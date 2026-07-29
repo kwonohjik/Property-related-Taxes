@@ -27,6 +27,8 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { TransferLandStdPartCard } from "./TransferStdPriceCards";
+import { TransferBuildingStdPartCard } from "./TransferStdPriceCards";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
@@ -72,6 +74,13 @@ interface Props {
   acqStdPriceRequired: boolean;
   /** §164⑤ PHD + 양쪽 환산 — 엔진이 3-시점 경로로 early-return해 이 입력을 쓰지 않는다 */
   isPhdBothEstimated: boolean;
+  /**
+   * 양도시 기준시가를 파트 섹션에 두는가 — `saleStdPlacement(...)`의 파트 2값.
+   * **호출부가 계산해 주입**한다(`CompanionAcqPurchaseBlock`) — 축 A와 같은 1회 계산을 공유해야
+   * "같은 카드가 축 A·축 B에 동시 노출"이 구조적으로 불가능해진다(하위 재파생 금지).
+   */
+  saleStdInLandPart: boolean;
+  saleStdInBuildingPart: boolean;
   /** 축 B 취득시 기준시가 — 토지분은 주택·건물 공통, 건물분 명시 입력만 `building` 전용 */
   asset?: AssetForm;
   onAssetChange?: (patch: Partial<AssetForm>) => void;
@@ -172,6 +181,9 @@ function PartAcqStdPrice(props: {
       <div className="flex justify-end">
         <BuildingStdPriceModalButton
           lockedTaxType="transfer"
+          // 같은 ② 섹션에 「양도시 …」 런처가 인접할 수 있으므로 시점을 라벨에 명시한다
+          // (기본값 "건물 기준시가 계산"은 부분일치 셀렉터가 두 버튼을 모두 잡는다).
+          buttonLabel="취득시 건물 기준시가 계산"
           initialAddress={stdPriceAddress}
           // 「건물 기준시가 계산서」 서식 출력의 스냅샷 소스 — 키가 없으면 서식이 비어 출력된다.
           snapshotKey={`bsp-${asset.assetId}-split-acq`}
@@ -201,6 +213,8 @@ function PartAcqInputs(props: {
   onSalesCaseValueChange: (v: string) => void;
   /** 주택(라목) — 건물분 카드가 없어 환산 안내를 역산 서술로 대체 */
   isHousingAsset?: boolean;
+  /** 양도시 기준시가 카드가 **이 파트 섹션 안**에 있는가 — 안내 문구가 가리킬 대상이 달라진다 */
+  saleStdInPart: boolean;
 }) {
   const label = props.part === "land" ? "토지" : "건물";
   if (props.mode === "actual" || props.mode === "appraisal") {
@@ -259,12 +273,17 @@ function PartAcqInputs(props: {
     props.part === "building" && props.isHousingAsset
       ? "위 「취득시 기준시가(개별·공동주택가격)」에서 토지분을 뺀 값으로 자동 도출"
       : `위 「${label} 취득시 기준시가」 카드`;
+  // 양도시 기준시가 카드는 배치에 따라 이 섹션 안(구분양도+환산) 또는 축 A(일괄양도)에 있다.
+  // 없는 카드 이름을 가리키면 사용자가 입력 위치를 찾지 못한다(2026-07-30 배치 분리).
+  const transferSource = props.saleStdInPart
+    ? `위 「${label} 양도시 기준시가」 카드`
+    : "위 「양도시 기준시가」 카드(양도가액 결정 방식 아래)";
   return (
     <ToneCard tone="amber" noDark bodyClassName="space-y-1">
       <p className="text-xs text-amber-900" data-testid={`split-${props.part}-estimated-note`}>
         {label} 환산취득가 = {label} 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가)
         <br />· 취득시 기준시가 → {acqSource}
-        <br />· 양도시 기준시가 → 위 「양도시 기준시가」 카드
+        <br />· 양도시 기준시가 → {transferSource}
       </p>
     </ToneCard>
   );
@@ -347,6 +366,13 @@ export function LandBuildingSplitSection(props: Props) {
               derivedBuildingNote={isHousingAsset}
             />
           )}
+          {props.saleStdInLandPart && props.asset && props.onAssetChange && (
+            <TransferLandStdPartCard
+              asset={props.asset}
+              onChange={props.onAssetChange}
+              transferDate={props.transferDate}
+            />
+          )}
           <PartAcqInputs
             part="land"
             mode={props.landAcqMode}
@@ -356,6 +382,7 @@ export function LandBuildingSplitSection(props: Props) {
             salesCaseValue={props.landSalesCaseValue}
             onSalesCaseValueChange={props.onLandSalesCaseValueChange}
             isHousingAsset={isHousingAsset}
+            saleStdInPart={props.saleStdInLandPart}
           />
         </div>
       )}
@@ -402,6 +429,13 @@ export function LandBuildingSplitSection(props: Props) {
           {showBuildingStdPrice && (
             <PartAcqStdPrice part="building" asset={props.asset!} onChange={props.onAssetChange!} transferDate={props.transferDate} />
           )}
+          {props.saleStdInBuildingPart && props.asset && props.onAssetChange && (
+            <TransferBuildingStdPartCard
+              asset={props.asset}
+              onChange={props.onAssetChange}
+              transferDate={props.transferDate}
+            />
+          )}
           <PartAcqInputs
             part="building"
             mode={props.buildingAcqMode}
@@ -411,6 +445,7 @@ export function LandBuildingSplitSection(props: Props) {
             salesCaseValue={props.buildingSalesCaseValue}
             onSalesCaseValueChange={props.onBuildingSalesCaseValueChange}
             isHousingAsset={isHousingAsset}
+            saleStdInPart={props.saleStdInBuildingPart}
           />
         </div>
       )}

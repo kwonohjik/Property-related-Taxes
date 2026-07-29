@@ -22,6 +22,7 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPrice } from "./transfer-tax-split-acq-mode";
+import { needsSaleStdPart } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
@@ -166,6 +167,25 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   const hasSaleRatio =
     opt(asset.landStandardPriceAtTransfer) != null && opt(asset.buildingStandardPriceAtTransfer) != null;
 
+  // 양도시 기준시가 배치 — UI 노출과 **같은 술어**. 여기서 재기술하면 "칸이 없는데 차단"이 된다.
+  // `saleSplitMode` fallback은 UI(CompanionAcqDateSection.tsx:202)·API(transfer-tax-api-split.ts:67)와
+  // 3중으로 맞춘다 — stale sessionStorage 자산은 undefined일 수 있다.
+  const saleStdCtx = {
+    saleSplitMode: asset.saleSplitMode ?? ("apportioned" as const),
+    landMode,
+    buildingMode,
+    selfOwns: asset.selfOwns ?? ("both" as const),
+  };
+
+  // ⚠️ V4의 `hasSaleRatio`는 **좁히지 않는다**(2026-07-30 검토 결론). 파트 배치로 카드가 화면에서
+  //    사라진 뒤에도 잔존 기준시가가 §64①1호 안분 비율로 쓰이는 것은 사실이나, 그 상황은
+  //    **이번 변경이 만드는 것이 아니다** — 구분양도 + 양쪽 실지거래가액에서는 현행
+  //    `needsSaleStdPrice`(LandBuildingSaleSplitSection.tsx:183-186)도 false라 카드가 이미 숨는다.
+  //    2026-07-29에 그 경로를 "정당한 입력"으로 확정했고(S1 해소, split-sale-std-price-transmit.test.ts),
+  //    사용자가 **직접 입력한** 기준시가로 법정 안분(§166⑥ → 부가세령 §64①1호)하는 것은
+  //    `feedback_no_silent_apportion_fallback`이 금지하는 "시스템이 값을 지어내는" 자동 안분이 아니다.
+  //    값은 모드를 되돌리면 화면에 복귀한다(표시 게이트만 — 값 보존).
+
   // ── V4. 양도가액 구분 근거 (규칙 ① — §166⑥ → 부가가치세법 시행령 §64①1호) ─────────────
   // "구분양도"를 골랐는데 토지·건물 양도가액을 **둘 다 비우면** 구분 근거가 없다.
   // 이때 엔진은 `saleRatio ?? landRatio`로 **취득시** 비율에 후퇴하는데(split-gain),
@@ -182,6 +202,8 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   ) {
     // ⚠️ 안내 문구는 **실제 입력 칸의 이름**과 일치해야 한다 — 토지분 총액 칸은 표시 전용으로
     //    바뀌었으므로(2026-07-29) "양도시 토지 기준시가를 입력하세요"라고 하면 없는 칸을 찾게 된다.
+    //    양도시 기준시가 2칸은 구분양도에서 화면에 없을 수 있으나(2026-07-30 파트 배치),
+    //    일괄양도로 전환하면 나타나므로 유효한 해소 경로다 — 두 경로를 모두 안내한다.
     return `${label}: 구분양도를 선택했으면 토지·건물 양도가액을 입력하거나, 양도시 토지 공시지가·면적과 건물 기준시가를 입력하세요 (§166⑥ — 양도 당시 기준시가 비율로 안분).`;
   }
 
@@ -203,14 +225,17 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     }
   }
 
-  const needsTransferStd =
-    asset.saleSplitMode === "apportioned" || landMode === "estimated" || buildingMode === "estimated";
-  if (needsTransferStd) {
-    const landStd = opt(asset.landStandardPriceAtTransfer);
-    const buildingStd = opt(asset.buildingStandardPriceAtTransfer);
-    if (landStd == null || buildingStd == null) {
-      return `${label}: 일괄양도 안분·환산취득가 계산에는 토지·건물 양도시 기준시가가 필요합니다(§166⑥ 양도 당시 기준시가). 토지는 ㎡당 공시지가·면적을, 건물은 기준시가 계산기로 산정해 입력하세요.`;
-    }
+  // ── V7. 양도시 기준시가 — **파트별** 필수 (2026-07-30 파트 배치) ────────────────────
+  // 종전에는 한쪽 파트만 환산이어도 양쪽을 요구했다. 기준시가 카드가 "쓰는 섹션 아래"로 이동한
+  // 뒤에는 그 요구가 **입력 칸 없는 차단**이 된다 — 구분양도 + 토지만 환산이면 건물 양도시
+  // 기준시가 칸이 화면에 없다(계획서 §5.5). 노출 술어와 같은 함수로 파트별로 판정한다.
+  // 메시지는 `양도시 기준시가` 연속 토큰을 유지한다 — 기존 anchor 4곳이 그 부분문자열에 의존한다
+  // (transfer-tax-validate-split.test.ts:78,86,537,550).
+  if (needsSaleStdPart("land", saleStdCtx) && opt(asset.landStandardPriceAtTransfer) == null) {
+    return `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목).`;
+  }
+  if (needsSaleStdPart("building", saleStdCtx) && opt(asset.buildingStandardPriceAtTransfer) == null) {
+    return `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`;
   }
 
   if (asset.saleSplitMode !== "actual") return null;

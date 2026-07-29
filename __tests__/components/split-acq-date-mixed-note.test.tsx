@@ -68,8 +68,7 @@ function DateHarness({
       isSplit={isSplit}
       isMixedUse={isMixedUse}
       acqDateLabel={isSplit ? "건물 취득일" : "취득일"}
-      effLandAcqMode="actual"
-      effBuildingAcqMode="actual"
+      saleStdInSaleAxis
     />
   );
 }

@@ -130,6 +130,55 @@ test.describe("양도 방식 게이팅 — 취득과 독립", () => {
   });
 });
 
+/**
+ * 양도시 기준시가 **배치** — "쓰는 섹션 아래"에만 노출 (사용자 이미지 6·7).
+ * 계획서: docs/02-design/features/transfer-split-std-price-colocation.plan.md
+ */
+test.describe("양도시 기준시가 배치 — 구분양도 + 파트 환산", () => {
+  const saleAxisCard = (p: Page) => p.getByTestId("split-sale-std-card");
+  const landPartCard = (p: Page) => p.getByTestId("split-land-std-transfer-card");
+  const buildingPartCard = (p: Page) => p.getByTestId("split-building-std-transfer-card");
+
+  test("이미지 6 — 토지만 환산 → 토지 섹션에만 양도시 카드, 건물 계산 기능 미노출", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
+
+    await expect(saleAxisCard(page), "구분양도에는 안분 비율이 없다").toHaveCount(0);
+    await expect(landPartCard(page)).toBeVisible();
+    await expect(buildingPartCard(page)).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /양도시 건물 기준시가 계산/ }),
+      "건물이 실지거래가액이면 건물 양도시 기준시가는 계산에 등장하지 않는다",
+    ).toHaveCount(0);
+  });
+
+  test("이미지 7 — 건물만 환산 → 건물 섹션에만 양도시 카드 + 계산 런처", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
+
+    await expect(saleAxisCard(page)).toHaveCount(0);
+    await expect(buildingPartCard(page)).toBeVisible();
+    await expect(page.getByRole("button", { name: /양도시 건물 기준시가 계산/ })).toBeVisible();
+    await expect(landPartCard(page), "토지가 실지거래가액이면 토지 기준시가 기능은 불필요").toHaveCount(0);
+  });
+
+  test("일괄양도로 되돌리면 카드가 축 A로 복귀한다 (상호배타)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
+    await expect(landPartCard(page)).toBeVisible();
+
+    await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
+    await expect(saleAxisCard(page)).toBeVisible();
+    await expect(landPartCard(page), "같은 카드가 두 곳에 동시 노출되면 안 된다").toHaveCount(0);
+  });
+});
+
 test.describe("양도시 기준시가 자동 계산 (§99①1호 · 부가세령 §64①1호 준용)", () => {
   // 계획서: docs/02-design/features/transfer-split-transfer-std-price-auto.plan.md
   // setupSplitAsset은 "주택"을 고르지만, 양도가액 안분은 주택이라도 파트별 독립 공시액을 쓴다
@@ -139,7 +188,7 @@ test.describe("양도시 기준시가 자동 계산 (§99①1호 · 부가세령
     await setupSplitAsset(page);
     await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
 
-    await page.getByPlaceholder("원/㎡").fill("540000");
+    await page.getByTestId("split-land-std-transfer-persqm").fill("540000");
     await page.getByTestId("split-land-std-transfer-area").fill("206.6");
     await expect(landTransferStdPrice(page)).toHaveText("111,564,000");
   });
@@ -152,7 +201,7 @@ test.describe("양도시 기준시가 자동 계산 (§99①1호 · 부가세령
     // 주택이어도 「양도시 건물 기준시가 계산」 런처가 있어야 한다
     await expect(page.getByRole("button", { name: /양도시 건물 기준시가 계산/ })).toBeVisible();
 
-    await page.getByPlaceholder("원/㎡").fill("540000");
+    await page.getByTestId("split-land-std-transfer-persqm").fill("540000");
     await page.getByTestId("split-land-std-transfer-area").fill("206.6");
     await expect(
       page.getByTestId("split-building-std-transfer"),
@@ -324,10 +373,14 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
       "가리킬 대상이 사라진 안내는 dangling reference",
     ).toHaveCount(0);
 
-    // 환산으로 되돌리면 카드가 복귀하고, 안내는 위쪽 「양도시 기준시가」 카드를 가리킨다
+    // 환산으로 되돌리면 취득시 카드가 복귀하고, 양도시 카드도 **같은 파트 섹션**에 나타난다
+    // (2026-07-30 배치 — 구분양도에서 양도시 기준시가는 그 파트의 환산 분모 전용).
     await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
     await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
-    await expect(page.getByTestId("split-land-estimated-note")).toContainText("위 「양도시 기준시가」");
+    await expect(page.getByTestId("split-land-std-transfer-card")).toBeVisible();
+    await expect(page.getByTestId("split-land-estimated-note")).toContainText(
+      "위 「토지 양도시 기준시가」 카드",
+    );
   });
 
   test("🔴 U9: 파트별 취득가액을 다 넣으면 '취득가액을 입력하세요'로 차단하지 않는다", async ({ page }) => {
