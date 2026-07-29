@@ -324,7 +324,52 @@ A안은 표시 문구, Phase 3는 문자열 상수 변경이므로 해당 지점
 
 ## 9. 후속 작업 (본 계획서 범위 밖 — 별도 착수)
 
-### 🟡 N-1. `mixed-use-commercial-stdprice-landprice-prefill.spec.ts` 1건 사전존재 실패
+### ✅ N-1. `mixed-use-commercial-stdprice-landprice-prefill.spec.ts` — 해소(2026-07-29)
+
+**원인은 셀렉터 rot 2건 복합**이었다(프로덕션 결함 아님). probe로 단계별 실측:
+
+| 단계 | 실측 | 판정 |
+|---|---|---|
+| 셋업 후 | `acquisitionDate: ""` · `landAcquisitionDate: "1997-09-12"` | 🔴 rot ①: `.first()`가 겸용 2열의 **토지** 취득일을 잡음 → 취득 시점 `p.year` undefined → `isAcqPre2001`(`PhdBuildingStdPriceModalButton.tsx:416-417`) false → 「2001.1.1」 전용 행 자체가 미렌더 |
+| rot ① 수정 후 | 2001 칸 렌더 ✓ · 「모두 적용」 후 `phdLandPricePerSqmAtAcq2001: "1200000"` **저장 성공** | 배관 정상 |
+| 상가 모달 | 런처가 **2개**. #0 = "**양도시** 건물 기준시가 계산"(축 A) / #1 = "③ 상가 기준시가" | 🔴 rot ②: `name`이 substring 매칭이라 축 A 런처까지 잡혀 `.first()`가 잘못된 모달을 염 |
+
+→ ① 취득일을 `acq-date-building` 스코프로, ② 런처를 「③ 상가 기준시가」 섹션 스코프로 한정 → **통과**.
+
+### 🔴 N-2. 같은 rot 가족 2건 + **배후 프로덕션 결함 의심**
+
+N-1 수정 후 겸용 E2E를 순차 전수 실행하다 **추가 사전존재 실패 2건**을 발견했다
+(변경분을 `git stash`로 되돌려도 동일 실패 — 본 작업 무관 확인).
+
+| spec | 실패 |
+|---|---|
+| `mixed-use-asset-major-commercial-modal.spec.ts` | `"건물 기준시가 계산"` **strict mode violation: 2 elements** |
+| `mixed-use-transfer-landprice-fallback.spec.ts` | `getByPlaceholder('원/㎡', exact)` 개수 **3 기대 → 4** |
+
+셋 다 **같은 원인**이다 — 2026-07-29 축 A 분리·재배치(`transfer-split-input-flow-reorder`)로
+겸용 화면에 「양도시 기준시가」 카드와 그 런처가 **새로 추가**되면서 개수·순서 가정이 깨졌다.
+
+**⚠️ 그런데 spec을 고치기 전에 판단할 것이 있다 — 겸용에 축 A가 뜨는 게 옳은가?**
+
+- 겸용주택은 `hasSeperateLandAcquisitionDate`가 강제 ON이라 `isSplit`이 true가 되고,
+  `CompanionAcqDateSection:173`이 `LandBuildingSaleSplitSection`(축 A)을 렌더한다.
+- 그러나 겸용은 **이미 `MixedUseStdPrice`/`MixedUsePreHousingDisclosureSection`에서 3시점
+  기준시가를 입력받는다** → 양도시 기준시가 입력이 **중복 노출**된다.
+- 겸용 엔진(`transfer-tax-mixed-use-commercial.ts:157-158`)은 양도가액을 **자체 4부분 안분**으로
+  산출한다 — `landTransferPrice`는 엔진 내부 계산값이지 사용자 입력이 아니다.
+
+즉 **사용자가 세션 초에 보고한 D1("필요 없는 UI가 함께 보여 혼란")과 같은 클래스의 결함**이
+겸용 경로에 남아 있을 수 있다. 확증하려면 겸용에서 축 A 입력(`saleSplitMode`·`landTransferPrice`·
+`buildingStandardPriceAtTransfer`)이 엔진에 도달·소비되는지 실측해야 한다.
+
+**착수 순서 권고**: ⑴ 겸용에서 축 A 소비 여부 실측 → ⑵ 미소비면 **겸용에서 축 A를 숨기는
+프로덕션 수정**(그러면 런처가 1개·공시지가 칸이 3개로 돌아가 **두 spec은 원본 그대로 통과**한다)
+→ ⑶ 소비된다면 그때 spec 셀렉터를 스코프 한정으로 고친다.
+**순서를 뒤집어 spec부터 고치면 ⑵에서 되돌려야 한다.**
+
+---
+
+### (원본 기록) N-1 최초 관측
 
 - **테스트**: "취득 ≤2000: 배치 모달의 2001.1.1 공시지가가 상가 모달 취득칸에 자동 채움"
 - **증상**: `getByPlaceholder('2001.1.1. 현재 공시지가')` 대기 timeout(120s)
