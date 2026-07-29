@@ -51,7 +51,11 @@ test.describe("겸용주택 자산-우선 — 상가건물 통합 모달", () =>
     await expandAssetSection(page, 3);
     await page.getByRole("button", { name: "매매", exact: true }).click();
     await page.getByRole("button", { name: "환산취득가" }).click();
-    await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+    // ⚠️ `acq-date-building` 스코프 필수 — 겸용주택은 분리 모드가 강제 ON이라 취득일이
+    //    `[토지 | 건물]` 2열이고, 섹션 스코프 + `.first()`는 앞 칸인 **토지** 취득일을 잡는다.
+    //    그러면 `acquisitionDate`가 비어 모달의 취득 연도("2010년") 파생이 실패한다
+    //    (계획서 e2e-preexisting-failures-4.plan.md §9-N2).
+    await fillDateExact(page.getByTestId("acq-date-building"), {
       year: "2010",
       month: "06",
       day: "15",

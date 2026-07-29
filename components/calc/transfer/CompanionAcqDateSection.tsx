@@ -186,8 +186,17 @@ export function CompanionAcqDateSection(props: {
             취득가액 산정(규칙 ②)보다 **앞**에 온다. 축 B(파트별 취득가액)와 달리
             자산 전체 「취득가액 산정 방식」에 의존하지 않으므로 여기 둘 수 있다.
             ⚠️ 산정방식 게이트(burdened_gift·redevelopment_apt 제외) **밖** — 부담부증여는
-               안내 카드를 렌더해야 한다. */}
-        {isSplit && p.asset && p.onAssetChange && (
+               안내 카드를 렌더해야 한다.
+            ⚠️ **겸용주택 제외**(2026-07-29). 겸용은 `hasSeperateLandAcquisitionDate`가 강제
+               ON이라 `isSplit`이 참이 되지만, 축 A 입력은 **엔진에 도달하지 않는다**:
+                 · `app/api/calc/transfer/route.ts:568` 겸용 분기가 early-return —
+                   `calculateTransferTax`(→ calcTransferGain → calcSplitGain)를 호출조차 않는다
+                 · `transfer-tax-mixed-use*.ts`가 `landTransferPrice`·`saleSplitMode`·
+                   `buildingStandardPriceAtTransfer`를 읽는 지점 0건(양도가액은 자체 4부분 안분)
+               게다가 겸용은 「겸용주택 분리계산」 영역에서 이미 3시점 기준시가를 입력받아
+               **중복 노출**이었다. 취득일 2열은 유지한다 — 그건 엔진이 실제로 소비한다
+               (transfer-tax-mixed-use.ts:136-139 LTHD 기산). */}
+        {isSplit && !isMixedUse && p.asset && p.onAssetChange && (
           <LandBuildingSaleSplitSection
             isBurdenedGift={p.asset.transferType === "burdened_gift"}
             saleSplitMode={p.asset.saleSplitMode ?? "apportioned"}

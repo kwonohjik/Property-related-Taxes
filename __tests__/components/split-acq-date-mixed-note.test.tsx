@@ -139,3 +139,34 @@ describe("E3·E4 — PHD 3시점 「계산 제외」 안내 (A-2)", () => {
     expect(screen.getAllByText(/취득당시/).length, "취득 시점 행이 산출 대상에 든다").toBeGreaterThan(0);
   });
 });
+
+// ── 겸용주택 축 A 미노출 (N-2) ──────────────────────────────────
+//
+// 🔴 겸용은 `hasSeperateLandAcquisitionDate`가 강제 ON이라 `isSplit`이 true가 되고,
+//   축 A(양도가액 구분 + 양도시 기준시가 카드)가 함께 렌더됐다. 그러나 실측 결과
+//   **겸용에서 축 A 입력은 소비되지 않는다**:
+//     · `app/api/calc/transfer/route.ts:568` 겸용 분기가 **early-return** —
+//       `calculateTransferTax`(→ calcTransferGain → calcSplitGain)를 호출조차 하지 않는다
+//     · `transfer-tax-mixed-use*.ts`가 `landTransferPrice`·`saleSplitMode`·
+//       `buildingStandardPriceAtTransfer`를 읽는 지점 0건 (양도가액은 자체 4부분 안분으로 산출)
+//   게다가 겸용은 이미 `MixedUseStdPrice`에서 3시점 기준시가를 입력받아 **중복 노출**이었다.
+//   (사용자 보고 D1 "필요 없는 UI가 함께 보여 혼란"과 같은 클래스)
+//
+// ⚠️ 취득일 2열은 **유지**한다 — 겸용 엔진이 `landAcquisitionDate`를 실제로 소비한다
+//    (transfer-tax-mixed-use.ts:136-139 LTHD 기산 등). 축 A만 숨긴다.
+describe("E6 — 겸용주택은 축 A(양도가액 구분) 미노출", () => {
+  it("E6-a 겸용 — 축 A 미렌더, 취득일 2열은 유지", () => {
+    render(<DateHarness isMixedUse />);
+    expect(
+      screen.queryAllByTestId("sale-split-mode"),
+      "겸용은 4부분 안분이 양도가액을 지배 — 축 A 입력은 엔진에 도달하지 않는다",
+    ).toHaveLength(0);
+    expect(screen.getAllByTestId("acq-date-land"), "취득일 2열은 엔진이 소비하므로 유지").toHaveLength(1);
+    expect(screen.getAllByTestId("acq-date-building")).toHaveLength(1);
+  });
+
+  it("E6-b 비-겸용 분리 — 축 A 종전대로 노출 (회귀 가드)", () => {
+    render(<DateHarness isMixedUse={false} />);
+    expect(screen.getAllByTestId("sale-split-mode")).toHaveLength(1);
+  });
+});
