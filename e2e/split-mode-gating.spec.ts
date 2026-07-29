@@ -275,6 +275,35 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     await expect(page.getByText("취득시 기준시가 (원)", { exact: false })).toHaveCount(0);
   });
 
+  test("🔴 U13: 실가/실가 + 양도가액 구분 → 파트별 취득시 기준시가 카드도 사라진다", async ({ page }) => {
+    // 계획서: transfer-split-part-std-card-gating.plan.md D1 (사용자 보고 2026-07-29)
+    // 결함: 파트 카드 게이트에 취득 모드가 없어, 실가/실가에서도 환산 전용 입력(㎡당 공시지가·면적)이
+    //       계속 떴다. 같은 값을 받는 자산 전체 블록은 이미 술어로 숨겨져 **노출/숨김이 서로 모순**.
+    test.setTimeout(90_000);
+    await setupSeparateAcq(page);
+
+    // 기본 진입(일괄양도 + 양도시 기준시가 미입력) — 술어 ⑤절 true → 카드 노출
+    await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
+
+    // 구분양도 + 양도가액 입력 → 안분 근거 확보 → 취득시 기준시가 불요
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await landTransfer(page).fill("600000000");
+
+    await expect(
+      page.getByTestId("split-land-std-acq-card"),
+      "실가/실가에서는 취득시 기준시가가 계산 어디에도 등장하지 않는다(§99①1호 가목)",
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId("split-housing-building-derived-note"),
+      "가리킬 대상이 사라진 안내는 dangling reference",
+    ).toHaveCount(0);
+
+    // 환산으로 되돌리면 카드가 복귀하고, 안내는 위쪽 「양도시 기준시가」 카드를 가리킨다
+    await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
+    await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
+    await expect(page.getByTestId("split-land-estimated-note")).toContainText("위 「양도시 기준시가」");
+  });
+
   test("🔴 U9: 파트별 취득가액을 다 넣으면 '취득가액을 입력하세요'로 차단하지 않는다", async ({ page }) => {
     // 버그(2026-07-29 사용자 보고): 별개 취득은 자산 전체 취득가액 칸이 UI에서 사라지는데
     // validate가 그 총액을 계속 요구해, 파트 금액을 다 넣어도 계산이 영구 차단됐다.

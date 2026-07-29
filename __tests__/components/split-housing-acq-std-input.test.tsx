@@ -23,6 +23,11 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(cleanup);
 
+// ⚠️ 파트 모드 기본값이 **환산(estimated)**이다(2026-07-29). 취득시 기준시가 카드는
+//    `requiresAcqStdPrice` 술어로 게이팅되므로 실가/실가에서는 노출되지 않는다
+//    (계획서 transfer-split-part-std-card-gating.plan.md D1). 이 파일이 지키는 불변식
+//    ("주택도 토지분 노출 / 건물분 명시 입력은 building 전용")은 **환산 모드에서** 성립하며,
+//    원 결함(환산 파트 취득가액이 조용히 0)도 환산에서만 발생하므로 의도는 훼손되지 않는다.
 function Harness({ init }: { init: Partial<AssetForm> }) {
   const [asset, setAsset] = useState<AssetForm>({
     ...makeDefaultAsset(1),
@@ -30,12 +35,16 @@ function Harness({ init }: { init: Partial<AssetForm> }) {
     acquisitionDate: "2025-08-29",
     landAcquisitionDate: "2025-01-08",
     addressJibun: "서울특별시 강남구 삼성동 100",
+    landAcqMode: "estimated",
+    buildingAcqMode: "estimated",
     ...init,
   } as AssetForm);
 
   return (
     <LandBuildingSplitSection
       selfOwns="both"
+      acqStdPriceRequired
+      isPhdBothEstimated={false}
       landAcqMode={asset.landAcqMode || "actual"}
       onLandAcqModeChange={() => {}}
       buildingAcqMode={asset.buildingAcqMode || "actual"}
@@ -109,8 +118,10 @@ describe("게이트 — 별개취득이 아니면 미노출 (회귀 0)", () => {
       <div>
         <LandBuildingSplitSection
           selfOwns="both"
-          landAcqMode="actual" onLandAcqModeChange={() => {}}
-          buildingAcqMode="actual" onBuildingAcqModeChange={() => {}}
+          acqStdPriceRequired
+          isPhdBothEstimated={false}
+          landAcqMode="estimated" onLandAcqModeChange={() => {}}
+          buildingAcqMode="estimated" onBuildingAcqModeChange={() => {}}
                   landAcquisitionPrice="" onLandAcquisitionPriceChange={() => {}}
           buildingAcquisitionPrice="" onBuildingAcquisitionPriceChange={() => {}}
           landSalesCaseValue="" onLandSalesCaseValueChange={() => {}}
