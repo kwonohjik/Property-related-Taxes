@@ -401,3 +401,119 @@ describe("상속·증여 평가시점 — eventDate 단일 입력 → 연도 도
     expect(validateBuildingStdPriceForm(f)).toMatch(/자료가 없습니다/);
   });
 });
+
+describe("단일 시점 모드 (④ toEngineInput · ⑧ validate) — S5·S6", () => {
+  /** 양도 전용 모달 상황 — 양도 시점만 채우고 취득 4필드는 비운다 */
+  const transferOnly = (o: Partial<BuildingStdPriceFormState> = {}) =>
+    form({
+      taxType: "transfer",
+      singleTimePoint: "transfer",
+      builtYear: "2010",
+      floorArea: "200",
+      transferYear: "2025",
+      transStructureKey: "rc",
+      transUsageNo: "1",
+      transLandPrice: "7,500,000",
+      ...o,
+    });
+
+  /** 취득 전용 모달 상황 — 취득 시점만 채우고 양도 3필드는 비운다 */
+  const acqOnly = (o: Partial<BuildingStdPriceFormState> = {}) =>
+    form({
+      taxType: "transfer",
+      singleTimePoint: "acquisition",
+      builtYear: "2010",
+      floorArea: "200",
+      acquisitionYear: "2015",
+      acqStructureKey: "rc",
+      acqUsageNo: "1",
+      acqLandPrice: "5,000,000",
+      ...o,
+    });
+
+  // S5 — 반대 시점 미입력이 오류가 아니다(폼에서 숨겨져 입력 경로 자체가 없다)
+  it("S5-a 양도 전용: 취득 4필드 미입력이 검증 통과", () => {
+    expect(validateBuildingStdPriceForm(transferOnly())).toBeNull();
+  });
+
+  it("S5-b 취득 전용: 양도 3필드 미입력이 검증 통과", () => {
+    expect(validateBuildingStdPriceForm(acqOnly())).toBeNull();
+  });
+
+  it("S5-c 양도 전용이라도 양도 필드 누락은 차단", () => {
+    expect(validateBuildingStdPriceForm(transferOnly({ transLandPrice: "" }))).toMatch(
+      /양도당시 ㎡당 개별공시지가/,
+    );
+  });
+
+  it("S5-d 취득 전용이라도 취득 필드 누락은 차단", () => {
+    expect(validateBuildingStdPriceForm(acqOnly({ acqStructureKey: "" }))).toMatch(
+      /취득당시 건물 구조/,
+    );
+  });
+
+  // §164⑧ — 취득연도 == 양도연도이면 단일 시점을 적용하지 않고 2시점 검증 그대로
+  it("S5-e 동일연도: 양도 전용이어도 취득 입력을 요구", () => {
+    const f = transferOnly({ acquisitionYear: "2025" });
+    expect(validateBuildingStdPriceForm(f)).toMatch(/취득당시/);
+  });
+
+  // S6 — 변환이 반대 시점 point를 만들지 않는다(빈 point 전달 금지)
+  it("S6-a 양도 전용: input.acquisition 미구성 · singleTimePoint 전달", () => {
+    const input = toEngineInput(transferOnly());
+    expect(input.acquisition).toBeUndefined();
+    expect(input.transfer).toBeDefined();
+    expect(input.singleTimePoint).toBe("transfer");
+  });
+
+  it("S6-b 취득 전용: input.transfer·transferYear 미구성", () => {
+    const input = toEngineInput(acqOnly());
+    expect(input.transfer).toBeUndefined();
+    expect(input.transferYear).toBeUndefined();
+    expect(input.acquisition).toBeDefined();
+    expect(input.singleTimePoint).toBe("acquisition");
+  });
+
+  // 양도 전용에서도 acquisitionYear는 남긴다 — 엔진 §164⑧ 판정의 근거
+  it("S6-c 양도 전용: acquisitionYear는 엔진에 전달된다", () => {
+    const input = toEngineInput(transferOnly({ acquisitionYear: "2015" }));
+    expect(input.acquisitionYear).toBe(2015);
+    expect(input.acquisition).toBeUndefined();
+  });
+
+  it("S6-d 동일연도: 단일 시점 분기를 타지 않고 2시점 input 구성", () => {
+    const input = toEngineInput(
+      transferOnly({
+        acquisitionYear: "2025",
+        acqStructureKey: "rc",
+        acqUsageNo: "1",
+        acqLandPrice: "7,000,000",
+        holdingMonths: "6",
+        adjustMonths: "12",
+        prevLandPrice: "6,500,000",
+      }),
+    );
+    expect(input.acquisition).toBeDefined();
+    expect(input.holdingMonths).toBe(6);
+  });
+
+  // 폼 → 엔진 왕복 — 단일 시점 결과가 실제로 산출된다
+  it("S6-e 양도 전용 왕복: transfer만 산출", () => {
+    const r = calcBuildingStandardPrice(toEngineInput(transferOnly()));
+    expect(r.transfer).toBeDefined();
+    expect(r.acquisition).toBeUndefined();
+  });
+
+  it("S6-f 미지정(기존 스냅샷)은 종전 2시점 검증 — 하위호환", () => {
+    const f = form({
+      taxType: "transfer",
+      builtYear: "2010",
+      floorArea: "200",
+      transferYear: "2025",
+      transStructureKey: "rc",
+      transUsageNo: "1",
+      transLandPrice: "7,500,000",
+    });
+    expect(validateBuildingStdPriceForm(f)).toMatch(/취득연도/);
+  });
+});
