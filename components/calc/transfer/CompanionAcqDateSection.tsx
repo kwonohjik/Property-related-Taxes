@@ -18,6 +18,7 @@ import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -120,6 +121,22 @@ export function CompanionAcqDateSection(props: {
               </p>
             )}
           </>
+        )}
+        {/* ③-a 겸용주택 안내 — 분리를 **사용자가 켠 적이 없는데** 2열이 나타난 경우에만.
+            겸용 토글이 `hasSeperateLandAcquisitionDate`를 강제 ON 하므로(MixedUseSection.tsx:44-50)
+            사용자는 왜 칸이 둘인지 알 수 없고, 앞 칸(토지)만 채운 채 넘어간다. 그러면 건물 취득일이
+            비어 PHD 3시점 모달이 취득 시점을 "연도 미상 — 계산 제외"로 빼고 환산취득가 산정이
+            조용히 축소된다(계획서 e2e-preexisting-failures-4.plan.md D-C).
+            ⚠️ 사용자가 토글을 **직접** 켠 경우에는 붙이지 않는다 — 그건 "취득일이 다르다"는 의도
+               표명이라 둘 다 채울 의사가 있고, 안내는 노이즈가 된다. */}
+        {isSplit && isMixedUse && (
+          <ToneCard tone="amber" noDark bodyClassName="space-y-1">
+            <p className="text-xs text-amber-900" data-testid="split-acq-date-mixed-note">
+              겸용주택은 토지·건물 취득일을 <strong>각각</strong> 입력합니다. 같은 날 취득했다면 같은
+              날짜를 넣으세요 — 두 값이 주택분·상가분 4부분 안분과 장기보유특별공제 기산에 각각
+              쓰입니다 (소득세법 시행령 §166⑥).
+            </p>
+          </ToneCard>
         )}
         {/* ③ 분리 ON — 토지·건물 취득일 2열. 취득일이 다른 자산이므로 두 날짜를 나란히 본다. */}
         {isSplit && (

@@ -448,7 +448,17 @@ export function PhdBuildingStdPriceModalButton({
                   unit="원/㎡"
                   hint={
                     !p.year
-                      ? "해당 시점 날짜 미입력 — 계산 제외"
+                      ? // 어디를 채워야 하는지 알려준다 — 종전 문구는 "계산 제외"만 알리고 해소
+                        // 방법을 숨겨, 겸용주택에서 취득일 2열 중 앞 칸(토지)만 채운 사용자가
+                        // 취득 시점이 빠진 것을 알아채지도 고치지도 못했다(계획서 D-C).
+                        (
+                          <span data-testid="phd-point-excluded-note">
+                            해당 시점 날짜 미입력 — 계산 제외
+                            {p.key === "acquisition" && (
+                              <> (③ 취득 정보의 「건물 취득일」을 입력하면 취득시점도 함께 산출됩니다)</>
+                            )}
+                          </span>
+                        )
                       : isFirstPre2001
                         ? "고시(2001년~) 전 최초공시일의 건물분은 2001년 기준시가 × 산정기준율로 환산 — 이 공시지가는 토지분 계산에 사용"
                         : undefined
