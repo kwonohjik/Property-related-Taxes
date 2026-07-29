@@ -20,6 +20,7 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { HouseValuationSection } from "./HouseValuationSection";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
+import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers";
 import {
   Select,
   SelectContent,
@@ -66,15 +67,8 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   // 토지/주택 판정은 상단 assetKind로 파생(상속 자산구분 라디오 폐지 대응).
   const isLand = asset.assetKind === "land";
   const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
-  // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용).
-  const kind: "house_individual" | "house_apart" =
-    asset.inheritanceAssetKind === "house_individual"
-      ? "house_individual"
-      : asset.inheritanceAssetKind === "house_apart"
-        ? "house_apart"
-        : asset.addressDong && asset.addressHo
-          ? "house_apart"
-          : "house_individual";
+  // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용). 파생은 공용 단일 소스.
+  const kind = deriveInheritanceHouseKind(asset);
   const showHouseValuation = isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
 
   // 보충적평가 보조계산은 상속개시 시점에 공시가격이 존재해야 조회·재구성 가능.

@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { deriveEngineInheritanceAssetKind } from "@/lib/calc/transfer-tax-api-helpers";
+import {
+  deriveEngineInheritanceAssetKind,
+  deriveInheritanceHouseKind,
+} from "@/lib/calc/transfer-tax-api-helpers";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -66,5 +69,57 @@ describe("deriveEngineInheritanceAssetKind", () => {
     expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "building" }))).toBe("house_apart");
     expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "right_to_move_in" }))).toBe("house_apart");
     expect(deriveEngineInheritanceAssetKind(asset({ assetKind: "commercial_building" }))).toBe("house_apart");
+  });
+});
+
+/**
+ * `deriveInheritanceHouseKind` — UI 픽커·게이팅·API 공용 단일 소스 (2026-07-30 신설).
+ *
+ * 이 파생을 복제하거나 raw 비교(`asset.inheritanceAssetKind === "house_individual"`)로 대체하면
+ * 픽커에 "개별"이 선택돼 보이는데 그 소비처만 false가 되어 UI가 막힌다 —
+ * HouseValuationSection의 3시점 일괄 계산 버튼이 초기 진입 시 미노출되던 실제 결함.
+ * (이미 checked인 native radio는 다시 눌러도 change 이벤트가 나지 않아 사용자가 풀 수 없다.)
+ */
+describe("deriveInheritanceHouseKind — 픽커 표시값과 소비처 게이트의 단일 소스", () => {
+  it("명시 선택은 그대로", () => {
+    expect(deriveInheritanceHouseKind(asset({ inheritanceAssetKind: "house_individual" }))).toBe(
+      "house_individual",
+    );
+    expect(deriveInheritanceHouseKind(asset({ inheritanceAssetKind: "house_apart" }))).toBe(
+      "house_apart",
+    );
+  });
+
+  it("🔴 미선택 + 동·호 없음 → house_individual (배치 버튼 게이트가 열려야 한다)", () => {
+    expect(
+      deriveInheritanceHouseKind(asset({ inheritanceAssetKind: "land", addressDong: "", addressHo: "" })),
+    ).toBe("house_individual");
+  });
+
+  it("미선택 + 동·호 있음 → house_apart", () => {
+    expect(
+      deriveInheritanceHouseKind(
+        asset({ inheritanceAssetKind: "land", addressDong: "101", addressHo: "1502" }),
+      ),
+    ).toBe("house_apart");
+  });
+
+  it("동만 있고 호가 없으면 개별 (둘 다 있어야 공동 추정)", () => {
+    expect(
+      deriveInheritanceHouseKind(asset({ inheritanceAssetKind: "land", addressDong: "101", addressHo: "" })),
+    ).toBe("house_individual");
+  });
+
+  // 엔진 파생이 이 술어에 위임한다 — 주택 자산에서 두 함수 결과가 항상 일치해야 한다
+  it("deriveEngineInheritanceAssetKind가 주택에서 동일 결과(위임 회귀)", () => {
+    for (const patch of [
+      { inheritanceAssetKind: "land" as const, addressDong: "", addressHo: "" },
+      { inheritanceAssetKind: "land" as const, addressDong: "101", addressHo: "1502" },
+      { inheritanceAssetKind: "house_individual" as const },
+      { inheritanceAssetKind: "house_apart" as const },
+    ]) {
+      const a = asset({ assetKind: "housing", ...patch });
+      expect(deriveEngineInheritanceAssetKind(a)).toBe(deriveInheritanceHouseKind(a));
+    }
   });
 });

@@ -166,6 +166,7 @@ function yearOf(d?: string): number | undefined {
 }
 
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
+import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers";
 
 interface Props {
   asset: AssetForm;
@@ -180,7 +181,10 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
 
   // 3시점 건물기준시가 일괄 계산기 배선(§164⑤).
   // F2: 계산기(구조·용도 방식 국세청 건물기준시가)는 단독주택 전용 — 공동주택은 미노출.
-  const isHouseIndividual = asset.inheritanceAssetKind === "house_individual";
+  // 픽커(InheritanceHouseKindPicker)와 **같은 파생**을 써야 한다 — raw 비교로 두면 픽커에
+  // "개별"이 선택돼 보이는데 이 게이트만 false가 되어 아래 일괄 계산 버튼이 영구 미노출된다
+  // (이미 checked인 라디오는 다시 눌러도 change가 나지 않는다). 2026-07-30 정정.
+  const isHouseIndividual = deriveInheritanceHouseKind(asset) === "house_individual";
 
   // 1990 이전 토지기준시가는 매 렌더 시 동기적으로 직접 계산 (useEffect 콜백 의존성 제거).
   // 엔진 측은 어차피 inheritedHouseValuation.pre1990 등급 데이터를 받아 자체 계산하므로

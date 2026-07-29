@@ -68,6 +68,36 @@ describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산기 �
     expect(screen.queryByTestId("phd-batch-stub")).toBeNull();
   });
 
+  /**
+   * 🔴 F2 회귀 — **미선택 상태**가 기존 케이스에 없어 실결함을 놓쳤다(2026-07-30).
+   *
+   * `inheritanceAssetKind`는 미선택("land" 초기값)으로 시작하고 픽커는 동·호 유무로 "개별"을
+   * **선택된 것처럼 표시**한다. 게이트가 raw 비교였을 때 이 상태에서 버튼이 안 나왔고,
+   * 이미 checked인 native radio는 다시 눌러도 change가 나지 않아 사용자가 풀 수 없었다.
+   * → 게이트는 픽커와 같은 파생(deriveInheritanceHouseKind)을 써야 한다.
+   */
+  it("🔴 F2: 미선택 + 동·호 없음 → 계산기 버튼 노출 (픽커 표시와 일치)", () => {
+    render(
+      <HouseValuationSection
+        asset={{ ...baseAsset(), inheritanceAssetKind: "land", addressDong: "", addressHo: "" }}
+        transferDate="2025-09-01"
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId("phd-batch-stub")).not.toBeNull();
+  });
+
+  it("F2: 미선택 + 동·호 있음 → 미노출 (공동주택 추정)", () => {
+    render(
+      <HouseValuationSection
+        asset={{ ...baseAsset(), inheritanceAssetKind: "land", addressDong: "101", addressHo: "1502" }}
+        transferDate="2025-09-01"
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId("phd-batch-stub")).toBeNull();
+  });
+
   it("F1: '모두 적용' → 3필드가 단일 onChange patch로 병합 갱신", () => {
     const onChange = vi.fn();
     render(
