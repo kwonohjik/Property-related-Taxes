@@ -97,8 +97,8 @@ describe("E1: building + 별개 취득 → 취득시 기준시가 파트별 독�
     const r = calcSplitGain(
       bldg({ buildingStandardPriceAtAcquisition: 350_000_000 }),
     );
-    expect(r!.apportionRatio.land).toBeCloseTo(200_000_000 / 550_000_000, 10);
-    expect(r!.apportionRatio.building).toBeCloseTo(350_000_000 / 550_000_000, 10);
+    expect(r!.apportionRatio!.land).toBeCloseTo(200_000_000 / 550_000_000, 10);
+    expect(r!.apportionRatio!.building).toBeCloseTo(350_000_000 / 550_000_000, 10);
   });
 
   it("환산 분자도 파트별 독립값을 쓴다", () => {
@@ -186,7 +186,7 @@ describe("게이트 off: building 동시 취득 → 종전 역산 (회귀 0)", (
       }),
     );
     expect(r!.building.stdPriceAtAcq).toBe(300_000_000);
-    expect(r!.apportionRatio.land).toBeCloseTo(0.4, 10); // 2억 / 5억
+    expect(r!.apportionRatio!.land).toBeCloseTo(0.4, 10); // 2억 / 5억
   });
 
   it("레거시 비율 항등성 — 토지분 > 총액이면 비율 1로 클램프 (종전 동작)", () => {
@@ -196,7 +196,7 @@ describe("게이트 off: building 동시 취득 → 종전 역산 (회귀 0)", (
         standardPriceAtAcquisition: 150_000_000, // 토지분 2억 < 총액
       }),
     );
-    expect(r!.apportionRatio.land).toBe(1);
-    expect(r!.apportionRatio.building).toBe(0);
+    expect(r!.apportionRatio!.land).toBe(1);
+    expect(r!.apportionRatio!.building).toBe(0);
   });
 });

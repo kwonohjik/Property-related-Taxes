@@ -124,12 +124,17 @@ describe("P0-C: salesCase 파트 미입력 → 총액 안분 (동시 취득 경�
 });
 
 // ════════════════════════════════════════════════════════════
-// P0-D. 게이트 — 취득시 기준시가 3요소 미입력 시 분리 전체 비활성
-//   PR #837(P1)은 UI·API 입력 경로를 열었을 뿐, 엔진 게이트는 그대로다.
-//   validate V0이 필요한 이유를 실증한다.
+// P0-D. 게이트 — 취득시 기준시가는 **환산해야 할 때만** 필요하다
+//   🔄 2026-07-29 반전: 종전 이 블록은 "3요소가 없으면 분리 전체가 죽는다"를 **정상 동작으로**
+//   고정하고 있었다. 그러나 파트별 실지거래가액을 모두 아는 경우(케이스 a) 취득시 기준시가는
+//   계산 어디에도 등장하지 않으므로(사용자 확정 규칙 ③) 요구해서는 안 된다.
+//   종전 동작은 분리 계산을 **오류 없이 비활성**시키고 호출부가 단일자산 경로(취득가액 0)로
+//   흘려 양도차익을 양도가액 전액으로 만드는 결함이었다.
+//   계획서: docs/02-design/features/transfer-split-acq-std-gate-relaxation.plan.md
+//   (feedback_anchor_correction_legal_priority — 법령 정합이 기존 anchor보다 우선)
 // ════════════════════════════════════════════════════════════
-describe("P0-D: 3요소 미입력 → calcSplitGain null (validate V0 필요 근거)", () => {
-  it("총액만 없어도 null", () => {
+describe("P0-D: 케이스 a — 취득시 기준시가 없이도 분리 계산이 성립한다", () => {
+  it("🔄 총액이 없어도 파트 실가로 계산된다 (종전: null)", () => {
     const r = calcSplitGain(
       housingBase({
         landAcqMode: "actual",
@@ -139,10 +144,12 @@ describe("P0-D: 3요소 미입력 → calcSplitGain null (validate V0 필요 근
         standardPriceAtAcquisition: undefined,
       }),
     );
-    expect(r, "파트 금액이 둘 다 확정돼 있어도 비율 3요소가 없으면 분리 전체가 죽는다").toBeNull();
+    expect(r, "파트 금액이 둘 다 확정됐으면 비율 3요소는 계산에 쓰이지 않는다").not.toBeNull();
+    expect(r!.land.acquisitionPrice).toBe(300_000_000);
+    expect(r!.building.acquisitionPrice).toBe(100_000_000);
   });
 
-  it("면적만 없어도 null", () => {
+  it("🔄 면적이 없어도 파트 실가로 계산된다 (종전: null)", () => {
     const r = calcSplitGain(
       housingBase({
         landAcqMode: "actual",
@@ -152,6 +159,18 @@ describe("P0-D: 3요소 미입력 → calcSplitGain null (validate V0 필요 근
         acquisitionArea: undefined,
       }),
     );
-    expect(r).toBeNull();
+    expect(r).not.toBeNull();
+  });
+
+  it("환산 파트가 있으면 여전히 필요하다 — 3요소 미입력 시 null (PR3에서 throw 전환)", () => {
+    const r = calcSplitGain(
+      housingBase({
+        landAcqMode: "actual",
+        buildingAcqMode: "estimated",
+        landAcquisitionPrice: 300_000_000,
+        acquisitionArea: undefined,
+      }),
+    );
+    expect(r, "환산 분자·개산공제 base가 취득시 기준시가를 요구한다").toBeNull();
   });
 });
