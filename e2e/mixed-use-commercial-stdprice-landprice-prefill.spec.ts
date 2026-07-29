@@ -54,7 +54,15 @@ async function setupMixedUsePre2001PhdAsset(page: Page) {
   await page.getByRole("button", { name: "매매", exact: true }).click();
   await page.getByRole("button", { name: "환산취득가" }).click();
   // 취득 1997 → ≤2000 → 위치지수는 2001.1.1 기준 트랙(§164⑤)
-  await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
+  //
+  // ⚠️ **`acq-date-building` 스코프 필수**. 겸용주택 토글이 `hasSeperateLandAcquisitionDate`를
+  //    강제 ON 하므로(`MixedUseSection.tsx:44-50`) 취득일이 `[토지 | 건물]` 2열이 되는데,
+  //    섹션 스코프 + `.first()`는 앞 칸인 **토지 취득일**을 잡는다. 그러면 `acquisitionDate`가
+  //    빈 채로 남아 3시점 모달의 취득 시점 `p.year`가 undefined가 되고,
+  //    `isAcqPre2001`(`PhdBuildingStdPriceModalButton.tsx:416-417`)이 false로 떨어져
+  //    「2001.1.1. 현재 공시지가」 전용 행이 아예 렌더되지 않는다
+  //    (계획서 e2e-preexisting-failures-4.plan.md §9-N1).
+  await fillDateExact(page.getByTestId("acq-date-building"), {
     year: "1997",
     month: "09",
     day: "12",
@@ -108,7 +116,16 @@ test.describe("겸용주택 상가 모달 — 개별공시지가 자동입력", 
     await expect(batch).toBeHidden();
 
     // ── 상가 섹션 모달 — 취득 위치지수 칸이 2001.1.1 값으로 자동 채움 ──
-    await page.getByRole("button", { name: "건물 기준시가 계산" }).first().click();
+    // ⚠️ `name`은 **substring 매칭**이라(e2e/CLAUDE.md §2) 축 A의
+    //    「**양도시** 건물 기준시가 계산」 런처까지 잡힌다. 2026-07-29 축 A 분리·재배치로
+    //    겸용 화면에 그 런처가 새로 생기면서 `.first()`가 상가 런처가 아닌 그것을 열었고,
+    //    2001 칸은 있으나 상가 prefill이 없어 빈 값으로 실패했다(계획서 §9-N1).
+    //    → 「③ 상가 기준시가」 섹션으로 스코프를 한정한다.
+    const commercialSection = page
+      .locator("div")
+      .filter({ hasText: /상가건물 기준시가 \(토지 제외\)/ })
+      .last();
+    await commercialSection.getByRole("button", { name: "건물 기준시가 계산" }).first().click();
     const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
     await expect(modal).toBeVisible();
 
