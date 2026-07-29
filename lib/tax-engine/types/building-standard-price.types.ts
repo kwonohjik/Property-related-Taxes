@@ -76,6 +76,16 @@ export interface BuildingStandardPriceInput {
   acquisitionYear?: number;
   transfer?: BuildingPointInput;
   acquisition?: BuildingPointInput;
+  /**
+   * 단일 시점 모드 — 지정 시 그 시점만 검증·계산하고 반대 시점 결과를 내지 않는다.
+   * 호출부가 한 시점 필드에만 값을 주입할 때(모달 `applyTimePoint`) 반대 시점 입력을 강제하지 않기 위함.
+   * 미지정 = 종전 2시점(하위호환).
+   *
+   * ⚠️ `"transfer"`라도 **취득연도 == 양도연도이면 §164⑧ 환산 경로가 우선**한다 —
+   * 그 경우 양도당시 기준시가가 취득시 기준시가에서 파생되므로 취득 입력이 여전히 필수다.
+   * 복합구조(compositeParts)·공동주택 환산(apartmentConversion)은 별도 반환 경로라 이 플래그를 무시한다.
+   */
+  singleTimePoint?: "acquisition" | "transfer";
   /** §164⑧ 동일연도 양도 환산용 보유월수(1월 미만=1월). 동일연도 시 필수 */
   holdingMonths?: number;
   /** §164⑧ 기준시가조정월수(전기 결정일~취득 결정일 전일). 미입력 시 12 */

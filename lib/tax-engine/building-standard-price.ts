@@ -66,6 +66,31 @@ function hasComposite(input: BuildingStandardPriceInput): boolean {
   return (input.compositeParts?.length ?? 0) > 0 || (input.landParcels?.length ?? 0) > 0;
 }
 
+/** 취득시 breakdown — ≥2001 당해연도 일반산식 / ≤2000 §164⑤ 산정기준율 환산 */
+function calcAcquisitionBreakdown(
+  year: number,
+  point: BuildingPointInput,
+  floorArea: number,
+  builtYear: number,
+): BuildingStdPriceBreakdown {
+  return year >= 2001
+    ? calcPointBreakdown(year, point, floorArea, builtYear, 1.0, "취득시")
+    : calcAcqBaseBreakdown(year, point, floorArea, builtYear);
+}
+
+/**
+ * 취득 ≤2000 산정기준율 환산 echo(계산서 ※표 소스) — rate 미적용(≥2001)이면 undefined.
+ * total2001 = 2001 지수표 ㎡당 × 면적(rate 적용 전, stdPriceFromPerM2로 정수화) / convertedTotal = 적용 후.
+ */
+function acqBaseConversionOf(bd: BuildingStdPriceBreakdown, floorArea: number) {
+  if (bd.acqBaseRate === undefined) return undefined;
+  return {
+    total2001: stdPriceFromPerM2(bd.pricePerM2 ?? 0, floorArea).standardPrice,
+    acqBaseRate: bd.acqBaseRate,
+    convertedTotal: bd.standardPrice,
+  };
+}
+
 /** 복합건물 부분 목록 — compositeParts 우선, 없으면 valuation 단일 point fallback(다필지 전용) */
 function resolveCompositeParts(input: BuildingStandardPriceInput): BuildingCompositePart[] {
   return (input.compositeParts?.length ?? 0) > 0
@@ -323,6 +348,44 @@ export function calcBuildingStandardPrice(
     return { apartmentConversion: conv, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER };
   }
 
+  // 단일 시점 모드 — 호출부가 한 시점 필드에만 값을 주입할 때 반대 시점 입력을 요구하지 않는다.
+  // ⚠️ 취득연도 == 양도연도이면 §164⑧ 환산(양도값이 취득값에서 파생)이 우선하므로 이 분기를 건너뛰고
+  //    아래 2시점 경로로 간다. 복합구조·기계식주차는 별도 반환 경로라 미지원(2시점 경로 유지).
+  const sameYearBoth =
+    input.acquisitionYear !== undefined && input.acquisitionYear === input.transferYear;
+  if (input.singleTimePoint && !sameYearBoth && !input.isMechanicalParking && !hasComposite(input)) {
+    if (input.singleTimePoint === "acquisition") {
+      if (input.acquisitionYear === undefined) {
+        throw new BuildingStdPriceError("단일 시점(취득): 취득연도 필수");
+      }
+      const acquisition = calcAcquisitionBreakdown(
+        input.acquisitionYear,
+        validatePoint(input.acquisition, "취득시"),
+        input.floorArea,
+        input.builtYear,
+      );
+      const conv = acqBaseConversionOf(acquisition, input.floorArea);
+      return {
+        acquisition,
+        ...(conv && { acqBaseConversion: conv }),
+        warnings,
+        legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
+      };
+    }
+    if (input.transferYear === undefined) {
+      throw new BuildingStdPriceError("단일 시점(양도): 양도연도 필수");
+    }
+    const transfer = calcPointBreakdown(
+      input.transferYear,
+      validatePoint(input.transfer, "양도시"),
+      input.floorArea,
+      input.builtYear,
+      1.0,
+      "양도시",
+    );
+    return { transfer, warnings, legalBasis: BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER };
+  }
+
   // 양도 모드 (취득시·양도시 2시점)
   if (input.transferYear === undefined || input.acquisitionYear === undefined) {
     throw new BuildingStdPriceError("양도: 취득연도·양도연도 필수");
@@ -349,21 +412,15 @@ export function calcBuildingStandardPrice(
   const acqPoint = validatePoint(input.acquisition, "취득시");
 
   // 취득시 breakdown — 2001 이후 일반 / 2000 이전 산정기준율
-  const acquisition =
-    acquisitionYear >= 2001
-      ? calcPointBreakdown(acquisitionYear, acqPoint, input.floorArea, input.builtYear, 1.0, "취득시")
-      : calcAcqBaseBreakdown(acquisitionYear, acqPoint, input.floorArea, input.builtYear);
+  const acquisition = calcAcquisitionBreakdown(
+    acquisitionYear,
+    acqPoint,
+    input.floorArea,
+    input.builtYear,
+  );
 
-  // 취득 ≤2000 단독: 산정기준율 환산 echo(계산서 ※표 소스 — 복합 경로 :213과 대칭).
-  // total2001 = 2001 지수표 ㎡당 × 면적(rate 적용 전, stdPriceFromPerM2로 정수화) / convertedTotal = 적용 후.
-  const acqBaseConversion =
-    acquisition.acqBaseRate !== undefined
-      ? {
-          total2001: stdPriceFromPerM2(acquisition.pricePerM2 ?? 0, input.floorArea).standardPrice,
-          acqBaseRate: acquisition.acqBaseRate,
-          convertedTotal: acquisition.standardPrice,
-        }
-      : undefined;
+  // 취득 ≤2000 단독: 산정기준율 환산 echo(계산서 ※표 소스 — 복합 경로와 대칭)
+  const acqBaseConversion = acqBaseConversionOf(acquisition, input.floorArea);
 
   // 동일연도(§164⑧) 환산 분기
   if (transferYear === acquisitionYear) {

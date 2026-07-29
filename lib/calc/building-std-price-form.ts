@@ -172,6 +172,16 @@ export interface BuildingStdPriceFormState {
   ancillaryAreas: AncillaryAreaForm;
   /** 부속시설 종류별 위치 층 라벨(계산서 Ⅳ "층별") */
   ancillaryFloors: AncillaryFloorForm;
+  /**
+   * 단일 시점 모드(양도) — 지정 시 그 시점 입력·결과만 다룬다. 모달 `applyTimePoint`가 주입한다.
+   *
+   * ⚠️ **prop이 아닌 폼 상태**여야 한다: 「건물 기준시가 계산서」 서식이 저장된 스냅샷으로
+   * `calcBuildingStandardPrice(toEngineInput(snap))`를 재계산하므로(BuildingStdPriceReportSection ·
+   * building-std-pdf-data), 상태에 없으면 재계산 시 모드가 복원되지 않아 서식이 통째로 사라진다.
+   *
+   * 미지정(기존 저장 스냅샷 포함) = 종전 2시점 — 하위호환.
+   */
+  singleTimePoint?: "acquisition" | "transfer";
 }
 
 /** 빈 복합 부분 1개 */
@@ -353,6 +363,15 @@ function applyAncillary(base: BuildingStandardPriceInput, f: BuildingStdPriceFor
 }
 
 /** 폼 → 엔진 입력. 모드별로 필요한 필드만 채움(미입력은 검증에서 차단). */
+/**
+ * §164⑧ 동일연도 양도 여부 — 취득연도 == 양도연도.
+ * 이 경우 양도당시 기준시가가 취득시 기준시가에서 파생되므로(엔진 §164⑧ 환산) 단일 시점 모드를
+ * 적용하지 않는다. 엔진 `calcBuildingStandardPrice`와 **동일 판정식** — 여기서 새 규칙을 세우지 않는다.
+ */
+function isSameYearTransfer(acqYear: number | undefined, transferYear: number | undefined): boolean {
+  return acqYear !== undefined && acqYear === transferYear;
+}
+
 export function toEngineInput(f: BuildingStdPriceFormState): BuildingStandardPriceInput {
   const base: BuildingStandardPriceInput = {
     taxType: f.taxType,
@@ -403,6 +422,35 @@ export function toEngineInput(f: BuildingStdPriceFormState): BuildingStandardPri
   // 양도
   base.acquisitionYear = intOrUndef(f.acquisitionYear);
   base.transferYear = intOrUndef(f.transferYear);
+
+  // 단일 시점 모드 — 반대 시점 point를 구성하지 않는다(엔진 singleTimePoint 분기가 그 시점만 검증).
+  // ⚠️ "transfer" 모드에서도 acquisitionYear는 남긴다 — 엔진 §164⑧ 동일연도 판정의 근거다.
+  //    동일연도이면 양도값이 취득값에서 파생되므로 이 분기를 건너뛰고 아래 2시점 경로로 간다.
+  //    복합구조·공동주택 환산·기계식주차는 별도 반환 경로라 종전 흐름을 유지한다.
+  if (
+    f.singleTimePoint &&
+    !isSameYearTransfer(base.acquisitionYear, base.transferYear) &&
+    !f.isMechanicalParking &&
+    !f.compositeMode &&
+    !f.apartmentConversionMode
+  ) {
+    base.singleTimePoint = f.singleTimePoint;
+    if (f.singleTimePoint === "acquisition") {
+      base.transferYear = undefined;
+      base.acquisition = {
+        structureKey: f.acqStructureKey,
+        usageNo: intOrUndef(f.acqUsageNo) ?? 0,
+        landPricePerM2: parseAmount(f.acqLandPrice),
+      };
+    } else {
+      base.transfer = {
+        structureKey: f.transStructureKey,
+        usageNo: intOrUndef(f.transUsageNo) ?? 0,
+        landPricePerM2: parseAmount(f.transLandPrice),
+      };
+    }
+    return base;
+  }
 
   // 양도 복합건물(층·구역별 구조·용도 상이) — 시점별 공시지가만(구조·용도는 부분별·acqUsageNo)
   if (f.compositeMode && !f.isMechanicalParking && !f.apartmentConversionMode) {
@@ -594,6 +642,32 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
   }
 
   const transY = intOrUndef(f.transferYear);
+
+  // 단일 시점 모드 — 그 시점 필드만 검증한다(반대 시점은 폼에서도 숨겨져 입력 경로가 없다).
+  // 동일연도(§164⑧)는 취득값이 양도값의 소스라 예외 없이 아래 2시점 검증을 그대로 적용한다.
+  // (복합·공동주택 환산은 위에서 이미 return — 여기 도달하지 않는다.)
+  if (f.singleTimePoint && !isSameYearTransfer(acqY, transY) && !f.isMechanicalParking) {
+    if (f.singleTimePoint === "acquisition") {
+      if (acqY === undefined) return "취득연도를 선택하세요.";
+      // 취득 ≤2000은 2001년 지수표(산정기준율 환산)라 해당연도 지수 자료를 요구하지 않는다.
+      if (acqY >= 2001 && (!hasUsageIndexYear(acqY) || !hasLocationIndexYear(acqY))) {
+        return `${acqY}년 지수 자료가 없습니다.`;
+      }
+      if (!f.acqStructureKey) return "취득당시 건물 구조를 선택하세요.";
+      if (intOrUndef(f.acqUsageNo) === undefined) return "취득당시 건물 용도를 선택하세요.";
+      if (!(parseAmount(f.acqLandPrice) > 0)) return "취득당시 ㎡당 개별공시지가를 입력하세요.";
+      return null;
+    }
+    if (transY === undefined) return "양도연도를 선택하세요.";
+    if (!hasUsageIndexYear(transY) || !hasLocationIndexYear(transY)) {
+      return `${transY}년 양도시 지수 자료가 없습니다.`;
+    }
+    if (!f.transStructureKey) return "양도당시 건물 구조를 선택하세요.";
+    if (intOrUndef(f.transUsageNo) === undefined) return "양도당시 건물 용도를 선택하세요.";
+    if (!(parseAmount(f.transLandPrice) > 0)) return "양도당시 ㎡당 개별공시지가를 입력하세요.";
+    return null;
+  }
+
   if (acqY === undefined) return "취득연도를 선택하세요.";
   if (transY === undefined) return "양도연도를 선택하세요.";
 
