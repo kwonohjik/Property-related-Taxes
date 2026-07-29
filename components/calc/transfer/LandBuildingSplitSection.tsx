@@ -19,7 +19,7 @@
  *   환산: 파트 양도가 × (파트 취득시/양도시 기준시가).
  */
 
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
@@ -30,6 +30,8 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TransferLandStdPartCard } from "./TransferStdPriceCards";
 import { TransferBuildingStdPartCard } from "./TransferStdPriceCards";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { calcDerivedBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 export type { PartAcqMode };
@@ -197,6 +199,54 @@ function PartAcqStdPrice(props: {
         />
       </div>
     </ToneCard>
+    </div>
+  );
+}
+
+/**
+ * 주택(라목) 건물분 취득시 기준시가 — **읽기 전용 파생 표시** (`결합 총액 − 토지분`).
+ *
+ * 주택은 건물분 단독 공시가 없어 직접 입력 칸을 둘 수 없다(개산공제 법정액 §163⑥2호가목
+ * 이탈). 그러나 값이 **어디에도 보이지 않으면** 사용자는 건물 환산취득가의 분자가 무엇인지,
+ * 무엇을 채워야 그 값이 생기는지 알 수 없다(사용자 보고 2026-07-30 — 「취득시 건물기준시가
+ * 화면이 없다」). 입력은 위쪽 두 곳(결합 총액 · 토지 ㎡당 공시지가×면적)에 그대로 두고,
+ * **결과만** 건물 섹션에 표시해 양도시 카드와 짝을 맞춘다.
+ *
+ * ⚠️ 산식은 엔진과 **같은 헬퍼**(`calcDerivedBuildingStdAtAcq`)를 쓴다 — 재구현하면 clamp 규약이
+ *    갈려 표시값과 계산값이 어긋난다.
+ */
+function HousingBuildingStdDerivedCard(props: { asset: AssetForm }) {
+  const { asset } = props;
+  const land = calcLandStdPriceAtAcq(
+    parseAmount(asset.standardPricePerSqmAtAcq ?? ""),
+    parseDecimal(asset.acquisitionArea ?? ""),
+  );
+  const building = calcDerivedBuildingStdAtAcq(
+    parseAmount(asset.standardPriceAtAcq ?? ""),
+    land ?? 0,
+  );
+  return (
+    <div data-testid="split-building-std-acq-derived-card">
+      <ToneCard tone="amber" title="건물 취득시 기준시가 (§99①1호 라목 — 자동 도출)" noDark>
+        <FieldCard
+          label="취득시 건물기준시가"
+          unit="원"
+          hint="주택은 부수토지를 포함한 결합 공시라 건물분이 따로 공시되지 않습니다 — 위 「취득시 기준시가(개별·공동주택가격)」에서 토지분을 뺀 값입니다"
+        >
+          <div
+            className="flex h-9 items-center justify-end rounded-md border border-input bg-muted/40 px-3 text-sm font-mono tabular-nums whitespace-nowrap text-muted-foreground"
+            data-testid="split-building-std-acq-derived"
+          >
+            {building !== null ? (
+              building.toLocaleString()
+            ) : (
+              <span className="text-muted-foreground/50 text-xs">
+                위 「취득시 기준시가(개별·공동주택가격)」 입력 후 자동 계산
+              </span>
+            )}
+          </div>
+        </FieldCard>
+      </ToneCard>
     </div>
   );
 }
@@ -429,6 +479,9 @@ export function LandBuildingSplitSection(props: Props) {
           {showBuildingStdPrice && (
             <PartAcqStdPrice part="building" asset={props.asset!} onChange={props.onAssetChange!} transferDate={props.transferDate} />
           )}
+          {/* 주택은 직접 입력 카드 대신 역산 결과를 표시한다 — 같은 게이트(`showLandStdPrice`)를
+              쓰므로 「취득시 기준시가가 계산에 필요한 경우」에만 나타난다. */}
+          {showLandStdPrice && isHousingAsset && <HousingBuildingStdDerivedCard asset={props.asset!} />}
           {props.saleStdInBuildingPart && props.asset && props.onAssetChange && (
             <TransferBuildingStdPartCard
               asset={props.asset}

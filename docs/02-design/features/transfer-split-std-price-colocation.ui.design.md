@@ -148,6 +148,7 @@ export function TransferStdPriceCard(p: {                  // 축 A 래퍼 (test
 | testid | 위치 | 신규/기존 | 용도 |
 |---|---|---|---|
 | `split-sale-std-card` | 축 A 양도시 카드 wrapper | **신규** | 축 A 카드 존재 판정(§7 #1~#3 검증이 내부 필드 대리 판정으로 돌아가지 않도록) |
+| `split-building-std-acq-derived-card` · `split-building-std-acq-derived` | 주택 건물분 취득시 기준시가 **파생 표시**(② 건물 섹션) | **신규** | 주택은 라목 결합 공시라 직접 입력 불가 — `결합 총액 − 토지분` 역산 결과만 표시(이미지 8) |
 | `split-land-std-transfer-card` | 토지 양도시 ToneCard wrapper | **신규** | 카드 존재 판정(내부 필드 대리 판정 금지) |
 | `split-building-std-transfer-card` | 건물 양도시 ToneCard wrapper | **신규** | 동상 |
 | `split-land-std-transfer-persqm` | 양도시 ㎡당 공시지가 입력 | **신규** | `placeholder="원/㎡"` 중복 회피 |

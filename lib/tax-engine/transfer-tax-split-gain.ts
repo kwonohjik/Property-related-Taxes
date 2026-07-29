@@ -20,6 +20,7 @@ import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLu
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { requiresAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { calcDerivedBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
   applySplitLandExpropriationValuation,
@@ -60,9 +61,11 @@ function calcAcqStdPair(input: TransferTaxInput): { land: number; building: numb
   }
 
   // 레거시 역산 — 주택(정상 경로) 및 건물 기준시가 미입력 시(한시 후퇴).
-  const total = input.standardPriceAtAcquisition ?? 0;
-  if (total <= 0) return null;
-  return { land: landStd, building: Math.max(total - landStd, 0) };
+  // 산식은 `lib/calc`의 단일 소스를 쓴다 — UI 읽기 전용 표시(건물 섹션의 파생 카드)가 같은
+  // 함수를 공유해야 표시값과 계산값이 갈리지 않는다.
+  const building = calcDerivedBuildingStdAtAcq(input.standardPriceAtAcquisition ?? 0, landStd);
+  if (building == null) return null;
+  return { land: landStd, building };
 }
 
 /**
