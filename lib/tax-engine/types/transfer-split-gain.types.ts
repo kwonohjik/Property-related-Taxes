@@ -66,7 +66,11 @@ export interface SplitPartResult {
 export interface SplitGainResult {
   land: SplitPartResult;
   building: SplitPartResult;
-  apportionRatio: { land: number; building: number };
+  /**
+   * 취득시 기준시가 안분비율. **파트별 실지거래가액을 아는 경우에는 안분 자체를 하지 않으므로
+   * 존재하지 않는다**(계획서 transfer-split-acq-std-gate-relaxation §4.3 — `{0,0}` 금지).
+   */
+  apportionRatio?: { land: number; building: number };
   note: string;
   /** 본인 신고 부분 — UI 결과 뷰 표시용 */
   selfOwns: "both" | "building_only" | "land_only";

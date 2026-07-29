@@ -18,6 +18,7 @@ import type {
 } from "./types/transfer.types";
 import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { requiresAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
   applySplitLandExpropriationValuation,
@@ -92,11 +93,21 @@ function splitPair(
   total: number,
   landIn: number | undefined,
   buildingIn: number | undefined,
-  landRatio: number,
+  landRatio: number | null,
+  what = "가액",
 ): { land: number; building: number } {
   if (landIn != null && buildingIn != null) return { land: landIn, building: buildingIn };
   if (landIn != null) return { land: landIn, building: total - landIn };
   if (buildingIn != null) return { land: total - buildingIn, building: buildingIn };
+  // 양쪽 미입력 → 비율 안분이 유일한 도출 수단. 비율이 없으면 **조용히 0으로 메우지 않는다**.
+  // `requiresAcqStdPrice`가 이 경로를 이미 차단하므로 도달 불가 — 도달했다면 술어 버그다.
+  if (landRatio == null) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `${what}을 토지·건물로 나눌 수 없습니다 — 파트별 금액 또는 취득시 기준시가(㎡당 개별공시지가 × 면적)를 입력하세요.`,
+      { what },
+    );
+  }
   const land = Math.floor(total * landRatio);
   return { land, building: total - land };
 }
@@ -174,7 +185,7 @@ function calcSplitAcquisitionPrice(
   buildingTransferPrice: number,
   landStdAtAcq: number,
   buildingStdAtAcq: number,
-  landRatio: number,
+  landRatio: number | null,
 ): {
   land: number;
   building: number;
@@ -190,10 +201,12 @@ function calcSplitAcquisitionPrice(
   // 재구현하면 dual-truth가 된다.
   const isSeparate = input.isSeparateAcquisition === true;
 
-  // 환산(estimated) 분모 — 양도시 기준시가 파트별 (기존 로직 승계, 모드 무관 공통 산출).
+  // 환산(estimated) 분모 — 양도시 기준시가 파트별.
+  // ⚠️ `landRatio`(취득시 비율) 후퇴는 **비율이 산출된 경우에만** 가능하다. 케이스 a(양쪽 실가)는
+  //    비율 자체가 없고 이 값도 쓰이지 않으므로 0으로 둔다(환산 파트가 없어 분모가 소비되지 않음).
   const totalStdAtTransfer = input.standardPriceAtTransfer ?? 0;
   const landStdAtTransferBase = input.landStandardPriceAtTransfer
-    ?? Math.floor(totalStdAtTransfer * landRatio);
+    ?? (landRatio != null ? Math.floor(totalStdAtTransfer * landRatio) : 0);
   const buildingStdAtTransfer = input.buildingStandardPriceAtTransfer
     ?? Math.max(totalStdAtTransfer - landStdAtTransferBase, 0);
 
@@ -251,15 +264,17 @@ function calcSplitAcquisitionPrice(
         if (isSeparate) return null;
         // 동시 취득(겸용·selfOwns 강제 분리 등) — 총액이 실재하므로 §166⑥ "구분할 수 없는 때" 안분.
         const base = input.similarSalesValue ?? input.acquisitionPrice ?? 0;
-        const land = Math.floor(base * landRatio);
-        return isLand ? land : base - land;
+        // 비율 없이 조용히 나누지 않는다 — 술어(requiresAcqStdPrice 1절: 비-actual 파트)가
+        // salesCase를 이미 걸러내므로 도달 불가 방어선이다.
+        const pair = splitPair(base, undefined, undefined, landRatio, "매매사례가액");
+        return isLand ? pair.land : pair.building;
       }
       case "appraisal": {
         // 감정가액 — 감정평가서가 토지·건물을 각각 평가하는 경우가 많아 직접 입력 허용(실거래가와 동일 구조).
         const own = isLand ? input.landAcquisitionPrice : input.buildingAcquisitionPrice;
         if (isSeparate) return own ?? null;
         const base = input.appraisalValue ?? input.acquisitionPrice ?? 0;
-        const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
+        const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio, "취득가액");
         return isLand ? pair.land : pair.building;
       }
       case "actual":
@@ -267,7 +282,7 @@ function calcSplitAcquisitionPrice(
         const own = isLand ? input.landAcquisitionPrice : input.buildingAcquisitionPrice;
         if (isSeparate) return own ?? null;
         const base = input.acquisitionPrice ?? 0;
-        const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio);
+        const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio, "취득가액");
         return isLand ? pair.land : pair.building;
       }
     }
@@ -327,18 +342,42 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     return calcSplitGainPreDisclosure(input);
   }
 
-  const ratio = calcApportionRatio(input);
-  if (!ratio) return null;
+  // 양도시 기준시가 비율 — 술어와 본체(:352 상당)가 **공유**한다(중복 호출 제거).
+  const saleRatio = calcSaleApportionRatio(input);
 
-  const { land: landRatio, building: buildingRatio } = ratio;
+  const ratio = calcApportionRatio(input);
+  // 취득시 기준시가는 취득가액을 **환산해야 할 때만** 필요하다. 양쪽 실가를 아는 케이스에서는
+  // 계산 어디에도 등장하지 않으므로 진입을 막지 않는다(계획서 §3·§4.1, 사용자 확정 규칙 ③).
+  // 종전에는 무조건 `if (!ratio) return null`이라, 파트 실가를 다 입력해도 분리 계산이
+  // **오류 없이 비활성**되고 호출부가 단일자산 경로(취득가액 0)로 흘려 세액이 과대 산출됐다.
+  // 판정은 UI·validate와 **같은 술어**(lib/calc — dual-truth 회피).
+  if (
+    !ratio &&
+    requiresAcqStdPrice(input, {
+      landMode: earlyLandMode,
+      buildingMode: earlyBuildingMode,
+      // 엔진은 별개취득을 재판정하지 않는다 — API 변환이 파생해 전달한다(:187-190 주석).
+      isSeparate: input.isSeparateAcquisition === true,
+      hasSaleRatio: saleRatio != null,
+    })
+  ) {
+    return null;
+  }
+
+  // ratio 미산출(케이스 a) 시 null 전파 — `0`으로 메우면 미래에 소비 지점이 추가됐을 때
+  // 조용히 "토지 0% 안분"이 된다. 실제 소비부는 위 술어가 이미 걸러냈으므로 도달하지 않는다.
+  const landRatio: number | null = ratio ? ratio.land : null;
+  const buildingRatio: number | null = ratio ? ratio.building : null;
 
   // 취득시 기준시가 — 토지/건물 분리 (축 B). ratio와 **같은 소스**에서 산출한다
   // (calcAcqStdPair) — 별도 재계산하면 파트별 독립 경로에서 비율과 금액이 어긋난다.
-  const acqStd = calcAcqStdPair(input)!; // ratio가 non-null이면 pair도 non-null
-  const landStdAtAcq = acqStd.land;
-  const buildingStdAtAcq = acqStd.building;
+  const acqStd = calcAcqStdPair(input); // 케이스 a에서는 null (술어가 소비부 도달을 차단)
+  const landStdAtAcq = acqStd?.land ?? 0;
+  const buildingStdAtAcq = acqStd?.building ?? 0;
   // 건물분이 결합 총액에서 역산된 값인가 — 주택(라목)은 **법정 정상 경로**, 건물은 한시 후퇴 표식.
-  const buildingStdDerivedFromTotal = !(
+  // 취득시 기준시가를 실제로 쓴 경우에만 "역산" 안내를 띄운다 — 실가 파트는 그 값을
+  // 쓰지 않았으므로 안내가 거짓이 된다(결과 카드 fine-print, SplitGainDetailSection).
+  const buildingStdDerivedFromTotal = acqStd != null && !(
     input.propertyType === "building" &&
     input.isSeparateAcquisition === true &&
     input.buildingStandardPriceAtAcquisition != null
@@ -348,13 +387,13 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   // 토지·건물 양도시 기준시가가 모두 명시 입력된 경우에만 양도시 비율을 쓰고, 미입력 시 종전
   // 취득시 비율(landRatio)로 후퇴한다(회귀 0 — 기존 입력만 있는 케이스는 동작 불변).
   const totalTransfer = input.transferPrice;
-  const saleRatio = calcSaleApportionRatio(input);
   const effectiveSaleLandRatio = saleRatio?.land ?? landRatio;
   const { land: landTransferPrice, building: buildingTransferPrice } = splitPair(
     totalTransfer,
     input.landTransferPrice,
     input.buildingTransferPrice,
     effectiveSaleLandRatio,
+    "양도가액",
   );
 
   // ② 취득가액 분리 (파트별 독립 4-way — 환산 모드 시 토지분 §164⑨1호 특례 산출근거 동반)
@@ -385,7 +424,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   //    (input.*DirectExpenses !== undefined)을 직접 보므로 여기 결과에서 파생시키면 안 된다.
   const { land: landDirectExp, building: buildingDirectExp } =
     totalExpenses > 0
-      ? splitPair(totalExpenses, input.landDirectExpenses, input.buildingDirectExpenses, landRatio)
+      ? splitPair(totalExpenses, input.landDirectExpenses, input.buildingDirectExpenses, landRatio, "자본적지출")
       : { land: input.landDirectExpenses ?? 0, building: input.buildingDirectExpenses ?? 0 };
 
   // ④ 개산공제 — 파트별 모드가 환산·감정·매매사례일 때만 (소득령 §163⑥). 실가(actual) 파트는 0.
@@ -485,8 +524,13 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   return {
     land: landPart,
     building: buildingPart,
-    apportionRatio: { land: landRatio, building: buildingRatio },
-    note: `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (안분비 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`,
+    // 케이스 a(양쪽 실가)는 안분 자체를 하지 않으므로 비율이 **정의되지 않는다**.
+    // `{0,0}`으로 메우면 "안분비 토지 0.0% : 건물 100.0%"로 침묵 오표시된다.
+    ...(landRatio != null && buildingRatio != null ? { apportionRatio: { land: landRatio, building: buildingRatio } } : {}),
+    note:
+      landRatio != null && buildingRatio != null
+        ? `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (안분비 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`
+        : `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (파트별 실지거래가액 — 기준시가 안분 미적용)`,
     selfOwns: input.selfOwns ?? "both",
     splitLandExpropriationValuationDetail,
   };
