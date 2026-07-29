@@ -13,7 +13,11 @@
 import { useMemo } from "react";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import { toEngineInput, buildNtsReportContext } from "@/lib/calc/building-std-price-form";
-import { idOfSnapshotKey, phdTimepointLabel } from "@/lib/calc/building-std-snapshot-keys";
+import {
+  idOfSnapshotKey,
+  phdTimepointLabel,
+  snapshotKeyTimepoint,
+} from "@/lib/calc/building-std-snapshot-keys";
 import { BUILDING_STD_FIRST_YEAR } from "@/lib/calc/phd-building-std-batch";
 import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
 import { buildNtsReportModel, type NtsReportModel, type NtsReportInstance } from "@/lib/calc/nts-report-adapter";
@@ -60,20 +64,16 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         let model = buildNtsReportModel(buildNtsReportContext(snap), result);
         // phd override(markCell acq2000·연도 라벨)는 phd-acq 전용.
         const isTransferAcq = snap.taxType === "transfer" && /-phd-acq(-commercial)?$/.test(key);
-        // 시점 전용 스냅샷의 반대 시점 인스턴스 제거 — 엔진 transfer 2시점 모드가 양도+취득 2벌을 내므로,
-        // 취득 전용 키는 취득 인스턴스만, 양도 전용 키는 양도 인스턴스만 노출한다.
-        // (한 자산이 -acq·-transfer 2스냅샷을 가지므로 필터 없으면 취득·양도 각 2벌 중복)
-        //
-        // ⚠️ 키 접두는 **전수 열거**한다 — 누락되면 조용히 2벌이 출력된다.
-        //    2026-07-29 실측으로 split-acq·split-transfer(토지·건물 분리)·cbinh-acq(상속취득 상가)
-        //    3종이 빠져 있던 것을 편입. 신규 스냅샷 키 규약 추가 시 여기도 함께 갱신할 것.
-        //    (단일 시점 모드 스냅샷은 엔진이 애초에 1벌만 내지만, 그 이전 저장분은 여전히 2벌이다.)
-        if (snap.taxType === "transfer") {
-          if (/-(phd|gb|cb|cbinh|split)-acq(-commercial)?$/.test(key)) {
-            model = { ...model, instances: model.instances.filter((i) => i.markCell !== "transfer") };
-          } else if (/-(gb|cb|split)-transfer$/.test(key)) {
-            model = { ...model, instances: model.instances.filter((i) => i.markCell === "transfer") };
-          }
+        // 시점 전용 스냅샷의 반대 시점 인스턴스 제거 — 판정은 `snapshotKeyTimepoint` 단일 소스.
+        // PDF 경로(building-std-pdf-data)도 같은 함수를 쓴다(화면↔PDF 어긋남 방지).
+        const keyTimepoint = snap.taxType === "transfer" ? snapshotKeyTimepoint(key) : null;
+        if (keyTimepoint) {
+          model = {
+            ...model,
+            instances: model.instances.filter((i) =>
+              keyTimepoint === "transfer" ? i.markCell === "transfer" : i.markCell !== "transfer",
+            ),
+          };
         }
         if (model.instances.length === 0) continue;
         // 감면 PHD 환산 통합 스냅샷(-red-phd) — 취득시·최초공시시 2 인스턴스를 시점별 계산서로 분리.
