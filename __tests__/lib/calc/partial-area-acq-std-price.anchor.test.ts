@@ -195,3 +195,84 @@ describe("B4-3 — 지분과 부분비는 다른 차원에 적용된다 (이중 
     expect(stdAcq).not.toBe(Math.floor(UNIT_ACQ * area * ratio));
   });
 });
+
+// ══════════════════════════════════════════════════════════
+// B4-1b — 다필지(parcels[]) 경로 (BR4 감환지 배타성)
+// ══════════════════════════════════════════════════════════
+//
+// 엔진은 필지별로 `standardAtAcq = floor(acqArea × sqmAtAcq)`를 계산한다
+// (`multi-parcel-transfer.ts:349`). 단건과 같은 규약을 적용한다.
+//
+// ## BR4 해소 — 감환지와 배타
+//
+// 감환지는 `transfer-tax-api.ts`에서 **먼저** 의제취득면적을 계산하므로
+// `resolveAcqAreaForStdPrice`에 도달하지 않는다. 도달하더라도 헬퍼가 `reduction`을
+// 통과시켜 이중 안분이 두 겹으로 막힌다.
+//
+// ## `effectiveAcquisitionArea` 확인 (착수 전 선행 조건)
+//
+// 엔진이 반환하는 `effectiveAcquisitionArea`(`:459`)는 **표시 전용 echo**다 —
+// 엔진 내 계산 재사용 0건, UI 소비 0건(grep 실측). 따라서 정정된 면적이 그대로
+// 표시되는 것이 맞고, 다른 산식을 오염시키지 않는다.
+//
+// ## 필지 fallback 함정
+//
+// 필지의 `areaScenario` 기본값은 **`"partial"`**(`transfer-tax-api.ts:498`)이고
+// 헬퍼 기본값은 `"same"`이다. 호출부가 `scenario`를 명시 주입해야 구 세션 필지
+// (`areaScenario === undefined`)에서 정정이 조용히 미적용되지 않는다.
+
+describe("B4-1b — 다필지 필지별 취득 기준시가 면적", () => {
+  it("필지 partial: 양도면적을 쓴다", () => {
+    expect(
+      resolveAcqAreaForStdPrice({
+        areaScenario: "partial",
+        acquisitionArea: "500",
+        transferArea: "120",
+      }),
+    ).toBe(120);
+  });
+
+  it("필지 same: 취득면적 그대로", () => {
+    expect(
+      resolveAcqAreaForStdPrice({
+        areaScenario: "same",
+        acquisitionArea: "500",
+        transferArea: "500",
+      }),
+    ).toBe(500);
+  });
+
+  it("BR4 — 감환지는 헬퍼를 통과한다 (호출부가 먼저 처리하지만 이중 방어)", () => {
+    const deemed = (300 * 100) / 300; // priorLandArea × allocatedArea / entitlementArea
+    expect(deemed).toBe(100);
+    expect(
+      resolveAcqAreaForStdPrice({
+        areaScenario: "reduction",
+        acquisitionArea: String(deemed),
+        transferArea: "100",
+      }),
+    ).toBe(100); // 또 양도분을 적용해 축소하지 않는다
+  });
+
+  it("🔴 필지 fallback 함정 — areaScenario 미지정 필지는 명시 주입이 필요하다", () => {
+    // 필지 기본값은 "partial"(transfer-tax-api.ts:498)이지만 헬퍼 기본값은 "same"이다.
+    const staleParcel = { acquisitionArea: "500", transferArea: "120" };
+    // 그대로 넘기면 same으로 판정돼 정정이 미적용된다
+    expect(resolveAcqAreaForStdPrice(staleParcel)).toBe(500);
+    // 호출부가 scenario를 주입하면 정정된다
+    expect(resolveAcqAreaForStdPrice({ ...staleParcel, areaScenario: "partial" })).toBe(120);
+  });
+
+  it("증환지 필지는 partial 판정에 걸리지 않는다 (양도면적 > 취득면적)", () => {
+    // 증환지는 교부면적 > 권리면적이라 transferArea가 더 크다.
+    // areaScenario가 "partial"로 저장돼 있어도 양도면적을 쓰는 것이 산식상 동일하다
+    // (엔진이 warning + 별도 취득 분리를 안내한다 — multi-parcel-transfer.ts:340).
+    expect(
+      resolveAcqAreaForStdPrice({
+        areaScenario: "partial",
+        acquisitionArea: "300",
+        transferArea: "350",
+      }),
+    ).toBe(350);
+  });
+});
