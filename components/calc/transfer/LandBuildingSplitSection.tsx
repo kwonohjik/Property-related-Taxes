@@ -108,6 +108,8 @@ function PartAcqStdPrice(props: {
   transferDate?: string;
   /** 비소유 파트에 렌더할 때의 사유 안내 (`selfOwns ≠ both` — 소유는 없어도 계산에는 필요) */
   notOwnedReason?: string;
+  /** (building 전용) 양도시 칸을 같은 카드에 배치하고 런처를 2시점 통합 모달로 전환 */
+  showTransfer?: boolean;
 }) {
   const { asset, onChange } = props;
   const stdPriceAddress = {
@@ -153,45 +155,78 @@ function PartAcqStdPrice(props: {
     );
   }
 
+  // 양도시 칸이 같은 카드에 오면 **취득·양도를 한 번에 계산**하는 통합 모달을 쓴다(2026-07-30).
+  // 두 시점 값이 하나의 건물 계산서에서 나오므로 런처를 2개 두는 것이 오히려 중복이었다.
+  const both = !!props.showTransfer;
   return (
-    <div data-testid="split-building-std-acq-card">
-    <ToneCard tone="amber" title="건물 취득시 기준시가 (§99①1호 나목)" noDark>
-      <FieldCard
-        label="취득시 건물기준시가"
-        unit="원"
-        hint="건물 취득일 직전 고시분 (§164③). 취득시기가 다르므로 결합 공시액에서 역산하면 건물분에 토지 취득시점이 섞인다."
-      >
-        <CurrencyInput
-          label=""
-          hideUnit
-          value={asset.buildingStandardPriceAtAcq}
-          onChange={(v) => onChange({ buildingStandardPriceAtAcq: v })}
-          data-testid="split-building-std-acq"
-        />
-      </FieldCard>
+    <ToneCard tone="amber" title="건물 기준시가 (§99①1호 나목)" noDark>
+      <div className={both ? "grid grid-cols-1 gap-2 sm:grid-cols-2 items-start" : undefined}>
+        <div data-testid="split-building-std-acq-card">
+          <FieldCard
+            label="취득시 건물기준시가"
+            unit="원"
+            hint="건물 취득일 직전 고시분 (§164③). 취득시기가 다르므로 결합 공시액에서 역산하면 건물분에 토지 취득시점이 섞인다."
+          >
+            <CurrencyInput
+              label=""
+              hideUnit
+              value={asset.buildingStandardPriceAtAcq}
+              onChange={(v) => onChange({ buildingStandardPriceAtAcq: v })}
+              data-testid="split-building-std-acq"
+            />
+          </FieldCard>
+        </div>
+        {both && (
+          <div data-testid="split-building-std-transfer-card">
+            <FieldCard
+              label="양도시 건물 기준시가"
+              unit="원"
+              hint="환산취득가 분모 (§99①1호 나목). 위치지수·부속토지 값은 계산기 안에서 입력합니다"
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                value={asset.buildingStandardPriceAtTransfer ?? ""}
+                onChange={(v) => onChange({ buildingStandardPriceAtTransfer: v })}
+                data-testid="split-building-std-transfer"
+              />
+            </FieldCard>
+          </div>
+        )}
+      </div>
       <div className="flex justify-end">
         <BuildingStdPriceModalButton
           lockedTaxType="transfer"
-          // 같은 ② 섹션에 「양도시 …」 런처가 인접할 수 있으므로 시점을 라벨에 명시한다
-          // (기본값 "건물 기준시가 계산"은 부분일치 셀렉터가 두 버튼을 모두 잡는다).
-          buttonLabel="취득시 건물 기준시가 계산"
+          buttonLabel={both ? "건물 기준시가 계산" : "취득시 건물 기준시가 계산"}
           initialAddress={stdPriceAddress}
           // 「건물 기준시가 계산서」 서식 출력의 스냅샷 소스 — 키가 없으면 서식이 비어 출력된다.
-          snapshotKey={`bsp-${asset.assetId}-split-acq`}
-          applyTimePoint="acquisition"
+          // 2시점 통합 모달은 시점 세그먼트 없는 `-split-both` 키를 쓴다(규약: building-std-snapshot-keys.ts).
+          snapshotKey={`bsp-${asset.assetId}-split-${both ? "both" : "acq"}`}
+          {...(both ? {} : { applyTimePoint: "acquisition" as const })}
           prefill={{
             landAreaM2: asset.acquisitionArea,
             acquisitionDate: asset.acquisitionDate,
             transferDate: props.transferDate,
-            // 취득시 위치지수 소스 — 양도시 런처의 `transferLandPricePerSqm`와 대칭.
-            // 트랙 분기(취득 ≤2000이면 2001 기준)는 모달이 `pickAcqLocationIndexLandPrice`로 처리한다.
+            // 취득시 위치지수 소스. 트랙 분기(취득 ≤2000이면 2001 기준)는 모달이
+            // `pickAcqLocationIndexLandPrice`로 처리한다.
             acqLandPricePerSqm: asset.standardPricePerSqmAtAcq,
+            ...(both ? { transferLandPricePerSqm: asset.standardPricePerSqmAtTransfer } : {}),
           }}
           onApply={(v: number) => onChange({ buildingStandardPriceAtAcq: String(v) })}
+          {...(both
+            ? {
+                // 한 번의 계산으로 두 시점 필드를 동시에 채운다 — 개별 적용 버튼은 숨겨져
+                // 반대 시점 필드를 덮어쓰는 오적용이 구조적으로 불가능해진다.
+                onApplyBoth: (acq: number, transfer: number) =>
+                  onChange({
+                    buildingStandardPriceAtAcq: String(acq),
+                    buildingStandardPriceAtTransfer: String(transfer),
+                  }),
+              }
+            : {})}
         />
       </div>
     </ToneCard>
-    </div>
   );
 }
 
@@ -417,9 +452,17 @@ export function LandBuildingSplitSection(props: Props) {
             />
           </div>
           {showBuildingStdPrice && (
-            <PartAcqStdPrice part="building" asset={props.asset!} onChange={props.onAssetChange!} transferDate={props.transferDate} />
+            <PartAcqStdPrice
+              part="building"
+              asset={props.asset!}
+              onChange={props.onAssetChange!}
+              transferDate={props.transferDate}
+              // 두 시점이 한 카드에 오면 런처가 2시점 통합 모달이 된다(중복 런처 제거).
+              showTransfer={props.saleStdInBuildingPart}
+            />
           )}
-          {props.saleStdInBuildingPart && props.asset && props.onAssetChange && (
+          {/* 취득시 카드가 없는 조합(§164⑤ PHD 양쪽 환산)에서만 양도시 단독 카드 */}
+          {!showBuildingStdPrice && props.saleStdInBuildingPart && props.asset && props.onAssetChange && (
             <TransferBuildingStdPartCard
               asset={props.asset}
               onChange={props.onAssetChange}
