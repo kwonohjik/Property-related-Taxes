@@ -39,21 +39,30 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 
 **자동 게이트**: husky pre-commit(lint-staged) + pre-push(폰트·톤 + typecheck + **범위 선택 테스트**) + GitHub Actions.
 
-### GitHub Actions 사용량 정책 (2026-07-31 — 무료 한도 상시 초과 정정)
+### CI는 self-hosted 러너(개발자 Mac)에서 돈다 (2026-07-31)
 
-무료 계정 + **비공개** 저장소는 월 **2,000분**이다. 종전 CI는 `push`·`pull_request`를 **둘 다** 트리거해 변경 1건당 **2회**(각 10.4~14.4분 실측) 돌았다 → 변경 **약 83건**이면 소진(2026-07-30 하루 9건 머지 ≈ 216분). 그래서 `.github/workflows/ci.yml`을 이렇게 바꿨다:
+**GitHub 호스팅 러너를 쓰지 않는다** — 무료 계정 + 비공개 저장소는 월 2,000분인데, 종전 CI는 `push`·`pull_request`를 **둘 다** 트리거해 변경 1건당 **2회**(각 10.4~14.4분 실측) 돌아 **약 83건**이면 소진됐다(2026-07-30 하루 9건 머지 ≈ 216분). 소진 후 실행은 3~13초 만에 거부되어(`spending limit needs to be increased`) **과금도 신호도 없는** 상태였다.
 
-| 수단 | 효과 |
-|---|---|
-| **`push` 트리거 제거**(PR만) | 변경당 2회 → **1회** |
-| `paths-ignore`: `**.md`·`docs/**`·`.claude/**` | 문서 전용 PR은 워크플로 자체 미실행 |
-| draft PR 미실행 | 준비 중 푸시에 과금 안 함 |
-| `scripts/select-test-scope.sh`로 범위 판정 | 세목 단위 변경은 그 세목만 (pre-push와 **같은 정본**) |
-| `node_modules` 캐시(lockfile 해시) | `npm ci` 재설치 회피 |
+**GitHub은 self-hosted 실행에 분을 과금하지 않는다.** 워크플로·PR 체크 표시는 그대로 두고 실행만 로컬로 옮겼다. 비공개 저장소라 fork PR이 임의 코드를 실행하는 self-hosted의 대표 위험도 해당하지 않는다.
 
-- **종전 CI의 유일한 고유 신호였던 `lint`는 pre-push로 옮겼다**(실측 26초). lint-staged는 변경 파일만 `--fix`하므로 전체 lint 관문이 CI뿐이었는데, 그 CI가 한도 초과로 상시 실패해 사실상 관문이 없었다. 이제 CI는 pre-push가 이미 통과시킨 것의 재확인(다른 OS·Node·fresh install)만 남는다 → **CI 실패가 드물어지고 PR 전용으로 줄여도 안전하다**.
-- 한도를 없애려면 저장소를 **공개**로 전환하면 된다(공개 저장소 Actions 무제한).
-- **워크플로를 늘릴 때는 분(minute) 예산부터 계산**할 것. job 하나가 최소 1분으로 과금되고, 스케줄 cron은 상시 비용이다.
+```bash
+~/actions-runner/svc.sh status   # 러너 상태 (stop | start 로 제어)
+```
+
+러너가 꺼져 있으면 체크는 **큐에 대기**한다(실패 아님). 러너 등록 정보는 `~/actions-runner/`.
+
+**역할 분담 — pre-push와 중복되지 않게**:
+
+| | 시점 | 내용 |
+|---|---|---|
+| **pre-push** | 매 푸시 (빠름) | 폰트·톤 + typecheck + **lint** + **범위 선택** 테스트 |
+| **CI** | PR 1회 (철저) | fresh checkout + **`npm ci`** + typecheck + lint + **전체** 테스트 |
+
+- **lint는 pre-push로 이관했다**(실측 26초). 종전엔 lint-staged가 변경 파일만 `--fix`하고 전체 lint 관문이 CI뿐이었는데 그 CI가 상시 실패해 **실질 관문이 없었다**.
+- **CI가 주는 고유 신호는 fresh `npm ci`**다 — 러너가 실행마다 독립 디렉터리를 쓰므로 로컬 node_modules가 가리던 lockfile·의존성 문제가 드러난다. 그 신호가 유일하므로 CI는 **범위를 좁히지 않고 전체 테스트**를 돌린다(좁히면 pre-push의 재탕이 된다).
+- 문서 전용(`**.md`·`docs/**`·`.claude/**`)·draft PR은 건너뛴다 — 이제 과금이 아니라 **개발 머신 부하·대기시간** 때문이다.
+- **워크플로를 늘릴 때**: GitHub 호스팅(`runs-on: ubuntu-latest`)으로 되돌리면 다시 분이 과금된다. 신규 job은 `self-hosted`를 기본으로 할 것.
+- **예외 — 스케줄 워크플로는 GitHub 호스팅 유지**: `supabase-keepalive`(3일마다·월 ≈10분)와 `matrix-update`(분기 1회)는 **Mac이 꺼져 있어도 반드시 떠야** 한다. 특히 keepalive가 밀리면 Supabase가 pause되어 세율 로드가 fallback으로 떨어진다. 합쳐서 월 10여 분이라 한도에 영향이 없다.
 
 ### 테스트 범위 정책 (2026-07-28 — 반복 검증에 전체 실행 금지)
 
