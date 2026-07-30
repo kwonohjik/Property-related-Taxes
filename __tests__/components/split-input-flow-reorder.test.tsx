@@ -156,26 +156,43 @@ describe("R4~R7·R10 — 취득시 기준시가 표시 게이트", () => {
     expect(screen.queryByTestId("acq-std-required-mark")).toBeNull();
   });
 
-  it("R5 주택 + 건물 환산 — 표시 (라목 결합 총액이 역산 소스)", () => {
+  /**
+   * ⚠️ **R5~R7 기대값 반전 (2026-07-30)** — 별개취득에서는 자산 전체 취득시 기준시가 UI를
+   * **완전히 숨긴다**(계획서 transfer-split-acq-std-part-gating.plan.md §2 불변식).
+   * 종전에는 이 라벨이 읽기 전용 3열 파생 패널에서 나왔는데, 그 패널이 폐지됐다 —
+   * "합계 = 개산공제 base" 안내가 거짓이었기 때문(실제 base는 각 파트 자기 기준시가).
+   * 「취득시 기준시가가 필요한가」는 이제 **파트 카드 노출**로 표현되므로 검증 대상을 옮긴다.
+   */
+  it("R5 주택 + 건물 환산 — 자산 전체 UI 0개, 건물 파트 카드로 입력", () => {
     render(<Harness init={{ ...CASE_2, assetKind: "housing", buildingAcqMode: "estimated" }} />);
+    expect(acqStdLabel(), "별개취득에는 라목 결합 공시가 없다").toHaveLength(0);
     expect(
-      acqStdLabel().length,
-      "주택 건물분은 «결합 총액 − 토지분» 역산이 유일한 경로 — 숨기면 취득가액이 조용히 0",
-    ).toBeGreaterThan(0);
+      screen.queryAllByTestId("split-building-std-acq-card"),
+      "입력 정본은 파트 카드 — 숨기면 취득가액이 조용히 0이 된다",
+    ).toHaveLength(1);
   });
 
-  it("R6 케이스 2 → 토지 환산 전환 시 재등장", () => {
+  it("R6 케이스 2 → 토지 환산 전환 시 토지 파트 카드 재등장", () => {
     render(<Harness init={{ ...CASE_2, landAcqMode: "estimated" }} />);
-    expect(acqStdLabel().length).toBeGreaterThan(0);
+    expect(acqStdLabel()).toHaveLength(0);
+    expect(screen.queryAllByTestId("split-land-std-acq-card")).toHaveLength(1);
   });
 
-  it("R7 케이스 3(일괄양도 + 양도시 기준시가 미입력) — 표시 (회귀 0)", () => {
+  /**
+   * ⚠️ **기대값 반전 (2026-07-30 — 술어 ⑤절 폐지)**. 양도시 기준시가가 없는 것은
+   * **양도가액**을 나누지 못하는 문제이지 취득시 기준시가가 필요한 것이 아니다.
+   * 엔진은 2026-07-29부터 취득시 비율로 후퇴하지 않으므로(`saleRatio?.land ?? null`)
+   * 그 요구는 계산에 쓰이지 않는 값을 강제하는 거짓이었다. 차단은 validate V7이 담당한다.
+   */
+  it("R7 케이스 3(일괄양도 + 양도시 기준시가 미입력) — 취득시 카드는 뜨지 않는다", () => {
     render(
       <Harness
         init={{ ...CASE_2, saleSplitMode: "apportioned", landTransferPrice: "", buildingTransferPrice: "" }}
       />,
     );
-    expect(acqStdLabel().length).toBeGreaterThan(0);
+    expect(acqStdLabel()).toHaveLength(0);
+    expect(screen.queryAllByTestId("split-land-std-acq-card")).toHaveLength(0);
+    expect(screen.queryAllByTestId("split-building-std-acq-card")).toHaveLength(0);
   });
 
   it("R10 분리 OFF + 환산 — 표시 (비분리 환산 경로 회귀 0)", () => {

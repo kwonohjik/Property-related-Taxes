@@ -104,7 +104,7 @@ export interface RowDef {
   separatorAfter?: boolean;
   /**
    * 열별 주석 — 특수 세율 분기(부수토지 일체과세 등) 시 세율 근거를 산출세액 행 셀 아래에 표시.
-   * 예: { "primary": "주택·부수토지 일체과세 / §89·영§154⑦ / 재산-53/1354" }
+   * 예: { "primary": "주택·부수토지 일체과세 / §104①2호·영§167의5 / 재산세제과-1354" }
    */
   notes?: Record<ColumnKey, string>;
   /**

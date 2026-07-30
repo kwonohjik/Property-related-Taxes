@@ -1,0 +1,571 @@
+# 양도소득세 — 기본사항에 건물 면적(연면적·바닥면적) 추가 · Phase F
+
+> 작성일: 2026-07-30 (분할본 v1.0 — `basic-info-building-area-phase-ef.plan.md` rev.7에서 F1만 추출)
+> 브랜치: `feat/basic-info-area-single-source` (PR #912 후속)
+> 선행: [`basic-info-area-single-source.plan.md`](basic-info-area-single-source.plan.md) — 46필드 인벤토리·3축 모델·Phase A~E
+> 별건 분리: [`transfer-partial-area-apportionment.plan.md`](transfer-partial-area-apportionment.plan.md) — 일부양도 면적 안분(B-4)
+> 사용자 지적(2026-07-30): 기본정보 면적 입력에 **토지만 있고 건물(연면적·바닥면적)이 없다.**
+
+---
+
+## 0. 확정 결론 (구현자는 이 절만 보면 된다)
+
+7차 검토·anchor 20건·법령 조회를 거쳐 확정된 사항이다. **다른 절과 충돌하면 이 절이 유효하다.**
+
+| # | 결정 | 근거 |
+|---|---|---|
+| D-1 | 축 B(건물 연면적)를 **신규 단일 필드 `buildingFloorArea`**로 신설한다 (β-2) | §3.2 · A-6 |
+| D-2 | `acquisitionArea`/`transferArea`는 **축 A(토지) 전용**으로 의미 확정. `building` 자산의 축 B를 `buildingFloorArea`로 **이전**(마이그레이션) | §3.1 |
+| D-3 | `building`의 면적 시나리오를 **`["same"]`으로 축소**한다 | §3.2 · A-6 |
+| D-4 | 축 C(바닥면적)는 **기존 `buildingFootprintArea` 재사용** — 신규 필드 0개 | §2.2 |
+| D-5 | 축 C 입력칸을 기본사항에 추가한다 (`housing` 대상) | §2 |
+| D-6 | 주택 경로 **2곳**에 `floorArea` prefill을 배선한다 (`ReductionPhdInput`은 설계상 자산 분리 → 별건) | §5.5.1 P-1 |
+| D-7 | **⑦ 결과 카드는 변경하지 않는다** | §4 U-4 |
+| D-8 | **`land`에 축 C를 추가하지 않는다** | §4 U-5 |
+| D-9 | **F3(NBL 정착면적 통합)은 폐기** — 법령 개념이 달라 통합 불가. "이중 입력 UX 개선"으로 격하 | §4 U-3 |
+| **D-10** | **F2(축 A·B 승격 확대)도 폐기** — 전용 자산 4종의 **단일 면적 필드가 정확성의 근거**다. 2시점 쌍으로 승격하면 B-4 왜곡이 재발한다 | §11 |
+
+**상태**: ✅ **F1 Do 완료**(2026-07-30, §5.5). A-1·A-3·A-4·A-6·A-7 anchor 전건 작성. 전체 12,457건 + E2E 5건 통과.
+
+---
+
+## 1. 해소하는 결함 2건
+
+### 1.1 F-1 — 주택 바닥면적의 입력 경로가 게이트에 갇혔다
+
+`buildingFootprintArea`(AssetForm 최상위 필드)의 소비처는 자산 종류를 가리지 않는다:
+
+| 소비처 | 용도 |
+|---|---|
+| `lib/tax-engine/appurtenant-land-rate.ts:220` | **「소득세법 시행령」 제154조 제7항 부수토지 한도** — `limitArea = buildingFootprintArea × 배율(3/5/10)` |
+| `lib/tax-engine/transfer-tax-mixed-use-helpers.ts:92` | 겸용 주거분 정착면적 안분 |
+| `lib/calc/transfer-tax-api.ts:683` | 값이 있으면 무조건 전송(자산 종류 무관) |
+
+그런데 **입력 UI는 2곳뿐이고 둘 다 게이트 뒤**에 있다:
+
+| 입력 위치 | 진입 조건 |
+|---|---|
+| `mixed-use/MixedUseAreaInputs.tsx:201` | `isMixedUseHouse === true` (겸용 분리계산 ON) |
+| `NewConstructionFootprintSection.tsx:135` | `acquisitionCause === "newConstruction"` **AND** `assetKind === "housing"` (`CompanionAssetCardNewConstruction.tsx:60`) |
+
+→ **주택 · 겸용 OFF · 취득원인 매매**인 자산에는 바닥면적 입력 칸이 없다.
+
+미입력 시 거동(`appurtenant-land-rate.ts:204,267~279` 실측 인용):
+```ts
+const hasFootprintArea =
+  primary.buildingFootprintArea !== undefined && primary.buildingFootprintArea > 0;
+if (hasFootprintArea) { /* §154⑦ 한도 → excessArea 분리, 초과분 excessRate 0.40 */ }
+
+// 정착면적 미입력 시 fallback — 한도 검증 생략, 전량 부수토지로 가정
+return {
+  applied: true,
+  unifiedRate: rateDecision,
+  excessArea: 0,                      // ← 초과분 없음으로 확정
+  appliedReason: appliedReason + " (정착면적 미입력 — 전량 부수토지로 가정)",
+};
+```
+
+**성격 — 침묵이 아니라 "고칠 수 없는 명시된 가정"**: `appliedReason`은 `shortTermNote`로 승격(`transfer-tax-rate-calc.ts:225`)돼 신고서 서식 주석(`FilingFormTableHelpers.ts:695`)·상세명세서(`DetailedStatementHelpers.ts:691`)·다건 자산별 주석(`FilingFormTableAggregateHelpers.ts:200`)에 **출력된다**. 사용자는 그 가정을 보지만 **고칠 입력 수단이 없다**.
+
+두 가지가 결함이다:
+1. **입력 경로 부재** — memory `feedback_ui_gate_removes_sole_input_path`
+2. **자동 fallback 정책 위반 방향** — 「미입력은 검증 오류로 차단」인데 납세자 유리 쪽(전량 부수토지 인정)으로 가정한다
+
+**영향 범위**: `resolveCompanionLandRate(companion, primaryCtx)`는 companion 토지 자산의 세율을 결정하고 정착면적은 primary(주택) 자산에서 온다(`transfer-tax-rate-calc.ts:192~204` · `route.ts:496~505`). → **주택 + 부수토지를 별개 자산 2건으로 입력한 구성**(사례 28 계열)에서 발동한다.
+
+**A-1 실측 — 세액 결함 확정** (anchor `basic-info-building-area.anchor.test.ts`):
+
+| | 정착면적 100㎡ | 미입력 |
+|---|---|---|
+| `limitArea` | **500㎡** (100 × 5배 도시지역) | **`undefined`** |
+| `excessArea` | **200㎡** (700 − 500) | **0** |
+| `excessRate` | **0.40** | `undefined` |
+| `unifiedRate` | 주택 세율 | 주택 세율 (동일) |
+
+차이는 "초과 200㎡를 40%로 뗄지"다. 방향은 케이스 의존(이 구성은 주택 70%·토지 40%라 미입력이 과다과세, 주택이 비과세·장기보유면 반대)이나 **세액이 달라지는 것은 확정**이다.
+
+배율 3단계가 한도를 결정한다 — 같은 정착면적 100㎡가 zone별로 한도 300/500/1000㎡(초과 400/200/0㎡). 정착면적이 없으면 **이 축 전체가 무력화**된다.
+
+### 1.2 F-2 — 주택 건물 연면적이 없어 건물기준시가 모달이 매번 재입력을 요구한다
+
+국세청 건물기준시가는 **㎡당 × 연면적**이고, `BuildingStdPriceModalButton`의 `prefill`이 `floorArea`를 받는다(`:54~55`). 배선 현황:
+
+| 호출부 | `landAreaM2` | `floorArea` |
+|---|---|---|
+| `GeneralBuildingBlock.tsx:344,372` | `gbLandArea` | ✅ `gbBuildingArea` |
+| `CommercialBuildingBlock.tsx:241,271` | `cbLandArea` | ✅ `totalFloorArea`(전유+공용 파생) |
+| `CommercialInheritanceStdPriceSection.tsx:115` | `cbLandArea` | ✅ |
+| `mixed-use/MixedUseAssetMajorStdPrice.tsx:368` · `MixedUseLegacyStdPrice.tsx:205,334` | — | ✅ `nonResidentialFloorArea` |
+| **`TransferStdPriceCards.tsx:139`** (주택·토지 주 경로) | `transferArea` | 🔴 **없음** |
+| **`LandBuildingSplitSection.tsx:207`** | `acquisitionArea` | 🔴 **없음** |
+| `ReductionPhdInput.tsx:227,255` | `value.landAreaSqm` | ⏭️ **별건** — 설계상 자산과 분리(§5.5.1 P-1) |
+
+**왜 세액이 틀어지나**: 모달의 `floorArea`는 로컬 state(`:90 useState(0)`)이고 폼 복원은 `snapshotKey`별로 갈린다(`:98~100`, 키가 시점별로 다름 — `bsp-${assetId}-gb-acq` vs `-gb-transfer`). GB·상가는 같은 폼 필드를 두 시점 모달에 모두 주입해 일관성이 강제되지만, 주택은 prefill이 없어 사용자가 3시점 모달에서 각각 손으로 넣고 **불일치가 검증 없이 통과**한다(memory `feedback_3point_input_consistency`).
+
+**U-2 해소 — 배선 안전**: `initialForm={{ ...restoredForm, ...prefillForm }}`(`:184`)이므로 **prefill이 승리**한다. 부작용 점검 2건:
+
+| 항목 | 결론 |
+|---|---|
+| 기존 자산의 모달 입력이 지워지나 | ❌ 아니다. `prefillForm`은 `...(prefill.floorArea ? {...} : {})` — **빈 값 미주입**(`:121`) |
+| 사용자가 모달에서 고쳐도 재오픈 시 폼 값으로 되돌아감 | ✅ 의도된 동작. 폼이 정본이어야 3시점 일관성이 성립한다(GB·상가 선례) |
+
+**A-3 실측 — 세액 결함 확정**: 실제 `calcBuildingStandardPrice`로 연면적만 바꿔 측정했다. 연면적 200㎡ → 150㎡(25% 오차)를 양도시에만 적용하면 양도시 기준시가가 과소해져 **환산비율이 4/3배**로 커지고, 환산취득가가 그만큼 부풀어 **양도차익이 과소계상**된다. F-1(A-1)과 같은 기준으로 검증됐다.
+
+---
+
+## 2. 승격 판정 기준
+
+### 2.0 Phase E 실측 결과 — 축 C "확인 필요" 6건 (승격 판정의 근거)
+
+선행 계획서 §5.3이 "확인 필요"로 남긴 6건. 폼→Zod→엔진 배선을 전부 코드로 확인했다 — **배선 누락 0건**(선행 계획서의 "미배선 의심"은 `form-mapper.ts`만 grep한 오판이며 실제 매핑은 `form-mapper-helpers.ts`에 있다).
+
+| # | 필드 | 법령 근거 | 배선 | 성격 | 통합? |
+|---|---|---|---|---|---|
+| E-1 | `nblOtherBuildingFloorArea` | 「지방세법 시행령」 제101조 제1항 제2호 나목 | ✅ `form-mapper-helpers.ts:240` → `other-land.ts:504` | 바닥면적이지만 **배율 미적용** carve-out(2% 미달 시 이 면적만 별도합산) | ⚠️ 개념 동일·용도 상이 |
+| E-2 | `nblOtherMixedUseSpecificFootprint` / `TotalFootprint` | 「소득세법 시행령」 제168조의11 제6항 제2호 | ✅ `:245~246` → `other-land.ts:204~205` | **비율의 분자·분모** | 🔴 불가 |
+| E-3 | `parcels[].buildingFootprintArea` | 동조 제5항 제2호 (연접 다필지) | ✅ `:223` → `contiguous-parcel-proportioning.ts:46` | **필지별** 값 | 🔴 불가 |
+| E-4 | `gbBuildingFootprintArea` | 「지방세법 시행령」 제101조 제1항 제2호·제2항 | ✅ `transfer-tax-api-gb.ts:109,164,241` | 자산-수준 단일 바닥면적 | ✅ 가능 (⚠️U-13) |
+| E-5 | `buildingFootprintArea` | 「소득세법 시행령」 제154조 제7항 + 겸용 안분 | ✅ `transfer-tax-api.ts:683` 등 | 자산-수준 단일 바닥면적 — **이미 공유 필드** | ✅ 이미 공유 |
+| E-6 | 별장 부속토지 | 「소득세법 시행령」 제168조의13 제1항 | — | `nblVillaBuildingFloorArea`는 **연면적 150㎡ 법정요건**(농어촌주택)이며 정착면적 배율이 **없다** | 🔴 **가설 오류** → 축 B 재분류 |
+
+**선행 계획서 정정 2건**: (1) "별장 부속토지 10배"는 **그런 배율 규정이 없다** — `villa-land.ts:105~114`는 연면적 ≤150㎡ · 부속토지 ≤660㎡ · 기준시가 ≤2억의 **요건 판정**이다. 축 C 목록에서 제거. (2) "확인 필요" 3건은 전부 배선돼 있었다.
+
+→ **축 C 필드는 7개가 아니라 6개**이고, 통합 대상은 **2개**(E-4·E-5)다.
+
+### 2.1 판정 규칙
+
+선행 계획서 §6 "통합 금지"를 판정 가능한 규칙으로 정리한다.
+
+> **자산-수준 단일 값**이면 기본사항으로 승격한다. **분해값**(용도별·시점별·필지별·비율 분자/분모)이면 전용 필드로 유지한다.
+
+| 분류 | 필드 | 판정 |
+|---|---|---|
+| 자산-수준 단일 (승격 후보) | `gbLandArea` · `cbLandArea` · `mixedUseTotalLandArea` · `redevLandArea` (축 A) | **F2** |
+| | `gbBuildingArea` (축 B) · `gbBuildingFootprintArea` · `buildingFootprintArea` (축 C) | **F1·F2** |
+| 용도별 분해 | `residentialFloorArea` / `nonResidentialFloorArea` (합=연면적) · `cbExclusiveArea` / `cbSharedArea` (다른 단가) | 전용 유지 |
+| 비율 분자/분모 | `nblOtherMixedUseSpecific*` / `Total*` | 전용 유지 |
+| 필지별 | `parcels[].landArea` · `parcels[].buildingFootprintArea` | 전용 유지 |
+| 법정 요건 면적 | `nblVillaBuildingFloorArea`(150㎡) · `nblOtherBuildingFloorArea`(배율 미적용 carve-out) · 감면 조문 면적(135·149㎡ 등) | 전용 유지 — 같은 물리량이라도 요건 판정용이라 승격 시 의미가 흐려진다 |
+| 별개 사건 | `extensionFloorArea` · `gbExtensionArea` (증축 — 가산세 게이트) | 전용 유지 |
+
+**✅ U-13 해소 — 통합 불가**(§10): 두 필드는 **물리량 자체가 다르다**. `buildingFootprintArea`는 「소득세법」 제89조①3호의 "건물이 **정착**된 면적"(1층 정착면적)이고, `gbBuildingFootprintArea`는 「지방세법 시행령」 제101조①2호의 "건축물의 **바닥면적**" = **지하층 포함 각 층 중 가장 넓은 값**이다(조심 2025지0451). → **F2에서 축 C 통합은 제외**된다.
+
+### 2.2 승격 방식 — 필드 이동이 아니라 **입력 위치 추가**
+
+`useEffect → store` 미러링 금지 정책 하에서 안전한 패턴은 이미 확립돼 있다(components/calc/CLAUDE.md "같은 의미 폼 필드의 양방향 read/write 통합"):
+
+- **같은 폼 필드를 두 위치에서 직접 read/write** — 자동 동기화, 미러링 불필요
+- 전용 블록의 입력칸은 **제거하지 않는다**(그 블록만 보고 작업하는 사용자 경로 보존)
+- API·validate는 fallback 없이 **단일 필드**를 읽으므로 ⑧ 모순이 생기지 않는다
+
+→ 축 C는 기존 `buildingFootprintArea` 재사용이므로 **신규 필드 0개**(D-4).
+
+### 2.3 F1 작업 목록
+
+```
+F1-a  기본사항 면적 섹션에 「건물 연면적」 입력 추가 (신규 필드 buildingFloorArea)
+      + building 자산의 축 B를 acquisitionArea → buildingFloorArea 이전 (§3.1)
+      + building 면적 시나리오를 ["same"]으로 축소 (D-3)
+
+F1-b  기본사항 면적 섹션에 「건물 바닥면적(정착면적)」 입력 추가
+      → 기존 buildingFootprintArea 재사용 (F-1 입력경로 소멸 해소)
+
+F1-c  주택 경로 3곳에 floorArea prefill 배선 (F-2 3시점 불일치 해소)
+      TransferStdPriceCards · LandBuildingSplitSection · ReductionPhdInput
+```
+
+**F2·F3 모두 폐기**됐다 — F3는 법령 개념 상이(D-9·U-3), F2는 승격이 회귀 위험(D-10·§11).
+
+---
+
+## 3. 축 B 필드 설계
+
+### 3.1 왜 `acquisitionArea`에서 이전해야 하는가
+
+PR #912(Phase A)에서 `assetKind === "building"`을 기본사항 면적 섹션에 올릴 때 축 B 전용 필드가 없어 `acquisitionArea`에 실었다. 그 결과 같은 필드가 자산 종류에 따라 축이 갈린다:
+
+```
+AREA_LABEL_BY_ASSET_KIND (AssetSectionBasic.tsx)
+  land     → "취득·양도 당시 면적 (㎡)"          ← acquisitionArea = 축 A
+  housing  → "취득·양도 당시 토지 면적 (㎡)"     ← acquisitionArea = 축 A
+  building → "취득·양도 당시 건물 연면적 (㎡)"   ← acquisitionArea = 축 B 🔴
+```
+
+**이 이원성이 이미 실제 결함을 만들고 있다 (U-6 확정)**:
+```ts
+// CompanionAcqPurchaseBlock.tsx:116~117
+const isSplitable =
+  props.assetKind === "housing" || props.assetKind === "building";
+```
+`building`("건물(토지 제외)")에서도 "토지·건물 취득일 다름"을 켤 수 있고, 그러면 `LandBuildingSplitSection.tsx:207`이 `landAreaM2: asset.acquisitionArea`를 넘긴다 — **연면적이 토지면적 자리로 들어간다.**
+
+→ `acquisitionArea`를 축 A 전용으로 확정하면 이 혼동이 **구조적으로 불가능**해진다(D-2).
+
+**⚠️ U-12 (별건)**: "건물(토지 제외)" 자산에 토지·건물 분리가 왜 허용되는가 — 라벨과 `isSplitable`이 모순이다. β 이전 후에도 별건으로 확인 필요.
+
+### 3.2 단일 필드 확정 (β-2) — A-6 근거
+
+`acquisitionArea`/`transferArea`는 **2시점 쌍**으로 소비된다(`transfer-tax-api-burdened-gift.ts:141~145` 시점별 단가 × 시점별 면적 · `StandardPriceInput` `area={acquisitionArea}`/`area={transferArea}`). 따라서 축 B를 단일 필드로 옮기면 `building`의 `partial` 시나리오가 깨진다.
+
+**A-6 실측 — `partial`은 보존할 기능이 아니라 오답 생성 구조다.** partial 전용 안분 로직이 **없다**(`areaScenario`는 API까지 전달되지만 엔진이 소비하지 않는다 — `transfer-tax-api-helpers.ts:341`):
+
+취득 ㎡당 100만 · 양도 ㎡당 200만 · 양도가액 5억:
+
+| 시나리오 | 취득 기준시가 | 양도 기준시가 | 환산비율 | 환산취득가 | 양도차익 |
+|---|---|---|---|---|---|
+| `same` (100·100㎡) | 1억 | 2억 | 0.5 | 250,000,000 | 250,000,000 |
+| **`partial` (200·100㎡)** | **2억** | 2억 | **1.0** | **500,000,000** | **0** 🔴 |
+
+면적비가 단가 상승을 상쇄해 양도가액 전액이 취득가액이 된다(과소과세).
+
+→ **β-2 확정**: 축 B를 단일 `buildingFloorArea`로 신설(GB `gbBuildingArea` 선례 일치) + `building` 시나리오를 `["same"]`으로 축소(D-1·D-3). 연면적의 취득↔양도 차이는 **증축 전용 필드**(`extensionFloorArea`·`gbExtensionArea`)가 담당한다는 기존 설계와 정합하다.
+
+> 같은 왜곡이 `land`·`housing`의 `partial`에도 있다 — **별건**으로 분리했다: [`transfer-partial-area-apportionment.plan.md`](transfer-partial-area-apportionment.plan.md). β-2가 `building` 경로 하나를 자동 소멸시킨다.
+
+### 3.3 표시 대상 assetKind
+
+| assetKind | 축 A 토지 | 축 B 연면적 | 축 C 바닥면적 | 근거 |
+|---|---|---|---|---|
+| `housing` | ✅ 현행 | **신설** | **신설** | 건물기준시가(B) + §154⑦(C) |
+| `land` | ✅ 현행 | ❌ | ❌ **추가 안 함** | `nblHousingFootprint`가 담당하고 그 필드는 법 제104조의3①5호 전용 개념 (D-8·§4 U-5) |
+| `building` | ❌ (토지 제외 자산) | **`buildingFloorArea`로 이전** | ❌ | 부수토지 판정 없음 |
+
+### 3.4 마이그레이션
+
+`migrateAsset`에 이전 로직을 추가한다. 선례: `gbBuildingFloors → gbBuildingFootprintArea` 흡수 + `delete`(`calc-wizard-asset-migrate.ts:509~520`).
+
+```ts
+// β-2: building 자산의 축 B를 acquisitionArea → buildingFloorArea 로 이전 (2026-07-30)
+// ⚠️ 순서 — assetKind normalize(:429~430)보다 뒤에 두어야 한다(fallback "building" 확정 후).
+if (a.assetKind === "building" && !a.buildingFloorArea && a.acquisitionArea) {
+  a.buildingFloorArea = a.acquisitionArea;
+  a.acquisitionArea = "";   // 축 A(토지) 전용으로 의미 확정
+  a.transferArea = "";      // β-2 — 시나리오가 ["same"]으로 축소되므로 쌍이 불필요
+}
+```
+
+---
+
+## 4. 검증 완료 항목 (U-1~U-11 전건 해소)
+
+| # | 항목 | 결론 |
+|---|---|---|
+| U-1 | §154⑦ 한도의 세액 영향 | ✅ 초과 200㎡ ↔ 0㎡로 갈린다 — **세액 결함 확정** (§1.1) |
+| U-2 | `prefillForm` ↔ `restoredForm` 우선순위 | ✅ prefill 승리, 빈 값 미주입 → F1-c 배선 안전 (§1.2) |
+| **U-3** | `nblHousingFootprint` ↔ `buildingFootprintArea` 동일성 | ✅ **다르다.** 「소득세법」 제89조①3호 "**건물**이 정착된 면적"(비과세 한도) ↔ 제104조의3①5호 "**주택**이 정착된 면적"(NBL). 배율표는 동일(3/5/5/10)하나 곱셈 대상이 갈려 겸용에서 값이 다르다. 코드도 이미 구분한다 — `residentialFootprintArea = round2(buildingFootprintArea × 주택연면적비율)`(`mixed-use-helpers.ts:92`), NBL 판정은 이 값을 쓴다(`:425`) → **F3 폐기**(D-9) |
+| **U-4** | 축 B 결과 카드 표시 필요성 | ✅ **불필요.** 정본 표시는 「건물 기준시가 계산서」 서식(`components/calc/building-std-price/`). 상가(`CommercialBuildingValuationDetailCard.tsx:123,125`)·겸용(`MixedUseResultCardParts.tsx:141,145`)은 있으나 **GB조차 결과 카드에 연면적 미표시** → **⑦ 무변경**(D-7) |
+| **U-5** | `land`에 축 C 필요성 | ✅ **추가 안 함.** `nblHousingFootprint`로 NBL 섹션에서 이미 받고(`NblSectionContainer.tsx:200`), U-3에 따라 범용 바닥면적과 합치면 안 된다(D-8) |
+| **U-6** | `building`에서 split 토글이 보이는지 | ✅ **보인다.** `isSplitable = housing \|\| building`(`CompanionAcqPurchaseBlock.tsx:116`) → §3.1. β-2가 해소 |
+| U-7 | `building` + `partial` downstream 지원 | ✅ 안분 로직 없음, 환산비율 왜곡 → **β-2 확정** (§3.2) |
+| U-8~U-11 | 일부양도 안분 (B-4 계열) | ✅ 별건 문서로 이관 → [`transfer-partial-area-apportionment.plan.md`](transfer-partial-area-apportionment.plan.md) |
+
+### 남은 미검증 (F1 착수를 막지 않음)
+
+| # | 항목 | 처리 |
+|---|---|---|
+| U-12 | "건물(토지 제외)" ↔ `isSplitable` 모순 | 별건 — β-2 이전 후 확인 (§3.1) |
+| ~~U-13~~ | `buildingFootprintArea` ↔ `gbBuildingFootprintArea` 법령 개념 동일성 | ✅ **해소 — 다르다. 통합 불가**(§10). 확인 과정에서 **신규 세액 결함** 발견 → 별도 정정 완료 |
+
+---
+
+## 5. anchor 현황 — **A-3·A-4 미작성**
+
+anchor 파일: `__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.ts` (20건)
+
+| # | anchor | 상태 |
+|---|---|---|
+| A-1 | §154⑦ 한도 초과 시나리오 — 정착면적 有/無 세액 차이 | ✅ 작성 (5건) |
+| A-2 | `applied: false` 경로 거동 | ⚠️ 부분 — `excessArea: 0` 고정. 초과분 40%의 하류 소비 지점 미추적 |
+| **A-3** | 주택 건물기준시가 3시점 불일치 재현 | ✅ **작성 (3건)** — 실제 `calcBuildingStandardPrice`로 측정, 연면적 25% 오차 → 환산취득가 4/3배 |
+| **A-4** | `building` `acquisitionArea`가 기준시가 곱셈 인자로 도달하는지 | ✅ **작성 (4건)** |
+| A-5 | 축 C 6건 배선 회귀 가드 | 🔴 미작성 — **F2 착수 시** 필요(F1 무관) |
+| A-6 | `building` + `partial` 지원 여부 | ✅ 작성 (4건) |
+| A-7 | β 마이그레이션 회귀 | ✅ **작성 (9건)** — `__tests__/stores/asset-building-floor-area-migration.test.ts` |
+
+**A-6 외 B-4 계열 anchor 11건**(B-4 5건 · U-9 4건 · U-10 3건 중 일부)은 별건 문서 소관이나 같은 파일에 있다. 파일 분리는 하지 않는다 — 같은 면적 축을 다루므로 응집도가 높고, describe 제목에 소관이 명시돼 있다.
+
+---
+
+## 5.5 F1 Do 완료 기록 (2026-07-30)
+
+### 5.5.1 계획과 어긋난 실측 3건
+
+| # | 계획 | 실제 |
+|---|---|---|
+| **P-1** | F1-c는 prefill **3곳** 배선 | 🔴 **2곳.** `ReductionPhdInput`은 **설계상 자산과 분리**돼 있다 — `asset`을 받지 않고 `value: ReductionPhdValue`를 받으며, `landAreaSqm`조차 자산 값을 자동 prefill하지 않고 **사용자가 「자산 카드 PHD 데이터 가져오기」를 눌러야** 7필드가 복사된다(`ReductionStdPriceSection.tsx:166~177`). 축 B를 자동 prefill하면 그 설계와 반대다 → **별건**(감면 PHD에 축 B 도입 = `ReductionPhdValue` 필드 + 조문별 배선) |
+| **P-2** | ⑫⑬⑭(Zod·body·Route) 배선 필요 | 🔴 **불필요.** 축 B는 **클라이언트 전용**이다 — 엔진 input에 주택 건물 연면적 필드가 없고(`transfer.types.ts` 실측 0건), 「건물 기준시가 계산서」 모달의 **곱셈 인자**로만 쓰여 그 결과 총액(`buildingStandardPriceAtTransfer` 등)이 API로 간다 |
+| **P-3** | 마이그레이션은 축 B 이전 1건 | ⚠️ **2건 필요.** `building`의 시나리오를 `["same"]`으로 축소하면 저장된 `building`+`partial` 조합이 **Select에 없는 값이 선택된 상태**로 남는다(죽은 2칸 분기). `areaResetPatchForAssetKind`는 assetKind 변경 시에만 동작하므로 마이그레이션에서 정규화해야 한다 |
+
+### 5.5.2 변경 파일
+
+| 파일 | 변경 |
+|---|---|
+| `lib/stores/calc-wizard-asset.ts` | ① `buildingFloorArea` 추가 + `acquisitionArea`/`transferArea`를 **축 A 전용**으로 문서화 |
+| `lib/stores/calc-wizard-asset-factory.ts` | ② 초기값 `""` |
+| `lib/stores/calc-wizard-asset-migrate.ts` | ③ normalize + **β-2 이전** + `building` stale `areaScenario` 정규화 (assetKind 정규화 **뒤**에 배치) |
+| `components/calc/transfer/asset-sections/AssetSectionBasic.tsx` | ⑤ 축 B·C 입력 신설, `building` 시나리오 `["same"]` 축소, `LAND_AXIS_EXCLUDED_KINDS`·`FLOOR_AREA_KINDS`·`FOOTPRINT_AREA_KINDS` + 겸용 제외 헬퍼 |
+| `components/calc/transfer/TransferStdPriceCards.tsx` | F1-c — `floorArea` prefill |
+| `components/calc/transfer/LandBuildingSplitSection.tsx` | F1-c — `floorArea` prefill |
+| `e2e/transfer-self-owns-filing-form.spec.ts` | seed에 `buildingFloorArea` 추가 (§5.5.3) |
+
+**겸용 중복 노출 방지**: 겸용 ON이면 기본정보 면적 섹션 전체를 숨기는 기존 설계(`areaScenarioOptions` → `[]`)를 축 B·C에도 적용했다. 그러지 않으면 `buildingFootprintArea`가 기본정보와 `MixedUseAreaInputs` 두 곳에 동시 노출된다.
+
+### 5.5.3 기존 E2E seed 조정 — U-12 모순이 드러났다
+
+`e2e/transfer-self-owns-filing-form.spec.ts`는 `assetKind: "building"`에 **토지분** 기준시가·양도가액을 함께 seed한다(`isSplitable`이 `building`을 포함하는 U-12 경로를 실제로 사용). β-2 마이그레이션이 `acquisitionArea`(100㎡)를 축 B로 이전해 비우므로 `buildingFloorArea: "100"`을 함께 seed해 축 A를 보존했다.
+
+→ **U-12가 실사용(테스트) 경로에 존재함이 확인됐다.** "건물(토지 제외)" 라벨과 `isSplitable`의 모순은 여전히 별건이다.
+
+### 5.5.4 테스트
+
+| 구분 | 결과 |
+|---|---|
+| A-3 신설 (F-2 세액 증거) | 3건 — 실제 `calcBuildingStandardPrice`로 측정. 연면적 200→150(25% 오차)이 **환산취득가를 4/3배로 부풀린다**(양도차익 과소) |
+| A-4 신설 (β-2 전제) | 4건 — `toPropertyKind("building") === "building_non_residential"` → isAreaMode 확인, 이전이 값 보존임을 고정 |
+| **A-7 신설** | 9건 (`__tests__/stores/asset-building-floor-area-migration.test.ts`) — 값 보존·멱등·재실행 안전·assetKind fallback 케이스·stale 시나리오 정규화 |
+| RTL 뒤집기 | `building` 3건 → 축 A·시나리오 Select **미렌더**로 전환 + `housing` 축 B·C 신설 5건 추가 (총 21건) |
+| **E2E** | 5건 통과 (`E2E_PORT=3102`) — 주택 축 B·C 노출·입력 · `building` 축 B만 노출 · 겸용 미노출 |
+| 전체 회귀 | **12,457건 통과** · tsc 0 · lint 0 errors |
+
+**E2E 함정**: ToggleCard는 BaseUI `<span role="switch">`라 `setChecked`가 "Not a checkbox or radio button"으로 실패한다 → `.click()`을 써야 한다(같은 파일 `:73` 선례).
+
+**파일 크기**: `lib/stores/calc-wizard-asset.ts`가 802줄(800 초과)이나 **로직 0건의 타입 전용 파일**이므로 File Size Policy 명시적 예외에 해당한다 — 분리하지 않았다.
+
+---
+
+## 6. 14 동기화 지점 (F1)
+
+신규 필드 `buildingFloorArea` 1개 + 기존 `buildingFootprintArea` 입력 위치 추가.
+
+| # | 지점 | F1 조치 |
+|---|---|---|
+| ① | `AssetForm` | `buildingFloorArea: string` 추가 |
+| ② | `makeDefaultAsset` | `""` |
+| ③ | `migrateAsset` | `undefined → ""` + **`building` 자산 축 B 이전**(§3.4) |
+| ④ | `transfer-tax-api*.ts` | **무변경** — 축 B는 클라이언트 전용(§5.5.1 P-2) |
+| ⑤ | `AssetSectionBasic.tsx` | 축 B·C 입력칸 (assetKind별 조건부) + `building` 시나리오 `["same"]` 축소 |
+| ⑥ | 사이드바 | 면적은 합계 대상 아님 — **무변경** |
+| ⑦ | 결과 카드 | **무변경** (D-7) |
+| ⑧ | `transfer-tax-validate-asset.ts` | 축 B·C 필수 여부 판정 — **소비하지 않는 경로에서 필수화 금지**(Phase 5 선례) |
+| ⑨⑩ | Zod enum | 신규 enum 없음 |
+| ⑪ | 자산-수준 fallback | 해당 없음 |
+| **⑫** | `transfer-tax-schema-sub.ts` | **무변경** — 엔진에 도달하지 않는다 (§5.5.1 P-2) |
+| **⑬** | `callTransferTaxAPI` body spread | **무변경** (grep 자가 점검 완료 — `lib/calc`·`lib/api`·`app/api`에 `buildingFloorArea` 0건) |
+| **⑭** | Route handler 엔진 input 매핑 | **무변경** |
+
+**F1-c는 14지점 밖**이다 — 폼 필드 신설이 아니라 기존 모달 prefill 배선이다.
+
+**⑧ validation 무변경 근거**: 축 B·C를 필수화하지 않았다. 「소비하지 않는 경로에서 필수화 금지」(Phase 5 선례) — 축 C 미입력은 엔진이 명시적 가정(`shortTermNote`)으로 처리하므로 차단 대상이 아니고, 축 B는 모달 편의 인자다. 대신 축 C 미입력 시 거동을 **UI hint로 노출**했다.
+
+---
+
+## 7. 리스크
+
+| # | 리스크 | 완화 |
+|---|---|---|
+| R2 | β 마이그레이션이 기존 `building` 자산 sessionStorage를 깨뜨림 | `migrateAsset` 이전 로직 + **A-7 anchor**. memory `feedback_new_asset_field_stale_sessionstorage_guard` |
+| R3 | 기본사항 입력칸이 늘어 ① 섹션이 비대해짐 | assetKind별 조건부 렌더 유지(현행 `AREA_SCENARIOS_BY_ASSET_KIND` 패턴) |
+| R4 | 전용 블록 입력칸을 남기면 두 곳을 다르게 채운 것으로 오인 | 같은 필드 read/write이므로 물리적으로 불가능 — 두 위치에 같은 값이 보이는 것에 대한 hint 필요 |
+| R8 | β 마이그레이션이 `assetKind` 정규화보다 앞서면 fallback `building` 케이스를 놓침 | 배치 순서를 `:429~430` 뒤로 고정 + A-7 (§3.4) |
+| **R9** | `building` 시나리오 `["same"]` 축소가 기존 partial 사용자 데이터를 무효화 | 마이그레이션에서 `transferArea` 정리(§3.4). 실사용 데이터는 PR #912 이후라 거의 없다 |
+
+> 해소된 리스크(R1·R5·R6·R7)는 변경 이력 참조.
+
+---
+
+## 8. 변경 이력
+
+| 날짜 | 버전 | 변경 |
+|---|---|---|
+| 2026-07-30 | v1.1 | **F1 Do 완료**(§5.5). 계획과 어긋난 실측 3건: **P-1** F1-c는 3곳이 아니라 **2곳**(`ReductionPhdInput`은 설계상 자산과 분리 — `landAreaSqm`조차 사용자가 「가져오기」를 눌러야 복사됨 → 별건), **P-2** ⑫⑬⑭ **불필요**(축 B는 엔진 input이 아닌 **클라이언트 전용** — 모달 곱셈 인자), **P-3** 마이그레이션 **2건** 필요(stale `building`+`partial` 정규화). anchor A-3·A-4·A-7 신설(16건)·RTL 21건·E2E 5건·전체 12,457건 통과. `building` E2E seed 조정으로 **U-12 모순이 실사용 경로에 존재함** 확인 |
+| 2026-07-30 | v1.0 | **분할본** — `basic-info-building-area-phase-ef.plan.md` rev.7(651줄)에서 **F1만 추출**. 폐기된 처방 3세대(rev.4 B4-1/2/3 · rev.5 §8.7.3 · rev.6 §8.8.4)를 제거하고 유효 결론을 §0 「확정 결론」으로 통합. stale 4건 정정(F-1 "침묵 스킵" → "고칠 수 없는 명시된 가정" · F3 → 폐기 · 리스크 R1·R5·R7 해소 반영 · anchor "착수 전 필수" → **A-3·A-4 미작성 명시**). 신규 U-13(`buildingFootprintArea` ↔ `gbBuildingFootprintArea` 법령 개념 — F2 전제)·R9 |
+
+### 통합 전 문서의 정정 이력 (요약)
+
+| rev | 정정 내용 |
+|---|---|
+| rev.1 | 최초 — Phase E 완료(축 C 6건 배선 확인, "별장 10배" 가설 오류 정정) + 결함 2건 |
+| rev.2 | F-1이 "침묵 스킵"이 아님(신고서에 출력됨) · β는 "단일 필드"로 끝나지 않음(2시점 쌍 소비) · U-2 해소 · U-6 신규 |
+| rev.3 | A-1·A-6 실측 — F1-b는 세액 결함 확정 · **β-2 확정** |
+| rev.4 | B-4 실측 — partial 왜곡이 `land`·`housing`에도 있다(별건 분리) |
+| rev.5 | U-9 — 실거래가 모드는 성격이 다르다(별건) |
+| rev.6 | U-10 — 안분 기준은 면적비가 아니다(별건) |
+| rev.7 | U-3·U-4·U-5·U-6·U-11 — **F3 폐기** · "감정가액 안분 배척" 정정(별건) |
+
+
+---
+
+## 10. U-13 해소 (2026-07-30) — 통합 불가 + 신규 세액 결함
+
+### 10.1 「건축법 시행령」 제119조 제1항이 두 면적을 구분한다
+
+| 호 | 용어 | 정의 |
+|---|---|---|
+| 제2호 | **건축면적** | 건축물 외벽 중심선으로 둘러싸인 부분의 **수평투영면적** (건물 전체 1개 값) |
+| 제3호 | **바닥면적** | 건축물의 **각 층** 또는 그 일부의 수평투영면적 (층별) |
+
+| 필드 | 조문 | 물리량 |
+|---|---|---|
+| `buildingFootprintArea` | 「소득세법」 제89조①3호 → 시행령 제154조⑦ | "건물이 **정착**된 면적" = **1층 정착면적** |
+| `gbBuildingFootprintArea` | 「소득세법」 제104조의3①4호나목 → 「지방세법 시행령」 제101조①2호 | "건축물의 **바닥면적**" = **지하층 포함 각 층 중 최대** |
+
+→ **통합 불가.** F2에서 축 C는 제외한다. U-3(주택↔건물 정착면적)에 이어 **두 번째 "같은 이름 다른 개념"** 사례다.
+
+### 10.2 🔴 그 과정에서 세액 결함이 드러났다 — 별도 정정 완료
+
+**조심 2025지0451 (2026.03.20, 기각)** 이 쟁점을 정면으로 다뤘다. 청구인이 "「지방세법」에 바닥면적 정의가 없으므로 **건축면적**을 기준으로 해야 한다"고 주장(연결 다리·발코니·관람석이 건축면적에는 산입되나 바닥면적에서는 제외돼 두 값이 유의미하게 다르다)했으나 **기각**됐다:
+
+> 「지방세법」상 바닥면적에 별도 규정이 없다면 「건축법」 산정방법에 따라야 하며, 여기서 바닥면적은 **지하층을 포함한 각 층의 바닥면적 중 가장 넓은 것**으로 보아야 한다
+> (대법원 2015.6.24. 2012두7073 · 대법원 1994.5.13. 93누18242 · 조심 2011지505)
+
+**현행 코드 3곳이 배척된 기준(건축면적)을 요구하고 있었다**:
+
+| 위치 | 종전 문구 |
+|---|---|
+| `calc-wizard-asset-gb.ts:23` | "건축물대장 **건축면적**(= 바닥면적)" |
+| `GeneralBuildingBlock.tsx:313` hint | "건축물대장 '**건축면적**' 또는 1층 바닥면적. … (§168의12)" |
+| `general-building-valuation.ts:72,428` | "건축물대장 **건축면적** 또는 1층 바닥면적" |
+
+방향은 건물 형태 의존이다 — 지하층이 넓으면 건축면적 < 최대 바닥면적이라 **과다과세**, 처마·발코니가 크면 반대로 **과소과세**(재결 사안이 후자).
+
+**Phase D 잔재도 함께 제거**했다: GB UI hint·§배지·법조문 링크에 「소득세법 시행령」 **제168의12**가 남아 있었다(Phase D가 배율은 정정했으나 이 3곳을 놓쳤다 — 자체 누락).
+
+정정: 라벨 "건물 수평투영면적" → **"건축물 바닥면적"**, hint에 "각 층 중 **가장 넓은** 값 — **지하층 포함**", 인용을 「지방세법 시행령」 제101조로. anchor 6건.
+
+
+---
+
+## 11. F2 폐기 (2026-07-30) — 승격이 개선이 아니라 회귀 위험이다
+
+anchor: `__tests__/tax-engine/transfer/area-axis-single-field-invariant.anchor.test.ts` (6건)
+
+### 11.1 결정적 차이 — 전용 자산은 **단일** 면적, 기본사항은 **2시점 쌍**
+
+| 필드 | 시점 축 |
+|---|---|
+| 기본사항 `acquisitionArea` / `transferArea` | **2시점 쌍** |
+| `gbLandArea` · `cbLandArea` · `mixedUseTotalLandArea` · `redevLandArea` · `gbBuildingArea` | **단일** |
+
+### 11.2 그 단일성이 **정확성의 근거**다
+
+엔진이 시점별 **단가**에 **같은 면적**을 곱한다:
+
+| 근거 | 구현 |
+|---|---|
+| `general-building-valuation.ts:506,535` | `transferLandPricePerSqm × landArea` · `acquisitionLandPricePerSqm × landArea` |
+| `commercial-building-valuation.ts:245,249,258` | 취득·최초공시·양도 **3시점 단가 × 같은 `landArea`** |
+| `transfer-tax-mixed-use-helpers.ts:246,262` | `landAreaAtAcquisition = landAreaAtFirstDisclosure = totalLandArea` (명시 대입) |
+| `calc-wizard-asset-redev.ts:107` | 주석 "단일 면적; **시점별 동일 가정**" |
+
+→ 환산 산식에서 **면적이 분자·분모에서 약분**되고 비율은 단가비만 반영한다. anchor로 고정: 면적이 50·300·1,234.56·10,000㎡ 어느 값이든 환산비율이 1/3로 불변이다.
+
+**즉 이 자산들은 B-4 왜곡이 구조적으로 불가능하다.** 2시점 쌍으로 승격하면 그 안전장치가 사라지고, 취득/양도에 다른 면적이 들어가 **양도차익이 0이 되는** 경로가 새로 생긴다(anchor로 재현 고정).
+
+### 11.3 승격의 이득도 없다
+
+| 기대했던 이득 | 실제 |
+|---|---|
+| 중복 입력 제거 | 🔴 **중복이 없다** — `AREA_SCENARIOS_BY_ASSET_KIND`에 4종이 미등재라 기본사항 면적 섹션이 렌더되지 않는다(F1에서 확인) |
+| 단일 소스 | 이미 자산별 단일 소스다. 기본사항으로 옮겨도 소스 수는 그대로 |
+| 일관성 | 시점 축이 다른 것을 억지로 맞추는 것이라 **일관성이 아니라 위험 전파**다 |
+
+### 11.4 대신 한 것 — 단일성을 **의도적 안전장치**로 고정
+
+동작은 변경하지 않았다(Surgical). 4개 필드 주석에 다음을 명시했다:
+
+> ⚠️ **단일 필드를 2시점 쌍으로 확장하지 말 것.** 엔진이 시점별 단가에 같은 면적을 곱하므로 면적이 약분되고 비율은 단가비만 반영한다 — 단일성이 정확성의 근거다. 2시점으로 나누면 B-4 왜곡이 재발한다.
+
+anchor 6건이 그 불변식을 지킨다 — 누군가 "일관성"을 이유로 확장을 시도하면 깨진다.
+
+### 11.5 Phase F 최종 상태
+
+| 단계 | 결론 |
+|---|---|
+| **F1** | ✅ 완료 — `housing` 축 B·C 신설, `building` 축 B 신설, prefill 배선. **β-2 이전은 §12에서 철회** |
+| **F2** | ❌ **폐기** — 승격이 회귀 위험(§11) |
+| **F3** | ❌ **폐기** — 법령 개념 상이(U-3) |
+| **U-12** | ✅ **종결** — 모순이 아니었다. 대신 F1 β-2가 만든 데이터 손상을 정정(§12) |
+
+**Phase F는 F1 + U-12 정정으로 종결된다.**
+
+---
+
+## §12 U-12 종결 — `building` 라벨 ↔ `isSplitable`은 모순이 아니다 (2026-07-30)
+
+### 12.1 결론: 게이트는 정본, **F1이 만든 데이터 손상이 진짜 결함**
+
+U-12는 "「건물(토지 제외)」인데 `isSplitable`이 `building`을 포함해 토지·건물 분리가 열린다"는
+모순 의심이었다. **모순이 아니다.**
+
+「소득세법」 제99조 제1항 제1호는 **나목**(건물)에 "딸린 토지" 문구를 두지 **않고**,
+**다목**(오피스텔·상업용건물)에만 **"이에 딸린 토지를 포함한다"**를 둔다
+(KoreanLaw 실측 MST 280405 시행 2026-07-01 — 같은 조 **제3항 제4호**에서 문언 확인:
+"…오피스텔(이에 딸린 토지를 포함한다), 상업용 건물(이에 딸린 토지를 포함한다)…").
+
+→ **나목 건물의 부수토지는 가목으로 별도 평가**된다. 라벨 "건물(토지 제외)"는
+*기준시가 공시 범위*를 뜻하고 **토지 부재가 아니다**. 따라서:
+
+- `isSplitable`이 `building`을 포함하는 것은 정본 (`CompanionAcqPurchaseBlock.tsx:116`)
+- 엔진 게이트도 같다 (`transfer-tax-split-gain.ts:357`)
+- `LandBuildingSplitSection`의 토지 카드 "(§99①1호 **가목**)" / 건물 카드 "(**나목**)"이
+  법문 구조 그대로다
+
+### 12.2 🔴 진짜 결함 — PR #912 오라벨링 → F1 β-2 데이터 손상
+
+코드도 이미 나목 건물에 축 A가 있다고 전제한다:
+
+```
+StandardPriceInput.tsx:69~70
+  toPropertyType(kind) = (house_individual|house_apart) ? "housing" : "land"
+  → building_non_residential → "land" → **개별공시지가** 조회
+```
+
+즉 `building`의 면적 모드 곱셈 인자는 **토지 면적**이고, 단가 필드도
+`standardPricePerSqmAtAcq`("㎡당 **공시지가**")다. `LandBuildingSplitSection.tsx:163`이
+같은 필드를 "**토지 면적**"으로 입력받는 것과 일관된다.
+
+**PR #912(Phase A)가 이를 "건물 연면적"으로 오라벨링**했고(`AREA_LABEL_BY_ASSET_KIND`),
+**F1 β-2가 그 전제로 값을 이전**했다. 실측 손상:
+
+| 항목 | 마이그레이션 전 | 후 |
+|---|---|---|
+| `acquisitionArea` | `"200"` | **`""`** |
+| `transferArea` | `"200"` | **`""`** |
+| `buildingFloorArea` | `""` | **`"200"`** (토지 면적이 연면적으로 오입력) |
+| 토지분 취득 기준시가 | **100,000,000** | **null** |
+
+`calcApportionRatio`가 null → 토지·건물 안분 불가(`transfer-tax-split-gain.ts:54,96~104`).
+`assetKind` 미상 → `building` fallback 정규화 **뒤**에 배치했으므로 미분류 자산까지 휩쓸었다.
+
+**심각도**: validate가 "토지 면적을 입력하세요"로 차단하므로(`transfer-tax-validate-split.ts:115,155,247`)
+침묵 오산출은 아니다. 그러나 ① 저장된 토지 면적 **값 소실** ② 연면적 필드 **오염**(「건물
+기준시가 계산서」 모달 `prefill.floorArea`가 토지 면적을 쓴다) 두 실해가 남는다.
+
+### 12.3 정정 내용
+
+| # | 파일 | 변경 |
+|---|---|---|
+| 1 | `calc-wizard-asset-migrate.ts` | β-2 이전 블록 **삭제** → ⛔ 재도입 금지 근거 주석 |
+| 2 | `AssetSectionBasic.tsx` | `LAND_AXIS_EXCLUDED_KINDS` **삭제**(빈 집합=dead) → 축 A 렌더 복원 + ⛔ 주석 |
+| 3 | `AssetSectionBasic.tsx` | `AREA_LABEL_BY_ASSET_KIND.building = "취득·양도 당시 **토지 면적** (㎡)"` |
+| 4 | `calc-wizard-asset.ts` | `acquisitionArea` JSDoc — 전 자산유형 토지 면적임을 명시 |
+| 5 | `e2e/transfer-self-owns-filing-form.spec.ts` | 우회용 `buildingFloorArea` seed 제거 + 법령 근거로 주석 교체 |
+
+축 B(`buildingFloorArea`) 자체는 **유지**한다 — 나목 건물 기준시가 계산서의 곱셈 인자로
+정당하고, 종전에는 모달 안에서만 수기 입력했다(F1의 진짜 기여).
+
+`building: ["same"]`도 유지한다. `partial`은 `resolveAcqAreaForStdPrice`(B-4)를 태우면
+안전해지지만 별건이다.
+
+### 12.4 회귀 — anchor가 잘못된 전제를 고정하고 있었다
+
+정정으로 **뒤집힌 anchor 3건**(성공 신호):
+
+- `asset-section-basic-area-gate.anchor.test.tsx` — "building: 축 A 미렌더" → **축 A 렌더**
+- `basic-info-building-area.anchor.test.ts` A-4 — "곱셈 인자는 연면적" → `toPropertyType`이
+  **"land"**임을 고정 + 축 A 비움의 수치 손상 고정
+- `asset-building-floor-area-migration.test.ts` A-7 — "이전된다" → **축 A 불가침**
+
+**교훈**: `isAreaMode`가 켜지는 것만 보고 "면적 = 연면적"이라 추론했다. 조회 대상을 정하는
+`toPropertyType`을 한 줄 더 읽으면 "land"였다. Phase F에서 법령·코드 실측이 내 가정을
+뒤집은 **네 번째** 사례다(U-3 · U-13 · F2 · U-12).

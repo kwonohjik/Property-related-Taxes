@@ -22,6 +22,9 @@ export function idOfSnapshotKey(key: string): string {
         //    긴 접두(cbinh)를 짧은 것(cb)보다 앞에 둔다. 신규 키 규약 추가 시 여기도 함께 갱신할 것.
         .replace(/-(?:gb|cbinh|cb|phd|split)-(?:acq|first|transfer)(?:-commercial)?$/, "")
         .replace(/-mx-commercial$/, "")
+        // 별개취득 건물분 취득·양도 **통합 모달**(2026-07-30) — 한 폼에서 2시점을 계산하므로
+        // 시점 세그먼트가 없다(mx-commercial과 같은 구조). 시점 필터도 적용하지 않는다.
+        .replace(/-split-both$/, "")
         // 감면 조문 PHD 환산 통합 모달(취득시+최초공시시 단일 스냅샷) — 규약 편입.
         .replace(/-red-phd$/, "");
 }

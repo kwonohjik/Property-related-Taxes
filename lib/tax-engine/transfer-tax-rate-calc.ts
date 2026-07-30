@@ -172,11 +172,13 @@ export function calcTax(
     };
   }
 
-  // T-1.5: 부수토지 일체과세 세율 분기 (영 §154⑦, landNature 명시 입력 기반)
+  // T-1.5: 부수토지 일체과세 세율 분기 (영 §167의5, landNature 명시 입력 기반)
   // companion 토지 자산에 manualHoldingPeriodOverride 또는 landNature/primaryContext가 있으면
   // resolveCompanionLandRate로 세율을 결정하고 조기 반환.
-  // [법령 근거] §89①3호·영§154⑦ — 주택과 일체과세. §104①후단 — 큰 산출세액 세율.
-  //            기재부 재산-53(2015.1.15) / 재산-1354(2022.10.27)
+  // [법령 근거] §104①2호 괄호("주택…이에 딸린 토지…포함…이하 이 항에서 같다")·영§167의5
+  //            — 주택과 일체과세. §104①후단 — 큰 산출세액 세율.
+  //            기재부 재산세제과-1354(2022.10.27) / 조심 2024인3140(2024.9.3. 기각)
+  //            ※ 영 §154⑦은 §89①3호가 위임한 비과세 축 — 세율 축과 구분한다(배율은 동일).
   if (
     input.propertyType === "land" &&
     (input.manualHoldingPeriodOverride !== undefined ||
@@ -223,7 +225,7 @@ export function calcTax(
           progressiveDeduction: deduction,
           surchargeSuspended: false,
           shortTermNote: resolution.appliedReason
-            ? `부수토지 일체과세(§89①3호·영§154⑦): 누진세율`
+            ? `부수토지 일체과세(§104①2호·영§167의5): 누진세율`
             : "수동 지정: 누진세율",
         };
       }
@@ -237,7 +239,7 @@ export function calcTax(
           surchargeSuspended: false,
           shortTermNote: isManualOverride
             ? `수동 지정: ${Math.round(resolution.manualRate * 100)}%`
-            : `부수토지 일체과세(§89①3호·영§154⑦): ${Math.round(resolution.manualRate * 100)}%`,
+            : `부수토지 일체과세(§104①2호·영§167의5): ${Math.round(resolution.manualRate * 100)}%`,
         };
       }
       if (resolution.unifiedRate !== undefined) {
@@ -249,7 +251,7 @@ export function calcTax(
           appliedRate: resolution.unifiedRate,
           progressiveDeduction: 0,
           surchargeSuspended: false,
-          shortTermNote: `부수토지 일체과세(§89①3호·영§154⑦): ${Math.round(resolution.unifiedRate * 100)}%`,
+          shortTermNote: `부수토지 일체과세(§104①2호·영§167의5): ${Math.round(resolution.unifiedRate * 100)}%`,
         };
       }
     }

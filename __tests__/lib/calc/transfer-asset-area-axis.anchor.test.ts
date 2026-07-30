@@ -239,10 +239,41 @@ describe("A-6 [Phase 5 뒤집힘] — 자산-수준 partial 불변식 (taxonomy 
     expect(err).toContain("① 기본정보");
   });
 
-  it("partial에서 취득면적 ≥ 양도면적이면 통과한다", () => {
-    for (const [acq, tr] of [["150", "100"], ["100", "100"]]) {
+  /**
+   * 🔄 **B4-2b에서 부분 뒤집힘**(2026-07-30). 취득면적 > 양도면적(진짜 일부양도)이고
+   * 실거래가 모드에 취득가액이 입력됐으면 「양도분 취득가액이 구분되는가」 선택을
+   * 요구한다 — 전체 취득가액을 그대로 넣으면 양도차익이 과소 계상되고 시스템이 그것을
+   * 감지할 수 없다(취득 300㎡·양도 100㎡에서 2억 차이).
+   * `acq === tr`은 사실상 same이라 종전처럼 통과한다.
+   */
+  it("partial + 취득=양도면적이면 통과한다 (사실상 same)", () => {
+    const err = validateAssetAcquisition(
+      withPrice({ areaScenario: "partial", acquisitionArea: "100", transferArea: "100" }),
+      "자산1",
+      "2026-05-01",
+    );
+    expect(err).toBeNull();
+  });
+
+  it("🔄 partial + 취득>양도면적 + 실거래가 취득가액 → 구분 여부 선택을 요구한다", () => {
+    const err = validateAssetAcquisition(
+      withPrice({ areaScenario: "partial", acquisitionArea: "150", transferArea: "100" }),
+      "자산1",
+      "2026-05-01",
+    );
+    expect(err).toContain("양도분 취득가액이 구분되는가");
+    expect(err).toContain("③ 취득정보");
+  });
+
+  it("구분 여부를 선택하면 통과한다", () => {
+    for (const distinct of ["yes", "no"] as const) {
       const err = validateAssetAcquisition(
-        withPrice({ areaScenario: "partial", acquisitionArea: acq, transferArea: tr }),
+        withPrice({
+          areaScenario: "partial",
+          acquisitionArea: "150",
+          transferArea: "100",
+          partialAcqDistinct: distinct,
+        }),
         "자산1",
         "2026-05-01",
       );

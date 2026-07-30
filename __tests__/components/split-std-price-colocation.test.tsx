@@ -88,7 +88,9 @@ const buildingPartCard = () => screen.queryAllByTestId("split-building-std-trans
 const buildingStdInput = () => screen.queryAllByTestId("split-building-std-transfer");
 const landStdTotal = () => screen.queryAllByTestId("split-land-std-transfer");
 const landStdPerSqm = () => screen.queryAllByTestId("split-land-std-transfer-persqm");
-const transferCalcButton = () => screen.queryAllByRole("button", { name: "양도시 건물 기준시가 계산" });
+// 취득시·양도시가 한 카드에 오면 런처는 2시점 통합 모달 1개다("건물 기준시가 계산").
+const bothCalcButton = () => screen.queryAllByRole("button", { name: "건물 기준시가 계산" });
+const transferOnlyCalcButton = () => screen.queryAllByRole("button", { name: "양도시 건물 기준시가 계산" });
 
 const SPLIT_ACTUAL: Init = {
   saleSplitMode: "actual",
@@ -122,7 +124,8 @@ describe("이미지 6 — 구분양도 + 토지만 환산 (매트릭스 #5)", ()
       buildingStdInput(),
       "건물이 실지거래가액이면 건물 양도시 기준시가는 계산에 등장하지 않는다",
     ).toHaveLength(0);
-    expect(transferCalcButton()).toHaveLength(0);
+    expect(bothCalcButton()).toHaveLength(0);
+    expect(transferOnlyCalcButton()).toHaveLength(0);
   });
 });
 
@@ -143,7 +146,7 @@ describe("이미지 7 — 구분양도 + 건물만 환산 (매트릭스 #6)", ()
     render(<Harness init={CASE6} />);
     expect(buildingPartCard()).toHaveLength(1);
     expect(buildingStdInput()).toHaveLength(1);
-    expect(transferCalcButton()).toHaveLength(1);
+    expect(bothCalcButton(), "취득·양도를 한 번에 계산하는 통합 런처 1개").toHaveLength(1);
   });
 
   it("🔴 토지 양도시 기준시가 기능은 노출되지 않는다", () => {
@@ -221,8 +224,16 @@ describe("이미지 8·9 — 주택 별개취득 건물분 취득시 기준시�
     expect(acqInput()).toHaveLength(1);
   });
 
-  it("🔴 취득시 계산 런처도 제공된다 (양도시와 동일)", () => {
+  it("🔴 취득·양도 동시 계산 런처가 제공된다", () => {
     render(<Harness init={CASE9} />);
+    expect(
+      screen.queryAllByRole("button", { name: "건물 기준시가 계산" }),
+      "두 시점 값이 하나의 건물 계산서에서 나오므로 런처도 하나다",
+    ).toHaveLength(1);
+  });
+
+  it("양도시 칸이 없는 조합(감정가액)에서는 취득시 전용 런처", () => {
+    render(<Harness init={{ ...CASE9, buildingAcqMode: "appraisal" }} />);
     expect(screen.queryAllByRole("button", { name: "취득시 건물 기준시가 계산" })).toHaveLength(1);
   });
 
@@ -237,8 +248,8 @@ describe("이미지 8·9 — 주택 별개취득 건물분 취득시 기준시�
   });
 });
 
-describe("건물 계산 런처 라벨 — 취득시·양도시 구분", () => {
-  it("일반건물 + 양쪽 환산 → 두 런처의 라벨이 시점으로 구분된다", () => {
+describe("건물 계산 런처 — 2시점 통합", () => {
+  it("일반건물 + 양쪽 환산 → 건물 런처는 통합 1개", () => {
     render(
       <Harness
         init={{
@@ -249,10 +260,10 @@ describe("건물 계산 런처 라벨 — 취득시·양도시 구분", () => {
         }}
       />,
     );
+    expect(screen.queryAllByRole("button", { name: "건물 기준시가 계산" })).toHaveLength(1);
     expect(
       screen.queryAllByRole("button", { name: "취득시 건물 기준시가 계산" }),
-      "기본 라벨 「건물 기준시가 계산」이면 부분일치 셀렉터가 두 버튼을 모두 잡는다",
-    ).toHaveLength(1);
-    expect(screen.queryAllByRole("button", { name: "양도시 건물 기준시가 계산" })).toHaveLength(1);
+      "취득·양도가 한 카드이므로 시점별 런처로 나누지 않는다",
+    ).toHaveLength(0);
   });
 });

@@ -102,6 +102,12 @@ export function CompanionAcqDateSection(props: {
               onCheckedChange={(v) =>
                 p.onHasSeperateLandAcquisitionDateChange!(v)
               }
+              // 소유자 분리는 이 토글을 **강제로 켠다**(AssetOwnershipSplitSection).
+              // 끌 수 있게 두면 "위는 소유자 다름 ON, 아래는 취득일 다름 OFF"라는 모순 상태가
+              // 되는데, `isSplitPayloadActive`는 `selfOwns !== "both"`로 여전히 참이라
+              // 분리 계산은 계속 돈다 — 화면과 계산이 어긋난다(2026-07-30 두 토글 인접 배치).
+              disabled={(p.selfOwns ?? "both") !== "both"}
+              disabledReason="토지·건물 소유자가 다르면 각각 산정하므로 항상 분리됩니다"
             />
           )}
         </div>

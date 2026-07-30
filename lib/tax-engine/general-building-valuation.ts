@@ -18,7 +18,7 @@
 import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
-import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
+import { getBuildingSiteMultiplier } from "./non-business-land/urban-area";
 import type { ZoneType } from "./non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
@@ -69,7 +69,14 @@ export type GeneralBuildingInput = {
   landArea: number;
   /** 건물 연면적 (㎡) */
   buildingArea: number;
-  /** 건물 수평투영면적 (㎡) — 비사업용토지 판정 기준 (건축물대장 건축면적 또는 1층 바닥면적) */
+  /**
+   * 건축물 바닥면적 (㎡) — 비사업용토지 부수토지 한도의 곱셈 기준.
+   *
+   * 「건축법 시행령」 제119조 제1항 제3호의 **바닥면적**이며 **지하층을 포함한 각 층 중
+   * 가장 넓은 값**이다(조심 2025지0451 · 대법원 2012두7073). 같은 조 제2호 **건축면적**이
+   * **아니다** — 종전 주석은 "건축물대장 건축면적 또는 1층 바닥면적"이라 했고 오답이었다
+   * (2026-07-30 정정).
+   */
   buildingFootprintArea: number;
 
   // 양도시점 기준시가 (안분 분모)
@@ -425,13 +432,13 @@ export type GeneralBuildingOutput = {
   estimatedDeduction: GeneralBuildingEstimatedDeduction;
 
   // 비사업용토지 판정
-  /** 건물 수평투영면적 (㎡) — 사용자 직접 입력 */
+  /** 건축물 바닥면적 (㎡) — 각 층 중 최대(지하 포함). 사용자 직접 입력 */
   buildingFootprintArea: number;
   /** 적용 배율 (3/5/10배) */
   appliedMultiplier: number;
   /** 배율 산출 근거 ("수도권 주·상·공 3배" 등) */
   multiplierDetail: string;
-  /** 인정 한도 = 수평투영면적 × 배율 (㎡) */
+  /** 인정 한도 = 건축물 바닥면적(각 층 중 최대) × 배율 (㎡) */
   allowedLandArea: number;
   /** true = 사업용 (배율 내, 중과 미발동) */
   isWithinNblRatio: boolean;
@@ -606,10 +613,19 @@ export function buildGeneralBuildingAssetCards(
   const estimatedDeduction = calculateEstimatedDeduction(input, rate);
 
   /**
-   * 비사업용토지 판정 (§104의3·§168의12)
+   * 비사업용토지 판정 — **건축물(비주택) 부속토지**
    *
-   * 2026-05-09: 사용자 직접 입력 수평투영면적 기준. 균등층 가정 폐지.
-   * 2026-05-10: getLandFootprintMultiplier()로 용도지역·수도권 배율 정밀 계산.
+   * 근거 체인: 「소득세법」 제104조의3 제1항 제4호 나목 →
+   *   「지방세법」 제106조 제1항 제2호(별도합산과세대상) →
+   *   「지방세법 시행령」 제101조 제1항 제2호(바닥면적 × 제2항 적용배율)
+   *
+   * ⚠️ 「소득세법 시행령」 제168조의12는 **주택** 부수토지 배율이므로 이 경로에 쓰지 않는다.
+   *   제101조 제2항에는 수도권 축이 없다(용도지역만으로 결정).
+   *
+   * 2026-05-09: 사용자 직접 입력 면적 기준. 균등층 가정 폐지.
+   * 2026-07-30: 곱셈 대상을 **각 층 중 최대 바닥면적**으로 정정(종전 안내는 건축면적 — 조심 2025지0451 배척).
+   * 2026-07-30: 「소득세법 시행령」 제168조의12(주택) 배율을 잘못 쓰던 것을
+   *   「지방세법 시행령」 제101조 제2항으로 정정(22개 용도지역·수도권 조합 중 19개 오답이었다).
    *   초과분 면적(nonBusinessArea)·비율(nonBusinessRatio) 계산 → 토지 카드 분할 중과.
    */
 
@@ -633,11 +649,15 @@ export function buildGeneralBuildingAssetCards(
         "일반건물 비사업용토지 판정: zoneType(용도지역)이 입력되지 않았습니다. 계산 전 용도지역을 선택하세요.",
       );
     }
-    const { multiplier, detail } = getLandFootprintMultiplier(
-      input.zoneType as ZoneType,
-      input.isMetropolitan ?? false,
-      "general_building",
-    );
+    // 「지방세법 시행령」 제101조 제2항 표에 없는 용도지역(residential 등)은 추정 금지 → 차단
+    const resolved = getBuildingSiteMultiplier(input.zoneType as ZoneType);
+    if (!resolved) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `일반건물 비사업용토지 판정: 용도지역 "${input.zoneType}"은 「지방세법 시행령」 제101조 제2항 적용배율표에 대응 항목이 없습니다. 세분된 용도지역(전용주거·일반주거·준주거 등)을 선택하세요.`,
+      );
+    }
+    const { multiplier, detail } = resolved;
     appliedMultiplier = multiplier;
     multiplierDetail = detail;
     allowedLandArea = input.buildingFootprintArea * multiplier;

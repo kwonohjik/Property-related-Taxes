@@ -428,8 +428,19 @@ describe("V4 — 취득시 기준시가는 '필요할 때만' 필수 (사용자 
     expect(validateSplitDirectInputs(sep(), "자산 1")).toBeNull();
   });
 
+  // 2026-07-30 파트별 분해 — 토지가 실거래가면 토지 3요소(㎡당 공시지가·면적)는 계산 어디에도
+  // 쓰이지 않으므로 요구하지 않는다. 차단 자체는 유지되되 **실제로 필요한 값**을 지목한다
+  // (계획서 transfer-split-acq-std-part-gating.plan.md §3.2 (3)).
   it("🔴 케이스 b(건물 환산) + 취득시 기준시가 미입력 → 차단", () => {
     const err = validateSplitDirectInputs(sep({ buildingAcqMode: "estimated" }), "자산 1");
+    expect(err, "토지 3요소가 아니라 건물분 기준시가를 요구해야 한다").toMatch(/건물분|건물 기준시가/);
+  });
+
+  it("🔴 토지도 환산이면 종전대로 토지 3요소를 요구한다 (파트별 게이트 회귀 가드)", () => {
+    const err = validateSplitDirectInputs(
+      sep({ landAcqMode: "estimated", buildingStandardPriceAtAcq: "350,000,000" }),
+      "자산 1",
+    );
     expect(err).toContain("개별공시지가");
   });
 
@@ -448,10 +459,14 @@ describe("V4 — 취득시 기준시가는 '필요할 때만' 필수 (사용자 
     ).toBeNull();
   });
 
+  // ⚠️ **토지 환산**으로 검증한다(2026-07-30). all-or-nothing 불변식(단가·면적 둘 다) 자체는
+  //    그대로지만, 토지가 실거래가면 그 값이 계산에 등장하지 않아 요구 대상이 아니다 —
+  //    종전 케이스(건물만 환산)로는 이 불변식을 더 이상 검증할 수 없다.
   it("🔴 단가만 있고 면적이 없으면 차단 (엔진 calcAcqStdPair는 둘 다 요구)", () => {
     const err = validateSplitDirectInputs(
       sep({
-        buildingAcqMode: "estimated",
+        landAcqMode: "estimated",
+        buildingStandardPriceAtAcq: "350,000,000",
         landStandardPriceAtTransfer: "600,000,000",
         buildingStandardPriceAtTransfer: "400,000,000",
         standardPricePerSqmAtAcq: "5,000,000",
@@ -460,6 +475,22 @@ describe("V4 — 취득시 기준시가는 '필요할 때만' 필수 (사용자 
       "자산 1",
     );
     expect(err).toContain("토지 면적");
+  });
+
+  it("토지 실거래가면 면적이 없어도 통과 (계산에 등장하지 않는 값을 요구하지 않는다)", () => {
+    expect(
+      validateSplitDirectInputs(
+        sep({
+          buildingAcqMode: "estimated",
+          buildingStandardPriceAtAcq: "350,000,000",
+          landStandardPriceAtTransfer: "600,000,000",
+          buildingStandardPriceAtTransfer: "400,000,000",
+          standardPricePerSqmAtAcq: "",
+          acquisitionArea: "",
+        }),
+        "자산 1",
+      ),
+    ).toBeNull();
   });
 
   it("회귀 0 — 비-별개취득(취득일 동일)은 요구하지 않는다", () => {

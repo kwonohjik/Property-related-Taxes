@@ -18,12 +18,12 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { NewConstructionFootprintSection } from "./NewConstructionFootprintSection";
 
-/** 수동 세율 오버라이드 옵션 (부수토지 일체과세 §89·영§154⑦) */
+/** 수동 세율 오버라이드 옵션 (부수토지 일체과세 §104①2호·영§167의5) */
 export const MANUAL_RATE_OVERRIDE_OPTIONS = [
   {
     value: "shortTermHousing70",
     label: "70% — 단기보유 주택 세율 적용",
-    description: "§104①3호 단서 — 주택·부수토지 일체과세 원리(§89①3호·영§154⑦)",
+    description: "§104①2·3호 괄호 — 주택·부수토지 일체과세(영 §167의5)",
   },
   {
     value: "shortTerm60",
@@ -95,7 +95,7 @@ interface LandRateOverrideProps {
 }
 
 /**
- * companion 토지 — 수동 세율 오버라이드 토글 (부수토지 일체과세 §89·영§154⑦).
+ * companion 토지 — 수동 세율 오버라이드 토글 (부수토지 일체과세 §104①2호·영§167의5).
  * 렌더 조건: assetKind === "land" && !isPrimary (호출 측에서 제어).
  */
 export function CompanionLandRateOverrideToggle({ asset, onChange }: LandRateOverrideProps) {

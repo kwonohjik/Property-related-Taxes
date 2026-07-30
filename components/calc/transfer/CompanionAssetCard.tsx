@@ -216,7 +216,7 @@ export function CompanionAssetCard({
           )}
           {showUnifiedBadge && (
             <span className="inline-flex rounded bg-amber-100 border border-amber-300 px-2 py-0.5 text-micro text-amber-800">
-              주택·부수토지 일체과세 자동 적용 중 (§89·영 §154⑦, 재산-53·재산-1354)
+              주택·부수토지 일체과세 자동 적용 중 (§104①2호·영 §167의5, 재산세제과-1354)
             </span>
           )}
         </div>

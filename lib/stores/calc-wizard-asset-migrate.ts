@@ -13,6 +13,7 @@ import {
   applyPhase3Normalize,
   migrateGeneralBuildingFields,
 } from "./calc-wizard-asset-migrate-phase3";
+import { migratePartialAreaApportionFields } from "./calc-wizard-asset-partial-area";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "./calc-wizard-asset-factory";
 import type { AssetForm } from "./calc-wizard-asset";
 
@@ -36,6 +37,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   }
   // 축 B 파트별 독립(§99①1호 나목) — stale sessionStorage 자산에 필드가 없으면 빈 문자열로 정규화
   if (a.buildingStandardPriceAtAcq === undefined) a.buildingStandardPriceAtAcq = "";
+  // 토지 파트 취득 원인(건물 신축 + 토지 상속·증여, 2026-07-30) — 구 세션 복원 방어
+  if (a.landAcquisitionCause === undefined) a.landAcquisitionCause = "";
   if (!a.standardPricePerSqmAtAcq) a.standardPricePerSqmAtAcq = "";
   if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
   // Round 9 (2026-05-06): 자산-수준 매매계약일 (감면 시한 판정)
@@ -428,6 +431,46 @@ export function migrateAsset(raw: unknown): AssetForm {
   const validKinds = ["housing", "land", "building", "right_to_move_in", "presale_right", "commercial_building", "general_building", "redevelopment_apt"];
   if (!a.assetKind || !validKinds.includes(a.assetKind as string)) {
     a.assetKind = "building";
+  }
+
+  // ③ 일부양도 취득가액 안분 계산기 (2026-07-30, B4-2b) — UI 전용 필드 5개
+  migratePartialAreaApportionFields(a);
+
+  // ③ 축 B(건물 연면적) 신설 — buildingFloorArea (2026-07-30, Phase F1 β-2)
+  if (a.buildingFloorArea === undefined) a.buildingFloorArea = "";
+
+  /**
+   * ⛔ **`building`의 `acquisitionArea`를 `buildingFloorArea`로 이전하지 말 것**
+   *    (2026-07-30 U-12 실측으로 철회 — 종전 β-2 블록은 데이터 손상이었다).
+   *
+   * PR #912(Phase A)는 `building`(건물, 토지 제외)의 `acquisitionArea`를 "건물 연면적"으로
+   * 라벨링했고, β-2가 그 전제로 값을 `buildingFloorArea`로 옮기고 축 A를 비웠다.
+   * **전제가 틀렸다** — `building`의 `acquisitionArea`는 처음부터 **토지 면적**이다:
+   *
+   *   · `StandardPriceInput.tsx:69~70` — `toPropertyType(building_non_residential)` → **"land"**.
+   *     즉 조회 대상이 **개별공시지가**이고 곱셈 인자는 토지 면적이다(건물 ㎡당 단가가 아니다).
+   *   · `calc-wizard-asset.ts` — `standardPricePerSqmAtAcq` 주석 "㎡당 **공시지가**".
+   *   · `LandBuildingSplitSection.tsx:163` — 같은 필드를 "**토지 면적**"으로 입력받는다
+   *     (「소득세법」 제99조 제1항 제1호 가목).
+   *
+   * 「소득세법」 제99조 제1항 제1호는 나목(건물)에 "딸린 토지" 문구를 두지 않고, 다목
+   * (오피스텔·상업용건물)에만 "이에 딸린 토지를 포함한다"를 둔다(같은 조 제3항 제4호에서 확인).
+   * 즉 **나목 건물의 부수토지는 가목으로 별도 평가**되므로 `building`에도 축 A가 실재한다 —
+   * 라벨 "건물(토지 제외)"는 *기준시가 공시 범위*를 뜻하고, 토지가 없다는 뜻이 아니다.
+   *
+   * 실측(제거 전): `acquisitionArea "200"` → `""`, `buildingFloorArea "" → "200"`,
+   *   토지분 취득 기준시가 100,000,000 → **null**(`calcLandStdPriceAtAcq` 면적 0).
+   *   `assetKind` 미상 → `building` fallback 자산까지 휩쓸어 피해 범위가 더 넓었다.
+   */
+
+  /**
+   * `building`의 면적 시나리오가 `["same"]`으로 축소됐다 → stale `partial`을 정규화한다.
+   * `areaResetPatchForAssetKind`는 **assetKind를 바꿀 때만** 동작하므로, 이미 저장된
+   * `building` + `partial` 조합은 이 마이그레이션이 아니면 그대로 남아 Select에 없는 값이
+   * 선택된 상태가 된다(취득·양도 면적 2칸이 렌더되는 죽은 분기).
+   */
+  if (a.assetKind === "building" && a.areaScenario !== "same") {
+    a.areaScenario = "same";
   }
   // ③ 재개발/재건축 redev* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.redevSubject === undefined) a.redevSubject = "";

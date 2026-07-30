@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqNewConstructionBlock } from "./CompanionAcqNewConstructionBlock";
+import { AssetOwnershipSplitSection } from "./AssetOwnershipSplitSection";
+import { NonPurchaseSplitInputsBlock } from "./NonPurchaseSplitInputsBlock";
+import { NewConstructionLandAcqBlock } from "./NewConstructionLandAcqBlock";
 import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
@@ -58,7 +61,16 @@ export function CompanionAcquisitionCauseSection({
           <button
             key={opt.value}
             type="button"
-            onClick={() => onChange({ acquisitionCause: opt.value })}
+            onClick={() =>
+              onChange({
+                acquisitionCause: opt.value,
+                // 매매 → 비-매매 전환 시 `hasSeperateLandAcquisitionDate` stale 정리(2026-07-30).
+                // 그 플래그는 매매 경로의 취득일 2열 UI 표시 상태이지 사용자 데이터가 아니다.
+                // 남겨두면 토지 취득일이 채워진 채 상속으로 넘어갔을 때 `isSeparateAcquisition`이
+                // true가 되어 파트별 취득가액 필수 → 입력 칸 없는 차단이 된다.
+                ...(opt.value !== "purchase" ? { hasSeperateLandAcquisitionDate: false } : {}),
+              })
+            }
             className={cn(
               "rounded-md border-2 px-1 py-2 text-center transition-all",
               asset.acquisitionCause === opt.value
@@ -108,6 +120,15 @@ export function CompanionAcquisitionCauseSection({
           }
         />
       )}
+
+      {/* 「토지·건물 소유자 다름」 — 취득원인 라디오 직하(2026-07-30 이동).
+          이 토글이 「취득일 다름」을 강제로 켜므로 그보다 **앞**에 와야 위→아래 연쇄가 된다.
+          현재 노출은 매매 전용(컴포넌트 내부 게이트) — 상속·증여 확대는 별도 PR. */}
+      <AssetOwnershipSplitSection asset={asset} onChange={onChange} />
+
+      {/* 토지를 상속·증여로 취득하고 그 위에 건물을 신축한 경우 — 토지 파트 입력.
+          취득원인이 자산 단위 단일값이라 종전엔 토지 취득일·취득가액 칸이 아예 없었다. */}
+      <NewConstructionLandAcqBlock asset={asset} onChange={onChange} transferDate={transferDate} />
 
       {/* 신축(자가건축) — 신축비용(취득가액) 입력 블록 */}
       {isNewConstruction && (
@@ -259,6 +280,11 @@ export function CompanionAcquisitionCauseSection({
           onChange={onChange}
         />
       )}
+
+      {/* 비-매매 취득원인의 소유자 분리 입력 — 취득시 기준시가(§166⑥ 안분 비율) + 축 A.
+          매매는 `CompanionAcqPurchaseBlock`이 이미 제공하므로 내부 게이트로 비노출된다.
+          이 입력이 없으면 `calcSplitGain`이 null → `selfOwns` 무시 → 비소유 파트까지 과세. */}
+      <NonPurchaseSplitInputsBlock asset={asset} onChange={onChange} transferDate={transferDate} />
     </div>
   );
 }

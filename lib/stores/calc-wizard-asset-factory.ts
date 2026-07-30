@@ -4,6 +4,7 @@
  */
 
 import { MIXED_USE_DEFAULTS } from "./calc-wizard-asset-mixed-use";
+import { PARTIAL_AREA_APPORTION_DEFAULTS } from "./calc-wizard-asset-partial-area";
 import { RESIDENCE_DEFAULTS } from "./calc-wizard-asset-residence";
 import { CARRYOVER_DEFAULTS } from "./calc-wizard-asset-carryover";
 import type { AssetForm } from "./calc-wizard-asset";
@@ -85,6 +86,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     inheritanceAssetKind: "land",
     acquisitionArea: "",
     transferArea: "",
+    buildingFloorArea: "",
+    ...PARTIAL_AREA_APPORTION_DEFAULTS,
     areaScenario: "same",
     publishedValueAtInheritance: "",
     fixedAcquisitionPrice: "",
@@ -116,7 +119,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     approvalCertificateDate: "",
     temporaryApprovalDate: "",
     actualUseDate: "",
-    // 부수토지 한도 산정 (영 §154⑦) — 사례 28
+    // 부수토지 한도 산정 (영 §167의5 — 세율 축) — 사례 28
     isUrbanArea: undefined,
     appurtenantLandZone: undefined,
     // companion 토지 세율 수동 오버라이드 — 사례 28
@@ -142,6 +145,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     selfOwns: "both",
     hasSeperateLandAcquisitionDate: false,
     landAcquisitionDate: "",
+    landAcquisitionCause: "",
     landAcqMode: "",
     buildingAcqMode: "",
     saleSplitMode: "apportioned",

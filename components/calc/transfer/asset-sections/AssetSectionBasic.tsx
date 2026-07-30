@@ -85,7 +85,91 @@ const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
 > = {
   land: ["same", "partial", "reduction", "increase"],
   housing: ["same", "partial"],
+  /**
+   * 건물(토지 제외) — 축 A(**토지** 면적)와 축 B(연면적)를 **모두** 갖는다.
+   *
+   * 라벨 "건물(토지 제외)"는 「소득세법」 제99조 제1항 제1호 **나목**의 *기준시가 공시 범위*를
+   * 뜻한다 — 토지가 없다는 뜻이 아니다. 나목에는 "딸린 토지" 문구가 없고 다목(오피스텔·
+   * 상업용건물)에만 "이에 딸린 토지를 포함한다"가 붙으므로(같은 조 제3항 제4호에서 확인),
+   * **나목 건물의 부수토지는 가목으로 별도 평가**된다. 그래서 축 A가 실재한다:
+   *   `toPropertyType(building_non_residential)` → "land"(`StandardPriceInput.tsx:69~70`)
+   *   → 조회 대상이 **개별공시지가**이고 `acquisitionArea`가 그 곱셈 인자다.
+   *
+   * ⚠️ **`same` 단일**이다. 종전 `["same","partial"]`(PR #912)은 land·housing 패턴을
+   *    기계적으로 복사한 것으로, `partial`은 취득·양도에 **서로 다른 면적**을 기준시가
+   *    곱셈에 넣어 환산비율을 왜곡했다(면적비가 단가비를 상쇄해 양도차익 0).
+   *    anchor: `basic-info-building-area.anchor.test.ts` A-6.
+   *    ※ `land`·`housing`처럼 `resolveAcqAreaForStdPrice`(B-4)를 태우면 `partial`도
+   *      안전해지지만, 별건이다 — 필요해지면 그때 확장한다.
+   */
+  building: ["same"],
 };
+
+/**
+ * `same` 시나리오 단일 입력의 라벨 — taxonomy 원칙 C `[세법 역할]+[기준 시점]+"면적 (㎡)"`.
+ * 대상어는 그 면적이 실제로 곱해지는 대상에서 온다:
+ *   land    → 토지 기준시가 = ㎡당 개별공시지가 × 면적
+ *   housing → 부수토지 면적(PHD §164⑤·환산의 곱셈 인자)
+ *   building→ 부수토지 면적 — 「소득세법」 제99조 제1항 제1호 **가목**(개별공시지가 × 면적).
+ *             나목 건물분은 축 B(`buildingFloorArea`)가 담당한다.
+ */
+const AREA_LABEL_BY_ASSET_KIND: Partial<Record<AssetForm["assetKind"], string>> = {
+  land: "취득·양도 당시 면적 (㎡)",
+  housing: "취득·양도 당시 토지 면적 (㎡)",
+  building: "취득·양도 당시 토지 면적 (㎡)",
+};
+
+/**
+ * 축 B(건물 연면적) 입력 대상 자산유형.
+ *
+ * - `housing`: 「건물 기준시가 계산서」의 곱셈 인자. 종전에는 폼 필드가 없어 시점별 모달에서
+ *   각각 수동 입력했고 스냅샷 키가 시점별로 갈려 **3시점 불일치**가 무검증 통과했다
+ *   (anchor A-3). 단독주택 건물분 기준시가·PHD §164⑤ 환산이 이 값에 의존한다.
+ * - `building`: 자산 자체가 건물이므로 축 B가 유일한 면적이다.
+ *
+ * GB·상가·겸용은 전용 필드(`gbBuildingArea`·`cbExclusiveArea`+`cbSharedArea`·
+ * `residentialFloorArea`)가 담당한다 — F2 범위.
+ */
+const FLOOR_AREA_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["housing", "building"]);
+
+/**
+ * 축 C(건물 바닥면적·정착면적) 입력 대상 자산유형.
+ *
+ * `housing`만이다. 소비처는 「소득세법」 제89조 제1항 제3호("건물이 정착된 면적") →
+ * 「소득세법 시행령」 제154조 제7항 부수토지 한도(`limitArea = 정착면적 × 3/5/10배`)와
+ * 겸용 주거분 정착면적 안분이다.
+ *
+ * 종전 입력 경로는 **겸용 ON** 또는 **취득원인 신축**뿐이어서, 주택·겸용OFF·매매 자산은
+ * 영구 공백이 되고 엔진이 "전량 부수토지"로 가정했다(anchor A-1 — 초과 200㎡ ↔ 0㎡).
+ *
+ * ⚠️ `land`는 제외한다. 그 축 C는 `nblHousingFootprint`(「소득세법」 제104조의3 제1항
+ *    제5호 "**주택**이 정착된 면적")가 담당하며 **다른 법령 개념**이다 — 합치면 겸용에서
+ *    오답이 된다(계획서 U-3).
+ * ⚠️ `building`은 토지가 없어 부수토지 판정 자체가 없다 → 제외.
+ */
+const FOOTPRINT_AREA_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["housing"]);
+
+/**
+ * 겸용주택 분리계산 ON이면 기본정보 면적 섹션 전체를 숨기는 것이 기존 설계다
+ * (`areaScenarioOptions`가 `[]` 반환 — `mixedUseTotalLandArea` + 겸용 전용 섹션이 담당).
+ * 축 B·C도 같은 원칙을 따른다:
+ *   축 B → `residentialFloorArea` / `nonResidentialFloorArea` (용도별 분해)
+ *   축 C → `MixedUseAreaInputs`의 `buildingFootprintArea` (같은 필드, 겸용 섹션 내 입력)
+ * 그러지 않으면 같은 필드가 두 곳에 동시 노출된다.
+ */
+function isMixedUseSeparated(asset: AssetForm): boolean {
+  return asset.assetKind === "housing" && !!asset.isMixedUseHouse;
+}
+
+/** 축 B(연면적) 입력을 이 자산에 렌더하는가. */
+function showFloorArea(asset: AssetForm): boolean {
+  return FLOOR_AREA_KINDS.has(asset.assetKind) && !isMixedUseSeparated(asset);
+}
+
+/** 축 C(바닥면적) 입력을 이 자산에 렌더하는가. */
+function showFootprintArea(asset: AssetForm): boolean {
+  return FOOTPRINT_AREA_KINDS.has(asset.assetKind) && !isMixedUseSeparated(asset);
+}
 
 const AREA_SCENARIO_LABEL: Record<AreaScenario, string> = {
   same: "취득면적 = 양도면적 (일반)",
@@ -366,8 +450,20 @@ export function AssetSectionBasic({
 
       {/* 면적 정보 — AREA_SCENARIOS_BY_ASSET_KIND 등재 자산유형만 표시.
           전용 면적 섹션을 가진 자산유형(겸용·상가·일반건물·재개발)은 미렌더 — 중복 입력 방지. */}
-      {areaScenarioOptions(asset).length > 0 && (
+      {(areaScenarioOptions(asset).length > 0 ||
+        showFloorArea(asset) ||
+        showFootprintArea(asset)) && (
         <div className="space-y-3">
+          {/* ── 축 A: 토지 면적 (시나리오 분기) ──────────────────────────
+              ⛔ **자산유형별로 축 A를 끄는 예외를 만들지 말 것**(2026-07-30 U-12).
+                 `building`("건물(토지 제외)")을 제외했다가 되돌렸다 — 그 라벨은 「소득세법」
+                 제99조 제1항 제1호 나목의 *기준시가 공시 범위*이지 토지 부재가 아니고,
+                 부수토지는 가목으로 별도 평가된다. 끄면 토지 면적의 입력 경로가 사라져
+                 validate가 "토지 면적을 입력하세요"로 차단하는 dead-end가 된다
+                 (`transfer-tax-validate-split.ts:115,155,247`).
+                 축 A가 불필요한 자산유형은 `AREA_SCENARIOS_BY_ASSET_KIND` 미등재로 표현한다. */}
+          {areaScenarioOptions(asset).length > 0 && (
+          <>
           <div
             className={cn(
               (asset.areaScenario ?? "same") === "same" &&
@@ -426,9 +522,8 @@ export function AssetSectionBasic({
             {(asset.areaScenario ?? "same") === "same" && (
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">
-                  {asset.assetKind === "housing"
-                    ? "취득·양도 당시 토지 면적 (㎡)"
-                    : "취득·양도 당시 면적 (㎡)"}
+                  {AREA_LABEL_BY_ASSET_KIND[asset.assetKind] ??
+                    "취득·양도 당시 면적 (㎡)"}
                   <span
                     title="취득·양도 기준시가 = ㎡ 단가 × 이 면적. 공시가격 자동 조회 및 환산취득가 계산에 사용됩니다."
                     className="ml-1 cursor-help"
@@ -497,6 +592,53 @@ export function AssetSectionBasic({
               onChange={onChange}
               onAddAsset={onAddAsset}
             />
+          )}
+          </>
+          )}
+
+          {/* ── 축 B: 건물 연면적 ──────────────────────────────────────── */}
+          {showFloorArea(asset) && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                건물 연면적 (㎡)
+                <span
+                  title="각 층 바닥면적의 합(건축물대장 연면적). 건물 기준시가 = ㎡당 금액 × 이 면적. 취득·최초공시·양도 3시점 계산에 같은 값이 쓰입니다."
+                  className="ml-1 cursor-help"
+                >
+                  ⓘ
+                </span>
+              </label>
+              <DecimalInput
+                value={asset.buildingFloorArea}
+                onChange={(v) => onChange({ buildingFloorArea: v })}
+                placeholder="건축물대장 연면적"
+                data-testid="basic-building-floor-area"
+              />
+            </div>
+          )}
+
+          {/* ── 축 C: 건물 바닥면적(정착면적) ──────────────────────────── */}
+          {showFootprintArea(asset) && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                건물 바닥면적 (정착면적, ㎡)
+                <span
+                  title="건물이 땅에 닿는 면적(1층 건축면적). 층별 합계인 연면적이 아닙니다. 「소득세법」 제89조 제1항 제3호의 「건물이 정착된 면적」 — 이 면적 × 지역별 배율(3·5·10배)이 1세대1주택 비과세 부수토지 한도입니다."
+                  className="ml-1 cursor-help"
+                >
+                  ⓘ
+                </span>
+              </label>
+              <DecimalInput
+                value={asset.buildingFootprintArea}
+                onChange={(v) => onChange({ buildingFootprintArea: v })}
+                placeholder="1층 건축면적"
+                data-testid="basic-building-footprint-area"
+              />
+              <p className="text-caption text-muted-foreground">
+                미입력 시 부수토지 한도 검증 없이 전량 부수토지로 가정합니다 (「소득세법 시행령」 제154조 제7항).
+              </p>
+            </div>
           )}
         </div>
       )}

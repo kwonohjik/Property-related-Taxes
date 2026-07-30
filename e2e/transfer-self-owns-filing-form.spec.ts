@@ -25,7 +25,13 @@ function buildingOnlyAsset() {
     useEstimatedAcquisition: true, // 환산 → standardPriceAtAcquisition 송신 → calcApportionRatio 활성
     standardPriceAtAcq: "100000000",
     standardPricePerSqmAtAcq: "800000",
-    acquisitionArea: "100",
+    // 이 seed는 `building`(건물, 토지 제외)에 **토지분** 기준시가·양도가액을 함께 넣는다 —
+    // 모순이 아니다(U-12 종결, 2026-07-30): 「소득세법」 제99조 제1항 제1호는 **나목**(건물)에
+    // "딸린 토지" 문구를 두지 않고 **다목**(오피스텔·상업용건물)에만 "이에 딸린 토지를
+    // 포함한다"를 둔다(같은 조 제3항 제4호에서 확인) → **나목 건물의 부수토지는 가목으로
+    // 별도 평가**된다. 라벨 "건물(토지 제외)"는 *기준시가 공시 범위*이지 토지 부재가 아니므로
+    // `isSplitable`이 `building`을 포함하는 것이 정본이다.
+    acquisitionArea: "100", // 축 A — 부수토지 면적(가목: ㎡당 공시지가 × 면적)
     standardPriceAtTransfer: "300000000",
     selfOwns: "building_only",
     hasSeperateLandAcquisitionDate: true,

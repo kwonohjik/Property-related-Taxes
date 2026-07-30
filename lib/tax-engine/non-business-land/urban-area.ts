@@ -89,19 +89,71 @@ export function getHousingMultiplier(
 }
 
 /**
- * §168의9(주택부수토지)·§168의12(건축물부수토지) 공용 배율 함수.
+ * 「지방세법 시행령」 제101조 제2항 용도지역별 적용배율 — **정본(단일 소스)**.
  *
- * 두 조문의 배율표는 현재 동일하지만 추후 시행령 개정 시 분기될 가능성에 대비해
- * kind 파라미터로 호출 의도를 명시한다. 현재는 kind 무관 동일 산식 적용.
+ * 「소득세법」 제104조의3 제1항 제4호 나목이 「지방세법」 제106조 제1항 제2호(별도합산)를
+ * 비사업용에서 제외하므로, **건축물(비주택) 부속토지**의 기준면적은
+ * 「지방세법 시행령」 제101조 제1항 제2호(= 바닥면적 × 제2항 적용배율)로 결정된다.
  *
- * @param kind  "housing" = §168의9 주택부수토지 / "general_building" = §168의12 건축물부수토지
+ * ⚠️ **수도권 축이 없다** — 용도지역만으로 결정된다. 「소득세법 시행령」 제168조의12
+ * (주택부수토지 배율)와 결정적으로 다른 점이며, 두 표는 22개 조합 중 19개가 어긋난다.
+ *
+ * 법제처 Open API는 조문 안에 삽입된 표를 반환하지 않으므로 이 상수가 유일한 정본이다.
+ * 개정 시 `__tests__/tax-engine/non-business-land/building-site-multiplier.anchor.test.ts`
+ * (A-BS-8 드리프트 가드)가 먼저 깨진다.
+ *
+ * `residential`(세분 전 주거지역)은 표에 대응 항목이 없어 **의도적으로 미등재** —
+ * 추정 배율 적용 금지(키 부재 = 배율 결정 불가).
  */
-export function getLandFootprintMultiplier(
+export const LOCAL_TAX_ZONE_AREA_MULTIPLIER: Partial<Record<ZoneType, number>> = {
+  exclusive_residential: 5, // 전용주거지역
+  semi_residential: 3, // 준주거지역
+  commercial: 3, // 상업지역
+  general_residential: 4, // 일반주거지역
+  industrial: 4, // 공업지역
+  green: 7, // 녹지지역
+  unplanned: 4, // 미계획지역
+  management: 7, // 도시지역 외 (관리지역)
+  agriculture_forest: 7, // 도시지역 외 (농림지역)
+  natural_env: 7, // 도시지역 외 (자연환경보전지역)
+  undesignated: 7, // 도시지역 외 (용도 미지정)
+};
+
+/** 「지방세법 시행령」 제101조 제2항 배율 산정 시 표시할 용도지역 한국어 명칭. */
+const ZONE_LABEL: Partial<Record<ZoneType, string>> = {
+  exclusive_residential: "전용주거지역",
+  semi_residential: "준주거지역",
+  commercial: "상업지역",
+  general_residential: "일반주거지역",
+  industrial: "공업지역",
+  green: "녹지지역",
+  unplanned: "미계획지역",
+  management: "관리지역",
+  agriculture_forest: "농림지역",
+  natural_env: "자연환경보전지역",
+  undesignated: "용도 미지정",
+};
+
+/**
+ * 건축물(비주택) 부속토지 기준면적 배율 —
+ * 「지방세법 시행령」 제101조 제1항 제2호·제2항.
+ *
+ * 근거 체인: 「소득세법」 제104조의3 제1항 제4호 나목 →
+ *   「지방세법」 제106조 제1항 제2호(별도합산과세대상) →
+ *   「지방세법 시행령」 제101조 제1항 제2호(바닥면적 × 제2항 적용배율)
+ *
+ * 주택 부수토지(「소득세법」 제104조의3 제1항 제5호 → 「소득세법 시행령」 제168조의12)와
+ * **다른 조문·다른 배율표**다. 주택은 `getHousingMultiplier`를 쓴다.
+ *
+ * @returns 표에 없는 용도지역(`residential` 등)은 `undefined` — 호출부가 차단해야 한다.
+ */
+export function getBuildingSiteMultiplier(
   zoneType: ZoneType,
-  isMetropolitan: boolean,
-  kind: "housing" | "general_building" = "housing",
-): { multiplier: number; detail: string; kind: typeof kind } {
-  // 현재 두 조문 배율표 동일 — kind만 메타로 보존
-  const result = getHousingMultiplier(zoneType, isMetropolitan);
-  return { ...result, kind };
+): { multiplier: number; detail: string } | undefined {
+  const multiplier = LOCAL_TAX_ZONE_AREA_MULTIPLIER[zoneType];
+  if (multiplier === undefined) return undefined;
+  return {
+    multiplier,
+    detail: `${ZONE_LABEL[zoneType] ?? zoneType} ${multiplier}배 (「지방세법 시행령」 제101조 제2항)`,
+  };
 }

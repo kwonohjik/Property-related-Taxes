@@ -51,8 +51,11 @@ import type { NblOtherFormSlice } from "./calc-wizard-asset-nbl-other";
 export type { NblOtherFormSlice } from "./calc-wizard-asset-nbl-other";
 import type { GeneralBuildingFormSlice } from "./calc-wizard-asset-gb";
 export type { GeneralBuildingFormSlice } from "./calc-wizard-asset-gb";
+// 일부양도 취득가액 안분 계산기 (B4-2b) — UI 전용 슬라이스
+import type { PartialAreaApportionFormSlice } from "./calc-wizard-asset-partial-area";
+export type { PartialAreaApportionFormSlice, PartialApportionBasis } from "./calc-wizard-asset-partial-area";
 
-export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice {
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice {
   assetId: string;
   assetLabel: string;
   /**
@@ -87,10 +90,31 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   inheritanceDate: string;
   /** 자산 종류 (토지/단독주택/공동주택 — 보충적평가용) */
   inheritanceAssetKind: "land" | "house_individual" | "house_apart";
-  /** 취득 당시 면적 (㎡) — 취득 기준시가 산정, Pre1990 환산 */
+  /**
+   * 취득 당시 **토지** 면적 (㎡) — 축 A. 취득 기준시가 산정, Pre1990 환산, NBL landArea.
+   *
+   * ⚠️ **전 자산유형에서 토지 면적이다** — `assetKind === "building"`("건물(토지 제외)")도
+   *    포함한다(2026-07-30 U-12 실측). 그 라벨은 「소득세법」 제99조 제1항 제1호 **나목**의
+   *    *기준시가 공시 범위*를 뜻하고, 부수토지는 **가목**으로 별도 평가된다:
+   *      `toPropertyType(building_non_residential)` → "land"(`StandardPriceInput.tsx:69~70`)
+   *      → 조회 대상이 개별공시지가이고 이 필드가 그 곱셈 인자다.
+   *    PR #912가 이를 "건물 연면적"으로 오라벨링했고 후속 마이그레이션이 값을
+   *    `buildingFloorArea`로 옮기며 축 A를 비웠다 — **철회됨**. 건물 연면적은 별도 필드다.
+   */
   acquisitionArea: string;
-  /** 양도 당시 면적 (㎡) — 양도 기준시가 산정 */
+  /** 양도 당시 **토지** 면적 (㎡) — 축 A. 양도 기준시가 산정. */
   transferArea: string;
+  /**
+   * 건물 연면적 (㎡) — 축 B. 각 층 바닥면적의 합.
+   *
+   * 소비처: 「건물 기준시가 계산서」의 곱셈 인자(`standardPrice = floor(㎡당 × 연면적)`,
+   * `building-standard-price-helpers.ts:111`). `BuildingStdPriceModalButton`의
+   * `prefill.floorArea`로 주입되어 **취득·최초공시·양도 3시점에 같은 값**이 쓰인다.
+   *
+   * 시점 쌍이 아닌 **단일 필드**다(GB `gbBuildingArea` 선례). 연면적의 취득↔양도 차이는
+   * 증축 전용 필드(`extensionFloorArea`)가 담당한다.
+   */
+  buildingFloorArea: string;
   /**
    * 면적 입력 시나리오 (UI 전용, API 전송 시 제외)
    * - "same"      : 취득면적 = 양도면적 (일반, 기본값)
@@ -263,14 +287,14 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    */
   actualUseDate: string;
 
-  // ── 부수토지 한도 산정 (영 §154⑦, 2022년 개정 후 3단계) ──
+  // ── 부수토지 한도 산정 (영 §167의5 — 세율 축, 3단계) ──
   /**
-   * @deprecated isUrbanArea 단일 boolean은 영 §154⑦ 3단계(3/5/10배) 표현 못함.
+   * @deprecated isUrbanArea 단일 boolean은 영 §167의5 3단계(3/5/10배) 표현 못함.
    * 신규 입력은 appurtenantLandZone 사용. 하위호환 위해 유지.
    */
   isUrbanArea: boolean | undefined;
   /**
-   * 부수토지 인정 한도 zone (영 §154⑦):
+   * 부수토지 인정 한도 zone (영 §167의5):
    * - "metropolitan_residential": 수도권 도시지역 + 주거·상업·공업 → 3배
    * - "non_metropolitan_or_green": 수도권 녹지 또는 수도권 외 도시지역 → 5배
    * - "non_urban": 도시지역 외 → 10배
@@ -368,6 +392,18 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   hasSeperateLandAcquisitionDate: boolean;
   /** 토지 취득일 (YYYY-MM-DD) — hasSeperateLandAcquisitionDate === true 시 필수 */
   landAcquisitionDate: string;
+  /**
+   * **토지 파트의 취득 원인** — 건물을 신축하고 그 토지는 상속·증여로 취득한 경우(2026-07-30).
+   *
+   * `acquisitionCause`는 자산 단위 단일값이라 "건물=신축 / 토지=상속"을 표현할 수 없었다.
+   * ""(미설정)이면 토지도 자산 전체 원인을 따른다(종전 동작).
+   *
+   * ⚠️ **엔진에는 전달하지 않는다.** 엔진은 파트별 취득 *방식*(`landAcqMode` 4-way)만 알고
+   *    취득 *원인*은 모른다. 이 값은 취득가액 칸의 라벨·안내를 바꾸는 **UI 전용**이며,
+   *    실제 계산은 사용자가 입력한 평가액이 `landAcquisitionPrice`(actual 모드)로 흐른다.
+   *    상속 §163⑨ 평가액·증여 신고가액은 모두 "확인된 취득가액"이라 이 처리가 법령상 정합적이다.
+   */
+  landAcquisitionCause: "" | "inheritance" | "gift";
   /**
    * 토지 파트 취득 방식 — 4-way 독립(소득령 §166⑥, 토지·건물 취득일 분리 모드 전용).
    * `landSplitMode`(구, 취득·양도 겸용 토글)를 대체 — 취득은 이 필드가 단일 소스.
@@ -688,7 +724,16 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   cbExclusiveArea: string;
   /** 공유면적 (㎡) */
   cbSharedArea: string;
-  /** 대지면적 (㎡) */
+  /**
+   * 대지면적 (㎡) — 「소득세법 시행령」 제164조 제6항 3축(대지·전유·공용) 중 대지.
+   * 시점 구분 없는 **단일** 필드다 — `commercial-building-valuation.ts:245,249,258`이
+   * 취득·최초공시·양도 3시점 단가에 이 값을 각각 곱한다.   *
+   * ⚠️ **단일 필드를 2시점 쌍으로 확장하지 말 것**(2026-07-30 F2 검토 결론).
+   *    엔진이 시점별 **단가**에 **같은 면적**을 곱하므로 환산 산식에서 면적이 약분되고
+   *    비율은 단가비만 반영한다 — 즉 단일성이 **정확성의 근거**다. 2시점으로 나누면
+   *    취득/양도에 다른 면적이 들어가 면적비가 단가비를 상쇄해 **양도차익이 0이 되는**
+   *    왜곡(B-4)이 재발한다. anchor `area-axis-single-field-invariant.anchor.test.ts`.
+   */
   cbLandArea: string;
   /**
    * 호별 ㎡당 고시가 — 양도시 (원/㎡).

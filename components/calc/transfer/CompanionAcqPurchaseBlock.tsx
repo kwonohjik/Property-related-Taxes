@@ -21,16 +21,15 @@ import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandV
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { CompanionAcqDateSection } from "./CompanionAcqDateSection";
+import { PartialAcqApportionSection } from "./PartialAcqApportionSection";
 import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "@/lib/calc/transfer-tax-split-acq-mode";
-import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import { SalesCaseSection } from "./SalesCaseSection";
-import { SplitAcqStdReadonlyPanel } from "./SplitAcqStdReadonlyPanel";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
-import { requiresAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
@@ -145,29 +144,35 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
    * 필수(`*`)로 표시하면 거짓이 된다(2026-07-29 사용자 확정 규칙 ③).
    * 조건을 여기서 다시 쓰면 엔진 요건이 바뀔 때 UI가 조용히 어긋난다(dual-truth).
    */
-  const acqStdPriceRequired = requiresAcqStdPrice(
-    {
-      landAcquisitionPrice: props.landAcquisitionPrice,
-      buildingAcquisitionPrice: props.buildingAcquisitionPrice,
-      landTransferPrice: props.landTransferPrice,
-      buildingTransferPrice: props.buildingTransferPrice,
-      landDirectExpenses: props.landDirectExpenses,
-      buildingDirectExpenses: props.buildingDirectExpenses,
-      // ⑥절 인자 — **누락하면 술어가 UI에서만 dead**가 된다. 엔진은
-      // `input.expenses = parseAmount(primary.directExpenses)`(transfer-tax-api.ts:238-243)를 받아
-      // live하므로, 넘기지 않으면 legacy 자산에서 UI 숨김 ↔ 엔진 throw로 갈린다.
-      // 같은 함수를 공유하는 것만으로는 단일 소스가 아니다 — **인자까지 같아야** 한다.
-      expenses: parseAmount(props.asset?.directExpenses ?? ""),
-    },
-    {
-      landMode: effLandAcqMode,
-      buildingMode: effBuildingAcqMode,
-      isSeparate: isSeparateAcq,
-      hasSaleRatio:
-        parseAmount(props.landStandardPriceAtTransfer ?? "") > 0 &&
-        parseAmount(props.buildingStandardPriceAtTransfer ?? "") > 0,
-    },
-  );
+  const acqStdNeedFlags = {
+    landAcquisitionPrice: props.landAcquisitionPrice,
+    buildingAcquisitionPrice: props.buildingAcquisitionPrice,
+    landTransferPrice: props.landTransferPrice,
+    buildingTransferPrice: props.buildingTransferPrice,
+    landDirectExpenses: props.landDirectExpenses,
+    buildingDirectExpenses: props.buildingDirectExpenses,
+    // ⑥절 인자 — **누락하면 술어가 UI에서만 dead**가 된다. 엔진은
+    // `input.expenses = parseAmount(primary.directExpenses)`(transfer-tax-api.ts:238-243)를 받아
+    // live하므로, 넘기지 않으면 legacy 자산에서 UI 숨김 ↔ 엔진 throw로 갈린다.
+    // 같은 함수를 공유하는 것만으로는 단일 소스가 아니다 — **인자까지 같아야** 한다.
+    expenses: parseAmount(props.asset?.directExpenses ?? ""),
+  };
+  const acqStdNeedCtx = {
+    landMode: effLandAcqMode,
+    buildingMode: effBuildingAcqMode,
+    isSeparate: isSeparateAcq,
+  };
+  /**
+   * **파트별** 필요 판정 (2026-07-30) — 계획서
+   * `docs/02-design/features/transfer-split-acq-std-part-gating.plan.md` §3.2 (4).
+   *
+   * 자산 전체 술어는 "어느 한 파트라도 필요하면 true"라 파트 카드 게이팅에 그대로 쓸 수 없다 —
+   * 토지 실거래가 + 건물 환산에서 계산에 쓰이지도 않는 토지 카드까지 필수가 된다.
+   * 두 값은 하위(`LandBuildingSplitSection`)에 **주입**한다(재파생 금지).
+   */
+  const acqStdRequiredLand = requiresAcqStdPricePart("land", acqStdNeedFlags, acqStdNeedCtx);
+  const acqStdRequiredBuilding = requiresAcqStdPricePart("building", acqStdNeedFlags, acqStdNeedCtx);
+  const acqStdPriceRequired = acqStdRequiredLand || acqStdRequiredBuilding;
   /**
    * 양도시 기준시가 카드의 **배치** — 축 A(양도가액 결정) vs 파트 섹션(축 B).
    *
@@ -187,20 +192,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
 
   // 2열 배치(2026-07-29)에서 괄호 설명이 두 줄로 접혀 라벨만 남긴다.
   const acqDateLabel = isSplit ? "건물 취득일" : "취득일";
-
-  /**
-   * 자산 전체 취득시 기준시가 블록을 **읽기 전용 파생 표시**로 대체하는가 (Phase 3 · D5).
-   *
-   * 일반건물(`building`)만 대상 — `toPropertyKind`가 `building_non_residential`로 매핑돼
-   * `StandardPriceInput`이 area 모드(㎡당·면적·총액)로 렌더되는 탓에, 파트 토지 카드와
-   * **같은 폼 필드를 두 번** 입력받는다. 주택(라목)은 총액 모드라 중복이 없고 결합 공시가
-   * 정본이므로 대상이 아니다.
-   */
-  // **자산 종류 무관**(2026-07-30 사용자 확정). 종전엔 `building` 전용이라 주택 별개취득에서는
-  // 결합 총액 입력 블록이 계속 떴고, 사용자가 그 값을 채우면 엔진이 역산 경로로 흘렀다.
-  // §163⑥2호가목은 "라목 주택 **취득당시**의 라목 가액"을 요구하는데 토지를 먼저 취득한
-  // 경우 그 시점엔 주택이 없어 라목 결합 공시가 존재하지 않는다 → 파트별 독립이 정본.
-  const showAcqStdReadonly = isSeparateAcq;
 
   // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
@@ -225,47 +216,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       {/* 매매계약일 입력은 Step4 감면·공제(UnifiedReductionPanel)의 펼침 영역 상단으로 이동 (Round 9 정정 2026-05-06)
           이유: 입력 일관성 + 감면 사용 안 할 때 불필요한 입력 방지 */}
 
-      {/* 토지/건물 소유자 분리 (housing·building 전용) */}
-      {isSplitable && props.onSelfOwnsChange && (
-        <div className="space-y-1.5">
-          <ToggleCard
-            variant="chip"
-            tone="amber"
-            title="토지·건물 소유자 다름"
-            description="배우자·공유자 등"
-            checked={(props.selfOwns ?? "both") !== "both"}
-            onCheckedChange={(checked) => {
-              if (checked) {
-                props.onSelfOwnsChange!("building_only");
-                props.onHasSeperateLandAcquisitionDateChange?.(true);
-              } else {
-                props.onSelfOwnsChange!("both");
-              }
-            }}
-          />
-          {(props.selfOwns ?? "both") !== "both" && (
-            <div className="ml-5 flex gap-2 flex-wrap">
-              {(["building_only", "land_only"] as const).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => props.onSelfOwnsChange!(v)}
-                  className={cn(
-                    "rounded-md border-2 px-3 py-1 text-sm transition-all",
-                    props.selfOwns === v
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-border hover:border-muted-foreground/50",
-                  )}
-                >
-                  {v === "building_only" ? "건물만 본인 소유 (토지는 타인)" : "토지만 본인 소유 (건물은 타인)"}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 토지/건물 취득일 분리 상세 (housing·building 전용) */}
+      {/* 「토지·건물 소유자 다름」 토글은 **취득원인 라디오 직하로 이동**했다(2026-07-30) —
+          `AssetOwnershipSplitSection`(CompanionAcquisitionCauseSection에서 렌더).
+          이 토글이 「취득일 다름」을 강제로 켜므로, 아래에 두면 아래를 눌렀는데 위가 펼쳐지는
+          역방향 인과였다. 계획서: transfer-self-owns-toggle-relocation.plan.md §1.1 */}
 
       {/* 부담부증여 모드 — 취득가액 산정 방식·실거래가 입력 숨김 (§159 자동 산정).
           폼 상태(useEstimatedAcquisition·fixedAcquisitionPrice 등)는 보존하여
@@ -317,18 +271,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           이 게이트 밖이라 그대로 노출된다 — 함께 숨기면 안분 비율 소스가 사라진다.
           폼 상태(useEstimatedAcquisition·fixedAcquisitionPrice)는 보존한다(토글 OFF 시 복원).
           ⚠️ stale 전송 가드는 API 변환이 담당한다(transfer-tax-api-split.ts — 별개 취득이면
-             축 A가 파트 필드만 소비하므로 총액 필드가 엔진 취득가액에 도달하지 않는다). */}
-      {isSeparateAcq && (
-        <div data-testid="split-acq-total-note">
-        <ToneCard tone="amber">
-          <p className="text-sm leading-relaxed">
-            토지·건물의 취득시기가 다르므로 <b>취득가액은 토지·건물 각각</b> 아래에서 산정합니다.
-            별개 거래로 취득한 자산에는 하나의 총 취득가액이 존재하지 않습니다
-            (소득세법 §114⑦·시행령 §176의2③).
-          </p>
-        </ToneCard>
-        </div>
-      )}
+             축 A가 파트 필드만 소비하므로 총액 필드가 엔진 취득가액에 도달하지 않는다).
+          ⚠️ 종전의 안내 카드(`split-acq-total-note` — "총 취득가액이 존재하지 않습니다")는
+             **삭제**했다(2026-07-30 사용자 확정 — 화면 밀도 우선). 바로 아래 「취득가액 산정 방식
+             — 토지·건물 독립 선택」 헤더가 맥락을 대신한다. */}
       {!isSeparateAcq && (
       <div className="space-y-2">
         <label className="block text-sm font-medium">취득가액 산정 방식</label>
@@ -514,8 +460,26 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 value={props.fixedAcquisitionPrice}
                 onChange={props.onFixedAcquisitionPriceChange}
                 required
+                data-testid="fixed-acquisition-price"
                 hint={
-                  isMixedExtension
+                  /**
+                   * B4-2 — 일부양도 안내. 실거래가 모드는 엔진이 면적·가액 안분을 하지 않으므로
+                   * **사용자가 양도분 대응 취득가액을 넣어야 정답**이 된다. 종전에는 라벨이
+                   * "취득가액 (원)"이고 hint가 undefined여서 전체 취득가액을 넣기 쉬웠다
+                   * (양도차익 과소계상 — 계획서 §2 U-9 실측: 취득 300㎡·양도 100㎡에서 2억 차이).
+                   *
+                   * 안분 기준은 **면적비가 아니라 취득 당시 각 부분의 상대가치**다:
+                   *   조심 2018부0572 — 취득 당시 기준시가 비율로 안분
+                   *   국심2005구1458 — 취득 당시 신빙성 있는 감정가액이 있으면 그것
+                   *   국심1992서2655 — "기준시가가 동일하므로" 면적비 (특수 케이스)
+                   * **양도 당시** 가액 기준 안분은 배척된다(조심 2018부0572).
+                   *
+                   * 자동 안분은 하지 않는다 — 계약서에 구분 기재돼 있으면 그 값이 우선하고
+                   * (조심 2018부0572 "불분명한 경우"), 무조건 안분은 그 우선순위를 뭉갠다.
+                   */
+                  props.asset?.areaScenario === "partial" && !isMixedUse && !isMixedExtension
+                    ? "일부 양도 — 양도한 부분에 대응하는 취득가액을 입력하세요. 계약서에 구분 기재돼 있으면 그 금액, 구분되지 않으면 취득 당시 기준시가(또는 취득 당시 감정가액) 비율로 안분한 금액입니다. 양도 당시 가액 기준 안분은 인정되지 않습니다."
+                    : isMixedExtension
                     ? "엔진이 양도시 기준시가 비율로 토지·건물1에 자동 안분합니다. 일괄 금액 그대로 입력하세요."
                     : isMixedUse && !props.isAppraisalAcquisition
                       ? "겸용주택 취득 실거래가(계약서상): 법 §100②에 따라 취득시 기준시가 비율로 주택분·상가분, 각 토지·건물에 자동 안분합니다. (위 “겸용주택 분리계산”의 취득시 기준시가가 안분 비율로 사용됩니다.)"
@@ -526,6 +490,20 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                         : undefined
                 }
               />
+              {/* B4-2b 일부양도 취득가액 안분 계산기 — 실거래가 모드 전용.
+                  환산 모드는 B4-1이 취득 기준시가 면적을 정정했으므로 이 축이 필요 없다.
+                  겸용·증축 일괄은 엔진이 §100② 기준시가 비율로 자동 안분한다(별개 축). */}
+              {props.asset?.areaScenario === "partial" &&
+                !props.isAppraisalAcquisition &&
+                !isMixedUse &&
+                !isMixedExtension &&
+                props.onAssetChange && (
+                  <PartialAcqApportionSection
+                    asset={props.asset}
+                    onChange={props.onAssetChange}
+                    onApply={props.onFixedAcquisitionPriceChange}
+                  />
+                )}
               {/* 사례 33 일괄 모드: 토지+건물1 일괄 취득 시 필요경비 (중개수수료·취득세·인지대 등 §97① 가목)
                   엔진은 취득시 기준시가 비율로 토지·건물1에 자동 안분. */}
               {isMixedExtension && props.asset && props.onAssetChange && (
@@ -588,18 +566,13 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               ⚠️ 게이트는 여기(5-way 분기의 마지막 else) 안에만 건다 — 최상위 조건에 붙이면
                  겸용·상가·일반건물·PHD의 「저기서 입력하세요」 길잡이 문구까지 사라진다.
               ⚠️ 값은 지우지 않는다 — 파트 모드를 환산·감정·매매사례로 되돌리면 입력값과 함께 복귀. */}
-          {/* 일반건물 별개취득 — 입력 정본은 파트 카드다. 자산 전체 블록을 그대로 두면
-              같은 폼 필드(㎡당 공시지가·면적)를 한 화면에서 두 번 입력받게 되고(면적 칸 2개),
-              엔진은 파트 독립 경로에서 결합 총액을 참조하지 않으므로(split-gain.ts:52-56)
-              쓰이지도 않는 총액을 채우게 된다 → 읽기 전용 파생 표시로 대체. */}
-          {acqStdPriceRequired && showAcqStdReadonly && props.asset && (
-            <SplitAcqStdReadonlyPanel
-              pricePerSqmAtAcq={acqPricePerSqm}
-              acquisitionArea={props.acquisitionArea ?? ""}
-              buildingStdPriceAtAcq={props.asset.buildingStandardPriceAtAcq ?? ""}
-            />
-          )}
-          {acqStdPriceRequired && !showAcqStdReadonly && (
+          {/* 별개취득 — 자산 전체 취득시 기준시가 UI는 **완전히 숨긴다**(2026-07-30 사용자 확정).
+              입력 정본은 파트 카드(`LandBuildingSplitSection`의 `PartAcqStdPrice`)뿐이고,
+              엔진도 파트 독립 경로에서 결합 총액을 참조하지 않는다(split-gain.ts calcAcqStdPair).
+              종전의 읽기 전용 3열 파생 패널(`SplitAcqStdReadonlyPanel`)도 **폐지**했다 — 그 hint
+              "합계 = 개산공제·안분 비율의 base"가 파트별 독립 정책과 어긋났다(실제 base는
+              합계가 아니라 각 파트 자기 기준시가 — §163⑥1호·2호가 별개 호). */}
+          {acqStdPriceRequired && !isSeparateAcq && (
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
               취득시 기준시가 (원){" "}
@@ -726,6 +699,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   // 취득시 기준시가 노출 게이트 — 자산 전체 블록(:554)과 **같은 술어**를 공유해야
                   // 같은 값의 노출/숨김이 어긋나지 않는다. 하위에서 재파생 금지.
                   acqStdPriceRequired={acqStdPriceRequired}
+                  // 파트 카드 게이팅은 **파트별** 술어로 — 자산 전체 술어를 쓰면 토지 실거래가 +
+                  // 건물 환산에서 계산에 등장하지 않는 토지 카드까지 필수가 된다(2026-07-30).
+                  acqStdRequiredLand={acqStdRequiredLand}
+                  acqStdRequiredBuilding={acqStdRequiredBuilding}
                   isPhdBothEstimated={
                     !!props.asset.usePreHousingDisclosure &&
                     effLandAcqMode === "estimated" &&

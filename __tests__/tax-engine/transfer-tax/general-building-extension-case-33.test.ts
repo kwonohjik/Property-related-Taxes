@@ -351,7 +351,7 @@ describe("사례 33: 자산 카드 3장 구조 (aggregate 위임용)", () => {
 });
 
 // ============================================================
-// §6.6 — NBL 판정 (제2종일반주거, 수도권 3배)
+// §6.6 — NBL 판정 (일반주거지역 4배 — 「지방세법 시행령」 제101조 제2항)
 // ============================================================
 
 describe("사례 33: 비사업용토지 판정 — 사업용 (배율 내)", () => {
@@ -361,16 +361,25 @@ describe("사례 33: 비사업용토지 판정 — 사업용 (배율 내)", () =
     expect(out.buildingFootprintArea).toBeCloseTo(57, 2);
   });
 
-  it("배율 = 수도권 일반주거(general_residential) 3배", () => {
-    expect(out.appliedMultiplier).toBe(3);
-    expect(out.multiplierDetail).toBe("수도권 주·상·공 3배");
+  /**
+   * 2026-07-30 근거 정정 — 종전 「소득세법 시행령」 제168조의12(주택 부수토지) 3배를
+   * 건물 부수토지에 잘못 적용했다. 정본은 「소득세법」 제104조의3 제1항 제4호 나목 →
+   * 「지방세법」 제106조 제1항 제2호 → 「지방세법 시행령」 제101조 제1항 제2호·제2항
+   * → 일반주거지역 **4배**. 제101조 제2항에는 수도권 축이 없다.
+   *
+   * 토지 57㎡는 종전 허용면적(171㎡)·정정 허용면적(228㎡) 모두 이내이므로
+   * **비사업용 판정과 세액은 무변경**이다(이 파일의 세액 anchor 전부 통과).
+   */
+  it("배율 = 일반주거지역 4배 (「지방세법 시행령」 제101조 제2항)", () => {
+    expect(out.appliedMultiplier).toBe(4);
+    expect(out.multiplierDetail).toBe("일반주거지역 4배 (「지방세법 시행령」 제101조 제2항)");
   });
 
-  it("인정한도 = 57 × 3 = 171㎡", () => {
-    expect(out.allowedLandArea).toBeCloseTo(171, 2);
+  it("인정한도 = 57 × 4 = 228㎡", () => {
+    expect(out.allowedLandArea).toBeCloseTo(228, 2);
   });
 
-  it("부수토지 57㎡ ≤ 171㎡ → 전체 사업용 (nonBusinessRatio = 0)", () => {
+  it("부수토지 57㎡ ≤ 228㎡ → 전체 사업용 (nonBusinessRatio = 0)", () => {
     expect(out.isWithinNblRatio).toBe(true);
     expect(out.nonBusinessRatio).toBe(0);
   });
