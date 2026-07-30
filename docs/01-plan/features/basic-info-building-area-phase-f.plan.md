@@ -481,8 +481,91 @@ anchor 6건이 그 불변식을 지킨다 — 누군가 "일관성"을 이유로
 
 | 단계 | 결론 |
 |---|---|
-| **F1** | ✅ 완료 — `housing` 축 B·C 신설, `building` 축 B 이전(β-2), prefill 배선 |
+| **F1** | ✅ 완료 — `housing` 축 B·C 신설, `building` 축 B 신설, prefill 배선. **β-2 이전은 §12에서 철회** |
 | **F2** | ❌ **폐기** — 승격이 회귀 위험(§11) |
 | **F3** | ❌ **폐기** — 법령 개념 상이(U-3) |
+| **U-12** | ✅ **종결** — 모순이 아니었다. 대신 F1 β-2가 만든 데이터 손상을 정정(§12) |
 
-**Phase F는 F1로 종결된다.** 남은 별건은 U-12(`building` 라벨 ↔ `isSplitable` 모순)뿐이다.
+**Phase F는 F1 + U-12 정정으로 종결된다.**
+
+---
+
+## §12 U-12 종결 — `building` 라벨 ↔ `isSplitable`은 모순이 아니다 (2026-07-30)
+
+### 12.1 결론: 게이트는 정본, **F1이 만든 데이터 손상이 진짜 결함**
+
+U-12는 "「건물(토지 제외)」인데 `isSplitable`이 `building`을 포함해 토지·건물 분리가 열린다"는
+모순 의심이었다. **모순이 아니다.**
+
+「소득세법」 제99조 제1항 제1호는 **나목**(건물)에 "딸린 토지" 문구를 두지 **않고**,
+**다목**(오피스텔·상업용건물)에만 **"이에 딸린 토지를 포함한다"**를 둔다
+(KoreanLaw 실측 MST 280405 시행 2026-07-01 — 같은 조 **제3항 제4호**에서 문언 확인:
+"…오피스텔(이에 딸린 토지를 포함한다), 상업용 건물(이에 딸린 토지를 포함한다)…").
+
+→ **나목 건물의 부수토지는 가목으로 별도 평가**된다. 라벨 "건물(토지 제외)"는
+*기준시가 공시 범위*를 뜻하고 **토지 부재가 아니다**. 따라서:
+
+- `isSplitable`이 `building`을 포함하는 것은 정본 (`CompanionAcqPurchaseBlock.tsx:116`)
+- 엔진 게이트도 같다 (`transfer-tax-split-gain.ts:357`)
+- `LandBuildingSplitSection`의 토지 카드 "(§99①1호 **가목**)" / 건물 카드 "(**나목**)"이
+  법문 구조 그대로다
+
+### 12.2 🔴 진짜 결함 — PR #912 오라벨링 → F1 β-2 데이터 손상
+
+코드도 이미 나목 건물에 축 A가 있다고 전제한다:
+
+```
+StandardPriceInput.tsx:69~70
+  toPropertyType(kind) = (house_individual|house_apart) ? "housing" : "land"
+  → building_non_residential → "land" → **개별공시지가** 조회
+```
+
+즉 `building`의 면적 모드 곱셈 인자는 **토지 면적**이고, 단가 필드도
+`standardPricePerSqmAtAcq`("㎡당 **공시지가**")다. `LandBuildingSplitSection.tsx:163`이
+같은 필드를 "**토지 면적**"으로 입력받는 것과 일관된다.
+
+**PR #912(Phase A)가 이를 "건물 연면적"으로 오라벨링**했고(`AREA_LABEL_BY_ASSET_KIND`),
+**F1 β-2가 그 전제로 값을 이전**했다. 실측 손상:
+
+| 항목 | 마이그레이션 전 | 후 |
+|---|---|---|
+| `acquisitionArea` | `"200"` | **`""`** |
+| `transferArea` | `"200"` | **`""`** |
+| `buildingFloorArea` | `""` | **`"200"`** (토지 면적이 연면적으로 오입력) |
+| 토지분 취득 기준시가 | **100,000,000** | **null** |
+
+`calcApportionRatio`가 null → 토지·건물 안분 불가(`transfer-tax-split-gain.ts:54,96~104`).
+`assetKind` 미상 → `building` fallback 정규화 **뒤**에 배치했으므로 미분류 자산까지 휩쓸었다.
+
+**심각도**: validate가 "토지 면적을 입력하세요"로 차단하므로(`transfer-tax-validate-split.ts:115,155,247`)
+침묵 오산출은 아니다. 그러나 ① 저장된 토지 면적 **값 소실** ② 연면적 필드 **오염**(「건물
+기준시가 계산서」 모달 `prefill.floorArea`가 토지 면적을 쓴다) 두 실해가 남는다.
+
+### 12.3 정정 내용
+
+| # | 파일 | 변경 |
+|---|---|---|
+| 1 | `calc-wizard-asset-migrate.ts` | β-2 이전 블록 **삭제** → ⛔ 재도입 금지 근거 주석 |
+| 2 | `AssetSectionBasic.tsx` | `LAND_AXIS_EXCLUDED_KINDS` **삭제**(빈 집합=dead) → 축 A 렌더 복원 + ⛔ 주석 |
+| 3 | `AssetSectionBasic.tsx` | `AREA_LABEL_BY_ASSET_KIND.building = "취득·양도 당시 **토지 면적** (㎡)"` |
+| 4 | `calc-wizard-asset.ts` | `acquisitionArea` JSDoc — 전 자산유형 토지 면적임을 명시 |
+| 5 | `e2e/transfer-self-owns-filing-form.spec.ts` | 우회용 `buildingFloorArea` seed 제거 + 법령 근거로 주석 교체 |
+
+축 B(`buildingFloorArea`) 자체는 **유지**한다 — 나목 건물 기준시가 계산서의 곱셈 인자로
+정당하고, 종전에는 모달 안에서만 수기 입력했다(F1의 진짜 기여).
+
+`building: ["same"]`도 유지한다. `partial`은 `resolveAcqAreaForStdPrice`(B-4)를 태우면
+안전해지지만 별건이다.
+
+### 12.4 회귀 — anchor가 잘못된 전제를 고정하고 있었다
+
+정정으로 **뒤집힌 anchor 3건**(성공 신호):
+
+- `asset-section-basic-area-gate.anchor.test.tsx` — "building: 축 A 미렌더" → **축 A 렌더**
+- `basic-info-building-area.anchor.test.ts` A-4 — "곱셈 인자는 연면적" → `toPropertyType`이
+  **"land"**임을 고정 + 축 A 비움의 수치 손상 고정
+- `asset-building-floor-area-migration.test.ts` A-7 — "이전된다" → **축 A 불가침**
+
+**교훈**: `isAreaMode`가 켜지는 것만 보고 "면적 = 연면적"이라 추론했다. 조회 대상을 정하는
+`toPropertyType`을 한 줄 더 읽으면 "land"였다. Phase F에서 법령·코드 실측이 내 가정을
+뒤집은 **네 번째** 사례다(U-3 · U-13 · F2 · U-12).

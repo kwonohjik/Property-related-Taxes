@@ -85,9 +85,25 @@ describe("R-1 — assetKind별 면적 섹션 렌더 여부", () => {
     expect(screen.getByText(/건물 연면적 \(㎡\)/)).toBeInTheDocument();
   });
 
-  it("building: 축 A(토지) 입력·시나리오 Select 미렌더 — 토지 제외 자산", () => {
+  /**
+   * 🔴 U-12(2026-07-30) — 축 A를 **끄지 않는다**. 종전 이 테스트는 "토지 제외 자산이므로
+   *    축 A 미렌더"를 고정했는데, 그 전제가 틀렸다:
+   *
+   *    「소득세법」 제99조 제1항 제1호는 **나목**(건물)에 "딸린 토지" 문구를 두지 않고
+   *    **다목**(오피스텔·상업용건물)에만 "이에 딸린 토지를 포함한다"를 둔다(같은 조
+   *    제3항 제4호에서 확인) → **나목 건물의 부수토지는 가목으로 별도 평가**된다.
+   *    라벨 "건물(토지 제외)"는 *기준시가 공시 범위*이지 토지 부재가 아니다.
+   *
+   *    코드도 그렇게 동작한다 — `toPropertyType(building_non_residential)` → "land"
+   *    (`StandardPriceInput.tsx:69~70`)이므로 조회 대상이 **개별공시지가**이고
+   *    `acquisitionArea`가 그 곱셈 인자다. 끄면 validate가 "토지 면적을 입력하세요"로
+   *    차단하는 dead-end가 된다(`transfer-tax-validate-split.ts:115,155,247`).
+   */
+  it("🔴 building: 축 A(토지 면적)도 렌더된다 — 부수토지가 가목으로 별도 평가된다", () => {
     renderBasic("building");
-    expect(screen.queryByTestId("area-scenario-select")).not.toBeInTheDocument();
+    expect(screen.getByTestId("area-scenario-select")).toBeInTheDocument();
+    // 라벨은 「토지 면적」이다 — PR #912의 "건물 연면적" 오라벨링은 제거됐다
+    expect(screen.getByText(/취득·양도 당시 토지 면적 \(㎡\)/)).toBeInTheDocument();
     expect(screen.queryByText(/취득·양도 당시 건물 연면적 \(㎡\)/)).not.toBeInTheDocument();
   });
 

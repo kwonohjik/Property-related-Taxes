@@ -440,28 +440,28 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.buildingFloorArea === undefined) a.buildingFloorArea = "";
 
   /**
-   * β-2 이전 — `building`(건물, 토지 제외) 자산의 축 B를 `acquisitionArea` → `buildingFloorArea`로.
+   * ⛔ **`building`의 `acquisitionArea`를 `buildingFloorArea`로 이전하지 말 것**
+   *    (2026-07-30 U-12 실측으로 철회 — 종전 β-2 블록은 데이터 손상이었다).
    *
-   * PR #912(Phase A)는 축 B 전용 필드가 없어 `building`의 연면적을 `acquisitionArea`(축 A)에
-   * 실었다. 그 이원성이 `LandBuildingSplitSection.tsx:207`의 `landAreaM2: acquisitionArea`
-   * prefill에 **연면적을 토지면적으로** 흘리는 결함을 만들었다(`isSplitable`이 `building`을
-   * 포함한다 — `CompanionAcqPurchaseBlock.tsx:116`).
+   * PR #912(Phase A)는 `building`(건물, 토지 제외)의 `acquisitionArea`를 "건물 연면적"으로
+   * 라벨링했고, β-2가 그 전제로 값을 `buildingFloorArea`로 옮기고 축 A를 비웠다.
+   * **전제가 틀렸다** — `building`의 `acquisitionArea`는 처음부터 **토지 면적**이다:
    *
-   * ⚠️ 이 블록은 **assetKind 정규화(위) 뒤**에 있어야 한다 — fallback으로 `building`이 된
-   *    자산도 함께 이전해야 하기 때문이다.
-   * ⚠️ `transferArea`도 비운다: `building`의 면적 시나리오가 `["same"]`으로 축소되어
-   *    시점 쌍이 불필요해졌다(축 B는 단일 필드 — GB `gbBuildingArea` 선례).
+   *   · `StandardPriceInput.tsx:69~70` — `toPropertyType(building_non_residential)` → **"land"**.
+   *     즉 조회 대상이 **개별공시지가**이고 곱셈 인자는 토지 면적이다(건물 ㎡당 단가가 아니다).
+   *   · `calc-wizard-asset.ts` — `standardPricePerSqmAtAcq` 주석 "㎡당 **공시지가**".
+   *   · `LandBuildingSplitSection.tsx:163` — 같은 필드를 "**토지 면적**"으로 입력받는다
+   *     (「소득세법」 제99조 제1항 제1호 가목).
+   *
+   * 「소득세법」 제99조 제1항 제1호는 나목(건물)에 "딸린 토지" 문구를 두지 않고, 다목
+   * (오피스텔·상업용건물)에만 "이에 딸린 토지를 포함한다"를 둔다(같은 조 제3항 제4호에서 확인).
+   * 즉 **나목 건물의 부수토지는 가목으로 별도 평가**되므로 `building`에도 축 A가 실재한다 —
+   * 라벨 "건물(토지 제외)"는 *기준시가 공시 범위*를 뜻하고, 토지가 없다는 뜻이 아니다.
+   *
+   * 실측(제거 전): `acquisitionArea "200"` → `""`, `buildingFloorArea "" → "200"`,
+   *   토지분 취득 기준시가 100,000,000 → **null**(`calcLandStdPriceAtAcq` 면적 0).
+   *   `assetKind` 미상 → `building` fallback 자산까지 휩쓸어 피해 범위가 더 넓었다.
    */
-  if (
-    a.assetKind === "building" &&
-    !a.buildingFloorArea &&
-    typeof a.acquisitionArea === "string" &&
-    a.acquisitionArea !== ""
-  ) {
-    a.buildingFloorArea = a.acquisitionArea;
-    a.acquisitionArea = ""; // 축 A(토지) 전용으로 의미 확정
-    a.transferArea = "";
-  }
 
   /**
    * `building`의 면적 시나리오가 `["same"]`으로 축소됐다 → stale `partial`을 정규화한다.

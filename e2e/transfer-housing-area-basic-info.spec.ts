@@ -112,16 +112,27 @@ test.describe("Phase F1 — 기본정보 건물 면적(축 B·C)", () => {
     await expect(page.getByTestId("basic-building-footprint-area")).toHaveCount(1);
   });
 
-  test("건물(토지 제외): 연면적만 노출 — 축 A·C·시나리오 Select 미노출 (β-2)", async ({ page }) => {
+  /**
+   * 🔴 U-12(2026-07-30) — 축 A는 **노출된다**. 종전 이 테스트는 "토지가 없는 자산"을
+   *    전제로 축 A 미노출을 고정했으나 틀렸다:
+   *
+   *    「소득세법」 제99조 제1항 제1호는 **나목**(건물)에 "딸린 토지" 문구를 두지 않고
+   *    **다목**(오피스텔·상업용건물)에만 "이에 딸린 토지를 포함한다"를 둔다(같은 조
+   *    제3항 제4호에서 확인) → **나목 건물의 부수토지는 가목으로 별도 평가**된다.
+   *    라벨 "건물(토지 제외)"는 *기준시가 공시 범위*이지 토지 부재가 아니다.
+   *    코드도 그렇다 — `toPropertyType(building_non_residential)` → "land"(개별공시지가).
+   */
+  test("건물(토지 제외): 축 A(토지 면적) + 축 B(연면적) 노출, 축 C만 미노출", async ({ page }) => {
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: "건물(토지 제외)", exact: true }).click();
 
     await expect(page.getByTestId("basic-building-floor-area")).toBeVisible();
-    // 토지가 없는 자산 → 축 A 입력·시나리오 Select 없음
-    await expect(page.getByTestId("area-scenario-select")).toHaveCount(0);
-    // 부수토지 판정이 없으므로 축 C도 없음
+    // 부수토지가 가목으로 별도 평가되므로 축 A가 필요하다
+    await expect(page.getByTestId("area-scenario-select")).toHaveCount(1);
+    await expect(page.getByText(/취득·양도 당시 토지 면적 \(㎡\)/)).toBeVisible();
+    // 축 C(바닥면적)는 §154⑦ 주택 부수토지 한도 판정용이라 대상 아님
     await expect(page.getByTestId("basic-building-footprint-area")).toHaveCount(0);
   });
 

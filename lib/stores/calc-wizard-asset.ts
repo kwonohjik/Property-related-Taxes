@@ -92,9 +92,14 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   inheritanceAssetKind: "land" | "house_individual" | "house_apart";
   /**
    * 취득 당시 **토지** 면적 (㎡) — 축 A. 취득 기준시가 산정, Pre1990 환산, NBL landArea.
-   * ⚠️ 2026-07-30(β-2) 이후 **축 A(토지) 전용**이다. 건물 연면적은 `buildingFloorArea`.
-   *    종전에는 `assetKind === "building"`에서 이 필드가 연면적을 담았고, 그 이원성이
-   *    `LandBuildingSplitSection`의 `landAreaM2` prefill에 연면적을 흘리는 결함을 만들었다.
+   *
+   * ⚠️ **전 자산유형에서 토지 면적이다** — `assetKind === "building"`("건물(토지 제외)")도
+   *    포함한다(2026-07-30 U-12 실측). 그 라벨은 「소득세법」 제99조 제1항 제1호 **나목**의
+   *    *기준시가 공시 범위*를 뜻하고, 부수토지는 **가목**으로 별도 평가된다:
+   *      `toPropertyType(building_non_residential)` → "land"(`StandardPriceInput.tsx:69~70`)
+   *      → 조회 대상이 개별공시지가이고 이 필드가 그 곱셈 인자다.
+   *    PR #912가 이를 "건물 연면적"으로 오라벨링했고 후속 마이그레이션이 값을
+   *    `buildingFloorArea`로 옮기며 축 A를 비웠다 — **철회됨**. 건물 연면적은 별도 필드다.
    */
   acquisitionArea: string;
   /** 양도 당시 **토지** 면적 (㎡) — 축 A. 양도 기준시가 산정. */
