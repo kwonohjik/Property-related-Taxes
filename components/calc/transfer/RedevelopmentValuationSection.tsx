@@ -236,7 +236,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               hint="국토교통부장관이 최초로 공시한 주택가격 (단일 라목값)"
             />
 
-            <FieldCard label="토지면적 (㎡)" hint="시점별 동일 가정 — 환지·합병으로 면적이 다른 케이스는 후속 PR">
+            <FieldCard label="취득·양도 당시 토지 면적 (㎡)" hint="시점별 동일 가정 — 환지·합병으로 면적이 다른 케이스는 후속 PR">
               <DecimalInput
                 value={asset.redevLandArea}
                 onChange={(v) => onChange({ redevLandArea: v })}
@@ -399,7 +399,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
 
       {/* 토지면적 */}
       <FieldCard
-        label="토지면적 (㎡)"
+        label="취득·양도 당시 토지 면적 (㎡)"
         hint="§166③ 분자·분모 공통 면적. 취득·관리처분 시점 동일 가정."
       >
         <DecimalInput

@@ -373,7 +373,21 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   // 1) 다필지 모드는 별도 검증
   if (isParcelMode) return validateParcelMode(asset, formTransferDate);
 
-  // 2) 환지처분 시나리오
+  // 2) 면적 시나리오
+  // partial 불변식은 면적 섹션이 노출되는 전 자산유형 공통(land·housing) —
+  //   AREA_SCENARIOS_BY_ASSET_KIND(AssetSectionBasic)와 대응. 환지는 토지 제도(소득령 §162의2)라 land 한정.
+  // 미입력 자체는 요구하지 않는다 — 면적을 소비하지 않는 경로(실지거래가·NBL 미사용)에서
+  //   필수화하면 과도 차단이 된다. 소비 경로별 요구는 아래 3)·4-2)·NBL·분리 검증이 담당.
+  {
+    const scenario = asset.areaScenario ?? "same";
+    if (scenario === "partial") {
+      const acq = parseFloat((asset.acquisitionArea || "").replace(/,/g, ""));
+      const tr = parseFloat((asset.transferArea || "").replace(/,/g, ""));
+      if (acq > 0 && tr > 0 && acq < tr)
+        return `${label}: 취득 당시 면적은 양도 당시 면적 이상이어야 합니다. (① 기본정보)`;
+    }
+  }
+
   if (asset.assetKind === "land") {
     const scenario = asset.areaScenario ?? "same";
     if (scenario === "reduction") {
@@ -390,7 +404,7 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     if (scenario === "increase") {
       if (!asset.replottingConfirmDate) return `${label}: 환지처분확정일을 입력하세요.`;
       if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
-        return `${label}: 종전토지 면적(③ 취득정보의 취득 당시 면적)을 입력하세요.`;
+        return `${label}: 종전토지 면적(① 기본정보의 취득 당시 면적)을 입력하세요.`;
       if (!asset.transferArea || parseFloat(asset.transferArea) <= 0)
         return `${label}: 권리면적(양도 당시 면적)을 입력하세요.`;
     }
