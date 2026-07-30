@@ -51,8 +51,11 @@ import type { NblOtherFormSlice } from "./calc-wizard-asset-nbl-other";
 export type { NblOtherFormSlice } from "./calc-wizard-asset-nbl-other";
 import type { GeneralBuildingFormSlice } from "./calc-wizard-asset-gb";
 export type { GeneralBuildingFormSlice } from "./calc-wizard-asset-gb";
+// 일부양도 취득가액 안분 계산기 (B4-2b) — UI 전용 슬라이스
+import type { PartialAreaApportionFormSlice } from "./calc-wizard-asset-partial-area";
+export type { PartialAreaApportionFormSlice, PartialApportionBasis } from "./calc-wizard-asset-partial-area";
 
-export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice {
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice {
   assetId: string;
   assetLabel: string;
   /**

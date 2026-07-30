@@ -93,3 +93,26 @@ describe("A-7b — building의 stale areaScenario 정규화", () => {
     }
   });
 });
+
+describe("B4-2b — 안분 계산기 필드 ③ normalize", () => {
+  it("구 세션 자산에 5필드가 빈 문자열로 채워진다", () => {
+    const a = migrateAsset({ assetKind: "land" });
+    expect(a.partialAcqDistinct).toBe("");
+    expect(a.partialApportionBasis).toBe("");
+    expect(a.partialTotalAcqPrice).toBe("");
+    expect(a.partialSoldValue).toBe("");
+    expect(a.partialRemainValue).toBe("");
+  });
+
+  it("기존 값은 보존된다 (덮어쓰기 금지)", () => {
+    const a = migrateAsset({
+      assetKind: "land",
+      partialAcqDistinct: "no",
+      partialApportionBasis: "appraisal",
+      partialTotalAcqPrice: "300000000",
+    });
+    expect(a.partialAcqDistinct).toBe("no");
+    expect(a.partialApportionBasis).toBe("appraisal");
+    expect(a.partialTotalAcqPrice).toBe("300000000");
+  });
+});

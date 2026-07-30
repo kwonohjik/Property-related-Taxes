@@ -21,6 +21,7 @@ import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandV
 import { SelfBuiltSection } from "./SelfBuiltSection";
 import { LandBuildingSplitSection } from "./LandBuildingSplitSection";
 import { CompanionAcqDateSection } from "./CompanionAcqDateSection";
+import { PartialAcqApportionSection } from "./PartialAcqApportionSection";
 import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -459,6 +460,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 value={props.fixedAcquisitionPrice}
                 onChange={props.onFixedAcquisitionPriceChange}
                 required
+                data-testid="fixed-acquisition-price"
                 hint={
                   /**
                    * B4-2 — 일부양도 안내. 실거래가 모드는 엔진이 면적·가액 안분을 하지 않으므로
@@ -488,6 +490,20 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                         : undefined
                 }
               />
+              {/* B4-2b 일부양도 취득가액 안분 계산기 — 실거래가 모드 전용.
+                  환산 모드는 B4-1이 취득 기준시가 면적을 정정했으므로 이 축이 필요 없다.
+                  겸용·증축 일괄은 엔진이 §100② 기준시가 비율로 자동 안분한다(별개 축). */}
+              {props.asset?.areaScenario === "partial" &&
+                !props.isAppraisalAcquisition &&
+                !isMixedUse &&
+                !isMixedExtension &&
+                props.onAssetChange && (
+                  <PartialAcqApportionSection
+                    asset={props.asset}
+                    onChange={props.onAssetChange}
+                    onApply={props.onFixedAcquisitionPriceChange}
+                  />
+                )}
               {/* 사례 33 일괄 모드: 토지+건물1 일괄 취득 시 필요경비 (중개수수료·취득세·인지대 등 §97① 가목)
                   엔진은 취득시 기준시가 비율로 토지·건물1에 자동 안분. */}
               {isMixedExtension && props.asset && props.onAssetChange && (
