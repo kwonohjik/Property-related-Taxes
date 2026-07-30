@@ -558,19 +558,21 @@ export interface TransferTaxInput {
    */
   selfOwns?: "both" | "building_only" | "land_only";
   /**
-   * 건물 정착면적 (㎡) — 부수토지 한도 산정용 (소득세법 시행령 §154⑦).
+   * 건물 정착면적 (㎡) — 부수토지 한도 산정용.
+   * ⚠️ 축별 근거 조문이 다르다(배율 수치 3/5/5/10은 동일) — 세율 축 「소득세법 시행령」 §167의5 /
+   *    비사업용 토지 축 같은 영 §168의12 / 비과세 축 같은 영 §154⑦.
    * 나대지 취득 후 주택 신축·일괄양도 케이스에서 companion 토지의 부수토지 인정 한도를
    * 계산할 때 사용. undefined이면 부수토지 일체과세 자동 분기 비활성화.
    * 겸용주택(`isMixedUseHouse=true`)에서도 동일 필드를 재사용한다.
    */
   buildingFootprintArea?: number;
   /**
-   * @deprecated 영 §154⑦의 3단계(3/5/10배)를 boolean으로 표현 못함.
+   * @deprecated 배율 3단계(3/5/10배)를 boolean으로 표현 못함 (영 §167의5·§168의12·§154⑦ 공통).
    * 신규 코드는 appurtenantLandZone 사용.
    */
   isUrbanArea?: boolean;
   /**
-   * 부수토지 인정 한도 zone (영 §154⑦).
+   * 부수토지 인정 한도 zone — 세율 축 「소득세법 시행령」 §167의5(비사토 축 §168의12·비과세 축 §154⑦ 동일 수치).
    * - "metropolitan_residential": 수도권 도시지역 + 주거·상업·공업 → 3배
    * - "non_metropolitan_or_green": 수도권 녹지 또는 수도권 외 도시지역 → 5배
    * - "non_urban": 도시지역 외 → 10배
@@ -584,27 +586,27 @@ export interface TransferTaxInput {
    */
   rentalHousingException?: import("../transfer-tax/rental-housing-exception/types").RentalHousingExceptionInput;
 
-  // ── 부수토지 일체과세 — companion 전용 필드 (사례 28, 영 §154⑦) ──
+  // ── 부수토지 일체과세 — companion 전용 필드 (사례 28, 세율 축: §104①2호 괄호·영 §167의5) ──
   /**
    * companion 토지 세율 수동 오버라이드 (부수토지 일체과세 자동 분기 무시).
    * 미지정(undefined) 시 landNature 명시 입력 기반으로 자동 판단.
    *
-   * - "shortTermHousing70": 주택 단기보유 70% 강제 (§104①3호 단서)
-   * - "shortTerm60":        1년~2년 주택 세율 60% 강제 (§104①3호)
+   * - "shortTermHousing70": 1년 미만 주택 70% 강제 (「소득세법」 §104①3호 괄호)
+   * - "shortTerm60":        1년~2년 주택 60% 강제 (같은 법 §104①**2호** 괄호)
    * - "progressive":        일반 누진세율 강제
    *
-   * 법령 근거: §89①3호 / 영 §154⑦ / §104①후단
+   * 법령 근거: 「소득세법」 §104①2·3호 괄호 / 같은 법 시행령 §167의5 / 같은 법 §104①후단
    */
   manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
 
   /**
    * 토지 성질 명시 입력 (propertyType === "land" 자산에서만 사용).
    * 사용자가 자산 카드에서 선언.
-   * - "appurtenant_to_housing": 주택 부수토지 — §89①3호·영§154⑦ 일체과세 대상
+   * - "appurtenant_to_housing": 주택 부수토지 — §104①2호 괄호·영 §167의5 일체과세 대상
    * - "non_appurtenant": 독립 나대지 — 일체과세 대상 아님, 토지 본래 세율 적용
    * - undefined: 미선언 (단독 자산 양도 시 생략 가능)
    *
-   * 부수토지 판정은 면적 한도(영 §154⑦: 도시지역 3~5배 / 도시지역 외 10배)와 무관하게
+   * 부수토지 판정은 면적 한도(영 §167의5: 도시지역 3~5배 / 그 밖의 지역 10배)와 무관하게
    * 사용자가 사실 관계에 근거하여 선언하는 값. 면적 초과분은 엔진이 자동으로 분리.
    */
   landNature?: "appurtenant_to_housing" | "non_appurtenant";
@@ -623,7 +625,7 @@ export interface TransferTaxInput {
     buildingFootprintArea?: number;
     /** @deprecated isUrbanArea 단일 boolean. appurtenantLandZone 사용 권장 */
     isUrbanArea?: boolean;
-    /** 부수토지 인정 한도 zone (영 §154⑦) */
+    /** 부수토지 인정 한도 zone (세율 축 — 영 §167의5) */
     appurtenantLandZone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
     /** 일괄양도 모드 */
     bundledSaleMode?: "actual" | "apportioned";
