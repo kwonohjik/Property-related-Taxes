@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqNewConstructionBlock } from "./CompanionAcqNewConstructionBlock";
+import { AssetOwnershipSplitSection } from "./AssetOwnershipSplitSection";
 import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
@@ -108,6 +109,11 @@ export function CompanionAcquisitionCauseSection({
           }
         />
       )}
+
+      {/* 「토지·건물 소유자 다름」 — 취득원인 라디오 직하(2026-07-30 이동).
+          이 토글이 「취득일 다름」을 강제로 켜므로 그보다 **앞**에 와야 위→아래 연쇄가 된다.
+          현재 노출은 매매 전용(컴포넌트 내부 게이트) — 상속·증여 확대는 별도 PR. */}
+      <AssetOwnershipSplitSection asset={asset} onChange={onChange} />
 
       {/* 신축(자가건축) — 신축비용(취득가액) 입력 블록 */}
       {isNewConstruction && (

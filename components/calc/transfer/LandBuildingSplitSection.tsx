@@ -19,7 +19,7 @@
  *   환산: 파트 양도가 × (파트 취득시/양도시 기준시가).
  */
 
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
@@ -72,6 +72,13 @@ interface Props {
    * 엔진·validate와 단일 소스를 공유하기 위해 **호출부가 계산해 주입**한다(재파생 금지).
    */
   acqStdPriceRequired: boolean;
+  /**
+   * **파트별** 필요 판정(`requiresAcqStdPricePart`) — 2026-07-30.
+   * 자산 전체 술어는 "어느 한쪽이라도 필요하면 true"라 파트 카드 게이팅에 쓸 수 없다:
+   * 토지 실거래가 + 건물 환산에서 계산에 등장하지 않는 토지 카드까지 필수가 된다.
+   */
+  acqStdRequiredLand: boolean;
+  acqStdRequiredBuilding: boolean;
   /** §164⑤ PHD + 양쪽 환산 — 엔진이 3-시점 경로로 early-return해 이 입력을 쓰지 않는다 */
   isPhdBothEstimated: boolean;
   /**
@@ -108,6 +115,11 @@ function PartAcqStdPrice(props: {
   transferDate?: string;
   /** 비소유 파트에 렌더할 때의 사유 안내 (`selfOwns ≠ both` — 소유는 없어도 계산에는 필요) */
   notOwnedReason?: string;
+  /**
+   * (land 전용) 이 파트가 실거래가라 **취득가액 계산에는 쓰이지 않는** 상태 —
+   * 「건물 기준시가 계산」의 위치지수·부속토지 소스로만 쓰인다. 필수 표시를 하지 않는다.
+   */
+  calcUnusedNote?: string;
   /** (building 전용) 양도시 칸을 같은 카드에 배치하고 런처를 2시점 통합 모달로 전환 */
   showTransfer?: boolean;
 }) {
@@ -131,6 +143,11 @@ function PartAcqStdPrice(props: {
         {props.notOwnedReason && (
           <p className="text-xs text-amber-800" data-testid="split-land-std-not-owned-note">
             {props.notOwnedReason}
+          </p>
+        )}
+        {props.calcUnusedNote && (
+          <p className="text-xs text-amber-800" data-testid="split-land-std-calc-unused-note">
+            {props.calcUnusedNote}
           </p>
         )}
         <LandPriceLookupField
@@ -313,6 +330,23 @@ function PartAcqInputs(props: {
   );
 }
 
+/**
+ * 자본적지출 칸 hint — **파트 취득 방식에 따라 실제 반영 여부가 다르다**(엔진 `applyAssetSwap`).
+ *
+ * · 실가(actual): 필요경비로 전액 차감 (소득세법 §97①2호)
+ * · 환산(estimated): 「환산취득가 + 개산공제」(가목) ↔ 「자본적지출」(나목) **택일** — §97②2호 단서
+ * · 감정·매매사례: 개산공제(§163⑥)만 적용되고 자본적지출은 차감되지 않는다
+ */
+function capexHint(label: string, mode: PartAcqMode): string {
+  if (mode === "estimated") {
+    return `${label}이 환산취득가여서 「환산취득가 + 개산공제」와 「자본적지출」 중 큰 쪽만 필요경비가 됩니다 (소득세법 §97②2호). 없으면 비워두세요`;
+  }
+  if (mode === "appraisal" || mode === "salesCase") {
+    return `${label}은 추계 취득가액이라 개산공제(§163⑥)가 적용되고 자본적지출은 차감되지 않습니다. 없으면 비워두세요`;
+  }
+  return `${label}에 귀속되는 자본적지출만 입력, 없으면 비워두세요`;
+}
+
 export function LandBuildingSplitSection(props: Props) {
   // 축 B 취득시 기준시가 입력 — 별개 취득 전용.
   //
@@ -335,21 +369,38 @@ export function LandBuildingSplitSection(props: Props) {
   // (`CompanionAcqPurchaseBlock.tsx:554` — 이미 같은 술어로 게이팅)과 **노출/숨김이 서로 모순**이었다.
   // 술어는 호출부가 계산해 내려준다 — 여기서 재파생하면 dual-truth가 된다.
   const isHousingAsset = props.asset?.assetKind === "housing";
-  const showLandStdPrice =
+  // 두 파트 카드의 공통 전제 — 별개취득 · PHD 양쪽환산 제외 · 자산 종류 · 콜백 존재.
+  // §164⑤ PHD + **양쪽** 환산은 `calcSplitGainPreDisclosure`로 early-return되어
+  // (transfer-tax-split-gain.ts) 이 입력이 엔진에 도달하지 않는다. 한쪽만 환산이면
+  // early-return이 걸리지 않아 카드가 실제로 필요하므로 `양쪽 estimated`로 한정한다.
+  const stdCardBase =
     !!props.isSeparateAcq &&
-    props.acqStdPriceRequired &&
-    // §164⑤ PHD + **양쪽** 환산은 `calcSplitGainPreDisclosure`로 early-return되어
-    // (transfer-tax-split-gain.ts:341) 이 입력이 엔진에 도달하지 않는다. 한쪽만 환산이면
-    // early-return이 걸리지 않아 카드가 실제로 필요하므로 `양쪽 estimated`로 한정한다.
     !props.isPhdBothEstimated &&
     (props.asset?.assetKind === "building" || isHousingAsset) &&
     !!props.asset &&
     !!props.onAssetChange;
+
   // **주택도 파트 독립 입력**(2026-07-30 사용자 확정 + §163⑥2호가목 실측). 종전엔 주택을 제외하고
   // `결합 총액 − 토지분` 역산만 허용했으나, 그 규정은 "**취득당시**의 라목 가액"을 전제한다 —
   // 토지를 먼저 취득하고 건물을 나중에 신축·취득했다면 토지 취득 당시엔 주택이 없어 라목 결합
   // 공시가 애초에 없다. 역산하면 건물분에 토지 취득시점이 섞인다(§164③ 직전 고시분 위반).
-  const showBuildingStdPrice = showLandStdPrice;
+  const showBuildingStdPrice = stdCardBase && props.acqStdRequiredBuilding;
+
+  /**
+   * 토지 카드는 **계산에 쓰이지 않아도** 건물이 환산이면 노출한다 (2026-07-30, 안 ①).
+   *
+   * `standardPricePerSqmAtAcq`·`acquisitionArea`는 「건물 기준시가 계산」 모달의 prefill 소스
+   * (`acqLandPricePerSqm` 위치지수 · `landAreaM2` 부속토지)이고, 별개취득에서는 이 카드가
+   * 두 값의 **유일한 입력 경로**다(자산 전체 블록은 별개취득에서 완전히 숨겨진다).
+   * 숨기면 건물 환산에 필요한 값을 모달 안에서 수기로만 넣게 된다.
+   *
+   * ⚠️ **양쪽 실가 + 안분 근거 있음**에서는 종전대로 숨긴다 — `acqStdRequiredLand`도
+   *    `buildingAcqMode === "estimated"`도 false다(e2e/split-mode-gating.spec.ts가 검증).
+   */
+  const landStdForBuildingPrefillOnly =
+    !props.acqStdRequiredLand && props.buildingAcqMode === "estimated";
+  const showLandStdPrice =
+    stdCardBase && (props.acqStdRequiredLand || landStdForBuildingPrefillOnly);
   const landOwned = props.selfOwns !== "building_only";
   const buildingOwned = props.selfOwns !== "land_only";
 
@@ -391,6 +442,11 @@ export function LandBuildingSplitSection(props: Props) {
               asset={props.asset!}
               onChange={props.onAssetChange!}
               transferDate={props.transferDate}
+              calcUnusedNote={
+                landStdForBuildingPrefillOnly
+                  ? "토지가 실거래가여서 취득가액 계산에는 쓰이지 않습니다. 「건물 기준시가 계산」의 위치지수·부속토지 산정에만 사용됩니다."
+                  : undefined
+              }
             />
           )}
           {props.saleStdInLandPart && props.asset && props.onAssetChange && (
@@ -482,12 +538,15 @@ export function LandBuildingSplitSection(props: Props) {
         </div>
       )}
 
-      {/* 자본적지출 — 모드·양도 방식과 무관하게 항상 입력 가능 */}
+      {/* 자본적지출 — 모드·양도 방식과 무관하게 항상 입력 가능.
+          ⚠️ hint는 **파트 모드별**로 갈린다(2026-07-30). 실가 파트는 전액 필요경비로 차감되지만
+             (§97①2호), 추계 파트는 개산공제(§163⑥)가 적용되어 차감되지 않거나 §97②2호 단서의
+             택일 대상이 된다 — 안내가 없으면 "입력했는데 세액이 안 변한다"는 오인을 부른다. */}
       <div className="grid grid-cols-2 gap-2">
-        <FieldCard label="토지 자본적지출" hint="토지에 귀속되는 자본적지출만 입력, 없으면 비워두세요">
+        <FieldCard label="토지 자본적지출" hint={capexHint("토지", props.landAcqMode)}>
           <CurrencyInput label="" value={props.landDirectExpenses} onChange={props.onLandDirectExpensesChange} placeholder="없으면 비워두세요" />
         </FieldCard>
-        <FieldCard label="건물 자본적지출" hint="건물에 귀속되는 자본적지출만 입력, 없으면 비워두세요">
+        <FieldCard label="건물 자본적지출" hint={capexHint("건물", props.buildingAcqMode)}>
           <CurrencyInput label="" value={props.buildingDirectExpenses} onChange={props.onBuildingDirectExpensesChange} placeholder="없으면 비워두세요" />
         </FieldCard>
       </div>

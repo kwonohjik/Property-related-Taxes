@@ -21,7 +21,7 @@ import { isSplitPairOverflow } from "@/lib/tax-engine/transfer-tax-split-gain";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
-import { requiresAcqStdPrice } from "./transfer-tax-split-acq-mode";
+import { requiresAcqStdPricePart } from "./transfer-tax-split-acq-mode";
 import { needsSaleStdPart } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -117,9 +117,12 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     //    (⑧ 규칙 — UI 통과 ↔ validate 차단 모순). 술어가 false면 그 값은 계산에 쓰이지 않으므로
     //    all-or-nothing을 요구할 이유도 없다.
     // 자산 종류 무관(2026-07-30) — 주택 별개취득도 파트 독립 산정을 쓴다(§163⑥2호가목 "취득당시").
+    // 2026-07-30 파트별 분해 — **토지분 술어**로 좁힌다. 건물분만 필요한 조합
+    // (토지 실거래가 + 건물 환산)에서 토지 3요소를 함께 요구하면 계산에 쓰이지도 않는
+    // 값을 강제하게 된다(계획서 transfer-split-acq-std-part-gating.plan.md §3.2 (3)).
     if (
       opt(asset.buildingStandardPriceAtAcq) != null &&
-      requiresAcqStdPrice(withExpenses(asset), {
+      requiresAcqStdPricePart("land", withExpenses(asset), {
         landMode: effectivePartAcqMode(asset.landAcqMode, asset),
         buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
         isSeparate: true,
@@ -143,7 +146,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     // 자산 종류 무관(2026-07-30) — 주택도 결합 총액 역산이 아니라 파트별 나목 기준시가를 쓴다.
     if (
       opt(asset.buildingStandardPriceAtAcq) == null &&
-      requiresAcqStdPrice(withExpenses(asset), {
+      requiresAcqStdPricePart("building", withExpenses(asset), {
         landMode: effectivePartAcqMode(asset.landAcqMode, asset),
         buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
         isSeparate: true,
@@ -216,9 +219,12 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 종전대로 단일 자산 경로로 정상 산출하므로 막을 이유가 없다(⑧ 모순 방지).
   // ⚠️ V4(양도가액 구분)를 **먼저** 검사한다 — 양도가액 구분이 정해지면 술어 ⑤절이 꺼져
   //    취득시 기준시가 요건 자체가 사라지므로, 더 실행 가능한 오류를 먼저 보여야 한다.
+  // ⚠️ 이 분기는 별개취득 경로에서 **이미 도달 불가**다 — V6가 건물분 미입력을, V3가 건물분
+  //    입력 시 토지 3요소를 먼저 차단하므로 여기 도달하면 3요소가 이미 채워져 있다.
+  //    V3/V6 조건이 바뀌면 되살아나는 안전망이라 제거하지 않고 게이트만 파트별로 맞춘다.
   if (
     separateAcq &&
-    requiresAcqStdPrice(withExpenses(asset), { landMode, buildingMode, isSeparate: true, hasSaleRatio })
+    requiresAcqStdPricePart("land", withExpenses(asset), { landMode, buildingMode, isSeparate: true, hasSaleRatio })
   ) {
     if (opt(asset.standardPricePerSqmAtAcq) == null || parseDecimal(asset.acquisitionArea) <= 0) {
       return `${label}: 환산·감정·매매사례 취득가액 계산에는 취득시 ㎡당 개별공시지가와 토지 면적이 필요합니다 (소득세법 §99①1호 가목).`;

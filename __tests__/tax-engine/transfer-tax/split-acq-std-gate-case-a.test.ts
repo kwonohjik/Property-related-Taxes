@@ -97,7 +97,10 @@ describe("케이스 a — 취득시 기준시가 없이도 분리 계산이 성�
 describe("케이스 b·c — 환산 파트가 있으면 취득시 기준시가가 필요하다 → **차단**", () => {
   it("b-1 건물만 환산 + 취득시 기준시가 없음 → 차단(throw)", () => {
     // 조용한 null(단일자산 경로 → 취득가액 0) 대신 명시 오류. feedback_no_silent_apportion_fallback
-    expect(() => calcSplitGain(caseA({ buildingAcqMode: "estimated" }))).toThrow(/개별공시지가/);
+    // 2026-07-30 파트별 분해 — 메시지가 **어느 파트가 비었는지** 지목한다. 토지는 실거래가라
+    // 그 기준시가가 계산에 등장하지 않으므로 "개별공시지가"가 아니라 **건물분**을 요구하는 것이 정확하다
+    // (계획서 transfer-split-acq-std-part-gating.plan.md §3.2 (2)).
+    expect(() => calcSplitGain(caseA({ buildingAcqMode: "estimated" }))).toThrow(/건물분/);
   });
 
   it("b-2 건물만 환산 + 취득시 기준시가 있음 → 환산 성립", () => {

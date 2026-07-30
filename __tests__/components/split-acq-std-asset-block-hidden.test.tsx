@@ -1,18 +1,18 @@
 /**
- * anchor: 일반건물 별개취득 — 자산 전체 취득시 기준시가 블록을 **읽기 전용 파생**으로 전환 (D5).
+ * anchor: 별개취득 — 자산 전체 취득시 기준시가 UI **완전 숨김** (2026-07-30 사용자 확정).
  *
- * 계획서: docs/02-design/features/transfer-split-part-std-card-gating.plan.md §6 Phase 3
+ * 계획서: docs/02-design/features/transfer-split-acq-std-part-gating.plan.md §2
  *
- * 🔴 결함: `toPropertyKind`가 `building → building_non_residential`이라 자산 전체 블록이
- *   area 모드(㎡당 단가 + 면적 + 총액)로 렌더된다. 파트 토지 카드도 **같은 폼 필드**
- *   (`standardPricePerSqmAtAcq`·`acquisitionArea`)를 입력받아 한 화면에 같은 값이 두 번 노출된다.
- *   게다가 별개취득 + 건물분 명시 입력 시 엔진(`calcAcqStdPair`, split-gain.ts:52-56)은
- *   결합 총액을 **아예 참조하지 않으므로**, 사용자는 쓰이지도 않는 총액 칸을 채우게 된다.
+ * 종전 설계(`transfer-split-part-std-card-gating.plan.md` §6 Phase 3 — "입력형 → 읽기 전용
+ * 파생 표시로 전환")는 **폐기**됐다. 파생 표시조차 두지 않는다:
+ *   · 그 패널의 "합계 = 개산공제·안분 비율의 base" 안내가 **거짓**이었다 — 실제 개산공제 base는
+ *     합계가 아니라 **각 파트 자기 기준시가**다(소득령 §163⑥1호 토지·2호 건물이 별개 호).
+ *   · 엔진도 별개취득에서 결합 총액을 참조하지 않는다(`calcAcqStdPair` 파트 독립 분기).
  *
  * 불변식:
- *   · **입력 정본은 파트 카드** — 자산 전체 블록은 파생값 읽기 전용 표시로만 남는다
- *   · 파생 산식은 엔진과 동일 절사(`Math.floor(sqm × area)`) — UI 재계산 드리프트 금지
- *   · 주택(라목)은 대상 아님 — 결합 공시가 정본이라 총액 입력이 계속 필요
+ *   · 별개취득이면 자산 전체 레벨에 취득시 기준시가 UI가 **0개**(입력형·읽기전용 모두)
+ *   · 입력 정본은 **파트 카드**뿐 — 같은 폼 필드를 한 화면에서 두 번 입력받지 않는다
+ *   · 자산 종류 무관(주택도 동일) — 별개취득엔 라목 결합 공시가 존재하지 않는다
  *   · 비-별개취득(겸용·소유자분리 취득일 동일)은 종전 입력형 유지
  */
 import { describe, it, expect, afterEach } from "vitest";
@@ -88,10 +88,13 @@ function Harness({ init = {} }: { init?: Partial<AssetForm> }) {
   );
 }
 
-/** 자산 전체 블록의 입력 칸 — 읽기 전용 전환 후에는 존재하지 않아야 한다 */
+/** 자산 전체 블록의 면적 입력 칸 — 별개취득에서는 존재하지 않아야 한다 */
 const assetTotalAreaInput = () =>
   Array.from(document.querySelectorAll("label")).filter((l) => l.textContent?.trim() === "면적 (㎡)");
+/** 폐기된 읽기 전용 3열 패널 — 어떤 조합에서도 0개여야 한다 */
 const readonlyPanel = () => screen.queryAllByTestId("split-acq-std-readonly");
+/** 자산 전체 입력형 총액 블록의 필수 표식 — 별개취득에서는 0개 */
+const assetTotalStdBlock = () => screen.queryAllByTestId("acq-std-required-mark");
 const partAreaInput = () => screen.queryAllByTestId("split-land-std-acq-area");
 
 const FILLED: Partial<AssetForm> = {
@@ -111,45 +114,79 @@ describe("H1 — 중복 입력 제거", () => {
   });
 });
 
-describe("H2 — 읽기 전용 파생 표시", () => {
-  it("H2-a 토지분·건물분·합계가 파트 입력값에서 파생돼 표시된다", () => {
+describe("H2 — 자산 전체 취득시 기준시가 UI 0개 (완전 숨김)", () => {
+  it("H2-a 읽기 전용 파생 패널이 존재하지 않는다 (폐기)", () => {
     render(<Harness init={FILLED} />);
-    const panel = readonlyPanel()[0];
-    expect(panel).toBeTruthy();
-    // 토지분 = floor(1,000,000 × 200) = 200,000,000 / 건물분 350,000,000 / 합계 550,000,000
-    expect(panel.textContent).toContain("200,000,000");
-    expect(panel.textContent).toContain("350,000,000");
-    expect(panel.textContent).toContain("550,000,000");
+    expect(readonlyPanel(), "파생 표시조차 두지 않는다 — 합계는 개산공제 base가 아니다").toHaveLength(0);
   });
 
-  it("H2-b 엔진과 동일한 floor 절사 (표시값 ≠ 계산값 드리프트 금지)", () => {
-    // 12,345 × 33.33 = 411,458.85 → floor 411,458. 반올림하면 411,459로 엔진과 어긋난다.
-    render(<Harness init={{ ...FILLED, standardPricePerSqmAtAcq: "12345", acquisitionArea: "33.33" }} />);
-    const panel = readonlyPanel()[0];
-    expect(panel.textContent).toContain("411,458");
-    expect(panel.textContent).not.toContain("411,459");
+  it("H2-b 입력형 총액 블록도 존재하지 않는다 (재출현 회귀 방지)", () => {
+    render(<Harness init={FILLED} />);
+    expect(assetTotalStdBlock()).toHaveLength(0);
   });
 
-  it("H2-c 미입력이면 '자동 계산' 안내 (0원으로 표시하지 않는다)", () => {
-    render(<Harness init={{ buildingStandardPriceAtAcq: "350000000" }} />);
-    const panel = readonlyPanel()[0];
-    expect(panel.textContent).toContain("자동 계산");
+  it("H2-c 파트 카드는 그대로 존재한다 (입력 경로 dead-end 방지)", () => {
+    render(<Harness init={FILLED} />);
+    expect(screen.queryAllByTestId("split-land-std-acq-card")).toHaveLength(1);
+    expect(screen.queryAllByTestId("split-building-std-acq-card")).toHaveLength(1);
+  });
+
+  it("H2-d 파트 기준시가 미입력이어도 자산 전체 UI는 되살아나지 않는다", () => {
+    render(<Harness init={{}} />);
+    expect(readonlyPanel()).toHaveLength(0);
+    expect(assetTotalStdBlock()).toHaveLength(0);
   });
 });
 
 describe("H3·H5 — 범위 한정 (회귀 0)", () => {
   /**
-   * 2026-07-30 — **주택도 별개취득이면 읽기 전용 파생 표시로 전환**한다.
-   * 별개취득에는 라목 결합 공시가 존재하지 않으므로(§163⑥2호가목 "취득당시" 요건) 총액을
-   * 사용자가 입력할 대상이 아니다 — 파트 카드 입력값에서 파생된 토지분·건물분·합계만 보여준다.
+   * 2026-07-30 — **주택도 별개취득이면 자산 전체 블록을 숨긴다.**
+   * 별개취득에는 라목 결합 공시가 존재하지 않으므로(§163⑥2호가목 "취득당시" 요건) 총액은
+   * 사용자가 입력할 대상 자체가 아니다.
    */
-  it("H3 주택도 별개취득이면 읽기 전용 파생 표시", () => {
+  it("H3 주택도 별개취득이면 자산 전체 UI 0개", () => {
     render(<Harness init={{ ...FILLED, assetKind: "housing" }} />);
-    expect(readonlyPanel(), "별개취득에는 라목 결합 공시가 없다").toHaveLength(1);
+    expect(readonlyPanel(), "별개취득에는 라목 결합 공시가 없다").toHaveLength(0);
+    expect(assetTotalStdBlock()).toHaveLength(0);
   });
 
   it("H5 비-별개취득(취득일 동일)은 종전 입력형 유지", () => {
     render(<Harness init={{ ...FILLED, landAcquisitionDate: "2025-08-29" }} />);
     expect(readonlyPanel()).toHaveLength(0);
+    expect(assetTotalStdBlock(), "총액이 실재하므로 입력형 블록이 필요하다").toHaveLength(1);
+  });
+});
+
+describe("H6 — 파트별 게이팅 (2026-07-30)", () => {
+  it("H6-a 토지 실거래가 + 건물 환산 → 토지 카드는 prefill 소스로 노출되되 안내가 붙는다", () => {
+    render(<Harness init={{ ...FILLED, landAcqMode: "actual", buildingAcqMode: "estimated" }} />);
+    expect(screen.queryAllByTestId("split-land-std-acq-card")).toHaveLength(1);
+    expect(
+      screen.queryAllByTestId("split-land-std-calc-unused-note"),
+      "실가 파트 기준시가는 취득가액 계산에 쓰이지 않는다",
+    ).toHaveLength(1);
+  });
+
+  it("H6-b 양쪽 환산이면 안내 없이 정상 필수 카드", () => {
+    render(<Harness init={FILLED} />);
+    expect(screen.queryAllByTestId("split-land-std-calc-unused-note")).toHaveLength(0);
+  });
+
+  it("H6-c 양쪽 실가 + 양도가액 구분 → 토지·건물 카드 모두 미노출", () => {
+    render(
+      <Harness
+        init={{
+          landAcqMode: "actual",
+          buildingAcqMode: "actual",
+          landAcquisitionPrice: "300000000",
+          buildingAcquisitionPrice: "250000000",
+          landTransferPrice: "600000000",
+          buildingTransferPrice: "400000000",
+          saleSplitMode: "actual",
+        }}
+      />,
+    );
+    expect(screen.queryAllByTestId("split-land-std-acq-card")).toHaveLength(0);
+    expect(screen.queryAllByTestId("split-building-std-acq-card")).toHaveLength(0);
   });
 });
