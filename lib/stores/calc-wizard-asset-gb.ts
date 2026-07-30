@@ -15,7 +15,16 @@ export interface GeneralBuildingFormSlice {
   gbAcqLandPricePerSqm: string;
   /** 취득시 건물기준시가 총액 (원). 환산 분자 + 개산공제 기준액. */
   gbAcqBuildingValue: string;
-  /** 토지 부수면적 (㎡). 안분·환산·개산공제·NBL 판정 공통 사용. */
+  /**
+   * 토지 부수면적 (㎡). 안분(§166⑥)·환산(§176의2②)·개산공제(§163⑥)·NBL 판정 공통 사용.
+   * 시점 구분 없는 **단일** 필드다 — `general-building-valuation.ts:506,535`가
+   * 양도시·취득시 단가에 이 값을 각각 곱한다.   *
+   * ⚠️ **단일 필드를 2시점 쌍으로 확장하지 말 것**(2026-07-30 F2 검토 결론).
+   *    엔진이 시점별 **단가**에 **같은 면적**을 곱하므로 환산 산식에서 면적이 약분되고
+   *    비율은 단가비만 반영한다 — 즉 단일성이 **정확성의 근거**다. 2시점으로 나누면
+   *    취득/양도에 다른 면적이 들어가 면적비가 단가비를 상쇄해 **양도차익이 0이 되는**
+   *    왜곡(B-4)이 재발한다. anchor `area-axis-single-field-invariant.anchor.test.ts`.
+   */
   gbLandArea: string;
   /** 건물 연면적(㎡). 자산 식별·표시용. */
   gbBuildingArea: string;
@@ -187,7 +196,17 @@ export interface GeneralBuildingFormSlice {
   nonResidentialFloorArea: string;
   /** 건물 정착면적 = 1층 면적 (㎡) */
   buildingFootprintArea: string;
-  /** 전체 토지 면적 (㎡) — 겸용주택용 */
+  /**
+   * 전체 토지 면적 (㎡) — 겸용주택용. 시점 구분 없는 **단일** 필드다
+   * (`transfer-tax-mixed-use-helpers.ts:246,262`가
+   *  `landAreaAtAcquisition = landAreaAtFirstDisclosure = totalLandArea`로 명시 대입).
+   * 주거·상가 안분값(`residentialLandArea` 등)은 **분해값**이라 별개 필드가 정본이다.   *
+   * ⚠️ **단일 필드를 2시점 쌍으로 확장하지 말 것**(2026-07-30 F2 검토 결론).
+   *    엔진이 시점별 **단가**에 **같은 면적**을 곱하므로 환산 산식에서 면적이 약분되고
+   *    비율은 단가비만 반영한다 — 즉 단일성이 **정확성의 근거**다. 2시점으로 나누면
+   *    취득/양도에 다른 면적이 들어가 면적비가 단가비를 상쇄해 **양도차익이 0이 되는**
+   *    왜곡(B-4)이 재발한다. anchor `area-axis-single-field-invariant.anchor.test.ts`.
+   */
   mixedUseTotalLandArea: string;
   /**
    * 주택 부수토지 면적 수동 지정 (㎡) — PHD OFF 전용, 취득·양도 양시점 공통.
