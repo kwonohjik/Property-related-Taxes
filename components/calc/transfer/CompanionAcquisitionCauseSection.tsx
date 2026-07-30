@@ -11,6 +11,7 @@ import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqNewConstructionBlock } from "./CompanionAcqNewConstructionBlock";
 import { AssetOwnershipSplitSection } from "./AssetOwnershipSplitSection";
 import { NonPurchaseSplitInputsBlock } from "./NonPurchaseSplitInputsBlock";
+import { NewConstructionLandAcqBlock } from "./NewConstructionLandAcqBlock";
 import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
@@ -124,6 +125,10 @@ export function CompanionAcquisitionCauseSection({
           이 토글이 「취득일 다름」을 강제로 켜므로 그보다 **앞**에 와야 위→아래 연쇄가 된다.
           현재 노출은 매매 전용(컴포넌트 내부 게이트) — 상속·증여 확대는 별도 PR. */}
       <AssetOwnershipSplitSection asset={asset} onChange={onChange} />
+
+      {/* 토지를 상속·증여로 취득하고 그 위에 건물을 신축한 경우 — 토지 파트 입력.
+          취득원인이 자산 단위 단일값이라 종전엔 토지 취득일·취득가액 칸이 아예 없었다. */}
+      <NewConstructionLandAcqBlock asset={asset} onChange={onChange} transferDate={transferDate} />
 
       {/* 신축(자가건축) — 신축비용(취득가액) 입력 블록 */}
       {isNewConstruction && (

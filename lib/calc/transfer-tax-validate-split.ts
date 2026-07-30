@@ -65,7 +65,12 @@ function validateSeparateAcqParts(asset: AssetForm, label: string): string | nul
       owned: selfOwns !== "land_only",
       name: "건물",
       mode: effectivePartAcqMode(asset.buildingAcqMode, asset),
-      price: asset.buildingAcquisitionPrice,
+      // 건물 신축 + 토지 상속·증여(2026-07-30): 건물 취득가액의 정본은 「신축비용」 칸
+      // (`fixedAcquisitionPrice`)이다 — API 변환도 같은 후퇴를 적용하므로(transfer-tax-api-split.ts)
+      // 여기서 인식하지 않으면 "API 통과 ↔ validate 차단" 모순이 된다(⑧ 3중 패턴).
+      price:
+        asset.buildingAcquisitionPrice ||
+        (asset.landAcquisitionCause ? asset.fixedAcquisitionPrice : ""),
       salesCase: asset.buildingSalesCaseValue,
     },
   ];

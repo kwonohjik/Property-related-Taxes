@@ -36,6 +36,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   }
   // 축 B 파트별 독립(§99①1호 나목) — stale sessionStorage 자산에 필드가 없으면 빈 문자열로 정규화
   if (a.buildingStandardPriceAtAcq === undefined) a.buildingStandardPriceAtAcq = "";
+  // 토지 파트 취득 원인(건물 신축 + 토지 상속·증여, 2026-07-30) — 구 세션 복원 방어
+  if (a.landAcquisitionCause === undefined) a.landAcquisitionCause = "";
   if (!a.standardPricePerSqmAtAcq) a.standardPricePerSqmAtAcq = "";
   if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
   // Round 9 (2026-05-06): 자산-수준 매매계약일 (감면 시한 판정)

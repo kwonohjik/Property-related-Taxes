@@ -134,7 +134,14 @@ export function buildSplitPayload(
     // 취득가액 2필드.
     ...(landAcqDirectActive ? { landAcquisitionPrice: ratioed(primary.landAcquisitionPrice) } : {}),
     ...(buildingAcqDirectActive
-      ? { buildingAcquisitionPrice: ratioed(primary.buildingAcquisitionPrice) }
+      ? {
+          // 건물 신축 + 토지 상속·증여(2026-07-30): 건물 취득가액의 정본은 「신축비용」 칸
+          // (`fixedAcquisitionPrice`)이다. 파트 칸을 따로 두면 같은 값을 두 번 입력받게 되므로
+          // 여기서 후퇴시킨다. `landAcquisitionCause`가 설정된 경우에만 적용해 다른 경로는 불변.
+          buildingAcquisitionPrice:
+            ratioed(primary.buildingAcquisitionPrice) ??
+            (primary.landAcquisitionCause ? ratioed(primary.fixedAcquisitionPrice) : undefined),
+        }
       : {}),
     // 파트별 매매사례가액 — salesCase 모드 시만. 별개 취득이면 미입력 = 차단(§176의2③1호 —
     // 탐색 창이 파트별 취득일 ±3개월로 달라 총액 안분 근거 없음), 동시 취득이면 §166⑥ 안분 fallback.
