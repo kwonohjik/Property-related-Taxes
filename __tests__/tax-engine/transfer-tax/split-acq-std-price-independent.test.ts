@@ -6,9 +6,13 @@
  * 축 B는 축 A와 달리 **propertyType으로 갈린다** — 공시 구조가 다르기 때문이다.
  *
  *  · 주택(소득세법 §99①1호 **라목**): 개별주택가격·공동주택가격은 **부수토지를 포함한 결합 공시**다.
- *    건물분 단독 공시가 존재하지 않으므로 `결합 총액 − 토지분` 역산이 정본이며, 이 역산이
+ *    **동시 취득**이면 건물분 단독 공시가 없어 `결합 총액 − 토지분` 역산이 정본이고, 그 역산이
  *    `토지분 + 건물분 ≡ 라목 총액` 항등성을 지켜 개산공제 합계를 법정액(소득령 §163⑥2호가목 —
- *    라목 가액 × 3/100)과 일치시킨다. → **파트 독립 입력을 허용하면 안 된다.**
+ *    라목 가액 × 3/100)과 일치시킨다.
+ *    ⚠️ **별개 취득은 다르다**(2026-07-30 정정). §163⑥2호가목은 "라목의 주택 **취득당시**의
+ *    라목 가액"을 전제하는데, 토지를 먼저 취득하고 건물을 나중에 신축·취득했다면 **토지 취득
+ *    당시엔 주택이 없어** 라목 결합 공시가 애초에 존재하지 않는다. 그 경우 각 파트에
+ *    §163⑥1호(토지)·2호(건물)가 따로 적용되므로 **파트별 독립이 정본**이다.
  *
  *  · 일반 건물(**가목** 토지 + **나목** 건물): 개별공시지가와 국세청장 산정 건물 기준시가가
  *    각각 별도 공시된다. 결합 총액이라는 공시 자체가 없다. 취득시점이 다르면 각 파트는
@@ -140,27 +144,64 @@ describe("레거시 후퇴: 건물분 미입력 → 결합 총액 역산 (한시
 // ════════════════════════════════════════════════════════════
 // H4·H10 — 주택은 라목 결합 유지 (신규 필드가 있어도 무시)
 // ════════════════════════════════════════════════════════════
-describe("🔴 housing: 라목 결합 공시 — 파트 독립 입력 무시", () => {
+describe("housing 별개취득: 파트 독립 (2026-07-30 — 라목 결합 공시가 없는 시점 구조)", () => {
   const house = (over: Record<string, unknown> = {}) =>
     bldg({ propertyType: "housing", ...over });
 
-  it("buildingStandardPriceAtAcquisition을 줘도 역산을 유지한다", () => {
+  it("🔴 buildingStandardPriceAtAcquisition을 주면 그것을 쓴다 (역산 아님)", () => {
     const r = calcSplitGain(
       house({
+        landAcqMode: "appraisal",
+        buildingAcqMode: "appraisal",
+        buildingStandardPriceAtAcquisition: 350_000_000,
+      }),
+    );
+    expect(
+      r!.building.stdPriceAtAcq,
+      "토지 2015 / 건물 2018 취득 — 2015년엔 주택이 없어 라목 결합 공시가 존재하지 않는다",
+    ).toBe(350_000_000);
+    expect(r!.building.stdPriceDerivedFromTotal).toBe(false);
+  });
+
+  it("H10: 개산공제는 파트별 3% — 각자 자기 취득일 기준 base (§163⑥1호·2호)", () => {
+    const r = calcSplitGain(
+      house({
+        landAcqMode: "appraisal",
+        buildingAcqMode: "appraisal",
+        buildingStandardPriceAtAcquisition: 350_000_000,
+      }),
+    );
+    // 토지 2억 × 3% + 건물 3.5억 × 3% = 600만 + 1,050만
+    expect(r!.land.appraisalDeduction).toBe(6_000_000);
+    expect(r!.building.appraisalDeduction).toBe(10_500_000);
+  });
+});
+
+describe("housing 동시취득: 라목 결합 공시 항등성 유지 (회귀 가드)", () => {
+  const houseSame = (over: Record<string, unknown> = {}) =>
+    bldg({
+      propertyType: "housing",
+      // 취득일 동일 → 라목 결합 공시가 실재하므로 역산이 정본
+      isSeparateAcquisition: undefined,
+      landAcquisitionDate: new Date("2018-06-01"),
+      ...over,
+    });
+
+  it("건물분 명시 입력이 있어도 역산을 유지한다", () => {
+    const r = calcSplitGain(
+      houseSame({
         landAcqMode: "appraisal",
         buildingAcqMode: "appraisal",
         buildingStandardPriceAtAcquisition: 350_000_000, // 무시돼야 한다
       }),
     );
-    expect(r!.building.stdPriceAtAcq, "라목은 부수토지 포함 결합 공시 — 파트 독립이 성립하지 않는다").toBe(
-      300_000_000,
-    );
+    expect(r!.building.stdPriceAtAcq).toBe(300_000_000); // 5억 − 2억
     expect(r!.building.stdPriceDerivedFromTotal).toBe(true);
   });
 
-  it("H10: 개산공제 합계 = 라목 총액 × 3% 항등성 (파트 독립을 허용하면 깨지는 값)", () => {
+  it("H10: 개산공제 합계 = 라목 총액 × 3% 항등성", () => {
     const r = calcSplitGain(
-      house({
+      houseSame({
         landAcqMode: "appraisal",
         buildingAcqMode: "appraisal",
         buildingStandardPriceAtAcquisition: 350_000_000,

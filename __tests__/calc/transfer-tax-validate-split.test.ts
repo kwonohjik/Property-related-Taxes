@@ -283,6 +283,8 @@ describe("V1·V2 — 별개 취득 파트별 취득가액 필수", () => {
         buildingAcqMode: "estimated",
         standardPricePerSqmAtAcq: "5,000,000",
         acquisitionArea: "200",
+        // 2026-07-30 — 주택도 V6(건물분 필수) 대상. 이 테스트 스코프는 V1·V2이므로 충족시켜 격리.
+        buildingStandardPriceAtAcq: "100,000,000",
       }),
       "자산 1",
     );
@@ -416,6 +418,9 @@ describe("V4 — 취득시 기준시가는 '필요할 때만' 필수 (사용자 
       buildingAcqMode: "actual" as const,
       landAcquisitionPrice: "150,000,000",
       buildingAcquisitionPrice: "100,000,000",
+      // 2026-07-30부터 주택도 V6(건물분 필수) 대상이다. 이 describe가 보려는 것은
+      // **V4/V5(취득시 기준시가 필요성 판정)**이므로 건물분을 채워 V6와 분리한다.
+      buildingStandardPriceAtAcq: "100,000,000",
       ...over,
     });
 
@@ -486,6 +491,10 @@ describe("V5 — 구분양도 선택 시 양도가액 구분 근거 필수 (규�
       buildingAcqMode: "actual" as const,
       landAcquisitionPrice: "150,000,000",
       buildingAcquisitionPrice: "100,000,000",
+      // V5 스코프(양도가액 구분 근거) 격리 — 2026-07-30부터 주택도 V6 대상이다.
+      buildingStandardPriceAtAcq: "100,000,000",
+      standardPricePerSqmAtAcq: "5,000,000",
+      acquisitionArea: "200",
       ...over,
     });
 

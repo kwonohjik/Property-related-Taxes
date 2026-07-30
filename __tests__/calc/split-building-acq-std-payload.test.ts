@@ -55,13 +55,20 @@ describe("H6 — 결합 총액 stale 전송 차단", () => {
     ).toBeUndefined();
   });
 
-  it("H6-b 주택은 차단 대상 아님 (라목 결합 공시가 정본)", () => {
+  /**
+   * 2026-07-30 — **주택도 별개취득이면 결합 총액 전송을 차단**한다.
+   * §163⑥2호가목은 "라목 주택 **취득당시**의 라목 가액"을 전제하는데, 토지를 먼저 취득한
+   * 경우 그 시점엔 주택이 없어 라목 결합 공시가 존재하지 않는다 → 파트별 독립이 정본.
+   * 화면에서도 총액 입력 칸이 읽기 전용 파생 표시로 바뀌므로, 폼에 남은 stale 값이
+   * 전송되면 **보이지 않는 값이 계산에 쓰인다**.
+   */
+  it("H6-b 주택도 별개취득이면 차단 대상 (파트 독립)", () => {
     const body = buildSplitPayload(asset({ assetKind: "housing", buildingStandardPriceAtAcq: "" }), {
       isBurdenedGift: false,
       usesPhd: false,
       ratioed: (v) => (v ? parseInt(String(v).replace(/,/g, ""), 10) || undefined : undefined),
     });
-    expect(Object.prototype.hasOwnProperty.call(body, "standardPriceAtAcquisition")).toBe(false);
+    expect(body.standardPriceAtAcquisition).toBeUndefined();
   });
 
   it("H6-c 비-별개취득(취득일 동일)도 차단 대상 아님", () => {
@@ -102,9 +109,10 @@ describe("H4 — 건물분 취득시 기준시가 필수", () => {
     expect(err, "쓰이지도 않는 값을 필수로 요구하면 거짓 요구다").toBeNull();
   });
 
-  it("H4-d 주택은 건물분 필수 대상 아님 (파트 독립 입력 자체가 없다)", () => {
+  it("H4-d 주택도 건물분 필수 (2026-07-30 파트 독립 — 입력 칸이 생겼다)", () => {
     expect(
       validateSplitDirectInputs(asset({ assetKind: "housing", buildingStandardPriceAtAcq: "" }), "자산 1"),
-    ).toBeNull();
+      "카드가 노출되므로 요구해도 dead-end가 아니다(⑧ 규칙)",
+    ).toContain("건물분 취득시 기준시가");
   });
 });
