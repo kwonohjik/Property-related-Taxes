@@ -1,5 +1,5 @@
 /**
- * 일괄양도 companion 자산 한도 초과 split 헬퍼 (G-2, 영 §154⑦)
+ * 일괄양도 companion 자산 한도 초과 split 헬퍼 (G-2, 세율 축: 영 §167의5)
  *
  * 신축주택 + 부수토지 일체과세 케이스에서
  * companion 토지가 부수토지 인정 한도를 초과하면
@@ -16,10 +16,14 @@
  *   - 각 금액을 Math.floor(금액 × 비율)로 excess 몫 계산
  *   - appurtenant 몫 = 전체 - excess 몫 (나머지 귀속, 절사 오차 흡수)
  *
- * 법령 근거:
- *   §89①3호 (1세대1주택·부수토지 일체과세)
- *   영 §154⑦ (부수토지 인정 면적 한도: 도시지역 5배, 도시지역 외 10배)
- *   기재부 재산-53(2015.1.15) / 재산-1354(2022.10.27)
+ * 법령 근거 (세율 축):
+ *   「소득세법」 §104①2·3호 괄호 (주택에 딸린 토지를 주택에 포함 — "이하 이 항에서 같다")
+ *   같은 법 시행령 §167의5 (단기보유 주택부수토지의 범위 — 정착면적 × 배율)
+ *     도시지역 내: 수도권 주거·상업·공업 3배 / 수도권 녹지 5배 / 수도권 밖 5배, 그 밖의 지역 10배
+ *     ⚠️ 2022.1.1. 전 양도분은 종전 규정(도시지역 일률 5배) — 2020.2.11. 대통령령 제30395호 부칙 §39
+ *   기재부 재산세제과-1354(2022.10.27) / 조심 2024인3140(2024.9.3. 기각)
+ *
+ * ※ 영 §154⑦(§89①3호 위임)은 **비과세 축**이라 여기서는 근거가 아니다 — 배율 수치만 동일하다.
  */
 
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -134,7 +138,7 @@ interface CompanionRawAsset {
   /**
    * 토지 성질 명시 입력 (assetKind === "land" 전용).
    * Zod companion schema의 landNature enum에서 도출됨.
-   * - "appurtenant_to_housing": 주택 부수토지 (§89①3호·영§154⑦ 일체과세 대상)
+   * - "appurtenant_to_housing": 주택 부수토지 (§104①2호 괄호·영 §167의5 일체과세 대상)
    * - "non_appurtenant": 독립 나대지
    */
   landNature?: "appurtenant_to_housing" | "non_appurtenant";
@@ -254,7 +258,7 @@ export function buildCompanionEngineInputs(
     acquisitionArea: c.areaM2,
   };
 
-  // G-2 한도 초과 split (영 §154⑦)
+  // G-2 한도 초과 split (세율 축 — 영 §167의5)
   if (ctx.primaryCtxForSplit) {
     const splitResult = resolveCompanionSplit(
       {
@@ -425,7 +429,10 @@ export function splitCompanionIntoTwo(
   };
 
   // 자산 B: 한도 초과 — primaryContextForCompanionRate 제거 (토지 본래 보유기간 적용)
-  //   영 §154⑦ 초과분은 일반 나대지 → 보유기간 기준 §104①3호 세율(토지 본래 보유기간)
+  //   영 §167의5 한도 초과분은 주택부수토지가 아니다 → 토지 본래 보유기간 기준 §104① 적용.
+  //   ⚠️ 초과분은 「소득세법」 §104의3①5호(위임 영 §168의12)에 따라 **비사업용 토지**에도
+  //      해당할 수 있으나(정의요건) 기간요건(영 §168의6)은 별도이며, 현재 이 분기는
+  //      isNonBusinessLand를 사용자 입력값 그대로 상속한다 — 자동 적용하지 않는다.
   const excess: TransferTaxItemInput = {
     ...base,
     propertyId: `${base.propertyId}__excess`,
