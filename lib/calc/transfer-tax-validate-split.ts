@@ -106,6 +106,24 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   const selfOwnsSplit = (asset.selfOwns ?? "both") !== "both";
   if (!asset.hasSeperateLandAcquisitionDate && !selfOwnsSplit) return null;
 
+  // ── V9. 주택 부수토지 배율 판정 필수 입력 (「소득세법 시행령」 제168조의12) ──────────
+  // 토지 면적이 정착면적의 **3배**(최소 배율)를 넘으면 어느 용도지역이든 한도 초과 가능성이
+  // 있으므로 소재지 구분이 필수다. 미입력 시 엔진은 배율 판정 자체를 하지 않고(R-7 — 미입력
+  // fallback 3배는 초과면적을 과다 산출해 납세자에게 불리) 초과분이 조용히 누락된다.
+  // 3배 이하이면 어느 배율을 써도 초과가 없으므로 요구하지 않는다(차단 범위 최소화).
+  if (
+    asset.assetKind === "housing" &&
+    !asset.isMixedUseHouse &&
+    (asset.selfOwns ?? "both") === "both" &&
+    asset.appurtenantLandZone === undefined
+  ) {
+    const footprint = parseDecimal(asset.buildingFootprintArea);
+    const landArea = parseDecimal(asset.acquisitionArea);
+    if (footprint > 0 && landArea > footprint * 3) {
+      return `${label}: 토지 면적(${landArea}㎡)이 건물 정착면적의 3배를 초과합니다 — 부수토지 인정 한도 배율을 정하려면 「부수토지 소재지 구분」을 선택하세요. 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 과세됩니다 (소득세법 §104의3①5호·시행령 §168의12).`;
+    }
+  }
+
   // ── V8. 소유자 분리 + 취득일 동일(비-매매 경로) — 취득시 기준시가 필수 ─────────────
   // 취득가액을 토지·건물로 나누는 유일한 근거가 §166⑥ 기준시가 비율이다. 셋 중 하나라도
   // 비면 `calcAcqStdPair`가 null → `calcApportionRatio` null → `calcSplitGain`이 null을

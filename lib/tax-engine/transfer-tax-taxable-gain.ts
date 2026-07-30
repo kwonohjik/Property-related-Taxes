@@ -10,8 +10,8 @@
  */
 import { calcOneHouseProration } from "./transfer-tax-helpers";
 import {
-  applyLaterLandExemptExclusion,
-  isLaterAcquiredLandExemptExcluded,
+  applyHousingLandExclusions,
+  hasHousingLandExemptExclusion,
 } from "./transfer-tax-split-rate";
 import { TRANSFER } from "./legal-codes";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
@@ -36,19 +36,20 @@ export function resolveTaxableGain(args: {
       effectiveInput.burdenedGiftDenominator,
     );
 
-  // G-3: 보유 2년 미만 부수토지분은 12억 안분 대상에서 빼고 전액 과세 (겸용주택 ①→② 패턴)
-  const laterLandExclusion = applyLaterLandExemptExclusion({
+  // G-2·G-3: 비과세 대상이 아닌 부수토지분(배율 초과분 · 보유 2년 미만분)을 12억 안분 대상에서
+  // 빼고 전액 과세한다 (겸용주택 ①→② 패턴)
+  const exclusion = applyHousingLandExclusions({
     input: effectiveInput,
     splitDetail,
     isExempt,
     isPartialExempt,
     prorate,
   });
-  if (laterLandExclusion) {
-    steps.push(laterLandExclusion.step);
-    return laterLandExclusion.taxableGain;
+  if (exclusion) {
+    steps.push(exclusion.step);
+    return exclusion.taxableGain;
   }
-  if (isExempt && isLaterAcquiredLandExemptExcluded(effectiveInput)) {
+  if (isExempt && hasHousingLandExemptExclusion(effectiveInput)) {
     // G-3 때문에 전액 비과세 조기 반환을 건너뛰었는데 분리 결과가 없다 — 비과세를 유지한다
     // (조용한 전액 과세 금지).
     // ⚠️ `isExempt`만으로 판정하면 안 된다 — §155⑳ 시나리오 B·A 미충족은 `isExempt=true`인 채로

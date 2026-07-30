@@ -19,7 +19,8 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import {
   AddressSearch,
   type AddressValue,
@@ -148,6 +149,25 @@ const FLOOR_AREA_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["housing"
  * ⚠️ `building`은 토지가 없어 부수토지 판정 자체가 없다 → 제외.
  */
 const FOOTPRINT_AREA_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["housing"]);
+
+/**
+ * 부수토지 인정 배율 — 「소득세법」 시행령 제168의12(비사업용 토지)·제167조의5(세율)·제154조 제7항
+ * (비과세) 세 조문의 배율이 동일하다(3/5/5/10). 2022.1.1. 전 양도분은 도시지역 일률 5배.
+ * 라벨은 `NewConstructionFootprintSection`의 ZONE_OPTIONS와 같은 문구를 쓴다.
+ */
+const APPURTENANT_ZONE_OPTIONS: { value: NonNullable<AssetForm["appurtenantLandZone"]>; label: string; description: string }[] = [
+  {
+    value: "metropolitan_residential",
+    label: "수도권 도시지역 (주거·상업·공업)",
+    description: "정착면적 × 3배 한도",
+  },
+  {
+    value: "non_metropolitan_or_green",
+    label: "수도권 녹지 / 수도권 외 도시지역",
+    description: "정착면적 × 5배 한도",
+  },
+  { value: "non_urban", label: "도시지역 외", description: "정착면적 × 10배 한도" },
+];
 
 /**
  * 겸용주택 분리계산 ON이면 기본정보 면적 섹션 전체를 숨기는 것이 기존 설계다
@@ -637,6 +657,34 @@ export function AssetSectionBasic({
               />
               <p className="text-caption text-muted-foreground">
                 미입력 시 부수토지 한도 검증 없이 전량 부수토지로 가정합니다 (「소득세법 시행령」 제154조 제7항).
+              </p>
+            </div>
+          )}
+
+          {/* ── 부수토지 배율 판정용 소재지 구분 (영 §168의12 · §167의5 · §154⑦ — 배율 동일) ── */}
+          {showFootprintArea(asset) && parseDecimal(asset.buildingFootprintArea) > 0 && (
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs text-muted-foreground">
+                부수토지 소재지 구분
+                <span
+                  title="정착면적에 곱할 배율을 정합니다. 한도를 넘는 부수토지는 1세대1주택 비과세에서 제외되고 「소득세법」 제104조의3 제1항 제5호의 비사업용 토지가 됩니다."
+                  className="ml-1 cursor-help"
+                >
+                  ⓘ
+                </span>
+              </label>
+              <RadioCardGroup
+                name={`appurtenantLandZone-${asset.assetId}`}
+                tone="sky"
+                layout="stack"
+                value={asset.appurtenantLandZone ?? ""}
+                onChange={(v) =>
+                  onChange({ appurtenantLandZone: v as AssetForm["appurtenantLandZone"] })
+                }
+                options={APPURTENANT_ZONE_OPTIONS}
+              />
+              <p className="text-caption text-muted-foreground">
+                미선택 시 배율 한도 검증을 하지 않습니다 — 토지 면적이 정착면적의 3배를 넘으면 필수입니다.
               </p>
             </div>
           )}
