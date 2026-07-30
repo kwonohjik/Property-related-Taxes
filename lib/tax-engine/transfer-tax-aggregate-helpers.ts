@@ -12,6 +12,7 @@ import {
   type TransferTaxResult,
 } from "./transfer-tax";
 import { calculateProgressiveTax } from "./tax-utils";
+import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   RateGroup,
@@ -348,6 +349,27 @@ export function aggregateByGroup(
 
   const out: GroupTaxResult[] = [];
   const parsedRates = parseRatesFromMap(rates);
+  /**
+   * 자산 1건의 산출세액 — 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세.
+   * 단건 엔진(`transfer-tax.ts` STEP 7)과 **같은 헬퍼**를 쓴다(이중 진실 방지).
+   */
+  const assetTaxOf = (i: number) => {
+    const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
+    const tr = resolveSplitAwareTax({
+      taxBase: assetTaxBase,
+      transferIncome: incomeAfterOffset[i],
+      basicDeduction: allocatedBasic[i],
+      splitDetail: records[i].result.splitDetail,
+      parsedRates,
+      taxRateInput: records[i].correctedSingleInput,
+    });
+    return {
+      tax: tr.calculatedTax,
+      rate: tr.appliedRate,
+      surcharge: tr.surchargeRate,
+      splitParts: tr.splitPartDetail !== undefined,
+    };
+  };
   for (const [group, idxList] of groupMap) {
     const groupGrossGain = idxList
       .filter((i) => records[i].income > 0)
@@ -368,12 +390,11 @@ export function aggregateByGroup(
       // §104⑤2호 — 단기 단일세율은 호(1년 미만 50%/70%, 1~2년 40%/60%)별로 다를 수 있다.
       // 자산별 과세표준(= max(0, incomeAfterOffset[i] - allocatedBasic[i])) × 자산별 세율로 산출세액 계산.
       // calcTax를 자산 입력으로 재호출하여 §104①후단(비사업용+단기 큰 세액) 분기까지 정확히 반영.
-      const perAsset = idxList.map((i) => {
-        const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
-        const tr = calcTax(assetTaxBase, parsedRates, records[i].correctedSingleInput);
-        return { rate: tr.appliedRate, tax: tr.calculatedTax };
-      });
-      const uniformRate = perAsset.every((p) => p.rate === perAsset[0].rate);
+      const perAsset = idxList.map((i) => assetTaxOf(i));
+      // 토지·건물 파트별 세율이 걸린 자산은 그룹 합산 1회 계산으로 되돌리면 파트 분해가 사라진다
+      // (단건 엔진과 값이 갈리는 이중 진실) — 세율이 같아 보여도 자산별 합계 경로를 쓴다.
+      const uniformRate =
+        !perAsset.some((p) => p.splitParts) && perAsset.every((p) => p.rate === perAsset[0].rate);
       if (uniformRate) {
         // 동일 세율(예: 일괄양도 일체과세 70% — 사례 28)은 합산 과세표준 × 세율로 1회 floor.
         // 자산별 floor 합산은 floor 횟수 차이로 ±N원 오차가 나므로 동일 세율은 기존 합산 방식 유지.
@@ -405,13 +426,12 @@ export function aggregateByGroup(
       // `short_term` 그룹은 위에서 이미 같은 판정을 하고 있었다(세율 혼재 → 자산별 합) —
       // 누진 호 쪽만 빠져 있던 내부 불일치다. 동일 세율이면 종전대로 합산 1회 floor를 유지한다
       // (자산별 floor 합산은 floor 횟수 차이로 ±N원이 어긋난다).
-      const perAsset = idxList.map((i) => {
-        const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
-        const tr = calcTax(assetTaxBase, parsedRates, records[i].correctedSingleInput);
-        return { tax: tr.calculatedTax, rate: tr.appliedRate, surcharge: tr.surchargeRate };
-      });
+      const perAsset = idxList.map((i) => assetTaxOf(i));
       // 호 판정 대리값 = 중과 가산율. 가산율이 갈리면 적용 호가 다르다는 뜻이다.
-      const mixedTier = perAsset.some((p) => p.surcharge !== perAsset[0].surcharge);
+      // 파트별 세율 자산도 그룹 합산 1회 계산으로 되돌릴 수 없다(위 short_term과 동일 사유).
+      const mixedTier =
+        perAsset.some((p) => p.splitParts) ||
+        perAsset.some((p) => p.surcharge !== perAsset[0].surcharge);
       if (mixedTier) {
         groupCalculatedTax = perAsset.reduce((sum, p) => sum + p.tax, 0);
         appliedRate = Math.max(...perAsset.map((p) => p.rate)); // 표시용 최고세율
