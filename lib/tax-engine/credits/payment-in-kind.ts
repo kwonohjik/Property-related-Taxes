@@ -47,12 +47,15 @@ function computeEligibleRealSec(input: PaymentInKindInput): number {
   const {
     realEstateValue,
     eligibleSecuritiesValue,
+    governmentBondValue,
     unlistedStockValue,
     ineligibleManagementValue,
   } = input.assets;
   // §74①1호·2호가목 — 부동산 + 충당가능 유가증권(국채·공채·내국법인 증권·처분제한 상장).
   //   거래소 상장(처분제한 X, tradableListedValue)은 §74①2호가목 본문 제외.
-  const baseEligible = realEstateValue + eligibleSecuritiesValue;
+  //   국채·공채는 §74②1호로 순위만 분리된 것이고 §74①2호 본문 열거이므로 분자에 합산한다.
+  const baseEligible =
+    realEstateValue + eligibleSecuritiesValue + governmentBondValue;
   // §74①2호나목 단서 — 비상장주식은 상속에서 위 재산으로 납부세액 충당이 부족한 경우에만
   //   충당가능 유가증권. 부동산·상장으로 finalTax를 충당하면(≥) 비상장 미산입 (H-41).
   const unlistedEligible =
@@ -81,6 +84,7 @@ export function calcPaymentInKindAssessment(
   const {
     realEstateValue,
     eligibleSecuritiesValue,
+    governmentBondValue,
     unlistedStockValue,
     tradableListedValue,
     grossFinancialValue,
@@ -125,7 +129,7 @@ export function calcPaymentInKindAssessment(
 
   // 충당순서 (상증령 §74②)
   const availableByOrder = [
-    0, // 1 국채·공채 (estate 자동도출 분류 없음 — 후속)
+    governmentBondValue, // 1 국채·공채 (§74②1호 — isGovernmentBond flag 자동도출)
     eligibleSecuritiesValue, // 2 상장유가증권(처분제한)
     Math.max(0, realEstateValue - heirResidenceValue), // 3 국내 부동산 (§74②3호 — 제6호 거주주택 제외)
     0, // 4 그 밖의 유가증권
@@ -258,9 +262,31 @@ export function derivePaymentInKindAssets(
   let unlistedStockValue = 0;
   let tradableListedValue = 0;
   let eligibleSecuritiesValue = 0;
+  let governmentBondValue = 0;
   let grossFinancialValue = 0;
   for (const item of estateItems) {
     const v = valById.get(item.id) ?? 0;
+    // §74①2호 본문 국채·공채 — 카테고리(§22 기준 "financial")와 무관하게 flag가 우선한다.
+    // §73⑤ 금융재산 열거(예금·적금·…·어음)에 채권이 없으므로 grossFinancialValue에서 **항상** 제외.
+    // §22 금융재산공제 경로는 이 분기를 타지 않으므로 무영향.
+    //
+    // 충당 분류는 **상장 여부**가 가른다 — §74①2호**가목** 본문이 "거래소에 상장된 것"을 제2호
+    // 전체(국채·공채 포함)에서 제외한다(법제처 XML `<목내용>` 실측 MST 283637):
+    //   "가. 거래소에 상장된 것. 다만, 최초로 거래소에 상장되어 물납허가통지서 발송일 전일 현재
+    //    「자본시장과 금융투자업에 관한 법률」에 따라 처분이 제한된 경우에는 그러하지 아니하다."
+    // §74②2호가 "가목 단서 유가증권(**제1호의 재산을 제외한다**)으로서 거래소에 상장된 것"이라며
+    // 1호를 빼는 것이 방증 — §74②1호의 "국채 및 공채"는 가목 관문을 통과한 것을 가리킨다.
+    if (item.isGovernmentBond) {
+      if (item.isGovernmentBondListed) {
+        // 상장 국채 — 충당 대상 아님(가목 본문) + §73①2호 한도2 차감 대상
+        // ("거래소에 상장된 유가증권(법령에 따라 처분이 제한된 것은 제외한다)").
+        // 차감 축이 가목 제외 축과 **동일 문구**라 기존 tradableListedValue가 그대로 정본이다.
+        tradableListedValue += v;
+      } else {
+        governmentBondValue += v; // §74②1호 충당 1순위
+      }
+      continue;
+    }
     switch (classifyForPaymentInKind(item)) {
       case "realEstate":
         realEstateValue += v;
@@ -293,6 +319,7 @@ export function derivePaymentInKindAssets(
   return {
     realEstateValue,
     eligibleSecuritiesValue,
+    governmentBondValue, // §74②1호: isGovernmentBond flag로 자동도출 (§73⑤ 금융재산 제외)
     unlistedStockValue,
     tradableListedValue,
     grossFinancialValue,

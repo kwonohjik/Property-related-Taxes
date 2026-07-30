@@ -10,8 +10,18 @@
 export interface PaymentInKindAssets {
   /** §74①1호 국내소재 부동산 (상속인 거주주택 heirResidenceValue 포함 — 요건1 분자) */
   realEstateValue: number;
-  /** §74①2호 충당가능 유가증권 = 국채·공채·내국법인채권 + 처분제한 상장 (국채·공채 세분류 마커는 후속) */
+  /**
+   * §74①2호 충당가능 유가증권 = 내국법인 채권·증권 + 처분제한 상장.
+   * **국채·공채는 `governmentBondValue`로 분리**(§74②1호가 별도 1순위) — 여기서 제외.
+   * 요건1/한도1 분자에는 둘을 합산해 사용(§74①2호 본문은 국채·공채도 포함).
+   */
   eligibleSecuritiesValue: number;
+  /**
+   * §74①2호 본문 국채·공채 — §74②**1호** 충당 1순위.
+   * `EstateItem.isGovernmentBond` flag로 자동도출. §73⑤ 금융재산 열거(예금·어음 등)에
+   * 채권이 없으므로 `grossFinancialValue`와 이중계상되지 않는다(KoreanLaw MST 283637 검증).
+   */
+  governmentBondValue: number;
   /**
    * §74①2호나목 비상장주식 (§73④ 캡·§74②5호 최후순위).
    * 요건1/한도1 분자(충당가능 유가증권)에는 §74①2호나목 단서에 따라 부동산+충당유가증권으로

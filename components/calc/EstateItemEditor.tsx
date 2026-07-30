@@ -207,6 +207,44 @@ export function EstateItemEditor({
             />
           )}
 
+        {/* 물납 충당순위 — 국채·공채 (상증령 §74②1호 1순위). 금융재산 자산 한정.
+            §73⑤ 금융재산 열거(예금·적금·…·어음)에 채권이 없어 물납 요건3·한도2 계산에서 제외된다.
+            §22 금융재산상속공제(금융실명법 기준·채권 포함)는 정의가 달라 영향 없다. */}
+        {mode === "inheritance" && cat === "financial" && (
+          <ToggleCard
+            tone="sky"
+            title="국채·공채 (물납 §74①2호)"
+            description="국고채·지방채 등. 물납 요건·한도의 「금융재산」(§73⑤ 열거 — 채권 제외)에서 빠집니다. 금융재산상속공제(§22)와 결정세액에는 영향 없습니다."
+            checked={item.isGovernmentBond === true}
+            onCheckedChange={(on) =>
+              // 다중 키는 **단일 배치**로 — 나눠 부르면 stale spread로 한쪽이 덮인다.
+              // OFF 시 상장 플래그도 함께 내려 죽은 값이 남지 않게 한다.
+              onUpdate({
+                ...item,
+                isGovernmentBond: on,
+                ...(on ? {} : { isGovernmentBondListed: false }),
+              })
+            }
+          />
+        )}
+
+        {/* 상장 여부 — §74①2호가목 본문이 "거래소에 상장된 것"을 제2호 전체에서 제외한다.
+            국고채는 통상 KRX 상장이라 묻지 않으면 납세자 유리 방향으로 과대해진다
+            (충당 분자 과대 + §73①2호 한도2 미차감) → 자동 fallback 금지 원칙에 따라 명시 입력. */}
+        {mode === "inheritance" &&
+          cat === "financial" &&
+          item.isGovernmentBond === true && (
+            <ToggleCard
+              tone="amber"
+              title="거래소 상장 (물납 §74①2호가목)"
+              description="상장된 국채·공채는 물납 충당 대상에서 제외되고(가목 본문), 물납 한도에서 차감됩니다(§73①2호). 국고채는 통상 한국거래소에 상장되어 있습니다. 끄면 비상장으로 보아 충당 1순위(§74②1호)로 분류합니다."
+              checked={item.isGovernmentBondListed === true}
+              onCheckedChange={(on) =>
+                onUpdate({ ...item, isGovernmentBondListed: on })
+              }
+            />
+          )}
+
         {/* 조특법 §71 영농자녀 농지 증여세 감면 — gift 모드 + 농지(real_estate_land) 한정 */}
         {mode === "gift" && cat === "real_estate_land" && (
           <ToggleCard
