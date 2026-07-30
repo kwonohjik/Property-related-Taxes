@@ -9,7 +9,8 @@
  *  ② 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율)
  *  ③ 취득시 기준시가 (amber)   — 환산취득가 모드 OR "토지·건물 일괄 (증축분 별도)" 모드 (일괄 취득가 안분에 필요)
  *  ⑤ 증축 정보 (amber)          — 환산취득가 모드 OR gbHasExtension ON 시 (선택); 증축분 취득방식 서브 라디오로 4가지 조합 지원
- *  ④ 비사업용토지 판정 (rose)  — 항상 표시 (§104의3·§168의12)
+ *  ④ 비사업용토지 판정 (rose)  — 항상 표시
+ *      (「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101①2호·②)
  *
  * 정책 준수:
  *  - placeholder 숫자 예시 금지
@@ -308,9 +309,9 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           )}
 
           <FieldCard
-            label="건물 수평투영면적"
+            label="건축물 바닥면적"
             unit="㎡"
-            hint="건축물대장 '건축면적' 또는 1층 바닥면적. 비사업용토지 판정 기준 (§168의12)"
+            hint="건축물대장의 각 층 바닥면적 중 **가장 넓은** 값 — 지하층도 포함합니다. 건축물대장의 '건축면적'이 아닙니다(발코니·처마 등이 달라 값이 어긋납니다). 「지방세법 시행령」 제101조 제1항 제2호 부수토지 한도의 곱셈 기준."
           >
             <DecimalInput value={asset.gbBuildingFootprintArea} onChange={(v) => onChange({ gbBuildingFootprintArea: v })} />
           </FieldCard>
@@ -591,15 +592,20 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           tone="rose"
           sectionNum="④"
           title="비사업용토지 판정"
-          titleExtra={<span className="text-micro text-rose-500">(§104의3·§168의12)</span>}
+          titleExtra={
+            <span className="text-micro text-rose-500">
+              (§104의3①4호나목 · 지방세령 §101)
+            </span>
+          }
           noDark
         >
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />
-            <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
+            <LawArticleModal legalBasis="지방세법 시행령 §101" label="지방세령 §101 배율" />
           </div>
           <p className="text-caption text-rose-600">
-            부수토지 한도 = 수평투영면적 × 용도지역 배율. 초과분에만 +10%p 중과.
+            부수토지 한도 = <strong>건축물 바닥면적</strong>(각 층 중 최대, 지하 포함) × 용도지역 배율.
+            초과분에만 +10%p 중과.
           </p>
 
           {/* 무허가건축물 — 배율 무관 전체 NBL */}

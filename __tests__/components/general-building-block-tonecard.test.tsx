@@ -27,8 +27,11 @@ describe("GeneralBuildingBlock — 섹션카드 <ToneCard> 전환 (회귀 0)", (
     expect(getByText("양도시 기준시가 (토지·건물 안분 비율)").className).toContain("text-emerald-700");
     expect(getByText("취득시 기준시가 (환산 분자 + 개산공제 기준)").className).toContain("text-amber-700");
     expect(getByText("비사업용토지 판정").className).toContain("text-rose-700");
-    // ④ titleExtra(§ 배지) — 헤더 인라인 요소 보존
-    expect(getByText("(§104의3·§168의12)")).toBeTruthy();
+    // ④ titleExtra(§ 배지) — 헤더 인라인 요소 보존.
+    // 🔄 2026-07-30: 인용 정정. GB 부수토지 배율은 「소득세법 시행령」 §168의12(주택)가 아니라
+    //   「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101 소관이다
+    //   (Phase D 배율 정정의 UI 잔재 제거 — anchor `gb-footprint-max-floor-area.anchor.test.tsx`).
+    expect(getByText("(§104의3①4호나목 · 지방세령 §101)")).toBeTruthy();
   });
 
   it("① 섹션카드 sky light 유지 + dark: 미도입 (noDark 회귀 0)", () => {
