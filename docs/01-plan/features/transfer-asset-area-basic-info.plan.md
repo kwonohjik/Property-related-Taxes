@@ -181,10 +181,40 @@ throwaway probe 실측: `land` + `purchase` + 취득가액 입력 상태에서 `
 Phase 0  ✅ 완료 — U-1~U-8·R4 실측 해소 + anchor 18건 green
 Phase 1  ✅ 완료 — AREA_SCENARIOS_BY_ASSET_KIND 상수화 + 환지 land 전용 제한 (R-2 green)
 Phase 2  ✅ 완료 — 게이트 land → land+housing 확대 (RTL 13건 + E2E 2건 green)
-Phase 3  ⏳ 전용 면적 필드 기본정보 승격 (상가·GB·재개발)  → verify: 면적 칸 중복 0 (E-2)
-Phase 4  ⏳ 라벨 표준화 (원칙 C) — 재개발 "토지면적 (㎡)" 등 → verify: R-5 확대
-Phase 5  ⏳ validate ⑧ — :393 메시지 정정 + partial 불변식 → verify: A-5·A-6 뒤집기
+Phase 3  ✅ 완료 — 중복 0이 이미 충족임을 실측·계약화 (이동 불필요, 아래 §5.1)
+Phase 4  ✅ 완료 — 재개발 라벨 2건 원칙 C 정정 (GB·상가는 대상 아님, §5.2)
+Phase 5  ✅ 완료 — :393 메시지 정정 + partial 불변식 추가 (A-5·A-6 뒤집힘)
 ```
+
+### 5.1 Phase 3 — "이동"이 아니라 "중복 0 계약"으로 완결
+
+Phase 3의 성공 기준은 "면적 칸 중복 0"이었다. 실측 결과 **이미 충족 상태**이며, 전용 면적 섹션들이 상호배타 게이트 아래 있기 때문이다:
+
+| 자산유형 | 상호배타 근거 |
+|---|---|
+| 상가 | `AssetSectionAcquisition.tsx:293` `acquisitionCause !== "inheritance"` → `CommercialBuildingBlock` / `CommercialInheritanceStdPriceSection.tsx:38~44` `=== "inheritance"` → 상속 전용. **두 「면적 정보 (㎡)」 카드는 동시 렌더 불가** |
+| 재개발 | `RedevelopmentValuationSection.tsx:174` `isLand ? <LandContrib…> : <main>` 삼항 |
+| 일반건물 | `GeneralBuildingBlock.tsx:299~313` 단일 위치 |
+| land·housing | 기본정보 면적 섹션 단독 (Phase 2) |
+
+→ 전용 섹션을 ① 기본정보로 **물리적 이동**하는 것은 (a) 성공 기준을 개선하지 못하고, (b) 면적을 그것이 쓰이는 곳(단가×면적 총액 표시·`BuildingStdPriceModalButton` prefill)에서 분리시키며, (c) 각 블록의 `sectionNum` 번호 체계를 깨뜨린다. **Simplicity·Surgical 원칙상 수행하지 않는다.**
+
+대신 상호배타성을 회귀로부터 지키는 계약을 테스트로 고정했다 — `__tests__/components/asset-area-input-no-duplication.anchor.test.tsx` 3건. 게이트를 잘못 완화하면(예: 상속 조건 제거) 같은 필드를 두 곳에서 입력받게 되고 사용자는 어느 값이 반영되는지 알 수 없다.
+
+> 위치 통일(모든 면적을 ① 기본정보로)을 UX 목표로 별도 추진하려면 독립 과제로 다루어야 한다 — 본 작업의 결함 해소 범위 밖이다.
+
+### 5.2 Phase 4 — 재개발 2건만 대상
+
+| 위치 | 변경 | 근거 |
+|---|---|---|
+| `RedevelopmentValuationSection.tsx:239` | "토지면적 (㎡)" → "취득·양도 당시 토지 면적 (㎡)" | hint가 "시점별 동일 가정" 명시 → `same` 라벨 형식 |
+| `RedevelopmentValuationSection.tsx:402` | 동상 | hint "§166③ 분자·분모 공통 면적. 취득·관리처분 시점 동일 가정." |
+
+**대상 아님** (원칙 C 적용이 오표시가 되는 경우):
+
+- 상가 "전용면적"·"공유면적"·"대지면적" — 물건 고유 속성이며 시점 개념이 없다.
+- GB "토지면적"(등기부·토지대장 기재)·"건물 연면적"(건축물대장)·"건물 수평투영면적"(§168의12 판정) — 대장 기재 속성. "취득 당시 건물 수평투영면적"은 의미를 왜곡한다.
+- GB "토지면적"은 환산 분자·분모 공통 면적이라 시점 개념이 있을 수 있으나 hint에 시점 언급이 없어 **미검증**이다. 임의로 "취득·양도 당시"를 붙이면 추정 단정이 된다 → **보류**(별건 확인 대상).
 
 ### Phase 1~2 구현 결과 (2026-07-30)
 
@@ -231,3 +261,4 @@ Phase 2와 Phase 3은 성격이 다르다 — Phase 2는 **없던 입력 경로�
 |---|---|---|
 | 2026-07-30 | v1.0 | 최초 작성 — 실측 기반. "신규 추가" 가정을 "게이트 해제 + 승격"으로 정정 |
 | 2026-07-30 | v1.1 (rev.2) | Phase 0 완료. U-1~U-8·R4 전건 해소(anchor 18건). **핵심 정정: 자산유형별 전용 면적 필드가 이미 존재 → 필드 통합 불가·불필요, (a)는 "입력 위치 승격"으로 확정.** 겸용 신규 필드 폐기. 신규 발견 2건(자산-수준 검증 전무 · validate 메시지 드리프트). 단계 6→6 재편, R3·R4 해소·R5·R6 추가 |
+| 2026-07-30 | v1.2 | Phase 1~5 전건 완료. **Phase 3 정정: "이동"이 아니라 "중복 0 계약"으로 완결** — 전용 섹션이 상호배타 게이트 아래 있어 중복이 이미 0이며, 물리적 이동은 기준을 개선하지 못하고 면적↔사용처를 분리시킨다(§5.1). Phase 4 대상을 재개발 2건으로 한정(§5.2 — GB·상가 라벨은 대장·물건 속성이라 원칙 C 적용이 오표시). Phase 5 partial 불변식은 면적 섹션 노출 전 자산유형 공통 적용 |

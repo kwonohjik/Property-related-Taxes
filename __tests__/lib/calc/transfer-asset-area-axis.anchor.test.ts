@@ -196,8 +196,8 @@ describe("A-4 [R4 해소] — NBL 면적 검증은 land 전용이므로 현행 �
 });
 
 // ══════════════════════════════════════════════════════════
-describe("A-5 [의도적 드리프트 고정] — 같은 필드를 두 메시지가 다른 위치로 안내", () => {
-  it("증환지(increase)는 acquisitionArea를 「③ 취득정보」에서 입력하라고 안내한다", () => {
+describe("A-5 [Phase 5 뒤집힘] — 면적 안내 위치가 ① 기본정보로 통일", () => {
+  it("증환지(increase)는 acquisitionArea를 「① 기본정보」에서 입력하라고 안내한다", () => {
     const asset = landAsset({
       areaScenario: "increase",
       replottingConfirmDate: "2015-03-01",
@@ -205,40 +205,91 @@ describe("A-5 [의도적 드리프트 고정] — 같은 필드를 두 메시지
     });
 
     const err = validateAssetAcquisition(asset, "자산1", "2026-05-01");
-    // validate-asset.ts:393 — 그러나 면적 섹션의 실제 위치는 ① 기본정보(AssetSectionBasic.tsx:298).
-    // PHD 경로(:459)는 같은 필드를 「자산 기본 정보」로 안내한다 → 두 메시지가 상충.
-    // Phase 5에서 ① 기본정보로 통일 정정한다.
-    expect(err).toContain("③ 취득정보");
+    // Phase 5 정정: "③ 취득정보" → "① 기본정보".
+    // 면적 섹션의 실제 위치는 AssetSectionBasic(① 기본정보)이며 PHD 경로 메시지와도 일치한다.
+    expect(err).toContain("① 기본정보");
+    expect(err).not.toContain("③ 취득정보");
+  });
+
+  it("PHD 경로 메시지도 동일하게 자산 기본 정보를 가리킨다 (드리프트 해소)", () => {
+    const err = validateAssetAcquisition(
+      housingPhdAsset({ acquisitionArea: "" }),
+      "자산1",
+      "2026-05-01",
+    );
+    expect(err).toContain("자산 기본 정보");
   });
 });
 
 // ══════════════════════════════════════════════════════════
-describe("A-6 [의도적 갭 고정] — 자산-수준 면적 불변식이 미구현", () => {
-  // 실측(throwaway probe): land + purchase + 취득가액 입력 상태에서
-  //   same/partial × (100/150, 150/100, 빈/빈, 100/100) 8조합 전부 null(통과).
-  // → 자산-수준에는 면적 필수 검증도, partial 불변식(taxonomy §4.1)도 없다.
-  //   검증은 다필지 parcels[] 경로에만 존재(validate-asset.ts:73~79).
+describe("A-6 [Phase 5 뒤집힘] — 자산-수준 partial 불변식 (taxonomy §4.1)", () => {
+  // Phase 0 실측(throwaway probe): land + purchase + 취득가액 입력 상태에서
+  //   same/partial × (100/150, 150/100, 빈/빈, 100/100) 8조합 전부 null(통과) → 불변식 부재.
+  // Phase 5에서 partial 불변식만 추가. 미입력 필수화는 하지 않는다(과도 차단 금지).
   const withPrice = (over: Partial<AssetForm>) =>
     landAsset({ fixedAcquisitionPrice: "300000000", ...over });
 
-  it("partial에서 취득면적 < 양도면적이어도 현행은 통과한다 (taxonomy §4.1 미구현)", () => {
+  it("partial에서 취득면적 < 양도면적이면 차단된다", () => {
     const err = validateAssetAcquisition(
       withPrice({ areaScenario: "partial", acquisitionArea: "100", transferArea: "150" }),
       "자산1",
       "2026-05-01",
     );
-    // Phase 5에서 `acquisitionArea >= transferArea` 검증 추가 → 이 anchor가 뒤집힌다.
-    expect(err).toBeNull();
+    expect(err).toContain("취득 당시 면적은 양도 당시 면적 이상");
+    expect(err).toContain("① 기본정보");
   });
 
-  it("실지거래가 모드에서 면적 미입력도 통과한다 (면적이 세액에 미사용인 경로)", () => {
+  it("partial에서 취득면적 ≥ 양도면적이면 통과한다", () => {
+    for (const [acq, tr] of [["150", "100"], ["100", "100"]]) {
+      const err = validateAssetAcquisition(
+        withPrice({ areaScenario: "partial", acquisitionArea: acq, transferArea: tr }),
+        "자산1",
+        "2026-05-01",
+      );
+      expect(err).toBeNull();
+    }
+  });
+
+  it("partial 불변식은 housing에도 적용된다 (면적 섹션 노출 자산유형 공통)", () => {
+    const err = validateAssetAcquisition(
+      {
+        ...makeDefaultAsset(1),
+        assetKind: "housing",
+        acquisitionCause: "purchase",
+        acquisitionDate: "2010-05-01",
+        fixedAcquisitionPrice: "300000000",
+        areaScenario: "partial",
+        acquisitionArea: "80",
+        transferArea: "120",
+      } as AssetForm,
+      "자산1",
+      "2026-05-01",
+    );
+    expect(err).toContain("취득 당시 면적은 양도 당시 면적 이상");
+  });
+
+  it("면적 한쪽만 입력된 중간 상태는 차단하지 않는다 (입력 중 방해 금지)", () => {
+    for (const over of [
+      { acquisitionArea: "100", transferArea: "" },
+      { acquisitionArea: "", transferArea: "150" },
+      { acquisitionArea: "", transferArea: "" },
+    ]) {
+      const err = validateAssetAcquisition(
+        withPrice({ areaScenario: "partial", ...over }),
+        "자산1",
+        "2026-05-01",
+      );
+      expect(err).toBeNull();
+    }
+  });
+
+  it("실지거래가 모드 same에서 면적 미입력은 통과한다 (면적 미소비 경로)", () => {
     const err = validateAssetAcquisition(
       withPrice({ areaScenario: "same", acquisitionArea: "", transferArea: "" }),
       "자산1",
       "2026-05-01",
     );
-    // 이는 결함이 아니다 — 면적을 쓰지 않는 경로에서 필수화하면 과도 차단.
-    // 면적을 실제로 소비하는 경로(NBL 상세판정·PHD·환산·Pre1990)에서만 요구하는 현행 설계가 맞다.
+    // 면적을 쓰지 않는 경로에서 필수화하면 과도 차단 — 소비 경로(NBL·PHD·환산·Pre1990)에서만 요구.
     expect(err).toBeNull();
   });
 });
