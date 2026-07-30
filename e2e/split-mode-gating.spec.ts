@@ -666,3 +666,65 @@ test.describe("P7 — 소유자 분리 토글 배치", () => {
     await expect(page.getByTestId("acq-date-land")).toBeVisible();
   });
 });
+
+/**
+ * 건물 신축 + 토지 상속·증여 — 파트별 취득원인 상이 (2026-07-30).
+ * 계획서: docs/02-design/features/transfer-part-acquisition-cause.plan.md
+ *
+ * 종전에는 취득원인을 「신축」으로 고르면 토지 취득일·취득가액 칸이 아예 없어
+ * 토지 취득가액이 0으로 계산됐다(과대과세).
+ */
+test.describe("P8 — 신축 + 토지 상속·증여", () => {
+  async function setupNewConstruction(page: Page) {
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "신축(자가건축)" }).click();
+  }
+  const landAcqToggle = (p: Page) => p.getByTestId("newconstruction-land-acq");
+
+  test("토글 OFF 기본 — 토지 입력 없음(종전 동작)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupNewConstruction(page);
+    await expect(landAcqToggle(page)).toBeVisible();
+    await expect(page.getByTestId("land-acq-cause")).toHaveCount(0);
+    await expect(page.getByTestId("acq-date-land")).toHaveCount(0);
+  });
+
+  test("토글 ON → 토지 취득원인·취득일·평가액 + 양도가액 구분이 나타난다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupNewConstruction(page);
+    await landAcqToggle(page).getByRole("switch").click();
+
+    await expect(page.getByTestId("land-acq-cause")).toBeVisible();
+    await expect(page.getByTestId("acq-date-land")).toBeVisible();
+    await expect(page.getByTestId("split-land-acq-price")).toBeVisible();
+    // 양도차익을 파트별로 나누려면 양도가액 구분 근거가 필요하다
+    await expect(page.getByTestId("sale-split-mode")).toBeVisible();
+    // 상속이 기본 — 라벨이 §163⑨ 평가액으로 바뀐다
+    await expect(page.getByText("토지 상속개시일 평가액")).toBeVisible();
+  });
+
+  test("증여로 바꾸면 라벨이 증여 신고가액으로 바뀐다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupNewConstruction(page);
+    await landAcqToggle(page).getByRole("switch").click();
+    await page.getByTestId("land-acq-cause").getByRole("radio", { name: "증여" }).check();
+
+    await expect(page.getByText("토지 증여 신고가액")).toBeVisible();
+    await expect(page.getByText("토지 상속개시일 평가액")).toHaveCount(0);
+  });
+
+  test("매매 취득원인에서는 이 블록이 나타나지 않는다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await expect(landAcqToggle(page)).toHaveCount(0);
+  });
+});

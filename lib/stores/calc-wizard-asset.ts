@@ -369,6 +369,18 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 토지 취득일 (YYYY-MM-DD) — hasSeperateLandAcquisitionDate === true 시 필수 */
   landAcquisitionDate: string;
   /**
+   * **토지 파트의 취득 원인** — 건물을 신축하고 그 토지는 상속·증여로 취득한 경우(2026-07-30).
+   *
+   * `acquisitionCause`는 자산 단위 단일값이라 "건물=신축 / 토지=상속"을 표현할 수 없었다.
+   * ""(미설정)이면 토지도 자산 전체 원인을 따른다(종전 동작).
+   *
+   * ⚠️ **엔진에는 전달하지 않는다.** 엔진은 파트별 취득 *방식*(`landAcqMode` 4-way)만 알고
+   *    취득 *원인*은 모른다. 이 값은 취득가액 칸의 라벨·안내를 바꾸는 **UI 전용**이며,
+   *    실제 계산은 사용자가 입력한 평가액이 `landAcquisitionPrice`(actual 모드)로 흐른다.
+   *    상속 §163⑨ 평가액·증여 신고가액은 모두 "확인된 취득가액"이라 이 처리가 법령상 정합적이다.
+   */
+  landAcquisitionCause: "" | "inheritance" | "gift";
+  /**
    * 토지 파트 취득 방식 — 4-way 독립(소득령 §166⑥, 토지·건물 취득일 분리 모드 전용).
    * `landSplitMode`(구, 취득·양도 겸용 토글)를 대체 — 취득은 이 필드가 단일 소스.
    * ""(미선택) 시 자산 전체 레거시 플래그에서 파생 — `lib/calc/transfer-tax-split-acq-mode.ts` 참조.

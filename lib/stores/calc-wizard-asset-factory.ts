@@ -142,6 +142,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     selfOwns: "both",
     hasSeperateLandAcquisitionDate: false,
     landAcquisitionDate: "",
+    landAcquisitionCause: "",
     landAcqMode: "",
     buildingAcqMode: "",
     saleSplitMode: "apportioned",
