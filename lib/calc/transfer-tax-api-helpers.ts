@@ -390,6 +390,34 @@ export function buildPre1990LandPayload(
 export { applyRatio };
 
 /**
+ * 엔진 `acquisitionArea`로 보낼 면적 — **취득 당시 단가에 곱할 면적**.
+ *
+ * 일부양도(`areaScenario === "partial"`)에서는 취득 전체 면적이 아니라 **양도한 부분의
+ * 면적**이다. 「소득세법 시행령」 제176조의2 제2항 제2호의 "취득당시의 기준시가"는
+ * 법 제114조 제7항 문맥상 **양도자산의** 것이고, 일부양도에서는 양도한 부분이 그 자산이다.
+ * 조심 2018부0572(2018.05.03, 기각)도 "각 필지의 취득 당시 기준시가"를 안분 기준으로 삼았다.
+ *
+ * 환지(`reduction`)는 예외다 — UI가 이미 `acquisitionArea`에 **의제취득면적**
+ * (`priorLandArea × allocatedArea / entitlementArea`)을 계산해 넣으므로 그대로 쓴다
+ * (`transfer-tax-api.ts:499` 주석 · `multi-parcel-transfer.ts:326` 동일 산식).
+ * `increase`(증환지)는 증가분이 별도 자산으로 분리되므로 당초분은 전체 면적이 맞다.
+ *
+ * 계획: docs/01-plan/features/transfer-partial-area-apportionment.plan.md §0 C-6 · §3.3 L-4
+ */
+export function resolveAcqAreaForStdPrice(asset: {
+  areaScenario?: string;
+  acquisitionArea?: string;
+  transferArea?: string;
+}): number | undefined {
+  const acq = asset.acquisitionArea ? parseFloat(asset.acquisitionArea) || undefined : undefined;
+  if ((asset.areaScenario ?? "same") !== "partial") return acq;
+  const tr = asset.transferArea ? parseFloat(asset.transferArea) || undefined : undefined;
+  // 양도면적 미입력(입력 중) 시 전체 면적 fallback — 차단은 validate 소관이며
+  // 여기서 undefined로 떨구면 기준시가 경로가 조용히 비활성된다.
+  return tr ?? acq;
+}
+
+/**
  * 자산별 effective transferExpense 계산 (B3 폼-수준 안분 로직).
  * 우선순위:
  *   1. 자산-수준 transferExpense 직접 입력 (>0): 지분 모드 시 × ratio, 단독 모드는 그대로

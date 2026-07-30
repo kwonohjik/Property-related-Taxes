@@ -3,7 +3,7 @@
 > 작성일: 2026-07-30 (분할본 v1.0 — `basic-info-building-area-phase-ef.plan.md` rev.7에서 B-4만 추출)
 > 발견 경위: [`basic-info-building-area-phase-f.plan.md`](basic-info-building-area-phase-f.plan.md) §3.2 A-6 실측의 파생
 > anchor: `__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.ts` — `describe("B-4 …")` · `describe("U-9 …")` · `describe("U-10 …")` (12건, **현행 동작 고정만**)
-> 상태: **설계 완료 · Do 미착수.** Phase F(F1)와 독립이며 별도 PR로 처리한다.
+> 상태: ⏳ **부분 Do 완료**(§5.5) — B4-1 단건 경로 · B4-2 안내 · B4-3 완료. 후속 3건(다필지·안분 계산기·필요경비 안내) 미착수.
 
 ---
 
@@ -166,15 +166,58 @@ B4-3  지분 × 부분비 합성 anchor + 회귀
 
 ---
 
+## 5.5 Do 기록 (2026-07-30) — B4-1 단건 + B4-2 안내 + B4-3 완료
+
+anchor: `__tests__/lib/calc/partial-area-acq-std-price.anchor.test.ts` (14건)
+
+### 5.5.1 완료
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| **B4-1** (단건) | `resolveAcqAreaForStdPrice()` 신설 — 엔진 `acquisitionArea`를 `partial`일 때 **양도분 면적**으로. `transfer-tax-api.ts:320` 단일 배선 지점 | ✅ |
+| **B4-2** (안내) | 실거래가 모드 취득가액 hint에 일부양도 안내 — "양도한 부분에 대응하는 취득가액… 구분되지 않으면 취득 당시 기준시가(또는 취득 당시 감정가액) 비율로 안분… **양도 당시 가액 기준 안분은 인정되지 않습니다**" | ✅ |
+| **B4-3** | 지분 × 부분비 합성 검증 | ✅ |
+
+### 5.5.2 🔑 BR3 해소 — 이중 적용이 **구조적으로 불가능**하다
+
+계획서 BR3은 "부분비가 지분 `applyRatio`와 곱셈 합성돼 이중 적용될 수 있다"고 경고했으나, 실측 결과 **두 축은 다른 차원에 적용된다**:
+
+| 축 | 적용 대상 | 근거 |
+|---|---|---|
+| 지분 `applyRatio` | **금액**에만 | `transfer-tax-api.ts:171,174,216,232,245,255` — 전부 금액 |
+| 부분비 | **면적**에만 | `resolveAcqAreaForStdPrice` |
+
+면적에 `applyRatio`를 적용하는 지점은 `lib/calc` 전체에 **0건**이다(grep 실측). → BR3 소멸, anchor로 고정.
+
+### 5.5.3 BR4 처리 — 감환지와 배타
+
+`resolveAcqAreaForStdPrice`는 `partial`에서만 양도면적을 쓴다. `reduction`(감환지)은 UI가 이미 `acquisitionArea`에 **의제취득면적**(`priorLandArea × allocatedArea / entitlementArea`)을 넣으므로 그대로 통과시킨다 — 여기서 또 양도분을 적용하면 이중 안분이 된다. `increase`(증환지)는 증가분이 별도 자산으로 분리되므로 당초분은 전체 면적이 맞다. anchor 2건으로 고정.
+
+### 5.5.4 BR5 해소 — 기존 세액 anchor 파손 0건
+
+`areaScenario` 사용 테스트 전수 grep 결과, `partial`을 쓰는 기존 테스트는 **validate 불변식만** 고정한다(`transfer-asset-area-axis.anchor.test.ts:225~290` — "취득면적 ≥ 양도면적"). 세액 anchor는 없다. 전체 회귀 **12,471건 통과**로 확인.
+
+### 5.5.5 미착수 — 후속 3건
+
+| # | 항목 | 이유 |
+|---|---|---|
+| **B4-1b** | **다필지(`parcels[]`) 경로** | `transfer-tax-api.ts:518~527`이 감환지 의제취득면적을 이미 계산하고, `finalAcqArea`가 `multi-parcel-transfer.ts:329 acqArea` → `effectiveAcquisitionArea`로도 흐른다. **감환지 분기와의 배타성 + `effectiveAcquisitionArea` 다른 소비처**를 확인해야 BR4 이중 적용을 피할 수 있다 |
+| **B4-2b** | **안분 계산기 UI** (2-state + 취득 당시 기준시가/감정가액 비율 입력) | 현재는 hint 안내로 사용자가 정답을 넣을 수 있게 했다. 계산기는 별도 위젯 설계 필요 |
+| **B4-2c** | **필요경비 안내** (C-5 — 취득가액과 동일 기준 안분) | 필요경비 입력이 경비 탭에 분산돼 있어 안내 지점 식별 필요 |
+
+**B4-1(단건)만으로도 세액 정정 효과가 있다** — `land` 일괄 · `housing` 토지·건물 분리 경로가 모두 단건 API를 거친다.
+
+---
+
 ## 6. 리스크
 
 | # | 리스크 | 완화 |
 |---|---|---|
 | BR1 | 무조건 자동 안분이 L-2(구분 가액 우선)를 뭉갠다 | 2-state 선택 필수(C-7). 「자동 안분 fallback 금지」 정책과도 정합 |
 | BR2 | 안분 기준을 면적비로 하드코딩하면 부분별 단가가 다른 사안에서 오답 | C-3 우선순위 구현. 면적비는 별도 옵션으로 노출하지 않는다(기준시가 동일 시 자동으로 같아짐) |
-| BR3 | 지분 × 부분비 이중 적용 | B4-3 anchor 선행 |
-| BR4 | 다필지 감환지 안분(`multi-parcel-transfer.ts:326`)과 신규 안분이 중복 적용 | 감환지 분기는 이미 `acqArea`를 조정하므로 그 뒤에 부분비를 또 곱하면 이중이다 — 분기 배타성 anchor 필요 |
-| BR5 | 기존 세액 anchor 파손 | 현행 코퍼스는 `partial`을 거의 쓰지 않는다(A-6 실측 — 검증된 조합이 아니었다). 다만 Do 전 `areaScenario` 사용 테스트 전수 grep 필수 |
+| ~~BR3~~ | 지분 × 부분비 이중 적용 | ✅ **소멸** — 지분은 금액축·부분비는 면적축으로 다른 차원(§5.5.2). 면적에 `applyRatio` 적용 0건 |
+| BR4 | 다필지 감환지 안분과 신규 안분이 중복 적용 | ✅ **단건 경로는 해소**(§5.5.3, `reduction`·`increase` 통과 anchor 2건). **다필지는 B4-1b로 이연** — `effectiveAcquisitionArea` 다른 소비처 확인 필요 |
+| ~~BR5~~ | 기존 세액 anchor 파손 | ✅ **0건** — `partial` 사용 기존 테스트는 validate 불변식만 고정. 전체 12,471건 통과(§5.5.4) |
 
 ---
 
@@ -182,6 +225,7 @@ B4-3  지분 × 부분비 합성 anchor + 회귀
 
 | 날짜 | 버전 | 변경 |
 |---|---|---|
+| 2026-07-30 | v1.1 | **B4-1(단건)·B4-2(안내)·B4-3 Do 완료**(§5.5, anchor 14건). `resolveAcqAreaForStdPrice()` 신설로 `partial` 시 엔진 `acquisitionArea`에 **양도분 면적**을 넘긴다(`transfer-tax-api.ts:320` 단일 배선). 세액 효과: 취득 300㎡·양도 100㎡·단가 50만/150만에서 환산비율 1.0→1/3, **양도차익 0 → 6억**. 🔑 **BR3 소멸** — 지분은 금액축·부분비는 면적축이라 이중 적용이 구조적으로 불가능(면적에 `applyRatio` 0건). BR4는 단건 해소(`reduction`·`increase` 배타 anchor)·다필지 이연. BR5 해소(기존 세액 anchor 파손 0건). 후속 3건: B4-1b 다필지 · B4-2b 안분 계산기 · B4-2c 필요경비 안내 |
 | 2026-07-30 | v1.0 | **분할본** — `basic-info-building-area-phase-ef.plan.md` rev.7 §8.6~§8.9에서 B-4만 추출. **폐기된 처방 3세대를 제거**하고 유효 결론을 §0 「확정 결론」으로 통합 |
 
 ### 폐기된 처방 3세대 (통합 전 문서에서 순차 정정된 이력)

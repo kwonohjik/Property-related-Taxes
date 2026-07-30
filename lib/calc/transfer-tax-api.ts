@@ -14,6 +14,9 @@ import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-a
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+// ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
+//    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
+import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
@@ -318,10 +321,29 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.standardPricePerSqmAtAcq
         ? parseFloat(primary.standardPricePerSqmAtAcq) || undefined
         : undefined,
-    acquisitionArea:
-      primary.acquisitionArea
-        ? parseFloat(primary.acquisitionArea) || undefined
-        : undefined,
+    /**
+     * 엔진 `acquisitionArea` — **취득 당시 단가에 곱할 면적**이며, 일부양도(`partial`)에서는
+     * 취득 전체 면적이 아니라 **양도한 부분의 면적**이다.
+     *
+     * 근거: 「소득세법 시행령」 제176조의2 제2항 제2호의 "취득당시의 기준시가"는
+     * 법 제114조 제7항 문맥상 **양도자산의** 것이고, 일부양도에서는 양도한 부분이 그 자산이다.
+     * 조심 2018부0572(2018.05.03, 기각)도 "**각 필지의** 취득 당시 기준시가"를 쓴다.
+     *
+     * 전체 면적을 넣으면 분자(취득 기준시가)만 과대해져 환산비율이 부풀고 환산취득가가
+     * 과대 계상된다 — 면적비가 단가비를 상쇄해 **양도차익이 0이 되는** 사례까지 나온다
+     * (anchor `basic-info-building-area.anchor.test.ts` B-4).
+     *
+     * 두 소비처 모두 양도분을 요구한다:
+     *   `transfer-tax-split-gain.ts:52`      토지분 취득 기준시가 = 단가 × 이 면적
+     *   `transfer-tax-rate-calc.ts:189`      §154⑦ 한도 비교 대상 = **양도하는** 부수토지 면적
+     *
+     * ⚠️ 부분별 단가가 다르면(용도지역 상이 등) 사용자가 `standardPricePerSqmAtAcq`에
+     *    그 부분의 취득 당시 단가를 입력해야 한다 — 면적비 안분은 단가가 같을 때만
+     *    기준시가비 안분과 일치한다(조심 2018부0572는 공시지가가 동일한 사안이었다).
+     *
+     * 계획: docs/01-plan/features/transfer-partial-area-apportionment.plan.md §0 C-6 · §3.3 L-4
+     */
+    acquisitionArea: resolveAcqAreaForStdPrice(primary),
     householdHousingCount: parseInt(form.householdHousingCount) || 0,
     // 사례 36 §89①4호 가목 1세대1입주권 비과세 — 조합원입주권 수 (양도일 현재)
     // right_to_move_in 자산 유형에서만 의미. 기본 "0" fallback.
