@@ -207,6 +207,19 @@ export function EstateItemEditor({
             />
           )}
 
+        {/* 물납 충당순위 — 국채·공채 (상증령 §74②1호 1순위). 금융재산 자산 한정.
+            §73⑤ 금융재산 열거(예금·적금·…·어음)에 채권이 없어 물납 요건3·한도2 계산에서 제외된다.
+            §22 금융재산상속공제(금융실명법 기준·채권 포함)는 정의가 달라 영향 없다. */}
+        {mode === "inheritance" && cat === "financial" && (
+          <ToggleCard
+            tone="sky"
+            title="국채·공채 (물납 §74②1호)"
+            description="국고채·지방채 등. 물납 신청 시 충당 1순위로 분류되고, 물납 요건·한도의 「금융재산」(§73⑤ 열거 — 채권 제외)에서 빠집니다. 금융재산상속공제(§22)와 결정세액에는 영향 없습니다."
+            checked={item.isGovernmentBond === true}
+            onCheckedChange={(on) => onUpdate({ ...item, isGovernmentBond: on })}
+          />
+        )}
+
         {/* 조특법 §71 영농자녀 농지 증여세 감면 — gift 모드 + 농지(real_estate_land) 한정 */}
         {mode === "gift" && cat === "real_estate_land" && (
           <ToggleCard

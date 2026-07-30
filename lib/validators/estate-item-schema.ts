@@ -69,6 +69,8 @@ const baseItemSchema = z.object({
   deemedCategory: z.enum(["retirement", "insurance", "trust"]).optional(),
   // 갭4: 물납 충당순위 §74②6호 상속인 거주주택 (누락 시 z.object 침묵 strip — ⑫)
   isHeirResidenceProperty: z.boolean().optional(),
+  /** 국채·공채 (상증령 §74②1호 충당 1순위 · §73⑤ 금융재산 열거 외) — 물납 표시 전용 */
+  isGovernmentBond: z.boolean().optional(),
   isFamilyBusinessAsset: z.boolean().optional(),
   // §23의2 동거주택 상속공제 자동도출 (v3)
   isCohabitantHouse: z.boolean().optional(),

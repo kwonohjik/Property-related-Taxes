@@ -47,12 +47,15 @@ function computeEligibleRealSec(input: PaymentInKindInput): number {
   const {
     realEstateValue,
     eligibleSecuritiesValue,
+    governmentBondValue,
     unlistedStockValue,
     ineligibleManagementValue,
   } = input.assets;
   // §74①1호·2호가목 — 부동산 + 충당가능 유가증권(국채·공채·내국법인 증권·처분제한 상장).
   //   거래소 상장(처분제한 X, tradableListedValue)은 §74①2호가목 본문 제외.
-  const baseEligible = realEstateValue + eligibleSecuritiesValue;
+  //   국채·공채는 §74②1호로 순위만 분리된 것이고 §74①2호 본문 열거이므로 분자에 합산한다.
+  const baseEligible =
+    realEstateValue + eligibleSecuritiesValue + governmentBondValue;
   // §74①2호나목 단서 — 비상장주식은 상속에서 위 재산으로 납부세액 충당이 부족한 경우에만
   //   충당가능 유가증권. 부동산·상장으로 finalTax를 충당하면(≥) 비상장 미산입 (H-41).
   const unlistedEligible =
@@ -81,6 +84,7 @@ export function calcPaymentInKindAssessment(
   const {
     realEstateValue,
     eligibleSecuritiesValue,
+    governmentBondValue,
     unlistedStockValue,
     tradableListedValue,
     grossFinancialValue,
@@ -125,7 +129,7 @@ export function calcPaymentInKindAssessment(
 
   // 충당순서 (상증령 §74②)
   const availableByOrder = [
-    0, // 1 국채·공채 (estate 자동도출 분류 없음 — 후속)
+    governmentBondValue, // 1 국채·공채 (§74②1호 — isGovernmentBond flag 자동도출)
     eligibleSecuritiesValue, // 2 상장유가증권(처분제한)
     Math.max(0, realEstateValue - heirResidenceValue), // 3 국내 부동산 (§74②3호 — 제6호 거주주택 제외)
     0, // 4 그 밖의 유가증권
@@ -258,9 +262,17 @@ export function derivePaymentInKindAssets(
   let unlistedStockValue = 0;
   let tradableListedValue = 0;
   let eligibleSecuritiesValue = 0;
+  let governmentBondValue = 0;
   let grossFinancialValue = 0;
   for (const item of estateItems) {
     const v = valById.get(item.id) ?? 0;
+    // §74①2호 본문 국채·공채 — 카테고리(§22 기준 "financial")와 무관하게 flag가 우선한다.
+    // §73⑤ 금융재산 열거(예금·적금·…·어음)에 채권이 없으므로 grossFinancialValue에서 제외하고
+    // §74②1호 충당 1순위로 분리 집계한다. §22 금융재산공제 경로는 이 분기를 타지 않으므로 무영향.
+    if (item.isGovernmentBond) {
+      governmentBondValue += v;
+      continue;
+    }
     switch (classifyForPaymentInKind(item)) {
       case "realEstate":
         realEstateValue += v;
@@ -293,6 +305,7 @@ export function derivePaymentInKindAssets(
   return {
     realEstateValue,
     eligibleSecuritiesValue,
+    governmentBondValue, // §74②1호: isGovernmentBond flag로 자동도출 (§73⑤ 금융재산 제외)
     unlistedStockValue,
     tradableListedValue,
     grossFinancialValue,
