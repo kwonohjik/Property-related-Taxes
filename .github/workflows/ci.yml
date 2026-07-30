@@ -1,35 +1,37 @@
 name: CI
 
 # ══════════════════════════════════════════════════════════════════
-# Actions 사용량 최소화 설계 (2026-07-31)
+# **self-hosted 러너**에서 실행한다 (2026-07-31).
 #
-# 무료 계정 + **비공개 저장소**는 월 2,000분이다. 종전 설정은 그 한도를 상시 초과했다:
+# ## 배경 — GitHub 호스팅은 무료 한도를 상시 초과했다
 #
+# 무료 계정 + 비공개 저장소는 월 2,000분이다. 종전 설정은:
 #   · `push`와 `pull_request`를 **둘 다** 트리거해 변경 1건당 **2회** 실행
-#   · 성공 실행 1회가 **10.4~14.4분**(2026-07 실측 8건, 평균 ≈11.8분)
-#   → 변경 1건 ≈ 24분 → 한 달에 **약 83건**이면 소진. 2026-07-30 하루에만 9건 머지(≈216분).
+#   · 성공 실행 1회가 **10.4~14.4분**(2026-07 실측 8건)
+#   → 변경 1건 ≈24분 → 약 83건이면 소진(2026-07-30 하루 9건 머지 ≈216분).
+# 소진 후 실행은 3~13초 만에 거부된다("spending limit needs to be increased") —
+# 과금은 없지만 **신호도 없다**. 7월 실패 723건이 대부분 이것이다.
 #
-# 게다가 이 저장소에서 **CI는 머지를 차단하지 않는다**(master에 브랜치 보호 없음 —
-# 루트 CLAUDE.md "진짜 게이트는 git push 시 pre-push뿐"). 즉 종전 CI는 pre-push가 이미
-# 로컬에서 통과시킨 `tsc + 전체 test`를 **그대로 한 번 더** 돌리는 순수 중복이었다.
+# ## 해결 — 개발자 Mac을 러너로 등록
 #
-# ## 그래서 남긴 것 — CI만이 주는 신호
+# GitHub은 **self-hosted 실행에 Actions 분을 과금하지 않는다**. 워크플로·PR 체크 표시는
+# 그대로 두고 실행만 로컬로 옮겼다. 비공개 저장소이므로 fork PR이 임의 코드를 실행하는
+# self-hosted의 대표 위험도 해당하지 않는다.
 #
-#   · **lint**: pre-push는 tsc+test만 돌린다(lint 제외). lint-staged는 **변경 파일만**
-#     `--fix`하므로 전체 lint는 CI가 유일한 관문이다. ← 가장 큰 고유 가치
-#   · **fresh `npm ci`**: lockfile·의존성 문제는 로컬 node_modules로는 드러나지 않는다.
-#   · `--no-verify` 푸시나 훅 없는 환경에서의 우회 감지.
+#   러너 관리: ~/actions-runner/svc.sh {status|stop|start}
+#   러너가 꺼져 있으면 체크는 **큐에 대기**한다(실패 아님).
 #
-# ## 절감 수단
+# ## 역할 분담 — pre-push와 중복되지 않게
 #
-#   1. `push` 트리거 제거 → 변경당 2회 → **1회** (-50%)
-#   2. 문서·메모리 전용 변경은 워크플로 자체 미실행 (`paths-ignore`)
-#   3. draft PR 미실행 — 준비 중 푸시마다 과금되지 않게
-#   4. 테스트 범위를 `scripts/select-test-scope.sh`로 판정(pre-push와 **같은 정본**,
-#      회귀 테스트 14케이스로 보증). 문서만이면 생략, 한 세목이면 그 세목만.
-#   5. `node_modules` 캐시로 `npm ci` 재설치 회피
+#   · **pre-push**(매 푸시, 빠름): 폰트·톤 + typecheck + lint + **범위 선택** 테스트
+#     → `scripts/select-test-scope.sh`로 변경 경로에 맞는 세목만
+#   · **CI**(PR 1회, 철저): fresh checkout + `npm ci` + typecheck + lint + **전체** 테스트
+#     → 러너가 실행마다 `_work/` 아래 독립 디렉터리를 쓰므로 로컬 node_modules가
+#       가리던 lockfile·의존성 문제가 드러난다. 로컬 pre-push가 못 주는 신호가 이것뿐이라
+#       CI는 **전체 테스트**를 돌린다(범위를 좁히면 pre-push의 재탕이 된다).
 #
-# 한도를 아예 없애려면 저장소를 **공개**로 전환하면 된다(공개 저장소는 Actions 무제한).
+# 분 과금이 없으므로 종전의 범위 축소·캐시 최적화는 제거했다 — 남기면 이득 없는 복잡도다.
+# 대신 문서 전용·draft PR은 여전히 건너뛴다(개발 머신 부하·대기시간).
 # ══════════════════════════════════════════════════════════════════
 
 on:
@@ -41,7 +43,7 @@ on:
       - ".claude/**"
       - "LICENSE"
 
-# 같은 PR에 연속 푸시하면 이전 실행을 취소한다 — 중간 커밋에 과금하지 않는다.
+# 같은 PR에 연속 푸시하면 이전 실행을 취소한다 — 러너를 한 번에 하나만 점유.
 concurrency:
   group: ci-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -49,63 +51,31 @@ concurrency:
 jobs:
   check:
     name: typecheck + lint + test
-    # draft PR은 돌리지 않는다 — "Ready for review" 시점부터 과금.
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    # 종전 15분. 실측 성공 최대 14.4분은 **전체 테스트** 기준이고, 이제 범위 판정이
-    # 붙으므로 초과 시 조기 중단해 폭주 과금을 막는다.
-    timeout-minutes: 12
+    runs-on: self-hosted
+    # 로컬 실측: npm ci ≈40초 + typecheck ≈30초 + lint ≈26초 + 전체 test ≈165초 ≈ 4~5분.
+    # 초과 시 러너가 물리지 않도록 조기 중단.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
+      # `setup-node`는 쓰지 않는다 — self-hosted 러너에는 이미 Node가 있고,
+      # `cache: npm`은 GitHub 서버로 왕복해 로컬 실행에서는 오히려 느리다.
+      # 버전이 어긋나면 여기서 드러나도록 먼저 찍는다.
+      - name: Node 버전 확인
+        run: node -v && npm -v
 
-      # `setup-node`의 `cache: npm`은 **~/.npm 다운로드 캐시**만 복원한다 — `npm ci`는
-      # 여전히 node_modules를 지우고 재설치한다. lockfile 해시로 node_modules 자체를
-      # 캐싱해 그 재설치를 건너뛴다.
-      - name: Cache node_modules
-        id: node-modules-cache
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node20-modules-${{ hashFiles('package-lock.json') }}
-
-      - name: Install deps
-        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+      # `npm ci`는 node_modules를 지우고 lockfile 그대로 재설치한다 —
+      # 로컬 개발 트리가 가리던 의존성·lockfile 문제를 드러내는 CI 고유 신호다.
+      - name: Install deps (fresh)
         run: npm ci
-
-      # 변경 경로로 테스트 범위 판정 — pre-push와 **같은 스크립트**를 쓴다(dual-truth 방지).
-      # PR 변경 파일은 API로 받는다: `fetch-depth: 0` 전체 클론(.git 48M)을 피하면서 정확하다.
-      - name: Determine test scope
-        id: scope
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api --paginate \
-            "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" \
-            -q '.[].filename' > /tmp/changed.txt
-          # 판정 실패 시 안전측 기본값 "test"(전체) — 스크립트 설계 원칙과 동일.
-          SCOPE="$(scripts/select-test-scope.sh --stdin < /tmp/changed.txt || echo test)"
-          echo "scope=$SCOPE" >> "$GITHUB_OUTPUT"
-          echo "판정된 테스트 범위: $SCOPE"
 
       - name: Type check
         run: npm run typecheck
 
-      # CI 고유 신호 — pre-push가 돌리지 않는 전체 lint.
       - name: Lint
         run: npm run lint
 
-      # `none`(문서·E2E spec만) 이면 생략. 그 외는 스크립트 출력이 곧 npm 스크립트명이다
-      # (`test` → 전체 / `test:transfer` 등 → 세목 단위).
-      # `run:`에 `${{ }}`를 직접 넣지 않고 env로 넘긴다 — 표현식이 셸 소스에 전개되는
-      # 패턴은 값이 신뢰 경계를 넘는 순간 주입이 된다(여기선 자체 스크립트 출력이지만
-      # 형태 자체를 남기지 않는다).
-      - name: Test
-        if: steps.scope.outputs.scope != 'none'
-        env:
-          SCOPE: ${{ steps.scope.outputs.scope }}
-        run: npm run "$SCOPE"
+      # pre-push는 범위 선택 테스트만 돌린다 → CI는 전체를 돌려 그 갭을 메운다.
+      - name: Test (전체)
+        run: npm test
