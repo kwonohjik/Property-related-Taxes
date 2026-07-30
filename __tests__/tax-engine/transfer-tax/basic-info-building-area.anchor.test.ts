@@ -1,0 +1,168 @@
+/**
+ * Pre-Do anchor — 기본사항 건물 면적(축 B·C) Phase F
+ *
+ * 계획: docs/01-plan/features/basic-info-building-area-phase-ef.plan.md (rev.2)
+ *
+ * ## A-1 — 「소득세법 시행령」 제154조 제7항 부수토지 한도가 실제로 세액을 바꾸는가
+ *
+ * 계획서 §2가 주장하는 결함(주택 정착면적 입력 경로 부재)이 세액 결함인지,
+ * 단순 입력 편의 문제인지 확정한다 (memory feedback_numeric_impact_verify_before_bug_claim).
+ *
+ * ## A-6 — `building` assetKind의 `partial` 시나리오가 무엇을 소비하는가
+ *
+ * β-2(축 B 단일 필드) vs β-1(2시점 쌍) 선택의 전제.
+ * `areaScenario` 자체는 엔진에 도달하지만 **엔진이 소비하지 않는다**(API 전달만).
+ * partial의 실질은 "취득·양도 면적을 각각 기준시가 총액 곱셈에 쓴다"뿐이다.
+ */
+import { describe, it, expect } from "vitest";
+import {
+  resolveCompanionLandRate,
+  appurtenantLandMultiplier,
+} from "@/lib/tax-engine/appurtenant-land-rate";
+import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
+
+// ══════════════════════════════════════════════════════════
+// A-1 — §154⑦ 한도: 정착면적 有/無로 세율이 갈린다
+// ══════════════════════════════════════════════════════════
+//
+// 사례 28 Group E 구성 재사용 (new-construction-bundled-case-28.test.ts:346~376):
+//   도시지역 · 건물 정착면적 100㎡ × 5배 = 한도 500㎡ · 부수토지 700㎡ → 초과 200㎡
+//   주택 보유 ≈ 6개월(단기 70%) · 토지 보유 ≈ 14개월(§104①3호 40%)
+
+const LAND_AREA = 700;
+const FOOTPRINT = 100;
+const HOUSING_HOLDING_MONTHS = 6; // 2022-08-29 ~ 2023-03-06
+
+/** primary(주택) 컨텍스트 — footprint만 有/無로 바꾼다. */
+function ctx(footprint?: number) {
+  return {
+    propertyType: "housing" as const,
+    holdingMonths: HOUSING_HOLDING_MONTHS,
+    buildingFootprintArea: footprint,
+    isUrbanArea: true,
+  };
+}
+
+const companion = {
+  assetKind: "land",
+  area: LAND_AREA,
+  landNature: "appurtenant_to_housing" as const,
+};
+
+describe("A-1 — §154⑦ 부수토지 한도: 정착면적이 세액을 바꾼다", () => {
+  it("정착면적 입력 시 — 한도 500㎡ 산정 + 초과 200㎡ 분리", () => {
+    const r = resolveCompanionLandRate(companion, ctx(FOOTPRINT));
+    expect(r.applied).toBe(true);
+    expect(r.limitArea).toBe(500); // 100㎡ × 5배(도시지역)
+    expect(r.excessArea).toBe(200); // 700 − 500
+    expect(r.excessRate).toBe(0.4); // 초과분은 토지 본래 세율
+  });
+
+  it("🔴 정착면적 미입력 시 — 한도 미산정 + 초과 0으로 확정(전량 부수토지 가정)", () => {
+    const r = resolveCompanionLandRate(companion, ctx(undefined));
+    expect(r.applied).toBe(true);
+    expect(r.limitArea).toBeUndefined(); // 한도 자체가 산정되지 않는다
+    expect(r.excessArea).toBe(0); // 🔴 초과분 없음으로 확정
+    expect(r.excessRate).toBeUndefined();
+  });
+
+  it("A-1 결론 — 200㎡가 40%가 아니라 주택 세율로 과세된다 (세액 결함 확정)", () => {
+    const withFp = resolveCompanionLandRate(companion, ctx(FOOTPRINT));
+    const without = resolveCompanionLandRate(companion, ctx(undefined));
+    // 같은 토지 700㎡인데 초과 판정이 200㎡ ↔ 0㎡로 갈린다.
+    expect(withFp.excessArea).not.toBe(without.excessArea);
+    // 두 경로 모두 한도 내 부분은 주택 보유기간 세율(70%)로 통일 과세된다.
+    expect(withFp.unifiedRate).toBe(without.unifiedRate);
+    // → 차이는 오직 "초과 200㎡를 40%로 뗄지"다. 이 케이스는 40% < 70%이므로
+    //   미입력이 과다과세지만, 주택이 비과세·장기보유면 방향이 반대가 된다.
+    //   **방향은 케이스 의존이고, 세액이 달라지는 것은 확정이다.**
+    expect(withFp.excessRate).toBe(0.4);
+  });
+
+  it("가정 표시는 되지만 수치는 틀린다 — appliedReason에 미입력이 명시된다", () => {
+    const without = resolveCompanionLandRate(companion, ctx(undefined));
+    // rev.2 정정: 침묵이 아니다. 이 문구가 shortTermNote로 신고서에 출력된다
+    // (transfer-tax-rate-calc.ts:225 → FilingFormTableHelpers.ts:695).
+    expect(without.appliedReason).toContain("정착면적 미입력");
+    expect(without.appliedReason).toContain("전량 부수토지로 가정");
+  });
+
+  it("배율 3단계가 한도를 결정한다 — 정착면적 없으면 이 축이 전부 무력화된다", () => {
+    // ⚠️ zone 값은 "metropolitan_residential"이다("metropolitan_urban" 아님).
+    //    appurtenantLandMultiplier의 default가 3을 반환하므로 오타를 넣어도 런타임
+    //    단언이 통과한다(false GREEN) — 이 파일은 tsc로만 오타가 잡혔다.
+    expect(appurtenantLandMultiplier("metropolitan_residential")).toBe(3);
+    expect(appurtenantLandMultiplier("non_metropolitan_or_green")).toBe(5);
+    expect(appurtenantLandMultiplier("non_urban")).toBe(10);
+    // 미지정은 보수적으로 최소 한도(3배)
+    expect(appurtenantLandMultiplier(undefined)).toBe(3);
+    // 같은 정착면적 100㎡가 zone에 따라 한도 300/500/1000㎡ → 초과 400/200/0㎡
+    for (const [zone, limit] of [
+      ["metropolitan_residential", 300],
+      ["non_metropolitan_or_green", 500],
+      ["non_urban", 1000],
+    ] as const) {
+      expect(FOOTPRINT * appurtenantLandMultiplier(zone)).toBe(limit);
+      expect(Math.max(0, LAND_AREA - limit)).toBe(
+        { 300: 400, 500: 200, 1000: 0 }[limit],
+      );
+    }
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// A-6 — building + partial: 시점별 면적이 환산취득가를 왜곡한다
+// ══════════════════════════════════════════════════════════
+//
+// `building` assetKind는 기준시가가 **단가 × 면적**으로 산출된다
+// (toPropertyKind → "building_non_residential" → StandardPriceInput.isAreaMode).
+// 면적 인자는 시점별로 갈린다 — 취득시 `acquisitionArea`, 양도시 `transferArea`
+// (CompanionAcqPurchaseBlock.tsx:621,645 → StandardPriceInput.ts:180 총액 자동계산).
+//
+// 따라서 partial(취득 연면적 > 양도 연면적)을 선택하면 환산취득가 산식의
+// 분자·분모가 **서로 다른 면적**으로 계산된다.
+
+const UNIT_ACQ = 1_000_000; // 취득시 ㎡당 기준시가
+const UNIT_TRANSFER = 2_000_000; // 양도시 ㎡당 기준시가
+const TRANSFER_PRICE = 500_000_000;
+
+/** StandardPriceInput isAreaMode 총액 산식 — Math.floor(면적 × 단가) */
+const total = (area: number, unit: number) => Math.floor(area * unit);
+
+describe("A-6 — building + partial 시나리오의 실질", () => {
+  it("same(취득=양도 100㎡): 환산비율은 단가비 그대로 = 0.5", () => {
+    const stdAcq = total(100, UNIT_ACQ); // 100,000,000
+    const stdTransfer = total(100, UNIT_TRANSFER); // 200,000,000
+    const converted = calculateEstimatedAcquisitionPrice(TRANSFER_PRICE, stdAcq, stdTransfer);
+    expect(stdAcq / stdTransfer).toBe(0.5);
+    expect(converted).toBe(250_000_000);
+  });
+
+  it("🔴 partial(취득 200㎡ · 양도 100㎡): 환산취득가가 2배로 부풀어난다", () => {
+    const stdAcq = total(200, UNIT_ACQ); // 200,000,000 ← 취득 당시 전체 연면적
+    const stdTransfer = total(100, UNIT_TRANSFER); // 200,000,000 ← 양도분 연면적만
+    const converted = calculateEstimatedAcquisitionPrice(TRANSFER_PRICE, stdAcq, stdTransfer);
+    // 단가가 2배 올랐는데 면적비가 그것을 상쇄해 비율이 1.0이 된다.
+    expect(stdAcq / stdTransfer).toBe(1);
+    expect(converted).toBe(500_000_000); // same 대비 2배
+    // 양도가액 전액이 취득가액이 되어 양도차익 0 → 과소과세
+    expect(TRANSFER_PRICE - converted).toBe(0);
+  });
+
+  it("A-6 결론 — partial은 안분 로직이 없고 면적 불일치를 그대로 비율에 흘린다", () => {
+    // `areaScenario`는 API까지 전달되지만(transfer-tax-api-helpers.ts:341)
+    // 엔진이 소비하지 않는다 — partial 전용 취득가액 면적 안분이 존재하지 않는다.
+    // 즉 building + partial은 "지원되는 기능"이 아니라 **미검증 조합**이다.
+    const stdAcqFull = total(200, UNIT_ACQ);
+    const stdAcqProportioned = total(100, UNIT_ACQ); // 면적 안분했다면 이 값이어야 한다
+    expect(stdAcqFull).not.toBe(stdAcqProportioned);
+    // 올바른 안분 시 환산비율은 same과 동일해진다.
+    expect(
+      calculateEstimatedAcquisitionPrice(
+        TRANSFER_PRICE,
+        stdAcqProportioned,
+        total(100, UNIT_TRANSFER),
+      ),
+    ).toBe(250_000_000);
+  });
+});
