@@ -375,6 +375,56 @@ describe("G-2 주택 부수토지 배율 초과분 → 비사업용 토지 분�
   });
 });
 
+/**
+ * G-4 (계획서 §5.3 P3) — §104②1·2호 통산을 **토지 파트**에 적용.
+ *
+ * 「소득세법」 제104조 제2항 단서는 보유기간 기산을 **해당 자산별로** 정한다:
+ *   1호 상속받은 자산 → 피상속인이 그 자산을 취득한 날
+ *   2호 제97조의2 제1항(배우자등 이월과세) 자산 → 증여자가 그 자산을 취득한 날
+ * 토지·건물의 취득원인이 다르면(건물 신축 + 토지 상속 등) 토지 파트는 **토지의 원인**으로 따진다.
+ *
+ * ⚠️ 장기보유특별공제 기산(§95④)은 상속개시일이 원칙이라 **여기서 바뀌지 않는다** — 세율 축 전용.
+ */
+describe("G-4 토지 파트 §104② 상속·증여 보유기간 통산", () => {
+  it("A-14: M-10 토지 상속(피상속인 2005 · 개시 2025-06) + 건물 2020 — 토지분이 누진으로", () => {
+    const r = run({
+      acquisitionDate: D("2020-01-01"),
+      acquisitionCause: "purchase",
+      landAcquisitionDate: D("2025-06-01"),
+      landAcquisitionCause: "inheritance",
+      landDecedentAcquisitionDate: D("2005-01-01"),
+    });
+    // 장특은 상속개시일 기준(§95④) 그대로 — 토지 보유 1년 → 0
+    expect(r.splitDetail!.land.longTermDeduction).toBe(0);
+    expect(r.taxBase).toBe(541_500_000);
+    // 통산 미적용 시 토지분이 1~2년 40% → 204,340,000 (과대).
+    // 통산 시 토지 21년 누진 → 2호 178,350,000 < 1호 191,490,000 → MAX = 1호
+    expect(r.calculatedTax).toBe(191_490_000);
+  });
+
+  it("A-14a: 피상속인 취득일 미입력이면 상속개시일 기준 — 토지분 1~2년 40%(통산 전 값)", () => {
+    const r = run({
+      acquisitionDate: D("2020-01-01"),
+      acquisitionCause: "purchase",
+      landAcquisitionDate: D("2025-06-01"),
+      landAcquisitionCause: "inheritance",
+    });
+    // 2호 = 토지 497,500,000 × 40% 199,000,000 + 건물 44,000,000 누진 5,340,000
+    expect(r.calculatedTax).toBe(204_340_000);
+  });
+
+  it("A-14b(회귀): 토지 취득원인 미제공이면 자산 단위 원인을 그대로 쓴다", () => {
+    const r = run({
+      acquisitionDate: D("2020-01-01"),
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: D("2005-01-01"),
+      landAcquisitionDate: D("2025-06-01"),
+    });
+    // 자산 단위 상속 통산이 토지 파트에도 그대로 적용된다(종전 `calcTax` 동작과 동일)
+    expect(r.calculatedTax).toBe(191_490_000);
+  });
+});
+
 describe("G-1 파트별 세율 — 단건 ↔ 다건 일치 (이중 진실 방지)", () => {
   it("A-1-agg: 다건 엔진도 같은 자산에 대해 단건과 같은 산출세액을 낸다", () => {
     const item = {

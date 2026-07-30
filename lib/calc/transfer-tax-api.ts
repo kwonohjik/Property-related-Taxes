@@ -370,6 +370,19 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.acquisitionCause === "inheritance" && primary.decedentAcquisitionDate
         ? primary.decedentAcquisitionDate
         : undefined,
+    // §104②1·2호를 **토지 파트**에 적용 (G-4) — 건물과 취득원인이 다른 경우.
+    // 원인이 비면 전송하지 않는다: 엔진이 자산 단위 원인을 그대로 쓰도록(회귀 0).
+    ...(primary.landAcquisitionCause
+      ? {
+          landAcquisitionCause: primary.landAcquisitionCause,
+          ...(primary.landAcquisitionCause === "inheritance" && primary.landDecedentAcquisitionDate
+            ? { landDecedentAcquisitionDate: primary.landDecedentAcquisitionDate }
+            : {}),
+          ...(primary.landAcquisitionCause === "gift" && primary.landDonorAcquisitionDate
+            ? { landDonorAcquisitionDate: primary.landDonorAcquisitionDate }
+            : {}),
+        }
+      : {}),
     // §154⑧3호 상속주택 자체 양도 보유기간 통산
     decedentSameHouseholdBeforeInheritance:
       primary.acquisitionCause === "inheritance"

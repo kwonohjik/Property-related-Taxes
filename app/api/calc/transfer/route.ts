@@ -250,6 +250,10 @@ export async function POST(request: NextRequest) {
     extensionStdPriceAtAcquisition: data.extensionStdPriceAtAcquisition,
     // 토지/건물 취득일 분리 (선택)
     landAcquisitionDate: toOptionalDate(data.landAcquisitionDate),
+    // §104②1·2호 토지 파트 통산 (G-4) — Date 변환 필수
+    landAcquisitionCause: data.landAcquisitionCause,
+    landDecedentAcquisitionDate: toOptionalDate(data.landDecedentAcquisitionDate),
+    landDonorAcquisitionDate: toOptionalDate(data.landDonorAcquisitionDate),
     landSplitMode: data.landSplitMode,
     // ⑭ 파트별 취득 모드 + 양도 분리 모드 — TypeScript 미감지 영역(엔진 명시 입력, §9 M2)
     landAcqMode: data.landAcqMode,

@@ -524,6 +524,20 @@ export interface TransferTaxInput {
   landAcquisitionPrice?: number;
   /** 건물 취득가액 (실거래가 모드 시) */
   buildingAcquisitionPrice?: number;
+  /**
+   * 토지 파트의 취득원인 — 건물과 다를 수 있다(예: 건물 신축 + 토지 상속).
+   *
+   * 「소득세법」 제104조 제2항 단서는 보유기간 기산을 **해당 자산별로** 정한다
+   *   1호 상속받은 자산 → 피상속인이 그 자산을 취득한 날
+   *   2호 제97조의2 제1항(배우자등 이월과세) 자산 → 증여자가 그 자산을 취득한 날
+   * ⇒ 토지·건물 취득원인이 다르면 **토지 파트의 세율 보유기간은 토지의 원인**으로 따진다.
+   * 미제공 시 자산 단위 `acquisitionCause`를 그대로 쓴다(회귀 0).
+   */
+  landAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
+  /** 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 §104②1호 통산 */
+  landDecedentAcquisitionDate?: Date;
+  /** 토지 파트 증여자 취득일 — `landAcquisitionCause`가 증여 계열일 때 §104②2호 통산 */
+  landDonorAcquisitionDate?: Date;
   /** 토지 자본적지출·필요경비 */
   landDirectExpenses?: number;
   /** 건물 자본적지출·필요경비 */

@@ -39,6 +39,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.buildingStandardPriceAtAcq === undefined) a.buildingStandardPriceAtAcq = "";
   // 토지 파트 취득 원인(건물 신축 + 토지 상속·증여, 2026-07-30) — 구 세션 복원 방어
   if (a.landAcquisitionCause === undefined) a.landAcquisitionCause = "";
+  // §104②1·2호 토지 파트 통산(2026-07-31) — 구 세션 복원 방어
+  if (a.landDecedentAcquisitionDate === undefined) a.landDecedentAcquisitionDate = "";
+  if (a.landDonorAcquisitionDate === undefined) a.landDonorAcquisitionDate = "";
   if (!a.standardPricePerSqmAtAcq) a.standardPricePerSqmAtAcq = "";
   if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
   // Round 9 (2026-05-06): 자산-수준 매매계약일 (감면 시한 판정)
