@@ -239,12 +239,13 @@ Phase D  ⚠️ 부분 완료 — rev.2에서 재정의된 우선 1~3(GB 배율�
          building_site가 UI 선택 불가·테스트 0건으로 **도달 불가** 확인돼 별건 격하.
 Phase E  ✅ 완료 — 축 C 6건 전부 배선 확인(선행 "미배선 의심"은 form-mapper.ts만
          grep한 오판). "별장 부수토지 10배"는 가설 오류 → 축 B 재분류.
-         결과·정정: basic-info-building-area-phase-ef.plan.md §1
-Phase F  ⏳ 계획 수립 완료 — basic-info-building-area-phase-ef.plan.md
+         결과·정정: basic-info-building-area-phase-f.plan.md §2.0
+Phase F  ⏳ 계획 수립 완료 — basic-info-building-area-phase-f.plan.md
+         (F3는 폐기 — 법령 개념 상이. 파생 별건: transfer-partial-area-apportionment.plan.md)
          F1(주택 연면적·바닥면적 기본사항 추가) · F2(승격 확대) · F3(NBL 정착면적 통합)
 ```
 
-**§5.3 정정**: 축 C는 7건이 아니라 **6건**이며(별장 제거), 통합 대상은 **2건**(`buildingFootprintArea`·`gbBuildingFootprintArea`)이다. 나머지 4건은 비율 분자/분모·필지별·배율 미적용 carve-out으로 법령상 통합 불가 — 상세 [`basic-info-building-area-phase-ef.plan.md`](basic-info-building-area-phase-ef.plan.md) §1.
+**§5.3 정정**: 축 C는 7건이 아니라 **6건**이며(별장 제거), 통합 대상은 **2건**(`buildingFootprintArea`·`gbBuildingFootprintArea`)이다. 나머지 4건은 비율 분자/분모·필지별·배율 미적용 carve-out으로 법령상 통합 불가 — 상세 [`basic-info-building-area-phase-f.plan.md`](basic-info-building-area-phase-f.plan.md) §2.0.
 
 **Phase B는 독립적이고 즉시 가능**(라벨만, 계산 무변경). Phase C가 D·E·F의 전제다.
 

@@ -1,7 +1,8 @@
 /**
  * Pre-Do anchor — 기본사항 건물 면적(축 B·C) Phase F
  *
- * 계획: docs/01-plan/features/basic-info-building-area-phase-ef.plan.md (rev.2)
+ * 계획: docs/01-plan/features/basic-info-building-area-phase-f.plan.md (F1 — A-1·A-6)
+ *       docs/01-plan/features/transfer-partial-area-apportionment.plan.md (별건 — B-4·U-9·U-10)
  *
  * ## A-1 — 「소득세법 시행령」 제154조 제7항 부수토지 한도가 실제로 세액을 바꾸는가
  *
