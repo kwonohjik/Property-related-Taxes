@@ -34,6 +34,9 @@
  */
 
 import type { TransferTaxInput } from "./types/transfer.types";
+// 배율 세분 시행일(2022.1.1.)은 비사토 축(영 §168의12)과 **같은 부칙 호**로 움직인다 —
+// 날짜를 두 곳에 적으면 개정 시 한쪽만 고쳐지는 dual-truth가 된다.
+import { HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE } from "./non-business-land/urban-area";
 
 // ─── 타입 ──────────────────────────────────────────────────────
 
@@ -67,18 +70,36 @@ export type AppurtenantLandZone =
 
 /**
  * zone → 정착면적 배율 (영 §167의5)
+ *
+ * **2022.1.1. 전 양도분은 종전 규정** — 도시지역 內 일률 5배 / 그 밖의 토지 10배
+ * (2020.2.11. 대통령령 제30395호 부칙 §1 3호·§39. 시행일 상수는 비사토 축과 공유 —
+ *  `HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE`. 부칙 §39가 §154⑦1호·§167의5 1호·§168의12 1호를
+ *  한 묶음으로 지목하므로 세 축이 함께 움직인다.)
+ *
+ * ⚠️ 종전 §167의5 1호 원문은 직접 확보하지 못했다. 같은 부칙 호로 개정된 §154⑦·§168의12의
+ *    종전 1호가 모두 "도시지역 내의 토지: 5배"임이 확인되어(조심 2021광2410 별지) 동일하게 본다.
+ *
+ * @param transferDate 양도일. **미제공 시 현행 배율**(기존 호출부 호환).
  */
-export function appurtenantLandMultiplier(zone: AppurtenantLandZone | undefined): number {
+export function appurtenantLandMultiplier(
+  zone: AppurtenantLandZone | undefined,
+  transferDate?: Date,
+): number {
+  const isPreSplit =
+    transferDate !== undefined && transferDate < HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE;
+
   switch (zone) {
     case "metropolitan_residential":
-      return 3;
+      // 종전: 도시지역 內 일률 5배 (수도권 축 없음)
+      return isPreSplit ? 5 : 3;
     case "non_metropolitan_or_green":
       return 5;
     case "non_urban":
       return 10;
     default:
-      // 미지정 시 보수적으로 가장 작은 한도(3배) 적용 — 한도 초과 케이스를 더 안전하게 분리
-      return 3;
+      // 미지정 시 보수적으로 가장 작은 한도 적용 — 한도 초과 케이스를 더 안전하게 분리.
+      // '가장 작은 한도'가 시행일 전후로 5배/3배로 갈린다.
+      return isPreSplit ? 5 : 3;
   }
 }
 
@@ -169,6 +190,8 @@ export function housingRateForHoldingPeriod(holdingMonths: number): number | "pr
 export function resolveCompanionLandRate(
   companion: CompanionLandRateInput,
   primary: PrimaryContextForCompanionRate,
+  /** 양도일 — 영 §167의5 배율 경과조치(2022.1.1., 부칙 §39) 판정용. 미제공 시 현행 배율. */
+  transferDate?: Date,
 ): CompanionLandRateResolution {
 
   // ── 수동 오버라이드 우선 처리 ──
@@ -222,7 +245,7 @@ export function resolveCompanionLandRate(
         : primary.isUrbanArea
           ? "non_metropolitan_or_green"
           : "non_urban");
-    const multiplier = appurtenantLandMultiplier(zone);
+    const multiplier = appurtenantLandMultiplier(zone, transferDate);
     const limitArea = primary.buildingFootprintArea! * multiplier;
     const companionArea = companion.area ?? 0;
     const excessArea = companionArea > 0 ? Math.max(0, companionArea - limitArea) : 0;

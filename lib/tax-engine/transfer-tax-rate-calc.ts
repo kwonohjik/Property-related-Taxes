@@ -213,6 +213,8 @@ export function calcTax(
             propertyType: "land",
             holdingMonths: 999, // landNature 체크 전에 applied=false → 수동 오버라이드만 동작
           },
+      // 영 §167의5 배율 경과조치(2022.1.1.) — 양도일 미전달 시 과거 양도분에 3배 오적용.
+      input.transferDate,
     );
 
     if (resolution.applied) {

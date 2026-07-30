@@ -274,6 +274,7 @@ export function buildCompanionEngineInputs(
         propertyType: ctx.primaryEngineInput.propertyType,
         bundledSaleMode: ctx.bundledSaleMode,
       },
+      ctx.transferDate,
     );
     if (splitResult.applied) {
       return splitCompanionIntoTwo(companionEngine, splitResult, ctx.primaryCtxForSplit);
@@ -335,6 +336,8 @@ export type CompanionSplitResult = CompanionSplitNotApplied | CompanionSplitAppl
 export function resolveCompanionSplit(
   companion: CompanionSplitContext,
   primary: PrimarySplitContext,
+  /** 양도일 — 영 §167의5 배율 경과조치(2022.1.1., 부칙 §39) 판정용. */
+  transferDate?: Date,
 ): CompanionSplitResult {
   // split 진입 조건:
   //   1. companion이 토지이고 landNature === "appurtenant_to_housing" (명시적 부수토지 선언)
@@ -361,6 +364,7 @@ export function resolveCompanionSplit(
       appurtenantLandZone: primary.appurtenantLandZone,
       bundledSaleMode: primary.bundledSaleMode,
     },
+    transferDate,
   );
 
   if (!resolution.applied || !resolution.excessArea || resolution.excessArea <= 0) {

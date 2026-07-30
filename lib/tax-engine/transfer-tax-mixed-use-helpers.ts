@@ -416,10 +416,12 @@ export interface ExcessLandResult {
 export function calcExcessLandRatio(
   asset: MixedUseAssetInput,
   derived: MixedUseDerivedAreas,
+  /** 양도일 — 영 §168의12 배율 경과조치(2022.1.1., 부칙 §39) 판정용. 미제공 시 현행 배율. */
+  transferDate?: Date,
 ): ExcessLandResult {
   const zoneType = asset.zoneType ?? "residential";
   const isMetro = asset.isMetropolitanArea ?? true;
-  const { multiplier: rawMultiplier } = getHousingMultiplier(zoneType, isMetro);
+  const { multiplier: rawMultiplier } = getHousingMultiplier(zoneType, isMetro, transferDate);
   const multiplier = (rawMultiplier as 3 | 5 | 10);
 
   const allowedArea = derived.residentialFootprintArea * multiplier;

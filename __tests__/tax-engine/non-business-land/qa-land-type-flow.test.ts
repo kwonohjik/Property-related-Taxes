@@ -553,14 +553,19 @@ describe("주택부수토지 배율 (§168-12)", () => {
 
   /**
    * QA-064: 주택부수토지 배율 초과 → 비사업용 + 면적 분할
+   *
+   * ⚠️ 2026-07-30 정정 — 양도일을 2020-01-01 → 2023-01-01로 변경.
+   *    영 §168의12 1호의 3배 세분은 2020.2.11. 대통령령 제30395호 부칙 §1 3호에 따라
+   *    **2022.1.1. 이후 양도분부터** 적용된다(같은 부칙 §39 경과조치: 그 전 양도분은 종전
+   *    규정 = 도시지역 일률 5배). 종전 케이스는 아래 QA-064b가 담당한다.
    */
-  it("QA-064: 주택부수토지 배율 초과분 비사업용 (수도권 3배)", () => {
+  it("QA-064: 주택부수토지 배율 초과분 비사업용 (수도권 3배, 2022.1.1. 이후 양도)", () => {
     const input: NonBusinessLandInput = {
       landType: "housing_site",
       landArea: 400, // 정착면적 100㎡ × 3배 = 300㎡ 허용, 초과 100㎡
       zoneType: "residential",
       acquisitionDate: d("2010-01-01"),
-      transferDate: d("2020-01-01"),
+      transferDate: d("2023-01-01"),
       businessUsePeriods: [],
       gracePeriods: [],
       housingFootprint: 100,
@@ -572,6 +577,32 @@ describe("주택부수토지 배율 (§168-12)", () => {
     expect(r.areaProportioning!.businessArea).toBe(300);
     expect(r.areaProportioning!.nonBusinessArea).toBe(100);
     expect(r.areaProportioning!.buildingMultiplier).toBe(3);
+  });
+
+  /**
+   * QA-064b: 같은 토지를 2022.1.1. **전에** 양도 → 종전 규정 5배 → 전량 사업용
+   *
+   * 근거: 2020.2.11. 대통령령 제30395호 부칙 §39 — 「2022년 1월 1일 전에 양도한 자산에
+   *   대해서는 제154조제7항제1호, 제167조의5제1호 및 제168조의12제1호의 개정규정에도
+   *   불구하고 종전의 규정에 따른다」. 종전 §168의12 = 「도시지역 내의 토지: 5배 /
+   *   그 밖의 토지: 10배」(조심 2021광2410 별지 인용).
+   */
+  it("QA-064b: 2022.1.1. 전 양도 → 종전 5배 → 400㎡ ≤ 500㎡ 전량 사업용", () => {
+    const input: NonBusinessLandInput = {
+      landType: "housing_site",
+      landArea: 400, // 정착면적 100㎡ × 5배 = 500㎡ 허용 → 초과 0
+      zoneType: "residential",
+      acquisitionDate: d("2010-01-01"),
+      transferDate: d("2021-12-31"),
+      businessUsePeriods: [],
+      gracePeriods: [],
+      housingFootprint: 100,
+      isMetropolitanArea: true,
+    };
+    const r = judgeNonBusinessLand(input);
+    expect(r.isNonBusinessLand).toBe(false);
+    expect(r.areaProportioning!.nonBusinessArea).toBe(0);
+    expect(r.areaProportioning!.buildingMultiplier).toBe(5);
   });
 });
 

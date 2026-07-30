@@ -67,7 +67,12 @@ export function judgeHousingLand(
   } else {
     isMetropolitan = input.isMetropolitanArea;
   }
-  const { multiplier, detail: multiplierDetail } = getHousingMultiplier(input.zoneType, isMetropolitan);
+  // 영 §168의12 배율 경과조치(2022.1.1., 부칙 §39) — 양도일 기준.
+  const { multiplier, detail: multiplierDetail } = getHousingMultiplier(
+    input.zoneType,
+    isMetropolitan,
+    input.transferDate,
+  );
   const allowedArea = footprint * multiplier;
 
   steps.push({

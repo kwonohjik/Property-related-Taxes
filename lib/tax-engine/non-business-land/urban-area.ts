@@ -62,18 +62,47 @@ export function isUrbanForHousing(zoneType: ZoneType): boolean {
 }
 
 /**
+ * 주택부수토지 배율 세분(도시지역 일률 5배 → 3/5/5) **시행일**.
+ *
+ * 2020.2.11. 대통령령 제30395호 부칙 §1 3호 — 「제154조제7항제1호, 제160조제1항,
+ * 제167조의5제1호 및 제168조의12제1호의 개정규정: **2022년 1월 1일**」
+ * 같은 부칙 §39(경과조치) — 「**2022년 1월 1일 전에 양도한 자산**에 대해서는 … 개정규정에도
+ * 불구하고 **종전의 규정**에 따른다」. 부칙 §2②도 "시행 이후 **양도하는 분**부터" 적용 →
+ * 기준은 **양도일**이다.
+ *
+ * 3축(비과세 영 §154⑦ / 세율 영 §167의5 / 비사토 영 §168의12)이 같은 부칙 호로 함께 움직이므로
+ * 세율 축(`appurtenantLandMultiplier`)도 이 상수를 공유한다 — 날짜 중복 정의 금지.
+ */
+export const HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE = new Date("2022-01-01");
+
+/**
  * §168-12 주택부수토지 배율.
- * 도시지역 內:
- *   - 수도권 주·상·공: 3배
- *   - 수도권 녹지: 5배
- *   - 수도권 밖 도시: 5배
- * 그 외 (도시지역 外): 10배
+ *
+ * **2022.1.1. 이후 양도분** (현행):
+ *   도시지역 內 — 수도권 주·상·공 3배 / 수도권 녹지 5배 / 수도권 밖 도시 5배
+ *   도시지역 外 — 10배
+ *
+ * **2022.1.1. 전 양도분** (종전 — 부칙 §39):
+ *   도시지역 內 **일률 5배** / 그 밖의 토지 10배
+ *   (2020.2.11. 대통령령 제30395호로 개정되기 전의 영 §168의12·§154⑦ 원문.
+ *    조심 2021광2410(2021.7.16.) 별지·조심 2024서2826(2025.5.13.) 관련법령 인용으로 확인.)
+ *
+ * @param transferDate 양도일. **미제공 시 현행 배율**(기존 호출부 호환) — 신규 호출부는 반드시 전달할 것.
  */
 export function getHousingMultiplier(
   zoneType: ZoneType,
   isMetropolitan: boolean,
+  transferDate?: Date,
 ): { multiplier: number; detail: string } {
   const urban = isUrbanForHousing(zoneType);
+
+  // 종전 규정 — 도시지역 여부만으로 결정(수도권 축 없음). 2호(그 밖 10배)는 미개정이라 동일.
+  if (transferDate && transferDate < HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE) {
+    return urban
+      ? { multiplier: 5, detail: "도시지역 內 5배 (2022.1.1. 전 양도 — 종전 규정)" }
+      : { multiplier: 10, detail: "도시지역 外 10배" };
+  }
+
   if (!urban) return { multiplier: 10, detail: "도시지역 外 10배" };
 
   if (isMetropolitan) {
