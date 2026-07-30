@@ -70,17 +70,7 @@ describe("G-1 파트별 세율 — 회귀 가드 (먼저 GREEN이어야 한다)"
     expect(r.appliedRate).toBe(0.6);
   });
 
-  it("A-3b: 비사업용 토지 자산은 P1 대상 밖 — 현행 불변", () => {
-    const r = run({
-      isNonBusinessLand: true,
-      acquisitionDate: D("2025-06-01"),
-      landAcquisitionDate: D("2010-06-01"),
-    });
-    // 토지 취득 2010-06-01은 2008 위기 취득 중과배제(부칙 제9270호 §14①) 구간 →
-    // +10%p 배제 후 §104①후단 비교로 단기 40%가 채택된다.
-    expect(r.calculatedTax).toBe(159_000_000);
-    expect(r.appliedRate).toBe(0.4);
-  });
+  // (A-3b「비사업용 토지 자산은 대상 밖」은 **P4에서 폐기** — 아래 P4 describe가 대체한다.)
 
   it("A-3c: 부담부증여는 §159 안분이 총액을 override — 대상 밖, 현행 불변", () => {
     const r = run({
@@ -422,6 +412,65 @@ describe("G-4 토지 파트 §104② 상속·증여 보유기간 통산", () => 
     });
     // 자산 단위 상속 통산이 토지 파트에도 그대로 적용된다(종전 `calcTax` 동작과 동일)
     expect(r.calculatedTax).toBe(191_490_000);
+  });
+});
+
+/**
+ * P4 (계획서 §6 M-12) — **비사업용 토지 split 자산**의 파트별 세율.
+ *
+ * 「소득세법」 제104조의3 제1항은 **토지**만 비사업용으로 규정한다 — 건물은 비사업용 「토지」가
+ * 될 수 없다. 그런데 자산 단위 `isNonBusinessLand` 하나로 판정하던 종전 경로는 **건물분
+ * 과세표준까지 +10%p**를 물렸다. 제104조 제5항 후단("한 필지의 토지가 비사업용 토지와 그 외의
+ * 토지로 구분되는 경우에는 각각을 별개의 자산으로 보아 산출세액을 계산한다")에 따라 분리한다.
+ */
+describe("P4 비사업용 토지 split 자산 — 토지 파트만 +10%p", () => {
+  // 토지 2005-06-01 취득(2008 위기 취득 중과배제 구간 밖) + 건물 2025-06-01
+  const nbl = {
+    isNonBusinessLand: true,
+    acquisitionDate: D("2025-06-01"),
+    landAcquisitionDate: D("2005-06-01"),
+  };
+
+  it("A-15: 토지 21년(비사토) + 건물 1~2년 — 건물분 +10%p 제거", () => {
+    const r = run(nbl);
+    expect(r.taxBase).toBe(397_500_000);
+    // 종전: 397,500,000 누진 133,060,000 + 10%p 39,750,000 = 172,810,000 (건물분에도 중과)
+    // 2호 = 토지 347,500,000 누진 113,060,000 + 10%p 34,750,000 = 147,810,000
+    //      + 건물 50,000,000 × 40% 20,000,000
+    // 1호 = 133,060,000 → MAX = 2호
+    expect(r.calculatedTax).toBe(167_810_000);
+    // 차액 5,000,000 = 건물 양도소득금액 50,000,000 × 10%p
+    expect(172_810_000 - r.calculatedTax).toBe(5_000_000);
+    // 중과 표시는 유지되어야 한다 (결과 카드 법령근거·배지)
+    expect(r.surchargeType).toBe("non_business_land");
+    expect(r.surchargeRate).toBe(0.1);
+  });
+
+  it("A-15b: 토지·건물 취득일이 같아도 세율군이 갈리면 파트별로 계산한다", () => {
+    const r = run({
+      isNonBusinessLand: true,
+      acquisitionDate: D("2005-06-01"),
+      landAcquisitionDate: D("2005-06-01"),
+    });
+    expect(r.taxBase).toBe(382_500_000);
+    // 종전: 382,500,000 누진 127,060,000 + 10%p 38,250,000 = 165,310,000
+    // 2호 = 토지 347,500,000(누진+10%p) 147,810,000 + 건물 35,000,000 누진 3,990,000
+    expect(r.calculatedTax).toBe(151_800_000);
+    expect(r.surchargeType).toBe("non_business_land");
+  });
+
+  it("A-15c(회귀): 2008 위기 취득(2010-06) 중과배제는 그대로 — 부칙 제9270호 §14①", () => {
+    const r = run({
+      isNonBusinessLand: true,
+      acquisitionDate: D("2025-06-01"),
+      landAcquisitionDate: D("2010-06-01"),
+    });
+    // +10%p 배제 → 토지분도 기본 누진.
+    // 종전 159,000,000은 **건물 취득일 기준 단기 40%를 자산 전체에 물린 값**(G-1 과대과세)이다.
+    // 2호 = 토지 347,500,000 누진 113,060,000 + 건물 50,000,000 × 40% 20,000,000 = 133,060,000
+    // 1호 = 397,500,000 누진 133,060,000 → MAX = 133,060,000
+    expect(r.calculatedTax).toBe(133_060_000);
+    expect(r.surchargeType).toBeUndefined();
   });
 });
 

@@ -60,6 +60,11 @@ export interface SplitRatePart {
   /** 파트 산출세액 */
   calculatedTax: number;
   appliedRate: number;
+  /** 이 파트에 붙은 중과 유형·가산율 (비사업용 토지 등) — 결과 표시용 echo */
+  surchargeType?: string;
+  surchargeRate?: number;
+  /** 부칙 제9270호 §14① 2008 위기 취득 중과배제 echo */
+  nblSurchargeExcluded?: boolean;
 }
 
 export interface SplitPartRateResult {
@@ -353,9 +358,6 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
   if (input.forceFlatRate20 || input.suppressShortTermRate) return null;
   // 4. 부담부증여는 §159 안분이 총액을 override한다(`transfer-tax-api-split.ts`와 동일 사유).
   if (input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift") return null;
-  // 5. 비사업용 토지 자산은 §104의3 정의·기간요건과 §104⑤ 후단(한 필지 내 구분)이 얽힌다 —
-  //    범위 밖(계획서 §5.3 P4 · §6 M-12). 자산 단위 판정을 그대로 유지한다.
-  if (input.isNonBusinessLand) return null;
 
   // ── 파트 구성 ───────────────────────────────────────────
   // 파트 양도소득금액은 자산 단위와 같은 소스(splitDetail)에서 만든다.
@@ -376,7 +378,12 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
       raw:
         (splitDetail.land.taxableGainAfterProration ?? splitDetail.land.gain) -
         splitDetail.land.longTermDeduction,
-      rateInput: buildLandRateInput(input, landBasisDate),
+      // 배율 초과분을 이미 비사업용 토지로 떼어냈다면(G-2) 남은 배율 내 부수토지는
+      // 「소득세법」 제104조의3 제1항 제5호가 비사업용으로 규정한 부분이 아니다 → 중과 제외.
+      rateInput: {
+        ...buildLandRateInput(input, landBasisDate),
+        ...(splitDetail.nonBusinessLandPart ? { isNonBusinessLand: false } : {}),
+      },
     },
     {
       kind: "building",
@@ -384,7 +391,14 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
       raw:
         (splitDetail.building.taxableGainAfterProration ?? splitDetail.building.gain) -
         splitDetail.building.longTermDeduction,
-      rateInput: input,
+      // **건물은 비사업용 「토지」가 될 수 없다** — §104의3①은 토지만 규정한다.
+      // 자산 단위 `isNonBusinessLand`가 건물분 과세표준까지 +10%p를 물리던 것을 여기서 끊는다
+      // (§104⑤ 후단 — 각각을 별개의 자산으로 보아 산출세액을 계산). 계획서 §6 M-12.
+      rateInput: {
+        ...input,
+        isNonBusinessLand: false,
+        nonBusinessLandAreaRatio: undefined,
+      },
     },
   ];
   if (nbPart && nbBasisDate) {
@@ -469,6 +483,9 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
     taxBase: taxBases[i],
     calculatedTax: finals[i].calculatedTax,
     appliedRate: finals[i].appliedRate,
+    surchargeType: finals[i].surchargeType,
+    surchargeRate: finals[i].surchargeRate,
+    nblSurchargeExcluded: finals[i].nblSurchargeExcluded,
   }));
   const perAssetTotal = finals.reduce((s, r) => s + r.calculatedTax, 0);
   const aggregateProgressive = calculateProgressiveTax(taxBase, parsedRates.brackets);
@@ -537,12 +554,18 @@ export function resolveSplitAwareTax(
     building: "건물",
     non_business_land: "배율 초과 토지(비사업용)",
   };
+  // 파트 중 하나라도 중과가 붙으면 자산 단위로도 그 사실을 노출한다 —
+  // 결과 카드의 중과 표시·법령근거가 사라지지 않도록(§104①8호 비사업용 토지 등).
+  const surcharged = parts.parts.find((p) => p.surchargeType !== undefined);
   return {
     calculatedTax: chosenTax,
     // 표시용 적용세율은 파트 최고세율 (누진공제는 파트별로 달라 합산 표시 불가)
     appliedRate: Math.max(...parts.parts.map((p) => p.appliedRate)),
     progressiveDeduction: 0,
     surchargeSuspended: false,
+    surchargeType: surcharged?.surchargeType,
+    surchargeRate: surcharged?.surchargeRate,
+    ...(parts.parts.some((p) => p.nblSurchargeExcluded) ? { nblSurchargeExcluded: true } : {}),
     shortTermNote:
       `파트별 세율(소득세법 §104⑤2호): ` +
       parts.parts
