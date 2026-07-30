@@ -70,6 +70,22 @@ describe("R-1 — assetKind별 면적 섹션 렌더 여부", () => {
     renderBasic("housing");
     expect(screen.getByText(/취득·양도 당시 토지 면적 \(㎡\)/)).toBeInTheDocument();
   });
+
+  it("building: 면적 시나리오 Select가 렌더된다 (기준시가 단가×연면적 곱셈 인자)", () => {
+    renderBasic("building");
+    expect(screen.getByTestId("area-scenario-select")).toBeInTheDocument();
+  });
+
+  it("R-5 building: 라벨이 「취득·양도 당시 건물 연면적」", () => {
+    renderBasic("building");
+    expect(screen.getByText(/취득·양도 당시 건물 연면적 \(㎡\)/)).toBeInTheDocument();
+  });
+
+  it("building: 환지 시나리오는 노출되지 않는다 (토지 제도 — 소득령 §162의2)", () => {
+    renderBasic("building");
+    fireEvent.click(screen.getByTestId("area-scenario-select"));
+    expect(screen.queryByText(/환지처분/)).not.toBeInTheDocument();
+  });
 });
 
 describe("R-6 — 전용 면적 섹션 보유 자산유형은 기본정보에 미렌더 (중복 입력 방지)", () => {

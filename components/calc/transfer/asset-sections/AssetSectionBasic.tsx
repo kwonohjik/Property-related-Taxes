@@ -85,6 +85,24 @@ const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
 > = {
   land: ["same", "partial", "reduction", "increase"],
   housing: ["same", "partial"],
+  // 건물(토지 제외) — toPropertyKind가 building_non_residential로 매핑하므로
+  // StandardPriceInput이 단가×면적 모드(isAreaMode)로 동작한다 → acquisitionArea가
+  // 건물 기준시가의 곱셈 인자. 종전엔 그 위젯 내부에만 입력 칸이 있어 실거래가 모드에서
+  // 입력 경로가 사라졌다(housing과 동일 구조 갭) → 기본정보로 승격.
+  building: ["same", "partial"],
+};
+
+/**
+ * `same` 시나리오 단일 입력의 라벨 — taxonomy 원칙 C `[세법 역할]+[기준 시점]+"면적 (㎡)"`.
+ * 대상어는 그 면적이 실제로 곱해지는 대상에서 온다:
+ *   land    → 토지 기준시가 = ㎡당 개별공시지가 × 면적
+ *   housing → 부수토지 면적(PHD §164⑤·환산의 곱셈 인자)
+ *   building→ 건물 기준시가 = ㎡당 × 연면적 (toPropertyKind → building_non_residential)
+ */
+const AREA_LABEL_BY_ASSET_KIND: Partial<Record<AssetForm["assetKind"], string>> = {
+  land: "취득·양도 당시 면적 (㎡)",
+  housing: "취득·양도 당시 토지 면적 (㎡)",
+  building: "취득·양도 당시 건물 연면적 (㎡)",
 };
 
 const AREA_SCENARIO_LABEL: Record<AreaScenario, string> = {
@@ -426,9 +444,8 @@ export function AssetSectionBasic({
             {(asset.areaScenario ?? "same") === "same" && (
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">
-                  {asset.assetKind === "housing"
-                    ? "취득·양도 당시 토지 면적 (㎡)"
-                    : "취득·양도 당시 면적 (㎡)"}
+                  {AREA_LABEL_BY_ASSET_KIND[asset.assetKind] ??
+                    "취득·양도 당시 면적 (㎡)"}
                   <span
                     title="취득·양도 기준시가 = ㎡ 단가 × 이 면적. 공시가격 자동 조회 및 환산취득가 계산에 사용됩니다."
                     className="ml-1 cursor-help"
