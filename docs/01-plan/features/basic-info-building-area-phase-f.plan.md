@@ -23,6 +23,7 @@
 | D-7 | **⑦ 결과 카드는 변경하지 않는다** | §4 U-4 |
 | D-8 | **`land`에 축 C를 추가하지 않는다** | §4 U-5 |
 | D-9 | **F3(NBL 정착면적 통합)은 폐기** — 법령 개념이 달라 통합 불가. "이중 입력 UX 개선"으로 격하 | §4 U-3 |
+| **D-10** | **F2(축 A·B 승격 확대)도 폐기** — 전용 자산 4종의 **단일 면적 필드가 정확성의 근거**다. 2시점 쌍으로 승격하면 B-4 왜곡이 재발한다 | §11 |
 
 **상태**: ✅ **F1 Do 완료**(2026-07-30, §5.5). A-1·A-3·A-4·A-6·A-7 anchor 전건 작성. 전체 12,457건 + E2E 5건 통과.
 
@@ -173,7 +174,7 @@ F1-c  주택 경로 3곳에 floorArea prefill 배선 (F-2 3시점 불일치 해�
       TransferStdPriceCards · LandBuildingSplitSection · ReductionPhdInput
 ```
 
-**F2**(승격 후보 확대 — GB·상가·겸용·재개발의 자산-수준 면적 통합)는 **F1 이후 별도**로 다룬다. **F3는 폐기**(D-9).
+**F2·F3 모두 폐기**됐다 — F3는 법령 개념 상이(D-9·U-3), F2는 승격이 회귀 위험(D-10·§11).
 
 ---
 
@@ -430,3 +431,58 @@ anchor 파일: `__tests__/tax-engine/transfer-tax/basic-info-building-area.ancho
 **Phase D 잔재도 함께 제거**했다: GB UI hint·§배지·법조문 링크에 「소득세법 시행령」 **제168의12**가 남아 있었다(Phase D가 배율은 정정했으나 이 3곳을 놓쳤다 — 자체 누락).
 
 정정: 라벨 "건물 수평투영면적" → **"건축물 바닥면적"**, hint에 "각 층 중 **가장 넓은** 값 — **지하층 포함**", 인용을 「지방세법 시행령」 제101조로. anchor 6건.
+
+
+---
+
+## 11. F2 폐기 (2026-07-30) — 승격이 개선이 아니라 회귀 위험이다
+
+anchor: `__tests__/tax-engine/transfer/area-axis-single-field-invariant.anchor.test.ts` (6건)
+
+### 11.1 결정적 차이 — 전용 자산은 **단일** 면적, 기본사항은 **2시점 쌍**
+
+| 필드 | 시점 축 |
+|---|---|
+| 기본사항 `acquisitionArea` / `transferArea` | **2시점 쌍** |
+| `gbLandArea` · `cbLandArea` · `mixedUseTotalLandArea` · `redevLandArea` · `gbBuildingArea` | **단일** |
+
+### 11.2 그 단일성이 **정확성의 근거**다
+
+엔진이 시점별 **단가**에 **같은 면적**을 곱한다:
+
+| 근거 | 구현 |
+|---|---|
+| `general-building-valuation.ts:506,535` | `transferLandPricePerSqm × landArea` · `acquisitionLandPricePerSqm × landArea` |
+| `commercial-building-valuation.ts:245,249,258` | 취득·최초공시·양도 **3시점 단가 × 같은 `landArea`** |
+| `transfer-tax-mixed-use-helpers.ts:246,262` | `landAreaAtAcquisition = landAreaAtFirstDisclosure = totalLandArea` (명시 대입) |
+| `calc-wizard-asset-redev.ts:107` | 주석 "단일 면적; **시점별 동일 가정**" |
+
+→ 환산 산식에서 **면적이 분자·분모에서 약분**되고 비율은 단가비만 반영한다. anchor로 고정: 면적이 50·300·1,234.56·10,000㎡ 어느 값이든 환산비율이 1/3로 불변이다.
+
+**즉 이 자산들은 B-4 왜곡이 구조적으로 불가능하다.** 2시점 쌍으로 승격하면 그 안전장치가 사라지고, 취득/양도에 다른 면적이 들어가 **양도차익이 0이 되는** 경로가 새로 생긴다(anchor로 재현 고정).
+
+### 11.3 승격의 이득도 없다
+
+| 기대했던 이득 | 실제 |
+|---|---|
+| 중복 입력 제거 | 🔴 **중복이 없다** — `AREA_SCENARIOS_BY_ASSET_KIND`에 4종이 미등재라 기본사항 면적 섹션이 렌더되지 않는다(F1에서 확인) |
+| 단일 소스 | 이미 자산별 단일 소스다. 기본사항으로 옮겨도 소스 수는 그대로 |
+| 일관성 | 시점 축이 다른 것을 억지로 맞추는 것이라 **일관성이 아니라 위험 전파**다 |
+
+### 11.4 대신 한 것 — 단일성을 **의도적 안전장치**로 고정
+
+동작은 변경하지 않았다(Surgical). 4개 필드 주석에 다음을 명시했다:
+
+> ⚠️ **단일 필드를 2시점 쌍으로 확장하지 말 것.** 엔진이 시점별 단가에 같은 면적을 곱하므로 면적이 약분되고 비율은 단가비만 반영한다 — 단일성이 정확성의 근거다. 2시점으로 나누면 B-4 왜곡이 재발한다.
+
+anchor 6건이 그 불변식을 지킨다 — 누군가 "일관성"을 이유로 확장을 시도하면 깨진다.
+
+### 11.5 Phase F 최종 상태
+
+| 단계 | 결론 |
+|---|---|
+| **F1** | ✅ 완료 — `housing` 축 B·C 신설, `building` 축 B 이전(β-2), prefill 배선 |
+| **F2** | ❌ **폐기** — 승격이 회귀 위험(§11) |
+| **F3** | ❌ **폐기** — 법령 개념 상이(U-3) |
+
+**Phase F는 F1로 종결된다.** 남은 별건은 U-12(`building` 라벨 ↔ `isSplitable` 모순)뿐이다.

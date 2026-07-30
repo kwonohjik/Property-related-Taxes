@@ -719,7 +719,16 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   cbExclusiveArea: string;
   /** 공유면적 (㎡) */
   cbSharedArea: string;
-  /** 대지면적 (㎡) */
+  /**
+   * 대지면적 (㎡) — 「소득세법 시행령」 제164조 제6항 3축(대지·전유·공용) 중 대지.
+   * 시점 구분 없는 **단일** 필드다 — `commercial-building-valuation.ts:245,249,258`이
+   * 취득·최초공시·양도 3시점 단가에 이 값을 각각 곱한다.   *
+   * ⚠️ **단일 필드를 2시점 쌍으로 확장하지 말 것**(2026-07-30 F2 검토 결론).
+   *    엔진이 시점별 **단가**에 **같은 면적**을 곱하므로 환산 산식에서 면적이 약분되고
+   *    비율은 단가비만 반영한다 — 즉 단일성이 **정확성의 근거**다. 2시점으로 나누면
+   *    취득/양도에 다른 면적이 들어가 면적비가 단가비를 상쇄해 **양도차익이 0이 되는**
+   *    왜곡(B-4)이 재발한다. anchor `area-axis-single-field-invariant.anchor.test.ts`.
+   */
   cbLandArea: string;
   /**
    * 호별 ㎡당 고시가 — 양도시 (원/㎡).
