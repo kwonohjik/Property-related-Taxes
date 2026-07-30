@@ -152,6 +152,27 @@ export function NewConstructionLandAcqBlock(props: {
                 data-testid="split-land-acq-price"
               />
             </FieldCard>
+            {/* §104②1·2호 — 세율 판정 보유기간은 토지 파트의 취득원인으로 통산한다 */}
+            <FieldCard
+              label={cause === "inheritance" ? "피상속인 취득일" : "증여자 취득일"}
+              hint={`세율 판정 보유기간을 ${cause === "inheritance" ? "피상속인" : "증여자"}이 취득한 날부터 통산합니다 (「소득세법」 제104조 제2항 ${cause === "inheritance" ? "제1호" : "제2호"}). 미입력 시 위 ${cause === "inheritance" ? "상속개시일" : "증여일"} 기준으로 계산합니다.`}
+            >
+              <DateInput
+                value={
+                  cause === "inheritance"
+                    ? asset.landDecedentAcquisitionDate
+                    : asset.landDonorAcquisitionDate
+                }
+                onChange={(v) =>
+                  onChange(
+                    cause === "inheritance"
+                      ? { landDecedentAcquisitionDate: v }
+                      : { landDonorAcquisitionDate: v },
+                  )
+                }
+                data-testid="land-statutory-acq-date"
+              />
+            </FieldCard>
           </div>
 
           <p className="text-caption text-muted-foreground">

@@ -227,6 +227,12 @@ const propertyBaseShape = {
   // ─── 토지/건물 취득일 분리 (소득령 §166⑥·§168②) ────────────────
   /** 토지 취득일 (건물 acquisitionDate와 다를 때) */
   landAcquisitionDate: z.string().date().optional(),
+  /** 토지 파트 취득원인 — 「소득세법」 제104조 제2항 단서를 토지 파트에 적용(G-4) */
+  landAcquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift"]).optional(),
+  /** 토지 파트 피상속인 취득일 (§104②1호) */
+  landDecedentAcquisitionDate: z.string().date().optional(),
+  /** 토지 파트 증여자 취득일 (§104②2호) */
+  landDonorAcquisitionDate: z.string().date().optional(),
   /** 분리 입력 방식 (@deprecated — landAcqMode/buildingAcqMode + saleSplitMode로 대체. 하위호환용 유지, 엔진 미소비) */
   landSplitMode: z.enum(["apportioned", "actual"]).optional(),
   /**

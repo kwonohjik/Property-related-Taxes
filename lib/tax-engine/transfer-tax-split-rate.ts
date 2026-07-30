@@ -113,10 +113,47 @@ const ONE_HOUSE_HOLDING_MONTHS = 24;
  *   `max`로" 라는 명시 판단은 없다(계획서 §10-1). ⇒ 되돌릴 수 있도록 이 함수 하나에 격리한다.
  */
 export function resolveAppurtenantLandRateBasisDate(input: TransferTaxInput): Date | undefined {
+  const effective = resolveLandStatutoryAcquisitionDate(input);
+  if (!effective) return undefined;
+  // ② 주택은 "주택부수토지로서의" 보유기간 → `max`
+  if (input.propertyType !== "housing") return effective;
+  return effective.getTime() >= input.acquisitionDate.getTime() ? effective : input.acquisitionDate;
+}
+
+/**
+ * 토지 파트의 §104② 보유기간 기산일 — **주택 `max` 적용 전**의 법정 취득일.
+ *
+ * 「소득세법」 제104조 제2항 단서를 **토지 파트 고유의 취득원인**으로 적용한다(G-4).
+ *   1호 상속 → 피상속인이 그 자산을 취득한 날
+ *   2호 §97의2① 이월과세 → 증여자가 그 자산을 취득한 날
+ * 토지 취득원인(`landAcquisitionCause`)이 명시되면 그 원인·날짜만 쓰고, 없으면 자산 단위
+ * 값을 그대로 상속한다(회귀 0 — 종전에는 `calcTax`가 자산 단위 값으로 덮어썼다).
+ */
+export function resolveLandStatutoryAcquisitionDate(input: TransferTaxInput): Date | undefined {
   const land = input.landAcquisitionDate;
   if (!land) return undefined;
-  if (input.propertyType !== "housing") return land;
-  return land.getTime() >= input.acquisitionDate.getTime() ? land : input.acquisitionDate;
+  const useLandCause = input.landAcquisitionCause !== undefined;
+  const cause = useLandCause ? input.landAcquisitionCause : input.acquisitionCause;
+  const decedent = useLandCause ? input.landDecedentAcquisitionDate : input.decedentAcquisitionDate;
+  const donor = useLandCause ? input.landDonorAcquisitionDate : input.donorAcquisitionDate;
+  if (cause === "inheritance" && decedent) return decedent;
+  if ((cause === "gift" || cause === "carryover_gift") && donor) return donor;
+  return land;
+}
+
+/**
+ * 토지 파트 세율 판정용 입력 — 기산일을 확정한 뒤 **자산 단위 §104② 재적용을 무력화**한다.
+ * `calcTax`의 `rateBasisAcquisitionDate`는 `acquisitionCause`가 상속·증여면 `acquisitionDate`를
+ * 무시하고 피상속인·증여자 취득일로 덮어쓰므로, 여기서 이미 통산을 마친 날짜가 무시된다.
+ */
+function buildLandRateInput(input: TransferTaxInput, basisDate: Date): TransferTaxInput {
+  return {
+    ...input,
+    acquisitionDate: basisDate,
+    acquisitionCause: "purchase",
+    decedentAcquisitionDate: undefined,
+    donorAcquisitionDate: undefined,
+  };
 }
 
 /**
@@ -325,7 +362,8 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
   // ⚠️ `gain`은 12억 안분 **전** 값이라 `longTermDeduction`(안분 후 기준)과 축이 다르다 —
   //    `taxableGainAfterProration`(안분·비과세 제외 반영)을 써야 파트 소득금액이 자산 단위와 맞는다.
   const nbPart = splitDetail.nonBusinessLandPart;
-  const nbBasisDate = input.landAcquisitionDate;
+  // 배율 초과분은 주택부수토지가 아니므로 `max` 없이 토지 자체의 §104② 기산일을 쓴다.
+  const nbBasisDate = resolveLandStatutoryAcquisitionDate(input);
   const seeds: {
     kind: SplitRatePart["kind"];
     basisDate: Date;
@@ -338,7 +376,7 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
       raw:
         (splitDetail.land.taxableGainAfterProration ?? splitDetail.land.gain) -
         splitDetail.land.longTermDeduction,
-      rateInput: { ...input, acquisitionDate: landBasisDate },
+      rateInput: buildLandRateInput(input, landBasisDate),
     },
     {
       kind: "building",
@@ -358,9 +396,8 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
       // 주택 단기세율(§104①2·3호)이 아니라 §104①8호 누진 + 10%p. `propertyType`을 토지로 두어야
       // `calcTax`의 주택 분기(70%/60%)에 걸리지 않는다.
       rateInput: {
-        ...input,
+        ...buildLandRateInput(input, nbBasisDate),
         propertyType: "land",
-        acquisitionDate: nbBasisDate,
         isNonBusinessLand: true,
         // 자산 단위 면적안분 비율은 이 파트에 의미가 없다(이미 초과분만 떼어냈다).
         nonBusinessLandAreaRatio: undefined,

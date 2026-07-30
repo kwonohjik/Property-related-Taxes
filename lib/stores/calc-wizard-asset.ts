@@ -405,6 +405,13 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    */
   landAcquisitionCause: "" | "inheritance" | "gift";
   /**
+   * 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 「소득세법」
+   * 제104조 제2항 제1호 보유기간 통산(세율 판정)에 쓰인다. 미입력 시 토지 취득일 기준(현행).
+   */
+  landDecedentAcquisitionDate: string;
+  /** 토지 파트 증여자 취득일 — `landAcquisitionCause === "gift"` 시 §104②2호 통산 */
+  landDonorAcquisitionDate: string;
+  /**
    * 토지 파트 취득 방식 — 4-way 독립(소득령 §166⑥, 토지·건물 취득일 분리 모드 전용).
    * `landSplitMode`(구, 취득·양도 겸용 토글)를 대체 — 취득은 이 필드가 단일 소스.
    * ""(미선택) 시 자산 전체 레거시 플래그에서 파생 — `lib/calc/transfer-tax-split-acq-mode.ts` 참조.
