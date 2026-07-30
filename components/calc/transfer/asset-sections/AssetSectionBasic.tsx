@@ -86,15 +86,21 @@ const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
   land: ["same", "partial", "reduction", "increase"],
   housing: ["same", "partial"],
   /**
-   * 건물(토지 제외) — 축 A(토지)가 없고 **축 B(연면적)만** 있는 자산이다.
-   * `toPropertyKind`가 `building_non_residential`로 매핑해 `StandardPriceInput`이
-   * 단가×면적 모드(isAreaMode)로 동작하므로 연면적이 기준시가의 곱셈 인자다.
+   * 건물(토지 제외) — 축 A(**토지** 면적)와 축 B(연면적)를 **모두** 갖는다.
    *
-   * ⚠️ **`same` 단일**이다(2026-07-30 Phase F1 β-2). 종전 `["same","partial"]`은
-   *    PR #912에서 land·housing 패턴을 기계적으로 복사한 것이고, `partial`은 취득·양도에
-   *    **서로 다른 면적**을 기준시가 곱셈에 넣어 환산비율을 왜곡했다(면적비가 단가비를
-   *    상쇄해 양도차익 0). 연면적의 취득↔양도 차이는 증축 전용 필드가 담당한다.
+   * 라벨 "건물(토지 제외)"는 「소득세법」 제99조 제1항 제1호 **나목**의 *기준시가 공시 범위*를
+   * 뜻한다 — 토지가 없다는 뜻이 아니다. 나목에는 "딸린 토지" 문구가 없고 다목(오피스텔·
+   * 상업용건물)에만 "이에 딸린 토지를 포함한다"가 붙으므로(같은 조 제3항 제4호에서 확인),
+   * **나목 건물의 부수토지는 가목으로 별도 평가**된다. 그래서 축 A가 실재한다:
+   *   `toPropertyType(building_non_residential)` → "land"(`StandardPriceInput.tsx:69~70`)
+   *   → 조회 대상이 **개별공시지가**이고 `acquisitionArea`가 그 곱셈 인자다.
+   *
+   * ⚠️ **`same` 단일**이다. 종전 `["same","partial"]`(PR #912)은 land·housing 패턴을
+   *    기계적으로 복사한 것으로, `partial`은 취득·양도에 **서로 다른 면적**을 기준시가
+   *    곱셈에 넣어 환산비율을 왜곡했다(면적비가 단가비를 상쇄해 양도차익 0).
    *    anchor: `basic-info-building-area.anchor.test.ts` A-6.
+   *    ※ `land`·`housing`처럼 `resolveAcqAreaForStdPrice`(B-4)를 태우면 `partial`도
+   *      안전해지지만, 별건이다 — 필요해지면 그때 확장한다.
    */
   building: ["same"],
 };
@@ -104,18 +110,14 @@ const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
  * 대상어는 그 면적이 실제로 곱해지는 대상에서 온다:
  *   land    → 토지 기준시가 = ㎡당 개별공시지가 × 면적
  *   housing → 부수토지 면적(PHD §164⑤·환산의 곱셈 인자)
- *   building→ 건물 기준시가 = ㎡당 × 연면적 (toPropertyKind → building_non_residential)
+ *   building→ 부수토지 면적 — 「소득세법」 제99조 제1항 제1호 **가목**(개별공시지가 × 면적).
+ *             나목 건물분은 축 B(`buildingFloorArea`)가 담당한다.
  */
 const AREA_LABEL_BY_ASSET_KIND: Partial<Record<AssetForm["assetKind"], string>> = {
   land: "취득·양도 당시 면적 (㎡)",
   housing: "취득·양도 당시 토지 면적 (㎡)",
+  building: "취득·양도 당시 토지 면적 (㎡)",
 };
-
-/**
- * 축 A(토지)를 갖지 않는 자산유형 — 축 B(연면적)만 입력받는다.
- * `building`은 "건물(토지 제외)"이므로 토지 면적 칸을 렌더하지 않는다.
- */
-const LAND_AXIS_EXCLUDED_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["building"]);
 
 /**
  * 축 B(건물 연면적) 입력 대상 자산유형.
@@ -452,9 +454,15 @@ export function AssetSectionBasic({
         showFloorArea(asset) ||
         showFootprintArea(asset)) && (
         <div className="space-y-3">
-          {/* ── 축 A: 토지 면적 (시나리오 분기) ────────────────────────── */}
-          {!LAND_AXIS_EXCLUDED_KINDS.has(asset.assetKind) &&
-            areaScenarioOptions(asset).length > 0 && (
+          {/* ── 축 A: 토지 면적 (시나리오 분기) ──────────────────────────
+              ⛔ **자산유형별로 축 A를 끄는 예외를 만들지 말 것**(2026-07-30 U-12).
+                 `building`("건물(토지 제외)")을 제외했다가 되돌렸다 — 그 라벨은 「소득세법」
+                 제99조 제1항 제1호 나목의 *기준시가 공시 범위*이지 토지 부재가 아니고,
+                 부수토지는 가목으로 별도 평가된다. 끄면 토지 면적의 입력 경로가 사라져
+                 validate가 "토지 면적을 입력하세요"로 차단하는 dead-end가 된다
+                 (`transfer-tax-validate-split.ts:115,155,247`).
+                 축 A가 불필요한 자산유형은 `AREA_SCENARIOS_BY_ASSET_KIND` 미등재로 표현한다. */}
+          {areaScenarioOptions(asset).length > 0 && (
           <>
           <div
             className={cn(

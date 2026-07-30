@@ -480,40 +480,57 @@ describe("A-3 [F-2 결함 고정] — 3시점 연면적 불일치가 환산취�
 });
 
 // ══════════════════════════════════════════════════════════
-// A-4 — β-2 마이그레이션 안전성: building의 acquisitionArea 소비 경로
+// A-4 — building의 `acquisitionArea`는 **토지 면적**이다 (U-12, 2026-07-30)
 // ══════════════════════════════════════════════════════════
 //
-// `building` assetKind는 `toPropertyKind`가 "building_non_residential"로 매핑하므로
-// (`CompanionAcqPurchaseBlock.types.ts:132~138`) `StandardPriceInput.isAreaMode = true`가
-// 되어 기준시가가 **단가 × 면적**으로 산출된다(`StandardPriceInput.tsx:98~100`).
-// 면적 인자는 `acquisitionArea`/`transferArea`다(`CompanionAcqPurchaseBlock.tsx:621,645`).
+// 종전 이 절은 "`building`의 면적 모드 곱셈 인자는 **연면적**"이라는 전제로 β-2 이전을
+// 정당화했다. **전제가 틀렸다** — `isAreaMode`가 켜지는 것은 맞지만, 조회 대상은
+// `toPropertyType`이 결정하고 그 값이 **"land"**다:
 //
-// β-2는 이 값을 `buildingFloorArea`로 이전한다. 이전 후에도 **같은 총액**이 나와야 한다.
+//   `StandardPriceInput.tsx:69~70`
+//     toPropertyType(kind) = (house_individual|house_apart) ? "housing" : "land"
+//   → `building_non_residential` → **"land"** → 개별공시지가 조회
+//   → 곱셈 인자는 **토지 면적**이고, 단가 필드도 `standardPricePerSqmAtAcq`
+//     ("㎡당 **공시지가**" — `calc-wizard-asset.ts`)다.
+//
+// 법령도 같다: 「소득세법」 제99조 제1항 제1호는 **나목**(건물)에 "딸린 토지" 문구를 두지
+// 않고 **다목**(오피스텔·상업용건물)에만 "이에 딸린 토지를 포함한다"를 둔다(같은 조 제3항
+// 제4호에서 확인) → **나목 건물의 부수토지는 가목으로 별도 평가**된다. 그래서 `building`
+// 자산에도 축 A가 실재하고, `LandBuildingSplitSection.tsx:163`이 같은 필드를
+// "토지 면적"으로 입력받는 것과 일관된다.
+//
+// → β-2 이전은 **철회**됐다. 이 절은 그 재도입을 막는 가드다.
 
 import { toPropertyKind } from "@/components/calc/transfer/CompanionAcqPurchaseBlock.types";
+import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 
-describe("A-4 [β-2 전제] — building의 축 B 소비 경로", () => {
-  it("building은 building_non_residential로 매핑되어 면적 모드가 된다", () => {
+/** `StandardPriceInput.tsx:69~70`의 정본 — 조회 대상 결정. */
+function toPropertyType(kind: ReturnType<typeof toPropertyKind>): string {
+  return kind === "house_individual" || kind === "house_apart" ? "housing" : "land";
+}
+
+describe("A-4 — building의 면적 모드 곱셈 인자는 토지 면적이다", () => {
+  it("🔴 building은 면적 모드지만 조회 대상이 「land」(개별공시지가)다", () => {
     expect(toPropertyKind("building")).toBe("building_non_residential");
     // isAreaMode = propertyKind === "land" || "building_non_residential"
     expect(["land", "building_non_residential"]).toContain(toPropertyKind("building"));
+    // 결정적 — 건물 기준시가가 아니라 개별공시지가를 조회한다
+    expect(toPropertyType(toPropertyKind("building"))).toBe("land");
+    expect(toPropertyType(toPropertyKind("land"))).toBe("land");
   });
 
   it("housing은 총액 모드 — 면적 곱셈이 없다 (축 B 신설 대상인 이유)", () => {
     expect(toPropertyKind("housing")).toBe("house_individual");
     expect(["land", "building_non_residential"]).not.toContain(toPropertyKind("housing"));
+    expect(toPropertyType(toPropertyKind("housing"))).toBe("housing");
   });
 
-  it("land는 면적 모드 — 축 A가 곱셈 인자", () => {
-    expect(toPropertyKind("land")).toBe("land");
-  });
-
-  it("이전은 값 보존이어야 한다 — 총액 산식이 면적 필드명에 의존하지 않는다", () => {
-    // StandardPriceInput.tsx:137,150,180 — 모두 floor(단가 × 면적)
-    const unit = 1_200_000;
-    const area = 84.5;
-    const beforeMigration = Math.floor(unit * area); // acquisitionArea 참조
-    const afterMigration = Math.floor(unit * area); // buildingFloorArea 참조
-    expect(afterMigration).toBe(beforeMigration);
+  it("🔴 축 A를 비우면 토지분 취득 기준시가가 소실된다 — β-2 철회 근거(실측)", () => {
+    const unitPrice = 500_000; // ㎡당 개별공시지가
+    // 철회 전 마이그레이션은 "200" → "" 로 비웠다
+    expect(calcLandStdPriceAtAcq(unitPrice, 200)).toBe(100_000_000);
+    expect(calcLandStdPriceAtAcq(unitPrice, 0)).toBeNull();
+    // null이면 `calcApportionRatio`가 null → 토지·건물 안분 자체가 불가능해진다
+    // (`transfer-tax-split-gain.ts:54,96~104`).
   });
 });
