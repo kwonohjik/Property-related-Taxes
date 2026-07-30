@@ -117,7 +117,7 @@ export function calcMixedUseTransferTax(
 
   // STEP 5·6: 12억 초과 비과세 안분 + 주택부수토지 배율초과 분리
   // 🚨 Critical: isOneHouseExempt 인자 전달 — 다주택자(false) 시 12억 비과세 미적용·표1
-  const excessResult = calcExcessLandRatio(asset, derived);
+  const excessResult = calcExcessLandRatio(asset, derived, transferDate);
 
   // STEP 7-prep: 상가부분 양도차익 (period-split에서도 housing 직전 commercial gain 필요)
   const commercialGainSplit = calcCommercialGainSplit(
