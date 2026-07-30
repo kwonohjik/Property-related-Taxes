@@ -93,7 +93,26 @@ function validateSeparateAcqParts(asset: AssetForm, label: string): string | nul
  *   `hasSeperateLandAcquisitionDate && saleSplitMode === "actual"`
  */
 export function validateSplitDirectInputs(asset: AssetForm, label: string): string | null {
-  if (!asset.hasSeperateLandAcquisitionDate) return null;
+  // ⚠️ 게이트는 **API 전송 조건(`isSplitPayloadActive`)과 같아야** 한다(2026-07-30).
+  //    종전엔 `hasSeperateLandAcquisitionDate`만 봤는데, 비-매매 취득원인의 소유자 분리는
+  //    그 플래그를 켜지 않으므로(취득일 2열 UI가 없다) validate 전체가 early-return돼
+  //    **양도가액 안분 근거·기준시가 검증이 통째로 건너뛰어졌다** — 엔진은 조용히 null을
+  //    반환하고 `selfOwns`가 무시되어 비소유 파트까지 과세된다.
+  const selfOwnsSplit = (asset.selfOwns ?? "both") !== "both";
+  if (!asset.hasSeperateLandAcquisitionDate && !selfOwnsSplit) return null;
+
+  // ── V8. 소유자 분리 + 취득일 동일(비-매매 경로) — 취득시 기준시가 필수 ─────────────
+  // 취득가액을 토지·건물로 나누는 유일한 근거가 §166⑥ 기준시가 비율이다. 셋 중 하나라도
+  // 비면 `calcAcqStdPair`가 null → `calcApportionRatio` null → `calcSplitGain`이 null을
+  // 반환하고 **selfOwns가 무시된다**(조용한 과대과세). 별개취득은 V3·V5·V6가 이미 담당한다.
+  if (selfOwnsSplit && !isSeparateAcquisition(asset)) {
+    const hasPerSqm = opt(asset.standardPricePerSqmAtAcq) != null;
+    const hasArea = parseDecimal(asset.acquisitionArea) > 0;
+    const hasTotal = opt(asset.standardPriceAtAcq) != null;
+    if (!hasPerSqm || !hasArea || !hasTotal) {
+      return `${label}: 토지·건물 소유자가 다르면 본인 소유분만 과세하므로 취득가액을 토지·건물로 나눠야 합니다 — 취득 당시 ㎡당 개별공시지가·면적·기준시가 총액을 입력하세요 (소득세법 §99①1호·시행령 §166⑥).`;
+    }
+  }
 
   // ── V1·V2. 별개 취득 — 취득가액 파트별 필수 (함수 최상단 필수) ──────────────
   // 아래 §7.2 검증과 `saleSplitMode !== "actual"` early-return(:57 상당)·`skipTotals`(지분·

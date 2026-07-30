@@ -615,7 +615,10 @@ test.describe("P7 — 소유자 분리 토글 배치", () => {
     await expect(dateToggle(page)).toBeDisabled();
   });
 
-  test("상속 취득에서는 아직 노출되지 않는다 (분리 입력 부재 — 별도 PR)", async ({ page }) => {
+  // 2026-07-30 [요구 C] — 상속·증여에도 노출한다. 종전에는 분리 계산 입력이 없어
+  // `calcSplitGain`이 null → `selfOwns` 무시 → 비소유 파트까지 과세되므로 매매 전용이었다.
+  // 이제 `NonPurchaseSplitInputsBlock`이 취득시 기준시가·양도가액 안분을 제공한다.
+  test("상속 취득에서도 노출되고, ON 시 분리 계산 입력이 함께 나타난다", async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -623,6 +626,43 @@ test.describe("P7 — 소유자 분리 토글 배치", () => {
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await expandAssetSection(page, 3);
     await page.getByRole("button", { name: "상속", exact: true }).click();
-    await expect(ownerToggle(page)).toHaveCount(0);
+
+    await expect(ownerToggle(page)).toBeVisible();
+    // OFF 상태에서는 분리 입력이 없다
+    await expect(page.getByTestId("non-purchase-split-inputs")).toHaveCount(0);
+
+    await ownerToggle(page).getByRole("switch").click();
+    await expect(page.getByRole("button", { name: /건물만 본인 소유/ })).toBeVisible();
+    // ON → 취득시 기준시가(안분 비율) + 양도가액 결정 방식이 함께 나타나야 계산이 성립한다
+    await expect(page.getByTestId("non-purchase-split-inputs")).toBeVisible();
+    await expect(page.getByTestId("sale-split-mode")).toBeVisible();
+  });
+
+  test("증여 취득에서도 동일하게 동작한다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "증여", exact: true }).click();
+
+    await ownerToggle(page).getByRole("switch").click();
+    await expect(page.getByTestId("non-purchase-split-inputs")).toBeVisible();
+  });
+
+  test("매매에서는 비-매매 블록이 나타나지 않는다 (중복 입력 방지)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+
+    await ownerToggle(page).getByRole("switch").click();
+    await expect(page.getByTestId("non-purchase-split-inputs")).toHaveCount(0);
+    // 매매는 취득일 2열이 정본 입력 경로다
+    await expect(page.getByTestId("acq-date-land")).toBeVisible();
   });
 });

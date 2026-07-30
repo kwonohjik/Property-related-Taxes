@@ -10,6 +10,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqNewConstructionBlock } from "./CompanionAcqNewConstructionBlock";
 import { AssetOwnershipSplitSection } from "./AssetOwnershipSplitSection";
+import { NonPurchaseSplitInputsBlock } from "./NonPurchaseSplitInputsBlock";
 import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
@@ -59,7 +60,16 @@ export function CompanionAcquisitionCauseSection({
           <button
             key={opt.value}
             type="button"
-            onClick={() => onChange({ acquisitionCause: opt.value })}
+            onClick={() =>
+              onChange({
+                acquisitionCause: opt.value,
+                // 매매 → 비-매매 전환 시 `hasSeperateLandAcquisitionDate` stale 정리(2026-07-30).
+                // 그 플래그는 매매 경로의 취득일 2열 UI 표시 상태이지 사용자 데이터가 아니다.
+                // 남겨두면 토지 취득일이 채워진 채 상속으로 넘어갔을 때 `isSeparateAcquisition`이
+                // true가 되어 파트별 취득가액 필수 → 입력 칸 없는 차단이 된다.
+                ...(opt.value !== "purchase" ? { hasSeperateLandAcquisitionDate: false } : {}),
+              })
+            }
             className={cn(
               "rounded-md border-2 px-1 py-2 text-center transition-all",
               asset.acquisitionCause === opt.value
@@ -265,6 +275,11 @@ export function CompanionAcquisitionCauseSection({
           onChange={onChange}
         />
       )}
+
+      {/* 비-매매 취득원인의 소유자 분리 입력 — 취득시 기준시가(§166⑥ 안분 비율) + 축 A.
+          매매는 `CompanionAcqPurchaseBlock`이 이미 제공하므로 내부 게이트로 비노출된다.
+          이 입력이 없으면 `calcSplitGain`이 null → `selfOwns` 무시 → 비소유 파트까지 과세. */}
+      <NonPurchaseSplitInputsBlock asset={asset} onChange={onChange} transferDate={transferDate} />
     </div>
   );
 }
