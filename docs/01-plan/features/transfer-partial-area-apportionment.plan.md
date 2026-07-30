@@ -3,7 +3,7 @@
 > 작성일: 2026-07-30 (분할본 v1.0 — `basic-info-building-area-phase-ef.plan.md` rev.7에서 B-4만 추출)
 > 발견 경위: [`basic-info-building-area-phase-f.plan.md`](basic-info-building-area-phase-f.plan.md) §3.2 A-6 실측의 파생
 > anchor: `__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.ts` — `describe("B-4 …")` · `describe("U-9 …")` · `describe("U-10 …")` (12건, **현행 동작 고정만**)
-> 상태: ⏳ **부분 Do 완료**(§5.5) — B4-1 단건 경로 · B4-2 안내 · B4-3 완료. 후속 3건(다필지·안분 계산기·필요경비 안내) 미착수.
+> 상태: ⏳ **부분 Do 완료**(§5.5·§5.6) — B4-1(단건) · **B4-1b(다필지)** · B4-2(안내) · B4-3 완료. 후속 2건(안분 계산기 UI · 필요경비 안내) 미착수.
 
 ---
 
@@ -36,9 +36,9 @@
 | 경로 | 취득측 면적 | 양도측 면적 | 근거 | 왜곡 |
 |---|---|---|---|---|
 | `building` 일괄 (축 B 연면적) | `acquisitionArea` | `transferArea` | `CompanionAcqPurchaseBlock.tsx:621,645` | 🔴 → **F1 β-2가 소멸시킴** |
-| `land` 일괄 (축 A 토지) | `acquisitionArea` | `transferArea` | `StandardPriceInput` `isAreaMode`(`toPropertyKind("land")→"land"`) | 🔴 |
-| `housing` 토지·건물 분리 (축 A) | `acquisitionArea` | `transferArea` | `LandBuildingSplitSection.tsx:141` ↔ `TransferStdPriceCards.tsx:56~57,67` | 🔴 |
-| 다필지 (환지 아님) | `parcel.acquisitionArea` | `parcel.transferArea` | `multi-parcel-transfer.ts:349~350` | 🔴 |
+| `land` 일괄 (축 A 토지) | `acquisitionArea` | `transferArea` | `StandardPriceInput` `isAreaMode`(`toPropertyKind("land")→"land"`) | ✅ **B4-1 정정** |
+| `housing` 토지·건물 분리 (축 A) | `acquisitionArea` | `transferArea` | `LandBuildingSplitSection.tsx:141` ↔ `TransferStdPriceCards.tsx:56~57,67` | ✅ **B4-1 정정** |
+| 다필지 (환지 아님) | `parcel.acquisitionArea` | `parcel.transferArea` | `multi-parcel-transfer.ts:349~350` | ✅ **B4-1b 정정** |
 | **다필지 감환지** | **의제취득면적 안분** | `parcel.transferArea` | `multi-parcel-transfer.ts:326` | ✅ **대조군** |
 | `housing` 일괄 | — | — | `toPropertyKind("housing")→"house_individual"` → `isAreaMode=false`(총액 직접) | ✅ 해당 없음 |
 
@@ -201,11 +201,40 @@ anchor: `__tests__/lib/calc/partial-area-acq-std-price.anchor.test.ts` (14건)
 
 | # | 항목 | 이유 |
 |---|---|---|
-| **B4-1b** | **다필지(`parcels[]`) 경로** | `transfer-tax-api.ts:518~527`이 감환지 의제취득면적을 이미 계산하고, `finalAcqArea`가 `multi-parcel-transfer.ts:329 acqArea` → `effectiveAcquisitionArea`로도 흐른다. **감환지 분기와의 배타성 + `effectiveAcquisitionArea` 다른 소비처**를 확인해야 BR4 이중 적용을 피할 수 있다 |
+| ~~B4-1b~~ | 다필지 경로 | ✅ **완료**(§5.6) |
 | **B4-2b** | **안분 계산기 UI** (2-state + 취득 당시 기준시가/감정가액 비율 입력) | 현재는 hint 안내로 사용자가 정답을 넣을 수 있게 했다. 계산기는 별도 위젯 설계 필요 |
 | **B4-2c** | **필요경비 안내** (C-5 — 취득가액과 동일 기준 안분) | 필요경비 입력이 경비 탭에 분산돼 있어 안내 지점 식별 필요 |
 
 **B4-1(단건)만으로도 세액 정정 효과가 있다** — `land` 일괄 · `housing` 토지·건물 분리 경로가 모두 단건 API를 거친다.
+
+---
+
+## 5.6 B4-1b Do 기록 (2026-07-30) — 다필지 경로
+
+### 5.6.1 선행 조건 해소 — `effectiveAcquisitionArea`는 표시 전용이다
+
+착수 전 확인이 필요했던 항목. `multi-parcel-transfer.ts`에서 `:331` 대입 → `:459` 반환뿐이고 **엔진 내 계산 재사용 0건 · UI 소비 0건**(grep 실측)이다. 필드 주석도 "환산 방식에서 **실제 사용된** 취득 면적"이라 정정된 값이 노출되는 것이 맞다.
+
+→ 면적을 바꿔도 다른 산식을 오염시키지 않는다. BR4의 나머지 축이 해소됐다.
+
+### 5.6.2 구현 — 단건과 같은 헬퍼
+
+`transfer-tax-api.ts:518`의 `finalAcqArea`를 `resolveAcqAreaForStdPrice`로 전환했다. 감환지 분기를 **먼저** 두어 이중 안분을 막고(호출부 방어), 헬퍼도 `reduction`을 통과시킨다(두 겹).
+
+### 5.6.3 🔴 필지 fallback 불일치 함정
+
+```ts
+transfer-tax-api.ts:498   const scenario = p.areaScenario ?? "partial";   // 필지 기본값
+transfer-tax-api-helpers.ts  (asset.areaScenario ?? "same") !== "partial"  // 헬퍼 기본값
+```
+
+**기본값이 다르다.** `p`를 그대로 넘기면 `areaScenario`가 `undefined`인 구 세션 필지에서 `"same"`으로 판정돼 **정정이 조용히 미적용**된다. 호출부가 `scenario`를 명시 주입해 해소했다(memory `feedback_store_default_vs_ui_display_fallback` 유형).
+
+anchor로 두 동작을 모두 고정했다 — 미주입 시 500㎡(미적용) · 주입 시 120㎡(적용).
+
+### 5.6.4 테스트
+
+anchor 5건 추가(총 19건). 전체 **12,539건 통과** · tsc 0 · lint 0 errors. 다필지 기존 테스트(`multi-parcel-transfer` · `multi-parcel-loss-offset` 34건) 무파손.
 
 ---
 
@@ -216,7 +245,7 @@ anchor: `__tests__/lib/calc/partial-area-acq-std-price.anchor.test.ts` (14건)
 | BR1 | 무조건 자동 안분이 L-2(구분 가액 우선)를 뭉갠다 | 2-state 선택 필수(C-7). 「자동 안분 fallback 금지」 정책과도 정합 |
 | BR2 | 안분 기준을 면적비로 하드코딩하면 부분별 단가가 다른 사안에서 오답 | C-3 우선순위 구현. 면적비는 별도 옵션으로 노출하지 않는다(기준시가 동일 시 자동으로 같아짐) |
 | ~~BR3~~ | 지분 × 부분비 이중 적용 | ✅ **소멸** — 지분은 금액축·부분비는 면적축으로 다른 차원(§5.5.2). 면적에 `applyRatio` 적용 0건 |
-| BR4 | 다필지 감환지 안분과 신규 안분이 중복 적용 | ✅ **단건 경로는 해소**(§5.5.3, `reduction`·`increase` 통과 anchor 2건). **다필지는 B4-1b로 이연** — `effectiveAcquisitionArea` 다른 소비처 확인 필요 |
+| ~~BR4~~ | 다필지 감환지 안분과 신규 안분이 중복 적용 | ✅ **전건 해소**(§5.5.3 · §5.6.2) — 감환지는 호출부에서 **먼저** 처리돼 헬퍼에 도달하지 않고, 도달해도 헬퍼가 통과시켜 **두 겹**으로 막힌다. `effectiveAcquisitionArea`는 표시 전용 echo(계산 재사용 0건) |
 | ~~BR5~~ | 기존 세액 anchor 파손 | ✅ **0건** — `partial` 사용 기존 테스트는 validate 불변식만 고정. 전체 12,471건 통과(§5.5.4) |
 
 ---
@@ -225,6 +254,7 @@ anchor: `__tests__/lib/calc/partial-area-acq-std-price.anchor.test.ts` (14건)
 
 | 날짜 | 버전 | 변경 |
 |---|---|---|
+| 2026-07-30 | v1.2 | **B4-1b(다필지) 완료**(§5.6, anchor 5건). 선행 조건 해소 — `effectiveAcquisitionArea`는 **표시 전용 echo**(계산 재사용 0건·UI 소비 0건)라 면적 정정이 다른 산식을 오염시키지 않는다 → **BR4 전건 해소**. 단건과 같은 `resolveAcqAreaForStdPrice`로 전환하고 감환지 분기를 앞에 둬 이중 안분을 두 겹으로 막았다. 🔴 **필지 fallback 불일치 함정** — 필지 기본값 `"partial"`(`transfer-tax-api.ts:498`) ↔ 헬퍼 기본값 `"same"`이라 `p`를 그대로 넘기면 구 세션 필지에서 정정이 **조용히 미적용**된다 → `scenario` 명시 주입, anchor 2방향 고정. 전체 12,539건 통과 |
 | 2026-07-30 | v1.1 | **B4-1(단건)·B4-2(안내)·B4-3 Do 완료**(§5.5, anchor 14건). `resolveAcqAreaForStdPrice()` 신설로 `partial` 시 엔진 `acquisitionArea`에 **양도분 면적**을 넘긴다(`transfer-tax-api.ts:320` 단일 배선). 세액 효과: 취득 300㎡·양도 100㎡·단가 50만/150만에서 환산비율 1.0→1/3, **양도차익 0 → 6억**. 🔑 **BR3 소멸** — 지분은 금액축·부분비는 면적축이라 이중 적용이 구조적으로 불가능(면적에 `applyRatio` 0건). BR4는 단건 해소(`reduction`·`increase` 배타 anchor)·다필지 이연. BR5 해소(기존 세액 anchor 파손 0건). 후속 3건: B4-1b 다필지 · B4-2b 안분 계산기 · B4-2c 필요경비 안내 |
 | 2026-07-30 | v1.0 | **분할본** — `basic-info-building-area-phase-ef.plan.md` rev.7 §8.6~§8.9에서 B-4만 추출. **폐기된 처방 3세대를 제거**하고 유효 결론을 §0 「확정 결론」으로 통합 |
 

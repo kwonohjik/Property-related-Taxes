@@ -514,11 +514,33 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             const scaleAmt = (n: number) =>
               primaryFractional ? applyRatio(n, primaryRatio) : n;
 
-            // 감환지: 의제 취득면적을 직접 계산해 API에 전달 (스키마 positive() 충족)
+            /**
+             * 취득 기준시가 산정용 면적 (B4-1b, 2026-07-30).
+             *
+             * 엔진은 `standardAtAcq = floor(acqArea × sqmAtAcq)`로 쓴다
+             * (`multi-parcel-transfer.ts:349`). 따라서 **취득 당시 단가에 곱할 면적**이며,
+             * 일부양도(`partial`)에서는 취득 전체가 아니라 **양도한 부분의 면적**이다 —
+             * 단건 경로와 같은 규약(`resolveAcqAreaForStdPrice`)이다.
+             *
+             * 근거: 「소득세법 시행령」 제176조의2 제2항 제2호의 "취득당시의 기준시가"는
+             * 법 제114조 제7항 문맥상 **양도자산의** 것이고, 조심 2018부0572(2018.05.03,
+             * 기각)도 "**각 필지의** 취득 당시 기준시가"를 안분 기준으로 삼았다.
+             *
+             * 감환지는 **먼저** 처리한다 — UI/여기서 의제취득면적
+             * (`priorLandArea × allocatedArea / entitlementArea`)을 계산하므로 그 뒤에
+             * 또 양도분을 적용하면 **이중 안분**이 된다(계획서 BR4).
+             * 증환지는 `entitlementArea < allocatedArea`라 `partial` 판정에 걸리지 않는다.
+             *
+             * `effectiveAcquisitionArea`(엔진 결과 echo, `:459`)도 이 값으로 표시되는데,
+             * 계산 재사용처가 없는 **표시 전용**이라 정정된 값이 노출되는 것이 맞다.
+             */
             const finalAcqArea = isReduction
               ? (parseFloat(p.priorLandArea) * parseFloat(p.allocatedArea)) /
                 parseFloat(p.entitlementArea)
-              : parseFloat(p.acquisitionArea) || 0;
+              // ⚠️ `scenario`를 명시 주입한다 — 필지 기본값은 `"partial"`(`:498`)이지만
+              //    헬퍼 기본값은 `"same"`이다. `p`를 그대로 넘기면 `areaScenario`가
+              //    undefined인 구 세션 필지에서 정정이 조용히 미적용된다.
+              : resolveAcqAreaForStdPrice({ ...p, areaScenario: scenario }) ?? 0;
 
             // 감환지: 양도면적 = 교부면적 (UI에서 transferArea=allocatedArea로 이미 동기화)
             const finalTransferArea = isReduction
