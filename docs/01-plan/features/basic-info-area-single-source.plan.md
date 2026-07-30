@@ -233,11 +233,18 @@ Phase B  ✅ 완료 — 라벨 "주택 연면적"→"주택 정착면적" + 법�
 Phase C  ✅ 완료 — building_site는 「소득세법 시행령」 §168의12가 아니라
          「지방세법 시행령」 제101조 제1항 2호·제2항 경로 (§4). 두 배율표 상이 확정 →
          **세액 오답**(도시지역 외 10배 vs 7배 등). urban-area.ts 주석도 오기(§4.4)
-Phase D  ⏳ 구조 정정 — housing-land.ts:37 삼항 제거 + building_site를 §101 경로로 라우팅
-         (당초 "buildingFootprint 신설"은 폐기 — 잘못된 구조 고착)
-Phase E  §5.3 "확인 필요" 6건 실측 → 축 C 단일 소스 대상 확정
-Phase F  기본사항에 축 C(바닥면적) 입력 추가 + 소비처 참조 전환
+Phase D  ⚠️ 부분 완료 — rev.2에서 재정의된 우선 1~3(GB 배율을 「지방세법 시행령」
+         제101조 제2항으로 정정)은 ✅ 완료(설계 rev.3 §6.5, 커밋 f84ca451).
+         원문 항목(housing-land.ts:37 삼항 제거 + building_site 라우팅)은 미착수 —
+         building_site가 UI 선택 불가·테스트 0건으로 **도달 불가** 확인돼 별건 격하.
+Phase E  ✅ 완료 — 축 C 6건 전부 배선 확인(선행 "미배선 의심"은 form-mapper.ts만
+         grep한 오판). "별장 부수토지 10배"는 가설 오류 → 축 B 재분류.
+         결과·정정: basic-info-building-area-phase-ef.plan.md §1
+Phase F  ⏳ 계획 수립 완료 — basic-info-building-area-phase-ef.plan.md
+         F1(주택 연면적·바닥면적 기본사항 추가) · F2(승격 확대) · F3(NBL 정착면적 통합)
 ```
+
+**§5.3 정정**: 축 C는 7건이 아니라 **6건**이며(별장 제거), 통합 대상은 **2건**(`buildingFootprintArea`·`gbBuildingFootprintArea`)이다. 나머지 4건은 비율 분자/분모·필지별·배율 미적용 carve-out으로 법령상 통합 불가 — 상세 [`basic-info-building-area-phase-ef.plan.md`](basic-info-building-area-phase-ef.plan.md) §1.
 
 **Phase B는 독립적이고 즉시 가능**(라벨만, 계산 무변경). Phase C가 D·E·F의 전제다.
 
