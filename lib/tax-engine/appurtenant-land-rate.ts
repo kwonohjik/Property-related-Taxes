@@ -5,14 +5,20 @@
  * companion 토지에 적용할 세율을 결정한다.
  *
  * [부수토지 일체과세 원리 — 주택과 함께 양도되는 부수토지의 세율]
- * 1차 근거: 소득세법 §89①3호 / 시행령 §154⑦의 입법 취지에 따라
- *          주택의 부수토지는 주택과 일체로 보아 주택의 보유기간·세율을 적용한다.
- *          (기재부 재산-53(2015.1.15), 재산-1354(2022.10.27))
+ * 1차 근거: 소득세법 §104①2호 괄호 — "주택(이에 딸린 토지로서 대통령령으로 정하는 토지를
+ *          포함한다. **이하 이 항에서 같다**)" → 부수토지는 주택의 보유기간·세율을 따른다.
+ *          위임 조문 = 시행령 §167의5(단기보유 주택부수토지의 범위).
+ *          (기재부 재산세제과-1354(2022.10.27), 사전-2021-법규재산-1231(2022.10.31),
+ *           조심 2024인3140(2024.9.3. 기각 — "토지·건물 별개 자산" 주장 배척))
  * 2차 근거: §104① 후단 "하나의 자산이 둘 이상 세율에 해당 시 큰 산출세액 적용"
  *          도 같은 결론을 지지.
  *
- * 면적 한도 (영 §154⑦):
- *   부수토지 인정 면적 = 건물 정착면적 × 5(도시지역) 또는 10(도시지역 외)
+ * ⚠️ 세율 축의 근거는 영 §167의5다. 영 §154⑦은 §89①3호가 위임한 **비과세 축**으로 축이 다르다
+ *    (배율 수치는 3/5/5/10로 동일 — 2026-07-30 KoreanLaw MCP 양쪽 본문 대조).
+ *
+ * 면적 한도 (영 §167의5):
+ *   부수토지 인정 면적 = 주택 정착면적 × 3배(수도권 도시지역 주거·상업·공업) /
+ *                        5배(수도권 녹지·수도권 밖 도시지역) / 10배(그 밖의 지역)
  *   한도 초과분은 일반 나대지로 분리 → 토지 본래 보유기간 기준 §104① 적용.
  *
  * 신축주택 취득일 (영 §162①4호):
@@ -22,7 +28,7 @@
  *
  * 법령코드 상수 (legal-codes.ts):
  *   TRANSFER.ONE_HOUSE_EXEMPT            — §89①3호 (1세대1주택 + 부수토지 일체과세)
- *   TRANSFER.APPURTENANT_LAND_LIMIT      — 영 §154⑦ (부수토지 한도)
+ *   TRANSFER.SHORT_TERM_APPURTENANT_LAND — 영 §167의5 (세율 축 부수토지 한도)
  *   TRANSFER.HIGHER_TAX_RULE             — §104①후단 (복수 세율 → 큰 산출세액)
  *   TRANSFER.SELF_BUILT_ACQUISITION_DATE — 영 §162①4호 (자가건축 취득일)
  */
@@ -35,13 +41,13 @@ import type { TransferTaxInput } from "./types/transfer.types";
 export interface CompanionLandRateInput {
   /** companion 자산 종류 ("land" 여야 부수토지 분기 대상) */
   assetKind: string;
-  /** companion 토지 면적 (㎡) — 영 §154⑦ 한도 초과 판정용 */
+  /** companion 토지 면적 (㎡) — 영 §167의5 한도 초과 판정용 */
   area?: number;
   /** 사용자 수동 세율 오버라이드 */
   manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
   /**
    * 토지 성질 명시 입력 (사용자가 자산 카드에서 선언).
-   * - "appurtenant_to_housing": 주택 부수토지 (§89①3호·영§154⑦ 일체과세 대상)
+   * - "appurtenant_to_housing": 주택 부수토지 (§104①2호·영§167의5 일체과세 대상)
    * - "non_appurtenant": 독립 나대지 (일체과세 대상 아님)
    * - undefined: 미선언 → 자동 분기 진입 안 함
    */
@@ -49,7 +55,7 @@ export interface CompanionLandRateInput {
 }
 
 /**
- * 부수토지 인정 한도 zone (소득세법 시행령 §154⑦, 2022년 개정 후)
+ * 부수토지 인정 한도 zone (소득세법 시행령 §167의5 — 세율 축)
  * - "metropolitan_residential": 수도권 + 도시지역 + 주거·상업·공업 → 3배
  * - "non_metropolitan_or_green": 수도권 녹지 또는 수도권 외 도시지역 → 5배
  * - "non_urban": 도시지역 외 → 10배
@@ -60,7 +66,7 @@ export type AppurtenantLandZone =
   | "non_urban";
 
 /**
- * zone → 정착면적 배율 (영 §154⑦)
+ * zone → 정착면적 배율 (영 §167의5)
  */
 export function appurtenantLandMultiplier(zone: AppurtenantLandZone | undefined): number {
   switch (zone) {
@@ -87,17 +93,17 @@ export interface PrimaryContextForCompanionRate {
    * 영 §162①4호 기준 취득일(사용승인일 등) 기준으로 산정해야 정확함.
    */
   holdingMonths: number;
-  /** 건물 정착면적 (㎡) — 영 §154⑦ 한도 산정 */
+  /** 건물 정착면적 (㎡) — 영 §167의5 한도 산정 */
   buildingFootprintArea?: number;
   /**
-   * @deprecated isUrbanArea 단일 boolean은 영 §154⑦ 3단계(3/5/10)를 표현 못함.
+   * @deprecated isUrbanArea 단일 boolean은 영 §167의5 3단계(3/5/10)를 표현 못함.
    * 신규 코드는 appurtenantLandZone 사용. 이 필드는 하위호환만 유지:
    *   true  → "non_metropolitan_or_green" (5배 보수적 매핑)
    *   false → "non_urban" (10배)
    */
   isUrbanArea?: boolean;
   /**
-   * 부수토지 한도 zone (영 §154⑦) — 3/5/10배 결정.
+   * 부수토지 한도 zone (영 §167의5) — 3/5/10배 결정.
    * 신규 코드는 이 필드를 사용. isUrbanArea보다 우선.
    */
   appurtenantLandZone?: AppurtenantLandZone;
@@ -133,8 +139,8 @@ export interface CompanionLandRateResolution {
  *
  * [포괄적 일체과세 원칙]
  *   부수토지=Yes 선언 시 주택과 동일한 보유기간 기준 세율 적용 (§104①).
- *   - 1년 미만: 70% (§104①3호 단서, 주택 단기)
- *   - 1년~2년: 60% (§104①3호 본문, 주택 1~2년)
+ *   - 1년 미만: 70% (§104①3호 괄호 — 주택·입주권·분양권)
+ *   - 1년~2년: 60% (§104①2호 괄호 — 주택·입주권·분양권)
  *   - 2년 이상: 누진세율 (일반 세율, "progressive" 신호)
  *
  * 반환값:
@@ -142,8 +148,8 @@ export interface CompanionLandRateResolution {
  *   "progressive": 누진세율 적용 신호 — 호출부에서 `manualProgressive=true`로 처리
  */
 export function housingRateForHoldingPeriod(holdingMonths: number): number | "progressive" {
-  if (holdingMonths < 12) return 0.70;  // 1년 미만 → 70%
-  if (holdingMonths < 24) return 0.60;  // 1년~2년 → 60%
+  if (holdingMonths < 12) return 0.70;  // 1년 미만 → 70% (§104①3호)
+  if (holdingMonths < 24) return 0.60;  // 1년~2년 → 60% (§104①2호)
   return "progressive";                  // 2년 이상 → 누진세율
 }
 
@@ -153,12 +159,12 @@ export function housingRateForHoldingPeriod(holdingMonths: number): number | "pr
  * 호출 순서:
  *   1. 수동 오버라이드(manualHoldingPeriodOverride) 우선.
  *   2. landNature === "appurtenant_to_housing" 선언 시 주택 보유기간 기준 세율 동적 적용.
- *   3. 면적 한도 검증 (영 §154⑦).
+ *   3. 면적 한도 검증 (영 §167의5).
  *   4. 조건 미충족 시 applied=false → 호출부가 기존 경로(본래 보유기간 기준) 진행.
  *
  * [설계 변경 — 자동 분기 단순화]
  *   Before: primary 보유 1년 미만 + 일괄양도 조건 휴리스틱 (법령상 무관)
- *   After:  landNature 명시 입력 단독 판정 (부수토지 판정 = 사실 판단, 법령 근거 §154⑦)
+ *   After:  landNature 명시 입력 단독 판정 (부수토지 판정 = 사실 판단, 법령 근거 영 §167의5)
  */
 export function resolveCompanionLandRate(
   companion: CompanionLandRateInput,
@@ -197,9 +203,9 @@ export function resolveCompanionLandRate(
   }
 
   const appliedReason =
-    "주택·부수토지 일체과세(§89①3호·영§154⑦, 기재부 재산-53/재산-1354)";
+    "주택·부수토지 일체과세(§104①2호·영§167의5, 기재부 재산세제과-1354·조심 2024인3140)";
 
-  // ── 면적 한도 검증 (영 §154⑦) ──
+  // ── 면적 한도 검증 (영 §167의5) ──
   const hasFootprintArea =
     primary.buildingFootprintArea !== undefined && primary.buildingFootprintArea > 0;
 
@@ -207,7 +213,7 @@ export function resolveCompanionLandRate(
   const rateDecision = housingRateForHoldingPeriod(primary.holdingMonths);
 
   if (hasFootprintArea) {
-    // 영 §154⑦ 부수토지 한도 계산 (정착면적 입력된 경우)
+    // 영 §167의5 부수토지 한도 계산 (정착면적 입력된 경우)
     // 우선순위: appurtenantLandZone(3/5/10배) > isUrbanArea(deprecated, 5/10배 fallback)
     const zone: AppurtenantLandZone | undefined =
       primary.appurtenantLandZone ??
@@ -224,7 +230,7 @@ export function resolveCompanionLandRate(
     if (excessArea > 0) {
       // 한도 초과분 분리:
       //   한도 내 → 주택 보유기간 기준 세율 (포괄적 일체과세)
-      //   한도 초과 → 토지 본래 보유기간 기준 §104①3호 세율 (applied=false에서 처리)
+      //   한도 초과 → 토지 본래 보유기간 기준 §104① 세율 (route 레이어에서 별도 자산 분리)
       if (rateDecision === "progressive") {
         return {
           applied: true,

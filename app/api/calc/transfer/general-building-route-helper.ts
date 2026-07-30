@@ -153,7 +153,8 @@ function buildProperties(
       extensionFloorArea: isBuilding ? card.extensionFloorArea : undefined,
       // 건물 카드: buildingAcquisitionCause → acquisitionCause + decedent/donor (#6)
       // 토지 카드: landAcquisitionCause + decedent/donorAcquisitionDate (#4-a)
-      // 단건/aggregate 엔진의 단기보유 기산점 분기(영 §95④)에 사용.
+      // 단건/aggregate 엔진의 단기보유 기산점 분기(「소득세법」 제104조 제2항 — 상속은
+      // 피상속인 취득일, §97의2① 이월과세는 증여자 취득일)에 사용.
       ...(isBuilding && card.buildingAcquisitionCause
         ? {
             acquisitionCause: card.buildingAcquisitionCause,

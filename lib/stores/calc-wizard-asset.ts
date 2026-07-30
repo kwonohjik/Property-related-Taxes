@@ -263,14 +263,14 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    */
   actualUseDate: string;
 
-  // ── 부수토지 한도 산정 (영 §154⑦, 2022년 개정 후 3단계) ──
+  // ── 부수토지 한도 산정 (영 §167의5 — 세율 축, 3단계) ──
   /**
-   * @deprecated isUrbanArea 단일 boolean은 영 §154⑦ 3단계(3/5/10배) 표현 못함.
+   * @deprecated isUrbanArea 단일 boolean은 영 §167의5 3단계(3/5/10배) 표현 못함.
    * 신규 입력은 appurtenantLandZone 사용. 하위호환 위해 유지.
    */
   isUrbanArea: boolean | undefined;
   /**
-   * 부수토지 인정 한도 zone (영 §154⑦):
+   * 부수토지 인정 한도 zone (영 §167의5):
    * - "metropolitan_residential": 수도권 도시지역 + 주거·상업·공업 → 3배
    * - "non_metropolitan_or_green": 수도권 녹지 또는 수도권 외 도시지역 → 5배
    * - "non_urban": 도시지역 외 → 10배
