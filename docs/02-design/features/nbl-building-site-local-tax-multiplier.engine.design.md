@@ -229,9 +229,57 @@ A-BS-2·3·4·7은 **의도적으로 오답을 고정**한다. Do에서 실패�
 
 ---
 
+## 6.5 Do 완료 기록 (2026-07-30, rev.3)
+
+### 6.5.1 rev.2 설계와 어긋난 실측 2건
+
+| # | rev.2 서술 | 실제 |
+|---|---|---|
+| D-1 | 호출부 **2곳**(`general-building-valuation.ts:636`·`general-building-extension.ts:216`) | 🔴 **3곳** — `app/api/calc/transfer/general-building-route-helper.ts:592`(**실거래가 모드 GB**)가 누락돼 있었다. Pre-Do grep이 `lib/`만 훑어 `app/`을 놓쳤다 |
+| D-2 | UI는 대상 아님 | 🔴 `GeneralBuildingBlock.tsx:52~63` `getMultiplierLabel()`이 「소득세법 시행령」 제168조의12 배율을 **인라인 재구현**(dual truth). 엔진과 같은 오답을 표시했다 |
+
+### 6.5.2 실제 변경
+
+| 파일 | 변경 |
+|---|---|
+| `lib/tax-engine/non-business-land/urban-area.ts` | `LOCAL_TAX_ZONE_AREA_MULTIPLIER`(정본 이동) + `ZONE_LABEL` + `getBuildingSiteMultiplier(zoneType)` 신설. `getLandFootprintMultiplier` **폐지** |
+| `lib/tax-engine/non-business-land/other-land.ts` | 로컬 `ZONE_AREA_MULTIPLIER` 선언 제거 → `urban-area.ts` import (값 변경 0) |
+| `lib/tax-engine/general-building-valuation.ts` | 배율 교체 + 근거 주석 정정 + 표 미등재 용도지역 차단 |
+| `lib/tax-engine/general-building-extension.ts` | 동상 (증축 경로) |
+| `app/api/calc/transfer/general-building-route-helper.ts` | 동상 (실거래가 경로) + 고아 `isMetropolitan` 구조분해 제거 |
+| `components/calc/transfer/GeneralBuildingBlock.tsx` | 인라인 배율 재구현 제거 → 엔진 `getBuildingSiteMultiplier` 재사용. **수도권 토글 제거**(배율에 영향 없음) |
+| `lib/stores/calc-wizard-asset-gb.ts` | `gbIsMetropolitan` `@deprecated` tombstone (배관은 하위호환 잔존) |
+
+### 6.5.3 U-5 해소 — `isMetropolitan` 다른 용도
+
+`gbIsMetropolitan`의 소비처는 `transfer-tax-api-gb.ts:121` → 엔진 `isMetropolitan` **단 하나**였고, 그 인자의 유일한 사용처가 교체 대상 배율 함수였다. → **다른 용도 없음.** UI 토글 제거가 안전하며, 남겨두면 아무 효과 없는 입력을 노출하는 것이 된다.
+
+### 6.5.4 테스트
+
+| 구분 | 결과 |
+|---|---|
+| anchor 뒤집기 | `building-site-multiplier.anchor.test.ts` — 오답 고정 → 정답 단언으로 전환. 불일치 규모 19 → **0** |
+| **경계 케이스 신설** | 4건 — 종전·정정 허용면적 사이 구간에서 판정이 실제로 뒤집힘을 고정(녹지 600㎡·도시지역 외 800㎡·일반주거 350㎡) + 수도권 무영향 |
+| 기존 테스트 기대값 수정 | **3건** — 사례 31 `multiplierDetail` 문구(배율 3=3 동일), 사례 33 배율 3→4·허용면적 171→228㎡ |
+| **세액 anchor 변경** | **0건** — 사례 33 토지 57㎡가 171·228 양쪽 이내라 판정 불변 |
+| 전체 회귀 | `1112 passed / 1 skipped` · `12,416 tests passed` · tsc 0 · lint 0 errors |
+
+**⚠️ 기존 코퍼스가 이 결함을 못 잡은 이유**: GB 테스트의 `landArea`가 종전·정정 배율 양쪽 허용면적 이내였다(사례 33: 57 ≤ 171 ≤ 228). 배율 경계를 밟는 케이스가 0건이었다 — §6.5.4의 경계 anchor가 그 구멍을 메운다.
+
+### 6.5.5 남은 별건
+
+| # | 항목 |
+|---|---|
+| B-1 | 「지방세법 시행령」 제101조 제1항 제2호 나목 (건물 시가표준액 < 부속토지의 2% → 바닥면적만 별도합산) — GB에 시가표준액 입력 필드 부재 |
+| B-2 | `building_site` landType 라우팅 정리 — UI 선택 불가·테스트 0건으로 도달 불가 |
+| B-3 | `gbIsMetropolitan` 폼 필드·API 배관 완전 제거 — store 마이그레이션·E2E 픽스처 4곳 동반 수정 필요 |
+
+---
+
 ## 7. 변경 이력
 
 | 날짜 | 버전 | 변경 |
 |---|---|---|
 | 2026-07-30 | v1.0 | 최초 작성 — 배율표 상이 확정 기반. anchor 9건·리스크 5건·미검증 4건 |
+| 2026-07-30 | v1.2 (rev.3) | **Do 완료**(§6.5). 설계와 어긋난 실측 2건: 호출부가 2곳이 아니라 **3곳**(실거래가 route helper 누락), UI에도 배율 인라인 재구현 존재. `getBuildingSiteMultiplier` 신설·`getLandFootprintMultiplier` 폐지·수도권 토글 제거. 기존 테스트 3건 갱신·**세액 anchor 변경 0건**·경계 anchor 4건 신설. 전체 12,416건 통과 |
 | 2026-07-30 | v1.1 (rev.2) | **U-1~U-4 해소로 주 대상 교체** — `building_site`는 UI 선택 불가(도달 불가)로 별건 격하, 실제 세액 오답은 **일반건물(GB) 부수토지**(`getLandFootprintMultiplier` 호출부 2곳). probe 실측: 22개 용도지역×수도권 조합 중 **19개 불일치**(과다·과소 양방향). §0 신설 |

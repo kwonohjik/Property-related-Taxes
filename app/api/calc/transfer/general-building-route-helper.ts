@@ -19,7 +19,7 @@ import {
   apportionLandByBusinessArea,
   type GeneralBuildingInput,
 } from "@/lib/tax-engine/general-building-valuation";
-import { getLandFootprintMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
+import { getBuildingSiteMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -499,7 +499,9 @@ export function calculateGeneralBuildingActualTransfer(
     totalTransferPrice, transferDate, acquisitionDate,
     landArea, buildingFootprintArea,
     transferLandPricePerSqm, transferBuildingStdPrice,
-    zoneType, isMetropolitan = false, isUnregistered = false,
+    // isMetropolitan은 더 이상 구조분해하지 않는다 — 「지방세법 시행령」 제101조 제2항
+    //   배율에 수도권 축이 없다(2026-07-30 정정). payload 필드 자체는 하위호환으로 잔존.
+    zoneType, isUnregistered = false,
     actualAcquisitionPrice, actualExpenses,
     acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
     burdenedGiftInfo,
@@ -589,9 +591,13 @@ export function calculateGeneralBuildingActualTransfer(
   } else {
     if (!zoneType) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT,
       "일반건물(실거래가): zoneType(용도지역)이 필요합니다.");
-    const { multiplier } = getLandFootprintMultiplier(
-      zoneType as ZoneType, isMetropolitan, "general_building",
-    );
+    // 건축물(비주택) 부속토지 — 「소득세법」 제104조의3 제1항 제4호 나목 →
+    //   「지방세법」 제106조 제1항 제2호 → 「지방세법 시행령」 제101조 제1항 제2호·제2항.
+    // 표에 없는 용도지역(residential 등)은 추정 금지 → 차단.
+    const resolved = getBuildingSiteMultiplier(zoneType as ZoneType);
+    if (!resolved) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT,
+      `일반건물(실거래가): 용도지역 "${zoneType}"은 「지방세법 시행령」 제101조 제2항 적용배율표에 대응 항목이 없습니다.`);
+    const { multiplier } = resolved;
     const allowedArea = buildingFootprintArea * multiplier;
     isWithinNblRatio = landArea <= allowedArea;
     nonBusinessArea = Math.max(0, landArea - allowedArea);

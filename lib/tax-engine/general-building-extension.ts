@@ -25,7 +25,7 @@
 
 import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
-import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
+import { getBuildingSiteMultiplier } from "./non-business-land/urban-area";
 import type { ZoneType } from "./non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
@@ -195,7 +195,10 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     extensionUsedEstimated = false;
   }
 
-  // ── 비사업용토지 판정 (공통, §104의3·§168의12) ───────────────────────
+  // ── 비사업용토지 판정 (공통) ──────────────────────────────────────────
+  // 「소득세법」 제104조의3 제1항 제4호 나목 → 「지방세법」 제106조 제1항 제2호
+  //   → 「지방세법 시행령」 제101조 제1항 제2호(바닥면적 × 제2항 적용배율).
+  // ⚠️ 「소득세법 시행령」 제168조의12(주택 부수토지)는 이 경로에 쓰지 않는다.
   let appliedMultiplier: number;
   let multiplierDetail: string;
   let allowedLandArea: number;
@@ -213,11 +216,15 @@ export function buildGeneralBuildingAssetCardsWithExtension(
         "일반건물(증축) 비사업용토지 판정: zoneType(용도지역)이 입력되지 않았습니다.",
       );
     }
-    const { multiplier, detail } = getLandFootprintMultiplier(
-      input.zoneType as ZoneType,
-      input.isMetropolitan ?? false,
-      "general_building",
-    );
+    // 「지방세법 시행령」 제101조 제2항 표에 없는 용도지역(residential 등)은 추정 금지 → 차단
+    const resolved = getBuildingSiteMultiplier(input.zoneType as ZoneType);
+    if (!resolved) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `일반건물(증축) 비사업용토지 판정: 용도지역 "${input.zoneType}"은 「지방세법 시행령」 제101조 제2항 적용배율표에 대응 항목이 없습니다.`,
+      );
+    }
+    const { multiplier, detail } = resolved;
     appliedMultiplier = multiplier;
     multiplierDetail = detail;
     allowedLandArea = input.buildingFootprintArea * multiplier;
