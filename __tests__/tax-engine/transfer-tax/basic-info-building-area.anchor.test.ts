@@ -322,3 +322,86 @@ describe("U-9 [현행 고정] — 실거래가 모드는 면적 안분을 하지
     expect(Math.floor(total(ACQ_AREA, unit) * (TR_AREA / ACQ_AREA))).toBe(total(TR_AREA, unit));
   });
 });
+
+// ══════════════════════════════════════════════════════════
+// U-10 — 법령·심판례 확인 결과 (KoreanLaw 실측 2026-07-30)
+// ══════════════════════════════════════════════════════════
+//
+// ## 「소득세법 시행령」 제176조의2 제2항 제2호 원문 (MST 286211, 시행 2026-07-01)
+//
+//   환산가액 = 양도당시의 실지거래가액 × (취득당시의 기준시가 / 양도당시의 기준시가)
+//
+// 조문은 **면적을 언급하지 않는다**. "취득당시의 기준시가"는 법 제114조 제7항 문맥상
+// **양도자산의** 취득당시 기준시가다 — 일부양도라면 양도한 부분이 그 자산이다.
+//
+// ## 조심 2018부0572 (2018.05.03, 기각) — 분할 양도 직접 사례
+//
+//   사실: 분할전토지 1,134㎡를 2005년 취득 → 2017년 분할된 644㎡를 양도(수용)
+//   처분: 쟁점토지 취득가액 = 분할전토지 취득가액을 **취득 당시 기준시가 비율로 안분**
+//   재결: **기각**(처분 정당). 판단 요지 —
+//     "일괄하여 취득한 토지의 총 취득가액은 확인되나 **각 필지별 실지취득가액이
+//      불분명한 경우**, 각 토지의 취득가액 산정은 전체 토지의 실지취득가액을
+//      **각 필지의 취득 당시 기준시가 비율로 안분**하여 산정하는 것이 합리적"
+//   배척된 청구주장: 양도 당시 감정평가액 기준 안분
+//
+//   같은 방향 — 감정가액 안분 배척: 국심2005구1458(기각) · 국심1992서2655(기각)
+//
+// ## 도출되는 세 가지 제약
+//
+//   L-1 안분 기준은 **면적비가 아니라 취득 당시 기준시가 비율**이다.
+//       2018부0572는 쟁점·잔여토지의 취득 당시 공시지가가 **동일**한 사안이어서
+//       결과적으로 면적비와 같아졌을 뿐이다(처분청 의견 "공시지가가 동일하며").
+//   L-2 안분은 **실지취득가액이 불분명한 경우의 보충적 방법**이다.
+//       계약서에 구분 기재돼 있으면 그 값을 쓴다 → 무조건 자동 안분은 금지.
+//   L-3 취득 기준시가(환산 분자)는 **양도한 부분의** 취득 당시 기준시가다.
+//       "각 필지의 취득 당시 기준시가"(2018부0572) — 부분별 단가가 다르면 그 단가.
+//
+// ⚠️ 이 describe는 **법령 제약을 상수로 고정**한다. 구현은 B-4 Do에서 한다.
+
+describe("U-10 [법령 제약 고정] — 분할 양도 취득가액 산정", () => {
+  it("L-1 안분 기준은 취득 당시 기준시가 비율 — 단가가 다르면 면적비와 갈린다", () => {
+    // 분할전 1,134㎡ = 양도분 644㎡ + 잔여 490㎡
+    const ACQ_TOTAL = 1_134;
+    const SOLD = 644;
+    const REMAIN = ACQ_TOTAL - SOLD;
+    expect(REMAIN).toBe(490);
+    const acqPriceTotal = 340_200_000;
+
+    // (a) 취득 당시 단가가 같은 경우 — 기준시가비 = 면적비 (2018부0572 사안)
+    const sameUnit = 300_000;
+    const stdSold = SOLD * sameUnit;
+    const stdRemain = REMAIN * sameUnit;
+    const byStdSame = Math.floor((acqPriceTotal * stdSold) / (stdSold + stdRemain));
+    const byArea = Math.floor((acqPriceTotal * SOLD) / ACQ_TOTAL);
+    expect(byStdSame).toBe(byArea); // 우연한 일치
+
+    // (b) 단가가 다른 경우 — 갈린다 (양도분이 제3종일반주거, 잔여가 자연녹지 등)
+    const stdSoldHi = SOLD * 500_000;
+    const stdRemainLo = REMAIN * 200_000;
+    const byStdDiff = Math.floor((acqPriceTotal * stdSoldHi) / (stdSoldHi + stdRemainLo));
+    expect(byStdDiff).not.toBe(byArea);
+    expect(byStdDiff).toBeGreaterThan(byArea); // 비싼 부분을 양도 → 취득가액도 더 배분
+  });
+
+  it("L-2 안분은 보충적 — 실지취득가액이 구분되면 그 값이 우선한다", () => {
+    // 2018부0572: "매매계약서에는 쟁점토지와 잔여토지의 가액이 구분되어 있지 아니한 점"
+    //   → 구분되어 있었다면 안분하지 않았을 것이다.
+    // ⇒ 무조건 자동 안분은 이 우선순위를 뭉갠다(「자동 안분 fallback 금지」 정책 정합).
+    const contractSpecified = 250_000_000; // 계약서상 양도분 취득가액
+    const wouldBeApportioned = Math.floor((340_200_000 * 644) / 1_134);
+    expect(contractSpecified).not.toBe(wouldBeApportioned);
+    // 두 값이 다르므로 "구분 가액 유무"를 사용자에게 물어야 한다.
+  });
+
+  it("L-3 환산 분자는 양도한 부분의 취득 당시 기준시가 — 면적비 적용과 동치", () => {
+    // 부분별 단가가 같다면: 양도분 면적 × 취득 단가 === 전체 기준시가 × 면적비
+    const unit = 300_000;
+    const SOLD = 644;
+    const ACQ_TOTAL = 1_134;
+    expect(Math.floor(SOLD * unit)).toBe(
+      Math.floor(Math.floor(ACQ_TOTAL * unit) * (SOLD / ACQ_TOTAL)),
+    );
+    // 현행 구현은 분자에 **전체 면적**(1,134㎡)을 쓴다 → 이 값보다 크다.
+    expect(Math.floor(ACQ_TOTAL * unit)).toBeGreaterThan(Math.floor(SOLD * unit));
+  });
+});
