@@ -54,7 +54,12 @@ function calcAcqStdPair(input: TransferTaxInput): { land: number; building: numb
   if (landStd == null) return null;
 
   const buildingStd = input.buildingStandardPriceAtAcquisition;
-  if (input.propertyType === "building" && input.isSeparateAcquisition === true && buildingStd != null) {
+  // **주택도 포함**한다(2026-07-30). §163⑥2호가목은 "라목의 주택 **취득당시**의 라목 가액 × 3/100"
+  // 이라 **취득 당시 라목 주택으로서의 가액이 존재**해야 적용된다. 토지를 먼저 취득하고 건물을
+  // 나중에 신축·취득했다면 토지 취득 당시엔 주택이 없어 라목 결합 공시 자체가 없고,
+  // 각 파트에 §163⑥1호(토지)·2호(건물)가 따로 적용된다. 종전에는 이 경로가 `building` 전용이라
+  // 주택 별개취득에서 결합 총액 역산이 강제됐고, 건물분에 **토지 취득시점**이 섞였다(§164③ 위반).
+  if (input.isSeparateAcquisition === true && buildingStd != null) {
     // 파트별 독립 — 결합 총액(standardPriceAtAcquisition)을 참조하지 않는다.
     // 혼합 역산(신규 land + (레거시 총액 − 신규 land)) 금지: 서로 다른 취득시점 값의 뺄셈은 근거가 없다.
     return { land: landStd, building: buildingStd };
@@ -395,7 +400,6 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   // 취득시 기준시가를 실제로 쓴 경우에만 "역산" 안내를 띄운다 — 실가 파트는 그 값을
   // 쓰지 않았으므로 안내가 거짓이 된다(결과 카드 fine-print, SplitGainDetailSection).
   const buildingStdDerivedFromTotal = acqStd != null && !(
-    input.propertyType === "building" &&
     input.isSeparateAcquisition === true &&
     input.buildingStandardPriceAtAcquisition != null
   );

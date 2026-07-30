@@ -116,8 +116,8 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     //    `buildingStandardPriceAtAcq`만 보고 차단하면 **입력 칸이 없는데 막히는 dead-end**가 된다
     //    (⑧ 규칙 — UI 통과 ↔ validate 차단 모순). 술어가 false면 그 값은 계산에 쓰이지 않으므로
     //    all-or-nothing을 요구할 이유도 없다.
+    // 자산 종류 무관(2026-07-30) — 주택 별개취득도 파트 독립 산정을 쓴다(§163⑥2호가목 "취득당시").
     if (
-      asset.assetKind === "building" &&
       opt(asset.buildingStandardPriceAtAcq) != null &&
       requiresAcqStdPrice(withExpenses(asset), {
         landMode: effectivePartAcqMode(asset.landAcqMode, asset),
@@ -140,8 +140,8 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     //
     // 술어 게이트 필수 — 실가/실가에서는 취득시 기준시가 자체가 계산에 쓰이지 않아
     // 입력 카드도 숨겨지므로, 요구하면 입력 칸 없는 dead-end가 된다(V3와 동일 원칙).
+    // 자산 종류 무관(2026-07-30) — 주택도 결합 총액 역산이 아니라 파트별 나목 기준시가를 쓴다.
     if (
-      asset.assetKind === "building" &&
       opt(asset.buildingStandardPriceAtAcq) == null &&
       requiresAcqStdPrice(withExpenses(asset), {
         landMode: effectivePartAcqMode(asset.landAcqMode, asset),

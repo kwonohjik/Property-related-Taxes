@@ -99,9 +99,11 @@ export function buildSplitPayload(
     ...(isSplitActive
       ? { landAcqMode, buildingAcqMode, saleSplitMode, isSeparateAcquisition: separateAcquisition }
       : {}),
-    // 건물분 취득시 기준시가(§99①1호 나목) — `building` + 별개 취득 전용.
-    // 주택(라목)은 부수토지 포함 결합 공시라 파트 독립 입력이 성립하지 않는다(개산공제 법정액 이탈).
-    ...(separateAcquisition && primary.assetKind === "building"
+    // 건물분 취득시 기준시가(§99①1호 나목) — **별개 취득 전용**(자산 종류 무관, 2026-07-30).
+    // 주택도 포함한다: §163⑥2호가목은 "라목의 주택 **취득당시**의 라목 가액"을 요구하는데,
+    // 토지를 먼저 취득하고 건물을 나중에 취득했다면 토지 취득 당시엔 주택이 없어 라목 결합
+    // 공시가 존재하지 않는다 → 각 파트가 자기 취득일 기준으로 §163⑥1호·2호를 따른다.
+    ...(separateAcquisition
       ? {
           buildingStandardPriceAtAcquisition: parseAmount(primary.buildingStandardPriceAtAcq) || undefined,
           // **결합 총액 전송 차단**(2026-07-29 Phase 3). 이 조합에서 자산 전체 취득시 기준시가

@@ -196,13 +196,15 @@ describe("배치 불변식 — 같은 카드가 두 곳에 동시 노출되지 �
 });
 
 /**
- * 이미지 8 — 주택 + 건물 환산에서 「취득시 건물기준시가」가 화면에 없던 문제(사용자 보고 2026-07-30).
+ * 이미지 8·9 — 주택 별개취득도 **건물분 취득시 기준시가를 파트별 독립 입력**한다.
  *
- * 주택(§99①1호 라목)은 부수토지 포함 결합 공시라 건물분 단독 입력 칸을 둘 수 없다
- * (개산공제 법정액 §163⑥2호가목 이탈). 입력은 위쪽 두 곳에 두되 **역산 결과를 건물 섹션에 표시**한다.
+ * 종전에는 주택을 라목 결합 공시 역산 전용으로 두어 건물 섹션에 입력·표시가 없었다.
+ * §163⑥2호가목은 "라목의 주택 **취득당시**의 라목 가액 × 3/100"이라 **취득 당시 라목 주택으로서의
+ * 가액이 존재**해야 적용된다 — 토지를 먼저 취득하고 건물을 나중에 신축·취득했다면 토지 취득
+ * 당시엔 주택이 없어 라목 결합 공시가 애초에 없다(§163⑥1호·2호가 각각 적용).
  */
-describe("이미지 8 — 주택 건물분 취득시 기준시가 파생 표시", () => {
-  const CASE8: Init = {
+describe("이미지 8·9 — 주택 별개취득 건물분 취득시 기준시가 파트 독립", () => {
+  const CASE9: Init = {
     ...SPLIT_ACTUAL,
     assetKind: "housing",
     landAcqMode: "actual",
@@ -210,50 +212,28 @@ describe("이미지 8 — 주택 건물분 취득시 기준시가 파생 표시"
     landAcquisitionPrice: "150,000,000",
   };
 
-  const derivedCard = () => screen.queryAllByTestId("split-building-std-acq-derived-card");
-  const derivedValue = () => screen.queryAllByTestId("split-building-std-acq-derived");
+  const acqCard = () => screen.queryAllByTestId("split-building-std-acq-card");
+  const acqInput = () => screen.queryAllByTestId("split-building-std-acq");
 
-  it("🔴 건물 섹션에 취득시 건물기준시가가 표시된다", () => {
-    render(<Harness init={CASE8} />);
-    expect(derivedCard(), "값이 어디에도 안 보이면 환산 분자를 확인할 수 없다").toHaveLength(1);
+  it("🔴 주택도 건물 취득시 기준시가 입력 카드가 노출된다", () => {
+    render(<Harness init={CASE9} />);
+    expect(acqCard(), "별개취득에는 라목 결합 공시가 없어 파트 독립이 정본").toHaveLength(1);
+    expect(acqInput()).toHaveLength(1);
   });
 
-  it("결합 총액 − 토지분 역산값을 보여준다 (엔진 calcAcqStdPair와 같은 산식)", () => {
-    render(
-      <Harness
-        init={{
-          ...CASE8,
-          standardPriceAtAcq: "500,000,000",
-          standardPricePerSqmAtAcq: "1,000,000",
-          acquisitionArea: "200", // 토지분 = 200,000,000
-        }}
-      />,
-    );
-    expect(derivedValue()[0].textContent).toBe("300,000,000");
+  it("🔴 취득시 계산 런처도 제공된다 (양도시와 동일)", () => {
+    render(<Harness init={CASE9} />);
+    expect(screen.queryAllByRole("button", { name: "취득시 건물 기준시가 계산" })).toHaveLength(1);
   });
 
-  it("총액 미입력 → 어디를 채워야 하는지 안내한다 (조용한 0 금지)", () => {
-    render(<Harness init={{ ...CASE8, standardPriceAtAcq: "" }} />);
-    expect(derivedValue()[0].textContent).toContain("취득시 기준시가(개별·공동주택가격)");
+  it("역산 안내(dangling reference)는 더 이상 표시하지 않는다", () => {
+    render(<Harness init={CASE9} />);
+    expect(screen.queryAllByTestId("split-housing-building-derived-note")).toHaveLength(0);
   });
 
-  it("직접 입력 칸은 두지 않는다 — 라목 항등성 유지", () => {
-    render(<Harness init={CASE8} />);
-    expect(
-      screen.queryAllByTestId("split-building-std-acq"),
-      "주택에 건물분 직접 입력을 열면 토지분+건물분 ≡ 총액이 깨져 개산공제가 법정액을 이탈",
-    ).toHaveLength(0);
-  });
-
-  it("일반건물은 종전대로 직접 입력 카드 — 파생 카드 미노출", () => {
-    render(<Harness init={{ ...CASE8, assetKind: "building" }} />);
-    expect(derivedCard()).toHaveLength(0);
-    expect(screen.queryAllByTestId("split-building-std-acq-card")).toHaveLength(1);
-  });
-
-  it("취득시 기준시가가 계산에 불필요하면(양쪽 실가) 파생 카드도 없다", () => {
-    render(<Harness init={{ ...CASE8, buildingAcqMode: "actual", buildingAcquisitionPrice: "100,000,000" }} />);
-    expect(derivedCard()).toHaveLength(0);
+  it("취득시 기준시가가 계산에 불필요하면(양쪽 실가) 카드도 없다", () => {
+    render(<Harness init={{ ...CASE9, buildingAcqMode: "actual", buildingAcquisitionPrice: "100,000,000" }} />);
+    expect(acqCard()).toHaveLength(0);
   });
 });
 

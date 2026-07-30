@@ -94,9 +94,10 @@ describe("G11 — 술어 인자 동일성 (expenses)", () => {
     // validate는 asset을 통째로 넘기지만 AssetForm에는 `expenses`가 없다(`directExpenses`가 실제 필드).
     // 인자를 보정하지 않으면 여기서 술어가 false가 되어 엔진과 어긋난다.
     //
-    // ⚠️ 주택으로 검증한다 — 일반건물은 V6(건물분 필수, Phase 3)가 V5보다 먼저 걸려 다른
-    //    메시지를 낸다. 여기서 보려는 것은 **⑥절 인자가 전달되는가** 하나이므로, V6와 섞이지
-    //    않는 자산 종류를 골라 검증 대상을 좁힌다.
+    // ⚠️ 2026-07-30부터 주택도 V6(건물분 필수) 대상이라 V6가 V5보다 먼저 걸린다.
+    //    **V6도 같은 술어(`requiresAcqStdPrice`)를 거치므로** 이 메시지가 나온다는 것 자체가
+    //    ⑥절 인자(directExpenses → expenses)가 전달됐다는 증거다 — 전달되지 않았다면 술어가
+    //    false가 되어 V6·V5 어느 것도 걸리지 않고 null이 반환된다.
     const a = asset({
       ...ACTUAL_BOTH,
       assetKind: "housing",
@@ -106,7 +107,7 @@ describe("G11 — 술어 인자 동일성 (expenses)", () => {
     });
     const err = validateSplitDirectInputs(a, "자산 1");
     expect(err, "엔진이 취득시 기준시가를 요구하는 입력이면 validate도 같이 요구해야 한다").toMatch(
-      /㎡당 개별공시지가/,
+      /건물분 취득시 기준시가|㎡당 개별공시지가/,
     );
   });
 

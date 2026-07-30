@@ -15,6 +15,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { fillDateAndVerify } from "./_helpers/tax-flow";
 
 async function setupSplitAsset(page: Page) {
   await page.goto("/calc/transfer-tax");
@@ -164,6 +165,38 @@ test.describe("양도시 기준시가 배치 — 구분양도 + 파트 환산", 
     await expect(buildingPartCard(page)).toBeVisible();
     await expect(page.getByRole("button", { name: /양도시 건물 기준시가 계산/ })).toBeVisible();
     await expect(landPartCard(page), "토지가 실지거래가액이면 토지 기준시가 기능은 불필요").toHaveCount(0);
+  });
+
+  /**
+   * 이미지 9·10·11 — 주택 별개취득도 건물분 취득시 기준시가를 파트 독립으로 입력·계산한다.
+   * §163⑥2호가목은 "라목 주택 **취득당시**의 라목 가액"을 전제하는데, 토지를 먼저 취득했으면
+   * 그 시점엔 주택이 없어 라목 결합 공시가 존재하지 않는다.
+   */
+  test("주택 별개취득 + 건물 환산 → 취득시 건물 기준시가 입력·계산 제공", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    // 취득일 분리 — 토지 2025-01-08 / 건물 2025-08-29 (신축 패턴)
+    await fillDateAndVerify(page, { year: "2025", month: "01", day: "08" }, {
+      scope: page.locator('[data-asset-card-index="0"] [data-slot="field-card"]').filter({ hasText: "토지 취득일" }),
+    });
+    await fillDateAndVerify(page, { year: "2025", month: "08", day: "29" }, {
+      scope: page.locator('[data-asset-card-index="0"] [data-slot="field-card"]').filter({ hasText: "건물 취득일" }),
+    });
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
+
+    // 이미지 11 — 취득시 건물기준시가 입력칸(주택도 파트 독립)
+    await expect(page.getByTestId("split-building-std-acq")).toBeVisible();
+    // 결합 총액 입력 블록은 읽기 전용 파생 표시로 대체된다
+    await expect(page.getByTestId("split-acq-std-readonly")).toBeVisible();
+
+    // 이미지 10 — 취득시 계산 모달이 **취득 시점** 입력을 제공한다(양도 시점은 숨김)
+    await page.getByRole("button", { name: "취득시 건물 기준시가 계산" }).click();
+    const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
+    await expect(modal).toBeVisible();
+    await expect(modal.getByText("취득당시 구조")).toBeVisible();
+    await expect(modal.getByText("취득당시 용도")).toBeVisible();
+    await expect(modal.getByText("양도당시 구조"), "취득시 전용 모달은 양도 시점을 숨긴다").toHaveCount(0);
   });
 
   test("일괄양도로 되돌리면 카드가 축 A로 복귀한다 (상호배타)", async ({ page }) => {
@@ -322,9 +355,13 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
 
     await expect(page.getByTestId("split-land-std-acq-area")).toBeVisible();
     await expect(page.getByText("취득시 토지 공시지가")).toBeVisible();
-    // 건물분 명시 입력은 주택에 노출하지 않는다 — 라목 결합 공시(역산이 정본)
-    await expect(page.getByTestId("split-building-std-acq")).toHaveCount(0);
-    await expect(page.getByTestId("split-housing-building-derived-note")).toBeVisible();
+    // 2026-07-30 — 주택도 건물분을 파트 독립 입력한다. §163⑥2호가목은 "라목 주택 **취득당시**의
+    // 라목 가액"을 전제하는데, 토지를 먼저 취득했으면 그 시점엔 주택이 없어 결합 공시가 없다.
+    await expect(page.getByTestId("split-building-std-acq")).toBeVisible();
+    await expect(
+      page.getByTestId("split-housing-building-derived-note"),
+      "역산을 하지 않으므로 역산 안내도 없다(dangling reference 방지)",
+    ).toHaveCount(0);
   });
 
 
@@ -335,14 +372,20 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     test.setTimeout(90_000);
     await setupSeparateAcq(page);
 
+    // 2026-07-30 — 별개취득에서는 상단 결합 총액 블록이 **읽기 전용 파생 표시**로 대체되어
+    // 붉은 별표가 존재하지 않는다(라목 결합 공시가 없으므로 입력 대상이 아니다).
+    // 「취득시 기준시가가 실제로 필요한가」는 이제 **파트 카드 노출**로 표현된다 — 같은 술어
+    // (`requiresAcqStdPrice`)가 구동하므로 검증 대상만 옮긴다.
+    await expect(page.getByTestId("split-acq-std-readonly")).toBeVisible();
+
     // 기본 상태(일괄양도 + 양도시 기준시가 미입력) → 안분 근거가 없어 취득시 기준시가가 필요
-    await expect(page.getByTestId("acq-std-required-mark")).toBeVisible();
+    await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
 
     // 구분양도로 바꾸고 양도가액을 입력하면 안분 근거가 생겨 취득시 기준시가는 불요
     await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
     await landTransfer(page).fill("600000000");
     await expect(
-      page.getByTestId("acq-std-required-mark"),
+      page.getByTestId("split-land-std-acq-card"),
       "양쪽 실가 + 양도가액 구분이 있으면 취득시 기준시가는 계산에 쓰이지 않는다",
     ).toHaveCount(0);
     // 2026-07-29: 「사용되지 않습니다」 안내로 남겨두던 것을 **숨김**으로 바꿨다 — 계산에 쓰이지

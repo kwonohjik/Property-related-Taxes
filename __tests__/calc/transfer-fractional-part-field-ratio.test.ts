@@ -168,11 +168,13 @@ describe("기준시가는 지분 스케일 대상이 아니다", () => {
   it("취득시 기준시가·㎡당 공시지가·면적은 raw 유지", async () => {
     const cap = captureBody();
     await callTransferTaxAPI(makeForm());
+    // 별개취득은 결합 총액을 전송하지 않는다(2026-07-30 파트 독립) — 지분 불변성은
+    // 실제로 전송되는 **파트별** 기준시가로 검증한다. 기준시가는 소유 지분이 아니라 물건의
+    // 속성값이라 환산 산식에서 분자·분모로 상쇄된다.
     expect(
-      cap.body?.standardPriceAtAcquisition,
-      "기준시가는 소유 지분이 아니라 물건의 속성값 — 환산 산식에서 분자·분모로 상쇄된다",
-    ).toBe(500_000_000);
-    expect(cap.body?.standardPricePerSqmAtAcquisition).toBe(1_000_000);
+      cap.body?.standardPricePerSqmAtAcquisition,
+      "㎡당 공시지가를 지분으로 깎으면 환산 상쇄·§166⑥ 안분 비율이 깨진다",
+    ).toBe(1_000_000);
     expect(cap.body?.acquisitionArea).toBe(200);
   });
 });
@@ -189,10 +191,12 @@ describe("P2 — 개산공제 지분율(ownershipRatio) 전송", () => {
     const cap = captureBody();
     await callTransferTaxAPI(makeForm({ useEstimatedAcquisition: true }));
     expect(cap.body?.ownershipRatio).toBe(0.5);
+    // 별개취득은 결합 총액 미전송(2026-07-30) → 파트별 기준시가로 raw 유지를 검증한다.
     expect(
-      cap.body?.standardPriceAtAcquisition,
+      cap.body?.standardPricePerSqmAtAcquisition,
       "기준시가까지 스케일하면 §166⑥ 안분 비율(landStd/total)이 깨진다",
-    ).toBe(500_000_000);
+    ).toBe(1_000_000);
+    expect(cap.body?.acquisitionArea).toBe(200);
   });
 
   it("🔴 단독소유(100%) → 미전송 (기본값 1로 종전 동작)", async () => {

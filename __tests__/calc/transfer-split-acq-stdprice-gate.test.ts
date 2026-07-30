@@ -67,8 +67,9 @@ describe("P1 — 분리 모드 취득시 기준시가 전송 게이트", () => {
     await callTransferTaxAPI(makeForm({ useEstimatedAcquisition: false }));
     expect(
       cap.body?.standardPriceAtAcquisition,
-      "실거래가 분리 모드에서 미전송되면 calcApportionRatio가 null → 분리 계산이 조용히 비활성된다",
-    ).toBe(500_000_000);
+      "별개취득(2026-07-30)은 파트별 독립이므로 결합 총액을 보내지 않는다 — 양쪽 실가면 " +
+        "requiresAcqStdPrice가 false라 비율 없이도 분리 계산이 성립한다",
+    ).toBeUndefined();
     // 안분 비율 산정에 함께 필요한 나머지 2요소
     expect(cap.body?.standardPricePerSqmAtAcquisition).toBe(1_000_000);
     expect(cap.body?.acquisitionArea).toBe(200);
@@ -79,7 +80,7 @@ describe("P1 — 분리 모드 취득시 기준시가 전송 게이트", () => {
     await callTransferTaxAPI(
       makeForm({ useEstimatedAcquisition: false, isAppraisalAcquisition: true }),
     );
-    expect(cap.body?.standardPriceAtAcquisition).toBe(500_000_000);
+    expect(cap.body?.standardPriceAtAcquisition).toBeUndefined();
   });
 
   it("매매사례가액 모드 + 분리 → 전송", async () => {
@@ -87,13 +88,13 @@ describe("P1 — 분리 모드 취득시 기준시가 전송 게이트", () => {
     await callTransferTaxAPI(
       makeForm({ useEstimatedAcquisition: false, isSalesCaseAcquisition: true }),
     );
-    expect(cap.body?.standardPriceAtAcquisition).toBe(500_000_000);
+    expect(cap.body?.standardPriceAtAcquisition).toBeUndefined();
   });
 
   it("환산 모드 + 분리 → 전송 (회귀 방어 — 종전부터 정상)", async () => {
     const cap = captureBody();
     await callTransferTaxAPI(makeForm({ useEstimatedAcquisition: true }));
-    expect(cap.body?.standardPriceAtAcquisition).toBe(500_000_000);
+    expect(cap.body?.standardPriceAtAcquisition).toBeUndefined();
   });
 
   it("🔴 비분리 + 실거래가 → 미전송 (회귀 0 — 종전 동작 유지)", async () => {
@@ -165,15 +166,16 @@ describe("P2b — 건물분 취득시 기준시가 전송 게이트", () => {
     expect(cap.body?.buildingStandardPriceAtAcquisition).toBe(350_000_000);
   });
 
-  it("🔴 주택 → 미전송 (라목 결합 공시 — 파트 독립이 성립하지 않는다)", async () => {
+  it("주택도 별개취득이면 전송 (2026-07-30 파트 독립)", async () => {
     const cap = captureBody();
     await callTransferTaxAPI(
       makeForm({ useEstimatedAcquisition: false, buildingStandardPriceAtAcq: "350000000" }),
     );
     expect(
       cap.body?.buildingStandardPriceAtAcquisition,
-      "주택에 전송되면 개산공제 합계가 §163⑥2호가목 법정액을 이탈한다",
-    ).toBeUndefined();
+      "§163⑥2호가목은 «라목 주택 취득당시의 라목 가액»을 전제 — 토지를 먼저 취득했으면 " +
+        "그 시점엔 주택이 없어 라목 결합 공시가 존재하지 않는다",
+    ).toBe(350_000_000);
   });
 
   it("🔴 building + 취득일 동일 → 미전송", async () => {
