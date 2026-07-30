@@ -1,8 +1,19 @@
-echo "▶ pre-push gate: 폰트 크기 + 동적 톤 정본 + typecheck + test (lint은 lint-staged에서 처리)"
+echo "▶ pre-push gate: 폰트 크기 + 동적 톤 정본 + typecheck + lint + test"
 
 scripts/check-font-sizes.sh || exit 1
 scripts/check-tone-classes.sh || exit 1
 npm run typecheck || exit 1
+
+# 전체 lint (2026-07-31 추가 — 실측 26초).
+#
+# 종전에는 lint를 CI에만 맡겼다. 그런데 lint-staged는 **변경 파일만** `--fix`하므로
+# 전체 lint는 CI가 유일한 관문이었고, 그 CI가 무료 한도(월 2,000분)를 상시 초과해
+# 사실상 아무 관문도 없는 상태였다. 26초면 로컬에서 닫을 수 있는 갭이다.
+#
+# 이걸 여기로 옮기면 CI는 pre-push가 이미 통과시킨 것의 재확인만 남는다 →
+# CI 실패가 드물어지고, CI를 PR 전용으로 줄여도 안전하다(.github/workflows/ci.yml).
+# 경고(warning)는 통과시킨다 — 현행 278건은 사전 존재분이고 errors만 차단한다.
+npm run lint || exit 1
 
 # 테스트 범위 — 변경 경로 기반 선택 실행 (scripts/select-test-scope.sh).
 # lib/tax-engine/** · lib/api/** · lib/stores/** · types · 설정 등 공유 경로가 하나라도 걸리면 전체.

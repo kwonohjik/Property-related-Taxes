@@ -39,6 +39,22 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 
 **자동 게이트**: husky pre-commit(lint-staged) + pre-push(폰트·톤 + typecheck + **범위 선택 테스트**) + GitHub Actions.
 
+### GitHub Actions 사용량 정책 (2026-07-31 — 무료 한도 상시 초과 정정)
+
+무료 계정 + **비공개** 저장소는 월 **2,000분**이다. 종전 CI는 `push`·`pull_request`를 **둘 다** 트리거해 변경 1건당 **2회**(각 10.4~14.4분 실측) 돌았다 → 변경 **약 83건**이면 소진(2026-07-30 하루 9건 머지 ≈ 216분). 그래서 `.github/workflows/ci.yml`을 이렇게 바꿨다:
+
+| 수단 | 효과 |
+|---|---|
+| **`push` 트리거 제거**(PR만) | 변경당 2회 → **1회** |
+| `paths-ignore`: `**.md`·`docs/**`·`.claude/**` | 문서 전용 PR은 워크플로 자체 미실행 |
+| draft PR 미실행 | 준비 중 푸시에 과금 안 함 |
+| `scripts/select-test-scope.sh`로 범위 판정 | 세목 단위 변경은 그 세목만 (pre-push와 **같은 정본**) |
+| `node_modules` 캐시(lockfile 해시) | `npm ci` 재설치 회피 |
+
+- **종전 CI의 유일한 고유 신호였던 `lint`는 pre-push로 옮겼다**(실측 26초). lint-staged는 변경 파일만 `--fix`하므로 전체 lint 관문이 CI뿐이었는데, 그 CI가 한도 초과로 상시 실패해 사실상 관문이 없었다. 이제 CI는 pre-push가 이미 통과시킨 것의 재확인(다른 OS·Node·fresh install)만 남는다 → **CI 실패가 드물어지고 PR 전용으로 줄여도 안전하다**.
+- 한도를 없애려면 저장소를 **공개**로 전환하면 된다(공개 저장소 Actions 무제한).
+- **워크플로를 늘릴 때는 분(minute) 예산부터 계산**할 것. job 하나가 최소 1분으로 과금되고, 스케줄 cron은 상시 비용이다.
+
 ### 테스트 범위 정책 (2026-07-28 — 반복 검증에 전체 실행 금지)
 
 전체 `npm test`는 **1036파일 11628테스트 ≈ 152초**다. 작업 중 반복 실행하면 그 자체가 최대 시간 낭비다.
@@ -69,9 +85,9 @@ scripts/ship.sh <branch> "<commit message>" --auto   # CI 통과 후 자동 머�
 ```
 
 - **전제**: master에서 작업 변경분을 들고 실행(자동으로 새 브랜치 분기)하거나, 이미 `<branch>`에 있는 상태.
-- **진짜 게이트는 `git push` 시 pre-push(tsc + 전체 test)뿐**. master에 브랜치 보호가 없어 **CI는 머지를 차단하지 않음**(머지 후 기록용 실행) → 즉시 머지 모드는 CI를 기다리지 않는다.
+- **진짜 게이트는 `git push` 시 pre-push(tsc + 전체 test)뿐**. master에 브랜치 보호가 없어 **CI는 머지를 차단하지 않음** → 즉시 머지 모드는 CI를 기다리지 않는다. (2026-07-31부터 CI는 **PR에서만** 돌고 머지 후 push 실행은 없다 — 위 사용량 정책.)
 - repo 설정 `deleteBranchOnMerge: true`(원격 자동삭제) + `allowAutoMerge: true`(`--auto`) 적용됨.
-- **lint 갭 주의**: pre-push는 tsc+test만(lint 제외). lint는 commit 시 lint-staged가 **변경 파일만** `--fix`. 대규모 변경 후 불안하면 push 전 `npm run lint`.
+- **lint 갭 해소(2026-07-31)**: pre-push가 이제 전체 `npm run lint`도 돌린다(26초). 종전의 "lint는 CI에서만" 갭은 없다.
 - **효율**: 작은 수정 여러 개를 한 브랜치에 모아 1회 ship → CI 실행 횟수↓.
 - `.claude/commands/`(로컬 개인 슬래시 커맨드)는 `.git/info/exclude`로 제외됨 → `git add -A` 오염 없음.
 
