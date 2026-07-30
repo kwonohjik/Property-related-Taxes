@@ -13,6 +13,7 @@ import {
   applyPhase3Normalize,
   migrateGeneralBuildingFields,
 } from "./calc-wizard-asset-migrate-phase3";
+import { migratePartialAreaApportionFields } from "./calc-wizard-asset-partial-area";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "./calc-wizard-asset-factory";
 import type { AssetForm } from "./calc-wizard-asset";
 
@@ -431,6 +432,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.assetKind || !validKinds.includes(a.assetKind as string)) {
     a.assetKind = "building";
   }
+
+  // ③ 일부양도 취득가액 안분 계산기 (2026-07-30, B4-2b) — UI 전용 필드 5개
+  migratePartialAreaApportionFields(a);
 
   // ③ 축 B(건물 연면적) 신설 — buildingFloorArea (2026-07-30, Phase F1 β-2)
   if (a.buildingFloorArea === undefined) a.buildingFloorArea = "";

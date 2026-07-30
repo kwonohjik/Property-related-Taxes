@@ -4,6 +4,7 @@
  */
 
 import { MIXED_USE_DEFAULTS } from "./calc-wizard-asset-mixed-use";
+import { PARTIAL_AREA_APPORTION_DEFAULTS } from "./calc-wizard-asset-partial-area";
 import { RESIDENCE_DEFAULTS } from "./calc-wizard-asset-residence";
 import { CARRYOVER_DEFAULTS } from "./calc-wizard-asset-carryover";
 import type { AssetForm } from "./calc-wizard-asset";
@@ -86,6 +87,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     acquisitionArea: "",
     transferArea: "",
     buildingFloorArea: "",
+    ...PARTIAL_AREA_APPORTION_DEFAULTS,
     areaScenario: "same",
     publishedValueAtInheritance: "",
     fixedAcquisitionPrice: "",

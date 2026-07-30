@@ -3,7 +3,7 @@
 > 작성일: 2026-07-30 (분할본 v1.0 — `basic-info-building-area-phase-ef.plan.md` rev.7에서 B-4만 추출)
 > 발견 경위: [`basic-info-building-area-phase-f.plan.md`](basic-info-building-area-phase-f.plan.md) §3.2 A-6 실측의 파생
 > anchor: `__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.ts` — `describe("B-4 …")` · `describe("U-9 …")` · `describe("U-10 …")` (12건, **현행 동작 고정만**)
-> 상태: ⏳ **부분 Do 완료**(§5.5·§5.6) — B4-1(단건) · **B4-1b(다필지)** · B4-2(안내) · B4-3 완료. 후속 2건(안분 계산기 UI · 필요경비 안내) 미착수.
+> 상태: ⏳ **부분 Do 완료**(§5.5~§5.7) — B4-1(단건) · B4-1b(다필지) · B4-2(안내) · **B4-2b(안분 계산기)** · B4-3 완료. 후속 1건(B4-2c 필요경비 안내) 미착수.
 
 ---
 
@@ -202,7 +202,7 @@ anchor: `__tests__/lib/calc/partial-area-acq-std-price.anchor.test.ts` (14건)
 | # | 항목 | 이유 |
 |---|---|---|
 | ~~B4-1b~~ | 다필지 경로 | ✅ **완료**(§5.6) |
-| **B4-2b** | **안분 계산기 UI** (2-state + 취득 당시 기준시가/감정가액 비율 입력) | 현재는 hint 안내로 사용자가 정답을 넣을 수 있게 했다. 계산기는 별도 위젯 설계 필요 |
+| ~~B4-2b~~ | 안분 계산기 UI | ✅ **완료**(§5.7) |
 | **B4-2c** | **필요경비 안내** (C-5 — 취득가액과 동일 기준 안분) | 필요경비 입력이 경비 탭에 분산돼 있어 안내 지점 식별 필요 |
 
 **B4-1(단건)만으로도 세액 정정 효과가 있다** — `land` 일괄 · `housing` 토지·건물 분리 경로가 모두 단건 API를 거친다.
@@ -238,6 +238,51 @@ anchor 5건 추가(총 19건). 전체 **12,539건 통과** · tsc 0 · lint 0 er
 
 ---
 
+## 5.7 B4-2b Do 기록 (2026-07-30) — 안분 계산기 UI
+
+### 5.7.1 구현
+
+| 지점 | 내용 |
+|---|---|
+| ① 신규 slice | `calc-wizard-asset-partial-area.ts` — 필드 5개 + `calcPartialAcqPrice()`. `calc-wizard-asset.ts`가 이미 802줄이라 별도 파일로 분리 |
+| ②③ | factory defaults + `migratePartialAreaApportionFields` |
+| ⑤ UI | `PartialAcqApportionSection.tsx` — `areaScenario === "partial"` **AND 실거래가 모드**에서만 마운트(환산은 B4-1이 정정, 겸용·증축은 엔진이 §100② 안분) |
+| ⑧ validate | partial **확정** + 실거래가 + 취득가액 입력 시 「구분되는가」 선택 강제 |
+| ④⑫⑬⑭ | **무변경** — UI 전용 필드다. 결과는 사용자가 「적용」을 눌러 기존 `fixedAcquisitionPrice`에 기록된다(grep 자가점검 0건) |
+
+산식: `floor(전체 취득가액 × 양도분 가치 / (양도분 + 잔여분 가치))` — 금액이므로 floor 절사.
+
+### 5.7.2 법령 제약을 UI로 강제
+
+| 제약 | UI |
+|---|---|
+| C-2 구분되면 그 값 우선 | **먼저** "구분되는가"를 묻는다. 「구분됨」이면 안분 입력을 렌더하지 않고 직접 입력을 안내 |
+| C-3 우선순위 | 안분 기준 2종 = 취득 당시 **기준시가** / 취득 당시 **감정가액** |
+| **C-4 양도 당시 가액 금지** | 그 옵션을 **제공하지 않는다** + "양도 당시 가액 기준 안분은 인정되지 않는다" 명시. anchor·E2E로 부재를 고정 |
+| 자동 안분 금지 | `useEffect` 미러링 없이 **「적용」 버튼**으로만 기록. 렌더만으로 `onApply`가 호출되지 않음을 anchor로 고정 |
+
+「구분됨」으로 되돌리면 안분 입력을 비운다 — stale 값으로 「적용」을 잘못 누르는 것을 막는다.
+
+### 5.7.3 ⑧ validate 게이트를 두 번 좁혔다
+
+첫 구현이 기존 anchor 2건을 깨뜨렸다. "면적 한쪽만 입력된 중간 상태는 차단하지 않는다(입력 중 방해 금지)" 원칙과 충돌했기 때문이다.
+
+→ **일부양도가 확정된 상태**로 좁혔다: `acq > 0 && tr > 0 && acq > tr`. `acq === tr`은 사실상 same이라 요구하지 않는다. 남은 1건(`150/100`)은 **의도된 뒤집힘**이므로 anchor를 갱신했다(요구 1건 + 선택 후 통과 1건 추가).
+
+### 5.7.4 테스트
+
+| 구분 | 결과 |
+|---|---|
+| 계산기 anchor | **16건** — 산식 5(면적비 일치·불일치·floor·null) · UI 흐름 8 · 적용 4 |
+| validate anchor | 기존 1건 → 3건으로 분화(사실상 same 통과 · 요구 · 선택 후 통과) |
+| ③ normalize anchor | 2건 |
+| **E2E** | **2건 통과** — 계산·「적용」 기록 · 양도 당시 가액 옵션 부재 |
+| 전체 회귀 | **12,559건 통과** · tsc 0 · lint 0 errors |
+
+E2E 함정 2건 기록: 자산 카드 섹션은 진입 시 전부 접힘 → `expandAssetSection(page, 3)` 필요. `CurrencyInput`의 `data-testid`는 **내부 input에 직접** 붙으므로(`CurrencyInput.tsx:132`) `.locator("input")`을 덧붙이면 실패한다.
+
+---
+
 ## 6. 리스크
 
 | # | 리스크 | 완화 |
@@ -254,6 +299,7 @@ anchor 5건 추가(총 19건). 전체 **12,539건 통과** · tsc 0 · lint 0 er
 
 | 날짜 | 버전 | 변경 |
 |---|---|---|
+| 2026-07-30 | v1.3 | **B4-2b(안분 계산기 UI) 완료**(§5.7, anchor 18건 + E2E 2건). 신규 slice `calc-wizard-asset-partial-area.ts`(필드 5 + `calcPartialAcqPrice`) + `PartialAcqApportionSection.tsx`. **법령 제약을 UI로 강제** — C-2(구분 여부를 먼저 묻는다) · C-3(취득 당시 기준시가/감정가액 2종) · **C-4(양도 당시 가액 옵션 미제공**, anchor·E2E로 부재 고정) · 자동 반영 금지(「적용」 버튼). ④⑫⑬⑭ 무변경(UI 전용 — 결과는 기존 `fixedAcquisitionPrice`에 기록). ⑧ validate 게이트를 **두 번 좁혔다** — "입력 중 방해 금지" 원칙과 충돌해 `acq > tr` 확정 상태로 한정. 전체 12,559건 통과 |
 | 2026-07-30 | v1.2 | **B4-1b(다필지) 완료**(§5.6, anchor 5건). 선행 조건 해소 — `effectiveAcquisitionArea`는 **표시 전용 echo**(계산 재사용 0건·UI 소비 0건)라 면적 정정이 다른 산식을 오염시키지 않는다 → **BR4 전건 해소**. 단건과 같은 `resolveAcqAreaForStdPrice`로 전환하고 감환지 분기를 앞에 둬 이중 안분을 두 겹으로 막았다. 🔴 **필지 fallback 불일치 함정** — 필지 기본값 `"partial"`(`transfer-tax-api.ts:498`) ↔ 헬퍼 기본값 `"same"`이라 `p`를 그대로 넘기면 구 세션 필지에서 정정이 **조용히 미적용**된다 → `scenario` 명시 주입, anchor 2방향 고정. 전체 12,539건 통과 |
 | 2026-07-30 | v1.1 | **B4-1(단건)·B4-2(안내)·B4-3 Do 완료**(§5.5, anchor 14건). `resolveAcqAreaForStdPrice()` 신설로 `partial` 시 엔진 `acquisitionArea`에 **양도분 면적**을 넘긴다(`transfer-tax-api.ts:320` 단일 배선). 세액 효과: 취득 300㎡·양도 100㎡·단가 50만/150만에서 환산비율 1.0→1/3, **양도차익 0 → 6억**. 🔑 **BR3 소멸** — 지분은 금액축·부분비는 면적축이라 이중 적용이 구조적으로 불가능(면적에 `applyRatio` 0건). BR4는 단건 해소(`reduction`·`increase` 배타 anchor)·다필지 이연. BR5 해소(기존 세액 anchor 파손 0건). 후속 3건: B4-1b 다필지 · B4-2b 안분 계산기 · B4-2c 필요경비 안내 |
 | 2026-07-30 | v1.0 | **분할본** — `basic-info-building-area-phase-ef.plan.md` rev.7 §8.6~§8.9에서 B-4만 추출. **폐기된 처방 3세대를 제거**하고 유효 결론을 §0 「확정 결론」으로 통합 |

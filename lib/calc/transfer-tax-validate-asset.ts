@@ -385,6 +385,34 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
       const tr = parseFloat((asset.transferArea || "").replace(/,/g, ""));
       if (acq > 0 && tr > 0 && acq < tr)
         return `${label}: 취득 당시 면적은 양도 당시 면적 이상이어야 합니다. (① 기본정보)`;
+
+      /**
+       * B4-2b — 실거래가 모드에서 「양도분 취득가액이 구분되는가」 선택 강제.
+       *
+       * 실거래가 모드는 엔진이 취득가액을 안분하지 않으므로 사용자가 **양도분 대응**
+       * 금액을 넣어야 정답이 된다. 전체 취득가액을 그대로 넣으면 양도차익이 과소
+       * 계상되고(취득 300㎡·양도 100㎡에서 **2억 차이**), 시스템이 그것을 감지할 수 없다.
+       *
+       * 「자동 안분 fallback 금지 — 미입력은 검증 오류로 차단」 정책에 따라 차단한다.
+       * 자동 안분을 하지 않는 이유: 계약서에 구분 기재돼 있으면 그 값이 우선하고
+       * (조심 2018부0572 "불분명한 경우"), 무조건 안분은 그 우선순위를 뭉갠다.
+       *
+       * 게이트를 좁게 둔다:
+       *   1. **일부양도가 확정된 상태**만 — 양쪽 면적이 입력되고 `acq > tr`일 때.
+       *      한쪽만 입력된 중간 상태나 `acq === tr`(사실상 same)에서 요구하면 입력을 방해한다.
+       *   2. **취득가액이 입력된 실거래가 경로**만 — 환산·감정·매매사례는 B4-1이 기준시가
+       *      면적을 정정했고, 겸용·증축 일괄은 엔진이 §100② 비율로 안분한다.
+       */
+      const partialConfirmed = acq > 0 && tr > 0 && acq > tr;
+      const isActualPriceMode =
+        !asset.useEstimatedAcquisition &&
+        !asset.isAppraisalAcquisition &&
+        !asset.isSalesCaseAcquisition &&
+        !asset.isMixedUseHouse;
+      const hasAcqPrice = parseFloat((asset.fixedAcquisitionPrice || "").replace(/,/g, "")) > 0;
+      if (partialConfirmed && isActualPriceMode && hasAcqPrice && !asset.partialAcqDistinct) {
+        return `${label}: 일부 양도 — 「양도분 취득가액이 구분되는가」를 선택하세요. 전체 취득가액을 그대로 입력하면 양도차익이 과소 계상됩니다. (③ 취득정보)`;
+      }
     }
   }
 
