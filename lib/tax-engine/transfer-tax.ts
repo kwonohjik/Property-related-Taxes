@@ -57,13 +57,13 @@ import {
   meetsOneHouseHoldingResidence,
   resolveExemptionResidenceMonths,
   calcTransferGain,
-  calcOneHouseProration,
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
   applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, handleMultiParcelBranch, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
-import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-split-rate";
+import { resolveSplitAwareTax, buildCalculatedTaxStep, isLaterAcquiredLandExemptExcluded } from "./transfer-tax-split-rate";
+import { resolveTaxableGain } from "./transfer-tax-taxable-gain";
 import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails, buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
@@ -264,7 +264,9 @@ export function calculateTransferTax(
   const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
 
   // STEP 1a: 전액 비과세 조기 반환. §155⑳ B(→STEP 2.5 §161 안분)·A eligibility 미충족(→STEP 2.5 정상과세)은 억제.
-  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput)) {
+  // G-3: 주택 취득 후 취득한 부수토지가 보유 2년 미만이면 그 토지분은 비과세 대상이 아니다 —
+  //      조기 반환하면 과세할 토지분이 사라지므로 정상 경로로 흘려 STEP 3에서 분리한다(§5.4).
+  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput) && !isLaterAcquiredLandExemptExcluded(effectiveInput)) {
     steps.push({
       label: "1세대1주택 비과세",
       formula: exemptionResult.exemptReason ?? "비과세",
@@ -447,33 +449,14 @@ export function calculateTransferTax(
   // STEP 3: 과세 양도차익 (12억 초과분 안분 — 부분과세인 경우)
   // 우선순위: burdenedGiftDenominator (부담부증여 — 해석 B) > totalPropertyTransferPrice (지분) > transferPrice (단독)
   // F-1 (2026-05-12): effectiveInput 사용 — STEP 0.48 burdenedGiftDenominator 오버라이드 반영.
-  let taxableGain: number;
-  if (exemptionResult.isPartialExempt) {
-    taxableGain = calcOneHouseProration(
-      transferGain,
-      effectiveInput.transferPrice,
-      effectiveInput.totalPropertyTransferPrice,
-      effectiveInput.burdenedGiftDenominator,
-    );
-    const denom =
-      effectiveInput.burdenedGiftDenominator ??
-      effectiveInput.totalPropertyTransferPrice ??
-      effectiveInput.transferPrice;
-    const isBurdened = effectiveInput.burdenedGiftDenominator !== undefined;
-    const isFractional =
-      !isBurdened &&
-      effectiveInput.totalPropertyTransferPrice !== undefined &&
-      effectiveInput.totalPropertyTransferPrice !== effectiveInput.transferPrice;
-    const denomLabel = isBurdened ? "증여가액 C" : isFractional ? "총양도가" : "양도가";
-    steps.push({
-      label: "과세 양도차익 (12억 초과분)",
-      formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - 12억) / ${denomLabel} ${denom.toLocaleString()}`,
-      amount: taxableGain,
-      legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
-    });
-  } else {
-    taxableGain = transferGain;
-  }
+  const taxableGain = resolveTaxableGain({
+    effectiveInput,
+    splitDetail,
+    transferGain,
+    isExempt: exemptionResult.isExempt,
+    isPartialExempt: exemptionResult.isPartialExempt,
+    steps,
+  });
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용
