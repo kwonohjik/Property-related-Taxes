@@ -160,9 +160,6 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     landMode: effLandAcqMode,
     buildingMode: effBuildingAcqMode,
     isSeparate: isSeparateAcq,
-    hasSaleRatio:
-      parseAmount(props.landStandardPriceAtTransfer ?? "") > 0 &&
-      parseAmount(props.buildingStandardPriceAtTransfer ?? "") > 0,
   };
   /**
    * **파트별** 필요 판정 (2026-07-30) — 계획서

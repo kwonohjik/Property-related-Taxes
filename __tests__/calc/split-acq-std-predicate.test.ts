@@ -84,7 +84,7 @@ describe("G11 — 술어 인자 동일성 (expenses)", () => {
     expect(
       requiresAcqStdPrice(
         { ...ACTUAL_BOTH, expenses: 30_000_000 },
-        { landMode: "actual", buildingMode: "actual", isSeparate: true, hasSaleRatio: true },
+        { landMode: "actual", buildingMode: "actual", isSeparate: true },
       ),
       "총액 안분이 필요한데 파트 2칸이 비면 취득시 비율이 유일한 도출 수단",
     ).toBe(true);
@@ -115,7 +115,7 @@ describe("G11 — 술어 인자 동일성 (expenses)", () => {
     expect(
       requiresAcqStdPrice(
         { ...ACTUAL_BOTH, expenses: 30_000_000, landDirectExpenses: "20000000", buildingDirectExpenses: "10000000" },
-        { landMode: "actual", buildingMode: "actual", isSeparate: true, hasSaleRatio: true },
+        { landMode: "actual", buildingMode: "actual", isSeparate: true },
       ),
     ).toBe(false);
   });
