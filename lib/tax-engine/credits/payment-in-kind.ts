@@ -267,10 +267,24 @@ export function derivePaymentInKindAssets(
   for (const item of estateItems) {
     const v = valById.get(item.id) ?? 0;
     // §74①2호 본문 국채·공채 — 카테고리(§22 기준 "financial")와 무관하게 flag가 우선한다.
-    // §73⑤ 금융재산 열거(예금·적금·…·어음)에 채권이 없으므로 grossFinancialValue에서 제외하고
-    // §74②1호 충당 1순위로 분리 집계한다. §22 금융재산공제 경로는 이 분기를 타지 않으므로 무영향.
+    // §73⑤ 금융재산 열거(예금·적금·…·어음)에 채권이 없으므로 grossFinancialValue에서 **항상** 제외.
+    // §22 금융재산공제 경로는 이 분기를 타지 않으므로 무영향.
+    //
+    // 충당 분류는 **상장 여부**가 가른다 — §74①2호**가목** 본문이 "거래소에 상장된 것"을 제2호
+    // 전체(국채·공채 포함)에서 제외한다(법제처 XML `<목내용>` 실측 MST 283637):
+    //   "가. 거래소에 상장된 것. 다만, 최초로 거래소에 상장되어 물납허가통지서 발송일 전일 현재
+    //    「자본시장과 금융투자업에 관한 법률」에 따라 처분이 제한된 경우에는 그러하지 아니하다."
+    // §74②2호가 "가목 단서 유가증권(**제1호의 재산을 제외한다**)으로서 거래소에 상장된 것"이라며
+    // 1호를 빼는 것이 방증 — §74②1호의 "국채 및 공채"는 가목 관문을 통과한 것을 가리킨다.
     if (item.isGovernmentBond) {
-      governmentBondValue += v;
+      if (item.isGovernmentBondListed) {
+        // 상장 국채 — 충당 대상 아님(가목 본문) + §73①2호 한도2 차감 대상
+        // ("거래소에 상장된 유가증권(법령에 따라 처분이 제한된 것은 제외한다)").
+        // 차감 축이 가목 제외 축과 **동일 문구**라 기존 tradableListedValue가 그대로 정본이다.
+        tradableListedValue += v;
+      } else {
+        governmentBondValue += v; // §74②1호 충당 1순위
+      }
       continue;
     }
     switch (classifyForPaymentInKind(item)) {

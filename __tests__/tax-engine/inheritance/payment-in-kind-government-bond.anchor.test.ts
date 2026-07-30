@@ -8,11 +8,29 @@
  *   → **국채·공채는 열거에 없다** (어음은 있으나 채권은 없음).
  *
  * 상증령 §74①2호 — 물납 충당 가능 유가증권:
- *   "국채·공채·주권 및 내국법인이 발행한 채권 또는 증권 …"
+ *   "국채·공채·주권 및 내국법인이 발행한 채권 또는 증권 … **다만, 다음 각 목의 어느 하나에
+ *    해당하는 유가증권은 제외한다.**"
  * 상증령 §74②1호 — 충당 순서 **1순위**: "국채 및 공채"
  *
  * → 국채·공채는 §74① 충당 자산이면서 §73⑤ 금융재산이 **아니다**. 이중계상 우려 없음
  *   (`inheritance-gift-estate.types.ts` 보류 주석의 검증 완료 — 2026-07-30).
+ *
+ * ## ⚠️ 가목 단서 — **상장 국채는 충당 대상이 아니다** (2026-07-30 추가 검증)
+ *
+ * MCP `get_law_text`는 이 조의 **목 단위 본문을 반환하지 않는다**. 법제처
+ * `target=law&MST=283637&JO=007400` XML의 `<목내용>`으로 확보한 원문:
+ *
+ *   "가. **거래소에 상장된 것.** 다만, 최초로 거래소에 상장되어 물납허가통지서 발송일 전일
+ *    현재 「자본시장과 금융투자업에 관한 법률」에 따라 처분이 제한된 경우에는 그러하지 아니하다."
+ *
+ * 이 단서는 제2호 **전체**(국채·공채 포함)에 걸린다 → 상장 국채는 §74①2호에서 제외되어
+ * 충당 분자(요건1·한도1)에 들어가지 않고, §73①2호 한도2에서 **차감**된다(같은 문구
+ * "거래소에 상장된 유가증권(법령에 따라 처분이 제한된 것은 제외한다)").
+ * §74②2호가 "가목 단서 해당 유가증권(**제1호의 재산을 제외한다**)으로서 거래소에 상장된 것"
+ * 이라며 1호를 빼는 것이 방증 — §74②1호의 "국채 및 공채"는 가목 관문 통과분을 가리킨다.
+ *
+ * 국고채는 통상 KRX 상장이라 이를 묻지 않으면 **납세자 유리 방향으로 과대**해진다
+ * (충당 분자 과대 + 한도2 미차감) → `isGovernmentBondListed`로 명시 입력받는다(A-GB-2).
  *
  * ## 고정하는 결함 (현행 = 납세자 불리)
  *
@@ -173,6 +191,98 @@ describe("A-GB-1 [Do 전 실패] — isGovernmentBond flag 자동도출", () => 
     } as PaymentInKindInput);
     const first = r.fillOrder.find((s) => s.order === 1);
     expect(first?.availableValue).toBe(GOV_BOND);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+describe("A-GB-2 — 상장 국채는 충당 대상이 아니다 (§74①2호가목 본문)", () => {
+  function items(listed: boolean) {
+    return [
+      { id: "re1", category: "real_estate_land", name: "토지", marketValue: REAL_ESTATE },
+      { id: "fin1", category: "financial", name: "예금", marketValue: DEPOSIT },
+      {
+        id: "gb1",
+        category: "financial",
+        name: "국고채권",
+        marketValue: GOV_BOND,
+        isGovernmentBond: true,
+        isGovernmentBondListed: listed,
+      },
+    ] as unknown as EstateItem[];
+  }
+  const valuation = {
+    valuationResults: [
+      { estateItemId: "re1", valuatedAmount: REAL_ESTATE },
+      { estateItemId: "fin1", valuatedAmount: DEPOSIT },
+      { estateItemId: "gb1", valuatedAmount: GOV_BOND },
+    ],
+    collateralDebtDetail: [],
+  } as unknown as Parameters<typeof derivePaymentInKindAssets>[1];
+
+  function assess(listed: boolean) {
+    const a = derivePaymentInKindAssets(items(listed), valuation, 0);
+    return {
+      assets: a,
+      r: calcPaymentInKindAssessment({
+        finalTax: FINAL_TAX,
+        grossEstateValue: GROSS_ESTATE,
+        exemptAmount: 0,
+        priorGiftToHeirTotal: 0,
+        taxableEstateValue: GROSS_ESTATE,
+        requestedAmount: 0,
+        assets: a,
+      } as PaymentInKindInput),
+    };
+  }
+
+  it("상장 국채는 tradableListedValue로 간다 — 충당 분자 제외", () => {
+    const { assets } = assess(true);
+    expect(assets.tradableListedValue).toBe(GOV_BOND);
+    expect(assets.governmentBondValue).toBe(0);
+    // §73⑤ 금융재산에서는 상장 여부와 무관하게 항상 빠진다(열거에 채권 없음)
+    expect(assets.grossFinancialValue).toBe(DEPOSIT);
+  });
+
+  it("비상장 국채는 governmentBondValue로 간다 — 충당 1순위", () => {
+    const { assets } = assess(false);
+    expect(assets.governmentBondValue).toBe(GOV_BOND);
+    expect(assets.tradableListedValue).toBe(0);
+    expect(assets.grossFinancialValue).toBe(DEPOSIT);
+  });
+
+  it("🔴 상장 여부가 허용한도를 가른다 — 묻지 않으면 2억 과대", () => {
+    // 상장: 한도2 = 6억 − 4억(예금) − 5억(상장 국채) = 음수 → 0
+    expect(assess(true).r.allowedLimit).toBe(0);
+    // 비상장: 한도2 = 6억 − 4억 − 0 = 2억
+    expect(assess(false).r.allowedLimit).toBe(200_000_000);
+  });
+
+  it("적격 판정(요건3)은 상장 여부와 무관하다 — §73⑤ 제외가 공통이므로", () => {
+    // 요건3 = 납부세액 > 금융재산. 국채가 금융재산에서 빠지는 것은 상장 여부와 무관하다.
+    // → PR의 핵심 성과(부적격 오판정 정정)는 두 경로 모두에서 유지된다.
+    expect(assess(true).r.eligible).toBe(true);
+    expect(assess(false).r.eligible).toBe(true);
+  });
+
+  it("상장 국채는 충당순서 1호에 표시되지 않는다 (§74②1호는 가목 통과분)", () => {
+    expect(assess(true).r.fillOrder.find((s) => s.order === 1)?.availableValue).toBe(0);
+    expect(assess(false).r.fillOrder.find((s) => s.order === 1)?.availableValue).toBe(
+      GOV_BOND,
+    );
+  });
+
+  it("⑫ Zod — isGovernmentBondListed가 파싱 결과에 살아남는다", () => {
+    const parsed = estateItemSchema.parse({
+      id: "gb1",
+      category: "financial",
+      name: "국고채권",
+      marketValue: GOV_BOND,
+      isGovernmentBond: true,
+      isGovernmentBondListed: true,
+    });
+    expect(
+      (parsed as { isGovernmentBondListed?: boolean }).isGovernmentBondListed,
+    ).toBe(true);
   });
 });
 

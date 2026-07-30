@@ -71,6 +71,7 @@ const baseItemSchema = z.object({
   isHeirResidenceProperty: z.boolean().optional(),
   /** 국채·공채 (상증령 §74②1호 충당 1순위 · §73⑤ 금융재산 열거 외) — 물납 표시 전용 */
   isGovernmentBond: z.boolean().optional(),
+  isGovernmentBondListed: z.boolean().optional(),
   isFamilyBusinessAsset: z.boolean().optional(),
   // §23의2 동거주택 상속공제 자동도출 (v3)
   isCohabitantHouse: z.boolean().optional(),
