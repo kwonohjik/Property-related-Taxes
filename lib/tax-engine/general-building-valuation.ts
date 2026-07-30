@@ -18,7 +18,7 @@
 import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
-import { getLandFootprintMultiplier } from "./non-business-land/urban-area";
+import { getBuildingSiteMultiplier } from "./non-business-land/urban-area";
 import type { ZoneType } from "./non-business-land/types";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
@@ -606,10 +606,18 @@ export function buildGeneralBuildingAssetCards(
   const estimatedDeduction = calculateEstimatedDeduction(input, rate);
 
   /**
-   * 비사업용토지 판정 (§104의3·§168의12)
+   * 비사업용토지 판정 — **건축물(비주택) 부속토지**
+   *
+   * 근거 체인: 「소득세법」 제104조의3 제1항 제4호 나목 →
+   *   「지방세법」 제106조 제1항 제2호(별도합산과세대상) →
+   *   「지방세법 시행령」 제101조 제1항 제2호(바닥면적 × 제2항 적용배율)
+   *
+   * ⚠️ 「소득세법 시행령」 제168조의12는 **주택** 부수토지 배율이므로 이 경로에 쓰지 않는다.
+   *   제101조 제2항에는 수도권 축이 없다(용도지역만으로 결정).
    *
    * 2026-05-09: 사용자 직접 입력 수평투영면적 기준. 균등층 가정 폐지.
-   * 2026-05-10: getLandFootprintMultiplier()로 용도지역·수도권 배율 정밀 계산.
+   * 2026-07-30: 「소득세법 시행령」 제168조의12(주택) 배율을 잘못 쓰던 것을
+   *   「지방세법 시행령」 제101조 제2항으로 정정(22개 용도지역·수도권 조합 중 19개 오답이었다).
    *   초과분 면적(nonBusinessArea)·비율(nonBusinessRatio) 계산 → 토지 카드 분할 중과.
    */
 
@@ -633,11 +641,15 @@ export function buildGeneralBuildingAssetCards(
         "일반건물 비사업용토지 판정: zoneType(용도지역)이 입력되지 않았습니다. 계산 전 용도지역을 선택하세요.",
       );
     }
-    const { multiplier, detail } = getLandFootprintMultiplier(
-      input.zoneType as ZoneType,
-      input.isMetropolitan ?? false,
-      "general_building",
-    );
+    // 「지방세법 시행령」 제101조 제2항 표에 없는 용도지역(residential 등)은 추정 금지 → 차단
+    const resolved = getBuildingSiteMultiplier(input.zoneType as ZoneType);
+    if (!resolved) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `일반건물 비사업용토지 판정: 용도지역 "${input.zoneType}"은 「지방세법 시행령」 제101조 제2항 적용배율표에 대응 항목이 없습니다. 세분된 용도지역(전용주거·일반주거·준주거 등)을 선택하세요.`,
+      );
+    }
+    const { multiplier, detail } = resolved;
     appliedMultiplier = multiplier;
     multiplierDetail = detail;
     allowedLandArea = input.buildingFootprintArea * multiplier;

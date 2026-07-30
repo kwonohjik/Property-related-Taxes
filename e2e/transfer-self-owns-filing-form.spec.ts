@@ -25,7 +25,13 @@ function buildingOnlyAsset() {
     useEstimatedAcquisition: true, // 환산 → standardPriceAtAcquisition 송신 → calcApportionRatio 활성
     standardPriceAtAcq: "100000000",
     standardPricePerSqmAtAcq: "800000",
+    // 이 seed는 `building`(건물, 토지 제외)에 **토지분** 기준시가·양도가액을 함께 넣는다 —
+    // `isSplitable`이 `building`을 포함하는 현행 동작(계획서 U-12: 라벨과 모순, 별건)에 의존.
+    // 축 A(토지면적)로 100㎡를 쓰므로 `buildingFloorArea`를 함께 seed해야 한다:
+    // 그러지 않으면 β-2 마이그레이션(2026-07-30)이 `acquisitionArea`를 축 B로 이전해 비운다
+    // (`calc-wizard-asset-migrate.ts` — `!buildingFloorArea && acquisitionArea` 조건).
     acquisitionArea: "100",
+    buildingFloorArea: "100",
     standardPriceAtTransfer: "300000000",
     selfOwns: "building_only",
     hasSeperateLandAcquisitionDate: true,

@@ -74,3 +74,67 @@ test.describe("주택 기본정보 면적 입력 (Phase 2 게이트 확대)", ()
     await expect(page.getByTestId("area-scenario-select")).toHaveCount(0);
   });
 });
+
+/**
+ * Phase F1 — 기본정보 축 B(건물 연면적)·축 C(건물 바닥면적) 신설 브라우저 확인
+ *
+ * 해소하는 결함:
+ *   F-1 축 C 입력 경로가 겸용 ON·취득원인 신축 게이트 안에만 있어, 주택·겸용OFF·매매
+ *       자산은 영구 공백이 되고 엔진이 "전량 부수토지"로 가정했다(anchor A-1).
+ *   F-2 축 B 폼 필드가 없어 건물기준시가 모달에 `floorArea` prefill이 없었고, 스냅샷 키가
+ *       시점별로 갈려 3시점 불일치가 무검증 통과했다(anchor A-3).
+ *
+ * 세액 영향은 vitest anchor가 고정한다
+ *   (__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.ts).
+ */
+test.describe("Phase F1 — 기본정보 건물 면적(축 B·C)", () => {
+  test("주택: 연면적·바닥면적 칸이 기본정보에 노출되고 입력된다", async ({ page }) => {
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).click();
+
+    // 축 B — 건물 연면적
+    const floorArea = page.getByTestId("basic-building-floor-area");
+    await expect(floorArea).toBeVisible();
+    await floorArea.fill("245.8");
+    await expect(floorArea).toHaveValue("245.8");
+
+    // 축 C — 건물 바닥면적(정착면적) + 미입력 시 거동 안내
+    const footprint = page.getByTestId("basic-building-footprint-area");
+    await expect(footprint).toBeVisible();
+    await expect(page.getByText(/전량 부수토지로 가정/)).toBeVisible();
+    await footprint.fill("98.4");
+    await expect(footprint).toHaveValue("98.4");
+
+    // 축 A와 3개가 각각 1개씩 — 중복 노출 없음
+    await expect(page.getByTestId("basic-building-floor-area")).toHaveCount(1);
+    await expect(page.getByTestId("basic-building-footprint-area")).toHaveCount(1);
+  });
+
+  test("건물(토지 제외): 연면적만 노출 — 축 A·C·시나리오 Select 미노출 (β-2)", async ({ page }) => {
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "건물(토지 제외)", exact: true }).click();
+
+    await expect(page.getByTestId("basic-building-floor-area")).toBeVisible();
+    // 토지가 없는 자산 → 축 A 입력·시나리오 Select 없음
+    await expect(page.getByTestId("area-scenario-select")).toHaveCount(0);
+    // 부수토지 판정이 없으므로 축 C도 없음
+    await expect(page.getByTestId("basic-building-footprint-area")).toHaveCount(0);
+  });
+
+  test("겸용주택 ON: 축 B·C도 미노출 (겸용 전용 섹션이 정본)", async ({ page }) => {
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).click();
+    // ToggleCard는 BaseUI `<span role="switch">`다 — `setChecked`는 "Not a checkbox or
+    // radio button"으로 실패한다. 프로젝트 관례대로 `.click()`을 쓴다(:73 선례).
+    await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
+
+    await expect(page.getByTestId("basic-building-floor-area")).toHaveCount(0);
+    await expect(page.getByTestId("basic-building-footprint-area")).toHaveCount(0);
+  });
+});

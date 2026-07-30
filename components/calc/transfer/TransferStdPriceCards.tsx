@@ -137,6 +137,9 @@ export function TransferBuildingStdFields({
             applyTimePoint="transfer"
             prefill={{
               landAreaM2: asset.transferArea,
+              // 축 B — 기본정보 「건물 연면적」이 정본. 시점별 모달에 같은 값을 주입해
+              // 3시점 불일치를 차단한다(GB·상가 선례, anchor A-3).
+              floorArea: asset.buildingFloorArea || undefined,
               acquisitionDate: asset.acquisitionDate,
               transferDate,
               transferLandPricePerSqm: asset.standardPricePerSqmAtTransfer,

@@ -32,9 +32,11 @@ import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/Re
 import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
+import { getBuildingSiteMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
+import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 
-// §168의12 배율표 기준 용도지역 선택지
-// (수도권/비수도권 배율 차이는 gbIsMetropolitan 토글로 반영)
+// 「지방세법 시행령」 제101조 제2항 적용배율표 기준 용도지역 선택지.
+// 세분 전 주거지역(residential)은 표에 대응 항목이 없어 선택지에 두지 않는다(추정 배율 금지).
 const GB_ZONE_OPTIONS = [
   { value: "exclusive_residential", label: "전용주거" },
   { value: "general_residential",   label: "일반주거" },
@@ -48,19 +50,11 @@ const GB_ZONE_OPTIONS = [
   { value: "unplanned",             label: "도시계획 미지정" },
 ];
 
-/** 용도지역 + 수도권 여부 → 배율 문자열 (UI 표시용) */
-function getMultiplierLabel(zoneType: string, isMetro: boolean): string {
-  const urban = ["exclusive_residential","general_residential","semi_residential",
-    "commercial","industrial","green","unplanned"].includes(zoneType);
-  if (!urban) return "10배 (도시지역 外)";
-  if (isMetro) {
-    if (zoneType === "green") return "5배 (수도권 녹지)";
-    if (["exclusive_residential","general_residential","semi_residential",
-      "commercial","industrial"].includes(zoneType)) return "3배 (수도권 주·상·공)";
-    return "5배 (수도권 기타)";
-  }
-  return "5배 (수도권 밖 도시)";
-}
+// 배율은 엔진 getBuildingSiteMultiplier가 단일 진실 — UI에서 재구현 금지.
+//   근거: 「소득세법」 제104조의3 제1항 제4호 나목 → 「지방세법」 제106조 제1항 제2호
+//         → 「지방세법 시행령」 제101조 제1항 제2호(바닥면적 × 제2항 적용배율).
+//   종전 UI는 「소득세법 시행령」 제168조의12(주택 부수토지) 배율을 인라인 재구현했고
+//   엔진도 같은 오류였다(2026-07-30 정정 — 22개 조합 중 19개 오답).
 
 interface Props {
   asset: AssetForm;
@@ -81,17 +75,21 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
     pnu: asset.addressPnu,
   };
 
-  // 자동 배율 표시 (용도지역 입력 시)
-  const multiplierLabel = useMemo(() => {
-    if (!asset.gbZoneType) return null;
-    return getMultiplierLabel(asset.gbZoneType, asset.gbIsMetropolitan);
-  }, [asset.gbZoneType, asset.gbIsMetropolitan]);
+  // 자동 배율 표시 — 엔진 함수 재사용 (UI 재계산 금지)
+  const zoneMultiplier = useMemo(
+    () =>
+      asset.gbZoneType
+        ? getBuildingSiteMultiplier(asset.gbZoneType as ZoneType)
+        : undefined,
+    [asset.gbZoneType],
+  );
 
-  // 인정 한도 미리 계산 (토지·수평투영면적 + 배율)
+  // 인정 한도 미리 계산 (바닥면적 × 배율)
   const footprint = parseDecimal(asset.gbBuildingFootprintArea);
   const landArea = parseDecimal(asset.gbLandArea);
-  const multiplierNum = multiplierLabel?.startsWith("3") ? 3 : multiplierLabel?.startsWith("5") ? 5 : 10;
-  const allowedArea = footprint > 0 && asset.gbZoneType ? footprint * multiplierNum : null;
+  const multiplierNum = zoneMultiplier?.multiplier;
+  const allowedArea =
+    footprint > 0 && multiplierNum !== undefined ? footprint * multiplierNum : null;
 
   /**
    * 증축 있음 안분 미리보기 — 4가지 조합 모두 지원.
@@ -637,22 +635,16 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               </FieldCard>
               <ReferenceSiteLinks className="-mt-1" sites={[REFERENCE_SITES.landUsePlan]} />
 
-              {/* 수도권 여부 */}
-              <ToggleCard
-                tone="rose"
-                variant="chip"
-                title="수도권 소재 (서울·경기·인천)"
-                description="수도권 주·상·공: 3배 / 녹지: 5배. 비수도권 도시: 5배."
-                checked={asset.gbIsMetropolitan}
-                onCheckedChange={(v) => onChange({ gbIsMetropolitan: v })}
-              />
+              {/* 수도권 토글 폐지 (2026-07-30) — 「지방세법 시행령」 제101조 제2항에는
+                  수도권 축이 없다. 종전에는 「소득세법 시행령」 제168조의12(주택 부수토지)
+                  배율을 잘못 적용해 수도권 여부가 배율을 바꿨다. */}
 
               {/* 배율·인정한도 자동 표시 */}
-              {asset.gbZoneType && (
+              {zoneMultiplier && (
                 <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-800 space-y-0.5">
-                  <p>적용 배율: <span className="font-semibold">{multiplierLabel}</span></p>
+                  <p>적용 배율: <span className="font-semibold">{zoneMultiplier.detail}</span></p>
                   {footprint > 0 && allowedArea !== null && (
-                    <p>인정 한도: {footprint}㎡ × {multiplierNum}배 = <span className="font-semibold tabular-nums">{allowedArea.toFixed(2)} ㎡</span></p>
+                    <p>인정 한도: 바닥면적 {footprint}㎡ × {multiplierNum}배 = <span className="font-semibold tabular-nums">{allowedArea.toFixed(2)} ㎡</span></p>
                   )}
                   {footprint > 0 && landArea > 0 && allowedArea !== null && (
                     landArea <= allowedArea

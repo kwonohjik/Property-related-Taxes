@@ -87,10 +87,26 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   inheritanceDate: string;
   /** 자산 종류 (토지/단독주택/공동주택 — 보충적평가용) */
   inheritanceAssetKind: "land" | "house_individual" | "house_apart";
-  /** 취득 당시 면적 (㎡) — 취득 기준시가 산정, Pre1990 환산 */
+  /**
+   * 취득 당시 **토지** 면적 (㎡) — 축 A. 취득 기준시가 산정, Pre1990 환산, NBL landArea.
+   * ⚠️ 2026-07-30(β-2) 이후 **축 A(토지) 전용**이다. 건물 연면적은 `buildingFloorArea`.
+   *    종전에는 `assetKind === "building"`에서 이 필드가 연면적을 담았고, 그 이원성이
+   *    `LandBuildingSplitSection`의 `landAreaM2` prefill에 연면적을 흘리는 결함을 만들었다.
+   */
   acquisitionArea: string;
-  /** 양도 당시 면적 (㎡) — 양도 기준시가 산정 */
+  /** 양도 당시 **토지** 면적 (㎡) — 축 A. 양도 기준시가 산정. */
   transferArea: string;
+  /**
+   * 건물 연면적 (㎡) — 축 B. 각 층 바닥면적의 합.
+   *
+   * 소비처: 「건물 기준시가 계산서」의 곱셈 인자(`standardPrice = floor(㎡당 × 연면적)`,
+   * `building-standard-price-helpers.ts:111`). `BuildingStdPriceModalButton`의
+   * `prefill.floorArea`로 주입되어 **취득·최초공시·양도 3시점에 같은 값**이 쓰인다.
+   *
+   * 시점 쌍이 아닌 **단일 필드**다(GB `gbBuildingArea` 선례). 연면적의 취득↔양도 차이는
+   * 증축 전용 필드(`extensionFloorArea`)가 담당한다.
+   */
+  buildingFloorArea: string;
   /**
    * 면적 입력 시나리오 (UI 전용, API 전송 시 제외)
    * - "same"      : 취득면적 = 양도면적 (일반, 기본값)

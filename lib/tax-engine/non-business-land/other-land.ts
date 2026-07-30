@@ -37,6 +37,7 @@ import {
   employeeSportsArea,
 } from "./data/area-standards";
 import { computeRevenueTest } from "./revenue-test";
+import { LOCAL_TAX_ZONE_AREA_MULTIPLIER } from "./urban-area";
 
 /**
  * 나대지 간주 (소득세법 §104의3①4호나목 + 지방세법 시행령 §101①2호나목·단서 — 재산세 별도합산 제외 → 비사업용):
@@ -60,20 +61,12 @@ export function isBareLand(input: NonBusinessLandInput): boolean {
  * 자동산출(KoreanLaw 본문 검증): 7호 최대면적×1.2 · 4호 수용정원×200㎡ · 2호나 최저차고×1.5 · 13호 660㎡.
  * 직접입력(별표 의존): 1호(별표3/4/5) · 2호가목(설치기준면적) · 5호다(별표6) · 6호(휴양 합산면적).
  */
-/** §101② 용도지역별 적용배율 (지방세법 시행령 §101② 정본). residential(세분 전 주거지역)·미정의는 자동 제외(직접입력 fallback) — 추정 금지. */
-const ZONE_AREA_MULTIPLIER: Partial<Record<ZoneType, number>> = {
-  exclusive_residential: 5, // 전용주거지역
-  semi_residential: 3, // 준주거지역
-  commercial: 3, // 상업지역
-  general_residential: 4, // 일반주거지역
-  industrial: 4, // 공업지역
-  green: 7, // 녹지지역
-  unplanned: 4, // 미계획지역
-  management: 7, // 도시지역 외 (관리지역)
-  agriculture_forest: 7, // 도시지역 외 (농림지역)
-  natural_env: 7, // 도시지역 외 (자연환경보전지역)
-  undesignated: 7, // 도시지역 외 (용도 미지정)
-};
+/**
+ * 「지방세법 시행령」 제101조 제2항 용도지역별 적용배율.
+ * 정본은 `urban-area.ts`의 `LOCAL_TAX_ZONE_AREA_MULTIPLIER` — 여기서 재선언 금지.
+ * residential(세분 전 주거지역)·미정의는 자동 제외(직접입력 fallback) — 추정 금지.
+ */
+const ZONE_AREA_MULTIPLIER = LOCAL_TAX_ZONE_AREA_MULTIPLIER;
 
 /** 별표3·4 비고2 5종목군(축구·야구·럭비·필드하키·미식축구) — 운동장 공유로 그 중 max1만 인정, 그 외 종목은 합산. */
 const SPORTS_BIG_FIELD_GROUP = new Set(["soccer", "baseball", "rugby", "field_hockey", "american_football"]);
