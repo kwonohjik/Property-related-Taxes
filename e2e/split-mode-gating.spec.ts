@@ -187,8 +187,10 @@ test.describe("양도시 기준시가 배치 — 구분양도 + 파트 환산", 
 
     // 이미지 11 — 취득시 건물기준시가 입력칸(주택도 파트 독립)
     await expect(page.getByTestId("split-building-std-acq")).toBeVisible();
-    // 결합 총액 입력 블록은 읽기 전용 파생 표시로 대체된다
-    await expect(page.getByTestId("split-acq-std-readonly")).toBeVisible();
+    // 2026-07-30 — 자산 전체 취득시 기준시가 UI는 **완전히 숨긴다**(입력형·읽기전용 모두).
+    // 단순 삭제가 아니라 0개 단언으로 남긴다 — 총액 블록 재출현 회귀를 놓치지 않기 위해서다.
+    await expect(page.getByTestId("split-acq-std-readonly")).toHaveCount(0);
+    await expect(page.getByTestId("acq-std-required-mark")).toHaveCount(0);
 
     // 이미지 10·12 — 런처 1개로 **취득·양도를 한 번에** 계산한다(2시점 통합 모달).
     await page.getByRole("button", { name: "건물 기준시가 계산" }).click();
@@ -314,13 +316,16 @@ async function setupSeparateAcq(page: Page) {
 const topAcqModeLabel = (p: Page) => p.getByText("취득가액 산정 방식", { exact: true });
 
 test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
-  test("U1: 취득일 상이 → 상단 '취득가액 산정 방식' 미표시 + 안내 카드 표시", async ({ page }) => {
+  // 2026-07-30 — 안내 카드(`split-acq-total-note`)는 **삭제**됐다(사용자 확정, 화면 밀도 우선).
+  // 아래 「취득가액 산정 방식 — 토지·건물 독립 선택」 헤더가 맥락을 대신한다.
+  test("U1: 취득일 상이 → 상단 '취득가액 산정 방식' 미표시 + 파트별 헤더로 대체", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSeparateAcq(page);
     await expect(topAcqModeLabel(page)).toHaveCount(0);
+    await expect(page.getByTestId("split-acq-total-note")).toHaveCount(0);
     await expect(
-      page.getByTestId("split-acq-total-note"),
-      "총 취득가액이 실재하지 않는다는 설명이 없으면 사용자가 입력칸 소실을 결함으로 읽는다",
+      page.getByText("취득가액 산정 방식 — 토지·건물 독립 선택"),
+      "상단 입력이 사라진 자리를 파트별 헤더가 설명해야 사용자가 결함으로 읽지 않는다",
     ).toBeVisible();
   });
 
@@ -372,11 +377,12 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     test.setTimeout(90_000);
     await setupSeparateAcq(page);
 
-    // 2026-07-30 — 별개취득에서는 상단 결합 총액 블록이 **읽기 전용 파생 표시**로 대체되어
-    // 붉은 별표가 존재하지 않는다(라목 결합 공시가 없으므로 입력 대상이 아니다).
-    // 「취득시 기준시가가 실제로 필요한가」는 이제 **파트 카드 노출**로 표현된다 — 같은 술어
-    // (`requiresAcqStdPrice`)가 구동하므로 검증 대상만 옮긴다.
-    await expect(page.getByTestId("split-acq-std-readonly")).toBeVisible();
+    // 2026-07-30 — 별개취득에서는 자산 전체 취득시 기준시가 UI가 **0개**다(입력형·읽기전용 모두).
+    // 라목 결합 공시가 없으므로 입력 대상이 아니고, 파생 표시조차 두지 않는다(그 "합계"는
+    // 개산공제 base가 아니다 — 실제 base는 각 파트 자기 기준시가).
+    // 「취득시 기준시가가 실제로 필요한가」는 이제 **파트 카드 노출**로 표현된다.
+    await expect(page.getByTestId("split-acq-std-readonly")).toHaveCount(0);
+    await expect(page.getByTestId("acq-std-required-mark")).toHaveCount(0);
 
     // 기본 상태(일괄양도 + 양도시 기준시가 미입력) → 안분 근거가 없어 취득시 기준시가가 필요
     await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
@@ -459,7 +465,6 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
       topAcqModeLabel(page),
       "취득일이 같으면 총 취득가액이 실재한다 — 겸용·selfOwns가 분리를 강제해도 상단 입력이 필요하다",
     ).toBeVisible();
-    await expect(page.getByTestId("split-acq-total-note")).toHaveCount(0);
   });
 
   test("🔴 U8: 별개 취득 + 파트 환산 → PHD 토글이 계속 보인다 (숨김 부작용 가드)", async ({ page }) => {
@@ -511,5 +516,113 @@ test.describe("U12 — 토글 직하 배치", () => {
     const saleBox = await page.getByTestId("sale-split-mode").boundingBox();
     const acqBox = await page.getByTestId("part-acq-mode-land").boundingBox();
     expect(saleBox!.y).toBeLessThan(acqBox!.y);
+  });
+});
+
+/**
+ * 이미지13 시나리오 재현 — 토지 실거래가 + 건물 환산취득가 (별개취득).
+ *
+ * 계획서: docs/02-design/features/transfer-split-acq-std-part-gating.plan.md
+ * 종전에는 계산에 등장하지도 않는 토지 공시지가·면적이 필수라 미입력 시 엔진이 throw했다.
+ */
+test.describe("P6 — 파트별 취득시 기준시가 게이팅 (2026-07-30)", () => {
+  test("토지 실가 + 건물 환산 — 자산 전체 기준시가 UI 0개, 토지 카드는 안내와 함께 노출", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await fillDateAndVerify(page, { year: "2025", month: "01", day: "08" }, {
+      scope: page.locator('[data-asset-card-index="0"] [data-slot="field-card"]').filter({ hasText: "토지 취득일" }),
+    });
+    await fillDateAndVerify(page, { year: "2025", month: "08", day: "29" }, {
+      scope: page.locator('[data-asset-card-index="0"] [data-slot="field-card"]').filter({ hasText: "건물 취득일" }),
+    });
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
+    await landAcqGroup(page).getByRole("radio", { name: "실거래가" }).check();
+
+    // 이미지14 — 상단 「취득시 기준시가 (원)」 3열 패널이 완전히 사라진다
+    await expect(page.getByTestId("split-acq-std-readonly")).toHaveCount(0);
+    await expect(page.getByTestId("acq-std-required-mark")).toHaveCount(0);
+
+    // 건물분은 환산이므로 파트 카드가 필요하다
+    await expect(page.getByTestId("split-building-std-acq")).toBeVisible();
+
+    // ⚠️ 이 시점엔 토지 기준시가가 **실제로 필요**하다 — 양도가액 구분 입력이 없어
+    //    취득시 비율이 유일한 양도가액 안분 수단이기 때문(술어 3절). 안내는 아직 없다.
+    await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
+    await expect(page.getByTestId("split-land-std-calc-unused-note")).toHaveCount(0);
+
+    // 양도가액을 구분 입력하면 안분 근거가 생겨 토지 기준시가는 계산에서 빠진다 →
+    // 카드는 「건물 기준시가 계산」 prefill 소스로 남되 계산 무관 안내가 붙는다.
+    await landTransfer(page).fill("300000000");
+    await page.getByTestId("split-building-transfer-price").fill("200000000");
+    await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
+    await expect(page.getByTestId("split-land-std-calc-unused-note")).toBeVisible();
+  });
+
+  test("환산 파트의 자본적지출 칸에 §97②2호 택일 안내가 붙는다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await setupSplitAsset(page);
+    await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
+    await expect(page.getByText(/큰 쪽만 필요경비가 됩니다/)).toBeVisible();
+  });
+});
+
+/**
+ * 소유자 분리 토글 상단 이동 (2026-07-30).
+ * 계획서: docs/02-design/features/transfer-self-owns-toggle-relocation.plan.md §4
+ *
+ * 이 토글은 「토지·건물 취득일 다름」을 **강제로 켜므로** 그보다 앞에 와야 위→아래 연쇄가 된다.
+ * 종전에는 축 A(양도가액 결정) 뒤에 있어, 아래를 눌렀는데 위쪽 화면이 펼쳐졌다.
+ */
+test.describe("P7 — 소유자 분리 토글 배치", () => {
+  const ownerToggle = (p: Page) => p.getByTestId("asset-ownership-split");
+  const dateToggle = (p: Page) => p.getByRole("switch", { name: /토지·건물 취득일 다름/ });
+
+  test("소유자 토글이 취득일 다름 토글보다 DOM 앞에 온다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+
+    await expect(ownerToggle(page)).toBeVisible();
+    await expect(dateToggle(page)).toBeVisible();
+    const owner = await ownerToggle(page).elementHandle();
+    const date = await dateToggle(page).elementHandle();
+    const relation = await page.evaluate(
+      ([a, b]) => a!.compareDocumentPosition(b!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      [owner, date],
+    );
+    expect(relation, "소유자 토글이 취득일 토글보다 앞이어야 인과가 위→아래로 흐른다").toBeTruthy();
+  });
+
+  test("소유자 다름 ON → 취득일 다름이 자동 ON + 되돌릴 수 없게 비활성", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "매매", exact: true }).click();
+
+    await ownerToggle(page).getByRole("switch").click();
+    await expect(page.getByRole("button", { name: /건물만 본인 소유/ })).toBeVisible();
+    // 취득일 2열이 나타나야 토지 취득일을 입력할 수 있다(입력 경로 확보)
+    await expect(page.getByTestId("acq-date-land")).toBeVisible();
+    // 모순 상태 방지 — 위는 ON인데 아래만 OFF로 되돌리는 조작을 막는다
+    await expect(dateToggle(page)).toBeDisabled();
+  });
+
+  test("상속 취득에서는 아직 노출되지 않는다 (분리 입력 부재 — 별도 PR)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 1);
+    await page.getByRole("button", { name: "주택", exact: true }).first().click();
+    await expandAssetSection(page, 3);
+    await page.getByRole("button", { name: "상속", exact: true }).click();
+    await expect(ownerToggle(page)).toHaveCount(0);
   });
 });

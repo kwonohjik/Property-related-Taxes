@@ -159,7 +159,31 @@ describe("G3·G4·G6 — 필요한 경우는 종전대로 노출 (회귀 0)", ()
   it("G6 매트릭스 #9 (일반건물·토지 환산 / 건물 실가)", () => {
     render(<Harness init={{ ...ACTUAL_SPLIT_SALE, assetKind: "building", landAcqMode: "estimated" }} />);
     expect(landCard()).toHaveLength(1);
-    expect(buildingCard(), "V3 all-or-nothing — 건물분을 비우면 엔진이 결합 총액 역산으로 후퇴").toHaveLength(1);
+    // 2026-07-30 파트별 게이팅 — 건물이 실거래가면 건물분 기준시가는 계산 어디에도 등장하지
+    // 않는다(개산공제 base·환산 분자 모두 파트 자기 모드 게이트). 구분양도 + 양도가액 직접입력이라
+    // 안분 비율도 소비되지 않으므로 요구할 근거가 없다. 종전 주석의 "결합 총액 역산 후퇴" 우려는
+    // 별개취득에서 총액 전송이 차단되어(transfer-tax-api-split.ts) 성립하지 않는다.
+    expect(buildingCard(), "실가 파트의 기준시가는 요구하지 않는다").toHaveLength(0);
+  });
+
+  it("G6' 매트릭스 #9 + 일괄양도(안분 비율 소비) → 건물분도 다시 필요", () => {
+    render(
+      <Harness
+        init={{
+          ...ACTUAL_SPLIT_SALE,
+          assetKind: "building",
+          landAcqMode: "estimated",
+          saleSplitMode: "apportioned",
+          // 양도가액 구분도 없고 양도시 기준시가도 없으면 **취득시 비율**이 유일한 안분 수단이라
+          // (술어 3절) 양쪽 파트의 기준시가가 함께 필요해진다.
+          landTransferPrice: "",
+          buildingTransferPrice: "",
+          landStandardPriceAtTransfer: "",
+          buildingStandardPriceAtTransfer: "",
+        }}
+      />,
+    );
+    expect(buildingCard(), "안분 비율은 양쪽 기준시가를 함께 요구한다").toHaveLength(1);
   });
 });
 
@@ -171,15 +195,19 @@ describe("G5 — 일반건물 실가/실가는 두 카드 모두 숨김 (D1)", (
   });
 });
 
-describe("G7 — 자산 전체 블록 ↔ 파트 카드 동시 노출/숨김 (⑧ 모순 금지)", () => {
-  // ⚠️ non-PHD · non-겸용 · non-상가 · non-일반건물 안내분기 한정 — 그 경로들은 자산 전체가
-  //    「저기서 입력하세요」 문구만 렌더해 라벨이 0이 되어 false GREEN을 만든다.
+describe("G7 — 별개취득이면 자산 전체 블록은 **항상** 숨김 (2026-07-30 불변식)", () => {
+  /**
+   * 종전 불변식은 "자산 전체 블록 ↔ 파트 카드 **동시** 노출/숨김"이었다. 그 시절에는 자산 전체가
+   * 읽기 전용 파생 패널로 남아 있어 두 블록이 같은 게이트를 공유했다.
+   * 이제 별개취득에서는 자산 전체 UI가 **조건 없이 0개**이고, 파트 카드만 파트별 술어로 갈린다
+   * (계획서 transfer-split-acq-std-part-gating.plan.md §2).
+   */
   it.each([
-    ["숨김", ACTUAL_APPORTIONED],
-    ["노출", { ...ACTUAL_APPORTIONED, landAcqMode: "estimated" as const }],
-  ])("G7 %s 케이스에서 두 블록의 노출 여부가 일치", (_label, init) => {
+    ["파트 카드 숨김", ACTUAL_APPORTIONED],
+    ["파트 카드 노출", { ...ACTUAL_APPORTIONED, landAcqMode: "estimated" as const }],
+  ])("G7 %s 케이스에서도 자산 전체 블록은 0개", (_label, init) => {
     render(<Harness init={init} />);
-    expect(landCard().length > 0).toBe(assetTotalBlock().length > 0);
+    expect(assetTotalBlock()).toHaveLength(0);
   });
 });
 

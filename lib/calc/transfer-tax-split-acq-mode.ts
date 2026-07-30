@@ -263,9 +263,17 @@ export function requiresAcqStdPrice(
   a: AcqStdPriceNeedFlags,
   ctx: AcqStdPriceNeedContext,
 ): boolean {
-  // ① 환산 분자 · ② 개산공제 base · ⑧ echo · ⑨ lumpDeductionBase — 실가가 아닌 파트가 하나라도 있으면 필요
-  if (ctx.landMode !== "actual" || ctx.buildingMode !== "actual") return true;
+  return (
+    requiresAcqStdPricePart("land", a, ctx) || requiresAcqStdPricePart("building", a, ctx)
+  );
+}
 
+/**
+ * **안분 비율**(토지·건물 기준시가 **둘 다** 필요)이 실제로 소비되는가 — 위 2·3·4절.
+ *
+ * 1절(환산 분자·개산공제 base·echo)은 파트 자기 기준시가만 쓰므로 여기 들어오지 않는다.
+ */
+function needsApportionRatio(a: AcqStdPriceNeedFlags, ctx: AcqStdPriceNeedContext): boolean {
   // ③④ 취득가액 안분 — 별개취득은 파트별 완결이라 안분 자체가 없다(§97①1호·§114⑦).
   //     비-별개취득에서 파트 2칸이 모두 비면 비율 안분이 유일한 도출 수단이다.
   if (!ctx.isSeparate && empty(a.landAcquisitionPrice) && empty(a.buildingAcquisitionPrice)) return true;
@@ -277,4 +285,28 @@ export function requiresAcqStdPrice(
   if ((a.expenses ?? 0) > 0 && empty(a.landDirectExpenses) && empty(a.buildingDirectExpenses)) return true;
 
   return false;
+}
+
+/**
+ * **그 파트의** 취득시 기준시가가 실제로 쓰이는가 (2026-07-30 파트별 분해).
+ *
+ * 계획서: docs/02-design/features/transfer-split-acq-std-part-gating.plan.md §3.2
+ *
+ * 종전 `requiresAcqStdPrice` 1절은 "어느 한 파트라도 non-actual이면 true"라 파트를 구분하지
+ * 않았다. 그 결과 **토지=실거래가 + 건물=환산**에서 토지 공시지가·면적이 계산 어디에도 쓰이지
+ * 않는데(취득가액은 파트별 완결·개산공제는 파트 자기 base·양도가액은 양도시 기준시가 비율)
+ * 미입력이면 엔진이 throw하고 validate가 차단했다.
+ *
+ * 1절(환산 분자 ①·개산공제 base ②·echo ⑧·lumpDeductionBase ⑨)은 **그 파트 자신의 기준시가**만
+ * 소비하므로 파트 모드로 판정하고, 2·3·4절(안분 비율)은 양쪽을 함께 요구한다.
+ */
+export function requiresAcqStdPricePart(
+  part: "land" | "building",
+  a: AcqStdPriceNeedFlags,
+  ctx: AcqStdPriceNeedContext,
+): boolean {
+  const mode = part === "land" ? ctx.landMode : ctx.buildingMode;
+  // ① 환산 분자 · ② 개산공제 base · ⑧ echo · ⑨ lumpDeductionBase — 그 파트가 실가가 아니면 필요
+  if (mode !== "actual") return true;
+  return needsApportionRatio(a, ctx);
 }

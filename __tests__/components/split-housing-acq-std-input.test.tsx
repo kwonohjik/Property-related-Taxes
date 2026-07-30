@@ -44,6 +44,8 @@ function Harness({ init }: { init: Partial<AssetForm> }) {
     <LandBuildingSplitSection
       selfOwns="both"
       acqStdPriceRequired
+      acqStdRequiredLand
+      acqStdRequiredBuilding
       isPhdBothEstimated={false}
       saleStdInLandPart={false}
       saleStdInBuildingPart={false}
@@ -124,6 +126,8 @@ describe("게이트 — 별개취득이 아니면 미노출 (회귀 0)", () => {
         <LandBuildingSplitSection
           selfOwns="both"
           acqStdPriceRequired
+          acqStdRequiredLand
+          acqStdRequiredBuilding
           isPhdBothEstimated={false}
           saleStdInLandPart={false}
           saleStdInBuildingPart={false}
