@@ -190,13 +190,13 @@ test.describe("양도시 기준시가 배치 — 구분양도 + 파트 환산", 
     // 결합 총액 입력 블록은 읽기 전용 파생 표시로 대체된다
     await expect(page.getByTestId("split-acq-std-readonly")).toBeVisible();
 
-    // 이미지 10 — 취득시 계산 모달이 **취득 시점** 입력을 제공한다(양도 시점은 숨김)
-    await page.getByRole("button", { name: "취득시 건물 기준시가 계산" }).click();
+    // 이미지 10·12 — 런처 1개로 **취득·양도를 한 번에** 계산한다(2시점 통합 모달).
+    await page.getByRole("button", { name: "건물 기준시가 계산" }).click();
     const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
     await expect(modal).toBeVisible();
     await expect(modal.getByText("취득당시 구조")).toBeVisible();
     await expect(modal.getByText("취득당시 용도")).toBeVisible();
-    await expect(modal.getByText("양도당시 구조"), "취득시 전용 모달은 양도 시점을 숨긴다").toHaveCount(0);
+    await expect(modal.getByText("양도당시 구조"), "2시점 모달은 양도 시점도 함께 입력한다").toBeVisible();
   });
 
   test("일괄양도로 되돌리면 카드가 축 A로 복귀한다 (상호배타)", async ({ page }) => {

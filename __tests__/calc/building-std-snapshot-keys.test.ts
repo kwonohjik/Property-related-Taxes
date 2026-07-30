@@ -22,6 +22,8 @@ describe("idOfSnapshotKey — 소속 자산/재산 id 환원", () => {
     // 시점 접미 전수 — 누락 시 id가 잘리지 않아 그 자산 계산서가 조용히 미출력된다(2026-07-29 실측)
     expect(idOfSnapshotKey("bsp-a1-split-acq")).toBe("a1");
     expect(idOfSnapshotKey("bsp-a1-split-transfer")).toBe("a1");
+    // 별개취득 건물분 취득·양도 통합 모달(2026-07-30) — 시점 세그먼트 없음
+    expect(idOfSnapshotKey("bsp-a1-split-both")).toBe("a1");
     expect(idOfSnapshotKey("bsp-a1-cbinh-acq")).toBe("a1");
     expect(idOfSnapshotKey("bsp-a1-cb-acq")).toBe("a1");
     expect(idOfSnapshotKey("bsp-a1-cb-transfer")).toBe("a1");
