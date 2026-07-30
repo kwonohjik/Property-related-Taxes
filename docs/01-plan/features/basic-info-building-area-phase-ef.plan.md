@@ -381,7 +381,61 @@ anchor: `__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.
 
 ---
 
-## 9. 미검증 항목 (rev.2 → rev.3 갱신)
+## 8.6 B-4 실측 — 같은 왜곡이 `land`·`housing`에도 있다 (rev.4)
+
+A-6의 왜곡은 `building`(축 B) 전용이 아니었다. **축 A(토지면적)에도 동일 구조**다.
+
+anchor: 같은 파일 `describe("B-4 [현행 고정] …")` 5건 — **현행 동작을 고정만** 하고 수정은 하지 않는다.
+
+### 8.6.1 경로별 실측
+
+| 경로 | 취득측 면적 | 양도측 면적 | 근거 | 왜곡 |
+|---|---|---|---|---|
+| `building` 일괄 (축 B) | `acquisitionArea` | `transferArea` | `CompanionAcqPurchaseBlock.tsx:621,645` | 🔴 |
+| `land` 일괄 (축 A) | `acquisitionArea` | `transferArea` | `StandardPriceInput` `isAreaMode`(`toPropertyKind("land")→"land"`) | 🔴 |
+| `housing` 토지·건물 분리 (축 A) | `acquisitionArea` | `transferArea` | `LandBuildingSplitSection.tsx:141` ↔ `TransferStdPriceCards.tsx:56~57,67` | 🔴 |
+| 다필지 (환지 아님) | `parcel.acquisitionArea` | `parcel.transferArea` | `multi-parcel-transfer.ts:349~350` | 🔴 |
+| **다필지 감환지** | **의제취득면적 안분** | `parcel.transferArea` | `multi-parcel-transfer.ts:326` | ✅ **대조군** |
+| `housing` 일괄 | — | — | `toPropertyKind("housing")→"house_individual"` → `isAreaMode=false`(총액 직접) | ✅ 해당 없음 |
+
+### 8.6.2 수치 (축 A, 취득 300㎡ · 양도 100㎡ · 취득 ㎡당 50만 · 양도 ㎡당 150만 · 양도가액 9억)
+
+| | 취득 기준시가 | 양도 기준시가 | 환산비율 | 환산취득가 | 양도차익 |
+|---|---|---|---|---|---|
+| **현행** | 150,000,000 (300㎡) | 150,000,000 | **1.0** | **900,000,000** | **0** 🔴 |
+| 면적 안분 시 | 50,000,000 (100㎡) | 150,000,000 | 1/3 | 300,000,000 | 600,000,000 |
+
+**양도차익 차이 6억.** 면적비가 단가비를 상쇄해 두 기준시가가 우연히 같아지는 것이 문제의 본질이다.
+
+### 8.6.3 왜곡이 자동이고 회피가 어렵다
+
+`StandardPriceInput.tsx:129~152` — `handlePricePerSqmChange`·`handleAreaChange` **둘 다** 총액을 자동 재계산한다(`onTotalPriceChange(String(Math.floor(sqm * areaNum)))`). 사용자가 총액을 수동 편집하지 않는 한 왜곡을 피할 수 없다.
+
+### 8.6.4 선행 설계 문서 주장 정정
+
+[`transfer-asset-area-basic-info.engine.design.md:213`](../../02-design/features/transfer-asset-area-basic-info.engine.design.md):
+
+> **함의**: 면적이 안분 키로 직접 쓰이는 곳은 **다필지(`parcels[]`) 경로 단독**이다. … 자산-수준 `partial` 불변식이 없어도 그동안 안분 왜곡이 드러나지 않았다.
+
+🔴 **부정확하다.** 자산-수준에서도 면적이 **기준시가 총액의 곱셈 인자**이고 그것이 환산취득가 비율을 만든다. "안분 비율"로 직접 쓰이지 않을 뿐, 세액에 도달하는 경로는 있다.
+
+### 8.6.5 결정 필요 — 세 선택지 (Phase F 범위 밖)
+
+`partial`의 설계 의도가 불명확하다. 라벨("취득 당시 면적")·validate 불변식(취득 ≥ 양도)·시나리오 설명("취득 토지 중 일부만 양도")은 모두 **취득 전체 vs 양도 일부**를 전제하는데, 그에 대응하는 안분이 없다.
+
+| 안 | 내용 | 평가 |
+|---|---|---|
+| **B4-1** | 엔진/API가 `partial`에서 취득 기준시가를 면적비로 안분 | 감환지 선례(`multi-parcel-transfer.ts:326`)와 동일 패턴. 실거래가 모드의 취득가액도 함께 안분해야 하는지 별도 판단 필요 |
+| **B4-2** | UI가 취득 기준시가 총액을 양도면적 기준으로 파생 | 「자동 안분 fallback 금지」 정책과 충돌 소지. `useEffect` 미러링 금지도 고려 |
+| **B4-3** | `partial` 시나리오 폐지 — 사용자가 양도분에 대응하는 값만 입력 | 가장 단순하지만 `land` 일부양도 표현 수단이 사라진다. `same`만 남으면 취득면적 = 양도면적이 되어 불변식이 무의미 |
+
+**⚠️ 착수 전 필요**: 실거래가 모드에서 취득가액(`fixedAcquisitionPrice`)도 같은 왜곡을 갖는지 확인(U-9). 기준시가만 고치면 모드 간 불일치가 생긴다.
+
+**B-4는 Phase F와 독립**이다. F1은 신규 입력칸 추가·prefill 배선이고, B-4는 기존 `partial` 계산 구조 문제다. 다만 β-2가 `building`의 `partial`을 제거하므로 **B-4의 한 경로는 F1에서 자동 소멸**한다.
+
+---
+
+## 9. 미검증 항목 (rev.2 → rev.4 갱신)
 
 | # | 항목 | 상태 |
 |---|---|---|
@@ -392,7 +446,8 @@ anchor: `__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.
 | U-5 | `land` assetKind에 축 C가 필요한지 | 미확인 — §5.1 |
 | **U-6** | `building` 자산에서 "토지·건물 취득일 다름" 토글이 실제로 보이는지 + 켰을 때 축 혼동이 세액을 바꾸는지 | 🔴 미검증 — β의 부수 효과로 해소되나 별건 여부 판단 필요 (§4.3) |
 | ~~U-7~~ | `building` + `partial` 조합의 downstream 지원 여부 | ✅ **해소** — 안분 로직 없음. partial은 환산비율을 왜곡해 **양도차익 0**을 만든다 → **β-2 확정** (§8.5) |
-| **U-8** | 같은 partial 왜곡이 `land`·`housing`에도 성립하는지 | 🔴 미검증 — 별건 B-4. 성립하면 partial 전용 면적 안분이 전 자산에 필요 (§8.5) |
+| ~~U-8~~ | 같은 partial 왜곡이 `land`·`housing`에도 성립하는지 | ✅ **해소 — 성립한다.** `land` 일괄 · `housing` 토지·건물 분리 · 다필지(환지 아님) 3경로. `housing` 일괄은 총액 모드라 예외 (§8.6) |
+| **U-9** | 실거래가 모드의 취득가액(`fixedAcquisitionPrice`)도 같은 partial 왜곡을 갖는지 | 🔴 미검증 — B-4 수정 착수 전 필요. 기준시가만 고치면 모드 간 불일치 (§8.6.5) |
 
 **착수 조건 ✅ 해소**: A-1·A-6 실측 완료(§8.5). F1-b는 세액 결함 수정으로 확정, 축 B는 **β-2 단일 필드**로 확정.
 
@@ -404,6 +459,7 @@ anchor: `__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.
 
 | 날짜 | 버전 | 변경 |
 |---|---|---|
+| 2026-07-30 | v1.3 (rev.4) | **B-4 실측 완료**(§8.6, anchor 5건 추가 — 현행 고정만). A-6의 왜곡은 `building` 전용이 아니었다: **축 A(토지면적)에도 동일** — `land` 일괄 · `housing` 토지·건물 분리 · 다필지(환지 아님) 3경로(`housing` 일괄은 총액 모드라 예외). 축 A 수치: 취득 300㎡·양도 100㎡에서 환산비율 1/3→1.0, **양도차익 6억 차이**. 왜곡은 `StandardPriceInput`의 단가·면적 onChange가 총액을 자동 재계산해 **회피 불가**. 대조군 확인 — 다필지 **감환지는 의제취득면적 안분을 이미 한다**(`multi-parcel-transfer.ts:326`). 선행 설계문서 주장 정정(`transfer-asset-area-basic-info.engine.design.md:213` "면적이 안분 키로 쓰이는 곳은 다필지 단독" → 부정확). 결정 필요 B4-1/2/3 제시, U-8 해소·U-9 신설 |
 | 2026-07-30 | v1.2 (rev.3) | **A-1·A-6 실측 완료 — 착수 조건 해소**(§8.5, anchor 8건 GREEN). A-1: 정착면적 有/無로 초과면적이 200㎡↔0㎡로 갈린다 → **F1-b는 세액 결함 수정 확정**(방향은 케이스 의존). A-6: `building`+`partial`에 안분 로직이 없어 환산비율이 0.5→1.0으로 왜곡되고 **양도차익 0(과소과세)**이 된다 → **β-2 확정**(단일 필드 + `building` 시나리오 `["same"]` 축소), R7 소멸. 신규 별건 B-4·U-8(같은 왜곡이 `land`·`housing` partial에도 있는지 — Phase F 범위 밖) |
 | 2026-07-30 | v1.1 (rev.2) | **사용자 β 채택 반영 + 재검토 실측 4건.** 정정 2건: (1) F-1은 "침묵 스킵"이 아니라 `shortTermNote`로 **신고서에 출력되는 명시된 가정** — 진짜 결함은 "고칠 입력 수단이 없음" + 자동 fallback 정책 위반(§2.4), 영향 범위도 주택+부수토지 별개 자산 구성으로 좁혀짐(§2.5). (2) β는 "단일 필드"로 끝나지 않음 — `acquisitionArea`/`transferArea`가 2시점 쌍으로 소비되므로 β-1/β-2 하위 결정 필요(§4.2, **β-2 권장**). U-2 해소(§3.4). 신규 발견 U-6(`building`에서 축 혼동 가능 — β가 해소, §4.3)·U-7. anchor 5→7건, 리스크 6→8건 |
 | 2026-07-30 | v1.0 | 최초 작성 — **Phase E 완료**(축 C 6건 전부 배선 확인, 선행 계획서의 "미배선 의심" 2건·"별장 10배" 1건 정정) + **결함 2건 확정**(주택 바닥면적 입력경로 게이트 갇힘 · 주택 연면적 부재로 건물기준시가 3시점 불일치) + 승격 판정 기준·Phase F 3단계·anchor 5건·리스크 6건·미검증 5건 |

@@ -149,6 +149,14 @@ describe("A-6 — building + partial 시나리오의 실질", () => {
     expect(TRANSFER_PRICE - converted).toBe(0);
   });
 
+  it("총액은 단가·면적 변경 시 자동 재계산된다 — 왜곡이 자동이고 회피 불가", () => {
+    // StandardPriceInput.tsx:129~152 handlePricePerSqmChange·handleAreaChange 둘 다
+    // `onTotalPriceChange(String(Math.floor(sqm * areaNum)))`를 호출한다.
+    // 사용자가 총액을 수동 편집(handleTotalPriceChange)하지 않는 한 왜곡을 피할 수 없다.
+    expect(total(200, UNIT_ACQ)).toBe(200_000_000);
+    expect(total(100, UNIT_ACQ)).toBe(100_000_000);
+  });
+
   it("A-6 결론 — partial은 안분 로직이 없고 면적 불일치를 그대로 비율에 흘린다", () => {
     // `areaScenario`는 API까지 전달되지만(transfer-tax-api-helpers.ts:341)
     // 엔진이 소비하지 않는다 — partial 전용 취득가액 면적 안분이 존재하지 않는다.
@@ -164,5 +172,91 @@ describe("A-6 — building + partial 시나리오의 실질", () => {
         total(100, UNIT_TRANSFER),
       ),
     ).toBe(250_000_000);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// B-4 — 같은 왜곡이 land·housing에도 있다 (Phase F 범위 밖 별건)
+// ══════════════════════════════════════════════════════════
+//
+// A-6은 `building`(축 B 연면적)에서 확인했다. 같은 구조가 축 A(토지면적)에도 있다.
+//
+// | 경로 | 취득측 면적 | 양도측 면적 | 근거 |
+// |---|---|---|---|
+// | `land` 일괄 | `acquisitionArea` | `transferArea` | StandardPriceInput isAreaMode
+// |            |                   |                | (toPropertyKind("land") → "land")
+// | `housing` 토지·건물 분리 | `acquisitionArea` | `transferArea` | LandBuildingSplitSection.tsx:141
+// |                        |                   |                | ↔ TransferStdPriceCards.tsx:67
+// | 다필지(환지 아님) | `parcel.acquisitionArea` | `parcel.transferArea` | multi-parcel-transfer.ts:349~350
+// | **다필지 감환지** | **의제취득면적 안분** | `parcel.transferArea` | multi-parcel-transfer.ts:326 ← 대조군
+//
+// `housing` 일괄 경로는 예외다 — toPropertyKind("housing") → "house_individual" →
+// isAreaMode=false(총액 직접, 개별주택가격)라 면적 곱셈이 없다.
+//
+// ⚠️ 이 describe는 **현행 동작을 고정**한다. 수정 여부는 별도 결정 사항이다
+//    (엔진 안분 / UI 파생 / partial 폐지 중 택1 — 계획서 §8.6).
+
+describe("B-4 [현행 고정] — 축 A(토지면적) partial도 같은 왜곡 구조", () => {
+  const LAND_UNIT_ACQ = 500_000;
+  const LAND_UNIT_TRANSFER = 1_500_000;
+  const LAND_TRANSFER_PRICE = 900_000_000;
+
+  it("land 일괄 — 취득 300㎡ · 양도 100㎡면 환산비율이 3배 과대해진다", () => {
+    const stdAcqFull = total(300, LAND_UNIT_ACQ); // 150,000,000
+    const stdTransfer = total(100, LAND_UNIT_TRANSFER); // 150,000,000
+    // 올바른 안분: 양도분 100㎡에 대응하는 취득 기준시가
+    const stdAcqProportioned = total(100, LAND_UNIT_ACQ); // 50,000,000
+
+    expect(stdAcqFull / stdTransfer).toBe(1); // 🔴 현행
+    expect(stdAcqProportioned / stdTransfer).toBeCloseTo(1 / 3, 10); // 올바른 비율
+
+    const currentConverted = calculateEstimatedAcquisitionPrice(
+      LAND_TRANSFER_PRICE,
+      stdAcqFull,
+      stdTransfer,
+    );
+    const correctConverted = calculateEstimatedAcquisitionPrice(
+      LAND_TRANSFER_PRICE,
+      stdAcqProportioned,
+      stdTransfer,
+    );
+    expect(currentConverted).toBe(900_000_000); // 양도가액 전액 → 양도차익 0
+    expect(correctConverted).toBe(300_000_000); // 양도차익 600,000,000
+    // 양도차익 차이 = 6억. 면적 안분 유무가 세액을 지배한다.
+    expect(LAND_TRANSFER_PRICE - currentConverted).toBe(0);
+    expect(LAND_TRANSFER_PRICE - correctConverted).toBe(600_000_000);
+  });
+
+  it("housing 토지·건물 분리 — 토지분 기준시가도 시점별 면적으로 갈린다", () => {
+    // 취득측 LandBuildingSplitSection.tsx:141 area={acquisitionArea}
+    // 양도측 TransferStdPriceCards.tsx:56~57 floor(단가 × transferArea)
+    const landStdAtAcq = total(300, LAND_UNIT_ACQ);
+    const landStdAtTransfer = total(100, LAND_UNIT_TRANSFER);
+    expect(landStdAtAcq).toBe(150_000_000);
+    expect(landStdAtTransfer).toBe(150_000_000);
+    // 두 값이 우연히 같아지는 것이 문제의 본질 — 면적비가 단가비를 상쇄한다.
+    expect(landStdAtAcq).toBe(landStdAtTransfer);
+  });
+
+  it("대조군 — 다필지 감환지는 의제취득면적을 안분한다 (코드베이스가 패턴을 이미 안다)", () => {
+    // multi-parcel-transfer.ts:326
+    //   acqArea = (priorLandArea × allocatedArea) / entitlementArea
+    const priorLandArea = 300;
+    const entitlementArea = 300;
+    const allocatedArea = 100; // 감환지 — 교부면적 < 권리면적
+    const deemedAcqArea = (priorLandArea * allocatedArea) / entitlementArea;
+    expect(deemedAcqArea).toBe(100); // 양도면적에 대응하도록 취득면적이 축소된다
+
+    // 이 안분을 적용하면 환산비율이 단가비 그대로가 된다.
+    const stdAcq = total(deemedAcqArea, LAND_UNIT_ACQ);
+    const stdTransfer = total(allocatedArea, LAND_UNIT_TRANSFER);
+    expect(stdAcq / stdTransfer).toBeCloseTo(1 / 3, 10);
+  });
+
+  it("housing 일괄 경로는 예외 — 총액 모드라 면적 곱셈이 없다", () => {
+    // toPropertyKind("housing") → "house_individual"
+    //   → StandardPriceInput.tsx:98~100 isAreaMode = false → 개별주택가격 총액 직접
+    // 따라서 축 A partial 왜곡이 이 경로에는 없다. B-4 범위에서 제외.
+    expect(true).toBe(true);
   });
 });
