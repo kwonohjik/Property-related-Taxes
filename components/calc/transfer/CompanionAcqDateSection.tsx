@@ -21,7 +21,6 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
-import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 const MIN_ACQ_DATE = "1985-01-01";
 
@@ -40,8 +39,11 @@ export function CompanionAcqDateSection(props: {
   isSplit: boolean;
   isMixedUse: boolean;
   acqDateLabel: string;
-  effLandAcqMode: PartAcqMode;
-  effBuildingAcqMode: PartAcqMode;
+  /**
+   * 양도시 기준시가 카드를 축 A에 두는가 — `saleStdPlacement(...).saleAxis`.
+   * 호출부(`CompanionAcqPurchaseBlock`)가 축 B와 **같은 1회 계산**으로 내려준다(재파생 금지).
+   */
+  saleStdInSaleAxis: boolean;
 }) {
   const { block: p, isSplitable, isSplit, isMixedUse, acqDateLabel } = props;
   const [dateClampMsg, setDateClampMsg] = useState(false);
@@ -205,10 +207,7 @@ export function CompanionAcqDateSection(props: {
             onLandTransferPriceChange={p.onLandTransferPriceChange ?? (() => {})}
             buildingTransferPrice={p.buildingTransferPrice ?? ""}
             onBuildingTransferPriceChange={p.onBuildingTransferPriceChange ?? (() => {})}
-            buildingStandardPriceAtTransfer={p.buildingStandardPriceAtTransfer ?? ""}
-            onBuildingStandardPriceAtTransferChange={p.onBuildingStandardPriceAtTransferChange ?? (() => {})}
-            landAcqMode={props.effLandAcqMode}
-            buildingAcqMode={props.effBuildingAcqMode}
+            showStdCard={props.saleStdInSaleAxis}
             asset={p.asset}
             onAssetChange={p.onAssetChange}
             transferDate={p.transferDate}

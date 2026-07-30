@@ -129,6 +129,22 @@ export function calcLandStdPriceAtAcq(pricePerSqm: number, area: number): number
   return Math.floor(pricePerSqm * area);
 }
 
+/**
+ * 건물분 취득시 기준시가 — **결합 총액에서 토지분을 뺀 역산** (소득세법 §99①1호 라목).
+ *
+ * 주택의 개별주택가격·공동주택가격은 **부수토지를 포함한 결합 공시**라 건물분 단독 공시가
+ * 존재하지 않는다. 이 역산이 정본이며, `토지분 + 건물분 ≡ 라목 총액` 항등성을 지켜
+ * 개산공제 합계를 법정액(시행령 §163⑥2호가목 = 라목 가액 × 3/100)과 일치시킨다.
+ *
+ * **엔진(`calcAcqStdPair`)과 UI 읽기 전용 표시가 공유하는 단일 소스**다 — UI가 같은 식을
+ * 재구현하면 clamp 규약이 갈려 표시값과 계산값이 어긋난다
+ * (`feedback_ui_engine_dual_truth_avoidance`). 총액 미입력(≤0)은 산출 불가라 `null`이다.
+ */
+export function calcDerivedBuildingStdAtAcq(total: number, landStd: number): number | null {
+  if (!(total > 0)) return null;
+  return Math.max(total - landStd, 0);
+}
+
 export function isSeparateAcquisition(asset: SeparateAcquisitionFlags): boolean {
   if (!asset.hasSeperateLandAcquisitionDate) return false;
   if (!asset.landAcquisitionDate || !asset.acquisitionDate) return false;
@@ -143,6 +159,65 @@ function empty(v: string | number | undefined | null): boolean {
   if (v == null) return true;
   if (typeof v === "number") return !(v > 0);
   return !(raw(v) > 0);
+}
+
+/** 양도시 기준시가 배치 판정 입력 — 각 계층의 기존 단일 소스가 파생해 주입한다(재파생 금지). */
+export interface SaleStdPlacementCtx {
+  /** `AssetForm.saleSplitMode` — stale 자산 대비 `?? "apportioned"` fallback을 **호출부가** 적용 */
+  saleSplitMode: "actual" | "apportioned";
+  landMode: PartAcqMode;
+  buildingMode: PartAcqMode;
+  selfOwns: "both" | "building_only" | "land_only";
+}
+
+/**
+ * **양도시 기준시가를 어디에 두는가** — 축 A(양도가액 결정) vs 파트 섹션(축 B 취득가액).
+ *
+ * 계획서: docs/02-design/features/transfer-split-std-price-colocation.plan.md §5.1
+ *
+ * 엔진 소비 구조와 1:1로 대응한다(`transfer-tax-split-gain.ts`):
+ *   · 일괄양도(apportioned) → `calcSaleApportionRatio`(:162-171)가 **토지·건물 둘 다** 요구.
+ *     이 값은 특정 파트가 아니라 **양도가액 축**에 속하므로 축 A에 둔다.
+ *   · 구분양도(actual) → 파트 환산 분모로만 쓰인다(:258-262 `partStdAtTransfer`).
+ *     그 파트가 환산이 아니면 계산 어디에도 등장하지 않으므로 노출하지 않는다.
+ *   · 비소유 파트(`selfOwns≠both`)의 양도차익은 상위에서 폐기되므로(transfer-tax.ts:315-316)
+ *     그 파트의 환산 분모도 필요 없다.
+ *
+ * **불변식**: `saleAxis && (landPart || buildingPart)`가 참인 조합은 없다 — 같은 `data-testid`가
+ * 화면에 2개 존재해 E2E strict mode가 깨지는 사고를 차단한다. (`landPart`와 `buildingPart`는
+ * 양쪽 환산에서 동시에 참이며, 이는 서로 다른 섹션의 서로 다른 카드라 정상이다.)
+ *
+ * ⚠️ **공통 조상이 1회 계산해 양축에 주입**한다(`CompanionAcqPurchaseBlock`). 축 A·축 B가 각자
+ * 호출하면 인자가 어긋나는 순간 위 불변식이 관례적 보증으로 전락한다 — 기존 `acqStdPriceRequired`
+ * 주입과 같은 패턴이다(memory `feedback_ui_engine_dual_truth_avoidance`).
+ */
+export function saleStdPlacement(ctx: SaleStdPlacementCtx): {
+  /** 축 A: 양도가액 안분 비율 — 토지·건물을 한 카드에 */
+  saleAxis: boolean;
+  /** 축 B 토지 섹션: 토지 환산 분모 */
+  landPart: boolean;
+  /** 축 B 건물 섹션: 건물 환산 분모 */
+  buildingPart: boolean;
+} {
+  if (ctx.saleSplitMode === "apportioned") {
+    return { saleAxis: true, landPart: false, buildingPart: false };
+  }
+  return {
+    saleAxis: false,
+    landPart: ctx.landMode === "estimated" && ctx.selfOwns !== "building_only",
+    buildingPart: ctx.buildingMode === "estimated" && ctx.selfOwns !== "land_only",
+  };
+}
+
+/**
+ * 그 파트의 양도시 기준시가가 **계산에 실제로 쓰이는가** = 입력 필수 여부.
+ *
+ * UI 노출(`saleStdPlacement`)과 validate 요구가 **같은 술어에서 나온다** — 어긋나면
+ * "입력 칸이 없는데 차단"(dead-end)이 된다(memory `feedback_ui_gate_removes_sole_input_path` 3항).
+ */
+export function needsSaleStdPart(part: "land" | "building", ctx: SaleStdPlacementCtx): boolean {
+  const p = saleStdPlacement(ctx);
+  return p.saleAxis || (part === "land" ? p.landPart : p.buildingPart);
 }
 
 interface AcqStdPriceNeedFlags {

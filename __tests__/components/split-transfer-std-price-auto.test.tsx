@@ -15,6 +15,7 @@ import { useState } from "react";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { LandBuildingSaleSplitSection } from "@/components/calc/transfer/LandBuildingSaleSplitSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(cleanup);
@@ -30,15 +31,18 @@ function Harness({ init }: { init: Partial<AssetForm> }) {
 
   return (
     <LandBuildingSaleSplitSection
-      landAcqMode={asset.landAcqMode || "actual"}
-      buildingAcqMode={asset.buildingAcqMode || "actual"}
       saleSplitMode={asset.saleSplitMode ?? "apportioned"}
       onSaleSplitModeChange={() => {}}
       landTransferPrice="" onLandTransferPriceChange={() => {}}
       buildingTransferPrice="" onBuildingTransferPriceChange={() => {}}
-      buildingStandardPriceAtTransfer={asset.buildingStandardPriceAtTransfer}
-      onBuildingStandardPriceAtTransferChange={(v: string) =>
-        setAsset((a) => ({ ...a, buildingStandardPriceAtTransfer: v }))
+      // 실제 배선과 동일하게 호출부(공통 조상)가 술어로 계산해 주입한다.
+      showStdCard={
+        saleStdPlacement({
+          saleSplitMode: asset.saleSplitMode ?? "apportioned",
+          landMode: asset.landAcqMode || "actual",
+          buildingMode: asset.buildingAcqMode || "actual",
+          selfOwns: asset.selfOwns ?? "both",
+        }).saleAxis
       }
       asset={asset}
       onAssetChange={(patch) => setAsset((a) => ({ ...a, ...patch }))}
@@ -131,9 +135,20 @@ describe("C. 게이트 — 회귀 0", () => {
     expect(screen.queryByTestId("split-land-std-transfer-area")).toBeNull();
   });
 
-  it("환산(estimated) 파트 → 노출", () => {
+  /**
+   * 2026-07-30 배치 변경 — 구분양도에서 양도시 기준시가는 **환산 분모 전용**이므로
+   * 축 A가 아니라 그 파트 섹션(축 B `LandBuildingSplitSection`)에 렌더된다.
+   * 축 A 카드는 일괄양도(안분 비율) 전용이 됐다.
+   */
+  it("구분양도 + 환산(estimated) 파트 → 축 A에는 미노출 (파트 섹션으로 이동)", () => {
     render(<Harness init={{ assetKind: "building", saleSplitMode: "actual", landAcqMode: "estimated" }} />);
-    expect(screen.getByTestId("split-land-std-transfer")).toBeTruthy();
+    expect(screen.queryByTestId("split-sale-std-card")).toBeNull();
+    expect(screen.queryByTestId("split-land-std-transfer")).toBeNull();
+  });
+
+  it("일괄양도(apportioned) → 축 A 카드 노출", () => {
+    render(<Harness init={{ assetKind: "building", saleSplitMode: "apportioned" }} />);
+    expect(screen.getByTestId("split-sale-std-card")).toBeTruthy();
   });
 
   it("라벨은 '양도시 토지/건물 기준시가' 어순 (시점 → 대상)", () => {

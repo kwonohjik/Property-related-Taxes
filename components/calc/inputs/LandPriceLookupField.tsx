@@ -58,6 +58,11 @@ export interface LandPriceLookupFieldProps {
    * 고정 testid를 박으면 중복된다 — 호출부가 필요할 때만 부여한다.
    */
   landStdPriceTestId?: string;
+  /**
+   * ㎡당 공시지가 **입력 칸**의 testid. 취득시·양도시 두 인스턴스가 같은 섹션에 공존하면
+   * 기본 placeholder("원/㎡")로는 셀렉터가 중복 매칭된다 — 필요할 때만 호출부가 부여한다.
+   */
+  pricePerSqmTestId?: string;
 }
 
 export function LandPriceLookupField({
@@ -73,6 +78,7 @@ export function LandPriceLookupField({
   fixedYear,
   hideLandStdPrice = false,
   landStdPriceTestId,
+  pricePerSqmTestId,
 }: LandPriceLookupFieldProps) {
   const [selectedYear, setSelectedYear] = useState("");
   const [isManual, setIsManual] = useState(false);
@@ -213,6 +219,7 @@ export function LandPriceLookupField({
           onChange={onPricePerSqmChange}
           placeholder={placeholder}
           hideUnit
+          data-testid={pricePerSqmTestId}
         />
       </FieldCard>
 
