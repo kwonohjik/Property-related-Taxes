@@ -61,7 +61,7 @@ export function validateGeneralBuildingAsset(
   if (!parseDecimal(asset.gbLandArea))
     return `${label}: 토지면적을 입력하세요.`;
   if (!parseDecimal(asset.gbBuildingFootprintArea))
-    return `${label}: 건물 수평투영면적을 입력하세요.`;
+    return `${label}: 건축물 바닥면적(각 층 중 최대, 지하 포함)을 입력하세요.`;
 
   // 용도지역 — 필수
   if (!asset.gbZoneType)
