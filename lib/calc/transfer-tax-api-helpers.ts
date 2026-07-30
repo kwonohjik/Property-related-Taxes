@@ -610,7 +610,7 @@ export function buildAssetPayload(
         ...cp.topLevelOverrides,
       };
     })(),
-    // ⑬ 사례 28 — companion 토지 세율 수동 오버라이드 (부수토지 일체과세 §89·영§154⑦)
+    // ⑬ 사례 28 — companion 토지 세율 수동 오버라이드 (부수토지 일체과세 §104①2호·영§167의5)
     // undefined이면 엔진 자동 분기. 빈 문자열·null은 undefined로 정규화.
     manualHoldingPeriodOverride: asset.manualHoldingPeriodOverride ?? undefined,
     // ⑬ 토지 성질 명시 입력 (landNature) — 폼 enum → 엔진 enum 변환
