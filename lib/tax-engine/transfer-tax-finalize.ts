@@ -15,6 +15,7 @@ import { applyRate, truncateToWon } from "./tax-utils";
 import { applyAnnualLimits, applyFiveYearLimits, buildLimitGroups } from "./aggregate-reduction-limits";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
+import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import {
   emitPenaltySteps,
   getReductionLegalBasis,
@@ -87,6 +88,8 @@ export interface FinalizeArgs {
   estimatedBase?: number;
   /** 차감형 감면 전 양도소득금액 (산출세액 차감 비교 기준) */
   transferIncomeBefore993: number;
+  /** 토지·건물 분리 결과 — 감면 전 산출세액 재계산도 파트별 세율을 따라야 한다(§104⑤ 이중 진실 방지) */
+  splitDetailForRate?: TransferTaxResult["splitDetail"];
   new993PreliminaryResult?: New993Result;
   new99PreliminaryResult?: New99Result;
   unsold988PreliminaryResult?: Unsold988Result;
@@ -153,7 +156,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     input, effectiveInput, steps, taxResult, taxRateInput, parsedRates,
     multiHouseSurchargeResult, taxableGain, longTermHoldingDeduction,
     basicDeduction, taxBase, estimatedBase,
-    transferIncomeBefore993, new993PreliminaryResult,
+    transferIncomeBefore993, splitDetailForRate, new993PreliminaryResult,
     new99PreliminaryResult, unsold988PreliminaryResult,
     unsold987PreliminaryResult, unsold992PreliminaryResult,
     unsold983PreliminaryResult, unsold985PreliminaryResult, unsold986PreliminaryResult,
@@ -199,7 +202,17 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     const isExempt =
       "ruralSurtaxExempt" in activePrelim! && (activePrelim as UnsoldHybridResult).ruralSurtaxExempt;
     const taxBaseBefore993 = Math.max(0, transferIncomeBefore993 - basicDeduction);
-    const taxResultBefore993 = calcTax(taxBaseBefore993, parsedRates, taxRateInput, multiHouseSurchargeResult);
+    // 감면 전 산출세액도 STEP 7과 같은 경로로 구한다 — split 자산에서 여기만 자산 단위
+    // 단일세율로 남으면 농특세 기초(감면액)가 과대·과소가 된다(이중 진실).
+    const taxResultBefore993 = resolveSplitAwareTax({
+      taxBase: taxBaseBefore993,
+      transferIncome: transferIncomeBefore993,
+      basicDeduction,
+      splitDetail: splitDetailForRate,
+      parsedRates,
+      taxRateInput,
+      multiHouseSurchargeResult,
+    });
     const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
     ruralSurtax993 = isExempt ? 0 : applyRate(taxReduction993, 0.2);
     const surtaxFields = { taxReductionForRuralSurtax: taxReduction993, ruralSurtax: ruralSurtax993 };

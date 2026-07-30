@@ -140,7 +140,7 @@ interface CalcTaxResult {
  * brackets는 max 오름차순 정렬 전제 (progressiveRateSchema transform이 보장).
  * calcTax의 T-1.5·T-2·T-2.5·T-3·T-4 5개 분기가 공유 — 중복 제거 + 정렬 가정 단일화.
  */
-function computeBracketBreakdown(
+export function computeBracketBreakdown(
   taxBase: number,
   brackets: ParsedRates["brackets"],
 ): { progressiveTax: number; baseRate: number; deduction: number } {

@@ -62,7 +62,8 @@ import {
   calcBasicDeduction,
   applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
-import { calculateBuildingPenalty, calcTax, handleMultiParcelBranch, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
+import { calculateBuildingPenalty, handleMultiParcelBranch, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
+import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-split-rate";
 import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails, buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
@@ -658,14 +659,9 @@ export function calculateTransferTax(
     : rateSpecialActive
       ? { ...taxRateInputBase, suppressShortTermRate: true }
       : taxRateInputBase;
-  const taxResult = calcTax(taxBase, parsedRates, taxRateInput, multiHouseSurchargeResult);
-  const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
-  steps.push({
-    label: "산출세액",
-    formula: `과세표준 ${taxBase.toLocaleString()} × 세율 ${fmtPct(taxResult.appliedRate)}${taxResult.surchargeRate ? ` (+중과 ${fmtPct(taxResult.surchargeRate)})` : ""}${taxResult.progressiveDeduction ? ` - 누진공제 ${taxResult.progressiveDeduction.toLocaleString()}` : ""}${taxResult.shortTermNote ? ` (${taxResult.shortTermNote})` : ""}`,
-    amount: taxResult.calculatedTax,
-    legalBasis: taxResult.surchargeRate ? TRANSFER.SURCHARGE : TRANSFER.TAX_RATE,
-  });
+  // 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세 (transfer-tax-split-rate.ts)
+  const taxResult = resolveSplitAwareTax({ taxBase, transferIncome, basicDeduction, splitDetail, parsedRates, taxRateInput, multiHouseSurchargeResult });
+  steps.push(buildCalculatedTaxStep(taxResult, taxBase));
 
   // STEP 7.5 ~ 11/12: 산출세액 이후 단계 통합 (transfer-tax-finalize.ts)
   const finalize = finalizeTransferTax({
@@ -682,6 +678,7 @@ export function calculateTransferTax(
     taxBase,
     estimatedBase,
     transferIncomeBefore993,
+    splitDetailForRate: splitDetail,
     new993PreliminaryResult,
     new99PreliminaryResult: incomeDeduction.new99Detail,
     unsold988PreliminaryResult: incomeDeduction.unsold988Detail,
