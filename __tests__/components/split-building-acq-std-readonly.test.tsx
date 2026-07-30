@@ -138,10 +138,14 @@ describe("H2 — 읽기 전용 파생 표시", () => {
 });
 
 describe("H3·H5 — 범위 한정 (회귀 0)", () => {
-  it("H3 주택은 대상 아님 — 결합 공시 총액 입력 칸 유지", () => {
+  /**
+   * 2026-07-30 — **주택도 별개취득이면 읽기 전용 파생 표시로 전환**한다.
+   * 별개취득에는 라목 결합 공시가 존재하지 않으므로(§163⑥2호가목 "취득당시" 요건) 총액을
+   * 사용자가 입력할 대상이 아니다 — 파트 카드 입력값에서 파생된 토지분·건물분·합계만 보여준다.
+   */
+  it("H3 주택도 별개취득이면 읽기 전용 파생 표시", () => {
     render(<Harness init={{ ...FILLED, assetKind: "housing" }} />);
-    expect(readonlyPanel(), "라목 결합 공시가 정본이라 총액을 사용자가 입력한다").toHaveLength(0);
-    expect(screen.queryAllByText(/^취득시 기준시가 \(원\)/).length).toBeGreaterThan(0);
+    expect(readonlyPanel(), "별개취득에는 라목 결합 공시가 없다").toHaveLength(1);
   });
 
   it("H5 비-별개취득(취득일 동일)은 종전 입력형 유지", () => {

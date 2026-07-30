@@ -146,10 +146,14 @@ describe("G3·G4·G6 — 필요한 경우는 종전대로 노출 (회귀 0)", ()
     expect(landCard(), "안분 근거가 없으면 취득시 비율이 유일한 도출 수단").toHaveLength(1);
   });
 
-  it("G4 매트릭스 #5 (주택·토지 실가 / 건물 환산) — 역산 소스", () => {
+  it("G4 매트릭스 #5 (주택·토지 실가 / 건물 환산) — 파트 독립 (2026-07-30)", () => {
     render(<Harness init={{ ...ACTUAL_SPLIT_SALE, buildingAcqMode: "estimated" }} />);
-    expect(landCard(), "주택 건물분은 «결합 총액 − 토지분» 역산이 유일한 경로").toHaveLength(1);
-    expect(derivedNote()).toHaveLength(1);
+    expect(landCard(), "토지분은 안분·환산 분자의 소스").toHaveLength(1);
+    expect(
+      buildingCard(),
+      "별개취득에는 라목 결합 공시가 없어 건물분도 파트 독립 입력이다(§163⑥2호가목 «취득당시»)",
+    ).toHaveLength(1);
+    expect(derivedNote(), "역산 안내는 폐지 — 더 이상 역산하지 않는다").toHaveLength(0);
   });
 
   it("G6 매트릭스 #9 (일반건물·토지 환산 / 건물 실가)", () => {
@@ -236,7 +240,7 @@ describe("G8 — 환산 안내 문구 방향 (D3)", () => {
     expect(note.textContent).toMatch(/위 「토지 양도시 기준시가」 카드/);
   });
 
-  it("G8-d 일괄양도 — 안내가 축 A 「양도시 기준시가」 카드를 가리킨다", () => {
+  it("G8-e 일괄양도 — 안내가 축 A 「양도시 기준시가」 카드를 가리킨다", () => {
     render(<Harness init={{ ...ACTUAL_APPORTIONED, landAcqMode: "estimated" }} />);
     const note = estimatedNote("land")[0];
     expect(note).toBeTruthy();
@@ -255,13 +259,15 @@ describe("G8 — 환산 안내 문구 방향 (D3)", () => {
     expect(note.compareDocumentPosition(acqCard) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
-  it("G8-d 주택 건물 파트는 없는 카드를 가리키지 않는다 (D2 재도입 금지)", () => {
+  it("G8-d 주택 건물 파트도 실재하는 카드를 가리킨다 (2026-07-30 파트 독립)", () => {
     render(<Harness init={{ ...ACTUAL_SPLIT_SALE, buildingAcqMode: "estimated" }} />);
-    expect(buildingCard(), "주택은 showBuildingStdPrice=false").toHaveLength(0);
+    expect(buildingCard(), "주택도 건물분 카드를 노출한다").toHaveLength(1);
     const note = estimatedNote("building")[0];
     expect(note).toBeTruthy();
-    expect(note.textContent).not.toMatch(/「건물 취득시 기준시가」 카드/);
-    expect(note.textContent).toMatch(/토지분을 뺀|자동 도출/);
+    expect(
+      note.textContent,
+      "카드가 실재하므로 dangling reference가 아니다 — 역산 서술은 폐지",
+    ).toMatch(/위 「건물 취득시 기준시가」 카드/);
   });
 });
 

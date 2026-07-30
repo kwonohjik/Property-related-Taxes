@@ -196,7 +196,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
    * **같은 폼 필드를 두 번** 입력받는다. 주택(라목)은 총액 모드라 중복이 없고 결합 공시가
    * 정본이므로 대상이 아니다.
    */
-  const showAcqStdReadonly = isSeparateAcq && props.assetKind === "building";
+  // **자산 종류 무관**(2026-07-30 사용자 확정). 종전엔 `building` 전용이라 주택 별개취득에서는
+  // 결합 총액 입력 블록이 계속 떴고, 사용자가 그 값을 채우면 엔진이 역산 경로로 흘렀다.
+  // §163⑥2호가목은 "라목 주택 **취득당시**의 라목 가액"을 요구하는데 토지를 먼저 취득한
+  // 경우 그 시점엔 주택이 없어 라목 결합 공시가 존재하지 않는다 → 파트별 독립이 정본.
+  const showAcqStdReadonly = isSeparateAcq;
 
   // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.

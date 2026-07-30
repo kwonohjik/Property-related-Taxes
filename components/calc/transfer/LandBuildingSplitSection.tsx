@@ -30,8 +30,6 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TransferLandStdPartCard } from "./TransferStdPriceCards";
 import { TransferBuildingStdPartCard } from "./TransferStdPriceCards";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
-import { calcDerivedBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 export type { PartAcqMode };
@@ -97,19 +95,17 @@ interface Props {
  * 각자 자기 취득일의 직전 고시분(소득령 §164③)이어야 하므로, 결합 총액에서 역산하면
  * 건물분에 토지 취득시점이 섞인다.
  *
- * **토지분(가목)은 주택에도 노출한다** — `㎡당 공시지가 × 면적`은 자산 종류와 무관하게
- * 안분 비율·환산 분자·개산공제 base의 유일한 소스다(engine `calcAcqStdPair`).
- * 반면 **건물분(나목) 명시 입력은 `building` 전용**이다 — 주택(라목)은 부수토지 포함
- * 결합 공시라 건물분 단독 공시가 없고, `결합 총액 − 토지분` 역산만이 항등성을 지켜
- * 개산공제 합계를 법정액(§163⑥2호가목)에 맞춘다.
+ * **토지분·건물분 모두 자산 종류와 무관하게 노출한다**(2026-07-30). 종전엔 건물분을 `building`
+ * 전용으로 두고 주택은 `결합 총액 − 토지분` 역산만 허용했으나, 그 근거인 §163⑥2호가목은
+ * "라목의 주택 **취득당시**의 라목 가액"을 전제한다 — 토지를 먼저 취득하고 건물을 나중에
+ * 신축·취득했다면 **토지 취득 당시엔 주택이 없어** 라목 결합 공시가 애초에 존재하지 않는다.
+ * 그 경우 §163⑥1호(토지)·2호(건물)가 각각 적용되므로 파트별 독립이 정본이다.
  */
 function PartAcqStdPrice(props: {
   part: "land" | "building";
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
-  /** 주택(라목) — 건물분은 별도 공시가 없어 `결합 총액 − 토지분`으로 도출됨을 안내 */
-  derivedBuildingNote?: boolean;
   /** 비소유 파트에 렌더할 때의 사유 안내 (`selfOwns ≠ both` — 소유는 없어도 계산에는 필요) */
   notOwnedReason?: string;
 }) {
@@ -152,13 +148,6 @@ function PartAcqStdPrice(props: {
             data-testid="split-land-std-acq-area"
           />
         </FieldCard>
-        {props.derivedBuildingNote && (
-          <p className="text-xs text-amber-800" data-testid="split-housing-building-derived-note">
-            건물분 취득시 기준시가는 위 <strong>취득시 기준시가(개별·공동주택가격)</strong>에서 이 토지분을 뺀 값으로
-            자동 도출됩니다 — 주택은 부수토지를 포함한 결합 공시라 건물분이 따로 공시되지 않습니다
-            (소득세법 §99①1호 라목·시행령 §163⑥2호가목).
-          </p>
-        )}
       </ToneCard>
       </div>
     );
@@ -170,7 +159,7 @@ function PartAcqStdPrice(props: {
       <FieldCard
         label="취득시 건물기준시가"
         unit="원"
-        hint="건물 취득일 직전 고시분. 미입력 시 결합 총액에서 역산하며, 그 값에는 토지 취득시점이 섞인다."
+        hint="건물 취득일 직전 고시분 (§164③). 취득시기가 다르므로 결합 공시액에서 역산하면 건물분에 토지 취득시점이 섞인다."
       >
         <CurrencyInput
           label=""
@@ -194,59 +183,14 @@ function PartAcqStdPrice(props: {
             landAreaM2: asset.acquisitionArea,
             acquisitionDate: asset.acquisitionDate,
             transferDate: props.transferDate,
+            // 취득시 위치지수 소스 — 양도시 런처의 `transferLandPricePerSqm`와 대칭.
+            // 트랙 분기(취득 ≤2000이면 2001 기준)는 모달이 `pickAcqLocationIndexLandPrice`로 처리한다.
+            acqLandPricePerSqm: asset.standardPricePerSqmAtAcq,
           }}
           onApply={(v: number) => onChange({ buildingStandardPriceAtAcq: String(v) })}
         />
       </div>
     </ToneCard>
-    </div>
-  );
-}
-
-/**
- * 주택(라목) 건물분 취득시 기준시가 — **읽기 전용 파생 표시** (`결합 총액 − 토지분`).
- *
- * 주택은 건물분 단독 공시가 없어 직접 입력 칸을 둘 수 없다(개산공제 법정액 §163⑥2호가목
- * 이탈). 그러나 값이 **어디에도 보이지 않으면** 사용자는 건물 환산취득가의 분자가 무엇인지,
- * 무엇을 채워야 그 값이 생기는지 알 수 없다(사용자 보고 2026-07-30 — 「취득시 건물기준시가
- * 화면이 없다」). 입력은 위쪽 두 곳(결합 총액 · 토지 ㎡당 공시지가×면적)에 그대로 두고,
- * **결과만** 건물 섹션에 표시해 양도시 카드와 짝을 맞춘다.
- *
- * ⚠️ 산식은 엔진과 **같은 헬퍼**(`calcDerivedBuildingStdAtAcq`)를 쓴다 — 재구현하면 clamp 규약이
- *    갈려 표시값과 계산값이 어긋난다.
- */
-function HousingBuildingStdDerivedCard(props: { asset: AssetForm }) {
-  const { asset } = props;
-  const land = calcLandStdPriceAtAcq(
-    parseAmount(asset.standardPricePerSqmAtAcq ?? ""),
-    parseDecimal(asset.acquisitionArea ?? ""),
-  );
-  const building = calcDerivedBuildingStdAtAcq(
-    parseAmount(asset.standardPriceAtAcq ?? ""),
-    land ?? 0,
-  );
-  return (
-    <div data-testid="split-building-std-acq-derived-card">
-      <ToneCard tone="amber" title="건물 취득시 기준시가 (§99①1호 라목 — 자동 도출)" noDark>
-        <FieldCard
-          label="취득시 건물기준시가"
-          unit="원"
-          hint="주택은 부수토지를 포함한 결합 공시라 건물분이 따로 공시되지 않습니다 — 위 「취득시 기준시가(개별·공동주택가격)」에서 토지분을 뺀 값입니다"
-        >
-          <div
-            className="flex h-9 items-center justify-end rounded-md border border-input bg-muted/40 px-3 text-sm font-mono tabular-nums whitespace-nowrap text-muted-foreground"
-            data-testid="split-building-std-acq-derived"
-          >
-            {building !== null ? (
-              building.toLocaleString()
-            ) : (
-              <span className="text-muted-foreground/50 text-xs">
-                위 「취득시 기준시가(개별·공동주택가격)」 입력 후 자동 계산
-              </span>
-            )}
-          </div>
-        </FieldCard>
-      </ToneCard>
     </div>
   );
 }
@@ -261,8 +205,6 @@ function PartAcqInputs(props: {
   onAcquisitionPriceChange: (v: string) => void;
   salesCaseValue: string;
   onSalesCaseValueChange: (v: string) => void;
-  /** 주택(라목) — 건물분 카드가 없어 환산 안내를 역산 서술로 대체 */
-  isHousingAsset?: boolean;
   /** 양도시 기준시가 카드가 **이 파트 섹션 안**에 있는가 — 안내 문구가 가리킬 대상이 달라진다 */
   saleStdInPart: boolean;
 }) {
@@ -317,12 +259,9 @@ function PartAcqInputs(props: {
   // ⚠️ 방향은 "위"다. 축 A(양도시 기준시가)는 2026-07-29에 `LandBuildingSaleSplitSection`으로
   //    분리되며 **앞으로** 이동했고, 취득시 카드(PartAcqStdPrice)도 이 안내보다 앞에 렌더된다.
   //    종전 문구는 둘 다 "아래"라고 가리켜 사용자가 입력 위치를 찾지 못했다.
-  // ⚠️ 주택은 `showBuildingStdPrice = false`라 「건물 취득시 기준시가」 카드가 **존재하지 않는다**
-  //    — 건물 파트 문구를 카드로 지시하면 dangling reference가 된다(역산 안내로 대체).
-  const acqSource =
-    props.part === "building" && props.isHousingAsset
-      ? "위 「취득시 기준시가(개별·공동주택가격)」에서 토지분을 뺀 값으로 자동 도출"
-      : `위 「${label} 취득시 기준시가」 카드`;
+  // 2026-07-30부터 주택도 건물분 카드를 노출하므로(§163⑥2호가목 "취득당시" 요건 — 별개취득에는
+  // 라목 결합 공시가 없다) 자산 종류로 갈리지 않는다. 종전 주택 분기(역산 서술)는 폐지.
+  const acqSource = `위 「${label} 취득시 기준시가」 카드`;
   // 양도시 기준시가 카드는 배치에 따라 이 섹션 안(구분양도+환산) 또는 축 A(일괄양도)에 있다.
   // 없는 카드 이름을 가리키면 사용자가 입력 위치를 찾지 못한다(2026-07-30 배치 분리).
   const transferSource = props.saleStdInPart
@@ -371,7 +310,11 @@ export function LandBuildingSplitSection(props: Props) {
     (props.asset?.assetKind === "building" || isHousingAsset) &&
     !!props.asset &&
     !!props.onAssetChange;
-  const showBuildingStdPrice = showLandStdPrice && !isHousingAsset;
+  // **주택도 파트 독립 입력**(2026-07-30 사용자 확정 + §163⑥2호가목 실측). 종전엔 주택을 제외하고
+  // `결합 총액 − 토지분` 역산만 허용했으나, 그 규정은 "**취득당시**의 라목 가액"을 전제한다 —
+  // 토지를 먼저 취득하고 건물을 나중에 신축·취득했다면 토지 취득 당시엔 주택이 없어 라목 결합
+  // 공시가 애초에 없다. 역산하면 건물분에 토지 취득시점이 섞인다(§164③ 직전 고시분 위반).
+  const showBuildingStdPrice = showLandStdPrice;
   const landOwned = props.selfOwns !== "building_only";
   const buildingOwned = props.selfOwns !== "land_only";
 
@@ -413,7 +356,6 @@ export function LandBuildingSplitSection(props: Props) {
               asset={props.asset!}
               onChange={props.onAssetChange!}
               transferDate={props.transferDate}
-              derivedBuildingNote={isHousingAsset}
             />
           )}
           {props.saleStdInLandPart && props.asset && props.onAssetChange && (
@@ -431,7 +373,6 @@ export function LandBuildingSplitSection(props: Props) {
             onAcquisitionPriceChange={props.onLandAcquisitionPriceChange}
             salesCaseValue={props.landSalesCaseValue}
             onSalesCaseValueChange={props.onLandSalesCaseValueChange}
-            isHousingAsset={isHousingAsset}
             saleStdInPart={props.saleStdInLandPart}
           />
         </div>
@@ -452,7 +393,6 @@ export function LandBuildingSplitSection(props: Props) {
           asset={props.asset!}
           onChange={props.onAssetChange!}
           transferDate={props.transferDate}
-          derivedBuildingNote={isHousingAsset}
           notOwnedReason="토지는 타인 소유이나, 건물분 취득시 기준시가를 결합 공시액에서 도출하려면 토지분이 필요합니다 (소득세법 §99①1호 가목·라목)."
         />
       )}
@@ -479,9 +419,6 @@ export function LandBuildingSplitSection(props: Props) {
           {showBuildingStdPrice && (
             <PartAcqStdPrice part="building" asset={props.asset!} onChange={props.onAssetChange!} transferDate={props.transferDate} />
           )}
-          {/* 주택은 직접 입력 카드 대신 역산 결과를 표시한다 — 같은 게이트(`showLandStdPrice`)를
-              쓰므로 「취득시 기준시가가 계산에 필요한 경우」에만 나타난다. */}
-          {showLandStdPrice && isHousingAsset && <HousingBuildingStdDerivedCard asset={props.asset!} />}
           {props.saleStdInBuildingPart && props.asset && props.onAssetChange && (
             <TransferBuildingStdPartCard
               asset={props.asset}
@@ -497,7 +434,6 @@ export function LandBuildingSplitSection(props: Props) {
             onAcquisitionPriceChange={props.onBuildingAcquisitionPriceChange}
             salesCaseValue={props.buildingSalesCaseValue}
             onSalesCaseValueChange={props.onBuildingSalesCaseValueChange}
-            isHousingAsset={isHousingAsset}
             saleStdInPart={props.saleStdInBuildingPart}
           />
         </div>

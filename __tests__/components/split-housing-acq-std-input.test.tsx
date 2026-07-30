@@ -83,17 +83,20 @@ describe("주택(housing) — 토지분 입력 노출", () => {
     expect(area().value).toBe("200");
   });
 
-  it("🔴 건물분 명시 입력은 노출하지 않는다 (라목 결합 공시 — 역산이 정본)", () => {
+  /**
+   * 2026-07-30 정책 전환 — **주택 별개취득도 건물분을 파트 독립 입력**한다.
+   * §163⑥2호가목은 "라목의 주택 **취득당시**의 라목 가액"을 전제하는데, 토지를 먼저 취득하고
+   * 건물을 나중에 신축·취득했다면 토지 취득 당시엔 주택이 없어 라목 결합 공시가 존재하지 않는다.
+   * 결합 총액 역산은 건물분에 **토지 취득시점**을 섞는다(§164③ 직전 고시분 위반).
+   */
+  it("🔴 건물분 명시 입력을 노출한다 (별개취득에는 라목 결합 공시가 없다)", () => {
     render(<Harness init={{ assetKind: "housing" }} />);
-    expect(
-      screen.queryByTestId("split-building-std-acq"),
-      "주택에 파트 독립 입력을 열면 개산공제 합계가 법정액(§163⑥2호가목)을 이탈한다",
-    ).toBeNull();
+    expect(screen.getByTestId("split-building-std-acq")).toBeTruthy();
   });
 
-  it("건물분이 역산됨을 안내한다", () => {
+  it("역산 안내는 표시하지 않는다 (dangling reference 방지)", () => {
     render(<Harness init={{ assetKind: "housing" }} />);
-    expect(screen.getByTestId("split-housing-building-derived-note")).toBeTruthy();
+    expect(screen.queryByTestId("split-housing-building-derived-note")).toBeNull();
   });
 });
 
