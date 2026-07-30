@@ -102,6 +102,14 @@ describe("A. 파트별 양도시 기준시가 필수 — 한쪽만 환산이면 
         buildingStandardPriceAtTransfer: BLDG_STD,
         // landStandardPriceAtTransfer 미입력 — 토지는 타인 소유라 그 gain을 버린다
         //                                     (transfer-tax.ts:315-316)
+        // ⚠️ 2026-07-30 — **취득시** 기준시가를 픽스처에 추가했다. 이 검증의 관심사는
+        //    「양도시」 기준시가 축인데, 종전 픽스처는 취득시 기준시가도 비워 두고 통과를
+        //    기대했다. 그 조합은 양쪽 환산이라 취득시 기준시가가 **반드시 필요**하며
+        //    (환산 분자), 없으면 엔진이 조용히 null을 반환해 `selfOwns`가 무시된다.
+        //    V8이 그 갭을 메우므로 이 축을 만족시킨 뒤 원래 대상만 검증한다.
+        standardPricePerSqmAtAcq: "1,000,000",
+        acquisitionArea: "100",
+        standardPriceAtAcq: "250,000,000",
       }),
       "자산 1",
     );

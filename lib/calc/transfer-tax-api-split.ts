@@ -89,10 +89,17 @@ export function buildSplitPayload(
   return {
     // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
     selfOwns: primary.selfOwns !== "both" ? primary.selfOwns : undefined,
+    // ⚠️ `selfOwns !== "both"` fallback(2026-07-30) — 소유자 분리를 **비-매매 취득원인**으로
+    //    확대하면서 추가. 상속·증여는 취득일이 하나(상속개시일·증여일)라 토지 취득일을 따로
+    //    입력받지 않는데, 이 값이 없으면 `calcSplitGain`이 early-return하고(split-gain.ts:356)
+    //    `splitDetail`이 null이 되어 **`selfOwns`가 통째로 무시된다**(transfer-tax.ts:315)
+    //    → 비소유 파트까지 전액 과세되는 조용한 오답. `usesPhd`가 쓰는 것과 같은 후퇴 패턴이다.
+    //    같은 날짜가 되므로 `isSeparateAcquisition`은 false — 파트별 취득가액 완결 규칙은
+    //    발동하지 않고 §166⑥ 기준시가 비율 안분 경로로 흐른다(의도된 동작).
     landAcquisitionDate:
       (primary.hasSeperateLandAcquisitionDate || primary.selfOwns !== "both") && primary.landAcquisitionDate
         ? primary.landAcquisitionDate
-        : usesPhd
+        : usesPhd || primary.selfOwns !== "both"
           ? primary.acquisitionDate
           : undefined,
     // 파트별 취득 모드 + 양도 분리 모드 — 엔진 명시 입력(§9 M2, "죽은 모드" 재발 방지).
