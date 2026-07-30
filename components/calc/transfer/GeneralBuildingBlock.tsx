@@ -295,7 +295,11 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         {/* ① 면적·규모 (sky) — 항상 표시 */}
         <ToneCard tone="sky" sectionNum="①" title="면적·규모" noDark>
 
-          <FieldCard label="토지면적" unit="㎡" hint="등기부등본 또는 토지대장 기재 토지면적 (㎡)">
+          <FieldCard
+            label="취득·양도 당시 토지 면적"
+            unit="㎡"
+            hint="등기부등본 또는 토지대장 기재 토지면적 (㎡). 취득시·양도시 기준시가 양쪽의 곱셈 인자 — 시점별 동일 가정."
+          >
             <DecimalInput value={asset.gbLandArea} onChange={(v) => onChange({ gbLandArea: v })} />
           </FieldCard>
 
