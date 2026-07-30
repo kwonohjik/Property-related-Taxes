@@ -34,6 +34,8 @@
  * (`transfer-tax-mixed-use-helpers.ts` `buildHousingPart` ①→②).
  */
 import { calculateProgressiveTax, calculateHoldingPeriod } from "./tax-utils";
+import { round2 } from "./area-utils";
+import { appurtenantLandMultiplier } from "./appurtenant-land-rate";
 import { TRANSFER } from "./legal-codes";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { calcTax, computeBracketBreakdown } from "./transfer-tax-rate-calc";
@@ -45,8 +47,8 @@ import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 
 /** 파트 1건의 산출 결과 */
 export interface SplitRatePart {
-  /** "land" | "building" */
-  kind: "land" | "building";
+  /** 토지(배율 내 부수토지 포함) / 건물 / 배율 초과분(비사업용 토지) */
+  kind: "land" | "building" | "non_business_land";
   /** §104② 세율 보유기간 기산일 */
   basisDate: Date;
   /** 파트 양도소득금액 (양도차익 − 장기보유특별공제) */
@@ -61,8 +63,8 @@ export interface SplitRatePart {
 }
 
 export interface SplitPartRateResult {
-  land: SplitRatePart;
-  building: SplitRatePart;
+  /** 토지 · 건물 (+ 배율 초과 비사업용 토지) — §104⑤ 후단이 각각을 별개 자산으로 본다 */
+  parts: SplitRatePart[];
   /** §104⑤2호 — 자산별 산출세액의 합 */
   perAssetTotal: number;
   /** §104⑤1호 — 합산 과세표준 누진세액 */
@@ -142,69 +144,155 @@ export function isLaterAcquiredLandExemptExcluded(input: TransferTaxInput): bool
   return held.years * 12 + held.months < ONE_HOUSE_HOLDING_MONTHS;
 }
 
-/** `applyLaterLandExemptExclusion` 결과 */
-export interface LaterLandExemptExclusion {
-  /** 나중 취득 토지분 과세 양도차익 — 12억 안분 없이 전액 과세 */
+/** 주택 부수토지 배율 한도 판정 결과 (G-2) */
+export interface AppurtenantLandExcess {
+  /** 적용 배율 (3/5/10) */
+  multiplier: number;
+  /** 인정 한도 면적 = 정착면적 × 배율 */
+  limitArea: number;
+  /** 한도 초과 면적 */
+  excessArea: number;
+  /** 토지 양도차익 중 비사업용으로 이전할 비율 */
+  nonBizRatio: number;
+}
+
+/**
+ * 주택 부수토지 배율 한도 판정 — 초과분이 없으면 `null`.
+ *
+ * 배율 수치는 「소득세법」 시행령 제168조의12(비사업용 토지 축)와 제167조의5(세율 축)가
+ * **동일**하다(3/5/5/10, 2022.1.1. 전 양도분은 도시지역 일률 5배). 입력 필드가
+ * `appurtenantLandZone`이므로 그 축의 헬퍼(`appurtenantLandMultiplier`)를 그대로 쓰되,
+ * **여기서의 근거 조문은 비사업용 토지 축인 시행령 제168조의12**다(§1.1.1 「축을 섞지 말 것」).
+ *
+ * ⚠️ 용도지역(`appurtenantLandZone`) 미입력 시 진입하지 않는다 — 미입력 fallback은 가장 작은
+ * 한도(3배)를 돌려주어 초과면적을 과다 산출하고 **납세자에게 불리**해진다(계획서 R-7).
+ * 미입력은 ⑧validate가 차단한다.
+ */
+export function resolveAppurtenantLandExcess(
+  input: TransferTaxInput,
+): AppurtenantLandExcess | null {
+  if (input.propertyType !== "housing") return null;
+  if ((input.selfOwns ?? "both") !== "both") return null;
+  if (input.isSeparateAcquisition !== true) return null;
+  if (input.appurtenantLandZone === undefined) return null;
+  const footprint = input.buildingFootprintArea ?? 0;
+  const landArea = input.acquisitionArea ?? 0;
+  if (footprint <= 0 || landArea <= 0) return null;
+
+  const multiplier = appurtenantLandMultiplier(input.appurtenantLandZone, input.transferDate);
+  const limitArea = round2(footprint * multiplier);
+  const excessArea = round2(Math.max(0, landArea - limitArea));
+  if (excessArea <= 0) return null;
+  return { multiplier, limitArea, excessArea, nonBizRatio: excessArea / landArea };
+}
+
+/** `applyHousingLandExclusions` 결과 */
+export interface HousingLandExclusionResult {
+  /** 배율 초과분(비사업용 토지) 양도차익 — 12억 안분 대상 아님 */
+  nonBusinessGain: number;
+  /** 배율 내 토지분 과세 양도차익 */
   landTaxableGain: number;
-  /** 비과세 대상 파트(건물)의 12억 안분 후 과세 양도차익 */
+  /** 건물분의 12억 안분 후 과세 양도차익 */
   buildingTaxableGain: number;
-  /** 자산 과세 양도차익 = 위 둘의 합 (Σ파트 = 자산 불변식) */
+  /** 자산 과세 양도차익 = 위 셋의 합 (Σ파트 = 자산 불변식) */
   taxableGain: number;
   step: CalculationStep;
 }
 
 /**
- * G-3 비과세 축 적용 — 나중 취득 부수토지분을 12억 안분 대상에서 빼고 전액 과세로 돌린다.
+ * 주택 부수토지 중 **1세대1주택 비과세 대상이 아닌 부분**을 분리한다 (G-2 + G-3).
  *
  * 겸용주택 정본(`buildHousingPart`)의 ①→② 순서를 그대로 따른다:
- *   ① 비과세 비대상분(여기서는 보유 2년 미만 토지분)을 **안분 전** 양도차익에서 분리 — 전액 과세
- *   ② 12억 안분(영 §160①)은 **잔여 주택분**에만 적용. 분모는 자산 양도가액 그대로다
- *      (고가주택 판정 §89①3호는 주택과 그 부수토지 전체의 실지거래가액 기준).
+ *   ① 비과세 비대상분을 **안분 전** 양도차익에서 분리 — 전액 과세
+ *      · G-2: 배율 초과분 → 비사업용 토지(§104의3①5호). 별도 파트로 조립한다.
+ *      · G-3: 배율 내이지만 나중 취득으로 보유 2년 미만인 토지분(영 §154① 보유요건 미충족).
+ *   ② 12억 안분(영 §160①)은 **잔여 주택분**(배율 내 + 2년 이상 토지 + 건물)에만 적용.
+ *      분모는 자산 양도가액 그대로다 — 고가주택 판정(§89①3호)은 주택과 그 부수토지 전체의
+ *      실지거래가액 기준이기 때문이다.
  *
  * 파트별 과세 양도차익을 `splitDetail`에 역기입해 `calcLongTermHoldingDeduction`이 같은 값으로
  * 장특공제를 산정하게 한다(이중 안분 방지).
  *
  * 적용 대상이 아니면 `null` — 호출부는 기존 안분 경로를 그대로 쓴다.
  */
-export function applyLaterLandExemptExclusion(args: {
+export function applyHousingLandExclusions(args: {
   input: TransferTaxInput;
   splitDetail: SplitGainResult | undefined;
   isExempt: boolean;
   isPartialExempt: boolean;
   /** `calcOneHouseProration` — 12억 안분(영 §160①) 단일 소스 */
   prorate: (gain: number) => number;
-}): LaterLandExemptExclusion | null {
+}): HousingLandExclusionResult | null {
   const { input, splitDetail, isExempt, isPartialExempt, prorate } = args;
   if (!splitDetail) return null;
-  if (!isExempt && !isPartialExempt) return null;
-  if (!isLaterAcquiredLandExemptExcluded(input)) return null;
+  const excess = resolveAppurtenantLandExcess(input);
+  const laterLand = isLaterAcquiredLandExemptExcluded(input);
+  if (!excess && !laterLand) return null;
 
-  // ① 보유 2년 미만 토지분 — 안분 없이 전액 과세
-  const landTaxableGain = Math.max(0, splitDetail.land.gain);
-  // ② 잔여(건물분) — 전액 비과세이면 0, 고가주택이면 12억 안분
+  const landGain = Math.max(0, splitDetail.land.gain);
   const buildingGain = Math.max(0, splitDetail.building.gain);
-  const buildingTaxableGain = isExempt ? 0 : prorate(buildingGain);
+
+  // ① 배율 초과분을 비사업용 토지로 이전 (12억 안분 대상 아님)
+  const nonBusinessGain = excess ? Math.floor(landGain * excess.nonBizRatio) : 0;
+  const housingLandGain = landGain - nonBusinessGain;
+
+  // ② 잔여 주택분 — 비과세 대상이면 안분(전액 비과세면 0), 아니면 전액 과세
+  const exemptApplies = isExempt || isPartialExempt;
+  const applyExempt = (gain: number) => (isExempt ? 0 : prorate(gain));
+  //   배율 내 토지분: G-3(보유 2년 미만)이면 비과세 대상이 아니라 전액 과세
+  const landTaxableGain =
+    !exemptApplies || laterLand ? housingLandGain : applyExempt(housingLandGain);
+  const buildingTaxableGain = !exemptApplies ? buildingGain : applyExempt(buildingGain);
 
   splitDetail.land.taxableGainAfterProration = landTaxableGain;
   splitDetail.building.taxableGainAfterProration = buildingTaxableGain;
+  if (excess) {
+    splitDetail.nonBusinessLandPart = {
+      limitArea: excess.limitArea,
+      excessArea: excess.excessArea,
+      appliedMultiplier: excess.multiplier,
+      gain: nonBusinessGain,
+      taxableGainAfterProration: nonBusinessGain,
+      holdingYears: splitDetail.land.holdingYears,
+      longTermRate: 0, // `calcLongTermHoldingDeduction`이 표1로 채운다
+      longTermDeduction: 0,
+    };
+  }
 
-  const held = calculateHoldingPeriod(input.landAcquisitionDate!, input.transferDate);
-  const heldLabel = `${held.years}년 ${held.months}개월`;
+  const reasons: string[] = [];
+  if (excess) {
+    reasons.push(
+      `배율 초과분 ${excess.excessArea.toFixed(2)}㎡(한도 정착면적 × ${excess.multiplier}배 = ` +
+        `${excess.limitArea.toFixed(2)}㎡)는 「소득세법」 제104조의3 제1항 제5호의 비사업용 토지 — ` +
+        `양도차익 ${nonBusinessGain.toLocaleString()}을 분리해 전액 과세`,
+    );
+  }
+  if (laterLand) {
+    const held = calculateHoldingPeriod(input.landAcquisitionDate!, input.transferDate);
+    reasons.push(
+      `주택 취득 후 취득한 부수토지(보유 ${held.years}년 ${held.months}개월)는 「소득세법」 ` +
+        `시행령 제154조 제1항 보유요건 미충족으로 1세대1주택 비과세 대상이 아님 — ` +
+        `양도차익 ${housingLandGain.toLocaleString()}을 12억 안분 없이 전액 과세`,
+    );
+  }
+  const taxableGain = nonBusinessGain + landTaxableGain + buildingTaxableGain;
   return {
+    nonBusinessGain,
     landTaxableGain,
     buildingTaxableGain,
-    taxableGain: landTaxableGain + buildingTaxableGain,
+    taxableGain,
     step: {
-      label: "부수토지 비과세 제외 (보유 2년 미만)",
-      formula:
-        `주택 취득 후 취득한 부수토지(보유 ${heldLabel})는 「소득세법」 시행령 제154조 제1항 ` +
-        `보유요건을 충족하지 못해 1세대1주택 비과세 대상이 아니다 — ` +
-        `토지분 양도차익 ${landTaxableGain.toLocaleString()}은 12억 안분 없이 전액 과세, ` +
-        `건물분 과세 양도차익 ${buildingTaxableGain.toLocaleString()}`,
-      amount: landTaxableGain + buildingTaxableGain,
+      label: "부수토지 비과세 제외",
+      formula: `${reasons.join(" / ")} · 건물분 과세 양도차익 ${buildingTaxableGain.toLocaleString()}`,
+      amount: taxableGain,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     },
   };
+}
+
+/** STEP 1a 전액 비과세 조기 반환을 억제해야 하는가 (G-2 또는 G-3) */
+export function hasHousingLandExemptExclusion(input: TransferTaxInput): boolean {
+  return isLaterAcquiredLandExemptExcluded(input) || resolveAppurtenantLandExcess(input) !== null;
 }
 
 /**
@@ -232,103 +320,124 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
   //    범위 밖(계획서 §5.3 P4 · §6 M-12). 자산 단위 판정을 그대로 유지한다.
   if (input.isNonBusinessLand) return null;
 
-  // 파트 양도소득금액 — 자산 단위와 같은 소스(splitDetail)에서 만든다.
+  // ── 파트 구성 ───────────────────────────────────────────
+  // 파트 양도소득금액은 자산 단위와 같은 소스(splitDetail)에서 만든다.
   // ⚠️ `gain`은 12억 안분 **전** 값이라 `longTermDeduction`(안분 후 기준)과 축이 다르다 —
   //    `taxableGainAfterProration`(안분·비과세 제외 반영)을 써야 파트 소득금액이 자산 단위와 맞는다.
-  const rawLand =
-    (splitDetail.land.taxableGainAfterProration ?? splitDetail.land.gain) -
-    splitDetail.land.longTermDeduction;
-  const rawBuilding =
-    (splitDetail.building.taxableGainAfterProration ?? splitDetail.building.gain) -
-    splitDetail.building.longTermDeduction;
+  const nbPart = splitDetail.nonBusinessLandPart;
+  const nbBasisDate = input.landAcquisitionDate;
+  const seeds: {
+    kind: SplitRatePart["kind"];
+    basisDate: Date;
+    raw: number;
+    rateInput: TransferTaxInput;
+  }[] = [
+    {
+      kind: "land",
+      basisDate: landBasisDate,
+      raw:
+        (splitDetail.land.taxableGainAfterProration ?? splitDetail.land.gain) -
+        splitDetail.land.longTermDeduction,
+      rateInput: { ...input, acquisitionDate: landBasisDate },
+    },
+    {
+      kind: "building",
+      basisDate: input.acquisitionDate,
+      raw:
+        (splitDetail.building.taxableGainAfterProration ?? splitDetail.building.gain) -
+        splitDetail.building.longTermDeduction,
+      rateInput: input,
+    },
+  ];
+  if (nbPart && nbBasisDate) {
+    seeds.push({
+      kind: "non_business_land",
+      // 배율 초과분은 주택부수토지가 아니므로 §104②의 "해당 자산"은 토지 본래 취득일이다.
+      basisDate: nbBasisDate,
+      raw: (nbPart.taxableGainAfterProration ?? nbPart.gain) - nbPart.longTermDeduction,
+      // 주택 단기세율(§104①2·3호)이 아니라 §104①8호 누진 + 10%p. `propertyType`을 토지로 두어야
+      // `calcTax`의 주택 분기(70%/60%)에 걸리지 않는다.
+      rateInput: {
+        ...input,
+        propertyType: "land",
+        acquisitionDate: nbBasisDate,
+        isNonBusinessLand: true,
+        // 자산 단위 면적안분 비율은 이 파트에 의미가 없다(이미 초과분만 떼어냈다).
+        nonBusinessLandAreaRatio: undefined,
+      },
+    });
+  }
+
   // 6. 어느 파트든 결손이면 자산 내부에서 이미 통산된 뒤다(`transfer-tax-helpers.ts` 합산).
   //    파트별로 쪼개면 Σ파트 ≠ 자산 과세표준이 되므로 진입하지 않는다.
-  if (rawLand < 0 || rawBuilding < 0) return null;
-  const rawSum = rawLand + rawBuilding;
+  if (seeds.some((s) => s.raw < 0)) return null;
+  const rawSum = seeds.reduce((s, p) => s + p.raw, 0);
   if (rawSum <= 0) return null;
 
-  // 자산 단위 양도소득금액과 어긋나면(감면·안분 등) 비율 안분 후 잔액은 건물 파트가 흡수한다.
+  // 자산 단위 양도소득금액과 어긋나면(감면 등) 비율 안분 후 잔액은 **마지막 파트가 흡수**한다.
   // 큰 금액의 곱(최대 1e18)이 2^53을 넘길 수 있어 BigInt로 계산한다.
-  const landIncome =
-    transferIncome === rawSum
-      ? rawLand
-      : Number((BigInt(transferIncome) * BigInt(rawLand)) / BigInt(rawSum));
-  const buildingIncome = transferIncome - landIncome;
-  if (landIncome < 0 || buildingIncome < 0) return null;
-
-  const buildingBasisDate = input.acquisitionDate;
-  // 파트별 세율 판정 입력 — 토지는 기산일 교체, 건물은 자산 단위 로직 그대로.
-  const landInput: TransferTaxInput = { ...input, acquisitionDate: landBasisDate };
-  const buildingInput: TransferTaxInput = input;
+  let allocatedIncome = 0;
+  const incomes = seeds.map((s, i) => {
+    if (i === seeds.length - 1) return transferIncome - allocatedIncome;
+    const v =
+      transferIncome === rawSum
+        ? s.raw
+        : Number((BigInt(transferIncome) * BigInt(s.raw)) / BigInt(rawSum));
+    allocatedIncome += v;
+    return v;
+  });
+  if (incomes.some((v) => v < 0)) return null;
 
   // 1차: 기본공제 배분 전 세율 확인 (§103② MAX_BENEFIT 판정에 적용세율이 필요하다)
-  const landRate = calcTax(landIncome, parsedRates, landInput, ctx.multiHouseSurchargeResult);
-  const buildingRate = calcTax(buildingIncome, parsedRates, buildingInput, ctx.multiHouseSurchargeResult);
+  const preRates = seeds.map((s, i) =>
+    calcTax(incomes[i], parsedRates, s.rateInput, ctx.multiHouseSurchargeResult),
+  );
 
-  // 7. 파트별 확정세율이 같으면 분해해도 결과가 같다 — 진입하지 않는다(회귀 0의 핵심).
+  // 7. 파트별 확정세율이 모두 같으면 분해해도 결과가 같다 — 진입하지 않는다(회귀 0의 핵심).
   //    세율**군**이 아니라 **확정세율 + 누진공제쌍**으로 판정한다. 1년 미만 50% + 1~2년 40%는
   //    둘 다 short_term 군이라 군 단위로 보면 누락된다.
-  if (
-    landRate.appliedRate === buildingRate.appliedRate &&
-    landRate.progressiveDeduction === buildingRate.progressiveDeduction
-  ) {
-    return null;
-  }
+  const uniform = preRates.every(
+    (r) =>
+      r.appliedRate === preRates[0].appliedRate &&
+      r.progressiveDeduction === preRates[0].progressiveDeduction,
+  );
+  if (uniform) return null;
 
   // ── §104⑤ 비교과세 ─────────────────────────────────────
   const allocation = allocateBasicDeduction(
-    [
-      {
-        idx: 0,
-        rateGroup: PART_RATE_GROUP,
-        income: landIncome,
-        transferDate: input.transferDate,
-        rate: landRate.appliedRate,
-      },
-      {
-        idx: 1,
-        rateGroup: PART_RATE_GROUP,
-        income: buildingIncome,
-        transferDate: input.transferDate,
-        rate: buildingRate.appliedRate,
-      },
-    ],
+    seeds.map((_, i) => ({
+      idx: i,
+      rateGroup: PART_RATE_GROUP,
+      income: incomes[i],
+      transferDate: input.transferDate,
+      rate: preRates[i].appliedRate,
+    })),
     basicDeduction,
     "MAX_BENEFIT",
   );
-  const allocatedLand = allocation.find((a) => a.idx === 0)?.amount ?? 0;
-  const allocatedBuilding = allocation.find((a) => a.idx === 1)?.amount ?? 0;
-
-  const landTaxBase = Math.max(0, landIncome - allocatedLand);
-  const buildingTaxBase = Math.max(0, buildingIncome - allocatedBuilding);
+  const allocated = seeds.map((_, i) => allocation.find((a) => a.idx === i)?.amount ?? 0);
+  const taxBases = seeds.map((_, i) => Math.max(0, incomes[i] - allocated[i]));
   // 불변식 — 조용한 오답 방지. 배분액이 파트 소득금액을 넘지 않으므로 성립해야 한다.
-  if (landTaxBase + buildingTaxBase !== taxBase) return null;
+  if (taxBases.reduce((s, v) => s + v, 0) !== taxBase) return null;
 
-  const landFinal = calcTax(landTaxBase, parsedRates, landInput, ctx.multiHouseSurchargeResult);
-  const buildingFinal = calcTax(buildingTaxBase, parsedRates, buildingInput, ctx.multiHouseSurchargeResult);
+  const finals = seeds.map((s, i) =>
+    calcTax(taxBases[i], parsedRates, s.rateInput, ctx.multiHouseSurchargeResult),
+  );
 
-  const perAssetTotal = landFinal.calculatedTax + buildingFinal.calculatedTax;
+  const parts: SplitRatePart[] = seeds.map((s, i) => ({
+    kind: s.kind,
+    basisDate: s.basisDate,
+    income: incomes[i],
+    allocatedBasicDeduction: allocated[i],
+    taxBase: taxBases[i],
+    calculatedTax: finals[i].calculatedTax,
+    appliedRate: finals[i].appliedRate,
+  }));
+  const perAssetTotal = finals.reduce((s, r) => s + r.calculatedTax, 0);
   const aggregateProgressive = calculateProgressiveTax(taxBase, parsedRates.brackets);
 
   return {
-    land: {
-      kind: "land",
-      basisDate: landBasisDate,
-      income: landIncome,
-      allocatedBasicDeduction: allocatedLand,
-      taxBase: landTaxBase,
-      calculatedTax: landFinal.calculatedTax,
-      appliedRate: landFinal.appliedRate,
-    },
-    building: {
-      kind: "building",
-      basisDate: buildingBasisDate,
-      income: buildingIncome,
-      allocatedBasicDeduction: allocatedBuilding,
-      taxBase: buildingTaxBase,
-      calculatedTax: buildingFinal.calculatedTax,
-      appliedRate: buildingFinal.appliedRate,
-    },
+    parts,
     perAssetTotal,
     aggregateProgressive,
     chosen: perAssetTotal >= aggregateProgressive ? "per_asset" : "aggregate",
@@ -386,17 +495,23 @@ export function resolveSplitAwareTax(
       splitPartDetail: parts,
     };
   }
+  const label: Record<SplitRatePart["kind"], string> = {
+    land: "토지",
+    building: "건물",
+    non_business_land: "배율 초과 토지(비사업용)",
+  };
   return {
     calculatedTax: chosenTax,
     // 표시용 적용세율은 파트 최고세율 (누진공제는 파트별로 달라 합산 표시 불가)
-    appliedRate: Math.max(parts.land.appliedRate, parts.building.appliedRate),
+    appliedRate: Math.max(...parts.parts.map((p) => p.appliedRate)),
     progressiveDeduction: 0,
     surchargeSuspended: false,
     shortTermNote:
-      `토지·건물 파트별 세율(소득세법 §104⑤2호): ` +
-      `토지 ${pct(parts.land.appliedRate)} ${parts.land.calculatedTax.toLocaleString()} + ` +
-      `건물 ${pct(parts.building.appliedRate)} ${parts.building.calculatedTax.toLocaleString()} ` +
-      `(합산 누진세액 ${parts.aggregateProgressive.toLocaleString()}과 비교한 큰 세액)`,
+      `파트별 세율(소득세법 §104⑤2호): ` +
+      parts.parts
+        .map((p) => `${label[p.kind]} ${pct(p.appliedRate)} ${p.calculatedTax.toLocaleString()}`)
+        .join(" + ") +
+      ` (합산 누진세액 ${parts.aggregateProgressive.toLocaleString()}과 비교한 큰 세액)`,
     splitPartDetail: parts,
   };
 }

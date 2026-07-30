@@ -62,7 +62,7 @@ import {
   applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, handleMultiParcelBranch, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
-import { resolveSplitAwareTax, buildCalculatedTaxStep, isLaterAcquiredLandExemptExcluded } from "./transfer-tax-split-rate";
+import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain } from "./transfer-tax-taxable-gain";
 import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails, buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
@@ -264,9 +264,9 @@ export function calculateTransferTax(
   const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
 
   // STEP 1a: 전액 비과세 조기 반환. §155⑳ B(→STEP 2.5 §161 안분)·A eligibility 미충족(→STEP 2.5 정상과세)은 억제.
-  // G-3: 주택 취득 후 취득한 부수토지가 보유 2년 미만이면 그 토지분은 비과세 대상이 아니다 —
-  //      조기 반환하면 과세할 토지분이 사라지므로 정상 경로로 흘려 STEP 3에서 분리한다(§5.4).
-  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput) && !isLaterAcquiredLandExemptExcluded(effectiveInput)) {
+  // G-2·G-3: 부수토지 중 배율 초과분(비사업용 토지)·보유 2년 미만분은 비과세 대상이 아니다 —
+  //      조기 반환하면 과세할 토지분이 사라지므로 정상 경로로 흘려 STEP 3에서 분리한다(§5.2·§5.4).
+  if (exemptionResult.isExempt && canEarlyReturnPrhp(effectiveInput) && !hasHousingLandExemptExclusion(effectiveInput)) {
     steps.push({
       label: "1세대1주택 비과세",
       formula: exemptionResult.exemptReason ?? "비과세",

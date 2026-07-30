@@ -71,9 +71,40 @@ export interface SplitPartResult {
   stdPriceDerivedFromTotal?: boolean;
 }
 
+/**
+ * 주택 부수토지 배율 초과분 = 비사업용 토지 (G-2).
+ *
+ * 「소득세법」 제104조의3 제1항 제5호가 "주택부속토지 중 주택 정착면적에 지역별 배율을 곱하여
+ * 산정한 면적을 초과하는 토지"를 **명문으로 비사업용 토지로 규정**한다(배율 위임 = 같은 법
+ * 시행령 제168조의12). ⇒ 1세대1주택 비과세 대상이 아니고, 토지 본래 보유기간 기준
+ * 누진세율 + 10%p 중과(§104①8호), 장기보유특별공제는 표1이다.
+ *
+ * 「소득세법」 제104조 제5항 후단("한 필지의 토지가 비사업용 토지와 그 외의 토지로 구분되는
+ * 경우에는 각각을 별개의 자산으로 보아 산출세액을 계산한다")이 이 분리의 직접 근거다.
+ */
+export interface SplitNonBusinessLandPart {
+  /** 인정 한도 면적 = 건물 정착면적 × 배율 */
+  limitArea: number;
+  /** 한도 초과 면적 (㎡) */
+  excessArea: number;
+  /** 적용 배율 (3/5/10 — 2022.1.1. 전 양도분은 종전 규정) */
+  appliedMultiplier: number;
+  /** 토지 양도차익 중 초과면적 비율만큼 이전한 금액 — 12억 안분 대상이 아니다 */
+  gain: number;
+  /** 과세 대상 양도차익 (= `gain` — 안분하지 않는다). `SplitPartResult`와 축을 맞추기 위한 echo */
+  taxableGainAfterProration?: number;
+  /** 토지 본래 보유연수 */
+  holdingYears: number;
+  /** 장기보유특별공제율 (표1) */
+  longTermRate: number;
+  longTermDeduction: number;
+}
+
 export interface SplitGainResult {
   land: SplitPartResult;
   building: SplitPartResult;
+  /** 배율 초과 부수토지(비사업용 토지) 파트 — 초과분이 있을 때만 (G-2) */
+  nonBusinessLandPart?: SplitNonBusinessLandPart;
   /**
    * 취득시 기준시가 안분비율. **파트별 실지거래가액을 아는 경우에는 안분 자체를 하지 않으므로
    * 존재하지 않는다**(계획서 transfer-split-acq-std-gate-relaxation §4.3 — `{0,0}` 금지).

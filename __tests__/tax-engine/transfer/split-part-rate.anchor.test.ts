@@ -169,8 +169,10 @@ describe("G-1 파트별 세율 — 본 기능 (§104⑤)", () => {
         taxRateInput: input,
       });
       expect(parts).not.toBeNull();
-      expect(parts!.land.taxBase + parts!.building.taxBase).toBe(r.taxBase);
-      expect(parts!.land.calculatedTax + parts!.building.calculatedTax).toBe(parts!.perAssetTotal);
+      const sum = (f: (p: NonNullable<typeof parts>["parts"][number]) => number) =>
+        parts!.parts.reduce((s, p) => s + f(p), 0);
+      expect(sum((p) => p.taxBase)).toBe(r.taxBase);
+      expect(sum((p) => p.calculatedTax)).toBe(parts!.perAssetTotal);
       expect(r.calculatedTax).toBe(Math.max(parts!.perAssetTotal, parts!.aggregateProgressive));
     }
   });
@@ -254,6 +256,122 @@ describe("G-3 주택 부수토지 max 기산일 + 비과세 제외", () => {
     });
     expect(r.isExempt).toBe(true);
     expect(r.calculatedTax).toBe(0);
+  });
+});
+
+/**
+ * G-2 (계획서 §5.2) — 주택 부수토지 **배율 초과분**을 비사업용 토지로 분리.
+ *
+ * 「소득세법」 제104조의3 제1항 제5호가 "주택부속토지 중 주택 정착면적에 지역별 배율을 곱하여
+ * 산정한 면적을 초과하는 토지"를 명문으로 비사업용 토지로 규정한다(배율 위임 = 같은 법
+ * 시행령 제168조의12). ⇒ ⓐ1세대1주택 비과세 제외 ⓑ토지 본래 보유기간 기준 누진 + 10%p
+ * (§104①8호) ⓒ장기보유특별공제 표1.
+ *
+ * ⚠️ **기간요건(시행령 제168조의6)은 판정하지 않는다** — 사용자 방침(2026-07-31).
+ *    겸용주택 정본(`buildNonBusinessPart`)과 동일하게 배율 초과 = 비사업용 토지로 일률 처리한다.
+ *
+ * 픽스처는 **조심 2024인3140** 구조: 정착 60㎡ × 10배(도시지역 외) = 600㎡ / 토지 660㎡ → 초과 60㎡.
+ * 토지 2008-07-01 · 주택 2022-09-01 신축 · 2023-02-01 양도 · 토지 8억(취득 2억) + 건물 2억(취득 1억).
+ */
+describe("G-2 주택 부수토지 배율 초과분 → 비사업용 토지 분리", () => {
+  const case3140 = {
+    propertyType: "housing" as const,
+    transferPrice: 1_000_000_000,
+    acquisitionPrice: 300_000_000,
+    landTransferPrice: 800_000_000,
+    buildingTransferPrice: 200_000_000,
+    landAcquisitionPrice: 200_000_000,
+    buildingAcquisitionPrice: 100_000_000,
+    acquisitionDate: D("2022-09-01"),
+    landAcquisitionDate: D("2008-07-01"),
+    transferDate: D("2023-02-01"),
+    buildingFootprintArea: 60,
+    acquisitionArea: 660,
+    appurtenantLandZone: "non_urban" as const,
+  };
+
+  it("A-6: 비과세 비대상(2주택) — 초과 60㎡를 비사업용 토지로 분리", () => {
+    const r = run({ ...case3140, isOneHousehold: false, householdHousingCount: 2 });
+    const nb = r.splitDetail!.nonBusinessLandPart!;
+    expect(nb.appliedMultiplier).toBe(10);
+    expect(nb.limitArea).toBe(600); // 정착 60㎡ × 10배
+    expect(nb.excessArea).toBe(60); // 660 − 600
+    // 토지 양도차익 600,000,000 × 60/660 = 54,545,454 (원 미만 절사)
+    expect(nb.gain).toBe(54_545_454);
+    expect(r.splitDetail!.land.taxableGainAfterProration).toBe(545_454_546);
+    // 장특: 배율 초과분은 표1(토지 보유 14년 × 2% = 28%)
+    expect(nb.longTermRate).toBe(0.28);
+    expect(nb.longTermDeduction).toBe(15_272_727);
+    expect(r.longTermHoldingDeduction).toBe(167_999_999);
+    expect(r.taxBase).toBe(529_500_001);
+    // 2호 = 토지 390,227,274 × 70% 273,159,091 (배율 내 부수토지는 주택 단기세율 —
+    //        조심 2024인3140이 "600㎡까지 70%"라 한 것과 일치)
+    //      + 건물 100,000,000 × 70% 70,000,000
+    //      + 비사업용 36,772,727... 39,272,727 누진 4,630,909 + 10%p 3,927,272 = 8,558,181
+    // 1호 = 529,500,001 누진 186,450,000 → MAX = 2호
+    expect(r.calculatedTax).toBe(351_717_272);
+  });
+
+  it("A-7: 1세대1주택 비과세 요건 충족(주택 5년 보유·10억) — 초과분만 과세", () => {
+    const r = run({
+      ...case3140,
+      acquisitionDate: D("2018-01-01"),
+      isOneHousehold: true,
+      householdHousingCount: 1,
+    });
+    expect(r.isExempt).toBe(false); // 전액 비과세 조기 반환이 억제된다
+    expect(r.transferGain).toBe(700_000_000);
+    // 배율 내 토지·건물은 비과세, 초과분 54,545,454만 과세
+    expect(r.taxableGain).toBe(54_545_454);
+    expect(r.splitDetail!.land.taxableGainAfterProration).toBe(0);
+    expect(r.splitDetail!.building.taxableGainAfterProration).toBe(0);
+    expect(r.taxBase).toBe(36_772_727);
+    // 비사업용 36,772,727 누진 4,255,909 + 10%p 3,677,272
+    expect(r.calculatedTax).toBe(7_933_181);
+  });
+
+  it("A-8: 조심 2024서2826 면적 구조 — 정착 141.39㎡ × 3배 = 424.17㎡ / 토지 647㎡ → 초과 222.83㎡", () => {
+    const r = run({
+      propertyType: "housing",
+      transferPrice: 2_000_000_000,
+      acquisitionPrice: 600_000_000,
+      landTransferPrice: 1_600_000_000,
+      buildingTransferPrice: 400_000_000,
+      landAcquisitionPrice: 400_000_000,
+      buildingAcquisitionPrice: 200_000_000,
+      acquisitionDate: D("2015-05-01"),
+      landAcquisitionDate: D("2015-05-01"),
+      transferDate: D("2023-07-26"),
+      buildingFootprintArea: 141.39,
+      acquisitionArea: 647,
+      appurtenantLandZone: "metropolitan_residential",
+      isOneHousehold: false,
+      householdHousingCount: 2,
+    });
+    const nb = r.splitDetail!.nonBusinessLandPart!;
+    expect(nb.appliedMultiplier).toBe(3); // 수도권 주거지역 (2022.1.1. 이후 양도)
+    expect(nb.limitArea).toBe(424.17);
+    expect(nb.excessArea).toBe(222.83); // 재결례 실제 수치
+    // ⚠️ 세액은 §104⑤**1호**(합산 누진)가 이겨 분리 전과 같다 — 파트를 쪼개면 각 파트가 낮은
+    //    누진구간에 들어가 2호 합계가 1호보다 작아지기 때문이다(§104⑤ = MAX).
+    expect(r.calculatedTax).toBe(462_135_000);
+  });
+
+  it("A-6b(회귀): 토지가 한도 이내(500㎡ ≤ 600㎡)면 분리하지 않는다", () => {
+    const r = run({ ...case3140, acquisitionArea: 500, isOneHousehold: false, householdHousingCount: 2 });
+    expect(r.splitDetail!.nonBusinessLandPart).toBeUndefined();
+    expect(r.calculatedTax).toBe(370_650_000); // 주택 일체 70% 단일
+  });
+
+  it("A-6c(회귀·R-7): 용도지역 미입력이면 진입하지 않는다 — 3배 fallback은 납세자 불리", () => {
+    const r = run({
+      ...case3140,
+      appurtenantLandZone: undefined,
+      isOneHousehold: false,
+      householdHousingCount: 2,
+    });
+    expect(r.splitDetail!.nonBusinessLandPart).toBeUndefined();
+    expect(r.calculatedTax).toBe(370_650_000); // 미입력은 ⑧validate가 차단한다
   });
 });
 

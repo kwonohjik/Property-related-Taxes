@@ -587,12 +587,26 @@ export function calcLongTermHoldingDeduction(
     splitDetail.building.longTermRate = buildingRate;
     splitDetail.building.longTermDeduction = buildingDed;
 
+    // 배율 초과 부수토지(비사업용 토지) 파트 — 「소득세법」 제95조 제2항 **표1**(일반)을 쓴다.
+    // 1세대1주택 표2는 비과세 대상 주택·부수토지 전용이고, 배율 초과분은 §104의3①5호로
+    // 비사업용 토지이므로 대상이 아니다. 보유연수는 토지 본래 보유연수.
+    const nb = splitDetail.nonBusinessLandPart;
+    let nbDed = 0;
+    if (nb) {
+      const nbTaxableGain = nb.taxableGainAfterProration ?? nb.gain;
+      const nbRate = Math.min(nb.holdingYears < 3 ? 0 : nb.holdingYears * 0.02, 0.30);
+      nbDed = applyRate(Math.max(nbTaxableGain, 0), nbRate);
+      nb.taxableGainAfterProration = nbTaxableGain;
+      nb.longTermRate = nbRate;
+      nb.longTermDeduction = nbDed;
+    }
+
     const anchorDate = selfOwns === "land_only" && input.landAcquisitionDate
       ? input.landAcquisitionDate
       : input.acquisitionDate;
     const anchorHolding = calculateHoldingPeriod(anchorDate, input.transferDate);
     return {
-      deduction: landDed + buildingDed,
+      deduction: landDed + buildingDed + nbDed,
       rate: 0, // 단일 공제율 없음 (혼합) — splitDetail.land/building.longTermRate 참조
       holdingPeriod: { years: anchorHolding.years, months: anchorHolding.months },
     };
