@@ -45,6 +45,14 @@ export interface SplitPartResult {
    */
   lumpDeductionBase?: number;
   gain: number;
+  /**
+   * 이 파트의 **과세 대상** 양도차익 — 12억 안분(영 §160①)·1세대1주택 비과세 제외를 반영한 값.
+   *
+   * `gain`은 안분 **전** 양도차익이라 `longTermDeduction`(안분 후 기준)과 축이 다르다. 파트별
+   * 세율(§104⑤)처럼 "파트 양도소득금액 = 과세 양도차익 − 장특공제"가 필요한 소비자는 이 값을 써야
+   * 한다. `calcLongTermHoldingDeduction`의 split 분기가 채운다 — 미설정 시 소비자는 `gain` fallback.
+   */
+  taxableGainAfterProration?: number;
   holdingYears: number;
   longTermRate: number;
   longTermDeduction: number;

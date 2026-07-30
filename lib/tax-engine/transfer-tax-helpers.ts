@@ -563,8 +563,14 @@ export function calcLongTermHoldingDeduction(
       return Math.floor(g * (selfTransferPrice - THRESHOLD) / selfTransferPrice);
     };
 
-    const landTaxableGain = ownsLand ? proratePartGain(splitDetail.land.gain) : 0;
-    const buildingTaxableGain = ownsBuilding ? proratePartGain(splitDetail.building.gain) : 0;
+    // 파트별 과세 양도차익 — 호출부가 미리 확정해 두었으면(G-3 부수토지 비과세 제외 등) 그 값을
+    // 따른다. 여기서 다시 안분하면 STEP 3의 과세 양도차익과 어긋난다(이중 진실).
+    const landTaxableGain = ownsLand
+      ? (splitDetail.land.taxableGainAfterProration ?? proratePartGain(splitDetail.land.gain))
+      : 0;
+    const buildingTaxableGain = ownsBuilding
+      ? (splitDetail.building.taxableGainAfterProration ?? proratePartGain(splitDetail.building.gain))
+      : 0;
 
     const landRate = ownsLand ? rateForYears(splitDetail.land.holdingYears) : 0;
     const buildingRate = ownsBuilding ? rateForYears(splitDetail.building.holdingYears) : 0;
@@ -572,6 +578,10 @@ export function calcLongTermHoldingDeduction(
     const buildingDed = ownsBuilding ? applyRate(Math.max(buildingTaxableGain, 0), buildingRate) : 0;
 
     // SplitPartResult 에 공제율·공제액 채우기 (참조 수정)
+    // 과세 양도차익도 함께 역기입 — 소비자(파트별 세율 §104⑤)가 `gain`(안분 전)과
+    // `longTermDeduction`(안분 후) 축을 섞지 않도록 한다.
+    splitDetail.land.taxableGainAfterProration = landTaxableGain;
+    splitDetail.building.taxableGainAfterProration = buildingTaxableGain;
     splitDetail.land.longTermRate = landRate;
     splitDetail.land.longTermDeduction = landDed;
     splitDetail.building.longTermRate = buildingRate;

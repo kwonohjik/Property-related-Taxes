@@ -176,6 +176,87 @@ describe("G-1 파트별 세율 — 본 기능 (§104⑤)", () => {
   });
 });
 
+/**
+ * G-3 (계획서 §5.4) — 주택 부수토지를 **나중에** 취득한 경우.
+ *
+ * 세율 축: 토지 파트 기산일 = `max(토지 취득일, 주택 취득일)`.
+ *   · 토지 먼저 → 주택 취득일 (= 현행, 회귀 0 — 조심 2024인3140 정합)
+ *   · 토지 나중 → 토지 취득일 (신규) → 주택부수토지로서 보유 1~2년이면 §104①2호 60%
+ * 비과세 축: 나중 취득 토지가 보유 2년 미만이면 「소득세법」 시행령 제154조 제1항 보유요건
+ *   미충족 → 그 토지분은 1세대1주택 비과세 대상이 아니다. 겸용주택 정본 패턴대로
+ *   12억 안분 대상에서 빼고 전액 과세한다.
+ *
+ * ⚠️ 근거 수준은 **간접**이다(계획서 §1.5·§10-1) — 국세청 상속증여세과-466·부동산거래관리과-435가
+ *    부수토지 취득시기를 개별 판정하도록 한 데서 이어진 것이고 명시 판단은 없다. 사용자(세무
+ *    전문가) 방침으로 확정했다.
+ */
+describe("G-3 주택 부수토지 max 기산일 + 비과세 제외", () => {
+  /** 건물 2010-06-01 + 토지 2025-06-01 (토지를 나중에 취득 — 보유 1년 1개월) */
+  const LATER_LAND = { acquisitionDate: D("2010-06-01"), landAcquisitionDate: D("2025-06-01") };
+
+  it("A-12: 비과세 비대상(2주택) — 토지분 60% + 건물분 누진 (현행 누진 단일 187,710,000)", () => {
+    const r = run({ propertyType: "housing", householdHousingCount: 2, isOneHousehold: false, ...LATER_LAND });
+    expect(r.taxBase).toBe(532_500_000);
+    // 2호 = 토지 497,500,000 × 60% 298,500,000 + 건물 35,000,000 누진 3,990,000
+    // 1호 = 532,500,000 누진 187,710,000 → MAX = 2호
+    expect(r.calculatedTax).toBe(302_490_000);
+    expect(r.appliedRate).toBe(0.6);
+  });
+
+  it("A-12b: 1세대1주택 12억 이하 — 건물분만 비과세, 토지분(보유 1년)은 과세", () => {
+    const r = run({ propertyType: "housing", householdHousingCount: 1, isOneHousehold: true, ...LATER_LAND });
+    // 현행은 전액 비과세 조기 반환(산출세액 0)이었다.
+    expect(r.isExempt).toBe(false);
+    expect(r.transferGain).toBe(550_000_000);
+    expect(r.taxableGain).toBe(500_000_000); // 토지분 전액 + 건물분 0
+    expect(r.taxBase).toBe(497_500_000);
+    expect(r.calculatedTax).toBe(298_500_000);
+    expect(r.appliedRate).toBe(0.6);
+  });
+
+  it("A-12c: 1세대1주택 고가주택(20억) — 토지분 전액 과세 + 건물분만 12억 안분", () => {
+    const r = run({
+      propertyType: "housing",
+      householdHousingCount: 1,
+      isOneHousehold: true,
+      transferPrice: 2_000_000_000,
+      landTransferPrice: 1_400_000_000,
+      buildingTransferPrice: 600_000_000,
+      ...LATER_LAND,
+    });
+    // 토지 양도차익 1,200,000,000 전액 + 건물 350,000,000 × (20억−12억)/20억 = 140,000,000
+    expect(r.taxableGain).toBe(1_340_000_000);
+    // 장특: 토지 0(보유 1년) + 건물 140,000,000 × 60%(표2) = 84,000,000
+    expect(r.longTermHoldingDeduction).toBe(84_000_000);
+    expect(r.taxBase).toBe(1_253_500_000);
+    // 2호 = 토지 1,197,500,000 × 60% 718,500,000 + 건물 56,000,000 누진 7,680,000
+    // 1호 = 1,253,500,000 누진 498,135,000 → MAX = 2호
+    expect(r.calculatedTax).toBe(726_180_000);
+  });
+
+  it("A-13: 회귀 가드 — 토지를 **먼저** 취득하면 `max`가 주택 취득일을 돌려준다(불변)", () => {
+    const first = { acquisitionDate: D("2022-09-01"), landAcquisitionDate: D("2010-06-01") };
+    const taxed = run({ propertyType: "housing", householdHousingCount: 2, isOneHousehold: false, ...first });
+    expect(taxed.calculatedTax).toBe(131_860_000);
+    expect(taxed.appliedRate).toBe(0.4);
+    const exempt = run({ propertyType: "housing", householdHousingCount: 1, isOneHousehold: true, ...first });
+    expect(exempt.isExempt).toBe(true); // 전액 비과세 조기 반환 유지
+    expect(exempt.calculatedTax).toBe(0);
+  });
+
+  it("A-13b: 회귀 가드 — 토지를 나중에 취득했어도 **보유 2년 이상**이면 비과세 유지", () => {
+    const r = run({
+      propertyType: "housing",
+      householdHousingCount: 1,
+      isOneHousehold: true,
+      acquisitionDate: D("2010-06-01"),
+      landAcquisitionDate: D("2023-01-01"), // 보유 3년 6개월
+    });
+    expect(r.isExempt).toBe(true);
+    expect(r.calculatedTax).toBe(0);
+  });
+});
+
 describe("G-1 파트별 세율 — 단건 ↔ 다건 일치 (이중 진실 방지)", () => {
   it("A-1-agg: 다건 엔진도 같은 자산에 대해 단건과 같은 산출세액을 낸다", () => {
     const item = {
