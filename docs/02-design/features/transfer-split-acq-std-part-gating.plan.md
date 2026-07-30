@@ -184,8 +184,18 @@ export function requiresAcqStdPrice(a, ctx): boolean {
   - 뒤 항은 **건물 기준시가 계산 모달의 prefill 소스**(`landAreaM2` :207 · `acqLandPricePerSqm` :212) 확보용이며, 이때 카드는 **필수 표시 없이** hint를 전환한다: "토지가 실거래가여서 취득가액 계산에는 쓰이지 않습니다. 「건물 기준시가 계산」의 위치지수 산정에만 사용됩니다."
 - ⚠️ **케이스 1(양쪽 실가 + 안분 근거 있음)에서는 토지 카드가 계속 숨겨져야 한다** — 초판 미기재 제약. `e2e/split-mode-gating.spec.ts:379-390`이 이미 `split-land-std-acq-card` → `toHaveCount(0)`을 검증한다. 위 식은 `acqStdRequiredLand=false` + `buildingAcqMode="actual"` 이므로 false가 되어 이 회귀를 지킨다.
 
-### 3.3 남은 과잉 요구 (범위 밖 — 기록만)
-`requiresAcqStdPrice` 3절(양도가액 안분 fallback)은 엔진이 2026-07-29에 취득시 비율 후퇴를 폐지(`transfer-tax-split-gain.ts:418` `saleRatio?.land ?? null`)한 뒤에도 남아 있어, 양도가액 미입력 시 취득시 기준시가를 요구한다. 실제로는 `splitPair`가 차단하고 V4가 먼저 잡는다. **이번 범위에서 건드리지 않는다**(회귀 위험 대비 이득 낮음).
+### 3.3 3절(양도가액 안분 fallback) — **후속 PR에서 폐지 완료** (2026-07-30)
+
+`requiresAcqStdPrice` 3절은 엔진이 2026-07-29에 취득시 비율 후퇴를 폐지(`transfer-tax-split-gain.ts` `effectiveSaleLandRatio = saleRatio?.land ?? null`)한 뒤에도 남아 있어, 양도가액 미입력 시 **계산에 쓰이지 않는** 취득시 기준시가를 요구했다. 본 PR에서는 범위 밖으로 두었으나 별도 PR에서 제거했다:
+
+- 술어에서 ⑤절 삭제 + `AcqStdPriceNeedContext.hasSaleRatio` 제거(유일 소비처가 3절이었다). 전달 지점 5곳(엔진·UI·validate 3) 정리.
+- **차단 구멍 없음** — 구분양도는 V4, 일괄양도는 V7이 담당하고, 엔진 `splitPair`가 "양도가액을 토지·건물로 나눌 수 없습니다"로 막는다. 오히려 오류 메시지가 **실제 원인(양도가액)** 을 가리키게 됐다.
+- 기대값을 반전한 테스트 3건(컴포넌트 G3·R7, E2E U10·U11·U13·P6의 "기본 진입 → 카드 노출" 전제)은 전부 3절이 만들던 거짓 요구에 의존하던 것이다. G6′는 폐지.
+- anchor: `__tests__/calc/acq-std-predicate-sale-clause-removal.test.ts` (8건 — 술어 4절 회귀 포함).
+
+### 3.4 V5 dead branch (기록만 — 조치 불요)
+
+별개취득 경로에서 V6가 `buildingStd == null`을, V3가 `buildingStd != null`일 때 토지 3요소를 먼저 차단하므로 V5에 도달하는 시점엔 3요소가 이미 채워져 있다. **삭제하지 않고 게이트만 맞춘다** — V3/V6 조건이 바뀌거나 비-별개취득 경로가 확장되면 되살아나는 안전망이다.
 
 ---
 

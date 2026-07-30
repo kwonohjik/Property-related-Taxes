@@ -231,13 +231,18 @@ interface AcqStdPriceNeedFlags {
   expenses?: number;
 }
 
-/** 모드·별개취득·양도안분비 판정은 각 계층의 기존 단일 소스가 파생해 주입한다(재파생 금지). */
+/**
+ * 모드·별개취득 판정은 각 계층의 기존 단일 소스가 파생해 주입한다(재파생 금지).
+ *
+ * ⚠️ **양도 축(`hasSaleRatio`)은 인자가 아니다**(2026-07-30 3절 폐지와 함께 제거).
+ *    취득시 기준시가는 **취득가액**을 나누는 값이고, 양도가액 안분은 양도시 기준시가가
+ *    담당한다(`calcSaleApportionRatio`). 두 축을 한 술어에 섞어 두면 "양도가액이 없으니
+ *    취득시 기준시가를 넣으라"는 거짓 요구가 되살아난다 — 실제로 그 형태로 남아 있었다.
+ */
 interface AcqStdPriceNeedContext {
   landMode: PartAcqMode;
   buildingMode: PartAcqMode;
   isSeparate: boolean;
-  /** 양도시 기준시가 비율이 산출 가능한가 — 엔진은 `calcSaleApportionRatio() != null` */
-  hasSaleRatio: boolean;
 }
 
 /**
@@ -278,8 +283,14 @@ function needsApportionRatio(a: AcqStdPriceNeedFlags, ctx: AcqStdPriceNeedContex
   //     비-별개취득에서 파트 2칸이 모두 비면 비율 안분이 유일한 도출 수단이다.
   if (!ctx.isSeparate && empty(a.landAcquisitionPrice) && empty(a.buildingAcquisitionPrice)) return true;
 
-  // ⑤ 양도가액 안분 — 양도시 기준시가 비율도 없고 구분 입력도 없으면 취득시 비율로 후퇴한다.
-  if (!ctx.hasSaleRatio && empty(a.landTransferPrice) && empty(a.buildingTransferPrice)) return true;
+  // ⑤ 양도가액 안분 — **폐지**(2026-07-30).
+  //    종전엔 "양도시 기준시가 비율도 없고 구분 입력도 없으면 취득시 비율로 후퇴한다"였으나,
+  //    2026-07-29에 그 후퇴가 폐지됐다 — `transfer-tax-split-gain.ts`의 양도가액 축은
+  //    `effectiveSaleLandRatio = saleRatio?.land ?? null`로 **취득시 비율을 참조하지 않는다**
+  //    (토지는 오르고 건물은 감가해 두 시점의 비율이 크게 다르고, 취득시 비율로 양도대가를
+  //     나눌 법령 근거가 없다). 남겨두면 계산에 쓰이지 않는 값을 요구하는 **거짓 요구**이고,
+  //    오류 메시지가 실제 원인(양도가액 구분 근거 부재)이 아니라 기준시가를 가리킨다.
+  //    차단은 validate V4(구분양도)·V7(일괄양도 기준시가)과 엔진 `splitPair`가 담당한다.
 
   // ⑥ 자본적지출 — legacy 총액을 안분해야 하는데 파트 2칸이 모두 빈 경우.
   if ((a.expenses ?? 0) > 0 && empty(a.landDirectExpenses) && empty(a.buildingDirectExpenses)) return true;

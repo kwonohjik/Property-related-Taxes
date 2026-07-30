@@ -385,7 +385,6 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     buildingMode: earlyBuildingMode,
     // 엔진은 별개취득을 재판정하지 않는다 — API 변환이 파생해 전달한다(:187-190 주석).
     isSeparate: input.isSeparateAcquisition === true,
-    hasSaleRatio: saleRatio != null,
   };
   const missingStd: string[] = [];
   if (requiresAcqStdPricePart("land", input, stdNeedCtx) && acqStd?.land == null) {

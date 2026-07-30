@@ -178,16 +178,21 @@ describe("R4~R7·R10 — 취득시 기준시가 표시 게이트", () => {
     expect(screen.queryAllByTestId("split-land-std-acq-card")).toHaveLength(1);
   });
 
-  it("R7 케이스 3(일괄양도 + 양도시 기준시가 미입력) — 안분 근거가 없어 양쪽 파트 카드 노출", () => {
+  /**
+   * ⚠️ **기대값 반전 (2026-07-30 — 술어 ⑤절 폐지)**. 양도시 기준시가가 없는 것은
+   * **양도가액**을 나누지 못하는 문제이지 취득시 기준시가가 필요한 것이 아니다.
+   * 엔진은 2026-07-29부터 취득시 비율로 후퇴하지 않으므로(`saleRatio?.land ?? null`)
+   * 그 요구는 계산에 쓰이지 않는 값을 강제하는 거짓이었다. 차단은 validate V7이 담당한다.
+   */
+  it("R7 케이스 3(일괄양도 + 양도시 기준시가 미입력) — 취득시 카드는 뜨지 않는다", () => {
     render(
       <Harness
         init={{ ...CASE_2, saleSplitMode: "apportioned", landTransferPrice: "", buildingTransferPrice: "" }}
       />,
     );
     expect(acqStdLabel()).toHaveLength(0);
-    // 취득시 비율이 소비되므로 **양쪽** 기준시가가 필요하다(술어 2·3·4절).
-    expect(screen.queryAllByTestId("split-land-std-acq-card")).toHaveLength(1);
-    expect(screen.queryAllByTestId("split-building-std-acq-card")).toHaveLength(1);
+    expect(screen.queryAllByTestId("split-land-std-acq-card")).toHaveLength(0);
+    expect(screen.queryAllByTestId("split-building-std-acq-card")).toHaveLength(0);
   });
 
   it("R10 분리 OFF + 환산 — 표시 (비분리 환산 경로 회귀 0)", () => {

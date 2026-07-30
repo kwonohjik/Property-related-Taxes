@@ -139,11 +139,21 @@ describe("G1·G2 — 실가/실가에서 파트 카드 숨김 (D1)", () => {
 });
 
 describe("G3·G4·G6 — 필요한 경우는 종전대로 노출 (회귀 0)", () => {
-  it("G3 매트릭스 #3 (일괄양도 + 양도시 기준시가 미입력) — 술어 ⑤절", () => {
+  /**
+   * ⚠️ **기대값 반전 (2026-07-30 — 술어 ⑤절 폐지)**.
+   * 종전에는 "양도시 기준시가가 없으면 취득시 비율이 유일한 도출 수단"이라 카드를 띄웠다.
+   * 그러나 엔진의 양도가액 축은 2026-07-29부터 취득시 비율로 후퇴하지 않는다
+   * (`effectiveSaleLandRatio = saleRatio?.land ?? null`) — 계산에 쓰이지 않는 값을 요구하던
+   * **거짓 요구**였다. 이 조합은 validate V7(일괄양도 양도시 기준시가 필수)이 차단한다.
+   */
+  it("G3 매트릭스 #3 (일괄양도 + 양도시 기준시가 미입력) — 취득시 카드는 뜨지 않는다", () => {
     render(
       <Harness init={{ ...ACTUAL_APPORTIONED, landStandardPriceAtTransfer: "", buildingStandardPriceAtTransfer: "" }} />,
     );
-    expect(landCard(), "안분 근거가 없으면 취득시 비율이 유일한 도출 수단").toHaveLength(1);
+    expect(
+      landCard(),
+      "양도가액을 나누지 못하는 문제이지 취득시 기준시가가 필요한 것이 아니다",
+    ).toHaveLength(0);
   });
 
   it("G4 매트릭스 #5 (주택·토지 실가 / 건물 환산) — 파트 독립 (2026-07-30)", () => {
@@ -166,25 +176,10 @@ describe("G3·G4·G6 — 필요한 경우는 종전대로 노출 (회귀 0)", ()
     expect(buildingCard(), "실가 파트의 기준시가는 요구하지 않는다").toHaveLength(0);
   });
 
-  it("G6' 매트릭스 #9 + 일괄양도(안분 비율 소비) → 건물분도 다시 필요", () => {
-    render(
-      <Harness
-        init={{
-          ...ACTUAL_SPLIT_SALE,
-          assetKind: "building",
-          landAcqMode: "estimated",
-          saleSplitMode: "apportioned",
-          // 양도가액 구분도 없고 양도시 기준시가도 없으면 **취득시 비율**이 유일한 안분 수단이라
-          // (술어 3절) 양쪽 파트의 기준시가가 함께 필요해진다.
-          landTransferPrice: "",
-          buildingTransferPrice: "",
-          landStandardPriceAtTransfer: "",
-          buildingStandardPriceAtTransfer: "",
-        }}
-      />,
-    );
-    expect(buildingCard(), "안분 비율은 양쪽 기준시가를 함께 요구한다").toHaveLength(1);
-  });
+  // G6′(일괄양도 + 양도가액·양도시 기준시가 미입력 → 건물분도 필요)는 **폐지**한다 —
+  // 그 케이스를 true로 만들던 술어 ⑤절이 2026-07-30에 제거됐다(거짓 요구).
+  // 안분 비율이 실제로 소비되는 경로(2절 — 비-별개취득 + 파트 취득가액 2칸 미입력)는
+  // `__tests__/calc/acq-std-predicate-sale-clause-removal.test.ts`가 커버한다.
 });
 
 describe("G5 — 일반건물 실가/실가는 두 카드 모두 숨김 (D1)", () => {

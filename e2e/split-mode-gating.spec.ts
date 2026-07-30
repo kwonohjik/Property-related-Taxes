@@ -357,6 +357,11 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     // setupSplitAsset은 "주택"을 고른다.
     test.setTimeout(90_000);
     await setupSeparateAcq(page);
+    // 2026-07-30 술어 ⑤절 폐지 — 「일괄양도 + 양도시 기준시가 미입력」만으로는 취득시 기준시가를
+    // 요구하지 않는다(그건 양도가액을 나누지 못하는 문제다). 이 테스트의 관심사는 **주택도
+    // 파트 카드를 갖는가**이므로, 카드가 필요한 정당 조건(환산 파트)을 만든 뒤 검증한다.
+    await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
+    await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
 
     await expect(page.getByTestId("split-land-std-acq-area")).toBeVisible();
     await expect(page.getByText("취득시 토지 공시지가")).toBeVisible();
@@ -384,10 +389,12 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     await expect(page.getByTestId("split-acq-std-readonly")).toHaveCount(0);
     await expect(page.getByTestId("acq-std-required-mark")).toHaveCount(0);
 
-    // 기본 상태(일괄양도 + 양도시 기준시가 미입력) → 안분 근거가 없어 취득시 기준시가가 필요
+    // 토지를 환산으로 두면 취득시 기준시가가 **환산 분자**로 실제 필요하다 → 카드 노출
+    await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
     await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
 
-    // 구분양도로 바꾸고 양도가액을 입력하면 안분 근거가 생겨 취득시 기준시가는 불요
+    // 실가로 되돌리고 양도가액을 구분 입력하면 취득시 기준시가는 계산 어디에도 등장하지 않는다
+    await landAcqGroup(page).getByRole("radio", { name: "실거래가" }).check();
     await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
     await landTransfer(page).fill("600000000");
     await expect(
@@ -406,10 +413,8 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     test.setTimeout(90_000);
     await setupSeparateAcq(page);
 
-    // 기본 진입(일괄양도 + 양도시 기준시가 미입력) — 술어 ⑤절 true → 카드 노출
-    await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
-
-    // 구분양도 + 양도가액 입력 → 안분 근거 확보 → 취득시 기준시가 불요
+    // 2026-07-30 술어 ⑤절 폐지 — 실가/실가에서는 진입 시점부터 카드가 없다.
+    // 구분양도 + 양도가액 입력 → 안분 근거 확보(이 검증의 본래 대상)
     await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
     await landTransfer(page).fill("600000000");
 
@@ -546,15 +551,9 @@ test.describe("P6 — 파트별 취득시 기준시가 게이팅 (2026-07-30)", 
     // 건물분은 환산이므로 파트 카드가 필요하다
     await expect(page.getByTestId("split-building-std-acq")).toBeVisible();
 
-    // ⚠️ 이 시점엔 토지 기준시가가 **실제로 필요**하다 — 양도가액 구분 입력이 없어
-    //    취득시 비율이 유일한 양도가액 안분 수단이기 때문(술어 3절). 안내는 아직 없다.
-    await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
-    await expect(page.getByTestId("split-land-std-calc-unused-note")).toHaveCount(0);
-
-    // 양도가액을 구분 입력하면 안분 근거가 생겨 토지 기준시가는 계산에서 빠진다 →
-    // 카드는 「건물 기준시가 계산」 prefill 소스로 남되 계산 무관 안내가 붙는다.
-    await landTransfer(page).fill("300000000");
-    await page.getByTestId("split-building-transfer-price").fill("200000000");
+    // 토지는 실거래가 — 취득가액 계산에 쓰이지 않지만 「건물 기준시가 계산」의 위치지수·
+    // 부속토지 prefill 소스라 카드는 남고, 계산 무관 안내가 붙는다.
+    // (2026-07-30 술어 ⑤절 폐지 — 양도가액 미입력이 취득시 기준시가를 요구하지 않는다.)
     await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
     await expect(page.getByTestId("split-land-std-calc-unused-note")).toBeVisible();
   });
