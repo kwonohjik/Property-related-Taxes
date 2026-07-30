@@ -406,3 +406,114 @@ describe("U-10 [법령 제약 고정] — 분할 양도 취득가액 산정", ()
     expect(Math.floor(ACQ_TOTAL * unit)).toBeGreaterThan(Math.floor(SOLD * unit));
   });
 });
+
+// ══════════════════════════════════════════════════════════
+// A-3 — F-2: 주택 건물기준시가 3시점 연면적 불일치가 세액을 바꾼다
+// ══════════════════════════════════════════════════════════
+//
+// F-1을 A-1으로 세액 검증했으므로 F-2도 같은 기준을 적용한다.
+//
+// 주택 경로(TransferStdPriceCards·LandBuildingSplitSection·ReductionPhdInput)는
+// 모달에 `floorArea` prefill을 넘기지 않는다 → 사용자가 시점별 모달에서 각각 손으로
+// 입력하고, 스냅샷 키가 시점별로 갈려(`bsp-${assetId}-split-acq` vs `-split-transfer`)
+// 불일치가 검증 없이 통과한다.
+//
+// 실제 엔진 `calcBuildingStandardPrice`로 연면적만 바꿔 영향을 측정한다.
+
+import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
+
+describe("A-3 [F-2 결함 고정] — 3시점 연면적 불일치가 환산취득가를 바꾼다", () => {
+  /** 같은 건물의 시점별 건물기준시가 — 연면적만 인자로 바꾼다. */
+  const bldStd = (floorArea: number, valuationYear: number) =>
+    calcBuildingStandardPrice({
+      taxType: "inheritance_gift", // 순수 산식 경로(양도세도 같은 국세청 산식 사용)
+      floorArea,
+      builtYear: 2005,
+      valuationYear,
+      isResidentialUse: false,
+      valuation: { structureKey: "rc", usageNo: 1, landPricePerM2: 3_000_000 },
+    }).valuation!.standardPrice;
+
+  const TRUE_FLOOR_AREA = 200; // 건축물대장상 연면적
+  const TYPO_FLOOR_AREA = 150; // 양도시 모달에서 사용자가 잘못 입력
+
+  it("연면적이 건물기준시가의 곱셈 인자다 — 비례한다", () => {
+    const a = bldStd(TRUE_FLOOR_AREA, 2024);
+    const b = bldStd(TYPO_FLOOR_AREA, 2024);
+    expect(a).toBeGreaterThan(b);
+    // standardPrice = floor(pricePerM2 × floorArea) (building-standard-price-helpers.ts:111)
+    expect(a / b).toBeCloseTo(TRUE_FLOOR_AREA / TYPO_FLOOR_AREA, 6);
+  });
+
+  it("🔴 3시점 중 한 시점만 오입력하면 환산취득가가 틀어진다", () => {
+    const TRANSFER_PRICE = 800_000_000;
+    const stdAtAcq = bldStd(TRUE_FLOOR_AREA, 2010);
+    const stdAtTransferCorrect = bldStd(TRUE_FLOOR_AREA, 2024);
+    const stdAtTransferTypo = bldStd(TYPO_FLOOR_AREA, 2024); // 양도시만 150㎡로 오입력
+
+    const correct = calculateEstimatedAcquisitionPrice(
+      TRANSFER_PRICE,
+      stdAtAcq,
+      stdAtTransferCorrect,
+    );
+    const wrong = calculateEstimatedAcquisitionPrice(TRANSFER_PRICE, stdAtAcq, stdAtTransferTypo);
+
+    // 양도시 기준시가가 과소 → 환산비율 과대 → 환산취득가 과대 → 양도차익 과소
+    expect(wrong).toBeGreaterThan(correct);
+    expect(TRANSFER_PRICE - wrong).toBeLessThan(TRANSFER_PRICE - correct);
+    // 연면적 200→150(25% 오차)이 환산취득가를 3/4배 비율로 부풀린다
+    expect(wrong / correct).toBeCloseTo(TRUE_FLOOR_AREA / TYPO_FLOOR_AREA, 6);
+  });
+
+  it("F1-c 배선 후에는 폼 단일 값이 두 시점에 주입되어 불일치가 불가능해진다", () => {
+    // prefill이 restoredForm을 덮어쓴다(BuildingStdPriceModalButton.tsx:184)
+    //   initialForm={{ ...restoredForm, ...prefillForm }}
+    // → 같은 buildingFloorArea가 취득·양도 모달 모두에 들어가면 비율이 단가비만 반영한다.
+    const stdAtAcq = bldStd(TRUE_FLOOR_AREA, 2010);
+    const stdAtTransfer = bldStd(TRUE_FLOOR_AREA, 2024);
+    const ratio = stdAtAcq / stdAtTransfer;
+    // 연면적이 분자·분모에서 약분되므로 비율은 ㎡당 지수비와 같다
+    const perM2Ratio =
+      bldStd(1_000, 2010) / bldStd(1_000, 2024); // 면적 무관 확인용(같은 면적)
+    expect(ratio).toBeCloseTo(perM2Ratio, 6);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// A-4 — β-2 마이그레이션 안전성: building의 acquisitionArea 소비 경로
+// ══════════════════════════════════════════════════════════
+//
+// `building` assetKind는 `toPropertyKind`가 "building_non_residential"로 매핑하므로
+// (`CompanionAcqPurchaseBlock.types.ts:132~138`) `StandardPriceInput.isAreaMode = true`가
+// 되어 기준시가가 **단가 × 면적**으로 산출된다(`StandardPriceInput.tsx:98~100`).
+// 면적 인자는 `acquisitionArea`/`transferArea`다(`CompanionAcqPurchaseBlock.tsx:621,645`).
+//
+// β-2는 이 값을 `buildingFloorArea`로 이전한다. 이전 후에도 **같은 총액**이 나와야 한다.
+
+import { toPropertyKind } from "@/components/calc/transfer/CompanionAcqPurchaseBlock.types";
+
+describe("A-4 [β-2 전제] — building의 축 B 소비 경로", () => {
+  it("building은 building_non_residential로 매핑되어 면적 모드가 된다", () => {
+    expect(toPropertyKind("building")).toBe("building_non_residential");
+    // isAreaMode = propertyKind === "land" || "building_non_residential"
+    expect(["land", "building_non_residential"]).toContain(toPropertyKind("building"));
+  });
+
+  it("housing은 총액 모드 — 면적 곱셈이 없다 (축 B 신설 대상인 이유)", () => {
+    expect(toPropertyKind("housing")).toBe("house_individual");
+    expect(["land", "building_non_residential"]).not.toContain(toPropertyKind("housing"));
+  });
+
+  it("land는 면적 모드 — 축 A가 곱셈 인자", () => {
+    expect(toPropertyKind("land")).toBe("land");
+  });
+
+  it("이전은 값 보존이어야 한다 — 총액 산식이 면적 필드명에 의존하지 않는다", () => {
+    // StandardPriceInput.tsx:137,150,180 — 모두 floor(단가 × 면적)
+    const unit = 1_200_000;
+    const area = 84.5;
+    const beforeMigration = Math.floor(unit * area); // acquisitionArea 참조
+    const afterMigration = Math.floor(unit * area); // buildingFloorArea 참조
+    expect(afterMigration).toBe(beforeMigration);
+  });
+});

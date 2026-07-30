@@ -85,11 +85,18 @@ const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
 > = {
   land: ["same", "partial", "reduction", "increase"],
   housing: ["same", "partial"],
-  // 건물(토지 제외) — toPropertyKind가 building_non_residential로 매핑하므로
-  // StandardPriceInput이 단가×면적 모드(isAreaMode)로 동작한다 → acquisitionArea가
-  // 건물 기준시가의 곱셈 인자. 종전엔 그 위젯 내부에만 입력 칸이 있어 실거래가 모드에서
-  // 입력 경로가 사라졌다(housing과 동일 구조 갭) → 기본정보로 승격.
-  building: ["same", "partial"],
+  /**
+   * 건물(토지 제외) — 축 A(토지)가 없고 **축 B(연면적)만** 있는 자산이다.
+   * `toPropertyKind`가 `building_non_residential`로 매핑해 `StandardPriceInput`이
+   * 단가×면적 모드(isAreaMode)로 동작하므로 연면적이 기준시가의 곱셈 인자다.
+   *
+   * ⚠️ **`same` 단일**이다(2026-07-30 Phase F1 β-2). 종전 `["same","partial"]`은
+   *    PR #912에서 land·housing 패턴을 기계적으로 복사한 것이고, `partial`은 취득·양도에
+   *    **서로 다른 면적**을 기준시가 곱셈에 넣어 환산비율을 왜곡했다(면적비가 단가비를
+   *    상쇄해 양도차익 0). 연면적의 취득↔양도 차이는 증축 전용 필드가 담당한다.
+   *    anchor: `basic-info-building-area.anchor.test.ts` A-6.
+   */
+  building: ["same"],
 };
 
 /**
@@ -102,8 +109,65 @@ const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
 const AREA_LABEL_BY_ASSET_KIND: Partial<Record<AssetForm["assetKind"], string>> = {
   land: "취득·양도 당시 면적 (㎡)",
   housing: "취득·양도 당시 토지 면적 (㎡)",
-  building: "취득·양도 당시 건물 연면적 (㎡)",
 };
+
+/**
+ * 축 A(토지)를 갖지 않는 자산유형 — 축 B(연면적)만 입력받는다.
+ * `building`은 "건물(토지 제외)"이므로 토지 면적 칸을 렌더하지 않는다.
+ */
+const LAND_AXIS_EXCLUDED_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["building"]);
+
+/**
+ * 축 B(건물 연면적) 입력 대상 자산유형.
+ *
+ * - `housing`: 「건물 기준시가 계산서」의 곱셈 인자. 종전에는 폼 필드가 없어 시점별 모달에서
+ *   각각 수동 입력했고 스냅샷 키가 시점별로 갈려 **3시점 불일치**가 무검증 통과했다
+ *   (anchor A-3). 단독주택 건물분 기준시가·PHD §164⑤ 환산이 이 값에 의존한다.
+ * - `building`: 자산 자체가 건물이므로 축 B가 유일한 면적이다.
+ *
+ * GB·상가·겸용은 전용 필드(`gbBuildingArea`·`cbExclusiveArea`+`cbSharedArea`·
+ * `residentialFloorArea`)가 담당한다 — F2 범위.
+ */
+const FLOOR_AREA_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["housing", "building"]);
+
+/**
+ * 축 C(건물 바닥면적·정착면적) 입력 대상 자산유형.
+ *
+ * `housing`만이다. 소비처는 「소득세법」 제89조 제1항 제3호("건물이 정착된 면적") →
+ * 「소득세법 시행령」 제154조 제7항 부수토지 한도(`limitArea = 정착면적 × 3/5/10배`)와
+ * 겸용 주거분 정착면적 안분이다.
+ *
+ * 종전 입력 경로는 **겸용 ON** 또는 **취득원인 신축**뿐이어서, 주택·겸용OFF·매매 자산은
+ * 영구 공백이 되고 엔진이 "전량 부수토지"로 가정했다(anchor A-1 — 초과 200㎡ ↔ 0㎡).
+ *
+ * ⚠️ `land`는 제외한다. 그 축 C는 `nblHousingFootprint`(「소득세법」 제104조의3 제1항
+ *    제5호 "**주택**이 정착된 면적")가 담당하며 **다른 법령 개념**이다 — 합치면 겸용에서
+ *    오답이 된다(계획서 U-3).
+ * ⚠️ `building`은 토지가 없어 부수토지 판정 자체가 없다 → 제외.
+ */
+const FOOTPRINT_AREA_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["housing"]);
+
+/**
+ * 겸용주택 분리계산 ON이면 기본정보 면적 섹션 전체를 숨기는 것이 기존 설계다
+ * (`areaScenarioOptions`가 `[]` 반환 — `mixedUseTotalLandArea` + 겸용 전용 섹션이 담당).
+ * 축 B·C도 같은 원칙을 따른다:
+ *   축 B → `residentialFloorArea` / `nonResidentialFloorArea` (용도별 분해)
+ *   축 C → `MixedUseAreaInputs`의 `buildingFootprintArea` (같은 필드, 겸용 섹션 내 입력)
+ * 그러지 않으면 같은 필드가 두 곳에 동시 노출된다.
+ */
+function isMixedUseSeparated(asset: AssetForm): boolean {
+  return asset.assetKind === "housing" && !!asset.isMixedUseHouse;
+}
+
+/** 축 B(연면적) 입력을 이 자산에 렌더하는가. */
+function showFloorArea(asset: AssetForm): boolean {
+  return FLOOR_AREA_KINDS.has(asset.assetKind) && !isMixedUseSeparated(asset);
+}
+
+/** 축 C(바닥면적) 입력을 이 자산에 렌더하는가. */
+function showFootprintArea(asset: AssetForm): boolean {
+  return FOOTPRINT_AREA_KINDS.has(asset.assetKind) && !isMixedUseSeparated(asset);
+}
 
 const AREA_SCENARIO_LABEL: Record<AreaScenario, string> = {
   same: "취득면적 = 양도면적 (일반)",
@@ -384,8 +448,14 @@ export function AssetSectionBasic({
 
       {/* 면적 정보 — AREA_SCENARIOS_BY_ASSET_KIND 등재 자산유형만 표시.
           전용 면적 섹션을 가진 자산유형(겸용·상가·일반건물·재개발)은 미렌더 — 중복 입력 방지. */}
-      {areaScenarioOptions(asset).length > 0 && (
+      {(areaScenarioOptions(asset).length > 0 ||
+        showFloorArea(asset) ||
+        showFootprintArea(asset)) && (
         <div className="space-y-3">
+          {/* ── 축 A: 토지 면적 (시나리오 분기) ────────────────────────── */}
+          {!LAND_AXIS_EXCLUDED_KINDS.has(asset.assetKind) &&
+            areaScenarioOptions(asset).length > 0 && (
+          <>
           <div
             className={cn(
               (asset.areaScenario ?? "same") === "same" &&
@@ -514,6 +584,53 @@ export function AssetSectionBasic({
               onChange={onChange}
               onAddAsset={onAddAsset}
             />
+          )}
+          </>
+          )}
+
+          {/* ── 축 B: 건물 연면적 ──────────────────────────────────────── */}
+          {showFloorArea(asset) && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                건물 연면적 (㎡)
+                <span
+                  title="각 층 바닥면적의 합(건축물대장 연면적). 건물 기준시가 = ㎡당 금액 × 이 면적. 취득·최초공시·양도 3시점 계산에 같은 값이 쓰입니다."
+                  className="ml-1 cursor-help"
+                >
+                  ⓘ
+                </span>
+              </label>
+              <DecimalInput
+                value={asset.buildingFloorArea}
+                onChange={(v) => onChange({ buildingFloorArea: v })}
+                placeholder="건축물대장 연면적"
+                data-testid="basic-building-floor-area"
+              />
+            </div>
+          )}
+
+          {/* ── 축 C: 건물 바닥면적(정착면적) ──────────────────────────── */}
+          {showFootprintArea(asset) && (
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">
+                건물 바닥면적 (정착면적, ㎡)
+                <span
+                  title="건물이 땅에 닿는 면적(1층 건축면적). 층별 합계인 연면적이 아닙니다. 「소득세법」 제89조 제1항 제3호의 「건물이 정착된 면적」 — 이 면적 × 지역별 배율(3·5·10배)이 1세대1주택 비과세 부수토지 한도입니다."
+                  className="ml-1 cursor-help"
+                >
+                  ⓘ
+                </span>
+              </label>
+              <DecimalInput
+                value={asset.buildingFootprintArea}
+                onChange={(v) => onChange({ buildingFootprintArea: v })}
+                placeholder="1층 건축면적"
+                data-testid="basic-building-footprint-area"
+              />
+              <p className="text-caption text-muted-foreground">
+                미입력 시 부수토지 한도 검증 없이 전량 부수토지로 가정합니다 (「소득세법 시행령」 제154조 제7항).
+              </p>
+            </div>
           )}
         </div>
       )}

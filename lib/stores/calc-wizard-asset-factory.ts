@@ -85,6 +85,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     inheritanceAssetKind: "land",
     acquisitionArea: "",
     transferArea: "",
+    buildingFloorArea: "",
     areaScenario: "same",
     publishedValueAtInheritance: "",
     fixedAcquisitionPrice: "",

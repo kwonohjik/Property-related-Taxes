@@ -205,6 +205,8 @@ function PartAcqStdPrice(props: {
           {...(both ? {} : { applyTimePoint: "acquisition" as const })}
           prefill={{
             landAreaM2: asset.acquisitionArea,
+            // 축 B — 기본정보 「건물 연면적」이 정본(anchor A-3).
+            floorArea: asset.buildingFloorArea || undefined,
             acquisitionDate: asset.acquisitionDate,
             transferDate: props.transferDate,
             // 취득시 위치지수 소스. 트랙 분기(취득 ≤2000이면 2001 기준)는 모달이

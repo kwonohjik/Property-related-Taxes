@@ -429,6 +429,43 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.assetKind || !validKinds.includes(a.assetKind as string)) {
     a.assetKind = "building";
   }
+
+  // ③ 축 B(건물 연면적) 신설 — buildingFloorArea (2026-07-30, Phase F1 β-2)
+  if (a.buildingFloorArea === undefined) a.buildingFloorArea = "";
+
+  /**
+   * β-2 이전 — `building`(건물, 토지 제외) 자산의 축 B를 `acquisitionArea` → `buildingFloorArea`로.
+   *
+   * PR #912(Phase A)는 축 B 전용 필드가 없어 `building`의 연면적을 `acquisitionArea`(축 A)에
+   * 실었다. 그 이원성이 `LandBuildingSplitSection.tsx:207`의 `landAreaM2: acquisitionArea`
+   * prefill에 **연면적을 토지면적으로** 흘리는 결함을 만들었다(`isSplitable`이 `building`을
+   * 포함한다 — `CompanionAcqPurchaseBlock.tsx:116`).
+   *
+   * ⚠️ 이 블록은 **assetKind 정규화(위) 뒤**에 있어야 한다 — fallback으로 `building`이 된
+   *    자산도 함께 이전해야 하기 때문이다.
+   * ⚠️ `transferArea`도 비운다: `building`의 면적 시나리오가 `["same"]`으로 축소되어
+   *    시점 쌍이 불필요해졌다(축 B는 단일 필드 — GB `gbBuildingArea` 선례).
+   */
+  if (
+    a.assetKind === "building" &&
+    !a.buildingFloorArea &&
+    typeof a.acquisitionArea === "string" &&
+    a.acquisitionArea !== ""
+  ) {
+    a.buildingFloorArea = a.acquisitionArea;
+    a.acquisitionArea = ""; // 축 A(토지) 전용으로 의미 확정
+    a.transferArea = "";
+  }
+
+  /**
+   * `building`의 면적 시나리오가 `["same"]`으로 축소됐다 → stale `partial`을 정규화한다.
+   * `areaResetPatchForAssetKind`는 **assetKind를 바꿀 때만** 동작하므로, 이미 저장된
+   * `building` + `partial` 조합은 이 마이그레이션이 아니면 그대로 남아 Select에 없는 값이
+   * 선택된 상태가 된다(취득·양도 면적 2칸이 렌더되는 죽은 분기).
+   */
+  if (a.assetKind === "building" && a.areaScenario !== "same") {
+    a.areaScenario = "same";
+  }
   // ③ 재개발/재건축 redev* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.redevSubject === undefined) a.redevSubject = "";
   if (a.redevApprovalLawBasis === undefined) a.redevApprovalLawBasis = "";

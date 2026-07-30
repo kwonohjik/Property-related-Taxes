@@ -71,20 +71,59 @@ describe("R-1 — assetKind별 면적 섹션 렌더 여부", () => {
     expect(screen.getByText(/취득·양도 당시 토지 면적 \(㎡\)/)).toBeInTheDocument();
   });
 
-  it("building: 면적 시나리오 Select가 렌더된다 (기준시가 단가×연면적 곱셈 인자)", () => {
+  /**
+   * 🔄 building 3건은 **Phase F1 β-2에서 뒤집혔다**(2026-07-30).
+   *
+   * 종전: `acquisitionArea`(축 A 슬롯)가 연면적을 담고 시나리오 Select가 렌더됐다.
+   * 정정: 축 B 전용 필드 `buildingFloorArea` 신설 → `acquisitionArea`는 축 A(토지) 전용.
+   *       `building`은 토지가 없으므로 **축 A 입력·시나리오 Select 모두 미렌더**이고
+   *       면적 시나리오는 `["same"]` 단일로 축소됐다(partial이 환산비율을 왜곡했다 — A-6).
+   */
+  it("R-5 building: 축 B 전용 입력이 렌더된다 (연면적)", () => {
     renderBasic("building");
-    expect(screen.getByTestId("area-scenario-select")).toBeInTheDocument();
+    expect(screen.getByTestId("basic-building-floor-area")).toBeInTheDocument();
+    expect(screen.getByText(/건물 연면적 \(㎡\)/)).toBeInTheDocument();
   });
 
-  it("R-5 building: 라벨이 「취득·양도 당시 건물 연면적」", () => {
+  it("building: 축 A(토지) 입력·시나리오 Select 미렌더 — 토지 제외 자산", () => {
     renderBasic("building");
-    expect(screen.getByText(/취득·양도 당시 건물 연면적 \(㎡\)/)).toBeInTheDocument();
+    expect(screen.queryByTestId("area-scenario-select")).not.toBeInTheDocument();
+    expect(screen.queryByText(/취득·양도 당시 건물 연면적 \(㎡\)/)).not.toBeInTheDocument();
   });
 
-  it("building: 환지 시나리오는 노출되지 않는다 (토지 제도 — 소득령 §162의2)", () => {
+  it("building: 축 C(바닥면적) 미렌더 — 부수토지 판정이 없다", () => {
     renderBasic("building");
-    fireEvent.click(screen.getByTestId("area-scenario-select"));
-    expect(screen.queryByText(/환지처분/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId("basic-building-footprint-area")).not.toBeInTheDocument();
+  });
+});
+
+describe("R-5b — housing 축 B·C 신설 (Phase F1)", () => {
+  it("housing: 축 B(건물 연면적) 입력이 렌더된다", () => {
+    renderBasic("housing");
+    expect(screen.getByTestId("basic-building-floor-area")).toBeInTheDocument();
+  });
+
+  it("housing: 축 C(건물 바닥면적) 입력이 렌더된다 — §154⑦ 부수토지 한도", () => {
+    renderBasic("housing");
+    expect(screen.getByTestId("basic-building-footprint-area")).toBeInTheDocument();
+    expect(screen.getByText(/정착면적/)).toBeInTheDocument();
+  });
+
+  it("housing: 축 C 미입력 시 거동을 안내한다 (전량 부수토지 가정)", () => {
+    renderBasic("housing");
+    expect(screen.getByText(/전량 부수토지로 가정/)).toBeInTheDocument();
+  });
+
+  it("land: 축 B·C 모두 미렌더 — 축 C는 nblHousingFootprint 소관(법 §104의3①5호)", () => {
+    renderBasic("land");
+    expect(screen.queryByTestId("basic-building-floor-area")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("basic-building-footprint-area")).not.toBeInTheDocument();
+  });
+
+  it("겸용주택: 축 B·C 미렌더 — 겸용 전용 섹션이 담당(중복 노출 방지)", () => {
+    renderBasic("housing", { isMixedUseHouse: true });
+    expect(screen.queryByTestId("basic-building-floor-area")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("basic-building-footprint-area")).not.toBeInTheDocument();
   });
 });
 
