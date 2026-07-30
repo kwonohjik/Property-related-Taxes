@@ -188,12 +188,29 @@ A-2·A-5·A-6·게이트 anchor는 **현행 결함·갭을 의도적으로 고�
 |---|---|---|
 | U-1 | 겸용 전체 면적 = `mixedUseTotalLandArea` | ✅ 해소 (§4.3) |
 | U-2 | `validate-asset.ts:392~394` = 증환지 | ✅ 해소 (§5.2) |
-| U-3 | `transferArea`의 일괄양도 안분 소비 지점 | 🟡 **미해소** — 본 작업 범위에 영향 없음(전달 경로 무변경)이라 Do를 차단하지 않음. Phase 3 착수 시 확인 |
+| U-3 | `transferArea`의 일괄양도 안분 소비 지점 | ✅ 해소 (§7.1) — **일괄양도 안분은 `transferArea`를 쓰지 않는다** |
 | U-4 | 상가·일반건물 면적 3축 | ✅ 해소 (§4.1·§4.2) |
 | U-5 | 재개발 = `redevLandArea` | ✅ 해소 (§4.1) |
 | U-6 | `StandardPriceInput` uncontrolled | ✅ 해소 — `isAreaMode`가 `land`·`building_non_residential` 한정(`:98~100`), 미전달 호출부는 전부 `house_individual`. **신규 호출 시 R6 가드 필요** |
 
-U-3만 남았고 Do 차단 사유가 아니다. **Do 착수 가능.**
+**전건 해소.**
+
+### 7.1 U-3 실측 결과 — 일괄양도 안분은 면적을 쓰지 않는다
+
+`lib/tax-engine/bundled-sale-apportionment.ts` (304줄) — **`area` 문자열 참조 0건**. 일괄양도 안분 키는 **기준시가 총액**이며 면적은 개입하지 않는다. taxonomy §5.2 툴팁의 "양도 기준시가 = ㎡ 단가 × 이 면적. … **일괄양도 안분에 사용**"이라는 문구는 정확히는 "㎡ 단가 × 면적으로 산출한 **총액**이 안분 키"라는 뜻이다 — 면적이 안분 산식에 직접 들어가지는 않는다.
+
+`transferArea`의 실제 소비 경로 (전수):
+
+| 소비처 | 인용 | 성격 |
+|---|---|---|
+| 다필지 면적 비례 안분 | `multi-parcel-transfer.ts:267,281` (`totalArea` · `safeMultiplyThenDivide`) | **면적이 직접 안분 키** — 자산-수준이 아니라 `parcels[]` 경로 |
+| 다필지 양도시 기준시가 | `multi-parcel-transfer.ts:350` `floor(transferArea × sqmAtTransfer)` | 총액 산출 |
+| §164⑨1호 공익수용 per-sqm 특례 | `transfer-tax-api-helpers.ts:521`(컴패니언)·`:665`(primary) — `isExprValuationEligibleAssetKind` 게이트 | 자산-수준 |
+| 증환지 증가분 양도시 기준시가 파생 | `transfer-tax-api-helpers.ts:440~447` (primary ㎡당 × 증가분 면적) | 자산-수준 |
+| 부담부증여 양도시 기준시가 파생 | `transfer-tax-api-burdened-gift.ts:141~145` | 자산-수준 |
+| 상가 3축 → `transferArea` 매핑 | `transfer-tax-commercial-step.ts:74` `transferArea: floorAreaTotal` | 상가 전용 축이 엔진 공통 필드로 들어가는 지점 |
+
+**함의**: 면적이 안분 키로 직접 쓰이는 곳은 **다필지(`parcels[]`) 경로 단독**이다. 그래서 taxonomy가 다필지 면적 체계를 "이미 최종 형태"로 판정했고(§6.1), 자산-수준 `partial` 불변식이 없어도 그동안 안분 왜곡이 드러나지 않았다(Phase 5에서 보강).
 
 ---
 
