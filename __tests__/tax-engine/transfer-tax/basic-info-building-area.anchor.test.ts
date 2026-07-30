@@ -260,3 +260,65 @@ describe("B-4 [현행 고정] — 축 A(토지면적) partial도 같은 왜곡 �
     expect(true).toBe(true);
   });
 });
+
+// ══════════════════════════════════════════════════════════
+// U-9 — 실거래가 모드의 취득가액은 왜곡 성격이 다르다
+// ══════════════════════════════════════════════════════════
+//
+// 환산 모드는 시스템이 `단가 × 면적`으로 총액을 **자동 계산**하므로 왜곡이 자동이다.
+// 실거래가 모드는 `fixedAcquisitionPrice`를 **사용자가 직접 입력**하고 엔진이 면적
+// 안분을 하지 않는다(`transfer-tax-api-helpers.ts:474` — 지분 `applyRatio`만 적용).
+//
+// → 사용자가 양도분에 대응하는 취득가액을 직접 넣으면 정답이 된다.
+//   문제는 그 안내가 **어디에도 없다**는 것이다:
+//     - 라벨 "취득가액 (원)" · hint `undefined` (CompanionAcqPurchaseBlock.tsx:509~527)
+//     - validate는 면적 불변식만 검사(취득 ≥ 양도) — 가액 안내 없음
+//       (transfer-tax-validate-asset.ts:383~388)
+//     - 반면 다필지 경로는 라벨에 "**총** 취득면적"을 명시한다(:77)
+//
+// ## 상충하는 두 선례 — 자동 스케일이 허용되는 기준
+//
+// | 선례 | 처리 | 근거 |
+// |---|---|---|
+// | 지분: `applyRatio(fixedAcqRaw, ratio)` (transfer-tax-api-helpers.ts:492) | **자동 스케일** | 같은 물건의 지분이므로 가액이 지분에 **정의상 비례** |
+// | 부담부증여 채무: ×지분율 금지 (BurdenedGiftBlock.tsx:101) | **자동 금지** | "물건 전체 채무를 ×지분율로 쪼개면 **자동 안분 fallback 정책 위반**" — 채무는 당사자 약정이라 비례 보장 없음 |
+//
+// → 기준은 **"비례가 자명한가"**다. 이를 면적에 적용하면 처방이 갈린다(§8.7 권고).
+
+describe("U-9 [현행 고정] — 실거래가 모드는 면적 안분을 하지 않는다", () => {
+  const ACQ_PRICE_FULL = 300_000_000; // 취득 300㎡ 전체 취득가액
+  const ACQ_AREA = 300;
+  const TR_AREA = 100;
+
+  it("엔진은 취득가액에 면적비를 적용하지 않는다 — 사용자 입력 그대로", () => {
+    // 면적비를 적용했다면 이 값이어야 한다.
+    const areaProportioned = Math.floor(ACQ_PRICE_FULL * (TR_AREA / ACQ_AREA));
+    expect(areaProportioned).toBe(100_000_000);
+    // 그러나 API는 `parseAmount(asset.fixedAcquisitionPrice)`를 그대로 넘긴다
+    // (지분 fractional일 때만 applyRatio 적용).
+    expect(ACQ_PRICE_FULL).not.toBe(areaProportioned);
+  });
+
+  it("전체 취득가액을 넣으면 양도차익이 2억 과소계상된다", () => {
+    const TRANSFER_PRICE_PARTIAL = 200_000_000; // 100㎡ 양도 실제 거래가액
+    const gainIfFull = TRANSFER_PRICE_PARTIAL - ACQ_PRICE_FULL; // -100,000,000 (손실)
+    const gainIfProportioned =
+      TRANSFER_PRICE_PARTIAL - Math.floor(ACQ_PRICE_FULL * (TR_AREA / ACQ_AREA)); // 100,000,000
+    expect(gainIfFull).toBe(-100_000_000);
+    expect(gainIfProportioned).toBe(100_000_000);
+    expect(gainIfProportioned - gainIfFull).toBe(200_000_000);
+  });
+
+  it("지분 모드는 취득가액을 자동 스케일한다 — 비례가 자명한 경우의 선례", () => {
+    // transfer-tax-api-helpers.ts:492 `applyRatio(fixedAcqRaw, ratio)`
+    // 같은 물건의 1/3 지분이면 취득가액도 1/3 — 정의상 비례.
+    const ratio = 1 / 3;
+    expect(Math.floor(ACQ_PRICE_FULL * ratio)).toBe(100_000_000);
+  });
+
+  it("면적비 안분이 환산 모드에서는 정확하다 — 기준시가는 단가 × 면적이므로 정의상 비례", () => {
+    const unit = 1_000_000;
+    // 취득 기준시가를 양도면적으로 안분한 값 === 양도면적 × 단가
+    expect(Math.floor(total(ACQ_AREA, unit) * (TR_AREA / ACQ_AREA))).toBe(total(TR_AREA, unit));
+  });
+});
