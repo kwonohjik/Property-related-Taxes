@@ -340,3 +340,43 @@ describe("Phase B4 — 결과 표시 근거 echo (⑦ 동기화 지점)", () => 
     expect(r.housingPart.longTermDeductionAmount).toBe(0);
   });
 });
+
+// ============================================================
+// Phase B2 (후속 계획서 transfer-surcharge-155-deeming-coverage.plan.md)
+//   §155① 일시적 2주택 의제 → 영 §167의10①15호 중과 배제. 겸용은 **자동 파급되지 않아**
+//   `MixedUseAssetInput.temporaryTwoHouse`를 route가 주입하고 서브엔진이 정본으로 선판정한다.
+// ============================================================
+
+describe("Phase B2 — §167의10①15호 일시적 2주택 중과 배제 (겸용 경로)", () => {
+  const TTH = {
+    previousAcquisitionDate: D("2018-01-01"),
+    newAcquisitionDate: D("2025-01-01"),
+  };
+
+  it("T-B2a: temporaryTwoHouse 주입 → 배제. 중과·장특배제 모두 해제", () => {
+    const r = run({ multiHouse: multiHouse(1), temporaryTwoHouse: TTH });
+    expect(r.multiHouseSurcharge).toBeDefined(); // R-9 침묵 스킵 방어
+    expect(r.multiHouseSurcharge!.exclusionReasons[0].type).toBe("temporary_two_house");
+    expect(r.multiHouseSurcharge!.surchargeApplicable).toBe(false);
+    expect(r.total.surchargeAddon).toBeUndefined();
+    // §95② 장특 배제 술어(surchargeType!=="none")도 함께 풀린다 → 주택분 장특 부활
+    expect(r.multiHouseSurcharge!.surchargeType).toBe("none");
+    expect(r.housingPart.longTermDeductionAmount).toBeGreaterThan(0);
+  });
+
+  it("T-B2b: 미주입 → 종전대로 중과 유지 (회귀)", () => {
+    const r = run({ multiHouse: multiHouse(1) });
+    expect(r.multiHouseSurcharge!.exclusionReasons).toHaveLength(0);
+    expect(r.multiHouseSurcharge!.surchargeType).toBe("multi_house_2");
+    expect(r.housingPart.longTermDeductionAmount).toBe(0);
+  });
+
+  it("T-B2c: 기한 초과(신규취득 2015) → 의제 미성립 → 중과 유지", () => {
+    const r = run({
+      multiHouse: multiHouse(1),
+      temporaryTwoHouse: { ...TTH, newAcquisitionDate: D("2015-01-01") },
+    });
+    expect(r.multiHouseSurcharge!.exclusionReasons).toHaveLength(0);
+    expect(r.multiHouseSurcharge!.surchargeType).toBe("multi_house_2");
+  });
+});

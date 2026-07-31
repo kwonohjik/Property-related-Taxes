@@ -66,7 +66,9 @@ describe("T-24: houses[] + 일시적 2주택 배제 → 일반세율", () => {
     const transferDate = new Date("2024-06-01"); // 신규주택 취득 후 2년 → 3년 이내
 
     const input = baseInput({
-      transferPrice: 500_000_000,
+      // 12억 초과 고가주택 — §155① 의제가 성립하면 비과세도 함께 성립하므로,
+      // 중과 배제의 효과는 **12억 초과분 과세**에서만 관측된다(계획서 F-1).
+      transferPrice: 2_000_000_000,
       acquisitionPrice: 300_000_000,
       acquisitionDate: new Date("2020-01-01"),
       transferDate,
@@ -75,7 +77,12 @@ describe("T-24: houses[] + 일시적 2주택 배제 → 일반세율", () => {
       isOneHousehold: true,
       sellingHouseId: "h1",
       houses: [h1, h2],
-      multiHouseTemporaryTwoHouse: { previousHouseId: "h1", newHouseId: "h2" },
+      // 2026-07-31: 중과 전용 `multiHouseTemporaryTwoHouse`(ID 매칭) 폐기 —
+      //   §155① 비과세 입력 하나로 엔진이 의제 성립을 선판정한다(§167의10①15호).
+      temporaryTwoHouse: {
+        previousAcquisitionDate: new Date("2020-01-01"), // 종전주택(h1) 취득
+        newAcquisitionDate: new Date("2022-06-01"), // 신규주택(h2) 취득
+      },
     });
 
     const result = calculateTransferTax(input, mockRatesWithHouseEngine);

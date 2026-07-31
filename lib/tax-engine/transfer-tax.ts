@@ -55,6 +55,7 @@ import {
   parseRatesFromMap,
   checkExemption,
   meetsOneHouseHoldingResidence,
+  resolveDeemedOneHouseBy155,
   resolveExemptionResidenceMonths,
   calcTransferGain,
   calcLongTermHoldingDeduction,
@@ -192,7 +193,12 @@ export function calculateTransferTax(
       sellingHouseId: sellingId,
       transferDate: workingInput.transferDate,
       isOneHousehold: workingInput.isOneHousehold,
-      temporaryTwoHouse: workingInput.multiHouseTemporaryTwoHouse,
+      // §167의10①15호 ① 요소 — §155① 의제 성립 여부를 **비과세 정본으로 선판정**해 주입.
+      //   STEP 1(checkExemption)이 뒤에 오므로 그 결과를 받을 수 없다. 배제 2가
+      //   `meetsOneHouseHoldingResidence`를 여기서 precompute하는 것과 같은 패턴이다.
+      //   ⚠️ 타이밍(요건 A·B)만 본다 — §154① 충족(② 요소)은
+      //   `sellingHouseMeetsOneHouseRequirements`가 별도로 담당하며, 중과 엔진이 둘을 AND한다.
+      deemedOneHouseBy155: resolveDeemedOneHouseBy155(workingInput, parsedRates.oneHouseSpecialRules),
       marriageMerge: workingInput.marriageMerge,
       parentalCareMerge: workingInput.parentalCareMerge,
       presaleRights: workingInput.presaleRights ?? [],

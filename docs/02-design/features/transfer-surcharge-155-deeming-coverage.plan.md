@@ -1,10 +1,10 @@
-# 다주택 중과 — 영 §167의10①15호(§155 의제) 커버리지 + 일시적 2주택 배관 — v1.0
+# 다주택 중과 — 영 §167의10①15호(§155 의제) 커버리지 + 일시적 2주택 배관 — v1.2
 
 > 선행 계획서 [`transfer-mixed-use-residence-surcharge.plan.md`](./transfer-mixed-use-residence-surcharge.plan.md) §11 **U-7**에서
 > 파생. 조사 결과 「배관 한 줄 누락」이 아니라 **설계 이슈**로 확인되어 별도 문서로 분리한다.
 >
-> **적용 대상은 겸용주택이 아니라 일반 단건 양도세 경로**다. 겸용은 선행 계획서 Phase B에서
-> 같은 정본을 이미 재사용하므로 이 문서의 수정이 자동으로 파급된다.
+> **주 적용 대상은 일반 단건 양도세 경로**다. 겸용은 중과 입력을 `MixedUseAssetInput.multiHouse`
+> 서브객체로 따로 받으므로 **자동 파급되지 않는다** — Phase B2가 별도로 배선한다(S-5 정정).
 >
 > **작성 원칙**: 인용 file:line은 실제 파일 대조, 수치는 throwaway probe 실행 실측.
 > 미확인은 🔶로 명시하고 단정하지 않는다(CLAUDE.md 검증 기준).
@@ -274,13 +274,44 @@ MultiHouseSurchargeInput:
 
 ## 4. Phase
 
-| Phase | 내용 | 선행 |
-|---|---|---|
-| **A** | `resolveTemporaryTwoHouseDeadlineYears` 추출 (**동작 불변 리팩터**) + 기존 anchor로 회귀 확인 | — |
-| **B1** | 배제 1 재설계 — `deemedOneHouseBy155` 도입 · 선판정 배선 · `MultiHouseSurchargeInput.temporaryTwoHouse`와 `TransferTaxInput.multiHouseTemporaryTwoHouse` **동시 폐기** | A |
-| **B2** | **겸용 경로 배선** — `MixedUseAssetInput.multiHouse`에 `deemedOneHouseBy155` 전달(S-5) | B1 |
-| **C** | 🔍 **감사** — F-4 매트릭스 🔶 6칸을 실측으로 닫는다 + F-3 mock↔seed 전수 대조 | B2 |
-| **D** | C 결과에 따른 갭 수정 (범위 미정 — C 완료 후 재계획) | C |
+| Phase | 내용 | 선행 | 상태 |
+|---|---|---|---|
+| **A** | `resolveTemporaryTwoHouseDeadlineYears` 추출 (**동작 불변 리팩터**) + 기존 anchor로 회귀 확인 | — | ✅ 2026-07-31 |
+| **B1** | 배제 1 재설계 — `deemedOneHouseBy155` 도입 · 선판정 배선 · `MultiHouseSurchargeInput.temporaryTwoHouse`와 `TransferTaxInput.multiHouseTemporaryTwoHouse` **동시 폐기** | A | ✅ 2026-07-31 |
+| **B2** | **겸용 경로 배선** — `MixedUseAssetInput.temporaryTwoHouse` 신설 + route ⑭ 주입 + 서브엔진 선판정(S-5) | B1 | ✅ 2026-07-31 |
+| **C** | 🔍 **감사** — F-4 매트릭스 🔶 6칸을 실측으로 닫는다 + F-3 mock↔seed 전수 대조 | B2 | 미착수 |
+| **D** | C 결과에 따른 갭 수정 (범위 미정 — C 완료 후 재계획) | C | 미착수 |
+
+### A·B 구현 결과 (2026-07-31)
+
+**배관에 신규 UI·API 필드가 필요 없었다.** §155① 비과세용 `temporaryTwoHouse`(폼 토글
+`temporaryTwoHouseSpecial` + `newHouseAcquisitionDate`)가 이미 ④⑬⑨⑫⑭ 전 구간을 통과하고 있어,
+엔진이 그 하나로 의제를 선판정하면 된다. 겸용만 route ⑭ 1줄 주입이 추가됐다.
+
+| 파일 | 변경 |
+|---|---|
+| `transfer-tax-exemption.ts` | `resolveTemporaryTwoHouseDeadlineYears`(추출) · `evaluateTemporaryTwoHouseTiming`(내부 공용) · `resolveDeemedOneHouseBy155` · `DeemedOneHouseReqInput` 타입 |
+| `multi-house-surcharge-exclusion.ts` | 배제 1 재설계 — 기한 재계산 삭제, 15호 2요소 AND. `isRegulated` 파라미터 제거(사용처 소멸) |
+| `types/multi-house-surcharge.types.ts` | `temporaryTwoHouse` → `deemedOneHouseBy155` |
+| `types/transfer.types.ts` | `multiHouseTemporaryTwoHouse` 폐기 |
+| `transfer-tax.ts` · `transfer-tax-mixed-use.ts` | STEP 0.5 선판정 주입 |
+| `app/api/calc/transfer/route.ts` | ⑭ `mixedAsset.temporaryTwoHouse` |
+| `legal-codes/transfer.ts` | `MULTI_HOUSE.TEMP_TWO_HOUSE_2HOUSE_BASIS` |
+
+**실측 before→after** (fixture: 종전주택 취득 2018-01-01 · 양도가 20억 · 취득가 7억 · 거주 36개월 ·
+조정대상지역 2주택 · **seed 규칙**). `lib/` 변경만 stash해 같은 probe로 양쪽을 측정했다.
+
+| # | 현행 | 정정 후 | 차액 |
+|---|---:|---:|---:|
+| N1 (新 2025-01-01 · 양 2026-06-01) | 284,910,000 | **147,780,000** | −137,130,000 |
+| N2 (新 2020-06-01 · 양 2022-01-01 — F-2) | 284,910,000 | **168,580,000** | −116,330,000 |
+| N4 (기한 초과) | 777,435,000 | 777,435,000 | 0 |
+| N6 (유예 활성) | 147,780,000 `suspended:true` | 147,780,000 `배제` | **0 — 경로만 변경** |
+| N7 (§154① 미충족) | 777,435,000 | 777,435,000 | 0 |
+| N8 (입력 없음) | 777,435,000 | 777,435,000 | 0 |
+
+N1의 −137,130,000은 §2 F-1 실측과 원 단위로 일치한다. N2는 §5 매트릭스의 156,100,000과 다른데,
+그 값은 조사 단계 probe의 **다른 fixture**(양도가·거주기간 상이)에서 나온 것이다 — 위 표가 현행 anchor 기준.
 
 **A를 분리하는 이유**: 헬퍼 추출은 동작이 바뀌면 안 된다. B와 섞으면 회귀 원인이 분리되지 않는다.
 
@@ -375,5 +406,6 @@ MultiHouseSurchargeInput:
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.2 | 2026-07-31 | **Phase A·B1·B2 구현 완료.** anchor `temporary-two-house-surcharge.anchor.test.ts` 14건 + 겸용 3건 신설, 기존 4곳(MH-05·MH-06·T-24) 신 입력으로 갱신. 전체 회귀 0. §4에 구현 결과·before→after 실측표 추가. **배관에 신규 UI/API 필드 불필요**(§155① 비과세 입력 재사용)가 확인됨 — B2만 route ⑭ 1줄 |
 | v1.1 | 2026-07-31 | **자가 검토 6+3건 정정** — ① §3.2 `checkExemption` 파일 혼동 ② F-1 첫 행이 프로덕션 미발생 상태임을 명시(격리 측정) ③ N1 fixture를 실측값(新 2025-01-01)에 맞춤 ④ **N6·T-B5 정정** — 「유예 우선」이 아니라 **배제가 먼저 early-return**하며 `surchargeType:"none"`·`isSuspended:false`를 반환(`multi-house-surcharge.ts:301-313`) ⑤ N7 현행은 「우연히 정답」임을 명시 ⑥ §1.4 ⑯ 항번호가 역산임을 각주 ⑦ **F-5 신설**(§155⑱ 3년 기한 예외 전 저장소 미구현) ⑧ **S-5 정정** — 겸용은 자동 파급되지 않음 → Phase **B2 신설** ⑨ V-7 |
 | v1.0 | 2026-07-31 | 최초 작성. 선행 계획서 U-7에서 분리. **F-1**(배관 0곳, +137,130,000~+353,100,000 과다과세) · **F-2**(기한 3중 드리프트, 「비과세 O/중과배제 X」 실측 +128,810,000) · **F-3**(mock≠seed가 F-2를 가림) · **F-4**(15호 커버리지 6칸 미확인). 근거 조문이 §155① 재구현이 아니라 **§167의10①15호**임을 법문으로 확정 |

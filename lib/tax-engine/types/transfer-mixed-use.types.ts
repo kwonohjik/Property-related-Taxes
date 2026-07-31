@@ -133,6 +133,14 @@ export interface MixedUseAssetInput {
    */
   isOneHouseExempt?: boolean;
 
+  /**
+   * §155① 일시적 2주택 — 종전·신규주택 취득일. **폼-전역** 값이라 route가 주입한다.
+   *
+   * 겸용 서브엔진이 이것으로 §155① 의제 성립을 선판정해(`resolveDeemedOneHouseBy155`)
+   * 중과 배제(영 §167의10①15호 ① 요소)에 넘긴다. 미주입 시 의제 미성립 — 종전 동작 불변.
+   */
+  temporaryTwoHouse?: { previousAcquisitionDate: Date; newAcquisitionDate: Date };
+
   // ── 영 §154① 요건 판정 입력 (Phase A — 거주요건 + 단서 각호 면제) ──
   // 셋 다 **폼-전역(top-level)** 값이다. 클라이언트는 `mixedUse` 객체가 아니라 body 최상위로
   // 보내므로(⑫ Zod는 이미 정의됨) route가 `mixedAsset` 조립 시 명시 주입한다
@@ -165,13 +173,13 @@ export interface MixedUseAssetInput {
    * **폼-전역(top-level)** 값이라 `data.mixedUse`에 없다 → route가 조립해 주입한다.
    * 미주입(undefined)이면 중과 판정 자체를 건너뛴다(종전 경로 완전 불변).
    *
-   * ⚠️ `temporaryTwoHouse`(중과용 `{previousHouseId, newHouseId}`)는 담지 않는다 —
-   *    단건 경로에서도 route가 `multiHouseTemporaryTwoHouse`를 채우지 않아 상시 undefined다
-   *    (저장소 전체 정의·소비 2곳뿐). 별건 조사 대상(계획서 §11 U-7).
+   * ⚠️ `deemedOneHouseBy155`(§167의10①15호 ① 요소)는 담지 않는다 — 겸용 서브엔진이
+   *    §155① 정본(`resolveDeemedOneHouseBy155`)으로 **자체 선판정**한다(Phase B2).
+   *    폼-전역 `temporaryTwoHouse`는 `MixedUseAssetInput.temporaryTwoHouseSpecial`로 이미 들어온다.
    */
   multiHouse?: Omit<
     MultiHouseSurchargeInput,
-    "transferDate" | "sellingHouseMeetsOneHouseRequirements" | "temporaryTwoHouse"
+    "transferDate" | "sellingHouseMeetsOneHouseRequirements" | "deemedOneHouseBy155"
   > & {
     /** 양도 당시 조정대상지역 boolean fallback (`regulatedAreaHistory` 미매칭 시). */
     isRegulatedArea: boolean;

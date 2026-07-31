@@ -10,7 +10,10 @@
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calculateHoldingPeriod } from "./tax-utils";
-import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
+import {
+  meetsOneHouseHoldingResidence,
+  resolveDeemedOneHouseBy155,
+} from "./transfer-tax-exemption";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
@@ -165,6 +168,17 @@ export function calcMixedUseTransferTax(
             // §155⑤ 1세대1주택 의제 중과배제(배제2) 게이트 — 위에서 만든 §154① 통합 판정을
             // 그대로 넘긴다. 단건이 `transfer-tax.ts:202`에서 넘기는 값과 **같은 함수의 결과**다.
             sellingHouseMeetsOneHouseRequirements: meetsOneHouseRequirements,
+            // §167의10①15호 ① 요소 — §155① 의제 성립. 단건과 **같은 정본 함수**를 쓴다
+            // (기한 규칙 재구현 금지 — 계획서 F-2). `temporaryTwoHouse` 미주입 시 undefined.
+            deemedOneHouseBy155: resolveDeemedOneHouseBy155(
+              {
+                ...exemptionReqInput,
+                isRegulatedArea: asset.multiHouse.isRegulatedArea,
+                isOneHousehold: asset.multiHouse.isOneHousehold,
+                temporaryTwoHouse: asset.temporaryTwoHouse,
+              },
+              oneHouseSpecialRules,
+            ),
           },
           houseCountExclusionRules,
           regulatedAreaHistory ?? null,

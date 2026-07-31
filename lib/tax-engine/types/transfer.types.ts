@@ -262,11 +262,11 @@ export interface TransferTaxInput {
    * houses 제공 시 함께 전달 권장.
    */
   presaleRights?: PresaleRight[];
-  /** 일시적 2주택 정보 (houses 제공 시 사용) */
-  multiHouseTemporaryTwoHouse?: {
-    previousHouseId: string;
-    newHouseId: string;
-  };
+  // `multiHouseTemporaryTwoHouse`(중과 전용 `{previousHouseId, newHouseId}`)는 2026-07-31 폐기.
+  //   프로덕션에서 아무도 채우지 않아 일시적 2주택 중과배제 분기 전체가 잠들어 있었고(계획서 F-1),
+  //   중과 엔진이 §155① 기한을 재구현해 비과세 정본과 어긋났다(F-2).
+  //   이제 §155① 비과세용 `temporaryTwoHouse`(위) 하나만 받고, 엔진이 정본 판정 결과를
+  //   `MultiHouseSurchargeInput.deemedOneHouseBy155`로 넘긴다(영 §167의10①15호).
   /** 혼인합가 정보 */
   marriageMerge?: {
     marriageDate: Date;

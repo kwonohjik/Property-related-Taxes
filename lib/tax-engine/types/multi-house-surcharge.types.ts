@@ -319,11 +319,21 @@ export interface MultiHouseSurchargeInput {
   transferDate: Date;
   /** 1세대 여부 */
   isOneHousehold: boolean;
-  /** 일시적 2주택 정보 (종전주택 → 신규주택) */
-  temporaryTwoHouse?: {
-    previousHouseId: string;
-    newHouseId: string;
-  };
+  /**
+   * §155 1세대1주택 **의제 성립** 여부 — 영 §167의10①15호(·§167의3①13호) ① 요소.
+   *
+   * 15호는 「§155 … 1세대1주택으로 보아 §154①이 적용되는 주택으로서 **같은 항의 요건을 모두
+   * 충족**하는 주택」이라는 **2요소** 판정이다. ②(§154① 충족)는
+   * `sellingHouseMeetsOneHouseRequirements`가 담당한다.
+   *
+   * ⚠️ **①을 이 엔진이 재판정하지 않는다.** 종전에는 `{previousHouseId, newHouseId}`를 받아
+   * §155① 처분기한을 자체 재구현했고, 그 기한이 비과세 정본과 달라
+   * 「비과세 O / 중과배제 X」 모순을 만들었다(계획서 F-2). caller가 §155① 정본
+   * (`judgeTemporaryTwoHouseTiming` + `resolveTemporaryTwoHouseDeadlineYears`) 결과를 주입한다.
+   *
+   * 값은 의제 근거 항이다. 현재는 ①(일시적 2주택)만 채운다 — 나머지 항은 계획서 Phase C·D.
+   */
+  deemedOneHouseBy155?: "temporary_two_house";
   /** 혼인합가 정보 */
   marriageMerge?: {
     marriageDate: Date;

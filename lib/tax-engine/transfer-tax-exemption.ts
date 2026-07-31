@@ -55,6 +55,17 @@ export type ResidenceReqInput = Pick<
 export type ExemptionReqInput = ResidenceReqInput &
   Pick<TransferTaxInput, "decedentCohabitationHoldingStartDate">;
 
+/**
+ * §155① 의제 성립 판정 입력 — `ExemptionReqInput` + 일시적 2주택 3필드.
+ *
+ * `ExemptionReqInput`과 같은 이유로 narrowing한다: 겸용주택 서브엔진은 `TransferTaxInput`
+ * 전체를 구성할 수 없으므로, 전체를 요구하면 정본을 재사용하지 못하고 규칙을 재구현하게 된다
+ * (그 결과가 계획서 F-2 — 중과 배제가 §155① 기한을 자체 계산해 비과세와 어긋난 것).
+ * **타입 전용 narrowing이며 동작은 불변**이다.
+ */
+export type DeemedOneHouseReqInput = ExemptionReqInput &
+  Pick<TransferTaxInput, "isRegulatedArea" | "isOneHousehold" | "temporaryTwoHouse">;
+
 interface ExemptionResult {
   isExempt: boolean;
   isPartialExempt: boolean;
@@ -271,6 +282,85 @@ export function judgeTemporaryTwoHouseTiming(p: {
   return { oneYearThreshold, oneYearMet, deadline, threeYearMet, overall: oneYearMet && threeYearMet };
 }
 
+/**
+ * §155① 처분기한(년) 산정 — 조정대상지역 부칙 완화 반영.
+ *
+ * 비과세 판정(`checkExemption` E-3)과 중과 배제(§167의10①15호) **양쪽이 같은 값을 써야** 한다.
+ * 중과 배제가 이 규칙을 자체 재구현했다가 「비과세 O / 중과배제 X」 모순을 만든 것이
+ * 계획서 F-2다. 인라인이던 것을 추출만 했으며 **동작은 불변**이다.
+ */
+export function resolveTemporaryTwoHouseDeadlineYears(
+  p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate">,
+  twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
+): number {
+  if (!p.isRegulatedArea) return twoHouseRule.disposalDeadlineYears;
+  // 부칙: 양도일이 완화 시행일(2022-05-10) 이후이면 완화 기한 적용
+  const relaxDate = twoHouseRule.regulatedAreaRelaxDate
+    ? new Date(twoHouseRule.regulatedAreaRelaxDate)
+    : null;
+  if (relaxDate && p.transferDate >= relaxDate) {
+    return twoHouseRule.regulatedAreaRelaxDeadlineYears ?? twoHouseRule.regulatedAreaDeadlineYears;
+  }
+  return twoHouseRule.regulatedAreaDeadlineYears;
+}
+
+/**
+ * §155① 일시적 2주택 **타이밍 요건(A·B)** 판정 — 비과세(E-3)와 중과 배제(§167의10①15호) 공용.
+ *
+ * `provisoRelaxesHolding`(§154① 단서 화이트리스트 → 1년 요건 면제)까지 함께 산출해
+ * 두 호출부가 **같은 규칙**을 쓰게 한다. 15호 ② 요소(§154① 보유·거주 충족)는 여기서 보지 않는다 —
+ * 비과세는 `meetsOneHouseHoldingResidence`가, 중과는 `sellingHouseMeetsOneHouseRequirements`가 담당.
+ */
+function evaluateTemporaryTwoHouseTiming(
+  input: DeemedOneHouseReqInput,
+  twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
+): {
+  provisoRelaxesHolding: boolean;
+  timing: ReturnType<typeof judgeTemporaryTwoHouseTiming>;
+} {
+  const { previousAcquisitionDate, newAcquisitionDate } = input.temporaryTwoHouse!;
+
+  // §155①→§154①1·2가·3호 준용: 종전주택이 §154① 단서(both, 화이트리스트) 해당 시 보유 2년 요건 면제.
+  // 나·다목(출국일 1주택)·5호(무주택·residence_only)는 일시적 2주택과 양립 불가라 화이트리스트로 제외.
+  // resolveExemptionProviso는 input.acquisitionDate(=종전주택 취득일, previousAcquisitionDate와 동일 의도) 기준.
+  const provisoReason = input.oneHouseExemptionProviso?.reason;
+  const provisoRelaxesHolding =
+    resolveExemptionProviso(input) === "both" &&
+    provisoReason !== undefined &&
+    TEMP_TWO_HOUSE_PROVISO_REASONS.has(provisoReason);
+
+  // §155① 요건 A(1년 경과)·B(3년 내) 판정 — 1년 요건은 보유면제 화이트리스트(§154①1·2가·3호) 시 면제.
+  const timing = judgeTemporaryTwoHouseTiming({
+    previousAcquisitionDate,
+    newAcquisitionDate,
+    transferDate: input.transferDate,
+    deadlineYears: resolveTemporaryTwoHouseDeadlineYears(input, twoHouseRule),
+    oneYearWaived: provisoRelaxesHolding,
+  });
+
+  return { provisoRelaxesHolding, timing };
+}
+
+/**
+ * 영 §167의10①15호(·§167의3①13호) **① 요소** — §155에 따른 1세대1주택 의제 성립 여부.
+ *
+ * 중과 판정(STEP 0.5)이 비과세 판정(STEP 1)보다 먼저 실행되므로 `checkExemption` 결과를 넘길 수
+ * 없다. 그래서 §155① 타이밍만 **선판정**해 `MultiHouseSurchargeInput.deemedOneHouseBy155`로 넘긴다.
+ *
+ * ② 요소(§154① 요건 모두 충족)는 중과 엔진이 `sellingHouseMeetsOneHouseRequirements`로 AND한다.
+ * 현재 채우는 항은 ①(일시적 2주택)뿐 — 나머지 §155 각 항은 계획서 Phase C·D.
+ */
+export function resolveDeemedOneHouseBy155(
+  input: DeemedOneHouseReqInput,
+  oneHouseRules: OneHouseSpecialRulesData | undefined,
+): "temporary_two_house" | undefined {
+  const twoHouseRule = oneHouseRules?.temporary_two_house;
+  if (!input.isOneHousehold || !input.temporaryTwoHouse || !twoHouseRule) return undefined;
+  return evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall
+    ? "temporary_two_house"
+    : undefined;
+}
+
 export function checkExemption(
   input: TransferTaxInput,
   oneHouseRules: OneHouseSpecialRulesData,
@@ -323,42 +413,17 @@ export function checkExemption(
 
   // E-3: 일시적 2주택
   if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
-    const { previousAcquisitionDate, newAcquisitionDate } = input.temporaryTwoHouse;
-
-    // §155①→§154①1·2가·3호 준용: 종전주택이 §154① 단서(both, 화이트리스트) 해당 시 보유 2년 요건 면제.
-    // 나·다목(출국일 1주택)·5호(무주택·residence_only)는 일시적 2주택과 양립 불가라 화이트리스트로 제외.
-    // resolveExemptionProviso는 input.acquisitionDate(=종전주택 취득일, previousAcquisitionDate와 동일 의도) 기준.
     const provisoReason = input.oneHouseExemptionProviso?.reason;
-    const provisoRelaxesHolding =
-      resolveExemptionProviso(input) === "both" &&
-      provisoReason !== undefined &&
-      TEMP_TWO_HOUSE_PROVISO_REASONS.has(provisoReason);
+    const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
 
-    const prevHolding = calculateHoldingPeriod(previousAcquisitionDate, input.transferDate);
+    const prevHolding = calculateHoldingPeriod(
+      input.temporaryTwoHouse.previousAcquisitionDate,
+      input.transferDate,
+    );
     if (!provisoRelaxesHolding && prevHolding.years < rule.minHoldingYears) {
       return { isExempt: false, isPartialExempt: false };
     }
 
-    let deadlineYears = twoHouseRule.disposalDeadlineYears;
-    if (input.isRegulatedArea) {
-      // 부칙: 양도일이 완화 시행일(2022-05-10) 이후이면 완화 기한 적용
-      const relaxDate = twoHouseRule.regulatedAreaRelaxDate
-        ? new Date(twoHouseRule.regulatedAreaRelaxDate)
-        : null;
-      if (relaxDate && input.transferDate >= relaxDate) {
-        deadlineYears = twoHouseRule.regulatedAreaRelaxDeadlineYears ?? twoHouseRule.regulatedAreaDeadlineYears;
-      } else {
-        deadlineYears = twoHouseRule.regulatedAreaDeadlineYears;
-      }
-    }
-    // §155① 요건 A(1년 경과)·B(3년 내) 판정 — 1년 요건은 보유면제 화이트리스트(§154①1·2가·3호) 시 면제.
-    const timing = judgeTemporaryTwoHouseTiming({
-      previousAcquisitionDate,
-      newAcquisitionDate,
-      transferDate: input.transferDate,
-      deadlineYears,
-      oneYearWaived: provisoRelaxesHolding,
-    });
     // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 종전에는 타이밍(요건 A·B)만 보고
     //   비과세를 줬다. §155①은 "…국내에 1주택을 소유한 것으로 **보아 제154조제1항을 적용**한다"이므로
     //   종전주택 자체가 **§154①의 보유 2년 + (취득 당시 조정대상지역이면) 거주 2년**을 충족해야 한다.

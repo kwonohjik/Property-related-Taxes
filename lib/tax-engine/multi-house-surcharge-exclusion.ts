@@ -13,7 +13,6 @@ import { addMonths, addYears, addDays, subDays, differenceInYears } from "date-f
 import { isSurchargeSuspended } from "./tax-utils";
 import {
   MULTI_HOUSE,
-  SURCHARGE_EXCLUSION_WINDOW,
   SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
   SURCHARGE_TRANSITION,
   SURCHARGE_TRANSITION_FOUR_MONTH_SGG,
@@ -225,7 +224,6 @@ function getFirstDesignatedDate(
 export function determineSurchargeExclusion(
   input: MultiHouseSurchargeInput,
   effectiveHouseCount: number,
-  isRegulated: boolean,
   suspensionRules: SurchargeSpecialRulesData | null,
   regulatedAreaHistory: RegulatedAreaHistory | null,
   excludedHouseIds: Set<string>,
@@ -241,24 +239,21 @@ export function determineSurchargeExclusion(
   const exclusionReasons: ExclusionReason[] = [];
   const sellingHouse = input.houses.find((h) => h.id === input.sellingHouseId);
 
-  // 배제 1: 일시적 2주택
-  if (effectiveHouseCount === 2 && input.temporaryTwoHouse) {
-    const { previousHouseId, newHouseId } = input.temporaryTwoHouse;
-    if (input.sellingHouseId === previousHouseId) {
-      const newHouse = input.houses.find((h) => h.id === newHouseId);
-      if (newHouse) {
-        const relaxDate = new Date(SURCHARGE_EXCLUSION_WINDOW.start);
-        const deadlineYears = isRegulated && newHouse.acquisitionDate < relaxDate ? 1 : 3;
-        const deadline = addYears(newHouse.acquisitionDate, deadlineYears);
-        if (input.transferDate <= deadline) {
-          exclusionReasons.push({
-            type: "temporary_two_house",
-            detail: `신규주택 취득일(${newHouse.acquisitionDate.toISOString().slice(0, 10)}) + ${deadlineYears}년 처분기한 이내`,
-          });
-          return { isExcluded: true, exclusionReasons, isSuspended: false };
-        }
-      }
-    }
+  // 배제 1: 일시적 2주택 §155① 1세대1주택 의제 (§167의10①15호 → §167의3①13호 동문)
+  // 15호 2요소: ① §155 의제 성립(caller가 §155① 정본으로 선판정해 주입) ② §154① 요건 모두 충족.
+  //   ①을 여기서 재판정하지 않는다 — 종전 자체 기한 계산이 비과세 정본과 어긋나
+  //   「비과세 O / 중과배제 X」를 만들었다(계획서 F-2).
+  //   ②는 배제 2(혼인)와 같은 게이트. 미제공(?? true)은 충족 간주(직접 호출 하위호환).
+  if (
+    effectiveHouseCount === 2 &&
+    input.deemedOneHouseBy155 === "temporary_two_house" &&
+    (input.sellingHouseMeetsOneHouseRequirements ?? true)
+  ) {
+    exclusionReasons.push({
+      type: "temporary_two_house",
+      detail: `일시적 2주택 1세대1주택 의제 — 종전주택 처분기한 이내 (${MULTI_HOUSE.TEMP_TWO_HOUSE_2HOUSE_BASIS})`,
+    });
+    return { isExcluded: true, exclusionReasons, isSuspended: false };
   }
 
   // 배제 2: 혼인합가 1세대1주택 의제 (§167의10①15호 → §155⑤, 2주택 10년)

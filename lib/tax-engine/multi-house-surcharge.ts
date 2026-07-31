@@ -291,7 +291,6 @@ export function determineMultiHouseSurcharge(
   const { isExcluded, exclusionReasons, isSuspended, suspensionBasis, suspensionDeadline } = determineSurchargeExclusion(
     input,
     effectiveHouseCount,
-    isRegulatedAtTransfer,
     suspensionRules,
     regulatedAreaHistory,
     new Set(excludedHouses.map((e) => e.houseId)),
