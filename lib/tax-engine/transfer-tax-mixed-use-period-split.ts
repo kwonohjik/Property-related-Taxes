@@ -115,6 +115,8 @@ export function applyUsagePeriodSplit(
   periodInfo: UsagePeriodInfo,
   direction: "house_to_commercial" | "commercial_to_house",
   housingAcqResult: HousingEstimatedAcqResult,
+  /** §95② 미등기양도자산 장기보유특별공제 배제. */
+  isUnregistered = false,
 ): {
   housingPart: MixedUseHousingPart;
   commercialPart: MixedUseCommercialPart;
@@ -199,14 +201,14 @@ export function applyUsagePeriodSplit(
 
   // P1 housing LTHD: t1 보유기간 (h_to_c일 때만 housing P1 존재)
   const p1HousingRate = isHtoC
-    ? calcLongTermRate(t1HoldingYears, residenceYears, useTable2)
+    ? calcLongTermRate(t1HoldingYears, residenceYears, useTable2, isUnregistered)
     : 0;
   const p1HousingLTHD =
     applyRate(p1HousingLandProrated, p1HousingRate) +
     applyRate(p1HousingBuildingProrated, p1HousingRate);
 
   // P2 housing LTHD: t2 보유기간
-  const p2HousingRate = calcLongTermRate(t2HoldingYears, residenceYears, useTable2);
+  const p2HousingRate = calcLongTermRate(t2HoldingYears, residenceYears, useTable2, isUnregistered);
   const p2HousingLTHD =
     applyRate(p2HousingLandProrated, p2HousingRate) +
     applyRate(p2HousingBuildingProrated, p2HousingRate);
@@ -215,7 +217,7 @@ export function applyUsagePeriodSplit(
   const housingIncome = Math.max(0, proratedTaxableGain - housingLTHD);
 
   // P1 commercial LTHD: t1 보유기간 (c_to_h일 때만 P1 commercial 존재), 표1 only
-  const p1CommercialRate = !isHtoC ? calcLongTermRate(t1HoldingYears, 0, false) : 0;
+  const p1CommercialRate = !isHtoC ? calcLongTermRate(t1HoldingYears, 0, false, isUnregistered) : 0;
   const p1CommercialLand = !isHtoC
     ? Math.floor(Math.max(p1CommercialLandGain, 0))
     : 0;
@@ -227,7 +229,7 @@ export function applyUsagePeriodSplit(
     applyRate(p1CommercialBuilding, p1CommercialRate);
 
   // P2 commercial LTHD: t2 보유기간, 표1 only
-  const p2CommercialRate = calcLongTermRate(t2HoldingYears, 0, false);
+  const p2CommercialRate = calcLongTermRate(t2HoldingYears, 0, false, isUnregistered);
   const p2CommercialLand = Math.floor(Math.max(p2CommercialLandGain, 0));
   const p2CommercialBuilding = Math.floor(Math.max(p2CommercialBuildingGain, 0));
   const p2CommercialLTHD =

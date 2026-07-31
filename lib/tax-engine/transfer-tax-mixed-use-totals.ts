@@ -17,11 +17,13 @@ export function buildNonBusinessPart(
   housingPart: MixedUseHousingPart,
   excessResult: ExcessLandResult,
   landHoldingYears: number,
+  /** §95② 미등기양도자산 장기보유특별공제 배제. */
+  isUnregistered = false,
 ): MixedUseNonBusinessLandPart | null {
   if (excessResult.excessArea <= 0) return null;
 
   const transferredGain = housingPart.nonBusinessTransferredGain;
-  const deductionRate = calcLongTermRate(landHoldingYears, 0, false);
+  const deductionRate = calcLongTermRate(landHoldingYears, 0, false, isUnregistered);
   const longTermDeductionAmount = applyRate(Math.max(transferredGain, 0), deductionRate);
 
   return {
@@ -70,8 +72,15 @@ export function buildTotalTax(
    * (합산 누진 + 비사업용 10%p 가산)를 그대로 쓴다 — 계획서 §4.2 · P3b 범위.
    */
   rateParts?: MixedUseRatePart[],
+  /**
+   * 미등기양도자산(「소득세법」 제104조 제3항). 세율·공제가 통째로 갈린다:
+   *   §103①1호 **단서** — 양도소득기본공제 **배제**
+   *   §104①10호        — 양도소득 과세표준의 **70%** 단일세율
+   * (§95② 장특 배제·§91① 비과세 배제는 각 part 조립 단계에서 이미 반영된다.)
+   */
+  isUnregistered = false,
 ): MixedUseTotalTax {
-  const BASIC_DEDUCTION = basicDeductionLimit;
+  const BASIC_DEDUCTION = isUnregistered ? 0 : basicDeductionLimit;
 
   const aggregateIncome = housingIncome + commercialIncome + nonBizIncome;
   const taxBase = Math.max(0, aggregateIncome - BASIC_DEDUCTION);
@@ -132,8 +141,11 @@ export function buildTotalTax(
   // §104⑤1호 — 합산 과세표준 누진(+ 비사토 가산은 종전 모델). `shortTermTax`가 있으면
   // `nonBizIncome === 0`이므로 가산은 0이고 이 값이 곧 1호다.
   const clause1 = taxByBasicRate + nonBusinessSurcharge;
-  const usesShortTerm = shortTermTax !== null && shortTermTax > clause1;
-  const transferTax = usesShortTerm ? shortTermTax : clause1;
+  // §104①10호 70% 단일세율 — 보유기간·비사업용 여부와 무관한 **최우선** 분기다.
+  const unregisteredTax = isUnregistered ? applyRate(taxBase, 0.7) : null;
+  const usesShortTerm =
+    unregisteredTax === null && shortTermTax !== null && shortTermTax > clause1;
+  const transferTax = unregisteredTax ?? (usesShortTerm ? shortTermTax : clause1);
   const localTax = applyRate(transferTax, 0.10);
 
   return {
@@ -142,7 +154,9 @@ export function buildTotalTax(
     taxBase,
     taxByBasicRate,
     // 2호(자산별 합)가 채택되면 대표세율은 파트 최고세율이고 누진공제는 표시할 수 없다.
-    appliedRate: usesShortTerm
+    appliedRate: isUnregistered
+      ? 0.7
+      : usesShortTerm
       ? Math.max(
           ...(rateParts ?? []).map(
             (p) => shortTermRate(p.holdingYears, p.kind === "housing") ?? appliedRate,
