@@ -298,6 +298,22 @@ export function countEffectiveHouses(
       }
     }
 
+    // 배제 1.5: 공동상속주택 소수지분 — §167의3②2호 (2주택은 §167의10②로 준용).
+    //   「공동상속주택: 상속지분이 가장 큰 상속인의 소유로 하여 주택수를 계산」이므로
+    //   소수지분자에게는 **기간 제한 없이** 미산입이다(배제 1의 5년과 별개 규칙).
+    //   2026-07-31 신설(계획서 F-8) — 종전에는 비과세 주택 수(`transfer-inheritance-exclusion.ts`)
+    //   에서만 반영되고 그 단계가 중과 판정보다 뒤라, 상속 5년이 지나면 소수지분도 산입됐다.
+    //   `isLargestCoInheritedShareholder`는 자기선언 boolean — 미제공은 소수지분으로 본다
+    //   (엔진은 다른 공동상속인의 지분을 알 수 없다. 타입 주석과 동일 규약).
+    if (house.isInherited && house.isCoInherited && house.isLargestCoInheritedShareholder !== true) {
+      excluded.push({
+        houseId: house.id,
+        reason: "co_inherited_minor_share",
+        detail: `공동상속주택 소수지분 — 최대지분 상속인의 소유로 계산 (${MULTI_HOUSE.CO_INHERITED_COUNT_BASIS})`,
+      });
+      continue;
+    }
+
     // 배제 2: 장기임대 등록주택 (말소 전)
     if (house.isLongTermRental && rules.rentalHousingExempt) {
       const isActive = !house.rentalCancelledDate || house.rentalCancelledDate > transferDate;

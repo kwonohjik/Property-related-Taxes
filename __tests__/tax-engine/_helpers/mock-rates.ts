@@ -125,7 +125,10 @@ export function makeMockRates(
         },
         temporary_two_house: {
           disposalDeadlineYears: 3,
-          regulatedAreaDeadlineYears: 1,
+          // ⚠️ seed와 동일해야 한다 — 2026-07-31 정정(계획서 F-3).
+          //    종전 mock의 1년이 구 중과 배제의 하드코딩 1년과 **우연히 일치**해
+          //    「비과세 O / 중과배제 X」 드리프트(F-2)를 테스트에서 가리고 있었다.
+          regulatedAreaDeadlineYears: 2,
           regulatedAreaRelaxDate: "2022-05-10",
           regulatedAreaRelaxDeadlineYears: 3,
         },
@@ -231,7 +234,11 @@ export function makeMockRatesWithHouseEngine(): TaxRatesMap {
         type: "house_count_exclusion",
         inheritedHouseYears: 5,
         rentalHousingExempt: true,
-        lowPriceThreshold: { capital: null, non_capital: 100_000_000 },
+        // ⚠️ seed(`transfer-rate-seed.ts`)와 동일해야 한다 — 2026-07-31 정정(계획서 V-2).
+        //    §167의3①1호 지방 저가주택 기준은 1억 → **3억**으로 개정됐는데 mock만 구법이라
+        //    테스트가 구법 동작을 고정하고 있었다. (2주택 §167의10①9호 「기준시가 1억 이하」는
+        //    별개 규칙이며 엔진 상수로 유지된다 — 혼동 주의.)
+        lowPriceThreshold: { capital: null, non_capital: 300_000_000 },
         presaleRightStartDate: "2021-01-01",
         officetelStartDate: "2022-01-01",
       },

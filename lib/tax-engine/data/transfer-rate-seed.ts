@@ -9,7 +9,7 @@
  * 세율 개정 시 이 파일만 수정 → 시딩·fallback 동시 반영.
  */
 
-import { ONE_HOUSE_RESIDENCE } from "../legal-codes/transfer";
+import { ONE_HOUSE_RESIDENCE, SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW } from "../legal-codes/transfer";
 
 export const transferTaxSeeds = [
   // 1. 누진세율 (2023.1.1~ 현행)
@@ -100,7 +100,19 @@ export const transferTaxSeeds = [
       },
     },
     deduction_rules: null,
-    special_rules: null,
+    // ⚠️ 이 레코드의 effective_date(2023-01-01)는 중과 한시배제 창
+    //    (2022-05-10 ~ 2026-05-09, §167의3①12의2·§167의10①12의2) **안**이다.
+    //    유예 정보를 담은 historical 레코드는 2022-05-10·2024-01-10 두 건뿐이라,
+    //    여기를 null로 두면 `DISTINCT ON … ORDER BY effective_date DESC` 의미론상
+    //    **2023-01-01 ~ 2024-01-09 양도분이 유예를 잃는다**(계획서 F-6, 실측 +388,410,000 과다과세).
+    //    fallback·DB(preload_tax_rates) 양쪽 동일 의미론이므로 두 경로 모두 영향받았다.
+    //    보유 2년 요건은 엔진(determineMultiHouseSurcharge)이 별도 게이트 — 여기는 양도일 축만.
+    special_rules: {
+      surcharge_suspended: true,
+      suspended_types: ["multi_house_2", "multi_house_3plus"],
+      suspended_until: SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end,
+      legal_basis: "소득세법 시행령 §167의3①12의2·§167의10①12의2",
+    },
     is_active: true,
   },
 

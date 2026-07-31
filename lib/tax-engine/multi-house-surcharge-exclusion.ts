@@ -308,8 +308,16 @@ export function determineSurchargeExclusion(
     }
   }
 
-  // 3주택+ 전용 배제 (양도 주택 자체가 배제 항목 해당)
-  if (effectiveHouseCount >= 3 && sellingHouse) {
+  // 양도 주택 **자체**가 §167의3①2호~8호·8호의2에 해당하는 경우의 배제.
+  //
+  // 근거가 주택 수에 따라 갈린다:
+  //   3주택 이상 → §167의3① 각 호 **직접**
+  //   2주택      → §167의10①**2호**「제167조의3제1항제2호부터 제8호까지 및 제8호의2 중
+  //                어느 하나에 해당하는 주택」 — **준용**
+  // ⚠️ 2026-07-31 정정(계획서 F-7): 종전에는 `>= 3` 게이트라 **2주택에서 하나도 적용되지 않았다.**
+  //    3주택이면 배제되는데 2주택이면 중과되는 역전이었고 과다과세 방향이었다.
+  //    (2호 장기임대·7호 상속 5년은 `countEffectiveHouses`가 주택 수에서 빼므로 여기 없다.)
+  if (effectiveHouseCount >= 2 && sellingHouse) {
     if (sellingHouse.isMortgageExecution) {
       const yearsHeld = differenceInYears(input.transferDate, sellingHouse.acquisitionDate);
       if (yearsHeld < 3) {
@@ -355,6 +363,9 @@ export function determineSurchargeExclusion(
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }
 
+    // 소형 신축·미분양(§167의3①12호)은 위 준용 범위(2~8·8의2) 밖이지만 §167의10①**12호**가
+    // 별도로 준용하므로 2주택에서도 성립한다. 통상은 `countEffectiveHouses`가 주택 수에서
+    // 먼저 빼므로 여기까지 오지 않는 backstop이다.
     if (isSmallNewHouseSpecial(sellingHouse)) {
       exclusionReasons.push({
         type: "small_new_house",
