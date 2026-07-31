@@ -1,4 +1,4 @@
-# 겸용주택 — 영 §154① 거주요건 + 법 §104⑦ 다주택 중과 — v1.3
+# 겸용주택 — 영 §154① 거주요건 + 법 §104⑦ 다주택 중과 — v1.4
 
 > 선행 계획서 [`transfer-104-5-proviso-mixed-use-rate-gaps.plan.md`](./transfer-104-5-proviso-mixed-use-rate-gaps.plan.md) v1.7의
 > **잔여 2건**(P3c = D-9 거주요건 · P5 = D-4 다주택 중과)을 분리·재설계한 문서.
@@ -635,6 +635,56 @@ export interface MixedUseRatePart {
 
 ---
 
+### 5.7-R Phase B1 구현 결과 ✅ (2026-07-31)
+
+**범위 — 판정 배관만. 세액은 불변**(B-B3b가 고정). B2(장특)·B3(세율)이 세액을 바꾼다.
+
+| 파일 | 변경 |
+|---|---|
+| `types/transfer-mixed-use.types.ts` | 입력 `multiHouse?`(서브객체 1개) + 결과 `multiHouseSurcharge?` |
+| `transfer-tax-mixed-use.ts:81-89` | `parseRatesFromMap` 구조분해에 3개 추가 |
+| `transfer-tax-mixed-use.ts:137-160` | 정본 `determineMultiHouseSurcharge` 호출 + 결과 echo |
+| `app/api/calc/transfer/route.ts:595-612` | ⑭ `multiHouse` 주입 |
+
+**⚠️ Zod string 날짜 함정이 두 번 걸렸다 — `tsc`가 둘 다 잡았다**:
+
+| 필드 | raw `data.*` | 올바른 소스 |
+|---|---|---|
+| `houses` | `acquisitionDate`가 **string** | `engineInput.houses` (`mapHousesToEngine` 변환본, route.ts:192) |
+| `gracePeriod` | 계약일 등 string | `engineInput.gracePeriod` (`mapGracePeriodToEngine`, route.ts:195) |
+
+계획서 §5.1이 `gracePeriod`만 지적했는데 **`houses`도 같은 함정**이었다. 타입이 잡아준 것은
+`HouseInfo.acquisitionDate`가 `Date`로 선언돼 있었기 때문이다 — ⑫⑬⑭ 침묵 strip과 달리
+이 경로는 TypeScript가 방어한다.
+
+**🔴 R-9(침묵 GREEN)가 실제로 발동할 뻔했다 + mock에 두 번째 함정이 있었다**:
+
+- `makeMockRates()`에는 `house_count_exclusion`이 없어 `multiHouseSurcharge`가 `undefined`가 된다.
+  B-B0이 **양방향으로** 고정한다(올바른 mock → defined / 잘못된 mock → undefined).
+- **추가 발견** — `makeMockRatesWithHouseEngine()`는 `surcharge_suspended: **false**`로
+  **한시 유예를 의도적으로 끈다**("중과 실제 적용 테스트용" override). 그래서 유예 창 anchor는
+  그 레코드만 되살린 전용 mock(`ratesWithSuspension()`)이 필요했다. 이를 모르면
+  「유예가 동작하지 않는다」는 **잘못된 결론**에 이른다.
+
+**`temporaryTwoHouse` 미전달 확정** — §11 U-7의 의심이 사실로 굳었다.
+`MultiHouseSurchargeInput.temporaryTwoHouse`는 `{previousHouseId, newHouseId}`(주택 ID)인데
+route가 Date 변환해 두는 `engineInput.temporaryTwoHouse`는 `{previousAcquisitionDate,
+newAcquisitionDate}`(날짜)로 **형상이 아예 다르다**. 값을 채우는 `multiHouseTemporaryTwoHouse`는
+저장소 전체에서 정의·소비 2곳뿐이고 **아무도 쓰지 않는다** → **단건 경로에서도 상시 undefined**.
+겸용도 동일하게 비워 둔다(단건과 동작 일치). 별건 조사 대상.
+
+**anchor 8건** — B-B0(R-9 방어) · B-B1 · B-B1b · B-B2 · B-B2b(유예 경계 양방향) · B-B3 ·
+B-B3b(세액 불변) · B-B4(Phase A 판정 전달).
+
+**검증**: `tsc` 0 · `eslint` **0 error** · 전체 **1,130파일 12,679건 통과 · 회귀 0**(12,671 → +8).
+
+**파일 크기**: `transfer-tax-mixed-use.ts` 664 → **699** · `route.ts` 713 → **732**.
+계획서 §5.6이 예고한 `-surcharge.ts` 분리는 **아직 하지 않았다** — 800 트리거 미달이고
+정책상 선제 분리는 금지다(「700~749에 안정적으로 앉은 파일을 미리 쪼개면 순수 낭비」).
+**B3에서 재확인**한다.
+
+---
+
 ## 6. 케이스 매트릭스
 
 `R` = 취득시 조정지역 · `Res` = 거주연수 · `H` = 세대 주택수 · `Reg` = 양도시 조정지역
@@ -778,7 +828,7 @@ E-2 실측에서 차액의 절반 이상이 장특에서 나온 것이 그 근�
 | U-4 | 겸용 §154① **단서 5호**(공고전계약, "residence_only") 실동작 | 🔶 정본에 있으나 겸용 anchor 미구성. Phase A에서 B-A4와 함께 시도 |
 | U-5 | 다주택자 겸용주택의 주택분/상가분 **분리계산 자체**의 근거 | 🔶 영 §160①단서는 1세대1주택 고가주택 맥락. 다주택 분리는 §104⑦·§95②가 주택분만 지목하는 데서 도출. **현행 엔진의 기존 전제이며 이 계획서가 바꾸지 않는다** |
 | U-6 | 중과 대상 주택의 §95② 배제와 **표2**(1세대1주택) 관계 | ✅ 배타 — 중과는 다주택 전제, 표2는 1세대1주택 전제. 동시 성립 불가 |
-| U-7 | **별건 의심** — `multiHouseTemporaryTwoHouse`가 저장소 전체에서 정의·소비 2곳뿐이고 **route가 채우지 않는다**. 단건 중과 판정의 일시적2주택 입력이 상시 `undefined`일 가능성 | 🔶 미확인 · **이 계획서 범위 밖**. 사실이면 단건 경로 결함이므로 별도 조사 필요 |
+| U-7 ✅**확정** | **별건 결함(범위 밖)** — `multiHouseTemporaryTwoHouse`가 저장소 전체에서 정의·소비 2곳뿐이고 **route가 채우지 않는다**. 단건 중과 판정의 일시적2주택 입력이 상시 `undefined`일 가능성 | 🔶 미확인 · **이 계획서 범위 밖**. 사실이면 단건 경로 결함이므로 별도 조사 필요 |
 
 ---
 
@@ -786,6 +836,7 @@ E-2 실측에서 차액의 절반 이상이 장특에서 나온 것이 그 근�
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| **v1.4** | 2026-07-31 | **Phase B1 완료**(§5.7-R) — 중과 판정 배관, 세액 불변. Zod string 날짜 함정이 `houses`에도 있었다(계획서는 `gracePeriod`만 지적 — tsc가 방어). `makeMockRatesWithHouseEngine()`가 **유예를 끄는** 두 번째 mock 함정 발견. U-7(`multiHouseTemporaryTwoHouse` 미배선) **사실 확정** — 형상이 아예 다르고 아무도 안 채운다. anchor 8건 · 12,679건 회귀 0 |
 | **v1.3** | 2026-07-31 | **Phase 0·A 구현 완료**(§4.6-R). anchor가 계획서 수치를 뒤집었다 — CASE14 건물 취득일(1997)이 §154① 거주요건 **경과규정**(2017-08-03 이전 취득 면제) 안이라 거주요건을 검증할 수 없어, anchor는 2018-06-01로 덮어쓰고 전 수치를 재실측했다. E-1 +438,011,837 · **E-3 −838,560,493**(과다과세 해소). anchor 14건 · 12,671건 회귀 0 |
 | **v1.2** | 2026-07-31 | **2차 자가 검토 — 설계 결함 1건·Do-blocker 1건 발견**. ① 🔴 **E-3 신설**: 영 §154① 단서 1~3호가 「**보유기간 및** 거주기간의 제한을 받지 않는다」(법제처 실측, 시행령 MST 286211)는데 **이미 머지된 P3a**가 이를 무시 → 겸용 1주택+수용+보유2년미만에서 **과다과세**. `provisoGate`가 겸용에도 단서를 전송하므로 도달 가능. ② §4.4를 「거주 축 AND 추가」에서 **「정본 `meetsOneHouseHoldingResidence` 단일 호출로 교체」**로 재설계(단서가 `meetsHolding` 내부에 있어 AND 구조로는 못 고침) + `ExemptionReqInput` 타입 narrowing. ③ 🔴 **R-9**: Phase B anchor가 `makeMockRates()`를 쓰면 `house_count_exclusion` 부재로 중과가 스킵되는데 **예외가 안 나 침묵 GREEN**. ④ §2.6 영 §154③ 적용범위 한정 확인(U-2 보강). ⑤ anchor B-A7·B-A8, 매트릭스 M4b 신설 |
 | v1.1 | 2026-07-31 | 자가 검토 — 인용 6건 정정(`calcLongTermRate` 정의 위치·`resolveExemptionResidenceMonths` line·겸용 테스트 8→**16파일**) + 논리 모순 3건 정정(§5.5 §95② 장특 배제는 nonBiz 경계와 **무관** · M13/B-B11 「세액 불변」 철회 · §5.1 `gracePeriod` 변환본 필수) + U-7 별건 의심 등록 |

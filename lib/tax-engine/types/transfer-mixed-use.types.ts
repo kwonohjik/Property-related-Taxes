@@ -3,6 +3,10 @@ import type { PreHousingDisclosureInput, PreHousingDisclosureResult, TransferTax
 import type { AmendmentDetail } from "./transfer-amendment.types";
 import type { ExprTotalValuationDetail } from "../transfer-tax-expropriation-valuation";
 import type { InheritedAcquisitionDetail } from "../transfer-tax-mixed-use-inheritance";
+import type {
+  MultiHouseSurchargeInput,
+  MultiHouseSurchargeResult,
+} from "./multi-house-surcharge.types";
 
 /** §164⑨1호 겸용주택 공익수용 특례 산출근거 (계획 P7/D8) — 주택분·상가분 각 목별. */
 export interface MixedUseExpropriationDetail {
@@ -153,6 +157,25 @@ export interface MixedUseAssetInput {
    *    `addYears`·`>=` 비교가 침묵 오작동한다(`lib/api/date-coerce.ts` 규약).
    */
   oneHouseExemptionProviso?: TransferTaxInput["oneHouseExemptionProviso"];
+
+  /**
+   * 법 §104⑦ 다주택 중과 판정 입력 — 정본 `determineMultiHouseSurcharge`에 그대로 넘긴다.
+   *
+   * `houses`·`presaleRights`·`isOneHousehold`·`isRegulatedArea`·`gracePeriod` 등은 전부
+   * **폼-전역(top-level)** 값이라 `data.mixedUse`에 없다 → route가 조립해 주입한다.
+   * 미주입(undefined)이면 중과 판정 자체를 건너뛴다(종전 경로 완전 불변).
+   *
+   * ⚠️ `temporaryTwoHouse`(중과용 `{previousHouseId, newHouseId}`)는 담지 않는다 —
+   *    단건 경로에서도 route가 `multiHouseTemporaryTwoHouse`를 채우지 않아 상시 undefined다
+   *    (저장소 전체 정의·소비 2곳뿐). 별건 조사 대상(계획서 §11 U-7).
+   */
+  multiHouse?: Omit<
+    MultiHouseSurchargeInput,
+    "transferDate" | "sellingHouseMeetsOneHouseRequirements" | "temporaryTwoHouse"
+  > & {
+    /** 양도 당시 조정대상지역 boolean fallback (`regulatedAreaHistory` 미매칭 시). */
+    isRegulatedArea: boolean;
+  };
 
   // ── §164⑨1호 공익수용 특례 (계획 P7/D8, 일반 §97 전용) ──
   // 목별 독립 적용: 주택분(라목 개별주택가격 총액) + 상가분(가목 토지 기준시가). 상가 건물분·모든
@@ -550,6 +573,12 @@ export interface MixedUseGainBreakdown {
   calculationRoute: MixedUseCalculationRoute;
   /** 경고 메시지 (PHD 적합성, 22.1.1 이전 양도일 등) */
   warnings: string[];
+  /**
+   * 법 §104⑦ 다주택 중과 판정 결과 — `asset.multiHouse` 미주입 시 undefined.
+   * 세율(§104⑦)·장특 배제(§95②)의 단일 근거이며 결과 카드 표시에도 그대로 쓴다
+   * (계산-표시 drift 차단 — `feedback_engine_result_display_drift`).
+   */
+  multiHouseSurcharge?: MultiHouseSurchargeResult;
   /**
    * 보유 중 일부 용도변경 메타 — 결과 카드 "취득시점 자산 구성" 섹션 표시용.
    * partialUsageChange 토글 OFF 시 undefined.

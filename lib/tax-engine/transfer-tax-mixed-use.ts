@@ -11,6 +11,7 @@ import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
+import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
 import { computeAmendment } from "./transfer-tax-amendment";
 import type { AmendmentInput } from "./types/transfer-amendment.types";
@@ -79,7 +80,15 @@ export function calcMixedUseTransferTax(
   const steps: MixedUseStep[] = [];
 
   // 누진세율 brackets + 기본공제 한도 (DB 세율)
-  const { brackets, basicDeductionRules, oneHouseSpecialRules } = parseRatesFromMap(rates);
+  const {
+    brackets,
+    basicDeductionRules,
+    oneHouseSpecialRules,
+    // §104⑦ 다주택 중과 판정용 — `houseCountExclusionRules`는 **optional**이다(DB 키 부재 시 undefined).
+    houseCountExclusionRules,
+    surchargeSpecialRules,
+    regulatedAreaHistory,
+  } = parseRatesFromMap(rates);
 
   // ── 영 §154① 본문 — 1세대1주택 비과세 **보유 2년** 요건 ─────────────────────────
   // 「소득세법」 제89조 제1항 제3호 가목이 위임한 같은 법 시행령 제154조 제1항 본문:
@@ -138,6 +147,30 @@ export function calcMixedUseTransferTax(
         `${r.regulatedAreaMinResidenceYears}년, 소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.`,
     );
   }
+
+  // ── 법 §104⑦ 다주택 중과 판정 ────────────────────────────────────────────────
+  // 주택 수 산정·배제 주택·혼인합가 차감·한시 유예는 전부 정본
+  // `determineMultiHouseSurcharge`가 갖고 있다. 겸용은 그 결과만 받아 쓴다.
+  //
+  // ⚠️ `houseCountExclusionRules`가 없으면(DB 키 부재) 판정을 **건너뛴다** — 단건 엔진
+  //    (`transfer-tax.ts:184`)과 동일한 가드다. 예외를 던지지 않으므로 테스트에서
+  //    `makeMockRates()`를 쓰면 중과가 조용히 스킵된다(계획서 R-9).
+  const multiHouseSurcharge =
+    asset.multiHouse && houseCountExclusionRules
+      ? determineMultiHouseSurcharge(
+          {
+            ...asset.multiHouse,
+            transferDate,
+            // §155⑤ 1세대1주택 의제 중과배제(배제2) 게이트 — 위에서 만든 §154① 통합 판정을
+            // 그대로 넘긴다. 단건이 `transfer-tax.ts:202`에서 넘기는 값과 **같은 함수의 결과**다.
+            sellingHouseMeetsOneHouseRequirements: meetsOneHouseRequirements,
+          },
+          houseCountExclusionRules,
+          regulatedAreaHistory ?? null,
+          surchargeSpecialRules,
+          asset.multiHouse.isRegulatedArea,
+        )
+      : undefined;
 
   // 파생값 (면적 비율)
   const derived = computeDerivedAreas(asset);
@@ -357,6 +390,8 @@ export function calcMixedUseTransferTax(
     steps,
     calculationRoute,
     warnings,
+    // §104⑦ 판정 echo — 세율·장특 배제와 결과 카드 표시가 **같은 값**을 보게 한다.
+    multiHouseSurcharge,
     partialUsageChange,
     usagePeriodSplit,
     amendmentDetail,
