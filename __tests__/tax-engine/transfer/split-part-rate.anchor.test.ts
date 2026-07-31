@@ -21,6 +21,7 @@
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, parseRatesFromMap } from "@/lib/tax-engine/transfer-tax";
 import { computeSplitPartTax } from "@/lib/tax-engine/transfer-tax-split-rate";
+import { calcTax } from "@/lib/tax-engine/transfer-tax-rate-calc";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
@@ -488,5 +489,156 @@ describe("G-1 파트별 세율 — 단건 ↔ 다건 일치 (이중 진실 방�
     // 단건 A-1과 동일 — `aggregateByGroup`이 그룹 합산 1회 계산으로 되돌리면 159,000,000이 된다.
     expect(agg.calculatedTax).toBe(133_060_000);
     expect(agg.taxBase).toBe(397_500_000);
+  });
+});
+
+/**
+ * P1 (D-1) — §104⑤2호 **단서**: 동일 호 자산은 과세표준을 **합산**한다.
+ *
+ * 계획서 `docs/02-design/features/transfer-104-5-proviso-mixed-use-rate-gaps.plan.md` §4.1.
+ *
+ * [법령 근거] 「소득세법」 제104조 제5항 제2호 단서 —
+ *   "다만, 둘 이상의 자산에 대하여 제1항 각 호 … 중 **동일한 호의 세율이 적용**되고,
+ *    그 적용세율이 둘 이상인 경우 해당 자산에 대해서는 각 자산의 양도소득과세표준을
+ *    **합산한 것**에 대하여 … 호별 세율을 적용하여 산출한 세액 중에서 큰 산출세액의 합계액"
+ *
+ * G-2 3파트(배율내 토지 · 건물 · 배율 초과 비사업용 토지)에서 **배율내 토지와 건물이 둘 다
+ * §104①1호 누진**이면 종전 구현은 파트별로 `calcTax`를 따로 불러 **누진공제를 2회** 받았다.
+ * 정본(`transfer-tax-aggregate-helpers.ts:415-419`)은 이미 같은 단서를 구현하고 있었다 —
+ * split 경로에만 빠진 내부 불일치였다.
+ *
+ * 픽스처 공통: 1세대1주택 · 정착 60㎡ · 수도권 주거(배율 3배) · 토지·건물 모두 2013-01-01 취득
+ * (2009.3.16~2012.12.31 위기취득 중과배제 구간을 **벗어나야** 비사토 +10%p가 살아난다) ·
+ * 2026-07-01 양도 · 취득가 5억(토지 3억 + 건물 2억).
+ */
+describe("P1 (D-1) §104⑤2호 단서 — 동일 호 파트 과세표준 합산", () => {
+  const provisoCase = (o: {
+    transferPrice: number;
+    landTransferPrice: number;
+    buildingTransferPrice: number;
+    acquisitionArea: number;
+  }) =>
+    run({
+      propertyType: "housing",
+      isOneHousehold: true,
+      householdHousingCount: 1,
+      acquisitionPrice: 500_000_000,
+      landAcquisitionPrice: 300_000_000,
+      buildingAcquisitionPrice: 200_000_000,
+      acquisitionDate: D("2013-01-01"),
+      landAcquisitionDate: D("2013-01-01"),
+      buildingFootprintArea: 60,
+      appurtenantLandZone: "metropolitan_residential",
+      ...o,
+    });
+
+  it("B-1: 30억(토지 24억/건물 6억)·토지 2,000㎡ — 누진공제 1회로 정정", () => {
+    const r = provisoCase({
+      transferPrice: 3_000_000_000,
+      landTransferPrice: 2_400_000_000,
+      buildingTransferPrice: 600_000_000,
+      acquisitionArea: 2000,
+    });
+    // 파트 과세표준: 배율내토지 45,360,000 · 건물 96,000,000 · 비사토 1,411,640,000
+    // 종전 2호 = P(45,360,000) + P(96,000,000) + 비사토      = 734,166,000  ← 누진공제 2회
+    // 단서 2호 = P(45,360,000 + 96,000,000) + 비사토          = 744,498,000  ← 1회
+    // 1호(합산 누진) = 632,910,000 → MAX = 2호
+    expect(r.calculatedTax).toBe(744_498_000);
+  });
+
+  it("B-2: 50억(토지 45억/건물 5억)·토지 3,000㎡", () => {
+    const r = provisoCase({
+      transferPrice: 5_000_000_000,
+      landTransferPrice: 4_500_000_000,
+      buildingTransferPrice: 500_000_000,
+      acquisitionArea: 3000,
+    });
+    // 종전 1,568,626,919 → 단서 1,583,348,040 (1호 1,323,132,600)
+    expect(r.calculatedTax).toBe(1_583_348_040);
+  });
+
+  it("B-3: 20억(토지 17억/건물 3억)·토지 1,500㎡ — 차액이 15% 구간 누진공제 1회분과 같다", () => {
+    const r = provisoCase({
+      transferPrice: 2_000_000_000,
+      landTransferPrice: 1_700_000_000,
+      buildingTransferPrice: 300_000_000,
+      acquisitionArea: 1500,
+    });
+    // 파트 과세표준: 배율내토지 26,880,000 · 건물 16,000,000 (둘 다 15% 구간)
+    //   P(26,880,000) + P(16,000,000) = 3,912,000   /   P(42,880,000) = 5,172,000
+    //   차 1,260,000 = 15% 구간 누진공제(1,260,000) 정확히 1회분
+    expect(r.calculatedTax).toBe(442_005_600);
+    expect(r.calculatedTax - 440_745_600).toBe(1_260_000);
+  });
+});
+
+/**
+ * B-8 — `calcTax`가 **적용 호를 직접 싣는지** 분기별로 고정한다.
+ *
+ * `rateClause`가 빠진 분기는 §104⑤2호 단서 판정에서 `undefined`로 떨어져 **조용히**
+ * 개별 계산된다(계획서 R-1). 세액이 아니라 **분류**가 틀리는 것이라 세액 anchor로는
+ * 잡히지 않으므로 분기 전수를 직접 고정한다.
+ */
+describe("P1 (D-1) rateClause — calcTax 분기 전수", () => {
+  const rates = parseRatesFromMap(makeMockRates());
+  const clauseOf = (o: Partial<TransferTaxInput>, taxBase = 300_000_000) =>
+    calcTax(taxBase, rates, baseTransferInput({ transferDate: D("2026-07-01"), ...o })).rateClause;
+
+  it("T-4 일반 누진 → 104-1-1", () => {
+    expect(clauseOf({ acquisitionDate: D("2015-01-01") })).toBe("104-1-1");
+  });
+
+  it("T-1 미등기 → 104-1-10", () => {
+    expect(clauseOf({ acquisitionDate: D("2015-01-01"), isUnregistered: true })).toBe("104-1-10");
+  });
+
+  it("T-2.5 단기 — 주택 1년 미만 → 104-1-3 / 1~2년 → 104-1-2", () => {
+    expect(clauseOf({ propertyType: "housing", acquisitionDate: D("2026-01-01") })).toBe("104-1-3");
+    expect(clauseOf({ propertyType: "housing", acquisitionDate: D("2025-01-01") })).toBe("104-1-2");
+  });
+
+  it("T-2 비사업용 토지 2년 이상 → 104-1-8", () => {
+    expect(
+      clauseOf({ propertyType: "land", acquisitionDate: D("2015-01-01"), isNonBusinessLand: true }),
+    ).toBe("104-1-8");
+  });
+
+  it("T-2 비사업용 토지 단기 — §104①후단으로 단기세율이 이기면 그 호(2·3호)를 싣는다", () => {
+    // 1년 미만 50% vs 누진+10%p — 과세표준이 낮으면 50%가 이긴다.
+    expect(
+      clauseOf(
+        { propertyType: "land", acquisitionDate: D("2026-01-01"), isNonBusinessLand: true },
+        50_000_000,
+      ),
+    ).toBe("104-1-3");
+  });
+
+  it("T-3 다주택 중과 → 2주택 104-7-1 / 3주택 이상 104-7-3", () => {
+    const surcharged = (count: number) =>
+      clauseOf({
+        propertyType: "housing",
+        acquisitionDate: D("2015-01-01"),
+        isRegulatedArea: true,
+        householdHousingCount: count,
+        isOneHousehold: false,
+      });
+    expect(surcharged(2)).toBe("104-7-1");
+    expect(surcharged(3)).toBe("104-7-3");
+  });
+
+  it("T-1.5 부수토지 일체과세 — 누진 강제는 104-1-1, 수동 세율 지정은 undefined", () => {
+    const companion = (override: "progressive" | "shortTermHousing70") =>
+      clauseOf({
+        propertyType: "land",
+        acquisitionDate: D("2015-01-01"),
+        manualHoldingPeriodOverride: override,
+      });
+    expect(companion("progressive")).toBe("104-1-1");
+    // 수동 지정 단일세율은 사용자가 세율을 강제한 것이라 적용 호를 단정할 수 없다 → 묶지 않는다.
+    expect(companion("shortTermHousing70")).toBeUndefined();
+  });
+
+  it("조특법 §98①1호 20% 단일세율은 §104 밖 → undefined (묶지 않는다)", () => {
+    expect(clauseOf({ acquisitionDate: D("2015-01-01"), forceFlatRate20: true })).toBeUndefined();
   });
 });

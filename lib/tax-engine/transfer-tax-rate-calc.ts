@@ -122,6 +122,35 @@ export function resolveExtensionPenaltyBase(
 // H-7: calcTax — 세액 결정 (T-1 ~ T-4)
 // ============================================================
 
+/**
+ * 「소득세법」 제104조 중 **실제로 적용된 호**.
+ *
+ * §104⑤2호 **단서**("둘 이상의 자산에 대하여 동일한 호의 세율이 적용되고, 그 적용세율이
+ * 둘 이상인 경우 … 과세표준을 합산한 것에 대하여 … 호별 세율을 적용")를 판정하려면
+ * "호 동일성"이 필요한데, 출력 세율로는 역추론할 수 없다 — 단기 40%와 누진 40% 구간이
+ * `appliedRate`로 구분되지 않고, 같은 호라도 브래킷이 다르면 `appliedRate`가 달라진다.
+ * ⇒ `calcTax`가 **자기가 탄 분기를 직접 싣는다**(단일 소스).
+ */
+export type RateClause =
+  | "104-1-1"   // 일반 누진(§55①)
+  | "104-1-2"   // 1~2년 보유 40%(주택 등 60%)
+  | "104-1-3"   // 1년 미만 50%(주택 등 70%)
+  | "104-1-8"   // 비사업용 토지 누진 + 10%p
+  | "104-1-10"  // 미등기 70%
+  | "104-7-1"   // 조정지역 1세대 2주택 중과 +20%p
+  | "104-7-3";  // 조정지역 1세대 3주택 이상 중과 +30%p
+
+/**
+ * 누진세율 호 — 과세표준을 합치면 세액이 달라지므로 §104⑤2호 단서의 합산 대상이다.
+ * 단일세율 호(2·3·10호)는 세율이 같으면 합산·개별이 (floor 외) 동일하다.
+ */
+export const PROGRESSIVE_RATE_CLAUSES: ReadonlySet<RateClause> = new Set<RateClause>([
+  "104-1-1",
+  "104-1-8",
+  "104-7-1",
+  "104-7-3",
+]);
+
 interface CalcTaxResult {
   calculatedTax: number;
   surchargeType?: string;
@@ -132,7 +161,24 @@ interface CalcTaxResult {
   shortTermNote?: string;
   /** 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 비사업용 토지 +10%p 중과배제(기본세율). 장특은 표1 유지. */
   nblSurchargeExcluded?: boolean;
+  /** 적용된 §104 호 — §104⑤2호 단서(동일 호 합산) 판정용. 조특법 특칙 등 §104 밖이면 undefined. */
+  rateClause?: RateClause;
 }
+
+/** 단기 단일세율 호 — 1년 미만은 3호, 1~2년은 2호(§104①). */
+const shortTermClause = (holdingMonths: number): RateClause =>
+  holdingMonths < 12 ? "104-1-3" : "104-1-2";
+
+/**
+ * 부수토지 일체과세 단일세율 → 호. 주택 단기세율만 나오므로 70%=3호·60%=2호다.
+ * 그 밖의 값은 호를 단정할 수 없어 undefined(묶지 않음 = 안전측).
+ */
+const unifiedShortTermClause = (rate: number): RateClause | undefined =>
+  rate === 0.70 ? "104-1-3" : rate === 0.60 ? "104-1-2" : undefined;
+
+/** 다주택 중과 호 — §104⑦1호(2주택) / 3호(3주택 이상). 정본 R7 감사와 같은 구분. */
+const surchargeClause = (surchargeType: string): RateClause =>
+  surchargeType === "multi_house_3plus" ? "104-7-3" : "104-7-1";
 
 /**
  * 누진세율 산출세액 + 적용구간(표시용 baseRate·deduction)을 일괄 계산.
@@ -169,6 +215,7 @@ export function calcTax(
       appliedRate: flatRate,
       progressiveDeduction: 0,
       surchargeSuspended: false,
+      rateClause: "104-1-10",
     };
   }
 
@@ -229,6 +276,7 @@ export function calcTax(
           shortTermNote: resolution.appliedReason
             ? `부수토지 일체과세(§104①2호·영§167의5): 누진세율`
             : "수동 지정: 누진세율",
+          rateClause: "104-1-1",
         };
       }
       if (resolution.manualRate !== undefined) {
@@ -242,6 +290,8 @@ export function calcTax(
           shortTermNote: isManualOverride
             ? `수동 지정: ${Math.round(resolution.manualRate * 100)}%`
             : `부수토지 일체과세(§104①2호·영§167의5): ${Math.round(resolution.manualRate * 100)}%`,
+          // 수동 오버라이드는 사용자가 세율을 강제한 것이라 적용 호를 알 수 없다 → undefined(묶지 않음).
+          ...(isManualOverride ? {} : { rateClause: unifiedShortTermClause(resolution.manualRate) }),
         };
       }
       if (resolution.unifiedRate !== undefined) {
@@ -254,6 +304,7 @@ export function calcTax(
           progressiveDeduction: 0,
           surchargeSuspended: false,
           shortTermNote: `부수토지 일체과세(§104①2호·영§167의5): ${Math.round(resolution.unifiedRate * 100)}%`,
+          rateClause: unifiedShortTermClause(resolution.unifiedRate),
         };
       }
     }
@@ -336,6 +387,8 @@ export function calcTax(
           surchargeSuspended: false,
           shortTermNote: `보유기간 ${holdingMonthsTotal < 12 ? "1년" : "2년"} 미만 단기세율 적용 (§104①후단: 비사업용 누진세액과 비교한 큰 세액)`,
           ...(nblCrisisExcluded ? { nblSurchargeExcluded: true } : {}),
+          // 8호가 아니라 단기세율(2·3호)이 채택됐다 — 적용 호도 그쪽이다.
+          rateClause: shortTermClause(holdingMonthsTotal),
         };
       }
     }
@@ -347,6 +400,7 @@ export function calcTax(
       progressiveDeduction: deduction,
       surchargeSuspended: false,
       ...(nblCrisisExcluded ? { nblSurchargeExcluded: true } : {}),
+      rateClause: "104-1-8",
     };
   }
 
@@ -403,6 +457,7 @@ export function calcTax(
             progressiveDeduction: deductionST,
             surchargeSuspended: false,
             shortTermNote,
+            rateClause: surchargeClause(effectiveSurchargeType),
           };
         }
       }
@@ -413,6 +468,8 @@ export function calcTax(
       progressiveDeduction: 0,
       surchargeSuspended: false,
       shortTermNote,
+      // 분양권 2년 이상 60%는 §104①**1호** 단일세율이다(위 주석) — 2·3호가 아니다.
+      rateClause: holdingMonthsTotal < 24 ? shortTermClause(holdingMonthsTotal) : "104-1-1",
     };
   }
 
@@ -436,6 +493,7 @@ export function calcTax(
         appliedRate: roundRate(baseRate + additionalRate),
         progressiveDeduction: deduction,
         surchargeSuspended: false,
+        rateClause: surchargeClause(effectiveSurchargeType),
       };
     }
   }
@@ -448,6 +506,7 @@ export function calcTax(
     appliedRate: baseRate,
     progressiveDeduction: deduction,
     surchargeSuspended: suspended,
+    rateClause: "104-1-1",
   };
 }
 
