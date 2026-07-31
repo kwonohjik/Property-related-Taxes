@@ -167,6 +167,8 @@ export async function POST(request: NextRequest) {
           // ⑭ §155⑯·⑱ — 날짜가 아닌 boolean·enum이라 변환 없이 그대로 통과시킨다.
           //    여기서 명시 전달하지 않으면 침묵 strip되어 처분기한 5년·기한 예외가 미도달한다.
           publicInstitutionRelocation: data.temporaryTwoHouse.publicInstitutionRelocation,
+          relocatedSigunguCode: data.temporaryTwoHouse.relocatedSigunguCode,
+          newHouseSigunguCode: data.temporaryTwoHouse.newHouseSigunguCode,
           disposalDelayReason: data.temporaryTwoHouse.disposalDelayReason,
         }
       : undefined,

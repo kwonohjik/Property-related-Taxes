@@ -428,7 +428,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             previousAcquisitionDate: primary.acquisitionDate,
             newAcquisitionDate: form.newHouseAcquisitionDate,
             // §155⑯ — 처분기한 5년 + 1년 요건 면제. false는 보내지 않는다(Zod optional).
-            ...(form.publicInstitutionRelocation ? { publicInstitutionRelocation: true } : {}),
+            ...(form.publicInstitutionRelocation
+              ? {
+                  publicInstitutionRelocation: true,
+                  // 연접 판정 코드 — 둘 다 있을 때만 자동 판정된다(엔진이 한쪽만 있으면 자기선언 유지).
+                  ...(form.relocatedSigunguCode ? { relocatedSigunguCode: form.relocatedSigunguCode } : {}),
+                  ...(form.newHouseSigunguCode ? { newHouseSigunguCode: form.newHouseSigunguCode } : {}),
+                }
+              : {}),
             // §155⑱ — 빈 문자열은 "해당 없음"이므로 미전송.
             ...(form.disposalDelayReason
               ? { disposalDelayReason: form.disposalDelayReason as TemporaryTwoHouseDelayReason }

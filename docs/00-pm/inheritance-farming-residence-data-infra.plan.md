@@ -99,6 +99,14 @@ PoC 결과에 따라 다음 우선순위 권장 (PRD v4.1.1 §3-3):
 
 ## 4. Phase 1-C — 매트릭스 작성 (GIS 자동, 5~8h, PRD v4.1.1 E6)
 
+> ✅ **2026-07-31 완료.** 단, **데이터 소스가 아래 §4-C.2 가정과 다르다** —
+> 공공데이터포털 `LSMD_ADM_SECT_RGN` Shapefile(~50MB) 수동 다운로드 대신
+> **Vworld `LT_C_ADSIGG_INFO` API가 전국 256건을 한 번에** 반환한다(프로젝트가 이미 쓰는
+> `VWORLD_API_KEY` 재사용). 실제 스크립트는 `scripts/build-sigungu-adjacency.ts`.
+> 결과: 시·군·구 256건 · 인접 654건 · `MATRIX_VERSION = "2026-07-31"`.
+> §4-C.3의 **ADJ-4 코드는 오류**였다(26290 = 남구, 금정구 = 26410) — 실측 정정.
+> 상세·코드 체계 주의사항: `docs/02-design/features/transfer-155-deeming-gaps.plan.md` §9.2~9.3.
+
 ### 4-C.1 라이브러리 선정
 
 | 선택지 | 채택 사유 |
