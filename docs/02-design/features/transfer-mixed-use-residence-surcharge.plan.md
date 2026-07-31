@@ -1,11 +1,11 @@
-# 겸용주택 — 영 §154① 거주요건 + 법 §104⑦ 다주택 중과 — v1.0
+# 겸용주택 — 영 §154① 거주요건 + 법 §104⑦ 다주택 중과 — v1.2
 
 > 선행 계획서 [`transfer-104-5-proviso-mixed-use-rate-gaps.plan.md`](./transfer-104-5-proviso-mixed-use-rate-gaps.plan.md) v1.7의
 > **잔여 2건**(P3c = D-9 거주요건 · P5 = D-4 다주택 중과)을 분리·재설계한 문서.
 >
 > | | 선행 계획서 | 이 문서 |
 > |---|---|---|
-> | 결함 ID | D-9(잔여)·D-4 | **E-1**(거주요건) · **E-2**(중과) |
+> | 결함 ID | D-9(잔여)·D-4 | **E-1**(거주요건) · **E-2**(중과) · **E-3**(P3a 단서 면제 누락 — v1.2 신규) |
 > | Phase | P3c·P5 | **A**(거주요건) → **B**(중과) |
 >
 > **작성 원칙**: 모든 인용 file:line은 실제 파일 대조, 모든 수치는 throwaway probe 실행 실측.
@@ -153,7 +153,34 @@ mixedUse keys:             isMixedUseHouse, residentialFloorArea, …, isOneHous
 | §154⑧3호 통산 | 동일세대 상속은 상속개시 전 거주 통산 | `resolveExemptionResidenceMonths`(`:160`) |
 | 단서 각호 면제 | 1호 임대5년·2호가 수용·2호나다 해외·3호 부득이 → "both" / 5호 공고전계약 → "residence_only" | `resolveExemptionProviso`(`:70-110`) |
 
-### 2.5 🔶 본문 미확인 — 국세청 법령해석 5건
+### 2.5 영 §154① **단서** — 1~3호는 **보유기간도** 면제 (E-1 재설계 근거)
+
+「소득세법 시행령」 MST 286211 · 공포 2026-05-22 · **시행 2026-07-01** · 2026-07-31 조회.
+
+> **다만**, 1세대가 양도일 현재 국내에 1주택을 보유하고 있는 경우로서 **제1호부터 제3호까지**의
+> 어느 하나에 해당하는 경우에는 **그 보유기간 및 거주기간의 제한을 받지 않으며** 제5호에 해당하는
+> 경우에는 **거주기간의 제한을 받지 않는다.**
+> 1. 민간건설임대주택 등 … 세대전원 거주 **5년** 이상인 경우
+> 2. 다음 각 목의 어느 하나(가목 수용 … 그 양도일 또는 수용일부터 **5년** 이내 양도 …)
+> 3. **1년** 이상 거주한 주택을 … 취학·근무상 형편·질병 요양, 그 밖에 부득이한 사유로 양도하는 경우
+> 5. 조정대상지역 공고일 이전 매매계약 + 계약금 지급 + 계약금 지급일 현재 무주택
+
+⇒ 1~3호는 **보유·거주 둘 다** 면제("both"), 5호는 거주만("residence_only").
+정본 `resolveExemptionProviso`의 반환값과 정확히 일치한다.
+
+**이것이 §3의 E-3(P3a 기시행 결함)을 만든다.**
+
+### 2.6 영 §154③ — 「전부를 주택으로 본다」의 적용 범위
+
+> ③ **법 제89조제1항제3호를 적용할 때** 하나의 건물이 주택과 주택외의 부분으로 복합되어 있는 경우 …
+> 그 전부를 주택으로 본다. 다만, 주택의 연면적이 주택 외의 부분의 연면적보다 적거나 같을 때에는
+> 주택외의 부분은 주택으로 보지 아니한다.
+
+⇒ 적용 범위가 **「법 §89①3호(1세대1주택 비과세)를 적용할 때」로 명시 한정**된다.
+법 §104⑦(중과)에 준용한다는 규정이 없다 — §5.3의 「중과·장특 배제는 주택분만」을 뒷받침한다.
+(다만 이는 법문 구조 해석이며, 유권해석 본문은 여전히 미확인 — §11 U-2.)
+
+### 2.7 🔶 본문 미확인 — 국세청 법령해석 5건
 
 「겸용주택 중과세율」 검색 결과(법제처 Open API, domain=nts). **제목만 확인했고 본문은 조회 불가**다
 (법제처 API가 ntsCgmExpc 본문 미제공 · taxlaw.nts.go.kr는 SPA라 WebFetch도 빈 페이지).
@@ -227,6 +254,42 @@ const isOneHouseExempt =
 **세액 기여 분해** — 차액의 절반 이상이 세율이 아니라 **장특 배제**에서 나온다.
 「중과 = +20%p」로만 이해하면 규모를 놓친다.
 
+### E-3 🔴 **이미 머지된 P3a의 과다과세 결함** — 단서 각호가 보유요건을 면제하지 않는다
+
+**v1.2 자가 검토에서 발견.** 계획서 결함이 아니라 **PR #937(P3a)로 이미 배포된 코드**의 결함이다.
+
+| | 판정식 |
+|---|---|
+| 정본 `meetsOneHouseHoldingResidence`(`transfer-tax-exemption.ts:224-232`) | `meetsHolding = **proviso === "both"** \|\| holding.years >= minHoldingYears` |
+| 겸용 P3a(`transfer-tax-mixed-use.ts:103-105`) | `meetsExemptionHolding = exemptionHolding.years >= minHoldingYears` — **단서 없음** |
+
+영 §154① 단서(§2.5)는 1~3호에 대해 「**보유기간 및** 거주기간의 제한을 받지 않는다」고 정한다.
+P3a는 그 면제를 구현하지 않았다.
+
+**도달 가능성 — 실측**: 단서 입력은 겸용에도 전송된다.
+`provisoGate`(`transfer-tax-api-helpers.ts:95-99`)는 `isHousing = primary.assetKind === "housing"`만
+보고, 겸용은 그 조건을 만족한다(§1.2). 1세대 + 1주택이면 `visible: true, mode: "one_house"` →
+`oneHouseExemptionProviso`가 top-level로 나간다. **이론적 사각이 아니다.**
+
+**결과** — 겸용 1세대1주택 + 단서 1~3호(수용·해외이주·부득이 등) + 보유 2년 미만:
+
+```
+법령: 단서 1~3호 → 보유·거주 제한 없음 → 1세대1주택 비과세 적용
+P3a: meetsExemptionHolding = false → isOneHouseExempt = false → 주택분 전액 과세
+```
+
+⇒ **과다과세**. 방향이 E-1(과소과세)과 **반대**이며
+memory `feedback_no_unfavorable_application_without_legal_basis`(법 근거 없이 불리 적용 금지)를
+정면으로 위반한다. **E-1·E-2보다 우선순위가 높다.**
+
+**금액 미실측** — 현행 엔진에는 단서 입력이 없어 「법령 정합값」을 산출할 경로가 없다
+(`isOneHouseExempt`를 true로 넣어도 P3a 게이트가 AND로 덮는다). 규모는 E-1과 같은 축
+(주택분 12억 비과세 적용/배제)이며 **anchor B-A7이 확정한다**. 추정하지 않는다.
+
+> P3a 당시 이 결함이 드러나지 않은 이유: 기존 겸용 anchor가 전부 보유 2년 이상이었고
+> (선행 §D-9-R이 「기존 anchor가 하나도 깨지지 않았다」고 기록), 단서 입력 자체를
+> 겸용 테스트가 한 번도 구성하지 않았다.
+
 ### 3.3 중과 한시배제는 **2026-05-09에 끝났다**
 
 `SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW = { start: "2022-05-10", end: "2026-05-09" }`
@@ -237,12 +300,16 @@ E-2는 사문(死文)이 아니라 **현재 진행형 결함**이다.
 
 ---
 
-## 4. 설계 — Phase A (E-1 거주요건)
+## 4. 설계 — Phase A (E-1 거주요건 + E-3 단서 면제)
 
-### 4.1 원칙 — 정본을 호출한다
+### 4.1 원칙 — 요건 판정 전체를 정본에 위임한다
 
-거주요건 규칙을 겸용에 **다시 쓰지 않는다**. `meetsOneHouseResidenceRequirement`를 호출한다.
-경과규정·통산·단서 각호가 전부 그 안에 있고, 겸용이 따로 구현하면 즉시 드리프트한다.
+§154① 요건을 겸용에 **다시 쓰지 않는다**. 보유·거주·단서를 한 번에 판정하는
+**`meetsOneHouseHoldingResidence`**(`transfer-tax-exemption.ts:224-232`)를 호출한다.
+경과규정·§154⑧ 통산·단서 각호가 전부 그 안에 있다.
+
+P3a가 **보유 축만 따로 구현**했다가 단서 면제를 놓친 것(E-3)이 바로 「따로 구현하면 드리프트한다」의
+실례다. 거주 축을 또 따로 붙이면 같은 실수를 반복한다 — **함수 하나만 부른다.**
 
 ### 4.2 ⑭ route 주입
 
@@ -270,30 +337,61 @@ regionCode?: string;
 oneHouseExemptionProviso?: TransferTaxInput["oneHouseExemptionProviso"];
 ```
 
-### 4.4 엔진 — 판정 1회, 오케스트레이터에서
+### 4.4 엔진 — P3a의 보유 판정을 **정본 통합 판정으로 교체**한다
 
-`transfer-tax-mixed-use.ts:103` 직전에 거주 축을 추가한다.
+> **v1.2 재설계.** 초안은 P3a의 `meetsExemptionHolding`에 거주 판정을 AND로 붙였다.
+> 그 구조로는 E-3(단서가 보유요건을 면제)을 고칠 수 없다 — 단서는 `meetsHolding` **내부**에
+> 있기 때문이다. 두 축을 따로 두지 말고 **정본 함수 하나를 호출**한다.
+
+`transfer-tax-mixed-use.ts:103`의 `meetsExemptionHolding` AND 항을 **대체**한다.
 
 ```ts
-const meetsExemptionResidence = meetsOneHouseResidenceRequirement(
-  {
-    // 주택 부분의 취득일 = 건물 취득일 — P3a 보유요건과 **같은 축**(선행 §D-9-R)
-    acquisitionDate: asset.buildingAcquisitionDate,
-    transferDate,
-    residencePeriodMonths: residenceMonthsForExemption,   // §4.5
-    oneHouseExemptionProviso: asset.oneHouseExemptionProviso,
-    regionCode: asset.regionCode,
-    wasRegulatedAtAcquisition: asset.wasRegulatedAtAcquisition,
-    // acquisitionCause·decedent* 는 **의도적 미전달** — §4.5 이중통산 차단
-  },
+const exemptionReqInput = {
+  // 주택 부분의 취득일 = 건물 취득일 — P3a 축 유지(선행 §D-9-R · B-20/B-20b가 고정)
+  acquisitionDate: asset.buildingAcquisitionDate,
+  transferDate,
+  residencePeriodMonths: residenceMonthsForExemption,   // §4.5
+  oneHouseExemptionProviso: asset.oneHouseExemptionProviso,
+  regionCode: asset.regionCode,
+  wasRegulatedAtAcquisition: asset.wasRegulatedAtAcquisition,
+  // acquisitionCause·decedent* 는 **의도적 미전달** — 두 가지를 동시에 담보한다:
+  //   ① 이중 통산 차단(§4.5)
+  //   ② resolveExemptionHoldingStartDate가 acquisitionDate를 그대로 반환 → 보유 기산일이
+  //      건물 취득일로 고정(P3a 축 불변). 겸용에는 decedentCohabitationHoldingStartDate
+  //      입력 자체가 없다(grep 0건).
+};
+const meetsOneHouseRequirements = meetsOneHouseHoldingResidence(
+  exemptionReqInput,
   oneHouseSpecialRules.one_house_exemption,
 );
 const isOneHouseExempt =
-  (asset.isOneHouseExempt ?? true) &&
-  meetsExemptionHolding && meetsExemptionResidence && !isUnregistered;
+  (asset.isOneHouseExempt ?? true) && meetsOneHouseRequirements && !isUnregistered;
 ```
 
-미충족 시 `warnings`에 거주개월·조문을 실어 침묵 과세를 막는다(P3a와 동일 규약).
+**한 번의 호출이 세 가지를 동시에 해결한다** — 보유(P3a 유지) · 거주(E-1) · 단서 면제(E-3).
+
+**타입 — 소폭 narrowing 필요**: `meetsOneHouseHoldingResidence`의 1번 인자는 현재
+`TransferTaxInput`(전체)이다. 겸용이 전체를 만들 수는 없으므로, 이미 있는 `ResidenceReqInput`
+(`transfer-tax-exemption.ts:32-44`)과 **같은 방식**으로 narrowing한다:
+
+```ts
+export type ExemptionReqInput = ResidenceReqInput &
+  Pick<TransferTaxInput, "decedentCohabitationHoldingStartDate">;
+```
+
+`resolveExemptionHoldingStartDate`가 읽는 필드는 `acquisitionCause` ·
+`decedentSameHouseholdBeforeInheritance` · `decedentCohabitationHoldingStartDate` ·
+`acquisitionDate` 넷뿐이고 앞의 둘은 이미 `ResidenceReqInput`에 있다.
+**타입 전용 변경으로 동작은 불변**이며, 단건 호출부(`transfer-tax.ts:202`)가 넘기는
+`TransferTaxInput`은 구조적으로 이 타입을 만족한다.
+
+**P3a 회귀 안전성** — 단서·조정지역 미주입 시 `proviso = null`, `wasRegulated = false` →
+`meetsHolding = years >= minHoldingYears` · `residence = true` → **P3a와 완전 동일**.
+B-17·B-18·B-20·B-20b는 손대지 않는다(B-A8이 이를 명시 고정).
+
+미충족 시 `warnings`에 **보유기간·거주기간·취득시 조정지역 여부를 모두** 실어 침묵 과세를 막는다.
+어느 요건이 걸렸는지 사용자가 판별할 수 있어야 하며, 술어를 따로 계산해 붙이지는 않는다
+(memory `feedback_shared_predicate_argument_parity` — 중복 술어를 만들지 않는다).
 
 ### 4.5 ⚠️ 이중 통산 차단 — 설계 판단
 
@@ -369,16 +467,27 @@ multiHouse: data.houses && data.houses.length > 0
 (`transfer-tax-helpers.ts:114-136`). 정본 호출에 부족한 것이 없다.
 
 ```ts
+// ⚠️ transfer-tax-mixed-use.ts:81의 구조분해를 먼저 넓힌다 —
+//    현재 { brackets, basicDeductionRules, oneHouseSpecialRules } 3개뿐이다.
+const { …, houseCountExclusionRules, surchargeSpecialRules, regulatedAreaHistory } =
+  parseRatesFromMap(rates);
+
 const mhResult = asset.multiHouse && houseCountExclusionRules
   ? determineMultiHouseSurcharge(
       { ...asset.multiHouse, transferDate,
-        // A가 만든 §154① 판정을 그대로 — 배제2(§155⑤ 의제) 게이트
-        sellingHouseMeetsOneHouseRequirements: meetsExemptionHolding && meetsExemptionResidence },
+        // Phase A가 만든 §154① 통합 판정을 **그대로** 재사용 — 배제2(§155⑤ 의제) 게이트.
+        // 정본이 단건에서 넘기는 값과 같은 함수의 결과다(`transfer-tax.ts:202`).
+        sellingHouseMeetsOneHouseRequirements: meetsOneHouseRequirements },
       houseCountExclusionRules, regulatedAreaHistory ?? null, surchargeSpecialRules,
       asset.multiHouse.isRegulatedArea,
     )
   : undefined;
 ```
+
+> ⚠️ **`houseCountExclusionRules`가 없으면 중과가 통째로 스킵된다** — `parseRatesFromMap`은
+> 이 레코드를 **optional로 처리하며 throw하지 않는다**(`transfer-tax-helpers.ts:130-134`).
+> 단건 경로도 같은 구조(`transfer-tax.ts:184`)이므로 동작은 정합이나,
+> **테스트에서는 이것이 침묵 오탐의 원인이 된다** — §8 Phase B 주의.
 
 **적용 여부는 정본 판정을 그대로 쓴다** (`transfer-tax.ts:467-481`과 동일):
 
@@ -484,8 +593,9 @@ export interface MixedUseRatePart {
 | M2 | ✓ | 0 | 1 | — | 30년 | 비과세 | **비과세 배제** (+372,298,395) | A |
 | M3 | ✓ | 3 | 1 | — | 30년 | 비과세 | **불변**(거주 충족) | A |
 | M4 | ✓ | 0 | 1 | — | 30년 | 비과세 | **불변** — 단서 2호가(수용) | A |
+| **M4b** | — | 0 | 1 | — | **1년** | 🔴 **과세**(P3a 결함) | **비과세 유지** — 단서 2호가가 보유요건도 면제(§2.5·E-3) | **A** |
 | M5 | ✓ | 0 | 1 | — | 30년 | 비과세 | **불변** — 2017-08-03 이전 취득 경과규정 | A |
-| M6 | ✓ | 0 | 1 | — | 1년 | 과세(P3a) | **불변**(보유에서 이미 배제) | A(회귀) |
+| M6 | ✓ | 0 | 1 | — | 1년 | 과세(P3a) | **불변** — 단서 **미입력**이면 보유 미충족 배제 유지 | A(회귀) |
 | M7 | — | — | 2 | ✓ | 30년 | 과세·중과✗ | **중과 +20%p·장특 0** (+451,766,149) | B |
 | M8 | — | — | 3 | ✓ | 30년 | 과세·중과✗ | **중과 +30%p·장특 0** (+602,747,649) | B |
 | M9 | — | — | 2 | ✗ | 30년 | 과세·중과✗ | **불변**(비조정) | B(회귀) |
@@ -506,7 +616,7 @@ export interface MixedUseRatePart {
 | Phase | 내용 | 산출 | 선행 |
 |---|---|---|---|
 | **0** | 선행 계획서 §D-4·§D-9-R의 「14지점」 서술에 역참조 각주 | 문서 1개 | — |
-| **A** | E-1 거주요건 — ⑭ 주입 3필드 + 정본 호출 + warning | anchor B-A1~A6 | 0 |
+| **A** | E-1 거주요건 **+ E-3 단서 면제(과다과세 정정)** — ⑭ 주입 3필드 + `ExemptionReqInput` narrowing + 정본 `meetsOneHouseHoldingResidence` **단일 호출로 교체** + warning | anchor B-A1~A8 | 0 |
 | **B1** | E-2 배관 — ⑭ `multiHouse` 주입 + 엔진 정본 판정 | anchor B-B1~B3 | A |
 | **B2** | E-2 §95② 주택분 장특 배제 (6곳) | anchor B-B4~B6 | B1 |
 | **B3** | E-2 세율 — `surchargeAddon` + §104⑦ 후단 MAX | anchor B-B7~B10 | B2 |
@@ -532,8 +642,19 @@ E-2 실측에서 차액의 절반 이상이 장특에서 나온 것이 그 근�
 | B-A4 | M4 — 단서 2호가(수용, 수용일 ≤ 양도일+5년) | 비과세 유지 · 단서 미입력이면 **미적용**(fail-closed, `transfer-tax-exemption.ts:83-88` 규약) |
 | B-A5 | 동일세대 상속 통산 | 정본 단독 계산과 **동일값** — 이중 통산 부재(§4.5) |
 | B-A6 | 거주 23개월 / 24개월 경계 | 미충족 / 충족 — 연 절사가 결론을 바꾸지 않음(§4.5) |
+| **B-A7** 🔴 | **M4b** — 단서 2호가(수용) + **보유 1년** | **비과세 유지**(`housingPart.isExempt === true`). **E-3(기시행 과다과세) 노출 anchor** — 현재 RED |
+| **B-A8** | 단서 **미입력** + 보유 1년 | 비과세 배제 — P3a 동작 **불변**(B-A7이 게이트를 과도하게 열지 않았음을 반증) |
 
 ### Phase B
+
+> 🔴 **필수 — `makeMockRatesWithHouseEngine()`을 쓸 것.** `makeMockRates()`
+> (`mock-rates.ts:13-194`)에는 `transfer:special:house_count_exclusion` 레코드가 **없고**
+> 그 키는 `makeMockRatesWithHouseEngine()`(`:195~`, 레코드는 `:224`)에만 있다.
+> `parseRatesFromMap`이 이를 optional로 넘기므로 **예외가 나지 않고**
+> `houseCountExclusionRules === undefined` → §5.2 가드가 `mhResult = undefined` →
+> **중과가 통째로 스킵된 채 anchor가 조용히 GREEN**이 된다.
+> Phase B에서 가장 위험한 실패 모드다. 각 anchor는 `mhResult`가 실제로 만들어졌음을
+> (`surchargeType !== undefined`) **먼저 단언**한다.
 
 | ID | 고정 대상 | 기대 |
 |---|---|---|
@@ -590,6 +711,8 @@ E-2 실측에서 차액의 절반 이상이 장특에서 나온 것이 그 근�
 | R-6 | `transfer-tax-mixed-use.ts` 800줄 초과 | 현재 635. 중과 판정을 신규 파일로 분리(§5.6). Do 착수 시 실측 재확인 |
 | R-7 | E-2 손계산값(B-B7·B-B8)이 엔진과 불일치 | §8 각주 — 법령 정합 우선으로 정정, 계획서 수치를 맞추려 구현을 비틀지 않는다 |
 | R-8 | 브라우저 수동 확인 미수행 | 선행 세션 전체가 미수행 상태. ⑦ 표시(B4) 작업 시 함께 실시 |
+| **R-9** 🔴 | **Phase B anchor가 침묵 GREEN** — mock에 `house_count_exclusion`이 없으면 중과가 스킵되는데 예외가 안 난다 | §8 Phase B 주의 — `makeMockRatesWithHouseEngine()` 강제 + 각 anchor가 `mhResult` 생성 여부를 선단언 |
+| **R-10** | E-3 정정이 비과세를 **과도하게 열어** 다른 케이스를 놓아줌 | 단서 각호는 각자 시한·거주요건을 갖고 정본이 이미 검증한다(수용일 미입력 → fail-closed, `transfer-tax-exemption.ts:83-88`). B-A8이 「단서 없으면 여전히 배제」를 반증으로 고정 |
 
 ---
 
@@ -598,7 +721,7 @@ E-2 실측에서 차액의 절반 이상이 장특에서 나온 것이 그 근�
 | ID | 항목 | 상태 |
 |---|---|---|
 | U-1 | 국세청 해석 217202(2023-02-15) 「중과세율이 적용되는 상가겸용주택의 주택 및 주택 부수토지 계산방법」 **본문** | 🔶 조회 불가(법제처 API 미제공·SPA). 제목만 확인. 설계 근거는 §104⑦ 법문 |
-| U-2 | 겸용주택 상가분 중과 제외에 대한 **직접 유권해석** | 🔶 본문 미확보. 법문상 「주택(+딸린 토지)」로 판단 |
+| U-2 | 겸용주택 상가분 중과 제외에 대한 **직접 유권해석** | 🔶 본문 미확보. **법문 2중 근거로 판단** — ① 법 §104⑦ 대상이 「주택(이에 딸린 토지를 포함한다)」(§2.1) ② 영 §154③의 「전부를 주택으로 본다」는 **「법 §89①3호를 적용할 때」로 명시 한정**되어 §104⑦에 준용되지 않는다(§2.6) |
 | U-3 | 배율초과 비사토 동반 겸용의 중과(§5.5) | 🛑 선행 D-8(세무 판단 대기)에 종속. 과소과세 방향 |
 | U-4 | 겸용 §154① **단서 5호**(공고전계약, "residence_only") 실동작 | 🔶 정본에 있으나 겸용 anchor 미구성. Phase A에서 B-A4와 함께 시도 |
 | U-5 | 다주택자 겸용주택의 주택분/상가분 **분리계산 자체**의 근거 | 🔶 영 §160①단서는 1세대1주택 고가주택 맥락. 다주택 분리는 §104⑦·§95②가 주택분만 지목하는 데서 도출. **현행 엔진의 기존 전제이며 이 계획서가 바꾸지 않는다** |
@@ -611,5 +734,6 @@ E-2 실측에서 차액의 절반 이상이 장특에서 나온 것이 그 근�
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| **v1.2** | 2026-07-31 | **2차 자가 검토 — 설계 결함 1건·Do-blocker 1건 발견**. ① 🔴 **E-3 신설**: 영 §154① 단서 1~3호가 「**보유기간 및** 거주기간의 제한을 받지 않는다」(법제처 실측, 시행령 MST 286211)는데 **이미 머지된 P3a**가 이를 무시 → 겸용 1주택+수용+보유2년미만에서 **과다과세**. `provisoGate`가 겸용에도 단서를 전송하므로 도달 가능. ② §4.4를 「거주 축 AND 추가」에서 **「정본 `meetsOneHouseHoldingResidence` 단일 호출로 교체」**로 재설계(단서가 `meetsHolding` 내부에 있어 AND 구조로는 못 고침) + `ExemptionReqInput` 타입 narrowing. ③ 🔴 **R-9**: Phase B anchor가 `makeMockRates()`를 쓰면 `house_count_exclusion` 부재로 중과가 스킵되는데 **예외가 안 나 침묵 GREEN**. ④ §2.6 영 §154③ 적용범위 한정 확인(U-2 보강). ⑤ anchor B-A7·B-A8, 매트릭스 M4b 신설 |
 | v1.1 | 2026-07-31 | 자가 검토 — 인용 6건 정정(`calcLongTermRate` 정의 위치·`resolveExemptionResidenceMonths` line·겸용 테스트 8→**16파일**) + 논리 모순 3건 정정(§5.5 §95② 장특 배제는 nonBiz 경계와 **무관** · M13/B-B11 「세액 불변」 철회 · §5.1 `gracePeriod` 변환본 필수) + U-7 별건 의심 등록 |
 | v1.0 | 2026-07-31 | 최초 작성. 선행 계획서 D-4·D-9 잔여 분리. **선행 「14지점 전부」 전제 실측 반박**(§1). §104⑦·§95② 법문 확인. E-1 +372,298,395 · E-2 +451,766,149(2주택)·+602,747,649(3주택+) 실측 |
