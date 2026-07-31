@@ -456,6 +456,8 @@ export function buildHousingPart(
   // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (게이트 전용). 거주분 공제율은 residenceYears(실거주) 유지.
   table2ResidenceYears: number,
   isOneHouseExempt: boolean = true,  // 미주입 시 true (기존 겸용주택 사례14 등 backward compat)
+  /** §95② 미등기양도자산 장기보유특별공제 배제. */
+  isUnregistered = false,
 ): MixedUseHousingPart {
   const housingAcq = housingAcqResult.estimatedAcq;
   const HIGH_VALUE_THRESHOLD = 1_200_000_000;
@@ -499,11 +501,13 @@ export function buildHousingPart(
     gainSplit.landHoldingYears,
     residenceYears,
     useTable2,
+    isUnregistered,
   );
   const buildingDedRate = calcLongTermRate(
     gainSplit.buildingHoldingYears,
     residenceYears,
     useTable2,
+    isUnregistered,
   );
 
   const longTermDeductionAmount =
@@ -519,8 +523,8 @@ export function buildHousingPart(
     proratedBuildingGain,
     landDedRate,
     buildingDedRate,
-    landHoldingRate: calcLongTermRate(gainSplit.landHoldingYears, 0, useTable2),
-    buildingHoldingRate: calcLongTermRate(gainSplit.buildingHoldingYears, 0, useTable2),
+    landHoldingRate: calcLongTermRate(gainSplit.landHoldingYears, 0, useTable2, isUnregistered),
+    buildingHoldingRate: calcLongTermRate(gainSplit.buildingHoldingYears, 0, useTable2, isUnregistered),
     longTermDeductionAmount,
     buildingHoldingYears: gainSplit.buildingHoldingYears,
     residenceYears,
@@ -560,16 +564,18 @@ export function buildHousingPart(
 /** 상가부분 조립 */
 export function buildCommercialPart(
   gainSplit: CommercialGainSplit,
+  /** §95② 미등기양도자산 장기보유특별공제 배제. */
+  isUnregistered = false,
 ): MixedUseCommercialPart {
   const holdingYears = Math.max(gainSplit.landHoldingYears, gainSplit.buildingHoldingYears);
-  const landDedRate = calcLongTermRate(gainSplit.landHoldingYears, 0, false);
-  const buildingDedRate = calcLongTermRate(gainSplit.buildingHoldingYears, 0, false);
+  const landDedRate = calcLongTermRate(gainSplit.landHoldingYears, 0, false, isUnregistered);
+  const buildingDedRate = calcLongTermRate(gainSplit.buildingHoldingYears, 0, false, isUnregistered);
 
   const longTermDeductionAmount =
     applyRate(Math.max(gainSplit.landGain, 0), landDedRate) +
     applyRate(Math.max(gainSplit.buildingGain, 0), buildingDedRate);
 
-  const longTermDeductionRate = calcLongTermRate(holdingYears, 0, false);
+  const longTermDeductionRate = calcLongTermRate(holdingYears, 0, false, isUnregistered);
 
   return {
     estimatedAcquisitionPrice: gainSplit.estimatedAcqPrice,

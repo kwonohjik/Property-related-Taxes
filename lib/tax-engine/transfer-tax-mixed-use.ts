@@ -98,7 +98,10 @@ export function calcMixedUseTransferTax(
   const exemptionHolding = calculateHoldingPeriod(asset.buildingAcquisitionDate, transferDate);
   const meetsExemptionHolding =
     exemptionHolding.years >= oneHouseSpecialRules.one_house_exemption.minHoldingYears;
-  const isOneHouseExempt = (asset.isOneHouseExempt ?? true) && meetsExemptionHolding;
+  // §91① — 미등기양도자산에는 **비과세 규정을 적용하지 아니한다**. 주택분 12억 비과세도 배제.
+  const isUnregistered = asset.isUnregistered === true;
+  const isOneHouseExempt =
+    (asset.isOneHouseExempt ?? true) && meetsExemptionHolding && !isUnregistered;
   if ((asset.isOneHouseExempt ?? true) && !meetsExemptionHolding) {
     warnings.push(
       `건물 보유기간 ${exemptionHolding.years}년 ${exemptionHolding.months}개월 — ` +
@@ -195,6 +198,7 @@ export function calcMixedUseTransferTax(
       periodInfo,
       asset.partialUsageChange.direction,
       housingAcqResult,
+      isUnregistered,
     );
     housingPart = split.housingPart;
     commercialPart = split.commercialPart;
@@ -208,8 +212,9 @@ export function calcMixedUseTransferTax(
       asset.residencePeriodYears,
       table2ResidenceYears,
       isOneHouseExempt,
+      isUnregistered,
     );
-    commercialPart = buildCommercialPart(commercialGainSplit);
+    commercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
   }
 
   steps.push(buildHousingStep(housingPart, apportionment));
@@ -220,6 +225,7 @@ export function calcMixedUseTransferTax(
     housingPart,
     excessResult,
     housingGainSplit.landHoldingYears,
+    isUnregistered,
   );
   if (nonBusinessLandPart) {
     steps.push(buildNonBusinessStep(nonBusinessLandPart, excessResult, derived));
@@ -266,6 +272,7 @@ export function calcMixedUseTransferTax(
     brackets,
     basicDeductionRules.annualLimit,
     rateParts,
+    isUnregistered,
   );
   steps.push(buildTotalStep(total));
 

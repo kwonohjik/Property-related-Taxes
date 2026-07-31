@@ -139,3 +139,61 @@ describe("P3b (D-2) 겸용주택 단기세율 + §104⑤ 비교과세", () => {
     expect(both).toBe(run({ oneHouse: false }).total?.transferTax);
   });
 });
+
+/**
+ * P4 (D-3) — 겸용주택 **미등기양도자산**: 4개 조문이 전부 미적용이었다.
+ *
+ * 계획서 §D-3. `isUnregistered`는 겸용 엔진에서 **개산공제율**(§163⑥ 3% → 0.3%)에만 쓰였고
+ * (`transfer-tax-mixed-use-commercial.ts:166` · `-housing.ts:193` — grep 전수 3곳),
+ * 세율·장특·기본공제·비과세에는 전혀 반영되지 않았다.
+ *
+ * [법령 근거 — 4개 조문, 2026-07-31 법제처 원문 확인]
+ *  · §104①10호  — 양도소득 과세표준의 **70%** 단일세율
+ *  · §95②       — 장기보유특별공제 **배제**("…자산(§104③에 따른 미등기양도자산…은 제외한다)")
+ *  · §103①1호 단서 — 양도소득기본공제 **배제**
+ *  · §91①       — 비과세 규정 **배제**("미등기양도자산에 대하여는 … 비과세에 관한 규정을 적용하지 아니한다")
+ */
+describe("P4 (D-3) 겸용주택 미등기양도자산", () => {
+  const unreg = (over: { land?: Date; building?: Date } = {}) =>
+    calcMixedUseTransferTax(
+      CASE14_TRANSFER_PRICE,
+      TRANSFER_DATE,
+      {
+        ...mixedUseCase14(),
+        isUnregistered: true,
+        ...(over.land ? { landAcquisitionDate: over.land } : {}),
+        ...(over.building ? { buildingAcquisitionDate: over.building } : {}),
+      },
+      makeMockRates(),
+    );
+
+  it("B-14: 4개 조문 적용 — 종전 163,273,425 → 1,288,354,126", () => {
+    const r = unreg();
+    // §91① 비과세 배제 → 주택분이 과세로 들어온다(종전 소득금액 0)
+    expect(r.housingPart?.transferGain).toBe(1_161_172_235);
+    // §95② 장특 배제 → 양도소득금액 = 양도차익
+    expect(r.housingPart?.longTermDeductionAmount).toBe(0);
+    expect(r.commercialPart?.longTermDeductionAmount).toBe(0);
+    expect(r.housingPart?.incomeAmount).toBe(1_161_172_235);
+    expect(r.commercialPart?.incomeAmount).toBe(679_333_660);
+    // §103①1호 단서 기본공제 배제 → 과세표준 = 양도소득금액 합
+    expect(r.total?.basicDeduction).toBe(0);
+    expect(r.total?.taxBase).toBe(1_840_505_895);
+    // §104①10호 70% 단일세율
+    expect(r.total?.appliedRate).toBe(0.7);
+    expect(r.total?.transferTax).toBe(1_288_354_126); // floor(1,840,505,895 × 70%)
+  });
+
+  it("B-14b: 미등기는 §104⑤ 단기세율 혼합이 아니라 **전체 70%** — P3b 경로와 구분된다", () => {
+    // 등기 단기(P3b)라면 주택 70% + 상가 50% 혼합이라 「과세표준 전체 × 70%」와 다르다.
+    // 미등기는 §104①10호 단일세율이므로 전체에 70%가 걸리고 기본공제도 0이다.
+    const r = unreg({ land: D("2021-03-01"), building: D("2021-03-01") });
+    expect(r.total?.basicDeduction).toBe(0);
+    expect(r.total?.transferTax).toBe(Math.floor((r.total?.taxBase ?? 0) * 0.7));
+  });
+
+  it("B-15(회귀): 미등기가 아니면 종전과 같다", () => {
+    expect(run({}).total?.transferTax).toBe(160_672_654);
+    expect(run({}).total?.basicDeduction).toBe(2_500_000);
+  });
+});

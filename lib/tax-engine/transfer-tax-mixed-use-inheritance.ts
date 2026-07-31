@@ -27,7 +27,10 @@ export function calcLongTermRate(
   holdingYears: number,
   residenceYears: number,
   useTable2: boolean,
+  /** 「소득세법」 제95조 제2항 — 미등기양도자산은 장기보유특별공제 **배제**. */
+  isUnregistered = false,
 ): number {
+  if (isUnregistered) return 0;
   if (holdingYears < 3) return 0;
   if (useTable2) {
     const holdingPart = Math.min(holdingYears * 0.04, 0.40);
