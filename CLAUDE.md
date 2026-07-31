@@ -37,7 +37,7 @@ npm run seed:tax-rates        # Supabase tax_rates 시딩
 npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 무효화 후)
 ```
 
-**자동 게이트**: husky pre-commit(lint-staged) + pre-push(폰트·톤 + typecheck + **범위 선택 테스트**) + GitHub Actions.
+**자동 게이트**: husky pre-commit(lint-staged) + pre-push(폰트·톤·**워크플로 러너** + typecheck + **lint** + **범위 선택 테스트**) + CI(self-hosted 러너).
 
 ### CI는 self-hosted 러너(개발자 Mac)에서 돈다 (2026-07-31)
 
@@ -61,8 +61,13 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 - **lint는 pre-push로 이관했다**(실측 26초). 종전엔 lint-staged가 변경 파일만 `--fix`하고 전체 lint 관문이 CI뿐이었는데 그 CI가 상시 실패해 **실질 관문이 없었다**.
 - **CI가 주는 고유 신호는 fresh `npm ci`**다 — 러너가 실행마다 독립 디렉터리를 쓰므로 로컬 node_modules가 가리던 lockfile·의존성 문제가 드러난다. 그 신호가 유일하므로 CI는 **범위를 좁히지 않고 전체 테스트**를 돌린다(좁히면 pre-push의 재탕이 된다).
 - 문서 전용(`**.md`·`docs/**`·`.claude/**`)·draft PR은 건너뛴다 — 이제 과금이 아니라 **개발 머신 부하·대기시간** 때문이다.
-- **워크플로를 늘릴 때**: GitHub 호스팅(`runs-on: ubuntu-latest`)으로 되돌리면 다시 분이 과금된다. 신규 job은 `self-hosted`를 기본으로 할 것.
-- **예외 — 스케줄 워크플로는 GitHub 호스팅 유지**: `supabase-keepalive`(3일마다·월 ≈10분)와 `matrix-update`(분기 1회)는 **Mac이 꺼져 있어도 반드시 떠야** 한다. 특히 keepalive가 밀리면 Supabase가 pause되어 세율 로드가 fallback으로 떨어진다. 합쳐서 월 10여 분이라 한도에 영향이 없다.
+#### 🔒 신규 워크플로는 `runs-on: self-hosted`가 **기본**이다 (pre-push 하드블록)
+
+`runs-on: ubuntu-latest`(·`macos-*`·`windows-*`)로 워크플로를 추가하면 **그 순간 Actions 분 과금이 재개**된다. `scripts/check-workflow-runner.sh`가 `.github/workflows/**`를 검사해 **pre-push에서 차단**한다(폰트·톤 게이트와 동일 층위 — 우회 금지).
+
+- **예외는 `schedule:` 트리거가 있는 워크플로뿐**이다. 별도 화이트리스트를 두지 않는다 — 목록은 낡지만 이 조건은 파일이 스스로 증명한다.
+- 그 예외가 필요한 이유: `supabase-keepalive`(3일마다·월 ≈10분)·`matrix-update`(분기 1회)는 **Mac이 꺼져 있어도 반드시 떠야** 한다. 특히 keepalive가 밀리면 Supabase가 pause되어 세율 로드가 fallback으로 떨어진다. 합쳐 월 10여 분이라 한도에 영향이 없다.
+- 즉 판단 기준은 **"Mac 전원과 무관하게 떠야 하는가"**다. 그렇다면 `schedule:`을 두고 GitHub 호스팅을, 아니면 `self-hosted`를 쓴다.
 
 ### 테스트 범위 정책 (2026-07-28 — 반복 검증에 전체 실행 금지)
 
