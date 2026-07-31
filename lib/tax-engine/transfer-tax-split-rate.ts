@@ -38,7 +38,7 @@ import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier } from "./appurtenant-land-rate";
 import { TRANSFER } from "./legal-codes";
 import type { ParsedRates } from "./transfer-tax-helpers";
-import { calcTax, computeBracketBreakdown } from "./transfer-tax-rate-calc";
+import { calcTax, computeBracketBreakdown, PROGRESSIVE_RATE_CLAUSES } from "./transfer-tax-rate-calc";
 import { allocateBasicDeduction } from "./transfer-tax-aggregate-helpers";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { RateGroup } from "./types/transfer-aggregate.types";
@@ -475,19 +475,73 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
     calcTax(taxBases[i], parsedRates, s.rateInput, ctx.multiHouseSurchargeResult),
   );
 
+  // ── §104⑤2호 **단서** — 동일 호 파트는 과세표준을 **합산**해 1회 계산한다 ────────
+  // "둘 이상의 자산에 대하여 … 동일한 호의 세율이 적용되고, 그 적용세율이 둘 이상인 경우
+  //  해당 자산에 대해서는 각 자산의 양도소득과세표준을 합산한 것에 대하여 … 호별 세율을 적용"
+  // 파트별로 따로 계산하면 **누진공제를 파트 수만큼 중복**해 2호가 과소해진다.
+  //
+  // 정본 `transfer-tax-aggregate-helpers.ts:415-446`과 **같은 규칙**을 쓴다(내부 일관성):
+  //   · 누진 호(1호·8호·⑦1호·⑦3호) → 호 단위로 합산 후 1회 계산
+  //   · 단일세율 호(2·3·10호)       → 세율이 같을 때만 합산(다르면 개별 — 정본 `uniformRate`)
+  //   · 호 불명(undefined)          → 묶지 않는다(현행 동작 = 안전측)
+  //
+  // 실제로 합쳐지는 조합은 「배율내 토지 + 건물」이 같은 호일 때뿐이다 — 비사토 파트가 있으면
+  // 토지 파트는 `isNonBusinessLand: false`로 강제되므로(위 seeds) 8호 묶음은 항상 단일이다.
+  const clauseKey = (i: number): string => {
+    const c = finals[i].rateClause;
+    if (!c) return `solo-${i}`;
+    return PROGRESSIVE_RATE_CLAUSES.has(c) ? c : `${c}|${finals[i].appliedRate}`;
+  };
+  const clauseGroups = new Map<string, number[]>();
+  seeds.forEach((_, i) => {
+    const k = clauseKey(i);
+    clauseGroups.set(k, [...(clauseGroups.get(k) ?? []), i]);
+  });
+
+  // 묶음 세액을 파트별 표시값으로 역안분한다(잔액은 마지막 파트가 흡수) —
+  // `Σ 파트 세액 === perAssetTotal` 불변식을 지켜야 결과 산식이 합계와 어긋나지 않는다
+  // (memory `feedback_engine_result_display_drift` · `feedback_floor_residual_absorption`).
+  const partTax = new Array<number>(seeds.length).fill(0);
+  let perAssetTotal = 0;
+  for (const idxs of clauseGroups.values()) {
+    if (idxs.length === 1) {
+      partTax[idxs[0]] = finals[idxs[0]].calculatedTax;
+      perAssetTotal += partTax[idxs[0]];
+      continue;
+    }
+    const mergedBase = idxs.reduce((s, i) => s + taxBases[i], 0);
+    const mergedTax = calcTax(
+      mergedBase,
+      parsedRates,
+      seeds[idxs[0]].rateInput,
+      ctx.multiHouseSurchargeResult,
+    ).calculatedTax;
+    let allocatedTax = 0;
+    idxs.forEach((i, n) => {
+      const v =
+        n === idxs.length - 1
+          ? mergedTax - allocatedTax
+          : mergedBase === 0
+            ? 0
+            : Number((BigInt(mergedTax) * BigInt(taxBases[i])) / BigInt(mergedBase));
+      partTax[i] = v;
+      allocatedTax += v;
+    });
+    perAssetTotal += mergedTax;
+  }
+
   const parts: SplitRatePart[] = seeds.map((s, i) => ({
     kind: s.kind,
     basisDate: s.basisDate,
     income: incomes[i],
     allocatedBasicDeduction: allocated[i],
     taxBase: taxBases[i],
-    calculatedTax: finals[i].calculatedTax,
+    calculatedTax: partTax[i],
     appliedRate: finals[i].appliedRate,
     surchargeType: finals[i].surchargeType,
     surchargeRate: finals[i].surchargeRate,
     nblSurchargeExcluded: finals[i].nblSurchargeExcluded,
   }));
-  const perAssetTotal = finals.reduce((s, r) => s + r.calculatedTax, 0);
   const aggregateProgressive = calculateProgressiveTax(taxBase, parsedRates.brackets);
 
   return {
