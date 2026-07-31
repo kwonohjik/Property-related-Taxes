@@ -199,6 +199,14 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     if (!allowsUnregistered && form.isUnregistered) {
       patch.isUnregistered = false;
     }
+    // 비사업용 토지: 토글이 토지에서만 렌더되므로(아래 primaryKind === "land" 블록) 종류를 바꾸면
+    // 화면에서 사라지는데 폼 값은 남는다. API 변환에도 같은 게이트가 있으나(3중 패턴), 사이드바
+    // 합계·결과 표시가 폼 값을 직접 읽으므로 여기서도 정리한다.
+    if (primaryKind !== "land" && (primary?.isNonBusinessLand || primary?.nblUseDetailedJudgment)) {
+      patch.assets = form.assets.map((a, i) =>
+        i === 0 ? { ...a, isNonBusinessLand: false, nblUseDetailedJudgment: false } : a,
+      );
+    }
     if (Object.keys(patch).length > 0) onChange(patch);
     // 의도적으로 onChange 의존성 제외 (안정적인 props 가정)
     // eslint-disable-next-line react-hooks/exhaustive-deps

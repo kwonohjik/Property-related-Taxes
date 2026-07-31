@@ -1,6 +1,6 @@
-# §104⑤2호 단서 위반 정정 + 겸용주택 세율·비과세 결손 — v1.2
+# §104⑤2호 단서 위반 정정 + 겸용주택 세율·비과세 결손 — v1.3
 
-작성 2026-07-31 · **v1.1**(자가 검토 11건 — 논리 결함 4 + 정확성 7) · **v1.2**(P1 = D-1 구현 완료, §4.1-R) · 선행 [[transfer-split-part-rate-shortterm.plan.md]] (v3.1 · 전 항목 종결)
+작성 2026-07-31 · **v1.1**(자가 검토 11건 — 논리 결함 4 + 정확성 7) · **v1.2**(P1 = D-1) · **v1.3**(P2 = D-5 구현 완료, §4.3-R) · 선행 [[transfer-split-part-rate-shortterm.plan.md]] (v3.1 · 전 항목 종결)
 
 > **표기 규약** — 이하 **§**는 「소득세법」, **영 §**는 「소득세법 시행령」을 가리킨다.
 > 다른 법령은 매번 법령명을 병기한다. (memory `feedback_law_citation_must_name_statute_and_tier`)
@@ -14,7 +14,7 @@
 > | **D-2** | 겸용주택 **단기세율**(§104①2·3호) 미적용 | 과소 | 22,589,097 / 89,343,616 | 기존 |
 > | **D-3** | 겸용주택 **미등기** 4개 조문 전부 미적용 | 과소 | 1,125,080,701 | 기존 |
 > | **D-4** | 겸용주택 **다주택 중과**(§104⑦) 미적용 — 입력 자체가 없음 | 과소 | 미실측 | 기존 |
-> | **D-5** | `isNonBusinessLand` stale 전달 (assetKind 전환 시 미초기화) | 과대 | 구조적 | 기존 |
+> | **D-5** ✅ | `isNonBusinessLand` stale 전달 (assetKind 전환 시 미초기화) | 과대 | 구조적 | 기존 — **P2 완료 2026-07-31 · §4.3-R** |
 > | D-6 | §104⑤ 본문 괄호(감면 차감 후 비교) 미반영 | 과대 가능 | 🔶 미확인 | 선행 계획서 |
 > | D-7 | 다건 aggregate에 단서 위반 전이 가능성 | 과소 가능 | 🔶 미확인 | 선행 P1 |
 > | D-8 | 겸용 「합산누진+가산」 ↔ split 「§104⑤ MAX」 **세액 모델 불일치** | — | 격차 실측 완료 | 선행 계획서 미해소 |
@@ -445,6 +445,40 @@ buildTotalTax(housingIncome, commercialIncome, nonBizIncome, brackets,
 > **assetKind 변경 시 1회 정리**이며, 같은 useEffect가 이미 `isRegulatedArea`·`isUnregistered`를
 > 같은 방식으로 처리하고 있다(기존 스타일 준수).
 
+### 4.3-R P2 구현 결과 ✅ (2026-07-31)
+
+설계대로 2층을 막았다.
+
+| 층 | 조치 | 위치 |
+|---|---|---|
+| ④ API 변환 | `assetKind === "land"`가 아니면 **`false` 고정**. 폼 값은 보존 — 토지로 되돌리면 복귀 | `lib/calc/transfer-tax-api.ts:359-363` |
+| ① 폼 상태 | assetKind 변경 초기화 useEffect에 `isNonBusinessLand`·`nblUseDetailedJudgment` 추가 | `app/calc/transfer-tax/steps/Step4.tsx:200-207` |
+
+**⑧ validate는 손대지 않았다** — 값이 엔진에 도달하지 않으므로 차단할 대상이 없다.
+
+**검토 중 확인 — 정밀판정 payload는 이미 막혀 있었다.** `buildNonBusinessLandRaw`
+(`lib/calc/non-business-land-request.ts:58`)가 `assetKind !== "land"`를 이미 게이트한다.
+즉 stale로 새던 것은 **`isNonBusinessLand` boolean 하나**였다. B-9c를 그 가드의 회귀
+guard로 편입했다.
+
+**anchor 4건** (`__tests__/calc/transfer-nbl-assetkind-stale-gate.test.ts`) —
+`fetch`를 가로채 실제 전송 body를 검사하는 기존 패턴(`transfer-tax-api-split-gate.test.ts`) 차용:
+
+| ID | 케이스 | 기대 |
+|---|---|---|
+| B-9 | land → building 전환 | `isNonBusinessLand === false` |
+| B-9b | land → housing 전환 | `false` |
+| B-9c | 정밀판정 payload | `nonBusinessLand === undefined`(기존 가드 회귀) |
+| B-10 | land 유지 | `true` **불변** |
+
+**RED 확인**: B-9·B-9b가 `expected true to be false`로 실패 → 구현 후 GREEN.
+B-10·B-9c는 RED 단계에서도 통과(회귀 없음).
+
+**검증**: `tsc` 0 · `eslint` 0 error · 전체 **1,127파일 12,646건 통과 · 회귀 0**.
+
+**파일 크기**: `Step4.tsx` 770 → **778**(예상 776과 근사). 여전히 cap 800 이내이나
+**위험구간**이라 다음 이 파일 작업 시 기회주의적 분리를 검토한다(R-5).
+
 ---
 
 ### 4.4 Phase
@@ -452,7 +486,7 @@ buildTotalTax(housingIncome, commercialIncome, nonBizIncome, brackets,
 | P | 범위 | 신규 타입 | 14지점 | 근거 |
 |---|---|---|---|---|
 | **P1** ✅ | **D-1** §104⑤2호 단서 — `rateClause` + 파트 호별 합산 | `CalcTaxResult.rateClause?` (엔진 내부) | 불필요 | §4.1 · **결과 §4.1-R** |
-| **P2** | **D-5** stale 차단 | 없음 | ④① | §4.3 |
+| **P2** ✅ | **D-5** stale 차단 | 없음 | ④① | §4.3 · **결과 §4.3-R** |
 | **P3** | **D-2** 겸용 단기세율 — **`nonBizIncome === 0`인 겸용만** (§4.2 정정) | 없음(기존 입력) | 불필요 | §4.2 |
 | **P4** | **D-3** 겸용 미등기 4중 | 없음(기존 입력) | ⑦ 결과 카드 확인 | §4.2 |
 | P5 | **D-4** 겸용 다주택 중과 | `MixedUseAssetInput` 신규 3필드 | **전 14지점** | §D-4 |
@@ -599,3 +633,6 @@ anchor 작성 시 **RED를 먼저 확인**해야 도출값의 타당성이 검�
 - **v1.2** (2026-07-31) — **P1(D-1) 구현 완료** → §4.1-R. 계획 대비 변경 1건: `104-4-3`
   (지정지역 비사토)은 `calcTax`에 §104④ 분기가 없어 **폐기**(speculative 타입 제거).
   anchor 37건 · 전체 12,642건 통과 · 회귀 0.
+- **v1.3** (2026-07-31) — **P2(D-5) 구현 완료** → §4.3-R. 검토 중 확인: 정밀판정 payload는
+  `buildNonBusinessLandRaw`가 이미 `assetKind !== "land"`를 게이트하고 있어, stale로 새던 것은
+  **`isNonBusinessLand` boolean 하나**였다. anchor 4건 · 전체 12,646건 통과 · 회귀 0.
