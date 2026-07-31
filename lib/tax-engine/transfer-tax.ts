@@ -56,6 +56,7 @@ import {
   checkExemption,
   meetsOneHouseHoldingResidence,
   resolveDeemedOneHouseBy155,
+  qualifiesUnavoidableOutsideCapital,
   resolveExemptionResidenceMonths,
   calcTransferGain,
   calcLongTermHoldingDeduction,
@@ -199,6 +200,9 @@ export function calculateTransferTax(
       //   ⚠️ 타이밍(요건 A·B)만 본다 — §154① 충족(② 요소)은
       //   `sellingHouseMeetsOneHouseRequirements`가 별도로 담당하며, 중과 엔진이 둘을 AND한다.
       deemedOneHouseBy155: resolveDeemedOneHouseBy155(workingInput, parsedRates.oneHouseSpecialRules),
+      // 영 §167의10①4호 — §155⑧ 수도권 밖 부득이 주택. 15호와 **별개 호**라 슬롯이 다르다.
+      //   요건(2주택·해소일부터 3년) 판정은 비과세와 같은 정본을 쓴다.
+      unavoidableOutsideCapitalHouse: qualifiesUnavoidableOutsideCapital(workingInput),
       marriageMerge: workingInput.marriageMerge,
       parentalCareMerge: workingInput.parentalCareMerge,
       presaleRights: workingInput.presaleRights ?? [],
@@ -268,6 +272,17 @@ export function calculateTransferTax(
     runHouseCountExclusionStep(effectiveInput, steps);
 
   const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
+
+  // §155⑦3호 귀농주택 — ⑪(귀농 후 최초 1개 일반주택 한정)·⑫(귀농일부터 3년 영농·거주 사후관리)는
+  //   과거·미래 양도 이력이 있어야 판정할 수 있어 엔진이 결론 낼 수 없다. 자동 판정 대신 경고로 노출한다
+  //   (자동 안분 fallback 금지 원칙과 다른 층위 — 임의 배분이 아니라 **판정 불가 고지**다).
+  if (exemptionResult.exemptReason?.includes("§155⑦3호") ) {
+    warnings.push(
+      "귀농주택 특례(§155⑦3호) — ⑪ 귀농 후 **최초로 양도하는 1개** 일반주택에만 적용됩니다. " +
+        "또한 §155⑫에 따라 귀농일부터 3년 이상 영농·영어에 종사하지 않거나 그 기간 거주하지 않으면 " +
+        "사유 발생일이 속하는 달의 말일부터 2개월 이내에 감면세액을 신고·납부해야 합니다(추징).",
+    );
+  }
 
   // STEP 1a: 전액 비과세 조기 반환. §155⑳ B(→STEP 2.5 §161 안분)·A eligibility 미충족(→STEP 2.5 정상과세)은 억제.
   // G-2·G-3: 부수토지 중 배율 초과분(비사업용 토지)·보유 2년 미만분은 비과세 대상이 아니다 —

@@ -436,6 +436,47 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           },
         }
       : {}),
+    // ④⑬ §155⑧ 수도권 밖 부득이 주택 FLAT → nested. 해소일은 미입력 시 미전송(= 미해소).
+    ...(form.unavoidableOutsideCapitalSpecial
+      ? {
+          unavoidableOutsideCapitalHouse: {
+            reason: form.unavoidableOutsideCapitalReason as
+              | "study"
+              | "work"
+              | "illness"
+              | "other",
+            ...(form.unavoidableOutsideCapitalResolvedDate
+              ? { resolvedDate: form.unavoidableOutsideCapitalResolvedDate }
+              : {}),
+          },
+        }
+      : {}),
+    // ④⑬ §155⑦ 농어촌주택 FLAT → nested. 유형별로 무의미한 필드는 보내지 않는다
+    //     (침묵 오판정 방지 — 예: 상속 유형에 귀농 대지면적을 실어 보내면 안 된다).
+    ...(form.ruralHouseSpecial
+      ? {
+          ruralHouse: {
+            kind: form.ruralHouseKind as "inherited" | "farm_exit" | "return_to_farm",
+            isOutsideCapitalEupMyeon: form.ruralHouseOutsideCapitalEupMyeon,
+            ...(form.ruralHouseKind === "inherited"
+              ? { decedentResidenceYears: parseFloat(form.ruralHouseDecedentResidenceYears) || 0 }
+              : {}),
+            ...(form.ruralHouseKind === "farm_exit"
+              ? { ownerResidenceYears: parseFloat(form.ruralHouseOwnerResidenceYears) || 0 }
+              : {}),
+            ...(form.ruralHouseKind === "return_to_farm"
+              ? {
+                  ...(form.ruralHouseAcquisitionDate
+                    ? { acquisitionDate: form.ruralHouseAcquisitionDate }
+                    : {}),
+                  isHighPriceAtAcquisition: form.ruralHouseHighPriceAtAcquisition,
+                  landAreaSqm: parseFloat(form.ruralHouseLandAreaSqm) || 0,
+                  wholeHouseholdMoved: form.ruralHouseWholeHouseholdMoved,
+                }
+              : {}),
+          },
+        }
+      : {}),
     // ④⑬ §156의2⑤ 대체주택 비과세 특례 FLAT → nested (helpers로 분리, 800줄 정책)
     ...buildReplacementHousePayload(form),
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),

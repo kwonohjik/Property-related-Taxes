@@ -14,8 +14,14 @@ import { addYears, format } from "date-fns";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
-import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "./types/transfer.types";
+import type {
+  TransferTaxInput,
+  TemporaryTwoHouseDelayReason,
+  UnavoidableReasonKind,
+  RuralHouseKind,
+} from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
+import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 
 // §156의2⑤ 대체주택 특례 — 신축주택 완성 후 대체주택 양도 기한.
 // 2023.01.12 이후 양도분부터 3년(구 2년). 소득세법 시행령 부칙(대통령령 제33267호).
@@ -26,6 +32,84 @@ const REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD = 2;
 const MERGE_EXEMPTION_YEARS = 10;
 // §155⑯ 공공기관·법인 지방이전 — §155① 본문의 "3년"을 "5년"으로 치환.
 const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
+// §155⑧ — 부득이한 사유가 해소된 날부터 일반주택 양도 기한.
+const UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS = 3;
+
+// §155⑦1호·2호 — 거주 요건 연수.
+const RURAL_HOUSE_RESIDENCE_YEARS = 5;
+// §155⑦ 단서 — 귀농주택(3호)은 취득일부터 5년 이내 일반주택 양도에 한정.
+const RURAL_RETURN_TO_FARM_TRANSFER_YEARS = 5;
+// §155⑩3호 — 귀농주택 대지면적 상한(㎡).
+const RURAL_RETURN_TO_FARM_MAX_LAND_SQM = 660;
+
+/** §155⑦ 각 호 라벨 (exemptReason 표시용 — 내부 id 노출 금지) */
+const RURAL_HOUSE_LABEL: Record<RuralHouseKind, string> = {
+  inherited: "1호 상속",
+  farm_exit: "2호 이농",
+  return_to_farm: "3호 귀농",
+};
+
+/**
+ * §155⑦ 농어촌주택 요건 판정 — 「각각 1개씩 소유(2주택)」 + 소재 + 유형별 요건.
+ *
+ * 비과세(E-3.8)와 중과 배제(영 §167의10①15호)가 같은 값을 쓰도록 정본으로 분리한다.
+ * §154① 충족은 여기서 보지 않는다(15호 ② 요소는 별도 게이트).
+ */
+export function qualifiesRuralHouse(
+  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse">,
+): boolean {
+  const r = input.ruralHouse;
+  if (input.householdHousingCount !== 2 || !r) return false;
+  // 소재: 수도권 밖의 읍(도시지역 제외)·면 — 유형 불문 공통 요건.
+  if (!r.isOutsideCapitalEupMyeon) return false;
+
+  switch (r.kind) {
+    case "inherited":
+      // 1호: 피상속인이 취득 후 5년 이상 거주
+      return (r.decedentResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS;
+    case "farm_exit":
+      // 2호: 이농인이 취득일 후 5년 이상 거주
+      return (r.ownerResidenceYears ?? 0) >= RURAL_HOUSE_RESIDENCE_YEARS;
+    case "return_to_farm": {
+      // 3호 + ⑩ 요건 + ⑦ 단서(취득일부터 5년 이내 일반주택 양도)
+      if (r.isHighPriceAtAcquisition === true) return false; // ⑩2호
+      if ((r.landAreaSqm ?? Infinity) > RURAL_RETURN_TO_FARM_MAX_LAND_SQM) return false; // ⑩3호
+      if (r.wholeHouseholdMoved !== true) return false; // ⑩5호
+      if (!r.acquisitionDate) return false; // ⑦ 단서 판정 불가 → 적용하지 않는다
+      return input.transferDate <= addYears(r.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
+    }
+  }
+}
+
+/**
+ * §155⑧ 요건 판정 — 「각각 1개씩 소유(2주택)」 + 「해소된 날부터 3년 이내」.
+ *
+ * 비과세(E-3.7)와 중과 배제(영 §167의10①4호)가 **같은 값을 써야** 한다 — 앞 계획서 F-2에서
+ * 기한 규칙을 양쪽이 따로 구현했다가 「비과세 O / 중과배제 X」 모순이 났던 것과 같은 구조다.
+ *
+ * §154① 충족(「§154①을 적용한다」)은 여기서 보지 않는다 — 비과세는 `meetsOneHouseHoldingResidence`가,
+ * 중과는 §167의10①4호가 §154①을 요구하지 않으므로(15호와 달리 문언에 없다) 별도로 다룬다.
+ */
+export function qualifiesUnavoidableOutsideCapital(
+  input: Pick<
+    TransferTaxInput,
+    "householdHousingCount" | "transferDate" | "unavoidableOutsideCapitalHouse"
+  >,
+): boolean {
+  const u = input.unavoidableOutsideCapitalHouse;
+  if (input.householdHousingCount !== 2 || !u) return false;
+  // 🔶 해소 전 양도는 명문이 없다 — 기한이 기산되지 않은 것으로 본다(계획서 W-1).
+  if (u.resolvedDate === undefined) return true;
+  return input.transferDate <= addYears(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
+}
+
+/** §155⑧ 부득이한 사유 라벨 (exemptReason 표시용 — 내부 id 노출 금지) */
+const UNAVOIDABLE_REASON_LABEL: Record<UnavoidableReasonKind, string> = {
+  study: "취학",
+  work: "근무상 형편",
+  illness: "질병 요양",
+  other: "그 밖의 부득이한 사유",
+};
 
 /**
  * 거주요건 판정 입력 — TransferTaxInput의 부분집합. UI(Step4 안내 메시지)와 엔진이 공용.
@@ -66,7 +150,10 @@ export type ExemptionReqInput = ResidenceReqInput &
  * **타입 전용 narrowing이며 동작은 불변**이다.
  */
 export type DeemedOneHouseReqInput = ExemptionReqInput &
-  Pick<TransferTaxInput, "isRegulatedArea" | "isOneHousehold" | "temporaryTwoHouse">;
+  Pick<
+    TransferTaxInput,
+    "isRegulatedArea" | "isOneHousehold" | "temporaryTwoHouse" | "householdHousingCount" | "ruralHouse"
+  >;
 
 interface ExemptionResult {
   isExempt: boolean;
@@ -383,9 +470,12 @@ function evaluateTemporaryTwoHouseTiming(
 export function resolveDeemedOneHouseBy155(
   input: DeemedOneHouseReqInput,
   oneHouseRules: OneHouseSpecialRulesData | undefined,
-): "temporary_two_house" | undefined {
+): DeemedOneHouseBasis | undefined {
+  if (!input.isOneHousehold) return undefined;
+  // §155⑦ 농어촌주택 — ①(일시적 2주택)과 양립하지 않으므로 먼저 본다.
+  if (qualifiesRuralHouse(input)) return "rural_house";
   const twoHouseRule = oneHouseRules?.temporary_two_house;
-  if (!input.isOneHousehold || !input.temporaryTwoHouse || !twoHouseRule) return undefined;
+  if (!input.temporaryTwoHouse || !twoHouseRule) return undefined;
   return evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall
     ? "temporary_two_house"
     : undefined;
@@ -482,6 +572,35 @@ export function checkExemption(
       }
       return { isExempt: false, isPartialExempt: true, exemptReason: `일시적 2주택 고가주택${provisoLabel}` };
     }
+  }
+
+  // E-3.7: §155⑧ 부득이한 사유로 취득한 수도권 밖 주택 + 일반주택 → **일반주택 양도**를 1주택 의제.
+  //   "…각각 1개씩 소유하고 있는 1세대가 …일반주택을 양도하는 경우에는 국내에 1개의 주택을
+  //    소유하고 있는 것으로 보아 제154조제1항을 적용한다."
+  //   ⇒ ① 2주택일 것 ② 해소일부터 3년 이내 양도 ③ §154① 요건 충족(「§154①을 적용」이므로).
+  if (qualifiesUnavoidableOutsideCapital(input)) {
+    const u = input.unavoidableOutsideCapitalHouse!;
+    if (meetsOneHouseHoldingResidence(input, rule)) {
+      const label = `수도권 밖 부득이한 사유 주택`;
+      const basis = ` (§155⑧ ${UNAVOIDABLE_REASON_LABEL[u.reason]})`;
+      const priceCheck =
+        input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+      if (priceCheck <= rule.maxExemptPrice) {
+        return { isExempt: true, isPartialExempt: false, exemptReason: `${label} 비과세${basis}` };
+      }
+      return { isExempt: false, isPartialExempt: true, exemptReason: `${label} 고가주택${basis}` };
+    }
+  }
+
+  // E-3.8: §155⑦ 농어촌주택 + 일반주택 → **일반주택 양도**를 1주택 의제.
+  if (qualifiesRuralHouse(input) && meetsOneHouseHoldingResidence(input, rule)) {
+    const basis = ` (§155⑦${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`;
+    const priceCheck =
+      input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+    if (priceCheck <= rule.maxExemptPrice) {
+      return { isExempt: true, isPartialExempt: false, exemptReason: `농어촌주택 비과세${basis}` };
+    }
+    return { isExempt: false, isPartialExempt: true, exemptReason: `농어촌주택 고가주택${basis}` };
   }
 
   // E-3.5: 합가 비과세 (§155④⑤ 혼인·동거봉양) — 합가일부터 10년 내 "먼저 양도" 주택 1세대1주택 의제.

@@ -176,6 +176,11 @@ export function calcMixedUseTransferTax(
                 isRegulatedArea: asset.multiHouse.isRegulatedArea,
                 isOneHousehold: asset.multiHouse.isOneHousehold,
                 temporaryTwoHouse: asset.temporaryTwoHouse,
+                // 겸용은 §155⑦ 농어촌주택 입력을 받지 않는다(농어촌주택은 겸용주택이 아니다).
+                //   `householdHousingCount`는 §155⑦ 판정의 「각각 1개씩」 게이트 전용이라
+                //   중과 주택 수(`multiHouse.houses`)와 무관하다 — 2를 넣으면 오판정이 된다.
+                householdHousingCount: 0,
+                ruralHouse: undefined,
               },
               oneHouseSpecialRules,
             ),

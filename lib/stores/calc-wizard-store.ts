@@ -104,6 +104,30 @@ export interface TransferFormData {
   newHouseAcquisitionDate: string;
   /** §155⑯ 공공기관·법인 지방이전 — 처분기한 3년→5년 + 1년 요건 면제 (효과 둘) */
   publicInstitutionRelocation: boolean;
+  /** §155⑧ 수도권 밖 부득이 주택 보유 여부 — 양도 대상은 **일반주택**이다 */
+  unavoidableOutsideCapitalSpecial: boolean;
+  /** §155⑧ 부득이한 사유 ("study"|"work"|"illness"|"other") */
+  unavoidableOutsideCapitalReason: string;
+  /** §155⑧ 사유 해소일 (YYYY-MM-DD). "" = 미해소 → 3년 기한 미기산 */
+  unavoidableOutsideCapitalResolvedDate: string;
+  /** §155⑦ 농어촌주택 보유 여부 — 양도 대상은 **일반주택**이다 */
+  ruralHouseSpecial: boolean;
+  /** §155⑦ 유형 ("inherited"|"farm_exit"|"return_to_farm") */
+  ruralHouseKind: string;
+  /** §155⑦ 소재 — 수도권 밖 읍(도시지역 제외)·면 */
+  ruralHouseOutsideCapitalEupMyeon: boolean;
+  /** §155⑦1호 — 피상속인 거주 연수 */
+  ruralHouseDecedentResidenceYears: string;
+  /** §155⑦2호 — 이농인 거주 연수 */
+  ruralHouseOwnerResidenceYears: string;
+  /** §155⑦3호 — 귀농주택 취득일(⑦단서 5년 판정) */
+  ruralHouseAcquisitionDate: string;
+  /** §155⑩2호 — 취득 당시 고가주택 여부 */
+  ruralHouseHighPriceAtAcquisition: boolean;
+  /** §155⑩3호 — 대지면적(㎡) */
+  ruralHouseLandAreaSqm: string;
+  /** §155⑩5호 — 세대전원 이사·거주 */
+  ruralHouseWholeHouseholdMoved: boolean;
   /** §155⑱ 처분기한 예외 사유 — "" = 해당 없음. 「3년이 되는 날 현재」 기준 */
   disposalDelayReason: string;
   // §156의2⑤ 대체주택 비과세 특례 FLAT 필드 (API에서 replacementHouse nested로 조립)
@@ -263,6 +287,18 @@ const defaultFormData: TransferFormData = {
   newHouseAcquisitionDate: "",
   publicInstitutionRelocation: false,
   disposalDelayReason: "",
+  unavoidableOutsideCapitalSpecial: false,
+  unavoidableOutsideCapitalReason: "work",
+  unavoidableOutsideCapitalResolvedDate: "",
+  ruralHouseSpecial: false,
+  ruralHouseKind: "inherited",
+  ruralHouseOutsideCapitalEupMyeon: false,
+  ruralHouseDecedentResidenceYears: "",
+  ruralHouseOwnerResidenceYears: "",
+  ruralHouseAcquisitionDate: "",
+  ruralHouseHighPriceAtAcquisition: false,
+  ruralHouseLandAreaSqm: "",
+  ruralHouseWholeHouseholdMoved: false,
   replacementHouseSpecial: false,
   replBusinessApprovalDate: "",
   replCompletionDate: "",

@@ -47,6 +47,18 @@ import type { CarryoverTaxationInput } from "./transfer-carryover.types";
 export type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
 
 /**
+ * §155⑦ 각 호 — 농어촌주택의 3유형.
+ * 1호 상속(피상속인 취득 후 5년 이상 거주) / 2호 이농(취득 후 5년 이상 거주) / 3호 귀농.
+ */
+export type RuralHouseKind = "inherited" | "farm_exit" | "return_to_farm";
+
+/**
+ * §155⑧·§167의10①3호 공통 — 재정경제부령이 정하는 「부득이한 사유」.
+ * 법문 예시: 취학, 근무상의 형편, 질병의 요양, 그 밖에 부득이한 사유.
+ */
+export type UnavoidableReasonKind = "study" | "work" | "illness" | "other";
+
+/**
  * §155⑱ 각 호 — §155① 처분기한(3년/⑯ 5년)의 예외 사유.
  * 「다른 주택을 취득한 날부터 **3년이 되는 날 현재**」 해당해야 한다(기준시점 주의).
  */
@@ -300,6 +312,45 @@ export interface TransferTaxInput {
   //   중과 엔진이 §155① 기한을 재구현해 비과세 정본과 어긋났다(F-2).
   //   이제 §155① 비과세용 `temporaryTwoHouse`(위) 하나만 받고, 엔진이 정본 판정 결과를
   //   `MultiHouseSurchargeInput.deemedOneHouseBy155`로 넘긴다(영 §167의10①15호).
+  /**
+   * §155⑧ — 부득이한 사유로 취득한 **수도권 밖 소재 주택**을 함께 보유한 상태에서
+   * **일반주택(= 양도 대상)** 을 양도하는 경우 1세대1주택으로 본다.
+   *
+   * 「부득이한 사유가 **해소된 날부터 3년 이내**」 양도 요건이 붙는다.
+   * 🔶 해소 전 양도는 명문이 없다 — 기한이 기산되지 않은 것으로 보아 적용한다
+   * (계획서 W-1 · memory `feedback_no_unfavorable_application_without_legal_basis`).
+   *
+   * 중과 배제는 15호가 아니라 영 §167의10①**4호**가 직접 규정한다.
+   */
+  unavoidableOutsideCapitalHouse?: {
+    reason: UnavoidableReasonKind;
+    /** 부득이한 사유가 해소된 날. 미입력 = 미해소 → 3년 기한 미기산 */
+    resolvedDate?: Date;
+  };
+  /**
+   * §155⑦ — 농어촌주택(수도권 밖 읍·면 소재)과 일반주택을 각각 1개씩 보유한 1세대가
+   * **일반주택(= 양도 대상)** 을 양도하는 경우 1세대1주택으로 본다.
+   *
+   * ⑪(귀농 후 최초 1개 한정)·⑫(3년 영농 사후관리)는 과거·미래 양도 이력이 필요해
+   * **엔진이 판정할 수 없다** → 경고로 노출한다(계획서 G-4).
+   */
+  ruralHouse?: {
+    kind: RuralHouseKind;
+    /** 수도권 밖 + 읍(도시지역 제외)·면 소재 — 자기선언(계획서 W-3) */
+    isOutsideCapitalEupMyeon: boolean;
+    /** 1호 — 피상속인이 취득 후 거주한 연수 (5년 이상) */
+    decedentResidenceYears?: number;
+    /** 2호 — 이농인이 취득일 후 거주한 연수 (5년 이상) */
+    ownerResidenceYears?: number;
+    /** 3호 — 귀농주택 취득일. ⑦ 단서: 취득일부터 5년 이내 일반주택 양도 한정 */
+    acquisitionDate?: Date;
+    /** 3호·⑩2호 — 취득 당시 고가주택(§89①3호)이 아닐 것 */
+    isHighPriceAtAcquisition?: boolean;
+    /** 3호·⑩3호 — 대지면적 660㎡ 이내 */
+    landAreaSqm?: number;
+    /** 3호·⑩5호 — 세대전원 이사·거주 */
+    wholeHouseholdMoved?: boolean;
+  };
   /** 혼인합가 정보 */
   marriageMerge?: {
     marriageDate: Date;

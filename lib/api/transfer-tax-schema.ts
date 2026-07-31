@@ -10,6 +10,8 @@
 import { z } from "zod";
 import {
   temporaryTwoHouseSchema,
+  unavoidableOutsideCapitalHouseSchema,
+  ruralHouseSchema,
   replacementHouseSchema,
   nonBusinessLandRawSchema,
   rentalReductionDetailsSchema,
@@ -167,6 +169,8 @@ const propertyBaseShape = {
   isSuccessorRightToMoveIn: z.boolean().optional(),
   isOneHousehold: z.boolean(),
   temporaryTwoHouse: temporaryTwoHouseSchema.optional(),
+  unavoidableOutsideCapitalHouse: unavoidableOutsideCapitalHouseSchema.optional(),
+  ruralHouse: ruralHouseSchema.optional(),
   // ⑨⑩⑫ §156의2⑤ 대체주택 비과세 특례
   replacementHouse: replacementHouseSchema.optional(),
   reductions: z.array(reductionSchema).default([]),

@@ -16,6 +16,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
 import { HousesListSection } from "./step4-sections/HousesListSection";
@@ -554,6 +555,149 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 </div>
               </ToneCard>
             )}
+
+            {/* §155⑧ 수도권 밖 부득이 주택 — 양도 대상은 **일반주택**이다(특례 주택은 보유만) */}
+            <p className="text-sm font-medium mt-1">수도권 밖 부득이한 사유 주택 특례</p>
+            <ToggleCard
+              checked={form.unavoidableOutsideCapitalSpecial}
+              onCheckedChange={(v) =>
+                onChange({
+                  unavoidableOutsideCapitalSpecial: v,
+                  unavoidableOutsideCapitalResolvedDate: v
+                    ? form.unavoidableOutsideCapitalResolvedDate
+                    : "",
+                })
+              }
+              title="수도권 밖 부득이한 사유 주택 보유 (§155⑧)"
+              description="취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 수도권 밖 주택을 함께 보유한 상태에서, 지금 양도하는 일반주택을 1세대1주택으로 봅니다"
+              tone="sky"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">부득이한 사유</label>
+                  <RadioCardGroup
+                    name="unavoidableOutsideCapitalReason"
+                    value={form.unavoidableOutsideCapitalReason}
+                    onChange={(v) => onChange({ unavoidableOutsideCapitalReason: v })}
+                    options={[
+                      { value: "study", label: "취학" },
+                      { value: "work", label: "근무상 형편" },
+                      { value: "illness", label: "질병 요양" },
+                      { value: "other", label: "그 밖의 부득이한 사유" },
+                    ]}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">사유 해소일</label>
+                  <DateInput
+                    value={form.unavoidableOutsideCapitalResolvedDate}
+                    onChange={(v) => onChange({ unavoidableOutsideCapitalResolvedDate: v })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    해소일부터 <strong>3년 이내</strong>에 일반주택을 양도해야 합니다.
+                    아직 해소되지 않았다면 비워 두세요 — 기한이 기산되지 않습니다.
+                  </p>
+                </div>
+              </div>
+            </ToggleCard>
+
+            {/* §155⑦ 농어촌주택 — 양도 대상은 **일반주택**이다(농어촌주택은 보유만) */}
+            <p className="text-sm font-medium mt-1">농어촌주택 특례</p>
+            <ToggleCard
+              checked={form.ruralHouseSpecial}
+              onCheckedChange={(v) => onChange({ ruralHouseSpecial: v })}
+              title="농어촌주택 보유 (§155⑦)"
+              description="수도권 밖 읍·면 소재 농어촌주택(상속·이농·귀농)을 함께 보유한 상태에서, 지금 양도하는 일반주택을 1세대1주택으로 봅니다"
+              tone="emerald"
+            >
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">농어촌주택 유형</label>
+                  <RadioCardGroup
+                    name="ruralHouseKind"
+                    value={form.ruralHouseKind}
+                    onChange={(v) => onChange({ ruralHouseKind: v })}
+                    options={[
+                      { value: "inherited", label: "1호 상속", description: "피상속인이 취득 후 5년 이상 거주" },
+                      { value: "farm_exit", label: "2호 이농", description: "이농인이 취득일 후 5년 이상 거주" },
+                      { value: "return_to_farm", label: "3호 귀농", description: "영농·영어 목적 취득 — 취득일부터 5년 이내 일반주택 양도 한정" },
+                    ]}
+                  />
+                </div>
+
+                <ToggleCard
+                  checked={form.ruralHouseOutsideCapitalEupMyeon}
+                  onCheckedChange={(v) => onChange({ ruralHouseOutsideCapitalEupMyeon: v })}
+                  title="수도권 밖 읍·면 소재"
+                  description="읍지역은 도시지역 안의 지역을 제외합니다 — 유형과 무관한 공통 요건입니다"
+                  tone="emerald"
+                />
+
+                {form.ruralHouseKind === "inherited" && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">피상속인 거주 연수</label>
+                    <DecimalInput
+                      value={form.ruralHouseDecedentResidenceYears}
+                      onChange={(v) => onChange({ ruralHouseDecedentResidenceYears: v })}
+                      unit="년"
+                    />
+                    <p className="text-xs text-muted-foreground">취득 후 5년 이상이어야 합니다.</p>
+                  </div>
+                )}
+
+                {form.ruralHouseKind === "farm_exit" && (
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">이농인 거주 연수</label>
+                    <DecimalInput
+                      value={form.ruralHouseOwnerResidenceYears}
+                      onChange={(v) => onChange({ ruralHouseOwnerResidenceYears: v })}
+                      unit="년"
+                    />
+                    <p className="text-xs text-muted-foreground">취득일 후 5년 이상이어야 합니다.</p>
+                  </div>
+                )}
+
+                {form.ruralHouseKind === "return_to_farm" && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">귀농주택 취득일</label>
+                        <DateInput
+                          value={form.ruralHouseAcquisitionDate}
+                          onChange={(v) => onChange({ ruralHouseAcquisitionDate: v })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          취득일부터 5년 이내에 일반주택을 양도해야 합니다 (§155⑦ 단서).
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">대지면적</label>
+                        <DecimalInput
+                          value={form.ruralHouseLandAreaSqm}
+                          onChange={(v) => onChange({ ruralHouseLandAreaSqm: v })}
+                          unit="㎡"
+                        />
+                        <p className="text-xs text-muted-foreground">660㎡ 이내여야 합니다 (§155⑩3호).</p>
+                      </div>
+                    </div>
+                    <ToggleCard
+                      checked={form.ruralHouseWholeHouseholdMoved}
+                      onCheckedChange={(v) => onChange({ ruralHouseWholeHouseholdMoved: v })}
+                      title="세대전원 이사·거주 (§155⑩5호)"
+                      description="취학·근무·질병 등으로 세대원 일부가 이사하지 못한 경우도 포함합니다"
+                      tone="emerald"
+                    />
+                    <ToggleCard
+                      checked={form.ruralHouseHighPriceAtAcquisition}
+                      onCheckedChange={(v) => onChange({ ruralHouseHighPriceAtAcquisition: v })}
+                      title="취득 당시 고가주택에 해당 (§155⑩2호)"
+                      description="해당하면 귀농주택 요건을 충족하지 못합니다"
+                      tone="amber"
+                    />
+                  </div>
+                )}
+              </div>
+            </ToggleCard>
 
             {/* §154① 단서 — 일시적 2주택(temporary_two_house) 맥락: 종전주택 §155①→§154①1·2가·3호 준용 (판정 카드 아래 배치) */}
             {proviso.visible && proviso.mode === "temporary_two_house" && (
