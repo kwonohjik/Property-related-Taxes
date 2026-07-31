@@ -115,8 +115,10 @@ export function applyUsagePeriodSplit(
   periodInfo: UsagePeriodInfo,
   direction: "house_to_commercial" | "commercial_to_house",
   housingAcqResult: HousingEstimatedAcqResult,
-  /** §95② 미등기양도자산 장기보유특별공제 배제. */
+  /** §95② 미등기양도자산 장기보유특별공제 배제 (자산 전체). */
   isUnregistered = false,
+  /** §95② §104⑦ 각 호 자산 배제 — **주택분 전용**(상가 P1·P2에는 미적용). */
+  surchargeLthdExcluded = false,
 ): {
   housingPart: MixedUseHousingPart;
   commercialPart: MixedUseCommercialPart;
@@ -200,15 +202,16 @@ export function applyUsagePeriodSplit(
   const longTermDeductionTable: 1 | 2 = useTable2 ? 2 : 1;
 
   // P1 housing LTHD: t1 보유기간 (h_to_c일 때만 housing P1 존재)
+  const housingLthdExcluded = isUnregistered || surchargeLthdExcluded;
   const p1HousingRate = isHtoC
-    ? calcLongTermRate(t1HoldingYears, residenceYears, useTable2, isUnregistered)
+    ? calcLongTermRate(t1HoldingYears, residenceYears, useTable2, housingLthdExcluded)
     : 0;
   const p1HousingLTHD =
     applyRate(p1HousingLandProrated, p1HousingRate) +
     applyRate(p1HousingBuildingProrated, p1HousingRate);
 
   // P2 housing LTHD: t2 보유기간
-  const p2HousingRate = calcLongTermRate(t2HoldingYears, residenceYears, useTable2, isUnregistered);
+  const p2HousingRate = calcLongTermRate(t2HoldingYears, residenceYears, useTable2, housingLthdExcluded);
   const p2HousingLTHD =
     applyRate(p2HousingLandProrated, p2HousingRate) +
     applyRate(p2HousingBuildingProrated, p2HousingRate);
