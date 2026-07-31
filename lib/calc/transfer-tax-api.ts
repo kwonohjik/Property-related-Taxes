@@ -356,7 +356,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 isRegulatedArea boolean fallback.
     regionCode: primary.regionCode || form.regionCode || undefined,
     isUnregistered: form.isUnregistered,
-    isNonBusinessLand: primary.isNonBusinessLand ?? false,
+    // 「비사업용 **토지**」는 「소득세법」 제104조의3이 **토지**에만 규정한 개념이다.
+    // 토글은 `assetKind === "land"`에서만 렌더되는데(Step4.tsx) 종류를 바꿔도 폼 값은 남으므로,
+    // 여기서 막지 않으면 **화면에 없는 값이** §104①8호 +10%p 중과를 붙인다(과대과세).
+    // 폼 값 자체는 보존한다 — 토지로 되돌리면 그대로 복귀.
+    isNonBusinessLand: primary.assetKind === "land" ? (primary.isNonBusinessLand ?? false) : false,
     isSuccessorRightToMoveIn:
       primary.assetKind === "right_to_move_in"
         ? primary.isSuccessorRightToMoveIn
