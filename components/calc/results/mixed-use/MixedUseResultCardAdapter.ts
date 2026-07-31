@@ -1,0 +1,101 @@
+/**
+ * 겸용주택 결과 카드 — **어댑터·표시 파생 헬퍼**.
+ *
+ * `MixedUseResultCard.tsx`에서 분리(800줄 정책). 순수 함수만 두며 JSX는 없다.
+ * `mixedUseToFilingResult`는 신고서·명세서 컴포넌트가 기대하는 `TransferTaxResult` 형상으로
+ * 겸용 결과를 변환한다.
+ */
+
+import type {
+  MixedUseGainBreakdown,
+  MixedUseTotalTax,
+} from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+
+/** MixedUseGainBreakdown → TransferTaxResult 어댑터 (FilingFormTable 호환) */
+export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
+  const t = b.total;
+  const localTax = t.localTax;
+  // 취득 모드 판별 — 본문 계산 섹션(isDeemedAcq)과 동일 기준. 실가(§100²·§97①1호가목)·상속/증여
+  // 의제(§163⑨)는 실제 취득가액을 표시(개산공제 미표시), 환산·감정/매매사례(§176의2 추계)는 추계 분기.
+  const acqRoute = b.calculationRoute.acquisitionConversionRoute;
+  const isDeemedOrActual =
+    acqRoute === "section97_actual" ||
+    acqRoute === "inheritance_direct" ||
+    acqRoute === "inheritance_phd_max" ||
+    acqRoute === "gift_direct" ||
+    acqRoute === "gift_phd_max";
+  // 취득가액 = 주택분 + 상가분 (해당 모드 값이 estimatedAcquisitionPrice에 담김).
+  const acqPrice = b.housingPart.estimatedAcquisitionPrice + b.commercialPart.estimatedAcquisitionPrice;
+  // 필요경비 = 개산공제 합계(환산·감정/매매사례) 또는 실제 필요경비(의제) — appraisalDed 필드가 담음. 실가는 0.
+  // 상세명세서 실가 분기(취득가액 = 양도가액 − 양도차익 − expenses)가 acqPrice를 정확히 역산하도록 전달.
+  const acqDeduction =
+    b.housingPart.landAppraisalDed +
+    b.housingPart.buildingAppraisalDed +
+    b.commercialPart.landAppraisalDed +
+    b.commercialPart.buildingAppraisalDed;
+  return {
+    isExempt: false,
+    transferGain: b.housingPart.transferGain + b.commercialPart.transferGain,
+    taxableGain: b.housingPart.proratedTaxableGain + b.commercialPart.transferGain,
+    usedEstimatedAcquisition: !isDeemedOrActual,
+    // 환산·추계 분기: 취득가액(추계)·개산공제를 실제 값으로 표시. 실가/의제는 undefined(실가 역산 분기 사용).
+    estimatedBase: isDeemedOrActual ? undefined : acqPrice,
+    estimatedDeduction: isDeemedOrActual ? undefined : acqDeduction,
+    expenses: acqDeduction,
+    longTermHoldingDeduction: b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount,
+    // 겸용은 주택분(표2 가능)·상가분(표1)이 서로 다른 공제율이라 단일 rate가 없음 —
+    // 상단 요약 산식용 실효 blended rate = 장특공제 합계 ÷ 과세대상 양도차익 합계.
+    longTermHoldingRate:
+      b.housingPart.proratedTaxableGain + b.commercialPart.transferGain > 0
+        ? (b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount) /
+          (b.housingPart.proratedTaxableGain + b.commercialPart.transferGain)
+        : 0,
+    lthdStartDate: new Date(0), // mixed-use 합산 mock: 표시용
+    basicDeduction: t.basicDeduction,
+    taxBase: t.taxBase,
+    appliedRate: t.appliedRate,
+    progressiveDeduction: t.progressiveDeduction,
+    calculatedTax: adoptedCalculatedTax(t),
+    isSurchargeSuspended: false,
+    reductionAmount: 0,
+    determinedTax: t.transferTax,
+    penaltyBase: 0, // 겸용주택 어댑터: 가산세 미적용 경로 (MixedUseGainBreakdown에 penaltyBase 없음)
+    penaltyTax: 0,
+    localIncomeTax: localTax,
+    totalTax: t.totalPayable,
+    // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)로 CalculationStep[]과
+    // 형태가 달라 재사용 불가. 명세서 카드는 mixedUseDetail·result 필드로 값을 뽑고
+    // formula는 fallback을 쓰므로 빈 배열로 전달 (findStepByLabel 매칭 자연 실패).
+    steps: [],
+    mixedUseDetail: b,
+  };
+}
+
+/**
+ * 실제 채택된 **산출세액**(비사업용 가산 제외분).
+ *
+ * §104⑤2호(자산별 산출세액 합)가 채택되면 `taxByBasicRate`(1호)는 **채택되지 않은 값**이다.
+ * 그걸 그대로 표시하면 「산출세액 < 지방소득세×10」 같은 불일치가 난다.
+ * 결과 카드·신고서 어댑터가 **같은 식**을 쓰도록 단일 소스로 둔다
+ * (memory `feedback_engine_result_display_drift`).
+ *
+ * `rateBasis` 미주입(구 캐시 결과)이면 종전 동작(1호)으로 fallback.
+ */
+export function adoptedCalculatedTax(t: MixedUseTotalTax): number {
+  return t.rateBasis === "clause2" ? t.transferTax - t.nonBusinessSurcharge : t.taxByBasicRate;
+}
+
+/** 양도소득세 기본세율 8구간 (소득세법 §104) — 캐시된 결과 fallback용 */
+export function deriveBasicRateBracket(taxBase: number): { rate: number; deduction: number } {
+  if (taxBase <= 14_000_000) return { rate: 0.06, deduction: 0 };
+  if (taxBase <= 50_000_000) return { rate: 0.15, deduction: 1_260_000 };
+  if (taxBase <= 88_000_000) return { rate: 0.24, deduction: 5_760_000 };
+  if (taxBase <= 150_000_000) return { rate: 0.35, deduction: 15_440_000 };
+  if (taxBase <= 300_000_000) return { rate: 0.38, deduction: 19_940_000 };
+  if (taxBase <= 500_000_000) return { rate: 0.40, deduction: 25_940_000 };
+  if (taxBase <= 1_000_000_000) return { rate: 0.42, deduction: 35_940_000 };
+  return { rate: 0.45, deduction: 65_940_000 };
+}
+
+/** 계산 섹션 id — ④ 비사업용토지는 조건부 렌더 */
