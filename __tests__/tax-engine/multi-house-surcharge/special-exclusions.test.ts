@@ -481,7 +481,14 @@ describe("MH-20: ④⑤⑥⑨ 특수용도 주택 → 3주택+ 중과배제", ()
     expect(result.exclusionReasons[0].type).toBe("daycare_center_5years");
   });
 
-  it("④⑤⑥⑨ 모두 2주택에서는 미적용 → 중과 적용", () => {
+  // 2026-07-31 정정(계획서 F-7 / D-2) — **종전 기대값이 틀렸다.**
+  //   이 테스트는 「2주택에서는 미적용 → 중과 적용」을 고정하고 있었으나, 「소득세법 시행령」
+  //   §167의10①**2호**가 「제167조의3제1항제2호부터 제8호까지 및 제8호의2 중 어느 하나에
+  //   해당하는 주택」을 **준용**한다(MST 286211 · 시행 2026-07-01 법제처 실측).
+  //   ④사원용(4호)·⑤조특특례(5호)·⑥국가유산(6호)·⑨어린이집(8호의2)은 전부 준용 범위 안이다.
+  //   종전 동작은 3주택이면 배제되고 2주택이면 중과되는 역전이었고 과다과세 방향이었다.
+  //   근거 없이 불리하게 적용하지 않는다(memory `feedback_no_unfavorable_application_without_legal_basis`).
+  it("④⑤⑥⑨ 2주택에서도 배제 — §167의10①2호 준용", () => {
     const h1 = makeHouse("h1", {
       regionCode: "11680",
       isEmployeeHousing: true,
@@ -506,9 +513,10 @@ describe("MH-20: ④⑤⑥⑨ 특수용도 주택 → 3주택+ 중과배제", ()
       true,
     );
 
-    // 2주택 → 3주택+ 전용 배제 미적용
-    expect(result.surchargeApplicable).toBe(true);
-    expect(result.surchargeType).toBe("multi_house_2");
+    // 2주택도 §167의10①2호 준용으로 배제된다. 우선순위상 ④사원용(4호)이 먼저 걸린다.
+    expect(result.surchargeApplicable).toBe(false);
+    expect(result.surchargeType).toBe("none");
+    expect(result.exclusionReasons[0].type).toBe("employee_housing_10years");
   });
 });
 

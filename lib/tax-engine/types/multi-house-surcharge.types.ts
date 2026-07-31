@@ -362,6 +362,7 @@ export interface ExcludedHouse {
   houseId: string;
   reason:
     | "inherited_5years"
+    | "co_inherited_minor_share"      // §167의3②2호 공동상속 소수지분 (기간 제한 없음)
     | "long_term_rental"              // 장기임대 (boolean 또는 유형 검증 통과)
     | "low_price_non_capital"         // legacy: regionCriteria 미제공 + non_capital
     | "low_price_local_300"           // VALUE 지역 양도 공시가 3억 이하

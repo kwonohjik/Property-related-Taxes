@@ -1,4 +1,4 @@
-# 다주택 중과 — 영 §167의10①15호(§155 의제) 커버리지 + 일시적 2주택 배관 — v1.3
+# 다주택 중과 — 영 §167의10①15호(§155 의제) 커버리지 + 일시적 2주택 배관 — v1.4
 
 > 선행 계획서 [`transfer-mixed-use-residence-surcharge.plan.md`](./transfer-mixed-use-residence-surcharge.plan.md) §11 **U-7**에서
 > 파생. 조사 결과 「배관 한 줄 누락」이 아니라 **설계 이슈**로 확인되어 별도 문서로 분리한다.
@@ -498,13 +498,31 @@ probe 실측(양도 h1 일반 + h2 공동상속, 상속 10년 경과 · 조정):
 
 ### 9.6 Phase D 후보 — 우선순위
 
-| # | 항목 | 방향 | 규모 |
+| # | 항목 | 조치 | 상태 |
 |---|---|---|---|
-| D-1 | **F-6** 유예 공백 | seed에 2023-01-01 유예 레코드 추가(또는 메인 레코드 특례 명시) | 작음 · 영향 큼 |
-| D-2 | **F-7** 2주택 준용 5종 | `>= 3` 게이트를 §167의10①2호 준용에 맞게 분리 | 중간 |
-| D-3 | **F-8** 공동상속 | 중과 `countEffectiveHouses`에 §167의3②2호 반영 | 중간 |
-| D-4 | mock `lowPriceThreshold` 현행화 | 회귀 다수 예상 — 별건 | 중간 |
-| D-5 | §155⑦⑧⑯·⑱(F-5) 미구현 | 신규 기능 — 별도 계획서 | 큼 |
+| D-1 | **F-6** 유예 공백 | 메인 seed `surcharge:_default`(2023-01-01)에 유예 `special_rules` 부여 — 종료일은 `SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end` 단일 출처 | ✅ 2026-07-31 |
+| D-2 | **F-7** 2주택 준용 5종 | 배제 블록 게이트 `>= 3` → `>= 2` (§167의10①2호 준용). 소형신축은 §167의10①12호 근거로 동일 게이트 | ✅ 2026-07-31 |
+| D-3 | **F-8** 공동상속 | `countEffectiveHouses`에 배제 1.5 신설 — 소수지분 미산입(기간 제한 없음, §167의3②2호) | ✅ 2026-07-31 |
+| D-4 | mock ↔ seed 현행화 | `lowPriceThreshold.non_capital` 1억→3억 · `regulatedAreaDeadlineYears` 1→2 + **parity 게이트 테스트 신설** | ✅ 2026-07-31 |
+| D-5 | §155⑦⑧⑯·⑱ 미구현 | 신규 기능 — §11 참조 | 진행 중 |
+
+### D-1~D-4 구현 결과
+
+| 파일 | 변경 |
+|---|---|
+| `data/transfer-rate-seed.ts` | `surcharge:_default.special_rules` — null → 유예 규칙(F-6) |
+| `multi-house-surcharge-exclusion.ts` | 준용 배제 블록 게이트 `>= 3` → `>= 2`(F-7) |
+| `multi-house-surcharge-count.ts` | 배제 1.5 공동상속 소수지분 미산입(F-8) |
+| `types/multi-house-surcharge.types.ts` | `ExcludedHouse.reason`에 `co_inherited_minor_share` |
+| `legal-codes/transfer.ts` | `MULTI_HOUSE.CO_INHERITED_COUNT_BASIS` |
+| `_helpers/mock-rates.ts` | seed 값으로 현행화(2건) |
+
+**anchor 신설 31건** — `surcharge-suspension-window-seed`(11) · `two-house-167-10-1-2-referral`(14) ·
+`co-inherited-count-167-3-2-2`(6) + `_helpers/mock-seed-parity`(2). 전체 회귀 **12,748 통과 · 0 실패**.
+
+> **기존 테스트 1건이 결함을 고정하고 있었다** — `special-exclusions.test.ts`의
+> 「④⑤⑥⑨ 모두 2주택에서는 미적용 → 중과 적용」. §167의10①2호 준용 법문으로 기대값을 뒤집었다.
+> 「3주택이면 배제, 2주택이면 중과」는 법문 어디에도 근거가 없다.
 
 > ⚠️ D-2·D-3은 **배제를 넓히는**(감세) 방향, D-1도 마찬가지다. 반대로 Phase B의 15호 ② 요소는
 > 좁히는 방향이었다. 세액이 움직이는 분기이므로 D 착수 시 before→after 실측을 anchor로 양방향 고정한다.
@@ -515,6 +533,7 @@ probe 실측(양도 h1 일반 + h2 공동상속, 상속 10년 경과 · 조정):
 
 | 버전 | 일자 | 내용 |
 |---|---|---|
+| v1.4 | 2026-07-31 | **D-1~D-4 구현 완료.** F-6 유예 공백 메움(seed 레코드) · F-7 게이트 `>=3`→`>=2`(§167의10①2호 준용) · F-8 공동상속 소수지분 미산입(§167의3②2호) · mock↔seed 현행화 + parity 게이트. anchor 31건 신설, 회귀 0. **기존 테스트 1건이 결함을 고정하고 있어 법문 근거로 기대값 정정** |
 | v1.3 | 2026-07-31 | **Phase C 감사 완료(조사만)** — §9 신설. **F-6 신설 🔴**(중과 한시배제가 2023-01-01~2024-01-09 양도분에 미적용, seed effective_date 겹침. 실측 +388,410,000 과다과세. DB·fallback 양쪽) · **F-7 신설 🔴**(2주택에서 §167의10①2호 준용 5종 전부 미적용 — 3주택보다 불리한 역전) · **F-8 신설 🟠**(공동상속 소수지분이 중과 주택수에 산입, §167의3②2호 준용 누락). F-4 6칸 종결(⑳ ✅커버 · ⑦⑧⑯ 미구현 확정). V-2 전수 대조 — 불일치 6종 중 2종 무해(dead config)·1종 해소·3종 잔존 |
 | v1.2 | 2026-07-31 | **Phase A·B1·B2 구현 완료.** anchor `temporary-two-house-surcharge.anchor.test.ts` 14건 + 겸용 3건 신설, 기존 4곳(MH-05·MH-06·T-24) 신 입력으로 갱신. 전체 회귀 0. §4에 구현 결과·before→after 실측표 추가. **배관에 신규 UI/API 필드 불필요**(§155① 비과세 입력 재사용)가 확인됨 — B2만 route ⑭ 1줄 |
 | v1.1 | 2026-07-31 | **자가 검토 6+3건 정정** — ① §3.2 `checkExemption` 파일 혼동 ② F-1 첫 행이 프로덕션 미발생 상태임을 명시(격리 측정) ③ N1 fixture를 실측값(新 2025-01-01)에 맞춤 ④ **N6·T-B5 정정** — 「유예 우선」이 아니라 **배제가 먼저 early-return**하며 `surchargeType:"none"`·`isSuspended:false`를 반환(`multi-house-surcharge.ts:301-313`) ⑤ N7 현행은 「우연히 정답」임을 명시 ⑥ §1.4 ⑯ 항번호가 역산임을 각주 ⑦ **F-5 신설**(§155⑱ 3년 기한 예외 전 저장소 미구현) ⑧ **S-5 정정** — 겸용은 자동 파급되지 않음 → Phase **B2 신설** ⑨ V-7 |
