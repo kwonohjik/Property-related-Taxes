@@ -575,6 +575,13 @@ export function buildCommercialPart(
     estimatedAcquisitionPrice: gainSplit.estimatedAcqPrice,
     inheritedAcquisitionDetail: gainSplit.inheritedAcquisitionDetail,
     transferGain: gainSplit.totalGain,
+    // 파트별 양도소득금액 — §104①2·3호 단기세율은 토지·건물 각각의 보유기간으로 갈린다.
+    // 장특이 이미 파트별(landDedRate·buildingDedRate)이므로 같은 축으로 노출한다(재도출 금지).
+    landIncomeAmount: Math.max(0, gainSplit.landGain - applyRate(Math.max(gainSplit.landGain, 0), landDedRate)),
+    buildingIncomeAmount: Math.max(
+      0,
+      gainSplit.buildingGain - applyRate(Math.max(gainSplit.buildingGain, 0), buildingDedRate),
+    ),
     landTransferGain: gainSplit.landGain,
     buildingTransferGain: gainSplit.buildingGain,
     landTransferPrice: gainSplit.landTransferPrice,

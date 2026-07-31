@@ -360,6 +360,13 @@ export interface MixedUseCommercialPart {
   estimatedAcquisitionPrice: number;
   /** 상가부분 양도차익 합계 */
   transferGain: number;
+  /**
+   * 파트별 양도소득금액 — 「소득세법」 제104조 제1항 제2·3호 단기세율은 토지·건물 **각각의**
+   * 보유기간으로 갈린다. 장특이 이미 파트별(`buildCommercialPart`의 landDedRate·buildingDedRate)
+   * 이므로 같은 축으로 노출한다(재도출 금지).
+   */
+  landIncomeAmount?: number;
+  buildingIncomeAmount?: number;
   /** 토지분 양도차익 */
   landTransferGain: number;
   /** 건물분 양도차익 */

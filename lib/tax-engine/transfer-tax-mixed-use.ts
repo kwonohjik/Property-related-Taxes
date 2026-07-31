@@ -10,6 +10,7 @@
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calculateHoldingPeriod } from "./tax-utils";
+import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
 import { computeAmendment } from "./transfer-tax-amendment";
 import type { AmendmentInput } from "./types/transfer-amendment.types";
 import { MIXED_USE } from "./legal-codes/transfer";
@@ -225,12 +226,46 @@ export function calcMixedUseTransferTax(
   }
 
   // STEP 9: 합산 세액
+  // §104①2·3호 단기세율 판정용 파트 — 주택분(주택+부수토지 **일체**, §104①2호 괄호) 1개 +
+  // 상가 토지·건물 각 1개. 상가는 §94①1호상 토지·건물이 별개 자산이라 보유기간이 따로 간다.
+  //
+  // 주택분 기산은 **토지·건물 중 늦은 취득**(= 짧은 보유)이다 — 부수토지를 나중에 취득하면
+  // 그 시점부터가 「주택과 그 부수토지」의 보유기간이다(선행 계획서 G-3 `max(취득일)` 규칙과 동일).
+  const commercialLandIncome = commercialPart.landIncomeAmount;
+  const commercialBuildingIncome = commercialPart.buildingIncomeAmount;
+  const rateParts: MixedUseRatePart[] | undefined =
+    commercialLandIncome !== undefined &&
+    commercialBuildingIncome !== undefined &&
+    // 불변식 — 파트 합이 자산 소득금액과 어긋나면(음수 차익 clamp 등) 진입하지 않는다.
+    commercialLandIncome + commercialBuildingIncome === commercialPart.incomeAmount
+      ? [
+          {
+            kind: "housing" as const,
+            income: housingPart.incomeAmount,
+            holdingYears: Math.min(
+              housingGainSplit.landHoldingYears,
+              housingGainSplit.buildingHoldingYears,
+            ),
+          },
+          {
+            kind: "commercial_land" as const,
+            income: commercialLandIncome,
+            holdingYears: commercialGainSplit.landHoldingYears,
+          },
+          {
+            kind: "commercial_building" as const,
+            income: commercialBuildingIncome,
+            holdingYears: commercialGainSplit.buildingHoldingYears,
+          },
+        ]
+      : undefined;
   const total = buildTotalTax(
     housingPart.incomeAmount,
     commercialPart.incomeAmount,
     nonBusinessLandPart?.incomeAmount ?? 0,
     brackets,
     basicDeductionRules.annualLimit,
+    rateParts,
   );
   steps.push(buildTotalStep(total));
 
