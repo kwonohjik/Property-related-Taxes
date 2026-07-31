@@ -9,6 +9,7 @@
 
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
+import { calculateHoldingPeriod } from "./tax-utils";
 import { computeAmendment } from "./transfer-tax-amendment";
 import type { AmendmentInput } from "./types/transfer-amendment.types";
 import { MIXED_USE } from "./legal-codes/transfer";
@@ -76,7 +77,34 @@ export function calcMixedUseTransferTax(
   const steps: MixedUseStep[] = [];
 
   // 누진세율 brackets + 기본공제 한도 (DB 세율)
-  const { brackets, basicDeductionRules } = parseRatesFromMap(rates);
+  const { brackets, basicDeductionRules, oneHouseSpecialRules } = parseRatesFromMap(rates);
+
+  // ── 영 §154① 본문 — 1세대1주택 비과세 **보유 2년** 요건 ─────────────────────────
+  // 「소득세법」 제89조 제1항 제3호 가목이 위임한 같은 법 시행령 제154조 제1항 본문:
+  //   "…해당 주택의 **보유기간이 2년 이상**인 것"
+  //
+  // 종전에는 호출부가 넘긴 `isOneHouseExempt`를 그대로 신뢰해, 「1세대 해당」 토글만 켜면
+  // **보유 1일이어도 12억 비과세**가 적용됐다(과소과세). 일반 단건 엔진은 정본
+  // `meetsOneHouseHoldingResidence`(transfer-tax-exemption.ts)로 이미 판정하고 있었다 —
+  // 겸용만 그 규칙을 쓰지 않던 내부 불일치다.
+  //
+  // 기산일은 **건물 취득일**이다. §154①의 보유기간은 「해당 **주택**」의 보유기간이고,
+  // 겸용 건물의 주택 부분 취득일이 곧 건물 취득일이기 때문이다.
+  //
+  // ⚠️ 범위 — **보유요건만** 판정한다. 조정대상지역 취득 시의 **거주 2년**(같은 항 본문 후단)과
+  //    **단서 각호 면제**(수용·해외이주 등)는 겸용 입력에 조정지역 여부·면제사유가 없어
+  //    판정할 수 없다. 둘 다 과소과세 방향의 잔여 갭이다(계획서 P3c).
+  const exemptionHolding = calculateHoldingPeriod(asset.buildingAcquisitionDate, transferDate);
+  const meetsExemptionHolding =
+    exemptionHolding.years >= oneHouseSpecialRules.one_house_exemption.minHoldingYears;
+  const isOneHouseExempt = (asset.isOneHouseExempt ?? true) && meetsExemptionHolding;
+  if ((asset.isOneHouseExempt ?? true) && !meetsExemptionHolding) {
+    warnings.push(
+      `건물 보유기간 ${exemptionHolding.years}년 ${exemptionHolding.months}개월 — ` +
+        `1세대1주택 비과세 보유요건(${oneHouseSpecialRules.one_house_exemption.minHoldingYears}년, ` +
+        `소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.`,
+    );
+  }
 
   // 파생값 (면적 비율)
   const derived = computeDerivedAreas(asset);
@@ -162,7 +190,7 @@ export function calcMixedUseTransferTax(
       excessResult,
       asset.residencePeriodYears,
       table2ResidenceYears,
-      asset.isOneHouseExempt ?? true,
+      isOneHouseExempt,
       periodInfo,
       asset.partialUsageChange.direction,
       housingAcqResult,
@@ -178,7 +206,7 @@ export function calcMixedUseTransferTax(
       excessResult,
       asset.residencePeriodYears,
       table2ResidenceYears,
-      asset.isOneHouseExempt ?? true,  // 미주입 시 true (기존 backward compat)
+      isOneHouseExempt,
     );
     commercialPart = buildCommercialPart(commercialGainSplit);
   }
@@ -214,6 +242,7 @@ export function calcMixedUseTransferTax(
     excessResult,
     commercialPart,
     table2ResidenceYears,
+    isOneHouseExempt,
   );
 
   // 보유 중 일부 용도변경 메타 (결과 카드 표시용)
@@ -284,6 +313,8 @@ function buildCalculationRoute(
   commercialPart: ReturnType<typeof buildCommercialPart>,
   // 표2 게이트에 실제로 쓴 통산 거주 연수 — 재계산 없이 주입받아 표시-계산 drift 차단.
   table2ResidenceYears: number,
+  /** §154① 보유요건까지 반영한 최종 비과세 적용 여부 — 오케스트레이터 1회 판정값. */
+  isOneHouseExempt: boolean,
 ): MixedUseCalculationRoute {
   const acqHousing = asset.acquisitionStandardPrice.housingPrice;
   const housingAcqPriceSource =
@@ -321,8 +352,9 @@ function buildCalculationRoute(
   const metroLabel = asset.isMetropolitanArea === false ? "수도권 외" : "수도권";
   const landMultiplierReason = `${metroLabel} ${zoneLabel} → ${excessResult.multiplier}배 (시행령 §168의12)`;
 
-  // 🚨 Critical: 다주택자(isOneHouseExempt === false) → non_one_house_full_taxation
-  const isOneHouseExempt = asset.isOneHouseExempt ?? true;
+  // 🚨 Critical: 다주택자·§154① 보유요건 미충족(isOneHouseExempt === false)
+  //    → non_one_house_full_taxation. 판정은 오케스트레이터가 1회 수행해 주입받는다
+  //    (재도출 시 표시-계산 drift — memory `feedback_engine_result_display_drift`).
   const highValueRule = !isOneHouseExempt
     ? ("non_one_house_full_taxation" as const)
     : housingPart.isExempt
