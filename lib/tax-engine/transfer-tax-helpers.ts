@@ -181,6 +181,7 @@ export {
   checkExemption,
   meetsOneHouseHoldingResidence,
   resolveDeemedOneHouseBy155,
+  qualifiesUnavoidableOutsideCapital,
   resolveExemptionProviso,
   resolveWasRegulatedAtAcquisition,
   resolveExemptionResidenceMonths,

@@ -246,13 +246,20 @@ export function determineSurchargeExclusion(
   //   ②는 배제 2(혼인)와 같은 게이트. 미제공(?? true)은 충족 간주(직접 호출 하위호환).
   if (
     effectiveHouseCount === 2 &&
-    input.deemedOneHouseBy155 === "temporary_two_house" &&
+    input.deemedOneHouseBy155 &&
     (input.sellingHouseMeetsOneHouseRequirements ?? true)
   ) {
-    exclusionReasons.push({
-      type: "temporary_two_house",
-      detail: `일시적 2주택 1세대1주택 의제 — 종전주택 처분기한 이내 (${MULTI_HOUSE.TEMP_TWO_HOUSE_2HOUSE_BASIS})`,
-    });
+    exclusionReasons.push(
+      input.deemedOneHouseBy155 === "rural_house"
+        ? {
+            type: "rural_house",
+            detail: `농어촌주택 보유 1세대1주택 의제 (${MULTI_HOUSE.RURAL_HOUSE_2HOUSE_BASIS})`,
+          }
+        : {
+            type: "temporary_two_house",
+            detail: `일시적 2주택 1세대1주택 의제 — 종전주택 처분기한 이내 (${MULTI_HOUSE.TEMP_TWO_HOUSE_2HOUSE_BASIS})`,
+          },
+    );
     return { isExcluded: true, exclusionReasons, isSuspended: false };
   }
 
@@ -380,6 +387,16 @@ export function determineSurchargeExclusion(
     const otherEffectiveHouses = input.houses.filter(
       (h) => h.id !== input.sellingHouseId && !excludedHouseIds.has(h.id),
     );
+
+    // ④ §167의10①4호 「제155조제8항에 따른 수도권 밖에 소재하는 주택」.
+    //   15호(§155 의제)를 거치지 않는 **별개 호**다. caller가 §155⑧ 요건을 판정해 주입한다.
+    if (input.unavoidableOutsideCapitalHouse) {
+      exclusionReasons.push({
+        type: "unavoidable_outside_capital",
+        detail: `부득이한 사유로 취득한 수도권 밖 주택 보유 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_OUTSIDE_CAPITAL})`,
+      });
+      return { isExcluded: true, exclusionReasons, isSuspended: false };
+    }
 
     // ③ 취학·근무상 형편·질병 등 부득이한 사유
     const hasUnavoidableHouse = otherEffectiveHouses.some((h) => {

@@ -335,6 +335,20 @@ export function TransferTaxResultView({
           </div>
         )}
 
+        {/* 엔진 경고 — 종전에는 **부담부증여 카드에서만** 표시돼(:521) 일반 경로의 경고가
+            화면 어디에도 나오지 않았다(§155⑳ 요건 미충족 안내·§155⑦3호 귀농 사후관리 등).
+            부담부증여 카드가 뜨는 경우는 그쪽이 표시하므로 여기서는 제외해 중복을 막는다. */}
+        {result.warnings && result.warnings.length > 0 && !result.transferBurdenedGiftBreakdown && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1 dark:border-amber-900/60 dark:bg-amber-950/20">
+            <p className="font-semibold text-amber-900 dark:text-amber-300">확인이 필요한 사항</p>
+            <ul className="list-disc pl-5 space-y-1 text-xs text-amber-800 dark:text-amber-400">
+              {result.warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* 부분 비과세(고가주택) 근거 — 전액 비과세는 위 카드가 이미 exemptReason을 표시한다.
             어느 특례로 1세대1주택 의제가 성립했는지 남기지 않으면 12억 초과분만 과세된 이유를
             납세자가 확인할 수 없다. */}

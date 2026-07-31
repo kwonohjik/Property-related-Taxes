@@ -36,6 +36,25 @@ export const temporaryTwoHouseSchema = z.object({
     .optional(),
 });
 
+/** ⑫ §155⑧ 수도권 밖 부득이 주택 — 양도 대상은 일반주택이고 이 주택은 보유만 한다 */
+export const unavoidableOutsideCapitalHouseSchema = z.object({
+  reason: z.enum(["study", "work", "illness", "other"]),
+  /** 미제공 = 사유 미해소 → 3년 기한 미기산 (계획서 W-1) */
+  resolvedDate: z.string().date().optional(),
+});
+
+/** ⑫ §155⑦ 농어촌주택 — 유형별 요건은 엔진이 판정한다(Zod는 형상만 검증) */
+export const ruralHouseSchema = z.object({
+  kind: z.enum(["inherited", "farm_exit", "return_to_farm"]),
+  isOutsideCapitalEupMyeon: z.boolean(),
+  decedentResidenceYears: z.number().nonnegative().optional(),
+  ownerResidenceYears: z.number().nonnegative().optional(),
+  acquisitionDate: z.string().date().optional(),
+  isHighPriceAtAcquisition: z.boolean().optional(),
+  landAreaSqm: z.number().nonnegative().optional(),
+  wholeHouseholdMoved: z.boolean().optional(),
+});
+
 // ⑫ §156의2⑤ 대체주택 비과세 특례 Zod 스키마
 export const replacementHouseSchema = z.object({
   businessApprovalDate: z.string().date(),

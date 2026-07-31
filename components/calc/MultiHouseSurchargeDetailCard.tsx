@@ -30,6 +30,7 @@ interface Props {
 // 제외 사유 레이블 매핑
 const EXCLUDED_REASON_LABEL: Record<string, string> = {
   inherited_5years: "상속주택 (5년 이내)",
+  co_inherited_minor_share: "공동상속주택 소수지분 (§167의3②2호)",
   long_term_rental: "장기임대 등록주택",
   low_price_non_capital: "지방 저가주택",
   low_price_local_300: "지방 공시가 3억 이하",
@@ -43,6 +44,7 @@ const EXCLUDED_REASON_LABEL: Record<string, string> = {
 // 배제 사유 레이블 매핑
 const EXCLUSION_REASON_LABEL: Record<string, string> = {
   temporary_two_house: "일시적 2주택 특례",
+  rural_house: "농어촌주택 1세대1주택 의제 (§155⑦)",
   marriage_merge: "혼인합가 1세대1주택 의제 (2주택·10년)",
   parental_care_merge: "동거봉양 합가 특례 (10년 이내)",
   pre_designation_contract: "조정대상지역 공고일 이전 매매계약",
@@ -55,6 +57,7 @@ const EXCLUSION_REASON_LABEL: Record<string, string> = {
   tax_incentive_rental: "조특법 감면 임대주택",
   small_new_house: "소형 신축·미분양 중과배제",
   unavoidable_reason_two_house: "2주택 부득이한 사유 (취학·근무·질병)",
+  unavoidable_outside_capital: "수도권 밖 부득이한 사유 주택 (§155⑧)",
   low_price_two_house: "2주택 기준시가 1억 이하 소형",
   litigation_housing_two_house: "2주택 소송 취득·진행 중 주택",
 };

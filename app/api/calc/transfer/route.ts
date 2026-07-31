@@ -170,6 +170,20 @@ export async function POST(request: NextRequest) {
           disposalDelayReason: data.temporaryTwoHouse.disposalDelayReason,
         }
       : undefined,
+    // ⑭ §155⑧ — resolvedDate는 string이라 Date 변환 필수(미제공 = 미해소).
+    unavoidableOutsideCapitalHouse: data.unavoidableOutsideCapitalHouse
+      ? {
+          reason: data.unavoidableOutsideCapitalHouse.reason,
+          resolvedDate: toOptionalDate(data.unavoidableOutsideCapitalHouse.resolvedDate),
+        }
+      : undefined,
+    // ⑭ §155⑦ — acquisitionDate만 Date 변환 대상. 나머지는 boolean·number라 그대로 통과.
+    ruralHouse: data.ruralHouse
+      ? {
+          ...data.ruralHouse,
+          acquisitionDate: toOptionalDate(data.ruralHouse.acquisitionDate),
+        }
+      : undefined,
     // ⑭ §156의2⑤ 대체주택 비과세 특례 — string 일자 → Date 변환 (date-coerce)
     replacementHouse: data.replacementHouse
       ? {

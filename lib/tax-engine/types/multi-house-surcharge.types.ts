@@ -310,6 +310,12 @@ export interface MultiHouseGracePeriodInput {
   hasTenantInResidence?: boolean;
 }
 
+/**
+ * §167의10①15호(·§167의3①13호) ① 요소로 인정되는 §155 의제 근거.
+ * 값이 곧 표시 라벨의 키다 — 어느 항으로 의제가 성립했는지 결과에 남긴다.
+ */
+export type DeemedOneHouseBasis = "temporary_two_house" | "rural_house";
+
 export interface MultiHouseSurchargeInput {
   /** 세대 보유 전체 주택 목록 */
   houses: HouseInfo[];
@@ -333,7 +339,14 @@ export interface MultiHouseSurchargeInput {
    *
    * 값은 의제 근거 항이다. 현재는 ①(일시적 2주택)만 채운다 — 나머지 항은 계획서 Phase C·D.
    */
-  deemedOneHouseBy155?: "temporary_two_house";
+  deemedOneHouseBy155?: DeemedOneHouseBasis;
+  /**
+   * 영 §167의10①**4호**「제155조제8항에 따른 수도권 밖에 소재하는 주택」.
+   *
+   * 15호(§155 의제)를 거치지 않고 **직접** 배제하는 별개 호라 슬롯을 따로 둔다.
+   * caller가 §155⑧ 요건(2주택 · 해소일부터 3년 · 소재)을 판정해 주입한다.
+   */
+  unavoidableOutsideCapitalHouse?: boolean;
   /** 혼인합가 정보 */
   marriageMerge?: {
     marriageDate: Date;
@@ -390,6 +403,8 @@ export interface ExclusionReason {
     | "tax_incentive_rental"        // ③ 조특법 감면 임대주택
     | "small_new_house"            // ⑬ 소형 신축/미분양 (중과배제)
     | "unavoidable_reason_two_house" // ③ 2주택 취학·근무·질병 부득이한 사유 (소령 §167-10 ③)
+    | "unavoidable_outside_capital" // ④ §155⑧ 수도권 밖 부득이 주택 (소령 §167-10 ① 4호)
+    | "rural_house"                 // §155⑦ 농어촌주택 의제 (소령 §167-10 ① 15호)
     | "low_price_two_house"        // ⑩ 2주택 기준시가 1억 이하 소형 (소령 §167-10 ⑩)
     | "litigation_housing_two_house"; // ⑧ 2주택 소송 취득/진행 중 주택 (소령 §167-10 ① 8호)
   detail: string;
