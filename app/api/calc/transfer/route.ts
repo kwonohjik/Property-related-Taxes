@@ -592,6 +592,10 @@ export async function POST(request: NextRequest) {
         // ⚠️ raw `data.oneHouseExemptionProviso` 전달 금지 — Zod 출력은 날짜가 string이라
         //    §154① 단서의 `addYears`·`>=` 비교가 침묵 오작동한다. 상단(:205~)의 Date 변환본을 쓴다.
         oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
+        // ⑭ §155① 일시적 2주택 — 폼-전역 값이라 `data.mixedUse`에 없다. 겸용 서브엔진이
+        //    이것으로 §155① 의제 성립을 선판정해 중과 배제(§167의10①15호)에 넘긴다.
+        //    ⚠️ raw `data.temporaryTwoHouse` 금지 — Zod 출력은 날짜가 string이다(:163 변환본 사용).
+        temporaryTwoHouse: engineInput.temporaryTwoHouse,
         // ⑭ 법 §104⑦ 다주택 중과 판정 입력 — 전부 폼-전역 값이라 `data.mixedUse`에 없다.
         //    `houses` 미전송(단독 주택)이면 undefined → 엔진이 중과 판정을 건너뛴다.
         //    ⚠️ 날짜를 갖는 3종은 `engineInput` 변환본을 쓴다 — 특히 `gracePeriod`는

@@ -180,6 +180,7 @@ export function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
 export {
   checkExemption,
   meetsOneHouseHoldingResidence,
+  resolveDeemedOneHouseBy155,
   resolveExemptionProviso,
   resolveWasRegulatedAtAcquisition,
   resolveExemptionResidenceMonths,

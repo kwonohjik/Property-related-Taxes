@@ -187,22 +187,28 @@ describe("MH-04: 분양권 산정시작일 경계값", () => {
 });
 
 // ============================================================
-// MH-05: 일시적 2주택 (조정→조정, 2022.5.9 이전 취득) → 1년 처분기한
+// MH-05·06: 일시적 2주택 — §167의10①15호 1세대1주택 의제 배제
+//
+// ⚠️ 2026-07-31 재설계(계획서 F-2): **처분기한 판정은 이 엔진의 책임이 아니다.**
+//    §155① 정본(`resolveTemporaryTwoHouseDeadlineYears` + `judgeTemporaryTwoHouseTiming`)이
+//    산출한 의제 성립 여부를 `deemedOneHouseBy155`로 받는다. 종전에는 여기서 기한을 재계산해
+//    비과세 정본과 어긋났다(「비과세 O / 중과배제 X」).
+//    기한 규칙 자체는 `transfer-tax/temporary-two-house-surcharge.anchor.test.ts` T-A1이 고정한다.
 // ============================================================
 
-describe("MH-05: 일시적 2주택 (구 기준 1년 처분기한)", () => {
-  it("신규주택 2022.5.9 취득 + 조정 + 1년 내 양도 → 배제", () => {
+describe("MH-05: §155① 의제 성립 → 중과 배제 (15호 ① 요소)", () => {
+  it("의제 성립 + §154① 충족 → 배제", () => {
     // 강남구(11680, 해제일 없음)를 사용해야 양도일 기준 조정지역 유지
     const h1 = makeHouse("h1", { regionCode: "11680" }); // 종전주택 (강남구, 해제 없음)
     const h2 = makeHouse("h2", {
-      acquisitionDate: new Date("2022-05-09"), // 2022.5.10 이전
+      acquisitionDate: new Date("2022-05-09"),
       regionCode: "11680",
     });
 
     const input = makeInput([h1, h2], {
       sellingHouseId: "h1",
-      transferDate: new Date("2023-05-08"), // 신규 취득일 + 1년 이내
-      temporaryTwoHouse: { previousHouseId: "h1", newHouseId: "h2" },
+      transferDate: new Date("2023-05-08"),
+      deemedOneHouseBy155: "temporary_two_house",
     });
 
     const result = determineMultiHouseSurcharge(
@@ -215,10 +221,9 @@ describe("MH-05: 일시적 2주택 (구 기준 1년 처분기한)", () => {
 
     expect(result.surchargeApplicable).toBe(false);
     expect(result.exclusionReasons[0].type).toBe("temporary_two_house");
-    expect(result.exclusionReasons[0].detail).toContain("1년");
   });
 
-  it("신규주택 2022.5.9 취득 + 조정 + 1년 초과 양도 → 유예 중이면 suspended", () => {
+  it("의제 미성립(기한 초과 등) → 배제 없음. 유예 중이면 suspended", () => {
     // 강남구(11680, 해제일 없음) — 양도일 기준으로도 조정대상지역 유지
     const h1 = makeHouse("h1", { regionCode: "11680" });
     const h2 = makeHouse("h2", {
@@ -228,8 +233,8 @@ describe("MH-05: 일시적 2주택 (구 기준 1년 처분기한)", () => {
 
     const input = makeInput([h1, h2], {
       sellingHouseId: "h1",
-      transferDate: new Date("2023-05-10"), // 1년 초과
-      temporaryTwoHouse: { previousHouseId: "h1", newHouseId: "h2" },
+      transferDate: new Date("2023-05-10"),
+      // deemedOneHouseBy155 미주입 = §155① 정본이 의제 불성립으로 판정한 상태
     });
 
     // 유예 활성 → 중과 미적용, isSurchargeSuspended=true
@@ -248,21 +253,20 @@ describe("MH-05: 일시적 2주택 (구 기준 1년 처분기한)", () => {
 });
 
 // ============================================================
-// MH-06: 일시적 2주택 (2022.5.10 이후 취득) → 3년 처분기한
+// MH-06: 15호 ② 요소 — §154① 요건 미충족 시 배제 부적용
 // ============================================================
 
-describe("MH-06: 일시적 2주택 (완화 기준 3년 처분기한)", () => {
-  it("신규주택 2022.5.10 취득 + 3년 내 양도 → 배제", () => {
+describe("MH-06: §154① 미충족 → 의제 성립해도 배제 부적용 (15호 ② 요소)", () => {
+  it("deemedOneHouseBy155 성립 + sellingHouseMeetsOneHouseRequirements=false → 중과 유지", () => {
     // 강남구(11680, 해제일 없음) — 양도일 2025.5.9에도 조정대상지역
     const h1 = makeHouse("h1", { regionCode: "11680" });
-    const h2 = makeHouse("h2", {
-      acquisitionDate: new Date("2022-05-10"), // 완화 기준일
-    });
+    const h2 = makeHouse("h2", { acquisitionDate: new Date("2022-05-10") });
 
     const input = makeInput([h1, h2], {
       sellingHouseId: "h1",
-      transferDate: new Date("2025-05-09"), // 3년 이내
-      temporaryTwoHouse: { previousHouseId: "h1", newHouseId: "h2" },
+      transferDate: new Date("2025-05-09"),
+      deemedOneHouseBy155: "temporary_two_house",
+      sellingHouseMeetsOneHouseRequirements: false,
     });
 
     const result = determineMultiHouseSurcharge(
@@ -273,9 +277,9 @@ describe("MH-06: 일시적 2주택 (완화 기준 3년 처분기한)", () => {
       true,
     );
 
-    expect(result.surchargeApplicable).toBe(false);
-    expect(result.exclusionReasons[0].type).toBe("temporary_two_house");
-    expect(result.exclusionReasons[0].detail).toContain("3년");
+    expect(result.exclusionReasons).toHaveLength(0);
+    expect(result.surchargeApplicable).toBe(true);
+    expect(result.surchargeType).toBe("multi_house_2");
   });
 });
 
