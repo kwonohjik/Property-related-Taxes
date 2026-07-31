@@ -116,6 +116,12 @@ export interface TransferFormData {
   ruralHouseKind: string;
   /** §155⑦ 소재 — 수도권 밖 읍(도시지역 제외)·면 */
   ruralHouseOutsideCapitalEupMyeon: boolean;
+  /** §155⑦ 소재지 지번주소 — 읍·면 자동 판별용 (W-3) */
+  ruralHouseJibun: string;
+  /** §155⑦ 소재지 법정동코드(PNU 앞 10) — 수도권 여부 자동 판별용 */
+  ruralHouseRegionCode: string;
+  /** 소재 요건 토글을 사용자가 직접 조작했는지 — true면 자동 판정을 덮지 않는다 */
+  ruralHouseLocationTouched: boolean;
   /** §155⑦1호 — 피상속인 거주 연수 */
   ruralHouseDecedentResidenceYears: string;
   /** §155⑦2호 — 이농인 거주 연수 */
@@ -293,6 +299,9 @@ const defaultFormData: TransferFormData = {
   ruralHouseSpecial: false,
   ruralHouseKind: "inherited",
   ruralHouseOutsideCapitalEupMyeon: false,
+  ruralHouseJibun: "",
+  ruralHouseRegionCode: "",
+  ruralHouseLocationTouched: false,
   ruralHouseDecedentResidenceYears: "",
   ruralHouseOwnerResidenceYears: "",
   ruralHouseAcquisitionDate: "",

@@ -5,6 +5,7 @@ import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
+import { classifyEupMyeon, judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 import {
   ONE_HOUSE_RESIDENCE,
   SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
@@ -17,6 +18,7 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
 import { HousesListSection } from "./step4-sections/HousesListSection";
@@ -51,6 +53,10 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     acquisitionBasis: string | null;
     confidence: "high" | "medium" | "low";
   } | null>(null);
+  // §155⑦ 농어촌주택 소재 요건 자동 판별(W-3) — 읍지역만 용도지역(도시지역) 조회가 필요하다.
+  const [ruralUrbanVerdict, setRuralUrbanVerdict] = useState<
+    "urban" | "non_urban" | "unknown" | null
+  >(null);
   const [regulatedLoading, setRegulatedLoading] = useState(false);
   const [regulatedError, setRegulatedError] = useState<string | null>(null);
   // 수동 조작 플래그 최신값 미러 — fetch 완료 시점(비동기)에 stale closure 없이 참조
@@ -184,6 +190,50 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [primaryAddress, primaryRegionCode, form.transferDate, primaryAcquisitionDate, primaryKind]);
+
+  // §155⑦ 소재 요건 — 읍지역일 때만 용도지역을 조회한다(면지역은 도시지역 여부를 따지지 않는다).
+  const ruralEupMyeon = classifyEupMyeon(form.ruralHouseJibun);
+  useEffect(() => {
+    if (!form.ruralHouseSpecial || ruralEupMyeon !== "eup" || !form.ruralHouseJibun) {
+      setRuralUrbanVerdict(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/address/land-use-zone?jibun=${encodeURIComponent(form.ruralHouseJibun)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { verdict?: "urban" | "non_urban" | "unknown" } | null) => {
+        if (!cancelled) setRuralUrbanVerdict(d?.verdict ?? "unknown");
+      })
+      .catch(() => {
+        if (!cancelled) setRuralUrbanVerdict("unknown");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.ruralHouseSpecial, form.ruralHouseJibun, ruralEupMyeon]);
+
+  // 판정 결과는 store에 미러링하지 않는다 — 파생값은 useMemo로만 만든다.
+  const ruralLocation = useMemo(
+    () =>
+      judgeRuralHouseLocation({
+        regionCode: form.ruralHouseRegionCode || undefined,
+        jibun: form.ruralHouseJibun,
+        urbanVerdict: ruralUrbanVerdict ?? undefined,
+      }),
+    [form.ruralHouseRegionCode, form.ruralHouseJibun, ruralUrbanVerdict],
+  );
+
+  // 자동 판정 결과를 토글에 반영 — **사용자가 직접 조작한 뒤에는 덮지 않는다**(touched 가드).
+  //   조정대상지역 자동판별(`isRegulatedAreaTouched`)과 동일한 패턴이다.
+  //   판정 불가(unknown)일 때는 아무것도 하지 않는다 — 미충족으로 단정하지 않는다.
+  useEffect(() => {
+    if (form.ruralHouseLocationTouched || ruralLocation.verdict === "unknown") return;
+    const auto = ruralLocation.verdict === "qualified";
+    if (form.ruralHouseOutsideCapitalEupMyeon !== auto) {
+      onChange({ ruralHouseOutsideCapitalEupMyeon: auto });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ruralLocation.verdict, form.ruralHouseLocationTouched, form.ruralHouseOutsideCapitalEupMyeon]);
 
   // assetKind 변경 시 표시되지 않는 필드 값 초기화
   //   - 조정대상지역 체크박스: 주택(housing)에서만 표시 → 그 외 false
@@ -625,11 +675,50 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   />
                 </div>
 
+                {/* 소재 요건 — 주소에서 수도권·읍면을 자동 판정하고, 읍이면 용도지역까지 조회한다(W-3) */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">농어촌주택 소재지</label>
+                  <AddressSearch
+                    value={
+                      {
+                        road: "",
+                        jibun: form.ruralHouseJibun,
+                        building: "",
+                        detail: "",
+                        lng: "",
+                        lat: "",
+                      } satisfies AddressValue
+                    }
+                    onChange={(v: AddressValue) =>
+                      onChange({
+                        ruralHouseJibun: v.jibun ?? "",
+                        ruralHouseRegionCode: v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : "",
+                      })
+                    }
+                  />
+                  {ruralLocation.verdict !== "unknown" || form.ruralHouseJibun ? (
+                    <ToneCard
+                      tone={ruralLocation.verdict === "qualified" ? "emerald" : ruralLocation.verdict === "not_qualified" ? "amber" : "sky"}
+                      bodyClassName=""
+                      className="px-3 py-2"
+                    >
+                      <p data-testid="rural-location-verdict" className="text-xs">
+                        {ruralLocation.reason}
+                      </p>
+                    </ToneCard>
+                  ) : null}
+                </div>
+
                 <ToggleCard
                   checked={form.ruralHouseOutsideCapitalEupMyeon}
-                  onCheckedChange={(v) => onChange({ ruralHouseOutsideCapitalEupMyeon: v })}
-                  title="수도권 밖 읍·면 소재"
-                  description="읍지역은 도시지역 안의 지역을 제외합니다 — 유형과 무관한 공통 요건입니다"
+                  onCheckedChange={(v) =>
+                    onChange({
+                      ruralHouseOutsideCapitalEupMyeon: v,
+                      ruralHouseLocationTouched: true,
+                    })
+                  }
+                  title="수도권 밖 읍·면 소재 (도시지역 읍 제외)"
+                  description="소재지를 입력하면 자동 판정됩니다. 판정 결과와 다르면 직접 조정하세요"
                   tone="emerald"
                 />
 
