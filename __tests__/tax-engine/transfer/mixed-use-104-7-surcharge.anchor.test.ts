@@ -216,3 +216,82 @@ describe("Phase B2 — §95② 중과 대상 주택 장기보유특별공제 배
     expect(r.housingPart.longTermDeductionAmount).toBe(0);
   });
 });
+
+describe("Phase B3 — §104⑦ 중과세율 + 후단 MAX", () => {
+  /**
+   * [법령 — 「소득세법」 §104⑦ 본문·후단]
+   *   본문: "…제55조제1항에 따른 세율에 **100분의 20**(제3호 및 제4호의 경우 **100분의 30**)을
+   *          더한 세율을 적용한다."
+   *   후단: "이 경우 해당 주택 **보유기간이 2년 미만**인 경우에는 [중과세액]과
+   *          **제1항제2호 또는 제3호의 세율을 적용하여 계산한 양도소득 산출세액 중 큰 세액**을
+   *          양도소득 산출세액으로 한다."
+   *
+   * §104⑤2호 단서상 주택분(§104⑦1·3호)과 상가분(§104①1호)은 **다른 호**이므로 합산되지 않는다.
+   *
+   * 목표값은 계획서 §3 E-2의 손계산 2호와 일치해야 한다(B2에서 1호=889,767,350 확인 완료).
+   */
+  const CLAUSE1_AFTER_B2 = 889_767_350;
+
+  it("B-B11: 조정지역 2주택 → +20%p · 산출세액 1,137,370,975", () => {
+    const r = run({ multiHouse: multiHouse(1) });
+    expect(r.total.transferTax).toBe(1_137_370_975);
+  });
+
+  it("B-B12: 조정지역 3주택+ → +30%p · 산출세액 1,288,352,475", () => {
+    const r = run({ multiHouse: multiHouse(2) });
+    expect(r.total.transferTax).toBe(1_288_352_475);
+  });
+
+  it("B-B13: 2008 위기취득 — 세율 가산 **0**, 장특 배제는 존속 → B2 값 그대로", () => {
+    const r = run({
+      multiHouse: multiHouse(1, {
+        houses: [
+          makeHouseInfo("selling", { acquisitionDate: D("2010-06-01") }),
+          makeHouseInfo("h2", { acquisitionDate: D("2015-03-01") }),
+        ],
+      }),
+    });
+    expect(r.total.transferTax).toBe(CLAUSE1_AFTER_B2);
+  });
+
+  it("B-B14: 한시 유예 중 → 세율·장특 **둘 다** 미적용 (중과 이전 값)", () => {
+    const r = run({ multiHouse: multiHouse(1) }, DURING_SUSPENSION, ratesWithSuspension());
+    expect(r.total.transferTax).toBe(
+      run({}, DURING_SUSPENSION, ratesWithSuspension()).total.transferTax,
+    );
+  });
+
+  it("B-B15(회귀): 비조정지역 → 세율·장특 미적용", () => {
+    expect(run({ multiHouse: multiHouse(1, { isRegulatedArea: false }) }).total.transferTax)
+      .toBe(BASELINE_TAX);
+  });
+
+  it("B-B16: 2018-04-01 **이전** 양도 → §104⑦ 가산율 없음(historical null)", () => {
+    // resolveSurchargeAddonRate가 null을 돌려주는 구간 — 세율 가산이 붙으면 안 된다.
+    const r = run({ multiHouse: multiHouse(1) }, D("2017-06-01"));
+    expect(r.total.appliedRate).toBeLessThanOrEqual(0.45);
+  });
+
+  it("B-B17: 보유 2년 미만 + 중과 → §104⑦ **후단 MAX** — 여기서는 단기 70%가 이긴다", () => {
+    const SHORT = { landAcquisitionDate: D("2025-06-01"), buildingAcquisitionDate: D("2025-06-01") };
+    const r = run({ multiHouse: multiHouse(1), ...SHORT });
+    expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
+    // 중과 한계세율 45%+20%p = 65% < 단기 70% → 후단 MAX가 §104①3호를 채택한다.
+    expect(r.total.appliedRate).toBe(0.7);
+    expect(r.total.transferTax).toBe(1_495_427_008);
+  });
+
+  it("B-B17b: 보유 2년 이상 + 중과 → 중과세율 채택 · 표시율 0.65(=45%+20%p)", () => {
+    // B-B17과 짝 — 후단 MAX가 **양쪽 다** 고를 수 있음을 반증으로 고정한다.
+    expect(run({ multiHouse: multiHouse(1) }).total.appliedRate).toBe(0.65);
+    expect(run({ multiHouse: multiHouse(2) }).total.appliedRate).toBe(0.75);
+  });
+
+  it("B-B18: 배율초과 비사토 동반 → 세율 가산 **보류** + warning (계획서 §5.5)", () => {
+    const r = run({ multiHouse: multiHouse(1), totalLandArea: 1000 });
+    expect(r.nonBusinessLandPart).not.toBeNull();
+    // 장특 배제는 적용되므로 세액은 불변이 아니다. 세율 가산만 빠진다.
+    expect(r.housingPart.longTermDeductionAmount).toBe(0);
+    expect(r.warnings.some((w) => w.includes("중과") && w.includes("세율"))).toBe(true);
+  });
+});

@@ -12,6 +12,7 @@ import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
+import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
 import { computeAmendment } from "./transfer-tax-amendment";
 import type { AmendmentInput } from "./types/transfer-amendment.types";
@@ -321,6 +322,28 @@ export function calcMixedUseTransferTax(
   // 그 시점부터가 「주택과 그 부수토지」의 보유기간이다(선행 계획서 G-3 `max(취득일)` 규칙과 동일).
   const commercialLandIncome = commercialPart.landIncomeAmount;
   const commercialBuildingIncome = commercialPart.buildingIncomeAmount;
+
+  // 「소득세법」 제104조 제7항 가산율 — **주택분 전용**.
+  //
+  // ⚠️ 세율의 술어는 `surchargeApplicable`이다(장특 배제와 **다르다**). 2008 위기취득
+  //    (부칙 §9270호 §14①)은 **세율만** 배제하므로 여기서는 빠지고, 장특 배제는 존속한다.
+  // ⚠️ `resolveSurchargeAddonRate`는 2018-04-01 이전 양도에 **null**을 돌려준다(중과 신설 전).
+  const surchargeAddon =
+    multiHouseSurcharge?.surchargeApplicable &&
+    multiHouseSurcharge.surchargeType !== "none"
+      ? resolveSurchargeAddonRate(transferDate, multiHouseSurcharge.surchargeType) ?? undefined
+      : undefined;
+
+  // 계획서 §5.5 — 배율초과 비사업용 토지가 있으면 `buildTotalTax`의 §104⑤ 경로가
+  // 열리지 않아(D-8 세무 판단 대기) 세율 가산을 적용할 수 없다. **침묵하지 않는다.**
+  // (§95② 장특 배제는 파트 조립 단계라 이 경계와 무관하게 이미 적용돼 있다.)
+  if (surchargeAddon !== undefined && (nonBusinessLandPart?.incomeAmount ?? 0) > 0) {
+    warnings.push(
+      "주택 부수토지 배율 초과분(비사업용 토지)이 있어 다주택 중과 **세율** 가산" +
+        `(${Math.round(surchargeAddon * 100)}%p, 소득세법 §104⑦)을 적용하지 않았습니다. ` +
+        "장기보유특별공제 배제(§95②)는 반영되어 있습니다.",
+    );
+  }
   const rateParts: MixedUseRatePart[] | undefined =
     commercialLandIncome !== undefined &&
     commercialBuildingIncome !== undefined &&
@@ -334,6 +357,8 @@ export function calcMixedUseTransferTax(
               housingGainSplit.landHoldingYears,
               housingGainSplit.buildingHoldingYears,
             ),
+            // §104⑦ — 상가 파트에는 붙이지 않는다(대상이 「주택+딸린 토지」).
+            ...(surchargeAddon !== undefined ? { surchargeAddon } : {}),
           },
           {
             kind: "commercial_land" as const,
