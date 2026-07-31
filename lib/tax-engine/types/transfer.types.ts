@@ -199,6 +199,14 @@ export interface TransferTaxInput {
      */
     publicInstitutionRelocation?: boolean;
     /**
+     * §155⑯ 「이전한 시·군」 — 법인·공공기관이 이전한 시·군 코드(행안부 표준 10자리).
+     * `newHouseSigunguCode`와 함께 주면 「또는 이와 연접한 시·군」을 **자동 판정**한다.
+     * 미제공 시 자기선언(`publicInstitutionRelocation`)을 그대로 신뢰한다.
+     */
+    relocatedSigunguCode?: string;
+    /** §155⑯ 신규주택 소재 시·군 코드(행안부 표준 10자리) */
+    newHouseSigunguCode?: string;
+    /**
      * §155⑱ — §155① 본문 괄호「(제18항에 따른 사유에 해당하는 경우를 포함한다)」.
      * 해당 시 **3년(또는 ⑯의 5년) 처분기한을 초과해도** 요건 B를 충족한 것으로 본다.
      *

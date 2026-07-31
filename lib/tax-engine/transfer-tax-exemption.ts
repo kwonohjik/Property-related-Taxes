@@ -22,6 +22,7 @@ import type {
 } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
+import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 
 // §156의2⑤ 대체주택 특례 — 신축주택 완성 후 대체주택 양도 기한.
 // 2023.01.12 이후 양도분부터 3년(구 2년). 소득세법 시행령 부칙(대통령령 제33267호).
@@ -397,6 +398,29 @@ export function judgeTemporaryTwoHouseTiming(p: {
  * 중과 배제가 이 규칙을 자체 재구현했다가 「비과세 O / 중과배제 X」 모순을 만든 것이
  * 계획서 F-2다. 인라인이던 것을 추출만 했으며 **동작은 불변**이다.
  */
+/**
+ * §155⑯ 「이전한 시·군 또는 **이와 연접한 시·군**」 충족 여부.
+ *
+ * 두 코드가 모두 있으면 자동 판정한다(동일 시·군 또는 인접 매트릭스 조회).
+ * 코드가 없거나 매트릭스가 비어 있으면 **자기선언 boolean을 그대로 신뢰**한다 —
+ * 자동 판정을 근거로 사용자 입력을 부정하지 않는다(판정 불가 ≠ 미충족).
+ *
+ * 인접 매트릭스: `lib/geo/administrative-district-adjacency.ts` (Vworld 경계 + turf, 2026-07-31).
+ */
+export function meetsPublicInstitutionRelocationRegion(
+  p: NonNullable<TransferTaxInput["temporaryTwoHouse"]>,
+  adjacentCodes: (code: string) => string[] = getAdjacentSigunguCodes,
+): boolean {
+  if (!p.publicInstitutionRelocation) return false;
+  const from = p.relocatedSigunguCode;
+  const to = p.newHouseSigunguCode;
+  if (!from || !to) return true; // 코드 미입력 → 자기선언 유지
+  if (from === to) return true; // 「이전한 시·군」
+  const adjacent = adjacentCodes(from);
+  if (adjacent.length === 0) return true; // 매트릭스 미보유 지역 → 판정 불가, 자기선언 유지
+  return adjacent.includes(to); // 「이와 연접한 시·군」
+}
+
 export function resolveTemporaryTwoHouseDeadlineYears(
   p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate" | "temporaryTwoHouse">,
   twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
@@ -404,7 +428,7 @@ export function resolveTemporaryTwoHouseDeadlineYears(
   // §155⑯ 전단: "제1항 중 '3년'을 '5년'으로 본다."
   //   🔶 조정대상지역 단축 기한(DB 2년)과의 우선순위는 명문이 없다(계획서 W-4).
   //   법문이 §155① 본문의 "3년"을 직접 치환하므로 5년이 덮는 것으로 구현한다.
-  if (p.temporaryTwoHouse?.publicInstitutionRelocation) {
+  if (p.temporaryTwoHouse && meetsPublicInstitutionRelocationRegion(p.temporaryTwoHouse)) {
     return PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS;
   }
   if (!p.isRegulatedArea) return twoHouseRule.disposalDeadlineYears;

@@ -6,6 +6,8 @@ import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import { classifyEupMyeon, judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
+import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
+import { extractSigunguCodeFromPnu } from "@/lib/geo/pnu-sigungu";
 import {
   ONE_HOUSE_RESIDENCE,
   SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
@@ -234,6 +236,34 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ruralLocation.verdict, form.ruralHouseLocationTouched, form.ruralHouseOutsideCapitalEupMyeon]);
+
+  // §155⑯ 연접 판정 — 두 코드가 모두 있을 때만 결론을 낸다(판정 불가는 표시하지 않는다).
+  const relocationRegionVerdict = useMemo(() => {
+    if (!form.publicInstitutionRelocation) return null;
+    const from = form.relocatedSigunguCode;
+    const to = form.newHouseSigunguCode;
+    if (!from || !to) return null;
+    if (from === to) {
+      return { ok: true, reason: "이전한 시·군에 신규 주택이 소재합니다 — 지역 요건 충족." };
+    }
+    const adjacent = getAdjacentSigunguCodes(from);
+    if (adjacent.length === 0) {
+      return {
+        ok: true,
+        reason: "이전지의 연접 시·군 정보가 없어 자동 판정할 수 없습니다 — 입력하신 선택을 유지합니다.",
+      };
+    }
+    return adjacent.includes(to)
+      ? { ok: true, reason: "이전한 시·군과 연접한 시·군에 소재합니다 — 지역 요건 충족." }
+      : {
+          ok: false,
+          reason: "이전한 시·군과 연접하지 않습니다 — §155⑯ 지역 요건 미충족으로 처분기한 5년이 적용되지 않습니다.",
+        };
+  }, [
+    form.publicInstitutionRelocation,
+    form.relocatedSigunguCode,
+    form.newHouseSigunguCode,
+  ]);
 
   // assetKind 변경 시 표시되지 않는 필드 값 초기화
   //   - 조정대상지역 체크박스: 주택(housing)에서만 표시 → 그 외 false
@@ -526,7 +556,65 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   title="공공기관·법인 지방이전 특례 (§155⑯)"
                   description="수도권 1주택 보유 중 소속 법인·공공기관이 수도권 밖으로 이전하여, 이전한 시·군 또는 연접 시·군의 주택을 취득한 경우 — 처분기한이 5년으로 늘고 1년 경과 요건도 면제됩니다"
                   tone="sky"
-                />
+                >
+                  {/* 두 소재지를 넣으면 「이전한 시·군 또는 연접한 시·군」을 자동 판정한다.
+                      한쪽만 넣거나 매트릭스에 없는 지역이면 자기선언을 그대로 신뢰한다. */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">이전한 기관·법인 소재지</label>
+                      <AddressSearch
+                        value={
+                          {
+                            road: "",
+                            jibun: form.relocatedInstitutionJibun,
+                            building: "",
+                            detail: "",
+                            lng: "",
+                            lat: "",
+                          } satisfies AddressValue
+                        }
+                        onChange={(v: AddressValue) =>
+                          onChange({
+                            relocatedInstitutionJibun: v.jibun ?? "",
+                            relocatedSigunguCode: extractSigunguCodeFromPnu(v.pnu) ?? "",
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">신규 주택 소재지</label>
+                      <AddressSearch
+                        value={
+                          {
+                            road: "",
+                            jibun: form.newHouseJibun,
+                            building: "",
+                            detail: "",
+                            lng: "",
+                            lat: "",
+                          } satisfies AddressValue
+                        }
+                        onChange={(v: AddressValue) =>
+                          onChange({
+                            newHouseJibun: v.jibun ?? "",
+                            newHouseSigunguCode: extractSigunguCodeFromPnu(v.pnu) ?? "",
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  {relocationRegionVerdict && (
+                    <ToneCard
+                      tone={relocationRegionVerdict.ok ? "emerald" : "amber"}
+                      bodyClassName=""
+                      className="mt-3 px-3 py-2"
+                    >
+                      <p data-testid="relocation-region-verdict" className="text-xs">
+                        {relocationRegionVerdict.reason}
+                      </p>
+                    </ToneCard>
+                  )}
+                </ToggleCard>
 
                 {/* §155⑱ — 3년 기한의 예외. 판정 기준시점이 양도일이 아님을 문구로 명시(G-2) */}
                 <div className="space-y-1.5">

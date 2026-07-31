@@ -84,6 +84,24 @@ test.describe("§155⑯·⑱ 처분기한 특례", () => {
     await expect(verdict).toContainText("§155⑯ 공공기관 이전으로 1년 요건 면제");
   });
 
+  test("W-2 연접 판정 — 비연접이면 미충족 배지", async ({ page }) => {
+    await gotoHolding(page, {
+      publicInstitutionRelocation: true,
+      relocatedSigunguCode: "4111700000", // 수원 영통
+      newHouseSigunguCode: "5011000000", // 제주시
+    });
+    await expect(page.getByTestId("relocation-region-verdict")).toContainText("연접하지 않습니다");
+  });
+
+  test("W-2 연접 판정 — 연접이면 충족 배지 (수원 영통 ↔ 용인 기흥)", async ({ page }) => {
+    await gotoHolding(page, {
+      publicInstitutionRelocation: true,
+      relocatedSigunguCode: "4111700000",
+      newHouseSigunguCode: "4146300000",
+    });
+    await expect(page.getByTestId("relocation-region-verdict")).toContainText("연접한 시·군");
+  });
+
   test("⑫⑬⑭ 배관 — 두 필드가 API 요청 본문에 실려 나간다", async ({ page }) => {
     test.setTimeout(60_000);
     let tth: Record<string, unknown> | undefined;

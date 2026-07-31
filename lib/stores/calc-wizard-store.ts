@@ -104,6 +104,14 @@ export interface TransferFormData {
   newHouseAcquisitionDate: string;
   /** §155⑯ 공공기관·법인 지방이전 — 처분기한 3년→5년 + 1년 요건 면제 (효과 둘) */
   publicInstitutionRelocation: boolean;
+  /** §155⑯ 이전한 기관 소재지 지번주소 (연접 판정용) */
+  relocatedInstitutionJibun: string;
+  /** §155⑯ 이전한 기관 시·군 코드 (행안부 10자리) */
+  relocatedSigunguCode: string;
+  /** §155⑯ 신규주택 소재지 지번주소 */
+  newHouseJibun: string;
+  /** §155⑯ 신규주택 시·군 코드 (행안부 10자리) */
+  newHouseSigunguCode: string;
   /** §155⑧ 수도권 밖 부득이 주택 보유 여부 — 양도 대상은 **일반주택**이다 */
   unavoidableOutsideCapitalSpecial: boolean;
   /** §155⑧ 부득이한 사유 ("study"|"work"|"illness"|"other") */
@@ -292,6 +300,10 @@ const defaultFormData: TransferFormData = {
   temporaryTwoHouseSpecial: false,
   newHouseAcquisitionDate: "",
   publicInstitutionRelocation: false,
+  relocatedInstitutionJibun: "",
+  relocatedSigunguCode: "",
+  newHouseJibun: "",
+  newHouseSigunguCode: "",
   disposalDelayReason: "",
   unavoidableOutsideCapitalSpecial: false,
   unavoidableOutsideCapitalReason: "work",

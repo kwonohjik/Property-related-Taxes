@@ -234,3 +234,67 @@ describe("E-1·E-2 엔진 통합 — 단일 소스라 비과세에 그대로 반
     );
   });
 });
+
+// ============================================================
+// W-2 — §155⑯ 「이전한 시·군 또는 이와 연접한 시·군」 자동 판정
+// ============================================================
+
+describe("W-2 — §155⑯ 연접 시·군 자동 판정", () => {
+  const base = {
+    previousAcquisitionDate: D("2018-01-01"),
+    newAcquisitionDate: D("2021-06-01"),
+    publicInstitutionRelocation: true as const,
+  };
+  const deadline = (tth: Record<string, unknown>) =>
+    resolveTemporaryTwoHouseDeadlineYears(
+      { isRegulatedArea: false, transferDate: D("2026-06-01"), temporaryTwoHouse: { ...base, ...tth } },
+      twoHouseRule,
+    );
+
+  it("코드 미입력 → 자기선언 신뢰 (5년)", () => {
+    expect(deadline({})).toBe(5);
+  });
+
+  it("동일 시·군 → 충족 (5년)", () => {
+    expect(
+      deadline({ relocatedSigunguCode: "4111700000", newHouseSigunguCode: "4111700000" }),
+    ).toBe(5);
+  });
+
+  it("🔴 연접 시·군 → 충족 (수원 영통 ↔ 용인 기흥)", () => {
+    expect(
+      deadline({ relocatedSigunguCode: "4111700000", newHouseSigunguCode: "4146300000" }),
+    ).toBe(5);
+  });
+
+  it("🔴 비연접 시·군 → **미충족** (수원 영통 ↔ 제주시) → 종전 3년", () => {
+    expect(
+      deadline({ relocatedSigunguCode: "4111700000", newHouseSigunguCode: "5011000000" }),
+    ).toBe(3);
+  });
+
+  it("매트릭스에 없는 코드(도서·미등록) → 판정 불가 → 자기선언 유지 (5년)", () => {
+    // 울릉군은 육지 인접이 0이라 조회 결과가 비어 있다 — 미충족으로 단정하지 않는다.
+    expect(
+      deadline({ relocatedSigunguCode: "4794000000", newHouseSigunguCode: "4713000000" }),
+    ).toBe(5);
+  });
+
+  it("특례 토글이 꺼져 있으면 코드가 있어도 종전 기한 (회귀)", () => {
+    expect(
+      resolveTemporaryTwoHouseDeadlineYears(
+        {
+          isRegulatedArea: false,
+          transferDate: D("2026-06-01"),
+          temporaryTwoHouse: {
+            previousAcquisitionDate: D("2018-01-01"),
+            newAcquisitionDate: D("2021-06-01"),
+            relocatedSigunguCode: "4111700000",
+            newHouseSigunguCode: "4146300000",
+          },
+        },
+        twoHouseRule,
+      ),
+    ).toBe(3);
+  });
+});
