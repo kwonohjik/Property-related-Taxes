@@ -456,9 +456,17 @@ export function buildHousingPart(
   // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (게이트 전용). 거주분 공제율은 residenceYears(실거주) 유지.
   table2ResidenceYears: number,
   isOneHouseExempt: boolean = true,  // 미주입 시 true (기존 겸용주택 사례14 등 backward compat)
-  /** §95② 미등기양도자산 장기보유특별공제 배제. */
+  /** §95② 미등기양도자산 장기보유특별공제 배제 (자산 전체). */
   isUnregistered = false,
+  /**
+   * §95② **§104⑦ 각 호(다주택 중과) 자산** 장기보유특별공제 배제 — **주택분 전용**.
+   * 상가분(`buildCommercialPart`)·비사토(`buildNonBusinessPart`)에는 넘기지 않는다:
+   * §104⑦의 대상이 「주택(이에 딸린 토지 포함)」이라 상가는 그 자산이 아니다.
+   */
+  surchargeLthdExcluded = false,
 ): MixedUseHousingPart {
+  // 주택분에 걸리는 §95② 배제 사유 합집합 — 아래 4개 calcLongTermRate 호출의 단일 소스.
+  const housingLthdExcluded = isUnregistered || surchargeLthdExcluded;
   const housingAcq = housingAcqResult.estimatedAcq;
   const HIGH_VALUE_THRESHOLD = 1_200_000_000;
   // ─── 🚨 Critical (이슈 8-A): 다주택자 1세대1주택 비과세 미적용 분기 ───
@@ -501,13 +509,13 @@ export function buildHousingPart(
     gainSplit.landHoldingYears,
     residenceYears,
     useTable2,
-    isUnregistered,
+    housingLthdExcluded,
   );
   const buildingDedRate = calcLongTermRate(
     gainSplit.buildingHoldingYears,
     residenceYears,
     useTable2,
-    isUnregistered,
+    housingLthdExcluded,
   );
 
   const longTermDeductionAmount =
@@ -523,8 +531,8 @@ export function buildHousingPart(
     proratedBuildingGain,
     landDedRate,
     buildingDedRate,
-    landHoldingRate: calcLongTermRate(gainSplit.landHoldingYears, 0, useTable2, isUnregistered),
-    buildingHoldingRate: calcLongTermRate(gainSplit.buildingHoldingYears, 0, useTable2, isUnregistered),
+    landHoldingRate: calcLongTermRate(gainSplit.landHoldingYears, 0, useTable2, housingLthdExcluded),
+    buildingHoldingRate: calcLongTermRate(gainSplit.buildingHoldingYears, 0, useTable2, housingLthdExcluded),
     longTermDeductionAmount,
     buildingHoldingYears: gainSplit.buildingHoldingYears,
     residenceYears,

@@ -172,6 +172,22 @@ export function calcMixedUseTransferTax(
         )
       : undefined;
 
+  // §95② 본문 괄호 — 「제104조 제7항 각 호에 따른 자산」의 장기보유특별공제 **배제**.
+  //
+  // ⚠️ 술어가 `surchargeApplicable`이 **아니다**. 2008 위기취득 배제(부칙 §9270호 §14①)는
+  //    **세율만** 배제하고 `surchargeType`은 유지하므로 §104⑦ 각 호 해당 자산인 것은 변함이 없다
+  //    → 장특 배제는 존속한다(서울행정법원 2024구단72950 국승 ·
+  //    `types/multi-house-surcharge.types.ts:410-412`). 반면 한시 유예(§167의3①12의2)는
+  //    각 호에서 빼주는 것이라 장특이 살아난다. 단건 정본도 같은 조합이다
+  //    (`transfer-tax-helpers.ts:458-461` — `isSurcharge && !isSuspended`).
+  //
+  // ⚠️ 적용 범위는 **주택분 한정**이다. §104⑦의 대상이 「주택(이에 딸린 토지를 포함한다)」이므로
+  //    상가건물·상가부수토지, 배율초과 비사업용 토지(§104①8호 자산)에는 미치지 않는다.
+  const surchargeLthdExcluded =
+    multiHouseSurcharge !== undefined &&
+    multiHouseSurcharge.surchargeType !== "none" &&
+    !multiHouseSurcharge.isSurchargeSuspended;
+
   // 파생값 (면적 비율)
   const derived = computeDerivedAreas(asset);
   // 보유 중 일부 용도변경 시 취득시 면적 파생값 (시행령 §166⑥)
@@ -261,6 +277,7 @@ export function calcMixedUseTransferTax(
       asset.partialUsageChange.direction,
       housingAcqResult,
       isUnregistered,
+      surchargeLthdExcluded,
     );
     housingPart = split.housingPart;
     commercialPart = split.commercialPart;
@@ -275,7 +292,10 @@ export function calcMixedUseTransferTax(
       table2ResidenceYears,
       isOneHouseExempt,
       isUnregistered,
+      surchargeLthdExcluded,
     );
+    // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
+    //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
     commercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
   }
 

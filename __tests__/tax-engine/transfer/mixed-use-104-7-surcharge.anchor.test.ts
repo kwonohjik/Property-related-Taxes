@@ -129,10 +129,10 @@ describe("Phase B1 — §104⑦ 중과 판정 배관 (E-2)", () => {
     expect(r.total.transferTax).toBe(BASELINE_TAX);
   });
 
-  it("B-B3b(회귀): **B1은 세액을 바꾸지 않는다** — 중과 판정이 붙어도 아직 동일", () => {
-    // B2(장특 배제)·B3(세율 가산)이 붙으면 이 anchor는 **의도적으로** 갱신된다.
-    expect(run({ multiHouse: multiHouse(1) }).total.transferTax).toBe(BASELINE_TAX);
-    expect(run({ multiHouse: multiHouse(2) }).total.transferTax).toBe(BASELINE_TAX);
+  it("B-B3b: 중과 **비대상**이면 세액 불변 — 판정만으로는 아무것도 바뀌지 않는다", () => {
+    // (B2에서 갱신됨: 중과 **대상**이면 §95② 장특 배제로 세액이 오른다 — B-B5 계열.)
+    expect(run({ multiHouse: multiHouse(1, { isRegulatedArea: false }) }).total.transferTax)
+      .toBe(BASELINE_TAX);
   });
 
   it("B-B4: Phase A의 §154① 판정이 중과 입력으로 전달된다 (배제2 게이트)", () => {
@@ -145,5 +145,74 @@ describe("Phase B1 — §104⑦ 중과 판정 배관 (E-2)", () => {
     });
     expect(r.multiHouseSurcharge).toBeDefined();
     expect(r.multiHouseSurcharge?.surchargeType).toBe("multi_house_2");
+  });
+});
+
+describe("Phase B2 — §95② 중과 대상 주택 장기보유특별공제 배제", () => {
+  /**
+   * [법령 — 「소득세법」 §95②, MST 280405 · 2026-07-31 법제처 실측]
+   *   "…제94조제1항제1호에 따른 자산(제104조제3항에 따른 미등기양도자산과
+   *    **같은 조 제7항 각 호에 따른 자산은 제외한다**)으로서 보유기간이 3년 이상인 것…"
+   *
+   * §104⑦ 각 호의 대상은 「**주택**(이에 딸린 토지를 포함한다)」이므로 배제도 **주택분에 한정**된다.
+   * 겸용의 상가건물·상가부수토지, 그리고 배율초과 비사업용 토지(§104①8호 자산)는 **유지**된다.
+   *
+   * ⚠️ 배제 술어는 `surchargeApplicable`이 **아니다**:
+   *   `surchargeType !== "none" && !isSurchargeSuspended`
+   *   2008 위기취득 배제(부칙 §9270호 §14①)는 **세율만** 배제하고 장특 배제는 존속하기 때문이다
+   *   (`types/multi-house-surcharge.types.ts:410-412` · 서울행정법원 2024구단72950 국승).
+   */
+  it("B-B5: 중과 대상 → **주택분 장특 0**, 상가분 장특은 **유지**", () => {
+    const r = run({ multiHouse: multiHouse(1) });
+    expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(true);
+    expect(r.housingPart.longTermDeductionRate).toBe(0);
+    expect(r.housingPart.longTermDeductionAmount).toBe(0);
+    // 상가분은 §104⑦ 자산이 아니다 — 배제되면 침묵 과다과세다.
+    expect(r.commercialPart.longTermDeductionAmount).toBeGreaterThan(0);
+  });
+
+  it("B-B5b: 배제로 주택 소득금액이 양도차익 전액이 된다 · 세액 증가", () => {
+    const r = run({ multiHouse: multiHouse(1) });
+    expect(r.housingPart.incomeAmount).toBe(r.housingPart.transferGain);
+    expect(r.total.transferTax).toBeGreaterThan(BASELINE_TAX);
+  });
+
+  it("B-B6: 한시 유예 중이면 장특 **유지** (§167의3①12의2 → §104⑦ 각 호 미해당)", () => {
+    const r = run({ multiHouse: multiHouse(1) }, DURING_SUSPENSION, ratesWithSuspension());
+    expect(r.multiHouseSurcharge?.isSurchargeSuspended).toBe(true);
+    expect(r.housingPart.longTermDeductionAmount).toBeGreaterThan(0);
+  });
+
+  it("B-B7: 2008 위기취득 — **세율은 배제, 장특 배제는 존속** (술어가 다르다)", () => {
+    // 부칙 §9270호 §14① — 2009-03-16 ~ 2012-12-31 취득. surchargeApplicable=false지만
+    // surchargeType은 유지되므로 §95② 배제는 살아 있다.
+    const r = run({
+      multiHouse: multiHouse(1, {
+        houses: [
+          makeHouseInfo("selling", { acquisitionDate: D("2010-06-01") }),
+          makeHouseInfo("h2", { acquisitionDate: D("2015-03-01") }),
+        ],
+      }),
+    });
+    expect(r.multiHouseSurcharge?.rateSurchargeStatutoryExcluded).toBe(true);
+    expect(r.multiHouseSurcharge?.surchargeApplicable).toBe(false);
+    expect(r.multiHouseSurcharge?.surchargeType).toBe("multi_house_2");
+    expect(r.housingPart.longTermDeductionAmount).toBe(0); // 장특 배제 존속
+  });
+
+  it("B-B8(회귀): 비조정지역 → 중과 대상 아님 → 장특 유지", () => {
+    const r = run({ multiHouse: multiHouse(1, { isRegulatedArea: false }) });
+    expect(r.housingPart.longTermDeductionAmount).toBeGreaterThan(0);
+  });
+
+  it("B-B9(회귀): `multiHouse` 미주입 → 장특 완전 불변", () => {
+    expect(run().housingPart.longTermDeductionAmount).toBeGreaterThan(0);
+  });
+
+  it("B-B10: 배율초과 비사업용 토지분 장특은 **유지** (§104①8호 자산 — §104⑦ 아님)", () => {
+    const r = run({ multiHouse: multiHouse(1), totalLandArea: 1000 });
+    expect(r.nonBusinessLandPart).not.toBeNull();
+    expect(r.nonBusinessLandPart!.longTermDeductionAmount).toBeGreaterThan(0);
+    expect(r.housingPart.longTermDeductionAmount).toBe(0);
   });
 });

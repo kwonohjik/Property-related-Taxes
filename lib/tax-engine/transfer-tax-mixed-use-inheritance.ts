@@ -27,10 +27,16 @@ export function calcLongTermRate(
   holdingYears: number,
   residenceYears: number,
   useTable2: boolean,
-  /** 「소득세법」 제95조 제2항 — 미등기양도자산은 장기보유특별공제 **배제**. */
-  isUnregistered = false,
+  /**
+   * 「소득세법」 제95조 제2항 본문 괄호 — 장기보유특별공제 **배제** 대상.
+   * 두 사유가 있고 **적용 범위가 다르다**:
+   *   §104③ 미등기양도자산 → 자산 **전체**(주택·상가·토지 모두)
+   *   §104⑦ 각 호 자산     → 「**주택**(이에 딸린 토지 포함)」 **한정** — 상가분·비사토는 유지
+   * 따라서 어느 사유가 걸리는지는 **호출부가 판단**해 넘긴다. 이 leaf는 결과만 받는다.
+   */
+  lthdExcluded = false,
 ): number {
-  if (isUnregistered) return 0;
+  if (lthdExcluded) return 0;
   if (holdingYears < 3) return 0;
   if (useTable2) {
     const holdingPart = Math.min(holdingYears * 0.04, 0.40);
