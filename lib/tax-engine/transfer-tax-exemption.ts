@@ -14,7 +14,7 @@ import { addYears, format } from "date-fns";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
-import type { TransferTaxInput } from "./types/transfer.types";
+import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "./types/transfer.types";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
 // §156의2⑤ 대체주택 특례 — 신축주택 완성 후 대체주택 양도 기한.
@@ -24,6 +24,8 @@ const REPLACEMENT_HOUSE_DEADLINE_YEARS_NEW = 3;
 const REPLACEMENT_HOUSE_DEADLINE_YEARS_OLD = 2;
 // §155④⑤ 합가·혼인 1세대1주택 비과세 처분기한 — 합가·혼인일부터 10년.
 const MERGE_EXEMPTION_YEARS = 10;
+// §155⑯ 공공기관·법인 지방이전 — §155① 본문의 "3년"을 "5년"으로 치환.
+const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
 
 /**
  * 거주요건 판정 입력 — TransferTaxInput의 부분집합. UI(Step4 안내 메시지)와 엔진이 공용.
@@ -71,6 +73,15 @@ interface ExemptionResult {
   isPartialExempt: boolean;
   exemptReason?: string;
 }
+
+/** §155⑱ 각 호 라벨 (exemptReason 표시용) — 내부 id 노출 금지 원칙에 따라 한국어로 환원 */
+const DISPOSAL_DELAY_REASON_LABEL: Record<TemporaryTwoHouseDelayReason, string> = {
+  kamco: "1호 한국자산관리공사 매각 의뢰",
+  auction: "2호 법원 경매 신청",
+  public_sale: "3호 공매 진행 중",
+  cash_settlement_suit: "4호 현금청산금 지급 소송",
+  expropriation_suit: "5호 수용재결·매도청구소송",
+};
 
 /** §154① 단서 각호 면제 범위 라벨 (exemptReason 표시용) — 모듈 스코프 (per-call 재생성 금지) */
 const PROVISO_LABEL: Record<
@@ -268,6 +279,10 @@ export function judgeTemporaryTwoHouseTiming(p: {
   transferDate: Date;
   deadlineYears: number;
   oneYearWaived: boolean;
+  /** §155⑯ 후단 — 공공기관 지방이전 시 1년 요건 면제 */
+  publicInstitutionRelocation?: boolean;
+  /** §155⑱ — 해당 시 처분기한 초과여도 요건 B 충족 */
+  disposalDelayReason?: TemporaryTwoHouseDelayReason;
 }): {
   oneYearThreshold: Date;
   oneYearMet: boolean;
@@ -276,9 +291,15 @@ export function judgeTemporaryTwoHouseTiming(p: {
   overall: boolean;
 } {
   const oneYearThreshold = addYears(p.previousAcquisitionDate, 1);
-  const oneYearMet = p.oneYearWaived || p.newAcquisitionDate >= oneYearThreshold;
+  // §155⑯ 후단: "…종전의 주택을 취득한 날부터 1년 이상이 지난 후 다른 주택을 취득하는 요건을
+  //   적용하지 아니한다." — 기한 5년(전단)과 **별개의 두 번째 효과**다.
+  const oneYearMet =
+    p.oneYearWaived || p.publicInstitutionRelocation === true || p.newAcquisitionDate >= oneYearThreshold;
   const deadline = addYears(p.newAcquisitionDate, p.deadlineYears);
-  const threeYearMet = p.transferDate <= deadline;
+  // §155① 본문 괄호 "(제18항에 따른 사유에 해당하는 경우를 포함한다)" — 기한 초과를 치유한다.
+  //   ⑱ 각 호는 「다른 주택을 취득한 날부터 3년이 되는 날 현재」 해당 여부이므로 양도일과 무관하다.
+  //   ⑱은 **요건 B(기한)만** 치유한다 — 요건 A(1년)는 그대로다(본문 괄호가 3년 절에만 붙어 있다).
+  const threeYearMet = p.disposalDelayReason !== undefined || p.transferDate <= deadline;
   return { oneYearThreshold, oneYearMet, deadline, threeYearMet, overall: oneYearMet && threeYearMet };
 }
 
@@ -290,9 +311,15 @@ export function judgeTemporaryTwoHouseTiming(p: {
  * 계획서 F-2다. 인라인이던 것을 추출만 했으며 **동작은 불변**이다.
  */
 export function resolveTemporaryTwoHouseDeadlineYears(
-  p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate">,
+  p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate" | "temporaryTwoHouse">,
   twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
 ): number {
+  // §155⑯ 전단: "제1항 중 '3년'을 '5년'으로 본다."
+  //   🔶 조정대상지역 단축 기한(DB 2년)과의 우선순위는 명문이 없다(계획서 W-4).
+  //   법문이 §155① 본문의 "3년"을 직접 치환하므로 5년이 덮는 것으로 구현한다.
+  if (p.temporaryTwoHouse?.publicInstitutionRelocation) {
+    return PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS;
+  }
   if (!p.isRegulatedArea) return twoHouseRule.disposalDeadlineYears;
   // 부칙: 양도일이 완화 시행일(2022-05-10) 이후이면 완화 기한 적용
   const relaxDate = twoHouseRule.regulatedAreaRelaxDate
@@ -336,6 +363,9 @@ function evaluateTemporaryTwoHouseTiming(
     transferDate: input.transferDate,
     deadlineYears: resolveTemporaryTwoHouseDeadlineYears(input, twoHouseRule),
     oneYearWaived: provisoRelaxesHolding,
+    // §155⑯ 후단(1년 면제) · §155⑱(기한 예외) — 정본 한 곳에서 전달해 비과세·중과가 같은 값을 쓴다.
+    publicInstitutionRelocation: input.temporaryTwoHouse!.publicInstitutionRelocation,
+    disposalDelayReason: input.temporaryTwoHouse!.disposalDelayReason,
   });
 
   return { provisoRelaxesHolding, timing };
@@ -433,9 +463,16 @@ export function checkExemption(
     //   바로 아래 E-3.5(합가 §155④⑤)는 이미 "§154① 보유·거주"를 요건으로 명시하고 있어
     //   같은 조 구조에서 E-3만 빠져 있던 내부 불일치였다.
     if (timing.overall && meetsOneHouseHoldingResidence(input, rule)) {
-      const provisoLabel = provisoRelaxesHolding
-        ? ` (§154① 단서 ${PROVISO_LABEL[provisoReason!]})`
-        : "";
+      // 적용된 특례 근거를 결과에 남긴다 — 어느 조항으로 요건이 완화됐는지 납세자가 확인할 수 있어야 한다.
+      const basisParts: string[] = [];
+      if (provisoRelaxesHolding) basisParts.push(`§154① 단서 ${PROVISO_LABEL[provisoReason!]}`);
+      if (input.temporaryTwoHouse.publicInstitutionRelocation) {
+        basisParts.push("§155⑯ 지방이전 처분기한 5년·1년요건 면제");
+      }
+      if (input.temporaryTwoHouse.disposalDelayReason) {
+        basisParts.push(`§155⑱ ${DISPOSAL_DELAY_REASON_LABEL[input.temporaryTwoHouse.disposalDelayReason]}`);
+      }
+      const provisoLabel = basisParts.length > 0 ? ` (${basisParts.join(" · ")})` : "";
       // §155①은 "1세대1주택으로 보아 §154①을 적용" — 고가주택 배제(§89①3괄호)·12억 초과분
       // 안분(§95③·§160)도 동일 적용. E-1/E-3.5/E-5와 같은 priceCheck 패턴.
       const priceCheck =

@@ -28,6 +28,12 @@ export function addRentalHousingExceptionRefines(
 export const temporaryTwoHouseSchema = z.object({
   previousAcquisitionDate: z.string().date(),
   newAcquisitionDate: z.string().date(),
+  /** §155⑯ 공공기관·법인 지방이전 — 처분기한 3년→5년 + 1년 요건 면제 */
+  publicInstitutionRelocation: z.boolean().optional(),
+  /** §155⑱ 처분기한 예외 — 「다른 주택 취득일부터 3년이 되는 날 현재」 각 호 해당 */
+  disposalDelayReason: z
+    .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
+    .optional(),
 });
 
 // ⑫ §156의2⑤ 대체주택 비과세 특례 Zod 스키마
