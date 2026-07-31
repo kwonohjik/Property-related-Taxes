@@ -7,7 +7,7 @@
  * 각 항목 하단에 계산 과정(산식)을 한국어로 표기.
  */
 
-import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import type { MixedUseGainBreakdown, MixedUseTotalTax } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
@@ -39,80 +39,15 @@ import {
   PartialUsageChangeCard,
   UsagePeriodSplitCard,
 } from "@/components/calc/results/mixed-use/MixedUseResultCardParts";
+import {
+  mixedUseToFilingResult,
+  adoptedCalculatedTax,
+  deriveBasicRateBracket,
+} from "@/components/calc/results/mixed-use/MixedUseResultCardAdapter";
 
-/** MixedUseGainBreakdown → TransferTaxResult 어댑터 (FilingFormTable 호환) */
-export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxResult {
-  const t = b.total;
-  const localTax = t.localTax;
-  // 취득 모드 판별 — 본문 계산 섹션(isDeemedAcq)과 동일 기준. 실가(§100²·§97①1호가목)·상속/증여
-  // 의제(§163⑨)는 실제 취득가액을 표시(개산공제 미표시), 환산·감정/매매사례(§176의2 추계)는 추계 분기.
-  const acqRoute = b.calculationRoute.acquisitionConversionRoute;
-  const isDeemedOrActual =
-    acqRoute === "section97_actual" ||
-    acqRoute === "inheritance_direct" ||
-    acqRoute === "inheritance_phd_max" ||
-    acqRoute === "gift_direct" ||
-    acqRoute === "gift_phd_max";
-  // 취득가액 = 주택분 + 상가분 (해당 모드 값이 estimatedAcquisitionPrice에 담김).
-  const acqPrice = b.housingPart.estimatedAcquisitionPrice + b.commercialPart.estimatedAcquisitionPrice;
-  // 필요경비 = 개산공제 합계(환산·감정/매매사례) 또는 실제 필요경비(의제) — appraisalDed 필드가 담음. 실가는 0.
-  // 상세명세서 실가 분기(취득가액 = 양도가액 − 양도차익 − expenses)가 acqPrice를 정확히 역산하도록 전달.
-  const acqDeduction =
-    b.housingPart.landAppraisalDed +
-    b.housingPart.buildingAppraisalDed +
-    b.commercialPart.landAppraisalDed +
-    b.commercialPart.buildingAppraisalDed;
-  return {
-    isExempt: false,
-    transferGain: b.housingPart.transferGain + b.commercialPart.transferGain,
-    taxableGain: b.housingPart.proratedTaxableGain + b.commercialPart.transferGain,
-    usedEstimatedAcquisition: !isDeemedOrActual,
-    // 환산·추계 분기: 취득가액(추계)·개산공제를 실제 값으로 표시. 실가/의제는 undefined(실가 역산 분기 사용).
-    estimatedBase: isDeemedOrActual ? undefined : acqPrice,
-    estimatedDeduction: isDeemedOrActual ? undefined : acqDeduction,
-    expenses: acqDeduction,
-    longTermHoldingDeduction: b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount,
-    // 겸용은 주택분(표2 가능)·상가분(표1)이 서로 다른 공제율이라 단일 rate가 없음 —
-    // 상단 요약 산식용 실효 blended rate = 장특공제 합계 ÷ 과세대상 양도차익 합계.
-    longTermHoldingRate:
-      b.housingPart.proratedTaxableGain + b.commercialPart.transferGain > 0
-        ? (b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount) /
-          (b.housingPart.proratedTaxableGain + b.commercialPart.transferGain)
-        : 0,
-    lthdStartDate: new Date(0), // mixed-use 합산 mock: 표시용
-    basicDeduction: t.basicDeduction,
-    taxBase: t.taxBase,
-    appliedRate: t.appliedRate,
-    progressiveDeduction: t.progressiveDeduction,
-    calculatedTax: t.taxByBasicRate,
-    isSurchargeSuspended: false,
-    reductionAmount: 0,
-    determinedTax: t.transferTax,
-    penaltyBase: 0, // 겸용주택 어댑터: 가산세 미적용 경로 (MixedUseGainBreakdown에 penaltyBase 없음)
-    penaltyTax: 0,
-    localIncomeTax: localTax,
-    totalTax: t.totalPayable,
-    // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)로 CalculationStep[]과
-    // 형태가 달라 재사용 불가. 명세서 카드는 mixedUseDetail·result 필드로 값을 뽑고
-    // formula는 fallback을 쓰므로 빈 배열로 전달 (findStepByLabel 매칭 자연 실패).
-    steps: [],
-    mixedUseDetail: b,
-  };
-}
+// 하위 호환 — 종전에 이 모듈에서 어댑터를 가져가던 소비처 유지.
+export { mixedUseToFilingResult };
 
-/** 양도소득세 기본세율 8구간 (소득세법 §104) — 캐시된 결과 fallback용 */
-function deriveBasicRateBracket(taxBase: number): { rate: number; deduction: number } {
-  if (taxBase <= 14_000_000) return { rate: 0.06, deduction: 0 };
-  if (taxBase <= 50_000_000) return { rate: 0.15, deduction: 1_260_000 };
-  if (taxBase <= 88_000_000) return { rate: 0.24, deduction: 5_760_000 };
-  if (taxBase <= 150_000_000) return { rate: 0.35, deduction: 15_440_000 };
-  if (taxBase <= 300_000_000) return { rate: 0.38, deduction: 19_940_000 };
-  if (taxBase <= 500_000_000) return { rate: 0.40, deduction: 25_940_000 };
-  if (taxBase <= 1_000_000_000) return { rate: 0.42, deduction: 35_940_000 };
-  return { rate: 0.45, deduction: 65_940_000 };
-}
-
-/** 계산 섹션 id — ④ 비사업용토지는 조건부 렌더 */
 const MIXED_SECTION_IDS = ["apportion", "housing", "commercial", "nbl", "total"] as const;
 
 interface Props {
@@ -148,7 +83,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
     );
   }
 
-  const { apportionment: a, housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t } = breakdown;
+  const { apportionment: a, housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t, multiHouseSurcharge: mhs } = breakdown;
   const totalTransfer = a.housingTransferPrice + a.commercialTransferPrice;
   // 상속 취득가액 직접 산정(소령 §163⑨) — 단일 소스: calculationRoute.acquisitionConversionRoute만 판독.
   // (part-level acqPriceSource는 dual-truth 회피로 미채택 — plan §4.5 정본 결정)
@@ -507,15 +442,30 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
             }
           />
         )}
-        <Row
-          label={`장기보유공제 (표${h.longTermDeductionTable}, ${fmtPct(h.longTermDeductionRate)})`}
-          value={`△ ${fmt(h.longTermDeductionAmount)}`}
-          formula={
-            h.longTermDeductionTable === 2
-              ? "보유연수×4% + 거주연수×4% (최대 80%)"
-              : "보유연수×2% (최대 30%)"
-          }
-        />
+        {(() => {
+          // §95② 본문 괄호 — §104⑦ 각 호(다주택 중과) 해당 주택은 장기보유특별공제 배제.
+          // 판정은 엔진 결과(multiHouseSurcharge)를 그대로 읽는다 — 재도출 금지(계산-표시 drift 차단).
+          const mh = mhs;
+          const lthdExcludedBySurcharge =
+            !!mh && mh.surchargeType !== "none" && !mh.isSurchargeSuspended;
+          return (
+            <Row
+              label={
+                lthdExcludedBySurcharge
+                  ? "장기보유공제 (배제)"
+                  : `장기보유공제 (표${h.longTermDeductionTable}, ${fmtPct(h.longTermDeductionRate)})`
+              }
+              value={`△ ${fmt(h.longTermDeductionAmount)}`}
+              formula={
+                lthdExcludedBySurcharge
+                  ? `조정대상지역 ${mh.effectiveHouseCount}주택 중과 대상 주택 — 장기보유특별공제 배제 (소득세법 §95② 본문 괄호·§104⑦)`
+                  : h.longTermDeductionTable === 2
+                    ? "보유연수×4% + 거주연수×4% (최대 80%)"
+                    : "보유연수×2% (최대 30%)"
+              }
+            />
+          );
+        })()}
         <DivRow />
         <Row
           label="주택부분 양도소득금액"
@@ -679,9 +629,17 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         />
         <DivRow />
         <Row
-          label="산출세액 (기본세율)"
-          value={fmt(t.taxByBasicRate)}
+          label={t.rateBasis === "clause2" ? "산출세액 (자산별 합계)" : "산출세액 (기본세율)"}
+          value={fmt(adoptedCalculatedTax(t))}
           formula={(() => {
+            // §104⑤2호가 채택되면 세액은 파트별 산출세액의 합이라 `taxByBasicRate`(1호)와 다르다.
+            // 1호 값을 그대로 인용하면 표시-계산 drift가 된다.
+            if (t.rateBasis === "clause2") {
+              const addon = t.surchargeAddon;
+              return addon !== undefined
+                ? `주택분 과세표준 × (누진세율 + ${fmtPct(addon)}) + 상가분 과세표준 × 누진세율 — 자산별 산출세액 합계가 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호·§104⑦)`
+                : `파트별 과세표준 × 각 적용세율 합계 — 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호)`;
+            }
             if (t.taxBase <= 0) return "과세표준 × 누진세율 (6%~45% 8구간) — 소득세법 §104";
             // 엔진이 신규 필드를 채웠으면 그대로 사용, 아니면 taxBase로부터 도출 (캐시 fallback)
             const fallback = deriveBasicRateBracket(t.taxBase);
@@ -707,7 +665,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         <Row
           label="양도소득세"
           value={fmt(t.transferTax)}
-          formula={`산출세액 ${fmtPlain(t.taxByBasicRate)}${
+          formula={`산출세액 ${fmtPlain(adoptedCalculatedTax(t))}${
             t.nonBusinessSurcharge > 0
               ? ` + 비사업용토지 가산세 ${fmtPlain(t.nonBusinessSurcharge)}`
               : ""

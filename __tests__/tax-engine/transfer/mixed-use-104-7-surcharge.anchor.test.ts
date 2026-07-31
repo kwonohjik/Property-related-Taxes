@@ -295,3 +295,48 @@ describe("Phase B3 — §104⑦ 중과세율 + 후단 MAX", () => {
     expect(r.warnings.some((w) => w.includes("중과") && w.includes("세율"))).toBe(true);
   });
 });
+
+describe("Phase B4 — 결과 표시 근거 echo (⑦ 동기화 지점)", () => {
+  /**
+   * 결과 카드가 판정을 **재도출하지 않도록** 엔진이 근거를 그대로 실어 보낸다
+   * (memory `feedback_engine_result_display_drift`).
+   *
+   * `rateBasis`는 P3b부터 있던 표시 결함도 함께 막는다 — §104⑤2호가 채택되면
+   * `transferTax !== taxByBasicRate`인데, 결과 카드의 「양도소득세」 산식이
+   * 1호 값(`taxByBasicRate`)을 인용하고 있었다.
+   */
+  it("B-B19: §104⑤2호 채택 시 rateBasis='clause2' · surchargeAddon echo", () => {
+    const r2 = run({ multiHouse: multiHouse(1) });
+    expect(r2.total.rateBasis).toBe("clause2");
+    expect(r2.total.surchargeAddon).toBe(0.2);
+    // 표시 결함 방어 — 1호 값과 실제 세액이 다르다는 사실 자체를 고정한다.
+    expect(r2.total.transferTax).not.toBe(r2.total.taxByBasicRate);
+
+    const r3 = run({ multiHouse: multiHouse(2) });
+    expect(r3.total.surchargeAddon).toBe(0.3);
+  });
+
+  it("B-B20: 중과 미적용이면 rateBasis='progressive' · surchargeAddon 없음", () => {
+    const r = run({ multiHouse: multiHouse(1, { isRegulatedArea: false }) });
+    expect(r.total.rateBasis).toBe("progressive");
+    expect(r.total.surchargeAddon).toBeUndefined();
+    // 1호 채택이면 산식이 인용하는 값과 세액이 일치해야 한다.
+    expect(r.total.transferTax).toBe(r.total.taxByBasicRate + r.total.nonBusinessSurcharge);
+  });
+
+  it("B-B21: 2008 위기취득 — 세율 가산이 없으므로 surchargeAddon도 없다", () => {
+    const r = run({
+      multiHouse: multiHouse(1, {
+        houses: [
+          makeHouseInfo("selling", { acquisitionDate: D("2010-06-01") }),
+          makeHouseInfo("h2", { acquisitionDate: D("2015-03-01") }),
+        ],
+      }),
+    });
+    expect(r.total.surchargeAddon).toBeUndefined();
+    // 그러나 장특 배제는 존속하므로 결과 카드는 "장기보유공제 (배제)"를 표시해야 한다.
+    expect(r.multiHouseSurcharge?.surchargeType).not.toBe("none");
+    expect(r.multiHouseSurcharge?.isSurchargeSuspended).toBe(false);
+    expect(r.housingPart.longTermDeductionAmount).toBe(0);
+  });
+});

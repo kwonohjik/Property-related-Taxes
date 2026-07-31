@@ -176,6 +176,10 @@ export function buildTotalTax(
     // 2호(자산별 합)가 채택되면 대표세율은 파트 최고세율이고 누진공제는 표시할 수 없다.
     appliedRate: isUnregistered ? 0.7 : usesClause2 ? clause2.maxRate : appliedRate,
     progressiveDeduction: usesClause2 ? 0 : progressiveDeduction,
+    rateBasis: isUnregistered ? "unregistered" : usesClause2 ? "clause2" : "progressive",
+    ...(rateParts?.find((p) => (p.surchargeAddon ?? 0) > 0)?.surchargeAddon !== undefined
+      ? { surchargeAddon: rateParts.find((p) => (p.surchargeAddon ?? 0) > 0)!.surchargeAddon }
+      : {}),
     nonBusinessSurcharge,
     transferTax,
     localTax,

@@ -501,6 +501,16 @@ export interface MixedUseTotalTax {
   progressiveDeduction: number;
   /** 비사업용토지 +10%p 가산세 */
   nonBusinessSurcharge: number;
+  /**
+   * 채택된 세율 근거 — **표시-계산 drift 차단용 단일 소스**.
+   *   "progressive"   §104⑤1호(합산 과세표준 누진) — `transferTax = taxByBasicRate + nonBusinessSurcharge`
+   *   "clause2"       §104⑤2호(자산별 산출세액 합) — `transferTax ≠ taxByBasicRate`
+   *   "unregistered"  §104①10호 70% 단일세율
+   * 미주입(구 캐시 결과) 시 결과 카드는 값 비교로 fallback 추론한다.
+   */
+  rateBasis?: "progressive" | "clause2" | "unregistered";
+  /** 적용된 §104⑦ 다주택 중과 가산율(0.20·0.30). 미적용 시 undefined. */
+  surchargeAddon?: number;
   /** 양도소득세 */
   transferTax: number;
   /** 지방소득세 (10%) */
