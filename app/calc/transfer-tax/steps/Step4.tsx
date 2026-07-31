@@ -116,6 +116,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         provisoExpropriationDate: form.provisoExpropriationDate,
         provisoBusinessApprovalDate: form.provisoBusinessApprovalDate,
         residencePeriodMonths: form.residencePeriodMonths,
+        publicInstitutionRelocation: form.publicInstitutionRelocation,
+        disposalDelayReason: form.disposalDelayReason,
       }),
     [
       primaryAcquisitionDate,
@@ -126,6 +128,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       form.provisoExpropriationDate,
       form.provisoBusinessApprovalDate,
       form.residencePeriodMonths,
+      form.publicInstitutionRelocation,
+      form.disposalDelayReason,
     ],
   );
 
@@ -462,6 +466,47 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   <p className="text-xs text-muted-foreground">새로 취득한 주택의 취득일</p>
                 </div>
               </div>
+
+              {/* §155⑯ — 처분기한 3년→5년 + 1년 요건 면제(효과 둘) */}
+              <div className="mt-4 space-y-3">
+                <ToggleCard
+                  checked={form.publicInstitutionRelocation}
+                  onCheckedChange={(v) => onChange({ publicInstitutionRelocation: v })}
+                  title="공공기관·법인 지방이전 특례 (§155⑯)"
+                  description="수도권 1주택 보유 중 소속 법인·공공기관이 수도권 밖으로 이전하여, 이전한 시·군 또는 연접 시·군의 주택을 취득한 경우 — 처분기한이 5년으로 늘고 1년 경과 요건도 면제됩니다"
+                  tone="sky"
+                />
+
+                {/* §155⑱ — 3년 기한의 예외. 판정 기준시점이 양도일이 아님을 문구로 명시(G-2) */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">처분기한 예외 사유 (§155⑱)</label>
+                  <RadioCardGroup
+                    name="disposalDelayReason"
+                    value={form.disposalDelayReason}
+                    onChange={(v) => onChange({ disposalDelayReason: v })}
+                    options={[
+                      { value: "", label: "해당 없음", description: "처분기한 내 양도 (일반)" },
+                      { value: "kamco", label: "한국자산관리공사 매각 의뢰", description: "1호" },
+                      { value: "auction", label: "법원 경매 신청", description: "2호" },
+                      { value: "public_sale", label: "「국세징수법」 공매 진행 중", description: "3호" },
+                      {
+                        value: "cash_settlement_suit",
+                        label: "정비사업 현금청산금 지급 소송",
+                        description: "4호 — 진행 중이거나 종료됐으나 미지급",
+                      },
+                      {
+                        value: "expropriation_suit",
+                        label: "정비사업 수용재결·매도청구소송",
+                        description: "5호 — 진행 중이거나 종료됐으나 미지급",
+                      },
+                    ]}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    <strong>신규 주택을 취득한 날부터 3년이 되는 날 현재</strong> 해당해야 합니다 (양도일 기준이 아닙니다).
+                    해당 시 처분기한을 넘겨도 §155① 요건 B를 충족한 것으로 봅니다.
+                  </p>
+                </div>
+              </div>
             </ToggleCard>
 
             {/* §155① 요건 자동판정 카드 — 엔진 헬퍼 단일소스(judgeTempTwoHouseFromForm), 특례 토글 직하 배치 */}
@@ -490,12 +535,16 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                       <p>
                         {tempTwoHouseVerdict.oneYearMet ? "충족" : "미충족"} · 요건 A — 종전주택 취득 후 1년 경과 후 신규주택 취득
                         {tempTwoHouseVerdict.oneYearWaived
-                          ? " (§154① 단서 사유로 1년 요건 면제)"
+                          ? form.publicInstitutionRelocation
+                            ? " (§155⑯ 공공기관 이전으로 1년 요건 면제)"
+                            : " (§154① 단서 사유로 1년 요건 면제)"
                           : ` (1년 경과일 ${tempTwoHouseVerdict.oneYearThreshold.toISOString().slice(0, 10)})`}
                       </p>
                       <p>
-                        {tempTwoHouseVerdict.threeYearMet ? "충족" : "미충족"} · 요건 B — 신규주택 취득일부터 3년 내 종전주택 양도
+                        {tempTwoHouseVerdict.threeYearMet ? "충족" : "미충족"} · 요건 B — 신규주택 취득일부터{" "}
+                        {form.publicInstitutionRelocation ? "5년" : "3년"} 내 종전주택 양도
                         {` (처분기한 ${tempTwoHouseVerdict.deadline.toISOString().slice(0, 10)})`}
+                        {tempTwoHouseVerdict.delayReasonApplied && " — §155⑱ 사유로 기한 요건 충족 간주"}
                       </p>
                       <p className="text-caption">
                         최종 비과세 여부는 계산 결과에서 확정됩니다(조정지역 종전 처분기한 등 반영).

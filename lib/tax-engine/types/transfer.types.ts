@@ -46,6 +46,22 @@ import type { CarryoverTaxationInput } from "./transfer-carryover.types";
 // 외부 소비자 편의를 위해 재수출.
 export type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer-carryover.types";
 
+/**
+ * §155⑱ 각 호 — §155① 처분기한(3년/⑯ 5년)의 예외 사유.
+ * 「다른 주택을 취득한 날부터 **3년이 되는 날 현재**」 해당해야 한다(기준시점 주의).
+ */
+export type TemporaryTwoHouseDelayReason =
+  /** 1호 한국자산관리공사에 매각을 의뢰한 경우 */
+  | "kamco"
+  /** 2호 법원에 경매를 신청한 경우 */
+  | "auction"
+  /** 3호 「국세징수법」에 따른 공매가 진행 중인 경우 */
+  | "public_sale"
+  /** 4호 정비사업 현금청산금 지급 소송 진행 중 또는 종료됐으나 미지급 */
+  | "cash_settlement_suit"
+  /** 5호 정비사업 수용재결·매도청구소송 진행 중 또는 종료됐으나 미지급 */
+  | "expropriation_suit";
+
 // ── 부담부증여 / 상업용건물 / 재개발 타입 (800줄 정책 — sibling 파일 분리) ──
 import type { BurdenedGiftInfo } from "./transfer-burdened-gift.types";
 export type { BurdenedGiftInfo, TransferBurdenedGiftBreakdown, BurdenedGiftValuationMode } from "./transfer-burdened-gift.types";
@@ -161,6 +177,23 @@ export interface TransferTaxInput {
   temporaryTwoHouse?: {
     previousAcquisitionDate: Date;
     newAcquisitionDate: Date;
+    /**
+     * §155⑯ 공공기관·법인 지방이전 특례 — 「제1항 중 "3년"을 "5년"으로 본다」.
+     * 후단으로 **1년 요건(종전주택 취득 후 1년 경과)도 면제**된다 — 효과가 둘이다.
+     *
+     * 요건(자기선언): 수도권 1주택 + 수도권 소재 법인·공공기관의 수도권 밖 이전 +
+     * 그 임원·사용인·종사자 세대가 취득한 신규주택이 이전한 시·군 또는 **연접** 시·군 소재.
+     * 「연접」 자동 판별은 미구현 — 계획서 W-2.
+     */
+    publicInstitutionRelocation?: boolean;
+    /**
+     * §155⑱ — §155① 본문 괄호「(제18항에 따른 사유에 해당하는 경우를 포함한다)」.
+     * 해당 시 **3년(또는 ⑯의 5년) 처분기한을 초과해도** 요건 B를 충족한 것으로 본다.
+     *
+     * ⚠️ 판정 기준시점은 양도일이 아니라 **「다른 주택을 취득한 날부터 3년이 되는 날 현재」**다
+     * (계획서 G-2). 자기선언 입력이므로 UI가 기준시점을 명시한다.
+     */
+    disposalDelayReason?: TemporaryTwoHouseDelayReason;
   };
   /**
    * §156의2⑤ 대체주택 비과세 특례 — 재개발·재건축 시행기간 중 거주목적 대체주택 취득 후 양도.

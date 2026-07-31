@@ -11,12 +11,16 @@ import {
   resolveExemptionProviso,
 } from "@/lib/tax-engine/transfer-tax-exemption";
 import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
+import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
 
 /**
  * UI 판정 카드 표준 처분기한 — 2023.01.12 이후 양도분 3년(조정·비조정 공통, §155① 부칙).
  * 조정지역 종전 기한(2년, 2022-05-10 이전 양도)은 드물어 계산 결과에서 확정.
  */
 export const TEMP_TWO_HOUSE_UI_DEADLINE_YEARS = 3;
+
+/** §155⑯ 공공기관·법인 지방이전 — 「제1항 중 "3년"을 "5년"으로 본다」 */
+export const PUBLIC_INSTITUTION_RELOCATION_UI_DEADLINE_YEARS = 5;
 
 export type TempTwoHouseVerdict =
   | { status: "pending" } // 입력 부족 — 자산취득일·신규취득일·양도일 중 미입력
@@ -27,6 +31,8 @@ export type TempTwoHouseVerdict =
       oneYearWaived: boolean;
       deadline: Date;
       threeYearMet: boolean;
+      /** §155⑱ 사유로 기한 요건이 치유됐는지 — 카드가 "기한 초과이나 예외 적용"을 구분해 표시 */
+      delayReasonApplied: boolean;
     };
 
 /**
@@ -42,6 +48,10 @@ export function judgeTempTwoHouseFromForm(p: {
   provisoExpropriationDate: string;
   provisoBusinessApprovalDate: string;
   residencePeriodMonths: string;
+  /** §155⑯ 공공기관 지방이전 — 기한 5년 + 1년 요건 면제 */
+  publicInstitutionRelocation?: boolean;
+  /** §155⑱ 처분기한 예외 사유 ("" = 해당 없음) */
+  disposalDelayReason?: string;
 }): TempTwoHouseVerdict {
   if (!p.previousAcquisitionDate || !p.newHouseAcquisitionDate || !p.transferDate) {
     return { status: "pending" };
@@ -78,16 +88,25 @@ export function judgeTempTwoHouseFromForm(p: {
     previousAcquisitionDate: prev,
     newAcquisitionDate: nw,
     transferDate: transfer,
-    deadlineYears: TEMP_TWO_HOUSE_UI_DEADLINE_YEARS,
+    // §155⑯이면 본문 "3년"이 "5년"으로 치환된다.
+    deadlineYears: p.publicInstitutionRelocation
+      ? PUBLIC_INSTITUTION_RELOCATION_UI_DEADLINE_YEARS
+      : TEMP_TWO_HOUSE_UI_DEADLINE_YEARS,
     oneYearWaived,
+    publicInstitutionRelocation: p.publicInstitutionRelocation,
+    disposalDelayReason: (p.disposalDelayReason || undefined) as
+      | TemporaryTwoHouseDelayReason
+      | undefined,
   });
 
   return {
     status: t.overall ? "eligible" : "ineligible",
     oneYearThreshold: t.oneYearThreshold,
     oneYearMet: t.oneYearMet,
-    oneYearWaived,
+    // ⑯ 후단도 1년 면제 사유다 — 카드 문구가 "면제"를 표시해야 판정과 설명이 어긋나지 않는다.
+    oneYearWaived: oneYearWaived || p.publicInstitutionRelocation === true,
     deadline: t.deadline,
     threeYearMet: t.threeYearMet,
+    delayReasonApplied: !!p.disposalDelayReason,
   };
 }

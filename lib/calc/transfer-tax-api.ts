@@ -10,6 +10,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
@@ -426,6 +427,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             // 종전주택 취득일 = 양도 자산 취득일(단일소스)
             previousAcquisitionDate: primary.acquisitionDate,
             newAcquisitionDate: form.newHouseAcquisitionDate,
+            // §155⑯ — 처분기한 5년 + 1년 요건 면제. false는 보내지 않는다(Zod optional).
+            ...(form.publicInstitutionRelocation ? { publicInstitutionRelocation: true } : {}),
+            // §155⑱ — 빈 문자열은 "해당 없음"이므로 미전송.
+            ...(form.disposalDelayReason
+              ? { disposalDelayReason: form.disposalDelayReason as TemporaryTwoHouseDelayReason }
+              : {}),
           },
         }
       : {}),

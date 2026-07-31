@@ -335,6 +335,20 @@ export function TransferTaxResultView({
           </div>
         )}
 
+        {/* 부분 비과세(고가주택) 근거 — 전액 비과세는 위 카드가 이미 exemptReason을 표시한다.
+            어느 특례로 1세대1주택 의제가 성립했는지 남기지 않으면 12억 초과분만 과세된 이유를
+            납세자가 확인할 수 없다. */}
+        {!result.isExempt && result.exemptReason && (
+          <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-3 text-sm dark:border-emerald-900/60 dark:bg-emerald-950/20">
+            <p className="font-semibold text-emerald-900 dark:text-emerald-300">
+              1세대1주택 특례 적용 — {result.exemptReason}
+            </p>
+            <p className="text-xs text-emerald-800 dark:text-emerald-400 mt-0.5">
+              양도가액 12억원 초과분에 대해서만 과세됩니다 (소득세법 §89①3호·시행령 §160).
+            </p>
+          </div>
+        )}
+
         {/* 필지별 계산 내역 */}
         {result.parcelDetails && result.parcelDetails.length > 0 && (
           <div className="space-y-2">

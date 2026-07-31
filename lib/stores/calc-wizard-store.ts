@@ -102,6 +102,10 @@ export interface TransferFormData {
   temporaryTwoHouseSpecial: boolean;
   // 종전주택 취득일은 별도 필드를 두지 않고 양도 자산(assets[0])의 acquisitionDate를 단일소스로 사용(§155① 종전주택 = 양도주택).
   newHouseAcquisitionDate: string;
+  /** §155⑯ 공공기관·법인 지방이전 — 처분기한 3년→5년 + 1년 요건 면제 (효과 둘) */
+  publicInstitutionRelocation: boolean;
+  /** §155⑱ 처분기한 예외 사유 — "" = 해당 없음. 「3년이 되는 날 현재」 기준 */
+  disposalDelayReason: string;
   // §156의2⑤ 대체주택 비과세 특례 FLAT 필드 (API에서 replacementHouse nested로 조립)
   replacementHouseSpecial: boolean;
   replBusinessApprovalDate: string;   // 사업시행계획인가일
@@ -257,6 +261,8 @@ const defaultFormData: TransferFormData = {
   isUnregistered: false,
   temporaryTwoHouseSpecial: false,
   newHouseAcquisitionDate: "",
+  publicInstitutionRelocation: false,
+  disposalDelayReason: "",
   replacementHouseSpecial: false,
   replBusinessApprovalDate: "",
   replCompletionDate: "",
