@@ -592,6 +592,25 @@ export async function POST(request: NextRequest) {
         // ⚠️ raw `data.oneHouseExemptionProviso` 전달 금지 — Zod 출력은 날짜가 string이라
         //    §154① 단서의 `addYears`·`>=` 비교가 침묵 오작동한다. 상단(:205~)의 Date 변환본을 쓴다.
         oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
+        // ⑭ 법 §104⑦ 다주택 중과 판정 입력 — 전부 폼-전역 값이라 `data.mixedUse`에 없다.
+        //    `houses` 미전송(단독 주택)이면 undefined → 엔진이 중과 판정을 건너뛴다.
+        //    ⚠️ 날짜를 갖는 3종은 `engineInput` 변환본을 쓴다 — 특히 `gracePeriod`는
+        //       `mapGracePeriodToEngine`(:195)이 toDate 변환한 값이어야 한다.
+        multiHouse:
+          data.houses && data.houses.length > 0
+            ? {
+                // ⚠️ raw `data.houses` 금지 — Zod 출력은 `acquisitionDate`가 string이다.
+                //    `engineInput.houses`는 상단(:192) `mapHousesToEngine`이 Date 변환한 값이다.
+                houses: engineInput.houses ?? [],
+                sellingHouseId: data.sellingHouseId ?? data.houses[0].id,
+                presaleRights: engineInput.presaleRights ?? [],
+                isOneHousehold: data.isOneHousehold,
+                isRegulatedArea: data.isRegulatedArea,
+                marriageMerge: engineInput.marriageMerge,
+                parentalCareMerge: engineInput.parentalCareMerge,
+                gracePeriod: engineInput.gracePeriod,
+              }
+            : undefined,
         landAcquisitionDate: new Date(data.mixedUse.landAcquisitionDate),
         buildingAcquisitionDate: new Date(data.mixedUse.buildingAcquisitionDate),
         preHousingDisclosure: phdInput,
