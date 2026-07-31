@@ -224,8 +224,16 @@ B-19(장기 회귀)는 RED 단계에서도 통과.
 **파일 크기**: `transfer-tax-mixed-use.ts` 561 → **593**(cap 800 이내).
 
 **잔여 갭(P3c)** — 조정지역 취득 시 **거주 2년**(§154① 본문 후단)과 **단서 각호 면제**는
-입력이 없어 미판정이다. 둘 다 과소과세 방향이며, 거주요건은 `wasRegulatedAtAcquisition`
-신설이 필요해 14지점 전부가 걸린다.
+입력이 없어 미판정이다. ~~둘 다 과소과세 방향이며, 거주요건은 `wasRegulatedAtAcquisition`
+신설이 필요해 14지점 전부가 걸린다.~~
+
+> 🔴 **두 가지가 정정됐다** (2026-07-31 · 후속 계획서
+> [`transfer-mixed-use-residence-surcharge.plan.md`](./transfer-mixed-use-residence-surcharge.plan.md)):
+> ① 「14지점 전부」는 **틀렸다** — 위 D-4 정정과 같은 이유로 **⑭ 1지점**이면 된다(같은 문서 §1).
+> ② 「둘 다 과소과세 방향」도 **틀렸다** — **단서 각호 미구현은 과다과세**다. 영 §154① 단서는
+>    「제1호부터 제3호까지 … 그 **보유기간 및** 거주기간의 제한을 받지 않는다」이므로,
+>    위 P3a 보유 판정이 단서를 무시한 결과 **수용·해외이주 등에 해당하는데도 보유 2년 미만이면
+>    비과세가 배제**됐다. 후속 계획서 §E-3 · anchor B-A7이 정정했다.
 
 ### 4.2-R P3b 구현 결과 ✅ (2026-07-31)
 
@@ -338,8 +346,16 @@ part 조립 후 0으로 덮어쓰면 `landHoldingRate`·`longTermDeductionRate` 
 
 ### D-4 — 겸용주택 다주택 중과(§104⑦) 미적용
 
+> 🔴 **이 절의 규모 판정은 폐기됐다** (2026-07-31 실측).
+> 겸용은 별도 `assetKind`가 아니라 `assetKind === "housing"` + `isMixedUseHouse === true`이므로
+> 주택용 **top-level 입력이 전부 살아 있다**. `fetch` body 가로채기로
+> `wasRegulatedAtAcquisition`·`householdHousingCount`·`residencePeriodMonths`·`houses[]` 전송을
+> 확인했다. 실제 결손은 **⑭ route→`mixedAsset` 1지점 + 엔진 소비**뿐이다(P4 `isUnregistered` 선례와 동일).
+> ⇒ 후속 계획서 [`transfer-mixed-use-residence-surcharge.plan.md`](./transfer-mixed-use-residence-surcharge.plan.md) §1.
+
 `MixedUseAssetInput`에 `householdHousingCount`·조정대상지역 필드가 **없다**(grep 전수).
-따라서 세율 결손을 넘어 **입력 배관 자체가 없다** — 14 동기화 지점 전부가 필요하다.
+따라서 세율 결손을 넘어 ~~**입력 배관 자체가 없다** — 14 동기화 지점 전부가 필요하다~~
+**엔진 서브입력 타입에만 없다**(위 정정).
 
 D-2·D-3과 달리 신규 입력이 필요하므로 별도 Phase로 분리한다.
 

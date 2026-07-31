@@ -10,6 +10,7 @@
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calculateHoldingPeriod } from "./tax-utils";
+import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
 import { computeAmendment } from "./transfer-tax-amendment";
 import type { AmendmentInput } from "./types/transfer-amendment.types";
@@ -92,21 +93,49 @@ export function calcMixedUseTransferTax(
   // 기산일은 **건물 취득일**이다. §154①의 보유기간은 「해당 **주택**」의 보유기간이고,
   // 겸용 건물의 주택 부분 취득일이 곧 건물 취득일이기 때문이다.
   //
-  // ⚠️ 범위 — **보유요건만** 판정한다. 조정대상지역 취득 시의 **거주 2년**(같은 항 본문 후단)과
-  //    **단서 각호 면제**(수용·해외이주 등)는 겸용 입력에 조정지역 여부·면제사유가 없어
-  //    판정할 수 없다. 둘 다 과소과세 방향의 잔여 갭이다(계획서 P3c).
+  // 본문 후단은 **취득 당시 조정대상지역**이면 거주 2년을 더 요구하고, **단서**는
+  //   "제1호부터 제3호까지 … 그 **보유기간 및** 거주기간의 제한을 받지 않으며 제5호에 해당하는
+  //    경우에는 거주기간의 제한을 받지 않는다"
+  // 고 정한다(법제처 실측 2026-07-31 · 시행령 MST 286211).
+  //
+  // ⚠️ **판정을 쪼개지 않는다.** 종전 P3a는 보유 축만 따로 구현했다가 단서가 보유요건까지
+  //    면제한다는 점을 놓쳐, 수용·해외이주 등에 해당하는데도 보유 2년 미만이면 비과세를
+  //    배제했다(**과다과세**). 단서 면제는 정본의 `meetsHolding` **내부**에 있으므로
+  //    거주 축을 AND로 덧붙이는 방식으로는 고칠 수 없다 — 정본 함수 하나를 부른다.
   const exemptionHolding = calculateHoldingPeriod(asset.buildingAcquisitionDate, transferDate);
-  const meetsExemptionHolding =
-    exemptionHolding.years >= oneHouseSpecialRules.one_house_exemption.minHoldingYears;
+  const exemptionReqInput = {
+    // 주택 부분의 취득일 = 건물 취득일. §154①의 보유기간은 「해당 **주택**」의 보유기간이고
+    // 겸용 건물의 주택 부분 취득일이 곧 건물 취득일이다.
+    acquisitionDate: asset.buildingAcquisitionDate,
+    transferDate,
+    // 거주기간은 §154⑧3호 **통산값**(동일세대 상속분 포함)을 쓴다. API 변환
+    // (`transfer-tax-api-mixed-use.ts:171`)이 `consolidateResidenceMonths`로 이미 통산해
+    // 보내므로, 여기서 `acquisitionCause`·`decedent*`를 함께 넘기면 **통산이 두 번** 걸린다
+    // → 의도적으로 미전달. 같은 미전달이 `resolveExemptionHoldingStartDate`의 backdate도
+    // 막아 보유 기산일이 건물 취득일로 고정된다(겸용에는 그 입력 자체가 없다).
+    residencePeriodMonths: (asset.table2ResidencePeriodYears ?? asset.residencePeriodYears) * 12,
+    oneHouseExemptionProviso: asset.oneHouseExemptionProviso,
+    regionCode: asset.regionCode,
+    // 미주입 시 false — 조정대상지역이 아니면 거주요건 자체가 없다(종전 동작 불변).
+    wasRegulatedAtAcquisition: asset.wasRegulatedAtAcquisition ?? false,
+  };
+  const meetsOneHouseRequirements = meetsOneHouseHoldingResidence(
+    exemptionReqInput,
+    oneHouseSpecialRules.one_house_exemption,
+  );
   // §91① — 미등기양도자산에는 **비과세 규정을 적용하지 아니한다**. 주택분 12억 비과세도 배제.
   const isUnregistered = asset.isUnregistered === true;
   const isOneHouseExempt =
-    (asset.isOneHouseExempt ?? true) && meetsExemptionHolding && !isUnregistered;
-  if ((asset.isOneHouseExempt ?? true) && !meetsExemptionHolding) {
+    (asset.isOneHouseExempt ?? true) && meetsOneHouseRequirements && !isUnregistered;
+  if ((asset.isOneHouseExempt ?? true) && !meetsOneHouseRequirements) {
+    // 어느 요건이 걸렸는지 사용자가 판별할 수 있도록 세 축을 모두 싣는다(침묵 과세 방지).
+    const r = oneHouseSpecialRules.one_house_exemption;
     warnings.push(
-      `건물 보유기간 ${exemptionHolding.years}년 ${exemptionHolding.months}개월 — ` +
-        `1세대1주택 비과세 보유요건(${oneHouseSpecialRules.one_house_exemption.minHoldingYears}년, ` +
-        `소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.`,
+      `건물 보유기간 ${exemptionHolding.years}년 ${exemptionHolding.months}개월 · ` +
+        `거주기간 ${exemptionReqInput.residencePeriodMonths / 12}년 · ` +
+        `취득 당시 조정대상지역 ${asset.wasRegulatedAtAcquisition ? "해당" : "미해당"} — ` +
+        `1세대1주택 비과세 요건(보유 ${r.minHoldingYears}년, 조정대상지역 취득 시 거주 ` +
+        `${r.regulatedAreaMinResidenceYears}년, 소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.`,
     );
   }
 

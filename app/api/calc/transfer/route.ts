@@ -585,6 +585,13 @@ export async function POST(request: NextRequest) {
         //    `data.mixedUse`에는 없는 top-level 필드라 여기서 명시 전달하지 않으면 조용히 누락된다.
         ownershipRatio: data.ownershipRatio,
         isUnregistered: data.isUnregistered,
+        // ⑭ 영 §154① 요건 판정 — 셋 다 폼-전역(top-level) 값이라 `data.mixedUse`에 없다.
+        //    여기서 명시 전달하지 않으면 조용히 누락되어 거주요건·단서 면제가 미판정된다.
+        wasRegulatedAtAcquisition: data.wasRegulatedAtAcquisition,
+        regionCode: data.regionCode,
+        // ⚠️ raw `data.oneHouseExemptionProviso` 전달 금지 — Zod 출력은 날짜가 string이라
+        //    §154① 단서의 `addYears`·`>=` 비교가 침묵 오작동한다. 상단(:205~)의 Date 변환본을 쓴다.
+        oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
         landAcquisitionDate: new Date(data.mixedUse.landAcquisitionDate),
         buildingAcquisitionDate: new Date(data.mixedUse.buildingAcquisitionDate),
         preHousingDisclosure: phdInput,

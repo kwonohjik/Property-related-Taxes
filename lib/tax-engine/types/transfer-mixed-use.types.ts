@@ -1,5 +1,5 @@
 import type { ZoneType } from "../non-business-land/types";
-import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./transfer.types";
+import type { PreHousingDisclosureInput, PreHousingDisclosureResult, TransferTaxInput } from "./transfer.types";
 import type { AmendmentDetail } from "./transfer-amendment.types";
 import type { ExprTotalValuationDetail } from "../transfer-tax-expropriation-valuation";
 import type { InheritedAcquisitionDetail } from "../transfer-tax-mixed-use-inheritance";
@@ -128,6 +128,31 @@ export interface MixedUseAssetInput {
    * 미주입 시 true (기존 겸용주택 사례14 등 backward compat).
    */
   isOneHouseExempt?: boolean;
+
+  // ── 영 §154① 요건 판정 입력 (Phase A — 거주요건 + 단서 각호 면제) ──
+  // 셋 다 **폼-전역(top-level)** 값이다. 클라이언트는 `mixedUse` 객체가 아니라 body 최상위로
+  // 보내므로(⑫ Zod는 이미 정의됨) route가 `mixedAsset` 조립 시 명시 주입한다
+  // — `ownershipRatio`·`isUnregistered`와 같은 경로.
+
+  /**
+   * 취득 당시 조정대상지역 여부 (영 §154① 본문 후단) — **거주 2년** 요건 게이트.
+   * 미주입(undefined) 시 false 취급 → 거주요건 면제(종전 동작 불변).
+   */
+  wasRegulatedAtAcquisition?: boolean;
+
+  /**
+   * 법정동코드 10자리. 제공 시 **건물 취득일 기준** `isRegulatedByBjdCode()` 정밀 판정,
+   * 미제공 시 위 `wasRegulatedAtAcquisition` boolean fallback.
+   */
+  regionCode?: string;
+
+  /**
+   * 영 §154① **단서** 각호 면제 사유.
+   * 1~3호 = 보유·거주 **둘 다** 면제 / 5호 = 거주만 면제 (법문 실측 2026-07-31).
+   * ⚠️ 날짜 필드는 **Date 변환 완료본**만 주입할 것 — Zod 출력(string)을 그대로 넘기면
+   *    `addYears`·`>=` 비교가 침묵 오작동한다(`lib/api/date-coerce.ts` 규약).
+   */
+  oneHouseExemptionProviso?: TransferTaxInput["oneHouseExemptionProviso"];
 
   // ── §164⑨1호 공익수용 특례 (계획 P7/D8, 일반 §97 전용) ──
   // 목별 독립 적용: 주택분(라목 개별주택가격 총액) + 상가분(가목 토지 기준시가). 상가 건물분·모든

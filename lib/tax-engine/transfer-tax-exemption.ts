@@ -43,6 +43,18 @@ export type ResidenceReqInput = Pick<
   | "decedentCohabitationResidenceMonths"
 >;
 
+/**
+ * §154① **보유·거주 통합** 요건 판정 입력 — `ResidenceReqInput` + 보유 기산일 backdate 1필드.
+ *
+ * `meetsOneHouseHoldingResidence`가 `TransferTaxInput` 전체를 요구하면 겸용주택 서브엔진처럼
+ * 전체를 구성할 수 없는 호출부가 정본을 재사용하지 못한다(그 결과가 계획서 E-3 —
+ * P3a가 보유 판정을 따로 구현했다가 단서 면제를 놓친 과다과세 결함).
+ * **타입 전용 narrowing이며 동작은 불변**이다. 단건 엔진이 넘기는 `TransferTaxInput`은
+ * 구조적으로 이 타입을 만족한다.
+ */
+export type ExemptionReqInput = ResidenceReqInput &
+  Pick<TransferTaxInput, "decedentCohabitationHoldingStartDate">;
+
 interface ExemptionResult {
   isExempt: boolean;
   isPartialExempt: boolean;
@@ -209,7 +221,7 @@ export function meetsOneHouseResidenceRequirement(
  *    둘 다 §154① 보유·거주 요건 판정이라 §154⑧ 통산이 정합(먼저양도 상속주택도 §154① 적용).
  *    단 LTHD(resolveLTHDStartDate)·단기세율(decedentAcquisitionDate)에는 적용하지 않는다.
  */
-export function resolveExemptionHoldingStartDate(input: TransferTaxInput): Date {
+export function resolveExemptionHoldingStartDate(input: ExemptionReqInput): Date {
   if (
     input.acquisitionCause === "inheritance" &&
     input.decedentSameHouseholdBeforeInheritance === true &&
@@ -222,7 +234,7 @@ export function resolveExemptionHoldingStartDate(input: TransferTaxInput): Date 
 }
 
 export function meetsOneHouseHoldingResidence(
-  input: TransferTaxInput,
+  input: ExemptionReqInput,
   rule: OneHouseSpecialRulesData["one_house_exemption"],
 ): boolean {
   const proviso = resolveExemptionProviso(input);
