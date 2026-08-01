@@ -7,7 +7,7 @@ IndexedDB(Dexie.js) 기반 로컬 저장소. 향후 Supabase 도입 시 **데이
 ```
 constants.ts              # LOCAL_USER_ID 상수
 types.ts                  # UserProfile · CalculationRecord · LocalTaxType
-db.ts                     # Dexie v6 (userProfile·calculations·clients·캐시) + 복합 인덱스 4종
+db.ts                     # Dexie v7 (userProfile·calculations·clients·캐시) + 복합 인덱스 4종
 current-user.ts           # getCurrentUserId() — Supabase 교체 단일 지점
 user-repository.ts        # createUserRepository(uid) 클로저 패턴
 calculation-repository.ts # createCalculationRepository(uid)
@@ -16,6 +16,10 @@ use-auto-save-calculation.ts  # 결과 화면 마운트 시 자동 저장 훅
 migrations/
   reduction-reclassification.ts  # 기존 이력의 §99의3 'unsold_housing' → 'new_99_3' 재분류
                                  # db.ts v4 upgrade에서 migrateReductionReclassification() 호출로 배선 완료
+  nbl-sigungu-code-recovery.ts   # NBL 재촌 시·군·구 코드를 **저장된 이름 기준**으로 현행에 재정렬
+                                 # db.ts v7 upgrade 배선. 코드는 체계 판별이 불가(11680이 구·신 양쪽에
+                                 # 존재)해 이름이 진실의 원천 — 현행 테이블에 **정확히 1건** 매칭될
+                                 # 때만 교체하고, 폐지·분할·동명 충돌은 손대지 않는다
 ```
 
 ## 핵심 규칙

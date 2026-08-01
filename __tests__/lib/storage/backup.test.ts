@@ -164,8 +164,11 @@ describe("validateBackup", () => {
     expect(validateBackup(bad).ok).toBe(false);
   });
 
-  it("미래 dbVersion(>6) 차단", () => {
-    const bad = { ...validFile(), dbVersion: 7 };
+  it("미래 dbVersion(현 앱보다 높음) 차단", () => {
+    // 검증기는 `db.verno`(현재 스키마 버전)를 상한으로 쓴다. 여기서 숫자를 고정하면
+    // Dexie 버전을 올릴 때마다 무관한 테스트가 깨진다(v7 배선 시 실제로 깨졌다) —
+    // 같은 소스에서 파생시켜 「앱이 모르는 미래 스키마」라는 의도만 고정한다.
+    const bad = { ...validFile(), dbVersion: db.verno + 1 };
     expect(validateBackup(bad).ok).toBe(false);
   });
 

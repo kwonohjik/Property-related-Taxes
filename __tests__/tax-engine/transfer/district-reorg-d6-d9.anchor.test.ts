@@ -90,6 +90,26 @@ describe("D-9 화성시 동탄 — 일반구 신설 (41590 → 41597 등)", () =
     expect(isRegulatedByBjdCode("4159710300", DURING).isRegulated).toBe(true); // 41597103 석우동
   });
 
+  it("D9-2b: 동탄2 지구 8개 동도 적용된다 (Y-13 — LH 지구 폴리곤 실측 편입)", () => {
+    // 구 `41590420 동탄면`의 현행 대응. Vworld LT_C_LHBLPN「화성동탄2 택지개발사업」
+    // 폴리곤 2,040건과 법정동 폴리곤을 교차해 얻은 8개 동이다.
+    for (const dong of ["105", "106", "108", "109", "110", "111", "112", "115"]) {
+      expect(
+        isRegulatedByBjdCode(`41597${dong}00`, DURING).isRegulated,
+        `41597${dong} 이 동탄2 지구로 적용되어야 한다`,
+      ).toBe(true);
+    }
+  });
+
+  it("D9-2c: 능동·중동·방교동·금곡동은 **미적용** — 근거 없는 확대를 막는 대조군", () => {
+    // 능동은 동탄1(95.4%)이고 종전 데이터에도 없었다. 중동·방교동·금곡동은
+    // 동탄1·동탄2 어느 지구에도 속하지 않는다(실측 0%).
+    expect(isRegulatedByBjdCode("4159710100", DURING).isRegulated).toBe(false); // 능동
+    expect(isRegulatedByBjdCode("4159710700", DURING).isRegulated).toBe(false); // 중동
+    expect(isRegulatedByBjdCode("4159711300", DURING).isRegulated).toBe(false); // 방교동
+    expect(isRegulatedByBjdCode("4159711400", DURING).isRegulated).toBe(false); // 금곡동
+  });
+
   it("D9-3: 화성은 **시 전역이 아니라 지구 한정** 지정이었다 — 부분 지정이 유지된다", () => {
     // 부천(전역)과 달리 화성은 동탄2 지구만 지정이었다. 신설 구 전역으로 넓히면
     // 근거 없이 납세자에게 불리해진다 — 지정 밖 지역은 그대로 미지정이어야 한다.
@@ -100,7 +120,11 @@ describe("D-9 화성시 동탄 — 일반구 신설 (41590 → 41597 등)", () =
 
   it("D9-4: 2026-07-01 동탄구 전역 지정(국토부공고 제2026-882호)은 별건으로 살아 있다", () => {
     // 과거 이력(2017~2022 동탄2 한정)과 신규 지정(2026 동탄구 전역)은 서로 다른 건이다.
-    expect(isRegulatedByBjdCode("4159711000", "2026-07-01").isRegulated).toBe(true); // 산척동
-    expect(isRegulatedByBjdCode("4159711000", DURING).isRegulated).toBe(false); // 당시엔 미지정
+    // 방교동은 어느 지구에도 없어 과거엔 미지정이지만, 2026 지정은 **전역**이라 걸린다.
+    expect(isRegulatedByBjdCode("4159711300", "2026-07-01").isRegulated).toBe(true); // 방교동
+    expect(isRegulatedByBjdCode("4159711300", DURING).isRegulated).toBe(false); // 당시엔 미지정
+    // 동탄2 지구인 산척동은 양쪽 모두 지정
+    expect(isRegulatedByBjdCode("4159711000", "2026-07-01").isRegulated).toBe(true);
+    expect(isRegulatedByBjdCode("4159711000", DURING).isRegulated).toBe(true);
   });
 });
