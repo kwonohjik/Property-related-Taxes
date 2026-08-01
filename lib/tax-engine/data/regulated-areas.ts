@@ -24,6 +24,8 @@
  *   현재는 빈 배열 — 판정/변환 로직만 완성하고 fixture로 검증한다.
  */
 
+import { expandSigunguAliases } from "@/lib/geo/sigungu-code-alias";
+
 import type {
   RegulatedAreaDesignation,
   RegulatedAreaHistory,
@@ -558,17 +560,26 @@ export function isRegulatedByBjdCodeIn(
     return { isRegulated: false, confidence: "low", basis: "법정동코드 또는 날짜 누락" };
   }
 
+  // 이 데이터는 지정 당시 기준이라 **구 코드**로 남아 있는 지역이 있다(광주 29·전남 46).
+  //   주소검색 PNU는 현행(전남광주통합 12)을 주므로 구·신 코드를 모두 후보로 둔다 —
+  //   행정구역 개편으로 코드만 바뀌었을 뿐 지정 이력이 붙은 지역 실체는 같다
+  //   (계획서 sigungu-code-system-drift D-1 — 실측 −337,386,500 과소과세).
+  const sigunguCandidates = expandSigunguAliases(bjdCode);
   const sigunguCode = bjdCode.slice(0, 5);
   const sidoCode = bjdCode.slice(0, 2);
   // 시군구(5자리) 매칭 우선 → 없으면 시도 전역(2자리) 폴백.
   // 시도 전역 지정은 서울(코드 "11")만 해당. 전역 해제기간에도 개별 지정으로 남는 구
   // (강남3구·용산)는 시군구 엔트리가 우선 매칭되어 정확히 처리된다.
   const region =
-    regions.find((r) => r.code === sigunguCode) ?? regions.find((r) => r.code === sidoCode);
+    regions.find((r) => sigunguCandidates.includes(r.code)) ??
+    regions.find((r) => r.code === sidoCode);
   if (!region) {
     // 데이터 수록 시도 내 미매칭 = 진짜 미지정(high). 미수록 시도(데이터 범위 밖)는
     // "미지정"으로 단정하지 않고 low(직접 확인) — 주소 경로(isRegulatedByAddressIn)와 대칭.
-    const sidoCovered = regions.some((r) => r.code.slice(0, 2) === sidoCode);
+    // 별칭 후보의 시도(구 코드 29·46 포함)까지 훑는다 — 그러지 않으면 통합 코드(12)가
+    //   「데이터 미수록 시도」로 떨어져 confidence가 low가 된다(판정은 같아도 안내가 틀린다).
+    const sidoCandidates = new Set(sigunguCandidates.map((c) => c.slice(0, 2)));
+    const sidoCovered = regions.some((r) => sidoCandidates.has(r.code.slice(0, 2)));
     return sidoCovered
       ? { isRegulated: false, confidence: "high", basis: `${date} 기준 미지정 지역(${sigunguCode})` }
       : { isRegulated: false, confidence: "low", basis: `데이터 미수록 시도(${sidoCode}) — 직접 확인 필요` };

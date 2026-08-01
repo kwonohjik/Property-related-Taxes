@@ -16,6 +16,8 @@
  *      → 행안부 관심지역 18곳 중 세법 적용 9곳(강원4·전북1·경북2·경남2).
  */
 
+import { hasAnySigunguAlias } from "@/lib/geo/sigungu-code-alias";
+
 /**
  * 인구감소지역 시군구코드(법정동 5자리) 집합 — 소령 §167의3①12 다목 적용 대상(84곳).
  */
@@ -155,7 +157,11 @@ export function classifyPopulationDeclineArea(regionCode: string): {
 } {
   const sgg = toSigunguCode(regionCode);
   if (!sgg) return { kind: null };
-  if (POPULATION_DECLINE_AREA_CODES.has(sgg)) return { kind: "decline" };
-  if (POPULATION_INTEREST_AREA_CODES.has(sgg)) return { kind: "interest" };
+  // 위 두 집합은 **구 코드**(전남 46·광주 29)로 작성돼 있는데 주소검색 PNU는 현행(12)을 준다.
+  //   행정구역 개편(전남·광주 통합, 시행 2026-07-01)으로 코드가 바뀌었을 뿐 지역 실체는 같으므로
+  //   구·신 코드를 모두 훑는다. 집합을 신 코드로 치환하면 저장된 이력·수동 입력이 깨진다
+  //   (계획서 sigungu-code-system-drift D-2 — 실측 +388,410,000 과다과세).
+  if (hasAnySigunguAlias(POPULATION_DECLINE_AREA_CODES, sgg)) return { kind: "decline" };
+  if (hasAnySigunguAlias(POPULATION_INTEREST_AREA_CODES, sgg)) return { kind: "interest" };
   return { kind: null };
 }
