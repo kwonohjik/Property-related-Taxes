@@ -16,13 +16,19 @@
 | ~~R2~~ | ~~초과부담부 가드 구조적 미발동~~ | — | — | — | **✅ 종결 — 가드 정상, 별건 §63 결함 수정** |
 | ~~R3~~ | ~~§66 담보채권액 지분 대응분 해석~~ | — | — | — | **✅ 종결 — 현행 정의 유지** |
 | R4 | 지분 부담부증여 정식 지원 | 기능 부재 (차단됨) | 대 | — | 🛑 **보류 확정 (2026-07-29 사용자 결정)** |
-| R5 | 800줄 초과 파일 9개 → **8개** | 없음 (유지보수) | 중 | 없음 | **부분 완료 — 나머지는 기회주의적 유지** |
+| R5 | 800줄 초과 파일 — **재측정 11개** | 없음 (유지보수) | 중 | 없음 | **Step4.tsx·property-valuation 분리 완료 · 밴드 8건은 기회주의적 유지** |
 | ~~R6~~ | ~~PR #737 집합건물 전유면적~~ | — | — | — | **✅ 실측 완료 + 결함 3건 수정 + 머지** |
 | ~~R7~~ | ~~#591 양도세 감사 백로그~~ | — | — | — | **✅ 완결 — 99 → 0 (158/158 통과)** |
 
 ---
 
-## R1. 일괄(bundled) 결과 상세 카드 — 감면 외 12종
+## R1. 일괄(bundled) 결과 상세 카드 — 감면 외 12종 — ✅ 완료 (R1-a·R1-b 전건)
+
+> ⚠️ 2026-08-01 정정: 아래 본문은 **착수 전 시점 서술**이 그대로 남아 있었다(요약표는 ✅완료).
+> 코드 실측 — `TransferValuationDetailSource`(`types/transfer-result.types.ts:407`) 13종 +
+> `pickValuationDetails()`(`transfer-tax-aggregate.ts:52`) 1:1 배선 완료,
+> `splitDetail`·`pre1990LandValuationDetail`의 컴포넌트 추출(R1-b)도 끝났다.
+> 본문은 **당시 계획 기록**으로 남긴다.
 
 ### 현황
 
@@ -209,19 +215,60 @@ R4(지분 부담부증여 UI 개방)를 진행하게 되면, hint 문구는 "지
 
 ---
 
-## R5. 800줄 정책 초과 파일 9개
+## R5. 800줄 정책 초과 파일 — **현행화 (2026-08-01 재측정)**
 
-| 파일 | 줄수 |
-|---|---|
-| `lib/tax-engine/types/inheritance-gift-estate.types.ts` | 1,059 |
-| `lib/tax-engine/property-valuation.ts` | 1,025 |
-| `lib/tax-engine/legal-codes/transfer.ts` | 840 |
-| `lib/tax-engine/general-building-valuation.ts` | 833 |
-| `lib/tax-engine/inheritance-tax.ts` | 831 |
-| `lib/tax-engine/deductions/inheritance-deductions.ts` | 815 |
-| `lib/tax-engine/types/transfer-redevelopment.types.ts` | 803 |
-| `lib/tax-engine/transfer-tax.ts` | 803 |
-| `lib/api/transfer-tax-schema-sub.ts` | 801 |
+⚠️ 종전 목록은 **`lib/tax-engine/`만 훑어** `app/`·`lib/stores/`·`lib/calc/`를 놓쳤다.
+저장소 전체(`lib`·`components`·`app`)를 다시 재니 **9건이 아니라 11건**이었고,
+그중 **가장 큰 파일이 목록에 아예 없었다**(`Step4.tsx` 1,148줄).
+재측정은 `find lib components app -name '*.ts*' | xargs wc -l | awk '$1>800'`로 한다.
+
+| 파일 | 종전 | 현재 | 비고 |
+|---|---:|---:|---|
+| `app/calc/transfer-tax/steps/Step4.tsx` | (미수록) | 1,148 → **701** | ✅ **분리 완료** — 아래 |
+| `lib/tax-engine/property-valuation.ts` | 1,025 | **653** | ✅ 분리 완료 (2026-07-28) |
+| `lib/tax-engine/types/inheritance-gift-estate.types.ts` | 1,059 | 1,101 | 🔵 **타입 전용 — 예외 대상** |
+| `lib/tax-engine/general-building-valuation.ts` | 833 | 880 | 밴드 초과 유지 |
+| `lib/tax-engine/legal-codes/transfer.ts` | 840 | 856 | 🔵 **상수 전용 — 예외 대상** |
+| `lib/stores/calc-wizard-asset.ts` | (미수록) | 838 | 밴드 |
+| `lib/calc/transfer-tax-api.ts` | (미수록) | 836 | 밴드 |
+| `lib/tax-engine/inheritance-tax.ts` | 831 | 831 | 밴드 |
+| `lib/api/transfer-tax-schema-sub.ts` | 801 | 829 | 밴드 |
+| `lib/tax-engine/deductions/inheritance-deductions.ts` | 815 | 815 | 밴드 |
+| `lib/tax-engine/transfer-tax.ts` | 803 | 804 | 밴드 |
+| `lib/tax-engine/types/transfer-redevelopment.types.ts` | 803 | 803 | 🔵 **타입 전용 — 예외 대상** |
+
+**밴드(801~880) 8건은 그대로 둔다** — CLAUDE.md가 경고한 재분리 thrash 구간이다.
+트리거를 크게 초과한 것만 고정비를 정당화한다는 종전 판단을 유지한다.
+
+### Step4.tsx 분리 (2026-08-01) — 1,148 → **701**
+
+트리거를 **44% 초과**했고 양도세 마법사 4단계라 변경이 잦아 계속 자라던 자리다.
+
+가장 큰 자연 이음매인 **③ 일시적 2주택·합가 특례(452줄)**를
+`steps/step4-sections/TemporaryTwoHouseSection.tsx`(515줄)로 옮겼다.
+`HousesListSection`·`MergeDateSection`이 이미 쓰던 같은 디렉터리·같은 규약이다.
+
+이음매를 이걸로 고른 근거는 **상위 식별자 의존이 7개뿐**이라는 실측이다
+(`form`·`onChange`·`tempTwoHouseVerdict`·`relocationRegionVerdict`·`ruralLocation`·
+`proviso`·`primaryAcquisitionDate`). 판정값은 전부 상위에서 파생해 props로 넘긴다 —
+섹션 안에서 다시 계산하면 두 번째 진실이 생긴다.
+노출 게이트(`isHousingLike && 세대 주택수 ≥ 2`)는 호출부에 남겼다.
+
+**순수 이동 검증**: 원본 452줄과 이동본을 `strip()` 비교해 **완전 일치**를 확인했다.
+JSX 텍스트 노드는 React가 공백을 정규화하므로 들여쓰기 축소(8→4)는 렌더에 영향이 없고,
+여러 줄 템플릿 리터럴이 없음도 확인했다(백틱 2건 모두 단일 줄) — 있었다면 들여쓰기 변경이
+**출력 문자열을 조용히 바꿨을** 자리다.
+
+내 변경으로 미사용이 된 import 5건만 제거했다(`extractSigunguCodeFromPnu`·`DateInput`·
+`DecimalInput`·`AddressSearch`/`AddressValue`) — 기존 dead code는 손대지 않았다.
+`Step5.tsx:67`의 미사용 `toggleReduction` 경고는 **선행 존재**이며 이번 변경과 무관하다.
+
+검증: tsc 0 · lint 0(신규) · **E2E 19건 통과**
+(`transfer-155-temp-two-house-auto-judge` · `155-16-18-deadline-specials` ·
+`155-7-rural-location-auto` · `155-8-outside-capital`).
+
+> 착지 **701줄**로 목표(≤700)를 1줄 넘겼다. 트리거(800) 대비 데드밴드가 99줄이라
+> 정책 취지에는 부합하므로 억지 압축은 하지 않는다.
 
 **타입 전용 파일 2건**(`*-estate.types.ts` · `transfer-redevelopment.types.ts`)과
 상수 파일(`legal-codes/transfer.ts`)은 CLAUDE.md 예외 조항 대상 — 분리 가치가 낮다.
