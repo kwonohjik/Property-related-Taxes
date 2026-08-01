@@ -24,6 +24,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { SIGUNGU_CODES } from "@/lib/korean-law/sigungu-codes";
 import { JEONNAM_GWANGJU_ALIASES, JEONBUK_ALIASES } from "@/lib/geo/sigungu-code-alias";
+import ABOLISHED from "@/lib/geo/abolished-sigungu-codes.json";
 
 /**
  * 시·군·구 코드 리터럴을 담고 있는 파일. **새 파일이 생기면 여기에 추가**한다.
@@ -88,11 +89,30 @@ describe("시·군·구 코드 리터럴 전수 대조 (계획서 §6-G.3)", () 
         if (CURRENT.has(code)) continue;
         if (LEGACY.has(code)) continue;
         if (code in INTENTIONAL_LEGACY) continue;
-        orphans.push(`${file}:${line} — "${code}"`);
+        // 🔴 폐지 코드는 **허용하지 않는다** — 진단만 붙인다. D-6의 `41810`은 실재했던
+        //    코드(폐지된 「경기도 포천군」)라 허용하면 그대로 통과해, 연천군(`41800`)
+        //    자리에 포천군 코드가 적힌 결함을 놓친다(계획서 Y-5).
+        const wasReal = (ABOLISHED as Record<string, string>)[code];
+        orphans.push(
+          `${file}:${line} — "${code}" ` +
+            (wasReal ? `(한때 「${wasReal}」 — 폐지됨)` : "(어느 시점에도 없던 코드)"),
+        );
       }
     }
     // 실패 시 메시지가 곧 조치 목록이 되도록 전건을 나열한다.
     expect(orphans, `현행 테이블·별칭·예외 어디에도 없는 코드:\n${orphans.join("\n")}`).toEqual([]);
+  });
+
+  it("AUDIT-5: 폐지 코드 진단 자료가 살아 있다 (D-6 사례로 자가 확인)", () => {
+    // `abolished-sigungu-codes.json`이 비거나 낡으면 AUDIT-1의 실패 메시지가 조용히
+    // 「어느 시점에도 없던 코드」로 뭉개진다 — 실제 결함 사례로 자료 자체를 고정한다.
+    const map = ABOLISHED as Record<string, string>;
+    expect(Object.keys(map).length).toBeGreaterThan(200);
+    expect(map["41810"]).toBe("경기도 포천군"); // D-6이 연천군(41800) 자리에 잘못 적었던 코드
+    expect(map["28110"]).toBe("인천광역시 중구"); // D-5 인천 재편으로 폐지
+    // 현행 코드는 폐지 목록에 들어 있으면 안 된다 — 코드 재사용 오탐 방지
+    expect(map["41800"]).toBeUndefined(); // 연천군(현행)
+    expect(map["11680"]).toBeUndefined(); // 강남구(현행)
   });
 
   it("AUDIT-2: 별칭의 current는 전부 현행 테이블에 있다", () => {
