@@ -204,7 +204,9 @@ describe("MH-NEW-01: classifyRegionCriteriaByCode — 시군구코드 자동 분
   it("경기 주요시(41xxx) → REGION, 가평/연천/양평군 → VALUE", () => {
     expect(classifyRegionCriteriaByCode("41135")).toBe("REGION"); // 성남시 분당구
     expect(classifyRegionCriteriaByCode("41610")).toBe("REGION"); // 광주시
-    expect(classifyRegionCriteriaByCode("41810")).toBe("VALUE");  // 연천군
+    // 2026-08-01 정정(계획서 D-6): 종전 `41810`은 **존재하지 않는 코드**였다.
+    //   연천군은 `41800`이며, 이 단언이 오타를 그대로 고정해 결함을 가려 왔다.
+    expect(classifyRegionCriteriaByCode("41800")).toBe("VALUE");  // 연천군
     expect(classifyRegionCriteriaByCode("41820")).toBe("VALUE");  // 가평군
     expect(classifyRegionCriteriaByCode("41830")).toBe("VALUE");  // 양평군
   });
