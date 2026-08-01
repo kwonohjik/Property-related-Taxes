@@ -90,24 +90,23 @@ describe("D-9 화성시 동탄 — 일반구 신설 (41590 → 41597 등)", () =
     expect(isRegulatedByBjdCode("4159710300", DURING).isRegulated).toBe(true); // 41597103 석우동
   });
 
-  it("D9-2b: 동탄2 지구 8개 동도 적용된다 (Y-13 — LH 지구 폴리곤 실측 편입)", () => {
-    // 구 `41590420 동탄면`의 현행 대응. Vworld LT_C_LHBLPN「화성동탄2 택지개발사업」
-    // 폴리곤 2,040건과 법정동 폴리곤을 교차해 얻은 8개 동이다.
-    for (const dong of ["105", "106", "108", "109", "110", "111", "112", "115"]) {
+  it("D9-2b: 구 동탄면 리에서 온 11개 동도 적용된다 (Y-13 — 행안부 연혁 자료로 확정)", () => {
+    // 구 `41590420 동탄면`의 13개 리가 전부 동으로 전환됐다(반송·석우는 위 D9-2에서 확인).
+    //   105 청계 · 106 영천 · 107 중동 · 108 신동 · 109 목동 · 110 산척 ·
+    //   111 장지 · 112 송동 · 113 방교 · 114 금곡  (+ 115 여울 — 신설이나 동탄2 99.2%)
+    // 104 오산동은 폐지되어 대상이 아니다.
+    for (const dong of ["105", "106", "107", "108", "109", "110", "111", "112", "113", "114", "115"]) {
       expect(
         isRegulatedByBjdCode(`41597${dong}00`, DURING).isRegulated,
-        `41597${dong} 이 동탄2 지구로 적용되어야 한다`,
+        `41597${dong} 이 구 동탄면 유래로 적용되어야 한다`,
       ).toBe(true);
     }
   });
 
-  it("D9-2c: 능동·중동·방교동·금곡동은 **미적용** — 근거 없는 확대를 막는 대조군", () => {
-    // 능동은 동탄1(95.4%)이고 종전 데이터에도 없었다. 중동·방교동·금곡동은
-    // 동탄1·동탄2 어느 지구에도 속하지 않는다(실측 0%).
-    expect(isRegulatedByBjdCode("4159710100", DURING).isRegulated).toBe(false); // 능동
-    expect(isRegulatedByBjdCode("4159710700", DURING).isRegulated).toBe(false); // 중동
-    expect(isRegulatedByBjdCode("4159711300", DURING).isRegulated).toBe(false); // 방교동
-    expect(isRegulatedByBjdCode("4159711400", DURING).isRegulated).toBe(false); // 금곡동
+  it("D9-2c: 능동은 **미적용** — 동탄면이 아니라 구 화성시 본토 동이다", () => {
+    // 능동(41597101)은 구 `41590118`로 진안·병점·기산동과 같은 묶음이었다.
+    // 동탄면 13개 리 목록에 없고 종전 데이터에도 없었다 — 근거 없는 확대를 막는 대조군.
+    expect(isRegulatedByBjdCode("4159710100", DURING).isRegulated).toBe(false);
   });
 
   it("D9-3: 화성은 **시 전역이 아니라 지구 한정** 지정이었다 — 부분 지정이 유지된다", () => {
@@ -120,9 +119,9 @@ describe("D-9 화성시 동탄 — 일반구 신설 (41590 → 41597 등)", () =
 
   it("D9-4: 2026-07-01 동탄구 전역 지정(국토부공고 제2026-882호)은 별건으로 살아 있다", () => {
     // 과거 이력(2017~2022 동탄2 한정)과 신규 지정(2026 동탄구 전역)은 서로 다른 건이다.
-    // 방교동은 어느 지구에도 없어 과거엔 미지정이지만, 2026 지정은 **전역**이라 걸린다.
-    expect(isRegulatedByBjdCode("4159711300", "2026-07-01").isRegulated).toBe(true); // 방교동
-    expect(isRegulatedByBjdCode("4159711300", DURING).isRegulated).toBe(false); // 당시엔 미지정
+    // 능동은 동탄면이 아니라 과거엔 미지정이지만, 2026 지정은 **전역**이라 걸린다.
+    expect(isRegulatedByBjdCode("4159710100", "2026-07-01").isRegulated).toBe(true); // 능동
+    expect(isRegulatedByBjdCode("4159710100", DURING).isRegulated).toBe(false); // 당시엔 미지정
     // 동탄2 지구인 산척동은 양쪽 모두 지정
     expect(isRegulatedByBjdCode("4159711000", "2026-07-01").isRegulated).toBe(true);
     expect(isRegulatedByBjdCode("4159711000", DURING).isRegulated).toBe(true);
