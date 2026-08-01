@@ -17,9 +17,13 @@ import { describe, it, expect } from "vitest";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land";
 
-// 행정표준코드 11680 = 서울특별시 서초구 (강남구는 11710) — sigungu-codes.ts:39-40
-const SEOCHO = "11680";
-const SEOCHO_NAME = "서울특별시 서초구";
+// 행정표준코드 11680 = 서울특별시 **강남구** (서초구는 11650).
+// ⚠️ 2026-08-01 정정: 종전 주석·변수명은 11680을 「서초구」라고 적고 있었다 —
+//    `sigungu-codes.ts`가 구 체계라 그렇게 보였을 뿐이며, 현행 표준·PNU에서는 강남구다
+//    (계획서 D-3: 서울은 도봉구부터 한 칸씩 밀려 있었다).
+//    단언 자체는 우연히 유지됐으나 이름이 사실과 달라 판독을 오도했다.
+const GANGNAM = "11680";
+const GANGNAM_NAME = "서울특별시 강남구";
 
 function farmlandRaw(overrides: Record<string, unknown> = {}) {
   return {
@@ -30,15 +34,15 @@ function farmlandRaw(overrides: Record<string, unknown> = {}) {
     acquisitionDate: "2016-01-01",
     transferDate: "2026-06-01",
     nblFarmingSelf: true,
-    nblLandSigunguCode: SEOCHO,
-    nblLandSigunguName: SEOCHO_NAME,
+    nblLandSigunguCode: GANGNAM,
+    nblLandSigunguName: GANGNAM_NAME,
     // 자경 전기간
     nblBusinessUsePeriods: [
       { startDate: "2016-01-01", endDate: "2026-06-01", usageType: "자경" },
     ],
     // 거주 이력: 토지 소재지와 동일 시군구(재촌) — sigungu 매칭 경로(거리 fallback 아님)
     nblResidenceHistories: [
-      { sigunguCode: SEOCHO, sigunguName: SEOCHO_NAME, startDate: "2016-01-01", endDate: "2026-06-01", hasResidentRegistration: true },
+      { sigunguCode: GANGNAM, sigunguName: GANGNAM_NAME, startDate: "2016-01-01", endDate: "2026-06-01", hasResidentRegistration: true },
     ],
     ...overrides,
   };
@@ -49,8 +53,8 @@ describe("[NBL-RESIDENCE] 갭1 재촌 시군구 매칭 결선", () => {
     const input = buildNblEngineInput(farmlandRaw() as never);
     expect(input).toBeDefined();
     // (현행 FAIL) landLocation 미매핑 → undefined
-    expect(input!.landLocation?.sigunguCode).toBe(SEOCHO);
-    // 연접 시군구(SIGUNGU_CODES lookupSigungu) 주입 — 11680 인접에 11710(강남) 포함
+    expect(input!.landLocation?.sigunguCode).toBe(GANGNAM);
+    // 연접 시군구(SIGUNGU_CODES lookupSigungu) 주입 — 강남구(11680) 인접에 송파구(11710) 포함
     expect(input!.adjacentSigunguCodes).toBeDefined();
     expect(input!.adjacentSigunguCodes).toContain("11710");
   });

@@ -29,6 +29,7 @@ const VWORLD_DATA_URL = "https://api.vworld.kr/req/data";
 const NATION_BBOX = "BOX(124.5,33.0,132.0,38.7)";
 const OUT_PATH = path.join(process.cwd(), "lib/geo/administrative-district-adjacency.json");
 const CACHE_PATH = path.join(process.cwd(), ".legal-cache/adsigg-raw.json");
+const TABLE_PATH = path.join(process.cwd(), "lib/korean-law/sigungu-codes.json");
 
 interface SigunguFeature {
   properties: { sig_cd: string; sig_kor_nm: string; full_nm: string };
@@ -128,6 +129,28 @@ async function main() {
   for (const code of Object.keys(adjacency)) {
     adjacency[code] = [...new Set(adjacency[code])].sort();
   }
+
+  // ── 부산물: NBL·UI가 쓰는 5자리계 시·군·구 테이블 (lib/korean-law/sigungu-codes.json) ──
+  //   같은 원본에서 함께 뽑아야 코드·인접이 어긋나지 않는다(계획서 D-3 — 두 테이블이 따로
+  //   낡아 11680이 「서초구」로, 인접 목록은 구 코드로 남아 있던 것이 결함의 실체였다).
+  const table = items
+    .map((it) => {
+      const props = features.find((f) => `${f.properties.sig_cd}00000` === it.code)!.properties;
+      const fullName = props.full_nm;
+      const tokens = fullName.split(/\s+/);
+      return {
+        code: props.sig_cd, // 5자리 — NBL·SigunguSelect 규약
+        sidoName: tokens[0],
+        // 세종처럼 시·도 자체가 시·군·구인 경우 sig_kor_nm === full_nm 이다.
+        name: props.sig_kor_nm,
+        fullName,
+        // 10자리 매트릭스 → 5자리계로 변환
+        adjacentCodes: adjacency[it.code].map((c) => c.slice(0, 5)),
+      };
+    })
+    .sort((a, b) => a.code.localeCompare(b.code));
+  fs.writeFileSync(TABLE_PATH, `${JSON.stringify(table, null, 2)}\n`);
+  console.log(`시·군·구 테이블 ${table.length}건 → ${TABLE_PATH}`);
 
   const isolated = Object.entries(adjacency).filter(([, v]) => v.length === 0);
   const totalEdges = Object.values(adjacency).reduce((s, v) => s + v.length, 0) / 2;
