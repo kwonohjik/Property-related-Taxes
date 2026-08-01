@@ -1,6 +1,7 @@
 import Dexie, { type Table } from "dexie";
 import type { UserProfile, CalculationRecord, Client } from "./types";
 import { migrateReductionReclassification } from "./migrations/reduction-reclassification";
+import { migrateNblSigunguCodeRecovery } from "./migrations/nbl-sigungu-code-recovery";
 import type { RtmsTradeRecord } from "@/lib/calc/rtms-similar-sales-filter";
 
 /**
@@ -147,6 +148,27 @@ class LocalTaxDB extends Dexie {
       reverseGeocodeCache: "id, expiresAt",
       rtmsSalesCache: "id, expiresAt",
     });
+
+    // v7 (2026-08-01): NBL 재촌 시·군·구 코드 복구 (계획서 sigungu-code-system-drift Y-4).
+    //   `nblLandSigunguCode`는 5종 코드 필드 중 유일하게 PNU가 아니라 `SigunguSelect`에서
+    //   오는데, 그 테이블이 전면 낡아 **43건이 다른 지역을 가리켰다**(D-3). 이력을 복원해
+    //   재계산하면 재촌 1호·2호가 엉뚱한 집합으로 판정된다(구 154건 중 82건이 재촌 부정).
+    //   코드만으로는 어느 체계인지 판별할 수 없어(`11680`이 구·신 양쪽에 존재) **함께 저장된
+    //   이름**으로 현행 코드를 다시 찾는다. 이름이 현행 테이블에 **정확히 1건** 매칭될 때만
+    //   바꾸므로, 폐지·분할(인천 N:M · 부천 1:N)이나 동명 충돌은 손대지 않는다.
+    //   기존 5 테이블 schema 변경 없음 — 데이터 정정만.
+    this.version(7)
+      .stores({
+        userProfile: "id, updatedAt",
+        calculations:
+          "id, userId, taxType, createdAt, [userId+createdAt], [userId+taxType+createdAt], [userId+linkedCalculationId], [userId+clientId+createdAt]",
+        clients: "id, userId, name, lastUsedAt, [userId+name], [userId+createdAt], [userId+lastUsedAt]",
+        reverseGeocodeCache: "id, expiresAt",
+        rtmsSalesCache: "id, expiresAt",
+      })
+      .upgrade(async (tx) => {
+        await migrateNblSigunguCodeRecovery(tx);
+      });
   }
 }
 
