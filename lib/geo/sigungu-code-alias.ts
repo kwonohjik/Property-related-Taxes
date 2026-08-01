@@ -66,8 +66,27 @@ export const JEONNAM_GWANGJU_ALIASES: readonly SigunguAlias[] = Object.freeze([
   { legacy: "46910", current: "12870", name: "신안군" },
 ]);
 
+/**
+ * 전북특별자치도 전환(시행 2024-01-18) 별칭 — 구 전라북도 `45xxx` → `52xxx`.
+ *
+ * 「전북특별자치도 설치 및 글로벌생명경제도시 조성을 위한 특별법」으로 시·도 코드가 바뀌었다.
+ * 전남·광주와 달리 **뒷자리는 그대로**라 산술 변환도 가능하지만, 명시 테이블 쪽이
+ * anchor로 이름을 대조할 수 있어 안전하다(같은 파일의 `ALIAS-1`·`AUDIT-2`).
+ *
+ * 수록 범위는 다른 별칭과 같은 기준 — **프로젝트가 실제로 구 코드를 갖고 있는 것만**이다.
+ * `regulated-areas.ts`의 전주 2건이 전부이며(`population-decline-areas.ts`는 이미 `52`),
+ * 그래서 §6-D의 「전북은 무해」 판정이 이 2건을 놓쳤다(계획서 D-7).
+ *
+ * 강원(`42` → `51`)은 프로젝트에 구 코드가 **하나도 없어** 별칭이 필요 없다 —
+ * 생기면 여기에 `GANGWON_ALIASES`를 추가한다.
+ */
+export const JEONBUK_ALIASES: readonly SigunguAlias[] = Object.freeze([
+  { legacy: "45111", current: "52111", name: "전주시 완산구" },
+  { legacy: "45113", current: "52113", name: "전주시 덕진구" },
+]);
+
 /** 전체 별칭 — 다른 개편이 생기면 여기에 배열을 추가한다 */
-const ALL_ALIASES: readonly SigunguAlias[] = JEONNAM_GWANGJU_ALIASES;
+const ALL_ALIASES: readonly SigunguAlias[] = [...JEONNAM_GWANGJU_ALIASES, ...JEONBUK_ALIASES];
 
 const LEGACY_TO_CURRENT = new Map(ALL_ALIASES.map((a) => [a.legacy, a.current]));
 /** 현행 → 구 코드 목록 (한 현행 코드에 구 코드가 여럿일 수 있어 배열) */

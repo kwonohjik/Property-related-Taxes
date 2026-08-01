@@ -60,9 +60,19 @@ export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VA
     return "REGION";
   }
 
-  // 경기: 가평군(41820)·연천군(41810)·양평군(41830) VALUE, 나머지 REGION
+  // 경기: 연천군(41800)·가평군(41820)·양평군(41830) VALUE, 나머지 REGION
+  //
+  // 2026-08-01 정정(계획서 D-6 — **세액 변경**): 연천군 코드가 `41810`으로 적혀 있었다.
+  //   그런 코드는 **존재하지 않는다**(현행 256건에도, 과거 어느 체계에도 없다) — 연천군은
+  //   `41800`이다. 같은 저장소의 `data/population-decline-areas.ts:32`는 `41800`으로
+  //   **맞게** 적혀 있었으니, 한 저장소 안에서 두 파일이 다른 코드를 쓰고 있었던 셈이다.
+  //   그 결과 경기 3군 중 연천군만 아래 기본값이 아니라 이 분기의 `return "REGION"`으로
+  //   떨어져 **3억 이하 주택도 가액 불문 주택 수에 산입**됐다(납세자 불리).
+  //   기존 회귀 테스트도 `classifyRegionCriteriaByCode("41810")`으로 **오류를 고정**하고
+  //   있어 안전망에 걸리지 않았다 — 코드 리터럴 전수 대조 anchor를 함께 도입한 이유다
+  //   (`__tests__/tax-engine/transfer/sigungu-code-literal-audit.anchor.test.ts`).
   if (sidoCode === "41") {
-    if (sggCode === "41810" || sggCode === "41820" || sggCode === "41830") return "VALUE";
+    if (sggCode === "41800" || sggCode === "41820" || sggCode === "41830") return "VALUE";
     return "REGION";
   }
 
