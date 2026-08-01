@@ -34,6 +34,18 @@ import type {
  * - REGION: 수도권(서울·인천·경기 주요지역)·광역시(군 제외)·세종 → 가액 불문 주택 수 산입
  * - VALUE:  지방 및 수도권 내 군 지역 → 양도 공시가 3억 초과만 산입
  */
+/**
+ * 전남광주통합특별시의 **자치구** 5개 (종전 광주광역시 자치구).
+ * 시·군(목포·여수·순천·나주·광양 + 군 17)은 종전 전라남도와 같이 가액기준(VALUE)이다.
+ */
+const INTEGRATED_GWANGJU_DISTRICT_CODES = new Set([
+  "12210", // 동구
+  "12240", // 서구
+  "12270", // 남구
+  "12300", // 북구
+  "12330", // 광산구
+]);
+
 export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VALUE" {
   if (!regionCode || regionCode.length < 2) return "VALUE";
 
@@ -77,8 +89,26 @@ export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VA
     return "REGION";
   }
 
-  if (sidoCode === "29") return "REGION"; // 광주
+  if (sidoCode === "29") return "REGION"; // 구 광주광역시 (통합 전 코드 — 저장된 이력·수동 입력)
   if (sidoCode === "30") return "REGION"; // 대전
+
+  // 전남광주통합특별시(12): **자치구만** REGION, 시·군은 VALUE.
+  //
+  //   「전남광주통합특별시 설치를 위한 특별법」(시행 2026-07-01) §7①이 전라남도와
+  //   광주광역시를 **폐지**하고 통합특별시를 설치하면서 두 지역의 코드가 `12`로 합쳐졌다.
+  //   그 결과 종전에 REGION이던 광주 자치구와 VALUE이던 전남 시·군이 한 시도코드에 섞였다.
+  //
+  //   §167의3①1호는 「수도권 및 광역시·특별자치시(**광역시에 소속된 군** … 제외) 외의 지역」을
+  //   가액기준으로 정한다 — **구는 지역기준, 군은 가액기준**이라는 구조다.
+  //   2026-08-01 세무 판단: 통합 전 실질 취급을 그대로 옮겨 **자치구 5개만** REGION으로 본다.
+  //
+  //   ⚠️ 이 분기가 없으면 `12xxx`가 아래 기본값 VALUE로 **조용히** 떨어져 광주 자치구
+  //   3억 이하 주택이 주택 수에서 빠졌다(계획서 D-4 — 실측 세액 차 388,410,000).
+  //   같은 파일의 군위군(47720→27720) 주석이 지적한 「행정구역 개편이 세법상 취급을
+  //   바꿔버리는」 함정이 재발한 것이다.
+  if (sidoCode === "12") {
+    return INTEGRATED_GWANGJU_DISTRICT_CODES.has(sggCode) ? "REGION" : "VALUE";
+  }
 
   // 울산: 울주군(31710) VALUE
   if (sidoCode === "31") {
