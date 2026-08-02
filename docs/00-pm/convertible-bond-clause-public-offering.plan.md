@@ -1,4 +1,4 @@
-# §40 전환사채등 — **목(目) 선택 도입 + 공모 발행 적용제외** 구현 계획서 **v1.0**
+# §40 전환사채등 — **목(目) 선택 도입 + 공모 발행 적용제외** 구현 계획서 **v1.1 (자가검토 9건 반영)**
 
 > 대상: 「상증법」§40①1호 가·나·다목 / §40①2호 가·나·다목 · 「상증령」§30①1·2, §30③, §30④
 > 선행: `capital-increase-public-offering-exclusion.plan.md` v1.2 §10-5(인접 발견)
@@ -15,7 +15,7 @@
 
 1단계 없이 2단계만 하는 것은 **불가능**하다.
 
-🔴 **인접 결함 동시 발견**: 이미 머지된 §39 공모 게이트가 「**주권상장법인이**」 요건을 검사하지 않는다(`capital-increase.ts:25`). 비상장 + 공모 배정이면 잘못 제외되어 **과소과세**. §6에서 동시 처리를 권고한다.
+🔴 **인접 결함 동시 발견**: 이미 머지된 §39 공모 게이트가 「**주권상장법인이**」 요건을 검사하지 않는다(`capital-increase.ts:25`). 비상장 + 공모 배정이면 잘못 제외되어 **과소과세**. §6에서 **단건 경로만** 동시 처리를 권고한다(cap-table 경로는 구조적 이유로 범위 외 — §6-2).
 
 ---
 
@@ -109,7 +109,9 @@ function publicOfferingExcluded(input: CapitalIncreaseInput): boolean {
 }
 ```
 
-「상증법」§39① 괄호는 「**주권상장법인이** …모집방법으로 배정하는 경우는 제외」다. `CapitalIncreaseInput.isListed`는 **이미 존재**한다(`gift-deemed-input-types.ts:191`, Phase D 도입). 비상장 + `public_offering` 조합에서 **잘못 제외 ⇒ 과소과세**. §6에서 동시 처리를 권고.
+「상증법」§39① 괄호는 「**주권상장법인이** …모집방법으로 배정하는 경우는 제외」다. `CapitalIncreaseInput.isListed`는 **이미 존재**한다(`gift-deemed-input-types.ts:191`, Phase D 도입). 비상장 + `public_offering` 조합에서 **잘못 제외 ⇒ 과소과세**. §6-1에서 동시 처리를 권고.
+
+⚠️ 같은 결함이 **cap-table 경로**(`capital-increase-allocation.ts:69·79`)에도 있으나 그쪽은 `CapitalIncreaseAllocationInput`에 `isListed` **필드가 없어** 검사할 수단조차 없다 — 사정이 다르다(§6-2).
 
 ### 2-5. 파일 규모 (800줄 정책)
 
@@ -167,12 +169,18 @@ function publicOfferingExcluded(input: ConvertibleBondInput): boolean {
 }
 ```
 
-| 진입점 | 게이트 | 근거 |
-|---|---|---|
-| `bondAcquisition` (1호) | ⭕ 적용 | 1호 나·다목 |
-| `bondConversion` (2호 가·나·다) | ⭕ 적용 | 2호 나·다목 |
-| `bondConversionReverse` (2호 라) | ❌ **미적용** | 「발행한 법인」 미등장 |
-| `bondTransfer` (3호) | ❌ **미적용** | 「발행한 법인」 미등장 |
+| 진입점 | 게이트 호출 | 실제 제외되는 목 | 근거 |
+|---|---|---|---|
+| `bondAcquisition` (1호) | ⭕ 호출 | **나·다목만** (가목은 `clause`에서 탈락) | 1호 나·다목 |
+| `bondConversion` (2호 가·나·다) | ⭕ 호출 | **나·다목만** (가목은 `clause`에서 탈락) | 2호 나·다목 |
+| `bondConversionReverse` (2호 라) | ❌ 미호출 | — | 「발행한 법인」 미등장 |
+| `bondTransfer` (3호) | ❌ 미호출 | — | 「발행한 법인」 미등장 |
+
+⚠️ **「함수 단위 ⭕」와 「목 단위 적용」을 혼동하지 말 것**: 함수는 진입하되 `ISSUER_CLAUSES` 집합이 **가목을 탈락**시킨다. 즉 게이트 호출 = 2개 함수, 실제 제외 = 4개 목이다(CB-PO-3이 이 구분을 고정).
+
+**결과 래핑**: §40은 모든 반환이 `withGiftFlags(result, aggregationExcluded)`를 통과한다. 제외 결과도 **동일하게 감싸고 호별 `aggregationExcluded`를 유지**한다(1호 `false` / 2호 `true`). §39 선례(`publicOfferingExcludedResult`)는 그 래퍼가 없는 구조라 그대로 옮기면 플래그가 누락된다.
+
+**`thresholdEcho`**: 제외 시 `{ gain: 0 }`(§39 선례와 동일 — 결과뷰가 항상 참조한다).
 
 간주모집은 §39와 동일하게 **제외 취소 + breakdown note**(세액은 normal과 동일, 감사 추적성).
 
@@ -184,6 +192,8 @@ function publicOfferingExcluded(input: ConvertibleBondInput): boolean {
 - 단 acquisition에서는 **종가평균 입력이 불필요**하다 — 자식 없는 순수 토글로 분기한다.
 
 ⚠️ memory `feedback_ui_gate_removes_sole_input_path`: 기존 conversion 토글의 종가평균 입력 경로를 없애지 않는다(조건부 자식만 분기).
+
+**입력 일관성 hint(필수)**: 1호가 공모 제외로 0이 되면, 2호 계산에서 차감하는 `acquisitionGainPrior`(§30①1 이익, 폼 `cbAcqGainPrior`)도 **0이어야 한다**. 엔진은 이를 강제할 수 없다(별개 사안의 입력값) ⇒ 2호 폼의 해당 필드에 「1호가 §40① 적용 제외라면 0」 hint를 단다. 안 달면 **제외분을 2호에서 다시 차감**해 과소과세가 된다.
 
 ### 3-4. 범위 외 — 초과분 토글 게이팅은 하지 않는다
 
@@ -199,8 +209,10 @@ function publicOfferingExcluded(input: ConvertibleBondInput): boolean {
 ```ts
 CB_PUBLIC_OFFERING_EXCLUSION: "상증법 §40①1호나목 괄호 · 자본시장법 §9⑦",
 CB_DEEMED_PUBLIC_OFFERING:    "상증령 §30④ · 자본시장법 시행령 §11③",
-CB_CLAUSE_MAJOR:              "상증령 §30③",   // 최대주주 정의
+CB_CLAUSE_MAJOR:              "상증령 §30③",   // 최대주주 = 최대주주등 중 보유주식 최다 1인
 ```
+
+**사용처 명시**(미사용 상수 금지): 앞 2개는 `exclusionReason`·breakdown note에, `CB_CLAUSE_MAJOR`는 목 3택 `RadioCardGroup`의 나·다목 hint(「최대주주 = 최대주주등 중 보유주식이 가장 많은 1인」)에 쓴다. 쓸 곳이 없으면 **추가하지 않는다**.
 
 ---
 
@@ -212,12 +224,12 @@ CB_CLAUSE_MAJOR:              "상증령 §30③",   // 최대주주 정의
 | ② initial | 동상 | `"from_related"` · `"normal"` | 신규 |
 | ③ normalize | — | sessionStorage persist 없음 ⇒ **N/A** | — |
 | ④ API 변환 | `gift-deemed-api.ts:293~356` | `acquisition` 경로에 `clause`·`issuanceMethod`·**`isListed`(현재 미전달)** / `conversion` 경로에 `clause`·`issuanceMethod` | 신규 |
-| ⑤ UI | `capital-forms.tsx` `ConvertibleBondFields` | 목 3택 `RadioCardGroup` + 발행방법 3택 + acquisition 상장 토글 | 신규 |
+| ⑤ UI | `capital-forms.tsx` `ConvertibleBondFields` | 목 3택 `RadioCardGroup`(나·다목 hint = `CB_CLAUSE_MAJOR`) + 발행방법 3택 + acquisition 전용 상장 토글(자식 없음, §3-3) + `cbAcqGainPrior` 일관성 hint(§3-3) | 신규 |
 | ⑥ 사이드바 | — | deemed는 합계 사이드바 없음 ⇒ N/A | — |
 | ⑦ 결과 카드 | `DeemedGiftResultView.tsx:461` | `exclusionReason` 일반 렌더 재사용 ⇒ **N/A** | — |
 | ⑧ Validation | `gift-deemed-validate.ts` | 없음 — 3택 enum이라 부정 조합 없음(§4-1 참조) | — |
 | ⑨ 타입 | `gift-deemed-input-types.ts` | `ConvertibleBondInput` +2 · `ConvertibleBondClause` 신설 | 신규 |
-| ⑩ breakdown | `convertible-bond.ts` | 목 note · 제외 사유 · 간주모집 note | 신규 |
+| ⑩ breakdown | `convertible-bond.ts` | 목 note · 제외 사유 · 간주모집 note · `thresholdEcho { gain: 0 }` · `withGiftFlags` 호별 유지(§3-2) | 신규 |
 | ⑪ 결과뷰 | ⑦과 동일 | — | — |
 | ⑫ prefill | — | 해당 없음 | — |
 | ⑬ Zod | `gift-deemed-input.ts:447` `convertibleBondSchema` | `clause` enum + `issuanceMethod` enum | 신규 |
@@ -236,6 +248,11 @@ CB_CLAUSE_MAJOR:              "상증령 §30③",   // 최대주주 정의
 - 1호: 시가 1,000,000,000 · 취득 600,000,000 → **400,000,000**
 - 2호: 전환전 20,000 × 100,000주 · 전환가 10,000 · 증가 50,000주 → 교부주식가액 16,666 → **333,300,000**
 
+⚠️ **2호 anchor의 `isListed` 효과 혼입 주의**: `isListed: true`는 공모 제외의 AND 조건인 동시에 「상증령」§30⑤1 **Min 단서**도 활성화한다. 두 효과가 섞이면 판별력이 죽는다. 회피:
+
+- `listedMarketAvg`를 **주지 않는다** ⇒ `applyListedPerShareBound`가 `avg <= 0`에서 이론주가를 그대로 반환(§6-1 무해 근거와 동일) ⇒ §30⑤1 효과 0
+- 각 anchor는 **기준값을 먼저 assert**한 뒤 `issuanceMethod`만 바꿔 **변화분만** 드러낸다(§39 PO anchor와 같은 방식)
+
 | # | 시나리오 | 기대 | 판별 대상 |
 |---|---|---|---|
 | CB-PO-1 ⭐ | 1호 **나목** + 상장 + 공모발행 | **0** · applied false · 사유 | 게이트 본체 |
@@ -253,21 +270,40 @@ CB_CLAUSE_MAJOR:              "상증령 §30③",   // 최대주주 정의
 
 ---
 
-## 6. 🔴 §39 상장 요건 결함 — 동시 처리 권고
+## 6. 🔴 §39 상장 요건 결함 — **단건 경로만** 동시 처리 권고
 
-§2-4의 결함이다. **동시 처리를 권고**하는 이유:
+§2-4의 결함이다. 그런데 §39 공모 게이트는 **두 경로**에 있고, 둘의 사정이 다르다.
 
-- 수정이 **1줄**(`&& input.isListed === true`)이고, 이번 작업이 **같은 판단 구조**를 다룬다
-- 별건으로 미루면 「§40은 상장을 보는데 §39는 안 본다」는 **비대칭이 코드에 남는다**
-- 방향이 **과소과세**라 방치 비용이 크다
+### 6-1. 단건 경로 (`capital-increase.ts:25`) — 동시 처리 ⭕
 
-anchor 2건 추가: `capital-increase-public-offering.anchor.test.ts`에
-- PO-9: 저가 + `public_offering` + **비상장** → **300,000,000 과세**(제외 안 됨)
+`CapitalIncreaseInput.isListed`가 **이미 존재**한다(`gift-deemed-input-types.ts:191`). 수정은 **1줄**이다.
+
+```ts
+return input.allocationMethod === "public_offering" && input.isListed === true;
+```
+
+동시 처리 근거: 이번 작업이 **같은 판단 구조**를 다루고, 방향이 **과소과세**이며, 미루면 「§40은 상장을 보는데 §39는 안 본다」는 비대칭이 남는다.
+
+anchor 2건 추가(`capital-increase-public-offering.anchor.test.ts`):
+- PO-9 ⭐: 저가 + `public_offering` + **비상장** → **300,000,000 과세**(제외 안 됨)
 - PO-10: 저가 + `public_offering` + **상장** → 0 (기존 PO-1 강화)
 
-⚠️ **회귀 위험**: 기존 PO-1~PO-8 픽스처는 `isListed`를 지정하지 않는다 ⇒ 수정 후 **전부 「제외 안 됨」으로 뒤집힌다**. 픽스처에 `isListed: true`를 추가해야 한다. **이 갱신은 anchor 약화가 아니라 법령 정합 교정**이다(memory `feedback_anchor_correction_legal_priority`).
+**기존 PO-1~PO-8 픽스처에 `isListed: true` 추가가 필요**하다(안 넣으면 전부 「제외 안 됨」으로 뒤집힘). 이 갱신은 anchor 약화가 아니라 법령 정합 교정이다(memory `feedback_anchor_correction_legal_priority`).
 
-> 사용자가 범위를 §40으로 한정하면 §6은 **별건 등록**하고 §40만 진행한다.
+> ✅ **세액 무해 확인**: `applyListedPerShareBound`는 `if (!opts.isListed || avg <= 0) return theoretical;`이다(`capital-helpers.ts`). 기존 픽스처는 `listedMarketAvg`를 주지 않으므로 `isListed: true`를 넣어도 **이론주가가 그대로 반환**되어 세액이 변하지 않는다. R4가 실질 위험이 아닌 이유.
+
+### 6-2. cap-table 경로 (`capital-increase-allocation.ts:69·79`) — **범위 외** ❌
+
+행별 공모 게이트(`publicOfferingIds`)는 있으나, 상장 요건을 검사할 **수단이 없다**:
+
+- `CapitalIncreaseAllocationInput`(`gift-deemed-input-types.ts:228~233`)에 **`isListed` 필드가 아예 없다**
+- 이 경로의 상장 단서(「상증령」§29②1가·3나)는 **「안 C」로 이미 종결**됐다 — equity-delta 모델의 zero-sum 불변식과 충돌해 **미반영 + 명시 안내 + 차단 없음**으로 확정(PR#998, `__tests__/calc/gift-deemed-captable-listed-notice.test.tsx`)
+
+⇒ 여기에 `isListed`만 신설하면 **「상장 여부는 묻는데 상장 단서는 반영하지 않는」 어정쩡한 상태**가 된다. 안 C의 결정을 부분적으로 뒤집는 셈이라 이번 범위에서 다루지 않는다.
+
+🟠 **잔존 리스크(등록)**: 비상장 사안에서 cap-table 행에 `public_offering`을 고르면 **잘못 제외**된다. 안 C 안내 문구에 「공모 배정 제외는 주권상장법인 전제」 한 줄을 덧붙이는 것이 최소 완화책이며, 근본 해소는 안 C 재검토와 함께여야 한다.
+
+> 사용자가 범위를 §40으로 한정하면 §6-1도 **별건 등록**하고 §40만 진행한다.
 
 ---
 
@@ -278,11 +314,13 @@ anchor 2건 추가: `capital-increase-public-offering.anchor.test.ts`에
 | **A** | anchor 10건 작성 → RED 확인 | CB-PO-1·2·4·6 실패, 3·5·7·8·9 통과 |
 | **E** | 법령 상수 3 · 타입 2필드 + enum · 게이트 · breakdown note | anchor 10/10 GREEN |
 | **W** | ①②④⑤⑬ + 배럴 re-export | `tsc --noEmit` 0 |
-| **F** | (권고) §39 상장 요건 1줄 + PO-9·10 + 기존 픽스처 `isListed: true` | §39 anchor 10/10 |
+| **F** | (권고) §39 **단건 경로만** 1줄 + PO-9·10 + 기존 픽스처 `isListed: true` (§6-1) | §39 anchor 10/10 |
 | **V** | lint · E2E 1건 · 전체 회귀 | 실패 0 |
 | **G** | 코드 품질 게이트 → 커밋·PR·머지 | High/Medium 0 |
 
-E2E는 `e2e/gift-deemed-capital.spec.ts`에 「1호 나목 + 상장 + 공모발행 → 미적용 배너」 1건 추가(`data-testid="deemed-exclusion"` 기존 활용).
+E2E는 **`e2e/gift-deemed-capital.spec.ts`**(§40 시나리오가 `cb-case-transfer`로 line 60에 실재)에 「1호 나목 + 상장 + 공모발행 → 미적용 배너」 1건 추가(`data-testid="deemed-exclusion"` 기존 활용).
+
+⚠️ **오작업 방지**: 이름이 비슷한 `e2e/convertible-bond-valuation.spec.ts`는 「**§58의2 전환사채등 평가**」(재산평가) 스펙으로 §40 이익 증여와 **무관**하다. 건드리지 않는다.
 
 ---
 
@@ -293,7 +331,8 @@ E2E는 `e2e/gift-deemed-capital.spec.ts`에 「1호 나목 + 상장 + 공모발�
 | R1 | `clause` 도입이 기존 계산을 바꿈 | 「상증령」§30①1 「각 목」 단일 산식 ⇒ 구조적으로 불가. **CB-PO-5·9가 고정** |
 | R2 | `allocationMethod`와 `issuanceMethod` 혼동 | 필드 분리(§3-1 결정 A) + 각 주석에 「배정 ≠ 발행」 명시 |
 | R3 | 적용 목 범위를 §40① 전체로 오확대 | `ISSUER_CLAUSES` 집합 명시 + **CB-PO-3·7·8이 3방향 차단** |
-| R4 | §6 수행 시 기존 §39 anchor 대량 실패 | 픽스처 `isListed: true` 일괄 추가(§6 명시) |
+| R4 ↓ | §6-1 수행 시 기존 §39 anchor 대량 실패 | **실질 위험 낮음** — 픽스처 `isListed: true` 일괄 추가로 해소되고, `listedMarketAvg` 미지정이라 **세액은 불변**(§6-1 무해 근거) |
+| R7 🟠 | cap-table 비상장 + `public_offering` 오제외가 **남는다** | 이번 범위 밖(§6-2). 안 C 안내 문구 보강이 최소 완화, 근본 해소는 별건 |
 | R5 | acquisition 상장 토글이 conversion 종가평균 경로를 훼손 | 조건부 자식 분기(§3-3), memory `feedback_ui_gate_removes_sole_input_path` |
 | R6 | 「최대주주」를 엔진이 판정한다는 오해 | 「상증령」§30③은 정의 규정 — 판정은 사용자 선언(§1-5)이고 UI hint로 안내 |
 
@@ -305,3 +344,24 @@ E2E는 `e2e/gift-deemed-capital.spec.ts`에 「1호 나목 + 상장 + 공모발�
 - **최대주주 자동 판정** — 지분 명세 입력 자체가 없다. 별도 기능
 - **§29④/§30 「인수등」 확대 규정** — v1.2 §10에서 「해당성 규칙 ⇒ 엔진 대상 아님」으로 종결
 - **1호 해당성 축소** — 어느 목에도 해당하지 않는 순수 제3자 저가 취득을 **과세 제외**하는 것. 목 선택은 그 판정의 **선언**일 뿐 자동 배제가 아니다. 자동 배제는 특수관계·지분 입력이 선행돼야 하며 별건
+- **§39 cap-table 경로의 상장 요건**(§6-2) — 입력 필드 부재 + 안 C 종결. 잔존 리스크는 §8 R7에 등록
+
+---
+
+## 11. 자가검토 이력
+
+**v1.1 (2026-08-02)** — 9건 정정(Critical 1 · High 2 · Medium 4 · Low 2):
+
+| # | 카테고리 | 정정 |
+|---|---|---|
+| 1 | 오류 **Critical** | §6 「1줄 수정」이 **단건 경로에만** 해당. cap-table은 `isListed` 필드 부재 + 안 C 종결 ⇒ §6-1/§6-2 분리, R7 신설 |
+| 2 | 누락 High | 제외 결과의 `withGiftFlags` 호별 `aggregationExcluded` 유지 명시(§3-2) |
+| 3 | 누락 High | 2호 anchor의 `isListed` 효과 혼입 회피 — `listedMarketAvg` 미지정 + 변화분 방식(§5) |
+| 4 | 누락 Medium | 기존 §39 픽스처 `isListed: true`가 **세액 불변**인 근거 → R4 하향 |
+| 5 | 누락 Medium | `thresholdEcho { gain: 0 }` ⑩에 추가 |
+| 6 | 누락 Medium | 1호 제외 시 `acquisitionGainPrior` 0 입력 일관성 hint(§3-3·⑤) |
+| 7 | 모순 Medium | §3-2 표의 「함수 단위 ⭕」 ↔ 「목 단위 적용」 구분 명시 |
+| 8 | 개선 Low | `convertible-bond-valuation.spec.ts`는 §58의2 평가 — 오작업 방지 note(§7) |
+| 9 | 개선 Low | `CB_CLAUSE_MAJOR` 사용처 명시(미사용 상수 금지) |
+
+**verdict**: Critical/High 미해소 0 ⇒ **Do 진입 가능**.
