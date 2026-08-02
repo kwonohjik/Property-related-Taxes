@@ -111,6 +111,44 @@ describe("§39 cap-table ↔ sub-case — 상장 단서 미해소 불일치 동�
     expect(capTable - withProviso.deemedGiftValue).toBe(120_000_000);
   });
 
+  /**
+   * CT-5 — 🆕 **단서와 무관한 기존 불일치** (계획서 v1.2 §4-5 파생 발견)
+   *
+   * cap-table 파일 주석의 「호별 산식과 **대수적으로 동치**」는 **깔끔한 케이스 한정**이다.
+   * **부분 실권 + 재배정 동시 수령** 주주에서는 두 방식이 갈리고, **부호까지 반대**다:
+   *   equity-delta — 실권 손해와 재배정 이익을 **상계** ⇒ 「증여자」
+   *   법정 산식     — 「실권주를 **배정받은 자가** 배정받음으로써 얻은 이익」(§39①1호가목)만
+   *                   정하고 **상계 규정이 없다** ⇒ 문언상 「수증자」
+   *
+   * ⚠️ **어느 쪽이 정답인지 판정하지 않는다.** 상계 여부에 대한 예규·심판례는 **미발견**이고,
+   *    법문에 상계 규정이 없다는 점만 실측됐다. 따라서 이 anchor는 **현행 동작만 고정**하며
+   *    값을 바꾸지 않는다 — 쟁점을 잊지 않기 위한 표시다.
+   */
+  it("CT-5 ⭐: 부분 실권 + 재배정 동시 — cap-table은 「증여자」, 법정 산식은 「수증자」", () => {
+    // A: 배정 60,000 중 자기분 20,000만 인수(40,000 실권) + 재배정 10,000 수령 ⇒ 총 30,000
+    // B: 배정 40,000 전량 인수 + 재배정 30,000 수령 ⇒ 총 70,000
+    const r = calcCapitalIncreaseAllocation({
+      direction: "low",
+      preIssuePrice: 20_000,
+      newSharePrice: 10_000,
+      shareholders: [
+        { id: "A", name: "A", preShares: 60_000, entitledShares: 60_000, subscribedShares: 30_000, reallocatedShares: 10_000, relatedTo: ["B"] },
+        { id: "B", name: "B", preShares: 40_000, entitledShares: 40_000, subscribedShares: 70_000, reallocatedShares: 30_000, relatedTo: ["A"] },
+      ],
+    });
+    expect(r.perShareAfter).toBe(15_000);
+
+    // 현행 cap-table — A는 상계 결과 **손해**라 증여자로 분류되고 수증자 명단에서 빠진다
+    expect(r.byShareholder.find((b) => b.id === "A")?.delta).toBe(-150_000_000);
+    expect(r.perBeneficiary.map((p) => p.beneficiaryId)).toEqual(["B"]);
+
+    // 법정 산식(§29②1 다목 = 배정받은 실권주수 10,000) — A는 **+50,000,000의 수증자**
+    const statutoryA = (15_000 - 10_000) * 10_000;
+    expect(statutoryA).toBe(50_000_000);
+    // ⭐ 부호가 반대다. 단서 도입 이전부터 존재하는 불일치이며 정답은 **미판정**.
+    expect(Math.sign(r.byShareholder.find((b) => b.id === "A")!.delta)).not.toBe(Math.sign(statutoryA));
+  });
+
   it("CT-4: naive 치환값 20,000,000은 **양쪽 어디와도 다르다** (안 B 배제 근거)", () => {
     // cap-table의 ㉯를 종가평균 13,000으로 그대로 치환했을 때의 delta를 산식으로 재현.
     //   A: 60,000×13,000 − 60,000×20,000 −        0 = −420,000,000

@@ -349,6 +349,27 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
         <CurrencyInput label="신주 1주당 인수가액" value={form.ciAllocNewPrice} onChange={(v) => set({ ciAllocNewPrice: v })} placeholder="신주 1주당 인수가액 (원)" />
       </ToneCard>
 
+      {/*
+        주권상장법인 단서 미반영 안내 (안 C) — 계획서
+        docs/00-pm/capital-increase-captable-listed-proviso.plan.md v1.2 §6.
+        차단(validate)하지 않고 **안내에 그친다**: 다주주 모드는 상장 여부를 입력받지 않으므로
+        상장임을 판정할 방법이 없고, 비상장 다주주 사용을 막아서도 안 된다(자동 판정 금지).
+      */}
+      <ToneCard tone="amber" title="주권상장법인이라면 이 모드를 쓰지 마세요" noDark>
+        <p className="text-xs text-amber-800">
+          주권상장법인등은 「상증령」 §29②1가·3나 단서에 따라 <b>증자 후 1주당 평가가액</b>이 산식값이 아닌
+          <b> 종가평균</b>(평가기준일 전후 각 2개월, 상증법 §63①1가)으로 바뀔 수 있습니다.
+        </p>
+        <p className="text-xs text-amber-800">
+          <b>다주주 모드는 이 단서를 반영하지 않습니다.</b> 지분 증감(equity-delta) 방식이라 외생 시장가를
+          넣으면 &ldquo;증여자 손해 합계 = 수증자 이익 합계&rdquo; 항등식이 깨지기 때문입니다. 상장법인은
+          <b> 「증자 §39」 단일 모드</b>에서 <b>주권상장법인등</b> 토글을 켜고 계산하세요.
+        </p>
+        <p className="text-caption text-amber-700">
+          비상장법인이면 이 안내는 해당하지 않습니다.
+        </p>
+      </ToneCard>
+
       <ToneCard
         tone="emerald"
         sectionNum={2}
