@@ -1066,6 +1066,68 @@ anchor로 안전하게 고정할 수 있다.
 
 ---
 
+### 4.10-R P12 **1단계** 구현 결과 ✅ (2026-08-02)
+
+**엔진 2파일**(파트 노출 + 800줄 정책 분리). **세액 변경 0** — 정보 노출만 했다.
+
+| | 변경 |
+|---|---|
+| `SplitRatePart` | **`rateClause?: RateClause` 추가**. `computeSplitPartTax`가 이미 내부에서 쓰던 `finals[i].rateClause`(`clauseKey`)를 그대로 실어 보낸다 |
+| `computePartialNblTax` | 반환 타입에 **`splitPartDetail?: SplitPartRateResult`** 추가. 파트 2개(비사업용 `kind: "non_business_land"` / 그 외 `kind: "land"`)를 split과 **같은 형태**로 낸다 |
+| 전달 경로 | `clause1 >= clause2`(1호 승) 분기 **포함 전 경로**에서 partDetail을 얹는다 — 호별 합산 단위는 **승패와 무관**하게 필요하다 |
+
+**세액 불변인 이유**(착수 전 논증 → 회귀로 확인):
+`aggregate-helpers.ts:370`의 `splitParts: tr.splitPartDetail !== undefined`가 부분 비사토
+자산에서도 true가 되지만, **그 자산은 `partialNbl`이 이미 true**라
+`isAssetLevelClause5 = splitParts || partialNbl`이 **불변**이다. `splitPartDetail`의 소비처는
+그 한 곳뿐이고(grep 실측), 단건 엔진은 `taxResult`를 스프레드하지 않는다(`transfer-tax.ts:668`·`:675`).
+
+**파트 income·기본공제 배분** — 자산 단위에서 이미 끝난 값이라, 과세표준과 **같은 면적비율**로
+되돌려 표시값을 만들고 잔액은 마지막 파트가 흡수한다
+(memory `feedback_floor_residual_absorption`). **세액 계산에는 쓰지 않는다.**
+
+**anchor 5건 신설**(`split-part-clause-exposure.anchor.test.ts`) — 세액을 단정하지 않고
+**구조·호·불변식만** 고정한다:
+
+| ID | 고정 대상 |
+|---|---|
+| A-1 | split 파트의 호 — 토지 `104-1-3`(70%) · 건물 `104-1-1` |
+| A-2 | 부분 비사토 파트 2개 — 비사업용 `104-1-8` · 그 외 `104-1-1`, 각 과세표준 117,000,000 |
+| A-2b | **전량** 비사토(`ratio` 미지정)는 나눌 대상이 없어 파트를 내지 않는다 |
+| A-3a·A-3b | `Σ 파트 과세표준 = 자산 과세표준` · `Σ 파트 세액 = perAssetTotal` |
+
+#### 800줄 정책 분리 (같은 PR · 기회주의적)
+
+파트 리터럴을 더하자 `transfer-tax-split-rate.ts`가 **803줄**로 트리거(800)를 넘어
+PostToolUse hook이 경고했다. 정책대로 **즉시 분리**했다 — 자연 이음매가 이미 있었다.
+
+| 파일 | 줄 | 책임 |
+|---|---:|---|
+| `transfer-tax-appurtenant-land.ts` 🆕 | **253** | 주택 **부수토지** 축 — §104② 기산일(`resolveAppurtenantLandRateBasisDate`·`resolveLandStatutoryAcquisitionDate`·`buildLandRateInput`) · 배율 초과분(`resolveAppurtenantLandExcess`) · 비과세 제외(`applyHousingLandExclusions`·`isLaterAcquiredLandExemptExcluded`·`hasHousingLandExemptExclusion`) |
+| `transfer-tax-split-rate.ts` | 803 → **588** | §104⑤ **파트별 세율·비교과세** — `computeSplitPartTax` · `computePartialNblTax` · `resolveSplitAwareTax` · `buildCalculatedTaxStep` |
+
+- **단방향**(부수토지 → split-rate)이라 순환이 없다.
+- **export 전량 재수출**로 종전 import 경로를 깨지 않았다
+  (memory `feedback_800line_split_export_preservation`) — 소비처 7곳
+  (`transfer-tax.ts` · `transfer-tax-taxable-gain.ts` · `transfer-tax-finalize.ts` ·
+  `transfer-tax-aggregate-helpers.ts` · 테스트 3) **무수정**.
+- 분리가 만든 고아 import 3건(`calculateHoldingPeriod`·`round2`·`appurtenantLandMultiplier`)만
+  제거했다. 인접 코드는 손대지 않았다(Surgical).
+
+**검증**: `tsc` 0 · `lint` 0 · 양도+calc **170파일 1,668건** · 전체 **1,153파일 12,947건 · 회귀 0**.
+
+#### 남은 단계
+
+- **2단계** — 그룹 키를 자산 → 파트로(`classifyRateGroup` · `aggregateByGroup`의 `idxList`).
+  **여기서 세액이 바뀐다**(D-7 +51,000,000 · D-12 +23,400,000).
+- **3단계** — 호 그룹 세액을 자산으로 역안분(`PerPropertyBreakdown`은 자산 단위 유지).
+- 🔶 **겸용(`MixedUseRatePart`)은 아직 통일하지 않았다** — 단건 전용 경로라 aggregate 그룹핑에
+  직접 걸리지 않는다. 2단계에서 다건 겸용의 흐름을 확인한 뒤 판단한다.
+- 🔶 기본공제 배분(§103②)의 자산↔파트 이중 구조는 2단계 착수 전 확인 항목(§4.10).
+- ✅ **800줄 정책 분리 완료**(아래) — 2단계가 파트 그룹핑 로직을 더해도 여유가 있다.
+
+---
+
 ## 3. 폐기·재제안 금지
 
 | 주장 | 폐기 사유 |
