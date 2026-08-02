@@ -19,6 +19,22 @@ export const CI_SHARES_LABEL: Record<DeemedFormState["ciSubType"], string> = {
   no_realloc: "실권주수",
 };
 
+/** §39① 공모 모집 배정 제외 3택 — 증자·전환주식·cap-table 공용 옵션 */
+export const ALLOCATION_METHOD_OPTIONS = [
+  { value: "normal", label: "일반 배정" },
+  { value: "public_offering", label: "공모 배정 (§9⑦ 모집방법)" },
+  { value: "deemed_public_offering", label: "간주모집 (자시령 §11③)" },
+] as const;
+
+/** 3택 선택 시 화면에 붙는 효과 안내 — 「왜 0인가/왜 과세인가」를 입력 시점에 알려준다 */
+export function allocationMethodHint(v: DeemedFormState["ciAllocationMethod"]): string {
+  if (v === "public_offering")
+    return "주권상장법인이 50인 이상에게 청약을 권유하는 모집방법으로 배정한 경우 — 「상증법」 §39①이 적용되지 않아 증여재산가액이 0이 됩니다.";
+  if (v === "deemed_public_offering")
+    return "청약권유 인원이 50인 미만이지만 전매기준에 해당해 모집으로 의제된 경우 — 「상증령」 §29③으로 위 제외가 취소되어 일반 배정과 같이 과세됩니다.";
+  return "실권주 일부만 공모로 배정했다면 공모분을 뺀 주식수를 「이익 귀속 주식수」에 입력하세요.";
+}
+
 /**
  * §63①1가 종가평균 키움 자동조회 블록 — 증자 §39 · 전환주식 §39①3호 공용.
  * 평가기준일은 호출부가 결정한다(상증령 §29① — 상장 주주배정 권리락일 / 전환한 날 / 납입일,

@@ -2,7 +2,7 @@
  * 증여로 보는 경우 — 폼 상태 타입 + 초기값.
  * shared.tsx에서 분리(800줄 정책). shared.tsx가 re-export하여 하위호환 유지.
  */
-import type { DeemedGiftType, ScRelation, ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftType, ScRelation, ShareAllocationMethod, ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 /** 감자 멀티 모드 주주 행 (전부 string — parseAmount 변환은 API 변환 시) */
@@ -24,10 +24,11 @@ export interface CapTableRow {
   subscribedShares: string; // 실제 인수 신주수
   reallocatedShares: string; // 재배정/제3자/초과로 받은 신주수
   relatedTo: string[]; // 특수관계인 주주 id 목록
+  allocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외 판정 (행별)
 }
 
 export function makeCapTableRow(id: string): CapTableRow {
-  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [] };
+  return { id, name: "", preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], allocationMethod: "normal" };
 }
 
 /**
@@ -237,6 +238,7 @@ export interface DeemedFormState {
   ciIsListed: boolean; // 주권상장법인등 — §29②1가 단서(저가 Min)·§29②3나 단서(고가 Max)
   ciListedMarketAvg: string; // 평가기준일(§29① — 상장 주주배정은 권리락일) 전후 2개월 종가평균
   ciStockCode: string; // 키움 자동조회용 종목코드 (UI 전용)
+  ciAllocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외
   // 증자 §39 cap-table (다수증자·다증여자)
   ciAllocDirection: "low" | "high";
   ciAllocPrePrice: string; // ㉮ 증자 전 1주당 평가가액
@@ -323,6 +325,8 @@ export interface DeemedFormState {
   csIssueIsListed: boolean; // 발행 시점 주권상장법인등
   csIssueListedMarketAvg: string;
   csStockCode: string; // 키움 자동조회용 종목코드 (양 시점 공용 — 같은 법인)
+  csConvAllocationMethod: ShareAllocationMethod; // 전환 시점 §39① 공모 제외
+  csIssueAllocationMethod: ShareAllocationMethod; // 발행 시점 §39① 공모 제외
   csIssuanceDate: string; // 발행 시점 평가기준일 — 전환주식 **발행 당시**(§29②6나). 전환 시점은 증여일(§29①2호)
   // ── Phase 3 추정·의제 ──
   // 재산취득자금 증여추정 §45
@@ -522,6 +526,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciIsListed: false,
   ciListedMarketAvg: "",
   ciStockCode: "",
+  ciAllocationMethod: "normal",
   ciAllocDirection: "low",
   ciAllocPrePrice: "",
   ciAllocNewPrice: "",
@@ -597,6 +602,8 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csIssueIsListed: false,
   csIssueListedMarketAvg: "",
   csStockCode: "",
+  csConvAllocationMethod: "normal",
+  csIssueAllocationMethod: "normal",
   csIssuanceDate: "",
   afSubType: "acquisition",
   afAcquisitionValue: "",

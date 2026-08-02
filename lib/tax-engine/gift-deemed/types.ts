@@ -23,6 +23,7 @@ export type {
   MergerShareholders,
   CapitalIncreaseInput,
   CapShareholder,
+  ShareAllocationMethod,
   CapitalIncreaseAllocationInput,
   ConvertibleStockInput,
   CapitalDecreaseInput,

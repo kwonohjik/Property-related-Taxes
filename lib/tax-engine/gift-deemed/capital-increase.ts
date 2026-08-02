@@ -14,6 +14,38 @@ const SUBTYPE_NOTE: Record<NonNullable<CapitalIncreaseInput["subType"]>, string>
   no_realloc: "실권주 미배정·특수관계인 인수",
 };
 
+/**
+ * 「상증법」§39① 괄호 — **주권상장법인이 자본시장법 §9⑦ 모집방법으로 배정하는 경우는 제외**한다.
+ * 「이하 이 항에서 같다」이므로 **§39① 전체**(1호 가·나·다·라 + 2호)에 걸린다.
+ *
+ * ⚠️ **이중부정**: 그 모집이 「상증령」§29③이 가리키는 자본시장법 **시행령 §11③ 간주모집**
+ *    (50인 미만이지만 전매기준 해당으로 모집 의제)에 불과하면 **제외가 취소**되어 과세한다.
+ *    형식적 간주모집을 통한 회피를 막는 구조다.
+ */
+function publicOfferingExcluded(input: CapitalIncreaseInput): boolean {
+  return input.allocationMethod === "public_offering";
+}
+
+/** 간주모집이라 제외가 취소된 경우에만 붙이는 근거 note (감사 추적성 — 세액은 normal과 같다) */
+function deemedPublicOfferingNote(input: CapitalIncreaseInput): string | undefined {
+  return input.allocationMethod === "deemed_public_offering"
+    ? `유가증권 모집방법 배정이나 간주모집이라 제외 취소 (${GIFT.CI_DEEMED_PUBLIC_OFFERING})`
+    : undefined;
+}
+
+/** §39① 적용 제외 결과 — 산식 행은 남겨 「왜 0인지」가 보이게 한다 */
+function publicOfferingExcludedResult(breakdown: CalculationStep[]): DeemedGiftResult {
+  return {
+    type: "capital_increase",
+    applied: false,
+    deemedGiftValue: 0,
+    breakdown,
+    exclusionReason: `주권상장법인의 유가증권 모집방법 배정 — §39① 적용 제외 (${GIFT.CI_PUBLIC_OFFERING_EXCLUSION})`,
+    legalBasis: GIFT.CAPITAL_INCREASE,
+    thresholdEcho: { gain: 0 },
+  };
+}
+
 export function calcCapitalIncreaseGift(input: CapitalIncreaseInput): DeemedGiftResult {
   return (input.direction ?? "low") === "high" ? increaseHigh(input) : increaseLow(input);
 }
@@ -55,7 +87,10 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
     { label: "1주당 이익", amount: perShareGain },
     { label: "이익 귀속 주식수", amount: forfeitedShares },
     { label: "증여재산가액", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: `§39①1호 저가발행 — ${SUBTYPE_NOTE[subType]}${imputationNote}` },
+    ...(deemedPublicOfferingNote(input) ? [{ label: "배정 방법", amount: 0, note: deemedPublicOfferingNote(input) }] : []),
   ];
+  // §39① 괄호 — 주권상장법인 모집방법 배정은 「배정」에서 제외되어 과세 요건 자체가 성립하지 않는다
+  if (publicOfferingExcluded(input)) return publicOfferingExcludedResult(breakdown);
   return {
     type: "capital_increase",
     applied,
@@ -111,7 +146,10 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
     { label: "1주당 차액", amount: perShareGain },
     { label: "이익 귀속 주식수", amount: forfeitedShares },
     { label: "증여재산가액", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: `§39①2호 고가발행 — ${SUBTYPE_NOTE[subType]}` },
+    ...(deemedPublicOfferingNote(input) ? [{ label: "배정 방법", amount: 0, note: deemedPublicOfferingNote(input) }] : []),
   ];
+  // §39① 괄호는 「이하 이 항에서 같다」로 **2호(고가)에도** 걸린다
+  if (publicOfferingExcluded(input)) return publicOfferingExcludedResult(breakdown);
   return {
     type: "capital_increase",
     applied,

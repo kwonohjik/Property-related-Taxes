@@ -203,6 +203,7 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         smallShareholderImputation: !isHigh ? form.ciSmallImputation : undefined,
         isListed: form.ciIsListed,
         listedMarketAvg: form.ciIsListed ? parseAmount(form.ciListedMarketAvg) : undefined,
+        allocationMethod: form.ciAllocationMethod,
       };
     }
     case "capital_increase_allocation":
@@ -220,6 +221,7 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           subscribedShares: parseAmount(r.subscribedShares),
           reallocatedShares: parseAmount(r.reallocatedShares) || undefined,
           relatedTo: r.relatedTo.length > 0 ? r.relatedTo : undefined,
+          allocationMethod: r.allocationMethod,
         })),
       } as unknown as DeemedGiftInput;
     case "capital_decrease":
@@ -356,7 +358,7 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
     case "convertible_stock": {
       const isHigh = form.csDirection === "high";
       const needsRatio = isHigh && form.csSubType !== "forfeited_realloc";
-      const side = (k: { prePrice: string; preShares: string; newPrice: string; issuedShares: string; forfeitedShares: string; relatedAcquired: string; ratioDenom: string; isListed: boolean; listedMarketAvg: string }) => ({
+      const side = (k: { prePrice: string; preShares: string; newPrice: string; issuedShares: string; forfeitedShares: string; relatedAcquired: string; ratioDenom: string; isListed: boolean; listedMarketAvg: string; allocationMethod: DeemedFormState["ciAllocationMethod"] }) => ({
         direction: form.csDirection,
         subType: form.csSubType,
         preIssuePrice: parseAmount(k.prePrice),
@@ -369,11 +371,12 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
         // §29②6이 §29②1~5를 상속하므로 시점별로 단서가 각각 걸린다
         isListed: k.isListed,
         listedMarketAvg: k.isListed ? parseAmount(k.listedMarketAvg) : undefined,
+        allocationMethod: k.allocationMethod,
       });
       return {
         type: "convertible_stock",
-        atConversion: side({ prePrice: form.csConvPrePrice, preShares: form.csConvPreShares, newPrice: form.csConvNewPrice, issuedShares: form.csConvIssuedShares, forfeitedShares: form.csConvForfeitedShares, relatedAcquired: form.csConvRelatedAcquiredShares, ratioDenom: form.csConvRatioDenomShares, isListed: form.csConvIsListed, listedMarketAvg: form.csConvListedMarketAvg }),
-        atIssuance: side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares, isListed: form.csIssueIsListed, listedMarketAvg: form.csIssueListedMarketAvg }),
+        atConversion: side({ prePrice: form.csConvPrePrice, preShares: form.csConvPreShares, newPrice: form.csConvNewPrice, issuedShares: form.csConvIssuedShares, forfeitedShares: form.csConvForfeitedShares, relatedAcquired: form.csConvRelatedAcquiredShares, ratioDenom: form.csConvRatioDenomShares, isListed: form.csConvIsListed, listedMarketAvg: form.csConvListedMarketAvg, allocationMethod: form.csConvAllocationMethod }),
+        atIssuance: side({ prePrice: form.csIssuePrePrice, preShares: form.csIssuePreShares, newPrice: form.csIssueNewPrice, issuedShares: form.csIssueIssuedShares, forfeitedShares: form.csIssueForfeitedShares, relatedAcquired: form.csIssueRelatedAcquiredShares, ratioDenom: form.csIssueRatioDenomShares, isListed: form.csIssueIsListed, listedMarketAvg: form.csIssueListedMarketAvg, allocationMethod: form.csIssueAllocationMethod }),
       };
     }
     case "acquisition_fund_presumption":

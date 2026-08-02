@@ -27,8 +27,8 @@ function allocForm(over: Partial<DeemedFormState> = {}): DeemedFormState {
     ciAllocPrePrice: "20,000",
     ciAllocNewPrice: "10,000",
     ciAllocRows: [
-      { id: "sh-1", name: "A", preShares: "60,000", entitledShares: "60,000", subscribedShares: "0", reallocatedShares: "", relatedTo: ["sh-2"] },
-      { id: "sh-2", name: "B", preShares: "40,000", entitledShares: "40,000", subscribedShares: "100,000", reallocatedShares: "60,000", relatedTo: ["sh-1"] },
+      { id: "sh-1", name: "A", preShares: "60,000", entitledShares: "60,000", subscribedShares: "0", reallocatedShares: "", relatedTo: ["sh-2"], allocationMethod: "normal" },
+      { id: "sh-2", name: "B", preShares: "40,000", entitledShares: "40,000", subscribedShares: "100,000", reallocatedShares: "60,000", relatedTo: ["sh-1"], allocationMethod: "normal" },
     ],
     ...over,
   };
