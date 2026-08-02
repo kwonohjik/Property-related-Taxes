@@ -13,6 +13,8 @@ import {
 } from "./transfer-tax";
 import { calculateProgressiveTax } from "./tax-utils";
 import { resolveSplitAwareTax, hasPartialNonBusinessLand } from "./transfer-tax-split-rate";
+import type { SplitRatePart } from "./transfer-tax-split-rate";
+import { PROGRESSIVE_RATE_CLAUSES } from "./transfer-tax-rate-calc";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   RateGroup,
@@ -367,6 +369,12 @@ export function aggregateByGroup(
       tax: tr.calculatedTax,
       rate: tr.appliedRate,
       surcharge: tr.surchargeRate,
+      /** 자산 단위 과세표준 — 파트가 없는 자산은 이 값이 곧 파트 과세표준이다. */
+      taxBase: assetTaxBase,
+      /** 자산 단위 「해당 호」 — 파트가 없는 자산의 호별 합산 키(P12 2단계). */
+      rateClause: tr.rateClause,
+      /** §104⑤ 본문이 「각 호별로 합산한 자산」이라 정한 **파트 목록**(있으면). */
+      parts: tr.splitPartDetail?.parts,
       splitParts: tr.splitPartDetail !== undefined,
       // 한 필지 중 일부만 비사업용 — §104⑤ 본문 후단으로 **별개 자산 의제**가 걸린 자산.
       partialNbl: hasPartialNonBusinessLand(records[i].correctedSingleInput),
@@ -511,25 +519,80 @@ export function aggregateByGroup(
       //    (교재 사례2 = ①2호 + ⑦3호 동시 해당 → D-11/P9가 구현).
       //    ⇒ 아래 `mixedTier`(적용 **호**가 갈리는가)가 정확한 판정이다. 자산별 **적용세율**
       //      동일 여부로 쪼개면 과소과세가 된다. 계획서 §D-13.
+      // 2026-08-02 **P12 2단계** — 자산이 아니라 **파트**를 호별로 묶는다(계획서 §4.11).
+      //   자산 하나가 둘 이상의 호에 걸치면(토지·건물 분리취득 · 한 필지 중 일부만 비사업용)
+      //   §104⑤ 본문·후단이 **각각을 별개 자산으로 의제**하므로 **파트가 곧 합산 단위**다.
+      //   종전에는 그런 자산이 있으면 `mixedTier`가 켜져 **그룹 전체**가 자산별 합으로 떨어져
+      //   같은 호 다른 자산의 합산까지 끊겼다(§D-7 과소 51,000,000 · §D-12 과소 23,400,000).
+      //
+      // ⚠️ **이 분기에만 적용한다.** `calcTax`의 `rateClause`는 §104⑦ **후단의 승자 기준**이라
+      //   (`transfer-tax-rate-calc.ts:451`) 그대로 그룹 키로 쓰면 「해당 호는 같은데 승자만
+      //   갈린」 자산이 나뉘어 **D-11(P9)이 회귀**한다. 그런데 이 분기의 자산은 위
+      //   `classifyRateGroup`(:72)이 2년 미만을 전부 `short_term`으로 보내 **2년 이상만**
+      //   남으므로 §104⑦ 후단이 발동하지 않는다 ⇒ 승패 오염이 없다.
+      //   `short_term` 분기는 손대지 않는다 — D-11(`sameRateClause`)이 거기 있다.
       const perAsset = idxList.map((i) => assetTaxOf(i));
-      // 호 판정 대리값 = 중과 가산율. 가산율이 갈리면 적용 호가 다르다는 뜻이다.
-      // 파트별 세율 자산도 그룹 합산 1회 계산으로 되돌릴 수 없다(위 short_term과 동일 사유).
-      const mixedTier =
-        perAsset.some(isAssetLevelClause5) ||
-        perAsset.some((p) => p.surcharge !== perAsset[0].surcharge);
-      if (mixedTier) {
-        groupCalculatedTax = perAsset.reduce((sum, p) => sum + p.tax, 0);
-        appliedRate = Math.max(...perAsset.map((p) => p.rate)); // 표시용 최고세율
-        surchargeRate = Math.max(...perAsset.map((p) => p.surcharge ?? 0));
-        progressiveDeduction = 0; // 자산별 누진공제가 상이 — 합산 표시 불가
-      } else {
-        const rep = records[idxList[0]];
-        const taxResult = calcTax(groupTaxBase, parsedRates, rep.correctedSingleInput);
-        groupCalculatedTax = taxResult.calculatedTax;
-        appliedRate = taxResult.appliedRate;
-        surchargeRate = taxResult.surchargeRate;
-        progressiveDeduction = taxResult.progressiveDeduction;
+      /** 호별 합산 단위 — 파트가 있으면 그 파트들, 없으면 자산 자체가 파트 1개다. */
+      type ClausePart = Pick<SplitRatePart, "taxBase" | "calculatedTax" | "appliedRate"> & {
+        rateClause: SplitRatePart["rateClause"];
+        rateInput: TransferTaxInput;
+        surchargeRate?: number;
+      };
+      const clauseParts: ClausePart[] = perAsset.flatMap((a, n) =>
+        a.parts
+          ? a.parts.map((p) => ({
+              taxBase: p.taxBase,
+              calculatedTax: p.calculatedTax,
+              appliedRate: p.appliedRate,
+              rateClause: p.rateClause,
+              rateInput: p.rateInput,
+              surchargeRate: p.surchargeRate,
+            }))
+          : [
+              {
+                taxBase: a.taxBase,
+                calculatedTax: a.tax,
+                appliedRate: a.rate,
+                rateClause: a.rateClause,
+                rateInput: records[idxList[n]].correctedSingleInput,
+                surchargeRate: a.surcharge,
+              },
+            ],
+      );
+      // 묶음 키 — `computeSplitPartTax`가 자산 **내부**에서 쓰는 `clauseKey`와 **같은 규약**이다:
+      //   · 누진 호(1·8호·⑦1·3호) → 호 단위로 묶는다. 합산하면 누진 구간·누진공제가 달라진다.
+      //   · 단일세율 호(2·3·10호) → **`호|세율`**로 묶는다. 세율이 같아야 합산 1회가 성립하고,
+      //     그때 자산별 합과의 차이는 floor 횟수뿐이라 **종전 규약을 그대로 유지**한다.
+      //   · 호 불명(`undefined`)   → 묶지 않는다(안전측).
+      const clauseGroups = new Map<string, ClausePart[]>();
+      clauseParts.forEach((p, i) => {
+        const c = p.rateClause;
+        const k = !c
+          ? `solo-${i}`
+          : PROGRESSIVE_RATE_CLAUSES.has(c)
+            ? c
+            : `${c}|${p.appliedRate}`;
+        clauseGroups.set(k, [...(clauseGroups.get(k) ?? []), p]);
+      });
+      groupCalculatedTax = 0;
+      for (const bucket of clauseGroups.values()) {
+        if (bucket.length === 1) {
+          groupCalculatedTax += bucket[0].calculatedTax;
+          continue;
+        }
+        // 같은 호 → 과세표준을 **합산해 1회** 계산한다(§104⑤2호 본문 · 예규 §1.6-A).
+        // 대표 파트의 `rateInput`을 쓴다 — 같은 호라 세율 규칙이 같고, 재구성하면 dual-truth다.
+        const mergedBase = bucket.reduce((sum, p) => sum + p.taxBase, 0);
+        groupCalculatedTax += calcTax(
+          mergedBase,
+          parsedRates,
+          bucket[0].rateInput,
+        ).calculatedTax;
       }
+      appliedRate = Math.max(...clauseParts.map((p) => p.appliedRate)); // 표시용 최고세율
+      surchargeRate = Math.max(...clauseParts.map((p) => p.surchargeRate ?? 0));
+      // 호마다 누진공제가 달라 그룹 단위로 합산 표시할 수 없다(묶음이 하나일 때도 규약 통일).
+      progressiveDeduction = 0;
     }
 
     out.push({

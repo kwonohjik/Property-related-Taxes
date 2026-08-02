@@ -92,6 +92,16 @@ export interface SplitRatePart {
    * (`unifiedShortTermClause`가 그 경우 undefined를 낸다).
    */
   rateClause?: RateClause;
+  /**
+   * 이 파트의 **세율 판정에 실제로 쓰인 입력** — 다건 호별 합산이 같은 규칙을 재현하려면 필요하다.
+   *
+   * 호 묶음 세액은 `calcTax(합산 과세표준, 대표 파트의 rateInput)`으로 낸다.
+   * `aggregateByGroup`이 이 값을 재구성하면 **dual-truth**가 된다 — 토지 파트는
+   * `buildLandRateInput`으로 §104② 기산일을 확정한 뒤 자산 단위 재적용을 무력화했고,
+   * 비사업용 파트는 `nonBusinessLandAreaRatio`를 1로 되돌린 입력이기 때문이다.
+   * ⇒ **만든 쪽이 그대로 실어 보낸다**(memory `feedback_ui_engine_dual_truth_avoidance`).
+   */
+  rateInput: TransferTaxInput;
   /** 이 파트에 붙은 중과 유형·가산율 (비사업용 토지 등) — 결과 표시용 echo */
   surchargeType?: string;
   surchargeRate?: number;
@@ -338,6 +348,7 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
     appliedRate: finals[i].appliedRate,
     // 위 `clauseKey`가 이미 쓰고 있던 값을 밖으로 내보낸다 — 다건 호별 합산의 그룹 키(P12).
     rateClause: finals[i].rateClause,
+    rateInput: s.rateInput,
     surchargeType: finals[i].surchargeType,
     surchargeRate: finals[i].surchargeRate,
     nblSurchargeExcluded: finals[i].nblSurchargeExcluded,
@@ -420,18 +431,15 @@ function computePartialNblTax(
   // 2호 — 각 파트를 `calcTax`에 그대로 위임한다.
   //   비사토 파트: `ratio`를 1로 되돌려 자기 과세표준 **전량**에 §104①8호(+ §104① 후단) 적용
   //   그 외 파트 : 비사업용이 아니므로 §104①1호(2년 미만이면 2·3호)
-  const nblPart = calcTax(
-    nblBase,
-    ctx.parsedRates,
-    { ...input, nonBusinessLandAreaRatio: 1 },
-    ctx.multiHouseSurchargeResult,
-  );
-  const otherPart = calcTax(
-    otherBase,
-    ctx.parsedRates,
-    { ...input, isNonBusinessLand: false, nonBusinessLandAreaRatio: undefined },
-    ctx.multiHouseSurchargeResult,
-  );
+  // 파트별 세율 판정 입력 — 아래 파트 상세가 **같은 객체**를 실어 보낸다(재구성 금지).
+  const nblRateInput: TransferTaxInput = { ...input, nonBusinessLandAreaRatio: 1 };
+  const otherRateInput: TransferTaxInput = {
+    ...input,
+    isNonBusinessLand: false,
+    nonBusinessLandAreaRatio: undefined,
+  };
+  const nblPart = calcTax(nblBase, ctx.parsedRates, nblRateInput, ctx.multiHouseSurchargeResult);
+  const otherPart = calcTax(otherBase, ctx.parsedRates, otherRateInput, ctx.multiHouseSurchargeResult);
   const clause2 = nblPart.calculatedTax + otherPart.calculatedTax;
   // 1호 — 양도소득과세표준 합계액에 §55①에 따른 세율만. 가산이 없다.
   const clause1 = calculateProgressiveTax(ctx.taxBase, ctx.parsedRates.brackets);
@@ -464,6 +472,7 @@ function computePartialNblTax(
         calculatedTax: nblPart.calculatedTax,
         appliedRate: nblPart.appliedRate,
         rateClause: nblPart.rateClause,
+        rateInput: nblRateInput,
         surchargeType: nblPart.surchargeType,
         surchargeRate: nblPart.surchargeRate,
         nblSurchargeExcluded: nblPart.nblSurchargeExcluded,
@@ -478,6 +487,7 @@ function computePartialNblTax(
         calculatedTax: otherPart.calculatedTax,
         appliedRate: otherPart.appliedRate,
         rateClause: otherPart.rateClause,
+        rateInput: otherRateInput,
         surchargeType: otherPart.surchargeType,
         surchargeRate: otherPart.surchargeRate,
       },

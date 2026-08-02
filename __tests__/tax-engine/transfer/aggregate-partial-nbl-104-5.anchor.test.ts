@@ -85,19 +85,32 @@ function agg(properties: TransferTaxItemInput[]) {
 }
 
 describe("P10 / D-12 — 그룹 합산 경로가 §104⑤를 우회하지 않는다", () => {
-  it("B-33: 부분 비사토 2건 — 그룹 합산 1회가 아니라 **자산별 합**으로 간다", () => {
+  /**
+   * ⚠️ **P12 2단계에서 기대값을 갱신했다**(계획서 §4.11). P10은 「자산별 합」으로 착지시켰는데,
+   * 예규가 「"자산별" = **각 호별로 합산한 자산**」을 확정하면서 그것이 **중간 지점**이었음이
+   * 드러났다 — 부분 비사토 자산의 파트는 §104①**8호**와 §104①**1호**로 갈리므로 각 호끼리
+   * 합산해야 한다. P10은 모델 A(과대)를 지나 **과소**로 착지했었다:
+   *   모델 A 184,660,000(과대) → P10 137,960,000(과소) → **예규 161,360,000**
+   * (memory `feedback_anchor_correction_legal_priority` — anchor 갱신은 법령 정합 우선)
+   */
+  it("B-33: 부분 비사토 2건 — 파트를 **호별로 합산**한다", () => {
     const r = agg([partial("L1", 300_000_000), partial("L2", 300_000_000)]);
     const g = r.groupTaxes.find((x) => x.group === "non_business_land");
     expect(g).toBeDefined();
-    // 종전: 그룹 합산 1회 `calcTax(groupTaxBase, …)` → 모델 A(누진 전체 + 10%p×ratio분)
-    // 정정: 자산별 합 — 각 자산이 `computePartialNblTax`로 §104⑤ MAX를 수행
-    expect(g!.groupCalculatedTax).toBe(137_960_000);
+    // 종전 P10 이전: 그룹 합산 1회 `calcTax(groupTaxBase, …)` → 모델 A 184,660,000
+    // 종전 P10:      자산별 합 137,960,000 (각 자산이 `computePartialNblTax`로 내부 MAX)
+    // 정정 P12:      §104①8호 117,000,000 × 2 = 234,000,000 → 누진 68,980,000 + 10% 23,400,000
+    //                §104①1호 117,000,000 × 2 = 234,000,000 → 68,980,000
+    expect(g!.groupCalculatedTax).toBe(161_360_000);
   });
 
-  it("B-34: 부분 비사토 + 전량 비사토 혼재 — 역시 자산별 합", () => {
+  it("B-34: 부분 비사토 + 전량 비사토 혼재 — 전량 자산은 파트가 없어 그 자체가 ①8호 단위", () => {
     const r = agg([partial("L1", 300_000_000), full("L2", 300_000_000)]);
     const g = r.groupTaxes.find((x) => x.group === "non_business_land");
-    expect(g!.groupCalculatedTax).toBe(161_360_000);
+    // §104①8호: 부분자산의 비사토 파트 117,000,000 + 전량자산 234,000,000 = 351,000,000
+    //           → 누진 114,460,000 + 10% 35,100,000 = 149,560,000
+    // §104①1호: 부분자산의 그 외 파트 117,000,000 → 25,510,000
+    expect(g!.groupCalculatedTax).toBe(175_070_000);
   });
 });
 

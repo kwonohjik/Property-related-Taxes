@@ -25,6 +25,7 @@ import { describe, it, expect } from "vitest";
 import { resolveSplitAwareTax } from "@/lib/tax-engine/transfer-tax-split-rate";
 import { calcSplitGain } from "@/lib/tax-engine/transfer-tax-split-gain";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
+import { calcTax } from "@/lib/tax-engine/transfer-tax-rate-calc";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 
@@ -175,6 +176,25 @@ describe("P12 1단계 — 부분 비사토도 같은 형태로 파트를 낸다"
     expect(parts.reduce((s, p) => s + p.allocatedBasicDeduction, 0)).toBe(2_500_000);
     expect(parts.reduce((s, p) => s + p.income, 0)).toBe(234_000_000);
     expect(parts.reduce((s, p) => s + p.taxBase, 0)).toBe(231_500_000);
+  });
+
+  it("A-4: 파트의 `rateInput`으로 `calcTax`를 다시 부르면 파트 세액이 그대로 나온다", () => {
+    // 다건 호별 합산은 `calcTax(합산 base, 대표 파트의 rateInput)`으로 세액을 낸다(P12 2단계).
+    // 그 `rateInput`이 **파트를 만든 쪽이 실제로 쓴 것**이어야 같은 규칙이 재현된다 —
+    // aggregate가 재구성하면 dual-truth가 된다(비사업용 파트는 `nonBusinessLandAreaRatio`를
+    // 1로 되돌린 입력이고, 토지 파트는 §104② 기산일을 확정한 입력이다).
+    const input = partialNblInput();
+    const r = resolveSplitAwareTax({
+      taxBase: 234_000_000,
+      transferIncome: 234_000_000,
+      basicDeduction: 0,
+      splitDetail: undefined,
+      parsedRates,
+      taxRateInput: input,
+    });
+    for (const p of r.splitPartDetail!.parts) {
+      expect(calcTax(p.taxBase, parsedRates, p.rateInput).calculatedTax).toBe(p.calculatedTax);
+    }
   });
 
   it("A-2b: 전량 비사토(ratio 1)는 나눌 대상이 없어 파트를 내지 않는다", () => {
