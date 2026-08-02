@@ -236,6 +236,7 @@ export interface DeemedFormState {
   ciSmallImputation: boolean; // 저가 §39② 소액주주 1인 의제
   ciIsListed: boolean; // 주권상장법인등 — §29②1가 단서(저가 Min)·§29②3나 단서(고가 Max)
   ciListedMarketAvg: string; // 평가기준일(§29① — 상장 주주배정은 권리락일) 전후 2개월 종가평균
+  ciStockCode: string; // 키움 자동조회용 종목코드 (UI 전용)
   // 증자 §39 cap-table (다수증자·다증여자)
   ciAllocDirection: "low" | "high";
   ciAllocPrePrice: string; // ㉮ 증자 전 1주당 평가가액
@@ -273,6 +274,7 @@ export interface DeemedFormState {
   conIsListed: boolean; // 주권상장법인등 — §29의3①이 준용하는 §29②1가·3나 단서
   conListedMarketAvg: string; // 현물출자 납입일 전후 2개월 종가평균 (§63①1가)
   conPublicOfferingShares: string; // 일반공모(자본시장법 §165의6①3) 배정 신주수 — 상장 시 곱셈 인자에서 제외
+  conStockCode: string; // 키움 자동조회용 종목코드 (UI 전용 — 엔진 미전달)
   // 전환사채 §40
   cbCaseType: "acquisition" | "conversion" | "conversion_reverse" | "transfer";
   cbMarketValue: string;
@@ -320,6 +322,8 @@ export interface DeemedFormState {
   csIssueRatioDenomShares: string;
   csIssueIsListed: boolean; // 발행 시점 주권상장법인등
   csIssueListedMarketAvg: string;
+  csStockCode: string; // 키움 자동조회용 종목코드 (양 시점 공용 — 같은 법인)
+  csIssuanceDate: string; // 발행 시점 평가기준일 — 전환주식 **발행 당시**(§29②6나). 전환 시점은 증여일(§29①2호)
   // ── Phase 3 추정·의제 ──
   // 재산취득자금 증여추정 §45
   afSubType: "acquisition" | "debt_repayment";
@@ -517,6 +521,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciSmallImputation: false,
   ciIsListed: false,
   ciListedMarketAvg: "",
+  ciStockCode: "",
   ciAllocDirection: "low",
   ciAllocPrePrice: "",
   ciAllocNewPrice: "",
@@ -546,6 +551,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   conIsListed: false,
   conListedMarketAvg: "",
   conPublicOfferingShares: "",
+  conStockCode: "",
   cbCaseType: "acquisition",
   cbMarketValue: "",
   cbAcquisitionPrice: "",
@@ -590,6 +596,8 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csIssueRatioDenomShares: "",
   csIssueIsListed: false,
   csIssueListedMarketAvg: "",
+  csStockCode: "",
+  csIssuanceDate: "",
   afSubType: "acquisition",
   afAcquisitionValue: "",
   afProvenAmount: "",
