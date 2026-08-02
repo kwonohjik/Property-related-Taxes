@@ -33,6 +33,19 @@ export {
   type CompanionLandRateResolution,
 } from "./appurtenant-land-rate";
 import type { TransferTaxInput, CalculationStep, TransferTaxResult } from "./types/transfer.types";
+import {
+  type RateClause,
+  shortTermClause,
+  unifiedShortTermClause,
+  surchargeClause,
+  clauseSet,
+} from "./transfer-tax-rate-clause";
+// 종전 import 경로 하위 호환 — 호 축 심볼은 이 모듈에서 계속 가져올 수 있다.
+export {
+  type RateClause,
+  PROGRESSIVE_RATE_CLAUSES,
+  clauseBucketKey,
+} from "./transfer-tax-rate-clause";
 import { TRANSFER } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
 import {
@@ -122,34 +135,6 @@ export function resolveExtensionPenaltyBase(
 // H-7: calcTax — 세액 결정 (T-1 ~ T-4)
 // ============================================================
 
-/**
- * 「소득세법」 제104조 중 **실제로 적용된 호**.
- *
- * §104⑤2호 **단서**("둘 이상의 자산에 대하여 동일한 호의 세율이 적용되고, 그 적용세율이
- * 둘 이상인 경우 … 과세표준을 합산한 것에 대하여 … 호별 세율을 적용")를 판정하려면
- * "호 동일성"이 필요한데, 출력 세율로는 역추론할 수 없다 — 단기 40%와 누진 40% 구간이
- * `appliedRate`로 구분되지 않고, 같은 호라도 브래킷이 다르면 `appliedRate`가 달라진다.
- * ⇒ `calcTax`가 **자기가 탄 분기를 직접 싣는다**(단일 소스).
- */
-export type RateClause =
-  | "104-1-1"   // 일반 누진(§55①)
-  | "104-1-2"   // 1~2년 보유 40%(주택 등 60%)
-  | "104-1-3"   // 1년 미만 50%(주택 등 70%)
-  | "104-1-8"   // 비사업용 토지 누진 + 10%p
-  | "104-1-10"  // 미등기 70%
-  | "104-7-1"   // 조정지역 1세대 2주택 중과 +20%p
-  | "104-7-3";  // 조정지역 1세대 3주택 이상 중과 +30%p
-
-/**
- * 누진세율 호 — 과세표준을 합치면 세액이 달라지므로 §104⑤2호 단서의 합산 대상이다.
- * 단일세율 호(2·3·10호)는 세율이 같으면 합산·개별이 (floor 외) 동일하다.
- */
-export const PROGRESSIVE_RATE_CLAUSES: ReadonlySet<RateClause> = new Set<RateClause>([
-  "104-1-1",
-  "104-1-8",
-  "104-7-1",
-  "104-7-3",
-]);
 
 interface CalcTaxResult {
   calculatedTax: number;
@@ -178,30 +163,6 @@ interface CalcTaxResult {
   candidateClauses?: RateClause[];
 }
 
-/** 단기 단일세율 호 — 1년 미만은 3호, 1~2년은 2호(§104①). */
-const shortTermClause = (holdingMonths: number): RateClause =>
-  holdingMonths < 12 ? "104-1-3" : "104-1-2";
-
-/**
- * 부수토지 일체과세 단일세율 → 호. 주택 단기세율만 나오므로 70%=3호·60%=2호다.
- * 그 밖의 값은 호를 단정할 수 없어 undefined(묶지 않음 = 안전측).
- */
-const unifiedShortTermClause = (rate: number): RateClause | undefined =>
-  rate === 0.70 ? "104-1-3" : rate === 0.60 ? "104-1-2" : undefined;
-
-/** 다주택 중과 호 — §104⑦1호(2주택) / 3호(3주택 이상). 정본 R7 감사와 같은 구분. */
-const surchargeClause = (surchargeType: string): RateClause =>
-  surchargeType === "multi_house_3plus" ? "104-7-3" : "104-7-1";
-
-/**
- * 「해당 호 후보」 배열 — 중복 제거 + **문자열 오름차순 정렬**.
- * 정렬이 결정적이어야 그룹핑 키가 흔들리지 않는다(계획서 R-3).
- * 후보가 하나도 없으면 `undefined` — 「호 불명」은 묶지 않는 것이 안전측이다.
- */
-const clauseSet = (...cs: (RateClause | undefined)[]): RateClause[] | undefined => {
-  const out = [...new Set(cs.filter((c): c is RateClause => c !== undefined))].sort();
-  return out.length > 0 ? out : undefined;
-};
 
 /**
  * 누진세율 산출세액 + 적용구간(표시용 baseRate·deduction)을 일괄 계산.
@@ -408,10 +369,19 @@ export function calcTax(
       holdingMonthsTotal < 12 ? 0.50 :
       holdingMonthsTotal < 24 ? 0.40 :
       null;
+    // 부칙 §9270호 §14①로 가산이 배제되면 **해당 호 자체가 §104①1호**다 — 정본
+    // `legal-codes/surcharge-transition.ts:42`가 「중과세율 배제(→**§104①1호 기본세율**,
+    // 보유 2년 미만이면 §104①2·3호 단기)」로 확정한 해석이다(「기획재정부 재산세제과-1422」
+    // 2023.12.26. · 서울행정법원 2024구단72950).
+    //
+    // 2026-08-02 Q2 — 종전에는 가산이 0인데도 호 표기가 `"104-1-8"`이라 **일반 비사업용 토지와
+    //   같은 버킷**에 들어갔다. 합산 대표가 위기취득이면 가산이 통째로 사라지고 아니면
+    //   위기취득분에까지 가산이 붙어 **순서 의존 36,600,000**이었다(계획서 §9).
+    const nblBaseClause: RateClause = nblCrisisExcluded ? "104-1-1" : "104-1-8";
     // §104① 후단 비교 대상이 되는 **해당 호 집합** — 승자와 무관하게 아래 두 반환이 **공유**한다.
-    // 2년 이상이면 단기 호에 해당하지 않아 8호 하나뿐이다.
+    // 2년 이상이면 단기 호에 해당하지 않아 하나뿐이다.
     const nblCandidates = clauseSet(
-      "104-1-8",
+      nblBaseClause,
       nblShortTermRate !== null ? shortTermClause(holdingMonthsTotal) : undefined,
     );
     if (nblShortTermRate !== null) {
@@ -439,7 +409,7 @@ export function calcTax(
       progressiveDeduction: deduction,
       surchargeSuspended: false,
       ...(nblCrisisExcluded ? { nblSurchargeExcluded: true } : {}),
-      rateClause: "104-1-8",
+      rateClause: nblBaseClause,
       candidateClauses: nblCandidates,
     };
   }
