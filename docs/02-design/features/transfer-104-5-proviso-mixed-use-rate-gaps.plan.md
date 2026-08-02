@@ -1323,6 +1323,56 @@ split 자산의 **주택 파트가 2년 미만 + 조정 다주택**이면 그 �
 
 ---
 
+### 4.12-R P12 **3단계** 구현 결과 ✅ (2026-08-02)
+
+**엔진 3파일 + UI 1파일**. **총 세액 불변** — 자산별 **표시**만 정확해진다.
+
+| | 변경 |
+|---|---|
+| `aggregateByGroup` | 반환을 `{ groupTaxes, assetPartTax }`로 확장. `assetTaxOf`가 이미 계산한 **자산 단독 세액**을 파트가 있는 자산만 기록한다(`tr.splitPartDetail` 게이트) |
+| `computeGroupsAndComparison` | `assetPartTax`를 그대로 전달 |
+| `transfer-tax-aggregate.ts:652` | `refCalculatedTax = 파트자산이면 자산 단독 세액, 아니면 **종전 산식 그대로**` |
+| `PerPropertyBreakdown` | `refCalculatedTaxNote?: string` 신설 — `resolveSplitAwareTax`의 `shortTermNote`를 echo |
+| `MultiTransferTaxResultView.tsx:428` | 파트 자산이면 산식 문구를 파트 내역으로(「기여분 × 세율」이 거짓이 되므로) |
+
+**실측 정정**(D-7의 split 자산 S):
+
+| | 종전 | 정정 |
+|---|---:|---:|
+| `refCalculatedTax` | 357,000,000 (= 510,000,000 × **파트 최고세율 0.7**) | **269,860,000** (토지 210,000,000 + 건물 59,860,000) |
+| 총 `calculatedTax` | 458,820,000 | **불변** |
+
+**배선이 성립하는 근거**(착수 조사) — `transfer-tax-aggregate.ts:382`가 `aggregateByGroup`에
+넘기는 것은 실제로 **`taxableAfterReduction`**이다(파라미터 이름만 `incomeAfterOffset`).
+⇒ `assetTaxOf`의 과세표준 `max(0, incomeAfterOffset[i] − allocatedBasic[i])`가
+`:652`의 `taxBaseShare`와 **같은 값**이라 세액을 그대로 옮겨 쓸 수 있다.
+`aggregateByGroup` 호출부는 **1곳**(`:156`)뿐이고 테스트 직접 호출이 없어 반환 확장이 안전했다.
+
+**⚠️ 파트가 없는 자산은 건드리지 않았다**(Surgical) — 종전 근사식
+`floor(base × (baseRate + add)) − deduction`과 `calcTax`의
+`(floor(base × baseRate) − deduction) + floor(base × add)`는 **floor 위치가 달라 ±1원**이
+어긋날 수 있다. 특정된 결함은 **파트 자산의 최고세율 오적용**뿐이다.
+
+**anchor 5건 신설**(`aggregate-ref-tax-parts.anchor.test.ts`):
+
+| ID | 고정 대상 |
+|---|---|
+| A-1 | split 자산 ref 357,000,000 → **269,860,000** |
+| A-2 | 부분 비사토 자산도 자산 단독 세액과 일치(§104⑤ 1호 승 68,980,000) |
+| A-4 | **총 산출세액 불변** 458,820,000 |
+| A-3 | 파트 없는 자산 ref 불변 + `Σ ref ≠ 그룹`이 **정상**임을 함께 고정 |
+| A-3b | 자산 1건이면 ref = 총 산출세액 (타입 문서 계약) |
+
+❌ 파일 상단에 **「역안분 재제안 금지」**를 명시했다 — 예정신고는 자산별, §104⑤는 확정신고에서
+전체에 적용되므로 자산 단독 기준이 실무적으로 정확하다(§4.12).
+
+**검증**: `tsc` 0 · `lint` 0 error(기존 경고 2건은 사전존재 — `git stash`로 확인) ·
+양도+calc **172파일 1,680건** · 전체 **1,155파일 12,958건 · 회귀 0**.
+
+⇒ **P12 1·2·3단계 전부 완료. D-7 · D-12 종결.**
+
+---
+
 ## 3. 폐기·재제안 금지
 
 | 주장 | 폐기 사유 |

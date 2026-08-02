@@ -149,6 +149,13 @@ export interface PerPropertyBreakdown
    */
   refCalculatedTax: number;
   /**
+   * 파트가 있는 자산(토지·건물 분리취득 · 한 필지 중 일부만 비사업용)의 **파트별 산식 문구**.
+   * `resolveSplitAwareTax`가 낸 `shortTermNote`를 그대로 echo한다 — 그 자산에서는
+   * 「과세표준 기여분 × 세율」 산식이 성립하지 않기 때문이다(계획서 §4.12).
+   * 파트가 없는 자산은 `undefined`(UI가 종전 산식을 쓴다).
+   */
+  refCalculatedTaxNote?: string;
+  /**
    * 자산별 결정세액 (다건 컨텍스트, 참고).
    * = max(0, refCalculatedTax - reductionAmount)
    * 기납부세액 자동 계산(앞 자산들의 결정세액 합) 등에 사용된다.

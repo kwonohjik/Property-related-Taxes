@@ -153,7 +153,7 @@ function computeGroupsAndComparison(
   allocatedBasic: number[],
   rates: TaxRatesMap,
 ) {
-  const groupTaxes = aggregateByGroup(records, incomeArray, allocatedBasic, rates);
+  const { groupTaxes, assetPartTax } = aggregateByGroup(records, incomeArray, allocatedBasic, rates);
   const calculatedTaxByGroups = groupTaxes.reduce((s, g) => s + g.groupCalculatedTax, 0);
   const totalIncome = incomeArray.reduce((s, v) => s + v, 0);
   const totalBasic = allocatedBasic.reduce((s, v) => s + v, 0);
@@ -174,7 +174,7 @@ function computeGroupsAndComparison(
     calculatedTax = calculatedTaxByGroups;
     comparedTaxApplied = "groups";
   }
-  return { groupTaxes, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied };
+  return { groupTaxes, assetPartTax, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied };
 }
 
 /** 감면 유형별 주 법령 조문 매핑 (한도 조문과 별개) */
@@ -379,6 +379,7 @@ export function calculateTransferTaxAggregate(
     calculatedTaxByGeneral,
     calculatedTax,
     comparedTaxApplied,
+    assetPartTax,
   } = computeGroupsAndComparison(assetRecords, taxableAfterReduction, allocatedBasic, rates);
 
   steps.push({
@@ -651,9 +652,16 @@ export function calculateTransferTaxAggregate(
     // taxBaseShare(= incomeAfterOffset - allocatedBasic) 기준으로 다건 컨텍스트에서 재계산해 노출한다.
     const taxBaseShare = Math.max(0, taxableAfterReduction[idx] - allocatedBasic[idx]);
     const effectiveRate = r.result.appliedRate + (r.result.surchargeRate ?? 0);
+    // 파트가 있는 자산(토지·건물 분리취득 · 한 필지 중 일부만 비사업용)은 **자산 단독 세액**을
+    // 그대로 쓴다. 아래 근사식은 `appliedRate`가 그 자산에서 **파트 최고세율**이라
+    // 자산 과세표준 전체에 곱해지면 과대해진다(계획서 §4.12 — 실측 +87,140,000).
+    // ⚠️ 파트가 없는 자산은 **종전 산식 그대로** — `calcTax`와 floor 위치가 달라 ±1원이
+    //    어긋날 수 있어 건드리지 않는다(Surgical).
+    const partAssetTax = assetPartTax[idx];
     const refCalculatedTax = r.result.isExempt
       ? 0
-      : Math.max(0, Math.floor(taxBaseShare * effectiveRate) - r.result.progressiveDeduction);
+      : (partAssetTax?.tax ??
+        Math.max(0, Math.floor(taxBaseShare * effectiveRate) - r.result.progressiveDeduction));
     const refDeterminedTax = Math.max(0, refCalculatedTax - standalone);
 
     return {
@@ -682,6 +690,7 @@ export function calculateTransferTaxAggregate(
       progressiveDeduction: r.result.progressiveDeduction,
       surchargeRate: r.result.surchargeRate,
       refCalculatedTax,
+      refCalculatedTaxNote: partAssetTax?.note,
       refDeterminedTax,
       reductionAmount: standalone,
       reductionType,

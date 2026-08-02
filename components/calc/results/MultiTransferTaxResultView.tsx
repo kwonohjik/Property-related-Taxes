@@ -422,14 +422,18 @@ function PropertyBreakdownAccordion({
                 highlight
               />
 
-              {/* 산출세액 참고 — 자산별 과세표준 기여분 × 자산 세율 - 누진 차감 */}
+              {/* 산출세액 참고 — 자산별 과세표준 기여분 × 자산 세율 - 누진 차감.
+                  단, 토지·건물 분리취득이나 한 필지 중 일부만 비사업용인 자산은 **파트별**로
+                  세율이 갈리므로(§104⑤) 그 자산의 파트 내역을 그대로 싣는다. 그 경우
+                  「기여분 × 세율」 산식은 성립하지 않는다(계획서 §4.12). */}
               {!breakdown.isExempt && breakdown.taxBaseShare > 0 && (
                 <DetailRow
                   label="산출세액 (참고)"
                   formula={
-                    breakdown.progressiveDeduction > 0
+                    breakdown.refCalculatedTaxNote ??
+                    (breakdown.progressiveDeduction > 0
                       ? `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%${breakdown.surchargeRate ? ` (기본 ${(breakdown.appliedRate * 100).toFixed(0)}% + 중과 ${(breakdown.surchargeRate * 100).toFixed(0)}%p)` : ""} - 누진차감 ${formatKRW(breakdown.progressiveDeduction)}`
-                      : `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%`
+                      : `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%`)
                   }
                   legalBasis="소득세법 §104"
                   value={refCalculatedTax}
