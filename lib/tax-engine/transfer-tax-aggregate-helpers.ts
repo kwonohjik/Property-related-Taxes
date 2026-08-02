@@ -12,7 +12,7 @@ import {
   type TransferTaxResult,
 } from "./transfer-tax";
 import { calculateProgressiveTax } from "./tax-utils";
-import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
+import { resolveSplitAwareTax, hasPartialNonBusinessLand } from "./transfer-tax-split-rate";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   RateGroup,
@@ -368,8 +368,25 @@ export function aggregateByGroup(
       rate: tr.appliedRate,
       surcharge: tr.surchargeRate,
       splitParts: tr.splitPartDetail !== undefined,
+      // 한 필지 중 일부만 비사업용 — §104⑤ 본문 후단으로 **별개 자산 의제**가 걸린 자산.
+      partialNbl: hasPartialNonBusinessLand(records[i].correctedSingleInput),
     };
   };
+  /**
+   * 자산 **내부**에서 §104⑤가 이미 적용된 자산인가.
+   *   · `splitParts`  — 토지·건물 파트 분해(§94①1호상 별개 자산)
+   *   · `partialNbl`  — 한 필지 중 비사토/그 외 분해(§104⑤ 본문 후단 별개 자산 의제)
+   *
+   * 이런 자산을 **그룹 합산 1회**로 되돌리면 그 분해가 사라진다. 특히 부분 비사토는
+   * `calcTax`가 곧바로 모델 A(`누진(전체) + 10%p × 비사토분`)를 내므로 **P8 정정이 무효화**된다
+   * — 그룹 합산 경로는 `resolveSplitAwareTax`를 거치지 않기 때문이다(계획서 D-12).
+   *
+   * ⚠️ 대가로 §104⑤2호 **단서 ⓐ**(동일 호 합산) 혜택을 포기한다(D-7과 같은 성질). 다만
+   *   **법문 밖 산식(모델 A)을 법문 안 선택지(2호 본문)로** 바꾸는 것이라 방향이 명확하다.
+   *   엄밀한 해법은 의제된 **파트 단위 그룹핑**이며 대규모 리팩터다(계획서 §4.8).
+   */
+  const isAssetLevelClause5 = (p: { splitParts: boolean; partialNbl: boolean }) =>
+    p.splitParts || p.partialNbl;
   /**
    * §104⑤2호 **단서** ⓐ 요건(「동일한 호의 세율이 적용되고」) 판정용 **해당 호** 키.
    *
@@ -432,7 +449,7 @@ export function aggregateByGroup(
       // 토지·건물 파트별 세율이 걸린 자산은 그룹 합산 1회 계산으로 되돌리면 파트 분해가 사라진다
       // (단건 엔진과 값이 갈리는 이중 진실) — 세율이 같아 보여도 자산별 합계 경로를 쓴다.
       const uniformRate =
-        !perAsset.some((p) => p.splitParts) && perAsset.every((p) => p.rate === perAsset[0].rate);
+        !perAsset.some(isAssetLevelClause5) && perAsset.every((p) => p.rate === perAsset[0].rate);
       // §104⑤2호 **단서** — 「동일한 호의 세율이 적용되고, 그 **적용세율이 둘 이상**인 경우
       // 해당 자산에 대해서는 각 자산의 양도소득과세표준을 **합산한 것에 대하여** … 각 해당
       // 호별 세율을 적용하여 산출한 세액 중에서 **큰 산출세액**의 합계액으로 한다」.
@@ -449,7 +466,7 @@ export function aggregateByGroup(
       // ⚠️ **호가 다른 경우와 구분**한다 — 1년 미만(3호)+1~2년(2호)이나 ⑦1호+⑦3호 혼재는
       //    단서가 아니라 **본문**(자산별 합)이다. 후자는 R7 감사(2026-07-29)가 고친 결함이다.
       const sameRateClause =
-        !perAsset.some((p) => p.splitParts) &&
+        !perAsset.some(isAssetLevelClause5) &&
         idxList.every((i) => rateClauseKeyOf(i) === rateClauseKeyOf(idxList[0]));
       if (uniformRate || sameRateClause) {
         // 동일 세율(예: 일괄양도 일체과세 70% — 사례 28)은 합산 과세표준 × 세율로 1회 floor.
@@ -486,7 +503,7 @@ export function aggregateByGroup(
       // 호 판정 대리값 = 중과 가산율. 가산율이 갈리면 적용 호가 다르다는 뜻이다.
       // 파트별 세율 자산도 그룹 합산 1회 계산으로 되돌릴 수 없다(위 short_term과 동일 사유).
       const mixedTier =
-        perAsset.some((p) => p.splitParts) ||
+        perAsset.some(isAssetLevelClause5) ||
         perAsset.some((p) => p.surcharge !== perAsset[0].surcharge);
       if (mixedTier) {
         groupCalculatedTax = perAsset.reduce((sum, p) => sum + p.tax, 0);

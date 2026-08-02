@@ -571,6 +571,22 @@ export function buildCalculatedTaxStep(
 }
 
 /**
+ * 한 필지 중 **일부만** 비사업용인 토지인가 — §104⑤ 본문 **후단**의 「별개 자산 의제」가
+ * 걸리는 자산인지 판정한다.
+ *
+ * **단일 소스다.** `computePartialNblTax`(자산 세액 계산)와 다건 `aggregateByGroup`
+ * (그룹 합산 금지 판정)이 **같은 술어**를 써야 한다 — 한쪽만 바뀌면 자산별 경로와 그룹 합산
+ * 경로가 갈려 §104⑤가 조용히 우회된다(계획서 D-12).
+ * memory `single-source-engine-helper`
+ */
+export function hasPartialNonBusinessLand(input: TransferTaxInput): boolean {
+  const ratio = input.nonBusinessLandAreaRatio;
+  // `ratio = 1`(전량 비사토)·미지정은 **나눌 대상이 없다** — 파트가 하나뿐이라 2호 = 종전
+  // 세액이고 2호 ≥ 1호다. 압도적 다수 경로가 여기라 정정 범위가 `0 < ratio < 1`로 닫힌다.
+  return input.isNonBusinessLand === true && ratio !== undefined && ratio > 0 && ratio < 1;
+}
+
+/**
  * 한 필지 중 **일부만** 비사업용인 토지 — §104⑤ 비교과세 (계획서 D-10 · P8).
  *
  * [법령 — §104⑤ 본문 **후단**]
@@ -591,10 +607,8 @@ function computePartialNblTax(
   fallback: () => ReturnType<typeof calcTax>,
 ): ReturnType<typeof calcTax> | null {
   const input = ctx.taxRateInput;
-  const ratio = input.nonBusinessLandAreaRatio;
-  // `ratio = 1`(전량 비사토)·미지정은 **나눌 대상이 없다** — 파트가 하나뿐이라 2호 = 종전
-  // 세액이고 2호 ≥ 1호다. 압도적 다수 경로가 여기라 정정 범위가 `0 < ratio < 1`로 닫힌다.
-  if (!input.isNonBusinessLand || ratio === undefined || ratio <= 0 || ratio >= 1) return null;
+  if (!hasPartialNonBusinessLand(input)) return null;
+  const ratio = input.nonBusinessLandAreaRatio!;
   if (ctx.taxBase <= 0) return null;
 
   // 안분 기준은 **면적비율**로 종전(`calcTax` T-2)과 동일하게 둔다. split이 쓰는
