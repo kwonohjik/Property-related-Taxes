@@ -295,18 +295,26 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
   // 파트별로 따로 계산하면 **누진공제를 파트 수만큼 중복**해 2호가 과소해진다.
   //
   // 다건 정본(`transfer-tax-aggregate-helpers.ts`)과 **같은 키 함수**를 쓴다(단일 소스).
-  // 🔶 여기도 아직 `rateClause`(**승자**)를 넘긴다 — 계획서 E-2. Q3에서 `candidateClauses`로
-  //   바꾼다(파트는 이미 그 배열을 들고 있다).
   //
-  // 실제로 합쳐지는 조합은 「배율내 토지 + 건물」이 같은 호일 때뿐이다 — 비사토 파트가 있으면
-  // 토지 파트는 `isNonBusinessLand: false`로 강제되므로(위 seeds) 8호 묶음은 항상 단일이다.
+  // 2026-08-02 **Q3**(계획서 `transfer-rate-clause-candidates.plan.md` §4 — **세액 변경**):
+  //   종전에는 `rateClause`(**승자**)로 묶어 묶음이 **과세표준 크기에 따라** 달라졌다.
+  //   구조가 같은 두 자산이 합쳐지기도 나뉘기도 했다(순서 의존이 아니라 **승자 의존**):
+  //     ⓐ 해당 호는 **같은데** 승자가 갈려 **나뉜다**  → 274,060,000 → 289,060,000 (과소 15,000,000)
+  //     ⓑ 해당 호는 **다른데** 승자가 같아 **합쳐진다** → 219,060,000 → 205,300,000 (과대 13,760,000)
+  //   ⓐ는 교재 사례2(D-11)의 **파트판**이고, ⓑ는 11년 보유 건물분에 **토지 파트의 §104⑦ 후단
+  //   단기 비교**가 얹혀 있던 것이다.
+  //
+  // ⇒ 묶음 단위는 **「해당 호 집합」**이다. §104⑤2호 단서의 효과절이 「합산한 것에 대하여
+  //   … **각 해당 호별** 세율을 적용해 **큰** 산출세액」이라, 합산 대상 전원이 같은 집합이어야
+  //   그 「각 해당 호별」이 정의된다. 집합이 **부분적으로만 겹쳐도 묶지 않는다** — {①2호,⑦3호}와
+  //   {⑦3호}를 묶어 ①2호를 적용하면 11년 보유 자산에 단기세율이 붙는다(계획서 §7.4).
+  //   Q2가 E-1ⓐ(비사토 {①8호,①2호} vs 사업용 {①2호})에서 이미 세액으로 확정한 규칙이다.
+  //
+  // 비사업용(8호) 파트는 자산 내부에서 **항상 단일**이라 묶일 짝이 없다 — 비사토 파트가 있으면
+  // 토지 파트가 `isNonBusinessLand: false`로 강제되기 때문이다(위 seeds).
   const clauseGroups = new Map<string, number[]>();
   seeds.forEach((_, i) => {
-    const k = clauseBucketKey(
-      finals[i].rateClause ? [finals[i].rateClause!] : undefined,
-      finals[i].appliedRate,
-      i,
-    );
+    const k = clauseBucketKey(finals[i].candidateClauses, finals[i].appliedRate, i);
     clauseGroups.set(k, [...(clauseGroups.get(k) ?? []), i]);
   });
 
