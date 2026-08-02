@@ -353,16 +353,8 @@ export function calcMixedUseTransferTax(
       ? resolveSurchargeAddonRate(transferDate, multiHouseSurcharge.surchargeType) ?? undefined
       : undefined;
 
-  // 계획서 §5.5 — 배율초과 비사업용 토지가 있으면 `buildTotalTax`의 §104⑤ 경로가
-  // 열리지 않아(D-8 세무 판단 대기) 세율 가산을 적용할 수 없다. **침묵하지 않는다.**
-  // (§95② 장특 배제는 파트 조립 단계라 이 경계와 무관하게 이미 적용돼 있다.)
-  if (surchargeAddon !== undefined && (nonBusinessLandPart?.incomeAmount ?? 0) > 0) {
-    warnings.push(
-      "주택 부수토지 배율 초과분(비사업용 토지)이 있어 다주택 중과 **세율** 가산" +
-        `(${Math.round(surchargeAddon * 100)}%p, 소득세법 §104⑦)을 적용하지 않았습니다. ` +
-        "장기보유특별공제 배제(§95②)는 반영되어 있습니다.",
-    );
-  }
+  // P6(계획서 D-8) — 배율초과 비사업용 토지도 §104⑤2호 파트로 들어가므로 종전의
+  // 「중과 세율 가산 미적용」 경고는 더 이상 사실이 아니다. 삭제했다.
   const rateParts: MixedUseRatePart[] | undefined =
     commercialLandIncome !== undefined &&
     commercialBuildingIncome !== undefined &&
@@ -389,6 +381,20 @@ export function calcMixedUseTransferTax(
             income: commercialBuildingIncome,
             holdingYears: commercialGainSplit.buildingHoldingYears,
           },
+          // §104⑤ 본문 후단 — 배율 초과분(비사업용 토지)은 **별개 자산**으로 보아
+          // §104①8호(§55① 세율 + 10%p)를 자기 과세표준에만 적용한다. 2년 미만이면
+          // `buildTotalTax`가 §104① 후단으로 토지 단기세율(50%/40%)과 큰 것을 취한다.
+          // 보유연수 기산은 **주택 부수토지의 토지 보유연수** — 배율 초과분도 같은 필지다.
+          ...((nonBusinessLandPart?.incomeAmount ?? 0) > 0
+            ? [
+                {
+                  kind: "non_business_land" as const,
+                  income: nonBusinessLandPart!.incomeAmount,
+                  holdingYears: housingGainSplit.landHoldingYears,
+                  surchargeAddon: nonBusinessLandPart!.additionalRate,
+                },
+              ]
+            : []),
         ]
       : undefined;
   const total = buildTotalTax(
@@ -754,7 +760,12 @@ function buildTotalStep(t: ReturnType<typeof buildTotalTax>): MixedUseStep {
       { label: "기본공제", value: t.basicDeduction },
       { label: "과세표준", value: t.taxBase },
       { label: "산출세액 (기본세율)", value: t.taxByBasicRate },
-      { label: "비사업용토지 +10%p 가산세", value: t.nonBusinessSurcharge },
+      // P6 — 비사토가 §104⑤2호 파트로 계산되면 이 값은 0이다(총액에 별도 가산하지 않음).
+      // 배율초과가 있는데 「가산세 0원」이 뜨면 중과 누락으로 오해되므로 감춘다.
+      // 결과 카드(`MixedUseResultCard`)의 `> 0` 조건부 렌더와 같은 규칙이다.
+      ...(t.nonBusinessSurcharge > 0
+        ? [{ label: "비사업용토지 +10%p 가산세", value: t.nonBusinessSurcharge }]
+        : []),
       { label: "양도소득세", value: t.transferTax },
       { label: "지방소득세 (10%)", value: t.localTax },
       { label: "총 납부세액", value: t.totalPayable, isResult: true },

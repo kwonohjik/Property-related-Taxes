@@ -157,8 +157,13 @@ describe("SC-3: 부수토지 배율초과 발생 (토지 1,000㎡ 확대)", () =
     expect(result.nonBusinessLandPart!.additionalRate).toBe(0.10);
   });
 
-  it("비사업용 +10%p 가산세 > 0", () => {
-    expect(result.total.nonBusinessSurcharge).toBeGreaterThan(0);
+  it("비사업용 +10%p는 §104⑤2호 파트 **안에서** 계산된다 (총액 별도 가산 아님)", () => {
+    // P6(계획서 `transfer-104-5-proviso-mixed-use-rate-gaps.plan.md` D-8) —
+    // §104⑤ 본문 **후단**이 배율 초과분을 **별개 자산**으로 보게 하므로, +10%p는 그 파트의
+    // 산출세액에 녹는다. 총액에 별도로 얹던 종전 모델 A(`누진(합산) + 10%p × 비사토분`)는
+    // §104⑤ 어느 호도 아니어서 폐기됐다.
+    // 세액 수준의 검증은 `mixed-use-104-5-nonbiz.anchor.test.ts`(B-22~B-24·B-31~B-33)가 맡는다.
+    expect(result.total.nonBusinessSurcharge).toBe(0);
   });
 
   it("주택부분 nonBusinessTransferRatio > 0", () => {

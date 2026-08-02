@@ -287,12 +287,25 @@ describe("Phase B3 — §104⑦ 중과세율 + 후단 MAX", () => {
     expect(run({ multiHouse: multiHouse(2) }).total.appliedRate).toBe(0.75);
   });
 
-  it("B-B18: 배율초과 비사토 동반 → 세율 가산 **보류** + warning (계획서 §5.5)", () => {
+  it("B-B18: 배율초과 비사토 동반 — **P6로 세율 가산 보류가 해제**됐다 (§104⑤ 2호에 포함)", () => {
+    // 종전(P6 전): 비사토가 있으면 `buildTotalTax`의 §104⑤ 경로가 열리지 않아 §104⑦ 세율
+    //   가산을 아예 적용하지 못했고, 그 사실을 warning으로 고지했다(후속 계획서 §5.5).
+    // 현행(P6): 비사토도 §104⑤2호 파트로 들어가므로(§104⑤ 본문 후단 — 별개 자산 의제)
+    //   중과 판정이 정상 수행되고 보류 warning은 사실이 아니게 되어 제거됐다.
     const r = run({ multiHouse: multiHouse(1), totalLandArea: 1000 });
     expect(r.nonBusinessLandPart).not.toBeNull();
-    // 장특 배제는 적용되므로 세액은 불변이 아니다. 세율 가산만 빠진다.
+    // 장특 배제(§95②)는 파트 조립 단계라 종전과 동일하게 적용된다.
     expect(r.housingPart.longTermDeductionAmount).toBe(0);
-    expect(r.warnings.some((w) => w.includes("중과") && w.includes("세율"))).toBe(true);
+    expect(r.warnings.some((w) => w.includes("중과") && w.includes("세율"))).toBe(false);
+    // §104⑦ 중과가 **판정되어 주택 파트에 실린다**(종전에는 보류).
+    expect(r.total.surchargeAddon).toBe(0.2);
+    // 다만 §104⑤ MAX에서 **1호(합산 누진)가 더 커서 채택**된다. 중과·비사토 가산이 세액에
+    // 드러나지 않는 것이 법대로다(§104⑤ 본문 "다음 각 호의 금액 중 **큰 것**").
+    // 파트를 4개로 쪼갠 2호가 낮은 누진구간을 여러 번 타 가산분보다 작아지기 때문이다.
+    expect(r.total.rateBasis).toBe("progressive");
+    // 비사토 가산은 2호 파트 세액 안에서만 계산된다 → 총액에 별도로 얹지 않는다.
+    expect(r.total.nonBusinessSurcharge).toBe(0);
+    expect(r.total.transferTax).toBe(559_027_563);
   });
 });
 
