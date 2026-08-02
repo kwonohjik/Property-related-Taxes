@@ -31,6 +31,7 @@ export type {
   ContributionParty,
   ContributionInput,
   ConvertibleBondInput,
+  ConvertibleBondClause,
   AcquisitionFundPresumptionInput,
   NomineeTrustInput,
   ShareholderDividend,

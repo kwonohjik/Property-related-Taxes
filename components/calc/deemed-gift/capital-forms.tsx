@@ -519,10 +519,37 @@ export function CapitalDecreaseFields({ form, set }: Props) {
   );
 }
 
+/** §40①1호·2호 각 목 — 「상증령」§30①이 각 목을 한 산식으로 묶으므로 **세액은 같다**(공모 제외 대상만 가른다) */
+const CB_CLAUSE_OPTIONS = [
+  { value: "from_related", label: "가목 — 특수관계인으로부터 취득", testId: "cb-clause-from_related" },
+  { value: "major_excess", label: "나목 — 최대주주등 주주의 균등초과 인수등", testId: "cb-clause-major_excess" },
+  { value: "major_related_nonshareholder", label: "다목 — 최대주주의 특수관계인(주주 제외)", testId: "cb-clause-major_related_nonshareholder" },
+] as const;
+
+/** 전환사채등의 **발행** 방법 — §39의 「배정」과 다른 개념이라 라벨·옵션을 별도로 둔다 */
+const CB_ISSUANCE_OPTIONS = [
+  { value: "normal", label: "일반 발행", testId: "cb-issuance-normal" },
+  { value: "public_offering", label: "공모 발행 (§9⑦ 모집방법)", testId: "cb-issuance-public_offering" },
+  { value: "deemed_public_offering", label: "간주모집 (자시령 §11③)", testId: "cb-issuance-deemed_public_offering" },
+] as const;
+
+function cbIssuanceHint(v: DeemedFormState["cbIssuanceMethod"], isListed: boolean): string {
+  if (v === "public_offering")
+    return isListed
+      ? "주권상장법인이 50인 이상에게 청약을 권유하는 모집방법으로 전환사채등을 발행한 경우 — 「상증법」 §40①이 적용되지 않아 증여재산가액이 0이 됩니다."
+      : "제외는 「주권상장법인으로서」 발행한 경우에만 적용됩니다. 위 주권상장법인 항목이 꺼져 있어 제외되지 않고 과세됩니다.";
+  if (v === "deemed_public_offering")
+    return "청약권유 인원이 50인 미만이지만 전매기준에 해당해 모집으로 의제된 경우 — 「상증령」 §30④로 위 제외가 취소되어 일반 발행과 같이 과세됩니다.";
+  return "공모 발행 제외는 나·다목에만 적용됩니다(「전환사채등을 발행한 법인」이 등장하는 목).";
+}
+
 /** (11) 전환사채등 §40 — 인수취득(①1호)·주식전환(①2호 가나다/라)·양도(①3호) */
 export function ConvertibleBondFields({ form, set }: Props) {
   const ct = form.cbCaseType;
   const isConversion = ct === "conversion" || ct === "conversion_reverse";
+  // 목 선택은 1호·2호 가·나·다에만 의미가 있다 — 라목은 별도 caseType, 3호(양도)는 목이 없다
+  const hasClause = ct === "acquisition" || ct === "conversion";
+  const isIssuerClause = form.cbClause === "major_excess" || form.cbClause === "major_related_nonshareholder";
   return (
     <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
       <RadioCardGroup
@@ -538,6 +565,54 @@ export function ConvertibleBondFields({ form, set }: Props) {
           { value: "transfer", label: "양도 (①3호)", testId: "cb-case-transfer" },
         ]}
       />
+      {hasClause && (
+        <>
+          <RadioCardGroup
+            lawLinks="상증법"
+            name="cb-clause"
+            tone="violet"
+            value={form.cbClause}
+            onChange={(v) => set({ cbClause: v })}
+            options={[...CB_CLAUSE_OPTIONS]}
+          />
+          <ToneCard tone="violet" title="목 선택은 증여재산가액을 바꾸지 않습니다" noDark>
+            <p className="text-xs text-violet-800">
+              「상증령」 §30①이 각 목을 <b>한 산식</b>으로 규정합니다. 목이 가르는 것은{" "}
+              <b>공모 발행 제외 대상인지</b>(나·다목만)입니다.
+              {isIssuerClause && (
+                <>
+                  {" "}
+                  여기서 <b>최대주주</b>는 최대주주등 중 보유주식이 가장 많은 1인입니다(「상증령」 §30③).
+                </>
+              )}
+            </p>
+          </ToneCard>
+          {ct === "acquisition" && (
+            <ToggleCard
+              tone="emerald"
+              checked={form.cbIsListed}
+              onCheckedChange={(v) => set({ cbIsListed: v })}
+              title="주권상장법인"
+              description="공모 발행 제외(§40①1호나목 괄호)의 전제 요건"
+            />
+          )}
+          {isIssuerClause && (
+            <>
+              <RadioCardGroup
+                lawLinks="상증법"
+                name="cb-issuance"
+                tone="sky"
+                value={form.cbIssuanceMethod}
+                onChange={(v) => set({ cbIssuanceMethod: v })}
+                options={[...CB_ISSUANCE_OPTIONS]}
+              />
+              <ToneCard tone="sky" noDark>
+                <p className="text-xs text-sky-800">{cbIssuanceHint(form.cbIssuanceMethod, form.cbIsListed)}</p>
+              </ToneCard>
+            </>
+          )}
+        </>
+      )}
       {(ct === "acquisition" || ct === "transfer") && (
         <CurrencyInput label="전환사채등 시가" value={form.cbMarketValue} onChange={(v) => set({ cbMarketValue: v })} placeholder="전환사채등 시가 (원)" />
       )}
@@ -603,7 +678,12 @@ export function ConvertibleBondFields({ form, set }: Props) {
           {!form.cbAutoInterestLoss && (
             <CurrencyInput label="이자손실분" value={form.cbInterestLoss} onChange={(v) => set({ cbInterestLoss: v })} />
           )}
-          <CurrencyInput label="인수 시 기과세 이익 (§30①1)" value={form.cbAcqGainPrior} onChange={(v) => set({ cbAcqGainPrior: v })} />
+          <FieldCard
+            label="인수 시 기과세 이익 (§30①1)"
+            hint="인수·취득 단계(§40①1호)가 공모 발행으로 적용 제외되어 0이었다면 여기도 0을 입력하세요. 제외된 이익을 다시 차감하면 과세가 과소해집니다."
+          >
+            <CurrencyInput hideLabel label="인수 시 기과세 이익 (§30①1)" value={form.cbAcqGainPrior} onChange={(v) => set({ cbAcqGainPrior: v })} />
+          </FieldCard>
           <CurrencyInput label="전환가능기간 전환사채 양도차익 (선택 — 양도 cap §30①2 단서)" value={form.cbTransferGainForCap} onChange={(v) => set({ cbTransferGainForCap: v })} />
         </>
       )}

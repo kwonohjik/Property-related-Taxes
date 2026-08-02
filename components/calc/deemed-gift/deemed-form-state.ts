@@ -2,6 +2,7 @@
  * 증여로 보는 경우 — 폼 상태 타입 + 초기값.
  * shared.tsx에서 분리(800줄 정책). shared.tsx가 re-export하여 하위호환 유지.
  */
+import type { ConvertibleBondClause } from "@/lib/tax-engine/gift-deemed/types";
 import type { DeemedGiftType, ScRelation, ShareAllocationMethod, ValueIncreaseAcquisitionCause, ValueIncreaseReason } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -279,6 +280,8 @@ export interface DeemedFormState {
   conStockCode: string; // 키움 자동조회용 종목코드 (UI 전용 — 엔진 미전달)
   // 전환사채 §40
   cbCaseType: "acquisition" | "conversion" | "conversion_reverse" | "transfer";
+  cbClause: ConvertibleBondClause; // §40①1호·2호 각 목 — 세액 불변, 공모 발행 제외 대상 판정
+  cbIssuanceMethod: ShareAllocationMethod; // 전환사채등 **발행** 방법 (§39 배정과 별개 개념)
   cbMarketValue: string;
   cbAcquisitionPrice: string;
   cbTransferPrice: string; // transfer 양도가액
@@ -558,6 +561,8 @@ export const INITIAL_DEEMED: DeemedFormState = {
   conPublicOfferingShares: "",
   conStockCode: "",
   cbCaseType: "acquisition",
+  cbClause: "from_related",
+  cbIssuanceMethod: "normal",
   cbMarketValue: "",
   cbAcquisitionPrice: "",
   cbTransferPrice: "",

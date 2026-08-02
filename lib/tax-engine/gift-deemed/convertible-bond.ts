@@ -6,13 +6,73 @@ import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
 import { computeWeightedPerShare, applyListedPerShareBound } from "./capital-helpers";
 import type { CalculationStep } from "../types/inheritance-gift.types";
-import type { DeemedGiftResult, ConvertibleBondInput } from "./types";
+import type { DeemedGiftResult, ConvertibleBondInput, ConvertibleBondClause } from "./types";
 
 const ABSOLUTE_THRESHOLD = 100_000_000;
 
 /** §40 공통 증여세 연계 echo: 연대납부 면제(§4의2⑥)는 §40 전체, 합산배제(§47①)는 caseType별 호출부에서 지정 */
 function withGiftFlags(result: DeemedGiftResult, aggregationExcluded: boolean): DeemedGiftResult {
   return { ...result, aggregationExcluded, donorJointLiabilityExempt: true };
+}
+
+/**
+ * 공모 발행 제외가 걸리는 목 — 「전환사채등을 **발행한 법인**」이 등장하는 **나·다목뿐**이다.
+ * 「상증법」§40①1호나목 괄호의 「이하 이 항에서 같다」는 그 **용어 정의**에 붙으므로,
+ * 가목(특수관계인으로부터 취득)·2호라목·3호(양도)에는 걸리지 않는다.
+ * (§39①은 괄호가 「배정」이라는 **행위**에 붙어 항 전체에 걸렸다 — 구조가 다르다.)
+ */
+const ISSUER_CLAUSES: ReadonlySet<ConvertibleBondClause> = new Set([
+  "major_excess",
+  "major_related_nonshareholder",
+]);
+
+/**
+ * 「상증법」§40①1호나목 괄호 — **주권상장법인으로서** 자본시장법 §9⑦ 모집방법으로 전환사채등을
+ * **발행**한 법인은 제외한다. 상장·공모는 **AND 조건**이다(「주권상장법인**으로서**」).
+ *
+ * ⚠️ **이중부정**: 그 모집이 「상증령」§30④가 가리키는 자본시장법 시행령 §11③ **간주모집**
+ *    (50인 미만이나 전매기준 해당으로 모집 의제)에 불과하면 **제외가 취소**되어 과세한다.
+ */
+function publicOfferingExcluded(input: ConvertibleBondInput): boolean {
+  return excludableIssuer(input) && input.issuanceMethod === "public_offering";
+}
+
+/**
+ * 제외 규정이 **적용될 수 있는 사안**인가 — 나·다목 + 주권상장법인.
+ * 제외 판정과 간주모집 note가 이 전제를 공유하므로 단일 소스로 둔다(한쪽만 바뀌는 드리프트 차단).
+ */
+function excludableIssuer(input: ConvertibleBondInput): boolean {
+  return ISSUER_CLAUSES.has(input.clause ?? "from_related") && input.isListed === true;
+}
+
+/** 간주모집이라 제외가 취소된 경우에만 붙이는 근거 note (감사 추적성 — 세액은 normal과 같다) */
+function deemedPublicOfferingNote(input: ConvertibleBondInput): string | undefined {
+  return excludableIssuer(input) && input.issuanceMethod === "deemed_public_offering"
+    ? `유가증권 모집방법 발행이나 간주모집이라 제외 취소 (${GIFT.CB_DEEMED_PUBLIC_OFFERING})`
+    : undefined;
+}
+
+/**
+ * §40① 적용 제외 결과 — 산식 행은 남겨 「왜 0인지」가 보이게 한다.
+ * ⚠️ §40은 **모든 반환**이 `withGiftFlags`를 통과한다 — 제외 결과만 빠뜨리면
+ *    `aggregationExcluded`·`donorJointLiabilityExempt`가 침묵 소실된다(호별 값을 그대로 넘긴다).
+ */
+function publicOfferingExcludedResult(
+  breakdown: CalculationStep[],
+  aggregationExcluded: boolean,
+): DeemedGiftResult {
+  return withGiftFlags(
+    {
+      type: "convertible_bond",
+      applied: false,
+      deemedGiftValue: 0,
+      breakdown,
+      exclusionReason: `주권상장법인의 유가증권 모집방법 발행 — §40① 적용 제외 (${GIFT.CB_PUBLIC_OFFERING_EXCLUSION})`,
+      legalBasis: GIFT.CONVERTIBLE_BOND,
+      thresholdEcho: { gain: 0 },
+    },
+    aggregationExcluded,
+  );
 }
 
 /** §30⑤1 교부주식가액 1주당 — 상장이면 시세평균과 이론주가 중 Min(가나다)/Max(라목), 비상장은 이론주가 */
@@ -52,8 +112,15 @@ function bondAcquisition(input: ConvertibleBondInput): DeemedGiftResult {
   const breakdown: CalculationStep[] = [
     { label: "전환사채등 시가", amount: bondMarketValue, lawRef: GIFT.CONVERTIBLE_BOND },
     { label: "인수·취득가액", amount: acquisitionPrice },
-    { label: "증여재산가액 (시가 − 인수가)", amount: value, lawRef: GIFT.CONVERTIBLE_BOND, note: "§40①1호 저가 인수·취득" },
   ];
+  // §40①1호 나·다목 + 주권상장법인 + §9⑦ 모집방법 발행 ⇒ 적용 제외
+  if (publicOfferingExcluded(input)) return publicOfferingExcludedResult(breakdown, false);
+  breakdown.push({
+    label: "증여재산가액 (시가 − 인수가)",
+    amount: value,
+    lawRef: GIFT.CONVERTIBLE_BOND,
+    note: deemedPublicOfferingNote(input) ?? "§40①1호 저가 인수·취득",
+  });
   return withGiftFlags(
     {
       type: "convertible_bond",
@@ -97,11 +164,13 @@ function bondConversion(input: ConvertibleBondInput): DeemedGiftResult {
   if (input.bondTransferGainForCap != null) {
     breakdown.push({ label: "양도차익 한도(§30①2 단서)", amount: input.bondTransferGainForCap });
   }
+  // §40①2호 나·다목 + 주권상장법인 + §9⑦ 모집방법 발행 ⇒ 적용 제외 (합산배제 대상이므로 true)
+  if (publicOfferingExcluded(input)) return publicOfferingExcludedResult(breakdown, true);
   breakdown.push({
     label: "증여재산가액 ((교부주식가액−전환가액)×주식수 − 이자손실분 − 기과세)",
     amount: value,
     lawRef: GIFT.CONVERTIBLE_BOND,
-    note: "§40①2호 가·나·다목 주식전환",
+    note: deemedPublicOfferingNote(input) ?? "§40①2호 가·나·다목 주식전환",
   });
   return withGiftFlags(
     {

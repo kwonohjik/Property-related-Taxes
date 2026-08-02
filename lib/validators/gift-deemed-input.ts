@@ -447,6 +447,10 @@ const specificCorpSchema = z.object({
 const convertibleBondSchema = z.object({
   type: z.literal("convertible_bond"),
   caseType: z.enum(["acquisition", "conversion", "conversion_reverse", "transfer"]).optional(),
+  // §40①1호·2호 각 목 — 세액 불변(상증령 §30①), 공모 발행 제외 대상 판정용
+  clause: z.enum(["from_related", "major_excess", "major_related_nonshareholder"]).optional(),
+  // 전환사채등 **발행** 방법 — §39의 allocationMethod(배정)와 다른 개념이라 필드를 분리한다
+  issuanceMethod: z.enum(["normal", "public_offering", "deemed_public_offering"]).optional(),
   bondMarketValue: z.number().nonnegative(),
   acquisitionPrice: z.number().nonnegative().optional(),
   transferPrice: z.number().nonnegative().optional(),
