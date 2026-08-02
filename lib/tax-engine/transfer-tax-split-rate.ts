@@ -36,7 +36,7 @@
 import { applyRate, calculateProgressiveTax } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
 import type { ParsedRates } from "./transfer-tax-helpers";
-import { calcTax, computeBracketBreakdown, PROGRESSIVE_RATE_CLAUSES } from "./transfer-tax-rate-calc";
+import { calcTax, computeBracketBreakdown, clauseBucketKey } from "./transfer-tax-rate-calc";
 import type { RateClause } from "./transfer-tax-rate-calc";
 import { resolveAppurtenantLandRateBasisDate } from "./transfer-tax-appurtenant-land";
 import { resolveLandStatutoryAcquisitionDate } from "./transfer-tax-appurtenant-land";
@@ -294,21 +294,19 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
   //  해당 자산에 대해서는 각 자산의 양도소득과세표준을 합산한 것에 대하여 … 호별 세율을 적용"
   // 파트별로 따로 계산하면 **누진공제를 파트 수만큼 중복**해 2호가 과소해진다.
   //
-  // 정본 `transfer-tax-aggregate-helpers.ts:415-446`과 **같은 규칙**을 쓴다(내부 일관성):
-  //   · 누진 호(1호·8호·⑦1호·⑦3호) → 호 단위로 합산 후 1회 계산
-  //   · 단일세율 호(2·3·10호)       → 세율이 같을 때만 합산(다르면 개별 — 정본 `uniformRate`)
-  //   · 호 불명(undefined)          → 묶지 않는다(현행 동작 = 안전측)
+  // 다건 정본(`transfer-tax-aggregate-helpers.ts`)과 **같은 키 함수**를 쓴다(단일 소스).
+  // 🔶 여기도 아직 `rateClause`(**승자**)를 넘긴다 — 계획서 E-2. Q3에서 `candidateClauses`로
+  //   바꾼다(파트는 이미 그 배열을 들고 있다).
   //
   // 실제로 합쳐지는 조합은 「배율내 토지 + 건물」이 같은 호일 때뿐이다 — 비사토 파트가 있으면
   // 토지 파트는 `isNonBusinessLand: false`로 강제되므로(위 seeds) 8호 묶음은 항상 단일이다.
-  const clauseKey = (i: number): string => {
-    const c = finals[i].rateClause;
-    if (!c) return `solo-${i}`;
-    return PROGRESSIVE_RATE_CLAUSES.has(c) ? c : `${c}|${finals[i].appliedRate}`;
-  };
   const clauseGroups = new Map<string, number[]>();
   seeds.forEach((_, i) => {
-    const k = clauseKey(i);
+    const k = clauseBucketKey(
+      finals[i].rateClause ? [finals[i].rateClause!] : undefined,
+      finals[i].appliedRate,
+      i,
+    );
     clauseGroups.set(k, [...(clauseGroups.get(k) ?? []), i]);
   });
 
