@@ -370,6 +370,44 @@ export function aggregateByGroup(
       splitParts: tr.splitPartDetail !== undefined,
     };
   };
+  /**
+   * §104⑤2호 **단서** ⓐ 요건(「동일한 호의 세율이 적용되고」) 판정용 **해당 호** 키.
+   *
+   * `assetTaxOf`의 `rate`·`surcharge`는 **승패가 반영된** 값이라 이 판정에 쓸 수 없다 —
+   * §104⑦ 후단이 자산별로 「중과 vs 단기」 중 하나를 이미 골라버리기 때문이다.
+   * 단서는 자산이 **해당하는 호**가 같은지를 묻는다(승패는 ⓑ「적용세율이 둘 이상」 쪽이다).
+   *
+   * 중과 호 판정은 `classifyRateGroup`의 `multiHouseByInput`과 **같은 입력 기반 규칙**을 쓴다
+   * (`result.surchargeType`은 단기가 이기면 비어 있어 승패에 오염된다).
+   */
+  const rateClauseKeyOf = (i: number): string => {
+    const item = records[i].correctedItem;
+    const result = records[i].result;
+    const acqDate =
+      item.acquisitionCause === "inheritance" && item.decedentAcquisitionDate
+        ? item.decedentAcquisitionDate
+        : item.acquisitionCause === "gift" && item.donorAcquisitionDate
+          ? item.donorAcquisitionDate
+          : item.acquisitionDate;
+    const holdingMonths = monthsBetween(acqDate, item.transferDate);
+    // §104①3호(1년 미만) · 2호(1~2년) — 구간이 다르면 **호가 다르다**.
+    const shortBand = holdingMonths < 12 ? "104-1-3" : holdingMonths < 24 ? "104-1-2" : "-";
+    const isHousingLike =
+      item.propertyType === "housing" ||
+      item.propertyType === "right_to_move_in" ||
+      item.propertyType === "presale_right";
+    // §104⑦1호(2주택 +20%p) · 3호(3주택 이상 +30%p) — 역시 다르면 다른 호다.
+    // 유예·부칙 배제로 중과가 걸리지 않으면 해당 호 자체가 없다.
+    const surchargeBand =
+      result.isSurchargeSuspended || result.rateSurchargeStatutoryExcluded
+        ? "-"
+        : isHousingLike && item.isRegulatedArea && item.householdHousingCount >= 2
+          ? item.householdHousingCount >= 3
+            ? "104-7-3"
+            : "104-7-1"
+          : "-";
+    return `${shortBand}|${surchargeBand}`;
+  };
   for (const [group, idxList] of groupMap) {
     const groupGrossGain = idxList
       .filter((i) => records[i].income > 0)
@@ -395,7 +433,25 @@ export function aggregateByGroup(
       // (단건 엔진과 값이 갈리는 이중 진실) — 세율이 같아 보여도 자산별 합계 경로를 쓴다.
       const uniformRate =
         !perAsset.some((p) => p.splitParts) && perAsset.every((p) => p.rate === perAsset[0].rate);
-      if (uniformRate) {
+      // §104⑤2호 **단서** — 「동일한 호의 세율이 적용되고, 그 **적용세율이 둘 이상**인 경우
+      // 해당 자산에 대해서는 각 자산의 양도소득과세표준을 **합산한 것에 대하여** … 각 해당
+      // 호별 세율을 적용하여 산출한 세액 중에서 **큰 산출세액**의 합계액으로 한다」.
+      //
+      // 자산별 승자가 갈렸을 뿐 **해당 호는 같은** 경우가 있다(실무 교재 사례2):
+      //   B·C 둘 다 §104①2호(1~2년) 대상이면서 둘 다 §104⑦3호(3주택) 대상인데,
+      //   개별로는 B가 단기 60% 승·C가 중과 승 → `appliedRate`가 갈려 자산별 합으로 떨어졌다.
+      //   교재는 "B·C **별도로** 비교하는 것이 아니라 **합산한 금액**에 중과세율을 적용해
+      //   단기세율 산출세액과 비교한다"고 명시한다(과소 14,000,000 실측 · 계획서 D-11).
+      //
+      // `calcTax`의 §104⑦ 후단이 **자기가 받은 과세표준**에 대해 그 MAX를 이미 수행하므로,
+      // 합산 1회 경로로 보내면 정답이 나온다(신규 세율 로직 불필요).
+      //
+      // ⚠️ **호가 다른 경우와 구분**한다 — 1년 미만(3호)+1~2년(2호)이나 ⑦1호+⑦3호 혼재는
+      //    단서가 아니라 **본문**(자산별 합)이다. 후자는 R7 감사(2026-07-29)가 고친 결함이다.
+      const sameRateClause =
+        !perAsset.some((p) => p.splitParts) &&
+        idxList.every((i) => rateClauseKeyOf(i) === rateClauseKeyOf(idxList[0]));
+      if (uniformRate || sameRateClause) {
         // 동일 세율(예: 일괄양도 일체과세 70% — 사례 28)은 합산 과세표준 × 세율로 1회 floor.
         // 자산별 floor 합산은 floor 횟수 차이로 ±N원 오차가 나므로 동일 세율은 기존 합산 방식 유지.
         const tr = calcTax(groupTaxBase, parsedRates, records[idxList[0]].correctedSingleInput);
