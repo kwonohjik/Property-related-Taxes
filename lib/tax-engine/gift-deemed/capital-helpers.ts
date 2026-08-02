@@ -18,6 +18,33 @@ export function computeWeightedPerShare(
 }
 
 /**
+ * 주권상장법인등 1주당 가액 단서 — 시행령 §29②1가 단서(min) · §29②3나 단서(max).
+ *
+ *   §29②1가: 「… 다만, **주권상장법인등**의 경우로서 증자후의 1주당 평가가액이 다음 산식에 의하여
+ *             계산한 1주당 가액보다 **적은** 경우에는 당해 가액」                    ⇒ min
+ *   §29②3나: 「… 다만, 주권상장법인등의 경우로서 … 산식 가액보다 **큰** 경우에는 당해 가액」 ⇒ max
+ *
+ * ⚠️ 방향을 뒤집으면 **과다과세**다. 비대칭인 이유는 그 값이 놓인 자리가 다르기 때문이다:
+ *   저가 = **가목**(평가) − 나목(인수가) → 평가가 **피감수** → 적은 쪽이 이익 ↓
+ *   고가 = 가목(인수가) − **나목**(평가) → 평가가 **감수**   → 큰 쪽이  이익 ↓
+ * ⇒ 두 방향 모두 **이익을 줄이는 쪽**이다.
+ *
+ * 준용 관계: §29의3①(현물출자 — 「"증자"는 "현물출자"로 본다」) · §30⑤1(전환사채) ·
+ *            §29②6(전환주식은 §29②1~5를 통해 상속).
+ *
+ * 상장이라도 평균액 미입력이면 **이론값 유지**(자동 추정 금지) — 입력 차단은 validate/Zod 담당.
+ */
+export function applyListedPerShareBound(
+  theoretical: number,
+  opts: { isListed?: boolean; listedMarketAvg?: number },
+  pick: "min" | "max",
+): number {
+  const avg = opts.listedMarketAvg ?? 0;
+  if (!opts.isListed || avg <= 0) return theoretical;
+  return pick === "min" ? Math.min(avg, theoretical) : Math.max(avg, theoretical);
+}
+
+/**
  * 시행령 §29⑤ 소액주주 = 발행주식총수등의 100분의 1 미만 소유 AND 주식등 액면가액 합계 3억원 미만.
  * (§39②·§39의3②의 "이익을 증여한 소액주주 2명 이상 → 1인 의제" 판정에 공통 사용)
  */

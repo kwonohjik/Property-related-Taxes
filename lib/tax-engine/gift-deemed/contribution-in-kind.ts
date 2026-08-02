@@ -1,7 +1,7 @@
 /** (10) 현물출자에 따른 이익의 증여 (§39의3) — 저가인수(①1호) / 고가인수(①2호) */
 import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
-import { computeWeightedPerShare } from "./capital-helpers";
+import { computeWeightedPerShare, applyListedPerShareBound } from "./capital-helpers";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ContributionInput, ContributionParty } from "./types";
 
@@ -19,10 +19,40 @@ function legalNote(base: string): string {
   );
 }
 
-/** "55,000/100,000" 형태 비율 라벨 (locale 무관 천단위 콤마) */
+/** locale 무관 천단위 콤마 */
+function fmtNum(n: number): string {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/** "55,000/100,000" 형태 비율 라벨 */
 function ratioLabel(numer: number, denom: number): string {
-  const fmt = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${fmt(numer)}/${fmt(denom)}`;
+  return `${fmtNum(numer)}/${fmtNum(denom)}`;
+}
+
+/**
+ * §29의3①1·2호 괄호 — 주권상장법인이 자본시장법 §165의6①3호(일반공모) 방식으로 배정한 신주는
+ * 곱하는 신주수에서 제외한다. 조문이 「**주권상장법인이** … 배정하는 경우」 한정이므로
+ * **비상장에는 차감하지 않는다**(게이트를 API 계층에 두면 엔진 직접 호출이 오적용 — dual-truth).
+ */
+function countedNewShares(input: ContributionInput, allocatedShares: number): number {
+  const excluded = input.isListed ? input.publicOfferingShares ?? 0 : 0;
+  return Math.max(0, allocatedShares - excluded);
+}
+
+/** 상장 단서가 실제로 발동했을 때만 붙이는 근거 note (미발동 시 undefined — 표시 노이즈 방지) */
+function boundNote(theoretical: number, applied: number, clause: "저가" | "고가"): string | undefined {
+  if (applied === theoretical) return undefined;
+  return clause === "저가"
+    ? `주권상장법인 평가액 적용 — 산식 이론값 ${fmtNum(theoretical)}보다 적음 (${GIFT.CONTRIBUTION_LISTED_LOW} 준용)`
+    : `주권상장법인 평가액 적용 — 산식 이론값 ${fmtNum(theoretical)}보다 큼 (${GIFT.CONTRIBUTION_LISTED_HIGH} 준용)`;
+}
+
+/** 일반공모 제외가 실제로 발생했을 때만 붙이는 note */
+function publicOfferingNote(input: ContributionInput, allocatedShares: number): string | undefined {
+  const excluded = allocatedShares - countedNewShares(input, allocatedShares);
+  return excluded > 0
+    ? `일반공모 배정분 ${fmtNum(excluded)}주 제외 (${GIFT.CONTRIBUTION_PUBLIC_OFFERING})`
+    : undefined;
 }
 
 /** 당사자 표시명 (feedback_no_internal_id_in_result) */
@@ -37,20 +67,35 @@ export function calcContributionGift(input: ContributionInput): DeemedGiftResult
 /** ①1호 저가인수 (시행령 §29의3①1 → §29②1가 준용) */
 function contributionLow(input: ContributionInput): DeemedGiftResult {
   const { preContribPrice, preContribShares, newSharePrice, contributedShares, allocatedShares, parties } = input;
-  const perShareAfter = computeWeightedPerShare(preContribPrice, preContribShares, newSharePrice, contributedShares);
+  const theoretical = computeWeightedPerShare(preContribPrice, preContribShares, newSharePrice, contributedShares);
+  // §29②1가 단서 준용 — 주권상장법인등은 실제 평가가 산식값보다 **적으면** 그 평가액(Min)
+  const perShareAfter = applyListedPerShareBound(theoretical, input, "min");
   const perShareGain = perShareAfter - newSharePrice; // 저가: 평가 > 인수가
   // gross = 법문 §29의3①1호 = (후가−인수가) × 배정신주수 (지분비율 없음)
-  const gross = perShareGain > 0 ? safeMultiply(perShareGain, allocatedShares) : 0;
+  const countedShares = countedNewShares(input, allocatedShares);
+  const gross = perShareGain > 0 ? safeMultiply(perShareGain, countedShares) : 0;
 
   // §39의3②: 이익을 증여한 소액주주 2명 이상 → 1인 의제 (저가인수 ①1호 한정, 집계 이익 불변)
   const imputation = input.smallShareholderImputation === true;
   const imputationNote = imputation ? " · §39의3② 소액주주 1인 의제" : "";
 
   const breakdown: CalculationStep[] = [
-    { label: "현물출자 후 1주당 가액", amount: perShareAfter, lawRef: GIFT.CONTRIBUTION },
+    ...(perShareAfter !== theoretical
+      ? [{ label: "현물출자 후 1주당 가액 (산식 이론값)", amount: theoretical }]
+      : []),
+    {
+      label: "현물출자 후 1주당 가액",
+      amount: perShareAfter,
+      lawRef: GIFT.CONTRIBUTION,
+      note: boundNote(theoretical, perShareAfter, "저가"),
+    },
     { label: "신주 1주당 인수가액", amount: newSharePrice },
     { label: "1주당 이익", amount: perShareGain },
-    { label: "배정받은 신주수", amount: allocatedShares },
+    {
+      label: "배정받은 신주수",
+      amount: countedShares,
+      note: publicOfferingNote(input, allocatedShares),
+    },
     { label: "증여재산가액 총액(gross)", amount: gross, lawRef: GIFT.CONTRIBUTION, note: "법문 §29의3①1호 — 증여자별 안분 전" },
   ];
 
@@ -124,17 +169,33 @@ function contributionLow(input: ContributionInput): DeemedGiftResult {
 /** ①2호 고가인수 (시행령 §29의3①2·② → §29②3가 준용) */
 function contributionHigh(input: ContributionInput): DeemedGiftResult {
   const { preContribPrice, preContribShares, newSharePrice, contributedShares, allocatedShares, parties } = input;
-  const perShareAfter = computeWeightedPerShare(preContribPrice, preContribShares, newSharePrice, contributedShares);
+  const theoretical = computeWeightedPerShare(preContribPrice, preContribShares, newSharePrice, contributedShares);
+  // §29②3나 단서 준용 — 주권상장법인등은 실제 평가가 산식값보다 **크면** 그 평가액(Max)
+  const perShareAfter = applyListedPerShareBound(theoretical, input, "max");
   const perShareGain = newSharePrice - perShareAfter; // 고가: 인수가 > 평가
-  const base = perShareGain > 0 ? safeMultiply(perShareGain, allocatedShares) : 0;
+  const countedShares = countedNewShares(input, allocatedShares);
+  const base = perShareGain > 0 ? safeMultiply(perShareGain, countedShares) : 0;
   // §29의3② 30% 게이트 — per-share 공통(다수 수증자도 동일). CON-H 회귀: applyRate(perShareAfter, 0.3).
+  // ⚠️ 분모는 「같은 호 **나목**을 준용하여 계산한 가액」 = **단서 적용 후** perShareAfter다.
+  //    이론값으로 되돌리면 Max가 게이트를 뒤집는 케이스(anchor D-5)를 놓친다.
   const ratioGateMet = perShareGain >= applyRate(perShareAfter, 0.3);
 
   const baseBreakdown: CalculationStep[] = [
     { label: "신주 1주당 인수가액", amount: newSharePrice, lawRef: GIFT.CONTRIBUTION },
-    { label: "현물출자 후 1주당 가액", amount: perShareAfter },
+    ...(perShareAfter !== theoretical
+      ? [{ label: "현물출자 후 1주당 가액 (산식 이론값)", amount: theoretical }]
+      : []),
+    {
+      label: "현물출자 후 1주당 가액",
+      amount: perShareAfter,
+      note: boundNote(theoretical, perShareAfter, "고가"),
+    },
     { label: "1주당 차액", amount: perShareGain },
-    { label: "인수 신주수", amount: allocatedShares },
+    {
+      label: "인수 신주수",
+      amount: countedShares,
+      note: publicOfferingNote(input, allocatedShares),
+    },
     { label: "차액 × 인수신주(base)", amount: base, note: "특수관계인 지분비율 적용 전" },
   ];
 

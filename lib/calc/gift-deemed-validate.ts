@@ -126,6 +126,9 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (form.ciDirection === "high" && form.ciSubType !== "forfeited_realloc") {
         if (parseAmount(form.ciRatioDenomShares) <= 0) return "분모 신주수를 입력하세요";
       }
+      // 상장 ON인데 평균액 미입력이면 엔진이 조용히 이론값으로 통과한다(§29②1가·3나 단서 미발동)
+      if (form.ciIsListed && parseAmount(form.ciListedMarketAvg) <= 0)
+        return "증자 후 1주당 평가가액(평가기준일 전후 2개월 종가평균)을 입력하세요";
       break;
     case "capital_increase_allocation": {
       if (parseAmount(form.ciAllocPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
@@ -171,6 +174,14 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "contribution":
       if (parseAmount(form.conPrePrice) <= 0) return "현물출자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.conPreShares) <= 0) return "현물출자 전 발행주식총수를 입력하세요";
+      // §29②1가·3나 단서 — 상장 ON·평균액 미입력이면 엔진이 이론값으로 조용히 통과한다
+      if (form.conIsListed && parseAmount(form.conListedMarketAvg) <= 0)
+        return "현물출자 납입일 전후 2개월 종가평균을 입력하세요";
+      // 자본시장법 §165의6①3 일반공모 배정분 — 배정받은 신주수를 넘을 수 없다.
+      // 상장 게이트는 엔진·API 변환과 동일하게 걸어 3중 일치(mirror-pattern) — 비상장에서 값이
+      // 남아 있어도 엔진은 무시하므로 차단하면 UI 통과↔validate 차단 모순이 된다.
+      if (form.conIsListed && parseAmount(form.conPublicOfferingShares) > parseAmount(form.conAllocatedShares))
+        return "일반공모 배정 신주수가 배정받은 신주수를 초과합니다";
       // 당사자 명부 roster 3-state 검증 (자동 안분 fallback 금지)
       if (form.conParties !== undefined) {
         // ON 빈 배열 — 최소 1명 필요
@@ -193,6 +204,10 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (parseAmount(form.csConvPreShares) <= 0) return "전환 시점 증자 전 발행주식총수를 입력하세요";
       if (parseAmount(form.csIssuePrePrice) <= 0) return "발행 시점 증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.csIssuePreShares) <= 0) return "발행 시점 증자 전 발행주식총수를 입력하세요";
+      if (form.csConvIsListed && parseAmount(form.csConvListedMarketAvg) <= 0)
+        return "전환 시점 증자 후 1주당 평가가액(전후 2개월 종가평균)을 입력하세요";
+      if (form.csIssueIsListed && parseAmount(form.csIssueListedMarketAvg) <= 0)
+        return "발행 시점 증자 후 1주당 평가가액(전후 2개월 종가평균)을 입력하세요";
       break;
     case "acquisition_fund_presumption":
       if (parseAmount(form.afAcquisitionValue) <= 0)

@@ -234,6 +234,8 @@ export interface DeemedFormState {
   ciRelatedAcquiredShares: string; // 고가 나·다라 특수관계인 인수신주수
   ciRatioDenomShares: string; // 고가 나·다라 분모 신주수
   ciSmallImputation: boolean; // 저가 §39② 소액주주 1인 의제
+  ciIsListed: boolean; // 주권상장법인등 — §29②1가 단서(저가 Min)·§29②3나 단서(고가 Max)
+  ciListedMarketAvg: string; // 평가기준일(§29① — 상장 주주배정은 권리락일) 전후 2개월 종가평균
   // 증자 §39 cap-table (다수증자·다증여자)
   ciAllocDirection: "low" | "high";
   ciAllocPrePrice: string; // ㉮ 증자 전 1주당 평가가액
@@ -268,6 +270,9 @@ export interface DeemedFormState {
    */
   conParties?: Array<{ name: string; shares: string; relation: GiftDonorRelation | "" }>;
   conSelectedDoneeIndex: number; // 고가 과세 수증자 선택 (prefill 이관용 — 각자 독립 납세의무자)
+  conIsListed: boolean; // 주권상장법인등 — §29의3①이 준용하는 §29②1가·3나 단서
+  conListedMarketAvg: string; // 현물출자 납입일 전후 2개월 종가평균 (§63①1가)
+  conPublicOfferingShares: string; // 일반공모(자본시장법 §165의6①3) 배정 신주수 — 상장 시 곱셈 인자에서 제외
   // 전환사채 §40
   cbCaseType: "acquisition" | "conversion" | "conversion_reverse" | "transfer";
   cbMarketValue: string;
@@ -304,6 +309,8 @@ export interface DeemedFormState {
   csConvForfeitedShares: string;
   csConvRelatedAcquiredShares: string;
   csConvRatioDenomShares: string;
+  csConvIsListed: boolean; // 전환 시점 주권상장법인등 (§29②6 → §29②1~5 상속)
+  csConvListedMarketAvg: string;
   csIssuePrePrice: string;
   csIssuePreShares: string;
   csIssueNewPrice: string;
@@ -311,6 +318,8 @@ export interface DeemedFormState {
   csIssueForfeitedShares: string;
   csIssueRelatedAcquiredShares: string;
   csIssueRatioDenomShares: string;
+  csIssueIsListed: boolean; // 발행 시점 주권상장법인등
+  csIssueListedMarketAvg: string;
   // ── Phase 3 추정·의제 ──
   // 재산취득자금 증여추정 §45
   afSubType: "acquisition" | "debt_repayment";
@@ -506,6 +515,8 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciRelatedAcquiredShares: "",
   ciRatioDenomShares: "",
   ciSmallImputation: false,
+  ciIsListed: false,
+  ciListedMarketAvg: "",
   ciAllocDirection: "low",
   ciAllocPrePrice: "",
   ciAllocNewPrice: "",
@@ -532,6 +543,9 @@ export const INITIAL_DEEMED: DeemedFormState = {
   conSmallImputation: false,
   conParties: undefined,
   conSelectedDoneeIndex: 0,
+  conIsListed: false,
+  conListedMarketAvg: "",
+  conPublicOfferingShares: "",
   cbCaseType: "acquisition",
   cbMarketValue: "",
   cbAcquisitionPrice: "",
@@ -565,6 +579,8 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csConvForfeitedShares: "",
   csConvRelatedAcquiredShares: "",
   csConvRatioDenomShares: "",
+  csConvIsListed: false,
+  csConvListedMarketAvg: "",
   csIssuePrePrice: "",
   csIssuePreShares: "",
   csIssueNewPrice: "",
@@ -572,6 +588,8 @@ export const INITIAL_DEEMED: DeemedFormState = {
   csIssueForfeitedShares: "",
   csIssueRelatedAcquiredShares: "",
   csIssueRatioDenomShares: "",
+  csIssueIsListed: false,
+  csIssueListedMarketAvg: "",
   afSubType: "acquisition",
   afAcquisitionValue: "",
   afProvenAmount: "",

@@ -159,6 +159,12 @@ export const GIFT = {
   PREMIUM_EXCLUSION_29_3: "상증령 §53⑧3호",
   /** 상증법 §4의2⑥ 단서 — §39의3 수증자에 대한 증여자 연대납부의무 면제 */
   JOINT_LIABILITY_EXEMPTION: "상증법 §4의2⑥ 단서",
+  /** 상증령 §29②1가 단서 — 주권상장법인등은 증자후 1주당 평가가액이 산식값보다 적으면 그 평가액(저가·Min) */
+  CONTRIBUTION_LISTED_LOW: "상증령 §29②1가 단서",
+  /** 상증령 §29②3나 단서 — 주권상장법인등은 증자후 1주당 평가가액이 산식값보다 크면 그 평가액(고가·Max) */
+  CONTRIBUTION_LISTED_HIGH: "상증령 §29②3나 단서",
+  /** 자본시장법 §165의6①3 — 일반공모 방식 배정 신주는 §29의3①1·2호 곱셈 인자에서 제외 */
+  CONTRIBUTION_PUBLIC_OFFERING: "자본시장법 §165의6①3호",
   CONVERTIBLE_BOND: "상증법 §40",
   CONVERTIBLE_BOND_INTEREST_LOSS: "상증칙 §10의2",
   CONVERTIBLE_BOND_DISCOUNT_RATE: "상증칙 §18의3",

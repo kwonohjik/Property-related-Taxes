@@ -185,6 +185,14 @@ export interface CapitalIncreaseInput {
   ratioDenomShares?: number; // 분모 신주수 (나목=균등증자 증자주식총수 / 다·라목=주주아닌자배정+초과인수 총수)
   // §39②: 이익을 증여한 소액주주(§29⑤) 2명 이상 → 1인 의제 (저가발행 ①1호 한정)
   smallShareholderImputation?: boolean;
+  /** 주권상장법인등 — §29②1가 단서(저가 min)·§29②3나 단서(고가 max) */
+  isListed?: boolean;
+  /**
+   * 증자 후 1주당 평가가액 = 평가기준일 전후 각 2개월 종가평균(§63①1가).
+   * 평가기준일은 §29① — 상장·코스닥 **주주배정**은 권리락일(1호), 전환주식은 전환한 날(2호),
+   * 그 외는 주식대금 납입일(3호). 엔진은 평균액을 계산하지 않고 주입받는다.
+   */
+  listedMarketAvg?: number;
 }
 
 // ── (8b) 증자 §39 cap-table 다수증자·다증여자 배분 (equity-delta 방식) ──
@@ -275,6 +283,15 @@ export interface ContributionInput {
    * low: 증여자(현물출자자 外 전체 주주), high: 수증자(특수관계 기존주주만). 분모 = preContribShares.
    */
   parties?: ContributionParty[];
+  /** 주권상장법인등 — §29의3①이 준용하는 §29②1가 단서(저가 min)·§29②3나 단서(고가 max) */
+  isListed?: boolean;
+  /** 현물출자 후 1주당 평가가액 = **현물출자 납입일**(법 §39의3① 본문) 전후 각 2개월 종가평균(§63①1가) */
+  listedMarketAvg?: number;
+  /**
+   * 일반공모(자본시장법 §165의6①3) 방식으로 배정된 신주수 — §29의3①1·2호 괄호로 곱셈 인자에서 제외.
+   * 조문이 「주권상장법인이 … 방식으로 배정하는 경우」 한정이라 **isListed일 때만** 차감한다.
+   */
+  publicOfferingShares?: number;
 }
 
 /** (11) 전환사채등 §40 — 인수·취득(①1호)·주식전환(①2호 가나다/라목)·양도(①3호) sub-case */
