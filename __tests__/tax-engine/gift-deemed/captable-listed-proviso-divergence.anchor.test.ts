@@ -112,15 +112,19 @@ describe("§39 cap-table ↔ sub-case — 상장 단서 미해소 불일치 동�
   });
 
   /**
-   * CT-5 — 🆕 **단서와 무관한 기존 불일치** (계획서 v1.2 §4-5 파생 발견)
+   * CT-5 — **부분 실권 + 재배정 동시 수령** (계획서 v1.5 §10)
    *
-   * cap-table 파일 주석의 「호별 산식과 **대수적으로 동치**」는 **깔끔한 케이스 한정**이다.
-   * **부분 실권 + 재배정 동시 수령** 주주에서는 두 방식이 갈리고, **부호까지 반대**다:
-   *   equity-delta — 실권 손해와 재배정 이익을 **상계** ⇒ 「증여자」
-   *   법정 산식     — 「실권주를 **배정받은 자가** 배정받음으로써 얻은 이익」(§39①1호가목)만
-   *                   정하고 **상계 규정이 없다** ⇒ 문언상 「수증자」
+   * 🔧 **v1.5 정정**: 초판 주석은 「법정 산식은 A를 +50,000,000의 **수증자**로 본다 ⇒ 부호가 반대」라고
+   *    했으나 **틀렸다** — **증여자 특정 단계를 빠뜨린 비교**였다.
+   *    이 픽스처는 **실권자가 A 하나뿐**이라, A가 재배정받은 10,000주는 **전부 A 자신이 포기한
+   *    실권주**에서 나온다. **자기 자신으로부터 증여받을 수 없으므로**(§39의3에서 이미 채택한 원칙 —
+   *    조심2010서3741 현물출자자 자기지분 제외) A의 과세액은 **0**이고, cap-table 결과와 **일치**한다.
    *
-   * ⚠️ **어느 쪽이 정답인지 판정하지 않는다** — 이 anchor는 **현행 동작만 고정**하며 값을 바꾸지 않는다.
+   * ⇒ 이 케이스는 **불일치가 아니다.** 다만 cap-table이 A를 뺀 이유는 「자기증여 제외」가 아니라
+   *   **delta 부호(상계)** 때문이다(코드에 자기증여 로직 **0건** — grep 실측). 즉 **우연히 일치**한다.
+   *   실권자가 2명 이상이면 실제로 갈린다 → **CT-6**.
+   *
+   * ⚠️ 이 anchor는 **현행 동작만 고정**하며 값을 바꾸지 않는다.
    *
    * ── 별건 조사 결과 (계획서 v1.4 §10) ─────────────────────────────────
    * 「상계 없음」이 **유력**하다: ⓐ §39①1가는 「배정받은 자가 배정받음으로써 얻은 이익」만
@@ -135,7 +139,7 @@ describe("§39 cap-table ↔ sub-case — 상장 단서 미해소 불일치 동�
    *    증여이익 계산」(2010.2.1.) 본문 — 법제처 API가 국세청 해석 본문을 제공하지 않아 **미확인**.
    *    taxlaw.nts.go.kr 에서 사람이 직접 열어야 한다(계획서 §10-6).
    */
-  it("CT-5 ⭐: 부분 실권 + 재배정 동시 — cap-table은 「증여자」, 법정 산식은 「수증자」", () => {
+  it("CT-5: 부분 실권 + 재배정 동시 — 실권자가 **1명뿐**이면 자기증여라 결과가 일치한다", () => {
     // A: 배정 60,000 중 자기분 20,000만 인수(40,000 실권) + 재배정 10,000 수령 ⇒ 총 30,000
     // B: 배정 40,000 전량 인수 + 재배정 30,000 수령 ⇒ 총 70,000
     const r = calcCapitalIncreaseAllocation({
@@ -153,11 +157,53 @@ describe("§39 cap-table ↔ sub-case — 상장 단서 미해소 불일치 동�
     expect(r.byShareholder.find((b) => b.id === "A")?.delta).toBe(-150_000_000);
     expect(r.perBeneficiary.map((p) => p.beneficiaryId)).toEqual(["B"]);
 
-    // 법정 산식(§29②1 다목 = 배정받은 실권주수 10,000) — A는 **+50,000,000의 수증자**
-    const statutoryA = (15_000 - 10_000) * 10_000;
-    expect(statutoryA).toBe(50_000_000);
-    // ⭐ 부호가 반대다. 단서 도입 이전부터 존재하는 불일치이며 정답은 **미판정**.
-    expect(Math.sign(r.byShareholder.find((b) => b.id === "A")!.delta)).not.toBe(Math.sign(statutoryA));
+    // 법정 산식 raw = (15,000 − 10,000) × 배정받은 실권주 10,000 = 50,000,000
+    const statutoryRawA = (15_000 - 10_000) * 10_000;
+    expect(statutoryRawA).toBe(50_000_000);
+    // ⭐ 그러나 **증여자는 실권자뿐이고 여기선 A 자신뿐**이다 ⇒ 전액 자기증여 ⇒ 과세 0.
+    //    총실권 40,000 중 A의 몫 40,000 = 100% 자기증여.
+    const selfPortion = 40_000 / 40_000;
+    expect(statutoryRawA * (1 - selfPortion)).toBe(0);
+    // ⇒ 법정 0 == cap-table 0(수증자 명단 제외). **이 케이스는 불일치가 아니다.**
+  });
+
+  /**
+   * CT-6 — ⭐ **진짜 불일치**: 실권자가 **2명 이상**이고 그중 하나가 재배정도 받는 경우
+   *
+   * A가 재배정받은 10,000주 중 **자기 실권분에 대응하는 부분만** 자기증여로 빠지고,
+   * **다른 실권자(C)로부터 온 부분은 과세 대상**이다. 그런데 cap-table은 A의 delta가 음수라는
+   * 이유만으로 A를 **수증자 명단에서 통째로 제외**한다(자기증여 로직이 아니라 상계의 부작용).
+   *
+   * ⚠️ 「자기 실권분을 실권주 풀 비율로 안분한다」는 것 자체는 **법에 명문이 없다** — 다만
+   *    cap-table이 이미 쓰는 손해비례 배분과 **같은 비율**이라 내적 일관성은 있다.
+   *    정답은 **미판정** ⇒ 이 anchor도 **현행 동작만 고정**한다.
+   */
+  it("CT-6 ⭐: 실권자 2명 중 하나가 재배정도 받으면 **수증자 판정이 갈린다**", () => {
+    // A 20,000 실권 + 재배정 10,000 수령 · C 20,000 실권(재배정 없음) · B 재배정 30,000 수령
+    const r = calcCapitalIncreaseAllocation({
+      direction: "low",
+      preIssuePrice: 20_000,
+      newSharePrice: 10_000,
+      shareholders: [
+        { id: "A", name: "A", preShares: 40_000, entitledShares: 40_000, subscribedShares: 30_000, reallocatedShares: 10_000, relatedTo: ["B", "C"] },
+        { id: "C", name: "C", preShares: 30_000, entitledShares: 30_000, subscribedShares: 10_000, reallocatedShares: 0, relatedTo: ["A", "B"] },
+        { id: "B", name: "B", preShares: 30_000, entitledShares: 30_000, subscribedShares: 60_000, reallocatedShares: 30_000, relatedTo: ["A", "C"] },
+      ],
+    });
+    // 현행 — A는 delta 음수라 증여자로만 잡히고 수증자 명단에서 빠진다
+    expect(r.byShareholder.find((b) => b.id === "A")?.delta).toBe(-50_000_000);
+    expect(r.perBeneficiary.map((p) => p.beneficiaryId)).toEqual(["B"]);
+    expect(r.splits.map((s) => `${s.donorId}>${s.beneficiaryId}=${s.value}`)).toEqual([
+      "A>B=50000000",
+      "C>B=100000000",
+    ]);
+
+    // 법정 산식 + 자기증여 제외 — A는 **C로부터 받은 부분만큼 수증자**다
+    //   raw = 5,000 × 10,000 = 50,000,000 · 총실권 40,000 중 C 몫 20,000 = 50%
+    const statutoryTaxableA = ((15_000 - 10_000) * 10_000 * 20_000) / 40_000;
+    expect(statutoryTaxableA).toBe(25_000_000);
+    // ⭐ 차이 25,000,000 — 단서와 **무관한** 기존 불일치. 정답 미판정이라 값은 바꾸지 않는다.
+    expect(r.perBeneficiary.find((p) => p.beneficiaryId === "A")).toBeUndefined();
   });
 
   it("CT-4: naive 치환값 20,000,000은 **양쪽 어디와도 다르다** (안 B 배제 근거)", () => {
