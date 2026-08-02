@@ -390,12 +390,10 @@ export function aggregateByGroup(
       surcharge: tr.surchargeRate,
       /** 자산 단위 과세표준 — 파트가 없는 자산은 이 값이 곧 파트 과세표준이다. */
       taxBase: assetTaxBase,
-      /** 자산 단위 「해당 호」 — 파트가 없는 자산의 호별 합산 키(P12 2단계). */
-      rateClause: tr.rateClause,
       /**
-       * 자산 단위 「**해당** 호 후보 전부」 — §104⑤ 합산 단위 키(Q2).
-       * `rateClause`는 §104①·⑦ 후단의 **승자**라 그룹핑에 쓰면 「해당 호는 같은데 승자만
-       * 갈린」 자산이 나뉜다. 묶음 판정은 반드시 이 배열을 쓴다.
+       * 자산 단위 「**해당** 호 후보 전부」 — §104⑤ 합산 단위 키(Q2·Q3).
+       * `rateClause`(승자)는 그룹핑에 쓰지 않는다 — 「해당 호는 같은데 승자만 갈린」 자산이
+       * 나뉘고, 반대로 「해당 호는 다른데 승자만 같은」 자산이 합쳐진다(계획서 E-2).
        */
       candidateClauses: tr.candidateClauses,
       /** §104⑤ 본문이 「각 호별로 합산한 자산」이라 정한 **파트 목록**(있으면). */
@@ -527,16 +525,14 @@ export function aggregateByGroup(
       //   종전에는 그런 자산이 있으면 `mixedTier`가 켜져 **그룹 전체**가 자산별 합으로 떨어져
       //   같은 호 다른 자산의 합산까지 끊겼다(§D-7 과소 51,000,000 · §D-12 과소 23,400,000).
       //
-      // ⚠️ **이 분기에만 적용한다.** `calcTax`의 `rateClause`는 §104⑦ **후단의 승자 기준**이라
-      //   (`transfer-tax-rate-calc.ts:451`) 그대로 그룹 키로 쓰면 「해당 호는 같은데 승자만
-      //   갈린」 자산이 나뉘어 **D-11(P9)이 회귀**한다. 그런데 이 분기의 자산은 위
-      //   `classifyRateGroup`(:72)이 2년 미만을 전부 `short_term`으로 보내 **2년 이상만**
-      //   남으므로 §104⑦ 후단이 발동하지 않는다 ⇒ 승패 오염이 없다.
-      //   `short_term` 분기는 손대지 않는다 — D-11(`sameRateClause`)이 거기 있다.
+      // ✅ 2026-08-02 **Q3**로 승패 오염 걱정이 사라졌다 — 묶음 키가 `candidateClauses`
+      //   (**해당 호 집합**)라 §104①·⑦ 후단이 어느 쪽을 골랐든 같은 키가 나온다.
+      //   `short_term` 분기도 **Q2에서 같은 규약**으로 옮겼다(두 분기가 한 규칙을 공유한다).
       const perAsset = idxList.map((i) => assetTaxOf(i));
       /** 호별 합산 단위 — 파트가 있으면 그 파트들, 없으면 자산 자체가 파트 1개다. */
       type ClausePart = Pick<SplitRatePart, "taxBase" | "calculatedTax" | "appliedRate"> & {
-        rateClause: SplitRatePart["rateClause"];
+        /** 묶음 키의 **정본** — §104①·⑦ 후단의 승자가 아니라 「해당 호 집합」이다(Q3). */
+        candidateClauses: SplitRatePart["candidateClauses"];
         rateInput: TransferTaxInput;
         surchargeRate?: number;
       };
@@ -546,7 +542,7 @@ export function aggregateByGroup(
               taxBase: p.taxBase,
               calculatedTax: p.calculatedTax,
               appliedRate: p.appliedRate,
-              rateClause: p.rateClause,
+              candidateClauses: p.candidateClauses,
               rateInput: p.rateInput,
               surchargeRate: p.surchargeRate,
             }))
@@ -555,19 +551,21 @@ export function aggregateByGroup(
                 taxBase: a.taxBase,
                 calculatedTax: a.tax,
                 appliedRate: a.rate,
-                rateClause: a.rateClause,
+                candidateClauses: a.candidateClauses,
                 rateInput: records[idxList[n]].correctedSingleInput,
                 surchargeRate: a.surcharge,
               },
             ],
       );
       // 묶음 키 — `short_term` 분기·`computeSplitPartTax`와 **같은 규약**(`clauseBucketKey`).
-      // 🔶 여기만 아직 `rateClause`(**승자**)를 쓴다 — 계획서 E-2. 이 분기의 자산은
-      //   `classifyRateGroup`(:72)이 2년 미만을 전부 `short_term`으로 보내 **2년 이상만** 남으므로
-      //   §104① 후단·⑦ 후단이 발동하지 않아 승패 오염이 없다. 파트 축의 잔여 국면은 Q3에서 다룬다.
+      //
+      // 2026-08-02 **Q3** — 종전에는 `rateClause`(**승자**)를 넘겼다. 자산은 2년 이상만 남지만
+      //   **파트는 아니다**: 토지를 나중에 취득한 split 주택은 자산이 11년이어도 토지 파트가
+      //   17개월이라 §104⑦ 후단이 그 파트에서 발동한다. 그래서 「해당 호는 다른데 승자만 같은」
+      //   파트가 합쳐졌다 — 두 자산 다건에서 314,060,000 → **303,620,000**(과대 10,440,000).
       const clauseGroups = new Map<string, ClausePart[]>();
       clauseParts.forEach((p, i) => {
-        const k = clauseBucketKey(p.rateClause ? [p.rateClause] : undefined, p.appliedRate, i);
+        const k = clauseBucketKey(p.candidateClauses, p.appliedRate, i);
         clauseGroups.set(k, [...(clauseGroups.get(k) ?? []), p]);
       });
       groupCalculatedTax = 0;
