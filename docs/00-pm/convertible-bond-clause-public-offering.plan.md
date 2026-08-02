@@ -1,4 +1,4 @@
-# §40 전환사채등 — **목(目) 선택 도입 + 공모 발행 적용제외** 구현 계획서 **v1.1 (자가검토 9건 반영)**
+# §40 전환사채등 — **목(目) 선택 도입 + 공모 발행 적용제외** 구현 계획서 **v1.2 (Do 완료·환류)**
 
 > 대상: 「상증법」§40①1호 가·나·다목 / §40①2호 가·나·다목 · 「상증령」§30①1·2, §30③, §30④
 > 선행: `capital-increase-public-offering-exclusion.plan.md` v1.2 §10-5(인접 발견)
@@ -365,3 +365,38 @@ E2E는 **`e2e/gift-deemed-capital.spec.ts`**(§40 시나리오가 `cb-case-trans
 | 9 | 개선 Low | `CB_CLAUSE_MAJOR` 사용처 명시(미사용 상수 금지) |
 
 **verdict**: Critical/High 미해소 0 ⇒ **Do 진입 가능**.
+
+---
+
+## 12. 구현 환류 (v1.2 — Do 완료 2026-08-02)
+
+**전 항목 완료.** 전체 회귀 **1,168파일 13,050건 통과·실패 0** · `tsc` 0 · `lint` 0 errors · E2E 7/7.
+
+### 12-1. 계획 대비 차이
+
+| 항목 | 계획 | 실제 | 사유 |
+|---|---|---|---|
+| §40 anchor | 10건 | **12건** | CB-PO-5b(다목 제외)·6b(2호 가목 + Min 단서 혼입 없음) 추가 — 목별 대칭 확보 |
+| §39 anchor 추가 | 2건 | **3건** | PO-11 추가 — 비상장 + 간주모집에 **「제외 취소」 note를 붙이지 않는다**(애초에 제외 대상이 아니므로 그 서술이 사실과 다름). `deemedPublicOfferingNote`에도 상장 조건을 넣은 이유 |
+| E2E | 1건 | **2건** | 나목 제외 + **가목 불변**(「4개 목뿐」을 UI 레벨에서도 고정) |
+| RED 예측 | 1·2·4·6 실패 | **1·2·5b·6·10 실패** | **CB-PO-4는 처음부터 GREEN**이 맞다 — 비상장은 게이트가 없어도 과세라 현행과 일치한다. 예측이 틀렸고 실제 쪽이 옳다 |
+
+### 12-2. 🆕 800줄 정책 대응 (계획 외)
+
+`lib/calc/gift-deemed-api.ts`가 이번 변경(+8줄)으로 **808줄**이 되어 hook이 차단했다.
+
+- `buildGiftWizardPrefill`(164줄)을 **`lib/calc/gift-deemed-prefill.ts`**로 분리 → **647줄 착지**(목표 ≤700 충족, 800까지 153줄 여유)
+- 함수 단위 완전 분리라 이음매가 자연스럽다. **re-export로 import 경로 보존**(`DeemedGiftCalculator.tsx`·테스트 3파일 무수정, memory `feedback_800line_split_export_preservation`)
+
+### 12-3. 설계 조정 2건
+
+- **안내는 `FieldCard`가 아니라 `ToneCard`** — `FieldCard`는 `children`이 필수(`FieldCard.tsx:9`)라 순수 안내에 쓸 수 없다. 프로젝트 규칙(「안내·섹션 카드는 `ToneCard`」)과도 일치한다. `cbAcqGainPrior` 일관성 hint만 입력을 감싸는 `FieldCard`로 유지
+- **`excludableIssuer` 추출** — 제외 판정과 간주모집 note가 「나·다목 + 상장」 전제를 공유한다. 한쪽만 바뀌는 드리프트를 막으려 단일 소스로 뺐다(품질 게이트 정독에서 발견)
+
+### 12-4. 14 동기화 지점 자가 grep 결과
+
+⑫ Zod `convertibleBondSchema` ✓ · ⑬ `buildDeemedGiftInput` 반환 = fetch body ✓ · ⑭ Route는 `calcDeemedGift(data as unknown as DeemedGiftInput)`로 **parsed.data를 통째 전달**(`route.ts:66`)이라 명시 매핑 strip 위험 없음 ✓
+
+### 12-5. 남은 것
+
+🟠 **§8 R7** — cap-table 비상장 + `public_offering` 오제외(§6-2). 이번 범위 밖으로 확정, 별건 등록.

@@ -32,7 +32,14 @@ import type {
   ContributionInput,
 } from "@/lib/tax-engine/gift-deemed/types";
 
-/** 저가발행 가목(실권주 재배정) — 이론 ㉯ 15,000 · 이익 (15,000−10,000)×60,000 = 300,000,000 */
+/**
+ * 저가발행 가목(실권주 재배정) — 이론 ㉯ 15,000 · 이익 (15,000−10,000)×60,000 = 300,000,000
+ *
+ * ⚠️ `isListed: true`가 기본이다 — §39① 괄호의 주어가 「**주권상장법인이**」이므로 공모 제외는
+ *    상장을 전제한다(PO-9). `listedMarketAvg`를 주지 않으므로 `applyListedPerShareBound`가
+ *    `avg <= 0`에서 이론주가를 그대로 반환한다 ⇒ 「상증령」§29②1가 단서 효과는 **0**이고
+ *    아래 모든 기대값은 상장 여부와 무관하게 유지된다.
+ */
 function low(over: Partial<CapitalIncreaseInput> = {}): CapitalIncreaseInput {
   return {
     direction: "low",
@@ -42,6 +49,7 @@ function low(over: Partial<CapitalIncreaseInput> = {}): CapitalIncreaseInput {
     newSharePrice: 10_000,
     issuedShares: 100_000,
     forfeitedShares: 60_000,
+    isListed: true,
     ...over,
   };
 }
@@ -56,6 +64,7 @@ function high(over: Partial<CapitalIncreaseInput> = {}): CapitalIncreaseInput {
     newSharePrice: 20_000,
     issuedShares: 50_000,
     forfeitedShares: 50_000,
+    isListed: true,
     ...over,
   };
 }
@@ -157,6 +166,34 @@ describe("§39의3 오적용 차단", () => {
     const withField = { ...base, allocationMethod: "public_offering" } as ContributionInput;
     expect(calcContributionGift(base).grossDeemedGiftValue).toBe(500_000_000);
     expect(calcContributionGift(withField).grossDeemedGiftValue).toBe(500_000_000);
+  });
+});
+
+describe("「주권상장법인이」 — 공모 제외의 AND 조건 (§6-1)", () => {
+  /**
+   * 「상증법」§39① 괄호: 「**주권상장법인이** 「자본시장과 금융투자업에 관한 법률」 §9⑦에 따른
+   * 유가증권의 모집방법(…)으로 배정하는 경우는 제외한다」 — 주어가 주권상장법인이다.
+   * 비상장법인의 모집방법 배정은 제외 대상이 아니며, 이를 빠뜨리면 **과소과세**가 된다.
+   */
+  it("PO-9 ⭐: **비상장** + 공모 배정 → 제외되지 않고 **과세**된다", () => {
+    const r = calcCapitalIncreaseGift(low({ isListed: false, allocationMethod: "public_offering" }));
+    expect(r.deemedGiftValue).toBe(300_000_000);
+    expect(r.applied).toBe(true);
+  });
+
+  it("PO-10: **상장** + 공모 배정 → 0 (PO-1 강화 — 상장이 실제로 조건임을 대비로 고정)", () => {
+    const r = calcCapitalIncreaseGift(low({ isListed: true, allocationMethod: "public_offering" }));
+    expect(r.deemedGiftValue).toBe(0);
+    expect(r.applied).toBe(false);
+  });
+
+  it("PO-11: 비상장 + 간주모집도 과세이며 **제외 취소 note를 붙이지 않는다**", () => {
+    // 애초에 제외 대상이 아니므로 「제외가 취소됐다」는 서술은 사실과 다르다.
+    const r = calcCapitalIncreaseGift(
+      low({ isListed: false, allocationMethod: "deemed_public_offering" }),
+    );
+    expect(r.deemedGiftValue).toBe(300_000_000);
+    expect(JSON.stringify(r.breakdown)).not.toContain("간주모집");
   });
 });
 

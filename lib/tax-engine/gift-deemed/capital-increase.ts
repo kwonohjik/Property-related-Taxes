@@ -21,14 +21,17 @@ const SUBTYPE_NOTE: Record<NonNullable<CapitalIncreaseInput["subType"]>, string>
  * ⚠️ **이중부정**: 그 모집이 「상증령」§29③이 가리키는 자본시장법 **시행령 §11③ 간주모집**
  *    (50인 미만이지만 전매기준 해당으로 모집 의제)에 불과하면 **제외가 취소**되어 과세한다.
  *    형식적 간주모집을 통한 회피를 막는 구조다.
+ *
+ * ⚠️ **「주권상장법인이」는 AND 조건이다** — 법문의 주어가 주권상장법인이므로, 비상장법인이
+ *    모집방법으로 배정하더라도 제외되지 않는다. 이 검사를 빠뜨리면 **과소과세**다(PO-9가 고정).
  */
 function publicOfferingExcluded(input: CapitalIncreaseInput): boolean {
-  return input.allocationMethod === "public_offering";
+  return input.allocationMethod === "public_offering" && input.isListed === true;
 }
 
 /** 간주모집이라 제외가 취소된 경우에만 붙이는 근거 note (감사 추적성 — 세액은 normal과 같다) */
 function deemedPublicOfferingNote(input: CapitalIncreaseInput): string | undefined {
-  return input.allocationMethod === "deemed_public_offering"
+  return input.allocationMethod === "deemed_public_offering" && input.isListed === true
     ? `유가증권 모집방법 배정이나 간주모집이라 제외 취소 (${GIFT.CI_DEEMED_PUBLIC_OFFERING})`
     : undefined;
 }

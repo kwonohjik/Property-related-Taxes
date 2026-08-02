@@ -311,8 +311,35 @@ export interface ContributionInput {
 }
 
 /** (11) 전환사채등 §40 — 인수·취득(①1호)·주식전환(①2호 가나다/라목)·양도(①3호) sub-case */
+/**
+ * §40①1호·2호 각 목 — 「상증법」§40①1호 가·나·다목 / 2호 가·나·다목.
+ *   "from_related"                  가목 — 특수관계인으로부터 전환사채등을 취득
+ *   "major_excess"                  나목 — 발행법인의 최대주주나 그의 특수관계인인 **주주**가
+ *                                          균등배정 초과 인수등
+ *   "major_related_nonshareholder"  다목 — 발행법인 최대주주의 특수관계인(그 법인의 **주주는 제외**)
+ *
+ * ⚠️ **계산 규칙이 아니라 해당성(분류) 규칙**이다 — 「상증령」§30①1이 「제1호 **각 목**」을,
+ *    §30①2가 「제2호 **가목부터 다목까지**」를 각각 **한 산식**으로 묶으므로 목이 달라도 세액은 같다.
+ *    목이 가르는 것은 **공모 발행 제외 대상 여부**(나·다목만)다.
+ * ⚠️ 라목(교부주식가액 < 전환가액등)은 `caseType: "conversion_reverse"`로 분리돼 있어 여기 없다.
+ * ⚠️ 「최대주주」 판정은 사용자 몫이다(「상증령」§30③ — 최대주주등 중 보유주식 최다 1인).
+ */
+export type ConvertibleBondClause =
+  | "from_related"
+  | "major_excess"
+  | "major_related_nonshareholder";
+
 export interface ConvertibleBondInput {
   caseType?: "acquisition" | "conversion" | "conversion_reverse" | "transfer"; // 기본 acquisition
+  /** §40①1호·2호 각 목 — 세액 불변, 공모 발행 제외 대상 판정용. 미지정 = "from_related"(가목) */
+  clause?: ConvertibleBondClause;
+  /**
+   * 전환사채등의 **발행** 방법 — 「상증법」§40①1호나목 괄호 공모 발행 제외 판정.
+   * ⚠️ §39의 `allocationMethod`(모집방법 **배정**·주주별 행위)와 **다른 개념**이다.
+   *    §40은 「모집방법으로 전환사채등을 **발행**한 법인」이라는 **발행법인 속성**이라 사안 단위 단일값.
+   *    타입만 공유하고 필드는 분리한다(겸용 시 dual-truth). 미지정 = "normal"
+   */
+  issuanceMethod?: ShareAllocationMethod;
   bondMarketValue: number; // 전환사채등 시가 (acquisition·transfer 이익·기준금액)
   // acquisition(§40①1호, §30①1)
   acquisitionPrice?: number; // 인수·취득가액

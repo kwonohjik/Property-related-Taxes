@@ -24,6 +24,36 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await expect(page).toHaveURL(/\/calc\/gift-tax/);
   });
 
+  test("§40①1호 나목 + 상장 + 공모 발행 → 적용 제외(0)", async ({ page }) => {
+    // 「상증법」§40①1호나목 괄호 — 주권상장법인으로서 자시법 §9⑦ 모집방법으로 발행한 법인은 제외.
+    // 목·상장·발행방법 3요건이 **모두 UI에서 엔진까지 도달**해야 0이 된다(⑤ 배선 전수 확인).
+    // AND 조건 자체(비상장이면 과세)는 anchor CB-PO-4가 고정한다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "convertible_bond");
+    const dialog = page.getByTestId("deemed-detail-dialog");
+    await page.getByTestId("cb-clause-major_excess").click();
+    await dialog.getByRole("switch", { name: /주권상장법인/ }).click();
+    await page.getByTestId("cb-issuance-public_offering").click();
+    await page.getByPlaceholder("전환사채등 시가 (원)").fill("1000000000");
+    await page.getByPlaceholder("인수·취득가액 (원)").fill("600000000");
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("§40① 적용 제외");
+  });
+
+  test("§40①1호 **가목**은 같은 입력에서 그대로 과세 (4개 목뿐)", async ({ page }) => {
+    // 「이하 이 항에서 같다」는 「전환사채등을 발행한 법인」이라는 용어에 붙어 나·다목에만 걸린다.
+    await page.goto("/calc/gift-deemed");
+    await openDetail(page, "convertible_bond");
+    const dialog = page.getByTestId("deemed-detail-dialog");
+    await dialog.getByRole("switch", { name: /주권상장법인/ }).click();
+    await page.getByPlaceholder("전환사채등 시가 (원)").fill("1000000000");
+    await page.getByPlaceholder("인수·취득가액 (원)").fill("600000000");
+    await closeDetail(page);
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toContainText("400,000,000");
+  });
+
   test("§39 증자 저가발행·실권주 재배정 → 33,330,000", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "capital_increase");
