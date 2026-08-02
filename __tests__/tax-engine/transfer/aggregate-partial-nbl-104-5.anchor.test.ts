@@ -101,22 +101,33 @@ describe("P10 / D-12 — 그룹 합산 경로가 §104⑤를 우회하지 않는
   });
 });
 
-describe("P10 회귀 — 바꾸지 않은 경로", () => {
-  it("B-35: **전량** 비사토(ratio 1)만 있는 그룹은 합산 1회 유지 — 불변", () => {
-    // 별개 자산으로 나눌 대상이 없으므로 §104⑤ 분기 자체가 없다. 종전 동작 그대로.
+describe("P10 회귀 — 부분 비사토 분기가 걸리지 않는 경로", () => {
+  /**
+   * ⚠️ **P11(D-13)에서 기대값을 갱신했다.** 두 케이스 모두 `ratio` 분기와 무관하지만,
+   * 자산별 적용세율이 **동일**해 §104⑤2호 **단서 요건 ⓑ**(적용세율이 둘 이상)를 충족하지
+   * 못한다 ⇒ 합산 1회가 아니라 **본문**(자산별 합)이 정본이다.
+   * 종전 값은 「P10에서 바꾸지 않은 경로」를 고정한 것이었을 뿐 법령 판정이 아니었다.
+   * (memory `feedback_anchor_correction_legal_priority` — anchor 갱신은 법령 정합 우선)
+   */
+  it("B-35: **전량** 비사토(ratio 1)만 있는 그룹 — `ratio` 분기 없음 + 동일세율 → 자산별 합", () => {
+    // 별개 자산으로 나눌 대상이 없으므로 §104⑤ 본문 **후단**(별개 자산 의제) 분기는 없다.
     const r = agg([full("L1", 300_000_000), full("L2", 300_000_000)]);
     const g = r.groupTaxes.find((x) => x.group === "non_business_land");
-    expect(g!.groupTaxBase).toBe(468_000_000); // 합산 base로 1회 계산
-    expect(g!.groupCalculatedTax).toBe(208_060_000);
+    expect(g!.groupTaxBase).toBe(468_000_000); // 그룹 과세표준 자체는 불변
+    // 각 자산 234,000,000: 누진 68,980,000 + 10%p × 234,000,000 = 23,400,000 → 92,380,000
+    // 종전(합산 1회) 208,060,000 — 둘 다 38%라 ⓑ 불충족이므로 P11에서 정정.
+    expect(g!.groupCalculatedTax).toBe(184_760_000);
   });
 
-  it("B-35b: 비사업용토지가 아닌 다건은 종전대로 합산 1회 — 불변", () => {
+  it("B-35b: 비사업용토지가 아닌 다건 — 동일세율(38%)이라 자산별 합", () => {
     const r = agg([
       land("P1", 200_000_000, { isNonBusinessLand: false }),
       land("P2", 300_000_000, { isNonBusinessLand: false }),
     ]);
     const g = r.groupTaxes.find((x) => x.group === "progressive");
     expect(g!.groupTaxBase).toBe(390_000_000);
-    expect(g!.groupCalculatedTax).toBe(130_060_000);
+    // 156,000,000 → 39,340,000 · 234,000,000 → 68,980,000 (둘 다 §55① 38% 구간)
+    // 종전(합산 1회) 130,060,000.
+    expect(g!.groupCalculatedTax).toBe(108_320_000);
   });
 });
