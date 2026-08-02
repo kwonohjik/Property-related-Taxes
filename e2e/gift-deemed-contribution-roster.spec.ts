@@ -78,6 +78,21 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
     const breakdown = page.getByTestId("deemed-contribution-breakdown");
     await expect(breakdown).toContainText("175,000,000");
     await expect(breakdown).toContainText("50,000,000");
+
+    // 고가 수증자는 각자 독립 납세의무자 → 이관 대상 1명 선택 (Phase B ⑫)
+    const selector = page.getByTestId("con-high-donee-selector");
+    await expect(selector).toBeVisible();
+    await expect(selector.locator("option")).toHaveCount(2);
+    await selector.selectOption("1"); // 둘째 수증자 C
+
+    await page.getByTestId("deemed-to-wizard").click();
+    await expect(page).toHaveURL(/\/calc\/gift-tax/);
+    // 마법사 2단계(증여재산)에 **선택한 C**의 50,000,000이 들어왔는지 — 첫 행 B(175,000,000) 고정이 아님.
+    // (sessionStorage는 마법사 마운트 시 소비·삭제되므로 화면으로 확인한다)
+    await page.getByRole("button", { name: "다음" }).click();
+    const assets = page.getByText("현물출자에 따른 이익 — C 수증자분");
+    await expect(assets).toBeVisible();
+    await expect(page.getByText("50,000,000").first()).toBeVisible();
   });
 
   test("계산사례3 저가 roster無 — gross 4,000,000 + 자기지분 경고", async ({ page }) => {

@@ -43,6 +43,10 @@ export function DeemedGiftResultView({
     return <AllocationResultView result={result} onToGiftTax={onToGiftTax} />;
   }
 
+  // §39의3 고가인수 과세 수증자 — prefill 대상 선택지(가액 0 = 기준금액 미달, 신고 대상 아님).
+  // 인덱스 기준을 prefill(`buildGiftWizardPrefill`)과 동일하게 **과세 행만**으로 맞춘다.
+  const contribTaxableDonees = (result.contributionBreakdown ?? []).filter((r) => r.value > 0);
+
   // §41의3④ 단서·령§31의3⑥ 평가손실 환급 — 증여이익(과세)과 별도 표시(정적 색조 매핑)
   const isRefund = result.direction === "refund";
   const headLabel = isRefund ? "평가손실 환급 대상액" : "증여재산가액 (증여이익)";
@@ -269,6 +273,32 @@ export function DeemedGiftResultView({
                 각 {result.caseType === "high" ? "수증자" : "증여자"}는 위 이익을 각자의 증여재산가액으로 별도 증여세를 신고합니다.
                 &nbsp;<LawArticleModal legalBasis={GIFT.DUP_EXCLUSION_ANNUAL} />
               </p>
+
+              {/* 고가 — 수증자는 각자 독립 납세의무자(동시증여 아님) ⇒ 이관 대상 1명 선택.
+                  선례: 감자 §39의2 `cd-multi-donee-select` · 특정법인 §45의5 */}
+              {result.caseType === "high" && contribTaxableDonees.length > 1 && (
+                <div
+                  className="mt-3 rounded-md border border-rose-200 bg-rose-50/40 p-3"
+                  data-testid="con-high-donee-select"
+                >
+                  <p className="text-sm font-semibold text-rose-800">증여세 계산 대상 수증자 선택</p>
+                  <select
+                    value={selectedDoneeIndex}
+                    onChange={(e) => onSelectDonee?.(Number(e.target.value))}
+                    data-testid="con-high-donee-selector"
+                    className="mt-2 w-full rounded-md border border-rose-200 bg-white px-2 py-1.5 text-sm"
+                  >
+                    {contribTaxableDonees.map((d, i) => (
+                      <option key={`${d.party}-${i}`} value={i}>
+                        {d.party} — 증여재산가액 {formatKRW(d.value)}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    선택한 수증자의 건만 증여세 마법사로 이관됩니다. 나머지 수증자는 다시 선택해 각각 이관하세요.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

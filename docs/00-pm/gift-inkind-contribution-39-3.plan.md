@@ -192,7 +192,7 @@ caseType이 역할 결정: 저가=증여자(현물출자자 外 전체 주주), 
 ### 결정 4 — 증여세 본세 prefill **별건 분리** (사용자 확정 2026-06-25)
 §47 증여자별 과세표준 원칙상 별건 분리. **저가/고가 비대칭** (실측 확인):
 - **저가 (1 수증자=현물출자자, N 증여자)** → **기존 동시증여 메커니즘 재사용** (`lib/tax-engine/gift-simultaneous.ts` `calcSimultaneousGifts`, 상증령 §46①2호 공제 안분·법 §47② 동일인 합산 가드). prefill이 현 신고 건 + `simultaneousGifts[]`(`GiftSubFormState`, `components/calc/gift/SimultaneousGiftCard.tsx`) 배열을 증여자별로 populate. **다중 giftItems 단순 합산 금지** — 서로 다른 증여자는 §47상 합산 불가(동일인 그룹 아닌 한). `project_gift_simultaneous_multi` 패턴.
-- **고가 (1 증여자=현물출자자, N 수증자=독립 납세의무자)** → 동시증여 아님(동시증여=동일 수증자 전제). N개 **독립 증여세 건**. 현 prefill은 단일 수증자 타깃 → 결과뷰에서 수증자별 증여재산가액 리스트 제시 + 사용자가 수증자 1명 선택해 그 건 prefill(또는 순차). **고가 multi-수증자 자동 N-건 UX는 Phase B 설계에서 확정.**
+- **고가 (1 증여자=현물출자자, N 수증자=독립 납세의무자)** → 동시증여 아님(동시증여=동일 수증자 전제). N개 **독립 증여세 건**. ✅ **확정·구현(2026-08-02)**: 마법사 세션 1개 = 신고 1건이므로 N건 동시 주입은 불가 — **결과뷰 과세 수증자 select → 선택 1건 이관**(`conSelectedDoneeIndex`). 선례 그대로: 감자 §39의2 `cdSelectedDoneeIndex` · 특정법인 §45의5 `scSelectedDoneeIndex`. 목록·이관 기준은 **과세 행(value > 0)만** — §29의3② 기준금액 미달 행은 신고 대상이 아니다.
 
 ---
 
@@ -226,7 +226,7 @@ caseType이 역할 결정: 저가=증여자(현물출자자 外 전체 주주), 
 - ⑦ 결과뷰 `DeemedGiftResultView.tsx`: `contributionBreakdown` per-party 표 + `grossDeemedGiftValue` echo + 증여시기/할증배제/연대면제/§43 note. 금액칸 `amount-column-align`.
 - ⑫ prefill `gift-deemed-api.ts:288~320` `buildGiftWizardPrefill` **별건 분리** (결정 4):
   - 저가: `contributionBreakdown` N행 → 현 신고 건 + `simultaneousGifts[]`(증여자별) populate. 수증자=현물출자자, 증여자 관계=party.relation. 동시증여 경로(`calcSimultaneousGifts`) 라우팅. trust_benefit subGifts(:295~306)가 다항목 prefill 선례.
-  - 고가: 수증자별 N행 → 결과뷰 수증자 리스트 + 선택 수증자 단건 prefill(수증자=party, 증여자=현물출자자). multi-수증자 N-건 자동화는 Phase B 설계 확정.
+  - 고가: 수증자별 N행 → 결과뷰 수증자 리스트 + 선택 수증자 단건 prefill(수증자=party, 증여자=현물출자자). ✅ **완료(2026-08-02)** — `conSelectedDoneeIndex` 신설(①폼·②initial), `DeemedGiftResultView` select(`con-high-donee-selector`), `buildGiftWizardPrefill` 고가 분기가 **과세 행 필터 + 선택 인덱스**(범위 초과 시 첫 과세 행 fallback, 전원 미달 시 `giftItems: []`). anchor `__tests__/calc/gift-deemed-contribution-high-prefill.test.ts`(PB-1~6) + `...-high-donee-select.test.tsx`(PB-U1~3).
   - ⚠️ **현행 prefill은 단일 `category:"other"` 항목만 반환**(`gift-deemed-api.ts:308~318`) — contribution 분기 신설(자명하지 않음). 다중 giftItems 단순 합산 금지(저가 증여자 §47 합산 불가). 동시증여 §47② 동일인 그룹 가드(`components/calc/gift-tax-form-validate.ts:336`)와 정합 확인. `relation`→`donorRelation` 매핑, 미지정 시 마법사 "증여자 관계 선택" 차단으로 자연 가드.
 
 ### Phase C — 회귀·E2E
@@ -285,10 +285,11 @@ caseType이 역할 결정: 저가=증여자(현물출자자 外 전체 주주), 
 |---|---|
 | 저가 2단계 해석이 심판례(조심2010서3741) 기반 — 법문엔 비율 없음 | Pre-Do anchor 사례1·3 둘 다 동결. gross는 항상 echo로 노출(법문값 보존), 과세값은 안분(심판례). 결과뷰에 양값·근거 병기 |
 | 기존 CON-1/CON-H/IMP-CON 회귀 | roster optional·미사용 경로 불변 — anchor 재실행 게이트 |
-| §47 별건 증여 prefill(⑫) | **별건 분리 확정(결정 4)**. 저가=동시증여 재사용(§46①2호·§47②), 고가=수증자별 독립 건. 잔여: 고가 multi-수증자 자동 N-건 UX는 Phase B 설계 |
+| §47 별건 증여 prefill(⑫) | **별건 분리 확정(결정 4)**. 저가=동시증여 재사용(§46①2호·§47②), 고가=수증자별 독립 건. ✅ **잔여 해소(2026-08-02)** — 고가 multi-수증자는 결과뷰 select로 1건씩 이관 |
 | 동시증여 §47② 동일인 그룹 가드 충돌 | 저가 증여자가 동일인 그룹(예 父+祖)이면 `components/calc/gift-tax-form-validate.ts:336`(UI 가드) + `lib/tax-engine/gift-simultaneous.ts` `mergeSameDonorGroupGifts`(엔진 병합) 발동. roster→prefill 시 동일그룹 합산 입력 안내. relation 미지정 시 "증여자 관계를 선택하세요"로 자연 차단 |
 | 고가 3억 게이트 per-donee↔aggregate | §29의3② "그 이익"=ratio 적용 후 per-donee 판정. roster無 aggregate 경로의 3억 게이트는 **합계 기준**(다수 특수관계인 개인별<3억·합계≥3억 시 오판정 가능). per-donee 정확 판정은 roster 경로에서만. 30% 게이트는 per-share 공통. 6 계산사례는 30%로 통과해 수치영향 0 |
 | ESLint --fix named export 제거 | 신규 import 1라인 1named (CLAUDE.md 함정) |
+| 🟠**OPEN — 고가 roster 행 라벨 오기**(2026-08-02 발견, 미수정) | `contribution-form.tsx:67` 행 라벨이 `isHigh ? "인수 신주수" : "현물출자 전 보유주식수"`인데, 이 입력은 `gift-deemed-api.ts:267`에서 `ContributionParty.preShares`로 들어가 `contribution-in-kind.ts:174` `base × preShares / preContribShares` **지분비율의 분자**가 된다. 검증도 `Σshares ≤ conPreShares`(발행주식총수) 기준(`gift-deemed-validate.ts:185~188`)이고, TBC-2 anchor도 B 35,000/100,000 = 35% **기존 보유주식수**다. 고가에서 신주를 인수하는 쪽은 현물출자자(폼-전역 `conAllocatedShares`, 같은 라벨)이고 수증자는 인수하지 않는다 ⇒ 고가 라벨은 **"현물출자 전 보유주식수"**여야 한다. 라벨만 오기이고 산식 영향 0(사용자가 라벨대로 입력하면 분자가 틀림). 별건 수정 필요 |
 
 **완료 정의**: TBC 6 anchor green · CON-1/CON-H/IMP-CON 불변 · `tsc --noEmit` 0 · gift-deemed 전 테스트 green · 결과뷰 per-party 표·gross echo·법령 note 표시 · 브라우저(또는 E2E) 확인.
 

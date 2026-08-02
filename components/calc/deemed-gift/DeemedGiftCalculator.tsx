@@ -77,7 +77,11 @@ export function DeemedGiftCalculator() {
   const selectDonee = (i: number) =>
     setForm((p) => ({
       ...p,
-      ...(result?.type === "specific_corp" ? { scSelectedDoneeIndex: i } : { cdSelectedDoneeIndex: i }),
+      ...(result?.type === "specific_corp"
+        ? { scSelectedDoneeIndex: i }
+        : result?.type === "contribution"
+          ? { conSelectedDoneeIndex: i }
+          : { cdSelectedDoneeIndex: i }),
     }));
 
   return (
@@ -144,7 +148,13 @@ export function DeemedGiftCalculator() {
         <DeemedGiftResultView
           result={result}
           onToGiftTax={handleToGiftTax}
-          selectedDoneeIndex={result.type === "specific_corp" ? form.scSelectedDoneeIndex : form.cdSelectedDoneeIndex}
+          selectedDoneeIndex={
+            result.type === "specific_corp"
+              ? form.scSelectedDoneeIndex
+              : result.type === "contribution"
+                ? form.conSelectedDoneeIndex
+                : form.cdSelectedDoneeIndex
+          }
           onSelectDonee={selectDonee}
         />
       )}
