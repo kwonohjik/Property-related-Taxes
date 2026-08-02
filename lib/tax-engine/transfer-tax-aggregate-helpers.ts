@@ -12,7 +12,7 @@ import {
   type TransferTaxResult,
 } from "./transfer-tax";
 import { calculateProgressiveTax } from "./tax-utils";
-import { resolveSplitAwareTax, hasPartialNonBusinessLand } from "./transfer-tax-split-rate";
+import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import type { SplitRatePart } from "./transfer-tax-split-rate";
 import { clauseBucketKey } from "./transfer-tax-rate-calc";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -396,28 +396,16 @@ export function aggregateByGroup(
        * 나뉘고, 반대로 「해당 호는 다른데 승자만 같은」 자산이 합쳐진다(계획서 E-2).
        */
       candidateClauses: tr.candidateClauses,
-      /** §104⑤ 본문이 「각 호별로 합산한 자산」이라 정한 **파트 목록**(있으면). */
+      /**
+       * §104⑤ 합산 단위인 **파트 목록**(있으면).
+       * 본문 후단이 「각각을 **별개의 자산**으로 보아」라고 정하므로, 자산 하나가 둘 이상의
+       * 호에 걸치면(토지·건물 분리취득 · 한 필지 중 일부만 비사업용) **파트가 곧 합산 단위**다.
+       * ⚠️ 파트를 자산 단위 합산 1회로 되돌리면 그 분해가 사라진다 — 특히 부분 비사토는
+       *   `calcTax`가 곧바로 폐기된 모델 A를 내므로 P8 정정이 무효화된다(D-12).
+       */
       parts: tr.splitPartDetail?.parts,
-      splitParts: tr.splitPartDetail !== undefined,
-      // 한 필지 중 일부만 비사업용 — §104⑤ 본문 후단으로 **별개 자산 의제**가 걸린 자산.
-      partialNbl: hasPartialNonBusinessLand(records[i].correctedSingleInput),
     };
   };
-  /**
-   * 자산 **내부**에서 §104⑤가 이미 적용된 자산인가.
-   *   · `splitParts`  — 토지·건물 파트 분해(§94①1호상 별개 자산)
-   *   · `partialNbl`  — 한 필지 중 비사토/그 외 분해(§104⑤ 본문 후단 별개 자산 의제)
-   *
-   * 이런 자산을 **그룹 합산 1회**로 되돌리면 그 분해가 사라진다. 특히 부분 비사토는
-   * `calcTax`가 곧바로 모델 A(`누진(전체) + 10%p × 비사토분`)를 내므로 **P8 정정이 무효화**된다
-   * — 그룹 합산 경로는 `resolveSplitAwareTax`를 거치지 않기 때문이다(계획서 D-12).
-   *
-   * ⚠️ 대가로 §104⑤2호 **단서 ⓐ**(동일 호 합산) 혜택을 포기한다(D-7과 같은 성질). 다만
-   *   **법문 밖 산식(모델 A)을 법문 안 선택지(2호 본문)로** 바꾸는 것이라 방향이 명확하다.
-   *   엄밀한 해법은 의제된 **파트 단위 그룹핑**이며 대규모 리팩터다(계획서 §4.8).
-   */
-  const isAssetLevelClause5 = (p: { splitParts: boolean; partialNbl: boolean }) =>
-    p.splitParts || p.partialNbl;
   for (const [group, idxList] of groupMap) {
     const groupGrossGain = idxList
       .filter((i) => records[i].income > 0)
@@ -454,37 +442,64 @@ export function aggregateByGroup(
       //      사업용과 세율이 같아져 후보 집합이 달라도 합쳐졌다(174,060,000 ↔ 160,000,000).
       //   ⓒ 키가 하나라도 다르면 **그룹 전체**가 자산별 합으로 떨어져 같은 호끼리의 합산까지
       //      끊겼다 — 누진 호 분기의 D-12와 같은 성질이다(P12가 그쪽을 먼저 고쳤다).
+      // 2026-08-02 **P13**(계획서 `transfer-104-5-short-term-part-bucket.plan.md` — **세액 변경**):
+      //   버킷 멤버가 **자산**이라, 파트가 있는 자산(토지·건물 분리취득 · 한 필지 중 일부만
+      //   비사업용)은 통째로 `solo`로 빠져 **같은 호인 다른 자산과 합산되지 않았다**.
+      //     실측 `[split 주택, 단순 주택]` 409,060,000 → **432,060,000**(과소 23,000,000).
+      //   ⭐ 도출값은 추정이 아니다 — **파트가 없는 동등 입력**(과세표준 합계·해당 호 동일)에
+      //     현행 엔진이 **이미** 432,060,000을 냈다. 「split이라는 이유만으로」 빠지던 것이다.
+      //   누진 호 분기는 P12가 이미 파트를 버킷 멤버로 풀었다(D-7 51,000,000 · D-12 23,400,000)
+      //   — `short_term`이 **같은 결함의 마지막 조각**이었다.
       const perAsset = idxList.map((i) => assetTaxOf(i));
-      const buckets = new Map<string, number[]>();
-      perAsset.forEach((p, n) => {
-        // 자산 **내부**에서 §104⑤가 이미 적용된 자산(split 파트·부분 비사토)은 묶지 않는다 —
-        // 그룹 합산 1회로 되돌리면 그 분해가 사라진다(`isAssetLevelClause5` 주석).
-        // ⚠️ 종전과 달리 **그 자산만** 단독으로 빠진다. 같은 호인 다른 자산의 합산은 유지된다.
-        const k = isAssetLevelClause5(p)
-          ? `solo-${n}`
-          : clauseBucketKey(p.candidateClauses, p.rate, n);
-        buckets.set(k, [...(buckets.get(k) ?? []), n]);
+      /**
+       * §104⑤ 합산 단위 — 파트가 있으면 그 파트들, 없으면 자산 자체가 파트 1개다.
+       * 근거: §104⑤ 본문 **후단**(「각각을 **별개의 자산**으로 보아」) + 예규(「"자산별" =
+       * 각 호별로 합산한 자산」). 누진 호 분기와 **같은 형태**다.
+       */
+      const stParts = perAsset.flatMap((a, n) =>
+        a.parts
+          ? a.parts.map((p) => ({
+              taxBase: p.taxBase,
+              calculatedTax: p.calculatedTax,
+              appliedRate: p.appliedRate,
+              candidateClauses: p.candidateClauses,
+              // ⚠️ 파트가 **실어 보낸 입력**을 그대로 쓴다. 재구성하면 dual-truth다 — 토지 파트는
+              //   `buildLandRateInput`으로 §104② 기산일을 확정했고, 비사업용 파트는
+              //   `nonBusinessLandAreaRatio`를 1로 되돌린 입력이다.
+              rateInput: p.rateInput,
+            }))
+          : [
+              {
+                taxBase: a.taxBase,
+                calculatedTax: a.tax,
+                appliedRate: a.rate,
+                candidateClauses: a.candidateClauses,
+                rateInput: records[idxList[n]].correctedSingleInput,
+              },
+            ],
+      );
+      const buckets = new Map<string, typeof stParts>();
+      stParts.forEach((p, i) => {
+        const k = clauseBucketKey(p.candidateClauses, p.appliedRate, i);
+        buckets.set(k, [...(buckets.get(k) ?? []), p]);
       });
       groupCalculatedTax = 0;
       appliedRate = 0;
       for (const bucket of buckets.values()) {
         if (bucket.length === 1) {
-          groupCalculatedTax += perAsset[bucket[0]].tax;
-          appliedRate = Math.max(appliedRate, perAsset[bucket[0]].rate); // 표시용 최고세율
+          groupCalculatedTax += bucket[0].calculatedTax;
+          appliedRate = Math.max(appliedRate, bucket[0].appliedRate); // 표시용 최고세율
           continue;
         }
-        // 합산 과세표준 × 세율로 **1회 floor** — 자산별 floor 합산은 floor 횟수 차이로 ±N원
+        // 합산 과세표준 × 세율로 **1회 floor** — 파트별 floor 합산은 floor 횟수 차이로 ±N원
         // 어긋난다(일괄양도 일체과세 70% 사례 28이 이 경로다).
         //
         // 버킷이 그룹 전체면 `mergedBase === groupTaxBase`다(종전 경로와 동일) —
         // `allocateBasicDeduction`이 `take = min(remaining, income)`으로 배분해
-        // `allocatedBasic[i] ≤ incomeAfterOffset[i]`이므로 자산별 `max(0, …)`이 깎이지 않는다.
-        const mergedBase = bucket.reduce((s, n) => s + perAsset[n].taxBase, 0);
-        const tr = calcTax(
-          mergedBase,
-          parsedRates,
-          records[idxList[bucket[0]]].correctedSingleInput,
-        );
+        // `allocatedBasic[i] ≤ incomeAfterOffset[i]`이고, 파트 과세표준의 합은 자산 과세표준과
+        // 같다(`computeSplitPartTax:286`가 어긋나면 `null`을 반환해 파트를 만들지 않는다).
+        const mergedBase = bucket.reduce((s, p) => s + p.taxBase, 0);
+        const tr = calcTax(mergedBase, parsedRates, bucket[0].rateInput);
         groupCalculatedTax += tr.calculatedTax;
         appliedRate = Math.max(appliedRate, tr.appliedRate);
       }
