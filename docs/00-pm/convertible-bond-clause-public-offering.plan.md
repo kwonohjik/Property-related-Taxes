@@ -301,6 +301,10 @@ anchor 2건 추가(`capital-increase-public-offering.anchor.test.ts`):
 
 ⇒ 여기에 `isListed`만 신설하면 **「상장 여부는 묻는데 상장 단서는 반영하지 않는」 어정쩡한 상태**가 된다. 안 C의 결정을 부분적으로 뒤집는 셈이라 이번 범위에서 다루지 않는다.
 
+> 🔴 **정정 (2026-08-02, 안 C 재검토 후)**: 위 판단은 **과했다**. 안 C가 막은 것은 「상장이면 ㉯를 종가평균으로 바꾼다」는 **평가 산식 단서**이고, 공모 제외의 상장 요건은 「이 법인이 주권상장법인인가」라는 **사실 플래그**다. 공모 게이트는 `perShareAfter` 산출이 **끝난 뒤** 거르는 필터(`capital-increase-allocation.ts:79·92`)라 `isListed`를 그 조건에만 쓰면 ㉯·delta·zero-sum이 **한 톨도 바뀌지 않는다**. 두 축은 분리된다.
+>
+> ⇒ `isListed` 추가(**안 D1**)로 안 C를 뒤집지 않고 오제외를 해소할 수 있다. 근거·실측·가드는 [`capital-increase-captable-listed-proviso.plan.md`](capital-increase-captable-listed-proviso.plan.md) **v1.7 §13**.
+
 🟠 **잔존 리스크(등록)**: 비상장 사안에서 cap-table 행에 `public_offering`을 고르면 **잘못 제외**된다. 안 C 안내 문구에 「공모 배정 제외는 주권상장법인 전제」 한 줄을 덧붙이는 것이 최소 완화책이며, 근본 해소는 안 C 재검토와 함께여야 한다.
 
 > 사용자가 범위를 §40으로 한정하면 §6-1도 **별건 등록**하고 §40만 진행한다.
