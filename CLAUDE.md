@@ -56,10 +56,23 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 | | 시점 | 내용 |
 |---|---|---|
 | **pre-push** | 매 푸시 (빠름) | 폰트·톤 + typecheck + **lint** + **범위 선택** 테스트 |
-| **CI** | PR 1회 (철저) | fresh checkout + **`npm ci`** + typecheck + lint + **전체** 테스트 |
+| **CI** | PR 1회 (철저) | fresh checkout + **`npm ci`** + typecheck + lint + **전체** 테스트 + **E2E** |
 
 - **lint는 pre-push로 이관했다**(실측 26초). 종전엔 lint-staged가 변경 파일만 `--fix`하고 전체 lint 관문이 CI뿐이었는데 그 CI가 상시 실패해 **실질 관문이 없었다**.
 - **CI가 주는 고유 신호는 fresh `npm ci`**다 — 러너가 실행마다 독립 디렉터리를 쓰므로 로컬 node_modules가 가리던 lockfile·의존성 문제가 드러난다. 그 신호가 유일하므로 CI는 **범위를 좁히지 않고 전체 테스트**를 돌린다(좁히면 pre-push의 재탕이 된다).
+
+#### E2E는 CI에만 있다 (2026-08-03 추가)
+
+**종전엔 E2E가 어느 자동 게이트에도 없었다** — pre-push도 CI도 vitest만 돌렸다. 그래서 PR#1008이 `gift-deemed-capital-increase.spec.ts`를 **조용히 무력화**시킨 것을 다음 작업에서야 발견했다(`toContainText("0")`이 substring이라 `"300,000,000"`도 통과 → 깨진 게 아니라 검증을 멈춘 것).
+
+pre-push에는 넣지 않는다 — **5~7분**이 매 푸시에 붙으면 개발 흐름이 끊긴다. PR 1회만 돌리고 self-hosted라 분 과금도 없다.
+
+두 전제가 이 게이트를 의미 있게 만든다(`playwright.config.ts`):
+
+- 🔴 **CI 포트 3199** — 러너가 개발자 Mac이라 3000에 dev 서버가 떠 있으면 `reuseExistingServer`가 그것을 잡아 **PR 코드가 아니라 로컬 작업 트리**를 테스트한다. `reuseExistingServer: !CI`도 함께 건다.
+- **`e2e/known-failures.ts`** — master에도 실패하는 **16건**을 제외한다. 그대로 넣으면 CI가 상시 빨간불이 되어 게이트 구실을 못 한다(lint가 상시 실패 CI에만 있어 실질 관문이 없던 것과 같은 실패). **목록은 줄이기만 한다** — 새 실패를 추가하는 것은 회귀를 숨기는 것이다.
+
+**spec은 포트를 하드코딩하지 않는다** — `page.goto("/calc/...")` 상대경로로 `baseURL`을 쓴다. `http://localhost:3000` 고정 spec 1건이 CI 포트에서 전건 실패해 정정했다(`inheritance-cohabit-redev-right`).
 - 문서 전용(`**.md`·`docs/**`·`.claude/**`)·draft PR은 건너뛴다 — 이제 과금이 아니라 **개발 머신 부하·대기시간** 때문이다.
 #### 🔒 신규 워크플로는 `runs-on: self-hosted`가 **기본**이다 (pre-push 하드블록)
 
