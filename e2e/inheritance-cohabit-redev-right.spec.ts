@@ -4,20 +4,20 @@
  * 시나리오 1: 1+1 조합원입주권 선택 시 미적용 배지 노출 + CohabitRequirementBlock 외 진행 확인
  * 시나리오 2: 분양권 선택 시 rose 안내 노출
  *
- * 서버: E2E_PORT 환경변수 또는 기본 3000
+ * 서버: playwright.config.ts의 baseURL(E2E_PORT · CI는 3199)
  */
 import { test, expect, type Page } from "@playwright/test";
 import { addHeir, closeHeirEditModal } from "./_helpers/tax-flow";
 
-const PORT = process.env.E2E_PORT ?? "3000";
-const BASE = `http://localhost:${PORT}`;
+// ⚠️ 포트를 하드코딩하지 않는다 — playwright.config.ts의 `baseURL`이 상대경로에 자동 적용된다.
+//    종전 `http://localhost:3000` 고정 탓에 CI(포트 3199)에서 ERR_CONNECTION_REFUSED로 전건 실패했다.
 
 // ─────────────────────────────────────────────
 // 헬퍼: Step0 자녀(동거) 추가 + Step1 아파트 추가 + 동거주택 토글 ON
 // ─────────────────────────────────────────────
 
 async function setupCohabitApartmentWithChild(page: Page) {
-  await page.goto(`${BASE}/calc/inheritance-tax`);
+  await page.goto("/calc/inheritance-tax");
 
   // 상속개시일: 2024-06-01
   await page.getByLabel("연도").first().fill("2024");
