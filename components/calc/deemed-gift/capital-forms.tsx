@@ -360,9 +360,12 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
 
       {/*
         주권상장법인 단서 미반영 안내 (안 C) — 계획서
-        docs/00-pm/capital-increase-captable-listed-proviso.plan.md v1.2 §6.
-        차단(validate)하지 않고 **안내에 그친다**: 다주주 모드는 상장 여부를 입력받지 않으므로
-        상장임을 판정할 방법이 없고, 비상장 다주주 사용을 막아서도 안 된다(자동 판정 금지).
+        docs/00-pm/capital-increase-captable-listed-proviso.plan.md v1.2 §6 · v1.7 §13.
+        차단(validate)하지 않고 **안내에 그친다**: 비상장 다주주 사용을 막아서도 안 된다.
+
+        ⚠️ v1.7(안 D1): 아래 토글은 **공모 배정 제외(§39① 괄호 「주권상장법인이」)의 AND 조건**에만
+           쓰인다. 평가 산식 단서(§29②1가·3나)는 **여전히 미반영**이다 — 두 축을 혼동하지 말 것.
+           종전 주석의 「상장 여부를 입력받지 않으므로」는 이 토글 도입으로 더 이상 사실이 아니다.
       */}
       <ToneCard tone="amber" title="주권상장법인이라면 이 모드를 쓰지 마세요" noDark>
         <p className="text-xs text-amber-800">
@@ -377,6 +380,13 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
         <p className="text-caption text-amber-700">
           비상장법인이면 이 안내는 해당하지 않습니다.
         </p>
+        <ToggleCard
+          tone="amber"
+          checked={form.ciAllocIsListed}
+          onCheckedChange={(v) => set({ ciAllocIsListed: v })}
+          title="주권상장법인 (공모 배정 제외 판정용)"
+          description="공모 배정을 §39① 적용 제외로 처리할지만 가릅니다. 위 평가가액 단서(§29②1가·3나)는 이 항목을 켜도 반영되지 않습니다."
+        />
       </ToneCard>
 
       <ToneCard

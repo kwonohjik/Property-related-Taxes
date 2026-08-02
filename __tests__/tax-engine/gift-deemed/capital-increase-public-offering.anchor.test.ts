@@ -140,10 +140,13 @@ describe("cap-table — **행별** 적용 (한 증자에 공모·특정 배정�
     expect(base.perBeneficiary.find((p) => p.beneficiaryId === "B")?.total).toBe(200_000_000);
     expect(base.perBeneficiary.find((p) => p.beneficiaryId === "C")?.total).toBe(100_000_000);
 
+    // isListed: true — §39① 괄호의 주어가 「주권상장법인이」라 공모 제외는 상장을 전제한다(안 D1).
+    // 비상장 cap-table의 공모 배정이 제외되지 않음은 CL-3이 별도로 고정한다.
     const r = calcCapitalIncreaseAllocation({
       direction: "low",
       preIssuePrice: 20_000,
       newSharePrice: 10_000,
+      isListed: true,
       shareholders: shareholders.map((s) => (s.id === "B" ? { ...s, allocationMethod: "public_offering" as const } : s)),
     });
     expect(r.perBeneficiary.find((p) => p.beneficiaryId === "B")?.total).toBe(0);
