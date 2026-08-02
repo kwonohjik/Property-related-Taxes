@@ -25,7 +25,7 @@ import { INITIAL_DEEMED, type DeemedFormState } from "@/components/calc/deemed-g
 
 type Row = DeemedFormState["ciAllocRows"][number];
 const row = (o: Partial<Row> & { id: string; name: string }): Row => ({
-  preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], ...o,
+  preShares: "", entitledShares: "", subscribedShares: "", reallocatedShares: "", relatedTo: [], allocationMethod: "normal", ...o,
 });
 
 function allocForm(rows: Row[]): DeemedFormState {

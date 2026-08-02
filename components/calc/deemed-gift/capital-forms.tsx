@@ -14,7 +14,7 @@ import { CapitalDecreaseShareholderTable } from "./CapitalDecreaseShareholderTab
 export { ContributionFields } from "./contribution-form";
 // §39①3호 전환주식 폼도 분리(800줄 정책). re-export로 import 경로 보존.
 export { ConvertibleStockFields } from "./convertible-stock-form";
-import { CI_SHARES_LABEL, ListedAvgAutoFetch } from "./capital-forms-shared";
+import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint } from "./capital-forms-shared";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -254,6 +254,15 @@ export function CapitalIncreaseFields({ form, set }: Props) {
       <CurrencyInput label="신주 1주당 인수가액" value={form.ciNewPrice} onChange={(v) => set({ ciNewPrice: v })} placeholder="신주 1주당 인수가액 (원)" />
       <CurrencyInput label="증자 주식수" value={form.ciIssuedShares} onChange={(v) => set({ ciIssuedShares: v })} placeholder="증자 주식수" />
       <CurrencyInput label={sharesLabel} value={form.ciForfeitedShares} onChange={(v) => set({ ciForfeitedShares: v })} placeholder={sharesLabel} />
+      <RadioCardGroup
+        lawLinks="상증법"
+        name="ci-allocation-method"
+        tone="rose"
+        value={form.ciAllocationMethod}
+        onChange={(v) => set({ ciAllocationMethod: v })}
+        options={ALLOCATION_METHOD_OPTIONS.map((o) => ({ ...o, testId: `ci-alloc-method-${o.value}` }))}
+      />
+      <p className="text-xs text-muted-foreground">{allocationMethodHint(form.ciAllocationMethod)}</p>
       <ToggleCard
         lawLinks="상증법"
         tone="emerald"
@@ -404,6 +413,22 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
               <CurrencyInput hideUnit label="당초 배정" value={r.entitledShares} onChange={(v) => updateRow(r.id, { entitledShares: v })} placeholder="균등 배정 신주수" />
               <CurrencyInput hideUnit label="실제 인수" value={r.subscribedShares} onChange={(v) => updateRow(r.id, { subscribedShares: v })} placeholder="실제 인수 신주수" />
               <CurrencyInput hideUnit label="재배정·제3자·초과" value={r.reallocatedShares} onChange={(v) => updateRow(r.id, { reallocatedShares: v })} placeholder="재배정/제3자/초과 신주수" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-caption text-emerald-700">배정 방법 (§39① 공모 모집 제외)</p>
+              <select
+                value={r.allocationMethod}
+                onChange={(e) => updateRow(r.id, { allocationMethod: e.target.value as CapTableRow["allocationMethod"] })}
+                aria-label={`${r.name.trim() || `주주 ${idx + 1}`} 배정 방법`}
+                data-testid={`ci-alloc-method-row-${idx}`}
+                className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm"
+              >
+                {ALLOCATION_METHOD_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1">
               <p className="text-caption text-emerald-700">특수관계인 (이 주주에게 증여한 자)</p>

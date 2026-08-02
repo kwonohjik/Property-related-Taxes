@@ -151,6 +151,10 @@ export const GIFT = {
   MERGER_SPLIT: "상증령 §28⑦",
   MERGER_SELF_GIFT: "재산세과-799, 2009.4.24.",
   CAPITAL_INCREASE: "상증법 §39",
+  /** 상증법 §39① 괄호 — 주권상장법인이 자본시장법 §9⑦ 모집방법으로 배정하면 §39① 적용 제외 */
+  CI_PUBLIC_OFFERING_EXCLUSION: "상증법 §39① 괄호 · 자본시장법 §9⑦",
+  /** 상증령 §29③ — 그 모집이 자본시장법 시행령 §11③ 간주모집이면 위 제외가 취소되어 과세 */
+  CI_DEEMED_PUBLIC_OFFERING: "상증령 §29③ · 자본시장법 시행령 §11③",
   CAPITAL_DECREASE: "상증법 §39의2",
   CONTRIBUTION: "상증법 §39의3",
   /** 상증법 §39의3① 본문 — 현물출자 납입일을 증여일로 한다 */

@@ -1,6 +1,8 @@
-# §39 증자 — **공모 모집 배정 적용제외**(§39①·상증령 §29③) 구현 계획서 v1.0
+# §39 증자 — **공모 모집 배정 적용제외**(§39①·상증령 §29③) 구현 계획서 **v1.1 ✅구현 완료**
 
 > 발단: [`gift-inkind-contribution-39-3-phase-d.plan.md`](gift-inkind-contribution-39-3-phase-d.plan.md) §1-7이 「별건」으로 남긴 항목. v1.4에서 위임체인을 끝까지 따라가 성격이 확정됐다.
+> **v1.1 환류(2026-08-02)**: 전 Phase 완료. anchor 8/8 GREEN(착수 시 **5건 RED**) · E2E 2/2 · 전체 회귀 1,167파일 13,035건 실패 0. **계획 대비 이탈 1건**: ⑧ validation을 「불요」로 봤으나 실제로도 불요였다(enum 3택이라 부정 조합 없음) — 확인 완료.
+>
 > 작성 기준: **추정 금지** — 법문은 KoreanLaw MCP 본문, 코드는 file:line·grep 실측. 미검증은 "확인 필요" 명시.
 
 ---
@@ -178,15 +180,15 @@ CI_DEEMED_PUBLIC_OFFERING: "상증령 §29③ · 자본시장법 시행령 §11�
 
 ## 6. Phase 분해
 
-| # | 작업 | 검증 |
+| # | 작업 | 결과 |
 |---|---|---|
-| **P-1** | anchor 8건 작성 → RED 확인 | PO-1·4·5·6 RED |
-| **P-2** | 법령 상수 2개 + `CapitalIncreaseInput`·`CapShareholder` 타입 | tsc 0 |
-| **P-3** | 엔진 게이트 — `increaseLow`·`increaseHigh`·cap-table 행별 | PO-1~PO-8 GREEN |
-| **P-4** | ⑬ Zod(`capitalIncreaseShape`·`capShareholderSchema`) | superRefine probe |
-| **P-5** | ① ② ④ ⑤ ⑩ 배선 — 증자·전환주식(`CsNumericSection`)·cap-table 행 | tsc 0 · lint 0 |
-| **P-6** | E2E 1건 — 공모 라디오 선택 → 결과 0 + 제외 사유 표시 | Playwright |
-| **P-7** | 전체 회귀 + 계획서·Phase D §1-7 환류 | `npm test` 실패 0 |
+| **P-1** | ✅ anchor 8건 작성 → RED 확인 | **5건 RED**(PO-1·2·4·5·6) — 예측 4건 + PO-2(간주모집 note) |
+| **P-2** | ✅ `GIFT.CI_PUBLIC_OFFERING_EXCLUSION`·`CI_DEEMED_PUBLIC_OFFERING` + `ShareAllocationMethod` 타입(barrel 재수출) | tsc 0 |
+| **P-3** | ✅ `publicOfferingExcluded()`·`publicOfferingExcludedResult()`·`deemedPublicOfferingNote()` + cap-table `publicOfferingIds` 행별 | **8/8 GREEN** |
+| **P-4** | ✅ `capitalIncreaseShape` +1(증자+전환주식 2시점 동시) · `capShareholderSchema` +1 | tsc 0 |
+| **P-5** | ✅ `RadioCardGroup` 3택(증자·전환주식 2시점) + cap-table **행별 select** · 효과 hint 공용화(`allocationMethodHint`) | tsc 0 · lint 0 errors |
+| **P-6** | ✅ E2E — 일반 300,000,000 → 공모 **0**(「모집방법」 표시) → 간주모집 **300,000,000**(「간주모집」 표시) 3단 전환 | **2/2 GREEN** |
+| **P-7** | ✅ 전체 회귀 + 환류 | 1,167파일 13,035건 실패 0 |
 
 ---
 

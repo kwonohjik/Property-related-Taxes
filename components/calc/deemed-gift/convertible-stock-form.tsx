@@ -7,7 +7,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { DeemedFormState } from "./shared";
-import { CI_SHARES_LABEL, ListedAvgAutoFetch, type Props, type SetFn } from "./capital-forms-shared";
+import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint, type Props, type SetFn } from "./capital-forms-shared";
 
 const CS_SECTION_TONE = {
   sky: { box: "border-sky-200 bg-sky-50/40", badge: "bg-sky-200 text-sky-800", title: "text-sky-700" },
@@ -24,6 +24,7 @@ type CsKeys = {
   ratioDenom: keyof DeemedFormState;
   isListed: keyof DeemedFormState;
   listedMarketAvg: keyof DeemedFormState;
+  allocationMethod: keyof DeemedFormState;
 };
 
 /** 전환주식 한 시점(전환/발행)의 §29②1~5 산식 입력 구간 */
@@ -76,6 +77,17 @@ function CsNumericSection({
       <CurrencyInput label={newPriceLabel} value={v(keys.newPrice)} onChange={on(keys.newPrice)} placeholder={`${ph} ${newPriceLabel} (원)`} />
       <CurrencyInput label="증자 주식수" value={v(keys.issuedShares)} onChange={on(keys.issuedShares)} placeholder={`${ph} 증자 주식수`} />
       <CurrencyInput label={sharesLabel} value={v(keys.forfeitedShares)} onChange={on(keys.forfeitedShares)} placeholder={`${ph} ${sharesLabel}`} />
+      <RadioCardGroup
+        lawLinks="상증법"
+        name={`cs-alloc-method-${ph}`}
+        tone="rose"
+        value={form[keys.allocationMethod] as DeemedFormState["ciAllocationMethod"]}
+        onChange={(val) => set({ [keys.allocationMethod]: val } as Partial<DeemedFormState>)}
+        options={ALLOCATION_METHOD_OPTIONS.map((o) => ({ ...o, testId: `cs-alloc-method-${ph}-${o.value}` }))}
+      />
+      <p className="text-xs text-muted-foreground">
+        {allocationMethodHint(form[keys.allocationMethod] as DeemedFormState["ciAllocationMethod"])}
+      </p>
       <ToggleCard
         lawLinks="상증법"
         tone="emerald"
@@ -168,6 +180,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
           ratioDenom: "csConvRatioDenomShares",
           isListed: "csConvIsListed",
           listedMarketAvg: "csConvListedMarketAvg",
+          allocationMethod: "csConvAllocationMethod",
         }}
       />
       <CsNumericSection
@@ -196,6 +209,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
           ratioDenom: "csIssueRatioDenomShares",
           isListed: "csIssueIsListed",
           listedMarketAvg: "csIssueListedMarketAvg",
+          allocationMethod: "csIssueAllocationMethod",
         }}
       />
     </ToneCard>

@@ -73,4 +73,39 @@ test.describe("§39 증자 이익 cap-table", () => {
     await page.getByTestId("deemed-to-wizard").click();
     await expect(page).toHaveURL(/\/calc\/gift-tax/);
   });
+
+  test("§39① 공모 모집 배정 — 적용 제외로 증여재산가액 0 (상증령 §29③ 간주모집은 과세)", async ({ page }) => {
+    await page.goto("/calc/gift-deemed");
+    await page.getByTestId("deemed-type-capital_increase").click();
+    const d = page.getByTestId("deemed-detail-dialog");
+    await d.getByLabel("연도").fill("2025");
+    await d.getByLabel("월").fill("7");
+    await d.getByLabel("일", { exact: true }).fill("1");
+    await d.getByPlaceholder("증자 전 1주당 평가가액 (원)").fill("20000");
+    await d.getByPlaceholder("증자 전 발행주식총수").fill("100000");
+    await d.getByPlaceholder("신주 1주당 인수가액 (원)").fill("10000");
+    await d.getByPlaceholder("증자 주식수").fill("100000");
+    await d.getByPlaceholder("배정받은 실권주수").fill("60000");
+
+    // ① 기본(일반 배정) — 300,000,000
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toContainText("300,000,000");
+
+    // ② 공모 배정 — 「배정」에서 제외되어 과세 요건 자체가 성립하지 않는다
+    await page.getByTestId("deemed-edit-btn").click();
+    await d.getByTestId("ci-alloc-method-public_offering").click();
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toContainText("0");
+    await expect(page.getByTestId("deemed-result")).toContainText("모집방법");
+
+    // ③ 간주모집(자시령 §11③) — 제외가 취소되어 다시 과세
+    await page.getByTestId("deemed-edit-btn").click();
+    await d.getByTestId("ci-alloc-method-deemed_public_offering").click();
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+    await expect(page.getByTestId("deemed-result-value")).toContainText("300,000,000");
+    await expect(page.getByTestId("deemed-result")).toContainText("간주모집");
+  });
 });

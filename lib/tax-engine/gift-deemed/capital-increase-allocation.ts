@@ -63,6 +63,12 @@ export function calcCapitalIncreaseAllocation(
   const relationGateApplies = direction === "high" || hasForfeitProcessing;
 
   const relatedSets = new Map(shareholders.map((s) => [s.id, new Set(s.relatedTo ?? [])]));
+  // 「상증법」§39① 괄호 — 주권상장법인이 자본시장법 §9⑦ 모집방법으로 배정한 몫은 「배정」에서 제외된다.
+  //   한 증자에 공모 배정과 특정 배정이 섞일 수 있어 **주주별 행**으로 판정한다.
+  //   ⚠️ 간주모집(「상증령」§29③ · 자시령 §11③)은 제외가 취소되므로 normal과 같이 과세된다.
+  const publicOfferingIds = new Set(
+    shareholders.filter((s) => s.allocationMethod === "public_offering").map((s) => s.id),
+  );
   const splits: DonationSplit[] = [];
   const perBeneficiary: CapitalIncreaseAllocationResult["perBeneficiary"] = [];
 
@@ -70,6 +76,7 @@ export function calcCapitalIncreaseAllocation(
     if (b.delta <= 0) continue; // 이익 본 자만 수증자
     // 집계 게이트(②⑤): 실권처리 발생 시 차액 30% 미만 AND 집계이익 3억 미만이면 미과세
     const gatedOut = hasForfeitProcessing && !ratioMet && b.delta < ABSOLUTE_THRESHOLD;
+    const publicOfferingOut = publicOfferingIds.has(b.id); // §39① 적용 제외
 
     // 손해비례 증여자별 배분 + floor 잔액 흡수(마지막 증여자가 잔액 흡수)
     const byDonor: DonationSplit[] = [];
@@ -82,14 +89,16 @@ export function calcCapitalIncreaseAllocation(
       assigned += raw;
       const isRelated = relatedSets.get(b.id)?.has(d.id) ?? false;
       const relationExcluded = relationGateApplies && !isRelated;
-      const taxable = gatedOut || relationExcluded ? 0 : raw;
-      const excludedReason = gatedOut
-        ? "이익이 기준금액(증자후가 30%·3억) 미만"
-        : relationExcluded
-          ? direction === "high"
-            ? "특수관계 부재(§39①2호)"
-            : "특수관계 부재(§39①1호나목)"
-          : undefined;
+      const taxable = publicOfferingOut || gatedOut || relationExcluded ? 0 : raw;
+      const excludedReason = publicOfferingOut
+        ? "주권상장법인의 유가증권 모집방법 배정 — §39① 적용 제외"
+        : gatedOut
+          ? "이익이 기준금액(증자후가 30%·3억) 미만"
+          : relationExcluded
+            ? direction === "high"
+              ? "특수관계 부재(§39①2호)"
+              : "특수관계 부재(§39①1호나목)"
+            : undefined;
       const row: DonationSplit = { beneficiaryId: b.id, donorId: d.id, value: taxable, excludedReason };
       byDonor.push(row);
       splits.push(row);

@@ -186,6 +186,8 @@ export interface CapitalIncreaseInput {
   // §39②: 이익을 증여한 소액주주(§29⑤) 2명 이상 → 1인 의제 (저가발행 ①1호 한정)
   smallShareholderImputation?: boolean;
   /** 주권상장법인등 — §29②1가 단서(저가 min)·§29②3나 단서(고가 max) */
+  /** 배정 방법 — §39① 공모 모집 제외 판정. 미지정 = "normal" */
+  allocationMethod?: ShareAllocationMethod;
   isListed?: boolean;
   /**
    * 증자 후 1주당 평가가액 = 평가기준일 전후 각 2개월 종가평균(§63①1가).
@@ -198,6 +200,18 @@ export interface CapitalIncreaseInput {
 // ── (8b) 증자 §39 cap-table 다수증자·다증여자 배분 (equity-delta 방식) ──
 
 /** 주주 1명의 증자 참여 명세 (cap-table 1행) */
+/**
+ * 실권주·신주의 배정 방법 — 「상증법」§39① 괄호(주권상장법인 모집방법 배정 제외) 판정.
+ *   "normal"                 기본 — 제외 대상 아님(과세)
+ *   "public_offering"        주권상장법인이 자본시장법 §9⑦ 모집방법(50인 이상 청약권유)으로 배정
+ *                            ⇒ **§39① 적용 제외**(과세 없음)
+ *   "deemed_public_offering" 그 모집이 자본시장법 시행령 §11③ **간주모집**(50인 미만 + 전매기준)
+ *                            ⇒ 「상증령」§29③으로 위 제외가 **취소**되어 과세(normal과 세액 동일)
+ * ⚠️ §39의3(현물출자)에는 적용하지 않는다 — 그쪽은 자본시장법 §165의6①3(일반공모 **방식**)로
+ *    별도 규율하며 효과도 「신주수 차감」이라 다르다.
+ */
+export type ShareAllocationMethod = "normal" | "public_offering" | "deemed_public_offering";
+
 export interface CapShareholder {
   id: string;
   name?: string;
@@ -206,6 +220,8 @@ export interface CapShareholder {
   subscribedShares: number; // 실제 인수한 총 신주수(당초+재배정+제3자+초과)
   reallocatedShares?: number; // 그 중 재배정/제3자/초과로 받은 신주수 (실권처리 판정용)
   relatedTo?: string[]; // 특수관계인 주주 id (없으면 그 증여자 귀속분 과세 0)
+  /** 이 주주가 신주를 배정받은 방법 — §39① 공모 제외 판정(행별). 미지정 = "normal" */
+  allocationMethod?: ShareAllocationMethod;
 }
 
 /** 증자 cap-table 입력 (equity-delta: 실제 ㉯ + 손해비례 배분) */

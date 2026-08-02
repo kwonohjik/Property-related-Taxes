@@ -171,6 +171,8 @@ const capitalIncreaseShape = {
   // atConversion·atIssuance도 이 shape을 재사용하므로 한 곳 수정으로 함께 커버된다.
   isListed: z.boolean().optional(),
   listedMarketAvg: z.number().nonnegative().optional(),
+  // §39① 괄호(주권상장법인 모집방법 배정 제외) · §29③ 간주모집 취소 — 전환주식 2시점도 이 shape 재사용
+  allocationMethod: z.enum(["normal", "public_offering", "deemed_public_offering"]).optional(),
 } as const;
 const capitalIncreaseSchema = z.object({ type: z.literal("capital_increase"), ...capitalIncreaseShape });
 const capitalIncreaseInnerSchema = z.object(capitalIncreaseShape);
@@ -183,6 +185,8 @@ const capShareholderSchema = z.object({
   subscribedShares: z.number().nonnegative(),
   reallocatedShares: z.number().nonnegative().optional(),
   relatedTo: z.array(z.string()).optional(),
+  // 행별 §39① 공모 제외 — 한 증자에 공모 배정과 특정 배정이 섞일 수 있다
+  allocationMethod: z.enum(["normal", "public_offering", "deemed_public_offering"]).optional(),
 });
 const capitalIncreaseAllocationSchema = z
   .object({
