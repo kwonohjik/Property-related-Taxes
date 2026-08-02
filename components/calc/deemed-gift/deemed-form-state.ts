@@ -267,6 +267,7 @@ export interface DeemedFormState {
    * low: 증여자(현물출자자 外 주주) / high: 수증자(특수관계 기존주주). 분모=conPreShares.
    */
   conParties?: Array<{ name: string; shares: string; relation: GiftDonorRelation | "" }>;
+  conSelectedDoneeIndex: number; // 고가 과세 수증자 선택 (prefill 이관용 — 각자 독립 납세의무자)
   // 전환사채 §40
   cbCaseType: "acquisition" | "conversion" | "conversion_reverse" | "transfer";
   cbMarketValue: string;
@@ -530,6 +531,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   conRelatedRatioPct: "",
   conSmallImputation: false,
   conParties: undefined,
+  conSelectedDoneeIndex: 0,
   cbCaseType: "acquisition",
   cbMarketValue: "",
   cbAcquisitionPrice: "",

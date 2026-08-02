@@ -683,20 +683,25 @@ export function buildGiftWizardPrefill(
       };
     }
 
-    // 고가: 수증자 첫 행 단건 prefill (multi-수증자 N-건 자동화는 Phase B 후속)
-    const firstDonee = result.contributionBreakdown[0];
+    // 고가: 수증자는 **각자 독립 납세의무자**(동시증여 아님 — 동시증여는 동일 수증자 전제).
+    //   마법사 세션 1개 = 신고 1건이므로 선택된 1명만 이관한다.
+    //   선례와 동일: 감자 §39의2 `cdSelectedDoneeIndex` · 특정법인 §45의5 `scSelectedDoneeIndex`.
+    // 기준금액(§29의3② 30%·3억) 미달 행은 value 0으로 남아 있다 — 신고 대상이 아니므로 제외.
+    const taxableDonees = result.contributionBreakdown.filter((bd) => bd.value > 0);
+    const selectedDonee = taxableDonees[form.conSelectedDoneeIndex] ?? taxableDonees[0];
+    if (!selectedDonee) return { giftDate: form.giftDate, giftItems: [] };
     return {
       giftDate: form.giftDate,
       donorRelation: deriveDonorRelation(
-        (firstDonee.relation ?? "other") as GiftDonorRelation,
+        (selectedDonee.relation ?? "other") as GiftDonorRelation,
         false,
       ),
       giftItems: [
         {
-          id: `deemed-contribution-high-${firstDonee.party}`,
+          id: `deemed-contribution-high-${selectedDonee.party}`,
           category: "other" as const,
-          name: `현물출자에 따른 이익 — ${firstDonee.party} 수증자분`,
-          marketValue: firstDonee.value,
+          name: `현물출자에 따른 이익 — ${selectedDonee.party} 수증자분`,
+          marketValue: selectedDonee.value,
         },
       ],
     };
