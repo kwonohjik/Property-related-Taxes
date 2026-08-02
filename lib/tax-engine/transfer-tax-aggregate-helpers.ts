@@ -340,7 +340,22 @@ export function aggregateByGroup(
   incomeAfterOffset: number[],
   allocatedBasic: number[],
   rates: TaxRatesMap,
-): GroupTaxResult[] {
+): {
+  groupTaxes: GroupTaxResult[];
+  /**
+   * 파트가 있는 자산(토지·건물 분리취득 · 한 필지 중 일부만 비사업용)의 **자산 단독 세액**.
+   * 파트가 없는 자산은 `undefined`.
+   *
+   * `PerPropertyBreakdown.refCalculatedTax`가 쓴다 — 그 필드의 종전 산식
+   * `taxBaseShare × (appliedRate + surchargeRate)`은 파트 자산에서 `appliedRate`가
+   * **파트 최고세율**이라 자산 과세표준 전체에 곱해지면 과대해진다(계획서 §4.12).
+   *
+   * ❌ 이것은 **그룹 세액의 역안분이 아니다.** `refCalculatedTax`는 **자산 단독 참고값**이고
+   *   `Σ ref ≠ 그룹 세액`은 비교과세의 본질이다(타입 문서가 「비교과세 적용 시 합산값과
+   *   차이 가능」으로 명시). 예정신고는 자산별, §104⑤는 확정신고에서 전체에 적용된다.
+   */
+  assetPartTax: { tax: number; note?: string }[];
+} {
   const groupMap = new Map<RateGroup, number[]>();
   records.forEach((r, i) => {
     if (r.result.isExempt) return;
@@ -350,6 +365,7 @@ export function aggregateByGroup(
   });
 
   const out: GroupTaxResult[] = [];
+  const assetPartTax: { tax: number; note?: string }[] = [];
   const parsedRates = parseRatesFromMap(rates);
   /**
    * 자산 1건의 산출세액 — 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세.
@@ -365,6 +381,9 @@ export function aggregateByGroup(
       parsedRates,
       taxRateInput: records[i].correctedSingleInput,
     });
+    // 파트가 있는 자산만 **자산 단독 세액**을 기록한다(§4.12 — 표시 정확화용).
+    // 자산은 그룹 하나에만 속하므로 이 대입은 자산당 1회다.
+    if (tr.splitPartDetail) assetPartTax[i] = { tax: tr.calculatedTax, note: tr.shortTermNote };
     return {
       tax: tr.calculatedTax,
       rate: tr.appliedRate,
@@ -610,7 +629,7 @@ export function aggregateByGroup(
     });
   }
 
-  return out;
+  return { groupTaxes: out, assetPartTax };
 }
 
 // ============================================================
