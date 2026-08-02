@@ -140,6 +140,16 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       const ids = new Set(rows.map((r) => r.id));
       if (rows.some((r) => r.relatedTo.some((rid) => !ids.has(rid))))
         return "특수관계인 선택이 올바르지 않습니다";
+      // 신주인수권을 포기하면 그 증자에서 더는 인수할 수 없다 ⇒ **포기와 재배정 수령은 병존 불가**.
+      //   당초배정분 인수 = 실제인수 − 재배정분. 그것이 당초배정에 미달하면 「일부 포기」다.
+      //   포기했는데 재배정까지 받은 입력은 현실에서 성립하지 않으므로 차단한다.
+      for (const r of rows) {
+        const realloc = parseAmount(r.reallocatedShares);
+        if (realloc <= 0) continue;
+        const ownSubscribed = parseAmount(r.subscribedShares) - realloc;
+        if (ownSubscribed < parseAmount(r.entitledShares))
+          return `${r.name.trim() || "주주"}: 당초 배정분을 포기한 주주는 실권주를 재배정받을 수 없습니다`;
+      }
       break;
     }
     case "capital_decrease":

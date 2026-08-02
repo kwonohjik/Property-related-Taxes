@@ -184,13 +184,28 @@ const capShareholderSchema = z.object({
   reallocatedShares: z.number().nonnegative().optional(),
   relatedTo: z.array(z.string()).optional(),
 });
-const capitalIncreaseAllocationSchema = z.object({
-  type: z.literal("capital_increase_allocation"),
-  direction: z.enum(["low", "high"]),
-  preIssuePrice: z.number().nonnegative(),
-  newSharePrice: z.number().nonnegative(),
-  shareholders: z.array(capShareholderSchema).min(2, { message: "주주를 2명 이상 입력하세요" }),
-});
+const capitalIncreaseAllocationSchema = z
+  .object({
+    type: z.literal("capital_increase_allocation"),
+    direction: z.enum(["low", "high"]),
+    preIssuePrice: z.number().nonnegative(),
+    newSharePrice: z.number().nonnegative(),
+    shareholders: z.array(capShareholderSchema).min(2, { message: "주주를 2명 이상 입력하세요" }),
+  })
+  .superRefine((val, ctx) => {
+    // 포기 ↔ 재배정 병존 불가 (⑧ gift-deemed-validate.ts와 동일 규칙 — 3중 일치)
+    val.shareholders.forEach((s, i) => {
+      const realloc = s.reallocatedShares ?? 0;
+      if (realloc <= 0) return;
+      if (s.subscribedShares - realloc < s.entitledShares) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${s.name?.trim() || "주주"}: 당초 배정분을 포기한 주주는 실권주를 재배정받을 수 없습니다`,
+          path: ["shareholders", i, "reallocatedShares"],
+        });
+      }
+    });
+  });
 const convertibleStockSchema = z.object({
   type: z.literal("convertible_stock"),
   atConversion: capitalIncreaseInnerSchema,
