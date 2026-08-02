@@ -33,7 +33,7 @@
  * 12억 안분 대상에서 그 토지분을 빼는 방식으로 처리한다
  * (`transfer-tax-mixed-use-helpers.ts` `buildHousingPart` ①→②).
  */
-import { calculateProgressiveTax, calculateHoldingPeriod } from "./tax-utils";
+import { applyRate, calculateProgressiveTax, calculateHoldingPeriod } from "./tax-utils";
 import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier } from "./appurtenant-land-rate";
 import { TRANSFER } from "./legal-codes";
@@ -571,6 +571,93 @@ export function buildCalculatedTaxStep(
 }
 
 /**
+ * 한 필지 중 **일부만** 비사업용인 토지 — §104⑤ 비교과세 (계획서 D-10 · P8).
+ *
+ * [법령 — §104⑤ 본문 **후단**]
+ *   "이 경우 **제2호의 금액을 계산할 때** … **한 필지의 토지가 제104조의3에 따른 비사업용
+ *    토지와 그 외의 토지로 구분되는 경우에는 각각을 별개의 자산으로 보아** 양도소득
+ *    산출세액을 계산한다." (2018.4.1. 이후 양도분 · 대법원 2014.10.30. 2012두15371 취지)
+ *
+ * 종전에는 `calcTax` T-2가 「누진(**전체** 과세표준) + 10%p × 비사토분」을 냈다(모델 A).
+ * 1호(가산 없는 합산 누진)도 2호(호별 산출세액 합)도 아니어서 항상 MAX를 초과했다.
+ *
+ * **`calcTax`는 건드리지 않는다** — 호출부가 9곳이고 그 계약은 「자산 하나의 세액」이다.
+ * 여기서 파트를 나눠 각각 `calcTax`에 위임하므로 **신규 세율 로직이 0**이다.
+ *
+ * @returns 부분 비사토가 아니면 `null`(호출부가 종전 경로로 후퇴)
+ */
+function computePartialNblTax(
+  ctx: SplitPartRateContext,
+  fallback: () => ReturnType<typeof calcTax>,
+): ReturnType<typeof calcTax> | null {
+  const input = ctx.taxRateInput;
+  const ratio = input.nonBusinessLandAreaRatio;
+  // `ratio = 1`(전량 비사토)·미지정은 **나눌 대상이 없다** — 파트가 하나뿐이라 2호 = 종전
+  // 세액이고 2호 ≥ 1호다. 압도적 다수 경로가 여기라 정정 범위가 `0 < ratio < 1`로 닫힌다.
+  if (!input.isNonBusinessLand || ratio === undefined || ratio <= 0 || ratio >= 1) return null;
+  if (ctx.taxBase <= 0) return null;
+
+  // 안분 기준은 **면적비율**로 종전(`calcTax` T-2)과 동일하게 둔다. split이 쓰는
+  // 「기본공제를 최고세율 파트에 전액 귀속」으로 바꾸는 것은 P8 범위 밖이다(Surgical).
+  const nblBase = applyRate(ctx.taxBase, ratio);
+  const otherBase = ctx.taxBase - nblBase;
+  if (nblBase <= 0 || otherBase <= 0) return null;
+
+  // 2호 — 각 파트를 `calcTax`에 그대로 위임한다.
+  //   비사토 파트: `ratio`를 1로 되돌려 자기 과세표준 **전량**에 §104①8호(+ §104① 후단) 적용
+  //   그 외 파트 : 비사업용이 아니므로 §104①1호(2년 미만이면 2·3호)
+  const nblPart = calcTax(
+    nblBase,
+    ctx.parsedRates,
+    { ...input, nonBusinessLandAreaRatio: 1 },
+    ctx.multiHouseSurchargeResult,
+  );
+  const otherPart = calcTax(
+    otherBase,
+    ctx.parsedRates,
+    { ...input, isNonBusinessLand: false, nonBusinessLandAreaRatio: undefined },
+    ctx.multiHouseSurchargeResult,
+  );
+  const clause2 = nblPart.calculatedTax + otherPart.calculatedTax;
+  // 1호 — 양도소득과세표준 합계액에 §55①에 따른 세율만. 가산이 없다.
+  const clause1 = calculateProgressiveTax(ctx.taxBase, ctx.parsedRates.brackets);
+
+  if (clause1 >= clause2) {
+    const base = fallback();
+    // 1호가 이겼고 값이 종전과 같으면 **아무것도 바뀌지 않는다** — 산식 문구까지 종전 그대로
+    // 둔다(위기취득 중과배제로 가산이 0인 경우가 여기다).
+    if (base.calculatedTax === clause1) return base;
+    const { baseRate, deduction } = computeBracketBreakdown(ctx.taxBase, ctx.parsedRates.brackets);
+    return {
+      calculatedTax: clause1,
+      appliedRate: baseRate,
+      progressiveDeduction: deduction,
+      surchargeSuspended: false,
+      ...(nblPart.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
+      shortTermNote:
+        `한 필지 중 비사업용 ${Math.round(ratio * 100)}% 분리(소득세법 §104⑤ 본문 후단): ` +
+        `합산 누진세액 ${clause1.toLocaleString()}이 별개 자산별 합계 ` +
+        `${clause2.toLocaleString()}보다 크다`,
+    };
+  }
+  return {
+    calculatedTax: clause2,
+    appliedRate: Math.max(nblPart.appliedRate, otherPart.appliedRate),
+    progressiveDeduction: 0,
+    surchargeSuspended: false,
+    // 파트 중과 사실을 자산 단위로 끌어올린다 — 결과 카드의 중과 배지·법령근거가 사라지지 않도록.
+    surchargeType: nblPart.surchargeType,
+    surchargeRate: nblPart.surchargeRate,
+    ...(nblPart.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
+    shortTermNote:
+      `한 필지 중 비사업용 ${Math.round(ratio * 100)}% 분리(소득세법 §104⑤ 2호·본문 후단): ` +
+      `비사업용 ${nblPart.calculatedTax.toLocaleString()} + 그 외 ` +
+      `${otherPart.calculatedTax.toLocaleString()} ` +
+      `(합산 누진세액 ${clause1.toLocaleString()}과 비교한 큰 세액)`,
+  };
+}
+
+/**
  * STEP 7 산출세액 — 파트별 세율이 성립하면 §104⑤ 비교과세 결과를, 아니면 기존 자산 단위 세액을 낸다.
  * 반환 형태는 `calcTax`와 동일해 호출부·finalize가 구분 없이 소비한다.
  */
@@ -579,7 +666,8 @@ export function resolveSplitAwareTax(
 ): ReturnType<typeof calcTax> & { splitPartDetail?: SplitPartRateResult } {
   const fallback = () =>
     calcTax(ctx.taxBase, ctx.parsedRates, ctx.taxRateInput, ctx.multiHouseSurchargeResult);
-  if (!ctx.splitDetail) return fallback();
+  // 토지·건물 분리취득이 아니어도 **한 필지 안에서** 비사업용/그 외로 갈리면 §104⑤가 걸린다.
+  if (!ctx.splitDetail) return computePartialNblTax(ctx, fallback) ?? fallback();
 
   const parts = computeSplitPartTax(ctx);
   if (!parts) return fallback();
