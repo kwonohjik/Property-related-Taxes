@@ -634,18 +634,29 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           formula={(() => {
             // §104⑤2호가 채택되면 세액은 파트별 산출세액의 합이라 `taxByBasicRate`(1호)와 다르다.
             // 1호 값을 그대로 인용하면 표시-계산 drift가 된다.
+            // 배율 초과분(비사업용 토지)은 §104⑤ 본문 **후단**에 따라 **별개 자산**으로 보아
+            // §104①8호(누진 + 10%p)를 자기 과세표준에만 적용한다. 총액에 별도로 얹지 않으므로
+            // 위 「비사업용토지 +10%p 가산세」 행이 뜨지 않는다 — 산식에서마저 빠지면
+            // 사용자는 중과가 누락된 것으로 오해한다.
+            const nbTerm = nb && t.nonBusinessSurcharge === 0
+              ? ` + 비사업용토지분 과세표준 × (누진세율 + 10%p, 소득세법 §104①8호)`
+              : "";
             if (t.rateBasis === "clause2") {
               const addon = t.surchargeAddon;
               return addon !== undefined
-                ? `주택분 과세표준 × (누진세율 + ${fmtPct(addon)}) + 상가분 과세표준 × 누진세율 — 자산별 산출세액 합계가 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호·§104⑦)`
-                : `파트별 과세표준 × 각 적용세율 합계 — 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호)`;
+                ? `주택분 과세표준 × (누진세율 + ${fmtPct(addon)}) + 상가분 과세표준 × 누진세율${nbTerm} — 자산별 산출세액 합계가 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호·§104⑦)`
+                : `파트별 과세표준 × 각 적용세율 합계${nbTerm} — 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호)`;
             }
             if (t.taxBase <= 0) return "과세표준 × 누진세율 (6%~45% 8구간) — 소득세법 §104";
             // 엔진이 신규 필드를 채웠으면 그대로 사용, 아니면 taxBase로부터 도출 (캐시 fallback)
             const fallback = deriveBasicRateBracket(t.taxBase);
             const rate = t.appliedRate && t.appliedRate > 0 ? t.appliedRate : fallback.rate;
             const deduction = t.progressiveDeduction && t.progressiveDeduction > 0 ? t.progressiveDeduction : fallback.deduction;
-            return `${fmtPlain(t.taxBase)} × ${fmtPct(rate)} - ${fmtPlain(deduction)} (소득세법 §104)`;
+            // 1호(합산 누진)가 채택된 경우 — 비사업용 가산이 포함된 2호보다 1호가 컸다는 뜻이다.
+            const nbNote = nbTerm
+              ? ` · 비사업용토지분은 별개 자산으로 보아 §104①8호를 적용한 자산별 합계(§104⑤ 2호)와 비교했으나, 합산 누진(1호)이 더 커서 1호가 채택되었습니다`
+              : "";
+            return `${fmtPlain(t.taxBase)} × ${fmtPct(rate)} - ${fmtPlain(deduction)} (소득세법 §104)${nbNote}`;
           })()}
         />
         {t.nonBusinessSurcharge > 0 && (

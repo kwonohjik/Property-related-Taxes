@@ -162,11 +162,19 @@ describe("겸용주택 상속 취득가액 엔진 정합 (소득세법 시행령
     // 필요경비 전액 토지분 배부(취득시 토지 기준시가 압도)
     expect(withExp.housingPart.landAppraisalDed).toBe(10_000_000);
     expect(withExp.housingPart.buildingAppraisalDed).toBe(0);
-    // 토지분 공제 → 비사업용 중과세·총세액 감소(non-neutral, 정정 방향)
-    expect(noExp.total.nonBusinessSurcharge).toBe(44_160_500);
-    expect(withExp.total.nonBusinessSurcharge).toBe(43_361_750);
-    expect(noExp.total.totalPayable).toBe(704_289_025);
-    expect(withExp.total.totalPayable).toBe(699_456_587);
+    // 토지분 공제 → 비사업용 중과대상 gain 감소 → 총세액 감소(non-neutral, 정정 방향)
+    //
+    // ⚠️ P6(2026-08-02 · 계획서 D-8) 이후 관측 필드가 바뀌었다 — 비사토 가산은 §104⑤2호
+    //   파트 세액 **안에서** 계산되므로 `nonBusinessSurcharge`(총액에 별도 가산되는 금액)는
+    //   0이다. 주장(필요경비가 세액을 줄인다)은 **총세액 차이**로 관측한다.
+    //   세액 자체도 낮아졌다: 704,289,025 → 655,712,475 / 699,456,587 → 651,758,662.
+    //   종전 값은 모델 A(합산 누진 + 가산)로 §104⑤ MAX를 초과한 과다과세였다.
+    expect(noExp.total.nonBusinessSurcharge).toBe(0);
+    expect(withExp.total.nonBusinessSurcharge).toBe(0);
+    expect(noExp.total.totalPayable).toBe(655_712_475);
+    expect(withExp.total.totalPayable).toBe(651_758_662);
+    // 주장의 핵심 — 필요경비가 실제로 세액을 줄인다(tax-neutral이 아니다).
+    expect(withExp.total.totalPayable).toBeLessThan(noExp.total.totalPayable);
   });
 
   // ─── 케이스#9 — 비상속(purchase) 겸용주택 회귀 ───

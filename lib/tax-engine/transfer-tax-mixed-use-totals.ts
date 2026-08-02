@@ -54,7 +54,13 @@ function shortTermRate(holdingYears: number, isHousing: boolean): number | null 
  * 세율 기산 연수는 caller가 산정해 넣는다(재도출 금지).
  */
 export interface MixedUseRatePart {
-  kind: "housing" | "commercial_land" | "commercial_building";
+  /**
+   * `non_business_land` = 주택 부수토지 배율 초과분(「소득세법」 §104의3①5호).
+   * §104⑤ 본문 **후단**이 "한 필지의 토지가 §104의3에 따른 비사업용 토지와 그 외의 토지로
+   * 구분되는 경우에는 **각각을 별개의 자산으로 보아** 양도소득 산출세액을 계산한다"고 정한다
+   * (2018.4.1. 이후 양도분 — 대법원 2014.10.30. 2012두15371 취지 반영).
+   */
+  kind: "housing" | "commercial_land" | "commercial_building" | "non_business_land";
   income: number;
   holdingYears: number;
   /**
@@ -97,11 +103,16 @@ export function buildTotalTax(
   // 2호 **단서**(동일 호·동일세율 합산)는 P1(`transfer-tax-split-rate.ts`)과 같은 규칙 —
   // 세율이 갈리면 본문인 자산별 합계다.
   //
-  // ⚠️ 범위 — `nonBizIncome > 0`(배율 초과 비사업용 토지)이면 진입하지 않는다.
-  //    §104⑤ MAX를 도입하는 순간 비사토 +10%p가 2호 안에서 계산되어 종전 모델
-  //    「합산 누진 + 가산」을 대체하는데, 그 통일은 세무 판단 대기다(계획서 D-8 · P6).
+  // 배율 초과 비사업용 토지(`kind: "non_business_land"`)도 **2호 안에서** 계산한다 —
+  // §104⑤ 본문 **후단**이 "한 필지의 토지가 §104의3에 따른 비사업용 토지와 그 외의 토지로
+  // 구분되는 경우에는 **각각을 별개의 자산으로 보아**" 산출세액을 계산하도록 정한다
+  // (2018.4.1. 이후 양도분 · 대법원 2014.10.30. 2012두15371 취지). 계획서 D-8 · P6.
+  //   종전 모델 A(`누진(합산 과세표준) + 10%p × 비사토분`)는 §104⑤ 1호도 2호도 아니었고
+  //   항상 MAX를 초과했다(과다과세 4,750,000~59,865,000 실측).
+  //
+  // ⚠️ `rateParts` 미전달(상가 파트 분해 실패 등)이면 여전히 종전 모델로 후퇴한다 — 안전측.
   const clause2 = (() => {
-    if (!rateParts || rateParts.length === 0 || nonBizIncome > 0 || taxBase <= 0) return null;
+    if (!rateParts || rateParts.length === 0 || taxBase <= 0) return null;
     const rates = rateParts.map((p) => shortTermRate(p.holdingYears, p.kind === "housing"));
     const addonOf = (i: number) => rateParts[i].surchargeAddon ?? 0;
     // 전 파트가 2년 이상이고 중과도 없으면 §55① 누진 하나뿐 — 1호와 같아지므로 진입 의미가 없다.
@@ -158,10 +169,20 @@ export function buildTotalTax(
   // 적용공제 = aggregateIncome − taxBase (= min(aggregate, 기본공제); nonBiz < 공제면 base 0으로 흡수).
   const appliedDeduction = aggregateIncome - taxBase;
   const nonBizSurchargeBase = Math.max(0, nonBizIncome - appliedDeduction);
-  const nonBusinessSurcharge = applyRate(nonBizSurchargeBase, 0.10);
-  // §104⑤1호 — 합산 과세표준 누진(+ 비사토 가산은 종전 모델). `clause2`가 있으면
-  // `nonBizIncome === 0`이므로 가산은 0이고 이 값이 곧 1호다.
+  // 비사토가 §104⑤2호 파트로 들어갔으면 가산은 **그 파트 세액 안에서** 계산된다 —
+  // 총액에 별도로 얹지 않는다(얹으면 이중 가산이고, 그것이 곧 폐기된 모델 A다).
+  // `rateParts` 미전달 fallback 경로에서만 종전 모델을 유지한다.
+  const nonBizInRateParts = rateParts?.some((p) => p.kind === "non_business_land") ?? false;
+  const nonBusinessSurcharge = nonBizInRateParts ? 0 : applyRate(nonBizSurchargeBase, 0.10);
+  // §104⑤1호 — 해당 과세기간의 양도소득과세표준 **합계액**에 §55①에 따른 세율을 적용한
+  // 산출세액. **가산 항이 없다.**
   const clause1 = taxByBasicRate + nonBusinessSurcharge;
+  // §104⑦ 표시용 가산율 — **주택 파트 전용**이다. 비사토 파트도 `surchargeAddon`(0.10)을
+  // 갖지만 그것은 §104①8호로 근거 조문이 달라, 섞으면 결과 카드가 「다주택 중과 10%p」로
+  // 오표시한다.
+  const housingSurchargeAddon = rateParts?.find(
+    (p) => p.kind === "housing" && (p.surchargeAddon ?? 0) > 0,
+  )?.surchargeAddon;
   // §104①10호 70% 단일세율 — 보유기간·비사업용 여부와 무관한 **최우선** 분기다.
   const unregisteredTax = isUnregistered ? applyRate(taxBase, 0.7) : null;
   const usesClause2 = unregisteredTax === null && clause2 !== null && clause2.tax > clause1;
@@ -177,9 +198,7 @@ export function buildTotalTax(
     appliedRate: isUnregistered ? 0.7 : usesClause2 ? clause2.maxRate : appliedRate,
     progressiveDeduction: usesClause2 ? 0 : progressiveDeduction,
     rateBasis: isUnregistered ? "unregistered" : usesClause2 ? "clause2" : "progressive",
-    ...(rateParts?.find((p) => (p.surchargeAddon ?? 0) > 0)?.surchargeAddon !== undefined
-      ? { surchargeAddon: rateParts.find((p) => (p.surchargeAddon ?? 0) > 0)!.surchargeAddon }
-      : {}),
+    ...(housingSurchargeAddon !== undefined ? { surchargeAddon: housingSurchargeAddon } : {}),
     nonBusinessSurcharge,
     transferTax,
     localTax,

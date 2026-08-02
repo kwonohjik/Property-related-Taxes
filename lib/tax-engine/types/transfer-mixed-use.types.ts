@@ -507,11 +507,18 @@ export interface MixedUseTotalTax {
   appliedRate: number;
   /** 산출세액에 적용된 누진공제액 */
   progressiveDeduction: number;
-  /** 비사업용토지 +10%p 가산세 */
+  /**
+   * 비사업용토지 +10%p 가산세 — **총액에 별도로 가산되는 금액**.
+   *
+   * ⚠️ 배율 초과분이 §104⑤2호 파트(`kind: "non_business_land"`)로 들어가면 가산은 **그 파트
+   * 세액 안에서** 계산되므로 이 값은 **0**이다(§104⑤ 본문 후단 — 별개 자산 의제).
+   * `rateParts` 미전달 fallback 경로에서만 0이 아니다. 계획서 D-8 · P6.
+   */
   nonBusinessSurcharge: number;
   /**
    * 채택된 세율 근거 — **표시-계산 drift 차단용 단일 소스**.
    *   "progressive"   §104⑤1호(합산 과세표준 누진) — `transferTax = taxByBasicRate + nonBusinessSurcharge`
+   *                   (§104⑤ 경로에서는 `nonBusinessSurcharge = 0`이라 `= taxByBasicRate`)
    *   "clause2"       §104⑤2호(자산별 산출세액 합) — `transferTax ≠ taxByBasicRate`
    *   "unregistered"  §104①10호 70% 단일세율
    * 미주입(구 캐시 결과) 시 결과 카드는 값 비교로 fallback 추론한다.
