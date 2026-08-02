@@ -144,6 +144,37 @@ export function ContributionFields({ form, set }: Props) {
       <CurrencyInput label="현물출자 주식수" value={form.conContributedShares} onChange={(v) => set({ conContributedShares: v })} placeholder="현물출자 주식수" />
       <CurrencyInput label={isHigh ? "인수 신주수" : "배정받은 신주수"} value={form.conAllocatedShares} onChange={(v) => set({ conAllocatedShares: v })} placeholder={isHigh ? "인수 신주수" : "배정받은 신주수"} />
 
+      {/* 상장 단서 — 신주수 직후(공모 제외가 그 신주수에 걸린다). UI 순서 = 로직 순서 */}
+      <ToggleCard
+        lawLinks="상증법"
+        tone="emerald"
+        checked={form.conIsListed}
+        onCheckedChange={(v) => set({ conIsListed: v })}
+        title="주권상장법인등 (§29②1가·3나 단서 준용)"
+        description={
+          isHigh
+            ? "고가: Max(종가평균, 산식 이론값) — 평가액이 산식값보다 크면 평가액"
+            : "저가: Min(종가평균, 산식 이론값) — 평가액이 산식값보다 적으면 평가액"
+        }
+      >
+        <CurrencyInput
+          label="현물출자 후 1주당 평가가액"
+          value={form.conListedMarketAvg}
+          onChange={(v) => set({ conListedMarketAvg: v })}
+          placeholder="현물출자 납입일 전후 각 2개월 종가평균 (원)"
+        />
+        <CurrencyInput
+          label="일반공모 배정 신주수"
+          value={form.conPublicOfferingShares}
+          onChange={(v) => set({ conPublicOfferingShares: v })}
+          placeholder="자본시장법 §165의6①3 방식 배정분 — 없으면 비워두세요"
+        />
+        <p className="text-xs text-muted-foreground">
+          종가평균은 상증법 §63①1가에 따라 산정합니다. 평가기준일 전후에 증자·합병 등의 사유가 있으면
+          상증령 §52의2②로 기간이 단축될 수 있습니다. 일반공모 배정분은 이익 계산의 신주수에서 제외됩니다.
+        </p>
+      </ToggleCard>
+
       {/* 고가: 비율 단일 경로(roster 無) 또는 roster 경로 */}
       {isHigh && !hasRoster && (
         <FieldCard label="현물출자자 특수관계인 주주등 지분비율" hint="고가인수 시 비율 가중 — 당사자를 직접 명시하려면 아래 명부 토글을 활성화" unit="%">

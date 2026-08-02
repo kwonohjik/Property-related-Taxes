@@ -234,8 +234,12 @@ caseType이 역할 결정: 저가=증여자(현물출자자 外 전체 주주), 
 - **E2E 신규 1건 명시**(`e2e/gift-deemed-capital.spec.ts`에 §39의3 con-case 0건 확인됨 — 추가 필수): 저가 roster 입력→결과뷰 per-party 표·gross echo 확인→"증여세 본세로 계산" handoff→gift 마법사 `SimultaneousGiftCard` N개 prefill 확인까지 1 happy-path. `feedback_browser_verify_with_playwright`·`feedback_e2e_preexisting_failures`(사전존재 실패 회귀 오인 금지).
 - **route 왕복 보존 확인**: `contributionBreakdown` 배열이 `/api/calc/gift-deemed` JSON 왕복 후 결과뷰까지 보존되는지 RTL/통합 anchor 1건(배열은 Map과 달리 소실 없으나 ⑫⑬⑭ 침묵 strip 정책 정합).
 
-### Phase D — 상장 Min (후속·optional, 계산사례 무관)
-- `caseType`과 별개 `listed?: boolean` + 후1주가 = Min[2개월시세평균 입력, 이론값]. 계산사례 3건 비상장이라 본 PR 범위 외 권장.
+### Phase D — 상장 Min/Max ✅**완료 (2026-08-02)**
+- `isListed?` + `listedMarketAvg?` + `publicOfferingShares?` 신설. **저가 = Min[종가평균, 이론값](§29②1가 단서) · 고가 = Max[…](§29②3나 단서)** — §29의3①이 두 목을 **단서째로 준용**하고 「"증자"는 "현물출자"로 본다」.
+- ⚠️ **§29의3② 30% 게이트 분모가 연쇄**로 바뀐다(「같은 호 나목을 준용하여 계산한 가액」) ⇒ Max가 **과세 여부를 뒤집을 수 있다**(anchor D-5).
+- 본칙 **§39 증자**와 **전환주식 §39①3호**(위임 자동 커버)까지 동시 적용. cap-table 경로는 방향이 주주별로 갈려 **제외**(별건).
+- 자본시장법 §165의6①3 **일반공모 배정분 제외**도 함께 구현(현물출자 전용 · 상장 게이트는 엔진 내부).
+- 계획서: [`gift-inkind-contribution-39-3-phase-d.plan.md`](gift-inkind-contribution-39-3-phase-d.plan.md) v1.2 · anchor `__tests__/tax-engine/gift-deemed/listed-per-share-bound.anchor.test.ts`.
 
 ---
 
@@ -297,7 +301,7 @@ caseType이 역할 결정: 저가=증여자(현물출자자 外 전체 주주), 
 
 ## 11. 범위 외 (SCOPE-OUT)
 
-- 상장법인 Min[2개월시세평균, 이론값] 및 시세 자동조회(키움) — Phase D 후속.
+- ~~상장법인 Min[2개월시세평균, 이론값]~~ ✅**Phase D 완료(2026-08-02)**. 시세 **자동조회(키움)** 연동만 후속 잔여.
 - §60·§63 보충적 평가 엔진 내 계산(현행대로 caller가 평가값 주입).
 - §43① 중복배제·§43② 1년합산의 **자동 다규정 비교/합산 오케스트레이션**(router Phase 3 별도) — 본 PR은 §39의3 단건 정확성 + note 표기까지. **SCOPE-OUT 근거**: 교재 계산사례 1·2·3 모두 단건 §39의3로 §43 중복배제/합산 미발생(재검토 확인).
 - 고가인수 **multi-수증자 자동 N-건** 동시 계산 UX(결정 4 — 본 PR은 수증자 선택 단건 prefill까지, N-건 자동화는 후속). 저가 동시증여 다건은 본 PR 범위.

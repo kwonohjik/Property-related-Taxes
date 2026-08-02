@@ -167,6 +167,10 @@ const capitalIncreaseShape = {
   relatedAcquiredShares: z.number().nonnegative().optional(),
   ratioDenomShares: z.number().nonnegative().optional(),
   smallShareholderImputation: z.boolean().optional(),
+  // §29②1가·3나 단서 — 주권상장법인등 Min(저가)/Max(고가). 전환주식(§39①3호)의
+  // atConversion·atIssuance도 이 shape을 재사용하므로 한 곳 수정으로 함께 커버된다.
+  isListed: z.boolean().optional(),
+  listedMarketAvg: z.number().nonnegative().optional(),
 } as const;
 const capitalIncreaseSchema = z.object({ type: z.literal("capital_increase"), ...capitalIncreaseShape });
 const capitalIncreaseInnerSchema = z.object(capitalIncreaseShape);
@@ -234,8 +238,28 @@ const contributionSchema = z
     smallShareholderImputation: z.boolean().optional(),
     // 3-state: undefined=OFF / []=ON빈(차단) / [{...}]=데이터
     parties: z.array(contributionPartySchema).optional(),
+    // §29의3①이 준용하는 §29②1가·3나 단서 + 자본시장법 §165의6①3 일반공모 제외
+    isListed: z.boolean().optional(),
+    listedMarketAvg: z.number().nonnegative().optional(),
+    publicOfferingShares: z.number().nonnegative().optional(),
   })
   .superRefine((val, ctx) => {
+    // 상장 ON인데 평균액 미입력이면 엔진이 **조용히 이론값으로 통과**한다(단서 미발동).
+    // 사용자는 단서가 적용된 줄 알게 되므로 차단한다.
+    if (val.isListed && (val.listedMarketAvg ?? 0) <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "현물출자 납입일 전후 2개월 종가평균을 입력하세요",
+        path: ["listedMarketAvg"],
+      });
+    }
+    if ((val.publicOfferingShares ?? 0) > val.allocatedShares) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "일반공모 배정 신주수가 배정받은 신주수를 초과합니다",
+        path: ["publicOfferingShares"],
+      });
+    }
     if (val.parties === undefined) return; // OFF 경로 — gross/relatedRatio 경로
     if (val.parties.length === 0) {
       ctx.addIssue({

@@ -4,7 +4,7 @@
  */
 import { GIFT } from "../legal-codes";
 import { applyRate, safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
-import { computeWeightedPerShare } from "./capital-helpers";
+import { computeWeightedPerShare, applyListedPerShareBound } from "./capital-helpers";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, ConvertibleBondInput } from "./types";
 
@@ -23,11 +23,8 @@ function creditedPerShareValue(input: ConvertibleBondInput, pick: "min" | "max")
     input.conversionPrice ?? 0,
     input.increasedShares ?? 0,
   );
-  const avg = input.listedMarketAvg ?? 0;
-  if (input.isListed && avg > 0) {
-    return pick === "min" ? Math.min(avg, theoretical) : Math.max(avg, theoretical);
-  }
-  return theoretical;
+  // §29②1가·3나 단서와 같은 규칙 — 공용 헬퍼 단일 소스(single-source-engine-helper)
+  return applyListedPerShareBound(theoretical, input, pick);
 }
 
 export function calcConvertibleBondGift(input: ConvertibleBondInput): DeemedGiftResult {

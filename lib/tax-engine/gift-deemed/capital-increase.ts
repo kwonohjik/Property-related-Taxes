@@ -1,7 +1,7 @@
 /** (8) 증자에 따른 이익의 증여 (§39) — 저가발행(①1호) / 고가발행(①2호) sub-case (시행령 §29②) */
 import { GIFT } from "../legal-codes";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
-import { computeWeightedPerShare } from "./capital-helpers";
+import { computeWeightedPerShare, applyListedPerShareBound } from "./capital-helpers";
 import type { CalculationStep } from "../types/inheritance-gift.types";
 import type { DeemedGiftResult, CapitalIncreaseInput } from "./types";
 
@@ -23,7 +23,9 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   const { preIssuePrice, preIssueShares, newSharePrice, issuedShares, forfeitedShares } = input;
   const subType = input.subType ?? "forfeited_realloc";
   // 증자 후 1주당 가액 = [(증자전평가×증자전주식수)+(인수가×증자주식수)] ÷ (증자전+증자주식수)
-  const perShareAfter = computeWeightedPerShare(preIssuePrice, preIssueShares, newSharePrice, issuedShares);
+  const theoretical = computeWeightedPerShare(preIssuePrice, preIssueShares, newSharePrice, issuedShares);
+  // §29②1가 단서 — 주권상장법인등은 증자후 평가가 산식값보다 **적으면** 그 평가액(Min)
+  const perShareAfter = applyListedPerShareBound(theoretical, input, "min");
   const perShareGain = perShareAfter - newSharePrice; // 저가: 평가 > 인수가
   const base = perShareGain > 0 ? safeMultiply(perShareGain, forfeitedShares) : 0;
 
@@ -46,7 +48,9 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
   const imputationNote = imputation ? " · §39② 소액주주 1인 의제" : "";
 
   const breakdown: CalculationStep[] = [
-    { label: "증자 후 1주당 가액", amount: perShareAfter, lawRef: GIFT.CAPITAL_INCREASE },
+    ...(perShareAfter !== theoretical ? [{ label: "증자 후 1주당 가액 (산식 이론값)", amount: theoretical }] : []),
+    { label: "증자 후 1주당 가액", amount: perShareAfter, lawRef: GIFT.CAPITAL_INCREASE,
+      note: perShareAfter !== theoretical ? `주권상장법인 평가액 적용 (${GIFT.CONTRIBUTION_LISTED_LOW})` : undefined },
     { label: "신주 1주당 인수가액", amount: newSharePrice },
     { label: "1주당 이익", amount: perShareGain },
     { label: "이익 귀속 주식수", amount: forfeitedShares },
@@ -67,7 +71,9 @@ function increaseLow(input: CapitalIncreaseInput): DeemedGiftResult {
 function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
   const { preIssuePrice, preIssueShares, newSharePrice, issuedShares, forfeitedShares } = input;
   const subType = input.subType ?? "forfeited_realloc";
-  const perShareAfter = computeWeightedPerShare(preIssuePrice, preIssueShares, newSharePrice, issuedShares);
+  const theoretical = computeWeightedPerShare(preIssuePrice, preIssueShares, newSharePrice, issuedShares);
+  // §29②3나 단서 — 주권상장법인등은 증자후 평가가 산식값보다 **크면** 그 평가액(Max)
+  const perShareAfter = applyListedPerShareBound(theoretical, input, "max");
   const perShareGain = newSharePrice - perShareAfter; // 고가: 인수가 > 평가
   const base = perShareGain > 0 ? safeMultiply(perShareGain, forfeitedShares) : 0;
 
@@ -99,7 +105,9 @@ function increaseHigh(input: CapitalIncreaseInput): DeemedGiftResult {
 
   const breakdown: CalculationStep[] = [
     { label: "신주 1주당 인수가액", amount: newSharePrice, lawRef: GIFT.CAPITAL_INCREASE },
-    { label: "증자 후 1주당 가액", amount: perShareAfter },
+    ...(perShareAfter !== theoretical ? [{ label: "증자 후 1주당 가액 (산식 이론값)", amount: theoretical }] : []),
+    { label: "증자 후 1주당 가액", amount: perShareAfter,
+      note: perShareAfter !== theoretical ? `주권상장법인 평가액 적용 (${GIFT.CONTRIBUTION_LISTED_HIGH})` : undefined },
     { label: "1주당 차액", amount: perShareGain },
     { label: "이익 귀속 주식수", amount: forfeitedShares },
     { label: "증여재산가액", amount: value, lawRef: GIFT.CAPITAL_INCREASE, note: `§39①2호 고가발행 — ${SUBTYPE_NOTE[subType]}` },

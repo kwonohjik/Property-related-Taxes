@@ -1,8 +1,10 @@
-# §39의3 현물출자 Phase D — **주권상장법인 Min/Max 단서** 구현 계획서 **v1.1**
+# §39의3 현물출자 Phase D — **주권상장법인 Min/Max 단서** 구현 계획서 **v1.2 ✅구현 완료**
 
 > 모(母)계획: [`gift-inkind-contribution-39-3.plan.md`](gift-inkind-contribution-39-3.plan.md) §7 Phase D · §11 SCOPE-OUT
 > 선행: Phase A~C ✅(PR#374) · Phase B ✅(PR#988 — 고가 multi-수증자 선택 prefill)
 > 작성 기준: **추정 금지** — 법문은 KoreanLaw MCP 본문, 코드는 file:line 실측. 미검증은 "확인 필요" 명시.
+>
+> **v1.2 구현 환류(2026-08-02)**: 전 Phase 완료. anchor 14건 GREEN(D-1~D-13 + 회귀 2케이스) · E2E 4/4 · 신규 7 폼필드가 폼·validate·UI·API 전 계층 도달 자가검증 완료. **계획 대비 이탈 2건**: ⓐ `capital-forms.tsx` 728줄(예상 704 — 750 미만이라 분리 불요) ⓑ 법령 상수 3개 신설(`GIFT.CONTRIBUTION_LISTED_LOW/HIGH`·`CONTRIBUTION_PUBLIC_OFFERING` — 문자열 리터럴 금지 정책상 필요, v1.1에 누락돼 있었음).
 >
 > **v1.1 재검토 반영(2026-08-02)**: 결정 A·B·C 확정(§3) · 🆕 **5번째 소비처 전환주식 §39①3호 발견**(§2) · 🔧 ⓒ 상장 게이트를 **엔진 안으로**(dual-truth 제거) · 🔧 result echo 2필드 **삭제**(breakdown 행으로 충분) · 🆕 §39 증자는 **평가기준일이 다름**(권리락일) · 🆕 §29③ 공모 제외와 **혼동 금지** 경고 · anchor 9 → **13건**.
 
@@ -305,16 +307,16 @@ export interface CapitalIncreaseInput {
 
 ## 8. Phase 분해 (Do는 시퀀셜)
 
-| # | 작업 | 검증 |
+| # | 작업 | 결과 |
 |---|---|---|
 | **D-0** | ✅ 결정 A·B·C 확정 (§3) | 완료 |
-| **D-1** | anchor 13건 작성 → **RED 확인** | D-1·3·5·8·10·11 RED |
-| **D-2** | `applyListedPerShareBound` 신설 + **CB 이관** | CB anchor 전건 불변 |
-| **D-3** | `ContributionInput` +3 · `CapitalIncreaseInput` +2 · 엔진 4분기(현물출자 2 + 증자 2) + ⓒ 차감 | D-1~D-13 GREEN |
-| **D-4** | ⑬ Zod(`contributionSchema` +3 · `capitalIncreaseShape` +2) + ⑧ validate 3케이스 | superRefine probe |
-| **D-5** | ① ② ④ ⑤ ⑩ 배선 — 현물출자·증자·전환주식(`CsNumericSection` 1곳) | `npx tsc --noEmit` 0 |
-| **D-6** | E2E 1건 — 상장 토글 → 평균액 입력 → breakdown 단서 행 확인 | `gift-deemed-contribution-roster.spec.ts` 확장 |
-| **D-7** | 전체 회귀 + 모계획 §7 Phase D·§11 환류 | `npm test` 실패 0 |
+| **D-1** | ✅ anchor 13건 작성 → RED 확인 | **7건 RED**(D-1·3·5·8·10·11·12) — 예측과 일치 |
+| **D-2** | ✅ `applyListedPerShareBound` 신설(`capital-helpers.ts:37`) + CB 이관(`convertible-bond.ts:27`) | CB anchor 전건 불변 |
+| **D-3** | ✅ `ContributionInput` +3 · `CapitalIncreaseInput` +2 · 엔진 4분기 + ⓒ 차감(엔진 내 상장 게이트) | anchor 14/14 GREEN |
+| **D-4** | ✅ ⑬ Zod(`contributionSchema` +3 superRefine 2규칙 · `capitalIncreaseShape` +2) + ⑧ validate 3케이스 | tsc 0 |
+| **D-5** | ✅ ① ② ④ ⑤ ⑩ 배선 — 현물출자·증자·전환주식(`CsNumericSection` 1곳 = 2시점) | 7 필드 전 계층 도달 grep |
+| **D-6** | ✅ E2E — 상장 토글 → 종가평균 13,000 → 결과 300,000,000 + 이론값 15,000 + 「상증령 §29②1가 단서」 표시 | **4/4 GREEN** |
+| **D-7** | ✅ 전체 회귀 + 계획 환류 | `npm test` 실패 0 |
 
 **파일 크기 영향**(800 트리거 · ≤700 착지 · ≥750 기회주의 분리):
 

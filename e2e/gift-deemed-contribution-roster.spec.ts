@@ -95,6 +95,30 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
     await expect(page.getByText("50,000,000").first()).toBeVisible();
   });
 
+  test("Phase D 저가 상장 Min — 이론 15,000 → 평가 13,000 · gross 300,000,000", async ({ page }) => {
+    const dialog = await openContribution(page);
+    // 저가(①1호) 기본값 — 이론값 = (20,000×100,000 + 10,000×100,000) ÷ 200,000 = 15,000
+    await dialog.getByPlaceholder("현물출자 전 1주당 평가가액 (원)").fill("20000");
+    await dialog.getByPlaceholder("현물출자 전 발행주식총수").fill("100000");
+    await dialog.getByPlaceholder("신주 1주당 인수가액 (원)").fill("10000");
+    await dialog.getByPlaceholder("현물출자 주식수").fill("100000");
+    await dialog.getByPlaceholder("배정받은 신주수").fill("100000");
+    // 주권상장법인 토글 ON → 종가평균 13,000 (< 이론 15,000 ⇒ §29②1가 단서 발동)
+    await dialog.getByRole("switch", { name: /주권상장법인등/ }).click();
+    await dialog.getByPlaceholder("현물출자 납입일 전후 각 2개월 종가평균 (원)").fill("13000");
+
+    await page.getByTestId("deemed-detail-confirm").click();
+    await page.getByTestId("deemed-calc-btn").click();
+
+    // (13,000 − 10,000) × 100,000 = 300,000,000 (비상장이면 500,000,000)
+    await expect(page.getByTestId("deemed-result-value")).toContainText("300,000,000");
+    // breakdown에 이론값 행 + 단서 근거가 표시된다
+    const result = page.getByTestId("deemed-result");
+    await expect(result).toContainText("산식 이론값");
+    await expect(result).toContainText("15,000");
+    await expect(result).toContainText("상증령 §29②1가 단서");
+  });
+
   test("계산사례3 저가 roster無 — gross 4,000,000 + 자기지분 경고", async ({ page }) => {
     const dialog = await openContribution(page);
     await dialog.getByPlaceholder("현물출자 전 1주당 평가가액 (원)").fill("1000");

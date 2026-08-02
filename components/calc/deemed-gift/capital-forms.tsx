@@ -258,6 +258,29 @@ export function CapitalIncreaseFields({ form, set }: Props) {
       <CurrencyInput label="신주 1주당 인수가액" value={form.ciNewPrice} onChange={(v) => set({ ciNewPrice: v })} placeholder="신주 1주당 인수가액 (원)" />
       <CurrencyInput label="증자 주식수" value={form.ciIssuedShares} onChange={(v) => set({ ciIssuedShares: v })} placeholder="증자 주식수" />
       <CurrencyInput label={sharesLabel} value={form.ciForfeitedShares} onChange={(v) => set({ ciForfeitedShares: v })} placeholder={sharesLabel} />
+      <ToggleCard
+        lawLinks="상증법"
+        tone="emerald"
+        checked={form.ciIsListed}
+        onCheckedChange={(v) => set({ ciIsListed: v })}
+        title="주권상장법인등 (증자 후 1주당 가액 단서 §29②1가·3나)"
+        description={
+          isHigh
+            ? "고가: Max(종가평균, 산식 이론값)"
+            : "저가: Min(종가평균, 산식 이론값)"
+        }
+      >
+        <CurrencyInput
+          label="증자 후 1주당 평가가액"
+          value={form.ciListedMarketAvg}
+          onChange={(v) => set({ ciListedMarketAvg: v })}
+          placeholder="평가기준일 전후 각 2개월 종가평균 (원)"
+        />
+        <p className="text-xs text-muted-foreground">
+          평가기준일은 상증령 §29① — 상장·코스닥 법인이 주주에게 배정하면 권리락일, 전환주식은 전환한 날,
+          그 밖에는 주식대금 납입일입니다. 종가평균은 상증법 §63①1가에 따릅니다.
+        </p>
+      </ToggleCard>
       {needsRatio && (
         <>
           <CurrencyInput label="특수관계인이 인수한 신주수" value={form.ciRelatedAcquiredShares} onChange={(v) => set({ ciRelatedAcquiredShares: v })} placeholder="특수관계인이 인수한 신주수" />
@@ -459,6 +482,8 @@ type CsKeys = {
   forfeitedShares: keyof DeemedFormState;
   relatedAcquired: keyof DeemedFormState;
   ratioDenom: keyof DeemedFormState;
+  isListed: keyof DeemedFormState;
+  listedMarketAvg: keyof DeemedFormState;
 };
 
 /** 전환주식 한 시점(전환/발행)의 §29②1~5 산식 입력 구간 */
@@ -499,6 +524,21 @@ function CsNumericSection({
       <CurrencyInput label={newPriceLabel} value={v(keys.newPrice)} onChange={on(keys.newPrice)} placeholder={`${ph} ${newPriceLabel} (원)`} />
       <CurrencyInput label="증자 주식수" value={v(keys.issuedShares)} onChange={on(keys.issuedShares)} placeholder={`${ph} 증자 주식수`} />
       <CurrencyInput label={sharesLabel} value={v(keys.forfeitedShares)} onChange={on(keys.forfeitedShares)} placeholder={`${ph} ${sharesLabel}`} />
+      <ToggleCard
+        lawLinks="상증법"
+        tone="emerald"
+        checked={form[keys.isListed] === true}
+        onCheckedChange={(val) => set({ [keys.isListed]: val } as Partial<DeemedFormState>)}
+        title={`${ph} 시점 주권상장법인등 (§29②1가·3나 단서)`}
+        description="§29②6이 §29②1~5를 상속하므로 시점별로 각각 판정합니다"
+      >
+        <CurrencyInput
+          label="증자 후 1주당 평가가액"
+          value={v(keys.listedMarketAvg)}
+          onChange={on(keys.listedMarketAvg)}
+          placeholder={`${ph} 시점 전후 각 2개월 종가평균 (원)`}
+        />
+      </ToggleCard>
       {needsRatio && (
         <>
           <CurrencyInput label="특수관계인이 인수한 신주수" value={v(keys.relatedAcquired)} onChange={on(keys.relatedAcquired)} placeholder={`${ph} 특수관계인이 인수한 신주수`} />
@@ -560,6 +600,8 @@ export function ConvertibleStockFields({ form, set }: Props) {
           forfeitedShares: "csConvForfeitedShares",
           relatedAcquired: "csConvRelatedAcquiredShares",
           ratioDenom: "csConvRatioDenomShares",
+          isListed: "csConvIsListed",
+          listedMarketAvg: "csConvListedMarketAvg",
         }}
       />
       <CsNumericSection
@@ -580,6 +622,8 @@ export function ConvertibleStockFields({ form, set }: Props) {
           forfeitedShares: "csIssueForfeitedShares",
           relatedAcquired: "csIssueRelatedAcquiredShares",
           ratioDenom: "csIssueRatioDenomShares",
+          isListed: "csIssueIsListed",
+          listedMarketAvg: "csIssueListedMarketAvg",
         }}
       />
     </ToneCard>
