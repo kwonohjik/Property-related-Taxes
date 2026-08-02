@@ -63,8 +63,13 @@ function ConPartyRow({
         onFocus={(e) => e.target.select()}
         aria-label={isHigh ? `수증자 ${idx + 1} 성명` : `증여자 ${idx + 1} 성명`}
       />
+      {/*
+        저가·고가 모두 **현물출자 전 보유주식수**다 — 이 값은 `ContributionParty.preShares`로 들어가
+        `base × preShares / preContribShares` 지분비율의 **분자**가 된다(검증도 Σ ≤ 현물출자 전 발행주식총수).
+        고가에서 신주를 인수하는 쪽은 현물출자자(폼-전역 "인수 신주수")이지 수증자가 아니다.
+      */}
       <CurrencyInput
-        label={isHigh ? "인수 신주수" : "현물출자 전 보유주식수"}
+        label="현물출자 전 보유주식수"
         value={party.shares}
         onChange={(v) => onChange({ ...party, shares: v })}
         placeholder="주식수 입력"
