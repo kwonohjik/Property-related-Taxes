@@ -241,6 +241,7 @@ export interface DeemedFormState {
   ciStockCode: string; // 키움 자동조회용 종목코드 (UI 전용)
   ciAllocationMethod: ShareAllocationMethod; // §39① 공모 모집 배정 제외
   // 증자 §39 cap-table (다수증자·다증여자)
+  ciAllocIsListed: boolean; // §39① 괄호 「주권상장법인이」 — 공모 배정 제외 AND 조건 (㉯ 미접촉)
   ciAllocDirection: "low" | "high";
   ciAllocPrePrice: string; // ㉮ 증자 전 1주당 평가가액
   ciAllocNewPrice: string; // ㉰ 신주 1주당 인수가액
@@ -530,6 +531,7 @@ export const INITIAL_DEEMED: DeemedFormState = {
   ciListedMarketAvg: "",
   ciStockCode: "",
   ciAllocationMethod: "normal",
+  ciAllocIsListed: false,
   ciAllocDirection: "low",
   ciAllocPrePrice: "",
   ciAllocNewPrice: "",

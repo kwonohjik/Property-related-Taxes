@@ -195,6 +195,8 @@ const capitalIncreaseAllocationSchema = z
     preIssuePrice: z.number().nonnegative(),
     newSharePrice: z.number().nonnegative(),
     shareholders: z.array(capShareholderSchema).min(2, { message: "주주를 2명 이상 입력하세요" }),
+    // §39① 괄호 「주권상장법인이」 — 공모 배정 제외의 AND 조건. ㉯ 계산에는 쓰이지 않는다(안 C 유지)
+    isListed: z.boolean().optional(),
   })
   .superRefine((val, ctx) => {
     // 포기 ↔ 재배정 병존 불가 (⑧ gift-deemed-validate.ts와 동일 규칙 — 3중 일치)

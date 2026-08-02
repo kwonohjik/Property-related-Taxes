@@ -230,6 +230,18 @@ export interface CapitalIncreaseAllocationInput {
   preIssuePrice: number; // ㉮ 증자 전 1주당 평가가액
   newSharePrice: number; // ㉰ 신주 1주당 인수가액
   shareholders: CapShareholder[];
+  /**
+   * 주권상장법인 여부 — 「상증법」§39① 괄호 「**주권상장법인이** …모집방법으로 배정하는 경우는 제외」의
+   * AND 조건. 미지정은 비상장으로 본다(안전측 — 제외 오적용은 과소과세 방향).
+   *
+   * 🚫 **이 값을 증자 후 1주당 평가가액(㉯) 계산에 절대 넣지 말 것.**
+   *    「상증령」§29②1가·3나 단서(상장이면 ㉯를 종가평균 Min/Max로)는 equity-delta 모델에서
+   *    「증여자 손해 합계 = 수증자 이익 합계」 항등식을 깨뜨린다(실측: 이론 ㉯ 15,000 → Σdelta 0 /
+   *    종가평균 12,000 → Σdelta −600,000,000). 그래서 **안 C로 미반영 확정**됐다.
+   *    이 필드는 「이 법인이 상장인가」라는 **사실 플래그**로만 쓰여 ㉯에 접촉하지 않는다.
+   *    (계획서 `capital-increase-captable-listed-proviso.plan.md` v1.7 §13 · anchor CL-1·CL-2)
+   */
+  isListed?: boolean;
 }
 
 /** (8-3) 전환주식 §39①3호 — 전환후 §29②1~5 이익 − 발행당시 §29②1~5 이익 (시행령 §29②6) */

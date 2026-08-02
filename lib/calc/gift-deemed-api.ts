@@ -211,6 +211,8 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
       return {
         type: "capital_increase_allocation",
         direction: form.ciAllocDirection,
+        // §39① 괄호 「주권상장법인이」 — 공모 배정 제외 AND 조건. ㉯ 계산에는 쓰이지 않는다(안 C)
+        isListed: form.ciAllocIsListed,
         preIssuePrice: parseAmount(form.ciAllocPrePrice),
         newSharePrice: parseAmount(form.ciAllocNewPrice),
         shareholders: form.ciAllocRows.map((r) => ({

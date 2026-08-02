@@ -63,11 +63,15 @@ export function calcCapitalIncreaseAllocation(
   const relationGateApplies = direction === "high" || hasForfeitProcessing;
 
   const relatedSets = new Map(shareholders.map((s) => [s.id, new Set(s.relatedTo ?? [])]));
-  // 「상증법」§39① 괄호 — 주권상장법인이 자본시장법 §9⑦ 모집방법으로 배정한 몫은 「배정」에서 제외된다.
+  // 「상증법」§39① 괄호 — **주권상장법인이** 자본시장법 §9⑦ 모집방법으로 배정한 몫은 「배정」에서 제외된다.
   //   한 증자에 공모 배정과 특정 배정이 섞일 수 있어 **주주별 행**으로 판정한다.
+  //   ⚠️ 「주권상장법인이」는 **AND 조건**이다 — 비상장법인의 모집방법 배정은 제외 대상이 아니다(과소과세 차단).
+  //      `isListed`는 여기서만 쓰이고 ㉯(`perShareAfter`)에는 접촉하지 않는다 — 안 C 유지(위 타입 주석).
   //   ⚠️ 간주모집(「상증령」§29③ · 자시령 §11③)은 제외가 취소되므로 normal과 같이 과세된다.
   const publicOfferingIds = new Set(
-    shareholders.filter((s) => s.allocationMethod === "public_offering").map((s) => s.id),
+    input.isListed === true
+      ? shareholders.filter((s) => s.allocationMethod === "public_offering").map((s) => s.id)
+      : [],
   );
   const splits: DonationSplit[] = [];
   const perBeneficiary: CapitalIncreaseAllocationResult["perBeneficiary"] = [];

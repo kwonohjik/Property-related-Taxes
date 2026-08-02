@@ -86,6 +86,12 @@ test.describe("§39 증자 이익 cap-table", () => {
     await d.getByPlaceholder("신주 1주당 인수가액 (원)").fill("10000");
     await d.getByPlaceholder("증자 주식수").fill("100000");
     await d.getByPlaceholder("배정받은 실권주수").fill("60000");
+    // 「상증법」§39① 괄호의 주어가 「주권상장법인이」라 공모 제외는 **상장이 AND 조건**이다(anchor PO-9).
+    // 첫 단계에서 켜 둔다. ⑧ validate가 상장이면 종가평균을 요구하므로(gift-deemed-validate.ts:130)
+    // 함께 입력하되, 이론 ㉯ 15,000보다 **큰** 20,000을 넣어 「상증령」§29②1가 단서 Min(종가, 이론)이
+    // 이론값을 고르게 한다 ⇒ ①③의 300,000,000이 유지되어 **공모 제외 효과만** 분리 관측된다.
+    await d.getByRole("switch", { name: /주권상장법인등/ }).click();
+    await d.getByPlaceholder("평가기준일 전후 각 2개월 종가평균 (원)").fill("20000");
 
     // ① 기본(일반 배정) — 300,000,000
     await page.getByTestId("deemed-detail-confirm").click();
@@ -97,8 +103,10 @@ test.describe("§39 증자 이익 cap-table", () => {
     await d.getByTestId("ci-alloc-method-public_offering").click();
     await page.getByTestId("deemed-detail-confirm").click();
     await page.getByTestId("deemed-calc-btn").click();
-    await expect(page.getByTestId("deemed-result-value")).toContainText("0");
-    await expect(page.getByTestId("deemed-result")).toContainText("모집방법");
+    // ⚠️ `deemed-result-value`에 toContainText("0")을 쓰지 말 것 — **substring 매칭**이라
+    //    "300,000,000"도 통과해 제외가 안 돼도 초록으로 남는다(실제로 그렇게 무력화된 적이 있다).
+    //    제외 상태에서는 값 대신 제외 배너가 렌더되므로 배너를 직접 단언한다.
+    await expect(page.getByTestId("deemed-exclusion")).toContainText("모집방법");
 
     // ③ 간주모집(자시령 §11③) — 제외가 취소되어 다시 과세
     await page.getByTestId("deemed-edit-btn").click();
