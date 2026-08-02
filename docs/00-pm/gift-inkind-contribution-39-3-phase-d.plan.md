@@ -1,8 +1,10 @@
-# §39의3 현물출자 Phase D — **주권상장법인 Min/Max 단서** 구현 계획서 **v1.2 ✅구현 완료**
+# §39의3 현물출자 Phase D — **주권상장법인 Min/Max 단서** 구현 계획서 **v1.3 ✅D·D-2 완료**
 
 > 모(母)계획: [`gift-inkind-contribution-39-3.plan.md`](gift-inkind-contribution-39-3.plan.md) §7 Phase D · §11 SCOPE-OUT
 > 선행: Phase A~C ✅(PR#374) · Phase B ✅(PR#988 — 고가 multi-수증자 선택 prefill)
 > 작성 기준: **추정 금지** — 법문은 KoreanLaw MCP 본문, 코드는 file:line 실측. 미검증은 "확인 필요" 명시.
+>
+> **v1.3 D-2 환류(2026-08-02)**: **키움 자동조회 연동 완료**. §4의 「확인 필요」 해소 — `/api/kiwoom/valuation-2month`가 **이미 §63①1가 전후 2개월 평균**을 계산하고 §52의2 단축 override까지 지원한다(시점 4종 중 3번째). 신규 API·엔진 변경 **0** — `KiwoomValuationAutoFetchButton` 배선만. 평가기준일이 세목별로 달라 **전환주식 발행 시점만 별도 DateInput**(`csIssuanceDate`). 800줄 초과(829)로 `capital-forms.tsx` → `capital-forms-shared.tsx`(79) + `convertible-stock-form.tsx`(203) 분할, 잔여 571.
 >
 > **v1.2 구현 환류(2026-08-02)**: 전 Phase 완료. anchor 14건 GREEN(D-1~D-13 + 회귀 2케이스) · E2E 4/4 · 신규 7 폼필드가 폼·validate·UI·API 전 계층 도달 자가검증 완료. **계획 대비 이탈 2건**: ⓐ `capital-forms.tsx` 728줄(예상 704 — 750 미만이라 분리 불요) ⓑ 법령 상수 3개 신설(`GIFT.CONTRIBUTION_LISTED_LOW/HIGH`·`CONTRIBUTION_PUBLIC_OFFERING` — 문자열 리터럴 금지 정책상 필요, v1.1에 누락돼 있었음).
 >
@@ -354,7 +356,7 @@ export interface CapitalIncreaseInput {
 ## 10. 범위 외 (SCOPE-OUT)
 
 - **§63①1가 2개월 평균·§52의2 기간단축·거래정지 종목 제외의 엔진 내 계산** — caller 주입 유지(§4).
-- **키움 자동조회 연동**(Phase D-2 후속) — 「평가기준일 전후 2개월 평균」이 기존 시점 4종에 포함되는지 **미실측**.
+- ~~키움 자동조회 연동(Phase D-2)~~ ✅**완료** — 기존 `/api/kiwoom/valuation-2month` 재사용(신규 API 0). 잔여: **§52의2② 단축 override 자동 판정**은 미구현(사용자가 직접 산정·입력 — 자동 fallback 금지 정책).
 - **§28⑤ 합병 Min의 공용 헬퍼 이관** — 두 번째 인자 산식이 달라 통합 부적합(§3-A).
 - 🛑 **§39 cap-table(equity-delta) 경로의 단서 적용** — 방향이 주주별로 갈려 **법령상 정답 미판정**(§3-B). 별건 조사 선행.
 - 🆕 **§29③ 공모 모집 적용제외**(§39①1호가목 · 자본시장법 시행령 §11③) — 코드 0건 실측(미구현)이나 Min/Max와 **무관한 별건**(§1-7).

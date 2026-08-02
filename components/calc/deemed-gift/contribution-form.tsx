@@ -8,6 +8,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuationAutoFetchButton";
 import type { DeemedFormState } from "./shared";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 
@@ -157,6 +158,33 @@ export function ContributionFields({ form, set }: Props) {
             : "저가: Min(종가평균, 산식 이론값) — 평가액이 산식값보다 적으면 평가액"
         }
       >
+        {/* §63①1가 종가평균 키움 자동조회 (선택) — 평가기준일 = 증여일 = 현물출자 납입일(법 §39의3① 본문) */}
+        <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2">
+          <p className="text-xs font-semibold text-emerald-700">
+            §63①1가 종가평균 자동조회 (키움, 선택)
+          </p>
+          <input
+            type="text"
+            inputMode="text"
+            maxLength={6}
+            value={form.conStockCode}
+            onChange={(e) => set({ conStockCode: e.target.value.toUpperCase() })}
+            placeholder="종목코드 6자리"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            aria-label="현물출자 법인 종목코드"
+            data-testid="con-stock-code"
+          />
+          <p className="text-xs text-muted-foreground">
+            평가기준일은 상단에 입력한 <b>증여일(현물출자 납입일)</b>
+            {form.giftDate ? ` — ${form.giftDate}` : " — 미입력"} 을 사용합니다.
+          </p>
+          <KiwoomValuationAutoFetchButton
+            variant="card"
+            stockCode={form.conStockCode}
+            valuationDate={form.giftDate}
+            onFill={(patch) => set({ conListedMarketAvg: String(patch.listedStockAvgPrice) })}
+          />
+        </div>
         <CurrencyInput
           label="현물출자 후 1주당 평가가액"
           value={form.conListedMarketAvg}
@@ -170,8 +198,9 @@ export function ContributionFields({ form, set }: Props) {
           placeholder="자본시장법 §165의6①3 방식 배정분 — 없으면 비워두세요"
         />
         <p className="text-xs text-muted-foreground">
-          종가평균은 상증법 §63①1가에 따라 산정합니다. 평가기준일 전후에 증자·합병 등의 사유가 있으면
-          상증령 §52의2②로 기간이 단축될 수 있습니다. 일반공모 배정분은 이익 계산의 신주수에서 제외됩니다.
+          종가평균은 상증법 §63①1가에 따라 산정합니다. 자동조회는 평가기준일 전후 각 2개월 전 구간을 씁니다 —
+          그 구간에 별도의 증자·합병 등 사유가 있어 상증령 §52의2②로 기간이 단축되어야 하면 직접 산정해 입력하세요.
+          일반공모 배정분은 이익 계산의 신주수에서 제외됩니다.
         </p>
       </ToggleCard>
 
