@@ -23,7 +23,7 @@
 | ⓐ §39의3 준용 단서 미구현 | `contribution-in-kind.ts:40·127` | **대상** |
 | ⓑ **본칙 §39 증자 sub-case도 미구현** | `capital-increase.ts:26·70` · `CapitalIncreaseInput`(`gift-deemed-input-types.ts:174~188`)에 `isListed` 없음 | **대상**(결정 B-1) |
 | ⓑ' 🆕 **전환주식 §39①3호가 5번째 소비처** | `convertible-stock.ts:12~13`이 `calcCapitalIncreaseGift`에 **위임** | **엔진 자동 커버** + UI 1곳 |
-| ⓑ'' §39 **cap-table** 경로 | `capital-increase-allocation.ts:39` — equity-delta 모델 | 🛑 **제외**(방향 미판정, §3-B) |
+| ⓑ'' §39 **cap-table** 경로 | `capital-increase-allocation.ts:39` — equity-delta 모델(zero-sum 불변식) | 🛑 **제외**(§3-B · 전용 계획서) |
 | ⓒ **일반공모 배정분 제외 미구현** | §29의3①1·2호 괄호(자본시장법 §165의6①3) · 코드 0건 | **대상**(결정 C) |
 | ⓓ 선례 2건이 이미 같은 패턴 | `convertible-bond.ts:19~31`(§30⑤1) · `merger-valuation.ts:42`(§28⑤) | ✅ **컨벤션 승계** |
 
@@ -148,7 +148,11 @@
 §29②1가·3나 단서는 **§39의 본칙**이고 §39의3은 준용일 뿐이다. 준용만 고치면 **본칙이 빠진 역전 상태**가 된다.
 
 - 🆕 **전환주식 §39①3호는 별도 작업이 필요 없다** — `convertible-stock.ts:12~13`이 `calcCapitalIncreaseGift`에 위임하므로 `CapitalIncreaseInput`에 필드를 넣으면 **엔진은 자동 커버**된다. UI만 `CsNumericSection`(2시점 공용) 1곳에 토글을 넣어 4개 폼 필드로 노출한다.
-- 🛑 **cap-table 경로(`capital-increase-allocation.ts`)는 제외**한다. equity-delta 모델(주주별 사후평가 `:45` − 사전 → 이익)이라 **저가/고가 방향이 주주마다 갈린다**. 단서는 「제1호가목(min)」·「제3호나목(max)」처럼 **호별로 방향이 고정**돼 있어, 하나의 `perShareAfter`에 min·max 중 하나만 적용하면 반대 방향 주주가 왜곡된다. **법령상 정답 미판정 ⇒ 별건 조사 후 착수**(`feedback_unverified_authority_blocks_tax_change`).
+- 🛑 **cap-table 경로(`capital-increase-allocation.ts`)는 제외**한다. equity-delta 모델이라 단순 치환이 불가능하다. **별건 조사 후 착수**(`feedback_unverified_authority_blocks_tax_change`) — 전용 계획서 [`capital-increase-captable-listed-proviso.plan.md`](capital-increase-captable-listed-proviso.plan.md).
+
+> 🔧 **v1.3 정정 (실측)**: v1.1은 제외 사유를 「저가/고가 **방향이 주주마다 갈린다**」로 적었으나 **코드와 다르다** — `direction`은 **전역 단일값**이고 min/max 선택에 쓰이지도 않는다(`:34·63` 특수관계 게이트 전용).
+> **정확한 사유는 「zero-sum(`reconciliation.balanced`) 불변식 붕괴」**다. ㉯가 가중평균일 때만 `Σdelta = 0`이 성립하는데 단서의 ㉯는 **외생 시장가**라 항등식이 깨지고, 증여자 배분 분모(`totalLoss`)와 배분 대상(`b.delta`)이 서로 다른 기준이 된다(probe 실측 `Σdelta = −400,000,000`).
+> 또한 **이미 경로 불일치가 발생**했다 — 같은 사실관계에서 sub-case **180,000,000** ↔ cap-table **300,000,000**(실측).
 
 ### ✅ 결정 C — **일반공모 배정분 제외(ⓒ) 포함**, 단 **현물출자 전용**
 
@@ -358,6 +362,6 @@ export interface CapitalIncreaseInput {
 - **§63①1가 2개월 평균·§52의2 기간단축·거래정지 종목 제외의 엔진 내 계산** — caller 주입 유지(§4).
 - ~~키움 자동조회 연동(Phase D-2)~~ ✅**완료** — 기존 `/api/kiwoom/valuation-2month` 재사용(신규 API 0). 잔여: **§52의2② 단축 override 자동 판정**은 미구현(사용자가 직접 산정·입력 — 자동 fallback 금지 정책).
 - **§28⑤ 합병 Min의 공용 헬퍼 이관** — 두 번째 인자 산식이 달라 통합 부적합(§3-A).
-- 🛑 **§39 cap-table(equity-delta) 경로의 단서 적용** — 방향이 주주별로 갈려 **법령상 정답 미판정**(§3-B). 별건 조사 선행.
+- 🛑 **§39 cap-table(equity-delta) 경로의 단서 적용** — zero-sum 불변식 붕괴 + 배분 기준의 **법령상 정답 미판정**(§3-B v1.3 정정). 전용 계획서 `capital-increase-captable-listed-proviso.plan.md`.
 - 🆕 **§29③ 공모 모집 적용제외**(§39①1호가목 · 자본시장법 시행령 §11③) — 코드 0건 실측(미구현)이나 Min/Max와 **무관한 별건**(§1-7).
 - ✅ ~~고가 roster 행 라벨 오기~~ — 2026-08-02 수정 완료(저가·고가 공통 「현물출자 전 보유주식수」). Phase D 착수 전 선처리.
