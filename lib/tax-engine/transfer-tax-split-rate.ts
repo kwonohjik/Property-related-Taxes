@@ -93,6 +93,12 @@ export interface SplitRatePart {
    */
   rateClause?: RateClause;
   /**
+   * 이 파트가 **해당**하는 §104 호 **전부**(정렬) — `calcTax`가 낸 값을 그대로 싣는다.
+   * `rateClause`는 §104① 후단·⑦ 후단의 **승자**라 그룹핑 키로 쓰면 「해당 호는 같은데 승자만
+   * 갈린」 파트가 나뉜다(계획서 `transfer-rate-clause-candidates` E-2).
+   */
+  candidateClauses?: RateClause[];
+  /**
    * 이 파트의 **세율 판정에 실제로 쓰인 입력** — 다건 호별 합산이 같은 규칙을 재현하려면 필요하다.
    *
    * 호 묶음 세액은 `calcTax(합산 과세표준, 대표 파트의 rateInput)`으로 낸다.
@@ -348,6 +354,7 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
     appliedRate: finals[i].appliedRate,
     // 위 `clauseKey`가 이미 쓰고 있던 값을 밖으로 내보낸다 — 다건 호별 합산의 그룹 키(P12).
     rateClause: finals[i].rateClause,
+    candidateClauses: finals[i].candidateClauses,
     rateInput: s.rateInput,
     surchargeType: finals[i].surchargeType,
     surchargeRate: finals[i].surchargeRate,
@@ -472,6 +479,7 @@ function computePartialNblTax(
         calculatedTax: nblPart.calculatedTax,
         appliedRate: nblPart.appliedRate,
         rateClause: nblPart.rateClause,
+        candidateClauses: nblPart.candidateClauses,
         rateInput: nblRateInput,
         surchargeType: nblPart.surchargeType,
         surchargeRate: nblPart.surchargeRate,
@@ -487,6 +495,7 @@ function computePartialNblTax(
         calculatedTax: otherPart.calculatedTax,
         appliedRate: otherPart.appliedRate,
         rateClause: otherPart.rateClause,
+        candidateClauses: otherPart.candidateClauses,
         rateInput: otherRateInput,
         surchargeType: otherPart.surchargeType,
         surchargeRate: otherPart.surchargeRate,

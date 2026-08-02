@@ -163,6 +163,19 @@ interface CalcTaxResult {
   nblSurchargeExcluded?: boolean;
   /** 적용된 §104 호 — §104⑤2호 단서(동일 호 합산) 판정용. 조특법 특칙 등 §104 밖이면 undefined. */
   rateClause?: RateClause;
+  /**
+   * 이 자산이 **해당**하는 §104 호 **전부**(문자열 오름차순 정렬).
+   *
+   * `rateClause`는 §104① 후단·§104⑦ 후단이 고른 **승자**라 「해당 호 집합」을 표현하지 못한다.
+   * 그런데 §104⑤2호 **단서**는 「동일한 호의 세율이 적용되고, 그 **적용세율이 둘 이상**인 경우
+   * … **각 해당 호별** 세율을 적용하여 산출한 세액 중 **큰** 산출세액」이라 그 집합을 요구한다.
+   * ⇒ 다건 그룹핑 키는 이 배열을 써야 승패에 오염되지 않는다
+   *   (계획서 `docs/02-design/features/transfer-rate-clause-candidates.plan.md`).
+   *
+   * ⚠️ **정렬은 결정적이어야 한다** — 순서가 흔들리면 키가 갈려 입력 순서 의존이 재발한다(R-3).
+   * `undefined`는 「해당 호를 단정할 수 없음」이다(조특법 특칙 등) — **묶지 않는 것이 안전측**.
+   */
+  candidateClauses?: RateClause[];
 }
 
 /** 단기 단일세율 호 — 1년 미만은 3호, 1~2년은 2호(§104①). */
@@ -179,6 +192,16 @@ const unifiedShortTermClause = (rate: number): RateClause | undefined =>
 /** 다주택 중과 호 — §104⑦1호(2주택) / 3호(3주택 이상). 정본 R7 감사와 같은 구분. */
 const surchargeClause = (surchargeType: string): RateClause =>
   surchargeType === "multi_house_3plus" ? "104-7-3" : "104-7-1";
+
+/**
+ * 「해당 호 후보」 배열 — 중복 제거 + **문자열 오름차순 정렬**.
+ * 정렬이 결정적이어야 그룹핑 키가 흔들리지 않는다(계획서 R-3).
+ * 후보가 하나도 없으면 `undefined` — 「호 불명」은 묶지 않는 것이 안전측이다.
+ */
+const clauseSet = (...cs: (RateClause | undefined)[]): RateClause[] | undefined => {
+  const out = [...new Set(cs.filter((c): c is RateClause => c !== undefined))].sort();
+  return out.length > 0 ? out : undefined;
+};
 
 /**
  * 누진세율 산출세액 + 적용구간(표시용 baseRate·deduction)을 일괄 계산.
@@ -216,6 +239,7 @@ export function calcTax(
       progressiveDeduction: 0,
       surchargeSuspended: false,
       rateClause: "104-1-10",
+      candidateClauses: clauseSet("104-1-10"),
     };
   }
 
@@ -277,6 +301,7 @@ export function calcTax(
             ? `부수토지 일체과세(§104①2호·영§167의5): 누진세율`
             : "수동 지정: 누진세율",
           rateClause: "104-1-1",
+          candidateClauses: clauseSet("104-1-1"),
         };
       }
       if (resolution.manualRate !== undefined) {
@@ -291,7 +316,12 @@ export function calcTax(
             ? `수동 지정: ${Math.round(resolution.manualRate * 100)}%`
             : `부수토지 일체과세(§104①2호·영§167의5): ${Math.round(resolution.manualRate * 100)}%`,
           // 수동 오버라이드는 사용자가 세율을 강제한 것이라 적용 호를 알 수 없다 → undefined(묶지 않음).
-          ...(isManualOverride ? {} : { rateClause: unifiedShortTermClause(resolution.manualRate) }),
+          ...(isManualOverride
+            ? {}
+            : {
+                rateClause: unifiedShortTermClause(resolution.manualRate),
+                candidateClauses: clauseSet(unifiedShortTermClause(resolution.manualRate)),
+              }),
         };
       }
       if (resolution.unifiedRate !== undefined) {
@@ -305,6 +335,7 @@ export function calcTax(
           surchargeSuspended: false,
           shortTermNote: `부수토지 일체과세(§104①2호·영§167의5): ${Math.round(resolution.unifiedRate * 100)}%`,
           rateClause: unifiedShortTermClause(resolution.unifiedRate),
+          candidateClauses: clauseSet(unifiedShortTermClause(resolution.unifiedRate)),
         };
       }
     }
@@ -377,6 +408,12 @@ export function calcTax(
       holdingMonthsTotal < 12 ? 0.50 :
       holdingMonthsTotal < 24 ? 0.40 :
       null;
+    // §104① 후단 비교 대상이 되는 **해당 호 집합** — 승자와 무관하게 아래 두 반환이 **공유**한다.
+    // 2년 이상이면 단기 호에 해당하지 않아 8호 하나뿐이다.
+    const nblCandidates = clauseSet(
+      "104-1-8",
+      nblShortTermRate !== null ? shortTermClause(holdingMonthsTotal) : undefined,
+    );
     if (nblShortTermRate !== null) {
       const nblShortTermTax = applyRate(taxBase, nblShortTermRate);
       if (nblShortTermTax > nblTax) {
@@ -387,8 +424,10 @@ export function calcTax(
           surchargeSuspended: false,
           shortTermNote: `보유기간 ${holdingMonthsTotal < 12 ? "1년" : "2년"} 미만 단기세율 적용 (§104①후단: 비사업용 누진세액과 비교한 큰 세액)`,
           ...(nblCrisisExcluded ? { nblSurchargeExcluded: true } : {}),
-          // 8호가 아니라 단기세율(2·3호)이 채택됐다 — 적용 호도 그쪽이다.
+          // 8호가 아니라 단기세율(2·3호)이 채택됐다 — **적용** 호는 그쪽이다.
+          // 다만 **해당** 호는 둘 다이므로 `candidateClauses`는 아래 8호 반환과 같다.
           rateClause: shortTermClause(holdingMonthsTotal),
+          candidateClauses: nblCandidates,
         };
       }
     }
@@ -401,6 +440,7 @@ export function calcTax(
       surchargeSuspended: false,
       ...(nblCrisisExcluded ? { nblSurchargeExcluded: true } : {}),
       rateClause: "104-1-8",
+      candidateClauses: nblCandidates,
     };
   }
 
@@ -437,29 +477,48 @@ export function calcTax(
 
   if (shortTermFlatRate !== null) {
     const shortTermTax = applyRate(taxBase, shortTermFlatRate);
-    // §104③: 다주택 중과세율과 비교하여 더 높은 세율 적용
-    if (surchargeApplicable && effectiveSurchargeType !== "none") {
-      const surchargeInfoST = effectiveSurchargeType === "multi_house_3plus"
+    // 분양권 2년 이상 60%는 §104①**1호** 단일세율이다(위 주석) — 2·3호가 아니다.
+    const stClause: RateClause =
+      holdingMonthsTotal < 24 ? shortTermClause(holdingMonthsTotal) : "104-1-1";
+    // §104③: 다주택 중과세율과 비교하여 더 높은 세율 적용.
+    // 중과 정보·가산율은 **후보 판정에도 필요**하므로 비교 블록 밖에서 구한다
+    // (종전에는 `if` 안에 있어 「해당 호 집합」을 만들 수 없었다).
+    // 종전 `if (surchargeApplicable && effectiveSurchargeType !== "none")` 블록이 하던
+    // 타입 narrowing을 변수로 옮긴다("none" 제외).
+    const stSurchargeType =
+      surchargeApplicable && effectiveSurchargeType !== "none" ? effectiveSurchargeType : undefined;
+    const stSurchargeInfo = stSurchargeType
+      ? stSurchargeType === "multi_house_3plus"
         ? surchargeRates.multi_house_3plus
-        : surchargeRates.multi_house_2;
-      // 양도일 기준 중과 가산율 (§104⑦ 시행일별). null = 2018.4.1 이전 → 중과 미적용.
-      const historicalRateST = resolveSurchargeAddonRate(input.transferDate, effectiveSurchargeType);
-      if (surchargeInfoST && historicalRateST !== null) {
-        const additionalRateST = historicalRateST;
-        const { progressiveTax: progressiveTaxST, baseRate: baseRateST, deduction: deductionST } = computeBracketBreakdown(taxBase, brackets);
-        const surchargeTaxST = progressiveTaxST + applyRate(taxBase, additionalRateST);
-        if (surchargeTaxST > shortTermTax) {
-          return {
-            calculatedTax: surchargeTaxST,
-            surchargeType: effectiveSurchargeType,
-            surchargeRate: roundRate(additionalRateST),
-            appliedRate: roundRate(baseRateST + additionalRateST),
-            progressiveDeduction: deductionST,
-            surchargeSuspended: false,
-            shortTermNote,
-            rateClause: surchargeClause(effectiveSurchargeType),
-          };
-        }
+        : surchargeRates.multi_house_2
+      : undefined;
+    // 양도일 기준 중과 가산율 (§104⑦ 시행일별). null = 2018.4.1 이전 → 중과 미적용.
+    const stHistoricalRate = stSurchargeType
+      ? resolveSurchargeAddonRate(input.transferDate, stSurchargeType)
+      : null;
+    // §104⑦ 후단 비교 대상이 되는 **해당 호 집합** — 승자와 무관하게 아래 두 반환이 **공유**한다.
+    const stCandidates = clauseSet(
+      stClause,
+      stSurchargeInfo && stHistoricalRate !== null
+        ? surchargeClause(effectiveSurchargeType)
+        : undefined,
+    );
+    if (stSurchargeInfo && stHistoricalRate !== null) {
+      const additionalRateST = stHistoricalRate;
+      const { progressiveTax: progressiveTaxST, baseRate: baseRateST, deduction: deductionST } = computeBracketBreakdown(taxBase, brackets);
+      const surchargeTaxST = progressiveTaxST + applyRate(taxBase, additionalRateST);
+      if (surchargeTaxST > shortTermTax) {
+        return {
+          calculatedTax: surchargeTaxST,
+          surchargeType: effectiveSurchargeType,
+          surchargeRate: roundRate(additionalRateST),
+          appliedRate: roundRate(baseRateST + additionalRateST),
+          progressiveDeduction: deductionST,
+          surchargeSuspended: false,
+          shortTermNote,
+          rateClause: surchargeClause(effectiveSurchargeType),
+          candidateClauses: stCandidates,
+        };
       }
     }
     return {
@@ -468,8 +527,8 @@ export function calcTax(
       progressiveDeduction: 0,
       surchargeSuspended: false,
       shortTermNote,
-      // 분양권 2년 이상 60%는 §104①**1호** 단일세율이다(위 주석) — 2·3호가 아니다.
-      rateClause: holdingMonthsTotal < 24 ? shortTermClause(holdingMonthsTotal) : "104-1-1",
+      rateClause: stClause,
+      candidateClauses: stCandidates,
     };
   }
 
@@ -494,6 +553,8 @@ export function calcTax(
         progressiveDeduction: deduction,
         surchargeSuspended: false,
         rateClause: surchargeClause(effectiveSurchargeType),
+        // 2년 이상이라 §104⑦ 후단(단기 비교)이 없다 — 해당 호가 하나뿐이다.
+        candidateClauses: clauseSet(surchargeClause(effectiveSurchargeType)),
       };
     }
   }
@@ -507,6 +568,7 @@ export function calcTax(
     progressiveDeduction: deduction,
     surchargeSuspended: suspended,
     rateClause: "104-1-1",
+    candidateClauses: clauseSet("104-1-1"),
   };
 }
 
