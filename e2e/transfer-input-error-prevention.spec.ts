@@ -20,9 +20,12 @@ test.describe("양도세 입력 오류 예방", () => {
     await page.getByRole("button", { name: "다음", exact: true }).click();
 
     // 일괄 오류 배너: 건수 헤더 + 목록
-    await expect(page.getByText(/입력 확인이 필요합니다 \(\d+건\)/)).toBeVisible();
-    await expect(page.getByText("양도일을 선택하세요.", { exact: false })).toBeVisible();
-    await expect(page.getByText("총 양도가액을 입력하세요.", { exact: false })).toBeVisible();
+    // ⚠️ 배너 안으로 스코프 한정 — 같은 문구가 필드 인라인 경고에도 나와 strict mode가 터진다
+    //    (e2e/CLAUDE.md §3 「결과 화면 라벨 중복 — visible/스코프 한정」).
+    const banner = page.getByTestId("validation-issues");
+    await expect(banner.getByText(/입력 확인이 필요합니다 \(\d+건\)/)).toBeVisible();
+    await expect(banner.getByText("양도일을 선택하세요.", { exact: false })).toBeVisible();
+    await expect(banner.getByText("총 양도가액을 입력하세요.", { exact: false })).toBeVisible();
   });
 
   test("실시간 경고 — 취득일을 양도일 이후로 입력하면 즉시 amber 경고", async ({ page }) => {

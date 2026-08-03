@@ -91,8 +91,12 @@ function FarmingPostMgmtPageInner() {
   );
   // 메인 마법사 진입 시 신고기한(§67)·상속개시일 prefill — 가업 시뮬레이터와 동형(영농 prefill 강화)
   const initialFilingDeadline = sanitizeDateParam(searchParams.get("filingDeadline"));
+  // 🔴 호출부(InheritanceTaxResultView.tsx:434)가 붙이는 파라미터명은 **deathDate**다.
+  //    가업 시뮬레이터(family-business-postmgmt/page.tsx:120)도 deathDate를 쓴다 —
+  //    여기만 inheritanceStartDate를 읽어 **상속개시일 prefill이 동작하지 않았다**(E2E GAP3-1이 잡음).
+  //    직접 링크 하위호환을 위해 기존 이름도 계속 인정한다.
   const initialInheritanceStartDate = sanitizeDateParam(
-    searchParams.get("inheritanceStartDate"),
+    searchParams.get("deathDate") ?? searchParams.get("inheritanceStartDate"),
   );
 
   const [violation, setViolation] = useState<FarmingPostMgmtViolation>("asset_disposed");

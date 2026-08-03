@@ -13,7 +13,7 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
   // 섹션 1 — 기업규모·재무
   await dialog.getByTestId("rc-size-small").click();
   await dialog.getByPlaceholder("총 매출액 (원)").fill("20000000000");
-  await dialog.getByPlaceholder("세무조정 후 영업손익 (원)").fill("2500000000");
+  await dialog.getByPlaceholder(/세무조정 후 영업손익/).fill("2500000000");
   await dialog.getByPlaceholder("각 사업연도 소득금액 (원)").fill("1800000000");
   await dialog.getByPlaceholder("산출세액 − 공제·감면액 (원)").fill("340000000");
 

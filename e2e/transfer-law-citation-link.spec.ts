@@ -65,6 +65,11 @@ test.describe("양도세 계산 마법사 법조문 링크 → 조문 팝업", (
     const card = page.locator('[data-asset-card-index="0"]');
 
     // 취득 원인: "상속" 라디오 선택 → CompanionAcqInheritanceBlock(소령 §163⑨ 배지) 렌더
+    // §163⑨ 배지는 **상가·겸용** 상속에만 렌더된다(CompanionAcqInheritanceBlock.tsx:113·138).
+    // 일반 주택 상속에는 없으므로 자산 종류를 상업용건물로 먼저 바꾼다.
+    // 자산 카드는 진입 시 전부 접힘이라 ① 기본 섹션을 펼쳐야 종류 라디오가 렌더된다.
+    await expandAssetSection(page, 1);
+    await card.getByRole("button", { name: "상업용건물·오피스텔", exact: true }).click();
     await card.getByRole("button", { name: "상속", exact: true }).click();
 
     // 배지 라벨은 약칭 "소령 §163⑨" — legalBasis 정식명은 "소득세법 시행령 §163 ⑨"

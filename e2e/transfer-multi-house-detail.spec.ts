@@ -99,14 +99,24 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3000 });
 
     // gracePeriod 섹션: 1세대(기본 ON) + 주택수 2 + houses>0 → 노출
-    await expect(page.getByText("중과세 한시 유예 조건 입력", { exact: false })).toBeVisible();
+    await expect(page.getByText(/중과 경과조치 조건 입력/, { exact: false })).toBeVisible();
 
     // 토글 ON
-    await toggleCardByTitle(page, "중과세 한시 유예 조건 입력");
+    // 제목이 「중과세 한시 유예 조건 입력」에서 바뀌었다(HousesListSection.tsx:230).
+    // 헬퍼가 new RegExp(title)로 감싸므로 정규식 메타문자(괄호·§)를 피해 앞부분만 넘긴다.
+    await toggleCardByTitle(page, "중과 경과조치 조건 입력");
+
+    // 나·다목 분기 라디오가 선행 단계로 추가됐다 — 「매매계약일」은 isLandPermitTarget이
+    // 정해져야 렌더된다(HousesListSection.tsx:300). 나목(허가 대상)을 고르면
+    // 「토지거래허가 수령」 토글도 함께 노출된다.
+    await page.getByRole("radio", { name: /토지거래허가 대상/ }).click();
 
     // 세부 조건 노출
     await expect(page.getByText("매매계약일", { exact: false })).toBeVisible();
-    await expect(page.getByText("토지거래허가구역", { exact: false })).toBeVisible();
+    // 「토지거래허가구역」 → 나목 4요건 UI로 재구성되며 「토지거래허가 신청일」·
+    // 「토지거래허가 수령」으로 바뀌었다(HousesListSection.tsx:278·296).
+    await expect(page.getByText("토지거래허가 신청일", { exact: false })).toBeVisible();
+    await expect(page.getByRole("switch", { name: /토지거래허가 수령/ })).toBeVisible();
   });
 
   test("장기임대 9유형 선택(마목) → 유형별 요건 필드 노출", async ({ page }) => {

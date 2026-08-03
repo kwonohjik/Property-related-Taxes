@@ -43,8 +43,18 @@ async function fillFieldCardDate(page: Page, label: string, y: string, m: string
   await card.getByLabel("일").fill(d);
 }
 
-/** 사업연도 열(라벨 input 부모) 안의 종료일 DateInput(개시일=0, 종료일=1) 채우기 */
-async function fillFiscalYearEndDate(col: Locator, y: string, m: string, d: string) {
+/**
+ * 사업연도 열(라벨 input 부모)의 **개시일(0)·종료일(1)을 모두** 채운다.
+ *
+ * ⚠️ 종료일만 덮어쓰면 안 된다 — 평가기준일을 입력하면 사업연도가 **자동 산정**되어
+ *    개시일에 이미 값이 들어간다. 종료일만 바꾸면 개시일이 자동값으로 남아
+ *    「사업연도 0개월」이 되고, §56⑤ 조정에서 가 되어
+ *    1년전 반영액이 **0으로 떨어진다**(엔진은 정상 — 단독 실측 [12,500,000, 25,000,000, 25,000,000]).
+ */
+async function fillFiscalYear(col: Locator, startY: string, y: string, m: string, d: string) {
+  await col.getByLabel("연도").nth(0).fill(startY);
+  await col.getByLabel("월").nth(0).fill("1");
+  await col.getByLabel("일").nth(0).fill("1");
   await col.getByLabel("연도").nth(1).fill(y);
   await col.getByLabel("월").nth(1).fill(m);
   await col.getByLabel("일").nth(1).fill(d);
@@ -74,9 +84,9 @@ test.describe("비상장주식 V2 — §56⑤ 유상증자 조정 UI 반영", ()
     await yearLabels.nth(0).fill("2021");
     await yearLabels.nth(1).fill("2020");
     await yearLabels.nth(2).fill("2019");
-    await fillFiscalYearEndDate(yearLabels.nth(0).locator(".."), "2021", "12", "31");
-    await fillFiscalYearEndDate(yearLabels.nth(1).locator(".."), "2020", "12", "31");
-    await fillFiscalYearEndDate(yearLabels.nth(2).locator(".."), "2019", "12", "31");
+    await fillFiscalYear(yearLabels.nth(0).locator(".."), "2021", "2021", "12", "31");
+    await fillFiscalYear(yearLabels.nth(1).locator(".."), "2020", "2020", "12", "31");
+    await fillFiscalYear(yearLabels.nth(2).locator(".."), "2019", "2019", "12", "31");
 
     // 자본금 변동: 유상증자 2021-06-30, 50,000주 @ 5,000원
     await page.getByRole("button", { name: /변동 추가/ }).click();

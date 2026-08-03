@@ -158,11 +158,14 @@ test.describe("G4 — 부수토지 면적한도 입력 블록", () => {
     await expect(page.getByTestId("ancillary-land-partial-warning")).toBeVisible();
   });
 
-  test("E2E-G4-3: 3필드 전부 입력 시 partial 경고 사라짐", async ({ page }) => {
+  test("E2E-G4-4: 4필드 전부 입력 시 partial 경고 사라짐", async ({ page }) => {
     await goToStep4WithCohabitChild(page);
 
+    // ⚠️ isPartial은 **4필드**(면적·정착면적·지역·공시지가)를 센다
+    //    (CohabitAncillaryLandBlock.tsx:63). 종전 3필드 시드로는 경고가 사라지지 않는다.
     await page.getByTestId("ancillary-land-area-input").locator("input").fill("500");
     await page.getByTestId("building-footprint-area-input").locator("input").fill("100");
+    await page.getByTestId("ancillary-land-std-price-input").locator("input").fill("1000000");
     // 지역 라디오 선택 — 수도권 주거·상업·공업
     await page.getByText("수도권 주거·상업·공업").click();
 
