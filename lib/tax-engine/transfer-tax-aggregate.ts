@@ -159,21 +159,41 @@ function computeGroupsAndComparison(
   const totalBasic = allocatedBasic.reduce((s, v) => s + v, 0);
   const generalTaxBase = Math.max(0, totalIncome - totalBasic);
   const calculatedTaxByGeneral = applyGeneralProgressive(generalTaxBase, rates);
+  /**
+   * ⚠️ **`hasSurchargeGroup`은 §104⑤의 적용 요건이 아니라 「표시」 판정이다.**
+   *
+   * 법문은 「해당 과세기간에 §94①1호·2호 및 4호에서 규정한 자산을 **둘 이상 양도하는 경우**
+   * … 다음 각 호의 금액 중 **큰 것**으로 한다」이다 — 중과·단기 자산의 존재는 요건에 없다.
+   * 종전에는 그 그룹이 없으면 **비교 자체를 건너뛰고** 2호를 그대로 채택했다. 그래서
+   * `progressive` 그룹 안에서 버킷이 갈리면(파트 자산·수동 세율 오버라이드 등) 1호가 더 커도
+   * 반영되지 않는 경로가 남아 있었다. ⇒ **MAX를 무조건으로** 돌린다.
+   *
+   * 📌 **현재 세액은 변하지 않는다**(전체 13,083건 불변으로 확인). 구조적 이유가 있다:
+   *   1호는 §55① 누진이라 **최고 한계세율이 45%**인데, 2호에서 따로 떨어져 나갈 수 있는
+   *   단일세율 호는 **40%(①2호 비주택)·50%(①3호 비주택)·60%(①2호 주택·분양권)·70%(①3호 주택,
+   *   ⑩호 미등기)** 뿐이라 대부분 45%를 웃돈다. 실측해도 1호가 이기는 조합이 나오지 않았다
+   *   (H-70%·B-50% 등 6종). 유일한 후보인 40% 구간도 재현하지 못했다.
+   *   ⇒ 세액 정정이 아니라 **문언 정합 + 잠복 경로 제거**다.
+   *
+   * `comparedTaxApplied`는 **표시 전용**이라 종전 의미를 그대로 둔다(UI 배지·PDF가 `"none"`을
+   * 「중과·단기 없음」으로 읽는다 — `MultiTransferTaxSummaryCard.tsx:119·147` · `ResultPdfDocument.tsx:304`).
+   * 1호가 이기는 순간에만 `"general"`로 바뀌는데, 그 경우는 종전에 **틀린 값을 내던** 경로다.
+   *
+   * ❌ **단일 자산(`properties.length === 1`)에도 비교가 도는 것은 이번에 건드리지 않았다.**
+   *   §104⑤은 「둘 이상」이 요건이라 문언상 미적용이 맞지만, 끄면 세액이 **내려갈** 수 있다 —
+   *   `calcTax`는 일반 단기 자산에서 §104① **후단**(1호 누진 vs 2·3호 단기 중 큰 것)을 수행하지
+   *   않는데, 지금은 이 MAX가 그 비교를 대신 공급하고 있다. 어느 쪽이 정답인지는 **미판정**이다.
+   */
   const hasSurchargeGroup = groupTaxes.some((g) =>
     g.group === "multi_house_surcharge" || g.group === "non_business_land" ||
     g.group === "unregistered" || g.group === "short_term");
-  let calculatedTax: number;
-  let comparedTaxApplied: "groups" | "general" | "none";
-  if (!hasSurchargeGroup) {
-    calculatedTax = calculatedTaxByGroups;
-    comparedTaxApplied = "none";
-  } else if (calculatedTaxByGeneral > calculatedTaxByGroups) {
-    calculatedTax = calculatedTaxByGeneral;
-    comparedTaxApplied = "general";
-  } else {
-    calculatedTax = calculatedTaxByGroups;
-    comparedTaxApplied = "groups";
-  }
+  const calculatedTax = Math.max(calculatedTaxByGroups, calculatedTaxByGeneral);
+  const comparedTaxApplied: "groups" | "general" | "none" =
+    calculatedTaxByGeneral > calculatedTaxByGroups
+      ? "general"
+      : hasSurchargeGroup
+        ? "groups"
+        : "none";
   return { groupTaxes, assetPartTax, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied };
 }
 
