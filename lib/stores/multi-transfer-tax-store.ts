@@ -97,6 +97,15 @@ const defaultFormData: MultiTransferFormData = {
   originalPaymentDate: "",
 };
 
+/**
+ * 다자산 폼 기본값 — **§104⑤ 크로스 재계산**(C-3d)이 이력의 **단건 폼**을 다자산 API에 태울 때
+ * 나머지 필드(신고·정정·가산세 등 19개)를 채우는 데 쓴다.
+ *
+ * ⚠️ **값을 복제하지 말 것** — 복제하면 기본값이 바뀔 때 조용히 어긋난다(계획서 W-4).
+ *   마법사 상태와 무관한 **읽기 전용 상수**다.
+ */
+export const defaultMultiTransferFormData: MultiTransferFormData = defaultFormData;
+
 interface MultiTransferState {
   form: MultiTransferFormData;
   result: AggregateTransferResult | null;

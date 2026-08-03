@@ -1,6 +1,7 @@
 # C-3d — §104⑤ 크로스 **재계산 UI**
 
-**상태**: 🔴 계획(미착수) · 선행 [[cross-104-5-c3-ui-design.plan.md]] C-3a·C-3b·C-3c ✅(#1037·#1038·#1040)
+**상태**: **C-3d-1 ✅**(재계산 헬퍼) · 🔴 C-3d-2(배분 2안)·C-3d-3(화면 배선) ·
+선행 [[cross-104-5-c3-ui-design.plan.md]] C-3a·C-3b·C-3c ✅(#1037·#1038·#1040)
 **성격**: C-3c가 **의도적으로 1차에서 뺀 두 가지**를 붙인다 — 새 개념이 아니라 배관 연결이다.
 **작성** 2026-08-04
 
@@ -95,14 +96,17 @@ C-3c O-4와 동일. 재계산 결과도 마찬가지다 — **원본 이력을 �
 ## 4. Phase
 
 ```
-C-3d-1  재계산 헬퍼 (순수 배관 · UI 없음)
+C-3d-1  재계산 헬퍼 (순수 배관 · UI 없음) ✅ **완료**
   - lib/calc/cross-104-5-recalc.ts
+      · checkRealEstateRecalc(record) → { ok, kind: "multi"|"single" } | { ok:false, reason }
       · recalcRealEstate(record, { annualBasicDeductionUsed })
-          → 다자산 이력이면 inputData.properties 그대로
-          → 단건이면 [{ propertyId, propertyLabel, form: inputData }] 로 감싼다
-          → mixed-use는 지원하지 않는다(호출 전 판별)
+          → 다자산 이력이면 inputData.properties **그대로**(저장된 다른 필드도 보존)
+          → 단건이면 PropertyItem **하나**로 감싸고 나머지는 defaultMultiTransferFormData
+          → mixed-use는 **호출조차 하지 않는다**
       · recalcOtherAsset(record, { realEstateGroupBasicDeductionUsed })
-  → verify: 단위 테스트(폼 조립·기본공제 주입) — 네트워크는 mock
+  → verified: 12건(가능여부 4 · 부동산 5 · 기타자산 3) — 네트워크 mock으로 **호출 인자**를 고정
+     ⭐ B-2·S-2가 **문자열 주입**(X-1)을, B-5가 **mixed-use 미호출**(W-1)을 고정한다
+     ⚠️ 아직 **호출자가 없다** — 사용자 가치는 C-3d-3(화면 배선)에서 생긴다
 
 C-3d-2  배분 2안 비교
   - pickBestAllocation({ reRecord, oaRecord, taxYear }) → 두 후보 계산 후 세액 min
