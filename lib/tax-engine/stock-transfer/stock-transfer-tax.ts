@@ -651,11 +651,30 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
       })
     : undefined;
 
+  // §104⑤ **크로스 조정용 호별 echo**(C-3a / 2b-3) — 조건 없이 항상 싣는다.
+  //
+  // `cross1045Adjustment`는 사용자가 `crossClause8TaxBase`를 **입력했을 때만** 생기는데,
+  // 이력 기반 교차 합산은 **입력 없이 저장된 결과만 읽어** 두 엔진을 합친다.
+  // ⇒ 「이 종목이 §104①1호인가 9호인가 + 그 과세표준·세액」을 무조건 노출한다.
+  //
+  // 🔒 **기타자산(§94①4호)이고 비과세가 아닐 때만** 값이 실린다 — 주식(§94①3호)은 §104⑤ 본문이
+  //   열거하지 않아 대상이 아니고, 비과세는 aggregate `computeOtherAssetComparativeTax`가
+  //   `!r.isExempt`로 거르는 것과 규약을 맞춘다.
+  const isOtherAssetTarget =
+    classification.basicDeductionGroup === "real_estate_and_other_asset" &&
+    !classification.isExempt;
+  const isClause9 = isOtherAssetTarget && NBL_HEAVY_CORP_CATEGORIES.has(classification.taxCategory);
+  const isClause1 = isOtherAssetTarget && !isClause9;
+
   // ──────────────────────────────────────────────────────────
   // 결과 조립
   // ──────────────────────────────────────────────────────────
   const fullResult: StockTransferResult = {
     ...(cross1045Adjustment ? { cross1045Adjustment } : {}),
+    clause1BucketTaxBase: isClause1 ? taxBase : 0,
+    clause1BucketTax: isClause1 ? calculatedTax : 0,
+    clause9TaxBase: isClause9 ? taxBase : 0,
+    clause9Tax: isClause9 ? calculatedTax : 0,
     taxCategory: classification.taxCategory,
     appliedSection94: classification.appliedSection94,
     section94_2Applied: classification.section94_2Applied,

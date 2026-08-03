@@ -302,6 +302,19 @@ export interface AggregateTransferResult {
    */
   clause8TaxBase: number;
   clause8Tax: number;
+  /**
+   * §104⑤ **크로스 조정**(부동산 §104①**1호** ↔ 기타자산 §104①1호)용 echo — 2호의 「자산별」이
+   * 예규상 「**각 호별로 합산한 자산**」이므로 **1호끼리도 합산 대상**이다(기재부 재산세제과-536).
+   *
+   * 🔒 후보 집합이 **정확히 `{104-1-1}`인 버킷**만이다 — 8호와 같은 좁은 규약.
+   * 🔒 **분양권은 포함되지 않는다.** 호는 1호이나 세율이 단일 60%라 `classifyRateGroup`이
+   *   `short_term`으로 분리해 두고, 이 echo는 누진 호 분기에서만 누적되기 때문이다.
+   *   제외 근거는 **현행 규약 승계**이지 새 법령 해석이 아니다
+   *   (계획서 `cross-104-5-c3-ui-design.plan.md` · 가드 `presale-clause-1-bucket-guard`).
+   * ⚠️ 조합원입주권 2년+는 1호 누진이라 **포함**된다. 1호 버킷이 없으면 둘 다 0.
+   */
+  clause1BucketTaxBase: number;
+  clause1BucketTax: number;
   /** MAX(byGroups, byGeneral) */
   calculatedTax: number;
 

@@ -153,7 +153,7 @@ function computeGroupsAndComparison(
   allocatedBasic: number[],
   rates: TaxRatesMap,
 ) {
-  const { groupTaxes, assetPartTax, clause8TaxBase, clause8Tax } =
+  const { groupTaxes, assetPartTax, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax } =
     aggregateByGroup(records, incomeArray, allocatedBasic, rates);
   const calculatedTaxByGroups = groupTaxes.reduce((s, g) => s + g.groupCalculatedTax, 0);
   const totalIncome = incomeArray.reduce((s, v) => s + v, 0);
@@ -195,7 +195,7 @@ function computeGroupsAndComparison(
       : hasSurchargeGroup
         ? "groups"
         : "none";
-  return { groupTaxes, assetPartTax, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied, clause8TaxBase, clause8Tax };
+  return { groupTaxes, assetPartTax, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax };
 }
 
 /** 감면 유형별 주 법령 조문 매핑 (한도 조문과 별개) */
@@ -403,6 +403,8 @@ export function calculateTransferTaxAggregate(
     assetPartTax,
     clause8TaxBase,
     clause8Tax,
+    clause1BucketTaxBase,
+    clause1BucketTax,
   } = computeGroupsAndComparison(assetRecords, taxableAfterReduction, allocatedBasic, rates);
 
   steps.push({
@@ -748,9 +750,11 @@ export function calculateTransferTaxAggregate(
     calculatedTaxByGroups,
     calculatedTaxByGeneral,
     comparedTaxApplied,
-    // §104⑤ 크로스 조정(부동산 8호 ↔ 주식 9호)용 echo — 타입 주석 참조
+    // §104⑤ 크로스 조정(부동산 8호 ↔ 주식 9호 · 부동산 1호 ↔ 기타자산 1호)용 echo — 타입 주석 참조
     clause8TaxBase,
     clause8Tax,
+    clause1BucketTaxBase,
+    clause1BucketTax,
     calculatedTax,
     reductionAmount,
     reductionBreakdown,

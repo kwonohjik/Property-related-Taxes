@@ -61,6 +61,21 @@ export interface OtherAssetComparativeTax {
    */
   clause9TaxBase: number;
   clause9Tax: number;
+  /**
+   * §104①**1호** 버킷의 과세표준·산출세액. 1호 자산이 없으면 둘 다 0.
+   *
+   * 부동산 `AggregateTransferResult.clause1BucketTaxBase`·`clause1BucketTax`와 **대칭**이다 —
+   * 2호의 「자산별」이 예규상 「**각 호별로 합산한 자산**」이므로 **부동산 1호와 기타자산 1호도
+   * 합산 대상**이다(기재부 재산세제과-536). 크로스 조정 레이어가 두 값을 한 버킷으로 묶는다.
+   *
+   * ⚠️ **이름에 `Bucket`이 붙는 이유** — 위 `clause1Tax`는 §104**⑤**1호(과세표준 합계액 ×
+   *   §55①)이고 이 필드는 §104**①**1호(호별 버킷)다. **다른 조항의 「1호」**라 이름이 겹치면
+   *   조정 레이어에서 치명적으로 혼동된다. 8호·9호는 §104⑤에 그 번호가 없어 접미사가 없다.
+   *
+   * 📌 `clause1BucketTax + clause9Tax === clause2Tax`가 불변식이다(버킷이 이 둘뿐이므로).
+   */
+  clause1BucketTaxBase: number;
+  clause1BucketTax: number;
   /** MAX가 고른 호 — 9호가 섞이지 않으면 두 값이 같아 `"clause2"`가 된다 */
   applied: "clause1" | "clause2";
   /** `MAX(clause1Tax, clause2Tax)` — 이 그룹의 결정 산출세액 */
@@ -185,6 +200,10 @@ function computeOtherAssetComparativeTax(
   // 재합산해야 하므로(§104⑤ 본문 후단) 과세표준·세액을 분리 노출한다.
   let clause9TaxBase = 0;
   let clause9Tax = 0;
+  // §104①1호 버킷도 같은 이유로 분리한다 — 부동산 1호와 합산 대상이기 때문(위 타입 주석).
+  // ⚠️ 아래 `clause1Tax`(§104⑤1호)와 **다른 것**이라 `Bucket`을 붙인다.
+  let clause1BucketTaxBase = 0;
+  let clause1BucketTax = 0;
   for (const [clause, bucket] of buckets) {
     const bucketBase = bucket.reduce((s, { r }) => s + r.taxBase, 0);
     // 버킷 **안에서는** 대표 선택이 결과를 바꾸지 않는다 — 1호 버킷의 두 카테고리
@@ -203,6 +222,9 @@ function computeOtherAssetComparativeTax(
     if (clause === "104-1-9") {
       clause9TaxBase = bucketBase;
       clause9Tax = bucketTax;
+    } else {
+      clause1BucketTaxBase = bucketBase;
+      clause1BucketTax = bucketTax;
     }
   }
 
@@ -220,6 +242,8 @@ function computeOtherAssetComparativeTax(
     clause2Tax,
     clause9TaxBase,
     clause9Tax,
+    clause1BucketTaxBase,
+    clause1BucketTax,
     applied: clause1Tax > clause2Tax ? "clause1" : "clause2",
     aggregatedTax,
   };

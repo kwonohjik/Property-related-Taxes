@@ -1,6 +1,7 @@
 # C-3 — §104⑤ 교차 합산 **UI 설계**
 
-**상태**: 🔴 설계안(미착수) · 선행 [[cross-engine-104-5-real-estate-other-asset.plan.md]] C-1 ✅#1030 · C-2 ✅#1032·#1034
+**상태**: **C-3a ✅완료**(엔진 echo — 세액 변경 0) · 🔴 C-3b·C-3c 미착수 ·
+선행 [[cross-engine-104-5-real-estate-other-asset.plan.md]] C-1 ✅#1030 · C-2 ✅#1032·#1034
 **성격**: 기능 신설. **엔진은 이미 있다**(`comparative-104-5-cross.ts`) — 없는 것은 **호출자**다.
 **작성** 2026-08-03 — 상위 계획서가 「C-3은 UI 설계가 선행이다. 통합 마법사인지 교차 입력
 확장인지부터 정해야 한다」로 남긴 결정을 내리기 위한 문서.
@@ -114,23 +115,40 @@ C-1 고지 카드(`CrossEngine1045Notice`)에 **「합산 계산하기」 버튼
 
 ⇒ **R-2가 여기서 실제로 해소된다.** 상위 계획서가 「C-3에서만 해소된다」고 한 것이 이 경로다.
 
-## 5. 선행 엔진 작업 (UI보다 먼저)
+## 5. ✅ C-3a — 선행 엔진 작업 (완료)
 
-| # | 작업 | 크기 |
+| # | 작업 | 결과 |
 |---|---|---|
-| **2b-1** | 부동산 `aggregateByGroup`에 **`clause1TaxBase`·`clause1Tax`** echo (키가 정확히 `"104-1-1"`인 버킷 · `else` 분기) | 3줄 — 8호와 대칭 |
-| **2b-2** | 주식 `otherAssetComparativeTax`에 **`clause1TaxBase`·`clause1Tax`** echo | 3줄 — 버킷을 이미 나눠 계산 중(`stock-transfer-aggregate.ts:178`) |
-| **2b-3** 🆕 | **주식 단건 결과에 `clause1*`·`clause9*`를 무조건 echo** | 현재는 `crossClause8TaxBase`가 입력됐을 때만 `cross1045Adjustment` 안에 담긴다(`stock-transfer.types.ts:104·687`). 이력 기반은 **입력 없이도** 필요하다 |
+| **2b-1** ✅ | 부동산 `aggregateByGroup`에 **`clause1BucketTaxBase`·`clause1BucketTax`** echo (키가 정확히 `"104-1-1"`인 버킷 · `else` 분기) | 8호와 대칭 · `AggregateTransferResult`까지 배선 |
+| **2b-2** ✅ | 주식 `otherAssetComparativeTax`에 같은 두 필드 | 버킷을 이미 나눠 계산 중이었다(`stock-transfer-aggregate.ts:178`) |
+| **2b-3** ✅ | **주식 단건 결과에 `clause1Bucket*`·`clause9*`를 무조건 echo** | 종전 `cross1045Adjustment`는 `crossClause8TaxBase` 입력 시에만 생겼다 — 이력 기반은 **입력 없이도** 필요하다 |
 | ~~2b-4~~ | ~~부동산 **단건** 결과에도 echo~~ | ❌ **불필요**(§7 O-1 실측) — 단건 이력은 **다자산 API로 재호출**해 얻는다 |
 
-⚠️ 2b-1~2b-3은 **echo만 추가**하므로 세액을 바꾸지 않는다 ⇒ 기존 anchor 전건 불변이 기대값이다.
+### 🔴 착수 중 발견 — **`clause1Tax` 이름 충돌**
+
+주식 `OtherAssetComparativeTax.clause1Tax`는 이미 **§104⑤1호**(과세표준 합계액 × §55①)였다.
+§104**①**1호 버킷을 같은 이름으로 넣으면 **인터페이스와 지역변수가 동시에 충돌**하고, 무엇보다
+조정 레이어가 **다른 조항의 「1호」를 같은 이름으로** 읽게 된다.
+⇒ **양쪽 엔진 모두 `clause1Bucket*`** 으로 확정했다(8호·9호는 §104⑤에 그 번호가 없어 접미사 없음).
+
+### 검증
+
+- anchor **14건** 신규 — 부동산 8(`clause1-bucket-echo`) + 주식 6(`clause-bucket-echo`)
+- ⭐ **되돌림 실측**: `classifyRateGroup`의 분양권 분기를 제거하면 **기존 가드 3건 + 신규 A-2가
+  함께** 빨개진다(§5-C H-1이 예고한 그대로 — 방어선이 echo 정확성까지 지탱한다)
+- ⭐ **A-4 완전 분해**: 부분 비사토에서 `clause1Bucket + clause8 = 그룹`이 과세표준·세액 **양쪽 모두**
+  정확히 성립(123,000,000 + 369,000,000 = 492,000,000 · 27,610,000 + 158,560,000 = 186,170,000)
+- ⭐ **S-6 불변식**: 주식 `clause1BucketTax + clause9Tax === clause2Tax`
+- 전체 **13,152건 통과 · 회귀 0** · typecheck 0 · lint 0 errors(신규 warning 0)
+- 📌 **typecheck가 두 번째 조립 경로를 잡았다** — 비과세 `buildExemptResult`(`stock-transfer-exempt-result.ts`)도
+  필드를 채워야 했다. optional로 뒀다면 침묵 누락이 됐을 자리다.
 
 ## 6. Phase 분해
 
 ```
-C-3a  엔진 echo (세액 변경 0)
-  - 2b-1·2b-2·2b-3 (+ 2b-4는 O-1 판단 후)
-  → verify: anchor(버킷 일치·분양권 미포함·조합원입주권 포함·8호와 상호배타) + 기존 전건 불변
+C-3a  엔진 echo (세액 변경 0) ✅ **완료**
+  - 2b-1·2b-2·2b-3 (2b-4는 O-1 실측으로 불필요 확정)
+  → verified: anchor 14건 + 전체 13,152건 회귀 0 + 되돌림 적색 확인
 
 C-3b  어댑터 + 조정 레이어 배선 (UI 없음)
   - lib/calc/cross-104-5-adapter.ts — resultData 3형태 → Cross1045Input
@@ -158,8 +176,8 @@ C-3d  (선택) 주식 aggregate UI 연결
 
 ## 8. 착수 판단
 
-- **C-3a(엔진 echo)는 지금 착수 가능**하다 — 세액 변경 0이고 어느 UI 안을 택하든 필요하다.
-  **O-1은 실측으로 닫혔다**(단건 echo 불필요 — 재호출로 해결) ⇒ **2b-1·2b-2·2b-3 세 건**이다.
+- ✅ **C-3a 완료** — 세액 변경 0. **O-1은 실측으로 닫혔다**(단건 echo 불필요 — 재호출로 해결).
+  ⚠️ 착수 중 `clause1Tax` **이름 충돌**이 드러나 양쪽 모두 `clause1Bucket*`으로 확정했다(§5).
 - **C-3b·C-3c는 「가」안 승인 후**다. 「나(통합 마법사)」를 택하면 C-3b의 어댑터는 버려지고
   C-3a만 살아남는다 ⇒ **C-3a를 먼저 하는 것이 어느 쪽으로 가도 손해가 없다.**
 - **O-2(감면)** 는 착수를 막지 않는다 — C-2가 이미 「감면 있으면 미적용 + 경고」로 살고 있다.
