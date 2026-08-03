@@ -92,7 +92,26 @@ export function classifyRateGroup(
     return "short_term";
   }
 
-  if (result.surchargeType === "non_business_land" || item.isNonBusinessLand) return "non_business_land";
+  // 부칙 §9270호 §14①(nblSurchargeExcluded): +10%p가 배제되면 **해당 호 자체가 §104①1호**다
+  // (`legal-codes/surcharge-transition.ts:41` 「중과세율 배제 → §104①1호 기본세율」 — 기획재정부
+  //  재산세제과-1422 · 서울행정법원 2024구단72950). `calcTax`는 이미 그 판정을 내려 `nblBaseClause`를
+  //  `"104-1-1"`로 싣는데(`transfer-tax-rate-calc.ts:380` — Q2/PR#982), **그룹 분류만 따라가지 않아**
+  //  같은 §104①1호 자산과 §104⑤2호 버킷을 공유하지 못했다.
+  //  실측: [위기취득비사토 3억, 사업용토지 2억, 조정지역3주택 4억] 347,480,000 → 368,120,000
+  //        (합산 과세표준 350,000,000이 동일한데 누진이 두 번 태워져 20,640,000 과소).
+  //        anchor `aggregate-crisis-nbl-clause-group.anchor.test.ts` C-1 — 대조군 C-2가
+  //        「위기취득분을 사업용으로 바꾼 동등 입력」으로 같은 값을 내 도출값을 확증한다.
+  //  바로 아래 다주택 축(rateSurchargeStatutoryExcluded)이 **이미 같은 처리**를 하고 있던 좌우 불일치다.
+  //
+  // ⚠️ 배율 초과분 파트만 비사업용인 자산(주택 등)은 여기 걸리지 않는다 — 그 파트가 중과 배제되면
+  //   `surchargeType`이 undefined이고 `item.isNonBusinessLand`도 false라 종전과 동일하게 흐른다.
+  //   「배율 초과분 파트가 자산 전체를 §104⑤상 비사업용 토지 자산으로 만드는가」는 **미판정 별건**이다.
+  if (
+    (result.surchargeType === "non_business_land" || item.isNonBusinessLand) &&
+    !result.nblSurchargeExcluded
+  ) {
+    return "non_business_land";
+  }
 
   const multiHouseByResult =
     result.surchargeType === "multi_house_2" || result.surchargeType === "multi_house_3plus";
