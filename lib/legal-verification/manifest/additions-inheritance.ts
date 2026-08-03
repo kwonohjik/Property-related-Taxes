@@ -416,4 +416,15 @@ export const INHERITANCE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  // ── 🆕 2026-08-03 커버리지 갭 해소 (E2E `legal-coverage-button`이 드러낸 미등록분) ──
+  {
+    // inheritance-gift.ts PUBLIC_TRUST_GIFT — 공익신탁재산 증여세 과세가액 불산입
+    id: "GIFT.PUBLIC_TRUST",
+    citation: "상증법 §52",
+    keywords: [
+      "공익신탁으로서 종교ㆍ자선ㆍ학술 또는 그 밖의 공익을 목적으로 하는 신탁",
+      "공익법인등에 출연하는 재산의 가액은 증여세 과세가액에 산입하지 아니한다",
+    ],
+    keywordMode: "ALL",
+  },
 ];

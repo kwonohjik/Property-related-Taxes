@@ -50,4 +50,60 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywords: ["과세표준에 대한 세율", "조합법인", "100분의 14", "이자소득"],
     keywordMode: "ALL",
   },
+  // ── 🆕 2026-08-03 커버리지 갭 해소 (E2E `legal-coverage-button` 실패가 드러낸 미등록분) ──
+  // 신규 조문을 legal-codes에 인용하면 여기에도 등록해야 커버리지 100%가 유지된다.
+  {
+    // common.ts AMENDMENT_45 — 수정신고
+    id: "NTBL.AMENDMENT",
+    citation: "국세기본법 §45",
+    keywords: [
+      "과세표준수정신고서를 제출할 수 있다",
+      "신고하여야 할 과세표준 및 세액에 미치지 못할 때",
+      "결손금액이나 환급세액을 초과할 때",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // common.ts CORRECTION_CLAIM_45_2 — 경정 등의 청구
+    id: "NTBL.CORRECTION_CLAIM",
+    citation: "국세기본법 §45의2",
+    keywords: [
+      "법정신고기한이 지난 후 5년 이내에 관할 세무서장에게 청구할 수 있다",
+      "신고하여야 할 과세표준 및 세액을 초과할 때",
+      "그 사유가 발생한 것을 안 날부터 3개월 이내",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // common.ts AMENDMENT_48_2(②1호 수정신고 감면율)·AMENDMENT_48_1_2(①2호 정당한 사유)
+    id: "NTBL.PENALTY_REDUCTION",
+    citation: "국세기본법 §48",
+    keywords: [
+      "납세자가 의무를 이행하지 아니한 데에 정당한 사유가 있는 경우",
+      "1개월 이내에 수정신고한 경우: 해당 가산세액의 100분의 90에 상당하는 금액",
+      "1년 6개월 초과 2년 이내에 수정신고한 경우: 해당 가산세액의 100분의 10에 상당하는 금액",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // common.ts REFUND_GAIN_52 — 국세환급가산금
+    id: "NTBL.REFUND_INTEREST",
+    citation: "국세기본법 §52",
+    keywords: [
+      "국세환급가산금 기산일부터 충당하는 날 또는 지급결정을 하는 날까지의 기간",
+      "국세환급금에 가산하여야 한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // common.ts FINAL_RETURN_SETTLEMENT — 확정신고납부 시 예정신고 산출세액 공제
+    id: "TRANSFER.FINAL_RETURN_SETTLEMENT",
+    citation: "소득세법 §111",
+    keywords: [
+      "양도소득 산출세액에서 감면세액과 세액공제액을 공제한 금액",
+      "예정신고 산출세액",
+      "이를 공제하여 납부한다",
+    ],
+    keywordMode: "ALL",
+  },
 ];
