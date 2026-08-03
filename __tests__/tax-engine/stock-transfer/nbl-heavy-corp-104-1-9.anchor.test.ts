@@ -189,6 +189,39 @@ describe("§104⑤ — 9호가 생기면 버킷이 둘로 갈린다", () => {
     expect(r.totalCalculatedTax).toBe(215_010_000);
   });
 
+  it("B-10: **9호 버킷 echo** — 크로스 조정 레이어에 넘길 과세표준·세액을 분리 노출한다", () => {
+    // §104⑤ 본문 후단이 「8호 및 9호의 자산은 **동일한 자산으로 보고**」라 정하므로,
+    // 크로스 레이어(`comparative-104-5-cross.ts`)가 부동산 8호와 한 버킷으로 재합산하려면
+    // 9호 몫이 분리돼야 한다. `otherClausesTax`는 `clause2Tax − clause9Tax`로 얻는다.
+    const r = calculateStockTransferTaxAggregate(
+      [
+        otherAsset(300_000_000, { nblRatioOfCorpAssets: 0.6 }), // 9호
+        otherAsset(300_000_000), // 1호
+      ],
+      "aggregate",
+    );
+    const c = r.otherAssetComparativeTax!;
+    // ⚠️ §103② 기본공제 250만원은 **입력 순서 앞 종목**부터 소진한다 — 여기서는 9호가 먼저다.
+    //   9호 버킷: 300,000,000 − 2,500,000 = 297,500,000 → × 48% − 19,940,000
+    expect(c.clause9TaxBase).toBe(297_500_000);
+    expect(c.clause9Tax).toBe(122_860_000);
+    // 나머지(1호 버킷) 300,000,000 → × 38% − 19,940,000 = 94,060,000
+    expect(c.clause2Tax - c.clause9Tax).toBe(94_060_000);
+    // 버킷 과세표준의 합은 전체와 같다
+    expect(c.aggregatedTaxBase).toBe(597_500_000);
+  });
+
+  it("B-11: 9호가 없으면 echo는 0이다 (크로스 레이어가 재합산할 것이 없음)", () => {
+    const r = calculateStockTransferTaxAggregate(
+      [otherAsset(300_000_000), otherAsset(300_000_000)],
+      "aggregate",
+    );
+    const c = r.otherAssetComparativeTax!;
+    expect(c.clause9TaxBase).toBe(0);
+    expect(c.clause9Tax).toBe(0);
+    expect(c.clause2Tax).toBe(215_010_000); // 전부 1호 버킷
+  });
+
   it("B-9: 불변식 — 결정 산출세액은 언제나 `MAX(1호, 2호)`이고 자산별 합 이상이다", () => {
     for (const [g1, n1, g2, n2] of [
       [300_000_000, 0.6, 300_000_000, 0.6],

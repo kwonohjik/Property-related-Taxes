@@ -52,6 +52,15 @@ export interface OtherAssetComparativeTax {
    * §104①1호 버킷(§55① 누진) + §104①9호 버킷(기본세율 + 10%p).
    */
   clause2Tax: number;
+  /**
+   * §104①**9호** 버킷의 과세표준·산출세액. 9호 자산이 없으면 둘 다 0.
+   *
+   * **§104⑤ 크로스 조정 레이어**(`comparative-104-5-cross.ts`)가 부동산 §104①8호와 한 버킷으로
+   * 재합산하려면 이 둘이 필요하다 — 「본문 후단: 8호 및 9호의 자산은 **동일한 자산으로 보고**」.
+   * `otherClausesTax`(= 8호·9호를 뺀 나머지)는 `clause2Tax − clause9Tax`로 얻는다.
+   */
+  clause9TaxBase: number;
+  clause9Tax: number;
   /** MAX가 고른 호 — 9호가 섞이지 않으면 두 값이 같아 `"clause2"`가 된다 */
   applied: "clause1" | "clause2";
   /** `MAX(clause1Tax, clause2Tax)` — 이 그룹의 결정 산출세액 */
@@ -172,13 +181,17 @@ function computeOtherAssetComparativeTax(
     buckets.set(k, [...(buckets.get(k) ?? []), t]);
   }
   let clause2Tax = 0;
-  for (const bucket of buckets.values()) {
+  // §104①9호 버킷은 **따로 기록**한다 — 크로스 조정 레이어가 부동산 8호와 한 버킷으로
+  // 재합산해야 하므로(§104⑤ 본문 후단) 과세표준·세액을 분리 노출한다.
+  let clause9TaxBase = 0;
+  let clause9Tax = 0;
+  for (const [clause, bucket] of buckets) {
     const bucketBase = bucket.reduce((s, { r }) => s + r.taxBase, 0);
     // 버킷 **안에서는** 대표 선택이 결과를 바꾸지 않는다 — 1호 버킷의 두 카테고리
     // (다목·라목)는 같은 §55① 누진이고, 9호 버킷의 두 카테고리도 같은 9호 표다.
     // 세율을 재구현하지 않고 정본 `applyStockTaxRate`에 위임한다(dual-truth 방지).
     const rep = bucket[0];
-    clause2Tax += floorTen(
+    const bucketTax = floorTen(
       applyStockTaxRate(
         bucketBase,
         rep.r.taxCategory,
@@ -186,6 +199,11 @@ function computeOtherAssetComparativeTax(
         rep.r.isShortTermHolding,
       ).calculatedTax,
     );
+    clause2Tax += bucketTax;
+    if (clause === "104-1-9") {
+      clause9TaxBase = bucketBase;
+      clause9Tax = bucketTax;
+    }
   }
 
   // ── §104⑤1호 — 「과세표준 **합계액**에 §55①」 ────────────────────────────
@@ -200,6 +218,8 @@ function computeOtherAssetComparativeTax(
     itemSumTax,
     clause1Tax,
     clause2Tax,
+    clause9TaxBase,
+    clause9Tax,
     applied: clause1Tax > clause2Tax ? "clause1" : "clause2",
     aggregatedTax,
   };

@@ -1,5 +1,4 @@
 import { addDays, addMonths, addYears, differenceInDays, differenceInMonths, differenceInYears, subMonths } from "date-fns";
-import type { TaxBracket } from "./types";
 import type { Heir } from "./types/inheritance-gift.types";
 
 // ============================================================
@@ -16,8 +15,16 @@ import type { Heir } from "./types/inheritance-gift.types";
  * P0-1: Math.floor를 세율 곱셈 직후 적용 → 누진공제액(정수) 차감 순서 보장
  */
 export function calculateProgressiveTax(
+  /**
+   * ⚠️ **`TaxBracket[]`이 아니라 「이 함수가 실제로 읽는 최소 구조」**로 받는다.
+   *   본문이 `max`·`rate`·`deduction`만 쓰고 `min`은 쓰지 않는다. 좁게 선언해 두면
+   *   주식 엔진의 정적 표(`{ max?: number; rate; deduction }` — `min` 없음)도 **변환 없이**
+   *   같은 함수를 쓸 수 있어, 같은 산식이 두 곳에 복제되는 것을 막는다
+   *   (§104⑤ 크로스 레이어 `comparative-104-5-cross.ts`가 그 소비자다).
+   *   기존 `TaxBracket[]` 호출자는 구조적 타이핑으로 그대로 통과한다.
+   */
   taxableAmount: number,
-  brackets: TaxBracket[],
+  brackets: readonly { max?: number | null; rate: number; deduction: number }[],
 ): number {
   if (taxableAmount <= 0) return 0;
 
