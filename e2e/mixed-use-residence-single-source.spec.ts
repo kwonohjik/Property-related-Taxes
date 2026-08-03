@@ -36,6 +36,10 @@ function seedForm() {
           mixedAcqLandPricePerSqm: "2500000",
           mixedAcqCommercialBuildingPrice: "50000000",
           mixedIsMetropolitanArea: true,
+          // 겸용주택 실가 모드의 §100② **피안분액** — 없으면 validate가 계산을 차단해
+          // 결과 화면에 도달하지 못한다("자산: 겸용주택 취득 실거래가액을 입력하세요").
+          // 정본 시드는 mixed-use-filing-form-4col.spec.ts.
+          fixedAcquisitionPrice: "700000000",
         }],
         transferDate: "2026-02-16",
         filingDate: "2026-04-30",
