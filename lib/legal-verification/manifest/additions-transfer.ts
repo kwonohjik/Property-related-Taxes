@@ -349,4 +349,28 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywords: ["재전입 등에 따른 환급 등", "국외전출자가 출국일부터 5년 이내에", "납부유예 중인 세액의 취소"],
     keywordMode: "ALL",
   },
+  // ── 🆕 2026-08-03 커버리지 갭 해소 (E2E `legal-coverage-button`이 드러낸 미등록분) ──
+  {
+    // transfer.ts REDUCTION_REPLACEMENT_LAND — 대토보상 과세특례
+    id: "TRANSFER.REDUCTION_REPLACEMENT_LAND",
+    citation: "조특법 §77의2",
+    keywords: [
+      "해당 공익사업의 시행으로 조성한 토지로 보상",
+      "양도소득세의 100분의 40에 상당하는 세액을 감면받거나 양도소득세의 과세를 이연",
+      "감면받거나 과세이연받은 세액 및 이자 상당 가산액",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // transfer.ts REDUCTION_GB_DESIGNATED_LAND — 개발제한구역 매수대상 토지 감면
+    id: "TRANSFER.REDUCTION_GB_DESIGNATED_LAND",
+    citation: "조특법 §77의3",
+    keywords: [
+      "개발제한구역 지정일 이전에 해당 토지등을 취득하여",
+      "양도소득세의 100분의 40에 상당하는 세액",
+      "20년 이전에 취득하여",
+      "양도소득세의 100분의 25에 상당하는 세액",
+    ],
+    keywordMode: "ALL",
+  },
 ];

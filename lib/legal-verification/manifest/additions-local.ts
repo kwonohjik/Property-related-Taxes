@@ -200,4 +200,16 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     keywords: ["벤처기업집적시설", "신기술창업집적지역", "취득세 및 재산세", "100분의 35"],
     keywordMode: "ALL",
   },
+  // ── 🆕 2026-08-03 커버리지 갭 해소 (E2E `legal-coverage-button`이 드러낸 미등록분) ──
+  {
+    // acquisition.ts DEEMED_TAX_BASE — 간주취득(지목변경·개수·과점주주) 과세표준
+    id: "ACQUISITION.DEEMED_TAX_BASE",
+    citation: "지방세법 §10의6",
+    keywords: [
+      "토지의 지목을 사실상 변경한 경우",
+      "그 변경으로 증가한 가액에 해당하는 사실상취득가격",
+      "과점주주가 취득한 것으로 보는 해당 법인의 부동산등의 취득당시가액",
+    ],
+    keywordMode: "ALL",
+  },
 ];
