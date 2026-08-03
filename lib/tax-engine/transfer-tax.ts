@@ -458,6 +458,7 @@ export function calculateTransferTax(
       estimatedDeduction,
       parsedRates,
       multiHouseSurchargeResult,
+      splitDetail,
       steps,
     });
     if (rheResult) return rheResult;
