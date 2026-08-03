@@ -99,6 +99,15 @@ jobs:
 
       - name: E2E (알려진 사전존재 실패 제외)
         run: npm run test:e2e
+        env:
+          # 🔑 `e2e/law-*.spec.ts`(법령 리서치 12 spec)는 법제처 Open API를 직접 호출한다.
+          # `.gitignore`가 `.env*`를 제외하므로 **fresh checkout에는 키가 없고**,
+          # `lib/korean-law/client-core.ts:48`의 `process.env.KOREAN_LAW_OC`가 빈 값이 되어
+          # 브라우저에 `TypeError: Failed to fetch`가 뜬다.
+          #   ⇒ 2026-08-02 E2E 게이트 도입 후 **CI 6연속 실패**가 전부 이 원인이었다.
+          #     로컬은 `.env.local`이 있어 통과하므로 "known-failures 0건"도 로컬 기준이었다.
+          # 저장소 secret으로 주입한다(2026-08-03 등록). 이 키가 없으면 law spec은 CI에서만 빨간불이다.
+          KOREAN_LAW_OC: ${{ secrets.KOREAN_LAW_OC }}
 
       - name: E2E 실패 아티팩트 업로드
         if: failure()
