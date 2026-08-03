@@ -36,6 +36,10 @@ function seedForm() {
           mixedAcqLandPricePerSqm: "2500000",
           mixedAcqCommercialBuildingPrice: "50000000",
           mixedIsMetropolitanArea: true,
+          // 겸용주택 실가 모드의 §100② **피안분액** — 없으면 validate가 계산을 차단해
+          // 결과 화면에 도달하지 못한다("자산: 겸용주택 취득 실거래가액을 입력하세요").
+          // 정본 시드는 mixed-use-filing-form-4col.spec.ts.
+          fixedAcquisitionPrice: "700000000",
           residenceInputMode: "interval",
           residencePeriods: [{ moveInDate: "2010-03-15", moveOutDate: "2022-02-16" }],
         }],
@@ -75,7 +79,9 @@ test.describe("겸용주택 사이드바 취득가액 (mode:mixed-use 처리)", 
     await seedAndCalc(page);
 
     // 결과뷰 → 자산 목록(Step0)으로 복귀 (result 유지)
-    await page.getByRole("button", { name: "← 처음으로 (자산 목록)" }).click();
+    // ⚠️ 라벨 부분 매칭 — NavButton은 화살표를 아이콘으로 렌더하므로 accessible name에
+    //    "←"가 들어가지 않는다(TransferTaxCalculator.tsx label="처음으로 (자산 목록)").
+    await page.getByRole("button", { name: /처음으로 \(자산 목록\)/ }).click();
     await page.getByRole("heading", { name: "자산 목록·취득 정보 입력" }).waitFor();
 
     // 좌측 사이드바(WizardSidebar aside) 내 취득가액 행
