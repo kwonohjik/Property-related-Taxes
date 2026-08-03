@@ -73,6 +73,16 @@ pre-push에는 넣지 않는다 — **5~7분**이 매 푸시에 붙으면 개발
 - **`e2e/known-failures.ts`** — master에도 실패하는 **16건**을 제외한다. 그대로 넣으면 CI가 상시 빨간불이 되어 게이트 구실을 못 한다(lint가 상시 실패 CI에만 있어 실질 관문이 없던 것과 같은 실패). **목록은 줄이기만 한다** — 새 실패를 추가하는 것은 회귀를 숨기는 것이다.
 
 **spec은 포트를 하드코딩하지 않는다** — `page.goto("/calc/...")` 상대경로로 `baseURL`을 쓴다. `http://localhost:3000` 고정 spec 1건이 CI 포트에서 전건 실패해 정정했다(`inheritance-cohabit-redev-right`).
+
+#### 법령 검증 커버리지 100%는 vitest가 지킨다 (2026-08-03)
+
+`legal-codes/`에 새 조문을 인용하면 **`lib/legal-verification/manifest/additions-{세목}.ts`에도 등록**해야 한다. 등록하지 않으면 그 조문은 `npm run verify:legal` 대상에서 **조용히 빠져**, 개정돼도 아무도 알려주지 않는다.
+
+이 갭은 **두 번 재발**했다(2026-06-08 4건 · 2026-08-03 9건). 둘 다 E2E가 빨개진 뒤에야 발견됐다.
+
+⇒ `__tests__/lib/legal-verification-coverage-complete.test.ts`가 게이트다. **커버리지 계산은 순수 정적 분석**(법제처 API·`.env.local` 불필요)이라 vitest에 둘 수 있고, 그래서 **pre-push와 CI 전체 테스트 양쪽에서** 자동으로 잡힌다. 실패하면 누락 조문명을 그대로 출력한다.
+
+키워드는 **KoreanLaw MCP로 조회한 본문의 verbatim 표현**이어야 한다(강학상 용어 금지). 등록 후 `npm run verify:legal`로 키워드가 실제 법문과 맞는지 확인한다.
 - 문서 전용(`**.md`·`docs/**`·`.claude/**`)·draft PR은 건너뛴다 — 이제 과금이 아니라 **개발 머신 부하·대기시간** 때문이다.
 #### 🔒 신규 워크플로는 `runs-on: self-hosted`가 **기본**이다 (pre-push 하드블록)
 
