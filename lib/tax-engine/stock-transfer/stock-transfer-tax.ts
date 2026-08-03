@@ -706,5 +706,6 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
 export {
   calculateStockTransferTaxAggregate,
   type StockTransferAggregateResult,
+  type OtherAssetComparativeTax,
 } from "./stock-transfer-aggregate";
 

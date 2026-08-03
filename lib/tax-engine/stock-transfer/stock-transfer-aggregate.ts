@@ -25,8 +25,41 @@ import {
 // 다자산 합산 결과 타입
 // ============================================================
 
+/**
+ * §104⑤ 비교과세 — **기타자산(§94①4호) 그룹** echo.
+ *
+ * ⚠️ 주식(§94①3호 가·나목)은 §104⑤ 대상이 **아니다** — 본문이 「제94조제1항제1호ㆍ제2호 및
+ *   **제4호**에서 규정한 자산」으로 3호를 뺐다. 그래서 이 값은 기타자산 그룹만 본다.
+ */
+export interface OtherAssetComparativeTax {
+  /** §104⑤ 대상 건수(비과세 제외). 2 이상일 때만 이 객체가 만들어진다 */
+  itemCount: number;
+  /** 합산 과세표준 */
+  aggregatedTaxBase: number;
+  /**
+   * 자산별 산출세액 **단순 합계** — 참고값이다.
+   * §104⑤ 어느 호도 아니며(호별 합산을 하지 않아 누진 구간이 자산마다 리셋된다),
+   * 이 값이 결정 산출세액이 되어서는 안 된다.
+   */
+  itemSumTax: number;
+  /**
+   * 합산 과세표준에 §55① 누진 **1회** — §104⑤ **1호이자 2호**다.
+   * 기타자산은 전부 §104①**1호**(「§94①1호·2호 및 4호에 따른 자산 — §55①」)이므로
+   * 1호(합계액 누진)와 2호(호별 합산)가 같은 값이 되고, MAX도 그 값이다.
+   * (§104①9호가 구현되면 2호가 갈라지므로 그때 버킷 분리가 필요하다 — 계획서 결함 B.)
+   */
+  aggregatedTax: number;
+}
+
 export interface StockTransferAggregateResult {
-  /** 종목별 단건 결과 배열 */
+  /**
+   * 종목별 단건 결과 배열.
+   *
+   * ⚠️ **`Σ items.calculatedTax ≠ totalCalculatedTax`일 수 있다** — 기타자산 2건 이상이면
+   *   §104⑤ 비교과세가 합계에 적용되기 때문이다(`otherAssetComparativeTax`).
+   *   items는 **자산 단독 참고값**이며, 그 차이는 비교과세의 본질이다
+   *   (부동산 정본 `PerPropertyBreakdown.refCalculatedTax`와 같은 규약).
+   */
   items: StockTransferResult[];
   /** 합산 양도소득금액 */
   totalTransferIncome: number;
@@ -41,8 +74,17 @@ export interface StockTransferAggregateResult {
   };
   /** 합산 과세표준 (그룹별 기본공제 1회 적용 후) */
   totalTaxBase: number;
-  /** 합산 산출세액 */
+  /**
+   * 합산 산출세액.
+   * 기타자산 2건 이상이면 §104⑤ 비교과세가 반영되어 **`Σ items.calculatedTax`와 다르다**
+   * (`otherAssetComparativeTax` 참조).
+   */
   totalCalculatedTax: number;
+  /**
+   * §104⑤ 비교과세(기타자산 그룹) echo — 대상이 2건 미만이면 `undefined`.
+   * `"aggregate"` 모드에서만 만들어진다(§103② 기본공제가 정상 배분되는 실제 신고 경로).
+   */
+  otherAssetComparativeTax?: OtherAssetComparativeTax;
   /** 합산 가산세 */
   totalUnderReportPenalty: number;
   /** 합산 전자신고 공제 (전체 1회) */
@@ -58,6 +100,69 @@ export interface StockTransferAggregateResult {
    * ⚠️ 현재 aggregate UI 소비자 없음(다자산 UI 미연결) — 향후 연결 시 14지점 재점검 대상.
    */
   totalSecuritiesTransactionTax: SecuritiesTransactionTaxTotal;
+}
+
+/** §103②1호 그룹 키 — 기타자산(§94①4호)은 부동산과 같은 기본공제 그룹이다. */
+const OTHER_ASSET_GROUP = "real_estate_and_other_asset" as const;
+
+/**
+ * §104⑤ 비교과세 — **기타자산(§94①4호) 그룹**의 산출세액을 호별 합산으로 다시 낸다.
+ *
+ * [법령]
+ * - 「소득세법」 §104⑤ 본문: 「해당 과세기간에 제94조제1항제1호ㆍ제2호 및 **제4호**에서 규정한
+ *   자산을 **둘 이상 양도**하는 경우 양도소득 산출세액은 다음 각 호의 금액 중 **큰 것** … 으로 한다」
+ *     1호 — 양도소득과세표준 **합계액**에 §55①의 세율을 적용한 산출세액
+ *     2호 — §104①~④·⑦에 따라 계산한 **자산별** 산출세액 합계액
+ * - 「기획재정부 재산-536」(2018.6.19.) · 국세청 「기준-2018-법령해석재산-0098」:
+ *   「2호의 "자산별"에서 "자산"의 의미는 §104 **각 호별로 합산한 자산**을 의미」
+ *   ⇒ 같은 호 자산의 과세표준 합산은 **단서가 아니라 본문**이며 **조건이 없다**.
+ *
+ * [왜 1호 = 2호인가]
+ * 기타자산은 전부 §104①**1호**다 — 1호가 「§94①1호·2호 및 **4호**에 따른 자산 — §55①에 따른
+ * 세율」로 4호를 포함한다. 단기세율(§104①2·3호)은 「§94①**1호 및 2호**에서 규정하는 자산」이라
+ * 4호가 빠져 **기타자산에 적용되지 않는다**. 그래서 호가 하나뿐이고, 2호(호별 합산)가 곧
+ * 1호(합계액 누진)와 같은 값이 되어 MAX도 그 값이다.
+ * ⇒ 지금은 버킷이 하나라 「합산 과세표준에 누진 1회」로 충분하다. **§104①9호**(비사업용 토지
+ *   과다소유법인 주식 — 시행령 §167의7, 기본세율 + 10%p)가 구현되면 호가 둘이 되어 버킷 분리가
+ *   필요해진다(계획서 `docs/00-pm/stock-other-asset-104-5-and-104-1-9.plan.md` 결함 B).
+ *
+ * [종전 결함] `Σ 단건 세액`을 그대로 합계로 썼다. 그러면 **누진 구간이 자산마다 리셋**되어
+ *   1호도 2호도 아닌 값이 나온다 — 부동산 쪽 P11이 저질렀다 되돌린 오류와 같은 성질이다
+ *   (`aggregate-progressive-clause-104-5.anchor.test.ts` ❌재제안 금지 항목).
+ *   실측 과소 **27,840,000**(기타자산 2건 · 각 양도차익 3억).
+ *
+ * ⚠️ **주식(§94①3호 가·나목)은 대상이 아니다** — 본문이 3호를 열거하지 않는다.
+ * ⚠️ **차손 통산(§102②)은 이 함수의 범위가 아니다** — 차손 자산은 `taxBase`가 0이라 합계에
+ *   기여하지 않으며, 종전 동작과 동일하다(통산 미구현은 별건).
+ *
+ * @returns 대상이 2건 미만이면 `undefined`(§104⑤은 「둘 이상 양도」가 요건이다)
+ */
+function computeOtherAssetComparativeTax(
+  items: StockTransferResult[],
+  inputs: StockTransferInput[],
+): OtherAssetComparativeTax | undefined {
+  const targets = items
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => r.basicDeductionGroup === OTHER_ASSET_GROUP && !r.isExempt);
+  if (targets.length < 2) return undefined;
+
+  const aggregatedTaxBase = targets.reduce((s, { r }) => s + r.taxBase, 0);
+  const itemSumTax = targets.reduce((s, { r }) => s + r.calculatedTax, 0);
+
+  // 대표 항목의 분류로 세율을 부른다 — 기타자산 두 카테고리
+  // (`other_asset_block_shareholder`·`other_asset_heavy_re`)가 **같은 §55① 누진**이라
+  // 대표 선택이 결과를 바꾸지 않는다. 재구현하면 dual-truth가 된다.
+  const rep = targets[0];
+  const aggregatedTax = floorTen(
+    applyStockTaxRate(
+      aggregatedTaxBase,
+      rep.r.taxCategory,
+      inputs[rep.i].isSmallMediumEnterprise,
+      rep.r.isShortTermHolding,
+    ).calculatedTax,
+  );
+
+  return { itemCount: targets.length, aggregatedTaxBase, itemSumTax, aggregatedTax };
 }
 
 /**
@@ -79,6 +184,12 @@ export function calculateStockTransferTaxAggregate(
 
   if (deductionMode === "each_item" || inputs.length === 1) {
     // 단건 또는 each_item 모드 — 개별 계산 합산
+    //
+    // §104⑤ 비교과세를 여기서는 적용하지 않는다:
+    //   · `inputs.length === 1` — 법문 요건이 「자산을 **둘 이상** 양도하는 경우」다.
+    //   · `each_item` — §103② 기본공제 **중복을 허용**하는 진단 모드라 애초에 유효한 신고가
+    //     아니다(위 함수 주석). 실제 신고 경로는 `"aggregate"`이며 Zod 기본값도 그쪽이다
+    //     (`lib/api/stock-transfer-tax-schema.ts:548`).
     const items = inputs.map((input) => calculateStockTransferTaxInternal(input));
     const totalTransferIncome = items.reduce((s, r) => s + r.transferIncome, 0);
     const totalCalculatedTax = items.reduce((s, r) => s + r.calculatedTax, 0);
@@ -214,7 +325,18 @@ export function calculateStockTransferTaxAggregate(
   });
 
   const totalTransferIncome = processedItems.reduce((s, r) => s + r.transferIncome, 0);
-  const totalCalculatedTax = processedItems.reduce((s, r) => s + r.calculatedTax, 0);
+
+  // §104⑤ 비교과세 — 기타자산 그룹만 호별 합산으로 다시 낸다(위 함수 주석 참조).
+  // 주식 그룹은 §104⑤ 대상이 아니라 종전대로 단건 합계다.
+  const otherAssetComparativeTax = computeOtherAssetComparativeTax(processedItems, inputs);
+  const totalCalculatedTax =
+    processedItems.reduce((s, r) => s + r.calculatedTax, 0) +
+    (otherAssetComparativeTax
+      ? otherAssetComparativeTax.aggregatedTax - otherAssetComparativeTax.itemSumTax
+      : 0);
+
+  // 가산세는 **자산별 단건 값의 합**을 유지한다 — 부동산 정본과 같은 방침
+  // (`transfer-tax-aggregate.ts` "자산별 가산세는 단건 엔진이 처리, aggregate는 합산만 수행").
   const totalUnderReportPenalty = processedItems.reduce((s, r) => s + r.underReportPenalty, 0);
 
   // 전자신고 공제는 합산 1회
@@ -236,6 +358,7 @@ export function calculateStockTransferTaxAggregate(
     },
     totalTaxBase: processedItems.reduce((s, r) => s + r.taxBase, 0),
     totalCalculatedTax,
+    ...(otherAssetComparativeTax ? { otherAssetComparativeTax } : {}),
     totalUnderReportPenalty,
     electronicFilingCredit,
     totalFinalTax,
