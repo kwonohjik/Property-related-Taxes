@@ -616,6 +616,14 @@ export function AssetSectionBasic({
           </>
           )}
 
+          {/* ── 축 B·C: 건물 연면적 · 바닥면적(정착면적) — 둘 다 표시되면 한 행 ── */}
+          <div
+            className={cn(
+              showFloorArea(asset) &&
+                showFootprintArea(asset) &&
+                "grid grid-cols-1 sm:grid-cols-2 gap-3 items-start",
+            )}
+          >
           {/* ── 축 B: 건물 연면적 ──────────────────────────────────────── */}
           {showFloorArea(asset) && (
             <div className="space-y-1">
@@ -660,6 +668,7 @@ export function AssetSectionBasic({
               </p>
             </div>
           )}
+          </div>
 
           {/* ── 부수토지 배율 판정용 소재지 구분 (영 §168의12 · §167의5 · §154⑦ — 배율 동일) ── */}
           {showFootprintArea(asset) && parseDecimal(asset.buildingFootprintArea) > 0 && (
@@ -677,6 +686,7 @@ export function AssetSectionBasic({
                 name={`appurtenantLandZone-${asset.assetId}`}
                 tone="sky"
                 layout="stack"
+                columns={3}
                 value={asset.appurtenantLandZone ?? ""}
                 onChange={(v) =>
                   onChange({ appurtenantLandZone: v as AssetForm["appurtenantLandZone"] })

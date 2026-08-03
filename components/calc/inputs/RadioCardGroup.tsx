@@ -112,7 +112,7 @@ export interface RadioCardGroupProps<T extends string> {
   /** stack(기본): 세로 카드 / inline: 가로 컴팩트 */
   layout?: "stack" | "inline";
   /** stack 레이아웃 열 수 (반응형: 모바일은 항상 1열, sm↑부터 적용). 기본 1 */
-  columns?: 1 | 2;
+  columns?: 1 | 2 | 3;
   className?: string;
   /**
    * 조문 링크 배지 자동 생성. 기본 법령명(예: "상증법")을 주면 각 옵션의
@@ -156,9 +156,11 @@ export function RadioCardGroup<T extends string>({
       className={cn(
         layout === "inline"
           ? "flex flex-wrap gap-2"
-          : columns === 2
-            ? "grid grid-cols-1 sm:grid-cols-2 gap-2"
-            : "space-y-2",
+          : columns === 3
+            ? "grid grid-cols-1 sm:grid-cols-3 gap-2"
+            : columns === 2
+              ? "grid grid-cols-1 sm:grid-cols-2 gap-2"
+              : "space-y-2",
         className,
       )}
     >
