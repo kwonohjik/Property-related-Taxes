@@ -129,6 +129,8 @@ export interface StockTransferFormData {
 
   // ── §94①4 다목 누적 ──
   cumulativeTransferRatio: string;   // % 단위 "30" = 30% (API에서 ×0.01 → 엔진 decimal)
+  /** §104①9호 — 법인 자산총액 중 비사업용토지 가액 비율. % 단위 "50" (API에서 ×0.01 → 엔진 decimal) */
+  nblRatioOfCorpAssets: string;
 
   // ── 양도가액 ──
   transferPriceMode: "actual" | "exchange";  // 3중 패턴 default: "actual"
@@ -479,6 +481,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     preMergerAcquisitionDate: "",
 
     cumulativeTransferRatio: "",
+    nblRatioOfCorpAssets: "",
 
     transferPriceMode: "actual",         // 3중 패턴 default
     transferActualInputMode: "total", // 3중 패턴 default

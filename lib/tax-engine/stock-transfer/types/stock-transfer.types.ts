@@ -79,6 +79,16 @@ export type StockTransferInput = {
   isHeavyRealEstateForRate: boolean;
   /** 시행령 §165⑤ 가중치 반전용 (별개 임계 50%) */
   isHeavyRealEstateForValuation: boolean;
+  /**
+   * §104①9호 판정용 — 해당 **법인의 자산총액 중 비사업용토지 가액이 차지하는 비율**.
+   * **0~1 소수**다(형제 필드 `cumulativeTransferRatio`와 같은 단위 — UI는 %, API가 ×0.01).
+   * 시행령 §167의7이 「**100분의 50 이상**」이면 §104①9호(기본세율 + 10%p)로 정한다.
+   * 비사업용토지는 「**법인세법」 §55의2②** 기준이다(소득세법 §104의3이 아니다).
+   *
+   * **미입력(undefined) = 9호 미해당**(§104①1호 유지) — 법 근거 없이 불리하게 적용하지 않는다.
+   * 임계 판정은 **엔진이 한다**(사용자가 「9호 해당」을 스스로 판단하지 않는다) — 계획서 §4 D-1.
+   */
+  nblRatioOfCorpAssets?: number;
 
   // 회사 분류
   isSmallMediumEnterprise: boolean;
@@ -497,6 +507,13 @@ export type StockTransferResult = {
     | "kotc_venture_exempt"
     | "other_asset_block_shareholder"
     | "other_asset_heavy_re"
+    /**
+     * §104①**9호** — 비사업용 토지 과다소유법인 주식(시행령 §167의7). 분류는 다목·라목
+     * 그대로이고 **세율만** 기본세율 + 10%p라 **둘 다**에 얹히므로 2종이다.
+     * 플래그가 아니라 카테고리로 둔 이유는 `stock-transfer-rate-calc.ts` 분기 주석 참조.
+     */
+    | "other_asset_block_shareholder_nbl"
+    | "other_asset_heavy_re_nbl"
     | "out_of_scope_foreign"
     | "foreign_stock"
     | "exit_tax";

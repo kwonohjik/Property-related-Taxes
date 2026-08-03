@@ -217,3 +217,28 @@ export const BASIC_PROGRESSIVE_BRACKETS = [
   { max: 1_000_000_000, rate: 0.42, deduction: 35_940_000 },
   { max: undefined, rate: 0.45, deduction: 65_940_000 },
 ] as const;
+
+/**
+ * 「소득세법」 §104①**9호** — **비사업용 토지 과다소유법인 주식** 세율표 (16~55%).
+ *
+ * [대상] 시행령 **§167조의7**(「비사업용 토지 과다소유법인 주식의 범위」):
+ *   「법 §94①4호 **다목 또는 라목**에 해당하는 주식등으로서 해당 법인의 **자산총액 중
+ *    「법인세법」 §55조의2②에 따른 비사업용토지의 가액이 차지하는 비율이 100분의 50 이상**인
+ *    법인의 주식등」
+ *
+ * ⭐ **법정 표는 기본표에서 `rate`만 +10%p이고 `deduction`은 그대로다.**
+ *   `tax₉ = tax_기본 + 0.1 × base = base × (r + 0.1) − d` 이므로 `d' = d`가 **수학적 필연**이다.
+ *   8구간 전부 법문 수치로 검산했다(예: 3억 구간 `3억 × 50% − 1억2,406만 = 25,940,000`
+ *   = 기본표 40% 구간 공제). ⇒ **파생**해서 드리프트를 원천 차단한다.
+ *   법정 표 8구간 전수는 `__tests__/.../nbl-heavy-corp-brackets.anchor.test.ts`가 고정한다 —
+ *   기본표가 개정되면 그 anchor가 빨개져 **법문 재확인을 강제**한다.
+ *
+ * ⚠️ **`rate + 0.1`을 그대로 쓰면 안 된다** — `0.06 + 0.1 === 0.16000000000000003`이다.
+ *   세율은 소수 2자리이므로 **정수(퍼센트포인트) 경유**로 오염을 없앤다
+ *   (루트 정책 「부동소수 누적 금지」).
+ */
+export const NBL_HEAVY_CORP_BRACKETS = BASIC_PROGRESSIVE_BRACKETS.map((b) => ({
+  max: b.max,
+  rate: Math.round(b.rate * 100 + 10) / 100,
+  deduction: b.deduction,
+})) as readonly { max?: number; rate: number; deduction: number }[];

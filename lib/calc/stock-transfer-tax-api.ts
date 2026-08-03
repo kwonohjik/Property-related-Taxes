@@ -334,6 +334,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // §94①4 다목 누적 비율 — UI는 % 단위 입력, 엔진은 decimal(0.0~1.0) 수신 → ×0.01 변환
   const cumRatioPercent = parseFloatOrUndef(form.cumulativeTransferRatio);
   if (cumRatioPercent !== undefined) body.cumulativeTransferRatio = cumRatioPercent * 0.01;
+  // §104①9호 — UI는 %, 엔진은 0~1 소수(형제 필드와 같은 규약). 미입력이면 body에 넣지 않는다
+  // = 9호 미해당(법 근거 없이 불리 적용 금지).
+  const nblRatioPercent = parseFloatOrUndef(form.nblRatioOfCorpAssets);
+  if (nblRatioPercent !== undefined) body.nblRatioOfCorpAssets = nblRatioPercent * 0.01;
 
   // ── 양도가액 ──
   body.transferPriceMode = transferPriceMode;         // 3중 패턴 default: "actual"

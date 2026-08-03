@@ -101,6 +101,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     donorAcquisitionDate: strField("donorAcquisitionDate"),
     preMergerAcquisitionDate: strField("preMergerAcquisitionDate"),
     cumulativeTransferRatio: strField("cumulativeTransferRatio"),
+    nblRatioOfCorpAssets: strField("nblRatioOfCorpAssets"),
     transferPriceMode: enumField("transferPriceMode", ["actual", "exchange"], defaults.transferPriceMode),
     transferActualInputMode: enumField("transferActualInputMode", ["per_share", "total"], defaults.transferActualInputMode),
     transferTotalPrice: strField("transferTotalPrice"),

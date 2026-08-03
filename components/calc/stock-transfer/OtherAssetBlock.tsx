@@ -13,6 +13,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface OtherAssetBlockProps {
@@ -22,6 +23,7 @@ interface OtherAssetBlockProps {
     | "isHeavyRealEstateForRate"
     | "isHeavyRealEstateForValuation"
     | "cumulativeTransferRatio"
+    | "nblRatioOfCorpAssets"
   >;
   onChange: (patch: Partial<StockTransferFormData>) => void;
 }
@@ -96,6 +98,35 @@ export function OtherAssetBlock({ form, onChange }: OtherAssetBlockProps) {
           </div>
         </ToggleCard>
       </div>
+
+      {/*
+        §104①9호 — 비사업용 토지 과다소유법인 주식 (세율만 기본세율 + 10%p)
+        시행령 §167의7이 「§94①4호 **다목 또는 라목**」을 대상으로 하므로 두 토글 **바깥**에 둔다.
+        분류(다목/라목)와 독립된 축이라 amber로 구분한다.
+      */}
+      {(form.isQualifyingBlockShareholder || form.isHeavyRealEstateForRate) && (
+        <div className="mt-3">
+          <ToneCard tone="amber" title="§104①9호 — 비사업용 토지 과다소유법인 여부">
+            <FieldCard
+              label="자산총액 중 비사업용토지 가액 비율"
+              hint="법인 재무제표 기준. 비사업용토지는 「법인세법」 §55조의2②에 따른다(소득세법 §104의3이 아님). 50% 이상이면 세율이 기본세율 + 10%p로 적용된다. 모르면 비워두세요 — 미해당으로 계산된다."
+              unit="%"
+              trailing={
+                <div className="flex flex-wrap gap-1">
+                  <LawArticleModal legalBasis="소득세법 §104 ① 9호" label="§104①9" />
+                  <LawArticleModal legalBasis="소득세법 시행령 §167조의7" label="영§167의7" />
+                </div>
+              }
+            >
+              <DecimalInput
+                value={form.nblRatioOfCorpAssets}
+                onChange={(v) => onChange({ nblRatioOfCorpAssets: v })}
+                placeholder="비사업용토지 가액 비율"
+              />
+            </FieldCard>
+          </ToneCard>
+        </div>
+      )}
     </FieldCard>
   );
 }
