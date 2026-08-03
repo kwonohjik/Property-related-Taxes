@@ -41,6 +41,7 @@ import { PostListingDetailCard } from "@/components/calc/results/PostListingDeta
 import { CaseFortyNineFormulaCard } from "@/components/calc/stock-transfer/CaseFortyNineFormulaCard";
 import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
 import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
+import { Cross1045AdjustmentCard } from "@/components/calc/stock-transfer/Cross1045AdjustmentCard";
 import {
   fmt,
   ResultRow,
@@ -555,10 +556,15 @@ export function StockTransferTaxResultView({
       {/* PR 로드맵 카드 (항상 — 개발용 로드맵) */}
       <PrRoadmapCard />
 
-      {/* §104⑤ 크로스 엔진 고지 — 기타자산(§94①4호)일 때만 (계획서 C-1) */}
-      {result.basicDeductionGroup === "real_estate_and_other_asset" && (
-        <CrossEngine1045Notice from="other_asset" />
+      {/* §104⑤ 8호·9호 의제 조정액 — 부동산 8호 과세표준이 입력된 9호 종목에서만 (C-2 / 2-3′) */}
+      {result.cross1045Adjustment && (
+        <Cross1045AdjustmentCard detail={result.cross1045Adjustment} />
       )}
+
+      {/* §104⑤ 크로스 엔진 고지 — 기타자산(§94①4호)일 때만 (계획서 C-1).
+          조정액 카드가 뜨면 그쪽이 더 구체적이므로 일반 고지는 접는다. */}
+      {result.basicDeductionGroup === "real_estate_and_other_asset" &&
+        !result.cross1045Adjustment && <CrossEngine1045Notice from="other_asset" />}
 
       {/* 경고 (항상 인쇄) */}
       <Warnings warnings={result.warnings} />

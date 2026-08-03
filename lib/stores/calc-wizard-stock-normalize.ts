@@ -168,6 +168,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     isFraudulent: boolField("isFraudulent", defaults.isFraudulent),
     isInternationalTransaction: boolField("isInternationalTransaction", defaults.isInternationalTransaction),
     realEstateGroupBasicDeductionUsed: strField("realEstateGroupBasicDeductionUsed") || defaults.realEstateGroupBasicDeductionUsed,
+    crossClause8TaxBase: strField("crossClause8TaxBase"),
 
     // ── 분할 매수·분할 양도 (Plan v2.2) ──
     lotsMode: enumField("lotsMode", ["single", "split"], defaults.lotsMode),

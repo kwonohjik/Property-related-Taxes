@@ -225,6 +225,19 @@ export function Step3({ form, onChange }: Step3Props) {
             onChange={(v) => onChange({ realEstateGroupBasicDeductionUsed: v })}
             placeholder="0"
           />
+
+          {/*
+            §104⑤ 본문 후단 — 8호·9호 동일 자산 의제.
+            부동산 엔진과 주식 엔진이 분리돼 자동 연동이 불가능하므로 위 기본공제와 **같은 층위**로
+            사용자가 옮겨 적는다. 세액에는 반영하지 않고 결과에서 조정액을 **안내**한다.
+          */}
+          <CurrencyInput
+            label="같은 해 양도한 부동산 중 비사업용 토지 과세표준"
+            hint="비사업용 토지(소득세법 §104①8호)와 비사업용 토지 과다소유법인 주식(§104①9호)은 §104⑤ 본문 후단이 「동일한 자산으로 보아」 합산하도록 정합니다. 부동산 계산 결과의 §104①8호 과세표준을 입력하면 합산 시 늘어나는 세액을 안내합니다 — 모르면 비워두세요."
+            value={form.crossClause8TaxBase}
+            onChange={(v) => onChange({ crossClause8TaxBase: v })}
+            placeholder="비사업용 토지 과세표준"
+          />
         </div>
       </section>
 

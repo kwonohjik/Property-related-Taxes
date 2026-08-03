@@ -59,6 +59,57 @@ export interface Cross1045Reduction {
   ifClause2: number;
 }
 
+/**
+ * §104⑤ 본문 후단 **8호·9호 의제**만 반영한 **조정액** — 1호 비교는 하지 않는다.
+ *
+ * 완전한 §104⑤(1호·2호 MAX)을 내려면 반대편 엔진의 **과세표준 합계·산출세액**까지 필요한데,
+ * 그건 사용자가 4개 숫자를 옮겨 적어야 한다(계획서 §5-B **G-3**). 반면 조정액은
+ * **8호 과세표준 1칸**이면 나온다 — 9호는 이 엔진이 안다.
+ *
+ * ⚠️ **1호가 이기는 경우를 놓친다**(G-5). 다만 8호·9호가 있으면 +10%p가 붙어 2호가 커지므로
+ *   누락 위험이 4개 숫자 오입력 위험보다 낮다고 판단했다. **UI 문구에 그 한계를 적어야 한다.**
+ * ⚠️ 조정액에 **귀속이 없다**(G-4) — §104⑤은 전체 산출세액을 하나로 정하므로 부동산 몫인지
+ *   주식 몫인지 정해지지 않는다. ⇒ **세액에 반영하지 말고 안내로만** 쓴다.
+ */
+export interface Cross1045Adjustment {
+  /** 사용자가 입력한 부동산 §104①8호 과세표준 */
+  clause8TaxBase: number;
+  /** 이 신고의 §104①9호 과세표준 */
+  clause9TaxBase: number;
+  /** 8호·9호를 **합산**했을 때의 세액 */
+  merged89Tax: number;
+  /** 따로 계산했을 때의 합 (= 현행 단순합) */
+  separate89Tax: number;
+  /** `merged89Tax − separate89Tax` — 「동일한 자산으로 보아」 늘어나는 세액 */
+  adjustment: number;
+}
+
+/**
+ * 8호·9호 의제 조정액만 계산한다. **둘 중 하나라도 0이면 `undefined`**
+ * (합칠 대상이 없으면 조정도 없다).
+ */
+export function computeCross89Adjustment(args: {
+  clause8TaxBase: number;
+  clause9TaxBase: number;
+  nbl89Brackets: Bracket;
+}): Cross1045Adjustment | undefined {
+  const { clause8TaxBase, clause9TaxBase, nbl89Brackets } = args;
+  if (clause8TaxBase <= 0 || clause9TaxBase <= 0) return undefined;
+
+  const merged89Tax = calculateProgressiveTax(clause8TaxBase + clause9TaxBase, nbl89Brackets);
+  const separate89Tax =
+    calculateProgressiveTax(clause8TaxBase, nbl89Brackets) +
+    calculateProgressiveTax(clause9TaxBase, nbl89Brackets);
+
+  return {
+    clause8TaxBase,
+    clause9TaxBase,
+    merged89Tax,
+    separate89Tax,
+    adjustment: merged89Tax - separate89Tax,
+  };
+}
+
 export interface Cross1045Input {
   /** §104⑤**1호**용 — 부동산 + 기타자산 **전체** 양도소득과세표준 합계 */
   totalTaxBase: number;

@@ -381,6 +381,18 @@ export function aggregateByGroup(
    *   차이 가능」으로 명시). 예정신고는 자산별, §104⑤는 확정신고에서 전체에 적용된다.
    */
   assetPartTax: { tax: number; note?: string }[];
+  /**
+   * §104⑤ **크로스 조정**(부동산 §104①8호 ↔ 주식 §104①9호)용 echo — 본문 후단
+   * 「제1항제8호 및 제9호의 자산은 **동일한 자산으로 보고**」.
+   *
+   * 🔒 후보 집합이 **정확히 `{104-1-8}`인 버킷**만이다(계획서 §5-B G-2 — 좁은 해석).
+   *   단기 비사토(`{104-1-2, 104-1-8}`)는 제외 — 넓히면 세액이 오르고 §104⑤2호 단서와 충돌한다.
+   * ⚠️ `groupTaxes`의 `non_business_land` **그룹으로 대신할 수 없다** — 부분 비사업용 토지는
+   *   한 그룹 안에서 8호 파트/1호 파트로 갈린다.
+   * 8호 자산이 없으면 둘 다 0.
+   */
+  clause8TaxBase: number;
+  clause8Tax: number;
 } {
   const groupMap = new Map<RateGroup, number[]>();
   records.forEach((r, i) => {
@@ -391,6 +403,10 @@ export function aggregateByGroup(
   });
 
   const out: GroupTaxResult[] = [];
+  // §104⑤ 크로스 조정용 8호 버킷 누적(위 반환 타입 주석 참조). `short_term` 그룹에는
+  // 순수 8호가 생기지 않는다 — 2년 미만 비사토는 후보가 `{104-1-2/3, 104-1-8}`이기 때문이다.
+  let clause8TaxBase = 0;
+  let clause8Tax = 0;
   const assetPartTax: { tax: number; note?: string }[] = [];
   const parsedRates = parseRatesFromMap(rates);
   /**
@@ -610,19 +626,33 @@ export function aggregateByGroup(
         clauseGroups.set(k, [...(clauseGroups.get(k) ?? []), p]);
       });
       groupCalculatedTax = 0;
-      for (const bucket of clauseGroups.values()) {
+      for (const [bucketKey, bucket] of clauseGroups) {
+        const bucketBase = bucket.reduce((sum, p) => sum + p.taxBase, 0);
+        let bucketTax: number;
         if (bucket.length === 1) {
-          groupCalculatedTax += bucket[0].calculatedTax;
-          continue;
+          bucketTax = bucket[0].calculatedTax;
+        } else {
+          // 같은 호 → 과세표준을 **합산해 1회** 계산한다(§104⑤2호 본문 · 예규 §1.6-A).
+          // 대표 파트의 `rateInput`을 쓴다 — 같은 호라 세율 규칙이 같고, 재구성하면 dual-truth다.
+          bucketTax = calcTax(bucketBase, parsedRates, bucket[0].rateInput).calculatedTax;
         }
-        // 같은 호 → 과세표준을 **합산해 1회** 계산한다(§104⑤2호 본문 · 예규 §1.6-A).
-        // 대표 파트의 `rateInput`을 쓴다 — 같은 호라 세율 규칙이 같고, 재구성하면 dual-truth다.
-        const mergedBase = bucket.reduce((sum, p) => sum + p.taxBase, 0);
-        groupCalculatedTax += calcTax(
-          mergedBase,
-          parsedRates,
-          bucket[0].rateInput,
-        ).calculatedTax;
+        groupCalculatedTax += bucketTax;
+
+        // §104⑤ **크로스 조정**(부동산 8호 ↔ 주식 9호)용 echo — 본문 후단이 「제1항제8호 및
+        // 제9호의 자산은 **동일한 자산으로 보고**」라 정하므로 8호 몫을 분리해 내보낸다.
+        //
+        // 🔒 **키가 정확히 `"104-1-8"`인 버킷만** 잡는다(계획서 §5-B **G-2 — 좁은 해석**).
+        //   단기(1~2년) 비사토는 8호에 **해당은 하나** 후보 집합이 `{104-1-2, 104-1-8}`이라
+        //   키가 `"104-1-2+104-1-8"`이고 애초에 `short_term` 그룹에 있다. 그것까지 8호로 묶으면
+        //   세율이 8호 표로 바뀌어 **세액이 오르고** §104⑤2호 **단서**(합산액에 각 해당 호별
+        //   세율을 적용해 **큰** 것)와도 충돌 소지가 있다 ⇒ 「법 근거 없이 불리 적용 금지」.
+        //
+        // ⚠️ `groupTaxBase`로 대신할 수 없다 — **부분 비사업용 토지**는 한 그룹 안에서 8호 파트와
+        //   1호 파트로 갈린다(실측: 그룹 492,000,000 = 8호 369,000,000 + 1호 123,000,000).
+        if (bucketKey === "104-1-8") {
+          clause8TaxBase += bucketBase;
+          clause8Tax += bucketTax;
+        }
       }
       appliedRate = Math.max(...clauseParts.map((p) => p.appliedRate)); // 표시용 최고세율
       surchargeRate = Math.max(...clauseParts.map((p) => p.surchargeRate ?? 0));
@@ -645,7 +675,7 @@ export function aggregateByGroup(
     });
   }
 
-  return { groupTaxes: out, assetPartTax };
+  return { groupTaxes: out, assetPartTax, clause8TaxBase, clause8Tax };
 }
 
 // ============================================================

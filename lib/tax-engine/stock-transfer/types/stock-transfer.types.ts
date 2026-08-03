@@ -9,6 +9,7 @@
 // 취득 후 상장 환산 결과 — sibling 분리(800줄 정책). import는 StockTransferResult가 참조,
 // export는 외부 import 경로 무변경용 re-export.
 import type { PostListingValuationResult } from "./post-listing-result.types";
+import type { Cross1045Adjustment } from "../../comparative-104-5-cross";
 export type { PostListingValuationResult };
 
 // ============================================================
@@ -89,6 +90,18 @@ export type StockTransferInput = {
    * 임계 판정은 **엔진이 한다**(사용자가 「9호 해당」을 스스로 판단하지 않는다) — 계획서 §4 D-1.
    */
   nblRatioOfCorpAssets?: number;
+  /**
+   * §104⑤ **크로스 조정** — 같은 과세기간에 양도한 **부동산 §104①8호(비사업용 토지) 과세표준**(원).
+   *
+   * 본문 후단이 「제1항**제8호 및 제9호**의 자산은 **동일한 자산으로 보고**」라 정하므로,
+   * 이 신고의 §104①9호분과 **한 버킷으로 합산**했을 때 늘어나는 세액을 안내하기 위해 받는다.
+   * 부동산 결과 화면의 「§104①8호 버킷 과세표준」을 옮겨 적는다(두 엔진이 분리돼 자동 연동이
+   * 불가능하다 — `realEstateGroupBasicDeductionUsed`와 같은 층위).
+   *
+   * ⚠️ **세액에 반영하지 않는다** — §104⑤은 전체 산출세액을 하나로 정하므로 조정액에 귀속이 없다.
+   *   결과에 `cross1045Adjustment`로 echo해 **안내**로만 쓴다. 미입력이면 조정 미적용.
+   */
+  crossClause8TaxBase?: number;
 
   // 회사 분류
   isSmallMediumEnterprise: boolean;
@@ -667,6 +680,11 @@ export type StockTransferResult = {
 
   // 기본공제 그룹
   basicDeductionGroup: "real_estate_and_other_asset" | "stock";
+  /**
+   * §104⑤ 본문 후단(8호·9호 동일 자산 의제) **조정액 echo** — `crossClause8TaxBase`가 입력되고
+   * 이 종목이 §104①9호일 때만 만들어진다. **세액에는 반영되지 않는다**(귀속이 없다).
+   */
+  cross1045Adjustment?: Cross1045Adjustment;
 
   // 필요경비
   expenses: number;
