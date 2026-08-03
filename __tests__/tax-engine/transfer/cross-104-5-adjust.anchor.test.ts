@@ -29,6 +29,10 @@ import {
 const brackets = {
   basicBrackets: BASIC_PROGRESSIVE_BRACKETS,
   nbl89Brackets: NBL_HEAVY_CORP_BRACKETS,
+  // C-3b에서 §104①1호 버킷 교차 합산이 추가됐다. 이 파일의 케이스는 **8호·9호 의제 전용**이라
+  // 1호는 0이고, 따라서 **기존 도출값이 전부 불변**이어야 한다(0을 합쳐도 0).
+  realEstateClause1TaxBase: 0,
+  otherAssetClause1TaxBase: 0,
 };
 
 describe("§104⑤ 크로스 조정 (C-2)", () => {

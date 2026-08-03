@@ -1,6 +1,6 @@
 # C-3 — §104⑤ 교차 합산 **UI 설계**
 
-**상태**: **C-3a ✅완료**(엔진 echo — 세액 변경 0) · 🔴 C-3b·C-3c 미착수 ·
+**상태**: **C-3a ✅**(엔진 echo) · **C-3b ✅**(어댑터 + 1호 교차) · 🔴 **C-3c**(화면) 미착수 ·
 선행 [[cross-engine-104-5-real-estate-other-asset.plan.md]] C-1 ✅#1030 · C-2 ✅#1032·#1034
 **성격**: 기능 신설. **엔진은 이미 있다**(`comparative-104-5-cross.ts`) — 없는 것은 **호출자**다.
 **작성** 2026-08-03 — 상위 계획서가 「C-3은 UI 설계가 선행이다. 통합 마법사인지 교차 입력
@@ -89,6 +89,33 @@ C-1 고지 카드(`CrossEngine1045Notice`)에 **「합산 계산하기」 버튼
 - **[5]는 세액을 「대체」하지 않고 「신고 시 이 금액」으로 제시**한다 — 두 마법사가 낸 개별
   신고서 금액은 그대로 유효하고(예정신고 단위), §104⑤은 확정신고 단위이기 때문이다.
 
+### 4.2-R ✅ C-3b 구현 결과 (2026-08-03)
+
+**어댑터는 순수 함수다** — 세액을 계산하지 않고, 네트워크도 타지 않는다. 호별 값이 없는 형태는
+**`needsRecalc` 신호만** 내고 재계산은 호출자(C-3c 화면)가 한다.
+
+| 형태 | 판별 | 처리 |
+|---|---|---|
+| `AggregateTransferResult`(다자산 직접) | `groupTaxes` + `calculatedTaxByGroups` 존재 | ✅ 그대로 |
+| `{ mode:"bundled", apportionment, aggregated }` | `aggregated`가 다자산 결과 | ✅ 꺼내 쓴다 |
+| `{ mode:"single", result }` · `{ mode:"mixed-use", result }` | 호 정보 없음 | 🔴 `needsRecalc` |
+| 주식 `StockTransferResult` | `clause1BucketTaxBase` 존재 + 기타자산 그룹 | ✅ C-3a echo |
+| 주식 — **구 버전 이력** | 호별 필드 부재 | 🔴 `needsRecalc` |
+| 주식 — **§94①3호** | `basicDeductionGroup === "stock"` | 🔴 대상 아님 |
+
+⚠️ **`clause2Tax`는 `calculatedTaxByGroups`이지 `calculatedTax`가 아니다** — 후자는 이미 §104⑤1호와
+MAX를 취한 값이라 크로스에 넣으면 **비교가 두 번** 걸린다(테스트 R-2가 고정).
+
+**`computeCross1045`에 1호 교차가 들어왔다**(C-2b의 엔진 몫):
+- 2호 = `otherClausesTax` + `f_기본(부동산1호 + 기타1호)` + `f₈₉(8호 + 9호)`
+- `otherClausesTax` = 양쪽 2호 합 − 1호 세액 − 8·9호 세액 (**재합산 대상을 걷어낸 나머지**)
+- 1호는 **양쪽을 따로 받는다**(`realEstateClause1TaxBase`·`otherAssetClause1TaxBase`) — 8호·9호는
+  이름으로 출처가 정해지지만 1호는 양쪽에 다 있고, 합쳐 받으면 「따로 계산했을 때」를 낼 수 없다.
+
+📌 **도출값**(테스트 B-4): 부동산(1호 2억 + 8호 2.435억) × 기타자산(1호 2억 + 9호 3억)
+→ 1호 합산 **134,060,000** · 8·9호 합산 **246,680,000**(C-2 값과 동일) · 2호 **380,740,000** ·
+1호 360,330,000 ⇒ 채택 380,740,000. **현행 단순합 333,120,000 대비 47,620,000 과소**.
+
 ### 4.3 데이터 흐름
 
 ```
@@ -150,10 +177,10 @@ C-3a  엔진 echo (세액 변경 0) ✅ **완료**
   - 2b-1·2b-2·2b-3 (2b-4는 O-1 실측으로 불필요 확정)
   → verified: anchor 14건 + 전체 13,152건 회귀 0 + 되돌림 적색 확인
 
-C-3b  어댑터 + 조정 레이어 배선 (UI 없음)
-  - lib/calc/cross-104-5-adapter.ts — resultData 3형태 → Cross1045Input
-  - computeCross1045 호출 · 감면 유무 판정
-  → verify: 어댑터 단위 테스트(형태별) + 도출값 anchor
+C-3b  어댑터 + 조정 레이어 배선 (UI 없음) ✅ **완료**
+  - `lib/calc/cross-104-5-adapter.ts` — resultData 3형태 → `CrossSide` → `Cross1045Input`
+  - `computeCross1045`에 **§104①1호 교차 합산 추가**(C-2b의 엔진 몫이 여기서 들어왔다)
+  → verified: 13건(형태 판별 9 + 조립·도출 4) + 기존 anchor 7건 **값 불변**
 
 C-3c  화면 /calc/cross-104-5
   - 이력 선택 UI · R-2 감지·재계산 · 결과 비교표
