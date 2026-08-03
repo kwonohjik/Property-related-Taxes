@@ -587,6 +587,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
 
   // ── §103② 기본공제 그룹 ──
   body.realEstateGroupBasicDeductionUsed = parseIntOrZero(form.realEstateGroupBasicDeductionUsed);  // default: 0
+  // §104⑤ 크로스 조정 — 미입력이면 body에 넣지 않는다(= 조정 미적용).
+  const crossC8 = parseIntOrZero(form.crossClause8TaxBase);
+  if (crossC8 > 0) body.crossClause8TaxBase = crossC8;
 
   // ── 분할 매수·분할 양도 (Plan v2.2) ──⑪⑫⑬
   if (form.lotsMode === "split") {

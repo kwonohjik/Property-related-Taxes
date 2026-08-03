@@ -27,6 +27,13 @@ import { calculateForeignStockTax } from "./foreign-stock";
 import { calculateExitTax } from "./exit-tax";
 import { classifyStockTransfer } from "./stock-classification";
 import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate, buildAppliedThreshold } from "./stock-transfer-helpers";
+import { computeCross89Adjustment } from "../comparative-104-5-cross";
+import { NBL_HEAVY_CORP_BRACKETS } from "./stock-rate-tables";
+/** §104①9호 카테고리 — `stock-transfer-aggregate.ts`와 같은 집합(둘 다 다목·라목에 얹힌다) */
+const NBL_HEAVY_CORP_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]> = new Set([
+  "other_asset_block_shareholder_nbl",
+  "other_asset_heavy_re_nbl",
+]);
 import { calcPostListingConversion } from "./stock-valuation-post-listing";
 import type { PostListingValuationResult } from "./stock-valuation-post-listing";
 import { synthesizePostListingInput } from "./post-listing-flat-adapter";
@@ -627,9 +634,28 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   const stxResult = calcSecuritiesTransactionTax(input, transferPrice);
 
   // ──────────────────────────────────────────────────────────
+  // §104⑤ 본문 후단 — 8호·9호 **동일 자산 의제** 조정액 (안내 전용)
+  // ──────────────────────────────────────────────────────────
+  // 부동산 엔진과 주식 엔진이 분리돼 §104⑤이 교차 조합을 아우르지 못한다. 사용자가 부동산
+  // 결과에서 「§104①8호 버킷 과세표준」을 옮겨 적으면, 이 종목의 9호분과 **한 버킷으로 합산**
+  // 했을 때 늘어나는 세액을 계산해 **안내**한다.
+  // ⚠️ **세액에 반영하지 않는다** — §104⑤은 전체 산출세액을 하나로 정하므로 조정액에 귀속이 없다.
+  //   여기서 `calculatedTax`에 더하면 **주식 신고서 금액이 틀어진다**(계획서 §5-B G-4).
+  // ⚠️ §104⑤**1호 비교는 하지 않는다**(G-5) — 반대편 과세표준 합계·산출세액이 필요해 입력이
+  //   4칸이 된다. 결과 카드가 그 한계를 문구로 알린다.
+  const cross1045Adjustment = NBL_HEAVY_CORP_CATEGORIES.has(classification.taxCategory)
+    ? computeCross89Adjustment({
+        clause8TaxBase: input.crossClause8TaxBase ?? 0,
+        clause9TaxBase: taxBase,
+        nbl89Brackets: NBL_HEAVY_CORP_BRACKETS,
+      })
+    : undefined;
+
+  // ──────────────────────────────────────────────────────────
   // 결과 조립
   // ──────────────────────────────────────────────────────────
   const fullResult: StockTransferResult = {
+    ...(cross1045Adjustment ? { cross1045Adjustment } : {}),
     taxCategory: classification.taxCategory,
     appliedSection94: classification.appliedSection94,
     section94_2Applied: classification.section94_2Applied,

@@ -289,6 +289,19 @@ export interface AggregateTransferResult {
   calculatedTaxByGeneral: number;
   /** 비교과세(§104⑤) 적용 결과 */
   comparedTaxApplied: "groups" | "general" | "none";
+  /**
+   * §104⑤ **크로스 조정**(부동산 §104①8호 ↔ 주식 §104①9호)용 echo — 본문 후단
+   * 「제2호의 금액을 계산할 때 **제1항제8호 및 제9호의 자산은 동일한 자산으로 보고**」.
+   *
+   * 주식 엔진의 `otherAssetComparativeTax.clause9TaxBase`·`clause9Tax`와 **대칭**이며,
+   * 조정 레이어 `comparative-104-5-cross.ts`가 두 값을 한 버킷으로 재합산한다.
+   *
+   * 🔒 후보 집합이 **정확히 `{104-1-8}`인 버킷**만이다(좁은 해석 — 단기 비사토 제외).
+   * ⚠️ `groupTaxes`의 `non_business_land` 그룹으로 대신할 수 없다 — **부분 비사업용 토지**는
+   *   한 그룹 안에서 8호 파트/1호 파트로 갈린다. 8호 자산이 없으면 둘 다 0.
+   */
+  clause8TaxBase: number;
+  clause8Tax: number;
   /** MAX(byGroups, byGeneral) */
   calculatedTax: number;
 

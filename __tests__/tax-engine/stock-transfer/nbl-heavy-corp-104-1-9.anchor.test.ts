@@ -222,6 +222,49 @@ describe("§104⑤ — 9호가 생기면 버킷이 둘로 갈린다", () => {
     expect(c.clause2Tax).toBe(215_010_000); // 전부 1호 버킷
   });
 
+  it("C-1: **8호·9호 의제 조정액** — 부동산 8호 과세표준을 입력하면 안내값이 나온다", () => {
+    // §104⑤ 본문 후단: 「제1항제8호 및 제9호의 자산은 **동일한 자산으로 보고**」
+    const r = calculateStockTransferTax(
+      otherAsset(300_000_000, { nblRatioOfCorpAssets: 0.6, crossClause8TaxBase: 243_500_000 }),
+    );
+    const c = r.cross1045Adjustment!;
+    expect(c.clause8TaxBase).toBe(243_500_000);
+    expect(c.clause9TaxBase).toBe(297_500_000); // 3억 − 기본공제 250만
+    // 합산 541,000,000 × 52% − 35,940,000 = 245,380,000
+    expect(c.merged89Tax).toBe(245_380_000);
+    // 따로: 8호 f₈₉(243,500,000) + 9호 f₈₉(297,500,000)
+    expect(c.separate89Tax).toBe(96_940_000 + 122_860_000);
+    expect(c.adjustment).toBe(25_580_000);
+
+    // ⚠️ **세액에는 반영하지 않는다** — §104⑤은 전체 산출세액을 정하므로 귀속이 없다(G-4).
+    expect(r.calculatedTax).toBe(122_860_000);
+  });
+
+  it("C-2: 미입력이면 조정 없음 — 9호가 아니어도 없음", () => {
+    const noInput = calculateStockTransferTax(
+      otherAsset(300_000_000, { nblRatioOfCorpAssets: 0.6 }),
+    );
+    expect(noInput.cross1045Adjustment).toBeUndefined();
+
+    // 9호가 아니면 합칠 대상이 아니다(§104⑤ 후단은 8호·9호만 지목한다)
+    const not9 = calculateStockTransferTax(
+      otherAsset(300_000_000, { crossClause8TaxBase: 243_500_000 }),
+    );
+    expect(not9.taxCategory).toBe("other_asset_block_shareholder");
+    expect(not9.cross1045Adjustment).toBeUndefined();
+  });
+
+  it("C-3: 조정액은 **합산 − 분리**이고 음수가 될 수 없다(누진의 볼록성)", () => {
+    for (const c8 of [10_000_000, 243_500_000, 1_000_000_000]) {
+      const r = calculateStockTransferTax(
+        otherAsset(300_000_000, { nblRatioOfCorpAssets: 0.6, crossClause8TaxBase: c8 }),
+      );
+      const c = r.cross1045Adjustment!;
+      expect(c.adjustment).toBe(c.merged89Tax - c.separate89Tax);
+      expect(c.adjustment).toBeGreaterThanOrEqual(0);
+    }
+  });
+
   it("B-9: 불변식 — 결정 산출세액은 언제나 `MAX(1호, 2호)`이고 자산별 합 이상이다", () => {
     for (const [g1, n1, g2, n2] of [
       [300_000_000, 0.6, 300_000_000, 0.6],
