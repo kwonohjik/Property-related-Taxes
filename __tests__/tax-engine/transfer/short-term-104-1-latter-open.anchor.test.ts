@@ -17,11 +17,29 @@
  * 반대 해석: 1호는 2·3호·8호 등 특별 규정이 적용되지 않는 **잔여(일반) 규정**이므로 2호가
  * 적용되는 자산은 1호에 「해당」하지 않는다.
  *
- * 🔴 **어느 쪽인지 판단하지 않았다.** 이 쟁점을 직접 다룬 예규·판례를 찾지 못했다
+ * 🔴 **어느 쪽인지 판단하지 않았다.** 이 쟁점을 **직접** 판정한 예규·판례를 찾지 못했다
  * (법제처 해석례 19-0620은 §104①**4호 단서** 건이라 무관하나, 「조세법규는 법문대로 해석하고
  *  합리적 이유 없이 확장·유추해석할 수 없다」는 원칙은 확인해 준다 — 대법원 95누1491·97누20090).
  * 세액이 **오르는** 방향이라 근거 없이 바꾸지 않는다(memory `feedback_unverified_authority_blocks_tax_change`
  * 「법문 해석만으로 세액 변경 금지」).
+ *
+ * 🟢 **다만 실무 교재가 「배타적 독법」 쪽 정황을 준다**(2026-08-03 사용자 제공 이미지 재확인).
+ *   §104⑤2호 「자산별」 해설에서 **호별 그룹을 이렇게 열거**한다:
+ *     「즉, **2년 이상 보유토지 등, 단기양도, 미등기자산, 비사업용토지, 조정대상지역내 다주택자**와
+ *      같이 각 호별로 합산하라는 의미이다」(기획재정부 재산-536, 2018.6.19. 인용부 직후)
+ *   ⇒ 1호 그룹을 「**2년 이상 보유토지 등**」으로 부르고 「단기양도」를 **별개 그룹**으로 병렬한다.
+ *     단기 자산이 1호에도 해당한다면 §104⑤2호 호별 합산에서 **한 자산이 두 그룹에 중복 계상**되어
+ *     이 그룹핑 자체가 성립하지 않는다. A-5가 그 대응(교재 5그룹 ↔ 엔진 `RateGroup` 5개)을 고정한다.
+ *   교재 **사례2**도 정합적이다 — B·C주택(1~2년 미만 + 조정지역 3주택)의 비교 후보를
+ *     **①2호 60% vs ⑦3호 70% 둘만** 들고 §104①1호 누진(4억×40%−25,940,000 = 134,060,000)은
+ *     후보에 넣지 않는다. (다만 1호는 어차피 져서 생략됐을 수도 있어 이것만으로는 결정적이지 않다.)
+ *
+ * ⚠️ **반대 정황도 있다** — 교재 「④ 하나의 토지가 사업용과 비사업용으로 나뉘는 경우」는
+ *   §104① 후단이 **기본세율(1호) ↔ 비사업용 중과(8호)** 사이에서 작동한다고 서술한다
+ *   (「…가장 높은 것을 적용한다는 규정에 따라 … 전체를 비사업용 토지로 보고」). 즉 그 국면에서는
+ *   1호가 후단의 한 축이었다. 다만 그것은 **한 자산이 물리적으로 두 성격으로 나뉘는** 경우이고,
+ *   대법원 2012두15371 + 2018.4.1. §104⑤ 본문 후단 신설로 **이미 폐기된 취급**이다.
+ *   ⇒ 균질한 자산 하나가 1호·2호에 **동시 해당**하는가는 교재도 직접 답하지 않는다.
  *
  * ⚠️ **실질 영향은 §104①2호 40% 축뿐이다** — 후단이 발동하려면 단일세율이 누진 한계세율(최고 45%)
  *   보다 낮아야 하는데, 단일세율 호는 40%·50%·60%·70%뿐이라 **40%(비주택 1~2년)만 후보**다.
@@ -131,5 +149,57 @@ describe("§104① 후단 — 일반 단기 자산 × 1호 누진 (미판정·�
     expect(r.calculatedTaxByGeneral).toBe(832_935_000); // 1호 = 누진
     expect(r.calculatedTax).toBe(832_935_000);
     expect(r.comparedTaxApplied).toBe("general");
+  });
+
+  it("A-5: 교재의 **호별 5그룹**과 엔진 `RateGroup`이 1:1로 대응한다", () => {
+    // 「즉, 2년 이상 보유토지 등 · 단기양도 · 미등기자산 · 비사업용토지 · 조정대상지역내 다주택자와
+    //   같이 각 호별로 합산하라는 의미이다」 — 실무 교재(기재부 재산-536 인용부 직후)
+    //
+    // 이 5그룹이 **배타적**이라는 것이 「단기 자산은 1호에 해당하지 않는다」 독법의 근거다.
+    // 단기 자산이 1호에도 해당한다면 호별 합산에서 한 자산이 두 그룹에 중복 계상된다.
+    //
+    // ⇒ 누군가 §104① 후단을 도입하며 `candidateClauses`에 1호를 넣으면 이 대응이 깨진다.
+    //   그때 이 anchor가 「교재 그룹핑과의 정합을 어떻게 유지할 것인가」를 강제로 묻게 한다.
+    const engineGroups = [
+      "progressive", // 2년 이상 보유토지 등 (§104①1호)
+      "short_term", // 단기양도 (§104①2·3호)
+      "unregistered", // 미등기자산 (§104①10호)
+      "non_business_land", // 비사업용토지 (§104①8호)
+      "multi_house_surcharge", // 조정대상지역내 다주택자 (§104⑦)
+    ] as const;
+    expect(engineGroups).toHaveLength(5);
+
+    // 각 그룹이 실제로 만들어지는지 — 자산 5건을 한 신고에 담아 확인한다.
+    const D2 = D("2026-06-01");
+    const base = {
+      transferDate: D2,
+      acquisitionPrice: 0,
+      expenses: 0,
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      isRegulatedArea: false,
+    };
+    const r = calculateTransferTaxAggregate(
+      {
+        taxYear: 2026,
+        annualBasicDeductionUsed: 2_500_000,
+        properties: [
+          // 2년 이상 보유토지
+          { ...(baseTransferInput({ ...base, propertyType: "land", acquisitionDate: D("2015-01-01"), transferPrice: 300_000_000 }) as unknown as Record<string, unknown>), propertyId: "G1", propertyLabel: "G1" },
+          // 단기양도(19개월)
+          { ...(baseTransferInput({ ...base, propertyType: "land", acquisitionDate: D("2024-11-01"), transferPrice: 300_000_000 }) as unknown as Record<string, unknown>), propertyId: "G2", propertyLabel: "G2" },
+          // 미등기
+          { ...(baseTransferInput({ ...base, propertyType: "land", acquisitionDate: D("2015-01-01"), transferPrice: 300_000_000, isUnregistered: true }) as unknown as Record<string, unknown>), propertyId: "G3", propertyLabel: "G3" },
+          // 비사업용토지
+          { ...(baseTransferInput({ ...base, propertyType: "land", acquisitionDate: D("2015-01-01"), transferPrice: 300_000_000, isNonBusinessLand: true }) as unknown as Record<string, unknown>), propertyId: "G4", propertyLabel: "G4" },
+          // 조정대상지역 다주택
+          { ...(baseTransferInput({ ...base, propertyType: "housing", acquisitionDate: D("2015-01-01"), transferPrice: 300_000_000, isRegulatedArea: true, householdHousingCount: 3 }) as unknown as Record<string, unknown>), propertyId: "G5", propertyLabel: "G5" },
+        ],
+      } as never,
+      mockRates,
+    );
+    expect([...r.groupTaxes.map((g) => g.group)].sort()).toEqual([...engineGroups].sort());
+    // 각 그룹에 정확히 1건씩 — 겹치는 자산이 없다(배타성).
+    for (const g of r.groupTaxes) expect(g.assetIds).toHaveLength(1);
   });
 });
