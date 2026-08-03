@@ -28,6 +28,7 @@ import { downloadSelectedPdf } from "@/components/calc/results/transfer/Transfer
 import { PublicExpropriationDetailCard } from "@/components/calc/results/transfer/TransferReductionRows";
 import { ReplacementLand77_2DetailCard } from "@/components/calc/results/transfer/ReplacementLand77_2DetailCard";
 import { GbDesignatedLand77_3DetailCard } from "@/components/calc/results/transfer/GbDesignatedLand77_3DetailCard";
+import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
 import {
   MULTI_TRANSFER_PRINT_SECTIONS,
   type MultiTransferPrintSectionId,
@@ -769,6 +770,11 @@ export function MultiTransferTaxResultView({
       </PrintSection>
 
       {/* 합산 계산 과정 토글은 명세서 카드 내 'EngineStepsSubToggle'로 통합됨 (2026-05-12) */}
+
+      {/* §104⑤ 크로스 엔진 고지 — 비사업용 토지 그룹이 있을 때만 (계획서 C-1 · R-5) */}
+      {result.groupTaxes.some((g) => g.group === "non_business_land") && (
+        <CrossEngine1045Notice from="real_estate" />
+      )}
 
       {/* 이력 안내 */}
       {!isLoggedIn && (

@@ -40,6 +40,7 @@ import { LotCapitalAdjustmentsCard } from "@/components/calc/results/LotCapitalA
 import { PostListingDetailCard } from "@/components/calc/results/PostListingDetailCard";
 import { CaseFortyNineFormulaCard } from "@/components/calc/stock-transfer/CaseFortyNineFormulaCard";
 import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
+import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
 import {
   fmt,
   ResultRow,
@@ -553,6 +554,11 @@ export function StockTransferTaxResultView({
 
       {/* PR 로드맵 카드 (항상 — 개발용 로드맵) */}
       <PrRoadmapCard />
+
+      {/* §104⑤ 크로스 엔진 고지 — 기타자산(§94①4호)일 때만 (계획서 C-1) */}
+      {result.basicDeductionGroup === "real_estate_and_other_asset" && (
+        <CrossEngine1045Notice from="other_asset" />
+      )}
 
       {/* 경고 (항상 인쇄) */}
       <Warnings warnings={result.warnings} />

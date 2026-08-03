@@ -13,6 +13,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
+import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
@@ -502,6 +503,15 @@ export function TransferTaxResultView({
       {/* ⑦ 가업상속공제 §97의2④ 의제·일반 비교 결과 카드 */}
       {result.familyBusinessDetail && (
         <FamilyBusinessImputedComparisonCard detail={result.familyBusinessDetail} />
+      )}
+
+      {/* §104⑤ 크로스 엔진 고지 — 비사업용 토지가 있을 때만(계획서 C-1 · R-5 좁은 노출).
+          ⚠️ `surchargeType`은 부칙 §9270호 §14① 위기취득 배제 시 undefined가 되고
+             `nonBusinessLandJudgmentDetail`은 `nonBusinessLandDetails` 제공 시만 채워지므로,
+             비사토인데 안 뜨는 경우가 있다. **오탐보다 미탐이 낫다**는 R-5 방침상 의도된 것이다
+             (§104⑤ 자체는 비사토와 무관하게 걸리며, 그 사실은 고지 본문이 적는다). */}
+      {(result.surchargeType === "non_business_land" || result.nonBusinessLandJudgmentDetail?.isNonBusinessLand) && (
+        <CrossEngine1045Notice from="real_estate" />
       )}
 
       {/* 면책 고지 */}
