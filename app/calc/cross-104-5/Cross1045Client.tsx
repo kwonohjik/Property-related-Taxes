@@ -30,8 +30,27 @@ import {
   type CrossCandidate,
 } from "@/lib/calc/cross-104-5-history";
 import { callCross1045API, type CrossCalcResponse } from "@/lib/calc/cross-104-5-api";
+import {
+  extractRealEstateSide,
+  extractOtherAssetSide,
+  type CrossSide,
+} from "@/lib/calc/cross-104-5-adapter";
+import { checkRealEstateRecalc, recalcRealEstate, recalcOtherAsset } from "@/lib/calc/cross-104-5-recalc";
+import { pickBestAllocation, type AllocationOutcome } from "@/lib/calc/cross-104-5-allocation";
 
 const won = (n: number) => n.toLocaleString();
+
+/** 재계산으로 얻은 결과 — 이력 대신 이것을 쓴다 */
+interface Recalced {
+  /** 원본 이력 id — 다른 이력을 고르면 버린다 */
+  recordId: string;
+  side: CrossSide;
+  /** 감면 재판정용(X-3) — 구 이력에는 없던 값이 드러날 수 있다 */
+  reductionAmount: number;
+  /** 원본 이력의 §104⑤2호 세액 — 값이 달라졌는지 비교한다(X-5) */
+  previousClause2Tax: number | null;
+  raw: Record<string, unknown>;
+}
 
 /** 이력 1건의 표시 이름 */
 function labelOf(rec: CalculationRecord): string {
@@ -49,12 +68,20 @@ function CandidatePicker({
   selectedId,
   onSelect,
   emptyHint,
+  recalcState,
+  onRecalc,
+  canRecalc,
 }: {
   title: string;
   candidates: CrossCandidate[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   emptyHint: string;
+  /** recordId → 재계산 상태 */
+  recalcState: Record<string, "idle" | "loading" | "done" | { error: string }>;
+  onRecalc: (id: string) => void;
+  /** 이 이력을 다시 계산할 수 있는가 — 불가하면 사유 */
+  canRecalc: (c: CrossCandidate) => { ok: true } | { ok: false; reason: string };
 }) {
   if (candidates.length === 0) {
     return (
@@ -67,31 +94,66 @@ function CandidatePicker({
     <ToneCard tone="slate" title={title}>
       <div className="space-y-2">
         {candidates.map((c) => {
-          const usable = c.extract.ok;
+          const state = recalcState[c.record.id] ?? "idle";
+          const recalcedOk = state === "done";
+          // 이력에 호별 값이 없어도 **재계산하면** 쓸 수 있다(C-3d).
+          const usable = c.extract.ok || recalcedOk;
+          const recalcable = !c.extract.ok && !recalcedOk ? canRecalc(c) : null;
           return (
-            <label
+            <div
               key={c.record.id}
-              className={`flex items-start gap-2 rounded-md border p-2 text-sm ${
-                usable ? "cursor-pointer hover:bg-muted/50" : "opacity-60"
+              className={`rounded-md border p-2 text-sm ${
+                usable ? "hover:bg-muted/50" : "opacity-60"
               } ${selectedId === c.record.id ? "border-primary bg-primary/5" : ""}`}
             >
-              <input
-                type="radio"
-                className="mt-1"
-                name={title}
-                disabled={!usable}
-                checked={selectedId === c.record.id}
-                onChange={() => onSelect(c.record.id)}
-              />
-              <span className="flex-1">
-                <span className="block">{labelOf(c.record)}</span>
-                {!usable && (
-                  <span className="mt-1 block text-caption text-amber-700 dark:text-amber-400">
-                    {c.extract.reason}
+              <label className={`flex items-start gap-2 ${usable ? "cursor-pointer" : ""}`}>
+                <input
+                  type="radio"
+                  className="mt-1"
+                  name={title}
+                  disabled={!usable}
+                  checked={selectedId === c.record.id}
+                  onChange={() => onSelect(c.record.id)}
+                />
+                <span className="flex-1">
+                  <span className="block">
+                    {labelOf(c.record)}
+                    {recalcedOk && (
+                      <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-micro font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                        다시 계산함
+                      </span>
+                    )}
                   </span>
-                )}
-              </span>
-            </label>
+                  {!usable && (
+                    <span className="mt-1 block text-caption text-amber-700 dark:text-amber-400">
+                      {c.extract.ok ? "" : c.extract.reason}
+                    </span>
+                  )}
+                  {typeof state === "object" && (
+                    <span className="mt-1 block text-caption text-rose-700 dark:text-rose-400">
+                      {state.error}
+                    </span>
+                  )}
+                </span>
+              </label>
+              {/* 호별 값이 없는 이력 → 저장된 입력으로 다시 계산해 쓸 수 있게 한다(C-3d-3) */}
+              {recalcable && (
+                <div className="mt-1 pl-6">
+                  {recalcable.ok ? (
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      disabled={state === "loading"}
+                      onClick={() => onRecalc(c.record.id)}
+                    >
+                      {state === "loading" ? "다시 계산 중…" : "다시 계산"}
+                    </Button>
+                  ) : (
+                    <p className="text-caption text-muted-foreground">{recalcable.reason}</p>
+                  )}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -107,6 +169,13 @@ export default function Cross1045Client() {
   const [result, setResult] = useState<CrossCalcResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // C-3d — 재계산 결과·상태. 다른 이력을 고르면 버린다(`recordId`로 식별).
+  const [recalcedRe, setRecalcedRe] = useState<Recalced | null>(null);
+  const [recalcedOa, setRecalcedOa] = useState<Recalced | null>(null);
+  const [recalcState, setRecalcState] = useState<
+    Record<string, "idle" | "loading" | "done" | { error: string }>
+  >({});
+  const [allocation, setAllocation] = useState<AllocationOutcome | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -134,46 +203,134 @@ export default function Cross1045Client() {
   const rePick = reOfYear.find((c) => c.record.id === reId) ?? null;
   const oaPick = oaOfYear.find((c) => c.record.id === oaId) ?? null;
 
-  /** §103② 기본공제 중복(R-2) — 감지만 한다 */
-  const overlap = useMemo(() => {
-    if (!rePick?.extract.ok || !oaPick?.extract.ok) return null;
-    const re = rePick.record.resultData as Record<string, unknown>;
-    const oa = oaPick.record.resultData as Record<string, unknown>;
-    return detectBasicDeductionOverlap({
-      realEstateBasicDeduction: typeof re.basicDeduction === "number" ? re.basicDeduction : 0,
-      otherAssetBasicDeduction: typeof oa.basicDeduction === "number" ? oa.basicDeduction : 0,
-    });
-  }, [rePick, oaPick]);
+  /** 재계산 결과가 있으면 그것을, 없으면 이력에서 뽑은 값을 쓴다 */
+  const reSide: CrossSide | null =
+    recalcedRe?.recordId === reId ? recalcedRe.side : rePick?.extract.ok ? rePick.extract.side : null;
+  const oaSide: CrossSide | null =
+    recalcedOa?.recordId === oaId ? recalcedOa.side : oaPick?.extract.ok ? oaPick.extract.side : null;
 
-  /** 부동산에 감면이 있으면 크로스를 내지 않는다(§4.6 U-4) */
+  /** §103② 기본공제 중복(R-2) — 감지 */
+  const overlap = useMemo(() => {
+    if (!rePick || !oaPick) return null;
+    const re = (recalcedRe?.recordId === reId ? recalcedRe.raw : rePick.record.resultData) ?? {};
+    const oa = (recalcedOa?.recordId === oaId ? recalcedOa.raw : oaPick.record.resultData) ?? {};
+    const pick = (v: Record<string, unknown>) => {
+      const inner = (v.aggregated ?? v) as Record<string, unknown>;
+      return typeof inner.basicDeduction === "number" ? inner.basicDeduction : 0;
+    };
+    return detectBasicDeductionOverlap({
+      realEstateBasicDeduction: pick(re as Record<string, unknown>),
+      otherAssetBasicDeduction: pick(oa as Record<string, unknown>),
+    });
+  }, [rePick, oaPick, recalcedRe, recalcedOa, reId, oaId]);
+
+  /**
+   * 부동산에 감면이 있으면 크로스를 내지 않는다(§4.6 U-4).
+   * ⚠️ **재계산 결과를 우선**한다 — 구 이력에는 `reductionAmount`가 없다가 재계산으로
+   *   드러날 수 있다(계획서 X-3).
+   */
   const reReduction = useMemo(() => {
+    if (recalcedRe?.recordId === reId) return recalcedRe.reductionAmount;
     if (!rePick?.extract.ok) return 0;
     const re = rePick.record.resultData as Record<string, unknown>;
     const inner = (re.aggregated ?? re) as Record<string, unknown>;
     return typeof inner.reductionAmount === "number" ? inner.reductionAmount : 0;
-  }, [rePick]);
+  }, [rePick, recalcedRe, reId]);
 
-  const canCalc =
-    year !== null && rePick?.extract.ok === true && oaPick?.extract.ok === true && reReduction === 0;
+  const canCalc = year !== null && reSide !== null && oaSide !== null && reReduction === 0;
 
   const run = useCallback(async () => {
-    if (!canCalc || !rePick?.extract.ok || !oaPick?.extract.ok || year === null) return;
+    if (!canCalc || !reSide || !oaSide || year === null) return;
     setLoading(true);
     setError(null);
     setResult(null);
+    setAllocation(null);
     try {
-      const r = await callCross1045API({
-        taxYear: year,
-        realEstate: rePick.extract.side,
-        otherAsset: oaPick.extract.side,
-      });
-      setResult(r);
+      setResult(await callCross1045API({ taxYear: year, realEstate: reSide, otherAsset: oaSide }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "계산 중 오류가 발생했습니다.");
     } finally {
       setLoading(false);
     }
-  }, [canCalc, rePick, oaPick, year]);
+  }, [canCalc, reSide, oaSide, year]);
+
+  /** 후보 1건 재계산 — 호별 값이 없는 이력을 쓸 수 있게 만든다 */
+  const doRecalc = useCallback(
+    async (side: "re" | "oa", record: CalculationRecord) => {
+      setRecalcState((s) => ({ ...s, [record.id]: "loading" }));
+      try {
+        const prevClause2 = (() => {
+          const v = (record.resultData ?? {}) as Record<string, unknown>;
+          const inner = (v.aggregated ?? v) as Record<string, unknown>;
+          const n = side === "re" ? inner.calculatedTaxByGroups : inner.calculatedTax;
+          return typeof n === "number" ? n : null;
+        })();
+
+        if (side === "re") {
+          const raw = (await recalcRealEstate(record)) as unknown as Record<string, unknown>;
+          const ex = extractRealEstateSide(raw);
+          if (!ex.ok) throw new Error(ex.reason);
+          setRecalcedRe({
+            recordId: record.id,
+            side: ex.side,
+            reductionAmount: typeof raw.reductionAmount === "number" ? raw.reductionAmount : 0,
+            previousClause2Tax: prevClause2,
+            raw,
+          });
+        } else {
+          const raw = (await recalcOtherAsset(record)) as unknown as Record<string, unknown>;
+          const ex = extractOtherAssetSide(raw);
+          if (!ex.ok) throw new Error(ex.reason);
+          setRecalcedOa({
+            recordId: record.id,
+            side: ex.side,
+            reductionAmount: 0, // 주식 결과에는 감면 필드가 없다(계획서 U-4)
+            previousClause2Tax: prevClause2,
+            raw,
+          });
+        }
+        setRecalcState((s) => ({ ...s, [record.id]: "done" }));
+        setResult(null);
+        setAllocation(null);
+      } catch (e) {
+        setRecalcState((s) => ({
+          ...s,
+          [record.id]: { error: e instanceof Error ? e.message : "다시 계산하지 못했습니다." },
+        }));
+      }
+    },
+    [],
+  );
+
+  /** 기본공제 배분 2안을 계산해 유리한 쪽 채택(C-3d-2) */
+  const runAllocation = useCallback(async () => {
+    if (!rePick || !oaPick || year === null) return;
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setAllocation(null);
+    try {
+      const outcome = await pickBestAllocation({
+        realEstateRecord: rePick.record,
+        otherAssetRecord: oaPick.record,
+        taxYear: year,
+      });
+      // ⚠️ 재계산으로 감면이 드러나면 크로스를 내지 않는다(X-3).
+      if ((outcome.best.realEstate.reductionAmount ?? 0) > 0) {
+        setError(
+          "다시 계산해 보니 부동산 쪽에 감면세액이 있어 합산 결과를 제시할 수 없습니다. " +
+            "(§104⑤ 본문 괄호 — 감면세액 차감 후 비교가 필요합니다)",
+        );
+        return;
+      }
+      setAllocation(outcome);
+      setResult(outcome.best.cross);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "배분안을 계산하지 못했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  }, [rePick, oaPick, year]);
 
   if (records === null) {
     return <div className="p-6 text-sm text-muted-foreground">이력을 불러오는 중…</div>;
@@ -248,8 +405,18 @@ export default function Cross1045Client() {
                 onSelect={(id) => {
                   setReId(id);
                   setResult(null);
+                  setAllocation(null);
                 }}
                 emptyHint={`${year}년 부동산 계산 이력이 없습니다.`}
+                recalcState={recalcState}
+                onRecalc={(id) => {
+                  const c = reOfYear.find((x) => x.record.id === id);
+                  if (c) void doRecalc("re", c.record);
+                }}
+                canRecalc={(c) => {
+                  const r = checkRealEstateRecalc(c.record);
+                  return r.ok ? { ok: true } : { ok: false, reason: r.reason };
+                }}
               />
               <CandidatePicker
                 title="3. 기타자산 계산"
@@ -258,8 +425,16 @@ export default function Cross1045Client() {
                 onSelect={(id) => {
                   setOaId(id);
                   setResult(null);
+                  setAllocation(null);
                 }}
                 emptyHint={`${year}년 기타자산 계산 이력이 없습니다.`}
+                recalcState={recalcState}
+                onRecalc={(id) => {
+                  const c = oaOfYear.find((x) => x.record.id === id);
+                  if (c) void doRecalc("oa", c.record);
+                }}
+                // 주식은 저장된 폼을 그대로 다시 태우면 되므로 항상 가능하다.
+                canRecalc={() => ({ ok: true })}
               />
             </>
           )}
@@ -275,8 +450,61 @@ export default function Cross1045Client() {
                 <strong>{won(overlap.excess)}원</strong>이 초과되었습니다.
               </p>
               <p className="text-caption text-muted-foreground">
-                아래 결과는 저장된 값을 그대로 합산한 것이라 이 중복이 남아 있습니다. 정확한 신고를
-                위해서는 한쪽 계산기에서 「이미 사용한 기본공제」를 입력해 다시 계산하시기 바랍니다.
+                아래 「합산 계산」은 저장된 값을 그대로 쓰므로 이 중복이 남습니다. 기본공제를 한쪽에
+                몰아준 <strong>두 경우를 각각 계산해 유리한 쪽</strong>을 쓰려면 아래 버튼을 눌러
+                주세요. <strong>부분 배분</strong>(예: 100만원 + 150만원)은 비교하지 않습니다.
+              </p>
+              <div className="pt-1">
+                <Button variant="outline" size="sm" disabled={loading} onClick={runAllocation}>
+                  {loading ? "계산 중…" : "배분 조정하여 계산"}
+                </Button>
+              </div>
+            </ToneCard>
+          )}
+
+          {allocation && (
+            <ToneCard tone="emerald" title="기본공제를 다시 배분했습니다">
+              <p className="text-sm">
+                기본공제 {won(BASIC_DEDUCTION_LIMIT)}원을{" "}
+                <strong>
+                  {allocation.best.side === "real_estate" ? "부동산" : "기타자산"} 쪽에 전액
+                </strong>{" "}
+                적용한 경우가 유리해 그 결과를 아래에 표시합니다.
+              </p>
+              {allocation.candidates.length > 1 && (
+                <dl className="rounded-lg bg-emerald-100/60 px-3 py-2 text-sm dark:bg-emerald-950/40">
+                  {allocation.candidates.map((c) => (
+                    <Row
+                      key={c.side}
+                      label={`${c.side === "real_estate" ? "부동산" : "기타자산"}에 전액`}
+                      value={won(c.cross.calculatedTax)}
+                      strong={c.side === allocation.best.side}
+                    />
+                  ))}
+                </dl>
+              )}
+              {allocation.failures.length > 0 && (
+                <p className="text-caption text-amber-700 dark:text-amber-400">
+                  {allocation.failures
+                    .map((f) => `${f.side === "real_estate" ? "부동산" : "기타자산"}에 전액 적용한 배분안은 계산하지 못했습니다 — ${f.reason}`)
+                    .join(" / ")}
+                </p>
+              )}
+              <p className="text-caption text-muted-foreground">
+                각 계산기에 저장된 값과 다를 수 있습니다 — 기본공제를 두 계산에 걸쳐 다시
+                배분했기 때문입니다. <strong>원래 이력은 그대로 두었습니다.</strong>
+              </p>
+            </ToneCard>
+          )}
+
+          {(recalcedRe?.recordId === reId && recalcedRe.previousClause2Tax !== null &&
+            recalcedRe.previousClause2Tax !== recalcedRe.side.clause2Tax) && (
+            <ToneCard tone="amber" title="다시 계산하니 부동산 세액이 달라졌습니다">
+              <p className="text-sm">
+                저장된 산출세액 <strong>{won(recalcedRe.previousClause2Tax)}원</strong> →{" "}
+                <strong>{won(recalcedRe.side.clause2Tax)}원</strong>. 호별 내역을 얻기 위해 다건
+                계산 경로로 다시 계산했기 때문입니다. 차이가 크다면 양도소득세 다건 계산기에서
+                직접 확인해 주세요.
               </p>
             </ToneCard>
           )}
