@@ -149,6 +149,84 @@ test.describe("§104⑤ 크로스 합산", () => {
     await expect(page.getByText("상장 대주주 주식 2024")).toHaveCount(0);
   });
 
+  test("X-5: 호별 값이 없는 이력은 **「다시 계산」 버튼**을 준다 (C-3d-3)", async ({ page }) => {
+    await page.goto("/calc/cross-104-5");
+    await seedCalculation(page, {
+      id: "e2e-re-single",
+      taxType: "transfer",
+      // 단건 이력 — `mode:"single"`이라 호별 값이 없다
+      inputData: { assets: [{ assetKind: "land" }], transferDate: "2024-03-01" },
+      title: "단건 부동산 2024",
+      resultData: { mode: "single", result: { calculatedTax: 50_000_000 } },
+      taxLawVersion: "2024-03-01",
+    });
+    await seedCalculation(page, {
+      id: "e2e-oa-3",
+      taxType: "stock_transfer",
+      title: "기타자산 2024",
+      inputData: { transferDate: "2024-05-10" },
+      resultData: OTHER_ASSET_RESULT,
+      taxLawVersion: "2024-05-10",
+    });
+    await page.reload();
+
+    // 사유가 보이고, 「다시 계산」으로 이어진다(막다른 길이 아니다).
+    await expect(page.getByText(/single.*형태라|다시 계산해야/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "다시 계산" }).first()).toBeVisible();
+  });
+
+  test("X-6: 🔒 **겸용주택은 「다시 계산」 대신 사유**를 보여준다 (W-1)", async ({ page }) => {
+    await page.goto("/calc/cross-104-5");
+    await seedCalculation(page, {
+      id: "e2e-re-mixed",
+      taxType: "transfer",
+      inputData: { assets: [{ assetKind: "housing" }], transferDate: "2024-03-01" },
+      title: "겸용주택 2024",
+      resultData: { mode: "mixed-use", result: {} },
+      taxLawVersion: "2024-03-01",
+    });
+    await seedCalculation(page, {
+      id: "e2e-oa-4",
+      taxType: "stock_transfer",
+      title: "기타자산 2024",
+      inputData: { transferDate: "2024-05-10" },
+      resultData: OTHER_ASSET_RESULT,
+      taxLawVersion: "2024-05-10",
+    });
+    await page.reload();
+
+    await expect(page.getByText(/겸용주택.*다시 계산할 수 없습니다/)).toBeVisible();
+  });
+
+  test("X-7: 기본공제 중복이면 **「배분 조정하여 계산」**이 뜬다 (C-3d-2)", async ({ page }) => {
+    await page.goto("/calc/cross-104-5");
+    await seedCalculation(page, {
+      id: "e2e-re-5",
+      taxType: "transfer",
+      title: "부동산 다건 2024",
+      inputData: { __multiTransfer: true, taxYear: 2024 },
+      resultData: REAL_ESTATE_RESULT, // basicDeduction 2,500,000
+      taxLawVersion: "2024",
+    });
+    await seedCalculation(page, {
+      id: "e2e-oa-5",
+      taxType: "stock_transfer",
+      title: "기타자산 2024",
+      inputData: { transferDate: "2024-05-10" },
+      // 주식도 250만원을 써서 합계 500만원 → 250만원 초과
+      resultData: { ...OTHER_ASSET_RESULT, basicDeduction: 2_500_000 },
+      taxLawVersion: "2024-05-10",
+    });
+    await page.reload();
+    await page.getByText("부동산 다건 2024").click();
+    await page.getByText("기타자산 2024").click();
+
+    await expect(page.getByText("양도소득 기본공제가 중복 적용되어 있습니다")).toBeVisible();
+    await expect(page.getByRole("button", { name: "배분 조정하여 계산" })).toBeVisible();
+    // 부분 배분을 비교하지 않는다는 한계도 적는다(U-1)
+    await expect(page.getByText(/부분 배분/)).toBeVisible();
+  });
+
   test("X-4: C-1 고지 카드에서 합산 화면으로 연결된다", async ({ page }) => {
     await page.goto("/calc/cross-104-5");
     // 고지 카드는 결과 화면에만 뜨므로, 링크 대상만 직접 확인한다(라우트 존재 검증).
