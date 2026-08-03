@@ -101,7 +101,12 @@ test.describe("갭3 — 영농 사후관리 prefill 강화 (deathDate·filingDea
     // prefill 안내 배너 + 신고기한 값 노출 (배너 고유 텍스트로 한정 — 입력란 라벨과 구분)
     await expect(page.getByText(/메인 마법사에서 진입/)).toBeVisible();
     await expect(page.getByText("2025-07-31")).toBeVisible();
-    // 신고기한 DateInput(첫 DateInput) 연도 prefill
-    await expect(page.getByLabel("연도").first()).toHaveValue("2025");
+    // ⚠️ 첫 DateInput은 「상속개시일」이다(신고기한은 두 번째) — 인덱스 대신 라벨로 스코프 한정.
+    const deadlineBlock = page.locator("div").filter({ hasText: /^상속세 신고기한/ }).last();
+    await expect(deadlineBlock.getByLabel("연도")).toHaveValue("2025");
+    // deathDate 쿼리 → 상속개시일도 prefill돼야 한다
+    // (종전에는 페이지가 inheritanceStartDate만 읽어 동작하지 않았다 — page.tsx:94 정정).
+    const startBlock = page.locator("div").filter({ hasText: /^상속개시일/ }).last();
+    await expect(startBlock.getByLabel("연도")).toHaveValue("2025");
   });
 });

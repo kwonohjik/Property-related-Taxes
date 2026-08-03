@@ -656,7 +656,10 @@ export default function TransferTaxCalculator({
 
           {/* 에러 메시지 — 검증 오류 일괄 목록(issues) + API 오류(error) */}
           {(error || issues.length > 0) && (
-            <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            <div
+              className="mt-4 rounded-lg border border-destructive/50 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+              data-testid="validation-issues"
+            >
               {issues.length > 0 && (
                 <>
                   <p className="font-semibold mb-1.5">
