@@ -76,6 +76,12 @@ export function buildExemptResult(
     section94_2Applied: classification.section94_2Applied,
     isExempt: true,
     exemptReason: classification.exemptReason,
+    // §104⑤ 크로스 조정용 호별 echo — **비과세는 전부 0**이다(aggregate
+    // `computeOtherAssetComparativeTax`가 `!r.isExempt`로 거르는 것과 같은 규약).
+    clause1BucketTaxBase: 0,
+    clause1BucketTax: 0,
+    clause9TaxBase: 0,
+    clause9Tax: 0,
 
     transferPrice,
     transferPriceBreakdown: undefined,

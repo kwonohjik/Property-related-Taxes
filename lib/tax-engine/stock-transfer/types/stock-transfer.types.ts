@@ -685,6 +685,24 @@ export type StockTransferResult = {
    * 이 종목이 §104①9호일 때만 만들어진다. **세액에는 반영되지 않는다**(귀속이 없다).
    */
   cross1045Adjustment?: Cross1045Adjustment;
+  /**
+   * §104⑤ **크로스 조정용 호별 echo** — 이 종목이 §104① **1호**·**9호** 중 어디에 속하는지와
+   * 그 과세표준·산출세액. 기타자산(§94①4호)이 아니거나 비과세면 **전부 0**이다.
+   *
+   * ## 왜 `cross1045Adjustment`로 부족한가
+   * 그 필드는 `crossClause8TaxBase`가 **입력됐을 때만** 만들어진다. 이력 기반 교차 합산
+   * (계획서 `cross-104-5-c3-ui-design.plan.md` C-3)은 **입력 없이 저장된 결과만 읽어** 두 엔진을
+   * 합치므로, 조건 없이 항상 실려 있어야 한다.
+   *
+   * ⚠️ **단건은 「버킷」이 아니라 「이 종목」이다** — 자산이 하나뿐이라 호 판정이 곧 버킷이다.
+   *   2건 이상은 aggregate의 `otherAssetComparativeTax.clause1BucketTaxBase`·`clause9TaxBase`를 쓴다.
+   * 📌 `clause1BucketTax + clause9Tax === calculatedTax`(기타자산일 때). 주식 그룹이면 둘 다 0이고
+   *   `calculatedTax`와 무관하다 — **주식(§94①3호)은 §104⑤ 대상이 아니기 때문**이다.
+   */
+  clause1BucketTaxBase: number;
+  clause1BucketTax: number;
+  clause9TaxBase: number;
+  clause9Tax: number;
 
   // 필요경비
   expenses: number;

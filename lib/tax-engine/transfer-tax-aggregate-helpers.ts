@@ -393,6 +393,21 @@ export function aggregateByGroup(
    */
   clause8TaxBase: number;
   clause8Tax: number;
+  /**
+   * §104①**1호**(§55① 일반 누진) 버킷 echo — 8호와 **같은 규약**(키가 정확히 `"104-1-1"`).
+   *
+   * 🔒 **분양권은 여기 도달하지 않는다.** `classifyRateGroup`이 분양권을 보유기간과 무관하게
+   *   `short_term`으로 보내고(§104①1호 괄호 60% = 누진이 아니므로), 이 누적은 **`else` 분기
+   *   (누진 호)에서만** 일어나기 때문이다. 분양권의 후보는 `["104-1-1"]`이고 `clauseBucketKey`가
+   *   누진 호 포함 시 세율을 키에서 빼므로 **키는 `"104-1-1"`로 같다** — 그룹 분리가 유일한
+   *   방어선이다(`presale-clause-1-bucket-guard.anchor.test.ts`).
+   *   ⇒ 제외 근거는 **새 법령 해석이 아니라 현행 규약 승계**다(계획서 §5-C H-1).
+   * ⚠️ 조합원입주권 2년+는 `progressive`·1호 누진이라 **포함되는 것이 맞다**(§104①1호 괄호가
+   *   분양권만 지목한다).
+   * 1호 버킷이 없으면 둘 다 0.
+   */
+  clause1BucketTaxBase: number;
+  clause1BucketTax: number;
 } {
   const groupMap = new Map<RateGroup, number[]>();
   records.forEach((r, i) => {
@@ -407,6 +422,9 @@ export function aggregateByGroup(
   // 순수 8호가 생기지 않는다 — 2년 미만 비사토는 후보가 `{104-1-2/3, 104-1-8}`이기 때문이다.
   let clause8TaxBase = 0;
   let clause8Tax = 0;
+  // §104①1호 버킷(위 반환 타입 주석) — 분양권은 `short_term` 분기라 여기 오지 않는다.
+  let clause1BucketTaxBase = 0;
+  let clause1BucketTax = 0;
   const assetPartTax: { tax: number; note?: string }[] = [];
   const parsedRates = parseRatesFromMap(rates);
   /**
@@ -652,6 +670,12 @@ export function aggregateByGroup(
         if (bucketKey === "104-1-8") {
           clause8TaxBase += bucketBase;
           clause8Tax += bucketTax;
+        } else if (bucketKey === "104-1-1") {
+          // §104①1호(일반 누진) — 크로스 조정 레이어가 기타자산 1호와 한 버킷으로 재합산한다.
+          // 8호와 **같은 좁은 규약**(후보 집합이 정확히 그 호 하나)이라 단기·중과가 섞인
+          // 버킷(`"104-1-2+104-1-8"` 등)은 자동으로 빠진다.
+          clause1BucketTaxBase += bucketBase;
+          clause1BucketTax += bucketTax;
         }
       }
       appliedRate = Math.max(...clauseParts.map((p) => p.appliedRate)); // 표시용 최고세율
@@ -675,7 +699,7 @@ export function aggregateByGroup(
     });
   }
 
-  return { groupTaxes: out, assetPartTax, clause8TaxBase, clause8Tax };
+  return { groupTaxes: out, assetPartTax, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax };
 }
 
 // ============================================================
