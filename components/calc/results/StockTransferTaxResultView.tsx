@@ -93,6 +93,8 @@ const TAX_CATEGORY_LABEL: Record<StockTransferResult["taxCategory"], string> = {
   kotc_venture_exempt: "조특법 §14①7호 — K-OTC 벤처 비과세",
   other_asset_block_shareholder: "§94①4 다목 — 과점주주",
   other_asset_heavy_re: "§94①4 라목 — 부동산과다보유",
+  other_asset_block_shareholder_nbl: "§94①4 다목 — 과점주주 (§104①9호 비사업용토지 과다소유법인)",
+  other_asset_heavy_re_nbl: "§94①4 라목 — 부동산과다보유 (§104①9호 비사업용토지 과다소유법인)",
   out_of_scope_foreign: "§94①3 다목 — 해외주식 (별도 도메인)",
   foreign_stock: "§94①3 다목 — 해외주식 (§118의2~§118의8)",
   exit_tax: "국외전출세 (§118의9~§118의16)",
@@ -110,6 +112,9 @@ const CATEGORY_LAW_MAP: Record<StockTransferResult["taxCategory"], string> = {
   kotc_venture_exempt: "조세특례제한법 §14①7호",
   other_asset_block_shareholder: "소득세법 §94①4 다목",
   other_asset_heavy_re: "소득세법 §94①4 라목",
+  // 세율 근거가 §104①9호로 갈리므로 법령근거도 그쪽을 가리킨다(분류 자체는 다목·라목 그대로).
+  other_asset_block_shareholder_nbl: "소득세법 §104①9호",
+  other_asset_heavy_re_nbl: "소득세법 §104①9호",
   out_of_scope_foreign: "소득세법 §94①3 다목",
   foreign_stock: "소득세법 §94①3 다목",
   exit_tax: "소득세법 §118의9",

@@ -168,6 +168,7 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     donorAcquisitionDate: coerced.donorAcquisitionDate as Date | undefined,
     preMergerAcquisitionDate: coerced.preMergerAcquisitionDate as Date | undefined,
     cumulativeTransferRatio: coerced.cumulativeTransferRatio as number | undefined,
+    nblRatioOfCorpAssets: coerced.nblRatioOfCorpAssets as number | undefined,
     transferPriceMode: coerced.transferPriceMode as StockTransferInput["transferPriceMode"],
     transferActualInputMode: coerced.transferActualInputMode as StockTransferInput["transferActualInputMode"],
     perShareTransferPrice: coerced.perShareTransferPrice as number | undefined,

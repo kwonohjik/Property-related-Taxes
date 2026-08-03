@@ -349,6 +349,20 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
     });
   }
 
+  // §104①9호 비사업용토지 가액 비율 > 100 금지 (Zod가 0~1 소수로 max(1)을 걸므로 UI에서도 동일 상한)
+  // ⚠️ **미입력은 오류가 아니다** — 9호 미해당으로 흐른다(법 근거 없이 불리 적용 금지).
+  //    API·엔진도 같은 fallback이라 3중이 일치한다(memory `mirror-pattern`).
+  // ⚠️ `parseF`는 `s.replace`를 부르므로 **가드를 먼저** 건다 — 이 필드는 신규라
+  //   normalize를 거치지 않은 폼(레거시 sessionStorage·테스트 픽스처)에서 `undefined`일 수 있다.
+  //   (형제 `cumulativeTransferRatio`는 선행 필드라 항상 존재해 가드 순서가 문제되지 않았다.)
+  if (form.nblRatioOfCorpAssets && parseF(form.nblRatioOfCorpAssets) > 100) {
+    errors.push({
+      field: "nblRatioOfCorpAssets",
+      message: "비사업용토지 가액 비율은 100%를 초과할 수 없습니다",
+      severity: "error",
+    });
+  }
+
   return errors;
 }
 

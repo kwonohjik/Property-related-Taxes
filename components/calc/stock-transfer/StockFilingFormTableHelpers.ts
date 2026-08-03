@@ -134,6 +134,11 @@ function taxCategoryLabel(cat: StockTransferResult["taxCategory"]): string {
     kotc_venture_exempt: "K-OTC 벤처 (비과세)",
     other_asset_block_shareholder: "과점주주 (§94①4 다목)",
     other_asset_heavy_re: "부동산과다보유 (§94①4 라목)",
+    // §104①9호 — 분류는 다목·라목 그대로이고 세율만 기본세율 + 10%p다.
+    // ⚠️ 이 map은 `map[cat] ?? cat` 폴백이라 **누락돼도 tsc가 잡지 못한다** —
+    //   빠뜨리면 내부 id가 화면에 그대로 노출된다(memory `feedback_no_internal_id_in_result`).
+    other_asset_block_shareholder_nbl: "과점주주 (§94①4 다목) · §104①9호 비사업용토지 과다소유법인",
+    other_asset_heavy_re_nbl: "부동산과다보유 (§94①4 라목) · §104①9호 비사업용토지 과다소유법인",
     out_of_scope_foreign: "해외주식 (별도 도메인)",
   };
   return map[cat] ?? cat;

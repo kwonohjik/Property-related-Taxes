@@ -235,6 +235,31 @@ function classifySection94(
   // §94①4 해당 여부 (상장·비상장 모두 적용 가능)
   const hasSection94_4 = isQualifyingBlockShareholder || isHeavyRealEstateForRate;
 
+  /**
+   * §104①**9호** — 비사업용 토지 과다소유법인 주식.
+   *
+   * 시행령 **§167의7**: 「법 §94①4호 **다목 또는 라목**에 해당하는 주식등으로서 해당 법인의
+   * 자산총액 중 「법인세법」 §55의2②에 따른 **비사업용토지 가액 비율이 100분의 50 이상**인
+   * 법인의 주식등」 ⇒ 다목·라목 **둘 다**가 대상이고, 임계는 **50% 이상**이다.
+   *
+   * 분류(다목/라목)는 그대로 두고 **세율만** 기본세율 + 10%p로 올린다.
+   * **미입력(undefined)은 미해당**이다 — 법 근거 없이 불리하게 적용하지 않는다.
+   *
+   * ⚠️ 단위는 **0~1 소수**다(형제 필드 `cumulativeTransferRatio`와 동일 — UI %, API가 ×0.01).
+   */
+  const isNblHeavyCorp = (input.nblRatioOfCorpAssets ?? 0) >= 0.5;
+  /** 다목/라목 카테고리에 9호를 얹는다. 9호 미해당이면 종전 그대로. */
+  const otherAssetCategory = (
+    isBlockShareholder: boolean,
+  ): StockTransferResult["taxCategory"] =>
+    isBlockShareholder
+      ? isNblHeavyCorp
+        ? "other_asset_block_shareholder_nbl"
+        : "other_asset_block_shareholder"
+      : isNblHeavyCorp
+        ? "other_asset_heavy_re_nbl"
+        : "other_asset_heavy_re";
+
   // §94①3 해당 여부
   const hasSection94_3 =
     marketType === "kospi" ||
@@ -244,9 +269,7 @@ function classifySection94(
 
   // §94② 우선순위: 3호+4호 동시 충족 시 4호(기타자산) 강제
   if (hasSection94_3 && hasSection94_4) {
-    const taxCategory: StockTransferResult["taxCategory"] = isQualifyingBlockShareholder
-      ? "other_asset_block_shareholder"
-      : "other_asset_heavy_re";
+    const taxCategory = otherAssetCategory(isQualifyingBlockShareholder);
     const appliedSection94: StockTransferResult["appliedSection94"] = isQualifyingBlockShareholder
       ? "①4다"
       : "①4라";
@@ -262,9 +285,7 @@ function classifySection94(
   // §94①4 단독 (other_asset 직접 선택)
   if (marketType === "other_asset") {
     return {
-      taxCategory: isQualifyingBlockShareholder
-        ? "other_asset_block_shareholder"
-        : "other_asset_heavy_re",
+      taxCategory: otherAssetCategory(isQualifyingBlockShareholder),
       appliedSection94: isQualifyingBlockShareholder ? "①4다" : "①4라",
       section94_2Applied: false,
       basicDeductionGroup: "real_estate_and_other_asset",

@@ -9,6 +9,7 @@ import type { StockTransferResult } from "./types/stock-transfer.types";
 import {
   STOCK_MAJOR_PROGRESSIVE_BRACKETS,
   BASIC_PROGRESSIVE_BRACKETS,
+  NBL_HEAVY_CORP_BRACKETS,
 } from "./stock-rate-tables";
 import {
   STOCK_SHORT_TERM_RATE,
@@ -51,6 +52,21 @@ function calcProgressiveTaxFromBrackets(
   const last = brackets[brackets.length - 1];
   const tax = Math.floor(taxBase * last.rate) - last.deduction;
   return { rate: last.rate, deduction: last.deduction, tax: Math.max(0, tax) };
+}
+
+/**
+ * §55① 기본누진만 적용 — **§104⑤1호 전용**.
+ *
+ * 1호는 「해당 과세기간의 양도소득과세표준 **합계액**에 §55①에 따른 세율을 적용」이라
+ * **§104①9호분(기본세율 + 10%p)까지 기본세율로** 계산해야 한다. 그래서 `taxCategory`를
+ * 경유하는 `applyStockTaxRate`로는 표현할 수 없다(대표 종목이 9호면 +10%p가 섞인다).
+ */
+export function applyBasicProgressiveRate(taxBase: number): {
+  rate: number;
+  deduction: number;
+  tax: number;
+} {
+  return calcProgressiveTaxFromBrackets(taxBase, BASIC_PROGRESSIVE_BRACKETS);
 }
 
 // ============================================================
@@ -112,7 +128,7 @@ export function applyStockTaxRate(
       };
 
     // --------------------------------------------------------
-    // 기타자산 §55 누진 8단계
+    // 기타자산 §55 누진 8단계 (§104①1호)
     // --------------------------------------------------------
     case "other_asset_block_shareholder":
     case "other_asset_heavy_re": {
@@ -125,6 +141,34 @@ export function applyStockTaxRate(
         progressiveDeduction: deduction,
         calculatedTax: tax,
         appliedRuleRef: "소득세법 §55 누진세율 8단계",
+        isShortTermRate: false,
+      };
+    }
+
+    // --------------------------------------------------------
+    // 기타자산 중 **비사업용 토지 과다소유법인 주식** — §104①9호 (기본세율 + 10%p)
+    // --------------------------------------------------------
+    //
+    // 🔒 **이 두 case를 지우거나 default로 넘기지 마라.** 아래 `default`가 산출세액 **0**을
+    //   반환하므로 **컴파일 에러 없이 조용히 세금이 사라진다**.
+    //   ⇒ `taxCategory`를 늘리는 것만으로는 세율 분기가 강제되지 않는다(`Record<taxCategory,…>`
+    //     2곳만 컴파일로 열린다). 그래서 anchor가 「9호 카테고리가 default로 떨어지지 않는다」를
+    //     직접 고정한다(`nbl-heavy-corp-brackets.anchor.test.ts`).
+    //
+    // 대상: 시행령 §167의7 — §94①4호 **다목 또는 라목** 주식등으로서 해당 법인의 자산총액 중
+    //   「법인세법」 §55의2②에 따른 **비사업용토지 가액 비율이 50% 이상**인 법인의 주식등.
+    //   ⇒ 다목·라목 **둘 다**에 얹히므로 카테고리가 2종이다.
+    case "other_asset_block_shareholder_nbl":
+    case "other_asset_heavy_re_nbl": {
+      const { rate, deduction, tax } = calcProgressiveTaxFromBrackets(
+        taxBase,
+        NBL_HEAVY_CORP_BRACKETS,
+      );
+      return {
+        appliedRate: rate,
+        progressiveDeduction: deduction,
+        calculatedTax: tax,
+        appliedRuleRef: `${STOCK.SECTION_104_1_9_NBL_HEAVY_CORP} (${STOCK.ENFORCEMENT_167_7_NBL_HEAVY_CORP_SCOPE})`,
         isShortTermRate: false,
       };
     }

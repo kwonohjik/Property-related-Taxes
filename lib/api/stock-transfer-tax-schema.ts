@@ -190,6 +190,8 @@ export const stockTransferInputSchema = z.object({
 
   // §94①4 다목 부가
   cumulativeTransferRatio: z.number().min(0).max(1).optional(),
+  /** §104①9호 판정 — 법인 자산총액 중 비사업용토지 가액 비율(0~1 소수). 시행령 §167의7 임계 0.5 */
+  nblRatioOfCorpAssets: z.number().min(0).max(1).optional(),
 
   // 양도가액
   transferPriceMode: transferPriceModeSchema,

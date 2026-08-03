@@ -14,7 +14,7 @@
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
 import { calculateStockTransferTaxInternal } from "./stock-transfer-tax";
 import { floorTen } from "./stock-transfer-helpers";
-import { applyStockTaxRate } from "./stock-transfer-rate-calc";
+import { applyStockTaxRate, applyBasicProgressiveRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import {
   sumSecuritiesTransactionTax,
@@ -43,11 +43,18 @@ export interface OtherAssetComparativeTax {
    */
   itemSumTax: number;
   /**
-   * 합산 과세표준에 §55① 누진 **1회** — §104⑤ **1호이자 2호**다.
-   * 기타자산은 전부 §104①**1호**(「§94①1호·2호 및 4호에 따른 자산 — §55①」)이므로
-   * 1호(합계액 누진)와 2호(호별 합산)가 같은 값이 되고, MAX도 그 값이다.
-   * (§104①9호가 구현되면 2호가 갈라지므로 그때 버킷 분리가 필요하다 — 계획서 결함 B.)
+   * **§104⑤1호** — 양도소득과세표준 **합계액**에 §55①(기본누진) 1회.
+   * §104①9호분도 **기본세율**로 계산한다(법문이 §55①만 지목한다).
    */
+  clause1Tax: number;
+  /**
+   * **§104⑤2호** — 「각 호별로 합산한 자산」의 산출세액 합계(예규 재산-536).
+   * §104①1호 버킷(§55① 누진) + §104①9호 버킷(기본세율 + 10%p).
+   */
+  clause2Tax: number;
+  /** MAX가 고른 호 — 9호가 섞이지 않으면 두 값이 같아 `"clause2"`가 된다 */
+  applied: "clause1" | "clause2";
+  /** `MAX(clause1Tax, clause2Tax)` — 이 그룹의 결정 산출세액 */
   aggregatedTax: number;
 }
 
@@ -105,6 +112,12 @@ export interface StockTransferAggregateResult {
 /** §103②1호 그룹 키 — 기타자산(§94①4호)은 부동산과 같은 기본공제 그룹이다. */
 const OTHER_ASSET_GROUP = "real_estate_and_other_asset" as const;
 
+/** §104①9호(비사업용 토지 과다소유법인 주식) 카테고리 — 다목·라목 **둘 다**에 얹힌다. */
+const NBL_HEAVY_CORP_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]> = new Set([
+  "other_asset_block_shareholder_nbl",
+  "other_asset_heavy_re_nbl",
+]);
+
 /**
  * §104⑤ 비교과세 — **기타자산(§94①4호) 그룹**의 산출세액을 호별 합산으로 다시 낸다.
  *
@@ -117,14 +130,17 @@ const OTHER_ASSET_GROUP = "real_estate_and_other_asset" as const;
  *   「2호의 "자산별"에서 "자산"의 의미는 §104 **각 호별로 합산한 자산**을 의미」
  *   ⇒ 같은 호 자산의 과세표준 합산은 **단서가 아니라 본문**이며 **조건이 없다**.
  *
- * [왜 1호 = 2호인가]
- * 기타자산은 전부 §104①**1호**다 — 1호가 「§94①1호·2호 및 **4호**에 따른 자산 — §55①에 따른
- * 세율」로 4호를 포함한다. 단기세율(§104①2·3호)은 「§94①**1호 및 2호**에서 규정하는 자산」이라
- * 4호가 빠져 **기타자산에 적용되지 않는다**. 그래서 호가 하나뿐이고, 2호(호별 합산)가 곧
- * 1호(합계액 누진)와 같은 값이 되어 MAX도 그 값이다.
- * ⇒ 지금은 버킷이 하나라 「합산 과세표준에 누진 1회」로 충분하다. **§104①9호**(비사업용 토지
- *   과다소유법인 주식 — 시행령 §167의7, 기본세율 + 10%p)가 구현되면 호가 둘이 되어 버킷 분리가
- *   필요해진다(계획서 `docs/00-pm/stock-other-asset-104-5-and-104-1-9.plan.md` 결함 B).
+ * [호 버킷 — 기타자산에 걸릴 수 있는 호는 **둘**이다]
+ * - **§104①1호** — 「§94①1호·2호 및 **4호**에 따른 자산 — §55①에 따른 세율」. 기타자산의 기본.
+ * - **§104①9호** — 그 중 **비사업용 토지 과다소유법인 주식**(시행령 §167의7: 자산총액 중
+ *   「법인세법」 §55의2②에 따른 비사토 가액 비율 50% 이상) → **기본세율 + 10%p**.
+ * 단기세율(§104①2·3호)은 「§94①**1호 및 2호**에서 규정하는 자산」이라 4호가 빠져
+ * **기타자산에 적용되지 않는다** — 그래서 버킷은 이 둘뿐이다.
+ *
+ * ⚠️ **1호와 2호가 갈린다** — 9호 도입 전에는 호가 하나뿐이라 「1호 = 2호」였고 합산 누진 1회로
+ *   충분했다. 이제는 **1호가 이길 수 있다**: 1호는 9호분까지 **기본세율**로 합쳐 계산하므로,
+ *   버킷이 각 1건씩이면 「합산으로 올라간 누진 구간」이 「+10%p」를 넘어설 수 있다.
+ *   ⇒ MAX를 실제로 취한다(`applied`가 어느 호를 골랐는지 echo한다).
  *
  * [종전 결함] `Σ 단건 세액`을 그대로 합계로 썼다. 그러면 **누진 구간이 자산마다 리셋**되어
  *   1호도 2호도 아닌 값이 나온다 — 부동산 쪽 P11이 저질렀다 되돌린 오류와 같은 성질이다
@@ -149,20 +165,44 @@ function computeOtherAssetComparativeTax(
   const aggregatedTaxBase = targets.reduce((s, { r }) => s + r.taxBase, 0);
   const itemSumTax = targets.reduce((s, { r }) => s + r.calculatedTax, 0);
 
-  // 대표 항목의 분류로 세율을 부른다 — 기타자산 두 카테고리
-  // (`other_asset_block_shareholder`·`other_asset_heavy_re`)가 **같은 §55① 누진**이라
-  // 대표 선택이 결과를 바꾸지 않는다. 재구현하면 dual-truth가 된다.
-  const rep = targets[0];
-  const aggregatedTax = floorTen(
-    applyStockTaxRate(
-      aggregatedTaxBase,
-      rep.r.taxCategory,
-      inputs[rep.i].isSmallMediumEnterprise,
-      rep.r.isShortTermHolding,
-    ).calculatedTax,
-  );
+  // ── §104⑤2호 — 「각 호별로 합산한 자산」(예규 재산-536) ──────────────────
+  const buckets = new Map<"104-1-1" | "104-1-9", typeof targets>();
+  for (const t of targets) {
+    const k = NBL_HEAVY_CORP_CATEGORIES.has(t.r.taxCategory) ? "104-1-9" : "104-1-1";
+    buckets.set(k, [...(buckets.get(k) ?? []), t]);
+  }
+  let clause2Tax = 0;
+  for (const bucket of buckets.values()) {
+    const bucketBase = bucket.reduce((s, { r }) => s + r.taxBase, 0);
+    // 버킷 **안에서는** 대표 선택이 결과를 바꾸지 않는다 — 1호 버킷의 두 카테고리
+    // (다목·라목)는 같은 §55① 누진이고, 9호 버킷의 두 카테고리도 같은 9호 표다.
+    // 세율을 재구현하지 않고 정본 `applyStockTaxRate`에 위임한다(dual-truth 방지).
+    const rep = bucket[0];
+    clause2Tax += floorTen(
+      applyStockTaxRate(
+        bucketBase,
+        rep.r.taxCategory,
+        inputs[rep.i].isSmallMediumEnterprise,
+        rep.r.isShortTermHolding,
+      ).calculatedTax,
+    );
+  }
 
-  return { itemCount: targets.length, aggregatedTaxBase, itemSumTax, aggregatedTax };
+  // ── §104⑤1호 — 「과세표준 **합계액**에 §55①」 ────────────────────────────
+  // 9호분도 **기본세율**로 계산한다(법문이 §55①만 지목한다). 그래서 `taxCategory` 경유가
+  // 아니라 전용 헬퍼를 쓴다 — 대표가 9호면 +10%p가 섞여 1호가 아니게 된다.
+  const clause1Tax = floorTen(applyBasicProgressiveRate(aggregatedTaxBase).tax);
+
+  const aggregatedTax = Math.max(clause1Tax, clause2Tax);
+  return {
+    itemCount: targets.length,
+    aggregatedTaxBase,
+    itemSumTax,
+    clause1Tax,
+    clause2Tax,
+    applied: clause1Tax > clause2Tax ? "clause1" : "clause2",
+    aggregatedTax,
+  };
 }
 
 /**

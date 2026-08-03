@@ -419,6 +419,9 @@ export function buildGiftStockBurdenedTransferBody(
     isQualifyingBlockShareholder: false,
     isHeavyRealEstateForRate: false,
     isHeavyRealEstateForValuation: false,
+    // `nblRatioOfCorpAssets`(§104①9호)는 **의도적으로 생략**한다 — 이 경로에 입력 UI가 없어
+    // 값을 알 수 없고, undefined = 9호 미해당(§104①1호)이 「법 근거 없이 불리 적용 금지」에 맞다.
+    // 위 분류 플래그가 전부 false라 애초에 기타자산으로 분류되지도 않는다.
     isSmallMediumEnterprise: bgt.isSmallMediumEnterprise ?? false,
     isMidsizeEnterprise: false,
     isListedSmallShareholder: false,
