@@ -29,7 +29,9 @@
  *   (노출은 좁게, 정보는 정확하게).
  */
 
+import Link from "next/link";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { Button } from "@/components/ui/button";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export function CrossEngine1045Notice({
@@ -67,6 +69,17 @@ export function CrossEngine1045Notice({
         커집니다. 비사업용 토지가 아니더라도 부동산과 기타자산을 함께 양도했다면 §104⑤ 합산
         대상입니다.
       </p>
+      {/*
+        C-3c 진입점 — 종전에는 이 카드가 「과소일 수 있다」까지만 말하고 **막다른 길**이었다.
+        합산 화면은 **저장된 이력**에서 반대편 계산을 골라 §104⑤을 낸다(숫자 입력 0칸).
+      */}
+      <div className="pt-1">
+        <Link href="/calc/cross-104-5">
+          <Button variant="outline" size="sm">
+            §104⑤ 합산 계산하기
+          </Button>
+        </Link>
+      </div>
     </ToneCard>
   );
 }
