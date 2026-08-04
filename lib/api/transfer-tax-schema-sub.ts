@@ -626,6 +626,25 @@ export const inheritanceHouseValuationSchema = z
   });
 
 
+// ─── 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) ──────────────
+
+/**
+ * ⑫ 비주택 → 주택 용도변경 입력.
+ *
+ * 미정의 시 Zod가 **조용히 필드를 떼어내** 엔진에 도달하지 않는다(침묵 stripping).
+ * 날짜 순서(취득일 < 주거용 사용일 < 양도일) 검증은 `addPropertyRefines`가 한다 —
+ * 여기서는 취득일·양도일을 볼 수 없기 때문이다.
+ */
+export const nonHousingToHousingConversionSchema = z.object({
+  /** 사실상 주거용으로 사용한 날 (YYYY-MM-DD). 불분명하면 공부상 용도변경일 — §95⑥ 단서. */
+  residentialUseStartDate: z.string().date(),
+  /**
+   * §95⑤2호 클램프로 잘려나간 거주 개월 수.
+   * 결과 화면 절사 안내 전용 — 계산에는 쓰이지 않는다(거주기간 자체는 이미 클램프된 값이 온다).
+   */
+  residenceMonthsTrimmed: z.number().int().nonnegative(),
+});
+
 // ─── 겸용주택 분리계산 Zod 스키마 — 별도 파일로 분리 (800줄 정책) ──────
 // 실체: ./transfer-tax-schema-mixed-use.ts
 export { mixedUseAssetSchema } from "./transfer-tax-schema-mixed-use";

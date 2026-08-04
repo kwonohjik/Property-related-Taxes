@@ -71,6 +71,16 @@ export function buildTransferEngineInput(
     decedentSameHouseholdBeforeInheritance: data.decedentSameHouseholdBeforeInheritance,
     decedentCohabitationHoldingStartDate: toOptionalDate(data.decedentCohabitationHoldingStartDate),
     decedentCohabitationResidenceMonths: data.decedentCohabitationResidenceMonths,
+    // ⑭ 비주택 → 주택 용도변경 §95⑤·⑥ — 날짜만 Date로, 절사 개월은 number 그대로.
+    nonHousingToHousingConversion: data.nonHousingToHousingConversion
+      ? {
+          residentialUseStartDate: toDate(
+            data.nonHousingToHousingConversion.residentialUseStartDate,
+            "nonHousingToHousingConversion.residentialUseStartDate",
+          ),
+          residenceMonthsTrimmed: data.nonHousingToHousingConversion.residenceMonthsTrimmed,
+        }
+      : undefined,
     donorAcquisitionDate: toOptionalDate(data.donorAcquisitionDate),
     carryoverTaxation: data.carryoverTaxation
       ? {

@@ -69,11 +69,19 @@ describe("Pre-Do anchor — 비주택 → 주택 용도변경 (PDF 사례 30)", 
     expect(r.longTermHoldingDeduction).toBe(71_416_000); // 178,540,000 × 40%
   });
 
-  // ⚠️ Do 완료 시 `it.fails` → `it`로 되돌릴 것. 현재는 §95⑤ 미구현이라 의도적으로 실패한다.
-  //    Pre-Do 실측(2026-08-04): expected 0.4 to be close to 0.32 — 차이 0.08은
-  //    비주택 4년이 표1 8%가 아니라 표2 16%로 계산된 값이다(현행이 총 보유 7년에 표2 적용).
-  it.fails("★ 기대 (§95⑤·⑥ 적용 후) — Do 전에는 실패해야 한다", () => {
-    const r = calculateTransferTax(case30(), rates);
+  // Phase B(2026-08-05)에서 `it.fails` → `it`로 되돌렸다.
+  //   Pre-Do 실측(2026-08-04): expected 0.4 to be close to 0.32 — 차이 0.08은
+  //   비주택 4년이 표1 8%가 아니라 표2 16%로 계산된 값이었다(현행이 총 보유 7년에 표2 적용).
+  it("★ 기대 (§95⑤·⑥ 적용 후)", () => {
+    const r = calculateTransferTax(
+      case30({
+        nonHousingToHousingConversion: {
+          residentialUseStartDate: new Date("2022-11-25"),
+          residenceMonthsTrimmed: 0,
+        },
+      }),
+      rates,
+    );
 
     // 보유공제율 = min[ 비주택 4년 표1 8% + 주택 3년 표2 12%, 40% ] = 20%
     // 거주공제율 = 주택 거주 3년 표2 12%
@@ -85,17 +93,52 @@ describe("Pre-Do anchor — 비주택 → 주택 용도변경 (PDF 사례 30)", 
     expect(r.taxBase).toBe(118_907_200); // 121,407,200 − 기본공제 250만
     expect(r.calculatedTax).toBe(26_177_520); // × 35% − 15,440,000 (§55)
     expect(r.localIncomeTax).toBe(2_617_752); // 산출세액 × 10%
+
+    // ── 표시 계층 (Phase G) — 문구가 자기일관적이고 sub-step 금액이 정확해야 한다 ──
+    const lthdStep = r.steps.find((s) => s.label === "장기보유특별공제");
+    expect(lthdStep?.formula).toContain("비주택 보유 4년 표1 8% + 주택 보유 3년 표2 12%");
+    expect(lthdStep?.formula).toContain("보유분 20%");
+    expect(lthdStep?.formula).toContain("거주 3년×4%=12% = 32%"); // 20+12=32 — 자기일관
+    expect(lthdStep?.legalBasis).toBe("소득세법 §95 ⑤");
+
+    // sub-step 안분은 20:12이지 28:12가 아니다 (종전 표2 경로는 39,992,960을 냈다)
+    const holdingSub = r.steps.find((s) => s.label === "보유 기간분 장특");
+    const residenceSub = r.steps.find((s) => s.label === "거주 기간분 장특");
+    expect(holdingSub?.amount).toBe(35_708_000); // 57,132,800 × 20/32
+    expect(residenceSub?.amount).toBe(21_424_800); // 57,132,800 × 12/32
+    expect(holdingSub!.amount + residenceSub!.amount).toBe(57_132_800); // 합 = 총액 불변식
+    expect(holdingSub?.legalBasis).toBe("소득세법 §95 ⑤");
+
+    // echo — 결과 화면 산출근거가 읽는 값 (전파 3지점이 살아 있는지도 함께 고정)
+    expect(r.usageConversionDetail).toEqual({
+      residentialUseStartDate: "2022-11-25",
+      nonHousingYears: 4,
+      housingYears: 3,
+      table1Pct: 8,
+      table2HoldingPct: 12,
+      residencePct: 12,
+      holdingRateCapped: false,
+      residenceMonthsTrimmed: 0,
+    });
   });
 
   it("★ 비과세 보유기간 (§154⑤ 단서) — 주거용 사용일 기준 2년 미달이면 과세", () => {
-    // 주거용 사용 개시일을 양도일 1년 11개월 전으로 → 취득일(2018) 기준으로는 8년이지만
-    // §154⑤ 단서상 보유기간은 1년 11개월이라 비과세 불가.
-    // Do 전에는 취득일 기준으로만 판정하므로 비과세가 적용되어 실패한다.
+    // 주거용 사용 개시일을 양도일 1년 10개월 전으로 → 취득일(2018) 기준으로는 7년 11개월이지만
+    // §154⑤ 단서상 보유기간은 1년 10개월이라 비과세 불가. (Phase C — 2026-08-05)
     const r = calculateTransferTax(
-      case30({ transferPrice: 1_000_000_000 }), // 12억 이하 — 비과세 여부가 세액을 가르도록
+      case30({
+        transferPrice: 1_000_000_000, // 12억 이하 — 비과세 여부가 세액을 가르도록
+        nonHousingToHousingConversion: {
+          residentialUseStartDate: new Date("2024-03-20"),
+          residenceMonthsTrimmed: 0,
+        },
+      }),
       rates,
     );
-    expect(r.isExempt).toBe(true); // 현행: 취득일 기준 8년 보유 → 비과세
-    // Do 후 기대: 주거용 사용일(2024-03 이후 케이스)을 넣으면 isExempt === false
+    expect(r.isExempt).toBe(false);
+
+    // 같은 입력에서 토글만 빼면 취득일(2018-02-10) 기준 7년 보유라 전액 비과세다.
+    const without = calculateTransferTax(case30({ transferPrice: 1_000_000_000 }), rates);
+    expect(without.isExempt).toBe(true);
   });
 });

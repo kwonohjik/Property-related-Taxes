@@ -425,7 +425,7 @@ export function calculateTransferTax(
   // §99의4 eligible 시 exemptionJudgeInput(유효 주택수) 전달 — 표2 판정도 §89①3호 의제 체인
   // (소령 §159의4 "그 밖의 규정에 따라 1세대 1주택으로 보는 주택 포함"). 중과 isSurchargeCase는 원본(R-D).
   // eslint-disable-next-line prefer-const -- deduction·rate는 STEP 4.05 §98의2 특칙에서 재할당
-  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, exclusionReason: lthdExclusionReason } =
+  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, usageConversionDetail, exclusionReason: lthdExclusionReason } =
     calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
   // §154⑧3호: 표2 "대상 판정"용 통산 거주연수 (동일세대 상속 통산 반영) — rate calc와 동일 exemptionJudgeInput.
   // 거주분 공제율 표시는 실거주(residenceYearsForStep) 유지 — 대상판정/공제율 분리 (rate↔display drift 방지).
@@ -459,6 +459,8 @@ export function calculateTransferTax(
     householdHousingCount: exemptionJudgeInput.householdHousingCount,
     lthd982Applied,
     lthdExclusionReason,
+    // §95⑤ 적용 시 보유분을 표1+표2로 나눠 표시한다 — 없으면 종전 표2 문구 그대로.
+    usageConversionDetail,
   });
 
   // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
@@ -652,6 +654,7 @@ export function calculateTransferTax(
     publicExpropriationDetail,
     selfFarmingReductionDetail,
     rental97LthdDetail,
+    usageConversionDetail,
     lthdExclusionReason,
     rental97TaxDetail,
     new994Detail,

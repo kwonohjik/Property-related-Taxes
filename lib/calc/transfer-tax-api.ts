@@ -8,7 +8,8 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
+import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
+import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -206,6 +207,18 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isRedevelopmentRightTransfer =
     primary.assetKind === "redevelopment_apt" && primary.redevSubject === "right";
 
+  // ④ 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서).
+  // 술어는 단일 소스 — UI·validation과 같은 함수를 쓴다.
+  const usageConversionOn = isUsageConversionActive(primary);
+  // §95⑤2호 — 주택으로 보유한 기간 중의 거주기간만 산입한다. 구간 입력이면 여기서 잘라낸다.
+  // (`direct` 모드는 시점 정보가 없어 클램프 불가 — 원값 유지 + Step4 안내. 계획 C-10b)
+  const residence = clampResidenceToHousingPeriod(
+    primary,
+    form.transferDate,
+    form.residencePeriodMonths,
+    usageConversionOn ? primary.residentialUseStartDate : undefined,
+  );
+
   const body = {
     // commercial_building/general_building은 그대로 송신 — 엔진 진입 조건 충족
     // 추가로 서브객체(commercialBuildingValuation/generalBuildingValuation)로 환산취득가 데이터 전달
@@ -355,7 +368,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // right_to_move_in 자산 유형에서만 의미. 기본 "0" fallback.
     householdRightCount: parseInt(form.householdRightCount ?? "0") || 0,
     // 거주기간 — 공용 헬퍼 도출(interval 합산 / direct·form-global fallback). UI 메시지②와 단일 진실.
-    residencePeriodMonths: deriveResidencePeriodMonths(primary, form.transferDate, form.residencePeriodMonths),
+    // 용도변경 시에는 §95⑤2호 클램프가 적용된 값이다(위 `residence` 참조).
+    residencePeriodMonths: residence.months,
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     // ④ regionCode — primary 자산 법정동코드(AddressSearch PNU 앞10) 우선, 없으면 form-global fallback.
@@ -393,6 +407,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             : {}),
         }
       : {}),
+    // ⑬ 비주택 → 주택 용도변경 §95⑤·⑥ — 미정의 시 침묵 stripping 방지를 위해 명시 선언.
+    // `residenceMonthsTrimmed`는 결과 화면 절사 안내 전용이며 계산에는 쓰이지 않는다.
+    nonHousingToHousingConversion: usageConversionOn
+      ? {
+          residentialUseStartDate: primary.residentialUseStartDate,
+          residenceMonthsTrimmed: residence.trimmed,
+        }
+      : undefined,
     // §154⑧3호 상속주택 자체 양도 보유기간 통산
     decedentSameHouseholdBeforeInheritance:
       primary.acquisitionCause === "inheritance"

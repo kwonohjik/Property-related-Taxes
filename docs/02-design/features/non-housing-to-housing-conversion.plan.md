@@ -293,12 +293,12 @@ L-1b는 `transfer-tax-helpers.ts:469-472`가 **`propertyType === "land" && landN
 | ⑥ | 사이드바 | — | **N/A 확인** (`computeTransferSummary`는 금액 5필드만) |
 | ⑦ | 결과 카드 | `TransferTaxResultView.tsx` + 신규 상세 카드 + **G-12 3파일** | §9.2·§9.3 |
 | ⑧ | validation | `transfer-tax-validate-asset.ts` | C-8·C-9·C-14·C-16·C-18~C-21·C-24. ⚠️ **`:310` 조기 return보다 앞** |
-| ⑨ | Zod enum 메인 | `transfer-tax-schema.ts` | **확인 후 N/A 기록** |
-| ⑩ | Zod refines | `transfer-tax-schema-refines.ts`(`addPropertyRefines:13`) | 날짜 순서. **메인 + 컴패니언** |
-| ⑪ | 자산-수준 fallback | **`lib/calc/transfer-tax-api.ts`**(`:100`·`:113`·`:238`) | ~~route.ts~~ 경로 정정 |
-| ⑫ | **Zod 입력 객체** | ⚠️ **Phase 0에서 경로 확정** | 선례 `houseToCommercialConversion`은 `-schema-sub.ts`가 아니라 **`transfer-tax-building-schemas.ts:206`**에 있다. 메인·컴패니언 양쪽 |
-| ⑬ | body spread | `transfer-tax-api.ts` | `callTransferTaxAPI` body |
-| ⑭ | Route 매핑 | **`app/api/calc/transfer/engine-input.ts`**(A-0 분리 — `buildTransferEngineInput`) | `residentialUseStartDate`는 `toDate()`, **`residenceMonthsTrimmed`는 number 그대로**. 선례 `general-building-route-helper.ts:184-188`이 필드별 명시 매핑 |
+| ⑨ | Zod enum 메인 | — | ✅ **N/A 확정** — 신규 enum 값이 없다(`transfer-tax-schema.ts`를 열지 않았다) |
+| ⑩ | Zod refines | ✅ `transfer-tax-schema-refines.ts`(`addPropertyRefines`) | 주거용 사용일이 취득일·양도일 **사이**인지(C-8·C-9 → 400). 단건·다건 스키마가 같은 헬퍼를 공유하므로 1곳 수정으로 양쪽 적용 |
+| ⑪ | 자산-수준 fallback | — | ✅ **N/A** — `residentialUseStartDate`는 primary 자산 전용이라 form-global fallback 대상이 아니다 |
+| ⑫ | **Zod 입력 객체** | ✅ 정의 `transfer-tax-schema-sub.ts:638` · 배선 `transfer-tax-schema.ts:371` | ⚠️ **컴패니언에는 두지 않았다**(계획 이탈) — C-26이 비-primary 자산을 UI 미노출로 정했고 거주분이 항상 0이 되므로, 스키마에 넣으면 **지원하지 않는 입력을 받아들이는** 셈이다 |
+| ⑬ | body spread | ✅ `transfer-tax-api.ts:412` | 게이트는 `isUsageConversionActive`(단일 소스 술어) |
+| ⑭ | Route 매핑 | ✅ `app/api/calc/transfer/engine-input.ts:75` | `residentialUseStartDate`는 `toDate()`, `residenceMonthsTrimmed`는 number 그대로 |
 
 ### 파일 크기 — Phase A-0 ✅ **완료** (2026-08-04)
 
@@ -364,12 +364,12 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 | **0** | ~~V-2·V-3 해소~~ · V-4 처리 · ⑫ Zod 경로 확정 · **PDF 사례 30 anchor 작성 후 현행 엔진 실행** | anchor **실패** + 실패 메시지가 예상 갭과 일치. **V-4 미확보 시 총 보유기간 기준 확정**. ⑫ 파일 경로 기재 |
 | **A-0** ✅ | 선분리 6파일(§8 표) — **별도 커밋** | ✅ `npx tsc --noEmit` 0건 · `npm run test:transfer` 전건 통과 · 대상 ≤700 · 행 번호 앵커 3문서 재실측 갱신 완료 |
 | **A** ✅ | `calcUsagePeriodInfo` leaf 추출 · **G-8 사본 4벌 → 0벌 정본 위임**(`rateForYears` 포함) · `calcConversionHoldingPct`(정수 %, 신규 leaf) · 게이트 상수 2종 · 법령 상수 4종 | **`npm run test:transfer`**(`package.json:14`, ~59초) 전건 통과. 🔴 **필수 케이스 2건**: ⓐ 비주택 2년·주택 5년 → 표1 **0%** + 표2 20% (가드 내장 확인) ⓑ **분수 정수 연산** — 비주택 3년·주택 4년·거주 3년 → 34% → 장특 **60,703,600**(소수 연산이면 60,703,599) |
-| **B** | R-1 혼합 분기 + echo + 전파 3지점 | anchor **장특 57,132,800** 통과. C-5·C-6·C-7·C-25 · **2025-01-01 정확일 경계**. `transfer.route.bundled-swallows-special.test.ts` 통과. *엔진 단위 테스트로만 — 화면 확인은 Phase E 이후* |
-| **C** | ⓪ Pick 확장 → R-2 §154⑤ 분기 + 2024-03-01 게이트 | C-11 · **2024-03-01 경계**. 기존 §154⑧3호 상속 테스트 회귀 0 |
-| **D** | R-3 — 기준일 파라미터화(엔진 + `buildResidenceReqInput`) **+ §9.1b Step4 UI 4항목** | C-12. **"Step4 안내 ↔ 엔진 판정 일치"** — UI가 같은 Phase에 있어야 검증 가능 |
-| **E** | ⑨~⑭ API·Zod·Route | request body 신규 **3필드** 도달(단건 + 다자산). ⑫⑬⑭ grep(§8) |
-| **F** | ①②③⑤⑧ UI + validation | C-8·C-9·C-14·C-16·C-18~C-21·C-24·C-26 차단·미노출 확인. ⚠️ **겸용주택 ON + 토글 ON 실행 확인**(G-13). 이력 복원 확인. `fuchsia` 정적 클래스 + `check-tone-classes.sh` 통과. `npm run lint` 0건 |
-| **G** | ⑦ 결과 카드 + §9.3 8곳 문구 교체 | 신고서 표·상세명세서가 §95⑤ 문구로 표시. 요약행 연결·접힘 여부 확정(§13) |
+| **B** ✅ | R-1 혼합 분기 + echo + **전파 6지점** + `transfer-tax-lthd.ts` 분리(800줄) | ✅ anchor **장특 57,132,800**·산출세액 **26,177,520** 통과(4건). 신규 `…conversion.engine.test.ts` **11건**(C-1·C-2·C-4·C-5·C-6·C-7·C-8·C-9·C-25 + 2025-01-01 경계). `npm run test:transfer` **480파일 5,427건 전건**. tsc 0건 · lint 0 error |
+| **C** ✅ | ⓪ Pick 확장 → R-2 §154⑤ 분기 + 2024-03-01 게이트 | ✅ C-11 · **2024-02-29 ↔ 2024-03-01 경계** · 상속 §154⑧3호 회귀 0(backdate 반례까지 고정) · 겹침 시 단서 우선. `test:transfer` **5,433건 전건** · tsc 0 · lint 0 error |
+| **D** ✅ | R-3 기준일(엔진 + `buildResidenceReqInput`) + Step4 UI 4항목 **+ ①②③ 폼 필드(F에서 당김)** | ✅ **C-12·C-13 양방향**(김포 4157010100 — 토글 유무로 `isExempt` 뒤집힘) · **"Step4 안내 ↔ 엔진 판정 일치"** 5건 · `npm test` **13,381건 전건** · tsc 0 · lint 0 error |
+| **E** ✅ | ④⑨~⑭ API·Zod·Route + 거주 클램프 | ✅ body 도달 **단건·다자산** · ⑫⑬⑭ grep 3계층 hit · Zod 날짜순서 400(C-8·C-9) · 클램프 6케이스 · **C-10c 세액 변경 고정** · `npm test` **13,394건 전건** |
+| **F** ✅ | ~~①②③~~ ⑤⑧ UI 위젯 + validation | ✅ validation **18건**(C-8·C-9·C-14·C-16·C-18~C-21·C-24 + 배치 고정 3건) · **브라우저 실동작 확인**(미리보기 20%·40% 캡·시행일 게이트 3화면 스크린샷) · `check-tone-classes.sh`·`check-font-sizes.sh` 통과 · `npm test` **13,412건** · lint 0 error |
+| **G** ✅ | ⑦ 결과 카드 + §9.3 문구 분기 | ✅ **표시 계층 금액 정정**(보유분 39,992,960 → **35,708,000**) · 산식 자기일관(20+12=32) · `legalBasis` §95⑤ · 신규 상세 카드 · **브라우저 결과 화면 확인** · 미결 a·b 확정 · `npm test` **13,412건** |
 | **H** | 통합 anchor + E2E | 산출세액 **26,177,520** · 지방소득세 **2,617,752**. E2E는 **sessionStorage 시드 방식**(§12) |
 
 ---
@@ -396,8 +396,12 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 
 **엔진·타입**
 - ✅ `conversion-holding-pct.ts`(신규 leaf) — `calcConversionHoldingPct`(정수 %). ⚠️ `tax-utils.ts`에 두면 순환(design Do deviation)
-- ✅ `transfer-tax-helpers.ts` — G-8 3곳 정본 위임 완료(751 → 744). 혼합 분기는 Phase B
-- `transfer-tax-exemption.ts` — ⓪ Pick 확장, §154⑤ 분기, 기준일 파라미터화 (⚠️ `resolveExemptionResidenceMonths`는 **개조 대상 아님**)
+- ✅ `transfer-tax-helpers.ts` — G-8 3곳 정본 위임(751 → 744) 후 **Phase B에서 H-5 분리로 503**
+- ✅ **`transfer-tax-lthd.ts`(신규 340줄)** — H-5 `calcLongTermHoldingDeduction` 전체 + **L-2 §95⑤ 혼합 분기**. helpers는 재수출만(외부 import 무변경). 분리 이유: 분기 삽입으로 helpers가 812줄이 되어 800 hard cap 초과
+- ✅ `types/transfer.types.ts` — `nonHousingToHousingConversion?` input(⚠️ **799줄** — 다음 필드 추가 시 800 초과, 타입 전용 파일 예외 적용 중)
+- ✅ `types/transfer-result.types.ts` — `UsageConversionDetail` 인터페이스 + `usageConversionDetail?` + Pick 등록
+- ✅ `transfer-tax.ts`(ⓒⓓ) · `transfer-tax-aggregate-pickers.ts`(ⓖ) — echo 전파
+- ✅ `transfer-tax-exemption.ts`(697) — ⓪ Pick 확장·§154⑤ 분기 완료(Phase C). 기준일 파라미터화는 **Phase D** (⚠️ `resolveExemptionResidenceMonths`는 **개조 대상 아님**)
 - ✅ `usage-period-info.ts`(신규 leaf, 58줄) — `calcUsagePeriodInfo` + `UsagePeriodInfo` 이동 + re-export(기존 import 2곳 무변경)
 - ✅ `legal-codes/transfer.ts` — 법령 상수 **4종**(`LONG_TERM_DEDUCTION_CONVERSION` · `CONVERSION_HOUSING_PERIOD_START` · `CONVERSION_EXEMPTION_HOLDING`). 게이트 상수는 `tax-utils.ts`(Date export 선례 0건 + 800줄 초과라 부적합)
 - `calc-wizard-asset-residence.ts` — `clampResidenceToHousingPeriod`(신규)
@@ -447,12 +451,27 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 | 1 | **V-4** 표2 거주 "보유 3년 이상 한정"의 지시 대상 (C-5) | 0 |
 | 2 | ⑫ Zod 정의 파일 경로 확정 | 0 |
 | ~~3~~ | ~~A-0 후 행 번호 앵커 재실측 + 계획서 갱신~~ | ✅ **완료**(2026-08-04) — 3문서 34곳 |
-| **a** | §9.2 요약행(`:100`) — 상세 카드 연결 vs 라벨 병기 **택일** | G |
-| **b** | §9.2 상세 카드 **접힘형 여부** (접힘이면 `print-only-css-toggle` 필수) | G |
+| ~~**a**~~ | ~~§9.2 요약행 — 상세 카드 연결 vs 라벨 병기~~ | ✅ **결정**(G) — 상세 카드가 **같은 PrintSection 안**이라 연결·병기 **모두 불요** |
+| ~~**b**~~ | ~~§9.2 상세 카드 접힘형 여부~~ | ✅ **결정**(G) — **접지 않는다**(8행으로 짧고 드문 케이스라 즉시 읽혀야 함. `print-only-css-toggle` 불요) |
 
 ---
 
 ## 14. 개정 이력
+
+**v11 (2026-08-05)** — **Phase G 완료**. 🔴 **표시 계층이 문구가 아니라 금액을 틀리고 있었다** — 종전 표2 경로가 총 보유 7년으로 안분해 보유분 39,992,960(정확값 **35,708,000**)을 냈고 문구도 "28%+12%=32%" 자기모순이었다. ✅ **G-12 8곳 → 실제 3곳**: `DetailedStatementHelpers`가 엔진 sub-step을 우선 소비하므로 엔진만 고치면 명세서·신고서가 자동 추종한다(신고서 2파일은 **라벨 정의만**이라 불요). 신규 상세 카드 + 미결 **a·b 확정**(연결 불요·접지 않음). `DetailedStatementHelpers.ts` 803줄 초과 → fallback 산식을 `DetailedStatementLthdFormulas.ts`로 분리(791).
+
+**v10 (2026-08-05)** — **Phase F 완료**. ⑤ `NonHousingConversionSection.tsx`(163줄) + 마운트 + ⑧ validation. 🔴 **800줄 초과 1건**: validation 추가로 `transfer-tax-validate-asset.ts`가 820줄 → 전용 검증을 **`transfer-tax-validate-usage-conversion.ts`(81줄)**로 분리(형제 `-mixed-use-asset.ts`·`-bg.ts`와 같은 위임 패턴). **브라우저 실동작 최초 확인** — 위젯 렌더·미리보기(7년11개월/표1 8%/표2 12%/합계 20%)·40% 캡(24+32→40)·시행일 게이트 3화면.
+
+**v9 (2026-08-05)** — **Phase E 완료**. ④⑩⑫⑬⑭ + `clampResidenceToHousingPeriod`. 🔴 **설계 미결 1건 결정**: "Step4 안내가 클램프된 값을 보는가"가 §13에 등록되지 않은 채 떠 있었다 → **본다**(C-10c에서 화면·엔진이 갈리면 안 된다). `buildResidenceReqInput`도 같은 헬퍼를 쓴다. 계획 이탈 1건: **⑫를 컴패니언 스키마에 넣지 않았다**(C-26이 비-primary를 미노출로 정했으므로). ⑨⑪는 **N/A 확정**.
+
+**v8 (2026-08-05)** — **Phase D 완료**. 🔴 **계획 순서 결함 1건 발견·해소**: Phase D의 Step4 UI가 읽을 폼 필드 ①②③가 Phase F에 있어 그대로는 착수 불가였다(D→F 의존). 사용자 승인으로 **①②③를 D로 당겼다**(위젯 ⑤·validation ⑧은 F 유지). Do deviation 2건: ① R-3을 「인자 파라미터화」가 아니라 **함수 내부 도출**로(호출부가 기준일을 고를 수 없게 — 인자 동일성 위험 원천 제거) ② **호출부가 3곳이 아니라 4곳**이었다(Step4 자동 판별 fetch의 `acquisitionDate`가 토글을 자동 덮어쓴다). `isUsageConversionActive` 단일 소스 술어 함수 신설.
+
+**v7 (2026-08-05)** — **Phase C 완료**. ⓪ `ResidenceReqInput` Pick 확장(파생 2종 자동 전파) + `resolveExemptionHoldingStartDate`에 §154⑤ 단서 분기 + 2024-03-01 게이트. **분기 순서를 용도변경 우선으로 확정**(단서는 상속 통산으로 우회 불가) — 엔진 단독 호출 전용 논점이라 테스트로 고정. 설계 이탈 없음.
+
+**v6 (2026-08-05)** — **Phase B 완료**. R-1 혼합 분기 + echo + 전파 6지점. Do deviation 2건을 design에 기록:
+① 분기 삽입으로 `transfer-tax-helpers.ts`가 812줄이 되어 H-5를 **`transfer-tax-lthd.ts`(신규 340줄)**로 분리(helpers 503, 재수출로 import 무변경)
+② `TaxErrorCode`가 enum이라 설계의 `"INVALID_CONVERSION_DATE"` 문자열은 컴파일 불가 → 기존 **`INVALID_DATE`** 사용.
+계약 개수 가드(`bundled-swallows-special.test.ts`) **24 → 25** 갱신.
 
 **v5 (2026-08-04)** — **V-2·V-3 해소** (서면-2020-부동산-5098 [부동산납세과-1247] 원문 확보). 회신이 특정한 조문은 「소득세법 시행령」 **제154조제1항**. C-13(대칭 방향) 근거를 회신의 일반 명제로 확정. R-3 착수 가능.
 

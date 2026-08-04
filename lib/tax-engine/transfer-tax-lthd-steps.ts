@@ -6,11 +6,14 @@
  * §98의2 특칙 재할당 완료). 이 모듈은 그 결과를 산식 문자열과 sub-step 금액으로
  * 풀어쓸 뿐이며 세액에는 영향을 주지 않는다.
  *
- * ⚠️ 「소득세법」 §95⑤(비주택→주택 용도변경) 도입 시 이 모듈이 **금액까지** 틀린다 —
- *    `isOneHouseSpecial` 경로가 총 보유기간에 표2를 적용한 문구·안분율을 쓰기 때문이다.
- *    설계: docs/02-design/features/non-housing-to-housing-conversion.engine.design.md
+ * 「소득세법」 §95⑤(비주택→주택 용도변경)은 **별도 분기**를 탄다 — 그 경우 공제율이
+ * 총 보유기간에 표2를 적용한 값이 아니라 「비주택 기간 표1 + 주택 기간 표2」이기 때문이다.
+ * 분기 없이 `isOneHouseSpecial` 경로를 태우면 문구가 자기모순(28%+12%≠32%)이 되고
+ * sub-step **금액까지** 어긋난다(2026-08-05 Phase G에서 정정).
+ * 설계: docs/02-design/features/non-housing-to-housing-conversion.engine.design.md
  */
 import type { CalculationStep } from "./types/transfer.types";
+import type { UsageConversionDetail } from "./types/transfer-result.types";
 import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 
@@ -28,6 +31,8 @@ export interface LthdStepArgs {
   householdHousingCount: number;
   lthd982Applied: boolean;
   lthdExclusionReason: LthdExclusionReason | undefined;
+  /** §95⑤·⑥ 용도변경 적용 내역 — 있으면 보유분을 표1+표2로 나눠 표시한다. */
+  usageConversionDetail?: UsageConversionDetail;
 }
 
 /** STEP 4 + 4.1 + 4.2 — 장특공제 본 step과 보유분/거주분 sub-step을 push한다. */
@@ -44,6 +49,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     householdHousingCount,
     lthd982Applied,
     lthdExclusionReason,
+    usageConversionDetail: conv,
   } = args;
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
@@ -54,14 +60,23 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     householdHousingCount === 1 &&
     table2ResidenceYearsForStep >= 2 &&
     longTermHoldingDeduction > 0;
+  // 보유분 공제율 — §95⑤이면 표1(비주택 기간) + 표2(주택 기간)의 합(40% 한도)이고,
+  // 그 외 표2 경로는 총 보유기간 × 4%다. sub-step 안분도 이 값을 기준으로 한다.
+  const holdingPct = conv
+    ? conv.table1Pct + conv.table2HoldingPct > 40
+      ? 40
+      : conv.table1Pct + conv.table2HoldingPct
+    : Math.min(holdingPeriod.years * 4, 40);
+  const residencePct = conv ? conv.residencePct : Math.min(residenceYearsForStep * 4, 40);
+
   const lthdFormulaRate = lthd982Applied
     ? `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×4% = ${Math.round(longTermHoldingRate * 100)}% (40% 한도, 법 §98의2①1호)`
+    : conv
+    ? `비주택 보유 ${conv.nonHousingYears}년 표1 ${conv.table1Pct}% + 주택 보유 ${conv.housingYears}년 표2 ${conv.table2HoldingPct}%`
+      + ` = 보유분 ${holdingPct}%${conv.holdingRateCapped ? " (40% 한도 적용)" : ""}`
+      + ` + 거주 ${residenceYearsForStep}년×4%=${residencePct}% = ${holdingPct + residencePct}%`
     : isOneHouseSpecial
-    ? (() => {
-        const hPart = Math.min(holdingPeriod.years * 4, 40);
-        const rPart = Math.min(residenceYearsForStep * 4, 40);
-        return `보유 ${holdingPeriod.years}년×4%=${hPart}% + 거주 ${residenceYearsForStep}년×4%=${rPart}% = ${Math.round(longTermHoldingRate * 100)}%`;
-      })()
+    ? `보유 ${holdingPeriod.years}년×4%=${holdingPct}% + 거주 ${residenceYearsForStep}년×4%=${residencePct}% = ${Math.round(longTermHoldingRate * 100)}%`
     : `보유 ${holdingPeriod.years}년×2% = ${Math.round(longTermHoldingRate * 100)}% (30% 한도)`;
   const lthdExcluded = lthdExclusionReason !== undefined && !lthd982Applied;
   steps.push({
@@ -74,33 +89,38 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
           holdingPeriodStr,
         ].filter(Boolean).join(" | "),
     amount: longTermHoldingDeduction,
-    legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+    legalBasis: conv ? TRANSFER.LONG_TERM_DEDUCTION_CONVERSION : TRANSFER.LONG_TERM_DEDUCTION,
   });
 
   // STEP 4.1·4.2: 1세대1주택 특례(표2) 적용 시 보유분/거주분 sub-step 정식 emit.
   // 명세서 카드의 "보유 기간분 장특"·"거주 기간분 장특" 행에 step.formula 자동 매핑 (정확한 안분율 노출).
   // 비특례 케이스는 sub-step 미발생 (보유분 일률 표1 적용 — UI는 표1 안내 노출).
-  if (isOneHouseSpecial && longTermHoldingDeduction > 0) {
-    const hPart = Math.min(holdingPeriod.years * 4, 40);
-    const rPart = Math.min(residenceYearsForStep * 4, 40);
-    const totalRate = hPart + rPart;
+  if ((isOneHouseSpecial || conv) && longTermHoldingDeduction > 0) {
+    const totalRate = holdingPct + residencePct;
     if (totalRate > 0) {
-      // 보유·거주 기간분 각각 자기 공제율로 직접 산정(§95② 별표 표2). floor 잔액(≤1원)은
+      // 보유·거주 기간분 각각 자기 공제율로 직접 산정(§95② 별표 표2 / §95⑤). floor 잔액(≤1원)은
       // 보유분(기저 공제)에 흡수 — 합 = 총 장특공제 불변식 유지. 세액은 총액만 사용(무관).
-      const residenceAmt = Math.floor((longTermHoldingDeduction * rPart) / totalRate);
+      const residenceAmt = Math.floor((longTermHoldingDeduction * residencePct) / totalRate);
       const holdingAmt = longTermHoldingDeduction - residenceAmt;
+      const basis = conv ? TRANSFER.LONG_TERM_DEDUCTION_CONVERSION : TRANSFER.LONG_TERM_DEDUCTION;
+      const holdingDesc = conv
+        ? `비주택 ${conv.nonHousingYears}년 표1 ${conv.table1Pct}% + 주택 ${conv.housingYears}년 표2 ${conv.table2HoldingPct}%, 40% 한도`
+        : `보유 ${holdingPeriod.years}년 × 4%, 40% 한도`;
+      const residenceDesc = conv
+        ? `주택으로 보유한 기간 중 거주 ${residenceYearsForStep}년 × 4%, 40% 한도`
+        : `거주 ${residenceYearsForStep}년 × 4%, 40% 한도`;
       steps.push({
         label: "보유 기간분 장특",
-        formula: `${longTermHoldingDeduction.toLocaleString()} × ${hPart}% / ${totalRate}% = ${holdingAmt.toLocaleString()} (보유 ${holdingPeriod.years}년 × 4%, 40% 한도)`,
+        formula: `${longTermHoldingDeduction.toLocaleString()} × ${holdingPct}% / ${totalRate}% = ${holdingAmt.toLocaleString()} (${holdingDesc})`,
         amount: holdingAmt,
-        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+        legalBasis: basis,
         sub: true,
       });
       steps.push({
         label: "거주 기간분 장특",
-        formula: `${longTermHoldingDeduction.toLocaleString()} × ${rPart}% / ${totalRate}% = ${residenceAmt.toLocaleString()} (거주 ${residenceYearsForStep}년 × 4%, 40% 한도)`,
+        formula: `${longTermHoldingDeduction.toLocaleString()} × ${residencePct}% / ${totalRate}% = ${residenceAmt.toLocaleString()} (${residenceDesc})`,
         amount: residenceAmt,
-        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+        legalBasis: basis,
         sub: true,
       });
     }

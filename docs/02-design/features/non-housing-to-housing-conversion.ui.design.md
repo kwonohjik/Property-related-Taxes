@@ -73,9 +73,14 @@ dark:bg-fuchsia-950/30 dark:border-fuchsia-800/60 dark:text-fuchsia-200
 ### 1.4 미리보기 — 엔진 헬퍼 직접 import (재구현 금지)
 
 ```ts
-import { calcUsagePeriodInfo } from "@/lib/tax-engine/usage-period-info";        // 신규 leaf
-import { calcConversionHoldingPct } from "@/lib/tax-engine/transfer-tax-helpers";
+import { calcUsagePeriodInfo } from "@/lib/tax-engine/usage-period-info";          // 신규 leaf
+import { calcConversionHoldingPct } from "@/lib/tax-engine/conversion-holding-pct"; // ✅ 신규 leaf (Phase A deviation)
+import { calculateHoldingPeriod, LTHD_CONVERSION_95_5_CUTOFF } from "@/lib/tax-engine/tax-utils";
 ```
+
+> ✅ **경로 갱신(Phase F)**: `calcConversionHoldingPct`는 `transfer-tax-helpers.ts`가 **아니다** —
+> `tax-utils` ↔ `mixed-use-inheritance` 순환 때문에 Phase A에서 신규 leaf로 분리됐다.
+> 「N년 M개월」 표시에는 `calculateHoldingPeriod`가 추가로 필요하다(`calcUsagePeriodInfo`는 연수만 준다).
 
 - **`useMemo` 순수** — `useEffect → store` 미러링 금지 (memory `feedback_useeffect_store_mirror_forbidden`)
 - 선례: `Step4.tsx:4`가 이미 `@/lib/tax-engine/transfer-tax-exemption`을 직접 import
@@ -115,16 +120,27 @@ import { calcConversionHoldingPct } from "@/lib/tax-engine/transfer-tax-helpers"
 
 ---
 
-## 2. Step4 연동 (Phase D — R-3과 같은 단위)
+## 2. Step4 연동 (Phase D ✅ 완료 2026-08-05)
 
-> 전제: **Step4 §② 전체가 `assets[0]` 전용**(`Step4.tsx:68`).
+> 전제: **Step4 §② 전체가 `assets[0]` 전용**.
+> ⚠️ **폼 필드 ①②③를 Phase D로 당겼다** — Step4가 읽을 `hasNonHousingConversion`·`residentialUseStartDate`의 출처가 Phase F였다(계획이 놓친 D→F 의존). 입력 위젯 ⑤·validation ⑧은 Phase F에 남는다.
 
-| 위치 | 현행 | 용도변경 ON 시 |
-|---|---|---|
-| `Step4.tsx:440-448` 토글 | 라벨 "**취득일** 기준 조정대상지역" | "**용도변경일** 기준 조정대상지역"으로 전환. `regulatedAutoTip`(`:297`) 자동판별 기준일도 함께 변경 |
-| `Step4.tsx:459` (블록 `:454-465`) 배너 | "장특공제가 표2(보유 4%/년 + 거주 4%/년, **최대 80%**)로 적용됩니다" | §95⑤ 혼합 + **40% 한도**로 분기 |
-| `Step4.tsx:487` (블록 `:483-491`) 경고 | "**취득 당시** 조정대상지역 주택은 2년 이상 거주해야…" | "**용도변경 당시**"로 분기 |
-| 거주기간 섹션 (`:469` 태그 · `i === 0` 갱신은 `:476`) | — | `residenceInputMode === "direct"`면 C-10b 안내 노출 |
+파생 2개를 상단에 두고 4곳이 공유한다:
+
+```ts
+const conversionActive = isUsageConversionActive(primary);          // 단일 소스 술어
+const residenceJudgmentDate = conversionActive ? primary!.residentialUseStartDate : primaryAcquisitionDate;
+const judgmentDateLabel = conversionActive ? "용도변경일" : "취득일";
+```
+
+| 위치 | 현행 | 용도변경 ON 시 | |
+|---|---|---|---|
+| 토글 | 라벨 "**취득일** 기준 조정대상지역" | "**용도변경일** 기준" + description에 "주택이 된 날" 설명 | ✅ |
+| 🆕 **자동 판별 fetch** | `acquisitionDate: primaryAcquisitionDate` | `residenceJudgmentDate` (deps도 교체) | ✅ **설계가 놓친 지점** — 이 결과가 토글을 자동으로 덮어쓴다 |
+| `regulatedAutoTip` 표시 | "취득일(2018-02-10): …" | "용도변경일(2022-11-25): …" | ✅ |
+| 1세대1주택 배너 | "표2(보유 4%/년 + 거주 4%/년, **최대 80%**)" | §95⑤ — 비주택 기간 표1 / 주택 기간 표2, 보유분 합계 **40% 한도**, 거주분 별도 | ✅ |
+| 거주요건 경고 | "**취득 당시** 조정대상지역 주택은…" | "**용도변경 당시**" | ✅ |
+| 거주기간 섹션 아래 | — | `residenceInputMode === "direct"`면 C-10b 안내(amber) 노출 | ✅ |
 
 **Phase D에 두는 이유**: Phase D verify가 "Step4 안내 ↔ 엔진 판정 일치"인데 UI가 Phase G에 있으면 그 시점에 Step4가 아직 옛 기준일을 써서 **verify를 통과시킬 수 없다**.
 
@@ -158,8 +174,9 @@ import { calcConversionHoldingPct } from "@/lib/tax-engine/transfer-tax-helpers"
 | 표기 | 한국어 풀어쓰기 · 변수 약어 금지 · `floor()` 미표시 · "원" 표기 금지 · 내부 id 노출 금지 |
 | **미표시 조건** | `result.usageConversionDetail === undefined`(I-1·I-2·I-3·I-5·I-9·I-15 및 **이력에서 불러온 과거 결과**)이면 **카드 미렌더** — 기존 표1/표2 표시 유지 |
 | 데이터 소스 | `result.usageConversionDetail` (공제율은 **정수 %** — `table1Pct`·`table2HoldingPct`·`residencePct`) |
-| 요약행 연결 | `TransferTaxResultView.tsx:100` `장기보유특별공제 (32%)` → **상세 카드로 연결** (plan §13-a) |
-| 접힘 여부 | plan §13-b에서 확정. 접힘형이면 `className={open ? "block" : "hidden print:block"}` + 토글 `print:hidden` (`print-only-css-toggle` 스킬) |
+| 요약행 연결 | ✅ **미결 a 결정 — 연결·병기 모두 불요.** 상세 카드가 **같은 `PrintSection` 안**(`pre1990LandValuationDetail` 카드 직후)에 렌더되므로 요약행에서 스크롤·앵커로 유도할 대상이 없다. 카드 제목 자체가 "비주택 → 주택 용도변경 장기보유특별공제"로 근거를 밝힌다 |
+| 접힘 여부 | ✅ **미결 b 결정 — 접지 않는다.** 카드가 8행으로 짧고 §95⑤ 적용 자체가 드문 케이스라 나타났을 때 바로 읽혀야 한다. 펼침 토글을 두면 `print-only-css-toggle` 대응이 추가로 필요해 이득 없이 복잡해진다 |
+| 구현 | ✅ `components/calc/results/transfer/UsageConversionDetailCard.tsx`(신규 105줄) — 절사 안내(§3.2)를 **같은 카드 안에** 포함 |
 
 ### 3.2 절사 안내
 
@@ -169,7 +186,27 @@ import { calcConversionHoldingPct } from "@/lib/tax-engine/transfer-tax-helpers"
 
 > ⚠️ 이 안내는 D-6(비과세 거주요건에도 클램프)의 사용자 접점이다. plan R-G가 기록하듯 **명문 없는 불리 적용**이므로, 문구가 "왜 줄었는지 + 무엇을 확인해야 하는지"를 모두 담아야 한다.
 
-### 3.3 §95② 하드코딩 8곳 문구 분기
+### 3.3 §95② 하드코딩 8곳 문구 분기 (Phase G ✅ 완료 2026-08-05)
+
+> ✅ **실측 결과 — 손댈 곳은 8곳이 아니라 3곳이었다.**
+>
+> `DetailedStatementHelpers`가 `lthHoldingStep?.formula ?? fallback` · `?.legalBasis ?? (...)`로
+> **엔진 sub-step을 우선 소비**한다. §95⑤ 케이스는 항상 sub-step을 낳으므로(`isOneHouseSpecial || conv`)
+> 엔진만 고치면 명세서·신고서 산식과 근거조문이 **자동으로 따라온다**.
+>
+> | 대상 | 판정 |
+> |---|---|
+> | `transfer-tax-lthd-steps.ts` 산식·sub-step 금액·`legalBasis` | ✅ **수정**(금액이 틀렸다 — 아래) |
+> | `DetailedStatementHelpers.ts` `note` | ✅ **수정** — "1세대1주택 고가주택 표2 적용"이 §95⑤에서 부정확 |
+> | 〃 fallback 산식(`§95② 표1/표2`) | ⚪ **불요** — sub-step이 있어 §95⑤가 도달하지 않는다(표1 단독·차손·겸용·과거 이력만 도달) |
+> | `FilingFormTableRowDefs.ts:46-47` · `FilingFormTableAggregateHelpers.ts:314-315` | ⚪ **불요** — **라벨 정의만**이고 값·산식은 `items.get()`로 온다. 라벨을 바꾸면 신고서 행이 어긋난다 |
+>
+> 🔴 **금액이 틀렸다 — 문구만의 문제가 아니었다.** 종전 경로는 `hPart = min(총보유 7년 × 4%, 40) = 28`,
+> `rPart = 12`로 안분해 보유분 **39,992,960**을 냈다. 정확값은 보유분 20% : 거주분 12% 안분인
+> **35,708,000**이다(거주분 21,424,800). 문구도 "28% + 12% = 32%"로 **자기모순**이었다.
+> anchor에 두 금액과 합계 불변식을 고정했다.
+
+#### (참고) 설계 시점의 대상 목록
 
 sub-step `"보유 기간분 장특"`·`"거주 기간분 장특"`은 **신고서 양식 표(단건·다자산)와 상세명세서가 라벨로 소비**한다. 참조 사례 PDF 537p 화면이 바로 그 「양도소득금액 계산명세서」다 — **우회하면 그 행이 빈다.** 라벨은 유지하고 문구만 분기한다.
 
@@ -201,9 +238,13 @@ sub-step `"보유 기간분 장특"`·`"거주 기간분 장특"`은 **신고서
 
 ---
 
-## 5. Validation (⑧ · Phase F)
+## 5. Validation (⑧ · Phase F ✅ 완료 2026-08-05)
 
-⚠️ **`transfer-tax-validate-asset.ts:310-312`의 겸용주택 조기 return보다 앞에 배치**한다 — 뒤에 두면 C-14가 필요한 바로 그 조건에서 dead code가 된다.
+⚠️ 설계는 "겸용주택 조기 return보다 앞"이라 했으나 실제로는 **`validateAssetAcquisition` 맨 앞**에 뒀다 — 겸용주택 말고도 **부담부증여(C-24)·이월과세(C-21)가 각자 전용 검증으로 먼저 빠져나간다**. 그 뒤에 두면 차단이 필요한 세 조합 전부에서 dead code가 된다. 테스트 3건으로 배치를 고정했다.
+
+> 🔴 **800줄 초과 → 분리**: 검증을 넣자 `transfer-tax-validate-asset.ts`가 **820줄**이 됐다.
+> `validateUsageConversion`을 **`transfer-tax-validate-usage-conversion.ts`(81줄)**로 분리하고
+> 호출만 남겼다(752줄). 형제 `-mixed-use-asset.ts`·`-bg.ts`·`-gb.ts`와 같은 위임 패턴이다.
 
 | 케이스 | 조건 (폼 관측 가능) | 메시지 |
 |---|---|---|

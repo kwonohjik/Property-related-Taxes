@@ -91,3 +91,50 @@ export function deriveResidencePeriodMonths(
     ? sumResidenceMonths(primary.residencePeriods, transferDate)
     : parseInt(primary.residencePeriodMonthsAsset || formFallbackMonths) || 0;
 }
+
+/**
+ * 「소득세법」 제95조 제5항 제2호 — **주택으로 보유한 기간 중** 거주한 기간만 산입.
+ *
+ * 비주택으로 취득해 주택으로 용도변경한 경우, 주거용 사용 개시일 이전의 거주는 §95⑤2호의
+ * 거주기간이 아니다. 입주일·퇴거일 구간으로 입력됐다면 각 구간의 시작을 주거용 사용 개시일로
+ * 당겨 다시 합산한다.
+ *
+ * ⚠️ **`direct` 모드는 클램프할 수 없다** — 개월 수 스칼라에는 시점 정보가 없다.
+ *    자동 안분 fallback은 금지이므로(비율로 깎지 않는다) 원값을 그대로 두고,
+ *    "주거용 사용 개시일 이후만 입력하라"는 안내를 Step4가 띄운다(계획 C-10b).
+ *
+ * `deriveResidencePeriodMonths`와 **같은 소스에 둔다** — 두 함수가 같은 입력 형태를 읽어야
+ * 클램프 전후 값이 어긋나지 않는다.
+ *
+ * @returns months 산입 개월 수 · trimmed 잘려나간 개월 수(0이면 절사 없음 — 결과 화면 안내용)
+ */
+export function clampResidenceToHousingPeriod(
+  primary: {
+    residenceInputMode: "interval" | "direct";
+    residencePeriods: ResidencePeriod[];
+    residencePeriodMonthsAsset: string;
+  },
+  transferDate: string,
+  formFallbackMonths: string,
+  residentialUseStartDate: string | undefined,
+): { months: number; trimmed: number } {
+  const raw = deriveResidencePeriodMonths(primary, transferDate, formFallbackMonths);
+
+  // 용도변경이 아니거나 direct 모드면 클램프 대상이 아니다.
+  if (
+    !residentialUseStartDate ||
+    primary.residenceInputMode !== "interval" ||
+    primary.residencePeriods.length === 0
+  ) {
+    return { months: raw, trimmed: 0 };
+  }
+
+  const clamped = primary.residencePeriods.reduce((sum, p) => {
+    if (!p.moveInDate || !p.moveOutDate) return sum;
+    // 구간 전체가 주거용 사용일 이전이면 0이 된다(diffMonthsClamped가 음수를 0으로 막는다).
+    const start = p.moveInDate < residentialUseStartDate ? residentialUseStartDate : p.moveInDate;
+    return sum + diffMonthsClamped(start, p.moveOutDate);
+  }, 0);
+
+  return { months: clamped, trimmed: Math.max(0, raw - clamped) };
+}

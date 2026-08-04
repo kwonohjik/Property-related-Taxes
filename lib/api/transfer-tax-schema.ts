@@ -30,6 +30,7 @@ import {
   parcelSchema,
   preHousingDisclosureSchema,
   mixedUseAssetSchema,
+  nonHousingToHousingConversionSchema,
   addPropertyRefines,
 } from "./transfer-tax-schema-sub";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
@@ -362,6 +363,12 @@ const propertyBaseShape = {
   primaryActualSalePrice: z.number().int().positive().optional(),
   /** 개별주택가격 미공시 취득 시 3-시점 환산취득가 계산 입력 (§164⑤) */
   preHousingDisclosure: preHousingDisclosureSchema.optional(),
+  /**
+   * ⑫ 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) — 미정의 시 침묵 stripping 방지.
+   * 컴패니언 자산에는 두지 않는다 — Step4의 거주기간·조정대상지역이 전부 assets[0] 전용이라
+   * 비-primary 자산은 거주분이 항상 0이 된다(계획 C-26 UI 미노출).
+   */
+  nonHousingToHousingConversion: nonHousingToHousingConversionSchema.optional(),
   /** 배우자등 이월과세 (§97조의2) — acquisitionCause === "carryover_gift" 시 필수 */
   carryoverTaxation: z.object({
     giftRegistryDate: z.string().date(),

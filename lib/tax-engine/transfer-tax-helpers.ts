@@ -13,19 +13,12 @@
  */
 
 import {
-  applyRate,
   computeEstimatedDeduction,
   calculateEstimatedAcquisitionPrice,
-  calculateHoldingPeriod,
   calculateProration,
 } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";
-// 「소득세법」 §95② 표1·표2 공제율 **정본**(3년 가드 내장). 사본을 새로 만들지 말 것.
-import { calcLongTermRate } from "./transfer-tax-mixed-use-inheritance";
 import { TRANSFER } from "./legal-codes";
-import type { LthdExclusionReason } from "./legal-codes/transfer";
-import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
-import { resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
 import {
   resolveConversionDenominatorAtTransfer,
   type ExpropriationValuationDetail,
@@ -51,7 +44,6 @@ import {
   type NewHousingMatrixData,
 } from "./schemas/rate-table.schema";
 import { toRegulatedAreaHistory } from "./data/regulated-areas";
-import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { getRate } from "@/lib/db/tax-rates";
 import type { TaxBracket } from "./types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -64,8 +56,6 @@ import type {
   MultiHouseSurchargeResult,
 } from "./multi-house-surcharge";
 import { calcSplitGain } from "./transfer-tax-split-gain";
-import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
-import type { Rental97Result } from "./transfer-reductions/types";
 
 // ============================================================
 // 내부 파싱 결과 타입 — transfer-tax-rate-calc.ts 에서도 import
@@ -425,241 +415,10 @@ export function calcOneHouseProration(
 
 // ============================================================
 // H-5: calcLongTermHoldingDeduction — 장기보유특별공제
+// 800줄 정책 준수를 위해 ./transfer-tax-lthd.ts 로 분리. 하위 호환 위해 재수출.
 // ============================================================
 
-interface LongTermHoldingResult {
-  deduction: number;
-  rate: number;
-  holdingPeriod: { years: number; months: number };
-  /** §97의3·§97의4 평가 결과 echo (Phase 2 — 2026-06-11). 평가 항목이 없으면 undefined. */
-  rental97LthdDetail?: Rental97Result;
-  /** 배제 사유 echo — 배제 경로(L-0·L-0a·L-1)에서만. 미배제(공제율 미달 포함)는 undefined. */
-  exclusionReason?: LthdExclusionReason;
-}
-
-export function calcLongTermHoldingDeduction(
-  taxableGain: number,
-  input: TransferTaxInput,
-  rules: ParsedRates["longTermHoldingRules"],
-  isSurcharge: boolean,
-  isSuspended: boolean,
-  longTermRentalRules?: LongTermRentalRuleSet,
-  splitDetail?: SplitGainResult,
-): LongTermHoldingResult {
-  // L-0: 미등기 — 배제
-  if (input.isUnregistered) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "unregistered" };
-  }
-
-  // L-0a: 분양권·승계입주권 — 배제
-  if (input.propertyType === "presale_right") {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "presale_right" };
-  }
-  if (input.propertyType === "right_to_move_in" && input.isSuccessorRightToMoveIn === true) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "successor_right_to_move_in" };
-  }
-
-  // L-1: 중과세 적용 중(유예 해제)이면 배제
-  if (isSurcharge && !isSuspended) {
-    return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "multi_house_surcharge" };
-  }
-
-  // L-1b: 부수토지 일체과세 (landNature === "appurtenant_to_housing")
-  // — 포괄적 일체과세 원칙: primary 주택의 보유기간·거주기간 기준 표 1/2 적용
-  // — 단기보유(1년 미만 → 70%, 1~2년 → 60%) 시에는 LTHD 배제 (세율에서 이미 처리됨)
-  // — 2년 이상 보유 시 주택 기준 LTHD 적용 (primaryContextForCompanionRate에서 holdingMonths 사용)
-  if (
-    input.propertyType === "land" &&
-    input.landNature === "appurtenant_to_housing" &&
-    input.primaryContextForCompanionRate
-  ) {
-    const ctx = input.primaryContextForCompanionRate;
-    // primary 주택 보유기간 기준
-    const primaryHoldingYears = Math.floor(ctx.holdingMonths / 12);
-    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 게이트가 24개월(2년)이라
-    //   주 주택 2~3년 보유 구간에서 **존재하지 않는 장기보유특별공제**가 부여됐다.
-    //   §95②의 진입요건은 **보유기간 3년 이상**이며, 같은 함수의 일반 경로
-    //   `rateForYears`도 `years < 3 → 0` 게이트를 갖고 있다(내부 불일치였다).
-    //   24개월 게이트는 "2년 미만 = 단기세율"이라는 **다른 규칙**을 LTHD 요건으로
-    //   착각한 것이다 — 단기세율 여부와 LTHD 3년 요건은 별개 판정이다.
-    if (ctx.holdingMonths < 36) {
-      const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
-      return { deduction: 0, rate: 0, holdingPeriod: { years: holding.years, months: holding.months } };
-    }
-    // 2년 이상: primary 주택 기준 LTHD 계산
-    // 부수토지는 1세대1주택 여부·거주기간을 주택과 공유
-    const isOneHouseSingleForCompanion =
-      input.isOneHousehold && input.householdHousingCount === 1;
-    const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(거주분 공제율)
-    const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12); // 통산(대상 판정)
-    // 표2(1세대1주택 — 보유분 4% + 실거주분 4%, 각 40% 캡) / 표1(일반 보유 × 2%, 30% 캡).
-    // 정본 위임 — 외곽 `holdingMonths < 36` return이 정본의 3년 가드와 등가라 중복 판정 없음.
-    const companionRate = calcLongTermRate(
-      primaryHoldingYears,
-      residenceYears,
-      isOneHouseSingleForCompanion && table2ResidenceYears >= 2,
-    );
-    const deduction = companionRate > 0 ? applyRate(taxableGain, companionRate) : 0;
-    const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
-    return {
-      deduction,
-      rate: companionRate,
-      holdingPeriod: { years: holding.years, months: holding.months },
-    };
-  }
-
-  // L-1c: 장기임대주택 특례율 우선 적용
-  if (input.rentalReductionDetails && longTermRentalRules) {
-    const override = getLongTermDeductionOverride(
-      input.rentalReductionDetails,
-      longTermRentalRules,
-    );
-    if (override.hasOverride) {
-      const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
-      const deduction = applyRate(taxableGain, override.overrideRate);
-      return {
-        deduction,
-        rate: override.overrideRate,
-        holdingPeriod: { years: holding.years, months: holding.months },
-      };
-    }
-  }
-
-  const isOneHouseSingle =
-    input.isOneHousehold && input.householdHousingCount === 1;
-  const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(표2 거주분 공제율)
-  // §154⑧3호: 표2 "대상 판정"은 동일세대 상속 통산 거주 (공제율은 실거주 residenceYears 유지).
-  const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12);
-
-  // 공제율 산식 (L-3/L-4 통합 헬퍼) — `calcLongTermRate` 정본 위임.
-  //   L-3: 1세대1주택 표2(§95② 별표) — 보유분·거주분 각 40% 캡 후 합산.
-  //        대상 판정은 통산(table2ResidenceYears), 공제율 거주분은 실거주(residenceYears).
-  //   L-4: 일반 표1 — 보유 × 2%, 30% 캡.
-  //   3년 가드는 정본에 내장돼 있다.
-  const rateForYears = (years: number): number =>
-    calcLongTermRate(years, residenceYears, isOneHouseSingle && table2ResidenceYears >= 2);
-
-  // 토지/건물 분리 케이스 — 각각 보유연수 적용 후 합산
-  if (splitDetail) {
-    const selfOwns = splitDetail.selfOwns ?? "both";
-    const ownsLand = selfOwns !== "building_only";
-    const ownsBuilding = selfOwns !== "land_only";
-
-    // 1세대1주택 12억 초과 안분: 본인 소유 파트 양도가액 기준
-    const THRESHOLD = 1_200_000_000;
-    const selfTransferPrice = selfOwns === "building_only"
-      ? splitDetail.building.transferPrice
-      : selfOwns === "land_only"
-        ? splitDetail.land.transferPrice
-        : input.transferPrice;
-    const isProratedSplit = isOneHouseSingle && selfTransferPrice > THRESHOLD;
-    const proratePartGain = (g: number): number => {
-      if (!isProratedSplit || g <= 0) return g;
-      return Math.floor(g * (selfTransferPrice - THRESHOLD) / selfTransferPrice);
-    };
-
-    // 파트별 과세 양도차익 — 호출부가 미리 확정해 두었으면(G-3 부수토지 비과세 제외 등) 그 값을
-    // 따른다. 여기서 다시 안분하면 STEP 3의 과세 양도차익과 어긋난다(이중 진실).
-    const landTaxableGain = ownsLand
-      ? (splitDetail.land.taxableGainAfterProration ?? proratePartGain(splitDetail.land.gain))
-      : 0;
-    const buildingTaxableGain = ownsBuilding
-      ? (splitDetail.building.taxableGainAfterProration ?? proratePartGain(splitDetail.building.gain))
-      : 0;
-
-    const landRate = ownsLand ? rateForYears(splitDetail.land.holdingYears) : 0;
-    const buildingRate = ownsBuilding ? rateForYears(splitDetail.building.holdingYears) : 0;
-    const landDed = ownsLand ? applyRate(Math.max(landTaxableGain, 0), landRate) : 0;
-    const buildingDed = ownsBuilding ? applyRate(Math.max(buildingTaxableGain, 0), buildingRate) : 0;
-
-    // SplitPartResult 에 공제율·공제액 채우기 (참조 수정)
-    // 과세 양도차익도 함께 역기입 — 소비자(파트별 세율 §104⑤)가 `gain`(안분 전)과
-    // `longTermDeduction`(안분 후) 축을 섞지 않도록 한다.
-    splitDetail.land.taxableGainAfterProration = landTaxableGain;
-    splitDetail.building.taxableGainAfterProration = buildingTaxableGain;
-    splitDetail.land.longTermRate = landRate;
-    splitDetail.land.longTermDeduction = landDed;
-    splitDetail.building.longTermRate = buildingRate;
-    splitDetail.building.longTermDeduction = buildingDed;
-
-    // 배율 초과 부수토지(비사업용 토지) 파트 — 「소득세법」 제95조 제2항 **표1**(일반)을 쓴다.
-    // 1세대1주택 표2는 비과세 대상 주택·부수토지 전용이고, 배율 초과분은 §104의3①5호로
-    // 비사업용 토지이므로 대상이 아니다. 보유연수는 토지 본래 보유연수.
-    const nb = splitDetail.nonBusinessLandPart;
-    let nbDed = 0;
-    if (nb) {
-      const nbTaxableGain = nb.taxableGainAfterProration ?? nb.gain;
-      const nbRate = calcLongTermRate(nb.holdingYears, 0, false); // 표1 — 정본 위임(3년 가드 내장)
-      nbDed = applyRate(Math.max(nbTaxableGain, 0), nbRate);
-      nb.taxableGainAfterProration = nbTaxableGain;
-      nb.longTermRate = nbRate;
-      nb.longTermDeduction = nbDed;
-    }
-
-    const anchorDate = selfOwns === "land_only" && input.landAcquisitionDate
-      ? input.landAcquisitionDate
-      : input.acquisitionDate;
-    const anchorHolding = calculateHoldingPeriod(anchorDate, input.transferDate);
-    return {
-      deduction: landDed + buildingDed + nbDed,
-      rate: 0, // 단일 공제율 없음 (혼합) — splitDetail.land/building.longTermRate 참조
-      holdingPeriod: { years: anchorHolding.years, months: anchorHolding.months },
-    };
-  }
-
-  // 단일 취득일 — 사례 35: 다주택 용도변경 시 LTHD 기산일 = conversionDate (사전법규재산 2022-684)
-  const holding = calculateHoldingPeriod(resolveLTHDStartDate(input), input.transferDate);
-  const holdingPeriod = { years: holding.years, months: holding.months };
-
-  const rate = rateForYears(holding.years);
-
-  // L-2': 장기임대 §97의3 (장특 70% 대체) / §97의4 (추가율 가산) — Phase 2 (2026-06-11)
-  // reductions[]의 rental_97_3/rental_97_4 본 필드 항목을 평가. 임대분 안분은 조특령 §97의3⑤.
-  const rental97Eval = evaluateRental97Lthd(input.reductions, {
-    transferDate: input.transferDate,
-    acquisitionDate: input.acquisitionDate,
-    stdPriceAtAcquisition: input.standardPriceAtAcquisition,
-    stdPriceAtTransfer: input.standardPriceAtTransfer,
-  });
-  if (
-    rental97Eval?.isEligible &&
-    rental97Eval.effectCategory === "long_term_holding_special" &&
-    rental97Eval.overrideRate !== undefined
-  ) {
-    // §97의3: 임대기간 분 양도차익 × 70% + 비임대분 × 일반율 (ratio=1이면 전액 70%)
-    const positiveGain = Math.max(taxableGain, 0);
-    const rentalGain = applyRate(positiveGain, rental97Eval.rentalGainRatio);
-    const nonRentalGain = positiveGain - rentalGain;
-    const deduction = applyRate(rentalGain, rental97Eval.overrideRate) + applyRate(nonRentalGain, rate);
-    const blendedRate =
-      rental97Eval.overrideRate * rental97Eval.rentalGainRatio + rate * (1 - rental97Eval.rentalGainRatio);
-    return { deduction, rate: blendedRate, holdingPeriod, rental97LthdDetail: rental97Eval };
-  }
-  if (
-    rental97Eval?.isEligible &&
-    rental97Eval.effectCategory === "long_term_holding_additional" &&
-    rental97Eval.additionalRate !== undefined
-  ) {
-    // §97의4: 보유기간별 공제율(§95② 표)에 추가율 가산 — 기본 공제율이 0(보유 3년 미만)이면 가산 불가
-    if (rate > 0) {
-      const combined = rate + rental97Eval.additionalRate;
-      return {
-        deduction: applyRate(taxableGain, combined),
-        rate: combined,
-        holdingPeriod,
-        rental97LthdDetail: rental97Eval,
-      };
-    }
-    return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail: rental97Eval };
-  }
-
-  if (rate > 0) {
-    const deduction = applyRate(taxableGain, rate);
-    return { deduction, rate, holdingPeriod, rental97LthdDetail: rental97Eval };
-  }
-
-  return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail: rental97Eval };
-}
+export { calcLongTermHoldingDeduction } from "./transfer-tax-lthd";
 
 // ============================================================
 // H-6: calcBasicDeduction — 기본공제

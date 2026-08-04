@@ -114,21 +114,25 @@ usageConversionDetail?: {
 > **필드는 UI 소비처가 있는 것만 남겼다** — v1의 `exemptionHoldingStartDate`·`regulatedJudgmentDate`·`residenceMonthsClamped`는 소비처가 없어 제거(후자는 `input.residencePeriodMonths`의 파생 중복).
 > **공제율을 정수 %로 노출**하는 이유는 아래 §분수 정수 연산 참조.
 
-### ★ 전파 6지점 — 하나라도 빠지면 화면에 안 뜬다
+### ★ 전파 6지점 — 하나라도 빠지면 화면에 안 뜬다 (Phase B ✅ 완료 2026-08-05)
 
-선례 `rental97LthdDetail`(역시 `calcLongTermHoldingDeduction`이 낳는 echo)의 실측 경로를 그대로 따른다.
+선례 `rental97LthdDetail`(역시 `calcLongTermHoldingDeduction`이 낳는 echo)의 실측 경로를 그대로 따랐다.
 
-| # | 지점 | 파일 | 선례 |
+| # | 지점 | 파일 (Phase B 착지) | 선례 |
 |---|---|---|---|
-| ⓐ | **`LongTermHoldingResult`에 필드 추가** | `transfer-tax-helpers.ts:428-436` (⚠️ **비-export private interface**) | `rental97LthdDetail?` `:433` |
-| ⓑ | `calcLongTermHoldingDeduction` 각 return | 동상 | |
-| ⓒ | **`transfer-tax.ts:428` 구조분해 목록** | `let { deduction, rate, holdingPeriod, rental97LthdDetail, exclusionReason } = …` | 5개만 분해 중 |
-| ⓓ | **`transfer-tax.ts:654` result 조립** | | |
-| ⓔ | `TransferTaxResult` 타입 | `transfer-result.types.ts:215` 부근 | `:370` |
-| ⓕ~ⓖ | Pick 목록 + pick 함수 | ⚠️ **`TransferReductionDetailSource` / `pickReductionDetails`(`aggregate.ts:93-110`)** — `rental97LthdDetail`이 이쪽을 쓴다(`aggregate.ts:98`). LTHD 축이므로 정합 | |
+| ⓐ | ✅ **`LongTermHoldingResult`에 필드 추가** | `transfer-tax-lthd.ts:45` (⚠️ **비-export private interface**) — Phase B에서 helpers로부터 분리 | `rental97LthdDetail?` |
+| ⓑ | ✅ `calcLongTermHoldingDeduction` L-2 return | 동상 | |
+| ⓒ | ✅ **`transfer-tax.ts:428` 구조분해 목록** | `usageConversionDetail` 추가 (6개 분해) | |
+| ⓓ | ✅ **`transfer-tax.ts:655` result 조립** | `rental97LthdDetail` 바로 아래 | |
+| ⓔ | ✅ `TransferTaxResult` 타입 + `UsageConversionDetail` 인터페이스 | `transfer-result.types.ts:41`(타입 정의)·`:243`(필드) | |
+| ⓕ~ⓖ | ✅ Pick 목록 + pick 함수 | `transfer-result.types.ts:399` · `transfer-tax-aggregate-pickers.ts:74` | `rental97LthdDetail`과 같은 계약 |
 
 > ⓐ 없이 의사코드대로 return하면 **컴파일 에러**, ⓒⓓ 없으면 값이 result에 실리지 않아 §9.2 결과 카드·§9.3 문구 분기가 **전부 동작 불가**다.
-> `pickValuationDetails`(`aggregate.ts:52-68`)는 **13필드**이며 이번 echo의 대상이 아니다.
+> `pickValuationDetails`(`-pickers.ts:52-68`)는 **13필드**이며 이번 echo의 대상이 아니다.
+>
+> ⚠️ **계약 개수 가드가 함께 움직인다**: `transfer.route.bundled-swallows-special.test.ts:291`이
+> `TransferReductionDetailSource`의 필드 수를 소스 텍스트로 세어 고정한다 — **24 → 25**로 갱신했다.
+> 이 가드가 "타입만 넓히고 picker를 빠뜨리는" 침묵 실패를 잡는다.
 
 **기존 `lthdStartDate`는 `acquisitionDate` 유지** — §95⑤에는 단일 기산일이 없다. UI는 `usageConversionDetail` 존재로 분기.
 
@@ -226,9 +230,23 @@ export const CONVERSION_EXEMPTION_CUTOFF = new Date("2024-03-01T00:00:00");
 > 게이트 상수 2종은 import가 전혀 없어 `tax-utils.ts`에 그대로 둔다(설계 유지).
 > 부수 효과로 `usage-period-info.ts`와 **같은 층위의 leaf 2종**이 되어 UI가 둘 다 직접 import할 수 있다.
 
-### R-1 — LTHD 혼합 분기 (Phase B)
+### R-1 — LTHD 혼합 분기 (Phase B ✅ 완료 2026-08-05)
 
-**삽입 위치: `transfer-tax-helpers.ts:533`(`table2ResidenceYears` 산출) 직후, `rateForYears` 정의(`:536`) 직전.** 그보다 앞이면 `isOneHouseSingle`(`:529`)·`residenceYears`(`:531`)·`table2ResidenceYears`(`:533`)가 아직 없다.
+**착지 위치: `transfer-tax-lthd.ts:139`(`table2ResidenceYears` 산출 직후, `rateForYears` 정의 직전).** 그보다 앞이면 `isOneHouseSingle`·`residenceYears`·`table2ResidenceYears`가 아직 없다.
+
+> 🔴 **Do deviation 2건 (2026-08-05)**
+>
+> 1. **파일이 갈렸다** — 분기를 넣자 `transfer-tax-helpers.ts`가 **812줄**로 800 hard cap을 넘겼다.
+>    H-5 블록(`LongTermHoldingResult` + `calcLongTermHoldingDeduction`, 298줄)을 신규
+>    **`transfer-tax-lthd.ts`**(340줄)로 분리하고 helpers는 `export { calcLongTermHoldingDeduction }
+>    from "./transfer-tax-lthd";` **재수출**만 남겼다(H-2 exemption·H-0.35 commercial-step과 같은 선례).
+>    helpers 812 → **503**. 외부 import 경로는 전부 무변경이다.
+>    신규 파일은 `import type { ParsedRates } from "./transfer-tax-helpers"`로 **타입만** 역참조한다 —
+>    타입은 erase되므로 런타임 순환이 아니다(tsc 0건 실증).
+> 2. **`TaxErrorCode`는 enum이다** — 설계 의사코드의 `"INVALID_CONVERSION_DATE"` 문자열 리터럴은
+>    컴파일되지 않는다(TS2345). 날짜 순서 위반에 정확히 대응하는 기존 멤버
+>    **`TaxErrorCode.INVALID_DATE`**를 쓰고 `details`에 3개 날짜를 실었다(선례
+>    `transfer-tax-split-gain.ts:130`이 `INVALID_INPUT` + details).
 
 L-0(미등기 `:447`)·L-0a(`:452`·`:456` — presale_right·승계입주권 **2개**)·L-1(중과 `:460`)·L-1b(`:469`)·L-1c(`:512`)는 그보다 앞에서 return하므로 **I-9는 자동 배제**된다. **L-1c 조합은 validation(C-18)이 차단하고, L-1b는 구조적으로 성립 불가**(plan D-8 보충 — `propertyType === "land"` 요구 vs 토글은 `housing` 전용).
 
@@ -273,28 +291,76 @@ if (input.nonHousingToHousingConversion
 > **`holdingPeriod`는 총 보유기간**이다 — `transfer-tax-lthd-steps.ts:84`(sub-step 표시)과 산식 문구가 소비하므로 분해 기간을 넣으면 표시가 왜곡된다.
 > **적용 순서 불변**: 12억 안분(`transfer-tax.ts:390` STEP 3) → taxableGain 확정 → LTHD(`:424` STEP 4) — I-14.
 
-### R-2 — 비과세 보유기간 기산 (Phase C)
+### R-2 — 비과세 보유기간 기산 (Phase C ✅ 완료 2026-08-05)
 
-`resolveExemptionHoldingStartDate`(`transfer-tax-exemption.ts:334-344`)에 기존 §154⑧3호 backdate와 **병렬** 분기:
+`resolveExemptionHoldingStartDate`(`transfer-tax-exemption.ts:346~`)에 기존 §154⑧3호 backdate와 **병렬** 분기. 이 값이 `meetsOneHouseHoldingResidence`의 보유 판정에 들어가 **I-10**을 만든다.
+
+**⓪ Pick 확장 완료** — `ResidenceReqInput`에 `"nonHousingToHousingConversion"` 추가(`:131`). `ExemptionReqInput`·`DeemedOneHouseReqInput`은 파생이라 자동 전파됐다(tsc 0건으로 확인).
+
+> **분기 순서 = 용도변경 우선.** §154⑤ 단서는 용도변경 사실이 있으면 적용되는 규정이라,
+> 상속 통산으로 기산일을 취득일 이전으로 당겨 단서를 우회할 수 없다. 동시 성립 조합은
+> 명문이 없어(R-C) validation이 차단하므로(C-21), 이 순서는 **엔진 단독 호출에서만** 드러난다.
+> 테스트로 고정했다("두 사유가 겹치면 §154⑤ 단서가 이긴다").
 
 ```ts
+// §154⑤ 단서 — 2024-03-01 이후 양도분 (대통령령 제34265호)
 if (input.nonHousingToHousingConversion
     && input.transferDate >= CONVERSION_EXEMPTION_CUTOFF) {
   return input.nonHousingToHousingConversion.residentialUseStartDate;   // I-2·I-4
 }
-// 기존 §154⑧3호 (상속 동일세대 backdate) — 동시 성립 조합은 C-21로 validate 차단
+// 기존 §154⑧3호 (상속 동일세대 backdate) — 무변경
+if (input.acquisitionCause === "inheritance" && …) return input.decedentCohabitationHoldingStartDate;
 return input.acquisitionDate;                                          // I-1·I-3
 ```
 
-이 값이 `meetsOneHouseHoldingResidence`(`:349`)의 보유 판정에 들어가 **I-10**을 만든다.
+**verify 실측**: C-11(주거용 사용일 기준 1년 10개월 → `isExempt === false`) · **2024-02-29 ↔ 2024-03-01 경계** · 상속 backdate 회귀 0(토글 없으면 종전 그대로, backdate 제거 시 과세로 뒤집히는 반례까지 고정) · `npm run test:transfer` 480파일 **5,433건** 전건.
 
-### R-3 — 거주요건 판정 시점 (Phase D)
+### R-3 — 거주요건 판정 시점 (Phase D ✅ 완료 2026-08-05)
 
-`resolveWasRegulatedAtAcquisition`(`:241-249`)의 `input.acquisitionDate` 고정을 **판정 기준일 인자**로. 호출부가 `nonHousingToHousingConversion?.residentialUseStartDate ?? acquisitionDate`를 넘긴다.
+> 🔴 **Do deviation — 「인자 파라미터화」를 하지 않았다.**
+>
+> 설계는 `resolveWasRegulatedAtAcquisition`에 기준일을 **인자로 받게** 하고 호출부가
+> `nonHousingToHousingConversion?.residentialUseStartDate ?? acquisitionDate`를 넘기라고 했다.
+> 그런데 그 방식은 **호출부마다 다른 값을 넘길 여지를 만든다** — memory
+> `feedback_shared_predicate_argument_parity`가 경고하는 바로 그 실패 모드다.
+>
+> ⇒ Phase C에서 `ResidenceReqInput`에 `nonHousingToHousingConversion`이 이미 들어갔으므로,
+> **함수 내부에서 한 번만 도출**한다. 호출부는 인자를 고를 수 없고 정합이 구조적으로 보장된다.
+>
+> ```ts
+> /** 거주요건 판정의 「주택을 취득한 날」 — 용도변경 시 주거용 사용 개시일이 그 시점이다. */
+> function resolveResidenceJudgmentDate(input: ResidenceReqInput): Date {
+>   return input.nonHousingToHousingConversion?.residentialUseStartDate ?? input.acquisitionDate;
+> }
+> ```
 
-**호출부 3곳이 같은 기준일을 봐야 한다** (memory `feedback_shared_predicate_argument_parity`): `transfer-tax-exemption.ts:308`(엔진) · `transfer-tax-api-residence.ts:12-48` `buildResidenceReqInput` → `Step4.tsx:86`(UI 안내) · `Step4.tsx:440-448` 수동 토글(fallback의 실질 입력값).
+**호출부 실측 — 설계가 센 3곳이 아니라 4곳이었다**:
 
-### 거주기간 클램프 (Phase E — API 변환 계층)
+| # | 지점 | 착지 |
+|---|---|---|
+| 1 | 엔진 `meetsOneHouseResidenceRequirement` | ✅ 함수 내부 도출로 자동 정합 |
+| 2 | `buildResidenceReqInput`(`transfer-tax-api-residence.ts`) → Step4 거주요건 경고 | ✅ `nonHousingToHousingConversion` 조립 추가 |
+| 3 | `Step4.tsx` 조정지역 토글 라벨·수동 조작 | ✅ `judgmentDateLabel` 파생 |
+| 4 | 🆕 **`Step4.tsx` 자동 판별 fetch의 `acquisitionDate` 파라미터** | ✅ 기준일로 교체 — **설계가 놓친 지점**. 이 fetch 결과가 `wasRegulatedAtAcquisition` 토글을 자동으로 덮어쓰므로(`touched`가 아닌 한), 여기서 취득일을 보내면 boolean fallback 경로가 엔진과 어긋난다 |
+
+**`isUsageConversionActive` 단일 소스 술어 신설**(`lib/stores/calc-wizard-asset-usage-conversion.ts`) — UI 설계 §5의 술어 표를 **함수로** 고정했다. UI·validation·API 변환·`buildResidenceReqInput`이 전부 이 함수를 호출한다.
+
+⚠️ **boolean fallback 경로는 기준일을 쓰지 않는다** — `regionCode`가 없으면 폼이 넘긴 `wasRegulatedAtAcquisition`을 그대로 신뢰한다. 용도변경 케이스에서 정밀 판정을 받으려면 주소·법정동코드가 있어야 한다(테스트로 고정).
+
+### 거주기간 클램프 (Phase E ✅ 완료 2026-08-05)
+
+> 🔴 **설계가 미결로 남긴 것을 결정했다 — `buildResidenceReqInput`도 클램프를 쓴다.**
+>
+> 설계는 "Step4 안내 메시지가 같은 값을 보는지는 §9.1b와 함께 결정(plan §13)"이라 했으나
+> **plan §13에 그 항목이 등록되지 않아** 미결로 떠 있었다. 결정 근거:
+>
+> 1. 클램프로 거주가 2년 미만이 되면 **비과세가 탈락한다**(C-10c — 세액이 바뀌는 유일 케이스).
+>    빌더가 클램프 전 원값을 쓰면 **화면은 "요건 충족"인데 엔진은 차단**한다.
+> 2. Phase D verify가 세운 불변식("Step4 안내 ↔ 엔진 판정 일치")이 클램프 도입으로 깨진다.
+> 3. memory `feedback_ui_engine_dual_truth_avoidance`.
+>
+> ⇒ `transfer-tax-api.ts`(④)와 `transfer-tax-api-residence.ts`(Step4)가 **같은 헬퍼**를 호출한다.
+> 부수 효과로 Phase D의 `residenceMonthsTrimmed: 0` 하드코딩도 실제 값으로 해소됐다.
 
 엔진 input `residencePeriodMonths`는 **스칼라**다(`transfer-tax-api.ts:358`이 `deriveResidencePeriodMonths()`로 배열을 접는다). 배열이 살아 있는 유일한 지점에서 클램프한다.
 
