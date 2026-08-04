@@ -120,6 +120,7 @@ export function ThreePointAssetMajorRender(
         commercialAcqFirstMode={splitMode}
         snapshotPrefix={props.stdPriceSnapshotPrefix}
         jibun={props.jibun}
+        initialAddress={props.stdPriceAddress}
         housingFloorAreaPrefill={props.housingFloorArea}
         commercialFloorAreaPrefill={props.commercialFloorArea}
         buttonLabel={label}

@@ -106,6 +106,8 @@ export function MixedUseLegacyStdPrice({
     lng: asset.longitude,
     lat: asset.latitude,
     pnu: asset.addressPnu,
+    dong: asset.addressDong || undefined,
+    ho: asset.addressHo || undefined,
   };
   // snapshotKey는 대상 폼 필드 기준(§4.4) — 같은 필드가 Case A/B에서 다른 컴포넌트로 렌더돼도 스냅샷 공유
   const bspPrefix = `bsp-${asset.assetId}-phd`;

@@ -86,6 +86,8 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
     lng: asset.longitude,
     lat: asset.latitude,
     pnu: asset.addressPnu,
+    dong: asset.addressDong || undefined,
+    ho: asset.addressHo || undefined,
   };
   const isOn = asset.useEstimatedAcquisition && asset.assetKind === "commercial_building";
   // 취득일에서 자동 판정(2005-01-01 경계) — 사용자가 라디오를 직접 고르면 그 값이 우선한다.
@@ -371,6 +373,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                   onApply={applyBatch}
                   snapshotPrefix={`bsp-${asset.assetId}-cb`}
                   jibun={asset.addressJibun || undefined}
+                  initialAddress={stdPriceAddress}
                   housingFloorAreaPrefill={totalFloorArea != null ? String(totalFloorArea) : undefined}
                   dataTestId="cb-building-std-batch-open"
                 />

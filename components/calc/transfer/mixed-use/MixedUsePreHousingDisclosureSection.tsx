@@ -211,6 +211,8 @@ export function MixedUsePreHousingDisclosureSection({
             lng: asset.longitude,
             lat: asset.latitude,
             pnu: asset.addressPnu,
+            dong: asset.addressDong || undefined,
+            ho: asset.addressHo || undefined,
           }}
           landArea={effectiveLandArea > 0 ? effectiveLandArea.toFixed(4) : undefined}
           // 3시점 일괄 계산 모달 첫 부분(주택) 연면적 자동채움 — 상위 화면의 **계산된 주택 연면적**

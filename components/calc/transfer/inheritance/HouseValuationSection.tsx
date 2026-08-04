@@ -320,6 +320,17 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             onApply={applyBatch}
             snapshotPrefix={`bsp-${asset.assetId}-phd`}
             jibun={asset.addressJibun || undefined}
+            initialAddress={{
+              road: asset.addressRoad,
+              jibun: asset.addressJibun,
+              building: asset.buildingName,
+              detail: asset.addressDetail,
+              lng: asset.longitude,
+              lat: asset.latitude,
+              pnu: asset.addressPnu,
+              dong: asset.addressDong || undefined,
+              ho: asset.addressHo || undefined,
+            }}
           />
         </div>
       )}
