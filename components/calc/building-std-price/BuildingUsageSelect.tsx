@@ -28,11 +28,9 @@ export function BuildingUsageSelect({ year, value, onChange, placeholder = "용�
           {selected ? `${selected.label} (지수 ${selected.index})` : placeholder}
         </span>
       </SelectTrigger>
-      <SelectContent
-        align="end"
-        alignItemWithTrigger={false}
-        className="w-auto max-w-[min(92vw,44rem)] min-w-(--anchor-width) [&_[data-slot=select-item]]:items-start [&_[data-slot=select-item]>div]:whitespace-normal"
-      >
+      {/* 폭만 넓힌다 — `alignItemWithTrigger`를 끄면 팝업이 스크롤 컨테이너가 되어
+          목록 아래쪽 항목이 뷰포트 밖에 남아 클릭 불가가 된다(2023 기준시가 계산서 E2E 회귀). */}
+      <SelectContent className="w-auto max-w-[min(92vw,44rem)] min-w-(--anchor-width) [&_[data-slot=select-item]]:items-start [&_[data-slot=select-item]>div]:whitespace-normal">
         {options.map((o) => (
           <SelectItem key={o.no} value={String(o.no)}>
             {o.no}. {o.label} (지수 {o.index})
