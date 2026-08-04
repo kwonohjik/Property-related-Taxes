@@ -43,6 +43,7 @@ import {
   isRedevAreaAsset,
   shouldShowRedevValuationSection,
 } from "./AssetAreaRedevelopment";
+import { MixedUseAreaInputs } from "../mixed-use/MixedUseAreaInputs";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
 import {
   ReplotReductionFields,
@@ -489,7 +490,8 @@ export function AssetSectionBasic({
         showFootprintArea(asset) ||
         isCommercialAreaAsset(asset) ||
         isGeneralBuildingAreaAsset(asset) ||
-        (isRedevAreaAsset(asset) && shouldShowRedevValuationSection(asset))) && (
+        (isRedevAreaAsset(asset) && shouldShowRedevValuationSection(asset)) ||
+        asset.isMixedUseHouse === true) && (
         <div className="space-y-3">
           {/* ── 상업용건물·오피스텔 전용 면적 3축 (전용·공유·대지) ──────────
               취득원인 무관 단일 입력. 종전에는 CommercialBuildingBlock(비상속)과
@@ -510,6 +512,16 @@ export function AssetSectionBasic({
               ③ 환산 섹션이 열릴 때만 노출한다(승계조합원 등은 미노출). */}
           {isRedevAreaAsset(asset) && shouldShowRedevValuationSection(asset) && (
             <AssetAreaRedevelopment asset={asset} onChange={onChange} />
+          )}
+
+          {/* ── 겸용주택 면적 안분 카드 (11칸) ────────────────────────────
+              ⚠️ **카드 통째로** 옮겼다. `mixedUseTotalLandArea`는 주택/상가 부수토지
+                 안분의 **분모**이고(`mixed-use-derived-areas.ts:66-73`) 결과 6칸이 같은
+                 카드에 있다. 1칸만 떼면 분모와 결과가 두 화면으로 갈리고, "부수토지 합 =
+                 전체 토지" validate를 맞추려 사용자가 ①↔③을 오가야 한다.
+              ※ 1-A(취득시점 자산 구성)는 ③에 남는다 — 카드 안내 문구가 그 관계를 설명. */}
+          {asset.isMixedUseHouse === true && (
+            <MixedUseAreaInputs asset={asset} onChange={onChange} sectionNum={1} />
           )}
           {/* ── 축 A: 토지 면적 (시나리오 분기) ──────────────────────────
               ⛔ **자산유형별로 축 A를 끄는 예외를 만들지 말 것**(2026-07-30 U-12).

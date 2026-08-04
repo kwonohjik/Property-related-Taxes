@@ -28,6 +28,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { AssetSectionAcquisition } from "@/components/calc/transfer/asset-sections/AssetSectionAcquisition";
 import { AssetSectionBasic } from "@/components/calc/transfer/asset-sections/AssetSectionBasic";
 import { RedevelopmentValuationSection } from "@/components/calc/transfer/RedevelopmentValuationSection";
+import { MixedUseExpandedPanel } from "@/components/calc/transfer/MixedUseSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -227,5 +228,82 @@ describe("재개발·입주권 면적 — ① 단일 위치 + 게이트 술어 �
       />,
     );
     expect(redevAreaLabelCount()).toBe(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// 겸용주택 — 안분 카드를 **통째로** ①로 이전
+// ══════════════════════════════════════════════════════════
+
+/**
+ * 겸용은 1칸만 떼지 않았다. `mixedUseTotalLandArea`가 주택/상가 부수토지 안분의
+ * **분모**이고(`mixed-use-derived-areas.ts:66-73`) 결과 6칸이 같은 카드에 있어,
+ * 쪼개면 "부수토지 합 = 전체 토지" validate를 맞추려 ①↔③을 오가야 한다.
+ * 이 계약은 **카드 응집**을 지킨다 — 분모와 결과가 항상 같은 화면에 있어야 한다.
+ */
+function mixedAreaCardCount() {
+  return screen.queryAllByText(/^(양도시 )?면적 \(건축물대장 기준\)$/).length;
+}
+
+function makeMixedAsset(over: Partial<AssetForm> = {}): AssetForm {
+  return {
+    ...makeDefaultAsset(1),
+    assetKind: "housing",
+    isMixedUseHouse: true,
+    ...over,
+  };
+}
+
+/** ① 기본정보를 겸용 자산으로 렌더 */
+function renderMixedBasic(over: Partial<AssetForm> = {}) {
+  return render(
+    <AssetSectionBasic
+      asset={makeMixedAsset(over)}
+      onChange={vi.fn()}
+      isMultiBundled={false}
+      onAddAsset={vi.fn()}
+      showFormDates={false}
+      transferDate="2026-05-01"
+      filingDate=""
+      filingOverdue={false}
+      filingDeadline=""
+      onFormChange={vi.fn()}
+    />,
+  );
+}
+
+describe("겸용주택 면적 — 안분 카드가 ① 단일 위치", () => {
+  it("① 기본정보에 안분 카드가 정확히 1개", () => {
+    renderMixedBasic();
+    expect(mixedAreaCardCount()).toBe(1);
+  });
+
+  it("① 안에 분모(전체 토지)와 결과(주택·상가 부수토지)가 함께 있다 — 응집 계약", () => {
+    renderMixedBasic();
+    expect(screen.getByText("전체 토지 면적 (㎡)")).toBeTruthy();
+    expect(screen.getByText("주택 부수토지 (㎡)")).toBeTruthy();
+    expect(screen.getByText("상가 부수토지 (㎡)")).toBeTruthy();
+  });
+
+  it("③ 겸용 확장 패널에 안분 카드가 0개", () => {
+    render(
+      <MixedUseExpandedPanel
+        asset={makeMixedAsset()}
+        onChange={vi.fn()}
+        transferDate="2026-05-01"
+      />,
+    );
+    expect(mixedAreaCardCount()).toBe(0);
+  });
+
+  it("1-A(취득시점 자산 구성)는 ③에 남는다 — 양도시/취득시 분업", () => {
+    render(
+      <MixedUseExpandedPanel
+        asset={makeMixedAsset({ hasPartialUsageChange: true })}
+        onChange={vi.fn()}
+        transferDate="2026-05-01"
+      />,
+    );
+    expect(screen.getByText("1-A")).toBeTruthy();
   });
 });
