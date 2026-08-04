@@ -157,7 +157,7 @@ PDF 533p 지문은 거주 **"2년 11개월"**, 536p 화면 입력은 **3년**, 5
 | G-5 | `transfer-tax-lthd-start.ts:23-26` | 용도변경 분기는 **주택 → 상가(사례 35) 방향만** |
 | G-6 | `transfer-tax-lthd-steps.ts:81-107` STEP 4.1·4.2 (핵심 `:84-85`) | sub-step이 `holdingPeriod.years * 4` 하드코딩 |
 | G-7 | 프로젝트 전역 | `grep "사실상 주거용"` **0건** |
-| G-8 | `transfer-tax-helpers.ts:489-502`(L-1b) · `:599`(splitDetail NBL) · **`DetailedStatementHelpers.ts:453-454`(UI)** | 표1·표2 산식이 `rateForYears` 밖에 **3벌 더** 존재. ⇒ **정본은 `calcLongTermRate`(`transfer-tax-mixed-use-inheritance.ts:26-47`)** — exported leaf·호출부 13곳·3년 가드 내장. 이 4벌을 정본으로 위임한다 (memory `feedback_sibling_path_already_implements_rule`) |
+| G-8 | ✅ **해소**(Phase A) — `transfer-tax-helpers.ts` L-1b·splitDetail NBL·`rateForYears` **3벌 모두 `calcLongTermRate` 위임**. `DetailedStatementHelpers.ts:453-454`(UI)만 §9.3에서 남음 | 종전 표1·표2 산식이 **4벌** 존재했다. 정본은 `calcLongTermRate`(`transfer-tax-mixed-use-inheritance.ts:26-47`) — exported leaf·3년 가드 내장 (memory `feedback_sibling_path_already_implements_rule`) |
 | G-9 | `transfer-tax-exemption.ts:119-131` `ResidenceReqInput` | **10필드 화이트리스트 `Pick`**. 여기 추가하지 않으면 R-2·R-3이 필드에 접근 불가. `ExemptionReqInput`(:142)·`DeemedOneHouseReqInput`(:153)에 **자동 전파**됨 |
 | G-10 | `lib/calc/transfer-tax-api-residence.ts:12-48` `buildResidenceReqInput` | UI(Step4)가 같은 술어를 **별도 조립 입력**으로 호출. :22-23에 동일 트랩 경고 주석 존재 |
 | G-11 | `transfer-tax-aggregate-pickers.ts:32-56` `pickValuationDetails` | 다자산 result 전파 화이트리스트(13필드 — 단 이번 echo는 `pickReductionDetails` 쪽). 빠뜨리면 **일괄 경로에서 침묵 누락**. 가드 `__tests__/api/transfer.route.bundled-swallows-special.test.ts` |
@@ -363,7 +363,7 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 |---|---|---|
 | **0** | ~~V-2·V-3 해소~~ · V-4 처리 · ⑫ Zod 경로 확정 · **PDF 사례 30 anchor 작성 후 현행 엔진 실행** | anchor **실패** + 실패 메시지가 예상 갭과 일치. **V-4 미확보 시 총 보유기간 기준 확정**. ⑫ 파일 경로 기재 |
 | **A-0** ✅ | 선분리 6파일(§8 표) — **별도 커밋** | ✅ `npx tsc --noEmit` 0건 · `npm run test:transfer` 전건 통과 · 대상 ≤700 · 행 번호 앵커 3문서 재실측 갱신 완료 |
-| **A** | `calcUsagePeriodInfo` leaf 추출 · `rateForYears` 분해(가드 보존) · G-8 2곳 위임 · `calcConversionHoldingRate`(구간 가드) · 상수 2종 · 법령 상수 추가 | **`npm run test:transfer`**(`package.json:14`, ~59초) 전건 통과. 🔴 **필수 케이스 2건**: ⓐ 비주택 2년·주택 5년 → 표1 **0%** + 표2 20% (가드 내장 확인) ⓑ **분수 정수 연산** — 비주택 3년·주택 4년·거주 3년 → 34% → 장특 **60,703,600**(소수 연산이면 60,703,599) |
+| **A** ✅ | `calcUsagePeriodInfo` leaf 추출 · **G-8 사본 4벌 → 0벌 정본 위임**(`rateForYears` 포함) · `calcConversionHoldingPct`(정수 %, 신규 leaf) · 게이트 상수 2종 · 법령 상수 4종 | **`npm run test:transfer`**(`package.json:14`, ~59초) 전건 통과. 🔴 **필수 케이스 2건**: ⓐ 비주택 2년·주택 5년 → 표1 **0%** + 표2 20% (가드 내장 확인) ⓑ **분수 정수 연산** — 비주택 3년·주택 4년·거주 3년 → 34% → 장특 **60,703,600**(소수 연산이면 60,703,599) |
 | **B** | R-1 혼합 분기 + echo + 전파 3지점 | anchor **장특 57,132,800** 통과. C-5·C-6·C-7·C-25 · **2025-01-01 정확일 경계**. `transfer.route.bundled-swallows-special.test.ts` 통과. *엔진 단위 테스트로만 — 화면 확인은 Phase E 이후* |
 | **C** | ⓪ Pick 확장 → R-2 §154⑤ 분기 + 2024-03-01 게이트 | C-11 · **2024-03-01 경계**. 기존 §154⑧3호 상속 테스트 회귀 0 |
 | **D** | R-3 — 기준일 파라미터화(엔진 + `buildResidenceReqInput`) **+ §9.1b Step4 UI 4항목** | C-12. **"Step4 안내 ↔ 엔진 판정 일치"** — UI가 같은 Phase에 있어야 검증 가능 |
@@ -395,10 +395,11 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 ## 12. 산출물
 
 **엔진·타입**
-- `transfer-tax-helpers.ts` — `calcConversionHoldingPct`(정수 %), 혼합 분기, **G-8 3곳을 `calcLongTermRate` 정본 위임**
+- ✅ `conversion-holding-pct.ts`(신규 leaf) — `calcConversionHoldingPct`(정수 %). ⚠️ `tax-utils.ts`에 두면 순환(design Do deviation)
+- ✅ `transfer-tax-helpers.ts` — G-8 3곳 정본 위임 완료(751 → 744). 혼합 분기는 Phase B
 - `transfer-tax-exemption.ts` — ⓪ Pick 확장, §154⑤ 분기, 기준일 파라미터화 (⚠️ `resolveExemptionResidenceMonths`는 **개조 대상 아님**)
-- `usage-period-info.ts`(신규 leaf) — `calcUsagePeriodInfo` + `UsagePeriodInfo` 이동 + re-export
-- `legal-codes/transfer.ts` — 게이트 상수 2종 + 법령 상수 3종
+- ✅ `usage-period-info.ts`(신규 leaf, 58줄) — `calcUsagePeriodInfo` + `UsagePeriodInfo` 이동 + re-export(기존 import 2곳 무변경)
+- ✅ `legal-codes/transfer.ts` — 법령 상수 **4종**(`LONG_TERM_DEDUCTION_CONVERSION` · `CONVERSION_HOUSING_PERIOD_START` · `CONVERSION_EXEMPTION_HOLDING`). 게이트 상수는 `tax-utils.ts`(Date export 선례 0건 + 800줄 초과라 부적합)
 - `calc-wizard-asset-residence.ts` — `clampResidenceToHousingPeriod`(신규)
 - `types/transfer.types.ts`(input) · `types/transfer-result.types.ts`(result echo + `TransferValuationDetailSource`)
 - `transfer-tax-aggregate.ts` — `pickValuationDetails`

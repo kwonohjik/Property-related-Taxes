@@ -395,3 +395,35 @@ export function isSurchargeSuspended(
   const suspendedUntil = new Date(specialRules.suspended_until);
   return referenceDate <= suspendedUntil;
 }
+
+// ============================================================
+// 비주택 → 주택 용도변경 (「소득세법」 §95⑤·⑥ / 「소득세법 시행령」 §154⑤ 단서)
+// ============================================================
+//
+// ⚠️ 게이트 상수를 여기 두는 이유 — `transfer-tax-helpers.ts`에 두면
+//    `transfer-tax-exemption.ts`(R-2)가 import해야 하는데 helpers → exemption이
+//    **단방향**이라 순환이 된다. `tax-utils.ts`는 양쪽이 이미 import해 순환이 없다.
+//    (`legal-codes/transfer.ts`도 부적합 — `Date` export 선례 0건 + 800줄 초과.)
+//
+// ⚠️ 공제율 헬퍼 `calcConversionHoldingPct`는 **여기 둘 수 없다** — 정본 `calcLongTermRate`가
+//    `transfer-tax-mixed-use-inheritance.ts`에 있고 그 파일이 `tax-utils`의 `applyRate`를
+//    import하므로 순환이 된다. 별도 leaf `conversion-holding-pct.ts`에 있다.
+
+/**
+ * 「소득세법」 §95⑤·⑥ 적용 개시 — **2025-01-01 이후 양도분**.
+ * 근거: 부칙 <법률 제19933호, 2023.12.31.> 제1조 단서 3호 · 제7조(적용례).
+ *
+ * 값은 `AMENDED_2025_TRANSFER_CUTOFF`(공익수용)와 같으나 **근거 법령이 무관**하므로
+ * 공유하지 않고 별도 선언한다 — 한쪽 개정이 다른 쪽을 조용히 바꾸면 안 된다.
+ *
+ * 🔴 `"T00:00:00"` 필수: `new Date("2025-01-01")`은 **UTC 파싱**이라 KST 로컬 자정
+ *    Date와 비교하면 2025-01-01 당일 양도가 게이트에서 누락된다.
+ */
+export const LTHD_CONVERSION_95_5_CUTOFF = new Date("2025-01-01T00:00:00");
+
+/**
+ * 「소득세법 시행령」 제154조 제5항 **단서** 시행 — **2024-03-01 이후 양도분**.
+ * 근거: 대통령령 제34265호(2024-02-29 공포, 2024-03-01 시행).
+ * 직전 버전(대통령령 제34061호, 2024-01-01 시행)에는 단서가 없음을 이분 탐색으로 확인했다.
+ */
+export const CONVERSION_EXEMPTION_CUTOFF = new Date("2024-03-01T00:00:00");

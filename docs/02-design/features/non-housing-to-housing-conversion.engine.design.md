@@ -147,7 +147,7 @@ usageConversionDetail?: {
 
 검증(date-fns probe): `2018-02-10 ~ 2022-11-25` = **4년** / `2022-11-25 ~ 2026-01-27` = **3년**
 
-### 헬퍼 2 — 공제율 (Phase A · **정본 위임 — 신규 추출 없음**)
+### 헬퍼 2 — 공제율 (Phase A ✅ 완료 2026-08-05 · **정본 위임 — 신규 추출 없음**)
 
 🔴 **v1의 `table1Rate`/`table2HoldingRate`/`table2ResidenceRate` 신설은 취소한다.** 정본이 이미 있다:
 
@@ -172,7 +172,7 @@ export function calcLongTermRate(
 - `transfer-tax-helpers.ts:599`(splitDetail NBL 파트) → `calcLongTermRate(nb.holdingYears, 0, false)`
 - ⚠️ **두 위임 모두 `lthdExcluded` 생략(기본 `false`)** — L-0(`:447`)이 미등기를 이미 return하므로 불필요하다. mixed-use 호출부(`:508`·`:534`)가 `isUnregistered`를 넘기는 것을 흉내내지 말 것
 - `DetailedStatementHelpers.ts:453-454`(UI) — §9.3에서 처리
-- (`rateForYears` 자체도 `calcLongTermRate` 위임으로 대체 가능 — 동작 완전 동일. **Phase A 선택 작업**)
+- ✅ (`rateForYears` 자체도 정본 위임으로 대체 — 선택 작업이었으나 **수행함**. 4벌 → 0벌. `transfer-tax-helpers.ts` 751 → 744)
 
 > ⚠️ **plan R-H**: `transfer-rate-seed.ts:45-57`에 `ratePerYear` 시딩이 있는데 `rateForYears`·`calcLongTermRate` 모두 `rules`를 쓰지 않는다(`helpers.ts:441` 인자 dead). 정본 위임이 이 드리프트를 **고착**시킨다 — 별건 정리 대상.
 
@@ -199,7 +199,7 @@ export function calcConversionHoldingPct(nonHousingYears: number, housingYears: 
 }
 ```
 
-### 게이트 상수 (Phase A)
+### 게이트 상수 (Phase A ✅ 완료 2026-08-05)
 
 ⚠️ **위치는 `lib/tax-engine/tax-utils.ts`**(397줄)다. `transfer-tax-helpers.ts`에 두면 `transfer-tax-exemption.ts`(R-2)가 import해야 하는데 **helpers → exemption 단방향**(`helpers.ts:26`)이라 순환이 된다. `tax-utils.ts`는 **helpers·exemption(`:14`) 양쪽이 이미 import**해 순환이 없다.
 
@@ -214,6 +214,17 @@ export const CONVERSION_EXEMPTION_CUTOFF = new Date("2024-03-01T00:00:00");
 ```
 
 > 🔴 `new Date("2025-01-01")`은 **UTC 파싱**이라 KST 로컬 자정 Date와 비교하면 **당일 양도가 게이트에서 누락**된다. 반드시 `"T00:00:00"`.
+
+> 🔴 **Do 단계 deviation (2026-08-05) — `calcConversionHoldingPct`는 `tax-utils.ts`에 둘 수 없다.**
+>
+> 설계가 게이트 상수와 공제율 헬퍼를 같은 파일에 배치했으나, 헬퍼는 정본 `calcLongTermRate`를
+> import해야 하고 그 정본이 있는 `transfer-tax-mixed-use-inheritance.ts:16`이
+> **`tax-utils`의 `applyRate`를 import**한다 ⇒ `tax-utils` → `mixed-use-inheritance` → `tax-utils` **순환**.
+> (설계의 순환 분석은 helpers ↔ exemption 축만 봤고 이 축을 놓쳤다.)
+>
+> ⇒ **함수만 신규 leaf `lib/tax-engine/conversion-holding-pct.ts`로 분리**했다.
+> 게이트 상수 2종은 import가 전혀 없어 `tax-utils.ts`에 그대로 둔다(설계 유지).
+> 부수 효과로 `usage-period-info.ts`와 **같은 층위의 leaf 2종**이 되어 UI가 둘 다 직접 import할 수 있다.
 
 ### R-1 — LTHD 혼합 분기 (Phase B)
 
