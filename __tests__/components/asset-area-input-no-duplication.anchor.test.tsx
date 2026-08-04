@@ -29,6 +29,8 @@ import { AssetSectionAcquisition } from "@/components/calc/transfer/asset-sectio
 import { AssetSectionBasic } from "@/components/calc/transfer/asset-sections/AssetSectionBasic";
 import { RedevelopmentValuationSection } from "@/components/calc/transfer/RedevelopmentValuationSection";
 import { MixedUseExpandedPanel } from "@/components/calc/transfer/MixedUseSection";
+import { shouldShowRedevValuationSection } from "@/components/calc/transfer/asset-sections/AssetAreaRedevelopment";
+import { validateRedevelopmentAsset } from "@/lib/calc/transfer-tax-validate-redev";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -209,6 +211,30 @@ describe("재개발·입주권 면적 — ① 단일 위치 + 게이트 술어 �
       useEstimatedAcquisition: true,
     });
     expect(redevAreaLabelCount()).toBe(0);
+  });
+
+  /**
+   * 게이트가 UI만 닫고 validate는 면적을 요구하면 **입력 불가 dead-end**가 된다.
+   * probe 실측(2026-08-04): 승계조합원은 validate가 준공일 분기로 빠져 면적을
+   * 요구하지 않는다 — UI 미노출과 정합. 이 동치를 계약으로 고정한다.
+   * (`feedback_ui_gate_removes_sole_input_path` ★★★)
+   */
+  it("승계조합원: UI가 닫히는 만큼 validate도 면적을 요구하지 않는다 (dead-end 0)", () => {
+    const asset = {
+      ...makeDefaultAsset(1),
+      assetKind: "redevelopment_apt" as const,
+      redevSubject: "apt",
+      redevApprovalDate: "2020-01-01",
+      acquisitionDate: "2015-01-01",
+      redevIsSuccessorMember: "yes",
+      useEstimatedAcquisition: true,
+      redevLandArea: "",
+    } as AssetForm;
+    // UI: 면적 미노출
+    expect(shouldShowRedevValuationSection(asset)).toBe(false);
+    // validate: 면적을 요구하지 않는다(다른 필수 항목으로 유도)
+    const msg = validateRedevelopmentAsset(asset, "자산1");
+    expect(msg == null || !/면적/.test(msg)).toBe(true);
   });
 
   /** ③ 환산 섹션의 두 갈래(isLand 삼항) 모두에서 면적 칸이 사라졌는지 */
