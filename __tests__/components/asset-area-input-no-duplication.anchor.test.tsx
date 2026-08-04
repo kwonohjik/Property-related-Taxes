@@ -27,6 +27,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { AssetSectionAcquisition } from "@/components/calc/transfer/asset-sections/AssetSectionAcquisition";
 import { AssetSectionBasic } from "@/components/calc/transfer/asset-sections/AssetSectionBasic";
+import { RedevelopmentValuationSection } from "@/components/calc/transfer/RedevelopmentValuationSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -139,5 +140,92 @@ describe("상가 면적 — ③ 취득정보에서 제거됨 (중복 0)", () => 
       useEstimatedAcquisition: true,
     });
     expect(areaInputCount()).toBe(0);
+  });
+});
+
+// ══════════════════════════════════════════════════════════
+// 재개발·입주권 — 두 갈래(isLand 삼항)가 같은 필드를 각각 렌더하던 것을 ①로 통합
+// ══════════════════════════════════════════════════════════
+
+/** 재개발 토지 면적 라벨 개수 */
+function redevAreaLabelCount() {
+  return screen.queryAllByText("취득·양도 당시 토지 면적 (㎡)").length;
+}
+
+function renderRedevBasic(over: Partial<AssetForm>) {
+  return render(
+    <AssetSectionBasic
+      asset={{
+        ...makeDefaultAsset(1),
+        assetKind: "redevelopment_apt",
+        acquisitionCause: "purchase",
+        ...over,
+      }}
+      onChange={vi.fn()}
+      isMultiBundled={false}
+      onAddAsset={vi.fn()}
+      showFormDates={false}
+      transferDate="2026-05-01"
+      filingDate=""
+      filingOverdue={false}
+      filingDeadline=""
+      onFormChange={vi.fn()}
+    />,
+  );
+}
+
+describe("재개발·입주권 면적 — ① 단일 위치 + 게이트 술어 공유", () => {
+  it("토지 출자(isLand): ①에 면적 라벨이 정확히 1개", () => {
+    renderRedevBasic({ redevOriginalAssetType: "land" });
+    expect(redevAreaLabelCount()).toBe(1);
+  });
+
+  it("주택 출자(비-isLand): ①에 면적 라벨이 정확히 1개", () => {
+    renderRedevBasic({ redevOriginalAssetType: "housing" });
+    expect(redevAreaLabelCount()).toBe(1);
+  });
+
+  it("입주권(right_to_move_in)도 ①에 면적 라벨이 1개", () => {
+    renderRedevBasic({ assetKind: "right_to_move_in" });
+    expect(redevAreaLabelCount()).toBe(1);
+  });
+
+  /**
+   * 게이트 술어 `shouldShowRedevValuationSection`이 ①과 ③에서 **같은 함수**여야 한다.
+   * 복제해서 갈리면 면적 입력 dead-end(③은 열렸는데 ①이 닫힘) 또는
+   * 쓰이지 않는 값 입력(①은 열렸는데 ③이 닫힘)이 된다.
+   */
+  it("승계조합원: 소비 경로가 닫히므로 ①의 면적도 노출되지 않는다", () => {
+    renderRedevBasic({ redevIsSuccessorMember: "yes" });
+    expect(redevAreaLabelCount()).toBe(0);
+  });
+
+  it("단독주택 출자 §164⑤ 분기: 전용 카드를 쓰므로 ①의 면적도 노출되지 않는다", () => {
+    renderRedevBasic({
+      assetKind: "right_to_move_in",
+      redevOriginalAssetType: "housing",
+      redevSettlementDirection: "receive",
+      useEstimatedAcquisition: true,
+    });
+    expect(redevAreaLabelCount()).toBe(0);
+  });
+
+  /** ③ 환산 섹션의 두 갈래(isLand 삼항) 모두에서 면적 칸이 사라졌는지 */
+  it.each([
+    ["토지 출자", "land"],
+    ["주택 출자", "housing"],
+  ] as const)("③ 환산 섹션(%s)에 면적 칸이 0개", (_label, originalType) => {
+    render(
+      <RedevelopmentValuationSection
+        asset={{
+          ...makeDefaultAsset(1),
+          assetKind: "redevelopment_apt",
+          redevOriginalAssetType: originalType,
+          useEstimatedAcquisition: true,
+        }}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(redevAreaLabelCount()).toBe(0);
   });
 });
