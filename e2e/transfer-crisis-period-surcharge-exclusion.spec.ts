@@ -125,8 +125,23 @@ test.describe("부칙 §9270호 §14① — 취득기간 중과배제 (E2E)", ()
     const crisis = props.find((p) => p.propertyId === "crisis")!;
     const normal = props.find((p) => p.propertyId === "normal")!;
 
-    // 두 건 모두 비사업용 판정(rateGroup) — 세율만 부칙으로 갈린다.
-    expect(crisis.rateGroup).toBe("non_business_land");
+    /**
+     * 🔄 계약 변경 (PR#1020 `ff8d8232`, 2026-08-03) — crisis의 `rateGroup`이 뒤집혔다.
+     *
+     * 종전 이 spec은 "두 건 모두 비사업용 판정 — 세율만 부칙으로 갈린다"를 고정했다.
+     * 그러나 부칙 §9270호 §14①로 +10%p가 배제되면 **해당 호 자체가 §104①1호**이므로
+     * §104⑤ 그룹도 `progressive`여야 한다
+     * (`legal-codes/surcharge-transition.ts:41` 「중과세율 배제 → §104①1호 기본세율」 ·
+     *  기획재정부 재산세제과-1422 · 서울행정법원 2024구단72950).
+     *
+     * 종전 분류는 위기취득 비사토가 같은 §104①1호 자산과 §104⑤2호 버킷을 공유하지 못해
+     * 누진이 두 번 태워졌고 **20,640,000원 과소**를 냈다
+     * (anchor `aggregate-crisis-nbl-clause-group.anchor.test.ts` C-1 · 대조군 C-2).
+     *
+     * ⚠️ PR#1020은 vitest anchor 4건만 신설하고 이 E2E를 갱신하지 않아, 머지 이후
+     *    CI가 상시 실패 상태였다(브랜치 보호가 없어 머지는 차단되지 않는다).
+     */
+    expect(crisis.rateGroup).toBe("progressive");
     expect(normal.rateGroup).toBe("non_business_land");
 
     // crisis(2010 취득): 부칙 §14① → 기본세율 적용. 과세표준 2.8억(1.5억~3억) → 기본 38%(비사업용 48% 아님).
