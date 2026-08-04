@@ -10,10 +10,15 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
-import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import {
+  buildHouseholdSpecialPayload,
+  buildPenaltyAmendmentPayload,
+  buildPreHousingDisclosurePayload,
+  buildNewConstructionPayload,
+} from "./transfer-tax-api-body-blocks";
 import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
@@ -419,71 +424,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         houseContractDate: e.houseContractDate || undefined,
         requirementsConfirmed: e.requirementsConfirmed,
       })),
-    ...(form.temporaryTwoHouseSpecial &&
-    primary?.acquisitionDate &&
-    form.newHouseAcquisitionDate
-      ? {
-          temporaryTwoHouse: {
-            // 종전주택 취득일 = 양도 자산 취득일(단일소스)
-            previousAcquisitionDate: primary.acquisitionDate,
-            newAcquisitionDate: form.newHouseAcquisitionDate,
-            // §155⑯ — 처분기한 5년 + 1년 요건 면제. false는 보내지 않는다(Zod optional).
-            ...(form.publicInstitutionRelocation
-              ? {
-                  publicInstitutionRelocation: true,
-                  // 연접 판정 코드 — 둘 다 있을 때만 자동 판정된다(엔진이 한쪽만 있으면 자기선언 유지).
-                  ...(form.relocatedSigunguCode ? { relocatedSigunguCode: form.relocatedSigunguCode } : {}),
-                  ...(form.newHouseSigunguCode ? { newHouseSigunguCode: form.newHouseSigunguCode } : {}),
-                }
-              : {}),
-            // §155⑱ — 빈 문자열은 "해당 없음"이므로 미전송.
-            ...(form.disposalDelayReason
-              ? { disposalDelayReason: form.disposalDelayReason as TemporaryTwoHouseDelayReason }
-              : {}),
-          },
-        }
-      : {}),
-    // ④⑬ §155⑧ 수도권 밖 부득이 주택 FLAT → nested. 해소일은 미입력 시 미전송(= 미해소).
-    ...(form.unavoidableOutsideCapitalSpecial
-      ? {
-          unavoidableOutsideCapitalHouse: {
-            reason: form.unavoidableOutsideCapitalReason as
-              | "study"
-              | "work"
-              | "illness"
-              | "other",
-            ...(form.unavoidableOutsideCapitalResolvedDate
-              ? { resolvedDate: form.unavoidableOutsideCapitalResolvedDate }
-              : {}),
-          },
-        }
-      : {}),
-    // ④⑬ §155⑦ 농어촌주택 FLAT → nested. 유형별로 무의미한 필드는 보내지 않는다
-    //     (침묵 오판정 방지 — 예: 상속 유형에 귀농 대지면적을 실어 보내면 안 된다).
-    ...(form.ruralHouseSpecial
-      ? {
-          ruralHouse: {
-            kind: form.ruralHouseKind as "inherited" | "farm_exit" | "return_to_farm",
-            isOutsideCapitalEupMyeon: form.ruralHouseOutsideCapitalEupMyeon,
-            ...(form.ruralHouseKind === "inherited"
-              ? { decedentResidenceYears: parseFloat(form.ruralHouseDecedentResidenceYears) || 0 }
-              : {}),
-            ...(form.ruralHouseKind === "farm_exit"
-              ? { ownerResidenceYears: parseFloat(form.ruralHouseOwnerResidenceYears) || 0 }
-              : {}),
-            ...(form.ruralHouseKind === "return_to_farm"
-              ? {
-                  ...(form.ruralHouseAcquisitionDate
-                    ? { acquisitionDate: form.ruralHouseAcquisitionDate }
-                    : {}),
-                  isHighPriceAtAcquisition: form.ruralHouseHighPriceAtAcquisition,
-                  landAreaSqm: parseFloat(form.ruralHouseLandAreaSqm) || 0,
-                  wholeHouseholdMoved: form.ruralHouseWholeHouseholdMoved,
-                }
-              : {}),
-          },
-        }
-      : {}),
+    // ④⑬ §155⑤ 일시적 2주택 · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 (body-blocks로 분리)
+    ...buildHouseholdSpecialPayload(form, primary),
     // ④⑬ §156의2⑤ 대체주택 비과세 특례 FLAT → nested (helpers로 분리, 800줄 정책)
     ...buildReplacementHousePayload(form),
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
@@ -517,53 +459,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     })(),
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
     ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
-    // 수정신고 모드에서는 무신고/과소신고 가산세 블록을 전송하지 않음 (상호배타)
-    ...(!form.amendmentMode && form.enablePenalty && form.filingType !== "correct"
-      ? {
-          filingPenaltyDetails: {
-            determinedTax: 0,
-            reductionAmount: 0,
-            priorPaidTax: parseAmount(form.priorPaidTax),
-            originalFiledTax: parseAmount(form.originalFiledTax),
-            excessRefundAmount: parseAmount(form.excessRefundAmount),
-            interestSurcharge: parseAmount(form.interestSurcharge),
-            filingType: form.filingType,
-            penaltyReason: form.penaltyReason,
-          },
-        }
-      : {}),
-    ...(!form.amendmentMode && form.enablePenalty && form.paymentDeadline
-      ? {
-          delayedPaymentDetails: {
-            unpaidTax: parseAmount(form.unpaidTax),
-            paymentDeadline: form.paymentDeadline,
-            actualPaymentDate: form.actualPaymentDate || undefined,
-          },
-        }
-      : {}),
-    // 수정신고(경정) — 국세기본법 §45·§48
-    ...(form.amendmentMode
-      ? {
-          amendment: {
-            correctionKind: form.correctionKind,
-            originalDeterminedTax: parseAmount(form.originalDeterminedTax),
-            // [F6] 경정청구(refund)는 가산세 없음 → 플래그 강제 false(stale 누출 차단)
-            applyUnderReportingPenalty:
-              form.correctionKind === "refund_claim" ? false : form.applyUnderReportingPenalty,
-            underReportingReason: form.underReportingReason,
-            underReductionMode: form.underReductionMode,
-            ...(form.statutoryFilingDeadline ? { statutoryFilingDeadline: form.statutoryFilingDeadline } : {}),
-            ...(form.amendedFilingDate ? { amendedFilingDate: form.amendedFilingDate } : {}),
-            priorAssessmentNotified: form.priorAssessmentNotified,
-            applyLatePaymentPenalty:
-              form.correctionKind === "refund_claim" ? false : form.applyLatePaymentPenalty,
-            ...(form.amendedPaymentDate ? { amendedPaymentDate: form.amendedPaymentDate } : {}),
-            // 경정청구 전용 — §45의2
-            ...(form.correctionKind === "refund_claim" ? { claimReasonType: form.claimReasonType } : {}),
-            ...(form.posteriorEventDate ? { posteriorEventDate: form.posteriorEventDate } : {}),
-          },
-        }
-      : {}),
+    ...buildPenaltyAmendmentPayload(form),
     ...(parcelModeActive
       ? {
           parcels: primary.parcels.map((p) => {
@@ -676,28 +572,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           }),
         }
       : {}),
-    // ── 개별주택가격 미공시 취득 환산 §164⑤ (일반 자산 전용) ──
-    // 겸용주택은 mixedUse.preHousingDisclosure에서 별도 전송하므로 여기 송신 금지.
-    // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)도 PHD 전송.
-    ...(!isMixed &&
-    primary.usePreHousingDisclosure &&
-    primary.phdFirstDisclosureDate &&
-    parseAmount(primary.phdFirstDisclosureHousingPrice) > 0
-      ? {
-          preHousingDisclosure: {
-            firstDisclosureDate: primary.phdFirstDisclosureDate,
-            firstDisclosureHousingPrice: parseAmount(primary.phdFirstDisclosureHousingPrice),
-            landArea: parseFloat(primary.acquisitionArea) || 0,
-            landPricePerSqmAtAcquisition: parseAmount(primary.phdLandPricePerSqmAtAcq) || 0,
-            buildingStdPriceAtAcquisition: parseAmount(primary.phdBuildingStdPriceAtAcq) || 0,
-            landPricePerSqmAtFirstDisclosure: parseAmount(primary.phdLandPricePerSqmAtFirst) || 0,
-            buildingStdPriceAtFirstDisclosure: parseAmount(primary.phdBuildingStdPriceAtFirst) || 0,
-            transferHousingPrice: parseAmount(primary.phdTransferHousingPrice) || 0,
-            landPricePerSqmAtTransfer: parseAmount(primary.phdLandPricePerSqmAtTransfer) || 0,
-            buildingStdPriceAtTransfer: parseAmount(primary.phdBuildingStdPriceAtTransfer) || 0,
-          },
-        }
-      : {}),
+    ...buildPreHousingDisclosurePayload(primary, isMixed),
     // ── landNature (토지 자산 성격 — 부수토지 vs 독립 나대지) ──
     // 폼 enum("appurtenant"/"standalone") → 엔진 enum("appurtenant_to_housing"/"non_appurtenant") 변환.
     // undefined이면 엔진에 전달하지 않음.
@@ -785,26 +660,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       const rhPayload = toRentalHousingExceptionApi(primary);
       return rhPayload ? { rentalHousingException: rhPayload } : {};
     })()),
-    // ④⑬ 사례 28 + G-5 — 신축(자가건축) 취득일 4-시점 + 부수토지 한도 산정 (영 §162①4호, 영 §167의5)
-    // acquisitionCause === "newConstruction" 시 4-시점 날짜 전송.
-    // buildingFootprintArea / isUrbanArea는 신축 여부와 무관하게 값이 있으면 전송.
-    ...(primary.acquisitionCause === "newConstruction"
-      ? {
-          occupancyApprovalDate: primary.occupancyApprovalDate || undefined,
-          approvalCertificateDate: primary.approvalCertificateDate || undefined,
-          temporaryApprovalDate: primary.temporaryApprovalDate || undefined,
-          actualUseDate: primary.actualUseDate || undefined,
-        }
-      : {}),
-    ...(parseFloat(primary.buildingFootprintArea) > 0
-      ? { buildingFootprintArea: parseFloat(primary.buildingFootprintArea) }
-      : {}),
-    ...(primary.isUrbanArea !== undefined
-      ? { isUrbanArea: primary.isUrbanArea }
-      : {}),
-    ...(primary.appurtenantLandZone !== undefined
-      ? { appurtenantLandZone: primary.appurtenantLandZone }
-      : {}),
+    ...buildNewConstructionPayload(primary),
   };
 
   const res = await fetch("/api/calc/transfer", {

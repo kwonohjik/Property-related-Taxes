@@ -122,8 +122,8 @@ usageConversionDetail?: {
 |---|---|---|---|
 | ⓐ | **`LongTermHoldingResult`에 필드 추가** | `transfer-tax-helpers.ts:428-436` (⚠️ **비-export private interface**) | `rental97LthdDetail?` `:433` |
 | ⓑ | `calcLongTermHoldingDeduction` 각 return | 동상 | |
-| ⓒ | **`transfer-tax.ts:509` 구조분해 목록** | `let { deduction, rate, holdingPeriod, rental97LthdDetail, exclusionReason } = …` | 5개만 분해 중 |
-| ⓓ | **`transfer-tax.ts:783` result 조립** | | |
+| ⓒ | **`transfer-tax.ts:428` 구조분해 목록** | `let { deduction, rate, holdingPeriod, rental97LthdDetail, exclusionReason } = …` | 5개만 분해 중 |
+| ⓓ | **`transfer-tax.ts:654` result 조립** | | |
 | ⓔ | `TransferTaxResult` 타입 | `transfer-result.types.ts:215` 부근 | `:370` |
 | ⓕ~ⓖ | Pick 목록 + pick 함수 | ⚠️ **`TransferReductionDetailSource` / `pickReductionDetails`(`aggregate.ts:93-110`)** — `rental97LthdDetail`이 이쪽을 쓴다(`aggregate.ts:98`). LTHD 축이므로 정합 | |
 
@@ -259,8 +259,8 @@ if (input.nonHousingToHousingConversion
 }
 ```
 
-> **`holdingPeriod`는 총 보유기간**이다 — `transfer-tax.ts:568`(sub-step 표시)과 산식 문구가 소비하므로 분해 기간을 넣으면 표시가 왜곡된다.
-> **적용 순서 불변**: 12억 안분(`transfer-tax.ts:471` STEP 3) → taxableGain 확정 → LTHD(`:505` STEP 4) — I-14.
+> **`holdingPeriod`는 총 보유기간**이다 — `transfer-tax-lthd-steps.ts:84`(sub-step 표시)과 산식 문구가 소비하므로 분해 기간을 넣으면 표시가 왜곡된다.
+> **적용 순서 불변**: 12억 안분(`transfer-tax.ts:390` STEP 3) → taxableGain 확정 → LTHD(`:424` STEP 4) — I-14.
 
 ### R-2 — 비과세 보유기간 기산 (Phase C)
 
@@ -285,7 +285,7 @@ return input.acquisitionDate;                                          // I-1·I
 
 ### 거주기간 클램프 (Phase E — API 변환 계층)
 
-엔진 input `residencePeriodMonths`는 **스칼라**다(`transfer-tax-api.ts:353`이 `deriveResidencePeriodMonths()`로 배열을 접는다). 배열이 살아 있는 유일한 지점에서 클램프한다.
+엔진 input `residencePeriodMonths`는 **스칼라**다(`transfer-tax-api.ts:358`이 `deriveResidencePeriodMonths()`로 배열을 접는다). 배열이 살아 있는 유일한 지점에서 클램프한다.
 
 **신규 헬퍼는 `deriveResidencePeriodMonths`와 같은 소스에 둔다** — 별도 파일에 만들면 UI/엔진 인자 불일치가 생긴다.
 
@@ -300,10 +300,10 @@ export function clampResidenceToHousingPeriod(
 // direct 모드: 클램프 불가(스칼라) → { months: 원값, trimmed: 0 } (C-10b — UI 안내로 처리)
 ```
 
-`transfer-tax-api.ts:353`이 이를 호출한다. **Step4 안내 메시지가 같은 값을 보는지는 §9.1b와 함께 결정**(plan §13).
+`transfer-tax-api.ts:358`이 이를 호출한다. **Step4 안내 메시지가 같은 값을 보는지는 §9.1b와 함께 결정**(plan §13).
 
 > `resolveExemptionResidenceMonths`(`transfer-tax-exemption.ts:282`)는 `consolidateResidenceMonths(input.residencePeriodMonths, input)` **순수 pass-through**라 클램프가 자동 전파된다. **개조 금지**(이중 클램프).
-> blast radius **확인만**: 표2 대상 판정 3지점 — `transfer-tax.ts:513` · `transfer-tax-helpers.ts:492` · `:533`.
+> blast radius **확인만**: 표2 대상 판정 3지점 — `transfer-tax.ts:432` · `transfer-tax-helpers.ts:492` · `:533`.
 >
 > **I-16 판정 경로**: 클램프된 `residencePeriodMonths`가 `meetsOneHouseResidenceRequirement`(`transfer-tax-exemption.ts:294~`)의 2년 판정에 그대로 들어가 비과세 탈락을 만든다 (I-10의 보유 판정 `meetsOneHouseHoldingResidence:349`와 대응).
 
@@ -370,14 +370,14 @@ export function clampResidenceToHousingPeriod(
 
 ## ★ 표시 계층 — 본 step 산식 + sub-step 금액 (Phase G)
 
-🔴 **§95⑤ 케이스에서도 `isOneHouseSpecial`(`transfer-tax.ts:536-540`)이 참**이므로, 표시 코드가 총 보유기간 기준 표2를 그대로 렌더한다. 문구만이 아니라 **금액이 틀린다.**
+🔴 **§95⑤ 케이스에서도 `isOneHouseSpecial`(`transfer-tax-lthd-steps.ts:52-56`)이 참**이므로, 표시 코드가 총 보유기간 기준 표2를 그대로 렌더한다. 문구만이 아니라 **금액이 틀린다.**
 
 | 대상 | 현행 동작 (anchor 기준) | 조치 |
 |---|---|---|
-| **`transfer-tax.ts:541-549` `lthdFormulaRate`** | `hPart = min(holdingPeriod.years*4, 40)` = **28%**, `rPart = 12%` → `"보유 7년×4%=28% + 거주 3년×4%=12% = 32%"`. **28+12=40 ≠ 32**로 인쇄된 합계와 자기모순 | §95⑤ 분기 시 echo의 `table1Pct`/`table2HoldingPct`/`residencePct`로 문자열 재구성: `"비주택 4년×표1=8% + 주택 3년×표2=12% (보유 20%) + 거주 3년×표2=12% = 32%"` |
-| **`transfer-tax.ts:556`** | 위 문자열 사용 | 동상 |
-| **`transfer-tax.ts:564-591` sub-step 금액** | `:567-568` `hPart=28`·`rPart=12` → `:571` `residenceAmt = floor(deduction × 12/40)` = **30%** 배분. §95⑤ 정확 배분은 보유 20 : 거주 12 → **12/32 = 37.5%** ⇒ 신고서 「보유/거주 기간분 장특」 **행 금액이 어긋난다**(합계는 보존) | §95⑤ 분기 시 **`hPart = table1Pct + table2HoldingPct`(=20), `rPart = residencePct`(=12)로 치환** |
-| `transfer-tax.ts:580`·`:587` `legalBasis` | `TRANSFER.LONG_TERM_DEDUCTION`(`"소득세법 §95 ②"`) — `DetailedStatementHelpers.ts:523`·`:535`가 그대로 인쇄 | `TRANSFER.LONG_TERM_DEDUCTION_CONVERSION`(`"소득세법 §95 ⑤"`)로 분기 |
+| **`transfer-tax-lthd-steps.ts:57-65` `lthdFormulaRate`** | `hPart = min(holdingPeriod.years*4, 40)` = **28%**, `rPart = 12%` → `"보유 7년×4%=28% + 거주 3년×4%=12% = 32%"`. **28+12=40 ≠ 32**로 인쇄된 합계와 자기모순 | §95⑤ 분기 시 echo의 `table1Pct`/`table2HoldingPct`/`residencePct`로 문자열 재구성: `"비주택 4년×표1=8% + 주택 3년×표2=12% (보유 20%) + 거주 3년×표2=12% = 32%"` |
+| **`transfer-tax-lthd-steps.ts:71-79`** | 위 문자열 사용 | 동상 |
+| **`transfer-tax-lthd-steps.ts:81-107` sub-step 금액** | `:84-85` `hPart=28`·`rPart=12` → `:90` `residenceAmt = floor(deduction × 12/40)` = **30%** 배분. §95⑤ 정확 배분은 보유 20 : 거주 12 → **12/32 = 37.5%** ⇒ 신고서 「보유/거주 기간분 장특」 **행 금액이 어긋난다**(합계는 보존) | §95⑤ 분기 시 **`hPart = table1Pct + table2HoldingPct`(=20), `rPart = residencePct`(=12)로 치환** |
+| `transfer-tax-lthd-steps.ts:96`·`:103` `legalBasis` | `TRANSFER.LONG_TERM_DEDUCTION`(`"소득세법 §95 ②"`) — `DetailedStatementHelpers.ts:523`·`:535`가 그대로 인쇄 | `TRANSFER.LONG_TERM_DEDUCTION_CONVERSION`(`"소득세법 §95 ⑤"`)로 분기 |
 
 **Phase G verify**: anchor 케이스에서 「보유 기간분 장특」·「거주 기간분 장특」 **금액**을 단언한다 — 보유분 `floor(57,132,800 × 20/32)` = **35,708,000**, 거주분 = `57,132,800 − 35,708,000` = **21,424,800**.
 
@@ -387,7 +387,7 @@ export function clampResidenceToHousingPeriod(
 
 - 🔴 **`calcLongTermRate` 정본 위임** — `table1Rate`/`table2HoldingRate`/`table2ResidenceRate` 신설 취소. 3년 가드가 함수 내장이라 **plan R-D 회귀 위험 소멸**
 - 🔴 **분수 정수 연산** — 소수 rate 합산의 1원 오차(78/17,576 조합) probe 실증. `applyRateFraction` + 정수 % 유지. I-17 경계 테스트
-- 🔴 **전파 3지점 → 6지점** — `LongTermHoldingResult`(비-export) · `transfer-tax.ts:509` 구조분해 · `:783` 조립 추가. Pick 함수는 `pickReductionDetails`(`rental97LthdDetail` 선례)
+- 🔴 **전파 3지점 → 6지점** — `LongTermHoldingResult`(비-export) · `transfer-tax.ts:428` 구조분해 · `:783` 조립 추가. Pick 함수는 `pickReductionDetails`(`rental97LthdDetail` 선례)
 - 게이트 상수 위치를 **`legal-codes/transfer.ts`**로 (helpers→exemption 단방향 순환 회피) + §95⑤ 전용 이름
 - **I-15**(splitDetail) 신설 + 엔진 가드 `!splitDetail` · **I-16**(C-10c) · **I-17**(분수) 신설
 - 인벤토리에 템플릿 필수 컬럼 4개(법령·anchor 출처·테스트·상태) 추가, I-4a~c를 하위 행으로

@@ -80,8 +80,9 @@ describe("Pre-Do anchor — 비주택 → 주택 용도변경 (PDF 사례 30)", 
     //                                            합계 32%
     expect(r.longTermHoldingRate).toBeCloseTo(0.32, 10);
     expect(r.longTermHoldingDeduction).toBe(57_132_800);
-    expect(r.transferIncome).toBe(121_407_200); // 178,540,000 − 57,132,800
-    expect(r.taxBase).toBe(118_907_200); // − 기본공제 250만
+    // 양도소득금액 121,407,200 (= 178,540,000 − 57,132,800)은 result에 별도 필드가 없다 —
+    // 과세표준 = 양도소득금액 − 기본공제로 간접 고정한다.
+    expect(r.taxBase).toBe(118_907_200); // 121,407,200 − 기본공제 250만
     expect(r.calculatedTax).toBe(26_177_520); // × 35% − 15,440,000 (§55)
     expect(r.localIncomeTax).toBe(2_617_752); // 산출세액 × 10%
   });

@@ -77,3 +77,44 @@ export function resolveTaxableGain(args: {
   });
   return taxableGain;
 }
+
+/**
+ * 양도차익 산출근거 문자열 — 취득가액 산정방식 3분기.
+ *
+ * ⚠️ 파생 입력(`effectiveInput`) 기준으로 통일한다. 원본 `input` 기준이면
+ *    CB 환산은 취득가·개산공제가 0이고 §97② swap은 개산공제가 실제 경비와 어긋나
+ *    산식이 금액과 불일치한다.
+ */
+export function buildGainFormula(args: {
+  swapApplied: boolean | undefined;
+  useEstimatedAcquisition: boolean | undefined;
+  transferPrice: number;
+  acquisitionPrice: number;
+  estimatedBase: number;
+  appliedExpenses: number;
+}): string {
+  const { swapApplied, useEstimatedAcquisition, transferPrice, acquisitionPrice, estimatedBase, appliedExpenses } = args;
+  const effectiveInput = { transferPrice, acquisitionPrice, useEstimatedAcquisition };
+  let gainFormula: string;
+  if (swapApplied) {
+    // §97② 2호 단서: 필요경비 = 자본적지출+양도비 단독 → 환산취득가액은 차감·표시에서 제외.
+    // 상가(CB) swap은 effectiveInput.useEstimatedAcquisition=false라 최상위에서 분기(환산·상가 공통).
+    gainFormula = [
+      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+      `필요경비(자본적지출+양도비 ${appliedExpenses.toLocaleString()}`,
+    ].join(" - ");
+  } else if (effectiveInput.useEstimatedAcquisition) {
+    gainFormula = [
+      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+      `취득가(환산 ${estimatedBase.toLocaleString()}`,
+      `경비(개산공제 ${appliedExpenses.toLocaleString()}`,
+    ].join(" - ");
+  } else {
+    gainFormula = [
+      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
+      `취득가(${effectiveInput.acquisitionPrice.toLocaleString()}`,
+      `경비(${appliedExpenses.toLocaleString()}`,
+    ].join(" - ");
+  }
+  return gainFormula;
+}

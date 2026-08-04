@@ -175,8 +175,8 @@ sub-step `"보유 기간분 장특"`·`"거주 기간분 장특"`은 **신고서
 
 | 대상 | 조치 |
 |---|---|
-| `transfer-tax.ts:568-569` | `× 4%` 하드코딩 → §95⑤ 분기 시 echo의 `table1Pct`/`table2HoldingPct` 사용 |
-| `transfer-tax.ts:580`·`:587` sub-step `legalBasis` | `TRANSFER.LONG_TERM_DEDUCTION`(`"소득세법 §95 ②"`) → **`TRANSFER.LONG_TERM_DEDUCTION_CONVERSION`**(`"소득세법 §95 ⑤"`)로 분기. `DetailedStatementHelpers.ts:523`·`:535`가 이 값을 그대로 인쇄한다 |
+| `transfer-tax-lthd-steps.ts:84-85` | `× 4%` 하드코딩 → §95⑤ 분기 시 echo의 `table1Pct`/`table2HoldingPct` 사용 |
+| `transfer-tax-lthd-steps.ts:96`·`:103` sub-step `legalBasis` | `TRANSFER.LONG_TERM_DEDUCTION`(`"소득세법 §95 ②"`) → **`TRANSFER.LONG_TERM_DEDUCTION_CONVERSION`**(`"소득세법 §95 ⑤"`)로 분기. `DetailedStatementHelpers.ts:523`·`:535`가 이 값을 그대로 인쇄한다 |
 | `DetailedStatementHelpers.ts:453-454` | `Math.min(lthHoldingYears * 4, 40)` — **총 보유 기준 표2 산식의 사본**. §95⑤ 분기 시 echo 값으로 대체 |
 | `DetailedStatementHelpers.ts:463`·`:464`·`:468`·`:469`·`:478`·`:516`·`:528-530` | `"(§95② 표2 …)"` 설명·fallback 산식 문구 분기 |
 | `FilingFormTableRowDefs.ts:46-47` · `FilingFormTableAggregateHelpers.ts:314-315` | 라벨→키 행 정의뿐 — **변경 불요**(값은 엔진에서 흘러온다) |
@@ -188,7 +188,7 @@ sub-step `"보유 기간분 장특"`·`"거주 기간분 장특"`은 **신고서
 
 | # | 지점 | 파일 | 작업 |
 |---|---|---|---|
-| ① | 폼 상태 | 🔴 신규 `lib/stores/calc-wizard-asset-usage-conversion.ts` | `UsageConversionFormSlice { hasNonHousingConversion: boolean; residentialUseStartDate: string }` → `AssetForm extends`(`calc-wizard-asset.ts:58`, 현재 6슬라이스). **본체가 838줄이라 직접 추가 불가** |
+| ① | 폼 상태 | 🔴 신규 `lib/stores/calc-wizard-asset-usage-conversion.ts` | `UsageConversionFormSlice { hasNonHousingConversion: boolean; residentialUseStartDate: string }` → `AssetForm extends`(`calc-wizard-asset.ts:61`, 현재 8슬라이스). **본체 668줄(A-0 분리 후) — 슬라이스 패턴 유지** |
 | ② | initial | `calc-wizard-asset-factory.ts:62` `makeDefaultAsset` | `false` / `""` |
 | ③ | normalize | `calc-wizard-asset-migrate.ts` | backfill. ⚠️ **유일한 안전망 아님** — `migrateAsset`은 현행 포맷 sessionStorage·IndexedDB 이력 로드에는 돌지 않는다 |
 | ④ | API 변환 | `lib/calc/transfer-tax-api.ts` | 객체 생성 게이트(토글 ON **AND** 날짜 유효) + **거주 클램프**(`clampResidenceToHousingPeriod`). 접근부 가드 `?? false`·`?? ""` |
@@ -211,11 +211,11 @@ sub-step `"보유 기간분 장특"`·`"거주 기간분 장특"`은 **신고서
 | C-8 | 개시일 ≤ `acquisitionDate` | 주거용 사용 개시일은 취득일 이후여야 합니다. |
 | C-9 | 개시일 ≥ 양도일 | 주거용 사용 개시일은 양도일 이전이어야 합니다. |
 | C-14 | `isMixedUseHouse === true` | 겸용주택과 함께 사용할 수 없습니다 — 일부만 주택화된 경우 「겸용주택」의 보유 중 일부 용도변경을 쓰세요. |
-| C-18 | `asset.reductions`(`calc-wizard-asset.ts:86`, `AssetReductionForm[]` — union은 `calc-wizard-asset-reduction.ts:126`) 중 `type === "rental_97_3" \| "rental_97_4"` | ⚠️ 엔진 `rentalReductionDetails`는 **폼에 없어 validate가 볼 수 없다**(`calc-wizard-asset-reduction.ts:167·179` 사용) |
-| C-19 | `hasSeperateLandAcquisitionDate === true` (`calc-wizard-asset.ts:392`) | |
+| C-18 | `asset.reductions`(`calc-wizard-asset.ts:89`, `AssetReductionForm[]` — union은 `calc-wizard-asset-reduction.ts:126`) 중 `type === "rental_97_3" \| "rental_97_4"` | ⚠️ 엔진 `rentalReductionDetails`는 **폼에 없어 validate가 볼 수 없다**(`calc-wizard-asset-reduction.ts:167·179` 사용) |
+| C-19 | `hasSeperateLandAcquisitionDate === true` (`calc-wizard-asset.ts:395`) | |
 | C-20 | `asset.reductions` 중 `unsold_98_2`(`:320`)·`rental_97_3`·`rental_97_4` | |
 | C-21 | `acquisitionCause ∈ {inheritance, gift, carryover_gift}` | |
-| C-24 | `transferType === "burdened_gift"` (`calc-wizard-asset.ts:221`) | |
+| C-24 | `transferType === "burdened_gift"` (`calc-wizard-asset.ts:224`) | |
 | C-26 | 자산 index ≥ 1 | **validation 아님 — UI 미노출로 처리** |
 
 **공통 차단 문안** (사유 1줄 + 대안):

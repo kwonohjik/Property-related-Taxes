@@ -127,7 +127,7 @@ PDF 533p 지문은 거주 **"2년 11개월"**, 536p 화면 입력은 **3년**, 5
 
 > 법 제95조제2항 표 외의 부분 단서 **및 같은 조 제5항 각 호 외의 부분**에서 "대통령령으로 정하는 1세대 1주택"이란 **각각** 1세대가 양도일(…) 현재 국내에 1주택(제155조ㆍ제155조의2ㆍ제156조의2ㆍ제156조의3 및 그 밖의 규정에 따라 1세대 1주택으로 보는 주택을 포함한다)을 보유하고 **보유기간 중 거주기간이 2년 이상**인 것을 말한다.
 
-⇒ §95⑤의 "대통령령으로 정하는 1세대 1주택"은 §159의4가 **명시적으로 포함**한다. 요건은 ① 양도일 현재 1주택(의제 포함) ② 보유기간 중 거주 2년 이상 — **현행 게이트 `isOneHouseSingle && table2ResidenceYears >= 2`와 1:1 대응**하므로 기존 표2 대상 판정을 그대로 재사용한다(의제 주택 체인도 `transfer-tax.ts:507` 주석이 이미 §159의4로 다룬다).
+⇒ §95⑤의 "대통령령으로 정하는 1세대 1주택"은 §159의4가 **명시적으로 포함**한다. 요건은 ① 양도일 현재 1주택(의제 포함) ② 보유기간 중 거주 2년 이상 — **현행 게이트 `isOneHouseSingle && table2ResidenceYears >= 2`와 1:1 대응**하므로 기존 표2 대상 판정을 그대로 재사용한다(의제 주택 체인도 `transfer-tax.ts:426` 주석이 이미 §159의4로 다룬다).
 
 **V-4에 대한 시사** — §159의4가 §95⑤ 맥락에서 「**보유기간** 중 거주기간」이라 쓸 때 그 보유기간은 별도 정의가 없으므로 §95④(취득일~양도일) = **총 보유기간**이다. 표2 거주 단서의 "보유기간"도 같은 의미로 읽는 것이 자연스러워 **잠정 결정(총 보유기간 기준)의 근거가 된다**. 다만 §159의4는 *대상 요건*, 표2 단서는 *공제율 산정*이라 층위가 달라 **완전 해소는 아니다** — V-4는 미결 유지.
 
@@ -146,7 +146,7 @@ PDF 533p 지문은 거주 **"2년 11개월"**, 536p 화면 입력은 **3년**, 5
 
 ## 4. 현행 코드 갭 — 실측
 
-⚠️ **행 번호 앵커 주의**: Phase A-0(선분리) 이후 아래 행 번호는 무효가 된다. A-0 verify에 **"앵커 재실측 후 계획서 갱신"**이 포함돼 있다(§10).
+✅ **행 번호 앵커 — Phase A-0 후 재실측 완료 (2026-08-04)**. 아래 G-1~G-15는 A-0 분리 결과를 반영한 값이다. `transfer-tax-helpers.ts`·`transfer-tax-exemption.ts`·`transfer-tax-lthd-start.ts`는 **분리하지 않아 행 번호가 그대로**이고, `transfer-tax.ts`·`-aggregate.ts`·`-api.ts`·`route.ts`·`calc-wizard-asset.ts` 앵커는 신규 파일 경로로 갱신됐다(§8).
 
 | # | 지점 | 실측 결과 |
 |---|---|---|
@@ -155,16 +155,16 @@ PDF 533p 지문은 거주 **"2년 11개월"**, 536p 화면 입력은 **3년**, 5
 | G-3 | `transfer-tax-exemption.ts:334-344` (JSDoc 325~) `resolveExemptionHoldingStartDate` | 분기가 **동일세대 상속 backdate(§154⑧3호) 하나뿐** |
 | G-4 | `transfer-tax-exemption.ts:241-249` (JSDoc 234~) `resolveWasRegulatedAtAcquisition` | 판정 기준일이 `input.acquisitionDate` 고정 |
 | G-5 | `transfer-tax-lthd-start.ts:23-26` | 용도변경 분기는 **주택 → 상가(사례 35) 방향만** |
-| G-6 | `transfer-tax.ts:564-591` STEP 4.1·4.2 (핵심 `:568-569`) | sub-step이 `holdingPeriod.years * 4` 하드코딩 |
+| G-6 | `transfer-tax-lthd-steps.ts:81-107` STEP 4.1·4.2 (핵심 `:84-85`) | sub-step이 `holdingPeriod.years * 4` 하드코딩 |
 | G-7 | 프로젝트 전역 | `grep "사실상 주거용"` **0건** |
 | G-8 | `transfer-tax-helpers.ts:489-502`(L-1b) · `:599`(splitDetail NBL) · **`DetailedStatementHelpers.ts:453-454`(UI)** | 표1·표2 산식이 `rateForYears` 밖에 **3벌 더** 존재. ⇒ **정본은 `calcLongTermRate`(`transfer-tax-mixed-use-inheritance.ts:26-47`)** — exported leaf·호출부 13곳·3년 가드 내장. 이 4벌을 정본으로 위임한다 (memory `feedback_sibling_path_already_implements_rule`) |
 | G-9 | `transfer-tax-exemption.ts:119-131` `ResidenceReqInput` | **10필드 화이트리스트 `Pick`**. 여기 추가하지 않으면 R-2·R-3이 필드에 접근 불가. `ExemptionReqInput`(:142)·`DeemedOneHouseReqInput`(:153)에 **자동 전파**됨 |
 | G-10 | `lib/calc/transfer-tax-api-residence.ts:12-48` `buildResidenceReqInput` | UI(Step4)가 같은 술어를 **별도 조립 입력**으로 호출. :22-23에 동일 트랩 경고 주석 존재 |
-| G-11 | `transfer-tax-aggregate.ts:52-68` `pickValuationDetails` | 다자산 result 전파 화이트리스트(13필드 — 단 이번 echo는 `pickReductionDetails` 쪽). 빠뜨리면 **일괄 경로에서 침묵 누락**. 가드 `__tests__/api/transfer.route.bundled-swallows-special.test.ts` |
-| G-12 | `DetailedStatementHelpers.ts:449-478,516,523,535` · `FilingFormTableRowDefs.ts:46-47` · `FilingFormTableAggregateHelpers.ts:314-315` | sub-step 라벨 소비처. **§95② 하드코딩 8곳**, 그중 `:523`·`:535`는 `lthHoldingStep?.legalBasis` — **엔진 sub-step의 `legalBasis`(`transfer-tax.ts:580`·`:587` = `"소득세법 §95 ②"`)를 그대로 인쇄** |
+| G-11 | `transfer-tax-aggregate-pickers.ts:32-56` `pickValuationDetails` | 다자산 result 전파 화이트리스트(13필드 — 단 이번 echo는 `pickReductionDetails` 쪽). 빠뜨리면 **일괄 경로에서 침묵 누락**. 가드 `__tests__/api/transfer.route.bundled-swallows-special.test.ts` |
+| G-12 | `DetailedStatementHelpers.ts:449-478,516,523,535` · `FilingFormTableRowDefs.ts:46-47` · `FilingFormTableAggregateHelpers.ts:314-315` | sub-step 라벨 소비처. **§95② 하드코딩 8곳**, 그중 `:523`·`:535`는 `lthHoldingStep?.legalBasis` — **엔진 sub-step의 `legalBasis`(`transfer-tax-lthd-steps.ts:96`·`:103` = `"소득세법 §95 ②"`)를 그대로 인쇄** |
 | G-13 | `transfer-tax-validate-asset.ts:310-312` | `isMixedUseHouse === true` **조기 return** |
 | G-14 | `Step4.tsx:440-448` | 수동 ToggleCard `wasRegulatedAtAcquisition`. `regionCode` 없는 fallback에서 **이 값이 실질 판정** |
-| **G-15** | `Step4.tsx:68` `primary = form.assets?.[0]` | **Step4 전체가 assets[0] 전용** — 조정대상지역 토글(:440)·거주기간 섹션(:469, `i === 0`만 갱신)·거주요건 경고(:487)·`regulatedAutoTip`(:297). `transfer-tax-api.ts:50`·`:353`도 primary만 읽는다 |
+| **G-15** | `Step4.tsx:68` `primary = form.assets?.[0]` | **Step4 전체가 assets[0] 전용** — 조정대상지역 토글(:440)·거주기간 섹션(:469, `i === 0`만 갱신)·거주요건 경고(:487)·`regulatedAutoTip`(:297). `transfer-tax-api.ts:55`·`:358`도 primary만 읽는다 |
 
 ### 갭이 만드는 오답
 
@@ -221,7 +221,7 @@ calcLongTermRate(holdingYears, residenceYears, useTable2, lthdExcluded = false)
 
 ### D-8 보충 — L-1b(부수토지)를 제외하는 이유
 
-L-1b는 `transfer-tax-helpers.ts:469-472`가 **`propertyType === "land" && landNature === "appurtenant_to_housing"`**를 요구하고, `landNature`는 `transfer-tax-api.ts:704`가 **`primary.assetKind === "land"`일 때만** 전송한다. 이 기능의 토글은 `assetKind === "housing"` 전용이므로 **같은 `TransferTaxInput`에 공존 불가**다(부수토지는 별도 컴패니언 자산). 차단 코드를 넣으면 **dead validation**이 되어 CLAUDE.md 전역 "불가능한 시나리오에 대한 에러 핸들링 금지" 위반이다.
+L-1b는 `transfer-tax-helpers.ts:469-472`가 **`propertyType === "land" && landNature === "appurtenant_to_housing"`**를 요구하고, `landNature`는 `transfer-tax-api.ts:579`가 **`primary.assetKind === "land"`일 때만** 전송한다. 이 기능의 토글은 `assetKind === "housing"` 전용이므로 **같은 `TransferTaxInput`에 공존 불가**다(부수토지는 별도 컴패니언 자산). 차단 코드를 넣으면 **dead validation**이 되어 CLAUDE.md 전역 "불가능한 시나리오에 대한 에러 핸들링 금지" 위반이다.
 
 ---
 
@@ -249,12 +249,12 @@ L-1b는 `transfer-tax-helpers.ts:469-472`가 **`propertyType === "land" && landN
 | **C-16** | 토글 ON + 주거용 사용 개시일 공란 | **차단**. ④ 변환 조건과 **동일 술어**(§8 인자 동일성 표) |
 | ~~C-17~~ | ~~부수토지 일체과세~~ | **삭제** — 구조적 성립 불가 (D-8 보충) |
 | **C-18** | 토글 ON + 장기임대 특례율 | **차단**. ⚠️ 판별은 폼값 `asset.reductions`의 `type === "rental_97_3" \| "rental_97_4"`(`calc-wizard-asset-reduction.ts:167·179`) — 엔진 `rentalReductionDetails`는 **폼에 없어 validate가 볼 수 없다** |
-| **C-19** | 토글 ON + 토지/건물 분리취득 | **차단**(`hasSeperateLandAcquisitionDate` — `calc-wizard-asset.ts:392`) **+ 엔진 가드 `!splitDetail`** — 엔진 단독 호출은 validate를 거치지 않는다(design I-15) |
+| **C-19** | 토글 ON + 토지/건물 분리취득 | **차단**(`hasSeperateLandAcquisitionDate` — `calc-wizard-asset.ts:395`) **+ 엔진 가드 `!splitDetail`** — 엔진 단독 호출은 validate를 거치지 않는다(design I-15) |
 | **C-20** | 토글 ON + §98의2 / §97의3·의4 | **차단**. `unsold_98_2`(`calc-wizard-asset-reduction.ts:320`)·`rental_97_3`·`rental_97_4` |
 | **C-21** | 토글 ON + 취득원인 상속·증여·이월과세 | **차단**. §154⑧3호 통산과의 우선순위 명문 없음(§11 R-C). **해소 시 최우선 확장 대상** |
 | **C-22** | 토글 ON + 미등기(L-0) / 중과 적용 중(L-1) | LTHD 배제가 **우선** — 현행 유지(토글 유무와 결과 동일하므로 차단 불요) |
 | **C-23** | `redevelopment_apt` · `right_to_move_in` · `presale_right` | **UI 미노출**(진입이 `housing` 한정) |
-| **C-24** | 토글 ON + 부담부증여 | **차단**. `transferType`(`calc-wizard-asset.ts:221`) |
+| **C-24** | 토글 ON + 부담부증여 | **차단**. `transferType`(`calc-wizard-asset.ts:224`) |
 | **C-25** | 토글 ON + 공동소유 지분 | 지분 안분은 공제율과 직교 → **지원**. Phase B 단위 테스트 |
 | **C-26** | 토글 ON + **비-primary 자산**(assets[1..]) | **UI 미노출**(D-3) — Step4의 거주기간·조정대상지역이 전부 assets[0] 전용이라 거주분이 항상 0이 된다(G-15) |
 
@@ -269,7 +269,7 @@ L-1b는 `transfer-tax-helpers.ts:469-472`가 **`propertyType === "land" && landN
 | input | `nonHousingToHousingConversion?: { residentialUseStartDate: Date; residenceMonthsTrimmed: number }` | design §엔진 input |
 | 판정 입력 Pick | `ResidenceReqInput`(`transfer-tax-exemption.ts:119-131`)에 필드 추가 — **R-2·R-3 선행** | design §엔진 input |
 | result echo | `usageConversionDetail`(8필드, 전부 string/number, **공제율은 정수 %**) | design §엔진 result |
-| **전파 6지점** | `LongTermHoldingResult`(비-export) → `transfer-tax.ts:509` 구조분해 → `:783` 조립 → `TransferTaxResult` → Pick 목록 → pick 함수. 선례 `rental97LthdDetail` | design §전파 6지점 |
+| **전파 6지점** | `LongTermHoldingResult`(비-export) → `transfer-tax.ts:428` 구조분해 → `:783` 조립 → `TransferTaxResult` → Pick 목록 → pick 함수. 선례 `rental97LthdDetail` | design §전파 6지점 |
 | 기간 분해 | **`calcUsagePeriodInfo` 정본 위임** — 신규 leaf `usage-period-info.ts`로 추출 + re-export(기존 import 무변경) | design §헬퍼 1 |
 | 공제율 | 🔴 **`calcLongTermRate`(`transfer-tax-mixed-use-inheritance.ts:26-47`) 정본 위임** — 신규 추출 없음. **3년 가드가 함수 내장** | design §헬퍼 2 |
 | 산술 | 🔴 **분수 정수 연산 필수** — `applyRateFraction(taxableGain, 정수%, 100)`. 소수 rate 합산은 1원 과소(78/17,576 조합) | design §분수 정수 연산 |
@@ -285,7 +285,7 @@ L-1b는 `transfer-tax-helpers.ts:469-472`가 **`propertyType === "land" && landN
 | # | 지점 | 파일 | 작업 |
 |---|---|---|---|
 | **⓪** | 판정 입력 Pick 확장 | `transfer-tax-exemption.ts` | §7.3(f) — **R-2·R-3 선행** |
-| ① | 폼 상태 | 🔴 **신규** `calc-wizard-asset-usage-conversion.ts` | `UsageConversionFormSlice` → `AssetForm extends`(`calc-wizard-asset.ts:58`) |
+| ① | 폼 상태 | 🔴 **신규** `calc-wizard-asset-usage-conversion.ts` | `UsageConversionFormSlice` → `AssetForm extends`(`calc-wizard-asset.ts:61`) |
 | ② | initial | `calc-wizard-asset-factory.ts:62` | `false` / `""` |
 | ③ | normalize | `calc-wizard-asset-migrate.ts` | backfill. ⚠️ **유일한 안전망 아님** — 현행 포맷 sessionStorage·IndexedDB 로드에는 안 돈다 |
 | ④ | API 변환 | `transfer-tax-api.ts` | 객체 생성 + **거주 클램프**(§7.2). 접근부 가드 `?? false`·`?? ""` |
@@ -298,23 +298,29 @@ L-1b는 `transfer-tax-helpers.ts:469-472`가 **`propertyType === "land" && landN
 | ⑪ | 자산-수준 fallback | **`lib/calc/transfer-tax-api.ts`**(`:100`·`:113`·`:238`) | ~~route.ts~~ 경로 정정 |
 | ⑫ | **Zod 입력 객체** | ⚠️ **Phase 0에서 경로 확정** | 선례 `houseToCommercialConversion`은 `-schema-sub.ts`가 아니라 **`transfer-tax-building-schemas.ts:206`**에 있다. 메인·컴패니언 양쪽 |
 | ⑬ | body spread | `transfer-tax-api.ts` | `callTransferTaxAPI` body |
-| ⑭ | Route 매핑 | `app/api/calc/transfer/route.ts` | `residentialUseStartDate`는 `toDate()`, **`residenceMonthsTrimmed`는 number 그대로**. 선례 `general-building-route-helper.ts:184-188`이 필드별 명시 매핑 |
+| ⑭ | Route 매핑 | **`app/api/calc/transfer/engine-input.ts`**(A-0 분리 — `buildTransferEngineInput`) | `residentialUseStartDate`는 `toDate()`, **`residenceMonthsTrimmed`는 number 그대로**. 선례 `general-building-route-helper.ts:184-188`이 필드별 명시 매핑 |
 
-### 파일 크기 — Phase A-0 대상 (**이 기능이 실제로 여는 파일 ∩ ≥750**)
+### 파일 크기 — Phase A-0 ✅ **완료** (2026-08-04)
 
-| 파일 | 현재 | 근거 | 조치 |
+| 파일 | 전 → 후 | 근거 | 분리 산출물 |
 |---|---|---|---|
-| `lib/stores/calc-wizard-asset.ts` | **838** | ① extends 추가 | 신규 슬라이스로 회피 + 본체 분리 |
-| `lib/calc/transfer-tax-api.ts` | **836** | ④⑪⑬ + 클램프 | **선분리** |
-| `lib/api/transfer-tax-schema-sub.ts` | **829** | ⑫(경로 확정 시) | 선분리 |
-| `lib/tax-engine/transfer-tax.ts` | **805** | G-6 §9.3 | 선분리 |
-| `lib/tax-engine/transfer-tax-aggregate.ts` | **783** | §7.4 전파 3 | 기회주의적 분리 |
-| `lib/tax-engine/transfer-tax-helpers.ts` | 751 | §7.3(a)(b) 대폭 개조 | 기회주의적 분리 — ⚠️ **§4 앵커 무효화**(아래) |
-| `app/api/calc/transfer/route.ts` | 756 | ⑭ | 기회주의적 분리 |
+| `lib/stores/calc-wizard-asset.ts` | 838 → **668** | ① extends 추가 | `-nbl-judgment.ts`(96, `NblJudgmentFormSlice`) · `-cb.ts`(100, `CommercialBuildingFormSlice`) — **슬라이스 패턴 계승**(기존 6 → 8) |
+| `lib/calc/transfer-tax-api.ts` | 836 → **692** | ④⑪⑬ + 클램프 | `-body-blocks.ts`(189) — body spread 4군(세대 특례 3종·가산세/수정신고·PHD·신축 4시점). 선례 `buildReplacementHousePayload` |
+| `lib/api/transfer-tax-schema-sub.ts` | 829 → **631** | ⑫ | `transfer-tax-schema-nbl.ts`(207) — NBL raw 페이로드 스키마군. 동명 re-export로 하위 호환 |
+| `lib/tax-engine/transfer-tax.ts` | 805 → **676** | G-6 §9.3 | `-lthd-steps.ts`(108, **표시 계층**) · `-judgment-steps.ts`(110, STEP 0.5·0.6) · `buildGainFormula` → `-taxable-gain.ts` |
+| `lib/tax-engine/transfer-tax-aggregate.ts` | 783 → **607** | §7.4 전파 3 | `-pickers.ts`(196) — picker 6종 + 세율군 1-pass 집계 |
+| `app/api/calc/transfer/route.ts` | 756 → **452** | ⑭ | `engine-input.ts`(341) — **⑭ 전용 모듈**. 침묵 strip 경고를 파일 헤더에 명시 |
+| `lib/tax-engine/transfer-tax-helpers.ts` | 751 (유지) | §7.3(a)(b) 개조 | **분리하지 않았다** — 800 미만이고 §7.3이 여는 구간(`:428-547`)이 응집 단위다. 개조 후 800 초과 시 그때 분리 |
 
 **제외**: `transfer-tax-schema.ts`(765) — ⑨가 N/A라 **열지 않는다**(Surgical). `transfer-tax-validate-asset.ts`(745) — **700~749 안정 구간**이라 CLAUDE.md가 "미리 쪼개면 순수 낭비"로 규정. `types/transfer.types.ts`(784)·`transfer-result.types.ts`(422) — **타입 전용 파일 예외**.
 
-> ⚠️ **A-0가 §4 G-1·G-2·G-6·G-8과 §7.3의 행 번호 앵커를 전부 무효화한다.** A-0 verify에 **"앵커 재실측 후 계획서 갱신"**을 포함한다. A-0는 **별도 커밋**(가능하면 별도 PR)으로 두어 기능 diff와 섞지 않는다.
+> ✅ **A-0 verify 통과**: `npx tsc --noEmit` 0건 · `npm run test:transfer` 전건 통과 · lint warning 140 → **137**(순감) · 대상 6파일 전부 ≤700 · **행 번호 앵커 3문서 34곳 재실측 갱신 완료**.
+>
+> **A-0가 만든 두 가지 실질 이득** (단순 줄 수 감축이 아니다):
+> 1. **`transfer-tax-lthd-steps.ts`가 §95⑤ 표시 계층 결함의 단일 수정 지점**이 됐다 — 종전에는 805줄 orchestrator 한가운데 흩어져 있었다.
+> 2. **`engine-input.ts`가 ⑭를 독립 파일로 격리**해 침묵 strip 자가 점검(grep)의 대상이 명확해졌다.
+>
+> 회귀 가드 1건 경로 정정: `transfer.route.bundled-swallows-special.test.ts`가 picker를 **소스 텍스트로 읽으므로** 파일 경로를 `-pickers.ts`로 갱신했다(테스트 자체는 불변 — 계약↔주입 1:1 강제 유지).
 
 ### ⑫⑬⑭ 침묵 strip 자가 점검
 
@@ -348,7 +354,7 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 | 미리보기 | 엔진 헬퍼 **직접 import**(재구현 금지) · `useMemo` 순수 |
 | Step4 연동 | 조정대상지역 토글 라벨·`regulatedAutoTip`·배너(최대 80%→40%)·거주요건 경고 4항목 — **Phase D**(R-3과 같은 단위) |
 | 결과 | `<PrintSection id="calculation">`(`TransferTaxResultView.tsx:293-474`) 내부 → **신규 print leaf 불요**. echo 없으면 **미렌더** |
-| 표시 계층 | 🔴 본 step 산식(`transfer-tax.ts:541-549`·`:556`) + sub-step **금액**(`:564-591`) + `legalBasis`(`:580`·`:587`) 분기 — engine.design §표시 계층 |
+| 표시 계층 | 🔴 본 step 산식(`transfer-tax-lthd-steps.ts:57-65`·`:556`) + sub-step **금액**(`:564-591`) + `legalBasis`(`:580`·`:587`) 분기 — engine.design §표시 계층 |
 | E2E | **sessionStorage 시드 방식**(`commercial-building-97-2-swap.spec.ts:40-65`) — 표2 게이트 충족 필드 전건 필요 |
 
 ## 10. Phase 분할
@@ -356,7 +362,7 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 | Phase | 내용 | verify |
 |---|---|---|
 | **0** | ~~V-2·V-3 해소~~ · V-4 처리 · ⑫ Zod 경로 확정 · **PDF 사례 30 anchor 작성 후 현행 엔진 실행** | anchor **실패** + 실패 메시지가 예상 갭과 일치. **V-4 미확보 시 총 보유기간 기준 확정**. ⑫ 파일 경로 기재 |
-| **A-0** | 선분리 7파일(§8 표) — **별도 커밋** | `npx tsc --noEmit` 0건 · `npm run test:transfer` 통과 · 대상 ≤700 · **§4·§7.3 행 번호 앵커 재실측 후 계획서 갱신** |
+| **A-0** ✅ | 선분리 6파일(§8 표) — **별도 커밋** | ✅ `npx tsc --noEmit` 0건 · `npm run test:transfer` 전건 통과 · 대상 ≤700 · 행 번호 앵커 3문서 재실측 갱신 완료 |
 | **A** | `calcUsagePeriodInfo` leaf 추출 · `rateForYears` 분해(가드 보존) · G-8 2곳 위임 · `calcConversionHoldingRate`(구간 가드) · 상수 2종 · 법령 상수 추가 | **`npm run test:transfer`**(`package.json:14`, ~59초) 전건 통과. 🔴 **필수 케이스 2건**: ⓐ 비주택 2년·주택 5년 → 표1 **0%** + 표2 20% (가드 내장 확인) ⓑ **분수 정수 연산** — 비주택 3년·주택 4년·거주 3년 → 34% → 장특 **60,703,600**(소수 연산이면 60,703,599) |
 | **B** | R-1 혼합 분기 + echo + 전파 3지점 | anchor **장특 57,132,800** 통과. C-5·C-6·C-7·C-25 · **2025-01-01 정확일 경계**. `transfer.route.bundled-swallows-special.test.ts` 통과. *엔진 단위 테스트로만 — 화면 확인은 Phase E 이후* |
 | **C** | ⓪ Pick 확장 → R-2 §154⑤ 분기 + 2024-03-01 게이트 | C-11 · **2024-03-01 경계**. 기존 §154⑧3호 상속 테스트 회귀 0 |
@@ -397,7 +403,7 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 - `types/transfer.types.ts`(input) · `types/transfer-result.types.ts`(result echo + `TransferValuationDetailSource`)
 - `transfer-tax-aggregate.ts` — `pickValuationDetails`
 - `transfer-tax.ts` — §9.3 sub-step 문구·`legalBasis`
-- **A-0 분리 산출물**: 7파일의 분리 축(orchestrator/helpers/types/sections)과 신규 파일명은 **Phase A-0에서 확정**
+- **A-0 분리 산출물 ✅ 확정**(2026-08-04): `calc-wizard-asset-{nbl-judgment,cb}.ts` · `transfer-tax-api-body-blocks.ts` · `transfer-tax-schema-nbl.ts` · `transfer-tax-{lthd-steps,judgment-steps,aggregate-pickers}.ts` · `app/api/calc/transfer/engine-input.ts` — 총 8파일 신규(§8 표)
 
 **법령 상수**
 - `legal-codes/transfer.ts` — 기존 표기 규칙 준수: **`"소득세법 §95 ⑤"`**(조·항 사이 공백 — `:207` `LONG_TERM_DEDUCTION: "소득세법 §95 ②"` 선례)
@@ -439,7 +445,7 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 |---|---|---|
 | 1 | **V-4** 표2 거주 "보유 3년 이상 한정"의 지시 대상 (C-5) | 0 |
 | 2 | ⑫ Zod 정의 파일 경로 확정 | 0 |
-| 3 | **A-0 후 행 번호 앵커 재실측 + 계획서 갱신** | A-0 |
+| ~~3~~ | ~~A-0 후 행 번호 앵커 재실측 + 계획서 갱신~~ | ✅ **완료**(2026-08-04) — 3문서 34곳 |
 | **a** | §9.2 요약행(`:100`) — 상세 카드 연결 vs 라벨 병기 **택일** | G |
 | **b** | §9.2 상세 카드 **접힘형 여부** (접힘이면 `print-only-css-toggle` 필수) | G |
 

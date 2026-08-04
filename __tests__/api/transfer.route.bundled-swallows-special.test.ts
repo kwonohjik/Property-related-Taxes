@@ -302,7 +302,8 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
       ),
     ].sort();
 
-    const engineSrc = readFileSync("lib/tax-engine/transfer-tax-aggregate.ts", "utf8");
+    // picker 2종은 800줄 정책으로 `-pickers.ts`로 분리됐다(2026-08-04, Phase A-0).
+    const engineSrc = readFileSync("lib/tax-engine/transfer-tax-aggregate-pickers.ts", "utf8");
     const body = engineSrc.slice(engineSrc.indexOf(`function ${fnName}`));
     const picked = [
       ...new Set([...body.slice(0, body.indexOf("\n}")).matchAll(/^\s+(\w+):/gm)].map((m) => m[1])),
