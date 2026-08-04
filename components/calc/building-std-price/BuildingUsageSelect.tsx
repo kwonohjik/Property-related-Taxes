@@ -28,7 +28,11 @@ export function BuildingUsageSelect({ year, value, onChange, placeholder = "용�
           {selected ? `${selected.label} (지수 ${selected.index})` : placeholder}
         </span>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent
+        align="end"
+        alignItemWithTrigger={false}
+        className="w-auto max-w-[min(92vw,44rem)] min-w-(--anchor-width) [&_[data-slot=select-item]]:items-start [&_[data-slot=select-item]>div]:whitespace-normal"
+      >
         {options.map((o) => (
           <SelectItem key={o.no} value={String(o.no)}>
             {o.no}. {o.label} (지수 {o.index})
