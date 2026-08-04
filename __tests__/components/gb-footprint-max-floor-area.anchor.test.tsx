@@ -42,18 +42,29 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 
 import { GeneralBuildingBlock } from "@/components/calc/transfer/GeneralBuildingBlock";
+import { AssetAreaGeneralBuilding } from "@/components/calc/transfer/asset-sections/AssetAreaGeneralBuilding";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(() => cleanup());
 
+/**
+ * 면적 입력 위젯이 ① 기본정보로 이전됐으므로(2026-08-04) **두 컴포넌트를 함께** 렌더한다.
+ * 사용자가 한 화면에서 보는 것과 같은 구성이며, 바닥면적 안내가 입력 라벨(①)과
+ * 비사업용토지 산식 설명(③) 양쪽에 걸려 있다는 계약은 그대로 유지된다.
+ */
 function renderGb(over: Partial<AssetForm> = {}) {
   const asset: AssetForm = {
     ...makeDefaultAsset(1),
     assetKind: "general_building",
     ...over,
   } as AssetForm;
-  render(<GeneralBuildingBlock asset={asset} onChange={vi.fn()} />);
+  render(
+    <>
+      <AssetAreaGeneralBuilding asset={asset} onChange={vi.fn()} />
+      <GeneralBuildingBlock asset={asset} onChange={vi.fn()} />
+    </>,
+  );
 }
 
 // ══════════════════════════════════════════════════════════

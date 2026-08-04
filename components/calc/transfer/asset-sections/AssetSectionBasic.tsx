@@ -34,6 +34,10 @@ import {
   AssetAreaCommercial,
   isCommercialAreaAsset,
 } from "./AssetAreaCommercial";
+import {
+  AssetAreaGeneralBuilding,
+  isGeneralBuildingAreaAsset,
+} from "./AssetAreaGeneralBuilding";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
 import {
   ReplotReductionFields,
@@ -478,13 +482,21 @@ export function AssetSectionBasic({
       {(areaScenarioOptions(asset).length > 0 ||
         showFloorArea(asset) ||
         showFootprintArea(asset) ||
-        isCommercialAreaAsset(asset)) && (
+        isCommercialAreaAsset(asset) ||
+        isGeneralBuildingAreaAsset(asset)) && (
         <div className="space-y-3">
           {/* ── 상업용건물·오피스텔 전용 면적 3축 (전용·공유·대지) ──────────
               취득원인 무관 단일 입력. 종전에는 CommercialBuildingBlock(비상속)과
               CommercialInheritanceStdPriceSection(상속)이 같은 3필드를 각각 렌더했다. */}
           {isCommercialAreaAsset(asset) && (
             <AssetAreaCommercial asset={asset} onChange={onChange} />
+          )}
+
+          {/* ── 일반건물 전용 면적 (토지·연면적·바닥면적) ──────────────────
+              ⚠️ 「건축물 바닥면적」(건축법 시행령 §119①3호)은 주택 「정착면적」
+                 (소득세법 §89①3호)과 **다른 법령 개념**이다 — 통합 금지. */}
+          {isGeneralBuildingAreaAsset(asset) && (
+            <AssetAreaGeneralBuilding asset={asset} onChange={onChange} />
           )}
           {/* ── 축 A: 토지 면적 (시나리오 분기) ──────────────────────────
               ⛔ **자산유형별로 축 A를 끄는 예외를 만들지 말 것**(2026-07-30 U-12).
