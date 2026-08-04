@@ -88,13 +88,7 @@ function VacancyPortionFields({
       onCheckedChange={setOpen}
     >
       <div className="space-y-2">
-        <FieldCard label="전체 건물 연면적 (㎡)" hint="건물기준시가 계산서의 연면적 합계">
-          <DecimalInput
-            value={item.totalBuildingArea != null ? String(item.totalBuildingArea) : ""}
-            onChange={(v) => set({ totalBuildingArea: parseDecimal(v) || undefined })}
-            placeholder="전체 건물 연면적"
-          />
-        </FieldCard>
+        {/* 전체 건물 연면적은 §61 경로 B 공통 입력으로 올렸다(계산기 prefill 공유) — 여기서는 미임대분만 받는다. */}
         <FieldCard label="미임대 건물 연면적 (㎡)" hint="공실(미임대) 층의 연면적 합계">
           <DecimalInput
             value={item.vacantBuildingArea != null ? String(item.vacantBuildingArea) : ""}
@@ -233,6 +227,18 @@ export function EstateBodySupplementaryValuation({
               : ""
           }
         />
+        {/* 건물 정보 — 계산기 prefill + §61⑤ 공실 안분 분모 공용(단일 소스).
+            경로 B(건물+부수토지 분리)에서만 의미가 있다: 경로 A는 토지·건물 일괄고시 1개 값이라
+            연면적으로 쪼개지 않는다. */}
+        {cat === "real_estate_building" && separateLandMode && (
+          <FieldCard label="전체 건물 연면적 (㎡)" hint="건물기준시가 계산서의 연면적 합계">
+            <DecimalInput
+              value={item.totalBuildingArea != null ? String(item.totalBuildingArea) : ""}
+              onChange={(v) => set({ totalBuildingArea: parseDecimal(v) || undefined })}
+              placeholder="전체 건물 연면적"
+            />
+          </FieldCard>
+        )}
         {(cat === "real_estate_building"
           ? separateLandMode
           : propertyKind !== "land") && (
@@ -242,6 +248,12 @@ export function EstateBodySupplementaryValuation({
               lockedTaxType="inheritance_gift"
               initialAddress={addrValue}
               snapshotKey={`bsp-estate-${item.id}`}
+              prefill={{
+                floorArea:
+                  item.totalBuildingArea != null ? String(item.totalBuildingArea) : undefined,
+                landAreaM2:
+                  item.appurtenantLandArea != null ? String(item.appurtenantLandArea) : undefined,
+              }}
               onApply={(v, land) =>
                 set({
                   standardPrice: v,
@@ -273,6 +285,10 @@ export function EstateBodySupplementaryValuation({
               }
               pricePerSqm={appurtenantLandPricePerSqm}
               onPricePerSqmChange={setAppurtenantLandPricePerSqm}
+              // 면적은 store에 저장한다 — 미주입 시 StandardPriceInput 내부 state로만 남아
+              // 카드를 닫으면 사라지고(총액·단가만 복원) 계산기 prefill에도 넘길 값이 없다.
+              area={item.appurtenantLandArea != null ? String(item.appurtenantLandArea) : ""}
+              onAreaChange={(v) => set({ appurtenantLandArea: parseDecimal(v) || undefined })}
               jibun={addrValue.jibun}
               label=""
               enableLookup={true}
