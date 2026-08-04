@@ -27,11 +27,8 @@ export function BuildingStructureSelect({ year, value, onChange, placeholder = "
           {selected ? `${selected.label} (지수 ${selected.index})` : placeholder}
         </span>
       </SelectTrigger>
-      <SelectContent
-        align="end"
-        alignItemWithTrigger={false}
-        className="w-auto max-w-[min(92vw,44rem)] min-w-(--anchor-width) [&_[data-slot=select-item]]:items-start [&_[data-slot=select-item]>div]:whitespace-normal"
-      >
+      {/* 폭만 넓힌다 — 이유는 BuildingUsageSelect 주석 참조(alignItemWithTrigger 회귀). */}
+      <SelectContent className="w-auto max-w-[min(92vw,44rem)] min-w-(--anchor-width) [&_[data-slot=select-item]]:items-start [&_[data-slot=select-item]>div]:whitespace-normal">
         {options.map((o) => (
           <SelectItem key={o.key} value={o.key}>
             {o.label} (지수 {o.index})
