@@ -119,6 +119,8 @@ export function MixedUseAssetMajorStdPrice({
     lng: asset.longitude,
     lat: asset.latitude,
     pnu: asset.addressPnu,
+    dong: asset.addressDong || undefined,
+    ho: asset.addressHo || undefined,
   };
   // snapshotKey는 대상 필드 기준 — 취득·양도 통합 단일 키.
   // ⚠️ `bsp-{id}-phd-…`를 쓰면 안 된다: 주택분 배치 모달(MultiPointBuildingStdPriceModal)이

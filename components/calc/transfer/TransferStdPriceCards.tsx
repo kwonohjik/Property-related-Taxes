@@ -131,6 +131,8 @@ export function TransferBuildingStdFields({
               lng: asset.longitude,
               lat: asset.latitude,
               pnu: asset.addressPnu,
+              dong: asset.addressDong || undefined,
+              ho: asset.addressHo || undefined,
             }}
             // 「건물 기준시가 계산서」 서식 출력의 스냅샷 소스 — 키가 없으면 서식이 비어 출력된다.
             snapshotKey={`bsp-${asset.assetId}-split-transfer`}

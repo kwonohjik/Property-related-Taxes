@@ -55,6 +55,8 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
     lng: asset.longitude,
     lat: asset.latitude,
     pnu: asset.addressPnu,
+    dong: asset.addressDong || undefined,
+    ho: asset.addressHo || undefined,
   };
 
   return (

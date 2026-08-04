@@ -66,6 +66,8 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
     lng: asset.longitude,
     lat: asset.latitude,
     pnu: asset.addressPnu,
+    dong: asset.addressDong || undefined,
+    ho: asset.addressHo || undefined,
   };
 
   // ── P4: 취득·양도 2시점 일괄 계산(배치) 배선 — 계획서 §4.2·§5 P4 ────────────
