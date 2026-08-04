@@ -18,9 +18,14 @@
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import type {
+  AggregateTransferInput,
+  TransferTaxItemInput,
+} from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 const rates = makeMockRates();
 
@@ -308,6 +313,59 @@ describe("R-3 거주요건 판정 시점 — 주택이 된 날 기준 (Phase D)"
       rates,
     );
     expect(r.isExempt).toBe(false); // 거주 0 → 요건 미충족
+  });
+});
+
+describe("Phase H — 다자산 경로·이력 왕복", () => {
+  it("다자산에서도 primary 자산의 §95⑤이 적용된다", () => {
+    // Phase E에서 request body 도달은 고정했으나 **엔진 결과**는 미확인이었다.
+    // 함께 양도한 토지가 있어도 주 자산의 혼합 공제율은 단건과 같아야 한다.
+    const primary: TransferTaxItemInput = {
+      ...(conv(toggle("2022-11-25")) as unknown as TransferTaxItemInput),
+      propertyId: "primary",
+      propertyLabel: "오피스텔",
+    };
+    const land: TransferTaxItemInput = {
+      ...(baseTransferInput({
+        propertyType: "land",
+        transferPrice: 300_000_000,
+        acquisitionPrice: 250_000_000,
+        acquisitionDate: new Date("2018-06-01"),
+        transferDate: new Date("2026-01-27"),
+        isOneHousehold: false,
+        householdHousingCount: 0,
+      }) as unknown as TransferTaxItemInput),
+      propertyId: "land-1",
+      propertyLabel: "토지",
+    };
+    const input: AggregateTransferInput = {
+      taxYear: 2026,
+      annualBasicDeductionUsed: 0,
+      properties: [primary, land],
+    };
+
+    const r = calculateTransferTaxAggregate(input, rates);
+    const p = r.properties.find((x) => x.propertyId === "primary")!;
+
+    expect(p.longTermHoldingDeduction).toBe(57_132_800); // 단건과 동일
+    expect(p.usageConversionDetail).toMatchObject({
+      nonHousingYears: 4,
+      housingYears: 3,
+      table1Pct: 8,
+      table2HoldingPct: 12,
+      residencePct: 12,
+    });
+  });
+
+  it("★ 이력 JSON 왕복 후에도 echo가 살아남는다", () => {
+    // 결과는 IndexedDB에 JSON으로 저장·복원된다. `residentialUseStartDate`를 Date로 두면
+    // 왕복 후 문자열이 되어 결과 카드가 깨진다 — 그래서 처음부터 string으로 설계했다.
+    const r = calculateTransferTax(conv(toggle("2022-11-25", 5)), rates);
+    const revived = JSON.parse(JSON.stringify(r)) as typeof r;
+
+    expect(revived.usageConversionDetail).toEqual(r.usageConversionDetail);
+    expect(typeof revived.usageConversionDetail!.residentialUseStartDate).toBe("string");
+    expect(revived.usageConversionDetail!.residenceMonthsTrimmed).toBe(5);
   });
 });
 

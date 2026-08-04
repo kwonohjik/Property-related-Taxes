@@ -278,9 +278,21 @@ sub-step `"보유 기간분 장특"`·`"거주 기간분 장특"`은 **신고서
 
 ---
 
-## 6. E2E (Phase H)
+## 6. E2E (Phase H ✅ 완료 2026-08-05)
 
-`e2e/non-housing-to-housing-conversion.spec.ts`
+`e2e/non-housing-to-housing-conversion.spec.ts` — **5건 전건 통과**
+
+| # | 케이스 | 검증 |
+|---|---|---|
+| 1 | 입력 미리보기 | 총 7년 11개월 · 표1 8% · 표2 12% · 합계 20% · 캡 미발동 |
+| 2 | §95⑤1호 단서 | 표1 24% + 표2 32% = 56% → **40%** + 캡 안내 |
+| 3 | 시행일 게이트 | 양도일 2024-12-31이면 미리보기 대신 안내 |
+| 4 | ★ 계산 결과 | 상세 카드 · 산식 자기일관 · 57,132,800 · **35,708,000/21,424,800** · 26,177,520 · 2,617,752 |
+| 5 | 회귀 0 | 토글 OFF → 종전 표2 경로(71,416,000) · 상세 카드 미렌더 |
+
+> 🔴 **시드 후 `expandAssetSection(page, 3)`이 필수다.** 위젯이 자산 카드 ③ 취득 섹션 안에 있어
+> 접힌 채로는 DOM에만 있고 보이지 않는다. `toHaveText`는 hidden에서도 통과하므로 이 누락이
+> **테스트를 조용히 약하게** 만든다 — `toBeVisible` 단언에서만 드러났다.
 
 ⚠️ **sessionStorage 시드 방식**이 양도세 E2E 정본이다 (`commercial-building-97-2-swap.spec.ts:52-58` — `page.evaluate(sessionStorage.setItem("transfer-tax-wizard", …))` + `makeDefaultAsset` import). `addAssetByType` 헬퍼는 **상속세 전용**(`asset-toggle-visibility-precision.spec.ts:35` — `estate-edit-dialog` 대기)이라 쓸 수 없다.
 

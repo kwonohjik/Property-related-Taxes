@@ -370,7 +370,7 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 | **E** ✅ | ④⑨~⑭ API·Zod·Route + 거주 클램프 | ✅ body 도달 **단건·다자산** · ⑫⑬⑭ grep 3계층 hit · Zod 날짜순서 400(C-8·C-9) · 클램프 6케이스 · **C-10c 세액 변경 고정** · `npm test` **13,394건 전건** |
 | **F** ✅ | ~~①②③~~ ⑤⑧ UI 위젯 + validation | ✅ validation **18건**(C-8·C-9·C-14·C-16·C-18~C-21·C-24 + 배치 고정 3건) · **브라우저 실동작 확인**(미리보기 20%·40% 캡·시행일 게이트 3화면 스크린샷) · `check-tone-classes.sh`·`check-font-sizes.sh` 통과 · `npm test` **13,412건** · lint 0 error |
 | **G** ✅ | ⑦ 결과 카드 + §9.3 문구 분기 | ✅ **표시 계층 금액 정정**(보유분 39,992,960 → **35,708,000**) · 산식 자기일관(20+12=32) · `legalBasis` §95⑤ · 신규 상세 카드 · **브라우저 결과 화면 확인** · 미결 a·b 확정 · `npm test` **13,412건** |
-| **H** | 통합 anchor + E2E | 산출세액 **26,177,520** · 지방소득세 **2,617,752**. E2E는 **sessionStorage 시드 방식**(§12) |
+| **H** ✅ | 통합 anchor + E2E | ✅ 산출세액 **26,177,520** · 지방소득세 **2,617,752**(Phase B부터 고정 유지) · **E2E 5건**(`non-housing-to-housing-conversion.spec.ts`) · 통합 anchor 보강 **2건**(다자산 경로 · 이력 JSON 왕복) |
 
 ---
 
@@ -457,6 +457,8 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 ---
 
 ## 14. 개정 이력
+
+**v12 (2026-08-05)** — **Phase H 완료 ⇒ 기능 전 구간 종결**. E2E 5건 + 통합 anchor 보강 2건(**다자산 경로**에서 primary의 §95⑤ 적용 · **이력 JSON 왕복** 후 echo 생존). 🔴 **E2E 함정**: 시드 후 `expandAssetSection(page, 3)`을 빠뜨리면 위젯이 접힌 채라 `toBeVisible`이 실패한다 — `toHaveText`는 hidden도 통과해 **검증이 조용히 약해진다**. 전 Phase(0·A-0·A~H) 완료: `npm test` **13,414건** · E2E 5건 · tsc 0 · lint 0 error.
 
 **v11 (2026-08-05)** — **Phase G 완료**. 🔴 **표시 계층이 문구가 아니라 금액을 틀리고 있었다** — 종전 표2 경로가 총 보유 7년으로 안분해 보유분 39,992,960(정확값 **35,708,000**)을 냈고 문구도 "28%+12%=32%" 자기모순이었다. ✅ **G-12 8곳 → 실제 3곳**: `DetailedStatementHelpers`가 엔진 sub-step을 우선 소비하므로 엔진만 고치면 명세서·신고서가 자동 추종한다(신고서 2파일은 **라벨 정의만**이라 불요). 신규 상세 카드 + 미결 **a·b 확정**(연결 불요·접지 않음). `DetailedStatementHelpers.ts` 803줄 초과 → fallback 산식을 `DetailedStatementLthdFormulas.ts`로 분리(791).
 
