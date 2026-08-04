@@ -9,7 +9,7 @@
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { PhdBuildingStdPriceModalButton } from "../../components/calc/building-std-price/PhdBuildingStdPriceModalButton";
+import { MultiPointBuildingStdPriceModal } from "../../components/calc/building-std-price/MultiPointBuildingStdPriceModal";
 
 afterEach(cleanup);
 
@@ -25,7 +25,7 @@ const BUILT_YEAR_ERROR = "신축연도를 입력하세요.";
 /** Case A 결합 모달 렌더 + 열기 — 자동 시드로 주택+상가 2행 상태로 시작 */
 function openCaseAModal() {
   render(
-    <PhdBuildingStdPriceModalButton
+    <MultiPointBuildingStdPriceModal
       points={points}
       onApply={() => {}}
       enableCommercial

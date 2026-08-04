@@ -5,7 +5,7 @@
  * 개별공시지가**로 산정해야 하나(location-index.ts:10-11,108-109), 폼이 취득연도 기준
  * 공시지가를 입력받아 엔진 위치지수 산정에 그대로 전달했다.
  *
- * 정정: ≤2000 취득 시 취득 공시지가 필드를 배치 모달(PhdBuildingStdPriceModalButton)과 동일하게
+ * 정정: ≤2000 취득 시 취득 공시지가 필드를 배치 모달(MultiPointBuildingStdPriceModal)과 동일하게
  * fixedYear=2001 + 토지기준시가 표시 숨김으로 전환.
  *
  * 계획서: docs/02-design/features/building-stdprice-acq-locationindex-2001-fix.plan.md

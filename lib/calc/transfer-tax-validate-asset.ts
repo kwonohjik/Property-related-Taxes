@@ -12,6 +12,7 @@
 import { effectiveCommercialLandPriceAtAcq } from "@/lib/calc/transfer-pre1990-commercial-bridge";
 import { isCommercialPre1990Acquisition } from "@/lib/calc/transfer-pre1990-commercial-bridge";
 import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
+import { resolveCbEra } from "@/lib/calc/commercial-cb-era";
 import { isSec164_8ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
 import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -146,9 +147,11 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   // ── 상업용건물·오피스텔 환산취득가 전용 검증 (⑧, 소령 §164⑥, §176조의2②2호) ──
   // ⑧ 동기화 원칙: API buildCommercialBuildingValuation 의 undefined 반환 조건과 동일하게 차단.
   if (asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition) {
-    // cbEra 선택 필수
-    if (!asset.cbEra) {
-      return `${label}: 상업용건물·오피스텔 — 호별고시 취득 시점을 선택하세요.`;
+    // 적용 cbEra — 명시 선택 없으면 취득일에서 파생(API·UI와 **같은 함수**, 3중 패턴).
+    // 취득일이 없으면 파생도 불가하므로 취득일 입력을 먼저 요구한다.
+    const era = resolveCbEra(asset);
+    if (!era) {
+      return `${label}: 상업용건물·오피스텔 — 취득일을 입력하세요 (호별고시 취득 시점 구분의 기준일).`;
     }
     // 면적 3종 필수
     if (!parseDecimal(asset.cbExclusiveArea))
@@ -161,12 +164,12 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     if (!parseAmount(asset.cbUnitPriceAtTransfer))
       return `${label}: 양도시 ㎡당 호별고시가를 입력하세요.`;
     if (!parseAmount(asset.cbUnitPriceAtFirstOrAcq))
-      return `${label}: ${asset.cbEra === "pre_disclosure" ? "최초고시(2005)" : "취득시"} ㎡당 호별고시가를 입력하세요.`;
+      return `${label}: ${era === "pre_disclosure" ? "최초고시(2005)" : "취득시"} ㎡당 호별고시가를 입력하세요.`;
     // 양도시 개별공시지가 공통 필수
     if (!parseAmount(asset.cbLandPricePerSqmAtTransfer))
       return `${label}: 양도시 개별공시지가(원/㎡)를 입력하세요.`;
 
-    if (asset.cbEra === "pre_disclosure") {
+    if (era === "pre_disclosure") {
       // 건물 기준시가 3시점 필수 (총액, 원 — 외부에서 ㎡당 단가 × 연면적 보정계수 반영)
       if (!parseAmount(asset.cbBuildingStdPriceAtAcq))
         return `${label}: 취득시 건물 기준시가(총액)를 입력하세요.`;
@@ -187,7 +190,7 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
       // 준용 산정에는 신축연도·구조·용도가 필요해 엔진이 자동 산정할 수 없으므로(AssetForm 미보유)
       // 사용자의 명시적 확인을 요구한다. 확인 없이 임의 금액이 들어가면 P_A가 조용히 틀린다.
       if (
-        isSec164_5ProvisoApplicable(asset.cbEra, asset.acquisitionDate) &&
+        isSec164_5ProvisoApplicable(era, asset.acquisitionDate) &&
         !asset.cbAcqBuildingStdBy164_5
       )
         return `${label}: 취득당시 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`;
@@ -197,7 +200,7 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         return `${label}: 취득당시 기준시가합과 최초고시당시 기준시가합이 같습니다 — §164⑥ 산식 괄호 단서에 따라 §164⑧을 준용해야 합니다. 전기(취득 직전 고시분)의 토지·건물 기준시가 합계액을 입력하세요.`;
     }
 
-    if (asset.cbEra === "post_disclosure") {
+    if (era === "post_disclosure") {
       // post_disclosure: 취득시 개별공시지가 필수 (API와 동일 유효값 판정)
       if (!effectiveCommercialLandPriceAtAcq(asset, formTransferDate ?? ""))
         return `${label}: 취득시 개별공시지가(원/㎡)를 입력하세요.`;

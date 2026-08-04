@@ -27,6 +27,9 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { cn } from "@/lib/utils";
+import { AssetFootprintField } from "./AssetFootprintField";
+import { showFootprintArea } from "./AssetFootprintField";
 
 interface Props {
   asset: AssetForm;
@@ -49,43 +52,70 @@ export function AssetAreaCommercial({ asset, onChange }: Props) {
 
   return (
     <ToneCard tone="sky" title="면적 정보 (㎡)" noDark>
-      <FieldCard
-        label="전용면적"
-        unit="㎡"
-        hint="건물 전용면적 (분양면적에서 공유면적 제외)"
+      {/* 3필드 1행 (3열, 라벨 상단 stacked) — 모바일은 1열 */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <FieldCard
+          label="전용면적"
+          unit="㎡"
+          hint="건물 전용면적 (분양면적에서 공유면적 제외)"
+          stacked
+        >
+          <DecimalInput
+            value={asset.cbExclusiveArea}
+            onChange={(v) => onChange({ cbExclusiveArea: v })}
+            placeholder="전용면적 입력"
+          />
+        </FieldCard>
+        <FieldCard
+          label="공유면적"
+          unit="㎡"
+          hint="계단·복도 등 공유부분 면적"
+          stacked
+        >
+          <DecimalInput
+            value={asset.cbSharedArea}
+            onChange={(v) => onChange({ cbSharedArea: v })}
+            placeholder="공유면적 입력"
+          />
+        </FieldCard>
+        <FieldCard
+          label="대지면적"
+          unit="㎡"
+          hint="이 호에 귀속되는 대지권 면적 (등기부 기재 면적)"
+          stacked
+        >
+          <DecimalInput
+            value={asset.cbLandArea}
+            onChange={(v) => onChange({ cbLandArea: v })}
+            placeholder="대지면적 입력"
+          />
+        </FieldCard>
+      </div>
+      {/* 연면적(자동계산) · 건물 바닥면적(축 C) — 둘 다 있으면 한 행 */}
+      <div
+        className={cn(
+          totalFloorArea !== null &&
+            showFootprintArea(asset) &&
+            "grid grid-cols-1 sm:grid-cols-2 gap-3 items-start"
+        )}
       >
-        <DecimalInput
-          value={asset.cbExclusiveArea}
-          onChange={(v) => onChange({ cbExclusiveArea: v })}
-          placeholder="전용면적 입력"
-        />
-      </FieldCard>
-      <FieldCard label="공유면적" unit="㎡" hint="계단·복도 등 공유부분 면적">
-        <DecimalInput
-          value={asset.cbSharedArea}
-          onChange={(v) => onChange({ cbSharedArea: v })}
-          placeholder="공유면적 입력"
-        />
-      </FieldCard>
-      <FieldCard
-        label="대지면적"
-        unit="㎡"
-        hint="이 호에 귀속되는 대지권 면적 (등기부 기재 면적)"
-      >
-        <DecimalInput
-          value={asset.cbLandArea}
-          onChange={(v) => onChange({ cbLandArea: v })}
-          placeholder="대지면적 입력"
-        />
-      </FieldCard>
-      {totalFloorArea !== null && (
-        <div className="rounded bg-sky-100/60 border border-sky-200 px-3 py-2 text-xs text-sky-800">
-          연면적 (전용+공유) ={" "}
-          <span className="font-semibold">
-            {totalFloorArea.toLocaleString()} ㎡
-          </span>
-        </div>
-      )}
+        {/* 라벨·값 2단 구조를 우측 축 C와 맞춘다 — 라벨끼리·입력칸끼리 같은 높이에 온다.
+            (`py-2 text-sm` = `DecimalInput`의 입력 높이) */}
+        {totalFloorArea !== null && (
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">
+              연면적 (전용+공유, ㎡)
+            </label>
+            <div className="rounded-md border border-sky-200 bg-sky-100/60 px-3 py-2 text-sm font-semibold text-sky-800">
+              {totalFloorArea.toLocaleString()} ㎡
+            </div>
+          </div>
+        )}
+        {/* 축 C는 `AssetAreaSection`이 아니라 여기서 렌더한다 — 면적 입력을 한 카드로 모은다. */}
+        {showFootprintArea(asset) && (
+          <AssetFootprintField asset={asset} onChange={onChange} />
+        )}
+      </div>
     </ToneCard>
   );
 }

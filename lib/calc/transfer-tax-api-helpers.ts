@@ -4,6 +4,7 @@
  */
 
 import { effectiveCommercialLandPriceAtAcq } from "./transfer-pre1990-commercial-bridge";
+import { resolveCbEra } from "./commercial-cb-era";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -128,7 +129,9 @@ export function buildCommercialBuildingValuation(
   if (asset.assetKind !== "commercial_building" || !asset.useEstimatedAcquisition) {
     return undefined;
   }
-  if (!asset.cbEra) return undefined;
+  // 취득일에서 자동 판정(2005-01-01 경계) — UI 표시·validate와 **같은 함수**를 쓴다(3중 패턴).
+  const era = resolveCbEra(asset);
+  if (!era) return undefined;
 
   const exclusiveArea = parseDecimal(asset.cbExclusiveArea);
   const sharedArea = parseDecimal(asset.cbSharedArea);
@@ -143,8 +146,8 @@ export function buildCommercialBuildingValuation(
     return undefined;
   }
 
-  // isPreDisclosure — cbEra가 "pre_disclosure" 이면 true
-  const isPreDisclosure = asset.cbEra === "pre_disclosure";
+  // isPreDisclosure — 적용 cbEra(명시 선택 ?? 취득일 파생)가 "pre_disclosure" 이면 true
+  const isPreDisclosure = era === "pre_disclosure";
 
   const base = {
     isPreDisclosure,

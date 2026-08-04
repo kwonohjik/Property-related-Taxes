@@ -6,7 +6,7 @@
  * `ThreePointStandardPriceInput`의 `layout="asset-major"`에서 3-PointBlock(시점) 대신
  * 렌더. 토지 3시점(공유)은 `PointBlock` landOnly 모드로 재사용(연도·조회·공시지가 로직 공유),
  * 주택/상가 건물은 자산별 섹션에 3시점 배치. 자산분 토지 auto는 공용 헬퍼로 계산(표시전용).
- * 건물 6값 산출은 주택/상가 섹션 헤더의 `PhdBuildingStdPriceModalButton` 런처 2개가 담당(D1) —
+ * 건물 6값 산출은 주택/상가 섹션 헤더의 `MultiPointBuildingStdPriceModal` 런처 2개가 담당(D1) —
  * 두 런처 모두 동일한 결합 모달을 열어 주택+상가 6값을 일관 산출(부모가 points·applyBatch 전달).
  * (계획: mixed-use-case-a-per-section-stdprice-calculator.plan.md §4)
  */
@@ -16,10 +16,10 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { landStdForArea } from "@/lib/calc/mixed-use-case";
 import { PointBlock, type ThreePointStandardPriceInputProps } from "./ThreePointStandardPriceInput";
 import {
-  PhdBuildingStdPriceModalButton,
-  type PhdThreePointApply,
-  type PointMeta,
-} from "@/components/calc/building-std-price/PhdBuildingStdPriceModalButton";
+  MultiPointBuildingStdPriceModal,
+  type MultiPointStdPriceApply,
+  type StdPricePointSpec,
+} from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
 
 type Tone = "amber" | "violet" | "emerald";
 
@@ -97,9 +97,9 @@ function AssetSection({
 
 interface AssetMajorBatchProps {
   /** 부모(ThreePointStandardPriceInput)가 계산한 배치 모달 3시점 메타(연도·공시지가 prefill) */
-  batchPoints?: PointMeta[];
+  batchPoints?: StdPricePointSpec[];
   /** 부모의 applyBatch — 주택 3 + 상가 3 + 공시지가 되돌려쓰기 라우팅 */
-  onBatchApply?: (v: PhdThreePointApply) => void;
+  onBatchApply?: (v: MultiPointStdPriceApply) => void;
 }
 
 export function ThreePointAssetMajorRender(
@@ -113,7 +113,7 @@ export function ThreePointAssetMajorRender(
   const splitMode = props.splitHousingCommercialForAcqAndFirst === true;
   const calcButton = (label: string, testid: string) =>
     props.enableBatchCalc && props.batchPoints && props.onBatchApply ? (
-      <PhdBuildingStdPriceModalButton
+      <MultiPointBuildingStdPriceModal
         points={props.batchPoints}
         onApply={props.onBatchApply}
         enableCommercial={splitMode}

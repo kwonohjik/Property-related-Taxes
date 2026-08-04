@@ -12,6 +12,7 @@ import { ACQ_BASE_RATE_MAX_ACQ_YEAR } from "@/lib/tax-engine/data/building-stand
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { resolveCbEra } from "./commercial-cb-era";
 
 /**
  * §164⑥ 단서 발동 여부 — 취득당시 건물 기준시가(나목)가 없는 구간인가.
@@ -51,7 +52,8 @@ export function isBeforeBuildingStdPriceNotice(acquisitionDate: string | undefin
  * 어긋나면 UI·validate가 보는 조건과 엔진 판정이 갈린다.
  */
 export function isSec164_8ProvisoApplicable(asset: AssetForm): boolean {
-  if (asset.cbEra !== "pre_disclosure") return false;
+  // 적용 cbEra — 명시 선택이 없으면 취득일에서 파생(UI·API·validate와 단일 소스).
+  if (resolveCbEra(asset) !== "pre_disclosure") return false;
   const acq = stdPriceSumAt(asset, "acq");
   const first = stdPriceSumAt(asset, "first");
   return acq > 0 && acq === first;

@@ -32,6 +32,7 @@ import {
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { guessNoticeDate, pickNoticeDate } from "@/lib/stdprice/pick-notice-date";
+import { resolveCbEra } from "@/lib/calc/commercial-cb-era";
 import { useCommercialStdPriceSnapshotStore } from "@/lib/stores/commercial-stdprice-snapshot-store";
 import type {
   CommercialStdPriceResponse,
@@ -78,7 +79,13 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
       return [{ id: "firstOrAcq", label: "최초고시(2005)", refDate: "2005-01-01" }];
     }
     const out: Omit<TimePoint, "noticeDate">[] = [];
-    if (asset.cbEra === "pre_disclosure") {
+    // 적용 cbEra — 명시 선택이 없으면 취득일에서 파생(CommercialBuildingBlock 표시와 동일).
+    // 필드 2개만 넘긴다 — `asset` 전체를 참조하면 useMemo deps가 자산 전체로 넓어진다.
+    const era = resolveCbEra({
+      cbEra: asset.cbEra,
+      acquisitionDate: asset.acquisitionDate,
+    });
+    if (era === "pre_disclosure") {
       out.push({ id: "firstOrAcq", label: "최초고시(2005)", refDate: "2005-01-01" });
     } else if (asset.acquisitionDate) {
       out.push({ id: "firstOrAcq", label: "취득시", refDate: asset.acquisitionDate });

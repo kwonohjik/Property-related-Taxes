@@ -62,7 +62,10 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
       try {
         const result = calcBuildingStandardPrice(toEngineInput(snap));
         let model = buildNtsReportModel(buildNtsReportContext(snap), result);
-        // phd override(markCell acq2000·연도 라벨)는 phd-acq 전용.
+        // 배치 override(markCell acq2000·연도 라벨)는 **취득 시점 배치 스냅샷** 전용.
+        // 배치 override(markCell acq2000·연도 라벨)는 **배치 전용 키**에만 적용된다.
+        // `-cb-acq`·`-gb-acq`는 1시점 모달과 키를 공유해 제외한다(`phdTimepointLabel` 주석 참조) —
+        // 그 키는 tp가 null이라 아래 override 자체가 발화하지 않는다.
         const isTransferAcq = snap.taxType === "transfer" && /-phd-acq(-commercial)?$/.test(key);
         // 시점 전용 스냅샷의 반대 시점 인스턴스 제거 — 판정은 `snapshotKeyTimepoint` 단일 소스.
         // PDF 경로(building-std-pdf-data)도 같은 함수를 쓴다(화면↔PDF 어긋남 방지).
@@ -110,7 +113,7 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         // 연도 라벨: valuation 스냅샷은 valuationYear, transfer 취득 스냅샷은 acquisitionYear(valuationYear 부재).
         const yearLabel = snap.valuationYear || (isTransferAcq ? snap.acquisitionYear : "");
         const titleOverride = tp
-          ? `${tp.timepoint} · ${tp.category === "commercial" ? "상가분" : "주택분"}${yearLabel ? ` (${yearLabel}년)` : ""}`
+          ? `${tp.timepoint} · ${tp.categoryLabel}${yearLabel ? ` (${yearLabel}년)` : ""}`
           : undefined;
         // Ⅰ.구분 마킹 — 상속(재구성 taxType) 대신 양도 맥락으로: 취득시·최초공시일=취득당시(2001↑), 양도시=양도당시.
         // 취득 ≤2000 transfer 스냅샷은 acq2000(2000.12.31 이전) 칸에 마킹.
@@ -121,11 +124,10 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
               ? "acq2000"
               : "acq2001"
           : undefined;
-        // PHD는 취득→최초공시→양도, 주택→상가 순으로 정렬. 비-PHD는 삽입 순서 유지.
-        const rank = tp
-          ? ({ 취득시: 0, 최초공시일: 1, 양도시: 2 }[tp.timepoint] ?? 0) * 2 +
-            (tp.category === "commercial" ? 1 : 0)
-          : 100 + seq;
+        // 배치 스냅샷은 취득→최초→양도, 주택→상가 순으로 정렬. 비-배치는 삽입 순서 유지.
+        // ⚠️ 정렬은 `tp.order`를 쓴다 — 라벨 문자열 매칭은 접두마다 달라(§164⑤ "최초공시일" ↔
+        //    §164⑥ "최초고시(2005)") 새 접두가 붙을 때마다 조용히 0으로 떨어진다.
+        const rank = tp ? tp.order * 2 + (tp.category === "commercial" ? 1 : 0) : 100 + seq;
         seq++;
         out.push({ key, model, titleOverride, markCellOverride, rank });
       } catch {

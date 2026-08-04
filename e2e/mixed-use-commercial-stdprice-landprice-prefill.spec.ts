@@ -59,7 +59,7 @@ async function setupMixedUsePre2001PhdAsset(page: Page) {
   //    강제 ON 하므로(`MixedUseSection.tsx:44-50`) 취득일이 `[토지 | 건물]` 2열이 되는데,
   //    섹션 스코프 + `.first()`는 앞 칸인 **토지 취득일**을 잡는다. 그러면 `acquisitionDate`가
   //    빈 채로 남아 3시점 모달의 취득 시점 `p.year`가 undefined가 되고,
-  //    `isAcqPre2001`(`PhdBuildingStdPriceModalButton.tsx:416-417`)이 false로 떨어져
+  //    `isAcqPre2001`(`MultiPointBuildingStdPriceModal.tsx:416-417`)이 false로 떨어져
   //    「2001.1.1. 현재 공시지가」 전용 행이 아예 렌더되지 않는다
   //    (계획서 e2e-preexisting-failures-4.plan.md §9-N1).
   await fillDateExact(page.getByTestId("acq-date-building"), {

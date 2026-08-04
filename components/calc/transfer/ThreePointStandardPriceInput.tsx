@@ -27,9 +27,9 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { ThreePointAssetMajorRender } from "./ThreePointAssetMajorRender";
 import {
-  PhdBuildingStdPriceModalButton,
-  type PhdThreePointApply,
-} from "@/components/calc/building-std-price/PhdBuildingStdPriceModalButton";
+  MultiPointBuildingStdPriceModal,
+  type MultiPointStdPriceApply,
+} from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
 import type { AddressValue } from "@/components/ui/address-search";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
 import { isAcq2001LocationIndexTrack } from "@/lib/calc/phd-acq-land-price-track";
@@ -659,7 +659,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     { key: "transfer" as const, label: "양도시", year: yearOf(props.transferDate), landPricePerM2: props.landPricePerSqmAtTransfer },
   ];
   // housing 3시점 + commercial(양도 항상, 취득·최초공시는 Case A 산출 시) 라우팅. 값 있는 시점만.
-  const applyBatch = (v: PhdThreePointApply) => {
+  const applyBatch = (v: MultiPointStdPriceApply) => {
     if (v.acquisition?.housing != null) props.onBuildingStdPriceAtAcqChange(String(v.acquisition.housing));
     if (v.firstDisclosure?.housing != null) props.onBuildingStdPriceAtFirstChange(String(v.firstDisclosure.housing));
     if (v.transfer?.housing != null) props.onBuildingStdPriceAtTransferChange(String(v.transfer.housing));
@@ -700,7 +700,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     <div className="space-y-3">
       {props.enableBatchCalc && !assetMajor && (
         <div className="flex justify-end">
-          <PhdBuildingStdPriceModalButton points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} housingFloorAreaPrefill={props.housingFloorArea} commercialFloorAreaPrefill={props.commercialFloorArea} />
+          <MultiPointBuildingStdPriceModal points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} housingFloorAreaPrefill={props.housingFloorArea} commercialFloorAreaPrefill={props.commercialFloorArea} />
         </div>
       )}
       {assetMajor ? (

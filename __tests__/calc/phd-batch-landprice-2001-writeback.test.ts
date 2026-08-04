@@ -3,7 +3,7 @@
  *
  * 계획서: docs/02-design/features/mixed-use-commercial-stdprice-modal-landprice-prefill.plan.md (§3-1·§3-2)
  *
- * 배경: PHD 배치 모달(PhdBuildingStdPriceModalButton:228-231)은 취득 ≤2000의 2001.1.1 공시지가를
+ * 배경: PHD 배치 모달(MultiPointBuildingStdPriceModal:228-231)은 취득 ≤2000의 2001.1.1 공시지가를
  * 이미 landPrices.acquisition으로 방출하지만, ThreePointStandardPriceInput:662가 **받을 그릇이 없어**
  * 드롭했다(phdLandPricePerSqmAtAcq는 취득당시 연도 토지값 트랙이라 넣으면 오염).
  * → 전용 필드 phdLandPricePerSqmAtAcq2001 신설 + 트랙 라우팅.
