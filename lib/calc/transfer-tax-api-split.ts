@@ -8,6 +8,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { applyRatio } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
+import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /**
@@ -159,9 +160,12 @@ export function buildSplitPayload(
         }
       : {}),
     // 양도시 기준시가 2필드 — 기준시가는 지분 스케일 대상이 아니다(물건 속성값).
+    // ⚠️ 토지분은 저장값이 아니라 **단가 × 면적 파생**을 쓴다 — 면적을 ① 기본정보에서 고치면
+    //    저장값이 stale로 남기 때문이다(`resolveLandStdAtTransfer` 주석의 실측 참조).
+    //    건물분(나목)은 국세청장 산정액이라 직접 입력이 정본이므로 저장값 그대로.
     ...(saleStdPriceActive
       ? {
-          landStandardPriceAtTransfer: parseAmount(primary.landStandardPriceAtTransfer) || undefined,
+          landStandardPriceAtTransfer: resolveLandStdAtTransfer(primary),
           buildingStandardPriceAtTransfer: parseAmount(primary.buildingStandardPriceAtTransfer) || undefined,
         }
       : {}),
