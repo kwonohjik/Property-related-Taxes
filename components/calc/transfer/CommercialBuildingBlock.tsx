@@ -33,6 +33,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
 import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
@@ -100,6 +101,24 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
   const needs164_4 = isCommercialPre1990Acquisition(asset);
   // 파생값(store 미저장) — 표시 fallback. API·validate도 같은 함수로 동일 fallback을 쓴다.
   const pre1990LandAtAcq = derivePre1990CommercialLandPricePerSqmAtAcqString(asset, transferDate ?? "");
+
+  /**
+   * P3 — 과거 시점 ㎡당 고시가가 양도시보다 **높은** 경우 경고(2026-08-04 실사례).
+   *
+   * §164⑥ 환산취득가 = 양도가액 × 취득시 환산기준시가 ÷ 양도시 호별총액이라, 과거 단가가
+   * 양도 단가를 넘으면 환산취득가가 양도가액 이상이 되어 **양도차익이 0**이 된다.
+   * 실제로 최초고시 단가를 10배(2,178,000 → 21,780,000) 잘못 넣은 사례에서 세액이 0으로 나왔고,
+   * 화면에 아무 단서가 없어 엔진 결함으로 오인됐다.
+   *
+   * ⛔ **차단하지 않는다** — 시세 하락 구간에서는 과거 단가가 더 높을 수 있어 법령상 불가능한
+   *    조합이 아니다. 값을 임의 보정하지도 않는다(자동 fallback 금지 정책과 같은 취지).
+   */
+  const unitPriceInversion = useMemo(() => {
+    const past = parseAmount(asset.cbUnitPriceAtFirstOrAcq);
+    const transfer = parseAmount(asset.cbUnitPriceAtTransfer);
+    if (past <= 0 || transfer <= 0 || past <= transfer) return null;
+    return { past, transfer };
+  }, [asset.cbUnitPriceAtFirstOrAcq, asset.cbUnitPriceAtTransfer]);
 
   // 연면적 자동 계산 표시 (사용자 친화적 피드백)
   const totalFloorArea = useMemo(() => {
@@ -242,6 +261,18 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                   hideUnit
                 />
               </FieldCard>
+              {unitPriceInversion && (
+                <p
+                  className="mt-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700"
+                  data-testid="cb-unit-price-inversion-warning"
+                >
+                  {isPreDisclosure ? "최초고시(2005)" : "취득시"} ㎡당 고시가(
+                  {unitPriceInversion.past.toLocaleString()})가 양도시(
+                  {unitPriceInversion.transfer.toLocaleString()})보다 <b>높습니다</b> — 자릿수를
+                  확인하세요. 이 경우 환산취득가가 양도가액 이상이 되어 <b>양도차익이 0</b>으로
+                  계산될 수 있습니다.
+                </p>
+              )}
             </div>
           </ToneCard>
         )}

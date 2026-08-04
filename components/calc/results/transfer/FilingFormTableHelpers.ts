@@ -457,6 +457,29 @@ export function buildRows(
 
   // ── 재개발/재건축 분할 모드 (시행령 §166) — FilingFormTableRedevRows.ts 위임 ──
   const isRedevMode = mode === "redev-4split" || mode === "redev-right-pay" || mode === "redev-right-receive" || mode === "redev-right-land-pay";
+  /**
+   * 환산취득가 표시 소스 — `usedEstimatedAcquisition` 플래그에만 의존하지 않는다.
+   *
+   * 🔴 상업용건물 「소득세법 시행령」 제164조 제6항은 엔진이 환산 결과를 **실가처럼 주입**하고
+   * `useEstimatedAcquisition:false`로 내린다(`transfer-tax-commercial-step.ts:119~151` — 설계상 의도).
+   * 그 플래그로 표시 분기를 가르면 상가가 **실가 분기로 떨어져** 취득가액을
+   * 역산(`양도가액 − 양도차익 − 필요경비`)하게 된다. 양도차익이 0이면 역산은 필연적으로
+   * `취득가액 = 양도가액`을 내놓아 환산이 수행됐는지조차 화면에서 알 수 없다
+   * (2026-08-04 실사례: 최초고시 ㎡당 고시가 10배 오입력 → 사용자가 엔진 결함으로 오인).
+   *
+   * ⚠️ 「소득세법」 제97조 제2항 제2호 단서 swap 시에는 환산취득가를 **차감하지 않으므로**
+   *    (같은 파일 :153) 취득가액 칸에 환산취득가를 쓰면 「양도가 − 취득가 − 경비 = 양도차익」
+   *    자기정합이 깨진다 → swap이면 종전 역산을 유지한다(현행 동작 보존).
+   */
+  const cbDetail = result.commercialBuildingValuationDetail;
+  const estimatedDisplay: { base: number; deduction: number } | null = result.swapApplied
+    ? null
+    : result.usedEstimatedAcquisition && result.estimatedBase !== undefined
+      ? { base: result.estimatedBase, deduction: result.estimatedDeduction ?? 0 }
+      : cbDetail
+        ? { base: cbDetail.estimatedAcquisitionTotal, deduction: cbDetail.estimatedDeductionTotal }
+        : null;
+
   if (isRedevMode && result.redevelopmentDetail) {
     if (mode === "redev-right-land-pay") {
       fillRedevRightLandPayBranchData(result.redevelopmentDetail, setNum, setStr, setRoseNote);
@@ -561,11 +584,11 @@ export function buildRows(
         sp.building.directExpenses + sp.building.appraisalDeduction,
       );
     }
-  } else if (result.usedEstimatedAcquisition && result.estimatedBase !== undefined) {
+  } else if (estimatedDisplay !== null) {
     // 환산취득가 모드: 자본적지출(있다면)을 취득가액(=환산취득가)에 합산, 필요경비는 개산공제 + 양도비
     const capExp = result.capitalExpenditureForDisplay ?? 0;
-    setNum("acquisitionPrice", "total", result.estimatedBase + capExp > 0 ? result.estimatedBase + capExp : null);
-    const deduction = result.estimatedDeduction ?? 0;
+    setNum("acquisitionPrice", "total", estimatedDisplay.base + capExp > 0 ? estimatedDisplay.base + capExp : null);
+    const deduction = estimatedDisplay.deduction;
     const transferOnlyExpense = Math.max(0, totalExpenses - capExp);
     const totalNecessaryExpenses = deduction + transferOnlyExpense;
     setNum("expenses", "total", totalNecessaryExpenses > 0 ? totalNecessaryExpenses : null);
