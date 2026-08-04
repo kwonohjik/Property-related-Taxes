@@ -30,6 +30,10 @@ import {
   isReverseGeocodeError,
 } from "@/lib/calc/vworld-reverse-geocode";
 import { MixedUseToggleRow } from "../MixedUseSection";
+import {
+  AssetAreaCommercial,
+  isCommercialAreaAsset,
+} from "./AssetAreaCommercial";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
 import {
   ReplotReductionFields,
@@ -468,12 +472,20 @@ export function AssetSectionBasic({
         </div>
       )}
 
-      {/* 면적 정보 — AREA_SCENARIOS_BY_ASSET_KIND 등재 자산유형만 표시.
-          전용 면적 섹션을 가진 자산유형(겸용·상가·일반건물·재개발)은 미렌더 — 중복 입력 방지. */}
+      {/* 면적 정보 — AREA_SCENARIOS_BY_ASSET_KIND 등재 자산유형 + 전용 위젯 보유 자산유형.
+          ⚠️ 전용 위젯(상가 등)은 **자산별 단일 필드**를 그대로 쓴다 — 축 A 시나리오 쌍
+             (`acquisitionArea`/`transferArea`)으로 흡수하지 않는다(F2 폐기 §11 준수). */}
       {(areaScenarioOptions(asset).length > 0 ||
         showFloorArea(asset) ||
-        showFootprintArea(asset)) && (
+        showFootprintArea(asset) ||
+        isCommercialAreaAsset(asset)) && (
         <div className="space-y-3">
+          {/* ── 상업용건물·오피스텔 전용 면적 3축 (전용·공유·대지) ──────────
+              취득원인 무관 단일 입력. 종전에는 CommercialBuildingBlock(비상속)과
+              CommercialInheritanceStdPriceSection(상속)이 같은 3필드를 각각 렌더했다. */}
+          {isCommercialAreaAsset(asset) && (
+            <AssetAreaCommercial asset={asset} onChange={onChange} />
+          )}
           {/* ── 축 A: 토지 면적 (시나리오 분기) ──────────────────────────
               ⛔ **자산유형별로 축 A를 끄는 예외를 만들지 말 것**(2026-07-30 U-12).
                  `building`("건물(토지 제외)")을 제외했다가 되돌렸다 — 그 라벨은 「소득세법」

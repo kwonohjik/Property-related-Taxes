@@ -7,10 +7,14 @@
  * 소득세법 시행령 §164⑥ (호별고시 전 취득 역환산) + §176조의2②2호 (환산취득가).
  *
  * 구조:
- *  ① 면적 섹션 (sky)
- *  ② 호별 ㎡당 고시가 (amber/emerald)
- *  ③ 건물 기준시가 3시점 — 총액 (pre_disclosure 시만, amber+emerald)
- *  ④ 개별공시지가 3시점 (amber+emerald)
+ *  ① 호별 ㎡당 고시가 (amber/emerald)
+ *  ② 건물 기준시가 3시점 — 총액 (pre_disclosure 시만, amber+emerald)
+ *  ③ 개별공시지가 3시점 (amber+emerald)
+ *
+ * ⚠️ 면적 3필드(전용·공유·대지)는 **① 기본정보**로 이전했다(2026-08-04) —
+ *    `asset-sections/AssetAreaCommercial.tsx`. 종전에는 이 블록(비상속)과
+ *    `CommercialInheritanceStdPriceSection`(상속)이 같은 3필드를 각각 렌더해
+ *    취득원인에 따라 입력 위치가 달라졌다. 여기에 면적 칸을 다시 추가하지 말 것.
  *
  * 정책 준수:
  *  - placeholder 숫자 예시 금지 — hint prop에 한국어 설명만
@@ -26,7 +30,6 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { CommercialStdPriceLookupModal } from "@/components/calc/transfer/CommercialStdPriceLookupModal";
 import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
@@ -118,53 +121,13 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
           />
         </div>
 
-        {/* ① 면적 섹션 (sky) — cbEra 선택 후 표시 */}
-        {hasEra && (
-          <ToneCard tone="sky" sectionNum="1" title="면적 정보 (㎡)" noDark>
-            <FieldCard
-              label="전용면적"
-              unit="㎡"
-              hint="건물 전용면적 (분양면적에서 공유면적 제외)"
-            >
-              <DecimalInput
-                value={asset.cbExclusiveArea}
-                onChange={(v) => onChange({ cbExclusiveArea: v })}
-                placeholder="전용면적 입력"
-              />
-            </FieldCard>
-            <FieldCard
-              label="공유면적"
-              unit="㎡"
-              hint="계단·복도 등 공유부분 면적"
-            >
-              <DecimalInput
-                value={asset.cbSharedArea}
-                onChange={(v) => onChange({ cbSharedArea: v })}
-                placeholder="공유면적 입력"
-              />
-            </FieldCard>
-            <FieldCard
-              label="대지면적"
-              unit="㎡"
-              hint="이 호에 귀속되는 대지권 면적 (등기부 기재 면적)"
-            >
-              <DecimalInput
-                value={asset.cbLandArea}
-                onChange={(v) => onChange({ cbLandArea: v })}
-                placeholder="대지면적 입력"
-              />
-            </FieldCard>
-            {totalFloorArea !== null && (
-              <div className="rounded bg-sky-100/60 border border-sky-200 px-3 py-2 text-xs text-sky-800">
-                연면적 (전용+공유) = <span className="font-semibold">{totalFloorArea.toLocaleString()} ㎡</span>
-              </div>
-            )}
-          </ToneCard>
-        )}
+        {/* 면적 3필드(전용·공유·대지)는 ① 기본정보로 이전했다 (2026-08-04).
+            취득원인 무관 단일 입력 — `asset-sections/AssetAreaCommercial.tsx`.
+            ⚠️ `totalFloorArea` 계산은 유지한다 — 아래 기준시가 모달 prefill이 소비한다. */}
 
-        {/* ② 호별 ㎡당 고시가 (emerald/amber) — cbEra 선택 후 표시 */}
+        {/* ① 호별 ㎡당 고시가 (emerald/amber) — cbEra 선택 후 표시 */}
         {hasEra && (
-          <ToneCard tone="emerald" sectionNum="2" title="호별 ㎡당 고시가 (원/㎡)" noDark>
+          <ToneCard tone="emerald" sectionNum="1" title="호별 ㎡당 고시가 (원/㎡)" noDark>
             {/* 국세청 고시분 자동조회 — 호 선택 시 단가·전용·공유면적을 단일 배치로 채운다 */}
             <div className="flex flex-col items-end gap-1">
               <CommercialStdPriceLookupModal
@@ -211,9 +174,9 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
           </ToneCard>
         )}
 
-        {/* ③ 건물 기준시가 3시점 — 총액 (pre_disclosure 시만 표시) */}
+        {/* ② 건물 기준시가 3시점 — 총액 (pre_disclosure 시만 표시) */}
         {isPreDisclosure && (
-          <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 3시점 (원, 총액)" noDark>
+          <ToneCard tone="amber" sectionNum="2" title="건물 기준시가 — 3시점 (원, 총액)" noDark>
             <div className="text-xs text-amber-700 mb-1">
               건물분 ㎡당 가액 × 연면적(전유+공용 보정계수 반영) = <b>건물 기준시가 총액</b>으로 환산해 입력
             </div>
@@ -278,7 +241,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {hasEra && (
           <ToneCard
             tone="amber"
-            sectionNum={isPreDisclosure ? "4" : "3"}
+            sectionNum={isPreDisclosure ? "3" : "2"}
             title={`개별공시지가 — ${isPreDisclosure ? "3시점" : "2시점"} (원/㎡)`}
             bodyClassName="space-y-3"
             noDark

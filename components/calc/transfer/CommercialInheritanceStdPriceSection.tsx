@@ -11,7 +11,6 @@
 "use client";
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -70,26 +69,12 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         미입력 시 상속개시일 평가액만 사용합니다.
       </p>
 
-      {/* ① 면적 */}
-      <ToneCard tone="sky" sectionNum="1" title="면적 정보 (㎡)" noDark>
-        <FieldCard label="전용면적" unit="㎡" hint="건물 전용면적">
-          <DecimalInput value={asset.cbExclusiveArea} onChange={(v) => onChange({ cbExclusiveArea: v })} placeholder="전용면적 입력" />
-        </FieldCard>
-        <FieldCard label="공유면적" unit="㎡" hint="계단·복도 등 공유부분 면적">
-          <DecimalInput value={asset.cbSharedArea} onChange={(v) => onChange({ cbSharedArea: v })} placeholder="공유면적 입력" />
-        </FieldCard>
-        <FieldCard label="대지면적" unit="㎡" hint="이 호에 귀속되는 대지권 면적">
-          <DecimalInput value={asset.cbLandArea} onChange={(v) => onChange({ cbLandArea: v })} placeholder="대지면적 입력" />
-        </FieldCard>
-        {totalFloorArea !== null && (
-          <div className="rounded bg-sky-100/60 border border-sky-200 px-3 py-2 text-xs text-sky-800">
-            연면적 (전용+공유) = <span className="font-semibold">{totalFloorArea.toLocaleString()} ㎡</span>
-          </div>
-        )}
-      </ToneCard>
+      {/* 면적 3필드(전용·공유·대지)는 ① 기본정보로 이전했다 (2026-08-04).
+          취득원인 무관 단일 입력 — `asset-sections/AssetAreaCommercial.tsx`.
+          ⚠️ `totalFloorArea` 계산은 유지한다 — 아래 기준시가 모달 prefill이 소비한다. */}
 
-      {/* ② 최초고시(2005) ㎡당 호별고시가 */}
-      <ToneCard tone="emerald" sectionNum="2" title="최초고시(2005) 호별 ㎡당 고시가 (원/㎡)" noDark>
+      {/* ① 최초고시(2005) ㎡당 호별고시가 */}
+      <ToneCard tone="emerald" sectionNum="1" title="최초고시(2005) 호별 ㎡당 고시가 (원/㎡)" noDark>
         <div className="flex flex-col items-end gap-1">
           <CommercialStdPriceLookupModal asset={asset} onChange={onChange} transferDate={transferDate} variant="inheritance" />
         </div>
@@ -98,8 +83,8 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         </FieldCard>
       </ToneCard>
 
-      {/* ③ 건물 기준시가 (취득시·최초고시) */}
-      <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 취득시·최초고시 (원, 총액)" noDark>
+      {/* ② 건물 기준시가 (취득시·최초고시) */}
+      <ToneCard tone="amber" sectionNum="2" title="건물 기준시가 — 취득시·최초고시 (원, 총액)" noDark>
         {isBeforeBuildingStdPriceNotice(inheritanceDate) && (
           <Sec164_5ProvisoNotice
             acquisitionDate={inheritanceDate}
@@ -119,8 +104,8 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         </FieldCard>
       </ToneCard>
 
-      {/* ④ 개별공시지가 (취득시·최초고시) */}
-      <ToneCard tone="amber" sectionNum="4" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3" noDark>
+      {/* ③ 개별공시지가 (취득시·최초고시) */}
+      <ToneCard tone="amber" sectionNum="3" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3" noDark>
         <div>
           <p className="mb-1 text-caption font-medium text-amber-700">취득시(상속개시일)</p>
           {isCommercialPre1990Acquisition(asset) && (
