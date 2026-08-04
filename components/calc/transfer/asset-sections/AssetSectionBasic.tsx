@@ -162,7 +162,18 @@ const FLOOR_AREA_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["housing"
  *    오답이 된다(계획서 U-3).
  * ⚠️ `building`은 토지가 없어 부수토지 판정 자체가 없다 → 제외.
  */
-const FOOTPRINT_AREA_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["housing"]);
+const FOOTPRINT_AREA_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set([
+  "housing",
+  // 🟡 아래 2종은 **현재 엔진 소비처가 없다** — 사용자 확정(2026-08-04)에 따라
+  //    장래 사용을 위해 입력만 받는다. 값은 store에 보존되고, hint가 "현재 세액에
+  //    반영되지 않음"을 명시한다. validate에서 필수로 만들지 않는다(계산 차단 금지).
+  //    소비처가 생기면 이 주석과 hint를 함께 갱신할 것.
+  "commercial_building",
+  "building",
+]);
+
+/** 축 C가 실제로 세액에 반영되는 자산유형 — hint 문구·배율 라디오 분기의 단일 소스 */
+const FOOTPRINT_CONSUMED_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set(["housing"]);
 
 /**
  * 부수토지 인정 배율 — 「소득세법」 시행령 제168의12(비사업용 토지)·제167조의5(세율)·제154조 제7항
@@ -203,6 +214,17 @@ function showFloorArea(asset: AssetForm): boolean {
 /** 축 C(바닥면적) 입력을 이 자산에 렌더하는가. */
 function showFootprintArea(asset: AssetForm): boolean {
   return FOOTPRINT_AREA_KINDS.has(asset.assetKind) && !isMixedUseSeparated(asset);
+}
+
+/**
+ * 축 C가 세액에 실제 반영되는가 — hint 문구와 배율 라디오 노출을 가른다.
+ *
+ * 배율 라디오(`appurtenantLandZone`)는 「소득세법 시행령」 제154조 제7항의 **주택**
+ * 부수토지 한도 전용이라 상가·건물에는 법령상 대응 개념이 없다 → 노출하지 않는다.
+ * (계획서 §4.2 — 상가·건물은 정착면적만 장래 대비 입력)
+ */
+function isFootprintConsumed(asset: AssetForm): boolean {
+  return FOOTPRINT_CONSUMED_KINDS.has(asset.assetKind);
 }
 
 const AREA_SCENARIO_LABEL: Record<AreaScenario, string> = {
@@ -700,7 +722,11 @@ export function AssetSectionBasic({
               <label className="text-xs text-muted-foreground">
                 건물 바닥면적 (정착면적, ㎡)
                 <span
-                  title="건물이 땅에 닿는 면적(1층 건축면적). 층별 합계인 연면적이 아닙니다. 「소득세법」 제89조 제1항 제3호의 「건물이 정착된 면적」 — 이 면적 × 지역별 배율(3·5·10배)이 1세대1주택 비과세 부수토지 한도입니다."
+                  title={
+                    isFootprintConsumed(asset)
+                      ? "건물이 땅에 닿는 면적(1층 건축면적). 층별 합계인 연면적이 아닙니다. 「소득세법」 제89조 제1항 제3호의 「건물이 정착된 면적」 — 이 면적 × 지역별 배율(3·5·10배)이 1세대1주택 비과세 부수토지 한도입니다."
+                      : "건물이 땅에 닿는 면적(1층 건축면적). 층별 합계인 연면적이 아닙니다. 「소득세법 시행령」 제154조 제7항 부수토지 한도는 주택 전용이라 이 자산 종류에는 적용되지 않습니다 — 현재는 기록용입니다."
+                  }
                   className="ml-1 cursor-help"
                 >
                   ⓘ
@@ -713,14 +739,18 @@ export function AssetSectionBasic({
                 data-testid="basic-building-footprint-area"
               />
               <p className="text-caption text-muted-foreground">
-                미입력 시 부수토지 한도 검증 없이 전량 부수토지로 가정합니다 (「소득세법 시행령」 제154조 제7항).
+                {isFootprintConsumed(asset)
+                  ? "미입력 시 부수토지 한도 검증 없이 전량 부수토지로 가정합니다 (「소득세법 시행령」 제154조 제7항)."
+                  : "이 자산 종류에서는 아직 세액 계산에 반영되지 않습니다 — 기록용으로 보관됩니다."}
               </p>
             </div>
           )}
           </div>
 
-          {/* ── 부수토지 배율 판정용 소재지 구분 (영 §168의12 · §167의5 · §154⑦ — 배율 동일) ── */}
-          {showFootprintArea(asset) && parseDecimal(asset.buildingFootprintArea) > 0 && (
+          {/* ── 부수토지 배율 판정용 소재지 구분 (영 §168의12 · §167의5 · §154⑦ — 배율 동일) ──
+              「소득세법 시행령」 제154조 제7항은 **주택** 부수토지 한도라 상가·건물에는
+              대응 개념이 없다 → `isFootprintConsumed`로 주택 전용 유지. */}
+          {showFootprintArea(asset) && isFootprintConsumed(asset) && parseDecimal(asset.buildingFootprintArea) > 0 && (
             <div className="space-y-1 sm:col-span-2">
               <label className="text-xs text-muted-foreground">
                 부수토지 소재지 구분

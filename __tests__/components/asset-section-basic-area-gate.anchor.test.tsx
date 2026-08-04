@@ -107,9 +107,51 @@ describe("R-1 — assetKind별 면적 섹션 렌더 여부", () => {
     expect(screen.queryByText(/취득·양도 당시 건물 연면적 \(㎡\)/)).not.toBeInTheDocument();
   });
 
-  it("building: 축 C(바닥면적) 미렌더 — 부수토지 판정이 없다", () => {
-    renderBasic("building");
-    expect(screen.queryByTestId("basic-building-footprint-area")).not.toBeInTheDocument();
+  /**
+   * 🔄 뒤집힌 anchor (2026-08-04, 사용자 확정 O-1)
+   *
+   * 종전 계약: "building은 부수토지 판정이 없으니 축 C 미렌더".
+   * 변경 근거: 사용자가 **상가·건물은 면적을 앞으로 사용 예정**으로 확정 → 장래 대비
+   * 입력을 받는다. 다만 값이 세액에 반영되지 않는 상태이므로 아래 3중 안전장치를 건다:
+   *   ① hint가 "아직 세액 계산에 반영되지 않습니다"를 명시
+   *   ② 배율 라디오(`appurtenantLandZone`)는 **미노출** — 「소득세법 시행령」 §154⑦은
+   *      주택 부수토지 한도라 상가·건물에 대응 개념이 없다
+   *   ③ validate에서 필수로 만들지 않는다(계산 차단 금지)
+   * 계획: `docs/00-pm/transfer-area-unification-all-asset-kinds.plan.md` P3
+   */
+  it.each(["building", "commercial_building"] as const)(
+    "%s: 축 C(바닥면적) 렌더 — 장래 대비 입력",
+    (kind) => {
+      renderBasic(kind);
+      expect(screen.getByTestId("basic-building-footprint-area")).toBeInTheDocument();
+    },
+  );
+
+  it.each(["building", "commercial_building"] as const)(
+    "%s: 세액 미반영 안내가 표시된다",
+    (kind) => {
+      renderBasic(kind);
+      expect(screen.getByText(/아직 세액 계산에 반영되지 않습니다/)).toBeInTheDocument();
+    },
+  );
+
+  it.each(["building", "commercial_building"] as const)(
+    "%s: 배율 라디오(§154⑦ 주택 전용)는 노출되지 않는다",
+    (kind) => {
+      renderBasic(kind, { buildingFootprintArea: "100" });
+      expect(screen.queryByText("부수토지 소재지 구분")).not.toBeInTheDocument();
+    },
+  );
+
+  it("housing: 배율 라디오는 그대로 노출된다 (회귀 0)", () => {
+    renderBasic("housing", { buildingFootprintArea: "100" });
+    expect(screen.getByText("부수토지 소재지 구분")).toBeInTheDocument();
+  });
+
+  it("housing: 세액 미반영 안내가 아니라 §154⑦ 안내가 나온다", () => {
+    renderBasic("housing");
+    expect(screen.getByText(/전량 부수토지로 가정합니다/)).toBeInTheDocument();
+    expect(screen.queryByText(/아직 세액 계산에 반영되지 않습니다/)).not.toBeInTheDocument();
   });
 });
 
