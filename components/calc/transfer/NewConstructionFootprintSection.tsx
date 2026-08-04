@@ -20,9 +20,7 @@
  */
 
 import { useMemo } from "react";
-import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 type AppurtenantLandZone =
@@ -30,13 +28,32 @@ type AppurtenantLandZone =
   | "non_metropolitan_or_green"
   | "non_urban";
 
+/**
+ * ⚠️ **표시 전용**이다 — 입력 콜백을 받지 않는다(2026-08-04).
+ *
+ * 정착면적·소재지 구분 두 필드는 **① 기본정보**가 입력받는다
+ * (`asset-sections/AssetAreaSection.tsx:481·514` — 축 C). 종전에는 이 카드가 같은 두 필드를
+ * **같은 옵션 문구의 같은 위젯**으로 한 번 더 입력받았고(`AssetAreaSection.tsx:157` 주석이
+ * 그 중복을 기록하고 있다), 그 상태로 신축주택(`acquisitionCause === "newConstruction"` +
+ * `assetKind === "housing"`)에서 ①과 동시에 렌더됐다.
+ *
+ * 🔴 단순 중복을 넘어 **표시와 저장이 어긋났다**: 여기서는 `?? "metropolitan_residential"`
+ * display fallback을 걸어 미선택 상태를 "수도권 도시지역 3배 **선택됨**"으로 보여주고
+ * 한도까지 계산해 줬지만, store는 `undefined`로 남아
+ * `transfer-tax-validate-split.ts:117-126`이 "「부수토지 소재지 구분」을 선택하세요"로
+ * **차단**했다(memory `feedback_store_default_vs_ui_display_fallback`).
+ * 게다가 그 3배 fallback은 같은 validate 주석의 R-7이 "초과면적을 과다 산출해 **납세자에게
+ * 불리**"하다고 명시한 바로 그 가정이다.
+ *
+ * ⇒ 입력은 ① 하나로 모으고, 이 카드는 **한도 계산 결과만** 보여준다.
+ *   미선택이면 3배를 가정하지 않고 계산을 **생략**한다(R-7).
+ * anchor: `__tests__/components/new-construction-footprint-display-only.anchor.test.tsx`
+ */
 interface Props {
-  /** 건물 정착면적 (㎡, 문자열) */
+  /** 건물 정착면적 (㎡, 문자열) — ① 기본정보가 입력한 값 */
   buildingFootprintArea: string;
-  onBuildingFootprintAreaChange: (v: string) => void;
-  /** 부수토지 인정 zone (3/5/10배 결정) */
+  /** 부수토지 인정 zone (3/5/10배 결정) — ① 기본정보가 입력한 값. `undefined` = 미선택 */
   appurtenantLandZone: AppurtenantLandZone | undefined;
-  onAppurtenantLandZoneChange: (v: AppurtenantLandZone) => void;
   /** companion 토지 면적 (㎡, 문자열) — 한도 초과 판정용. 없으면 계산 생략 */
   companionLandArea?: string;
 }
@@ -67,7 +84,12 @@ const ZONE_OPTIONS: ReadonlyArray<{
   },
 ];
 
-function multiplierOf(zone: AppurtenantLandZone | undefined): number {
+/**
+ * 미선택(`undefined`)은 **`null`**이다 — 3배로 가정하지 않는다.
+ * 그 가정은 `transfer-tax-validate-split.ts` R-7이 "초과면적을 과다 산출해 납세자에게 불리"로
+ * 배제한 것이고, 엔진도 미선택 시 배율 판정 자체를 하지 않는다.
+ */
+function multiplierOf(zone: AppurtenantLandZone | undefined): number | null {
   switch (zone) {
     case "metropolitan_residential":
       return 3;
@@ -76,34 +98,35 @@ function multiplierOf(zone: AppurtenantLandZone | undefined): number {
     case "non_urban":
       return 10;
     default:
-      return 3; // 미선택 시 가장 보수적인 3배 적용
+      return null; // 미선택 — 계산 생략 (R-7: 3배 가정은 납세자에게 불리)
   }
 }
 
 function zoneLabel(zone: AppurtenantLandZone | undefined): string {
-  return ZONE_OPTIONS.find((o) => o.value === zone)?.label ?? "수도권 도시지역(기본)";
+  return ZONE_OPTIONS.find((o) => o.value === zone)?.label ?? "미선택";
 }
 
 export function NewConstructionFootprintSection({
   buildingFootprintArea,
-  onBuildingFootprintAreaChange,
   appurtenantLandZone,
-  onAppurtenantLandZoneChange,
   companionLandArea,
 }: Props) {
   const footprint = parseDecimal(buildingFootprintArea) || 0;
   const multiplier = multiplierOf(appurtenantLandZone);
-  const limitArea = footprint * multiplier;
+  // 미선택이면 한도가 정의되지 않는다 — 0으로 떨어뜨리면 "전량 초과"라는 거짓 판정이 된다.
+  const limitArea = multiplier !== null ? footprint * multiplier : null;
 
   const companionArea = companionLandArea ? parseDecimal(companionLandArea) || 0 : 0;
   const hasCompanionArea = companionArea > 0;
-  const excessArea = hasCompanionArea ? Math.max(0, companionArea - limitArea) : 0;
+  const excessArea =
+    hasCompanionArea && limitArea !== null ? Math.max(0, companionArea - limitArea) : 0;
 
-  const isExcess = hasCompanionArea && excessArea > 0;
+  const isExcess = hasCompanionArea && limitArea !== null && excessArea > 0;
 
   const limitJudgment = useMemo(() => {
     if (!footprint || footprint <= 0) return null;
     if (!hasCompanionArea) return null;
+    if (limitArea === null) return null;
     if (isExcess) {
       return {
         type: "excess" as const,
@@ -125,40 +148,36 @@ export function NewConstructionFootprintSection({
         한도 초과분은 일반 나대지로 분리하여 토지 보유기간 기준 세율을 적용합니다.
       </p>
 
-      {/* ① 건물 정착면적 */}
-      <ToneCard tone="sky" sectionNum="①" title="건물 정착면적 (㎡)" noDark>
-        <FieldCard
-          label="건물 정착면적 (㎡)"
-          hint="건물이 지면에 접한 1층 바닥면적(㎡)입니다. 소수점 2자리까지 입력 가능."
-        >
-          <DecimalInput
-            value={buildingFootprintArea}
-            onChange={onBuildingFootprintAreaChange}
-          />
-        </FieldCard>
-      </ToneCard>
-
-      {/* ② 부수토지 zone (3/5/10배) */}
-      <ToneCard tone="sky" sectionNum="②" title="소재지 구분 (영 §154⑦)" noDark>
-        <RadioCardGroup
-          name="appurtenantLandZone"
-          tone="sky"
-          layout="stack"
-          value={appurtenantLandZone ?? "metropolitan_residential"}
-          onChange={(v) => onAppurtenantLandZoneChange(v as AppurtenantLandZone)}
-          options={ZONE_OPTIONS.map((opt) => ({
-            value: opt.value,
-            label: opt.label,
-            description: opt.description,
-          }))}
-        />
-        <p className="text-caption text-sky-600">
-          수도권정비계획법·국토계획법상 소재지에 따라 정착면적 배율이 달라집니다. 잘 모르겠으면 가장 보수적인 &quot;수도권 도시지역(주거·상업·공업) 3배&quot;를 선택하세요.
+      {/* ①② 입력값 표시 — 두 필드 모두 ① 기본정보가 입력한다(파일 상단 Props 주석).
+          여기에 입력 위젯을 다시 넣지 말 것. 특히 소재지 구분에 display fallback
+          (`?? "metropolitan_residential"`)을 걸면 store가 미선택인데 선택된 것처럼 보여
+          validate 차단과 어긋난다 — 그것이 이 카드가 표시 전용이 된 이유다. */}
+      <div className="rounded-md border border-sky-200 bg-white/60 px-3 py-2 text-caption text-sky-900 space-y-1">
+        <p>
+          <b>건물 정착면적</b>{" "}
+          {footprint > 0 ? `${buildingFootprintArea}㎡` : "— 미입력"}
         </p>
-      </ToneCard>
+        <p>
+          <b>소재지 구분</b>{" "}
+          {appurtenantLandZone
+            ? `${zoneLabel(appurtenantLandZone)} (×${multiplier}배)`
+            : "— 미선택"}
+        </p>
+        <p className="text-sky-600">
+          두 값 모두 <b>① 기본정보</b>에서 입력합니다.
+        </p>
+      </div>
+
+      {/* 소재지 미선택 안내 — 3배를 가정해 한도를 보여주지 않는다(R-7). */}
+      {footprint > 0 && limitArea === null && (
+        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-caption text-sky-800">
+          ① 기본정보에서 <b>부수토지 소재지 구분</b>을 선택하면 인정 한도를 계산합니다.
+          배율(3·5·10배)이 정해지지 않은 상태에서는 한도를 임의로 가정하지 않습니다.
+        </div>
+      )}
 
       {/* 자동 계산 결과 박스 */}
-      {footprint > 0 && (
+      {footprint > 0 && limitArea !== null && (
         <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-caption text-sky-800 space-y-1">
           <p className="font-semibold">부수토지 인정 한도 계산:</p>
           <p>
