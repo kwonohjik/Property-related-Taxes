@@ -700,7 +700,7 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     <div className="space-y-3">
       {props.enableBatchCalc && !assetMajor && (
         <div className="flex justify-end">
-          <MultiPointBuildingStdPriceModal points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} housingFloorAreaPrefill={props.housingFloorArea} commercialFloorAreaPrefill={props.commercialFloorArea} />
+          <MultiPointBuildingStdPriceModal points={batchPoints} onApply={applyBatch} enableCommercial={enableCommercial} commercialAcqFirstMode={splitMode} snapshotPrefix={props.stdPriceSnapshotPrefix} jibun={props.jibun} initialAddress={props.stdPriceAddress} housingFloorAreaPrefill={props.housingFloorArea} commercialFloorAreaPrefill={props.commercialFloorArea} />
         </div>
       )}
       {assetMajor ? (

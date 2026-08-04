@@ -36,6 +36,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { AddressSearch } from "@/components/ui/address-search";
+import type { AddressValue } from "@/components/ui/address-search";
 import { BuildingRegisterLookupField } from "./BuildingRegisterLookupField";
 import { buildAddressPatch } from "@/lib/calc/building-std-price-form";
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
@@ -101,6 +102,13 @@ interface Props {
    */
   jibun?: string;
   /**
+   * 소재지 전체(자산 카드 ① 기본정보) — 모달 열 때 소재지 검색창에 시드한다.
+   * `jibun`(지번 문자열)만으로는 **pnu가 없어 건축물대장 조회가 비활성**되므로,
+   * 1시점 계산기(`BuildingStdPriceModalButton initialAddress`)와 같은 값을 받는다.
+   * 미주입 시 빈 검색창(종전 동작) — 사용자가 모달에서 직접 검색한다.
+   */
+  initialAddress?: AddressValue;
+  /**
    * 첫 부분(주택) 연면적 자동채움(문자열) — 겸용주택 주택분 등에서 상위 화면의 주택 연면적을
    * 모달 열 때 첫 행에 시드. 미주입 시 빈 값(종전 동작). 사용자 수정 가능.
    */
@@ -151,6 +159,7 @@ export function MultiPointBuildingStdPriceModal({
   commercialAcqFirstMode = false,
   snapshotPrefix,
   jibun,
+  initialAddress,
   housingFloorAreaPrefill,
   commercialFloorAreaPrefill,
   dataTestId,
@@ -343,6 +352,12 @@ export function MultiPointBuildingStdPriceModal({
   // 모달 열 때 현재 위젯 공시지가로 재시드(지연 초기화는 최초 1회뿐 → 신규 입력 stale 방지).
   function handleOpen() {
     setLandPrices(Object.fromEntries(points.map((p) => [p.key, p.landPricePerM2])));
+    // 소재지는 상위 화면(자산 카드 ① 기본정보) 값으로 다시 시드 — pnu까지 들어와야
+    // 건축물대장 조회가 활성된다. **값이 실제로 있을 때만** 덮는다: 상위가 비어 있는데
+    // 시드하면 사용자가 모달에서 직접 검색한 주소가 재오픈 시 지워진다(종전 동작 보존).
+    if (initialAddress?.jibun || initialAddress?.road) {
+      setAddr(buildAddressPatch(initialAddress));
+    }
     // 첫 부분(주택)에 상위 화면 주택 연면적 자동채움(있으면). 사용자 수정 가능.
     // 겸용은 상가 행도 상가 연면적으로 함께 시드 — 상가 런처 진입 후 chip 전환 시
     // 주택 면적이 상가에 남는 혼란 방지(각 행이 자기 자산 면적을 갖고 시작).

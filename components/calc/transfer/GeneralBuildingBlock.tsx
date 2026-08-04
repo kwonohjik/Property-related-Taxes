@@ -283,6 +283,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                   onApply={(v) => onChange(buildGeneralBuildingBatchPatch(v, asset))}
                   snapshotPrefix={`bsp-${asset.assetId}-gb`}
                   jibun={asset.addressJibun || undefined}
+                  initialAddress={stdPriceAddress}
                   housingFloorAreaPrefill={asset.gbBuildingArea || undefined}
                   dataTestId="gb-building-std-batch-open"
                 />

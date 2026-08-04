@@ -371,6 +371,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                   onApply={applyBatch}
                   snapshotPrefix={`bsp-${asset.assetId}-cb`}
                   jibun={asset.addressJibun || undefined}
+                  initialAddress={stdPriceAddress}
                   housingFloorAreaPrefill={totalFloorArea != null ? String(totalFloorArea) : undefined}
                   dataTestId="cb-building-std-batch-open"
                 />
