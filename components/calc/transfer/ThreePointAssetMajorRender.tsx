@@ -14,7 +14,8 @@ import type { ReactNode } from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { landStdForArea } from "@/lib/calc/mixed-use-case";
-import { PointBlock, type ThreePointStandardPriceInputProps } from "./ThreePointStandardPriceInput";
+import { PointBlock } from "./ThreePointPointBlock";
+import type { ThreePointStandardPriceInputProps } from "./ThreePointStandardPriceInput";
 import {
   MultiPointBuildingStdPriceModal,
   type MultiPointStdPriceApply,
