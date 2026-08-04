@@ -11,7 +11,6 @@
 
 import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
@@ -104,15 +103,24 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         tone="amber"
       />
 
-      {/* ①② 토지 면적 · 최초 고시일 (한 행) */}
+      {/* ① 최초 고시일 (토지 면적은 ① 기본정보로 이전 — 아래 주석)
+
+          토지 면적(`acquisitionArea`) 입력 칸을 여기서 제거했다(2026-08-04).
+          이 패널은 `usePreHousingDisclosure` 토글 아래에 있어 **토글을 끄면 사라지는데**,
+          같은 필드를 ① 기본정보 축 A(`asset-sections/AssetAreaSection.tsx`)도 입력받아
+          같은 값을 두 곳에서 받고 있었다. 이 패널이 열리는 자산유형은 `housing`과
+          (분리취득 시) `building`뿐이고(`CompanionAcqPurchaseBlock.tsx:115-116·417`)
+          둘 다 축 A에 등재되어 있어(`AREA_SCENARIOS_BY_ASSET_KIND`) 입력 경로는 남는다.
+          전용 블록 4종과 같은 처리다 — `GeneralBuildingBlock.tsx:299` 참조.
+          ⛔ 여기에 면적 칸을 다시 추가하지 말 것.
+          anchor: `__tests__/components/asset-area-input-no-duplication.anchor.test.tsx`
+                  ("공유 섹션" describe) */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <FieldCard label="토지 면적" required unit="㎡" stacked>
-          <DecimalInput
-            placeholder="토지 면적 입력"
-            value={asset.acquisitionArea}
-            onChange={(v) => onChange({ acquisitionArea: v })}
-          />
-        </FieldCard>
+        <div className="rounded-md border border-border/60 bg-muted/20 p-2 text-caption text-muted-foreground">
+          <b>토지 면적</b>은 ① 기본정보에서 입력합니다
+          {asset.acquisitionArea ? ` — 현재 ${asset.acquisitionArea}㎡` : " (미입력)"}.
+          이 패널의 3-시점 기준시가는 그 면적을 곱셈 인자로 씁니다.
+        </div>
 
         <FieldCard label="최초 고시일" required stacked>
           <DateInput
