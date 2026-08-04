@@ -142,13 +142,13 @@ interface PrimarySectionProps {
  * 신축(자가건축) 주 자산(주택) — 부수토지 한도 산정 섹션.
  * 렌더 조건: acquisitionCause === "newConstruction" && assetKind === "housing" (호출 측에서 제어).
  */
-export function NewConstructionPrimarySection({ asset, onChange }: PrimarySectionProps) {
+export function NewConstructionPrimarySection({ asset }: PrimarySectionProps) {
+  // 표시 전용 — 정착면적·소재지 구분의 입력은 ① 기본정보가 담당한다
+  // (`NewConstructionFootprintSection` Props 주석 참조). 여기에 onChange를 다시 배선하지 말 것.
   return (
     <NewConstructionFootprintSection
       buildingFootprintArea={asset.buildingFootprintArea ?? ""}
-      onBuildingFootprintAreaChange={(v) => onChange({ buildingFootprintArea: v })}
       appurtenantLandZone={asset.appurtenantLandZone}
-      onAppurtenantLandZoneChange={(v) => onChange({ appurtenantLandZone: v })}
     />
   );
 }

@@ -29,6 +29,7 @@ import { AssetSectionAcquisition } from "@/components/calc/transfer/asset-sectio
 import { AssetSectionBasic } from "@/components/calc/transfer/asset-sections/AssetSectionBasic";
 import { RedevelopmentValuationSection } from "@/components/calc/transfer/RedevelopmentValuationSection";
 import { MixedUseExpandedPanel } from "@/components/calc/transfer/MixedUseSection";
+import { PreHousingDisclosureSection } from "@/components/calc/transfer/PreHousingDisclosureSection";
 import { shouldShowRedevValuationSection } from "@/components/calc/transfer/asset-sections/AssetAreaRedevelopment";
 import { validateRedevelopmentAsset } from "@/lib/calc/transfer-tax-validate-redev";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
@@ -331,5 +332,67 @@ describe("겸용주택 면적 — 안분 카드가 ① 단일 위치", () => {
       />,
     );
     expect(screen.getByText("1-A")).toBeTruthy();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 공유 섹션 — 전용 블록이 아니라 **모드 토글 아래** 있어 rev.2 P2에서 누락된 것들
+//
+// rev.2는 자산유형 **전용 블록 4종**(상가·일반건물·재개발·겸용)에서만 면적 칸을 걷어냈다.
+// 그런데 `acquisitionArea`는 자산유형이 아니라 **취득 모드**로 열리는 섹션들에도
+// 입력 칸이 있었다 — 이들은 전용 블록이 아니라 P2 범위 밖이었다:
+//
+//   `PreHousingDisclosureSection`   ← `usePreHousingDisclosure` 토글 (§164⑤)
+//
+// 계약은 rev.2와 같다 — 면적의 입력 위치는 ① 하나뿐이고, 이 섹션들은 그 값을
+// **읽어 쓰기만** 한다. 열리는 자산유형이 모두 축 A에 등재되어 있어 dead-end는 없다.
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe("공유 섹션 면적 — ① 단일 위치 (rev.2 누락분)", () => {
+  /** §164⑤ PHD 패널이 실제로 열리는 자산 — housing + 환산취득. */
+  function phdAsset(over: Partial<AssetForm> = {}): AssetForm {
+    return {
+      ...makeDefaultAsset(1),
+      assetKind: "housing",
+      useEstimatedAcquisition: true,
+      usePreHousingDisclosure: true,
+      acquisitionDate: "2003-05-01",
+      acquisitionArea: "150.5",
+      ...over,
+    };
+  }
+
+  it("PHD 패널(§164⑤)에 면적 입력 칸이 0개", () => {
+    render(
+      <PreHousingDisclosureSection
+        asset={phdAsset()}
+        transferDate="2026-05-01"
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByPlaceholderText("토지 면적 입력")).toBeNull();
+  });
+
+  it("PHD 패널은 ① 값을 읽어 보여준다 — 어디서 입력하는지 안내 포함", () => {
+    render(
+      <PreHousingDisclosureSection
+        asset={phdAsset()}
+        transferDate="2026-05-01"
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/① 기본정보에서 입력합니다/)).toBeTruthy();
+    expect(screen.getByText(/150\.5㎡/)).toBeTruthy();
+  });
+
+  it("면적 미입력이면 (미입력)으로 표시 — 침묵하지 않는다", () => {
+    render(
+      <PreHousingDisclosureSection
+        asset={phdAsset({ acquisitionArea: "" })}
+        transferDate="2026-05-01"
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/\(미입력\)/)).toBeTruthy();
   });
 });

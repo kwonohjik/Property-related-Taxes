@@ -23,6 +23,7 @@ import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPricePart } from "./transfer-tax-split-acq-mode";
 import { needsSaleStdPart } from "./transfer-tax-split-acq-mode";
+import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
@@ -203,8 +204,10 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 조건부 차단이라 엔진 fallback 경로는 이 게이트로 도달이 막히고, actual/legacy 경로는 불변(⑧ 모순 없음).
   const landMode = effectivePartAcqMode(asset.landAcqMode, asset);
   const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, asset);
+  // 토지분은 저장값이 아니라 단가 × 면적 파생 — API가 엔진에 넣는 값과 **같은 함수**로 판정한다.
+  // 저장값만 보면 "면적을 ①에서 고쳐 캐시가 stale인" 자산에서 UI 통과 ↔ 엔진 입력 불일치가 된다.
   const hasSaleRatio =
-    opt(asset.landStandardPriceAtTransfer) != null && opt(asset.buildingStandardPriceAtTransfer) != null;
+    resolveLandStdAtTransfer(asset) != null && opt(asset.buildingStandardPriceAtTransfer) != null;
 
   // 양도시 기준시가 배치 — UI 노출과 **같은 술어**. 여기서 재기술하면 "칸이 없는데 차단"이 된다.
   // `saleSplitMode` fallback은 UI(CompanionAcqDateSection.tsx:202)·API(transfer-tax-api-split.ts:67)와
@@ -273,7 +276,7 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 기준시가 칸이 화면에 없다(계획서 §5.5). 노출 술어와 같은 함수로 파트별로 판정한다.
   // 메시지는 `양도시 기준시가` 연속 토큰을 유지한다 — 기존 anchor 4곳이 그 부분문자열에 의존한다
   // (transfer-tax-validate-split.test.ts:78,86,537,550).
-  if (needsSaleStdPart("land", saleStdCtx) && opt(asset.landStandardPriceAtTransfer) == null) {
+  if (needsSaleStdPart("land", saleStdCtx) && resolveLandStdAtTransfer(asset) == null) {
     return `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목).`;
   }
   if (needsSaleStdPart("building", saleStdCtx) && opt(asset.buildingStandardPriceAtTransfer) == null) {

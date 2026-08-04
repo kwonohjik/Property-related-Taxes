@@ -321,3 +321,58 @@ export function requiresAcqStdPricePart(
   if (mode !== "actual") return true;
   return needsApportionRatio(a, ctx);
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 양도시 토지분 기준시가 — 저장값이 아니라 파생값이 정본
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** 콤마 허용 문자열 → 양수. 그 외는 0. (단가=정수·면적=소수 둘 다 처리) */
+function positive(v: string | undefined): number {
+  const n = parseFloat((v ?? "").replace(/,/g, ""));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * **양도시 토지분 기준시가**(「소득세법」 제99조 제1항 제1호 가목) = ㎡당 개별공시지가 × 양도 당시 토지 면적.
+ *
+ * ## 왜 저장값을 그대로 쓰면 안 되는가
+ *
+ * 토지분은 **직접 입력 칸이 없다** — 가목은 "개별공시지가 × 면적"이 정의 그 자체라 별도 고시
+ * 총액이 존재하지 않는다(`TransferStdPriceCards.tsx:88-91`). 그래서 `landStandardPriceAtTransfer`는
+ * 사용자가 적어 넣는 값이 아니라 **파생값의 캐시**다.
+ *
+ * 그런데 그 캐시를 갱신하는 경로는 `TransferStdPriceCards.tsx`의 `writeLandStd` **하나뿐**인데,
+ * 곱셈 인자인 `transferArea`를 쓰는 경로는 넷이다:
+ *
+ *   `AssetAreaSection.tsx:323·373·412`  ① 기본정보 축 A   → 캐시 갱신 ❌
+ *   `AssetSectionTransfer.tsx:105`      ② 공익수용 면적    → 캐시 갱신 ❌
+ *   `CompanionAcquisitionCauseSection.tsx:171`             → 캐시 갱신 ❌
+ *   `TransferStdPriceCards.tsx:50`      `writeLandStd`      → 캐시 갱신 ✅
+ *
+ * ⇒ ③에서 면적 100으로 총액을 만든 뒤 ①에서 면적을 200으로 고치면 캐시가 100 기준으로 남는다.
+ *   실측(면적을 절반으로 어긋나게 둔 경우, `land-building-split.test.ts` S1 fixture 기준):
+ *   **산출세액 20,202,957원 → 0원**. 양도가액 안분 비율(`calcSaleApportionRatio`)과 환산 분모가
+ *   함께 틀어지면서 세액이 통째로 사라진다 — 과소신고 방향이다.
+ *
+ * ## 규약
+ *
+ * 단가와 면적이 모두 있으면 **항상 그 곱**이 정본이다. 저장값은 둘 중 하나가 없을 때만 쓴다
+ * (단가·면적 없이 총액만 있는 legacy·stale sessionStorage 자산 호환).
+ *
+ * 절사는 `writeLandStd`(:56)·`LandPriceLookupField`(:144-145)와 동일한 `Math.floor`.
+ *
+ * UI 표시·API 변환·validate가 **이 함수 하나**를 쓴다 — 각자 계산하면 dual-truth가 된다
+ * (memory `feedback_ui_engine_dual_truth_avoidance`).
+ */
+export function resolveLandStdAtTransfer(a: {
+  standardPricePerSqmAtTransfer?: string;
+  transferArea?: string;
+  landStandardPriceAtTransfer?: string;
+}): number | undefined {
+  const perSqm = positive(a.standardPricePerSqmAtTransfer);
+  const area = positive(a.transferArea);
+  if (perSqm > 0 && area > 0) return Math.floor(perSqm * area);
+
+  const stored = positive(a.landStandardPriceAtTransfer);
+  return stored > 0 ? stored : undefined;
+}

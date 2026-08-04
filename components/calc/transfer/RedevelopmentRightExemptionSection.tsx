@@ -57,10 +57,13 @@ export function RedevelopmentRightExemptionSection({
   // ── C-1 (a) 자동 검증 useMemo ──
   const warningState = useMemo(() => {
     if (!isRightSubject) return null;
-    const eligible =
-      asset.redevExemptionEligibleAtApproval === "yes" ||
-      (asset.redevExemptionEligibleAtApproval !== "no" && !asset.redevExemptionEligibleAtApproval);
-    if (!eligible) return null;
+    // 경고는 **자기선언을 검증**하는 것이므로 선언(토글 ON = `"yes"`)이 전제다.
+    // 종전 조건은 `"yes"`에 더해 빈값도 포함했으나, 그때는 토글 OFF가 `"no"`를 기록해
+    // 빈값 = "아직 토글을 건드리지 않음"이었고 월수 입력칸(토글 children)도 열린 적이
+    // 없어 `> 0` 경고가 발동할 수 없었다 — 실질 무의미한 가지였다.
+    // 이제 OFF가 빈값을 기록하므로(:134 주석) 빈값을 남겨두면 **토글을 끈 뒤에도
+    // 경고 카드가 남는다**. 빈값을 제외해 종전의 "OFF면 경고 없음" 동작을 보존한다.
+    if (asset.redevExemptionEligibleAtApproval !== "yes") return null;
 
     const holdingMonths = parseDecimal(asset.redevPriorHouseHoldingMonths);
     const residenceMonths = parseDecimal(asset.redevPriorHouseResidenceMonths);
@@ -116,11 +119,22 @@ export function RedevelopmentRightExemptionSection({
           <LawArticleModal legalBasis="소득세법 시행령 §154" label="시행령 §154" />
         </div>
 
+        {/* ⚠️ OFF는 `""`(자동 판정)다 — `"no"`가 아니다.
+            이 필드는 3-state(`"" | "yes" | "no"`)이고 세 값이 엔진에서 각각 다른 뜻이다.
+            `"no"`는 `redevelopment-lthd.ts:119-122`에서 `isOneHouseSingle`을 강제 false로
+            내려 LTHD 표2(최대 80%)를 표1(최대 30%)로 강등하지만 `""`는 강등하지 않는다.
+            토글은 2-state라 `""`와 `"no"`를 똑같이 OFF로 표시하므로, OFF에 `"no"`를 쓰면
+            **같은 화면 상태에서 세액이 갈린다**(실측 +30,800,000원 — anchor 참조).
+            §89①4호 가목 자기선언의 OFF는 "선언하지 않음"이지 인가일 기준 미충족의 적극적
+            선언이 아니다 → 불리 적용의 법 근거가 없다.
+            `"no"` 입력은 3-state를 온전히 표현하는 `ExemptionAtApprovalCard`의
+            RadioCardGroup(`RedevelopmentBlock.tsx:598`)이 담당한다.
+            anchor: `__tests__/components/redev-exemption-toggle-tri-state.anchor.test.tsx` */}
         <ToggleCard
           tone="violet"
           checked={isToggleOn}
           onCheckedChange={(v) =>
-            onChange({ redevExemptionEligibleAtApproval: v ? "yes" : "no" })
+            onChange({ redevExemptionEligibleAtApproval: v ? "yes" : "" })
           }
           title="인가일 현재 §89①3호 가목 요건 충족 (자기선언)"
           description="양도일 현재 1세대1입주권 + 인가일 기준 종전주택 보유 2년 이상 (조정대상지역 취득 시 거주 2년 이상)"
