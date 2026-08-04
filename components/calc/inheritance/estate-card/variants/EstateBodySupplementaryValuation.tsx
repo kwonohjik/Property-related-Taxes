@@ -15,6 +15,7 @@ import {
 } from "@/components/calc/inputs/RadioCardGroup";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { HometaxStdPriceLink } from "@/components/calc/shared/HometaxStdPriceLink";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -202,6 +203,13 @@ export function EstateBodySupplementaryValuation({
             }}
             options={CB_ROUTE_OPTIONS(item.id)}
           />
+        )}
+        {/* 경로 A(일괄고시 §61①3호)는 자동조회가 없다 — 홈택스 고시 화면을 직접 열 수 있게 한다.
+            경로 B(건물+부수토지 분리)는 일괄고시 대상이 아니므로 노출하지 않는다. */}
+        {cat === "real_estate_building" && !separateLandMode && (
+          <div className="flex justify-end">
+            <HometaxStdPriceLink />
+          </div>
         )}
         <StandardPriceInput
           propertyKind={propertyKind}

@@ -22,6 +22,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { Button } from "@/components/ui/button";
+import { HometaxStdPriceLink } from "@/components/calc/shared/HometaxStdPriceLink";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,7 @@ interface TimePoint {
 
 const RENDER_LIMIT = 200;
 const SEARCH_THRESHOLD = 200;
+
 
 export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, variant }: Props) {
   const [open, setOpen] = useState(false);
@@ -198,17 +200,20 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
 
   return (
     <>
-      <Button
-        type="button"
-        variant="modalLauncher"
-        size="xs"
-        disabled={!!disabledReasonText}
-        title={disabledReasonText}
-        data-testid="cb-stdprice-lookup-open"
-        onClick={openModal}
-      >
-        호별 고시가 조회
-      </Button>
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        <HometaxStdPriceLink />
+        <Button
+          type="button"
+          variant="modalLauncher"
+          size="xs"
+          disabled={!!disabledReasonText}
+          title={disabledReasonText}
+          data-testid="cb-stdprice-lookup-open"
+          onClick={openModal}
+        >
+          호별 고시가 조회
+        </Button>
+      </div>
       {disabledReasonText && (
         <p className="text-caption text-muted-foreground">{disabledReasonText}</p>
       )}
