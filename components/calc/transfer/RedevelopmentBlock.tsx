@@ -38,6 +38,7 @@ import { RedevelopmentRightExemptionSection } from "./RedevelopmentRightExemptio
 import { SettlementExemptionGuideCard } from "./SettlementExemptionGuideCard";
 import { HousingContribEstimatedSection } from "./HousingContribEstimatedSection";
 import { RedevelopmentDeemedAcquisitionNotice } from "./RedevelopmentDeemedAcquisitionNotice";
+import { shouldShowRedevValuationSection } from "./asset-sections/AssetAreaRedevelopment";
 
 interface Props {
   asset: AssetForm;
@@ -390,11 +391,10 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
 
       {/* ⑥ rose: 환산취득가 (시행령 §166③ + §164⑦ PHD 패턴) — 승계조합원 모드 시 숨김 (본 PR 미지원) */}
       {/* 단독주택 출자 §164⑤ 분기(housing+right+receive+estimated)는 위 ⑤-a 카드 사용 → 일반 환산 카드 숨김 */}
-      {asset.redevIsSuccessorMember !== "yes" &&
-        !(asset.redevOriginalAssetType === "housing" &&
-          (asset.redevSubject === "right" || asset.assetKind === "right_to_move_in") &&
-          asset.redevSettlementDirection === "receive" &&
-          asset.useEstimatedAcquisition === true) && (
+      {/* 게이트는 `shouldShowRedevValuationSection` 단일 소스 — ① 기본정보의 면적
+          위젯(`AssetAreaRedevelopment`)이 같은 술어를 쓴다. 복제 금지:
+          갈리면 면적 입력 dead-end 또는 미사용 값 입력이 된다. */}
+      {shouldShowRedevValuationSection(asset) && (
         <RedevelopmentValuationSection asset={asset} onChange={onChange} />
       )}
 

@@ -15,7 +15,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DateInput } from "@/components/ui/date-input";
@@ -236,13 +236,8 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               hint="국토교통부장관이 최초로 공시한 주택가격 (단일 라목값)"
             />
 
-            <FieldCard label="취득·양도 당시 토지 면적 (㎡)" hint="시점별 동일 가정 — 환지·합병으로 면적이 다른 케이스는 후속 PR">
-              <DecimalInput
-                value={asset.redevLandArea}
-                onChange={(v) => onChange({ redevLandArea: v })}
-                unit="㎡"
-              />
-            </FieldCard>
+            {/* 토지 면적은 ① 기본정보로 이전했다 (2026-08-04) —
+                `asset-sections/AssetAreaRedevelopment.tsx`. 여기에 다시 추가하지 말 것. */}
 
             <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
               <p className="text-caption font-semibold text-rose-700">취득시 (Sum_A 산정)</p>
@@ -397,17 +392,9 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
         </p>
       </div>
 
-      {/* 토지면적 */}
-      <FieldCard
-        label="취득·양도 당시 토지 면적 (㎡)"
-        hint="§166③ 분자·분모 공통 면적. 취득·관리처분 시점 동일 가정."
-      >
-        <DecimalInput
-          value={asset.redevLandArea}
-          onChange={(v) => onChange({ redevLandArea: v })}
-          unit="㎡"
-        />
-      </FieldCard>
+      {/* 토지 면적은 ① 기본정보로 이전했다 (2026-08-04) —
+          `asset-sections/AssetAreaRedevelopment.tsx`가 `isLand` 분기에 맞춰
+          §166③ hint를 표시한다. 여기에 다시 추가하지 말 것. */}
 
       {/* 취득당시 토지 ㎡당 단가 — §166③ 분자 */}
       <LandPriceLookupField

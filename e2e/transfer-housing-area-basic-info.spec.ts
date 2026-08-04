@@ -68,10 +68,17 @@ test.describe("주택 기본정보 면적 입력 (Phase 2 게이트 확대)", ()
     // 게이트 확대 전제 확인 — 일반 주택에서는 노출
     await expect(page.getByTestId("area-scenario-select")).toBeVisible();
 
-    // 겸용주택 토글 ON → mixedUseTotalLandArea + 겸용 전용 섹션이 전체 면적을 담당하므로
-    // 기본정보 면적 섹션은 사라져야 한다(중복 입력 방지).
+    // 겸용주택 토글 ON → 축 A 시나리오는 사라지고 **겸용 안분 카드**가 대신 담당한다.
+    // ⚠️ 2026-08-04(P2-4)부터 그 안분 카드도 ① 기본정보에 있다 — 종전에는 ③ 취득정보의
+    //    겸용 확장 패널에 있었다. 즉 "면적 섹션이 사라진다"가 아니라 "축 A 위젯이
+    //    안분 카드로 교체된다"가 정확한 계약이다.
     await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
     await expect(page.getByTestId("area-scenario-select")).toHaveCount(0);
+
+    // 안분 카드가 ①에서 축 A를 대체한다 — 분모(전체 토지)와 결과(주택·상가 부수토지)가 함께
+    await expect(page.getByText("전체 토지 면적 (㎡)")).toBeVisible();
+    await expect(page.getByText("주택 부수토지 (㎡)")).toBeVisible();
+    await expect(page.getByText("상가 부수토지 (㎡)")).toBeVisible();
   });
 });
 
@@ -122,7 +129,18 @@ test.describe("Phase F1 — 기본정보 건물 면적(축 B·C)", () => {
    *    라벨 "건물(토지 제외)"는 *기준시가 공시 범위*이지 토지 부재가 아니다.
    *    코드도 그렇다 — `toPropertyType(building_non_residential)` → "land"(개별공시지가).
    */
-  test("건물(토지 제외): 축 A(토지 면적) + 축 B(연면적) 노출, 축 C만 미노출", async ({ page }) => {
+  /**
+   * 🔄 계약 변경 (2026-08-04, P3 — 사용자 확정 O-1)
+   *
+   * 종전: "축 C는 §154⑦ 주택 부수토지 한도 판정용이라 building은 대상 아님" → 미노출.
+   * 변경: 사용자가 **상가·건물은 면적을 앞으로 사용 예정**으로 확정 → 장래 대비 입력을
+   *       받는다. 다만 세액 소비처가 없으므로 3중 안전장치를 건다:
+   *         ① "아직 세액 계산에 반영되지 않습니다" 안내
+   *         ② 배율 라디오(부수토지 소재지 구분)는 **미노출** — §154⑦은 주택 전용
+   *         ③ validate 비강제
+   * vitest 대응 anchor: `__tests__/components/asset-section-basic-area-gate.anchor.test.tsx`
+   */
+  test("건물(토지 제외): 축 A·B·C 노출, 배율 라디오만 미노출", async ({ page }) => {
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
     await expandAssetSection(page, 1);
@@ -132,8 +150,11 @@ test.describe("Phase F1 — 기본정보 건물 면적(축 B·C)", () => {
     // 부수토지가 가목으로 별도 평가되므로 축 A가 필요하다
     await expect(page.getByTestId("area-scenario-select")).toHaveCount(1);
     await expect(page.getByText(/취득·양도 당시 토지 면적 \(㎡\)/)).toBeVisible();
-    // 축 C(바닥면적)는 §154⑦ 주택 부수토지 한도 판정용이라 대상 아님
-    await expect(page.getByTestId("basic-building-footprint-area")).toHaveCount(0);
+    // 축 C — 장래 대비 입력(P3)
+    await expect(page.getByTestId("basic-building-footprint-area")).toBeVisible();
+    await expect(page.getByText(/아직 세액 계산에 반영되지 않습니다/)).toBeVisible();
+    // 배율 라디오는 §154⑦ 주택 전용이라 미노출
+    await expect(page.getByText("부수토지 소재지 구분")).toHaveCount(0);
   });
 
   test("겸용주택 ON: 축 B·C도 미노출 (겸용 전용 섹션이 정본)", async ({ page }) => {

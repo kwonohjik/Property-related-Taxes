@@ -10,7 +10,6 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import { MixedUseAreaInputs } from "./mixed-use/MixedUseAreaInputs";
 import { MixedUseStandardPriceInputs } from "./mixed-use/MixedUseStandardPriceInputs";
 import { PartialUsageChangeInputs } from "./mixed-use/PartialUsageChangeInputs";
 
@@ -111,8 +110,10 @@ export function MixedUseExpandedPanel({
         </div>
       )}
 
-      {/* ① 면적 정보 */}
-      <MixedUseAreaInputs asset={asset} onChange={onChange} sectionNum={1} />
+      {/* ① 면적 정보는 ① 기본정보로 이전했다 (2026-08-04) — `AssetSectionBasic`이
+          `MixedUseAreaInputs`를 직접 렌더한다. 안분 11칸이 한 카드에 응집돼 있어
+          카드 통째로 옮겼다(1칸만 떼면 분모와 결과가 두 화면으로 갈린다).
+          1-A는 취득시점 전용이라 여기 남는다 — 아래 안내 문구가 그 관계를 설명한다. */}
 
       {/* 1-A 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10) */}
       {asset.hasPartialUsageChange && (

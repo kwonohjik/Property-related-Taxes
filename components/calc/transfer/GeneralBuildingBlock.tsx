@@ -5,12 +5,16 @@
  *
  * 진입 조건: assetKind === "general_building" (취득방법 무관 항상 마운트)
  * 섹션 구조:
- *  ① 면적·규모 (sky)         — 항상 표시
- *  ② 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율)
- *  ③ 취득시 기준시가 (amber)   — 환산취득가 모드 OR "토지·건물 일괄 (증축분 별도)" 모드 (일괄 취득가 안분에 필요)
- *  ⑤ 증축 정보 (amber)          — 환산취득가 모드 OR gbHasExtension ON 시 (선택); 증축분 취득방식 서브 라디오로 4가지 조합 지원
- *  ④ 비사업용토지 판정 (rose)  — 항상 표시
+ *  ① 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율)
+ *  ② 취득시 기준시가 (amber)   — 환산취득가 모드 OR "토지·건물 일괄 (증축분 별도)" 모드 (일괄 취득가 안분에 필요)
+ *     증축 정보 (amber)        — 환산취득가 모드 OR gbHasExtension ON 시 (선택); 증축분 취득방식 서브 라디오로 4가지 조합 지원
+ *  ③ 비사업용토지 판정 (rose)  — 항상 표시
  *      (「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101①2호·②)
+ *
+ * ⚠️ 면적 3필드(토지·연면적·바닥면적)는 **① 기본정보**로 이전했다(2026-08-04) —
+ *    `asset-sections/AssetAreaGeneralBuilding.tsx`. 연면적의 `isEstimated` 게이트도
+ *    함께 옮겨 동작은 그대로다. 여기에 면적 칸을 다시 추가하지 말 것.
+ *    ※ `footprint`·`landArea` 파생값은 유지한다 — ③ 비사업용토지 한도 미리보기가 소비한다.
  *
  * 정책 준수:
  *  - placeholder 숫자 예시 금지
@@ -271,7 +275,8 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             <p className="text-fuchsia-800">
               부담부증여(소득세법 시행령 §159)는 양도가/취득가 모두 <b>채무비율 × 자산별 기준시가</b>로
               엔진이 자동 산정합니다. 실거래가/환산취득가/증축 모드 선택·일괄 취득가 입력이 모두 무의미하므로
-              아래에는 §159 산식에 필요한 정보(면적·양도시·취득시 기준시가)만 표시됩니다.
+              아래에는 §159 산식에 필요한 정보(양도시·취득시 기준시가)만 표시됩니다.
+              <b>면적</b>은 ① 기본정보에서 입력합니다.
             </p>
           </div>
         )}
@@ -291,34 +296,12 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           </div>
         )}
 
-        {/* ① 면적·규모 (sky) — 항상 표시 */}
-        <ToneCard tone="sky" sectionNum="①" title="면적·규모" noDark>
+        {/* 면적 3필드(토지·연면적·바닥면적)는 ① 기본정보로 이전했다 (2026-08-04).
+            `asset-sections/AssetAreaGeneralBuilding.tsx` — 연면적의 `isEstimated`
+            게이트도 함께 옮겨 동작은 그대로다. 여기에 면적 칸을 다시 추가하지 말 것. */}
 
-          <FieldCard
-            label="취득·양도 당시 토지 면적"
-            unit="㎡"
-            hint="등기부등본 또는 토지대장 기재 토지면적 (㎡). 취득시·양도시 기준시가 양쪽의 곱셈 인자 — 시점별 동일 가정."
-          >
-            <DecimalInput value={asset.gbLandArea} onChange={(v) => onChange({ gbLandArea: v })} />
-          </FieldCard>
-
-          {isEstimated && (
-            <FieldCard label="건물 연면적" unit="㎡" hint="건축물대장 기재 각층 바닥면적 합계 (㎡). 환산취득가 참고용.">
-              <DecimalInput value={asset.gbBuildingArea} onChange={(v) => onChange({ gbBuildingArea: v })} />
-            </FieldCard>
-          )}
-
-          <FieldCard
-            label="건축물 바닥면적"
-            unit="㎡"
-            hint="건축물대장의 각 층 바닥면적 중 **가장 넓은** 값 — 지하층도 포함합니다. 건축물대장의 '건축면적'이 아닙니다(발코니·처마 등이 달라 값이 어긋납니다). 「지방세법 시행령」 제101조 제1항 제2호 부수토지 한도의 곱셈 기준."
-          >
-            <DecimalInput value={asset.gbBuildingFootprintArea} onChange={(v) => onChange({ gbBuildingFootprintArea: v })} />
-          </FieldCard>
-        </ToneCard>
-
-        {/* ② 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율 결정) */}
-        <ToneCard tone="emerald" sectionNum="②" title="양도시 기준시가 (토지·건물 안분 비율)" noDark>
+        {/* ① 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율 결정) */}
+        <ToneCard tone="emerald" sectionNum="①" title="양도시 기준시가 (토지·건물 안분 비율)" noDark>
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
           </div>
@@ -350,7 +333,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         {(isEstimated || asset.gbHasExtension || asset.transferType === "burdened_gift") && (
           <ToneCard
             tone="amber"
-            sectionNum="③"
+            sectionNum="②"
             title="취득시 기준시가 (환산 분자 + 개산공제 기준)"
             titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑥" label="§163⑥ 개산공제" />}
             noDark
@@ -590,7 +573,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         {/* ④ 비사업용토지 판정 (rose) — 항상 표시 */}
         <ToneCard
           tone="rose"
-          sectionNum="④"
+          sectionNum="③"
           title="비사업용토지 판정"
           titleExtra={
             <span className="text-micro text-rose-500">
