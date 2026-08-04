@@ -1,7 +1,7 @@
 /**
  * anchor: 상속취득 주택 3-시점 환산(§164⑤) — 건물기준시가 일괄 계산기 배선.
  *
- * HouseValuationSection에 PhdBuildingStdPriceModalButton을 배선한다.
+ * HouseValuationSection에 MultiPointBuildingStdPriceModal을 배선한다.
  *  F1. onApply 산출값을 3개 필드에 **단일 onChange patch**로 병합(3연속 호출 아님).
  *  F2. 계산기 버튼은 house_individual(단독)에만 노출, house_apart(공동주택)엔 미노출.
  *
@@ -13,8 +13,8 @@ import { HouseValuationSection } from "../../components/calc/transfer/inheritanc
 import { makeDefaultAsset } from "../../lib/stores/calc-wizard-asset-factory";
 
 // 실제 모달(구조·용도 select) 대신 stub — onApply 라우팅 + points seed 검증(계산 자체는 phd-3point-batch anchor 커버).
-vi.mock("@/components/calc/building-std-price/PhdBuildingStdPriceModalButton", () => ({
-  PhdBuildingStdPriceModalButton: (props: {
+vi.mock("@/components/calc/building-std-price/MultiPointBuildingStdPriceModal", () => ({
+  MultiPointBuildingStdPriceModal: (props: {
     points: Array<{ key: string; landPricePerM2: string }>;
     onApply: (v: {
       acquisition?: { housing?: number };

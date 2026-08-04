@@ -52,18 +52,66 @@ describe("idOfSnapshotKey — 소속 자산/재산 id 환원", () => {
   });
 });
 
-describe("phdTimepointLabel — PHD 시점 라벨", () => {
-  it("mx-commercial은 PHD 키가 아님 → null (비-PHD 기본 렌더로 위임)", () => {
+describe("phdTimepointLabel — 배치 시점 라벨", () => {
+  it("mx-commercial은 배치 키가 아님 → null (기본 렌더로 위임)", () => {
     expect(phdTimepointLabel("bsp-a1-mx-commercial")).toBeNull();
   });
 
   it("PHD 키 라벨 — 회귀 방어", () => {
-    expect(phdTimepointLabel("bsp-a1-phd-acq")).toEqual({ timepoint: "취득시", category: "housing" });
-    expect(phdTimepointLabel("bsp-a1-phd-first")).toEqual({ timepoint: "최초공시일", category: "housing" });
+    expect(phdTimepointLabel("bsp-a1-phd-acq")).toEqual({
+      timepoint: "취득시",
+      category: "housing",
+      categoryLabel: "주택분",
+      order: 0,
+    });
+    expect(phdTimepointLabel("bsp-a1-phd-first")).toEqual({
+      timepoint: "최초공시일",
+      category: "housing",
+      categoryLabel: "주택분",
+      order: 1,
+    });
     expect(phdTimepointLabel("bsp-a1-phd-transfer-commercial")).toEqual({
       timepoint: "양도시",
       category: "commercial",
+      categoryLabel: "상가분",
+      order: 2,
     });
+  });
+
+  /**
+   * 상가 §164⑥ 배치(2026-08-04 P3) — 같은 `first`가 PHD와 **다른 제도**다.
+   *   phd = 「소득세법 시행령」 제164조 제5항 주택 최초공시일
+   *   cb  = 같은 영 제164조 제6항 상업용건물·오피스텔 호별 최초고시(2005)
+   * 카테고리 구분이 없어 `housing` 슬롯을 재사용하므로 표기는 "건물"이어야 한다
+   * (그대로 두면 계산서에 "주택분"으로 오표시).
+   */
+  it("cb-first — 최초고시(2005) 라벨 + 구분 표기는 '건물'", () => {
+    expect(phdTimepointLabel("bsp-a1-cb-first")).toEqual({
+      timepoint: "최초고시(2005)",
+      category: "housing",
+      categoryLabel: "건물",
+      order: 1,
+    });
+  });
+
+  /**
+   * 🔴 대상은 **배치 전용 키**뿐이다(2026-08-04 P4 실측).
+   * `-cb-acq`·`-cb-transfer`·`-gb-acq`·`-gb-transfer`는 시점별 1시점 모달과 키를 공유하므로
+   * 라벨을 붙이면 배치를 쓰지 않은 기존 스냅샷의 계산서 제목까지 바뀐다.
+   */
+  it("1시점 모달과 공유하는 키(cb-acq·cb-transfer·gb-*)는 null", () => {
+    expect(phdTimepointLabel("bsp-a1-cb-acq")).toBeNull();
+    expect(phdTimepointLabel("bsp-a1-cb-transfer")).toBeNull();
+    expect(phdTimepointLabel("bsp-a1-gb-acq")).toBeNull();
+    expect(phdTimepointLabel("bsp-a1-gb-transfer")).toBeNull();
+  });
+
+  it("정렬 order는 라벨 문자열이 아니라 시점 세그먼트로 결정된다", () => {
+    // "최초고시(2005)"는 종전 라벨 매칭표({최초공시일:1})에 없어 0으로 떨어졌다 — order로 방어.
+    expect(phdTimepointLabel("bsp-a1-cb-first")?.order).toBe(1);
+    expect(phdTimepointLabel("bsp-a1-phd-first")?.order).toBe(1);
+    expect(phdTimepointLabel("bsp-a1-phd-first")?.timepoint).toBe("최초공시일");
+    expect(phdTimepointLabel("bsp-a1-cb-first")?.timepoint).toBe("최초고시(2005)");
   });
 });
 

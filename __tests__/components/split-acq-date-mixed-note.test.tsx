@@ -20,9 +20,9 @@ import { useState } from "react";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { CompanionAcqDateSection } from "@/components/calc/transfer/CompanionAcqDateSection";
 import {
-  PhdBuildingStdPriceModalButton,
-  type PointMeta,
-} from "@/components/calc/building-std-price/PhdBuildingStdPriceModalButton";
+  MultiPointBuildingStdPriceModal,
+  type StdPricePointSpec,
+} from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { BlockProps } from "@/components/calc/transfer/CompanionAcqPurchaseBlock.types";
@@ -101,19 +101,19 @@ describe("E1·E2 — 겸용 자동 강제 2열 안내 (A-1)", () => {
 });
 
 // ── PHD 3시점 모달 (A-2) ────────────────────────────────────────
-const POINTS_NO_ACQ: PointMeta[] = [
+const POINTS_NO_ACQ: StdPricePointSpec[] = [
   { key: "acquisition", label: "취득시", year: undefined, landPricePerM2: "" },
   { key: "firstDisclosure", label: "최초공시일", year: 2015, landPricePerM2: "" },
   { key: "transfer", label: "양도시", year: 2025, landPricePerM2: "" },
 ];
-const POINTS_ALL: PointMeta[] = [
+const POINTS_ALL: StdPricePointSpec[] = [
   { key: "acquisition", label: "취득시", year: 2010, landPricePerM2: "" },
   { key: "firstDisclosure", label: "최초공시일", year: 2015, landPricePerM2: "" },
   { key: "transfer", label: "양도시", year: 2025, landPricePerM2: "" },
 ];
 
-function ModalHarness({ points }: { points: PointMeta[] }) {
-  return <PhdBuildingStdPriceModalButton points={points} onApply={() => {}} />;
+function ModalHarness({ points }: { points: StdPricePointSpec[] }) {
+  return <MultiPointBuildingStdPriceModal points={points} onApply={() => {}} />;
 }
 
 const excludedNote = () => screen.queryAllByTestId("phd-point-excluded-note");

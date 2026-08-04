@@ -16,6 +16,34 @@ import { test, expect, type Page } from "@playwright/test";
 
 const LOCAL_USER_ID = "local-user";
 
+/**
+ * 앱(Dexie)이 `calculations` object store를 만들 때까지 대기.
+ *
+ * ⚠️ `seedCalculation`이 `indexedDB.open(name)`을 **버전 없이** 열기 때문에, 앱 초기화보다
+ * 먼저 실행되면 store가 없는 **빈 DB(v1)**가 생성되고 곧바로
+ * `NotFoundError: One of the specified object stores was not found`로 죽는다.
+ * 로컬은 빨라서 드러나지 않지만 CI(전체 E2E 병렬 부하)에서는 간헐 실패했다
+ * (2026-08-04 실측 — X-7만 실패, 887건 통과. 최근 CI 이력상 재발 2회).
+ *
+ * Dexie는 자기 버전으로 열며 업그레이드하므로, 폴링 중 빈 DB가 생겨도 곧 store가 채워진다.
+ */
+async function waitForCalculationsStore(page: Page) {
+  await page.waitForFunction(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const req = indexedDB.open("KoreanTaxCalcLocal");
+        req.onsuccess = () => {
+          const ok = req.result.objectStoreNames.contains("calculations");
+          req.result.close();
+          resolve(ok);
+        };
+        req.onerror = () => resolve(false);
+      }),
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
 /** Dexie `calculations` 테이블에 이력 1건 직접 삽입 */
 async function seedCalculation(
   page: Page,
@@ -28,6 +56,7 @@ async function seedCalculation(
     taxLawVersion: string;
   },
 ) {
+  await waitForCalculationsStore(page);
   await page.evaluate(
     async ({ rec, uid }) => {
       const open = () =>

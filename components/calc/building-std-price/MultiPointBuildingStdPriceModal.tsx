@@ -1,14 +1,26 @@
 "use client";
 
 /**
- * PHD 3시점 건물기준시가 "일괄 계산" 버튼 (양도 §164⑤) — Phase 2 겸용(Option B).
+ * 건물 기준시가 **N시점 일괄 계산** 모달 (양도 — 「소득세법 시행령」 제164조)
  *
- * 같은 건물의 부분(층/구역)별 구조·용도·연면적을 입력하면 취득·최초공시·양도 3시점의
- * ㎡당 공시지가(위젯 prefill)로 시점별 건물기준시가를 일괄 산출한다.
- *  - housing(주택분)은 3시점, commercial(상가분)은 **양도시에만** 산출(Option B).
- *  - 층별 구조·용도 상이는 compositeParts로 합산. "모두 적용" 시 산출된 값만 부모 필드에 주입.
+ * 같은 건물의 부분(층/구역)별 구조·용도·연면적을 1회 입력해, 호출부가 지정한 **시점 수만큼**
+ * (`points` 배열 — 1~3) 건물 기준시가를 한 번에 산출한다. 시점 라벨·연도·공시지가 prefill은
+ * 전부 호출부가 주입한다.
  *
- * 산출 규칙: lib/calc/phd-building-std-batch.ts (≤2000·당시 주택 용도 상가는 미산출·수동 유지).
+ * ## 맥락별 시점 구성 (호출부가 `points`로 결정)
+ *  - PHD §164⑤ · 겸용 · 상속 주택평가: 취득 · 최초공시 · 양도 3시점
+ *  - 상가 §164⑥(호별 고시 전 취득): 취득 · **최초고시(2005)** · 양도 3시점
+ *  - 일반건물 환산: 취득 · 양도 2시점
+ *
+ * 겸용(`enableCommercial`)은 부분별 주택/상가 카테고리를 구분해 주택분 전 시점 + 상가분
+ * 양도시(및 Case A의 취득·최초공시)를 함께 산출한다.
+ *
+ * 산출 규칙: `lib/calc/phd-building-std-batch.ts` (≤2000·당시 주택 용도 상가는 미산출·수동 유지).
+ * 사용 가능 여부 판정: `lib/calc/building-std-multipoint-gate.ts` (호출부가 게이트를 거쳐 렌더).
+ * 계획서: `docs/02-design/features/building-std-price-modal-multipoint.plan.md`
+ *
+ * ⚠️ 이 모달이 지원하지 않는 계산 경로(기계식주차·공동주택 환산·§164⑧ 동일연도·상증 조정률)는
+ *    `BuildingStdPriceModalButton`(범용 폼)이 담당한다 — 호출부는 그 런처를 **보조로 유지**한다.
  */
 import { useState } from "react";
 import {
@@ -23,6 +35,10 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { AddressSearch } from "@/components/ui/address-search";
+import { BuildingRegisterLookupField } from "./BuildingRegisterLookupField";
+import { buildAddressPatch } from "@/lib/calc/building-std-price-form";
+import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import { BuildingStructureSelect } from "./BuildingStructureSelect";
 import { BuildingUsageSelect } from "./BuildingUsageSelect";
 import {
@@ -36,7 +52,7 @@ import { phdBatchToSnapshots } from "@/lib/calc/phd-batch-snapshots";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 
 /** 시점별 적용 결과 — 산출된 카테고리만 채워짐(원 정수) */
-export interface PhdThreePointApply {
+export interface MultiPointStdPriceApply {
   acquisition?: { housing?: number; commercial?: number };
   firstDisclosure?: { housing?: number; commercial?: number };
   transfer?: { housing?: number; commercial?: number };
@@ -47,8 +63,13 @@ export interface PhdThreePointApply {
   landPrices?: { acquisition?: string; firstDisclosure?: string; transfer?: string };
 }
 
-export interface PointMeta {
+export interface StdPricePointSpec {
   key: "acquisition" | "firstDisclosure" | "transfer";
+  /**
+   * 화면 라벨 — 맥락에 따라 같은 `key`도 다르게 부른다.
+   * 예) `firstDisclosure`: PHD §164⑤ "최초공시일" / 상가 §164⑥ "최초고시(2005)".
+   * 미지정 시 `POINT_LABEL` 기본값으로 대체한다.
+   */
   label: string;
   year: number | undefined;
   /** ㎡당 공시지가 prefill(문자열) */
@@ -56,9 +77,9 @@ export interface PointMeta {
 }
 
 interface Props {
-  /** 시점 3종 메타(연도·공시지가 prefill). 연도 미상 시점은 계산 제외. */
-  points: PointMeta[];
-  onApply: (v: PhdThreePointApply) => void;
+  /** 표시·계산할 시점 목록(1~3). 연도 미상 시점은 계산에서 제외된다. */
+  points: StdPricePointSpec[];
+  onApply: (v: MultiPointStdPriceApply) => void;
   buttonLabel?: string;
   /** 겸용주택 — 부분별 주택/상가 카테고리 입력 노출. 미설정=주택 단일(단독). */
   enableCommercial?: boolean;
@@ -106,7 +127,7 @@ interface PartRow {
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
-const POINT_LABEL: Record<PointMeta["key"], string> = {
+const POINT_LABEL: Record<StdPricePointSpec["key"], string> = {
   acquisition: "취득시",
   firstDisclosure: "최초공시일",
   transfer: "양도시",
@@ -122,7 +143,7 @@ const emptyRow = (category: PhdPartCategory = "housing"): PartRow => ({
   transferUsageNo: "",
 });
 
-export function PhdBuildingStdPriceModalButton({
+export function MultiPointBuildingStdPriceModal({
   points,
   onApply,
   buttonLabel,
@@ -148,15 +169,27 @@ export function PhdBuildingStdPriceModalButton({
   const replaceSnapshotsByPrefix = useBuildingStdSnapshotStore((s) => s.replaceSnapshotsByPrefix);
 
   // 시점별 구조·용도 옵션 기준 연도 — 각 시점의 연도 체계. ≤2000은 2001 체계(엔진 acqBase가 2001표 사용).
-  const yearOf = (k: PointMeta["key"]) => points.find((p) => p.key === k)?.year;
+  const yearOf = (k: StdPricePointSpec["key"]) => points.find((p) => p.key === k)?.year;
   const schemeYear = (y: number | undefined) => (y != null && y <= 2000 ? 2001 : y);
   const acqOptionYear = schemeYear(yearOf("acquisition"));
   const firstOptionYear = schemeYear(yearOf("firstDisclosure"));
   const transferOptionYear = schemeYear(yearOf("transfer"));
 
+  /**
+   * 시점 라벨 — 호출부 `points[].label` 우선, 없으면 기본값(`POINT_LABEL`).
+   * 같은 `key`라도 맥락에 따라 부르는 이름이 다르다(§상가 "최초고시(2005)" ↔ PHD "최초공시일").
+   */
+  const labelOf = (k: StdPricePointSpec["key"]) =>
+    points.find((p) => p.key === k)?.label || POINT_LABEL[k];
+  /** 실제로 화면·계산에 등장하는 시점 목록 — 결과·문구가 모두 이 배열을 따른다. */
+  const activePoints = points.length > 0 ? points : [];
+  const pointCount = activePoints.length;
+
   const label =
     buttonLabel ??
-    (enableCommercial ? "3시점 주택·상가 건물기준시가 일괄 계산" : "3시점 건물기준시가 일괄 계산");
+    (enableCommercial
+      ? `${pointCount}시점 주택·상가 건물기준시가 일괄 계산`
+      : `${pointCount}시점 건물기준시가 일괄 계산`);
   // 단독은 상가 구분이 없어 "주택건물"이 아닌 "건물"로 표기(겸용만 주택/상가 구분).
   const housingNoun = enableCommercial ? "주택건물" : "건물";
 
@@ -216,7 +249,7 @@ export function PhdBuildingStdPriceModalButton({
         }
       }
     }
-    const pt = (key: PointMeta["key"]) => {
+    const pt = (key: StdPricePointSpec["key"]) => {
       const p = points.find((x) => x.key === key);
       if (!p || !p.year) return undefined;
       const land = parseAmount(landPrices[key] ?? "") ?? 0;
@@ -251,7 +284,7 @@ export function PhdBuildingStdPriceModalButton({
       replaceSnapshotsByPrefix(snapshotPrefix, phdBatchToSnapshots(computedInput, snapshotPrefix));
     }
     // 입력된 시점 공시지가만 외부 섹션으로 되돌려쓰기(빈값은 외부 미변경).
-    const lp: NonNullable<PhdThreePointApply["landPrices"]> = {};
+    const lp: NonNullable<MultiPointStdPriceApply["landPrices"]> = {};
     if ((landPrices.acquisition ?? "").trim()) lp.acquisition = landPrices.acquisition;
     if ((landPrices.firstDisclosure ?? "").trim()) lp.firstDisclosure = landPrices.firstDisclosure;
     if ((landPrices.transfer ?? "").trim()) lp.transfer = landPrices.transfer;
@@ -265,16 +298,47 @@ export function PhdBuildingStdPriceModalButton({
     setResult(null);
   }
 
+  // 적용 대상 개수 — **호출부가 요구한 시점만** 센다(하드코딩 3시점 아님).
   const computedCount = result
-    ? [
-        result.acquisition?.housing,
-        result.firstDisclosure?.housing,
-        result.transfer?.housing,
-        result.acquisition?.commercial,
-        result.firstDisclosure?.commercial,
-        result.transfer?.commercial,
-      ].filter((v) => v != null).length
+    ? activePoints.flatMap((p) => [result[p.key]?.housing, result[p.key]?.commercial]).filter(
+        (v) => v != null,
+      ).length
     : 0;
+
+  /**
+   * L-4 이식 — 소재지·건축물대장 자동조회 (계획서 §4.5).
+   *
+   * 종전에는 이 두 블록이 범용 폼 모달(`BuildingStdPriceForm`)에만 있어, 배치로 교체하면
+   * 신축연도·연면적 자동채움 경로가 사라졌다. 폼 상태 타입을 그대로 빌려 `buildAddressPatch`를
+   * 재사용한다(주소 파싱 재작성 금지 — 단일 소스).
+   */
+  const [addr, setAddr] = useState<Partial<BuildingStdPriceFormState>>({});
+  /** 지번 — 모달에서 검색한 값 우선, 없으면 호출부 주입값(§4.5). */
+  const effJibun = addr.addressJibun || jibun;
+
+  /**
+   * 건축물대장 patch → 배치 모달 로컬 state 어댑터.
+   *
+   * 배치의 신축연도·연면적은 로컬 state(`builtYear`·`PartRow.floorArea`)라 폼 patch를 그대로
+   * 쓸 수 없다. 구조·용도는 **양도 시점 연도로 조회**한 값이므로 양도 칸에만 넣는다 —
+   * 취득·최초공시는 연도 체계가 달라(2001 #21 ↔ 2005 #22 ↔ 2026 #28 = 같은 오피스텔)
+   * 자동채움하면 잘못된 지수가 들어간다.
+   */
+  function applyRegisterPatch(patch: Partial<BuildingStdPriceFormState>) {
+    if (patch.builtYear) setBuiltYear(patch.builtYear);
+    setRows((rs) =>
+      rs.map((r, i) =>
+        i === 0
+          ? {
+              ...r,
+              ...(patch.floorArea ? { floorArea: patch.floorArea } : {}),
+              ...(patch.transStructureKey ? { transferStructureKey: patch.transStructureKey } : {}),
+              ...(patch.transUsageNo ? { transferUsageNo: patch.transUsageNo } : {}),
+            }
+          : r,
+      ),
+    );
+  }
 
   // 모달 열 때 현재 위젯 공시지가로 재시드(지연 초기화는 최초 1회뿐 → 신규 입력 stale 방지).
   function handleOpen() {
@@ -305,18 +369,57 @@ export function PhdBuildingStdPriceModalButton({
           forceOverlay
         >
           <DialogHeader>
-            <DialogTitle>3시점 건물 기준시가 일괄 계산</DialogTitle>
+            <DialogTitle>{pointCount}시점 건물 기준시가 일괄 계산</DialogTitle>
             <DialogDescription>
-              {enableCommercial
-                ? "층/구역별 구조·용도·연면적을 입력하면 취득·최초공시·양도 3시점 주택분 건물기준시가와 양도시 상가분을 함께 산출합니다."
-                : "같은 건물의 층/구역별 구조·용도·연면적을 입력하면 취득·최초공시·양도 3시점 건물기준시가를 함께 산출합니다."}{" "}
+              {`같은 건물의 층/구역별 구조·용도·연면적을 입력하면 ${activePoints
+                .map((p) => p.label || POINT_LABEL[p.key])
+                .join("·")} ${pointCount}시점 건물기준시가를 함께 산출합니다.`}
+              {enableCommercial && " 겸용은 주택분 전 시점과 상가분을 함께 냅니다."}{" "}
               계산 후 “모두 적용”을 누르면 각 시점 필드에 채워집니다.
             </DialogDescription>
           </DialogHeader>
 
+          {/* 소재지 + 건축물대장 자동조회 (L-4 이식 — 계획서 §4.5) */}
+          <div className="space-y-1.5 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+            <p className="text-sm font-semibold text-rose-700">소재지 (공시지가·건축물대장 조회용)</p>
+            <p className="text-caption text-rose-600/90">
+              주소를 입력하면 아래 공시지가를 연도별로 자동 조회하고, 건축물대장에서 신축연도·연면적을
+              불러올 수 있습니다. 미입력 시 직접 입력하세요.
+            </p>
+            <AddressSearch
+              value={{
+                road: addr.addressRoad ?? "",
+                jibun: addr.addressJibun ?? "",
+                building: addr.buildingName ?? "",
+                detail: addr.addressDetail ?? "",
+                lng: addr.longitude ?? "",
+                lat: addr.latitude ?? "",
+                pnu: addr.pnu ?? "",
+              }}
+              onChange={(v) => setAddr((prev) => ({ ...prev, ...buildAddressPatch(v) }))}
+            />
+            <BuildingRegisterLookupField
+              pnu={addr.pnu ?? ""}
+              year={String(yearOf("transfer") ?? "")}
+              taxType="transfer"
+              disabled={false}
+              isCollectiveUnit={!!addr.unitDong || !!addr.unitHo}
+              dong={addr.unitDong}
+              ho={addr.unitHo}
+              onAutoFill={applyRegisterPatch}
+            />
+            {(!!addr.unitDong || !!addr.unitHo) && (
+              <p className="text-caption text-rose-600/90">
+                집합건물 세대는 건축물대장 조회 시 전유+공용 연면적이 첫 부분의 연면적으로 자동
+                입력됩니다(국세청 「건물 기준시가 계산방법 고시」상 건물면적 기준). 조회되지 않으면
+                전유+공용 연면적을 직접 입력하세요.
+              </p>
+            )}
+          </div>
+
           {/* 신축연도(건물 공통) */}
           <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
-            <p className="text-xs font-semibold text-sky-700">건물 정보 (3시점 공통)</p>
+            <p className="text-xs font-semibold text-sky-700">건물 정보 ({pointCount}시점 공통)</p>
             <FieldCard label="신축연도" hint="준공연도 4자리">
               <DecimalInput value={builtYear} onChange={setBuiltYear} placeholder="신축연도 (4자리)" />
             </FieldCard>
@@ -420,12 +523,12 @@ export function PhdBuildingStdPriceModalButton({
                   <div key={p.key} className="space-y-2 rounded-lg border bg-card px-4 py-3">
                     {/* 시점 식별 라벨 — 박스 내부 상단(최초공시일 FieldCard와 동일 위치·스타일) */}
                     <p className="text-sm font-medium leading-tight">
-                      취득시 (2001년 기준) 공시지가
+                      {labelOf("acquisition")} (2001년 기준) 공시지가
                     </p>
                     <LandPriceLookupField
                       fixedYear={2001}
                       hideLandStdPrice
-                      jibun={jibun}
+                      jibun={effJibun}
                       pricePerSqm={landPrices[p.key] ?? ""}
                       onPricePerSqmChange={(v) =>
                         setLandPrices((s) => ({ ...s, [p.key]: v }))
@@ -442,7 +545,7 @@ export function PhdBuildingStdPriceModalButton({
               return (
                 <FieldCard
                   key={p.key}
-                  label={`${POINT_LABEL[p.key]}${
+                  label={`${labelOf(p.key)}${
                     p.year ? ` (${p.year}년)` : " (연도 미상)"
                   } 공시지가`}
                   unit="원/㎡"
@@ -477,26 +580,26 @@ export function PhdBuildingStdPriceModalButton({
           </div>
 
           <Button type="button" size="sm" onClick={handleCalc}>
-            3시점 계산하기
+            {pointCount}시점 계산하기
           </Button>
 
           {error && <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
           {result && (
             <div className="space-y-2 border-t pt-3">
-              {(["acquisition", "firstDisclosure", "transfer"] as const).map((k) => {
+              {activePoints.map(({ key: k }) => {
                 const pr = result[k];
                 return (
                   <div key={k} className="space-y-0.5">
                     <div className="flex justify-between text-sm">
-                      <span>{POINT_LABEL[k]} {housingNoun} 기준시가</span>
+                      <span>{labelOf(k)} {housingNoun} 기준시가</span>
                       <span className="font-mono tabular-nums font-semibold">
                         {pr?.housing != null ? `${fmt(pr.housing)} 원` : "—"}
                       </span>
                     </div>
                     {enableCommercial && (k === "transfer" || commercialAcqFirstMode) && (
                       <div className="flex justify-between text-sm">
-                        <span>{POINT_LABEL[k]} 상가건물 기준시가</span>
+                        <span>{labelOf(k)} 상가건물 기준시가</span>
                         <span className="font-mono tabular-nums font-semibold">
                           {pr?.commercial != null ? `${fmt(pr.commercial)} 원` : "—"}
                         </span>
@@ -507,7 +610,7 @@ export function PhdBuildingStdPriceModalButton({
               })}
               {result.unsupported.map((u, i) => (
                 <p key={i} className="rounded bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
-                  {POINT_LABEL[u.point]} {u.category === "commercial" ? "상가건물" : housingNoun} 미산출 — {u.reason}
+                  {labelOf(u.point)} {u.category === "commercial" ? "상가건물" : housingNoun} 미산출 — {u.reason}
                 </p>
               ))}
               <Button type="button" size="sm" onClick={handleApplyAll} disabled={computedCount === 0}>

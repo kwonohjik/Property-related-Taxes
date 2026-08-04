@@ -32,9 +32,9 @@ import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-p
 import { calculatePre1990LandValuation } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import {
-  PhdBuildingStdPriceModalButton,
-  type PhdThreePointApply,
-} from "@/components/calc/building-std-price/PhdBuildingStdPriceModalButton";
+  MultiPointBuildingStdPriceModal,
+  type MultiPointStdPriceApply,
+} from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ─── 공시지가 조회 + 토지기준시가 서브 컴포넌트 ──────────────────────────
@@ -266,7 +266,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   ]);
 
   // F1: 산출값을 3필드에 단일 onChange patch로 병합(3연속 호출 아님 — stale-clobber 차단).
-  const applyBatch = (v: PhdThreePointApply) => {
+  const applyBatch = (v: MultiPointStdPriceApply) => {
     const patch: Partial<AssetForm> = {};
     if (v.transfer?.housing != null) patch.inhHouseValBuildingStdPriceAtTransfer = String(v.transfer.housing);
     if (v.firstDisclosure?.housing != null) patch.inhHouseValBuildingStdPriceAtFirst = String(v.firstDisclosure.housing);
@@ -315,7 +315,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       {/* 3시점 건물기준시가 일괄 계산기 — 단독주택 전용(F2) */}
       {isHouseIndividual && (
         <div className="flex justify-end">
-          <PhdBuildingStdPriceModalButton
+          <MultiPointBuildingStdPriceModal
             points={batchPoints}
             onApply={applyBatch}
             snapshotPrefix={`bsp-${asset.assetId}-phd`}

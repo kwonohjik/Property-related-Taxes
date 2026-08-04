@@ -28,32 +28,20 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { MultiPointBuildingStdPriceModal } from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
+import { canUseMultiPointStdPrice } from "@/lib/calc/building-std-multipoint-gate";
+import { MULTI_POINT_BLOCK_MESSAGE, multiPointBlockReason } from "@/lib/calc/building-std-multipoint-gate";
+import { buildGeneralBuildingBatchPatch, commercialAcqYear } from "@/lib/calc/building-std-batch-apply";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { GeneralBuildingNblSection } from "./GeneralBuildingNblSection";
+import { GeneralBuildingConversionSection } from "./GeneralBuildingConversionSection";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
-import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
-import { getBuildingSiteMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
-import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 
-// 「지방세법 시행령」 제101조 제2항 적용배율표 기준 용도지역 선택지.
-// 세분 전 주거지역(residential)은 표에 대응 항목이 없어 선택지에 두지 않는다(추정 배율 금지).
-const GB_ZONE_OPTIONS = [
-  { value: "exclusive_residential", label: "전용주거" },
-  { value: "general_residential",   label: "일반주거" },
-  { value: "semi_residential",      label: "준주거" },
-  { value: "commercial",            label: "상업지역" },
-  { value: "industrial",            label: "공업지역" },
-  { value: "green",                 label: "녹지지역" },
-  { value: "management",            label: "관리지역" },
-  { value: "agriculture_forest",    label: "농림지역" },
-  { value: "natural_env",           label: "자연환경보전" },
-  { value: "unplanned",             label: "도시계획 미지정" },
-];
 
 // 배율은 엔진 getBuildingSiteMultiplier가 단일 진실 — UI에서 재구현 금지.
 //   근거: 「소득세법」 제104조의3 제1항 제4호 나목 → 「지방세법」 제106조 제1항 제2호
@@ -80,21 +68,37 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
     pnu: asset.addressPnu,
   };
 
-  // 자동 배율 표시 — 엔진 함수 재사용 (UI 재계산 금지)
-  const zoneMultiplier = useMemo(
-    () =>
-      asset.gbZoneType
-        ? getBuildingSiteMultiplier(asset.gbZoneType as ZoneType)
-        : undefined,
-    [asset.gbZoneType],
+  // ── P4: 취득·양도 2시점 일괄 계산(배치) 배선 — 계획서 §4.2·§5 P4 ────────────
+  // 건물분 기준시가의 취득 시점은 **건물 취득일**이 따로 있으면 그것이다(§166⑥ 별개취득).
+  const gbAcqYear = commercialAcqYear(asset.gbBuildingAcquisitionDate || asset.acquisitionDate);
+  const gbTransferYear = commercialAcqYear(transferDate);
+  const gbBatchBlockReason = multiPointBlockReason({
+    acquisitionYear: gbAcqYear,
+    transferYear: gbTransferYear,
+  });
+  const canGbBatch = canUseMultiPointStdPrice({
+    acquisitionYear: gbAcqYear,
+    transferYear: gbTransferYear,
+  });
+  /** 2시점 — 일반건물에는 최초고시 시점이 없다(§164⑥ 환산 경로가 아니다). */
+  const gbBatchPoints = useMemo(
+    () => [
+      {
+        key: "acquisition" as const,
+        label: "취득시",
+        year: gbAcqYear,
+        // 취득 ≤2000이면 모달 칸이 2001.1.1 기준(위치지수 전용) — 취득당시 토지값을 넣지 않는다.
+        landPricePerM2: gbAcqYear != null && gbAcqYear <= 2000 ? "" : asset.gbAcqLandPricePerSqm,
+      },
+      {
+        key: "transfer" as const,
+        label: "양도시",
+        year: gbTransferYear,
+        landPricePerM2: asset.gbTransferLandPricePerSqm,
+      },
+    ],
+    [gbAcqYear, gbTransferYear, asset.gbAcqLandPricePerSqm, asset.gbTransferLandPricePerSqm],
   );
-
-  // 인정 한도 미리 계산 (바닥면적 × 배율)
-  const footprint = parseDecimal(asset.gbBuildingFootprintArea);
-  const landArea = parseDecimal(asset.gbLandArea);
-  const multiplierNum = zoneMultiplier?.multiplier;
-  const allowedArea =
-    footprint > 0 && multiplierNum !== undefined ? footprint * multiplierNum : null;
 
   /**
    * 증축 있음 안분 미리보기 — 4가지 조합 모두 지원.
@@ -179,74 +183,6 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
   function fmt(n: number): string {
     return n.toLocaleString("ko-KR");
   }
-
-  /**
-   * 사례 35: 주택→상가 용도변경 미리보기 — 보유기간 기산일 + 표1 공제율 안내.
-   * useMemo 순수 — useEffect 미러링 금지 정책 준수.
-   */
-  const conversionPreview = useMemo(() => {
-    if (!asset.gbHouseToCommercialConversion) return null;
-    if (!asset.gbConversionDate || !transferDate) return null;
-    if (asset.gbWasMultiHouseAtConversion === null) return null; // 미선택 시 표시 보류
-    const startISO = asset.gbWasMultiHouseAtConversion
-      ? asset.gbConversionDate
-      : asset.acquisitionDate;
-    if (!startISO) return null;
-    const start = new Date(startISO);
-    const end = new Date(transferDate);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-    // 만 보유연수 (초일불산입 — 민법 §157, calculateHoldingPeriod 동일 로직)
-    const startPlusOne = new Date(start);
-    startPlusOne.setDate(startPlusOne.getDate() + 1);
-    let years = end.getFullYear() - startPlusOne.getFullYear();
-    const m = end.getMonth() - startPlusOne.getMonth();
-    if (m < 0 || (m === 0 && end.getDate() < startPlusOne.getDate())) years -= 1;
-    years = Math.max(0, years);
-    const isUnder3Years = years < 3;
-    const rate = isUnder3Years ? 0 : Math.min(years * 2, 30);
-    return {
-      isUnder3Years,
-      years,
-      label: asset.gbWasMultiHouseAtConversion
-        ? `보유기간 기산일 = 용도변경일 (${asset.gbConversionDate})`
-        : `보유기간 기산일 = 당초 취득일 (${asset.acquisitionDate})`,
-      notice: isUnder3Years
-        ? `보유기간 ${years}년 → 3년 미만 — 장기보유특별공제 0% (§95② 표1)`
-        : `보유기간 ${years}년 → §95② 표1 ${rate}% (연 2%, 최대 30%)`,
-    };
-  }, [
-    asset.gbHouseToCommercialConversion,
-    asset.gbConversionDate,
-    asset.gbWasMultiHouseAtConversion,
-    asset.acquisitionDate,
-    transferDate,
-  ]);
-
-  /** 사례 35 후속-1 §99-164-10 환산주택가격 미리보기 — useMemo 순수 */
-  const convertedHousingPreview = useMemo(() => {
-    if (!asset.gbHasFirstDisclosure) return null;
-    const firstDisc = parseAmount(asset.gbFirstDisclosurePrice);
-    const firstDiscLand = parseAmount(asset.gbFirstDisclosureLandStdPrice);
-    const firstDiscBld = parseAmount(asset.gbFirstDisclosureBuildingStdPrice);
-    const acqLandPerSqm = parseAmount(asset.gbAcqLandPricePerSqm ?? "");
-    const acqBld = parseAmount(asset.gbAcqBuildingValue ?? "");
-    const landArea = parseDecimal(asset.gbLandArea ?? "");
-    if (!firstDisc || !firstDiscLand || !firstDiscBld || !acqLandPerSqm || !acqBld || !landArea) return null;
-    const acqLand = Math.floor(acqLandPerSqm * landArea);
-    const acqTotal = acqLand + acqBld;
-    const firstDiscTotal = firstDiscLand + firstDiscBld;
-    if (firstDiscTotal <= 0 || acqTotal <= 0) return null;
-    const converted = Math.floor(firstDisc * acqTotal / firstDiscTotal);
-    return { converted, firstDisc, acqTotal, firstDiscTotal };
-  }, [
-    asset.gbHasFirstDisclosure,
-    asset.gbFirstDisclosurePrice,
-    asset.gbFirstDisclosureLandStdPrice,
-    asset.gbFirstDisclosureBuildingStdPrice,
-    asset.gbAcqLandPricePerSqm,
-    asset.gbAcqBuildingValue,
-    asset.gbLandArea,
-  ]);
 
   const isBurdenedGift = asset.transferType === "burdened_gift";
 
@@ -338,6 +274,26 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑥" label="§163⑥ 개산공제" />}
             noDark
           >
+            {/* 취득·양도 2시점 일괄 계산 — 소재지·신축연도·구조·용도를 1회 입력해 ①·② 건물기준시가를
+                함께 채운다. 게이트가 막으면 사유를 밝히고 시점별 계산기만 남긴다(계획서 §4.2). */}
+            {canGbBatch ? (
+              <div className="flex justify-end">
+                <MultiPointBuildingStdPriceModal
+                  points={gbBatchPoints}
+                  onApply={(v) => onChange(buildGeneralBuildingBatchPatch(v, asset))}
+                  snapshotPrefix={`bsp-${asset.assetId}-gb`}
+                  jibun={asset.addressJibun || undefined}
+                  housingFloorAreaPrefill={asset.gbBuildingArea || undefined}
+                  dataTestId="gb-building-std-batch-open"
+                />
+              </div>
+            ) : (
+              gbBatchBlockReason && (
+                <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+                  {MULTI_POINT_BLOCK_MESSAGE[gbBatchBlockReason]}
+                </p>
+              )
+            )}
 
             <LandPriceLookupField
               label="취득시 토지 공시지가"
@@ -346,7 +302,12 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               area={parseDecimal(asset.gbLandArea) || undefined}
               referenceDate={asset.acquisitionDate}
               jibun={asset.addressJibun}
-              hint="취득일 전년도 기준 개별공시지가 (원/㎡)"
+              hint={
+                // 상가와 같은 트랙 분기 — 일괄 계산기의 취득 공시지가(≤2000)는 2001.1.1 기준이다.
+                gbAcqYear != null && gbAcqYear <= 2000
+                  ? "일괄 계산기에 넣은 2001.1.1 기준 공시지가는 위치지수 산정용이라 이 칸에 자동 입력되지 않습니다 — 취득 당시 개별공시지가를 직접 입력하세요."
+                  : "취득일 전년도 기준 개별공시지가 (원/㎡)"
+              }
             />
 
             <FieldCard label="취득시 건물기준시가" unit="원" hint="취득일 기준 건물기준시가 총액. 이 금액의 3%가 건물 개산공제액 (§163⑥)">
@@ -570,209 +531,9 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
           </ToggleCard>
         )}
 
-        {/* ④ 비사업용토지 판정 (rose) — 항상 표시 */}
-        <ToneCard
-          tone="rose"
-          sectionNum="③"
-          title="비사업용토지 판정"
-          titleExtra={
-            <span className="text-micro text-rose-500">
-              (§104의3①4호나목 · 지방세령 §101)
-            </span>
-          }
-          noDark
-        >
-          <div className="flex flex-wrap items-center gap-1.5">
-            <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />
-            <LawArticleModal legalBasis="지방세법 시행령 §101" label="지방세령 §101 배율" />
-          </div>
-          <p className="text-caption text-rose-600">
-            부수토지 한도 = <strong>건축물 바닥면적</strong>(각 층 중 최대, 지하 포함) × 용도지역 배율.
-            초과분에만 +10%p 중과.
-          </p>
+        <GeneralBuildingNblSection asset={asset} onChange={onChange} />
 
-          {/* 무허가건축물 — 배율 무관 전체 NBL */}
-          <ToggleCard
-            tone="rose"
-            variant="chip"
-            title="무허가(미등재) 건축물"
-            description="무허가건축물 부속토지는 재산세 별도합산에서 제외되어 토지 전체가 비사업용 (배율 계산 없음)"
-            checked={asset.gbIsUnregistered}
-            onCheckedChange={(v) => onChange({ gbIsUnregistered: v })}
-          />
-          {asset.gbIsUnregistered && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <LawArticleModal legalBasis="소득세법 §104의3 ① 4호 나목" label="§104의3①4호나목" />
-              <LawArticleModal legalBasis="지방세법 시행령 §101 ① 단서" label="지방세법시행령 §101①단서" />
-            </div>
-          )}
-
-          {!asset.gbIsUnregistered && (
-            <>
-              {/* 용도지역 */}
-              <FieldCard
-                label="용도지역 (필수)"
-                hint="국토계획법상 용도지역. 미선택 시 계산이 진행되지 않습니다."
-              >
-                <RadioCardGroup
-                  name="gbZoneType"
-                  layout="inline"
-                  value={asset.gbZoneType}
-                  onChange={(v) => onChange({ gbZoneType: v })}
-                  options={GB_ZONE_OPTIONS}
-                />
-              </FieldCard>
-              <ReferenceSiteLinks className="-mt-1" sites={[REFERENCE_SITES.landUsePlan]} />
-
-              {/* 수도권 토글 폐지 (2026-07-30) — 「지방세법 시행령」 제101조 제2항에는
-                  수도권 축이 없다. 종전에는 「소득세법 시행령」 제168조의12(주택 부수토지)
-                  배율을 잘못 적용해 수도권 여부가 배율을 바꿨다. */}
-
-              {/* 배율·인정한도 자동 표시 */}
-              {zoneMultiplier && (
-                <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-800 space-y-0.5">
-                  <p>적용 배율: <span className="font-semibold">{zoneMultiplier.detail}</span></p>
-                  {footprint > 0 && allowedArea !== null && (
-                    <p>인정 한도: 바닥면적 {footprint}㎡ × {multiplierNum}배 = <span className="font-semibold tabular-nums">{allowedArea.toFixed(2)} ㎡</span></p>
-                  )}
-                  {footprint > 0 && landArea > 0 && allowedArea !== null && (
-                    landArea <= allowedArea
-                      ? <p className="text-emerald-700 font-semibold">→ 사업용 (중과 미발동)</p>
-                      : <p className="text-rose-700 font-semibold">→ 초과분 {(landArea - allowedArea).toFixed(2)}㎡ 비사업용 (중과)</p>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
-          {asset.gbIsUnregistered && (
-            <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-700">
-              무허가건축물 — 토지 전체 비사업용 (배율 계산 없음)
-            </div>
-          )}
-        </ToneCard>
-
-        {/* ⑦ 주택→상가 용도변경 (fuchsia) — 사례 35 (사전법규재산 2022-684·881) */}
-        <ToggleCard
-          tone="fuchsia"
-          variant="card"
-          title="주택 → 상가 용도변경"
-          description="주택 전체를 근린생활시설 등 비주택으로 용도변경한 경우 ON. 다주택 상태에서 용도변경 시 변경일 이전 보유기간이 장기보유특별공제에서 배제됩니다."
-          checked={asset.gbHouseToCommercialConversion}
-          onCheckedChange={(v) => onChange({ gbHouseToCommercialConversion: v })}
-          trailing={
-            <PrecedentArticleModal
-              citation="사전법규재산 2022-684"
-              label="근거"
-              kind="ruling"
-              summary={
-                "조정대상지역 다주택자가 주택을 상가로 용도변경한 후 중과배제기간(2022-05-10 ~ 2024-05-09) 중 양도하는 경우,\n장기보유특별공제 보유기간 기산일은 용도변경일로 한다.\n변경일 이전 보유기간은 장기보유특별공제 대상에서 배제된다.\n\n관련: 사전법규재산 2022-881 (2022.12.28) — 동일 취지\n     서울행법 2012구단26961 (2013.04.24) — 다주택자 용도변경 LTHD 배제 판결"
-              }
-            />
-          }
-        >
-          <FieldCard
-            label="용도변경일"
-            hint="건축물대장 용도변경 처리 완료일. 취득일 이후, 양도일 이전이어야 합니다."
-          >
-            <DateInput
-              value={asset.gbConversionDate}
-              onChange={(v) => onChange({ gbConversionDate: v })}
-            />
-          </FieldCard>
-
-          <FieldCard
-            label="변경 당시 다주택자(중과대상)였습니까?"
-            hint="'예' 선택 시 변경일 이전 보유기간은 장기보유특별공제에서 배제됩니다 (사전법규재산 2022-684·881 / 서울행법 2012구단26961)."
-            trailing={<LawArticleModal legalBasis="소득세법 §95②" label="§95② 표1 장특공제" />}
-          >
-            <RadioCardGroup
-              name="gbWasMultiHouseAtConversion"
-              layout="inline"
-              value={
-                asset.gbWasMultiHouseAtConversion === null
-                  ? ""
-                  : String(asset.gbWasMultiHouseAtConversion)
-              }
-              onChange={(v) => onChange({ gbWasMultiHouseAtConversion: v === "true" })}
-              options={[
-                { value: "true", label: "예 (다주택)", description: "변경일 이전 보유기간 LTHD 배제 — 기산일 = 용도변경일" },
-                { value: "false", label: "아니오 (1주택)", description: "당초 취득일 기산 — 변경일 무영향" },
-              ]}
-            />
-          </FieldCard>
-
-          {/* 미리보기 카드 — useMemo 순수 */}
-          {conversionPreview && (
-            <div
-              className={
-                "rounded border px-3 py-2 text-xs " +
-                (conversionPreview.isUnder3Years
-                  ? "bg-amber-50 border-amber-300 text-amber-800"
-                  : "bg-emerald-50 border-emerald-300 text-emerald-800")
-              }
-            >
-              <p className="font-semibold">{conversionPreview.label}</p>
-              <p className="mt-1">{conversionPreview.notice}</p>
-            </div>
-          )}
-
-          {/* 사례 35 후속-1: §99-164-10 환산주택가격 (환산취득가 모드만) */}
-          {asset.useEstimatedAcquisition && (
-            <ToggleCard
-              tone="fuchsia"
-              variant="card"
-              title="주택으로 최초공시 후 상가로 용도변경 (환산취득가)"
-              description="취득가액을 모르는 경우 §99-164-10 환산주택가격으로 취득당시 기준시가를 환산합니다."
-              checked={asset.gbHasFirstDisclosure}
-              onCheckedChange={(v) => onChange({ gbHasFirstDisclosure: v })}
-              trailing={
-                <PrecedentArticleModal
-                  citation="양도소득세 집행기준 99-164-10"
-                  label="집행기준"
-                  kind="interpretation"
-                  summary={
-                    "취득당시에는 주택으로 개별주택가격이 고시된 이후 상가건물로 용도를 변경하여 양도하는 경우,\n취득 시 기준시가는 환산주택가격을 자산별 기준시가로 안분하여 토지와 주택분 기준시가를 각각 산정하며,\n양도 시 기준시가는 일반건물과 토지에 대한 기준시가를 적용하여 계산한다.\n\n취득당시의 환산주택가격(기준시가) =\n  최초공시주택가격 × (토지 취득당시의 기준시가 + 건물 취득당시의 기준시가)\n               ÷ (주택가격 최초공시 당시의 토지기준시가와 건물기준시가의 합계액)"
-                  }
-                />
-              }
-            >
-              <FieldCard label="최초공시주택가격" unit="원"
-                hint="주택가격이 최초로 고시된 시점의 개별주택가격 총액 (원)">
-                <CurrencyInput label="최초공시주택가격" hideUnit
-                  value={asset.gbFirstDisclosurePrice}
-                  onChange={(v) => onChange({ gbFirstDisclosurePrice: v })} />
-              </FieldCard>
-              <FieldCard label="최초공시 당시 토지 기준시가" unit="원"
-                hint="최초공시 시점 개별공시지가 × 면적 총액 (원)">
-                <CurrencyInput label="최초공시 당시 토지 기준시가" hideUnit
-                  value={asset.gbFirstDisclosureLandStdPrice}
-                  onChange={(v) => onChange({ gbFirstDisclosureLandStdPrice: v })} />
-              </FieldCard>
-              <FieldCard label="최초공시 당시 건물 기준시가" unit="원"
-                hint="최초공시 시점 건물 기준시가 총액 (원)">
-                <CurrencyInput label="최초공시 당시 건물 기준시가" hideUnit
-                  value={asset.gbFirstDisclosureBuildingStdPrice}
-                  onChange={(v) => onChange({ gbFirstDisclosureBuildingStdPrice: v })} />
-              </FieldCard>
-              {convertedHousingPreview && (
-                <div className="rounded border bg-rose-100/60 border-rose-300 px-3 py-2 text-xs text-rose-800">
-                  <p className="font-semibold">
-                    환산주택가격 = {convertedHousingPreview.converted.toLocaleString("ko-KR")} 원
-                  </p>
-                  <p className="mt-1">
-                    = {convertedHousingPreview.firstDisc.toLocaleString("ko-KR")}
-                    {" × "}
-                    {convertedHousingPreview.acqTotal.toLocaleString("ko-KR")}
-                    {" ÷ "}
-                    {convertedHousingPreview.firstDiscTotal.toLocaleString("ko-KR")}
-                  </p>
-                  <p className="mt-1 text-rose-600">근거: 양도소득세 집행기준 99-164-10</p>
-                </div>
-              )}
-            </ToggleCard>
-          )}
-        </ToggleCard>
+        <GeneralBuildingConversionSection asset={asset} onChange={onChange} transferDate={transferDate} />
 
       </div>
     </div>

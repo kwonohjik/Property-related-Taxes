@@ -121,7 +121,7 @@ export function MixedUseAssetMajorStdPrice({
     pnu: asset.addressPnu,
   };
   // snapshotKey는 대상 필드 기준 — 취득·양도 통합 단일 키.
-  // ⚠️ `bsp-{id}-phd-…`를 쓰면 안 된다: 주택분 배치 모달(PhdBuildingStdPriceModalButton)이
+  // ⚠️ `bsp-{id}-phd-…`를 쓰면 안 된다: 주택분 배치 모달(MultiPointBuildingStdPriceModal)이
   // replaceSnapshotsByPrefix(`bsp-{id}-phd`)로 그 접두 키를 전부 교체하므로, 용도변경 없음(Case B)에선
   // 배치가 상가 스냅샷을 재생성하지도 않아 통째로 소실됐다. `mx`(mixed) 축으로 분리한다.
   // 시점 세그먼트가 없는 것은 이 모달이 취득·양도 2시점을 한 폼에서 계산하기 때문(gb/cb와 동류).

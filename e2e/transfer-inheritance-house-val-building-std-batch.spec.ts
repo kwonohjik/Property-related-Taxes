@@ -1,7 +1,7 @@
 /**
  * E2E: 상속취득 주택 3-시점 환산(§164⑤) — 건물기준시가 일괄 계산기 배선.
  *
- * HouseValuationSection(상속취득 평가 경로)에 PhdBuildingStdPriceModalButton을 배선.
+ * HouseValuationSection(상속취득 평가 경로)에 MultiPointBuildingStdPriceModal을 배선.
  * 검증(F2 게이팅 — live app):
  *   T1. 상속 + 단독주택(house_individual) + 상속개시일 < 2005 → "3시점 건물기준시가 일괄 계산" 버튼 노출.
  *   T2. 공동주택(house_apart)으로 전환 → 버튼 미노출(구조·용도 방식 부적합).
@@ -97,7 +97,9 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
 
     // pre-2001 취득(1983) → 취득시 LandPriceLookupField(2001 고정) — 서브헤딩 "(2001년 기준)" + 조회 버튼, 주소 미입력이라 자동주입 없이 빈 값
     // (취득≤2000 필드 placeholder "2001.1.1. 현재 공시지가"로 분리 — 최초·양도만 "원/㎡")
-    await expect(modal.getByText("취득시 (2001년 기준) 공시지가")).toBeVisible();
+    // ⚠️ 라벨은 호출부 `points[].label`을 따른다(2026-08-04 P2 — 종전엔 이 행만 "취득시"로 하드코딩돼
+    //    같은 시점이 취득연도에 따라 "취득시"/"취득시(상속)"으로 갈렸다). 상속 호출부는 "취득시(상속)".
+    await expect(modal.getByText("취득시(상속) (2001년 기준) 공시지가")).toBeVisible();
     const acqLandInput = modal.getByPlaceholder("2001.1.1. 현재 공시지가");
     await expect(acqLandInput).toBeVisible();
     await expect(acqLandInput).toHaveValue("");

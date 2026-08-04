@@ -47,12 +47,52 @@ export function snapshotKeyTimepoint(key: string): "acquisition" | "transfer" | 
   return null;
 }
 
-/** PHD 시점 라벨(계산서 헤딩용). phd 키가 아니면 null. */
-export function phdTimepointLabel(
-  key: string,
-): { timepoint: string; category: "housing" | "commercial" } | null {
-  const m = key.match(/-phd-(acq|first|transfer)(-commercial)?$/);
+/**
+ * 배치(N시점 일괄) 스냅샷의 시점 라벨(계산서 헤딩용). 대상이 아니면 null.
+ *
+ * ## ⚠️ 대상은 **배치 전용 키**뿐이다
+ *
+ * `-gb-acq`·`-cb-acq`·`-cb-transfer`는 **시점별 1시점 모달과 키를 공유**한다
+ * (`snapshotKey={bsp-${id}-cb-acq}` 등). 여기에 라벨 override를 붙이면 배치를 쓰지 않고
+ * 시점별 계산기로 저장한 기존 스냅샷의 계산서 제목까지 바뀐다(2026-08-04 P4 실측 —
+ * `building-std-report-phd-section.test.tsx` S9-d가 이 회귀를 잡았다).
+ *
+ * ⇒ 배치만 만드는 키에 한정한다:
+ *   `-phd-{acq|first|transfer}` — PHD 배치 전용 접두(1시점 모달이 쓰지 않는다)
+ *   `-cb-first`                — 상가 §164⑥ 최초고시(2005). 1시점 모달에는 `first` 시점이 없다
+ *
+ * 취득·양도는 기본 제목("취득당시/양도당시 기준시가 계산")이 이미 시점을 밝히므로 정보 손실이 없다.
+ */
+export function phdTimepointLabel(key: string): {
+  timepoint: string;
+  category: "housing" | "commercial";
+  /**
+   * 계산서 헤딩의 구분 표기. **`category`로 직접 만들지 말 것** —
+   * 상가 §164⑥ 배치는 카테고리 구분이 없어 `housing` 슬롯을 재사용하므로
+   * "주택분"으로 오표시된다(2026-08-04 P3 실측).
+   */
+  categoryLabel: string;
+  /** 시점 정렬 순서(취득 0 · 최초 1 · 양도 2) — 라벨 문자열 매칭 금지(접두마다 다르다). */
+  order: 0 | 1 | 2;
+} | null {
+  const m = key.match(/-(?:(phd)-(acq|first|transfer)|(cb)-(first))(-commercial)?$/);
   if (!m) return null;
-  const timepoint = m[1] === "acq" ? "취득시" : m[1] === "first" ? "최초공시일" : "양도시";
-  return { timepoint, category: m[2] ? "commercial" : "housing" };
+  const isCommercialBuilding = m[3] === "cb";
+  const seg = (m[2] ?? m[4]) as "acq" | "first" | "transfer";
+  const category = m[5] ? ("commercial" as const) : ("housing" as const);
+  const timepoint =
+    seg === "acq"
+      ? "취득시"
+      : seg === "first"
+        ? isCommercialBuilding
+          ? "최초고시(2005)"
+          : "최초공시일"
+        : "양도시";
+  const order = seg === "acq" ? 0 : seg === "first" ? 1 : 2;
+  const categoryLabel = isCommercialBuilding
+    ? "건물"
+    : category === "commercial"
+      ? "상가분"
+      : "주택분";
+  return { timepoint, category, categoryLabel, order };
 }
