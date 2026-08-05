@@ -1,6 +1,7 @@
 # 의제취득일 前 상속·증여 자산 취득가액 — §164④~⑦ max 비교 추가 (pre-deemed Phase 2)
 
-> **상태**: Plan (Do 미착수) · 작성 2026-08-05
+> **상태**: ✅ **구현 완료** (2026-08-05) — Phase 0·D-1·D-2·D-3 완주.
+> ~~종전 표기: Plan (Do 미착수) · 작성 2026-08-05~~
 > **선행**: [`inheritance-post-deemed-house-164-7-max.plan.md`](inheritance-post-deemed-house-164-7-max.plan.md) — post-deemed(§163⑨2호)는 **구현 완료**. 본 계획은 그 **pre-deemed 대응분**
 > **세목**: 양도소득세 — 「소득세법 시행령」 §163⑨1호·2호 · §164④~⑦ · §176조의2④
 
@@ -155,9 +156,9 @@ const shouldInjectPostDeemedHouseMax = !!houseValuationResult && !isPreDeemed &&
 
 | # | 항목 | 확인 방법 |
 |---|---|---|
-| **U-1** | pre-deemed에서 `inheritedHouseValuation` payload가 **UI로 입력 가능한가** — post-deemed 전용 위젯이면 진입 경로가 없다 | `PostDeemedInputs.tsx`·`PreDeemedInputs` 렌더 조건 실측 |
-| **U-2** | 토지 §164④(§163⑨**1호**) 경로 — `pre1990LandResult`가 이미 있는데(`helpers:164`) ②로 쓰이는가 **분자로만** 쓰이는가 | `shouldInjectPre1990` 소비처 추적 |
-| **U-3** | V-1 적용 순서 예규 | KoreanLaw 심판례 검색 |
+| ~~U-1~~ | ✅ **해소 — 입력 경로 있다** | `PreDeemedInputs.tsx:215`가 `HouseValuationSection`을 렌더한다. UI 작업 불요 |
+| ~~U-2~~ | ✅ **해소 — 토지도 같은 갭** | `pre1990LandResult`는 `shouldInjectPre1990`(`helpers:164`)로 **③ 환산 분자에만** 주입되고 ②로는 안 쓰인다. 다만 본 구현은 주택 §164⑤~⑦·상가 §164⑥까지만 다루고 **토지 §164④(§163⑨1호)는 범위 밖**으로 남긴다(§11) |
+| **U-3** | V-1 적용 순서 예규 | **미해소** — 3자 max 근사 유지(§6 V-1) |
 
 ---
 
@@ -180,3 +181,23 @@ const shouldInjectPostDeemedHouseMax = !!houseValuationResult && !isPreDeemed &&
 | 현행 코드 | `inheritance-acquisition-price.ts:46-50·87·100-101·141` · `inheritance-acquisition-helpers.ts:146-164` 원문 |
 
 **미확인은 §8에 U-1~U-3으로 명시했고 단정하지 않았다.** 특히 **V-1(적용 순서)은 명문을 확인하지 못했으므로 3자 max라는 현행 근사의 연장으로만 처리한다** — 순서 재편은 예규 확보 전까지 착수하지 않는다.
+
+
+---
+
+## 11. Do 결과 (2026-08-05)
+
+| 항목 | 결과 |
+|---|---|
+| **Phase 0** | P-1 anchor 선작성 → **현행 엔진에서 실패 확인**(`max(①,③)`이 ②를 무시). P-7은 통과해 회귀 기준선 확보 |
+| **D-1** | `calcPreDeemed` 3자 max — 동점 시 **① > ② > ③** 우선(실지거래가액 의제를 추계보다 앞세움) |
+| **D-2** | `shouldInjectPostDeemedHouseMax` → `shouldInjectHouseMax`로 개명하고 `!isPreDeemed` 제거. 상가 §164⑥도 동일 |
+| **D-3** | 신규 `selectedMethod: "sec164"` — 개산공제 게이트가 `=== "converted"`만 보므로(`helpers:199-200`) **②는 자동으로 개산공제 제외**. 별도 분기 불요 |
+| 회귀 | `npm run test:transfer` **482파일 5,464테스트 3회 연속** 통과 · `test:inheritance` 2,757 통과 · tsc 0 |
+
+⚠️ **1회차 실행에서 1건 실패**가 났으나 이후 3회 재현되지 않았다 — vitest 병렬 flaky로 판단한다(memory `feedback_vitest_parallel_flaky`). 재발 시 재조사할 것.
+
+### 범위 밖으로 남긴 것
+
+- **토지 §164④**(§163⑨**1호**) — U-2에서 같은 갭임을 확인했으나 `pre1990LandResult`가 ③ 분자와 강하게 얽혀 있어 별건. 주택·상가와 달리 **주입 필드부터 신설**해야 한다.
+- **V-1**(§163⑨ ↔ §176조의2④ 적용 순서) · **V-2**(③ 분자 시점) — §6대로 미해소 유지.

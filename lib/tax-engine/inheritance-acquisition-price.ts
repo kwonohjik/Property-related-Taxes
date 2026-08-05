@@ -71,7 +71,12 @@ function validateInput(input: InheritanceAcquisitionInput): void {
 // ※ 생산자물가상승률 방식(§176조의2④2호)은 상속·증여 자산에 부적용
 //   (호2 base=취득당시 실지거래가액·매매·감정가액이 무상취득엔 부존재).
 // ① = 실지거래가액 의제(§163⑨) → 실제 필요경비 공제. ③ = 추계 → 개산공제(§163⑥, 하류 applyResultToInput).
-// ② 소령 §164④~⑦ 취득당시 기준시가는 Phase 2 추가 예정(standardPriceAtDeemedDate[환산 분자]와 구분되는 값·시점 확정 필요).
+// ② 소령 §164④~⑦ 취득당시 기준시가 — **§163⑨1호·2호가 근거**(§176조의2④ 아님).
+//    §163⑨은 「의제취득일」로 나뉘지 않고 조건이 **「기준시가 고시 전 상속·증여」**뿐이라,
+//    1985년 이전 상속은 개별공시지가(1990)·건물 기준시가(2005) 둘 다 고시 전이라 당연히 해당한다.
+//    시점은 §163⑨ 본문대로 **상속개시일 또는 증여일 현재**(의제취득일 아님) — post-deemed와 같은 값.
+//    ⚠️ 같은 값이 ③의 **환산 분자**(standardPriceAtDeemedDate)로도 쓰이므로 **필드를 분리**한다(역할이 둘).
+//    계획서: docs/02-design/features/inheritance-pre-deemed-164-max.plan.md
 
 function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisitionResult {
   const warnings: string[] = [];
@@ -97,11 +102,18 @@ function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisiti
       ? Math.floor(input.reportedValue)
       : 0;
 
-  // max(①,③) 선택 (동점 시 ① 우선) — ②(§164 취득당시 기준시가)는 Phase 2
-  const acquisitionPrice = Math.max(reported, converted);
+  // ② §164④~⑦ 취득당시 기준시가 (§163⑨1호·2호) — opt-in(payload 있을 때만 주입)
+  const sec164 = input.houseValuationStdPrice ?? input.commercialValuationStdPrice ?? 0;
+
+  // max(①,②,③) — 동점 시 ① > ② > ③ 우선(실지거래가액 의제를 추계보다 앞세운다)
+  const acquisitionPrice = Math.max(reported, sec164, converted);
 
   const selectedMethod: PreDeemedSelectedMethod =
-    reported > 0 && reported >= converted ? "reported" : "converted";
+    reported > 0 && reported >= sec164 && reported >= converted
+      ? "reported"
+      : sec164 > 0 && sec164 >= converted
+        ? "sec164"
+        : "converted";
 
   if (acquisitionPrice === 0) {
     warnings.push(
@@ -112,6 +124,7 @@ function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisiti
   const breakdown: PreDeemedBreakdown = {
     reportedAmount: reported > 0 ? reported : null,
     convertedAmount: converted,
+    sec164Amount: sec164 > 0 ? sec164 : null,
     selectedMethod,
   };
 
@@ -130,8 +143,16 @@ function buildPreDeemedFormula(b: PreDeemedBreakdown, acquisitionPrice: number):
   if (b.reportedAmount !== null) {
     lines.push(`① 상증법 평가액(상속세 신고가액): ${b.reportedAmount.toLocaleString()}`);
   }
+  if (b.sec164Amount !== null) {
+    lines.push(`② §164 취득당시 기준시가: ${b.sec164Amount.toLocaleString()}`);
+  }
   lines.push(`③ 환산취득가액: ${b.convertedAmount.toLocaleString()}`);
-  const label = b.selectedMethod === "reported" ? "① 상증법 평가액" : "③ 환산취득가액";
+  const label =
+    b.selectedMethod === "reported"
+      ? "① 상증법 평가액"
+      : b.selectedMethod === "sec164"
+        ? "② §164 취득당시 기준시가"
+        : "③ 환산취득가액";
   lines.push(`→ 적용 (큰 금액, ${label}): ${acquisitionPrice.toLocaleString()}`);
   return lines.join("\n");
 }
