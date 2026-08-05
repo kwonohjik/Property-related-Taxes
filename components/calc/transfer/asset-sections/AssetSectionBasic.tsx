@@ -22,6 +22,7 @@ import {
   isReverseGeocodeError,
 } from "@/lib/calc/vworld-reverse-geocode";
 import { MixedUseToggleRow } from "../MixedUseSection";
+import { NonHousingConversionToggleRow } from "../NonHousingConversionSection";
 import {
   AssetAreaSection,
   areaResetPatchForAssetKind,
@@ -71,6 +72,8 @@ interface Props {
   filingDeadline?: string;
   /** 폼-전역 패치 (양도일·신고일 write — handleFormChange 경유) */
   onFormChange?: (patch: Partial<TransferFormData>) => void;
+  /** 첫 자산(index 0) 여부 — §95⑤ 용도변경 토글 노출 게이트 (거주분이 assets[0] 전용) */
+  isFirst?: boolean;
 }
 
 export function AssetSectionBasic({
@@ -84,6 +87,7 @@ export function AssetSectionBasic({
   filingOverdue,
   filingDeadline,
   onFormChange,
+  isFirst,
 }: Props) {
   return (
     <>
@@ -164,9 +168,17 @@ export function AssetSectionBasic({
         )}
       </div>
 
-      {/* 겸용주택 분리계산 토글 — 자산 종류가 주택일 때 상단에 노출. */}
+      {/* 겸용주택 분리계산 토글 — 자산 종류가 주택일 때 상단에 노출.
+          바로 아래 §95⑤ 토글과 **배타**라(일부만 주택 ↔ 전부 주택) 나란히 둔다. */}
       {asset.assetKind === "housing" && (
-        <MixedUseToggleRow asset={asset} onChange={onChange} />
+        <>
+          <MixedUseToggleRow asset={asset} onChange={onChange} />
+          {/* 건물 전체를 주택으로 용도변경 (§95⑤·⑥) — 토글만. 개시일·미리보기는 ③ 취득정보.
+              전체폭: 설명문이 가장 길고, 위 2토글은 §166⑥이 겸용주택에 종속돼 한 줄로 묶인다. */}
+          {isFirst && (
+            <NonHousingConversionToggleRow asset={asset} onChange={onChange} />
+          )}
+        </>
       )}
 
       {/* 소재지 검색 */}

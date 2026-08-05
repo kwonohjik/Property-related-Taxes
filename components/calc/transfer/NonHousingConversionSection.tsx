@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 비주택 → 주택 용도변경 섹션 (fuchsia)
+ * 건물 전체를 주택으로 용도변경 (fuchsia)
  *
  * 「소득세법」 제95조 제5항·제6항 — 주택이 아닌 건물을 취득해 보유하다 주택으로 용도변경한 뒤
  * 양도하는 경우, 장기보유특별공제를 **비주택 기간(표1) + 주택 기간(표2)**으로 나누어 계산한다.
@@ -9,6 +9,16 @@
  *
  * 미리보기는 **엔진 헬퍼를 직접 호출**한다(`calcUsagePeriodInfo`·`calcConversionHoldingPct`).
  * 여기서 산식을 다시 쓰면 화면과 계산이 갈린다(dual truth).
+ *
+ * **배치는 겸용주택(`MixedUseSection`)과 같은 2분할 패턴**을 따른다:
+ *   - `NonHousingConversionToggleRow` → ① 기본정보 (겸용주택 토글 아래·전체폭)
+ *   - `NonHousingConversionExpandedPanel` → ③ 취득정보 (취득일 뒤)
+ *
+ * 토글만 ①로 올린 이유: 겸용주택과 **배타**라(`transfer-tax-validate-usage-conversion.ts`가 차단)
+ * 「건물 전체가 주택이 됐나 / 일부만인가」를 한 자리에서 골라야 하는데, 주택은 ③이 기본 접힘이라
+ * (`ACQUISITION_AUTO_OPEN_KINDS`에 housing 없음) 토글 자체가 발견되지 않았다.
+ * 날짜·미리보기를 함께 올리지 않은 이유: 미리보기가 `acquisitionDate`(③ 입력)를 읽으므로
+ * ①에 두면 취득일을 넣기 전에는 항상 빈 화면이 된다 — UI 순서 = 로직 순서.
  *
  * 형제: `GeneralBuildingConversionSection`(주택 → 상가, 반대 방향).
  */
@@ -37,7 +47,37 @@ function periodLabel(from: Date, to: Date): string {
   return `${years}년 ${months}개월`;
 }
 
-export function NonHousingConversionSection({ asset, onChange, transferDate }: Props) {
+/**
+ * 토글 행 — ① 기본정보의 겸용주택 토글 바로 아래에 **전체폭**으로 배치.
+ * 확장 입력(주거용 사용 개시일·미리보기)은 `NonHousingConversionExpandedPanel`이 ③에서 렌더한다.
+ *
+ * 겸용주택 ON이면 잠근다 — 배타 조합을 계산 버튼까지 끌고 가지 않고 입력 시점에 차단한다
+ * (「보유 중 일부 용도변경」이 겸용주택에 종속되는 것과 같은 방식).
+ */
+export function NonHousingConversionToggleRow({ asset, onChange }: Pick<Props, "asset" | "onChange">) {
+  const blockedByMixedUse = asset.isMixedUseHouse === true;
+
+  return (
+    <div className="mt-2">
+      <ToggleCard
+        tone="fuchsia"
+        title="건물 전체를 주택으로 용도변경"
+        description="오피스텔·근린생활시설 등 주택이 아닌 건물을 취득한 뒤 건물 전부를 주거용으로 사용하거나 주택으로 용도변경한 경우 ON. 건물 일부만 주택이 된 경우는 위 「겸용주택 분리계산」을 쓰세요."
+        checked={asset.hasNonHousingConversion ?? false}
+        disabled={blockedByMixedUse}
+        disabledReason="겸용주택 분리계산과 함께 사용할 수 없습니다 — 일부만 주택이 된 경우는 「보유 중 일부 용도변경」을 쓰세요."
+        onCheckedChange={(v) => onChange({ hasNonHousingConversion: v })}
+        trailing={<LawArticleModal legalBasis="소득세법 §95 ⑤" label="§95⑤ 혼합 공제율" />}
+      />
+    </div>
+  );
+}
+
+/**
+ * 확장 패널 — ③ 취득정보(취득일·취득가액 뒤)에 배치. 토글 OFF면 null 반환.
+ * 미리보기가 취득일에 의존하므로 취득일 **뒤**여야 한다.
+ */
+export function NonHousingConversionExpandedPanel({ asset, onChange, transferDate }: Props) {
   // 접근부 가드 — stale sessionStorage·IndexedDB 이력에서 undefined로 도달할 수 있다.
   const enabled = asset.hasNonHousingConversion ?? false;
   const startDate = asset.residentialUseStartDate ?? "";
@@ -77,18 +117,17 @@ export function NonHousingConversionSection({ asset, onChange, transferDate }: P
     };
   }, [enabled, startDate, transferDate, asset.acquisitionDate]);
 
+  if (!enabled) return null;
+
   return (
-    <ToggleCard
-      tone="fuchsia"
-      variant="card"
-      title="비주택 → 주택 용도변경"
-      description="오피스텔·근린생활시설 등 주택이 아닌 건물을 취득한 뒤 건물 전부를 주거용으로 사용하거나 주택으로 용도변경한 경우 ON. 일부만 주택이 된 겸용주택은 「겸용주택」 토글을 쓰세요."
-      checked={enabled}
-      onCheckedChange={(v) => onChange({ hasNonHousingConversion: v })}
-      trailing={
+    <div className="space-y-3 rounded-lg border border-fuchsia-300 bg-fuchsia-50/70 p-3 dark:border-fuchsia-700/60 dark:bg-fuchsia-950/30">
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-200">
+          건물 전체를 주택으로 용도변경
+        </p>
         <LawArticleModal legalBasis="소득세법 §95 ⑤" label="§95⑤ 혼합 공제율" />
-      }
-    >
+      </div>
+
       <FieldCard
         label="사실상 주거용 사용 개시일"
         hint="사실상 주거용으로 사용한 날. 불분명하면 건축물대장상 용도변경일을 입력하세요. 취득일 이후, 양도일 이전이어야 합니다."
@@ -123,7 +162,7 @@ export function NonHousingConversionSection({ asset, onChange, transferDate }: P
 
       {/* 자동 도출 — 엔진 헬퍼가 낸 값 그대로. 정적 fuchsia 클래스(ToneCard는 fuchsia 미지원) */}
       {!beforeCutoff && preview && (
-        <div className="space-y-1 rounded border border-fuchsia-300 bg-fuchsia-50 px-3 py-2 text-xs text-fuchsia-800 dark:border-fuchsia-800/60 dark:bg-fuchsia-950/30 dark:text-fuchsia-200">
+        <div className="space-y-1 rounded border border-fuchsia-300 bg-fuchsia-100/60 px-3 py-2 text-xs text-fuchsia-800 dark:border-fuchsia-800/60 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">
           <div className="flex justify-between">
             <span>총 보유기간</span>
             <span className="font-semibold" data-testid="conversion-total-holding">
@@ -158,6 +197,6 @@ export function NonHousingConversionSection({ asset, onChange, transferDate }: P
           </p>
         </div>
       )}
-    </ToggleCard>
+    </div>
   );
 }
