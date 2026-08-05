@@ -1,6 +1,14 @@
 # 개별주택가격 미공시 상속주택 취득가액 — post-deemed §164⑤~⑦ 환산 max 비교 누락 정정
 
-> 상태: Plan (법령 확정 · 엔진 트레이스 실측 · 구현 대기)
+> **상태**: ✅ **구현 완료** (2026-08-05 코드 실측) — **D1~D5 전건 해소**.
+> · **P1**(엔진 max(①,②)): `inheritance-acquisition-price.ts:141` `calcPostDeemed` — `max(reportedValue, houseValuationStdPrice)` · ③ 배제 · 개산공제 없음. 주입은 `inheritance-acquisition-helpers.ts:151` `shouldInjectPostDeemedHouseMax`. **상가 §164⑥(`commercialValuationStdPrice`)까지 확장**돼 계획 범위를 넘어섰다.
+> · **P2**(D2·D3·D5): `InheritedAcquisitionDeemedSection.tsx:84` `transferDate` 배선 완료 · `PostDeemedInputs.tsx:335` `HouseValuationSection` 렌더가 P1 주입으로 **취득가액에 실제 반영**된다.
+> · **P3**(D4): `inheritanceReportedValue`가 **전 코드 0건**(제거) — 하단 입력이 `publishedValueAtInheritance`를 직접 read/write(`PostDeemedInputs.tsx:88·192-193`)해 「엔진 경로로 승격·단일화」(Q2=(a)) 완료.
+> 
+> ⚠️ **본문의 file:line 인용은 stale이다** — 컴포넌트가 `components/calc/transfer/` → `components/calc/transfer/inheritance/`로 이동했다(`PostDeemedInputs.tsx`·`HouseValuationSection.tsx`). 본문은 착수 당시 기록으로 남긴다.
+> 
+> 🟠 **별건 — `calcPreDeemed`의 ②는 아직 미구현**: `inheritance-acquisition-price.ts:100` `// max(①,③) 선택 … ②(§164 취득당시 기준시가)는 Phase 2`. **본 계획서(post-deemed §163⑨2호)와 다른 규정**(pre-deemed §176조의2④)이니 혼동하지 말 것.
+> ~~종전 표기: Plan (법령 확정 · 엔진 트레이스 실측 · 구현 대기)~~
 > 대상: 상속개시일 ≥ 1985-01-01(post-deemed) & 개별주택가격 미공시(< 2005-04-30) 주택
 > 근거: 소득세법 시행령 §163⑨2호(max) · §164⑤~⑦ · §176조의2④(pre-deemed 대비)
 
