@@ -340,7 +340,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
       <FieldCard
         label="상속세 신고가액 (상증법 평가액)"
         unit="원"
-        hint="상속세 신고서·결정통지서상 평가액. 입력 시 취득당시 기준시가(§164④~⑦)·환산취득가와 비교하여 큰 금액을 취득가액으로 적용."
+        hint="상속세 신고서·결정통지서상 평가액. 이 값 또는 취득당시 기준시가(§164④~⑦)가 확인되면 그중 큰 금액이 취득가액이 되고, 환산취득가는 적용하지 않습니다(소득세법 §97①1호 단서)."
         trailing={
           <LawArticleModal
             legalBasis="상속세및증여세법 §60"

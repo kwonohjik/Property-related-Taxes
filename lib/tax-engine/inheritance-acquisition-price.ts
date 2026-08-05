@@ -124,15 +124,15 @@ function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisiti
   // ② §164④~⑦ 취득당시 기준시가 (§163⑨1호·2호) — opt-in(payload 있을 때만 주입)
   const sec164 = input.houseValuationStdPrice ?? input.commercialValuationStdPrice ?? 0;
 
-  // max(①,②,③) — 동점 시 ① > ② > ③ 우선(실지거래가액 의제를 추계보다 앞세운다)
-  const acquisitionPrice = Math.max(reported, sec164, converted);
+  // 가목(법 §97①1호 가목) = §163⑨ 본문·1호·2호 → max(①, ②). 동점 시 ① 우선.
+  const clauseA = Math.max(reported, sec164);
+
+  // 법 §97①1호 **단서**: "가목의 실지거래가액을 확인할 수 없는 경우에 **한정하여** 나목의 금액을 적용한다".
+  // ③(환산)은 §163⑫ → §176조의2로 연결되는 **나목**이므로, 가목이 확인되면 도달하지 않는다.
+  const acquisitionPrice = clauseA > 0 ? clauseA : converted;
 
   const selectedMethod: PreDeemedSelectedMethod =
-    reported > 0 && reported >= sec164 && reported >= converted
-      ? "reported"
-      : sec164 > 0 && sec164 >= converted
-        ? "sec164"
-        : "converted";
+    clauseA > 0 ? (reported >= sec164 ? "reported" : "sec164") : "converted";
 
   if (acquisitionPrice === 0) {
     warnings.push(
@@ -165,14 +165,23 @@ function buildPreDeemedFormula(b: PreDeemedBreakdown, acquisitionPrice: number):
   if (b.sec164Amount !== null) {
     lines.push(`② §164 취득당시 기준시가: ${b.sec164Amount.toLocaleString()}`);
   }
-  lines.push(`③ 환산취득가액: ${b.convertedAmount.toLocaleString()}`);
-  const label =
-    b.selectedMethod === "reported"
-      ? "① 상증법 평가액"
-      : b.selectedMethod === "sec164"
-        ? "② §164 취득당시 기준시가"
-        : "③ 환산취득가액";
-  lines.push(`→ 적용 (큰 금액, ${label}): ${acquisitionPrice.toLocaleString()}`);
+  const clauseAConfirmed = b.selectedMethod !== "converted";
+  lines.push(
+    `③ 환산취득가액: ${b.convertedAmount.toLocaleString()}` +
+      (clauseAConfirmed ? " (미적용 — 실지거래가액 의제가 확인됨)" : ""),
+  );
+
+  if (clauseAConfirmed) {
+    const label =
+      b.selectedMethod === "reported" ? "① 상증법 평가액" : "② §164 취득당시 기준시가";
+    lines.push(
+      `→ 적용 (실지거래가액 의제 ①② 중 큰 금액, ${label}): ${acquisitionPrice.toLocaleString()}`,
+    );
+  } else {
+    lines.push(
+      `→ 적용 (①② 확인 불가 → 추계, ③ 환산취득가액): ${acquisitionPrice.toLocaleString()}`,
+    );
+  }
   return lines.join("\n");
 }
 

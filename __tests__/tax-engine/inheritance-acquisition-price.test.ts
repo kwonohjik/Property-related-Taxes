@@ -239,18 +239,21 @@ describe("Case A — 의제취득일 전 상속·증여 max(①,②,③) (소령
     expect(r.preDeemedBreakdown?.reportedAmount).toBe(1_000_000_000);
   });
 
-  it("A-3: ③ 환산이 ①②보다 큼 → ③ 채택 (개산공제)", () => {
+  it("A-3: ①② 부존재 → ③ 환산 채택 (개산공제)", () => {
+    // ⚠️ 종전에는 `reportedValue: 1_000`(① 미미)을 두고 "③이 ①②보다 크므로 ③ 채택"을 기대했다.
+    //    법 §97①1호 단서상 **가목이 확인되면 금액 크기와 무관하게 나목에 도달하지 않으므로**
+    //    그 기대는 성립하지 않는다(①=1,000이면 취득가액도 1,000이다 — 오입력은 validate 계층의 몫).
+    //    이 anchor의 의도는 「③ 채택 + 개산공제」이므로 **①②가 모두 부존재**하는 형태로 고쳤다.
     const r = calculateInheritanceAcquisitionPrice({
       ...BEFORE_DEEMED,
       assetKind: "house_individual",
-      reportedValue: 1_000, // ① 미미
       transferPrice: 920_000_000,
       standardPriceAtDeemedDate: 200_000_000,
       standardPriceAtTransfer: 250_000_000,
       transferDate: new Date("2023-02-16"),
     });
 
-    // ③ 환산 = 920M × 200M/250M = 736,000,000 > ② 200M > ① 1,000
+    // ③ 환산 = 920M × 200M/250M = 736,000,000
     expect(r.preDeemedBreakdown?.convertedAmount).toBe(736_000_000);
     expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
     expect(r.acquisitionPrice).toBe(736_000_000);
@@ -462,5 +465,74 @@ describe("pre-deemed §163⑨ — ②(§164④~⑦ 취득당시 기준시가) ma
 
     expect(r.method).toBe("pre_deemed_max");
     expect(r.acquisitionPrice).toBe(100_000_000);
+  });
+});
+
+/**
+ * V-3 — 가목(§163⑨) 우선, 나목(③ 환산)은 가목 확인 불가 시에만.
+ *
+ * 근거: 「소득세법」법 §97①1호 **단서** — "가목의 실지거래가액을 확인할 수 없는 경우에
+ *       **한정하여** 나목의 금액을 적용한다".
+ *       시행령 §163⑫가 나목 = §176조의2②~④로 정하므로 ③(환산)은 **나목**이고,
+ *       §163⑨이 상속·증여 자산의 상증법 평가액을 실지거래가액으로 보므로 ①②는 **가목**이다.
+ * 판례·심판례: 대법원 2006두1326 · 국심2003부0627(pre-deemed 정면 — 처분청의 §176조의2④
+ *       환산 경정을 취소) · 조심2018서0513("체계상 환산가액 규정보다 실지거래가액 규정을 먼저 적용").
+ */
+describe("pre-deemed 가목 우선 — ③ 환산은 가목 확인 불가 시에만", () => {
+  const BASE = {
+    inheritanceDate: new Date("1984-12-31"),
+    assetKind: "house_individual" as const,
+    // ③ 환산 = 920,000,000 × 200,000,000 / 250,000,000 = 736,000,000
+    transferPrice: 920_000_000,
+    standardPriceAtDeemedDate: 200_000_000,
+    standardPriceAtTransfer: 250_000_000,
+  };
+
+  it("W-1: ②만 확인되면 ③이 더 커도 ②가 취득가액이다", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...BASE,
+      houseValuationStdPrice: 300_000_000, // ② < ③(736M)
+    });
+
+    expect(r.acquisitionPrice).toBe(300_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("sec164");
+  });
+
+  it("W-2: ①만 확인되면 ③이 더 커도 ①이 취득가액이다", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...BASE,
+      reportedValue: 400_000_000, // ① < ③(736M)
+    });
+
+    expect(r.acquisitionPrice).toBe(400_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("reported");
+  });
+
+  it("W-3: ①② 모두 있으면 그중 큰 값 — ③은 비교 대상이 아니다", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...BASE,
+      reportedValue: 400_000_000, // ①
+      houseValuationStdPrice: 500_000_000, // ② — 가목 안에서 최대
+    });
+
+    expect(r.acquisitionPrice).toBe(500_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("sec164");
+  });
+
+  it("W-4(회귀): ①② 모두 부존재면 ③ 환산 — 가목 확인 불가", () => {
+    const r = calculateInheritanceAcquisitionPrice(BASE);
+
+    expect(r.acquisitionPrice).toBe(736_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
+  });
+
+  it("W-5: 가목이 채택되면 selectedMethod가 converted가 아니다 — 개산공제 게이트 자동 배제", () => {
+    // §163⑥ 개산공제는 추계(나목)에만 적용된다. 가목은 실제 필요경비 공제.
+    const r = calculateInheritanceAcquisitionPrice({
+      ...BASE,
+      reportedValue: 400_000_000,
+    });
+
+    expect(r.preDeemedBreakdown?.selectedMethod).not.toBe("converted");
   });
 });
