@@ -29,6 +29,7 @@ import { CommercialBuildingBlock } from "../CommercialBuildingBlock";
 import { CommercialInheritanceStdPriceSection } from "../CommercialInheritanceStdPriceSection";
 import { GeneralBuildingBlock } from "../GeneralBuildingBlock";
 import { RedevelopmentBlock } from "../RedevelopmentBlock";
+import { NonHousingConversionSection } from "../NonHousingConversionSection";
 
 interface Props {
   asset: AssetForm;
@@ -284,6 +285,17 @@ export function AssetSectionAcquisition({
           transferDate={transferDate}
           useEstimatedAcquisition={asset.useEstimatedAcquisition}
           jibun={asset.addressJibun || undefined}
+        />
+      )}
+
+      {/* 비주택 → 주택 용도변경 (§95⑤·⑥) — 겸용주택과 배타이므로 인접 배치로 가시화.
+          첫 자산(index 0) 한정: Step4의 거주기간·조정대상지역이 전부 assets[0] 전용이라
+          비-primary 자산은 §95⑤2호 거주분이 항상 0이 된다. */}
+      {asset.assetKind === "housing" && isFirst && (
+        <NonHousingConversionSection
+          asset={asset}
+          onChange={onChange}
+          transferDate={transferDate}
         />
       )}
 

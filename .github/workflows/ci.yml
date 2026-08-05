@@ -1,37 +1,33 @@
 name: CI
 
 # ══════════════════════════════════════════════════════════════════
-# **self-hosted 러너**에서 실행한다 (2026-07-31).
+# **GitHub 호스팅 러너**에서 실행한다 (2026-08-04 환원).
 #
-# ## 배경 — GitHub 호스팅은 무료 한도를 상시 초과했다
+# ## 왜 돌아왔나 — 저장소가 public이 되어 전제가 뒤집혔다
 #
-# 무료 계정 + 비공개 저장소는 월 2,000분이다. 종전 설정은:
-#   · `push`와 `pull_request`를 **둘 다** 트리거해 변경 1건당 **2회** 실행
-#   · 성공 실행 1회가 **10.4~14.4분**(2026-07 실측 8건)
-#   → 변경 1건 ≈24분 → 약 83건이면 소진(2026-07-30 하루 9건 머지 ≈216분).
-# 소진 후 실행은 3~13초 만에 거부된다("spending limit needs to be increased") —
-# 과금은 없지만 **신호도 없다**. 7월 실패 723건이 대부분 이것이다.
+# 2026-07-31에 self-hosted(개발자 Mac)로 옮긴 이유는 **비공개 저장소**의 무료 한도였다:
+# 월 2,000분인데 변경 1건당 2회 × 10.4~14.4분이라 약 83건이면 소진했고, 소진 후에는
+# 3~13초 만에 거부되어 과금도 신호도 없는 상태가 됐다(7월 실패 723건).
 #
-# ## 해결 — 개발자 Mac을 러너로 등록
+# 저장소가 public으로 전환되면서 두 가지가 동시에 바뀌었다:
+#   1. **GitHub 호스팅 러너가 무료**다(public 저장소는 Actions 분을 쓰지 않는다) — 한도 문제 소멸.
+#   2. **self-hosted가 오히려 위험**하다 — public에서는 fork PR이 개발자 Mac에서 임의 코드를
+#      실행할 수 있다. GitHub이 명시적으로 권장하지 않는 조합이다.
 #
-# GitHub은 **self-hosted 실행에 Actions 분을 과금하지 않는다**. 워크플로·PR 체크 표시는
-# 그대로 두고 실행만 로컬로 옮겼다. 비공개 저장소이므로 fork PR이 임의 코드를 실행하는
-# self-hosted의 대표 위험도 해당하지 않는다.
+# ⚠️ 저장소를 다시 비공개로 되돌리면 1번 근거가 사라진다. 그때는 사용량을 먼저 확인할 것.
 #
-#   러너 관리: ~/actions-runner/svc.sh {status|stop|start}
-#   러너가 꺼져 있으면 체크는 **큐에 대기**한다(실패 아님).
+# 부수 효과: Mac 전원과 무관하게 CI가 돈다(종전에는 러너가 꺼져 있으면 체크가 큐에 대기했다).
 #
 # ## 역할 분담 — pre-push와 중복되지 않게
 #
 #   · **pre-push**(매 푸시, 빠름): 폰트·톤 + typecheck + lint + **범위 선택** 테스트
 #     → `scripts/select-test-scope.sh`로 변경 경로에 맞는 세목만
-#   · **CI**(PR 1회, 철저): fresh checkout + `npm ci` + typecheck + lint + **전체** 테스트
-#     → 러너가 실행마다 `_work/` 아래 독립 디렉터리를 쓰므로 로컬 node_modules가
-#       가리던 lockfile·의존성 문제가 드러난다. 로컬 pre-push가 못 주는 신호가 이것뿐이라
-#       CI는 **전체 테스트**를 돌린다(범위를 좁히면 pre-push의 재탕이 된다).
+#   · **CI**(PR 1회, 철저): fresh checkout + `npm ci` + typecheck + lint + **전체** 테스트 + E2E
+#     → 러너가 매번 깨끗한 환경이라 로컬 node_modules가 가리던 lockfile·의존성 문제가
+#       드러난다. 로컬 pre-push가 못 주는 신호가 이것이라 CI는 **전체 테스트**를 돌린다
+#       (범위를 좁히면 pre-push의 재탕이 된다).
 #
-# 분 과금이 없으므로 종전의 범위 축소·캐시 최적화는 제거했다 — 남기면 이득 없는 복잡도다.
-# 대신 문서 전용·draft PR은 여전히 건너뛴다(개발 머신 부하·대기시간).
+# 문서 전용·draft PR은 건너뛴다(대기시간).
 # ══════════════════════════════════════════════════════════════════
 
 on:
@@ -43,7 +39,7 @@ on:
       - ".claude/**"
       - "LICENSE"
 
-# 같은 PR에 연속 푸시하면 이전 실행을 취소한다 — 러너를 한 번에 하나만 점유.
+# 같은 PR에 연속 푸시하면 이전 실행을 취소한다 — 낡은 커밋의 결과를 기다리지 않는다.
 concurrency:
   group: ci-pr-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -52,17 +48,20 @@ jobs:
   check:
     name: typecheck + lint + test
     if: github.event.pull_request.draft == false
-    runs-on: self-hosted
-    # 로컬 실측: npm ci ≈40초 + typecheck ≈30초 + lint ≈26초 + 전체 test ≈180초
-    #            + E2E ≈7분(2026-08-03 추가) ≈ 12~15분.
-    # 초과 시 러너가 물리지 않도록 조기 중단.
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    # 로컬(Mac) 실측: npm ci ≈40초 + typecheck ≈30초 + lint ≈26초 + 전체 test ≈180초
+    #                + E2E ≈7분 ≈ 12~15분. 호스팅 러너는 더 걸릴 수 있어 여유를 둔다.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
-      # `setup-node`는 쓰지 않는다 — self-hosted 러너에는 이미 Node가 있고,
-      # `cache: npm`은 GitHub 서버로 왕복해 로컬 실행에서는 오히려 느리다.
-      # 버전이 어긋나면 여기서 드러나도록 먼저 찍는다.
+      # 개발 환경과 메이저를 맞춘다(로컬 v24). 호스팅 러너 기본 Node는 이보다 낮을 수 있어
+      # 명시하지 않으면 로컬에서 통과한 코드가 여기서만 깨질 수 있다.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
       - name: Node 버전 확인
         run: node -v && npm -v
 
@@ -86,16 +85,16 @@ jobs:
       # 그래서 PR#1008이 `gift-deemed-capital-increase.spec.ts`를 조용히 무력화시킨 것을
       # 다음 작업에서야 발견했다(`toContainText("0")`이 substring이라 "300,000,000"도 통과).
       #
-      # pre-push에는 넣지 않는다 — 7분이 매 푸시에 붙으면 개발 흐름이 끊긴다.
-      # PR 1회만 돌리고, self-hosted라 분 과금도 없다.
+      # pre-push에는 넣지 않는다 — 7분이 매 푸시에 붙으면 개발 흐름이 끊긴다. PR 1회만 돌린다.
       #
-      # ⚠️ 두 가지 전제가 이 step을 의미 있게 만든다(둘 다 playwright.config.ts에 구현):
-      #   1. **포트 3199** — 러너가 개발자 Mac이라 3000에 dev 서버가 떠 있으면
-      #      `reuseExistingServer`가 그것을 잡아 **PR 코드가 아닌 로컬 트리**를 테스트한다.
-      #   2. **known-failures 제외** — master에도 실패하는 16건을 그대로 두면 CI가
-      #      상시 빨간불이 되어 게이트 구실을 못 한다(`e2e/known-failures.ts`).
-      - name: Playwright 브라우저 확인
-        run: npx playwright install chromium
+      # ⚠️ `known-failures 제외` 전제가 이 step을 의미 있게 만든다 — master에도 실패하는
+      #    16건을 그대로 두면 CI가 상시 빨간불이 되어 게이트 구실을 못 한다(`e2e/known-failures.ts`).
+      #    포트 3199 격리(playwright.config.ts)는 호스팅 러너에서는 불필요하지만 그대로 둔다 —
+      #    로컬에서 `CI=1`로 재현할 때 여전히 dev 서버 오검출을 막아준다.
+      # ⚠️ 호스팅 러너는 Linux다. Mac 기준으로 작성된 known-failures와 어긋나 렌더 차이로
+      #    새 실패가 나올 수 있다 — 그때는 원인을 확인하고 고친다(목록에 추가하지 말 것).
+      - name: Playwright 브라우저 설치
+        run: npx playwright install --with-deps chromium
 
       - name: E2E (알려진 사전존재 실패 제외)
         run: npm run test:e2e

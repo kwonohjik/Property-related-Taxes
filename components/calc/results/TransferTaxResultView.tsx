@@ -35,6 +35,7 @@ import { HousingExpropriationValuationCard } from "@/components/calc/results/tra
 import { SplitLandExpropriationValuationCard } from "@/components/calc/results/transfer/SplitLandExpropriationValuationCard";
 import { SplitGainDetailSection } from "@/components/calc/results/transfer/SplitGainDetailSection";
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
+import { UsageConversionDetailCard } from "@/components/calc/results/transfer/UsageConversionDetailCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { incomeDeductionRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
@@ -469,6 +470,15 @@ export function TransferTaxResultView({
 
         {result.pre1990LandValuationDetail && (
           <Pre1990LandValuationDetailCard detail={result.pre1990LandValuationDetail} />
+        )}
+
+        {/* 비주택 → 주택 용도변경 §95⑤·⑥ — 보유분이 표1+표2로 나뉜 근거.
+            미적용(토글 없음·2025-01-01 전 양도·표2 대상 아님)이면 카드 자체가 없다. */}
+        {result.usageConversionDetail && (
+          <UsageConversionDetailCard
+            detail={result.usageConversionDetail}
+            deduction={result.longTermHoldingDeduction}
+          />
         )}
       </div>
       </PrintSection>

@@ -288,7 +288,9 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
    * 일괄 경로에서 값이 조용히 비어 화면에 안 뜬다(⑫⑬⑭ 침묵 strip과 같은 부류).
    */
   it.each([
-    ["감면 24종", "TransferReductionDetailSource", "pickReductionDetails", 24],
+    // 25종 — 2026-08-05 §95⑤ 용도변경 echo(`usageConversionDetail`) 추가. 감면은 아니지만
+    // LTHD가 낳는 echo라 `rental97LthdDetail`과 같은 계약에 실린다.
+    ["감면·LTHD echo 25종", "TransferReductionDetailSource", "pickReductionDetails", 25],
     ["평가·판정 13종", "TransferValuationDetailSource", "pickValuationDetails", 13],
   ])("%s — 계약 ↔ 주입 헬퍼 동기화", async (_label, typeName, fnName, minCount) => {
     const { readFileSync } = await import("node:fs");
@@ -302,7 +304,8 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
       ),
     ].sort();
 
-    const engineSrc = readFileSync("lib/tax-engine/transfer-tax-aggregate.ts", "utf8");
+    // picker 2종은 800줄 정책으로 `-pickers.ts`로 분리됐다(2026-08-04, Phase A-0).
+    const engineSrc = readFileSync("lib/tax-engine/transfer-tax-aggregate-pickers.ts", "utf8");
     const body = engineSrc.slice(engineSrc.indexOf(`function ${fnName}`));
     const picked = [
       ...new Set([...body.slice(0, body.indexOf("\n}")).matchAll(/^\s+(\w+):/gm)].map((m) => m[1])),

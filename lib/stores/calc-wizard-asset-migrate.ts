@@ -59,6 +59,10 @@ export function migrateAsset(raw: unknown): AssetForm {
   // §164⑨ 1호 특례 보상필드 — 자산-수준(단건 경로)
   if (a.compensationPerSqm === undefined) a.compensationPerSqm = "";
   if (a.compensationBasisStdPrice === undefined) a.compensationBasisStdPrice = "";
+  // 비주택 → 주택 용도변경 §95⑤·⑥ (2026-08-05) — 구 세션 복원 방어.
+  // undefined로 도달하면 ToggleCard가 uncontrolled로 뒤집히고 DateInput이 크래시한다.
+  if (a.hasNonHousingConversion === undefined) a.hasNonHousingConversion = false;
+  if (a.residentialUseStartDate === undefined) a.residentialUseStartDate = "";
   // §164⑨ 2호 공매·경락 특례 (P4)
   if (a.isAuctionTransfer === undefined) a.isAuctionTransfer = false;
   if (a.auctionPrice === undefined) a.auctionPrice = "";

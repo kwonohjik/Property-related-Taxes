@@ -33,6 +33,7 @@ import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateMixedUseAsset } from "./transfer-tax-validate-mixed-use-asset";
+import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
 
 /**
  * 오늘 날짜 — 로컬(KST) 기준 `YYYY-MM-DD` 문자열.
@@ -99,6 +100,12 @@ function validateParcelMode(primary: AssetForm, formTransferDate?: string): stri
 
 /** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) */
 export function validateAssetAcquisition(asset: AssetForm, label: string, formTransferDate?: string): string | null {
+  // ── 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) ──
+  // ⚠️ **모든 조기 return보다 앞**이다 — 부담부증여(C-24)·겸용주택(C-14)·이월과세(C-21)는
+  //    각자 전용 검증으로 빠져나가므로, 뒤에 두면 차단이 필요한 바로 그 조합에서 dead code가 된다.
+  const conversionError = validateUsageConversion(asset, label, formTransferDate);
+  if (conversionError) return conversionError;
+
   // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§47②) — 별도 모듈로 분리 (800줄 정책, 2026-05-12) ──
   const bgError = validateBurdenedGiftAsset(asset, label);
   if (bgError) return bgError;

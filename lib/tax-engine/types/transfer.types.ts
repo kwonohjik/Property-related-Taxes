@@ -749,6 +749,21 @@ export interface TransferTaxInput {
 
   /** 수정신고(경정) 입력 (선택). 제공 시 추가납부세액·가산세 산출 (국세기본법 §45·§48). */
   amendment?: AmendmentInput;
+
+  /**
+   * 비주택 → 주택 용도변경 (「소득세법」 §95⑤·⑥ · 「소득세법 시행령」 §154⑤ 단서).
+   * 미제공 시 현행 동작 그대로 — 취득일부터 전기간에 단일 표를 적용한다.
+   */
+  nonHousingToHousingConversion?: {
+    /** 사실상 주거용으로 사용한 날. 불분명하면 공부상 용도변경일(§95⑥ 단서). */
+    residentialUseStartDate: Date;
+    /**
+     * §95⑤2호 적용을 위해 주택 보유기간 밖으로 잘려나간 거주 개월 수.
+     * ⚠️ **API 변환 계층에서 산출**한다(엔진은 스칼라 `residencePeriodMonths`만 받는다).
+     * 결과 화면 절사 안내 문구 전용 — 계산에는 쓰지 않는다.
+     */
+    residenceMonthsTrimmed: number;
+  };
 }
 
 // TransferReduction union — transfer-reduction-input.types.ts로 분리 (800줄 정책, 2026-06-11)
