@@ -13,6 +13,8 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
+import { waitForCalculationsStore } from "./_helpers/history-seed";
+
 /** 단순 토지 자산 폼 (NBL·감면 없음) — API 필수 필드 충족. */
 function landAsset(price: string, area: string) {
   return {
@@ -113,14 +115,7 @@ async function seedRecord(page: Page, record: unknown) {
 test.describe("다건 결과탭 상단 신고서 양식 (합계+자산별)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/history");
-    await page.waitForFunction(
-      async () => {
-        if (typeof indexedDB.databases !== "function") return true;
-        const dbs = await indexedDB.databases();
-        return dbs.some((d) => d.name === "KoreanTaxCalcLocal");
-      },
-      { timeout: 15000 },
-    );
+    await waitForCalculationsStore(page);
     await seedRecord(page, MULTI_RECORD);
   });
 

@@ -11,8 +11,11 @@
 
 import type { VerificationRule } from "./verifier-types";
 import { TRANSFER_ADDITIONS } from "./manifest/additions-transfer";
+import { TRANSFER_DECREE_ADDITIONS } from "./manifest/additions-transfer-decree";
 import { INHERITANCE_ADDITIONS } from "./manifest/additions-inheritance";
+import { INHERITANCE_DECREE_ADDITIONS } from "./manifest/additions-inheritance-decree";
 import { LOCAL_ADDITIONS } from "./manifest/additions-local";
+import { LOCAL_DECREE_ADDITIONS } from "./manifest/additions-local-decree";
 import { COMPREHENSIVE_ADDITIONS } from "./manifest/additions-comprehensive";
 import { COMMON_ADDITIONS } from "./manifest/additions-common";
 
@@ -276,8 +279,11 @@ const BASE_MANIFEST: VerificationRule[] = [
 export const VERIFICATION_MANIFEST: VerificationRule[] = [
   ...BASE_MANIFEST,
   ...TRANSFER_ADDITIONS,
+  ...TRANSFER_DECREE_ADDITIONS,
   ...INHERITANCE_ADDITIONS,
+  ...INHERITANCE_DECREE_ADDITIONS,
   ...LOCAL_ADDITIONS,
+  ...LOCAL_DECREE_ADDITIONS,
   ...COMPREHENSIVE_ADDITIONS,
   ...COMMON_ADDITIONS,
 ];
