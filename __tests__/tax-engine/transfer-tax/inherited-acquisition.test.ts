@@ -71,6 +71,52 @@ describe("E-1: case A + 1990.8.30. 이전 토지 결합 — pre1990 → inherite
     const inheritedStep = result.steps.find((s) => s.label === "상속 취득가액 의제");
     expect(inheritedStep).toBeDefined();
   });
+
+  it("E-1b(배관): 같은 값이 ② landValuationStdPrice로도 주입되어 가목(§163⑨1호)이 성립한다", () => {
+    // §163⑨1호 — 1990.8.30. 개별공시지가 고시 전 상속·증여 토지는
+    //   취득가액 = max(① 상증법 평가액, ② §164④ 취득당시 기준시가).
+    // ②가 확인되므로 법 §97①1호 단서상 ③(환산·나목)에는 도달하지 않는다.
+    const TRANSFER_STD_PRICE = 1_243_350_000;
+
+    const input = baseTransferInput({
+      propertyType: "land",
+      transferPrice: 920_000_000,
+      transferDate: new Date("2023-02-16"),
+      acquisitionDate: new Date("1985-01-01"),
+      acquisitionPrice: 0,
+      useEstimatedAcquisition: false,
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      standardPriceAtTransfer: TRANSFER_STD_PRICE,
+      pre1990Land: {
+        acquisitionDate: new Date("1983-07-26"),
+        transferDate: new Date("2023-02-16"),
+        areaSqm: 184.2,
+        pricePerSqm_1990: 1_100_000,
+        pricePerSqm_atTransfer: 6_750_000,
+        grade_1990_0830: 218,
+        gradePrev_1990_0830: 218,
+        gradeAtAcquisition: 200,
+      },
+      inheritedAcquisition: {
+        inheritanceDate: new Date("1983-07-26"), // 1990-08-30 前 → §163⑨1호
+        assetKind: "land",
+        standardPriceAtTransfer: TRANSFER_STD_PRICE,
+        transferDate: new Date("2023-02-16"),
+        transferPrice: 920_000_000,
+      },
+    });
+
+    const b = calculateTransferTax(input, mockRates).inheritedAcquisitionDetail!.preDeemedBreakdown!;
+
+    // ②가 주입됐다 — 배관이 살아 있어야 성립한다
+    expect(b.sec164Amount).not.toBeNull();
+    expect(b.sec164Amount).toBeGreaterThan(0);
+
+    // 가목이 확인되므로 ③(환산)은 채택되지 않는다
+    expect(b.selectedMethod).not.toBe("converted");
+    expect(b.selectedMethod).toBe("sec164"); // ① 미입력이므로 ②
+  });
 });
 
 // ─── E-2: case A 환산 채택 시 useEstimatedAcquisition 흐름 ──────

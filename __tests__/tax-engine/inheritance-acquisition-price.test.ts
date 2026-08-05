@@ -536,3 +536,54 @@ describe("pre-deemed 가목 우선 — ③ 환산은 가목 확인 불가 시에
     expect(r.preDeemedBreakdown?.selectedMethod).not.toBe("converted");
   });
 });
+
+/**
+ * Phase C — 토지 §164④ (소령 §163⑨**1호**).
+ *
+ * "1990년 8월 30일 개별공시지가가 고시되기 전에 상속 또는 증여받은 토지의 경우에는
+ *  상속개시일 또는 증여일 현재 상증법 §60~66에 따라 평가한 가액과 **제164조제4항의 규정에
+ *  의한 가액 중 많은 금액**"
+ *
+ * 주택 §164⑦·상가 §164⑥(2호)과 같은 구조이며, 시점은 **의제취득일 기준**이다
+ * (부칙 §8 취득시기 의제 · 국심2003부0627·2002중1431·조심2010서1195 · UI "1985.1.1." 명시).
+ */
+describe("pre-deemed 토지 — ② §164④ (§163⑨1호)", () => {
+  const LAND_BASE = {
+    inheritanceDate: new Date("1984-12-31"),
+    assetKind: "land" as const,
+    // ③ 환산 = 920,000,000 × 200,000,000 / 250,000,000 = 736,000,000
+    transferPrice: 920_000_000,
+    standardPriceAtDeemedDate: 200_000_000,
+    standardPriceAtTransfer: 250_000_000,
+  };
+
+  it("L-1: 토지 ②가 주입되면 ③이 더 커도 ②가 취득가액이다", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...LAND_BASE,
+      landValuationStdPrice: 300_000_000, // ② §164④ < ③(736M)
+    });
+
+    expect(r.preDeemedBreakdown?.sec164Amount).toBe(300_000_000);
+    expect(r.acquisitionPrice).toBe(300_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("sec164");
+  });
+
+  it("L-2: ①이 ②보다 크면 ① — 가목 안에서 max(①,②)", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...LAND_BASE,
+      reportedValue: 400_000_000, // ①
+      landValuationStdPrice: 300_000_000, // ②
+    });
+
+    expect(r.acquisitionPrice).toBe(400_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("reported");
+  });
+
+  it("L-3(회귀): 토지 ② 미주입이면 종전대로 ③ 환산", () => {
+    const r = calculateInheritanceAcquisitionPrice(LAND_BASE);
+
+    expect(r.preDeemedBreakdown?.sec164Amount).toBeNull();
+    expect(r.acquisitionPrice).toBe(736_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
+  });
+});

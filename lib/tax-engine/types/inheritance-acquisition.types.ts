@@ -141,7 +141,20 @@ export interface InheritanceAcquisitionInput {
    */
   commercialValuationStdPrice?: number;
 
-  // ── 의제취득일 전 상속·증여 (case A): max(①,②,③) ──
+  /**
+   * 개별공시지가 미공시 상속·증여 토지의 §164④ 취득당시 기준시가 (원, 총액·미스케일).
+   * 상속개시일·증여일 < 1990-08-30(개별공시지가 최초고시) 시,
+   * 취득가액 = max(reportedValue[① 상증법 평가액], 이 값[② §164④]). 소령 §163⑨**1호**.
+   * helpers가 pre1990LandResult.standardPriceAtAcquisition으로 주입. 양도가 스케일 없음.
+   * (house/commercialValuationStdPrice와 배타 — 자산은 토지 or 주택 or 상가.)
+   *
+   * ⚠️ 같은 값이 ③의 **환산 분자**(standardPriceAtDeemedDate)로도 쓰이므로 **필드를 분리**한다
+   *    (주택 houseValuationStdPrice와 같은 이유 — 역할이 둘).
+   *    시점은 **의제취득일 기준**이다(부칙 §8 취득시기 의제 · 국심2003부0627 외 2건 · UI "1985.1.1." 명시).
+   */
+  landValuationStdPrice?: number;
+
+  // ── 의제취득일 전 상속·증여 (case A): 가목 max(①,②) 우선, 나목 ③은 확인 불가 시 ──
 
   /** @deprecated 물가상승률 방식 폐지(상속·증여 미적용). Phase 2에서 제거 예정 — 엔진 미사용 */
   decedentAcquisitionDate?: Date;

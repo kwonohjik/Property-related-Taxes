@@ -101,6 +101,12 @@ export function resolveInheritedRedevelopmentAcqPrice(
 const COMMERCIAL_FIRST_DISCLOSURE_DATE = new Date("2005-01-01T00:00:00.000Z");
 
 /**
+ * 개별공시지가 최초고시일 — 이 날짜 전 상속·증여 토지는 §163⑨**1호**로 §164④ max 대상.
+ * (「부동산 가격공시에 관한 법률」에 따른 1990.8.30. 최초고시 — §163⑨1호·§164④ 문언과 동일.)
+ */
+const LAND_FIRST_DISCLOSURE_DATE = new Date("1990-08-30T00:00:00.000Z");
+
+/**
  * §164⑥ 취득당시 기준시가(P_A) 산정 — 최초고시(2005) 역환산.
  * P_A = INT(최초고시 호별총액 × 취득시 기준시가합 / 최초고시시 기준시가합).
  * commercial-building-valuation.ts의 기준시가합(법 §99①1호 가목·나목)·§164⑥ 역환산 함수 재사용(single-source).
@@ -173,6 +179,19 @@ function resolveInheritedAcquisitionInput(
   const shouldInjectPre1990 =
     !shouldInjectHouseValuation && pre1990LandResult && isPreDeemed && !base.standardPriceAtDeemedDate;
 
+  // 토지 + 개별공시지가 최초고시(1990-08-30) 전 상속·증여: §164④ 취득당시 기준시가를
+  // max 비교용(②)으로 주입 (소령 §163⑨**1호**). 주택 §164⑦(2호)과 같은 구조다.
+  // ⚠️ 주택·상가와 마찬가지로 **같은 값이 ③의 환산 분자로도 쓰이므로 필드를 분리**한다.
+  //    시점은 **의제취득일 기준**이다 — `pre1990LandResult`가 그렇게 산출되고
+  //    UI도 "1985.1.1. 개별공시지가 × 면적"이라 안내한다(계획서 §4.1(d)).
+  // 📌 현재는 pre-deemed만 다룬다. §163⑨1호 자체는 의제취득일과 무관하므로
+  //    **post-deemed 토지(1985 ~ 1990.8.30. 상속)도 대상**이나, 그 경로는 `pre1990LandResult`가
+  //    산출되지 않아 별건으로 남긴다(계획서 §11).
+  const shouldInjectLandMax =
+    !!pre1990LandResult &&
+    base.assetKind === "land" &&
+    base.inheritanceDate.getTime() < LAND_FIRST_DISCLOSURE_DATE.getTime();
+
   let standardPriceAtDeemedDate = base.standardPriceAtDeemedDate;
   let standardPriceAtTransfer = base.standardPriceAtTransfer ?? currentInput.standardPriceAtTransfer;
 
@@ -195,6 +214,9 @@ function resolveInheritedAcquisitionInput(
     }),
     ...(shouldInjectCommercialMax && {
       commercialValuationStdPrice: computeCommercial164_6StdPrice(rawInput.commercialInheritanceValuation!),
+    }),
+    ...(shouldInjectLandMax && {
+      landValuationStdPrice: pre1990LandResult!.standardPriceAtAcquisition,
     }),
     transferDate: base.transferDate ?? rawInput.transferDate,
     transferPrice: base.transferPrice ?? rawInput.transferPrice,

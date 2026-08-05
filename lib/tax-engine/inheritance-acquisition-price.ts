@@ -121,8 +121,14 @@ function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisiti
       ? Math.floor(input.reportedValue)
       : 0;
 
-  // ② §164④~⑦ 취득당시 기준시가 (§163⑨1호·2호) — opt-in(payload 있을 때만 주입)
-  const sec164 = input.houseValuationStdPrice ?? input.commercialValuationStdPrice ?? 0;
+  // ② §164④~⑦ 취득당시 기준시가 — opt-in(payload 있을 때만 주입). 자산별 배타.
+  //   토지 §164④ = §163⑨**1호**(개별공시지가 최초고시 1990-08-30 前 상속·증여)
+  //   주택 §164⑦ · 상가 §164⑥ = §163⑨**2호**(건물 기준시가 고시 前)
+  const sec164 =
+    input.houseValuationStdPrice ??
+    input.commercialValuationStdPrice ??
+    input.landValuationStdPrice ??
+    0;
 
   // 가목(법 §97①1호 가목) = §163⑨ 본문·1호·2호 → max(①, ②). 동점 시 ① 우선.
   const clauseA = Math.max(reported, sec164);
