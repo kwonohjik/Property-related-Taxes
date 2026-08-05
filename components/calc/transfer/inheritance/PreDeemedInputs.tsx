@@ -336,11 +336,11 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         )}
       </div>
 
-      {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — max(①,③) 후보 */}
+      {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — max(①,②,③) 후보 */}
       <FieldCard
         label="상속세 신고가액 (상증법 평가액)"
         unit="원"
-        hint="상속세 신고서·결정통지서상 평가액. 입력 시 환산취득가와 비교하여 큰 금액을 취득가액으로 적용."
+        hint="상속세 신고서·결정통지서상 평가액. 입력 시 취득당시 기준시가(§164④~⑦)·환산취득가와 비교하여 큰 금액을 취득가액으로 적용."
         trailing={
           <LawArticleModal
             legalBasis="상속세및증여세법 §60"
