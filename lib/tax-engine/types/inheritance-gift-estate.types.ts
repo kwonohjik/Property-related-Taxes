@@ -258,8 +258,18 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
    * 전체 건물 연면적 (㎡) — §61⑤ 미임대(공실) 부분 토지 안분 분모. EstateItem 보충평가 전용
    * (NBL area-proportioning.ts의 동명 함수 파라미터와 무관 — 스코프 다름).
    * 1동 건물 일부만 임대 시 미임대분 토지 기준시가 = appurtenantLandStandardPrice × (vacantBuildingArea / totalBuildingArea).
+   *
+   * 입력 위치는 §61 경로 B 공통이다(공실 토글 안이 아니다) — 건물 기준시가 계산기 prefill로도 쓰기 때문.
+   * 공실 안분은 `vacantBuildingArea > 0`일 때만 일어나므로(property-valuation.ts:143),
+   * 이 값만 채워도 세액에는 영향이 없다.
    */
   totalBuildingArea?: number;
+  /**
+   * 부수토지 대지면적 (㎡) — §61①1호 부수토지 기준시가는 총액(`appurtenantLandStandardPrice`)으로
+   * 저장하지만, 단가×면적으로 산출하므로 면적 자체를 보존해야 재진입 시 재입력을 피하고
+   * 건물 기준시가 계산기에 prefill할 수 있다. **엔진 계산에는 쓰이지 않는다**(총액이 단일 진실).
+   */
+  appurtenantLandArea?: number;
   /** 미임대(공실) 건물 연면적 (㎡) — §61⑤ 미임대분 토지 안분 분자. */
   vacantBuildingArea?: number;
   /**

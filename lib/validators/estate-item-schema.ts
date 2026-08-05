@@ -31,6 +31,8 @@ const baseItemSchema = z.object({
   standardPrice: z.number().nonnegative().optional(),
   // 상업용 건물 부수토지 개별공시지가 총액(§61①1호) — 경로 B 보충평가 합산용. 누락 시 silent strip.
   appurtenantLandStandardPrice: z.number().nonnegative().optional(),
+  // 부수토지 대지면적(㎡) — 총액 산출 근거 보존 + 건물 기준시가 계산기 prefill. 엔진 미소비(총액이 단일 진실).
+  appurtenantLandArea: z.number().nonnegative().optional(),
   // 상속개시자료 요약 4표 (2026-05-28) — Table A 비고/수량 열
   valuationMethod: z
     .enum([
