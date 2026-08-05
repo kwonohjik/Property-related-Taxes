@@ -41,6 +41,8 @@ export type { UnsoldHybridResult } from "../transfer-reductions/unsold-hybrid";
 import type { InheritanceHouseValuationInput } from "./inheritance-house-valuation.types";
 import type { MixedUseAssetInput } from "./transfer-mixed-use.types";
 import type { CarryoverTaxationInput } from "./transfer-carryover.types";
+import type { CommercialAppurtenantLandInput } from "./commercial-appurtenant.types";
+export type { CommercialAppurtenantLandInput } from "./commercial-appurtenant.types";
 
 // CarryoverTaxationInput, CarryoverTaxationDetail 은 transfer-carryover.types.ts 에 정의됨.
 // 외부 소비자 편의를 위해 재수출.
@@ -743,6 +745,12 @@ export interface TransferTaxInput {
    * 소득세법 시행령 §164⑥·§176조의2②2호.
    */
   commercialBuildingValuation?: CommercialBuildingValuationInput;
+
+  /**
+   * 상업용건물·오피스텔 부수토지 초과분 판정 (선택, 「지방세법 시행령」 §101①2호·§101②).
+   * 미제공 시 판정 생략(현행 불변). 취득방법 무관이라 환산 전용 위 필드와 별개다.
+   */
+  commercialAppurtenantLand?: CommercialAppurtenantLandInput;
 
   /** 가업상속공제 §97의2④ 의제 취득가액 입력 (선택). 미제공 시 일반 §97 산식 불변. */
   familyBusinessInheritance?: FamilyBusinessInheritanceTransferInput;
