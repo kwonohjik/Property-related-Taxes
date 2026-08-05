@@ -16,6 +16,7 @@ import { INHERITANCE_ADDITIONS } from "./manifest/additions-inheritance";
 import { INHERITANCE_DECREE_ADDITIONS } from "./manifest/additions-inheritance-decree";
 import { LOCAL_ADDITIONS } from "./manifest/additions-local";
 import { LOCAL_DECREE_ADDITIONS } from "./manifest/additions-local-decree";
+import { LOCAL_RULE_ADDITIONS } from "./manifest/additions-local-rule";
 import { COMPREHENSIVE_ADDITIONS } from "./manifest/additions-comprehensive";
 import { COMMON_ADDITIONS } from "./manifest/additions-common";
 
@@ -284,6 +285,7 @@ export const VERIFICATION_MANIFEST: VerificationRule[] = [
   ...INHERITANCE_DECREE_ADDITIONS,
   ...LOCAL_ADDITIONS,
   ...LOCAL_DECREE_ADDITIONS,
+  ...LOCAL_RULE_ADDITIONS,
   ...COMPREHENSIVE_ADDITIONS,
   ...COMMON_ADDITIONS,
 ];

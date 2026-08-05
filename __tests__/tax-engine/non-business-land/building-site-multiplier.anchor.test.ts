@@ -33,6 +33,9 @@ import {
   LOCAL_TAX_ZONE_AREA_MULTIPLIER,
 } from "@/lib/tax-engine/non-business-land/urban-area";
 import { getLandCategoryGroup } from "@/lib/tax-engine/non-business-land/land-category";
+import { judgeBuildingSiteLand } from "@/lib/tax-engine/non-business-land/building-site-land";
+import { DEFAULT_NON_BUSINESS_LAND_RULES as RULES } from "@/lib/tax-engine/non-business-land/types";
+import { NBL_UI_LAND_TYPE_VALUES } from "@/lib/api/transfer-tax-schema-nbl";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 
 /**
@@ -209,19 +212,101 @@ describe("경계 케이스 — 배율 교체로 판정이 실제로 뒤집히는
 });
 
 // ══════════════════════════════════════════════════════════
-describe("A-BS-1 [별건 격하] — building_site 분류 (UI 선택 불가 = 도달 불가)", () => {
-  // 분류 함수는 getLandCategoryGroup(landType) — classifyLandCategory는 input 객체를 받아
-  // LandCategoryResult를 반환하는 상위 래퍼다(land-category.ts:37 vs :53).
-  it("현행: housing_site와 building_site가 같은 카테고리로 분류된다", () => {
+describe("A-BS-1 ✅ 해소 — building_site는 §101①2호로 분류된다 (2026-08-05)", () => {
+  // 종전: getLandCategoryGroup("building_site") === "housing" → judgeHousingLand →
+  //       getHousingMultiplier(§168의12 주택 배율, 수도권 축 3/5/10배) 적용.
+  // 정정: 전용 그룹 "building_site" → judgeBuildingSiteLand → judgeAppurtenantLandExcess
+  //       (정본 §101② 배율표, 수도권 축 없음).
+  it("주택과 건물은 서로 다른 그룹으로 분류된다", () => {
     expect(getLandCategoryGroup("housing_site")).toBe("housing");
-    expect(getLandCategoryGroup("building_site")).toBe("housing");
+    expect(getLandCategoryGroup("building_site")).toBe("building_site");
   });
 
-  it("NblSectionContainer LAND_TYPE_OPTIONS에 building_site가 없어 사용자가 선택할 수 없다", () => {
-    // 실측(2026-07-30): 옵션 6종 — farmland·forest·pasture·housing_site·villa_land·other_land.
-    // 따라서 A-BS-1의 분류 오류는 **도달 불가 경로**이며 세액 영향이 없다.
-    // 이 사실을 코드로 고정할 수단이 없으므로(UI 상수는 컴포넌트 내부) 주석으로 남긴다.
-    // Phase D는 GB 경로(A-BS-2~4)를 정정하고 building_site는 별건으로 분리한다.
-    expect(getLandCategoryGroup("building_site")).toBe("housing");
+  it("두 조문의 배율표는 실제로 다르다 — 22개 조합 중 19개 상이", () => {
+    // 이 수치가 A-BS-1이 「법령상 오류」인 근거다. 같으면 애초에 문제가 아니었다.
+    const zones: ZoneType[] = [
+      "exclusive_residential", "general_residential", "semi_residential",
+      "commercial", "industrial", "green", "management",
+      "agriculture_forest", "natural_env", "unplanned", "undesignated",
+    ];
+    let differ = 0;
+    let total = 0;
+    for (const z of zones) {
+      const bs = getBuildingSiteMultiplier(z);
+      if (!bs) continue;
+      for (const metro of [true, false]) {
+        total++;
+        const hs = getHousingMultiplier(z, metro, new Date("2024-01-01"));
+        if (hs.multiplier !== bs.multiplier) differ++;
+      }
+    }
+    expect(total).toBe(22);
+    expect(differ).toBe(19);
+  });
+
+  it("건물 부수토지 판정은 수도권 여부와 무관하다 (§101②에 수도권 축이 없다)", () => {
+    const base = {
+      landType: "building_site" as const,
+      landArea: 1000,
+      zoneType: "general_residential" as const, // §101② 4배 · §168의12는 수도권 3배/그 밖 5배
+      acquisitionDate: new Date("2014-01-01"),
+      transferDate: new Date("2024-01-01"),
+      buildingFootprint: 200,
+      businessUsePeriods: [],
+      gracePeriods: [],
+    };
+    const metro = judgeBuildingSiteLand({ ...base, isMetropolitanArea: true }, RULES);
+    const nonMetro = judgeBuildingSiteLand({ ...base, isMetropolitanArea: false }, RULES);
+
+    // 200㎡ × 4배 = 800㎡ → 1,000㎡ 중 200㎡(20%) 비사업용
+    expect(metro.areaProportioning?.buildingMultiplier).toBe(4);
+    expect(metro.areaProportioning?.nonBusinessArea).toBe(200);
+    expect(nonMetro.areaProportioning).toEqual(metro.areaProportioning);
+  });
+
+  it("주택 배율을 썼다면 결과가 달랐다 (수도권 3배 → 600㎡ 허용)", () => {
+    // 회귀 방향 고정 — 정정 전 구현은 수도권에서 3배를 적용해 초과분이 400㎡였다.
+    expect(getHousingMultiplier("general_residential", true, new Date("2024-01-01")).multiplier).toBe(3);
+    expect(getBuildingSiteMultiplier("general_residential")?.multiplier).toBe(4);
+  });
+
+  it("바닥면적 미입력을 「비사업용」으로 삼키지 않는다 (근거 없는 불리 적용 금지)", () => {
+    expect(() =>
+      judgeBuildingSiteLand(
+        {
+          landType: "building_site",
+          landArea: 1000,
+          zoneType: "general_residential",
+          acquisitionDate: new Date("2014-01-01"),
+          transferDate: new Date("2024-01-01"),
+          businessUsePeriods: [],
+          gracePeriods: [],
+        },
+        RULES,
+      ),
+    ).toThrow(/바닥면적/);
+  });
+
+  it("§101② 표에 없는 용도지역은 차단한다 (추정 배율 금지)", () => {
+    expect(() =>
+      judgeBuildingSiteLand(
+        {
+          landType: "building_site",
+          landArea: 1000,
+          zoneType: "residential", // 세분 전
+          acquisitionDate: new Date("2014-01-01"),
+          transferDate: new Date("2024-01-01"),
+          buildingFootprint: 200,
+          businessUsePeriods: [],
+          gracePeriods: [],
+        },
+        RULES,
+      ),
+    ).toThrow(/적용배율표/);
+  });
+
+  it("여전히 UI·API로는 도달할 수 없다 (Zod enum 6종에 없음) — 조문만 바로잡아 둔 상태", () => {
+    expect(NBL_UI_LAND_TYPE_VALUES).not.toContain("building_site");
+    expect(NBL_UI_LAND_TYPE_VALUES).toHaveLength(6);
   });
 });

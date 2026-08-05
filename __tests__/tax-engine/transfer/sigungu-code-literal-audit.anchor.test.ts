@@ -159,6 +159,7 @@ describe("시·군·구 코드 리터럴 전수 대조 (계획서 §6-G.3)", () 
       "lib/geo/sigungu-code-list.ts",
       // 5자리이지만 시·군·구 코드가 아닌 것들
       "lib/tax-engine/data/building-standard-price/building-register-map.ts", // 건물 용도 코드
+      "lib/tax-engine/data/factory-area-rates.generated.ts", // KSIC 세세분류 코드(「공장입지 기준고시」 별표1)
     ]);
     const missing = found.filter((f) => !known.has(f));
     expect(missing, `감사 대상에 넣거나 예외로 명시할 것:\n${missing.join("\n")}`).toEqual([]);

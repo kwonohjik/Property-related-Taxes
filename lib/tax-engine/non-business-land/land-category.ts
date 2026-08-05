@@ -38,7 +38,10 @@ export function getLandCategoryGroup(landType: LandType): LandCategoryGroup {
   if (isFarmlandType(landType)) return "farmland";
   if (landType === "forest") return "forest";
   if (landType === "pasture") return "pasture";
-  if (landType === "housing_site" || landType === "building_site") return "housing";
+  if (landType === "housing_site") return "housing";
+  // A-BS-1 정정(2026-08-05) — 건물(비주택) 부수토지는 「지방세법 시행령」 §101①2호 소관이다.
+  // 종전에는 housing으로 묶여 「소득세법 시행령」 §168의12(주택) 배율이 적용됐다(22개 조합 중 19개 상이).
+  if (landType === "building_site") return "building_site";
   if (landType === "villa_land") return "villa";
   if (
     landType === "other_land" ||

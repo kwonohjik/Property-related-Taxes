@@ -44,6 +44,14 @@ const nblResidenceHistoryRawSchema = z.object({
   lng: z.string().optional(),
 });
 
+/** 별표6 2호다 — 업종별 (연면적, 기준공장면적률). 값은 UI 문자열 그대로, 파싱은 form-mapper. */
+const nblFactorySegmentRawSchema = z.object({
+  id: z.string(),
+  floorArea: z.string(),
+  ratePercent: z.string(),
+  industryLabel: z.string().optional(),
+});
+
 /** NBL 지목 — UI 노출 6값. 무조건 사업용 의제(§168의14③) 성립 시 빌더가 지목 "" 로 전송 → "" 허용 */
 export const NBL_UI_LAND_TYPE_VALUES = [
   "farmland", "forest", "pasture", "housing_site", "villa_land", "other_land",
@@ -165,6 +173,29 @@ export const nonBusinessLandRawSchema = z.object({
   nblOtherIndoorFloorArea: z.string().optional(),
   // F2 Phase B(B-3) — 6호 휴양 건축물 바닥면적(§101② 배율 자동)
   nblOtherResortBuildingFloorArea: z.string().optional(),
+  // ⑫ 공장용 건축물 부속토지 기준면적 (「지방세법 시행령」 §102①1호 별표6 / §101①1호)
+  //
+  // ⚠️ 누락 시 z.object가 조용히 strip → 엔진에 factory가 도달하지 않아 **한도 판정 자체가
+  // 사라진다**(초과분 중과 미발동). 필드명은 반드시 `nbl` prefix — `buildNonBusinessLandRaw`가
+  // prefix-pick(`k.startsWith("nbl")`)으로 운반하기 때문이다.
+  //
+  // 면적은 전부 **1구의 공장 전체값**이다(양도 대상 필지 면적이 아님 — 조심 2023지0373).
+  // 용도지역은 별도 필드를 두지 않고 자산의 `nblZoneType`을 쓴다(단일 소스).
+  nblFactoryEnabled: z.boolean().optional(),
+  /** "eup_myeon_or_complex"(읍·면·산단·공업지역) | "urban_other"(그 밖) — 한도 산식을 가른다 */
+  nblFactoryLocationCategory: z.string().optional(),
+  /** 공장 전체 부속토지 면적(㎡) */
+  nblFactoryTotalLandArea: z.string().optional(),
+  /** 별표6 경로 — 업종별 연면적·기준공장면적률(2호다 다업종 합산) */
+  nblFactorySegments: z.array(nblFactorySegmentRawSchema).optional(),
+  /** 별표6 3호가1) 「산집법」 §20① 공장 신설 제한지역 — 10%·3,000㎡ 한도 vs 20% */
+  nblFactoryIsRestrictedZone: z.boolean().optional(),
+  /** 별표6 3호나~바 추가 인정면적 합계(㎡) */
+  nblFactoryAdditionalRecognizedArea: z.string().optional(),
+  /** §101①1호 경로 — 공장용 건축물 **바닥면적**(㎡). 연면적과 다른 값이다 */
+  nblFactoryFootprintArea: z.string().optional(),
+  /** §102①1호 단서·§101① 단서 — 허가·사용승인 미이행 */
+  nblFactoryIsUnregistered: z.boolean().optional(),
   // §168의11② 수입금액비율 (기타토지 특정 업종)
   nblRevenueBusinessType: z.string().optional(),
   nblRevenueCurrentRevenue: z.string().optional(),

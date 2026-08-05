@@ -38,6 +38,7 @@ import {
 } from "./data/area-standards";
 import { computeRevenueTest } from "./revenue-test";
 import { LOCAL_TAX_ZONE_AREA_MULTIPLIER } from "./urban-area";
+import { judgeFactoryLandExcess } from "./factory-land-standard-area";
 
 /**
  * 나대지 간주 (소득세법 §104의3①4호나목 + 지방세법 시행령 §101①2호나목·단서 — 재산세 별도합산 제외 → 비사업용):
@@ -275,9 +276,54 @@ export function judgeOtherLand(
     legalBasis: NBL.OTHER_LAND,
   });
 
-  // ── Step 3-1: 재산세 종합합산이 아닌 토지 + 기간기준 ───────────────
-  const isNonComprehensive = effectiveTaxType !== "comprehensive";
   const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
+
+  // ── Step 0.5: 공장용 건축물 부속토지 기준면적 — **판정만** (적용은 Step 3-2 직전) ──
+  // 「소득세법」 §104의3①4호나목이 제외하는 것은 재산세 별도합산·분리과세 대상 토지인데,
+  // 공장 부속토지는 두 경로 모두 **면적 한도**가 있다(§102①1호 별표6 / §101①1호 배율).
+  // 한도 초과분은 §106①1호 종합합산으로 떨어져 나목의 제외에서 벗어난다.
+  //
+  // ⚠️ **초과라고 해서 여기서 곧바로 비사업용으로 확정하면 안 된다.** §104의3①4호는
+  // "다음 각 목을 **제외한** 토지"를 비사업용으로 규정하므로 가·나·다목 중 **어느 하나**에
+  // 해당하면 사업용이다. 나목(공장 한도)에 미달해도 **다목**(§168의11① 호별 기준면적,
+  // ② 수입금액비율)에 해당하면 여전히 사업용이다 — 먼저 확정하면 법 근거 없는 불리 적용이 된다.
+  // Step 3-2(§101①2호나목)가 같은 이유로 뒤에 놓여 있다.
+  //
+  // 여기서 하는 일은 두 가지뿐이다:
+  //   (1) 한도 이내면 재산세 구분을 확정해 Step 3-1이 나목으로 통과시키게 한다
+  //   (2) 한도 초과면 결과만 보관하고 판단을 미룬다
+  let factoryTaxTypeOverride: PropertyTaxType | undefined;
+  let factoryExcess: ReturnType<typeof judgeFactoryLandExcess> | undefined;
+  let factoryLegalBasis: string | undefined;
+  if (o.factory) {
+    const f = judgeFactoryLandExcess(o.factory, "기타토지(공장)");
+    factoryLegalBasis =
+      f.route === "separate_taxation" ? NBL.FACTORY_LAND_SEPARATE : NBL.FACTORY_LAND_AGGREGATE;
+    appliedLaws.push(factoryLegalBasis);
+
+    if (f.isWithinLimit) {
+      steps.push({
+        id: "other_factory_area",
+        label: "Step 0.5 공장용 건축물 부속토지 기준면적",
+        status: "PASS",
+        detail: `${f.detail} ≥ 공장 전체 부속토지 ${o.factory.totalAppurtenantLandArea}㎡ → 전량 사업용`,
+        legalBasis: factoryLegalBasis,
+      });
+      // 한도 이내 — 재산세 구분을 경로에 맞게 확정한다. 사용자가 `propertyTaxType`을
+      // 종합합산으로 두었더라도 §104의3①4호나목은 「지방세법」상 **해당 여부**를 묻지
+      // 실제 부과 내용을 따르지 않는다(조심 2025서2489 — "재산세 경정 여부와 무관하게").
+      factoryTaxTypeOverride = f.route === "separate_taxation" ? "special_sum" : "separate";
+    } else {
+      factoryExcess = f;
+    }
+  }
+
+  // ── Step 3-1: 재산세 종합합산이 아닌 토지 + 기간기준 ───────────────
+  // 공장이 입력된 경우 나목 해당 여부는 **한도 판정 결과**가 정한다 — 초과면 나목에
+  // 해당하지 않으므로 사용자가 고른 `propertyTaxType`으로 통과시키지 않는다.
+  const isNonComprehensive = o.factory
+    ? factoryTaxTypeOverride !== undefined
+    : effectiveTaxType !== "comprehensive";
 
   // ── §168의11② 수입금액비율 (2호다목·10·11다·12호 특정 업종) ──────────
   let revenueTestDetail: RevenueTestResult | undefined;
@@ -325,7 +371,11 @@ export function judgeOtherLand(
       id: "other_tax_type_criteria",
       label: "Step 3-1 비종합합산 여부",
       status: "FAIL",
-      detail: "재산세 종합합산과세대상 (원칙 비사업용)",
+      // 공장은 「전량 종합합산」이 아니라 「한도 초과분만 종합합산」이다 — 뭉뚱그리면
+      // 뒤따르는 부분 안분 결과와 문구가 어긋난다.
+      detail: factoryExcess
+        ? "공장 기준면적 초과분이 종합합산 — 나목(별도합산·분리과세)으로는 전량 사업용이 되지 않는다"
+        : "재산세 종합합산과세대상 (원칙 비사업용)",
       legalBasis: NBL.OTHER_LAND,
     });
   }
@@ -494,6 +544,60 @@ export function judgeOtherLand(
       areaLimit !== undefined ? "거주·사업관련 토지 + 기준면적 이내" : "거주·사업관련 토지 + 기간기준 충족",
       steps, appliedLaws, warnings, { r, totalOwnershipDays, revenueTestDetail },
     );
+  }
+
+  // ── Step 0.5 적용: 공장 기준면적 초과분 비사업용 ─────────────────────
+  // 수입금액비율(②)·거주사업관련(① 호별) 우선 경로를 모두 통과하지 못한 경우에만 확정한다
+  // (§104의3①4호 가·나·다목은 택일이므로 나목 미달만으로 비사업용을 단정하면 안 된다).
+  if (factoryExcess) {
+    // 반환값 조립용(effectiveBusinessDays·criteria). **판정 분기로 쓰지 않는다** —
+    // `fullPeriod`(전 보유기간)를 사업용 기간으로 넘기므로 모든 창의 비사업용 일수가 0이 되어
+    // `meets`는 보유기간 길이와 무관하게 항상 true다(period-criteria.ts:160-189 실측).
+    // Step 3-1도 같은 인자를 쓰며 그 FAIL 분기 역시 도달하지 않는다.
+    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+    if (factoryExcess.isUnregisteredException) {
+      // 단서(허가·사용승인 미이행) — 안분 없이 전량 비사업용
+      steps.push({
+        id: "other_factory_area",
+        label: "Step 0.5 공장용 건축물 부속토지 기준면적",
+        status: "FAIL",
+        detail: factoryExcess.detail,
+        legalBasis: factoryLegalBasis!,
+      });
+      return buildFail(factoryExcess.detail, steps, appliedLaws, warnings, {
+        r, totalOwnershipDays, revenueTestDetail,
+      });
+    }
+    // ⚠️ 한도 비교는 **공장 전체**로 끝났다(`factoryExcess.nonBusinessRatio`). 여기서는 그
+    // 비율을 **양도 대상 토지**(`input.landArea`)에 적용한다 — 양도분이 공장 일부일 수 있으므로
+    // `factoryExcess.standardArea`를 양도분과 직접 비교하면 안 된다(§1.4 약분 구조).
+    const factoryTotal = o.factory!.totalAppurtenantLandArea;
+    const businessAreaOfAsset = input.landArea * (1 - factoryExcess.nonBusinessRatio);
+    const areaProportioning = computeAreaProportioning(input.landArea, businessAreaOfAsset);
+    steps.push({
+      id: "other_factory_area",
+      label: "Step 0.5 공장용 건축물 부속토지 기준면적",
+      status: "FAIL",
+      detail:
+        `${factoryExcess.detail} < 공장 전체 부속토지 ${factoryTotal}㎡ → 초과비율 ` +
+        `${(factoryExcess.nonBusinessRatio * 100).toFixed(2)}% · 양도분 ${input.landArea}㎡ 중 ` +
+        `${areaProportioning.nonBusinessArea.toFixed(2)}㎡ 비사업용(종합합산)`,
+      legalBasis: factoryLegalBasis!,
+    });
+    return {
+      isBusiness: false,
+      reason: `공장 기준면적 초과 — 초과분 ${areaProportioning.nonBusinessArea.toFixed(2)}㎡ 비사업용`,
+      steps,
+      appliedLaws,
+      areaProportioning,
+      totalOwnershipDays,
+      effectiveBusinessDays: r.effectiveBusinessDays,
+      gracePeriodDays: r.gracePeriodDays,
+      businessUseRatio: areaProportioning.nonBusinessRatio,
+      criteria: r.criteria,
+      revenueTestDetail,
+      warnings,
+    };
   }
 
   // ── Step 3-2: §101①2호나목 footprint carve-out ──────────────────

@@ -2,7 +2,10 @@
  * 세금 관련 법령 조문 상수 — barrel 파일
  *
  * 실제 상수는 세목별 모듈에 위치:
- *   - ./legal-codes/transfer         — NBL, NBL_REVENUE_THRESHOLDS, TRANSFER, MULTI_HOUSE
+ *   - ./legal-codes/transfer         — TRANSFER (소득세법 §89~§104). 아래 둘을 `export *`로 재수출
+ *   - ./legal-codes/transfer-nbl     — NBL, NBL_REVENUE_THRESHOLDS, ESTIMATED_DEDUCTION_RATE
+ *   - ./legal-codes/transfer-house   — MULTI_HOUSE, INHERITED_HOUSE, TRANSFER_RENTAL_HOUSING,
+ *                                      TRANSFER_REDUCTION_ARTICLE, REDEVELOPMENT, LTHD_*
  *   - ./legal-codes/acquisition      — ACQUISITION, ACQUISITION_CONST
  *   - ./legal-codes/property         — PROPERTY_EXEMPT, PROPERTY, PROPERTY_CONST, PROPERTY_CAL, PROPERTY_SEPARATE, PROPERTY_SEPARATE_CONST
  *   - ./legal-codes/comprehensive    — COMPREHENSIVE*, COMPREHENSIVE_LAND*, COMPREHENSIVE_EXCL*

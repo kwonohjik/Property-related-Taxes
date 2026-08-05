@@ -25,6 +25,7 @@ import { judgeFarmland } from "./farmland";
 import { judgeForest } from "./forest";
 import { judgePasture } from "./pasture";
 import { judgeHousingLand } from "./housing-land";
+import { judgeBuildingSiteLand } from "./building-site-land";
 import { judgeVillaLand } from "./villa-land";
 import { judgeOtherLand } from "./other-land";
 import { checkIncorporationGrace } from "./period-criteria";
@@ -106,6 +107,10 @@ export function judgeNonBusinessLand(
       break;
     case "housing":
       catResult = judgeHousingLand(engineInput, rules);
+      break;
+    case "building_site":
+      // 건물(비주택) 부수토지 — §101①2호. 주택 배율(§168의12)을 쓰지 않는다(A-BS-1).
+      catResult = judgeBuildingSiteLand(engineInput, rules);
       break;
     case "villa": {
       const villaResult = judgeVillaLand(engineInput, rules);

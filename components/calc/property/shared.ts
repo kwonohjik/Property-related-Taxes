@@ -351,13 +351,10 @@ export function validateStep(step: number, form: FormState): string | null {
       if (!form.saZoningDistrict) return "용도지역을 선택하세요.";
       const landArea = parseDecimal(form.saLandArea);
       if (!landArea || landArea <= 0) return "토지 면적(㎡)을 입력하세요.";
-      if (form.saIsFactory) {
-        const fsa = parseDecimal(form.saFactoryStandardArea);
-        if (!fsa || fsa <= 0) return "공장입지기준면적(㎡)을 입력하세요.";
-      } else {
-        const bfa = parseDecimal(form.saBuildingFloorArea);
-        if (!bfa || bfa <= 0) return "건물 바닥면적(㎡)을 입력하세요.";
-      }
+      // 공장용지도 별도합산 기준면적은 §101①1호 본칙(바닥면적 × 배율)이다 —
+      // 공장입지기준면적(§102①1호 분리과세 한도)으로 대체할 수 없다(2026-08-05 정정).
+      const bfa = parseDecimal(form.saBuildingFloorArea);
+      if (!bfa || bfa <= 0) return "건물 바닥면적(㎡)을 입력하세요.";
       if (form.saDemolished && !form.saDemolishedDate) return "철거일을 입력하세요.";
     }
     if (form.landTaxType === "separated") {
@@ -456,7 +453,6 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
         ...(form.saIsFactory
           ? {
               isFactory: true,
-              factoryStandardArea: parseDecimal(form.saFactoryStandardArea) || undefined,
             }
           : {
               buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,

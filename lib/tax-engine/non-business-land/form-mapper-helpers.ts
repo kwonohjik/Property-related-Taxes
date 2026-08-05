@@ -13,6 +13,9 @@ import type {
   PastureUsage,
   VillaUsage,
   OtherLandUsage,
+  FactoryLandUsage,
+  FactoryIndustrySegment,
+  ZoneType,
   NblParcel,
   LandType,
   RevenueTestInput,
@@ -231,6 +234,7 @@ export function buildOtherLand(
   landType: LandType,
   parseNumber: ParseNumber,
   parseDate: ParseDate,
+  zoneType?: ZoneType,
 ): OtherLandUsage | undefined {
   if (landType !== "other_land" && landType !== "vacant_lot" && landType !== "miscellaneous") return undefined;
   const relatedBusinessType = asString(a.nblOtherRelatedBusinessType) || undefined;
@@ -274,6 +278,44 @@ export function buildOtherLand(
     resortBuildingFloorArea:        parseNumber(asString(a.nblOtherResortBuildingFloorArea)),
     // §168의11⑤ 연접 다필지 (C·D)
     parcels:                        buildNblParcels(a, parseDate, parseNumber),
+    // 공장용 건축물 부속토지 기준면적 (§102①1호 별표6 / §101①1호)
+    factory:                        buildFactory(a, parseNumber, zoneType),
+  };
+}
+
+/**
+ * 공장용 건축물 부속토지 입력 (토글 ON 시에만). 미설정이면 undefined = 공장 아님.
+ *
+ * **값 검증은 하지 않는다** — 누락·부정합은 엔진(`judgeFactoryLandExcess`)이 던진다.
+ * 여기서 조용히 undefined로 떨어뜨리면 토글은 켜져 있는데 한도 판정만 사라져
+ * 사용자가 눈치채지 못한다(침묵 미발동).
+ *
+ * `zoneType`은 자산의 `nblZoneType`을 그대로 쓴다 — 공장 전용 용도지역 필드를 따로 두지
+ * 않는다(단일 소스). §101①1호 배율은 양도 대상 필지의 용도지역으로 정한다.
+ */
+export function buildFactory(
+  a: Record<string, unknown>,
+  parseNumber: ParseNumber,
+  zoneType?: ZoneType,
+): FactoryLandUsage | undefined {
+  if (!asBool(a.nblFactoryEnabled)) return undefined;
+  const rawSegments = asArray<{ floorArea?: string; ratePercent?: string; industryLabel?: string }>(
+    a.nblFactorySegments,
+  );
+  const segments: FactoryIndustrySegment[] = rawSegments.map((s) => ({
+    floorArea:   parseNumber(asString(s?.floorArea)) ?? 0,
+    ratePercent: parseNumber(asString(s?.ratePercent)) ?? 0,
+    industryLabel: asString(s?.industryLabel) || undefined,
+  }));
+  return {
+    locationCategory:          asString(a.nblFactoryLocationCategory) as FactoryLandUsage["locationCategory"],
+    totalAppurtenantLandArea:  parseNumber(asString(a.nblFactoryTotalLandArea)) ?? 0,
+    segments,
+    isRestrictedZone:          asBool(a.nblFactoryIsRestrictedZone),
+    additionalRecognizedArea:  parseNumber(asString(a.nblFactoryAdditionalRecognizedArea)),
+    totalFootprintArea:        parseNumber(asString(a.nblFactoryFootprintArea)),
+    zoneType,
+    isUnregistered:            asBool(a.nblFactoryIsUnregistered),
   };
 }
 

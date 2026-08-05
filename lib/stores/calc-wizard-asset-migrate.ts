@@ -102,6 +102,16 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.nblOtherMixedUseTotalFootprint === undefined) a.nblOtherMixedUseTotalFootprint = "";
   if (a.nblOtherUseParcels === undefined) a.nblOtherUseParcels = false;
   if (a.nblOtherParcels === undefined) a.nblOtherParcels = [];
+  // 공장용 건축물 부속토지 (§102①1호 별표6 / §101①1호) — 이력 복원 시 신규 필드 채움.
+  // 토글 기본 false라 기존 이력의 판정 결과는 바뀌지 않는다.
+  if (a.nblFactoryEnabled === undefined) a.nblFactoryEnabled = false;
+  if (a.nblFactoryLocationCategory === undefined) a.nblFactoryLocationCategory = "";
+  if (a.nblFactoryTotalLandArea === undefined) a.nblFactoryTotalLandArea = "";
+  if (a.nblFactorySegments === undefined) a.nblFactorySegments = [];
+  if (a.nblFactoryIsRestrictedZone === undefined) a.nblFactoryIsRestrictedZone = false;
+  if (a.nblFactoryAdditionalRecognizedArea === undefined) a.nblFactoryAdditionalRecognizedArea = "";
+  if (a.nblFactoryFootprintArea === undefined) a.nblFactoryFootprintArea = "";
+  if (a.nblFactoryIsUnregistered === undefined) a.nblFactoryIsUnregistered = false;
   if (a.nblVillaBuildingFloorArea === undefined) a.nblVillaBuildingFloorArea = "";
   if (a.nblVillaAttachedLandArea === undefined) a.nblVillaAttachedLandArea = "";
   if (a.nblVillaCombinedStdValue === undefined) a.nblVillaCombinedStdValue = "";
