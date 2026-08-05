@@ -1,11 +1,11 @@
 # 상업용건물·오피스텔(CB) 부수토지 기준면적 초과분 비사업용 중과 — 구현 계획
 
-- **작성일**: 2026-08-05 (rev.6 — Phase B 완료 반영, §10)
+- **작성일**: 2026-08-05 (rev.7 — Phase C 완료 반영, §10)
 - **브랜치**: `worktree-commercial-building-appurtenant-land` (워크트리 — master는 별건 작업 중)
 - **채택 설계**: **안 B-2** (§5.2) — 배율 판정 공용 헬퍼 추출 + 기존 부분중과 비율 주입
 - **발단**: 세무 교재 발췌 — "상업용 건물의 부수토지는 각 용도지역별 배율이 규정되어 있어 규모 이내의 부수토지는 일반적인 양도소득세 계산과정에 따라 산출되지만 규모를 초과하는 면적에 대해서는 별도로 구분하여 비사업용토지로 중과 계산한다."
 - **선행 작업**: 「지방세법 시행령」 §101② 배율표 정본 통일 — **PR #1067 머지 완료(2026-08-05)**. 정본 `lib/tax-engine/local-tax-zone-multiplier.ts` 확보.
-- **진행 상태**: Phase 0 전건 ✅ · **A ✅** · **B ✅** · Phase C(API)~E 대기
+- **진행 상태**: Phase 0 전건 ✅ · **A ✅** · **B ✅** · **C ✅** · Phase D(UI)·E 대기
 
 ---
 
@@ -409,12 +409,20 @@ CB: transfer-tax.ts STEP 0.6 직후 → 헬퍼 호출 → effectiveInput에 주�
 > ⚠️ `types/transfer.types.ts`가 799 → **807줄**로 800을 넘었다. CLAUDE.md의 **타입 전용 파일
 > 예외**(로직 없이 선언만 — 분리 가치 낮음)를 적용해 분리하지 않았다. 별도 판단 필요 시 재검토.
 
-### Phase C — API 배관 (⑫⑬⑭)
+### Phase C — API 배관 (⑨⑩⑫⑭) ✅ **완료 (2026-08-05)**
 
-- `commercialBuildingValuationSchema`에 `buildingFootprintArea`(또는 §2.3 ㉮ 채택 시 건물전체 바닥면적+지분율)·`zoneType`·`isUnregistered` 추가
-- `transfer-tax-schema-refines.ts` 필수 조건
-- `engine-input.ts` 매핑
-- verify: grep 자가 점검 + Network 탭 request body 신규 필드 도달 확인
+> ⚠️ **rev.1의 설계를 정정했다.** 당초 `commercialBuildingValuationSchema`에 필드를 얹으려 했으나,
+> 그 스키마는 **환산 전용**(`useEstimatedAcquisition` 게이트)이라 실거래가·상속 취득 CB에는
+> 존재하지 않는다. 부수토지 판정은 **취득방법 무관**(C-11)이므로 **별도 최상위 필드**로 분리했다.
+
+- `commercialAppurtenantLandSchema` 신설(`transfer-tax-building-schemas.ts`) — superRefine 포함
+- `transfer-tax-schema.ts` 최상위 `commercialAppurtenantLand` optional 추가(⑨⑫)
+- `engine-input.ts` 조건부 spread 매핑(⑭)
+- **refine 규칙(⑩)**: `isUnregistered`가 아니면 `zoneType` 필수 — 엔진이 throw하기 전에 API가 400으로 차단
+- anchor 7건 · **전체 13,494건 GREEN** · tsc 0 · lint 0 errors
+
+**14지점 자가 grep 결과**: ⑫(스키마 정의·최상위)·⑭(route 매핑)·엔진 타입·STEP **모두 도달**.
+**⑬(`lib/calc/transfer-tax-api.ts` body spread)만 미연결** — store 폼 필드가 없어 Phase D와 함께 한다.
 
 ### Phase D — UI (①②③⑤⑥⑦⑧)
 
@@ -444,12 +452,12 @@ CB: transfer-tax.ts STEP 0.6 직후 → 헬퍼 호출 → effectiveInput에 주�
 | ⑥ | 사이드바 | `lib/stores/` summary | 초과면적 표시 여부 판단 |
 | ⑦ | 결과 카드 | CB 결과뷰 + `FilingFormTableHelpers.ts:474` | 배율·기준면적 산출근거 |
 | ⑧ | validation | `lib/calc/transfer-tax-validate-asset.ts:156` | ④와 동일 조건 |
-| ⑨ | Zod enum 메인 | `lib/api/transfer-tax-schema.ts:410` | — |
-| ⑩ | Zod 컴패니언 | `lib/api/transfer-tax-schema-refines.ts:192` | 필수 조건 |
+| ⑨ | Zod 최상위 필드 | `lib/api/transfer-tax-schema.ts` | ✅ `commercialAppurtenantLand` |
+| ⑩ | Zod refine | `transfer-tax-building-schemas.ts` superRefine | ✅ 단서 아니면 `zoneType` 필수 |
 | ⑪ | 자산-수준 fallback | `app/api/calc/transfer/engine-input.ts` | — |
-| ⑫ | **Zod 입력 객체** | `lib/api/transfer-tax-building-schemas.ts:256` | 🔴 누락 시 침묵 strip |
-| ⑬ | **body spread** | `lib/calc/transfer-tax-api.ts` | 🔴 |
-| ⑭ | **Route 엔진 매핑** | `app/api/calc/transfer/engine-input.ts:322` | 🔴 |
+| ⑫ | **Zod 입력 객체** | `transfer-tax-building-schemas.ts` `commercialAppurtenantLandSchema` | ✅ 신설 |
+| ⑬ | **body spread** | `lib/calc/transfer-tax-api.ts` | ⏳ Phase D (store 필드 선행) |
+| ⑭ | **Route 엔진 매핑** | `app/api/calc/transfer/engine-input.ts` | ✅ 조건부 spread |
 
 ---
 
@@ -500,6 +508,18 @@ CB: transfer-tax.ts STEP 0.6 직후 → 헬퍼 호출 → effectiveInput에 주�
 ---
 
 ## 10. 검토 이력
+
+### rev.7 (2026-08-05) — Phase C 완료
+
+| 항목 | 결과 |
+|---|---|
+| **rev.1 설계 정정** | 당초 `commercialBuildingValuationSchema`에 필드를 얹으려 했으나 그 스키마는 **환산 전용**이라 실거래가·상속 CB엔 없다. 부수토지 판정은 취득방법 무관(C-11) ⇒ **별도 최상위 필드**로 분리 |
+| **⑨⑫** | `commercialAppurtenantLandSchema` 신설 + `transfer-tax-schema.ts` 최상위 optional |
+| **⑩** | superRefine — `isUnregistered`가 아니면 `zoneType` 필수. 엔진 throw 전에 API가 400으로 차단 |
+| **⑭** | `engine-input.ts` 조건부 spread |
+| **검증** | anchor 7건(스키마 보존·refine·route 매핑) · 전체 13,494건 GREEN · tsc 0 · lint 0 errors |
+
+**14지점 자가 grep** — ⑫⑭·엔진 타입·STEP 도달 확인. **⑬만 미연결**(store 필드 선행 필요 → Phase D).
 
 ### rev.6 (2026-08-05) — Phase B 완료
 

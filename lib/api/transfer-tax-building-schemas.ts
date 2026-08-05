@@ -301,6 +301,42 @@ export const commercialBuildingValuationSchema = z.object({
 });
 
 /**
+ * ⑫ 상업용건물·오피스텔 부수토지 기준면적 판정 입력 Zod 스키마.
+ *
+ * 「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101①2호·§101②.
+ *
+ * ⚠️ 환산 전용인 `commercialBuildingValuationSchema`와 **별개**다 — 부수토지 초과분 중과는
+ * 취득방법(환산·실거래가·상속)과 무관하게 적용된다.
+ *
+ * ⚠️ 두 면적은 **집합건물 전체 값**이다. 해당 호의 대지권 지분면적(§164⑥ 3축 중 대지,
+ * `commercialBuildingValuation.landArea`)과 혼동하지 말 것 — 구분소유 판정에서 지분율은
+ * 약분되므로 전체 값만으로 초과 비율이 확정된다(`types/commercial-appurtenant.types.ts` 헤더).
+ */
+export const commercialAppurtenantLandSchema = z
+  .object({
+    /** 집합건물 **전체** 대지면적 (㎡) */
+    totalLandArea: z.number().positive(),
+    /** 집합건물 **전체** 건축물 바닥면적 (㎡, 각 층 중 최대) */
+    totalBuildingFootprintArea: z.number().positive(),
+    /** 용도지역 — 「지방세법 시행령」 §101② 적용배율 결정. §101① 단서 해당 시에만 생략 가능. */
+    zoneType: z.string().optional(),
+    /** 「지방세법 시행령」 §101① 단서 — 허가·사용승인 미이행(불법 용도변경 포함, 해석례 25-0823) */
+    isUnregistered: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // 엔진(`appurtenant-land-excess.ts`)이 용도지역 없이는 배율을 결정하지 못하고 throw한다.
+    // §101① 단서 해당 시에는 배율 자체가 불필요하므로 면제한다.
+    if (!data.isUnregistered && !data.zoneType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["zoneType"],
+        message:
+          "상업용건물 부수토지 판정: 용도지역을 선택하세요 (「지방세법 시행령」 §101② 적용배율 결정).",
+      });
+    }
+  });
+
+/**
  * ⑫ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 Zod 스키마 (소령 §163⑨2호, §164⑥).
  * 상속개시일 < 2005-01-01 상가의 취득당시 기준시가(P_A) 산정용. opt-in — API가 8필드 all-or-nothing 빌드.
  * 미정의 시 침묵 stripping 방지. (환산 payload와 별개 — P_A max 전용, 양도시 값 불요.)
