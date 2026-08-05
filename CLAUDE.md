@@ -59,6 +59,25 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 | **pre-push** | 매 푸시 (빠름) | 폰트·톤 + typecheck + **lint** + **범위 선택** 테스트 |
 | **CI** | PR 1회 (철저) | fresh checkout + **`npm ci`** + typecheck + lint + **전체** 테스트 + **E2E** |
 
+##### 🔴 호스팅 러너는 Mac보다 훨씬 느리다 — job 분리 + E2E 4샤딩 (2026-08-05)
+
+환원 직후의 **단일 job 구성은 호스팅 러너에서 한 번도 완주하지 못했다**(3전 3패, 전부 타임아웃 취소 — PR #1056·#1058·#1059). 실측 분해(run 30962559594):
+
+| 단계 | 호스팅(ubuntu-latest) | self-hosted(Mac) |
+|---|---|---|
+| npm ci·typecheck·lint | 2.5분 | ~1.5분 |
+| npm test (vitest) | **18.7분** | 3.1분 |
+| E2E 894건 | **~29분**(2 worker) | ~5분(5 worker) |
+| **합계** | **~50분** | 9~10분 |
+
+원인은 **코어 수**다 — 호스팅 러너는 2 worker, Mac은 5 worker로 잡힌다. vitest·Playwright 둘 다 코어 수에 비례해 병렬도를 정하므로 그대로 몇 배가 된다.
+
+⇒ **`check`(vitest)와 `e2e`를 별도 job으로 분리**하고 E2E를 **4샤드**로 나눈다. 두 job은 서로 기다리지 않는다(`needs` 없음) — public 저장소는 Actions 분이 무료라 **벽시계가 유일한 비용**이다. 샤드 리포트는 `e2e-report` job이 `merge-reports`로 HTML 하나로 합친다.
+
+> ⚠️ **"실측 10분"은 Mac 수치였다.** PR #1059가 그 값을 호스팅 실측으로 오인해 타임아웃을 25분으로 줄였고, 결과는 **더 일찍 죽은 것뿐**이었다. `timeout-minutes`는 **호스팅 러너 실측**으로만 갱신할 것 — 러너가 다르면 다른 숫자다.
+>
+> ⚠️ **샤드 수를 바꾸면 `--shard=N/4`의 분모도 함께** 바꿔야 한다. 어긋나면 일부 테스트가 어느 샤드에도 안 들어가 **조용히 실행되지 않는다**. 검증: `CI=1 npx playwright test --list --shard=i/4`의 합이 전건 수와 일치해야 한다(현재 224+224+223+223 = 894).
+
 - **lint는 pre-push로 이관했다**(실측 26초). 종전엔 lint-staged가 변경 파일만 `--fix`하고 전체 lint 관문이 CI뿐이었는데 그 CI가 상시 실패해 **실질 관문이 없었다**.
 - **CI가 주는 고유 신호는 fresh `npm ci`**다 — 러너가 매번 깨끗한 환경이라 로컬 node_modules가 가리던 lockfile·의존성 문제가 드러난다. 그 신호가 유일하므로 CI는 **범위를 좁히지 않고 전체 테스트**를 돌린다(좁히면 pre-push의 재탕이 된다).
 - **Node 버전은 `setup-node`로 24에 고정**한다(로컬과 메이저 일치). 명시하지 않으면 러너 기본 Node가 더 낮아 로컬에서 통과한 코드가 CI에서만 깨질 수 있다.
@@ -67,7 +86,7 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 
 **종전엔 E2E가 어느 자동 게이트에도 없었다** — pre-push도 CI도 vitest만 돌렸다. 그래서 PR#1008이 `gift-deemed-capital-increase.spec.ts`를 **조용히 무력화**시킨 것을 다음 작업에서야 발견했다(`toContainText("0")`이 substring이라 `"300,000,000"`도 통과 → 깨진 게 아니라 검증을 멈춘 것).
 
-pre-push에는 넣지 않는다 — **5~7분**이 매 푸시에 붙으면 개발 흐름이 끊긴다. PR 1회만 돌린다.
+pre-push에는 넣지 않는다 — 매 푸시에 붙으면 개발 흐름이 끊긴다. PR 1회만, **별도 job 4샤드**로 돌린다(위 표).
 
 두 전제가 이 게이트를 의미 있게 만든다(`playwright.config.ts`):
 

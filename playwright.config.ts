@@ -16,9 +16,12 @@ const IS_CI = !!process.env.CI;
 
 /**
  * 🔴 **CI는 반드시 개발자 dev 서버와 다른 포트를 쓴다.**
- * CI가 self-hosted(= 개발자 Mac)에서 돌기 때문에, 기본 포트 3000에 개발 중인 dev 서버가
- * 떠 있으면 `reuseExistingServer`가 그것을 재사용해 **CI가 PR 코드가 아니라 로컬 작업 트리
- * 코드를 테스트**하게 된다. 통과해도 아무 의미가 없는 신호다.
+ *
+ * 원래 근거는 "CI가 self-hosted(= 개발자 Mac)에서 돈다"였는데, 2026-08-04에 GitHub 호스팅
+ * 러너로 환원해 그 근거는 사라졌다(러너가 매번 깨끗한 Linux 컨테이너다).
+ * **그래도 3199를 유지한다** — 로컬에서 `CI=1`로 CI를 재현할 때 3000에 떠 있는 dev 서버를
+ * `reuseExistingServer`가 재사용해 **PR 코드가 아니라 로컬 작업 트리**를 테스트하는 일을
+ * 막아주기 때문이다. 통과해도 아무 의미가 없는 신호다.
  */
 const PORT = process.env.E2E_PORT ?? (IS_CI ? "3199" : "3000");
 const BASE_URL = `http://localhost:${PORT}`;
