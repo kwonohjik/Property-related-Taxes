@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { clickAndExpectUrl } from "./_helpers/navigation";
+
 /** E2E: 증여로 보는 경우 — Phase 3 추정·의제 (§45 재산취득자금·§45의2 명의신탁). 상세 입력은 모달 안. */
 
 async function openDetail(page: Page, type: string) {
@@ -20,8 +22,7 @@ test.describe("증여로 보는 경우 — 추정·의제", () => {
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("400,000,000");
-    await page.getByTestId("deemed-to-wizard").click();
-    await expect(page).toHaveURL(/\/calc\/gift-tax/);
+    await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
   });
 
   test("§45 미입증액 기준금액 미만 → 미적용", async ({ page }) => {

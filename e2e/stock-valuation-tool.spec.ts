@@ -10,6 +10,8 @@
  * Plan: docs/00-pm/stock-valuation-tool.plan.md §Phase E
  */
 import { test, expect, type Page } from "@playwright/test";
+
+import { clickAndExpectUrl } from "./_helpers/navigation";
 import { fillDateAndVerify, closeStockModal } from "./_helpers/tax-flow";
 
 async function addListedStock(page: Page, avg: number, shares: number) {
@@ -25,8 +27,7 @@ async function addListedStock(page: Page, avg: number, shares: number) {
 test.describe("SV: 주식 평가 독립 도구", () => {
   test("SV-1: 홈 카드 → 도구 진입", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: /주식 평가/ }).click();
-    await expect(page).toHaveURL(/\/tools\/stock-valuation/);
+    await clickAndExpectUrl(page, page.getByRole("link", { name: /주식 평가/ }), /\/tools\/stock-valuation/);
     await expect(page.getByRole("heading", { name: "주식 평가" })).toBeVisible();
   });
 
