@@ -11,7 +11,7 @@
  */
 
 import { addYears, format } from "date-fns";
-import { calculateHoldingPeriod } from "./tax-utils";
+import { calculateHoldingPeriod, CONVERSION_EXEMPTION_CUTOFF } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import type {
@@ -128,6 +128,8 @@ export type ResidenceReqInput = Pick<
   | "acquisitionCause"
   | "decedentSameHouseholdBeforeInheritance"
   | "decedentCohabitationResidenceMonths"
+  // §154⑤ 단서 — 비주택을 주택으로 용도변경한 경우 보유기간을 주거용 사용일부터 기산한다.
+  | "nonHousingToHousingConversion"
 >;
 
 /**
@@ -232,17 +234,34 @@ export function resolveExemptionProviso(
 }
 
 /**
+ * 거주요건(§154① 본문) 판정의 **기준일** — 「주택을 취득한 날」.
+ *
+ * 통상은 취득일이지만, 비주택을 주택으로 용도변경한 경우에는 **주거용으로 사용하기 시작한 날**이
+ * 주택 취득 시점이다(서면-2020-부동산-5098 [부동산납세과-1247] — 거주요건은 주택 취득시점 기준).
+ * 조정대상지역 지정·해제는 시점에 따라 갈리므로 이 기준일이 거주요건 유무를 바꾼다.
+ *
+ * ⚠️ **호출부가 기준일을 각자 고르지 않게** 여기서 한 번만 도출한다 —
+ *    엔진·Step4 안내·수동 토글이 서로 다른 날짜를 보면 "화면은 통과인데 엔진은 차단"이 된다.
+ */
+function resolveResidenceJudgmentDate(input: ResidenceReqInput): Date {
+  return input.nonHousingToHousingConversion?.residentialUseStartDate ?? input.acquisitionDate;
+}
+
+/**
  * 취득 당시 조정대상지역 여부 — 거주요건(§154① 본문) 판정 입력.
  *
- * regionCode(법정동코드)가 있으면 취득일 기준 isRegulatedByBjdCode로 정밀 판정
+ * regionCode(법정동코드)가 있으면 판정 기준일 기준 isRegulatedByBjdCode로 정밀 판정
  * (읍·면·동/택지지구 예외까지 반영). 없으면 wasRegulatedAtAcquisition boolean fallback (회귀 0 보장).
- * 다주택 중과(multi-house-surcharge: 양도일 기준)와 대칭 — 여기서는 취득일 기준.
+ * 다주택 중과(multi-house-surcharge: 양도일 기준)와 대칭 — 여기서는 취득일(용도변경 시 주거용 사용일) 기준.
+ *
+ * ⚠️ boolean fallback 경로는 기준일을 쓰지 않는다 — 폼이 넘긴 값을 그대로 신뢰한다.
+ *    용도변경 케이스에서 정밀 판정을 받으려면 `regionCode`가 있어야 한다.
  */
 export function resolveWasRegulatedAtAcquisition(input: ResidenceReqInput): boolean {
   if (input.regionCode) {
     return isRegulatedByBjdCode(
       input.regionCode,
-      format(input.acquisitionDate, "yyyy-MM-dd"),
+      format(resolveResidenceJudgmentDate(input), "yyyy-MM-dd"),
     ).isRegulated;
   }
   return input.wasRegulatedAtAcquisition === true;
@@ -323,15 +342,31 @@ export function meetsOneHouseResidenceRequirement(
  * §155⑤(혼인 합가) 1세대1주택 의제 중과배제(§167의10①15호) 게이트에 재사용 — checkExemption과 단일 진실.
  */
 /**
- * §154⑧3호 — 상속주택 자체 양도 시 비과세 보유기간 기산일.
- * 상속개시 당시 상속인·피상속인 동일세대이고 통산 기산일(동일세대 보유 개시)이 상속개시일보다 이르면
- * 그 날부터 통산 → backdate. 그 외에는 acquisitionDate(상속개시일 등) 그대로.
+ * §154① 비과세 **보유기간 기산일** — 취득일을 옮기는 두 규정을 한 곳에서 판정한다.
+ *
+ *   §154⑤ 단서: 비주택 → 주택 용도변경 시 **주택으로 사용한 날**부터 (2024-03-01 이후 양도분)
+ *   §154⑧3호 : 동일세대 상속이면 상속개시 전 동일세대 보유 개시일부터 통산 → backdate
+ *
+ * 어느 쪽도 아니면 acquisitionDate(상속개시일 등) 그대로.
  * ⚠️ §154① 요건 판정 전용 — meetsOneHouseHoldingResidence 경유 소비처 전반에 적용:
  *    (1) 1세대1주택 비과세(checkExemption E-4), (2) §155⑤ 혼인·합가 1세대1주택 의제 중과배제 게이트.
  *    둘 다 §154① 보유·거주 요건 판정이라 §154⑧ 통산이 정합(먼저양도 상속주택도 §154① 적용).
  *    단 LTHD(resolveLTHDStartDate)·단기세율(decedentAcquisitionDate)에는 적용하지 않는다.
  */
 export function resolveExemptionHoldingStartDate(input: ExemptionReqInput): Date {
+  // §154⑤ 단서 — 주택이 아닌 건물을 주택으로 용도변경한 경우 보유기간은 **주택으로 사용한 날**부터
+  // 기산한다. 2024-03-01 이후 양도분부터 적용(대통령령 제34265호).
+  //
+  // ⚠️ §154⑧3호(상속 통산 backdate)보다 **먼저** 판정한다. 단서는 용도변경 사실이 있으면
+  //    적용되는 규정이라, 상속 통산으로 기산일을 취득일 이전으로 당겨 단서를 우회할 수 없다.
+  //    두 사유가 동시에 성립하는 조합은 명문이 없어(계획 R-C) validation이 차단한다(C-21) —
+  //    이 순서는 validation을 거치지 않는 엔진 단독 호출에서만 드러난다.
+  if (
+    input.nonHousingToHousingConversion &&
+    input.transferDate >= CONVERSION_EXEMPTION_CUTOFF
+  ) {
+    return input.nonHousingToHousingConversion.residentialUseStartDate;
+  }
   if (
     input.acquisitionCause === "inheritance" &&
     input.decedentSameHouseholdBeforeInheritance === true &&

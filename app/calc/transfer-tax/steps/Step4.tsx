@@ -5,6 +5,7 @@ import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
+import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { classifyEupMyeon, judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import {
@@ -66,6 +67,16 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const primaryKind = form.assets?.[0]?.assetKind ?? "";
   const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
   const primary = form.assets?.[0];
+
+  // 비주택 → 주택 용도변경(§95⑤·⑥). 거주요건 판정의 「주택 취득일」이 주거용 사용 개시일로 바뀐다
+  // (서면-2020-부동산-5098). 엔진 resolveWasRegulatedAtAcquisition과 **같은 술어·같은 기준일**을
+  // 써야 화면 안내와 판정이 어긋나지 않는다.
+  const conversionActive = isUsageConversionActive(primary);
+  const residenceJudgmentDate = conversionActive
+    ? primary!.residentialUseStartDate
+    : primaryAcquisitionDate;
+  /** 거주요건 맥락에서 기준일을 부르는 이름 — 라벨·안내 문구가 공유한다. */
+  const judgmentDateLabel = conversionActive ? "용도변경일" : "취득일";
 
   const primaryAddress =
     (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
@@ -154,7 +165,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         address: primaryAddress || undefined,
         regionCode: primaryRegionCode || undefined,
         transferDate: form.transferDate,
-        acquisitionDate: primaryAcquisitionDate || undefined,
+        // 용도변경 시 주거용 사용일 기준 — 자동 판별 결과가 그대로 wasRegulatedAtAcquisition
+        // 토글에 반영되므로, 여기서 취득일을 보내면 엔진 판정과 어긋난다.
+        acquisitionDate: residenceJudgmentDate || undefined,
       }),
     })
       .then((res) => res.json())
@@ -187,7 +200,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [primaryAddress, primaryRegionCode, form.transferDate, primaryAcquisitionDate, primaryKind]);
+  }, [primaryAddress, primaryRegionCode, form.transferDate, residenceJudgmentDate, primaryKind]);
 
   // §155⑦ 소재 요건 — 읍지역일 때만 용도지역을 조회한다(면지역은 도시지역 여부를 따지지 않는다).
   const ruralEupMyeon = classifyEupMyeon(form.ruralHouseJibun);
@@ -311,7 +324,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           </p>
           {regulatedAuto.acquisitionBasis && (
             <p className="text-muted-foreground">
-              취득일({primaryAcquisitionDate}):{" "}
+              {judgmentDateLabel}({residenceJudgmentDate}):{" "}
               <span className={regulatedAuto.wasRegulatedAtAcquisition ? "font-semibold text-amber-700 dark:text-amber-400" : ""}>
                 {regulatedAuto.wasRegulatedAtAcquisition ? "조정대상지역 ✓" : "미지정"}
               </span>{" "}
@@ -442,8 +455,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               onCheckedChange={(v) =>
                 onChange({ wasRegulatedAtAcquisition: v, wasRegulatedAtAcquisitionTouched: true })
               }
-              title="취득일 기준 조정대상지역"
-              description="비과세 거주요건 판단 — 해당 시 거주 2년 이상 필요"
+              title={`${judgmentDateLabel} 기준 조정대상지역`}
+              description={
+                conversionActive
+                  ? "비과세 거주요건 판단 — 주택이 된 날(주거용 사용 개시일)이 기준입니다. 해당 시 거주 2년 이상 필요"
+                  : "비과세 거주요건 판단 — 해당 시 거주 2년 이상 필요"
+              }
               tone="rose"
             />
 
@@ -456,7 +473,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 <p className="font-medium">1세대 1주택자 적용 효과</p>
                 <p className="mt-1 text-xs leading-relaxed text-violet-800">
                   보유 2년 이상 시 양도가액 12억 원까지 비과세이며, 12억 초과 고가주택 부분에 한해 과세됩니다.
-                  거주 2년 이상이면 장기보유특별공제가 표2(보유 4%/년 + 거주 4%/년, 최대 80%)로 적용됩니다.
+                  {conversionActive ? (
+                    <>
+                      {" "}거주 2년 이상이면 장기보유특별공제가 「소득세법」 제95조 제5항에 따라
+                      <strong> 비주택 기간은 표1(2%/년), 주택 기간은 표2(4%/년)</strong>로 나누어 적용되며,
+                      두 기간의 보유분 합계는 <strong>40%가 한도</strong>입니다. 거주분(4%/년, 40% 한도)은 별도로 더합니다.
+                    </>
+                  ) : (
+                    " 거주 2년 이상이면 장기보유특별공제가 표2(보유 4%/년 + 거주 4%/년, 최대 80%)로 적용됩니다."
+                  )}
                   {primaryKind === "housing"
                     ? " 아래 거주기간 입력이 표2 판정에 사용됩니다. (겸용주택 포함)"
                     : ""}
@@ -479,12 +504,30 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               />
             )}
 
+            {/* C-10b — direct 모드는 거주기간이 스칼라라 주택 기간으로 자동 클램프할 수 없다.
+                자동 안분 fallback 금지 원칙에 따라 안내로만 처리한다. */}
+            {conversionActive &&
+              form.isOneHousehold &&
+              primaryKind === "housing" &&
+              primary?.residenceInputMode === "direct" && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900">
+                  <p className="font-medium">⚠️ 주거용 사용 개시일 이후의 거주기간만 입력하세요</p>
+                  <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
+                    거주기간을 개월 수로 직접 입력하셨습니다. 「소득세법」 제95조 제5항 제2호는
+                    <strong> 주택으로 보유한 기간 중 거주한 기간</strong>만 산입하므로,
+                    주거용 사용 개시일({primary.residentialUseStartDate}) 이후의 거주기간만 입력해야 합니다.
+                    입주일·퇴거일 구간으로 입력하면 자동으로 잘라 계산합니다.
+                  </p>
+                </div>
+              )}
+
             {/* 메시지 ② 거주요건 불충족 — 엔진 §154① 판정과 일치 (단서면제·2017.8.3 이전 취득 자동 제외) */}
             {residenceShortfall && (
               <div className="rounded-lg border border-rose-200 bg-rose-50/40 px-3 py-2 text-xs text-rose-900">
                 <p className="font-medium">⚠️ 조정대상지역 거주요건(2년) 불충족</p>
                 <p className="mt-0.5 text-caption leading-relaxed text-rose-800">
-                  취득 당시 조정대상지역 주택은 2년 이상 거주해야 1세대1주택 비과세가 적용됩니다.
+                  {conversionActive ? "용도변경 당시" : "취득 당시"} 조정대상지역 주택은 2년 이상
+                  거주해야 1세대1주택 비과세가 적용됩니다.
                   현재 거주기간으로는 비과세가 배제될 수 있습니다.
                 </p>
               </div>

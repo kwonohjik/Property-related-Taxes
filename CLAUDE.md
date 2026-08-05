@@ -37,19 +37,20 @@ npm run seed:tax-rates        # Supabase tax_rates 시딩
 npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 무효화 후)
 ```
 
-**자동 게이트**: husky pre-commit(lint-staged) + pre-push(폰트·톤·**워크플로 러너** + typecheck + **lint** + **범위 선택 테스트**) + CI(self-hosted 러너).
+**자동 게이트**: husky pre-commit(lint-staged) + pre-push(폰트·톤·**워크플로 러너** + typecheck + **lint** + **범위 선택 테스트**) + CI(GitHub 호스팅 러너).
 
-### CI는 self-hosted 러너(개발자 Mac)에서 돈다 (2026-07-31)
+### CI는 GitHub 호스팅 러너에서 돈다 (2026-08-04 환원 — 저장소 public 전환)
 
-**GitHub 호스팅 러너를 쓰지 않는다** — 무료 계정 + 비공개 저장소는 월 2,000분인데, 종전 CI는 `push`·`pull_request`를 **둘 다** 트리거해 변경 1건당 **2회**(각 10.4~14.4분 실측) 돌아 **약 83건**이면 소진됐다(2026-07-30 하루 9건 머지 ≈ 216분). 소진 후 실행은 3~13초 만에 거부되어(`spending limit needs to be increased`) **과금도 신호도 없는** 상태였다.
+2026-07-31~08-04에는 **self-hosted(개발자 Mac)**로 돌렸다. 이유는 **비공개 저장소**의 무료 한도였다 — 월 2,000분인데 종전 CI는 `push`·`pull_request`를 **둘 다** 트리거해 변경 1건당 **2회**(각 10.4~14.4분 실측) 돌아 **약 83건**이면 소진됐고(2026-07-30 하루 9건 머지 ≈ 216분), 소진 후 실행은 3~13초 만에 거부되어(`spending limit needs to be increased`) **과금도 신호도 없는** 상태였다.
 
-**GitHub은 self-hosted 실행에 분을 과금하지 않는다.** 워크플로·PR 체크 표시는 그대로 두고 실행만 로컬로 옮겼다. 비공개 저장소라 fork PR이 임의 코드를 실행하는 self-hosted의 대표 위험도 해당하지 않는다.
+**저장소가 public이 되면서 두 전제가 동시에 뒤집혔다**:
 
-```bash
-~/actions-runner/svc.sh status   # 러너 상태 (stop | start 로 제어)
-```
+1. **public 저장소는 호스팅 러너가 무료**다 — Actions 분을 쓰지 않으므로 한도 문제 자체가 사라졌다.
+2. **public에서 self-hosted는 위험**하다 — fork PR이 개발자 Mac에서 임의 코드를 실행할 수 있다. GitHub이 명시적으로 권장하지 않는 조합이다.
 
-러너가 꺼져 있으면 체크는 **큐에 대기**한다(실패 아님). 러너 등록 정보는 `~/actions-runner/`.
+부수 효과로 **Mac 전원과 무관하게 CI가 돈다**(종전에는 러너가 꺼져 있으면 체크가 큐에 대기했다). `~/actions-runner/`는 더 이상 CI 경로가 아니다 — 서비스는 중지해도 된다(`~/actions-runner/svc.sh stop`).
+
+> ⚠️ **저장소를 다시 비공개로 되돌리면 1번 근거가 사라진다.** 그때는 사용량을 먼저 확인하고 self-hosted 복귀를 검토할 것 — `scripts/check-workflow-runner.sh`의 방향도 함께 되돌려야 한다.
 
 **역할 분담 — pre-push와 중복되지 않게**:
 
@@ -58,18 +59,68 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 | **pre-push** | 매 푸시 (빠름) | 폰트·톤 + typecheck + **lint** + **범위 선택** 테스트 |
 | **CI** | PR 1회 (철저) | fresh checkout + **`npm ci`** + typecheck + lint + **전체** 테스트 + **E2E** |
 
+##### 🔴 호스팅 러너는 Mac보다 훨씬 느리다 — job 분리 + E2E 4샤딩 (2026-08-05)
+
+환원 직후의 **단일 job 구성은 호스팅 러너에서 한 번도 완주하지 못했다**(3전 3패, 전부 타임아웃 취소 — PR #1056·#1058·#1059). 실측 분해(run 30962559594):
+
+| 단계 | 호스팅(ubuntu-latest) | self-hosted(Mac) |
+|---|---|---|
+| npm ci·typecheck·lint | 2.5분 | ~1.5분 |
+| npm test (vitest) | **18.7분** | 3.1분 |
+| E2E 894건 | **~29분**(2 worker) | ~5분(5 worker) |
+| **합계** | **~50분** | 9~10분 |
+
+원인은 **코어 수**다 — 호스팅 러너는 2 worker, Mac은 5 worker로 잡힌다. vitest·Playwright 둘 다 코어 수에 비례해 병렬도를 정하므로 그대로 몇 배가 된다.
+
+⇒ **`check`(vitest)와 `e2e`를 별도 job으로 분리**하고 E2E를 **4샤드**로 나눈다. 두 job은 서로 기다리지 않는다(`needs` 없음) — public 저장소는 Actions 분이 무료라 **벽시계가 유일한 비용**이다. 샤드 리포트는 `e2e-report` job이 `merge-reports`로 HTML 하나로 합친다.
+
+> ⚠️ **"실측 10분"은 Mac 수치였다.** PR #1059가 그 값을 호스팅 실측으로 오인해 타임아웃을 25분으로 줄였고, 결과는 **더 일찍 죽은 것뿐**이었다. `timeout-minutes`는 **호스팅 러너 실측**으로만 갱신할 것 — 러너가 다르면 다른 숫자다.
+>
+> ⚠️ **샤드 수를 바꾸면 `--shard=N/4`의 분모도 함께** 바꿔야 한다. 어긋나면 일부 테스트가 어느 샤드에도 안 들어가 **조용히 실행되지 않는다**.
+
+##### 🔴 법제처 API 의존 spec은 `e2e-law` 전용 job (자문 성격 — `continue-on-error`)
+
+`law-*.spec.ts` 16파일 **29건**은 법제처 Open API를 실제로 호출한다. 이 중 **5건**(POPUP-1·HTML-1·TBL-1·CITE-1·IMP-1)은 **조문 본문**이 도착해야 통과하는데 CI에서 30초~1.5분 타임아웃으로 깨진다. 통과하는 24건은 라우팅·헤더 등 **클라이언트 파생 값만** 단언한다.
+
+**확인된 사실만**: 같은 커밋이 00:41에는 통과했고 01:30 이후로는 계속 실패한다. 같은 시각 **로컬에서는 API 정상**(조문 본문 0.9초, http 200). ⇒ CI 환경에서만, 특정 시점 이후로 본문이 오지 않는다. **근본 원인 미확정**(러너 IP 스로틀링이 유력하나 미확인 — 추정으로 단정하지 말 것).
+
+> ⚠️ 처음엔 **"4샤드 동시 호출이 원인"이라 진단했으나 오진**이었다 — 전용 job으로 떼어 `--workers=1` 단독으로 돌려도 같은 5건이 실패한다(run 30967618223).
+
+⇒ 샤딩 job은 `E2E_SKIP_LAW=1`(`playwright.config.ts` `testIgnore`)로 이들을 빼고, **`e2e-law` job이 `continue-on-error: true`**로 돌린다 — **결과는 보이되 머지를 막지 않는다**.
+
+> ⚠️ **`known-failures.ts`에 넣는 것과 다르다.** 목록에 넣으면 실행 자체가 사라져 진짜 회귀가 생겨도 모른다. 여기서는 **매번 돌고 결과가 보이되** 빨간불이 머지만 막지 않는다. 나머지 **865건은 그대로 차단 게이트**다.
+> ⚠️ 원인이 밝혀져 안정화되면 `continue-on-error`를 **제거**할 것 — 영구 면제가 아니라 원인 미상 구간의 임시 조치다.
+
+##### ⏱️ CI 테스트 타임아웃 60초 (로컬 30초) — 2코어 러너 대응
+
+호스팅 러너는 **2 worker**(Mac 5)라 브라우저 안에서 도는 작업이 몇 배 느리다. `transfer-multi-*` 계열의 `beforeEach`(`page.evaluate` → `indexedDB.open` → Dexie 스토어 생성)가 기본 30초에 걸린다.
+
+실측(run 30968955696 샤드 4): 실패·flaky **10건이 전부 30.1~30.4초** — "느려서 못 끝낸 것"이지 단언이 틀린 게 아니다(8~9건은 재시도로 통과).
+
+⇒ `playwright.config.ts` `timeout: IS_CI ? 60_000 : 30_000`.
+
+> ⚠️ 타임아웃 상향은 **단언을 약화시키지 않는다** — 틀린 결과는 60초를 줘도 틀리다. 다만 진짜 성능 회귀를 늦게 알아채게 되므로 **로컬은 30초를 유지**해 개발 중에 느려짐이 먼저 드러나게 둔다.
+
+> ⚠️ **두 job의 합이 전건인지 반드시 확인**한다. `testIgnore` 패턴(`**/*law-*.spec.ts`)과 job의 positional 필터(`law-`)가 어긋나면 그 spec은 **어느 job에서도 돌지 않는다**(조용한 미실행).
+> ```bash
+> CI=1 E2E_SKIP_LAW=1 npx playwright test --list   # 865
+> CI=1 npx playwright test --list law-              #  29  → 합 894 = 전건
+> ```
+
 - **lint는 pre-push로 이관했다**(실측 26초). 종전엔 lint-staged가 변경 파일만 `--fix`하고 전체 lint 관문이 CI뿐이었는데 그 CI가 상시 실패해 **실질 관문이 없었다**.
-- **CI가 주는 고유 신호는 fresh `npm ci`**다 — 러너가 실행마다 독립 디렉터리를 쓰므로 로컬 node_modules가 가리던 lockfile·의존성 문제가 드러난다. 그 신호가 유일하므로 CI는 **범위를 좁히지 않고 전체 테스트**를 돌린다(좁히면 pre-push의 재탕이 된다).
+- **CI가 주는 고유 신호는 fresh `npm ci`**다 — 러너가 매번 깨끗한 환경이라 로컬 node_modules가 가리던 lockfile·의존성 문제가 드러난다. 그 신호가 유일하므로 CI는 **범위를 좁히지 않고 전체 테스트**를 돌린다(좁히면 pre-push의 재탕이 된다).
+- **Node 버전은 `setup-node`로 24에 고정**한다(로컬과 메이저 일치). 명시하지 않으면 러너 기본 Node가 더 낮아 로컬에서 통과한 코드가 CI에서만 깨질 수 있다.
 
 #### E2E는 CI에만 있다 (2026-08-03 추가)
 
 **종전엔 E2E가 어느 자동 게이트에도 없었다** — pre-push도 CI도 vitest만 돌렸다. 그래서 PR#1008이 `gift-deemed-capital-increase.spec.ts`를 **조용히 무력화**시킨 것을 다음 작업에서야 발견했다(`toContainText("0")`이 substring이라 `"300,000,000"`도 통과 → 깨진 게 아니라 검증을 멈춘 것).
 
-pre-push에는 넣지 않는다 — **5~7분**이 매 푸시에 붙으면 개발 흐름이 끊긴다. PR 1회만 돌리고 self-hosted라 분 과금도 없다.
+pre-push에는 넣지 않는다 — 매 푸시에 붙으면 개발 흐름이 끊긴다. PR 1회만, **별도 job 4샤드**로 돌린다(위 표).
 
 두 전제가 이 게이트를 의미 있게 만든다(`playwright.config.ts`):
 
-- 🔴 **CI 포트 3199** — 러너가 개발자 Mac이라 3000에 dev 서버가 떠 있으면 `reuseExistingServer`가 그것을 잡아 **PR 코드가 아니라 로컬 작업 트리**를 테스트한다. `reuseExistingServer: !CI`도 함께 건다.
+- **CI 포트 3199** — 호스팅 러너에서는 불필요하지만 유지한다. 로컬에서 `CI=1`로 재현할 때 3000의 dev 서버를 `reuseExistingServer`가 잡아 **PR 코드가 아니라 로컬 작업 트리**를 테스트하는 것을 막아준다. `reuseExistingServer: !CI`도 함께 건다.
+- ⚠️ **호스팅 러너는 Linux**다. Mac 기준으로 쌓인 known-failures와 어긋나 렌더 차이로 새 실패가 나올 수 있다 — 원인을 확인해 고칠 것(목록에 추가는 금지).
 - **`e2e/known-failures.ts`** — master에도 실패하는 **16건**을 제외한다. 그대로 넣으면 CI가 상시 빨간불이 되어 게이트 구실을 못 한다(lint가 상시 실패 CI에만 있어 실질 관문이 없던 것과 같은 실패). **목록은 줄이기만 한다** — 새 실패를 추가하는 것은 회귀를 숨기는 것이다.
 
 **spec은 포트를 하드코딩하지 않는다** — `page.goto("/calc/...")` 상대경로로 `baseURL`을 쓴다. `http://localhost:3000` 고정 spec 1건이 CI 포트에서 전건 실패해 정정했다(`inheritance-cohabit-redev-right`).
@@ -83,14 +134,14 @@ pre-push에는 넣지 않는다 — **5~7분**이 매 푸시에 붙으면 개발
 ⇒ `__tests__/lib/legal-verification-coverage-complete.test.ts`가 게이트다. **커버리지 계산은 순수 정적 분석**(법제처 API·`.env.local` 불필요)이라 vitest에 둘 수 있고, 그래서 **pre-push와 CI 전체 테스트 양쪽에서** 자동으로 잡힌다. 실패하면 누락 조문명을 그대로 출력한다.
 
 키워드는 **KoreanLaw MCP로 조회한 본문의 verbatim 표현**이어야 한다(강학상 용어 금지). 등록 후 `npm run verify:legal`로 키워드가 실제 법문과 맞는지 확인한다.
-- 문서 전용(`**.md`·`docs/**`·`.claude/**`)·draft PR은 건너뛴다 — 이제 과금이 아니라 **개발 머신 부하·대기시간** 때문이다.
-#### 🔒 신규 워크플로는 `runs-on: self-hosted`가 **기본**이다 (pre-push 하드블록)
+- 문서 전용(`**.md`·`docs/**`·`.claude/**`)·draft PR은 건너뛴다 — **대기시간** 때문이다.
 
-`runs-on: ubuntu-latest`(·`macos-*`·`windows-*`)로 워크플로를 추가하면 **그 순간 Actions 분 과금이 재개**된다. `scripts/check-workflow-runner.sh`가 `.github/workflows/**`를 검사해 **pre-push에서 차단**한다(폰트·톤 게이트와 동일 층위 — 우회 금지).
+#### 🔒 신규 워크플로는 `runs-on: ubuntu-latest`가 **기본**이다 (pre-push 하드블록)
 
-- **예외는 `schedule:` 트리거가 있는 워크플로뿐**이다. 별도 화이트리스트를 두지 않는다 — 목록은 낡지만 이 조건은 파일이 스스로 증명한다.
-- 그 예외가 필요한 이유: `supabase-keepalive`(3일마다·월 ≈10분)·`matrix-update`(분기 1회)는 **Mac이 꺼져 있어도 반드시 떠야** 한다. 특히 keepalive가 밀리면 Supabase가 pause되어 세율 로드가 fallback으로 떨어진다. 합쳐 월 10여 분이라 한도에 영향이 없다.
-- 즉 판단 기준은 **"Mac 전원과 무관하게 떠야 하는가"**다. 그렇다면 `schedule:`을 두고 GitHub 호스팅을, 아니면 `self-hosted`를 쓴다.
+**방향이 2026-08-04에 뒤집혔다.** 종전에는 GitHub 호스팅을 차단했지만(비공개 저장소 한도), 지금은 **self-hosted를 차단**한다 — public 저장소에서는 fork PR이 개발자 Mac에서 임의 코드를 실행할 수 있다. `scripts/check-workflow-runner.sh`가 `.github/workflows/**`를 검사해 **pre-push에서 차단**한다(폰트·톤 게이트와 동일 층위 — 우회 금지).
+
+- `supabase-keepalive`(3일마다)·`matrix-update`(분기 1회)는 종전 예외였으나, 이제 전 워크플로가 호스팅이라 **예외 개념 자체가 필요 없다**. keepalive가 밀리면 Supabase가 pause되어 세율 로드가 fallback으로 떨어지므로 스케줄 유지는 여전히 중요하다.
+- 저장소를 비공개로 되돌리면 이 게이트의 방향도 함께 되돌릴 것(스크립트 상단 주석에 근거를 남겼다).
 
 ### 테스트 범위 정책 (2026-07-28 — 반복 검증에 전체 실행 금지)
 

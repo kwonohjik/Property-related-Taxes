@@ -38,6 +38,35 @@ import type {
   HousingExpropriationValuationDetail,
 } from "../transfer-tax-expropriation-valuation";
 
+/**
+ * 「소득세법」 §95⑤·⑥ — 비주택 → 주택 용도변경 장기보유특별공제 적용 내역 echo.
+ *
+ * 공제율을 **정수 %**로 담는다(8 = 8%). 소수 rate로 합산하면 표1(0.02 배수) + 표2(0.04 배수)
+ * 조합에서 부동소수 오차가 1원 과소를 만들기 때문에 엔진이 정수 %로 계산하고, 표시 계층도
+ * 같은 값을 그대로 쓴다(`conversion-holding-pct.ts` 참조).
+ */
+export interface UsageConversionDetail {
+  /**
+   * 사실상 주거용으로 사용한 날 — `yyyy-MM-dd`.
+   * ⚠️ **`Date`가 아니다**: 결과는 IndexedDB에 JSON으로 저장·복원되므로 Date는 왕복 후 문자열이 된다.
+   */
+  residentialUseStartDate: string;
+  /** 비주택으로 보유한 완성연수 (취득일 ~ 주거용 사용 개시일) */
+  nonHousingYears: number;
+  /** 주택으로 보유한 완성연수 (주거용 사용 개시일 ~ 양도일 — §95⑥) */
+  housingYears: number;
+  /** 표1(일반) 보유분 공제율 — 정수 % */
+  table1Pct: number;
+  /** 표2(1세대1주택) 보유분 공제율 — 정수 % */
+  table2HoldingPct: number;
+  /** 표2 거주분 공제율 — 정수 % */
+  residencePct: number;
+  /** 표1 + 표2 보유분 합계가 40%를 넘어 §95⑤1호 단서로 잘렸는지 */
+  holdingRateCapped: boolean;
+  /** 주택 보유기간 밖이라 §95⑤2호 적용에서 제외된 거주 개월 수 (0이면 절사 없음) */
+  residenceMonthsTrimmed: number;
+}
+
 export interface TransferTaxResult {
   /** 전액 비과세 여부 */
   isExempt: boolean;
@@ -214,6 +243,12 @@ export interface TransferTaxResult {
    */
   rental97LthdDetail?: Rental97Result;
   /**
+   * 비주택 → 주택 용도변경 §95⑤·⑥ 적용 내역 echo (2026-08-05).
+   * 미적용(토글 없음·2025-01-01 전 양도·표2 대상 아님)이면 undefined.
+   * 계산 로직은 이 필드를 읽지 않는다 — 결과 화면 산출근거 표시 전용.
+   */
+  usageConversionDetail?: UsageConversionDetail;
+  /**
    * 장기임대 §97 본문/단서·§97의2·§97의5 세액감면 평가 결과 (Phase 2 — 2026-06-11).
    * reductions에 해당 항목 포함 시 세팅 (불적용 사유 포함).
    */
@@ -368,6 +403,7 @@ export type TransferReductionDetailSource = Pick<
   | "newHousingReductionDetail"
   | "rentalReductionDetail"
   | "rental97LthdDetail"
+  | "usageConversionDetail"
   | "rental97TaxDetail"
   | "new994Detail"
   | "unsold989Detail"

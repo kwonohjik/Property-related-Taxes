@@ -205,6 +205,12 @@ export const TRANSFER = {
   TAX_BASE_CALC:                 "소득세법 §92",
   /** 소득세법 §95 ② — 장기보유특별공제 */
   LONG_TERM_DEDUCTION:           "소득세법 §95 ②",
+  /** 소득세법 §95 ⑤ — 비주택→주택 용도변경 시 장기보유특별공제 (표1 + 표2 혼합, 40% 상한) */
+  LONG_TERM_DEDUCTION_CONVERSION: "소득세법 §95 ⑤",
+  /** 소득세법 §95 ⑥ — 용도변경 시 「주택으로 보유한 기간」 기산일 (사실상 주거용 사용일) */
+  CONVERSION_HOUSING_PERIOD_START: "소득세법 §95 ⑥",
+  /** 소득세법 시행령 §154 ⑤ 단서 — 용도변경 시 비과세 보유기간 기산일 */
+  CONVERSION_EXEMPTION_HOLDING:  "소득세법 시행령 §154 ⑤ 단서",
   /** 소득세법 §103 — 기본공제 (연 250만원) */
   BASIC_DEDUCTION:               "소득세법 §103",
 

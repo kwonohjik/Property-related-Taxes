@@ -31,6 +31,8 @@ export function addPropertyRefines(
     constructionDate?: string;
     /** §164⑤ PHD 입력 — 제공 시 standardPriceAt* 필수 검증 우회 + §164⑦ 취득일 게이트 */
     preHousingDisclosure?: { firstDisclosureDate?: string } | null;
+    /** ⑩ 비주택 → 주택 용도변경(§95⑥) — 주거용 사용 개시일의 취득일·양도일 사이 검증 */
+    nonHousingToHousingConversion?: { residentialUseStartDate: string } | null;
     /** 이월과세(§97의2) — PHD 게이트 비교일 = 증여자 취득일 */
     carryoverTaxation?: { donorAcquisitionDate?: string } | null;
     /** 겸용주택 PHD — mixedUse.preHousingDisclosure 위치 (동일 §164⑦ 게이트 적용) */
@@ -99,6 +101,26 @@ export function addPropertyRefines(
       path: ["acquisitionDate"],
       message: "취득일은 양도일보다 이전이어야 합니다",
     });
+  }
+  // ⑩ 비주택 → 주택 용도변경 (§95⑥) — 주거용 사용 개시일은 취득일과 양도일 **사이**여야 한다.
+  // 범위를 벗어나면 기간을 비주택/주택으로 나눌 수 없어 엔진이 TaxCalculationError를 던진다
+  // (계획 C-8·C-9). 400으로 먼저 돌려주는 편이 낫다.
+  if (data.nonHousingToHousingConversion) {
+    const start = data.nonHousingToHousingConversion.residentialUseStartDate;
+    if (start <= data.acquisitionDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["nonHousingToHousingConversion", "residentialUseStartDate"],
+        message: "주거용 사용 개시일은 취득일보다 이후여야 합니다",
+      });
+    }
+    if (start >= data.transferDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["nonHousingToHousingConversion", "residentialUseStartDate"],
+        message: "주거용 사용 개시일은 양도일보다 이전이어야 합니다",
+      });
+    }
   }
   if (data.acquisitionCause === "inheritance") {
     if (!data.decedentAcquisitionDate) {

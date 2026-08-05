@@ -23,7 +23,6 @@ export type {
   HouseEntry,
   PresaleRightEntry,
 } from "./calc-wizard-asset-nbl";
-import type { NblBusinessUsePeriod, ResidenceHistoryInput, NblGracePeriodInput } from "./calc-wizard-asset-nbl";
 
 // ── 감면 폼 타입 (별도 모듈, 800줄 정책) ──
 export type {
@@ -54,8 +53,15 @@ export type { GeneralBuildingFormSlice } from "./calc-wizard-asset-gb";
 // 일부양도 취득가액 안분 계산기 (B4-2b) — UI 전용 슬라이스
 import type { PartialAreaApportionFormSlice } from "./calc-wizard-asset-partial-area";
 export type { PartialAreaApportionFormSlice, PartialApportionBasis } from "./calc-wizard-asset-partial-area";
+import type { NblJudgmentFormSlice } from "./calc-wizard-asset-nbl-judgment";
+export type { NblJudgmentFormSlice } from "./calc-wizard-asset-nbl-judgment";
+import type { CommercialBuildingFormSlice } from "./calc-wizard-asset-cb";
+export type { CommercialBuildingFormSlice } from "./calc-wizard-asset-cb";
+// 비주택 → 주택 용도변경 (「소득세법」 §95⑤·⑥ · 시행령 §154⑤ 단서)
+import type { UsageConversionFormSlice } from "./calc-wizard-asset-usage-conversion";
+export type { UsageConversionFormSlice } from "./calc-wizard-asset-usage-conversion";
 
-export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice {
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice, NblJudgmentFormSlice, CommercialBuildingFormSlice, UsageConversionFormSlice {
   assetId: string;
   assetLabel: string;
   /**
@@ -565,91 +571,8 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   pre1990Grade_atAcq: string;
   pre1990GradeMode: "number" | "value";
 
-  // ── 비사업용 토지 정밀 판정 (assetKind === "land" 전용) ──
-  /** 단순 체크박스 경로 — 상세 판정 없이 플래그만 전달 */
-  isNonBusinessLand: boolean;
-  /** true 시 엔진 자동 판정, isNonBusinessLand 체크박스 무시 */
-  nblUseDetailedJudgment: boolean;
 
-  // ── NBL 공통 ──
-  /** 지목 (nblLandArea는 acquisitionArea 재사용 — area-taxonomy.md 원칙 B) */
-  nblLandType: "" | "farmland" | "forest" | "pasture" | "housing_site" | "villa_land" | "other_land";
-  nblZoneType: string;
-  nblBusinessUsePeriods: NblBusinessUsePeriod[];
-
-  // ── NBL 위치·거주 ──
-  nblLandSigunguCode: string;
-  nblLandSigunguName: string;
-  nblResidenceHistories: ResidenceHistoryInput[];
-
-  // ── NBL 무조건 면제 §168-14③ ──
-  nblExemptInheritBefore2007: boolean;
-  nblExemptInheritDate: string;
-  nblExemptLongOwned20y: boolean;
-  nblExemptAncestor8YearFarming: boolean;
-  nblExemptPublicExpropriation: boolean;
-  nblExemptPublicNoticeDate: string;
-  nblExemptFactoryAdjacent: boolean;
-  nblExemptJongjoongOwned: boolean;
-  nblExemptJongjoongAcqDate: string;
-  nblExemptUrbanFarmlandJongjoong: boolean;
-  nblExemptInong: boolean;
-  nblExemptInongDate: string;
-
-  // ── NBL 양도일 의제 (§168조의14②) ──
-  nblDeemedTransferReason: string; // none|auction|public_sale|kamco_consignment|newspaper_public_offering|republication
-  nblDeemedTransferDate: string;
-
-  // ── NBL 도시편입·수도권·공동상속 ──
-  nblUrbanIncorporationDate: string;
-  nblIsMetropolitanArea: "" | "yes" | "no" | "unknown";
-  nblOwnershipRatio: string;
-
-  // ── NBL 농지 세부 ──
-  nblFarmingSelf: boolean;
-  nblFarmerResidenceDistance: string;
-  nblFarmlandIsWeekendFarm: boolean;
-  nblFarmlandIsConversionApproved: boolean;
-  nblFarmlandConversionDate: string;
-  nblFarmlandIsFarmDevZone: boolean;
-  nblFarmlandIsMarginalFarm: boolean;
-  nblFarmlandIsReclaimedLand: boolean;
-  nblFarmlandIsPublicProjectUse: boolean;
-  nblFarmlandIsSickElderlyRental: boolean;
-
-  // ── NBL 임야 세부 ──
-  nblForestHasPlan: boolean;
-  nblForestIsPublicInterest: boolean;
-  nblForestIsProtected: boolean;
-  nblForestIsSuccessor: boolean;
-  nblForestInheritedWithin3Years: boolean;
-  nblForestInheritanceDate: string;
-
-  // ── NBL 목장 세부 ──
-  nblPastureIsLivestockOperator: boolean;
-  nblPastureLivestockType: string;
-  nblPastureLivestockCount: string;
-  nblPastureLivestockPeriods: NblBusinessUsePeriod[];
-  nblPastureInheritanceDate: string;
-  nblPastureIsSpecialOrgUse: boolean;
-
-  // ── NBL 주택·별장·나대지 세부 ──
-  nblHousingFootprint: string;
-  nblVillaUsePeriods: NblBusinessUsePeriod[];
-  nblVillaIsEupMyeon: boolean;
-  nblVillaIsRuralHousing: boolean;
-  nblVillaBuildingFloorArea: string;
-  nblVillaAttachedLandArea: string;
-  nblVillaCombinedStdValue: string;
-  nblVillaIsInRestrictedArea: boolean;
-  nblVillaIsAfter20150101: boolean;
-  // nblOther*·nblRevenue* (기타토지 §168의11) 일체는 NblOtherFormSlice로 분리 (calc-wizard-asset-nbl-other.ts).
-
-  // ── NBL 부득이한 사유 (§168의14①·§83의5①) ──
-  nblGracePeriods: NblGracePeriodInput[];
-  /** §83의5① 단서 — 부동산매매업 매매용부동산(1·2호 배제) */
-  nblBusinessIsRealEstateDealer: boolean;
-
+  // ── 비사업용 토지 정밀 판정 → NblJudgmentFormSlice (calc-wizard-asset-nbl-judgment.ts)
   // ── 상속 부동산 취득가액 의제 — InheritanceAcquisitionFormSlice (calc-wizard-asset-inheritance-acq.ts) ──
 
   // ── 장기임대주택 보유자 거주주택 비과세 특례 (소령 §155⑳) ──
@@ -719,96 +642,6 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     standardPriceAtTransferForPhrp?: string;
   };
 
-  // ── 상업용건물·오피스텔 환산취득가 (사례 29, 소득세법 시행령 §164⑥, §176조의2②2호) ──
-  /**
-   * 상업용건물·오피스텔 호별고시 시점 분기.
-   * - "pre_disclosure": 호별고시 전 취득(~2004.12) → 건물기준시가 3시점 + 역환산 필요
-   * - "post_disclosure": 호별고시 후 취득(2005.1~) → 호별고시가만으로 환산 가능
-   * commercial_building + useEstimatedAcquisition=true 시만 의미 있음.
-   */
-  cbEra: "pre_disclosure" | "post_disclosure" | "";
-  /** 전용면적 (㎡) */
-  cbExclusiveArea: string;
-  /** 공유면적 (㎡) */
-  cbSharedArea: string;
-  /**
-   * 대지면적 (㎡) — 「소득세법 시행령」 제164조 제6항 3축(대지·전유·공용) 중 대지.
-   * 시점 구분 없는 **단일** 필드다 — `commercial-building-valuation.ts:245,249,258`이
-   * 취득·최초공시·양도 3시점 단가에 이 값을 각각 곱한다.   *
-   * ⚠️ **단일 필드를 2시점 쌍으로 확장하지 말 것**(2026-07-30 F2 검토 결론).
-   *    엔진이 시점별 **단가**에 **같은 면적**을 곱하므로 환산 산식에서 면적이 약분되고
-   *    비율은 단가비만 반영한다 — 즉 단일성이 **정확성의 근거**다. 2시점으로 나누면
-   *    취득/양도에 다른 면적이 들어가 면적비가 단가비를 상쇄해 **양도차익이 0이 되는**
-   *    왜곡(B-4)이 재발한다. anchor `area-axis-single-field-invariant.anchor.test.ts`.
-   */
-  cbLandArea: string;
-  /**
-   * 호별 ㎡당 고시가 — 양도시 (원/㎡).
-   * 국세청 기준시가 조회 시 "㎡당 가액" 입력.
-   * 호별고시 전/후 취득 공통 사용.
-   */
-  cbUnitPriceAtTransfer: string;
-  /**
-   * 호별 ㎡당 고시가 — 최초고시(2005) 또는 취득시 (원/㎡).
-   * cbEra === "pre_disclosure": 최초고시(2005) 시점 가액.
-   * cbEra === "post_disclosure": 취득시 호별고시가.
-   */
-  cbUnitPriceAtFirstOrAcq: string;
-  /**
-   * 건물 기준시가 — 취득시 (원, 총액). cbEra === "pre_disclosure" 시만 필수.
-   * 법 §99①1호 나목의 가액: 국세청 고시 건물기준시가.
-   * 사용자(외부)에서 ㎡당 단가 × 연면적(전유+공용 보정계수 반영)을 미리 곱한 총액 입력.
-   */
-  cbBuildingStdPriceAtAcq: string;
-  /**
-   * §164⑥ 단서 — 취득당시 건물 기준시가를 §164⑤ 준용으로 산정했음을 사용자가 확인.
-   *
-   * 취득연도 ≤ 2000이면 법 §99①1호나목(건물 기준시가)이 고시되기 전이라 그 가액이 없다.
-   * 국세청 「취득당시 건물기준시가 산정기준율표」의 취득연도 축이 1985~2000이고
-   * `resolveAcqBaseRate()`가 `acqYear > 2000`을 잘라내는 것이 그 경계다.
-   * 이때 §164⑥ 단서에 따라 §164⑤을 준용해야 하는데, 준용 산정에는 신축연도·구조·용도가 필요해
-   * 엔진이 자동 산정할 수 없다(AssetForm 미보유 — 건물 기준시가 모달에서만 입력).
-   * → 사용자의 명시적 확인을 남긴다. cbEra === "pre_disclosure" + 취득연도 ≤2000일 때만 의미 있음.
-   */
-  cbAcqBuildingStdBy164_5: boolean;
-  /**
-   * §164⑥ 산식 괄호 단서(§164⑧ 준용) — **B: 전기의 토지 및 건물의 기준시가 합계액** (원, 총액).
-   *
-   * 취득당시 기준시가합 == 최초고시당시 기준시가합인 경우에만 쓰인다. 미입력 시 준용 산정을
-   * 하지 않고(종전 계산 유지) 결과에 경고만 남긴다.
-   * 산식: 취득당시 기준시가 = 최초고시 기준시가 × A / [A + (A−B) × C/D]
-   */
-  cbPrevStdPriceSum: string;
-  /**
-   * §164⑧ 준용 — **D: 토지 및 건물 기준시가 조정월수**. 빈 값이면 12(시행규칙 §80②1호 통상값).
-   */
-  cbStdPriceAdjustMonths: string;
-  /**
-   * 건물 기준시가 — 최초고시시(2005) (원, 총액). cbEra === "pre_disclosure" 시만 필수.
-   */
-  cbBuildingStdPriceAtFirst: string;
-  /**
-   * 건물 기준시가 — 양도시 (원, 총액).
-   * cbEra === "pre_disclosure": 필수 (역환산 분모의 건물 성분).
-   * cbEra === "post_disclosure": 불필요 (호별고시가가 건물+토지 통합).
-   */
-  cbBuildingStdPriceAtTransfer: string;
-  /**
-   * 개별공시지가 — 취득시 (원/㎡). LandPriceLookupField로 입력.
-   * cbEra === "pre_disclosure": 필수. 취득시 ㎡당기준시가합의 토지 성분.
-   * cbEra === "post_disclosure": 취득시 기준시가 산정용.
-   */
-  cbLandPricePerSqmAtAcq: string;
-  /**
-   * 개별공시지가 — 최초고시시(2005) (원/㎡). LandPriceLookupField로 입력.
-   * cbEra === "pre_disclosure" 시만 필수.
-   */
-  cbLandPricePerSqmAtFirst: string;
-  /**
-   * 개별공시지가 — 양도시 (원/㎡). LandPriceLookupField로 입력.
-   * cbEra === "pre_disclosure" / "post_disclosure" 공통 필수.
-   */
-  cbLandPricePerSqmAtTransfer: string;
 
   // ── 일반건물(general_building) + 겸용주택 필드 → GeneralBuildingFormSlice로 분리 ──
   // (calc-wizard-asset-gb.ts — 800줄 정책 준수, Phase 2 2026-06-22)
