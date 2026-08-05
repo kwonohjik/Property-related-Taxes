@@ -1,6 +1,8 @@
 # 건물 기준시가 모달 — prefill 소재지로 "건축물대장 조회" 버튼 활성화 정정 (수정 계획서)
 
-> 상태: Plan (Do 미착수) · 작성 2026-07-14
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `components/calc/transfer/asset-sections/AssetSectionBasic.tsx:223` — PNU 보존 배선 `patch.addressPnu = v.pnu` 실재 + 전용 테스트 2건 통과.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: Plan (Do 미착수) · 작성 2026-07-14~~
 > 대상: `AssetForm`(전체 PNU 저장) + `BuildingStdPriceForm`/`BuildingRegisterLookupField`로 소재지를 prefill하는 전 사이트
 > 관련: [[project_transfer_regulated_area_regioncode]] · [[feedback_general_building_split_acquisition_date]] · [[feedback_store_default_vs_ui_display_fallback]]
 

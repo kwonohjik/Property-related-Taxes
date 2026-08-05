@@ -1,6 +1,8 @@
 # 양도소득세 — 면적 입력 전 자산유형 통일 (계획서)
 
-> 상태: **Plan 확정 (P0 완료 · Do 착수 가능)** · 작성 2026-08-04 · **rev.4**
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `components/calc/transfer/asset-sections/AssetSectionBasic.tsx:310` — 면적 입력이 계획대로 **① 기본정보**에서 렌더(`AssetAreaSection`).
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: **Plan 확정 (P0 완료 · Do 착수 가능)** · 작성 2026-08-04 · **rev.4**~~
 > rev 이력: rev.2 자가검토(오류 1·누락 4·모순 1) → rev.3 미결 4건 확정 → **rev.4 P0 환류로 D1 철회·D3 축소**
 > 트리거: 사용자 요청 — "면적 부분을 이미지1(주택)과 같이 기본 정보 섹션으로 옮기는 작업을 했는데 주택 섹션에만 되었다. 모든 섹션이 주택처럼 되도록 통일"
 > 선행 계획서: [`transfer-asset-area-basic-info.plan.md`](../01-plan/features/transfer-asset-area-basic-info.plan.md) §2.1-3 미완분 · [`basic-info-building-area-phase-f.plan.md`](../01-plan/features/basic-info-building-area-phase-f.plan.md) §11(F2 폐기 — **본 계획이 준수**)
