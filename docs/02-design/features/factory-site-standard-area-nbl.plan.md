@@ -196,12 +196,19 @@
 | C-4 | 시지역 도시지역(그 외) | 아니오 | `S = F × m` | `L ≤ S` → 전량 사업용 |
 | C-5 | 〃 | 아니오 | 〃 | `L > S` → 초과분 비사업용 |
 | C-6 | 〃 | **예** | — | **전량 비사업용** (§101① 단서) |
-| C-7 | 어느 쪽이든 | 아니오 | 한도 이내 but **기간기준 미충족** | §168의6 기간기준으로 비사업용 (기존 동작) |
+| C-7 | ~~어느 쪽이든~~ | — | ~~한도 이내 but 기간기준 미충족~~ | ❌ **도달 불가 — Phase A 실측으로 삭제** |
 | C-8 | 2개 이상 업종 | 아니오 | 업종별 `A_i × 100 ÷ r_i` 합산 | 별표6 2호다 |
 | C-9 | 업종 구분 불가 | 아니오 | 매출 최대 업종 `r` 단일 적용 | 별표6 2호다 후단 |
 | C-10 | 지식산업센터 | 아니오 | `r = 40` 고정 | 고시 §4 |
 
-> ⚠️ C-7 주의: 기준면적 이내라도 §168의6 기간기준(3년 중 2년·5년 중 3년·80%)은 별도로 걸린다. 면적 한도는 기간기준을 **대체하지 않는다** — 현행 `other_land` Step 3-1도 `meetsPeriodCriteria`를 함께 본다.
+> 🔴 **C-7은 rev.1의 오해였다** (Phase A 실측으로 삭제). `other_land` 경로는 `meetsPeriodCriteria`에
+> **`fullPeriod`(전 보유기간)** 를 사업용 기간으로 넘긴다(`other-land.ts:280`). 그러면 3년·5년·전체
+> 모든 창의 비사업용 일수가 0이 되어 `meets`는 **보유기간 길이와 무관하게 항상 true**다
+> (`period-criteria.ts:160-189`; 보유 7개월 probe로도 확인). ⇒ 이 경로에서 §168의6 기간기준은
+> 판정에 개입하지 않으며, 기존 Step 3-1의 FAIL 분기도 같은 이유로 도달하지 않는다.
+>
+> ⇒ Step 0.5에 기간기준 분기를 넣지 않는다(도달 불가 코드 금지). `PeriodCriteriaResult`는
+> 반환값 조립(`effectiveBusinessDays`·`criteria`)에만 쓴다.
 
 ---
 
@@ -217,22 +224,31 @@
 
 ⇒ `OtherLandUsage`에 **`factory?: FactoryLandUsage`** 를 추가하고, `judgeOtherLand` 안에 **Step 0.5 "공장 기준면적 한도"** 를 넣는다.
 
-### 4.2 진입 위치
+### 4.2 진입 위치 — **판정과 적용을 분리한다** (Phase A에서 정정)
 
 ```
-Step 0     나대지 간주 (2% / 무건축물)
-Step 0.5   ★ 신규 — 공장 기준면적 한도            ← 여기
-Step 3-1   비종합합산 + 기간기준 → 전량 사업용
-Step 3-1-1 §168의11① 호별 기준면적
-Step 3-2   §101①2호나목 바닥면적 carve-out
+Step 0        나대지 간주 (2% / 무건축물)
+Step 0.5-판정 ★ 공장 한도 계산 · 이내면 재산세 구분 확정, 초과면 결과만 보관
+Step 3-1      비종합합산 + 기간기준 → 전량 사업용
+§168의11②     수입금액비율 → 전량 사업용
+Step 3-1-1    §168의11① 호별 기준면적 → 사업용 or 호별 안분
+Step 0.5-적용 ★ 공장 한도 초과분 안분                  ← 여기서 확정
+Step 3-2      §101①2호나목 바닥면적 carve-out
 ```
 
-**Step 3-1보다 앞**이어야 한다. Step 3-1이 `propertyTaxType !== "comprehensive"`만 보고 `buildPass`로 조기 반환하기 때문이다(`other-land.ts:302-315`).
+**두 지점이 모두 필요하다.**
+
+- **판정을 Step 3-1 앞에** 두는 이유: Step 3-1이 `propertyTaxType`만 보고 `buildPass`로 조기 반환한다(`other-land.ts:302`). 공장이 한도를 초과하면 나목에 해당하지 않으므로 그 통과를 막아야 한다.
+- **적용을 뒤에** 두는 이유: 🔴 **「소득세법」 §104의3①4호는 "다음 각 목을 **제외한** 토지"를 비사업용으로 규정한다** — 가·나·다목은 **택일**이다. 나목(공장 한도)에 미달해도 **다목**(§168의11① 호별 기준면적, ② 수입금액비율)에 해당하면 **여전히 사업용**이다. 앞에서 확정하면 그 경로를 차단해 **법 근거 없는 불리 적용**이 된다.
+
+> 🔴 **Phase A 구현 중 실제로 이 결함을 한 번 만들었다.** 초과 시 Step 0.5에서 즉시 `return` 하도록 짰다가, 기존 Step 3-2의 주석(`other-land.ts:571` — "수입금액비율(②)·거주사업관련(① 호별) 우선 경로 이후 — 법 근거 없는 불리 적용 방지")을 읽고 발견했다. **기존 코드의 주석이 새 코드의 검증 기준이 된 사례다.**
+>
+> 회귀 가드: anchor `ORDER-1`(초과 + 수입금액비율 충족 → 전량 사업용) · `ORDER-2`(초과 + 미달 → 그때 안분, 스텝 순서까지 단언) · `ORDER-3`(초과 + §168의11① 호별 이내 → 사업용).
 
 Step 0.5의 출력:
-- 한도 이내 → 아무것도 하지 않고 통과(Step 3-1이 기존대로 처리)
-- 초과 → `computeAreaProportioning(landArea, allowedArea)`로 부분 비사업용 반환
-- 단서 해당 → `effectiveTaxType`을 `"comprehensive"`로 강등(전량 비사업용 경로로 합류)
+- 한도 이내 → `factoryTaxTypeOverride`로 재산세 구분 확정 (Step 3-1이 나목으로 통과시킴)
+- 초과 → `factoryExcess`에 보관 → 후행 경로 모두 미해당 시 `computeAreaProportioning`으로 부분 비사업용
+- 단서 해당 → `standardArea = 0` → 안분 없이 전량 비사업용
 
 ### 4.3 지역 분기 입력
 
@@ -317,15 +333,48 @@ UI 계층:    업종 자동완성 → 면적률 채움 (선택)   또는   사�
 
 > 0-5는 선행 작업에서 **§104⑤ 비교과세로 낮은 초과비율에서는 세액이 변하지 않는 구간**이 실측됐다. 공장도 같은지 확인해야 anchor 기대값을 잘못 세우지 않는다.
 
-### Phase A — 엔진 (별표6 산식 + Step 0.5)
+### Phase A — 엔진 (별표6 산식 + Step 0.5) ✅ **완료 (2026-08-05)**
 
-- `lib/tax-engine/non-business-land/factory-land-standard-area.ts` 신설 — 별표6 산식 순수 함수
-  - `computeFactoryStandardArea({ floorArea, ratePercent, additionalRecognized?, isRestrictedZone? })`
-  - 다업종 합산(C-8)·지식산업센터 40%(C-10) 포함
-- `types.ts` — `FactoryLandUsage` + `OtherLandUsage.factory?`
-- `other-land.ts` — Step 0.5 삽입. `urban_other`는 `judgeAppurtenantLandExcess()` 위임
-- `legal-codes/transfer.ts` — `NBL.FACTORY_SITE_SEPARATE`(§102①1호) · `NBL.FACTORY_SITE_AGGREGATE`(§101①1호) 상수
-- **verify**: anchor 테스트 C-1~C-10 전건 + 기존 `other_land` 테스트 회귀 0건
+| 파일 | 내용 |
+|---|---|
+| `non-business-land/factory-land-standard-area.ts` (신설 187줄) | 별표6 산식 순수 함수 `computeFactoryStandardArea` + 경로 분기 `judgeFactoryLandExcess`. 다업종 합산(2호다)·3호가 추가인정(10%/3,000㎡·20%)·3호나~바 직접입력·단서 처리 |
+| `non-business-land/land-usage.types.ts` (신설 240줄) | `types.ts` 800줄 초과로 지목별 사용현황 타입 분리 — `FactoryLandUsage`·`FactoryIndustrySegment` 포함 |
+| `non-business-land/types.ts` (842 → 638줄) | 분리 + 전량 재수출(소비처 import 경로 불변) |
+| `non-business-land/other-land.ts` (606 → 674줄) | **Step 0.5** 삽입 (Step 3-1 앞) |
+| `legal-codes/transfer.ts` | `NBL.FACTORY_LAND_SEPARATE`(§102①1호+별표6) · `NBL.FACTORY_LAND_AGGREGATE`(§101①1호) |
+| `legal-verification/citation-parser.ts` | `LAW_ALIAS`에 「지방세법 시행규칙」 등재 |
+| `legal-verification/manifest/additions-local-rule.ts` (신설) | 시행규칙 §50 검증 규칙 + `verifier-manifest.ts` 배럴 등록 |
+| `__tests__/.../factory-land-standard-area.anchor.test.ts` (신설) | anchor **30건**(순서 가드 3건·입력 가드 4건 포함) |
+
+**verify 결과**: `npx tsc --noEmit` 0건 · 신규 anchor 30건 GREEN · NBL 335건 GREEN · **전체 13,556건 GREEN(실패 0)** · `npm run lint` 0 errors(신규 파일 경고 0) · `npm run verify:legal` **338건 통과·실패 0**.
+
+> 🔴 **입력 누락 침묵 오작동 1건을 잡았다** — `segments`(연면적·면적률)나 `totalFootprintArea`가
+> 비면 기준면적이 0이 되어 부속토지 **전량이 비사업용**으로 떨어지고, `other-land.ts`가
+> 그것을 단서(허가 미이행)로 오인해 **사유까지 틀리게** 표시했다. 두 경로 모두 `throw`로 막고
+> 단서 판별을 `standardArea === 0` 추론에서 **명시 플래그 `isUnregisteredException`** 으로
+> 바꿨다. 회귀 가드 `GUARD-1~4`.
+
+> 🟠 **법령 검증 게이트가 즉시 잡았다** — 새 상수가 「지방세법 시행규칙」을 인용하자
+> `legal-verification-unverifiable.test.ts`가 "모수 밖 인용"으로 빨개졌다(전체 테스트 1건 실패).
+> CLAUDE.md가 "두 번 재발했다"고 적은 바로 그 갭이다. 법제처 API로 조회 가능한 법령이므로
+> `UNVERIFIABLE`이 아니라 `LAW_ALIAS` + manifest에 등록해 해소했다.
+>
+> ⚠️ **§50 규칙의 한계** — §50 본문은 "별표 6에 따른다"는 위임 한 줄이고 산식은 별표에 있다.
+> 법제처 조문 API는 별표를 반환하지 않으므로 **이 규칙은 위임 구조 변경만 잡고
+> 별표 6 자체의 개정(직전 2025.10.31)은 못 잡는다.** 파일 헤더에 명시했다.
+
+**외부 기준점 검증(EXT-1~4)** — 조심 2025서2489 수치를 그대로 재현한다:
+
+| # | 입력 | 기대 | 결과 |
+|---|---|---|---|
+| EXT-1 | 연면적 89,865.838㎡ ÷ 12% | 748,881.98㎡ | ✅ 소수 2자리 일치 |
+| EXT-3 | 바닥 81,473.36㎡ × 일반주거 4배 | 325,893.44㎡ | ✅ 일치 |
+| EXT-4 | 연면적 ≠ 바닥면적 | 두 기준면적이 다름 | ✅ |
+
+> 🔴 **Phase A에서 확정한 것** — `factoryTaxTypeOverride`: 한도 이내면 공장 판정이 재산세 구분을
+> 확정한다(사용자가 `propertyTaxType`을 종합합산으로 두었어도 `special_sum`/`separate`로 승격).
+> 공장은 §101①**1호**라서 §101①2호나목의 2% 나대지 룰(`isBareLand`)이 적용되지 않는다 —
+> 조문이 "제1호에 따른 공장용 건축물은 제외한다"고 명시한다.
 
 ### Phase B — API 배관 (⑨⑩⑫⑭)
 
@@ -433,6 +482,28 @@ UI 계층:    업종 자동완성 → 면적률 채움 (선택)   또는   사�
 ---
 
 ## 10. 검토 이력
+
+### rev.4 (2026-08-05) — Phase A 완료 (엔진)
+
+**🔴 구현 중 스스로 만든 결함 1건을 잡았다 (§4.2)** — 공장 한도 초과 시 Step 0.5에서 즉시
+비사업용으로 확정하도록 짰는데, 「소득세법」 §104의3①4호는 가·나·다목 **택일**이라 나목(공장
+한도)에 미달해도 다목(수입금액비율·§168의11① 호별)에 해당하면 사업용이다. 기존 Step 3-2의
+주석(`other-land.ts:571`)이 같은 이유로 뒤에 놓여 있다는 것을 읽고 발견했다.
+⇒ **판정(앞)과 적용(뒤)을 분리**하고 회귀 가드 `ORDER-1~3`을 추가했다.
+
+
+- `factory-land-standard-area.ts`(208줄) 신설 — 별표6 산식 + 두 경로 분기. `urban_other`는 선행 CB 작업의 `judgeAppurtenantLandExcess()`를 그대로 위임한다(신규 코드 0)
+- `other-land.ts`에 **Step 0.5** 삽입 — Step 3-1이 `propertyTaxType`만 보고 조기 반환하므로 반드시 그 앞
+- anchor **23건** GREEN · NBL 전체 328건 GREEN · `tsc` 0건
+- ✅ **외부 기준점 통과**: 조심 2025서2489의 748,881.98㎡·325,893.44㎡를 소수 2자리까지 재현
+- 🔴 **C-7(기간기준 미충족)을 매트릭스에서 삭제** — rev.1의 오해였다. `other_land` 경로는
+  `meetsPeriodCriteria`에 **전 보유기간**을 사업용 기간으로 넘겨(`other-land.ts:280`)
+  `meets`가 항상 true다(보유 7개월 probe로 확인). 도달 불가 분기를 넣지 않았고,
+  기존 Step 3-1의 FAIL 분기도 같은 이유로 죽어 있다는 것을 주석으로 남겼다
+- 🟠 **부수 작업**: `types.ts`가 내 추가로 800줄을 넘겨(778→842) `land-usage.types.ts`로
+  분리했다(842→638·240). 전량 재수출이라 소비처 import 경로는 불변
+- 🟠 **미해결(기존)**: `legal-codes/transfer.ts`는 내 변경 **전에 이미 862줄**로 800 초과였다.
+  내 기여는 +5줄이라 이번 범위에서 분리하지 않았다 — 별건
 
 ### rev.3 (2026-08-05) — Phase 0-1 종결 · Phase 0 전건 완료
 
