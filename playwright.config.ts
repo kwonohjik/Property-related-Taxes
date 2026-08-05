@@ -56,6 +56,21 @@ export default defineConfig({
   // 로컬·CI 모두 retries 1 — 타이밍 flaky(병렬 토스트/애니메이션 레이스) 1회 흡수.
   // 실제 실패는 재시도해도 실패(결정적) → flaky와 구분됨. (2026-06-08)
   retries: 1,
+  /**
+   * 🔴 **CI는 테스트 타임아웃을 60초로 올린다** (기본 30초 — 2026-08-05 실측).
+   *
+   * GitHub 호스팅 러너는 **2 worker**(Mac은 5)라 IndexedDB 시드처럼 브라우저 안에서
+   * 도는 작업이 로컬보다 몇 배 느리다. `transfer-multi-*` 계열의 `beforeEach`
+   * (`page.evaluate` → `indexedDB.open` → Dexie 스토어 생성)가 여기 걸린다.
+   *
+   * 실측(run 30968955696 샤드 4): 실패·flaky **10건이 전부 30.1~30.4초** —
+   * 즉 "느려서 못 끝낸 것"이지 단언이 틀린 게 아니다. 8~9건은 재시도로 통과했다.
+   *
+   * ⚠️ 타임아웃 상향은 **단언을 약화시키지 않는다** — 틀린 결과는 60초를 줘도 틀리다.
+   *    다만 진짜 성능 회귀를 늦게 알아채게 되므로, 로컬은 30초를 유지해 개발 중에
+   *    느려짐이 먼저 드러나게 둔다.
+   */
+  timeout: IS_CI ? 60_000 : 30_000,
   reporter: [["list"], ["html", { outputFolder: "e2e/_artifacts/report", open: "never" }]],
   outputDir: "e2e/_artifacts/test-results",
   use: {
