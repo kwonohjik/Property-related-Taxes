@@ -84,6 +84,15 @@ export interface GeneralBuildingActualPricePayload {
    */
   landDirectExpenses?: number;
   buildingDirectExpenses?: number;
+  /**
+   * 파트별 **실지거래가액**(§97①1호 가목) — 별개 취득이라 파트별로 실재하는 취득가액이다.
+   *
+   * 두 값이 모두 있으면 자산 총액 안분을 **쓰지 않는다**. 「소득세법」 제100조 제2항 전문은
+   * 「토지와 건물 등을 함께 취득하거나 양도한 경우에는 이를 **각각 구분하여 기장**하되 …
+   * 가액 **구분이 불분명할 때에는** … 안분계산한다」이므로, 구분이 분명하면 안분 대상이 아니다.
+   */
+  landAcquisitionPrice?: number;
+  buildingAcquisitionPrice?: number;
   buildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
   /** 상속 시 피상속인 취득일 (영 §95④). */
   decedentAcquisitionDate?: Date;
@@ -404,6 +413,19 @@ export function dispatchGeneralBuilding(
           | "purchase" | "inheritance" | "gift" | "carryover_gift" | undefined,
         decedentAcquisitionDate: coercedGbRaw.decedentAcquisitionDate as Date | undefined,
         donorAcquisitionDate: coercedGbRaw.donorAcquisitionDate as Date | undefined,
+        /**
+         * 🔴 파트별 실지거래가액·자본적지출 — **명시 전달**(2026-08-06).
+         *
+         * 이 객체는 스프레드가 아니라 필드를 하나씩 나열하므로, 빠뜨린 필드는 Zod·타입 어디에도
+         * 걸리지 않고 **조용히 사라진다**(memory `feedback_explicit_prop_mapping_strip`).
+         * 실제로 네 필드가 모두 누락돼 있었다:
+         *   · 취득가액 2필드 → 분리 ON + 두 파트 실가에서 **취득가액 0**으로 계산(과대과세 139,033,991원)
+         *   · 자본적지출 2필드 → P5의 파트별 직접 귀속이 실가 경로에서 무효(안분분만 반영)
+         */
+        landAcquisitionPrice: coercedGbRaw.landAcquisitionPrice as number | undefined,
+        buildingAcquisitionPrice: coercedGbRaw.buildingAcquisitionPrice as number | undefined,
+        landDirectExpenses: coercedGbRaw.landDirectExpenses as number | undefined,
+        buildingDirectExpenses: coercedGbRaw.buildingDirectExpenses as number | undefined,
       },
       taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
     );
@@ -576,6 +598,7 @@ export function calculateGeneralBuildingActualTransfer(
     landAcquisitionCause, decedentAcquisitionDate, donorAcquisitionDate,
     landAcquisitionDate, buildingAcquisitionDate, buildingAcquisitionCause,
     landDirectExpenses, buildingDirectExpenses,
+    landAcquisitionPrice, buildingAcquisitionPrice,
   } = payload;
 
   /**
@@ -647,8 +670,33 @@ export function calculateGeneralBuildingActualTransfer(
   } else {
     landTransfer = Math.floor(totalTransferPrice * landRatioNum);
     buildingTransfer = totalTransferPrice - landTransfer;
-    landAcq = Math.floor(actualAcquisitionPrice * landRatioNum);
-    buildingAcq = actualAcquisitionPrice - landAcq;
+    /**
+     * 🔴 파트별 실지거래가액이 **둘 다** 있으면 안분하지 않고 그대로 쓴다(2026-08-06).
+     *
+     * 종전에는 이 값을 destructure조차 하지 않아, 분리 ON + 두 파트 모두 실거래가에서
+     * 파트 취득가액이 **엔진에 도달하지 못했다**. 분리 ON은 자산 단위 취득가액 칸을 숨기므로
+     * (`hideAssetAcqAxis`) `actualAcquisitionPrice`가 0이 되어 **취득가액 0**으로 계산됐다
+     * (실측 과대과세 139,033,991원 · validate는 통과시켰다).
+     *
+     * 근거는 「소득세법」 제100조 제2항 **전문**이다 — 안분은 「가액 구분이 **불분명할 때**」의
+     * 규칙이고, 별개 취득으로 파트별 실지거래가액이 실재하면 구분이 분명하다.
+     *
+     * ⚠️ **한쪽만** 입력된 경우는 안분을 유지한다. 반쪽 값으로 총액을 대체하면 상대 파트가
+     *    잔액으로 깎이는데, 그 총액은 두 파트의 합이 아니라 자산 전체 입력값이다
+     *    (P5의 필요경비 규칙과 같은 판단).
+     */
+    const hasBothPartPrices =
+      landAcquisitionPrice !== undefined &&
+      landAcquisitionPrice > 0 &&
+      buildingAcquisitionPrice !== undefined &&
+      buildingAcquisitionPrice > 0;
+    if (hasBothPartPrices) {
+      landAcq = landAcquisitionPrice;
+      buildingAcq = buildingAcquisitionPrice;
+    } else {
+      landAcq = Math.floor(actualAcquisitionPrice * landRatioNum);
+      buildingAcq = actualAcquisitionPrice - landAcq;
+    }
     /**
      * 필요경비 — **파트 직접 귀속이 있으면 안분하지 않는다**(2026-08-05 P5).
      * 근거는 「소득세법」 제100조 제2항 후문의 **유추**다: "이 경우 **공통되는** 취득가액과
