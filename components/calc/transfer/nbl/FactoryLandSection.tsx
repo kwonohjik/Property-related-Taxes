@@ -220,7 +220,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
           <FieldCard
             label="공장 전체 부속토지 면적"
             unit="㎡"
-            hint="하나의 울타리 안 공장 전체 면적입니다 — 양도하는 토지 면적이 아닙니다. 초과 비율은 공장 전체로 계산해 양도분에 적용합니다."
+            hint="하나의 울타리 안 공장 전체 면적입니다 — 양도하는 토지 면적이 아닙니다. 초과 비율은 공장 전체로 계산해 양도분에 적용합니다. 오염피해로 소유자 요구에 따라 취득한 인접토지가 있으면 그 면적도 여기에 합산합니다(별표6 3호마)."
           >
             <DecimalInput
               value={asset.nblFactoryTotalLandArea}
@@ -336,9 +336,9 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
               />
 
               <FieldCard
-                label="추가 인정면적 (별표6 3호 나~바)"
+                label="추가 인정면적 (별표6 3호 나·다·라·바)"
                 unit="㎡"
-                hint="녹지지역·활주로·철로·6m 이상 도로·접도구역 / 대규모 저수지·침전지 / 경사도 30도 이상 사면용지 / 오염피해 인접토지 / 종업원용 체육시설의 합계입니다. 해당분이 없으면 비워 두세요."
+                hint="녹지지역·활주로·철로·6m 이상 도로·접도구역 / 대규모 저수지·침전지 / 경사도 30도 이상 사면용지 / 종업원용 체육시설(기준면적의 10% 이내)의 합계입니다. 오염피해 인접토지(마목)는 여기가 아니라 위 「공장 전체 부속토지 면적」에 포함시키세요. 해당분이 없으면 비워 두세요."
               >
                 <DecimalInput
                   value={asset.nblFactoryAdditionalRecognizedArea}

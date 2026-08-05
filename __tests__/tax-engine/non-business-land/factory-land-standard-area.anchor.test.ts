@@ -29,6 +29,7 @@ import {
   KNOWLEDGE_INDUSTRY_CENTER_RATE_PERCENT,
 } from "@/lib/tax-engine/non-business-land/factory-land-standard-area";
 import { judgeOtherLand } from "@/lib/tax-engine/non-business-land/other-land";
+import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
 import type { NonBusinessLandInput, FactoryLandUsage } from "@/lib/tax-engine/non-business-land/types";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
 
@@ -450,5 +451,100 @@ describe("judgeOtherLand 통합 — Step 0.5", () => {
     const r = judgeOtherLand(input, R);
     expect(r.isBusiness).toBe(true);
     expect(r.areaProportioning).toBeUndefined();
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+/**
+ * 별표6 3호 **마목**(오염피해 인접토지)의 귀속 — 계획서 0-6 종결.
+ *
+ * ## 마목은 나머지 목과 문언 구조가 다르다 (2026-08-06 KoreanLaw 실측)
+ *
+ * | 목 | 별표6 문언 | 효과 |
+ * |---|---|---|
+ * | 나·다·라·바 | "…는 공장입지기준면적에 **포함되는 것으로 한다**" | 기준면적(한도)을 늘린다 |
+ * | **마** | "…합한 면적을 해당 공장의 **부속토지로 보아** …산정한다" | 부속토지(판정 대상)를 넓힌다 |
+ *
+ * ⇒ 마목 면적을 `additionalRecognizedArea`에 넣으면 한도가 부당하게 커져 초과분이 과소해진다
+ *   (납세자에게 **유리한 방향**의 오류). 정정 전 UI hint·엔진 주석이 마목을 「나~바」로 묶어
+ *   그 경로를 안내하고 있었다.
+ *
+ * ## 소득세법 §168의14③5호와의 이중적용은 구조적으로 불가능하다
+ *
+ * 「소득세법 시행규칙」 §83의5④1호(→ 시행령 §168의14③5호)는 **같은 토지**를 가리킨다:
+ * "공장의 가동에 따른 소음·분진·악취 등으로 인하여 생활환경의 오염피해가 발생되는 지역 안의
+ * 토지로서 그 토지소유자의 요구에 따라 취득한 공장용 부속토지의 **인접토지**".
+ *
+ * 그 인접토지 **자체를 양도**하면 `engine.ts` Step 2가 무조건 사업용으로 early-return 하므로
+ * 공장 기준면적 판정(Step 0.5)에 **도달하지 않는다**. 아래 MOK-3가 그 사실을 고정한다.
+ */
+describe("별표6 3호마 — 오염피해 인접토지는 「추가 인정면적」이 아니다", () => {
+  const SEGMENTS = [{ floorArea: 1200, ratePercent: 12 }]; // 1호 산출면적 10,000㎡
+  const FACTORY_BODY = 11000; // 공장 본체 부속토지
+  const ADJACENT = 2000; // 마목 인접토지 면적
+
+  /**
+   * ⚠️ 수치 설계 주의 — **3호가목이 먼저 초과분을 흡수한다**.
+   * 산출면적 10,000㎡ · 비제한지역이면 가목 한도가 20%(2,000㎡)라 부속토지가 12,000㎡ 이하면
+   * 자동으로 「이내」가 된다. 두 귀속 경로를 갈라 보려면 그 한도를 **넘는** 값을 써야 한다.
+   */
+  it("MOK-1: 마목분을 부속토지에 넣으면 대상이 늘어 초과분이 생긴다 (조문대로)", () => {
+    // 본체 11,000 + 인접 2,000 = 13,000㎡ > 한도 12,000㎡(산출 10,000 + 가목 2,000)
+    const r = judgeFactoryLandExcess(
+      {
+        locationCategory: "eup_myeon_or_complex",
+        segments: SEGMENTS,
+        totalAppurtenantLandArea: FACTORY_BODY + ADJACENT,
+      },
+      "마목 — 부속토지 편입",
+    );
+    expect(r.standardArea).toBe(12000);
+    expect(r.isWithinLimit).toBe(false);
+    expect(r.nonBusinessArea).toBe(1000);
+  });
+
+  it("MOK-2: 같은 면적을 「추가 인정면적」에 넣으면 한도가 늘어 초과분이 사라진다 — 유리한 오류", () => {
+    // 🔴 정정 전 UI hint가 안내하던 경로. 대상은 11,000㎡ 그대로인데 한도만 13,000㎡로 커진다.
+    const wrong = judgeFactoryLandExcess(
+      {
+        locationCategory: "eup_myeon_or_complex",
+        segments: SEGMENTS,
+        totalAppurtenantLandArea: FACTORY_BODY,
+        additionalRecognizedArea: ADJACENT,
+      },
+      "마목 — 오귀속",
+    );
+    expect(wrong.standardArea).toBe(13000);
+    expect(wrong.isWithinLimit).toBe(true);
+    expect(wrong.nonBusinessArea).toBe(0);
+
+    // 두 경로의 결과가 실제로 갈린다 — 귀속 위치가 세액을 바꾼다는 증명
+    const correct = judgeFactoryLandExcess(
+      {
+        locationCategory: "eup_myeon_or_complex",
+        segments: SEGMENTS,
+        totalAppurtenantLandArea: FACTORY_BODY + ADJACENT,
+      },
+      "마목 — 부속토지 편입",
+    );
+    expect(correct.nonBusinessArea).toBe(1000);
+    expect(wrong.nonBusinessArea).toBe(0);
+  });
+
+  it("MOK-3: 인접토지 자체를 양도하면 §168의14③5호가 먼저 걸려 공장 판정에 도달하지 않는다", () => {
+    // 이중적용이 구조적으로 불가능한 근거(계획서 0-6). Step 2 early-return이 그 관문이다.
+    const input = base(2000, { locationCategory: "eup_myeon_or_complex", segments: SEGMENTS });
+    input.unconditionalExemption = { isFactoryAdjacent: true };
+    const exempt = checkUnconditionalExemption(input, "other_land");
+    expect(exempt.isExempt).toBe(true);
+    expect(exempt.reason).toBe("factory_adjacent");
+    expect(exempt.legalBasis).toContain("§83의5④");
+  });
+
+  it("MOK-4: 나·다·라·바는 종전대로 기준면적에 가산된다 (마목만 빠진 것이지 규정 자체가 아니다)", () => {
+    const r = computeFactoryStandardArea(SEGMENTS, 9000, { additionalRecognizedArea: 500 });
+    expect(r.baseArea).toBe(10000);
+    expect(r.additionalRecognizedArea).toBe(500);
+    expect(r.standardArea).toBe(10500);
   });
 });

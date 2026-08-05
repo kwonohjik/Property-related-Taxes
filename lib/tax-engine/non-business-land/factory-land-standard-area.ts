@@ -64,7 +64,7 @@ export interface FactoryStandardAreaResult {
   additionalAllowanceCap: number;
   /** 별표6 3호가 실제 인정분 = min(초과면적, 한도) (㎡) */
   additionalAllowanceApplied: number;
-  /** 별표6 3호나~바 직접입력 인정면적 (㎡) */
+  /** 별표6 3호나·다·라·바 직접입력 인정면적 (㎡). **마목은 대상이 아니다** — 아래 주석 참조. */
   additionalRecognizedArea: number;
   /** 최종 공장입지기준면적 (㎡) */
   standardArea: number;
@@ -98,8 +98,20 @@ export function computeFactoryStandardArea(
   const excessOverBase = Math.max(0, landArea - baseArea);
   const additionalAllowanceApplied = Math.min(excessOverBase, additionalAllowanceCap);
 
-  // 별표6 3호나~바 — 녹지·활주로·철로·6m 이상 도로·접도구역 / 저수지·침전지 / 30도 사면용지 /
-  // 오염피해 인접토지 / 종업원 체육시설. 근거 판단은 사용자가 하고 면적 합계만 받는다.
+  // 별표6 3호나·다·라·바 — 녹지·활주로·철로·6m 이상 도로·접도구역 / 저수지·침전지 /
+  // 30도 사면용지 / 종업원 체육시설. 근거 판단은 사용자가 하고 면적 합계만 받는다.
+  //
+  // 🔴 **마목은 여기 들어오지 않는다.** 문언 구조가 나머지 목과 다르다(2026-08-06 실측):
+  //   나·다·라·바 — "…는 공장입지기준면적에 **포함되는 것으로 한다**"  → 한도(분자)를 늘린다
+  //   마          — "…합한 면적을 해당 공장의 **부속토지로 보아** 산정한다" → 부속토지(대상)를 넓힌다
+  // 마목은 오염피해 인접토지를 공장 부속토지 **범위**에 편입시키는 규정이지 기준면적을 늘리는
+  // 규정이 아니다. 여기 더하면 한도가 부당하게 커져 초과분이 과소해진다(유리한 방향 오류).
+  // ⇒ 마목 해당분은 `totalAppurtenantLandArea`(공장 전체 부속토지)에 포함시켜야 한다.
+  //
+  // 덧붙여 **양도세 경로에서 마목은 독자적 실익이 거의 없다**. 같은 토지를 「소득세법 시행령」
+  // §168의14③5호(→ 시행규칙 §83의5④1호 "…토지소유자의 요구에 따라 취득한 공장용 부속토지의
+  // 인접토지")가 **무조건 사업용**으로 의제하고, `engine.ts` Step 2가 그 시점에 early-return
+  // 하므로 공장 기준면적 판정에 도달하지도 않는다 ⇒ 두 조문의 이중적용은 구조적으로 불가능하다.
   const additionalRecognizedArea = options?.additionalRecognizedArea ?? 0;
 
   return {
