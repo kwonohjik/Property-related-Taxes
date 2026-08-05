@@ -12,7 +12,9 @@
 # (v3 본문 유지)
 
 
-> **상태**: PDCA — Plan v3 (Do 진입 게이트 4건 중 3건 완료. K-PING-01 모의투자 ping은 Do 첫 단계로 이월).
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `components/calc/stock-transfer/KiwoomMarketCapHelper.tsx`·`MajorShareholderBlock.tsx` + `lib/kiwoom/` 모듈 실재.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: PDCA — Plan v3 (Do 진입 게이트 4건 중 3건 완료. K-PING-01 모의투자 ping은 Do 첫 단계로 이월).~~
 > **작성자**: kiwoom-api-senior (페르소나) — `.claude/agents/kiwoom-api-senior.md`
 > **작성일**: 2026-05-19 (v1 → v2 → v3 동일자)
 > **v3 변경 요지**: ★ **법령 인용 정정 — §163⑨ → §99①3** (환원율 §82 오기 패턴 반복 발견) / KoreanLaw MCP 본문 첨부 완료 (§99①3·시행령 §165③·상증령 §52의2) / 거래일 분모 법령 명시 확인 (상증령 §52의2④ 공휴일·토요일 제외) / 거래정지 자동조회 차단 법령 근거 확인 (상증령 §52의2③ 평가 적용 제외) / 마운트 위치 확정 (`PostListingValuationCard.tsx:119` + `transferStdInputMode === "daily"` 분기) / 키움 REST WebFetch 부분 완료 (OAuth2 endpoint 확정·TR 상세는 회원 로그인 후 Do 첫 단계 캡처)

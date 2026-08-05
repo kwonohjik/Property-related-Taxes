@@ -1,7 +1,9 @@
 # 겸용주택 매매 취득 실거래가 안분 계획서 (R1) — 안분 근거 **법 §100②**
 
 > ⚠️ 파일명 `-166-6`은 초안 시점 식별자(내부 id 유지). **정확한 안분 근거는 법 §100② 본칙**(§1 — KoreanLaw 정정). §166⑥은 토지·건물 구분 불분명 시 부가세법 §64① 위임일 뿐.
-> 상태: **Plan (자가검토 13단계 완료)** · 작성 2026-07-21 · 근거: 감사 memory `project_transfer_special_engine_gift_acquisition_163_9_gap`(R1 확정 버그)
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `useActualAcquisition`·`acquisitionActualTotalPrice`(`transfer-tax-api-mixed-use.ts:234·237`) + route enum `section97_actual`(`transfer-tax-mixed-use.ts:505-506`) — 계획서 §3.1 설계 그대로.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: **Plan (자가검토 13단계 완료)** · 작성 2026-07-21 · 근거: 감사 memory `project_transfer_special_engine_gift_acquisition_163_9_gap`(R1 확정 버그)~~
 > 선행/관련: 겸용 §163⑨ 상속(PR#710)·증여(#726) 취득가액 직접평가 시리즈. 본 건은 **매매(purchase)** 경로.
 
 ## 0. 한 줄 요약
