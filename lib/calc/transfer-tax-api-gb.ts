@@ -157,13 +157,15 @@ export function buildGeneralBuildingValuation(
   const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, asset);
   const anyEstimated = landMode === "estimated" || buildingMode === "estimated";
   /**
-   * 파트별 자본적지출 — **두 파트 모두 실가일 때만** 보낸다.
-   * 환산 파트가 있으면 자본적지출은 §97②2호 단서의 **택일(가목↔나목) 대상**이고 그 판정이
-   * 자산 단위라(`resolveGeneralBuildingSwap`), 파트 값을 보내도 소비되지 않는 죽은 입력이 된다.
-   * 파트 단위 swap 판정은 미해결(계획서 §9 O-1)이므로 범위 밖이다.
+   * 파트별 자본적지출 — **두 파트가 모두 환산인 경우를 뺀 전부**에서 보낸다(O-1 해소).
+   *
+   * 두 파트 모두 환산이면 종전 자산 단위 `capitalExpenditure`가 §97②2호 단서의 자산총액 판정에
+   * 쓰이므로 파트 값을 보내지 않는다(회귀 0). 그 밖의 조합(혼합·둘 다 실가·감정/매매사례)은
+   * 파트별 귀속이 있어야 조문대로 계산된다 — 실가 파트는 §97②1호 **가산**, 환산 파트는
+   * 같은 호 단서 **택일**이라 단위가 다르기 때문이다(`general-building-swap.ts`).
    */
-  const bothActual = landMode === "actual" && buildingMode === "actual";
-  const partExpensePayload = bothActual
+  const bothEstimated = landMode === "estimated" && buildingMode === "estimated";
+  const partExpensePayload = !bothEstimated
     ? {
         ...(parseAmount(asset.landDirectExpenses) ? { landDirectExpenses: parseAmount(asset.landDirectExpenses) } : {}),
         ...(parseAmount(asset.buildingDirectExpenses) ? { buildingDirectExpenses: parseAmount(asset.buildingDirectExpenses) } : {}),

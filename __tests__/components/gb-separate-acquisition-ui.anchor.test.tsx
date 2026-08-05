@@ -228,3 +228,48 @@ describe("A-12 — 상속 블록 취득일 라우팅", () => {
     expect(patch).not.toHaveProperty("acquisitionDate");
   });
 });
+
+/**
+ * A-18 — 파트별 자본적지출 칸 노출 게이트 (O-1 해소 · 2026-08-05)
+ *
+ * §97②2호는 파트별로 규칙이 갈린다 — 실가 파트는 같은 항 1호(**가산**), 환산 파트는
+ * 2호 단서(**택일**). 그래서 조합이 섞이면 파트별 귀속이 있어야 조문대로 계산된다.
+ * 두 파트가 모두 환산일 때만 자산 단위 칸(④ 필요경비)이 자산총액 판정에 쓰인다.
+ *
+ * ⚠️ 이 게이트는 **validate V-8과 같은 축**이어야 한다 — 어긋나면 UI에 칸이 없는데
+ *    validate가 그 칸을 요구하는 dead-end가 된다(memory `feedback_ui_gate_removes_sole_input_path`).
+ *    정합은 `__tests__/calc/gb-separate-validate.anchor.test.ts` A-17이 함께 고정한다.
+ */
+describe("A-18 — 파트별 자본적지출 칸", () => {
+  const separate = (over: Partial<AssetForm> = {}) =>
+    ({
+      hasSeperateLandAcquisitionDate: true,
+      landAcquisitionDate: LAND,
+      acquisitionDate: BUILDING,
+      ...over,
+    }) as Partial<AssetForm>;
+
+  it("두 파트 모두 실가면 토지·건물 칸이 모두 나온다", () => {
+    renderCards(separate({ landAcqMode: "actual", buildingAcqMode: "actual" }));
+    expect(screen.getAllByText("토지 자본적지출", { exact: true }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("건물 자본적지출", { exact: true }).length).toBeGreaterThan(0);
+  });
+
+  it("🔴 혼합 모드(토지 실가 + 건물 환산)에서도 칸이 나온다 — 종전엔 숨었다", () => {
+    renderCards(separate({ landAcqMode: "actual", buildingAcqMode: "estimated" }));
+    expect(screen.getAllByText("토지 자본적지출", { exact: true }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("건물 자본적지출", { exact: true }).length).toBeGreaterThan(0);
+  });
+
+  it("두 파트 모두 환산이면 칸이 없다 — 자산 단위 칸을 쓴다 (회귀 0)", () => {
+    renderCards(separate({ landAcqMode: "estimated", buildingAcqMode: "estimated" }));
+    expect(screen.queryAllByText("토지 자본적지출", { exact: true })).toHaveLength(0);
+    expect(screen.queryAllByText("건물 자본적지출", { exact: true })).toHaveLength(0);
+  });
+
+  it("환산 파트의 hint는 **택일**임을 밝힌다 — 가산으로 오해하면 금액이 틀린다", () => {
+    renderCards(separate({ landAcqMode: "actual", buildingAcqMode: "estimated" }));
+    expect(screen.getByText(/건물이 환산취득가여서/)).toBeTruthy();
+    expect(screen.getByText(/토지에 귀속되는 자본적지출만/)).toBeTruthy();
+  });
+});

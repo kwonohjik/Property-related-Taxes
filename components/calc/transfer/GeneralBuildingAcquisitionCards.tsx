@@ -98,7 +98,7 @@ function PartAcqModeField({
   part: "land" | "building";
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
-  /** 파트 자본적지출 칸 노출 — 두 파트 모두 실가일 때만(죽은 입력 방지) */
+  /** 파트 자본적지출 칸 노출 — 두 파트 모두 환산인 경우만 제외(그때는 자산 단위 칸을 쓴다) */
   showCapex: boolean;
 }) {
   const isLand = part === "land";
@@ -189,14 +189,15 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
    * 불변식(§3.2(1))을 화면 조작만으로도 지키기 위함이며, 두 키를 **한 배치**로 넘긴다.
    */
   /**
-   * 파트 자본적지출 노출 조건 — **두 파트 모두 실가**일 때만.
-   * 환산 파트가 있으면 자본적지출은 §97②2호 단서의 택일 대상이고 그 판정이 자산 단위라,
-   * 파트 칸을 열어도 엔진이 소비하지 않는 **죽은 입력**이 된다(계획서 §9 O-1 미해결).
-   * 그 경우 종전대로 ④ 필요경비의 자산 단위 칸을 쓴다.
+   * 파트 자본적지출 노출 조건 — **두 파트 모두 환산인 경우만 제외**(O-1 해소).
+   *
+   * §97②2호는 파트별로 규칙이 갈린다 — 실가 파트는 같은 항 1호(가산), 환산 파트는 2호 단서(택일).
+   * 그래서 조합이 섞이면 파트별 귀속이 있어야 조문대로 계산된다.
+   * 두 파트가 모두 환산이면 종전처럼 ④ 필요경비의 자산 단위 칸이 자산총액 판정에 쓰인다.
    */
-  const bothPartsActual =
-    effectivePartAcqMode(asset.landAcqMode, asset) === "actual" &&
-    effectivePartAcqMode(asset.buildingAcqMode, asset) === "actual";
+  const showPartCapex =
+    effectivePartAcqMode(asset.landAcqMode, asset) !== "estimated" ||
+    effectivePartAcqMode(asset.buildingAcqMode, asset) !== "estimated";
 
   /**
    * 🔴 토지 카드 하위 블록(상속·증여·이월과세)의 `acquisitionDate` 쓰기를 **토지 축으로 라우팅**.
@@ -344,7 +345,7 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
 
         {/* 분리 ON — 토지 파트 산정방식·취득가액 (자산 전체 축 A는 위에서 숨겼다) */}
         {isSeparate && (
-          <PartAcqModeField part="land" asset={asset} onChange={onChange} showCapex={bothPartsActual} />
+          <PartAcqModeField part="land" asset={asset} onChange={onChange} showCapex={showPartCapex} />
         )}
 
         {/* 상속: 취득일 + 피상속인 취득일 + 보충적평가 */}
@@ -455,7 +456,7 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
         )}
 
         {isSeparate && (
-          <PartAcqModeField part="building" asset={asset} onChange={onChange} showCapex={bothPartsActual} />
+          <PartAcqModeField part="building" asset={asset} onChange={onChange} showCapex={showPartCapex} />
         )}
 
         {/* §163⑨ 상속개시일 건물 신고가액 (Phase 1 = 토지·건물 모두 상속) */}

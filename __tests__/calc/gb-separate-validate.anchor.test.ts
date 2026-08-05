@@ -125,6 +125,45 @@ describe("A-5 V-6 — 신축 건물 취득일은 산정 방식과 무관", () =>
  * UI 게이트(`GeneralBuildingBlock`의 취득시 기준시가 섹션)와 validate V-5가 **같은 술어**인지.
  * 어긋나면 「입력 칸이 없는데 차단」이 된다.
  */
+describe("A-17 — V-8 자본적지출 귀속 (O-1 해소)", () => {
+  /** 혼합 모드 — 토지 실가 + 건물 환산. 기준시가는 환산 파트(건물)만 필요하다. */
+  const mixed = (over: Partial<AssetForm> = {}) =>
+    base({
+      buildingAcqMode: "estimated",
+      buildingAcquisitionPrice: "",
+      gbAcqBuildingValue: "2814470",
+      ...over,
+    } as Partial<AssetForm>);
+
+  it("🔴 혼합 모드 + **파트별** 자본적지출은 통과한다 — 종전엔 차단됐다", () => {
+    expect(v(mixed({ landDirectExpenses: "30000000" } as Partial<AssetForm>))).toBeNull();
+  });
+
+  it("혼합 모드 + **자산 단위** 자본적지출은 파트별 칸으로 안내한다", () => {
+    const msg = v(mixed({ capitalExpenditure: "30000000" } as Partial<AssetForm>));
+    expect(msg).toMatch(/토지분·건물분 칸에 각각/);
+  });
+
+  it("두 파트 모두 실가여도 자산 단위 칸은 쓸 수 없다 — 귀속 파트를 알 수 없다", () => {
+    expect(v(base({ capitalExpenditure: "30000000" } as Partial<AssetForm>))).toMatch(
+      /토지분·건물분 칸에 각각/,
+    );
+  });
+
+  it("두 파트 모두 환산이면 자산 단위 칸이 정상 경로다 (회귀 0)", () => {
+    const bothEstimated = base({
+      landAcqMode: "estimated",
+      buildingAcqMode: "estimated",
+      landAcquisitionPrice: "",
+      buildingAcquisitionPrice: "",
+      gbAcqLandPricePerSqm: "2800000",
+      gbAcqBuildingValue: "2814470",
+      capitalExpenditure: "30000000",
+    } as Partial<AssetForm>);
+    expect(v(bothEstimated)).toBeNull();
+  });
+});
+
 describe("A-5 — UI 게이트 ↔ validate 정합", () => {
   it("혼합 모드는 UI 술어도 취득시 기준시가 섹션을 연다", () => {
     const mixed = base({ buildingAcqMode: "estimated", buildingAcquisitionPrice: "" });

@@ -127,17 +127,22 @@ function buildProperties(
 ): TransferTaxItemInput[] {
   return cards.map((card) => {
     const isBuilding = card.propertyType === "general_building_unit";
-    // §97②2호 단서 swap(안 A): 배분된 카드는 환산취득가 미차감(0)·필요경비=배분나목.
+    // §97②2호 단서 swap: 배분된 카드는 환산취득가 미차감(0)·필요경비=배분나목.
     // (단건 엔진 actual 모드에서 acqCost=0, expensesApplied=expenses → gain=양도가−배분나목.)
     const swapNabok = swap?.allocation.get(card.propertyId);
     const isSwapCard = swapNabok !== undefined;
+    /**
+     * 실가 파트 자본적지출 **가산** — §97②**1호**는 택일이 아니라
+     * 「해당 실지거래가액 + 제1항제2호·제3호의 금액」이다(O-1). 환산 파트는 여기 오지 않는다.
+     */
+    const directAddition = swap?.addition.get(card.propertyId) ?? 0;
     return {
       propertyId: card.propertyId,
       propertyLabel: card.propertyLabel,
       propertyType: card.propertyType,
       transferPrice: card.transferPrice,
       acquisitionPrice: isSwapCard ? 0 : card.acquisitionPrice,
-      expenses: isSwapCard ? swapNabok : card.expenses,
+      expenses: isSwapCard ? swapNabok : card.expenses + directAddition,
       transferDate: card.transferDate,
       acquisitionDate: card.acquisitionDate,
       // useEstimatedAcquisition=false: aggregate 경로에서는 이미 취득가 계산 완료.
@@ -233,13 +238,15 @@ function buildApportionment(
       // swap 발동 카드: 환산취득가 미차감(0)·필요경비=배분나목 (엔진 buildProperties:118-126 정합).
       const swapNabok = swap?.allocation.get(card.propertyId);
       const isSwapCard = swapNabok !== undefined;
+      // 실가 파트 가산분(§97②1호) — buildProperties와 같은 규칙(표시↔엔진 드리프트 금지).
+      const directAddition = swap?.addition.get(card.propertyId) ?? 0;
       return {
         assetId: card.propertyId,
         assetLabel: card.propertyLabel,
         assetKind: isLandCard ? "land" : "building",
         allocatedSalePrice: card.transferPrice,
         allocatedAcquisitionPrice: isSwapCard ? 0 : card.acquisitionPrice,
-        allocatedExpenses: isSwapCard ? swapNabok : card.expenses,
+        allocatedExpenses: isSwapCard ? swapNabok : card.expenses + directAddition,
         displayRatio: stdAtTransfer / totalStandAtTransfer,
         standardPriceAtTransfer: stdAtTransfer,
         standardPriceAtAcquisition: stdAtAcq,
@@ -459,8 +466,31 @@ export function calculateGeneralBuildingTransfer(
     isSelfBuilt: gbv.buildingAcquisitionCause === "newConstruction",
   };
   const gbOut = buildGeneralBuildingAssetCards(normalizedGbv);
-  // §97②2호 단서 swap 자산총액 판정(안 A) — 환산 카드 estimatedSide 합 vs 나목(자본+양도비).
-  const swap = resolveGeneralBuildingSwap(gbOut.assetCards, gbv.capitalExpenditure, gbv.transferExpense);
+  /**
+   * §97②2호 판정 — 파트별 자본적지출이 있으면 **파트 단위**, 없으면 종전 **자산총액**(안 A).
+   * 단위 선택 근거는 `general-building-swap.ts` 헤더(O-1 · §97②2호 본문 「자산별로」).
+   */
+  const swap = resolveGeneralBuildingSwap(
+    gbOut.assetCards,
+    gbv.capitalExpenditure,
+    gbv.transferExpense,
+    {
+      // 모드 기본값은 `applyPartAcqModes`와 **같은 단일 소스**여야 한다(둘 다 미지정 시 환산).
+      ...(gbv.landDirectExpenses !== undefined
+        ? { land: { direct: gbv.landDirectExpenses, mode: gbv.landAcqMode ?? "estimated" } }
+        : {}),
+      ...(gbv.buildingDirectExpenses !== undefined
+        ? {
+            building: {
+              direct: gbv.buildingDirectExpenses,
+              mode: gbv.buildingAcqMode ?? "estimated",
+            },
+          }
+        : {}),
+      // 양도비는 파트로 나누지 않고 넘긴다 — 엔진이 §100② 후문(가액 비례)으로 안분한다.
+      ...(gbv.transferExpense !== undefined ? { transferExpense: gbv.transferExpense } : {}),
+    },
+  );
   const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio, swap);
 
   const aggregated = calculateTransferTaxAggregate(
@@ -476,12 +506,25 @@ export function calculateGeneralBuildingTransfer(
   // UI 자산별 산식 인라인 표시용 — gbOut의 분모/분자 변수를 결과에 노출.
   // 사례 31(2-way)·33(3-way) 모두 generalBuildingValuationDetail 통해 UI 가공.
   aggregated.generalBuildingValuationDetail = gbOut;
-  // §97②2호 단서 swap 발동 시 결과뷰 표시용(F10) — 자산총액 판정이라 top-level 1개로 충분.
+  /**
+   * §97②2호 단서 발동 시 결과뷰 표시용(F10).
+   *
+   * 자산총액 판정은 top-level 1개로 충분하지만, **파트 단위 판정에서는 발동한 파트만 합산**한다.
+   * 미발동 파트의 가목·나목까지 더하면 「이 금액을 나목으로 채택했다」는 표시가 실제 채택액과
+   * 어긋난다(메모리 `feedback_engine_result_display_drift`).
+   */
   if (swap.swapApplied) {
+    const applied = swap.perPart
+      ? Object.values(swap.perPart).filter((p) => p.swapApplied)
+      : undefined;
     aggregated.swapApplied = true;
     aggregated.swapComparison = {
-      estimatedSide: swap.estimatedSideTotal,
-      directSide: swap.directSide,
+      estimatedSide: applied
+        ? applied.reduce((s, p) => s + p.estimatedSide, 0)
+        : swap.estimatedSideTotal,
+      directSide: applied
+        ? applied.reduce((s, p) => s + p.directSide, 0)
+        : swap.directSide,
       chosen: "direct",
     };
   }
