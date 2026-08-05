@@ -19,7 +19,11 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 /** PDF 사례 30 시드 — 15억 양도·6억 취득 고가주택, 거주 3년 */
-function seedForm(overrides: Record<string, unknown> = {}) {
+function seedForm(
+  overrides: Record<string, unknown> = {},
+  /** 폼-전역 필드 override (조정대상지역 등 — 자산 override와 스프레드 대상이 다르다) */
+  formOverrides: Record<string, unknown> = {},
+) {
   return {
     state: {
       formData: {
@@ -48,6 +52,7 @@ function seedForm(overrides: Record<string, unknown> = {}) {
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: true,
         isUnregistered: false,
+        ...formOverrides,
       },
       pendingMigration: false,
     },
@@ -55,12 +60,16 @@ function seedForm(overrides: Record<string, unknown> = {}) {
   };
 }
 
-async function seed(page: Page, overrides: Record<string, unknown> = {}) {
+async function seed(
+  page: Page,
+  overrides: Record<string, unknown> = {},
+  formOverrides: Record<string, unknown> = {},
+) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(overrides),
+    seedForm(overrides, formOverrides),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -192,5 +201,59 @@ test.describe("§95⑤ 토글 배치 — ① 기본정보 · 겸용주택과 배
   test("겸용주택 ON이면 §95⑤ 토글이 잠긴다 (반대 방향)", async ({ page }) => {
     await seed(page, { hasNonHousingConversion: false, isMixedUseHouse: true });
     await expectLocked(page, TOGGLE);
+  });
+});
+
+/**
+ * 상속 취득 × 용도변경 — C-21 범위 정정 (2026-08-05)
+ *
+ * 설계: `docs/02-design/features/non-housing-to-housing-conversion-inheritance-c21.plan.md`
+ *
+ * §154⑧3호는 "상속받은 **주택**으로서"가 전제인데, C-8이 용도변경일 > 취득일(=상속개시일)을
+ * 강제하므로 토글 ON인 상속은 언제나 「상속개시 당시 비주택」이다 ⇒ 통산 요건이 불성립한다.
+ *
+ * ⚠️ UI 위젯은 바뀌지 않았다(토글이 `acquisitionCause`를 보지 않는다) — **바뀐 것은 동작**이다.
+ *    종전에는 validate가 「상속·증여로 취득한 자산입니다」로 막아 계산 자체가 안 됐다.
+ *    그래서 이 스펙은 위젯이 아니라 **차단 해제 + 통산 배제가 결과에 닿는지**를 본다.
+ */
+test.describe("§95⑤ × 상속 취득 — §154⑧3호 통산 배제", () => {
+  /** 상속 자산 필수 필드 — `decedentAcquisitionDate`는 용도변경과 무관한 **기존** 요구다. */
+  const INHERITED = {
+    acquisitionCause: "inheritance",
+    decedentAcquisitionDate: "2010-03-05",
+    decedentSameHouseholdBeforeInheritance: true,
+    decedentCohabitationHoldingStartDate: "2012-06-01",
+    decedentCohabitationResidenceMonths: "24",
+  };
+
+  test("상속 + 토글 ON이 더 이상 차단되지 않는다 — 계산이 끝까지 간다", async ({ page }) => {
+    test.setTimeout(180_000);
+    // 실거주 36개월이라 통산 없이도 표2 대상이 성립한다(I-2) → 혼합 공제율 그대로.
+    await seed(page, INHERITED);
+    await calculate(page);
+
+    // 종전 차단 문구가 나오지 않는다
+    await expect(page.getByText(/상속·증여로 취득한 자산입니다/)).toHaveCount(0);
+    // 혼합 공제율이 결과에 닿는다 — 보유 20% + 실거주 3년 12% = 32%
+    await expect(page.getByText("57,132,800").first()).toBeVisible();
+  });
+
+  test("★ 통산으로 표2 대상을 만들지 않는다 — 실거주 1년이면 표1 단독", async ({ page }) => {
+    test.setTimeout(180_000);
+    // 실거주 12개월 + 피상속인 통산 24개월 = 36개월(3년). 통산하면 표2 대상이 되지만
+    // 상속개시 당시 비주택이므로 §154⑧3호가 적용되지 않는다 → 표2 대상 탈락.
+    // 조정대상지역을 끄는 이유: 켜두면 거주요건(2년) 미달로 **비과세**까지 갈려 축이 섞인다.
+    await seed(
+      page,
+      { ...INHERITED, residencePeriodMonthsAsset: "12" },
+      { wasRegulatedAtAcquisition: false },
+    );
+    await calculate(page);
+
+    // 표1 단독·전기간 — 총 보유 7년 × 2% = 14% → 178,540,000 × 14%
+    await expect(page.getByText("24,995,600").first()).toBeVisible();
+    // §95⑤ 혼합 경로로 빠지지 않았다 (통산이 살아 있었다면 32%·57,132,800이 나온다)
+    await expect(page.getByText("57,132,800")).toHaveCount(0);
+    await expect(page.getByText("비주택 → 주택 용도변경 장기보유특별공제")).toHaveCount(0);
   });
 });

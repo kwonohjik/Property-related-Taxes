@@ -39,6 +39,20 @@ describe("정상 입력은 통과한다", () => {
   it("토글 OFF면 이 검증이 개입하지 않는다 (회귀 0)", () => {
     expect(check({ hasNonHousingConversion: false, residentialUseStartDate: "" })).toBeNull();
   });
+
+  /**
+   * I-1 — C-21 범위 정정(2026-08-05). §154⑧3호는 "상속받은 **주택**"이 전제인데,
+   * C-8이 용도변경일 > 취득일(=상속개시일)을 강제하므로 토글 ON인 상속은 언제나
+   * 「상속개시 당시 비주택」이다 ⇒ 경합이 성립하지 않아 차단할 근거가 없다.
+   * 설계: `docs/02-design/features/non-housing-to-housing-conversion-inheritance-c21.plan.md`
+   */
+  it("I-1 상속 취득은 통과한다 — §154⑧3호 경합이 성립하지 않는다", () => {
+    // `decedentAcquisitionDate`는 상속 자산의 **기존** 필수 필드다(용도변경과 무관 —
+    // `transfer-tax-validate-asset.ts:557`). 용도변경 차단이 풀리면 이 요구가 드러난다.
+    expect(
+      check({ acquisitionCause: "inheritance", decedentAcquisitionDate: "2010-03-05" }),
+    ).toBeNull();
+  });
 });
 
 describe("날짜 검증", () => {
@@ -64,9 +78,8 @@ describe("지원하지 않는 조합 — 전부 공통 안내를 단다", () => 
     ["C-14 겸용주택", { isMixedUseHouse: true }, /겸용주택/],
     ["C-19 토지·건물 분리취득", { hasSeperateLandAcquisitionDate: true }, /서로 다른 시점/],
     ["C-24 부담부증여", { transferType: "burdened_gift" }, /부담부증여/],
-    ["C-21 상속 취득", { acquisitionCause: "inheritance" }, /상속·증여/],
-    ["C-21 증여 취득", { acquisitionCause: "gift" }, /상속·증여/],
-    ["C-21 이월과세", { acquisitionCause: "carryover_gift" }, /상속·증여/],
+    ["C-21 증여 취득", { acquisitionCause: "gift" }, /증여로 취득/],
+    ["C-21 이월과세", { acquisitionCause: "carryover_gift" }, /증여로 취득/],
   ];
 
   it.each(cases)("%s → 차단", (_label, over, pattern) => {
@@ -111,6 +124,6 @@ describe("★ 배치 — 조기 return보다 앞에 있다", () => {
   });
 
   it("이월과세는 전용 검증으로 빠지기 전에 잡힌다", () => {
-    expect(check({ acquisitionCause: "carryover_gift" })).toMatch(/상속·증여로 취득한 자산입니다/);
+    expect(check({ acquisitionCause: "carryover_gift" })).toMatch(/증여로 취득한 자산입니다/);
   });
 });
