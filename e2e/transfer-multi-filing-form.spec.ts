@@ -14,6 +14,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { putCalculationRecord } from "./_helpers/history-seed";
+import { openHistoryModal } from "./_helpers/navigation";
 
 /** 단순 토지 자산 폼 (NBL·감면 없음) — API 필수 필드 충족. */
 function landAsset(price: string, area: string) {
@@ -109,8 +110,11 @@ test.describe("다건 결과탭 상단 신고서 양식 (합계+자산별)", () 
   test("결과탭 맨 위에 '신고서 양식 (합산)' 표가 합산 요약 카드보다 앞서 렌더된다", async ({ page }) => {
     await page.goto("/calc/transfer-tax/multi");
 
-    await page.getByTestId("multi-load-history-btn").first().click();
-    await expect(page.getByText("다건 신고서 양식 (E2E)")).toBeVisible({ timeout: 15000 });
+    await openHistoryModal(
+      page,
+      page.getByTestId("multi-load-history-btn").first(),
+      page.getByText("다건 신고서 양식 (E2E)"),
+    );
     await page.getByTestId(`load-record-${MULTI_RECORD.id}`).click();
 
     const respPromise = page.waitForResponse(
@@ -142,8 +146,11 @@ test.describe("다건 결과탭 상단 신고서 양식 (합계+자산별)", () 
   test("자산별 양도일이 각 자산 실제값으로 표시되고 차감납부할세액 행이 렌더된다", async ({ page }) => {
     await page.goto("/calc/transfer-tax/multi");
 
-    await page.getByTestId("multi-load-history-btn").first().click();
-    await expect(page.getByText("다건 신고서 양식 (E2E)")).toBeVisible({ timeout: 15000 });
+    await openHistoryModal(
+      page,
+      page.getByTestId("multi-load-history-btn").first(),
+      page.getByText("다건 신고서 양식 (E2E)"),
+    );
     await page.getByTestId(`load-record-${MULTI_RECORD.id}`).click();
 
     const respPromise = page.waitForResponse(
@@ -166,8 +173,11 @@ test.describe("다건 결과탭 상단 신고서 양식 (합계+자산별)", () 
     await seedRecord(page, MULTI_RECORD_PRIOR);
     await page.goto("/calc/transfer-tax/multi");
 
-    await page.getByTestId("multi-load-history-btn").first().click();
-    await expect(page.getByText("다건 기신고 소득 (E2E)")).toBeVisible({ timeout: 15000 });
+    await openHistoryModal(
+      page,
+      page.getByTestId("multi-load-history-btn").first(),
+      page.getByText("다건 기신고 소득 (E2E)"),
+    );
     await page.getByTestId(`load-record-${MULTI_RECORD_PRIOR.id}`).click();
 
     const respPromise = page.waitForResponse(
