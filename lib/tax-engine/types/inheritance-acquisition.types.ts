@@ -58,7 +58,12 @@ export const DEEMED_ACQUISITION_DATE = new Date("1985-01-01T00:00:00.000Z");
  * 취득가액 산정 방법
  *
  * 의제취득일 전 상속:
- *   - pre_deemed_max: max(환산가액, 취득실가×물가상승률) — 소령 §176조의2 ④
+ *   - pre_deemed_max: max(① 상증법 §60~66 평가액, ② §164④~⑦ 취득당시 기준시가, ③ 환산취득가)
+ *     ①② = 소령 §163⑨ 본문·1호·2호 (법 §97①1호 **가목** — 취득당시 실지거래가액 의제)
+ *     ③  = 소령 §163⑫ → §176조의2②·③3호 (법 §97①1호 **나목** — 추계)
+ *     ※ 물가상승률 방식(§176조의2④2호)은 무상취득에 부적용 — **구현하지 않는다**
+ *       (호2의 base인 취득당시 실지거래가액·매매사례·감정가액이 무상취득엔 부존재.
+ *        조심2023서0676도 §163⑨ 의제가액에 물가상승률을 곱하는 변형을 기각했다)
  *
  * 의제취득일 이후 상속 / 일반 상속:
  *   - market_value:      매매사례가액 (시가, 상증법 §60 ①)
@@ -73,7 +78,7 @@ export type InheritanceAcquisitionMethod =
   | "auction_public_sale"   // 수용·경매·공매
   | "similar_sale"          // 유사매매사례
   | "supplementary"         // 보충적평가
-  | "pre_deemed_max";       // 의제취득일 전 max(환산, 실가×CPI)
+  | "pre_deemed_max";       // 의제취득일 전 max(상증법 평가액, §164 기준시가, 환산)
 
 export interface InheritanceAcquisitionInput {
   /** 상속개시일 (의제취득일 분기 기준) */

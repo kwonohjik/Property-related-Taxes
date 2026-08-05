@@ -4,7 +4,8 @@
  * 상속 취득가액 의제 상세 카드
  *
  * 엔진 result.inheritedAcquisitionDetail (InheritanceAcquisitionResult) 표시.
- *   - Case A (의제취득일 1985.1.1. 전 상속): max(환산취득가, 실가 × 물가상승률) 비교 내역
+ *   - Case A (의제취득일 1985.1.1. 전 상속): max(① 상증법 평가액, ② §164④~⑦ 취득당시 기준시가,
+ *     ③ 환산취득가) 비교 내역. ※ 물가상승률 방식(§176조의2④2호)은 무상취득에 부적용 — 미구현
  *   - Case B (의제취득일 이후 상속): 상속세 신고 평가방법별 신고가액
  *
  * ⑦ 결과 카드 산식 — 한국어 풀어쓰기, 변수 약어·floor()·"원" 끝 금지.
@@ -100,6 +101,17 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
                   </span>
                 </>
               )}
+              {preDeemedBreakdown.sec164Amount !== null && (
+                <>
+                  <span className="text-muted-foreground">
+                    ② 취득당시 기준시가 (소령 §164④~⑦)
+                    {preDeemedBreakdown.selectedMethod === "sec164" && <SelectedBadge />}
+                  </span>
+                  <span className="font-mono tabular-nums text-right text-foreground">
+                    {formatN(preDeemedBreakdown.sec164Amount)}
+                  </span>
+                </>
+              )}
               <span className="text-muted-foreground">
                 ③ 환산취득가액
                 {preDeemedBreakdown.selectedMethod === "converted" && <SelectedBadge />}
@@ -109,7 +121,7 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
               </span>
             </div>
             <p className="text-muted-foreground pt-1">
-              세 금액 중 큰 금액을 취득가액으로 적용 (소령 §163⑨·§176조의2④)
+              후보 중 큰 금액을 취득가액으로 적용 (소령 §163⑨1호·2호 · §176조의2)
             </p>
           </div>
         </div>
