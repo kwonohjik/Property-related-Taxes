@@ -184,9 +184,10 @@ function resolveInheritedAcquisitionInput(
   // ⚠️ 주택·상가와 마찬가지로 **같은 값이 ③의 환산 분자로도 쓰이므로 필드를 분리**한다.
   //    시점은 **의제취득일 기준**이다 — `pre1990LandResult`가 그렇게 산출되고
   //    UI도 "1985.1.1. 개별공시지가 × 면적"이라 안내한다(계획서 §4.1(d)).
-  // 📌 현재는 pre-deemed만 다룬다. §163⑨1호 자체는 의제취득일과 무관하므로
-  //    **post-deemed 토지(1985 ~ 1990.8.30. 상속)도 대상**이나, 그 경로는 `pre1990LandResult`가
-  //    산출되지 않아 별건으로 남긴다(계획서 §11).
+  // ⚠️ **pre/post 구분이 없다** — §163⑨1호의 조건은 「1990.8.30. 고시 前 상속·증여받은 토지」뿐이라
+  //    의제취득일 이후(1985.1.1.~1990.8.30.) 상속 토지도 당연히 대상이다(주택·상가 2호와 동일).
+  //    `pre1990LandResult`는 `transfer-tax.ts:85`가 `rawInput.pre1990Land` 유무만 보고 산출하므로
+  //    post-deemed에서도 그대로 공급된다 — 소비는 `calcPostDeemed`의 sec164Std에서 한다.
   const shouldInjectLandMax =
     !!pre1990LandResult &&
     base.assetKind === "land" &&

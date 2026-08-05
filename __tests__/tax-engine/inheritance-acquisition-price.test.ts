@@ -587,3 +587,51 @@ describe("pre-deemed 토지 — ② §164④ (§163⑨1호)", () => {
     expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
   });
 });
+
+/**
+ * post-deemed 토지 §164④ — §163⑨**1호**는 「의제취득일」과 무관하다.
+ *
+ * 1호의 조건은 **「1990.8.30. 개별공시지가 고시 前 상속·증여받은 토지」**뿐이므로
+ * 의제취득일 이후(1985.1.1. ~ 1990.8.30.) 상속 토지도 당연히 대상이다.
+ * 주택 §164⑦·상가 §164⑥(2호)이 이미 pre/post 구분 없이 적용되는 것과 같다.
+ * ③(환산)은 post-deemed에 적용 불가하므로 취득가액 = max(①, ②).
+ */
+describe("post-deemed 토지 — ② §164④ (§163⑨1호)", () => {
+  const POST_DEEMED_LAND = {
+    inheritanceDate: new Date("1987-05-01"), // 1985.1.1. 이후 · 1990.8.30. 이전
+    assetKind: "land" as const,
+  };
+
+  it("PL-1: ②가 ①보다 크면 ② — max(①,②)", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...POST_DEEMED_LAND,
+      reportedValue: 100_000_000, // ①
+      reportedMethod: "supplementary",
+      landValuationStdPrice: 300_000_000, // ② §164④
+    });
+
+    expect(r.acquisitionPrice).toBe(300_000_000);
+    expect(r.legalBasis).toContain("§164 ④");
+  });
+
+  it("PL-2: ①이 ②보다 크면 ①", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...POST_DEEMED_LAND,
+      reportedValue: 400_000_000, // ①
+      reportedMethod: "supplementary",
+      landValuationStdPrice: 300_000_000, // ②
+    });
+
+    expect(r.acquisitionPrice).toBe(400_000_000);
+  });
+
+  it("PL-3(회귀): ② 미주입이면 종전대로 신고가액", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...POST_DEEMED_LAND,
+      reportedValue: 100_000_000,
+      reportedMethod: "supplementary",
+    });
+
+    expect(r.acquisitionPrice).toBe(100_000_000);
+  });
+});
