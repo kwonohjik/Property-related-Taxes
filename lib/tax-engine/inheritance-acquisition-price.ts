@@ -77,6 +77,11 @@ function validateInput(input: InheritanceAcquisitionInput): void {
 //    시점은 §163⑨ 본문대로 **상속개시일 또는 증여일 현재**(의제취득일 아님) — post-deemed와 같은 값.
 //    ⚠️ 같은 값이 ③의 **환산 분자**(standardPriceAtDeemedDate)로도 쓰이므로 **필드를 분리**한다(역할이 둘).
 //    계획서: docs/02-design/features/inheritance-pre-deemed-164-max.plan.md
+// ⚠️ ①② = 법 §97①1호 **가목**(§163⑨), ③ = **나목**(§163⑫ → §176조의2). 법 §97①1호 단서상
+//    나목은 「가목의 실지거래가액을 확인할 수 없는 경우에 **한정**」이라 본래 같은 max에 들어갈 자리가 아니다
+//    (대법원 2006두1326: 상속·증여 자산은 취득당시 실지거래가액이 **부존재**하므로 나목 대신 §163⑨으로 간다).
+//    다만 ③ 제외는 **세액 증가** 방향이고 조심2023서0676은 상속 토지에 환산 적용을 인용했다
+//    ⇒ 우열을 정면으로 다룬 결정을 확보할 때까지 **현행 3자 max 유지**(계획서 §6 V-3).
 
 function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisitionResult {
   const warnings: string[] = [];
