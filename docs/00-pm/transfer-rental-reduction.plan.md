@@ -1,6 +1,7 @@
 # 장기임대주택 양도소득세 감면 (조특법 §97 시리즈) 구현 계획서
 
-> **상태**: Plan (Do 미착수)
+> **상태**: ✅ **구현 완료** (PR#119 · 2026-06-11) — 2026-08-04 코드 실측 · 2026-08-05 인용 PR·커밋 재검증(종전 헤더는 stale이었음).
+> ~~종전 표기: Plan (Do 미착수)~~
 > **작성일**: 2026-06-11
 > **작성**: long-term-rental-tax-senior (엔진) + transfer-tax-ui-senior (UI) 병렬 Plan, 오케스트레이터 통합
 > **선행 문서**: `docs/00-pm/transfer-reduction-expansion.plan.md` §3.1 · `docs/02-design/features/transfer-reduction-mapping-audit.md` §4.1

@@ -3,7 +3,8 @@
 > **세목**: 주식 양도소득세 (stock-transfer)
 > **대상**: Step 1 + Step 2 + 엔진 핵심 계산 파이프라인
 > **트리거**: 사용자 요청 (2026-05-18) — 섹션 4 조건부 숨김 점프 + 입력 순서 재정렬 + **분할 매수·분할 양도 + lot별 취득원인 + 산정방법 3종 선택**
-> **상태**: Plan v2 (KoreanLaw 사전 검증 + 인터뷰 4문항 반영, 2026-05-18)
+> **상태**: ✅ **구현 완료** (커밋 2a4cfc9c · 이동평균 PR#162 · 2026-05-18) — 2026-08-04 코드 실측 · 2026-08-05 인용 PR·커밋 재검증(종전 헤더는 stale이었음).
+> ~~종전 표기: Plan v2 (KoreanLaw 사전 검증 + 인터뷰 4문항 반영, 2026-05-18)~~
 > **참조 파일**:
 > - `app/calc/stock-transfer-tax/steps/Step1.tsx`·`Step2.tsx`
 > - `lib/tax-engine/stock-transfer/stock-transfer-tax.ts` (엔진 진입점)
