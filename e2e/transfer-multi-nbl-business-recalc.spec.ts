@@ -11,7 +11,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
-import { waitForCalculationsStore } from "./_helpers/history-seed";
+import { putCalculationRecord } from "./_helpers/history-seed";
 
 /** 자경 농지(사업용 판정) 토지 자산 폼 — 원시 isNonBusinessLand=true. */
 function businessLandAsset(price: string, area: string, transferDate: string) {
@@ -92,25 +92,12 @@ const MULTI_RECORD = {
 };
 
 async function seedRecord(page: Page, record: unknown) {
-  await page.evaluate((rec) => {
-    return new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open("KoreanTaxCalcLocal");
-      req.onerror = () => reject(req.error);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction("calculations", "readwrite");
-        tx.objectStore("calculations").put(rec);
-        tx.oncomplete = () => { db.close(); resolve(); };
-        tx.onerror = () => reject(tx.error);
-      };
-    });
-  }, record);
+  await putCalculationRecord(page, record);
 }
 
 test.describe("다건 이력 불러오기 → 재계산 — NBL 사업용 오중과 회귀(#508)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/history");
-    await waitForCalculationsStore(page);
     await seedRecord(page, MULTI_RECORD);
   });
 
