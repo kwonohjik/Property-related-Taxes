@@ -15,6 +15,8 @@
  */
 
 import { applyRate, truncateToThousand } from "./tax-utils";
+import { computeFactoryStandardArea } from "./factory-standard-area";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { PROPERTY } from "./legal-codes";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
@@ -60,10 +62,25 @@ export interface SeparateTaxationInput {
   isProtectedForest?: boolean;
 
   // ── 일반(0.2%) 판정용 ──
-  /** 공장용지 (산업단지·지정 공업지역 내, 기준면적 이내) */
+  /** 공장용지 (읍·면·산업단지·공업지역 내, 공장입지기준면적 이내) */
   isFactoryLand?: boolean;
   /** 공장 입지 유형 */
   factoryLocation?: "industrial_zone" | "urban" | "other";
+  /**
+   * 공장 전체 부속토지 면적 (㎡) — 「1구의 공장」 기준.
+   * 「지방세법 시행령」 §102①1호가 "공장입지기준면적 **범위의** 토지"로 한정하므로 필수다.
+   */
+  factoryTotalLandArea?: number;
+  /** 공장건축물 **연면적** (㎡) — 바닥면적이 아니다 (별표6 2호가) */
+  factoryFloorArea?: number;
+  /** 업종별 기준공장면적률 (%) — 「공장입지 기준고시」 별표1 */
+  factoryAreaRatePercent?: number;
+  /** 별표6 3호가1) 「산집법」 §20① 제한지역 — 추가 인정한도 10%(3,000㎡) / 그 밖 20% */
+  factoryIsRestrictedZone?: boolean;
+  /** 별표6 3호나·다·라·바 추가 인정면적 (㎡). **마목 제외** — 부속토지 면적 쪽에 넣는다. */
+  factoryAdditionalRecognizedArea?: number;
+  /** §102①1호 **단서** — 허가 미이행·사용승인 미이행 공장용 건축물 → 분리과세 전량 제외 */
+  factoryIsUnpermitted?: boolean;
   /** 염전 (염화나트륨 생산에 직접 사용) */
   isSaltField?: boolean;
   /** 여객·화물터미널 또는 공영주차장 부속토지 */
@@ -126,6 +143,28 @@ export interface SeparateTaxationResult {
     legalBasis: string;
   };
 
+  /**
+   * 공장용지 면적 한도 판정 (「지방세법 시행령」 §102①1호 · 시행규칙 §50 [별표6]) — 공장용지만.
+   *
+   * 초과분은 분리과세에서 빠져 **종합합산**으로 이관된다. 다만 종합합산은 인별 전국 합산이라
+   * 단일 필지 계산기에서 세액을 낼 수 없다 — `excessAssessedValue`를 경고로 안내만 한다
+   * (별도합산 `totalExcessOfficialValue`와 같은 취급).
+   */
+  factoryAreaCheck?: {
+    /** 별표6 공장입지기준면적 (㎡) */
+    standardArea: number;
+    /** 분리과세 인정면적 = min(부속토지, 기준면적) (㎡) */
+    recognizedArea: number;
+    /** 종합합산 이관 면적 (㎡) */
+    excessArea: number;
+    /** 인정 비율 (0~1) — 과세표준 안분에 쓰인다 */
+    recognizedRatio: number;
+    /** 분리과세분 시가표준액 (원) */
+    recognizedAssessedValue: number;
+    /** 종합합산 이관분 시가표준액 (원) */
+    excessAssessedValue: number;
+  };
+
   warnings: string[];
 }
 
@@ -147,6 +186,8 @@ type ClassifyPartial = {
   category: SeparateTaxationCategory;
   appliedRate: number;
   reasoning: SeparateTaxationResult["reasoning"];
+  /** 공장용지만 — 면적 한도 판정 결과 (과세표준 안분 근거) */
+  factoryAreaCheck?: SeparateTaxationResult["factoryAreaCheck"];
 } | null;
 
 /**
@@ -215,26 +256,138 @@ function classifyLowRate(
  * 2. 염전 (isSaltField)
  * 3. 터미널·공영주차장 (isTerminalOrParking)
  */
+/**
+ * 「지방세법 시행령」 §102①1호 면적 한도 판정 — 시행규칙 §50 [별표6].
+ *
+ * ## 미입력을 통과시키지 않는다
+ *
+ * §102①1호는 분리과세 대상을 "공장입지기준면적 **범위의** 토지"로 한정한다. 연면적·면적률이
+ * 없으면 그 범위를 알 수 없고, 모른 채 전량 분리과세(0.2%)를 주면 **납세자에게 유리한 방향**의
+ * 추정이 된다(종합합산 누진세율보다 낮다). 근거 없는 유리 적용도 금지다 ⇒ **던진다**.
+ *
+ * ## 초과분은 세액에 반영하지 않는다
+ *
+ * 초과분은 종합합산으로 이관되는데, 종합합산은 **인별 전국 합산**이라 단일 필지 계산기가
+ * 세율을 정할 수 없다. 별도합산 경로(`totalExcessOfficialValue`)와 동일하게 **경고로 안내**만 한다.
+ */
+function judgeFactoryAreaLimit(input: SeparateTaxationInput) {
+  const totalArea = input.factoryTotalLandArea ?? 0;
+  const floorArea = input.factoryFloorArea ?? 0;
+  const ratePercent = input.factoryAreaRatePercent ?? 0;
+
+  if (totalArea <= 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "공장용지 분리과세 판정에는 공장 전체 부속토지 면적(factoryTotalLandArea)이 필요합니다. " +
+      "「지방세법 시행령」 §102①1호는 공장입지기준면적 범위의 토지로 한정합니다.",
+    );
+  }
+  if (floorArea <= 0 || ratePercent <= 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "공장용지 분리과세 판정에는 공장건축물 연면적(factoryFloorArea)과 " +
+      "업종별 기준공장면적률(factoryAreaRatePercent)이 필요합니다 " +
+      "(「지방세법 시행규칙」 §50 [별표6] 1호). 연면적은 바닥면적과 다른 값입니다.",
+    );
+  }
+
+  const std = computeFactoryStandardArea(
+    [{ floorArea, ratePercent }],
+    totalArea,
+    {
+      isRestrictedZone: input.factoryIsRestrictedZone,
+      additionalRecognizedArea: input.factoryAdditionalRecognizedArea,
+    },
+  );
+
+  const recognizedArea = Math.min(totalArea, std.standardArea);
+  const excessArea = Math.max(0, totalArea - std.standardArea);
+  const recognizedRatio = recognizedArea / totalArea;
+
+  // 시가표준액 안분 — 금액은 원 미만 절사(세법 floor). 잔액은 초과분이 흡수해 합을 보존한다.
+  const assessed = input.assessedValue;
+  const recognizedAssessedValue = Math.floor(assessed * recognizedRatio);
+  const excessAssessedValue = assessed - recognizedAssessedValue;
+
+  return {
+    totalArea,
+    standardArea: std.standardArea,
+    recognizedArea,
+    excessArea,
+    recognizedRatio,
+    recognizedAssessedValue,
+    excessAssessedValue,
+  };
+}
+
 function classifyStandard(
   input: SeparateTaxationInput,
   warnings: string[],
   rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): ClassifyPartial {
   if (input.isFactoryLand) {
+    // 🔴 2026-08-06 정정 — 「도시지역 내 기타」는 분리과세가 **아니다**.
+    //
+    // 「지방세법 시행령」 §102①1호는 분리과세 공장용지를 §101①1호 **각 목**의 지역으로 한정한다:
+    //   가. 읍ㆍ면지역  나. 산업단지  다. 공업지역
+    // 그리고 §101①1호 **본문**은 "특별시ㆍ광역시(군 지역 제외)ㆍ특별자치시ㆍ특별자치도 및
+    // 시지역(위 각 목 제외)"의 공장용지를 **별도합산**(바닥면적 × §101② 배율)으로 정한다.
+    //
+    // ⇒ 두 조문은 소재 지역으로 **배타 분기**한다. 시지역의 그 밖 공장용지가 분리과세로
+    //   들어올 여지는 없다. 종전에는 경고만 띄우고 0.2% 분리과세를 그대로 줬다.
     if (input.factoryLocation === "urban") {
       warnings.push(
-        "도시지역 내 공장용지는 기준면적 초과 시 별도합산과세 대상으로 전환될 수 있습니다. " +
-        "기준면적 이내 여부를 확인하세요.",
+        "도시지역 내 그 밖의 지역(산업단지·공업지역 아님)에 있는 공장용지는 분리과세 대상이 " +
+        "아닙니다 — 「지방세법 시행령」 §101①1호에 따라 별도합산과세대상입니다. " +
+        "「토지 과세 유형」을 별도합산으로 바꾸어 공장용 건축물 바닥면적과 용도지역을 입력하세요.",
+      );
+      return null; // 폴스루 → 분리과세 비해당
+    }
+
+    // §102①1호 **단서** — 허가·사용승인 미이행 공장용 건축물의 부속토지는 제외한다.
+    if (input.factoryIsUnpermitted) {
+      warnings.push(
+        "허가 또는 사용승인을 받지 않은 공장용 건축물의 부속토지는 분리과세 대상에서 " +
+        "제외됩니다(「지방세법 시행령」 §102①1호 단서). 종합합산과세대상으로 판정하세요.",
+      );
+      return null;
+    }
+
+    const areaCheck = judgeFactoryAreaLimit(input);
+    if (areaCheck.recognizedArea <= 0) {
+      warnings.push(
+        `공장 부속토지 ${areaCheck.totalArea}㎡가 공장입지기준면적 ` +
+        `${areaCheck.standardArea.toFixed(2)}㎡를 전부 초과합니다 — 분리과세 대상이 없습니다. ` +
+        "종합합산과세대상으로 판정하세요.",
+      );
+      return null;
+    }
+    if (areaCheck.excessArea > 0) {
+      warnings.push(
+        `공장 부속토지 ${areaCheck.totalArea}㎡ 중 ${areaCheck.recognizedArea.toFixed(2)}㎡는 ` +
+        `분리과세(공장입지기준면적 ${areaCheck.standardArea.toFixed(2)}㎡ 이내), ` +
+        `${areaCheck.excessArea.toFixed(2)}㎡(시가표준액 ` +
+        `${areaCheck.excessAssessedValue.toLocaleString()}원)는 기준면적 초과로 ` +
+        "종합합산과세대상으로 이관됩니다. 인별 합산 계산 시 별도 처리가 필요합니다.",
       );
     }
+
     return {
       isApplicable: true,
       category: "standard",
       appliedRate: rateSet.landSeparatedGeneral,
       reasoning: {
         legalBasis: PROPERTY.SEPARATE.STANDARD_FACTORY,
-        matchedCondition: "산업단지·지정 공업지역 내 공장용지 (기준면적 이내)",
+        matchedCondition: "읍ㆍ면지역ㆍ산업단지ㆍ공업지역 내 공장용지 (공장입지기준면적 이내)",
         excludedFrom: ["comprehensive", "special_aggregated"],
+      },
+      factoryAreaCheck: {
+        standardArea: areaCheck.standardArea,
+        recognizedArea: areaCheck.recognizedArea,
+        excessArea: areaCheck.excessArea,
+        recognizedRatio: areaCheck.recognizedRatio,
+        recognizedAssessedValue: areaCheck.recognizedAssessedValue,
+        excessAssessedValue: areaCheck.excessAssessedValue,
       },
     };
   }
@@ -474,5 +627,8 @@ export function calculateSeparateTax(
   rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): SeparateTaxationResult {
   const classification = classifySeparateTaxation(input, rateSet);
-  return calculateSeparateTaxationTax(classification, input.assessedValue);
+  // 공장용지 기준면적 초과분은 분리과세에서 빠지므로 **인정분 시가표준액만** 과세표준이 된다
+  // (「지방세법 시행령」 §102①1호 "…기준면적 범위의 토지"). 초과분은 종합합산 이관 — 경고로 안내.
+  const base = classification.factoryAreaCheck?.recognizedAssessedValue ?? input.assessedValue;
+  return calculateSeparateTaxationTax(classification, base);
 }

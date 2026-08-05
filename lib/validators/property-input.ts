@@ -158,6 +158,15 @@ export const propertyTaxInputSchema = z
         isProtectedForest: z.boolean().optional(),
         isFactoryLand: z.boolean().optional(),
         factoryLocation: z.enum(["industrial_zone", "urban", "other"]).optional(),
+        // 「지방세법 시행령」 §102①1호 면적 한도 판정 입력 (시행규칙 §50 [별표6]).
+        // ⚠️ Zod는 스키마에 없는 키를 조용히 strip한다 — 여기 빠지면 엔진에 도달하지 않고
+        //    한도 판정이 사라져(전량 분리과세) 눈에 띄지 않는 유리한 오류가 된다.
+        factoryTotalLandArea: z.number().nonnegative().optional(),
+        factoryFloorArea: z.number().nonnegative().optional(),
+        factoryAreaRatePercent: z.number().nonnegative().optional(),
+        factoryIsRestrictedZone: z.boolean().optional(),
+        factoryAdditionalRecognizedArea: z.number().nonnegative().optional(),
+        factoryIsUnpermitted: z.boolean().optional(),
         isSaltField: z.boolean().optional(),
         isTerminalOrParking: z.boolean().optional(),
         isGolfCourse: z.boolean().optional(),

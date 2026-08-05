@@ -168,6 +168,13 @@ export interface FormState {
   saDemolishedDate: string;
   stSeparatedType: string;
   stFactoryLocation: string;
+  // 공장용지 면적 한도 (「지방세법 시행령」 §102①1호 · 시행규칙 §50 [별표6])
+  stFactoryTotalLandArea: string;
+  stFactoryFloorArea: string;
+  stFactoryAreaRatePercent: string;
+  stFactoryIsRestrictedZone: boolean;
+  stFactoryAdditionalRecognizedArea: string;
+  stFactoryIsUnpermitted: boolean;
 
   // ── 납세의무자(§107) 입력 — 선택 섹션 ──
   /**
@@ -237,6 +244,12 @@ export const INITIAL_FORM: FormState = {
   saDemolishedDate: "",
   stSeparatedType: "",
   stFactoryLocation: "",
+  stFactoryTotalLandArea: "",
+  stFactoryFloorArea: "",
+  stFactoryAreaRatePercent: "",
+  stFactoryIsRestrictedZone: false,
+  stFactoryAdditionalRecognizedArea: "",
+  stFactoryIsUnpermitted: false,
   // 납세의무자(§107) 초기값 — 섹션 접힘(미입력)
   ownershipType: undefined,
   registeredOwner: "",
@@ -361,6 +374,27 @@ export function validateStep(step: number, form: FormState): string | null {
       if (!form.stSeparatedType) return "분리과세 토지 유형을 선택하세요.";
       if (form.stSeparatedType === "factory" && !form.stFactoryLocation)
         return "공장 입지 유형을 선택하세요.";
+      // 「지방세법 시행령」 §102①1호는 §101①1호 각 목(읍·면·산업단지·공업지역)으로 한정한다.
+      // 그 밖의 시지역 공장용지는 §101①1호 본문 → 별도합산이다(2026-08-06 정정).
+      // 엔진도 이 경우 분리과세 비해당으로 throw한다 — 여기서 먼저 막아 같은 판정을 유지한다.
+      if (form.stSeparatedType === "factory" && form.stFactoryLocation === "urban")
+        return "그 밖의 시지역 공장용지는 분리과세가 아닙니다 — 「토지 과세 유형」을 별도합산으로 선택하세요.";
+      // §102①1호은 "공장입지기준면적 **범위의** 토지"로 한정한다 — 범위를 모르면 대상 판정이
+      // 불가능하다. 엔진도 미입력 시 던지므로 여기서 먼저 막아 같은 판정을 유지한다(⑧).
+      // 단서(허가·사용승인 미이행)에 해당하면 면적과 무관하게 제외이므로 면적을 묻지 않는다.
+      if (
+        form.stSeparatedType === "factory" &&
+        form.stFactoryLocation &&
+        form.stFactoryLocation !== "urban" &&
+        !form.stFactoryIsUnpermitted
+      ) {
+        const total = parseDecimal(form.stFactoryTotalLandArea);
+        if (!total || total <= 0) return "공장 전체 부속토지 면적(㎡)을 입력하세요.";
+        const floor = parseDecimal(form.stFactoryFloorArea);
+        if (!floor || floor <= 0) return "공장건축물 연면적(㎡)을 입력하세요. 바닥면적이 아닙니다.";
+        const rate = parseDecimal(form.stFactoryAreaRatePercent);
+        if (!rate || rate <= 0) return "업종별 기준공장면적률(%)을 입력하세요.";
+      }
     }
   }
   // Step3: recompute 모드 직전 과세표준 — 입력 시 형식만 검증, 미입력은 통과(상한 미적용 경고는 엔진)
@@ -469,10 +503,19 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
         case "farmland":      st.isFarmland = true; break;
         case "livestock":     st.isLivestockFarm = true; break;
         case "forest":        st.isProtectedForest = true; break;
-        case "factory":
+        case "factory": {
           st.isFactoryLand = true;
           if (form.stFactoryLocation) st.factoryLocation = form.stFactoryLocation;
+          // §102①1호 면적 한도 — 미입력은 엔진이 던진다(추정 금지). validate가 먼저 막는다.
+          st.factoryTotalLandArea = parseDecimal(form.stFactoryTotalLandArea) ?? undefined;
+          st.factoryFloorArea = parseDecimal(form.stFactoryFloorArea) ?? undefined;
+          st.factoryAreaRatePercent = parseDecimal(form.stFactoryAreaRatePercent) ?? undefined;
+          st.factoryIsRestrictedZone = form.stFactoryIsRestrictedZone;
+          st.factoryAdditionalRecognizedArea =
+            parseDecimal(form.stFactoryAdditionalRecognizedArea) ?? undefined;
+          st.factoryIsUnpermitted = form.stFactoryIsUnpermitted;
           break;
+        }
         case "saltfield":     st.isSaltField = true; break;
         case "terminal":      st.isTerminalOrParking = true; break;
         case "golf_member":   st.isGolfCourse = true; st.golfCourseType = "member"; break;

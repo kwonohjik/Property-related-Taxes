@@ -36,93 +36,23 @@
 
 import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
-import type { FactoryLandUsage, FactoryIndustrySegment } from "./types";
+import type { FactoryLandUsage } from "./types";
 
 // 「공장입지 기준고시」 §4 지식산업센터 40% — 정본은 `data/factory-area-rates.ts`(별표1 데이터와 동거).
 // 여기서 재선언하지 않고 재수출만 한다(이중 진실 방지 — 기존 import 경로 하위 호환).
 export { KNOWLEDGE_INDUSTRY_CENTER_RATE_PERCENT } from "../data/factory-area-rates";
 
-/** 별표6 3호가1) — 「산집법」 §20① 본문 공장 신설 제한지역: 산출면적의 10% 이내. */
-const RESTRICTED_ZONE_ALLOWANCE_RATE = 0.1;
-/** 별표6 3호가1) 단서 — 그 인정면적이 3,000㎡를 초과하지 않는 부분에 한정. */
-const RESTRICTED_ZONE_ALLOWANCE_CAP = 3000;
-/** 별표6 3호가2) — 제한지역 외: 산출면적의 20% 이내. */
-const GENERAL_ALLOWANCE_RATE = 0.2;
+// 별표6 산식 자체는 **세목 중립**이다 — 재산세(§102①1호)와 양도세(§104의3①4호나목)가 같은
+// 분모를 쓴다. 정본은 `../factory-standard-area.ts`이고 여기서는 재수출만 한다.
+// 사본을 두면 「공장입지 기준고시」 재고시 때 한 벌만 갱신되어 두 세목이 갈린다.
+export {
+  computeFactoryStandardArea,
+  type FactoryIndustrySegmentDetail,
+  type FactoryStandardAreaResult,
+} from "../factory-standard-area";
 
-/** 업종별 산출 내역 (별표6 1호·2호다 — 표시·검증용). */
-export interface FactoryIndustrySegmentDetail extends FactoryIndustrySegment {
-  /** 해당 업종분 기준면적 = 연면적 × 100 ÷ 면적률 (㎡) */
-  standardArea: number;
-}
-
-export interface FactoryStandardAreaResult {
-  /** 별표6 1호·2호 산출면적 (다업종이면 업종별 합, ㎡) */
-  baseArea: number;
-  /** 업종별 산출 내역 */
-  segments: FactoryIndustrySegmentDetail[];
-  /** 별표6 3호가 추가 인정 한도 (㎡) */
-  additionalAllowanceCap: number;
-  /** 별표6 3호가 실제 인정분 = min(초과면적, 한도) (㎡) */
-  additionalAllowanceApplied: number;
-  /** 별표6 3호나·다·라·바 직접입력 인정면적 (㎡). **마목은 대상이 아니다** — 아래 주석 참조. */
-  additionalRecognizedArea: number;
-  /** 최종 공장입지기준면적 (㎡) */
-  standardArea: number;
-}
-
-/**
- * 별표6 공장입지기준면적을 산출한다.
- *
- * 3호가목(10%/20% 추가 인정)은 "산출된 면적을 **초과하는 토지 중**" 일정 범위를 기준면적에
- * 포함시키는 규정이므로 실제 부속토지 면적(`landArea`)에 의존한다 — 초과분이 없으면 인정분도 0이다.
- *
- * 반올림하지 않는다. 별표6에 반올림 근거가 없고(근거 없는 불리 적용 금지), 자매 헬퍼
- * `judgeAppurtenantLandExcess`(바닥면적 × 배율)도 원시값을 유지한다. 표시 계층에서 2자리로 다룬다.
- */
-export function computeFactoryStandardArea(
-  segments: FactoryIndustrySegment[],
-  landArea: number,
-  options?: { isRestrictedZone?: boolean; additionalRecognizedArea?: number },
-): FactoryStandardAreaResult {
-  // 별표6 1호 (다업종이면 2호다에 따라 업종별 산출 후 합산)
-  const segmentDetails: FactoryIndustrySegmentDetail[] = segments.map((s) => ({
-    ...s,
-    standardArea: s.ratePercent > 0 ? (s.floorArea * 100) / s.ratePercent : 0,
-  }));
-  const baseArea = segmentDetails.reduce((sum, s) => sum + s.standardArea, 0);
-
-  // 별표6 3호가 — 제한지역 10%(3,000㎡ 한도) / 그 밖 20%
-  const additionalAllowanceCap = options?.isRestrictedZone
-    ? Math.min(baseArea * RESTRICTED_ZONE_ALLOWANCE_RATE, RESTRICTED_ZONE_ALLOWANCE_CAP)
-    : baseArea * GENERAL_ALLOWANCE_RATE;
-  const excessOverBase = Math.max(0, landArea - baseArea);
-  const additionalAllowanceApplied = Math.min(excessOverBase, additionalAllowanceCap);
-
-  // 별표6 3호나·다·라·바 — 녹지·활주로·철로·6m 이상 도로·접도구역 / 저수지·침전지 /
-  // 30도 사면용지 / 종업원 체육시설. 근거 판단은 사용자가 하고 면적 합계만 받는다.
-  //
-  // 🔴 **마목은 여기 들어오지 않는다.** 문언 구조가 나머지 목과 다르다(2026-08-06 실측):
-  //   나·다·라·바 — "…는 공장입지기준면적에 **포함되는 것으로 한다**"  → 한도(분자)를 늘린다
-  //   마          — "…합한 면적을 해당 공장의 **부속토지로 보아** 산정한다" → 부속토지(대상)를 넓힌다
-  // 마목은 오염피해 인접토지를 공장 부속토지 **범위**에 편입시키는 규정이지 기준면적을 늘리는
-  // 규정이 아니다. 여기 더하면 한도가 부당하게 커져 초과분이 과소해진다(유리한 방향 오류).
-  // ⇒ 마목 해당분은 `totalAppurtenantLandArea`(공장 전체 부속토지)에 포함시켜야 한다.
-  //
-  // 덧붙여 **양도세 경로에서 마목은 독자적 실익이 거의 없다**. 같은 토지를 「소득세법 시행령」
-  // §168의14③5호(→ 시행규칙 §83의5④1호 "…토지소유자의 요구에 따라 취득한 공장용 부속토지의
-  // 인접토지")가 **무조건 사업용**으로 의제하고, `engine.ts` Step 2가 그 시점에 early-return
-  // 하므로 공장 기준면적 판정에 도달하지도 않는다 ⇒ 두 조문의 이중적용은 구조적으로 불가능하다.
-  const additionalRecognizedArea = options?.additionalRecognizedArea ?? 0;
-
-  return {
-    baseArea,
-    segments: segmentDetails,
-    additionalAllowanceCap,
-    additionalAllowanceApplied,
-    additionalRecognizedArea,
-    standardArea: baseArea + additionalAllowanceApplied + additionalRecognizedArea,
-  };
-}
+import { computeFactoryStandardArea } from "../factory-standard-area";
+import type { FactoryStandardAreaResult } from "../factory-standard-area";
 
 export interface FactoryLandExcessResult {
   /** 적용 근거 경로 */
