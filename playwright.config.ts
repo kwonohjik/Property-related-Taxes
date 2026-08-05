@@ -29,6 +29,18 @@ const BASE_URL = `http://localhost:${PORT}`;
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.spec.ts",
+  /**
+   * 🔴 **법제처 Open API 의존 spec은 샤딩과 공존할 수 없다** (2026-08-05 실측).
+   *
+   * `law-*.spec.ts` 16파일 29건은 법제처 Open API를 실제로 호출한다. CI를 4샤드로
+   * 나누자 이 중 5건이 **30초~1.5분 타임아웃**으로 깨졌다 — 같은 커밋의 샤딩 전 실행
+   * (run 30962003893)에서는 **전부 5~9초에 통과**했다. 샤드 4개가 같은 OC 키로 동시에
+   * 두드리면서 응답이 느려지거나 막힌 것이다.
+   *
+   * ⇒ CI는 이 spec들을 **샤딩 job에서 빼고(`E2E_SKIP_LAW=1`) 전용 job에서 단독 실행**한다.
+   *   로컬에서는 변수가 없으므로 종전대로 전부 돈다.
+   */
+  testIgnore: process.env.E2E_SKIP_LAW ? "**/*law-*.spec.ts" : undefined,
   fullyParallel: true,
   forbidOnly: IS_CI,
   /**
