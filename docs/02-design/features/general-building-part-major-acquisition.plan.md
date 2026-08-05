@@ -693,3 +693,62 @@ anchor: `__tests__/calc/gb-inheritance-gift-part-axis.anchor.test.ts`(O3-1~O3-4,
 
 tsc 0 · lint 0 errors(warning 284 = master 기준선과 **동일**, 신규 0) · vitest **13,788 pass**.
 분리는 순수 이동이라 세액 변경이 없어야 하고, 실제로 기존 anchor 전건이 그대로 통과한다.
+
+---
+
+## §13 `general-building-valuation.ts` 923줄 → 타입 분리 (2026-08-06)
+
+### 13.1 로직을 쪼개지 않은 이유
+
+923줄의 구성을 먼저 실측했다.
+
+| 구간 | 줄 | 내용 |
+|---|---|---|
+| 52~525 | **≈474** | **순수 타입 선언** — `GeneralBuildingInput` 하나가 255줄 |
+| 526~923 | ≈398 | 로직 — 안분·개산공제·카드 조립 3함수 + 이득 산출 2함수 |
+
+로직은 「§166⑥ 안분 → §176의2② 환산 → §163⑥ 개산공제 → 카드 조립」이라는 **하나의 흐름**이다.
+중간에서 자르면 호출 순서를 따라가려고 두 파일을 오가야 한다 — 파일 크기는 줄지만 읽기는 나빠진다
+(루트 정책 「억지 조각화 금지·과분할 방지」).
+
+⇒ 타입만 뗀다. 루트 File Size Policy의 **타입 전용 파일 예외**와
+`lib/tax-engine/CLAUDE.md`의 「타입 파일 분리 기준」이 정확히 이 경우를 규정한다 —
+「공개 타입이 3개 이상이고 엔진 외부(API·UI·테스트)에서 import되면 `types/`로 분리.
+Orchestrator에서는 `export type { X } from "./types/..."`로 재수출해 하위 호환 유지.」
+
+### 13.2 결과
+
+| 파일 | 줄 |
+|---|---|
+| `lib/tax-engine/general-building-valuation.ts` | 923 → **471** |
+| `lib/tax-engine/types/general-building.types.ts` | **493** (신규) |
+
+공개 타입 6개(`GeneralBuildingInput`·`GeneralBuildingAllocation`·`GeneralBuildingAcquisition`·
+`GeneralBuildingEstimatedDeduction`·`AssetCardForAggregate`·`GeneralBuildingOutput`)를
+종전 경로에서 **재수출**한다. 실측 소비처: 18 · 1 · 5 · 1 · 5 · 6 파일.
+
+### 13.3 anchor (6건)
+
+`__tests__/tax-engine/general-building-valuation-types-split.anchor.test.ts`
+
+- **T-1** 엔진 파일 ≤700줄
+- **T-2** 6개 타입을 종전 경로에서 import해 **실제로 사용**한다 — 타입은 런타임에 지워지므로
+  `npx tsc --noEmit` 통과가 곧 재수출 계약 검사다. 소스 텍스트로 재수출 구문도 함께 본다
+- **T-3** 타입 파일에 **로직이 없다** — 함수·`const`/`let` 선언 금지, import는 `import type`만.
+  타입 파일이 다시 자라는 것을 막는 가드다(분리 가치가 「재성장 위험 낮음」에 근거하므로,
+  그 전제를 테스트로 고정한다)
+
+### 13.4 검증
+
+tsc **0** · lint **0 errors**(warning 284 = master 기준선과 **동일**, 신규 0) · vitest **13,794 pass**.
+
+타입 이동은 런타임 코드를 바꾸지 않으므로 세액 변경이 없어야 하고, 기존 anchor 전건이 그대로
+통과한다. 이동으로 미사용이 된 import 3건(`CarryoverTaxationInput`·`ExpropriationValuationDetail`·
+`PartAcqMode`)과 내부 미사용 타입 1건만 정리했다 — 그 밖의 인접 코드는 건드리지 않았다.
+
+### 13.5 이로써 일반건물 경로의 800줄 초과는 전부 해소됐다
+
+| 파일 | 종전 | 현재 |
+|---|---|---|
+| `app/api/calc/transfer/general-building-route-helper.ts` | 833 | **326** (+ actual 359 · cards 186 — §12) |
+| `lib/tax-engine/general-building-valuation.ts` | 923 | **471** (+ types 493) |
