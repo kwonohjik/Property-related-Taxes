@@ -79,8 +79,16 @@ describe("GB 증여 §163⑨ validation 가드", () => {
         useEstimatedAcquisition: true,
       }),
     );
-    expect(msg).toContain("상속 취득");
-    expect(msg).not.toContain("§163⑨");
+    /**
+     * 🔄 계약 갱신(2026-08-06 O-3) — **의도는 그대로, 표현만 정정**.
+     *
+     * 이 테스트의 계약은 「상속 케이스가 **증여** 메시지로 새지 않는다」다. 종전에는 그 대리
+     * 지표로 `not.toContain("§163⑨")`를 썼는데, §163⑨은 **상속과 증여를 함께** 규정하는
+     * 조항이라 상속 메시지가 그것을 인용하는 것이 오히려 정확하다. 두 경로를 가르는 직접
+     * 지표(상속 O · 증여 X)로 바꾼다(메모리 `feedback_anchor_correction_legal_priority`).
+     */
+    expect(msg).toContain("상속");
+    expect(msg).not.toContain("증여");
   });
 });
 
