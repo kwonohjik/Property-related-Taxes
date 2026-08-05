@@ -108,7 +108,7 @@ describe("isSeparatedTaxation — 분리과세 판정", () => {
         ...VACANT_LAND,
         id: "L_factory2",
         landCategory: "공장용지",
-        useZone: "residential",
+        useZone: "general_residential",
         isFactory: true,
         isIndustrialComplexFactory: true,
       }),

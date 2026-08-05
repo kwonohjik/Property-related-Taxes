@@ -13,14 +13,15 @@
  *   TC-09: 누진공제 정확도 — 3구간 경계
  *   TC-10: 세부담상한 150% 적용
  *
- * [P4-09] 용도지역 기준면적 테스트 7건
- *   TC-11: 상업지역 3배
- *   TC-12: 공업지역 4배
- *   TC-13: 주거지역 5배
- *   TC-14: 녹지지역 7배
- *   TC-15: 관리지역 7배
- *   TC-16: 농림지역 7배
- *   TC-17: 자연환경보전지역 7배
+ * [P4-09] 용도지역 기준면적 테스트 10건 (「지방세법 시행령」 §101② 표 전건)
+ *   TC-11: 전용주거지역 5배
+ *   TC-12: 준주거지역 3배
+ *   TC-13: 상업지역 3배
+ *   TC-14: 일반주거지역 4배
+ *   TC-15: 공업지역 4배
+ *   TC-16: 녹지지역 7배
+ *   TC-17: 미계획지역 4배
+ *   TC-18: 관리지역 7배 / TC-19: 농림지역 7배 / TC-20: 자연환경보전지역 7배 (도시지역 외)
  *
  * [P4-10] 철거 1년(유예기간) 경계 테스트 (지방세법 시행령 §103의2 1호)
  *   TC-18: 철거 후 5개월 — 별도합산 유지
@@ -219,17 +220,22 @@ describe("P4-08: 별도합산 누진세율 경계값", () => {
 // [P4-09] 용도지역 기준면적 테스트 (TC-11~17)
 // ============================================================
 
-describe("P4-09: 용도지역별 기준면적 배율 7종", () => {
+describe("P4-09: 용도지역별 기준면적 배율 — 「지방세법 시행령」 §101② 표 전건", () => {
   const CASES: Array<{
     district: SeparateAggregateLandItem["zoningDistrict"];
     multiplier: number;
     label: string;
   }> = [
-    { district: "commercial",      multiplier: 3, label: "상업지역 3배" },
-    { district: "industrial",      multiplier: 4, label: "공업지역 4배" },
-    { district: "residential",     multiplier: 5, label: "주거지역 5배" },
-    { district: "green",           multiplier: 7, label: "녹지지역 7배" },
-    { district: "management",      multiplier: 7, label: "관리지역(도시지역 외) 7배" }, // §101② 도시지역 외의 용도지역 = 7배 (구 5배 오류 정정)
+    // 도시지역 1~5 (§101② 표)
+    { district: "exclusive_residential", multiplier: 5, label: "전용주거지역 5배" },
+    { district: "semi_residential",      multiplier: 3, label: "준주거지역 3배" },
+    { district: "commercial",            multiplier: 3, label: "상업지역 3배" },
+    { district: "general_residential",   multiplier: 4, label: "일반주거지역 4배" },
+    { district: "industrial",            multiplier: 4, label: "공업지역 4배" },
+    { district: "green",                 multiplier: 7, label: "녹지지역 7배" },
+    { district: "unplanned",             multiplier: 4, label: "미계획지역 4배" },
+    // 도시지역 외의 용도지역 = 7배
+    { district: "management",      multiplier: 7, label: "관리지역(도시지역 외) 7배" },
     { district: "agricultural",    multiplier: 7, label: "농림지역 7배" },
     { district: "nature_preserve", multiplier: 7, label: "자연환경보전지역 7배" },
   ];
@@ -505,7 +511,7 @@ describe("P4-03: Zod 스키마 검증", () => {
       jurisdictionCode: "11680",
       landArea: 100,
       officialLandPrice: 800_000,
-      zoningDistrict: "residential",
+      zoningDistrict: "general_residential",
       demolished: true,
       demolishedDate: "2025-01-15",
     });
@@ -518,7 +524,7 @@ describe("P4-03: Zod 스키마 검증", () => {
       jurisdictionCode: "11680",
       landArea: 100,
       officialLandPrice: 800_000,
-      zoningDistrict: "residential",
+      zoningDistrict: "general_residential",
       demolished: true,
       // demolishedDate 누락
     });
@@ -541,7 +547,7 @@ describe("P4-03: Zod 스키마 검증", () => {
       jurisdictionCode: "11680",
       landArea: 100,
       officialLandPrice: 800_000,
-      zoningDistrict: "residential",
+      zoningDistrict: "general_residential",
       demolished: false,
       demolishedDate: "2025-01-15",
     });

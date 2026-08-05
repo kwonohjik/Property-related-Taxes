@@ -87,14 +87,24 @@ export const FIRE_HAZARD_OPTIONS: { value: string; label: string; description: s
   },
 ];
 
+/**
+ * 용도지역 선택지 — 「지방세법 시행령」 제101조 제2항 [표] 구분.
+ *
+ * 배율이 갈리므로 주거지역은 전용·일반·준주거를 반드시 나눠 받는다
+ * (종전에는 "주거지역" 하나만 있어 일반주거·준주거도 전용주거의 5배로 계산됐다).
+ * 값은 `lib/tax-engine/local-tax-zone-multiplier.ts` 정본 키와 일치해야 한다.
+ */
 export const ZONING_DISTRICT_LABELS: [string, string][] = [
-  ["residential", "주거지역"],
-  ["commercial", "상업지역"],
-  ["industrial", "공업지역"],
-  ["green", "녹지지역"],
-  ["management", "관리지역"],
-  ["agricultural", "농림지역"],
-  ["nature_preserve", "자연환경보전지역"],
+  ["exclusive_residential", "전용주거지역 (5배)"],
+  ["general_residential", "일반주거지역 (4배)"],
+  ["semi_residential", "준주거지역 (3배)"],
+  ["commercial", "상업지역 (3배)"],
+  ["industrial", "공업지역 (4배)"],
+  ["green", "녹지지역 (7배)"],
+  ["unplanned", "미계획지역 (4배)"],
+  ["management", "관리지역 (7배)"],
+  ["agricultural", "농림지역 (7배)"],
+  ["nature_preserve", "자연환경보전지역 (7배)"],
 ];
 
 export const SEPARATED_TYPE_OPTIONS: { value: string; label: string; rate: string; hint?: string }[] = [

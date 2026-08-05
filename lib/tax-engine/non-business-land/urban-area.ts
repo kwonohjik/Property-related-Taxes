@@ -5,6 +5,10 @@
  */
 
 import type { ZoneType } from "./types";
+import {
+  LOCAL_TAX_ZONE_AREA_MULTIPLIER as LOCAL_TAX_ZONE_AREA_MULTIPLIER_CANON,
+  getZoneAreaMultiplier,
+} from "../local-tax-zone-multiplier";
 
 /**
  * 주거·상업·공업지역 여부 (주·상·공).
@@ -118,7 +122,11 @@ export function getHousingMultiplier(
 }
 
 /**
- * 「지방세법 시행령」 제101조 제2항 용도지역별 적용배율 — **정본(단일 소스)**.
+ * 「지방세법 시행령」 제101조 제2항 용도지역별 적용배율 — 정본 재수출.
+ *
+ * **정본은 `lib/tax-engine/local-tax-zone-multiplier.ts`**다(재산세 별도합산과 공유).
+ * 여기서 재선언하지 말 것 — 이 파일은 「소득세법 시행령」 계열 `ZoneType`으로
+ * 좁혀 쓰기 위한 얇은 재수출만 담당한다.
  *
  * 「소득세법」 제104조의3 제1항 제4호 나목이 「지방세법」 제106조 제1항 제2호(별도합산)를
  * 비사업용에서 제외하므로, **건축물(비주택) 부속토지**의 기준면적은
@@ -126,42 +134,9 @@ export function getHousingMultiplier(
  *
  * ⚠️ **수도권 축이 없다** — 용도지역만으로 결정된다. 「소득세법 시행령」 제168조의12
  * (주택부수토지 배율)와 결정적으로 다른 점이며, 두 표는 22개 조합 중 19개가 어긋난다.
- *
- * 법제처 Open API는 조문 안에 삽입된 표를 반환하지 않으므로 이 상수가 유일한 정본이다.
- * 개정 시 `__tests__/tax-engine/non-business-land/building-site-multiplier.anchor.test.ts`
- * (A-BS-8 드리프트 가드)가 먼저 깨진다.
- *
- * `residential`(세분 전 주거지역)은 표에 대응 항목이 없어 **의도적으로 미등재** —
- * 추정 배율 적용 금지(키 부재 = 배율 결정 불가).
  */
-export const LOCAL_TAX_ZONE_AREA_MULTIPLIER: Partial<Record<ZoneType, number>> = {
-  exclusive_residential: 5, // 전용주거지역
-  semi_residential: 3, // 준주거지역
-  commercial: 3, // 상업지역
-  general_residential: 4, // 일반주거지역
-  industrial: 4, // 공업지역
-  green: 7, // 녹지지역
-  unplanned: 4, // 미계획지역
-  management: 7, // 도시지역 외 (관리지역)
-  agriculture_forest: 7, // 도시지역 외 (농림지역)
-  natural_env: 7, // 도시지역 외 (자연환경보전지역)
-  undesignated: 7, // 도시지역 외 (용도 미지정)
-};
-
-/** 「지방세법 시행령」 제101조 제2항 배율 산정 시 표시할 용도지역 한국어 명칭. */
-const ZONE_LABEL: Partial<Record<ZoneType, string>> = {
-  exclusive_residential: "전용주거지역",
-  semi_residential: "준주거지역",
-  commercial: "상업지역",
-  general_residential: "일반주거지역",
-  industrial: "공업지역",
-  green: "녹지지역",
-  unplanned: "미계획지역",
-  management: "관리지역",
-  agriculture_forest: "농림지역",
-  natural_env: "자연환경보전지역",
-  undesignated: "용도 미지정",
-};
+export const LOCAL_TAX_ZONE_AREA_MULTIPLIER: Partial<Record<ZoneType, number>> =
+  LOCAL_TAX_ZONE_AREA_MULTIPLIER_CANON;
 
 /**
  * 건축물(비주택) 부속토지 기준면적 배율 —
@@ -179,10 +154,7 @@ const ZONE_LABEL: Partial<Record<ZoneType, string>> = {
 export function getBuildingSiteMultiplier(
   zoneType: ZoneType,
 ): { multiplier: number; detail: string } | undefined {
-  const multiplier = LOCAL_TAX_ZONE_AREA_MULTIPLIER[zoneType];
-  if (multiplier === undefined) return undefined;
-  return {
-    multiplier,
-    detail: `${ZONE_LABEL[zoneType] ?? zoneType} ${multiplier}배 (「지방세법 시행령」 제101조 제2항)`,
-  };
+  const resolved = getZoneAreaMultiplier(zoneType);
+  if (!resolved) return undefined;
+  return { multiplier: resolved.multiplier, detail: resolved.detail };
 }

@@ -43,17 +43,23 @@ export type LandClassification =
   | "exempt";
 
 /**
- * 용도지역 7종 (국토의 계획 및 이용에 관한 법률 §36)
- * 별도합산 기준면적 배율 산정에 사용
+ * 용도지역 — 「지방세법 시행령」 제101조 제2항 [표] 구분.
+ * 별도합산 기준면적 배율 산정에 사용하며, 배율 정본은 `local-tax-zone-multiplier.ts`.
+ *
+ * 주거지역은 전용(5배)·일반(4배)·준주거(3배)가 모두 달라 통합 `residential` 키로는
+ * 배율을 결정할 수 없으므로 **세분 값만 허용**한다.
  */
 export type ZoningDistrictType =
-  | "residential"      // 주거지역 (배율 5배)
-  | "commercial"       // 상업지역 (배율 3배)
-  | "industrial"       // 공업지역 (배율 4배)
-  | "green"            // 녹지지역 (배율 5배)
-  | "management"       // 관리지역 (배율 5배)
-  | "agricultural"     // 농림지역 (배율 7배)
-  | "nature_preserve"; // 자연환경보전지역 (배율 7배)
+  | "exclusive_residential" // 전용주거지역 (배율 5배)
+  | "semi_residential"      // 준주거지역 (배율 3배)
+  | "commercial"            // 상업지역 (배율 3배)
+  | "general_residential"   // 일반주거지역 (배율 4배)
+  | "industrial"            // 공업지역 (배율 4배)
+  | "green"                 // 녹지지역 (배율 7배)
+  | "unplanned"             // 미계획지역 (배율 4배)
+  | "management"            // 관리지역 — 도시지역 외 (배율 7배)
+  | "agricultural"          // 농림지역 — 도시지역 외 (배율 7배)
+  | "nature_preserve";      // 자연환경보전지역 — 도시지역 외 (배율 7배)
 
 /**
  * 분리과세 토지 세부 유형 (지방세법 §106②, 시행령 §102)
