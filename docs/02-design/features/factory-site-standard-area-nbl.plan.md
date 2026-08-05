@@ -447,13 +447,38 @@ UI 계층:    업종 자동완성 → 면적률 채움 (선택)   또는   사�
 **14지점 self-grep**: ①②③⑧⑫⑭ ✅ · ④⑬은 prefix-pick이라 명시 나열 없음(정상) ·
 ⑥ 해당 없음(면적 입력이라 사이드바 합계 대상 아님) · ⑤⑦은 Phase D 대상.
 
-### Phase D — UI (⑤⑥⑦)
+### Phase D — UI (⑤⑦) ✅ **완료 (2026-08-05)**
 
-- `components/calc/transfer/nbl/OtherLandDetailSection.tsx`에 공장 블록 추가(ToggleCard)
-- 지역 라디오 → 분기별 필드(면적률·연면적 / 바닥면적·용도지역)
-- 기준면적·초과면적·초과비율 미리보기
-- 결과 카드 산식 한국어 풀어쓰기
-- **verify**: E2E 3건(한도 이내 / 초과 / 단서) — 접힌 섹션은 반드시 펼쳐서 단언
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| ⑤ | `components/calc/transfer/nbl/FactoryLandSection.tsx` (신설 311줄) | 토글 → 지역 라디오 → **경로별** 필드 + 미리보기 |
+| ⑤ | `components/calc/transfer/nbl/OtherLandDetailSection.tsx` | 마운트 1줄 (685줄 → 800 정책상 분리) |
+| ⑦ | `components/calc/NonBusinessLandResultCard.tsx` | 안분 근거 조문 열거에 공장 경로 추가 |
+| — | `__tests__/components/factory-land-section.anchor.test.tsx` (신설) | **16건** |
+| — | `e2e/transfer-nbl-factory-land.spec.ts` (신설) | **6건** |
+
+**설계 결정**
+
+- **미리보기는 엔진과 같은 순수 함수**(`computeFactoryStandardArea`)를 호출한다 — 화면 숫자와
+  판정 값이 갈릴 수 없다(`feedback_ui_engine_dual_truth_avoidance`). `PREVIEW-1`이 엔진 산출과
+  DOM 텍스트를 직접 대조한다.
+- **경로별 필드 노출** — 별표6은 연면적, §101①1호는 바닥면적으로 **다른 값**을 요구하므로
+  한 화면에 같이 띄우지 않는다(`UI-3`·`UI-4`).
+- **값이 모자라면 미리보기를 띄우지 않는다** — 추정 표시 금지(`PREVIEW-6`·`PREVIEW-7`).
+- 문구 가드(`COPY-1~3`): "양도하는 토지 면적이 아닙니다" · "건축면적이 아닙니다"(조심 2025지0451)
+  · "받지 않은 것이 확인되는 경우에만"(입증부담 — 조심 2025서2489).
+
+> 🔴 **E2E가 처음에 6건 전부 실패했는데 원인은 코드가 아니었다.** `reuseExistingServer: !CI`가
+> 포트 3000에 떠 있던 **다른 워크트리의 dev 서버**를 잡아, 이 브랜치 코드가 아닌 것을 테스트했다.
+> `E2E_PORT=3131`로 격리하니 전건 통과. **워크트리에서 E2E를 돌릴 때는 `E2E_PORT`를 반드시 줄 것**
+> (playwright.config.ts:13 주석이 같은 취지).
+
+> ⚠️ **`data-testid`는 하이픈 속성이라 TS가 통과시킨다.** `ToggleCard`는 props를 spread하지 않아
+> 붙여도 DOM에 나오지 않는데 컴파일 오류가 없다 — 죽은 prop이 남는다. 토글 셀렉터는 프로젝트
+> 관례대로 `getByRole("switch", { name })`를 쓴다.
+
+**verify 결과**: `tsc` 0건 · lint 0 errors · 톤/폰트 pre-push 게이트 통과 ·
+컴포넌트 anchor 16건 · **공장 E2E 6건** · **NBL E2E 전체 13건 GREEN**(회귀 0).
 
 ### Phase E — 상호작용 회귀
 
@@ -540,6 +565,20 @@ UI 계층:    업종 자동완성 → 면적률 채움 (선택)   또는   사�
 ---
 
 ## 10. 검토 이력
+
+### rev.7 (2026-08-05) — Phase D 완료 (UI)
+
+- ⑤ `FactoryLandSection.tsx` 신설(311줄) — `OtherLandDetailSection`이 685줄이라 800 정책상 분리
+- ⑦ 결과 카드의 **안분 근거 조문 열거**에 공장 경로 추가. 스텝·`areaProportioning`은 범용 렌더라
+  자동 표시되지만, 이 열거만 하드코딩이라 빠질 뻔했다(`feedback_engine_result_display_drift`)
+- 컴포넌트 anchor 16건 + E2E 6건 + NBL E2E 전체 13건 GREEN
+- 🔴 **E2E 6건 전부 실패 → 원인은 코드가 아니라 포트였다.** `reuseExistingServer`가 3000에 떠 있던
+  **다른 워크트리 dev 서버**를 잡아 이 브랜치가 아닌 코드를 테스트했다. 실패 스냅샷에 섹션 텍스트가
+  3회 보여 잠깐 헷갈렸는데 **전부 테스트 소스 에코**였다. `E2E_PORT=3131`로 격리하니 전건 통과
+- ⚠️ **`data-testid`가 조용히 죽는 경우**: 하이픈 속성이라 TS가 통과시키는데 `ToggleCard`는
+  props를 spread하지 않아 DOM에 안 나온다. 죽은 prop 3개를 제거하고 `getByRole("switch")` 관례로 전환
+- UI 표준 준수: 인라인 색상 클래스 대신 `<ToneCard>`·`TONE` 토큰 사용(CLAUDE.md) —
+  `check-tone-classes.sh`·`check-font-sizes.sh` 통과
 
 ### rev.6 (2026-08-05) — Phase C 완료 (폼·validate)
 
