@@ -43,6 +43,14 @@ function seedForm() {
           gbTransferBuildingValue: "20629440",
           gbAcqBuildingValue: "2814470",
           gbZoneType: "commercial",
+          /**
+           * ⚠️ 단일 자산 모드의 **양도가액 진실은 자산 필드**다. 폼 전역 `contractTotalPrice`는
+           *    `splitMode !== "none"`에서만 입력란이 있고(`Step1.tsx:162`), 단일 모드에서는
+           *    `updateAssets`가 `assets[0].actualSalePrice`로부터 **파생**한다(`Step1.tsx:118-120`).
+           *    자산 값을 비운 채 폼 값만 시드하면 첫 asset 패치에서 총 양도가액이 지워져
+           *    「총 양도가액을 입력하세요」로 막힌다(T4 작성 중 probe로 실측).
+           */
+          actualSalePrice: "2000000000",
         }],
         transferDate: "2026-02-16",
         filingDate: "2026-04-30",
@@ -118,6 +126,41 @@ test.describe("일반건물 — 토지·건물 취득일 다름", () => {
      *    (e2e/CLAUDE.md §3) — 금액 단언은 vitest anchor가 담당한다.
      */
     await expect(page.getByText(/취득가액을 입력하세요/)).toHaveCount(0);
+    await expect(page.getByText("신고서 양식", { exact: false }).first()).toBeVisible();
+  });
+
+  /**
+   * T4 — O-1 해소로 새로 열린 흐름. 혼합 모드에서 **파트별 자본적지출** 칸이 보이고,
+   * 그 값을 넣어도 계산이 끝까지 간다.
+   *
+   * 종전에는 이 조합에서 파트 칸이 숨고(`bothPartsActual` 게이트) 자산 단위 칸은 V-8이 막아
+   * **자본적지출을 넣을 경로가 아예 없었다**. 금액 단언은 vitest anchor A-16이 담당한다.
+   */
+  test("T4: 혼합 모드에서 파트별 자본적지출을 입력해 계산까지 간다", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seed(page);
+    await expandAssetSection(page, 3);
+
+    // 파트 칸이 열려 있다 — FieldCard 라벨과 CurrencyInput 내부 라벨이 함께 렌더되므로 .first()
+    await expect(page.getByText("토지 자본적지출", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("건물 자본적지출", { exact: true }).first()).toBeVisible();
+
+    /**
+     * ⚠️ `CurrencyInput`의 내부 `<label>`은 input과 연결돼 있지 않다(`htmlFor`/`id` 없음 — probe 실측).
+     *    그래서 `getByRole("textbox", { name })`은 닿지 않는다. FieldCard로 스코프해 잡는다.
+     */
+    const landCapexCard = page
+      .getByText("토지 자본적지출", { exact: true })
+      .first()
+      .locator("xpath=ancestor::*[@data-slot='field-card'][1]");
+    await landCapexCard.locator('input[type="text"]').fill("30,000,000");
+
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    await page.getByText("신고서 양식", { exact: false }).first().waitFor({ timeout: 30_000 });
+
+    // V-8이 파트별 입력을 막지 않는다(자산 단위 칸 안내 문구가 뜨지 않아야 한다).
+    await expect(page.getByText(/토지분·건물분 칸에 각각/)).toHaveCount(0);
     await expect(page.getByText("신고서 양식", { exact: false }).first()).toBeVisible();
   });
 });
