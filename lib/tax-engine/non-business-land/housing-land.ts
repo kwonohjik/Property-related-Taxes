@@ -6,7 +6,9 @@
  *   - 도시지역 內 수도권 녹지 / 수도권 밖: 5배
  *   - 도시지역 外: 10배
  *
- * 건물 부수 토지도 동일 모듈로 처리 (landType === "building_site" 호환).
+ * ⚠️ **건물(비주택) 부수토지는 여기서 처리하지 않는다** — 「지방세법 시행령」 §101①2호가
+ * 소관이고 배율표가 다르다(수도권 축 없음). `building-site-land.ts` 참조.
+ * 종전에는 `landType === "building_site"`를 이 모듈이 받아 주택 배율을 적용했다(A-BS-1, 2026-08-05 정정).
  */
 
 import { differenceInDays } from "date-fns";
@@ -33,12 +35,11 @@ export function judgeHousingLand(
   const ownershipStart = getOwnershipStart(input.acquisitionDate);
   const totalOwnershipDays = Math.max(0, differenceInDays(input.transferDate, ownershipStart));
 
-  const footprint =
-    (input.landType === "building_site" ? input.buildingFootprint : input.housingFootprint) ?? 0;
+  const footprint = input.housingFootprint ?? 0;
   if (footprint <= 0) {
     steps.push({
       id: "housing_footprint",
-      label: "주택/건물 정착면적",
+      label: "주택 정착면적",
       status: "FAIL",
       detail: "정착면적 미입력",
       legalBasis: NBL.HOUSING_MULTIPLIER,
@@ -100,7 +101,7 @@ export function judgeHousingLand(
     });
     return {
       isBusiness: true,
-      reason: "주택/건물 부수 토지 배율 이내 → 사업용",
+      reason: "주택 부수 토지 배율 이내 → 사업용",
       steps,
       appliedLaws,
       areaProportioning: area,

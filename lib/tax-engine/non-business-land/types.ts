@@ -43,6 +43,8 @@ export type LandCategoryGroup =
   | "forest"
   | "pasture"
   | "housing"
+  /** 건물(비주택) 부수토지 — 「지방세법 시행령」 §101①2호. 주택(housing)과 **다른 조문**이다 */
+  | "building_site"
   | "villa"
   | "other_land"
   | "unknown";
