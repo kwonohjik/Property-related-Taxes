@@ -154,6 +154,18 @@ export interface PropertyTaxInput {
     isProtectedForest?: boolean;
     isFactoryLand?: boolean;
     factoryLocation?: "industrial_zone" | "urban" | "other";
+    /** 공장 전체 부속토지 면적 (㎡) — §102①1호 "기준면적 범위의 토지" 판정 대상 */
+    factoryTotalLandArea?: number;
+    /** 공장건축물 **연면적** (㎡) — 바닥면적이 아니다 (별표6 2호가) */
+    factoryFloorArea?: number;
+    /** 업종별 기준공장면적률 (%) — 「공장입지 기준고시」 별표1 */
+    factoryAreaRatePercent?: number;
+    /** 별표6 3호가1) 「산집법」 §20① 제한지역 — 추가 인정한도 10%(3,000㎡) / 그 밖 20% */
+    factoryIsRestrictedZone?: boolean;
+    /** 별표6 3호나·다·라·바 추가 인정면적 (㎡). 마목 제외 — 부속토지 면적 쪽에 넣는다. */
+    factoryAdditionalRecognizedArea?: number;
+    /** §102①1호 단서 — 허가·사용승인 미이행 → 분리과세 전량 제외 */
+    factoryIsUnpermitted?: boolean;
     isSaltField?: boolean;
     isTerminalOrParking?: boolean;
     isGolfCourse?: boolean;

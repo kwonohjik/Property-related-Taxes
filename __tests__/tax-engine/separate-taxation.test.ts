@@ -51,6 +51,24 @@ function makeInput(overrides: Partial<SeparateTaxationInput> = {}): SeparateTaxa
   };
 }
 
+/**
+ * 공장용지 픽스처 — 면적 한도 입력을 갖춘 기본형 (2026-08-06 신설).
+ *
+ * 연면적 1,200㎡ ÷ 면적률 12% = 산출면적 10,000㎡.
+ * 비제한지역이라 별표6 3호가2)로 20%(2,000㎡)까지 추가 인정 → 한도 최대 12,000㎡.
+ * 부속토지 8,000㎡는 그 이내라 전량 분리과세.
+ */
+function makeFactoryInput(overrides: Partial<SeparateTaxationInput> = {}): SeparateTaxationInput {
+  return makeInput({
+    isFactoryLand: true,
+    factoryLocation: "industrial_zone",
+    factoryTotalLandArea: 8000,
+    factoryFloorArea: 1200,
+    factoryAreaRatePercent: 12,
+    ...overrides,
+  });
+}
+
 // ============================================================
 // [P5-10] 저율(0.07%) 테스트 (TC-01~04)
 // ============================================================
@@ -100,28 +118,49 @@ describe("P5-10: 저율 분리과세 (0.07%)", () => {
 // ============================================================
 
 describe("P5-11: 일반 분리과세 (0.2%)", () => {
-  it("TC-05: 공장용지 산업단지 → 0.2%, STANDARD_FACTORY, warning 없음", () => {
-    const result = calculateSeparateTax(
-      makeInput({ isFactoryLand: true, factoryLocation: "industrial_zone" }),
-    );
+  it("TC-05: 공장용지 산업단지 + 기준면적 이내 → 0.2%, STANDARD_FACTORY, warning 없음", () => {
+    const result = calculateSeparateTax(makeFactoryInput());
 
     expect(result.isApplicable).toBe(true);
     expect(result.category).toBe("standard");
     expect(result.appliedRate).toBe(0.002);
     expect(result.reasoning.legalBasis).toBe(PROPERTY.SEPARATE.STANDARD_FACTORY);
     expect(result.warnings).toHaveLength(0);
+    // 이내이므로 전액이 분리과세 과세표준 산정 대상
+    expect(result.factoryAreaCheck?.excessArea).toBe(0);
+    expect(result.factoryAreaCheck?.recognizedAssessedValue).toBe(100_000_000);
   });
 
-  it("TC-06: 공장용지 도시지역 → 0.2% + 기준면적 초과 warning 포함", () => {
+  /**
+   * 🔴 계약 정정 (2026-08-06) — **세액이 바뀐다**.
+   *
+   * 종전: `factoryLocation === "urban"` → 0.2% 분리과세 + 경고만
+   * 정정: 분리과세 **비해당**(`isApplicable: false`) → 별도합산으로 안내
+   *
+   * 근거(법제처 MST 287223 실측): 「지방세법 시행령」 §102①1호는 분리과세 공장용지를
+   * §101①1호 **각 목**(가.읍·면지역 / 나.산업단지 / 다.공업지역)으로 한정한다. §101①1호
+   * **본문**은 "특별시·광역시(군 제외)·특별자치시·특별자치도 및 시지역(각 목 제외)"의
+   * 공장용지를 **별도합산**으로 정한다 ⇒ 두 조문은 소재 지역으로 **배타 분기**한다.
+   */
+  it("TC-06: 공장용지 그 밖의 시지역 → 분리과세 **비해당** (§101①1호 별도합산)", () => {
     const result = calculateSeparateTax(
       makeInput({ isFactoryLand: true, factoryLocation: "urban" }),
     );
 
-    expect(result.isApplicable).toBe(true);
-    expect(result.category).toBe("standard");
-    expect(result.appliedRate).toBe(0.002);
+    expect(result.isApplicable).toBe(false);
+    expect(result.appliedRate).toBeUndefined();
     expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.warnings[0]).toContain("기준면적 초과");
+    expect(result.warnings[0]).toContain("별도합산");
+    expect(result.warnings[0]).toContain("§101①1호");
+  });
+
+  it("TC-06b: 읍·면지역·도시지역 외는 종전대로 0.2% 분리과세다", () => {
+    const result = calculateSeparateTax(makeFactoryInput({ factoryLocation: "other" }));
+
+    expect(result.isApplicable).toBe(true);
+    expect(result.appliedRate).toBe(0.002);
+    expect(result.reasoning.legalBasis).toBe(PROPERTY.SEPARATE.STANDARD_FACTORY);
+    expect(result.warnings).toHaveLength(0);
   });
 
   it("TC-07: 염전 → 0.2%, legalBasis = STANDARD_SALT_FIELD", () => {
