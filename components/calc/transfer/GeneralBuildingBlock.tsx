@@ -5,11 +5,23 @@
  *
  * 진입 조건: assetKind === "general_building" (취득방법 무관 항상 마운트)
  * 섹션 구조:
- *  ① 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율)
- *  ② 취득시 기준시가 (amber)   — 환산취득가 모드 OR "토지·건물 일괄 (증축분 별도)" 모드 (일괄 취득가 안분에 필요)
- *     증축 정보 (amber)        — 환산취득가 모드 OR gbHasExtension ON 시 (선택); 증축분 취득방식 서브 라디오로 4가지 조합 지원
+ *  ① 토지 공시지가 (slate) — 취득시(amber) → 양도시(emerald). 양도시는 항상, 취득시는 게이트
+ *  ② 건물 기준시가 (slate) — 취득시(amber) → 양도시(emerald) + 2시점 일괄 계산 + 개산공제 안내
+ *     증축 정보 (amber)    — 환산취득가 모드 OR gbHasExtension ON 시 (선택); 증축분 취득방식 서브 라디오로 4가지 조합 지원
  *  ③ 비사업용토지 판정 (rose)  — 항상 표시
  *      (「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101①2호·②)
+ *
+ * ## 배치 축을 시점 → 자산으로 바꿨다 (2026-08-05)
+ *
+ * 종전은 ①양도시(토지+건물) ②취득시(토지+건물)의 **시점 축**이었다. 3시점 화면
+ * (`ThreePointAssetMajorRender` — 토지 공시지가 그룹 → 자산별 건물 기준시가 그룹)과 축이 달라
+ * 같은 계산기를 오가는 사용자가 매번 다른 순서를 읽어야 했다. **자산 축**(토지 → 건물,
+ * 각 그룹 안에서 취득 → 양도)으로 통일한다.
+ * ⚠️ 시점별 tone 계약(취득=amber·양도=emerald)은 **안쪽 박스가 그대로 승계**한다 —
+ *    components/calc/CLAUDE.md 색상 가이드 위반이 아니다. 바깥 그룹만 slate(중립)다.
+ * ⚠️ 「건물 기준시가 계산」 런처가 한 화면에 둘이라 **순서가 바뀌었다** — E2E에서 `.first()`로
+ *    양도시 런처를 잡던 셀렉터는 `[data-gb-stdprice="transfer"]` 스코프로 바꿔야 한다.
+ * anchor: `__tests__/components/gb-stdprice-asset-major-layout.anchor.test.tsx`
  *
  * ⚠️ 면적 3필드(토지·연면적·바닥면적)는 **① 기본정보**로 이전했다(2026-08-04) —
  *    `asset-sections/AssetAreaGeneralBuilding.tsx`. 연면적의 `isEstimated` 게이트는
@@ -187,6 +199,21 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
   }
 
   const isBurdenedGift = asset.transferType === "burdened_gift";
+  /**
+   * 취득시 기준시가(토지·건물)를 입력받는 조건 — 환산 분자 / 일괄 취득가 안분 / §159 환산.
+   * 종전 "② 취득시 기준시가" 카드의 게이트를 그대로 승계한다(자산 축으로 재편해도 조건 불변).
+   */
+  const showAcqStdPrice = isEstimated || asset.gbHasExtension || isBurdenedGift;
+  /**
+   * 2시점 일괄 계산 런처가 실제로 떠 있는가 — 시점별 계산기의 **대체 여부**를 가른다.
+   *
+   * 일괄이 있으면 시점별 계산기 2개는 중복이라 숨긴다(2026-08-05 사용자 요청). 다만 일괄이
+   * 없는 두 경우에는 **반드시 시점별을 남긴다** — 없으면 건물기준시가를 산정할 경로가 사라진다
+   * (dead-end 금지: `feedback_ui_gate_removes_sole_input_path`).
+   *   · 실거래가 모드: 취득시 입력이 없어 "2시점"이 성립하지 않는다 → 양도시 계산기가 유일 경로
+   *   · 배치 게이트 차단(§164⑧ 동일연도 등): 사유만 뜨고 일괄 버튼이 없다
+   */
+  const showBatchLauncher = showAcqStdPrice && canGbBatch;
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
@@ -238,47 +265,74 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             `asset-sections/AssetAreaGeneralBuilding.tsx` — 연면적 게이트는 2026-08-05에
             제거돼 상시 노출된다. 여기에 면적 칸을 다시 추가하지 말 것. */}
 
-        {/* ① 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율 결정) */}
-        <ToneCard tone="emerald" sectionNum="①" title="양도시 기준시가 (토지·건물 안분 비율)" noDark>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />
-          </div>
-          <p className="text-caption text-emerald-600">
+        {/* ① 토지 공시지가 (취득 → 양도) — 3시점 화면(`ThreePointAssetMajorRender`)과 같은
+            **자산 축** 배치. 시점 정체성은 안쪽 amber(취득)/emerald(양도) 박스가 그대로 진다. */}
+        <ToneCard
+          tone="slate"
+          sectionNum="①"
+          title="토지 공시지가 (토지기준시가)"
+          titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />}
+          noDark
+        >
+          <p className="text-caption text-slate-600">
             {isEstimated
-              ? "환산취득가 분모 + 양도가액 안분 기준. 취득 기준시가는 아래 ③ 섹션에서 별도 입력."
-              : "실거래가 합계를 토지·건물로 안분하는 기준시가 (§166⑥). 취득가액도 같은 비율로 안분됩니다."}
+              ? "① 토지 · ② 건물 기준시가가 환산취득가 분모와 양도가액 안분 기준을 구성합니다 (§166⑥)."
+              : "① 토지 · ② 건물 기준시가가 실거래가 합계를 토지·건물로 안분하는 기준입니다 (§166⑥). 취득가액도 같은 비율로 안분됩니다."}
           </p>
 
-          <LandPriceLookupField
-            label="양도시 토지 공시지가"
-            pricePerSqm={asset.gbTransferLandPricePerSqm}
-            onPricePerSqmChange={(v) => onChange({ gbTransferLandPricePerSqm: v })}
-            area={parseDecimal(asset.gbLandArea) || undefined}
-            referenceDate={transferDate}
-            jibun={asset.addressJibun}
-            hint="양도일 전년도 기준 개별공시지가 (원/㎡). Vworld 또는 토지이음에서 조회."
-          />
+          {showAcqStdPrice && (
+            <div data-gb-stdprice="acq">
+              <ToneCard tone="amber" title="취득시" noDark>
+                <LandPriceLookupField
+                  label="취득시 토지 공시지가"
+                  pricePerSqm={asset.gbAcqLandPricePerSqm}
+                  onPricePerSqmChange={(v) => onChange({ gbAcqLandPricePerSqm: v })}
+                  area={parseDecimal(asset.gbLandArea) || undefined}
+                  referenceDate={asset.acquisitionDate}
+                  jibun={asset.addressJibun}
+                  hint={
+                    // 상가와 같은 트랙 분기 — 일괄 계산기의 취득 공시지가(≤2000)는 2001.1.1 기준이다.
+                    gbAcqYear != null && gbAcqYear <= 2000
+                      ? "일괄 계산기에 넣은 2001.1.1 기준 공시지가는 위치지수 산정용이라 이 칸에 자동 입력되지 않습니다 — 취득 당시 개별공시지가를 직접 입력하세요."
+                      : "취득일 전년도 기준 개별공시지가 (원/㎡)"
+                  }
+                />
+              </ToneCard>
+            </div>
+          )}
 
-          <FieldCard label="양도시 건물기준시가" unit="원" hint="건물분 기준시가 총액 (원). 모르면 아래 계산기로 산정.">
-            <CurrencyInput label="양도시 건물기준시가" hideUnit value={asset.gbTransferBuildingValue} onChange={(v) => onChange({ gbTransferBuildingValue: v })} />
-          </FieldCard>
-          <div className="flex justify-end">
-            <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-transfer`} applyTimePoint="transfer" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
+          <div data-gb-stdprice="transfer">
+            <ToneCard tone="emerald" title="양도시" noDark>
+              <LandPriceLookupField
+                label="양도시 토지 공시지가"
+                pricePerSqm={asset.gbTransferLandPricePerSqm}
+                onPricePerSqmChange={(v) => onChange({ gbTransferLandPricePerSqm: v })}
+                area={parseDecimal(asset.gbLandArea) || undefined}
+                referenceDate={transferDate}
+                jibun={asset.addressJibun}
+                hint="양도일 전년도 기준 개별공시지가 (원/㎡). Vworld 또는 토지이음에서 조회."
+              />
+            </ToneCard>
           </div>
         </ToneCard>
 
-        {/* ③ 취득시 기준시가 (amber) — 환산취득가 / 일괄(증축) / 부담부증여(§159①1호 환산) 모드 */}
-        {(isEstimated || asset.gbHasExtension || asset.transferType === "burdened_gift") && (
-          <ToneCard
-            tone="amber"
-            sectionNum="②"
-            title="취득시 기준시가 (환산 분자 + 개산공제 기준)"
-            titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑥" label="§163⑥ 개산공제" />}
-            noDark
-          >
-            {/* 취득·양도 2시점 일괄 계산 — 소재지·신축연도·구조·용도를 1회 입력해 ①·② 건물기준시가를
-                함께 채운다. 게이트가 막으면 사유를 밝히고 시점별 계산기만 남긴다(계획서 §4.2). */}
-            {canGbBatch ? (
+        {/* ② 건물 기준시가 (취득 → 양도) */}
+        <ToneCard
+          tone="slate"
+          sectionNum="②"
+          title="건물 기준시가"
+          titleExtra={
+            showAcqStdPrice ? (
+              <LawArticleModal legalBasis="소득세법 시행령 §163⑥" label="§163⑥ 개산공제" />
+            ) : undefined
+          }
+          noDark
+        >
+          {/* 취득·양도 2시점 일괄 계산 — 소재지·신축연도·구조·용도를 1회 입력해 두 시점 건물기준시가를
+              함께 채운다. 게이트가 막으면 사유를 밝히고 시점별 계산기만 남긴다(계획서 §4.2).
+              취득시 입력이 필요 없는 모드에서는 2시점 자체가 성립하지 않아 표시하지 않는다. */}
+          {showAcqStdPrice &&
+            (showBatchLauncher ? (
               <div className="flex justify-end">
                 <MultiPointBuildingStdPriceModal
                   points={gbBatchPoints}
@@ -297,52 +351,70 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                   {MULTI_POINT_BLOCK_MESSAGE[gbBatchBlockReason]}
                 </p>
               )
-            )}
+            ))}
 
-            <LandPriceLookupField
-              label="취득시 토지 공시지가"
-              pricePerSqm={asset.gbAcqLandPricePerSqm}
-              onPricePerSqmChange={(v) => onChange({ gbAcqLandPricePerSqm: v })}
-              area={parseDecimal(asset.gbLandArea) || undefined}
-              referenceDate={asset.acquisitionDate}
-              jibun={asset.addressJibun}
-              hint={
-                // 상가와 같은 트랙 분기 — 일괄 계산기의 취득 공시지가(≤2000)는 2001.1.1 기준이다.
-                gbAcqYear != null && gbAcqYear <= 2000
-                  ? "일괄 계산기에 넣은 2001.1.1 기준 공시지가는 위치지수 산정용이라 이 칸에 자동 입력되지 않습니다 — 취득 당시 개별공시지가를 직접 입력하세요."
-                  : "취득일 전년도 기준 개별공시지가 (원/㎡)"
-              }
-            />
-
-            <FieldCard label="취득시 건물기준시가" unit="원" hint="취득일 기준 건물기준시가 총액. 이 금액의 3%가 건물 개산공제액 (§163⑥)">
-              <CurrencyInput label="취득시 건물기준시가" hideUnit value={asset.gbAcqBuildingValue} onChange={(v) => onChange({ gbAcqBuildingValue: v })} />
-            </FieldCard>
-            <div className="flex justify-end">
-              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-acq`} applyTimePoint="acquisition" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
+          {showAcqStdPrice && (
+            <div data-gb-stdprice="acq">
+              <ToneCard tone="amber" title="취득시" noDark>
+                <FieldCard label="취득시 건물기준시가" unit="원" hint="취득일 기준 건물기준시가 총액. 이 금액의 3%가 건물 개산공제액 (§163⑥)">
+                  <CurrencyInput label="취득시 건물기준시가" hideUnit value={asset.gbAcqBuildingValue} onChange={(v) => onChange({ gbAcqBuildingValue: v })} />
+                </FieldCard>
+                {/* 일괄 런처가 없을 때만 — 있으면 중복이라 숨긴다(위 showBatchLauncher 주석). */}
+                {!showBatchLauncher && (
+                  <div className="flex justify-end">
+                    <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-acq`} applyTimePoint="acquisition" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
+                  </div>
+                )}
+              </ToneCard>
             </div>
+          )}
 
+          <div data-gb-stdprice="transfer">
+            <ToneCard tone="emerald" title="양도시" noDark>
+              {/* hint의 계산기 위치 안내는 실제 런처 위치를 따라간다 — 일괄이면 위, 아니면 아래. */}
+              <FieldCard
+                label="양도시 건물기준시가"
+                unit="원"
+                hint={
+                  showBatchLauncher
+                    ? "건물분 기준시가 총액 (원). 모르면 위 「2시점 건물기준시가 일괄 계산」으로 산정."
+                    : "건물분 기준시가 총액 (원). 모르면 아래 계산기로 산정."
+                }
+              >
+                <CurrencyInput label="양도시 건물기준시가" hideUnit value={asset.gbTransferBuildingValue} onChange={(v) => onChange({ gbTransferBuildingValue: v })} />
+              </FieldCard>
+              {!showBatchLauncher && (
+                <div className="flex justify-end">
+                  <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-transfer`} applyTimePoint="transfer" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
+                </div>
+              )}
+            </ToneCard>
+          </div>
+
+          {/* 개산공제는 토지·건물 취득시 값을 함께 쓴다 — 두 그룹 뒤(②의 말미)에 둔다. */}
+          {showAcqStdPrice && (
             <div className="rounded bg-violet-50/60 border border-violet-200 px-3 py-2 text-xs text-violet-700 space-y-0.5">
               <p className="font-semibold">개산공제 (§163⑥)</p>
               <p>토지: 취득시 공시지가 × 토지면적 × 3%</p>
               <p>건물: 취득시 건물기준시가 총액 × 3%</p>
             </div>
+          )}
 
-            {/* 부담부증여 §159①1호 단서 안내 — 사용자 입력 실거래가 무시 */}
-            {asset.transferType === "burdened_gift" && (
-              <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-800 space-y-0.5">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <p className="font-semibold">부담부증여 §159①1호 단서</p>
-                  <LawArticleModal legalBasis="소득세법 시행령 §159①" label="§159① 부담부증여" />
-                </div>
-                <p>
-                  양도가액이 채무액(=기준시가 모드와 동치)으로 의제되므로
-                  취득가액도 <b>취득시 기준시가 × 채무비율</b>로 환산됩니다.
-                  취득 정보의 <b>실거래가 입력값은 §159 환산 산식에서 무시</b>됩니다.
-                </p>
+          {/* 부담부증여 §159①1호 단서 안내 — 사용자 입력 실거래가 무시 */}
+          {isBurdenedGift && (
+            <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-800 space-y-0.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="font-semibold">부담부증여 §159①1호 단서</p>
+                <LawArticleModal legalBasis="소득세법 시행령 §159①" label="§159① 부담부증여" />
               </div>
-            )}
-          </ToneCard>
-        )}
+              <p>
+                양도가액이 채무액(=기준시가 모드와 동치)으로 의제되므로
+                취득가액도 <b>취득시 기준시가 × 채무비율</b>로 환산됩니다.
+                취득 정보의 <b>실거래가 입력값은 §159 환산 산식에서 무시</b>됩니다.
+              </p>
+            </div>
+          )}
+        </ToneCard>
 
         {/* ⑤ 증축 정보 (amber) — 환산취득가 모드 OR "토지·건물 일괄(증축분 별도)" 모드에서 표시.
             부담부증여 모드에서는 §159 자동 산정 — 증축 cross-cutting 비스코프이므로 숨김. */}

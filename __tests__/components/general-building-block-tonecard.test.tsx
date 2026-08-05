@@ -12,6 +12,13 @@
  * — 아래 별도 describe가 이어받아 톤 회귀 감시에 공백이 생기지 않게 한다.
  *
  * 계획: `docs/00-pm/transfer-area-unification-all-asset-kinds.plan.md` P2
+ *
+ * ## rev.3 (2026-08-05) — 기준시가 배치 축을 시점 → 자산으로
+ *
+ * ①emerald(양도시 토지+건물) ②amber(취득시 토지+건물)가 ①slate(토지) ②slate(건물)로 바뀌고,
+ * **시점 tone(취득=amber·양도=emerald)은 각 그룹 안쪽 박스가 승계**한다. 톤 회귀 감시가
+ * 끊기지 않도록 아래 단언을 안쪽 박스 기준으로 옮긴다(사라진 계약이 아니라 이동한 계약).
+ * anchor(순서·게이트): `gb-stdprice-asset-major-layout.anchor.test.tsx`
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen } from "@testing-library/react";
@@ -37,9 +44,16 @@ function renderBlock() {
 
 describe("GeneralBuildingBlock — 섹션카드 <ToneCard> 전환 (회귀 0)", () => {
   it("①②③ 섹션 제목이 톤별로 렌더 + ③ titleExtra(§ 배지) 보존", () => {
-    const { getByText } = renderBlock();
-    expect(getByText("양도시 기준시가 (토지·건물 안분 비율)").className).toContain("text-emerald-700");
-    expect(getByText("취득시 기준시가 (환산 분자 + 개산공제 기준)").className).toContain("text-amber-700");
+    const { getByText, getAllByText } = renderBlock();
+    // ①② 그룹은 중립(slate), 시점 tone은 안쪽 박스가 승계 — 취득 2개(토지·건물)·양도 2개.
+    expect(getByText("토지 공시지가 (토지기준시가)").className).toContain("text-slate-700");
+    expect(getByText("건물 기준시가").className).toContain("text-slate-700");
+    const acqTitles = getAllByText("취득시");
+    const transferTitles = getAllByText("양도시");
+    expect(acqTitles).toHaveLength(2);
+    expect(transferTitles).toHaveLength(2);
+    for (const t of acqTitles) expect(t.className).toContain("text-amber-700");
+    for (const t of transferTitles) expect(t.className).toContain("text-emerald-700");
     expect(getByText("비사업용토지 판정").className).toContain("text-rose-700");
     // ③ titleExtra(§ 배지) — 헤더 인라인 요소 보존.
     // 🔄 2026-07-30: 인용 정정. GB 부수토지 배율은 「소득세법 시행령」 §168의12(주택)가 아니라

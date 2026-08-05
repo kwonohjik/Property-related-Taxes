@@ -86,10 +86,15 @@ describe("B·C — 공시지가 트랙과 취득 시점", () => {
 });
 
 describe("D — 게이트 연동", () => {
-  it("정상(취득 2010 · 양도 2025) → 배치 런처 노출 + 시점별 계산기 병존", () => {
+  /**
+   * 🔄 **의도적으로 뒤집힌 계약** (2026-08-05) — 종전: "배치 런처 + 시점별 계산기 병존".
+   * 배치가 있으면 시점별 2개는 중복이라 숨긴다(사용자 요청). 배치가 **없는** 경우
+   * (아래 §164⑧ 케이스·실거래가 모드)에는 그대로 남아 dead-end가 생기지 않는다.
+   */
+  it("정상(취득 2010 · 양도 2025) → 배치 런처만 노출 (시점별 계산기 숨김)", () => {
     render(<GeneralBuildingBlock asset={gbAsset()} onChange={() => {}} transferDate="2025-05-01" />);
     expect(screen.getByTestId("gb-building-std-batch-open")).toBeTruthy();
-    expect(screen.getAllByText("건물 기준시가 계산").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("건물 기준시가 계산")).toHaveLength(0);
   });
 
   it("취득연도 == 양도연도(§164⑧) → 사유 표시 + 시점별 계산기 유지", () => {
