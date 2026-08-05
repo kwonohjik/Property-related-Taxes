@@ -14,78 +14,78 @@ export const NBL = {
   /** 소득세법 §104조의3 — 비사업용 토지의 범위 (메인 근거) */
   MAIN:           "소득세법 §104조의3",
   /** 시행령 §168조의6 — 판정 3기준 (80% / 5년3년 / 3년2년) */
-  CRITERIA:       "시행령 §168조의6",
+  CRITERIA:       "소득세법 시행령 §168조의6",
   /** 시행령 §168조의7 — 부득이한 사유 (질병·고령·징집 등) */
-  UNAVOIDABLE:    "시행령 §168조의7",
+  UNAVOIDABLE:    "소득세법 시행령 §168조의7",
   /** 시행령 §168조의8 — 농지 자경 요건 + 건물 부수 토지 배율 */
-  FARMLAND:       "시행령 §168조의8",
+  FARMLAND:       "소득세법 시행령 §168조의8",
   /** 시행령 §168조의8 ③ — 농지 사용의제 (주말농장·한계농지 등) */
-  FARMLAND_DEEM:  "시행령 §168조의8 ③",
+  FARMLAND_DEEM:  "소득세법 시행령 §168조의8 ③",
   /** 시행령 §168조의9 — 목장용지·임야 사업용 요건 */
-  FOREST_PASTURE: "시행령 §168조의9",
+  FOREST_PASTURE: "소득세법 시행령 §168조의9",
   /** 시행령 §168조의10 — 임야 특수 요건 (영림계획·산림보호 등) */
-  FOREST_SPECIAL: "시행령 §168조의10",
+  FOREST_SPECIAL: "소득세법 시행령 §168조의10",
   /** 시행령 §168조의11 — 별장 부수 토지·기타 토지 */
-  VILLA_OTHER:    "시행령 §168조의11",
+  VILLA_OTHER:    "소득세법 시행령 §168조의11",
   /** 시행령 §168조의11 ① — 기타토지 (나대지·잡종지) 재산세 유형 */
-  OTHER_LAND:     "시행령 §168조의11 ①",
+  OTHER_LAND:     "소득세법 시행령 §168조의11 ①",
   /** 시행령 §168조의8 — 건물 부수 토지 용도지역별 배율 (농지 자경 요건과 동일 조문) */
-  BUILDING_SITE:  "시행령 §168조의8",
+  BUILDING_SITE:  "소득세법 시행령 §168조의8",
   /** 시행령 §168조의8 — 주택 부수 토지 배율 */
-  HOUSING_SITE:   "시행령 §168조의8",
+  HOUSING_SITE:   "소득세법 시행령 §168조의8",
   /** 시행령 §168조의14 ① — 도시지역 편입유예 (2~3년) */
-  URBAN_GRACE:    "시행령 §168조의14 ①",
+  URBAN_GRACE:    "소득세법 시행령 §168조의14 ①",
   /** 시행령 §168조의14 ③ — 무조건 사업용 의제 (7가지 사유) */
-  UNCONDITIONAL:  "시행령 §168조의14 ③",
+  UNCONDITIONAL:  "소득세법 시행령 §168조의14 ③",
   /** 시행령 §168조의11 ② + 기획재정부령 §83의5 — 수입금액 비율 테스트 (업종별 기준) */
-  REVENUE_TEST:   "시행령 §168조의11 ② + 시행규칙 §83조의4",
+  REVENUE_TEST:   "소득세법 시행령 §168조의11 ② + 소득세법 시행규칙 §83조의4",
   /** 시행령 §168조의11 ③ 1호 — 전세금·보증금 간주임대료 합산 (부가가치세법 시행령 §65① 준용) */
-  REVENUE_DEEMED_RENT: "시행령 §168조의11 ③1호 (부가세법 시행령 §65① · 시행규칙 §47)",
+  REVENUE_DEEMED_RENT: "소득세법 시행령 §168조의11 ③1호 (부가가치세법 시행령 §65① · 부가가치세법 시행규칙 §47)",
   /** 시행령 §168조의11 ③ 2호 — 공통수입금액 토지가액 비율 안분 */
-  REVENUE_COMMON_APPORTION: "시행령 §168조의11 ③2호",
+  REVENUE_COMMON_APPORTION: "소득세법 시행령 §168조의11 ③2호",
 
   // ── v2 엔진 전용 정확 조문 상수 (PDF p.1695~1707 매핑) ──
-  CATEGORY:                       "시행령 §168조의7",
-  FARMLAND_URBAN_GRACE:           "시행령 §168조의8 ⑤⑥",
-  FOREST:                         "시행령 §168조의9",
-  FOREST_PUBLIC:                  "시행령 §168조의9 ①",
-  FOREST_RESIDENCE:               "시행령 §168조의9 ②",
-  FOREST_BUSINESS:                "시행령 §168조의9 ③",
-  PASTURE:                        "시행령 §168조의10",
-  PASTURE_RELATED:                "시행령 §168조의10 ②",
-  PASTURE_AREA:                   "시행령 §168조의10 ③",
-  PASTURE_URBAN:                  "시행령 §168조의10 ④",
-  PASTURE_URBAN_GRACE:            "시행령 §168조의10 ⑤",
-  OTHER_LAND_BUSINESS:            "시행령 §168조의11 ①",
+  CATEGORY:                       "소득세법 시행령 §168조의7",
+  FARMLAND_URBAN_GRACE:           "소득세법 시행령 §168조의8 ⑤⑥",
+  FOREST:                         "소득세법 시행령 §168조의9",
+  FOREST_PUBLIC:                  "소득세법 시행령 §168조의9 ①",
+  FOREST_RESIDENCE:               "소득세법 시행령 §168조의9 ②",
+  FOREST_BUSINESS:                "소득세법 시행령 §168조의9 ③",
+  PASTURE:                        "소득세법 시행령 §168조의10",
+  PASTURE_RELATED:                "소득세법 시행령 §168조의10 ②",
+  PASTURE_AREA:                   "소득세법 시행령 §168조의10 ③",
+  PASTURE_URBAN:                  "소득세법 시행령 §168조의10 ④",
+  PASTURE_URBAN_GRACE:            "소득세법 시행령 §168조의10 ⑤",
+  OTHER_LAND_BUSINESS:            "소득세법 시행령 §168조의11 ①",
   // §168의11① 호별 면적기준 (갭 3a) — 초과분 비사업용 면적 안분
-  OTHER_LAND_AREA_SPORTS:         "시행령 §168조의11 ① 1호 + 시행규칙 §83조의4 ①③④",
-  OTHER_LAND_AREA_PARKING:        "시행령 §168조의11 ① 2호 가목",
-  OTHER_LAND_AREA_GARAGE:         "시행령 §168조의11 ① 2호 나목",
-  OTHER_LAND_AREA_YOUTH:          "시행령 §168조의11 ① 4호 + 시행규칙 §83조의4 ⑧",
-  OTHER_LAND_AREA_RESERVE:        "시행령 §168조의11 ① 5호 다목 + 시행규칙 §83조의4 ⑨⑩",
-  OTHER_LAND_AREA_RESORT:         "시행령 §168조의11 ① 6호 + 시행규칙 §83조의4 ⑪⑫",
-  OTHER_LAND_AREA_HATCHANG:       "시행령 §168조의11 ① 7호",
-  OTHER_LAND_AREA_VACANT_LOT:     "시행령 §168조의11 ① 13호 + 시행규칙 §83조의4 ⑯⑰",
+  OTHER_LAND_AREA_SPORTS:         "소득세법 시행령 §168조의11 ① 1호 + 소득세법 시행규칙 §83조의4 ①③④",
+  OTHER_LAND_AREA_PARKING:        "소득세법 시행령 §168조의11 ① 2호 가목",
+  OTHER_LAND_AREA_GARAGE:         "소득세법 시행령 §168조의11 ① 2호 나목",
+  OTHER_LAND_AREA_YOUTH:          "소득세법 시행령 §168조의11 ① 4호 + 소득세법 시행규칙 §83조의4 ⑧",
+  OTHER_LAND_AREA_RESERVE:        "소득세법 시행령 §168조의11 ① 5호 다목 + 소득세법 시행규칙 §83조의4 ⑨⑩",
+  OTHER_LAND_AREA_RESORT:         "소득세법 시행령 §168조의11 ① 6호 + 소득세법 시행규칙 §83조의4 ⑪⑫",
+  OTHER_LAND_AREA_HATCHANG:       "소득세법 시행령 §168조의11 ① 7호",
+  OTHER_LAND_AREA_VACANT_LOT:     "소득세법 시행령 §168조의11 ① 13호 + 소득세법 시행규칙 §83조의4 ⑯⑰",
   // §101①2호나목 (지방세법 시행령) — 2% 미달 건축물 바닥면적분 별도합산 유지(cross-statute)
   OTHER_LAND_FOOTPRINT_CARVEOUT:  "지방세법 시행령 §101 ① 2호 나목",
   // §168의11⑥ 복합용도 건축물 부속토지 안분 — 특정용도분만 사업용
   /** ⑥1호 — 하나의 건축물 복합용도: 부속토지 × 특정용도분 연면적 / 건축물 연면적 */
-  OTHER_LAND_MIXED_USE_FLOOR:     "시행령 §168조의11 ⑥ 1호",
+  OTHER_LAND_MIXED_USE_FLOOR:     "소득세법 시행령 §168조의11 ⑥ 1호",
   /** ⑥2호 — 동일경계 다수 건축물: 전체 부속토지 × 특정용도분 바닥면적 / 전체 바닥면적 */
-  OTHER_LAND_MIXED_USE_FOOTPRINT: "시행령 §168조의11 ⑥ 2호",
+  OTHER_LAND_MIXED_USE_FOOTPRINT: "소득세법 시행령 §168조의11 ⑥ 2호",
   /** ⑤ — 연접 다필지 일괄용도 기준면적 초과분: 취득시기 늦은 필지부터 비사업용 귀속(2호=바닥면적 제외) */
-  OTHER_LAND_CONTIGUOUS:          "시행령 §168조의11 ⑤",
-  HOUSING_MULTIPLIER:             "시행령 §168조의12",
-  VILLA:                          "시행령 §168조의13",
-  UNAVOIDABLE_PERIOD:             "시행령 §168조의14 ① (시행규칙 §83의5①)",
-  TRANSFER_DATE_PRESUMED:         "시행령 §168조의14 ②",
-  UNCONDITIONAL_ANCESTOR:         "시행령 §168조의14 ③ 1의2호",
-  UNCONDITIONAL_PUBLIC:           "시행령 §168조의14 ③ 3호",
-  UNCONDITIONAL_JONGJOONG_INHERIT: "시행령 §168조의14 ③ 4호",
+  OTHER_LAND_CONTIGUOUS:          "소득세법 시행령 §168조의11 ⑤",
+  HOUSING_MULTIPLIER:             "소득세법 시행령 §168조의12",
+  VILLA:                          "소득세법 시행령 §168조의13",
+  UNAVOIDABLE_PERIOD:             "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+  TRANSFER_DATE_PRESUMED:         "소득세법 시행령 §168조의14 ②",
+  UNCONDITIONAL_ANCESTOR:         "소득세법 시행령 §168조의14 ③ 1의2호",
+  UNCONDITIONAL_PUBLIC:           "소득세법 시행령 §168조의14 ③ 3호",
+  UNCONDITIONAL_JONGJOONG_INHERIT: "소득세법 시행령 §168조의14 ③ 4호",
 } as const;
 
 /**
- * 업종별 수입금액비율 기준 (소득세법 시행령 §168조의11② + 시행규칙 §83조의4)
+ * 업종별 수입금액비율 기준 (소득세법 시행령 §168조의11② + 소득세법 시행규칙 §83조의4)
  *
  * §168의11②: 수입금액비율 = max(① 당해 수입÷당해 토지가액, ② (당해+직전 수입)÷(당해+직전 토지가액)).
  * 비율 ≥ 율이면 해당 토지 사업용 인정(§104의3①4호다목). 적용 대상: §168의11①2호다목·10호·11호다목·12호.
