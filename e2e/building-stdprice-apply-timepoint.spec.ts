@@ -34,7 +34,8 @@ async function selectInModal(page: Page, modal: Locator, triggerText: string, op
  */
 async function computeTransferOnly(page: Page, modal: Locator) {
   await modal.getByPlaceholder("신축연도 (4자리)").fill("2010");
-  await modal.getByPlaceholder("건물 연면적").fill("100");
+  // ⚠️ 연면적은 모달에서 입력하지 않는다(2026-08-05 `hideFloorAreaInput`) — ① 기본정보
+  //    「면적·규모」가 단일 입력 자리이고 모달은 prefill로만 받는다. 호출부가 미리 채운다.
 
   // 양도 시점 — 연도는 prefill 완료(회귀 가드), 구조·용도·공시지가만 입력
   await expect(modal.getByText("2025년", { exact: true })).toBeVisible();
@@ -58,6 +59,13 @@ test.describe("건물 기준시가 모달 — applyTimePoint 오적용 방지", 
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: /일반건물/ }).first().click();
     await expandAssetSection(page, 3);
+
+    // ① 면적·규모 — 건물 연면적은 여기가 단일 입력 자리다(모달은 prefill로만 받는다)
+    await page
+      .locator('[data-asset-card-index="0"]')
+      .locator('[data-slot="field-card"]', { hasText: "건물 연면적" })
+      .getByRole("textbox")
+      .fill("100");
 
     // ② 양도시 기준시가 섹션의 건물 기준시가 계산 모달 (항상 표시)
     await page.getByRole("button", { name: "건물 기준시가 계산" }).first().click();

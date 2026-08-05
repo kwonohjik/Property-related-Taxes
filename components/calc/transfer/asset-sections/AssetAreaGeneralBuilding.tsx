@@ -9,6 +9,16 @@
  * 위치가 달랐다. ① 기본정보로 올려 다른 자산유형과 같은 자리에 둔다.
  * 계획: `docs/00-pm/transfer-area-unification-all-asset-kinds.plan.md` P2.
  *
+ * ## 연면적의 `useEstimatedAcquisition` 게이트는 제거했다 (2026-08-05)
+ *
+ * 종전에는 환산취득가 모드에서만 노출했으나 **실거래가 모드에서도 연면적을 쓴다** —
+ * 항상 표시되는 「양도시 기준시가」의 건물 기준시가 계산기가 이 값을 prefill로 받는다
+ * (`GeneralBuildingBlock.tsx:266`). 칸이 없으면 prefill이 늘 비어 사용자가 모달 안에서
+ * 같은 값을 다시 쳤다. 그 이중 입력을 없애려 상시 노출로 바꾸고, 반대로 **모달 쪽
+ * 연면적 입력 칸을 숨겼다**(`hideFloorAreaInput`).
+ * 계획: `docs/02-design/features/general-building-area-row-always-visible.plan.md`
+ * anchor: `__tests__/components/area-card-row-layout.anchor.test.tsx`
+ *
  * ## ⛔ 「건축물 바닥면적」은 주택 「정착면적」과 다른 개념이다 — 통합 금지
  *
  * `gbBuildingFootprintArea` = 「건축법 시행령」 제119조 제1항 제3호의 **바닥면적**
@@ -43,46 +53,31 @@ export function isGeneralBuildingAreaAsset(asset: AssetForm): boolean {
 }
 
 export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
-  // 연면적은 환산취득가 산정 참고용이라 환산 모드에서만 노출한다
-  // (이전 전 `GeneralBuildingBlock`의 `isEstimated` 게이트를 그대로 옮긴 것 — 동작 변경 0).
-  const isEstimated = asset.useEstimatedAcquisition;
-
   return (
     <ToneCard tone="sky" title="면적·규모" noDark>
-      <FieldCard
-        label="취득·양도 당시 토지 면적"
-        unit="㎡"
-        hint="등기부등본 또는 토지대장 기재 토지면적 (㎡). 취득시·양도시 기준시가 양쪽의 곱셈 인자 — 시점별 동일 가정."
-      >
-        <DecimalInput
-          value={asset.gbLandArea}
-          onChange={(v) => onChange({ gbLandArea: v })}
-        />
-      </FieldCard>
+      {/* 3필드 1행 (3열, 라벨 상단 stacked) — 모바일은 1열. CB(`AssetAreaCommercial`)와 동일 배치. */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <FieldCard label="취득·양도 당시 토지 면적" unit="㎡" stacked>
+          <DecimalInput
+            value={asset.gbLandArea}
+            onChange={(v) => onChange({ gbLandArea: v })}
+          />
+        </FieldCard>
 
-      {isEstimated && (
-        <FieldCard
-          label="건물 연면적"
-          unit="㎡"
-          hint="건축물대장 기재 각층 바닥면적 합계 (㎡). 환산취득가 참고용."
-        >
+        <FieldCard label="건물 연면적" unit="㎡" stacked>
           <DecimalInput
             value={asset.gbBuildingArea}
             onChange={(v) => onChange({ gbBuildingArea: v })}
           />
         </FieldCard>
-      )}
 
-      <FieldCard
-        label="건축물 바닥면적"
-        unit="㎡"
-        hint="건축물대장의 각 층 바닥면적 중 **가장 넓은** 값 — 지하층도 포함합니다. 건축물대장의 '건축면적'이 아닙니다(발코니·처마 등이 달라 값이 어긋납니다). 「지방세법 시행령」 제101조 제1항 제2호 부수토지 한도의 곱셈 기준."
-      >
-        <DecimalInput
-          value={asset.gbBuildingFootprintArea}
-          onChange={(v) => onChange({ gbBuildingFootprintArea: v })}
-        />
-      </FieldCard>
+        <FieldCard label="건축물 바닥면적" unit="㎡" stacked>
+          <DecimalInput
+            value={asset.gbBuildingFootprintArea}
+            onChange={(v) => onChange({ gbBuildingFootprintArea: v })}
+          />
+        </FieldCard>
+      </div>
     </ToneCard>
   );
 }

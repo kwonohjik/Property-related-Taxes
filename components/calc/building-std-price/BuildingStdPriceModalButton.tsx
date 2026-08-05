@@ -70,6 +70,14 @@ interface Props {
    * 한 번에 계산할 때 "최초고시 시점"으로 표시(복합·공동주택 환산 토글 숨김). onApplyBoth와 함께 사용.
    */
   transferSectionLabel?: string;
+  /**
+   * 모달 안의 「건물 연면적」 **입력 칸을 숨긴다** — 상위 자산 폼(① 기본정보 면적·규모)이
+   * 연면적의 단일 입력 자리인 호출부 전용(GB·CB). `prefill.floorArea`가 그 값을 실어 나른다.
+   *
+   * ⛔ 상위에 연면적 필드가 없는 호출부(상속·증여·PHD 등)에는 켜지 말 것 — 모달이 유일한
+   *    입력 경로라 dead-end가 된다. 값이 비면 칸 대신 입력 위치 안내가 뜬다(연면적 0 오산 방지).
+   */
+  hideFloorAreaInput?: boolean;
 }
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
@@ -84,6 +92,7 @@ export function BuildingStdPriceModalButton({
   snapshotKey,
   prefill,
   transferSectionLabel,
+  hideFloorAreaInput,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<BuildingStandardPriceResult | null>(null);
@@ -180,6 +189,7 @@ export function BuildingStdPriceModalButton({
           <BuildingStdPriceForm
             lockedTaxType={lockedTaxType}
             transferSectionLabel={transferSectionLabel}
+            hideFloorAreaInput={hideFloorAreaInput}
             initialAddress={initialAddress}
             initialForm={{ ...restoredForm, ...prefillForm }}
             onResult={(r, fa, err, _report, landTotal, snapshot) => {

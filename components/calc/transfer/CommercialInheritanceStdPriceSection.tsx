@@ -99,7 +99,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
           <CurrencyInput label="" value={asset.cbBuildingStdPriceAtAcq} onChange={(v) => onChange({ cbBuildingStdPriceAtAcq: v })} hideUnit />
         </FieldCard>
         <div className="flex justify-end">
-          <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cbinh-acq`} applyTimePoint="acquisition" prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
+          <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cbinh-acq`} applyTimePoint="acquisition" hideFloorAreaInput prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
         </div>
         <FieldCard label="최초고시시(2005) 건물 기준시가" unit="원" hint="2005.1.1 최초 고시 시점 건물 기준시가 총액">
           <CurrencyInput label="" value={asset.cbBuildingStdPriceAtFirst} onChange={(v) => onChange({ cbBuildingStdPriceAtFirst: v })} hideUnit />

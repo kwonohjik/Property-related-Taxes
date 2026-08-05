@@ -68,6 +68,12 @@ interface Props {
    * 2시점을 한 번에 계산할 때 "최초고시 시점"으로 표시. 지정 시 복합·공동주택 환산 토글 숨김.
    */
   transferSectionLabel?: string;
+  /**
+   * 「건물 연면적」 입력 칸을 숨긴다 — 상위 자산 폼(① 기본정보 면적·규모)이 연면적의 단일
+   * 입력 자리인 호출부 전용(GB·CB). 값은 `initialForm.floorArea`(모달버튼의 prefill)로 온다.
+   * 값이 비면 칸 대신 입력 위치 안내를 띄운다 — 숨기기만 하면 연면적 0으로 조용히 오산된다.
+   */
+  hideFloorAreaInput?: boolean;
 }
 
 /** 연도 Select — 명시 라벨(SelectValue 단독 금지) */
@@ -98,7 +104,7 @@ function YearSelect({
   );
 }
 
-export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, initialForm, transferSectionLabel }: Props) {
+export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, initialForm, transferSectionLabel, hideFloorAreaInput }: Props) {
   const [f, setF] = useState<BuildingStdPriceFormState>(() => {
     const base: BuildingStdPriceFormState = {
       ...initialBuildingStdPriceForm,
@@ -231,11 +237,21 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
   const transferOnly = singleActive && f.singleTimePoint === "transfer";
   // 양도 복합 — 취득시 용도지수표 기준 연도(≤2000=2001)
   const acqUsageYear = acqIndexYear;
-  // 연면적 입력 불요: 복합구조(부분별)·공동주택 환산(자체 연면적)
-  const hideFloorArea = composite || apartmentConv;
+  // 연면적 입력 불요: 복합구조(부분별)·공동주택 환산(자체 연면적)·상위 폼이 단일 입력 자리인 호출부
+  const hideFloorArea = composite || apartmentConv || !!hideFloorAreaInput;
   // 건물 기본 면적 표시 조건 — 둘 다 보일 때만 한 행에 배치
   const showFloorArea = !isMech && !hideFloorArea;
   const showLandArea = !isMech && !apartmentConv && !f.landParcelMode;
+  /**
+   * 상위 폼 연면적이 비어 온 경우의 안내 — 칸만 숨기면 연면적 0으로 조용히 오산된다.
+   * 복합·공동주택 환산은 자체 연면적 경로라 대상이 아니다(종전 동작 유지).
+   */
+  const showFloorAreaSourceNotice =
+    !!hideFloorAreaInput &&
+    !isMech &&
+    !composite &&
+    !apartmentConv &&
+    !(parseFloat(f.floorArea.replace(/,/g, "")) > 0);
 
   const handleCalc = () => {
     const err = validateBuildingStdPriceForm(f);
@@ -363,6 +379,11 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               </FieldCard>
             )}
           </>
+        )}
+        {showFloorAreaSourceNotice && (
+          <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+            건물 연면적이 비어 있습니다 — ① 기본정보 「면적·규모」에서 입력하면 이 계산기에 자동 반영됩니다.
+          </p>
         )}
         {!isMech && (
           <div className="grid grid-cols-2 gap-2">

@@ -120,6 +120,16 @@ interface Props {
   commercialFloorAreaPrefill?: string;
   /** 런처 버튼 `data-testid`(E2E 셀렉터). 미주입 시 미부여. */
   dataTestId?: string;
+  /**
+   * 연면적 입력 칸을 숨긴다 — 상위 자산 폼(① 기본정보 면적·규모)이 연면적의 단일 입력
+   * 자리인 호출부 전용(GB·CB). 값은 `housingFloorAreaPrefill`이 실어 나른다.
+   *
+   * ⚠️ **행이 1개일 때만** 숨긴다. 「+ 부분 추가」로 층/구역을 나누면 행마다 자기 연면적이
+   *    필요한데(구조·용도별 ㎡당 가액) 상위에는 건물 **전체** 연면적 하나뿐이라 대체할 값이
+   *    없다 — 그대로 숨기면 2행부터 연면적 0으로 조용히 오산된다.
+   * ⛔ 상위에 연면적 필드가 없는 호출부(겸용 3시점·PHD·상속)에는 켜지 말 것.
+   */
+  hideFloorAreaInput?: boolean;
 }
 
 /** 편집 중 부분 행 — 시점별 구조·용도(연도 체계 상이) + 공통 연면적 */
@@ -163,6 +173,7 @@ export function MultiPointBuildingStdPriceModal({
   housingFloorAreaPrefill,
   commercialFloorAreaPrefill,
   dataTestId,
+  hideFloorAreaInput,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [builtYear, setBuiltYear] = useState("");
@@ -518,9 +529,19 @@ export function MultiPointBuildingStdPriceModal({
                       </FieldCard>
                     </div>
                   </div>
-                  <FieldCard label="연면적" unit="㎡">
-                    <DecimalInput value={row.floorArea} onChange={(v) => updateRow(idx, { floorArea: v })} placeholder="연면적" />
-                  </FieldCard>
+                  {/* 연면적 — 상위 폼이 단일 입력 자리인 호출부(GB·CB)에서는 **행 1개일 때만** 숨긴다.
+                      층/구역을 나눈 뒤에는 행마다 자기 연면적이 필요하다(상위엔 전체 연면적 하나뿐). */}
+                  {hideFloorAreaInput && rows.length === 1 ? (
+                    !(parseDecimal(row.floorArea) > 0) && (
+                      <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+                        연면적이 비어 있습니다 — ① 기본정보 「면적·규모」에서 입력하면 이 계산기에 자동 반영됩니다.
+                      </p>
+                    )
+                  ) : (
+                    <FieldCard label="연면적" unit="㎡">
+                      <DecimalInput value={row.floorArea} onChange={(v) => updateRow(idx, { floorArea: v })} placeholder="연면적" />
+                    </FieldCard>
+                  )}
                 </div>
               </div>
             ))}
