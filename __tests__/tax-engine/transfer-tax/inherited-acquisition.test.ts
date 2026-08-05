@@ -599,3 +599,67 @@ describe("E-7: post-deemed 미공시 주택 §164⑦ max — 소령 §163⑨2호
     expect(r.transferGain).toBe(350_000_000);
   });
 });
+
+// ─── V-2 가드: ③ 환산 분자의 시점 불일치가 세액에 노출되지 않음을 고정 ──────
+
+/**
+ * V-2 — ③ 환산취득가의 **분자**는 §176조의2④1호상 「**의제취득일 현재**」 기준시가여야 한다.
+ *
+ * 그런데 주택 경로는 `housePriceAtInheritanceUsed`(**상속개시일** 시점 값)를
+ * `standardPriceAtDeemedDate`(의제취득일 기준시가) 자리에 대입한다 — **이름과 의미가 어긋난다**.
+ *
+ * ⭐ 그럼에도 **실제 세액에 노출되지 않는다**: 같은 값이 ②로도 주입되어 가목(§163⑨)이 확인되고,
+ *    법 §97①1호 단서상 가목이 확인되면 ③(나목)에 도달하지 않기 때문이다(V-3 재편, #1089).
+ *
+ * ⚠️ 이 가드는 **그 성질 자체를 고정**한다. 다음 중 하나만 바뀌어도 V-2가 실제 세액에 노출된다:
+ *    · ③이 다시 max 후보로 돌아가거나
+ *    · `shouldInjectHouseMax`/`shouldInjectLandMax` 게이트가 좁아지거나
+ *    · ②와 ③ 분자를 서로 다른 값으로 분리하거나
+ *
+ * 계획서: docs/02-design/features/inheritance-pre-deemed-converted-numerator-timing.plan.md
+ */
+describe("V2-G: 자동 주입 경로에서는 ③이 채택되지 않는다 — ②가 반드시 함께 주입되므로", () => {
+  const fx = EXCEL_13_INHERITED_HOUSE_PRE_DISCLOSURE;
+
+  it("주택: houseValuation 자동 주입 시 ②가 주입되고 ③은 미채택", () => {
+    const input = baseTransferInput({
+      propertyType: "housing",
+      transferPrice: fx.transferPrice,
+      transferDate: fx.transferDate,
+      acquisitionDate: new Date("1983-07-26"), // 의제취득일 前
+      acquisitionPrice: 0,
+      useEstimatedAcquisition: false,
+      isOneHousehold: false,
+      householdHousingCount: 1,
+      inheritedHouseValuation: {
+        inheritanceDate: new Date("1983-07-26"),
+        transferDate: fx.transferDate,
+        landArea: fx.landArea,
+        landPricePerSqmAtTransfer: fx.landPricePerSqmAtTransfer,
+        landPricePerSqmAtFirstDisclosure: fx.landPricePerSqmAtFirstDisclosure,
+        housePriceAtTransfer: fx.housePriceAtTransfer,
+        housePriceAtFirstDisclosure: fx.housePriceAtFirstDisclosure,
+        buildingStdPriceAtTransfer: fx.buildingStdPriceAtTransfer,
+        buildingStdPriceAtFirstDisclosure: fx.buildingStdPriceAtFirstDisclosure,
+        buildingStdPriceAtInheritance: fx.buildingStdPriceAtInheritance,
+        pre1990: fx.pre1990,
+      },
+      inheritedAcquisition: {
+        inheritanceDate: new Date("1983-07-26"),
+        assetKind: fx.assetKind,
+        transferDate: fx.transferDate,
+        transferPrice: fx.transferPrice,
+        // standardPriceAtDeemedDate 미입력 → houseValuation 자동 주입 경로
+      },
+    });
+
+    const b = calculateTransferTax(input, mockRates).inheritedAcquisitionDetail!.preDeemedBreakdown!;
+
+    // ②(§164⑦)가 반드시 주입된다 — 이것이 ③을 배제하는 근거다
+    expect(b.sec164Amount).not.toBeNull();
+    expect(b.sec164Amount).toBeGreaterThan(0);
+
+    // ⇒ 가목이 확인되므로 ③(환산)은 채택되지 않는다 ⇒ 분자 시점 불일치가 세액에 닿지 않는다
+    expect(b.selectedMethod).not.toBe("converted");
+  });
+});

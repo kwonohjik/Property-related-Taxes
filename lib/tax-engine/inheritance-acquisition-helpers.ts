@@ -199,6 +199,14 @@ function resolveInheritedAcquisitionInput(
   if (shouldInjectHouseValuation) {
     // 주택 §176조의2④ 환산취득가는 개별주택가격 단일값을 분자/분모로 사용
     // (토지+건물 합계 기준시가가 아님). 개산공제도 동일 base × 3%.
+    // ⚠️ **이름-의미 불일치(V-2)** — `housePriceAtInheritanceUsed`는 **상속개시일** 시점 값인데
+    //    `standardPriceAtDeemedDate`는 §176조의2④1호상 **의제취득일 현재** 기준시가를 뜻한다.
+    //    ⭐ 그럼에도 **세액에 노출되지 않는다**: 같은 값이 ②(houseValuationStdPrice)로도 주입되어
+    //       가목(§163⑨)이 확인되고, 법 §97①1호 단서상 가목이 확인되면 ③에 도달하지 않는다.
+    //       (③이 쓰이는 것은 ①② 모두 부존재일 때뿐이고, 그때 이 값은 사용자 직접 입력이다.)
+    //    ⇒ ②·③ 분자를 분리하거나 ③을 다시 max 후보로 되돌린다면 **여기부터 재검토**할 것.
+    //       `V2-G` 가드(inherited-acquisition.test.ts)가 이 성질을 고정한다.
+    //    계획서: docs/02-design/features/inheritance-pre-deemed-converted-numerator-timing.plan.md
     standardPriceAtDeemedDate = houseValuationResult.housePriceAtInheritanceUsed;
     standardPriceAtTransfer =
       rawInput.inheritedHouseValuation?.housePriceAtTransfer ?? standardPriceAtTransfer;
