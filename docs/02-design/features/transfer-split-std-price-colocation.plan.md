@@ -1,6 +1,7 @@
 # 양도세 토지·건물 분리 — 기준시가 입력의 "쓰는 자리" 배치 계획서
 
-> 상태: Plan (Do 미착수) · 작성 2026-07-30 · **자가검토 1회차 반영(28건)**
+> **상태**: ✅ **구현 완료** (PR#913 · 2026-07-30) — 2026-08-04 코드 실측 · 2026-08-05 인용 PR·커밋 재검증(종전 헤더는 stale이었음).
+> ~~종전 표기: Plan (Do 미착수) · 작성 2026-07-30 · **자가검토 1회차 반영(28건)**~~
 > 선행 계획서: `transfer-land-building-independent-valuation-mode.plan.md` (축 A/B 분리) ·
 > `transfer-split-input-flow-reorder.plan.md` (축 A 선행 배치) ·
 > `transfer-split-acq-std-gate-relaxation.plan.md` (`requiresAcqStdPrice` 술어)

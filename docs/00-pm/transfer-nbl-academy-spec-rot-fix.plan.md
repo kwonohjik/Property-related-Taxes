@@ -1,6 +1,7 @@
 # transfer-nbl-academy-land.spec.ts — spec rot 복구 계획
 
-> 상태: Plan
+> **상태**: ✅ **구현 완료** (PR#1015·#1016 · 2026-08-03) — 2026-08-04 코드 실측 · 2026-08-05 인용 PR·커밋 재검증(종전 헤더는 stale이었음).
+> ~~종전 표기: Plan~~
 > 발견 경위: 비사업용 토지(NBL) 토지가액 자동조회 기능 작업(`feat/nbl-judgment`) 중 회귀 검증에서 발견.
 > 결론: 이 spec은 **현 master에서 이미 실패**하며, 원인은 본 작업과 무관한 **transfer 취득 흐름 UI 변경에 spec 셀렉터가 미추종한 사전존재 rot**.
 

@@ -1,7 +1,8 @@
 # 양도세 감면 통합 패널 구축 계획 (5개 카테고리 + 펼침 라디오)
 
 > **작성일**: 2026-05-06
-> **상태**: Plan (Round 8 직전)
+> **상태**: ✅ **구현 완료** (커밋 116a03fe · 2026-05-07) — 2026-08-04 코드 실측 · 2026-08-05 인용 PR·커밋 재검증(종전 헤더는 stale이었음).
+> ~~종전 표기: Plan (Round 8 직전)~~
 > **선행 산출물**:
 >   - `docs/00-pm/transfer-reduction-expansion.plan.md` (23개 조문 확장)
 >   - `docs/02-design/features/transfer-reduction-99-3.engine.design.md` (Phase 2 §99의3)
