@@ -13,7 +13,41 @@ export interface NblParcelFormItem {
   buildingFootprintArea: string;
 }
 
+/**
+ * 별표6 2호다 — 업종 1건(폼, 전부 string). 2건 이상이면 업종별로 산출해 합산한다.
+ * `id`는 React key 전용 — 엔진은 쓰지 않는다.
+ */
+export interface NblFactorySegmentFormItem {
+  id: string;
+  /** 해당 업종분 공장건축물 **연면적**(㎡). 무허가·위법시공분 제외(별표6 2호가) */
+  floorArea: string;
+  /** 업종별 기준공장면적률(%) — 「공장입지 기준고시」 별표1. 지식산업센터는 같은 고시 §4로 40 */
+  ratePercent: string;
+  /** 업종명 — 표시용(계산 무관) */
+  industryLabel: string;
+}
+
 export interface NblOtherFormSlice {
+  // ── 공장용 건축물 부속토지 기준면적 (「지방세법 시행령」 §102①1호 별표6 / §101①1호) ──
+  // ⚠️ 면적은 전부 **1구의 공장 전체값**이다(양도 대상 필지 면적이 아님 — 조심 2023지0373).
+  // 용도지역은 별도 필드 없이 `nblZoneType`을 승계한다(단일 소스).
+  /** 공장 판정 토글. OFF면 factory 입력 전체가 엔진에 도달하지 않는다(= 공장 아님) */
+  nblFactoryEnabled: boolean;
+  /** 한도 산식을 가르는 소재 지역. ""=미선택(validate 차단) */
+  nblFactoryLocationCategory: "" | "eup_myeon_or_complex" | "urban_other";
+  /** 공장 전체(하나의 울타리 기준) 부속토지 면적(㎡) */
+  nblFactoryTotalLandArea: string;
+  /** 별표6 경로 — 업종별 연면적·면적률 */
+  nblFactorySegments: NblFactorySegmentFormItem[];
+  /** 별표6 3호가1) 「산집법」 §20① 공장 신설 제한지역 — 10%·3,000㎡ 한도 vs 가2) 20% */
+  nblFactoryIsRestrictedZone: boolean;
+  /** 별표6 3호나~바 추가 인정면적 합계(㎡) — 녹지·활주로·철로·6m 도로·접도구역·저수지·30도 사면 등 */
+  nblFactoryAdditionalRecognizedArea: string;
+  /** §101①1호 경로 — 공장용 건축물 **바닥면적**(㎡). 연면적과 다른 값이다 */
+  nblFactoryFootprintArea: string;
+  /** §102①1호 단서·§101① 단서 — 허가·사용승인 미이행(용도변경 허가 미이행 포함) */
+  nblFactoryIsUnregistered: boolean;
+
   nblOtherPropertyTaxType: "" | "exempt" | "comprehensive" | "separate" | "special_sum";
   nblOtherBuildingValue: string;
   nblOtherLandValue: string;

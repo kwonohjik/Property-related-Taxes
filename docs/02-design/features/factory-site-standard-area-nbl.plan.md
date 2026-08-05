@@ -422,6 +422,31 @@ UI 계층:    업종 자동완성 → 면적률 채움 (선택)   또는   사�
 
 - **verify**: `tsc` 0건 + 14지점 self-grep + validate 5조건 anchor
 
+#### ✅ 완료 (2026-08-05)
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| ① | `stores/calc-wizard-asset-nbl-other.ts` | `NblOtherFormSlice`에 `nblFactory*` 8필드 + `NblFactorySegmentFormItem` |
+| ② | `stores/calc-wizard-asset-factory.ts` | 기본값(토글 `false` → 기존 동작 불변) |
+| ③ | `stores/calc-wizard-asset-migrate.ts` | 이력 복원 시 신규 필드 채움 |
+| ⑧ | `calc/transfer-tax-validate-nbl-other.ts` | `validateNblFactory()` — throw 5조건 전수 선차단 |
+| — | `__tests__/calc/factory-land-validate.anchor.test.ts` (신설) | **18건** — validate ↔ 엔진 **양방향 대칭** |
+
+> 🔴 **대칭 테스트를 넣은 이유** — validate가 **덜 막으면** 사용자가 원인 모를 500을 보고,
+> **더 막으면** 엔진은 계산 가능한데 UI가 막는다(UI 통과 ↔ validate 차단 모순).
+> `COND-1~5`는 각 조건을 validate가 막는지 **그리고** 그 입력을 엔진에 직접 흘리면 실제로
+> 던지는지를 둘 다 단언한다 — 한쪽만 고치면 깨진다. `PASS-1~6`은 과차단을 막는다
+> (경로별로 안 쓰는 필드는 비어 있어도 통과해야 한다).
+
+> ⚠️ **segment 배열에 `id`를 넣으며 배관 테스트가 깨졌다** — 폼 배열은 React key용 `id`를
+> 갖는데(`NblParcelFormItem` 선례) Zod 스키마에는 없어 `parse`가 실패했다. 스키마에 `id`를
+> 추가해 해소. **폼 배열 필드를 추가할 때는 raw 스키마도 같은 모양이어야 한다.**
+
+**verify 결과**: `tsc` 0건 · validate anchor 18건 GREEN · NBL+calc+stores 1,469건 GREEN.
+
+**14지점 self-grep**: ①②③⑧⑫⑭ ✅ · ④⑬은 prefix-pick이라 명시 나열 없음(정상) ·
+⑥ 해당 없음(면적 입력이라 사이드바 합계 대상 아님) · ⑤⑦은 Phase D 대상.
+
 ### Phase D — UI (⑤⑥⑦)
 
 - `components/calc/transfer/nbl/OtherLandDetailSection.tsx`에 공장 블록 추가(ToggleCard)
@@ -515,6 +540,17 @@ UI 계층:    업종 자동완성 → 면적률 채움 (선택)   또는   사�
 ---
 
 ## 10. 검토 이력
+
+### rev.6 (2026-08-05) — Phase C 완료 (폼·validate)
+
+- ①②③ 폼 슬라이스·기본값·마이그레이션. **토글 기본 `false`라 기존 이력의 판정 결과는 불변**
+- ⑧ `validateNblFactory()` — 엔진이 던지는 **5조건 전수** 선차단(§6 Phase C 표). 엔진 예외가
+  HTTP 500이 되는 구조라(`route.ts:432`) 인라인 오류로 바꾸려면 여기서 막는 수밖에 없다
+- **양방향 대칭 anchor 18건**: `COND-1~5`는 "validate가 막는다" + "그 입력을 엔진에 직접
+  흘리면 실제로 던진다"를 **둘 다** 단언한다(덜 막음 방지). `PASS-1~6`은 과차단 방지 —
+  경로별로 안 쓰는 필드(별표6 경로의 바닥면적, §101①1호 경로의 업종)는 비어도 통과해야 한다
+- ⚠️ segment 배열에 React key용 `id`를 넣자 Zod `parse`가 깨졌다(스키마에 `id` 부재).
+  **폼 배열 필드는 raw 스키마와 모양이 같아야 한다** — `NblParcelFormItem` 선례대로 정정
 
 ### rev.5 (2026-08-05) — Phase B 완료 (API 배관) · **Phase A 계약 결함 정정**
 

@@ -8,6 +8,7 @@
  */
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 
 /** 기타토지(other_land) 정밀판정 입력 검증. 첫 오류 메시지 또는 null. */
 export function validateNblOtherLand(asset: AssetForm, label: string): string | null {
@@ -79,6 +80,57 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
       return `${label}: 복합용도 건축물 안분 — 특정용도분 면적과 전체 면적(㎡)을 모두 입력하세요. (§168의11⑥)`;
     if (parseDecimal(numS) > parseDecimal(denS))
       return `${label}: 복합용도 건축물 안분 — 특정용도분 면적은 전체 면적을 초과할 수 없습니다. (§168의11⑥)`;
+  }
+
+  const factoryErr = validateNblFactory(asset, label);
+  if (factoryErr) return factoryErr;
+
+  return null;
+}
+
+/**
+ * 공장용 건축물 부속토지 기준면적 입력 검증 (§102①1호 별표6 / §101①1호).
+ *
+ * ## 왜 전수 차단이 필요한가
+ *
+ * 엔진(`judgeFactoryLandExcess`)은 미입력을 `TaxCalculationError`로 던지고, 그 예외는
+ * `app/api/calc/transfer/route.ts:432`에서 **HTTP 500**이 된다 — 인라인 필드 오류가 아니다.
+ * 토글만 켜고 값을 비워두면 사용자는 원인 모를 500을 본다.
+ * ⇒ 엔진이 던지는 **다섯 조건 전부**를 여기서 먼저 막는다(UI 통과 ↔ validate 차단 모순 방지).
+ *
+ * 값을 임의로 채우지 않는다 — 자동 fallback은 한도를 조용히 바꿔 세액을 틀리게 한다.
+ */
+export function validateNblFactory(asset: AssetForm, label: string): string | null {
+  if (!asset.nblFactoryEnabled) return null;
+
+  // (2) 소재 지역 — 한도 산식 자체가 갈린다. 빈 값이 한쪽 경로로 흐르지 않도록 먼저 막는다.
+  const loc = asset.nblFactoryLocationCategory;
+  if (loc !== "eup_myeon_or_complex" && loc !== "urban_other")
+    return `${label}: 공장 부수토지 — 소재 지역을 선택하세요. 읍·면지역(군 지역 포함)·산업단지·공업지역인지에 따라 기준면적 산식이 달라집니다. (「지방세법 시행령」 §102①1호 / §101①1호)`;
+
+  // (1) 공장 전체 부속토지 면적 — 양도 대상 필지 면적이 아니다(조심 2023지0373)
+  if (!asset.nblFactoryTotalLandArea || parseDecimal(asset.nblFactoryTotalLandArea) <= 0)
+    return `${label}: 공장 부수토지 — 공장 전체(하나의 울타리 기준) 부속토지 면적(㎡)을 입력하세요. 양도하는 토지 면적이 아니라 공장 전체 면적입니다.`;
+
+  if (loc === "eup_myeon_or_complex") {
+    // (3) 별표6 — 업종별 연면적·기준공장면적률
+    const segs = asset.nblFactorySegments ?? [];
+    if (segs.length === 0)
+      return `${label}: 공장 부수토지 — 공장건축물 연면적(㎡)과 업종별 기준공장면적률(%)을 입력하세요. (「지방세법 시행규칙」 별표 6 — 연면적 × 100 ÷ 기준공장면적률)`;
+    for (const [i, s] of segs.entries()) {
+      const no = segs.length > 1 ? ` ${i + 1}` : "";
+      if (!s.floorArea || parseDecimal(s.floorArea) <= 0)
+        return `${label}: 공장 부수토지 — 업종${no}의 공장건축물 연면적(㎡)을 입력하세요. (별표6 2호가 — 무허가·위법시공 건축물 연면적은 제외)`;
+      if (!s.ratePercent || parseDecimal(s.ratePercent) <= 0)
+        return `${label}: 공장 부수토지 — 업종${no}의 기준공장면적률(%)을 입력하세요. (「공장입지 기준고시」 별표1 · 지식산업센터는 같은 고시 §4로 40%)`;
+    }
+  } else {
+    // (4) §101①1호 — 바닥면적(연면적과 다른 값)
+    if (!asset.nblFactoryFootprintArea || parseDecimal(asset.nblFactoryFootprintArea) <= 0)
+      return `${label}: 공장 부수토지 — 공장용 건축물 바닥면적(㎡)을 입력하세요. 연면적이 아니라 바닥면적입니다. (「지방세법 시행령」 §101①1호 — 바닥면적 × 같은 조 ② 적용배율)`;
+    // (5) 용도지역 — 배율을 못 정하면 초과분이 조용히 틀어진다. 세분 전 `residential` 등 차단.
+    if (!getZoneAreaMultiplier(asset.nblZoneType))
+      return `${label}: 공장 부수토지 — 용도지역 "${asset.nblZoneType}"은 「지방세법 시행령」 제101조 제2항 적용배율표에 대응 항목이 없습니다. 세분된 용도지역(전용주거·일반주거·준주거 등)을 선택하세요.`;
   }
 
   return null;

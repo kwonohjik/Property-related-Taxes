@@ -35,7 +35,7 @@ const RAW_FORM = {
   nblFactoryEnabled: true,
   nblFactoryLocationCategory: "eup_myeon_or_complex",
   nblFactoryTotalLandArea: "20000",
-  nblFactorySegments: [{ floorArea: "1200", ratePercent: "12", industryLabel: "합성섬유 제조업" }],
+  nblFactorySegments: [{ id: "s1", floorArea: "1200", ratePercent: "12", industryLabel: "합성섬유 제조업" }],
   nblFactoryIsRestrictedZone: false,
   nblFactoryAdditionalRecognizedArea: "0",
   nblFactoryFootprintArea: "",
@@ -55,7 +55,7 @@ describe("⑫ Zod — 공장 필드가 strip되지 않는다", () => {
     expect(parsed.nblFactoryLocationCategory).toBe("eup_myeon_or_complex");
     expect(parsed.nblFactoryTotalLandArea).toBe("20000");
     expect(parsed.nblFactorySegments).toEqual([
-      { floorArea: "1200", ratePercent: "12", industryLabel: "합성섬유 제조업" },
+      { id: "s1", floorArea: "1200", ratePercent: "12", industryLabel: "합성섬유 제조업" },
     ]);
     expect(parsed.nblFactoryIsRestrictedZone).toBe(false);
     expect(parsed.nblFactoryAdditionalRecognizedArea).toBe("0");

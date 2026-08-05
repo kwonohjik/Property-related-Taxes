@@ -46,6 +46,7 @@ const nblResidenceHistoryRawSchema = z.object({
 
 /** 별표6 2호다 — 업종별 (연면적, 기준공장면적률). 값은 UI 문자열 그대로, 파싱은 form-mapper. */
 const nblFactorySegmentRawSchema = z.object({
+  id: z.string(),
   floorArea: z.string(),
   ratePercent: z.string(),
   industryLabel: z.string().optional(),
