@@ -22,20 +22,8 @@ import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/Re
 import { getBuildingSiteMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 
-// 「지방세법 시행령」 제101조 제2항 적용배율표 기준 용도지역 선택지.
-// 세분 전 주거지역(residential)은 표에 대응 항목이 없어 선택지에 두지 않는다(추정 배율 금지).
-const GB_ZONE_OPTIONS = [
-  { value: "exclusive_residential", label: "전용주거" },
-  { value: "general_residential",   label: "일반주거" },
-  { value: "semi_residential",      label: "준주거" },
-  { value: "commercial",            label: "상업지역" },
-  { value: "industrial",            label: "공업지역" },
-  { value: "green",                 label: "녹지지역" },
-  { value: "management",            label: "관리지역" },
-  { value: "agriculture_forest",    label: "농림지역" },
-  { value: "natural_env",           label: "자연환경보전" },
-  { value: "unplanned",             label: "도시계획 미지정" },
-];
+// 용도지역 선택지는 CB(상업용건물) 섹션과 공유한다 — `appurtenant-zone-options.ts`.
+import { APPURTENANT_ZONE_OPTIONS } from "./appurtenant-zone-options";
 
 interface Props {
   asset: AssetForm;
@@ -109,7 +97,7 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
                   layout="inline"
                   value={asset.gbZoneType}
                   onChange={(v) => onChange({ gbZoneType: v })}
-                  options={GB_ZONE_OPTIONS}
+                  options={APPURTENANT_ZONE_OPTIONS}
                 />
               </FieldCard>
               <ReferenceSiteLinks className="-mt-1" sites={[REFERENCE_SITES.landUsePlan]} />

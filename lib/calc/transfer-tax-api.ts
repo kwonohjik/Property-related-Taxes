@@ -20,7 +20,7 @@ import {
   buildPreHousingDisclosurePayload,
   buildNewConstructionPayload,
 } from "./transfer-tax-api-body-blocks";
-import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildCommercialAppurtenantLand, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
@@ -125,6 +125,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const cbValuation = isCommercialBuilding && primary.useEstimatedAcquisition && primary.acquisitionCause !== "inheritance"
     ? buildCommercialBuildingValuation(primary, form.transferDate)
     : undefined;
+  // ⑬ 부수토지 초과분 판정 payload — 위 환산과 달리 **취득방법 무관**(상속 포함)이라 게이트가 없다.
+  const cbAppurtenantLand = buildCommercialAppurtenantLand(primary);
 
   // ⑬ 일반건물(토지+건물 일괄) 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
   const isGeneralBuilding = primary.assetKind === "general_building";
@@ -609,6 +611,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 — 명시 spread 필수)
     // cbValuation === undefined 이면 키 자체를 포함하지 않음 (Zod optional 통과)
     ...(cbValuation !== undefined ? { commercialBuildingValuation: cbValuation } : {}),
+    // ⑬ 상업용건물 부수토지 초과분 판정 (TypeScript 미감지 — 누락 시 침묵 stripping)
+    ...(cbAppurtenantLand !== undefined ? { commercialAppurtenantLand: cbAppurtenantLand } : {}),
     // ⑬ 일반건물 환산취득가 body spread (TypeScript 미감지 영역 — 누락 시 서브객체 미도달)
     ...(gbValuation !== undefined ? { generalBuildingValuation: gbValuation } : {}),
     // ⑬ 부담부증여 body spread (TypeScript 미감지 영역 — 누락 시 침묵 stripping)

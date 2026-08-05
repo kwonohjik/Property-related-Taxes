@@ -90,13 +90,23 @@ describe("W-3 (⑭) — route가 엔진 input에 매핑한다", () => {
       ...baseBody(),
       commercialAppurtenantLand: CAL,
     });
-    const engineInput = buildTransferEngineInput(parsed as never);
+    const engineInput = buildTransferEngineInput(
+      parsed as never,
+      new Date("2024-06-01"),
+      new Date("2014-06-01"),
+      undefined,
+    );
     expect(engineInput.commercialAppurtenantLand).toEqual(CAL);
   });
 
   it("미제공 시 엔진 input에도 없다 (spread 조건부 — 빈 객체 주입 금지)", () => {
     const parsed = transferTaxRequestSchema.parse(baseBody());
-    const engineInput = buildTransferEngineInput(parsed as never);
+    const engineInput = buildTransferEngineInput(
+      parsed as never,
+      new Date("2024-06-01"),
+      new Date("2014-06-01"),
+      undefined,
+    );
     expect("commercialAppurtenantLand" in engineInput).toBe(false);
   });
 });

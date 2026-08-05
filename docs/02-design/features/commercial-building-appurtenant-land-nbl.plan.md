@@ -1,11 +1,11 @@
 # 상업용건물·오피스텔(CB) 부수토지 기준면적 초과분 비사업용 중과 — 구현 계획
 
-- **작성일**: 2026-08-05 (rev.7 — Phase C 완료 반영, §10)
+- **작성일**: 2026-08-05 (rev.8 — Phase D 완료 반영, §10)
 - **브랜치**: `worktree-commercial-building-appurtenant-land` (워크트리 — master는 별건 작업 중)
 - **채택 설계**: **안 B-2** (§5.2) — 배율 판정 공용 헬퍼 추출 + 기존 부분중과 비율 주입
 - **발단**: 세무 교재 발췌 — "상업용 건물의 부수토지는 각 용도지역별 배율이 규정되어 있어 규모 이내의 부수토지는 일반적인 양도소득세 계산과정에 따라 산출되지만 규모를 초과하는 면적에 대해서는 별도로 구분하여 비사업용토지로 중과 계산한다."
 - **선행 작업**: 「지방세법 시행령」 §101② 배율표 정본 통일 — **PR #1067 머지 완료(2026-08-05)**. 정본 `lib/tax-engine/local-tax-zone-multiplier.ts` 확보.
-- **진행 상태**: Phase 0 전건 ✅ · **A ✅** · **B ✅** · **C ✅** · Phase D(UI)·E 대기
+- **진행 상태**: Phase 0 전건 ✅ · **A ✅** · **B ✅** · **C ✅** · **D ✅** · Phase E(상호작용 회귀) 대기
 
 ---
 
@@ -424,14 +424,23 @@ CB: transfer-tax.ts STEP 0.6 직후 → 헬퍼 호출 → effectiveInput에 주�
 **14지점 자가 grep 결과**: ⑫(스키마 정의·최상위)·⑭(route 매핑)·엔진 타입·STEP **모두 도달**.
 **⑬(`lib/calc/transfer-tax-api.ts` body spread)만 미연결** — store 폼 필드가 없어 Phase D와 함께 한다.
 
-### Phase D — UI (①②③⑤⑥⑦⑧)
+### Phase D — UI (①②③⑤⑦⑧⑬) ✅ **완료 (2026-08-05)**
 
-- `CommercialBuildingBlock.tsx`에 입력 섹션 (GB의 `GeneralBuildingNblSection.tsx` 146줄 패턴 차용)
-- 용도지역은 **세분 10종**(정본 키와 일치)
-- store 필드 추가 + stale sessionStorage 가드
-- validate 동기화 (UI 통과 ↔ validate 차단 모순 금지)
-- 결과 카드에 배율·기준면적·초과면적 산출근거 표시 — **부분중과 비율 표시가 GB의 카드 2장 표시와 다르므로 표시 문안 별도 설계**
-- verify: C-3~C-5 E2E
+- store ①②③ — `cbTotalLandArea`·`cbTotalBuildingFootprintArea`·`cbZoneType`·`cbIsUnregistered`
+  (factory 초기값 + migrate stale 가드)
+- ⑤ `CommercialAppurtenantLandSection.tsx` 신설 — **환산 게이트 밖**에 마운트해 상속 취득 CB에서도 노출.
+  배율·기준면적·초과면적·초과비율 미리보기는 엔진 정본 `getZoneAreaMultiplier` 재사용(UI 재계산 금지)
+- 용도지역 선택지를 `appurtenant-zone-options.ts`로 **GB와 공유**(중복 제거)
+- ⑬ `buildCommercialAppurtenantLand` + body spread — 취득방법 무관 게이트
+- ⑧ validate — "둘 다 공란(생략) / 둘 다 입력(판정) / 하나만 입력(차단)"을 API 변환 조건과 1:1 정합
+- ⑦ 결과 표시 — 엔진 STEP이 명세서 카드의 "전체 엔진 계산 과정"에 자동 노출(별도 카드 불필요)
+- ⑥ 사이드바 — **해당 없음**(면적 판정이라 금액 합계에 들어갈 항목이 없다)
+
+**검증**: anchor 12건 · **E2E 3건** · 전체 13,506건 GREEN · tsc 0 · lint 0 errors
+
+> ⚠️ **E2E에서 접힘 두 겹을 실측으로 발견했다.** 자산 카드 ③ 취득 섹션과 결과의 "전체 엔진 계산 과정"이
+> 모두 기본 접힘이라, 펴지 않으면 `toBeVisible`이 hidden으로 실패한다(정확히는 **단언이 조용히 약해지는**
+> 반대 상황을 막아준 것). `expandAssetSection(page, 3)` + step 토글 클릭을 spec에 넣었다.
 
 ### Phase E — 상호작용 회귀
 
@@ -444,19 +453,19 @@ CB: transfer-tax.ts STEP 0.6 직후 → 헬퍼 호출 → effectiveInput에 주�
 
 | # | 지점 | 파일 | 작업 |
 |---|---|---|---|
-| ① | 폼 상태 | `lib/stores/calc-wizard-asset-cb.ts` | `cbBuildingFootprintArea` · `cbZoneType` · `cbIsUnregistered` |
-| ② | initial | 동상 | 빈 문자열·false |
-| ③ | normalize | `lib/stores/calc-wizard-asset-migrate.ts:530-533` (기존 cb* 가드 옆) | stale 이력 가드 |
-| ④ | API 변환 | `lib/calc/transfer-tax-api-helpers.ts:125` `buildCommercialBuildingValuation` | 신규 필드 포함 |
-| ⑤ | UI 위젯 | `components/calc/transfer/CommercialBuildingBlock.tsx` | 입력 섹션 |
-| ⑥ | 사이드바 | `lib/stores/` summary | 초과면적 표시 여부 판단 |
-| ⑦ | 결과 카드 | CB 결과뷰 + `FilingFormTableHelpers.ts:474` | 배율·기준면적 산출근거 |
-| ⑧ | validation | `lib/calc/transfer-tax-validate-asset.ts:156` | ④와 동일 조건 |
+| ① | 폼 상태 | `lib/stores/calc-wizard-asset-cb.ts` | ✅ `cbTotalLandArea`·`cbTotalBuildingFootprintArea`·`cbZoneType`·`cbIsUnregistered` |
+| ② | initial | `calc-wizard-asset-factory.ts` | ✅ |
+| ③ | normalize | `calc-wizard-asset-migrate.ts` (기존 cb* 가드 옆) | ✅ stale 가드 |
+| ④ | API 변환 | `transfer-tax-api-helpers.ts` `buildCommercialAppurtenantLand` | ✅ 신설(환산 변환과 별개) |
+| ⑤ | UI 위젯 | `CommercialAppurtenantLandSection.tsx` (환산 게이트 밖 마운트) | ✅ |
+| ⑥ | 사이드바 | — | ✅ 해당 없음(금액 항목 아님) |
+| ⑦ | 결과 카드 | 명세서 카드 「전체 엔진 계산 과정」 | ✅ STEP 자동 노출 |
+| ⑧ | validation | `transfer-tax-validate-asset.ts` | ✅ ⑬과 1:1 정합 |
 | ⑨ | Zod 최상위 필드 | `lib/api/transfer-tax-schema.ts` | ✅ `commercialAppurtenantLand` |
 | ⑩ | Zod refine | `transfer-tax-building-schemas.ts` superRefine | ✅ 단서 아니면 `zoneType` 필수 |
 | ⑪ | 자산-수준 fallback | `app/api/calc/transfer/engine-input.ts` | — |
 | ⑫ | **Zod 입력 객체** | `transfer-tax-building-schemas.ts` `commercialAppurtenantLandSchema` | ✅ 신설 |
-| ⑬ | **body spread** | `lib/calc/transfer-tax-api.ts` | ⏳ Phase D (store 필드 선행) |
+| ⑬ | **body spread** | `lib/calc/transfer-tax-api.ts` | ✅ 조건부 spread |
 | ⑭ | **Route 엔진 매핑** | `app/api/calc/transfer/engine-input.ts` | ✅ 조건부 spread |
 
 ---
@@ -508,6 +517,20 @@ CB: transfer-tax.ts STEP 0.6 직후 → 헬퍼 호출 → effectiveInput에 주�
 ---
 
 ## 10. 검토 이력
+
+### rev.8 (2026-08-05) — Phase D 완료
+
+| 항목 | 결과 |
+|---|---|
+| **마운트 설계** | CB 환산 블록(`CommercialBuildingBlock`)은 `acquisitionCause !== "inheritance"` + `useEstimatedAcquisition` 이중 게이트라 **상속 CB에서 아예 마운트되지 않는다**. 부수토지 섹션은 취득방법 무관이어야 하므로 **게이트 밖 별도 마운트**로 분리 |
+| **중복 제거** | 용도지역 선택지를 `appurtenant-zone-options.ts`로 추출해 GB 섹션과 공유 |
+| **⑧ 정합 규칙** | "둘 다 공란=생략 / 둘 다 입력=판정 / 하나만 입력=차단" — API 변환(`buildCommercialAppurtenantLand`)의 payload 생성 조건과 1:1 |
+| **⑥⑦ 판정** | ⑥ 해당 없음(면적이라 금액 합계 항목 아님) · ⑦ 엔진 STEP이 명세서 카드에 자동 노출되어 별도 카드 불필요 |
+| **검증** | anchor 12건 · **E2E 3건** · 전체 13,506건 GREEN · tsc 0 · lint 0 errors |
+
+**E2E 실측 발견** — 접힘이 **두 겹**이다: 자산 카드 ③ 취득 섹션(progressive disclosure)과 결과의 "전체 엔진 계산 과정" 토글. 펴지 않으면 요소가 DOM에 있어도 hidden이라 `toBeVisible`이 실패한다. `expandAssetSection(page, 3)`과 step 토글 클릭을 spec에 넣었다.
+
+**동명 파일 주의** — `e2e/commercial-building-appurtenant-land-61.spec.ts`가 이미 있으나 **상속·증여세 상증법 §61 보충적 평가** 경로로 이 작업과 무관하다. 혼동을 피해 신규 spec은 `commercial-appurtenant-excess.spec.ts`로 명명했다.
 
 ### rev.7 (2026-08-05) — Phase C 완료
 

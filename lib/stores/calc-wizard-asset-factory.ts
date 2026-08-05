@@ -333,6 +333,10 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     cbLandPricePerSqmAtAcq: "",
     cbLandPricePerSqmAtFirst: "",
     cbLandPricePerSqmAtTransfer: "",
+    cbTotalLandArea: "",
+    cbTotalBuildingFootprintArea: "",
+    cbZoneType: "",
+    cbIsUnregistered: false,
     // ── 일반건물(토지+건물 일괄) 환산취득가 gb* 필드 (사례 31, 소득세법 시행령 §176의2②, §163⑥) ──
     // 환산 ON/OFF는 useEstimatedAcquisition 라디오로 통일 (2026-05-09)
     gbTransferLandPricePerSqm: "",
