@@ -116,6 +116,14 @@ export interface FactoryLandUsage {
    * - `urban_other` = 그 밖의 특별시·광역시(군 제외)·특별자치시·특별자치도·시지역 → §101①1호 배율
    */
   locationCategory: "eup_myeon_or_complex" | "urban_other";
+  /**
+   * 「1구의 공장」 **전체** 부속토지 면적(㎡) — 하나의 울타리 기준(조심 2023지0373).
+   *
+   * ⚠️ **양도 대상 토지 면적(`NonBusinessLandInput.landArea`)이 아니다.** 한도 비교는 공장
+   * 전체로 하고(§1.4), 거기서 나온 초과 **비율**을 양도분에 적용한다 — 선행 CB 작업의
+   * 지분 약분과 같은 구조다. 양도가 공장 전체면 두 값이 같아진다.
+   */
+  totalAppurtenantLandArea: number;
   /** `eup_myeon_or_complex` 전용 — 업종별 연면적·면적률 (별표6 1호·2호다) */
   segments?: FactoryIndustrySegment[];
   /**

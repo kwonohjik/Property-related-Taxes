@@ -376,18 +376,51 @@ UI 계층:    업종 자동완성 → 면적률 채움 (선택)   또는   사�
 > 공장은 §101①**1호**라서 §101①2호나목의 2% 나대지 룰(`isBareLand`)이 적용되지 않는다 —
 > 조문이 "제1호에 따른 공장용 건축물은 제외한다"고 명시한다.
 
-### Phase B — API 배관 (⑨⑩⑫⑭)
+### Phase B — API 배관 (⑫⑬⑭) ✅ **완료 (2026-08-05)**
 
-- `lib/api/transfer-tax-schema-nbl.ts` — `factory` 오브젝트 Zod + superRefine(지역·면적률 필수)
-- `app/api/calc/transfer/engine-input.ts` — 조건부 spread
-- **verify**: 라운드트립 테스트(폼 → body → Zod → route → 엔진 input)에서 신규 필드 도달 확인
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| ⑫ | `lib/api/transfer-tax-schema-nbl.ts` | `nblFactory*` **8필드** + `nblFactorySegmentRawSchema`(다업종 배열) |
+| ⑬ | — | **변경 없음.** `buildNonBusinessLandRaw`가 필드를 나열하지 않고 **prefix-pick**(`k.startsWith("nbl")`)으로 운반한다 ⇒ 필드명이 `nbl`로 시작하면 자동 통과 |
+| ⑭ | `non-business-land/form-mapper-helpers.ts` | `buildFactory()` 신설 + `buildOtherLand`에 연결 |
+| ⑭ | `non-business-land/form-mapper.ts` | `buildOtherLand(..., zoneType)` — 자산 `nblZoneType`을 공장 판정에 승계 |
+| — | `__tests__/.../factory-land-plumbing.anchor.test.ts` (신설) | 라운드트립 anchor **9건** |
 
-### Phase C — 폼·매핑 (①②③④⑧⑬)
+> 🔴 **이 경로의 실질 관문은 ⑫뿐이다.** ⑬이 prefix-pick이라 이름만 맞으면 통과하므로,
+> Zod 등록을 잊으면 **컴파일도 되고 다른 테스트도 다 통과하는데 엔진에만 값이 안 간다**
+> (한도 판정 자체가 사라져 초과분 중과가 조용히 미발동). `STRIP-1~3`이 그 관문을 지킨다.
+>
+> ⚠️ **필드 계약 개수 가드**(`STRIP-2`) — `nblFactory*` 8개를 정렬 배열로 고정했다.
+> 필드를 늘리면 이 목록도 갱신해야 한다.
 
-- `AssetForm` 필드 + `calc-wizard-asset-migrate.ts` 기본값
-- `form-mapper-helpers.ts` 매핑
-- `lib/calc/transfer-tax-validate-asset.ts` — 미입력 차단(자동 fallback 금지)
-- **verify**: `npx tsc --noEmit` 0건 + 14지점 self-grep
+**용도지역은 별도 필드를 두지 않았다** — 자산의 `nblZoneType`을 승계한다(단일 소스). §101①1호
+배율은 양도 대상 필지의 용도지역으로 정하며, 이는 조심 2025서2489가 같은 공장의 필지를
+각자의 용도지역으로 판정한 것과 정합한다.
+
+**verify 결과**: `tsc` 0건 · 배관 anchor 9건 GREEN · NBL+calc 1,440건 GREEN.
+
+### Phase C — 폼·validate (①②③⑧)
+
+- `AssetForm` 필드 + `calc-wizard-asset-migrate.ts` 기본값(`nblFactoryEnabled: false` 등)
+- `lib/calc/transfer-tax-validate-asset.ts` — 미입력 차단
+
+#### 🔴 ⑧이 막아야 할 throw 조건 — **전수 (실측)**
+
+엔진 예외는 `route.ts:432`에서 **HTTP 500**이 된다(인라인 필드 오류가 아니다). 토글을 켜고
+값을 비워두면 사용자는 원인 모를 500을 본다 ⇒ validate가 **다섯 개 전부** 선차단해야 한다.
+
+| # | 조건 | 던지는 곳 |
+|---|---|---|
+| 1 | `totalAppurtenantLandArea` ≤ 0 | `judgeFactoryLandExcess` 진입부 |
+| 2 | `locationCategory`가 두 리터럴이 아님 | 〃 (조용한 분기 방지) |
+| 3 | 별표6 경로: `segments` 비었거나 `floorArea`·`ratePercent` ≤ 0 | 〃 |
+| 4 | §101①1호 경로: `totalFootprintArea` ≤ 0 | 〃 |
+| 5 | §101①1호 경로: `zoneType` 미입력·§101② 표 미등재 | `judgeAppurtenantLandExcess` |
+
+> 5번은 자산의 `nblZoneType`을 승계하므로, 세분 전 `residential`을 고른 사용자는 공장 토글을
+> 켜는 순간 막힌다 — validate 메시지에 "세분된 용도지역을 선택하세요"를 포함할 것.
+
+- **verify**: `tsc` 0건 + 14지점 self-grep + validate 5조건 anchor
 
 ### Phase D — UI (⑤⑥⑦)
 
@@ -482,6 +515,27 @@ UI 계층:    업종 자동완성 → 면적률 채움 (선택)   또는   사�
 ---
 
 ## 10. 검토 이력
+
+### rev.5 (2026-08-05) — Phase B 완료 (API 배관) · **Phase A 계약 결함 정정**
+
+🔴 **Phase A가 판정 단위를 잘못 구현하고 있었다.** 계획 §1.4는 한도 비교를 「1구의 공장 전체」로
+한다고 적어 놓고, 엔진은 `input.landArea`(= `asset.acquisitionArea`, **양도 대상 토지 면적**)를
+비교 대상으로 썼다. 양도분이 공장 일부일 때 초과비율이 통째로 틀어진다.
+
+- Phase B 배관을 설계하며 "이 면적이 어디서 오는가"를 추적하다 발견했다
+  (`form-mapper.ts:70` — `landArea = asset.acquisitionArea`)
+- ⇒ `FactoryLandUsage.totalAppurtenantLandArea`(**필수**) 신설. 한도 비교는 전체값으로 하고
+  거기서 나온 **비율**을 양도분에 적용한다 — 선행 CB 작업의 지분 약분과 같은 구조
+- `judgeFactoryLandExcess(usage, context)` — `landArea` 인자 제거(전체값을 usage가 들고 있다)
+- 회귀 가드 `PART-1~3`. 특히 **PART-2는 정정 전 구현이라면 통과했을 케이스**다
+  (양도분 5,000㎡만 보면 한도 12,000㎡ 이내 → 「전량 사업용」 오판정)
+
+**추가로 막은 조용한 분기 오류 1건** — `locationCategory`가 빈 문자열이면 삼항 연산자가
+말없이 `aggregate_taxation`으로 흘려 **다른 산식**(바닥면적 × 배율)이 적용됐다. 두 리터럴이
+아니면 던지도록 바꿨다(`E2E-3`).
+
+**Phase B 자체**: ⑫ Zod 8필드 추가, ⑬은 prefix-pick이라 무변경, ⑭ `buildFactory` 신설.
+라운드트립 anchor 9건으로 폼→Zod→mapper→엔진 도달을 실증했다(§6 Phase B 표).
 
 ### rev.4 (2026-08-05) — Phase A 완료 (엔진)
 

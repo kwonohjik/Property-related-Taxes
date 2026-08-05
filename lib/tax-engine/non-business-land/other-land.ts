@@ -296,7 +296,7 @@ export function judgeOtherLand(
   let factoryExcess: ReturnType<typeof judgeFactoryLandExcess> | undefined;
   let factoryLegalBasis: string | undefined;
   if (o.factory) {
-    const f = judgeFactoryLandExcess(o.factory, input.landArea, "기타토지(공장)");
+    const f = judgeFactoryLandExcess(o.factory, "기타토지(공장)");
     factoryLegalBasis =
       f.route === "separate_taxation" ? NBL.FACTORY_LAND_SEPARATE : NBL.FACTORY_LAND_AGGREGATE;
     appliedLaws.push(factoryLegalBasis);
@@ -306,7 +306,7 @@ export function judgeOtherLand(
         id: "other_factory_area",
         label: "Step 0.5 공장용 건축물 부속토지 기준면적",
         status: "PASS",
-        detail: `${f.detail} ≥ 부속토지 ${input.landArea}㎡ → 전량 사업용`,
+        detail: `${f.detail} ≥ 공장 전체 부속토지 ${o.factory.totalAppurtenantLandArea}㎡ → 전량 사업용`,
         legalBasis: factoryLegalBasis,
       });
       // 한도 이내 — 재산세 구분을 경로에 맞게 확정한다. 사용자가 `propertyTaxType`을
@@ -568,12 +568,20 @@ export function judgeOtherLand(
         r, totalOwnershipDays, revenueTestDetail,
       });
     }
-    const areaProportioning = computeAreaProportioning(input.landArea, factoryExcess.standardArea);
+    // ⚠️ 한도 비교는 **공장 전체**로 끝났다(`factoryExcess.nonBusinessRatio`). 여기서는 그
+    // 비율을 **양도 대상 토지**(`input.landArea`)에 적용한다 — 양도분이 공장 일부일 수 있으므로
+    // `factoryExcess.standardArea`를 양도분과 직접 비교하면 안 된다(§1.4 약분 구조).
+    const factoryTotal = o.factory!.totalAppurtenantLandArea;
+    const businessAreaOfAsset = input.landArea * (1 - factoryExcess.nonBusinessRatio);
+    const areaProportioning = computeAreaProportioning(input.landArea, businessAreaOfAsset);
     steps.push({
       id: "other_factory_area",
       label: "Step 0.5 공장용 건축물 부속토지 기준면적",
       status: "FAIL",
-      detail: `${factoryExcess.detail} < 부속토지 ${input.landArea}㎡ → 초과분 ${areaProportioning.nonBusinessArea.toFixed(2)}㎡ 비사업용(종합합산)`,
+      detail:
+        `${factoryExcess.detail} < 공장 전체 부속토지 ${factoryTotal}㎡ → 초과비율 ` +
+        `${(factoryExcess.nonBusinessRatio * 100).toFixed(2)}% · 양도분 ${input.landArea}㎡ 중 ` +
+        `${areaProportioning.nonBusinessArea.toFixed(2)}㎡ 비사업용(종합합산)`,
       legalBasis: factoryLegalBasis!,
     });
     return {

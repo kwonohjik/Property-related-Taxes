@@ -138,17 +138,38 @@ const UNREGISTERED_DETAIL =
 /**
  * 공장용 건축물 부속토지의 기준면적 초과분을 판정한다.
  *
- * @param usage  공장 입력 — 면적은 **1구의 공장 전체값**이다(양도 대상 필지 면적이 아니다).
- * @param landArea 공장 전체 부속토지 면적 (㎡)
+ * 비교 대상은 `usage.totalAppurtenantLandArea`(**1구의 공장 전체**)다 — 양도 대상 토지가
+ * 아니다. 여기서 나온 `nonBusinessRatio`를 호출부가 양도분에 적용한다(§1.4 약분 구조).
+ *
+ * @param usage  공장 입력 — 면적은 전부 공장 전체값
  * @param context 오류 메시지 접두사
  * @throws `urban_other` 경로에서 용도지역 미입력·§101② 표 미등재인 경우
  *   (`judgeAppurtenantLandExcess`가 던진다 — 추정 배율로 대체하면 초과분이 조용히 틀어진다).
  */
 export function judgeFactoryLandExcess(
   usage: FactoryLandUsage,
-  landArea: number,
   context: string,
 ): FactoryLandExcessResult {
+  const landArea = usage.totalAppurtenantLandArea;
+  if (!(landArea > 0)) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `${context} 비사업용토지 판정: 공장 전체(하나의 울타리 기준) 부속토지 면적을 입력하세요. ` +
+        `한도 비교는 양도 대상 토지가 아니라 공장 전체로 합니다.`,
+    );
+  }
+  // ⚠️ 두 값 중 하나여야 한다. 삼항으로 "아니면 aggregate"로 흘리면 빈 문자열이 조용히
+  // §101①1호 경로로 가서 **다른 산식**이 적용된다(한도 자체가 바뀐다).
+  if (
+    usage.locationCategory !== "eup_myeon_or_complex" &&
+    usage.locationCategory !== "urban_other"
+  ) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `${context} 비사업용토지 판정: 공장 소재 지역을 선택하세요 — ` +
+        `읍·면지역(군 지역 포함)·산업단지·공업지역 / 그 밖의 지역. 한도 산식이 달라집니다.`,
+    );
+  }
   const route =
     usage.locationCategory === "eup_myeon_or_complex" ? "separate_taxation" : "aggregate_taxation";
 

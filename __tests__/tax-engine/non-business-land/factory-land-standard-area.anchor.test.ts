@@ -35,7 +35,16 @@ import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-l
 const d = (iso: string) => new Date(iso);
 const R = DEFAULT_NON_BUSINESS_LAND_RULES;
 
-function base(landArea: number, factory?: FactoryLandUsage): NonBusinessLandInput {
+/**
+ * `landArea` = **양도 대상** 토지 면적. 공장 입력의 `totalAppurtenantLandArea`(1구의 공장 전체)는
+ * 지정하지 않으면 같은 값으로 채운다 = "양도 대상이 곧 공장 전체" 케이스.
+ * 부분 양도는 `totalAppurtenantLandArea`를 명시해 구분한다(PART-* 테스트).
+ */
+type FactoryArg = Omit<FactoryLandUsage, "totalAppurtenantLandArea"> & {
+  totalAppurtenantLandArea?: number;
+};
+
+function base(landArea: number, factory?: FactoryArg): NonBusinessLandInput {
   return {
     landType: "other_land",
     landArea,
@@ -46,7 +55,10 @@ function base(landArea: number, factory?: FactoryLandUsage): NonBusinessLandInpu
       propertyTaxType: "comprehensive",
       hasBuilding: true,
       isRelatedToResidenceOrBusiness: false,
-      factory,
+      factory: factory && {
+        ...factory,
+        totalAppurtenantLandArea: factory.totalAppurtenantLandArea ?? landArea,
+      },
     },
     businessUsePeriods: [],
     gracePeriods: [],
@@ -69,9 +81,7 @@ describe("별표6 산식 — 공장입지기준면적 = 연면적 × 100 ÷ 기�
     const r = judgeFactoryLandExcess(
       {
         locationCategory: "eup_myeon_or_complex",
-        segments: [{ floorArea: 89865.838, ratePercent: 12 }],
-      },
-      199115,
+        segments: [{ floorArea: 89865.838, ratePercent: 12 }], totalAppurtenantLandArea: 199115 },
       "test",
     );
     expect(r.route).toBe("separate_taxation");
@@ -85,9 +95,7 @@ describe("별표6 산식 — 공장입지기준면적 = 연면적 × 100 ÷ 기�
       {
         locationCategory: "urban_other",
         totalFootprintArea: 81473.36,
-        zoneType: "general_residential",
-      },
-      199115,
+        zoneType: "general_residential", totalAppurtenantLandArea: 199115 },
       "test",
     );
     expect(r.route).toBe("aggregate_taxation");
@@ -98,13 +106,11 @@ describe("별표6 산식 — 공장입지기준면적 = 연면적 × 100 ÷ 기�
   // ⚠️ 연면적(별표6)과 바닥면적(§101①1호)은 다른 값이다 — 같은 공장에서 실제로 갈렸다.
   it("EXT-4: 같은 공장의 연면적 89,865.838 ≠ 바닥면적 81,473.36 — 한 칸으로 받으면 안 된다", () => {
     const sep = judgeFactoryLandExcess(
-      { locationCategory: "eup_myeon_or_complex", segments: [{ floorArea: 89865.838, ratePercent: 12 }] },
-      199115,
+      { locationCategory: "eup_myeon_or_complex", segments: [{ floorArea: 89865.838, ratePercent: 12 }], totalAppurtenantLandArea: 199115 },
       "test",
     );
     const agg = judgeFactoryLandExcess(
-      { locationCategory: "urban_other", totalFootprintArea: 81473.36, zoneType: "general_residential" },
-      199115,
+      { locationCategory: "urban_other", totalFootprintArea: 81473.36, zoneType: "general_residential", totalAppurtenantLandArea: 199115 },
       "test",
     );
     expect(sep.standardArea).not.toBeCloseTo(agg.standardArea, 0);
@@ -192,9 +198,7 @@ describe("단서 — 허가·사용승인 미이행 (§102①1호 단서·§101�
       {
         locationCategory: "eup_myeon_or_complex",
         segments: [{ floorArea: 100000, ratePercent: 12 }], // 한도는 충분하지만
-        isUnregistered: true,
-      },
-      5000,
+        isUnregistered: true, totalAppurtenantLandArea: 5000 },
       "test",
     );
     expect(r.standardArea).toBe(0);
@@ -209,27 +213,28 @@ describe("단서 — 허가·사용승인 미이행 (§102①1호 단서·§101�
 describe("입력 누락은 차단한다 (자동 fallback 금지 · 근거 없는 불리 적용 금지)", () => {
   it("GUARD-1: 별표6 경로에서 segments가 비면 던진다 (전량 비사업용으로 떨어뜨리지 않는다)", () => {
     expect(() =>
-      judgeFactoryLandExcess({ locationCategory: "eup_myeon_or_complex" }, 5000, "기타토지(공장)"),
+      judgeFactoryLandExcess(
+      { locationCategory: "eup_myeon_or_complex", totalAppurtenantLandArea: 5000 },
+      "기타토지(공장)",
+    ),
     ).toThrow(/연면적과 업종별 기준공장면적률/);
   });
 
   it("GUARD-2: 면적률이 0이면 던진다", () => {
     expect(() =>
       judgeFactoryLandExcess(
-        { locationCategory: "eup_myeon_or_complex", segments: [{ floorArea: 1200, ratePercent: 0 }] },
-        5000,
-        "기타토지(공장)",
-      ),
+      { locationCategory: "eup_myeon_or_complex", segments: [{ floorArea: 1200, ratePercent: 0 }], totalAppurtenantLandArea: 5000 },
+      "기타토지(공장)",
+    ),
     ).toThrow(/기준공장면적률/);
   });
 
   it("GUARD-3: §101①1호 경로에서 바닥면적이 없으면 던진다", () => {
     expect(() =>
       judgeFactoryLandExcess(
-        { locationCategory: "urban_other", zoneType: "general_residential" },
-        5000,
-        "기타토지(공장)",
-      ),
+      { locationCategory: "urban_other", zoneType: "general_residential", totalAppurtenantLandArea: 5000 },
+      "기타토지(공장)",
+    ),
     ).toThrow(/바닥면적/);
   });
 
@@ -238,16 +243,13 @@ describe("입력 누락은 차단한다 (자동 fallback 금지 · 근거 없는
       {
         locationCategory: "eup_myeon_or_complex",
         segments: [{ floorArea: 1200, ratePercent: 12 }],
-        isUnregistered: true,
-      },
-      5000,
+        isUnregistered: true, totalAppurtenantLandArea: 5000 },
       "test",
     );
     expect(r.isUnregisteredException).toBe(true);
 
     const normal = judgeFactoryLandExcess(
-      { locationCategory: "eup_myeon_or_complex", segments: [{ floorArea: 1200, ratePercent: 12 }] },
-      20000,
+      { locationCategory: "eup_myeon_or_complex", segments: [{ floorArea: 1200, ratePercent: 12 }], totalAppurtenantLandArea: 20000 },
       "test",
     );
     expect(normal.isUnregisteredException).toBe(false);
@@ -257,17 +259,19 @@ describe("입력 누락은 차단한다 (자동 fallback 금지 · 근거 없는
 describe("지역 미입력·미등재 용도지역은 차단한다 (추정 금지)", () => {
   it("urban_other 경로에서 zoneType 미입력이면 던진다", () => {
     expect(() =>
-      judgeFactoryLandExcess({ locationCategory: "urban_other", totalFootprintArea: 100 }, 1000, "기타토지(공장)"),
+      judgeFactoryLandExcess(
+      { locationCategory: "urban_other", totalFootprintArea: 100, totalAppurtenantLandArea: 1000 },
+      "기타토지(공장)",
+    ),
     ).toThrow(/용도지역/);
   });
 
   it("§101② 표에 없는 세분 전 residential은 던진다", () => {
     expect(() =>
       judgeFactoryLandExcess(
-        { locationCategory: "urban_other", totalFootprintArea: 100, zoneType: "residential" },
-        1000,
-        "기타토지(공장)",
-      ),
+      { locationCategory: "urban_other", totalFootprintArea: 100, zoneType: "residential", totalAppurtenantLandArea: 1000 },
+      "기타토지(공장)",
+    ),
     ).toThrow(/적용배율표/);
   });
 });
@@ -394,6 +398,45 @@ describe("judgeOtherLand 통합 — Step 0.5", () => {
     const r = judgeOtherLand(input, R);
     expect(r.isBusiness).toBe(true);
     expect(r.steps.find((s) => s.id === "other_factory_area")).toBeUndefined();
+  });
+
+  // 🔴 판정 단위 회귀 가드 — 한도 비교는 「1구의 공장 전체」로 하고(조심 2023지0373),
+  // 거기서 나온 **비율**을 양도분에 적용한다. 양도분과 한도를 직접 비교하면 틀린다.
+  it("PART-1: 공장 전체 20,000㎡ 중 5,000㎡만 양도 → 전체 초과비율 40%가 양도분에 그대로 적용", () => {
+    const r = judgeOtherLand(
+      base(5000, {
+        locationCategory: "eup_myeon_or_complex",
+        segments: [{ floorArea: 1200, ratePercent: 12 }], // 기준 10,000 + 가2 2,000 = 12,000
+        totalAppurtenantLandArea: 20000, // 공장 전체 → 초과 8,000 (40%)
+      }),
+      R,
+    );
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning?.totalArea).toBe(5000);
+    expect(r.areaProportioning?.nonBusinessRatio).toBe(0.4);
+    expect(r.areaProportioning?.nonBusinessArea).toBe(2000); // 5,000 × 40%
+  });
+
+  it("PART-2: 양도분만 보면 한도 이내여도, 공장 전체가 초과면 초과비율이 적용된다", () => {
+    // 양도분 5,000㎡는 기준면적 12,000㎡보다 작다 — 양도분과 직접 비교했다면 「전량 사업용」이 됐을 것.
+    const r = judgeOtherLand(
+      base(5000, {
+        locationCategory: "eup_myeon_or_complex",
+        segments: [{ floorArea: 1200, ratePercent: 12 }],
+        totalAppurtenantLandArea: 20000,
+      }),
+      R,
+    );
+    expect(r.isBusiness).toBe(false); // ← 정정 전 구현이라면 true였다
+  });
+
+  it("PART-3: 총면적 미입력은 던진다 (양도분으로 조용히 대체하지 않는다)", () => {
+    const input = base(5000);
+    input.otherLand!.factory = {
+      locationCategory: "eup_myeon_or_complex",
+      segments: [{ floorArea: 1200, ratePercent: 12 }],
+    } as never; // 런타임 누락 재현 — 타입은 필수지만 API 경계를 넘어오면 뚫릴 수 있다
+    expect(() => judgeOtherLand(input, R)).toThrow(/공장 전체/);
   });
 
   it("회귀 — factory 미설정이면 기존 동작 그대로 (Step 0.5 스텝 자체가 없다)", () => {
