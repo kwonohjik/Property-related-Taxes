@@ -631,3 +631,65 @@ anchor: `__tests__/calc/gb-inheritance-gift-part-axis.anchor.test.ts`(O3-1~O3-4,
   요구하지 않으므로 **입력하지 않아도 통과**하고, 입력해도 무시된다(별건).
 - `app/api/calc/transfer/general-building-route-helper.ts` **833줄**(정책 800 초과). 명시 prop 매핑이
   길어 발생한 것이므로, 분리 시 그 매핑을 헬퍼로 뽑으면 strip 재발도 함께 막을 수 있다.
+
+---
+
+## §12 `general-building-route-helper.ts` 800줄 분리 (2026-08-06)
+
+### 12.1 왜 지금인가
+
+833줄로 정책(트리거 800 · 착지 목표 ≤700)을 넘었고, **초과분의 상당 부분이 결함의 원인 그 자체**였다 —
+실가 경로 호출부가 payload 필드를 하나씩 나열하는 긴 블록(§11.2 O3-5·O3-6). 분리와 결함 봉인을
+같이 처리한다.
+
+### 12.2 3분할 — 파일이 이미 문서화한 이음매를 따른다
+
+원본 헤더가 「A. 환산취득가 모드 / B. 실거래가·감정가 모드」로 두 경로를 명시하고 있었다.
+그 경계를 그대로 쓴다.
+
+| 파일 | 줄 | 내용 |
+|---|---|---|
+| `general-building-route-helper.ts` | **326** | 진입점 `dispatchGeneralBuilding` + **경로 A**(환산) |
+| `general-building-route-actual.ts` | **359** | **경로 B**(실가·감정가) + 그 payload 타입 |
+| `general-building-route-cards.ts` | **186** | 두 경로 **공용** 카드 변환(`buildProperties`·`buildApportionment`) + 결과 타입 |
+
+공용 카드 변환을 따로 뺀 이유는 **순환 import 회피**다 — 경로 B가 그 함수를 쓰는데 경로 A 파일에
+두면 `helper → actual → helper` 순환이 된다.
+
+`route.ts`와 테스트 15파일이 종전 경로에서 3개 export를 import하므로 **재수출로 보존**했다
+(메모리 `feedback_800line_split_export_preservation`).
+
+### 12.3 🔴 핵심 — payload 전달을 나열에서 **스프레드**로
+
+```
+- { totalTransferPrice, landArea: coercedGbRaw.landArea as number, ... 25개 필드 나열 ... }
++ { ...(coercedGbRaw as unknown as GeneralBuildingActualPricePayload),
++   totalTransferPrice, transferDate, acquisitionDate,
++   actualAcquisitionPrice, actualExpenses, burdenedGiftInfo,
++   landAcquisitionDate: landAcqDateCoerced, buildingAcquisitionDate: buildingAcqDate,
++   buildingAcquisitionCause: buildingAcqCause }
+```
+
+나열은 「빠뜨릴 수 있는 목록」을 코드에 남겨 두는 구조다. 실제로 **두 번** 빠뜨렸고 둘 다
+과대과세였다(§11.2). 스프레드는 그 실수 자체를 불가능하게 만든다 — 새 payload 필드가 자동으로
+흐른다. 환산 경로가 이미 같은 방식이었다(`gbPayload` 조립부).
+
+**스프레드 뒤에 오는 것만** 덮어쓴다: 함수 파라미터에서 오는 값과 `toOptionalDate`로 변환한 값이다.
+순서를 바꾸면 raw 문자열 날짜가 살아남아 `Date < string` 침묵 false 함정에 빠진다.
+
+### 12.4 구조 가드 anchor
+
+`__tests__/api/gb-route-actual-payload-forwarding.anchor.test.ts`(4건)는 **소스 텍스트**를 본다:
+
+- 실가 경로 호출부가 `coercedGbRaw`를 스프레드한다
+- 파트 취득가액·자본적지출을 **개별 나열하지 않는다**(목록이 되살아나면 실패)
+- 함수 인자·Date 변환값이 스프레드 **뒤에** 온다(덮어쓰기 순서)
+- 파일이 ≤700줄이다
+
+값 단언(§11의 P-1~P-4)은 **이미 아는 필드**만 지킨다 — 다음에 추가될 필드는 지켜주지 못한다.
+그래서 전달 **방식**을 고정했다. 선례는 「Pick 목록 계약 개수 가드」다.
+
+### 12.5 검증
+
+tsc 0 · lint 0 errors(warning 284 = master 기준선과 **동일**, 신규 0) · vitest **13,788 pass**.
+분리는 순수 이동이라 세액 변경이 없어야 하고, 실제로 기존 anchor 전건이 그대로 통과한다.
