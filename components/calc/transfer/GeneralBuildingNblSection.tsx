@@ -81,12 +81,12 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
             초과분에만 +10%p 중과.
           </p>
 
-          {/* 무허가건축물 — 배율 무관 전체 NBL */}
+          {/* §101① 단서 — 배율 무관 전체 NBL. 무허가 신축뿐 아니라 불법 용도변경도 포함(해석례 25-0823) */}
           <ToggleCard
             tone="rose"
             variant="chip"
-            title="무허가(미등재) 건축물"
-            description="무허가건축물 부속토지는 재산세 별도합산에서 제외되어 토지 전체가 비사업용 (배율 계산 없음)"
+            title="허가·사용승인 미이행 건축물"
+            description="건축허가·사용승인을 받지 않았거나, 용도변경 허가·사용승인 없이 용도를 바꿔 사용 중인 건축물. 부속토지가 재산세 별도합산에서 제외되어 토지 전체가 비사업용 (배율 계산 없음)"
             checked={asset.gbIsUnregistered}
             onCheckedChange={(v) => onChange({ gbIsUnregistered: v })}
           />

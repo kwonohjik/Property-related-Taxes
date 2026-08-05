@@ -23,13 +23,22 @@ export const generalBuildingValuationSchema = z.object({
   landArea: z.number().positive(),
   /** 건물 연면적 (㎡). 환산취득가 모드만 필수. */
   buildingArea: z.number().positive().optional(),
-  /** 건물 수평투영면적 (㎡) — 비사업용토지 판정 기준 (§168의12) */
+  /**
+   * 건축물 바닥면적 (㎡, 건축물 외 시설은 수평투영면적) — 비사업용토지 판정 기준.
+   * 「지방세법 시행령」 §101①2호(바닥면적 × §101② 적용배율).
+   */
   buildingFootprintArea: z.number().positive(),
-  /** 용도지역 (§168의12 배율 결정). validate에서 필수 보장. */
+  /** 용도지역 (「지방세법 시행령」 §101② 적용배율 결정). validate에서 필수 보장. */
   zoneType: z.string().optional(),
   /** 수도권 소재 여부 */
   isMetropolitan: z.boolean().optional(),
-  /** 무허가건축물 여부. true 시 전체 비사업용 (§168의11①1호) */
+  /**
+   * 「지방세법 시행령」 §101① **단서** 해당 여부 — true 시 배율과 무관하게 부속토지 전량 비사업용.
+   *
+   * 이름은 "unregistered"이나 범위는 **허가·사용승인 미이행 전반**이다. 법제처 법령해석례
+   * 25-0823(2026.02.03)은 단서의 "허가 등"·"사용승인"이 「건축법」 §11·§22로 한정되지 않으며
+   * **§19②1호 용도변경 허가 미이행**·**§19⑤·§22 사용승인 미이행**도 포함된다고 회답했다.
+   */
   isUnregistered: z.boolean().optional(),
   /** 양도시 개별공시지가 (원/㎡). 환산 분모 + §166⑥ 안분 비율. 모드 무관 필수. */
   transferLandPricePerSqm: z.number().int().positive(),

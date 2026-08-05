@@ -1,10 +1,11 @@
 # 상업용건물·오피스텔(CB) 부수토지 기준면적 초과분 비사업용 중과 — 구현 계획
 
-- **작성일**: 2026-08-05 (rev.4 — Phase 0-1·0-4 완료 반영, §10)
+- **작성일**: 2026-08-05 (rev.5 — Phase 0 전건·Phase A 완료 반영, §10)
 - **브랜치**: `worktree-commercial-building-appurtenant-land` (워크트리 — master는 별건 작업 중)
 - **채택 설계**: **안 B-2** (§5.2) — 배율 판정 공용 헬퍼 추출 + 기존 부분중과 비율 주입
 - **발단**: 세무 교재 발췌 — "상업용 건물의 부수토지는 각 용도지역별 배율이 규정되어 있어 규모 이내의 부수토지는 일반적인 양도소득세 계산과정에 따라 산출되지만 규모를 초과하는 면적에 대해서는 별도로 구분하여 비사업용토지로 중과 계산한다."
-- **선행 작업**: 「지방세법 시행령」 §101② 배율표 정본 통일 (별도 브랜치, 미머지). 이 계획은 그 정본(`lib/tax-engine/local-tax-zone-multiplier.ts`)을 전제한다 — **머지 선행 필요**.
+- **선행 작업**: 「지방세법 시행령」 §101② 배율표 정본 통일 — **PR #1067 머지 완료(2026-08-05)**. 정본 `lib/tax-engine/local-tax-zone-multiplier.ts` 확보.
+- **진행 상태**: Phase 0 전건 ✅ · **Phase A ✅** · Phase B~E 대기
 
 ---
 
@@ -26,15 +27,16 @@ UI 안내 문구가 범위를 명시한다 (`components/calc/transfer/asset-sect
 
 ⇒ **교재가 말하는 "상업용 건물"(단독 소유 근린상가 등)은 이 앱에서 `general_building`으로 입력된다.** 그리고 GB 경로에는 배율 판정과 초과분 분할 중과가 **이미 구현되어 있다**:
 
+> 아래는 **Phase A 완료 후** 기준이다. 판정 본체는 공용 헬퍼로 추출됐고 3경로가 이를 호출한다.
+
 | 위치 | 내용 |
 |---|---|
-| `lib/tax-engine/general-building-valuation.ts:653` | `getBuildingSiteMultiplier(input.zoneType)` — §101② 배율 조회 |
-| `:639-643` | `isUnregistered` → 배율 무관 전량 비사업용 (§101① 단서) |
-| `:663-664` | `allowedLandArea = buildingFootprintArea × multiplier` / 초과 판정 |
-| `:668-671` | `nonBusinessArea` · `nonBusinessRatio` 산출 |
-| `:677-745` | 토지 카드 2장 분할(`land_business` / `land_nbl`) — 초과분만 중과 |
-| `lib/tax-engine/general-building-extension.ts:220` | 증축 GB 동일 |
-| `app/api/calc/transfer/general-building-route-helper.ts:598` | 실거래가 모드 GB 동일 |
+| `lib/tax-engine/appurtenant-land-excess.ts` | **판정 본체**(신설) — §101① 단서 → 배율 조회 → 기준면적 → 초과분·비율 |
+| `lib/tax-engine/general-building-valuation.ts:641` | 환산 모드 GB — `judgeAppurtenantLandExcess({ context: "일반건물" })` |
+| `:663`·`:686`·`:705` | 토지 카드 분할(`land_nbl` / `land_business`) — 초과분만 중과 |
+| `lib/tax-engine/general-building-extension.ts:206` | 증축 GB — `context: "일반건물(증축)"` |
+| `app/api/calc/transfer/general-building-route-helper.ts:587` | 실거래가 모드 GB — `context: "일반건물(실거래가)"` |
+| `__tests__/tax-engine/appurtenant-land-excess.anchor.test.ts` | 헬퍼 계약 anchor 20건 |
 | `__tests__/tax-engine/non-business-land/building-site-multiplier.anchor.test.ts` | 배율·경로 anchor |
 
 ### 0.2 그렇다면 CB에 무엇이 없는가
@@ -43,7 +45,7 @@ UI 안내 문구가 범위를 명시한다 (`components/calc/transfer/asset-sect
 |---|---|---|
 | 정착면적(바닥면적) 입력 | `buildingFootprintArea` (`lib/api/transfer-tax-building-schemas.ts:27`) | **없음** — 전용/공유/대지면적만 |
 | 용도지역 입력 | `zoneType` (`:29`) | **없음** |
-| 미허가 플래그 | `isUnregistered` (`:33`) | **없음** |
+| §101① 단서 플래그 | `isUnregistered` (`:42`) | **없음** |
 | 배율 판정 | ✅ | **없음** |
 | 초과분 중과 | ✅ 카드 2장 분할 | **없음** |
 
@@ -361,7 +363,14 @@ CB: transfer-tax.ts STEP 0.6 직후 → 헬퍼 호출 → effectiveInput에 주�
 
 > **0-3 미해소 시 Phase B 진입 금지.** (0-1·0-4 해소 완료)
 
-### Phase A — 공용 헬퍼 추출 (GB 동작 불변)
+### Phase A — 공용 헬퍼 추출 (GB 동작 불변) ✅ **완료 (2026-08-05)**
+
+> 결과: `lib/tax-engine/appurtenant-land-excess.ts`(134줄) 신설 · GB 3경로 교체 ·
+> 헬퍼 anchor 20건 신설 · **전체 13,475건 GREEN**(baseline 13,455 + 신규 20) · lint 0 errors.
+> GB 판정 baseline 390건이 변경 전후 동일하게 통과해 **동작 불변**을 확인했다.
+>
+> ⚠️ `general-building-valuation.ts`는 880 → **856줄**로 줄었으나 여전히 800줄 정책 초과다
+> (이번 변경이 만든 위반이 아니라 기존 상태). 분리는 별건으로 남긴다.
 
 - `lib/tax-engine/appurtenant-land-excess.ts` 신설 — §101① 단서·2호 가목·나목·배율 판정
 - GB 3경로(`general-building-valuation.ts` · `general-building-extension.ts` · `general-building-route-helper.ts`)를 헬퍼 호출로 교체
@@ -466,6 +475,20 @@ CB: transfer-tax.ts STEP 0.6 직후 → 헬퍼 호출 → effectiveInput에 주�
 ---
 
 ## 10. 검토 이력
+
+### rev.5 (2026-08-05) — Phase 0-3·A 완료
+
+| 항목 | 결과 |
+|---|---|
+| **Phase 0-3** | PR #1067 머지 → 계획서 브랜치 리베이스. §101② 정본 확보. **Phase 0 블로커 전건 해소** |
+| **Phase A** | `appurtenant-land-excess.ts` 신설, GB 3경로(환산 `general-building-valuation.ts` · 증축 `general-building-extension.ts` · 실거래가 `general-building-route-helper.ts`) 교체 |
+| **동작 불변 증명** | GB baseline 390건이 변경 전후 동일 통과. 전체 13,475건 GREEN · tsc 0 · lint 0 errors |
+| **C-6b 반영** | `isUnregistered`의 의미를 §101① 단서 범위(허가·사용승인 미이행 — 불법 용도변경 포함)로 확장. 엔진 주석·Zod 주석·store 주석·UI 토글 제목/설명 4곳 정정. **판정 로직은 불변**(플래그 의미만 확장) |
+| **주석 드리프트 정리** | `transfer-tax-building-schemas.ts`의 `buildingFootprintArea`/`zoneType`/`isUnregistered` 주석이 §168의12·§168의11①1호를 가리키던 것을 §101①2호·§101②·§101①단서로 정정 |
+
+**설계 메모** — 3경로의 에러 메시지가 서로 달랐으나(`"일반건물 …"` / `"일반건물(증축) …"` / `"일반건물(실거래가): …"`) 테스트·UI 어디서도 문구를 검증하지 않음을 확인하고 `context` 파라미터로 접두사만 유지한 채 본문을 통일했다.
+
+**미구현 명시** — §101①2호 **가목**(법 §106①3호다목 토지 안 건축물)·**나목**(시가표준액 2% 미달)은 판정 입력이 폼에 없어 헬퍼가 다루지 않는다(헤더에 기록). 나목은 `land` 자산에 한해 `non-business-land/other-land.ts` `isBareLand`가 별도 처리한다.
 
 ### rev.4 (2026-08-05) — Phase 0-4 완료
 

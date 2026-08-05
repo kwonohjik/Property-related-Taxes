@@ -25,8 +25,7 @@
 
 import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
-import { getBuildingSiteMultiplier } from "./non-business-land/urban-area";
-import type { ZoneType } from "./non-business-land/types";
+import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
   ESTIMATED_DEDUCTION_RATE_LAND_BUILDING,
@@ -195,47 +194,22 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     extensionUsedEstimated = false;
   }
 
-  // ── 비사업용토지 판정 (공통) ──────────────────────────────────────────
-  // 「소득세법」 제104조의3 제1항 제4호 나목 → 「지방세법」 제106조 제1항 제2호
-  //   → 「지방세법 시행령」 제101조 제1항 제2호(바닥면적 × 제2항 적용배율).
-  // ⚠️ 「소득세법 시행령」 제168조의12(주택 부수토지)는 이 경로에 쓰지 않는다.
-  let appliedMultiplier: number;
-  let multiplierDetail: string;
-  let allowedLandArea: number;
-  let isWithinNblRatio: boolean;
-
-  if (input.isUnregistered) {
-    appliedMultiplier = 0;
-    multiplierDetail = "무허가건축물 — 전체 비사업용";
-    allowedLandArea = 0;
-    isWithinNblRatio = false;
-  } else {
-    if (!input.zoneType) {
-      throw new TaxCalculationError(
-        TaxErrorCode.INVALID_INPUT,
-        "일반건물(증축) 비사업용토지 판정: zoneType(용도지역)이 입력되지 않았습니다.",
-      );
-    }
-    // 「지방세법 시행령」 제101조 제2항 표에 없는 용도지역(residential 등)은 추정 금지 → 차단
-    const resolved = getBuildingSiteMultiplier(input.zoneType as ZoneType);
-    if (!resolved) {
-      throw new TaxCalculationError(
-        TaxErrorCode.INVALID_INPUT,
-        `일반건물(증축) 비사업용토지 판정: 용도지역 "${input.zoneType}"은 「지방세법 시행령」 제101조 제2항 적용배율표에 대응 항목이 없습니다.`,
-      );
-    }
-    const { multiplier, detail } = resolved;
-    appliedMultiplier = multiplier;
-    multiplierDetail = detail;
-    allowedLandArea = input.buildingFootprintArea * multiplier;
-    isWithinNblRatio = input.landArea <= allowedLandArea;
-  }
-
-  const nonBusinessArea = Math.max(0, input.landArea - allowedLandArea);
-  const nonBusinessRatio =
-    input.landArea > 0
-      ? nonBusinessArea / input.landArea
-      : 0;
+  // ── 비사업용토지 판정 (공통 헬퍼) ────────────────────────────────────
+  // 판정 본체는 `appurtenant-land-excess.ts` — 환산·증축·실거래가 3경로 공유. 재구현 금지.
+  const {
+    multiplier: appliedMultiplier,
+    multiplierDetail,
+    allowedLandArea,
+    isWithinLimit: isWithinNblRatio,
+    nonBusinessArea,
+    nonBusinessRatio,
+  } = judgeAppurtenantLandExcess({
+    landArea: input.landArea,
+    buildingFootprintArea: input.buildingFootprintArea,
+    zoneType: input.zoneType,
+    isUnregistered: input.isUnregistered,
+    context: "일반건물(증축)",
+  });
 
   // ── Step 4: 자산 카드 3장 생성 ────────────────────────────────────────
   // originUsedEstimated: 토지·건물1 카드에 적용 (원건물 모드에 따라 결정됨)
