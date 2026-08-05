@@ -64,7 +64,11 @@ export const separateAggregateLandSchema = z
     /** 공장용지 여부 (지방세법 시행령 §101①1호) */
     isFactory: z.boolean().optional(),
 
-    /** 공장입지기준면적 (㎡) — isFactory===true 시 기준면적으로 사용 */
+    /**
+     * @deprecated 별도합산 기준면적에 쓰이지 않는다(2026-08-05 정정).
+     * 공장입지기준면적은 「지방세법 시행령」 §102①1호(**분리과세**) 한도이고,
+     * §101①1호(별도합산) 본문에는 그 개념이 없다. 하위 호환을 위해 필드만 남긴다.
+     */
     factoryStandardArea: z
       .number()
       .positive({ message: "공장입지기준면적은 0㎡ 초과여야 합니다." })
@@ -115,12 +119,15 @@ export const separateAggregateLandSchema = z
       });
     }
 
-    // 공장용지인데 공장입지기준면적 미입력 (오류는 아님 — §101①1호 본칙인 바닥면적×적용배율로 산정)
-    if (data.isFactory && !data.factoryStandardArea && !data.buildingFloorArea) {
+    // 공장용지도 별도합산 기준면적은 §101①1호 본칙(바닥면적 × §101② 적용배율)이다.
+    // 공장입지기준면적(별표6)은 §102①1호 **분리과세** 한도라 여기서 대체 입력이 될 수 없다(2026-08-05 정정).
+    if (data.isFactory && !data.buildingFloorArea) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["factoryStandardArea"],
-        message: "공장용지(isFactory=true)의 경우 공장입지기준면적 또는 건축물 바닥면적 중 하나는 입력해야 합니다.",
+        path: ["buildingFloorArea"],
+        message:
+          "공장용지(isFactory=true)도 건축물 바닥면적(㎡)이 필요합니다. " +
+          "별도합산 기준면적은 「지방세법 시행령」 제101조 제1항 제1호에 따라 바닥면적 × 같은 조 제2항 적용배율로 산정합니다.",
       });
     }
   });

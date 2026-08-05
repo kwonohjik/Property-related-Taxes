@@ -54,43 +54,29 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       <ToggleCard
         tone="sky"
         title="공장용지"
-        description="공장입지기준면적 적용"
+        description="「지방세법 시행령」 §101①1호 — 기준면적은 공장용 건축물 바닥면적 × 용도지역 배율"
         checked={form.saIsFactory}
         onCheckedChange={(v) => onChange({ saIsFactory: v })}
       />
 
-      {/* 건물 바닥면적 (비공장) */}
-      {!form.saIsFactory && (
-        <div className="space-y-1">
-          <label className="text-sm font-medium">건물 바닥면적 (㎡)</label>
-          <DecimalInput
-            value={form.saBuildingFloorArea}
-            onChange={(v) => onChange({ saBuildingFloorArea: v })}
-            placeholder="면적 입력 (소수점 가능)"
-            unit="㎡"
-          />
-          <p className="text-xs text-muted-foreground">
-            기준면적 = 건물 바닥면적 × 용도지역 배율
-          </p>
-          <LawArticleModal legalBasis="지방세법 시행령 §101" label="§101②" />
-        </div>
-      )}
+      {/* 건물 바닥면적 — 공장·비공장 공통 (§101①1호·2호 모두 바닥면적 × 배율) */}
+      <div className="space-y-1">
+        <label className="text-sm font-medium">건물 바닥면적 (㎡)</label>
+        <DecimalInput
+          value={form.saBuildingFloorArea}
+          onChange={(v) => onChange({ saBuildingFloorArea: v })}
+          placeholder="면적 입력 (소수점 가능)"
+          unit="㎡"
+        />
+        <p className="text-xs text-muted-foreground">
+          기준면적 = 건물 바닥면적 × 용도지역 배율 (공장용지도 동일 — §101①1호)
+        </p>
+        <LawArticleModal legalBasis="지방세법 시행령 §101" label="§101②" />
+      </div>
 
-      {/* 공장입지기준면적 (공장) */}
-      {form.saIsFactory && (
-        <div className="space-y-1">
-          <label className="text-sm font-medium">공장입지기준면적 (㎡)</label>
-          <DecimalInput
-            value={form.saFactoryStandardArea}
-            onChange={(v) => onChange({ saFactoryStandardArea: v })}
-            placeholder="면적 입력 (소수점 가능)"
-            unit="㎡"
-          />
-          <p className="text-xs text-muted-foreground">
-            산업집적활성화법상 공장입지기준면적 이내: 별도합산, 초과: 종합합산
-          </p>
-        </div>
-      )}
+      {/* 공장입지기준면적 입력 칸은 제거했다(2026-08-05).
+          그 면적은 「지방세법 시행령」 §102①1호(분리과세) 한도이고, §101①1호(별도합산)
+          본문에는 그 개념이 없다. 종전 문구("이내: 별도합산")는 법문과 반대였다. */}
 
       {/* 건축물 철거 여부 */}
       <ToggleCard

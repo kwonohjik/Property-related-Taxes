@@ -2,7 +2,8 @@
  * 재산세 별도합산과세대상 판정 및 계산 엔진 (P4-04~07, P4-13)
  *
  * 지방세법 §106①2호  — 별도합산과세대상 (영업용 건축물 부속토지)
- * 지방세법 시행령 §101 — 기준면적 산정 (바닥면적 × 용도지역 배율 or 공장입지기준면적)
+ * 지방세법 시행령 §101 — 기준면적 산정 (바닥면적 × 용도지역 배율)
+ *   ⚠️ 공장입지기준면적(별표6)은 §102①1호 **분리과세** 소관 — 여기서 쓰지 않는다(2026-08-05 정정)
  * 지방세법 시행령 §103의2 1호 — 철거·멸실 후 1년 이내 별도합산 유지 특례
  * 지방세법 §111①1호 나목 — 별도합산 누진세율 0.2%~0.4%
  * 지방세법 §113         — 인별 전국 합산
@@ -181,9 +182,10 @@ export function isSeparateAggregateLand(
   const taxBaseDate = land.taxBaseDate ?? deriveDefaultTaxBaseDate(land);
 
   // ── 1단계: 건축물 존재 여부 ──
+  // 공장입지기준면적(§102①1호 분리과세 한도)은 「건축물이 있다」는 근거가 될 수 없다 —
+  // 별도합산은 §101①1호가 「공장용 **건축물**의 부속토지」를 요구하므로 바닥면적으로만 판정한다(2026-08-05 정정).
   const hasBuilding =
     (land.buildingFloorArea !== undefined && land.buildingFloorArea > 0) ||
-    (land.isFactory && land.factoryStandardArea !== undefined && land.factoryStandardArea > 0) ||
     land.demolished === true; // 철거 중인 경우도 건축물 존재로 처리 (특례 판단 대상)
 
   if (!hasBuilding) {
@@ -308,10 +310,23 @@ interface BaseAreaResult {
 }
 
 /**
- * 기준면적 계산 (지방세법 시행령 §101②)
+ * 기준면적 계산 (지방세법 시행령 §101①·②)
  *
- * 공장용지(§101①1호): 공장입지기준면적 입력 시 그 면적, 미입력 시 바닥면적 × 용도지역 배율
- * 공장용 외(§101①2호): buildingFloorArea × 용도지역 배율
+ * 공장용지(§101①1호)·공장용 외(§101①2호) **모두** `buildingFloorArea × 용도지역 배율`이다.
+ *
+ * ## 🔴 공장입지기준면적은 여기 쓰이지 않는다 (2026-08-05 정정)
+ *
+ * 「지방세법 시행령」의 두 조문은 **소재 지역으로 배타 분기**하고 한도 산식이 다르다:
+ *
+ * | 조문 | 과세구분 | 한도 |
+ * |---|---|---|
+ * | §101①1호 | **별도합산**(이 함수) | 공장용 건축물 **바닥면적 × §101② 적용배율** |
+ * | §102①1호 | **분리과세** | **공장입지기준면적**(시행규칙 §50 [별표6]) |
+ *
+ * §101①1호 본문에는 공장입지기준면적 개념이 **아예 없다**(법제처 MST 287223 실측).
+ * 종전에는 `factoryStandardArea`가 입력되면 그것을 별도합산 기준면적으로 삼았는데,
+ * 이는 **분리과세 한도를 별도합산 판정에 끌어다 쓴 것**이라 조문상 근거가 없었다.
+ * ⇒ 해당 분기를 제거했다. `factoryStandardArea`는 이 엔진에서 소비하지 않는다.
  *
  * 배율은 `local-tax-zone-multiplier.ts`(§101② 표)가 단일 정본 — 여기서 재선언 금지.
  *
@@ -320,40 +335,18 @@ interface BaseAreaResult {
  */
 export function calculateBaseArea(land: SeparateAggregateLandItem): BaseAreaResult {
   const floorArea = land.buildingFloorArea ?? 0;
+  // 공장용지·공장용 외 모두 같은 산식이다 — 조문 라벨만 호(號)에 맞춰 구분한다.
+  const legalBasis = land.isFactory
+    ? PROPERTY_SEPARATE.BASE_AREA_FACTORY   // §101①1호
+    : PROPERTY_SEPARATE.BASE_AREA_GENERAL;  // §101①2호
 
-  // 공장용지: 공장입지기준면적 우선 적용
-  if (land.isFactory) {
-    if (land.factoryStandardArea && land.factoryStandardArea > 0) {
-      return {
-        baseArea: land.factoryStandardArea,
-        multiplier: 0, // 직접 면적 적용이므로 배율 개념 없음
-        legalBasis: PROPERTY_SEPARATE.BASE_AREA_FACTORY,
-      };
-    }
-    // 미입력 → §101①1호 본칙(바닥면적 × 제2항 적용배율)으로 산정.
-    // 종전에는 용도지역과 무관하게 공업지역 4배를 고정 적용했다.
-    if (floorArea > 0) {
-      const multiplier = resolveZoneMultiplier(land.zoningDistrict);
-      return {
-        baseArea: floorArea * multiplier,
-        multiplier,
-        legalBasis: PROPERTY_SEPARATE.BASE_AREA_FACTORY,
-      };
-    }
-    return { baseArea: 0, multiplier: 0, legalBasis: PROPERTY_SEPARATE.BASE_AREA_FACTORY };
-  }
-
-  // 공장용 외 건축물: 바닥면적 × 용도지역 배율
+  // 건축물이 없으면 부속토지 개념이 성립하지 않는다 → 기준면적 0 (전량 종합합산)
   if (floorArea <= 0) {
-    return { baseArea: 0, multiplier: 0, legalBasis: PROPERTY_SEPARATE.BASE_AREA_GENERAL };
+    return { baseArea: 0, multiplier: 0, legalBasis };
   }
 
   const multiplier = resolveZoneMultiplier(land.zoningDistrict);
-  return {
-    baseArea: floorArea * multiplier,
-    multiplier,
-    legalBasis: PROPERTY_SEPARATE.BASE_AREA_GENERAL,
-  };
+  return { baseArea: floorArea * multiplier, multiplier, legalBasis };
 }
 
 /** §101② 표에서 적용배율을 조회한다. 미등재 용도지역은 추정하지 않고 차단한다. */

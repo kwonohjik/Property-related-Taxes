@@ -262,7 +262,8 @@ export interface SeparateAggregateCheckResult {
  *
  * 조건: 건축물의 부속토지로서 기준면적 이내
  * - 공장용 외(§101①2호): 건축물 바닥면적 × §101② 용도지역별 적용배율
- * - 공장용지(§101①1호): factoryStandardArea 입력 시 그 면적, 미입력 시 바닥면적 × 적용배율
+ * - 공장용지(§101①1호)·공장용 외(§101①2호) 모두: 바닥면적 × §101② 적용배율
+ *   ⚠️ 공장입지기준면적(별표6)은 §102①1호 분리과세 한도 — 여기서 쓰지 않는다(2026-08-05 정정)
  *
  * 초과 면적 → 종합합산 전환
  *
@@ -280,12 +281,12 @@ export function isSeparateAggregate(
     return { isSeparate: false, separateArea: 0, comprehensiveArea: land.area };
   }
 
+  // 공장용지(§101①1호)·공장용 외(§101①2호) 모두 바닥면적 × 용도지역별 적용배율이다.
+  // 🔴 공장입지기준면적(시행규칙 §50 [별표6])은 §102①1호 **분리과세** 한도이고,
+  //    §101①1호 본문에는 그 개념이 없다 — 종전에는 그 값을 별도합산 기준면적으로 썼다(2026-08-05 정정).
   let baseArea: number;
 
-  if (land.isFactory && land.factoryStandardArea && land.factoryStandardArea > 0) {
-    // 공장용지: 공장입지기준면적 기준
-    baseArea = land.factoryStandardArea;
-  } else {
+  {
     // 바닥면적 × 용도지역별 적용배율 (「지방세법 시행령」 §101②)
     // 표 미등재 용도지역은 추정하지 않고 차단한다 — 배율을 잘못 잡으면 종합합산
     // 이관 면적이 조용히 틀어져 세액이 어긋난다.

@@ -422,17 +422,33 @@ describe("P4-14: 통합 — legalBasis에 법령 상수 포함 검증", () => {
     expect(check.legalBasis).toBe(PROPERTY_SEPARATE.SUBJECT);
   });
 
-  it("TC-24: 공장용지 기준면적 이내 → 별도합산, legalBasis에 §101②2호 포함", () => {
+  // 🔴 계약 정정(2026-08-05) — 종전에는 `factoryStandardArea`만 있고 건축물 바닥면적이
+  // 없어도 별도합산으로 인정했다. 그러나 §101①1호는 「공장용 **건축물**의 부속토지」를
+  // 요구하고 그 한도는 바닥면적 × §101② 배율이다. 공장입지기준면적(별표6)은 §102①1호
+  // **분리과세** 한도라 별도합산의 근거가 될 수 없다.
+  // 상세: docs/02-design/features/property-factory-base-area-102-1-fix.plan.md
+  it("TC-24: 공장용지도 바닥면적이 있어야 별도합산 — 기준면적은 바닥면적 × 배율", () => {
+    // 공업지역 4배 · 바닥면적 100㎡ → 기준면적 400㎡ > landArea 300㎡ → 전량 인정
     const land = makeLand({
       isFactory: true,
-      factoryStandardArea: 500, // 기준면적 500㎡ > landArea 300㎡
-      buildingFloorArea: undefined,
+      buildingFloorArea: 100,
     });
     const check = isSeparateAggregateLand(land);
     expect(check.isSeparateAggregate).toBe(true);
     expect(check.recognizedArea).toBe(300);
     expect(check.excessArea).toBe(0);
     expect(check.legalBasis).toBe(PROPERTY_SEPARATE.BASE_AREA_FACTORY);
+  });
+
+  it("TC-24b: 공장입지기준면적만 있고 바닥면적이 없으면 별도합산이 아니다 (건축물 부재)", () => {
+    const land = makeLand({
+      isFactory: true,
+      factoryStandardArea: 500, // §102①1호 분리과세 한도 — 별도합산 근거가 되지 않는다
+      buildingFloorArea: undefined,
+    });
+    const check = isSeparateAggregateLand(land);
+    expect(check.isSeparateAggregate).toBe(false);
+    expect(check.excessArea).toBe(300); // 전량 종합합산
   });
 
   it("TC-25: 철거 후 유예기간(1년) 초과 → 종합합산, legalBasis에 §103의2 포함", () => {
@@ -492,17 +508,19 @@ describe("P4-03: Zod 스키마 검증", () => {
     expect(result.success).toBe(true);
   });
 
-  it("유효: 공장용지 — factoryStandardArea 포함", () => {
-    const result = separateAggregateLandSchema.safeParse({
+  it("유효: 공장용지 — 바닥면적 필수 (공장입지기준면적으로 대체 불가)", () => {
+    // 정정 전에는 factoryStandardArea만으로 통과했다. §101①1호 본칙이 바닥면적을 요구한다.
+    const base = {
       id: "L002",
       jurisdictionCode: "11680",
       landArea: 300,
       officialLandPrice: 500_000,
       zoningDistrict: "industrial",
       isFactory: true,
-      factoryStandardArea: 400,
-    });
-    expect(result.success).toBe(true);
+    };
+    expect(separateAggregateLandSchema.safeParse({ ...base, buildingFloorArea: 100 }).success).toBe(true);
+    // 공장입지기준면적만 넣으면 차단된다
+    expect(separateAggregateLandSchema.safeParse({ ...base, factoryStandardArea: 400 }).success).toBe(false);
   });
 
   it("유효: 철거 + 철거일 입력", () => {
