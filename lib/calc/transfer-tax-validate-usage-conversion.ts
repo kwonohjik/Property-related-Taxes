@@ -34,8 +34,25 @@ export function validateUsageConversion(
   }
 
   // C-8·C-9 — 취득일·양도일 사이여야 한다. 엔진도 같은 조건에서 오류를 던진다.
-  if (asset.acquisitionDate && start <= asset.acquisitionDate) {
-    return `${label}: 주거용 사용 개시일은 취득일 이후여야 합니다.`;
+  //
+  // ⚠️ **이월과세는 하한이 「증여 등기접수일」이다.** 엔진은 시나리오 A(이월과세 적용 —
+  //    증여자 취득일 기산)와 B(미적용 — 등기접수일 기산)를 **둘 다** 계산해 세액을 비교하는데
+  //    (§97의2②3호), B의 취득일이 항상 더 늦으므로 **B가 가장 엄격한 하한**이다.
+  //    전환일이 그 사이에 있으면 A는 통과하고 **B만 기간 분해에 실패해 엔진이 throw**한다.
+  //
+  //    게다가 이월과세 자산은 `acquisitionDate`가 **비어 있을 수 있다** — 입력 UI가
+  //    `carryover` 서브객체만 받고(`CarryoverGiftBlock.tsx`) API 변환이 fallback으로 채운다
+  //    (`transfer-tax-api.ts` — `acquisitionDate || carryover.giftRegistryDate`).
+  //    fallback 없이 그대로 두면 이 가드가 **통째로 단락**돼 검사 자체가 사라진다
+  //    (⑧ 규칙 — API/UI fallback이 있는 필드는 validate도 같은 fallback을 써야 한다).
+  const acqFloor =
+    asset.acquisitionCause === "carryover_gift"
+      ? asset.carryover?.giftRegistryDate || asset.acquisitionDate || ""
+      : asset.acquisitionDate;
+  if (acqFloor && start <= acqFloor) {
+    return asset.acquisitionCause === "carryover_gift"
+      ? `${label}: 주거용 사용 개시일은 증여 등기접수일 이후여야 합니다.`
+      : `${label}: 주거용 사용 개시일은 취득일 이후여야 합니다.`;
   }
   if (formTransferDate && start >= formTransferDate) {
     return `${label}: 주거용 사용 개시일은 양도일 이전이어야 합니다.`;
@@ -58,24 +75,24 @@ export function validateUsageConversion(
     return unsupported("부담부증여 양도입니다.");
   }
 
-  // C-21 — §97의2 이월과세와의 우선순위에 명문이 없다.
+  // ⛔ C-21(취득원인 차단)은 **폐지됐다** — 상속·증여·이월과세 셋 다 열려 있다.
   //
-  // ⚠️ **상속은 제외한다**(2026-08-05 범위 정정). §154⑧3호는 "상속받은 **주택**으로서"가
-  //    전제인데, 위 C-8(37행)이 용도변경일 > 취득일을 강제하고 상속의 취득일은 상속개시일이라
-  //    토글 ON인 상속은 언제나 「상속개시 당시 비주택」이다 ⇒ 통산 요건이 성립하지 않아
-  //    경합 자체가 발생할 수 없다. 통산 배제는 엔진 `resolveExemptionResidenceMonths`가 맡는다.
+  // 종전 근거는 "§154⑧3호 통산·§97의2와의 우선순위에 명문이 없다"였으나, 조문을 읽으니
+  // **셋 다 명문이 답을 정하거나 요건이 불성립**한다:
   //
-  // 이월과세는 다르다 — 엔진 STEP 0.475(`transfer-tax.ts`)가 취득일을 **증여자 취득일로 치환**해
-  //    용도변경이 증여자 단계에서 일어난 경우가 게이트를 통과한다. 여기가 진짜 미결이다.
-  // 단순 증여는 §154⑧3호·§97의2 어느 쪽도 아니라 차단 근거가 확인되지 않았다 — 안전측 유지.
+  //   · **상속** — §154⑧3호는 "상속받은 **주택**으로서"가 전제인데, 위 C-8이 용도변경일 >
+  //     취득일(=상속개시일)을 강제하므로 토글 ON인 상속은 언제나 「상속개시 당시 비주택」이다
+  //     ⇒ 통산 요건 불성립. 거주 통산 배제는 엔진 `resolveExemptionResidenceMonths`가 맡는다.
+  //   · **이월과세** — 「소득세법」 §95④ 단서가 **전체 보유기간**의 기산일을(증여자 취득일),
+  //     §95⑥이 그중 **주택으로 보유한 기간**의 기산일을(주거용 사용일) 각각 정한다. 충돌이
+  //     아니라 분담이며, 비주택 기간은 자연히 「증여자 취득일 ~ 주거용 사용일」이 된다.
+  //     §97의2는 제목부터 「필요경비 계산 특례」로 보유기간 문언이 없다. 시나리오 B의 하한은
+  //     위 C-8이 막는다.
+  //   · **단순 증여** — §95④ 단서는 "제97조의2제1항의 경우"에만 미친다. 수증자 취득일 기산이고
+  //     달리 취급하는 문언이 없다.
   //
-  // 설계: `docs/02-design/features/non-housing-to-housing-conversion-inheritance-c21.plan.md`
-  if (
-    asset.acquisitionCause === "gift" ||
-    asset.acquisitionCause === "carryover_gift"
-  ) {
-    return unsupported("증여로 취득한 자산입니다.");
-  }
+  // 설계: `docs/02-design/features/non-housing-to-housing-conversion-carryover-c21.plan.md`
+  //      (상속분은 `...-inheritance-c21.plan.md`)
 
   // C-18·C-20 — 장기임대(§97의3·§97의4)는 장특 특례율이, §98의2는 표2 강제가 §95⑤과 충돌한다.
   // ⚠️ 엔진 `rentalReductionDetails`는 폼에 없어 여기서 볼 수 없다 — 폼의 `reductions`로 판별한다.
