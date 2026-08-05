@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { clickAndExpectUrl } from "./_helpers/navigation";
+
 /**
  * E2E: 증자에 따른 이익의 증여 §39 — cap-table (다수증자·다증여자).
  * 교재 사례4(고가 재배정): 병 300,000,000(부225M+모75M)·정 100,000,000. 검증내역 증감 합계 0.
@@ -70,8 +72,7 @@ test.describe("§39 증자 이익 cap-table", () => {
     await expect(page.getByTestId("ci-alloc-reconciliation")).toContainText("증감 합계 = 0");
 
     // 증여세 마법사 이관
-    await page.getByTestId("deemed-to-wizard").click();
-    await expect(page).toHaveURL(/\/calc\/gift-tax/);
+    await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
   });
 
   test("§39① 공모 모집 배정 — 적용 제외로 증여재산가액 0 (상증령 §29③ 간주모집은 과세)", async ({ page }) => {

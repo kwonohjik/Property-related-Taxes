@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { clickAndExpectUrl } from "./_helpers/navigation";
+
 /** E2E: 증여로 보는 경우 — 자본거래 (Phase 2 핵심 + sub-case 토글). 상세 입력은 모달 안. */
 
 async function openDetail(page: Page, type: string) {
@@ -20,8 +22,7 @@ test.describe("증여로 보는 경우 — 자본거래", () => {
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("400,000,000");
-    await page.getByTestId("deemed-to-wizard").click();
-    await expect(page).toHaveURL(/\/calc\/gift-tax/);
+    await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
   });
 
   test("§40①1호 나목 + 상장 + 공모 발행 → 적용 제외(0)", async ({ page }) => {

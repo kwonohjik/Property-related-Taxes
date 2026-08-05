@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { clickAndExpectUrl } from "./_helpers/navigation";
+
 /** E2E: 증여로 보는 경우 — Phase 3 기타이익·자본거래연계·법인 (§42·§41의3·§45의5). 상세 입력은 모달 안. */
 
 async function openDetail(page: Page, type: string) {
@@ -43,7 +45,6 @@ test.describe("증여로 보는 경우 — 기타이익·법인", () => {
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("400,000,000");
-    await page.getByTestId("deemed-to-wizard").click();
-    await expect(page).toHaveURL(/\/calc\/gift-tax/);
+    await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
   });
 });

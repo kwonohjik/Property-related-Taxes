@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { clickAndExpectUrl } from "./_helpers/navigation";
+
 /**
  * E2E: 증여로 보는 경우 (gift-deemed) Phase 1
  * 유형 선택 → (모달) 증여일+상세 입력 → 닫기 → 증여이익 산정 → 세액연결 이관.
@@ -25,8 +27,7 @@ test.describe("증여로 보는 경우 (gift-deemed)", () => {
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("100,000,000");
-    await page.getByTestId("deemed-to-wizard").click();
-    await expect(page).toHaveURL(/\/calc\/gift-tax/);
+    await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
   });
 
   test("§34 보험금 1호 보험금1억·총1천만·타인600만 → 6,000만", async ({ page }) => {

@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { clickAndExpectUrl } from "./_helpers/navigation";
+
 /**
  * E2E: 현물출자 §39의3 — 당사자 명부(roster) 저가 2단계·고가 per-donee·gross(roster無).
  * 설계: docs/02-design/features/gift-inkind-contribution-39-3.ui.design.md
@@ -50,8 +52,7 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
     await expect(breakdown).toContainText("175,000,000");
 
     // 증여세 본세 handoff (저가 = 동시증여 다건)
-    await page.getByTestId("deemed-to-wizard").click();
-    await expect(page).toHaveURL(/\/calc\/gift-tax/);
+    await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
   });
 
   test("계산사례2 고가 roster per-donee — B 175M·C 50M·합 225M", async ({ page }) => {
@@ -85,8 +86,7 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
     await expect(selector.locator("option")).toHaveCount(2);
     await selector.selectOption("1"); // 둘째 수증자 C
 
-    await page.getByTestId("deemed-to-wizard").click();
-    await expect(page).toHaveURL(/\/calc\/gift-tax/);
+    await clickAndExpectUrl(page, page.getByTestId("deemed-to-wizard"), /\/calc\/gift-tax/);
     // 마법사 2단계(증여재산)에 **선택한 C**의 50,000,000이 들어왔는지 — 첫 행 B(175,000,000) 고정이 아님.
     // (sessionStorage는 마법사 마운트 시 소비·삭제되므로 화면으로 확인한다)
     await page.getByRole("button", { name: "다음" }).click();
