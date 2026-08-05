@@ -1,6 +1,19 @@
 /**
  * 재산세 과세대상 판정 통합 진입점 (P2-21~23)
  *
+ * # 🔴 `determinePropertyTaxObject`는 **호출처가 0건**이다 (2026-08-06 실측)
+ *
+ * API 경로는 `app/api/calc/property/route.ts` → `property-tax.ts` → `calculatePropertyTax`이며
+ * 이 모듈을 거치지 않는다. 「통합 진입점」이라는 이름과 달리 사용자 계산에 도달하지 않는다.
+ *
+ * 이 모듈이 부르는 `property-land-classification.ts`도 함께 도달 불가이고, 그쪽에는 살아 있는
+ * 경로가 이미 정정한 **결함 2건**(§102①1호 면적 한도 없음 · §101①1호와의 소재지 배타 분기
+ * 미적용)이 남아 있다 — 배선 전에 그 모듈 헤더를 읽을 것.
+ *
+ * 도달 불가는 `__tests__/lib/property-dead-classifier-reachability.test.ts`가 고정한다.
+ *
+ * ---
+ *
  * 지방세법 §105 (과세대상 5종 열거주의)
  * 지방세법 §106 (토지 3분류)
  * 지방세법 §107 (납세의무자)

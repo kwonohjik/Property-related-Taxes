@@ -320,6 +320,20 @@ export function isSeparateAggregate(
  *
  * 판정 순서: 분리과세 → 별도합산 → 종합합산(기본값)
  * split(면적 초과) 시 초과분을 종합합산으로 처리
+ *
+ * # 🔴 이 모듈은 **부분적으로만 살아 있다** (2026-08-06 실측)
+ *
+ * `property-tax.ts`가 import하는 것은 `calculateComprehensiveAggregateTax`(세율 적용, 숫자
+ * 인자)와 `applyBurdenCap` **둘뿐**이다. 이 분류 함수와 다필지 진입점
+ * `calculateComprehensiveAggregate`는 **테스트만** 부른다 — 사용자 계산에 도달하지 않는다.
+ *
+ * ⚠️ `calculateComprehensiveAggregate`(분류·죽음)와 `calculateComprehensiveAggregateTax`
+ *   (세율·살아 있음)는 **접미사 하나 차이**다. 혼동하면 "살아 있는 줄 알고" 판단하게 된다.
+ *
+ * 배선하려면 `isSeparatedTaxation`(:214)이 §102①1호 **면적 한도**와 §101①1호와의 **소재지
+ * 배타 분기**를 갖고 있지 않다는 점을 먼저 넘겨야 한다 — 살아 있는 경로의 정정 참조:
+ * `separate-taxation.ts` `judgeFactoryAreaLimit`.
+ * 도달 불가는 `__tests__/lib/property-dead-classifier-reachability.test.ts`가 고정한다.
  */
 export function classifyLandForComprehensive(
   land: LandInfo,

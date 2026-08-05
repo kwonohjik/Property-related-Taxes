@@ -32,10 +32,13 @@
 | 모듈 | 입력 | 호출처 |
 |---|---|---|
 | `separate-taxation.ts` `calculateSeparateTax` | `isFactoryLand`·`factoryLocation` | **재산세 UI 경로** (`property-tax.ts:511`) |
-| `property-land-classification.ts` `classifySeparateTaxationLand` | `isIndustrialDistrict`·`landUse` | 종부세 3분류·`property-object.ts` |
+| `property-land-classification.ts` `classifySeparateTaxationLand` | `isIndustrialDistrict`·`landUse` | `property-object.ts`뿐 — **도달 불가** (§7) |
 
 후자의 `isIndustrialDistrict`는 **UI에서 설정되는 곳이 없다**(2026-08-06 grep 실측 — 엔진·타입에만 존재).
 이번 정정은 실제 사용 경로인 **전자**에 넣었다.
+
+> ⚠️ 이 절의 초안은 후자의 호출처를 "**종부세** 3분류"로 적었다 — **오독이었다**.
+> 종부세(`comprehensive-tax.ts`)는 이 모듈을 쓰지 않는다. §7에서 정정·종결.
 
 ### 2.2 🔴 「도시지역 내 기타」가 분리과세를 받고 있었다 — 경로 오류
 
@@ -176,10 +179,69 @@
 
 - **목장용지 면적 한도(§102①3호)** — 가축별 기준면적 표 9종 × 축사·부대시설·초지·사료밭.
   가축 종류·마릿수 입력이 새로 필요하다. 이번 범위에서 제외(사용자 결정).
-- **`property-land-classification.ts` 경로** — `isIndustrialDistrict`가 UI에서 설정되지 않아
-  도달 불가로 보인다. 종부세 3분류가 이 모듈을 쓰므로 같은 한도가 필요한지 별도 확인이 필요하다.
+- ~~**`property-land-classification.ts` 경로**~~ → **§7에서 종결 (2026-08-06)**. 도달 불가가
+  확증됐고, "종부세가 이 모듈을 쓴다"는 여기 적었던 근거는 **오독이었다**.
 - **`STANDARD_TERMINAL`의 「공영주차장」** — §102⑥4호는 **여객자동차터미널·물류터미널**만 정한다.
   주차장은 §101③11호(별도합산 부설주차장)다. 인용은 고쳤으나 `isTerminalOrParking` 필드명·UI
   라벨의 「주차장」은 그대로 뒀다 — 동작 변경이라 별건.
 - **`truncateToThousand` 미사용 import**(`separate-taxation.ts:17`) — 이번 변경 **이전부터** 미사용
   (HEAD 실측: 파일 내 1회 = import뿐). 기존 dead code라 건드리지 않았다.
+
+---
+
+## 7. 후속 — 도달 불가 분류기 (2026-08-06 종결)
+
+§6에 *"`property-land-classification.ts` 경로 — **종부세 3분류가 이 모듈을 쓰므로** 같은 한도가
+필요한지 확인 필요"* 라고 적었다. **그 근거가 오독이었다.**
+
+### 실측
+
+`property-land-classification`을 import하는 프로덕션 파일은 **`property-object.ts` 하나**뿐이고
+(나머지 2건은 `types/`의 **주석**), 그 진입점 `determinePropertyTaxObject`는 **호출처가 0건**이다.
+
+| 모듈 | 진입점 | 프로덕션 호출처 |
+|---|---|---|
+| `separate-taxation.ts` | `calculateSeparateTax` | ✅ `property-tax.ts` (API 경로) |
+| `property-land-classification.ts` | `classifyLand` | ❌ `property-object.ts`만 (그 자신도 죽음) |
+| `property-object.ts` | `determinePropertyTaxObject` | ❌ **0건** |
+| `property-tax-comprehensive-aggregate.ts` | `calculateComprehensiveAggregate` | ❌ 테스트만 |
+
+**종부세(`comprehensive-tax.ts`)는 이 모듈을 전혀 쓰지 않는다** — import 목록에 없다.
+§6의 서술은 `property-tax-comprehensive-aggregate.ts`(**재산세** 종합합산)를 종부세로 오독한 것이다.
+
+> ⚠️ `property-tax-comprehensive-aggregate.ts`는 **부분적으로만 살아 있다**. `property-tax.ts`가
+> 쓰는 것은 `calculateComprehensiveAggregateTax`(세율 적용)와 `applyBurdenCap`뿐이고, 분류
+> 로직은 죽어 있다. 두 이름이 **접미사 하나 차이**라 혼동하기 쉽다 — 이번 오독의 원인이다.
+
+### 조치 — 삭제하지 않고 도달 불가를 고정했다
+
+세액 정확성 관점에서는 할 일이 없다(도달 불가라 영향 0). 다만 겉보기에는 살아 있고 테스트가
+초록이라 **함정으로 남는다** — 다필지 재산세 UI를 만들며 배선하면 §2.2·§2.3에서 정정한 결함
+2건(면적 한도 없음 · 소재지 배타 분기 미적용)을 그대로 물려받는다.
+
+| 지점 | 내용 |
+|---|---|
+| `property-land-classification.ts` 헤더 | 도달 불가 + 결함 2건 + 정정 참조 좌표 |
+| 같은 파일 공장·목장 분기 | 인라인 경고(목장은 「기준면적 이내」가 **사용자 선언**임을 명시) |
+| `property-object.ts` 헤더 | 진입점 호출처 0건 명시 |
+| `property-tax-comprehensive-aggregate.ts` `classifyLandForComprehensive` | 부분 사망 + 접미사 혼동 경고 |
+| `__tests__/lib/property-dead-classifier-reachability.test.ts` | **6건** — 도달 불가를 정적 분석으로 고정 |
+
+### 가드 설계
+
+"호출되지 않는다"는 런타임으로 증명할 수 없다(호출되지 않는 것을 실행할 수는 없다).
+`coverage-collect.ts`와 같이 **소스 트리를 읽어** import를 세는 순수 정적 분석이라
+`.env.local`·네트워크가 필요 없고 **pre-push·CI 양쪽에서 자동으로** 걸린다.
+
+- 배선을 시뮬레이션해 **실효를 증명**했다 — `property-tax.ts`에 import 한 줄을 넣으니 DEAD-1이
+  실패하며 **새 호출자 이름 + 넘겨야 할 결함 2건 + 참조 좌표**를 그대로 출력했다.
+- **DEAD-4**가 `calculateComprehensiveAggregateTax`는 살아 있음을 함께 단언한다 — 없으면 DEAD-3이
+  "이름을 잘못 써서 통과"하는 것과 구별되지 않는다.
+- **주석을 걷어내고** 판정한다. 이 저장소는 모듈 헤더에 심볼명을 적는 관행이 있어
+  (`types/property.types.ts:488`) 그대로 세면 주석이 호출로 잡힌다 — 1차 구현이 실제로 그렇게 걸렸다.
+
+### 남은 별건
+
+- **목장용지 면적 한도**(§102①3호 가축별 기준면적 표) — 살아 있는 경로·죽은 경로 **양쪽 모두** 미구현.
+- `truncateToThousand` 미사용 import(`property-tax-comprehensive-aggregate.ts:20`) — 이번 변경
+  **이전부터** 미사용(origin/master 실측: 1회 = import뿐). 기존 dead code라 건드리지 않았다.
