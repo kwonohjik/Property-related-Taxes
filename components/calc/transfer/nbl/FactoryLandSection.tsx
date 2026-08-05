@@ -16,7 +16,7 @@
  * ⚠️ 용도지역은 이 섹션에 두지 않는다 — 자산의 `nblZoneType`을 그대로 쓴다(단일 소스).
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -31,12 +31,74 @@ import {
   computeFactoryStandardArea,
   KNOWLEDGE_INDUSTRY_CENTER_RATE_PERCENT,
 } from "@/lib/tax-engine/non-business-land/factory-land-standard-area";
+import {
+  isCurrentFactoryAreaRateApplicable,
+  searchFactoryAreaRates,
+  type FactoryAreaRateEntry,
+} from "@/lib/tax-engine/data/factory-area-rates";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { NblFactorySegmentFormItem } from "@/lib/stores/calc-wizard-asset-nbl-other";
 
 export interface FactoryLandSectionProps {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /** 폼-전역 양도일 — 「공장입지 기준고시」 별표1 버전 게이트 판정 기준 */
+  transferDate?: string;
+}
+
+/**
+ * 업종 자동완성 — 별표1에서 면적률을 채운다.
+ *
+ * 🔴 **버전 게이트**: 2026-02-25 개정이 KSIC를 10차 → 11차로 교체했으므로, 양도일이 그 이전이면
+ * 현행 표를 채우지 않는다(같은 코드가 다른 업종을 가리켜 면적률이 조용히 틀어진다).
+ * 검색·목록 열람은 막지 않는다 — 자기 업종 코드조차 못 보게 하면 과잉이다.
+ */
+function IndustryAutocomplete({
+  applicable,
+  onPick,
+}: {
+  applicable: boolean;
+  onPick: (e: FactoryAreaRateEntry) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const hits = useMemo(() => searchFactoryAreaRates(query), [query]);
+
+  return (
+    <div className="space-y-1">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="업종명 또는 KSIC 코드로 검색"
+        data-testid="nbl-factory-industry-search"
+        className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+      />
+      {hits.length > 0 && (
+        <ul
+          data-testid="nbl-factory-industry-options"
+          className="max-h-40 overflow-y-auto rounded-md border border-input divide-y divide-border"
+        >
+          {hits.map((h) => (
+            <li key={h.code}>
+              <button
+                type="button"
+                disabled={!applicable}
+                data-testid={`nbl-factory-industry-option-${h.code}`}
+                onClick={() => {
+                  onPick(h);
+                  setQuery("");
+                }}
+                className="w-full px-2 py-1 text-left text-xs hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="font-mono text-muted-foreground">{h.code}</span> {h.name}{" "}
+                <span className="font-semibold">{h.ratePercent}%</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 type LocationCategory = AssetForm["nblFactoryLocationCategory"];
@@ -64,11 +126,17 @@ function newSegment(): NblFactorySegmentFormItem {
 
 const fmtArea = (n: number) => n.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
 
-export function FactoryLandSection({ asset, onAssetChange }: FactoryLandSectionProps) {
+export function FactoryLandSection({ asset, onAssetChange, transferDate }: FactoryLandSectionProps) {
   const enabled = asset.nblFactoryEnabled;
   const loc = asset.nblFactoryLocationCategory;
   // useMemo 의존성 안정화 — `?? []`를 인라인으로 두면 매 렌더 새 배열이라 미리보기가 매번 재계산된다.
   const segments = useMemo(() => asset.nblFactorySegments ?? [], [asset.nblFactorySegments]);
+
+  // 별표1 자동조회 가능 여부 — 양도일이 현행 고시 시행일(2026-02-25) 이후일 때만.
+  const rateApplicable = useMemo(
+    () => isCurrentFactoryAreaRateApplicable(transferDate ? new Date(transferDate) : undefined),
+    [transferDate],
+  );
 
   function updateSegment(i: number, patch: Partial<NblFactorySegmentFormItem>) {
     onAssetChange({ nblFactorySegments: segments.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) });
@@ -169,6 +237,33 @@ export function FactoryLandSection({ asset, onAssetChange }: FactoryLandSectionP
                 </p>
                 <LawArticleModal legalBasis="지방세법 시행규칙 §50" label="시행규칙 §50 [별표6]" />
               </div>
+
+              <IndustryAutocomplete
+                applicable={rateApplicable}
+                onPick={(e) =>
+                  onAssetChange({
+                    nblFactorySegments: [
+                      ...segments,
+                      {
+                        id: crypto.randomUUID(),
+                        floorArea: "",
+                        ratePercent: String(e.ratePercent),
+                        industryLabel: e.name,
+                      },
+                    ],
+                  })
+                }
+              />
+              {!rateApplicable && (
+                <p
+                  data-testid="nbl-factory-rate-gate"
+                  className={`text-xs rounded-md border px-3 py-2 ${TONE.amber.card} ${TONE.amber.title}`}
+                >
+                  양도일이 <b>2026-02-25</b>(현행 「공장입지 기준고시」 시행일) 이전이면 자동
+                  채움을 쓰지 않습니다 — 그 시점에는 <b>구 고시(KSIC 10차)</b>가 적용법이라 같은
+                  코드가 다른 업종을 가리킬 수 있습니다. 면적률은 직접 입력하세요.
+                </p>
+              )}
               {segments.length === 0 && (
                 <p className="text-xs text-muted-foreground">
                   등록된 업종이 없습니다. 업종을 추가하세요. (2개 이상이면 업종별로 산출해 합산합니다)

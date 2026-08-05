@@ -38,8 +38,9 @@ import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import type { FactoryLandUsage, FactoryIndustrySegment } from "./types";
 
-/** 「공장입지 기준고시」 §4 — 지식산업센터의 기준공장면적률(%)은 별표1이 아니라 이 값이다. */
-export const KNOWLEDGE_INDUSTRY_CENTER_RATE_PERCENT = 40;
+// 「공장입지 기준고시」 §4 지식산업센터 40% — 정본은 `data/factory-area-rates.ts`(별표1 데이터와 동거).
+// 여기서 재선언하지 않고 재수출만 한다(이중 진실 방지 — 기존 import 경로 하위 호환).
+export { KNOWLEDGE_INDUSTRY_CENTER_RATE_PERCENT } from "../data/factory-area-rates";
 
 /** 별표6 3호가1) — 「산집법」 §20① 본문 공장 신설 제한지역: 산출면적의 10% 이내. */
 const RESTRICTED_ZONE_ALLOWANCE_RATE = 0.1;

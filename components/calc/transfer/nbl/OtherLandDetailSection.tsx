@@ -497,7 +497,7 @@ export function OtherLandDetailSection({
       <OtherLandParcelSection asset={asset} onAssetChange={onAssetChange} />
 
       {/* 공장용 건축물 부속토지 기준면적 (§102①1호 별표6 / §101①1호) — 800줄 정책으로 분리 */}
-      <FactoryLandSection asset={asset} onAssetChange={onAssetChange} />
+      <FactoryLandSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
 
       {/* §168의11⑥ 복합용도 건축물 부속토지 안분 (건축물 존재 시) */}
       {asset.nblOtherHasBuilding && (

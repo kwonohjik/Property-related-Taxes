@@ -13,7 +13,7 @@
  * 3. **토글 OFF면 아무것도 안 보인다** — 기존 사용자 흐름 불변.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { FactoryLandSection } from "@/components/calc/transfer/nbl/FactoryLandSection";
 import { computeFactoryStandardArea } from "@/lib/tax-engine/non-business-land/factory-land-standard-area";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -35,8 +35,9 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
   } as unknown as AssetForm;
 }
 
-const view = (over: Partial<AssetForm> = {}) =>
-  render(<FactoryLandSection asset={asset(over)} onAssetChange={vi.fn()} />);
+/** 기본 양도일은 현행 고시 시행(2026-02-25) 이후 — 자동조회 가능 상태 */
+const view = (over: Partial<AssetForm> = {}, transferDate = "2026-06-01") =>
+  render(<FactoryLandSection asset={asset(over)} onAssetChange={vi.fn()} transferDate={transferDate} />);
 
 describe("토글 — OFF면 입력이 열리지 않는다", () => {
   it("UI-1: 토글 OFF에서는 소재 지역·면적 입력이 없다", () => {
@@ -153,5 +154,53 @@ describe("문구 — 오입력을 부르는 표현을 쓰지 않는다", () => {
   it("COPY-3: 단서 토글은 「확인되는 경우에만」으로 좁게 안내한다 (입증부담 — 조심 2025서2489)", () => {
     view();
     expect(screen.getByText(/받지 않은 것이 확인되는 경우에만/)).toBeTruthy();
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+describe("업종 자동완성 + 버전 게이트 (별표1)", () => {
+  it("RATE-1: 업종명으로 검색하면 코드·면적률이 보인다", () => {
+    view();
+    fireEvent.change(screen.getByTestId("nbl-factory-industry-search"), {
+      target: { value: "합성섬유" },
+    });
+    const opt = screen.getByTestId("nbl-factory-industry-option-20501");
+    expect(opt.textContent).toContain("20501");
+    expect(opt.textContent).toContain("12%");
+    expect((opt as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("RATE-2: 빈 질의는 목록을 열지 않는다", () => {
+    view();
+    expect(screen.queryByTestId("nbl-factory-industry-options")).toBeNull();
+  });
+
+  // 🔴 2026-02-25 개정이 KSIC를 10차→11차로 교체했다. 그 이전 양도에 현행 표를 쓰면
+  // 같은 코드가 다른 업종을 가리켜 면적률이 조용히 틀어진다.
+  it("RATE-3: 양도일이 시행일 이전이면 자동 채움 버튼이 비활성이고 사유가 보인다", () => {
+    view({}, "2026-01-01");
+    fireEvent.change(screen.getByTestId("nbl-factory-industry-search"), {
+      target: { value: "합성섬유" },
+    });
+    expect((screen.getByTestId("nbl-factory-industry-option-20501") as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId("nbl-factory-rate-gate").textContent).toContain("2026-02-25");
+  });
+
+  it("RATE-4: 시행일 이후면 게이트 안내가 뜨지 않는다", () => {
+    view({}, "2026-06-01");
+    expect(screen.queryByTestId("nbl-factory-rate-gate")).toBeNull();
+  });
+
+  it("RATE-5: 양도일 미상이면 자동 채움을 막는다 (추정 금지)", () => {
+    view({}, "");
+    expect(screen.getByTestId("nbl-factory-rate-gate")).toBeTruthy();
+  });
+
+  it("RATE-6: 검색은 게이트와 무관하다 — 자기 업종 코드는 확인할 수 있어야 한다", () => {
+    view({}, "2026-01-01");
+    fireEvent.change(screen.getByTestId("nbl-factory-industry-search"), {
+      target: { value: "합성섬유" },
+    });
+    expect(screen.getByTestId("nbl-factory-industry-option-20501")).toBeTruthy();
   });
 });
