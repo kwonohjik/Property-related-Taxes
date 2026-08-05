@@ -106,4 +106,20 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+
+  // ── 🆕 2026-08-05 시행령 커버리지 개방분 ────────────────────────────
+  {
+    // common.ts DAILY_RATE — 납부지연가산세 이자율 (일 0.022% = 1일 10만분의 22)
+    id: "NTBL_DECREE.LATE_PAYMENT_RATE",
+    citation: "국세기본법 시행령 §27의4",
+    keywords: ["납부지연가산세", "1일 10만분의 22의 율", "등기우편에 관한 요금"],
+    keywordMode: "ALL",
+  },
+  {
+    // stock.ts STX_DECREE_5_* — 증권거래세 탄력세율 (시장별)
+    id: "STX_DECREE.FLEXIBLE_RATE",
+    citation: "증권거래세법 시행령 §5",
+    keywords: ["탄력세율", "유가증권시장", "코넥스시장", "1만분의 15"],
+    keywordMode: "ALL",
+  },
 ];

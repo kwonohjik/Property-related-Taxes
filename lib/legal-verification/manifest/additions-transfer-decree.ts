@@ -373,4 +373,35 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+
+  // ══ 소득세법 시행규칙 ═══════════════════════════════════════════════
+  {
+    id: "TRANSFER_RULE.STD_PRICE_LAND_BUILDING",
+    citation: "소득세법 시행규칙 §80",
+    keywords: ["기준시가 조정월수", "전기의 기준시가", "취득당시의 기준시가"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_RULE.STD_PRICE_OTHER_ASSET",
+    citation: "소득세법 시행규칙 §81",
+    keywords: [
+      "「상속세 및 증여세법 시행규칙」 제17조에 따른 이자율",
+      "생산자물가지수",
+      "시가표준액",
+    ],
+    keywordMode: "ALL",
+  },
+
+  // ══ 조세특례제한법 시행령 (양도세 감면) ═════════════════════════════
+  {
+    id: "TRANSFER_DECREE.SELF_FARMING_REDUCTION",
+    citation: "조특령 §66",
+    keywords: [
+      "자경농지에 대한 양도소득세의 감면",
+      "농지소재지에 거주하는",
+      "직선거리 30킬로미터 이내의 지역",
+      "영농조합법인",
+    ],
+    keywordMode: "ALL",
+  },
 ];
