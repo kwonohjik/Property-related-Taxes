@@ -1,6 +1,8 @@
 # 사전증여재산(§13) 카드 → 요약 테이블 + 편집 모달 전환 계획
 
-> 상태: Plan (Do 미착수) · 작성 2026-06-13
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `components/calc/prior-gift/PriorGiftTableView.tsx` 가 이 계획서를 인용하며 실재한다.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: 상태: Plan (Do 미착수) · 작성 2026-06-13~~
 > 유형: **순수 UI 리팩터** (엔진·타입·API·Validation 무변경, 8지점 중 ⑤만)
 > 선행 동형 패턴: [estate-asset-table-view](./estate-asset-table-view.plan.md) · [debt-item-table-view](./debt-item-table-view.plan.md) · [inheritance-heir-table-view](./inheritance-heir-table-view.plan.md)
 
