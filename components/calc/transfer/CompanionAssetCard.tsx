@@ -290,6 +290,7 @@ export function CompanionAssetCard({
             filingOverdue={filingOverdue}
             filingDeadline={filingDeadline}
             onFormChange={onFormChange}
+            isFirst={index === 0}
           />
         </AssetSection>
       )}

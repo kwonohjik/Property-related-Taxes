@@ -25,7 +25,7 @@ export function validateUsageConversion(
 
   /** 지원하지 않는 조합의 공통 안내 — 사유 1줄 + 대안 */
   const unsupported = (reason: string) =>
-    `${label}: ${reason} 이 조합은 현재 지원하지 않습니다 — 「비주택 → 주택 용도변경」 토글을 끄면 종전 방식으로 계산됩니다.`;
+    `${label}: ${reason} 이 조합은 현재 지원하지 않습니다 — 「건물 전체를 주택으로 용도변경」 토글을 끄면 종전 방식으로 계산됩니다.`;
 
   // C-16 — 날짜가 없으면 기간을 나눌 수 없다.
   const start = asset.residentialUseStartDate ?? "";

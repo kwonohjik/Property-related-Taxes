@@ -158,3 +158,39 @@ test.describe("비주택 → 주택 용도변경 §95⑤·⑥", () => {
     await expect(page.getByText("비주택 → 주택 용도변경 장기보유특별공제")).toHaveCount(0);
   });
 });
+
+/**
+ * 토글 배치 — ① 기본정보(겸용주택 옆) / 확장 입력은 ③ 취득정보.
+ *
+ * 배경: ③은 주택 자산에서 **기본 접힘**이라(`ACQUISITION_AUTO_OPEN_KINDS`에 housing 없음)
+ * 토글이 ③에만 있던 동안 사용자가 기능을 찾지 못했다. 아래 3건이 그 회귀를 막는다.
+ */
+test.describe("§95⑤ 토글 배치 — ① 기본정보 · 겸용주택과 배타", () => {
+  const TOGGLE = "건물 전체를 주택으로 용도변경";
+  const MIXED = "겸용주택 분리계산";
+
+  test("토글은 ① 기본정보에 있다 — ③ 취득정보를 펼치지 않아도 보인다", async ({ page }) => {
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    // 빈 폼 기본값은 주택 자산 1건 — ③을 펴지 않은 상태에서 토글이 보여야 한다
+    await expect(page.getByRole("switch", { name: TOGGLE })).toBeVisible();
+    // 확장 입력은 OFF 상태이므로 아직 없다(시각적 노이즈 0)
+    await expect(page.getByText("사실상 주거용 사용 개시일")).toHaveCount(0);
+  });
+
+  // BaseUI Switch는 `<span role="switch" aria-disabled>`라 native disabled 속성이 없다 —
+  // Playwright `toBeDisabled()`는 aria-disabled를 보지 않으므로 속성으로 단언한다.
+  const expectLocked = (page: Page, name: string) =>
+    expect(page.getByRole("switch", { name })).toHaveAttribute("aria-disabled", "true");
+
+  test("§95⑤ ON이면 겸용주택 토글이 잠긴다", async ({ page }) => {
+    await seed(page); // hasNonHousingConversion: true
+    await expectLocked(page, MIXED);
+  });
+
+  test("겸용주택 ON이면 §95⑤ 토글이 잠긴다 (반대 방향)", async ({ page }) => {
+    await seed(page, { hasNonHousingConversion: false, isMixedUseHouse: true });
+    await expectLocked(page, TOGGLE);
+  });
+});
