@@ -34,15 +34,18 @@ test.describe("건물 기준시가 모달 — 자산값 자동입력(prefill)", 
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: /일반건물/ }).first().click();
 
-    // 취득 섹션: 환산취득가 모드 + 취득일 입력
-    // (연면적은 2026-08-05부터 취득가액 산정 방식과 무관하게 ①에 항상 있다 — 이 클릭은 취득일 흐름용)
+    // 취득 섹션: 취득일 입력 (취득가액 산정 방식은 건드리지 않는다 — 아래 ⚠️)
+    // ⚠️ 종전에는 환산취득가로 전환했으나 2026-08-05부터 **환산 모드에서는 시점별 계산기가
+    //    2시점 일괄 런처로 대체**돼 이 스펙이 여는 런처가 사라진다. 실거래가 모드에서는
+    //    2시점이 성립하지 않아 양도시 계산기가 그대로 남으므로 기본 모드로 검증한다
+    //    (검증 대상은 prefill 배선이지 취득가액 모드가 아니다).
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: /^환산취득가/ }).click();
-    // 취득일 DateInput만 감싸는 FieldCard로 scope 한정 — 섹션 전체 scope는 "이월과세" 라디오의
+    // 취득일 DateInput의 전용 testid로 scope 한정 — 섹션 전체 scope는 "이월과세" 라디오의
     // "월" substring이 getByLabel("월")에 오매칭됨(e2e/CLAUDE.md §1).
-    const acqDateScope = page
-      .locator('[data-asset-card-index="0"] [data-asset-section="3"] [data-slot="field-card"]')
-      .filter({ hasText: "취득일" });
+    // ⚠️ 종전에는 `[data-slot="field-card"]` + hasText:"취득일"로 잡았으나, 2026-08-05
+    //    「토지·건물 취득일 다름」 도입으로 **같음 모드에서는 건물 취득일 FieldCard가 숨는다**
+    //    → 그 스코프가 0개가 됐다. testid는 분리 ON/OFF 양쪽에서 살아 있다.
+    const acqDateScope = page.getByTestId("acq-date-building");
     await fillDateAndVerify(page, { year: "2010", month: "07", day: "12" }, { scope: acqDateScope });
 
     // ① 면적·규모: 토지 면적 78.1, 건물 연면적 100 (FieldCard 라벨로 스코프 — placeholder 기본값 중복 회피)
@@ -58,8 +61,13 @@ test.describe("건물 기준시가 모달 — 자산값 자동입력(prefill)", 
       .getByRole("textbox")
       .fill("100");
 
-    // ② 양도시 섹션 "건물 기준시가 계산" 모달 열기
-    await page.getByRole("button", { name: "건물 기준시가 계산" }).first().click();
+    // ② 건물 기준시가 그룹의 **양도시** 런처 열기.
+    // ⚠️ `.first()` 금지 — 2026-08-05 자산 축 재배치로 같은 그룹 안 **취득시 런처가 먼저** 온다.
+    //    시점은 `[data-gb-stdprice]` 스코프로만 특정한다(GeneralBuildingBlock.tsx 헤더).
+    await page
+      .locator('[data-gb-stdprice="transfer"]')
+      .getByRole("button", { name: "건물 기준시가 계산" })
+      .click();
     const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
     await expect(modal).toBeVisible();
 

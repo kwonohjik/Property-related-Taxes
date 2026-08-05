@@ -352,7 +352,6 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbIsUnregistered: false,
     // ── 일반건물 건물 취득원인 + 건물 취득일 (사례 32 이후 PR) ──
     gbBuildingAcquisitionCause: undefined,
-    gbBuildingAcquisitionDate: "",
     gbBundledAcquisitionExpenses: "",
     // ── 사례 33: 증축 건물 환산취득가 (소득세법 시행령 §176의2②, §166⑥) ──
     gbHasExtension: false,

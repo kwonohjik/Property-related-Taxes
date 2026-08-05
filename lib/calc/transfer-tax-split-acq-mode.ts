@@ -145,6 +145,27 @@ export function calcDerivedBuildingStdAtAcq(total: number, landStd: number): num
   return Math.max(total - landStd, 0);
 }
 
+/**
+ * 파트 취득일 — 「분리 OFF면 `landAcquisitionDate === acquisitionDate`」 불변식의 **방어적 표현**.
+ *
+ * M-1a(2026-08-05) 이후 `acquisitionDate` = 건물 · `landAcquisitionDate` = 토지다. 불변식은
+ * `migrateAsset`이 세우지만 **직접 조립한 fixture·구 세션은 그 경로를 거치지 않아** 토지 값이
+ * 빈 채로 도달할 수 있다. 그 상태로 토지 게이트(상속·증여 1985 판정 등)를 태우면 조용히
+ * false가 되어 특례가 사라진다 — 빈 토지 값은 건물 값으로 되돌린다(= 분리 OFF와 동치).
+ *
+ * ⚠️ 이것은 「자동 안분 fallback」이 아니다. 안분은 없는 값을 **지어내는** 것이고, 여기서는
+ *    분리 OFF에서 두 값이 같다는 **정의된 불변식**을 복원할 뿐이다.
+ *
+ * UI·API 변환·validate가 **이 함수 하나**를 쓴다(dual-truth 회피).
+ */
+export function partAcquisitionDates(a: {
+  acquisitionDate?: string;
+  landAcquisitionDate?: string;
+}): { land: string; building: string } {
+  const building = a.acquisitionDate ?? "";
+  return { land: a.landAcquisitionDate || building, building };
+}
+
 export function isSeparateAcquisition(asset: SeparateAcquisitionFlags): boolean {
   if (!asset.hasSeperateLandAcquisitionDate) return false;
   if (!asset.landAcquisitionDate || !asset.acquisitionDate) return false;

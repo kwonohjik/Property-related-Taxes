@@ -70,6 +70,21 @@ export interface GeneralBuildingActualPricePayload {
   // ── §95④ 단기보유 기산점 — actual 분기 기존 결측(회귀 동반 수정) ──
   /** 토지 취득원인 — 단기보유 기산점 분기(영 §95④). */
   landAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
+  /**
+   * M-1a 파트 취득일 — `acquisitionDate`(자산 단위)는 **건물** 취득일이고,
+   * 토지 카드는 `landAcquisitionDate`로 보유기간·세율을 잡는다. 둘 다 미주입이면 분리 OFF.
+   */
+  landAcquisitionDate?: Date;
+  buildingAcquisitionDate?: Date;
+  /**
+   * 파트별 자본적지출(§97①2호) — **직접 귀속** 금액이다.
+   * 「소득세법」 제100조 제2항 후문은 "**공통되는** 취득가액과 양도비용"만 안분하라고 하므로,
+   * 그 파트에 귀속되는 것이 분명하면 안분하지 않고 전액 그 파트에서 차감한다.
+   * 미주입 파트는 종전대로 §166⑥ 비율 안분.
+   */
+  landDirectExpenses?: number;
+  buildingDirectExpenses?: number;
+  buildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
   /** 상속 시 피상속인 취득일 (영 §95④). */
   decedentAcquisitionDate?: Date;
   /** 증여 시 증여자 취득일 (영 §95④). */
@@ -277,6 +292,8 @@ export function dispatchGeneralBuilding(
   // 미변환 시 string이 buildGeneralBuildingAssetCards()의 acquisitionDate에 도달 →
   // monthsBetween(from, to)에서 from.getFullYear() TypeError 발생.
   const buildingAcqDate = toOptionalDate(gbRaw.buildingAcquisitionDate);
+  // M-1a — 토지 파트 취득일. 미주입 시 건물 취득일과 동일(분리 OFF)로 본다.
+  const landAcqDateCoerced = toOptionalDate(gbRaw.landAcquisitionDate);
 
   // buildingAcquisitionCause: Zod 필수 강제 + normalizeAsset M-2 보완으로 항상 정의됨 보장.
   // silent fallback 제거 (정책 #1 — 자동 안분 fallback 금지).
@@ -317,6 +334,7 @@ export function dispatchGeneralBuilding(
   const coercedGbRaw: Record<string, unknown> = {
     ...gbRaw,
     ...(buildingAcqDate ? { buildingAcquisitionDate: buildingAcqDate } : {}),
+    ...(landAcqDateCoerced ? { landAcquisitionDate: landAcqDateCoerced } : {}),
     isSelfBuilt,                         // boolean 도출 (gbRaw의 isSelfBuilt 덮어씀)
     buildingAcquisitionCause: buildingAcqCause,
     ...(decedentAcqDate ? { decedentAcquisitionDate: decedentAcqDate } : {}),
@@ -370,6 +388,10 @@ export function dispatchGeneralBuilding(
         buildingAcquisitionByInheritance: coercedGbRaw.buildingAcquisitionByInheritance as boolean | undefined,
         inheritedLandValue: coercedGbRaw.inheritedLandValue as number | undefined,
         inheritedBuildingValue: coercedGbRaw.inheritedBuildingValue as number | undefined,
+        // M-1a 파트 취득일 — 토지 카드/건물 카드가 각자 자기 날짜로 보유기간을 잡는다.
+        landAcquisitionDate: landAcqDateCoerced,
+        buildingAcquisitionDate: buildingAcqDate,
+        buildingAcquisitionCause: buildingAcqCause,
         // §95④ 단기보유 기산점 — actual 분기 기존 결측 보강 (decedentAcqDate는 :256에서 Date 변환됨)
         landAcquisitionCause: coercedGbRaw.landAcquisitionCause as
           | "purchase" | "inheritance" | "gift" | "carryover_gift" | undefined,
@@ -509,7 +531,16 @@ export function calculateGeneralBuildingActualTransfer(
     acquisitionByInheritance, buildingAcquisitionByInheritance,
     inheritedLandValue, inheritedBuildingValue,
     landAcquisitionCause, decedentAcquisitionDate, donorAcquisitionDate,
+    landAcquisitionDate, buildingAcquisitionDate, buildingAcquisitionCause,
+    landDirectExpenses, buildingDirectExpenses,
   } = payload;
+
+  /**
+   * 파트별 카드 취득일 — 「분리 OFF면 두 날짜가 같다」 불변식의 방어적 표현(계획서 §3.2(1)).
+   * `acquisitionDate`(자산 단위)는 M-1a 이후 **건물** 취득일이다.
+   */
+  const landCardDate = landAcquisitionDate ?? acquisitionDate;
+  const buildingCardDate = buildingAcquisitionDate ?? acquisitionDate;
 
   // §166⑥ 안분 비율
   const landStdAtTransfer = transferLandPricePerSqm * landArea;
@@ -575,8 +606,19 @@ export function calculateGeneralBuildingActualTransfer(
     buildingTransfer = totalTransferPrice - landTransfer;
     landAcq = Math.floor(actualAcquisitionPrice * landRatioNum);
     buildingAcq = actualAcquisitionPrice - landAcq;
-    landExp = Math.floor(actualExpenses * landRatioNum);
-    buildingExp = actualExpenses - landExp;
+    /**
+     * 필요경비 — **파트 직접 귀속이 있으면 안분하지 않는다**(2026-08-05 P5).
+     * 근거는 「소득세법」 제100조 제2항 후문의 **유추**다: "이 경우 **공통되는** 취득가액과
+     * 양도비용은 해당 자산의 가액에 비례하여 안분계산한다." — 문언은 취득가액·양도비용만 들고
+     * **자본적지출을 열거하지 않으므로 직접 근거가 아니다**. 다만 「공통되는」이 요건인 구조는
+     * 같아, 귀속이 분명한 지출을 안분하지 않는 것이 그 취지에 부합한다(`AssetSectionExpense.tsx:37`
+     * 의 일부양도 유추와 같은 층위).
+     * 한쪽만 입력되면 그 파트만 직접 귀속하고 나머지는 총액 안분분을 그대로 둔다
+     * (잔액 도출로 상대 파트를 깎지 않는다 — 총액은 두 파트의 합이 아니라 자산 전체 입력값이다).
+     */
+    const landExpApportioned = Math.floor(actualExpenses * landRatioNum);
+    landExp = landDirectExpenses ?? landExpApportioned;
+    buildingExp = buildingDirectExpenses ?? actualExpenses - landExpApportioned;
   }
 
   // NBL 판정 — 본체는 공용 헬퍼(`appurtenant-land-excess.ts`). 환산·증축 경로와 공유.
@@ -603,7 +645,7 @@ export function calculateGeneralBuildingActualTransfer(
       propertyId: "land_business", propertyLabel: "토지-사업용(1001)", propertyType: "land",
       transferPrice: landBizTransfer, acquisitionPrice: landBizAcq, expenses: landBizExp,
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
-      acquisitionDate, transferDate, isNonBusinessLand: false,
+      acquisitionDate: landCardDate, transferDate, isNonBusinessLand: false,
     } as unknown as AssetCardForAggregate);
     cards.push({
       propertyId: "land_nbl", propertyLabel: "토지-비사업용초과분(1002)", propertyType: "land",
@@ -611,21 +653,21 @@ export function calculateGeneralBuildingActualTransfer(
       acquisitionPrice: landAcq - landBizAcq,
       expenses: landExp - landBizExp,
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
-      acquisitionDate, transferDate, isNonBusinessLand: true,
+      acquisitionDate: landCardDate, transferDate, isNonBusinessLand: true,
     } as unknown as AssetCardForAggregate);
   } else {
     cards.push({
       propertyId: "land", propertyLabel: "토지(1001)", propertyType: "land",
       transferPrice: landTransfer, acquisitionPrice: landAcq, expenses: landExp,
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
-      acquisitionDate, transferDate, isNonBusinessLand: false,
+      acquisitionDate: landCardDate, transferDate, isNonBusinessLand: false,
     } as unknown as AssetCardForAggregate);
   }
   cards.push({
     propertyId: "building", propertyLabel: "건물(3001)", propertyType: "general_building_unit",
     transferPrice: buildingTransfer, acquisitionPrice: buildingAcq, expenses: buildingExp,
     usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
-    acquisitionDate, transferDate, isNonBusinessLand: false,
+    acquisitionDate: buildingCardDate, transferDate, isNonBusinessLand: false,
   } as unknown as AssetCardForAggregate);
 
   // §95④ 단기보유 기산점 보강 (actual 분기 기존 결측 — 상속·증여 취득원인 + 피상속인/증여자 취득일).
@@ -635,10 +677,16 @@ export function calculateGeneralBuildingActualTransfer(
       if (landAcquisitionCause) c.landAcquisitionCause = landAcquisitionCause;
       if (decedentAcquisitionDate) c.decedentAcquisitionDate = decedentAcquisitionDate;
       if (donorAcquisitionDate) c.donorAcquisitionDate = donorAcquisitionDate;
-    } else if (buildingAcquisitionByInheritance) {
-      // C1: 건물도 상속 — buildingAcquisitionCause="inheritance" + 피상속인 취득일(동일 피상속인 전제).
-      c.buildingAcquisitionCause = "inheritance";
-      if (decedentAcquisitionDate) c.decedentAcquisitionDate = decedentAcquisitionDate;
+    } else {
+      // 건물 카드 — 취득원인을 **항상** 싣는다(종전에는 상속만 실려 §104② 기산점 분기가 죽었다).
+      // buildProperties(:158)가 `card.buildingAcquisitionCause`로 판독한다.
+      if (buildingAcquisitionByInheritance) {
+        // C1: 건물도 상속 — 피상속인 취득일(동일 피상속인 전제).
+        c.buildingAcquisitionCause = "inheritance";
+        if (decedentAcquisitionDate) c.decedentAcquisitionDate = decedentAcquisitionDate;
+      } else if (buildingAcquisitionCause) {
+        c.buildingAcquisitionCause = buildingAcquisitionCause;
+      }
     }
   }
 

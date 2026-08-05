@@ -53,6 +53,15 @@ export interface BlockProps {
   ho?: string;
   /** 자산 종류 — 공시가격 API 선택 및 토지 면적 계산용 */
   assetKind?: string;
+  /**
+   * 자산 전체 축 A(「취득가액 산정 방식」 라디오 + 취득가액 금액)를 숨긴다.
+   *
+   * 일반건물이 **파트별 입력을 자기 2카드에서 직접** 받을 때 쓴다(2026-08-05 P4).
+   * `isSeparateAcq`(주택·건물 경로)와 같은 자리를 가리지만, 일반건물은 `isSplitable`에
+   * 포함하지 않는다 — 포함시키면 공용 `CompanionAcqDateSection`의 토글·2열 날짜가 함께 켜져
+   * 일반건물의 자체 토글·건물 카드 날짜와 **중복**된다.
+   */
+  hideAssetAcqAxis?: boolean;
   /** 취득 당시 면적 (㎡) — 취득시 기준시가 자동계산, Pre1990 환산용 */
   acquisitionArea?: string;
   onAcquisitionAreaChange?: (v: string) => void;

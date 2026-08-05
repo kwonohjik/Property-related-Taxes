@@ -29,7 +29,6 @@ function seedForm(capitalExpenditure: string) {
           gbAcqLandPricePerSqm: "2800000",
           gbAcqBuildingValue: "28144700",
           gbBuildingAcquisitionCause: "purchase",
-          gbBuildingAcquisitionDate: "1999-05-24",
           gbZoneType: "commercial",
           gbIsMetropolitan: true,
           // 원건물(토지+건물1) 일괄 실가 취득

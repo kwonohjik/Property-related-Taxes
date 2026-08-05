@@ -6,6 +6,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 // ─── ④ 사례 33: 증축 extensionInfo 서브객체 변환 헬퍼 ───
@@ -125,10 +126,10 @@ export function buildGeneralBuildingValuation(
   // §163⑨ 상속 취득가액 직접 산정 게이트 (Phase 1 = C1). 계획서 §4-5:
   // acquisitionByInheritance = acquisitionCause==="inheritance" && 취득일>=1985-01-01.
   const acquisitionByInheritance =
-    asset.acquisitionCause === "inheritance" && (asset.acquisitionDate ?? "") >= "1985-01-01";
+    asset.acquisitionCause === "inheritance" && partAcquisitionDates(asset).land >= "1985-01-01";
   const buildingAcquisitionByInheritance =
     asset.gbBuildingAcquisitionCause === "inheritance" &&
-    ((asset.gbBuildingAcquisitionDate || asset.acquisitionDate) ?? "") >= "1985-01-01";
+    (asset.acquisitionDate ?? "") >= "1985-01-01";
   // 두 분기 공통 상속 필드 (실가 모드=C1 경로에서 소비, 환산 모드=C2는 validate 차단이나 대칭 전달).
   const gbInheritanceFields = {
     ...(acquisitionByInheritance
@@ -148,12 +149,53 @@ export function buildGeneralBuildingValuation(
   // 풀세트 payload 필요 케이스 = 환산취득가 모드 OR 사례 33 일괄 모드 (실가+증축)
   // 두 경우 모두 취득시 기준시가·extensionInfo·buildingAcquisitionCause 필요.
   // 사례 33 일괄 모드는 extensionInfo.actualBundledAcquisitionPrice가 정의되어 엔진이 실가 분기.
-  if (asset.useEstimatedAcquisition || asset.gbHasExtension) {
-    // 취득시 기준시가 포함 (양 모드 공통 필요)
+  /**
+   * 파트별 취득 방식 (2026-08-05 P3) — 미선택이면 자산 전체 레거시 플래그에서 파생한다
+   * (`effectivePartAcqMode` 단일 소스). 분리 OFF에서는 두 파트가 같은 값이라 종전과 동일하다.
+   */
+  const landMode = effectivePartAcqMode(asset.landAcqMode, asset);
+  const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, asset);
+  const anyEstimated = landMode === "estimated" || buildingMode === "estimated";
+  /**
+   * 파트별 자본적지출 — **두 파트 모두 실가일 때만** 보낸다.
+   * 환산 파트가 있으면 자본적지출은 §97②2호 단서의 **택일(가목↔나목) 대상**이고 그 판정이
+   * 자산 단위라(`resolveGeneralBuildingSwap`), 파트 값을 보내도 소비되지 않는 죽은 입력이 된다.
+   * 파트 단위 swap 판정은 미해결(계획서 §9 O-1)이므로 범위 밖이다.
+   */
+  const bothActual = landMode === "actual" && buildingMode === "actual";
+  const partExpensePayload = bothActual
+    ? {
+        ...(parseAmount(asset.landDirectExpenses) ? { landDirectExpenses: parseAmount(asset.landDirectExpenses) } : {}),
+        ...(parseAmount(asset.buildingDirectExpenses) ? { buildingDirectExpenses: parseAmount(asset.buildingDirectExpenses) } : {}),
+      }
+    : {};
+
+  const partModePayload = {
+    landAcqMode: landMode,
+    buildingAcqMode: buildingMode,
+    ...partExpensePayload,
+    ...(parseAmount(asset.landAcquisitionPrice) ? { landAcquisitionPrice: parseAmount(asset.landAcquisitionPrice) } : {}),
+    ...(parseAmount(asset.buildingAcquisitionPrice) ? { buildingAcquisitionPrice: parseAmount(asset.buildingAcquisitionPrice) } : {}),
+  };
+
+  // 한 파트라도 환산이면 **환산 경로**로 보낸다(혼합 모드 라우팅 확정 2026-08-05).
+  // 그 경로만 파트별 기준시가·개산공제 구조를 갖는다 — 계획서 §3.3·`general-building-part-acq.ts`.
+  if (anyEstimated || asset.gbHasExtension) {
+    // 취득시 기준시가 — **환산 파트만** 필수다(2026-08-05 P7 정정).
+    //
+    // 🔴 종전에는 두 값을 무조건 요구해 `undefined`를 반환했다. validate V-5는 실가 파트의
+    //    기준시가를 요구하지 않으므로(계산 어디에도 쓰이지 않는다), 사용자가 안내대로 비워두면
+    //    **payload가 통째로 사라져 `route.ts`의 일반건물 게이트가 실패**했다 —
+    //    validate 통과 ↔ API 침묵 drop이라는 최악의 조합이다(혼합 모드 C-4·C-5 전체가 불능).
+    //    요구 조건을 validate와 **같은 축**(파트 모드)으로 맞춘다.
     const acquisitionLandPricePerSqm = parseAmount(asset.gbAcqLandPricePerSqm);
     const acquisitionBuildingStdPrice = parseAmount(asset.gbAcqBuildingValue);
     const buildingArea = parseDecimal(asset.gbBuildingArea) || parseDecimal(asset.gbBuildingFootprintArea);
-    if (!acquisitionLandPricePerSqm || !acquisitionBuildingStdPrice || !buildingArea) return undefined;
+    const needLandStd = landMode === "estimated" || asset.gbHasExtension;
+    const needBuildingStd = buildingMode === "estimated" || asset.gbHasExtension;
+    if (needLandStd && !acquisitionLandPricePerSqm) return undefined;
+    if (needBuildingStd && !acquisitionBuildingStdPrice) return undefined;
+    if (!buildingArea) return undefined;
     return {
       transferLandPricePerSqm,
       transferBuildingStdPrice,
@@ -162,8 +204,10 @@ export function buildGeneralBuildingValuation(
       landArea,
       buildingArea,
       buildingFootprintArea,
+      ...partModePayload,
       estimatedDeductionRate: 0.03, // §163⑥ 등기 자산 3% 고정
-      buildingAcquisitionDate: asset.gbBuildingAcquisitionDate || undefined,
+      buildingAcquisitionDate: partAcquisitionDates(asset).building || undefined,
+      landAcquisitionDate: partAcquisitionDates(asset).land || undefined,
       // isSelfBuilt: gbBuildingAcquisitionCause에서 도출 (A안: gbIsSelfBuilt 필드 폐지)
       isSelfBuilt: asset.gbBuildingAcquisitionCause === "newConstruction",
       // buildingAcquisitionCause: 엔진 input 필드 (⑭ route handler 매핑 준비)
@@ -240,6 +284,11 @@ export function buildGeneralBuildingValuation(
     landArea,
     buildingFootprintArea,
     actualPriceMode: true,
+    ...partModePayload,
+    // M-1a — 실거래가 모드에서도 파트 취득일을 싣는다. 종전에는 건물 취득일이 여기서 누락돼
+    // 건물 카드가 토지 취득일로 계산됐다(계획서 §1.3 실측 결함).
+    buildingAcquisitionDate: partAcquisitionDates(asset).building || undefined,
+    landAcquisitionDate: partAcquisitionDates(asset).land || undefined,
     buildingAcquisitionCause: asset.gbBuildingAcquisitionCause || "purchase",
     isSelfBuilt: asset.gbBuildingAcquisitionCause === "newConstruction",
     ...(acquisitionLandPricePerSqm ? { acquisitionLandPricePerSqm } : {}),

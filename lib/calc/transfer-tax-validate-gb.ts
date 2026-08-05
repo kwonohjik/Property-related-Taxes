@@ -8,6 +8,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 
 /**
  * 일반건물 자산 전용 검증.
@@ -111,8 +112,9 @@ export function validateGeneralBuildingAsset(
   // 자산별 reported 분리(gbBuildingInheritedValue 등) 불요. pre-1985 증여는 §176의2④ 의제취득
   // 영역이므로 게이트 false → 기존 환산 fallback(회귀-safe).
   const isLandGift =
-    asset.acquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01";
+    asset.acquisitionCause === "gift" && partAcquisitionDates(asset).land >= "1985-01-01";
   const isBuildingGift =
+    // 🔄 M-1a로 교정: 종전에는 **건물** 게이트인데 토지 취득일을 읽었다(계획서 §3.2(2)).
     asset.gbBuildingAcquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01";
   if (isLandGift || isBuildingGift) {
     if (asset.useEstimatedAcquisition || asset.gbHasExtension) {
@@ -123,19 +125,75 @@ export function validateGeneralBuildingAsset(
     }
   }
 
+  // ── 파트별 취득 입력 검증 (2026-08-05 P6) ─────────────────────────────
+  // 계획서 §3.5. 파트 모드는 `effectivePartAcqMode` 단일 소스 — UI·API와 같은 함수다.
+  const isSeparate = !!asset.hasSeperateLandAcquisitionDate;
+  const landMode = effectivePartAcqMode(asset.landAcqMode, asset);
+  const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, asset);
+
+  if (isSeparate) {
+    // V-4 부담부증여 — §159가 채무비율로 자동 산정하므로 파트 분리가 성립하지 않는다.
+    //     `isSplitPayloadActive`(transfer-tax-api-split.ts:42)도 같은 이유로 제외한다.
+    if (isBurdenedGiftGB) {
+      return `${label}: 부담부증여는 §159 채무비율로 토지·건물을 자동 산정하므로 「토지·건물 취득일 다름」을 끄세요.`;
+    }
+    // V-3 증축 — 증축은 토지·건물1·건물2 3파트 축이라 2분할과 섞이지 않는다.
+    if (asset.gbHasExtension) {
+      return `${label}: 증축(건물2)과 「토지·건물 취득일 다름」은 함께 지원하지 않습니다. 둘 중 하나를 끄세요.`;
+    }
+    // V-1 파트 취득일 — 두 칸 모두 필요하다(§95④ 「그 자산의 취득일」).
+    if (!asset.landAcquisitionDate) return `${label}: 토지 취득일을 입력하세요.`;
+    if (!asset.acquisitionDate) return `${label}: 건물 취득일을 입력하세요.`;
+
+    /**
+     * 🔴 V-8 혼합 모드 + 자산 단위 자본적지출 — **차단**한다(2026-08-05 P7).
+     *
+     * §97②2호 단서의 「가목 ↔ 나목」 택일 판정(`resolveGeneralBuildingSwap`)은 **환산 카드만**
+     * 대상으로 삼는다(`general-building-swap.ts:40` `cards.filter(c => c.usedEstimatedAcquisition)`).
+     * 파트별 모드가 생기면서 실가 파트는 그 비교에서 빠지는데, 자산 단위 자본적지출은
+     * **전액이 환산 파트의 나목으로 흡수**된다 — 사용자가 「토지분 지출」이라 믿고 넣은 금액이
+     * 건물 파트 비교에 쓰여 세액이 조용히 크게 틀린다(실측 4천만원대 편차).
+     *
+     * 파트 단위 swap 판정은 미해결이라(계획서 §9 O-1 — 조문 확인 선행) 지금은 **입력을 막는다**.
+     * 두 파트가 모두 실가면 파트별 자본적지출 칸이 열리므로 이 차단에 걸리지 않는다.
+     */
+    const mixedMode = landMode !== buildingMode;
+    if (mixedMode && parseAmount(asset.capitalExpenditure)) {
+      return `${label}: 토지·건물의 취득가액 산정 방식이 서로 다르면 자산 전체 자본적지출을 사용할 수 없습니다. 두 파트를 같은 방식으로 맞추거나 자본적지출을 비우세요 (소득세법 §97②2호 단서의 가목·나목 택일이 환산 파트에만 적용되기 때문입니다).`;
+    }
+
+    // V-7 비-환산 파트의 실지거래가액 — 엔진이 던지기 전에 차단한다(같은 조건).
+    //     별개 취득은 총액이 실재하지 않아 잔액 도출이 불가능하다(§97①1호·§114⑦).
+    if (landMode !== "estimated" && !parseAmount(asset.landAcquisitionPrice)) {
+      return `${label}: 토지 취득가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호).`;
+    }
+    if (buildingMode !== "estimated" && !parseAmount(asset.buildingAcquisitionPrice)) {
+      return `${label}: 건물 취득가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호).`;
+    }
+  }
+
   // ⑧ 정합성 가드(삭제): 4가지 조합 모두 허용 — useEstimatedAcquisition 강제 조건 제거.
   // 기존 코드: gbHasExtension && !useEstimatedAcquisition 차단 → 사례 33 실가+증축 조합 불가 버그.
   // 4번째 라디오 onClick이 useEst=false 설정하므로 이 가드가 있으면 실가+증축 차단됨.
 
   // 환산취득가 모드 OR 사례 33 일괄 모드(실가+증축) 공통: 취득시 기준시가·건물 취득원인 검증.
   // 두 모드 모두 풀세트 payload(취득시 기준시가 + buildingAcquisitionCause)가 필요.
-  if (asset.useEstimatedAcquisition || asset.gbHasExtension) {
+  if (landMode === "estimated" || buildingMode === "estimated" || asset.gbHasExtension) {
     // 건물 연면적 — 환산 모드에서만 필수 (사례 33 일괄에서는 buildingFootprintArea로 대체 가능)
     if (asset.useEstimatedAcquisition && !parseDecimal(asset.gbBuildingArea))
       return `${label}: 건물 연면적을 입력하세요.`;
-    if (!parseAmount(asset.gbAcqLandPricePerSqm))
+    /**
+     * V-5 취득시 기준시가 — **환산 파트만** 요구한다(2026-08-05 P6).
+     * 종전에는 자산이 환산이면 토지·건물 둘 다 요구했으나, 파트별 모드에서는
+     * 실가 파트의 기준시가가 계산 어디에도 쓰이지 않는다 — 요구하면 거짓 차단이다
+     * (`requiresAcqStdPricePart`와 같은 취지 · dead-end 금지).
+     * ⚠️ 증축(3파트)은 종전대로 둘 다 필요하다 — 안분 분모를 구성한다.
+     */
+    const needLandStd = landMode === "estimated" || asset.gbHasExtension;
+    const needBuildingStd = buildingMode === "estimated" || asset.gbHasExtension;
+    if (needLandStd && !parseAmount(asset.gbAcqLandPricePerSqm))
       return `${label}: 취득시 토지 공시지가를 입력하세요.`;
-    if (!parseAmount(asset.gbAcqBuildingValue))
+    if (needBuildingStd && !parseAmount(asset.gbAcqBuildingValue))
       return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
 
     // (a) 건물 취득원인 미선택 차단
@@ -153,17 +211,25 @@ export function validateGeneralBuildingAsset(
     }
     // (b) 신축(자가건축) + 건물 취득일 미입력 차단
     if (asset.gbBuildingAcquisitionCause === "newConstruction") {
-      if (!asset.gbBuildingAcquisitionDate) {
+      if (!asset.acquisitionDate) {
         return `${label}: 신축(자가건축) 취득원인을 선택했습니다. 건물 취득일(영 §162①4호 빠른 날 — 사용승인서 교부일·사실상 사용일·임시사용승인일 중)을 입력하세요.`;
       }
       // 건물 취득일은 토지 취득일 이후여야 함
-      if (
-        asset.acquisitionDate &&
-        asset.gbBuildingAcquisitionDate < asset.acquisitionDate
-      ) {
-        return `${label}: 건물 취득일은 토지 취득일(${asset.acquisitionDate}) 이후여야 합니다.`;
+      const { land: landDate } = partAcquisitionDates(asset);
+      if (landDate && asset.acquisitionDate < landDate) {
+        return `${label}: 건물 취득일은 토지 취득일(${landDate}) 이후여야 합니다.`;
       }
     }
+  }
+
+  /**
+   * V-6 신축(자가건축) — **취득가액 산정 방식과 무관하게** 건물 취득일이 필요하다.
+   * 종전에는 환산·증축 게이트 안에만 있어 실거래가 모드에서는 요구도 검증도 하지 않았다
+   * (계획서 §1.3). 「소득세법 시행령」 제162조 제1항 제4호의 빠른 날이 §114조의2① 가산세
+   * 5년 판정의 기산일이기도 하다.
+   */
+  if (asset.gbBuildingAcquisitionCause === "newConstruction" && !asset.acquisitionDate) {
+    return `${label}: 신축(자가건축) 취득원인을 선택했습니다. 건물 취득일(영 §162①4호 빠른 날 — 사용승인서 교부일·사실상 사용일·임시사용승인일 중)을 입력하세요.`;
   }
 
   // 공통 취득일 검증
@@ -204,8 +270,7 @@ export function validateGeneralBuildingAsset(
     }
 
     // 증축일 범위: max(토지취득일, 건물1취득일) 이후
-    const landAcqDate = asset.acquisitionDate;
-    const buildingAcqDate = asset.gbBuildingAcquisitionDate ?? landAcqDate;
+    const { land: landAcqDate, building: buildingAcqDate } = partAcquisitionDates(asset);
     const minAcqDate =
       landAcqDate && buildingAcqDate
         ? landAcqDate > buildingAcqDate
@@ -227,8 +292,9 @@ export function validateGeneralBuildingAsset(
     if (!asset.gbConversionDate) {
       return `${label}: 주택→상가 용도변경을 선택했습니다. 용도변경일을 입력하세요.`;
     }
+    // 용도변경은 **건물**의 공부상 용도를 바꾸는 사건 → 하한은 건물 취득일(계획서 §3.6(4)).
     if (asset.acquisitionDate && asset.gbConversionDate < asset.acquisitionDate) {
-      return `${label}: 용도변경일은 취득일(${asset.acquisitionDate}) 이후여야 합니다.`;
+      return `${label}: 용도변경일은 건물 취득일(${asset.acquisitionDate}) 이후여야 합니다.`;
     }
     if (formTransferDate && asset.gbConversionDate > formTransferDate) {
       return `${label}: 용도변경일은 양도일(${formTransferDate}) 이전이어야 합니다.`;

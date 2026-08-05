@@ -67,8 +67,12 @@ test.describe("건물 기준시가 모달 — applyTimePoint 오적용 방지", 
       .getByRole("textbox")
       .fill("100");
 
-    // ② 양도시 기준시가 섹션의 건물 기준시가 계산 모달 (항상 표시)
-    await page.getByRole("button", { name: "건물 기준시가 계산" }).first().click();
+    // ② 건물 기준시가 그룹의 양도시 런처 (항상 표시).
+    // 시점 특정은 `[data-gb-stdprice]` 스코프 — 취득 모드에서는 취득시 런처가 먼저 온다.
+    await page
+      .locator('[data-gb-stdprice="transfer"]')
+      .getByRole("button", { name: "건물 기준시가 계산" })
+      .click();
     const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
     await expect(modal).toBeVisible();
 

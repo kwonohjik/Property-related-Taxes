@@ -275,7 +275,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           ⚠️ 종전의 안내 카드(`split-acq-total-note` — "총 취득가액이 존재하지 않습니다")는
              **삭제**했다(2026-07-30 사용자 확정 — 화면 밀도 우선). 바로 아래 「취득가액 산정 방식
              — 토지·건물 독립 선택」 헤더가 맥락을 대신한다. */}
-      {!isSeparateAcq && (
+      {!isSeparateAcq && !props.hideAssetAcqAxis && (
       <div className="space-y-2">
         <label className="block text-sm font-medium">취득가액 산정 방식</label>
         <div className={cn(
@@ -429,7 +429,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       )}
 
       {/* 자산 전체 추계·실거래가 금액 입력 — 별개 취득이면 파트 블록이 대신한다(축 A). */}
-      {!props.useEstimatedAcquisition && !isSeparateAcq && (
+      {!props.useEstimatedAcquisition && !isSeparateAcq && !props.hideAssetAcqAxis && (
         <>
           {/* 매매사례가액 추계(§176의2③1호) 모드 */}
           {props.isSalesCaseAcquisition ? (
