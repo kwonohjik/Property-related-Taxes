@@ -40,6 +40,10 @@ export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "on
         description="주택+상가 복합건물 (§160①단서)"
         trailing={<LawArticleModal legalBasis="소득세법 시행령 §160①" label="§160①단서 겸용주택" />}
         checked={!!asset.isMixedUseHouse}
+        // §95⑤(건물 전부가 주택이 된 경우)과 배타 — 반대 방향 잠금.
+        // 켜진 쪽만 조작 가능하므로 둘 다 잠기는 데드락은 없다.
+        disabled={asset.hasNonHousingConversion === true}
+        disabledReason="「건물 전체를 주택으로 용도변경」과 함께 사용할 수 없습니다"
         onCheckedChange={(checked) => {
           onChange({
             isMixedUseHouse: checked,
