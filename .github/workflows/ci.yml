@@ -49,9 +49,10 @@ jobs:
     name: typecheck + lint + test
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    # 로컬(Mac) 실측: npm ci ≈40초 + typecheck ≈30초 + lint ≈26초 + 전체 test ≈180초
-    #                + E2E ≈7분 ≈ 12~15분. 호스팅 러너는 더 걸릴 수 있어 여유를 둔다.
-    timeout-minutes: 40
+    # 호스팅 러너 실측(E2E 포함): **9분 49초 ~ 10분 32초**(2026-08-04 성공 4건).
+    # npm ci · typecheck · lint · 전체 test · E2E가 모두 이 job 안에서 순차 실행된다.
+    # 2.5배 여유로 25분 — 종전 40분은 실측 대비 과대해 hang을 늦게 알아챘다.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
