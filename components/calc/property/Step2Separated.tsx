@@ -75,8 +75,10 @@ export function Step2Separated({ form, onChange }: Props) {
             value={form.stFactoryLocation}
             onChange={(v) => onChange({ stFactoryLocation: v })}
           />
+          {/* ⚠️ ToneCard는 `...props`를 spread하지 않는다 — `data-testid`를 달아도 DOM에
+              도달하지 않는다(하이픈 JSX 속성이라 TS는 통과시킨다). 테스트는 텍스트로 조회한다. */}
           {form.stFactoryLocation === "urban" && (
-            <ToneCard tone="rose" data-testid="pt-factory-urban-not-separate">
+            <ToneCard tone="rose">
               <p className="text-xs text-rose-800">
                 이 지역의 공장용지는 <b>분리과세 대상이 아닙니다</b>. 「지방세법 시행령」
                 §101①1호에 따라 <b>별도합산과세대상</b>이며 기준면적은 공장용 건축물{" "}
