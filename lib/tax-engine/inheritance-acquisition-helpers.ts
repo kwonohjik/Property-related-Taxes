@@ -70,8 +70,11 @@ export function runInheritedAcquisitionStep(
  * 취득가액이 "확인 가능" → §166③ 환산·§163⑥ 개산공제 배제. 이 확인된 평가액을 반환한다.
  *
  * - post-deemed: result.acquisitionPrice(§163⑨ 본문/2호 평가액, 항상 확인됨).
- * - pre-deemed: preDeemedBreakdown.reportedAmount(상증법 평가액)만 "확인된 취득가액"으로 본다.
- *   §176조의2④ 환산(converted)은 추정치라 §166③ "확인 불가" 영역 → 제외.
+ * - pre-deemed: **①(§163⑨ 본문 상증법 평가액)과 ②(§163⑨1호·2호 §164④~⑦ 기준시가) 중 큰 값**.
+ *   ①②는 **둘 다 법 §97①1호 가목** = 취득당시 실지거래가액 의제라 법적 성격이 같다.
+ *   ③ 환산(§163⑫ → §176조의2)만 추계라 §166③ "확인 불가" 영역 → 제외.
+ *   ⚠️ ③이 채택(selectedMethod==="converted")됐더라도 ①② 중 확인된 값이 있으면 그것을 반환한다
+ *      — §166③의 판단 기준은 "채택 여부"가 아니라 "**확인 가능 여부**"다.
  * - 확인된 값이 없으면(신고가액 미입력 등) null → 호출측이 현행 §166③ 환산 경로를 유지한다.
  */
 export function resolveInheritedRedevelopmentAcqPrice(
@@ -80,8 +83,11 @@ export function resolveInheritedRedevelopmentAcqPrice(
   if (!step) return null;
   const r = step.result;
   if (r.preDeemedBreakdown) {
-    const reported = r.preDeemedBreakdown.reportedAmount;
-    return reported && reported > 0 ? reported : null;
+    const confirmed = Math.max(
+      r.preDeemedBreakdown.reportedAmount ?? 0,
+      r.preDeemedBreakdown.sec164Amount ?? 0,
+    );
+    return confirmed > 0 ? confirmed : null;
   }
   return r.acquisitionPrice > 0 ? r.acquisitionPrice : null;
 }
