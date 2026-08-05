@@ -10,6 +10,8 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
+import { waitForCalculationsStore } from "./_helpers/history-seed";
+
 /** 비사업용 토지 자산 — 자경하지 않는 농지(비사업용 판정). #508 asset 구조 준용. */
 function nblLandAsset(acquisitionDate: string) {
   return {
@@ -95,14 +97,7 @@ async function seedRecord(page: Page, record: unknown) {
 test.describe("부칙 §9270호 §14① — 취득기간 중과배제 (E2E)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/history");
-    await page.waitForFunction(
-      async () => {
-        if (typeof indexedDB.databases !== "function") return true;
-        const dbs = await indexedDB.databases();
-        return dbs.some((d) => d.name === "KoreanTaxCalcLocal");
-      },
-      { timeout: 15000 },
-    );
+    await waitForCalculationsStore(page);
     await seedRecord(page, RECORD);
   });
 

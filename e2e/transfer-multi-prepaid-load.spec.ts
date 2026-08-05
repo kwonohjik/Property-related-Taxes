@@ -10,6 +10,8 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
+import { waitForCalculationsStore } from "./_helpers/history-seed";
+
 /** 단건 양도 이력 record A — 신고일 빠름(기신고분). resultData는 { mode:"single", result } */
 const SINGLE_RECORD = {
   id: "e2e-single-load-1",
@@ -105,14 +107,7 @@ async function seedRecord(page: Page, record: unknown) {
 test.describe("다건 양도세 — 이력 불러오기 + 기납부 자동채움", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/history");
-    await page.waitForFunction(
-      async () => {
-        if (typeof indexedDB.databases !== "function") return true;
-        const dbs = await indexedDB.databases();
-        return dbs.some((d) => d.name === "KoreanTaxCalcLocal");
-      },
-      { timeout: 15000 },
-    );
+    await waitForCalculationsStore(page);
     await seedRecord(page, SINGLE_RECORD);
     await seedRecord(page, SINGLE_RECORD_LATE);
     await seedRecord(page, MULTI_RECORD);
