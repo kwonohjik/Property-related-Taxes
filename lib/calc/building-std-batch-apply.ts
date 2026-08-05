@@ -90,11 +90,12 @@ export function buildAcqBuildingStdEditPatch(
  */
 export function buildGeneralBuildingBatchPatch(
   v: MultiPointStdPriceApply,
-  asset: Pick<AssetForm, "gbBuildingAcquisitionDate" | "acquisitionDate">,
+  asset: Pick<AssetForm, "acquisitionDate">,
 ): Partial<AssetForm> {
   const patch: Partial<AssetForm> = {};
   // 건물 취득일이 따로 있으면 그것이 건물분 기준시가의 시점이다(§166⑥ 별개취득).
-  const acqYear = commercialAcqYear(asset.gbBuildingAcquisitionDate || asset.acquisitionDate);
+  // M-1a(2026-08-05): `acquisitionDate`가 **건물** 취득일이다 — 건물 기준시가 연도는 이 값 하나.
+  const acqYear = commercialAcqYear(asset.acquisitionDate);
 
   if (v.acquisition?.housing != null) patch.gbAcqBuildingValue = String(v.acquisition.housing);
   if (v.transfer?.housing != null) patch.gbTransferBuildingValue = String(v.transfer.housing);

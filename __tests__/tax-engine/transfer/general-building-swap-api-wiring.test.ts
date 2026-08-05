@@ -25,7 +25,6 @@ function gbAsset(overrides: Partial<AssetForm> = {}): AssetForm {
     gbAcqLandPricePerSqm: "2800000",
     gbAcqBuildingValue: "28144700",
     gbBuildingAcquisitionCause: "purchase",
-    gbBuildingAcquisitionDate: "1999-05-24",
     gbZoneType: "commercial",
     gbIsMetropolitan: true,
     capitalExpenditure: "800000000",

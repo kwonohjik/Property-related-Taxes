@@ -71,12 +71,11 @@ export interface GeneralBuildingFormSlice {
    */
   gbBuildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "newConstruction";
   /**
-   * 건물 취득일 (YYYY-MM-DD). 소득세법 시행령 §162① 4호 기준:
-   * 사용승인서 교부일·사실상 사용일·임시사용승인일 중 빠른 날.
-   * gbBuildingAcquisitionCause === "newConstruction" 시 필수. 미입력 시 validation에서 차단.
-   * 사례 31 호환(매매 등): gbBuildingAcquisitionCause !== "newConstruction" 시 취득일 = acquisitionDate 동일 가정.
+   * ⛔ `gbBuildingAcquisitionDate` 폐기 (2026-08-05 M-1a).
+   * 건물 취득일은 **`acquisitionDate`**, 토지 취득일은 **`landAcquisitionDate`**다
+   * (주택·건물과 동일한 split 규약). legacy 키는 `migrateGbAcquisitionDateConvention`이
+   * 1회 스왑 후 삭제한다. 이 자리에 건물 전용 날짜 필드를 다시 만들지 말 것.
    */
-  gbBuildingAcquisitionDate: string;
 
   /**
    * 토지·건물(원건물) 일괄 취득 시 발생한 필요경비 (원).

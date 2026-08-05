@@ -1,0 +1,424 @@
+# 일반건물 — 토지·건물 파트별 취득 입력 수정 계획서
+
+- **작성**: 2026-08-05 (rev.2 — D-1·M-1 확정 반영)
+- **대상**: `assetKind === "general_building"` (일반건물 — 토지+건물 일괄)
+- **요청**: ① 「토지·건물 취득일 같음/다름」을 확인받아 같으면 1회, 다르면 취득일·취득원인·취득가액 산정방식을 **각각** 입력받고 경우별 계산 수행 ② 자본적지출·필요경비 입력 방법을 산정방식에 맞게 분화
+
+> **이 문서의 모든 인용 file:line은 2026-08-05 master(`bb78fb00`) 기준 실측이다.** 수치는 throwaway probe 실측값이며, 확인하지 못한 항목은 §9에 「확인 필요」로 명시한다.
+
+---
+
+## §0 확정된 요구사항 (인터뷰 2026-08-05)
+
+| # | 질문 | 확정 |
+|---|---|---|
+| Q1 | 적용 자산유형 | **일반건물 + 기존 토글 UX 통일** — 주택·건물(토지 제외)의 기존 「토지·건물 취득일 다름」 토글과 같은 표현으로 통일 |
+| Q2 | 「다름」일 때 계산 엔진 | **기존 파트별 엔진 재사용** (`transfer-tax-split-gain.ts` 계열) |
+| Q3 | 「자본적지출·필요경비 입력 방법」의 의미 | **(a) 산정방식별 반영 규칙 안내** + **(b) 토지분·건물분 각각 귀속 입력** (취득원인별 항목 분화는 **비대상**) |
+| Q4 | 「같음」에서 건물 「신축(자가건축)」 | **신축 선택 시 자동으로 「다름」 전환** |
+
+> Q3에서 「취득원인(매매·상속·증여·신축)별로 입력 항목 자체가 달라짐」은 **선택되지 않았다.** 따라서 본 계획의 필요경비 분화 축은 **취득가액 산정방식**(실가·환산·감정·매매사례)이며, 취득원인은 축이 아니다.
+
+### rev.2 추가 확정 (2026-08-05)
+
+| # | 결정 | 내용 |
+|---|---|---|
+| **D-1** | **안 B — 함수 재사용** | 일반건물 전용 경로(`dispatchGeneralBuilding`)를 유지하고 split의 파트 산정 함수를 추출·공유한다. 라우팅 이관(안 A) 폐기 |
+| **M-1** | **M-1a — 일반건물을 split 규약으로 일치** | `acquisitionDate` = **건물** 취득일 · `landAcquisitionDate` = **토지** 취득일. 두 경로의 필드 의미를 하나로 통일하고 `gbBuildingAcquisitionDate`는 폐기(§3.2) |
+
+---
+
+## §1 현상 실측
+
+### 1.1 요청 기능의 대부분은 **이미 구현돼 있다** — 일반건물만 배제
+
+| 기능 | 구현 위치 | 일반건물 |
+|---|---|---|
+| 「토지·건물 취득일 다름」 토글 | `components/calc/transfer/CompanionAcqDateSection.tsx:89-101` | ❌ 배제 |
+| 파트별 취득 4방식 라디오(실가·환산·감정·매매사례) | `components/calc/transfer/LandBuildingSplitSection.tsx:38+` | ❌ |
+| 파트별 자본적지출 + **산정방식별 반영 규칙 hint** | 같은 파일 `:338-351`(`capexHint`)·`:550-554` | ❌ |
+| 구분양도/일괄양도(안분) 축 | `components/calc/transfer/LandBuildingSaleSplitSection.tsx` | ❌ |
+| 파트별 취득가액 엔진 | `lib/tax-engine/transfer-tax-split-gain.ts` (729줄, PR#836 머지) | ❌ |
+| 파트별 세율 §104② 기산일 | `lib/tax-engine/transfer-tax-appurtenant-land.ts:35-60`(`resolveAppurtenantLandRateBasisDate`) · `transfer-tax-split-rate.ts` | ❌ |
+| 파트 모드 단일 소스 술어 | `lib/calc/transfer-tax-split-acq-mode.ts` (`effectivePartAcqMode`·`requiresAcqStdPricePart`·`saleStdPlacement`) | ❌ |
+
+**배제 지점은 정확히 3곳이다.**
+
+| # | 위치 | 내용 |
+|---|---|---|
+| B-1 | `components/calc/transfer/CompanionAcqPurchaseBlock.tsx:115-116` | `isSplitable = assetKind === "housing" \|\| assetKind === "building"` — 토글 자체가 렌더되지 않음 |
+| B-2 | `components/calc/transfer/GeneralBuildingAcquisitionCards.tsx:155-156` | `hasSeperateLandAcquisitionDate={false}` **하드코딩** + `onChange={() => {}}` |
+| B-3 | `lib/tax-engine/transfer-tax-split-gain.ts:357` | `if (input.propertyType !== "housing" && input.propertyType !== "building") return null;` |
+
+> **전송 계층은 이미 자산유형 무관이다** — `buildSplitPayload`는 `lib/calc/transfer-tax-api.ts:338`에서 **무조건** 호출되고 `isSplitPayloadActive`(`transfer-tax-api-split.ts:34-46`)는 `hasSeperateLandAcquisitionDate`·`selfOwns`·부담부증여만 본다. assetKind 게이트가 없다. ⇒ B-1·B-2를 풀면 파트 필드는 **그대로 전송된다**.
+
+### 1.2 일반건물의 현행 모델 — 취득원인만 분리, 취득일·산정방식은 반쪽
+
+`components/calc/transfer/GeneralBuildingAcquisitionCards.tsx`가 2카드를 렌더한다.
+
+| 카드 | 필드 | 엔진 도달 |
+|---|---|---|
+| 📌 토지 취득(sky) | `acquisitionCause` `:91` · `acquisitionDate` `:104` · 취득가액 산정방식 `:106-109` | ✅ |
+| 🏗 건물 취득(amber) | `gbBuildingAcquisitionCause` `:235` · `gbBuildingAcquisitionDate` `:261` | ⚠️ §1.3 |
+
+- **취득가액 산정방식은 자산 단일**이다 — `useEstimatedAcquisition`/`isAppraisalAcquisition` 한 쌍이 토지·건물을 동시에 결정한다. 토지 실가 + 건물 환산 같은 조합은 표현 불가.
+- **자본적지출·양도비도 자산 단일**이다 — `components/calc/transfer/asset-sections/AssetSectionExpense.tsx:59·81`. 파트 귀속 입력이 없고, 엔진이 §166⑥ 기준시가 비율로 안분한다(`app/api/calc/transfer/general-building-route-helper.ts:572-573·579-580`).
+
+### 1.3 🔴 실측 결함 — 실거래가 모드에서 건물 취득일이 버려진다
+
+| 계층 | 환산·증축 모드 | 실거래가 모드 |
+|---|---|---|
+| API 변환 | `lib/calc/transfer-tax-api-gb.ts:166` `buildingAcquisitionDate` 전송 | **필드 없음** (`:237-264` 반환 객체) |
+| route helper | — | 건물 카드 `acquisitionDate`에 **토지 취득일**을 넣음 (`general-building-route-helper.ts:642`) |
+| 엔진 | 건물 카드 취득일 = `buildingAcquisitionDate ?? acquisitionDate` (`lib/tax-engine/general-building-valuation.ts:775·786`) | — |
+
+**probe 실측** — 공통: 토지 취득 1999-05-24 · 양도 2026-02-16 · 총양도 20억 · 토지 85㎡ · 연면적/바닥면적 180.96㎡ · 양도시 토지 공시지가 10,830,000원/㎡ · 양도시 건물기준시가 20,629,440원 · 용도지역 `commercial` · `makeMockRates()`. **건물 취득일만** 2020-03-01로 바꿔 비교.
+
+> ⚠️ 실가 행과 환산 행은 **fixture가 다르다**(모드가 다르면 필요한 입력이 다르다). 실가 = `actualAcquisitionPrice 600,000,000` / 환산 = `gbAcqLandPricePerSqm 2,800,000` + `gbAcqBuildingValue 2,814,470`. 같은 조건의 두 모드를 비교한 표가 아니라, **각 모드 안에서 건물 취득일만 바꾼** 비교다.
+
+| 케이스 | 건물 장기보유공제 | 총세액 |
+|---|---|---|
+| 실가 · 건물취득일 미입력 | 9,205,858 | 412,071,000 |
+| 실가 · 건물취득일 2020 | 9,205,858 **(동일)** | 412,071,000 **(동일)** |
+| 환산 · 건물취득일 미입력 | 11,331,677 | 439,411,088 |
+| 환산 · 건물취득일 2020 | 3,777,225 | 443,150,543 **(+3,739,455)** |
+
+건물 장기보유공제가 0이 아닌데도 실가 모드에서 미동이므로, 「값이 작아 차이가 안 나는」 것이 아니라 **입력이 버려지는** 것이다. 「소득세법」 제95조 제2항의 보유기간은 자산별 취득일~양도일이므로, 토지를 먼저 취득한 경우 건물분 공제가 과다 계상된다(과소신고 방향).
+
+`lib/calc/transfer-tax-validate-gb.ts:132`의 게이트가 환산·증축 모드 안에만 있어, 실가 모드에서는 건물 취득원인·취득일을 **요구하지도 검증하지도 않는다** — 입력해도 무시, 미입력도 통과.
+
+### 1.4 ⚠️ `acquisitionDate`의 의미가 두 경로에서 **반대다**
+
+| 경로 | `asset.acquisitionDate` | 토지 취득일 필드 |
+|---|---|---|
+| **일반건물** | **토지** 취득일 (`GeneralBuildingAcquisitionCards.tsx:104` 토지 카드) | 없음(= `acquisitionDate` 자신) |
+| **split(주택·건물)** | **건물** 취득일 (`CompanionAcqPurchaseBlock.tsx:194` `acqDateLabel = isSplit ? "건물 취득일" : "취득일"`) | `landAcquisitionDate` |
+| 엔진 split | 건물 파트 기준일 | `input.landAcquisitionDate` (`transfer-tax-appurtenant-land.ts:53`) |
+
+메모리 `feedback_general_building_split_acquisition_date`가 기록한 일반건물 규약과 split 규약이 정확히 뒤집혀 있다. **이 반전을 해소하지 않고 B-1·B-2만 풀면 토지·건물 취득일이 서로 바뀐 채 계산된다** — 세액이 조용히 틀리는 최악의 형태다. §3.2 M-1이 이 문제를 다룬다.
+
+### 1.5 일반건물 전용 기능 — split 경로에 **없는** 것
+
+| 기능 | 일반건물 구현 | split 경로 |
+|---|---|---|
+| 비주택 부수토지 배율 초과분 → 비사업용 | `general-building-route-helper.ts:593-607` (`getBuildingSiteMultiplier` ← 「지방세법 시행령」 제101조) | ❌ — `transfer-tax-appurtenant-land.ts:88·131`이 `propertyType !== "housing"` 조기 반환 |
+| 증축(건물2) 3파트 안분 | `lib/tax-engine/general-building-extension.ts` · `extensionInfo` | ❌ (2파트 고정) |
+| 부담부증여 §159①1호 | `general-building-route-helper.ts:537-561` | ❌ — `isSplitPayloadActive`가 명시 제외(`transfer-tax-api-split.ts:42` `!isBurdenedGift`) |
+| §166⑥ 안분 + 사업용/비사업용 카드 분할 후 aggregate | `:609-668` | 단일 물건 내부 파트 |
+| 응답 형태 | `mode: "bundled"` (`app/api/calc/transfer/route.ts:396-402`) | `mode: "single"` |
+
+### 1.6 일반건물은 **이미 파트-major 아키텍처**다
+
+`dispatchGeneralBuilding`은 토지·건물(·비사업용 초과분)을 **각각 하나의 물건 카드**로 만들어 `calculateTransferTaxAggregate`에 넘긴다(`general-building-route-helper.ts:610-668`). 각 카드는 자기 `acquisitionDate`로 보유기간·세율·장기보유공제를 받는다.
+
+⇒ 파트별 세율(§104②)·파트별 공제는 **이미 구조적으로 가능**하며, 부족한 것은 카드에 실릴 **입력값**뿐이다.
+
+---
+
+## §2 설계 방향 — 「기존 엔진 재사용」의 두 해석 (✅ **안 B 확정** 2026-08-05)
+
+Q2에서 「기존 파트별 엔진 재사용」이 확정됐으나, 실측 결과 그 말이 가리킬 수 있는 구현이 둘이다.
+
+### 안 A — 라우팅 이관 (분리 ON이면 `calculateTransferTax` split 경로로)
+
+`route.ts:361`의 일반건물 early-return을 「분리 OFF일 때만」으로 좁히고, 분리 ON은 단건 엔진으로 흘린다.
+
+- ✅ 파트별 4방식·구분/일괄 양도·파트별 세율·`calcSplitGain`을 **그대로** 사용. 신규 엔진 코드 최소.
+- ❌ §1.5의 일반건물 전용 기능이 **분리 ON에서 전부 소실**된다 — 비주택 부수토지 NBL 판정(§104의3①4호나목)·증축·§159.
+- ❌ **응답 형태가 `bundled` → `single`로 바뀐다.** 같은 자산유형인데 토글 하나로 결과 화면 구조가 통째로 달라진다(사이드바 안분 표·명세서 포함).
+- ❌ B-3(엔진 화이트리스트)에 `general_building` 추가 시, 부수토지 NBL 없는 계산이 정답인 것처럼 산출된다.
+
+### 안 B — 함수 재사용 (일반건물 경로가 split의 **파트 산정 함수**를 호출) ⭐ 권고
+
+`dispatchGeneralBuilding`의 카드 조립 골격은 유지하고, 파트별 취득가액 산정만 split의 로직을 공유한다.
+
+- ✅ §1.5 전용 기능 전부 보존. 응답 형태 불변 → 결과 화면·명세서 회귀 0.
+- ✅ §1.6대로 파트별 세율·공제는 카드 취득일만 채우면 자동으로 따라온다.
+- ✅ 산정방식별 필요경비 규칙(`capexHint`)·모드 술어(`effectivePartAcqMode`·`requiresAcqStdPricePart`)는 `lib/calc`의 순수 함수라 **그대로 import**된다.
+- ⚠️ `calcOnePart`가 `calcSplitAcquisitionPrice` 내부 클로저다(`transfer-tax-split-gain.ts:271-277`) → **공유 가능한 최상위 함수로 추출**해야 한다(메모리 `feedback_800line_split_export_preservation` 준수: export 이름·분기 순서 보존).
+- ⚠️ 「구분양도/일괄양도」 축은 일반건물에 §166⑥ 안분이 이미 있어 **범위 밖으로 둔다**(§9 O-2).
+
+**권고 근거**: 요청은 「입력을 파트별로 받아 경우별로 계산」이지 「일반건물을 다른 엔진으로 옮기기」가 아니다. 안 A는 부수토지 비사업용 판정을 잃는 대가로 코드를 아끼는 거래인데, 그 판정은 일반건물의 존재 이유에 가깝다(`§104의3①4호나목 → 지방세법 §106①2호 → 같은 법 시행령 §101`).
+
+> ✅ **안 B 확정**(2026-08-05). 이후 §3은 안 B 기준이며, `transfer-tax-split-gain.ts:357`의 `propertyType` 화이트리스트(B-3)는 **건드리지 않는다** — 일반건물은 `calcSplitGain`에 진입하지 않는다.
+
+---
+
+## §3 변경 설계 (안 B 기준)
+
+### 3.1 UI — 「같음/다름」 토글
+
+**위치**: ③ 취득정보 최상단, 토지 카드 **앞**. 기존 주택·건물의 토글(`CompanionAcqDateSection.tsx:89-101`)과 같은 `ToggleCard` 표현·같은 문구(「토지·건물 취득일 다름」)를 쓴다 — Q1 UX 통일.
+
+| 상태 | 렌더 |
+|---|---|
+| **같음**(기본) | 단일 「취득일」 1칸 + 단일 「취득원인」 + 단일 「취득가액 산정 방식」. 건물 카드는 **취득원인만** 남기고 취득일 칸을 숨긴다(요구사항 ①). |
+| **다름** | 토지 카드: 취득일·취득원인·산정방식 / 건물 카드: 취득일·취득원인·산정방식 — 각각 |
+
+**Q4 신축 자동 전환**: 건물 취득원인에서 「신축(자가건축)」을 고르면 `onChange`에서 `hasSeperateLandAcquisitionDate: true`를 **같은 배치로** 설정한다(메모리 `feedback_multikey_patch_stale_spread_overwrite` — 다중 키는 단일 `onChange` 호출로). 자동 전환 사실을 카드 안내 문구로 알린다(조용한 상태 변경 금지).
+
+#### 🔴 규칙 충돌 — 「비-매매 자동 해제」 vs 「신축 자동 ON」 (rev.2 자가검토에서 발견)
+
+split 경로에는 **토지 취득원인이 비-매매(상속·증여·이월과세)로 바뀌면 분리를 자동 해제**하는 규칙이 있다 — `CompanionAcquisitionCauseSection.tsx:67-71`:
+
+```
+...(opt.value !== "purchase" ? { hasSeperateLandAcquisitionDate: false } : {}),
+```
+
+일반건물에 이 규칙을 그대로 복사하면 **Q4(건물 신축 → 분리 ON)와 정면으로 충돌**한다. 대표 조합이 실제로 존재한다: **토지 상속 + 건물 신축**.
+
+| 축 | 트리거 | 방향 |
+|---|---|---|
+| 토지 취득원인 | 비-매매 선택 | 분리 **OFF** |
+| 건물 취득원인 | 신축 선택 | 분리 **ON** |
+
+**확정 규칙**: 두 축은 **서로 다른 필드**를 보므로 하나의 우선순위로 정한다 — **건물 축이 우선(ON 유지)**. 토지 원인 변경은 분리 플래그를 **끄지 않는다**. 대신 split의 원래 목적(상속·증여에서 파트별 취득가액을 요구해 dead-end가 되는 것 방지)은 §3.5 V-1·V-5의 파트별 필수 판정이 담당한다.
+
+> ⚠️ split 경로의 해제 규칙은 **그대로 둔다**(주택·건물 회귀 0). 일반건물만 다른 규칙을 갖는다는 사실을 두 파일 주석에 상호 링크한다.
+
+**정책 준수**: `useEffect → store` 미러링 금지, native radio/checkbox 금지(`RadioCardGroup`/`ToggleCard`), `DateInput` 사용, placeholder 숫자 예시 금지.
+
+### 3.2 데이터 모델 — 신규 필드 0을 목표로
+
+| 의미 | 재사용 필드 | 비고 |
+|---|---|---|
+| 분리 여부 | `hasSeperateLandAcquisitionDate` | B-2 하드코딩 해제 |
+| 토지 취득일 | `landAcquisitionDate` | **M-1a 전환** |
+| 건물 취득일 | `acquisitionDate` | **M-1a 전환** — `gbBuildingAcquisitionDate` 폐기 |
+| 토지 취득원인 | `acquisitionCause` → payload `landAcquisitionCause` | 기존 매핑 유지(`transfer-tax-api-gb.ts:174·248`) |
+| 건물 취득원인 | `gbBuildingAcquisitionCause` → payload `buildingAcquisitionCause` | 기존 |
+| 파트별 산정방식 | `landAcqMode` · `buildingAcqMode` | split과 공유(신규 아님) |
+| 파트별 자본적지출 | `landDirectExpenses` · `buildingDirectExpenses` | split과 공유 |
+
+#### 🔴 M-1a — `acquisitionDate` 의미를 split 규약으로 **일치** (✅ 확정 2026-08-05)
+
+전환 후 규약 (전 자산유형 동일):
+
+```
+asset.acquisitionDate      = 건물(주된 자산) 취득일
+asset.landAcquisitionDate  = 토지 취득일        (분리 OFF면 acquisitionDate와 동일 값)
+asset.gbBuildingAcquisitionDate = 폐기          (legacy 자동 변환 후 키 삭제)
+```
+
+##### (1) 회귀가 0인 이유 — 「같음」 모드에서 두 날짜가 같다
+
+전환은 **값이 아니라 이름**을 바꾼다. 분리 OFF(기본)에서는 `landAcquisitionDate === acquisitionDate`이므로, `acquisitionDate`를 읽는 **모든 일반·공용 소비처**(감면 시한·신고기한·보유기간 표시·이월과세 등)가 **종전과 같은 값**을 받는다. 값이 갈리는 것은 **새로 생기는 분리 ON 모드뿐**이고, 그 모드에서 공용 경로가 건물 취득일을 보는 것은 주택·건물(토지 제외)의 현행 규약과 같다.
+
+> ⚠️ 그러므로 **분리 OFF에서 두 날짜가 항상 동기화된다는 불변식**이 이 설계의 안전핀이다. 토글 OFF 시 `landAcquisitionDate`를 `acquisitionDate`로 맞추는 처리를 **onChange 단일 배치**로 수행한다(`useEffect → store` 미러링 금지 · 다중 키 stale spread 금지 — 메모리 `feedback_multikey_patch_stale_spread_overwrite`). anchor로 고정한다(A-8).
+
+##### (2) 전환 대상 — 일반건물 전용 파일에서 `acquisitionDate`를 **토지**로 읽는 지점 (전수 실측)
+
+| 파일:line | 현행 의미 | 전환 후 |
+|---|---|---|
+| `GeneralBuildingAcquisitionCards.tsx:104-105` | 토지 카드 취득일 입력 | `landAcquisitionDate` |
+| `GeneralBuildingAcquisitionCards.tsx:196-197` | 증여 블록 취득일 | `landAcquisitionDate` |
+| `GeneralBuildingAcquisitionCards.tsx:261-262` | 건물 카드 `gbBuildingAcquisitionDate` | `acquisitionDate` |
+| `GeneralBuildingAcquisitionCards.tsx:68-75` | §114조의2 가산세 5년 배지 — `gbBuildingAcquisitionDate` 판정 | `acquisitionDate` |
+| `GeneralBuildingAcquisitionCards.tsx:243` | 비-신축 전환 시 `gbBuildingAcquisitionDate: ""` 클리어 | 규칙 재설계 — `acquisitionDate`를 비우면 **자산 취득일이 사라진다**. §3.1 각주 참조 |
+| `CompanionAcqInheritanceBlock.tsx:45-47` | 상속 블록이 `acquisitionDate`를 **읽고 쓴다**(`inheritanceStartDate`·`inheritanceDate` 동시 기록) | 상속개시일은 하나 — 두 파트에 같은 값을 써야 한다(O-5) |
+| `GeneralBuildingBlock.tsx:291` | 취득시 **토지 공시지가** 기준일 | `landAcquisitionDate` |
+| `GeneralBuildingBlock.tsx:87·365·388` | 건물 기준시가 연도·prefill (`gbBuilding… \|\| acquisitionDate`) | `acquisitionDate` 단독 |
+| `GeneralBuildingConversionSection.tsx:43·62·71` | 용도변경 보유기간 기산일 **미리보기** | ✅ **O-6 확정 — 파트별**(§3.6). 분리 ON이면 2줄 표시로 변경 |
+| `transfer-tax-api-gb.ts:128` | §163⑨ **토지** 상속 게이트 | `landAcquisitionDate` |
+| `transfer-tax-api-gb.ts:131` | §163⑨ 건물 상속 게이트 | `acquisitionDate` 단독 |
+| `transfer-tax-api-gb.ts:166` | payload `buildingAcquisitionDate` | `acquisitionDate` |
+| `transfer-tax-validate-gb.ts:114` | 토지 증여 1985 게이트 | `landAcquisitionDate` |
+| `transfer-tax-validate-gb.ts:116` | **건물** 증여 1985 게이트인데 `acquisitionDate`(현행=토지)를 읽음 | `acquisitionDate` — 전환으로 **기존 오류가 함께 교정**된다 |
+| `transfer-tax-validate-gb.ts:161-164` | 건물 취득일 ≥ 토지 취득일 | 두 필드 비교로 재작성 |
+| `transfer-tax-validate-gb.ts:170` | 취득일 필수 | 파트별 필수(V-1) |
+| `transfer-tax-validate-gb.ts:207-208` | 증축일 하한 = max(토지, 건물) | 두 필드 |
+| `transfer-tax-validate-gb.ts:230-231` | 용도변경일 하한 | `acquisitionDate`(= **건물** 취득일) — §3.6(4). 전환이 의미를 **바로잡는** 케이스 |
+| `FilingFormTableHelpers.ts:313·324` | 신고서 건물 카드 취득일 | `acquisitionDate` 단독 |
+| `building-std-batch-apply.ts:93·97` | 건물 기준시가 배치 연도 | `acquisitionDate` 단독 |
+| `calc-wizard-asset-gb.ts:79` · `-factory.ts:351` · `-migrate-phase3.ts:42` | 필드 선언·기본값·normalize | 폐기 + 마이그레이션 |
+
+테스트·E2E 6파일이 `gbBuildingAcquisitionDate`를 참조한다 — 함께 전환한다.
+
+##### (3) stale sessionStorage 마이그레이션 (멱등)
+
+`lib/stores/calc-wizard-asset-migrate*.ts`에서 **legacy 키 존재를 트리거로** 1회 변환하고 키를 삭제한다 — 선례는 `gbIsSelfBuilt` 폐기(메모리 `project_general_building_split_cause` M-1).
+
+```
+if ("gbBuildingAcquisitionDate" in a) {            // 트리거 = 키 존재
+  a.landAcquisitionDate = a.acquisitionDate;        // 옛 acquisitionDate = 토지
+  a.acquisitionDate = a.gbBuildingAcquisitionDate || a.acquisitionDate;
+  a.hasSeperateLandAcquisitionDate =
+    !!a.landAcquisitionDate && !!a.acquisitionDate &&
+    a.landAcquisitionDate !== a.acquisitionDate;    // 값이 다르면 분리 ON으로 승격
+  delete a.gbBuildingAcquisitionDate;               // 재실행 시 no-op
+}
+```
+
+⚠️ **키 삭제가 멱등성의 유일한 근거**다. 삭제를 빠뜨리면 재실행 때 토지↔건물이 다시 스왑돼 **날짜가 뒤바뀐다**. 이 경로만 단독 anchor로 고정한다(A-9: 1회 실행·2회 실행 결과 동일).
+
+### 3.3 엔진 — 파트별 취득가액 + 건물 카드 취득일
+
+1. **`calcOnePart` 추출**: `transfer-tax-split-gain.ts:271-313`(`calcSplitAcquisitionPrice` 내부 클로저)의 4-way `switch`를 최상위 export 함수로 승격(분기 순서·에러 문구 보존). split 경로는 추출본을 호출하도록만 바꾼다(회귀 0).
+2. **일반건물 경로에서 파트별 산정**: `general-building-route-helper.ts`의 실가 분기(`:574-581`)와 환산 분기가 파트 모드에 따라 추출본을 호출한다. 파트 모드는 `effectivePartAcqMode`(`lib/calc/transfer-tax-split-acq-mode.ts:32`)로 도출 — **UI·validate와 같은 함수**.
+3. **건물 카드 취득일**: `:642`의 카드 `acquisitionDate`를 건물 취득일로 채운다(§1.3 결함 해소). 토지 카드(`:620·628·635`)는 토지 취득일.
+4. **파트별 취득원인**: 실가 분기의 `:652` 조건(상속만)을 제거하고 `buildingAcquisitionCause`를 항상 카드에 실어 `buildProperties:158`이 판독하게 한다.
+5. **개산공제(§163⑥)**: 파트별 모드에 따라 그 파트에만 적용. 현재는 환산/실가가 자산 단위라 카드 전체 `estimatedDeduction: 0` 또는 일괄 적용이다.
+
+### 3.4 필요경비 — Q3 (a)+(b)
+
+- **(b) 파트 귀속 입력**: 분리 ON일 때 ④ 필요경비 섹션에 「토지 자본적지출」·「건물 자본적지출」 2칸을 노출한다. `LandBuildingSplitSection.tsx:550-554`와 **같은 컴포넌트 구성·같은 필드**를 쓴다.
+  - 근거: 「소득세법」 제100조 제2항 후문 — "**공통되는** 취득가액과 양도비용은 해당 자산의 가액에 비례하여 안분계산한다". 즉 **직접 귀속되면 안분하지 않는다**. 파트 칸이 없으면 직접 귀속 지출도 강제로 안분된다.
+  - **양도비(§97①나목)는 파트 분할하지 않는다** — 양도 시 1회 발생이며 현행 자산 단위 유지(`AssetSectionExpense.tsx:44-45` 주석의 판단과 정합).
+- **(a) 산정방식별 반영 규칙 안내**: `LandBuildingSplitSection.tsx:338-351`의 `capexHint`를 **공용 모듈로 승격**해 일반건물에서도 같은 문구를 쓴다.
+  - 실가 → 전액 차감(「소득세법」 제97조 제1항 제2호)
+  - 환산 → 「환산취득가+개산공제」 ↔ 「자본적지출」 **택일**(같은 조 제2항 제2호 단서)
+  - 감정·매매사례 → 개산공제(시행령 제163조 제6항)만, 자본적지출 미차감
+- **§97②2호 swap**: 일반건물은 자산 단위 swap 결정(`GeneralBuildingSwapDecision`)을 갖는다. 파트별 모드가 도입되면 **swap 판정도 파트 단위**여야 한다 — §9 O-1.
+
+### 3.5 차단 규칙 (⑧ validate)
+
+| ID | 조건 | 메시지 방향 |
+|---|---|---|
+| V-1 | 분리 ON + 취득일 2칸 중 미입력 | 각 파트 취득일 입력 요구 |
+| V-2 | 분리 ON + 두 취득일이 **같음** | 「같음」으로 되돌리도록 안내(§1.4 `isSeparateAcquisition`이 false가 되어 파트 완결 규칙이 발동하지 않음) |
+| V-3 | 분리 ON + 증축(`gbHasExtension`) | 조합 미지원 — 증축은 3파트라 파트 2분할과 축이 다르다 |
+| V-4 | 분리 ON + 부담부증여 | `isSplitPayloadActive`가 이미 제외(`transfer-tax-api-split.ts:42`) — UI에서도 토글 숨김 |
+| V-5 | 파트 모드가 환산인데 그 파트 취득시 기준시가 미입력 | `requiresAcqStdPricePart`와 **같은 술어** 사용(dead-end 금지) |
+| V-6 | 건물 취득원인 신축 + 건물 취득일 미입력 | 기존 규칙(`validate-gb.ts:155-165`)을 **실가 모드에도** 적용 |
+
+---
+
+### 3.6 O-6 확정 — 용도변경 LTHD 기산일은 **자산(파트)별**이다 (2026-08-05 조문 확인)
+
+**(1) 법령 본문** (KoreanLaw MCP 실조회 · 「소득세법」 MST 280405 · 시행 2026-07-01)
+
+- 「소득세법」 제95조 제4항 본문: *"제2항에서 규정하는 **자산의 보유기간**은 **그 자산의 취득일**부터 양도일까지로 한다."*
+- 「소득세법」 제94조 제1항 제1호: *"**토지** … **또는 건물**(건물에 부속된 시설물과 구축물을 포함한다)의 양도로 발생하는 소득"*
+
+⇒ 토지와 건물은 **각각 별개 자산**이고, 표1·표2 보유기간은 **그 자산의** 취득일부터 기산한다. 일반건물의 LTHD 기산일이 자산 단위 하나일 근거는 없다.
+
+**(2) 엔진은 이미 파트별이다 — M-1a로 인한 엔진 변경 없음**
+
+`resolveLTHDStartDate(input)`(`lib/tax-engine/transfer-tax-lthd-start.ts:24-26`)는 **물건 카드 단위 input**을 받는다. 일반건물은 카드마다 자기 `acquisitionDate`를 갖고(환산: `general-building-valuation.ts:786` / 실가: `general-building-route-helper.ts:620·628·635·642`), 용도변경 플래그는 전 카드에 전파된다(`general-building-valuation.ts:820-822` · `general-building-route-helper.ts:660-666`).
+
+> 단, 실가 경로의 건물 카드가 **토지 취득일**을 받는 §1.3 결함이 남아 있어 현재는 결과적으로 두 카드가 같은 날짜다. P2에서 그 결함을 고치면 파트별 기산이 자동으로 정합된다.
+
+**(3) 따라서 M-1a의 실제 작업은 UI 미리보기뿐**
+
+`GeneralBuildingConversionSection.tsx:41-43·60-62`는 「당초 취득일」을 **하나만** 표시한다. 전환 후 `acquisitionDate`는 건물 취득일이므로, 분리 ON에서 그대로 두면 **토지 기산일이 화면에서 사라진다**. 분리 ON이면 두 줄로 표시한다.
+
+```
+보유기간 기산일 — 토지 1999-05-24 / 건물 2015-03-01   (1주택: 각 자산 취득일)
+보유기간 기산일 = 용도변경일 (2022-06-01) — 토지·건물 공통  (다주택)
+```
+
+**(4) `validate-gb.ts:230-231` 용도변경일 하한**
+
+용도변경은 **건물의 공부상 용도**를 바꾸는 사건이므로 하한은 **건물 취득일**이다. 전환 후 `acquisitionDate`가 건물 취득일이 되므로 코드는 그대로 두면 되고, 이는 우연이 아니라 M-1a가 **기존의 부정확한 비교(토지 취득일 기준)를 교정**하는 것이다. 메시지 문구를 「건물 취득일」로 명시한다.
+
+---
+
+## §4 케이스 매트릭스 (전수 열거)
+
+| # | 분리 | 토지 모드 | 건물 모드 | 기대 |
+|---|---|---|---|---|
+| C-1 | OFF | 실가 | 실가 | 현행 그대로 (§166⑥ 안분) — **회귀 0 필수** |
+| C-2 | OFF | 환산 | 환산 | 현행 그대로 |
+| C-3 | ON | 실가 | 실가 | 파트별 취득가액 직접 입력, 안분 없음 |
+| C-4 | ON | 실가 | 환산 | 건물만 환산(분모=건물 양도시 기준시가), 토지 공시지가 **미요구**(`requiresAcqStdPricePart`) |
+| C-5 | ON | 환산 | 실가 | 대칭 |
+| C-6 | ON | 환산 | 환산 | 파트별 환산 |
+| C-7 | ON | 감정 | 실가 | 감정가액 파트 개산공제만 |
+| C-8 | ON | 실가 | 매매사례 | §176의2③1호 탐색 창이 파트별로 다름 |
+| C-9 | ON | 실가 | 신축 원인 + 실가 | Q4 자동 전환 경로 |
+| C-10 | ON | 상속 | 상속 | 기존 §163⑨ C1 경로와 충돌 여부 — **§9 O-3** |
+| C-11 | ON | — | — | + 증축 → V-3 차단 |
+| C-12 | ON | — | — | + 부담부증여 → V-4 차단 |
+| C-13 | ON | — | — | + 부수토지 배율 초과(비사업용) → 사업용/비사업용/건물 3카드 유지 |
+| C-14 | OFF→ON→OFF | — | — | 토글 왕복 시 stale 값(파트 모드·파트 경비)이 계산에 끼어들지 않을 것 |
+
+---
+
+## §5 14개 동기화 지점
+
+| # | 지점 | 작업 |
+|---|---|---|
+| ① 폼 상태 | `lib/stores/calc-wizard-asset*.ts` | 신규 필드 **없음**(§3.2) — 일반건물에서 기존 split 필드를 쓰도록 허용만 |
+| ② initial | `calc-wizard-asset-factory.ts` | 기존 기본값 그대로 |
+| ③ normalize | `calc-wizard-asset-migrate.ts` · **`-migrate-phase3.ts:42`**(폐기 대상 키가 여기 있다) | M-1a 마이그레이션(§3.2(3)) + stale 자산 `hasSeperateLandAcquisitionDate` 미정의 → false |
+| ④ API 변환 | `lib/calc/transfer-tax-api-gb.ts` | **M-1a 필드 전환** + 파트 모드·파트 경비 payload |
+| ⑤ UI 위젯 | `GeneralBuildingAcquisitionCards.tsx` · `AssetSectionExpense.tsx` | §3.1·§3.4 |
+| ⑥ 사이드바 | `separateAcqPartsSum`(`transfer-tax-split-acq-mode.ts:88`) | 일반건물도 파트 합계 표시 |
+| ⑦ 결과 카드 | `GeneralBuildingValuationDetailCard.tsx` | 파트별 모드·취득일 echo |
+| ⑧ validate | `lib/calc/transfer-tax-validate-gb.ts` | §3.5 V-1~V-6 |
+| ⑨⑩ Zod enum | **작업 불필요 — 이미 수용됨** | `landAcqMode`·`buildingAcqMode`(`lib/api/transfer-tax-schema.ts:246·248`)·`landDirectExpenses`(`:281`)가 **top-level**에 이미 있다. 일반건물 서브객체(`transfer-tax-building-schemas.ts`)가 아니다 — **확인만** |
+| ⑪ 자산-수준 fallback | `route.ts` | 파트 취득일 fallback |
+| ⑫ Zod 입력 객체 | `transfer-tax-schema.ts` | **침묵 strip 주의** — 신규 키를 추가할 경우에 한함 |
+| ⑬ body spread | `transfer-tax-api.ts:338` | `buildSplitPayload` 이미 무조건 — 확인만 |
+| ⑭ route 매핑 | `general-building-route-helper.ts` | Date 변환 + 카드 조립 |
+
+---
+
+## §6 파급·회귀 위험
+
+| ID | 위험 | 완화 |
+|---|---|---|
+| R-1 | M-1a 전환 누락분이 남아 토지·건물이 뒤바뀐 채 계산 | §3.2(2) 전수 표를 체크리스트로 소진 + `gbBuildingAcquisitionDate` **잔존 참조 0건** grep 게이트 + A-2 카드별 취득일 단언 |
+| R-1b | 마이그레이션 재실행으로 날짜 재스왑 | 키 삭제 기반 멱등 + A-9(2회 실행 동일) |
+| R-2 | C-1·C-2 현행 경로 회귀 | 기존 일반건물 anchor 전건(사례 31·32·33·34·35) 무변경 통과가 착수 조건 |
+| R-3 | `calcOnePart` 추출이 split(주택·건물) 경로 회귀 | 추출 전후 `land-building-split.test.ts` 등 split anchor 전건 동일값 |
+| R-4 | 토글 왕복 stale (C-14) | 분리 OFF 시 파트 필드를 **전송하지 않는다**(게이트) — 폼 값은 보존하되 payload에서 제외 |
+| R-5 | 실가 모드 건물 취득일 반영으로 **기존 사용자의 세액이 바뀜** | 의도된 정정이나 §1.3 수치를 릴리스 노트에 명시. **`gbBuildingAcquisitionDate` 참조 테스트 6파일 실측 확인** — `general-building-swap-api-wiring.test.ts` · `general-building-batch-stdprice.anchor.test.tsx` · `DetailedCalculationStatementCard.test.tsx` · E2E 3건(`general-building-97-2-swap` · `-ext-97-2-swap` · `-inheritance-acquisition`). P1.5에서 전건 전환하며 세액 기대값 변화 여부를 개별 판단(법령 정합 우선 — 메모리 `feedback_anchor_correction_legal_priority`) |
+| R-6 | 부수토지 비사업용 판정과 파트 분할의 상호작용(C-13) | 토지 카드가 2장(사업용·비사업용)으로 쪼개진 뒤 파트 취득가액을 면적비로 재안분하는 순서 확정 필요 |
+
+---
+
+## §7 검증 계획
+
+**Pre-Do anchor** (구현 전 작성 → 현행 실패 확인):
+
+| ID | 대상 | 단언 |
+|---|---|---|
+| A-1 | `transfer-tax-api-gb.ts` | 실가 모드 payload에 건물 취득일이 실린다 (현행 미포함 → 실패) |
+| A-2 | route helper | 건물 카드 `acquisitionDate` = 건물 취득일, 토지 카드 = 토지 취득일 |
+| A-3 | 세액 | §1.3 probe 4행을 고정값 anchor로 (실가 모드 건물취득일 2020 → 환산과 같은 방향으로 공제 축소) |
+| A-4 | 파트 모드 | C-4·C-5 혼합 모드에서 파트별 취득가액 산식 분기 |
+| A-5 | validate | V-1~V-6 각 1건 + **UI 통과 ↔ validate 차단 모순 없음** |
+| A-6 | UI | 토글 OFF/ON 렌더 매트릭스 + Q4 자동 전환 |
+| A-7 | 회귀 | `calcOnePart` 추출 전후 split anchor 동일값 |
+| A-8 | 불변식 | 분리 OFF에서 `landAcquisitionDate === acquisitionDate` (토글 왕복 포함) |
+| A-9 | 마이그레이션 | legacy 자산 1회·2회 실행 결과 동일 + `gbBuildingAcquisitionDate` 키 소멸 |
+| A-10 | 용도변경 미리보기 | 분리 ON·1주택 → 토지·건물 기산일 **2줄** 표시 / 다주택 → 용도변경일 1줄 (§3.6(3)) |
+
+**E2E**: 일반건물 분리 ON 실플로우 1건(입력 → 계산 → 결과 명세서에 파트별 취득일·모드 표시). 접힌 섹션은 반드시 펼쳐서 단언(메모리 — `toHaveText`는 hidden도 통과).
+
+**게이트**: `npx tsc --noEmit` 0 · `npm run lint` 0 error · `npx vitest run __tests__/tax-engine/transfer/ __tests__/components/ __tests__/calc/` · Playwright 스크린샷 확인.
+
+---
+
+## §8 작업 순서
+
+| Phase | 내용 | verify |
+|---|---|---|
+| ~~**P0**~~ | ~~D-1·M-1 확정~~ | ✅ 2026-08-05 (안 B · M-1a) |
+| **P1** | A-1~A-3·A-8·A-9 anchor 작성 → **실패 확인** | 실패가 §1.3 결함·M-1a 미전환과 일치 |
+| **P1.5** | M-1a 필드 전환 + 마이그레이션 (§3.2) | A-9 통과 · `gbBuildingAcquisitionDate` 잔존 참조 0 · **분리 OFF 전건 회귀 0** |
+| **P2** | ④⑭ 배관: 건물 카드 취득일 + 실가 분기 건물 취득원인 | A-1~A-3 통과, 기존 anchor 전건 유지 |
+| **P3** | `calcOnePart` 추출 + 파트별 취득가액 산정 | A-4·A-7 |
+| **P4** | UI: 토글·파트 입력·Q4 자동 전환·§3.1 규칙 충돌 처리·용도변경 미리보기 2줄화 | A-6·**A-10** + 스크린샷 |
+| **P5** | 필요경비 (a)+(b) | 파트 귀속 anchor |
+| **P6** | validate V-1~V-6 | A-5 |
+| **P7** | E2E + 전체 회귀 | `check:pre-pr` |
+
+---
+
+## §9 미해결 — 착수 전/중 확인 필요
+
+| ID | 항목 | 상태 |
+|---|---|---|
+| ~~D-1~~ | 안 A vs 안 B (§2) | ✅ **안 B** 확정 |
+| ~~M-1~~ | `acquisitionDate` 반전 해소 (§3.2) | ✅ **M-1a**(split 규약으로 일치) 확정 |
+| ~~O-6~~ | 용도변경 LTHD 기산일이 토지·건물 중 어느 쪽인가 | ✅ **파트별 확정** — 「소득세법」 제95조 제4항 본문 + 제94조 제1항 제1호 실조회(§3.6). 엔진 변경 없음, UI 미리보기만 2줄화 |
+| **O-7** | 다주택 용도변경 시 기산일 = 용도변경일이 **부수토지에도** 적용되는가 | 🟡 **본문 미확인** — 국세청 해석 2건 존재하나 법제처 OPEN API가 국세청 해석 본문을 제공하지 않는다(`ntsCgmExpc`는 목록만). 링크: [사전법규재산 2022-881(2022.12.28)](https://taxlaw.nts.go.kr/qt/USEQTA002P.do?ntstDcmId=010000000000564787) · [2024.05.03 해석](https://taxlaw.nts.go.kr/qt/USEQTA002P.do?ntstDcmId=200000000000004034).<br>**현행 코드는 전 카드에 전파**하고 본 계획은 그 동작을 바꾸지 않으므로 **착수 블로커가 아니다**. 다만 부수토지 제외가 맞다면 별건 정정 대상 |
+| **O-1** | §97②2호 swap의 파트 단위화 — 현행 일반건물은 자산 단위 결정 | 🟡 미검증. 파트 모드 도입 시 「가목 vs 나목」 비교를 파트별로 해야 하는지 조문 확인 필요 |
+| **O-2** | 「구분양도/일괄양도」 축(`saleSplitMode`)을 일반건물에 도입할지 | 🟡 본 계획 **범위 밖**. 일반건물은 §166⑥ 안분이 전제 |
+| **O-3** | C-10(토지·건물 모두 상속) — 기존 §163⑨ C1 경로(`validate-gb.ts:84-104`)가 실가 모드 전용이며 파트 모드와 중복 판정 | 🟡 미검증 |
+| **O-4** | R-6 부수토지 비사업용 분할 × 파트 취득가액의 계산 순서 | 🟡 미검증 |
+| **O-5** | 상속·증여 파트에서 파트별 취득일이 실재하는가(상속개시일은 하나) | 🟢 **대부분 해소** — split은 비-매매 전환 시 분리를 자동 해제한다(`CompanionAcquisitionCauseSection.tsx:67-71` 실측). 일반건물은 §3.1 규칙 충돌 절에서 **건물 축 우선**으로 정했으므로 「토지 상속 + 건물 신축」만 남는다. 그 조합에서 토지 취득일 = 상속개시일이고 `CompanionAcqInheritanceBlock.tsx:45-47`이 `acquisitionDate`(전환 후 = 건물)에 쓰므로 **토지 필드로 라우팅 변경 필요** — P4 작업 항목 |
+
+> O-1·O-3·O-4는 **세액이 바뀌는** 판정이라, 법문·예규 확인 없이 구현으로 밀지 않는다(메모리 `feedback_unverified_authority_blocks_tax_change`).

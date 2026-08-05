@@ -571,7 +571,20 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 일반건물 NBL 판정 필드 (2026-05-10)
   if (a.gbZoneType === undefined) a.gbZoneType = "";
   // ── 일반건물 취득원인·증축·용도변경 normalize — 별도 모듈 (800줄 정책) ──
+  // ⚠️ M-1a 취득일 규약 스왑이 이 안에 있다 — 아래 동기화보다 **먼저** 와야 한다.
   migrateGeneralBuildingFields(a);
+
+  /**
+   * 분리 OFF ⇒ `landAcquisitionDate === acquisitionDate` 불변식 (M-1a 안전핀).
+   *
+   * 전환은 값이 아니라 **이름**을 바꾸는 것이므로, 분리 OFF에서 두 날짜가 같기만 하면
+   * `acquisitionDate`를 읽는 공용 소비처(감면 시한·신고기한·보유기간 표시 등)가 종전과
+   * 같은 값을 받는다 — 이것이 회귀 0의 근거다.
+   * 계획서 §3.2(1) · anchor `gb-acquisition-date-convention.anchor.test.ts` A-8
+   */
+  if (!a.hasSeperateLandAcquisitionDate) {
+    a.landAcquisitionDate = (a.acquisitionDate as string) ?? "";
+  }
 
   // ③ 장기임대주택 거주주택 비과세 특례 마이그레이션 (sessionStorage 호환)
   if (!a.rentalHousingException || typeof a.rentalHousingException !== "object") {

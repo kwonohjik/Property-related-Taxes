@@ -26,6 +26,8 @@ import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-
 import { applyConvertedHousingPriceOverride } from "./general-building-converted-housing";
 import type { ExpropriationValuationDetail } from "./transfer-tax-expropriation-valuation";
 import { calculateConvertedAcquisition } from "./general-building-converted-acquisition";
+import { applyPartAcqModes } from "./general-building-part-acq";
+import type { PartAcqMode } from "./transfer-tax-split-gain";
 
 // ============================================================
 // 개산공제율 상수 (시행령 §163 ⑥)
@@ -113,6 +115,21 @@ export type GeneralBuildingInput = {
    * buildingAcquisitionCause === "newConstruction" 시 validation에서 필수 강제.
    */
   buildingAcquisitionDate?: Date;
+  /**
+   * 토지 취득일 (M-1a, 2026-08-05). `acquisitionDate`는 **건물** 취득일이므로
+   * 토지 카드의 보유기간·세율 기산일은 이 값이다. 미입력 시 `acquisitionDate` fallback(분리 OFF).
+   */
+  landAcquisitionDate?: Date;
+  /**
+   * 파트별 취득 방식 (2026-08-05 P3) — 미주입 시 둘 다 환산(이 경로의 기본 = 종전 동작).
+   * 한 파트라도 환산이 아니면 그 파트는 실지거래가액을 쓰고 개산공제가 배제된다
+   * (`general-building-part-acq.ts`).
+   */
+  landAcqMode?: PartAcqMode;
+  buildingAcqMode?: PartAcqMode;
+  /** 파트별 실지거래가액(§97①1호) — 비-환산 파트에서 필수 */
+  landAcquisitionPrice?: number;
+  buildingAcquisitionPrice?: number;
   /**
    * 신축취득 여부. 라우트 헬퍼에서 `buildingAcquisitionCause === "newConstruction"` 으로 도출.
    * 엔진 input에는 boolean으로 normalize 후 전달 (단일 진실 원천 유지).
@@ -365,6 +382,21 @@ export type AssetCardForAggregate = {
    */
   buildingAcquisitionDate?: Date;
   /**
+   * 토지 취득일 (M-1a, 2026-08-05). `acquisitionDate`는 **건물** 취득일이므로
+   * 토지 카드의 보유기간·세율 기산일은 이 값이다. 미입력 시 `acquisitionDate` fallback(분리 OFF).
+   */
+  landAcquisitionDate?: Date;
+  /**
+   * 파트별 취득 방식 (2026-08-05 P3) — 미주입 시 둘 다 환산(이 경로의 기본 = 종전 동작).
+   * 한 파트라도 환산이 아니면 그 파트는 실지거래가액을 쓰고 개산공제가 배제된다
+   * (`general-building-part-acq.ts`).
+   */
+  landAcqMode?: PartAcqMode;
+  buildingAcqMode?: PartAcqMode;
+  /** 파트별 실지거래가액(§97①1호) — 비-환산 파트에서 필수 */
+  landAcquisitionPrice?: number;
+  buildingAcquisitionPrice?: number;
+  /**
    * 건물 카드에만 set. 토지 카드는 undefined.
    * `propertyType === "general_building_unit"` 카드에만 의미 있음.
    * 라우트가 TransferTaxItemInput 매핑 시 acquisitionCause로 전달.
@@ -603,14 +635,31 @@ export function buildGeneralBuildingAssetCards(
 
   // Step 2: 환산취득가 (§176의2②) — 토지 분모만 §164⑨ 공익수용 특례 override(토지 전용, D16-GB).
   // 법령 참조: TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ
-  const { acquisition, expropriationValuationDetail } = calculateConvertedAcquisition(
+  const { acquisition: acquisitionConverted, expropriationValuationDetail } = calculateConvertedAcquisition(
     input,
     allocation,
   );
 
   // Step 3: 개산공제 (§163⑥)
   // 법령 참조: TRANSFER.GENERAL_BUILDING_LUMP_DEDUCTION
-  const estimatedDeduction = calculateEstimatedDeduction(input, rate);
+  const estimatedDeductionConverted = calculateEstimatedDeduction(input, rate);
+
+  /**
+   * Step 3.5: **파트별 취득 방식** (2026-08-05 P3) — 비-환산 파트는 그 파트의 실지거래가액을
+   * 쓰고 개산공제(§163⑥)를 적용하지 않는다. 두 파트가 모두 환산이면 위 값을 그대로 통과시킨다
+   * (회귀 0). 산식 정본은 `calcPartAcquisitionPrice` — split 경로와 같은 함수다.
+   */
+  const partAcq = applyPartAcqModes(input, acquisitionConverted, estimatedDeductionConverted);
+  if (partAcq.missingParts.length > 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `일반건물: ${partAcq.missingParts.join("·")} 취득가액을 입력하세요 — `
+        + `환산이 아닌 파트는 그 파트의 실지거래가액이 필요합니다 (소득세법 §97①1호).`,
+      { missingParts: partAcq.missingParts },
+    );
+  }
+  const acquisition = { ...acquisitionConverted, ...partAcq.acquisition };
+  const estimatedDeduction = { ...estimatedDeductionConverted, ...partAcq.estimatedDeduction };
 
   /**
    * 비사업용토지 판정 — **건축물(비주택) 부속토지**
@@ -672,6 +721,13 @@ export function buildGeneralBuildingAssetCards(
 
   // Step 5: 자산 카드 생성 (aggregate 엔진 위임용)
   // 초과분이 있으면 토지를 사업용·비사업용 2장으로 분할 (§104의3 초과분만 중과)
+  /**
+   * 토지 카드 취득일 (M-1a) — `input.acquisitionDate`는 **건물** 취득일이다.
+   * 미주입 시 건물 취득일과 동일(분리 OFF)로 본다 — 「분리 OFF면 두 날짜가 같다」 불변식.
+   * 건물 카드는 아래 `buildingAcqDate`가 담당한다.
+   */
+  const landAcqDate = input.landAcquisitionDate ?? input.acquisitionDate;
+
   const assetCards: AssetCardForAggregate[] = [];
 
   if (!isWithinNblRatio && nonBusinessRatio >= 1) {
@@ -690,10 +746,10 @@ export function buildGeneralBuildingAssetCards(
       transferPrice: allocation.land,
       acquisitionPrice: acquisition.land,
       expenses: estimatedDeduction.land,
-      usedEstimatedAcquisition: true,
-      estimatedBase: acquisition.land,
+      usedEstimatedAcquisition: partAcq.landUsedEstimated,
+      estimatedBase: partAcq.landUsedEstimated ? acquisition.land : 0,
       estimatedDeduction: estimatedDeduction.land,
-      acquisitionDate: input.acquisitionDate,
+      acquisitionDate: landAcqDate,
       transferDate: input.transferDate,
       isNonBusinessLand: true,
       landAcquisitionCause: input.landAcquisitionCause,
@@ -713,10 +769,10 @@ export function buildGeneralBuildingAssetCards(
       transferPrice: landBusinessTransfer,
       acquisitionPrice: landBusinessAcq,
       expenses: landBusinessExp,
-      usedEstimatedAcquisition: true,
-      estimatedBase: landBusinessAcq,
+      usedEstimatedAcquisition: partAcq.landUsedEstimated,
+      estimatedBase: partAcq.landUsedEstimated ? landBusinessAcq : 0,
       estimatedDeduction: landBusinessExp,
-      acquisitionDate: input.acquisitionDate,
+      acquisitionDate: landAcqDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
       landAcquisitionCause: input.landAcquisitionCause,
@@ -732,10 +788,10 @@ export function buildGeneralBuildingAssetCards(
       transferPrice: allocation.land - landBusinessTransfer,
       acquisitionPrice: acquisition.land - landBusinessAcq,
       expenses: estimatedDeduction.land - landBusinessExp,
-      usedEstimatedAcquisition: true,
-      estimatedBase: acquisition.land - landBusinessAcq,
+      usedEstimatedAcquisition: partAcq.landUsedEstimated,
+      estimatedBase: partAcq.landUsedEstimated ? acquisition.land - landBusinessAcq : 0,
       estimatedDeduction: estimatedDeduction.land - landBusinessExp,
-      acquisitionDate: input.acquisitionDate,
+      acquisitionDate: landAcqDate,
       transferDate: input.transferDate,
       isNonBusinessLand: true,
       landAcquisitionCause: input.landAcquisitionCause,
@@ -752,10 +808,10 @@ export function buildGeneralBuildingAssetCards(
       transferPrice: allocation.land,
       acquisitionPrice: acquisition.land,
       expenses: estimatedDeduction.land,
-      usedEstimatedAcquisition: true,
-      estimatedBase: acquisition.land,
+      usedEstimatedAcquisition: partAcq.landUsedEstimated,
+      estimatedBase: partAcq.landUsedEstimated ? acquisition.land : 0,
       estimatedDeduction: estimatedDeduction.land,
-      acquisitionDate: input.acquisitionDate,
+      acquisitionDate: landAcqDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
       landAcquisitionCause: input.landAcquisitionCause,
@@ -780,8 +836,8 @@ export function buildGeneralBuildingAssetCards(
     transferPrice: allocation.building,
     acquisitionPrice: acquisition.building,
     expenses: estimatedDeduction.building,
-    usedEstimatedAcquisition: true,
-    estimatedBase: acquisition.building,
+    usedEstimatedAcquisition: partAcq.buildingUsedEstimated,
+    estimatedBase: partAcq.buildingUsedEstimated ? acquisition.building : 0,
     estimatedDeduction: estimatedDeduction.building,
     acquisitionDate: buildingAcqDate,
     transferDate: input.transferDate,

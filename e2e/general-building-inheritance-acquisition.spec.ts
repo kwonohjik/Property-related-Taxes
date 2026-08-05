@@ -30,7 +30,6 @@ function seedForm() {
           publishedValueAtInheritance: "84000000", // 상속개시일 토지 평가액
           // 건물 상속
           gbBuildingAcquisitionCause: "inheritance",
-          gbBuildingAcquisitionDate: "2017-09-15",
           gbBuildingInheritedValue: "45000000", // 상속개시일 건물 신고가액
           // 면적·양도시 기준시가·용도지역 (실거래가 모드 — 환산토글 미노출)
           gbLandArea: "150",

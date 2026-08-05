@@ -8,6 +8,42 @@
  */
 
 /**
+ * M-1a — 일반건물 취득일 규약을 split(주택·건물)과 **일치**시킨다 (2026-08-05).
+ *
+ * 계획서: `docs/02-design/features/general-building-part-major-acquisition.plan.md` §3.2
+ *
+ * 종전 일반건물은 `acquisitionDate` = **토지**, `gbBuildingAcquisitionDate` = **건물**이었고
+ * split은 정반대(`acquisitionDate` = 건물, `landAcquisitionDate` = 토지)였다. 같은 필드가
+ * 자산유형에 따라 반대를 뜻해, 일반건물에 분리 입력을 열면 두 날짜가 뒤바뀐 채 계산된다.
+ *
+ * ## ⛔ 자산유형 게이트가 필수다
+ *
+ * `gbBuildingAcquisitionDate`는 factory 공통 기본값이라 **주택·상가 등 모든 자산**에도 `""`로
+ * 저장돼 있다. 키 존재만 트리거로 삼으면 주택 자산의 `acquisitionDate`(=건물)를 토지 칸으로
+ * 옮겨 split 규약을 깨뜨린다 — 반드시 `assetKind === "general_building"`에서만 스왑한다.
+ *
+ * ## 멱등
+ *
+ * 키 삭제가 유일한 근거다. 삭제를 빠뜨리면 재실행 때 토지↔건물이 다시 스왑된다.
+ * anchor: `__tests__/calc/gb-acquisition-date-convention.anchor.test.ts` A-9
+ */
+function migrateGbAcquisitionDateConvention(a: Record<string, unknown>): void {
+  if (!("gbBuildingAcquisitionDate" in a)) return; // 이미 전환됨 → no-op
+
+  const legacyBuildingDate = (a.gbBuildingAcquisitionDate as string) || "";
+  delete a.gbBuildingAcquisitionDate; // 멱등의 근거 — 반드시 스왑 여부와 무관하게 삭제
+
+  if (a.assetKind !== "general_building") return; // 타 자산유형은 이미 split 규약
+
+  const legacyLandDate = (a.acquisitionDate as string) || "";
+  a.landAcquisitionDate = legacyLandDate;
+  a.acquisitionDate = legacyBuildingDate || legacyLandDate;
+  // 두 날짜가 실제로 다를 때만 분리 입력으로 승격한다(같으면 「같음」 모드가 정상).
+  a.hasSeperateLandAcquisitionDate =
+    !!legacyLandDate && !!legacyBuildingDate && legacyLandDate !== legacyBuildingDate;
+}
+
+/**
  * 일반건물(general_building) 취득원인·증축·용도변경 normalize — factory 800줄 정책 분리.
  * a는 Record<string, unknown>으로 mutate되는 raw 객체.
  */
@@ -39,7 +75,7 @@ export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
       a.gbBuildingAcquisitionCause = "purchase";
     }
   }
-  if (a.gbBuildingAcquisitionDate === undefined) a.gbBuildingAcquisitionDate = "";
+  migrateGbAcquisitionDateConvention(a);
   // ③ 사례 33 일괄 모드: 토지·건물 일괄 취득 시 필요경비 (신규 필드 — bundledExpenses 분리, 2026-05-11)
   if (a.gbBundledAcquisitionExpenses === undefined) a.gbBundledAcquisitionExpenses = "";
   // ③ 사례 33: 증축 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)

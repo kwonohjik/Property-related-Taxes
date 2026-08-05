@@ -308,7 +308,6 @@ describe("DetailedCalculationStatementCard — 다건 모드 (사례 33 일괄+�
     const asset = makeMinimalAsset({
       assetKind: "general_building",
       acquisitionDate: "2003-03-17",
-      gbBuildingAcquisitionDate: "2003-03-17",
       gbExtensionDate: "2007-07-24",
     } as Partial<AssetForm>);
     const formData = makeMinimalFormData(asset);
@@ -395,7 +394,6 @@ describe("DetailedCalculationStatementCard — 다건 모드 (사례 33 일괄+�
     const asset = makeMinimalAsset({
       assetKind: "general_building",
       acquisitionDate: "2003-03-17",
-      gbBuildingAcquisitionDate: "2003-03-17",
       gbExtensionDate: "2007-07-24",
       gbHasExtension: true,
       useEstimatedAcquisition: false,

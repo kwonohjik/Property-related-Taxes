@@ -40,11 +40,12 @@ test.describe("건물 기준시가 모달 — 자산값 자동입력(prefill)", 
     //    2시점이 성립하지 않아 양도시 계산기가 그대로 남으므로 기본 모드로 검증한다
     //    (검증 대상은 prefill 배선이지 취득가액 모드가 아니다).
     await expandAssetSection(page, 3);
-    // 취득일 DateInput만 감싸는 FieldCard로 scope 한정 — 섹션 전체 scope는 "이월과세" 라디오의
+    // 취득일 DateInput의 전용 testid로 scope 한정 — 섹션 전체 scope는 "이월과세" 라디오의
     // "월" substring이 getByLabel("월")에 오매칭됨(e2e/CLAUDE.md §1).
-    const acqDateScope = page
-      .locator('[data-asset-card-index="0"] [data-asset-section="3"] [data-slot="field-card"]')
-      .filter({ hasText: "취득일" });
+    // ⚠️ 종전에는 `[data-slot="field-card"]` + hasText:"취득일"로 잡았으나, 2026-08-05
+    //    「토지·건물 취득일 다름」 도입으로 **같음 모드에서는 건물 취득일 FieldCard가 숨는다**
+    //    → 그 스코프가 0개가 됐다. testid는 분리 ON/OFF 양쪽에서 살아 있다.
+    const acqDateScope = page.getByTestId("acq-date-building");
     await fillDateAndVerify(page, { year: "2010", month: "07", day: "12" }, { scope: acqDateScope });
 
     // ① 면적·규모: 토지 면적 78.1, 건물 연면적 100 (FieldCard 라벨로 스코프 — placeholder 기본값 중복 회피)

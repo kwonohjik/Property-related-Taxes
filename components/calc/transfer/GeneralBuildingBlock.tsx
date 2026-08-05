@@ -49,6 +49,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { GeneralBuildingNblSection } from "./GeneralBuildingNblSection";
 import { GeneralBuildingConversionSection } from "./GeneralBuildingConversionSection";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -84,7 +85,8 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
 
   // ── P4: 취득·양도 2시점 일괄 계산(배치) 배선 — 계획서 §4.2·§5 P4 ────────────
   // 건물분 기준시가의 취득 시점은 **건물 취득일**이 따로 있으면 그것이다(§166⑥ 별개취득).
-  const gbAcqYear = commercialAcqYear(asset.gbBuildingAcquisitionDate || asset.acquisitionDate);
+  // M-1a: `acquisitionDate` = 건물 취득일(건물 기준시가 연도) · `landAcquisitionDate` = 토지 취득일.
+  const gbAcqYear = commercialAcqYear(asset.acquisitionDate);
   const gbTransferYear = commercialAcqYear(transferDate);
   const gbBatchBlockReason = multiPointBlockReason({
     acquisitionYear: gbAcqYear,
@@ -203,7 +205,19 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
    * 취득시 기준시가(토지·건물)를 입력받는 조건 — 환산 분자 / 일괄 취득가 안분 / §159 환산.
    * 종전 "② 취득시 기준시가" 카드의 게이트를 그대로 승계한다(자산 축으로 재편해도 조건 불변).
    */
-  const showAcqStdPrice = isEstimated || asset.gbHasExtension || isBurdenedGift;
+  /**
+   * ⚠️ **파트 모드로 판정한다**(2026-08-05 P6). 자산 단위 `useEstimatedAcquisition`만 보면
+   * 「토지 실가 + 건물 환산」에서 이 섹션이 통째로 숨는데 validate는 건물 취득시 기준시가를
+   * 요구한다 — **입력 칸이 없는데 차단**되는 dead-end다
+   * (memory `feedback_ui_gate_removes_sole_input_path`). validate V-5와 같은 술어를 쓴다.
+   */
+  const landAcqModeEff = effectivePartAcqMode(asset.landAcqMode, asset);
+  const buildingAcqModeEff = effectivePartAcqMode(asset.buildingAcqMode, asset);
+  const showAcqStdPrice =
+    landAcqModeEff === "estimated" ||
+    buildingAcqModeEff === "estimated" ||
+    asset.gbHasExtension ||
+    isBurdenedGift;
   /**
    * 2시점 일괄 계산 런처가 실제로 떠 있는가 — 시점별 계산기의 **대체 여부**를 가른다.
    *
@@ -288,7 +302,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                   pricePerSqm={asset.gbAcqLandPricePerSqm}
                   onPricePerSqmChange={(v) => onChange({ gbAcqLandPricePerSqm: v })}
                   area={parseDecimal(asset.gbLandArea) || undefined}
-                  referenceDate={asset.acquisitionDate}
+                  referenceDate={asset.landAcquisitionDate}
                   jibun={asset.addressJibun}
                   hint={
                     // 상가와 같은 트랙 분기 — 일괄 계산기의 취득 공시지가(≤2000)는 2001.1.1 기준이다.
@@ -362,7 +376,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                 {/* 일괄 런처가 없을 때만 — 있으면 중복이라 숨긴다(위 showBatchLauncher 주석). */}
                 {!showBatchLauncher && (
                   <div className="flex justify-end">
-                    <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-acq`} applyTimePoint="acquisition" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
+                    <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-acq`} applyTimePoint="acquisition" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
                   </div>
                 )}
               </ToneCard>
@@ -385,7 +399,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               </FieldCard>
               {!showBatchLauncher && (
                 <div className="flex justify-end">
-                  <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-transfer`} applyTimePoint="transfer" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
+                  <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-transfer`} applyTimePoint="transfer" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
                 </div>
               )}
             </ToneCard>

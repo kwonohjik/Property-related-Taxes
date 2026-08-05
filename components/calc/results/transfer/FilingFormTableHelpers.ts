@@ -310,7 +310,7 @@ export function holdingPeriodFromDates(acq?: string, transfer?: string): string 
  *
  * 엔진 내부 카드의 acquisitionDate를 UI에서도 동일하게 표시하기 위한 도메인 매핑:
  *  - 토지 카드(land·land_business·land_nbl) → 토지 취득일 (asset.acquisitionDate)
- *  - 원건물 카드(building·building1) → 건물 취득일 (gbBuildingAcquisitionDate, 미입력 시 토지 취득일 fallback)
+ *  - 원건물 카드(building·building1) → 건물 취득일 (M-1a 이후 `acquisitionDate`가 건물 취득일)
  *  - 증축건물 카드(building2) → 증축일 (gbExtensionDate, 영 §162①4호 빠른 날 — 사례 33)
  *
  * 비-GB 자산은 asset.acquisitionDate 그대로 반환.
@@ -321,7 +321,7 @@ export function getAcqDateForCard(asset: import("@/lib/stores/calc-wizard-asset"
   if (!asset) return "";
   if (asset.assetKind !== "general_building") return asset.acquisitionDate || "";
   if (pid === "building" || pid === "building1") {
-    return asset.gbBuildingAcquisitionDate || asset.acquisitionDate || "";
+    return asset.acquisitionDate || "";
   }
   if (pid === "building2") {
     return asset.gbExtensionDate || "";

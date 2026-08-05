@@ -137,6 +137,83 @@ function splitPair(
   return { land, building: total - land };
 }
 
+/** `calcPartAcquisitionPrice` 컨텍스트 — 종전 클로저가 `input`에서 캡처하던 값 그대로. */
+export interface PartAcqPriceContext {
+  /** 별개 취득(파트별 완결) 여부 — API 변환이 파생해 전달한 값 */
+  isSeparate: boolean;
+  /** 취득시 기준시가 토지 비율 (비-별개취득 안분용). 없으면 null */
+  landRatio: number | null;
+  landAcquisitionPrice?: number;
+  buildingAcquisitionPrice?: number;
+  landSalesCaseValue?: number;
+  buildingSalesCaseValue?: number;
+  /** 자산 전체 총액 — 비-별개취득에서만 안분 base로 쓰인다 */
+  acquisitionPrice?: number;
+  appraisalValue?: number;
+  similarSalesValue?: number;
+}
+
+/**
+ * **파트 1개의 취득가액** — 4방식(실가·환산·감정·매매사례) 단일 정본.
+ *
+ * `calcSplitAcquisitionPrice` 내부 클로저(`calcOnePart`)에서 최상위로 승격했다(2026-08-05 P3).
+ * **분기 순서·산식·null 승격 규약을 글자 그대로 보존**한다 — 주택·건물 split 경로의 회귀 0이
+ * 조건이다(memory `feedback_800line_split_export_preservation`).
+ *
+ * 승격 이유: 일반건물 전용 경로(`general-building-route-helper.ts`)가 같은 산정을 필요로 하는데,
+ * 클로저인 채로는 재구현밖에 방법이 없어 dual-truth가 된다(계획서 D-1 안 B).
+ *
+ * 반환 `null` = **미입력**이다. 호출부가 차단해야 하며 `?? 0`으로 메우면 감정·매매사례에서
+ * "취득가액 0 + 개산공제 3%"라는 그럴듯한 소액이 남아 오답이 눈에 띄지 않는다.
+ */
+export function calcPartAcquisitionPrice(
+  mode: PartAcqMode,
+  isLand: boolean,
+  partTransferPrice: number,
+  partStdAtAcq: number,
+  partStdAtTransfer: number,
+  ctx: PartAcqPriceContext,
+): number | null {
+  const { isSeparate, landRatio } = ctx;
+  switch (mode) {
+    case "estimated":
+      // 환산취득가: 파트 양도가 × (파트 취득시 기준시가 / 파트 양도시 기준시가)
+      // — 총액 미참조 구조라 별개 취득 여부와 무관하게 동일.
+      return partStdAtTransfer > 0
+        ? Math.floor(partTransferPrice * (partStdAtAcq / partStdAtTransfer))
+        : 0;
+    case "salesCase": {
+      // 매매사례가액(소령 §176의2③1호) — 파트별 명시 입력(land/buildingSalesCaseValue) 우선.
+      const own = isLand ? ctx.landSalesCaseValue : ctx.buildingSalesCaseValue;
+      if (own != null) return own;
+      if (isSeparate) return null;
+      // 동시 취득(겸용·selfOwns 강제 분리 등) — 총액이 실재하므로 §166⑥ "구분할 수 없는 때" 안분.
+      const base = ctx.similarSalesValue ?? ctx.acquisitionPrice ?? 0;
+      // 비율 없이 조용히 나누지 않는다 — 술어(requiresAcqStdPrice 1절: 비-actual 파트)가
+      // salesCase를 이미 걸러내므로 도달 불가 방어선이다.
+      const pair = splitPair(base, undefined, undefined, landRatio, "매매사례가액");
+      return isLand ? pair.land : pair.building;
+    }
+    case "appraisal": {
+      // 감정가액 — 감정평가서가 토지·건물을 각각 평가하는 경우가 많아 직접 입력 허용(실거래가와 동일 구조).
+      const own = isLand ? ctx.landAcquisitionPrice : ctx.buildingAcquisitionPrice;
+      if (isSeparate) return own ?? null;
+      const base = ctx.appraisalValue ?? ctx.acquisitionPrice ?? 0;
+      const pair = splitPair(base, ctx.landAcquisitionPrice, ctx.buildingAcquisitionPrice, landRatio, "취득가액");
+      return isLand ? pair.land : pair.building;
+    }
+    case "actual":
+    default: {
+      const own = isLand ? ctx.landAcquisitionPrice : ctx.buildingAcquisitionPrice;
+      if (isSeparate) return own ?? null;
+      const base = ctx.acquisitionPrice ?? 0;
+      const pair = splitPair(base, ctx.landAcquisitionPrice, ctx.buildingAcquisitionPrice, landRatio, "취득가액");
+      return isLand ? pair.land : pair.building;
+    }
+  }
+}
+
+
 /**
  * `splitPair`가 음수 잔액(또는 총액 초과 합)을 만드는 입력인가 — **validate 전용 판정식**.
  *
@@ -160,7 +237,7 @@ export function isSplitPairOverflow(
 }
 
 /** 파트별 취득 방식 (Phase A — 토지·건물 독립 4-way) */
-type PartAcqMode = "actual" | "estimated" | "appraisal" | "salesCase";
+export type PartAcqMode = "actual" | "estimated" | "appraisal" | "salesCase";
 
 /**
  * 파트 모드 미제공 시 자산 전체 플래그에서 파생 — 기존 단일-모드 판정과 100% 동일.
@@ -268,53 +345,20 @@ function calcSplitAcquisitionPrice(
    * 미입력은 `null`로 승격해 호출부가 차단한다. `?? 0`으로 메우면 감정·매매사례 모드에서
    * "취득가액 0 + 개산공제 3%"라는 그럴듯한 소액이 남아 오답이 눈에 띄지 않는다.
    */
-  function calcOnePart(
-    mode: PartAcqMode,
-    isLand: boolean,
-    partTransferPrice: number,
-    partStdAtAcq: number,
-    partStdAtTransfer: number,
-  ): number | null {
-    switch (mode) {
-      case "estimated":
-        // 환산취득가: 파트 양도가 × (파트 취득시 기준시가 / 파트 양도시 기준시가)
-        // — 총액 미참조 구조라 별개 취득 여부와 무관하게 동일.
-        return partStdAtTransfer > 0
-          ? Math.floor(partTransferPrice * (partStdAtAcq / partStdAtTransfer))
-          : 0;
-      case "salesCase": {
-        // 매매사례가액(소령 §176의2③1호) — 파트별 명시 입력(land/buildingSalesCaseValue) 우선.
-        const own = isLand ? input.landSalesCaseValue : input.buildingSalesCaseValue;
-        if (own != null) return own;
-        if (isSeparate) return null;
-        // 동시 취득(겸용·selfOwns 강제 분리 등) — 총액이 실재하므로 §166⑥ "구분할 수 없는 때" 안분.
-        const base = input.similarSalesValue ?? input.acquisitionPrice ?? 0;
-        // 비율 없이 조용히 나누지 않는다 — 술어(requiresAcqStdPrice 1절: 비-actual 파트)가
-        // salesCase를 이미 걸러내므로 도달 불가 방어선이다.
-        const pair = splitPair(base, undefined, undefined, landRatio, "매매사례가액");
-        return isLand ? pair.land : pair.building;
-      }
-      case "appraisal": {
-        // 감정가액 — 감정평가서가 토지·건물을 각각 평가하는 경우가 많아 직접 입력 허용(실거래가와 동일 구조).
-        const own = isLand ? input.landAcquisitionPrice : input.buildingAcquisitionPrice;
-        if (isSeparate) return own ?? null;
-        const base = input.appraisalValue ?? input.acquisitionPrice ?? 0;
-        const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio, "취득가액");
-        return isLand ? pair.land : pair.building;
-      }
-      case "actual":
-      default: {
-        const own = isLand ? input.landAcquisitionPrice : input.buildingAcquisitionPrice;
-        if (isSeparate) return own ?? null;
-        const base = input.acquisitionPrice ?? 0;
-        const pair = splitPair(base, input.landAcquisitionPrice, input.buildingAcquisitionPrice, landRatio, "취득가액");
-        return isLand ? pair.land : pair.building;
-      }
-    }
-  }
+  const partCtx: PartAcqPriceContext = {
+    isSeparate,
+    landRatio,
+    landAcquisitionPrice: input.landAcquisitionPrice,
+    buildingAcquisitionPrice: input.buildingAcquisitionPrice,
+    landSalesCaseValue: input.landSalesCaseValue,
+    buildingSalesCaseValue: input.buildingSalesCaseValue,
+    acquisitionPrice: input.acquisitionPrice,
+    appraisalValue: input.appraisalValue,
+    similarSalesValue: input.similarSalesValue,
+  };
 
-  const landRaw = calcOnePart(landMode, true, landTransferPrice, landStdAtAcq, landStdAtTransfer);
-  const buildingRaw = calcOnePart(buildingMode, false, buildingTransferPrice, buildingStdAtAcq, buildingStdAtTransfer);
+  const landRaw = calcPartAcquisitionPrice(landMode, true, landTransferPrice, landStdAtAcq, landStdAtTransfer, partCtx);
+  const buildingRaw = calcPartAcquisitionPrice(buildingMode, false, buildingTransferPrice, buildingStdAtAcq, buildingStdAtTransfer, partCtx);
 
   // 미입력 차단 — **본인 소유 파트만** 대상. `selfOwns≠both`이면 비소유 파트의 gain은
   // 상위(transfer-tax.ts:315)에서 버려지므로 그 파트의 미입력은 오답을 만들지 않는다.

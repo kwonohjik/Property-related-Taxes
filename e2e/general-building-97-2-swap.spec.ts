@@ -33,7 +33,6 @@ function seedForm(capitalExpenditure: string, transferExpense: string) {
           gbAcqLandPricePerSqm: "2800000",
           gbAcqBuildingValue: "28144700",
           gbBuildingAcquisitionCause: "purchase",
-          gbBuildingAcquisitionDate: "1999-05-24",
           gbZoneType: "commercial",
           gbIsMetropolitan: true,
           capitalExpenditure,

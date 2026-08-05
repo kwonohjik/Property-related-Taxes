@@ -38,6 +38,10 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
     if (!asset.gbHouseToCommercialConversion) return null;
     if (!asset.gbConversionDate || !transferDate) return null;
     if (asset.gbWasMultiHouseAtConversion === null) return null; // 미선택 시 표시 보류
+    // 「소득세법」 제95조 제4항 본문 — 보유기간은 **그 자산의** 취득일부터다. 토지·건물은
+    // 제94조 제1항 제1호가 각각 자산으로 드는 별개 자산이므로 기산일도 파트별이다(계획서 §3.6).
+    // 미리보기 연수는 **이른 쪽**(=공제가 큰 쪽)이 아니라 건물 기준으로 잡는다 — 용도변경 대상이
+    // 건물이고, 토지 기산일은 아래 label에 병기해 사용자가 두 값을 모두 본다.
     const startISO = asset.gbWasMultiHouseAtConversion
       ? asset.gbConversionDate
       : asset.acquisitionDate;
@@ -58,8 +62,10 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
       isUnder3Years,
       years,
       label: asset.gbWasMultiHouseAtConversion
-        ? `보유기간 기산일 = 용도변경일 (${asset.gbConversionDate})`
-        : `보유기간 기산일 = 당초 취득일 (${asset.acquisitionDate})`,
+        ? `보유기간 기산일 = 용도변경일 (${asset.gbConversionDate}) — 토지·건물 공통`
+        : asset.hasSeperateLandAcquisitionDate
+          ? `보유기간 기산일 — 토지 ${asset.landAcquisitionDate} / 건물 ${asset.acquisitionDate} (자산별 §95④)`
+          : `보유기간 기산일 = 당초 취득일 (${asset.acquisitionDate})`,
       notice: isUnder3Years
         ? `보유기간 ${years}년 → 3년 미만 — 장기보유특별공제 0% (§95② 표1)`
         : `보유기간 ${years}년 → §95② 표1 ${rate}% (연 2%, 최대 30%)`,
@@ -69,6 +75,8 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
     asset.gbConversionDate,
     asset.gbWasMultiHouseAtConversion,
     asset.acquisitionDate,
+    asset.landAcquisitionDate,
+    asset.hasSeperateLandAcquisitionDate,
     transferDate,
   ]);
 

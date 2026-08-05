@@ -36,9 +36,16 @@ export const generalBuildingValuationSchema = z.object({
   /** 양도시 건물기준시가 총액 (원). 환산 분모 + §166⑥ 안분 비율. 모드 무관 필수. */
   transferBuildingStdPrice: z.number().int().positive(),
   /** 취득시 개별공시지가 (원/㎡). 환산취득가 모드만 필수. */
-  acquisitionLandPricePerSqm: z.number().int().positive().optional(),
+  /**
+   * ⚠️ `nonnegative` — **0을 허용한다**(2026-08-05 P7). 파트별 모드에서 그 파트가 실가면
+   * 취득시 기준시가가 계산 어디에도 쓰이지 않아 사용자가 비워두고, API는 0을 싣는다.
+   * `positive`로 두면 그 조합이 **400으로 떨어져 혼합 모드가 통째로 불능**이 된다.
+   * 환산 파트의 미입력은 validate V-5와 API 변환이 앞에서 막는다.
+   */
+  acquisitionLandPricePerSqm: z.number().int().nonnegative().optional(),
   /** 취득시 건물기준시가 총액 (원). 환산취득가 모드만 필수. */
-  acquisitionBuildingStdPrice: z.number().int().positive().optional(),
+  /** 위와 같은 이유로 `nonnegative` — 실가 파트는 0이 실린다. */
+  acquisitionBuildingStdPrice: z.number().int().nonnegative().optional(),
   /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
   estimatedDeductionRate: z.number().positive().max(1).optional(),
   /** 실거래가/감정가 모드 플래그. true 시 route helper가 실거래가 안분 경로 사용. */
@@ -50,6 +57,25 @@ export const generalBuildingValuationSchema = z.object({
    * validate⑧에서 newConstruction 시 필수 강제.
    */
   buildingAcquisitionDate: z.string().date().optional(),
+  /**
+   * 토지 취득일 (M-1a, 2026-08-05). 자산-수준 `acquisitionDate`는 **건물** 취득일이므로
+   * 토지 파트의 보유기간·세율 기산일은 이 값이 정본이다. 미주입 시 건물 취득일과 동일 가정
+   * (= 분리 OFF). ⚠️ 여기 없으면 Zod가 **조용히 strip**해 토지 카드가 건물 날짜로 계산된다.
+   */
+  landAcquisitionDate: z.string().date().optional(),
+  /**
+   * 파트별 취득 방식 (2026-08-05 P3). 한 파트라도 `estimated`면 환산 경로로 라우팅되고,
+   * 비-환산 파트는 그 파트의 실지거래가액을 쓰며 개산공제(§163⑥)가 배제된다.
+   * ⚠️ 여기 없으면 Zod가 조용히 strip해 **혼합 모드가 통째로 무시**된다.
+   */
+  landAcqMode: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),
+  buildingAcqMode: z.enum(["actual", "estimated", "appraisal", "salesCase"]).optional(),
+  /** 파트별 실지거래가액(§97①1호) — 비-환산 파트 필수 */
+  landAcquisitionPrice: z.number().int().nonnegative().optional(),
+  buildingAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /** 파트별 자본적지출(§97①2호) — 직접 귀속분. 「소득세법」 §100② 후문상 안분 대상이 아니다. */
+  landDirectExpenses: z.number().int().nonnegative().optional(),
+  buildingDirectExpenses: z.number().int().nonnegative().optional(),
   /**
    * ⑫ 건물 취득원인 (required — .optional() 없음).
    * "newConstruction"일 때 라우트 헬퍼에서 isSelfBuilt=true 도출 → §114조의2 ① 가산세 판정.
