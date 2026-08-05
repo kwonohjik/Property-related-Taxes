@@ -389,3 +389,68 @@ describe("C-25 공동소유 지분 — 공제율은 지분과 직교한다", () 
     expect(r.usageConversionDetail).toMatchObject({ table1Pct: 8, table2HoldingPct: 12 });
   });
 });
+
+/**
+ * I 시리즈 — 상속 취득 × 용도변경 (계획서
+ * `non-housing-to-housing-conversion-inheritance-c21.plan.md` §5)
+ *
+ * §154⑧3호는 "**상속받은 주택**으로서"를 전제한다. 그런데 C-8이 이중으로
+ * (`transfer-tax-validate-usage-conversion.ts:37` · `usage-period-info.ts:41`)
+ * 용도변경일 > 취득일을 강제하고, 상속의 취득일은 **상속개시일**이다.
+ * ⇒ 토글 ON인 상속은 언제나 「상속개시 당시 **비주택**」이라 통산 요건이 성립하지 않는다.
+ *
+ * 통산은 **표2 대상 판정**에만 쓰이므로(공제율 거주분은 실거주 유지 — 사전법령해석재산 2021-202),
+ * 이 배제가 세액을 바꾸는 지점은 **I-3 하나**다. I-3이 없으면 게이트가 no-op이어도 초록이 된다.
+ */
+describe("I: 상속 취득 × 용도변경 — §154⑧3호 통산 배제", () => {
+  /** 동일세대 상속 통산 입력 */
+  function inherited(residenceMonths: number, cohabitMonths: number) {
+    return {
+      acquisitionCause: "inheritance" as const,
+      residencePeriodMonths: residenceMonths,
+      decedentSameHouseholdBeforeInheritance: true,
+      decedentCohabitationResidenceMonths: cohabitMonths,
+    };
+  }
+
+  it("I-1 상속 + 동일세대 아님 → 통산 자체가 없어 현행과 같다", () => {
+    const r = calculateTransferTax(
+      conv({ acquisitionCause: "inheritance", ...toggle("2022-11-25") }),
+      rates,
+    );
+
+    expect(r.usageConversionDetail).toMatchObject({ table1Pct: 8, table2HoldingPct: 12 });
+    expect(r.longTermHoldingRate).toBeCloseTo(0.32, 10); // 보유 20% + 실거주 3년 12%
+  });
+
+  it("I-2 상속 동일세대 + 상속인 실거주 2년 → 통산 없이도 표2 대상 성립", () => {
+    const r = calculateTransferTax(
+      conv({ ...inherited(24, 24), ...toggle("2022-11-25") }),
+      rates,
+    );
+
+    // 통산(48개월)이든 실거주(24개월)든 2년 이상이라 대상 판정 결과가 같다.
+    expect(r.usageConversionDetail).toMatchObject({ table1Pct: 8, table2HoldingPct: 12 });
+    expect(r.longTermHoldingRate).toBeCloseTo(0.28, 10); // 보유 20% + 실거주 2년 8%
+  });
+
+  it("I-3 상속 동일세대 + 실거주 2년 미만 — 통산으로 표2 대상을 만들지 않는다", () => {
+    const r = calculateTransferTax(
+      conv({ ...inherited(12, 24), ...toggle("2022-11-25") }),
+      rates,
+    );
+
+    // 통산하면 36개월(3년)이라 표2 대상이 되지만, 상속개시 당시 비주택이므로 §154⑧3호가
+    // 적용되지 않는다 → 실거주 12개월(1년) < 2년 → 표2 대상 탈락 → 표1 단독·전기간.
+    expect(r.usageConversionDetail).toBeUndefined();
+    expect(r.longTermHoldingRate).toBeCloseTo(0.14, 10); // 총 보유 7년 × 2%
+  });
+
+  it("I-6 토글 OFF면 통산 그대로 — 상속 회귀 0", () => {
+    const r = calculateTransferTax(conv(inherited(12, 24)), rates);
+
+    // 용도변경이 없으면 「상속받은 주택」 전제가 깨지지 않는다 → 통산 유지.
+    expect(r.usageConversionDetail).toBeUndefined();
+    expect(r.longTermHoldingRate).toBeCloseTo(0.32, 10); // 표2 보유 7년 28% + 실거주 1년 4%
+  });
+});

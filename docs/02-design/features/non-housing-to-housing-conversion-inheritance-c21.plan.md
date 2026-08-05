@@ -1,6 +1,7 @@
 # 비주택→주택 용도변경 × 상속 취득 — C-21 차단 범위 정정 계획서
 
-> **상태**: Plan (Do 미착수) · 작성 2026-08-05
+> **상태**: ✅ **구현 완료** (2026-08-05) — Phase 0·A·B·D 완주. **Phase C는 불요로 판명**(§7 ⑤).
+> ~~종전 표기: Plan (Do 미착수) · 작성 2026-08-05~~
 > **선행**: [`non-housing-to-housing-conversion.plan.md`](non-housing-to-housing-conversion.plan.md) §11 R-C · C-21
 > **세목**: 양도소득세 — 「소득세법」 §95⑤ · 「소득세법 시행령」 §154⑤ 단서 · §154⑧3호
 
@@ -190,12 +191,14 @@ D-2는 validation만 푼다. 엔진의 C-8 등가 가드(`usage-period-info.ts:4
 |---|---|
 | ①폼 ②initial ③normalize | 없음 — 기존 `acquisitionCause`·`hasNonHousingConversion`·`decedentCohabitation*` 재사용 |
 | ④API 변환 | 없음 — `transfer-tax-api-residence.ts:41-43` 등이 이미 필드를 넘긴다 |
-| ⑤UI 위젯 | **확인 필요** — 상속 선택 시 토글이 노출되는지(종전엔 차단이라 노출돼도 validate에서 걸렸다). Do 착수 시 실측 |
+| ⑤UI 위젯 | ✅ **변경 없음**(실측 완료) — 토글은 `assetKind === "housing" && isFirst`만 보고 `acquisitionCause`를 **전혀 보지 않는다**(`AssetSectionBasic.tsx:173-180` · `AssetSectionAcquisition.tsx:296-302`). 상속을 골라도 이미 노출된다 |
 | ⑥사이드바 ⑦결과 카드 | 없음 |
 | **⑧validation** | **변경** — D-2 |
 | ⑨~⑭ Zod·route | 없음 — enum·필드 불변 |
 
-> ⑤는 **미확인**이다. "상속을 골랐을 때 토글이 보이는가"를 Do 착수 시 브라우저/E2E로 실측한 뒤 확정한다. 안 보이면 UI 게이트도 함께 풀어야 한다(memory `feedback_ui_gate_removes_sole_input_path`).
+> ⑤ 실측 결과 **UI 게이트 해제가 불필요**하다 ⇒ **Phase C 삭제**. 종전에는 토글이 노출돼도 validate가 막았으므로, C-21만 풀면 그대로 열린다.
+>
+> ⚠️ 다만 상속 자산에는 **기존 필수 필드**가 하나 더 있다 — `decedentAcquisitionDate`(피상속인 취득일, `transfer-tax-validate-asset.ts:557`). 용도변경과 무관한 종전 요구지만, C-21 차단이 풀리면서 **처음으로 드러난다**. I-1 테스트가 이를 고정한다.
 
 ---
 
@@ -229,7 +232,7 @@ D-2는 validation만 푼다. 엔진의 C-8 등가 가드(`usage-period-info.ts:4
 | # | 항목 | 대응 |
 |---|---|---|
 | **R-1** | **D-1이 상속 외 경로의 통산까지 끄면 회귀** — `resolveExemptionResidenceMonths`는 비과세 거주요건·단서 각호·표2 대상 판정 **5곳**에서 쓰인다 | 게이트 조건이 `nonHousingToHousingConversion` 존재 여부뿐이라 토글 OFF 경로는 불변. I-6 anchor 3종이 고정 |
-| **R-2** | **⑤ UI 노출 미확인** | Do 착수 전 실측(§7). 미노출이면 UI 게이트도 해제 대상 |
+| ~~R-2~~ | ✅ **해소** — ⑤ UI 노출 실측 완료 | 토글이 `acquisitionCause`를 보지 않아 **UI 변경 불요**(§7) ⇒ Phase C 삭제 |
 | **R-3** | 단순 증여 차단 근거 미상(§6.2) | 이번 범위 밖. 차단 유지라 세액 영향 없음 |
 | **R-4** | 이월과세의 validate↔엔진 **비교 기준 불일치** — validate는 폼의 수증자 취득일과, 엔진은 치환된 증여자 취득일과 비교한다 | 이번 범위 밖(차단 유지로 도달 불가). 이월과세를 열 때 **선결 과제**로 인계 |
 
@@ -247,11 +250,11 @@ D-2는 validation만 푼다. 엔진의 C-8 등가 가드(`usage-period-info.ts:4
 
 | Phase | 내용 | verify |
 |---|---|---|
-| **0** | ⑤ UI 노출 실측 + I-3 anchor **선작성**(현행 엔진에서 **실패** 확인) | anchor 실패 + 실패 메시지가 「통산분이 표2 대상 판정에 섞였다」와 일치 |
-| **A** | D-1 통산 게이트 | I-3 통과 · I-6 anchor 3종 회귀 0 |
-| **B** | D-2 validate 축소 + D-3 주석 정정 | `usage-conversion-validate.test.ts` I-1·I-8·I-9 |
-| **C** | (Phase 0에서 필요 판정 시) UI 게이트 해제 | E2E 1건 — 상속 선택 → 토글 노출 → 계산 성립 |
-| **D** | 전건 회귀 | `npm run test:transfer` · tsc 0 · lint 0 |
+| **0** ✅ | ⑤ UI 노출 실측 + I-3 anchor **선작성**(현행 엔진에서 **실패** 확인) | **충족** — I-3만 실패(`residencePct: 4`·`table1Pct: 8`으로 통산이 표2 대상을 통과시킨 흔적), I-1·I-2·I-6은 현행에서도 통과해 회귀 기준선 확보 |
+| **A** ✅ | D-1 통산 게이트 | I-3 통과 · 상속 anchor 3종 **19테스트 회귀 0** |
+| **B** ✅ | D-2 validate 축소 + D-3 주석 정정 | `usage-conversion-validate.test.ts` **18/18** |
+| ~~C~~ | ~~UI 게이트 해제~~ | **삭제** — ⑤ 실측 결과 불요(§7) |
+| **D** ✅ | 전건 회귀 | **480파일 5,442테스트** 통과 · tsc 0 · lint 0 error |
 
 **Phase 0의 anchor 선작성이 이 계획의 안전장치다** — D-1이 no-op이어도 통과하는 테스트를 쓰면 검증이 아무것도 못 한다(memory `feedback_pre_anchor_verification`).
 
@@ -270,4 +273,12 @@ D-2는 validation만 푼다. 엔진의 C-8 등가 가드(`usage-period-info.ts:4
 | 겸용 경로 용도변경 미전달 | grep 결과 0건 |
 | `ResidenceReqInput`에 conversion 포함 | `transfer-tax-exemption.ts:119-133` |
 
-**미확인으로 남긴 것**: ⑤ UI 토글 노출 여부(§7 R-2) · 단순 증여 차단 근거(§6.2). 둘 다 "확인 필요"로 명시했고 단정하지 않았다.
+**미확인으로 남긴 것**: 단순 증여 차단 근거(§6.2) — 별건으로 인계.
+
+**Do 단계에서 추가 확인한 것**:
+
+| 항목 | 결과 |
+|---|---|
+| ⑤ UI 토글 노출 | `AssetSectionBasic.tsx:173-180` — `acquisitionCause` 미참조 ⇒ 변경 불요 |
+| Phase 0 anchor 실패 | I-3 단독 실패, 메시지가 예상 갭과 일치 |
+| 상속 고유 필수 필드 | `decedentAcquisitionDate`(`transfer-tax-validate-asset.ts:557`) — 종전 요구가 차단 해제로 드러남. I-1이 고정 |

@@ -58,13 +58,23 @@ export function validateUsageConversion(
     return unsupported("부담부증여 양도입니다.");
   }
 
-  // C-21 — §154⑧3호 상속 통산·§97의2 이월과세와의 우선순위에 명문이 없다.
+  // C-21 — §97의2 이월과세와의 우선순위에 명문이 없다.
+  //
+  // ⚠️ **상속은 제외한다**(2026-08-05 범위 정정). §154⑧3호는 "상속받은 **주택**으로서"가
+  //    전제인데, 위 C-8(37행)이 용도변경일 > 취득일을 강제하고 상속의 취득일은 상속개시일이라
+  //    토글 ON인 상속은 언제나 「상속개시 당시 비주택」이다 ⇒ 통산 요건이 성립하지 않아
+  //    경합 자체가 발생할 수 없다. 통산 배제는 엔진 `resolveExemptionResidenceMonths`가 맡는다.
+  //
+  // 이월과세는 다르다 — 엔진 STEP 0.475(`transfer-tax.ts`)가 취득일을 **증여자 취득일로 치환**해
+  //    용도변경이 증여자 단계에서 일어난 경우가 게이트를 통과한다. 여기가 진짜 미결이다.
+  // 단순 증여는 §154⑧3호·§97의2 어느 쪽도 아니라 차단 근거가 확인되지 않았다 — 안전측 유지.
+  //
+  // 설계: `docs/02-design/features/non-housing-to-housing-conversion-inheritance-c21.plan.md`
   if (
-    asset.acquisitionCause === "inheritance" ||
     asset.acquisitionCause === "gift" ||
     asset.acquisitionCause === "carryover_gift"
   ) {
-    return unsupported("상속·증여로 취득한 자산입니다.");
+    return unsupported("증여로 취득한 자산입니다.");
   }
 
   // C-18·C-20 — 장기임대(§97의3·§97의4)는 장특 특례율이, §98의2는 표2 강제가 §95⑤과 충돌한다.

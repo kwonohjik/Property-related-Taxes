@@ -251,7 +251,7 @@ L-1b는 `transfer-tax-helpers.ts:469-472`가 **`propertyType === "land" && landN
 | **C-18** | 토글 ON + 장기임대 특례율 | **차단**. ⚠️ 판별은 폼값 `asset.reductions`의 `type === "rental_97_3" \| "rental_97_4"`(`calc-wizard-asset-reduction.ts:167·179`) — 엔진 `rentalReductionDetails`는 **폼에 없어 validate가 볼 수 없다** |
 | **C-19** | 토글 ON + 토지/건물 분리취득 | **차단**(`hasSeperateLandAcquisitionDate` — `calc-wizard-asset.ts:395`) **+ 엔진 가드 `!splitDetail`** — 엔진 단독 호출은 validate를 거치지 않는다(design I-15) |
 | **C-20** | 토글 ON + §98의2 / §97의3·의4 | **차단**. `unsold_98_2`(`calc-wizard-asset-reduction.ts:320`)·`rental_97_3`·`rental_97_4` |
-| **C-21** | 토글 ON + 취득원인 상속·증여·이월과세 | **차단**. §154⑧3호 통산과의 우선순위 명문 없음(§11 R-C). **해소 시 최우선 확장 대상** |
+| **C-21** | 토글 ON + 취득원인 **증여·이월과세** | **차단**. §97의2 이월과세와의 우선순위 명문 없음. ~~상속~~은 2026-08-05 **개방**(경합 불성립 — R-C) · 단순 증여는 차단 근거 미상으로 안전측 유지 |
 | **C-22** | 토글 ON + 미등기(L-0) / 중과 적용 중(L-1) | LTHD 배제가 **우선** — 현행 유지(토글 유무와 결과 동일하므로 차단 불요) |
 | **C-23** | `redevelopment_apt` · `right_to_move_in` · `presale_right` | **UI 미노출**(진입이 `housing` 한정) |
 | **C-24** | 토글 ON + 부담부증여 | **차단**. `transferType`(`calc-wizard-asset.ts:224`) |
@@ -381,7 +381,7 @@ grep -rn "nonHousingToHousingConversion\|residentialUseStartDate\|residenceMonth
 | ~~R-D~~ | ✅ **해소** | `calcLongTermRate` 정본 위임으로 3년 가드가 함수 내장 — 추출 자체를 취소해 회귀 위험 소멸 (§5 D-2 보충) |
 | **R-K** | 🔴 **분수 정수 연산** | 소수 rate 합산이 1원 과소(78/17,576 조합). §95⑤이 표1+표2를 합치며 **새로 만드는 결함**이고 anchor로는 안 잡힌다. `applyRateFraction` + 정수 % 필수. **Phase A 필수 verify** |
 | **R-G** | ⚠️ **D-6 — 명문 없는 불리 적용** | 비과세 거주요건에 주택기간 클램프는 「소득세법 시행령」 제154조 제6항에 **없는 제한**이며 **납세자에게 불리**하다(C-10c에서 비과세 탈락). 사용자 재확인 후 유지. **C-10c 테스트로 반드시 고정**. 근거 예규 확보 시 §3.2로 승격 |
-| **R-C** | §154⑧3호 ↔ §154⑤ 경합 | 명문 없음 → **C-21 차단**. **해소 시 최우선 확장 대상**(상속 오피스텔의 주거용 전환은 실무 빈발) |
+| ~~R-C~~ | ✅ **범위 정정 완료** (2026-08-05) | 「예규 대기」가 아니라 **범위 오설정**이었다 — §154⑧3호는 "상속받은 **주택**" 전제인데 C-8이 용도변경일 > 취득일(=상속개시일)을 강제해 **상속 경로에서는 경합이 성립할 수 없다**. 상속 개방 + 통산 배제 게이트 완료. **남은 진짜 미결은 이월과세**(§97의2 취득일 치환). 상세: [`non-housing-to-housing-conversion-inheritance-c21.plan.md`](non-housing-to-housing-conversion-inheritance-c21.plan.md) |
 | **R-J** | ⚠️ **시행령은 법령 검증 커버리지 대상 밖** | `coverage.ts:19` `KNOWN_ABBRS = Object.keys(LAW_ALIAS)`이고 `citation-parser.ts:26-39` `LAW_ALIAS`는 **본법 12개만** 담는다. 실증: `legal-codes/transfer.ts:197·388·466`이 이미 "소득세법 시행령 §154"를 인용하는데도 `legal-verification-coverage-complete.test.ts` **2 passed**(uncovered = []). ⇒ 프로젝트 전체의 시행령 인용(§154·§155·§163·§166 등)이 통째로 검증 밖이다. **이번 계획과 무관한 기존 구조 갭 — 별건 이슈** |
 | **R-H** | LTHD 율 DB 드리프트 | `transfer-rate-seed.ts:45-57`에 `ratePerYear` 시딩이 있는데 `rateForYears`는 `rules` 인자를 받고도 안 쓴다(`:441` dead). 이번 추출이 고착시킴 — 별건 |
 | **R-E** | 겸용주택 배타 | C-14 + G-13 조기 return 앞 배치 + 인접 UI 배치 |
