@@ -86,7 +86,17 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 
 > ⚠️ 처음엔 **"4샤드 동시 호출이 원인"이라 진단했으나 오진**이었다 — 전용 job으로 떼어 `--workers=1` 단독으로 돌려도 같은 5건이 실패한다(run 30967618223).
 
-⇒ 샤딩 job은 `E2E_SKIP_LAW=1`(`playwright.config.ts` `testIgnore`)로 이들을 빼고, **`e2e-law` job이 `continue-on-error: true`**로 돌린다 — **결과는 보이되 머지를 막지 않는다**.
+⇒ 샤딩 job은 `E2E_SKIP_LAW=1`(`playwright.config.ts` `testIgnore`)로 이들을 빼고, **`e2e-law` job이 `continue-on-error: true`**로 돌린다.
+
+> 🔴 **`continue-on-error`는 체크를 초록으로 만들지 않는다** — 실측 정정(2026-08-05).
+> 도입 당시 "결과는 보이되 머지를 막지 않는다"고 적었으나, **job 레벨 플래그는 그 job의 conclusion을 `failure` 그대로 둔다**:
+>
+> | run | law 결과 | job conclusion |
+> |---|---|---|
+> | 30968955696 | 29 passed | success (실제 통과) |
+> | 30974419277 | **5 failed** | **failure** ← 플래그가 있어도 빨간불 |
+>
+> 지금 머지가 가능한 것은 **master에 브랜치 보호가 없기** 때문이지 이 플래그 때문이 아니다. 브랜치 보호를 켜고 이 job을 required check로 넣으면 **막힌다** — 그때는 required 목록에서 빼야 한다.
 
 > ⚠️ **`known-failures.ts`에 넣는 것과 다르다.** 목록에 넣으면 실행 자체가 사라져 진짜 회귀가 생겨도 모른다. 여기서는 **매번 돌고 결과가 보이되** 빨간불이 머지만 막지 않는다. 나머지 **865건은 그대로 차단 게이트**다.
 > ⚠️ 원인이 밝혀져 안정화되면 `continue-on-error`를 **제거**할 것 — 영구 면제가 아니라 원인 미상 구간의 임시 조치다.
