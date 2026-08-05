@@ -1,6 +1,8 @@
 # 양도세 특수엔진 증여(gift) 취득가액 §163⑨ 수정 계획서
 
-> 상태: **Plan (자가검토 1사이클 완료)** · 작성 2026-07-21 · 근거: 감사 memory `project_transfer_special_engine_gift_acquisition_163_9_gap`
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `lib/api/transfer-tax-schema-mixed-use.ts:83`·`lib/calc/transfer-tax-api-mixed-use.ts:205` — 계획서가 제안한 `acquisitionByGift` 미러링이 Zod·API 변환 양쪽에 실재.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: **Plan (자가검토 1사이클 완료)** · 작성 2026-07-21 · 근거: 감사 memory `project_transfer_special_engine_gift_acquisition_163_9_gap`~~
 > 선행: 상속 §163⑨ 수정 시리즈(겸용 PR#710·GB #713·상가 #715/716·재개발 #718)
 > 자가검토(plan-design-self-review-loop): 오류·누락·개선·UI(인라인) + 모순·정책위반(fork). 정정 반영 완료 — §9 검토 로그.
 

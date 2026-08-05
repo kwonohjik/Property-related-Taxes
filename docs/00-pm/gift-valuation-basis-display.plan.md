@@ -1,6 +1,8 @@
 # 증여세 결과탭 — 증여재산 평가 산출근거 출력 계획서
 
-> 상태: Plan (Do 미착수) · 작성일 2026-06-22
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `components/calc/results/GiftValuationBasisCard.tsx` 실재.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: Plan (Do 미착수) · 작성일 2026-06-22~~
 > 세목: 증여세(gift) · 영역: 결과뷰(Result View) UI
 > 한 줄 요약: 엔진이 이미 생성하지만 결과탭이 버리고 있는 `PropertyValuationResult.breakdown`(자산별 평가 산출근거 단계)을 결과 화면에 펼침/접기로 렌더링한다.
 
