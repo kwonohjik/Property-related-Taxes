@@ -1,6 +1,8 @@
 # 장기임대주택 감면 (조특법 §97 시리즈) — UI 설계
 
-> **상태**: Design (Do 미착수) · 2026-06-11
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `lib/stores/calc-wizard-asset-reduction.ts` 가 이 계획서를 인용하며 실재한다.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: **상태**: Design (Do 미착수) · 2026-06-11~~
 > **선행**: `transfer-rental-reduction.plan.md` (계획) · `transfer-rental-reduction.engine.design.md` (엔진 — input/result 타입·케이스 인벤토리 27행)
 > **명명 규칙 (E5 확정)**: 등록일은 폼·Zod·Route·엔진 전 구간 `registrationDate` 단일 명명.
 

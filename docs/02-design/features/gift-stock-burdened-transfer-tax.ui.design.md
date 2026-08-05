@@ -4,7 +4,9 @@
 > 계획서: `docs/00-pm/gift-stock-burdened-transfer-tax.plan.md`
 > 엔진 설계: `docs/02-design/features/gift-stock-burdened-transfer-tax.engine.design.md`
 > 기준 코드: 메인 repo + worktree `feat/gift-stock-burdened-transfer` (slot 4, DEV 3004 / E2E 3104)
-> 상태: Design (Do 미착수)
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `components/calc/gift/StockBurdenedDebtSection.tsx` 가 이 계획서를 인용하며 실재한다.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: 상태: Design (Do 미착수)~~
 
 ---
 

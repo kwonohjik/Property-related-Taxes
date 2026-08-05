@@ -3,7 +3,9 @@
 > 작성일: 2026-06-22 · 세목: 증여(gift) ↔ 주식양도(stock-transfer) 연동
 > 계획서: `docs/00-pm/gift-stock-burdened-transfer-tax.plan.md` (13단계 자가검토 1차 정정 반영)
 > 기준 코드: 메인 repo `lib/tax-engine/stock-transfer/stock-transfer-tax.ts` (실측)
-> 상태: Design (Do 미착수)
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `lib/tax-engine/types/inheritance-gift-estate.types.ts` 가 이 계획서를 인용하며 실재한다.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: 상태: Design (Do 미착수)~~
 
 ---
 

@@ -2,7 +2,9 @@
 
 > 작성일 2026-05-27 · 세목: 상속세·증여세 (비상장주식 간편평가 UI)
 > 작성: inheritance-gift-tax-ui-senior
-> 상태: **Plan** · **엔진/산식/결과값 변경 0건 — 순수 UI 레이아웃·컴포넌트 교체**
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `e2e/inheritance-unlisted-simple-redesign.spec.ts` 가 이 계획서를 인용하며 실재한다.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: 상태: **Plan** · **엔진/산식/결과값 변경 0건 — 순수 UI 레이아웃·컴포넌트 교체**~~
 > 대상: `components/calc/UnlistedStockSimpleFields.tsx` (현재 533줄)
 > 관련: [[project_unlisted_stock_mode_selector]] · 영업권 PR `docs/00-pm/inheritance-unlisted-stock-simple-goodwill.plan.md`
 

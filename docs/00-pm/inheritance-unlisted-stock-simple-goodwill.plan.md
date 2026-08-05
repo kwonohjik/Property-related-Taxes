@@ -2,7 +2,9 @@
 
 > 작성일 2026-05-27 · 세목: 상속세·증여세 (비상장주식 보충적 평가)
 > 작성: inheritance-gift-tax-senior(엔진) + inheritance-gift-tax-ui-senior(UI) 병렬 참여 → 통합
-> 상태: **Plan** (Do 진입 전 Pre-Do anchor 1건 우선 검증 필요)
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `e2e/inheritance-unlisted-simple-goodwill.spec.ts` 가 이 계획서를 인용하며 실재한다.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: 상태: **Plan** (Do 진입 전 Pre-Do anchor 1건 우선 검증 필요)~~
 
 ---
 
