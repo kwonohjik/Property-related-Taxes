@@ -172,11 +172,15 @@ export interface PropertyTaxInput {
     jurisdictionCode: string;
     landArea: number;
     officialLandPrice: number;
+    /** 용도지역 — 「지방세법 시행령」 §101② 적용배율 결정. `ZoningDistrict`와 동일 집합. */
     zoningDistrict:
+      | "exclusive_residential"
+      | "semi_residential"
       | "commercial"
+      | "general_residential"
       | "industrial"
-      | "residential"
       | "green"
+      | "unplanned"
       | "management"
       | "agricultural"
       | "nature_preserve";

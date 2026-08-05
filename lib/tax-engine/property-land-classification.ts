@@ -11,6 +11,8 @@
  */
 
 import { PROPERTY } from "./legal-codes";
+import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type {
   LandInput,
   LandClassification,
@@ -58,21 +60,22 @@ export interface LandClassificationResult {
 }
 
 // ============================================================
-// 내부 상수 — 용도지역별 별도합산 배율 (지방세법 시행령 §102의3)
+// 용도지역별 별도합산 배율 — 「지방세법 시행령」 제101조 제2항 [표]
+// 정본은 `local-tax-zone-multiplier.ts`. 여기서 재선언 금지.
+// (종전 사본은 관리지역을 5배로 두어 법정 7배와 어긋났다.)
 // ============================================================
 
-const ZONING_MULTIPLIER: Record<ZoningDistrictType, number> = {
-  commercial:       3,  // 상업지역 3배
-  industrial:       4,  // 공업지역 4배
-  residential:      5,  // 주거지역 5배
-  green:            7,  // 녹지지역 7배
-  management:       5,  // 관리지역 5배
-  agricultural:     7,  // 농림지역 7배
-  nature_preserve:  7,  // 자연환경보전지역 7배
-};
-
+/** §101② 표에서 적용배율을 조회한다. 미등재 용도지역은 추정하지 않고 차단한다. */
 function getZoningMultiplier(district: ZoningDistrictType): number {
-  return ZONING_MULTIPLIER[district] ?? 5;
+  const resolved = getZoneAreaMultiplier(district);
+  if (!resolved) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `별도합산 기준면적 산정: 용도지역 "${district}"은 「지방세법 시행령」 제101조 제2항 ` +
+        `적용배율표에 대응 항목이 없습니다. 세분된 용도지역(전용주거·일반주거·준주거 등)을 선택하세요.`,
+    );
+  }
+  return resolved.multiplier;
 }
 
 // ============================================================

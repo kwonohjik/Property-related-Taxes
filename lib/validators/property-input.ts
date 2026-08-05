@@ -6,11 +6,18 @@
 
 import { z } from "zod";
 
+/**
+ * 용도지역 코드 — 「지방세법 시행령」 제101조 제2항 [표] 구분.
+ * 배율 정본 `lib/tax-engine/local-tax-zone-multiplier.ts`의 키와 일치해야 한다.
+ */
 const zoningDistrictSchema = z.enum([
+  "exclusive_residential",
+  "semi_residential",
   "commercial",
+  "general_residential",
   "industrial",
-  "residential",
   "green",
+  "unplanned",
   "management",
   "agricultural",
   "nature_preserve",

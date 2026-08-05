@@ -19,13 +19,24 @@
 
 import { applyRate, truncateToThousand } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
-import { PROPERTY_CAL, PROPERTY_CONST, PROPERTY_SEPARATE_CONST } from "./legal-codes";
+import { PROPERTY_CAL, PROPERTY_CONST } from "./legal-codes";
+import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 
 // ============================================================
 // P3-03: 타입 정의
 // ============================================================
+
+/** 산업단지 공장용지 분리과세에서 제외되는 용도지역 (주거·상업·녹지). */
+const EXCLUDED_FACTORY_SEPARATE_ZONES: ReadonlySet<string> = new Set([
+  "exclusive_residential",
+  "general_residential",
+  "semi_residential",
+  "commercial",
+  "green",
+]);
 
 /** 지목 코드 (지방세법 시행령 §102 기준) */
 export type LandCategoryCode =
@@ -39,15 +50,23 @@ export type LandCategoryCode =
   | "잡종지"    // 기타
   | string;     // 기타 지목
 
-/** 용도지역 코드 */
+/**
+ * 용도지역 코드 — 「지방세법 시행령」 제101조 제2항 [표] 구분.
+ *
+ * 배율 정본은 `local-tax-zone-multiplier.ts`. 주거지역은 전용(5배)·일반(4배)·준주거(3배)가
+ * 모두 달라 통합 `residential` 키로는 배율을 결정할 수 없으므로 **세분 값만 허용**한다.
+ */
 export type UseZone =
-  | "residential"    // 주거지역
-  | "commercial"     // 상업지역
-  | "industrial"     // 공업지역
-  | "green"          // 녹지지역
-  | "management"     // 관리지역
-  | "agricultural"   // 농림지역
-  | "nature_preserve"; // 자연환경보전지역
+  | "exclusive_residential" // 전용주거지역 5배
+  | "semi_residential"      // 준주거지역 3배
+  | "commercial"            // 상업지역 3배
+  | "general_residential"   // 일반주거지역 4배
+  | "industrial"            // 공업지역 4배
+  | "green"                 // 녹지지역 7배
+  | "unplanned"             // 미계획지역 4배
+  | "management"            // 관리지역 (도시지역 외) 7배
+  | "agricultural"          // 농림지역 (도시지역 외) 7배
+  | "nature_preserve";      // 자연환경보전지역 (도시지역 외) 7배
 
 /** 건축물 용도 */
 export type BuildingUsage =
@@ -213,12 +232,11 @@ export function isSeparatedTaxation(land: LandInfo): boolean {
 
   // ── 일반 0.2% ──
   // 산업단지 공장용지 (주거·상업·녹지지역 외)
+  // 주거지역은 전용·일반·준주거 3종 모두가 제외 대상이다(용도지역 세분 전에는 통합 키 1건이었다).
   if (
     land.isFactory &&
     land.isIndustrialComplexFactory &&
-    land.useZone !== "residential" &&
-    land.useZone !== "commercial" &&
-    land.useZone !== "green"
+    !EXCLUDED_FACTORY_SEPARATE_ZONES.has(land.useZone)
   ) {
     return true;
   }
@@ -242,11 +260,13 @@ export interface SeparateAggregateCheckResult {
 /**
  * 별도합산과세대상 여부 및 기준면적 판정 (지방세법 §106①2호, 시행령 §101)
  *
- * 조건: 영업용 건축물의 부속토지로서 기준면적 이내
- * - 일반 영업용: 건축물 바닥면적 × 10배
- * - 공장용지: factoryStandardArea 이내
+ * 조건: 건축물의 부속토지로서 기준면적 이내
+ * - 공장용 외(§101①2호): 건축물 바닥면적 × §101② 용도지역별 적용배율
+ * - 공장용지(§101①1호): factoryStandardArea 입력 시 그 면적, 미입력 시 바닥면적 × 적용배율
  *
  * 초과 면적 → 종합합산 전환
+ *
+ * 배율 정본은 `local-tax-zone-multiplier.ts` — 여기서 재선언 금지.
  */
 export function isSeparateAggregate(
   land: LandInfo,
@@ -266,12 +286,18 @@ export function isSeparateAggregate(
     // 공장용지: 공장입지기준면적 기준
     baseArea = land.factoryStandardArea;
   } else {
-    // 일반 영업용: 바닥면적 × 용도지역별 배율 (지방세법 시행령 §101②1호)
-    // separate-aggregate-land.ts의 PROPERTY_SEPARATE_CONST.ZONING_MULTIPLIER와 동일 기준 적용
-    const multiplierMap = PROPERTY_SEPARATE_CONST.ZONING_MULTIPLIER;
-    const multiplier: number =
-      (multiplierMap as Record<string, number>)[land.useZone] ?? 5;
-    baseArea = land.buildingFloorArea * multiplier;
+    // 바닥면적 × 용도지역별 적용배율 (「지방세법 시행령」 §101②)
+    // 표 미등재 용도지역은 추정하지 않고 차단한다 — 배율을 잘못 잡으면 종합합산
+    // 이관 면적이 조용히 틀어져 세액이 어긋난다.
+    const resolved = getZoneAreaMultiplier(land.useZone);
+    if (!resolved) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `별도합산 기준면적 산정: 용도지역 "${land.useZone}"은 「지방세법 시행령」 제101조 제2항 ` +
+          `적용배율표에 대응 항목이 없습니다. 세분된 용도지역(전용주거·일반주거·준주거 등)을 선택하세요.`,
+      );
+    }
+    baseArea = land.buildingFloorArea * resolved.multiplier;
   }
 
   const separateArea = Math.min(land.area, baseArea);

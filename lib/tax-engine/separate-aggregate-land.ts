@@ -24,6 +24,8 @@
 import { applyRate, truncateToThousand } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { PROPERTY_SEPARATE, PROPERTY_SEPARATE_CONST } from "./legal-codes";
+import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 
@@ -31,15 +33,23 @@ import type { PropertyRateSet } from "./data/property-rate-history";
 // 타입 정의
 // ============================================================
 
-/** 용도지역 코드 (지방세법 시행령 §101②1호) */
+/**
+ * 용도지역 코드 — 「지방세법 시행령」 제101조 제2항 [표] 구분.
+ *
+ * 배율 정본은 `local-tax-zone-multiplier.ts`. 주거지역은 전용(5배)·일반(4배)·준주거(3배)가
+ * 모두 달라 통합 `residential` 키로는 배율을 결정할 수 없으므로 **세분 값만 허용**한다.
+ */
 export type ZoningDistrict =
-  | "commercial"      // 상업지역
-  | "industrial"      // 공업지역
-  | "residential"     // 주거지역
-  | "green"           // 녹지지역
-  | "management"      // 관리지역
-  | "agricultural"    // 농림지역
-  | "nature_preserve"; // 자연환경보전지역
+  | "exclusive_residential" // 전용주거지역 5배
+  | "semi_residential"      // 준주거지역 3배
+  | "commercial"            // 상업지역 3배
+  | "general_residential"   // 일반주거지역 4배
+  | "industrial"            // 공업지역 4배
+  | "green"                 // 녹지지역 7배
+  | "unplanned"             // 미계획지역 4배
+  | "management"            // 관리지역 (도시지역 외) 7배
+  | "agricultural"          // 농림지역 (도시지역 외) 7배
+  | "nature_preserve";      // 자연환경보전지역 (도시지역 외) 7배
 
 /** 단일 필지 입력 */
 export interface SeparateAggregateLandItem {
@@ -300,12 +310,17 @@ interface BaseAreaResult {
 /**
  * 기준면적 계산 (지방세법 시행령 §101②)
  *
- * 공장용지: factoryStandardArea 직접 적용 (§101②2호)
- * 일반 영업용: buildingFloorArea × 용도지역 배율 (§101②1호)
+ * 공장용지(§101①1호): 공장입지기준면적 입력 시 그 면적, 미입력 시 바닥면적 × 용도지역 배율
+ * 공장용 외(§101①2호): buildingFloorArea × 용도지역 배율
  *
- * DB 세율 맵 fallback: PROPERTY_SEPARATE_CONST.ZONING_MULTIPLIER 상수 사용 (P4-13)
+ * 배율은 `local-tax-zone-multiplier.ts`(§101② 표)가 단일 정본 — 여기서 재선언 금지.
+ *
+ * @throws 표에 없는 용도지역(세분 전 `residential` 등)은 배율 결정 불가 → 차단.
+ *   추정 배율로 대체하면 기준면적이 과대·과소 산정되어 종합합산 이관 면적이 조용히 틀어진다.
  */
 export function calculateBaseArea(land: SeparateAggregateLandItem): BaseAreaResult {
+  const floorArea = land.buildingFloorArea ?? 0;
+
   // 공장용지: 공장입지기준면적 우선 적용
   if (land.isFactory) {
     if (land.factoryStandardArea && land.factoryStandardArea > 0) {
@@ -315,11 +330,12 @@ export function calculateBaseArea(land: SeparateAggregateLandItem): BaseAreaResu
         legalBasis: PROPERTY_SEPARATE.BASE_AREA_FACTORY,
       };
     }
-    // factoryStandardArea 미입력 → 바닥면적 × 공업지역 배율(4배) fallback
-    if (land.buildingFloorArea && land.buildingFloorArea > 0) {
-      const multiplier = PROPERTY_SEPARATE_CONST.ZONING_MULTIPLIER["industrial"];
+    // 미입력 → §101①1호 본칙(바닥면적 × 제2항 적용배율)으로 산정.
+    // 종전에는 용도지역과 무관하게 공업지역 4배를 고정 적용했다.
+    if (floorArea > 0) {
+      const multiplier = resolveZoneMultiplier(land.zoningDistrict);
       return {
-        baseArea: land.buildingFloorArea * multiplier,
+        baseArea: floorArea * multiplier,
         multiplier,
         legalBasis: PROPERTY_SEPARATE.BASE_AREA_FACTORY,
       };
@@ -327,21 +343,30 @@ export function calculateBaseArea(land: SeparateAggregateLandItem): BaseAreaResu
     return { baseArea: 0, multiplier: 0, legalBasis: PROPERTY_SEPARATE.BASE_AREA_FACTORY };
   }
 
-  // 일반 영업용: 바닥면적 × 용도지역 배율
-  if (!land.buildingFloorArea || land.buildingFloorArea <= 0) {
+  // 공장용 외 건축물: 바닥면적 × 용도지역 배율
+  if (floorArea <= 0) {
     return { baseArea: 0, multiplier: 0, legalBasis: PROPERTY_SEPARATE.BASE_AREA_GENERAL };
   }
 
-  // DB fallback: 상수 맵에서 배율 조회 (P4-13)
-  const multiplierMap = PROPERTY_SEPARATE_CONST.ZONING_MULTIPLIER;
-  const multiplier: number =
-    (multiplierMap as Record<string, number>)[land.zoningDistrict] ?? 5;
-
+  const multiplier = resolveZoneMultiplier(land.zoningDistrict);
   return {
-    baseArea: land.buildingFloorArea * multiplier,
+    baseArea: floorArea * multiplier,
     multiplier,
     legalBasis: PROPERTY_SEPARATE.BASE_AREA_GENERAL,
   };
+}
+
+/** §101② 표에서 적용배율을 조회한다. 미등재 용도지역은 추정하지 않고 차단한다. */
+function resolveZoneMultiplier(zoningDistrict: string): number {
+  const resolved = getZoneAreaMultiplier(zoningDistrict);
+  if (!resolved) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `별도합산 기준면적 산정: 용도지역 "${zoningDistrict}"은 「지방세법 시행령」 제101조 제2항 ` +
+        `적용배율표에 대응 항목이 없습니다. 세분된 용도지역(전용주거·일반주거·준주거 등)을 선택하세요.`,
+    );
+  }
+  return resolved.multiplier;
 }
 
 // ============================================================

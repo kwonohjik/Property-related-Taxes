@@ -11,15 +11,23 @@
 
 import { z } from "zod";
 
-/** 용도지역 코드 (지방세법 시행령 §101②1호 배율 맵과 일치) */
+/**
+ * 용도지역 코드 — 「지방세법 시행령」 제101조 제2항 [표] 구분.
+ * 배율 정본 `lib/tax-engine/local-tax-zone-multiplier.ts`의 키와 일치해야 한다.
+ *
+ * 주거지역은 전용(5배)·일반(4배)·준주거(3배)가 모두 달라 통합 키를 허용하지 않는다.
+ */
 const zoningDistrictSchema = z.enum([
-  "commercial",      // 상업지역 3배
-  "industrial",      // 공업지역 4배
-  "residential",     // 주거지역 5배
-  "green",           // 녹지지역 5배
-  "management",      // 관리지역 5배
-  "agricultural",    // 농림지역 7배
-  "nature_preserve", // 자연환경보전지역 7배
+  "exclusive_residential", // 전용주거지역 5배
+  "semi_residential",      // 준주거지역 3배
+  "commercial",            // 상업지역 3배
+  "general_residential",   // 일반주거지역 4배
+  "industrial",            // 공업지역 4배
+  "green",                 // 녹지지역 7배
+  "unplanned",             // 미계획지역 4배
+  "management",            // 관리지역 (도시지역 외) 7배
+  "agricultural",          // 농림지역 (도시지역 외) 7배
+  "nature_preserve",       // 자연환경보전지역 (도시지역 외) 7배
 ]);
 
 /** 단일 필지 별도합산 입력 스키마 */
@@ -44,7 +52,7 @@ export const separateAggregateLandSchema = z
       .int({ message: "공시지가는 원 단위 정수여야 합니다." })
       .positive({ message: "공시지가는 0원 초과여야 합니다." }),
 
-    /** 용도지역 (지방세법 시행령 §101②1호 배율 결정) */
+    /** 용도지역 (지방세법 시행령 §101② 적용배율 결정) */
     zoningDistrict: zoningDistrictSchema,
 
     /** 건축물 바닥면적 (㎡) — 기준면적 = 바닥면적 × 배율 */
@@ -53,7 +61,7 @@ export const separateAggregateLandSchema = z
       .nonnegative({ message: "건축물 바닥면적은 0㎡ 이상이어야 합니다." })
       .optional(),
 
-    /** 공장용지 여부 (별도합산 기준면적: 공장입지기준면적 이내) */
+    /** 공장용지 여부 (지방세법 시행령 §101①1호) */
     isFactory: z.boolean().optional(),
 
     /** 공장입지기준면적 (㎡) — isFactory===true 시 기준면적으로 사용 */
@@ -107,7 +115,7 @@ export const separateAggregateLandSchema = z
       });
     }
 
-    // 공장용지인데 공장입지기준면적 미입력 경고 (오류는 아님 — fallback으로 바닥면적×4 사용)
+    // 공장용지인데 공장입지기준면적 미입력 (오류는 아님 — §101①1호 본칙인 바닥면적×적용배율로 산정)
     if (data.isFactory && !data.factoryStandardArea && !data.buildingFloorArea) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
