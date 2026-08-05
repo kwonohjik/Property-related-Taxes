@@ -12,7 +12,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
-import { waitForCalculationsStore } from "./_helpers/history-seed";
+import { putCalculationRecord } from "./_helpers/history-seed";
 
 /** 전체 MultiTransferFormData (B0 이후 이력 inputData 형태) — 재진입 hydration 가능. */
 const MULTI_FORM = {
@@ -67,29 +67,13 @@ const MULTI_RECORD = {
 
 /** IndexedDB(Dexie "KoreanTaxCalcLocal")의 calculations 스토어에 다건 record 시드. */
 async function seedMultiRecord(page: Page) {
-  await page.evaluate((record) => {
-    return new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open("KoreanTaxCalcLocal");
-      req.onerror = () => reject(req.error);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction("calculations", "readwrite");
-        tx.objectStore("calculations").put(record);
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
-        };
-        tx.onerror = () => reject(tx.error);
-      };
-    });
-  }, MULTI_RECORD);
+  await putCalculationRecord(page, MULTI_RECORD);
 }
 
 test.describe("다건 양도세 수정신고·경정청구 — 이력 실플로우", () => {
   test.beforeEach(async ({ page }) => {
     // /history 최초 진입으로 Dexie가 DB(v6, calculations 스토어)를 생성하도록 유도
     await page.goto("/history");
-    await waitForCalculationsStore(page);
     await seedMultiRecord(page);
     await page.reload();
     await expect(page.getByText("다건 양도 (E2E)")).toBeVisible({ timeout: 15000 });

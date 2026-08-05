@@ -13,7 +13,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
-import { waitForCalculationsStore } from "./_helpers/history-seed";
+import { putCalculationRecord } from "./_helpers/history-seed";
 
 /** 단순 토지 자산 폼 (NBL·감면 없음) — API 필수 필드 충족. */
 function landAsset(price: string, area: string) {
@@ -97,25 +97,12 @@ const MULTI_RECORD = {
 };
 
 async function seedRecord(page: Page, record: unknown) {
-  await page.evaluate((rec) => {
-    return new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open("KoreanTaxCalcLocal");
-      req.onerror = () => reject(req.error);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction("calculations", "readwrite");
-        tx.objectStore("calculations").put(rec);
-        tx.oncomplete = () => { db.close(); resolve(); };
-        tx.onerror = () => reject(tx.error);
-      };
-    });
-  }, record);
+  await putCalculationRecord(page, record);
 }
 
 test.describe("다건 결과탭 상단 신고서 양식 (합계+자산별)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/history");
-    await waitForCalculationsStore(page);
     await seedRecord(page, MULTI_RECORD);
   });
 

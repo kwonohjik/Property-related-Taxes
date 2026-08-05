@@ -14,7 +14,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 
-import { waitForCalculationsStore } from "./_helpers/history-seed";
+import { putCalculationRecord } from "./_helpers/history-seed";
 
 const LOCAL_USER_ID = "local-user";
 
@@ -30,31 +30,13 @@ async function seedCalculation(
     taxLawVersion: string;
   },
 ) {
-  await waitForCalculationsStore(page);
-  await page.evaluate(
-    async ({ rec, uid }) => {
-      const open = () =>
-        new Promise<IDBDatabase>((resolve, reject) => {
-          const req = indexedDB.open("KoreanTaxCalcLocal");
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => reject(req.error);
-        });
-      const db = await open();
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction("calculations", "readwrite");
-        tx.objectStore("calculations").put({
-          ...rec,
-          userId: uid,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-      db.close();
-    },
-    { rec, uid: LOCAL_USER_ID },
-  );
+  const now = new Date().toISOString();
+  await putCalculationRecord(page, {
+    ...rec,
+    userId: LOCAL_USER_ID,
+    createdAt: now,
+    updatedAt: now,
+  });
 }
 
 /** 부동산 다자산 결과(호별 echo 포함)의 최소 형태 */
