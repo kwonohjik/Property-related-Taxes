@@ -41,6 +41,33 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     id: "COMPREHENSIVE.LAND_TAX_BURDEN_CEILING",
     citation: "종합부동산세법 §15",
     keywords: ["100분의 150을 초과하는 경우", "이를 없는 것으로 본다", "직전년도에 해당 토지에 부과된"],
+    keywordMode: "ALL"  },
+
+  // ── 🆕 2026-08-05 시행령 커버리지 개방분 ────────────────────────────
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_RENTAL_HOUSE",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["합산배제 임대주택", "공공주택사업자", "임대사업자", "사업자등록"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_EMPLOYEE_HOUSE",
+    citation: "종합부동산세법 시행령 §4",
+    keywords: [
+      "합산배제 사원용주택등",
+      "종업원에게 무상이나 저가로 제공",
+      "사내근로복지기금",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "COMPREHENSIVE_DECREE.PROPERTY_TAX_DEDUCTION_CALC",
+    citation: "종합부동산세법 시행령 §4의3",
+    keywords: [
+      "주택분 종합부동산세에서 공제되는 재산세액의 계산",
+      "공정시장가액비율",
+      "표준세율",
+    ],
     keywordMode: "ALL",
   },
 ];

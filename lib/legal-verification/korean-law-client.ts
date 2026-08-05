@@ -28,9 +28,10 @@ const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30일
  * 캐시한다 → 파서를 고쳐도 TTL(7일) 동안 구버전 산출물이 그대로 서빙되는 함정.
  * (실사례: 표 콤마 뭉갬·<img> 잔존 수정 후에도 11:55에 기록된 stale 캐시가 깨진 본문 노출)
  * extractUnitText·normalizeContent·title 추출 로직을 바꿀 때마다 이 값을 올릴 것.
+ * (v3: 항 바로 아래에 평탄화되어 오는 목을 읽도록 extractUnitText 수정 — 2026-08-05)
  * raw 캐시(law_units_*)는 파서 무관이라 버전 없이 유지 — 재파싱은 오프라인에서도 동작.
  */
-export const ARTICLE_CACHE_VERSION = 2;
+export const ARTICLE_CACHE_VERSION = 3;
 
 /**
  * 법제처 Open API 인증키 (OC)
@@ -82,7 +83,7 @@ export interface LawArticle {
 
 // ── 법제처 API 실제 응답 타입 ───────────────────────────────────────────────
 
-interface HoItem {
+export interface HoItem {
   호번호: string;
   /** 문자열·배열·중첩배열 가변 (표가 포함된 호는 중첩배열로 옴) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,21 +91,28 @@ interface HoItem {
   목?: MokItem | MokItem[];
 }
 
-interface MokItem {
+export interface MokItem {
   목번호: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   목내용: any;
 }
 
-interface HangItem {
+export interface HangItem {
   항번호?: string;
   /** 배열로 올 수도 있음 (XML→JSON 변환) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   항내용?: any;
   호?: HoItem | HoItem[];
+  /**
+   * ⚠️ API가 목을 **호 안이 아니라 항 바로 아래에 평탄화**해 내려주는 응답이 있다.
+   * (실측: 소득세법 시행령 §168의6 → `항: { 호: [1·2·3호], 목: [가·나·다·가·나·다·가·나] }`
+   *  — 8개 목이 어느 호에 속하는지 표시 없이 한 배열에 몰려 온다.)
+   * 이 필드를 읽지 않으면 목 계층이 **통째로 소실**된다.
+   */
+  목?: MokItem | MokItem[];
 }
 
-interface LawServiceUnit {
+export interface LawServiceUnit {
   조문번호: string;
   조문키: string;
   /** 문자열 또는 배열 또는 중첩배열 (XML→JSON 변환에 따라 구조 가변) */
@@ -217,11 +225,18 @@ async function fetchLawApi(
  * 조문단위 하나에서 전체 텍스트를 재구성한다.
  * 조문내용(제목 줄) + 각 항 + 각 호 + 각 목을 합쳐서 반환.
  */
-function extractUnitText(unit: LawServiceUnit): string {
+export function extractUnitText(unit: LawServiceUnit): string {
   const parts: string[] = [];
 
   const content = normalizeContent(unit.조문내용);
   if (content) parts.push(content);
+
+  const pushMok = (mokRaw: MokItem | MokItem[] | undefined) => {
+    for (const mok of normalizeArray(mokRaw)) {
+      const mokText = normalizeContent(mok.목내용);
+      if (mokText) parts.push(mokText);
+    }
+  };
 
   for (const hang of normalizeArray(unit.항)) {
     const hangText = normalizeContent(hang.항내용);
@@ -230,11 +245,10 @@ function extractUnitText(unit: LawServiceUnit): string {
       // 호내용은 표 포함 시 중첩배열 → normalizeContent로 평탄화(콤마 뭉갬·img 방지).
       const hoText = normalizeContent(ho.호내용);
       if (hoText) parts.push(hoText);
-      for (const mok of normalizeArray(ho.목)) {
-        const mokText = normalizeContent(mok.목내용);
-        if (mokText) parts.push(mokText);
-      }
+      pushMok(ho.목);
     }
+    // 항 바로 아래에 평탄화되어 온 목 (HangItem.목 주석 참조) — 빠뜨리면 목 계층 전체가 소실된다.
+    pushMok(hang.목);
   }
 
   return parts.join("\n");
