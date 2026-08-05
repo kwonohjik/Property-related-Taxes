@@ -320,6 +320,9 @@ export function buildTransferEngineInput(
     // ⑭ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 — 명시 매핑 필수)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...(data.commercialBuildingValuation ? { commercialBuildingValuation: data.commercialBuildingValuation as any } : {}),
+    // ⑭ 상업용건물 부수토지 초과분 판정 (「지방세법 시행령」 §101①2호·§101②).
+    // Date 변환 없음(면적·용도지역·플래그만). 누락 시 STEP 0.62가 no-op으로 조용히 지나간다.
+    ...(data.commercialAppurtenantLand ? { commercialAppurtenantLand: data.commercialAppurtenantLand } : {}),
     // ⑭ 일반건물 환산취득가 (TypeScript 미감지). ⑭ 부담부증여 §159 — Date 변환 없음.
     ...(data.burdenedGiftInfo ? { burdenedGiftInfo: data.burdenedGiftInfo } : {}),
     // ⑭ 재개발/재건축 (시행령 §166) — Date 4개 변환 (approvalDate/settlementSaleDate/firstDisclosureDate/completionDate)

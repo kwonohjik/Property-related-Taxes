@@ -97,4 +97,28 @@ export interface CommercialBuildingFormSlice {
    * cbEra === "pre_disclosure" / "post_disclosure" 공통 필수.
    */
   cbLandPricePerSqmAtTransfer: string;
+
+  // ── 부수토지 기준면적 초과분 비사업용 판정 (「지방세법 시행령」 §101①2호·§101②) ──
+  // 위 환산 필드들과 달리 **취득방법 무관**(환산·실거래가·상속 모두)하게 동작한다.
+
+  /**
+   * 집합건물 **전체** 대지면적 (㎡). 건축물대장 총괄표제부 기준.
+   *
+   * ⚠️ 위 `cbLandArea`(해당 호 대지권 지분면적, §164⑥ 3축 중 대지)와 **다른 값**이다.
+   * 구분소유 판정에서 지분율은 약분되므로 전체 값으로 초과 비율이 확정된다
+   * (`lib/tax-engine/types/commercial-appurtenant.types.ts` 헤더).
+   */
+  cbTotalLandArea: string;
+  /** 집합건물 **전체** 건축물 바닥면적 (㎡, 각 층 중 최대·지하 포함). */
+  cbTotalBuildingFootprintArea: string;
+  /**
+   * 용도지역 — 「지방세법 시행령」 §101② 적용배율 결정.
+   * 값은 `lib/tax-engine/local-tax-zone-multiplier.ts` 정본 키와 일치해야 한다.
+   */
+  cbZoneType: string;
+  /**
+   * 「지방세법 시행령」 §101① 단서 — true 시 배율과 무관하게 부속토지 전량 비사업용.
+   * 무허가 신축 + 불법 용도변경(허가·사용승인 미이행) 포함 — 법제처 해석례 25-0823.
+   */
+  cbIsUnregistered: boolean;
 }

@@ -118,6 +118,32 @@ export { toEngineReductions } from "./transfer-tax-api-reductions";
 // ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑥, §176조의2②2호) ───
 
 /**
+ * AssetForm → `commercialAppurtenantLand` 서브객체 변환 (⑬).
+ *
+ * 부수토지 초과분 비사업용 판정(「지방세법 시행령」 §101①2호·§101②) 입력.
+ * **취득방법과 무관**하게 동작하므로 아래 환산 전용 변환과 게이트가 다르다.
+ *
+ * 두 면적이 모두 입력됐을 때만 payload를 만든다 — 하나만 있으면 판정이 불가능하고,
+ * 부분 입력을 보내면 API refine이 400을 내 사용자가 원인을 알기 어렵다.
+ * ⑧ validate가 같은 조건("둘 다 입력 or 둘 다 공란")을 강제한다.
+ */
+export function buildCommercialAppurtenantLand(asset: AssetForm): object | undefined {
+  if (asset.assetKind !== "commercial_building") return undefined;
+
+  const totalLandArea = parseDecimal(asset.cbTotalLandArea);
+  const totalBuildingFootprintArea = parseDecimal(asset.cbTotalBuildingFootprintArea);
+  if (!(totalLandArea > 0) || !(totalBuildingFootprintArea > 0)) return undefined;
+
+  return {
+    totalLandArea,
+    totalBuildingFootprintArea,
+    // §101① 단서 해당 시 배율이 불필요하므로 용도지역을 보내지 않아도 API refine을 통과한다.
+    ...(asset.cbIsUnregistered ? {} : { zoneType: asset.cbZoneType || undefined }),
+    ...(asset.cbIsUnregistered ? { isUnregistered: true } : {}),
+  };
+}
+
+/**
  * AssetForm cb* 필드 → commercialBuildingValuation 서브객체 변환.
  * 필수 필드 미입력 시 undefined 반환 — validate에서 먼저 차단되므로 silent 처리.
  * ⑧ 주의: validate와 동일 조건으로 undefined 반환. UI 통과 → 여기서 undefined → 엔진 미도달 방지.

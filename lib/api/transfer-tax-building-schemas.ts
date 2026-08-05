@@ -23,13 +23,22 @@ export const generalBuildingValuationSchema = z.object({
   landArea: z.number().positive(),
   /** 건물 연면적 (㎡). 환산취득가 모드만 필수. */
   buildingArea: z.number().positive().optional(),
-  /** 건물 수평투영면적 (㎡) — 비사업용토지 판정 기준 (§168의12) */
+  /**
+   * 건축물 바닥면적 (㎡, 건축물 외 시설은 수평투영면적) — 비사업용토지 판정 기준.
+   * 「지방세법 시행령」 §101①2호(바닥면적 × §101② 적용배율).
+   */
   buildingFootprintArea: z.number().positive(),
-  /** 용도지역 (§168의12 배율 결정). validate에서 필수 보장. */
+  /** 용도지역 (「지방세법 시행령」 §101② 적용배율 결정). validate에서 필수 보장. */
   zoneType: z.string().optional(),
   /** 수도권 소재 여부 */
   isMetropolitan: z.boolean().optional(),
-  /** 무허가건축물 여부. true 시 전체 비사업용 (§168의11①1호) */
+  /**
+   * 「지방세법 시행령」 §101① **단서** 해당 여부 — true 시 배율과 무관하게 부속토지 전량 비사업용.
+   *
+   * 이름은 "unregistered"이나 범위는 **허가·사용승인 미이행 전반**이다. 법제처 법령해석례
+   * 25-0823(2026.02.03)은 단서의 "허가 등"·"사용승인"이 「건축법」 §11·§22로 한정되지 않으며
+   * **§19②1호 용도변경 허가 미이행**·**§19⑤·§22 사용승인 미이행**도 포함된다고 회답했다.
+   */
   isUnregistered: z.boolean().optional(),
   /** 양도시 개별공시지가 (원/㎡). 환산 분모 + §166⑥ 안분 비율. 모드 무관 필수. */
   transferLandPricePerSqm: z.number().int().positive(),
@@ -290,6 +299,42 @@ export const commercialBuildingValuationSchema = z.object({
   /** D — 토지 및 건물 기준시가 조정월수 (미지정 시 엔진이 12 적용) */
   stdPriceAdjustMonths: z.number().int().positive().optional(),
 });
+
+/**
+ * ⑫ 상업용건물·오피스텔 부수토지 기준면적 판정 입력 Zod 스키마.
+ *
+ * 「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101①2호·§101②.
+ *
+ * ⚠️ 환산 전용인 `commercialBuildingValuationSchema`와 **별개**다 — 부수토지 초과분 중과는
+ * 취득방법(환산·실거래가·상속)과 무관하게 적용된다.
+ *
+ * ⚠️ 두 면적은 **집합건물 전체 값**이다. 해당 호의 대지권 지분면적(§164⑥ 3축 중 대지,
+ * `commercialBuildingValuation.landArea`)과 혼동하지 말 것 — 구분소유 판정에서 지분율은
+ * 약분되므로 전체 값만으로 초과 비율이 확정된다(`types/commercial-appurtenant.types.ts` 헤더).
+ */
+export const commercialAppurtenantLandSchema = z
+  .object({
+    /** 집합건물 **전체** 대지면적 (㎡) */
+    totalLandArea: z.number().positive(),
+    /** 집합건물 **전체** 건축물 바닥면적 (㎡, 각 층 중 최대) */
+    totalBuildingFootprintArea: z.number().positive(),
+    /** 용도지역 — 「지방세법 시행령」 §101② 적용배율 결정. §101① 단서 해당 시에만 생략 가능. */
+    zoneType: z.string().optional(),
+    /** 「지방세법 시행령」 §101① 단서 — 허가·사용승인 미이행(불법 용도변경 포함, 해석례 25-0823) */
+    isUnregistered: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // 엔진(`appurtenant-land-excess.ts`)이 용도지역 없이는 배율을 결정하지 못하고 throw한다.
+    // §101① 단서 해당 시에는 배율 자체가 불필요하므로 면제한다.
+    if (!data.isUnregistered && !data.zoneType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["zoneType"],
+        message:
+          "상업용건물 부수토지 판정: 용도지역을 선택하세요 (「지방세법 시행령」 §101② 적용배율 결정).",
+      });
+    }
+  });
 
 /**
  * ⑫ 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 Zod 스키마 (소령 §163⑨2호, §164⑥).
