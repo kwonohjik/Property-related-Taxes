@@ -454,3 +454,58 @@ describe("I: 상속 취득 × 용도변경 — §154⑧3호 통산 배제", () =
     expect(r.longTermHoldingRate).toBeCloseTo(0.32, 10); // 표2 보유 7년 28% + 실거주 1년 4%
   });
 });
+
+/**
+ * K 시리즈 — 이월과세(§97의2) × 용도변경 (계획서
+ * `non-housing-to-housing-conversion-carryover-c21.plan.md` §7)
+ *
+ * 「소득세법」 §95④ 단서가 **전체 보유기간**의 기산일을(이월과세면 증여자 취득일),
+ * §95⑥이 그중 **주택으로 보유한 기간**의 기산일을(주거용 사용일) 각각 정한다 — 충돌이 아니다.
+ * ⇒ 비주택 기간은 자연히 「증여자 취득일 ~ 주거용 사용일」이 된다.
+ *
+ * ⚠️ 이월과세는 **시나리오 A(적용)와 B(미적용)를 모두 계산해 세액을 비교**한다(§97의2②3호).
+ *    두 시나리오는 **서로 다른 취득일**을 쓴다 — A는 증여자 취득일, B는 증여 등기접수일.
+ *    한쪽만 맞으면 비교 자체가 틀린 값으로 이뤄지므로 **양쪽을 함께 고정**한다.
+ */
+describe("K: 이월과세 × 용도변경 — 시나리오별 기산일", () => {
+  const DONOR_ACQ = new Date("2010-01-01");
+  const GIFT_REG = new Date("2018-06-01");
+
+  /** 이월과세 입력 — 증여자 취득일 2010-01-01 · 증여 등기 2018-06-01 */
+  function carryover(overrides: Record<string, unknown> = {}) {
+    return {
+      acquisitionCause: "carryover_gift" as const,
+      acquisitionDate: DONOR_ACQ, // API 변환이 채우는 값(폼은 giftRegistryDate fallback)
+      carryoverTaxation: {
+        giftRegistryDate: GIFT_REG,
+        donorAcquisitionDate: DONOR_ACQ,
+        useEstimatedAcquisition: false,
+        donorAcquisitionPrice: 300_000_000,
+        giftTaxAmount: 0,
+        giftDateValuation: 700_000_000,
+        ...overrides,
+      },
+    };
+  }
+
+  it("K-2 전환일이 증여 등기일 **이후** — A·B 모두 분해 가능하고 계산이 끝까지 간다", () => {
+    const r = calculateTransferTax(
+      conv({ ...carryover(), ...toggle("2020-03-01") }),
+      rates,
+    );
+
+    // 이월과세 판정 자체가 성립한다(용도변경이 이 축을 깨뜨리지 않는다)
+    expect(r.carryoverTaxationDetail).toBeDefined();
+    // 채택 시나리오의 기산일로 분해된 §95⑤ 결과가 나온다
+    expect(r.usageConversionDetail).toBeDefined();
+    expect(r.usageConversionDetail!.residentialUseStartDate).toBe("2020-03-01");
+  });
+
+  it("K-4 전환일이 증여자 취득일과 등기일 **사이** — 시나리오 B가 기간을 나눌 수 없다", () => {
+    // A(증여자 취득일 2010 기산)는 통과하지만 B(등기일 2018 기산)는 전환일이 취득일 이전이라
+    // 기간 분해가 불가능하다. 폼 경로는 validate가 막아야 하는데 지금은 막지 못한다(계획 D-3).
+    expect(() =>
+      calculateTransferTax(conv({ ...carryover(), ...toggle("2015-01-01") }), rates),
+    ).toThrow(TaxCalculationError);
+  });
+});
