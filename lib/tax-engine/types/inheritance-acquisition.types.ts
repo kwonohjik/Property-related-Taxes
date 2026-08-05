@@ -170,13 +170,21 @@ export interface InheritanceAcquisitionInput {
  * ※ ② 소령 §164④~⑦ 취득당시 기준시가는 Phase 2에서 별도 후보로 추가 예정
  *   (환산 분자 standardPriceAtDeemedDate와 구분되는 값·시점 확정 필요).
  */
-export type PreDeemedSelectedMethod = "reported" | "converted";
+/**
+ * pre-deemed 취득가액 후보.
+ * ⚠️ `"converted"`만 추계(§176조의2③3호)라 **개산공제(§163⑥) 대상**이다
+ *    (`inheritance-acquisition-helpers.ts`의 `isConvertedSelected` 게이트).
+ *    `"reported"`(①)·`"sec164"`(②)는 **실지거래가액 의제**(§163⑨)라 실제 필요경비를 쓴다.
+ */
+export type PreDeemedSelectedMethod = "reported" | "converted" | "sec164";
 
 export interface PreDeemedBreakdown {
   /** ① 상증법 §60~66 평가액 (상속세 신고가액) — null=미입력 */
   reportedAmount: number | null;
   /** ③ 환산취득가: 양도가 × (의제취득일 기준시가 ÷ 양도시 기준시가) */
   convertedAmount: number;
+  /** ② §164④~⑦ 취득당시 기준시가 (§163⑨1호·2호) — null=미주입(opt-in) */
+  sec164Amount: number | null;
   /** 채택된 후보 (max) */
   selectedMethod: PreDeemedSelectedMethod;
 }

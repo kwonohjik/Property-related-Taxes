@@ -424,3 +424,43 @@ describe("Case B — 의제취득일 이후 상속 (소령 §163 ⑨ · 상증�
     expect(r.method).toBe("supplementary");
   });
 });
+
+// ─── pre-deemed §163⑨1호·2호 — ②(§164④~⑦) max 비교 ────────────────────────
+//
+// 계획서: docs/02-design/features/inheritance-pre-deemed-164-max.plan.md
+//
+// 「소득세법 시행령」 §163⑨은 **의제취득일로 나뉘지 않는다** — 조건은 오직
+// 「기준시가 고시 전 상속·증여」다(1호 토지 §164④ / 2호 건물 §164⑤~⑦).
+// 1985년 이전 상속이면 개별공시지가(1990)·건물 기준시가(2005) 둘 다 고시 전이라 당연히 해당한다.
+// ⇒ post-deemed와 **같은 조문**이 근거인데 현행은 post에서만 ②를 비교한다.
+describe("pre-deemed §163⑨ — ②(§164④~⑦ 취득당시 기준시가) max 비교", () => {
+  /** ③ 환산 = 5억 × 5천만 ÷ 2.5억 = 1억 */
+  const CONVERTED_BASE = {
+    inheritanceDate: new Date("1984-12-31"),
+    assetKind: "house_individual" as const,
+    transferPrice: 500_000_000,
+    standardPriceAtDeemedDate: 50_000_000,
+    standardPriceAtTransfer: 250_000_000,
+  };
+
+  it("P-1 ②가 ①·③보다 크면 ②가 취득가액이 된다", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...CONVERTED_BASE,
+      reportedValue: 100_000_000, // ①
+      houseValuationStdPrice: 150_000_000, // ② §164⑦ — 가장 크다
+    });
+
+    // 현행은 max(①,③)=1억만 보고 ②를 무시한다 → 취득가액 과소 → 세액 과대
+    expect(r.acquisitionPrice).toBe(150_000_000);
+  });
+
+  it("P-7 ② 미주입이면 현행과 동일 — opt-in 회귀 0", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...CONVERTED_BASE,
+      reportedValue: 100_000_000,
+    });
+
+    expect(r.method).toBe("pre_deemed_max");
+    expect(r.acquisitionPrice).toBe(100_000_000);
+  });
+});

@@ -146,15 +146,19 @@ function resolveInheritedAcquisitionInput(
   const shouldInjectHouseValuation =
     houseValuationResult && isPreDeemed && isHousePreDisclosure && !base.standardPriceAtDeemedDate;
 
-  // case B(post-deemed) + 주택 미공시: §164⑦ 취득당시 기준시가를 max(①,②) 비교용으로 주입 (소령 §163⑨2호)
-  // ③(환산취득가/양도가 스케일) 적용 불가 → housePriceAtInheritanceUsed(②, 미스케일)만 취함
-  const shouldInjectPostDeemedHouseMax =
-    !!houseValuationResult && !isPreDeemed && isHousePreDisclosure;
+  // 주택 미공시: §164⑦ 취득당시 기준시가를 max 비교용(②)으로 주입 (소령 §163⑨2호).
+  // ⚠️ **pre/post 구분이 없다** — §163⑨은 「의제취득일」이 아니라 「기준시가 고시 전 상속·증여」만
+  //    조건으로 하므로 pre-deemed(1985 이전)도 당연히 해당한다. 2026-08-05 확장.
+  //    · post-deemed: max(①,②) — ③ 적용 불가
+  //    · pre-deemed : max(①,②,③) — ③은 아래 standardPriceAtDeemedDate(환산 분자)로 별도 계산
+  //    같은 `housePriceAtInheritanceUsed` 값이 ②(비교값)와 ③의 분자로 **둘 다** 쓰이므로
+  //    필드를 분리해 주입한다(역할이 둘 — 계획서 D-2).
+  const shouldInjectHouseMax = !!houseValuationResult && isHousePreDisclosure;
 
-  // case B(post-deemed) + 상가 + 최초고시(2005) 전 상속: §164⑥ 취득당시 기준시가(P_A)를 max 비교용 주입 (소령 §163⑨2호)
+  // 상가 + 최초고시(2005) 전 상속: §164⑥ 취득당시 기준시가(P_A)를 max 비교용(②) 주입 (소령 §163⑨2호).
+  // 주택과 같은 이유로 pre/post 구분 없다(2026-08-05 확장).
   // opt-in — commercialInheritanceValuation payload 있을 때만(주택 inheritedHouseValuation opt-in 미러).
   const shouldInjectCommercialMax =
-    !isPreDeemed &&
     rawInput.propertyType === "commercial_building" &&
     !!rawInput.commercialInheritanceValuation &&
     base.inheritanceDate.getTime() < COMMERCIAL_FIRST_DISCLOSURE_DATE.getTime();
@@ -180,7 +184,7 @@ function resolveInheritedAcquisitionInput(
     ...base,
     standardPriceAtDeemedDate,
     standardPriceAtTransfer,
-    ...(shouldInjectPostDeemedHouseMax && {
+    ...(shouldInjectHouseMax && {
       houseValuationStdPrice: houseValuationResult!.housePriceAtInheritanceUsed,
     }),
     ...(shouldInjectCommercialMax && {
