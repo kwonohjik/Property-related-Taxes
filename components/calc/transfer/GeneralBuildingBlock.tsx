@@ -12,8 +12,8 @@
  *      (「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101①2호·②)
  *
  * ⚠️ 면적 3필드(토지·연면적·바닥면적)는 **① 기본정보**로 이전했다(2026-08-04) —
- *    `asset-sections/AssetAreaGeneralBuilding.tsx`. 연면적의 `isEstimated` 게이트도
- *    함께 옮겨 동작은 그대로다. 여기에 면적 칸을 다시 추가하지 말 것.
+ *    `asset-sections/AssetAreaGeneralBuilding.tsx`. 연면적의 `isEstimated` 게이트는
+ *    2026-08-05에 제거돼 3필드 모두 상시 노출된다. 여기에 면적 칸을 다시 추가하지 말 것.
  *    ※ `footprint`·`landArea` 파생값은 유지한다 — ③ 비사업용토지 한도 미리보기가 소비한다.
  *
  * 정책 준수:
@@ -235,8 +235,8 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
         )}
 
         {/* 면적 3필드(토지·연면적·바닥면적)는 ① 기본정보로 이전했다 (2026-08-04).
-            `asset-sections/AssetAreaGeneralBuilding.tsx` — 연면적의 `isEstimated`
-            게이트도 함께 옮겨 동작은 그대로다. 여기에 면적 칸을 다시 추가하지 말 것. */}
+            `asset-sections/AssetAreaGeneralBuilding.tsx` — 연면적 게이트는 2026-08-05에
+            제거돼 상시 노출된다. 여기에 면적 칸을 다시 추가하지 말 것. */}
 
         {/* ① 양도시 기준시가 (emerald) — 항상 표시 (§166⑥ 토지·건물 안분 비율 결정) */}
         <ToneCard tone="emerald" sectionNum="①" title="양도시 기준시가 (토지·건물 안분 비율)" noDark>
@@ -263,7 +263,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             <CurrencyInput label="양도시 건물기준시가" hideUnit value={asset.gbTransferBuildingValue} onChange={(v) => onChange({ gbTransferBuildingValue: v })} />
           </FieldCard>
           <div className="flex justify-end">
-            <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-transfer`} applyTimePoint="transfer" prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
+            <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-transfer`} applyTimePoint="transfer" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbTransferBuildingValue: String(v) })} />
           </div>
         </ToneCard>
 
@@ -287,6 +287,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
                   jibun={asset.addressJibun || undefined}
                   initialAddress={stdPriceAddress}
                   housingFloorAreaPrefill={asset.gbBuildingArea || undefined}
+                  hideFloorAreaInput
                   dataTestId="gb-building-std-batch-open"
                 />
               </div>
@@ -317,7 +318,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               <CurrencyInput label="취득시 건물기준시가" hideUnit value={asset.gbAcqBuildingValue} onChange={(v) => onChange({ gbAcqBuildingValue: v })} />
             </FieldCard>
             <div className="flex justify-end">
-              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-acq`} applyTimePoint="acquisition" prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
+              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-acq`} applyTimePoint="acquisition" hideFloorAreaInput prefill={{ floorArea: asset.gbBuildingArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.gbBuildingAcquisitionDate || asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
             </div>
 
             <div className="rounded bg-violet-50/60 border border-violet-200 px-3 py-2 text-xs text-violet-700 space-y-0.5">

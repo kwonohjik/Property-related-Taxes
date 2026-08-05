@@ -99,12 +99,19 @@ describe("법령 제약 고정 — 「건축법 시행령」 제119조 제1항�
 
 // ══════════════════════════════════════════════════════════
 describe("GB UI — 바닥면적 정의 안내", () => {
-  it("라벨이 「건축물 바닥면적」이고 각 층 중 최대임을 안내한다", () => {
+  /**
+   * 🔄 안내 소스가 **① 입력 hint → ③ 비사업용토지 섹션 단독**으로 바뀌었다 (2026-08-05).
+   *
+   * ① 면적 카드의 hint 3종을 사용자 요청으로 삭제했다(3필드 한 행 배치).
+   * 「각 층 중 최대·지하 포함」 안내는 ③ `GeneralBuildingNblSection.tsx:80`의 산식 설명에
+   * 남아 있으므로 **정의가 화면에서 사라지지는 않았다** — 단언을 그 소스로 옮긴다.
+   * 계획: `docs/02-design/features/general-building-area-row-always-visible.plan.md`
+   */
+  it("라벨이 「건축물 바닥면적」이고 각 층 중 최대·지하 포함임을 안내한다", () => {
     renderGb();
-    // 입력 라벨 + ④ 섹션 산식 설명 두 곳에 반영된다(정정이 양쪽에 걸렸다는 증거)
+    // 입력 라벨(①) + ③ 섹션 산식 설명 두 곳에 반영된다(정정이 양쪽에 걸렸다는 증거)
     expect(screen.getAllByText(/건축물 바닥면적/).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText(/각 층.*가장 넓은/)).toBeInTheDocument();
-    expect(screen.getByText(/지하층/)).toBeInTheDocument();
+    expect(screen.getByText(/각 층 중 최대, 지하 포함/)).toBeInTheDocument();
   });
 
   it("🔴 종전 오안내 「건축면적」 요구가 제거됐다", () => {

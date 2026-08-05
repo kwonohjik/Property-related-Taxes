@@ -375,6 +375,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                   jibun={asset.addressJibun || undefined}
                   initialAddress={stdPriceAddress}
                   housingFloorAreaPrefill={totalFloorArea != null ? String(totalFloorArea) : undefined}
+                  hideFloorAreaInput
                   dataTestId="cb-building-std-batch-open"
                 />
               </div>
@@ -406,7 +407,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               />
             </FieldCard>
             <div className="flex justify-end">
-              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-acq`} applyTimePoint="acquisition" prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
+              <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-acq`} applyTimePoint="acquisition" hideFloorAreaInput prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
             </div>
             {/* 최초고시시(2005) — amber */}
             <FieldCard
@@ -436,7 +437,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 />
               </FieldCard>
               <div className="mt-1 flex justify-end">
-                <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-transfer`} applyTimePoint="transfer" prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtTransfer: String(v) })} />
+                <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-transfer`} applyTimePoint="transfer" hideFloorAreaInput prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtTransfer: String(v) })} />
               </div>
             </div>
           </ToneCard>

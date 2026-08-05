@@ -82,16 +82,23 @@ describe("AssetAreaGeneralBuilding — 이전된 면적 카드의 sky·noDark �
     expect(getByText("건축물 바닥면적")).toBeTruthy();
   });
 
-  it("실가 모드에서는 「건물 연면적」이 숨는다 — isEstimated 게이트 승계", () => {
+  /**
+   * 🔄 **의도적으로 뒤집힌 anchor** (2026-08-05) — 종전: "실가 모드에서 연면적이 숨는다".
+   *
+   * 실거래가 모드에서도 연면적을 쓴다 — 항상 표시되는 「양도시 기준시가」의 건물 기준시가
+   * 계산기가 이 값을 prefill로 받는다(`GeneralBuildingBlock.tsx:266`). 게이트 때문에
+   * 그 모드에서는 prefill이 늘 비어 사용자가 모달 안에서 같은 값을 다시 쳤다.
+   * anchor: `area-card-row-layout.anchor.test.tsx` A1
+   */
+  it("실가 모드에서도 면적 3필드가 모두 렌더된다 — isEstimated 게이트 제거", () => {
     render(
       <AssetAreaGeneralBuilding
         asset={{ ...makeGbAsset(), useEstimatedAcquisition: false }}
         onChange={() => {}}
       />,
     );
-    expect(screen.queryByText("건물 연면적")).toBeNull();
-    // 토지·바닥면적은 모드 무관 항상 노출
     expect(screen.getByText("취득·양도 당시 토지 면적")).toBeTruthy();
+    expect(screen.getByText("건물 연면적")).toBeTruthy();
     expect(screen.getByText("건축물 바닥면적")).toBeTruthy();
   });
 });

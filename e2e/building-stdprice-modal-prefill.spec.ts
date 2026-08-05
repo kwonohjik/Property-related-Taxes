@@ -5,7 +5,10 @@
  * 열 때 자동으로 채운다(모달 이중입력 제거). 연도는 날짜에서 파생(deriveYearFromEventDate).
  *
  * 일반건물(GeneralBuildingBlock) 환산취득가 모드로 4값 전부 검증:
- * - 건물 연면적(gbBuildingArea) → 모달 "건물 연면적"
+ * - 건물 연면적(gbBuildingArea) → 모달에 **입력 칸이 없다**(2026-08-05 `hideFloorAreaInput`).
+ *   ① 기본정보가 연면적의 단일 입력 자리이고 모달은 그 값을 prefill로만 받는다.
+ *   값이 비면 안내가 뜨는 계약이므로 **안내 부재 = prefill 도달**로 검증한다.
+ *   (칸 자체의 부재·안내 문구는 RTL anchor `area-card-row-layout.anchor.test.tsx` A4)
  * - 토지면적(gbLandArea) → 모달 "부속토지 면적"
  * - 취득일 → 모달 취득연도(YearSelect) 파생 표시
  * - 양도일 → 모달 양도연도(YearSelect) 파생 표시
@@ -31,7 +34,8 @@ test.describe("건물 기준시가 모달 — 자산값 자동입력(prefill)", 
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: /일반건물/ }).first().click();
 
-    // 취득 섹션: 환산취득가 모드 → 건물 연면적 필드 노출 + 취득일 입력
+    // 취득 섹션: 환산취득가 모드 + 취득일 입력
+    // (연면적은 2026-08-05부터 취득가액 산정 방식과 무관하게 ①에 항상 있다 — 이 클릭은 취득일 흐름용)
     await expandAssetSection(page, 3);
     await page.getByRole("button", { name: /^환산취득가/ }).click();
     // 취득일 DateInput만 감싸는 FieldCard로 scope 한정 — 섹션 전체 scope는 "이월과세" 라디오의
@@ -60,7 +64,10 @@ test.describe("건물 기준시가 모달 — 자산값 자동입력(prefill)", 
     await expect(modal).toBeVisible();
 
     // prefill 자동입력 검증 — 상위 폼 값이 모달 필드에 채워짐
-    await expect(modal.getByPlaceholder("건물 연면적")).toHaveValue("100");
+    // 연면적은 입력 칸 자체가 없다(① 기본정보가 단일 입력 자리). 값이 비었을 때만 뜨는
+    // 안내가 없다는 것 = 상위 값 100이 모달에 도달했다는 뜻이다.
+    await expect(modal.getByPlaceholder("건물 연면적")).toHaveCount(0);
+    await expect(modal.getByText(/건물 연면적이 비어 있습니다/)).toHaveCount(0);
     await expect(modal.getByPlaceholder("부속토지 면적")).toHaveValue("78.1");
     // 날짜에서 파생한 연도가 YearSelect trigger에 "YYYY년"으로 표시.
     // exact:true로 연도 select만 매칭(공시지가 연도 "YYYY년 (자동)" 제외).

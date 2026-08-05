@@ -54,36 +54,21 @@ export function AssetAreaCommercial({ asset, onChange }: Props) {
     <ToneCard tone="sky" title="면적 정보 (㎡)" noDark>
       {/* 3필드 1행 (3열, 라벨 상단 stacked) — 모바일은 1열 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <FieldCard
-          label="전용면적"
-          unit="㎡"
-          hint="건물 전용면적 (분양면적에서 공유면적 제외)"
-          stacked
-        >
+        <FieldCard label="전용면적" unit="㎡" stacked>
           <DecimalInput
             value={asset.cbExclusiveArea}
             onChange={(v) => onChange({ cbExclusiveArea: v })}
             placeholder="전용면적 입력"
           />
         </FieldCard>
-        <FieldCard
-          label="공유면적"
-          unit="㎡"
-          hint="계단·복도 등 공유부분 면적"
-          stacked
-        >
+        <FieldCard label="공유면적" unit="㎡" stacked>
           <DecimalInput
             value={asset.cbSharedArea}
             onChange={(v) => onChange({ cbSharedArea: v })}
             placeholder="공유면적 입력"
           />
         </FieldCard>
-        <FieldCard
-          label="대지면적"
-          unit="㎡"
-          hint="이 호에 귀속되는 대지권 면적 (등기부 기재 면적)"
-          stacked
-        >
+        <FieldCard label="대지면적" unit="㎡" stacked>
           <DecimalInput
             value={asset.cbLandArea}
             onChange={(v) => onChange({ cbLandArea: v })}
