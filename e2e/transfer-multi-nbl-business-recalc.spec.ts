@@ -12,6 +12,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { putCalculationRecord } from "./_helpers/history-seed";
+import { openHistoryModal } from "./_helpers/navigation";
 
 /** 자경 농지(사업용 판정) 토지 자산 폼 — 원시 isNonBusinessLand=true. */
 function businessLandAsset(price: string, area: string, transferDate: string) {
@@ -105,8 +106,11 @@ test.describe("다건 이력 불러오기 → 재계산 — NBL 사업용 오중
     await page.goto("/calc/transfer-tax/multi");
 
     // 마운트 edit 모드(빈 자산) → 불러오기 → 다건 record replace → 공통 설정
-    await page.getByTestId("multi-load-history-btn").first().click();
-    await expect(page.getByText("다건 NBL 사업용 (E2E)")).toBeVisible({ timeout: 15000 });
+    await openHistoryModal(
+      page,
+      page.getByTestId("multi-load-history-btn").first(),
+      page.getByText("다건 NBL 사업용 (E2E)"),
+    );
     await page.getByTestId(`load-record-${MULTI_RECORD.id}`).click();
 
     // 세액 계산 (요청/응답 가로채기)

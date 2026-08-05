@@ -89,7 +89,14 @@ export function MultiTransferHistoryLoadModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      {/* E2E가 「이 모달이 지금 열려 있는가」를 판정하는 유일한 신호.
+          안의 항목 텍스트로 판정하면 안 된다 — 목록이 전 레코드를 나열하므로 **직전에 닫히는
+          중인 모달의 잔상**도 같은 텍스트를 보여 「새로 열렸다」와 구분되지 않는다
+          (2026-08-05 실측: 그 판정으로 만든 헬퍼가 닫히는 모달의 항목을 눌러 detach). */}
+      <DialogContent
+        data-testid="multi-history-modal"
+        className="max-w-2xl max-h-[85vh] overflow-y-auto"
+      >
         <DialogHeader>
           <DialogTitle>📂 이력에서 불러오기</DialogTitle>
           <DialogDescription className="text-xs">

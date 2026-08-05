@@ -25,6 +25,40 @@
  */
 import { expect, type Locator, type Page } from "@playwright/test";
 
+/**
+ * 이력 모달을 연다 — **URL이 바뀌지 않는 이동**이라 `clickAndExpectUrl`로는 판정할 수 없다.
+ *
+ * 세 단계를 순서대로 밟는다. 하나라도 빠지면 아래 두 결함 중 하나가 남는다:
+ *
+ *  1. **닫힘 완료 대기** — 모달을 두 번 여는 spec에서, 직전 모달이 닫히는 중에 런처를 누르면
+ *     그 안의 항목이 detach돼 후속 클릭이 `element was detached from the DOM`으로 죽는다.
+ *  2. **클릭 재시도** — 런처는 `<Button onClick>`(순수 React)이라 hydration 전 클릭이 no-op이다.
+ *     CI에서 모달이 아예 열리지 않아 15초 뒤 `element(s) not found`로 실패했다
+ *     (run 30988428979 · 샤드 4 `1 flaky`).
+ *  3. **열림 확인 후 내용 확인** — 판정 기준은 **모달 자체**(`multi-history-modal`)다.
+ *     안의 항목 텍스트로 판정하면 안 된다 — 목록이 전 레코드를 나열하므로 닫히는 중인
+ *     모달의 잔상도 같은 텍스트를 보여 「새로 열렸다」와 구분되지 않는다.
+ *
+ * ⚠️ 2026-08-05에 1·3을 빠뜨린 두 버전을 만들었다가 로컬 실측에서 현행보다 나쁜 것을 확인하고
+ *    폐기했다(v1 7회 중 2회 실패 · v2 6회 중 6회 실패 · master 6회 중 0회). 판정 기준을 바꾸는
+ *    변경은 **같은 부하로 반복 측정**한 뒤에만 넣는다.
+ */
+export async function openHistoryModal(
+  page: Page,
+  launcher: Locator,
+  expected: Locator,
+): Promise<void> {
+  const modal = page.getByTestId("multi-history-modal");
+  // 1. 직전 모달이 완전히 사라질 때까지 (첫 호출이면 즉시 통과)
+  await expect(modal).toHaveCount(0, { timeout: 15_000 });
+  // 2·3. 모달이 열릴 때까지 클릭 재시도
+  await expect(async () => {
+    if ((await modal.count()) === 0) await launcher.click({ timeout: 5_000 });
+    await expect(modal).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
+  await expect(expected).toBeVisible({ timeout: 15_000 });
+}
+
 /** `target`을 눌러 `url`로 이동할 때까지 재시도한다. */
 export async function clickAndExpectUrl(page: Page, target: Locator, url: RegExp): Promise<void> {
   await expect(async () => {
