@@ -4,7 +4,9 @@
 > 증여가액에 가산·재계산되는 순환(고정점) 계산
 > **Branch / Worktree**: `feat/gift-enhance` (`.claude/worktrees/gift-enhance`)
 > **작성일**: 2026-06-21
-> **상태**: Plan (Do 미착수)
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `e2e/gift-donor-paid-grossup.spec.ts` + `__tests__/tax-engine/inheritance-gift/gift-donor-paid-grossup-anchor.test.ts` 실재.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: Plan (Do 미착수)~~
 
 ---
 

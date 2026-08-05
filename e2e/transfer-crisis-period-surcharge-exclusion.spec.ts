@@ -11,6 +11,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { putCalculationRecord } from "./_helpers/history-seed";
+import { openHistoryModal } from "./_helpers/navigation";
 
 /** 비사업용 토지 자산 — 자경하지 않는 농지(비사업용 판정). #508 asset 구조 준용. */
 function nblLandAsset(acquisitionDate: string) {
@@ -90,8 +91,11 @@ test.describe("부칙 §9270호 §14① — 취득기간 중과배제 (E2E)", ()
 
   test("2010 취득 비사업용 토지는 +10%p 배제, 2015 취득은 중과 — 응답 본문 검증", async ({ page }) => {
     await page.goto("/calc/transfer-tax/multi");
-    await page.getByTestId("multi-load-history-btn").first().click();
-    await expect(page.getByText("부칙 §14① 비사업용 토지 (E2E)")).toBeVisible({ timeout: 15000 });
+    await openHistoryModal(
+      page,
+      page.getByTestId("multi-load-history-btn").first(),
+      page.getByText("부칙 §14① 비사업용 토지 (E2E)"),
+    );
     await page.getByTestId(`load-record-${RECORD.id}`).click();
 
     const respPromise = page.waitForResponse(

@@ -151,6 +151,25 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     asset.assetKind === "commercial_building" ? giftEstimatedModeError(asset, label) : null;
   if (cbGiftEstErr) return cbGiftEstErr;
 
+  // ── 상업용건물 부수토지 초과분 판정 검증 (⑧, 지방세령 §101①2호·§101②) ──
+  // ⑧ 동기화 원칙: API `buildCommercialAppurtenantLand`의 payload 생성 조건과 정확히 맞춘다.
+  //   · 두 면적 모두 공란 = 판정 생략(허용) · 둘 다 입력 = 판정 수행
+  //   · 하나만 입력 = 판정 불가인데 사용자는 입력했다고 믿는 상태 → 차단
+  //   · 면적이 있는데 용도지역이 없으면 엔진이 throw하므로 여기서 먼저 막는다(§101① 단서 시 면제)
+  if (asset.assetKind === "commercial_building") {
+    const totalLand = parseDecimal(asset.cbTotalLandArea);
+    const totalFootprint = parseDecimal(asset.cbTotalBuildingFootprintArea);
+    const anyEntered = totalLand > 0 || totalFootprint > 0;
+    if (anyEntered) {
+      if (!(totalLand > 0))
+        return `${label}: 부수토지 판정 — 집합건물 전체 대지면적을 입력하세요.`;
+      if (!(totalFootprint > 0))
+        return `${label}: 부수토지 판정 — 집합건물 전체 바닥면적을 입력하세요.`;
+      if (!asset.cbIsUnregistered && !asset.cbZoneType)
+        return `${label}: 부수토지 판정 — 용도지역을 선택하세요 (지방세법 시행령 §101② 적용배율).`;
+    }
+  }
+
   // ── 상업용건물·오피스텔 환산취득가 전용 검증 (⑧, 소령 §164⑥, §176조의2②2호) ──
   // ⑧ 동기화 원칙: API buildCommercialBuildingValuation 의 undefined 반환 조건과 동일하게 차단.
   if (asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition) {

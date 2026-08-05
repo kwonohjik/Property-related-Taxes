@@ -39,7 +39,7 @@ import {
   RATE_SPECIAL_REDUCTION_IDS,
 } from "./transfer-reductions/income-deduction-router";
 import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
-import { runMultiHouseSurchargeStep, runNonBusinessLandStep } from "./transfer-tax-judgment-steps";
+import { runMultiHouseSurchargeStep, runNonBusinessLandStep, runCommercialAppurtenantLandStep } from "./transfer-tax-judgment-steps";
 import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
 
 import {
@@ -182,6 +182,12 @@ export function calculateTransferTax(
     parsedRates,
     steps,
   );
+
+  // STEP 0.62: 상업용건물·오피스텔 부수토지 기준면적 초과분 비사업용 판정
+  // (「지방세법 시행령」 §101①2호·§101②). commercialAppurtenantLand 미제공 시 no-op.
+  // STEP 0.35(:249 CB 환산)보다 **먼저** 실행되지만, 그 STEP이 spread로 재구성하므로
+  // 여기서 주입한 isNonBusinessLand·nonBusinessLandAreaRatio는 보존된다.
+  effectiveInput = runCommercialAppurtenantLandStep(effectiveInput, steps);
 
   // STEP 0.65: 재개발/재건축 분기 — 시행령 §166. STEP 1: 비과세 판단
   if (isRedevelopmentActive(effectiveInput.propertyType, effectiveInput.redevelopment)) {

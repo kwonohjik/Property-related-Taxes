@@ -27,6 +27,7 @@ import {
 import { CompanionAcquisitionCauseSection } from "../CompanionAcquisitionCauseSection";
 import { CommercialBuildingBlock } from "../CommercialBuildingBlock";
 import { CommercialInheritanceStdPriceSection } from "../CommercialInheritanceStdPriceSection";
+import { CommercialAppurtenantLandSection } from "../CommercialAppurtenantLandSection";
 import { GeneralBuildingBlock } from "../GeneralBuildingBlock";
 import { RedevelopmentBlock } from "../RedevelopmentBlock";
 import { NonHousingConversionExpandedPanel } from "../NonHousingConversionSection";
@@ -314,6 +315,12 @@ export function AssetSectionAcquisition({
 
       {/* 상속 상가 §164⑥ 취득당시 기준시가 (2005.1.1 전 상속) — max(상증법 평가액, §164⑥). 소령 §163⑨2호. */}
       <CommercialInheritanceStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
+
+      {/* 상업용건물 부수토지 초과분 비사업용 판정 (지방세령 §101①2호·§101②).
+          위 환산 블록과 달리 **취득방법 무관**(상속 포함) — 환산 게이트 밖에 마운트한다. */}
+      {asset.assetKind === "commercial_building" && (
+        <CommercialAppurtenantLandSection asset={asset} onChange={onChange} />
+      )}
 
       {/* 일반건물(토지+건물 일괄) — 취득방법 무관 항상 마운트 (2026-05-10 실거래가 모드 지원) */}
       {asset.assetKind === "general_building" && (

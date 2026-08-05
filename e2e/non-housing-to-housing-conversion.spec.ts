@@ -257,3 +257,65 @@ test.describe("§95⑤ × 상속 취득 — §154⑧3호 통산 배제", () => {
     await expect(page.getByText("비주택 → 주택 용도변경 장기보유특별공제")).toHaveCount(0);
   });
 });
+
+/**
+ * 이월과세 취득 × 용도변경 — C-21 폐지 (2026-08-05)
+ *
+ * 설계: `docs/02-design/features/non-housing-to-housing-conversion-carryover-c21.plan.md`
+ *
+ * 「소득세법」 §95④ 단서가 **전체 보유기간**의 기산일을(증여자 취득일), §95⑥이 그중
+ * **주택으로 보유한 기간**의 기산일을(주거용 사용일) 각각 정한다 — 충돌이 아니라 분담이다.
+ *
+ * ⚠️ UI 위젯은 바뀌지 않았다(토글이 `acquisitionCause`를 보지 않는다) — **바뀐 것은 동작**이다.
+ *    종전에는 validate가 「증여로 취득한 자산입니다」로 막아 계산 자체가 안 됐다.
+ */
+test.describe("§95⑤ × 이월과세 취득 — C-21 폐지", () => {
+  /** 이월과세 필수 입력 — 증여자 취득 2012 → 증여 등기 2018 → 주거용 전환 2022 → 양도 2026 */
+  const CARRYOVER = {
+    acquisitionCause: "carryover_gift",
+    // ⚠️ **실제 폼과 같게 비운다.** 이월과세 입력 UI(`CarryoverGiftBlock`)는 `carryover`
+    //    서브객체만 받고 자산-수준 `acquisitionDate`를 채우지 않는다. 값이 있으면 C-8이
+    //    그 값으로 막혀 **fallback 경로를 타지 않아 검증이 무효**가 된다(2026-08-05 실측).
+    acquisitionDate: "",
+    carryover: {
+      giftRegistryDate: "2018-06-01",
+      donorAcquisitionDate: "2012-03-05",
+      donorAcquisitionCause: "purchase",
+      useEstimatedAcquisition: false,
+      donorAcquisitionPrice: "300000000",
+      giftDateValuation: "700000000",
+      giftTaxAmount: "0",
+      donorRelation: "spouse",
+    },
+  };
+
+  test("이월과세 + 토글 ON이 더 이상 차단되지 않는다 — 계산이 끝까지 간다", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seed(page, CARRYOVER);
+    await calculate(page);
+
+    // 계산 완료의 증거는 `calculate()`가 기다린 「신고서 양식」이다(visible).
+    // 종전 차단 문구가 나오지 않는다.
+    await expect(page.getByText(/증여로 취득한 자산입니다/)).toHaveCount(0);
+    // 이월과세 축도 함께 살아 있다 — 계산 단계 목록에 판정이 들어간다.
+    // ⚠️ 이 단계 목록은 **접힌 섹션 안**이라 `toBeVisible`이 아니라 존재로 확인한다
+    //    (계산 완료 자체는 위 「신고서 양식」이 visible로 보증한다).
+    await expect(page.getByText(/배우자등 이월과세 판정/)).not.toHaveCount(0);
+  });
+
+  test("★ 전환일이 증여 등기접수일 이전이면 차단한다 — 시나리오 B가 기간을 못 나눈다", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    // 전환일 2015-01-01 은 증여자 취득일(2012) 뒤·증여 등기일(2018) 앞 —
+    // 시나리오 A는 통과하지만 B는 취득일 이전이라 엔진이 throw한다. 폼에서 먼저 막아야 한다.
+    await seed(page, { ...CARRYOVER, residentialUseStartDate: "2015-01-01" });
+
+    // 검증은 「세금 계산하기」에서 발화한다 — 단계 이동만으로는 뜨지 않는다.
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    await expect(page.getByText(/증여 등기접수일 이후여야 합니다/).first()).toBeVisible({
+      timeout: 15000,
+    });
+  });
+});

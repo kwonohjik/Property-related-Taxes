@@ -58,7 +58,10 @@ export interface GeneralBuildingFormSlice {
    * 다른 소비처 없음(`transfer-tax-api-gb.ts` → 엔진 `isMetropolitan` 미사용).
    */
   gbIsMetropolitan: boolean;
-  /** 무허가건축물 여부. true 시 전체 비사업용 의제 (§168의11①1호). */
+  /**
+   * 「지방세법 시행령」 §101① 단서 해당 여부 — true 시 부속토지 전량 비사업용.
+   * 무허가 신축 + 불법 용도변경(허가·사용승인 미이행) 포함 — 법제처 해석례 25-0823.
+   */
   gbIsUnregistered: boolean;
 
   /**

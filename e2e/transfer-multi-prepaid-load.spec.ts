@@ -11,6 +11,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { putCalculationRecord } from "./_helpers/history-seed";
+import { openHistoryModal } from "./_helpers/navigation";
 
 /** 단건 양도 이력 record A — 신고일 빠름(기신고분). resultData는 { mode:"single", result } */
 const SINGLE_RECORD = {
@@ -105,14 +106,20 @@ test.describe("다건 양도세 — 이력 불러오기 + 기납부 자동채움
     await page.goto("/calc/transfer-tax/multi");
 
     // 마운트 edit 모드 → 불러오기: A(신고일 빠름)
-    await page.getByTestId("multi-load-history-btn").first().click();
-    await expect(page.getByText("단건 양도 A (E2E)")).toBeVisible({ timeout: 15000 });
+    await openHistoryModal(
+      page,
+      page.getByTestId("multi-load-history-btn").first(),
+      page.getByText("단건 양도 A (E2E)"),
+    );
     await page.getByTestId(`load-record-${SINGLE_RECORD.id}`).click();
     await expect(page.getByText("양도 1번")).toBeVisible({ timeout: 15000 });
 
     // 두 번째 불러오기: C(신고일 늦음 = 확정신고분)
-    await page.getByTestId("multi-load-history-btn").first().click();
-    await expect(page.getByText("단건 양도 C (E2E)")).toBeVisible({ timeout: 15000 });
+    await openHistoryModal(
+      page,
+      page.getByTestId("multi-load-history-btn").first(),
+      page.getByText("단건 양도 C (E2E)"),
+    );
     await page.getByTestId(`load-record-${SINGLE_RECORD_LATE.id}`).click();
     await expect(page.getByText("양도 2번")).toBeVisible({ timeout: 15000 });
 
@@ -125,8 +132,11 @@ test.describe("다건 양도세 — 이력 불러오기 + 기납부 자동채움
   test("다건 이력 불러오기 → 세션 replace, 기납부 auto-fill 없음(배지 부재)", async ({ page }) => {
     await page.goto("/calc/transfer-tax/multi");
 
-    await page.getByTestId("multi-load-history-btn").first().click();
-    await expect(page.getByText("다건 양도 B (E2E)")).toBeVisible({ timeout: 15000 });
+    await openHistoryModal(
+      page,
+      page.getByTestId("multi-load-history-btn").first(),
+      page.getByText("다건 양도 B (E2E)"),
+    );
     await page.getByTestId(`load-record-${MULTI_RECORD.id}`).click();
 
     // replace 후 공통 설정 단계(예정신고 기납부세액 패널) — 자산별 예정세액 부재라 자동 배지 없음

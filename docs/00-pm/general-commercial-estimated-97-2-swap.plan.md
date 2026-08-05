@@ -1,6 +1,8 @@
 # 일반건물·상가 환산 경로 §97②2호 단서 swap 배선 — 구현 계획서
 
-> 상태: **Plan (코딩 미착수)** · 작성 2026-07-21
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `lib/tax-engine/general-building-swap.ts` 가 이 계획서를 인용하며 실재한다.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: 상태: **Plan (코딩 미착수)** · 작성 2026-07-21~~
 > 선행 조사: silent-drop 갭 **확정**(실측). 관련 메모리 `project_general_commercial_building_estimated_swap_unplumbed_open`(OPEN → 갭 CONFIRMED로 승격 필요).
 
 ---

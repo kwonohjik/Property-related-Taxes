@@ -1,6 +1,8 @@
 # 겸용 PHD 3시점 버튼 — Case B는 "주택 전용"으로 (상가는 전용 섹션 일임) 수정 계획서
 
-> 상태: Plan (Do 미착수) · 작성 2026-07-14 · **전면 개정(v2)**: 초판 "commercial>0 게이트" 전제는 오류로 폐기 — §0.1 참조.
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `components/calc/transfer/ThreePointStandardPriceInput.tsx:217` — 계획서 핵심 `enableCommercial` 게이트 실재.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: Plan (Do 미착수) · 작성 2026-07-14 · **전면 개정(v2)**: 초판 "commercial>0 게이트" 전제는 오류로 폐기 — §0.1 참조.~~
 > 대상: `components/calc/transfer/ThreePointStandardPriceInput.tsx` (겸용 PHD 3시점 → `PhdBuildingStdPriceModalButton`)
 > 관련: [[project_transfer_phd_3point_batch_stdprice]] · [[project_transfer_mixed_use_asset_major_stdprice]] · [[feedback_ui_toggle_auto_visibility_policy]] · [[feedback_anchor_correction_legal_priority]]
 

@@ -527,6 +527,11 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevIsSuccessorMember === undefined) a.redevIsSuccessorMember = "";
   if (a.redevCompletionDate === undefined) a.redevCompletionDate = "";
   // ③ 상업용건물·오피스텔 cb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
+  // 부수토지 판정 필드 — 이전 버전 이력에는 없으므로 stale 복원 시 undefined 가드 필수.
+  if (a.cbTotalLandArea === undefined) a.cbTotalLandArea = "";
+  if (a.cbTotalBuildingFootprintArea === undefined) a.cbTotalBuildingFootprintArea = "";
+  if (a.cbZoneType === undefined) a.cbZoneType = "";
+  if (a.cbIsUnregistered === undefined) a.cbIsUnregistered = false;
   if (a.cbEra === undefined) a.cbEra = "";
   // §164⑥ 단서 확인 토글 — 구 세션 미보유 시 false(미확인). 기존 값 보존.
   if (a.cbAcqBuildingStdBy164_5 === undefined) a.cbAcqBuildingStdBy164_5 = false;

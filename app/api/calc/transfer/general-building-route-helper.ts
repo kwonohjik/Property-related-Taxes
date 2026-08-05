@@ -19,8 +19,7 @@ import {
   apportionLandByBusinessArea,
   type GeneralBuildingInput,
 } from "@/lib/tax-engine/general-building-valuation";
-import { getBuildingSiteMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
-import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
+import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { AssetCardForAggregate, GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
@@ -622,31 +621,18 @@ export function calculateGeneralBuildingActualTransfer(
     buildingExp = buildingDirectExpenses ?? actualExpenses - landExpApportioned;
   }
 
-  // NBL 판정
-  let nonBusinessArea = 0;
-  let nonBusinessRatio = 0;
-  let isWithinNblRatio = true;
-
-  if (isUnregistered) {
-    isWithinNblRatio = false;
-    nonBusinessArea = landArea;
-    nonBusinessRatio = 1;
-  } else {
-    if (!zoneType) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT,
-      "일반건물(실거래가): zoneType(용도지역)이 필요합니다.");
-    // 건축물(비주택) 부속토지 — 「소득세법」 제104조의3 제1항 제4호 나목 →
-    //   「지방세법」 제106조 제1항 제2호 → 「지방세법 시행령」 제101조 제1항 제2호·제2항.
-    // 표에 없는 용도지역(residential 등)은 추정 금지 → 차단.
-    const resolved = getBuildingSiteMultiplier(zoneType as ZoneType);
-    if (!resolved) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT,
-      `일반건물(실거래가): 용도지역 "${zoneType}"은 「지방세법 시행령」 제101조 제2항 적용배율표에 대응 항목이 없습니다.`);
-    const { multiplier } = resolved;
-    const allowedArea = buildingFootprintArea * multiplier;
-    isWithinNblRatio = landArea <= allowedArea;
-    nonBusinessArea = Math.max(0, landArea - allowedArea);
-    // 표시용 정밀 비율 (round 미사용 — 분할은 면적 직접)
-    nonBusinessRatio = landArea > 0 ? nonBusinessArea / landArea : 0;
-  }
+  // NBL 판정 — 본체는 공용 헬퍼(`appurtenant-land-excess.ts`). 환산·증축 경로와 공유.
+  const {
+    isWithinLimit: isWithinNblRatio,
+    nonBusinessArea,
+    nonBusinessRatio,
+  } = judgeAppurtenantLandExcess({
+    landArea,
+    buildingFootprintArea,
+    zoneType,
+    isUnregistered,
+    context: "일반건물(실거래가)",
+  });
 
   // 토지 카드 생성 (초과 시 사업용·비사업용 분할 — 인정면적 직접 안분, round 의존 제거)
   const cards: AssetCardForAggregate[] = [];

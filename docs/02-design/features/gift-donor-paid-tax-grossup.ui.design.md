@@ -5,7 +5,9 @@
 > **계획서**: `docs/00-pm/gift-donor-paid-tax-grossup.plan.md`
 > **엔진 설계**: `docs/02-design/features/gift-donor-paid-tax-grossup.engine.design.md`
 > **작성일**: 2026-06-21
-> **상태**: Design (Do 미착수)
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `e2e/gift-donor-paid-grossup.spec.ts` + 대납 gross-up anchor 테스트 실재.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: Design (Do 미착수)~~
 > **법령 검증**: 계획서 §1 KoreanLaw MCP 검증 기준 준용 (MST 276123 시행 20260102)
 
 ---

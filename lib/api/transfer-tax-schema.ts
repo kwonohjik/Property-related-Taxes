@@ -39,10 +39,12 @@ import {
   generalBuildingValuationSchema,
   commercialBuildingValuationSchema,
   commercialInheritanceValuationSchema,
+  commercialAppurtenantLandSchema,
 } from "./transfer-tax-building-schemas";
 export {
   generalBuildingValuationSchema,
   commercialBuildingValuationSchema,
+  commercialAppurtenantLandSchema,
 } from "./transfer-tax-building-schemas";
 export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-building-schemas";
 
@@ -408,6 +410,14 @@ const propertyBaseShape = {
    * propertyType === "building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.
    */
   commercialBuildingValuation: commercialBuildingValuationSchema.optional(),
+  /**
+   * ⑫ 상업용건물·오피스텔 부수토지 기준면적 초과분 판정 입력
+   * (「지방세법 시행령」 §101①2호·§101②).
+   *
+   * 위 환산 필드와 **별개**다 — 취득방법(환산·실거래가·상속) 무관하게 적용된다.
+   * 미정의 시 침묵 stripping 방지를 위해 명시 필수.
+   */
+  commercialAppurtenantLand: commercialAppurtenantLandSchema.optional(),
   /**
    * ⑫ 일반건물(토지+건물 일괄) 환산취득가 계산 입력 (소령 §176의2②, §163⑥).
    * propertyType === "general_building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.

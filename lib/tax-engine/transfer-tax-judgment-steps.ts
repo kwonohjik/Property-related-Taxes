@@ -1,11 +1,13 @@
 /**
  * STEP 0.5 다주택 중과세 판정 · STEP 0.6 비사업용 토지 정밀 판정
+ * · STEP 0.62 상업용건물 부수토지 초과분 판정
  *
  * transfer-tax.ts 800줄 정책에 따라 분리(2026-08-04, Phase A-0).
- * 둘 다 `workingInput`을 읽어 판정 결과를 내고, NBL은 그 결과로 파생 입력
+ * 모두 `workingInput`을 읽어 판정 결과를 내고, 그 결과로 파생 입력
  * (`effectiveInput`)을 만든다. 세액 계산 자체는 하지 않는다.
  */
 import { NBL } from "./legal-codes";
+import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import {
@@ -107,4 +109,54 @@ export function runNonBusinessLandStep(
     }
   }
   return { nonBusinessLandJudgment, effectiveInput };
+}
+
+/**
+ * STEP 0.62 — 상업용건물·오피스텔 부수토지 기준면적 초과분 비사업용 판정.
+ *
+ * 근거: 「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 →
+ *       「지방세법 시행령」 §101①2호(바닥면적 × §101② 적용배율).
+ *
+ * 판정 본체는 GB와 **같은 헬퍼**(`appurtenant-land-excess.ts`)를 쓴다. 구분소유는 지분율이
+ * 판정식에서 약분되므로 집합건물 **전체** 대지·바닥면적만으로 초과 비율이 확정된다
+ * (설계 근거: `commercial-appurtenant.types.ts` 헤더 · 계획서 §2.3 안 ㉮).
+ *
+ * 초과분이 있을 때만 `isNonBusinessLand`를 켠다 — 초과가 0이면 기존 값을 건드리지 않는다.
+ *
+ * ⚠️ `nonBusinessLandAreaRatio`만 주입하고 `isNonBusinessLand`를 켜지 않으면
+ * `transfer-tax-rate-calc.ts`의 중과 분기에 진입하지 못해 **조용히 무효**가 된다.
+ *
+ * @returns 판정 미대상이면 입력을 그대로 반환한다(현행 동작 불변).
+ */
+export function runCommercialAppurtenantLandStep(
+  workingInput: TransferTaxInput,
+  steps: CalculationStep[],
+): TransferTaxInput {
+  const cal = workingInput.commercialAppurtenantLand;
+  if (workingInput.propertyType !== "commercial_building" || !cal) return workingInput;
+
+  const judged = judgeAppurtenantLandExcess({
+    landArea: cal.totalLandArea,
+    buildingFootprintArea: cal.totalBuildingFootprintArea,
+    zoneType: cal.zoneType,
+    isUnregistered: cal.isUnregistered,
+    context: "상업용건물",
+  });
+
+  if (judged.nonBusinessArea <= 0) return workingInput;
+
+  steps.push({
+    label: "부수토지 기준면적 초과분 비사업용 판정",
+    formula:
+      `기준면적 = 건축물 바닥면적 ${cal.totalBuildingFootprintArea}㎡ × ${judged.multiplier}배 = ${judged.allowedLandArea}㎡ · ` +
+      `대지면적 ${cal.totalLandArea}㎡ 중 ${judged.nonBusinessArea}㎡ 초과 (${judged.multiplierDetail})`,
+    amount: 0,
+    legalBasis: NBL.MAIN,
+  });
+
+  return {
+    ...workingInput,
+    isNonBusinessLand: true,
+    nonBusinessLandAreaRatio: judged.nonBusinessRatio,
+  };
 }

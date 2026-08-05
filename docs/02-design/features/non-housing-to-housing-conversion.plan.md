@@ -275,7 +275,7 @@ L-1b는 `transfer-tax-helpers.ts:469-472`가 **`propertyType === "land" && landN
 | **C-18** | 토글 ON + 장기임대 특례율 | **차단**. ⚠️ 판별은 폼값 `asset.reductions`의 `type === "rental_97_3" \| "rental_97_4"`(`calc-wizard-asset-reduction.ts:167·179`) — 엔진 `rentalReductionDetails`는 **폼에 없어 validate가 볼 수 없다** |
 | **C-19** | 토글 ON + 토지/건물 분리취득 | **차단**(`hasSeperateLandAcquisitionDate` — `calc-wizard-asset.ts:395`) **+ 엔진 가드 `!splitDetail`** — 엔진 단독 호출은 validate를 거치지 않는다(design I-15) |
 | **C-20** | 토글 ON + §98의2 / §97의3·의4 | **차단**. `unsold_98_2`(`calc-wizard-asset-reduction.ts:320`)·`rental_97_3`·`rental_97_4` |
-| **C-21** | 토글 ON + 취득원인 **증여·이월과세** | **차단**. §97의2 이월과세와의 우선순위 명문 없음. ~~상속~~은 2026-08-05 **개방**(경합 불성립 — R-C) · 단순 증여는 차단 근거 미상으로 안전측 유지 |
+| ~~C-21~~ | ✅ **폐지** (2026-08-05) | 상속·증여·이월과세 **전부 개방**. 셋 다 명문이 답을 정하거나 요건이 불성립한다 — 상속은 §154⑧3호 「상속받은 **주택**」 전제 불성립, 이월과세는 「소득세법」 §95④ 단서(전체 기간)와 §95⑥(주택 기간)이 **분담**, 단순 증여는 §95④ 단서가 미치지 않는다. 상세: [`...-carryover-c21.plan.md`](non-housing-to-housing-conversion-carryover-c21.plan.md) |
 | **C-22** | 토글 ON + 미등기(L-0) / 중과 적용 중(L-1) | LTHD 배제가 **우선** — 현행 유지(토글 유무와 결과 동일하므로 차단 불요) |
 | **C-23** | `redevelopment_apt` · `right_to_move_in` · `presale_right` | **UI 미노출**(진입이 `housing` 한정) |
 | **C-24** | 토글 ON + 부담부증여 | **차단**. `transferType`(`calc-wizard-asset.ts:224`) |

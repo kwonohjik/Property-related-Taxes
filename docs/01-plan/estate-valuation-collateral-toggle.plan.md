@@ -1,6 +1,8 @@
 # 계획서 — 부동산 평가: 보충적 평가방법·담보·임대 섹션 토글 펼침
 
-> 상태: Plan · 작성일 2026-06-09 · 대상 세목: 상속세·증여세 (부동산 자산)
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `EstateBodySupplementaryValuation.tsx:166-173`(섹션 A — `ToggleCard tone="emerald"` + `title={supplementaryLabel}`)·`EstateBodyRealEstate.tsx` `CollateralLeaseFields` 반환 루트가 `ToggleCard tone="amber"`(섹션 B) — 계획서 §4.1·§4.2 요구 그대로.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: Plan · 작성일 2026-06-09 · 대상 세목: 상속세·증여세 (부동산 자산)~~
 > 범위 확정: **두 섹션 모두** + **ToggleCard(Switch) 패턴** (사용자 확정)
 
 ## 1. 배경 / 문제

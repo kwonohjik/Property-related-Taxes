@@ -1,6 +1,8 @@
 # §99의3 신축주택의 취득자에 대한 양도소득세의 과세특례 — 엔진 설계
 
-> **상태**: Phase 2 Design (Do 진입 전)
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `lib/stores/calc-wizard-asset-reduction.ts` 가 이 계획서를 인용하며 실재한다.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: **상태**: Phase 2 Design (Do 진입 전)~~
 > **선행 산출물**: `docs/00-pm/transfer-reduction-expansion.plan.md`, `docs/02-design/features/transfer-reduction-mapping-audit.md`, `docs/02-design/features/anchors/reduction-99-3-case-2023.md`
 > **작성일**: 2026-05-06
 

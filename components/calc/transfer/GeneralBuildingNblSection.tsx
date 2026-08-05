@@ -22,20 +22,8 @@ import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/Re
 import { getBuildingSiteMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 
-// 「지방세법 시행령」 제101조 제2항 적용배율표 기준 용도지역 선택지.
-// 세분 전 주거지역(residential)은 표에 대응 항목이 없어 선택지에 두지 않는다(추정 배율 금지).
-const GB_ZONE_OPTIONS = [
-  { value: "exclusive_residential", label: "전용주거" },
-  { value: "general_residential",   label: "일반주거" },
-  { value: "semi_residential",      label: "준주거" },
-  { value: "commercial",            label: "상업지역" },
-  { value: "industrial",            label: "공업지역" },
-  { value: "green",                 label: "녹지지역" },
-  { value: "management",            label: "관리지역" },
-  { value: "agriculture_forest",    label: "농림지역" },
-  { value: "natural_env",           label: "자연환경보전" },
-  { value: "unplanned",             label: "도시계획 미지정" },
-];
+// 용도지역 선택지는 CB(상업용건물) 섹션과 공유한다 — `appurtenant-zone-options.ts`.
+import { APPURTENANT_ZONE_OPTIONS } from "./appurtenant-zone-options";
 
 interface Props {
   asset: AssetForm;
@@ -81,12 +69,12 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
             초과분에만 +10%p 중과.
           </p>
 
-          {/* 무허가건축물 — 배율 무관 전체 NBL */}
+          {/* §101① 단서 — 배율 무관 전체 NBL. 무허가 신축뿐 아니라 불법 용도변경도 포함(해석례 25-0823) */}
           <ToggleCard
             tone="rose"
             variant="chip"
-            title="무허가(미등재) 건축물"
-            description="무허가건축물 부속토지는 재산세 별도합산에서 제외되어 토지 전체가 비사업용 (배율 계산 없음)"
+            title="허가·사용승인 미이행 건축물"
+            description="건축허가·사용승인을 받지 않았거나, 용도변경 허가·사용승인 없이 용도를 바꿔 사용 중인 건축물. 부속토지가 재산세 별도합산에서 제외되어 토지 전체가 비사업용 (배율 계산 없음)"
             checked={asset.gbIsUnregistered}
             onCheckedChange={(v) => onChange({ gbIsUnregistered: v })}
           />
@@ -109,7 +97,7 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
                   layout="inline"
                   value={asset.gbZoneType}
                   onChange={(v) => onChange({ gbZoneType: v })}
-                  options={GB_ZONE_OPTIONS}
+                  options={APPURTENANT_ZONE_OPTIONS}
                 />
               </FieldCard>
               <ReferenceSiteLinks className="-mt-1" sites={[REFERENCE_SITES.landUsePlan]} />

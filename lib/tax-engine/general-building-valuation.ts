@@ -18,8 +18,7 @@
 import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
-import { getBuildingSiteMultiplier } from "./non-business-land/urban-area";
-import type { ZoneType } from "./non-business-land/types";
+import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
 import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-extension";
@@ -255,10 +254,12 @@ export type GeneralBuildingInput = {
   /** 수도권 소재 여부. 배율 3배 vs 5배 분기에 사용. */
   isMetropolitan?: boolean;
   /**
-   * 무허가(미등재) 건축물 여부.
-   * true 시 배율 계산 없이 토지 전체 비사업용.
-   * 근거: 지방세법 시행령 §101①단서(무허가건축물 부속토지 재산세 별도합산 제외)
-   *       + 소득세법 §104의3①4호나목 → 비사업용.
+   * 「지방세법 시행령」 §101① **단서** 해당 여부 — true 시 배율 계산 없이 토지 전체 비사업용.
+   * 근거: §101①단서(별도합산 제외) + 「소득세법」 §104의3①4호나목 → 비사업용.
+   *
+   * 이름은 "unregistered"이나 범위는 **허가·사용승인 미이행 전반**이다 — 무허가 신축뿐 아니라
+   * 「건축법」 §19②1호 용도변경 허가·§19⑤·§22 사용승인을 받지 않고 용도를 바꿔 사용 중인
+   * 경우도 포함된다(법제처 법령해석례 25-0823, 2026.02.03).
    */
   isUnregistered?: boolean;
   // ── 사례 35: 주택→상가 용도변경 (사전법규재산 2022-684·881) ──
@@ -678,46 +679,22 @@ export function buildGeneralBuildingAssetCards(
    *   초과분 면적(nonBusinessArea)·비율(nonBusinessRatio) 계산 → 토지 카드 분할 중과.
    */
 
-  // 무허가건축물: 배율 무관 토지 전체 비사업용
-  // 근거: 지방세법 시행령 §101①단서(무허가건축물 부속토지 재산세 별도합산 제외) + 소득세법 §104의3①4호나목 → 비사업용
-  let appliedMultiplier: number;
-  let multiplierDetail: string;
-  let allowedLandArea: number;
-  let isWithinNblRatio: boolean;
-
-  if (input.isUnregistered) {
-    appliedMultiplier = 0;
-    multiplierDetail = "무허가건축물 — 전체 비사업용";
-    allowedLandArea = 0;
-    isWithinNblRatio = false;
-  } else {
-    // 용도지역 미입력 시 엔진 예외 (validate에서 사전 차단해야 함)
-    if (!input.zoneType) {
-      throw new TaxCalculationError(
-        TaxErrorCode.INVALID_INPUT,
-        "일반건물 비사업용토지 판정: zoneType(용도지역)이 입력되지 않았습니다. 계산 전 용도지역을 선택하세요.",
-      );
-    }
-    // 「지방세법 시행령」 제101조 제2항 표에 없는 용도지역(residential 등)은 추정 금지 → 차단
-    const resolved = getBuildingSiteMultiplier(input.zoneType as ZoneType);
-    if (!resolved) {
-      throw new TaxCalculationError(
-        TaxErrorCode.INVALID_INPUT,
-        `일반건물 비사업용토지 판정: 용도지역 "${input.zoneType}"은 「지방세법 시행령」 제101조 제2항 적용배율표에 대응 항목이 없습니다. 세분된 용도지역(전용주거·일반주거·준주거 등)을 선택하세요.`,
-      );
-    }
-    const { multiplier, detail } = resolved;
-    appliedMultiplier = multiplier;
-    multiplierDetail = detail;
-    allowedLandArea = input.buildingFootprintArea * multiplier;
-    isWithinNblRatio = input.landArea <= allowedLandArea;
-  }
-
-  // 초과분 비율 (§104의3 — 초과분만 중과). 표시용 정밀 비율 (round 미사용 — 분할은 면적 직접).
-  const nonBusinessArea = Math.max(0, input.landArea - allowedLandArea);
-  const nonBusinessRatio = input.landArea > 0
-    ? nonBusinessArea / input.landArea
-    : 0;
+  // 판정 본체는 공용 헬퍼(`appurtenant-land-excess.ts`) — GB 환산·증축·실거래가 3경로와
+  // CB가 같은 로직을 공유한다. 여기서 재구현 금지.
+  const {
+    multiplier: appliedMultiplier,
+    multiplierDetail,
+    allowedLandArea,
+    isWithinLimit: isWithinNblRatio,
+    nonBusinessArea,
+    nonBusinessRatio,
+  } = judgeAppurtenantLandExcess({
+    landArea: input.landArea,
+    buildingFootprintArea: input.buildingFootprintArea,
+    zoneType: input.zoneType,
+    isUnregistered: input.isUnregistered,
+    context: "일반건물",
+  });
 
   // Step 5: 자산 카드 생성 (aggregate 엔진 위임용)
   // 초과분이 있으면 토지를 사업용·비사업용 2장으로 분할 (§104의3 초과분만 중과)

@@ -4,7 +4,9 @@
 > 작성일: 2026-05-04
 > 작성자: transfer-tax-ui-senior
 > 참조: `docs/00-pm/transfer-tax-carryover-taxation.plan.md`
-> 상태: Design (Do 진입 전)
+> **상태**: ✅ **구현됨** (2026-08-05 코드 실측) — `components/calc/transfer/CarryoverGiftBlock.tsx` 실재 + 엔진 `transfer-tax-carryover.ts` 연동 — 이월과세 UI 구현됨.
+> ⚠️ **산출물 실재까지만 확인했다** — 개별 Phase 완주 여부는 감사하지 않았다.
+> ~~종전 표기: Design (Do 진입 전)~~
 
 ---
 
