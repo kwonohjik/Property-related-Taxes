@@ -150,6 +150,21 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
 
+  // ── 사치성 재산 중과 (법 §13⑤ 위임) ────────────────────────────────
+  {
+    // 복합 인용 "지방세법 §111①1호 다목(2), 시행령 §28" 뒤쪽 조문
+    id: "LOCAL_DECREE.LUXURY_PROPERTY_SCOPE",
+    citation: "지방세법 시행령 §28",
+    keywords: [
+      "골프장 등의 범위와 적용기준",
+      "고급주택",
+      "고급오락장",
+      "331제곱미터",
+      "662제곱미터",
+    ],
+    keywordMode: "ALL",
+  },
+
   // ── 과세자료 통보 ──────────────────────────────────────────────────
   {
     id: "LOCAL_DECREE.TAX_DATA_ANALYSIS_UNIT",

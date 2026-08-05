@@ -12,7 +12,7 @@
  * 이 파일은 수집된 인용 배열을 받아 순수 계산만 한다.
  */
 
-import { parseCitation, LAW_ALIAS } from "./citation-parser";
+import { parseCitation, parseCitations, LAW_ALIAS } from "./citation-parser";
 import { VERIFICATION_MANIFEST } from "./verifier-manifest";
 
 /** 알려진 법령 약칭/정규명 집합 — 비인용 문자열을 걸러내는 화이트리스트 */
@@ -28,10 +28,34 @@ const KNOWN_ABBRS = new Set(Object.keys(LAW_ALIAS));
  */
 export const KNOWN_ABSENT_ARTICLES = new Set<string>([]);
 
-/** 문자열이 알려진 법령 조문 인용인지 판정 */
+/**
+ * 조문 단위 자동 검증이 **원리적으로 불가능한** 인용의 법령명(파싱된 `lawAbbr` 기준).
+ *
+ * 법제처 조문 API(`lawService.do`)는 **본칙 조문**만 내려준다. 부칙·국세청 훈령은
+ * 조회 대상이 아니라 키워드 대조 자체를 할 수 없다. 그래서 이 인용들은 커버리지
+ * 모수에서 빠지는데, **빠지는 이유가 코드 어디에도 적혀 있지 않으면 "미등록"과
+ * 구별되지 않는다** — 실제로 시행령 60여 건이 같은 방식으로 몇 달간 숨어 있었다.
+ *
+ * ⇒ 여기에 **이유와 함께 명시**하고, `legal-verification-unverifiable.test.ts`가
+ *   "모수 밖 법령 = 정확히 이 목록"을 강제한다. 새 법령이 모수 밖으로 새면 즉시 빨개진다.
+ *
+ * ⚠️ 항목을 늘리는 것은 갭을 넓히는 방향이다. 추가 전에 정말 조문 API로 조회
+ *    불가능한지 확인할 것 — 약칭이 `LAW_ALIAS`에 없을 뿐이면 그쪽에 등재하면 된다.
+ */
+export const UNVERIFIABLE_LAW_NAMES: Record<string, string> = {
+  "조특법 부칙":
+    "부칙 경과조치(공익사업 수용 감면 종전 감면율) — 조문 API는 본칙만 조회 가능",
+  "지방세법 법률":
+    "법률 제19230호 부칙 §15(주택 세부담상한 경과조치) — 부칙이라 조회 불가",
+  "부칙":
+    "법률 제12848호 부칙 §10②(2015.7.1. 이후 양도분 납부세액 기준) — 부칙이라 조회 불가",
+  "상증 평가준칙":
+    "국세청 「상속세 및 증여세 재산평가 준칙」 — 훈령이라 법제처 조문 API 대상이 아님",
+};
+
+/** 문자열이 알려진 법령 조문 인용인지 판정 (복합 인용은 하나라도 알려진 법령이면 참) */
 export function isLegalCitation(s: string): boolean {
-  const p = parseCitation(s);
-  return p !== null && KNOWN_ABBRS.has(p.lawAbbr);
+  return parseCitations(s).some((p) => KNOWN_ABBRS.has(p.lawAbbr));
 }
 
 /**
@@ -43,6 +67,17 @@ export function articleKey(citation: string): string | null {
   const p = parseCitation(citation);
   if (!p || !KNOWN_ABBRS.has(p.lawAbbr)) return null;
   return `${p.lawFullName} ${p.articleNo}`;
+}
+
+/**
+ * 한 인용 문자열이 가리키는 **모든** 조문 키를 반환한다(복합 인용 대응).
+ * 예: "소득세법 시행령 §168조의11 ② + 소득세법 시행규칙 §83조의4"
+ *     → ["소득세법 시행령 제168조의11", "소득세법 시행규칙 제83조의4"]
+ */
+export function articleKeys(citation: string): string[] {
+  return parseCitations(citation)
+    .filter((p) => KNOWN_ABBRS.has(p.lawAbbr))
+    .map((p) => `${p.lawFullName} ${p.articleNo}`);
 }
 
 export interface CoverageGap {
@@ -68,9 +103,8 @@ export function computeCoverageGap(citedCitations: string[]): CoverageGap {
       (k): k is string => k !== null,
     ),
   );
-  const citedKeys = new Set(
-    citedCitations.map(articleKey).filter((k): k is string => k !== null),
-  );
+  // 복합 인용("A법 §1 + B법 §2")은 조문이 여럿이므로 flatMap으로 전부 편다
+  const citedKeys = new Set(citedCitations.flatMap(articleKeys));
 
   const absent = [...citedKeys]
     .filter((k) => KNOWN_ABSENT_ARTICLES.has(k))

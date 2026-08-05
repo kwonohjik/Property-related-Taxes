@@ -16,6 +16,7 @@ import * as burdenedGift from "@/lib/tax-engine/legal-codes/burdened-gift";
 import * as common from "@/lib/tax-engine/legal-codes/common";
 
 import { isLegalCitation } from "./coverage";
+import { parseCitations, LAW_ALIAS } from "./citation-parser";
 
 const MODULES: unknown[] = [
   transfer,
@@ -57,4 +58,33 @@ export function collectCitedCitations(): string[] {
     collectStrings(mod, allStrings, seen);
   }
   return allStrings.filter(isLegalCitation);
+}
+
+/**
+ * 조문 인용처럼 파싱되지만 **법령명이 `LAW_ALIAS`에 없어 커버리지 모수에서 빠지는**
+ * 인용을 법령명별로 모은다.
+ *
+ * `collectCitedCitations`의 여집합이다. 모수에서 빠지는 것 자체는 정상일 수 있지만
+ * (부칙·훈령은 조문 API로 조회 불가), **빠지는 줄도 모르는 상태**는 정상이 아니다 —
+ * `legal-verification-unverifiable.test.ts`가 이 결과를 `UNVERIFIABLE_LAW_NAMES`와
+ * 대조해 새로 새는 법령을 잡는다.
+ */
+export function collectUnknownLawCitations(): Map<string, string[]> {
+  const seen = new WeakSet<object>();
+  const allStrings: string[] = [];
+  for (const mod of MODULES) {
+    collectStrings(mod, allStrings, seen);
+  }
+
+  const known = new Set(Object.keys(LAW_ALIAS));
+  const byLaw = new Map<string, string[]>();
+  for (const s of allStrings) {
+    for (const parsed of parseCitations(s)) {
+      if (known.has(parsed.lawAbbr)) continue;
+      const list = byLaw.get(parsed.lawAbbr) ?? [];
+      if (!list.includes(s)) list.push(s);
+      byLaw.set(parsed.lawAbbr, list);
+    }
+  }
+  return byLaw;
 }

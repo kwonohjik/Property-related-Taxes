@@ -346,6 +346,56 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
 
+  // ══ 🆕 복합 인용 파서가 드러낸 조문 ═════════════════════════════════
+  // "상증법 §61③·상증령 §51·상증규 §16"처럼 한 문자열에 여러 조문이 들어 있어
+  // 앞 조문만 파싱되던 것들. `parseCitations`로 전부 펴면서 모수에 들어왔다.
+  {
+    id: "INH_DECREE.GAIN_CALC_METHOD",
+    citation: "상증령 §32의4",
+    keywords: [
+      "이익의 계산방법",
+      "해당 이익별로 합산하여 각각의 금액기준을 계산",
+      "저가 양수 및 고가 양도에 따른 이익",
+      "금전무상대출에 따른 이익",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH_DECREE.SUPERFICIES_VALUATION",
+    citation: "상증령 §51",
+    keywords: [
+      "지상권등의 평가",
+      "지상권이 설정되어 있는 토지의 가액",
+      "잔존연수",
+      "특정시설물을 이용할 수 있는 권리",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH_DECREE.CONVERTIBLE_BOND_VALUATION",
+    citation: "상증령 §58의2",
+    keywords: ["전환사채등의 평가", "신주인수권증서", "적정할인율", "사채발행이율"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH_DECREE.ANNUITY_VALUATION",
+    citation: "상증령 §62",
+    keywords: [
+      "정기금을 받을 권리의 평가",
+      "유기정기금",
+      "무기정기금",
+      "종신정기금",
+      "1년분 정기금액의 20배",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH_RULE.SUPERFICIES_RATE",
+    citation: "상증칙 §16",
+    keywords: ["지상권의 평가등", "연간 100분의 2", "조합원권리가액"],
+    keywordMode: "ALL",
+  },
+
   // ══ 조세특례제한법 시행령 (증여세 감면) ═════════════════════════════
   {
     id: "GIFT_DECREE.FARMING_CHILD_EXEMPTION",

@@ -374,11 +374,46 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
 
+  {
+    // 복합 인용 "소득세법 §102 ② + 시행령 §167의2" 뒤쪽 조문
+    id: "TRANSFER_DECREE.LOSS_OFFSET",
+    citation: "소득세법 시행령 §167의2",
+    keywords: [
+      "양도차손의 통산",
+      "같은 세율을 적용받는 자산의 양도소득금액",
+      "안분하여 공제",
+    ],
+    keywordMode: "ALL",
+  },
+
   // ══ 소득세법 시행규칙 ═══════════════════════════════════════════════
   {
     id: "TRANSFER_RULE.STD_PRICE_LAND_BUILDING",
     citation: "소득세법 시행규칙 §80",
     keywords: ["기준시가 조정월수", "전기의 기준시가", "취득당시의 기준시가"],
+    keywordMode: "ALL",
+  },
+  {
+    // 복합 인용 "소득세법 시행령 §168조의11 ② + 소득세법 시행규칙 §83조의4" 뒤쪽 조문 —
+    // 앞 조문만 파싱되던 탓에 그동안 모수 밖이었다.
+    id: "TRANSFER_RULE.NBL_OTHER_LAND_AREA",
+    citation: "소득세법 시행규칙 §83의4",
+    keywords: [
+      "선수전용 체육시설의 기준면적",
+      "종업원 체육시설의 기준면적",
+      "대한체육회에 가맹된 경기단체",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_RULE.NBL_UNAVOIDABLE_PERIOD",
+    citation: "소득세법 시행규칙 §83의5",
+    keywords: [
+      "부득이한 사유가 있어 비사업용 토지로 보지 아니하는 토지의 판정기준",
+      "건축허가가 제한된 기간",
+      "착공이 제한된 기간",
+      "공공공지",
+    ],
     keywordMode: "ALL",
   },
   {
