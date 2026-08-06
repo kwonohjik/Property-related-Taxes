@@ -132,39 +132,51 @@ test.describe("양도 방식 게이팅 — 취득과 독립", () => {
 });
 
 /**
- * 양도시 기준시가 **배치** — "쓰는 섹션 아래"에만 노출 (사용자 이미지 6·7).
- * 계획서: docs/02-design/features/transfer-split-std-price-colocation.plan.md
+ * 양도시 기준시가 **배치**.
+ *
+ * 🔴 **Phase 1-D(2026-08-06)에서 계약이 뒤집혔다 — 배치가 불변이 됐다(항상 축 A).**
+ *
+ * 종전(2026-07-30 co-location): 「일괄양도 → 축 A · 구분양도 → 그 값을 쓰는 **환산 파트 섹션**」.
+ * 그 전제는 「구분양도에서 이 값은 파트 환산 분모로만 쓰인다」였는데, 「소득세법」 제100조 제3항이
+ * 구분 기재 가액을 **안분계산한 가액과 비교**하도록 요구하면서 깨졌다 — 구분양도에서도 토지·건물
+ * 기준시가가 **양쪽 다** 필요하고, 그것은 특정 파트의 값이 아니라 **양도가액 축**에 속한다.
+ *
+ * ⇒ `saleStdPlacement()`가 인자 없는 상수 함수가 되어 파트 카드는 **도달하지 않는다**.
+ *   describe를 지우지 않고 계약을 반전한다(vitest `split-std-price-colocation.test.tsx`와 동일).
+ *
+ * 계획서: `general-building-sale-split-mode.plan.md` §12.7 · §14.1
+ *       (구 배치: `transfer-split-std-price-colocation.plan.md`)
  */
-test.describe("양도시 기준시가 배치 — 구분양도 + 파트 환산", () => {
+test.describe("양도시 기준시가 배치 — 항상 축 A (Phase 1-D)", () => {
   const saleAxisCard = (p: Page) => p.getByTestId("split-sale-std-card");
   const landPartCard = (p: Page) => p.getByTestId("split-land-std-transfer-card");
   const buildingPartCard = (p: Page) => p.getByTestId("split-building-std-transfer-card");
 
-  test("이미지 6 — 토지만 환산 → 토지 섹션에만 양도시 카드, 건물 계산 기능 미노출", async ({ page }) => {
+  test("구분양도 + 토지만 환산 → 파트 섹션이 아니라 축 A에 있다", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
     await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
     await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
 
-    await expect(saleAxisCard(page), "구분양도에는 안분 비율이 없다").toHaveCount(0);
-    await expect(landPartCard(page)).toBeVisible();
-    await expect(buildingPartCard(page)).toHaveCount(0);
     await expect(
-      page.getByRole("button", { name: /양도시 건물 기준시가 계산/ }),
-      "건물이 실지거래가액이면 건물 양도시 기준시가는 계산에 등장하지 않는다",
-    ).toHaveCount(0);
+      saleAxisCard(page),
+      "구분양도에도 §100③ 30% 판정의 비교 대상(안분가액)이 필요하다",
+    ).toBeVisible();
+    await expect(landPartCard(page), "파트 배치는 1-D에서 폐기됐다").toHaveCount(0);
+    await expect(buildingPartCard(page)).toHaveCount(0);
   });
 
-  test("이미지 7 — 건물만 환산 → 건물 섹션에만 양도시 카드 + 계산 런처", async ({ page }) => {
+  test("구분양도 + 건물만 환산 → 같은 축 A 카드 하나뿐이다", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
     await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
     await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
 
-    await expect(saleAxisCard(page)).toHaveCount(0);
-    await expect(buildingPartCard(page)).toBeVisible();
+    await expect(saleAxisCard(page)).toBeVisible();
+    await expect(buildingPartCard(page)).toHaveCount(0);
+    await expect(landPartCard(page)).toHaveCount(0);
+    // 건물 양도시 기준시가 런처는 축 A 카드 안에 있다 — 파트 모드와 무관하다.
     await expect(page.getByRole("button", { name: /양도시 건물 기준시가 계산/ })).toBeVisible();
-    await expect(landPartCard(page), "토지가 실지거래가액이면 토지 기준시가 기능은 불필요").toHaveCount(0);
   });
 
   /**
@@ -192,25 +204,32 @@ test.describe("양도시 기준시가 배치 — 구분양도 + 파트 환산", 
     await expect(page.getByTestId("split-acq-std-readonly")).toHaveCount(0);
     await expect(page.getByTestId("acq-std-required-mark")).toHaveCount(0);
 
-    // 이미지 10·12 — 런처 1개로 **취득·양도를 한 번에** 계산한다(2시점 통합 모달).
-    await page.getByRole("button", { name: "건물 기준시가 계산" }).click();
+    // 🔴 Phase 1-D — **2시점 통합 런처가 시점별로 분리됐다.** 통합 런처는 co-location 배치
+    //    (양도시 값이 파트 섹션에 있던 구조)에서만 성립했는데, 양도시 값이 축 A로 옮겨지면서
+    //    한 버튼이 두 섹션을 건드리게 되어 성립하지 않는다.
+    await expect(
+      page.getByRole("button", { name: "건물 기준시가 계산", exact: true }),
+      "통합 런처는 1-D에서 폐기됐다",
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "취득시 건물 기준시가 계산" }).click();
     const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
     await expect(modal).toBeVisible();
     await expect(modal.getByText("취득당시 구조")).toBeVisible();
     await expect(modal.getByText("취득당시 용도")).toBeVisible();
-    await expect(modal.getByText("양도당시 구조"), "2시점 모달은 양도 시점도 함께 입력한다").toBeVisible();
   });
 
-  test("일괄양도로 되돌리면 카드가 축 A로 복귀한다 (상호배타)", async ({ page }) => {
+  test("모드를 오가도 카드는 축 A에 머문다 — 이동하지 않는다 (1-D 계약 반전)", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
     await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
     await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
-    await expect(landPartCard(page)).toBeVisible();
+    await expect(saleAxisCard(page)).toBeVisible();
+    await expect(landPartCard(page)).toHaveCount(0);
 
     await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
     await expect(saleAxisCard(page)).toBeVisible();
-    await expect(landPartCard(page), "같은 카드가 두 곳에 동시 노출되면 안 된다").toHaveCount(0);
+    // 불변식은 유지된다 — 같은 카드가 두 곳에 동시 노출되면 E2E strict mode가 깨진다.
+    await expect(landPartCard(page)).toHaveCount(0);
   });
 });
 
@@ -427,13 +446,13 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
       "가리킬 대상이 사라진 안내는 dangling reference",
     ).toHaveCount(0);
 
-    // 환산으로 되돌리면 취득시 카드가 복귀하고, 양도시 카드도 **같은 파트 섹션**에 나타난다
-    // (2026-07-30 배치 — 구분양도에서 양도시 기준시가는 그 파트의 환산 분모 전용).
+    // 환산으로 되돌리면 **취득시** 카드가 복귀한다. 양도시 카드는 Phase 1-D부터 파트 섹션에
+    // 오지 않는다(항상 축 A) — 안내 문구도 그에 맞춰 축 A를 가리켜야 dangling reference가 아니다.
     await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
     await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
-    await expect(page.getByTestId("split-land-std-transfer-card")).toBeVisible();
+    await expect(page.getByTestId("split-land-std-transfer-card")).toHaveCount(0);
     await expect(page.getByTestId("split-land-estimated-note")).toContainText(
-      "위 「토지 양도시 기준시가」 카드",
+      "위 「양도시 기준시가」 카드(양도가액 결정 방식 아래)",
     );
   });
 
