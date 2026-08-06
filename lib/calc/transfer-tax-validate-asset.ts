@@ -20,6 +20,8 @@ import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
 import { sec164PartialInputError } from "./transfer-tax-validate-sec164";
 import { sec164CommercialStatus, isFullyFilled } from "./sec164-required-fields";
 import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
+import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
+import { clauseADeclarationError } from "./transfer-tax-validate-clause-a";
 import { isPhdEligible } from "./phd-eligibility";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
@@ -120,6 +122,14 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   const sec164Error = sec164PartialInputError(asset, label);
   if (sec164Error) return sec164Error;
 
+  // ── E-1: 「가목 확인 불가」 명시 선언 (법 §97①1호 단서 · U2-E) ──
+  // pre-deemed에서 ①·② 모두 미충족이면 엔진이 **조용히** ③(나목)으로 간다. 법문상 나목은
+  // 「가목을 확인할 수 없는 경우에 한정」이므로, 그 예외에 해당함을 선언하게 한다.
+  // ⚠️ **§164 부분입력 차단 뒤**여야 한다 — 앞에 두면 「②를 절반 채운」 사용자가 선언 요구를
+  //    먼저 받아 정작 채우다 만 칸을 못 찾는다. 술어는 ⑤ UI와 공유(`needsClauseADeclaration`).
+  const clauseAError = clauseADeclarationError(asset, label);
+  if (clauseAError) return clauseAError;
+
   // ── 상업용건물·오피스텔 + 상속 (소령 §163⑨) — 환산 검증 전 우선 인터셉트 ──
   // §163⑨: 상속 상가는 상속개시일 상증법 평가액을 취득당시 실지거래가액으로 의제(환산 아님).
   // 아래 환산 블록(useEstimatedAcquisition 게이트)·generic 취득 검증(if(!isEstimated))은 stale
@@ -127,9 +137,17 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   if (asset.assetKind === "commercial_building" && asset.acquisitionCause === "inheritance") {
     if (!asset.acquisitionDate) return `${label}: 취득일(상속개시일)을 입력하세요.`;
     if (!asset.decedentAcquisitionDate) return `${label}: 피상속인 취득일을 입력하세요.`;
-    // 환산 제거 후 상속 상가의 유일 취득원 → 필수(generic housing/land의 line 530 "미필수(엔진 0)"와
-    // 달리 대체 취득원 부재). API buildInheritedAcquisitionPayload(post-deemed)도 reportedRaw>0 요구 → 정합.
-    if (!parseAmount(asset.publishedValueAtInheritance) || parseAmount(asset.publishedValueAtInheritance) <= 0)
+    // ① 필수 — 다만 **「①이 유일 취득원」은 거짓**이었다(D-5 · 2026-08-07).
+    //   §163⑨**2호**는 「평가액과 §164⑤~⑦ 가액 **중 많은 금액**」이므로 **② 단독도 가목**이고,
+    //   엔진도 그렇게 계산한다(`clauseA = max(①,②)`). ①만 요구하면 ②를 다 채운 사용자가
+    //   막힌다(probe Y-5). pre-deemed에는 ③(환산)까지 있어 「확인 불가」 선언도 통과 사유다.
+    //   ⚠️ post-deemed는 나목이 §163⑨ 의제로 대체돼 **③이 없다** — 선언해도 갈 곳이 없어
+    //      인정하지 않는다(anchor X-12c).
+    const cbClauseAOk =
+      parseAmount(asset.publishedValueAtInheritance) > 0 ||
+      isFullyFilled(sec164CommercialStatus(asset)) ||
+      (isSec163_9PreDeemed(asset) && asset.preDeemedClauseAUnconfirmed === true);
+    if (!cbClauseAOk)
       return `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`;
     // §164⑥ **부분 입력 차단은 진입부 `sec164PartialInputError`로 이관**(2026-08-06) — 증여도
     // 같은 규정(§163⑨2호)인데 이 블록은 상속 전용이라 도달하지 못했고, 필드 목록이 빌더와
@@ -581,8 +599,12 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
         !asset.decedentCohabitationHoldingStartDate
       )
         return `${label}: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)`;
-      // P2c: 상속 취득가액은 신고가액(publishedValueAtInheritance) 단일 경로로 항상 전송 →
-      // 별도 취득가액 필수 검증 불요(엔진이 미입력 시 0 처리, UI/API 통과 ↔ validate 차단 모순 방지).
+      // ~~P2c: 별도 취득가액 필수 검증 불요(엔진이 미입력 시 0 처리)~~
+      // 🔴 **2026-08-07 정정** — 「엔진이 0 처리」는 **3자 max 시절의 판단**이다. #1089가 가목
+      //   우선으로 재편한 뒤로 ①·② 미입력은 **「가목 확인 불가」를 선언한 것과 같은 효과**를 내어
+      //   법문상 나목이 금지된 구간에서 나목이 적용된다. ⇒ 진입부 **E-1**(`clauseADeclarationError`)이
+      //   담당한다. 「UI/API 통과 ↔ validate 차단 모순」 우려는 E-1이 **선언 토글이라는 통과 경로를
+      //   함께** 주므로 발생하지 않는다(dead-end 회피 — memory `feedback_ui_gate_removes_sole_input_path`).
     }
   }
 

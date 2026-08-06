@@ -285,10 +285,10 @@ export function CompanionAcquisitionCauseSection({
           환산(나목)과 무관한 가목 입력이라 환산 모드 토글 밖에 둔다. */}
       <GiftLandStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
 
-      {/* 의제취득일 前 상속·증여 + 추계 + ① 미입력 → §163⑨ 평가액이 계산에 안 들어간다는 안내.
-          차단이 아니다(pre-deemed는 §176조의2④ 적용 영역이기도 하다). 자체 게이트를 가지므로
-          취득원인 분기 없이 마운트한다 — 상속·증여 양쪽을 한 컴포넌트가 커버한다. */}
-      <PreDeemedEstimatedNotice asset={asset} />
+      {/* 의제취득일 前 상속·증여 + ①·② 미충족 → §163⑨ 평가액 미반영 안내 + 「가목 확인 불가」 선언.
+          E-1(U2-E)로 **차단이 붙었다** — 선언이 없으면 `clauseADeclarationError`가 계산을 막는다.
+          자체 게이트(⑧ validate와 같은 술어)를 가지므로 취득원인 분기 없이 마운트한다. */}
+      <PreDeemedEstimatedNotice asset={asset} onChange={onChange} />
 
       {asset.acquisitionCause === "carryover_gift" && (
         <CarryoverGiftBlock

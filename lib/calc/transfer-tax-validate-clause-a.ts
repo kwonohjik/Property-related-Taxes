@@ -1,0 +1,94 @@
+/**
+ * E-1 — 「가목(§163⑨ 평가액)을 확인할 수 없음」 **명시 선언** 요구 (U2-E).
+ *
+ * 「소득세법」 §97①1호 **단서**: "가목의 실지거래가액을 확인할 수 없는 경우에 **한정**하여
+ * 나목의 금액을 적용한다". 시행령 §163⑨은 상속·증여 자산의 취득가액을 「기준일 현재 상증법
+ * §60~66 평가액」으로 **보고**(가목), 같은 조 1호·2호는 기준시가 고시 前 취득에 「그 평가액과
+ * §164④~⑦ 가액 **중 많은 금액**」을 쓰게 한다 ⇒ **② 단독도 가목**이다.
+ *
+ * 현행 엔진은 `clauseA = max(①,②)`가 **0이면** ③(환산·나목)으로 간다
+ * (`inheritance-acquisition-price.ts`). 즉 **비워두면 자동으로 나목**이다 —
+ * 「확인할 수 없다」를 사용자가 선언한 적이 없는데도 법문상 예외 경로가 열린다.
+ *
+ * ⇒ ①·② 모두 미충족이면 **차단**하고, 선언(`preDeemedClauseAUnconfirmed`)이 있을 때만 통과시킨다.
+ *
+ * ## 경계 — 선언은 ③(나목)이 **있는** 구간에서만 효력이 있다
+ *
+ * · **post-deemed**: 나목이 §163⑨ 의제로 대체돼 ③이 없다. 선언해도 갈 곳이 없어 무의미하다.
+ * · **증여 · 실거래가**: 이미 「증여 신고가액을 입력하세요」가 막는다. E-1이 앞서면 그 메시지가
+ *   사라지고, 선언으로 **뚫리는** 완화가 되어 버린다 ⇒ 추계 계열에서만 적용한다.
+ *
+ * 이 경계가 무너지면 E-1은 강화가 아니라 완화다(설계서 §5 X-7·X-12c).
+ *
+ * ⚠️ **엔진에 보내지 않는다.** 선언은 validate 계층 게이트이고, 결과는 payload에 이미 드러난다
+ *    (① 미입력 → `reportedValue` 키 부재 → `clauseA=0` → `converted`).
+ *
+ * 설계: docs/02-design/features/pre-deemed-clause-a-confirmation-criteria.engine.design.md §4.2
+ */
+
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
+import {
+  isFullyFilled,
+  sec164CommercialStatus,
+  sec164HouseStatus,
+  sec164LandStatus,
+} from "./sec164-required-fields";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+
+/**
+ * ②(§164④~⑦)가 **가목으로 성립**하는가 — 3경로 중 하나라도 완전 충족.
+ *
+ * ⚠️ `sec164PartialInputError`가 토지에 적용하는 `hasPre1990` **제외 로직은 가져오지 않는다**.
+ *    그 제외는 「기존 환산 검증과 메시지가 중복되니까」라는 **표시상의 이유**이지, ②가 가목으로
+ *    성립하는지와는 무관하다. 가져오면 토지 `hasPre1990` 경로에서 ②를 「미충족」으로 잘못 읽어
+ *    **과잉 차단**한다(anchor X-14b).
+ */
+export function isSec164ClauseAFilled(asset: AssetForm): boolean {
+  return (
+    isFullyFilled(sec164HouseStatus(asset)) ||
+    isFullyFilled(sec164CommercialStatus(asset)) ||
+    isFullyFilled(sec164LandStatus(asset))
+  );
+}
+
+/** ①(상증법 평가액)의 소스는 취득원인별로 다르다 — 상속은 공시가격 필드, 증여는 「증여 신고가액」. */
+function clauseAReportedValue(asset: AssetForm): number {
+  const raw =
+    asset.acquisitionCause === "gift" ? asset.fixedAcquisitionPrice : asset.publishedValueAtInheritance;
+  return parseAmount(raw ?? "");
+}
+
+/** 추계 계열(환산·감정가액·매매사례) — 「나목으로 가려는」 상태. */
+function isEstimatingMode(asset: AssetForm): boolean {
+  return (
+    asset.useEstimatedAcquisition === true ||
+    asset.isAppraisalAcquisition === true ||
+    asset.isSalesCaseAcquisition === true
+  );
+}
+
+/**
+ * 「가목 확인 불가」 선언이 **필요한 상태**인가 — ⑤ UI와 ⑧ validate가 **공유하는 단일 술어**.
+ *
+ * 어긋나면 「토글은 보이는데 차단은 안 되는」(또는 그 반대) 침묵 실패가 된다
+ * (memory `feedback_shared_predicate_argument_parity`).
+ */
+export function needsClauseADeclaration(asset: AssetForm): boolean {
+  if (!isSec163_9PreDeemed(asset)) return false;
+  // 증여 실거래가는 「증여 신고가액을 입력하세요」가 이미 막는다 — 여기서 앞지르면 완화가 된다.
+  if (asset.acquisitionCause === "gift" && !isEstimatingMode(asset)) return false;
+  if (clauseAReportedValue(asset) > 0) return false;
+  if (isSec164ClauseAFilled(asset)) return false;
+  return true;
+}
+
+/** 선언이 필요한데 하지 않았으면 오류 메시지, 아니면 null. */
+export function clauseADeclarationError(asset: AssetForm, label: string): string | null {
+  if (!needsClauseADeclaration(asset)) return null;
+  if (asset.preDeemedClauseAUnconfirmed === true) return null;
+  return (
+    `${label}: 「소득세법」 §97①1호 단서상 환산 등 추계는 **가목(§163⑨ 평가액)을 확인할 수 없는 경우에 한정**됩니다. ` +
+    `기준일 현재 상증법 평가액이나 §164④~⑦ 기준시가를 입력하거나, 「가목을 확인할 수 없음」을 선택하세요.`
+  );
+}

@@ -146,6 +146,17 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   isReplotIncrement: boolean;
   /** 상속개시일 직전 공시가격: 토지=원/㎡, 주택=원 총액 */
   publishedValueAtInheritance: string;
+  /**
+   * 「가목(§163⑨ 평가액)을 확인할 수 없음」 명시 선언 — pre-deemed(기준일 < 1985.1.1.) 전용.
+   *
+   * 「소득세법」 §97①1호 **단서**는 나목(환산 등 추계)을 「가목의 실지거래가액을 확인할 수 없는
+   * 경우에 **한정**」한다. ①(상증법 평가액)도 ②(§164④~⑦)도 없으면 그 예외에 해당한다고
+   * **선언**해야 나목으로 갈 수 있다 — 비워둔 것이 곧 선언은 아니다.
+   *
+   * ⚠️ **엔진에 보내지 않는다**(validate 계층 게이트). 선언 결과는 payload에 이미 드러난다 —
+   *    ① 미입력이면 `reportedValue` 키가 실리지 않아 `clauseA=0` → `converted`로 간다.
+   */
+  preDeemedClauseAUnconfirmed: boolean;
   /** 직접 입력 취득가액 (매매 actual / 상속 manual / 증여 신고가액) */
   fixedAcquisitionPrice: string;
 
