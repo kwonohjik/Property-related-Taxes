@@ -17,6 +17,7 @@ import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { GiftHouseStdPriceSection } from "./GiftHouseStdPriceSection";
 import { GiftLandStdPriceSection } from "./GiftLandStdPriceSection";
+import { PreDeemedEstimatedNotice } from "./PreDeemedEstimatedNotice";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
@@ -283,6 +284,11 @@ export function CompanionAcquisitionCauseSection({
       {/* 증여 토지 §164④ 취득당시 기준시가 — max(증여일 상증법 평가액, §164④). 소령 §163⑨1호.
           환산(나목)과 무관한 가목 입력이라 환산 모드 토글 밖에 둔다. */}
       <GiftLandStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
+
+      {/* 의제취득일 前 상속·증여 + 추계 + ① 미입력 → §163⑨ 평가액이 계산에 안 들어간다는 안내.
+          차단이 아니다(pre-deemed는 §176조의2④ 적용 영역이기도 하다). 자체 게이트를 가지므로
+          취득원인 분기 없이 마운트한다 — 상속·증여 양쪽을 한 컴포넌트가 커버한다. */}
+      <PreDeemedEstimatedNotice asset={asset} />
 
       {asset.acquisitionCause === "carryover_gift" && (
         <CarryoverGiftBlock
