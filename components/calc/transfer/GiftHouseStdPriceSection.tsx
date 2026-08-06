@@ -26,6 +26,7 @@ import {
   isSec163_9House,
   HOUSE_FIRST_DISCLOSURE,
 } from "@/lib/calc/transfer-163-9-base-date";
+import { sec164HouseStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -38,6 +39,8 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
   // 기준일·자산 판정은 API payload 빌더(`buildInheritedHouseValuationPayload`)와 **같은 함수**.
   // 여기서 재기술하면 "칸은 보이는데 payload는 안 생기는" 어긋남이 생긴다.
   const giftDate = deriveSec163_9BaseDate(asset);
+  // 필수 항목 개수는 단일 소스에서 받는다 — 문구에 숫자를 하드코딩하면 필드가 늘 때 낡는다.
+  const status = sec164HouseStatus(asset);
   if (
     asset.acquisitionCause !== "gift" ||
     !isSec163_9House(asset.assetKind) ||
@@ -60,8 +63,10 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
       <p className="text-xs text-amber-700">
         개별주택가격 최초공시(2005.4.30.) 전 증여받은 주택은{" "}
         <b>max(증여일 상증법 평가액, §164⑤~⑦ 취득당시 기준시가)</b>를 취득가액으로 봅니다. 위
-        「증여 신고가액」이 앞의 값이고, 아래 3시점 입력이 뒤의 값을 산정합니다. 아래를 입력한
-        경우에만 비교하며, 미입력 시 증여 신고가액만 사용합니다.
+        「증여 신고가액」이 앞의 값이고, 아래 3시점 입력이 뒤의 값을 산정합니다.{" "}
+        <b>{status ? `${status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만
+        비교합니다. 전부 비워두면 증여 신고가액만 사용하고,{" "}
+        <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
       </p>
 
       <HouseValuationSection asset={asset} onChange={onChange} transferDate={transferDate} />

@@ -33,6 +33,7 @@ import {
   sec163_9BaseDateLabel,
   sec163_9CauseLabel,
 } from "@/lib/calc/transfer-163-9-base-date";
+import { sec164CommercialStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -47,6 +48,8 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
   const inheritanceDate = deriveSec163_9BaseDate(asset);
   const dateLabel = sec163_9BaseDateLabel(asset);
   const causeLabel = sec163_9CauseLabel(asset);
+  // 필수 항목 개수는 단일 소스에서 받는다(문구 하드코딩 금지 — 필드가 늘면 자동 추종).
+  const sec164Status = sec164CommercialStatus(asset);
   // 상가 기준시가 최초고시(2005-01-01) 전 상속·증여만 §164⑥ 대상.
   if (
     asset.assetKind !== "commercial_building" ||
@@ -81,8 +84,10 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       </div>
       <p className="text-xs text-amber-700">
         상가 기준시가 최초고시(2005.1.1) 전 {causeLabel}받은 상가는 <b>max({dateLabel} 상증법 평가액, §164⑥ 취득당시 기준시가)</b>를
-        취득가액으로 봅니다. 취득당시 기준시가는 최초고시(2005) 역환산으로 산정합니다. 아래 3시점 입력 시에만 적용되며,
-        미입력 시 {dateLabel} 평가액만 사용합니다.
+        취득가액으로 봅니다. 취득당시 기준시가는 최초고시(2005) 역환산으로 산정합니다.{" "}
+        <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한
+        경우에만 비교합니다. 전부 비워두면 {dateLabel} 평가액만 사용하고,{" "}
+        <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
       </p>
 
       {/* 면적 3필드(전용·공유·대지)는 ① 기본정보로 이전했다 (2026-08-04).

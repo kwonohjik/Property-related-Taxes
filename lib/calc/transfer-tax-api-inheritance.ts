@@ -9,6 +9,11 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
 import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-date";
+import {
+  sec164HouseStatus,
+  sec164CommercialStatus,
+  isFullyFilled,
+} from "./sec164-required-fields";
 
 /**
  * 상속·**증여** 취득가액 의제 페이로드 빌드 (소령 §163⑨).
@@ -109,12 +114,9 @@ export function buildInheritedAcquisitionPayload(
 export function buildCommercialInheritanceValuationPayload(
   primary: AssetForm,
 ): { commercialInheritanceValuation?: unknown } {
-  // §163⑨2호는 「상속 **또는 증여**」다 — 증여도 ②(§164⑥) 비교 대상이다.
-  if (primary.assetKind !== "commercial_building" || !isSec163_9Cause(primary.acquisitionCause)) {
-    return {};
-  }
+  // 대상 판정(자산종류·§163⑨ 취득원인·최초고시 前)과 8필드 완성 여부는 **단일 소스**가 한다.
+  if (!isFullyFilled(sec164CommercialStatus(primary))) return {};
   const inheritanceDate = deriveSec163_9BaseDate(primary);
-  if (!inheritanceDate || inheritanceDate >= "2005-01-01") return {};
 
   const exclusiveArea = parseFloat(primary.cbExclusiveArea) || 0;
   const commonArea = parseFloat(primary.cbSharedArea) || 0;
@@ -125,19 +127,7 @@ export function buildCommercialInheritanceValuationPayload(
   const buildingStdPriceAtAcquisition = parseAmount(primary.cbBuildingStdPriceAtAcq);
   const buildingStdPriceAtFirstDisclosure = parseAmount(primary.cbBuildingStdPriceAtFirst);
 
-  // all-or-nothing opt-in — 하나라도 결측이면 §164⑥ 미적용(Phase 1 상증법 평가액만).
-  if (
-    exclusiveArea <= 0 ||
-    commonArea <= 0 ||
-    landArea <= 0 ||
-    unitPriceAtFirstDisclosure <= 0 ||
-    landPriceAtAcquisition <= 0 ||
-    landPriceAtFirstDisclosure <= 0 ||
-    buildingStdPriceAtAcquisition <= 0 ||
-    buildingStdPriceAtFirstDisclosure <= 0
-  ) {
-    return {};
-  }
+  // all-or-nothing 검사는 위 `sec164CommercialStatus`가 이미 수행했다(중복 게이트 제거).
 
   return {
     commercialInheritanceValuation: {
@@ -163,18 +153,10 @@ export function buildInheritedHouseValuationPayload(
   primary: AssetForm,
   transferDate: string,
 ): { inheritedHouseValuation?: unknown } {
-  // §164⑦ 주택 환산은 실제 주택 자산(상단 assetKind)에만 적용 — 상속 자산구분 라디오 폐지 대응.
-  const isHouse =
-    primary.assetKind === "housing" || primary.assetKind === "redevelopment_apt";
-  // §163⑨2호는 「상속 **또는 증여**」다 — 증여도 ②(§164⑤~⑦) 비교 대상이다.
-  const triggerable =
-    isHouse &&
-    isSec163_9Cause(primary.acquisitionCause) &&
-    parseFloat(primary.inhHouseValLandArea) > 0 &&
-    parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer) > 0 &&
-    parseAmount(primary.inhHouseValLandPricePerSqmAtFirst) > 0 &&
-    parseAmount(primary.inhHouseValHousePriceAtFirst) > 0;
-  if (!triggerable) return {};
+  // 필수 필드 판정은 **단일 소스**(`sec164-required-fields.ts`)가 한다 — validate와 같은 기준이라
+  // "부분 입력이 조용히 무시"도 "칸은 다 있는데 차단"도 생기지 않는다(계획서 §5.1).
+  // 자산종류(주택 2종)·취득원인(§163⑨ 대상)·기간(개별주택가격 최초공시 前) 게이트가 그 안에 있다.
+  if (!isFullyFilled(sec164HouseStatus(primary))) return {};
 
   const inheritanceDate = deriveSec163_9BaseDate(primary);
   const isBefore1990 = !!inheritanceDate && inheritanceDate < "1990-08-30";
@@ -202,9 +184,8 @@ export function buildInheritedHouseValuationPayload(
 
   const landPriceAtInheritance = parseAmount(primary.inhHouseValLandPricePerSqmAtInheritance);
 
-  // 1990 이전이면 pre1990 필요, 이후이면 landPriceAtInheritance 필요
-  if (isBefore1990 && !pre1990Payload && !landPriceAtInheritance) return {};
-  if (!isBefore1990 && !landPriceAtInheritance) return {};
+  // 1990 前「등급 3종+1990가 ↔ 취득당시 단가」 택일·1990 後 단가 필수는 위 `sec164HouseStatus`가
+  // 이미 판정했다(`oneOf`). 여기서 다시 게이트하지 않는다 — 두 곳이 어긋나면 침묵 실패가 재발한다.
 
   return {
     inheritedHouseValuation: {
