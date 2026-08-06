@@ -3,11 +3,16 @@
 /**
  * 의제취득일(1985.1.1.) 이전 상속 취득가액 입력 (case A)
  *
- * 산식: max(환산취득가, 피상속인 실가 × 물가상승률)
- * 근거: 소득세법 시행령 §176조의2 ④
+ * 산식: **가목 우선** — `clauseA = max(① 상증법 §60~66 평가액, ② §164④~⑦ 취득당시 기준시가)`이고,
+ *       가목이 0일 때만 ③ 환산취득가로 간다(`inheritance-acquisition-price.ts`).
+ * 근거: 법 §97①1호 **단서**("가목의 실지거래가액을 확인할 수 없는 경우에 **한정**하여 나목")
+ *       · 시행령 §163⑨ 본문·1호·2호(①②) · §163⑫ → §176조의2(③)
+ *
+ * ⚠️ 종전 주석은 「max(환산취득가, 피상속인 실가 × **물가상승률**)」이었다 — 물가상승률(CPI) 분기는
+ *    법령 근거가 없어 제거됐고(#1080 계열), 3자 max도 #1089에서 가목 우선으로 재편됐다.
  *
  * UI 순서 = 엔진 계산 로직 순서:
- * ① 의제취득일 시점 기준시가 (토지: pre1990 환산 자동 계산 포함) → ② 양도시 기준시가 → ③ 피상속인 실가 입증
+ * ① 의제취득일 시점 기준시가 (토지: pre1990 환산 자동 계산 포함) → ② 양도시 기준시가 → ③ 상증법 평가액
  */
 
 import { useMemo } from "react";
@@ -195,13 +200,21 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
     <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20 p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-          의제취득일 이전 상속·증여 — max(① 상증법 평가액, ③ 환산취득가)
+          의제취득일 이전 상속·증여 — ① 상증법 평가액과 ② 취득당시 기준시가 중 많은 금액
         </p>
-        <LawArticleModal
-          legalBasis="소득세법시행령 §176조의2"
-          label="소령 §176조의2 ④"
-          className={LAW_BADGE_CLASS}
-        />
+        <div className="flex shrink-0 items-center gap-1">
+          {/* 가목이 먼저다 — §176조의2④(나목)은 가목을 확인할 수 없을 때만 온다(법 §97①1호 단서). */}
+          <LawArticleModal
+            legalBasis="소득세법 시행령 §163 ⑨"
+            label="소령 §163 ⑨"
+            className={LAW_BADGE_CLASS}
+          />
+          <LawArticleModal
+            legalBasis="소득세법시행령 §176조의2"
+            label="소령 §176조의2 ④"
+            className={LAW_BADGE_CLASS}
+          />
+        </div>
       </div>
 
       {/* 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 3-시점 보조 입력 */}
@@ -336,11 +349,12 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         )}
       </div>
 
-      {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — max(①,②,③) 후보 */}
+      {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — ②와 함께 **가목**을 이룬다(max(①,②)) */}
       <FieldCard
         label="상속세 신고가액 (상증법 평가액)"
         unit="원"
-        hint="상속세 신고서·결정통지서상 평가액. 이 값 또는 취득당시 기준시가(§164④~⑦)가 확인되면 그중 큰 금액이 취득가액이 되고, 환산취득가는 적용하지 않습니다(소득세법 §97①1호 단서)."
+        // §163⑨ 본문 괄호가 소스 서열을 **강행**으로 정한다 — 결정·경정액이 있으면 그 가액이다(U2-F).
+        hint="상속세 신고서상 평가액. 세무서장등이 결정·경정한 가액이 있으면 그 가액을 입력하세요(§163⑨ 본문). 이 값 또는 취득당시 기준시가(§164④~⑦)가 확인되면 그중 큰 금액이 취득가액이 되고, 환산취득가는 적용하지 않습니다(소득세법 §97①1호 단서)."
         trailing={
           <LawArticleModal
             legalBasis="상속세및증여세법 §60"
@@ -359,7 +373,9 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
       </FieldCard>
 
       <p className="text-caption text-muted-foreground">
-        취득가액 = max(① 상속세 신고가액, ③ 환산취득가). 환산취득가 = 양도가액 × (의제취득일 기준시가 ÷ 양도시 기준시가)
+        취득가액 = <b>① 상속세 신고가액</b>과 <b>② 취득당시 기준시가(§164④~⑦)</b> 중 많은 금액(가목).
+        둘 다 확인할 수 없을 때에 <b>한정</b>해 <b>③ 환산취득가</b>를 적용합니다(법 §97①1호 단서).
+        환산취득가 = 양도가액 × (의제취득일 기준시가 ÷ 양도시 기준시가)
       </p>
     </div>
   );

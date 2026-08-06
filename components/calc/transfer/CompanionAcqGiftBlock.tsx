@@ -47,10 +47,14 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
           value={props.fixedAcquisitionPrice}
           onChange={props.onFixedAcquisitionPriceChange}
           required
-          hint="증여세 신고서상 시가 또는 보충적평가액"
+          // 「소득세법 시행령」 §163⑨ 본문 괄호는 소스 서열을 **강행**으로 정한다 —
+          // "「상속세 및 증여세법」 제76조에 따라 세무서장등이 결정·경정한 가액이 있는 경우
+          // **그** 결정·경정한 가액**으로 한다**". 신고가액과 다르면 결정·경정액이 우선한다(U2-F).
+          hint="증여세 신고서상 시가 또는 보충적평가액. 세무서장등이 결정·경정한 가액이 있으면 그 가액을 입력하세요."
         />
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §97 ① 1호" label="§97①1호" />
+          <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="§163⑨" />
         </div>
       </div>
     </div>
