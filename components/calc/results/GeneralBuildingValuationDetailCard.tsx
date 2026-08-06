@@ -18,6 +18,7 @@
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
+import { SaleSplitJudgmentBlock } from "@/components/calc/results/transfer/SaleSplitJudgmentBlock";
 
 interface Props {
   detail: GeneralBuildingOutput;
@@ -180,13 +181,32 @@ export function GeneralBuildingValuationDetailCard({
             </tbody>
           </table>
         </div>
-        <div className="rounded bg-emerald-50/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800 space-y-1">
-          <p className="font-medium">산식</p>
-          <p>토지 양도가액 = INT(총양도가 {formatKRW(totalTransferPrice)} × 토지 기준시가 / 합계 기준시가)</p>
-          <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(allocation.land)}</span></p>
-          <p>건물 양도가액 = 총양도가 {formatKRW(totalTransferPrice)} − 토지 양도가액 {formatKRW(allocation.land)}</p>
-          <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(allocation.building)}</span> (잔액 보정)</p>
-        </div>
+        {/*
+          🔴 구분 기재가 **인정된** 경우에는 안분 산식을 보여주면 안 된다 — 화면의 산식과 실제
+             적용값이 어긋난다(메모리 `feedback_engine_result_display_drift`). 발동해서 안분값으로
+             되돌아간 경우는 산식이 다시 맞으므로 종전 표시를 그대로 쓴다.
+        */}
+        {detail.saleSplitJudgment && !detail.saleSplitJudgment.deemedUnclear ? (
+          <div className="rounded bg-emerald-50/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800 space-y-1">
+            <p className="font-medium">산식</p>
+            <p>계약서에 구분 기재된 금액을 그대로 적용했습니다 (소득세법 §100② — 안분은 구분이 불분명할 때의 예외).</p>
+            <p className="pl-2">
+              토지 <span className="font-semibold tabular-nums">{formatKRW(allocation.land)}</span>
+              {" · "}건물 <span className="font-semibold tabular-nums">{formatKRW(allocation.building)}</span>
+            </p>
+          </div>
+        ) : (
+          <div className="rounded bg-emerald-50/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800 space-y-1">
+            <p className="font-medium">산식</p>
+            <p>토지 양도가액 = INT(총양도가 {formatKRW(totalTransferPrice)} × 토지 기준시가 / 합계 기준시가)</p>
+            <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(allocation.land)}</span></p>
+            <p>건물 양도가액 = 총양도가 {formatKRW(totalTransferPrice)} − 토지 양도가액 {formatKRW(allocation.land)}</p>
+            <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(allocation.building)}</span> (잔액 보정)</p>
+          </div>
+        )}
+
+        {/* §100③ 판정 — 구분 기재가 있을 때만 채워진다. split 경로와 **같은 컴포넌트**를 쓴다. */}
+        {detail.saleSplitJudgment && <SaleSplitJudgmentBlock j={detail.saleSplitJudgment} />}
       </div>
 
       {/* ② 취득가액 (환산 or 상속개시일 평가액) */}

@@ -13,6 +13,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
+import { SaleSplitJudgmentBlock } from "@/components/calc/results/transfer/SaleSplitJudgmentBlock";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -560,6 +561,16 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           </tfoot>
         </table>
       </div>
+
+      {/*
+        §100③ 판정 (Phase 2) — **일반건물 구분양도 전용**.
+        ⚠️ 일반건물은 자산 카드 2장을 만들어 aggregate 경로로 흐르므로 화면도 이 다자산 뷰다
+           (`TransferTaxResultView`의 GB 상세 카드는 이 경로에서 렌더되지 않는다).
+           표시를 붙일 곳을 여기로 잡지 않으면 **판정이 계산에만 반영되고 화면에는 안 보인다**.
+      */}
+      {aggregated.generalBuildingValuationDetail?.saleSplitJudgment && (
+        <SaleSplitJudgmentBlock j={aggregated.generalBuildingValuationDetail.saleSplitJudgment} />
+      )}
 
       {/* §97② 2호 단서 swap 발동 표시 (일반건물 환산 자산총액 판정 — F10) */}
       {aggregated.swapApplied && aggregated.swapComparison && (

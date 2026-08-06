@@ -54,6 +54,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
+import { GeneralBuildingSaleSplitSection } from "./GeneralBuildingSaleSplitSection";
 
 
 // 배율은 엔진 getBuildingSiteMultiplier가 단일 진실 — UI에서 재구현 금지.
@@ -413,6 +414,23 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               <p>건물: 취득시 건물기준시가 총액 × 3%</p>
             </div>
           )}
+
+          {/*
+            ③ 양도가액 결정 방식 (Phase 2) — 「소득세법」 제100조 제2항은 **구분 기장이 원칙**이고
+            안분은 구분이 불분명할 때의 예외다. ①②에서 받은 기준시가가 안분 기준이므로 그 뒤에 둔다.
+          */}
+          <GeneralBuildingSaleSplitSection
+            asset={asset}
+            onChange={onChange}
+            sectionNum="③"
+            blockedReason={
+              asset.gbHasExtension
+                ? "증축이 있는 건물은 건물 구분가액을 본체와 증축분에 배분할 법령상 근거가 확정되지 않아 구분 기재를 지원하지 않습니다."
+                : isBurdenedGift
+                  ? "부담부증여는 양도가액이 인수 채무액 기준으로 자동 산정되어 구분 기재가 성립하지 않습니다 (소득세법 시행령 §159)."
+                  : undefined
+            }
+          />
 
           {/* 부담부증여 §159①1호 단서 안내 — 사용자 입력 실거래가 무시 */}
           {isBurdenedGift && (

@@ -390,12 +390,13 @@ export function validateGeneralBuildingAsset(
       return `${label}: 부담부증여는 양도가액을 인수 채무액 기준으로 자동 산정하므로 토지·건물 구분 기재를 쓸 수 없습니다 (소득세법 시행령 §159).`;
     }
 
-    // 양쪽 다 입력했으면 **합이 총액과 같아야** 한다. 한쪽만 입력한 경우는 나머지가
-    // `총액 − 입력값`으로 도출되므로(S-8 · Q-3) 검증 대상이 아니다.
-    const total = parseAmount(asset.actualSalePrice) || 0;
-    if (landIn > 0 && buildingIn > 0 && total > 0 && landIn + buildingIn !== total) {
-      return `${label}: 토지·건물 양도가액의 합(${(landIn + buildingIn).toLocaleString()}원)이 총 양도가액(${total.toLocaleString()}원)과 다릅니다 — 한쪽만 입력하면 나머지는 자동으로 계산됩니다.`;
-    }
+    /**
+     * ⚠️ **합계(= 총 양도가액) 검증은 여기서 하지 않는다** — 이 함수는 자산 하나만 받는데,
+     *    단건 일반건물의 총 양도가액은 **폼-전역 `contractTotalPrice`**에서 온다
+     *    (`transfer-tax-api.ts:232-238` — `asset.actualSalePrice`가 아니다).
+     *    자산 필드로 검증하면 **엉뚱한 값과 비교**하게 되므로 총액을 확실히 아는
+     *    엔진(`allocateBundledTransferPrice`)이 담당한다.
+     */
 
     // R-5 — §166⑧ 예외는 30% 의제를 면제해 **세액을 바꾼다**. 근거 없이 켤 수 있으면
     // 가드를 무력화하는 스위치가 된다(split V9와 같은 규칙).

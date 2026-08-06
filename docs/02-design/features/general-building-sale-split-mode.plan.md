@@ -1013,3 +1013,73 @@ anchor 3건으로 재작성: ① 양쪽 미입력 → 차단 · ② **한쪽만 
 2-E  UI ⑤ + 결과 ⑦                                        → verify: 컴포넌트 anchor
 2-F  E2E + 전체 회귀                                       → verify: 실플로우
 ```
+
+---
+
+## §17 Phase 2 완료 보고 (2026-08-06)
+
+### 17.1 결과
+
+일반건물이 **구분양도 축 + §100③ 30% 의제**를 갖췄다. §5 매트릭스 S-1~S-9·S-12는 동작하고,
+S-10(증축)·S-11(부담부증여)은 **차단**으로 확정했다(Q-4 미확정 · §159 자동 산정).
+
+`allocateBundledTransferPrice`를 Phase 1 함수 조합(`resolveSaleApportionBasis` +
+`judgeDeemedUnclearSplit`)으로 교체했다. 산식이 종전과 동일해 **회귀 0**이고, 부가령 §64①
+basis 서열이 함께 따라왔다(감정가액 입력 축은 UI가 없어 미도달 — §16.4).
+
+### 17.2 🔴 E2E가 **표시 no-op**을 잡았다
+
+⑦ 판정 블록을 `GeneralBuildingValuationDetailCard`에 붙였는데, **그 카드는 일반건물 화면에
+뜨지 않는다**. 일반건물은 자산 카드 2장을 만들어 **aggregate 경로**로 흐르므로 실화면이
+`MultiTransferTaxResultView` → `BundledAllocationCard`다. 그 카드는 `TransferTaxResultView`
+(단건 뷰) 전용이었다.
+
+| | 붙인 곳 | 실제 화면 |
+|---|---|---|
+| 처음 | `GeneralBuildingValuationDetailCard` | ❌ 렌더되지 않음 |
+| 정정 | `BundledAllocationCard`(안분 카드 아래) | ✅ |
+
+⚠️ **컴포넌트 anchor는 이것을 잡지 못한다** — 컴포넌트를 직접 렌더해 검증하므로 「그 컴포넌트가
+실제로 화면에 오르는가」는 범위 밖이다. 계산은 맞는데 화면에 안 보이는 상태를 **E2E만** 드러냈다
+(메모리 `feedback_api_trigger_without_input_path_is_noop`와 같은 계열 — 트리거만 열고 경로가 없는 것).
+
+> `GeneralBuildingValuationDetailCard`에 넣은 산식 분기(구분 기재 시 안분식 대신 구분값 표시)는
+> **그대로 두었다** — 그 카드가 뜨는 경로가 따로 있다면 올바르게 동작하고, 없다면 무해하다.
+> 도달 여부 확정은 별건이다.
+
+### 17.3 🔴 validate가 **엉뚱한 필드**를 볼 뻔했다
+
+처음에 「토지+건물 합 = 총액」 검증을 `transfer-tax-validate-gb.ts`에 넣고 총액을
+`asset.actualSalePrice`로 읽었다. **단건 일반건물의 총 양도가액은 폼-전역
+`contractTotalPrice`다**(`transfer-tax-api.ts:232-238`) — `actualSalePrice`는 일괄 모드의
+자산별 가액이라 단건에서는 비어 있다.
+
+⇒ 검증을 **엔진으로 옮겼다**. `allocateBundledTransferPrice`는 `input.totalTransferPrice`를
+확실히 알고, validate는 자산 하나만 받아 총액을 알 방법이 없다.
+
+### 17.4 게이트 (2026-08-06 16:40 실측)
+
+`npx tsc --noEmit` **0** · `npm run lint` **0 errors** ·
+`npm test` **1,254파일 14,048 passed**(13 skipped · 1 todo · 186초) ·
+`npx playwright test e2e/gb-sale-split-30pct.spec.ts` **3 passed**.
+
+신규 anchor **46건**: 엔진 G-1~G-6 **13** · 배관 ④⑧⑫ **16** · ⑤ 위젯 **7** · 표시 재사용 **9**(1-E) ·
+E2E **3**. Pre-Do로 먼저 작성해 4건 실패를 확인한 뒤 구현했고, 판정 분기를 무력화하는
+mutation probe로 인과성을 확인했다.
+
+### 17.5 이번에 확인한 함정
+
+- **거짓 통과**: 증축 차단 테스트가 `toContain("증축")`이었는데 필수 필드 미입력 시 뜨는
+  「증축일을 입력하세요」에도 매칭돼 새 규칙에 도달하지 않고도 통과했다. 필수 필드를 채우고
+  단언을 `toContain("구분 기재할 수 없습니다")`로 좁혔다.
+- **고아 import**: 안분을 공용 함수로 옮기면서 `safeMultiplyThenDivide`가 미사용이 됐다
+  (lint warning 286 → 287). 내 변경이 만든 것만 제거했다.
+
+### 17.6 남은 것
+
+- **Phase 3** — 구분/일괄 토글 E2E는 2-F가 실질적으로 덮었다. 남은 것은 **UI 조작 경로**
+  (라디오 클릭 → 칸 등장 → 계산)로, ⑤ 컴포넌트 anchor 7건이 조작을 이미 검증한다.
+- 일반건물 **감정평가가액 입력 축**(§16.4) — 엔진은 지원하나 UI가 없다. 1-E의
+  `SaleAppraisalBasisCard`를 재사용하면 된다.
+- Q-4(증축 배분 근거)가 확정되면 S-10 차단 해제 — 그때 `buildGeneralBuildingAssetCardsWithExtension`
+  3-way 경로에 판정을 배선한다.

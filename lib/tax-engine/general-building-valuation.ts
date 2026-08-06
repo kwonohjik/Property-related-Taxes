@@ -15,7 +15,9 @@
  * BigInt 원칙: 분자 ≈ 2.15×10¹⁷ 초과 시 safeMultiplyThenDivide() 자동 fallback.
  */
 
-import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
+// `safeMultiplyThenDivide`는 Phase 2에서 미사용이 됐다 — 양도가 안분을 `resolveSaleApportionBasis`로
+// 옮기면서 그 함수 안으로 들어갔다(산식은 동일). 내 변경이 만든 고아 import만 제거한다.
+import { computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
@@ -136,6 +138,17 @@ function allocateBundledTransferPrice(input: GeneralBuildingInput): {
    *    결정」이 실무 자료가 지적한 실수유형이고, 수학적으로도 **작은 파트가 실질 제약**이다
    *    — 차이 금액은 양쪽이 같은데 분모가 작아 비율이 크다.
    */
+  // 양쪽 다 주어졌으면 **합이 총액과 같아야** 한다 — 다르면 양도가액 합계가 어긋난 채 계산돼
+  // 조용한 오답이 된다. 총액을 아는 곳이 여기뿐이라 이 검증은 엔진이 갖는다(validate는 자산
+  // 하나만 받는데 단건 총액은 폼-전역 `contractTotalPrice`에서 온다).
+  if (landIn != null && buildingIn != null && landIn + buildingIn !== input.totalTransferPrice) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `일반건물: 토지·건물 양도가액의 합(${(landIn + buildingIn).toLocaleString()}원)이 총 양도가액(${input.totalTransferPrice.toLocaleString()}원)과 다릅니다 — 한쪽만 입력하면 나머지는 총액에서 자동 계산됩니다.`,
+      { what: "양도가액", reason: "sale_split_sum_mismatch" },
+    );
+  }
+
   const declared = {
     land: landIn ?? input.totalTransferPrice - buildingIn!,
     building: buildingIn ?? input.totalTransferPrice - landIn!,

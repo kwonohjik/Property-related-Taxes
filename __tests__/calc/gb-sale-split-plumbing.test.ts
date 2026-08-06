@@ -124,8 +124,19 @@ describe("⑧ — validate 차단 규칙", () => {
     expect(v(asset(SPLIT))).toBeNull();
   });
 
-  it("합이 총액과 다르면 차단한다", () => {
-    expect(v(asset({ ...SPLIT, buildingTransferPrice: "30,000,000" }))).toContain("총 양도가액");
+  /**
+   * 🔴 합계 검증은 **validate가 하지 않는다** — 이 함수는 자산 하나만 받는데 단건 일반건물의
+   *    총 양도가액은 폼-전역 `contractTotalPrice`에서 온다(`transfer-tax-api.ts:232-238`).
+   *    `asset.actualSalePrice`로 검증하면 엉뚱한 값과 비교하게 되므로 엔진이 담당한다.
+   */
+  it("합이 총액과 달라도 validate는 통과한다 — 총액을 모르기 때문이다", () => {
+    expect(v(asset({ ...SPLIT, buildingTransferPrice: "30,000,000" }))).toBeNull();
+  });
+
+  it("🔴 대신 엔진이 차단한다 — 합계가 어긋난 채 계산되면 조용한 오답이다", () => {
+    expect(() =>
+      throughSchemaToEngine(payloadOf(asset({ ...SPLIT, buildingTransferPrice: "30,000,000" }))),
+    ).toThrow(/총 양도가액.*과 다릅니다/);
   });
 
   it("한쪽만 입력하면 합계 검증을 걸지 않는다 — 나머지는 도출된다(S-8)", () => {
