@@ -275,6 +275,21 @@ const propertyBaseShape = {
   landTransferPrice: z.number().int().positive().optional(),
   /** 건물 양도가액 (원) */
   buildingTransferPrice: z.number().int().positive().optional(),
+  /**
+   * 양도시 감정평가가액 — 안분 basis 서열 1순위(부가령 §64①1호 단서 · 소령 §166⑥ 차용).
+   * `positive()`가 아니라 `nonnegative()`다: 0은 「그 파트를 평가하지 않았다」는 뜻이고,
+   * 그 상태를 엔진이 `incomplete`로 **배제 사유에 기록**해야 화면이 이유를 말할 수 있다.
+   */
+  landAppraisalAtTransfer: z.number().int().nonnegative().optional(),
+  /** 양도시 감정평가가액 (건물분) */
+  buildingAppraisalAtTransfer: z.number().int().nonnegative().optional(),
+  /** 감정일자 — 유효 창 [(양도연도−1)-01-01, 양도연도-12-31] 판정에 필수 */
+  appraisalDateAtTransfer: z.string().optional(),
+  /**
+   * 「소득세법 시행령」 제166조 제8항 예외 — 선택 시 §100③ 30% 의제가 발동하지 않는다.
+   * 근거 텍스트(`saleSplitExemptionNote`)는 계산에 쓰이지 않아 **전송하지 않는다**(UI 전용).
+   */
+  saleSplitExemption: z.enum(["other_law", "demolished_land_only"]).optional(),
   /** 토지 취득가액 (원) */
   landAcquisitionPrice: z.number().int().nonnegative().optional(),
   /** 건물 취득가액 (원) */

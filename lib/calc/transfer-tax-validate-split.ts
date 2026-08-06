@@ -274,7 +274,35 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     return `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`;
   }
 
+  // ── V8. 양도시 감정평가가액 — 3필드 all-or-nothing (부가령 §64①1호 단서) ────────────────
+  // 감정평가가액은 안분 basis **서열 1순위**다. 불완전 입력이 조용히 기준시가로 후퇴하면 사용자는
+  // 자기가 넣은 값이 안 쓰인 사실을 모른다. 엔진이 사유(`appraisalRejected`)를 남기기는 하지만,
+  // **입력 시점에 막는 것**이 먼저다(자동 fallback 금지 — `feedback_no_silent_apportion_fallback`).
+  //
+  // ⚠️ `saleSplitMode`와 **무관하게** 적용한다 — 일괄양도(안분)에서도 basis가 되기 때문이다.
+  //    여기를 구분양도로 좁히면 일괄양도에서 불완전 감정가액이 그대로 통과한다.
+  const landApp = opt(asset.landAppraisalAtTransfer);
+  const buildingApp = opt(asset.buildingAppraisalAtTransfer);
+  const appraisedAt = asset.appraisalDateAtTransfer?.trim();
+  const anyAppraisal = landApp != null || buildingApp != null;
+  if (anyAppraisal && !appraisedAt) {
+    return `${label}: 양도시 감정평가가액을 입력했으면 감정일자도 입력하세요 — 감정일자가 있어야 시기 요건(양도 전년도 1월 1일 ~ 양도연도 12월 31일)을 판정할 수 있습니다 (부가가치세법 시행령 §64①1호 단서).`;
+  }
+  if (anyAppraisal && (landApp == null || buildingApp == null)) {
+    return `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
+  }
+
   if (asset.saleSplitMode !== "actual") return null;
+
+  // ── V9. §166⑧ 예외 — 근거 필수 (계획서 §12.6) ───────────────────────────────────────
+  // 예외를 선택하면 §100③ 30% 의제가 발동하지 않아 **세액이 달라진다**. 근거 없이 켤 수 있으면
+  // 가드를 무력화하는 스위치가 된다 ⇒ 근거를 필수로 해 남용을 억제하고 신고서 각주 재료로 쓴다.
+  //
+  // ⚠️ 구분양도에서만 검사한다 — 예외를 골라 둔 채 일괄양도로 되돌리면 API가 전송하지 않으므로
+  //    (`transfer-tax-api-split.ts` `saleDirectActive` 게이트) 차단할 이유가 없다(값은 보존).
+  if (asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
+    return `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`;
+  }
 
   // ── 총액이 자산 필드와 1:1이 아닌 경로는 미검증(위 ⚠️ 참조) ──
   // 지분 판정은 API 정본(`transfer-tax-api.ts:140` primaryFractional = getOwnershipRatio(primary) < 1.0)과

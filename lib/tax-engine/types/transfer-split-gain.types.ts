@@ -5,7 +5,7 @@
 import type { PreHousingDisclosureResult } from "./transfer-phd.types";
 import type { HousingExpropriationValuationDetail } from "../transfer-tax-expropriation-valuation";
 import type { SaleSplitExemption, SaleSplitPair } from "../sale-split-deemed-unclear";
-import type { ApportionBasisKind } from "../sale-split-apportion-basis";
+import type { ApportionBasisKind, AppraisalRejectReason } from "../sale-split-apportion-basis";
 
 /**
  * §164⑨ 1호 건물 split 토지분 산출근거 (총액 3후보) — Record(Map 금지, JSON 소실).
@@ -131,6 +131,14 @@ export interface SaleSplitJudgmentDetail {
   buildingOver: boolean;
   /** §166⑧ 예외로 발동을 면한 경우의 사유 */
   exemptionApplied?: SaleSplitExemption;
+  /**
+   * 감정평가가액을 basis로 **쓰지 못한 사유** — 감정 입력이 있었는데 배제된 경우만 채운다
+   * (`out_of_window` 시기 요건 이탈 · `incomplete` 한쪽 미평가).
+   *
+   * 서열상 감정이 기준시가를 이기므로(부가령 §64①1호 단서), 감정을 넣었는데 기준시가로 안분되면
+   * 사용자는 **이유를 알 수 없다**. 침묵 후퇴를 막으려고 결과에 싣는다(Phase 1-E).
+   */
+  appraisalRejected?: AppraisalRejectReason;
 }
 
 export interface SplitGainResult {

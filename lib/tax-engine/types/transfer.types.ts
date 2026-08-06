@@ -620,6 +620,24 @@ export interface TransferTaxInput {
    * (계획서 `general-building-sale-split-mode.plan.md` §12.6·§12.9).
    */
   saleSplitExemption?: SaleSplitExemption;
+  /**
+   * 양도시 **감정평가가액** (토지분) — 안분 basis 서열 **1순위**
+   * (「부가가치세법 시행령」 제64조 제1항 제1호 단서 · 「소득세법 시행령」 제166조 제6항이 차용).
+   *
+   * ⚠️ 토지·건물 **양쪽 모두 양수**여야 basis로 채택된다. 「감정평가법인등이 **평가한** 가액」이므로
+   * 0은 평가 결과가 아니라 **그 파트를 평가하지 않았다**는 뜻이다
+   * (`sale-split-apportion-basis.ts` `usableAppraisal`). 기준시가는 0도 값일 수 있어 기준이
+   * 다른데, 그 비대칭은 **의도된 것**이다(계획서 §13.2).
+   */
+  landAppraisalAtTransfer?: number;
+  /** 양도시 감정평가가액 (건물분) — 위와 동일한 규칙. */
+  buildingAppraisalAtTransfer?: number;
+  /**
+   * 감정일자 — **시기 요건 판정에 필수**다. 유효 창 = **[(양도연도 − 1)-01-01, 양도연도-12-31]**
+   * (부가령 §64①1호 괄호 「직전 과세기간 개시일부터 … 종료일까지」 + 「소득세법」 제5조 제1항 역년).
+   * 창을 벗어난 감정은 basis로 쓰지 않고 **기준시가로 후퇴**한다(사유는 `appraisalRejected`에 남는다).
+   */
+  appraisalDateAtTransfer?: Date;
   /** 토지 파트 매매사례가액 (landAcqMode === "salesCase" 시 직접 입력, §176의2③1호) */
   landSalesCaseValue?: number;
   /** 건물 파트 매매사례가액 (buildingAcqMode === "salesCase" 시 직접 입력) */
