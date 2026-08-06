@@ -20,6 +20,7 @@ type SplitDetail = NonNullable<TransferTaxResult["splitDetail"]>;
 export function SplitGainDetailSection({
   splitDetail,
   assetKind,
+  exemptionNote,
 }: {
   splitDetail: SplitDetail;
   /**
@@ -28,6 +29,11 @@ export function SplitGainDetailSection({
    * prop으로 받는다(자산 0번 고정 참조는 다자산에서 틀린 문구를 낸다).
    */
   assetKind?: string;
+  /**
+   * §166⑧ 예외 근거 문구 — **엔진을 거치지 않으므로**(계획서 §15.3) 호출부가 폼에서 읽어 넘긴다.
+   * 판정 결과(`splitDetail.saleSplitJudgment`)에는 사유(호)만 있고 사용자가 적은 문구는 없다.
+   */
+  exemptionNote?: string;
 }) {
     const selfOwns = splitDetail.selfOwns ?? "both";
     const landIsOwned = selfOwns !== "building_only";
@@ -107,7 +113,10 @@ export function SplitGainDetailSection({
             비교 대상이 없어 판정하지 않으므로 이 블록도 뜨지 않는다(엔진 계약 그대로).
           */}
           {splitDetail.saleSplitJudgment && (
-            <SaleSplitJudgmentBlock j={splitDetail.saleSplitJudgment} />
+            <SaleSplitJudgmentBlock
+              j={splitDetail.saleSplitJudgment}
+              {...(exemptionNote ? { exemptionNote } : {})}
+            />
           )}
         </div>
   );

@@ -34,7 +34,19 @@ const EXEMPTION_LABEL = {
   demolished_land_only: "건물을 철거하고 토지만 사용하는 경우 (소득세법 시행령 §166⑧2호)",
 } as const;
 
-export function SaleSplitJudgmentBlock({ j }: { j: SaleSplitJudgmentDetail }) {
+export function SaleSplitJudgmentBlock({
+  j,
+  exemptionNote,
+}: {
+  j: SaleSplitJudgmentDetail;
+  /**
+   * §166⑧ 예외를 선택한 사용자가 적은 **근거 문구**.
+   *
+   * ⚠️ 이 값은 **엔진을 거치지 않는다** — 계산에 쓰이지 않는 서술 텍스트라 API로 보내지 않기로
+   * 했다(계획서 §15.3). 그래서 판정 결과(`j`)에는 없고 **호출부가 폼에서 읽어 넘긴다**.
+   */
+  exemptionNote?: string;
+}) {
   /**
    * bp → 퍼센트 문자열. **정수만 거쳐 반올림한다.**
    *
@@ -78,8 +90,24 @@ export function SaleSplitJudgmentBlock({ j }: { j: SaleSplitJudgmentDetail }) {
           {j.appraisalRejected && ` — ${REJECT_LABEL[j.appraisalRejected]}`}
         </p>
         {j.exemptionApplied && (
+          <>
+            <p className="text-caption leading-snug text-muted-foreground">
+              예외 사유: {EXEMPTION_LABEL[j.exemptionApplied]}
+            </p>
+            {exemptionNote?.trim() && (
+              <p className="text-caption leading-snug text-muted-foreground" data-testid="sale-split-exemption-note-display">
+                근거: {exemptionNote.trim()}
+              </p>
+            )}
+            <p className="text-caption leading-snug text-muted-foreground">
+              ※ 신고서에 <strong>구분 기재한 가액을 그대로 적용</strong>한 사유로 위 내용을 기재하세요.
+            </p>
+          </>
+        )}
+        {j.deemedUnclear && (
           <p className="text-caption leading-snug text-muted-foreground">
-            예외 사유: {EXEMPTION_LABEL[j.exemptionApplied]}
+            ※ 신고서 양도가액은 <strong>안분가액</strong>(토지 {j.applied.land.toLocaleString()} · 건물{" "}
+            {j.applied.building.toLocaleString()})으로 기재됩니다 — 계약서상 구분 기재 금액과 다릅니다.
           </p>
         )}
       </ToneCard>

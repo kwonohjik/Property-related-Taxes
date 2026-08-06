@@ -48,6 +48,11 @@ interface Props {
   taxableIncome?: number;
   /** 토지·건물 분리 안내 문구 분기(§99①1호 나목)용 — 자산별로 다르다. */
   assetKind?: string;
+  /**
+   * §166⑧ 예외 근거 문구 — **엔진을 거치지 않으므로**(계획서 §15.3) 폼에서 읽어 내려온다.
+   * 다자산 모드에서는 자산별로 다르므로 `assetKind`와 같은 층위에서 자산별로 넘긴다.
+   */
+  exemptionNote?: string;
 }
 
 export function ValuationDetailCards({
@@ -57,6 +62,7 @@ export function ValuationDetailCards({
   longTermDeduction,
   taxableIncome,
   assetKind,
+  exemptionNote,
 }: Props) {
   const hasAny =
     !!result.commercialBuildingValuationDetail ||
@@ -119,7 +125,11 @@ export function ValuationDetailCards({
         <Pre1990LandValuationDetailCard detail={result.pre1990LandValuationDetail} />
       )}
       {result.splitDetail && (
-        <SplitGainDetailSection splitDetail={result.splitDetail} assetKind={assetKind} />
+        <SplitGainDetailSection
+          splitDetail={result.splitDetail}
+          assetKind={assetKind}
+          {...(exemptionNote ? { exemptionNote } : {})}
+        />
       )}
     </div>
   );

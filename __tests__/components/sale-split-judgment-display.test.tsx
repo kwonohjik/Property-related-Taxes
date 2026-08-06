@@ -48,9 +48,15 @@ const mk = (over: Partial<TransferTaxInput> = {}): TransferTaxInput =>
   });
 
 /** 엔진을 실제로 돌려 그 결과를 렌더한다 */
-function renderFor(over: Partial<TransferTaxInput> = {}) {
+function renderFor(over: Partial<TransferTaxInput> = {}, exemptionNote?: string) {
   const result = calculateTransferTax(mk(over), rates);
-  render(<SplitGainDetailSection splitDetail={result.splitDetail!} assetKind="housing" />);
+  render(
+    <SplitGainDetailSection
+      splitDetail={result.splitDetail!}
+      assetKind="housing"
+      {...(exemptionNote ? { exemptionNote } : {})}
+    />,
+  );
   return result.splitDetail!.saleSplitJudgment;
 }
 
@@ -136,5 +142,38 @@ describe("U-9-3 — 감정평가가액 basis와 배제 사유", () => {
       appraisalDateAtTransfer: new Date("2023-06-01"),
     });
     expect(screen.getByText(/한쪽만 평가되어/)).toBeTruthy();
+  });
+});
+
+describe("U-9-4 — 신고서 각주 + §166⑧ 예외 근거 문구 (§12.5 3·4항목)", () => {
+  const OVER_LOCAL = { landTransferPrice: 1_400_000_000, buildingTransferPrice: 100_000_000 };
+
+  it("🔴 예외 근거 문구를 화면에 표시한다 — 엔진을 거치지 않는 값이라 폼에서 받아야 한다", () => {
+    renderFor({ ...OVER_LOCAL, saleSplitExemption: "other_law" }, "매매계약 특약 제3조");
+    expect(screen.getByTestId("sale-split-exemption-note-display")).toBeTruthy();
+    expect(screen.getByText(/매매계약 특약 제3조/)).toBeTruthy();
+  });
+
+  it("근거를 넘기지 않으면 그 줄은 뜨지 않는다 — 빈 근거를 지어내지 않는다", () => {
+    renderFor({ ...OVER_LOCAL, saleSplitExemption: "other_law" });
+    expect(screen.queryByTestId("sale-split-exemption-note-display")).toBeNull();
+  });
+
+  it("예외 적용 시 신고서에 사유를 적으라고 안내한다", () => {
+    renderFor({ ...OVER_LOCAL, saleSplitExemption: "other_law" }, "근거 문서");
+    // ⚠️ `<strong>`이 문장을 쪼개므로 **단일 텍스트 노드** 기준으로 찾는다 —
+    //    `getByText`는 요소 하나의 텍스트를 보지, 자식으로 나뉜 문장 전체를 잇지 않는다.
+    expect(screen.getByText(/사유로 위 내용을 기재하세요/)).toBeTruthy();
+  });
+
+  it("🔴 발동 시 신고서 양도가액이 **안분가액**임을 각주로 알린다 — 계약서 금액과 다르다", () => {
+    renderFor(OVER_LOCAL);
+    expect(screen.getByText(/신고서 양도가액은/)).toBeTruthy();
+    expect(screen.getByText(/계약서상 구분 기재 금액과 다릅니다/)).toBeTruthy();
+  });
+
+  it("미발동이면 그 각주는 뜨지 않는다 — 구분값이 그대로 신고되므로 다를 것이 없다", () => {
+    renderFor({ landTransferPrice: 1_000_000_000, buildingTransferPrice: 500_000_000 });
+    expect(screen.queryByText(/계약서상 구분 기재 금액과 다릅니다/)).toBeNull();
   });
 });

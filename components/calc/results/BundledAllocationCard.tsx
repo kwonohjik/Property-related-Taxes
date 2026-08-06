@@ -104,11 +104,14 @@ function PropertyCard({
   breakdown,
   ownership,
   assetKind,
+  exemptionNote,
 }: {
   breakdown: PerPropertyBreakdown;
   ownership?: { numerator: number; denominator: number };
   /** 안분 결과의 자산 종류 — 토지·건물 분리 안내 문구 분기용(자산별로 다르다). */
   assetKind?: string;
+  /** §166⑧ 예외 근거 문구 — 엔진 미전송이라 폼에서 읽어 내려온다(계획서 §15.3). */
+  exemptionNote?: string;
 }) {
   // 지분 모드(분자 < 분모) 시 "지분 X%" 라벨 표시. 단독 소유(분자 === 분모)는 미표시.
   const isFractional =
@@ -178,6 +181,7 @@ function PropertyCard({
         longTermDeduction={breakdown.longTermHoldingDeduction}
         taxableIncome={breakdown.incomeAfterOffset}
         assetKind={assetKind}
+        {...(exemptionNote ? { exemptionNote } : {})}
       />
     </div>
   );
@@ -569,7 +573,13 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
            표시를 붙일 곳을 여기로 잡지 않으면 **판정이 계산에만 반영되고 화면에는 안 보인다**.
       */}
       {aggregated.generalBuildingValuationDetail?.saleSplitJudgment && (
-        <SaleSplitJudgmentBlock j={aggregated.generalBuildingValuationDetail.saleSplitJudgment} />
+        <SaleSplitJudgmentBlock
+          j={aggregated.generalBuildingValuationDetail.saleSplitJudgment}
+          // 근거 문구는 엔진을 거치지 않는다(계획서 §15.3) — 폼에서 직접 읽는다.
+          {...(formData.assets[0]?.saleSplitExemptionNote
+            ? { exemptionNote: formData.assets[0].saleSplitExemptionNote }
+            : {})}
+        />
       )}
 
       {/* §97② 2호 단서 swap 발동 표시 (일반건물 환산 자산총액 판정 — F10) */}
@@ -658,6 +668,11 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             assetKind={
               apportionment.apportioned.find((a) => a.assetId === p.propertyId)?.assetKind
             }
+            // §166⑧ 예외 근거는 엔진을 거치지 않으므로(계획서 §15.3) 폼에서 **자산별로** 찾아 넘긴다.
+            {...(() => {
+              const note = formData.assets.find((a) => a.assetId === p.propertyId)?.saleSplitExemptionNote;
+              return note ? { exemptionNote: note } : {};
+            })()}
           />
         ))}
       </div>
