@@ -17,6 +17,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { HouseValuationSection } from "./HouseValuationSection";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
@@ -61,6 +62,8 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   // 평가방법(isSupplementary) 무관 — §163⑨2호는 상증법 평가액과 §164⑦을 비교하여 큰 금액을
   // 취득가액으로 하므로, ②(§164⑦)는 ①의 평가방법과 독립적으로 항상 산정 대상.
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
+  /** 개별공시지가 최초고시(1990.8.30.) 前 상속·증여 토지 → §164④ 등급환산 대상 (소령 §163⑨1호) */
+  const landPre1990 = asset.assetKind === "land" && !!inheritanceDate && inheritanceDate < "1990-08-30";
   // 상가건물·오피스텔: 토지/주택 보충적평가 보조계산(개별공시지가×면적 / 주택가격)은 부적합 →
   // 신고가액 직접 입력(상증법 §60~66 평가액). §164⑥ 취득당시 기준시가는 별도 섹션(취득 정보)에서 처리.
   const isCommercial = asset.assetKind === "commercial_building";
@@ -260,6 +263,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
                       onChange={(v) => handleLandAreaChange(v)}
                     />
                   </FieldCard>
+
                 </div>
               ) : (
                 /* 주택 — 고시주택가격 단일(개별/공동, Vworld 조회). 부수토지 일체 → 토지 별도 입력 없음(§61①4호). */
@@ -335,6 +339,36 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
           <HouseValuationSection
             asset={asset}
             onChange={onChange}
+            transferDate={transferDate}
+          />
+        </div>
+      )}
+
+      {/* 토지 미공시(1990.8.30. 이전 상속·증여): §164④ 등급환산 — §163⑨**1호** max(상증법 평가액, §164④)
+          1호는 「의제취득일」과 무관하다 — 조건은 「고시 前 상속·증여받은 토지」뿐이다.
+          ⚠️ 이 기간에는 위 보충적평가 섹션이 `isPreDisclosure`로 **숨겨진다**(개별공시지가가 존재하지 않으므로).
+             주택이 `showHouseValuation`으로 별도 경로를 갖는 것처럼, 토지도 여기가 **유일한 산정 경로**다. */}
+      {landPre1990 && (
+        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-3">
+          <p className="text-xs font-medium text-amber-800">
+            개별공시지가 미공시(1990.8.30. 이전 상속·증여) — 아래 토지등급가액 환산으로 취득당시
+            기준시가를 산정합니다. 취득가액은 위 상속세 신고가액(상증법 평가액)과 §164④ 환산액 중{" "}
+            <strong>큰 금액</strong>으로 자동 적용됩니다 (소득세법 시행령 §163⑨1호).
+          </p>
+          <Pre1990LandValuationInput
+            form={{
+              pre1990Enabled: asset.pre1990Enabled,
+              pre1990PricePerSqm_1990: asset.pre1990PricePerSqm_1990,
+              pre1990PricePerSqm_atTransfer: asset.pre1990PricePerSqm_atTransfer,
+              pre1990Grade_current: asset.pre1990Grade_current,
+              pre1990Grade_prev: asset.pre1990Grade_prev,
+              pre1990Grade_atAcq: asset.pre1990Grade_atAcq,
+              pre1990GradeMode: asset.pre1990GradeMode,
+            }}
+            onChange={(patch) => onChange(patch)}
+            acquisitionArea={asset.acquisitionArea || undefined}
+            jibun={asset.addressJibun || undefined}
+            acquisitionDate={asset.acquisitionDate || undefined}
             transferDate={transferDate}
           />
         </div>
