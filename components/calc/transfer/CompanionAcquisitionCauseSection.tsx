@@ -256,15 +256,6 @@ export function CompanionAcquisitionCauseSection({
         />
       )}
 
-      {/* 가업상속공제 §97의2④ 의제 취득가액 — 상속 취득원인 시만 표시 */}
-      {asset.acquisitionCause === "inheritance" && (
-        <FamilyBusinessInheritanceTransferSection
-          asset={asset}
-          onChange={onChange}
-          transferDate={transferDate}
-        />
-      )}
-
       {asset.acquisitionCause === "gift" && (
         <CompanionAcqGiftBlock
           acquisitionDate={asset.acquisitionDate}
@@ -285,10 +276,25 @@ export function CompanionAcquisitionCauseSection({
           환산(나목)과 무관한 가목 입력이라 환산 모드 토글 밖에 둔다. */}
       <GiftLandStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
 
-      {/* 의제취득일 前 상속·증여 + 추계 + ① 미입력 → §163⑨ 평가액이 계산에 안 들어간다는 안내.
-          차단이 아니다(pre-deemed는 §176조의2④ 적용 영역이기도 하다). 자체 게이트를 가지므로
-          취득원인 분기 없이 마운트한다 — 상속·증여 양쪽을 한 컴포넌트가 커버한다. */}
-      <PreDeemedEstimatedNotice asset={asset} />
+      {/* 의제취득일 前 상속·증여 + ①·② 미충족 → §163⑨ 평가액 미반영 안내 + 「가목 확인 불가」 선언.
+          E-1(U2-E)로 **차단이 붙었다** — 선언이 없으면 `clauseADeclarationError`가 계산을 막는다.
+          자체 게이트(⑧ validate와 같은 술어)를 가지므로 취득원인 분기 없이 마운트한다.
+
+          ⚠️ **위치가 의미를 만든다** — 「①도 ②도 없다」는 판정이므로 ①·② 입력칸을 **모두 보여준 뒤**에
+             와야 한다. 상속은 위 `CompanionAcqInheritanceBlock`이, 증여는 바로 위 두 §164 섹션이
+             그 칸을 낸다. 그래서 가업상속공제(§97의2④)는 이 아래로 미뤘다 — 종전에는 그것이 ①과
+             선언 토글 사이에 끼어 "못 구하겠다"는 사용자가 무관한 카드를 지나쳐야 했다. */}
+      <PreDeemedEstimatedNotice asset={asset} onChange={onChange} />
+
+      {/* 가업상속공제 §97의2④ 의제 취득가액 — 상속 취득원인 시만 표시.
+          §163⑨의 ①②③ 결정이 끝난 **뒤에 얹히는 특례**라 순서상으로도 여기가 맞다. */}
+      {asset.acquisitionCause === "inheritance" && (
+        <FamilyBusinessInheritanceTransferSection
+          asset={asset}
+          onChange={onChange}
+          transferDate={transferDate}
+        />
+      )}
 
       {asset.acquisitionCause === "carryover_gift" && (
         <CarryoverGiftBlock

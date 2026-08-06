@@ -408,6 +408,9 @@ export function migrateAsset(raw: unknown): AssetForm {
     a.fixedAcquisitionPrice = "";
   }
   delete a.inheritanceValuationMode;
+  // E-1 선언(U2-E) — 기존 세션에는 없는 신규 필드다. `undefined`로 두면 차단 게이트가 판정을
+  // 못 하므로 명시적으로 `false`(=미선언 → 차단)로 채운다.
+  if (a.preDeemedClauseAUnconfirmed === undefined) a.preDeemedClauseAUnconfirmed = false;
   if (a.useSupplementaryHelper === undefined) a.useSupplementaryHelper = false;
   if (!a.supplementaryLandArea) a.supplementaryLandArea = "";
   if (!a.supplementaryLandUnitPrice) a.supplementaryLandUnitPrice = "";

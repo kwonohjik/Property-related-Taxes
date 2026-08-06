@@ -48,6 +48,18 @@ export function deriveSec163_9BaseDate(asset: Sec163_9Asset): string {
 }
 
 /**
+ * 의제취득일 — 「소득세법」 부칙(1985.1.1. 개정). 이 날 **前** 취득은 §176조의2④(나목)도
+ * 적용 영역이라 ③(환산)이 존재한다. 그래서 「가목 확인 불가」 선언이 갈 곳이 있다.
+ */
+export const DEEMED_ACQUISITION_DATE = "1985-01-01";
+
+/** §163⑨ 대상이면서 기준일이 의제취득일 **前**인가 — pre-deemed 분기의 단일 술어. */
+export function isSec163_9PreDeemed(asset: Sec163_9Asset): boolean {
+  const baseDate = deriveSec163_9BaseDate(asset);
+  return !!baseDate && baseDate < DEEMED_ACQUISITION_DATE;
+}
+
+/**
  * 취득원인별 기준일 명칭 — 「상속개시일」 / 「증여일」.
  *
  * 화면 문구가 "상속개시일"로 고정돼 있으면 증여 사용자에게는 **틀린 안내**가 된다.

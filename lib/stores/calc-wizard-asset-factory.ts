@@ -90,6 +90,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     ...PARTIAL_AREA_APPORTION_DEFAULTS,
     areaScenario: "same",
     publishedValueAtInheritance: "",
+    // 기본값 `false`가 **통과가 아니라 차단**이라 3-state가 불요하다(§4.2).
+    preDeemedClauseAUnconfirmed: false,
     fixedAcquisitionPrice: "",
     addressRoad: "",
     addressJibun: "",
