@@ -23,6 +23,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { TransferStdPriceCard } from "./TransferStdPriceCards";
+import { SaleAppraisalBasisCard, SaleSplitExemptionCard } from "./SaleSplitBasisExemptionCards";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const SALE_MODE_OPTIONS: RadioCardOption<"actual" | "apportioned">[] = [
@@ -94,12 +95,29 @@ export function LandBuildingSaleSplitSection(props: Props) {
         )}
       </div>
 
+      {/*
+        순서는 **엔진 로직 순서**를 따른다(계획서 §12.3 · UI 순서 = 로직 순서 규칙):
+        ① 구분 기재 여부(위 라디오) → ② 안분 basis 해석(**감정 > 기준시가** 서열) → ③ §100③ 판정 → ④ 예외.
+        감정평가가액이 기준시가보다 위에 오는 것은 서열 그대로다.
+      */}
+      {props.asset && props.onAssetChange && (
+        <SaleAppraisalBasisCard
+          asset={props.asset}
+          onChange={props.onAssetChange}
+          transferDate={props.transferDate}
+        />
+      )}
+
       {props.showStdCard && props.asset && props.onAssetChange && (
         <TransferStdPriceCard
           asset={props.asset}
           onChange={props.onAssetChange}
           transferDate={props.transferDate}
         />
+      )}
+
+      {props.saleSplitMode === "actual" && props.asset && props.onAssetChange && (
+        <SaleSplitExemptionCard asset={props.asset} onChange={props.onAssetChange} />
       )}
     </div>
   );
