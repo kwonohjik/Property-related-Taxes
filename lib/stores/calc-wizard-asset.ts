@@ -431,6 +431,28 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * "apportioned": 양도시 기준시가 비율 안분 (기본) | "actual": 구분양도 직접 입력.
    */
   saleSplitMode: "apportioned" | "actual";
+  /**
+   * 양도시 **감정평가가액** — 안분 basis 서열 **1순위**
+   * (「부가가치세법 시행령」 제64조 제1항 제1호 단서 · 「소득세법 시행령」 제166조 제6항이 차용).
+   * 있으면 양도시 기준시가보다 **우선**해 양도가액을 안분한다.
+   *
+   * ⚠️ 토지·건물 **양쪽 다** 있어야 채택된다 — 한쪽만이면 엔진이 「미평가」로 보고 배제한다.
+   */
+  landAppraisalAtTransfer: string;
+  /** 양도시 감정평가가액 (건물분) — 위와 동일한 규칙 */
+  buildingAppraisalAtTransfer: string;
+  /**
+   * 감정일자 — **시기 요건 판정에 필수**다. 유효 창 = [(양도연도 − 1)-01-01, 양도연도-12-31]
+   * (부가령 §64①1호 괄호 + 「소득세법」 제5조 제1항 역년). 벗어나면 기준시가로 후퇴한다.
+   */
+  appraisalDateAtTransfer: string;
+  /**
+   * 「소득세법 시행령」 제166조 제8항 **예외** — 선택하면 §100③ 30% 의제가 발동하지 않는다.
+   * 3-state(`partialAcqDistinct` 선례): ""(미선택) 기본.
+   */
+  saleSplitExemption: "" | "other_law" | "demolished_land_only";
+  /** 예외 **근거** — 선택 시 필수(validate 차단). 남용 억제 + 신고서 각주 재료. */
+  saleSplitExemptionNote: string;
   /** 토지 파트 매매사례가액 (원) — landAcqMode === "salesCase" 시 직접입력, 미입력 시 §166⑥ 안분 */
   landSalesCaseValue: string;
   /** 건물 파트 매매사례가액 (원) — buildingAcqMode === "salesCase" 시 직접입력 */

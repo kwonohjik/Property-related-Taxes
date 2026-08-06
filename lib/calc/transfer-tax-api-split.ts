@@ -71,9 +71,14 @@ export function buildSplitPayload(
   const landAcqDirectActive = isSplitActive && (landAcqMode === "actual" || landAcqMode === "appraisal");
   const buildingAcqDirectActive = isSplitActive && (buildingAcqMode === "actual" || buildingAcqMode === "appraisal");
   // 양도가액 직접입력 게이트 — saleSplitMode==="actual"(구분양도) 시만.
-  // 엔진은 saleSplitMode를 명시 입력으로 소비하므로("죽은 모드" 재발 방지, §9 M2) 이 게이트를
-  // 벗어나도 유령 값이 도달하지 않지만, "기준시가 비율 안분"으로 되돌린 뒤 잔존한 직접 입력값을
-  // 사용자 의도와 다르게 전송하지 않기 위해 여전히 게이트로 막는다.
+  //
+  // 🔴 **엔진은 `saleSplitMode`를 읽지 않는다** (2026-08-06 실측 — `types/transfer.types.ts`의
+  //    타입 선언 1곳뿐이고 소비 지점이 없다. 계획서 Q-7의 주석↔구현 드리프트를 여기서 정정한다).
+  //    실제 스위치는 `landTransferPrice`/`buildingTransferPrice`의 **유무**다.
+  //
+  // ⇒ 그래서 이 게이트는 "사용자 의도 보호"가 아니라 **유일한 방어선**이다. "기준시가 비율 안분"
+  //    으로 되돌린 뒤 잔존한 직접 입력값이 여기를 통과하면, 엔진은 그것을 구분 기재로 보고
+  //    §100③ 30% 판정까지 태운다(`transfer-tax-split-sale-price.ts`).
   const saleDirectActive = isSplitActive && saleSplitMode === "actual";
   // 양도시 기준시가 — 분리 축이 활성이면 **항상 전송**한다(2026-07-29 S1 해소).
   //
@@ -131,6 +136,27 @@ export function buildSplitPayload(
           landTransferPrice: ratioed(primary.landTransferPrice),
           buildingTransferPrice: ratioed(primary.buildingTransferPrice),
         }
+      : {}),
+    // 양도가액 안분 basis — **감정평가가액**(부가령 §64①1호 단서 · 서열 1순위). 분리 축이
+    // 활성이면 **항상 전송**한다 — 일괄양도(안분 basis)와 구분양도(30% 판정의 비교 대상) 양쪽에서
+    // 쓰이므로 `saleDirectActive`로 좁히면 일괄양도에서 감정가액이 조용히 무시된다.
+    //
+    // ⚠️ `ratioed`(지분 스케일)를 **걸지 않는다** — 위 기준시가(:88)와 같은 이유다. 비율로만
+    //    소비되어 스케일해도 결과가 같고, 물건 전체의 평가액이라 지분으로 깎을 대상이 아니다.
+    ...(isSplitActive
+      ? {
+          landAppraisalAtTransfer: parseAmount(primary.landAppraisalAtTransfer) || undefined,
+          buildingAppraisalAtTransfer: parseAmount(primary.buildingAppraisalAtTransfer) || undefined,
+          appraisalDateAtTransfer: primary.appraisalDateAtTransfer || undefined,
+        }
+      : {}),
+    // §166⑧ 예외 — 30% 판정 자체가 구분 기재가 있을 때만 돌므로 양도가액 2필드와 **같은 게이트**다.
+    //
+    // ⚠️ 근거(`saleSplitExemptionNote`)는 **엔진에 보내지 않는다** — 계산에 쓰이지 않는 서술
+    //    텍스트이고, 결과 표시는 폼값을 직접 읽는다(`addressDong`·`addressHo`와 같은 UI 전용 취급).
+    //    엔진 입력에 넣으면 Zod·Route·엔진 타입 3곳이 계산과 무관한 문자열을 나르게 된다.
+    ...(saleDirectActive && primary.saleSplitExemption
+      ? { saleSplitExemption: primary.saleSplitExemption }
       : {}),
     // 취득가액 2필드.
     ...(landAcqDirectActive ? { landAcquisitionPrice: ratioed(primary.landAcquisitionPrice) } : {}),

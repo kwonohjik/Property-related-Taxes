@@ -68,8 +68,12 @@ export interface SaleApportionBasisResult {
 /**
  * 감정 유효 창 — 「직전 과세기간 개시일 ~ 양도 과세기간 종료일」.
  * 「소득세법」 §5① 역년 전제(§5②③ 단축은 범위 밖 — 위 주석).
+ *
+ * 📤 **UI도 이 함수를 쓴다**(Phase 1-E) — 화면이 창을 안내하려고 같은 규칙을 다시 쓰면
+ *    dual-truth가 된다(메모리 `feedback_ui_engine_dual_truth_avoidance`). 판정은 여전히
+ *    엔진이 정본이고, 화면은 **같은 함수의 출력을 표시만** 한다.
  */
-function appraisalWindowOf(transferDate: Date): { from: Date; to: Date } {
+export function appraisalWindowOf(transferDate: Date): { from: Date; to: Date } {
   /**
    * ⚠️ **UTC로 통일**한다. `lib/api/date-coerce.ts:45`의 `toDate`가 ISO 날짜 문자열을
    * `new Date(value)`로 파싱하므로 엔진에 도달하는 날짜는 **UTC 자정**이다. 창 경계를 `Date.UTC`로
