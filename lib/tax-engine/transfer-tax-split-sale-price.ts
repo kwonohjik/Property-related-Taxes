@@ -37,18 +37,33 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 /**
  * 안분 basis 해석 — 부가령 §64① 서열(감정평가가액 > 기준시가)을 엔진 입력에 적용한다.
  *
- * ⏳ 감정평가가액 축(가액 2필드 + 감정일자)은 **아직 폼·API에 없다**(계획서 §12.9 ① — Phase 1-E).
- *    그래서 지금은 기준시가만 도달하지만, 서열 판정 자체는 1-B에서 완성돼 있어 배관만 붙으면 된다.
- *    여기서 `appraisal`을 빼 두면 1-E에서 이 함수를 다시 열어야 하므로 **인자 형태로 남겨 둔다**.
+ * ✅ **Phase 1-E에서 감정평가가액 축을 배관했다**(가액 2필드 + 감정일자). 서열·시기 요건 판정은
+ *    1-B에서 완성돼 있으므로 여기는 입력을 형태만 맞춰 넘긴다.
+ *
+ * ⚠️ **감정일자가 없으면 감정가액을 넘기지 않는다** — 시기 요건(유효 창)을 판정할 수 없어서다.
+ *    반대로 **일자가 있고 가액이 한쪽만 있으면 넘긴다**: 그래야 `usableAppraisal`이 `incomplete`로
+ *    배제 사유를 남겨 화면이 「왜 감정가액이 안 쓰였는지」를 말할 수 있다. 조건을 「양쪽 다 있을 때만
+ *    전달」로 좁히면 한쪽 누락이 **침묵 무시**가 된다(정상 경로는 validate가 먼저 막는다).
  */
 function resolveBasis(input: TransferTaxInput): SaleApportionBasisResult {
   const landStd = input.landStandardPriceAtTransfer;
   const buildingStd = input.buildingStandardPriceAtTransfer;
+  const landApp = input.landAppraisalAtTransfer;
+  const buildingApp = input.buildingAppraisalAtTransfer;
+  const appraisedAt = input.appraisalDateAtTransfer;
   return resolveSaleApportionBasis({
     totalTransferPrice: input.transferPrice,
     transferDate: input.transferDate,
     ...(landStd != null && buildingStd != null
       ? { stdPrice: { land: landStd, building: buildingStd } }
+      : {}),
+    ...(appraisedAt != null && (landApp != null || buildingApp != null)
+      ? {
+          appraisal: {
+            value: { land: landApp ?? 0, building: buildingApp ?? 0 },
+            appraisedAt,
+          },
+        }
       : {}),
   });
 }
@@ -125,6 +140,8 @@ export function resolveTransferPriceSplit(input: TransferTaxInput): {
       apportioned: basis.apportioned,
       applied: judged.applied,
       basisKind: basis.kind,
+      // 감정을 넣었는데 기준시가로 안분된 경우 **이유를 싣는다** — 침묵 후퇴 금지(Phase 1-E).
+      ...(basis.appraisalRejected ? { appraisalRejected: basis.appraisalRejected } : {}),
       ...judged.detail,
     },
   };

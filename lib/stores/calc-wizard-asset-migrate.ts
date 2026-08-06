@@ -351,6 +351,14 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.buildingAcqMode === undefined) a.buildingAcqMode = "";
   if (a.landSalesCaseValue === undefined) a.landSalesCaseValue = "";
   if (a.buildingSalesCaseValue === undefined) a.buildingSalesCaseValue = "";
+  // 양도가액 안분 basis(감정평가가액) + §166⑧ 예외 — Phase 1-E 신규.
+  // 구 세션에는 없던 필드다. `undefined`로 두면 CurrencyInput이 uncontrolled로 시작해
+  // 첫 입력에서 React 경고가 나고, validate의 `opt()`도 빈 문자열과 다르게 다룬다.
+  if (a.landAppraisalAtTransfer === undefined) a.landAppraisalAtTransfer = "";
+  if (a.buildingAppraisalAtTransfer === undefined) a.buildingAppraisalAtTransfer = "";
+  if (a.appraisalDateAtTransfer === undefined) a.appraisalDateAtTransfer = "";
+  if (a.saleSplitExemption === undefined) a.saleSplitExemption = "";
+  if (a.saleSplitExemptionNote === undefined) a.saleSplitExemptionNote = "";
   if (!a.landTransferPrice) a.landTransferPrice = "";
   if (!a.buildingTransferPrice) a.buildingTransferPrice = "";
   if (!a.landAcquisitionPrice) a.landAcquisitionPrice = "";

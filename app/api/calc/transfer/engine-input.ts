@@ -222,6 +222,12 @@ export function buildTransferEngineInput(
     buildingSalesCaseValue: data.buildingSalesCaseValue,
     landTransferPrice: data.landTransferPrice,
     buildingTransferPrice: data.buildingTransferPrice,
+    landAppraisalAtTransfer: data.landAppraisalAtTransfer,
+    buildingAppraisalAtTransfer: data.buildingAppraisalAtTransfer,
+    // ⚠️ JSON 경유 후 **문자열**로 도착한다 — `Date`로 바꾸지 않으면 엔진의 창 비교
+    // (`getTime()`)가 런타임에 깨진다(`lib/api/date-coerce.ts`).
+    appraisalDateAtTransfer: toOptionalDate(data.appraisalDateAtTransfer),
+    saleSplitExemption: data.saleSplitExemption,
     landAcquisitionPrice: data.landAcquisitionPrice,
     buildingAcquisitionPrice: data.buildingAcquisitionPrice,
     landDirectExpenses: data.landDirectExpenses,
