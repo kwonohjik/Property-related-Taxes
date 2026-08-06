@@ -24,6 +24,7 @@ import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
+import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
@@ -104,6 +105,28 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     (primary.pre1990Enabled ?? false) &&
     primary.assetKind === "land" &&
     !(primary.acquisitionCause === "gift" && (primary.acquisitionDate ?? "") >= "1985-01-01");
+  /**
+   * §164④ **②(가목) 산출 전용** 게이트 — 「환산 모드 전환」과 분리한다 (G-1 · 2026-08-06).
+   *
+   * 위 `hasPre1990`은 `pre1990Land` payload 생성과 **환산 모드 전환**(`acquisitionPrice: 0` ·
+   * `expenses: 0` · `acquisitionMethod: "estimated"` 등 6개 필드 override)을 **한 값으로** 제어한다.
+   * 그런데 §163⑨1호의 ②(§164④)는 법 §97①1호 **가목**이라 환산(나목)과 무관하게 필요하다 —
+   * 증여는 ①(증여 신고가액)이 확인되므로 환산으로 전환되면 안 되지만 ②와는 **비교해야** 한다
+   * ("평가한 가액**과** §164④ 가액 **중 많은 금액**").
+   *
+   * ⇒ payload 생성만 이 게이트로 넓힌다. override 6곳은 `hasPre1990` 그대로 두므로
+   *   post-1985 증여의 신고가액 경로가 깨지지 않는다. 엔진은 `pre1990Land`로 ②를 산출하고
+   *   `runInheritedAcquisitionStep`이 max(①,②)를 결정한다
+   *   (anchor `gift-land-164-4-max.anchor.test.ts` G1-A·G1-B).
+   *
+   * ⚠️ **`pre1990Enabled` 래치를 조건에 넣지 않는다.** 그 플래그는 환산 클릭 시 set되는 uncleaable
+   *    래치라 §163⑨ 경로의 opt-in 신호로 부적절하다. 대신 `buildPre1990LandPayload`가 등급 3종·면적·
+   *    1990 ㎡당가를 **모두** 요구하므로(`transfer-tax-api-helpers.ts:400`) **등급을 실제로 입력한
+   *    경우에만** payload가 생긴다 — 상가 §164⑥·주택 §164⑤~⑦과 같은 all-or-nothing opt-in이다.
+   *    ⇒ PR#731이 막으려던 stale 래치 오염은 재발하지 않는다(이 게이트는 override를 켜지 않는다).
+   */
+  const hasPre1990ForSec164 =
+    primary.assetKind === "land" && isSec163_9Cause(primary.acquisitionCause);
   // §164⑤ PHD 모드: standardPriceAt* 는 3-시점 입력으로 자동 도출 → API body에서 제외
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)해도 PHD 경로는 표준시가 직접 입력 불요.
   const usesPhd = primary.usePreHousingDisclosure === true;
@@ -671,7 +694,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // ── 상속 상가 §164⑥ 취득당시 기준시가 보조 입력 (< 2005-01-01, §163⑨2호 max) — sibling 격리 ──
     ...buildCommercialInheritanceValuationPayload(primary),
     // ── 1990.8.30. 이전 취득 토지 기준시가 환산 (자산-수준 필드 사용, 단건·다건 공용 헬퍼) ──
-    ...(hasPre1990 ? buildPre1990LandPayload(primary, form.transferDate) : {}),
+    // ⑬ pre1990 토지등급 — 환산 모드(`hasPre1990`)뿐 아니라 §163⑨1호 ②(가목) 산출에도 필요하다.
+    //    `hasPre1990ForSec164`는 override를 켜지 않고 payload만 공급한다(G-1 입력 계층 분리).
+    ...(hasPre1990 || hasPre1990ForSec164
+      ? buildPre1990LandPayload(primary, form.transferDate)
+      : {}),
     // 겸용주택 분리계산 입력
     ...(mixedUsePayload ? { mixedUse: mixedUsePayload } : {}),
     // 배우자등 이월과세 (§97조의2)

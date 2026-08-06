@@ -8,6 +8,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
+import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-date";
 
 /**
  * 상속·**증여** 취득가액 의제 페이로드 빌드 (소령 §163⑨).
@@ -31,16 +32,14 @@ export function buildInheritedAcquisitionPayload(
 ): { inheritedAcquisition?: unknown } {
   const isGift = primary.acquisitionCause === "gift";
   const triggerable =
-    (primary.acquisitionCause === "inheritance" || isGift) &&
+    isSec163_9Cause(primary.acquisitionCause) &&
     (primary.inheritanceAssetKind === "land" ||
       primary.inheritanceAssetKind === "house_individual" ||
       primary.inheritanceAssetKind === "house_apart");
   if (!triggerable) return {};
 
-  /** 증여는 증여일(취득일)이 기준일이다 — §163⑨ 본문 "상속개시일 또는 증여일 현재" */
-  const inheritanceStartDate = isGift
-    ? primary.acquisitionDate || ""
-    : primary.inheritanceStartDate || primary.acquisitionDate || "";
+  /** 기준일 = 「상속개시일 또는 증여일 현재」(§163⑨ 본문). UI 노출 게이트와 **같은 파생**. */
+  const inheritanceStartDate = deriveSec163_9BaseDate(primary);
   if (!inheritanceStartDate) return {};
   const isPreDeemed = inheritanceStartDate < "1985-01-01";
 
@@ -111,15 +110,10 @@ export function buildCommercialInheritanceValuationPayload(
   primary: AssetForm,
 ): { commercialInheritanceValuation?: unknown } {
   // §163⑨2호는 「상속 **또는 증여**」다 — 증여도 ②(§164⑥) 비교 대상이다.
-  const isInheritanceOrGift =
-    primary.acquisitionCause === "inheritance" || primary.acquisitionCause === "gift";
-  if (primary.assetKind !== "commercial_building" || !isInheritanceOrGift) {
+  if (primary.assetKind !== "commercial_building" || !isSec163_9Cause(primary.acquisitionCause)) {
     return {};
   }
-  const inheritanceDate =
-    primary.acquisitionCause === "gift"
-      ? primary.acquisitionDate || ""
-      : primary.inheritanceStartDate || primary.acquisitionDate || "";
+  const inheritanceDate = deriveSec163_9BaseDate(primary);
   if (!inheritanceDate || inheritanceDate >= "2005-01-01") return {};
 
   const exclusiveArea = parseFloat(primary.cbExclusiveArea) || 0;
@@ -173,21 +167,16 @@ export function buildInheritedHouseValuationPayload(
   const isHouse =
     primary.assetKind === "housing" || primary.assetKind === "redevelopment_apt";
   // §163⑨2호는 「상속 **또는 증여**」다 — 증여도 ②(§164⑤~⑦) 비교 대상이다.
-  const isInheritanceOrGift =
-    primary.acquisitionCause === "inheritance" || primary.acquisitionCause === "gift";
   const triggerable =
     isHouse &&
-    isInheritanceOrGift &&
+    isSec163_9Cause(primary.acquisitionCause) &&
     parseFloat(primary.inhHouseValLandArea) > 0 &&
     parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer) > 0 &&
     parseAmount(primary.inhHouseValLandPricePerSqmAtFirst) > 0 &&
     parseAmount(primary.inhHouseValHousePriceAtFirst) > 0;
   if (!triggerable) return {};
 
-  const inheritanceDate =
-    primary.acquisitionCause === "gift"
-      ? primary.acquisitionDate || ""
-      : primary.inheritanceStartDate || primary.acquisitionDate || "";
+  const inheritanceDate = deriveSec163_9BaseDate(primary);
   const isBefore1990 = !!inheritanceDate && inheritanceDate < "1990-08-30";
   const buildGrade = (raw: string) => {
     const n = Number(raw.replace(/,/g, ""));

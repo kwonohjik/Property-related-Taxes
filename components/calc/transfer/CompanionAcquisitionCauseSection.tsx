@@ -15,6 +15,8 @@ import { NewConstructionLandAcqBlock } from "./NewConstructionLandAcqBlock";
 import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
+import { GiftHouseStdPriceSection } from "./GiftHouseStdPriceSection";
+import { GiftLandStdPriceSection } from "./GiftLandStdPriceSection";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
@@ -272,6 +274,15 @@ export function CompanionAcquisitionCauseSection({
           onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
         />
       )}
+
+      {/* 증여 주택 §164⑤~⑦ 취득당시 기준시가 — max(증여일 상증법 평가액, §164⑤~⑦). 소령 §163⑨2호.
+          자체 게이트(증여 + 주택 + 최초공시 前)를 가지므로 상가 섹션과 같이 무조건 마운트한다.
+          상속은 CompanionAcqInheritanceBlock 경로가 같은 위젯을 이미 렌더한다(중복 없음). */}
+      <GiftHouseStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
+
+      {/* 증여 토지 §164④ 취득당시 기준시가 — max(증여일 상증법 평가액, §164④). 소령 §163⑨1호.
+          환산(나목)과 무관한 가목 입력이라 환산 모드 토글 밖에 둔다. */}
+      <GiftLandStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
 
       {asset.acquisitionCause === "carryover_gift" && (
         <CarryoverGiftBlock

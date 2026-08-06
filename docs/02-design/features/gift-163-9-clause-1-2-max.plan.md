@@ -1,7 +1,9 @@
 # 증여 취득가액 — §163⑨1호·2호 max(①,②) 미적용 (상속과의 비대칭)
 
-> **상태**: ✅ **Phase 1 구현 완료** (2026-08-06) — payload 트리거 3곳 확장.
-> 🛑 **토지 §164④(G-1)는 미착수** — `pre1990Land` payload가 STEP 0.4에서 **환산을 강제**해 별도 설계가 필요하다(§10).
+> **상태**: ✅ **전 Phase 완료** (2026-08-06).
+> · Phase 1 — payload 트리거 3곳 확장(API 계층)
+> · **Phase 3 — 입력 UI 개방**(상가 §164⑥ · 주택 §164⑤~⑦ · 토지 §164④). Phase 1만으로는 **도달 불가**였다(§11).
+> · **G-1 — 입력 계층 분리**(`hasPre1990ForSec164`). §10의 당초 진단은 **실측으로 반증**됐다.
 > **선행**: [`inheritance-pre-deemed-clause-a-b-separation.plan.md`](inheritance-pre-deemed-clause-a-b-separation.plan.md)(#1089 상속 V-3) · [`post-deemed-land-164-4-ui-gap.plan.md`](post-deemed-land-164-4-ui-gap.plan.md)(#1096 상속 토지 UI)
 > **세목**: 양도소득세 — 「소득세법 시행령」 §163⑨ 본문·1호·2호 · §164④~⑦ · §176조의2④
 
@@ -148,10 +150,37 @@ const hasPre1990 =
 | **법령 판단** | §163⑨ 본문·1호·2호·§176조의2④는 **전부 "상속 또는 증여"**다. 증여만 max(①,②)를 안 하는 것은 **법문에 없는 구분**이다 |
 | **정면 근거** | **국심 2003부0627**은 **증여 사안**이고 §163⑨ 우선을 판정했다(#1089에서 확보) |
 | **범위** | 엔진·②주입·결과표시는 #1089·#1096에서 **이미 대칭 구조**로 만들어져 있다 ⇒ **API 트리거 확장이 핵심** |
-| **Phase 1** | ✅ **완료** — payload 트리거 3곳 확장(본체·주택 §164⑤~⑦·상가 §164⑥). G-2·G-3 해소 |
-| **G-1** | 🛑 **미착수** — §10 |
+| **Phase 1** | ✅ **완료** — payload 트리거 3곳 확장(본체·주택 §164⑤~⑦·상가 §164⑥). **단 API 계층 한정**(§11) |
+| **Phase 3** | ✅ **완료** — 입력 UI 개방. 이것까지 해야 G-2가 실제로 적용된다 |
+| **G-1** | ✅ **완료** — 입력 계층 분리(§10 정정) |
 
-## 10. 🛑 G-1(토지 §164④)을 미착수로 남긴 이유
+## 10. ✅ G-1(토지 §164④) — 당초 진단은 **틀렸다**(2026-08-06 실측 정정)
+
+> 🔴 **아래 원래 진단은 반증됐다.** probe 실측 결과 엔진은 증여 토지의 max(①,②)를 **이미 정확히
+> 수행한다**. STEP 0.4가 `acquisitionPrice: 0`·`useEstimatedAcquisition: true`로 override해도
+> **STEP 0.45(`runInheritedAcquisitionStep` → `applyResultToInput`)가 `acquisitionPrice`를 max
+> 결과로 덮어쓴다**. 즉 "신고가액 경로가 깨진다"는 관찰되지 않았다.
+>
+> ```
+> formula: "max(상증법 평가액 100,000,000, §164④ 취득당시 기준시가 84,443,174) = 100,000,000"
+> legalBasis: "소득세법 시행령 §163 ⑨ 1호 · §164 ④"      acquisitionPrice: 100,000,000
+> ```
+> anchor `__tests__/tax-engine/transfer/gift-land-164-4-max.anchor.test.ts`가 이 계약을 고정한다.
+>
+> ⇒ **실제 갭은 입력 계층뿐이었다** — ⑴ API `hasPre1990`의 post-1985 gift 배제, ⑵ 증여 토지에
+> §164④ 등급 입력 UI 부재.
+>
+> **해소**: `hasPre1990ForSec164`를 신설해 **payload 생성만** 분리했다. 환산 모드 override 6곳은
+> `hasPre1990` 그대로라 증여 신고가액 경로가 그대로 살아 있다. `pre1990Enabled` 래치를 조건에서
+> 뺐으므로 PR#731이 막으려던 stale 오염도 재발하지 않는다(`buildPre1990LandPayload`의
+> all-or-nothing 필수 검사가 opt-in 신호 역할을 한다).
+>
+> **교훈**: "payload가 override와 한 게이트에 묶여 있다"는 관찰은 옳았으나, 그로부터 **세액이
+> 깨진다**는 결론은 하류 단계(STEP 0.45)를 확인하지 않은 추정이었다.
+> (memory `feedback_numeric_impact_verify_before_bug_claim`)
+
+<details>
+<summary>당초 진단 원문 (보존)</summary>
 
 `hasPre1990` 게이트(`transfer-tax-api.ts:106`)를 열면 ②가 올 것 같지만 **그렇지 않다**.
 
@@ -173,3 +202,48 @@ if (rawInput.pre1990Land) {
 **본질**: ②(§164④)는 **가목**이라 환산(나목)과 무관해야 하는데, 현재 구조는 **한 payload에 묶여 있다**. #1089에서 엔진의 ②·③을 필드로 분리한 것처럼, **입력 계층에서도 「§164④ 산출」과 「환산 모드 전환」을 분리**해야 한다.
 
 ⇒ 별도 계획이 필요하다. **상속 토지는 `runInheritedAcquisitionStep`이 payload override로 보호받지만**(#1089 Phase C·D), 증여는 그 보호가 없다.
+
+</details>
+
+---
+
+## 11. 🔴 Phase 1만으로는 **도달할 수 없었다** (2026-08-06 발견)
+
+Phase 1은 API payload **트리거**를 「상속 또는 증여」로 열었다. 그러나 그 payload가 요구하는
+**입력 필드를 증여에서 채울 화면이 없었다** ⇒ 트리거 필드가 0으로 남아 payload가 생성되지 않고,
+결과적으로 **증여 세액은 전혀 달라지지 않았다**.
+
+| 대상 | 필요 필드 | 종전 입력 UI | 증여 도달 |
+|---|---|---|---|
+| 주택 §164⑤~⑦ | `inhHouseValLandArea` 외 3 | `HouseValuationSection`(상속 블록 안에만 마운트) | ❌ |
+| 상가 §164⑥ | `cbUnitPriceAtFirstOrAcq` 외 5 | `CommercialInheritanceStdPriceSection`(`!== "inheritance"` → `return null`) | ❌ |
+| 토지 §164④ | 등급 3종·면적·1990 ㎡당가 | 환산 모드 전용 `CompanionAcqPurchaseBlock` · 상속 `PreDeemedInputs` | ❌ |
+
+**해소 (Phase 3)**
+
+1. **상가** — 게이트를 `isSec163_9Cause`로 확장하고 상속 전제 문구를 취득원인별로 분기.
+2. **주택** — `GiftHouseStdPriceSection` 신설. 상속 섹션을 통째로 재사용하지 **않는다** —
+   증여의 ①은 이미 「증여 신고가액」(`fixedAcquisitionPrice`)에 있어 ① 입력이 두 곳이 되기 때문이다.
+   ② 산출 입력(`HouseValuationSection`)만 감싼다.
+3. **토지** — `GiftLandStdPriceSection` 신설(환산 모드 토글 **밖**). §10의 게이트 분리와 짝을 이룬다.
+
+**단일 소스 강제** — `lib/calc/transfer-163-9-base-date.ts`
+
+UI 노출 게이트와 API payload 빌더가 기준일을 **각자 파생하면 어긋난다**: 취득원인을 상속에서
+증여로 바꾼 자산에는 `inheritanceStartDate`가 stale로 남아, 한쪽은 그 값을 다른 쪽은
+`acquisitionDate`를 보게 된다 — 그 순간 "칸은 보이는데 payload는 안 생기는" 침묵 실패가 된다.
+`deriveSec163_9BaseDate` / `isSec163_9Cause`를 UI·API 양쪽이 공유한다.
+(memory `feedback_shared_predicate_argument_parity`)
+
+**anchor**: `__tests__/calc/gift-163-9-sec164-ui-reach.anchor.test.tsx` (12건)
+— Pre-Do 시점에 G2-A(상가)·G2-B(주택)·G1-UI(토지)가 **실패하는 것을 먼저 확인**했고,
+회귀·경계(매매·이월과세·고시 이후) 케이스는 처음부터 통과해 기준선이 됐다.
+
+## 12. 후속 (미착수)
+
+- **부분 입력 침묵 무시** — §164④·⑥·⑤~⑦ 세 경로 모두 all-or-nothing opt-in이라, 필수 필드를
+  **일부만** 입력하면 payload가 `{}`가 되어 조용히 ① 단독으로 계산된다. 사용자에게는 "입력했는데
+  반영되지 않는" 상태다. 상속에도 동일하게 존재하는 기존 동작이라 이번 범위에서 건드리지 않았다
+  — 3자산 공통으로 "부분 입력 시 검증 오류" 정책을 적용할지 별도 판단 필요.
+- **U-2** — pre-1985 증여에서 ③(환산)이 필요한 경계. `giftEstimatedModeError`가 pre-1985를
+  차단 대상에서 제외하므로 추계가 열려 있다. 가목이 확인되면 ③에 도달하지 않으나(#1089) 미검증.
