@@ -192,10 +192,19 @@ describe("G-7 — 감정평가가액이 기준시가를 이긴다 (부가령 §6
   });
 });
 
-describe("G-6 — 증축 조합은 차단한다 (R-4 · S-10)", () => {
+describe("G-6 — 🔴 증축 조합도 구분 기재를 받는다 (Q-4 확정 — 계약이 뒤집혔다)", () => {
   /**
-   * 3-way 안분은 건물을 **본체·증축 2장**으로 나눈다. 계약서의 「건물 양도가액」 하나를 그 둘에
-   * 배분할 근거가 없으므로(Q-4 미확정) 근거 없이 나누는 대신 **차단**한다 — 취득 축 V-3 선례.
+   * ## 계약 이력
+   *
+   * 종전에는 「건물 양도가액 하나를 본체·증축에 배분할 근거가 없다」며 **차단**했다.
+   * 2026-08-06 사용자 확정으로 기준이 정해졌다:
+   *
+   * > 증축분이 미미하면 당초 건물의 **자본적 지출**로 처리하고, 크고 중요하면 양도소득금액을
+   * > 구분하여 계산한다(중요 여부는 사용자 판단). 그 경우 양도가액을 당초 건물·증축 건물·토지로
+   * > 나누는 기준은 **양도 당시 기준시가 비율**밖에 없다.
+   *
+   * ⇒ 토지는 구분값을 그대로 쓰고, **건물 구분값을 본체·증축에 기준시가 비율로** 나눈다.
+   *   §100③ 판정은 계약서가 구분한 축(**토지 ↔ 건물 합계**) 기준 2-way다.
    */
   const withExtension: Partial<GeneralBuildingInput> = {
     extensionInfo: {
@@ -206,20 +215,56 @@ describe("G-6 — 증축 조합은 차단한다 (R-4 · S-10)", () => {
     },
   };
 
-  it("구분 기재가 있으면 throw한다", () => {
-    expect(() => mk({ ...withExtension, landTransferPrice: 900_000_000 })).toThrow(
-      /증축이 있는 일반건물은 토지·건물 양도가액 구분 기재를 지원하지 않습니다/,
-    );
+  /** 3-way 안분(구분 기재 없음)을 기준선으로 잡는다 */
+  const base = () => mk(withExtension);
+
+  it("구분 기재가 없으면 종전 3-way 안분 그대로다 (회귀 0)", () => {
+    const out = base();
+    expect(out.allocation.land + out.allocation.building).toBeLessThan(925_000_000); // 건물2가 따로 있다
+    expect(out.saleSplitJudgment).toBeUndefined();
   });
 
-  it("한쪽만 입력해도 차단한다", () => {
-    expect(() => mk({ ...withExtension, buildingTransferPrice: 25_000_000 })).toThrow(
-      /구분 기재를 지원하지 않습니다/,
-    );
+  it("🔴 토지는 구분값을 그대로 쓴다", () => {
+    const out = mk({ ...withExtension, landTransferPrice: 900_000_000, buildingTransferPrice: 25_000_000 });
+    expect(out.allocation.land).toBe(900_000_000);
   });
 
-  it("구분 기재가 없으면 증축 경로는 종전대로 동작한다 (회귀 0)", () => {
-    expect(() => mk(withExtension)).not.toThrow();
+  it("🔴 건물 구분값을 본체·증축에 **양도시 기준시가 비율**로 나눈다", () => {
+    const out = mk({ ...withExtension, landTransferPrice: 900_000_000, buildingTransferPrice: 25_000_000 });
+    // 본체 : 증축 = 20,629,440 : 5,000,000 ⇒ 본체 몫 = floor(25,000,000 × 20,629,440 / 25,629,440)
+    const expected1 = Math.floor((25_000_000 * 20_629_440) / 25_629_440);
+    expect(out.allocation.building).toBe(expected1);
+    // 증축 몫은 잔액이므로 합이 건물 구분값과 정확히 같다
+    const b2 = 25_000_000 - expected1;
+    expect(out.allocation.building + b2).toBe(25_000_000);
+  });
+
+  it("한쪽만 입력해도 나머지를 도출한 뒤 같은 방식으로 나눈다", () => {
+    const out = mk({ ...withExtension, buildingTransferPrice: 25_000_000 });
+    expect(out.allocation.land).toBe(900_000_000); // 925,000,000 − 25,000,000
+  });
+
+  it("🔴 §100③ 판정은 **토지 ↔ 건물 합계** 2-way다", () => {
+    const out = mk({ ...withExtension, landTransferPrice: 900_000_000, buildingTransferPrice: 25_000_000 });
+    const j = out.saleSplitJudgment!;
+    expect(j.declared).toEqual({ land: 900_000_000, building: 25_000_000 });
+    // 안분값의 건물은 본체+증축 **합계**다 — 계약서가 구분하지 않은 축은 비교 대상이 아니다
+    expect(j.apportioned.land + j.apportioned.building).toBe(925_000_000);
+    expect(j.basisKind).toBe("std_price");
+  });
+
+  it("30% 이상 벗어나면 3-way 안분값으로 되돌린다", () => {
+    const over = mk({ ...withExtension, landTransferPrice: 700_000_000, buildingTransferPrice: 225_000_000 });
+    const b = base();
+    expect(over.saleSplitJudgment!.deemedUnclear).toBe(true);
+    expect(over.allocation.land).toBe(b.allocation.land);
+    expect(over.allocation.building).toBe(b.allocation.building);
+  });
+
+  it("합이 총액과 다르면 차단한다", () => {
+    expect(() =>
+      mk({ ...withExtension, landTransferPrice: 900_000_000, buildingTransferPrice: 30_000_000 }),
+    ).toThrow(/총 양도가액.*과 다릅니다/);
   });
 });
 

@@ -184,12 +184,28 @@ describe("⑧ — validate 차단 규칙", () => {
     gbAcquisitionExtensionBuildingStdPrice: "4,000,000",
   } as Partial<AssetForm>;
 
-  it("증축 조합은 차단한다 (S-10 · R-4)", () => {
-    expect(v(asset({ ...SPLIT, ...EXTENSION_FILLED }))).toContain("구분 기재할 수 없습니다");
+  /**
+   * 🔴 **증축 차단은 Q-4 확정으로 해제됐다**(2026-08-06). 건물 구분값을 본체·증축에
+   *    **양도 당시 기준시가 비율**로 나눈다 — 그 외의 방법이 없다는 것이 확정 사항이다.
+   */
+  it("증축 + 구분 기재는 이제 통과한다 (Q-4)", () => {
+    expect(v(asset({ ...SPLIT, ...EXTENSION_FILLED }))).toBeNull();
   });
 
-  it("증축이라도 일괄양도면 통과한다 — 차단 대상은 구분 기재뿐이다", () => {
+  it("증축이라도 일괄양도면 당연히 통과한다", () => {
     expect(v(asset({ ...EXTENSION_FILLED, saleSplitMode: "apportioned" }))).toBeNull();
+  });
+
+  it("🔴 증축 + **감정평가가액**은 차단한다 — 건물을 다시 나눌 근거가 감정에는 없다", () => {
+    const msg = v(
+      asset({
+        ...SPLIT,
+        ...EXTENSION_FILLED,
+        landAppraisalAtTransfer: "400,000,000",
+        buildingAppraisalAtTransfer: "525,000,000",
+      }),
+    );
+    expect(msg).toContain("감정평가가액으로 안분할 수 없습니다");
   });
 
   it("부담부증여 조합은 차단한다 (S-11)", () => {

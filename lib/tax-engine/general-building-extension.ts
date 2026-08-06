@@ -27,6 +27,8 @@ import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
+import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import {
   ESTIMATED_DEDUCTION_RATE_LAND_BUILDING,
   type GeneralBuildingInput,
@@ -77,15 +79,86 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   }
 
   // 토지·건물1 안분 — BigInt 연산 (분자 ≈ 3.3억 × 수십억 > MAX_SAFE_INTEGER)
-  const landTransferPrice = Math.floor(
+  const apportionedLand = Math.floor(
     safeMultiplyThenDivide(input.totalTransferPrice, landStdTotal, denom3),
   );
-  const building1TransferPrice = Math.floor(
+  const apportionedBuilding1 = Math.floor(
     safeMultiplyThenDivide(input.totalTransferPrice, buildingStdTotal, denom3),
   );
   // 건물2 = 잔액 보정 (3중 floor 오차 방지)
-  const building2TransferPrice =
-    input.totalTransferPrice - landTransferPrice - building1TransferPrice;
+  const apportionedBuilding2 =
+    input.totalTransferPrice - apportionedLand - apportionedBuilding1;
+
+  /**
+   * ── 구분 기재(§100②) 처리 — **Q-4 확정 (2026-08-06)** ─────────────────────────
+   *
+   * 사용자 확정 사항:
+   *   · 증축분이 **미미하면** 당초 건물의 **자본적 지출**로 처리한다(= 이 경로를 쓰지 않는다)
+   *   · 증축분이 **크고 중요하면** 양도소득금액을 구분하여 계산한다 — **중요 여부는 사용자 판단**
+   *   · 그 경우 양도가액을 당초 건물·증축 건물·토지로 나누는 기준은
+   *     **양도 당시 기준시가 비율**밖에 없다
+   *
+   * ⇒ 계약서에 「토지 X / 건물 Y」로 구분 기재돼 있으면 **토지는 X를 그대로 쓰고**, 건물 Y를
+   *   본체·증축에 **양도시 기준시가 비율**로 나눈다. 계약서는 건물을 하나로 적으므로 그 안의
+   *   구분은 여전히 「불분명」하고, §100② 본문에 따라 안분하는 것이 그 상황에 맞는 처리다.
+   *
+   * 🔴 **§100③ 판정은 「토지 vs 건물 **합계**」 2-way로 한다.** 조문이 비교하라는 것은 「구분
+   *    기장한 가액」과 「안분계산한 가액」이고, 계약서가 구분한 축이 토지↔건물이기 때문이다.
+   *    본체·증축은 계약서가 구분하지 않았으므로 비교 대상이 아니다.
+   */
+  const landIn = input.landTransferPrice;
+  const buildingIn = input.buildingTransferPrice;
+  const hasDeclared = landIn != null || buildingIn != null;
+
+  let landTransferPrice = apportionedLand;
+  let building1TransferPrice = apportionedBuilding1;
+  let building2TransferPrice = apportionedBuilding2;
+  let saleSplitJudgment: SaleSplitJudgmentDetail | undefined;
+
+  if (hasDeclared) {
+    if (landIn != null && buildingIn != null && landIn + buildingIn !== input.totalTransferPrice) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `일반건물(증축): 토지·건물 양도가액의 합(${(landIn + buildingIn).toLocaleString()}원)이 총 양도가액(${input.totalTransferPrice.toLocaleString()}원)과 다릅니다 — 한쪽만 입력하면 나머지는 총액에서 자동 계산됩니다.`,
+        { what: "양도가액", reason: "sale_split_sum_mismatch" },
+      );
+    }
+    const declared = {
+      land: landIn ?? input.totalTransferPrice - buildingIn!,
+      building: buildingIn ?? input.totalTransferPrice - landIn!,
+    };
+    // 비교 대상 안분값 — 건물은 본체+증축을 **합쳐서** 본다(위 2-way 판정 근거).
+    const apportioned = {
+      land: apportionedLand,
+      building: apportionedBuilding1 + apportionedBuilding2,
+    };
+    const judged = judgeDeemedUnclearSplit({
+      declared,
+      apportioned,
+      ...(input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {}),
+    });
+
+    if (!judged.deemedUnclear) {
+      // 구분값 채택 — 건물 몫을 **양도시 기준시가 비율**로 본체·증축에 나눈다(잔액 흡수).
+      landTransferPrice = judged.applied.land;
+      const buildingDenom = buildingStdTotal + extStdTotal;
+      building1TransferPrice =
+        buildingDenom > 0
+          ? Math.floor(safeMultiplyThenDivide(judged.applied.building, buildingStdTotal, buildingDenom))
+          : judged.applied.building;
+      building2TransferPrice = judged.applied.building - building1TransferPrice;
+    }
+    // 발동 시에는 3-way 안분값(초기값)을 그대로 둔다.
+
+    saleSplitJudgment = {
+      deemedUnclear: judged.deemedUnclear,
+      declared,
+      apportioned,
+      applied: judged.applied,
+      basisKind: "std_price",
+      ...judged.detail,
+    };
+  }
 
   // ── Step 2: 토지+건물1 취득가·필요경비 결정 (원건물 모드 분기) ───────
   //
@@ -347,6 +420,8 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   // 증축 경로에서는 토지·건물1 값으로 채움 (건물2는 assetCards에 직접 포함).
   return {
     allocation: { land: landTransferPrice, building: building1TransferPrice },
+    // §100③ 판정 — 구분 기재가 있을 때만 채워진다(Q-4 · 2-way 토지↔건물 합계 비교).
+    ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
     acquisition: { land: landAcq, building: building1Acq },
     estimatedDeduction: { land: landExp, building: building1Exp },
     buildingFootprintArea: input.buildingFootprintArea,

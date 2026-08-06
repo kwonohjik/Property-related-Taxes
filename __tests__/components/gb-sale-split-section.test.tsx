@@ -9,7 +9,8 @@
  * |---|---|
  * | 일괄양도(기본) | 라디오만 — 양도가액 2칸은 숨긴다 |
  * | 구분양도 | 2칸 + §166⑧ 예외 카드 |
- * | 증축(S-10) · 부담부증여(S-11) | **입력 대신 사유 안내** — 칸을 띄우고 validate에서 막으면 dead-end다 |
+ * | 부담부증여(S-11) | **입력 대신 사유 안내** — 칸을 띄우고 validate에서 막으면 dead-end다 |
+ * | 증축(S-10) | 🔴 **차단이 아니라 안내**(Q-4 확정) — 건물 구분값을 본체·증축에 기준시가 비율로 나눈다 |
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { useState } from "react";
@@ -22,7 +23,15 @@ afterEach(cleanup);
 
 let lastPatch: Partial<AssetForm> = {};
 
-function Harness({ init, blockedReason }: { init?: Partial<AssetForm>; blockedReason?: string }) {
+function Harness({
+  init,
+  blockedReason,
+  hasExtension,
+}: {
+  init?: Partial<AssetForm>;
+  blockedReason?: string;
+  hasExtension?: boolean;
+}) {
   const [asset, setAsset] = useState<AssetForm>({
     ...makeDefaultAsset(1),
     assetKind: "general_building",
@@ -38,6 +47,7 @@ function Harness({ init, blockedReason }: { init?: Partial<AssetForm>; blockedRe
       }}
       sectionNum="③"
       {...(blockedReason ? { blockedReason } : {})}
+      {...(hasExtension ? { hasExtension } : {})}
     />
   );
 }
@@ -95,8 +105,8 @@ describe("⑤-3 — 감정평가가액 카드는 모드 밖에 있다", () => {
 });
 
 describe("⑤-2 — 차단 조합은 칸을 열지 않고 이유를 말한다", () => {
-  it("증축이면 입력 대신 안내가 뜬다 (S-10)", () => {
-    render(<Harness init={{ saleSplitMode: "actual" }} blockedReason="증축이 있는 건물은 … 지원하지 않습니다." />);
+  it("차단 사유가 있으면 입력 대신 안내가 뜬다 (부담부증여 — S-11)", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} blockedReason="부담부증여는 … 성립하지 않습니다." />);
     expect(screen.getByTestId("gb-sale-split-blocked")).toBeTruthy();
     expect(screen.queryByTestId("gb-sale-split-mode")).toBeNull();
     expect(screen.queryByTestId("gb-land-transfer-price")).toBeNull();
@@ -105,5 +115,30 @@ describe("⑤-2 — 차단 조합은 칸을 열지 않고 이유를 말한다", 
   it("안내에는 대신 무엇으로 계산되는지가 들어간다 — 막기만 하면 사용자가 다음 행동을 모른다", () => {
     render(<Harness blockedReason="부담부증여는 …" />);
     expect(screen.getByText(/양도시 기준시가 비율로 안분합니다/)).toBeTruthy();
+  });
+});
+
+describe("⑤-4 — 증축은 **차단이 아니라 안내**다 (Q-4 확정)", () => {
+  it("🔴 증축이 있어도 구분 기재 칸이 열린다", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} hasExtension />);
+    expect(screen.getByTestId("gb-land-transfer-price")).toBeTruthy();
+    expect(screen.queryByTestId("gb-sale-split-blocked")).toBeNull();
+  });
+
+  it("건물 구분값이 본체·증축에 기준시가 비율로 나뉜다고 안내한다", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} hasExtension />);
+    const note = screen.getByTestId("gb-split-extension-note");
+    expect(note.textContent).toContain("양도 당시 기준시가 비율");
+    expect(note.textContent).toContain("합계");
+  });
+
+  it("증축분이 미미하면 자본적 지출로 처리하라고 권한다 — 사용자 판단 사항이다", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} hasExtension />);
+    expect(screen.getByTestId("gb-split-extension-note").textContent).toContain("자본적 지출");
+  });
+
+  it("증축이 없으면 그 안내는 뜨지 않는다", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} />);
+    expect(screen.queryByTestId("gb-split-extension-note")).toBeNull();
   });
 });
