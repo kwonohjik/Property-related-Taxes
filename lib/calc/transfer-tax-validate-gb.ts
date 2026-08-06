@@ -372,5 +372,37 @@ export function validateGeneralBuildingAsset(
     }
   }
 
+  // ── 구분양도(§100②) — Phase 2 ────────────────────────────────────────────────
+  // 게이트는 API 전송(`transfer-tax-api-gb.ts` `saleSplitFields`)과 **같은 축**이다.
+  // 여기서 조건을 재기술하면 「전송되는데 차단 안 함」 또는 그 반대가 된다.
+  if (asset.saleSplitMode === "actual") {
+    const landIn = parseAmount(asset.landTransferPrice) || 0;
+    const buildingIn = parseAmount(asset.buildingTransferPrice) || 0;
+
+    // S-10 (R-4) — 증축 조합은 건물 구분값을 본체·증축에 배분할 근거가 없다(Q-4 미확정).
+    // 엔진도 throw하지만, 「계산 눌러야 알 수 있는 오류」로 두지 않는다.
+    if (asset.gbHasExtension && (landIn > 0 || buildingIn > 0)) {
+      return `${label}: 증축이 있는 건물은 토지·건물 양도가액을 구분 기재할 수 없습니다 — 건물 구분가액을 본체와 증축분에 배분할 법령상 근거가 확정되지 않았습니다. 일괄양도로 계산하세요.`;
+    }
+
+    // S-11 — 부담부증여는 §159가 채무비율로 자동 산정하므로 구분 기재가 성립하지 않는다.
+    if (isBurdenedGiftGB && (landIn > 0 || buildingIn > 0)) {
+      return `${label}: 부담부증여는 양도가액을 인수 채무액 기준으로 자동 산정하므로 토지·건물 구분 기재를 쓸 수 없습니다 (소득세법 시행령 §159).`;
+    }
+
+    // 양쪽 다 입력했으면 **합이 총액과 같아야** 한다. 한쪽만 입력한 경우는 나머지가
+    // `총액 − 입력값`으로 도출되므로(S-8 · Q-3) 검증 대상이 아니다.
+    const total = parseAmount(asset.actualSalePrice) || 0;
+    if (landIn > 0 && buildingIn > 0 && total > 0 && landIn + buildingIn !== total) {
+      return `${label}: 토지·건물 양도가액의 합(${(landIn + buildingIn).toLocaleString()}원)이 총 양도가액(${total.toLocaleString()}원)과 다릅니다 — 한쪽만 입력하면 나머지는 자동으로 계산됩니다.`;
+    }
+
+    // R-5 — §166⑧ 예외는 30% 의제를 면제해 **세액을 바꾼다**. 근거 없이 켤 수 있으면
+    // 가드를 무력화하는 스위치가 된다(split V9와 같은 규칙).
+    if (asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
+      return `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`;
+    }
+  }
+
   return null;
 }
