@@ -81,7 +81,7 @@ export function buildSplitPayload(
   // "구분양도 + 양도가액 미입력 + **양도시 기준시가 2필드**"를 정당한 입력으로 인정하므로
   // (§166⑥ → 부가세령 §64①1호 — 구분이 없으면 양도 당시 기준시가 비율), 그 조합에서 필드가
   // 전송되지 않아 **validate는 통과시키는데 엔진은 throw**했다(계층 간 `hasSaleRatio` 비대칭 —
-  // UI·validate는 폼값 기준, 엔진은 `calcSaleApportionRatio(input)` 즉 전송값 기준).
+  // UI·validate는 폼값 기준, 엔진은 `resolveSaleApportionBasis` 즉 전송값 기준).
   //
   // 과잉 전송은 무해하다 — 양도가액 2칸이 입력되면 `splitPair`가 비율을 쓰지 않고(split-gain.ts:99),
   // 환산 파트가 없으면 분모로도 소비되지 않는다. 기준시가는 물건 속성값이라 지분 스케일 대상도 아니다.

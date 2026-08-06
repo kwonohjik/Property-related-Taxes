@@ -30,8 +30,14 @@ function housingSeparateAcq(over: Partial<TransferTaxInput> = {}): TransferTaxIn
     landAcquisitionDate: new Date("2025-01-08"),
     isSeparateAcquisition: true,
     transferPrice: 1_000_000_000,
-    landTransferPrice: 600_000_000,
-    buildingTransferPrice: 400_000_000,
+    // ⚠️ **§100③ 정합** (2026-08-06 Phase 1-C). 종전 값(토지 6억 / 건물 4억)은 아래 양도시
+    //    기준시가 비율(3억 : 1억 = 75:25 → 안분 7.5억 / 2.5억)에서 **건물이 60% 벗어난다**.
+    //    「소득세법」 §100③이 「안분계산한 가액과 100분의 30 이상 차이」를 「불분명한 때로 본다」고
+    //    의제하므로 그 조합은 애초에 성립하지 않는 신고였다(가드 도입 후 안분값으로 되돌려진다).
+    //    이 anchor의 주제는 **취득시 기준시가 축**이므로 양도가액은 안분값과 일치시켜 두 축의
+    //    간섭을 없앤다 — 우발적 조합이 anchor의 의미를 흐리지 않게 한다.
+    landTransferPrice: 750_000_000,
+    buildingTransferPrice: 250_000_000,
     saleSplitMode: "actual",
     landAcqMode: "actual",
     buildingAcqMode: "estimated",
@@ -57,14 +63,14 @@ describe("주택 별개취득 — 건물분 취득시 기준시가 파트 독립
   it("🔴 H2 건물 환산취득가 분자로 **입력한 나목 기준시가**를 쓴다 (역산 아님)", () => {
     const r = calcSplitGain(housingSeparateAcq({ standardPriceAtAcquisition: undefined }));
     // 건물 환산 = 건물 양도가 × (취득시 건물 기준시가 ÷ 양도시 건물 기준시가)
-    //           = 400,000,000 × (120,000,000 ÷ 100,000,000) = 480,000,000
-    expect(r?.building.acquisitionPrice).toBe(480_000_000);
+    //           = 250,000,000 × (120,000,000 ÷ 100,000,000) = 300,000,000
+    expect(r?.building.acquisitionPrice).toBe(300_000_000);
   });
 
   it("🔴 H3 결합 총액이 남아 있어도 파트 입력이 우선한다 (stale 총액 무시)", () => {
     // 사용자가 종전 화면에서 넣었던 총액이 폼에 남아 전송돼도, 파트 값이 있으면 그것이 정본이다.
     const r = calcSplitGain(housingSeparateAcq({ standardPriceAtAcquisition: 900_000_000 }));
-    expect(r?.building.acquisitionPrice).toBe(480_000_000);
+    expect(r?.building.acquisitionPrice).toBe(300_000_000);
   });
 
   it("H4 토지분은 자기 취득일 기준 ㎡당 공시지가 × 면적 (§99①1호 가목)", () => {
@@ -95,7 +101,10 @@ describe("회귀 가드 — 동시 취득 주택은 라목 역산 유지", () =>
       }),
     );
     // 건물분 = 500,000,000 − 200,000,000(토지분) = 300,000,000
-    // 환산 = 400,000,000 × (300,000,000 ÷ 100,000,000) = 1,200,000,000
-    expect(r?.building.acquisitionPrice).toBe(1_200_000_000);
+    // 환산 = 250,000,000 × (300,000,000 ÷ 100,000,000) = 750,000,000
+    //
+    // 🔴 **역산 여부를 가르는 대비는 그대로다** — 파트 독립(H2·H3)은 입력한 나목 1.2억을 분자로
+    //    써 3억을, 역산 경로는 결합 총액에서 뽑은 3억을 써 7.5억을 낸다(2.5배 차이).
+    expect(r?.building.acquisitionPrice).toBe(750_000_000);
   });
 });

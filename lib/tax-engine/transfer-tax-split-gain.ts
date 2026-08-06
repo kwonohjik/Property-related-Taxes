@@ -22,6 +22,7 @@ import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode"
 import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { calcDerivedBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
+import { resolveTransferPriceSplit } from "./transfer-tax-split-sale-price";
 import {
   applySplitLandExpropriationValuation,
   applyHousingExpropriationValuation,
@@ -251,22 +252,18 @@ function deriveLegacyAcqMode(input: TransferTaxInput): PartAcqMode {
   return "actual";
 }
 
-/**
- * 양도가액 안분 비율 — **양도시** 기준시가 비율 (부가가치세법 시행령 §64①1호 "공급계약일(=양도)
- * 현재 기준시가" 준용, 소득령 §166⑥). 토지·건물 양도시 기준시가가 **모두** 명시 입력된 경우에만
- * 산출한다 — 부분 입력을 임의로 보완(자동 안분)하지 않는다.
+/*
+ * 🗑️ `calcSaleApportionRatio`는 **2026-08-06(Phase 1-C)에 제거**됐다.
+ *
+ * 양도가액 안분은 이제 `transfer-tax-split-sale-price.ts`의 `resolveTransferPriceSplit`
+ * → `sale-split-apportion-basis.ts`의 `resolveSaleApportionBasis`가 단일 정본이다. 그쪽은
+ * **비율이 아니라 금액 쌍**을 낸다 — §100③이 「안분계산한 **가액**」과의 차이를 보므로 비교 대상이
+ * 금액이어야 하고, 부가령 §64①1호 **단서**(감정평가가액 우선) 서열도 함께 담긴다.
+ *
+ * 비율 함수를 남겨 두면 「기준시가 비율」과 「basis 서열 적용 금액」이 갈려 dual-truth가 된다
+ * (메모리 `feedback_ui_engine_dual_truth_avoidance`). 이 자리 표식은 lib/calc의 주석들이
+ * 옛 이름을 가리키고 있어 이동 경로를 남기기 위한 것이다.
  */
-export function calcSaleApportionRatio(
-  input: TransferTaxInput,
-): { land: number; building: number } | null {
-  const landStd = input.landStandardPriceAtTransfer;
-  const buildingStd = input.buildingStandardPriceAtTransfer;
-  if (landStd == null || buildingStd == null) return null;
-  const total = landStd + buildingStd;
-  if (total <= 0) return null;
-  const landRatio = Math.min(landStd / total, 1);
-  return { land: landRatio, building: 1 - landRatio };
-}
 
 /**
  * §6.1 SoT — 파트별 취득 모드에서 자산 전체 `useEstimatedAcquisition` 단방향 파생.
@@ -411,9 +408,6 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     return calcSplitGainPreDisclosure(input);
   }
 
-  // 양도시 기준시가 비율 — 술어와 본체(:352 상당)가 **공유**한다(중복 호출 제거).
-  const saleRatio = calcSaleApportionRatio(input);
-
   const ratio = calcApportionRatio(input);
   // 취득시 기준시가 — 토지/건물 분리 (축 B). ratio와 **같은 소스**에서 산출한다
   // (calcAcqStdPair) — 별도 재계산하면 파트별 독립 경로에서 비율과 금액이 어긋난다.
@@ -474,17 +468,17 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   //    조용히 썼다(회귀 0 목적의 한시 코드). 그러나 토지는 오르고 건물은 감가하므로 두 시점의
   //    비율은 크게 다르고(실측: 취득시 40% vs 양도시 80% → 토지 양도가액 4억 차이), 취득시
   //    비율로 양도대가를 나눌 법령 근거가 없다.
-  //    → 근거가 없으면 `splitPair`가 차단한다(조용한 오답 금지). 사용자는 계약서 구분금액을
-  //      입력하거나 양도시 토지·건물 기준시가를 입력해 해소한다(validate가 선차단).
-  const totalTransfer = input.transferPrice;
-  const effectiveSaleLandRatio = saleRatio?.land ?? null;
-  const { land: landTransferPrice, building: buildingTransferPrice } = splitPair(
-    totalTransfer,
-    input.landTransferPrice,
-    input.buildingTransferPrice,
-    effectiveSaleLandRatio,
-    "양도가액",
-  );
+  //    → 근거가 없으면 `resolveTransferPriceSplit`이 차단한다(조용한 오답 금지). 사용자는 계약서
+  //      구분금액을 입력하거나 양도시 토지·건물 기준시가를 입력해 해소한다(validate가 선차단).
+  //
+  // 🔴 **§100③ 가드가 여기 붙는다**(2026-08-06 Phase 1-C). 구분 기재가 안분값과 30% 이상
+  //    차이나면 「불분명한 때로 본다」 ⇒ 안분값으로 되돌린다. 판정 상세는 결과에 실어 표시
+  //    계층이 그대로 읽게 한다. 산식·서열은 `transfer-tax-split-sale-price.ts` 단일 정본.
+  const {
+    land: landTransferPrice,
+    building: buildingTransferPrice,
+    judgment: saleSplitJudgment,
+  } = resolveTransferPriceSplit(input);
 
   // ② 취득가액 분리 (파트별 독립 4-way — 환산 모드 시 토지분 §164⑨1호 특례 산출근거 동반)
   const {
@@ -617,6 +611,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     // 케이스 a(양쪽 실가)는 안분 자체를 하지 않으므로 비율이 **정의되지 않는다**.
     // `{0,0}`으로 메우면 "안분비 토지 0.0% : 건물 100.0%"로 침묵 오표시된다.
     ...(landRatio != null && buildingRatio != null ? { apportionRatio: { land: landRatio, building: buildingRatio } } : {}),
+    // §100③ 판정 — 구분 기재가 있고 안분값도 산출된 경우에만 존재한다(위 resolveTransferPriceSplit).
+    ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
     // 비율 미산출 시 사유 문구는 **파트 모드로 갈린다**(2026-07-30). 종전에는 무조건
     // "파트별 실지거래가액"이었는데, 파트별 게이팅 이후 토지 실가 + 건물 환산도 이 분기에
     // 진입한다 — 건물이 환산인데 "실지거래가액"은 거짓이다.

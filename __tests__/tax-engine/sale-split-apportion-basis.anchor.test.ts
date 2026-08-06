@@ -161,6 +161,45 @@ describe("B-7 — 불완전한 감정 입력", () => {
 });
 
 /**
+ * B-9 — 🔴 **기준시가와 감정가액의 usability 기준이 다르다** (2026-08-06 1-C 통합 중 정정)
+ *
+ * 최초 구현은 두 basis 모두 「양쪽 다 양수」를 요구했다. 그 판정이 엔진 통합에서 기존 fixture
+ * 1건을 차단했다 — `__tests__/tax-engine/transfer-tax/pre-housing-disclosure.test.ts` D-11-1이
+ * **양도시 건물 기준시가 0**으로 「토지 100% 안분」을 만들고 있었다.
+ *
+ * 두 값은 성질이 다르다:
+ *   · **기준시가**는 고시·산정값이라 **0도 값일 수 있다**. 부가령 §64①1호는 「기준시가가 **모두
+ *     있는 경우**」라 하는데, 0으로 **입력된 것**을 「없는 것」으로 볼 근거(예규·심판례)를 확인하지
+ *     못했다 ⇒ 종전 동작을 보존한다(법령 해석만으로 세액 변경 금지).
+ *   · **감정평가가액**은 「감정평가법인등이 **평가한** 가액」이므로 0은 미평가를 뜻한다(B-7).
+ *
+ * ⚠️ 이 비대칭은 **의도된 것**이다. 「일관성」을 이유로 한쪽에 맞추면 D-11-1이 다시 깨지거나
+ *    (기준시가를 엄격하게) 감정 미입력이 basis로 채택된다(감정을 느슨하게).
+ */
+describe("B-9 — 기준시가 한쪽이 0인 것은 「없는 것」이 아니다", () => {
+  it("건물 기준시가 0 → 토지 100% 안분 (합계 > 0이면 비율이 성립한다)", () => {
+    const r = run({ stdPrice: { land: 627_000_000, building: 0 } });
+    expect(r.kind).toBe("std_price");
+    expect(r.apportioned).toEqual({ land: TOTAL, building: 0 });
+  });
+
+  it("토지 기준시가 0 → 건물 100% 안분", () => {
+    const r = run({ stdPrice: { land: 0, building: 600_000_000 } });
+    expect(r.kind).toBe("std_price");
+    expect(r.apportioned).toEqual({ land: 0, building: TOTAL });
+  });
+
+  it("🔴 감정가액은 여전히 엄격하다 — 한쪽 0이면 채택하지 않는다 (B-7과 대조)", () => {
+    const r = run({
+      stdPrice: { land: 900_000_000, building: 600_000_000 },
+      appraisal: { value: { land: 0, building: 600_000_000 }, appraisedAt: new Date("2025-06-01") },
+    });
+    expect(r.kind).toBe("std_price"); // 감정을 쓰지 않았다
+    expect(r.appraisalRejected).toBe("incomplete");
+  });
+});
+
+/**
  * B-8 — 시간대 관례: **UTC로 통일** (2026-08-06)
  *
  * `lib/api/date-coerce.ts:45`의 `toDate`가 ISO 날짜 문자열을 `new Date(value)`로 파싱하므로

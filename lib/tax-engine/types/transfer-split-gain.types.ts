@@ -4,6 +4,8 @@
  */
 import type { PreHousingDisclosureResult } from "./transfer-phd.types";
 import type { HousingExpropriationValuationDetail } from "../transfer-tax-expropriation-valuation";
+import type { SaleSplitExemption, SaleSplitPair } from "../sale-split-deemed-unclear";
+import type { ApportionBasisKind } from "../sale-split-apportion-basis";
 
 /**
  * §164⑨ 1호 건물 split 토지분 산출근거 (총액 3후보) — Record(Map 금지, JSON 소실).
@@ -100,6 +102,37 @@ export interface SplitNonBusinessLandPart {
   longTermDeduction: number;
 }
 
+/**
+ * §100③ 「구분 기장 가액이 안분 가액과 30% 이상 차이 → 불분명 의제」 판정 결과.
+ *
+ * 「소득세법」 제100조 제3항의 적용 내역이다. 구분 기재가 **없는** 일괄양도에는 비교 대상이
+ * 존재하지 않으므로 이 필드가 **없다**(`{deemedUnclear:false}`로 메우면 "판정했고 통과했다"로
+ * 침묵 오표시된다).
+ *
+ * 표시 계층(결과 카드·신고서 각주)은 이 값을 **그대로 읽는다** — 이탈률을 재계산하면 엔진 판정과
+ * 어긋난다(메모리 `feedback_engine_result_display_drift`).
+ */
+export interface SaleSplitJudgmentDetail {
+  /** 「불분명한 때로 본다」 발동 여부 */
+  deemedUnclear: boolean;
+  /** 구분 기장 가액 — 한쪽만 입력된 경우 반대쪽은 `총액 − 입력값`으로 도출된 값 */
+  declared: SaleSplitPair;
+  /** 안분 가액 — 부가령 §64① basis 서열 적용 결과 */
+  apportioned: SaleSplitPair;
+  /** 실제 적용된 가액 = 발동 시 `apportioned`, 아니면 `declared` */
+  applied: SaleSplitPair;
+  /** 안분에 쓴 basis 종류 (감정평가가액 / 기준시가) */
+  basisKind: ApportionBasisKind;
+  /** 이탈률 (basis point — 1% = 100) */
+  landDeviationBp: number;
+  buildingDeviationBp: number;
+  /** 그 파트가 30% 이상 벗어났는가 — **예외가 적용돼 발동을 면했어도 사실은 기록한다** */
+  landOver: boolean;
+  buildingOver: boolean;
+  /** §166⑧ 예외로 발동을 면한 경우의 사유 */
+  exemptionApplied?: SaleSplitExemption;
+}
+
 export interface SplitGainResult {
   land: SplitPartResult;
   building: SplitPartResult;
@@ -110,6 +143,13 @@ export interface SplitGainResult {
    * 존재하지 않는다**(계획서 transfer-split-acq-std-gate-relaxation §4.3 — `{0,0}` 금지).
    */
   apportionRatio?: { land: number; building: number };
+  /**
+   * §100③ 판정 내역 — **구분 기재가 있고 안분값도 산출된 경우에만** 존재한다.
+   *
+   * 없는 경우 2가지: ① 일괄양도(구분 기재 없음 — 비교 대상 부재) ② 양도시 기준시가·감정가액이
+   * 없어 안분값을 만들 수 없음(⏳ 1-C 한시 — 계획서 §12.7이 1-D에서 필수화를 확정했다).
+   */
+  saleSplitJudgment?: SaleSplitJudgmentDetail;
   note: string;
   /** 본인 신고 부분 — UI 결과 뷰 표시용 */
   selfOwns: "both" | "building_only" | "land_only";

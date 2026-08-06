@@ -4,7 +4,7 @@
  * 계획서: docs/02-design/features/transfer-split-part-std-card-gating.plan.md §12-S1
  *
  * 🔴 결함: UI·validate는 **폼값**으로 `hasSaleRatio`를 판정하는데, 엔진은
- *   `calcSaleApportionRatio(input)` 즉 **실제 전송된 필드** 기준이다. API가
+ *   `resolveSaleApportionBasis` 즉 **실제 전송된 필드** 기준이다. API가
  *   `saleStdPriceActive`(일괄양도 || 어느 파트든 환산)일 때만 양도시 기준시가를 전송하므로,
  *   **일괄양도 → 구분양도 전환 후 양도시 기준시가 2필드가 잔존 + 양도가액 2칸 공백**이면
  *   validate는 전부 통과시키는데 엔진은 `saleRatio = null` → `splitPair` throw.

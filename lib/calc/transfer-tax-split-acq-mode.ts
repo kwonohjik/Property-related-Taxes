@@ -197,7 +197,8 @@ export interface SaleStdPlacementCtx {
  * 계획서: docs/02-design/features/transfer-split-std-price-colocation.plan.md §5.1
  *
  * 엔진 소비 구조와 1:1로 대응한다(`transfer-tax-split-gain.ts`):
- *   · 일괄양도(apportioned) → `calcSaleApportionRatio`(:162-171)가 **토지·건물 둘 다** 요구.
+ *   · 일괄양도(apportioned) → `resolveSaleApportionBasis`가 **토지·건물 둘 다** 요구
+ *     (`lib/tax-engine/sale-split-apportion-basis.ts`).
  *     이 값은 특정 파트가 아니라 **양도가액 축**에 속하므로 축 A에 둔다.
  *   · 구분양도(actual) → 파트 환산 분모로만 쓰인다(:258-262 `partStdAtTransfer`).
  *     그 파트가 환산이 아니면 계산 어디에도 등장하지 않으므로 노출하지 않는다.
@@ -257,7 +258,7 @@ interface AcqStdPriceNeedFlags {
  *
  * ⚠️ **양도 축(`hasSaleRatio`)은 인자가 아니다**(2026-07-30 3절 폐지와 함께 제거).
  *    취득시 기준시가는 **취득가액**을 나누는 값이고, 양도가액 안분은 양도시 기준시가가
- *    담당한다(`calcSaleApportionRatio`). 두 축을 한 술어에 섞어 두면 "양도가액이 없으니
+ *    담당한다(`resolveSaleApportionBasis`). 두 축을 한 술어에 섞어 두면 "양도가액이 없으니
  *    취득시 기준시가를 넣으라"는 거짓 요구가 되살아난다 — 실제로 그 형태로 남아 있었다.
  */
 interface AcqStdPriceNeedContext {
@@ -372,7 +373,7 @@ function positive(v: string | undefined): number {
  *
  * ⇒ ③에서 면적 100으로 총액을 만든 뒤 ①에서 면적을 200으로 고치면 캐시가 100 기준으로 남는다.
  *   실측(면적을 절반으로 어긋나게 둔 경우, `land-building-split.test.ts` S1 fixture 기준):
- *   **산출세액 20,202,957원 → 0원**. 양도가액 안분 비율(`calcSaleApportionRatio`)과 환산 분모가
+ *   **산출세액 20,202,957원 → 0원**. 양도가액 안분(`resolveSaleApportionBasis`)과 환산 분모가
  *   함께 틀어지면서 세액이 통째로 사라진다 — 과소신고 방향이다.
  *
  * ## 규약

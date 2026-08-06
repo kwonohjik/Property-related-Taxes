@@ -30,6 +30,7 @@ import type {
   Pre1990LandValuationInput,
 } from "../pre-1990-land-valuation";
 import type { ParcelInput } from "../multi-parcel-transfer";
+import type { SaleSplitExemption } from "../sale-split-deemed-unclear";
 import type { InheritanceAcquisitionInput, CommercialInheritanceValuationInput } from "./inheritance-acquisition.types";
 export type { TransferReductionStub } from "./transfer-reductions-stub.types";
 export type { Rental97Result } from "../transfer-reductions/types";
@@ -606,6 +607,19 @@ export interface TransferTaxInput {
    * 미제공 시 land/buildingTransferPrice 존재 여부로 기존 방식대로 자동 판단(회귀 0).
    */
   saleSplitMode?: "actual" | "apportioned";
+  /**
+   * §166⑧ 예외 — 「소득세법」 제100조 제3항 **단서**의 제외 사유. 선택 시 30% 판정을 하지 않는다.
+   *   `"other_law"`             1호 다른 법령에서 정하는 바에 따라 가액을 구분한 경우
+   *   `"demolished_land_only"`  2호 함께 취득한 후 건물 등을 철거하고 토지만 사용하는 경우
+   *
+   * ⚠️ **자동 판정이 불가능한 사실관계**라 사용자 신고로 받는다. 이탈 사실 자체는 결과
+   * (`SaleSplitJudgmentDetail.landOver`·`buildingOver`)에 그대로 남는다 — 「예외로 인정받은
+   * 이탈」과 「애초에 이탈이 없었음」은 신고서에서 다른 사실이다.
+   *
+   * ⏳ **폼·API 배관(①②③④⑧⑨⑫⑬)은 Phase 1-E다.** 지금은 엔진 계약만 완성돼 있다
+   * (계획서 `general-building-sale-split-mode.plan.md` §12.6·§12.9).
+   */
+  saleSplitExemption?: SaleSplitExemption;
   /** 토지 파트 매매사례가액 (landAcqMode === "salesCase" 시 직접 입력, §176의2③1호) */
   landSalesCaseValue?: number;
   /** 건물 파트 매매사례가액 (buildingAcqMode === "salesCase" 시 직접 입력) */

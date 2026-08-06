@@ -85,8 +85,26 @@ function appraisalWindowOf(transferDate: Date): { from: Date; to: Date } {
   };
 }
 
-/** 양쪽이 모두 양수여야 비율을 만들 수 있다 — 한쪽만 있으면 비율이 아니라 추측이 된다. */
-function usableAsBasis(pair: SaleSplitPair | undefined): boolean {
+/**
+ * 🔴 **basis 종류에 따라 usability 기준이 다르다** (2026-08-06 1-C 통합 중 정정).
+ *
+ * 처음에는 두 basis 모두 「양쪽 다 양수」를 요구했다. 그러나 그 판정은 **엔진 통합 시 기존
+ * fixture 1건을 차단**했다 — `pre-housing-disclosure.test.ts` D-11-1이 `양도시 건물 기준시가 0`
+ * 으로 「토지 100% 안분」을 만들고 있었다. 두 값은 성질이 다르다:
+ *
+ * - **기준시가**: 고시·산정된 값이라 **0도 값일 수 있다**(예: 철거 예정 건물). 부가령 §64①1호는
+ *   「기준시가가 **모두 있는 경우**」라 하는데, 0으로 **입력된 것**을 「없는 것」으로 볼 근거
+ *   (예규·심판례)를 확인하지 못했다. ⇒ 종전 동작(합계 > 0이면 비율 산출)을 **보존**한다.
+ *   법령 해석만으로 세액을 바꾸지 않는다(메모리 `feedback_unverified_authority_blocks_tax_change`).
+ *
+ * - **감정평가가액**: 「감정평가법인등이 **평가한** 가액」이므로 0은 평가 결과가 아니라
+ *   **그 파트를 평가하지 않았다**는 뜻이다. ⇒ 양쪽 모두 양수를 요구한다(anchor B-7).
+ */
+function usableStdPrice(pair: SaleSplitPair | undefined): boolean {
+  return !!pair && pair.land + pair.building > 0;
+}
+
+function usableAppraisal(pair: SaleSplitPair | undefined): boolean {
   return !!pair && pair.land > 0 && pair.building > 0;
 }
 
@@ -114,7 +132,7 @@ export function resolveSaleApportionBasis(
   if (appraisal) {
     window = appraisalWindowOf(transferDate);
     const at = appraisal.appraisedAt.getTime();
-    if (!usableAsBasis(appraisal.value)) {
+    if (!usableAppraisal(appraisal.value)) {
       appraisalRejected = "incomplete";
     } else if (at < window.from.getTime() || at > window.to.getTime()) {
       appraisalRejected = "out_of_window";
@@ -127,7 +145,7 @@ export function resolveSaleApportionBasis(
     }
   }
 
-  if (usableAsBasis(stdPrice)) {
+  if (usableStdPrice(stdPrice)) {
     return {
       kind: "std_price",
       apportioned: apportion(totalTransferPrice, stdPrice!),
