@@ -1,6 +1,7 @@
 # pre-deemed에서 ①(가목)을 비운 채 ③(환산)으로 갈 수 있다 — U-2 실태 규명
 
-> **상태**: 🛑 **보류 권고** — 실태는 규명했으나 **착수 조건 미충족**(§9). V-3와 같은 축에서 갈린다.
+> **상태**: ✅ **S-1(안내) 구현 완료** (2026-08-06) — anchor 8건 통과.
+> 🛑 **S-3·S-4(세액 변경)는 보류** — 해제 조건은 **U2-E**(「가목 확인」 판정 기준), §4.3.
 > **세목**: 양도소득세 — 「소득세법」 §97①1호 · 「소득세법 시행령」 §163⑨ · §176조의2④
 > **선행**: [`gift-163-9-clause-1-2-max.plan.md`](gift-163-9-clause-1-2-max.plan.md) §12 U-2 ·
 > [`inheritance-pre-deemed-clause-a-b-separation.plan.md`](inheritance-pre-deemed-clause-a-b-separation.plan.md)(V-3 🛑보류)
@@ -136,6 +137,21 @@ V-3 보류의 1차 근거는 「pre-deemed 표본 2건뿐이고 **갈린다**」
 | **S-2** | post-1985 증여 차단 메시지가 pre-deemed에는 **없다는 사실**이 코드 주석에만 있고 화면에 없다 | 없음 | 착수 가능 |
 | **S-3** | ①을 필수로 요구(차단) | **있음** | 🛑 V-3 종속 |
 | **S-4** | `calcPreDeemed`를 가목 우선으로 재편 | **있음** | 🛑 V-3 본체 |
+
+### 🔴 S-1 도달 경로 (2026-08-06 구현 시 확인) — 표준 자산은 UI로 추계를 켤 수 없다
+
+추계 토글(`onUseEstimatedChange`)은 `CompanionAcqPurchaseBlock` 안에 있고 그 블록은
+**`acquisitionCause === "purchase"` 전용**이다(`CompanionAcquisitionCauseSection:143`).
+⇒ **표준 자산(주택·토지)의 상속·증여에서는 추계 모드를 UI로 켤 수 없다.**
+
+이 조합이 실제로 만들어지는 경로는 둘뿐이다:
+
+1. **자체 환산 블록이 있는 자산** — 상가(`CommercialBuildingBlock`, 증여에서 마운트)·일반건물·재개발
+2. **stale** — 매매로 환산을 켰다가 취득원인을 상속·증여로 바꾼 경우. `useEstimatedAcquisition`이
+   남고, pre-deemed라 `giftEstimatedModeError`가 차단하지 않는다. **이쪽이 실질적 위험이다.**
+
+⇒ 안내는 **추계 토글 옆이 아니라 취득원인 블록**에 둔다(`CompanionAcquisitionCauseSection`).
+자체 게이트를 가지므로 취득원인 분기 없이 마운트하고, **상속·증여를 한 컴포넌트가 커버**한다.
 
 ### S-1 설계 초안 (세액 무영향)
 
