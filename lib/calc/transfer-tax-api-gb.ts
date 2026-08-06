@@ -99,6 +99,38 @@ function buildExtensionInfo(
  *
  * 자동 안분 fallback 금지 — 미입력은 validate에서 명확한 오류로 차단.
  */
+/**
+ * 구분양도(§100②) 3필드 — 환산·실가 **양 경로 공통**(계획서 §6 ④).
+ *
+ * 게이트는 split 경로와 같다(`transfer-tax-api-split.ts` `saleDirectActive`) —
+ * 「기준시가 비율 안분」으로 되돌린 뒤 잔존한 입력값을 사용자 의도와 다르게 전송하지 않는다.
+ *
+ * ⚠️ 엔진이 읽는 실제 스위치는 **값의 유무**다(`allocateBundledTransferPrice`). `saleSplitMode`는
+ *    전송하지 않는다 — 엔진이 읽지 않는 플래그를 나르면 「죽은 모드」가 다시 생긴다(계획서 Q-7).
+ */
+function saleSplitFields(asset: AssetForm): Record<string, unknown> {
+  if (asset.saleSplitMode !== "actual") return {};
+  return {
+    landTransferPrice: parseAmount(asset.landTransferPrice) || undefined,
+    buildingTransferPrice: parseAmount(asset.buildingTransferPrice) || undefined,
+    ...(asset.saleSplitExemption ? { saleSplitExemption: asset.saleSplitExemption } : {}),
+  };
+}
+
+/**
+ * 양도시 **감정평가가액** 3필드 — 안분 basis 서열 1순위(부가령 §64①1호 단서).
+ *
+ * ⚠️ `saleSplitFields`와 달리 **모드 게이트가 없다** — 일괄양도의 안분 basis이자 구분양도의
+ *    30% 비교 대상이라 양쪽에서 쓰인다. 구분양도로 좁히면 일괄에서 감정가액이 조용히 무시된다.
+ */
+function saleAppraisalFields(asset: AssetForm): Record<string, unknown> {
+  return {
+    landAppraisalAtTransfer: parseAmount(asset.landAppraisalAtTransfer) || undefined,
+    buildingAppraisalAtTransfer: parseAmount(asset.buildingAppraisalAtTransfer) || undefined,
+    appraisalDateAtTransfer: asset.appraisalDateAtTransfer || undefined,
+  };
+}
+
 export function buildGeneralBuildingValuation(
   asset: AssetForm,
 ): object | undefined {
@@ -206,6 +238,8 @@ export function buildGeneralBuildingValuation(
       landArea,
       buildingArea,
       buildingFootprintArea,
+      ...saleSplitFields(asset),
+      ...saleAppraisalFields(asset),
       ...partModePayload,
       estimatedDeductionRate: 0.03, // §163⑥ 등기 자산 3% 고정
       buildingAcquisitionDate: partAcquisitionDates(asset).building || undefined,
@@ -286,6 +320,8 @@ export function buildGeneralBuildingValuation(
     landArea,
     buildingFootprintArea,
     actualPriceMode: true,
+    ...saleSplitFields(asset),
+    ...saleAppraisalFields(asset),
     ...partModePayload,
     // M-1a — 실거래가 모드에서도 파트 취득일을 싣는다. 종전에는 건물 취득일이 여기서 누락돼
     // 건물 카드가 토지 취득일로 계산됐다(계획서 §1.3 실측 결함).
