@@ -24,6 +24,9 @@ import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-
 import { applyConvertedHousingPriceOverride } from "./general-building-converted-housing";
 import { calculateConvertedAcquisition } from "./general-building-converted-acquisition";
 import { applyPartAcqModes } from "./general-building-part-acq";
+import { resolveSaleApportionBasis } from "./sale-split-apportion-basis";
+import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
+import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 
 // ============================================================
 // 개산공제율 상수 (시행령 §163 ⑥)
@@ -89,23 +92,72 @@ import type {
  *
  * ⚠️ BigInt 필수: 분자 ≈ 925,000,000 × 920,550,000 ≈ 8.5×10¹⁷ > MAX_SAFE_INTEGER(9.0×10¹⁵)
  */
-function allocateBundledTransferPrice(
-  input: GeneralBuildingInput,
-): GeneralBuildingAllocation {
+function allocateBundledTransferPrice(input: GeneralBuildingInput): {
+  allocation: GeneralBuildingAllocation;
+  /** 구분 기재가 있을 때만 채워진다 — 일괄양도는 비교 대상이 없어 판정하지 않는다 */
+  judgment?: SaleSplitJudgmentDetail;
+} {
   // 토지 기준시가 총액
   const landStdTotal = Math.floor(
     input.transferLandPricePerSqm * input.landArea,
   );
-  const totalStd = landStdTotal + input.transferBuildingStdPrice;
 
-  // BigInt fallback 자동 적용 — 분자 ≈ 8.5×10¹⁷
-  const landTransferPrice = Math.floor(
-    safeMultiplyThenDivide(input.totalTransferPrice, landStdTotal, totalStd),
-  );
-  // 잔액 보정: 건물 = 총양도가 − 토지 (이중 floor 오차 제거)
-  const buildingTransferPrice = input.totalTransferPrice - landTransferPrice;
+  /**
+   * 안분 basis — split 경로와 **같은 함수**를 쓴다(계획서 §16.2).
+   *
+   * 종전 인라인 산식과 **완전히 동일**하다(`floor(safeMultiplyThenDivide(총액, 토지std, 합계std))`
+   * + 잔액 보정) — 그래서 회귀가 0이고, 그 대가로 「부가가치세법 시행령」 제64조 제1항의
+   * basis 서열(감정평가가액 > 기준시가)이 일반건물에도 따라온다.
+   */
+  const basis = resolveSaleApportionBasis({
+    totalTransferPrice: input.totalTransferPrice,
+    transferDate: input.transferDate,
+    stdPrice: { land: landStdTotal, building: input.transferBuildingStdPrice },
+  });
+  if (!basis.apportioned) {
+    // 토지·건물 기준시가 합이 0 — 나눌 근거가 없다. 0으로 메우면 조용한 오답이 된다.
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "일반건물: 양도시 토지·건물 기준시가가 모두 0이라 양도가액을 안분할 수 없습니다 (소득세법 시행령 §166⑥).",
+      { what: "양도가액" },
+    );
+  }
+  const apportioned = basis.apportioned;
 
-  return { land: landTransferPrice, building: buildingTransferPrice };
+  // ── 구분 기재 없음(일괄양도) — 안분값이 곧 양도가액이다. 비교 대상이 없어 판정하지 않는다.
+  const landIn = input.landTransferPrice;
+  const buildingIn = input.buildingTransferPrice;
+  if (landIn == null && buildingIn == null) return { allocation: apportioned };
+
+  /**
+   * ── 구분 기재 있음 — 한쪽만 주면 반대쪽은 `총액 − 입력값`으로 **유일하게 확정**된다.
+   *
+   * 🔴 도출된 파트도 판정 대상이다(계획서 §11.3 · S-8). 「한쪽만 검증하고 나머지는 차액으로
+   *    결정」이 실무 자료가 지적한 실수유형이고, 수학적으로도 **작은 파트가 실질 제약**이다
+   *    — 차이 금액은 양쪽이 같은데 분모가 작아 비율이 크다.
+   */
+  const declared = {
+    land: landIn ?? input.totalTransferPrice - buildingIn!,
+    building: buildingIn ?? input.totalTransferPrice - landIn!,
+  };
+  const judged = judgeDeemedUnclearSplit({
+    declared,
+    apportioned,
+    ...(input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {}),
+  });
+
+  return {
+    allocation: judged.applied,
+    judgment: {
+      deemedUnclear: judged.deemedUnclear,
+      declared,
+      apportioned,
+      applied: judged.applied,
+      basisKind: basis.kind!,
+      ...(basis.appraisalRejected ? { appraisalRejected: basis.appraisalRejected } : {}),
+      ...judged.detail,
+    },
+  };
 }
 
 /**
@@ -179,6 +231,20 @@ export function buildGeneralBuildingAssetCards(
 
   // ── 증축 분기 (사례 33 — extensionInfo 활성 시 3-way 안분) ──────────
   if (input.extensionInfo) {
+    /**
+     * 🔴 **R-4 — 증축 조합에서는 구분 기재를 받지 않는다** (계획서 §5 S-10 · §7 R-4).
+     *
+     * 3-way 안분은 건물을 **본체·증축 2장**으로 나누는데, 계약서의 「건물 양도가액」 하나를
+     * 그 둘에 배분할 근거가 없다(Q-4 미확정). 근거 없이 면적비나 기준시가비로 나누면
+     * **조용한 오답**이 된다 — 취득 축 V-3에서 같은 이유로 차단한 선례를 따른다.
+     */
+    if (input.landTransferPrice != null || input.buildingTransferPrice != null) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "증축이 있는 일반건물은 토지·건물 양도가액 구분 기재를 지원하지 않습니다 — 건물 구분가액을 본체와 증축분에 배분할 법령상 근거가 확정되지 않았습니다. 일괄양도(기준시가 비율 안분)로 계산하세요.",
+        { what: "양도가액", reason: "extension_split_unsupported" },
+      );
+    }
     return buildGeneralBuildingAssetCardsWithExtension(input, input.extensionInfo);
   }
 
@@ -188,9 +254,9 @@ export function buildGeneralBuildingAssetCards(
   const rate =
     input.estimatedDeductionRate ?? ESTIMATED_DEDUCTION_RATE_LAND_BUILDING;
 
-  // Step 1: 양도가 안분 (§166⑥)
+  // Step 1: 양도가 안분 (§166⑥) + 구분 기재 시 §100③ 30% 의제 판정 (Phase 2)
   // 법령 참조: TRANSFER.GENERAL_BUILDING_APPORTIONMENT
-  const allocation = allocateBundledTransferPrice(input);
+  const { allocation, judgment: saleSplitJudgment } = allocateBundledTransferPrice(input);
 
   // Step 2: 환산취득가 (§176의2②) — 토지 분모만 §164⑨ 공익수용 특례 override(토지 전용, D16-GB).
   // 법령 참조: TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ
@@ -418,6 +484,9 @@ export function buildGeneralBuildingAssetCards(
 
   return {
     allocation,
+    // 구분 기재가 있을 때만 채워진다 — 일괄양도에 `{deemedUnclear:false}`를 넣으면
+    // 「판정했고 통과했다」로 침묵 오표시된다(split 경로와 같은 계약).
+    ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
     acquisition,
     estimatedDeduction,
     buildingFootprintArea: input.buildingFootprintArea,
