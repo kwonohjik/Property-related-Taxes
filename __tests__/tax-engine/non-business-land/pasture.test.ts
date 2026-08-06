@@ -117,9 +117,11 @@ describe("갭 3c — 목장 자동산출 warning 인용 정정 (별표 1의3)", 
     expect(autoWarning).not.toContain("축산법");
   });
 
-  // AT-PASTURE-CITE-2: 별표1의3 정본 반영 (구 동결값 → 사용자 제공 정본 재구현. 상세 anchor는 livestock-standards.test.ts).
-  it("AT-PASTURE-CITE-2: 별표1의3 정본 반영 (한우 육우 사육 1두 = 7,512.5㎡ · 유우 7,518㎡)", () => {
-    expect(getLivestockStandardArea("hanwoo_breeding", 1)).toBe(7512.5);
-    expect(getLivestockStandardArea("dairy", 1)).toBe(7518);
+  // AT-PASTURE-CITE-2: 별표1의3 정본 반영. 상세 anchor는 livestock-standards.test.ts.
+  // 🔴 2026-08-06 산식 정정 — 「초지 **또는** 사료포」를 문언대로 max로 읽는다(종전 합산).
+  //    한우 사육 1두 7,512.5 → 5,012.5 · 유우 7,518 → 5,018. 한도가 줄어 비사업용이 늘어난다.
+  it("AT-PASTURE-CITE-2: 별표1의3 정본 반영 (한우 육우 사육 1두 = 5,012.5㎡ · 유우 5,018㎡)", () => {
+    expect(getLivestockStandardArea("hanwoo_breeding", 1)).toBe(5012.5);
+    expect(getLivestockStandardArea("dairy", 1)).toBe(5018);
   });
 });

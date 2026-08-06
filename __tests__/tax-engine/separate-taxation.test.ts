@@ -85,13 +85,71 @@ describe("P5-10: 저율 분리과세 (0.07%)", () => {
     expect(result.reasoning.excludedFrom).toContain("special_aggregated");
   });
 
-  it("TC-02: 목장용지 (축산업 등록) → 저율 0.07%, legalBasis = LOW_RATE_LIVESTOCK", () => {
-    const result = calculateSeparateTax(makeInput({ isLivestockFarm: true }));
+  // 🔴 계약 정정 (2026-08-06) — §102①3호는 "가축별 기준면적으로 계산한 토지면적의 **범위에서**
+  //    소유하는 토지"로 한정한다. 종전에는 `isLivestockFarm` 플래그만으로 전량 0.07%를 줬다.
+  //    이제 축종·마릿수·전체 면적이 필수다(미입력은 던진다 — TC-02c).
+  it("TC-02: 목장용지 + 기준면적 이내 → 저율 0.07%, legalBasis = LOW_RATE_LIVESTOCK", () => {
+    // 한우 사육 10두 × 5,012.5㎡ = 50,125㎡ 한도 · 목장 40,000㎡ → 이내
+    const result = calculateSeparateTax(
+      makeInput({
+        isLivestockFarm: true,
+        pastureTotalLandArea: 40000,
+        pastureLivestockType: "hanwoo_breeding",
+        pastureLivestockCount: 10,
+      }),
+    );
 
     expect(result.isApplicable).toBe(true);
     expect(result.category).toBe("low_rate");
     expect(result.appliedRate).toBe(0.0007);
     expect(result.reasoning.legalBasis).toBe(PROPERTY.SEPARATE.LOW_RATE_LIVESTOCK);
+    expect(result.pastureAreaCheck?.excessArea).toBe(0);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  it("TC-02b: 기준면적 초과분은 종합합산 이관 안내 + 과세표준이 인정분에만 매겨진다", () => {
+    // 한우 사육 1두 → 한도 5,012.5㎡ · 목장 10,025㎡ → 인정 비율 정확히 0.5
+    const result = calculateSeparateTax(
+      makeInput({
+        isLivestockFarm: true,
+        pastureTotalLandArea: 10025,
+        pastureLivestockType: "hanwoo_breeding",
+        pastureLivestockCount: 1,
+      }),
+    );
+
+    expect(result.pastureAreaCheck?.standardArea).toBe(5012.5);
+    expect(result.pastureAreaCheck?.recognizedRatio).toBe(0.5);
+    expect(result.pastureAreaCheck?.recognizedAssessedValue).toBe(50_000_000);
+    // 1억 × 50% = 5,000만 × 70% = 3,500만 × 0.07% = 24,500원
+    expect(result.taxBase).toBe(35_000_000);
+    expect(result.calculatedTax).toBe(24_500);
+    expect(result.warnings.some((w) => w.includes("종합합산과세대상으로 이관"))).toBe(true);
+  });
+
+  it("TC-02c: 축종·마릿수 미입력은 던진다 (모른 채 유리하게 주지 않는다)", () => {
+    expect(() => calculateSeparateTax(makeInput({ isLivestockFarm: true }))).toThrow(
+      /목장용지 전체 면적/,
+    );
+    expect(() =>
+      calculateSeparateTax(makeInput({ isLivestockFarm: true, pastureTotalLandArea: 10000 })),
+    ).toThrow(/축종/);
+  });
+
+  it("TC-02d: §102⑨1호 — 도시지역 목장용지는 1989.12.31 이전 소유가 아니면 비해당", () => {
+    const result = calculateSeparateTax(
+      makeInput({
+        isLivestockFarm: true,
+        pastureTotalLandArea: 1000,
+        pastureLivestockType: "hanwoo_breeding",
+        pastureLivestockCount: 10,
+        pastureIsUrbanArea: true,
+        pastureOwnedBefore1990: false,
+      }),
+    );
+
+    expect(result.isApplicable).toBe(false);
+    expect(result.warnings.some((w) => w.includes("§102⑨1호"))).toBe(true);
   });
 
   it("TC-03: 보전산지 → 저율 0.07%, legalBasis = LOW_RATE_FOREST", () => {

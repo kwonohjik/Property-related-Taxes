@@ -106,3 +106,60 @@ describe("문구 — 오입력을 부르는 표현을 쓰지 않는다", () => {
     expect(screen.getByText(/인접토지가 있으면 그 면적도 여기에 합산합니다/)).toBeTruthy();
   });
 });
+
+// ────────────────────────────────────────────────────────────
+/**
+ * 목장용지 면적 한도 입력 (「지방세법 시행령」 §102①3호 [표]) — ⑤ UI 위젯
+ *
+ * 지키는 것:
+ * 1. §102⑨1호 게이트가 **면적보다 먼저** 걸린다 — 도시지역 + 1989 이전 소유가 아니면
+ *    분리과세 대상 자체가 아니므로 면적을 묻는 것이 오입력을 부른다.
+ * 2. **마릿수 기준이 양도세와 다름**을 문구로 명시한다(직전 연도 연중 최고 vs 과세기간 평균).
+ */
+describe("목장용지 — 가축별 기준면적 입력", () => {
+  it("PTP-1: 목장용지가 아니면 입력이 없다", () => {
+    view({ stSeparatedType: "factory", stFactoryLocation: "industrial_zone" });
+    expect(screen.queryByTestId("pt-pasture-total-area")).toBeNull();
+  });
+
+  it("PTP-2: 목장용지를 고르면 면적·축종·마릿수가 열린다", () => {
+    view({ stSeparatedType: "livestock" });
+    expect(screen.getByTestId("pt-pasture-total-area")).toBeTruthy();
+    expect(screen.getByTestId("pt-pasture-livestock-type")).toBeTruthy();
+    expect(screen.getByTestId("pt-pasture-livestock-count")).toBeTruthy();
+  });
+
+  it("PTP-3: 도시지역 + 1989 이전 소유 아님 → 면적을 묻지 않는다 (§102⑨1호)", () => {
+    view({
+      stSeparatedType: "livestock",
+      stPastureIsUrbanArea: true,
+      stPastureOwnedBefore1990: false,
+    });
+    expect(screen.queryByTestId("pt-pasture-total-area")).toBeNull();
+    expect(screen.queryByTestId("pt-pasture-livestock-count")).toBeNull();
+  });
+
+  it("PTP-4: 도시지역이어도 1989 이전 소유면 면적을 묻는다", () => {
+    view({
+      stSeparatedType: "livestock",
+      stPastureIsUrbanArea: true,
+      stPastureOwnedBefore1990: true,
+    });
+    expect(screen.getByTestId("pt-pasture-total-area")).toBeTruthy();
+  });
+
+  it("PTP-5: 도시지역 토글이 꺼져 있으면 1989 토글은 보이지 않는다", () => {
+    // ⚠️ `name: /1989/`로는 못 좁힌다 — **도시지역 토글의 description**에도 「1989년 12월 31일」이
+    //    들어가 그 스위치가 잡힌다. 1989 토글의 title(점 표기)로만 매칭한다.
+    view({ stSeparatedType: "livestock" });
+    expect(screen.queryByRole("switch", { name: /1989\.12\.31 이전부터 소유/ })).toBeNull();
+    // 도시지역 토글 자체는 보여야 한다 — 위 단언이 「아무것도 안 렌더됨」으로 공허하게 참이 되는 것 방지
+    expect(screen.getByRole("switch", { name: /도시지역 소재/ })).toBeTruthy();
+  });
+
+  it("PTP-6: 마릿수 기준이 양도세와 다름을 명시한다", () => {
+    view({ stSeparatedType: "livestock" });
+    expect(screen.getByText(/직전 연도/)).toBeTruthy();
+    expect(screen.getByText(/양도소득세의 과세기간 평균 방식과 다릅니다/)).toBeTruthy();
+  });
+});

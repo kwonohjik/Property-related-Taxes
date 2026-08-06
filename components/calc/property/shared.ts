@@ -169,6 +169,12 @@ export interface FormState {
   stSeparatedType: string;
   stFactoryLocation: string;
   // 공장용지 면적 한도 (「지방세법 시행령」 §102①1호 · 시행규칙 §50 [별표6])
+  // 목장용지 면적 한도 (「지방세법 시행령」 §102①3호 [표])
+  stPastureTotalLandArea: string;
+  stPastureLivestockType: string;
+  stPastureLivestockCount: string;
+  stPastureIsUrbanArea: boolean;
+  stPastureOwnedBefore1990: boolean;
   stFactoryTotalLandArea: string;
   stFactoryFloorArea: string;
   stFactoryAreaRatePercent: string;
@@ -244,6 +250,11 @@ export const INITIAL_FORM: FormState = {
   saDemolishedDate: "",
   stSeparatedType: "",
   stFactoryLocation: "",
+  stPastureTotalLandArea: "",
+  stPastureLivestockType: "",
+  stPastureLivestockCount: "",
+  stPastureIsUrbanArea: false,
+  stPastureOwnedBefore1990: false,
   stFactoryTotalLandArea: "",
   stFactoryFloorArea: "",
   stFactoryAreaRatePercent: "",
@@ -372,6 +383,17 @@ export function validateStep(step: number, form: FormState): string | null {
     }
     if (form.landTaxType === "separated") {
       if (!form.stSeparatedType) return "분리과세 토지 유형을 선택하세요.";
+      // §102①3호은 "가축별 기준면적으로 계산한 토지면적의 **범위에서**"로 한정한다 —
+      // 범위를 모르면 대상 판정이 불가능하다. 엔진도 던지므로 여기서 먼저 막는다(⑧).
+      if (form.stSeparatedType === "livestock") {
+        if (form.stPastureIsUrbanArea && !form.stPastureOwnedBefore1990)
+          return "도시지역 목장용지는 1989년 12월 31일 이전부터 소유한 것만 분리과세 대상입니다 (「지방세법 시행령」 §102⑨1호).";
+        const total = parseDecimal(form.stPastureTotalLandArea);
+        if (!total || total <= 0) return "목장용지 전체 면적(㎡)을 입력하세요.";
+        if (!form.stPastureLivestockType) return "축종을 선택하세요.";
+        const cnt = parseDecimal(form.stPastureLivestockCount);
+        if (!cnt || cnt <= 0) return "가축 마릿수를 입력하세요 (직전 연도 연중 최고 마릿수).";
+      }
       if (form.stSeparatedType === "factory" && !form.stFactoryLocation)
         return "공장 입지 유형을 선택하세요.";
       // 「지방세법 시행령」 §102①1호는 §101①1호 각 목(읍·면·산업단지·공업지역)으로 한정한다.
@@ -501,7 +523,15 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
       const st: Record<string, unknown> = {};
       switch (form.stSeparatedType) {
         case "farmland":      st.isFarmland = true; break;
-        case "livestock":     st.isLivestockFarm = true; break;
+        case "livestock":
+          st.isLivestockFarm = true;
+          // §102①3호 면적 한도 — 미입력은 엔진이 던진다(추정 금지). validate가 먼저 막는다.
+          st.pastureTotalLandArea = parseDecimal(form.stPastureTotalLandArea) ?? undefined;
+          st.pastureLivestockType = form.stPastureLivestockType || undefined;
+          st.pastureLivestockCount = parseDecimal(form.stPastureLivestockCount) ?? undefined;
+          st.pastureIsUrbanArea = form.stPastureIsUrbanArea;
+          st.pastureOwnedBefore1990 = form.stPastureOwnedBefore1990;
+          break;
         case "forest":        st.isProtectedForest = true; break;
         case "factory": {
           st.isFactoryLand = true;

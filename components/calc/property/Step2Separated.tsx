@@ -8,6 +8,14 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { KNOWLEDGE_INDUSTRY_CENTER_RATE_PERCENT } from "@/lib/tax-engine/data/factory-area-rates";
+import { LIVESTOCK_LABELS } from "@/lib/tax-engine/livestock-standard-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { SEPARATED_TYPE_OPTIONS, type FormState } from "./shared";
 
 interface Props {
@@ -62,6 +70,85 @@ export function Step2Separated({ form, onChange }: Props) {
         value={form.stSeparatedType}
         onChange={(v) => onChange({ stSeparatedType: v })}
       />
+
+      {/* 목장용지 면적 한도 (「지방세법 시행령」 §102①3호 [표]) */}
+      {form.stSeparatedType === "livestock" && (
+        <ToneCard
+          tone="sky"
+          title="가축별 기준면적 (「지방세법 시행령」 §102①3호 [표])"
+          className="p-3"
+        >
+          <p className="text-xs text-sky-800">
+            §102①3호는 <b>가축별 기준면적으로 계산한 토지면적의 범위</b>만 분리과세로 정합니다.
+            초과분은 종합합산과세대상으로 이관됩니다.
+          </p>
+
+          <ToggleCard
+            variant="chip"
+            tone="rose"
+            title="도시지역 소재"
+            description="도시지역 안의 개발제한구역·녹지지역 목장용지는 1989년 12월 31일 이전부터 소유한 것으로 한정됩니다 (「지방세법 시행령」 §102⑨1호)."
+            checked={form.stPastureIsUrbanArea}
+            onCheckedChange={(c) => onChange({ stPastureIsUrbanArea: c })}
+          />
+
+          {form.stPastureIsUrbanArea && (
+            <ToggleCard
+              variant="chip"
+              tone="violet"
+              title="1989.12.31 이전부터 소유"
+              description="1990년 1월 1일 이후에 상속받거나 법인합병으로 취득한 경우를 포함합니다."
+              checked={form.stPastureOwnedBefore1990}
+              onCheckedChange={(c) => onChange({ stPastureOwnedBefore1990: c })}
+            />
+          )}
+
+          {!(form.stPastureIsUrbanArea && !form.stPastureOwnedBefore1990) && (
+            <>
+              <FieldCard label="목장용지 전체 면적" unit="㎡">
+                <DecimalInput
+                  value={form.stPastureTotalLandArea}
+                  onChange={(v) => onChange({ stPastureTotalLandArea: v })}
+                  data-testid="pt-pasture-total-area"
+                />
+              </FieldCard>
+
+              <FieldCard
+                label="축종·사업"
+                hint="「지방세법 시행령」 §102①3호 [표]의 9종입니다. 비고의 포함 축종(말·노새·당나귀 / 친칠라 / 개 / 여우)도 해당 항목을 고르세요."
+              >
+                <Select
+                  value={form.stPastureLivestockType || undefined}
+                  onValueChange={(v) => onChange({ stPastureLivestockType: v ?? "" })}
+                >
+                  <SelectTrigger data-testid="pt-pasture-livestock-type">
+                    <SelectValue placeholder="축종을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(LIVESTOCK_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldCard>
+
+              <FieldCard
+                label="가축 마릿수"
+                unit="마리"
+                hint="과세기준일이 속하는 해의 **직전 연도** 기준 **연중 최고** 마릿수입니다. 양도소득세의 과세기간 평균 방식과 다릅니다."
+              >
+                <DecimalInput
+                  value={form.stPastureLivestockCount}
+                  onChange={(v) => onChange({ stPastureLivestockCount: v })}
+                  data-testid="pt-pasture-livestock-count"
+                />
+              </FieldCard>
+            </>
+          )}
+        </ToneCard>
+      )}
 
       {/* 공장 입지 유형 (공장용지 선택 시) */}
       {form.stSeparatedType === "factory" && (

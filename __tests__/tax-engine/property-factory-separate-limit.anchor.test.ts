@@ -187,3 +187,102 @@ describe("미입력은 통과시키지 않는다 — 모르는 채 유리하게 
     expect(r.factoryAreaCheck).toBeUndefined();
   });
 });
+
+// ────────────────────────────────────────────────────────────
+/**
+ * 목장용지 면적 한도 — 「지방세법 시행령」 §102①3호 [표]
+ *
+ * 기준면적 = (축사 + 부대시설 + **max(초지, 사료밭)**) × 마릿수 ÷ 가축두수 단위
+ *
+ * ⚠️ 마릿수는 **직전 연도 연중 최고**다(§102①3호 본문) — 양도세 별표1의3 2호의
+ *   「과세기간 평균」과 다른 기준이므로 두 세목이 같은 값을 쓰면 안 된다.
+ *
+ * 「초지 또는 사료밭」을 max로 읽는 근거·미확정 사유는
+ * `docs/02-design/features/livestock-standard-area-limit.plan.md` 참조.
+ */
+describe("§102①3호 — 목장용지 가축별 기준면적", () => {
+  const pasture = (over: Partial<SeparateTaxationInput> = {}): SeparateTaxationInput => ({
+    assessedValue: 100_000_000,
+    isLivestockFarm: true,
+    pastureTotalLandArea: 40000,
+    pastureLivestockType: "hanwoo_breeding",
+    pastureLivestockCount: 10,
+    ...over,
+  });
+
+  it("PAS-1: 기준면적 이내면 전량 분리과세 0.07%", () => {
+    // 한우 사육 10두 × 5,012.5 = 50,125㎡ 한도 · 40,000㎡ → 이내
+    const r = calculateSeparateTax(pasture());
+    expect(r.isApplicable).toBe(true);
+    expect(r.appliedRate).toBe(0.0007);
+    expect(r.pastureAreaCheck?.standardArea).toBe(50125);
+    expect(r.pastureAreaCheck?.excessArea).toBe(0);
+  });
+
+  it("PAS-2: 🔴 초과분이 생기고 과세표준이 인정분에만 매겨진다", () => {
+    const r = calculateSeparateTax(pasture({ pastureTotalLandArea: 100250 }));
+    expect(r.pastureAreaCheck?.recognizedArea).toBe(50125);
+    expect(r.pastureAreaCheck?.excessArea).toBe(50125);
+    expect(r.pastureAreaCheck?.recognizedRatio).toBe(0.5);
+    // 1억 × 50% = 5,000만 × 70% = 3,500만 × 0.07% = 24,500원
+    expect(r.taxBase).toBe(35_000_000);
+    expect(r.calculatedTax).toBe(24_500);
+  });
+
+  it("PAS-3: 축종별 한도가 표대로 다르다 (초지 「-」인 3종은 축사+부대시설뿐)", () => {
+    const pig = calculateSeparateTax(
+      pasture({ pastureLivestockType: "pig", pastureLivestockCount: 5, pastureTotalLandArea: 100 }),
+    );
+    expect(pig.pastureAreaCheck?.standardArea).toBe(63); // 50 + 13
+    const dairy = calculateSeparateTax(
+      pasture({ pastureLivestockType: "dairy", pastureLivestockCount: 1, pastureTotalLandArea: 100 }),
+    );
+    expect(dairy.pastureAreaCheck?.standardArea).toBe(5018); // 11 + 7 + max(5000, 2500)
+  });
+
+  it("PAS-4: §102⑨1호 — 도시지역은 1989.12.31 이전 소유가 아니면 비해당", () => {
+    const r = calculateSeparateTax(pasture({ pastureIsUrbanArea: true, pastureOwnedBefore1990: false }));
+    expect(r.isApplicable).toBe(false);
+    expect(r.warnings.some((w) => w.includes("§102⑨1호"))).toBe(true);
+  });
+
+  it("PAS-5: 도시지역이어도 1989.12.31 이전 소유면 통과한다", () => {
+    const r = calculateSeparateTax(pasture({ pastureIsUrbanArea: true, pastureOwnedBefore1990: true }));
+    expect(r.isApplicable).toBe(true);
+  });
+
+  it("PAS-6: 도시지역 밖은 소유시기 제한을 받지 않는다", () => {
+    const r = calculateSeparateTax(pasture({ pastureIsUrbanArea: false, pastureOwnedBefore1990: false }));
+    expect(r.isApplicable).toBe(true);
+  });
+
+  it("PAS-7: 미입력·미등재 축종은 던진다 (모른 채 유리하게 주지 않는다)", () => {
+    expect(() => calculateSeparateTax(pasture({ pastureTotalLandArea: undefined }))).toThrow(/전체 면적/);
+    expect(() => calculateSeparateTax(pasture({ pastureLivestockType: undefined }))).toThrow(/축종/);
+    expect(() => calculateSeparateTax(pasture({ pastureLivestockCount: undefined }))).toThrow(/마릿수/);
+    expect(() => calculateSeparateTax(pasture({ pastureLivestockType: "alpaca" }))).toThrow(/등재되지 않은 축종/);
+  });
+
+  it("PAS-8: ⑫ Zod — 목장 5필드가 strip되지 않는다", async () => {
+    const { propertyTaxInputSchema } = await import("@/lib/validators/property-input");
+    const parsed = propertyTaxInputSchema.parse({
+      objectType: "land",
+      publishedPrice: 100_000_000,
+      landTaxType: "separated",
+      separateTaxationItem: {
+        isLivestockFarm: true,
+        pastureTotalLandArea: 40000,
+        pastureLivestockType: "hanwoo_breeding",
+        pastureLivestockCount: 10,
+        pastureIsUrbanArea: true,
+        pastureOwnedBefore1990: true,
+      },
+    });
+    const st = parsed.separateTaxationItem!;
+    expect(st.pastureTotalLandArea).toBe(40000);
+    expect(st.pastureLivestockType).toBe("hanwoo_breeding");
+    expect(st.pastureLivestockCount).toBe(10);
+    expect(st.pastureIsUrbanArea).toBe(true);
+    expect(st.pastureOwnedBefore1990).toBe(true);
+  });
+});

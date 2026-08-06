@@ -155,6 +155,13 @@ export const propertyTaxInputSchema = z
         actualUsage: z.string().optional(),
         isFarmland: z.boolean().optional(),
         isLivestockFarm: z.boolean().optional(),
+        // §102①3호 목장용지 면적 한도 판정 입력 — Zod에서 빠지면 조용히 strip되어
+        // 한도 판정이 사라진다(전량 0.07% 분리과세 = 유리한 오류).
+        pastureTotalLandArea: z.number().nonnegative().optional(),
+        pastureLivestockType: z.string().optional(),
+        pastureLivestockCount: z.number().nonnegative().optional(),
+        pastureIsUrbanArea: z.boolean().optional(),
+        pastureOwnedBefore1990: z.boolean().optional(),
         isProtectedForest: z.boolean().optional(),
         isFactoryLand: z.boolean().optional(),
         factoryLocation: z.enum(["industrial_zone", "urban", "other"]).optional(),

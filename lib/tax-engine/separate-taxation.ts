@@ -16,6 +16,7 @@
 
 import { applyRate, truncateToThousand } from "./tax-utils";
 import { computeFactoryStandardArea } from "./factory-standard-area";
+import { computeLivestockStandardArea } from "./livestock-standard-area";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { PROPERTY } from "./legal-codes";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
@@ -56,8 +57,24 @@ export interface SeparateTaxationInput {
   // ── 저율(0.07%) 판정용 ──
   /** 농지 자경 요건 충족 (농지원부 등재 + 사실상 자경) */
   isFarmland?: boolean;
-  /** 목장용지 + 축산업 등록 + 기준면적 이내 */
+  /** 목장용지 + 축산용 사용 (기준면적 판정은 아래 3필드로 계산한다) */
   isLivestockFarm?: boolean;
+  /** 목장용지 전체 면적 (㎡) — §102①3호 "…계산한 토지면적의 **범위에서** 소유하는 토지" */
+  pastureTotalLandArea?: number;
+  /** 축종 키 — `LIVESTOCK_STANDARD` (「지방세법 시행령」 §102①3호 [표] 9종) */
+  pastureLivestockType?: string;
+  /**
+   * 가축 마릿수 — **과세기준일이 속하는 해의 직전 연도 · 연중 최고** 마릿수 (§102①3호 본문).
+   * ⚠️ 양도세(별표1의3 2호)의 「과세기간 평균」과 **다른 기준**이다 — 재사용 금지.
+   */
+  pastureLivestockCount?: number;
+  /**
+   * §102⑨1호 — **도시지역** 목장용지는 1989.12.31 이전부터 소유한 것으로 한정
+   * (1990.1.1 이후 상속·법인합병 취득 포함). 도시지역이면 이 값이 필요하다.
+   */
+  pastureIsUrbanArea?: boolean;
+  /** §102⑨1호 요건 충족 여부 — `pastureIsUrbanArea`가 true일 때만 본다 */
+  pastureOwnedBefore1990?: boolean;
   /** 공익용 보전산지·임업후계림 */
   isProtectedForest?: boolean;
 
@@ -144,12 +161,18 @@ export interface SeparateTaxationResult {
   };
 
   /**
-   * 공장용지 면적 한도 판정 (「지방세법 시행령」 §102①1호 · 시행규칙 §50 [별표6]) — 공장용지만.
+   * 면적 한도 판정 결과 — 한도가 조문에 명시된 두 subtype에만 붙는다.
+   *
+   *   `factoryAreaCheck` — 공장용지 (§102①1호 · 시행규칙 §50 [별표6])
+   *   `pastureAreaCheck` — 목장용지 (§102①3호 [표] 가축별 기준면적)
    *
    * 초과분은 분리과세에서 빠져 **종합합산**으로 이관된다. 다만 종합합산은 인별 전국 합산이라
    * 단일 필지 계산기에서 세액을 낼 수 없다 — `excessAssessedValue`를 경고로 안내만 한다
    * (별도합산 `totalExcessOfficialValue`와 같은 취급).
    */
+  pastureAreaCheck?: SeparateTaxationResult["factoryAreaCheck"];
+
+  /** 공장용지 면적 한도 판정 — 위 주석 참조 */
   factoryAreaCheck?: {
     /** 별표6 공장입지기준면적 (㎡) */
     standardArea: number;
@@ -188,18 +211,90 @@ type ClassifyPartial = {
   reasoning: SeparateTaxationResult["reasoning"];
   /** 공장용지만 — 면적 한도 판정 결과 (과세표준 안분 근거) */
   factoryAreaCheck?: SeparateTaxationResult["factoryAreaCheck"];
+  /** 목장용지만 — 면적 한도 판정 결과 (과세표준 안분 근거) */
+  pastureAreaCheck?: SeparateTaxationResult["factoryAreaCheck"];
 } | null;
+
+/**
+ * 면적 한도 초과분을 시가표준액으로 안분한다 — 공장용지·목장용지 공통.
+ *
+ * 초과분은 분리과세에서 빠져 **종합합산**으로 이관되는데, 종합합산은 **인별 전국 합산**이라
+ * 단일 필지 계산기가 세율을 정할 수 없다 ⇒ 별도합산 경로(`totalExcessOfficialValue`)와 동일하게
+ * 세액에 반영하지 않고 **경고로 안내**만 한다. 분리과세 과세표준은 인정분에만 매긴다.
+ *
+ * 금액은 원 미만 절사(세법 floor)하고 **잔액은 초과분이 흡수**해 합을 보존한다.
+ */
+function apportionByArea(totalArea: number, standardArea: number, assessedValue: number) {
+  const recognizedArea = Math.min(totalArea, standardArea);
+  const excessArea = Math.max(0, totalArea - standardArea);
+  const recognizedRatio = recognizedArea / totalArea;
+  const recognizedAssessedValue = Math.floor(assessedValue * recognizedRatio);
+  return {
+    standardArea,
+    recognizedArea,
+    excessArea,
+    recognizedRatio,
+    recognizedAssessedValue,
+    excessAssessedValue: assessedValue - recognizedAssessedValue,
+  };
+}
+
+/**
+ * 「지방세법 시행령」 §102①3호 목장용지 면적 한도 판정.
+ *
+ * 기준면적 = (축사 + 부대시설 + max(초지, 사료밭)) × 마릿수 ÷ 가축두수 단위
+ *
+ * ⚠️ **마릿수는 「직전 연도 연중 최고」다**(§102①3호 본문) — 양도세 별표1의3 2호의
+ * 「과세기간 평균」과 다른 기준이므로 두 세목이 같은 값을 쓰면 안 된다.
+ *
+ * 미입력을 통과시키지 않는다: §102①3호는 대상을 "…계산한 토지면적의 **범위에서** 소유하는
+ * 토지"로 한정하므로, 축종·마릿수가 없으면 범위를 알 수 없다. 모른 채 전량 분리과세(0.07%)를
+ * 주면 종합합산 누진(0.2~0.5%)보다 훨씬 낮아 **납세자에게 유리한 추정**이 된다 ⇒ 던진다.
+ */
+function judgePastureAreaLimit(input: SeparateTaxationInput) {
+  const totalArea = input.pastureTotalLandArea ?? 0;
+  const type = input.pastureLivestockType ?? "";
+  const count = input.pastureLivestockCount ?? 0;
+
+  if (totalArea <= 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "목장용지 분리과세 판정에는 목장용지 전체 면적(pastureTotalLandArea)이 필요합니다. " +
+      "「지방세법 시행령」 §102①3호는 가축별 기준면적으로 계산한 토지면적의 범위로 한정합니다.",
+    );
+  }
+  if (!type || count <= 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "목장용지 분리과세 판정에는 축종(pastureLivestockType)과 가축 마릿수" +
+      "(pastureLivestockCount)가 필요합니다. 마릿수는 과세기준일이 속하는 해의 " +
+      "**직전 연도 연중 최고** 마릿수입니다(「지방세법 시행령」 §102①3호).",
+    );
+  }
+
+  const standardArea = computeLivestockStandardArea(type, count);
+  if (standardArea <= 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `등재되지 않은 축종입니다(${type}). 「지방세법 시행령」 §102①3호 [표]의 9종` +
+      "(한우 사육·한우 비육·젖소·양·사슴·토끼·돼지·가금·밍크) 중에서 선택하세요.",
+    );
+  }
+
+  return { totalArea, ...apportionByArea(totalArea, standardArea, input.assessedValue) };
+}
 
 /**
  * 저율(0.07%) 분리과세 판정 (지방세법 §111①1호 다목(1), 시행령 §102①)
  *
  * 판정 순서:
  * 1. 농지 자경 (isFarmland)
- * 2. 목장용지 (isLivestockFarm)
+ * 2. 목장용지 (isLivestockFarm) — §102⑨1호 도시지역 게이트 + 가축별 기준면적 한도
  * 3. 보전산지 (isProtectedForest)
  */
 function classifyLowRate(
   input: SeparateTaxationInput,
+  warnings: string[],
   rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): ClassifyPartial {
   if (input.isFarmland) {
@@ -216,14 +311,51 @@ function classifyLowRate(
   }
 
   if (input.isLivestockFarm) {
+    // §102⑨1호 — **도시지역** 목장용지는 1989.12.31 이전부터 소유한 것으로 한정한다
+    // (1990.1.1 이후 상속·법인합병 취득 포함). 도시지역 밖은 이 제한을 받지 않는다.
+    if (input.pastureIsUrbanArea && !input.pastureOwnedBefore1990) {
+      warnings.push(
+        "도시지역의 목장용지는 1989년 12월 31일 이전부터 소유한 것(1990년 1월 1일 이후 상속·" +
+        "법인합병으로 취득한 경우 포함)으로 한정됩니다(「지방세법 시행령」 §102⑨1호). " +
+        "해당하지 않아 분리과세 대상이 아닙니다.",
+      );
+      return null;
+    }
+
+    const areaCheck = judgePastureAreaLimit(input);
+    if (areaCheck.recognizedArea <= 0) {
+      warnings.push(
+        `목장용지 ${areaCheck.totalArea}㎡가 가축별 기준면적 ` +
+        `${areaCheck.standardArea.toFixed(2)}㎡를 전부 초과합니다 — 분리과세 대상이 없습니다.`,
+      );
+      return null;
+    }
+    if (areaCheck.excessArea > 0) {
+      warnings.push(
+        `목장용지 ${areaCheck.totalArea}㎡ 중 ${areaCheck.recognizedArea.toFixed(2)}㎡는 ` +
+        `분리과세(가축별 기준면적 ${areaCheck.standardArea.toFixed(2)}㎡ 이내), ` +
+        `${areaCheck.excessArea.toFixed(2)}㎡(시가표준액 ` +
+        `${areaCheck.excessAssessedValue.toLocaleString()}원)는 기준면적 초과로 ` +
+        "종합합산과세대상으로 이관됩니다. 인별 합산 계산 시 별도 처리가 필요합니다.",
+      );
+    }
+
     return {
       isApplicable: true,
       category: "low_rate",
       appliedRate: rateSet.landSeparatedLow,
       reasoning: {
         legalBasis: PROPERTY.SEPARATE.LOW_RATE_LIVESTOCK,
-        matchedCondition: "축산업 등록 목장용지 (기준면적 이내)",
+        matchedCondition: "축산용 목장용지 (가축별 기준면적 이내)",
         excludedFrom: ["comprehensive", "special_aggregated"],
+      },
+      pastureAreaCheck: {
+        standardArea: areaCheck.standardArea,
+        recognizedArea: areaCheck.recognizedArea,
+        excessArea: areaCheck.excessArea,
+        recognizedRatio: areaCheck.recognizedRatio,
+        recognizedAssessedValue: areaCheck.recognizedAssessedValue,
+        excessAssessedValue: areaCheck.excessAssessedValue,
       },
     };
   }
@@ -300,24 +432,7 @@ function judgeFactoryAreaLimit(input: SeparateTaxationInput) {
     },
   );
 
-  const recognizedArea = Math.min(totalArea, std.standardArea);
-  const excessArea = Math.max(0, totalArea - std.standardArea);
-  const recognizedRatio = recognizedArea / totalArea;
-
-  // 시가표준액 안분 — 금액은 원 미만 절사(세법 floor). 잔액은 초과분이 흡수해 합을 보존한다.
-  const assessed = input.assessedValue;
-  const recognizedAssessedValue = Math.floor(assessed * recognizedRatio);
-  const excessAssessedValue = assessed - recognizedAssessedValue;
-
-  return {
-    totalArea,
-    standardArea: std.standardArea,
-    recognizedArea,
-    excessArea,
-    recognizedRatio,
-    recognizedAssessedValue,
-    excessAssessedValue,
-  };
+  return { totalArea, ...apportionByArea(totalArea, std.standardArea, input.assessedValue) };
 }
 
 function classifyStandard(
@@ -511,7 +626,7 @@ export function classifySeparateTaxation(
   if (heavyResult) return { ...heavyResult, warnings };
 
   // 2. 저율(0.07%)
-  const lowRateResult = classifyLowRate(input, rateSet);
+  const lowRateResult = classifyLowRate(input, warnings, rateSet);
   if (lowRateResult) return { ...lowRateResult, warnings };
 
   // 3. 일반(0.2%)
@@ -629,6 +744,9 @@ export function calculateSeparateTax(
   const classification = classifySeparateTaxation(input, rateSet);
   // 공장용지 기준면적 초과분은 분리과세에서 빠지므로 **인정분 시가표준액만** 과세표준이 된다
   // (「지방세법 시행령」 §102①1호 "…기준면적 범위의 토지"). 초과분은 종합합산 이관 — 경고로 안내.
-  const base = classification.factoryAreaCheck?.recognizedAssessedValue ?? input.assessedValue;
+  const base =
+    classification.factoryAreaCheck?.recognizedAssessedValue ??
+    classification.pastureAreaCheck?.recognizedAssessedValue ??
+    input.assessedValue;
   return calculateSeparateTaxationTax(classification, base);
 }
