@@ -7,7 +7,7 @@
 > 
 > ⚠️ **본문의 file:line 인용은 stale이다** — 컴포넌트가 `components/calc/transfer/` → `components/calc/transfer/inheritance/`로 이동했다(`PostDeemedInputs.tsx`·`HouseValuationSection.tsx`). 본문은 착수 당시 기록으로 남긴다.
 > 
-> 🟠 **별건 — `calcPreDeemed`의 ②는 아직 미구현**: `inheritance-acquisition-price.ts:100` `// max(①,③) 선택 … ②(§164 취득당시 기준시가)는 Phase 2`. **본 계획서(post-deemed §163⑨2호)와 다른 규정**(pre-deemed §176조의2④)이니 혼동하지 말 것.
+> ~~🟠 **별건 — `calcPreDeemed`의 ②는 아직 미구현**~~ → ✅ **2026-08-06 해소**. ②는 **#1080**에서 구현됐고(`clauseA`의 `sec164`), 인용했던 `:100` 주석(「max(①,③) … ②는 Phase 2」)은 **현행에 존재하지 않는다**. 또한 **#1089**가 pre-deemed를 「가목 우선」으로 재편해 ③(§176조의2④)은 **가목이 0일 때만** 도달한다 — 위 서술이 pre-deemed를 §176조의2④ 규정으로 특정한 것도 더 이상 맞지 않다(가목 §163⑨이 먼저다). 상세: [`…clause-a-b-separation.plan.md`](inheritance-pre-deemed-clause-a-b-separation.plan.md).
 > ~~종전 표기: Plan (법령 확정 · 엔진 트레이스 실측 · 구현 대기)~~
 > 대상: 상속개시일 ≥ 1985-01-01(post-deemed) & 개별주택가격 미공시(< 2005-04-30) 주택
 > 근거: 소득세법 시행령 §163⑨2호(max) · §164⑤~⑦ · §176조의2④(pre-deemed 대비)
