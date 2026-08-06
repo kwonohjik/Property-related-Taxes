@@ -27,6 +27,11 @@ function postDeemedAsset(overrides = {}) {
   return {
     ...makeDefaultAsset(1),
     assetKind: "land" as const,
+    // 2026-08-06 추가 — §163⑨ 기준일 파생이 취득원인을 본다(`deriveSec163_9BaseDate`).
+    // `PostDeemedInputs`는 `CompanionAcqInheritanceBlock`에서만 마운트되므로 실사용에서는 항상
+    // 상속이다. 종전 fixture는 이를 생략해 `makeDefaultAsset`의 기본 취득원인(매매)을 썼고,
+    // 파생이 엄격해지자 기준일이 빈 문자열이 되어 §164④가 숨겨졌다.
+    acquisitionCause: "inheritance" as const,
     inheritanceAssetKind: "land" as const,
     inheritanceStartDate: "1987-05-01", // ≥ 1985(post-deemed) & < 1990-08-30(공시지가 미고시)
     // 보충적평가 보조 입력 섹션의 상위 게이트 — 이걸 켜야 토지 입력이 렌더된다

@@ -8,35 +8,51 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
+import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-date";
 
 /**
- * 상속 취득가액 의제 페이로드 빌드.
- * - case A (상속개시일 < 1985-01-01): pre-deemed — max(① 상증법 평가액, ② §164④~⑦ 취득당시
- *   기준시가, ③ 환산취득가). ※ 실가×물가상승률(§176조의2④2호)은 무상취득에 부적용 — 미구현
- * - case B (상속개시일 ≥ 1985-01-01): post-deemed — 상속세 신고가액(공시가격) 적용
+ * 상속·**증여** 취득가액 의제 페이로드 빌드 (소령 §163⑨).
+ * - case A (취득일 < 1985-01-01): pre-deemed — 가목 max(① 상증법 평가액, ② §164④~⑦) 우선,
+ *   ③ 환산은 가목 확인 불가 시에만(법 §97①1호 단서). ※ 물가상승률(§176조의2④2호)은 무상취득에 부적용
+ * - case B (취득일 ≥ 1985-01-01): post-deemed — max(① 신고가액, ② §164④~⑦)
  * 트리거 조건 미충족 또는 필수 필드 부재 시 빈 객체 반환 (spread-safe).
+ *
+ * ⭐ **증여도 대상이다** — §163⑨ 본문·1호·2호·§176조의2④가 전부 「**상속 또는 증여**」다.
+ *    본문: "상속 또는 증여받은 자산 … **상속개시일 또는 증여일** 현재 … 실지거래가액으로 본다"
+ *    ⚠️ 본문 괄호는 **상증법 §34~§42의3 증여의제를 제외**한다 — 현행 취득원인 선택지에
+ *       증여의제 항목이 없어(매매/상속/증여/이월과세/신축) `gift`는 순수 수증뿐이라 정합하다.
+ *    ⚠️ 이월과세(`carryover_gift`)는 §97의2 승계 경로라 **대상이 아니다**.
+ *    ① 소스가 다르다 — 상속은 `publishedValueAtInheritance`, 증여는 `fixedAcquisitionPrice`
+ *       (UI 「증여 신고가액」). 계획서: docs/02-design/features/gift-163-9-clause-1-2-max.plan.md
  */
 export function buildInheritedAcquisitionPayload(
   primary: AssetForm,
   primaryRatio: number,
   primaryFractional: boolean,
 ): { inheritedAcquisition?: unknown } {
+  const isGift = primary.acquisitionCause === "gift";
   const triggerable =
-    primary.acquisitionCause === "inheritance" &&
+    isSec163_9Cause(primary.acquisitionCause) &&
     (primary.inheritanceAssetKind === "land" ||
       primary.inheritanceAssetKind === "house_individual" ||
       primary.inheritanceAssetKind === "house_apart");
   if (!triggerable) return {};
 
-  const inheritanceStartDate = primary.inheritanceStartDate || primary.acquisitionDate || "";
+  /** 기준일 = 「상속개시일 또는 증여일 현재」(§163⑨ 본문). UI 노출 게이트와 **같은 파생**. */
+  const inheritanceStartDate = deriveSec163_9BaseDate(primary);
   if (!inheritanceStartDate) return {};
   const isPreDeemed = inheritanceStartDate < "1985-01-01";
+
+  /** ① 상증법 §60~66 평가액 — 상속은 공시가격 필드, 증여는 「증여 신고가액」 */
+  const reportedSource = isGift
+    ? primary.fixedAcquisitionPrice
+    : primary.publishedValueAtInheritance;
 
   if (isPreDeemed) {
     const stdAtDeemed = parseAmount(primary.standardPriceAtAcq);
     const stdAtTransfer = parseAmount(primary.standardPriceAtTransfer);
-    // ① 상증법 §60~66 평가액(상속세 신고가액) — 지분 모드 시 × ratio (post-deemed와 일관)
-    const reportedRaw = parseAmount(primary.publishedValueAtInheritance);
+    // ① 상증법 §60~66 평가액 — 지분 모드 시 × ratio (post-deemed와 일관)
+    const reportedRaw = parseAmount(reportedSource);
     const reportedValue =
       reportedRaw > 0
         ? primaryFractional
@@ -56,8 +72,8 @@ export function buildInheritedAcquisitionPayload(
     };
   }
 
-  // case B post-deemed — 상속세 신고가액(공시가격) 적용
-  const reportedRaw = parseAmount(primary.publishedValueAtInheritance);
+  // case B post-deemed — ① 신고가액(상속=공시가격 / 증여=증여 신고가액)
+  const reportedRaw = parseAmount(reportedSource);
   if (reportedRaw <= 0) return {};
   // 지분 모드: 100% 기준 입력값에 × ratio 적용 (primaryInheritanceValuation과 일관)
   // 미적용 시 100% 송신으로 엔진에서 안분 잔여가 필요경비로 잘못 적재됨 (사례 27)
@@ -93,10 +109,11 @@ export function buildInheritedAcquisitionPayload(
 export function buildCommercialInheritanceValuationPayload(
   primary: AssetForm,
 ): { commercialInheritanceValuation?: unknown } {
-  if (primary.assetKind !== "commercial_building" || primary.acquisitionCause !== "inheritance") {
+  // §163⑨2호는 「상속 **또는 증여**」다 — 증여도 ②(§164⑥) 비교 대상이다.
+  if (primary.assetKind !== "commercial_building" || !isSec163_9Cause(primary.acquisitionCause)) {
     return {};
   }
-  const inheritanceDate = primary.inheritanceStartDate || primary.acquisitionDate || "";
+  const inheritanceDate = deriveSec163_9BaseDate(primary);
   if (!inheritanceDate || inheritanceDate >= "2005-01-01") return {};
 
   const exclusiveArea = parseFloat(primary.cbExclusiveArea) || 0;
@@ -149,16 +166,17 @@ export function buildInheritedHouseValuationPayload(
   // §164⑦ 주택 환산은 실제 주택 자산(상단 assetKind)에만 적용 — 상속 자산구분 라디오 폐지 대응.
   const isHouse =
     primary.assetKind === "housing" || primary.assetKind === "redevelopment_apt";
+  // §163⑨2호는 「상속 **또는 증여**」다 — 증여도 ②(§164⑤~⑦) 비교 대상이다.
   const triggerable =
     isHouse &&
-    primary.acquisitionCause === "inheritance" &&
+    isSec163_9Cause(primary.acquisitionCause) &&
     parseFloat(primary.inhHouseValLandArea) > 0 &&
     parseAmount(primary.inhHouseValLandPricePerSqmAtTransfer) > 0 &&
     parseAmount(primary.inhHouseValLandPricePerSqmAtFirst) > 0 &&
     parseAmount(primary.inhHouseValHousePriceAtFirst) > 0;
   if (!triggerable) return {};
 
-  const inheritanceDate = primary.inheritanceStartDate || primary.acquisitionDate || "";
+  const inheritanceDate = deriveSec163_9BaseDate(primary);
   const isBefore1990 = !!inheritanceDate && inheritanceDate < "1990-08-30";
   const buildGrade = (raw: string) => {
     const n = Number(raw.replace(/,/g, ""));
