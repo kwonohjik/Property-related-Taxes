@@ -201,25 +201,43 @@ describe("U-8-6 — 판정 결과가 결과에 실린다 (표시 계층 재료)"
   });
 });
 
-describe("U-8-7 — ⏳ 안분 basis가 없으면 1-C에서는 판정하지 않는다", () => {
+describe("U-8-7 — 🔴 안분 basis가 없으면 **차단**한다 (Phase 1-D에서 계약을 뒤집었다)", () => {
   /**
-   * ⚠️ **한시 계약이다.** 30% 판정은 안분값을 요구하고, 안분값은 양도시 기준시가(또는 감정가액)에서
-   * 나온다. 현행 UI는 구분양도 + 둘 다 실가 조합에서 기준시가 칸을 열지 않으므로
-   * (`saleStdPlacement` — `lib/calc/transfer-tax-split-acq-mode.ts`), 지금 필수화하면 fixture
-   * 최대 26건이 함께 깨진다. 1-D가 그 축을 정리한다.
+   * ## 계약 이력 — 이 describe는 **의도적으로 뒤집혔다**
    *
-   * 계획서 §12.7은 「기준시가 없으면 판정 건너뛰기」를 **영구 설계로는 채택하지 않는다**고
-   * 확정했다 — 칸을 비워 우회할 수 있으면 가드가 아니다. ⇒ **1-D에서 이 anchor는 「차단」으로
-   * 갱신된다.** 그때 이 describe를 지우지 말고 계약을 뒤집을 것.
+   * 1-C에서는 「판정 없이 구분값 그대로」였다(세액 199,551,000). 당시 UI가 구분양도 + 둘 다 실가
+   * 조합에서 기준시가 칸을 열지 않아 필수화하면 fixture가 함께 깨졌기 때문이다(한시).
+   *
+   * 1-D가 `saleStdPlacement`를 **「항상 축 A」**로 바꿔 두 파트 기준시가를 상시 노출·필수로
+   * 만들었다 ⇒ 이제 차단이 정답이다. 계획서 §12.7이 「기준시가 없으면 판정 건너뛰기」를 기각한
+   * 이유가 바로 이것이다 — **칸을 비워 두는 것만으로 가드를 우회**할 수 있으면 가드가 아니다.
+   *
+   * ⚠️ 정상 경로에서는 validate(`needsSaleStdPart`)가 먼저 막는다. 엔진 throw는 validate를
+   *    우회한 경로(직접 API 호출 등)에 대한 **backstop**이다.
    */
-  it("양도시 기준시가 미입력 + 30% 초과 구분 → 판정 없이 구분값 그대로", () => {
-    const over: Partial<TransferTaxInput> = {
-      landStandardPriceAtTransfer: undefined,
-      buildingStandardPriceAtTransfer: undefined,
-      landTransferPrice: 1_400_000_000,
-      buildingTransferPrice: 100_000_000,
-    };
-    expect(splitOf(over)!.saleSplitJudgment).toBeUndefined();
-    expect(taxOf(over)).toBe(199_551_000);
+  const over: Partial<TransferTaxInput> = {
+    landStandardPriceAtTransfer: undefined,
+    buildingStandardPriceAtTransfer: undefined,
+    landTransferPrice: 1_400_000_000,
+    buildingTransferPrice: 100_000_000,
+  };
+
+  it("양도시 기준시가 미입력 + 구분 기재 → 차단한다 (조용히 통과 금지)", () => {
+    expect(() => taxOf(over)).toThrow(/양도시 토지·건물 기준시가가 모두 필요합니다/);
+  });
+
+  it("한쪽만 입력해도 차단한다 — 비율은 양쪽이 있어야 성립한다", () => {
+    expect(() =>
+      taxOf({ ...over, landStandardPriceAtTransfer: 900_000_000 }),
+    ).toThrow(/양도시 토지·건물 기준시가가 모두 필요합니다/);
+  });
+
+  it("일괄양도(구분 기재 없음)는 종전 메시지로 차단된다 — 별개 경로다", () => {
+    expect(() =>
+      taxOf({
+        landStandardPriceAtTransfer: undefined,
+        buildingStandardPriceAtTransfer: undefined,
+      }),
+    ).toThrow(/양도가액을 토지·건물로 나눌 수 없습니다/);
   });
 });

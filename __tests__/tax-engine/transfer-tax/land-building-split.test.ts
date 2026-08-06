@@ -102,6 +102,10 @@ describe("S2: housing 1세대1주택 + 실거래가 + 실제 분리 입력", () 
     landSplitMode: "actual",
     landTransferPrice: 700_000_000,
     buildingTransferPrice: 800_000_000,
+    // 양도시 기준시가 — Phase 1-D부터 구분 기재 시 필수(§100③ 판정이 안분값을 요구한다).
+    // 구분 기재값과 같은 7:8로 둬 의제가 발동하지 않게 한다(세액 불변).
+    landStandardPriceAtTransfer: 700_000_000,
+    buildingStandardPriceAtTransfer: 800_000_000,
     landAcquisitionPrice: 350_000_000,
     buildingAcquisitionPrice: 450_000_000,
     landDirectExpenses: 5_000_000,
@@ -248,6 +252,10 @@ describe("S4: 안분 fallback — landTransferPrice만 직접 입력", () => {
     landSplitMode: "actual",
     landTransferPrice: 600_000_000, // 직접 입력 (60%)
     // buildingTransferPrice 미입력 → 전체 - 토지 = 400,000,000
+    // 양도시 기준시가 — Phase 1-D부터 구분 기재 시 필수. **잔액 도출분도 §100③ 판정 대상**이라
+    // 양쪽이 필요하다. 구분/잔액과 같은 6:4로 둬 의제가 발동하지 않게 한다(세액 불변).
+    landStandardPriceAtTransfer: 600_000_000,
+    buildingStandardPriceAtTransfer: 400_000_000,
     isOneHousehold: true,
     householdHousingCount: 1,
     residencePeriodMonths: 48,

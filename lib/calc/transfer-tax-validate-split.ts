@@ -209,15 +209,6 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   const hasSaleRatio =
     resolveLandStdAtTransfer(asset) != null && opt(asset.buildingStandardPriceAtTransfer) != null;
 
-  // 양도시 기준시가 배치 — UI 노출과 **같은 술어**. 여기서 재기술하면 "칸이 없는데 차단"이 된다.
-  // `saleSplitMode` fallback은 UI(CompanionAcqDateSection.tsx:202)·API(transfer-tax-api-split.ts:67)와
-  // 3중으로 맞춘다 — stale sessionStorage 자산은 undefined일 수 있다.
-  const saleStdCtx = {
-    saleSplitMode: asset.saleSplitMode ?? ("apportioned" as const),
-    landMode,
-    buildingMode,
-    selfOwns: asset.selfOwns ?? ("both" as const),
-  };
 
   // ⚠️ V4의 `hasSaleRatio`는 **좁히지 않는다**(2026-07-30 검토 결론). 파트 배치로 카드가 화면에서
   //    사라진 뒤에도 잔존 기준시가가 §64①1호 안분 비율로 쓰이는 것은 사실이나, 그 상황은
@@ -276,10 +267,10 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   // 기준시가 칸이 화면에 없다(계획서 §5.5). 노출 술어와 같은 함수로 파트별로 판정한다.
   // 메시지는 `양도시 기준시가` 연속 토큰을 유지한다 — 기존 anchor 4곳이 그 부분문자열에 의존한다
   // (transfer-tax-validate-split.test.ts:78,86,537,550).
-  if (needsSaleStdPart("land", saleStdCtx) && resolveLandStdAtTransfer(asset) == null) {
+  if (needsSaleStdPart("land") && resolveLandStdAtTransfer(asset) == null) {
     return `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목).`;
   }
-  if (needsSaleStdPart("building", saleStdCtx) && opt(asset.buildingStandardPriceAtTransfer) == null) {
+  if (needsSaleStdPart("building") && opt(asset.buildingStandardPriceAtTransfer) == null) {
     return `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`;
   }
 

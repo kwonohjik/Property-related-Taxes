@@ -40,6 +40,11 @@ const ACTUAL_BOTH: Partial<AssetForm> = {
   saleSplitMode: "actual",
   landTransferPrice: "400000000",
   buildingTransferPrice: "100000000",
+  // **양도시** 기준시가 — Phase 1-D부터 구분 기재 시 필수다(§100③ 판정이 안분값을 요구한다).
+  // 이 파일의 검증 대상은 **취득시** 기준시가 술어(V3·⑥절)이므로, 무관한 V7 오류가 먼저 걸리지
+  // 않게 구분 기재값과 같은 4:1로 채운다.
+  landStandardPriceAtTransfer: "400000000",
+  buildingStandardPriceAtTransfer: "100000000",
 };
 
 describe("G10 — validate V3가 술어를 거친다 (dead-end 방지)", () => {

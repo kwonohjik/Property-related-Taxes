@@ -37,6 +37,11 @@ function separateAcqAsset(over: Partial<ReturnType<typeof makeDefaultAsset>> = {
     // 양도가액 구분 근거 — 구분양도를 골랐으면 §166⑥상 필수다(V4). 이 anchor의 검증 대상은
     // "자산 전체 취득가액 총액을 요구하지 않는다"이므로, 무관한 V4 오류가 먼저 걸리지 않게 채운다.
     landTransferPrice: "300,000,000",
+    // **양도시** 기준시가 — Phase 1-D부터 구분 기재 시 필수다(§100③). 잔액 도출분(건물 2억)도
+    // 판정 대상이라 양쪽이 필요하다. 이 anchor의 대상은 「자산 전체 취득가액 총액을 요구하지
+    // 않는다」이므로 무관한 V7 오류가 먼저 걸리지 않게 3:2로 채운다.
+    landStandardPriceAtTransfer: "300,000,000",
+    buildingStandardPriceAtTransfer: "200,000,000",
     ...over,
   };
 }

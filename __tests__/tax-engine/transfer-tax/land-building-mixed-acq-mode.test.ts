@@ -32,6 +32,10 @@ describe("C3(#5): land-building-mixed-actual-est — 토지 실가 + 건물 환�
     saleSplitMode: "actual",
     landTransferPrice: 600_000_000,
     buildingTransferPrice: 400_000_000,
+    // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+    //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+    //    건물분은 아래 「환산 분모」와 같은 값이라 따로 두지 않는다(600:400 = 구분 비율).
+    landStandardPriceAtTransfer: 600_000_000,
     // 파트별 취득 방식 — 토지 실가 / 건물 환산 (독립)
     landAcqMode: "actual",
     buildingAcqMode: "estimated",
@@ -91,6 +95,14 @@ describe("C4(#6): land-building-mixed-est-actual — 토지 환산 + 건물 실�
     acquisitionArea: 100,                          // 토지면적 → 토지 취득시 기준시가 150,000,000
     standardPriceAtAcquisition: 400_000_000,       // 취득시 기준시가 합계 → 건물분 250,000,000(미사용)
     landStandardPriceAtTransfer: 300_000_000,      // 양도시 토지 기준시가(환산 분모)
+    // 양도시 **건물** 기준시가 — Phase 1-D부터 구분 기재 시 양쪽이 필수다(§100③ 판정이 안분값을
+    // 요구한다). 건물은 실가라 환산 분모로 쓰이지 않지만 **안분값의 분모로는 등장**한다.
+    //
+    // 토지 분모(3억)는 환산 산식이 쓰므로 **바꿀 수 없다** ⇒ 건물분으로 비율을 맞춘다.
+    //   안분: 토지 10억 × 300/(300+150) = 666,666,666 · 건물 333,333,334
+    //   이탈: 토지 |7억−6.667억|/6.667억 = 5.0% · 건물 |3억−3.333억|/3.333억 = 10.0% → **미발동**
+    // ⇒ 구분 기재값이 그대로 쓰이므로 이 describe의 기대값은 불변이다.
+    buildingStandardPriceAtTransfer: 150_000_000,
   });
 
   it("calcSplitGain: 토지 = 환산취득가, 개산공제 3%", () => {
@@ -145,6 +157,10 @@ describe("C8: phd-gate-mixed-suppress — PHD 입력 있어도 혼합 모드는 
     saleSplitMode: "actual",
     landTransferPrice: 600_000_000,
     buildingTransferPrice: 400_000_000,
+    // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+    //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+    //    건물분은 아래 「환산 분모」와 같은 값이라 따로 두지 않는다(600:400 = 구분 비율).
+    landStandardPriceAtTransfer: 600_000_000,
     landAcqMode: "actual",
     buildingAcqMode: "estimated",
     landAcquisitionPrice: 300_000_000,

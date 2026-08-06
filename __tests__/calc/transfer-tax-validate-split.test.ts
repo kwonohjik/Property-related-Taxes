@@ -20,6 +20,12 @@ function splitAsset(over: Partial<ReturnType<typeof makeDefaultAsset>> = {}) {
     saleSplitMode: "actual" as const,
     actualSalePrice: "1,000,000,000",
     fixedAcquisitionPrice: "400,000,000",
+    // 양도시 기준시가 — **Phase 1-D부터 split 자산에 항상 필수**다(§100③ 판정이 안분값을 요구한다).
+    // 종전에는 구분양도 + 양쪽 실가에서 요구하지 않았으므로 이 헬퍼에 없었고, 지금은 그 상태가
+    // V7 차단에 걸려 **다른 검사에 도달하지 못한다**. 구분 기재값과 같은 6:4로 둔다
+    // (계획서 general-building-sale-split-mode.plan.md §12.7 R-7).
+    landStandardPriceAtTransfer: "600,000,000",
+    buildingStandardPriceAtTransfer: "400,000,000",
     ...over,
   };
 }
@@ -74,13 +80,22 @@ describe("validateSplitDirectInputs — 게이트", () => {
 
 describe("validateSplitDirectInputs — 양도시 기준시가 필수 (§7.2, 2026-07-28 사용자 확정)", () => {
   it("apportioned 일괄양도 + 양도시 기준시가 미입력 → 차단", () => {
-    const err = validateSplitDirectInputs(splitAsset({ saleSplitMode: "apportioned" }), "자산 1");
+    // 헬퍼 기본값을 **명시적으로 비운다** — Phase 1-D부터 기본 제공되므로(§12.7 R-7).
+    const err = validateSplitDirectInputs(
+      splitAsset({ saleSplitMode: "apportioned", landStandardPriceAtTransfer: undefined, buildingStandardPriceAtTransfer: undefined }),
+      "자산 1",
+    );
     expect(err).toContain("양도시 기준시가");
   });
 
   it("estimated 파트(환산) + 양도시 기준시가 미입력 → 차단", () => {
     const err = validateSplitDirectInputs(
-      splitAsset({ saleSplitMode: "actual", useEstimatedAcquisition: true, landTransferPrice: "600,000,000" }),
+      splitAsset({
+        saleSplitMode: "actual",
+        useEstimatedAcquisition: true,
+        landTransferPrice: "600,000,000",
+        landStandardPriceAtTransfer: undefined, buildingStandardPriceAtTransfer: undefined,  // 헬퍼 기본값을 명시적으로 비운다
+      }),
       "자산 1",
     );
     expect(err).toContain("양도시 기준시가");
@@ -432,8 +447,17 @@ describe("V4 — 취득시 기준시가는 '필요할 때만' 필수 (사용자 
   // 쓰이지 않으므로 요구하지 않는다. 차단 자체는 유지되되 **실제로 필요한 값**을 지목한다
   // (계획서 transfer-split-acq-std-part-gating.plan.md §3.2 (3)).
   it("🔴 케이스 b(건물 환산) + 취득시 기준시가 미입력 → 차단", () => {
-    const err = validateSplitDirectInputs(sep({ buildingAcqMode: "estimated" }), "자산 1");
+    // ⚠️ **이 테스트는 종전에 엉뚱한 메시지로 통과했다**(2026-08-06 Phase 1-D에서 발견).
+    //    `sep`가 `buildingStandardPriceAtAcq`를 채워 두므로 V6(취득시 건물분)는 발동할 수 없었고,
+    //    실제로 매칭된 것은 **V7(양도시 기준시가 중 건물분)** 메시지였다 — 제목과 다른 계층이다.
+    //    1-D가 헬퍼에 양도시 기준시가를 채우자 그 우연한 매칭이 사라져 드러났다.
+    //    ⇒ 취득시 건물분을 **비워** 원래 의도한 V6를 검사한다.
+    const err = validateSplitDirectInputs(
+      sep({ buildingAcqMode: "estimated", buildingStandardPriceAtAcq: undefined }),
+      "자산 1",
+    );
     expect(err, "토지 3요소가 아니라 건물분 기준시가를 요구해야 한다").toMatch(/건물분|건물 기준시가/);
+    expect(err, "양도시가 아니라 **취득시** 기준시가를 요구해야 한다").toContain("취득시");
   });
 
   it("🔴 토지도 환산이면 종전대로 토지 3요소를 요구한다 (파트별 게이트 회귀 가드)", () => {
@@ -526,6 +550,10 @@ describe("V5 — 구분양도 선택 시 양도가액 구분 근거 필수 (규�
       buildingStandardPriceAtAcq: "100,000,000",
       standardPricePerSqmAtAcq: "5,000,000",
       acquisitionArea: "200",
+      // 이 describe는 「양도가액 구분 근거가 **전혀 없다**」를 재현한다 — 헬퍼가 Phase 1-D부터
+      // 양도시 기준시가를 기본 제공하므로 명시적으로 비운다.
+      landStandardPriceAtTransfer: undefined,
+      buildingStandardPriceAtTransfer: undefined,
       ...over,
     });
 
@@ -536,10 +564,16 @@ describe("V5 — 구분양도 선택 시 양도가액 구분 근거 필수 (규�
     expect(err).toContain("양도시 토지 공시지가·면적과 건물 기준시가");
   });
 
-  it("양도가액 한쪽만 입력해도 통과 (반대쪽은 잔액 도출)", () => {
-    expect(
-      validateSplitDirectInputs(sepNoBasis({ landTransferPrice: "600,000,000" }), "자산 1"),
-    ).toBeNull();
+  it("🔴 한쪽만 입력해도 양도시 기준시가는 필요하다 — 잔액 도출분도 §100③ 판정 대상이다", () => {
+    // 계약 뒤집힘(Phase 1-D). 종전에는 「반대쪽은 잔액으로 확정되니 근거 불요」였다.
+    // 그러나 §100③은 **구분 기장한 가액**을 안분값과 비교하라고 하고, 잔액으로 도출된 파트도
+    // 구분 기장의 일부다(실무 「실수유형」 — 한쪽만 검증하고 차액으로 결정하는 함정).
+    // ⇒ 안분값이 필요하므로 양도시 기준시가가 필수다.
+    const err = validateSplitDirectInputs(
+      sepNoBasis({ landTransferPrice: "600,000,000" }),
+      "자산 1",
+    );
+    expect(err).toContain("양도시 기준시가");
   });
 
   it("양도시 기준시가 2필드로도 통과 (§166⑥ 양도 당시 기준시가 안분)", () => {
@@ -570,7 +604,7 @@ describe("P0 anchor — 양도시 기준시가는 총액 필드로만 검증된�
         saleSplitMode: "apportioned",
         standardPricePerSqmAtTransfer: "5,000,000",
         transferArea: "200",
-        // landStandardPriceAtTransfer / buildingStandardPriceAtTransfer 미기록
+        landStandardPriceAtTransfer: undefined, buildingStandardPriceAtTransfer: undefined,  // 헬퍼 기본값을 명시적으로 비운다 (총액 미기록 상태 재현)
       }),
       "자산 1",
     );
@@ -584,6 +618,7 @@ describe("P0 anchor — 양도시 기준시가는 총액 필드로만 검증된�
         standardPricePerSqmAtTransfer: "5,000,000",
         transferArea: "200",
         landStandardPriceAtTransfer: "1,000,000,000",
+        buildingStandardPriceAtTransfer: undefined,  // 건물분 미기록 상태 재현
       }),
       "자산 1",
     );
@@ -617,6 +652,9 @@ describe("V4 — 비-별개취득에서도 양도가액 구분 근거 강제", (
       acquisitionDate: "2018-06-01",
       landAcquisitionDate: "2018-06-01",
       saleSplitMode: "actual" as const,
+      // 「양도가액 구분 근거 없음」 재현 — 헬퍼 기본값을 명시적으로 비운다(Phase 1-D).
+      landStandardPriceAtTransfer: undefined,
+      buildingStandardPriceAtTransfer: undefined,
       ...over,
     });
 
@@ -626,8 +664,10 @@ describe("V4 — 비-별개취득에서도 양도가액 구분 근거 강제", (
     expect(err).toContain("양도시 토지 공시지가·면적과 건물 기준시가");
   });
 
-  it("양도가액 한쪽 입력 → 통과 (반대쪽 잔액 확정)", () => {
-    expect(validateSplitDirectInputs(nonSep({ landTransferPrice: "600,000,000" }), "자산 1")).toBeNull();
+  it("🔴 한쪽 입력이어도 양도시 기준시가는 필요하다 (Phase 1-D 계약 뒤집힘)", () => {
+    // 위 V5와 같은 이유 — 잔액 도출분도 §100③ 판정 대상이다.
+    const err = validateSplitDirectInputs(nonSep({ landTransferPrice: "600,000,000" }), "자산 1");
+    expect(err).toContain("양도시 기준시가");
   });
 
   it("양도시 기준시가 2필드 → 통과 (§64①1호 양도 당시 비율)", () => {

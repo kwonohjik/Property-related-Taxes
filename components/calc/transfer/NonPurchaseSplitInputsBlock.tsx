@@ -44,12 +44,8 @@ export function NonPurchaseSplitInputsBlock(props: {
   if (asset.isMixedUseHouse) return null;
 
   // 양도시 기준시가 배치 — 축 A와 **같은 1회 계산**을 공유한다(하위 재파생 금지 규약).
-  const saleStdPlace = saleStdPlacement({
-    saleSplitMode: asset.saleSplitMode ?? "apportioned",
-    landMode: effectivePartAcqMode(asset.landAcqMode, asset),
-    buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
-    selfOwns: asset.selfOwns ?? "both",
-  });
+  // ⏳ Phase 1-D부터 배치는 불변(항상 축 A) — §100③ 판정이 양쪽 기준시가를 요구한다.
+  const saleStdPlace = saleStdPlacement();
 
   const ownedLabel = asset.selfOwns === "building_only" ? "건물" : "토지";
 

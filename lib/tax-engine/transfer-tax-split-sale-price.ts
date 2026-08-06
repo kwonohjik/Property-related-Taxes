@@ -94,15 +94,22 @@ export function resolveTransferPriceSplit(input: TransferTaxInput): {
     building: buildingIn ?? total - landIn!,
   };
 
-  // ⏳ **1-C 한시** — 안분값이 없으면 판정할 수 없다.
+  // 🔴 **안분값이 없으면 차단한다** (Phase 1-D — 계획서 §12.7 R-7).
   //
-  // 현행 UI는 구분양도 + 두 파트 실가 조합에서 양도시 기준시가 칸을 열지 않는다
-  // (`saleStdPlacement` — `lib/calc/transfer-tax-split-acq-mode.ts`). 지금 필수화하면 기존
-  // fixture가 함께 깨지므로 **Phase 1-D가 그 축을 정리한다**(계획서 §12.7 R-7 — 상한 26건).
+  // 30% 판정은 안분값을 요구하고, 안분값은 양도시 기준시가(또는 감정가액)에서 나온다.
+  // 1-C에서는 UI가 구분양도에서 그 칸을 열지 않아 **한시로 판정을 건너뛰었지만**, 그러면 칸을
+  // 비워 두는 것만으로 가드를 우회할 수 있다 — 우회 가능한 가드는 가드가 아니다.
   //
-  // ⚠️ 「기준시가 없으면 건너뛴다」는 **영구 설계가 아니다.** 칸을 비워 우회할 수 있으면 가드가
-  //    아니다 — 계획서 §12.7이 그 대안을 명시적으로 기각했다.
-  if (!basis.apportioned || basis.kind == null) return declared;
+  // ⇒ 1-D가 `saleStdPlacement`를 「항상 축 A」로 바꿔 두 파트 기준시가를 **상시 노출·필수**로
+  //    만들었다. validate가 같은 술어(`needsSaleStdPart`)로 선차단하므로 여기 도달하는 것은
+  //    validate를 우회한 경로(직접 API 호출 등)다 — 조용히 통과시키지 않는다.
+  if (!basis.apportioned || basis.kind == null) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "토지·건물 양도가액을 구분 기재한 경우에는 「소득세법」 제100조 제3항 판정을 위해 양도시 토지·건물 기준시가가 모두 필요합니다.",
+      { what: "양도가액", reason: "sale_split_basis_missing" },
+    );
+  }
 
   const judged = judgeDeemedUnclearSplit({
     declared,
