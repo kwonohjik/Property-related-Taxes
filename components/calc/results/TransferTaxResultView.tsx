@@ -499,6 +499,10 @@ export function TransferTaxResultView({
           <SplitGainDetailSection
             splitDetail={result.splitDetail}
             assetKind={formData?.assets?.[0]?.assetKind}
+            // §166⑧ 예외 근거는 엔진 미전송(계획서 §15.3) — 폼에서 직접 읽는다.
+            {...(formData?.assets?.[0]?.saleSplitExemptionNote
+              ? { exemptionNote: formData.assets[0].saleSplitExemptionNote }
+              : {})}
           />
         </PrintSection>
       )}
