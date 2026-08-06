@@ -33,7 +33,7 @@
 auto 모드에서 하단 값이 취득가액이 되는 메커니즘:
 - `lib/tax-engine/transfer-tax.ts:124-131` STEP 0.45 — `runInheritedAcquisitionStep` 실행
 - `lib/tax-engine/inheritance-acquisition-helpers.ts:141` — `applyResultToInput`이 `acquisitionPrice: result.acquisitionPrice`로 덮어씀
-- `lib/tax-engine/inheritance-acquisition-price.ts` — `calcPreDeemed`(max ①신고가액 ③환산) / `calcPostDeemed`(신고가액·§164⑦ max)
+- `lib/tax-engine/inheritance-acquisition-price.ts` — `calcPreDeemed`(**가목 우선**: `max(①신고가액, ②§164④~⑦)`, 0일 때만 ③환산 — 2026-08-06 갱신, 종전 서술 「max ①③」은 #1080·#1089 前) / `calcPostDeemed`(신고가액·§164⑦ max)
 
 > **원칙**: 이번 통합은 **UI·API 변환 레이어 재구성**이며, `lib/tax-engine/` 순수 엔진의 계산 로직·세법 정확성은 건드리지 않는다. 세액은 통합 전후 불변이어야 한다(회귀 anchor로 강제).
 
@@ -63,7 +63,7 @@ auto 모드에서 하단 값이 취득가액이 되는 메커니즘:
 
 핵심: **"자동 vs 직접입력" 이분 토글을 폐지**하고, 하단의 **"평가방법 선택" 단일 축**으로 흡수한다. 직접입력은 평가방법을 고른 뒤 신고가액을 손으로 적는 것으로 자연 표현된다.
 
-**⚠️ pre-deemed는 평가방법 축 N/A (H1 실측)**: `inheritanceValuationMethod`(5종)는 **post-deemed 전용**이다 — `calcPreDeemed`(`inheritance-acquisition-price.ts:76-126`)·pre-deemed payload(`transfer-tax-api-inheritance.ts:47-56`)는 `reportedMethod`를 쓰지 않는다. pre-deemed 직접입력 = "신고가액(①) 입력 + 환산필드 공란 → `max(①,③)`가 ① 채택"으로 자연 표현되므로, 통합 UI는 **의제취득일 분기(pre/post)를 먼저 판정한 뒤 post-deemed에서만 평가방법 셀렉트를 렌더**한다.
+**⚠️ pre-deemed는 평가방법 축 N/A (H1 실측)**: `inheritanceValuationMethod`(5종)는 **post-deemed 전용**이다 — `calcPreDeemed`(`inheritance-acquisition-price.ts:76-126`)·pre-deemed payload(`transfer-tax-api-inheritance.ts:47-56`)는 `reportedMethod`를 쓰지 않는다. pre-deemed 직접입력 = "신고가액(①) 입력 + 환산필드 공란 → ①이 채택"으로 자연 표현되므로(2026-08-06 정정: 현행은 **가목 우선**이라 ①이 있으면 ③에 **도달조차 하지 않는다** — 종전 서술 `max(①,③)`은 #1089 前), 통합 UI는 **의제취득일 분기(pre/post)를 먼저 판정한 뒤 post-deemed에서만 평가방법 셀렉트를 렌더**한다.
 
 **현행 위젯 전수 수용 (M6·M5 실측)**: 통합 UI는 현행 4컴포넌트의 모든 입력을 빠짐없이 수용한다 — 자산구분(RadioCardGroup)·평가방법(Select)·보충적평가 보조계산 토글(ToggleCard)·§164⑦ 환산(HouseValuationSection)·pre1990 등급환산·환산취득가 비교·**기준시가 override 토글 2종**(`useStandardPriceAtAcqOverride`/`useStandardPriceAtTransferOverride`, `PreDeemedInputs.tsx:245-259,310-324`)·**자산구분 변경 시 supplementary 필드 stale-reset**(`CompanionAcquisitionCauseSection.tsx:239-248`). **공용 컴포넌트 강제**: ToggleCard/RadioCardGroup native 금지·DateInput·SelectOnFocus 재사용.
 
