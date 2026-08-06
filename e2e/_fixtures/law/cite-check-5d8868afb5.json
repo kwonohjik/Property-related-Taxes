@@ -1,0 +1,6 @@
+{
+  "request": "GET /api/law/cite-check?caseNo=%EC%88%98%EC%9B%90%EA%B3%A0%EB%93%B1%EB%B2%95%EC%9B%90-2025-%EB%88%84-1031",
+  "status": 200,
+  "contentType": "application/json",
+  "body": "{\"result\":{\"caseNo\":\"수원고등법원-2025-누-1031\",\"citingCount\":0,\"scannedCount\":0,\"signals\":[],\"enBancUnscanned\":[],\"status\":\"no_citations\"}}"
+}

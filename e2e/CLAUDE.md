@@ -32,3 +32,13 @@
 ## 4. 셀렉터 확정은 추정 금지 — probe로 검증
 
 라벨 개수·DOM 순서·visible 여부는 결과뷰 구조에 의존한다. 새 셀렉터는 throwaway probe spec으로 count·순서를 실측한 뒤 확정한다("아마 nth(2)일 것" 금지).
+
+## 5. 외부 API 의존 spec은 `page.route`로 mock — 실호출 금지
+
+정부 API(주소·시가표준액·법제처)에 의존하는 spec은 **전부 mock**한다. 외부 가용성이 우리 코드의 신호를 오염시키기 때문이다.
+
+- 주소·시가표준액: `building-register-autofill.spec.ts:22` 등 **14 spec**의 `page.route("**/api/address/**")`
+- 법제처: `_helpers/law-api-mock.ts` — fixture 캡처/재생(`LAW_FIXTURE_CAPTURE=1`로 갱신)
+
+> ⚠️ **실호출 감시를 없애는 것이 아니다** — 스케줄 워크플로로 분리한다(`.github/workflows/law-api-health.yml`, `LAW_E2E_LIVE=1`).
+> 🪤 로컬 대조 실험 시 `.legal-cache/`(TTL 30일)가 mock 없이도 통과시켜 **검증을 무효로 만든다**. 반드시 `rm -rf .legal-cache` + dev 서버 재시작 후 확인할 것.

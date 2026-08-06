@@ -5,13 +5,19 @@
  *   CITE-1: 판례 탭 검색 → 본문 열기 → "후속 인용 확인" 버튼 노출 → 클릭 시 중립 상태 배지.
  *
  * 비고:
- *   - 검색·본문·생사확인 모두 법제처 API(KOREAN_LAW_OC) 의존 → 넉넉한 타임아웃 + 관대한 단정.
+ *   - 검색·본문·생사확인 모두 **fixture mock**이다(`_helpers/law-api-mock`).
+ *     판례 검색 결과는 시점에 따라 바뀌므로 fixture 고정이 오히려 단언을 안정시킨다.
  *   - 단정 금지 정책상 결과는 "검토 필요"/"미감지"/"없음" 중립 표현만 검증.
  * 정책: [[feedback_browser_verify_with_playwright]] [[feedback_e2e_worktree_port_isolation]]
  */
 import { test, expect } from "@playwright/test";
+import { mockLawApi } from "./_helpers/law-api-mock";
 
 test.describe("법령 리서치 — 판례 생사 확인", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockLawApi(page);
+  });
+
   test("CITE-1: 판례 본문 → 후속 인용 확인 버튼 + 중립 상태", async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto("/law");

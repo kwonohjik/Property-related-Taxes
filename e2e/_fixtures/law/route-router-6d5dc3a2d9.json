@@ -1,0 +1,6 @@
+{
+  "request": "POST /api/law/route-router",
+  "status": 200,
+  "contentType": "application/json",
+  "body": "{\"tool\":\"get_law_text\",\"params\":{\"lawName\":\"민법\",\"articleNo\":\"제750조\"},\"reason\":\"법령명 + 조문번호 패턴 매칭 → 해당 조문 팝업 조회\",\"patternName\":\"specific_article\",\"priority\":1,\"confidence\":\"high\",\"targetTab\":\"law\"}"
+}
