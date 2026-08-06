@@ -1,0 +1,76 @@
+name: 법제처 API 헬스체크
+
+# ── 왜 PR 게이트에서 떼어 스케줄로 옮겼나 (2026-08-06) ────────────────────
+#
+# 종전 `ci.yml`의 `e2e-law` job은 PR마다 법제처 Open API를 **실제로** 호출했다.
+# 48회 전수 실측: **success 32 · failure 16 = 실패율 33%**.
+#
+# 실패는 우리 코드와 무관한 **러너 인스턴스 종속 이항(binary) 상태**였다 —
+# `31055656433`(23:14 실패)이 도는 **중에** 시작한 `31055699662`(23:15)·
+# `31055996368`(23:20)은 **둘 다 성공**했다. 같은 시각·같은 OC 키인데 갈린다.
+# ⇒ 시각·동시성·키 요인이 아니다.
+#
+# 원인은 `836139a1`(2026-08-04)이다. 저장소 public 전환으로 self-hosted
+# (**개발자 Mac = 한국 IP**) → **`ubuntu-latest`(Azure = 해외 IP)** 로 환원했고,
+# 법제처 DRF API가 Azure 대역 **일부**에서 연결되지 않는다. 전면 차단은 아니다
+# (미국에서 `www.law.go.kr` 연결 성공 실측). 증상은 `fetch failed` —
+# HTTP 4xx/5xx가 아니라 **HTTP 레이어에 도달조차 못 한** 저수준 실패다.
+#
+# PR 게이트는 이제 fixture mock으로 결정적이다(`e2e/_helpers/law-api-mock.ts`).
+# **그러나 가용성 감시를 버린 것이 아니다** — 이 워크플로가 그 역할을 이어받는다.
+#
+# ⚠️ 이 워크플로는 **33% 확률로 빨간불이 된다** — 그것이 이 워크플로의 관측 대상이다.
+#    PR을 막지 않으므로 노이즈 부담이 없다. 연속 실패가 이어지면 그때가 진짜 신호다
+#    (법제처 정책 변경·차단 확대). 반대로 **fixture가 stale해져도 여기서만 깨진다**.
+#
+# 📌 `LAW_E2E_LIVE=1`이 mock을 우회하는 스위치다. PR 게이트에서는 절대 켜지 않는다.
+
+on:
+  schedule:
+    # 매주 월요일 00:00 UTC = 09:00 KST
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+# 스케줄 중복 실행 방지(수동 실행이 겹칠 때).
+concurrency:
+  group: law-api-health
+  cancel-in-progress: false
+
+jobs:
+  law-live:
+    name: E2E 법제처 API (실호출)
+    runs-on: ubuntu-latest
+    # 실측(run 30967618223): 워커 1개 직렬 10.6분(실패 재시도 포함). 2배 여유.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install deps (fresh)
+        run: npm ci
+
+      - name: Playwright 브라우저 설치
+        run: npx playwright install --with-deps chromium
+
+      # positional `law-`는 **파일 경로** 정규식이다 — `inheritance-law-article-badges` ·
+      # `transfer-law-citation-link`도 함께 잡힌다(둘 다 법제처 API를 호출한다).
+      - name: law spec 실호출 (mock 우회)
+        run: npx playwright test law- --workers=1 --reporter=list
+        env:
+          # 🔑 `.gitignore`가 `.env*`를 제외하므로 fresh checkout에는 키가 없다.
+          # 저장소 secret으로 주입한다(2026-08-03 등록).
+          KOREAN_LAW_OC: ${{ secrets.KOREAN_LAW_OC }}
+          # 🔬 이 변수가 `mockLawApi()`를 no-op으로 만든다 → 실제 법제처로 나간다.
+          LAW_E2E_LIVE: "1"
+
+      - name: 실패 리포트 업로드
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: law-health-report
+          path: e2e/_artifacts
+          retention-days: 14

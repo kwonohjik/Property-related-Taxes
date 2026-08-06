@@ -4,10 +4,11 @@
  * 검증:
  *   TBL-1: "법인세법 제55조" → 팝업에 <img> raw 태그 노출 없음 + 제목("세율") 표시.
  *
- * 비고: 조문 본문은 법제처 API 의존 → 본문 로드 후 단정.
+ * 비고: 조문 본문은 **fixture mock**이다(`_helpers/law-api-mock`) — 갱신은 `LAW_FIXTURE_CAPTURE=1`.
  * 정책: [[feedback_browser_verify_with_playwright]] [[feedback_e2e_worktree_port_isolation]]
  */
 import { test, expect, type Page } from "@playwright/test";
+import { mockLawApi } from "./_helpers/law-api-mock";
 
 async function search(page: Page, query: string) {
   const input = page.getByLabel("통합 검색창");
@@ -17,6 +18,10 @@ async function search(page: Page, query: string) {
 }
 
 test.describe("조문 팝업 — 표 렌더 / 제목 중복", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockLawApi(page);
+  });
+
   test("TBL-1: 법인세법 §55 세율표 → <img> 노출 없음 + 제목 정상", async ({ page }) => {
     test.setTimeout(60_000);
     await page.goto("/law");

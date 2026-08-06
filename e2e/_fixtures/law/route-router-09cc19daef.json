@@ -1,0 +1,6 @@
+{
+  "request": "POST /api/law/route-router",
+  "status": 200,
+  "contentType": "application/json",
+  "body": "{\"tool\":\"get_law_text\",\"params\":{\"lawName\":\"소득세법\",\"articleNo\":\"제77조\"},\"reason\":\"법령명 + 조문번호 패턴 매칭(\\\"제\\\" 생략) → 해당 조문 팝업 조회\",\"patternName\":\"specific_article_no_je\",\"priority\":2,\"confidence\":\"high\",\"targetTab\":\"law\"}"
+}

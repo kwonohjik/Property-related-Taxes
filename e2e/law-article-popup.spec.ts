@@ -8,11 +8,13 @@
  *
  * 비고:
  *   - route-router API는 순수 정규식(routeQuery)이라 라우팅 배너는 외부 의존 없이 결정적.
- *   - 조문 본문 로딩은 법제처 API(KOREAN_LAW_OC) 의존 → 로컬 미설정 시 본문은 실패할 수 있으나
- *     팝업 헤더(법령명·조문번호)는 props 기반이라 항상 노출. 본문 텍스트는 단정하지 않음.
+ *   - 조문 본문은 **fixture mock**이다(`_helpers/law-api-mock`) — 법제처 가용성에 흔들리지 않는다.
+ *     ⚠️ 종전 주석은 "본문 텍스트는 단정하지 않음"이라 했지만 `[현행]` 단언은 실제로는
+ *     **hard assertion**이었다(timeout만 30초로 늘렸을 뿐). 그래서 CI에서 33% 실패했다.
  * 정책: [[feedback_browser_verify_with_playwright]] [[korean-law-citation-verify]]
  */
 import { test, expect, type Page } from "@playwright/test";
+import { mockLawApi } from "./_helpers/law-api-mock";
 
 async function search(page: Page, query: string) {
   const input = page.getByLabel("통합 검색창");
@@ -22,6 +24,10 @@ async function search(page: Page, query: string) {
 }
 
 test.describe("법령 리서치 — 조문 팝업", () => {
+  test.beforeEach(async ({ page }) => {
+    await mockLawApi(page);
+  });
+
   test("POPUP-1: '소득세법 77조'(제 생략) → 팝업 + 라우팅 배너", async ({ page }) => {
     test.setTimeout(60_000);
     await page.goto("/law");

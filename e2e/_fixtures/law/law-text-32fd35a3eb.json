@@ -1,0 +1,6 @@
+{
+  "request": "GET /api/law/law-text?lawName=%EB%AF%BC%EB%B2%95&articleNo=%EC%A0%9C750%EC%A1%B0",
+  "status": 200,
+  "contentType": "application/json",
+  "body": "{\"article\":{\"title\":\"불법행위의 내용\",\"fullText\":\"제750조(불법행위의 내용) 고의 또는 과실로 인한 위법행위로 타인에게 손해를 가한 자는 그 손해를 배상할 책임이 있다.\",\"lawName\":\"민법\",\"articleNo\":\"제750조\",\"sourceUrl\":\"https://www.law.go.kr/법령/%EB%AF%BC%EB%B2%95/%EC%A0%9C750%EC%A1%B0\"}}"
+}
