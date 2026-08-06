@@ -1,6 +1,36 @@
 /**
  * 재산세 토지 3분류 판정 모듈 (P2-09~11)
  *
+ * # 🔴 현재 **도달 불가**다 — 배선 전에 아래를 읽을 것 (2026-08-06 실측)
+ *
+ * 이 모듈을 import하는 프로덕션 파일은 `property-object.ts` 하나뿐인데, 그 진입점
+ * `determinePropertyTaxObject`는 **호출처가 0건**이다. 즉 사용자 계산에 도달하지 않는다.
+ * API 경로(`app/api/calc/property/route.ts` → `property-tax.ts`)가 실제로 타는 분리과세는
+ * **`separate-taxation.ts`**다.
+ *
+ * 테스트가 초록이라 살아 있어 보이지만 아니다. 도달 불가는
+ * `__tests__/lib/property-dead-classifier-reachability.test.ts`가 고정한다 — 누군가 배선하면
+ * 그 테스트가 깨지며 아래 두 결함을 이름으로 지목한다.
+ *
+ * ## 배선하면 물려받는 결함 2건
+ *
+ * 살아 있는 경로는 2026-08-06에 이 둘을 정정했으나 **여기에는 그대로 남아 있다**:
+ *
+ * 1. **면적 한도 없음** — 「지방세법 시행령」 §102①1호는 분리과세 공장용지를
+ *    "공장입지기준면적 **범위의** 토지"로 한정한다(시행규칙 §50 [별표6]). 그런데
+ *    `classifySeparateTaxationLand`는 `isIndustrialDistrict`·`isCattleFarmland` 플래그만 보고
+ *    **한도 없이 전량** 분리과세한다. 초과분은 종합합산 누진(0.2~0.5%) 대상이라
+ *    **납세자에게 유리한 방향**의 오류가 된다. 목장용지(§102①3호 가축별 기준면적 표)도 같다.
+ * 2. **소재지 배타 분기 미적용** — §102①1호는 §101①1호 **각 목**(가.읍·면지역 나.산업단지
+ *    다.공업지역)으로 한정하고, §101①1호 **본문**은 그 밖의 시지역 공장용지를
+ *    **별도합산**(바닥면적 × §101② 배율)으로 정한다. 두 조문은 배타 분기인데 여기서는
+ *    `isIndustrialDistrict` 하나로 뭉뚱그린다.
+ *
+ * ⇒ 정정 참조: `separate-taxation.ts`의 `classifyStandard`·`judgeFactoryAreaLimit`,
+ *   설계: `docs/02-design/features/property-separate-taxation-factory-limit.plan.md`
+ *
+ * ---
+ *
  * 지방세법 §106 기반 판정 순서 (우선순위 엄수):
  *   1단계: 비과세 여부 (§109) — property-exemption.ts에서 선행 판정
  *   2단계: 분리과세 (§106②) — 자경농지·골프장 등 9종
@@ -130,6 +160,8 @@ export function classifySeparateTaxationLand(
   }
 
   // 목장용지 기준면적 이내 (§106②1호)
+  // 🔴 「기준면적 이내」는 **사용자 선언**이지 계산이 아니다. §102①3호는 가축별 기준면적 표
+  //    (한우 7.5㎡/마리 등 9종 × 축사·부대시설·초지·사료밭)로 한도를 정한다 — 미구현.
   if (input.isCattleFarmland) {
     return {
       isSeparate: true,
@@ -154,6 +186,9 @@ export function classifySeparateTaxationLand(
   // ── 일반 0.2% ──
 
   // 공장용지 (산업단지·지정 공업지역, §106②2호)
+  // 🔴 배선 전 확인 — 모듈 헤더의 「결함 2건」. 여기에는 §102①1호 **면적 한도**가 없고
+  //    §101①1호(별도합산)와의 **소재지 배타 분기**도 없다. 살아 있는 경로는
+  //    `separate-taxation.ts` `judgeFactoryAreaLimit`가 둘 다 처리한다.
   if (input.isIndustrialDistrict && input.landUse === "factory") {
     return {
       isSeparate: true,
