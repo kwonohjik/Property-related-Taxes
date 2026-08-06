@@ -77,6 +77,23 @@ describe("⑤-1 — 모드에 따라 입력 칸이 갈린다", () => {
   });
 });
 
+describe("⑤-3 — 감정평가가액 카드는 모드 밖에 있다", () => {
+  it("🔴 일괄양도에서도 보인다 — 여기서는 안분 basis 자체다", () => {
+    render(<Harness />);
+    expect(screen.getByTestId("sale-appraisal-toggle")).toBeTruthy();
+  });
+
+  it("구분양도에서도 보인다 — 30% 판정의 비교 대상이다", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} />);
+    expect(screen.getByTestId("sale-appraisal-toggle")).toBeTruthy();
+  });
+
+  it("차단 조합에서는 감정 카드도 숨는다 — 3-way 배분 근거가 없는 것은 basis도 마찬가지다", () => {
+    render(<Harness blockedReason="증축이 있는 건물은 …" />);
+    expect(screen.queryByTestId("sale-appraisal-toggle")).toBeNull();
+  });
+});
+
 describe("⑤-2 — 차단 조합은 칸을 열지 않고 이유를 말한다", () => {
   it("증축이면 입력 대신 안내가 뜬다 (S-10)", () => {
     render(<Harness init={{ saleSplitMode: "actual" }} blockedReason="증축이 있는 건물은 … 지원하지 않습니다." />);

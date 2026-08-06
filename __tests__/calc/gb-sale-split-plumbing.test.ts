@@ -117,6 +117,33 @@ describe("⑫⑭ — Zod가 버리지 않고 엔진에 닿는다", () => {
   });
 });
 
+describe("④⑫ — 감정평가가액 축", () => {
+  const APPRAISAL = {
+    landAppraisalAtTransfer: "400,000,000",
+    buildingAppraisalAtTransfer: "525,000,000",
+    appraisalDateAtTransfer: "2022-06-01",
+  } as Partial<AssetForm>;
+
+  it("🔴 모드와 무관하게 전송한다 — 일괄양도의 안분 basis이기도 하다", () => {
+    const p = payloadOf(asset(APPRAISAL)); // saleSplitMode 기본값(일괄)
+    expect(p.landAppraisalAtTransfer).toBe(400_000_000);
+    expect(p.buildingAppraisalAtTransfer).toBe(525_000_000);
+    expect(p.appraisalDateAtTransfer).toBe("2022-06-01");
+  });
+
+  it("Zod가 3필드를 strip하지 않는다", () => {
+    const parsed = generalBuildingValuationSchema.parse(payloadOf(asset(APPRAISAL)));
+    expect(parsed.landAppraisalAtTransfer).toBe(400_000_000);
+    expect(parsed.appraisalDateAtTransfer).toBe("2022-06-01");
+  });
+
+  it("감정 입력이 없으면 payload에도 없다 — 빈 값을 지어내지 않는다", () => {
+    const p = payloadOf(asset());
+    expect(p.landAppraisalAtTransfer).toBeUndefined();
+    expect(p.appraisalDateAtTransfer).toBeUndefined();
+  });
+});
+
 describe("⑧ — validate 차단 규칙", () => {
   const v = (a: AssetForm) => validateGeneralBuildingAsset(a, "자산 1");
 
@@ -179,6 +206,28 @@ describe("⑧ — validate 차단 규칙", () => {
   it("근거를 채우면 통과한다", () => {
     expect(
       v(asset({ ...SPLIT, saleSplitExemption: "other_law", saleSplitExemptionNote: "계약서 특약" } as Partial<AssetForm>)),
+    ).toBeNull();
+  });
+
+  it("감정가액만 넣고 감정일자를 비우면 차단한다 (모드 무관)", () => {
+    const msg = v(asset({ landAppraisalAtTransfer: "400,000,000", buildingAppraisalAtTransfer: "525,000,000" }));
+    expect(msg).toContain("감정일자");
+  });
+
+  it("한쪽 가액만 넣으면 차단한다", () => {
+    const msg = v(asset({ landAppraisalAtTransfer: "400,000,000", appraisalDateAtTransfer: "2022-06-01" }));
+    expect(msg).toContain("양쪽 모두");
+  });
+
+  it("감정 3필드를 다 채우면 통과한다", () => {
+    expect(
+      v(
+        asset({
+          landAppraisalAtTransfer: "400,000,000",
+          buildingAppraisalAtTransfer: "525,000,000",
+          appraisalDateAtTransfer: "2022-06-01",
+        }),
+      ),
     ).toBeNull();
   });
 

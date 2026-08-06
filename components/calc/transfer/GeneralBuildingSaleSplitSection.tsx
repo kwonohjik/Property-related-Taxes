@@ -22,7 +22,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { SaleSplitExemptionCard } from "./SaleSplitBasisExemptionCards";
+import { SaleAppraisalBasisCard, SaleSplitExemptionCard } from "./SaleSplitBasisExemptionCards";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const MODE_OPTIONS: RadioCardOption<"actual" | "apportioned">[] = [
@@ -36,9 +36,11 @@ interface Props {
   /** 구분 기재를 쓸 수 없는 사유 — 있으면 입력 대신 안내만 표시한다 */
   blockedReason?: string;
   sectionNum?: string;
+  /** 자산 양도일 — 감정 유효 창 안내에 쓴다 */
+  transferDate?: string;
 }
 
-export function GeneralBuildingSaleSplitSection({ asset, onChange, blockedReason, sectionNum }: Props) {
+export function GeneralBuildingSaleSplitSection({ asset, onChange, blockedReason, sectionNum, transferDate }: Props) {
   const mode = asset.saleSplitMode ?? "apportioned";
 
   if (blockedReason) {
@@ -96,6 +98,13 @@ export function GeneralBuildingSaleSplitSection({ asset, onChange, blockedReason
           <SaleSplitExemptionCard asset={asset} onChange={onChange} />
         </div>
       )}
+
+      {/*
+        감정평가가액은 **모드 밖**에 둔다 — 일괄양도에서는 안분 basis(부가령 §64①1호 단서로
+        기준시가보다 **우선**)이고, 구분양도에서는 §100③ 30% 판정의 비교 대상이다.
+        구분양도 블록 안에 넣으면 일괄양도에서 입력 경로가 사라진다.
+      */}
+      <SaleAppraisalBasisCard asset={asset} onChange={onChange} {...(transferDate ? { transferDate } : {})} />
     </ToneCard>
   );
 }

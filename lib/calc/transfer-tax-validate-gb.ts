@@ -372,6 +372,21 @@ export function validateGeneralBuildingAsset(
     }
   }
 
+  // ── 양도시 감정평가가액 — 3필드 all-or-nothing (부가령 §64①1호 단서) ────────────
+  // ⚠️ 구분양도 블록 **밖**이다 — 감정가액은 일괄양도의 안분 basis이기도 하다. 안으로 넣으면
+  //    일괄양도에서 불완전 입력이 그대로 통과해 조용히 기준시가로 후퇴한다.
+  //    (split V8과 같은 규칙 — `transfer-tax-validate-split.ts`)
+  const landApp = parseAmount(asset.landAppraisalAtTransfer) || 0;
+  const buildingApp = parseAmount(asset.buildingAppraisalAtTransfer) || 0;
+  const appraisedAt = asset.appraisalDateAtTransfer?.trim();
+  const anyAppraisal = landApp > 0 || buildingApp > 0;
+  if (anyAppraisal && !appraisedAt) {
+    return `${label}: 양도시 감정평가가액을 입력했으면 감정일자도 입력하세요 — 감정일자가 있어야 시기 요건(양도 전년도 1월 1일 ~ 양도연도 12월 31일)을 판정할 수 있습니다 (부가가치세법 시행령 §64①1호 단서).`;
+  }
+  if (anyAppraisal && (landApp <= 0 || buildingApp <= 0)) {
+    return `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
+  }
+
   // ── 구분양도(§100②) — Phase 2 ────────────────────────────────────────────────
   // 게이트는 API 전송(`transfer-tax-api-gb.ts` `saleSplitFields`)과 **같은 축**이다.
   // 여기서 조건을 재기술하면 「전송되는데 차단 안 함」 또는 그 반대가 된다.

@@ -105,6 +105,30 @@ test.describe("일반건물 §100③ 30% 의제 (Phase 2-F)", () => {
     await expect(block).toContainText("20,274,808");
   });
 
+  /**
+   * 🔴 감정평가가액 축 — **⑭ Date 변환까지 실증한다.**
+   *
+   * 감정일자는 JSON을 거쳐 **문자열**로 도착한다. route helper가 `Date`로 바꾸지 않으면 엔진의
+   * 유효 창 비교(`getTime()`)가 런타임에 깨지는데, 그 구간은 vitest 배관 anchor가 닿지 않는다
+   * (Zod parse 결과를 엔진에 직접 넣기 때문이다).
+   *
+   * 감정 토지 4억 / 건물 5.25억(합 = 총액) ⇒ 감정 비율 안분은 그대로 4억 / 5.25억이고,
+   * 기준시가 안분값(904,725,192)과 확연히 다르다 — 어느 basis를 썼는지 화면에서 갈린다.
+   */
+  test("🔴 감정평가가액이 있으면 기준시가 대신 그 비율로 안분한다 (부가령 §64①1호 단서)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndCalc(page, {
+      landAppraisalAtTransfer: "400000000",
+      buildingAppraisalAtTransfer: "525000000",
+      appraisalDateAtTransfer: "2022-06-01", // 양도 2023-02-19 ⇒ 창 [2022-01-01, 2023-12-31]
+    });
+
+    const allocation = page.getByRole("heading", { name: "양도가액 안분" }).locator("..").locator("..");
+    await expect(allocation).toContainText("400,000,000");
+    await expect(allocation).toContainText("525,000,000");
+    await expect(allocation, "기준시가 안분값이 나오면 감정가액이 무시된 것이다").not.toContainText("904,725,192");
+  });
+
   test("일괄양도(기본)는 판정 블록이 뜨지 않는다 — 비교 대상이 없다", async ({ page }) => {
     test.setTimeout(60_000);
     await seedAndCalc(page, {});

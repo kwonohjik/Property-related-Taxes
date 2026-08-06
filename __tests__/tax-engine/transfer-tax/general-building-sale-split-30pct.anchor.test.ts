@@ -128,6 +128,62 @@ describe("G-4 — 한쪽만 입력하면 잔액으로 도출하고 그 파트도
   });
 });
 
+describe("G-7 — 감정평가가액이 기준시가를 이긴다 (부가령 §64①1호 단서)", () => {
+  /**
+   * 감정 토지 4억 / 건물 5.25억 (합 = 총액 9.25억) ⇒ 감정 비율 안분값이 그대로 4억 / 5.25억.
+   * 기준시가 안분값(904,725,192 / 20,274,808)과 **확연히 달라** 어느 basis를 썼는지 한눈에 갈린다.
+   *
+   * 양도 2023-02-19 ⇒ 유효 창 = [2022-01-01, 2023-12-31].
+   */
+  const APPRAISAL = {
+    landAppraisalAtTransfer: 400_000_000,
+    buildingAppraisalAtTransfer: 525_000_000,
+    appraisalDateAtTransfer: new Date("2022-06-01"),
+  };
+
+  it("🔴 감정 3필드를 넣으면 감정 비율로 안분한다", () => {
+    const out = mk(APPRAISAL);
+    expect(out.allocation.land).toBe(400_000_000);
+    expect(out.allocation.building).toBe(525_000_000);
+  });
+
+  it("감정일자가 없으면 기준시가로 안분한다 — 시기 요건을 판정할 수 없다", () => {
+    const out = mk({
+      landAppraisalAtTransfer: 400_000_000,
+      buildingAppraisalAtTransfer: 525_000_000,
+    });
+    expect(out.allocation.land).toBe(APPORTIONED.land);
+  });
+
+  it("창을 벗어난 감정은 기준시가로 후퇴한다", () => {
+    const out = mk({ ...APPRAISAL, appraisalDateAtTransfer: new Date("2021-12-31") });
+    expect(out.allocation.land).toBe(APPORTIONED.land);
+  });
+
+  it("구분 기재와 함께 쓰면 **감정 기준**으로 30% 판정한다", () => {
+    // 구분값 4억 / 5.25억은 감정 안분값과 정확히 같으므로 미발동.
+    // 같은 구분값을 기준시가 basis(904,725,192)로 재면 토지가 −55%라 발동했을 것이다.
+    const j = mk({
+      ...APPRAISAL,
+      landTransferPrice: 400_000_000,
+      buildingTransferPrice: 525_000_000,
+    }).saleSplitJudgment;
+    expect(j!.basisKind).toBe("appraisal");
+    expect(j!.deemedUnclear).toBe(false);
+    expect(j!.applied).toEqual({ land: 400_000_000, building: 525_000_000 });
+  });
+
+  it("배제 사유가 판정 결과에 실린다 — 조용히 후퇴하지 않는다", () => {
+    const j = mk({
+      ...APPRAISAL,
+      buildingAppraisalAtTransfer: undefined,
+      landTransferPrice: 900_000_000,
+    }).saleSplitJudgment;
+    expect(j!.basisKind).toBe("std_price");
+    expect(j!.appraisalRejected).toBe("incomplete");
+  });
+});
+
 describe("G-6 — 증축 조합은 차단한다 (R-4 · S-10)", () => {
   /**
    * 3-way 안분은 건물을 **본체·증축 2장**으로 나눈다. 계약서의 「건물 양도가액」 하나를 그 둘에
