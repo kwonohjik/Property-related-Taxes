@@ -192,4 +192,80 @@ test.describe("증여 §163⑨1호 — §164④ 전 구간 (#1103·#1106·#1108)
     //    (상태 변화 「①을 채우면 안내가 사라진다」는 RTL U2-3이 커버하므로 여기서 중복하지 않는다.)
     await expect(page.getByText("증여 신고가액 (원)")).toBeVisible();
   });
+
+  /**
+   * ④ **E-1**(#1114) — ③의 안내에 **차단**과 **선언**이 붙었다.
+   *
+   * 법 §97①1호 단서상 나목(환산)은 「가목을 확인할 수 없는 경우에 **한정**」이다. ①·②를
+   * 비워두기만 한 것은 선언이 아니므로, 계산이 막히고 명시 선택을 요구한다.
+   *
+   * RTL(`pre-deemed-estimated-notice.test.tsx`)은 토글 **노출·쓰기**만 본다. 여기서는
+   * 「차단 → 선언 → 통과 → 실제로 ③이 채택」까지 브라우저로 관통시킨다.
+   */
+  test("④ E-1: ①·② 미충족이면 차단되고, 「확인할 수 없음」 선언 후 ③(환산)으로 계산된다", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page, {
+      acquisitionDate: "1980-03-01", // 의제취득일 前 → 나목(③)이 존재하는 구간
+      useEstimatedAcquisition: true,
+      fixedAcquisitionPrice: "", // ① 비움
+      standardPriceAtAcq: "50000000", // 환산 분자 — 추계 모드의 필수 입력
+    });
+
+    // ── 1. 차단 — 종전에는 조용히 ③으로 갔다
+    for (const step of ["보유 상황", "감면·공제", "가산세"]) {
+      await page.getByRole("button", { name: step }).first().click();
+    }
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    await expect(page.getByText(/가목\(§163⑨ 평가액\)을 확인할 수 없는 경우에 한정/).first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // ── 2. 선언 — 안내 카드 안의 토글이 통과 경로다(dead-end가 아니다)
+    await page.getByRole("button", { name: "자산 목록" }).first().click();
+    await expandAssetSection(page, 3);
+    const declToggle = page.getByRole("switch", { name: /증여일 상증법 평가액」을 확인할 수 없음/ });
+    await expect(declToggle, "선언 토글이 화면에 없다 — 차단만 있고 통과 경로가 없으면 dead-end다").toBeVisible();
+    await declToggle.click();
+
+    // ── 3. 통과 — 그리고 실제로 ③(환산)이 채택된다
+    const response = await calculate(page);
+    expect(
+      response.ok(),
+      `계산 API 비정상 응답 ${response.status()} — ${await response.text()}`,
+    ).toBe(true);
+    const body = await response.json();
+    const detail = body.data.result?.inheritedAcquisitionDetail;
+    expect(detail, "취득가액 의제 상세가 없다").toBeTruthy();
+    // 양도가 500,000,000 × (50,000,000 ÷ 200,000,000) = 125,000,000
+    expect(detail.preDeemedBreakdown?.selectedMethod).toBe("converted");
+    expect(detail.acquisitionPrice).toBe(125_000_000);
+  });
+
+  /**
+   * ⑤ **E-1의 확장 범위** — 종전 안내는 `useEstimatedAcquisition` 게이트라 **추계 전용**이었다.
+   * 그런데 P2c가 낸 구멍은 **상속 · 실거래가**였다(설계서 §3.2). ⑤⑧이 같은 술어를 쓰게 되면서
+   * 이 조합에도 안내·선언이 뜬다.
+   */
+  test("⑤ E-1: **상속 · 실거래가** 모드에서도 선언 토글이 뜬다 (종전 안내가 못 덮던 구멍)", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, {
+      assetLabel: "상속 토지",
+      acquisitionCause: "inheritance",
+      acquisitionDate: "1980-03-01",
+      inheritanceStartDate: "1980-03-01",
+      decedentAcquisitionDate: "1970-01-01",
+      donorAcquisitionDate: "",
+      fixedAcquisitionPrice: "",
+      useEstimatedAcquisition: false, // ← 실거래가 모드
+    });
+
+    await expect(
+      page.getByRole("switch", { name: /상속개시일 상증법 평가액」을 확인할 수 없음/ }),
+      "상속 실거래가 모드에서 선언 토글이 없다 — P2c 구멍이 그대로다",
+    ).toBeVisible();
+  });
 });

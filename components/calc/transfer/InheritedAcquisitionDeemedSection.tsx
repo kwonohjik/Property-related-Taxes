@@ -4,7 +4,9 @@
  * 상속 부동산 취득가액 의제 섹션 (의제취득일 분기)
  *
  * 상속개시일 기준으로 의제취득일(1985.1.1.) 전/후 자동 분기:
- *   - 전 (pre-deemed):  소령 §176조의2 ④ — max(환산취득가, 피상속인 실가×물가상승률)
+ *   - 전 (pre-deemed):  소령 §163⑨ **가목 우선** — max(① 상증법 평가액, ② §164④~⑦ 기준시가),
+ *                       가목이 0일 때만 소령 §176조의2④(③ 환산). 법 §97①1호 단서.
+ *                       ⚠️ 종전 주석의 「피상속인 실가 × 물가상승률」은 법령 근거가 없어 제거된 방식이다.
  *   - 이후 (post-deemed): 소령 §163 ⑨   — 상속세 신고가액
  *
  * 상속개시일은 위쪽 CompanionAcqInheritanceBlock에서 입력한 값(acquisitionDate)을
@@ -72,7 +74,7 @@ export function InheritedAcquisitionDeemedSection({ asset, onChange, transferDat
       <p className="text-caption text-muted-foreground">
         상속개시일 {effectiveDate} — 의제취득일(1985.1.1.) 기준{" "}
         {mode === "pre-deemed"
-          ? "환산취득가 또는 피상속인 실가 × 물가상승률 적용"
+          ? "상증법 평가액·§164④~⑦ 기준시가 중 많은 금액(가목), 둘 다 없을 때만 환산취득가"
           : "상속세 신고가액을 취득가로 인정"}
       </p>
 
