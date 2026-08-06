@@ -70,7 +70,7 @@
 §102①3호는 "…계산한 **토지면적의 범위에서** 소유하는 토지"로 한정한다.
 
 ```
-기준면적 = (축사 + 부대시설 + max(초지, 사료밭)) × 마릿수 ÷ 가축두수 단위
+기준면적 = (축사 + 보유한 시설분) × 마릿수 ÷ 가축두수 단위   ← §2
 인정면적 = min(목장용지 면적, 기준면적)
 초과분   = 종합합산 이관
 ```
@@ -95,21 +95,23 @@
 
 | 파일 | 변경 |
 |---|---|
-| `lib/tax-engine/livestock-standard-area.ts` | **신설** — 표 정본 + `max` 산식 + 라벨 |
+| `lib/tax-engine/livestock-standard-area.ts` | **신설** — 표 정본 + 보유분 합산 산식 + `LivestockFacilities` + `includedFacilityLabels` |
 | `non-business-land/data/livestock-standards.ts` | 사본 제거 → 재수출 (`getLivestockStandardArea` 별칭 유지) |
-| `lib/tax-engine/separate-taxation.ts` | 목장 한도·§102⑨ 게이트·입력 5필드 · `apportionByArea` 공용화 |
-| `lib/tax-engine/types/property.types.ts` · `lib/validators/property-input.ts` | ⑫ 5필드 |
-| `components/calc/property/Step2Separated.tsx` | ⑤ 축종 Select + 마릿수 + 도시지역 2토글 |
-| `components/calc/property/shared.ts` | ①② 폼 5필드 · ④ API 변환 · ⑧ validate |
+| `lib/tax-engine/separate-taxation.ts` | 목장 한도·§102⑨ 게이트·입력 **8필드** · `apportionByArea` 공용화 · 경고에 반영 항목 노출 |
+| `lib/tax-engine/types/property.types.ts` · `lib/validators/property-input.ts` | ⑫ **8필드** |
+| `components/calc/property/Step2Separated.tsx` | ⑤ 축종 Select + 마릿수 + 도시지역 2토글 + **보유 시설 3토글** |
+| `components/calc/property/shared.ts` | ①② 폼 **8필드** · ④ API 변환 · ⑧ validate |
+| `non-business-land/{pasture.ts,land-usage.types.ts,form-mapper-helpers.ts}` | **양도세도 동일 적용** — 자동 산출 fallback + warning에 반영 항목 노출 |
+| `components/calc/transfer/nbl/PastureDetailSection.tsx` · `lib/api/transfer-tax-schema-nbl.ts` · `lib/stores/calc-wizard-asset-*` | 양도세 ⑤⑫①② 3필드 |
 
 ---
 
 ## 5. 검증
 
 - `tsc --noEmit` 0건 · `eslint` 0 errors
-- 신규 anchor **14건** (엔진 PAS-1~8 + UI PTP-1~6) · 기존 계약 갱신 **8건**
-- NBL 회귀 **360건** GREEN · `npm run test:property` **321건** GREEN
-- 전체 vitest — 커밋 메시지 참조
+- anchor **재작성 17건**(livestock-standards) + 재산세 **10건**(PAS-1~8·3b·3c) + UI **7건**(PTP) · 기존 계약 갱신 다수
+- NBL 회귀 **363건** GREEN
+- 전체 vitest **13,889건** GREEN · 실패 0
 
 ### 작업 중 걸린 함정 2건 (주석으로 남김)
 
