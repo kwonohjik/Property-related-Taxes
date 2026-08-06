@@ -35,6 +35,7 @@ import {
   MultiPointBuildingStdPriceModal,
   type MultiPointStdPriceApply,
 } from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
+import { deriveSec163_9BaseDate } from "@/lib/calc/transfer-163-9-base-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ─── 공시지가 조회 + 토지기준시가 서브 컴포넌트 ──────────────────────────
@@ -176,7 +177,9 @@ interface Props {
 }
 
 export function HouseValuationSection({ asset, onChange, transferDate }: Props) {
-  const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
+  // 기준일 = 「상속개시일 **또는 증여일** 현재」(§163⑨ 본문) — API payload 빌더와 같은 파생.
+  // 증여는 `acquisitionDate`만 본다(취득원인을 바꾼 자산의 stale `inheritanceStartDate` 회피).
+  const inheritanceDate = deriveSec163_9BaseDate(asset);
   const isBefore1990 = !!inheritanceDate && inheritanceDate < PRE_1990_DATE;
 
   // 3시점 건물기준시가 일괄 계산기 배선(§164⑤).

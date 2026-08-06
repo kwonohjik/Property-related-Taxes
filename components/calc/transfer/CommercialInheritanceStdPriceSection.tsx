@@ -1,8 +1,12 @@
 /**
- * CommercialInheritanceStdPriceSection — 상속 상가 §164⑥ 취득당시 기준시가 입력 (소령 §163⑨2호)
+ * CommercialInheritanceStdPriceSection — 상속·**증여** 상가 §164⑥ 취득당시 기준시가 입력 (소령 §163⑨2호)
  *
- * assetKind === "commercial_building" + acquisitionCause === "inheritance" + 상속개시일 < 2005-01-01 시 렌더.
- * 상가 기준시가 최초고시(2005-01-01) 전 상속 상가는 취득가액 = max(상속개시일 상증법 평가액, §164⑥ 취득당시 기준시가).
+ * assetKind === "commercial_building" + 취득원인 ∈ {상속, 증여} + 기준일 < 2005-01-01 시 렌더.
+ * 상가 기준시가 최초고시(2005-01-01) 전 상속·증여 상가는
+ * 취득가액 = max(상속개시일·증여일 상증법 평가액, §164⑥ 취득당시 기준시가).
+ *
+ * ⭐ **§163⑨2호는 「상속 또는 증여」다** — 2026-08-06 증여 개방(계획서 U-3). 종전에는 상속만
+ *    통과시켜, PR #1097이 API payload 트리거를 열었어도 입력 칸이 없어 도달할 수 없었다.
  * §164⑥ 취득당시 기준시가(P_A)는 최초고시(2005) 역환산으로 산정 → 취득시·최초고시 3시점 기준시가 입력.
  *
  * cb* 스토어 필드 재사용(환산 섹션과 동일 물리량). opt-in — 미입력 시 상증법 평가액만 사용(Phase 1).
@@ -23,6 +27,12 @@ import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandV
 import { CommercialPre1990LandNotice } from "@/components/calc/transfer/CommercialPre1990LandNotice";
 import { derivePre1990CommercialLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-commercial-bridge";
 import { isCommercialPre1990Acquisition } from "@/lib/calc/transfer-pre1990-commercial-bridge";
+import {
+  deriveSec163_9BaseDate,
+  isSec163_9Cause,
+  sec163_9BaseDateLabel,
+  sec163_9CauseLabel,
+} from "@/lib/calc/transfer-163-9-base-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -32,11 +42,15 @@ interface Props {
 }
 
 export function CommercialInheritanceStdPriceSection({ asset, onChange, transferDate }: Props) {
-  const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
-  // 상가 기준시가 최초고시(2005-01-01) 전 상속만 §164⑥ 대상.
+  // 기준일·대상 판정은 API payload 빌더(`transfer-tax-api-inheritance.ts`)와 **같은 함수**를 쓴다.
+  // 여기서 재기술하면 stale `inheritanceStartDate`를 가진 증여 자산에서 노출과 payload가 어긋난다.
+  const inheritanceDate = deriveSec163_9BaseDate(asset);
+  const dateLabel = sec163_9BaseDateLabel(asset);
+  const causeLabel = sec163_9CauseLabel(asset);
+  // 상가 기준시가 최초고시(2005-01-01) 전 상속·증여만 §164⑥ 대상.
   if (
     asset.assetKind !== "commercial_building" ||
-    asset.acquisitionCause !== "inheritance" ||
+    !isSec163_9Cause(asset.acquisitionCause) ||
     !inheritanceDate ||
     inheritanceDate >= "2005-01-01"
   ) {
@@ -66,9 +80,9 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥" />
       </div>
       <p className="text-xs text-amber-700">
-        상가 기준시가 최초고시(2005.1.1) 전 상속 상가는 <b>max(상속개시일 상증법 평가액, §164⑥ 취득당시 기준시가)</b>를
+        상가 기준시가 최초고시(2005.1.1) 전 {causeLabel}받은 상가는 <b>max({dateLabel} 상증법 평가액, §164⑥ 취득당시 기준시가)</b>를
         취득가액으로 봅니다. 취득당시 기준시가는 최초고시(2005) 역환산으로 산정합니다. 아래 3시점 입력 시에만 적용되며,
-        미입력 시 상속개시일 평가액만 사용합니다.
+        미입력 시 {dateLabel} 평가액만 사용합니다.
       </p>
 
       {/* 면적 3필드(전용·공유·대지)는 ① 기본정보로 이전했다 (2026-08-04).
@@ -92,10 +106,10 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
             acquisitionDate={inheritanceDate}
             checked={asset.cbAcqBuildingStdBy164_5}
             onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
-            timePointLabel="취득당시(상속개시일)"
+            timePointLabel={`취득당시(${dateLabel})`}
           />
         )}
-        <FieldCard label="취득시(상속개시일) 건물 기준시가" unit="원" hint="㎡당 단가 × 연면적(보정계수 반영) = 건물 기준시가 총액">
+        <FieldCard label={`취득시(${dateLabel}) 건물 기준시가`} unit="원" hint="㎡당 단가 × 연면적(보정계수 반영) = 건물 기준시가 총액">
           <CurrencyInput label="" value={asset.cbBuildingStdPriceAtAcq} onChange={(v) => onChange({ cbBuildingStdPriceAtAcq: v })} hideUnit />
         </FieldCard>
         <div className="flex justify-end">
@@ -109,7 +123,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       {/* ③ 개별공시지가 (취득시·최초고시) */}
       <ToneCard tone="amber" sectionNum="3" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3" noDark>
         <div>
-          <p className="mb-1 text-caption font-medium text-amber-700">취득시(상속개시일)</p>
+          <p className="mb-1 text-caption font-medium text-amber-700">취득시({dateLabel})</p>
           {isCommercialPre1990Acquisition(asset) && (
             <>
               <CommercialPre1990LandNotice acquisitionDate={inheritanceDate} />
