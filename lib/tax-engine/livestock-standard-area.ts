@@ -21,22 +21,19 @@
  *
  * ⇒ 이 모듈은 **1두(수)당 면적**만 제공한다. 두수를 어떻게 구할지는 각 세목 모듈의 몫이다.
  *
- * ## 🔴 「초지 **또는** 사료포」 — 해석 미확정 구간
+ * ## 기준면적은 **보유한 시설만** 더한다
  *
- * 두 표 모두 열 묶음 헤더가 접속사를 구분한다:
+ * 표의 4개 열(축사·부대시설·초지·사료포)은 **각 항목별 인정 한도**다. 그 농장에 없는 시설의
+ * 몫까지 얹으면 근거 없이 한도가 커진다 — 반대로 있는 것을 빼면 근거 없이 좁아진다.
  *
- * - 「축사 **및** 부대시설」 → 둘 다 더한다
- * - 「초지 **또는** 사료포(사료밭)」 → **둘 중 하나**
+ *   기준면적 = 축사 + (부대시설 有) + (초지 有) + (사료포 有)
  *
- * ⇒ 기준면적 = 축사 + 부대시설 + **max(초지, 사료포)**
+ * 열 묶음 제목의 「축사 **및** 부대시설」·「초지 **또는** 사료포」는 통상적인 구성을 적은
+ * 이름표다 — 축사와 부대시설은 대개 함께 있고, 사료 공급은 방목(초지) **아니면** 재배(사료포)로
+ * 갈린다. **접속사가 산식을 정하는 것이 아니라** 실제 보유 여부가 정한다.
  *
- * > ⚠️ **권위 있는 근거를 찾지 못했다**(2026-08-06 실측): 법제처 법령해석례 **0건**,
- * > 조세심판례는 국심1994경1281 **1건뿐인데 본문이 「(내용없음)」**이다.
- * > 문언(「또는」)에 근거한 해석이며, 표에서 초지 ≥ 사료포이므로 실질은 **초지 값**이 된다.
- * >
- * > ⚠️ 종전 구현은 **넷을 모두 합산**했다(한우 사육 1두 7,512.5㎡ → 정정 후 5,012.5㎡).
- * > 한도가 줄어 **납세자에게 불리한 방향**이다 — 예규가 확인되면 재검토할 것.
- * > 판단 경위: `docs/02-design/features/livestock-standard-area-limit.plan.md`
+ * ⚠️ 축사는 축산업의 전제이므로 **항상 포함**한다. 나머지 셋은 호출부가 보유 여부를 받아 넘긴다
+ * (`facilities` 필수 인자 — 기본값을 두지 않는다. 어느 쪽으로 가정하든 세액이 달라진다).
  */
 
 /** 1두(수)당 기준면적 — 별표 원값 */
@@ -84,23 +81,54 @@ export const LIVESTOCK_LABELS: Readonly<Record<string, string>> = Object.freeze(
   mink:             "밍크 사육사업 — 여우 포함",
 });
 
-/** 1두(수)당 기준면적 (㎡) = 축사 + 부대시설 + **max(초지, 사료포)** */
-export function perUnitStandardArea(s: LivestockStandard): number {
-  return s.barn + s.facility + Math.max(s.grasslandM2, s.fodderM2);
+/** 부대시설·초지·사료포 보유 여부 — 축사는 축산업의 전제이므로 항상 포함한다. */
+export interface LivestockFacilities {
+  /** 부대시설 보유 */
+  hasFacility: boolean;
+  /** 초지 보유 (방목) */
+  hasGrassland: boolean;
+  /** 사료포·사료밭 보유 (사료 재배) */
+  hasFodder: boolean;
+}
+
+/** 1두(수)당 기준면적 (㎡) — 축사 + 보유한 시설분 */
+export function perUnitStandardArea(s: LivestockStandard, f: LivestockFacilities): number {
+  return (
+    s.barn +
+    (f.hasFacility ? s.facility : 0) +
+    (f.hasGrassland ? s.grasslandM2 : 0) +
+    (f.hasFodder ? s.fodderM2 : 0)
+  );
 }
 
 /**
- * 축종과 사육두수로 축산용 토지 기준면적(㎡)을 계산한다.
+ * 축종·사육두수·보유 시설로 축산용 토지 기준면적(㎡)을 계산한다.
  *
- * 기준면적 = (축사 + 부대시설 + max(초지, 사료포)) × 사육두수 ÷ 가축두수 단위.
+ * 기준면적 = (축사 + 보유 시설분) × 사육두수 ÷ 가축두수 단위.
  * 곱셈을 먼저 수행해 부동소수 누적을 피한다.
  *
  * @param livestockType `LIVESTOCK_STANDARD` 키 (예: "hanwoo_breeding")
  * @param count         사육두수(수)
+ * @param facilities    부대시설·초지·사료포 보유 여부 — **필수**. 기본값을 두면 없는 시설의
+ *                      몫을 얹거나 있는 것을 빼게 되고 그대로 세액이 틀어진다.
  * @returns 기준면적 (㎡). 미등재 축종이면 **0** — 호출부가 「추정 금지」로 처리할 것.
  */
-export function computeLivestockStandardArea(livestockType: string, count: number): number {
+export function computeLivestockStandardArea(
+  livestockType: string,
+  count: number,
+  facilities: LivestockFacilities,
+): number {
   const s = LIVESTOCK_STANDARD[livestockType];
   if (!s) return 0;
-  return (perUnitStandardArea(s) * count) / s.perUnit;
+  return (perUnitStandardArea(s, facilities) * count) / s.perUnit;
+}
+
+/** 표시용 — 기준면적에 포함된 항목 이름 (사용자가 무엇이 반영됐는지 검증할 수 있게) */
+export function includedFacilityLabels(f: LivestockFacilities): string[] {
+  return [
+    "축사",
+    ...(f.hasFacility ? ["부대시설"] : []),
+    ...(f.hasGrassland ? ["초지"] : []),
+    ...(f.hasFodder ? ["사료포"] : []),
+  ];
 }

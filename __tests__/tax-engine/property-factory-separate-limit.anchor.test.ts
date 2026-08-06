@@ -207,22 +207,26 @@ describe("§102①3호 — 목장용지 가축별 기준면적", () => {
     pastureTotalLandArea: 40000,
     pastureLivestockType: "hanwoo_breeding",
     pastureLivestockCount: 10,
+    // 보유 시설을 명시한다 — 표의 4개 열은 항목별 인정 한도라 기본값을 두면 세액이 틀어진다.
+    pastureHasFacility: true,
+    pastureHasGrassland: true,
+    pastureHasFodder: true,
     ...over,
   });
 
   it("PAS-1: 기준면적 이내면 전량 분리과세 0.07%", () => {
-    // 한우 사육 10두 × 5,012.5 = 50,125㎡ 한도 · 40,000㎡ → 이내
+    // 한우 사육 10두 × 7,512.5(넷 다 보유) = 75,125㎡ 한도 · 40,000㎡ → 이내
     const r = calculateSeparateTax(pasture());
     expect(r.isApplicable).toBe(true);
     expect(r.appliedRate).toBe(0.0007);
-    expect(r.pastureAreaCheck?.standardArea).toBe(50125);
+    expect(r.pastureAreaCheck?.standardArea).toBe(75125);
     expect(r.pastureAreaCheck?.excessArea).toBe(0);
   });
 
   it("PAS-2: 🔴 초과분이 생기고 과세표준이 인정분에만 매겨진다", () => {
-    const r = calculateSeparateTax(pasture({ pastureTotalLandArea: 100250 }));
-    expect(r.pastureAreaCheck?.recognizedArea).toBe(50125);
-    expect(r.pastureAreaCheck?.excessArea).toBe(50125);
+    const r = calculateSeparateTax(pasture({ pastureTotalLandArea: 150250 }));
+    expect(r.pastureAreaCheck?.recognizedArea).toBe(75125);
+    expect(r.pastureAreaCheck?.excessArea).toBe(75125);
     expect(r.pastureAreaCheck?.recognizedRatio).toBe(0.5);
     // 1억 × 50% = 5,000만 × 70% = 3,500만 × 0.07% = 24,500원
     expect(r.taxBase).toBe(35_000_000);
@@ -237,7 +241,34 @@ describe("§102①3호 — 목장용지 가축별 기준면적", () => {
     const dairy = calculateSeparateTax(
       pasture({ pastureLivestockType: "dairy", pastureLivestockCount: 1, pastureTotalLandArea: 100 }),
     );
-    expect(dairy.pastureAreaCheck?.standardArea).toBe(5018); // 11 + 7 + max(5000, 2500)
+    expect(dairy.pastureAreaCheck?.standardArea).toBe(7518); // 11 + 7 + 5000 + 2500 (넷 다 보유)
+  });
+
+  it("PAS-3b: 🔴 보유하지 않은 시설의 몫은 얹지 않는다", () => {
+    // 사료 재배만 하는 농가 — 초지가 없으므로 초지 몫(5,000/두)을 받지 못한다
+    const fodderOnly = calculateSeparateTax(
+      pasture({ pastureHasGrassland: false, pastureTotalLandArea: 100 }),
+    );
+    expect(fodderOnly.pastureAreaCheck?.standardArea).toBe(25125); // (7.5+5+2500) × 10
+    // 축사만 있는 농가
+    const barnOnly = calculateSeparateTax(
+      pasture({
+        pastureHasFacility: false,
+        pastureHasGrassland: false,
+        pastureHasFodder: false,
+        pastureTotalLandArea: 100,
+      }),
+    );
+    expect(barnOnly.pastureAreaCheck?.standardArea).toBe(75); // 7.5 × 10
+  });
+
+  it("PAS-3c: 경고가 무엇을 반영했는지 드러낸다 (사용자 검증 가능)", () => {
+    const r = calculateSeparateTax(
+      pasture({ pastureHasGrassland: false, pastureTotalLandArea: 1_000_000 }),
+    );
+    const w = r.warnings.find((x) => x.includes("종합합산과세대상으로 이관"))!;
+    expect(w).toContain("축사·부대시설·사료포");
+    expect(w).not.toContain("초지");
   });
 
   it("PAS-4: §102⑨1호 — 도시지역은 1989.12.31 이전 소유가 아니면 비해당", () => {

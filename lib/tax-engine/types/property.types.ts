@@ -157,6 +157,10 @@ export interface PropertyTaxInput {
     pastureLivestockType?: string;
     /** 가축 마릿수 — **직전 연도 연중 최고** (양도세 별표1의3의 「과세기간 평균」과 다름) */
     pastureLivestockCount?: number;
+    /** 부대시설·초지·사료포 보유 — 없는 시설의 몫은 기준면적에 얹지 않는다 */
+    pastureHasFacility?: boolean;
+    pastureHasGrassland?: boolean;
+    pastureHasFodder?: boolean;
     /** §102⑨1호 — 도시지역 목장용지 여부 */
     pastureIsUrbanArea?: boolean;
     /** §102⑨1호 — 1989.12.31 이전부터 소유(1990.1.1 이후 상속·법인합병 포함) */

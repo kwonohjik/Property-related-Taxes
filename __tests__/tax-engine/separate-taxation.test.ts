@@ -89,13 +89,16 @@ describe("P5-10: 저율 분리과세 (0.07%)", () => {
   //    소유하는 토지"로 한정한다. 종전에는 `isLivestockFarm` 플래그만으로 전량 0.07%를 줬다.
   //    이제 축종·마릿수·전체 면적이 필수다(미입력은 던진다 — TC-02c).
   it("TC-02: 목장용지 + 기준면적 이내 → 저율 0.07%, legalBasis = LOW_RATE_LIVESTOCK", () => {
-    // 한우 사육 10두 × 5,012.5㎡ = 50,125㎡ 한도 · 목장 40,000㎡ → 이내
+    // 한우 사육 10두 · 넷 다 보유 → 7,512.5 × 10 = 75,125㎡ 한도 · 목장 40,000㎡ → 이내
     const result = calculateSeparateTax(
       makeInput({
         isLivestockFarm: true,
         pastureTotalLandArea: 40000,
         pastureLivestockType: "hanwoo_breeding",
         pastureLivestockCount: 10,
+        pastureHasFacility: true,
+        pastureHasGrassland: true,
+        pastureHasFodder: true,
       }),
     );
 
@@ -108,13 +111,16 @@ describe("P5-10: 저율 분리과세 (0.07%)", () => {
   });
 
   it("TC-02b: 기준면적 초과분은 종합합산 이관 안내 + 과세표준이 인정분에만 매겨진다", () => {
-    // 한우 사육 1두 → 한도 5,012.5㎡ · 목장 10,025㎡ → 인정 비율 정확히 0.5
+    // 한우 사육 1두 · 축사+부대시설+초지 → 한도 5,012.5㎡ · 목장 10,025㎡ → 인정 비율 정확히 0.5
     const result = calculateSeparateTax(
       makeInput({
         isLivestockFarm: true,
         pastureTotalLandArea: 10025,
         pastureLivestockType: "hanwoo_breeding",
         pastureLivestockCount: 1,
+        pastureHasFacility: true,
+        pastureHasGrassland: true,
+        pastureHasFodder: false,
       }),
     );
 

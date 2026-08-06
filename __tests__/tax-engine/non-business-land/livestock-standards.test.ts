@@ -4,107 +4,148 @@
  * 「소득세법 시행령」 [별표 1의3](개정 2008.2.22) = 「지방세법 시행령」 §102①3호 [표]
  * — 2026-08-06 원문 대조 결과 **값·비고 완전 동일**. 정본은 `lib/tax-engine/livestock-standard-area.ts`.
  *
- * # 🔴 산식 정정 (2026-08-06) — **세액이 바뀐다**
+ * # 기준면적은 **보유한 시설만** 더한다
  *
- * 표의 열 묶음 헤더가 접속사를 구분한다:
+ * 표의 4개 열(축사·부대시설·초지·사료포)은 **항목별 인정 한도**다:
  *
- * | 열 묶음 | 접속사 | 처리 |
- * |---|---|---|
- * | 축사 **및** 부대시설 | 및 | 둘 다 더한다 |
- * | 초지 **또는** 사료포(사료밭) | **또는** | **둘 중 하나** = `max` |
+ *   기준면적 = 축사 + (부대시설 有) + (초지 有) + (사료포 有)
  *
- * 종전 구현은 넷을 모두 **합산**했다. 문언대로 읽으면 `축사 + 부대시설 + max(초지, 사료포)`이고,
- * 표에서 항상 초지 ≥ 사료포이므로 실질은 **초지 값**이 된다.
+ * 열 묶음 제목의 「및」·「또는」은 통상적 구성을 적은 이름표이지 **산식을 정하는 것이 아니다**.
+ * 산식은 그 농장이 실제로 무엇을 갖고 있느냐가 정한다.
  *
- * > ⚠️ **권위 있는 근거는 없다**(2026-08-06 실측): 법제처 법령해석례 **0건**, 조세심판례
- * > 국심1994경1281 **1건뿐인데 본문이 「(내용없음)」**. 문언 해석이며, 한도가 줄어
- * > **납세자에게 불리한 방향**이다 — 예규 확인 시 재검토 대상.
- * > 경위: `docs/02-design/features/livestock-standard-area-limit.plan.md`
- *
- * 아래 표가 before/after를 값으로 고정한다. 초지·사료포가 「-」인 3종(돼지·가금·밍크)은 **불변**이다.
+ * > 🔴 **정정 이력** — 이 파일은 두 번 틀렸다.
+ * >   1차: 넷을 무조건 **합산** → 없는 시설의 몫까지 얹었다
+ * >   2차: 「또는」을 조문 해석 문제로 보고 **max** → 사료포만 있는 농장에 초지 값을 줬다
+ * >   ⇒ 둘 다 **실제 보유와 무관한 고정 산식**이라는 같은 오류였다.
+ * >   문제는 접속사가 아니라 **보유 여부를 묻지 않은 것**이었다.
  */
+
 import { describe, it, expect } from "vitest";
 import {
   computeLivestockStandardArea,
-  LIVESTOCK_STANDARD,
   perUnitStandardArea,
+  includedFacilityLabels,
+  LIVESTOCK_STANDARD,
 } from "@/lib/tax-engine/livestock-standard-area";
 import { getLivestockStandardArea } from "@/lib/tax-engine/non-business-land/data/livestock-standards";
 
-describe("축산용 토지 기준면적 — 초지·사료포는 max (정정 후)", () => {
-  // 한우(육우) 사육 1두당: 7.5 + 5 + max(0.5ha=5000, 0.25ha=2500) = 5,012.5  [종전 7,512.5]
-  it("AT-LIVESTOCK-1: 한우 육우 사육 1두 → 5,012.5 (종전 7,512.5)", () => {
-    expect(computeLivestockStandardArea("hanwoo_breeding", 1)).toBe(5012.5);
+/** 축사만 (부대시설·초지·사료포 없음) */
+const NONE = { hasFacility: false, hasGrassland: false, hasFodder: false };
+/** 넷 다 보유 */
+const ALL = { hasFacility: true, hasGrassland: true, hasFodder: true };
+
+describe("보유한 시설만 더한다 — 한우(육우) 사육사업 1두당", () => {
+  // 축사 7.5 · 부대시설 5 · 초지 0.5ha(5,000) · 사료포 0.25ha(2,500)
+  it("AT-LIVESTOCK-1: 축사만 → 7.5", () => {
+    expect(computeLivestockStandardArea("hanwoo_breeding", 1, NONE)).toBe(7.5);
   });
-  // 한우(육우) 비육 1두당: 7.5 + 5 + max(2000, 1000) = 2,012.5  [종전 3,012.5]
-  it("AT-LIVESTOCK-2: 한우 육우 비육 1두 → 2,012.5 (종전 3,012.5)", () => {
-    expect(computeLivestockStandardArea("hanwoo_fattening", 1)).toBe(2012.5);
+
+  it("AT-LIVESTOCK-2: 축사 + 부대시설 → 12.5", () => {
+    expect(
+      computeLivestockStandardArea("hanwoo_breeding", 1, { ...NONE, hasFacility: true }),
+    ).toBe(12.5);
   });
-  // 유우 목장 1두당: 11 + 7 + max(5000, 2500) = 5,018  [종전 7,518]
-  it("AT-LIVESTOCK-3: 유우 1두 → 5,018 (종전 7,518)", () => {
-    expect(computeLivestockStandardArea("dairy", 1)).toBe(5018);
+
+  it("AT-LIVESTOCK-3: 축사 + 부대시설 + 초지 → 5,012.5 (방목 농가)", () => {
+    expect(
+      computeLivestockStandardArea("hanwoo_breeding", 1, { ...ALL, hasFodder: false }),
+    ).toBe(5012.5);
   });
-  // 양 목장 10두당: 8 + 3 + max(5000, 2500) = 5,011 → 100두 = 50,110  [종전 75,110]
-  it("AT-LIVESTOCK-4: 양 100두 → 50,110 (10두당 5,011 · 종전 75,110)", () => {
-    expect(computeLivestockStandardArea("sheep", 100)).toBe(50110);
+
+  it("AT-LIVESTOCK-4: 축사 + 부대시설 + 사료포 → 2,512.5 (사료 재배 농가)", () => {
+    // 🔴 종전 max 구현은 여기서 5,012.5를 줬다 — 초지가 없는데 초지 값을 얹은 것이다.
+    expect(
+      computeLivestockStandardArea("hanwoo_breeding", 1, { ...ALL, hasGrassland: false }),
+    ).toBe(2512.5);
   });
-  // 사슴 목장 10두당: 66 + 16 + max(5000, 2500) = 5,082  [종전 7,582]
-  it("AT-LIVESTOCK-5: 사슴 10두 → 5,082 (종전 7,582)", () => {
-    expect(computeLivestockStandardArea("deer", 10)).toBe(5082);
-  });
-  // 토끼 사육 100두당: 33 + 7 + max(2000, 1000) = 2,040  [종전 3,040]
-  it("AT-LIVESTOCK-6: 토끼 100두 → 2,040 (종전 3,040)", () => {
-    expect(computeLivestockStandardArea("rabbit", 100)).toBe(2040);
+
+  it("AT-LIVESTOCK-5: 넷 다 보유 → 7,512.5 (초지·사료포 겸용)", () => {
+    // 🔴 종전 max 구현은 5,012.5를 줬다 — 있는 사료포를 빼먹은 것이다.
+    expect(computeLivestockStandardArea("hanwoo_breeding", 1, ALL)).toBe(7512.5);
   });
 });
 
-describe("초지·사료포가 「-」인 3종은 정정 전후 동일하다", () => {
-  it("AT-LIVESTOCK-7: 돼지 5두 → 63 (50 + 13, 불변)", () => {
-    expect(computeLivestockStandardArea("pig", 5)).toBe(63);
+describe("두 종전 구현이 왜 둘 다 틀렸는가 — 보유 조합별로 갈린다", () => {
+  it("AT-LIVESTOCK-6: 고정 산식으로는 4가지 조합을 구분할 수 없다", () => {
+    const combos = [
+      NONE,
+      { ...NONE, hasFacility: true },
+      { ...ALL, hasFodder: false },
+      { ...ALL, hasGrassland: false },
+      ALL,
+    ];
+    const areas = combos.map((f) => computeLivestockStandardArea("hanwoo_breeding", 1, f));
+    // 5가지 조합이 5가지 다른 값을 낸다 — 하나의 상수로 대체할 수 없다는 증명
+    expect(new Set(areas).size).toBe(5);
+    expect(areas).toEqual([7.5, 12.5, 5012.5, 2512.5, 7512.5]);
   });
-  it("AT-LIVESTOCK-8: 가금 100수 → 49 (33 + 16, 불변)", () => {
-    expect(computeLivestockStandardArea("poultry", 100)).toBe(49);
+});
+
+describe("축종별 — 초지·사료포가 「-」인 3종은 보유 플래그와 무관하다", () => {
+  it("AT-LIVESTOCK-7: 돼지 5두 — 초지·사료포를 켜도 값이 같다 (표에 「-」)", () => {
+    const withFacility = { ...NONE, hasFacility: true };
+    expect(computeLivestockStandardArea("pig", 5, withFacility)).toBe(63); // 50 + 13
+    expect(computeLivestockStandardArea("pig", 5, ALL)).toBe(63);
   });
-  it("AT-LIVESTOCK-9: 밍크 5수 → 14 (7 + 7, 불변)", () => {
-    expect(computeLivestockStandardArea("mink", 5)).toBe(14);
+
+  it("AT-LIVESTOCK-8: 가금 100수 → 49 (33 + 16)", () => {
+    expect(computeLivestockStandardArea("poultry", 100, ALL)).toBe(49);
+  });
+
+  it("AT-LIVESTOCK-9: 밍크 5수 → 14 (7 + 7)", () => {
+    expect(computeLivestockStandardArea("mink", 5, ALL)).toBe(14);
+  });
+});
+
+describe("두수 단위 환산", () => {
+  it("AT-LIVESTOCK-10: 양 100두 = 10두당 값 × 10 (넷 다 보유 시 7,511 × 10)", () => {
+    expect(computeLivestockStandardArea("sheep", 100, ALL)).toBe(75110);
+  });
+
+  it("AT-LIVESTOCK-11: 사슴 10두 → 7,582 (66 + 16 + 5,000 + 2,500)", () => {
+    expect(computeLivestockStandardArea("deer", 10, ALL)).toBe(7582);
   });
 });
 
 describe("표 정본 — 원문과 대조", () => {
-  it("AT-LIVESTOCK-10: 미지원 축종 → 0 (호출부가 「추정 금지」로 처리)", () => {
-    expect(computeLivestockStandardArea("unknown", 100)).toBe(0);
+  it("AT-LIVESTOCK-12: 미지원 축종 → 0 (호출부가 「추정 금지」로 처리)", () => {
+    expect(computeLivestockStandardArea("unknown", 100, ALL)).toBe(0);
   });
 
-  it("AT-LIVESTOCK-11: 9종이며 초지 ≥ 사료포다 (max가 곧 초지임을 보장)", () => {
-    const keys = Object.keys(LIVESTOCK_STANDARD);
-    expect(keys).toHaveLength(9);
-    for (const k of keys) {
-      const s = LIVESTOCK_STANDARD[k];
-      expect(s.grasslandM2, `${k}: 초지 < 사료포`).toBeGreaterThanOrEqual(s.fodderM2);
-    }
+  it("AT-LIVESTOCK-13: 9종이다", () => {
+    expect(Object.keys(LIVESTOCK_STANDARD)).toHaveLength(9);
   });
 
-  it("AT-LIVESTOCK-12: 헥타르 환산이 표와 맞는다 (0.5ha=5,000 · 0.25ha=2,500 · 0.2ha=2,000 · 0.1ha=1,000)", () => {
+  it("AT-LIVESTOCK-14: 헥타르 환산이 표와 맞는다 (0.5ha=5,000 · 0.25ha=2,500 · 0.2ha=2,000 · 0.1ha=1,000)", () => {
     expect(LIVESTOCK_STANDARD.hanwoo_breeding.grasslandM2).toBe(5000);
     expect(LIVESTOCK_STANDARD.hanwoo_breeding.fodderM2).toBe(2500);
     expect(LIVESTOCK_STANDARD.hanwoo_fattening.grasslandM2).toBe(2000);
     expect(LIVESTOCK_STANDARD.hanwoo_fattening.fodderM2).toBe(1000);
   });
 
-  it("AT-LIVESTOCK-13: perUnitStandardArea는 축사+부대시설+max다", () => {
-    const s = LIVESTOCK_STANDARD.dairy;
-    expect(perUnitStandardArea(s)).toBe(11 + 7 + 5000);
-    // 합산이었다면 7,518이 나온다 — 정정이 실제로 반영됐는지의 대조점
-    expect(perUnitStandardArea(s)).not.toBe(7518);
+  it("AT-LIVESTOCK-15: 축사는 항상 포함된다 (축산업의 전제)", () => {
+    for (const [k, v] of Object.entries(LIVESTOCK_STANDARD)) {
+      expect(perUnitStandardArea(v, NONE), `${k}`).toBe(v.barn);
+    }
+  });
+});
+
+describe("표시 — 무엇이 반영됐는지 드러낸다", () => {
+  it("AT-LIVESTOCK-16: 포함 항목 라벨", () => {
+    expect(includedFacilityLabels(NONE)).toEqual(["축사"]);
+    expect(includedFacilityLabels({ ...ALL, hasGrassland: false })).toEqual([
+      "축사",
+      "부대시설",
+      "사료포",
+    ]);
+    expect(includedFacilityLabels(ALL)).toEqual(["축사", "부대시설", "초지", "사료포"]);
   });
 });
 
 describe("하위 호환 — NBL 재수출 경로", () => {
-  it("AT-LIVESTOCK-14: 종전 이름 `getLivestockStandardArea`가 같은 값을 준다", () => {
-    // 재수출이 끊기면 `tsc`가 잡지만, **다른 구현으로 갈라지는 것**은 못 잡는다.
-    expect(getLivestockStandardArea("hanwoo_breeding", 1)).toBe(
-      computeLivestockStandardArea("hanwoo_breeding", 1),
+  it("AT-LIVESTOCK-17: 종전 이름 `getLivestockStandardArea`가 같은 값을 준다", () => {
+    expect(getLivestockStandardArea("dairy", 3, ALL)).toBe(
+      computeLivestockStandardArea("dairy", 3, ALL),
     );
-    expect(getLivestockStandardArea("dairy", 3)).toBe(5018 * 3);
   });
 });

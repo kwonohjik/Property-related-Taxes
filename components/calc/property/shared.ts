@@ -173,6 +173,9 @@ export interface FormState {
   stPastureTotalLandArea: string;
   stPastureLivestockType: string;
   stPastureLivestockCount: string;
+  stPastureHasFacility: boolean;
+  stPastureHasGrassland: boolean;
+  stPastureHasFodder: boolean;
   stPastureIsUrbanArea: boolean;
   stPastureOwnedBefore1990: boolean;
   stFactoryTotalLandArea: string;
@@ -253,6 +256,9 @@ export const INITIAL_FORM: FormState = {
   stPastureTotalLandArea: "",
   stPastureLivestockType: "",
   stPastureLivestockCount: "",
+  stPastureHasFacility: false,
+  stPastureHasGrassland: false,
+  stPastureHasFodder: false,
   stPastureIsUrbanArea: false,
   stPastureOwnedBefore1990: false,
   stFactoryTotalLandArea: "",
@@ -529,6 +535,9 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
           st.pastureTotalLandArea = parseDecimal(form.stPastureTotalLandArea) ?? undefined;
           st.pastureLivestockType = form.stPastureLivestockType || undefined;
           st.pastureLivestockCount = parseDecimal(form.stPastureLivestockCount) ?? undefined;
+          st.pastureHasFacility = form.stPastureHasFacility;
+          st.pastureHasGrassland = form.stPastureHasGrassland;
+          st.pastureHasFodder = form.stPastureHasFodder;
           st.pastureIsUrbanArea = form.stPastureIsUrbanArea;
           st.pastureOwnedBefore1990 = form.stPastureOwnedBefore1990;
           break;

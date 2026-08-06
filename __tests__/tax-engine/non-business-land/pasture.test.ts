@@ -118,10 +118,14 @@ describe("갭 3c — 목장 자동산출 warning 인용 정정 (별표 1의3)", 
   });
 
   // AT-PASTURE-CITE-2: 별표1의3 정본 반영. 상세 anchor는 livestock-standards.test.ts.
-  // 🔴 2026-08-06 산식 정정 — 「초지 **또는** 사료포」를 문언대로 max로 읽는다(종전 합산).
-  //    한우 사육 1두 7,512.5 → 5,012.5 · 유우 7,518 → 5,018. 한도가 줄어 비사업용이 늘어난다.
-  it("AT-PASTURE-CITE-2: 별표1의3 정본 반영 (한우 육우 사육 1두 = 5,012.5㎡ · 유우 5,018㎡)", () => {
-    expect(getLivestockStandardArea("hanwoo_breeding", 1)).toBe(5012.5);
-    expect(getLivestockStandardArea("dairy", 1)).toBe(5018);
+  // 🔴 기준면적은 **보유한 시설만** 더한다 — 표의 4개 열은 항목별 인정 한도다.
+  //    같은 축종·두수라도 보유 조합에 따라 값이 갈리므로 고정 상수로 단언할 수 없다.
+  it("AT-PASTURE-CITE-2: 별표1의3 정본 반영 — 보유 조합별로 값이 갈린다", () => {
+    const ALL = { hasFacility: true, hasGrassland: true, hasFodder: true };
+    // 한우 사육 1두: 축사 7.5 + 부대시설 5 + 초지 5,000 + 사료포 2,500
+    expect(getLivestockStandardArea("hanwoo_breeding", 1, ALL)).toBe(7512.5);
+    expect(getLivestockStandardArea("dairy", 1, ALL)).toBe(7518);
+    // 초지 없이 사료포만 쓰는 농가는 초지 몫을 받지 못한다
+    expect(getLivestockStandardArea("hanwoo_breeding", 1, { ...ALL, hasGrassland: false })).toBe(2512.5);
   });
 });
