@@ -24,6 +24,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { deriveSec163_9BaseDate } from "@/lib/calc/transfer-163-9-base-date";
+import { sec164LandStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 개별공시지가 최초고시일 — 이 날 前 상속·증여받은 토지가 §163⑨1호의 §164④ max 대상. */
@@ -38,6 +39,8 @@ interface Props {
 export function GiftLandStdPriceSection({ asset, onChange, transferDate }: Props) {
   // 기준일은 API payload 빌더와 **같은 파생**(stale `inheritanceStartDate` 회피).
   const giftDate = deriveSec163_9BaseDate(asset);
+  // 필수 항목 개수는 단일 소스에서 받는다(문구 하드코딩 금지).
+  const status = sec164LandStatus(asset);
   if (
     asset.acquisitionCause !== "gift" ||
     asset.assetKind !== "land" ||
@@ -60,8 +63,10 @@ export function GiftLandStdPriceSection({ asset, onChange, transferDate }: Props
       <p className="text-xs text-amber-700">
         개별공시지가 최초고시(1990.8.30.) 전 증여받은 토지는{" "}
         <b>max(증여일 상증법 평가액, §164④ 취득당시 기준시가)</b>를 취득가액으로 봅니다. 위 「증여
-        신고가액」이 앞의 값이고, 아래 토지등급 입력이 뒤의 값을 산정합니다. 등급을 입력한 경우에만
-        비교하며, 미입력 시 증여 신고가액만 사용합니다.
+        신고가액」이 앞의 값이고, 아래 토지등급 입력이 뒤의 값을 산정합니다.{" "}
+        <b>{status ? `${status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만
+        비교합니다. 전부 비워두면 증여 신고가액만 사용하고,{" "}
+        <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
       </p>
 
       <Pre1990LandValuationInput

@@ -17,6 +17,9 @@ import { isSec164_8ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso
 import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
+import { sec164PartialInputError } from "./transfer-tax-validate-sec164";
+import { sec164CommercialStatus, isFullyFilled } from "./sec164-required-fields";
+import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
 import { isPhdEligible } from "./phd-eligibility";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
@@ -110,6 +113,13 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   const bgError = validateBurdenedGiftAsset(asset, label);
   if (bgError) return bgError;
 
+  // ── §164④·⑥·⑤~⑦ 부분 입력 차단 (소령 §163⑨1호·2호) ──
+  // ②는 all-or-nothing opt-in이라 일부만 입력하면 payload가 생성되지 않고 ① 단독으로 조용히
+  // 계산된다. 자산종류·취득원인·기간 분기는 `sec164*Status`가 내부에서 처리하므로 여기서
+  // 분기하지 않는다. **상속 상가 블록(:아래)보다 앞**이어야 증여 경로가 도달한다.
+  const sec164Error = sec164PartialInputError(asset, label);
+  if (sec164Error) return sec164Error;
+
   // ── 상업용건물·오피스텔 + 상속 (소령 §163⑨) — 환산 검증 전 우선 인터셉트 ──
   // §163⑨: 상속 상가는 상속개시일 상증법 평가액을 취득당시 실지거래가액으로 의제(환산 아님).
   // 아래 환산 블록(useEstimatedAcquisition 게이트)·generic 취득 검증(if(!isEstimated))은 stale
@@ -121,28 +131,18 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     // 달리 대체 취득원 부재). API buildInheritedAcquisitionPayload(post-deemed)도 reportedRaw>0 요구 → 정합.
     if (!parseAmount(asset.publishedValueAtInheritance) || parseAmount(asset.publishedValueAtInheritance) <= 0)
       return `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`;
-    // §164⑥ 취득당시 기준시가 (2005.1.1 전 상속) — all-or-nothing opt-in (소령 §163⑨2호).
-    // 8필드 중 일부만 입력 시 API가 payload를 침묵 드롭(§164⑥ 미적용) → 부분입력 차단.
-    const inhDate164 = asset.inheritanceStartDate || asset.acquisitionDate || "";
-    if (inhDate164 && inhDate164 < "2005-01-01") {
-      const areas164 = [asset.cbExclusiveArea, asset.cbSharedArea, asset.cbLandArea];
-      const amounts164 = [
-        asset.cbUnitPriceAtFirstOrAcq,
-        asset.cbLandPricePerSqmAtAcq,
-        asset.cbLandPricePerSqmAtFirst,
-        asset.cbBuildingStdPriceAtAcq,
-        asset.cbBuildingStdPriceAtFirst,
-      ];
-      const filled =
-        areas164.filter((f) => parseDecimal(f) > 0).length +
-        amounts164.filter((f) => parseAmount(f) > 0).length;
-      if (filled > 0 && filled < 8)
-        return `${label}: §164⑥ 취득당시 기준시가는 8개 항목(면적 3·최초고시 호별고시가·취득시·최초고시 개별공시지가·건물기준시가)을 모두 입력하거나 모두 비워두세요.`;
-      // §164⑥ 단서 — 상속개시 연도 ≤2000이면 나목(건물 기준시가) 가액이 없어 §164⑤ 준용이 필요하다.
-      // 8필드를 채워 §164⑥을 적용하는 경우에만 요구한다(전부 비우면 상증법 평가액만 사용 → 무관).
-      if (filled === 8 && isBeforeBuildingStdPriceNotice(inhDate164) && !asset.cbAcqBuildingStdBy164_5)
-        return `${label}: 취득당시(상속개시일) 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`;
-    }
+    // §164⑥ **부분 입력 차단은 진입부 `sec164PartialInputError`로 이관**(2026-08-06) — 증여도
+    // 같은 규정(§163⑨2호)인데 이 블록은 상속 전용이라 도달하지 못했고, 필드 목록이 빌더와
+    // 이중 관리였다. 여기 남는 것은 **§164⑥ 단서**(전부 채운 경우에만 적용되는 추가 요구)뿐이다.
+    const inhDate164 = deriveSec163_9BaseDate(asset);
+    // §164⑥ 단서 — 취득 연도 ≤2000이면 나목(건물 기준시가) 가액이 없어 §164⑤ 준용이 필요하다.
+    // 8필드를 채워 §164⑥을 적용하는 경우에만 요구한다(전부 비우면 상증법 평가액만 사용 → 무관).
+    if (
+      isFullyFilled(sec164CommercialStatus(asset)) &&
+      isBeforeBuildingStdPriceNotice(inhDate164) &&
+      !asset.cbAcqBuildingStdBy164_5
+    )
+      return `${label}: 취득당시(상속개시일) 건물 기준시가는 §164⑥ 단서에 따라 §164⑤ 준용으로 산정해야 합니다. [건물 기준시가 계산]으로 산정한 뒤 확인란을 체크하세요.`;
     return null;
   }
 

@@ -20,6 +20,7 @@ import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupFi
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { HouseValuationSection } from "./HouseValuationSection";
+import { sec164HouseStatus, sec164LandStatus } from "@/lib/calc/sec164-required-fields";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers";
 import {
@@ -73,6 +74,9 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용). 파생은 공용 단일 소스.
   const kind = deriveInheritanceHouseKind(asset);
   const showHouseValuation = isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
+  // §164 필수 항목 개수는 단일 소스에서 받는다 — 문구에 숫자를 하드코딩하면 필드가 늘 때 낡는다.
+  const houseSec164 = sec164HouseStatus(asset);
+  const landSec164 = sec164LandStatus(asset);
 
   // 보충적평가 보조계산은 상속개시 시점에 공시가격이 존재해야 조회·재구성 가능.
   // 미공시 시점(토지 <1990.8.30 / 주택 <2005.4.30)은 §60~66 평가액을 공시가격으로 재구성할 수 없어
@@ -329,7 +333,9 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
           <p className="text-xs font-medium text-amber-800">
             개별주택가격 미공시(2005.4.30. 이전 상속) — 아래 §164⑦ 환산으로 취득당시 기준시가를 산정합니다.
             취득가액은 위 상속세 신고가액(상증법 평가액)과 §164⑦ 환산액 중 <strong>큰 금액</strong>으로 자동
-            적용됩니다 (소득세법 시행령 §163⑨2호).
+            적용됩니다 (소득세법 시행령 §163⑨2호).{" "}
+            <strong>{houseSec164 ? `${houseSec164.total}개 항목을 모두` : "항목을 모두"}</strong>{" "}
+            입력한 경우에만 비교하며, <strong>일부만 입력하면 계산할 때 오류로 안내</strong>합니다.
           </p>
           <InheritanceHouseKindPicker
             value={kind}
@@ -353,7 +359,9 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
           <p className="text-xs font-medium text-amber-800">
             개별공시지가 미공시(1990.8.30. 이전 상속·증여) — 아래 토지등급가액 환산으로 취득당시
             기준시가를 산정합니다. 취득가액은 위 상속세 신고가액(상증법 평가액)과 §164④ 환산액 중{" "}
-            <strong>큰 금액</strong>으로 자동 적용됩니다 (소득세법 시행령 §163⑨1호).
+            <strong>큰 금액</strong>으로 자동 적용됩니다 (소득세법 시행령 §163⑨1호).{" "}
+            <strong>{landSec164 ? `${landSec164.total}개 항목을 모두` : "항목을 모두"}</strong>{" "}
+            입력한 경우에만 비교하며, <strong>일부만 입력하면 계산할 때 오류로 안내</strong>합니다.
           </p>
           <Pre1990LandValuationInput
             form={{
