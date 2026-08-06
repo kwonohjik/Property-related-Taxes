@@ -82,11 +82,13 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
         </div>
       )}
 
-      {/* Case A — 의제취득일 전 상속·증여 취득가액 후보 비교 max(①,②,③) */}
+      {/* Case A — 의제취득일 전 상속·증여.
+          ①② = 법 §97①1호 **가목**(실지거래가액 의제, 소령 §163⑨) → 그중 큰 금액.
+          ③  = **나목**(소령 §163⑫ → §176조의2) → 가목을 확인할 수 없을 때만 적용(법 §97①1호 단서). */}
       {preDeemedBreakdown && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-            의제취득일(1985.1.1.) 전 상속·증여 — 취득가액 후보 비교 (큰 금액 적용)
+            의제취득일(1985.1.1.) 전 상속·증여 — 취득가액 산정
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs space-y-1">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
@@ -114,14 +116,26 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
               )}
               <span className="text-muted-foreground">
                 ③ 환산취득가액
-                {preDeemedBreakdown.selectedMethod === "converted" && <SelectedBadge />}
+                {preDeemedBreakdown.selectedMethod === "converted" ? (
+                  <SelectedBadge />
+                ) : (
+                  <span className="ml-1 text-micro text-muted-foreground">(미적용)</span>
+                )}
               </span>
-              <span className="font-mono tabular-nums text-right text-foreground">
+              <span
+                className={
+                  preDeemedBreakdown.selectedMethod === "converted"
+                    ? "font-mono tabular-nums text-right text-foreground"
+                    : "font-mono tabular-nums text-right text-muted-foreground line-through"
+                }
+              >
                 {formatN(preDeemedBreakdown.convertedAmount)}
               </span>
             </div>
             <p className="text-muted-foreground pt-1">
-              후보 중 큰 금액을 취득가액으로 적용 (소령 §163⑨1호·2호 · §176조의2)
+              {preDeemedBreakdown.selectedMethod === "converted"
+                ? "①② 확인 불가 → 환산취득가액 적용 (소령 §163⑫ → §176조의2)"
+                : "실지거래가액 의제(①②) 중 큰 금액을 적용. 환산취득가액은 「가목을 확인할 수 없는 경우에 한정」되어 적용하지 않습니다 (소득세법 §97①1호 단서 · 소령 §163⑨)"}
             </p>
           </div>
         </div>

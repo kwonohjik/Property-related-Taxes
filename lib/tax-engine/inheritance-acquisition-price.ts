@@ -121,18 +121,24 @@ function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisiti
       ? Math.floor(input.reportedValue)
       : 0;
 
-  // ② §164④~⑦ 취득당시 기준시가 (§163⑨1호·2호) — opt-in(payload 있을 때만 주입)
-  const sec164 = input.houseValuationStdPrice ?? input.commercialValuationStdPrice ?? 0;
+  // ② §164④~⑦ 취득당시 기준시가 — opt-in(payload 있을 때만 주입). 자산별 배타.
+  //   토지 §164④ = §163⑨**1호**(개별공시지가 최초고시 1990-08-30 前 상속·증여)
+  //   주택 §164⑦ · 상가 §164⑥ = §163⑨**2호**(건물 기준시가 고시 前)
+  const sec164 =
+    input.houseValuationStdPrice ??
+    input.commercialValuationStdPrice ??
+    input.landValuationStdPrice ??
+    0;
 
-  // max(①,②,③) — 동점 시 ① > ② > ③ 우선(실지거래가액 의제를 추계보다 앞세운다)
-  const acquisitionPrice = Math.max(reported, sec164, converted);
+  // 가목(법 §97①1호 가목) = §163⑨ 본문·1호·2호 → max(①, ②). 동점 시 ① 우선.
+  const clauseA = Math.max(reported, sec164);
+
+  // 법 §97①1호 **단서**: "가목의 실지거래가액을 확인할 수 없는 경우에 **한정하여** 나목의 금액을 적용한다".
+  // ③(환산)은 §163⑫ → §176조의2로 연결되는 **나목**이므로, 가목이 확인되면 도달하지 않는다.
+  const acquisitionPrice = clauseA > 0 ? clauseA : converted;
 
   const selectedMethod: PreDeemedSelectedMethod =
-    reported > 0 && reported >= sec164 && reported >= converted
-      ? "reported"
-      : sec164 > 0 && sec164 >= converted
-        ? "sec164"
-        : "converted";
+    clauseA > 0 ? (reported >= sec164 ? "reported" : "sec164") : "converted";
 
   if (acquisitionPrice === 0) {
     warnings.push(
@@ -165,29 +171,46 @@ function buildPreDeemedFormula(b: PreDeemedBreakdown, acquisitionPrice: number):
   if (b.sec164Amount !== null) {
     lines.push(`② §164 취득당시 기준시가: ${b.sec164Amount.toLocaleString()}`);
   }
-  lines.push(`③ 환산취득가액: ${b.convertedAmount.toLocaleString()}`);
-  const label =
-    b.selectedMethod === "reported"
-      ? "① 상증법 평가액"
-      : b.selectedMethod === "sec164"
-        ? "② §164 취득당시 기준시가"
-        : "③ 환산취득가액";
-  lines.push(`→ 적용 (큰 금액, ${label}): ${acquisitionPrice.toLocaleString()}`);
+  const clauseAConfirmed = b.selectedMethod !== "converted";
+  lines.push(
+    `③ 환산취득가액: ${b.convertedAmount.toLocaleString()}` +
+      (clauseAConfirmed ? " (미적용 — 실지거래가액 의제가 확인됨)" : ""),
+  );
+
+  if (clauseAConfirmed) {
+    const label =
+      b.selectedMethod === "reported" ? "① 상증법 평가액" : "② §164 취득당시 기준시가";
+    lines.push(
+      `→ 적용 (실지거래가액 의제 ①② 중 큰 금액, ${label}): ${acquisitionPrice.toLocaleString()}`,
+    );
+  } else {
+    lines.push(
+      `→ 적용 (①② 확인 불가 → 추계, ③ 환산취득가액): ${acquisitionPrice.toLocaleString()}`,
+    );
+  }
   return lines.join("\n");
 }
 
 // ─── Case B: 의제취득일(1985.1.1.) 이후 상속 ─────────────────────────────
 
 function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisitionResult {
-  // 기준시가 미공시 상속 건물(§163⑨2호): 취득가액 = max(① 상증법 평가액[reportedValue], ② §164 취득당시 기준시가).
-  //   주택(개별주택가격 미공시, <2005.4.30) = §164⑦ houseValuationStdPrice
-  //   상가(기준시가 미공시, <2005.1.1) = §164⑥ commercialValuationStdPrice
-  // 자산은 주택 or 상가(둘 중 하나만 주입). ③(환산취득가/양도가 스케일) 적용 불가.
+  // 고시 前 상속·증여 자산(§163⑨): 취득가액 = max(① 상증법 평가액[reportedValue], ② §164 취득당시 기준시가).
+  //   토지(개별공시지가 미공시, <1990.8.30) = §164④ landValuationStdPrice      ← §163⑨**1호**
+  //   주택(개별주택가격 미공시, <2005.4.30) = §164⑦ houseValuationStdPrice     ← §163⑨**2호**
+  //   상가(기준시가 미공시, <2005.1.1)      = §164⑥ commercialValuationStdPrice ← §163⑨**2호**
+  // ⚠️ **1호는 「의제취득일」과 무관하다** — 조건이 「1990.8.30. 고시 前 상속·증여받은 토지」뿐이라
+  //    의제취득일 이후(1985.1.1.~1990.8.30.) 상속 토지도 당연히 대상이다(2호가 pre/post 구분 없는 것과 같다).
+  // 자산은 셋 중 하나만 주입(배타). ③(환산취득가/양도가 스케일) 적용 불가.
   // ①·② 실지거래가액 의제 → 개산공제 없음(추가 처리 없이 acquisitionPrice만 반환).
-  const sec164Std = input.houseValuationStdPrice ?? input.commercialValuationStdPrice;
+  const sec164Std =
+    input.houseValuationStdPrice ?? input.commercialValuationStdPrice ?? input.landValuationStdPrice;
   if (sec164Std !== undefined && sec164Std > 0) {
-    const isCommercial164 =
-      input.houseValuationStdPrice === undefined && input.commercialValuationStdPrice !== undefined;
+    const kind: "house" | "commercial" | "land" =
+      input.houseValuationStdPrice !== undefined
+        ? "house"
+        : input.commercialValuationStdPrice !== undefined
+          ? "commercial"
+          : "land";
     const reported =
       input.reportedValue !== undefined && input.reportedValue >= 0
         ? Math.floor(input.reportedValue)
@@ -195,14 +218,22 @@ function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisit
     const std = Math.floor(sec164Std);
     const sec164Wins = std >= reported;
     const acquisitionPrice = sec164Wins ? std : reported;
-    const clause = isCommercial164 ? "§164⑥" : "§164⑦";
-    const disclosureLabel = isCommercial164 ? "상가 기준시가 미공시" : "개별주택가격 미공시";
+    const clause = kind === "house" ? "§164⑦" : kind === "commercial" ? "§164⑥" : "§164④";
+    const disclosureLabel =
+      kind === "house"
+        ? "개별주택가격 미공시"
+        : kind === "commercial"
+          ? "상가 기준시가 미공시"
+          : "개별공시지가 미공시";
     return {
       acquisitionPrice,
       method: "supplementary",
-      legalBasis: isCommercial164
-        ? TRANSFER.INHERITED_AFTER_DEEMED_COMMERCIAL_MAX
-        : TRANSFER.INHERITED_AFTER_DEEMED_HOUSE_MAX,
+      legalBasis:
+        kind === "house"
+          ? TRANSFER.INHERITED_AFTER_DEEMED_HOUSE_MAX
+          : kind === "commercial"
+            ? TRANSFER.INHERITED_AFTER_DEEMED_COMMERCIAL_MAX
+            : TRANSFER.INHERITED_AFTER_DEEMED_LAND_MAX,
       formula:
         `max(상증법 평가액 ${reported.toLocaleString()}, ` +
         `${clause} 취득당시 기준시가 ${std.toLocaleString()}) = ${acquisitionPrice.toLocaleString()} ` +

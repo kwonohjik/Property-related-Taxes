@@ -101,6 +101,12 @@ export function resolveInheritedRedevelopmentAcqPrice(
 const COMMERCIAL_FIRST_DISCLOSURE_DATE = new Date("2005-01-01T00:00:00.000Z");
 
 /**
+ * 개별공시지가 최초고시일 — 이 날짜 전 상속·증여 토지는 §163⑨**1호**로 §164④ max 대상.
+ * (「부동산 가격공시에 관한 법률」에 따른 1990.8.30. 최초고시 — §163⑨1호·§164④ 문언과 동일.)
+ */
+const LAND_FIRST_DISCLOSURE_DATE = new Date("1990-08-30T00:00:00.000Z");
+
+/**
  * §164⑥ 취득당시 기준시가(P_A) 산정 — 최초고시(2005) 역환산.
  * P_A = INT(최초고시 호별총액 × 취득시 기준시가합 / 최초고시시 기준시가합).
  * commercial-building-valuation.ts의 기준시가합(법 §99①1호 가목·나목)·§164⑥ 역환산 함수 재사용(single-source).
@@ -173,12 +179,34 @@ function resolveInheritedAcquisitionInput(
   const shouldInjectPre1990 =
     !shouldInjectHouseValuation && pre1990LandResult && isPreDeemed && !base.standardPriceAtDeemedDate;
 
+  // 토지 + 개별공시지가 최초고시(1990-08-30) 전 상속·증여: §164④ 취득당시 기준시가를
+  // max 비교용(②)으로 주입 (소령 §163⑨**1호**). 주택 §164⑦(2호)과 같은 구조다.
+  // ⚠️ 주택·상가와 마찬가지로 **같은 값이 ③의 환산 분자로도 쓰이므로 필드를 분리**한다.
+  //    시점은 **의제취득일 기준**이다 — `pre1990LandResult`가 그렇게 산출되고
+  //    UI도 "1985.1.1. 개별공시지가 × 면적"이라 안내한다(계획서 §4.1(d)).
+  // ⚠️ **pre/post 구분이 없다** — §163⑨1호의 조건은 「1990.8.30. 고시 前 상속·증여받은 토지」뿐이라
+  //    의제취득일 이후(1985.1.1.~1990.8.30.) 상속 토지도 당연히 대상이다(주택·상가 2호와 동일).
+  //    `pre1990LandResult`는 `transfer-tax.ts:85`가 `rawInput.pre1990Land` 유무만 보고 산출하므로
+  //    post-deemed에서도 그대로 공급된다 — 소비는 `calcPostDeemed`의 sec164Std에서 한다.
+  const shouldInjectLandMax =
+    !!pre1990LandResult &&
+    base.assetKind === "land" &&
+    base.inheritanceDate.getTime() < LAND_FIRST_DISCLOSURE_DATE.getTime();
+
   let standardPriceAtDeemedDate = base.standardPriceAtDeemedDate;
   let standardPriceAtTransfer = base.standardPriceAtTransfer ?? currentInput.standardPriceAtTransfer;
 
   if (shouldInjectHouseValuation) {
     // 주택 §176조의2④ 환산취득가는 개별주택가격 단일값을 분자/분모로 사용
     // (토지+건물 합계 기준시가가 아님). 개산공제도 동일 base × 3%.
+    // ⚠️ **이름-의미 불일치(V-2)** — `housePriceAtInheritanceUsed`는 **상속개시일** 시점 값인데
+    //    `standardPriceAtDeemedDate`는 §176조의2④1호상 **의제취득일 현재** 기준시가를 뜻한다.
+    //    ⭐ 그럼에도 **세액에 노출되지 않는다**: 같은 값이 ②(houseValuationStdPrice)로도 주입되어
+    //       가목(§163⑨)이 확인되고, 법 §97①1호 단서상 가목이 확인되면 ③에 도달하지 않는다.
+    //       (③이 쓰이는 것은 ①② 모두 부존재일 때뿐이고, 그때 이 값은 사용자 직접 입력이다.)
+    //    ⇒ ②·③ 분자를 분리하거나 ③을 다시 max 후보로 되돌린다면 **여기부터 재검토**할 것.
+    //       `V2-G` 가드(inherited-acquisition.test.ts)가 이 성질을 고정한다.
+    //    계획서: docs/02-design/features/inheritance-pre-deemed-converted-numerator-timing.plan.md
     standardPriceAtDeemedDate = houseValuationResult.housePriceAtInheritanceUsed;
     standardPriceAtTransfer =
       rawInput.inheritedHouseValuation?.housePriceAtTransfer ?? standardPriceAtTransfer;
@@ -195,6 +223,9 @@ function resolveInheritedAcquisitionInput(
     }),
     ...(shouldInjectCommercialMax && {
       commercialValuationStdPrice: computeCommercial164_6StdPrice(rawInput.commercialInheritanceValuation!),
+    }),
+    ...(shouldInjectLandMax && {
+      landValuationStdPrice: pre1990LandResult!.standardPriceAtAcquisition,
     }),
     transferDate: base.transferDate ?? rawInput.transferDate,
     transferPrice: base.transferPrice ?? rawInput.transferPrice,
