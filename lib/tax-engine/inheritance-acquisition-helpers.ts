@@ -242,6 +242,16 @@ function applyResultToInput(
   const isConvertedSelected =
     result.preDeemedBreakdown?.selectedMethod === "converted";
 
+  // 🔴 **가목 확인 시 추계 플래그를 명시적으로 해제한다** (B-3 · 2026-08-07).
+  //   STEP 0.4(`transfer-tax.ts:85-96`)는 `pre1990Land` payload가 있으면 §164④ 환산을 준비하며
+  //   `useEstimatedAcquisition: true`·`acquisitionMethod: "estimated"`를 **무조건 강제**한다.
+  //   여기서 해제하지 않으면 가목(①·②)을 채택하고도 하류 `calcTransferGain`이 취득가액을
+  //   **환산으로 재계산**하고 개산공제(§163⑥)까지 붙인다 — 법 §97①1호 단서가 금지한 경로다.
+  //   (실측: 가목 300,000,000인데 양도차익이 환산 62,482,583 기준으로 계산돼 294,984,122 과대)
+  //   ⚠️ **`acquisitionPrice > 0`일 때만** 해제한다. ①②③이 모두 없어 0인 경우까지 실가 모드로
+  //      바꾸면 환산조차 못 하고 「취득가액 0 실가」가 되어 더 나빠진다.
+  const clauseAConfirmed = !isConvertedSelected && result.acquisitionPrice > 0;
+
   return {
     ...currentInput,
     acquisitionPrice: result.acquisitionPrice,
@@ -252,6 +262,11 @@ function applyResultToInput(
       standardPriceAtAcquisition: resolvedInput.standardPriceAtDeemedDate,
       standardPriceAtTransfer:
         resolvedInput.standardPriceAtTransfer ?? currentInput.standardPriceAtTransfer,
+    }),
+    // 가목(§163⑨) = **실지거래가액 의제**다. 실제 필요경비를 공제하고 개산공제는 적용하지 않는다.
+    ...(clauseAConfirmed && {
+      useEstimatedAcquisition: false,
+      acquisitionMethod: "actual" as const,
     }),
   };
 }

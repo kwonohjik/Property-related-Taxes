@@ -190,7 +190,7 @@ const shouldInjectPostDeemedHouseMax = !!houseValuationResult && !isPreDeemed &&
 > |---|---|---|
 > | **B-1** | **②·③ 분자 시점 = 의제취득일(1985)이어야 한다** — §176조의2④1호("의제취득일 현재")·국심2003서3266("실지거래가액 = 의제취득일 현재 기준시가") | 위 V-2와 **같은 논점**. 부칙§8상 §164 「취득당시」도 1985.1.1.이라는 것이 Phase 3의 주장이었다 |
 > | **B-2** | ②(`houseValuationStdPrice`)와 ③의 환산 분자(`standardPriceAtDeemedDate`)에 **같은 값**(`housePriceAtInheritanceUsed`)이 주입돼 얽힌다 | `inheritance-acquisition-helpers.ts:161-168` 주석에 명시. **가목 우선에서는 안전**하다(가목이 확인되면 ③에 도달하지 않는다) — 다만 시점 논점(B-1)은 남는다 |
-> | **B-3** | pre-1990 토지에서 `useEstimatedAcquisition=true` **강제** 잔존 | `transfer-tax.ts:90` — **여전히 있다** |
+> | ~~**B-3**~~ ✅ | pre-1990 토지에서 `useEstimatedAcquisition=true` **강제** 잔존 | 🔴 **실재 결함이었다 — 2026-08-07 해소.** 가목(①·②)을 채택해도 플래그가 남아 하류가 취득가액을 **환산으로 재계산**하고 개산공제까지 붙였다. 실측: 가목 300,000,000인데 양도차익이 환산 62,482,583 기준 → **294,984,122 과대**. `applyResultToInput`이 `converted`일 때만 플래그를 손대던 것을, **가목 확인(`acquisitionPrice > 0`) 시 명시 해제**하도록 고쳤다. anchor `pre-deemed-clause-a-mode-flag.anchor.test.ts` 4건 |
 >
 > ⚠️ B-1은 **세액을 바꾼다**. 착수 전 「본문 미확인 근거가 판정을 가르면 착수 조건」 원칙에 따라
 > 부칙§8 원문과 §164 「취득당시」 해석을 먼저 확정할 것(memory
