@@ -758,3 +758,80 @@ fixture의 기준시가를 짝지음). 블록 단위로 다시 세니:
 - `transfer.types.ts`가 **821줄**로 800을 넘었다. 다만 **로직 없는 타입 전용 파일**이라 루트
   File Size Policy의 예외 항목이다(내 변경 이전에도 807줄로 이미 초과). 1-E에서 이 파일을 또 열게
   되므로 그때 분리를 판단한다.
+
+---
+
+## §14 Phase 1-D 완료 보고 — 양도시 기준시가는 「항상 축 A」 (2026-08-06)
+
+커밋 `4b00f4a7` — 31파일 `+471/−313`.
+
+### 14.1 배치가 **불변**이 됐다 — 판정 인자가 결과를 가르지 않는다
+
+§12.7(R-7)이 요구한 「구분양도에서도 양쪽 요구」를 적용하니, `saleStdPlacement`의 판정 인자
+(`saleSplitMode`·파트 모드·`selfOwns`)가 **전부 결과를 가르지 않게** 됐다. ⇒ 인자를 제거했다.
+
+| 대상 | 종전 | 1-D |
+|---|---|---|
+| `saleStdPlacement(ctx)` | 모드·파트·소유 3축으로 축 A / 파트 섹션 분기 | `saleStdPlacement()` — 항상 `{saleAxis:true, landPart:false, buildingPart:false}` |
+| `needsSaleStdPart(part, ctx)` | 위 판정 소비 | `needsSaleStdPart(part)` — 파생 형태(`saleAxis || 파트`)는 유지 |
+| 엔진 `resolveTransferPriceSplit` | basis 없으면 `return declared`(한시) | **`TaxCalculationError` throw** |
+| 건물 기준시가 런처 | 2시점 통합 버튼 1개 | 양도시 / 취득시 **분리 버튼** |
+
+**상수를 함수로 남긴 이유**는 두 가지다 — ① UI 노출과 validate 요구가 **같은 값 하나**에서
+나오는 구조를 유지해 조건이 되살아날 때(Q-10: 3파트 이상 자산의 판정 단위) 한 곳만 고친다.
+② `landPart`/`buildingPart`를 반환 형태에 남겨 파트 섹션 경로를 보존한다.
+
+### 14.2 U-8-7 — 한시 계약을 **차단으로 뒤집었다**
+
+§13.7이 예고한 대로 describe를 지우지 않고 계약만 반전했다. 1-C에서는 basis가 없으면 판정을
+건너뛰어 세액 199,551,000이 그대로 나왔으나, 그러면 **칸을 비워 두는 것만으로 가드를 우회**할 수
+있다. 1-D가 칸을 상시 노출·필수로 만들었으므로 이제 차단이 정답이다.
+
+anchor 3건으로 재작성: ① 양쪽 미입력 → 차단 · ② **한쪽만 입력해도 차단**(비율은 양쪽이 있어야
+성립한다) · ③ 일괄양도는 **종전 메시지**로 차단(별개 경로임을 고정).
+
+> ⚠️ 정상 경로에서는 validate(`needsSaleStdPart`)가 먼저 막는다. 엔진 throw는 validate를 우회한
+> 경로(직접 API 호출 등)에 대한 **backstop**이다.
+
+### 14.3 테스트 조합 공간의 **소멸** — 커버리지 축소가 아니다
+
+`__tests__` diff 실측: `it` **추가 31 / 삭제 31**(순증감 0) · `describe` **추가 6 / 삭제 7**(−1).
+
+삭제된 7개 중 6개는 이름만 바뀐 대응물이 있다. 대응물이 없는 1개는
+**「소유 여부 — 비소유 파트의 양도차익은 폐기되므로 분모도 불요」**이고, A8의 **전수 96조합**
+루프도 함께 사라졌다(`split-sale-std-placement.test.ts` `−91/+33`).
+
+⇒ 이는 커버리지를 줄인 것이 아니라 **함수가 인자를 받지 않아 그 조합을 만들 수 없게 된 것**이다
+(타입 레벨 소멸). 대신 A8은 「항상 축 A」와 불변식 `saleAxis && (landPart || buildingPart)` 부재를
+직접 단언한다.
+
+### 14.4 게이트 (2026-08-06 14:03 실측)
+
+`npx tsc --noEmit` **0** · `npm run lint` **0 errors**(286 warnings — 기존치) ·
+`npm test` **1,244파일 13,891 passed**(13 skipped · 1 todo · 189초).
+
+1-C 보고(§13.6)와 **같은 13,891건**이다 — 위 순증감 0과 일치한다.
+
+### 14.5 🔴 후속 — **도달하지 않는 경로가 생겼다**
+
+`landPart`/`buildingPart`가 항상 `false`이므로 아래는 렌더되지 않는다:
+
+| 위치 | 상태 |
+|---|---|
+| `LandBuildingSplitSection.tsx:440` · `:509` 분기 | 조건 상수 false |
+| `TransferLandStdPartCard` · `TransferBuildingStdPartCard` (`TransferStdPriceCards.tsx`) | 도달 불가 |
+
+**제거하지 않았다.** 기능 영향이 0이고, Q-10(3파트 이상 자산의 판정 단위)이 파트별 배치를 되살릴
+수 있다. 제거 여부는 **Q-10 판단과 함께** 결정한다 — 그전에 지우면 되살릴 때 다시 쓰게 된다.
+
+### 14.6 1-E로 넘기는 것 (grep 실측)
+
+- **`saleSplitExemption` 배관이 전무하다.** 엔진 2파일(`transfer.types.ts` ·
+  `transfer-tax-split-sale-price.ts`)에만 있고 폼·`transfer-tax-api-split.ts` ·
+  `route.ts` · validate는 **0건**이다. §12.9의 ①②③④⑧⑨⑩⑫⑬가 통째로 남았다.
+- `saleSplitExemptionNote`(근거)는 **아직 어느 계층에도 없다**(§12.6).
+- **감정평가가액 basis 축**(가액 2필드 + 감정일자)도 폼·API에 없다. 엔진 서열 판정은 1-B에서
+  완성됐고 `resolveBasis`가 **인자 형태로 자리를 비워 두었다**
+  (`transfer-tax-split-sale-price.ts:40-42`) — 배관만 붙이면 된다.
+- ⑦ 표시 4항목(§12.5) + **U-9** anchor.
+- `transfer.types.ts` **821줄** 분리 판단(§13.7에서 이월).
