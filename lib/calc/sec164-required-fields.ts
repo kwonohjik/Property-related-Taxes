@@ -34,27 +34,47 @@ export interface Sec164FieldStatus {
   total: number;
   /** 비어 있는 항목의 사용자 표기 이름 */
   missing: string[];
+  /** §164 **전용** 필드가 하나라도 채워졌는가 — 「이 경로를 쓰겠다」는 의사 표시 */
+  triggered: boolean;
 }
 
 interface FieldSpec {
   /** 값이 있으면 true */
   has: (a: AssetForm) => boolean;
   label: string;
+  /**
+   * §164 전용이 **아닌** 공유 필드 — 채워져 있어도 **opt-in 신호로 보지 않는다**.
+   *
+   * ⚠️ 이게 없으면 `취득 당시 면적` 하나만 입력해도 「부분 입력」으로 오판해 차단한다
+   * (2026-08-06 probe 실측 — 1990년 이전 상속·증여 토지 전반이 막혔다).
+   * 판별 기준은 **입력 위젯이 §164 섹션 밖에도 있는가**다:
+   *   · `acquisitionArea` → `CompanionAcquisitionCauseSection`·`CompanionAcqPurchaseBlock` 등 다수
+   *   · `cbExclusiveArea`·`cbSharedArea`·`cbLandArea` → `AssetAreaCommercial`(일반 면적 섹션)
+   *   · `inhHouseVal*` → `HouseValuationSection`(§164⑤~⑦ 전용) **뿐** ⇒ 공유 아님
+   */
+  shared?: boolean;
 }
 
-const amountField = (key: keyof AssetForm, label: string): FieldSpec => ({
+const amountField = (key: keyof AssetForm, label: string, shared?: boolean): FieldSpec => ({
   has: (a) => parseAmount(String(a[key] ?? "")) > 0,
   label,
+  shared,
 });
 
-const decimalField = (key: keyof AssetForm, label: string): FieldSpec => ({
+const decimalField = (key: keyof AssetForm, label: string, shared?: boolean): FieldSpec => ({
   has: (a) => (parseFloat(String(a[key] ?? "").replace(/,/g, "")) || 0) > 0,
   label,
+  shared,
 });
 
 function tally(a: AssetForm, specs: FieldSpec[]) {
   const missing = specs.filter((s) => !s.has(a)).map((s) => s.label);
-  return { filled: specs.length - missing.length, total: specs.length, missing };
+  return {
+    filled: specs.length - missing.length,
+    total: specs.length,
+    missing,
+    triggered: specs.some((s) => !s.shared && s.has(a)),
+  };
 }
 
 /**
@@ -79,6 +99,7 @@ function merge(clause: string, ...parts: ReturnType<typeof tally>[]): Sec164Fiel
     filled: parts.reduce((n, p) => n + p.filled, 0),
     total: parts.reduce((n, p) => n + p.total, 0),
     missing: parts.flatMap((p) => p.missing),
+    triggered: parts.some((p) => p.triggered),
   };
 }
 
@@ -128,9 +149,10 @@ export function sec164CommercialStatus(asset: AssetForm): Sec164FieldStatus | nu
   return merge(
     "§164⑥",
     tally(asset, [
-      decimalField("cbExclusiveArea", "전용면적"),
-      decimalField("cbSharedArea", "공유면적"),
-      decimalField("cbLandArea", "대지면적"),
+      // 면적 3종은 일반 면적 섹션(`AssetAreaCommercial`)에서도 입력한다 ⇒ opt-in 신호 아님
+      decimalField("cbExclusiveArea", "전용면적", true),
+      decimalField("cbSharedArea", "공유면적", true),
+      decimalField("cbLandArea", "대지면적", true),
       amountField("cbUnitPriceAtFirstOrAcq", "최초고시 ㎡당 호별고시가"),
       amountField("cbLandPricePerSqmAtAcq", "취득시 개별공시지가"),
       amountField("cbLandPricePerSqmAtFirst", "최초고시 개별공시지가"),
@@ -149,7 +171,8 @@ export function sec164LandStatus(asset: AssetForm): Sec164FieldStatus | null {
   return merge(
     "§164④",
     tally(asset, [
-      decimalField("acquisitionArea", "취득 당시 면적"),
+      // 면적은 토지 자산의 **일반 필드**다(취득원인 블록 등에서 입력) ⇒ opt-in 신호 아님
+      decimalField("acquisitionArea", "취득 당시 면적", true),
       { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급" },
       { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급" },
       { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급" },
@@ -164,9 +187,15 @@ function gradeFilled(raw: string | undefined): boolean {
   return Number.isFinite(n) && n > 0;
 }
 
-/** 부분 입력 여부 — 「하나라도 손댔는데 끝까지 가지 않았다」. */
+/**
+ * 부분 입력 여부 — 「**§164 전용 칸을** 하나라도 손댔는데 끝까지 가지 않았다」.
+ *
+ * ⚠️ `triggered`가 조건에 **반드시 있어야 한다**. 공유 필드(면적 등)만 채워진 상태는
+ * §164를 쓰겠다는 의사가 아니므로 차단 대상이 아니다 — 없으면 1990년 이전 상속·증여 토지가
+ * 면적 입력만으로 막힌다(계획서 §3.2.1).
+ */
 export function isPartiallyFilled(s: Sec164FieldStatus | null): s is Sec164FieldStatus {
-  return !!s && s.filled > 0 && s.filled < s.total;
+  return !!s && s.triggered && s.filled > 0 && s.filled < s.total;
 }
 
 /** opt-in 충족 — 빌더가 payload를 만들 조건. */

@@ -331,3 +331,28 @@ return하므로 메시지 중복은 없다.
 
 ⇒ 이 결함군은 [[feedback_api_trigger_without_input_path_is_noop]]와 같은 계열이다:
 **"통과하는 테스트"가 "사용자가 도달할 수 있다"를 증명하지 않는다.**
+
+---
+
+## 11. 🔴 후속 정정 — 이 변경이 **과잉 차단**을 만들었다 (2026-08-06 · 해소 완료)
+
+머지 후 U2-E 설계 중 probe로 발견했다. 필수 필드 목록에 **§164 전용이 아닌 공유 필드**가 들어가
+있어, 그 필드만 채워도 「부분 입력」으로 오판해 차단했다.
+
+| 자산 | 오염 필드 | 증상 |
+|---|---|---|
+| **토지** | `acquisitionArea`(취득 당시 면적) | 면적만 입력 → `1/5` → **차단**. 1990.8.30. 이전 상속·증여 토지 전반 |
+| **상가** | `cbExclusiveArea`·`cbSharedArea`·`cbLandArea` | 면적 3종 입력 → `3/8` → **차단** |
+| 주택 | — | `inhHouseVal*`은 §164⑤~⑦ 전용 섹션에만 있어 **오염 없음** |
+
+사용자는 §164를 쓸 의사가 없는데도 등급·가격 칸을 채우거나, 다른 계산에 필요한 면적을 지워야
+진행할 수 있었다. **§9의 「6경로 중 3경로 침묵」 진단은 맞았으나, 처방의 부작용을 못 봤다.**
+
+**해소**: `FieldSpec.shared` + `Sec164FieldStatus.triggered` 도입. `isPartiallyFilled`가
+**「§164 전용 칸을 하나라도 손댔는가」**를 함께 본다. 완성 요건은 불변이라 「등급을 채웠는데 면적이
+빈」 경우는 그대로 차단된다. anchor `__tests__/calc/sec164-shared-field-not-trigger.anchor.test.ts` 8건
+(Pre-Do로 수정 전 5건 실패 확인).
+
+> **교훈**: all-or-nothing opt-in에서 「손댔다」의 신호는 **그 기능 전용 입력 위젯**이어야 한다.
+> 필수 필드 목록과 trigger 목록은 **같지 않다** — 공유 필드는 완성 요건이지 opt-in 신호가 아니다.
+> 설계: [`pre-deemed-clause-a-confirmation-criteria.engine.design.md`](pre-deemed-clause-a-confirmation-criteria.engine.design.md) §3.2.1
