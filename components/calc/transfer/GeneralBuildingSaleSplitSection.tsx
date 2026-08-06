@@ -36,11 +36,20 @@ interface Props {
   /** 구분 기재를 쓸 수 없는 사유 — 있으면 입력 대신 안내만 표시한다 */
   blockedReason?: string;
   sectionNum?: string;
-  /** 자산 양도일 — 감정 유효 창 안내에 쓴다 */
-  transferDate?: string;
+  /**
+   * 증축이 있는가 — **차단 조건이 아니다**(Q-4 확정). 건물 구분값을 본체·증축에 배분하는 방식과
+   * 감정평가가액을 쓸 수 없다는 제약을 안내하기 위해서만 쓴다.
+   */
+  hasExtension?: boolean;
 }
 
-export function GeneralBuildingSaleSplitSection({ asset, onChange, blockedReason, sectionNum, transferDate }: Props) {
+export function GeneralBuildingSaleSplitSection({
+  asset,
+  onChange,
+  blockedReason,
+  sectionNum,
+  hasExtension,
+}: Props) {
   const mode = asset.saleSplitMode ?? "apportioned";
 
   if (blockedReason) {
@@ -95,6 +104,14 @@ export function GeneralBuildingSaleSplitSection({ asset, onChange, blockedReason
             안분가액을 적용합니다 (소득세법 §100③). 한쪽만 입력하면 나머지는 총액에서 자동 계산되며,
             그 금액도 같은 판정을 받습니다.
           </p>
+          {hasExtension && (
+            <p className="text-caption leading-snug text-amber-800" data-testid="gb-split-extension-note">
+              증축이 있으므로 입력한 <strong>건물 양도가액</strong>은 본체분과 증축분에
+              <strong> 양도 당시 기준시가 비율</strong>로 나뉩니다. 30% 판정은 토지와 건물
+              <strong> 합계</strong>를 기준으로 합니다. 증축분이 미미하다면 구분 계산 대신
+              <strong> 당초 건물의 자본적 지출</strong>로 처리하는 편이 간명합니다.
+            </p>
+          )}
           <SaleSplitExemptionCard asset={asset} onChange={onChange} />
         </div>
       )}
@@ -104,7 +121,7 @@ export function GeneralBuildingSaleSplitSection({ asset, onChange, blockedReason
         기준시가보다 **우선**)이고, 구분양도에서는 §100③ 30% 판정의 비교 대상이다.
         구분양도 블록 안에 넣으면 일괄양도에서 입력 경로가 사라진다.
       */}
-      <SaleAppraisalBasisCard asset={asset} onChange={onChange} {...(transferDate ? { transferDate } : {})} />
+      <SaleAppraisalBasisCard asset={asset} onChange={onChange} />
     </ToneCard>
   );
 }

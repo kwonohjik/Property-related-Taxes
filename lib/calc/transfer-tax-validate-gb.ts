@@ -378,11 +378,11 @@ export function validateGeneralBuildingAsset(
   //    (split V8과 같은 규칙 — `transfer-tax-validate-split.ts`)
   const landApp = parseAmount(asset.landAppraisalAtTransfer) || 0;
   const buildingApp = parseAmount(asset.buildingAppraisalAtTransfer) || 0;
-  const appraisedAt = asset.appraisalDateAtTransfer?.trim();
   const anyAppraisal = landApp > 0 || buildingApp > 0;
-  if (anyAppraisal && !appraisedAt) {
-    return `${label}: 양도시 감정평가가액을 입력했으면 감정일자도 입력하세요 — 감정일자가 있어야 시기 요건(양도 전년도 1월 1일 ~ 양도연도 12월 31일)을 판정할 수 있습니다 (부가가치세법 시행령 §64①1호 단서).`;
-  }
+  /**
+   * 🔴 **감정일자는 요구하지 않는다**(2026-08-06 · Q-9 확정 — 계획서 §21). 시기 요건 판정을
+   * 폐지했으므로 일자는 선택 입력이다. 「양쪽 모두」는 비율 산출의 **산술적 필요조건**이라 유지한다.
+   */
   if (anyAppraisal && (landApp <= 0 || buildingApp <= 0)) {
     return `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
   }
@@ -394,10 +394,15 @@ export function validateGeneralBuildingAsset(
     const landIn = parseAmount(asset.landTransferPrice) || 0;
     const buildingIn = parseAmount(asset.buildingTransferPrice) || 0;
 
-    // S-10 (R-4) — 증축 조합은 건물 구분값을 본체·증축에 배분할 근거가 없다(Q-4 미확정).
-    // 엔진도 throw하지만, 「계산 눌러야 알 수 있는 오류」로 두지 않는다.
-    if (asset.gbHasExtension && (landIn > 0 || buildingIn > 0)) {
-      return `${label}: 증축이 있는 건물은 토지·건물 양도가액을 구분 기재할 수 없습니다 — 건물 구분가액을 본체와 증축분에 배분할 법령상 근거가 확정되지 않았습니다. 일괄양도로 계산하세요.`;
+    /**
+     * ✅ **증축 조합 차단은 Q-4 확정으로 해제됐다**(2026-08-06) — 건물 구분값을 본체·증축에
+     * **양도 당시 기준시가 비율**로 나눈다(그 외의 방법이 없다는 것이 사용자 확정 사항).
+     *
+     * ⚠️ 다만 **감정평가가액과는 함께 쓸 수 없다** — 감정은 토지·건물 2필드뿐이라 건물을 다시
+     *    본체·증축으로 나눌 근거가 없다. 조용히 무시하면 사용자는 감정가액이 반영된 줄 안다.
+     */
+    if (asset.gbHasExtension && anyAppraisal) {
+      return `${label}: 증축이 있는 건물에서는 감정평가가액으로 안분할 수 없습니다 — 감정평가가액은 토지·건물 두 값뿐이라 건물분을 본체와 증축분으로 다시 나눌 근거가 없습니다. 양도시 기준시가 비율로 안분됩니다.`;
     }
 
     // S-11 — 부담부증여는 §159가 채무비율로 자동 산정하므로 구분 기재가 성립하지 않는다.

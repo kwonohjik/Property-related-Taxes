@@ -125,14 +125,17 @@ describe("U-9-3 — 감정평가가액 basis와 배제 사유", () => {
     expect(screen.getByText(/안분 기준: 감정평가가액/)).toBeTruthy();
   });
 
-  it("🔴 감정이 배제되면 **이유를 표시한다** — 조용히 기준시가로 넘어가지 않는다", () => {
+  /**
+   * 🔴 시기 배제(`out_of_window`)는 Q-9 확정으로 폐지됐다 — 언제 평가했든 채택하므로
+   *    그 사유 자체가 발생하지 않는다(계획서 §21). 남은 배제 사유는 `incomplete` 하나다.
+   */
+  it("오래된 감정도 채택한다 — 시기로는 배제하지 않는다", () => {
     renderFor({
       ...OVER,
       ...APPRAISAL,
-      appraisalDateAtTransfer: new Date("2022-12-31"), // 창 시작 하루 전
+      appraisalDateAtTransfer: new Date("2020-12-31"),
     });
-    expect(screen.getByText(/유효 기간을 벗어나/)).toBeTruthy();
-    expect(screen.getByText(/안분 기준: 양도시 기준시가/)).toBeTruthy();
+    expect(screen.getByText(/안분 기준: 감정평가가액/)).toBeTruthy();
   });
 
   it("한쪽만 평가된 경우도 이유를 표시한다", () => {

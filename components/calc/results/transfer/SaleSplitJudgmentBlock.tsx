@@ -24,8 +24,13 @@ const BASIS_LABEL = {
   std_price: "양도시 기준시가",
 } as const;
 
+/**
+ * 감정 배제 사유 — `incomplete` 하나뿐이다.
+ *
+ * 시기 요건 배제(`out_of_window`)는 Q-9 확정으로 폐지했다(계획서 §21) — 엔진이 법령 요건을
+ * 판정하지 않고 사용자 책임으로 두기 때문이다.
+ */
 const REJECT_LABEL = {
-  out_of_window: "감정일자가 유효 기간을 벗어나 감정평가가액을 쓰지 않았습니다",
   incomplete: "토지·건물 중 한쪽만 평가되어 감정평가가액을 쓰지 않았습니다",
 } as const;
 

@@ -101,11 +101,7 @@ export function LandBuildingSaleSplitSection(props: Props) {
         감정평가가액이 기준시가보다 위에 오는 것은 서열 그대로다.
       */}
       {props.asset && props.onAssetChange && (
-        <SaleAppraisalBasisCard
-          asset={props.asset}
-          onChange={props.onAssetChange}
-          transferDate={props.transferDate}
-        />
+        <SaleAppraisalBasisCard asset={props.asset} onChange={props.onAssetChange} />
       )}
 
       {props.showStdCard && props.asset && props.onAssetChange && (

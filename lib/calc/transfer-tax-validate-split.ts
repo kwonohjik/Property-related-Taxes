@@ -283,11 +283,16 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
   //    여기를 구분양도로 좁히면 일괄양도에서 불완전 감정가액이 그대로 통과한다.
   const landApp = opt(asset.landAppraisalAtTransfer);
   const buildingApp = opt(asset.buildingAppraisalAtTransfer);
-  const appraisedAt = asset.appraisalDateAtTransfer?.trim();
   const anyAppraisal = landApp != null || buildingApp != null;
-  if (anyAppraisal && !appraisedAt) {
-    return `${label}: 양도시 감정평가가액을 입력했으면 감정일자도 입력하세요 — 감정일자가 있어야 시기 요건(양도 전년도 1월 1일 ~ 양도연도 12월 31일)을 판정할 수 있습니다 (부가가치세법 시행령 §64①1호 단서).`;
-  }
+  /**
+   * 🔴 **감정일자는 요구하지 않는다**(2026-08-06 · Q-9 확정 — 계획서 §21).
+   *
+   * 종전에는 시기 요건(유효 창) 판정에 필요해서 필수로 받았다. 그 판정을 폐지했으므로 일자는
+   * **선택 입력**이 됐다(기록·신고서 참고용). 요건 충족 여부는 사용자 책임이다.
+   *
+   * ⚠️ 반면 「양쪽 모두」는 **그대로 요구한다** — 법령 판단이 아니라 **비율을 내려면 두 값이
+   *    필요하다**는 산술적 필요조건이기 때문이다.
+   */
   if (anyAppraisal && (landApp == null || buildingApp == null)) {
     return `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
   }

@@ -113,25 +113,21 @@ function allocateBundledTransferPrice(input: GeneralBuildingInput): {
    */
   const basis = resolveSaleApportionBasis({
     totalTransferPrice: input.totalTransferPrice,
-    transferDate: input.transferDate,
     stdPrice: { land: landStdTotal, building: input.transferBuildingStdPrice },
     /**
      * 감정평가가액 — 서열 **1순위**(부가령 §64①1호 단서). split 경로
-     * (`transfer-tax-split-sale-price.ts` `resolveBasis`)와 **같은 규칙**으로 넘긴다:
+     * (`transfer-tax-split-sale-price.ts` `resolveBasis`)와 **같은 규칙**으로 넘긴다.
      *
-     * ⚠️ 감정일자가 없으면 넘기지 않는다(시기 요건을 판정할 수 없다). 반대로 **일자가 있고
-     *    가액이 한쪽만 있으면 넘긴다** — 그래야 `usableAppraisal`이 `incomplete`로 배제 사유를
-     *    남겨 화면이 「왜 감정가액이 안 쓰였는지」를 말할 수 있다. 좁히면 침묵 무시가 된다.
+     * 🔴 감정일자는 넘기지 않는다 — 시기 요건은 엔진이 판정하지 않고 사용자 책임이다(Q-9 확정).
+     * ⚠️ 가액이 한쪽만 있어도 넘긴다 — `incomplete` 배제 사유를 남겨야 침묵 무시가 안 된다.
      */
-    ...(input.appraisalDateAtTransfer != null &&
-    (input.landAppraisalAtTransfer != null || input.buildingAppraisalAtTransfer != null)
+    ...(input.landAppraisalAtTransfer != null || input.buildingAppraisalAtTransfer != null
       ? {
           appraisal: {
             value: {
               land: input.landAppraisalAtTransfer ?? 0,
               building: input.buildingAppraisalAtTransfer ?? 0,
             },
-            appraisedAt: input.appraisalDateAtTransfer,
           },
         }
       : {}),
@@ -265,19 +261,15 @@ export function buildGeneralBuildingAssetCards(
   // ── 증축 분기 (사례 33 — extensionInfo 활성 시 3-way 안분) ──────────
   if (input.extensionInfo) {
     /**
-     * 🔴 **R-4 — 증축 조합에서는 구분 기재를 받지 않는다** (계획서 §5 S-10 · §7 R-4).
+     * ✅ **Q-4 확정(2026-08-06) — 증축 조합에서도 구분 기재를 받는다.**
      *
-     * 3-way 안분은 건물을 **본체·증축 2장**으로 나누는데, 계약서의 「건물 양도가액」 하나를
-     * 그 둘에 배분할 근거가 없다(Q-4 미확정). 근거 없이 면적비나 기준시가비로 나누면
-     * **조용한 오답**이 된다 — 취득 축 V-3에서 같은 이유로 차단한 선례를 따른다.
+     * 종전에는 「건물 양도가액 하나를 본체·증축에 배분할 근거가 없다」며 차단했다. 사용자 확정으로
+     * 배분 기준이 정해졌다 — **양도 당시 기준시가 비율**(그 외의 방법이 없다). 3-way 경로가
+     * 그 처리를 담당한다(`general-building-extension.ts`).
+     *
+     * ⚠️ 감정평가가액은 **증축 경로에 전달하지 않는다** — 감정은 토지·건물 2필드뿐이라 건물을
+     *    본체·증축으로 다시 나눌 근거가 없다. validate가 그 조합을 먼저 막는다.
      */
-    if (input.landTransferPrice != null || input.buildingTransferPrice != null) {
-      throw new TaxCalculationError(
-        TaxErrorCode.INVALID_INPUT,
-        "증축이 있는 일반건물은 토지·건물 양도가액 구분 기재를 지원하지 않습니다 — 건물 구분가액을 본체와 증축분에 배분할 법령상 근거가 확정되지 않았습니다. 일괄양도(기준시가 비율 안분)로 계산하세요.",
-        { what: "양도가액", reason: "extension_split_unsupported" },
-      );
-    }
     return buildGeneralBuildingAssetCardsWithExtension(input, input.extensionInfo);
   }
 
