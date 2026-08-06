@@ -44,8 +44,23 @@ describe("비-별개취득 — 규칙 ① 강제", () => {
     expect(r!.building.transferPrice).toBe(200_000_000);
   });
 
-  it("계약서 구분(양도가액 직접입력) → 그 금액 그대로", () => {
-    const r = calcSplitGain(base({ landTransferPrice: 700_000_000 }));
+  it("🔴 계약서 구분이어도 양도시 기준시가가 **필요하다** (Phase 1-D 계약 뒤집힘)", () => {
+    // 종전에는 구분 기재가 있으면 안분 근거가 불필요했다. §100③이 구분 기재값을 **안분값과
+    // 비교**하도록 요구하므로 이제는 구분 기재가 있을 때도 안분값을 만들 수 있어야 한다.
+    expect(() => calcSplitGain(base({ landTransferPrice: 700_000_000 }))).toThrow(
+      /양도시 토지·건물 기준시가가 모두 필요합니다/,
+    );
+  });
+
+  it("계약서 구분 + 양도시 기준시가(동일 비율) → 그 금액 그대로", () => {
+    const r = calcSplitGain(
+      base({
+        landTransferPrice: 700_000_000,
+        // 구분 기재와 같은 7:3 ⇒ 의제 미발동
+        landStandardPriceAtTransfer: 700_000_000,
+        buildingStandardPriceAtTransfer: 300_000_000,
+      }),
+    );
     expect(r!.land.transferPrice).toBe(700_000_000);
     expect(r!.building.transferPrice, "반대쪽은 잔액으로 확정").toBe(300_000_000);
   });

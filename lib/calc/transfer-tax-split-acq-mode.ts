@@ -182,52 +182,48 @@ function empty(v: string | number | undefined | null): boolean {
   return !(raw(v) > 0);
 }
 
-/** 양도시 기준시가 배치 판정 입력 — 각 계층의 기존 단일 소스가 파생해 주입한다(재파생 금지). */
-export interface SaleStdPlacementCtx {
-  /** `AssetForm.saleSplitMode` — stale 자산 대비 `?? "apportioned"` fallback을 **호출부가** 적용 */
-  saleSplitMode: "actual" | "apportioned";
-  landMode: PartAcqMode;
-  buildingMode: PartAcqMode;
-  selfOwns: "both" | "building_only" | "land_only";
-}
-
 /**
  * **양도시 기준시가를 어디에 두는가** — 축 A(양도가액 결정) vs 파트 섹션(축 B 취득가액).
  *
  * 계획서: docs/02-design/features/transfer-split-std-price-colocation.plan.md §5.1
+ *        · general-building-sale-split-mode.plan.md §12.7 (R-7 · Phase 1-D)
  *
- * 엔진 소비 구조와 1:1로 대응한다(`transfer-tax-split-gain.ts`):
- *   · 일괄양도(apportioned) → `calcSaleApportionRatio`(:162-171)가 **토지·건물 둘 다** 요구.
- *     이 값은 특정 파트가 아니라 **양도가액 축**에 속하므로 축 A에 둔다.
- *   · 구분양도(actual) → 파트 환산 분모로만 쓰인다(:258-262 `partStdAtTransfer`).
- *     그 파트가 환산이 아니면 계산 어디에도 등장하지 않으므로 노출하지 않는다.
- *   · 비소유 파트(`selfOwns≠both`)의 양도차익은 상위에서 폐기되므로(transfer-tax.ts:315-316)
- *     그 파트의 환산 분모도 필요 없다.
+ * ## 🔴 2026-08-06 (Phase 1-D) — **배치가 불변이 됐다. 항상 축 A다.**
+ *
+ * 종전 규칙은 「일괄양도 → 축 A · 구분양도 → **환산 파트만** 파트 섹션」이었다. 그 전제는
+ * **「구분양도에서 이 값은 파트 환산 분모로만 쓰인다」**였는데, 그 전제가 깨졌다.
+ *
+ * 「소득세법」 제100조 **제3항**이 구분 기장 가액을 **안분계산한 가액과 비교**하도록 요구하고,
+ * 안분값은 **양도시 토지·건물 기준시가 양쪽**에서 나온다(부가령 §64①1호). ⇒ 구분양도에서도
+ * 양쪽이 필요하며, 그것은 특정 파트의 값이 아니라 **양도가액 축**에 속한다.
+ *
+ * ⚠️ **「기준시가가 없으면 30% 판정을 건너뛴다」는 채택하지 않았다** — 칸을 비워 우회할 수 있으면
+ *    가드가 아니다(계획서 §12.7이 그 대안을 명시적으로 기각했다). 노출을 없애는 대신 **필수로**
+ *    만들었다.
+ *
+ * ⇒ 판정 인자(`saleSplitMode`·파트 모드·`selfOwns`)가 **전부 결과를 가르지 않게** 되어 인자를
+ *   제거했다. 상수를 함수로 남기는 이유는 두 가지다:
+ *     ① UI 노출과 validate 요구가 **같은 값 하나**에서 나오는 구조를 유지한다 — 조건이 되살아날 때
+ *        (계획서 Q-10: 다필지·증축 등 3파트 이상 자산의 판정 단위) 한 곳만 고친다.
+ *     ② `landPart`/`buildingPart`를 반환 형태에 남겨 파트 섹션 경로를 보존한다.
+ *
+ * ⏳ **파트 카드 경로는 이제 도달하지 않는다**(`LandBuildingSplitSection`의
+ *    `saleStdInLandPart`/`saleStdInBuildingPart` · `TransferLandStdPartCard`/
+ *    `TransferBuildingStdPartCard`). 기능 영향은 0이며 제거 여부는 Q-10 판단과 함께 결정한다
+ *    — 계획서 §14에 후속으로 기록했다.
  *
  * **불변식**: `saleAxis && (landPart || buildingPart)`가 참인 조합은 없다 — 같은 `data-testid`가
- * 화면에 2개 존재해 E2E strict mode가 깨지는 사고를 차단한다. (`landPart`와 `buildingPart`는
- * 양쪽 환산에서 동시에 참이며, 이는 서로 다른 섹션의 서로 다른 카드라 정상이다.)
- *
- * ⚠️ **공통 조상이 1회 계산해 양축에 주입**한다(`CompanionAcqPurchaseBlock`). 축 A·축 B가 각자
- * 호출하면 인자가 어긋나는 순간 위 불변식이 관례적 보증으로 전락한다 — 기존 `acqStdPriceRequired`
- * 주입과 같은 패턴이다(memory `feedback_ui_engine_dual_truth_avoidance`).
+ * 화면에 2개 존재해 E2E strict mode가 깨지는 사고를 차단한다.
  */
-export function saleStdPlacement(ctx: SaleStdPlacementCtx): {
+export function saleStdPlacement(): {
   /** 축 A: 양도가액 안분 비율 — 토지·건물을 한 카드에 */
   saleAxis: boolean;
-  /** 축 B 토지 섹션: 토지 환산 분모 */
+  /** 축 B 토지 섹션: 토지 환산 분모 (⏳ Phase 1-D 이후 항상 false) */
   landPart: boolean;
-  /** 축 B 건물 섹션: 건물 환산 분모 */
+  /** 축 B 건물 섹션: 건물 환산 분모 (⏳ Phase 1-D 이후 항상 false) */
   buildingPart: boolean;
 } {
-  if (ctx.saleSplitMode === "apportioned") {
-    return { saleAxis: true, landPart: false, buildingPart: false };
-  }
-  return {
-    saleAxis: false,
-    landPart: ctx.landMode === "estimated" && ctx.selfOwns !== "building_only",
-    buildingPart: ctx.buildingMode === "estimated" && ctx.selfOwns !== "land_only",
-  };
+  return { saleAxis: true, landPart: false, buildingPart: false };
 }
 
 /**
@@ -235,9 +231,10 @@ export function saleStdPlacement(ctx: SaleStdPlacementCtx): {
  *
  * UI 노출(`saleStdPlacement`)과 validate 요구가 **같은 술어에서 나온다** — 어긋나면
  * "입력 칸이 없는데 차단"(dead-end)이 된다(memory `feedback_ui_gate_removes_sole_input_path` 3항).
+ * 파생 형태(`saleAxis || 파트`)를 그대로 유지해 조건이 되살아날 때 parity가 자동으로 따라온다.
  */
-export function needsSaleStdPart(part: "land" | "building", ctx: SaleStdPlacementCtx): boolean {
-  const p = saleStdPlacement(ctx);
+export function needsSaleStdPart(part: "land" | "building"): boolean {
+  const p = saleStdPlacement();
   return p.saleAxis || (part === "land" ? p.landPart : p.buildingPart);
 }
 
@@ -257,7 +254,7 @@ interface AcqStdPriceNeedFlags {
  *
  * ⚠️ **양도 축(`hasSaleRatio`)은 인자가 아니다**(2026-07-30 3절 폐지와 함께 제거).
  *    취득시 기준시가는 **취득가액**을 나누는 값이고, 양도가액 안분은 양도시 기준시가가
- *    담당한다(`calcSaleApportionRatio`). 두 축을 한 술어에 섞어 두면 "양도가액이 없으니
+ *    담당한다(`resolveSaleApportionBasis`). 두 축을 한 술어에 섞어 두면 "양도가액이 없으니
  *    취득시 기준시가를 넣으라"는 거짓 요구가 되살아난다 — 실제로 그 형태로 남아 있었다.
  */
 interface AcqStdPriceNeedContext {
@@ -372,7 +369,7 @@ function positive(v: string | undefined): number {
  *
  * ⇒ ③에서 면적 100으로 총액을 만든 뒤 ①에서 면적을 200으로 고치면 캐시가 100 기준으로 남는다.
  *   실측(면적을 절반으로 어긋나게 둔 경우, `land-building-split.test.ts` S1 fixture 기준):
- *   **산출세액 20,202,957원 → 0원**. 양도가액 안분 비율(`calcSaleApportionRatio`)과 환산 분모가
+ *   **산출세액 20,202,957원 → 0원**. 양도가액 안분(`resolveSaleApportionBasis`)과 환산 분모가
  *   함께 틀어지면서 세액이 통째로 사라진다 — 과소신고 방향이다.
  *
  * ## 규약

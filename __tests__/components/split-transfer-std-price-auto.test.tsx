@@ -36,14 +36,8 @@ function Harness({ init }: { init: Partial<AssetForm> }) {
       landTransferPrice="" onLandTransferPriceChange={() => {}}
       buildingTransferPrice="" onBuildingTransferPriceChange={() => {}}
       // 실제 배선과 동일하게 호출부(공통 조상)가 술어로 계산해 주입한다.
-      showStdCard={
-        saleStdPlacement({
-          saleSplitMode: asset.saleSplitMode ?? "apportioned",
-          landMode: asset.landAcqMode || "actual",
-          buildingMode: asset.buildingAcqMode || "actual",
-          selfOwns: asset.selfOwns ?? "both",
-        }).saleAxis
-      }
+      // ⏳ Phase 1-D부터 배치는 불변(항상 축 A) — 술어가 인자를 받지 않는다.
+      showStdCard={saleStdPlacement().saleAxis}
       asset={asset}
       onAssetChange={(patch) => setAsset((a) => ({ ...a, ...patch }))}
       transferDate="2025-06-01"
@@ -129,21 +123,23 @@ describe("B. 주택(housing) — 일반 건물과 동일하게 파트별 독립 
 });
 
 describe("C. 게이트 — 회귀 0", () => {
-  it("구분양도(actual) + 실가 파트 → 양도시 기준시가 블록 자체 미노출", () => {
+  /**
+   * 🔴 2026-08-06 (Phase 1-D) — **계약이 뒤집혔다.**
+   *
+   * 2026-07-30 배치는 「구분양도에서 양도시 기준시가는 **환산 분모 전용**이므로 그 파트 섹션에
+   * 렌더하고, 실가 파트에서는 아예 숨긴다」였다. 그 전제가 §100③으로 깨졌다 — 구분 기장 가액을
+   * **안분계산한 가액과 비교**해야 하므로 실가 파트의 기준시가도 판정에 등장한다.
+   * ⇒ 배치는 **항상 축 A**이고, 구분양도에서도 카드가 뜬다(`saleStdPlacement`).
+   */
+  it("🔴 구분양도(actual) + 실가 파트 → 축 A 카드가 **뜬다** (종전 계약의 반대)", () => {
     render(<Harness init={{ assetKind: "building", saleSplitMode: "actual" }} />);
-    expect(screen.queryByTestId("split-land-std-transfer")).toBeNull();
-    expect(screen.queryByTestId("split-land-std-transfer-area")).toBeNull();
+    expect(screen.getByTestId("split-sale-std-card")).toBeTruthy();
+    expect(screen.getByTestId("split-land-std-transfer-area")).toBeTruthy();
   });
 
-  /**
-   * 2026-07-30 배치 변경 — 구분양도에서 양도시 기준시가는 **환산 분모 전용**이므로
-   * 축 A가 아니라 그 파트 섹션(축 B `LandBuildingSplitSection`)에 렌더된다.
-   * 축 A 카드는 일괄양도(안분 비율) 전용이 됐다.
-   */
-  it("구분양도 + 환산(estimated) 파트 → 축 A에는 미노출 (파트 섹션으로 이동)", () => {
+  it("🔴 구분양도 + 환산(estimated) 파트 → 축 A에 뜬다 (파트 섹션 아님)", () => {
     render(<Harness init={{ assetKind: "building", saleSplitMode: "actual", landAcqMode: "estimated" }} />);
-    expect(screen.queryByTestId("split-sale-std-card")).toBeNull();
-    expect(screen.queryByTestId("split-land-std-transfer")).toBeNull();
+    expect(screen.getByTestId("split-sale-std-card")).toBeTruthy();
   });
 
   it("일괄양도(apportioned) → 축 A 카드 노출", () => {

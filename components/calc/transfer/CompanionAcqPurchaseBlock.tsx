@@ -180,15 +180,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
    * 부르면 인자가 어긋나는 순간 같은 카드가 두 곳에 동시 노출될 수 있고, 같은 `data-testid`가
    * 2개가 되어 E2E strict mode도 깨진다(계획서 §5.1 불변식). `acqStdPriceRequired`와 같은 패턴.
    *
-   * `saleSplitMode` fallback은 축 A(:202 상당)·API(transfer-tax-api-split.ts:67)·validate와
-   * 3중으로 맞춘다 — stale sessionStorage 자산은 undefined일 수 있다.
+   * ⏳ **2026-08-06(Phase 1-D)부터 배치는 불변이다** — §100③ 30% 판정이 양도시 기준시가 양쪽을
+   *    요구하므로 구분양도에서도 축 A다. 인자가 결과를 가르지 않게 되어 술어에서 제거됐다.
+   *    「1회 계산해 주입」 구조는 유지한다(조건이 되살아날 때 한 곳만 고친다 — 계획서 Q-10).
    */
-  const saleStdPlace = saleStdPlacement({
-    saleSplitMode: props.asset?.saleSplitMode ?? "apportioned",
-    landMode: effLandAcqMode,
-    buildingMode: effBuildingAcqMode,
-    selfOwns: props.selfOwns ?? "both",
-  });
+  const saleStdPlace = saleStdPlacement();
 
   // 2열 배치(2026-07-29)에서 괄호 설명이 두 줄로 접혀 라벨만 남긴다.
   const acqDateLabel = isSplit ? "건물 취득일" : "취득일";

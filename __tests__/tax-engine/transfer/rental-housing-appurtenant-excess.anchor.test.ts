@@ -68,6 +68,10 @@ const excessLandHouse = (rhe: boolean): TransferTaxInput =>
     acquisitionPrice: 300_000_000,
     landTransferPrice: 1_600_000_000,
     buildingTransferPrice: 400_000_000,
+    // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+    //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+    landStandardPriceAtTransfer: 1_600_000_000,
+    buildingStandardPriceAtTransfer: 400_000_000,
     landAcquisitionPrice: 200_000_000,
     buildingAcquisitionPrice: 100_000_000,
     acquisitionDate: D("2014-09-01"),
@@ -207,6 +211,10 @@ describe("§155⑳ B 시나리오(§161 안분) + 배율 초과 부수토지", (
       acquisitionPrice: 300_000_000,
       landTransferPrice: 600_000_000,
       buildingTransferPrice: 200_000_000,
+      // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+      //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+      landStandardPriceAtTransfer: 600_000_000,
+      buildingStandardPriceAtTransfer: 200_000_000,
       landAcquisitionPrice: 200_000_000,
       buildingAcquisitionPrice: 100_000_000,
       acquisitionDate: D("2014-09-01"),

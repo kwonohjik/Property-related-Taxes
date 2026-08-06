@@ -1,13 +1,27 @@
 /**
- * 양도시 기준시가 **배치** — "쓰는 섹션 아래"에만 노출 (사용자 이미지 6·7).
+ * 양도시 기준시가 **배치** — 항상 축 A (Phase 1-D).
  *
  * 계획서: docs/02-design/features/transfer-split-std-price-colocation.plan.md
+ *        · general-building-sale-split-mode.plan.md §12.7 (R-7)
  * UI 설계: 같은 이름 `.ui.design.md` §1 케이스 인벤토리
  *
- * 배치 규칙(`saleStdPlacement` 단일 소스):
- *   · 일괄양도 → 축 A 한 카드(토지+건물) — 양도가액 안분 비율은 양도가액 축의 값
- *   · 구분양도 + 파트 환산 → 그 파트 섹션에 개별 카드 — 환산 분모는 파트의 값
+ * ## 🔴 2026-08-06 (Phase 1-D) — 배치 규칙이 **뒤집혔다**
+ *
+ * 종전(2026-07-30 co-location):
+ *   · 일괄양도 → 축 A 한 카드(토지+건물)
+ *   · 구분양도 + 파트 환산 → 그 파트 섹션에 개별 카드 — **환산 분모는 파트의 값**
  *   · 그 외 → 노출 없음(엔진이 소비하지 않는다)
+ *
+ * 「소득세법」 제100조 **제3항**이 구분 기장 가액을 **안분계산한 가액과 비교**하도록 요구하고,
+ * 안분값은 양도시 토지·건물 기준시가 **양쪽**에서 나온다 ⇒ 「구분양도에서 이 값은 환산 분모
+ * 전용」이라는 전제가 깨졌다. **실가 파트의 기준시가도 판정에 등장한다.**
+ *
+ * ⇒ **모든 조합에서 축 A 한 카드**(`saleStdPlacement` — 인자 없는 상수).
+ *
+ * ⏳ **부수 효과**: 건물 기준시가 계산 런처가 시점별로 2개가 된다(축 A 「양도시…」 + 파트 섹션
+ *    「취득시…」). 종전 co-location에서만 2시점 통합 런처 1개였고, **일괄양도에서는 이미 2개**였다
+ *    — 1-D는 구분양도를 일괄양도와 같은 모양으로 통일한 것이다(신규 회귀 유형이 아니다).
+ *    통합 런처 복원은 Phase 1-E(⑤ UI)에서 판단한다.
  *
  * 불변식: 같은 testid가 화면에 **0 또는 1개**. `getAllBy*`는 0건에 throw하므로 `queryAllBy*`.
  */
@@ -105,27 +119,28 @@ describe("이미지 6 — 구분양도 + 토지만 환산 (매트릭스 #5)", ()
     buildingAcquisitionPrice: "100,000,000",
   };
 
-  it("축 A(양도가액 결정 방식)에는 양도시 기준시가 카드가 없다", () => {
+  it("🔴 축 A에 양도시 기준시가 카드가 **있다** (종전 계약의 반대)", () => {
     render(<Harness init={CASE5} />);
-    expect(saleAxisCard(), "구분양도에서는 안분 비율이 필요 없다").toHaveLength(0);
+    expect(saleAxisCard(), "구분양도에서도 §100③ 판정에 안분값이 필요하다").toHaveLength(1);
   });
 
-  it("토지 섹션에 토지 양도시 기준시가 카드가 있다", () => {
+  it("토지 파트 섹션에는 양도시 카드가 없다 — 축 A로 통합됐다", () => {
     render(<Harness init={CASE5} />);
-    expect(landPartCard()).toHaveLength(1);
+    expect(landPartCard()).toHaveLength(0);
+    // 축 A 카드 안에 토지 2요소(㎡당 공시지가·총액)가 들어 있다.
     expect(landStdPerSqm()).toHaveLength(1);
     expect(landStdTotal()).toHaveLength(1);
   });
 
-  it("🔴 건물 기준시가 계산 기능은 화면 어디에도 없다", () => {
+  it("🔴 건물이 실가여도 건물 양도시 기준시가 입력이 **제공된다**", () => {
     render(<Harness init={CASE5} />);
     expect(buildingPartCard()).toHaveLength(0);
     expect(
       buildingStdInput(),
-      "건물이 실지거래가액이면 건물 양도시 기준시가는 계산에 등장하지 않는다",
-    ).toHaveLength(0);
-    expect(bothCalcButton()).toHaveLength(0);
-    expect(transferOnlyCalcButton()).toHaveLength(0);
+      "실가 파트의 기준시가도 §100③ 안분값의 분모로 등장한다 — 없으면 판정 자체가 불가능하다",
+    ).toHaveLength(1);
+    // 축 A 카드의 런처는 양도시 전용이다(취득시 런처는 파트 섹션에 따로 있다).
+    expect(transferOnlyCalcButton()).toHaveLength(1);
   });
 });
 
@@ -137,22 +152,23 @@ describe("이미지 7 — 구분양도 + 건물만 환산 (매트릭스 #6)", ()
     landAcquisitionPrice: "150,000,000",
   };
 
-  it("축 A에는 양도시 기준시가 카드가 없다", () => {
+  it("🔴 축 A에 양도시 기준시가 카드가 있다", () => {
     render(<Harness init={CASE6} />);
-    expect(saleAxisCard()).toHaveLength(0);
+    expect(saleAxisCard()).toHaveLength(1);
   });
 
-  it("건물 섹션에 건물 양도시 기준시가 카드 + 계산 런처가 있다", () => {
+  it("건물 양도시 기준시가는 축 A 카드에 있고 런처는 시점 전용이다", () => {
     render(<Harness init={CASE6} />);
-    expect(buildingPartCard()).toHaveLength(1);
+    expect(buildingPartCard()).toHaveLength(0);
     expect(buildingStdInput()).toHaveLength(1);
-    expect(bothCalcButton(), "취득·양도를 한 번에 계산하는 통합 런처 1개").toHaveLength(1);
+    // ⏳ 통합 런처(2시점)는 co-location 배치에서만 성립했다 — 위 헤더 「부수 효과」 참조.
+    expect(transferOnlyCalcButton(), "축 A 카드의 런처는 양도시 전용").toHaveLength(1);
   });
 
-  it("🔴 토지 양도시 기준시가 기능은 노출되지 않는다", () => {
+  it("🔴 토지가 실가여도 토지 양도시 기준시가 기능이 제공된다", () => {
     render(<Harness init={CASE6} />);
     expect(landPartCard()).toHaveLength(0);
-    expect(landStdPerSqm()).toHaveLength(0);
+    expect(landStdPerSqm(), "안분값 분모에 토지분이 필요하다").toHaveLength(1);
   });
 });
 
@@ -183,18 +199,21 @@ describe("배치 불변식 — 같은 카드가 두 곳에 동시 노출되지 �
     expect(buildingPartCard()).toHaveLength(0);
   });
 
-  it("#4 구분양도 + 양쪽 실가 → 어떤 양도시 기준시가 카드도 없다", () => {
+  it("🔴 #4 구분양도 + 양쪽 실가 → 축 A 카드 1개 (우회 경로를 남기지 않는다)", () => {
     render(<Harness init={{ ...SPLIT_ACTUAL, landAcqMode: "actual", buildingAcqMode: "actual" }} />);
-    expect(saleAxisCard()).toHaveLength(0);
+    expect(
+      saleAxisCard(),
+      "이 조합에서 카드를 숨기면 칸을 비워 두는 것만으로 §100③ 가드를 우회할 수 있다",
+    ).toHaveLength(1);
     expect(landPartCard()).toHaveLength(0);
     expect(buildingPartCard()).toHaveLength(0);
   });
 
-  it("#7 구분양도 + 양쪽 환산 → 파트 카드 2개(서로 다른 섹션), 축 A 0개", () => {
+  it("🔴 #7 구분양도 + 양쪽 환산 → 축 A 1개, 파트 카드 0개", () => {
     render(<Harness init={{ ...SPLIT_ACTUAL, landAcqMode: "estimated", buildingAcqMode: "estimated" }} />);
-    expect(saleAxisCard()).toHaveLength(0);
-    expect(landPartCard()).toHaveLength(1);
-    expect(buildingPartCard()).toHaveLength(1);
+    expect(saleAxisCard()).toHaveLength(1);
+    expect(landPartCard()).toHaveLength(0);
+    expect(buildingPartCard()).toHaveLength(0);
   });
 });
 
@@ -224,12 +243,13 @@ describe("이미지 8·9 — 주택 별개취득 건물분 취득시 기준시�
     expect(acqInput()).toHaveLength(1);
   });
 
-  it("🔴 취득·양도 동시 계산 런처가 제공된다", () => {
+  it("⏳ 런처가 시점별로 분리된다 — 취득시(파트 섹션) + 양도시(축 A)", () => {
     render(<Harness init={CASE9} />);
-    expect(
-      screen.queryAllByRole("button", { name: "건물 기준시가 계산" }),
-      "두 시점 값이 하나의 건물 계산서에서 나오므로 런처도 하나다",
-    ).toHaveLength(1);
+    // 종전에는 co-location 덕에 한 카드에 두 시점이 모여 통합 런처 1개였다. 1-D가 양도시를
+    // 축 A로 옮기면서 시점별 런처가 됐다 — **일괄양도에서는 이미 이 모양**이었다(신규 유형 아님).
+    expect(screen.queryAllByRole("button", { name: "건물 기준시가 계산" })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: "취득시 건물 기준시가 계산" })).toHaveLength(1);
+    expect(screen.queryAllByRole("button", { name: "양도시 건물 기준시가 계산" })).toHaveLength(1);
   });
 
   it("양도시 칸이 없는 조합(감정가액)에서는 취득시 전용 런처", () => {
@@ -248,8 +268,8 @@ describe("이미지 8·9 — 주택 별개취득 건물분 취득시 기준시�
   });
 });
 
-describe("건물 계산 런처 — 2시점 통합", () => {
-  it("일반건물 + 양쪽 환산 → 건물 런처는 통합 1개", () => {
+describe("⏳ 건물 계산 런처 — 시점별 분리 (Phase 1-D)", () => {
+  it("일반건물 + 양쪽 환산 → 취득시·양도시 런처 각 1개", () => {
     render(
       <Harness
         init={{
@@ -260,10 +280,10 @@ describe("건물 계산 런처 — 2시점 통합", () => {
         }}
       />,
     );
-    expect(screen.queryAllByRole("button", { name: "건물 기준시가 계산" })).toHaveLength(1);
-    expect(
-      screen.queryAllByRole("button", { name: "취득시 건물 기준시가 계산" }),
-      "취득·양도가 한 카드이므로 시점별 런처로 나누지 않는다",
-    ).toHaveLength(0);
+    // 통합 런처(2시점)는 co-location 배치에서만 성립했다. 양도시 값이 축 A로 옮겨져 시점별로
+    // 나뉘었고, **일괄양도에서는 이미 이 모양**이었다 — 통합 복원 여부는 1-E(⑤ UI)에서 판단한다.
+    expect(screen.queryAllByRole("button", { name: "건물 기준시가 계산" })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: "취득시 건물 기준시가 계산" })).toHaveLength(1);
+    expect(screen.queryAllByRole("button", { name: "양도시 건물 기준시가 계산" })).toHaveLength(1);
   });
 });

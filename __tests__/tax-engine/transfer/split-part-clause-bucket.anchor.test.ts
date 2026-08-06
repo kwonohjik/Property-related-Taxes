@@ -59,6 +59,10 @@ function splitHouse(
     acquisitionPrice: 1_000_000_000,
     landTransferPrice: 600_000_000 + landGain,
     buildingTransferPrice: 400_000_000 + buildingGain,
+    // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+    //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+    landStandardPriceAtTransfer: 600_000_000 + landGain,
+    buildingStandardPriceAtTransfer: 400_000_000 + buildingGain,
     landAcquisitionPrice: 600_000_000,
     buildingAcquisitionPrice: 400_000_000,
     landAcqMode: "actual",

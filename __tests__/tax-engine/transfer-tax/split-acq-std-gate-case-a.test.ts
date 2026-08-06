@@ -37,7 +37,12 @@ const caseA = (over: Record<string, unknown> = {}) =>
     saleSplitMode: "actual",
     landTransferPrice: 300_000_000,
     buildingTransferPrice: 200_000_000,
-    // ⚠️ 취득시 기준시가 3요소를 **일부러 넣지 않는다** — 규칙 ③
+    // **양도시** 기준시가 — Phase 1-D부터 구분 기재 시 필수다(§100③ 판정이 안분값을 요구한다).
+    // 구분 기재값과 같은 3:2로 둬 의제가 발동하지 않게 한다 ⇒ 이 describe의 관심사
+    // (**취득시** 기준시가 없이도 성립하는가)는 그대로 남는다.
+    landStandardPriceAtTransfer: 300_000_000,
+    buildingStandardPriceAtTransfer: 200_000_000,
+    // ⚠️ **취득시** 기준시가 3요소를 **일부러 넣지 않는다** — 규칙 ③
     ...over,
   });
 

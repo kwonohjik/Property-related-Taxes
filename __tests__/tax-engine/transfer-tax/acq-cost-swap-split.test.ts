@@ -20,6 +20,10 @@ describe("§97② 단서 swap — 토지/건물 분리 (자산 단위)", () => {
       // 양도가 분리 (토지 60% / 건물 40%)
       landTransferPrice: 300_000_000,
       buildingTransferPrice: 200_000_000,
+      // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+      //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+      landStandardPriceAtTransfer: 300_000_000,
+      buildingStandardPriceAtTransfer: 200_000_000,
       // 취득시 기준시가 — 토지 8천 / 건물 2천 = 1억 합
       standardPriceAtAcquisition: 100_000_000,
       standardPriceAtTransfer: 500_000_000,
@@ -37,6 +41,10 @@ describe("§97② 단서 swap — 토지/건물 분리 (자산 단위)", () => {
     const result = calcSplitGain(splitInput({
       landTransferPrice: 300_000_000,
       buildingTransferPrice: 200_000_000,
+      // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+      //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+      landStandardPriceAtTransfer: 300_000_000,
+      buildingStandardPriceAtTransfer: 200_000_000,
       standardPricePerSqmAtTransfer: 3_000_000,
       landDirectExpenses: 100_000_000, // 명시 입력 — swap 가능
       buildingDirectExpenses: 500_000,  // 명시 입력 — swap 비교 결과 본문
@@ -53,8 +61,17 @@ describe("§97② 단서 swap — 토지/건물 분리 (자산 단위)", () => {
 
     // C-2: swap 발동 토지는 필요경비 = 나목(directExp 100M) 단독 → 환산취득가 미차감.
     expect(result!.land.gain).toBe(300_000_000 - 100_000_000); // 200,000,000 (환산 80M 미차감)
-    // 본문 건물(swap 아님, C-2 영향 없음): 양도가 − 건물환산(40M) − 개산공제(600K)
-    expect(result!.building.gain).toBe(159_400_000);
+    // 본문 건물(swap 아님, C-2 영향 없음): 양도가 − 건물환산(20M) − 개산공제(600K)
+    //
+    // ⚠️ **2026-08-06 (Phase 1-D) — 159,400,000 → 179,400,000.**
+    //    종전 fixture는 양도시 기준시가를 **입력하지 않아** 엔진이 `standardPriceAtTransfer`(5억)를
+    //    **취득시 비율 0.8**로 나눠 토지 4억 / 건물 1억을 파생했다 ⇒ 건물 환산 분모 1억 → 환산 40M.
+    //    그런데 그 파생값은 구분 기재(3억 : 2억 = 6:4)와 **100% 어긋난다**(8:2) — §100③ 하에서는
+    //    성립하지 않는 조합이다. 구분 기재와 정합하게 3:2를 명시하니 건물 분모가 2억이 되어
+    //    환산이 20M으로 바뀌었다.
+    //    이 테스트의 주제(**swap이 자산 단위로 독립 발동**)는 그대로다 — 토지 swap 발동
+    //    (directExp 100M > 82.4M) · 건물 본문(500K < 20.6M) 조건이 양쪽 모두 보존된다.
+    expect(result!.building.gain).toBe(179_400_000);
   });
 
   it("자산별 미입력(undefined) → swap 비활성, 본문만 (개산공제만)", () => {

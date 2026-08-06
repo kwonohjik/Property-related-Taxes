@@ -69,13 +69,8 @@ export function NewConstructionLandAcqBlock(props: {
   const meta = CAUSE_META[cause];
 
   // 양도시 기준시가 배치 — 축 A와 **같은 1회 계산**을 공유한다(하위 재파생 금지 규약).
-  // 두 파트 모두 확인된 취득가액(actual)이라 환산 분모는 쓰이지 않는다.
-  const saleStdPlace = saleStdPlacement({
-    saleSplitMode: asset.saleSplitMode ?? "apportioned",
-    landMode: "actual",
-    buildingMode: "actual",
-    selfOwns: asset.selfOwns ?? "both",
-  });
+  // ⏳ Phase 1-D부터 배치는 불변(항상 축 A) — §100③ 판정이 양쪽 기준시가를 요구한다.
+  const saleStdPlace = saleStdPlacement();
 
   return (
     <div className="space-y-2" data-testid="newconstruction-land-acq">

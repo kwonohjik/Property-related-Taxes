@@ -42,6 +42,10 @@ function splitAsset(overrides: Partial<TransferTaxInput>): TransferTaxInput {
     buildingAcqMode: "actual",
     landTransferPrice: 700_000_000,
     buildingTransferPrice: 300_000_000,
+    // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+    //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+    landStandardPriceAtTransfer: 700_000_000,
+    buildingStandardPriceAtTransfer: 300_000_000,
     landAcquisitionPrice: 200_000_000,
     buildingAcquisitionPrice: 250_000_000,
     ...overrides,
@@ -118,6 +122,10 @@ describe("G-1 파트별 세율 — 본 기능 (§104⑤)", () => {
       acquisitionPrice: 550_000_000,
       landTransferPrice: 2_300_000_000,
       buildingTransferPrice: 300_000_000,
+      // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+      //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+      landStandardPriceAtTransfer: 2_300_000_000,
+      buildingStandardPriceAtTransfer: 300_000_000,
       landAcquisitionPrice: 300_000_000,
       buildingAcquisitionPrice: 250_000_000,
       acquisitionDate: D("2025-06-01"),
@@ -215,6 +223,10 @@ describe("G-3 주택 부수토지 max 기산일 + 비과세 제외", () => {
       transferPrice: 2_000_000_000,
       landTransferPrice: 1_400_000_000,
       buildingTransferPrice: 600_000_000,
+      // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+      //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+      landStandardPriceAtTransfer: 1_400_000_000,
+      buildingStandardPriceAtTransfer: 600_000_000,
       ...LATER_LAND,
     });
     // 토지 양도차익 1,200,000,000 전액 + 건물 350,000,000 × (20억−12억)/20억 = 140,000,000
@@ -271,6 +283,10 @@ describe("G-2 주택 부수토지 배율 초과분 → 비사업용 토지 분�
     acquisitionPrice: 300_000_000,
     landTransferPrice: 800_000_000,
     buildingTransferPrice: 200_000_000,
+    // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+    //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+    landStandardPriceAtTransfer: 800_000_000,
+    buildingStandardPriceAtTransfer: 200_000_000,
     landAcquisitionPrice: 200_000_000,
     buildingAcquisitionPrice: 100_000_000,
     acquisitionDate: D("2022-09-01"),
@@ -328,6 +344,10 @@ describe("G-2 주택 부수토지 배율 초과분 → 비사업용 토지 분�
       acquisitionPrice: 600_000_000,
       landTransferPrice: 1_600_000_000,
       buildingTransferPrice: 400_000_000,
+      // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+      //    Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+      landStandardPriceAtTransfer: 1_600_000_000,
+      buildingStandardPriceAtTransfer: 400_000_000,
       landAcquisitionPrice: 400_000_000,
       buildingAcquisitionPrice: 200_000_000,
       acquisitionDate: D("2015-05-01"),
@@ -530,6 +550,11 @@ describe("P1 (D-1) §104⑤2호 단서 — 동일 호 파트 과세표준 합산
       buildingFootprintArea: 60,
       appurtenantLandZone: "metropolitan_residential",
       ...o,
+      // §100③(30% 의제) 판정 근거 — 구분 기재값과 **동일 비율**로 둬 의제가 발동하지 않게 한다.
+      // Phase 1-D부터 구분 기재 시 양도시 기준시가가 필수다(계획서 §12.7 R-7). 세액 불변.
+      // `...o` **뒤에** 둔다 — 각 케이스가 파트 양도가액을 덮어쓰므로 그 값에서 파생해야 한다.
+      landStandardPriceAtTransfer: o.landTransferPrice,
+      buildingStandardPriceAtTransfer: o.buildingTransferPrice,
     });
 
   it("B-1: 30억(토지 24억/건물 6억)·토지 2,000㎡ — 누진공제 1회로 정정", () => {
