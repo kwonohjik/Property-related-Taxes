@@ -15,6 +15,8 @@
 import type { CarryoverTaxationInput } from "./transfer-carryover.types";
 import type { ExpropriationValuationDetail } from "../transfer-tax-expropriation-valuation";
 import type { PartAcqMode } from "../transfer-tax-split-gain";
+import type { SaleSplitExemption } from "../sale-split-deemed-unclear";
+import type { SaleSplitJudgmentDetail } from "./transfer-split-gain.types";
 
 // ============================================================
 // ============================================================
@@ -28,6 +30,42 @@ export type GeneralBuildingInput = {
   totalTransferPrice: number;
   /** 양도일 */
   transferDate: Date;
+  /**
+   * 계약서에 **구분 기재**된 토지 양도가액 (원) — Phase 2.
+   *
+   * 「소득세법」 제100조 제2항은 「각각 구분하여 기장」이 **원칙**이고 안분은 구분이 불분명할
+   * 때의 예외다. 있으면 기준시가 비율 안분 대신 이 값을 쓴다.
+   *
+   * ⚠️ 그대로 쓰는 것이 아니라 같은 조 **제3항** 판정을 거친다 — 안분계산한 가액과 **100분의
+   * 30 이상** 차이가 나면 「불분명한 때로 보아」 안분값으로 되돌린다.
+   *
+   * 한쪽만 주면 반대쪽은 `총액 − 입력값`으로 도출되고, **도출된 파트도 판정 대상**이다
+   * (계획서 §11.3 「한쪽만 검증하고 차액으로 결정」이 실무 자료가 지적한 실수유형).
+   */
+  landTransferPrice?: number;
+  /** 구분 기재된 건물 양도가액 (원) — 위와 동일한 규칙 */
+  buildingTransferPrice?: number;
+  /**
+   * 「소득세법 시행령」 제166조 제8항 예외 — 선택 시 §100③ 30% 의제가 **발동하지 않는다**.
+   * 자동 판정이 불가능해(계약 근거·사실관계) 사용자 입력으로 받는다.
+   */
+  saleSplitExemption?: SaleSplitExemption;
+  /**
+   * 양도시 **감정평가가액** (토지분) — 안분 basis 서열 **1순위**
+   * (「부가가치세법 시행령」 제64조 제1항 제1호 단서 · 「소득세법 시행령」 제166조 제6항이 차용).
+   *
+   * ⚠️ 토지·건물 **양쪽 모두 양수**여야 채택된다 — 「감정평가법인등이 **평가한** 가액」이므로
+   * 0은 평가 결과가 아니라 **그 파트를 평가하지 않았다**는 뜻이다. 기준시가는 0도 값일 수 있어
+   * 기준이 다른데, 그 비대칭은 의도된 것이다(계획서 §13.2).
+   */
+  landAppraisalAtTransfer?: number;
+  /** 양도시 감정평가가액 (건물분) — 위와 동일한 규칙 */
+  buildingAppraisalAtTransfer?: number;
+  /**
+   * 감정일자 — **시기 요건 판정에 필수**다. 유효 창 = **[(양도연도 − 1)-01-01, 양도연도-12-31]**
+   * (부가령 §64①1호 괄호 + 「소득세법」 제5조 제1항 역년). 벗어나면 **기준시가로 후퇴**한다.
+   */
+  appraisalDateAtTransfer?: Date;
 
   // 취득 정보
   /** 취득일 */
@@ -435,8 +473,15 @@ export type AssetCardForAggregate = {
 /** 일반건물(토지+건물 일괄) 환산취득가 계산 출력 */
 export type GeneralBuildingOutput = {
   // 중간 계산값 (테스트·UI 노출용)
-  /** 양도가 안분 결과 */
+  /** 양도가 안분 결과 — 구분 기재가 인정되면 그 값, §100③ 발동 시 안분값 */
   allocation: GeneralBuildingAllocation;
+  /**
+   * §100③ 판정 상세 — **구분 기재가 있을 때만** 채워진다(Phase 2).
+   *
+   * 비교 대상이 없는 일괄양도에서 `{deemedUnclear:false}`로 메우면 「판정했고 통과했다」로
+   * 침묵 오표시된다. split 경로(`SplitGainResult.saleSplitJudgment`)와 같은 계약이다.
+   */
+  saleSplitJudgment?: SaleSplitJudgmentDetail;
   /** 환산취득가 결과 */
   acquisition: GeneralBuildingAcquisition;
   /** 개산공제 결과 */

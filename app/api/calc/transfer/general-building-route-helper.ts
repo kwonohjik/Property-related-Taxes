@@ -133,6 +133,11 @@ export function dispatchGeneralBuilding(
     ...(buildingDonorAcqDate ? { buildingDonorAcquisitionDate: buildingDonorAcqDate } : {}),
     ...(coercedLandCt ? { landCarryoverTaxation: coercedLandCt } : {}),
     ...(coercedExtInfo ? { extensionInfo: coercedExtInfo } : {}),
+    // ⑭ 양도시 감정평가가액의 **감정일자** — JSON 경유 후 문자열로 도착한다. `Date`로 바꾸지
+    //    않으면 엔진의 유효 창 비교(`getTime()`)가 런타임에 깨진다(`lib/api/date-coerce.ts`).
+    ...(gbRaw.appraisalDateAtTransfer
+      ? { appraisalDateAtTransfer: toOptionalDate(gbRaw.appraisalDateAtTransfer) }
+      : {}),
     // ⑭ 사례 35: 주택→상가 용도변경 필드 — Date 변환 후 GeneralBuildingInput에 주입
     ...(gbRaw.houseToCommercialConversion
       ? {

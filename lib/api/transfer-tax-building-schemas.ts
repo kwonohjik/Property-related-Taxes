@@ -21,6 +21,28 @@ import { z } from "zod";
 export const generalBuildingValuationSchema = z.object({
   /** 토지 부수면적 (㎡). 양도시 기준시가와 함께 안분 분모 계산. */
   landArea: z.number().positive(),
+  /**
+   * 계약서에 **구분 기재**된 토지·건물 양도가액 (원) — Phase 2.
+   *
+   * 「소득세법」 제100조 제2항은 「각각 구분하여 기장」이 원칙이고 안분은 예외다. 다만 같은 조
+   * 제3항이 안분계산한 가액과 **100분의 30 이상** 차이나면 「불분명한 때로 본다」고 하므로,
+   * 엔진이 판정을 거쳐 발동 시 안분값으로 되돌린다.
+   *
+   * 한쪽만 와도 된다 — 반대쪽은 `총액 − 입력값`으로 도출되고 **그 파트도 판정 대상**이다.
+   */
+  landTransferPrice: z.number().int().positive().optional(),
+  buildingTransferPrice: z.number().int().positive().optional(),
+  /** 「소득세법 시행령」 제166조 제8항 예외 — 선택 시 30% 의제가 발동하지 않는다 */
+  saleSplitExemption: z.enum(["other_law", "demolished_land_only"]).optional(),
+  /**
+   * 양도시 **감정평가가액** — 안분 basis 서열 1순위(부가령 §64①1호 단서).
+   * `positive()`가 아니라 `nonnegative()`다: 0은 「그 파트를 평가하지 않았다」는 뜻이고,
+   * 그 상태를 엔진이 `incomplete`로 **배제 사유에 기록**해야 화면이 이유를 말할 수 있다.
+   */
+  landAppraisalAtTransfer: z.number().int().nonnegative().optional(),
+  buildingAppraisalAtTransfer: z.number().int().nonnegative().optional(),
+  /** 감정일자 — 유효 창 [(양도연도−1)-01-01, 양도연도-12-31] 판정에 필수 */
+  appraisalDateAtTransfer: z.string().optional(),
   /** 건물 연면적 (㎡). 환산취득가 모드만 필수. */
   buildingArea: z.number().positive().optional(),
   /**
