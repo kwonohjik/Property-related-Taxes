@@ -39,6 +39,7 @@ import {
 import { computeRevenueTest } from "./revenue-test";
 import { LOCAL_TAX_ZONE_AREA_MULTIPLIER } from "./urban-area";
 import { judgeFactoryLandExcess } from "./factory-land-standard-area";
+import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
 
 /**
  * 나대지 간주 (소득세법 §104의3①4호나목 + 지방세법 시행령 §101①2호나목·단서 — 재산세 별도합산 제외 → 비사업용):
@@ -318,12 +319,53 @@ export function judgeOtherLand(
     }
   }
 
+  // ── Step 0.6: 일반 건물 부속토지 §101①2호 배율 — **판정만** (적용은 Step 3-2 직전) ──
+  // 「지방세법 시행령」 §101①2호 본문은 별도합산 대상을 "건축물의 바닥면적…에 제2항에 따른
+  // 용도지역별 적용배율을 곱하여 산정한 면적 **범위의 토지**"로 한정한다. 그런데 종전에는
+  // 사용자가 고른 `propertyTaxType`("special_sum")을 **그대로 신뢰**해 배율을 검증하지 않았다
+  // — 배율 초과분도 별도합산으로 통과했다(납세자에게 유리한 방향).
+  //
+  // ⚠️ 공장(Step 0.5)과 **같은 이유로 여기서 확정하지 않는다.** §104의3①4호는 "가·나·다목을
+  // 제외한 토지"를 비사업용으로 규정하므로 나목(배율)을 넘어도 **다목**(§168의11① 호별
+  // 기준면적, ② 수입금액비율, ⑥ 복합용도 안분)에 해당하면 여전히 사업용이다.
+  //
+  // ⚠️ 공장이 입력된 경우는 Step 0.5가 이미 §101①1호/§102①1호로 판정했으므로 건너뛴다
+  //    (같은 토지에 두 배율을 겹쳐 적용하지 않는다).
+  let buildingExcess: ReturnType<typeof judgeAppurtenantLandExcess> | undefined;
+  if (
+    !o.factory &&
+    !bareLand &&
+    o.hasBuilding &&
+    effectiveTaxType === "special_sum" &&
+    o.buildingFloorArea !== undefined &&
+    o.buildingFloorArea > 0
+  ) {
+    const b = judgeAppurtenantLandExcess({
+      landArea: input.landArea,
+      buildingFootprintArea: o.buildingFloorArea,
+      zoneType: input.zoneType,
+      context: "기타토지(건물 부수토지)",
+    });
+    appliedLaws.push(NBL.BUILDING_SITE_MULTIPLIER);
+    steps.push({
+      id: "other_building_multiplier",
+      label: "Step 0.6 건물 부수토지 §101①2호 배율",
+      status: b.isWithinLimit ? "PASS" : "FAIL",
+      detail: b.isWithinLimit
+        ? `${b.multiplierDetail} → 허용 ${b.allowedLandArea}㎡ ≥ 부속토지 ${input.landArea}㎡ → 별도합산 유지`
+        : `${b.multiplierDetail} → 허용 ${b.allowedLandArea}㎡ 초과분 ${b.nonBusinessArea}㎡는 별도합산 제외`,
+      legalBasis: NBL.BUILDING_SITE_MULTIPLIER,
+    });
+    if (!b.isWithinLimit) buildingExcess = b;
+  }
+
   // ── Step 3-1: 재산세 종합합산이 아닌 토지 + 기간기준 ───────────────
   // 공장이 입력된 경우 나목 해당 여부는 **한도 판정 결과**가 정한다 — 초과면 나목에
   // 해당하지 않으므로 사용자가 고른 `propertyTaxType`으로 통과시키지 않는다.
+  // 일반 건물도 같다 — 배율을 초과하면 그 선언을 그대로 신뢰하지 않는다.
   const isNonComprehensive = o.factory
     ? factoryTaxTypeOverride !== undefined
-    : effectiveTaxType !== "comprehensive";
+    : effectiveTaxType !== "comprehensive" && buildingExcess === undefined;
 
   // ── §168의11② 수입금액비율 (2호다목·10·11다·12호 특정 업종) ──────────
   let revenueTestDetail: RevenueTestResult | undefined;
@@ -549,6 +591,37 @@ export function judgeOtherLand(
   // ── Step 0.5 적용: 공장 기준면적 초과분 비사업용 ─────────────────────
   // 수입금액비율(②)·거주사업관련(① 호별) 우선 경로를 모두 통과하지 못한 경우에만 확정한다
   // (§104의3①4호 가·나·다목은 택일이므로 나목 미달만으로 비사업용을 단정하면 안 된다).
+  // ── Step 3-1-2: 일반 건물 §101①2호 배율 초과분 적용 ──────────────
+  // 여기까지 왔다는 것은 다목(수입금액비율·호별 기준면적·복합용도)이 모두 미해당이라는 뜻이다.
+  // 이제 비로소 배율 초과분을 비사업용으로 확정한다(Step 0.6에서 미룬 판단).
+  if (buildingExcess) {
+    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+    const areaProportioning = computeAreaProportioning(input.landArea, buildingExcess.allowedLandArea);
+    steps.push({
+      id: "other_building_multiplier_apply",
+      label: "Step 3-1-2 건물 부수토지 배율 초과분",
+      status: "FAIL",
+      detail:
+        `허용 ${buildingExcess.allowedLandArea}㎡ 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용 ` +
+        `(§101①2호 배율 ${buildingExcess.multiplier}배)`,
+      legalBasis: NBL.BUILDING_SITE_MULTIPLIER,
+    });
+    return {
+      isBusiness: false,
+      reason: `건물 부수토지 배율(${buildingExcess.multiplier}배) 초과 — 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용`,
+      steps,
+      appliedLaws,
+      areaProportioning,
+      totalOwnershipDays,
+      effectiveBusinessDays: r.effectiveBusinessDays,
+      gracePeriodDays: r.gracePeriodDays,
+      businessUseRatio: areaProportioning.nonBusinessRatio,
+      criteria: r.criteria,
+      revenueTestDetail,
+      warnings,
+    };
+  }
+
   if (factoryExcess) {
     // 반환값 조립용(effectiveBusinessDays·criteria). **판정 분기로 쓰지 않는다** —
     // `fullPeriod`(전 보유기간)를 사업용 기간으로 넘기므로 모든 창의 비사업용 일수가 0이 되어
