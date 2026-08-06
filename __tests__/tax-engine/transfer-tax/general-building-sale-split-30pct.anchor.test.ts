@@ -147,17 +147,25 @@ describe("G-7 — 감정평가가액이 기준시가를 이긴다 (부가령 §6
     expect(out.allocation.building).toBe(525_000_000);
   });
 
-  it("감정일자가 없으면 기준시가로 안분한다 — 시기 요건을 판정할 수 없다", () => {
+  /**
+   * 🔴 **시기 요건은 엔진이 판정하지 않는다**(2026-08-06 · Q-9 확정 — 계획서 §21).
+   *
+   * 종전에는 감정일자가 없거나 유효 창을 벗어나면 기준시가로 후퇴시켰다. 그 판정은 부가령
+   * §64①1호 괄호의 「공급시기」를 **양도시기로 읽는 유추** 위에 서 있었다. 근거가 확정되지 않아
+   * 엔진이 대신 판단하지 않고, 사용자가 감정평가가액으로 안분하겠다고 한 선택을 따른다.
+   */
+  it("감정일자가 없어도 감정 비율로 안분한다", () => {
     const out = mk({
       landAppraisalAtTransfer: 400_000_000,
       buildingAppraisalAtTransfer: 525_000_000,
     });
-    expect(out.allocation.land).toBe(APPORTIONED.land);
+    expect(out.allocation.land).toBe(400_000_000);
+    expect(out.allocation.building).toBe(525_000_000);
   });
 
-  it("창을 벗어난 감정은 기준시가로 후퇴한다", () => {
+  it("아주 오래된 감정(양도 2년 전)도 그대로 채택한다", () => {
     const out = mk({ ...APPRAISAL, appraisalDateAtTransfer: new Date("2021-12-31") });
-    expect(out.allocation.land).toBe(APPORTIONED.land);
+    expect(out.allocation.land).toBe(400_000_000);
   });
 
   it("구분 기재와 함께 쓰면 **감정 기준**으로 30% 판정한다", () => {

@@ -36,11 +36,9 @@ interface Props {
   /** 구분 기재를 쓸 수 없는 사유 — 있으면 입력 대신 안내만 표시한다 */
   blockedReason?: string;
   sectionNum?: string;
-  /** 자산 양도일 — 감정 유효 창 안내에 쓴다 */
-  transferDate?: string;
 }
 
-export function GeneralBuildingSaleSplitSection({ asset, onChange, blockedReason, sectionNum, transferDate }: Props) {
+export function GeneralBuildingSaleSplitSection({ asset, onChange, blockedReason, sectionNum }: Props) {
   const mode = asset.saleSplitMode ?? "apportioned";
 
   if (blockedReason) {
@@ -104,7 +102,7 @@ export function GeneralBuildingSaleSplitSection({ asset, onChange, blockedReason
         기준시가보다 **우선**)이고, 구분양도에서는 §100③ 30% 판정의 비교 대상이다.
         구분양도 블록 안에 넣으면 일괄양도에서 입력 경로가 사라진다.
       */}
-      <SaleAppraisalBasisCard asset={asset} onChange={onChange} {...(transferDate ? { transferDate } : {})} />
+      <SaleAppraisalBasisCard asset={asset} onChange={onChange} />
     </ToneCard>
   );
 }

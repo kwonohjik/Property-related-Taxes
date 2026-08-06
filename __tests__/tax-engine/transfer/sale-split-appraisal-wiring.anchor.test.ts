@@ -112,20 +112,24 @@ describe("E-1-1 — 감정평가가액이 기준시가를 이긴다 (§64①1호
   });
 });
 
-describe("E-1-2 — 감정일자가 없으면 감정가액을 쓰지 않는다", () => {
+describe("E-1-2 — 🔴 감정일자가 없어도 감정가액을 쓴다 (Q-9에서 계약이 뒤집혔다)", () => {
   /**
-   * 시기 요건을 판정할 수 없으면 basis로 채택할 근거가 없다. `resolveBasis`가 **아예 넘기지 않으므로**
-   * 배제 사유도 남지 않는다 — 「입력이 있었는데 배제된」 상태가 아니라 「입력이 성립하지 않은」 상태다.
-   * (정상 경로에서는 validate가 「감정가액 입력 시 감정일자 필수」로 먼저 막는다.)
+   * ## 계약 이력 — 의도적으로 뒤집혔다
+   *
+   * 종전에는 「감정일자가 없으면 시기 요건을 판정할 수 없으니 basis로 채택하지 않는다」였다.
+   * 2026-08-06 Q-9 확정으로 **엔진이 시기 요건을 판정하지 않게** 되면서, 일자는 계산에 쓰이지
+   * 않는 값이 됐다(폼에는 기록·신고서 목적의 **선택 입력**으로 남아 있다).
+   *
+   * ⇒ 사용자가 감정평가가액을 넣었으면 **그것이 곧 안분 기준**이다. 요건 충족 여부는 사용자 책임.
    */
-  it("가액 2필드만 있으면 기준시가로 안분한다", () => {
+  it("가액 2필드만 있으면 그대로 감정 비율로 안분한다", () => {
     const j = judgeOf({
       ...DECLARED,
       landAppraisalAtTransfer: BY_APPRAISAL.land,
       buildingAppraisalAtTransfer: BY_APPRAISAL.building,
     });
-    expect(j!.basisKind).toBe("std_price");
-    expect(j!.deemedUnclear).toBe(true);
+    expect(j!.basisKind).toBe("appraisal");
+    expect(j!.deemedUnclear).toBe(false);
     expect(j!.appraisalRejected).toBeUndefined();
   });
 });
@@ -141,25 +145,25 @@ describe("E-1-3 — 배제 사유가 결과에 실린다 (침묵 후퇴 금지)"
     expect(j!.appraisalRejected).toBe("incomplete");
   });
 
-  it("창을 벗어난 감정은 `out_of_window`로 남고 기준시가로 후퇴한다", () => {
+  /**
+   * 🔴 **시기 배제(`out_of_window`)는 Q-9 확정으로 폐지됐다.**
+   *
+   * 종전에는 유효 창 [(양도연도−1)-01-01, 양도연도-12-31]을 벗어난 감정을 배제하고 기준시가로
+   * 후퇴시켰다. 그 창은 부가령 §64①1호 괄호의 「공급시기」를 **양도시기로 읽는 유추** 위에 서
+   * 있었고, 근거가 확정되지 않아 엔진이 판정하지 않기로 했다(계획서 §21).
+   *
+   * ⇒ 언제 평가했든 채택한다. 경계 개념 자체가 사라져 「창 시작일 당일」 테스트도 소멸했다
+   *   (검증을 줄인 것이 아니라 **검증 대상이 없어진 것** — §14.3과 같은 성격).
+   */
+  it("아주 오래된 감정(양도 4년 전)도 그대로 채택한다", () => {
     const j = judgeOf({
       ...DECLARED,
       ...APPRAISAL_FIELDS,
-      appraisalDateAtTransfer: new Date("2022-12-31"), // 창 시작(2023-01-01) 하루 전
-    });
-    expect(j!.basisKind).toBe("std_price");
-    expect(j!.appraisalRejected).toBe("out_of_window");
-    expect(j!.deemedUnclear).toBe(true);
-  });
-
-  it("창 시작일 당일은 **유효**하다 — 경계는 닫혀 있다", () => {
-    const j = judgeOf({
-      ...DECLARED,
-      ...APPRAISAL_FIELDS,
-      appraisalDateAtTransfer: new Date("2023-01-01"),
+      appraisalDateAtTransfer: new Date("2020-01-01"),
     });
     expect(j!.basisKind).toBe("appraisal");
     expect(j!.appraisalRejected).toBeUndefined();
+    expect(j!.deemedUnclear).toBe(false);
   });
 
   it("채택된 경우에는 배제 사유가 없다", () => {

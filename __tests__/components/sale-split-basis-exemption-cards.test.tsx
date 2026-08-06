@@ -92,10 +92,21 @@ describe("⑤-1 — 감정평가가액 카드는 모드와 무관하게 보인�
     expect(lastPatch.appraisalDateAtTransfer).toBe("");
   });
 
-  it("감정 유효 창을 엔진과 같은 규칙으로 안내한다 (양도 2024 → 2023-01-01 ~ 2024-12-31)", () => {
+  /**
+   * 🔴 **유효 창 안내는 폐지됐다**(Q-9 — 계획서 §21). 엔진이 시기 요건을 판정하지 않으므로
+   *    화면이 기간을 계산해 보여줄 근거도 없다. 대신 **요건이 존재한다는 사실과 미검증임**을
+   *    알려 사용자가 스스로 확인하게 한다.
+   */
+  it("시기 요건을 검증하지 않는다는 사실을 알린다 — 침묵하지 않는다", () => {
     render(<Harness />);
     clickToggle(APPRAISAL_TOGGLE);
-    expect(screen.getByText(/2023-01-01 ~ 2024-12-31/)).toBeTruthy();
+    expect(screen.getByText(/검증하지 않으므로/)).toBeTruthy();
+  });
+
+  it("감정일자는 선택 입력임을 라벨에 밝힌다", () => {
+    render(<Harness />);
+    clickToggle(APPRAISAL_TOGGLE);
+    expect(screen.getByText(/안분 계산에는 쓰지 않습니다/)).toBeTruthy();
   });
 });
 

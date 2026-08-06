@@ -174,9 +174,10 @@ describe("E-2-4 · E-2-5 — Zod가 버리지 않고, Route가 Date로 바꾼다
 describe("E-2-6 — validate (⑧)", () => {
   const v = (a: AssetForm) => validateSplitDirectInputs(a, "자산 1");
 
-  it("감정가액만 넣고 감정일자를 비우면 차단한다", () => {
-    const msg = v(asset({ landAppraisalAtTransfer: "1,200,000,000", buildingAppraisalAtTransfer: "300,000,000" }));
-    expect(msg).toContain("감정일자");
+  it("🔴 감정일자를 비워도 통과한다 — 시기 요건을 검증하지 않는다 (Q-9)", () => {
+    expect(
+      v(asset({ landAppraisalAtTransfer: "1,200,000,000", buildingAppraisalAtTransfer: "300,000,000" })),
+    ).toBeNull();
   });
 
   it("감정일자는 있는데 한쪽 가액만 넣으면 차단한다", () => {

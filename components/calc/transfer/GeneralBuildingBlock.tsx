@@ -423,7 +423,6 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             asset={asset}
             onChange={onChange}
             sectionNum="③"
-            {...(transferDate ? { transferDate } : {})}
             blockedReason={
               asset.gbHasExtension
                 ? "증축이 있는 건물은 건물 구분가액을 본체와 증축분에 배분할 법령상 근거가 확정되지 않아 구분 기재를 지원하지 않습니다."

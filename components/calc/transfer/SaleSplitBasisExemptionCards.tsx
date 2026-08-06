@@ -28,26 +28,14 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
-import { appraisalWindowOf } from "@/lib/tax-engine/sale-split-apportion-basis";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
-  /** 자산 양도일 (YYYY-MM-DD) — 감정 유효 창 안내에 쓴다 */
-  transferDate?: string;
 }
 
-const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-
-/** 감정 유효 창 안내 문구 — 판정은 엔진이 하고 화면은 **같은 함수**의 출력을 표시만 한다. */
-function windowHint(transferDate: string | undefined): string {
-  if (!transferDate) return "양도일을 입력하면 유효 기간이 표시됩니다";
-  const w = appraisalWindowOf(new Date(transferDate));
-  return `${fmt(w.from)} ~ ${fmt(w.to)} 사이의 감정이어야 합니다`;
-}
-
-export function SaleAppraisalBasisCard({ asset, onChange, transferDate }: Props) {
+export function SaleAppraisalBasisCard({ asset, onChange }: Props) {
   const [open, setOpen] = useState(
     () => !!(asset.landAppraisalAtTransfer || asset.buildingAppraisalAtTransfer || asset.appraisalDateAtTransfer),
   );
@@ -89,7 +77,7 @@ export function SaleAppraisalBasisCard({ asset, onChange, transferDate }: Props)
             />
           </FieldCard>
         </div>
-        <FieldCard label="감정일자" hint={windowHint(transferDate)}>
+        <FieldCard label="감정일자" hint="선택 입력 — 기록·신고서 참고용이며 안분 계산에는 쓰지 않습니다">
           <DateInput
             value={asset.appraisalDateAtTransfer}
             onChange={(v) => onChange({ appraisalDateAtTransfer: v })}
@@ -97,8 +85,17 @@ export function SaleAppraisalBasisCard({ asset, onChange, transferDate }: Props)
           />
         </FieldCard>
         <p className="text-caption leading-snug text-muted-foreground">
-          토지·건물 <strong>양쪽 모두</strong> 입력해야 안분 기준이 됩니다. 한쪽만 입력하면 그 파트를
-          평가하지 않은 것으로 보아 기준시가 비율로 안분합니다.
+          토지·건물 <strong>양쪽 모두</strong> 입력해야 안분 기준이 됩니다.
+        </p>
+        {/*
+          🔴 시기 요건은 **프로그램이 판정하지 않는다**(Q-9 확정 — 계획서 §21). 부가령 §64①1호
+             괄호의 기간 제한을 양도소득세에 적용하는 근거가 확정되지 않아, 엔진이 대신 판단하는
+             대신 사실을 알리고 사용자 판단에 맡긴다.
+        */}
+        <p className="text-caption leading-snug text-amber-800">
+          「부가가치세법 시행령」 제64조 제1항 제1호 괄호는 감정평가 시기에 제한을 두고 있습니다
+          (공급시기가 속하는 과세기간의 <strong>직전 과세기간 개시일 ~ 종료일</strong>).
+          이 프로그램은 그 요건을 <strong>검증하지 않으므로</strong> 충족 여부는 직접 확인하세요.
         </p>
       </div>
     </ToggleCard>

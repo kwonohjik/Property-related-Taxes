@@ -113,25 +113,21 @@ function allocateBundledTransferPrice(input: GeneralBuildingInput): {
    */
   const basis = resolveSaleApportionBasis({
     totalTransferPrice: input.totalTransferPrice,
-    transferDate: input.transferDate,
     stdPrice: { land: landStdTotal, building: input.transferBuildingStdPrice },
     /**
      * 감정평가가액 — 서열 **1순위**(부가령 §64①1호 단서). split 경로
-     * (`transfer-tax-split-sale-price.ts` `resolveBasis`)와 **같은 규칙**으로 넘긴다:
+     * (`transfer-tax-split-sale-price.ts` `resolveBasis`)와 **같은 규칙**으로 넘긴다.
      *
-     * ⚠️ 감정일자가 없으면 넘기지 않는다(시기 요건을 판정할 수 없다). 반대로 **일자가 있고
-     *    가액이 한쪽만 있으면 넘긴다** — 그래야 `usableAppraisal`이 `incomplete`로 배제 사유를
-     *    남겨 화면이 「왜 감정가액이 안 쓰였는지」를 말할 수 있다. 좁히면 침묵 무시가 된다.
+     * 🔴 감정일자는 넘기지 않는다 — 시기 요건은 엔진이 판정하지 않고 사용자 책임이다(Q-9 확정).
+     * ⚠️ 가액이 한쪽만 있어도 넘긴다 — `incomplete` 배제 사유를 남겨야 침묵 무시가 안 된다.
      */
-    ...(input.appraisalDateAtTransfer != null &&
-    (input.landAppraisalAtTransfer != null || input.buildingAppraisalAtTransfer != null)
+    ...(input.landAppraisalAtTransfer != null || input.buildingAppraisalAtTransfer != null
       ? {
           appraisal: {
             value: {
               land: input.landAppraisalAtTransfer ?? 0,
               building: input.buildingAppraisalAtTransfer ?? 0,
             },
-            appraisedAt: input.appraisalDateAtTransfer,
           },
         }
       : {}),

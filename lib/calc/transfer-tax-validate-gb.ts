@@ -378,11 +378,11 @@ export function validateGeneralBuildingAsset(
   //    (split V8과 같은 규칙 — `transfer-tax-validate-split.ts`)
   const landApp = parseAmount(asset.landAppraisalAtTransfer) || 0;
   const buildingApp = parseAmount(asset.buildingAppraisalAtTransfer) || 0;
-  const appraisedAt = asset.appraisalDateAtTransfer?.trim();
   const anyAppraisal = landApp > 0 || buildingApp > 0;
-  if (anyAppraisal && !appraisedAt) {
-    return `${label}: 양도시 감정평가가액을 입력했으면 감정일자도 입력하세요 — 감정일자가 있어야 시기 요건(양도 전년도 1월 1일 ~ 양도연도 12월 31일)을 판정할 수 있습니다 (부가가치세법 시행령 §64①1호 단서).`;
-  }
+  /**
+   * 🔴 **감정일자는 요구하지 않는다**(2026-08-06 · Q-9 확정 — 계획서 §21). 시기 요건 판정을
+   * 폐지했으므로 일자는 선택 입력이다. 「양쪽 모두」는 비율 산출의 **산술적 필요조건**이라 유지한다.
+   */
   if (anyAppraisal && (landApp <= 0 || buildingApp <= 0)) {
     return `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
   }
