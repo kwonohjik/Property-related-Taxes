@@ -14,6 +14,14 @@ export interface PastureUsage {
   livestockType?: string;
   livestockCount?: number;
   standardArea?: number;
+  /**
+   * 부대시설·초지·사료포 **보유 여부** — 별표1의3의 4개 열은 항목별 인정 한도라
+   * 없는 시설의 몫을 얹으면 기준면적이 근거 없이 커진다(축사는 항상 포함).
+   * `standardArea` 직접입력 시에는 쓰이지 않는다(자동 산출 fallback 전용).
+   */
+  hasFacility?: boolean;
+  hasGrassland?: boolean;
+  hasFodder?: boolean;
   /** 축산업 영위 기간 (여러 구간 가능) — v2 신규 */
   livestockPeriods?: BusinessUsePeriod[];
   /** §168-10 ②1호 상속 3년 이내 목장용지 (상속개시일) — v2 신규 */

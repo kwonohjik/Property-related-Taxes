@@ -157,6 +157,16 @@ describe("목장용지 — 가축별 기준면적 입력", () => {
     expect(screen.getByRole("switch", { name: /도시지역 소재/ })).toBeTruthy();
   });
 
+  it("PTP-6b: 보유 시설 토글 3개가 있다 — 없는 시설의 몫을 얹지 않기 위해", () => {
+    view({ stSeparatedType: "livestock" });
+    expect(screen.getByRole("switch", { name: /부대시설/ })).toBeTruthy();
+    expect(screen.getByRole("switch", { name: /초지/ })).toBeTruthy();
+    expect(screen.getByRole("switch", { name: /사료포/ })).toBeTruthy();
+    // 축사 토글은 없다 — 축산업의 전제라 항상 포함이다
+    expect(screen.queryByRole("switch", { name: /^축사$/ })).toBeNull();
+    expect(screen.getByText(/축사는 축산업의 전제이므로 항상 포함/)).toBeTruthy();
+  });
+
   it("PTP-6: 마릿수 기준이 양도세와 다름을 명시한다", () => {
     view({ stSeparatedType: "livestock" });
     expect(screen.getByText(/직전 연도/)).toBeTruthy();

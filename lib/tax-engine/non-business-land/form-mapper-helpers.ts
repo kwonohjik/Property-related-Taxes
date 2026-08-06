@@ -179,6 +179,9 @@ export function buildPasture(
   return {
     isLivestockOperator: asBool(a.nblPastureIsLivestockOperator),
     livestockType:       asString(a.nblPastureLivestockType) || undefined,
+    hasFacility:         asBool(a.nblPastureHasFacility),
+    hasGrassland:        asBool(a.nblPastureHasGrassland),
+    hasFodder:           asBool(a.nblPastureHasFodder),
     livestockCount:      parseNumber(asString(a.nblPastureLivestockCount)),
     livestockPeriods:    mapBusinessUsePeriods(asArray<NblBusinessUsePeriod>(a.nblPastureLivestockPeriods), parseDate),
     inheritanceDate:     parseDate(asString(a.nblPastureInheritanceDate)),

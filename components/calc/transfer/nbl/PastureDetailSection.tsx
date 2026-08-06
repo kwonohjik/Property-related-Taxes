@@ -78,6 +78,36 @@ export function PastureDetailSection({
         />
       </FieldCard>
 
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+        <p className="text-xs font-semibold text-sky-700">보유 시설 (해당하는 것을 모두 선택)</p>
+        <p className="text-caption text-sky-800">
+          별표1의3의 4개 열은 <b>항목별 인정 한도</b>입니다 — 없는 시설의 몫은 기준면적에 더하지
+          않습니다. 축사는 축산업의 전제이므로 항상 포함됩니다. 위 「기준면적」을 직접 입력하면
+          이 선택은 쓰이지 않습니다.
+        </p>
+        <ToggleCard
+          variant="chip"
+          tone="sky"
+          title="부대시설"
+          checked={asset.nblPastureHasFacility}
+          onCheckedChange={(v) => onAssetChange({ nblPastureHasFacility: v })}
+        />
+        <ToggleCard
+          variant="chip"
+          tone="emerald"
+          title="초지 (방목)"
+          checked={asset.nblPastureHasGrassland}
+          onCheckedChange={(v) => onAssetChange({ nblPastureHasGrassland: v })}
+        />
+        <ToggleCard
+          variant="chip"
+          tone="amber"
+          title="사료포 (사료 재배)"
+          checked={asset.nblPastureHasFodder}
+          onCheckedChange={(v) => onAssetChange({ nblPastureHasFodder: v })}
+        />
+      </div>
+
       <FieldCard label="상속일">
         <DateInput
           value={asset.nblPastureInheritanceDate}

@@ -72,6 +72,10 @@ export interface NblJudgmentFormSlice {
   // ── NBL 목장 세부 ──
   nblPastureIsLivestockOperator: boolean;
   nblPastureLivestockType: string;
+  /** 부대시설·초지·사료포 보유 — 별표1의3 항목별 인정 한도 (축사는 항상 포함) */
+  nblPastureHasFacility: boolean;
+  nblPastureHasGrassland: boolean;
+  nblPastureHasFodder: boolean;
   nblPastureLivestockCount: string;
   nblPastureLivestockPeriods: NblBusinessUsePeriod[];
   nblPastureInheritanceDate: string;

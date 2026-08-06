@@ -16,7 +16,7 @@
 
 import { applyRate, truncateToThousand } from "./tax-utils";
 import { computeFactoryStandardArea } from "./factory-standard-area";
-import { computeLivestockStandardArea } from "./livestock-standard-area";
+import { computeLivestockStandardArea, includedFacilityLabels } from "./livestock-standard-area";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { PROPERTY } from "./legal-codes";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
@@ -68,6 +68,12 @@ export interface SeparateTaxationInput {
    * ⚠️ 양도세(별표1의3 2호)의 「과세기간 평균」과 **다른 기준**이다 — 재사용 금지.
    */
   pastureLivestockCount?: number;
+  /** 부대시설 보유 — 없으면 그 몫을 기준면적에 얹지 않는다 */
+  pastureHasFacility?: boolean;
+  /** 초지 보유(방목) */
+  pastureHasGrassland?: boolean;
+  /** 사료포·사료밭 보유(사료 재배) */
+  pastureHasFodder?: boolean;
   /**
    * §102⑨1호 — **도시지역** 목장용지는 1989.12.31 이전부터 소유한 것으로 한정
    * (1990.1.1 이후 상속·법인합병 취득 포함). 도시지역이면 이 값이 필요하다.
@@ -272,7 +278,13 @@ function judgePastureAreaLimit(input: SeparateTaxationInput) {
     );
   }
 
-  const standardArea = computeLivestockStandardArea(type, count);
+  // 보유하지 않은 시설의 몫은 얹지 않는다 — 표의 4개 열은 **항목별 인정 한도**다.
+  const facilities = {
+    hasFacility: input.pastureHasFacility ?? false,
+    hasGrassland: input.pastureHasGrassland ?? false,
+    hasFodder: input.pastureHasFodder ?? false,
+  };
+  const standardArea = computeLivestockStandardArea(type, count, facilities);
   if (standardArea <= 0) {
     throw new TaxCalculationError(
       TaxErrorCode.INVALID_INPUT,
@@ -281,7 +293,11 @@ function judgePastureAreaLimit(input: SeparateTaxationInput) {
     );
   }
 
-  return { totalArea, ...apportionByArea(totalArea, standardArea, input.assessedValue) };
+  return {
+    totalArea,
+    includedLabels: includedFacilityLabels(facilities),
+    ...apportionByArea(totalArea, standardArea, input.assessedValue),
+  };
 }
 
 /**
@@ -333,7 +349,8 @@ function classifyLowRate(
     if (areaCheck.excessArea > 0) {
       warnings.push(
         `목장용지 ${areaCheck.totalArea}㎡ 중 ${areaCheck.recognizedArea.toFixed(2)}㎡는 ` +
-        `분리과세(가축별 기준면적 ${areaCheck.standardArea.toFixed(2)}㎡ 이내), ` +
+        `분리과세(가축별 기준면적 ${areaCheck.standardArea.toFixed(2)}㎡ 이내 — ` +
+        `${areaCheck.includedLabels.join("·")} 반영), ` +
         `${areaCheck.excessArea.toFixed(2)}㎡(시가표준액 ` +
         `${areaCheck.excessAssessedValue.toLocaleString()}원)는 기준면적 초과로 ` +
         "종합합산과세대상으로 이관됩니다. 인별 합산 계산 시 별도 처리가 필요합니다.",

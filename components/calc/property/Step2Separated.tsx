@@ -134,6 +134,35 @@ export function Step2Separated({ form, onChange }: Props) {
                 </Select>
               </FieldCard>
 
+
+              <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+                <p className="text-xs font-semibold text-sky-700">보유 시설 (해당하는 것을 모두 선택)</p>
+                <p className="text-caption text-sky-800">
+                  표의 4개 열은 <b>항목별 인정 한도</b>입니다. 없는 시설의 몫은 기준면적에 더하지
+                  않습니다. 축사는 축산업의 전제이므로 항상 포함됩니다.
+                </p>
+                <ToggleCard
+                  variant="chip"
+                  tone="sky"
+                  title="부대시설"
+                  checked={form.stPastureHasFacility}
+                  onCheckedChange={(c) => onChange({ stPastureHasFacility: c })}
+                />
+                <ToggleCard
+                  variant="chip"
+                  tone="emerald"
+                  title="초지 (방목)"
+                  checked={form.stPastureHasGrassland}
+                  onCheckedChange={(c) => onChange({ stPastureHasGrassland: c })}
+                />
+                <ToggleCard
+                  variant="chip"
+                  tone="amber"
+                  title="사료포·사료밭 (사료 재배)"
+                  checked={form.stPastureHasFodder}
+                  onCheckedChange={(c) => onChange({ stPastureHasFodder: c })}
+                />
+              </div>
               <FieldCard
                 label="가축 마릿수"
                 unit="마리"

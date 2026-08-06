@@ -118,6 +118,9 @@ export const nonBusinessLandRawSchema = z.object({
   // 목장
   nblPastureIsLivestockOperator: z.boolean().optional(),
   nblPastureLivestockType: z.string().optional(),
+  nblPastureHasFacility: z.boolean().optional(),
+  nblPastureHasGrassland: z.boolean().optional(),
+  nblPastureHasFodder: z.boolean().optional(),
   nblPastureLivestockCount: z.string().optional(),
   nblPastureLivestockPeriods: z.array(nblPeriodRawSchema).optional(),
   nblPastureInheritanceDate: z.string().optional(),

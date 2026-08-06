@@ -29,6 +29,7 @@ import { isUrbanForPasture } from "./urban-area";
 import { getOwnershipStart } from "./utils/period-math";
 import { computeAreaProportioning } from "./utils/area-proportioning";
 import { getLivestockStandardArea } from "./data/livestock-standards";
+import { includedFacilityLabels } from "../livestock-standard-area";
 
 function getLivestockPeriods(input: NonBusinessLandInput): DateInterval[] {
   const p = input.pasture;
@@ -141,10 +142,19 @@ export function judgePasture(
   // 기준면적 결정: 직접 입력 > getLivestockStandardArea 자동 계산 > 미확정
   let resolvedStandardArea: number | undefined = p?.standardArea;
   if (resolvedStandardArea === undefined && p?.livestockType && p.livestockCount !== undefined) {
-    resolvedStandardArea = getLivestockStandardArea(p.livestockType, p.livestockCount);
+    // 별표1의3의 4개 열은 **항목별 인정 한도**다 — 보유하지 않은 시설의 몫은 얹지 않는다
+    // (축사는 축산업의 전제이므로 항상 포함). 무엇이 반영됐는지 warning에 드러낸다.
+    const facilities = {
+      hasFacility: p.hasFacility ?? false,
+      hasGrassland: p.hasGrassland ?? false,
+      hasFodder: p.hasFodder ?? false,
+    };
+    resolvedStandardArea = getLivestockStandardArea(p.livestockType, p.livestockCount, facilities);
     if (resolvedStandardArea > 0) {
       warnings.push(
-        `기준면적 미입력 — 축종(${p.livestockType}) × 사육두수(${p.livestockCount}두) = ${resolvedStandardArea}㎡ 자동 산출 (소득세법 시행령 별표 1의3 §168조의10③)`,
+        `기준면적 미입력 — 축종(${p.livestockType}) × 사육두수(${p.livestockCount}두) × ` +
+        `보유시설(${includedFacilityLabels(facilities).join("·")}) = ${resolvedStandardArea}㎡ ` +
+        "자동 산출 (소득세법 시행령 별표 1의3 §168조의10③)",
       );
     }
   }
