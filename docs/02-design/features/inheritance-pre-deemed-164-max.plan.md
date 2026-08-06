@@ -180,6 +180,22 @@ const shouldInjectPostDeemedHouseMax = !!houseValuationResult && !isPreDeemed &&
 
 **본 계획의 범위 밖**이다 — ② 추가와 직교하고, 건드리면 pre-deemed 전건이 흔들린다. 별건으로 기록만 한다.
 
+> ### 🟠 **2026-08-07 승계 — Phase 3 폐기 시 넘겨받은 3건**
+>
+> [`…phase3-sec164-candidate.plan.md`](inheritance-pre-deemed-phase3-sec164-candidate.plan.md)가
+> **§2 유리선택의 법적 근거 소멸**로 폐기되면서, 그 §8.5의 BLOCKER 중 **유리선택과 무관한 3건**을
+> 여기로 옮긴다. 폐기 문서에 묻히면 안 되는 살아 있는 논점이다.
+>
+> | # | 내용 | 실측(2026-08-07) |
+> |---|---|---|
+> | **B-1** | **②·③ 분자 시점 = 의제취득일(1985)이어야 한다** — §176조의2④1호("의제취득일 현재")·국심2003서3266("실지거래가액 = 의제취득일 현재 기준시가") | 위 V-2와 **같은 논점**. 부칙§8상 §164 「취득당시」도 1985.1.1.이라는 것이 Phase 3의 주장이었다 |
+> | **B-2** | ②(`houseValuationStdPrice`)와 ③의 환산 분자(`standardPriceAtDeemedDate`)에 **같은 값**(`housePriceAtInheritanceUsed`)이 주입돼 얽힌다 | `inheritance-acquisition-helpers.ts:161-168` 주석에 명시. **가목 우선에서는 안전**하다(가목이 확인되면 ③에 도달하지 않는다) — 다만 시점 논점(B-1)은 남는다 |
+> | **B-3** | pre-1990 토지에서 `useEstimatedAcquisition=true` **강제** 잔존 | `transfer-tax.ts:90` — **여전히 있다** |
+>
+> ⚠️ B-1은 **세액을 바꾼다**. 착수 전 「본문 미확인 근거가 판정을 가르면 착수 조건」 원칙에 따라
+> 부칙§8 원문과 §164 「취득당시」 해석을 먼저 확정할 것(memory
+> `feedback_unverified_authority_blocks_tax_change`).
+
 ---
 
 ## 7. 테스트

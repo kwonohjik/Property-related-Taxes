@@ -161,8 +161,10 @@ function resolveInheritedAcquisitionInput(
   // 주택 미공시: §164⑦ 취득당시 기준시가를 max 비교용(②)으로 주입 (소령 §163⑨2호).
   // ⚠️ **pre/post 구분이 없다** — §163⑨은 「의제취득일」이 아니라 「기준시가 고시 전 상속·증여」만
   //    조건으로 하므로 pre-deemed(1985 이전)도 당연히 해당한다. 2026-08-05 확장.
-  //    · post-deemed: max(①,②) — ③ 적용 불가
-  //    · pre-deemed : max(①,②,③) — ③은 아래 standardPriceAtDeemedDate(환산 분자)로 별도 계산
+  //    · post-deemed: max(①,②) — 나목이 §163⑨ 의제로 대체돼 ③이 **없다**
+  //    · pre-deemed : **가목 우선** — `clauseA = max(①,②)`이고 그것이 0일 때만 ③이다.
+  //      ⚠️ 종전 주석은 「max(①,②,③)」이었으나 **#1089(`af74d907`)에서 재편됐다**.
+  //      ③은 아래 standardPriceAtDeemedDate(환산 분자)로 별도 계산되며, 가목이 확인되면 도달하지 않는다.
   //    같은 `housePriceAtInheritanceUsed` 값이 ②(비교값)와 ③의 분자로 **둘 다** 쓰이므로
   //    필드를 분리해 주입한다(역할이 둘 — 계획서 D-2).
   const shouldInjectHouseMax = !!houseValuationResult && isHousePreDisclosure;
