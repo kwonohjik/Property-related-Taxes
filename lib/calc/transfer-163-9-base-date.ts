@@ -69,6 +69,45 @@ export function sec163_9BaseDateLabel(asset: Sec163_9Asset): string {
   return asset.acquisitionCause === "gift" ? "증여일" : "상속개시일";
 }
 
+/**
+ * B-1 — 부칙§8 **취득시기 의제**가 적용되는가.
+ *
+ * 「소득세법」 부칙(1994.12.22. 법률 제4803호) **§8 【양도자산의 취득시기에 관한 의제】**:
+ * "제94조 **제1호**에 규정하는 자산으로서 **1984년 12월 31일 이전에 취득한 것은 1985년 1월 1일에
+ * 취득한 것으로 보며**, 동조 제2호 내지 제5호에 …" (조심2010서1195 이유 2.나.(4) verbatim)
+ *
+ * ⇒ **취득원인을 묻지 않는다.** 조문이 「자산」을 기준으로 하므로 상속·증여·매매가 모두 대상이다.
+ *    그래서 `acquisitionDate` 하나로 판정한다 — `Sec163_9Asset`을 요구하지 않는 이유다.
+ *
+ * ⚠️ 토지·건물(§94①**1호**)은 **법이 직접** 정한다. 시행령 §162⑥⑦은 "§94①2호 및 4호"·"3호"만
+ *    열거해 1호가 빠진 것처럼 보이지만, **1호는 부칙 본문 전단이 직접 정해 위임할 것이 없다**.
+ *
+ * 계획서: docs/02-design/features/sec164-clause-a-deemed-date-timing-b1.plan.md §2
+ */
+export function isDeemedAcquisitionApplied(acquisitionDate: string | undefined): boolean {
+  return !!acquisitionDate && acquisitionDate < DEEMED_ACQUISITION_DATE;
+}
+
+/** 의제취득일 표기 — 라벨·안내문이 공유하는 단일 문구. */
+export const DEEMED_ACQUISITION_LABEL = "의제취득일(1985.1.1.)";
+
+/**
+ * §164④~⑦ 「취득당시」 입력이 **실제로 가리켜야 할 시점**의 라벨.
+ *
+ * 부칙§8이 걸리면 「취득당시」 = 1985.1.1.이므로, 사용자가 실제 취득일(예: 1974) 시점 값을
+ * 넣지 않도록 라벨이 그 사실을 말해야 한다. **엔진 산식에는 시점 파라미터가 없어**
+ * (계획서 §3.0 probe) 이 라벨이 시점의 **유일한 통제점**이다.
+ *
+ * @param acquisitionDate 자산의 취득일(상속개시일·증여일 포함)
+ * @param fallbackLabel   의제 미적용 시 쓸 명칭 — "상속개시일" / "증여일" / "취득시" 등
+ */
+export function sec164AcqTimePointLabel(
+  acquisitionDate: string | undefined,
+  fallbackLabel: string,
+): string {
+  return isDeemedAcquisitionApplied(acquisitionDate) ? DEEMED_ACQUISITION_LABEL : fallbackLabel;
+}
+
 /** 취득 행위 명칭 — 「상속」 / 「증여」. 안내문 본문용. */
 export function sec163_9CauseLabel(asset: Sec163_9Asset): string {
   return asset.acquisitionCause === "gift" ? "증여" : "상속";

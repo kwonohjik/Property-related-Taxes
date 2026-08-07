@@ -36,6 +36,8 @@ import {
   type MultiPointStdPriceApply,
 } from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
 import { deriveSec163_9BaseDate } from "@/lib/calc/transfer-163-9-base-date";
+import { sec164AcqTimePointLabel } from "@/lib/calc/transfer-163-9-base-date";
+import { isDeemedAcquisitionApplied } from "@/lib/calc/transfer-163-9-base-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ─── 공시지가 조회 + 토지기준시가 서브 컴포넌트 ──────────────────────────
@@ -182,6 +184,12 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   const inheritanceDate = deriveSec163_9BaseDate(asset);
   const isBefore1990 = !!inheritanceDate && inheritanceDate < PRE_1990_DATE;
 
+  // B-1 — 「소득세법」 부칙(법률 제4803호) §8이 1984.12.31. 이전 취득분의 취득시기를 1985.1.1.로
+  // **의제**하므로, §164⑦ 3시점 환산의 「취득시점」도 그날이다. 엔진 산식에는 시점 파라미터가
+  // 없어(계획서 §3.0) 이 라벨이 사용자가 넣을 값의 시점을 정하는 **유일한 통제점**이다.
+  const acqTimeLabel = sec164AcqTimePointLabel(inheritanceDate, "상속개시일");
+  const isDeemedAcq = isDeemedAcquisitionApplied(inheritanceDate);
+
   // 3시점 건물기준시가 일괄 계산기 배선(§164⑤).
   // F2: 계산기(구조·용도 방식 국세청 건물기준시가)는 단독주택 전용 — 공동주택은 미노출.
   // 픽커(InheritanceHouseKindPicker)와 **같은 파생**을 써야 한다 — raw 비교로 두면 픽커에
@@ -307,7 +315,13 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
 
       <p className="text-caption text-muted-foreground">
         상속개시일({inheritanceDate || "미입력"})이 개별주택가격 최초 공시일(2005-04-30) 이전이므로
-        토지·주택 분리 입력으로 상속개시일 합계 기준시가를 환산합니다.
+        토지·주택 분리 입력으로 {acqTimeLabel} 합계 기준시가를 환산합니다.
+        {isDeemedAcq && (
+          <span className="ml-1 font-medium text-rose-700 dark:text-rose-400">
+            1984.12.31. 이전 취득분은 「소득세법」 부칙(법률 제4803호) §8에 따라 1985.1.1.에 취득한
+            것으로 보므로, 아래 ③ 취득시점 입력은 <b>실제 상속개시일이 아니라 1985.1.1. 시점</b> 값입니다.
+          </span>
+        )}
         {isBefore1990 && (
           <span className="ml-1 font-medium text-amber-700 dark:text-amber-400">
             [토지: 1990.8.30. 이전 → 등급가액 환산 적용]
@@ -450,7 +464,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             3
           </span>
           <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">
-            상속개시일 시점 ({inheritanceDate || "미입력"})
+            {acqTimeLabel} 시점 {isDeemedAcq ? `(실제 상속개시일 ${inheritanceDate})` : `(${inheritanceDate || "미입력"})`}
           </p>
         </div>
 
@@ -476,9 +490,9 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         ) : (
           /* 1990-08-30 이후 → 개별공시지가 직접 입력 */
           <FieldCard
-            label="상속개시일 토지 개별공시지가"
+            label={`${acqTimeLabel} 토지 개별공시지가`}
             unit="원/㎡"
-            hint="상속개시일 직전 공시된 개별공시지가. Vworld 또는 홈택스에서 조회."
+            hint={`${acqTimeLabel} 직전 공시된 개별공시지가. Vworld 또는 홈택스에서 조회.`}
           >
             <CurrencyInput
               label=""
@@ -490,11 +504,11 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           </FieldCard>
         )}
 
-        {/* 상속개시일 건물기준시가 — §164⑤ Sum_A 분자의 건물 성분 */}
+        {/* 취득시점 건물기준시가 — §164⑤ Sum_A 분자의 건물 성분 */}
         <FieldCard
-          label="상속개시일 건물기준시가"
+          label={`${acqTimeLabel} 건물기준시가`}
           unit="원"
-          hint="국세청 건물기준시가 (상속개시일 당시). §164⑤ 환산 가격 공식에 사용."
+          hint={`국세청 건물기준시가 (${acqTimeLabel} 당시). §164⑤ 환산 가격 공식에 사용.`}
         >
           <CurrencyInput
             label=""
@@ -559,7 +573,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         <ToggleCard
           tone="amber"
           size="sm"
-          title="상속개시일 시점 주택가격 직접 입력"
+          title={`${acqTimeLabel} 시점 주택가격 직접 입력`}
           description="환산 가격 override"
           checked={asset.inhHouseValUseHousePriceOverride}
           onCheckedChange={(v) => {
@@ -570,7 +584,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           }}
         >
           <FieldCard
-            label="상속개시일 주택가격"
+            label={`${acqTimeLabel} 주택가격`}
             unit="원"
             hint="별도 산정 근거가 있을 때 직접 입력 (국세청 기준시가, 감정가액 등)"
           >
@@ -579,7 +593,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
               hideUnit
               value={asset.inhHouseValHousePriceAtInheritanceOverride}
               onChange={(v) => onChange({ inhHouseValHousePriceAtInheritanceOverride: v })}
-              placeholder="상속개시일 시점 주택가격"
+              placeholder={`${acqTimeLabel} 시점 주택가격`}
             />
           </FieldCard>
         </ToggleCard>

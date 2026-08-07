@@ -80,6 +80,14 @@ function houseAsset(inheritanceDate: string): AssetForm {
     acquisitionDate: inheritanceDate,
     inheritanceStartDate: inheritanceDate,
     inhHouseValLandArea: "200",
+    // ⚠️ 등급 섹션도 펴 둔다 — 접혀 있으면 그 안의 라벨을 보는 단언이 **빈 단언**이 된다
+    //    (T-4b가 실제로 그렇게 통과했다 — probe로 렌더 길이 1662자를 확인해 잡았다).
+    pre1990Enabled: true,
+    pre1990GradeMode: "value",
+    pre1990PricePerSqm_1990: "120,000",
+    pre1990Grade_current: "40,000",
+    pre1990Grade_prev: "36,000",
+    pre1990Grade_atAcq: "12,000",
   } as AssetForm;
 }
 
@@ -215,7 +223,15 @@ describe("B-1 T-4: post-deemed는 오염되지 않는다 (회귀 가드)", () =>
     const { container } = render(
       <PostDeemedInputs asset={houseAsset("1990-05-20")} onChange={NOOP} transferDate={TRANSFER_DATE} />,
     );
-    expect(container.textContent ?? "").not.toMatch(/의제취득일[^]{0,30}토지 개별공시지가/);
+    const text = container.textContent ?? "";
+
+    // 전제: 3-시점 보조 섹션이 렌더됐다(접혀 있으면 아래가 빈 단언이 된다)
+    expect(text).toMatch(/개별주택가격 미공시/);
+
+    // post-deemed는 「상속개시일」이 맞다 — positive로 고정해 오염을 잡는다.
+    expect(text).toMatch(/상속개시일 건물기준시가/);
+    expect(text).toMatch(/취득시 유효 등급/);
+    expect(text).not.toMatch(new RegExp(`${DEEMED_MARK}[^]{0,20}건물기준시가`));
   });
 });
 

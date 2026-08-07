@@ -250,6 +250,44 @@ pre-deemed(1985.1.1. 前 상속·증여) 자산의 취득시기는 **부칙§8�
 >
 > ⇒ 라벨 판정은 **`isSec163_9PreDeemed`와 같은 술어를 공유**한다. 새로 만들지 말고 `lib/calc/transfer-163-9-base-date.ts`의 것을 쓴다(memory `feedback_shared_predicate_argument_parity`).
 
+#### ✅ Phase 1 실행 결과 (2026-08-07)
+
+**단일 소스**: `lib/calc/transfer-163-9-base-date.ts`에 `isDeemedAcquisitionApplied` · `DEEMED_ACQUISITION_LABEL` · `sec164AcqTimePointLabel` 추가.
+
+> ⭐ **`Sec163_9Asset`이 아니라 `acquisitionDate` 하나로 판정한다.** 부칙§8은 조문이 「자산」 기준이라 **취득원인을 묻지 않으므로**(상속·증여·매매 공통) 취득일만으로 정확하다. 덕분에 `Pre1990LandValuationInput`(상속·증여·매매 공용)에 **prop을 늘리지 않고** 배선됐다.
+
+| 파일 | 변경 |
+|---|---|
+| `Pre1990LandValuationInput.tsx` | 등급 라벨 동적화 + 부칙§8 근거 캡션(의제 적용 시만) |
+| `HouseValuationSection.tsx` | `acqTimeLabel` 도출 → 취득시점 섹션 헤더·토지단가·건물기준시가·override 토글·placeholder 5곳 + 안내문 |
+| `CommercialInheritanceStdPriceSection.tsx` | **`dateLabel`(①용)과 `acqTimeLabel`(②용) 분리** — 한 변수가 두 시점을 겸하고 있었다 |
+| `PreDeemedInputs.tsx` | ① hint에 부칙§8 원칙 고지(T-6) |
+| `inheritance-acquisition-price.ts` | 주석 정정 — 종전 "시점은 상속개시일(의제취득일 아님)"이 구현과 모순되게 됐다 |
+
+**검증**: anchor 11/11 · `__tests__/components/` + `__tests__/calc/` **293파일 2,613건 통과** · tsc 0 · lint 0 error.
+
+##### 🔑 대조 실험 — 회귀 가드가 무의미하지 않음을 실증
+
+`sec164AcqTimePointLabel`이 **항상** 의제취득일을 반환하도록 임시 변경하니 **T-4·T-4b·T-5b 3건이 실패**했다. post-deemed 오염을 실제로 잡는다.
+
+> ⚠️ **1회차 대조에서는 T-4b가 통과했다** — `houseAsset` fixture에 `pre1990Enabled`가 없어 등급 섹션이 **접힌 채** 렌더돼(길이 1,662자) 검사 대상 라벨이 아예 없었다. §5의 「빈 단언」 함정이 **같은 파일 안에서 재발**한 것이다. probe로 렌더 내용을 찍어 잡고, fixture에 토글을 켠 뒤 positive 단언(「상속개시일 건물기준시가」·「취득시 유효 등급」이 **있다**)으로 바꿨다.
+>
+> ⇒ **`not.toMatch` 가드에는 반드시 「전제가 렌더됐다」는 positive 단언을 짝지을 것.**
+
+##### 검토 체크리스트 (hook `acquisition-cost-precheck`)
+
+에이전트 호출 없이 직접 수행했다(사용자 지시로 서브에이전트 미사용).
+
+| 항목 | 결과 |
+|---|---|
+| C-1 위임 체인 원문 | ✅ KoreanLaw MCP로 §164④~⑦·§162①⑥⑦·§176조의2④ 원문 조회. 부칙§8은 조심2010서1195 인용분 verbatim |
+| C-2 조건부 단서 | ✅ 부칙§8은 **1984.12.31. 이전 취득분 한정** — post-deemed 비적용을 T-4·T-5b가 고정 |
+| C-3 택일/비교 산식 | ✅ `max(①,②)` 구조 **불변** — 본 변경은 산식을 건드리지 않는다 |
+| C-4 시점 기준 | ✅ **본 작업의 본체** |
+| D-1 신규 필드 ⑫⑬⑭ | ✅ **해당 없음** — 신규 엔진 필드 0 |
+| D-2 3중 fallback | ✅ **해당 없음** — 라벨만 변경, 값 경로 불변 |
+| D-3 anchor GREEN | ✅ 11/11 + 대조 실험 |
+
 ### Phase 2 — 표시·주석 정합
 
 `types.ts:153`(맞음·유지) ↔ `price.ts:93`(**정정 대상**) ↔ UI 안내(맞음·유지). §3.1 표를 그대로 소비한다.
