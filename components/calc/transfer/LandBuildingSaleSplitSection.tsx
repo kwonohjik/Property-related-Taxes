@@ -21,33 +21,30 @@
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TransferStdPriceCard } from "./TransferStdPriceCards";
-import { SaleAppraisalBasisCard, SaleSplitExemptionCard } from "./SaleSplitBasisExemptionCards";
+import {
+  SALE_SPLIT_MODE_OPTIONS,
+  SaleAppraisalFields,
+  SaleSplitCompareBasisCard,
+  SaleSplitExemptionCard,
+} from "./SaleSplitBasisExemptionCards";
+import { saleSplitModePatch, type SaleSplitMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-
-const SALE_MODE_OPTIONS: RadioCardOption<"actual" | "apportioned">[] = [
-  { value: "actual", label: "구분양도 (직접입력)" },
-  { value: "apportioned", label: "일괄양도 (양도시 기준시가 안분)" },
-];
 
 interface Props {
   /** 부담부증여(§159 자동 산정) — 양도가액을 직접 입력하지 않는다(안내만 표시) */
   isBurdenedGift?: boolean;
 
+  saleSplitMode: SaleSplitMode;
   /**
-   * ⚠️ `"appraisal"`은 **일반건물 전용 값**이다(2026-08-07 3-way 통합 — `GeneralBuildingSaleSplitSection`).
+   * 모드 전환 **patch** — 값 하나가 아니라 덩어리를 받는다 (2026-08-08).
    *
-   * 이 경로(주택·건물 split)는 종전의 2-way 라디오 + 「감정평가가액으로 안분」 토글 구조를
-   * 그대로 유지한다. 자산 종류를 일반건물에서 바꾸면 `"appraisal"`이 남아 들어올 수 있으므로
-   * 타입만 넓히고, 라디오 표시는 아래 `displayMode`가 `"apportioned"`로 접는다 —
-   * 그 상태는 이 화면에서 「일괄양도 + 감정평가 토글 ON」과 **동치**라 기존 동작이 보존된다.
-   *
-   * 🟠 다만 그 구조에는 일반건물에서 해소한 **라벨-동작 모순**(「기준시가 안분」이라고 쓰고
-   *    감정평가액으로 안분)이 그대로 남아 있다 — 후속 정리 대상.
+   * 전환 시 쓰지 않는 쪽 값을 함께 비워야 하는데(`saleSplitModePatch`), 모드와 정리를 나눠
+   * 호출하면 뒤가 앞을 stale spread로 덮는다(`feedback_multikey_patch_stale_spread_overwrite`).
+   * 호출부 3곳 모두 `onAssetChange`와 **같은 함수**를 넘기고 있어 시그니처만 넓히면 된다.
    */
-  saleSplitMode: "actual" | "apportioned" | "appraisal";
-  onSaleSplitModeChange: (v: "actual" | "apportioned") => void;
+  onSaleSplitModeChange: (patch: Partial<AssetForm>) => void;
 
   landTransferPrice: string;
   onLandTransferPriceChange: (v: string) => void;
@@ -89,11 +86,9 @@ export function LandBuildingSaleSplitSection(props: Props) {
             name="saleSplitMode"
             tone="amber"
             layout="inline"
-            options={SALE_MODE_OPTIONS}
-            // 일반건물 전용 값 `"appraisal"`은 이 2-way 화면에서 「일괄양도 + 감정평가 토글 ON」과
-            // 동치다 — `"apportioned"`로 접어 미선택 상태(라디오가 비는 것)를 막는다.
-            value={props.saleSplitMode === "actual" ? "actual" : "apportioned"}
-            onChange={props.onSaleSplitModeChange}
+            options={SALE_SPLIT_MODE_OPTIONS}
+            value={props.saleSplitMode}
+            onChange={(v) => props.onSaleSplitModeChange(saleSplitModePatch(v) as Partial<AssetForm>)}
           />
         </div>
         {props.saleSplitMode === "actual" && (
@@ -109,12 +104,20 @@ export function LandBuildingSaleSplitSection(props: Props) {
       </div>
 
       {/*
-        순서는 **엔진 로직 순서**를 따른다(계획서 §12.3 · UI 순서 = 로직 순서 규칙):
-        ① 구분 기재 여부(위 라디오) → ② 안분 basis 해석(**감정 > 기준시가** 서열) → ③ §100③ 판정 → ④ 예외.
-        감정평가가액이 기준시가보다 위에 오는 것은 서열 그대로다.
+        ── 감정평가가액은 이제 **라디오의 한 선택지**다 (2026-08-08 · 일반건물과 통합) ──
+
+        종전에는 라디오(일괄/구분) 밖에 「감정평가가액으로 안분」 토글이 따로 있어, 「일괄양도
+        (양도시 **기준시가 안분**)」을 고른 채 토글을 켜면 실제로는 감정평가액으로 안분되는
+        **라벨-동작 모순**이 있었다(`sale-split-apportion-basis.ts`의 부가령 §64① 서열).
+        안분 basis는 축 하나이므로 선택지로 흡수했다.
+
+        구분양도에서는 감정평가액이 basis가 아니라 §100③ **30% 판정의 비교 대상**이므로,
+        그쪽 입력 경로는 아래 전용 카드로 남는다.
       */}
-      {props.asset && props.onAssetChange && (
-        <SaleAppraisalBasisCard asset={props.asset} onChange={props.onAssetChange} />
+      {props.saleSplitMode === "appraisal" && props.asset && props.onAssetChange && (
+        <div data-testid="sale-appraisal-basis">
+          <SaleAppraisalFields asset={props.asset} onChange={props.onAssetChange} />
+        </div>
       )}
 
       {props.showStdCard && props.asset && props.onAssetChange && (
@@ -126,7 +129,11 @@ export function LandBuildingSaleSplitSection(props: Props) {
       )}
 
       {props.saleSplitMode === "actual" && props.asset && props.onAssetChange && (
-        <SaleSplitExemptionCard asset={props.asset} onChange={props.onAssetChange} />
+        <>
+          <SaleSplitExemptionCard asset={props.asset} onChange={props.onAssetChange} />
+          {/* 30% 판정의 비교 대상 — 일반건물 경로와 공유한다(§100③ · 부가령 §64① 서열). */}
+          <SaleSplitCompareBasisCard asset={props.asset} onChange={props.onAssetChange} />
+        </>
       )}
     </div>
   );

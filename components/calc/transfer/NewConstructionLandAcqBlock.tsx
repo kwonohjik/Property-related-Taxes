@@ -179,7 +179,8 @@ export function NewConstructionLandAcqBlock(props: {
           <LandBuildingSaleSplitSection
             isBurdenedGift={asset.transferType === "burdened_gift"}
             saleSplitMode={asset.saleSplitMode ?? "apportioned"}
-            onSaleSplitModeChange={(v) => onChange({ saleSplitMode: v })}
+            // patch 덩어리를 그대로 전달 — 전환 시 쓰지 않는 값 정리가 함께 들어 있다.
+            onSaleSplitModeChange={onChange}
             landTransferPrice={asset.landTransferPrice ?? ""}
             onLandTransferPriceChange={(v) => onChange({ landTransferPrice: v })}
             buildingTransferPrice={asset.buildingTransferPrice ?? ""}
