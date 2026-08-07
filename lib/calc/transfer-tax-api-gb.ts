@@ -196,9 +196,32 @@ export function buildGeneralBuildingValuation(
    * ⚠️ 게이트 밖에서는 **비교하지 않는다** — 단서는 두 경우에 한정되고, 그 밖에서 max를
    *    적용하면 본문이 정한 「평가액을 실지거래가액으로 본다」를 넘어선다.
    */
+  /**
+   * 🔑 **증여도 같은 단서를 받는다.** §163⑨ 본문은 「**상속 또는 증여**받은 자산」이 대상이고,
+   *    단서 1호·2호도 「상속 또는 **증여**받은 토지/건물」이라고 쓴다.
+   *
+   *    다만 ①의 소스가 다르다 — 상속은 전용 필드가 있지만 증여 신고가액은 **분리 ON이면
+   *    파트 칸**, 분리 OFF면 자산 단위 칸이다. 조문이 요구하는 「자산별」 비교가 성립하려면
+   *    파트별 신고가액이 있어야 하므로, **분리 OFF + 게이트 안은 ⑧이 안내로 차단**한다.
+   *
+   * ⚠️ pre-1985 증여는 기존 §163⑨ 증여 게이트가 꺼진다(§176의2④ 의제취득 영역) — 그 경계는
+   *    여기서 건드리지 않는다. `isLandGift`/`isBuildingGift`는 ⑧과 **같은 정의**다.
+   */
+  const isLandGift =
+    asset.acquisitionCause === "gift" && partAcquisitionDates(asset).land >= "1985-01-01";
+  const isBuildingGift =
+    asset.gbBuildingAcquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01";
+
   const landInheritanceDate = partAcquisitionDates(asset).land;
-  const landSec164Applies = !!landInheritanceDate && landInheritanceDate < LAND_PRICE_NOTICE_START;
-  const buildingSec164Applies = isBeforeBuildingStdPriceNotice(asset.acquisitionDate);
+  /** 토지 파트가 §163⑨ 단서 **1호** 구간인가 — 상속·증여 공통. */
+  const landSec164Applies =
+    (acquisitionByInheritance || isLandGift) &&
+    !!landInheritanceDate &&
+    landInheritanceDate < LAND_PRICE_NOTICE_START;
+  /** 건물 파트가 §163⑨ 단서 **2호** 구간인가. */
+  const buildingSec164Applies =
+    (buildingAcquisitionByInheritance || isBuildingGift) &&
+    isBeforeBuildingStdPriceNotice(asset.acquisitionDate);
   /** ② §164④ 가액 — 취득시 토지 기준시가 **총액**(㎡당 × 면적). */
   const sec164LandTotal = Math.floor(
     effectiveGbLandPriceAtAcq(asset, transferDate ?? "") * (parseDecimal(asset.gbLandArea) || 0),
@@ -278,12 +301,29 @@ export function buildGeneralBuildingValuation(
    * ⚠️ C1(둘 다 상속)은 실가 경로의 **전용 분기가 먼저** 잡으므로 값이 변하지 않는다(회귀 0).
    * ⚠️ 분리 OFF + 부분 상속은 자산 단위 총액과 이중계상이 되므로 validate가 차단한다(V-5).
    */
+  /**
+   * 증여 파트의 §163⑨ 단서 max — ①은 **파트 칸의 증여 신고가액**이다.
+   *
+   * 상속처럼 전용 필드가 없으므로 파트 슬롯 자체가 ①이고, 여기서 ②와 겨룬다.
+   * 게이트 밖이면 그대로 통과한다(비교 없음).
+   */
+  const giftMax = (reported: number, applies: boolean, sec164: number) =>
+    (applies ? Math.max(reported, sec164) : reported) || undefined;
+
   const landPartPrice = acquisitionByInheritance
     ? inheritedLandValue
-    : parseAmount(asset.landAcquisitionPrice) || undefined;
+    : giftMax(
+        parseAmount(asset.landAcquisitionPrice),
+        isLandGift && landSec164Applies,
+        sec164LandTotal,
+      );
   const buildingPartPrice = buildingAcquisitionByInheritance
     ? inheritedBuildingValue
-    : parseAmount(asset.buildingAcquisitionPrice) || undefined;
+    : giftMax(
+        parseAmount(asset.buildingAcquisitionPrice),
+        isBuildingGift && buildingSec164Applies,
+        sec164BuildingValue,
+      );
 
   const partModePayload = {
     landAcqMode: landMode,
