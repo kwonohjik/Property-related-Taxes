@@ -168,13 +168,31 @@ export function buildGeneralBuildingValuation(
     isUnregistered: asset.gbIsUnregistered,
   };
 
-  // §163⑨ 상속 취득가액 직접 산정 게이트 (Phase 1 = C1). 계획서 §4-5:
-  // acquisitionByInheritance = acquisitionCause==="inheritance" && 취득일>=1985-01-01.
-  const acquisitionByInheritance =
-    asset.acquisitionCause === "inheritance" && partAcquisitionDates(asset).land >= "1985-01-01";
-  const buildingAcquisitionByInheritance =
-    asset.gbBuildingAcquisitionCause === "inheritance" &&
-    (asset.acquisitionDate ?? "") >= "1985-01-01";
+  /**
+   * §163⑨ 상속 취득가액 직접 산정 게이트.
+   *
+   * 🔴 **1985-01-01 하한을 제거했다** (2026-08-07). 종전 근거는 「pre-1985 상속·증여는
+   *    §176조의2④ 의제취득 영역이므로 게이트를 끄고 **기존 환산 fallback**에 맡긴다」였다.
+   *    원문 확인 결과 두 군데가 틀렸다:
+   *
+   *    ① **§163⑨에는 「의제취득일」 조건이 없다.** 조건은 「상속 또는 증여받은 자산」과
+   *       단서의 「기준시가 고시 전」뿐이다(MST 286211 본문 직독).
+   *    ② **§176조의2④는 나목 계열**이라 가목이 확인되면 도달하지 않는다 — 법 §97①1호 단서
+   *       「가목의 실지거래가액을 **확인할 수 없는 경우에 한정하여** 나목」. §163⑨은 평가액을
+   *       「실지거래가액으로 **본다**」고 하므로 가목이 확인된다. 법 §97②1호 나목의 생산자
+   *       물가상승률 가산도 「**환산취득가액에 의하여** … 계산하는 경우」가 조건이다.
+   *
+   *    게다가 그 「환산 fallback」은 **더 이상 존재하지 않는다** — O-3(2026-08-06)이 상속·증여
+   *    파트의 환산을 1985 하한 없이 차단했다(V2). 결과는 가목도 나목도 아닌 **취득가액 0**
+   *    이었다(실측 1980년 상속 세액 443,235,000 · validate 통과).
+   *
+   *    단건 경로는 이미 가목 우선이다(`calcPreDeemed` — #1080). GB만 예외였다.
+   *
+   * ⚠️ **취득시기 의제(1985.1.1)는 이 축과 무관하다** — 보유기간·세율·장특공제이고,
+   *    여기서 정하는 것은 취득**가액**이다.
+   */
+  const acquisitionByInheritance = asset.acquisitionCause === "inheritance";
+  const buildingAcquisitionByInheritance = asset.gbBuildingAcquisitionCause === "inheritance";
   /**
    * §163⑨ 단서 각 호 — **미공시 시기 상속은 §164 가액과 겨룬다** (Phase 3).
    *
@@ -204,13 +222,11 @@ export function buildGeneralBuildingValuation(
    *    파트 칸**, 분리 OFF면 자산 단위 칸이다. 조문이 요구하는 「자산별」 비교가 성립하려면
    *    파트별 신고가액이 있어야 하므로, **분리 OFF + 게이트 안은 ⑧이 안내로 차단**한다.
    *
-   * ⚠️ pre-1985 증여는 기존 §163⑨ 증여 게이트가 꺼진다(§176의2④ 의제취득 영역) — 그 경계는
-   *    여기서 건드리지 않는다. `isLandGift`/`isBuildingGift`는 ⑧과 **같은 정의**다.
+   * ⚠️ `isLandGift`/`isBuildingGift`는 ⑧과 **같은 정의**다.
    */
-  const isLandGift =
-    asset.acquisitionCause === "gift" && partAcquisitionDates(asset).land >= "1985-01-01";
-  const isBuildingGift =
-    asset.gbBuildingAcquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01";
+  // 1985 하한 제거 — 위 상속 게이트와 같은 근거다(§163⑨은 상속·증여를 같은 문장에서 다룬다).
+  const isLandGift = asset.acquisitionCause === "gift";
+  const isBuildingGift = asset.gbBuildingAcquisitionCause === "gift";
 
   const landInheritanceDate = partAcquisitionDates(asset).land;
   /** 토지 파트가 §163⑨ 단서 **1호** 구간인가 — 상속·증여 공통. */

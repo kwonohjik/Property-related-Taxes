@@ -193,13 +193,13 @@ export function validateGeneralBuildingAsset(
   // 본다(§163⑨) → 취득가액 "확인 가능" → §166③ 환산·§163⑥ 개산공제 배제. 증여 신고가액은
   // 항상 확인 가능하므로 환산 자체가 법적 불필요 → 환산·증축 조합을 차단하고 실가(신고가액=취득가액)를 강제.
   // 상속과 달리 별도 신고가액 필드 없이 fixedAcquisitionPrice→actual 경로로 §166⑥ 안분되므로
-  // 자산별 reported 분리(gbBuildingInheritedValue 등) 불요. pre-1985 증여는 §176의2④ 의제취득
-  // 영역이므로 게이트 false → 기존 환산 fallback(회귀-safe).
-  const isLandGift =
-    asset.acquisitionCause === "gift" && partAcquisitionDates(asset).land >= "1985-01-01";
-  const isBuildingGift =
-    // 🔄 M-1a로 교정: 종전에는 **건물** 게이트인데 토지 취득일을 읽었다(계획서 §3.2(2)).
-    asset.gbBuildingAcquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01";
+  // 자산별 reported 분리(gbBuildingInheritedValue 등) 불요.
+  // 🔴 1985 하한 제거(2026-08-07) — §163⑨에는 「의제취득일」 조건이 없고, §176조의2④는
+  //    나목 계열이라 가목(§163⑨)이 확인되면 도달하지 않는다(법 §97①1호 단서).
+  //    근거·실측은 `transfer-tax-api-gb.ts`의 상속 게이트 주석과 계획서
+  //    `transfer-gb-pre1985-163-9.plan.md`.
+  const isLandGift = asset.acquisitionCause === "gift";
+  const isBuildingGift = asset.gbBuildingAcquisitionCause === "gift";
   if (isLandGift || isBuildingGift) {
     // 증여 파트도 추계 불가 — **그 파트만** 제약된다(O-3). 상속과 달리 부분 증여가 허용되므로
     // 「토지 매매 + 건물 증여」에서 토지 환산은 정당하다(토지는 §163⑨ 대상이 아니다).

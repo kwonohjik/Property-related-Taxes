@@ -44,22 +44,18 @@ export function gbLandAcquisitionDate(asset: AssetForm): string {
  * (`CompanionAcqPurchaseBlock`의 `showPre1990`)이고 근거 조문도 다르다.
  * 세 경로는 **배타**다 — GB 카드가 `acquisitionCause`로 매매/상속/증여 블록을 갈라 렌더한다.
  *
- * ⚠️ **1985-01-01 하한을 함께 본다.** ④의 `acquisitionByInheritance`·`isLandGift`가 그 하한을
- *    갖기 때문이다. 하한 없이 열면 pre-1985에서 **섹션은 뜨는데 ④가 그 값을 쓰지 않는다** —
- *    「보이는데 아무 효과가 없는 칸」이 된다(`feedback_ui_engine_dual_truth_avoidance`).
- *
- *    🔴 pre-1985 상속 GB는 별도 결함이 있다 — 취득가액이 **0**으로 계산되고 validate가
- *    통과한다(실측 세액 443,235,000). Phase 1이 「pre-1985는 기존 환산 fallback」을 전제했으나
- *    O-3(2026-08-06)이 상속 파트의 환산을 **1985 하한 없이** 차단하면서 그 fallback이
- *    사라졌다. 이 파일의 범위 밖이며 별건으로 다룬다.
+ * ⚠️ **1985-01-01 하한이 없다.** ④의 §163⑨ 게이트가 그 하한을 버렸기 때문이다(2026-08-07) —
+ *    §163⑨에는 「의제취득일」 조건이 없고, §176조의2④는 나목 계열이라 가목이 확인되면
+ *    도달하지 않는다(법 §97①1호 단서). 이 게이트는 **④와 항상 같은 범위**여야 한다 —
+ *    어긋나면 「보이는데 ④가 안 쓰는 칸」 또는 그 반대가 된다
+ *    (`feedback_ui_engine_dual_truth_avoidance`).
  */
 export function isGbLandPre1990Sec163_9(asset: AssetForm): boolean {
   if (asset.assetKind !== "general_building") return false;
   const cause = asset.acquisitionCause;
   if (cause !== "inheritance" && cause !== "gift") return false;
   const acqDate = gbLandAcquisitionDate(asset);
-  if (!acqDate) return false;
-  return acqDate >= "1985-01-01" && acqDate < LAND_PRICE_NOTICE_START;
+  return !!acqDate && acqDate < LAND_PRICE_NOTICE_START;
 }
 
 /**

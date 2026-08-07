@@ -123,12 +123,19 @@ describe("G164-2 — 게이트 밖은 적용하지 않는다 (회귀 0)", () => 
   });
 
   /**
-   * pre-1985 증여는 §176의2④ 의제취득 영역이라 기존 §163⑨ 증여 게이트가 **꺼진다**.
-   * 이 PR은 그 경계를 건드리지 않는다 — 켜면 환산 fallback 경로가 함께 바뀐다(별건).
+   * 🔄 **정정(2026-08-07) — 종전 단언은 법령상 틀린 전제를 잠그고 있었다.**
+   *
+   * 종전: 「pre-1985 증여는 §176조의2④ 의제취득 영역이므로 §163⑨ 게이트가 꺼진다」.
+   * 원문 확인 결과 두 군데가 어긋났다:
+   *   ① 「소득세법 시행령」 제163조 제9항에 **「의제취득일」 조건이 없다** — 조건은
+   *      「상속 또는 증여받은 자산」과 단서의 「기준시가 고시 전」뿐이다.
+   *   ② §176조의2④는 **나목** 계열이라 가목이 확인되면 도달하지 않는다 — 법 §97①1호 단서
+   *      「가목의 실지거래가액을 **확인할 수 없는 경우에 한정하여** 나목」.
+   * 계획서: `docs/02-design/features/transfer-gb-pre1985-163-9.plan.md`
    */
-  it("pre-1985 증여 — 기존 게이트 밖이라 불변", () => {
+  it("🔄 pre-1985 증여도 게이트 안 — §164 가액이 채택된다", () => {
     const r = run(asset({ landAcquisitionDate: "1980-03-01", acquisitionDate: "1980-03-01" }));
-    expect(r.landAcq).toBe(50_000_000);
+    expect(r.landAcq).toBe(SEC164_LAND_TOTAL);
   });
 });
 
@@ -218,22 +225,23 @@ describe("G164-5 — 증여 §164④ 등급환산 파생", () => {
   });
 
   /**
-   * 🔑 pre-1985는 ④의 §163⑨ 게이트가 꺼진다(§176의2④ 의제취득 영역). UI도 함께 꺼야
-   * 「보이는데 아무 효과가 없는 칸」이 되지 않는다.
+   * 🔄 **정정(2026-08-07)** — UI 게이트는 ④와 **항상 같은 범위**여야 한다. ④가 1985 하한을
+   * 버렸으므로(위 정정 근거) UI도 함께 켜진다. 어긋나면 「보이는데 ④가 안 쓰는 칸」이
+   * 되거나 그 반대가 된다.
    */
-  it("🔑 pre-1985 증여 — UI 게이트도 꺼진다 (④와 같은 하한)", () => {
+  it("🔄 pre-1985 증여 — UI 게이트도 켜진다 (④와 같은 범위)", () => {
     const a = graded({ landAcquisitionDate: "1980-03-01", acquisitionDate: "1980-03-01" });
-    expect(isGbLandPre1990Sec163_9(a)).toBe(false);
+    expect(isGbLandPre1990Sec163_9(a)).toBe(true);
   });
 
-  it("🔑 pre-1985 상속도 같다 (④가 안 쓰는 칸을 띄우지 않는다)", () => {
+  it("🔄 pre-1985 상속도 같다", () => {
     const a = graded({
       acquisitionCause: "inheritance",
       gbBuildingAcquisitionCause: "inheritance",
       landAcquisitionDate: "1980-03-01",
       acquisitionDate: "1980-03-01",
     });
-    expect(isGbLandPre1990Sec163_9(a)).toBe(false);
+    expect(isGbLandPre1990Sec163_9(a)).toBe(true);
   });
 
   it("post-1985 상속은 종전대로 켜진다 (회귀 0)", () => {

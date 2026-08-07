@@ -145,11 +145,17 @@ test.describe("일반건물 증여 — §164④ 등급환산 UI", () => {
     await expect(page.getByText(/증여 신고가액 중/).first()).toBeVisible();
   });
 
-  test("GF-6: pre-1985 증여는 섹션이 뜨지 않는다 (④ 게이트와 같은 하한)", async ({ page }) => {
+  /**
+   * 🔄 **정정(2026-08-07)** — 종전에는 「pre-1985는 §176조의2④ 영역이라 게이트가 꺼진다」로
+   * 단언했다. 「소득세법 시행령」 제163조 제9항에 **「의제취득일」 조건이 없고**, §176조의2④는
+   * 나목 계열이라 가목(§163⑨)이 확인되면 도달하지 않는다(법 §97①1호 단서).
+   * 계획서: `docs/02-design/features/transfer-gb-pre1985-163-9.plan.md`
+   */
+  test("GF-6: pre-1985 증여도 섹션이 뜬다 (④ 게이트와 같은 범위)", async ({ page }) => {
     test.setTimeout(90_000);
     await seed(page, { landAcquisitionDate: "1980-03-01", acquisitionDate: "1980-03-01" });
     await expandAssetSection(page, 3);
 
-    await expect(page.getByText(/§164④ 등급환산/)).toHaveCount(0);
+    await expect(page.getByText(/§164④ 등급환산/).first()).toBeVisible();
   });
 });
