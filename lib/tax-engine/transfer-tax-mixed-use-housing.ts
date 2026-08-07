@@ -46,6 +46,13 @@ export function calcHousingGainSplit(
   derived: MixedUseDerivedAreas,
   transferDate: Date,
   acqDerived?: MixedUseDerivedAreas,
+  /**
+   * §97②2호 **단서** 적용 신호 (2026-08-07 W-8).
+   * true면 **취득가액을 차감하지 않고**(가목이 환산취득가+개산공제의 **합계액**이므로
+   * 나목 채택 시 별도 차감은 이중차감), 필요경비를 **나목**(자본적지출+양도비의 이 파트 안분분)으로 한다.
+   * 판정은 오케스트레이터가 **자산 단위**로 한다(`general-building-swap.ts:144-148` 교리).
+   */
+  swapToDirect?: boolean,
 ): HousingGainSplit {
   const housingEstimatedAcq = housingAcqResult.estimatedAcq;
   const effectiveAcqDerived = acqDerived ?? derived;
@@ -183,9 +190,10 @@ export function calcHousingGainSplit(
   const landTransferPrice = Math.floor(housingTransferPrice * transferLandRatio);
   const buildingTransferPrice = housingTransferPrice - landTransferPrice;
 
-  // 취득가액 안분 — 취득시 비율
-  const landAcqPrice = Math.floor(housingEstimatedAcq * acqLandRatio);
-  const buildingAcqPrice = housingEstimatedAcq - landAcqPrice;
+  // 취득가액 안분 — 취득시 비율.
+  // §97②2호 단서(나목) 채택 시에는 **차감하지 않는다**(가목에 이미 포함 — 이중차감 금지).
+  const landAcqPrice = swapToDirect ? 0 : Math.floor(housingEstimatedAcq * acqLandRatio);
+  const buildingAcqPrice = swapToDirect ? 0 : housingEstimatedAcq - landAcqPrice;
 
   // 개산공제(§163⑥, 취득시 기준시가 × 3%). 상속·증여(§163⑨)·매매실가는 미적용 —
   // 실제 필요경비(자본적지출·양도비)를 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
@@ -212,14 +220,15 @@ export function calcHousingGainSplit(
   const commonTransferExpHousing = apportionTransferPrice(
     asset.transferExpense ?? 0, asset, derived,
   ).housingTransferPrice;
-  const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq
-    ? resolvePartNecessaryExpense({
-        partDirect: asset.housingInheritedExpense,
-        commonCapitalExpenditure: commonCapexHousing,
-        commonTransferExpense: commonTransferExpHousing,
-        acqLandStd, acqBuildingStd, transferLandStd, transferBuildingStd,
-      })
-    : housingLumpPair;
+  const necessaryExpensePair = () =>
+    resolvePartNecessaryExpense({
+      partDirect: swapToDirect ? undefined : asset.housingInheritedExpense,
+      commonCapitalExpenditure: commonCapexHousing,
+      commonTransferExpense: commonTransferExpHousing,
+      acqLandStd, acqBuildingStd, transferLandStd, transferBuildingStd,
+    });
+  const { landAppraisalDed, buildingAppraisalDed } =
+    usesDeemedAcq || swapToDirect ? necessaryExpensePair() : housingLumpPair;
 
   const landGain = landTransferPrice - landAcqPrice - landAppraisalDed;
   const buildingGain = buildingTransferPrice - buildingAcqPrice - buildingAppraisalDed;
