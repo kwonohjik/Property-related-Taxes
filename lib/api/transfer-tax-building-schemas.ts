@@ -241,6 +241,11 @@ export const generalBuildingValuationSchema = z.object({
    * ⑫ 사례 33 증축: 토지+건물1 일괄 필요경비 (원).
    */
   bundledExpenses: z.number().int().nonnegative().optional(),
+  /**
+   * `bundledExpenses`에 담긴 값의 **성질** — 안분 시점을 가른다(2026-08-07 W-1a).
+   * `capital`=취득시 · `transfer`=**양도시** · `mixed`=취득시 유지(legacy 덩어리).
+   */
+  bundledExpenseNature: z.enum(["capital", "transfer", "mixed"]).optional(),
   // ── ⑫ §97②2호 단서 swap (자산총액) — 비-증축 전체환산(G2). 침묵 strip 방지 명시. ──
   /** 자본적지출 (원, 자산총액 — §97① 가목). */
   capitalExpenditure: z.number().int().nonnegative().optional(),

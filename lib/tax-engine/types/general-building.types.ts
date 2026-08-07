@@ -228,6 +228,17 @@ export type GeneralBuildingInput = {
      */
     actualBundledExpenses?: number;
     /**
+     * `actualBundledExpenses`의 **성질** — 안분 시점을 가른다(2026-08-07 W-1a).
+     *
+     * 그 필드는 세 후보(전용 필드·양도비·legacy)를 **한 슬롯**에 담아 성질을 지운다.
+     * 종전에는 전부 **취득시** 비율로 안분해, 양도비가 채택된 경우 「소득세법」 제100조
+     * 제2항이 정하는 시점(양도비 = **양도 당시**)과 어긋났다.
+     *
+     * `capital`=취득시 · `transfer`=**양도시** · `mixed`=취득시 유지(legacy 덩어리).
+     * 미주입 시 `mixed` 취급 — 종전 동작 불변.
+     */
+    bundledExpenseNature?: "capital" | "transfer" | "mixed";
+    /**
      * 증축분 취득 방식 (필수).
      * - "estimated": 환산취득가 (소령 §176조의2②) — transferExtensionBuildingStdPrice + acquisitionExtensionBuildingStdPrice 필수
      * - "actual":    실거래가 별도 입력 — actualAcquisitionPrice 필수

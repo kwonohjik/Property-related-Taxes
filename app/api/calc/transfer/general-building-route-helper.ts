@@ -217,6 +217,10 @@ export function dispatchGeneralBuilding(
         ...(coercedExtInfo as unknown as NonNullable<GeneralBuildingInput["extensionInfo"]>),
         actualBundledAcquisitionPrice: actualAcquisitionPrice,
         actualBundledExpenses: actualExpenses,
+        // W-1a — 그 값이 어느 성질에서 왔는지. 엔진이 안분 **시점**을 이것으로 고른다.
+        ...(coercedGbRaw.bundledExpenseNature !== undefined
+          ? { bundledExpenseNature: coercedGbRaw.bundledExpenseNature as "capital" | "transfer" | "mixed" }
+          : {}),
       },
     } : {}),
   };
