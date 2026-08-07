@@ -201,14 +201,21 @@ function resolveInheritedAcquisitionInput(
   if (shouldInjectHouseValuation) {
     // 주택 §176조의2④ 환산취득가는 개별주택가격 단일값을 분자/분모로 사용
     // (토지+건물 합계 기준시가가 아님). 개산공제도 동일 base × 3%.
-    // ⚠️ **이름-의미 불일치(V-2)** — `housePriceAtInheritanceUsed`는 **상속개시일** 시점 값인데
-    //    `standardPriceAtDeemedDate`는 §176조의2④1호상 **의제취득일 현재** 기준시가를 뜻한다.
-    //    ⭐ 그럼에도 **세액에 노출되지 않는다**: 같은 값이 ②(houseValuationStdPrice)로도 주입되어
-    //       가목(§163⑨)이 확인되고, 법 §97①1호 단서상 가목이 확인되면 ③에 도달하지 않는다.
-    //       (③이 쓰이는 것은 ①② 모두 부존재일 때뿐이고, 그때 이 값은 사용자 직접 입력이다.)
-    //    ⇒ ②·③ 분자를 분리하거나 ③을 다시 max 후보로 되돌린다면 **여기부터 재검토**할 것.
-    //       `V2-G` 가드(inherited-acquisition.test.ts)가 이 성질을 고정한다.
+    // ✅ **V-2 종결**(2026-08-07) — 종전 주석은 여기를 「이름-의미 불일치」로 적었다:
+    //    `housePriceAtInheritanceUsed`(상속개시일 값)를 `standardPriceAtDeemedDate`(§176조의2④1호상
+    //    **의제취득일 현재** 기준시가) 자리에 넣는다는 것이었다. **더 이상 사실이 아니다.**
+    //    B-1이 §164⑦ 3시점 환산의 **입력 라벨**을 「의제취득일(1985.1.1.)」로 바꿨으므로
+    //    (「소득세법」 부칙 법률 제4803호 §8 — 취득시기 의제), 그 산출물인
+    //    `housePriceAtInheritanceUsed`도 **1985 시점 값**이다 ⇒ 필드명과 값이 일치한다.
+    //    · 토지 경로(`pre1990LandResult.standardPriceAtAcquisition`)도 같은 이유로 정합.
+    //    · **B-2도 함께 해소**: 같은 값이 ②(houseValuationStdPrice)로도 주입돼 「얽힌다」던 것이,
+    //      ②(§164⑦ 취득당시=1985)와 ③ 분자(의제취득일=1985)가 **같아야 옳은** 관계가 됐다.
+    //    ⚠️ 그래도 ③은 여전히 **도달하지 않는다** — 가목이 확인되면(②가 함께 주입되므로)
+    //       법 §97①1호 단서상 나목에 가지 않는다. `V2-G` 가드가 그 성질을 고정하고,
+    //       B-1의 라벨 anchor(T-1~T-3)가 입력 시점을 고정한다 — **이중으로 닫혀 있다**.
+    //    ⇒ 둘 중 하나라도 되돌리면 여기부터 재검토할 것.
     //    계획서: docs/02-design/features/inheritance-pre-deemed-converted-numerator-timing.plan.md
+    //           docs/02-design/features/sec164-clause-a-deemed-date-timing-b1.plan.md
     standardPriceAtDeemedDate = houseValuationResult.housePriceAtInheritanceUsed;
     standardPriceAtTransfer =
       rawInput.inheritedHouseValuation?.housePriceAtTransfer ?? standardPriceAtTransfer;

@@ -24,6 +24,22 @@
  * - Case ④ 등급조정기간 동일 + 비율 100% 초과 — CAP-2 발동
  * - Case ⑤ 등급조정기간 상이 + 비율 100% 초과 — CAP-2 예외 (그대로 적용)
  *
+ * ## ⚠️ 「취득시」가 언제인지는 본 모듈이 정하지 않는다 (B-1 · 2026-08-07)
+ *
+ * 산식의 분자는 **호출부가 넘긴 `gradeAtAcquisition`(등급가액)** 이고, `acquisitionDate`는
+ * 1990.8.30. 이후 경고와 CAP-2 트리거 판정([CAP-2] `>= 1990-01-01`)에만 쓰인다.
+ * ⇒ **날짜를 1974→1985로 바꿔도 산출값이 동일**하다(probe 실증). 시점은 오직 **어느 시점의 등급을
+ * 입력했는가**로 정해진다.
+ *
+ * 「소득세법」 부칙(법률 제4803호) **§8【양도자산의 취득시기에 관한 의제】**: "1984.12.31. 이전에
+ * 취득한 것은 **1985.1.1.에 취득한 것으로 본다**" ⇒ 그 경우 §164④의 「취득당시」 등급은
+ * **1985.1.1. 시점** 등급이다(정면 결정 **조심2010서1195**). 취득원인을 묻지 않으므로
+ * 상속·증여·매매 모두 같다.
+ *
+ * ⇒ 통제점은 **UI 라벨**이다 — `sec164AcqTimePointLabel`(`lib/calc/transfer-163-9-base-date.ts`)이
+ *   `Pre1990LandValuationInput`의 등급 라벨을 「의제취득일(1985.1.1.) 유효 등급」으로 바꾼다.
+ *   계획서: docs/02-design/features/sec164-clause-a-deemed-date-timing-b1.plan.md
+ *
  * ## 연동
  * `transfer-tax.ts` 의 `TransferTaxInput.pre1990Land` 필드로 제공되면 본 모듈이
  * `standardPriceAtAcquisition` / `standardPriceAtTransfer` 를 자동 산출해 주입한다.

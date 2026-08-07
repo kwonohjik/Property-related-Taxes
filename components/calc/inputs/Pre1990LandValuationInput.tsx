@@ -19,6 +19,8 @@ import { ToggleCard } from "./ToggleCard";
 import { RadioCardGroup } from "./RadioCardGroup";
 import { getGradeValue } from "@/lib/tax-engine/data/land-grade-values";
 import { calculatePre1990LandValuation } from "@/lib/tax-engine/pre-1990-land-valuation";
+import { isDeemedAcquisitionApplied } from "@/lib/calc/transfer-163-9-base-date";
+import { sec164AcqTimePointLabel } from "@/lib/calc/transfer-163-9-base-date";
 
 export interface Pre1990FormSlice {
   pre1990Enabled: boolean;
@@ -262,7 +264,7 @@ export function Pre1990LandValuationInput({
               mode={mode}
             />
             <GradeField
-              label="취득시 유효 등급"
+              label={`${sec164AcqTimePointLabel(acquisitionDate, "취득시")} 유효 등급`}
               value={form.pre1990Grade_atAcq ?? ""}
               onChange={(v) => onChange({ pre1990Grade_atAcq: v })}
               preview={previews.atAcq}
@@ -270,6 +272,13 @@ export function Pre1990LandValuationInput({
             />
           </div>
 
+          {isDeemedAcquisitionApplied(acquisitionDate) && (
+            <p className="text-caption text-muted-foreground">
+              ※ 1984.12.31. 이전 취득 자산은 「소득세법」 부칙(법률 제4803호) §8에 따라
+              <b> 1985.1.1.에 취득한 것으로 봅니다</b>. 따라서 §164④의 「취득당시」 등급도
+              <b> 실제 취득일이 아니라 1985.1.1. 시점</b>에 유효했던 등급을 입력하세요.
+            </p>
+          )}
           <p className="text-caption text-muted-foreground">
             ※ 토지대장 및 부동산공시가격 알리미(realtyprice.kr)에서 조회 가능합니다.
             1990.1.1. 등급조정이 없었다면 직전 등급은 현재 등급과 동일하게 입력하세요.

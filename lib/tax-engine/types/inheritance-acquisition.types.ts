@@ -150,7 +150,14 @@ export interface InheritanceAcquisitionInput {
    *
    * ⚠️ 같은 값이 ③의 **환산 분자**(standardPriceAtDeemedDate)로도 쓰이므로 **필드를 분리**한다
    *    (주택 houseValuationStdPrice와 같은 이유 — 역할이 둘).
-   *    시점은 **의제취득일 기준**이다(부칙 §8 취득시기 의제 · 국심2003부0627 외 2건 · UI "1985.1.1." 명시).
+   *    ⭐ **시점은 pre/post가 갈린다**(B-1) — post-deemed는 상속개시일, pre-deemed는
+   *    **의제취득일(1985.1.1.)**. 「소득세법」 부칙(법률 제4803호) **§8【양도자산의 취득시기에 관한
+   *    의제】**가 "1984.12.31. 이전에 취득한 것은 1985.1.1.에 취득한 것으로 본다"고 정하므로
+   *    §164④의 「취득당시」도 그날이다. 정면 결정 **조심2010서1195**(§163⑨ + 부칙으로 의제취득일
+   *    기준시가를 적용한 처분을 **기각**).
+   *    ⚠️ 엔진은 이 시점을 강제하지 못한다 — 산식에 날짜가 없고 값은 사용자 입력 등급에서 온다.
+   *    통제점은 UI 라벨(`sec164AcqTimePointLabel`)이다. 계획서:
+   *    docs/02-design/features/sec164-clause-a-deemed-date-timing-b1.plan.md
    */
   landValuationStdPrice?: number;
 

@@ -32,6 +32,7 @@ import {
   isSec163_9Cause,
   sec163_9BaseDateLabel,
   sec163_9CauseLabel,
+  sec164AcqTimePointLabel,
 } from "@/lib/calc/transfer-163-9-base-date";
 import { sec164CommercialStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -48,6 +49,10 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
   const inheritanceDate = deriveSec163_9BaseDate(asset);
   const dateLabel = sec163_9BaseDateLabel(asset);
   const causeLabel = sec163_9CauseLabel(asset);
+  // B-1 — ①과 ②는 **기준시점이 다르다**. ①(상증법 평가액)은 §163⑨ 본문대로 `dateLabel`
+  // (상속개시일·증여일)이지만, ②(§164⑥ 취득당시 기준시가)는 「소득세법」 부칙(법률 제4803호)
+  // §8이 취득시기를 1985.1.1.로 **의제**하면 그날이다. 한 변수로 둘을 겸하면 안 된다.
+  const acqTimeLabel = sec164AcqTimePointLabel(inheritanceDate, dateLabel);
   // 필수 항목 개수는 단일 소스에서 받는다(문구 하드코딩 금지 — 필드가 늘면 자동 추종).
   const sec164Status = sec164CommercialStatus(asset);
   // 상가 기준시가 최초고시(2005-01-01) 전 상속·증여만 §164⑥ 대상.
@@ -111,10 +116,10 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
             acquisitionDate={inheritanceDate}
             checked={asset.cbAcqBuildingStdBy164_5}
             onCheckedChange={(v) => onChange({ cbAcqBuildingStdBy164_5: v })}
-            timePointLabel={`취득당시(${dateLabel})`}
+            timePointLabel={`취득당시(${acqTimeLabel})`}
           />
         )}
-        <FieldCard label={`취득시(${dateLabel}) 건물 기준시가`} unit="원" hint="㎡당 단가 × 연면적(보정계수 반영) = 건물 기준시가 총액">
+        <FieldCard label={`취득시(${acqTimeLabel}) 건물 기준시가`} unit="원" hint="㎡당 단가 × 연면적(보정계수 반영) = 건물 기준시가 총액">
           <CurrencyInput label="" value={asset.cbBuildingStdPriceAtAcq} onChange={(v) => onChange({ cbBuildingStdPriceAtAcq: v })} hideUnit />
         </FieldCard>
         <div className="flex justify-end">
@@ -128,7 +133,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       {/* ③ 개별공시지가 (취득시·최초고시) */}
       <ToneCard tone="amber" sectionNum="3" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3" noDark>
         <div>
-          <p className="mb-1 text-caption font-medium text-amber-700">취득시({dateLabel})</p>
+          <p className="mb-1 text-caption font-medium text-amber-700">취득시({acqTimeLabel})</p>
           {isCommercialPre1990Acquisition(asset) && (
             <>
               <CommercialPre1990LandNotice acquisitionDate={inheritanceDate} />
