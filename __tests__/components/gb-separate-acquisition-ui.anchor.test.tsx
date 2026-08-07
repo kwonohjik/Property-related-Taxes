@@ -7,11 +7,16 @@
  *
  * 고정 계약:
  *   A-6-1 토글은 **취득원인 블록 밖(최상단)**에 있다 — 상속·증여에서도 끌 수 있어야 한다
- *   A-6-2 분리 OFF면 건물 취득일 칸이 없다(토지 카드의 「취득일」 하나가 두 파트를 기록)
+ *   A-6-2 분리 OFF면 건물 취득일 칸이 없다(「취득」 카드의 「취득일」 하나가 두 파트를 기록)
  *   A-6-3 분리 ON이면 건물 취득일 칸이 나타난다
- *   A-6-4 Q4 — 건물 취득원인 「신축(자가건축)」 선택 시 분리를 **같은 배치로** 자동 ON
+ *   A-6-4 Q4 — 건물 취득원인 「신축(자가건축)」 선택 시 분리를 **같은 배치로** 켠다
  *   A-6-5 토글 OFF 전환은 `landAcquisitionDate`를 건물 취득일로 되맞춘다(불변식 §3.2(1))
  *   A-10  용도변경 미리보기 — 분리 ON·1주택이면 토지·건물 기산일을 **둘 다** 보여준다
+ *
+ * ⚠️ **2026-08-07 계약 변경** — 분리 OFF는 이제 **단일 「취득」 카드**다(사용자 보고).
+ *    건물 카드는 분리 ON 전용이 되었으므로, 건물 카드를 조작하는 아래 테스트들은 전부
+ *    **ON 기준**으로 옮겼다. OFF 경로(단일 취득원인 라디오·두 축 동시 기록·신축 진입)는
+ *    `gb-acq-cause-unified-off.anchor.test.tsx`의 U-1~U-7이 이어받는다.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
@@ -50,11 +55,21 @@ function renderCards(over: Partial<AssetForm> = {}) {
   return onChange;
 }
 
-/** 「건물 취득」 카드 안으로 스코프를 좁힌다 — 토지 카드에도 「취득원인」이 있다. */
+/**
+ * 「건물 취득」 카드 안으로 스코프를 좁힌다 — 토지 카드에도 「취득원인」이 있다.
+ * ⚠️ 이 카드는 **분리 ON에서만** 존재한다(2026-08-07) — 호출부는 ON 상태로 렌더할 것.
+ */
 function buildingCard(): HTMLElement {
   const title = screen.getByText("건물 취득");
   return title.closest("div.rounded-lg") as HTMLElement;
 }
+
+/** 분리 ON 자산 — 건물 카드를 조작하는 테스트의 공통 전제. */
+const SEPARATE_ON: Partial<AssetForm> = {
+  hasSeperateLandAcquisitionDate: true,
+  landAcquisitionDate: LAND,
+  acquisitionDate: BUILDING,
+};
 
 describe("A-6 — 분리 토글과 취득일 칸", () => {
   it("토글은 취득원인이 상속이어도 렌더된다 (취득원인 블록 밖)", () => {
@@ -72,8 +87,10 @@ describe("A-6 — 분리 토글과 취득일 칸", () => {
     expect(screen.getByText("건물 취득일")).toBeTruthy();
   });
 
-  it("Q4 — 「신축(자가건축)」 선택 시 분리를 같은 배치로 자동 ON", () => {
-    const onChange = renderCards();
+  // ⚠️ 아래 두 건은 **분리 ON 기준**이다 — 건물 카드가 ON 전용이 되었기 때문(2026-08-07).
+  //    OFF에서 신축을 고르는 경로는 U-4(`gb-acq-cause-unified-off.anchor.test.tsx`)가 고정한다.
+  it("Q4 — 건물 카드의 「신축(자가건축)」은 분리 플래그를 같은 배치로 함께 보낸다", () => {
+    const onChange = renderCards(SEPARATE_ON);
     fireEvent.click(within(buildingCard()).getByText("신축(자가건축)"));
     expect(onChange).toHaveBeenCalledWith({
       gbBuildingAcquisitionCause: "newConstruction",
@@ -82,21 +99,19 @@ describe("A-6 — 분리 토글과 취득일 칸", () => {
   });
 
   it("신축이 아닌 원인은 분리 상태를 건드리지 않는다", () => {
-    const onChange = renderCards();
+    const onChange = renderCards(SEPARATE_ON);
     fireEvent.click(within(buildingCard()).getByText("상속"));
     expect(onChange).toHaveBeenCalledWith({ gbBuildingAcquisitionCause: "inheritance" });
   });
 
-  it("토글 OFF 전환은 토지 취득일을 건물 취득일로 되맞춘다 (불변식)", () => {
-    const onChange = renderCards({
-      hasSeperateLandAcquisitionDate: true,
-      landAcquisitionDate: LAND,
-      acquisitionDate: BUILDING,
-    });
-    fireEvent.click(screen.getByRole("switch"));
+  it("토글 OFF 전환은 토지 취득일과 **건물 취득원인**을 함께 되맞춘다 (불변식)", () => {
+    const onChange = renderCards(SEPARATE_ON);
+    fireEvent.click(screen.getByRole("switch", { name: /토지·건물 취득일 다름/ }));
+    // 취득원인 되맞춤은 U-5가 상세히 고정한다 — 여기서는 날짜와 **한 배치**임을 본다.
     expect(onChange).toHaveBeenCalledWith({
       hasSeperateLandAcquisitionDate: false,
       landAcquisitionDate: BUILDING,
+      gbBuildingAcquisitionCause: "purchase",
     });
   });
 });

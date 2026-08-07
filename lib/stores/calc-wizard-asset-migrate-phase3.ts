@@ -61,18 +61,33 @@ export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
   // M-2: general_building + gbBuildingAcquisitionCause 미입력 시 acquisitionCause 값 복사
   // (사례 31 호환 데이터: 단일 취득원인이었던 경우 건물도 같은 원인으로 추정)
   const validBuildingCauses = ["purchase", "inheritance", "gift", "newConstruction"];
-  if (
-    a.assetKind === "general_building" &&
-    (!a.gbBuildingAcquisitionCause ||
-      !validBuildingCauses.includes(a.gbBuildingAcquisitionCause as string))
-  ) {
-    // acquisitionCause 중 건물 카드에 허용된 원인이면 그대로 사용
-    const ac = a.acquisitionCause as string;
-    // "carryover_gift"는 건물 카드 미지원 → "purchase" fallback
-    if (validBuildingCauses.includes(ac)) {
-      a.gbBuildingAcquisitionCause = ac;
+  if (a.assetKind === "general_building") {
+    /**
+     * M-2b **분리 OFF는 두 취득원인이 같다** — 어긋난 legacy 세션을 되맞춘다 (2026-08-07).
+     *
+     * 종전 UI는 분리 OFF에서도 토지·건물 취득원인 라디오를 각각 그려서 「토지 매매 + 건물 증여」
+     * 같은 조합을 저장할 수 있었다. OFF가 **단일 취득원인 카드**가 된 뒤로는 그 상태를 화면에
+     * 표현할 방법이 없다 — 라디오는 `acquisitionCause`만 보여주므로 **저장값과 화면이 어긋난
+     * 채로 payload를 가르게 된다**(`transfer-tax-api-gb.ts:487`이 건물 축을 그대로 싣는다).
+     *
+     * ⚠️ **신축만은 되맞추지 않는다** — 값을 잃는 대신 **분리를 켠다**. 신축은 토지를 산 뒤
+     *    건물을 짓는 것이라 취득일이 다를 수밖에 없고, 그래서 UI도 신축 선택 시 분리를 자동으로
+     *    켠다(Q4). 「신축 + 취득일 같음」은 애초에 물리적으로 모순인 상태이므로, 이미 코드베이스가
+     *    채택한 Q4 규칙을 마이그레이션에도 그대로 적용하는 것이 정합적이다.
+     */
+    const isSeparate = a.hasSeperateLandAcquisitionDate === true;
+    if (!isSeparate && a.gbBuildingAcquisitionCause === "newConstruction") {
+      a.hasSeperateLandAcquisitionDate = true;
     } else {
-      a.gbBuildingAcquisitionCause = "purchase";
+      // acquisitionCause 중 건물 카드에 허용된 원인이면 그대로 사용
+      const ac = a.acquisitionCause as string;
+      // "carryover_gift"는 건물 카드 미지원 → "purchase" fallback
+      const fromLand = validBuildingCauses.includes(ac) ? ac : "purchase";
+      const current = a.gbBuildingAcquisitionCause as string | undefined;
+      const missing = !current || !validBuildingCauses.includes(current);
+      if (missing || (!isSeparate && current !== fromLand)) {
+        a.gbBuildingAcquisitionCause = fromLand;
+      }
     }
   }
   migrateGbAcquisitionDateConvention(a);
