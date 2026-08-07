@@ -205,6 +205,23 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
 
   const isBurdenedGift = asset.transferType === "burdened_gift";
   /**
+   * 상속·증여 취득에서도 **증축 토글을 연다** (2026-08-07).
+   *
+   * 종전에는 증축 카드가 `isEstimated`(환산 모드)에서만 열렸다. 그런데 상속·증여는 §163⑨이
+   * 실가를 강제하므로 `isEstimated`가 **항상 false**이고, 증축을 켜는 다른 진입점인
+   * 「토지·건물 일괄(증축분 별도)」 라디오는 `CompanionAcqPurchaseBlock`(**매매 전용**)에만 있다.
+   * ⇒ 상속·증여에서는 증축을 **켤 방법 자체가 없었다** — 엔진·validate만 고치면 no-op이다
+   * (`feedback_api_trigger_without_input_path_is_noop`).
+   *
+   * ⚠️ **둘 다 상속 / 둘 다 증여**일 때만 연다. 부분 상속·증여 × 증축은 아직 dead-end다 —
+   *    V-5(부분 상속은 분리 ON 요구)와 V-3(증축 × 분리 ON 차단)이 정면 충돌한다.
+   *    계획서 `transfer-gb-inheritance-extension-3part.plan.md` §5 Phase 2.
+   */
+  const bothPartsSuccession =
+    (asset.acquisitionCause === "inheritance" &&
+      asset.gbBuildingAcquisitionCause === "inheritance") ||
+    (asset.acquisitionCause === "gift" && asset.gbBuildingAcquisitionCause === "gift");
+  /**
    * 취득시 기준시가(토지·건물)를 입력받는 조건 — 환산 분자 / 일괄 취득가 안분 / §159 환산.
    * 종전 "② 취득시 기준시가" 카드의 게이트를 그대로 승계한다(자산 축으로 재편해도 조건 불변).
    */
@@ -453,7 +470,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
 
         {/* ⑤ 증축 정보 (amber) — 환산취득가 모드 OR "토지·건물 일괄(증축분 별도)" 모드에서 표시.
             부담부증여 모드에서는 §159 자동 산정 — 증축 cross-cutting 비스코프이므로 숨김. */}
-        {!isBurdenedGift && (isEstimated || asset.gbHasExtension) && (
+        {!isBurdenedGift && (isEstimated || asset.gbHasExtension || bothPartsSuccession) && (
           <ToggleCard
             tone="amber"
             variant="card"

@@ -126,10 +126,19 @@ export function validateGeneralBuildingAsset(
     // V2: 상속 파트는 추계 불가 — **파트 축**으로 판정한다(O-3).
     if (isLandInherited && landMode !== "actual") return blockEstimation("토지", "상속");
     if (isBuildingInherited && buildingMode !== "actual") return blockEstimation("건물", "상속");
-    // 증축(3파트 축)은 종전대로 차단 — 상속 평가액 배정 경로가 2파트 전제다.
-    if (asset.gbHasExtension) {
-      return `${label}: 상속 취득 일반건물은 증축 조합을 지원하지 않습니다. 증축 토글을 끄세요.`;
-    }
+    /**
+     * ✅ **증축 차단을 해제했다** (2026-08-07). 종전 사유는 「상속 평가액 배정 경로가 2파트
+     * 전제다」였고 **맞는 서술이었다** — 3-way 경로가 `applyPartAcqModes`를 건너뛰어 평가액이
+     * 계산에 도달하지 못했다(실측: 평가액 8억 소실, 산출세액 204,090,000 → 313,290,000).
+     * 그 차단은 침묵 과대과세를 막는 정당한 방어였다.
+     *
+     * 이제 3-way도 2-way와 **같은 함수**로 파트별 실지거래가액을 적용한다
+     * (`general-building-extension.ts` Step 2.5). ⇒ 배정 경로가 생겼으므로 차단을 푼다.
+     *
+     * ⚠️ **부분 상속 × 증축은 아직 dead-end다** — V-5(부분 상속은 분리 ON 요구)와
+     *    V-3(증축 × 분리 ON 차단)이 정면 충돌한다. 아래 V-5가 그 조합을 계속 막는다.
+     *    계획서 `transfer-gb-inheritance-extension-3part.plan.md` §5 Phase 2.
+     */
     /**
      * V-5 **부분 상속은 분리 ON을 요구한다** (Phase 2 신설).
      *
@@ -205,9 +214,12 @@ export function validateGeneralBuildingAsset(
     // 「토지 매매 + 건물 증여」에서 토지 환산은 정당하다(토지는 §163⑨ 대상이 아니다).
     if (isLandGift && landMode !== "actual") return blockEstimation("토지", "증여");
     if (isBuildingGift && buildingMode !== "actual") return blockEstimation("건물", "증여");
-    if (asset.gbHasExtension) {
-      return `${label}: 증여 취득 일반건물은 증축 조합을 지원하지 않습니다. 증축 토글을 끄세요. (소득세법 시행령 §163⑨)`;
-    }
+    /**
+     * ✅ **증축 차단 해제** (2026-08-07) — 상속 게이트와 같은 근거다(위 주석).
+     * 증여 파트도 §163⑨ 평가액이 파트 취득가액 슬롯으로 실리고, 3-way 경로가 이제 그것을
+     * 읽는다. 증축분(건물2)은 §163⑨ 대상이 아니다 — 증축 취득원인은 매매·자가증축뿐이다
+     * (아래 「증축 취득원인을 선택하세요」 검증이 그 전제다).
+     */
     /**
      * 증여 신고가액은 **분리 OFF에서만** 자산 단위 칸으로 받는다(O-3 dead-end 해소).
      *
@@ -423,8 +435,23 @@ export function validateGeneralBuildingAsset(
 
   // ⑧ 사례 33: 증축(gbHasExtension=true) 추가 검증
   if (asset.gbHasExtension) {
-    // 사례 33 일괄 모드(실가+증축): 일괄 취득가 필수
-    if (!asset.useEstimatedAcquisition && !parseAmount(asset.fixedAcquisitionPrice))
+    /**
+     * 사례 33 일괄 모드(실가+증축): 일괄 취득가 필수.
+     *
+     * ⚠️ **상속 파트는 제외한다** (2026-08-07). 상속은 토지·건물1의 취득가액을 일괄 칸이 아니라
+     * §163⑨ 평가액 칸(`publishedValueAtInheritance`·`gbBuildingInheritedValue`)으로 받고,
+     * 그 값이 파트 취득가액 슬롯으로 실려 3-way 경로가 소비한다. 일괄 칸을 요구하면
+     * **입력할 방법이 없는 차단**이 된다 — 화면에 그 칸이 없다
+     * (`feedback_ui_gate_removes_sole_input_path`).
+     *
+     * 증여는 제외하지 않는다 — 증여 신고가액이 곧 `fixedAcquisitionPrice`다(분리 OFF 규약).
+     */
+    if (
+      !isLandInherited &&
+      !isBuildingInherited &&
+      !asset.useEstimatedAcquisition &&
+      !parseAmount(asset.fixedAcquisitionPrice)
+    )
       return `${label}: 토지·건물 일괄 취득가액을 입력하세요. (사례 33: 토지·원건물 일괄 실거래가)`;
 
     // 공통 필수: 증축일

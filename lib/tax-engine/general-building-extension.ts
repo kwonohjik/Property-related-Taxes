@@ -28,6 +28,7 @@ import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
+import { applyPartAcqModes } from "./general-building-part-acq";
 import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import {
   ESTIMATED_DEDUCTION_RATE_LAND_BUILDING,
@@ -248,6 +249,59 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     originUsedEstimated = true;
   }
 
+  /**
+   * ── Step 2.5: 파트별 취득 방식 — §163⑨ 상속·증여 평가액이 여기서 들어온다 ──────
+   *
+   * 2-way 경로와 **같은 함수**를 쓴다(`applyPartAcqModes` — `general-building-valuation.ts:326`).
+   * 판정을 각자 구현하면 반드시 갈라진다(`feedback_ui_engine_dual_truth_avoidance`).
+   *
+   * 종전에는 3-way가 이 단계를 통째로 건너뛰었다 — 증축 분기가
+   * `general-building-valuation.ts:297`에서 먼저 return하기 때문이다. 그래서 payload에 실려 온
+   * `landAcquisitionPrice`/`buildingAcquisitionPrice`(상속개시일·증여일 평가액, §164 max 적용분)를
+   * **아무도 읽지 않았다** ⇒ 상속 + 증축에서 토지·건물1 취득가액이 **0**이었다
+   * (실측: 평가액 8억이 사라져 산출세액 204,090,000 → 313,290,000). validate가 그 조합을
+   * 하드 차단하고 있어 사용자에게 도달하지는 않았다.
+   *
+   * ⚠️ **파트 값이 있는 파트만** 덮는다. 무조건 적용하면 조합 A(매매 일괄 실가)가 깨진다 —
+   *    분리 OFF 매매는 파트 취득가액 칸이 화면에 없어 payload에 값이 없고, `applyPartAcqModes`가
+   *    그것을 `missingParts`로 돌려주기 때문이다. 그 파트는 종전 산출값(조합 A 일괄 안분 ·
+   *    조합 C/D 환산)을 유지한다 — **자동 안분 fallback이 아니라 기존 정본**이다.
+   *    (2-way 경로가 `missingParts`에서 throw하는 것은 거기엔 대체 산출값이 없기 때문이다.)
+   */
+  const partAcq = applyPartAcqModes(
+    input,
+    { land: landAcq, building: building1Acq },
+    {
+      land: originUsedEstimated ? landExp : 0,
+      building: originUsedEstimated ? building1Exp : 0,
+    },
+  );
+  /** 그 파트가 파트별 실지거래가액으로 실제 대체됐는가 — 모드가 비-환산이고 값이 있을 때. */
+  const landPartApplied =
+    (input.landAcqMode ?? "estimated") !== "estimated" &&
+    !partAcq.missingParts.includes("토지");
+  const buildingPartApplied =
+    (input.buildingAcqMode ?? "estimated") !== "estimated" &&
+    !partAcq.missingParts.includes("건물");
+
+  if (landPartApplied) {
+    landAcq = partAcq.acquisition.land;
+    landExp = input.landDirectExpenses ?? 0;
+  }
+  if (buildingPartApplied) {
+    building1Acq = partAcq.acquisition.building;
+    building1Exp = input.buildingDirectExpenses ?? 0;
+  }
+
+  /**
+   * 개산공제(§163⑥)는 **파트별**로 갈린다 — 「소득세법」 제97조 제2항은 제1호(취득가액을
+   * **실지거래가액**에 의하는 경우)와 제2호(그 밖의 경우)를 나누고, 개산공제는 **제2호에만**
+   * 붙는다. §163⑨ 평가액은 「취득당시의 실지거래가액으로 **본다**」이므로 가목이다 ⇒ 제외.
+   * 대체되지 않은 파트는 원건물 모드(조합 A=실가 / C·D=환산)를 그대로 따른다.
+   */
+  const landUsedEstimated = landPartApplied ? false : originUsedEstimated;
+  const building1UsedEstimated = buildingPartApplied ? false : originUsedEstimated;
+
   // ── Step 3: 건물2 취득가·필요경비 결정 (건물2 모드 분기) ─────────────
   //
   // ext.acquisitionMode (default: "estimated"):
@@ -299,7 +353,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   });
 
   // ── Step 4: 자산 카드 3장 생성 ────────────────────────────────────────
-  // originUsedEstimated: 토지·건물1 카드에 적용 (원건물 모드에 따라 결정됨)
+  // landUsedEstimated: 토지·건물1 카드에 적용 (원건물 모드에 따라 결정됨)
   // extensionUsedEstimated: 건물2 카드에 적용 (건물2 모드에 따라 결정됨)
   const assetCards: AssetCardForAggregate[] = [];
 
@@ -315,9 +369,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       transferPrice: landBusinessTransfer,
       acquisitionPrice: landBusinessAcq,
       expenses: landBusinessExp,
-      usedEstimatedAcquisition: originUsedEstimated,
-      estimatedBase: originUsedEstimated ? landBusinessAcq : 0,
-      estimatedDeduction: originUsedEstimated ? landBusinessExp : 0,
+      usedEstimatedAcquisition: landUsedEstimated,
+      estimatedBase: landUsedEstimated ? landBusinessAcq : 0,
+      estimatedDeduction: landUsedEstimated ? landBusinessExp : 0,
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
@@ -333,9 +387,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       transferPrice: landTransferPrice - landBusinessTransfer,
       acquisitionPrice: landAcq - landBusinessAcq,
       expenses: landExp - landBusinessExp,
-      usedEstimatedAcquisition: originUsedEstimated,
-      estimatedBase: originUsedEstimated ? landAcq - landBusinessAcq : 0,
-      estimatedDeduction: originUsedEstimated ? landExp - landBusinessExp : 0,
+      usedEstimatedAcquisition: landUsedEstimated,
+      estimatedBase: landUsedEstimated ? landAcq - landBusinessAcq : 0,
+      estimatedDeduction: landUsedEstimated ? landExp - landBusinessExp : 0,
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
       isNonBusinessLand: true,
@@ -352,9 +406,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       transferPrice: landTransferPrice,
       acquisitionPrice: landAcq,
       expenses: landExp,
-      usedEstimatedAcquisition: originUsedEstimated,
-      estimatedBase: originUsedEstimated ? landAcq : 0,
-      estimatedDeduction: originUsedEstimated ? landExp : 0,
+      usedEstimatedAcquisition: landUsedEstimated,
+      estimatedBase: landUsedEstimated ? landAcq : 0,
+      estimatedDeduction: landUsedEstimated ? landExp : 0,
       acquisitionDate: input.acquisitionDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
@@ -378,9 +432,9 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     transferPrice: building1TransferPrice,
     acquisitionPrice: building1Acq,
     expenses: building1Exp,
-    usedEstimatedAcquisition: originUsedEstimated,
-    estimatedBase: originUsedEstimated ? building1Acq : 0,
-    estimatedDeduction: originUsedEstimated ? building1Exp : 0,
+    usedEstimatedAcquisition: building1UsedEstimated,
+    estimatedBase: building1UsedEstimated ? building1Acq : 0,
+    estimatedDeduction: building1UsedEstimated ? building1Exp : 0,
     acquisitionDate: building1AcqDate,
     transferDate: input.transferDate,
     isNonBusinessLand: false,
