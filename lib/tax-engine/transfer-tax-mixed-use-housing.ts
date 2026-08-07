@@ -13,7 +13,8 @@
 import { estimatedDeductionRate } from "./legal-codes";
 import { calculateHoldingPeriod, computeEstimatedDeduction } from "./tax-utils";
 import { buildHousingGainSplitFromFourPart } from "./transfer-tax-mixed-use-fourpart";
-import { splitDeemedExpense } from "./transfer-tax-mixed-use-inheritance";
+import { splitDeemedExpense, resolvePartNecessaryExpense } from "./transfer-tax-mixed-use-inheritance";
+import { apportionAcquisitionPrice, apportionTransferPrice } from "./transfer-tax-mixed-use-helpers";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import type { HousingEstimatedAcqResult } from "./transfer-tax-mixed-use-helpers";
 
@@ -196,8 +197,28 @@ export function calcHousingGainSplit(
     buildingAppraisalDed: computeEstimatedDeduction(acqBuildingStd, dedRate, asset.ownershipRatio),
   };
   const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition;
+  /**
+   * 🔴 자산 단위 **공통** 자본적지출·양도비의 **주택분 안분분**(2026-08-07 W-3).
+   *
+   * 「소득세법」 제100조 제2항 후문 — 「공통되는 취득가액과 **양도비용**은 **해당 자산의 가액에
+   * 비례하여** 안분계산한다」. 성질에 따라 축이 갈린다(같은 항 본문 「취득 **또는** 양도 당시」):
+   *   · 자본적지출 → `apportionAcquisitionPrice`(**취득시** 기준시가)
+   *   · 양도비     → `apportionTransferPrice`(**양도시** 기준시가)
+   * 두 헬퍼는 이미 취득가액·양도가액 안분에 쓰는 **같은 함수**다 — 축을 새로 만들지 않는다.
+   */
+  const commonCapexHousing = apportionAcquisitionPrice(
+    asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived,
+  ).housingAcqPrice;
+  const commonTransferExpHousing = apportionTransferPrice(
+    asset.transferExpense ?? 0, asset, derived,
+  ).housingTransferPrice;
   const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq
-    ? splitDeemedExpense(asset.housingInheritedExpense ?? 0, acqLandStd, acqBuildingStd)
+    ? resolvePartNecessaryExpense({
+        partDirect: asset.housingInheritedExpense,
+        commonCapitalExpenditure: commonCapexHousing,
+        commonTransferExpense: commonTransferExpHousing,
+        acqLandStd, acqBuildingStd, transferLandStd, transferBuildingStd,
+      })
     : housingLumpPair;
 
   const landGain = landTransferPrice - landAcqPrice - landAppraisalDed;

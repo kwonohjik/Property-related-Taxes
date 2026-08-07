@@ -229,6 +229,18 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
         : primary.acquisitionCause === "gift"
           ? parseAmount(primary.mixedCommercialGiftExpense)
           : parseAmount(primary.mixedCommercialInheritedExpense)) || undefined,
+    /**
+     * 🔴 자산 단위 **공통** 자본적지출·양도비 (2026-08-07 W-3).
+     *
+     * 위 파트별 필드는 「주택분/상가분을 **사용자가 직접 나눠** 넣은 것」이라 안분 대상이 아니다.
+     * 이 두 필드는 **나눌 수 없는 공통 지출**이고, 엔진이 「소득세법」 제100조 제2항 **후문**
+     * (「공통되는 취득가액과 양도비용은 해당 자산의 가액에 비례하여 안분계산한다」)으로 나눈다.
+     *
+     * ⚠️ 안분 **비율**은 엔진만 안다(취득시·양도시 기준시가) — 클라이언트에서 미리 나누지 않는다
+     *    (메모리 `feedback_ui_engine_dual_truth_avoidance`).
+     */
+    capitalExpenditure: parseAmount(primary.capitalExpenditure) || undefined,
+    transferExpense: parseAmount(primary.transferExpense) || undefined,
     // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매 + 실거래가 모드.
     // 상속·증여(byInheritance/byGift)와 상호배타(취득원인 purchase라 자동 배타). 환산/감정/매매사례 모드는 제외.
     useActualAcquisition: isMixedActualAcquisition,

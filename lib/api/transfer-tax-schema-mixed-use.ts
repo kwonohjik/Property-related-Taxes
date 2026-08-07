@@ -85,6 +85,13 @@ export const mixedUseAssetSchema = z.object({
   commercialInheritedValue: z.number().int().positive().optional(),
   housingInheritedExpense: z.number().int().nonnegative().optional(),
   commercialInheritedExpense: z.number().int().nonnegative().optional(),
+  /**
+   * 🔴 자산 단위 **공통** 자본적지출·양도비 (「소득세법」 제97조 제1항 제2호·제3호) — 2026-08-07 W-3.
+   * 위 파트별 필드로 나눌 수 없는 공통 지출을 엔진이 §100② 후문으로 안분한다
+   * (자본적지출=취득시 · 양도비=양도시 기준시가 축). **파트별 입력이 있으면 그 파트는 안분 제외.**
+   */
+  capitalExpenditure: z.number().int().nonnegative().optional(),
+  transferExpense: z.number().int().nonnegative().optional(),
   // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매. 침묵 strip 방지(⑫).
   useActualAcquisition: z.boolean().optional(),
   acquisitionActualTotalPrice: z.number().int().positive().optional(),
