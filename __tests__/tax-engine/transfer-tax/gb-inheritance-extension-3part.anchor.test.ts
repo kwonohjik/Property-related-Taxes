@@ -213,12 +213,22 @@ describe("E3-4 — 회귀 0", () => {
    * 안분한다. 상속 파트가 없으므로 `applyPartAcqModes`는 두 파트 모두 `estimated`로 보고
    * 입력을 그대로 돌려줘야 한다(`part-acq.ts:80~88` 조기 반환). 회귀 0의 핵심 대조군.
    */
-  it("비-상속(매매) + 증축은 종전 경로 그대로 — 일괄 취득가 기준시가 안분", () => {
+  /**
+   * 🔄 **픽스처 정정(2026-08-08)** — 종전에는 `landAcqMode`/`buildingAcqMode`를 명시적으로
+   * `"estimated"`로 두고 **동시에** 일괄 실가를 넣었다. 「환산이라면서 일괄 실가를 넣은」
+   * 모순 입력이라 validate가 만들어 낼 수 없는 상태였고, 조합 A의 회귀 가드로도 부정확했다.
+   *
+   * 분리 OFF에서는 `effectivePartAcqMode`가 `useEstimatedAcquisition`(false)에서 "actual"을
+   * 파생한다 — 모드를 명시하지 않는 것이 실제 조합 A다. 값(796,096,533 / 3,903,467)은 그대로다.
+   *
+   * ⚠️ 종전 픽스처는 Phase 2 이후 **다른 값**을 낸다(669,246,886) — 환산 파트가 이제
+   *    §176의2② 산식을 쓰기 때문이다. 그 동작은
+   *    `gb-extension-part-acq-date.anchor.test.ts`가 따로 잠근다.
+   */
+  it("비-상속(매매) + 증축은 종전 경로 그대로 — 일괄 취득가 기준시가 안분 (조합 A)", () => {
     const purchase = withExtension({
       acquisitionCause: "purchase",
       gbBuildingAcquisitionCause: "purchase",
-      landAcqMode: "estimated",
-      buildingAcqMode: "estimated",
       publishedValueAtInheritance: "",
       gbBuildingInheritedValue: "",
       fixedAcquisitionPrice: String(LAND_VALUE + BUILDING_VALUE),

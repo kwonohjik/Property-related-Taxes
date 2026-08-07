@@ -63,8 +63,25 @@ describe("A-5 — 분리 취득 차단 규칙", () => {
     expect(v(base({ acquisitionDate: "" }))).toMatch(/건물 취득일을 입력/);
   });
 
-  it("V-3 증축 조합 → 차단", () => {
-    expect(v(base({ gbHasExtension: true }))).toMatch(/증축.*함께 지원하지 않습니다/);
+  /**
+   * 🔄 **정정(2026-08-08) — V-3 차단을 해제했다.**
+   *
+   * 종전 사유는 「증축은 3파트 축이라 2분할과 섞이지 않는다」였는데, 실제 갭은 **하나**였다 —
+   * 3-way 카드 생성부가 토지 카드에도 `input.acquisitionDate`(= **건물** 취득일)를 써서
+   * `landAcquisitionDate`가 계산에 도달하지 않았다.
+   *
+   * 실측(토지 1995 · 건물 2020 · 2026 양도): 장기보유특별공제 합이 **81,999,999**로
+   * 「토지도 2020」인 경우와 정확히 같았다(분리 ON·증축 OFF 대조군 245,587,665).
+   * 그 갭을 메웠으므로 차단을 푼다 — 파트별 취득**방식·가액**은 #1137이 이미 처리했다.
+   *
+   * 이 해제로 **부분 상속·증여 × 증축**이 열린다(V-5가 요구하는 분리 ON과 정면 충돌해
+   * 종전에는 dead-end였다).
+   *
+   * anchor: `__tests__/tax-engine/transfer-tax/gb-extension-part-acq-date.anchor.test.ts`
+   * 계획서: `docs/02-design/features/transfer-gb-inheritance-extension-3part.plan.md` §5
+   */
+  it("🔄 V-3 증축 조합 → 차단하지 않는다 (토지 파트 취득일 반영 완료)", () => {
+    expect(v(base({ gbHasExtension: true }))).not.toMatch(/증축.*함께 지원하지 않습니다/);
   });
 
   it("V-4 부담부증여 조합 → 차단", () => {

@@ -91,14 +91,32 @@ describe("W-1b — 전용 필드 입력(① 채택) 시 양도비가 나목에 �
     expect(r.directSide).toBe(CAPEX + TRANSFER_EXP);
   });
 
-  it("🔴 세액이 실제로 달라진다 — 종전에는 121,962,280원 과대였다", () => {
+  /**
+   * 🔄 **차액 갱신(2026-08-08) — 이 테스트의 주제는 그대로다.**
+   *
+   * 단언하는 것은 「양도비를 나목에 넣느냐 마느냐가 **세액을 실제로 바꾼다**」는 사실이고,
+   * 그 성질은 불변이다(`directSide` 단언도 그대로 통과한다). 바뀐 것은 **차액의 크기**다.
+   *
+   * 이 픽스처는 분리 OFF · **환산 모드** · 증축 조합인데, 종전에는 그 조합에서 원건물
+   * 취득가액이 **0**이었다 — `route-helper`가 `actualBundledAcquisitionPrice`를 항상 주입해
+   * 조합 C/D(환산 산식)에 도달하지 못했기 때문이다. 즉 가목(환산취득가 + 개산공제)이
+   * 개산공제뿐이었고, 그 위에서 잰 차액이 121,962,280이었다.
+   *
+   * 그 결함을 고치면서(`general-building-extension.ts` — 환산 파트는 §176의2② 산식을 쓴다)
+   * 가목이 실제 값을 갖게 됐고, §97②2호 단서의 겨루기가 달라져 차액이 **92,942,585**가 됐다.
+   * 세액 자체도 내려간다 — 취득가액이 0에서 실제 환산취득가로 올라갔으므로 당연하다.
+   *
+   * 근거 anchor: `__tests__/tax-engine/transfer-tax/gb-extension-part-acq-date.anchor.test.ts`
+   * (「분리 OFF + 증축 + 환산 모드에서 취득가액이 0이 아니다」).
+   */
+  it("🔄 세액이 실제로 달라진다 — 양도비를 나목에 넣는 것의 차액", () => {
     const fixed = calc(gbExtAsset({ gbBundledAcquisitionExpenses: String(DEDICATED_BUNDLED) }));
     // 양도비를 빼면(=종전 동작) 나목이 자본적지출만 남는다.
     const asIfExcluded = calc(
       gbExtAsset({ gbBundledAcquisitionExpenses: String(DEDICATED_BUNDLED), transferExpense: "0" }),
     );
     expect(asIfExcluded.directSide).toBe(CAPEX);
-    expect(asIfExcluded.tax - fixed.tax).toBe(121_962_280);
+    expect(asIfExcluded.tax - fixed.tax).toBe(92_942_585);
   });
 });
 

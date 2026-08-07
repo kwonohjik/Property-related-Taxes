@@ -270,10 +270,25 @@ export function validateGeneralBuildingAsset(
     if (isBurdenedGiftGB) {
       return `${label}: 부담부증여는 §159 채무비율로 토지·건물을 자동 산정하므로 「토지·건물 취득일 다름」을 끄세요.`;
     }
-    // V-3 증축 — 증축은 토지·건물1·건물2 3파트 축이라 2분할과 섞이지 않는다.
-    if (asset.gbHasExtension) {
-      return `${label}: 증축(건물2)과 「토지·건물 취득일 다름」은 함께 지원하지 않습니다. 둘 중 하나를 끄세요.`;
-    }
+    /**
+     * ✅ **V-3(증축 × 분리 ON) 차단을 해제했다** (2026-08-08 — Phase 2).
+     *
+     * 종전 사유는 「증축은 3파트 축이라 2분할과 섞이지 않는다」였는데, 실제 갭은 **하나**였다 —
+     * 3-way 카드 생성부가 토지 카드에도 `input.acquisitionDate`(= **건물** 취득일)를 써서
+     * `landAcquisitionDate`가 계산에 도달하지 않았다. payload는 값을 싣고 있었다
+     * (`route-helper.ts:127`). #1137의 파트 가액과 같은 모양이다.
+     *
+     * 실측(토지 1995 · 건물 2020 · 2026 양도): 장기보유특별공제 합이 **81,999,999**로
+     * 「토지도 2020」인 경우와 **정확히 같았다** — 토지의 31년 보유가 6년으로 계산됐다
+     * (분리 ON·증축 OFF 대조군 245,587,665). 그 갭을 메웠으므로 차단을 푼다
+     * (`general-building-extension.ts`의 `landAcqDate`).
+     *
+     * 파트별 취득**방식·가액**은 #1137의 Step 2.5가 이미 처리한다.
+     *
+     * ⚠️ 이 해제로 **부분 상속·증여 × 증축**이 열린다 — V-5가 요구하는 분리 ON과
+     *    이 차단이 정면 충돌해 종전에는 dead-end였다.
+     * 계획서: `docs/02-design/features/transfer-gb-inheritance-extension-3part.plan.md` §5
+     */
     // V-1 파트 취득일 — 두 칸 모두 필요하다(§95④ 「그 자산의 취득일」).
     if (!asset.landAcquisitionDate) return `${label}: 토지 취득일을 입력하세요.`;
     if (!asset.acquisitionDate) return `${label}: 건물 취득일을 입력하세요.`;
@@ -445,8 +460,14 @@ export function validateGeneralBuildingAsset(
      * (`feedback_ui_gate_removes_sole_input_path`).
      *
      * 증여는 제외하지 않는다 — 증여 신고가액이 곧 `fixedAcquisitionPrice`다(분리 OFF 규약).
+     *
+     * ⚠️ **분리 ON도 제외한다** (2026-08-08 Phase 2). 분리 ON이면 자산 단위 취득가액 칸이
+     *    화면에서 사라지고(`hideAssetAcqAxis`) 파트별 칸이 그 역할을 한다. 일괄 칸을 요구하면
+     *    **입력할 방법이 없는 차단**이 된다(`feedback_ui_gate_removes_sole_input_path`).
+     *    파트별 취득가액은 아래 V-7이 파트마다 따로 요구하므로 검증 공백도 없다.
      */
     if (
+      !isSeparate &&
       !isLandInherited &&
       !isBuildingInherited &&
       !asset.useEstimatedAcquisition &&

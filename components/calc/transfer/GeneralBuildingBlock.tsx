@@ -222,6 +222,18 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
       asset.gbBuildingAcquisitionCause === "inheritance") ||
     (asset.acquisitionCause === "gift" && asset.gbBuildingAcquisitionCause === "gift");
   /**
+   * **분리 ON에서도 증축 토글을 연다** (2026-08-08 Phase 2).
+   *
+   * 종전에는 validate V-3이 「증축 × 분리 ON」을 하드 차단했으므로 화면에 낼 이유가 없었다.
+   * 그 차단을 풀었으니(3-way가 토지 파트 취득일을 읽게 됐다) 진입점이 필요하다 —
+   * 없으면 엔진·validate만 고친 **no-op**이 된다
+   * (`feedback_api_trigger_without_input_path_is_noop`).
+   *
+   * 이것이 **부분 상속·증여 × 증축**의 유일한 입력 경로다 — 부분 상속은 V-5가 분리 ON을
+   * 요구하므로 `bothPartsSuccession`(둘 다 상속/증여)에 걸리지 않는다.
+   */
+  const isSeparateAcq = asset.hasSeperateLandAcquisitionDate === true;
+  /**
    * 취득시 기준시가(토지·건물)를 입력받는 조건 — 환산 분자 / 일괄 취득가 안분 / §159 환산.
    * 종전 "② 취득시 기준시가" 카드의 게이트를 그대로 승계한다(자산 축으로 재편해도 조건 불변).
    */
@@ -470,7 +482,8 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
 
         {/* ⑤ 증축 정보 (amber) — 환산취득가 모드 OR "토지·건물 일괄(증축분 별도)" 모드에서 표시.
             부담부증여 모드에서는 §159 자동 산정 — 증축 cross-cutting 비스코프이므로 숨김. */}
-        {!isBurdenedGift && (isEstimated || asset.gbHasExtension || bothPartsSuccession) && (
+        {!isBurdenedGift &&
+          (isEstimated || asset.gbHasExtension || bothPartsSuccession || isSeparateAcq) && (
           <ToggleCard
             tone="amber"
             variant="card"
