@@ -105,7 +105,15 @@ export function runBurdenedGiftStep(
             acquisitionMethod: "estimated" as const,
             usedEstimatedAcquisition: true,
             // 증축: 증축부분 한정 base / 신축: 건물 전체 환산취득가 (기존 동작)
-            estimatedBase: extensionPenaltyBase ?? building.acquisitionPrice,
+            //
+            // 🔑 §97②2호 **단서**(W-6)가 발동하면 `building.acquisitionPrice`는 **0**이 된다
+            //    (나목이 필요경비 전체 — 환산취득가액 별도 차감 금지). 그러나 §114조의2 가산세는
+            //    「**환산취득가액을 썼다는 사실**」에 붙는 것이라 base가 0이 되면 안 된다
+            //    ⇒ 스왑 전 값을 보존한 `convertedAcquisitionBeforeSwap`을 우선한다.
+            estimatedBase:
+              extensionPenaltyBase ??
+              transferBurdenedGiftBreakdown.convertedAcquisitionBeforeSwap?.building ??
+              building.acquisitionPrice,
             // 85㎡ 게이트(rate-calc)가 읽는 신호 — spread 의존 제거용 명시 전달(안전 강화)
             buildingType: rawInput.buildingType,
             extensionFloorArea: rawInput.extensionFloorArea,

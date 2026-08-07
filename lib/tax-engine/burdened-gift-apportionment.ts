@@ -38,232 +38,30 @@ import type {
 } from "./types/transfer-burdened-gift.types";
 import { format } from "date-fns";
 
-// ============================================================
-// 공유지분 스케일 (소령 §159 — A·C는 증여 대상 재산의 값)
-// ============================================================
+// ── 800줄 정책 분리(2026-08-07 W-6) — 기존 import 경로 유지용 재수출 ──
+import {
+  scaleBurdenedGiftInfo,
+  computeSangjeungbeopValuation,
+  computeDebtRatio,
+  apportionTransferPrice,
+  apportionAcquisitionPrice,
+  estimatedDeductionForBurdenedGift,
+} from "./burdened-gift-valuation";
 
-/**
- * 공유지분 부담부증여 — **시스템이 물건 전체(100%)로 들고 있는 평가액**을 지분분으로 축소.
- *
- * ## 왜 필요한가
- *
- * 소령 §159①(KoreanLaw 실측 mst=286211): `취득가액 = A × B/C` · `양도가액 = A × B/C`.
- * **A(§97①1호 가액 / 상증법 §60~66 평가액)와 C(증여가액)는 모두 "증여 대상 재산"의 값**이므로
- * 증여 대상이 1/2 지분이면 A·C 모두 지분분이다. **B(채무액)만 절대금액**이다.
- *
- * A와 C가 함께 축소되면 산식은 **스케일 불변**이라 결과가 같다 — 이것이 지분 미인지 상태에서도
- * 대부분 정답이 나오던 이유다. 상쇄가 깨지는 지점은 **C = max(보충적, 담보, 임대)** 의
- * 담보·임대 항이 **절대금액**이라 지분에 따라 줄지 않는다는 것이다. C가 채무액으로 결정되면
- * A만 100% 스케일로 남아 약분되지 않고 **취득가액 과대 → 과소과세**가 된다.
- *
- * ## 스케일하지 않는 것
- *
- * `lendingDepositTotal`·`mortgageDebtAmount`·`annualRentTotal`·`mortgageSetAmount`는
- * **사용자가 해당 지분의 인수분을 입력**한다. 엔진이 물건 전체 채무를 ×ratio로 쪼개면
- * **자동 안분 fallback**이 되어 정책 위반이다(`feedback_no_silent_apportion_fallback`).
- * 인수채무는 계약으로 정해지는 금액이지 지분율로 파생되는 값이 아니다.
- *
- * `capitalExpenditure`·`transferExpense`도 제외 — `transfer-tax-api.ts`에서 **이미**
- * `applyRatio` 적용되어 도달한다(이중 적용 금지).
- *
- * ## 절사
- *
- * 성분별 **독립 floor**(`applyRatio` = `Math.floor(v × ratio)`). 잔액 흡수는 PR #845에서
- * 논파되어 규약에서 제외됐다(소득세법 §100② "각각 구분하여 기장"). 재도입 금지.
- */
-export function scaleBurdenedGiftInfo(
-  info: BurdenedGiftInfo,
-  ownershipRatio?: number,
-): BurdenedGiftInfo {
-  if (ownershipRatio === undefined || ownershipRatio >= 1 || ownershipRatio <= 0) return info;
-  const s = (v: number | undefined) => (v === undefined ? undefined : applyRatio(v, ownershipRatio));
-  return {
-    ...info,
-    // 기준시가 4 (양도·취득 × 토지·건물)
-    landStdPriceAtTransfer: applyRatio(info.landStdPriceAtTransfer, ownershipRatio),
-    buildingStdPriceAtTransfer: applyRatio(info.buildingStdPriceAtTransfer, ownershipRatio),
-    landStdPriceAtAcquisition: applyRatio(info.landStdPriceAtAcquisition, ownershipRatio),
-    buildingStdPriceAtAcquisition: applyRatio(info.buildingStdPriceAtAcquisition, ownershipRatio),
-    // 증여세 평가용 건물 기준시가 (상증법 §61 층별 가감율)
-    giftBuildingStdPriceAtTransfer: s(info.giftBuildingStdPriceAtTransfer),
-    // 시가 모드 2
-    marketValueAtTransfer: s(info.marketValueAtTransfer),
-    marketValueAtAcquisition: s(info.marketValueAtAcquisition),
-    // K-4 실지취득가액 3
-    actualLandAcquisitionPrice: s(info.actualLandAcquisitionPrice),
-    actualBuildingAcquisitionPrice: s(info.actualBuildingAcquisitionPrice),
-    actualAcquisitionTotal: s(info.actualAcquisitionTotal),
-  };
-}
+export {
+  scaleBurdenedGiftInfo,
+  computeMortgageValuation,
+  computeSangjeungbeopValuation,
+  computeDebtRatio,
+  apportionTransferPrice,
+  apportionAcquisitionPrice,
+  estimatedDeductionForBurdenedGift,
+} from "./burdened-gift-valuation";
+export {
+  assertBurdenedGiftEligible,
+  detectBurdenedGiftMultiHouseWarning,
+} from "./burdened-gift-eligibility";
 
-// ============================================================
-// 상증법 §60~§66 Max 평가 산정
-// ============================================================
-
-/**
- * 담보평가의 (근)저당 항 — 상증령 §63①3호 + §63② 전단.
- *
- * - **§63①3호**: 근저당권이 설정된 재산의 가액 = "평가기준일 현재 당해 재산이 담보하는 **채권액**".
- *   즉 원칙은 **설정액(채권최고액)이 아니라 실제 채권액**이다.
- * - **§63② 전단**: 채권최고액이 담보채권액보다 **적은** 경우에만 채권최고액으로 한다.
- *   ⇒ 두 조항의 결합은 `min(채권최고액, 채권액)` — 담보로 잡힌 금액의 상한이 최고액이라는 취지.
- *
- * ⚠️ **구법 드리프트 주의**(2026-07-28 정정): 구 상속세법 시행령 §5의2 3호는 근저당을
- * **채권최고액**으로 평가하도록 규정했고, 그 시기의 조세심판례(국심1997부0752 등 1989~1997년)가
- * 다수 검색된다. 현행 상증령 §63①3호는 **채권액**으로 개정돼 있으므로 그 심판례를 현행 근거로
- * 인용하면 안 된다. 종전 구현은 `mortgageSetAmount ?? mortgageDebtAmount`로 **설정액을 무조건
- * 우선**해 구법 규칙을 적용했다 — 설정액이 통상 채권액의 120%이므로 증여가액 C가 과대평가되고,
- * §159의 채무비율 B/C가 작아져 취득가액이 줄고 **양도차익이 과대**해지는(납세자 불리) 방향이었다.
- * (memory `feedback_no_unfavorable_application_without_legal_basis`)
- *
- * @param info 보증금·차입금·설정액 입력.
- * @returns 임대보증금 + min(채권최고액, 담보채권액).
- *          합산 구조의 근거는 §63② 후단 — "동일한 재산이 다수의 채권(전세금채권과 임차보증금채권을
- *          포함한다)의 담보로 되어 있는 경우에는 그 재산이 담보하는 채권액의 **합계액**으로 한다".
- */
-export function computeMortgageValuation(info: BurdenedGiftInfo): number {
-  const securedClaim =
-    info.mortgageSetAmount === undefined
-      ? info.mortgageDebtAmount
-      : Math.min(info.mortgageSetAmount, info.mortgageDebtAmount);
-  return info.lendingDepositTotal + securedClaim;
-}
-
-/**
- * 상증법 §60~§66 증여재산 평가 Max 산정.
- *
- * @param landStdPriceAtTransfer  양도시 토지 기준시가 (개별공시지가 × 면적). 시가 모드에서도 입력 가능 (보충적 비교용).
- * @param buildingStdPriceAtTransfer 양도시 건물 기준시가 합계.
- * @param info BurdenedGiftInfo (보증금·임대료·차입금·시가 입력).
- *
- * @returns supplementary/mortgage/rental + selectedMode + max.
- */
-export function computeSangjeungbeopValuation(
-  landStdPriceAtTransfer: number,
-  buildingStdPriceAtTransfer: number,
-  info: BurdenedGiftInfo,
-): TransferBurdenedGiftBreakdown["sangjeungbeopValuation"] {
-  // ① 보충적평가 (상증법 §61): 자산별 기준시가 합계.
-  // 시가 모드에서는 marketValueAtTransfer로 대체 (상증법 §60②~④).
-  const supplementary =
-    info.valuationMode === "sangjeungbeop_market"
-      ? (info.marketValueAtTransfer ?? 0)
-      : landStdPriceAtTransfer + buildingStdPriceAtTransfer;
-
-  // ② 담보평가 (상증법 §66 · 상증령 §63):
-  //   = 임대보증금 + min(채권최고액, 담보채권액). 상세 근거는 computeMortgageValuation 주석.
-  const mortgage = computeMortgageValuation(info);
-
-  // ③ 임대평가 (상증법 §61⑤·시행령 §50⑦):
-  //   = 임대보증금 + (연간 임대료 / 12%)  [2009.4.23. 이후 시행분]
-  //   safeMultiplyThenDivide 사용: annualRent × 1 ÷ 0.12 == annualRent / 0.12. 부동소수 회피.
-  const rentalCapitalized =
-    info.annualRentTotal === 0
-      ? 0
-      : Math.floor(info.annualRentTotal / ANNUAL_RENT_CAPITALIZATION_RATE_AFTER_2009_04_23);
-  const rental = info.lendingDepositTotal + rentalCapitalized;
-
-  // Max 채택
-  let selectedMode: "supplementary" | "mortgage" | "rental" = "supplementary";
-  let max = supplementary;
-  if (mortgage > max) {
-    max = mortgage;
-    selectedMode = "mortgage";
-  }
-  if (rental > max) {
-    max = rental;
-    selectedMode = "rental";
-  }
-
-  return { supplementary, mortgage, rental, selectedMode, max };
-}
-
-// ============================================================
-// 채무비율 산정 (소령 §159 — B / C)
-// ============================================================
-
-/**
- * 채무비율 = 인수채무 / 증여가액 = (임대보증금 + 담보차입금) / Max 평가액.
- *
- * @returns { assumedDebtAmount, debtRatio }
- */
-export function computeDebtRatio(
-  info: BurdenedGiftInfo,
-  sangjeungbeopMax: number,
-): { assumedDebtAmount: number; debtRatio: number } {
-  const assumedDebtAmount = info.lendingDepositTotal + info.mortgageDebtAmount;
-  if (sangjeungbeopMax === 0) {
-    return { assumedDebtAmount, debtRatio: 0 };
-  }
-  // 부동소수 비율 — anchor에서는 toBeCloseTo로 비교. 자산별 안분은 safeMultiplyThenDivide로 정수 보존.
-  const debtRatio = assumedDebtAmount / sangjeungbeopMax;
-  return { assumedDebtAmount, debtRatio };
-}
-
-// ============================================================
-// 자산별 양도가액 안분 (소령 §159 ① 2호)
-// ============================================================
-
-/**
- * 자산별 양도가액 = 자산별 평가가액 × 채무비율.
- *
- * 정수 보존을 위해 안분식은 safeMultiplyThenDivide(평가가액, 채무액, max) 사용 —
- * 부동소수 곱셈 회피.
- */
-export function apportionTransferPrice(
-  assetSangjeungbeopValue: number,
-  assumedDebtAmount: number,
-  sangjeungbeopMax: number,
-): number {
-  return safeMultiplyThenDivide(assetSangjeungbeopValue, assumedDebtAmount, sangjeungbeopMax);
-}
-
-// ============================================================
-// 자산별 취득가액 안분 (소령 §159 ① 1호)
-// ============================================================
-
-/**
- * 기준시가 모드에서 자산별 취득가액 = 취득시 자산 기준시가 × 채무비율.
- *
- * 소령 §159 ① 1호 A 괄호: 양도가액을 상증법 §61①·②·⑤·§66에 따라 기준시가로 산정한 경우
- * → 취득가액도 기준시가로 산정.
- *
- * 시가 모드(sangjeungbeop_market)에서는 별도 산식 — 사용자가 marketValueAtAcquisition을 총액으로 입력하므로
- * 자산별 분리 필요 시 v2에서 별도 anchor (Phase 1은 토지·건물 합계만으로 처리하고
- * 자산별 비율은 양도시 시가 비율을 그대로 사용).
- */
-export function apportionAcquisitionPrice(
-  assetStdPriceAtAcquisition: number,
-  assumedDebtAmount: number,
-  sangjeungbeopMax: number,
-): number {
-  return safeMultiplyThenDivide(assetStdPriceAtAcquisition, assumedDebtAmount, sangjeungbeopMax);
-}
-
-// ============================================================
-// 자산별 개산공제 (소령 §163 ⑥)
-// ============================================================
-
-/**
- * 안분된 **취득당시 기준시가** × 개산공제율 (소령 §163⑥1호·2호가목).
- *   등기: 3% · 미등기양도자산(§104③): 0.3% (단서 "미등기 3/1000"). (H-25)
- *
- * 계산 본체는 `tax-utils.ts`의 `computeEstimatedDeduction` 단일 소스에 위임한다 —
- * 같은 §163⑥ 개념 함수가 둘이면 드리프트한다(feedback_ui_engine_dual_truth_avoidance).
- * 부담부증여 경로는 지분 미인지(경로 전체가 그렇다)이므로 `ownershipRatio`를 넘기지 않는다.
- *
- * ⚠️ 종전 파라미터명 `assetAcquisitionPrice`는 **오칭**이었다 — 실제 base는 취득가액이 아니라
- *    §159 채무비율로 안분된 **기준시가**다(호출부 `landStdApportioned` 참조).
- */
-export function estimatedDeductionForBurdenedGift(
-  standardPriceApportioned: number,
-  isUnregistered = false,
-): number {
-  const rate = isUnregistered
-    ? UNREGISTERED_ESTIMATED_DEDUCTION_RATE
-    : REGISTERED_ESTIMATED_DEDUCTION_RATE;
-  return computeEstimatedDeduction(standardPriceApportioned, rate);
-}
 
 // ============================================================
 // 전체 자산-수준 분기 (orchestrator용)
@@ -451,6 +249,47 @@ export function buildBurdenedGiftBreakdown(params: {
     buildingAcquisitionPrice = apportionTransferPrice(buildingAcqMarket, assumedDebtAmount, giftValuation.max);
   }
 
+  // ── 실비(자본적지출·양도비) 공통 계산 — K-4 본문과 K-5 단서(STEP 5.5)가 함께 쓴다 ──
+  const capitalExpenditureRaw = params.capitalExpenditure ?? 0;
+  const transferExpenseRaw = params.transferExpense ?? 0;
+  const realExpenseTotal = capitalExpenditureRaw + transferExpenseRaw;
+  /** 실비 총액의 채무비율 안분액 — 「양도로 보는 부분」에 대응하는 몫. */
+  const necessaryExpenseDebtTotal = apportionAcquisitionPrice(
+    realExpenseTotal, assumedDebtAmount, giftValuation.max,
+  );
+  /** 실비를 명시 입력했는가 — 미입력이면 단서 비교 자체를 하지 않는다(§97② 본문 유지). */
+  const realExpenseDeclared =
+    params.capitalExpenditure !== undefined || params.transferExpense !== undefined;
+
+  /**
+   * 실비를 **성질별 시점 비율**로 토지·건물에 나눈다(W-5).
+   *
+   * 「소득세법」 제100조 제2항 후문: 「이 경우 **공통되는 취득가액과 양도비용**은 **해당 자산의
+   * 가액에 비례하여** 안분계산한다」. 같은 항 본문이 그 가액의 기준시점을 「**취득 또는 양도
+   * 당시의** 기준시가」로 나란히 들므로, **어디에 부수하는 지출인지**가 시점을 정한다.
+   *
+   *   · 자본적지출(§97①2호) → **취득시** 기준시가 비율
+   *   · 양도비(§97①3호)     → **양도시** 기준시가 비율
+   *
+   * ⚠️ **총액은 인자로 받은 값 그대로다** — 자본적지출분을 구하고 **잔액을 양도비분이 흡수**하며,
+   *    건물이 다시 잔액을 흡수한다(메모리 `feedback_floor_residual_absorption`).
+   */
+  function splitRealExpenseByNature(debtApportionedTotal: number): { land: number; building: number } {
+    const capexDebt =
+      realExpenseTotal === 0
+        ? 0
+        : safeMultiplyThenDivide(debtApportionedTotal, capitalExpenditureRaw, realExpenseTotal);
+    const transferExpDebt = debtApportionedTotal - capexDebt;
+    const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
+    const totalTransferStd = landStdPriceAtTransfer + buildingStdPriceAtTransfer;
+    const capexLand =
+      totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(capexDebt, landStdPriceAtAcquisition, totalAcqStd);
+    const transferExpLand =
+      totalTransferStd === 0 ? 0 : safeMultiplyThenDivide(transferExpDebt, landStdPriceAtTransfer, totalTransferStd);
+    const land = capexLand + transferExpLand;
+    return { land, building: debtApportionedTotal - land };
+  }
+
   // STEP 5: 자산별 필요경비 슬롯 (estimatedDeduction)
   //   K-1~K-3·K-5·legacy: 개산공제 (취득가액 × 3%, §163⑥).
   //   K-4 (실지취득가): 개산공제 미적용 — 실비를 채무비율 안분 후 **성질별 시점 비율**로 자산 분배.
@@ -475,26 +314,9 @@ export function buildBurdenedGiftBreakdown(params: {
      *    (메모리 `feedback_floor_residual_absorption`) ⇒ 절사 오차로 합계가 어긋나지 않는다.
      *    바뀌는 것은 **토지↔건물 배분**뿐이다.
      */
-    const capitalExpenditure = params.capitalExpenditure ?? 0;
-    const transferExpense = params.transferExpense ?? 0;
-    const totalNecessaryExpense = capitalExpenditure + transferExpense;
-    const necessaryExpenseDebt = apportionAcquisitionPrice(totalNecessaryExpense, assumedDebtAmount, giftValuation.max);
-    // 성질별 채무안분액 — 자본적지출분을 먼저 구하고 잔액을 양도비분으로 흡수(합계 보존).
-    const capexDebt =
-      totalNecessaryExpense === 0
-        ? 0
-        : safeMultiplyThenDivide(necessaryExpenseDebt, capitalExpenditure, totalNecessaryExpense);
-    const transferExpDebt = necessaryExpenseDebt - capexDebt;
-
-    const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
-    const totalTransferStd = landStdPriceAtTransfer + buildingStdPriceAtTransfer;
-    const capexLand =
-      totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(capexDebt, landStdPriceAtAcquisition, totalAcqStd);
-    const transferExpLand =
-      totalTransferStd === 0 ? 0 : safeMultiplyThenDivide(transferExpDebt, landStdPriceAtTransfer, totalTransferStd);
-
-    landEstimatedDeduction = capexLand + transferExpLand;
-    buildingEstimatedDeduction = necessaryExpenseDebt - landEstimatedDeduction;
+    const split = splitRealExpenseByNature(necessaryExpenseDebtTotal);
+    landEstimatedDeduction = split.land;
+    buildingEstimatedDeduction = split.building;
   } else {
     // 개산공제 base = 취득당시 기준시가 × 채무비율 (소령 §163⑥1호·2호가) — 환산취득가·market 가액이 아님.
     //   K-1~K-3(standard)는 landAcquisitionPrice가 이미 취득기준시가×채무비율이라 결과 불변.
@@ -503,6 +325,53 @@ export function buildBurdenedGiftBreakdown(params: {
     const buildingStdApportioned = apportionAcquisitionPrice(buildingStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
     landEstimatedDeduction = estimatedDeductionForBurdenedGift(landStdApportioned, isUnregistered);
     buildingEstimatedDeduction = estimatedDeductionForBurdenedGift(buildingStdApportioned, isUnregistered);
+  }
+
+  /**
+   * STEP 5.5 — 🔴 **§97②2호 단서**: K-5(환산취득가액) 한정 가목·나목 **택일** (2026-08-07 W-6).
+   *
+   * > 「다만, **제1항제1호나목에 따라 취득가액을 환산취득가액으로 하는 경우**로서 **가목의 금액이
+   * >  나목의 금액보다 적은 경우**에는 나목의 금액을 필요경비로 **할 수 있다**.」
+   *
+   *   · **가목** = 환산취득가액 + 개산공제 (= 필요경비 **전체**)
+   *   · **나목** = 자본적지출 + 양도비
+   *
+   * ⚠️ **왜 K-5가 「제1항제1호나목」인가** — 위임 체인을 따라가면 닫힌다.
+   *    「소득세법 시행령」 **제163조 제12항**: 「법 **제97조제1항제1호나목**에서 "…환산취득가액"이란
+   *    **제176조의2제2항부터 제4항까지**의 규정에 따른 가액을 말한다」.
+   *    K-5가 쓰는 §176의2②2호 산식은 §114⑦(추계결정·경정)과 **공유**하는 것이고,
+   *    납세자가 증여자의 실지취득가액을 확인할 수 없어 환산을 택하는 K-5는 **1호나목** 계열이다.
+   *    (§97②2호 본문이 §114⑦을 들면서 붙인 괄호 「제1호나목이 적용되는 경우는 제외한다」가
+   *     둘의 우선순위를 정한다 — 1호나목이 적용되면 그쪽이다.)
+   *
+   * ⚠️ **나목 채택 시 환산취득가액을 별도로 차감하지 않는다** — 가목이 「환산취득가액 **과**
+   *    개산공제의 **합계액**」이므로 둘은 **필요경비 전체를 놓고** 겨루는 것이다. 취득가액을
+   *    남겨 두면 이중차감이 된다(메모리 `feedback_97_2_swap_necessary_expense_max_not_sum` ·
+   *    조세심판원 조심2016서2576). 그래서 취득가액 슬롯을 **0으로 만들고** 나목을 경비 슬롯에 넣는다.
+   *
+   * ⚠️ **동률(==)은 본문**이다 — 단서가 「적은 경우」로 명시한다. 일반 경로
+   *    (`transfer-tax-helpers.ts` `calcNecessaryExpense`)와 같은 판정이다.
+   */
+  let necessaryExpenseSwap: TransferBurdenedGiftBreakdown["necessaryExpenseSwap"];
+  let convertedAcquisitionBeforeSwap: TransferBurdenedGiftBreakdown["convertedAcquisitionBeforeSwap"];
+  if (acquisitionMethodUsed === "converted" && realExpenseDeclared) {
+    const estimatedSide =
+      landAcquisitionPrice + buildingAcquisitionPrice + landEstimatedDeduction + buildingEstimatedDeduction;
+    const directSide = necessaryExpenseDebtTotal;
+    const chosen = directSide > estimatedSide ? "direct" : "estimated";
+    necessaryExpenseSwap = { estimatedSide, directSide, chosen };
+    if (chosen === "direct") {
+      // 🔑 §114조의2 가산세 base 등은 **환산취득가액 자체**를 봐야 하므로 스왑 전 값을 남긴다.
+      convertedAcquisitionBeforeSwap = {
+        land: landAcquisitionPrice,
+        building: buildingAcquisitionPrice,
+      };
+      landAcquisitionPrice = 0;
+      buildingAcquisitionPrice = 0;
+      const split = splitRealExpenseByNature(directSide);
+      landEstimatedDeduction = split.land;
+      buildingEstimatedDeduction = split.building;
+    }
   }
 
   // STEP 6: 무상이전분 — 증여재산 평가액(giftValuation.max) − 채무액 (상증법 §47③)
@@ -599,6 +468,8 @@ export function buildBurdenedGiftBreakdown(params: {
     gratuitousPortion,
     taxpayer: "donor",
     acquisitionMethodUsed,
+    ...(necessaryExpenseSwap ? { necessaryExpenseSwap } : {}),
+    ...(convertedAcquisitionBeforeSwap ? { convertedAcquisitionBeforeSwap } : {}),
     giftTax: giftTaxSummary,
     perAsset: {
       land: {
@@ -623,116 +494,4 @@ export function buildBurdenedGiftBreakdown(params: {
       },
     },
   };
-}
-
-// ============================================================
-// Phase 2 (2026-05-12) — propertyType 지원 범위·overshoot·고가주택 게이트
-// ============================================================
-
-const HIGH_PRICE_THRESHOLD_KRW = 1_200_000_000;
-
-/**
- * 부담부증여 진입 게이트 — Phase 2.
- *
- * 책임:
- *   (1) propertyType 지원 범위 검증 (housing·land·building·general_building만)
- *   (2) 초과부담부(B/C > 1) fail-fast — 상증법 §47③ 정의 위반 (silent 분모 보정 금지)
- *   (3) 1세대1주택 + 12억 초과 부담부증여(케이스 5-a) 차단 — 후속 PR 예정
- *      (D-0-2 채택안 해석 B: 12억 비교·안분 분모 = giftValuation C. 현재 엔진은
- *       transferPrice = C × B/C 기반이라 다운스트림 12억 안분 결과 오류 발생)
- *
- * @throws Error 검증 실패 시 명시 메시지로 throw — 다음 액션 힌트 포함.
- */
-export function assertBurdenedGiftEligible(args: {
-  propertyType: string;
-  isOneHousehold?: boolean;
-  info: BurdenedGiftInfo;
-  /**
-   * 공유지분율 — 초과부담부 검사도 **지분분 평가액** 기준이어야 한다.
-   * 물건 전체 평가액으로 검사하면 진짜 초과부담부(채무 > 지분 가액)가 조용히 통과한다.
-   */
-  ownershipRatio?: number;
-}): void {
-  const { propertyType, isOneHousehold, ownershipRatio } = args;
-  const info = scaleBurdenedGiftInfo(args.info, ownershipRatio);
-
-  // F-3 (2026-05-12): commercial_building 확장. general_building_unit은 엔진 내부 타입.
-  const SUPPORTED: string[] = ["housing", "land", "building", "general_building", "commercial_building"];
-  if (!SUPPORTED.includes(propertyType)) {
-    throw new Error(
-      `[burdened_gift] propertyType "${propertyType}"는 부담부증여 미지원입니다. ` +
-      "주택·토지·건물·일반건물·상업용건물·오피스텔에서만 지원합니다 (입주권·분양권 등은 별도 PR).",
-    );
-  }
-
-  // 초과부담부 검사 — giftValuation = Max(supplementary, mortgage, rental) 직접 산정
-  const lending = info.lendingDepositTotal;
-  const mortgageDebt = info.mortgageDebtAmount;
-  const assumedDebt = lending + mortgageDebt;
-  const rentalCap =
-    info.annualRentTotal > 0
-      ? Math.floor(info.annualRentTotal / ANNUAL_RENT_CAPITALIZATION_RATE_AFTER_2009_04_23)
-      : 0;
-  // 증여재산 평가용 건물 기준시가 (층별 가감율 적용 — 미입력 시 양도세 기준시가 fallback)
-  const giftBuildingStd =
-    info.giftBuildingStdPriceAtTransfer ?? info.buildingStdPriceAtTransfer;
-  const supplementary =
-    info.valuationMode === "sangjeungbeop_market"
-      ? info.marketValueAtTransfer ?? 0
-      : info.landStdPriceAtTransfer + giftBuildingStd;
-  const mortgageVal = computeMortgageValuation(info);
-  const rentalVal = lending + rentalCap;
-  const giftValuation = Math.max(supplementary, mortgageVal, rentalVal);
-
-  if (giftValuation > 0 && assumedDebt > giftValuation) {
-    throw new Error(
-      "[EXCESS_BURDENED_GIFT] 채무액(B=" +
-        assumedDebt.toLocaleString() +
-        "원)이 증여가액(C=" +
-        giftValuation.toLocaleString() +
-        "원)을 초과합니다. " +
-        "부담부증여로 성립하지 않습니다 (상속세및증여세법 §47③). " +
-        "다음 중 하나로 재입력하세요: ① 양도 형태 = '일반 양도' + 취득원인 = '매매' (사실상 매매 의제). " +
-        "② 평가액(C) 입력값 재확인 (시가 모드/임대평가 누락 등). " +
-        "③ 채무액(B) 입력값 재확인 (보증금·차입금 중복 합산 여부).",
-    );
-  }
-
-  // F-1 (2026-05-12): 케이스 5-a (1세대1주택 + 12억 초과) 차단 해제.
-  //   해결: burdenedGiftDenominator = giftValuation C 매개변수 추가로
-  //   checkOneHouseExemption()·calcOneHouseProration()이 해석 B 산식으로 분기.
-  //   - 12억 비교 분모 = C (giftValuation)
-  //   - 안분 산식: gain_burdened × (C − 12억) / C
-  //   근거: D-0-2 국세청 해석례 5건 (ntstDcmId=010000000000028078·010000000000027439·
-  //                                  010000000000038712·010000000000136005·010000000000042478)
-  // suppress: HIGH_PRICE_THRESHOLD_KRW·isOneHousehold·propertyType 변수는 정보성 변수로 보존
-  //   (후속 PR에서 다른 가드 케이스 추가 시 재사용).
-  void HIGH_PRICE_THRESHOLD_KRW;
-  void isOneHousehold;
-}
-
-/**
- * F-2 (2026-05-12): 케이스 12 다주택 중과 비스코프 감지.
- *
- * 부담부증여 + 주택 + 조정대상지역 + 자산 수 ≥ 2 시 정보성 경고 메시지 반환.
- * 정식 지원은 §167의3 한시 유예 종료 시점 확정 후 별도 PR.
- *
- * @returns 경고 메시지 (감지 시) | null (해당 없음)
- */
-export function detectBurdenedGiftMultiHouseWarning(args: {
-  propertyType: string;
-  isRegulatedArea?: boolean;
-  householdHousingCount?: number;
-}): string | null {
-  if (
-    args.propertyType === "housing" &&
-    args.isRegulatedArea === true &&
-    (args.householdHousingCount ?? 1) >= 2
-  ) {
-    return (
-      "다주택 중과(소득세법 시행령 §167의3) 분기는 Phase 2 비스코프입니다. " +
-      "결과는 한시 유예 기준으로 산정되었습니다 — 중과 유예 해제 시점 확정 후 별도 PR로 정식 지원 예정."
-    );
-  }
-  return null;
 }

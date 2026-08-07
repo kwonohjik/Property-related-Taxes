@@ -120,17 +120,33 @@ function SingleTransferResultCard({
             (land?.acquisitionPrice ?? 0) + (bldg?.acquisitionPrice ?? 0);
           const necessaryExpense =
             (land?.estimatedDeduction ?? 0) + (bldg?.estimatedDeduction ?? 0);
+          /**
+           * §97②2호 **단서**(W-6) 발동 시 취득가액 슬롯은 **0**이다 — 나목이 필요경비 **전체**라
+           * 환산취득가액을 별도 차감하지 않기 때문이다. 그대로 「취득가액 0」으로 두면 사용자가
+           * **계산이 빠진 것으로 읽는다** ⇒ 스왑 전 환산취득가액을 「차감 제외」 라벨로 보여준다
+           * (주식양도세 `StockTransferTaxResultView.tsx:318`과 같은 규약).
+           */
+          const swap = brkd.necessaryExpenseSwap;
+          const swapApplied = swap?.chosen === "direct";
+          const beforeSwap = brkd.convertedAcquisitionBeforeSwap;
+          const shownAcquisition = swapApplied
+            ? (beforeSwap?.land ?? 0) + (beforeSwap?.building ?? 0)
+            : acquisitionPrice;
           return (
             <>
               <Row label="양도가액 (채무인수분)" value={formatKRW(transferPrice)} />
               <Row
-                label="취득가액 (채무인수분)"
-                value={`(−) ${formatKRW(acquisitionPrice)}`}
+                label={
+                  swapApplied
+                    ? "취득가액 (환산 — 차감 제외)"
+                    : "취득가액 (채무인수분)"
+                }
+                value={swapApplied ? formatKRW(shownAcquisition) : `(−) ${formatKRW(acquisitionPrice)}`}
                 sub
-                deduction
+                deduction={!swapApplied}
               />
               <Row
-                label="필요경비"
+                label={swapApplied ? "필요경비 (자본·양도비 §97②단서)" : "필요경비"}
                 value={`(−) ${formatKRW(necessaryExpense)}`}
                 sub
                 deduction
@@ -196,6 +212,47 @@ function SingleTransferResultCard({
         />
       </div>
 
+      {/**
+       * §97②2호 단서 비교 결과 — **K-5(환산취득가액)에서만** 채워진다(W-6·W-7).
+       * 발동/미발동을 **둘 다** 보여준다. 미발동을 숨기면 「비교를 했는지」 자체가 안 보여
+       * 사용자가 자본적지출을 넣고도 반영이 안 됐다고 읽는다.
+       */}
+      {(() => {
+        const swap = result.transferBurdenedGiftBreakdown?.necessaryExpenseSwap;
+        if (!swap) return null;
+        if (swap.chosen === "direct") {
+          return (
+            <div
+              data-testid="burdened-97-2-proviso"
+              className="border-t border-amber-300 bg-amber-50/60 px-4 py-3 text-sm space-y-1"
+            >
+              <p className="font-semibold text-amber-900">
+                필요경비 택일 적용 — 「소득세법」 제97조 제2항 제2호 단서
+              </p>
+              <p className="text-xs text-amber-800">
+                환산취득가액 + 개산공제 {formatKRW(swap.estimatedSide)}
+                {" < "}자본적지출 + 양도비 {formatKRW(swap.directSide)}
+              </p>
+              <p className="text-xs text-amber-800">
+                → 자본적지출 + 양도비 {formatKRW(swap.directSide)}을 필요경비로 적용합니다.
+                이 경우 환산취득가액은 <span className="font-medium">별도로 차감하지 않습니다</span>
+                (두 금액은 필요경비 전체를 놓고 택일하는 관계).
+              </p>
+            </div>
+          );
+        }
+        return (
+          <div
+            data-testid="burdened-97-2-proviso"
+            className="border-t border-border bg-muted/20 px-4 py-2 text-xs text-muted-foreground"
+          >
+            「소득세법」 제97조 제2항 제2호 본문 적용 — 환산취득가액 + 개산공제{" "}
+            {formatKRW(swap.estimatedSide)} ≥ 자본적지출 + 양도비 {formatKRW(swap.directSide)}
+            (단서 미발동)
+          </div>
+        );
+      })()}
+
       {/* 상세 펼침 — §159 안분비율 + 산식 */}
       {detailOpen && (
         <div className="border-t border-sky-200 dark:border-sky-700 bg-sky-50/30 dark:bg-sky-900/10 px-4 py-3 space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
@@ -230,13 +287,17 @@ function SingleTransferResultCard({
               );
             }
             if (method === "converted") {
+              // §97②2호 단서 발동 시 필요경비는 개산공제가 **아니라** 자본적지출+양도비다(W-6).
+              const provisoApplied = brkd?.necessaryExpenseSwap?.chosen === "direct";
               return (
                 <p className="mt-1 text-sky-700 dark:text-sky-300">
                   ※ 취득가액 산정: <Frac top="취득시 기준시가" bottom="양도시 기준시가" /> × 시가 (소령
                   §176의2②2호 — K-5)
-                  {deductionTotal > 0
-                    ? ` + 개산공제 ${formatKRW(deductionTotal)} (소법 §163⑥)`
-                    : " + 소법 §163⑥ 개산공제 적용"}
+                  {provisoApplied
+                    ? ` / 필요경비는 자본적지출 + 양도비 ${formatKRW(deductionTotal)} (「소득세법」 제97조 제2항 제2호 단서)`
+                    : deductionTotal > 0
+                      ? ` + 개산공제 ${formatKRW(deductionTotal)} (「소득세법 시행령」 제163조 제6항)`
+                      : " + 「소득세법 시행령」 제163조 제6항 개산공제 적용"}
                 </p>
               );
             }
