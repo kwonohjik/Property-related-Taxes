@@ -53,6 +53,10 @@ function gbAsset(over: Partial<AssetForm> = {}): AssetForm {
     gbBuildingFootprintArea: "180.96",
     gbTransferLandPricePerSqm: "10830000",
     gbTransferBuildingValue: "20629440",
+    // 취득시 기준시가 — 실가 경로도 **취득 축 안분**에 쓴다(2026-08-07 P-2).
+    // 이 spec의 주제(파트 취득일 배선)와는 무관하지만, 없으면 엔진이 차단한다.
+    gbAcqLandPricePerSqm: "2800000",
+    gbAcqBuildingValue: "2814470",
     gbZoneType: "commercial",
     ...over,
   } as AssetForm;

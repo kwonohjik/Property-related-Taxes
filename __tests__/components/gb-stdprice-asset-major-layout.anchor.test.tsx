@@ -68,20 +68,34 @@ describe("A1 — 토지(취득·양도) → 건물(취득·양도) 순서", () =
   });
 });
 
-describe("A2 — 취득시 게이트 승계 (실가·비증축·비부담부)", () => {
-  it("취득 박스·일괄 런처·개산공제 안내가 모두 없고 양도 박스만 남는다", () => {
+/**
+ * 🔴 **반전**(2026-08-07 P-2) — 종전 계약은 「실가·비증축·비부담부에서는 취득시 입력이 **없다**」
+ * 였다. 그 전제는 **실가 경로가 취득시 기준시가를 계산에 쓰지 않는다**는 것이었는데, 그 자체가
+ * 정정 대상이었다.
+ *
+ * 이제 실가 경로도 일괄 취득가액·자본적지출을 **취득시** 기준시가 비율로 안분한다
+ * (「소득세법」 제100조 제2항 본문 「취득 당시」 · `general-building-route-actual.ts`
+ * `acqLandRatioNum`). 입력 칸을 숨기면 **칸이 없는데 차단되는 dead-end**가 된다
+ * (메모리 `feedback_ui_gate_removes_sole_input_path`).
+ *
+ * ⇒ 취득시 박스를 **항상 노출**한다. 계획서 §14가 **양도시** 기준시가를 「항상 축 A」로
+ *   단일화한 것과 같은 판단이다.
+ *
+ * ⚠️ **노출은 넓게, 차단은 정확히** — 필수 여부는 validate V-5b가 「취득 축 안분이 실제로
+ *    필요한가」로 판정한다(`__tests__/calc/gb-actual-expenses-plumbing.test.ts`).
+ */
+describe("A2 — 취득시 입력은 실가에서도 노출된다 (P-2 반전)", () => {
+  it("🔴 실가·비증축·비부담부에서도 취득시 박스가 있다", () => {
     const { container } = renderBlock({ useEstimatedAcquisition: false });
     const boxes = Array.from(
       container.querySelectorAll<HTMLElement>("[data-gb-stdprice]"),
     );
-    expect(boxes.map((b) => b.dataset.gbStdprice)).toEqual(["transfer", "transfer"]);
-    expect(screen.queryByText("취득시 토지 공시지가")).toBeNull();
-    expect(screen.queryByText("취득시 건물기준시가")).toBeNull();
-    expect(screen.queryByTestId("gb-building-std-batch-open")).toBeNull();
-    expect(screen.queryByText("개산공제 (§163⑥)")).toBeNull();
+    expect(boxes.map((b) => b.dataset.gbStdprice)).toContain("acq");
+    expect(screen.getByText("취득시 토지 공시지가")).toBeTruthy();
+    expect(screen.getAllByText("취득시 건물기준시가").length).toBeGreaterThan(0);
   });
 
-  it("증축 모드에서는 실가라도 취득시 입력이 살아난다", () => {
+  it("증축 모드에서도 그대로 살아 있다 (종전 계약 유지)", () => {
     renderBlock({ useEstimatedAcquisition: false, gbHasExtension: true });
     expect(screen.getByText("취득시 토지 공시지가")).toBeTruthy();
     expect(screen.getAllByText("취득시 건물기준시가").length).toBeGreaterThan(0);
@@ -115,15 +129,16 @@ describe("A4 — 런처 대체 규칙", () => {
     expect(screen.queryAllByText("건물 기준시가 계산")).toHaveLength(0);
   });
 
-  it("실거래가 모드 — 2시점이 성립하지 않아 양도시 계산기가 유일 경로로 남는다", () => {
-    const { container } = renderBlock({ useEstimatedAcquisition: false });
-    expect(screen.queryByTestId("gb-building-std-batch-open")).toBeNull();
-    const boxes = Array.from(
-      container.querySelectorAll<HTMLElement>("[data-gb-stdprice]"),
-    );
-    // 토지 양도시 박스에는 런처가 없고, 건물 양도시 박스에만 있다.
-    expect(within(boxes[0]).queryByText("건물 기준시가 계산")).toBeNull();
-    expect(within(boxes[1]).getByText("건물 기준시가 계산")).toBeTruthy();
+  /**
+   * 🔴 **반전**(2026-08-07 P-2). 종전 근거는 「실거래가 모드는 취득시 입력이 없어 **2시점이
+   * 성립하지 않는다**」였다. P-2로 취득시 입력이 생기면서 그 전제가 사라졌다 —
+   * 이제 실거래가 모드에서도 2시점 일괄 계산이 성립한다.
+   */
+  it("실거래가 모드에서도 2시점이 성립해 일괄 런처가 뜬다 (P-2 반전)", () => {
+    renderBlock({ useEstimatedAcquisition: false });
+    expect(screen.getByTestId("gb-building-std-batch-open")).toBeTruthy();
+    // 일괄이 뜨면 시점별 계산기는 중복이라 숨는다(A4 첫 계약과 같은 규칙).
+    expect(screen.queryAllByText("건물 기준시가 계산")).toHaveLength(0);
   });
 
   it("§164⑧ 배치 차단(취득연도 == 양도연도) — 사유 + 시점별 계산기 2개 유지", () => {

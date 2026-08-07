@@ -331,6 +331,27 @@ export function buildGeneralBuildingValuation(
     isSelfBuilt: asset.gbBuildingAcquisitionCause === "newConstruction",
     ...(acquisitionLandPricePerSqm ? { acquisitionLandPricePerSqm } : {}),
     ...(acquisitionBuildingStdPrice ? { acquisitionBuildingStdPrice } : {}),
+    /**
+     * 🔴 자본적지출(§97①2호)·양도비(§97①3호) — **실가 경로에도 싣는다**(2026-08-07 P-3).
+     *
+     * 종전에는 환산 payload(위 `:279-289`)에만 있어 **실가 경로에 도달하지 못했다**.
+     * `actualExpenses`는 legacy `directExpenses`에서만 오는데(`transfer-tax-api.ts:285-290`)
+     * 현행 UI는 자본적지출·양도비 두 칸을 쓰고 legacy 칸은 **둘 다 0일 때만** 띄운다
+     * (`AssetSectionExpense.tsx:109-111`) ⇒ 실측 **결정세액 12,800,000원 과대**(비용 4,000만 기준).
+     *
+     * ⚠️ 환산 경로와 달리 **§97②2호 단서 swap 대상이 아니다** — 실가 경로는 환산취득가도
+     *    개산공제도 쓰지 않아 단서 요건을 충족하지 않는다. 적용 조문은 같은 항 **1호**
+     *    (「해당 실지거래가액 + 제1항제2호·제3호의 금액」)의 **단순 가산**이다.
+     *
+     * ⚠️ 증축 제외 게이트(`!gbHasExtension`)를 여기 걸지 않는다 — 증축은 애초에 환산 경로로
+     *    가므로(`:217` `anyEstimated || gbHasExtension`) 이 return에 도달하지 않는다.
+     */
+    ...(parseAmount(asset.capitalExpenditure)
+      ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
+      : {}),
+    ...(parseAmount(asset.transferExpense)
+      ? { transferExpense: parseAmount(asset.transferExpense) }
+      : {}),
     // §95④ 단기보유 기산점 — actual 분기 기존 결측 보강 (토지 취득원인·피상속인/증여자 취득일).
     ...(asset.acquisitionCause && asset.acquisitionCause !== "newConstruction"
       ? { landAcquisitionCause: asset.acquisitionCause }
