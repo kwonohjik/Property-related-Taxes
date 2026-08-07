@@ -49,8 +49,49 @@ describe("GB 증여 §163⑨ validation 가드", () => {
     expect(msg).toContain("§163⑨");
   });
 
-  it("gift + 증축 → 차단(§163⑨ 실가 유도)", () => {
+  /**
+   * 🔄 **정정(2026-08-07) — 증축 차단은 §163⑨이 아니라 구현 제약이었다.**
+   *
+   * 종전 단언: 「gift + 증축 → §163⑨ 문구로 차단」. 그 차단의 실제 사유는 3-way 경로가
+   * `applyPartAcqModes`를 우회해 **파트 가액을 읽지 못한 것**이었고(엔진 구현 제약),
+   * anchor가 그것을 조문 근거인 양 묶어 두고 있었다.
+   *
+   * §163⑨이 실제로 요구하는 것은 **환산 배제**이고, 그것은 V2가 그대로 강제한다
+   * (바로 위 「gift + 환산 모드 → 차단」). 증축은 다른 축이다 — 증축분(건물2)은 §163⑨
+   * **대상이 아니고**(취득원인이 매매·자가증축뿐이다), 토지·건물1은 증축이 있어도 신고가액
+   * 그대로 간다.
+   *
+   * 실측(증여 신고가액 8억 · 증축 실가 3억 · 양도가 16.2억):
+   *   토지 796,096,533 · 건물1 3,903,467 · 건물2 300,000,000 = **합 11억**
+   *   ⇒ 신고가액 8억이 §166⑥ 취득시 기준시가 비율로 안분돼 **보존된다**. 소실 없음.
+   *
+   * 계획서: `docs/02-design/features/transfer-gb-inheritance-extension-3part.plan.md`
+   * 엔진 anchor: `__tests__/tax-engine/transfer-tax/gb-inheritance-extension-3part.anchor.test.ts`
+   */
+  it("🔄 gift + 증축 → 차단하지 않고 증축 필드를 요구한다", () => {
     const msg = GB(gbAsset({ gbHasExtension: true }));
+    expect(msg).not.toContain("증축 조합을 지원하지 않습니다");
+    expect(msg).toContain("증축일");
+  });
+
+  it("🔄 gift + 증축 필드까지 채우면 통과한다 (dead-end 아님)", () => {
+    expect(
+      GB(
+        gbAsset({
+          gbHasExtension: true,
+          gbExtensionDate: "2020-06-01",
+          gbExtensionAcquisitionCause: "newConstruction",
+          gbExtensionAcquisitionMode: "actual",
+          gbExtensionActualAcquisitionPrice: "300000000",
+          gbTransferExtensionBuildingStdPrice: "60000000",
+          gbAcquisitionExtensionBuildingStdPrice: "40000000",
+        }),
+      ),
+    ).toBe("");
+  });
+
+  it("gift + 증축이어도 **환산**은 계속 차단한다 (§163⑨의 본체)", () => {
+    const msg = GB(gbAsset({ gbHasExtension: true, useEstimatedAcquisition: true }));
     expect(msg).toContain("§163⑨");
   });
 
