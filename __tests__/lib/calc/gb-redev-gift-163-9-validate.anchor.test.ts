@@ -27,6 +27,11 @@ function gbAsset(over: Partial<AssetForm> = {}): AssetForm {
     gbZoneType: "residential",
     gbTransferLandPricePerSqm: "5000000",
     gbTransferBuildingValue: "300000000",
+    // 취득시 기준시가 — 실가 경로도 **취득 축 안분**에 쓴다(2026-08-07 P-2 · V-5b).
+    // 이 spec의 주제(§163⑨ 증여 게이트)와는 무관하지만, 자산 단위 취득가액을 토지·건물로
+    // 나누려면 필요하다. 없으면 「validate 통과 → 엔진 throw」 모순이 된다.
+    gbAcqLandPricePerSqm: "2000000",
+    gbAcqBuildingValue: "150000000",
     fixedAcquisitionPrice: "500000000",
     ...over,
   } as AssetForm;

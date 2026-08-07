@@ -62,6 +62,10 @@ function gbAsset(over: Partial<AssetForm> = {}): AssetForm {
     gbBuildingFootprintArea: "180.96",
     gbTransferLandPricePerSqm: "10830000",
     gbTransferBuildingValue: "20629440",
+    // 취득시 기준시가 — 실가 경로의 **취득 축 안분 기준**이다(2026-08-07 P-2).
+    // 종전에는 실가 경로가 양도시 비율로 취득가액을 나눠 이 값이 필요 없었다.
+    gbAcqLandPricePerSqm: "2800000",
+    gbAcqBuildingValue: "28144700",
     gbZoneType: "commercial",
     actualSalePrice: "2000000000",
     ...over,
@@ -135,12 +139,23 @@ describe("P-2 — 세액이 파트 취득가액에 반응한다", () => {
   });
 });
 
-describe("P-3 — 파트 값이 없으면 종전 안분 (회귀 0)", () => {
-  it("파트 취득가액 미입력 + 자산 총액 4억 → §166⑥ 안분 그대로", () => {
-    const { cards, tax } = run(gbAsset(), 400_000_000);
-    expect(cards.land).toBe(391_232_515);
-    expect(cards.building).toBe(8_767_485);
-    expect(tax).toBe(482_364_461);
+/**
+ * P-3 — 파트 값이 없으면 자산 총액을 안분한다.
+ *
+ * 🔴 **안분 기준이 「양도시」 → 「취득시」로 반전됐다**(2026-08-07 P-2).
+ *    「소득세법」 제100조 제2항 본문이 「**취득 또는 양도 당시의** 기준시가」로 두 시점을 나란히
+ *    들고, 함께 **취득**한 것의 구분이 불분명하면 **취득 당시**다. 증축 경로는 2026-05-11에
+ *    같은 정정을 마쳤고(`general-building-extension.ts:194-206`) 실가 경로만 미반영이었다.
+ *
+ *    취득시 비율 = 238,000,000 / (238,000,000 + 28,144,700) ≈ 0.894250
+ *    (종전 양도시 비율 ≈ 0.978081)
+ */
+describe("P-3 — 파트 값이 없으면 자산 총액을 **취득시** 비율로 안분", () => {
+  it("파트 취득가액 미입력 + 자산 총액 4억 → 취득시 기준시가 비율 안분", () => {
+    const { cards } = run(gbAsset(), 400_000_000);
+    expect(cards.land).toBe(357_700_153);
+    expect(cards.building).toBe(42_299_847);
+    expect(cards.land + cards.building).toBe(400_000_000); // 잔액 흡수 불변식
   });
 
   it("한쪽만 입력되면 안분을 유지한다 — 반쪽 값으로 총액을 대체하지 않는다", () => {
@@ -148,8 +163,8 @@ describe("P-3 — 파트 값이 없으면 종전 안분 (회귀 0)", () => {
       gbAsset({ landAcquisitionPrice: String(LAND_PRICE) } as Partial<AssetForm>),
       400_000_000,
     );
-    expect(cards.land).toBe(391_232_515);
-    expect(cards.building).toBe(8_767_485);
+    expect(cards.land).toBe(357_700_153);
+    expect(cards.building).toBe(42_299_847);
   });
 });
 

@@ -69,7 +69,7 @@ describe("A1 — 토지(취득·양도) → 건물(취득·양도) 순서", () =
 });
 
 describe("A2 — 취득시 게이트 승계 (실가·비증축·비부담부)", () => {
-  it("취득 박스·일괄 런처·개산공제 안내가 모두 없고 양도 박스만 남는다", () => {
+  it("취득 축 안분이 없으면 취득 박스·일괄 런처·개산공제 안내가 모두 없다", () => {
     const { container } = renderBlock({ useEstimatedAcquisition: false });
     const boxes = Array.from(
       container.querySelectorAll<HTMLElement>("[data-gb-stdprice]"),
@@ -85,6 +85,46 @@ describe("A2 — 취득시 게이트 승계 (실가·비증축·비부담부)", 
     renderBlock({ useEstimatedAcquisition: false, gbHasExtension: true });
     expect(screen.getByText("취득시 토지 공시지가")).toBeTruthy();
     expect(screen.getAllByText("취득시 건물기준시가").length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * 🆕 **A2b — 실가 경로에서도 「취득 축 안분이 필요하면」 열린다** (2026-08-07 P-2)
+ *
+ * 실가 경로가 일괄 취득가액·자본적지출을 **취득시** 기준시가 비율로 안분하게 됐다
+ * (「소득세법」 제100조 제2항 본문 「취득 당시」 · `general-building-route-actual.ts`
+ * `acqLandRatioNum`). 칸을 숨기면 **칸이 없는데 차단되는 dead-end**가 된다
+ * (메모리 `feedback_ui_gate_removes_sole_input_path`).
+ *
+ * ⚠️ **`true`로 항상 열지는 않는다** — 그러면 `showBatchLauncher`가 함께 켜져 **시점별
+ *    「건물 기준시가 계산」 런처가 숨고**, 기존 E2E 2건이 깨진다(CI 실측).
+ *
+ * 🔑 **UI·validate·엔진이 `needsGbActualAcqStdPrice` 한 함수를 공유한다.**
+ */
+describe("A2b — 실가 + 취득 축 안분 필요 시 노출 (P-2)", () => {
+  it("🔴 자산 단위 취득가액이 있으면 취득 박스가 열린다", () => {
+    const { container } = renderBlock({
+      useEstimatedAcquisition: false,
+      fixedAcquisitionPrice: "500,000,000",
+    });
+    const boxes = Array.from(container.querySelectorAll<HTMLElement>("[data-gb-stdprice]"));
+    expect(boxes.map((b) => b.dataset.gbStdprice)).toContain("acq");
+    expect(screen.getByText("취득시 토지 공시지가")).toBeTruthy();
+  });
+
+  it("🔴 자산 단위 자본적지출만 있어도 열린다", () => {
+    renderBlock({ useEstimatedAcquisition: false, capitalExpenditure: "30,000,000" });
+    expect(screen.getByText("취득시 토지 공시지가")).toBeTruthy();
+  });
+
+  it("거짓 노출 금지 — 파트별 실지취득가액이 둘 다 있으면 안분이 없어 열리지 않는다", () => {
+    renderBlock({
+      useEstimatedAcquisition: false,
+      fixedAcquisitionPrice: "500,000,000",
+      landAcquisitionPrice: "300,000,000",
+      buildingAcquisitionPrice: "200,000,000",
+    });
+    expect(screen.queryByText("취득시 토지 공시지가")).toBeNull();
   });
 });
 
@@ -115,6 +155,12 @@ describe("A4 — 런처 대체 규칙", () => {
     expect(screen.queryAllByText("건물 기준시가 계산")).toHaveLength(0);
   });
 
+  /**
+   * 🔑 **P-2에서도 이 계약은 유지된다.** 취득시 박스를 「항상」 열면 `showBatchLauncher`가
+   * 함께 켜져 **시점별 런처가 숨고** 이 계약이 깨진다 — CI에서 실제로 깨졌다
+   * (`building-stdprice-apply-timepoint`·`building-stdprice-modal-prefill` 2건).
+   * 그래서 노출 조건을 `needsGbActualAcqStdPrice`로 좁혔다.
+   */
   it("실거래가 모드 — 2시점이 성립하지 않아 양도시 계산기가 유일 경로로 남는다", () => {
     const { container } = renderBlock({ useEstimatedAcquisition: false });
     expect(screen.queryByTestId("gb-building-std-batch-open")).toBeNull();

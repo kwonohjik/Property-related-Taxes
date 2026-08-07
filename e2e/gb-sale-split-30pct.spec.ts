@@ -137,3 +137,59 @@ test.describe("일반건물 §100③ 30% 의제 (Phase 2-F)", () => {
     await expect(page.getByRole("heading", { name: "양도가액 안분" })).toBeVisible();
   });
 });
+
+/**
+ * 🔴 **실가 경로** — 2026-08-07 P-1 신설
+ *
+ * 위 describe의 fixture는 `useEstimatedAcquisition: true`(:30)라 **환산 경로만** 지난다.
+ * 그래서 Phase 1·2의 계약 전건이 초록인데도 **실가 경로에서는 구분양도가 통째로 무시**되고
+ * 있었다 — 「경로가 둘인데 한쪽만 테스트했다」가 이 결함의 발생 조건이었다.
+ *
+ * ⇒ 두 파트 모두 실거래가(= `makeDefaultAsset` 기본값)인 케이스를 **별도로** 지난다.
+ *
+ * 🔑 이 spec이 **표시 계층까지** 실증하는 것이 핵심이다. 엔진 anchor
+ * (`general-building-actual-sale-split.anchor.test.ts`)는 판정 객체까지만 보는데,
+ * 그 값이 `generalBuildingValuationDetail.saleSplitJudgment`에 실려 화면에 도달하는지는
+ * 컴포넌트 anchor로도 못 잡는다(계획서 §17.2가 같은 표시 no-op을 이미 겪었다).
+ */
+test.describe("일반건물 §100③ — 실가 경로 (P-1)", () => {
+  /** 실가 경로 fixture — 환산을 끄고, 취득시 기준시가(P-2 필수)를 채운다. */
+  const ACTUAL = {
+    useEstimatedAcquisition: false,
+    landAcqMode: "actual",
+    buildingAcqMode: "actual",
+    fixedAcquisitionPrice: "300000000",
+    gbAcqLandPricePerSqm: "2800000",
+    gbAcqBuildingValue: "28144700",
+  };
+
+  test("🔴 적정범위 구분 기재가 실가 경로에서도 적용된다", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndCalc(page, {
+      ...ACTUAL,
+      ...SPLIT,
+      landTransferPrice: "900000000",
+      buildingTransferPrice: "25000000",
+    });
+
+    const block = page.getByTestId("sale-split-judgment");
+    await expect(block, "종전에는 이 블록 자체가 뜨지 않았다 — 판정이 실행되지 않았다").toBeVisible();
+    await expect(block).toContainText("30% 미만 차이로 그대로 적용");
+    await expect(block).toContainText("900,000,000");
+  });
+
+  test("🔴 30% 초과도 실가 경로에서 안분값으로 되돌린다", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndCalc(page, {
+      ...ACTUAL,
+      ...SPLIT,
+      landTransferPrice: "825000000",
+      buildingTransferPrice: "100000000",
+    });
+
+    const block = page.getByTestId("sale-split-judgment");
+    await expect(block).toBeVisible();
+    await expect(block).toContainText("안분가액을 적용했습니다");
+    await expect(block).toContainText("904,725,192");
+  });
+});

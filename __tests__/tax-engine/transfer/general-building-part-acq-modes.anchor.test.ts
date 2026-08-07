@@ -127,6 +127,10 @@ describe("A-5b — 파트별 자본적지출 직접 귀속", () => {
     transferLandPricePerSqm: 10_830_000,
     transferBuildingStdPrice: 20_629_440,
     zoneType: "commercial",
+    // 취득시 기준시가 — 실가 경로의 **취득 축 안분 기준**이다(2026-08-07 P-2).
+    // 종전에는 취득가액도 양도시 비율로 나눠 이 값이 필요 없었다.
+    acquisitionLandPricePerSqm: 2_800_000,
+    acquisitionBuildingStdPrice: 28_144_700,
     actualAcquisitionPrice: 600_000_000,
     actualExpenses: 10_000_000,
   };

@@ -28,6 +28,7 @@ import { calculateConvertedAcquisition } from "./general-building-converted-acqu
 import { applyPartAcqModes } from "./general-building-part-acq";
 import { resolveSaleApportionBasis } from "./sale-split-apportion-basis";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
+import type { SaleSplitExemption } from "./sale-split-deemed-unclear";
 import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 
 // ============================================================
@@ -93,8 +94,31 @@ import type {
  *   건물 양도가 = 총양도가 − 토지양도가  (잔액 보정, 이중 floor 오차 방지)
  *
  * ⚠️ BigInt 필수: 분자 ≈ 925,000,000 × 920,550,000 ≈ 8.5×10¹⁷ > MAX_SAFE_INTEGER(9.0×10¹⁵)
+ *
+ * 🔑 **두 경로가 공유한다**(2026-08-07 P-1). 환산 경로(`buildGeneralBuildingAssetCards`)와
+ *    실가 경로(`general-building-route-actual.ts`)가 **같은 함수**를 부른다 — 종전에는 실가
+ *    경로가 자체 산식을 갖고 있어 §100③ 30% 판정·감정 서열·§166⑧ 예외가 **통째로 빠져 있었다**.
+ *    파라미터를 `GeneralBuildingInput`에서 아래 좁은 구조로 낮춘 것이 그 때문이다
+ *    (`GeneralBuildingInput`이 구조적으로 이를 만족하므로 기존 호출부는 무변경).
  */
-function allocateBundledTransferPrice(input: GeneralBuildingInput): {
+export interface BundledSaleAllocationInput {
+  totalTransferPrice: number;
+  landArea: number;
+  /** 양도시 토지 ㎡당 기준시가(개별공시지가) */
+  transferLandPricePerSqm: number;
+  /** 양도시 건물 기준시가 총액 */
+  transferBuildingStdPrice: number;
+  /** 양도시 감정평가가액 — 있으면 기준시가보다 **우선**(부가령 §64①1호 단서) */
+  landAppraisalAtTransfer?: number;
+  buildingAppraisalAtTransfer?: number;
+  /** 계약서상 구분 기재 양도가액(§100②). 한쪽만 주면 반대쪽은 총액에서 도출된다 */
+  landTransferPrice?: number;
+  buildingTransferPrice?: number;
+  /** §166⑧ 30% 의제 예외 사유 */
+  saleSplitExemption?: SaleSplitExemption;
+}
+
+export function allocateBundledTransferPrice(input: BundledSaleAllocationInput): {
   allocation: GeneralBuildingAllocation;
   /** 구분 기재가 있을 때만 채워진다 — 일괄양도는 비교 대상이 없어 판정하지 않는다 */
   judgment?: SaleSplitJudgmentDetail;

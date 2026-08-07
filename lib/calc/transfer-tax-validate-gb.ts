@@ -9,6 +9,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { needsGbActualAcqStdPrice } from "./transfer-tax-split-acq-mode";
 
 /**
  * 일반건물 자산 전용 검증.
@@ -247,6 +248,9 @@ export function validateGeneralBuildingAsset(
       return `${label}: 취득시 토지 공시지가를 입력하세요.`;
     if (needBuildingStd && !parseAmount(asset.gbAcqBuildingValue))
       return `${label}: 취득시 건물기준시가 총액을 입력하세요.`;
+    // (V-5의 「실가 파트는 요구하지 않는다」는 **환산 경로 안에서만** 유효하다.
+    //  두 파트가 모두 실가인 경우는 아래 V-5b가 따로 판정한다 — 그 경로는 취득 축 안분에
+    //  취득시 기준시가를 **쓴다**(2026-08-07 P-2).)
 
     // (a) 건물 취득원인 미선택 차단
     const validBuildingCauses = [
@@ -271,6 +275,33 @@ export function validateGeneralBuildingAsset(
       if (landDate && asset.acquisitionDate < landDate) {
         return `${label}: 건물 취득일은 토지 취득일(${landDate}) 이후여야 합니다.`;
       }
+    }
+  }
+
+  /**
+   * 🔴 V-5b 실가 경로의 **취득시 기준시가** — 2026-08-07 P-2 신설.
+   *
+   * 두 파트가 모두 실가면 엔진이 **실가 경로**(`general-building-route-actual.ts`)로 간다.
+   * 그 경로는 이제 일괄 취득가액·자본적지출을 **취득시** 기준시가 비율로 안분한다
+   * (「소득세법」 제100조 제2항 본문 「**취득 당시**」). 종전에는 양도시 비율을 썼고, 그래서
+   * V-5가 「실가 파트의 기준시가는 계산 어디에도 쓰이지 않는다」고 적을 수 있었다 —
+   * **그 전제가 바뀌었다.**
+   *
+   * ⚠️ **엔진 `requireAcqStd`와 같은 조건이어야 한다.** 어긋나면
+   *    「validate 통과 → 엔진 throw」 또는 그 반대가 된다(메모리 `feedback_validation_sync_8th_point`).
+   *
+   * ⚠️ **거짓 차단 금지** — 취득 축 안분이 실제로 없는 경우는 요구하지 않는다:
+   *    · 파트별 실지취득가액이 **둘 다** 있으면 취득가액은 안분하지 않는다
+   *    · 자본적지출이 없거나, 있어도 파트별 직접 귀속이 **둘 다** 있으면 안분하지 않는다
+   */
+  if (landMode === "actual" && buildingMode === "actual" && !asset.gbHasExtension) {
+    // 🔑 UI(`GeneralBuildingBlock.tsx` `showAcqStdPrice`)·엔진(`requireAcqStd`)과 **같은 술어**다.
+    //    각자 재기술하면 「칸이 없는데 차단」 또는 「차단 안 하는데 엔진이 throw」가 된다.
+    if (needsGbActualAcqStdPrice(asset)) {
+      if (!parseAmount(asset.gbAcqLandPricePerSqm))
+        return `${label}: 취득시 토지 공시지가를 입력하세요 — 취득가액·자본적지출을 토지·건물로 나누는 기준입니다 (소득세법 §100② 취득 당시 기준시가).`;
+      if (!parseAmount(asset.gbAcqBuildingValue))
+        return `${label}: 취득시 건물기준시가 총액을 입력하세요 — 취득가액·자본적지출을 토지·건물로 나누는 기준입니다 (소득세법 §100② 취득 당시 기준시가).`;
     }
   }
 
