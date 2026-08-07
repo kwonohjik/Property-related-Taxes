@@ -1,6 +1,8 @@
 # 일반건물(general_building) 상속 취득가액 엔진 정합 수정 계획서
 
-> 상태: **STEP 1~4 자가검토 완료(fork 3-way + KoreanLaw) · Q1·Q2 해소 · 설계문서(STEP 5·12) 생성 전 · Do 미착수**
+> 상태: **✅ Phase 1(C1) 구현 완료** — 커밋 `b8d71870`(2026-07-20). 부분 상속(C2·C2′·C3)은 [[transfer-gb-inheritance-partial-phase2.plan.md]]로 이관.
+> ⚠️ **아래 본문은 착수 전 시점의 기록**이다(계획서와 구현이 같은 커밋에 담겨 헤더만 남았다 — 2026-08-07 정정). 인용 file:line은 **2026-08-05~06 파트 축 재편(P3·P7·O-1·O-3) 이전 좌표**라 현행과 어긋난다. 현행 좌표는 Phase 2 계획서 §0을 볼 것.
+> ~~종전 표기: STEP 1~4 자가검토 완료(fork 3-way + KoreanLaw) · Q1·Q2 해소 · 설계문서(STEP 5·12) 생성 전 · Do 미착수~~
 > 선행: 겸용주택 상속 취득가액 수정([[transfer-mixed-use-inheritance-acquisition.plan.md]] · PR#710)과 **동일 클래스 버그**. 감사 근거: memory `project_transfer_special_engine_inheritance_acquisition_bugs`.
 > 방향: **엔진 정합**(B) — 사용자 확정 "일반건물 먼저"(2026-07-20).
 

@@ -1,5 +1,8 @@
 # 일반건물(general_building) 상속 취득가액 — UI 설계 문서 (STEP 12)
 
+> 상태: **✅ Phase 1(C1) 구현 완료** — 커밋 `b8d71870`(2026-07-20).
+> ⚠️ 인용 file:line은 착수 시점(2026-07-20) 좌표다. 부분 상속(C2·C2′·C3)의 현행 UI 현황은 [[transfer-gb-inheritance-partial-phase2.plan.md]] §4를 볼 것.
+
 > 단일 소스 계획서: [`transfer-general-building-inheritance-acquisition.plan.md`](./transfer-general-building-inheritance-acquisition.plan.md) (STEP 1~4 자가검토 완료·Q1·Q2 해소). 본 문서는 그 §4 확정 결정을 그대로 구현하는 **UI/클라이언트 8개 동기화 지점** 설계. 계획서 확정 결정(§4-1~9, Q1, Q2) 재-open 금지.
 > 겸용주택 선행 수정: [`transfer-mixed-use-inheritance-acquisition.ui.design.md`](./transfer-mixed-use-inheritance-acquisition.ui.design.md)(PR#710) — 동일 클래스 버그, 동일 패턴(§163⑨ 직접 산정) 재사용.
 > 엔진 설계문서(STEP 5)는 본 문서 작성 시점 기준 **미생성**. 본 문서는 계획서 §4가 명시한 payload 계약을 클라이언트 측에서 확정하며, 엔진 소비 로직(⑨~⑭, `GeneralBuildingInput` 필드 추가·`calculateGeneralBuildingActualTransfer` 시그니처)은 엔진 시니어의 후속 STEP 5 설계 대상입니다. §8 "엔진/Route 후속 조치"에 인계 사항을 명시합니다.
