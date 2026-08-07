@@ -35,7 +35,18 @@ interface Props {
   /** 부담부증여(§159 자동 산정) — 양도가액을 직접 입력하지 않는다(안내만 표시) */
   isBurdenedGift?: boolean;
 
-  saleSplitMode: "actual" | "apportioned";
+  /**
+   * ⚠️ `"appraisal"`은 **일반건물 전용 값**이다(2026-08-07 3-way 통합 — `GeneralBuildingSaleSplitSection`).
+   *
+   * 이 경로(주택·건물 split)는 종전의 2-way 라디오 + 「감정평가가액으로 안분」 토글 구조를
+   * 그대로 유지한다. 자산 종류를 일반건물에서 바꾸면 `"appraisal"`이 남아 들어올 수 있으므로
+   * 타입만 넓히고, 라디오 표시는 아래 `displayMode`가 `"apportioned"`로 접는다 —
+   * 그 상태는 이 화면에서 「일괄양도 + 감정평가 토글 ON」과 **동치**라 기존 동작이 보존된다.
+   *
+   * 🟠 다만 그 구조에는 일반건물에서 해소한 **라벨-동작 모순**(「기준시가 안분」이라고 쓰고
+   *    감정평가액으로 안분)이 그대로 남아 있다 — 후속 정리 대상.
+   */
+  saleSplitMode: "actual" | "apportioned" | "appraisal";
   onSaleSplitModeChange: (v: "actual" | "apportioned") => void;
 
   landTransferPrice: string;
@@ -79,7 +90,9 @@ export function LandBuildingSaleSplitSection(props: Props) {
             tone="amber"
             layout="inline"
             options={SALE_MODE_OPTIONS}
-            value={props.saleSplitMode}
+            // 일반건물 전용 값 `"appraisal"`은 이 2-way 화면에서 「일괄양도 + 감정평가 토글 ON」과
+            // 동치다 — `"apportioned"`로 접어 미선택 상태(라디오가 비는 것)를 막는다.
+            value={props.saleSplitMode === "actual" ? "actual" : "apportioned"}
             onChange={props.onSaleSplitModeChange}
           />
         </div>

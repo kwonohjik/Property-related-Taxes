@@ -12,7 +12,7 @@
  * | 부담부증여(S-11) | **입력 대신 사유 안내** — 칸을 띄우고 validate에서 막으면 dead-end다 |
  * | 증축(S-10) | 🔴 **차단이 아니라 안내**(Q-4 확정) — 건물 구분값을 본체·증축에 기준시가 비율로 나눈다 |
  */
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { useState } from "react";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { GeneralBuildingSaleSplitSection } from "@/components/calc/transfer/GeneralBuildingSaleSplitSection";
@@ -87,19 +87,55 @@ describe("⑤-1 — 모드에 따라 입력 칸이 갈린다", () => {
   });
 });
 
-describe("⑤-3 — 감정평가가액 카드는 모드 밖에 있다", () => {
-  it("🔴 일괄양도에서도 보인다 — 여기서는 안분 basis 자체다", () => {
+/**
+ * ⑤-3 — **계약 변경 (2026-08-07)**: 감정평가는 이제 **라디오의 한 선택지**다.
+ *
+ * 종전에는 라디오 2개(일괄/구분) 밖에 「감정평가가액으로 안분」 토글이 따로 있었다. 그 구조는
+ * 「일괄양도 (양도시 **기준시가 비율로** 안분)」을 고른 채 토글을 켜면 실제로는 감정평가액으로
+ * 안분되어(부가령 §64① 서열) **라벨이 거짓이 되는** 모순이 있었다(사용자 보고).
+ *
+ * ⇒ 3-way 라디오(구분양도 · 감정평가 · 기준시가 안분)로 합쳤다. 구분양도에서는 감정평가액이
+ *   안분 basis가 아니라 §100③ **30% 판정의 비교 대상**이므로, 그쪽 입력 경로는 전용 토글로 남는다.
+ */
+describe("⑤-3 — 감정평가는 라디오의 선택지이고, 구분양도에서는 비교 기준이다", () => {
+  it("기준시가 안분(기본)에서는 감정평가 입력이 없다 — 라벨과 동작이 일치한다", () => {
     render(<Harness />);
-    expect(screen.getByTestId("sale-appraisal-toggle")).toBeTruthy();
+    expect(screen.queryByTestId("gb-sale-appraisal-basis")).toBeNull();
+    expect(screen.getByTestId("gb-sale-apportioned-note")).toBeTruthy();
   });
 
-  it("구분양도에서도 보인다 — 30% 판정의 비교 대상이다", () => {
+  it("「감정평가」를 고르면 금액 칸이 열린다 — 여기서는 안분 basis 자체다", () => {
+    render(<Harness init={{ saleSplitMode: "appraisal" }} />);
+    expect(screen.getByTestId("gb-sale-appraisal-basis")).toBeTruthy();
+    expect(screen.getByTestId("sale-appraisal-land")).toBeTruthy();
+  });
+
+  it("구분양도에서는 30% 판정 비교 기준으로 입력할 수 있다 (§100③)", () => {
     render(<Harness init={{ saleSplitMode: "actual" }} />);
-    expect(screen.getByTestId("sale-appraisal-toggle")).toBeTruthy();
+    expect(screen.getByText(/30% 판정 비교 기준으로 감정평가가액 사용/)).toBeTruthy();
   });
 
-  it("차단 조합에서는 감정 카드도 숨는다 — 3-way 배분 근거가 없는 것은 basis도 마찬가지다", () => {
+  it("모드를 바꾸면 쓰지 않는 쪽 값을 비운다 — 화면에 없는 값이 basis를 가르지 않게", () => {
+    const onChange = vi.fn();
+    render(
+      <GeneralBuildingSaleSplitSection
+        asset={{ ...makeDefaultAsset(1), saleSplitMode: "appraisal", landAppraisalAtTransfer: "100000000" } as AssetForm}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByText(/기준시가 안분/));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        saleSplitMode: "apportioned",
+        landAppraisalAtTransfer: "",
+        buildingAppraisalAtTransfer: "",
+      }),
+    );
+  });
+
+  it("차단 조합에서는 감정 칸도 숨는다 — 3-way 배분 근거가 없는 것은 basis도 마찬가지다", () => {
     render(<Harness blockedReason="증축이 있는 건물은 …" />);
+    expect(screen.queryByTestId("gb-sale-appraisal-basis")).toBeNull();
     expect(screen.queryByTestId("sale-appraisal-toggle")).toBeNull();
   });
 });

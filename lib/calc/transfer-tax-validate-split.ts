@@ -297,6 +297,19 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     return `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
   }
 
+  /**
+   * V8-b **「감정평가」 모드를 골랐으면 금액이 있어야 한다** (2026-08-07 3-way 통합).
+   *
+   * 엔진 스위치는 모드가 아니라 **값의 유무**다(`transfer-tax-api-split.ts:75`). 모드만 고르고
+   * 금액을 비우면 basis 서열에서 감정평가가 빠져 **조용히 기준시가로 안분**된다 — 사용자는
+   * 자기가 고른 방식이 안 쓰인 사실을 모른다(자동 fallback 금지).
+   *
+   * ⚠️ 위 V8은 「한쪽만 입력」을 막고, 여기서는 「둘 다 빈 채로 모드만 선택」을 막는다.
+   */
+  if (asset.saleSplitMode === "appraisal" && !anyAppraisal) {
+    return `${label}: 「감정평가」를 선택했으면 토지·건물 감정평가가액을 입력하세요 — 비워두면 양도시 기준시가 비율로 안분됩니다 (부가가치세법 시행령 §64①1호 단서).`;
+  }
+
   if (asset.saleSplitMode !== "actual") return null;
 
   // ── V9. §166⑧ 예외 — 근거 필수 (계획서 §12.6) ───────────────────────────────────────

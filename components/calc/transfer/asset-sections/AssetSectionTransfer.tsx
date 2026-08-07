@@ -8,6 +8,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { TransferModeBlock } from "../TransferModeBlock";
 import { isExprValuationEligibleAssetKind } from "@/lib/tax-engine/expropriation-scope";
 import { CompanionSaleModeBlock, type BundledSaleMode } from "../CompanionSaleModeBlock";
+import { GeneralBuildingSaleSplitSection } from "../GeneralBuildingSaleSplitSection";
 
 interface Props {
   asset: AssetForm;
@@ -113,6 +114,26 @@ export function AssetSectionTransfer({
           isFractionalSplit={isFractionalSplit && asset.transferType !== "burdened_gift"}
           standardPricePerSqmAtTransfer={effPerSqm}
           onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
+        />
+      )}
+
+      {/*
+        🔀 **양도가액 토지·건물 안분 방식** — ③ 취득의 `GeneralBuildingBlock`에서 이전했다
+           (2026-08-07 · 사용자 요청). 양도가액을 토지·건물로 어떻게 나눌지는 **양도 정보**다.
+
+        양도가액(`CompanionSaleModeBlock`) **바로 뒤**에 둔다 — 총액을 정한 다음 그것을 나누는
+        순서라 로직 순서와 화면 순서가 일치한다(components/calc/CLAUDE.md 「UI 순서 = 로직 순서」).
+      */}
+      {asset.assetKind === "general_building" && (
+        <GeneralBuildingSaleSplitSection
+          asset={asset}
+          onChange={onChange}
+          blockedReason={
+            asset.transferType === "burdened_gift"
+              ? "부담부증여는 양도가액이 인수 채무액 기준으로 자동 산정되어 구분 기재가 성립하지 않습니다 (소득세법 시행령 §159)."
+              : undefined
+          }
+          hasExtension={asset.gbHasExtension === true}
         />
       )}
     </>
