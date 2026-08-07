@@ -9,12 +9,17 @@
  * 있는가**를 잡는다 — validate가 요구하는데 칸이 없으면 dead-end가 된다
  * (메모리 `feedback_ui_gate_removes_sole_input_path`).
  *
- * ## 노출 규칙 (계획서 §12.3 · §12.6)
+ * ## 노출 규칙 — **2026-08-08 계약 변경 (3-way 통합)**
  *
- * | 카드 | 일괄양도 | 구분양도 |
- * |---|---|---|
- * | 감정평가가액 | **보인다** — 여기서도 안분 basis다 | 보인다 — 30% 비교 대상이다 |
- * | §166⑧ 예외 | **숨는다** — 판정 자체가 돌지 않는다 | 보인다 |
+ * 종전에는 라디오(일괄/구분) 밖에 「감정평가가액으로 안분」 **토글**이 따로 있어, 「일괄양도
+ * (양도시 **기준시가 안분**)」을 고른 채 토글을 켜면 실제로는 감정평가액으로 안분되는
+ * **라벨-동작 모순**이 있었다(부가령 §64① 서열). 감정평가는 안분 방식의 한 선택지이므로
+ * 라디오로 흡수했다 — 일반건물 경로와 같은 구조다.
+ *
+ * | 입력 | 기준시가 안분 | 감정평가 | 구분양도 |
+ * |---|---|---|---|
+ * | 감정평가가액 | **숨는다** — 라벨과 동작이 일치한다 | **보인다** (안분 basis) | 보인다 (30% 비교 대상) |
+ * | §166⑧ 예외 | 숨는다 — 판정 자체가 돌지 않는다 | 숨는다 | 보인다 |
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { useState } from "react";
@@ -33,7 +38,7 @@ afterEach(cleanup);
  *    (선례: `redev-exemption-toggle-tri-state.anchor.test.tsx:54`).
  */
 const clickToggle = (name: string) => fireEvent.click(screen.getByLabelText(name));
-const APPRAISAL_TOGGLE = "감정평가가액으로 안분";
+const COMPARE_TOGGLE = "30% 판정 비교 기준으로 감정평가가액 사용";
 const EXEMPTION_TOGGLE = "구분 기재 가액을 그대로 인정받는 예외";
 
 /**
@@ -50,44 +55,58 @@ function Harness({ init }: { init?: Partial<AssetForm> }) {
     ...init,
   } as AssetForm);
 
+  // 실제 호출부 3곳 모두 두 콜백에 **같은 `onChange`**를 넘긴다 — 그대로 재현한다.
+  const apply = (patch: Partial<AssetForm>) => {
+    lastPatch = patch;
+    setAsset((a) => ({ ...a, ...patch }));
+  };
+
   return (
     <LandBuildingSaleSplitSection
       saleSplitMode={asset.saleSplitMode ?? "apportioned"}
-      onSaleSplitModeChange={() => {}}
+      onSaleSplitModeChange={apply}
       landTransferPrice="" onLandTransferPriceChange={() => {}}
       buildingTransferPrice="" onBuildingTransferPriceChange={() => {}}
       showStdCard={saleStdPlacement().saleAxis}
       asset={asset}
-      onAssetChange={(patch) => { lastPatch = patch; setAsset((a) => ({ ...a, ...patch })); }}
+      onAssetChange={apply}
       transferDate="2024-06-01"
     />
   );
 }
 
-describe("⑤-1 — 감정평가가액 카드는 모드와 무관하게 보인다", () => {
-  it("일괄양도에서 보인다 — 여기서도 안분 basis이기 때문이다", () => {
+describe("⑤-1 — 감정평가는 안분 방식의 한 선택지다 (3-way)", () => {
+  it("🔴 기준시가 안분에서는 감정평가 칸이 없다 — 라벨과 동작이 일치한다", () => {
     render(<Harness />);
-    expect(screen.getByTestId("sale-appraisal-toggle")).toBeTruthy();
+    expect(screen.queryByTestId("sale-appraisal-basis")).toBeNull();
+    expect(screen.queryByTestId("sale-compare-basis-toggle")).toBeNull();
   });
 
-  it("구분양도에서도 보인다", () => {
-    render(<Harness init={{ saleSplitMode: "actual" }} />);
-    expect(screen.getByTestId("sale-appraisal-toggle")).toBeTruthy();
-  });
-
-  it("토글을 켜면 가액 2칸 + 감정일자가 나온다 (validate가 요구하는 3필드)", () => {
-    render(<Harness />);
-    clickToggle(APPRAISAL_TOGGLE);
+  it("「감정평가」를 고르면 3필드가 바로 열린다 — 여기서는 basis 자체다", () => {
+    render(<Harness init={{ saleSplitMode: "appraisal" }} />);
     expect(screen.getByTestId("sale-appraisal-land")).toBeTruthy();
     expect(screen.getByTestId("sale-appraisal-building")).toBeTruthy();
     expect(screen.getByTestId("sale-appraisal-date")).toBeTruthy();
   });
 
-  it("🔴 토글을 끄면 3필드를 함께 비운다 — 화면에 없는 값이 전송되면 안 된다", () => {
-    render(<Harness init={{ landAppraisalAtTransfer: "1,200,000,000", appraisalDateAtTransfer: "2023-06-01" }} />);
+  it("구분양도에서는 30% 비교 기준 토글로 입력한다 (§100③)", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} />);
+    expect(screen.getByTestId("sale-compare-basis-toggle")).toBeTruthy();
+  });
+
+  it("🔴 비교 기준 토글을 끄면 3필드를 함께 비운다 — 화면에 없는 값이 전송되면 안 된다", () => {
+    render(
+      <Harness
+        init={{
+          saleSplitMode: "actual",
+          landAppraisalAtTransfer: "1,200,000,000",
+          appraisalDateAtTransfer: "2023-06-01",
+        }}
+      />,
+    );
     // 값이 있으면 열린 채로 시작한다(세션 복원)
     expect(screen.getByTestId("sale-appraisal-land")).toBeTruthy();
-    clickToggle(APPRAISAL_TOGGLE);
+    clickToggle(COMPARE_TOGGLE);
     expect(lastPatch.landAppraisalAtTransfer).toBe("");
     expect(lastPatch.appraisalDateAtTransfer).toBe("");
   });
@@ -98,15 +117,23 @@ describe("⑤-1 — 감정평가가액 카드는 모드와 무관하게 보인�
    *    알려 사용자가 스스로 확인하게 한다.
    */
   it("시기 요건을 검증하지 않는다는 사실을 알린다 — 침묵하지 않는다", () => {
-    render(<Harness />);
-    clickToggle(APPRAISAL_TOGGLE);
+    render(<Harness init={{ saleSplitMode: "appraisal" }} />);
     expect(screen.getByText(/검증하지 않으므로/)).toBeTruthy();
   });
 
   it("감정일자는 선택 입력임을 라벨에 밝힌다", () => {
-    render(<Harness />);
-    clickToggle(APPRAISAL_TOGGLE);
+    render(<Harness init={{ saleSplitMode: "appraisal" }} />);
     expect(screen.getByText(/안분 계산에는 쓰지 않습니다/)).toBeTruthy();
+  });
+
+  it("모드를 바꾸면 쓰지 않는 값을 함께 비운다 — 두 경로가 같은 규칙을 쓴다", () => {
+    render(<Harness init={{ saleSplitMode: "appraisal", landAppraisalAtTransfer: "1,200,000,000" }} />);
+    fireEvent.click(screen.getByText(/기준시가 안분/));
+    expect(lastPatch).toMatchObject({
+      saleSplitMode: "apportioned",
+      landAppraisalAtTransfer: "",
+      buildingAppraisalAtTransfer: "",
+    });
   });
 });
 

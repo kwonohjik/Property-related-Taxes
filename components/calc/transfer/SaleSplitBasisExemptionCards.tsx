@@ -28,11 +28,67 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
+import type { SaleSplitMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+}
+
+/**
+ * ── 안분 방식 **3-way 선택지** — 일반건물·주택 두 경로가 공유한다 (2026-08-07) ──
+ *
+ * 순서는 **법정 우선순위** 그대로다: 구분 기장이 원칙(「소득세법」 §100②)이고, 안분해야 한다면
+ * 감정평가액(「부가가치세법 시행령」 §64①1호)이 기준시가(같은 항 2호)에 앞선다.
+ *
+ * 라벨을 한 곳에 두는 이유는 두 화면이 **같은 것을 다르게 부르지 않게** 하기 위함이다 —
+ * 종전에는 같은 축을 일반건물은 「일괄양도 (양도시 기준시가 비율로 안분)」, 주택은
+ * 「일괄양도 (양도시 기준시가 안분)」으로 달리 불렀다.
+ */
+export const SALE_SPLIT_MODE_OPTIONS: RadioCardOption<SaleSplitMode>[] = [
+  { value: "actual", label: "구분양도 (계약서에 구분 기재)" },
+  { value: "appraisal", label: "감정평가 (감정평가가액으로 안분)" },
+  { value: "apportioned", label: "기준시가 안분 (양도시 기준시가 비율)" },
+];
+
+/**
+ * 구분양도 전용 — 「30% 판정 비교 기준」 감정평가액 (선택 입력).
+ *
+ * 「소득세법」 §100③은 구분 기재액을 「안분계산한 가액」과 견주는데, 그 안분값은 §166⑥ →
+ * 부가령 §64①의 서열(감정평가액 > 기준시가)로 정해진다. ⇒ 감정평가서가 있으면 **30% 판정도
+ * 그것과 해야 하므로** 구분양도에서도 입력 경로를 남긴다(3-way 배타로 없애면 감정평가가 있는데
+ * 기준시가로 비교하게 되어 판정이 뒤집힌다).
+ *
+ * 열림은 값 유무에서 파생한 **로컬 state**다 — 폼에 상태 필드를 두면 값과 두 벌을 동기화해야 하고,
+ * 값 유무로만 판정하면 「입력하다 지웠을 때 접히는」 문제가 생긴다.
+ */
+export function SaleSplitCompareBasisCard({ asset, onChange }: Props) {
+  const [open, setOpen] = useState(
+    () => !!(asset.landAppraisalAtTransfer || asset.buildingAppraisalAtTransfer || asset.appraisalDateAtTransfer),
+  );
+  return (
+    <div data-testid="sale-compare-basis-toggle">
+      <ToggleCard
+        tone="emerald"
+        checked={open}
+        onCheckedChange={(v) => {
+          setOpen(v);
+          if (!v) {
+            onChange({
+              landAppraisalAtTransfer: "",
+              buildingAppraisalAtTransfer: "",
+              appraisalDateAtTransfer: "",
+            });
+          }
+        }}
+        title="30% 판정 비교 기준으로 감정평가가액 사용"
+        description="비워두면 양도시 기준시가로 비교합니다 (소득세법 §100③ · 시행령 §166⑥)"
+      >
+        <SaleAppraisalFields asset={asset} onChange={onChange} />
+      </ToggleCard>
+    </div>
+  );
 }
 
 /**
@@ -90,41 +146,14 @@ export function SaleAppraisalFields({ asset, onChange }: Props) {
   );
 }
 
-/**
- * ⚠️ **토글형 감정평가 카드** — 주택·건물 split 경로(`LandBuildingSaleSplitSection`) 전용으로 남는다.
+/*
+ * 🗑 `SaleAppraisalBasisCard`(토글형 「감정평가가액으로 안분」)는 **삭제했다** (2026-08-08).
  *
- * 일반건물은 2026-08-07에 3-way 라디오(`GeneralBuildingSaleSplitSection`)로 옮겨가 이 카드를
- * 쓰지 않는다. 그쪽에서 드러난 **라벨-동작 모순**(「기준시가 비율로 안분」 라디오를 골라도 토글을
- * 켜면 감정평가액으로 안분됨)은 이 경로에도 **그대로 남아 있다** — 후속 정리 대상이다.
+ * 그 카드가 라벨-동작 모순의 원인이었다 — 라디오에서 「기준시가 안분」을 골라도 토글을 켜면
+ * 부가령 §64① 서열상 감정평가액이 이겨 실제로는 감정평가로 안분됐다. 감정평가는 **안분 방식의
+ * 한 선택지**이므로 `SALE_SPLIT_MODE_OPTIONS`의 `"appraisal"`로 흡수했고, 일반건물·주택 두 경로
+ * 모두 그것을 쓴다. 구분양도에서의 30% 비교 기준은 `SaleSplitCompareBasisCard`가 이어받았다.
  */
-export function SaleAppraisalBasisCard({ asset, onChange }: Props) {
-  const [open, setOpen] = useState(
-    () => !!(asset.landAppraisalAtTransfer || asset.buildingAppraisalAtTransfer || asset.appraisalDateAtTransfer),
-  );
-
-  return (
-    // ⚠️ `ToggleCard`는 `data-testid`를 DOM으로 흘리지 않는다(props에 없다) — 기존 코드와 같이
-    //    **감싸는 div에** 붙인다. 토글 자체를 조작할 때는 Switch의 `aria-label`(= title)로 잡는다.
-    <div data-testid="sale-appraisal-toggle">
-    <ToggleCard
-      tone="emerald"
-      checked={open}
-      onCheckedChange={(v) => {
-        setOpen(v);
-        // 끄면 값을 **함께 비운다** — 남겨 두면 화면에 없는 값이 계속 전송돼 안분 기준이 조용히
-        // 바뀐다(구분양도로 되돌린 뒤 잔존 양도가액이 일으켰던 것과 같은 종류의 사고다).
-        if (!v) {
-          onChange({ landAppraisalAtTransfer: "", buildingAppraisalAtTransfer: "", appraisalDateAtTransfer: "" });
-        }
-      }}
-      title="감정평가가액으로 안분"
-      description="감정평가가액이 있으면 양도시 기준시가보다 우선합니다 (부가가치세법 시행령 §64①1호 단서)"
-    >
-      <SaleAppraisalFields asset={asset} onChange={onChange} />
-    </ToggleCard>
-    </div>
-  );
-}
 
 const EXEMPTION_OPTIONS: RadioCardOption<"other_law" | "demolished_land_only">[] = [
   { value: "other_law", label: "다른 법령에 구분 기준이 있는 경우" },
