@@ -7,6 +7,10 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+// §163⑨ 단서 게이트 — 상가 경로와 **같은 상수·같은 술어**를 쓴다(경계가 갈리면 조문 하나에 두 정책이 된다).
+import { LAND_PRICE_NOTICE_START } from "./transfer-pre1990-commercial-bridge";
+import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
+import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 // ─── ④ 사례 33: 증축 extensionInfo 서브객체 변환 헬퍼 ───
@@ -133,6 +137,15 @@ function saleAppraisalFields(asset: AssetForm): Record<string, unknown> {
 
 export function buildGeneralBuildingValuation(
   asset: AssetForm,
+  /**
+   * 폼-전역 양도일 — **§164④ 등급환산 파생에만** 쓴다(`effectiveGbLandPriceAtAcq`).
+   *
+   * 상가 `buildCommercialBuildingValuation(primary, form.transferDate)`와 같은 규약이다.
+   * 생략하면 사용자가 직접 입력한 `gbAcqLandPricePerSqm`만 유효하고 등급환산 파생은 꺼진다 —
+   * 프로덕션 호출부(`transfer-tax-api.ts:157`)는 항상 넘기므로 그 경로에는 영향이 없고,
+   * ⑧ validate는 자체 `formTransferDate`로 같은 파생을 본다(3중 fallback 유지).
+   */
+  transferDate?: string,
 ): object | undefined {
   if (asset.assetKind !== "general_building") return undefined;
 
@@ -162,8 +175,46 @@ export function buildGeneralBuildingValuation(
   const buildingAcquisitionByInheritance =
     asset.gbBuildingAcquisitionCause === "inheritance" &&
     (asset.acquisitionDate ?? "") >= "1985-01-01";
-  const inheritedLandValue = parseAmount(asset.publishedValueAtInheritance) || undefined;
-  const inheritedBuildingValue = parseAmount(asset.gbBuildingInheritedValue) || undefined;
+  /**
+   * §163⑨ 단서 각 호 — **미공시 시기 상속은 §164 가액과 겨룬다** (Phase 3).
+   *
+   * 본문은 상증법 §60~66 평가액을 취득당시 실지거래가액으로 보지만, 단서가 두 경우를 뺀다:
+   *
+   *   **1호** 「1990년 8월 30일 개별공시지가가 고시되기 **전에**」 상속·증여받은 **토지**
+   *          → 평가액과 **제164조제4항**의 가액 중 **많은 금액**
+   *   **2호** 상증법 §61①2호~4호 「건물의 기준시가가 고시되기 **전에**」 상속·증여받은 **건물**
+   *          → 평가액과 **제164조제5항 내지 제7항**의 가액 중 **많은 금액**
+   *
+   * 일반건물의 건물분은 법 §99①1호 **나목**이므로 §164**⑤**가 정본이다
+   * (⑥=오피스텔·상업용건물·공동주택, ⑦=주택). §164⑤의 가액은 곧 「취득당시의 기준시가」이고,
+   * 취득연도 ≤2000이면 「건물 기준시가 계산」 모달이 **2001 지수표 × 산정기준율**로 그 값을
+   * 산출한다(`building-standard-price.ts:198·214`) — 그래서 별도 축이 필요 없다.
+   *
+   * ⚠️ **경계가 파트마다 다르다** — 토지는 1990-08-30(일자), 건물은 취득연도 2000/2001.
+   *    1995년 상속이면 **건물만** 게이트 안이다. 하나로 묶으면 그 조합에서 틀린다.
+   * ⚠️ 동점은 **평가액(①)** 이다 — 금액은 같고 근거만 갈린다(`calcPostDeemed`와 같은 규약).
+   * ⚠️ 게이트 밖에서는 **비교하지 않는다** — 단서는 두 경우에 한정되고, 그 밖에서 max를
+   *    적용하면 본문이 정한 「평가액을 실지거래가액으로 본다」를 넘어선다.
+   */
+  const landInheritanceDate = partAcquisitionDates(asset).land;
+  const landSec164Applies = !!landInheritanceDate && landInheritanceDate < LAND_PRICE_NOTICE_START;
+  const buildingSec164Applies = isBeforeBuildingStdPriceNotice(asset.acquisitionDate);
+  /** ② §164④ 가액 — 취득시 토지 기준시가 **총액**(㎡당 × 면적). */
+  const sec164LandTotal = Math.floor(
+    effectiveGbLandPriceAtAcq(asset, transferDate ?? "") * (parseDecimal(asset.gbLandArea) || 0),
+  );
+  /** ② §164⑤ 가액 — 취득시 건물 기준시가. */
+  const sec164BuildingValue = parseAmount(asset.gbAcqBuildingValue);
+
+  const reportedLandValue = parseAmount(asset.publishedValueAtInheritance);
+  const reportedBuildingValue = parseAmount(asset.gbBuildingInheritedValue);
+  const inheritedLandValue =
+    (landSec164Applies ? Math.max(reportedLandValue, sec164LandTotal) : reportedLandValue) ||
+    undefined;
+  const inheritedBuildingValue =
+    (buildingSec164Applies
+      ? Math.max(reportedBuildingValue, sec164BuildingValue)
+      : reportedBuildingValue) || undefined;
   /**
    * 상속 필드 — **양 경로 모두**에 싣는다.
    *
