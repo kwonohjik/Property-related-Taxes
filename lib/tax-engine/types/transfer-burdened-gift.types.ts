@@ -246,6 +246,36 @@ export interface TransferBurdenedGiftBreakdown {
   acquisitionMethodUsed: "standard_price" | "actual" | "converted";
 
   /**
+   * 🔴 §97②2호 **단서** 판정 — **K-5(환산취득가액) 전용** (2026-08-07 W-6).
+   *
+   * 「다만, 제1항제1호나목에 따라 취득가액을 **환산취득가액**으로 하는 경우로서 **가목의 금액이
+   *  나목의 금액보다 적은 경우**에는 나목의 금액을 필요경비로 할 수 있다.」
+   *
+   * · `estimatedSide` **가목** = 환산취득가액 + 개산공제 (채무비율 안분 후 · 필요경비 **전체**)
+   * · `directSide`    **나목** = 자본적지출 + 양도비 (채무비율 안분 후)
+   *
+   * 실비를 명시 입력하지 않으면(`capitalExpenditure`·`transferExpense` 둘 다 undefined)
+   * 비교 자체를 하지 않으므로 **undefined**다 — 본문(개산공제)이 그대로 적용된다.
+   *
+   * ⚠️ `chosen === "direct"`이면 `perAsset.*.acquisitionPrice`가 **0**이 된다.
+   *    가목이 「환산취득가액 **과** 개산공제의 **합계액**」이라 둘은 필요경비 전체를 놓고 겨루고,
+   *    나목 채택 시 환산취득가액을 별도 차감하면 **이중차감**이기 때문이다.
+   *    환산취득가액 자체가 필요한 소비자(§114조의2 가산세 base 등)는
+   *    `convertedAcquisitionBeforeSwap`을 읽어야 한다.
+   */
+  necessaryExpenseSwap?: {
+    estimatedSide: number;
+    directSide: number;
+    chosen: "estimated" | "direct";
+  };
+
+  /**
+   * 단서(나목) 채택으로 `acquisitionPrice`를 0으로 만들기 **직전**의 환산취득가액(채무비율 안분 후).
+   * 미발동 시 undefined. §114조의2 가산세 base처럼 「환산을 썼다는 사실」에 붙는 계산이 읽는다.
+   */
+  convertedAcquisitionBeforeSwap?: { land: number; building: number };
+
+  /**
    * Phase 2: 증여세 명세 (calcGiftTax 결과 요약).
    * burdenedGiftInfo.donorRelation 제공 시만 채워짐 — 미제공 시 undefined.
    */
