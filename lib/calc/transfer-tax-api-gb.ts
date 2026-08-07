@@ -281,10 +281,21 @@ export function buildGeneralBuildingValuation(
       ...(parseAmount(asset.capitalExpenditure)
         ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
         : {}),
-      // ⚠️ transferExpense는 **비-증축만**. 증축(gbHasExtension)에서는 위 bundledExpenses legacy
-      //   fallback으로 소비될 수 있어(F1) swap 나목에 재사용 시 이중차감 → 제외(decision b).
-      //   증축 원건물 실가 모드에서는 양도비가 이미 실가 필요경비로 차감되므로 법령상으로도 정합.
-      ...(!asset.gbHasExtension && parseAmount(asset.transferExpense)
+      /**
+       * 🔴 **증축에서도 「소비되지 않을 때는」 나목에 넣는다** (2026-08-07 W-1b).
+       *
+       * 종전 규칙은 「증축이면 무조건 제외」(decision b)였다. 이유는 위 `bundledExpenses`의
+       * fallback ②가 `transferExpense`를 채택하면 **같은 값이 두 번** 반영되기 때문이고,
+       * 그 우려는 **실재한다**(실측: 결정세액 131,082,800 → 16,954,949로 과소).
+       *
+       * 그러나 전용 필드 `gbBundledAcquisitionExpenses`가 입력되면 fallback은 **①에서 멈춘다**
+       * ⇒ `transferExpense`는 소비되지 않는데도 제외되어 **§97②2호 단서의 나목에서 통째로
+       * 빠졌다**. 실측 **결정세액 121,962,280원 과대**(양도비 3억 기준).
+       *
+       * ⇒ **①이 채택됐을 때만** 넣는다. 「무조건 제외」도 「무조건 포함」도 틀렸다.
+       */
+      ...((!asset.gbHasExtension || !!parseAmount(asset.gbBundledAcquisitionExpenses)) &&
+      parseAmount(asset.transferExpense)
         ? { transferExpense: parseAmount(asset.transferExpense) }
         : {}),
       ...nblFields,
