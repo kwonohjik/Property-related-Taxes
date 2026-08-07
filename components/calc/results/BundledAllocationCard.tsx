@@ -582,6 +582,49 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         />
       )}
 
+      {/*
+        §163⑨ 상속 취득가액 직접 산정 — **파트별**(C1 전부 상속 · C2·C2′·C3 부분 상속).
+
+        ⚠️ 표시를 여기 붙이는 이유는 바로 위 §100③ 블록과 같다 — 일반건물은 aggregate 경로로
+           흐르므로 `GeneralBuildingValuationDetailCard`(TransferTaxResultView 전용)는
+           **렌더되지 않는다**. 그쪽에만 라벨을 두면 계산에는 반영되고 화면에는 안 보인다.
+      */}
+      {(aggregated.generalBuildingValuationDetail?.acquisitionByInheritance ||
+        aggregated.generalBuildingValuationDetail?.buildingAcquisitionByInheritance) && (
+        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 text-sm space-y-1">
+          <p className="font-semibold text-violet-900">
+            상속 취득가액 직접 산정 — 소득세법 시행령 §163⑨
+          </p>
+          <p className="text-xs text-violet-800">
+            상속개시일 현재 「상속세 및 증여세법」 §60~§66 평가액을 취득당시의 실지거래가액으로
+            봅니다. 그 파트는 환산취득가·개산공제(§163⑥)를 적용하지 않습니다.
+          </p>
+          <ul className="text-xs text-violet-900 space-y-0.5 pt-1">
+            {(["land", "building"] as const).map((kind) => {
+              const inherited =
+                kind === "land"
+                  ? aggregated.generalBuildingValuationDetail?.acquisitionByInheritance
+                  : aggregated.generalBuildingValuationDetail?.buildingAcquisitionByInheritance;
+              const alloc = apportionment.apportioned.find((a) => a.assetKind === kind);
+              if (!alloc) return null;
+              return (
+                <li key={kind} className="flex items-baseline justify-between gap-3">
+                  <span>
+                    {kind === "land" ? "토지분" : "건물분"} 취득가액
+                    <span className="ml-1 text-violet-600">
+                      {inherited ? "(상속개시일 평가액)" : "(상속 아님 — 종전 산정)"}
+                    </span>
+                  </span>
+                  <span className="font-mono tabular-nums font-semibold whitespace-nowrap">
+                    {formatKRW(alloc.allocatedAcquisitionPrice)}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
       {/* §97② 2호 단서 swap 발동 표시 (일반건물 환산 자산총액 판정 — F10) */}
       {aggregated.swapApplied && aggregated.swapComparison && (
         <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1">

@@ -553,6 +553,12 @@ export function buildGeneralBuildingAssetCards(
     acqBuilding1StdTotal: input.acquisitionBuildingStdPrice,
     // §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 게이트 미충족 시 undefined)
     expropriationValuationDetail,
+    // §163⑨ 상속 게이트 echo — 결과 카드가 파트별로 라벨을 바꾸는 유일한 소스(Phase 2 C2).
+    // 값은 파트별 실지거래가액 슬롯으로 이미 반영돼 있다.
+    ...(input.acquisitionByInheritance ? { acquisitionByInheritance: true } : {}),
+    ...(input.buildingAcquisitionByInheritance
+      ? { buildingAcquisitionByInheritance: true }
+      : {}),
   };
 }
 

@@ -107,9 +107,28 @@ function PartAcqModeField({
     isLand ? asset.landAcqMode : asset.buildingAcqMode,
     asset,
   );
+  /**
+   * §163⑨ 상속 파트는 **평가액이 취득가액이다** — 파트 취득가액 칸을 노출하지 않는다.
+   *
+   * API 변환이 상속 평가액을 파트별 실지거래가액 슬롯에 실어 보내므로(`transfer-tax-api-gb`),
+   * 이 칸을 함께 띄우면 **두 칸이 같은 값을 다투고 한쪽이 조용히 무시된다**
+   * (`feedback_ui_engine_dual_truth_avoidance`). 실제로 종전 C1에서 이 칸에 999,999,999를
+   * 넣어도 세액이 변하지 않았다 — 보이는데 아무 효과가 없는 칸이었다.
+   */
+  const isInheritedPart = isLand
+    ? asset.acquisitionCause === "inheritance"
+    : asset.gbBuildingAcquisitionCause === "inheritance";
   return (
     <>
-      <FieldCard label={`${label} 취득가액 산정 방식`}>
+      <FieldCard
+        label={`${label} 취득가액 산정 방식`}
+        hint={
+          isInheritedPart
+            ? // 조사는 받침 유무로 갈린다 — 토지(모음)는 「는」·건물(받침)은 「은」.
+              `상속으로 취득한 ${isLand ? "토지는" : "건물은"} 상속개시일 평가액이 취득당시 실지거래가액입니다 (소득세법 시행령 §163⑨). 금액은 아래 상속 입력란에 적으세요.`
+            : undefined
+        }
+      >
         <RadioCardGroup
           name={`gb${isLand ? "Land" : "Building"}AcqMode`}
           layout="inline"
@@ -121,8 +140,9 @@ function PartAcqModeField({
         />
       </FieldCard>
       {/* 실거래가 파트만 금액을 받는다 — 환산 파트는 기준시가로 산정하므로 입력 자체가 없다.
-          비-환산 파트의 미입력은 엔진이 차단한다(`general-building-part-acq.ts`). */}
-      {mode === "actual" && (
+          비-환산 파트의 미입력은 엔진이 차단한다(`general-building-part-acq.ts`).
+          상속 파트는 위 주석대로 평가액이 정본이라 이 칸을 띄우지 않는다. */}
+      {mode === "actual" && !isInheritedPart && (
         <FieldCard
           label={`${label} 취득가액`}
           unit="원"

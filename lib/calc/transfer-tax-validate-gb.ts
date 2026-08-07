@@ -114,15 +114,11 @@ export function validateGeneralBuildingAsset(
     return `${label}: ${causeBy} 취득한 ${partSubject} 취득가액을 환산취득가·감정가액·매매사례가액으로 산정할 수 없습니다. ${cause} 당시 평가액이 취득당시 실지거래가액이므로 「실거래가」를 선택하세요 (소득세법 §97①1호 단서·같은 법 시행령 §163⑨).`;
   };
 
-  // ── §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1 토지·건물 모두 상속, 설계 §0) ──
-  // mode 분기 이전에 배치 — C2(부분 상속)를 취득시 기준시가 요구 전에 조기 차단(UX).
+  // ── §163⑨ 상속 취득가액 직접 산정 — **파트 축**(Phase 2: C1·C2·C2′·C3) ──
+  // mode 분기 이전에 배치 — 취득시 기준시가 요구 전에 조기 차단(UX).
   const isLandInherited = asset.acquisitionCause === "inheritance";
   const isBuildingInherited = asset.gbBuildingAcquisitionCause === "inheritance";
   if (isLandInherited || isBuildingInherited) {
-    // V1: Phase 1 = C1 단독. 부분 상속(한쪽만)은 혼합 배선 미설계 → Phase 2 차단.
-    if (isLandInherited !== isBuildingInherited) {
-      return `${label}: 일반건물의 토지·건물 중 한쪽만 상속으로 취득한 조합은 아직 지원하지 않습니다. (토지·건물 모두 상속이거나, 모두 상속이 아니어야 합니다)`;
-    }
     // V2: 상속 파트는 추계 불가 — **파트 축**으로 판정한다(O-3).
     if (isLandInherited && landMode !== "actual") return blockEstimation("토지", "상속");
     if (isBuildingInherited && buildingMode !== "actual") return blockEstimation("건물", "상속");
@@ -130,11 +126,31 @@ export function validateGeneralBuildingAsset(
     if (asset.gbHasExtension) {
       return `${label}: 상속 취득 일반건물은 증축 조합을 지원하지 않습니다. 증축 토글을 끄세요.`;
     }
-    // V3·V4: 상속개시일 평가액 필수 — 자동 안분 fallback 금지(mirror-pattern·API 변환과 동일 소스).
-    if (!parseAmount(asset.publishedValueAtInheritance)) {
+    /**
+     * V-5 **부분 상속은 분리 ON을 요구한다** (Phase 2 신설).
+     *
+     * 종전 V1은 부분 상속을 통째로 차단했다(「한쪽만 상속인 조합은 아직 지원하지 않습니다」).
+     * 파트 축 배선이 갖춰져 그 차단은 풀지만, **분리 OFF**에서는 여전히 성립하지 않는다 —
+     * 비상속 파트의 취득가액이 **자산 단위 총액**으로만 들어오는데 그 총액은 토지·건물
+     * 두 파트의 값이라, 상속 파트에 평가액을 따로 배정하면 **이중계상**이 된다.
+     * (같은 판단이 `general-building-route-actual.ts`의 「반쪽 값으로 총액을 대체하지 않는다」다.)
+     *
+     * 상속으로 한쪽만 취득했다면 두 파트의 취득 시점이 실제로 다르므로, 분리 ON은
+     * 사용자에게도 사실에 맞는 입력이다(§95④도 파트별 취득일을 요구한다).
+     */
+    if (isLandInherited !== isBuildingInherited && !isSeparate) {
+      return `${label}: 토지·건물 중 한쪽만 상속으로 취득했다면 「토지·건물 취득일 다름」을 켜고 파트별로 입력하세요. (상속분은 상속개시일 평가액, 나머지는 그 파트의 실지거래가액)`;
+    }
+    /**
+     * V3·V4 상속개시일 평가액 — **상속 파트만** 요구한다(Phase 2에서 파트별로 정정).
+     * 자동 안분 fallback 금지(mirror-pattern·API 변환과 동일 소스).
+     * ⚠️ 종전에는 둘 다 요구했다 — C1 전용이라 성립했으나, 부분 상속에서는 비상속 파트의
+     *    평가액을 묻는 **거짓 차단**이 된다.
+     */
+    if (isLandInherited && !parseAmount(asset.publishedValueAtInheritance)) {
       return `${label}: 상속개시일 토지 평가액을 입력하세요. (자산 구분 "토지" 선택 후 상속세 신고가액 또는 보충적평가)`;
     }
-    if (!parseAmount(asset.gbBuildingInheritedValue)) {
+    if (isBuildingInherited && !parseAmount(asset.gbBuildingInheritedValue)) {
       return `${label}: 상속개시일 건물 신고가액을 입력하세요.`;
     }
   }

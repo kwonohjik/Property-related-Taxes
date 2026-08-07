@@ -323,6 +323,16 @@ export type GeneralBuildingInput = {
    * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
    */
   ownershipRatio?: number;
+  /**
+   * §163⑨ 상속 취득 게이트 — **표시 전용 echo**(Phase 2 C2).
+   *
+   * 상속 파트의 취득가액 자체는 `landAcquisitionPrice`/`buildingAcquisitionPrice`(파트별
+   * 실지거래가액 슬롯)로 들어온다 — 같은 항이 상속개시일 평가액을 「취득당시의 실지거래가액으로
+   * **본다**」고 하므로 별도 축이 필요 없다. 이 두 플래그는 결과 카드가 「환산취득가」 대신
+   * 「상속개시일 평가액」으로 라벨을 바꾸는 **유일한 소스**다.
+   */
+  acquisitionByInheritance?: boolean;
+  buildingAcquisitionByInheritance?: boolean;
 };
 
 /** 양도가 안분 결과 */

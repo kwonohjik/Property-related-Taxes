@@ -162,20 +162,26 @@ export function buildGeneralBuildingValuation(
   const buildingAcquisitionByInheritance =
     asset.gbBuildingAcquisitionCause === "inheritance" &&
     (asset.acquisitionDate ?? "") >= "1985-01-01";
-  // 두 분기 공통 상속 필드 (실가 모드=C1 경로에서 소비, 환산 모드=C2는 validate 차단이나 대칭 전달).
+  const inheritedLandValue = parseAmount(asset.publishedValueAtInheritance) || undefined;
+  const inheritedBuildingValue = parseAmount(asset.gbBuildingInheritedValue) || undefined;
+  /**
+   * 상속 필드 — **양 경로 모두**에 싣는다.
+   *
+   * 🔴 종전 주석은 「환산 모드=C2는 validate 차단이나 **대칭 전달**」이라고 적었으나
+   *    **구현이 따라가지 않았다** — 이 객체는 실가 return에만 spread돼 있었고, C2 payload
+   *    실측에서 `inheritedBuildingValue`·`buildingAcquisitionByInheritance`가 둘 다
+   *    부재했다(2026-08-07). V1이 C2를 막고 있어 무해했을 뿐이다.
+   *    결과 카드의 파트별 상속 라벨은 이 echo가 **유일한 소스**다.
+   */
+  const gbInheritanceEcho = {
+    ...(acquisitionByInheritance ? { acquisitionByInheritance } : {}),
+    ...(buildingAcquisitionByInheritance ? { buildingAcquisitionByInheritance } : {}),
+  };
+  /** 실가 경로의 C1 전용 분기(둘 다 상속)가 소비하는 평가액 — Phase 1. */
   const gbInheritanceFields = {
-    ...(acquisitionByInheritance
-      ? {
-          acquisitionByInheritance,
-          inheritedLandValue: parseAmount(asset.publishedValueAtInheritance) || undefined,
-        }
-      : {}),
-    ...(buildingAcquisitionByInheritance
-      ? {
-          buildingAcquisitionByInheritance,
-          inheritedBuildingValue: parseAmount(asset.gbBuildingInheritedValue) || undefined,
-        }
-      : {}),
+    ...gbInheritanceEcho,
+    ...(acquisitionByInheritance ? { inheritedLandValue } : {}),
+    ...(buildingAcquisitionByInheritance ? { inheritedBuildingValue } : {}),
   };
 
   // 풀세트 payload 필요 케이스 = 환산취득가 모드 OR 사례 33 일괄 모드 (실가+증축)
@@ -204,12 +210,36 @@ export function buildGeneralBuildingValuation(
       }
     : {};
 
+  /**
+   * §163⑨ 상속 파트의 평가액을 **파트별 실지거래가액 슬롯**에 싣는다 (Phase 2 — C2·C2′·C3).
+   *
+   * 같은 항이 상속개시일 평가액을 「취득당시의 실지거래가액으로 **본다**」고 하므로, 엔진에서도
+   * 파트별 실지거래가액 슬롯에 그대로 싣는 것이 법문과 1:1이다. 그러면 이미 완성된 파트 축
+   * 배선이 부분 상속 세 케이스를 전부 처리한다 — **새 엔진 분기가 필요 없다**:
+   *   · 환산 경로 `applyPartAcqModes` — 비-환산 파트만 파트 가격으로 교체하고 개산공제도 파트별 0
+   *   · 실가 경로 `hasBothPartPrices` — 두 파트 가격이 다 차므로 안분 없이 직접 배정
+   *
+   * 종전에는 상속 파트에 파트 가격이 없어 두 AND 게이트가 모두 false로 떨어졌다 —
+   * 환산 경로는 **throw**, 실가 경로는 **취득가액 0**이었다(Pre-Do 실측).
+   *
+   * ⚠️ **평가액이 정본이라 파트 칸 입력을 덮어쓴다.** 두 칸이 같은 슬롯을 다투지 않도록
+   *    상속 파트에서는 파트 취득가액 칸을 화면에서 숨긴다(`GeneralBuildingAcquisitionCards`).
+   * ⚠️ C1(둘 다 상속)은 실가 경로의 **전용 분기가 먼저** 잡으므로 값이 변하지 않는다(회귀 0).
+   * ⚠️ 분리 OFF + 부분 상속은 자산 단위 총액과 이중계상이 되므로 validate가 차단한다(V-5).
+   */
+  const landPartPrice = acquisitionByInheritance
+    ? inheritedLandValue
+    : parseAmount(asset.landAcquisitionPrice) || undefined;
+  const buildingPartPrice = buildingAcquisitionByInheritance
+    ? inheritedBuildingValue
+    : parseAmount(asset.buildingAcquisitionPrice) || undefined;
+
   const partModePayload = {
     landAcqMode: landMode,
     buildingAcqMode: buildingMode,
     ...partExpensePayload,
-    ...(parseAmount(asset.landAcquisitionPrice) ? { landAcquisitionPrice: parseAmount(asset.landAcquisitionPrice) } : {}),
-    ...(parseAmount(asset.buildingAcquisitionPrice) ? { buildingAcquisitionPrice: parseAmount(asset.buildingAcquisitionPrice) } : {}),
+    ...(landPartPrice ? { landAcquisitionPrice: landPartPrice } : {}),
+    ...(buildingPartPrice ? { buildingAcquisitionPrice: buildingPartPrice } : {}),
   };
 
   // 한 파트라도 환산이면 **환산 경로**로 보낸다(혼합 모드 라우팅 확정 2026-08-05).
@@ -241,6 +271,9 @@ export function buildGeneralBuildingValuation(
       ...saleSplitFields(asset),
       ...saleAppraisalFields(asset),
       ...partModePayload,
+      // C2(토지 환산 + 건물 상속) — 결과 카드 파트별 라벨의 유일 소스. 종전 누락(§9-1).
+      // 값(평가액)은 위 `partModePayload`의 파트 가격 슬롯으로 흐르므로 여기서는 **게이트만** 보낸다.
+      ...gbInheritanceEcho,
       estimatedDeductionRate: 0.03, // §163⑥ 등기 자산 3% 고정
       buildingAcquisitionDate: partAcquisitionDates(asset).building || undefined,
       landAcquisitionDate: partAcquisitionDates(asset).land || undefined,
