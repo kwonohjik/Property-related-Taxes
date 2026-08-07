@@ -18,6 +18,19 @@ import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "./calc-wizard-asset-factory";
 import type { AssetForm } from "./calc-wizard-asset";
 
 /**
+ * 금액 문자열(CurrencyInput 저장 규약 — 콤마 포함)이 양수인가.
+ *
+ * `parseAmount`는 `components/calc/inputs/CurrencyInput`에 있어 store가 컴포넌트를 import하는
+ * 방향이 된다 — raw 객체 판정에만 쓰는 좁은 용도라 여기서 최소 구현한다.
+ */
+function hasPositiveAmount(v: unknown): boolean {
+  if (typeof v === "number") return v > 0;
+  if (typeof v !== "string") return false;
+  const n = parseInt(v.replace(/,/g, ""), 10);
+  return Number.isFinite(n) && n > 0;
+}
+
+/**
  * 구형 AssetForm (landAreaM2, pre1990AreaSqm 있음) → 현재 타입으로 마이그레이션.
  * sessionStorage 또는 이력 데이터 rehydrate 시 호출.
  */
@@ -344,6 +357,26 @@ export function migrateAsset(raw: unknown): AssetForm {
         : "apportioned";
   }
   delete a.landSplitMode;
+  /**
+   * M-3 **「일괄양도 + 감정평가 토글 ON」 → `"appraisal"` 승격** (2026-08-07).
+   *
+   * 종전에는 안분 basis가 라디오(일괄/구분) 밖의 **별도 토글**이라, 「일괄양도(기준시가 비율로
+   * 안분)」를 고른 상태에서 감정평가액을 넣으면 라벨과 달리 감정평가액으로 안분됐다
+   * (`sale-split-apportion-basis.ts`의 서열 — 부가령 §64①1호가 2호보다 우선).
+   *
+   * 3-way 라디오로 합친 뒤에는 그 상태의 정확한 이름이 `"appraisal"`이다. 승격하지 않으면
+   * 라디오가 「기준시가 안분」으로 표시되는데 실제로는 감정평가액이 쓰여 **화면과 계산이
+   * 어긋난다**(값은 그대로 두므로 세액은 변하지 않는다 — 이름만 바로잡는다).
+   *
+   * ⚠️ `"actual"`(구분양도)은 건드리지 않는다 — 그쪽 감정평가액은 안분 basis가 아니라
+   *    §100③ 30% 판정의 **비교 대상**이므로 모드가 바뀌면 안 된다.
+   */
+  if (
+    a.saleSplitMode === "apportioned" &&
+    (hasPositiveAmount(a.landAppraisalAtTransfer) || hasPositiveAmount(a.buildingAppraisalAtTransfer))
+  ) {
+    a.saleSplitMode = "appraisal";
+  }
   // landAcqMode/buildingAcqMode — 미선택("") 기본값. 실제 유효값은 API/validate/UI가
   // `effectivePartAcqMode()`(lib/calc/transfer-tax-split-acq-mode.ts)로 레거시 플래그에서
   // 매 사용 시점에 파생한다(단일 소스 — migrate 시점 1회 고정 스냅샷 금지, dual-truth 방지).

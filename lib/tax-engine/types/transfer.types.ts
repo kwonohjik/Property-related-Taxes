@@ -606,7 +606,7 @@ export interface TransferTaxInput {
    * "apportioned": 구분 불분명 → 양도시 기준시가 비율 안분(부가세령 §64①1호, 소득령 §166⑥).
    * 미제공 시 land/buildingTransferPrice 존재 여부로 기존 방식대로 자동 판단(회귀 0).
    */
-  saleSplitMode?: "actual" | "apportioned";
+  saleSplitMode?: "actual" | "apportioned" | "appraisal";
   /**
    * §166⑧ 예외 — 「소득세법」 제100조 제3항 **단서**의 제외 사유. 선택 시 30% 판정을 하지 않는다.
    *   `"other_law"`             1호 다른 법령에서 정하는 바에 따라 가액을 구분한 경우

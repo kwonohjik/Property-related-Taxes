@@ -266,7 +266,8 @@ const propertyBaseShape = {
    * 양도가액 결정 방식 — 자산 내 토지·건물 분리 축(엔진 명시 입력, §9 M2).
    * "apportioned"(양도시 기준시가 비율 안분, 기본) | "actual"(구분양도 직접입력).
    */
-  saleSplitMode: z.enum(["apportioned", "actual"]).optional(),
+  // "appraisal" = 감정평가액으로 안분 (2026-08-07 3-way 통합 — 엔진은 값의 유무로 판단한다)
+  saleSplitMode: z.enum(["apportioned", "actual", "appraisal"]).optional(),
   /** 토지 파트 매매사례가액(추계, §176의2③1호) — landAcqMode==="salesCase" 시 직접입력 */
   landSalesCaseValue: z.number().int().nonnegative().optional(),
   /** 건물 파트 매매사례가액 — buildingAcqMode==="salesCase" 시 직접입력 */

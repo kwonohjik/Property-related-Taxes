@@ -35,6 +35,68 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
 }
 
+/**
+ * 감정평가가액 입력 **본문만** — 토글 껍데기 없이 재사용한다 (2026-08-07).
+ *
+ * 두 자리에서 쓰인다:
+ *   · 안분 방식 라디오의 `"appraisal"` 선택 시 — **안분 basis**(부가령 §64①1호)
+ *   · `"actual"`(구분양도) 하위 — 「소득세법」 §100③ **30% 판정의 비교 대상**
+ *
+ * 같은 필드를 두 위치에서 read/write 하는 기존 패턴이다(components/calc/CLAUDE.md
+ * 「같은 의미 폼 필드의 양방향 read/write 통합」) — 별도 필드를 신설하지 않는다.
+ */
+export function SaleAppraisalFields({ asset, onChange }: Props) {
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <FieldCard label="토지 감정평가가액">
+          <CurrencyInput
+            label=""
+            value={asset.landAppraisalAtTransfer}
+            onChange={(v) => onChange({ landAppraisalAtTransfer: v })}
+            data-testid="sale-appraisal-land"
+          />
+        </FieldCard>
+        <FieldCard label="건물 감정평가가액">
+          <CurrencyInput
+            label=""
+            value={asset.buildingAppraisalAtTransfer}
+            onChange={(v) => onChange({ buildingAppraisalAtTransfer: v })}
+            data-testid="sale-appraisal-building"
+          />
+        </FieldCard>
+      </div>
+      <FieldCard label="감정일자" hint="선택 입력 — 기록·신고서 참고용이며 안분 계산에는 쓰지 않습니다">
+        <DateInput
+          value={asset.appraisalDateAtTransfer}
+          onChange={(v) => onChange({ appraisalDateAtTransfer: v })}
+          data-testid="sale-appraisal-date"
+        />
+      </FieldCard>
+      <p className="text-caption leading-snug text-muted-foreground">
+        토지·건물 <strong>양쪽 모두</strong> 입력해야 안분 기준이 됩니다.
+      </p>
+      {/*
+        🔴 시기 요건은 **프로그램이 판정하지 않는다**(Q-9 확정 — 계획서 §21). 부가령 §64①1호
+           괄호의 기간 제한을 양도소득세에 적용하는 근거가 확정되지 않아, 엔진이 대신 판단하는
+           대신 사실을 알리고 사용자 판단에 맡긴다.
+      */}
+      <p className="text-caption leading-snug text-amber-800">
+        「부가가치세법 시행령」 제64조 제1항 제1호 괄호는 감정평가 시기에 제한을 두고 있습니다
+        (공급시기가 속하는 과세기간의 <strong>직전 과세기간 개시일 ~ 종료일</strong>).
+        이 프로그램은 그 요건을 <strong>검증하지 않으므로</strong> 충족 여부는 직접 확인하세요.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * ⚠️ **토글형 감정평가 카드** — 주택·건물 split 경로(`LandBuildingSaleSplitSection`) 전용으로 남는다.
+ *
+ * 일반건물은 2026-08-07에 3-way 라디오(`GeneralBuildingSaleSplitSection`)로 옮겨가 이 카드를
+ * 쓰지 않는다. 그쪽에서 드러난 **라벨-동작 모순**(「기준시가 비율로 안분」 라디오를 골라도 토글을
+ * 켜면 감정평가액으로 안분됨)은 이 경로에도 **그대로 남아 있다** — 후속 정리 대상이다.
+ */
 export function SaleAppraisalBasisCard({ asset, onChange }: Props) {
   const [open, setOpen] = useState(
     () => !!(asset.landAppraisalAtTransfer || asset.buildingAppraisalAtTransfer || asset.appraisalDateAtTransfer),
@@ -58,46 +120,7 @@ export function SaleAppraisalBasisCard({ asset, onChange }: Props) {
       title="감정평가가액으로 안분"
       description="감정평가가액이 있으면 양도시 기준시가보다 우선합니다 (부가가치세법 시행령 §64①1호 단서)"
     >
-      <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-2">
-          <FieldCard label="토지 감정평가가액">
-            <CurrencyInput
-              label=""
-              value={asset.landAppraisalAtTransfer}
-              onChange={(v) => onChange({ landAppraisalAtTransfer: v })}
-              data-testid="sale-appraisal-land"
-            />
-          </FieldCard>
-          <FieldCard label="건물 감정평가가액">
-            <CurrencyInput
-              label=""
-              value={asset.buildingAppraisalAtTransfer}
-              onChange={(v) => onChange({ buildingAppraisalAtTransfer: v })}
-              data-testid="sale-appraisal-building"
-            />
-          </FieldCard>
-        </div>
-        <FieldCard label="감정일자" hint="선택 입력 — 기록·신고서 참고용이며 안분 계산에는 쓰지 않습니다">
-          <DateInput
-            value={asset.appraisalDateAtTransfer}
-            onChange={(v) => onChange({ appraisalDateAtTransfer: v })}
-            data-testid="sale-appraisal-date"
-          />
-        </FieldCard>
-        <p className="text-caption leading-snug text-muted-foreground">
-          토지·건물 <strong>양쪽 모두</strong> 입력해야 안분 기준이 됩니다.
-        </p>
-        {/*
-          🔴 시기 요건은 **프로그램이 판정하지 않는다**(Q-9 확정 — 계획서 §21). 부가령 §64①1호
-             괄호의 기간 제한을 양도소득세에 적용하는 근거가 확정되지 않아, 엔진이 대신 판단하는
-             대신 사실을 알리고 사용자 판단에 맡긴다.
-        */}
-        <p className="text-caption leading-snug text-amber-800">
-          「부가가치세법 시행령」 제64조 제1항 제1호 괄호는 감정평가 시기에 제한을 두고 있습니다
-          (공급시기가 속하는 과세기간의 <strong>직전 과세기간 개시일 ~ 종료일</strong>).
-          이 프로그램은 그 요건을 <strong>검증하지 않으므로</strong> 충족 여부는 직접 확인하세요.
-        </p>
-      </div>
+      <SaleAppraisalFields asset={asset} onChange={onChange} />
     </ToggleCard>
     </div>
   );

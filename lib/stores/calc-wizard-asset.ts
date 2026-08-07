@@ -437,11 +437,26 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 건물 파트 취득 방식 — landAcqMode와 완전 독립(파트별 4-way) */
   buildingAcqMode: "" | "actual" | "estimated" | "appraisal" | "salesCase";
   /**
-   * 양도가액 결정 방식 — 이 자산 **내** 토지·건물 분리 축.
+   * 양도가액 **토지·건물 안분 방식** — 이 자산 **내** 토지·건물 분리 축.
    * 자산 **간** 일괄양도 안분 축인 `bundledSaleMode`(폼-전역)와 레벨이 달라 공존한다.
-   * "apportioned": 양도시 기준시가 비율 안분 (기본) | "actual": 구분양도 직접 입력.
+   *
+   * | 값 | 의미 | 근거 |
+   * |---|---|---|
+   * | `"actual"` | 구분양도 — 계약서에 구분 기재 | 「소득세법」 §100② |
+   * | `"appraisal"` | 감정평가액으로 안분 | §166⑥ → 「부가가치세법 시행령」 §64①1호 |
+   * | `"apportioned"` | 양도시 기준시가 비율로 안분 (기본) | §166⑥ → 부가령 §64①2호 |
+   *
+   * 🔴 **`"appraisal"`은 2026-08-07 신설**이다. 종전에는 「일괄양도」 라디오 + 「감정평가가액으로
+   *    안분」 **토글**이 따로 있어, 라디오 라벨이 「기준시가 비율로 안분」인데 토글을 켜면 실제로는
+   *    감정평가액으로 안분되는 **라벨-동작 모순**이 있었다(사용자 보고). 안분 basis는 축 하나이므로
+   *    3-way 라디오로 합쳤다.
+   *
+   * ⚠️ **엔진은 이 필드를 읽지 않는다**(`transfer-tax-api-split.ts:75` 실측). 실제 스위치는
+   *    payload에 값이 실리는지 여부다 — `"actual"`이면 `land/buildingTransferPrice`,
+   *    `"appraisal"`이면 `land/buildingAppraisalAtTransfer`가 전달된다. 그래서 모드를 바꿀 때
+   *    **쓰지 않는 쪽 값을 비워야** 화면에 없는 값이 basis를 조용히 가르지 않는다.
    */
-  saleSplitMode: "apportioned" | "actual";
+  saleSplitMode: "apportioned" | "actual" | "appraisal";
   /**
    * 양도시 **감정평가가액** — 안분 basis 서열 **1순위**
    * (「부가가치세법 시행령」 제64조 제1항 제1호 단서 · 「소득세법 시행령」 제166조 제6항이 차용).
