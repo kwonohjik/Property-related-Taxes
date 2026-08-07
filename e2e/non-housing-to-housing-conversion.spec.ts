@@ -224,6 +224,11 @@ test.describe("§95⑤ × 상속 취득 — §154⑧3호 통산 배제", () => {
     decedentSameHouseholdBeforeInheritance: true,
     decedentCohabitationHoldingStartDate: "2012-06-01",
     decedentCohabitationResidenceMonths: "24",
+    // ⚠️ 상속의 취득가액(① 상증법 평가액)은 **이 필드**다 — base seed의
+    //    `fixedAcquisitionPrice`는 증여 전용이라 §163⑨ 경로로 가지 않는다
+    //    (`transfer-tax-api-inheritance.ts:52-54`). 종전 시드는 상속에 그 값만 두어
+    //    **취득가액 0**으로 계산되던 상태였고, 2026-08-07 신설된 post-deemed 게이트가 이를 막는다.
+    publishedValueAtInheritance: "600,000,000",
   };
 
   test("상속 + 토글 ON이 더 이상 차단되지 않는다 — 계산이 끝까지 간다", async ({ page }) => {
