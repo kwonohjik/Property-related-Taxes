@@ -311,14 +311,25 @@ export function calculateGeneralBuildingActualTransfer(
       buildingStdPriceAtAcquisition: acquisitionBuildingStdPrice,
       info: burdenedGiftInfo,
       giftDate: transferDate, // 증여일 = 양도일 (의제)
-      // K-4(실지취득가) 실비: actualExpenses(자본적지출+양도비)를 채무비율 안분하여 estimatedDeduction에 반영.
-      //
-      // ⚠️ **여기만 `effectiveExpenses`를 쓰지 않는다**(P-3 Phase 1 범위 밖 — W-4).
-      //    부담부증여 + 실지취득가 조합은 `route.ts:372-373`이 이미 자본적지출+양도비를 합쳐
-      //    `actualExpenses`로 넘긴다. 다른 평가모드 조합까지 바꾸면 Excel 정답표(사례 34)로
-      //    검증된 §159 산식의 개산공제가 미측정 상태로 움직인다.
-      capitalExpenditure: actualExpenses,
-      transferExpense: 0,
+      /**
+       * K-4(실지취득가) 실비 — 채무비율 안분 후 `estimatedDeduction` 슬롯에 반영.
+       *
+       * 🔑 **평가모드별 소비 여부는 엔진(STEP 5)이 정한다.** 「소득세법」 제97조 제2항은
+       *    **1호**(취득가액을 **실지거래가액**에 의하는 경우) = 「제1항제2호 및 제3호의 금액을 더한 금액」,
+       *    **2호**(그 밖의 경우) = 「자산별로 대통령령으로 정하는 금액」(= 개산공제 §163⑥)으로 나눈다.
+       *    ⇒ K-1~K-3(기준시가)·K-5(환산)에서 자본적지출·양도비가 **안 쓰이는 것이 정본**이다.
+       *    여기서 값을 넘겨도 STEP 5의 `acquisitionMethodUsed !== "actual"` 분기가 무시한다.
+       *
+       * 🔴 **payload 필드를 직접 소비한다**(2026-08-07 W-4). 종전에는 `actualExpenses`만 읽어
+       *    **`route.ts`가 두 값을 합쳐 주는 데 의존**했다 — payload에 실려 오는 값을 엔진이
+       *    구조분해하고도 쓰지 않는, P-1과 같은 모양이었다. 단건 경로
+       *    (`transfer-tax-burdened-gift-step.ts:44-45`)는 처음부터 둘을 따로 넘긴다.
+       *
+       * ⚠️ 합산하지 않고 **택일**한다 — legacy `directExpenses`와 신규 두 칸을 더하면 이중계상이다
+       *    (`effectiveExpenses`와 같은 축).
+       */
+      capitalExpenditure: declaredExpenses > 0 ? (capitalExpenditure ?? 0) : actualExpenses,
+      transferExpense: declaredExpenses > 0 ? (transferExpense ?? 0) : 0,
     });
     landTransfer = breakdown.perAsset.land.transferPrice;
     buildingTransfer = breakdown.perAsset.building.transferPrice;

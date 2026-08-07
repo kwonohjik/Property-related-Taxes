@@ -366,12 +366,25 @@ export async function POST(request: NextRequest) {
       const bundledAcq = (gbv.bundledAcquisitionPrice as number | undefined) ?? engineInput.acquisitionPrice ?? 0;
       // 부담부증여 K-4(실지취득가 안분)는 개산공제 미적용 — 자본적지출+양도비를 actualExpenses로 전달.
       // (general-building-route-helper가 buildBurdenedGiftBreakdown.capitalExpenditure로 넘겨 채무비율 안분.)
+      //
+      // 「소득세법」 제97조 제2항 제1호: 「취득가액을 **실지거래가액**에 의하는 경우의 필요경비는
+      // 다음 각 목의 금액에 **제1항제2호 및 제3호의 금액을 더한 금액**으로 한다」 ⇒ K-4에서는
+      // 자본적지출·양도비가 반드시 도달해야 한다(같은 항 제2호 「그 밖의 경우」의 개산공제와 대비).
       const isBurdenedGiftActualGb =
         data.transferType === "burdened_gift" &&
         data.burdenedGiftInfo?.acquisitionMethod === "actual";
+      const legacyBundledExp = (gbv.bundledExpenses as number | undefined) ?? engineInput.expenses ?? 0;
+      /**
+       * 🔴 **legacy 후퇴**(2026-08-07 W-4). 종전에는 K-4에서 `capitalExpenditure + transferExpense`
+       * **만** 보고 legacy `directExpenses`를 아예 보지 않았다 ⇒ legacy 칸만 채운 입력·기존 이력에서
+       * 필요경비가 **0으로 소실**됐다(실측 결정세액 **6,049,763원 과대** — 비용 4,000만 기준).
+       *
+       * 후퇴 조건은 실가 경로 `effectiveExpenses`(general-building-route-actual.ts)와 **같은 축**이다:
+       * 신규 두 칸이 **둘 다 0일 때만** legacy로 내려간다. 합산하면 이중계상이 된다.
+       */
       const bundledExp = isBurdenedGiftActualGb
-        ? (engineInput.capitalExpenditure ?? 0) + (engineInput.transferExpense ?? 0)
-        : (gbv.bundledExpenses as number | undefined) ?? engineInput.expenses ?? 0;
+        ? ((engineInput.capitalExpenditure ?? 0) + (engineInput.transferExpense ?? 0)) || legacyBundledExp
+        : legacyBundledExp;
       // 부담부증여 §159 — actualPriceMode 분기에서 §159①1호 환산 적용용 정보 전달.
       // BurdenedGiftInfo 타입은 string Date 허용이지만, 엔진 buildBurdenedGiftBreakdown은 필드 그대로 사용.
       const burdenedGiftInfoForGb =
