@@ -632,3 +632,73 @@ N4(두 축이 실제로 다르다) · N1·N2·N3(후보별 nature) · **세액�
 
 **4번은 3번을 고치면서 새로 쓴 서술이다** — 정정하는 문장조차 미검증이면 또 틀린다.
 ⇒ 계획서에 예측을 적을 때는 **「측정: 미실시」를 그 자리에 함께 적는다**.
+
+---
+
+## §12 ✅ W-8 완료 (2026-08-07) — **2-pass가 아니라 「재호출 3개」였다**
+
+### 12.1 §10.2 정정 — 예상보다 훨씬 작았다
+
+§10.2는 「STEP 3~8 구간을 **함수로 추출**해 두 번 호출」로 적었다. 실제로는 **그럴 필요가 없었다**:
+
+| 관찰 | 귀결 |
+|---|---|
+| STEP 3·4·7-prep 사이에 `steps.push`가 **없다** | 재호출해도 표시 step이 중복되지 않는다 |
+| `calcExcessLandRatio`(STEP 5·6)는 `(asset, derived, transferDate)`만 받는다 | **gain에 의존하지 않아 재실행 불필요** |
+| STEP 8(NBL)은 주택분 gain **파생** | 재호출 결과를 그대로 받아 자동 추종 |
+
+⇒ **STEP 7.5**를 새로 끼워 넣고 `calcHousingGainSplit`·`calcCommercialGainSplit` **둘만** 재호출한다.
+오케스트레이터 대수술은 없었다.
+
+> 🔑 「2-pass 리팩터」라는 규모 추정도 **미검증 서술**이었다(§11.6 목록에 다섯 번째로 추가된다).
+> 다만 이번엔 **과대추정**이라 착수를 늦췄을 뿐 잘못된 코드를 만들지는 않았다.
+
+### 12.2 구현
+
+```ts
+// transfer-tax-mixed-use.ts STEP 7.5
+const provisoEligible = !acquisitionByInheritance && !acquisitionByGift && !useActualAcquisition;
+const provisoDeclared = capitalExpenditure !== undefined || transferExpense !== undefined;
+가목 = (주택분 + 상가분) 취득가액 + 개산공제
+나목 = capitalExpenditure + transferExpense
+chosen = 나목 > 가목 ? "direct" : "estimated"   // 동률은 본문
+→ direct면 두 파트 함수를 `swapToDirect: true`로 재호출
+```
+
+파트 함수는 `swapToDirect`일 때 **취득가액 슬롯 0** + 필요경비 = `resolvePartNecessaryExpense`
+(W-3에서 만든 성질별 안분을 **그대로 재사용** — 새 배분 로직 없음).
+
+### 12.3 케이스 실측 (C-1~C-7 전수)
+
+| # | 케이스 | 결과 |
+|---|---|---|
+| C-1 | 기본 환산 | 가목 **694,100,000**(환산취득가 687,500,000 + 개산공제 6,600,000) · 발동 시 취득가 0 · 경비 = 나목 |
+| C-2 | **12억 초과 비과세** | ✅ 성립(1세대1주택·다주택 **양쪽** anchor) |
+| C-3 | **NBL(배율초과)** | ✅ 성립 — NBL 파트가 살아 있다(파생 끊김 없음) |
+| C-4~C-6 | PHD·4부분·period-split | 회귀 테스트로 커버(508파일 5,759건 통과) |
+| C-7 | 실가·상속·증여 | ✅ **진입 차단** — 아무리 큰 나목도 단서를 깨우지 않는다 |
+
+### 12.4 800줄 정책 — 분리
+
+`transfer-tax-mixed-use.ts` 774 → **821**(초과) ⇒ 표시용 빌더를 분리:
+
+| 파일 | 줄 |
+|---|---|
+| `transfer-tax-mixed-use.ts` | **538** |
+| `transfer-tax-mixed-use-steps.ts`(신규) | **320** |
+
+**로직 무변경 이전**이며 기존 import 경로는 오케스트레이터가 유지한다.
+
+### 12.5 게이트
+
+| | 결과 |
+|---|---|
+| **mutation probe**(판정을 항상 본문으로) | anchor **6건 실패** |
+| `npm run test:transfer` | **508파일 5,759건 통과** — 회귀 **0** |
+| `tsc` | **0** |
+
+### 12.6 신규 anchor
+
+`__tests__/tax-engine/transfer-tax/mixed-use-97-2-proviso.anchor.test.ts` (11건) —
+P1(가목 검산·취득가 0·세액 변화·합계로 겨룸) · **P2(동률은 본문)** · P3(미입력 시 비교 없음) ·
+**P4(실가·상속 진입 차단)** · **P5·P6(NBL·12억·다주택 공존)**

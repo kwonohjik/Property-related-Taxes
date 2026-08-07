@@ -61,6 +61,8 @@ export function calcCommercialGainSplit(
   housingAcqResult?: HousingEstimatedAcqResult,
   /** 매매 실가 모드(useActualAcquisition) 취득가액 상가분 — 오케스트레이터 apportionAcquisitionPrice 산출값. */
   actualCommercialAcqPrice?: number,
+  /** §97②2호 **단서** 적용 신호 (2026-08-07 W-8) — 주택분과 같은 의미. */
+  swapToDirect?: boolean,
 ): CommercialGainSplit {
   // Case A 4부분 안분 — 별도 어댑터 호출
   const fp = housingAcqResult?.phdResult?.fourPartApportionment;
@@ -159,9 +161,10 @@ export function calcCommercialGainSplit(
   const landTransferPrice = Math.floor(commercialTransferPrice * transferLandRatio);
   const buildingTransferPrice = commercialTransferPrice - landTransferPrice;
 
-  // 취득가액 안분 — 취득시 비율
-  const landAcqPrice = Math.floor(estimatedAcqPrice * acqLandRatio);
-  const buildingAcqPrice = estimatedAcqPrice - landAcqPrice;
+  // 취득가액 안분 — 취득시 비율.
+  // §97②2호 단서(나목) 채택 시에는 **차감하지 않는다**(가목에 이미 포함 — 이중차감 금지).
+  const landAcqPrice = swapToDirect ? 0 : Math.floor(estimatedAcqPrice * acqLandRatio);
+  const buildingAcqPrice = swapToDirect ? 0 : estimatedAcqPrice - landAcqPrice;
 
   // 개산공제 (§163⑥) — 상속·증여(실지거래가액 의제, 소령 §163⑨)·매매실가는 미적용.
   // 실제 필요경비(자본적지출·양도비)는 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
@@ -177,15 +180,17 @@ export function calcCommercialGainSplit(
   const commonTransferExpCommercial = apportionTransferPrice(
     asset.transferExpense ?? 0, asset, derived,
   ).commercialTransferPrice;
-  const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq
-    ? resolvePartNecessaryExpense({
-        partDirect: asset.commercialInheritedExpense,
-        commonCapitalExpenditure: commonCapexCommercial,
-        commonTransferExpense: commonTransferExpCommercial,
-        acqLandStd, acqBuildingStd,
-        transferLandStd,
-        transferBuildingStd: asset.transferStandardPrice.commercialBuildingPrice,
-      })
+  const necessaryExpensePair = () =>
+    resolvePartNecessaryExpense({
+      partDirect: swapToDirect ? undefined : asset.commercialInheritedExpense,
+      commonCapitalExpenditure: commonCapexCommercial,
+      commonTransferExpense: commonTransferExpCommercial,
+      acqLandStd, acqBuildingStd,
+      transferLandStd,
+      transferBuildingStd: asset.transferStandardPrice.commercialBuildingPrice,
+    });
+  const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq || swapToDirect
+    ? necessaryExpensePair()
     : {
         // 상가분은 **가목(개별공시지가) + 나목(건물 기준시가)** 별도 공시라 결합 총액이 없다 →
         // 잔액 흡수 대상이 아니며 성분별 독립 산출이 정본이다(주택분과 다른 이유는 설계 §3 E2).

@@ -608,6 +608,27 @@ export interface MixedUseGainBreakdown {
    */
   splitMode: "post-2022" | "pre-2022-rejected";
 
+  /**
+   * 🔴 §97②2호 **단서** 판정 — **환산 경로 전용** (2026-08-07 W-8).
+   *
+   * · `estimatedSide` **가목** = (주택분 + 상가분) 환산취득가액 + 개산공제 = 필요경비 **전체**
+   * · `directSide`    **나목** = 자산 단위 자본적지출 + 양도비
+   *
+   * 실비를 명시 입력하지 않았거나 실가·상속·증여 경로면 **undefined**(비교 자체를 하지 않는다).
+   *
+   * ⚠️ `chosen === "direct"`이면 각 파트의 `landAcqPrice`·`buildingAcqPrice`가 **0**이 된다 —
+   *    가목이 「환산취득가액 **과** 개산공제의 **합계액**」이라 둘은 필요경비 전체를 놓고 겨루고,
+   *    나목 채택 시 취득가액을 별도 차감하면 **이중차감**이기 때문이다.
+   *
+   * ⚠️ **비교 단위는 자산 단위**다 — 겸용의 취득모드 플래그가 전부 자산 단위라 파트별로
+   *    갈리지 않는다(`general-building-swap.ts:144-148`의 확립된 규칙).
+   */
+  necessaryExpenseProviso?: {
+    estimatedSide: number;
+    directSide: number;
+    chosen: "estimated" | "direct";
+  };
+
   /** 양도가액 안분 결과 */
   apportionment: MixedUseApportionment;
   /** 주택부분 결과 */
