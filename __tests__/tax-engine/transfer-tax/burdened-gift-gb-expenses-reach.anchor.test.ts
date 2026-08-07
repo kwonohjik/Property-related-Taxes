@@ -36,9 +36,20 @@ const CAPEX = 30_000_000;
 const TRANSFER_EXP = 10_000_000;
 const LEGACY_TOTAL = 40_000_000;
 
-/** 정답값 — 채무비율 안분 후 취득시 기준시가 비율로 자산 분배(§159①1호 본문 + §166⑥). */
-const ANS_LAND_EXP = 16_616_550;
-const ANS_BUILDING_EXP = 2_589_047;
+/**
+ * 정답값 — 채무비율 안분 후 **성질별 시점 비율**로 자산 분배(§159①1호 본문 + §100② 후문).
+ * 자본적지출 3,000만 → 취득시 비율 · 양도비 1,000만 → 양도시 비율 (W-5, 2026-08-07).
+ * 종전(둘 다 취득시 비율)은 16,616,550 / 2,589,047이었다 — 합계 19,205,597은 불변이다.
+ */
+const ANS_LAND_EXP = 16_910_262;
+const ANS_BUILDING_EXP = 2_295_335;
+/**
+ * legacy `directExpenses`는 **한 덩어리로 취득시 비율**이다 — 두 성질이 섞여 있어 나눌 근거가 없고,
+ * 이 경로의 **종전 동작이 취득시**였다(`capitalExpenditure: actualExpenses`). 근거 없이 바꾸면
+ * 기존 이력의 자산별 배분이 움직인다. 시점 축이 실가 비-부담부 경로(legacy = 양도시 유지)와
+ * 반대인 것은 **각 경로가 자기 이력을 보존**하기 때문이다 — 계획서 §16.3.
+ */
+const ANS_LEGACY_LAND_EXP = 16_616_550;
 const ANS_TAX_WITH_EXPENSE = 846_575_027;
 const ANS_TAX_NO_EXPENSE = 852_624_790;
 /** 비용 4,000만이 결정세액에 주는 영향 — 이 값이 0이 되면 계약이 죽은 것이다. */
@@ -124,7 +135,7 @@ describe("W-1 — K-4(실지취득가): 자본적지출·양도비가 도달한�
 
   it("🔴 legacy `directExpenses`(=actualExpenses)만 있어도 도달한다 — 후퇴 경로", () => {
     const r = run({ actualExpenses: LEGACY_TOTAL });
-    expect(r.landExp).toBe(ANS_LAND_EXP);
+    expect(r.landExp).toBe(ANS_LEGACY_LAND_EXP);
     expect(r.tax).toBe(ANS_TAX_WITH_EXPENSE);
   });
 
@@ -136,15 +147,18 @@ describe("W-1 — K-4(실지취득가): 자본적지출·양도비가 도달한�
     });
     // 합산(8,000만)이면 필요경비가 두 배가 되어 세액이 더 내려간다.
     expect(both.tax).toBe(ANS_TAX_WITH_EXPENSE);
+    // 신규를 택했으므로 성질별 시점 비율이 적용된다(legacy 한 덩어리 값이 아니다).
     expect(both.landExp).toBe(ANS_LAND_EXP);
   });
 
-  it("자본적지출만 / 양도비만 — 어느 한쪽만 와도 그 금액이 반영된다", () => {
+  it("자본적지출만 / 양도비만 — 총액이 같으면 **세액**은 같고 **자산별 배분**만 갈린다", () => {
     const capexOnly = run({ capitalExpenditure: LEGACY_TOTAL });
     const transferOnly = run({ transferExpense: LEGACY_TOTAL });
-    // STEP 5는 두 성질을 합산해 한 슬롯에 담으므로 총액이 같으면 결과가 같다.
+    // 이 케이스는 토지·건물 세율이 같아 합계만 맞으면 세액이 동일하다.
     expect(capexOnly.tax).toBe(ANS_TAX_WITH_EXPENSE);
     expect(transferOnly.tax).toBe(ANS_TAX_WITH_EXPENSE);
+    // 🔑 배분은 다르다 — 시점 축이 갈리기 때문(W-5). 같으면 성질별 분리가 죽은 것이다.
+    expect(capexOnly.landExp).not.toBe(transferOnly.landExp);
   });
 });
 

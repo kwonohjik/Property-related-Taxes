@@ -41,7 +41,10 @@ const CAPEX = 30_000_000;
 const TRANSFER_EXP = 10_000_000;
 const LEGACY_TOTAL = 40_000_000;
 
-const ANS_LAND_EXP = 16_616_550;
+/** 신규 두 칸 — 자본적지출은 취득시·양도비는 양도시 비율(W-5). */
+const ANS_LAND_EXP = 16_910_262;
+/** legacy 한 덩어리 — 취득시 비율(이 경로의 종전 동작 보존). */
+const ANS_LEGACY_LAND_EXP = 16_616_550;
 const ANS_TAX_WITH_EXPENSE = 846_575_027;
 const ANS_TAX_NO_EXPENSE = 852_624_790;
 
@@ -98,8 +101,23 @@ const req = (b: object) =>
     body: JSON.stringify(b),
   });
 
+/**
+ * 실제 API 변환은 자본적지출·양도비를 **두 곳에** 싣는다 —
+ * 최상위(`transfer-tax-api.ts`)와 `generalBuildingValuation`(`transfer-tax-api-gb.ts:349-355`).
+ * ⚠️ 최상위만 넣으면 엔진 payload에 도달하지 않아 **legacy 후퇴 경로로 빠진다**(실측).
+ *    fixture가 실제와 어긋나면 계약이 조용히 다른 것을 재게 된다.
+ */
 async function post(over: Record<string, unknown>) {
-  const res = await POST(req({ ...BASE, ...over }));
+  const gbExpenses: Record<string, unknown> = {};
+  if (over.capitalExpenditure) gbExpenses.capitalExpenditure = over.capitalExpenditure;
+  if (over.transferExpense) gbExpenses.transferExpense = over.transferExpense;
+  const res = await POST(
+    req({
+      ...BASE,
+      ...over,
+      generalBuildingValuation: { ...BASE.generalBuildingValuation, ...gbExpenses },
+    }),
+  );
   expect(res.status).toBe(200);
   const body = await res.json();
   const ap = body.data.apportionment.apportioned as { assetKind: string; allocatedExpenses: number }[];
@@ -122,7 +140,7 @@ describe("route.ts 배관 — 부담부증여 일반건물 K-4 필요경비", ()
 
   it("🔴 legacy `expenses`만 있어도 도달한다 — 종전에는 통째로 소실됐다", async () => {
     const r = await post({ expenses: LEGACY_TOTAL });
-    expect(r.landExp).toBe(ANS_LAND_EXP);
+    expect(r.landExp).toBe(ANS_LEGACY_LAND_EXP);
     expect(r.tax).toBe(ANS_TAX_WITH_EXPENSE);
   });
 

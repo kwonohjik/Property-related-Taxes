@@ -453,15 +453,47 @@ export function buildBurdenedGiftBreakdown(params: {
 
   // STEP 5: 자산별 필요경비 슬롯 (estimatedDeduction)
   //   K-1~K-3·K-5·legacy: 개산공제 (취득가액 × 3%, §163⑥).
-  //   K-4 (실지취득가): 개산공제 미적용 — 실비(자본적지출+양도비)를 채무비율 안분 후 취득기준시가 비율로 자산 분배.
+  //   K-4 (실지취득가): 개산공제 미적용 — 실비를 채무비율 안분 후 **성질별 시점 비율**로 자산 분배.
   let landEstimatedDeduction: number;
   let buildingEstimatedDeduction: number;
   if (acquisitionMethodUsed === "actual") {
-    const totalNecessaryExpense = (params.capitalExpenditure ?? 0) + (params.transferExpense ?? 0);
+    /**
+     * 🔴 **성질별로 안분 시점이 다르다**(2026-08-07 W-5).
+     *
+     * 「소득세법」 제100조 제2항 후문: 「이 경우 **공통되는 취득가액과 양도비용**은 **해당 자산의
+     * 가액에 비례하여** 안분계산한다」. 같은 항 본문이 그 가액의 기준시점을 「**취득 또는 양도
+     * 당시의** 기준시가」로 나란히 들므로, **어디에 부수하는 지출인지**가 시점을 정한다.
+     *
+     * · 자본적지출(§97①2호) → **취득시** 기준시가 비율 (취득에 부수)
+     * · 양도비(§97①3호)     → **양도시** 기준시가 비율 (양도에 부수)
+     *
+     * 종전에는 **둘을 합쳐 취득시 비율 하나로** 나눴다 — 실가 경로가 2026-08-07(P-2)에 이미
+     * 성질별로 갈라 놓은 것과 어긋나 있었다(`general-building-route-actual.ts` `apportionExpenses`).
+     *
+     * ⚠️ **총액은 움직이지 않는다.** 채무비율 안분은 종전대로 **합계에 한 번** 걸고
+     *    (`necessaryExpenseDebt`), 자본적지출분을 뺀 **잔액을 양도비분이 흡수**한다
+     *    (메모리 `feedback_floor_residual_absorption`) ⇒ 절사 오차로 합계가 어긋나지 않는다.
+     *    바뀌는 것은 **토지↔건물 배분**뿐이다.
+     */
+    const capitalExpenditure = params.capitalExpenditure ?? 0;
+    const transferExpense = params.transferExpense ?? 0;
+    const totalNecessaryExpense = capitalExpenditure + transferExpense;
     const necessaryExpenseDebt = apportionAcquisitionPrice(totalNecessaryExpense, assumedDebtAmount, giftValuation.max);
+    // 성질별 채무안분액 — 자본적지출분을 먼저 구하고 잔액을 양도비분으로 흡수(합계 보존).
+    const capexDebt =
+      totalNecessaryExpense === 0
+        ? 0
+        : safeMultiplyThenDivide(necessaryExpenseDebt, capitalExpenditure, totalNecessaryExpense);
+    const transferExpDebt = necessaryExpenseDebt - capexDebt;
+
     const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
-    landEstimatedDeduction =
-      totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(necessaryExpenseDebt, landStdPriceAtAcquisition, totalAcqStd);
+    const totalTransferStd = landStdPriceAtTransfer + buildingStdPriceAtTransfer;
+    const capexLand =
+      totalAcqStd === 0 ? 0 : safeMultiplyThenDivide(capexDebt, landStdPriceAtAcquisition, totalAcqStd);
+    const transferExpLand =
+      totalTransferStd === 0 ? 0 : safeMultiplyThenDivide(transferExpDebt, landStdPriceAtTransfer, totalTransferStd);
+
+    landEstimatedDeduction = capexLand + transferExpLand;
     buildingEstimatedDeduction = necessaryExpenseDebt - landEstimatedDeduction;
   } else {
     // 개산공제 base = 취득당시 기준시가 × 채무비율 (소령 §163⑥1호·2호가) — 환산취득가·market 가액이 아님.
