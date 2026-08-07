@@ -246,19 +246,34 @@ describe("U-9 — 마이그레이션이 OFF 불변식을 복원한다", () => {
     return a;
   };
 
-  it("OFF + 건물만 증여 → 토지 원인으로 되맞춘다", () => {
-    expect(gb({ gbBuildingAcquisitionCause: "gift" }).gbBuildingAcquisitionCause).toBe("purchase");
+  /**
+   * 🔴 **되맞추지 않는다 — 분리를 켠다.**
+   *
+   * 건물 원인을 토지 원인으로 덮으면 사용자가 저장한 사실이 조용히 바뀌고, 「토지 상속 + 건물
+   * 매매」가 「둘 다 상속」이 되어 **취득가액 산정 자체가 달라진다**. 실제로 그 구현은 부분 상속
+   * 가드(V-5)를 무력화시켰다 — E2E `general-building-partial-inheritance` PI-4가 잡았다.
+   */
+  it("OFF + 건물만 증여 → 값을 보존하고 분리를 켠다", () => {
+    const a = gb({ gbBuildingAcquisitionCause: "gift" });
+    expect(a.gbBuildingAcquisitionCause).toBe("gift");
+    expect(a.hasSeperateLandAcquisitionDate).toBe(true);
   });
 
-  it("OFF + 토지 상속 · 건물 매매 → 토지 원인으로 되맞춘다", () => {
+  it("OFF + 토지 상속 · 건물 매매 → 부분 상속을 지운 채 통과시키지 않는다", () => {
     const a = gb({ acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "purchase" });
-    expect(a.gbBuildingAcquisitionCause).toBe("inheritance");
+    expect(a.gbBuildingAcquisitionCause).toBe("purchase"); // 되맞추지 않는다
+    expect(a.hasSeperateLandAcquisitionDate).toBe(true);
   });
 
-  it("OFF + 건물 신축은 **되맞추지 않고 분리를 켠다** (Q4 규칙 — 값 보존)", () => {
+  it("OFF + 건물 신축도 같은 규칙 (UI의 Q4와 동일)", () => {
     const a = gb({ gbBuildingAcquisitionCause: "newConstruction" });
     expect(a.gbBuildingAcquisitionCause).toBe("newConstruction");
     expect(a.hasSeperateLandAcquisitionDate).toBe(true);
+  });
+
+  it("OFF + 원인이 이미 같으면 분리를 켜지 않는다 (정상 세션 무변경)", () => {
+    const a = gb({ gbBuildingAcquisitionCause: "purchase" });
+    expect(a.hasSeperateLandAcquisitionDate).toBe(false);
   });
 
   it("분리 ON은 건드리지 않는다 — 파트별 원인이 정당한 상태다 (회귀 0)", () => {

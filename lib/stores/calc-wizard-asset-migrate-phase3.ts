@@ -62,32 +62,38 @@ export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
   // (사례 31 호환 데이터: 단일 취득원인이었던 경우 건물도 같은 원인으로 추정)
   const validBuildingCauses = ["purchase", "inheritance", "gift", "newConstruction"];
   if (a.assetKind === "general_building") {
-    /**
-     * M-2b **분리 OFF는 두 취득원인이 같다** — 어긋난 legacy 세션을 되맞춘다 (2026-08-07).
-     *
-     * 종전 UI는 분리 OFF에서도 토지·건물 취득원인 라디오를 각각 그려서 「토지 매매 + 건물 증여」
-     * 같은 조합을 저장할 수 있었다. OFF가 **단일 취득원인 카드**가 된 뒤로는 그 상태를 화면에
-     * 표현할 방법이 없다 — 라디오는 `acquisitionCause`만 보여주므로 **저장값과 화면이 어긋난
-     * 채로 payload를 가르게 된다**(`transfer-tax-api-gb.ts:487`이 건물 축을 그대로 싣는다).
-     *
-     * ⚠️ **신축만은 되맞추지 않는다** — 값을 잃는 대신 **분리를 켠다**. 신축은 토지를 산 뒤
-     *    건물을 짓는 것이라 취득일이 다를 수밖에 없고, 그래서 UI도 신축 선택 시 분리를 자동으로
-     *    켠다(Q4). 「신축 + 취득일 같음」은 애초에 물리적으로 모순인 상태이므로, 이미 코드베이스가
-     *    채택한 Q4 규칙을 마이그레이션에도 그대로 적용하는 것이 정합적이다.
-     */
+    // acquisitionCause 중 건물 카드에 허용된 원인이면 그대로 사용
+    const ac = a.acquisitionCause as string;
+    // "carryover_gift"는 건물 카드 미지원 → "purchase" fallback
+    const fromLand = validBuildingCauses.includes(ac) ? ac : "purchase";
+    const current = a.gbBuildingAcquisitionCause as string | undefined;
     const isSeparate = a.hasSeperateLandAcquisitionDate === true;
-    if (!isSeparate && a.gbBuildingAcquisitionCause === "newConstruction") {
+
+    if (!current || !validBuildingCauses.includes(current)) {
+      // M-2 (종전): 미입력·무효값이면 토지 원인을 복사한다 — 잃을 값이 없다.
+      a.gbBuildingAcquisitionCause = fromLand;
+    } else if (!isSeparate && current !== fromLand) {
+      /**
+       * M-2b **분리 OFF + 취득원인 불일치 → 되맞추지 않고 분리를 켠다** (2026-08-07).
+       *
+       * 종전 UI는 분리 OFF에서도 토지·건물 취득원인 라디오를 각각 그려서 「토지 상속 + 건물
+       * 매매」 같은 조합을 저장할 수 있었다. OFF가 **단일 취득원인 카드**가 된 뒤로는 그 상태를
+       * 화면에 표현할 방법이 없다 — 라디오는 `acquisitionCause`만 보여주므로 **저장값과 화면이
+       * 어긋난 채 payload를 가른다**(`transfer-tax-api-gb.ts:487`이 건물 축을 그대로 싣는다).
+       *
+       * 🔴 **되맞추면(건물 원인을 토지 원인으로 덮으면) 안 된다.** 그것은 사용자가 저장한 사실을
+       *    조용히 바꾸는 것이고, 「토지 상속 + 건물 매매」를 「둘 다 상속」으로 만들어 **취득가액
+       *    산정 자체를 바꾼다**. 실제로 그 구현은 부분 상속 가드(`transfer-tax-validate-gb.ts:145`
+       *    V-5)를 무력화시켰다 — E2E `general-building-partial-inheritance` PI-4가 잡았다.
+       *
+       * ⇒ 값을 보존하고 **분리를 켠다**. 그러면 두 원인이 화면에 그대로 나타나고, 파트별 취득가액
+       *   칸이 열려 V-7이 각 파트를 요구한다 — V-5가 원래 안내하던 「토글을 켜고 파트별로
+       *   입력하세요」를 마이그레이션이 대신 해주는 셈이다.
+       *
+       * 신축도 같은 규칙이다(UI의 Q4와 동일) — 「신축 + 취득일 같음」은 물리적으로 모순이므로
+       * 분리가 켜지는 것이 사실에 맞다.
+       */
       a.hasSeperateLandAcquisitionDate = true;
-    } else {
-      // acquisitionCause 중 건물 카드에 허용된 원인이면 그대로 사용
-      const ac = a.acquisitionCause as string;
-      // "carryover_gift"는 건물 카드 미지원 → "purchase" fallback
-      const fromLand = validBuildingCauses.includes(ac) ? ac : "purchase";
-      const current = a.gbBuildingAcquisitionCause as string | undefined;
-      const missing = !current || !validBuildingCauses.includes(current);
-      if (missing || (!isSeparate && current !== fromLand)) {
-        a.gbBuildingAcquisitionCause = fromLand;
-      }
     }
   }
   migrateGbAcquisitionDateConvention(a);
