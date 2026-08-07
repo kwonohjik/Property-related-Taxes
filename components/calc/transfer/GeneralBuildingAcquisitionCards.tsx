@@ -63,6 +63,32 @@ const BUILDING_CAUSE_OPTIONS = [
   { value: "newConstruction",  label: "신축(자가건축)" },
 ] as const;
 
+/**
+ * ── 분리 OFF 전용 **단일** 취득원인 옵션 (U-1~U-4 · 2026-08-07) ──
+ *
+ * 토지 4종 + 「건물 신축」. 마지막 항목은 취득원인이 아니라 **분리로 가는 진입 경로**다 —
+ * 토지는 살 수밖에 없으므로 「토지·건물 모두 신축」이라는 상태는 존재하지 않는다.
+ * 고르면 분리를 자동 ON 해 곧바로 두 카드로 전환한다(`BUILDING_NEW_SENTINEL`).
+ */
+const BUILDING_NEW_SENTINEL = "__building_new__";
+const UNIFIED_CAUSE_OPTIONS = [
+  ...LAND_CAUSE_OPTIONS.map((o) => ({ value: o.value as string, label: o.label })),
+  { value: BUILDING_NEW_SENTINEL, label: "건물 신축(자가건축)" },
+];
+
+/**
+ * 토지 취득원인 → **건물 축**의 대응값 (분리 OFF 불변식).
+ *
+ * 건물 축에는 이월과세가 없다(`BUILDING_CAUSE_OPTIONS`). 마이그레이션 M-2
+ * (`calc-wizard-asset-migrate-phase3.ts:61-75`)가 이미 쓰는 규칙 — 유효하면 그대로,
+ * 아니면 `purchase` — 을 그대로 재사용한다. 규칙을 새로 만들면 두 곳이 갈린다.
+ */
+function toBuildingCause(
+  cause: AssetForm["acquisitionCause"] | undefined,
+): NonNullable<AssetForm["gbBuildingAcquisitionCause"]> {
+  return cause === "inheritance" || cause === "gift" ? cause : "purchase";
+}
+
 /** 양도일 − 건물취득일 < 5년 여부 판정 (소득세법 §114조의2 ① "5년 이내") */
 function isWithin5Years(buildingAcqDate: string, transferDateStr: string): boolean {
   if (!buildingAcqDate || !transferDateStr) return false;
@@ -183,6 +209,34 @@ function PartAcqModeField({
   );
 }
 
+/**
+ * §163⑨ 상속개시일 **건물** 평가액 — 분리 OFF면 통합 카드, ON이면 건물 카드에 놓인다.
+ *
+ * ⚠️ **모듈 스코프에 둔다** — 렌더 안에서 선언하면 매 렌더 새 컴포넌트 타입이 되어 입력 상태가
+ *    초기화된다(`react-hooks/static-components`, pre-commit 하드블록).
+ *
+ * 토지분(`publishedValueAtInheritance`)은 `CompanionAcqInheritanceBlock`이 받는다 — 상속이면
+ * **두 칸이 모두** 필요하다(`transfer-tax-validate-gb.ts:154·157`).
+ */
+function GbBuildingInheritedValueCard({
+  asset,
+  onChange,
+}: {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+}) {
+  return (
+    <ToneCard tone="violet" title="상속개시일 건물 신고가액 (소득세법 시행령 §163⑨)">
+      <CurrencyInput
+        label="건물 평가액"
+        value={asset.gbBuildingInheritedValue}
+        onChange={(v) => onChange({ gbBuildingInheritedValue: v })}
+        hint="상속세 신고서·결정통지서상 건물 평가액(상증법 §60~66). 상속개시일 평가액을 취득가액으로 직접 사용 — 환산·개산공제 미적용"
+      />
+    </ToneCard>
+  );
+}
+
 export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate }: Props) {
   // §114조의2 가산세 5년 이내 여부 (useMemo — useEffect 미러링 금지 정책)
   const showPenaltyBadge = useMemo(() => {
@@ -247,12 +301,46 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
     });
   };
 
+  /**
+   * OFF로 되돌릴 때 **날짜와 취득원인을 함께** 되맞춘다 (U-5 · 2026-08-07).
+   *
+   * 종전에는 날짜만 되맞춰서, 분리 ON에서 「건물=신축」을 골라 둔 뒤 토글을 끄면
+   * 화면에는 단일 취득원인 하나만 남는데 `gbBuildingAcquisitionCause`는 `newConstruction`으로
+   * 살아 있었다 — **화면에 없는 값이 payload를 가르는** 상태다
+   * (`transfer-tax-api-gb.ts:487`이 그대로 싣는다).
+   */
   const setSeparate = (next: boolean) =>
     onChange(
       next
         ? { hasSeperateLandAcquisitionDate: true }
-        : { hasSeperateLandAcquisitionDate: false, landAcquisitionDate: asset.acquisitionDate },
+        : {
+            hasSeperateLandAcquisitionDate: false,
+            landAcquisitionDate: asset.acquisitionDate,
+            gbBuildingAcquisitionCause: toBuildingCause(asset.acquisitionCause),
+          },
     );
+
+  /**
+   * 분리 OFF의 단일 취득원인 — **토지·건물 두 축을 한 배치로** 기록한다 (U-2·U-3).
+   *
+   * 나눠 부르면 뒤 호출이 앞 patch를 stale spread로 덮어쓴다
+   * (memory `feedback_multikey_patch_stale_spread_overwrite`).
+   *
+   * 「건물 신축」만은 취득원인이 아니라 진입 경로다 — 토지 원인은 **건드리지 않고**
+   * 분리만 켠다(U-4). 켜는 순간 이 라디오가 언마운트되고 파트별 라디오가 대신 뜨므로
+   * 「표시값 ≠ 저장값」이 남지 않는다.
+   */
+  const setUnifiedCause = (v: string) => {
+    if (v === BUILDING_NEW_SENTINEL) {
+      onChange({
+        gbBuildingAcquisitionCause: "newConstruction",
+        hasSeperateLandAcquisitionDate: true,
+      });
+      return;
+    }
+    const cause = v as AssetForm["acquisitionCause"];
+    onChange({ acquisitionCause: cause, gbBuildingAcquisitionCause: toBuildingCause(cause) });
+  };
 
   return (
     <div className="space-y-3">
@@ -266,25 +354,50 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
         onCheckedChange={setSeparate}
       />
 
-      {/* ── 📌 토지 취득 카드 (sky) ── */}
+      {/*
+        ── 취득 카드 (sky) ──
+        분리 OFF면 **토지·건물 공통 「취득」 카드 하나**, ON이면 「📌 토지 취득」이 된다(U-1·U-6).
+
+        하위 원인별 블록은 두 모드가 **그대로 공유**한다 — `setLandAcqDate`·`landCardOnChange`가
+        이미 `isSeparate`로 쓰기 축을 가르므로, 갈라야 하는 것은 카드 제목과 취득원인 라디오뿐이다.
+      */}
       <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
         <div className="flex items-center gap-2">
-          <span className="text-base">📌</span>
-          <p className="text-xs font-semibold text-sky-700">토지 취득</p>
+          <span className="text-base">{isSeparate ? "📌" : "🧾"}</span>
+          <p className="text-xs font-semibold text-sky-700">
+            {isSeparate ? "토지 취득" : "취득 (토지·건물 공통)"}
+          </p>
         </div>
 
-        <FieldCard label="취득원인">
-          <RadioCardGroup
-            name="gbLandAcquisitionCause"
-            layout="inline"
-            value={asset.acquisitionCause ?? ""}
-            onChange={(v) =>
-              onChange({
-                acquisitionCause: v as AssetForm["acquisitionCause"],
-              })
-            }
-            options={LAND_CAUSE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
-          />
+        <FieldCard
+          label="취득원인"
+          hint={
+            isSeparate
+              ? undefined
+              : "토지와 건물을 같은 시점에 함께 취득한 경우입니다. 건물을 나중에 짓거나 따로 승계했다면 위 「토지·건물 취득일 다름」을 켜세요."
+          }
+        >
+          {isSeparate ? (
+            <RadioCardGroup
+              name="gbLandAcquisitionCause"
+              layout="inline"
+              value={asset.acquisitionCause ?? ""}
+              onChange={(v) =>
+                onChange({
+                  acquisitionCause: v as AssetForm["acquisitionCause"],
+                })
+              }
+              options={LAND_CAUSE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            />
+          ) : (
+            <RadioCardGroup
+              name="gbUnifiedAcquisitionCause"
+              layout="inline"
+              value={asset.acquisitionCause ?? ""}
+              onChange={setUnifiedCause}
+              options={UNIFIED_CAUSE_OPTIONS}
+            />
+          )}
         </FieldCard>
 
         {/* 매매: 취득일 + 환산취득가·감정가 선택 */}
@@ -452,9 +565,19 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
          * Phase 2 (2026-05-12): 부담부증여 BurdenedGiftBlock은 TransferModeBlock(양도 정보 카드)로 이동.
          * 취득 정보 카드에서는 증여자의 당초 취득 정보(매매·상속·증여·이월과세)만 받음.
          */}
+
+        {/*
+          분리 OFF + 상속 — 건물 평가액도 **이 카드 안**에서 받는다.
+          OFF에서는 두 취득원인이 항상 같으므로(불변식), 토지가 상속이면 건물도 상속이다.
+          §163⑨은 파트별 평가액을 각각 요구한다(`transfer-tax-validate-gb.ts:154·157`).
+        */}
+        {!isSeparate && asset.gbBuildingAcquisitionCause === "inheritance" && (
+          <GbBuildingInheritedValueCard asset={asset} onChange={onChange} />
+        )}
       </ToneCard>
 
-      {/* ── 🏗 건물 취득 카드 (amber) ── */}
+      {/* ── 🏗 건물 취득 카드 (amber) — 분리 ON 전용 ── */}
+      {isSeparate && (
       <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
         <div className="flex items-center gap-2">
           <span className="text-base">🏗</span>
@@ -485,15 +608,15 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
         </FieldCard>
 
         {/* Q4 자동 전환 안내 — 조용한 상태 변경 금지 */}
-        {isSeparate && asset.gbBuildingAcquisitionCause === "newConstruction" && (
+        {asset.gbBuildingAcquisitionCause === "newConstruction" && (
           <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
             신축(자가건축)은 토지 취득일과 건물 취득일이 다르므로 「토지·건물 취득일 다름」을 자동으로 켰습니다.
           </p>
         )}
 
-        {/* 건물 취득일 — 분리 ON에서만. OFF면 위 토지 카드의 「취득일」 하나가 두 파트를 함께 기록한다
-            (불변식 §3.2(1)). 신축은 Q4가 분리를 강제로 켜므로 입력 경로가 사라지지 않는다. */}
-        {isSeparate && (
+        {/* 건물 취득일 — 이 카드 자체가 분리 ON 전용이다. OFF면 위 「취득」 카드의 「취득일」
+            하나가 두 파트를 함께 기록한다(불변식 §3.2(1)). 신축은 진입 시 분리가 켜지므로
+            입력 경로가 사라지지 않는다. */}
         <FieldCard
           label="건물 취득일"
           hint={
@@ -507,7 +630,6 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onChange={setBuildingAcqDate}
           />
         </FieldCard>
-        )}
 
         {/* §114조의2 가산세 5년 이내 안내 배지 (useMemo 파생) */}
         {showPenaltyBadge && (
@@ -521,22 +643,14 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
           </div>
         )}
 
-        {isSeparate && (
-          <PartAcqModeField part="building" asset={asset} onChange={onChange} showCapex={showPartCapex} />
-        )}
+        <PartAcqModeField part="building" asset={asset} onChange={onChange} showCapex={showPartCapex} />
 
         {/* §163⑨ 상속개시일 건물 신고가액 (Phase 1 = 토지·건물 모두 상속) */}
         {asset.gbBuildingAcquisitionCause === "inheritance" && (
-          <ToneCard tone="violet" title="상속개시일 건물 신고가액 (소득세법 시행령 §163⑨)">
-            <CurrencyInput
-              label="건물 평가액"
-              value={asset.gbBuildingInheritedValue}
-              onChange={(v) => onChange({ gbBuildingInheritedValue: v })}
-              hint="상속세 신고서·결정통지서상 건물 평가액(상증법 §60~66). 상속개시일 평가액을 취득가액으로 직접 사용 — 환산·개산공제 미적용"
-            />
-          </ToneCard>
+          <GbBuildingInheritedValueCard asset={asset} onChange={onChange} />
         )}
       </ToneCard>
+      )}
 
     </div>
   );

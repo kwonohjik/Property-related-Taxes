@@ -369,8 +369,24 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbZoneType: "",
     gbIsMetropolitan: false,
     gbIsUnregistered: false,
-    // ── 일반건물 건물 취득원인 + 건물 취득일 (사례 32 이후 PR) ──
-    gbBuildingAcquisitionCause: undefined,
+    /**
+     * ── 일반건물 건물 취득원인 + 건물 취득일 (사례 32 이후 PR) ──
+     *
+     * 🔴 **`undefined`가 아니라 `acquisitionCause`(:115)와 같은 `"purchase"`다** (2026-08-07).
+     *
+     * 분리 OFF는 「토지·건물 취득원인이 같다」가 불변식인데(`GeneralBuildingAcquisitionCards`
+     * 의 `toBuildingCause`), `undefined`로 시작하면 **초기 상태부터 그 불변식이 깨져 있다** —
+     * 사용자가 취득원인 라디오를 한 번도 건드리지 않으면 건물 축이 빈 채로 남는다.
+     *
+     * 종전에는 OFF에서도 건물 카드가 보여 직접 고를 수 있었으나, OFF가 단일 카드가 된 뒤로는
+     * 고칠 화면이 없다 — 환산 모드로 계산하면 `transfer-tax-validate-gb.ts:365`가
+     * 「건물 취득원인을 선택하세요」로 막는데 **선택할 칸이 화면에 없는 dead-end**가 된다
+     * (memory `feedback_ui_gate_removes_sole_input_path`).
+     *
+     * legacy 세션은 마이그레이션 M-2(`calc-wizard-asset-migrate-phase3.ts:61-75`)가 같은 값을
+     * 채운다 — 신규 자산의 출발점을 그와 일치시킨다.
+     */
+    gbBuildingAcquisitionCause: "purchase",
     gbBundledAcquisitionExpenses: "",
     // ── 사례 33: 증축 건물 환산취득가 (소득세법 시행령 §176의2②, §166⑥) ──
     gbHasExtension: false,

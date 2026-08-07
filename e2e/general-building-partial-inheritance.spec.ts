@@ -128,17 +128,30 @@ test.describe("일반건물 — 부분 상속", () => {
     await expect(page.getByText(/건물분 취득가액.*상속 아님/).first()).toBeVisible();
   });
 
-  test("PI-4: 분리 OFF + 부분 상속은 V-5가 막는다", async ({ page }) => {
+  /**
+   * PI-4 — **계약 변경 (2026-08-07)**: 분리 OFF + 부분 상속은 **마이그레이션이 승격한다**.
+   *
+   * 종전에는 이 상태로 계산까지 가서 V-5(`transfer-tax-validate-gb.ts:145`)가 「토글을 켜고
+   * 파트별로 입력하세요」로 막았다. 분리 OFF가 **단일 취득원인 카드**가 된 뒤로는 그 상태를
+   * 화면에 표현할 방법이 없어(라디오가 `acquisitionCause`만 보여준다) 로드 시점에
+   * M-2b(`calc-wizard-asset-migrate-phase3.ts`)가 **분리를 켜 값을 보존한다** — V-5가 안내하던
+   * 행동을 마이그레이션이 대신 해주는 셈이다.
+   *
+   * ⚠️ **되맞춤(건물 원인을 토지 원인으로 덮기)이 아니다.** 그 구현은 부분 상속을 「둘 다 상속」
+   *    으로 만들어 V-5를 무력화시켰고, 이 테스트가 그것을 잡았다. V-5 자체는 방어로 남는다.
+   */
+  test("PI-4: 분리 OFF + 부분 상속 세션은 로드 시 분리 ON으로 승격된다", async ({ page }) => {
     test.setTimeout(120_000);
     await seed(page, {
       hasSeperateLandAcquisitionDate: false,
       landAcquisitionDate: "2015-05-01",
     });
-    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
-    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    await expandAssetSection(page, 3);
 
-    await expect(
-      page.getByText(/「토지·건물 취득일 다름」을 켜고 파트별로 입력하세요/).first(),
-    ).toBeVisible({ timeout: 15_000 });
+    // 승격 결과 — 파트별 칸이 열리고 두 취득원인이 그대로 보인다(값 보존)
+    // ⚠️ exact 필수 — 「토지 취득가액 산정 방식」에 substring 매칭돼 strict mode가 깨진다
+    await expect(page.getByText("건물 취득일", { exact: true })).toBeVisible();
+    await expect(page.getByText("토지 취득", { exact: true })).toBeVisible();
+    await expect(page.getByText("건물 취득", { exact: true })).toBeVisible();
   });
 });
