@@ -16,10 +16,12 @@ import { buildCommercialGainSplitFromFourPart } from "./transfer-tax-mixed-use-f
 import {
   resolveCommercialInheritedAcq,
   splitDeemedExpense,
+  resolvePartNecessaryExpense,
   type InheritedAcquisitionDetail,
 } from "./transfer-tax-mixed-use-inheritance";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import type { HousingEstimatedAcqResult } from "./transfer-tax-mixed-use-helpers";
+import { apportionAcquisitionPrice, apportionTransferPrice } from "./transfer-tax-mixed-use-helpers";
 
 // ──────────────────────────────────────────────────────────────
 // 상가부분 환산취득가액 + 양도차익 분리 (STEP 7)
@@ -165,8 +167,25 @@ export function calcCommercialGainSplit(
   // 실제 필요경비(자본적지출·양도비)는 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
   const dedRate = estimatedDeductionRate(asset.isUnregistered);
   const usesDeemedAcq = asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition;
+  /**
+   * 🔴 자산 단위 **공통** 자본적지출·양도비의 **상가분 안분분**(2026-08-07 W-3).
+   * 주택분과 **같은 헬퍼·같은 축**을 쓴다 — 자본적지출=취득시 · 양도비=양도시(§100② 후문).
+   */
+  const commonCapexCommercial = apportionAcquisitionPrice(
+    asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived,
+  ).commercialAcqPrice;
+  const commonTransferExpCommercial = apportionTransferPrice(
+    asset.transferExpense ?? 0, asset, derived,
+  ).commercialTransferPrice;
   const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq
-    ? splitDeemedExpense(asset.commercialInheritedExpense ?? 0, acqLandStd, acqBuildingStd)
+    ? resolvePartNecessaryExpense({
+        partDirect: asset.commercialInheritedExpense,
+        commonCapitalExpenditure: commonCapexCommercial,
+        commonTransferExpense: commonTransferExpCommercial,
+        acqLandStd, acqBuildingStd,
+        transferLandStd,
+        transferBuildingStd: asset.transferStandardPrice.commercialBuildingPrice,
+      })
     : {
         // 상가분은 **가목(개별공시지가) + 나목(건물 기준시가)** 별도 공시라 결합 총액이 없다 →
         // 잔액 흡수 대상이 아니며 성분별 독립 산출이 정본이다(주택분과 다른 이유는 설계 §3 E2).

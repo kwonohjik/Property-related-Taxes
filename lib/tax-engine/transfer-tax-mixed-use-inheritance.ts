@@ -117,6 +117,56 @@ export function splitDeemedExpense(
   return { landAppraisalDed, buildingAppraisalDed: expense - landAppraisalDed };
 }
 
+/**
+ * 파트(주택분 또는 상가분)의 실제 필요경비를 **토지/건물**로 나눈다 — 2026-08-07 신설(W-3).
+ *
+ * ## 두 갈래
+ *
+ * · **파트별 직접 입력이 있으면**(`partDirect > 0`) 종전 그대로 **취득시** 비율 하나로 나눈다.
+ *   그 값은 성질이 섞인 한 덩어리라 나눌 근거가 없고, 바꾸면 기존 이력이 움직인다.
+ * · **없으면** 자산 단위 공통 비용의 안분분을 **성질별 시점**으로 나눈다:
+ *     자본적지출(§97①2호) → **취득시** 기준시가 비율
+ *     양도비(§97①3호)     → **양도시** 기준시가 비율
+ *
+ * 근거는 「소득세법」 제100조 제2항 **후문**(「공통되는 취득가액과 **양도비용**은 **해당 자산의
+ * 가액에 비례하여** 안분계산한다」) + 같은 항 **본문**의 「**취득 또는 양도 당시의** 기준시가」.
+ * 실가 경로(P-2)·부담부증여 K-4(W-5)가 이미 같은 교리를 쓴다.
+ *
+ * ⚠️ `splitDeemedExpense`는 **순수 비례 분배기**라 양도시 기준시가를 넣어도 그대로 쓸 수 있다.
+ *    이름의 「Deemed」는 최초 도입 맥락(상속 의제)일 뿐 산식의 제약이 아니다.
+ */
+export function resolvePartNecessaryExpense(args: {
+  /** 파트별 직접 입력 (`housingInheritedExpense` · `commercialInheritedExpense`). */
+  partDirect?: number;
+  /** 자산 단위 자본적지출의 **이 파트** 안분분. */
+  commonCapitalExpenditure: number;
+  /** 자산 단위 양도비의 **이 파트** 안분분. */
+  commonTransferExpense: number;
+  acqLandStd: number;
+  acqBuildingStd: number;
+  transferLandStd: number;
+  transferBuildingStd: number;
+}): { landAppraisalDed: number; buildingAppraisalDed: number } {
+  const direct = args.partDirect ?? 0;
+  if (direct > 0) {
+    return splitDeemedExpense(direct, args.acqLandStd, args.acqBuildingStd);
+  }
+  const capex = splitDeemedExpense(
+    Math.max(0, args.commonCapitalExpenditure),
+    args.acqLandStd,
+    args.acqBuildingStd,
+  );
+  const transferExp = splitDeemedExpense(
+    Math.max(0, args.commonTransferExpense),
+    args.transferLandStd,
+    args.transferBuildingStd,
+  );
+  return {
+    landAppraisalDed: capex.landAppraisalDed + transferExp.landAppraisalDed,
+    buildingAppraisalDed: capex.buildingAppraisalDed + transferExp.buildingAppraisalDed,
+  };
+}
+
 /** §163⑨ 본문 — 공시(비-PHD) 주택분. fallback(??), max 아님. */
 export function resolveHousingInheritedAcqDirect(
   asset: MixedUseAssetInput,

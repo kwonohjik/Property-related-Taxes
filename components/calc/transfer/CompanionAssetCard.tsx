@@ -346,10 +346,20 @@ export function CompanionAssetCard({
         />
       </AssetSection>
 
-      {/* ④ 필요경비 — 겸용주택은 주택/상가 섹션별 실제 필요경비(취득정보 ③)를 사용하므로
-          공통 자본적지출·양도비 입력은 숨김(겸용 엔진이 capex/transferExpense를 소비하지 않음). */}
-      {!(asset.assetKind === "housing" && asset.isMixedUseHouse) && (
-        <AssetSection
+      {/**
+       * ④ 필요경비.
+       *
+       * 🔴 **겸용주택 숨김 게이트 해제**(2026-08-07 W-3). 종전 주석은 「겸용 엔진이
+       *    capex/transferExpense를 소비하지 않음」이었고 그때는 사실이었다. 이제 소비한다 —
+       *    엔진이 「소득세법」 제100조 제2항 **후문**으로 주택분↔상가분에 안분한다
+       *    (`resolvePartNecessaryExpense`).
+       *
+       * 🔑 **파트별 칸과 공존한다.** 취득정보 ③의 「주택분/상가분 실제 필요경비」는
+       *    **사용자가 직접 나눠** 넣는 값이라 안분하지 않고 그 파트에서 우선한다.
+       *    여기 두 칸은 **나눌 수 없는 공통 지출**용이다 — 후문이 안분하라는 것은
+       *    「**공통되는**」 것뿐이다.
+       */}
+      <AssetSection
           num={4}
           title="자본적 지출, 필요경비"
           tone="slate"
@@ -365,7 +375,6 @@ export function CompanionAssetCard({
             totalTransferExpense={totalTransferExpense}
           />
         </AssetSection>
-      )}
 
       {/* ⑤ 기타 특례 — 적용 자산일 때만 노출 */}
       {summary.extras && (
