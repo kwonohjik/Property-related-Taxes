@@ -57,8 +57,15 @@ describe("정상 입력은 통과한다", () => {
   it("I-1 상속 취득은 통과한다 — §154⑧3호 경합이 성립하지 않는다", () => {
     // `decedentAcquisitionDate`는 상속 자산의 **기존** 필수 필드다(용도변경과 무관 —
     // `transfer-tax-validate-asset.ts:557`). 용도변경 차단이 풀리면 이 요구가 드러난다.
+    // ⚠️ `publishedValueAtInheritance`(① 상증법 평가액)도 마찬가지로 **용도변경과 무관한**
+    //    상속 자산의 요구다(2026-08-07 신설 — post-deemed는 ①·② 중 하나가 필수).
+    //    상속의 ① 소스는 이 필드 하나뿐이고 `fixedAcquisitionPrice`는 증여용이다.
     expect(
-      check({ acquisitionCause: "inheritance", decedentAcquisitionDate: "2010-03-05" }),
+      check({
+        acquisitionCause: "inheritance",
+        decedentAcquisitionDate: "2010-03-05",
+        publishedValueAtInheritance: "600,000,000",
+      }),
     ).toBeNull();
   });
 });

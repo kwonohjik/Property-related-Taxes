@@ -28,6 +28,8 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
+import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
+import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import {
   isFullyFilled,
   sec164CommercialStatus,
@@ -91,4 +93,46 @@ export function clauseADeclarationError(asset: AssetForm, label: string): string
     `${label}: 「소득세법」 §97①1호 단서상 환산 등 추계는 **가목(§163⑨ 평가액)을 확인할 수 없는 경우에 한정**됩니다. ` +
     `기준일 현재 상증법 평가액이나 §164④~⑦ 기준시가를 입력하거나, 「가목을 확인할 수 없음」을 선택하세요.`
   );
+}
+
+/**
+ * post-deemed 상속 — ①(상증법 평가액) 또는 ②(§164⑤~⑦) **필수**.
+ *
+ * 「상속세 및 증여세법」 §60③: "시가를 산정하기 **어려운 경우에는** … 제61조부터 제65조까지에
+ * 규정된 방법으로 평가한 가액을 시가로 **본다**" ⇒ **평가액이 「없는」 상태는 법적으로 성립하지
+ * 않는다**. 따라서 법 §97①1호 단서의 「가목을 확인할 수 없는 경우」에 해당하지 않아
+ * **나목(환산)에 도달하지 않는다** — pre-deemed와 달리 **갈 곳이 없다**.
+ *
+ * ⇒ 선언(E-1)은 여기서 **효력이 없다**. 필수 입력이다.
+ *
+ * ⚠️ 종전에는 **주택·토지·건물**이 통과해 취득가액 **0**으로 계산됐다(양도차익 = 양도가액 전액,
+ *    경고 0건). 상가는 이미 같은 규칙으로 막고 있었다 — 그 게이트를 3종에 넓힌 것이다.
+ *
+ * **통과 경로는 이미 화면에 있다** — `PostDeemedInputs`의 「평가방법 선택(§60 시가 / §61~65
+ * 보충적) + 보충적 평가 보조계산」이 상증법 §60③을 그대로 구현하고, 산출 결과가 ①로 동기화된다.
+ *
+ * 설계: docs/02-design/features/post-deemed-clause-a-required.plan.md §4
+ */
+export function postDeemedClauseARequiredError(asset: AssetForm, label: string): string | null {
+  if (asset.acquisitionCause !== "inheritance") return null;
+  const baseDate = deriveSec163_9BaseDate(asset);
+  // pre-deemed는 E-1이 담당한다(그쪽은 ③이 있어 선언이 성립한다).
+  if (!baseDate || baseDate < DEEMED_ACQUISITION_DATE) return null;
+
+  // 취득가액의 실제 소스가 따로 있거나, 다른 게이트가 이미 막는 자산은 제외한다(§4.2).
+  //   · 겸용주택: `mixedAcq*` 3필드가 취득가액을 만든다
+  //   · 상가: 전용 블록이 같은 규칙으로 막는다 — 중복 차단은 메시지만 흐린다
+  //   · 재개발: §166③④ 별도 경로(권리가액·추가분담금)
+  if (asset.isMixedUseHouse) return null;
+  if (asset.assetKind === "commercial_building" || asset.assetKind === "redevelopment_apt") return null;
+  if (!["housing", "land", "building"].includes(asset.assetKind ?? "")) return null;
+
+  // ⚠️ 상속의 ① 소스는 `publishedValueAtInheritance` **하나뿐**이다
+  //    (`transfer-tax-api-inheritance.ts:52-54` — `fixedAcquisitionPrice`는 증여용).
+  //    stale 세션에 후자가 남아 있어도 그 값은 §163⑨ 경로로 가지 않으므로 통과 사유가 아니다.
+  if (parseAmount(asset.publishedValueAtInheritance ?? "") > 0) return null;
+  // ②도 가목이다 — §163⑨2호 「평가한 가액과 §164⑤~⑦ 가액 **중 많은 금액**」.
+  if (isSec164ClauseAFilled(asset)) return null;
+
+  return `${label}: 상속개시일 평가액(상속세 신고가액)을 입력하세요.`;
 }

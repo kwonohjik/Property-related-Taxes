@@ -248,6 +248,65 @@ test.describe("증여 §163⑨1호 — §164④ 전 구간 (#1103·#1106·#1108)
    * 그런데 P2c가 낸 구멍은 **상속 · 실거래가**였다(설계서 §3.2). ⑤⑧이 같은 술어를 쓰게 되면서
    * 이 조합에도 안내·선언이 뜬다.
    */
+  /**
+   * ⑥ **post-deemed 필수화** — pre-deemed(E-1)와 달리 ③(나목)이 없어 **선언이 성립하지 않는다**.
+   *
+   * 상증법 §60③이 「시가를 못 구하면 §61~65로 평가한 가액을 시가로 **본다**」고 정하므로
+   * 평가액이 없는 상태가 법적으로 성립하지 않고, 법 §97①1호 단서의 「확인할 수 없는 경우」에
+   * 해당하지 않는다 ⇒ **필수 입력**이다.
+   *
+   * ⚠️ **차단만 확인하면 dead-end 여부를 검증하지 못한다.** 화면에 이미 있는 통과 경로
+   *    (평가방법 「보충적평가액」 → 보조계산 → ① 자동 동기화)가 실제로 작동하는지까지 본다.
+   */
+  test("⑥ post-deemed: ①·② 없으면 차단되고, **보충적평가 보조계산**으로 해소된다", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page, {
+      assetLabel: "상속 토지",
+      acquisitionCause: "inheritance",
+      acquisitionDate: "1998-07-01", // post-deemed
+      inheritanceStartDate: "1998-07-01",
+      decedentAcquisitionDate: "1980-01-01",
+      donorAcquisitionDate: "",
+      fixedAcquisitionPrice: "",
+    });
+
+    // ── 1. 차단 — 종전에는 취득가액 0으로 조용히 계산됐다
+    for (const step of ["보유 상황", "감면·공제", "가산세"]) {
+      await page.getByRole("button", { name: step }).first().click();
+    }
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    await expect(page.getByText(/상속개시일 평가액\(상속세 신고가액\)을 입력하세요/).first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // ── 2. 통과 경로 — 평가방법 「보충적평가액」 → 보조계산 토글 → 단가·면적
+    await page.getByRole("button", { name: "자산 목록" }).first().click();
+    await expandAssetSection(page, 3);
+    await page.getByText("평가방법 선택").click();
+    await page.getByRole("option", { name: /보충적평가액/ }).click();
+
+    const helper = page.getByRole("switch", { name: /보충적평가 보조계산 사용/ });
+    await expect(helper, "보충적평가 보조계산이 없다 — 차단만 있고 통과 경로가 없으면 dead-end다").toBeVisible();
+    await helper.click();
+
+    // 셀렉터는 probe로 확정했다(e2e/CLAUDE.md §4) — 공시지가 placeholder `원/㎡`는 페이지 전체에
+    // 1개뿐이고, 면적은 placeholder가 없는 `DecimalInput`(`숫자 입력`)이라 박스로 스코프한다.
+    await page.getByPlaceholder("원/㎡").fill("1000000");
+    const helperBox = page.locator("div").filter({ hasText: "토지 (개별공시지가 × 면적)" }).last();
+    await helperBox.getByPlaceholder("숫자 입력").fill("200");
+
+    // ── 3. ①이 자동으로 채워지고 계산이 통과한다 (200㎡ × 1,000,000 = 200,000,000)
+    const response = await calculate(page);
+    expect(
+      response.ok(),
+      `계산 API 비정상 응답 ${response.status()} — ${await response.text()}`,
+    ).toBe(true);
+    const body = await response.json();
+    expect(body.data.result?.inheritedAcquisitionDetail?.acquisitionPrice).toBe(200_000_000);
+  });
+
   test("⑤ E-1: **상속 · 실거래가** 모드에서도 선언 토글이 뜬다 (종전 안내가 못 덮던 구멍)", async ({
     page,
   }) => {

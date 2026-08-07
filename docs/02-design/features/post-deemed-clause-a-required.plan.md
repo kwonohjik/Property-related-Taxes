@@ -1,6 +1,6 @@
 # post-deemed 상속 취득가액 — ①(상증법 평가액) 필수화
 
-> **상태**: 설계 (2026-08-07). Do 미착수.
+> **상태**: ✅ **구현 완료** (2026-08-07). 설계·Do 동일 PR.
 > **세목**: 양도소득세 — 「소득세법」 §97①1호 단서 · 「소득세법 시행령」 §163⑨·§164⑤~⑦ ·
 > 「상속세 및 증여세법」 §60①③
 > **선행**: [`pre-deemed-clause-a-confirmation-criteria.engine.design.md`](pre-deemed-clause-a-confirmation-criteria.engine.design.md) **§12**(파생 발견)
@@ -257,6 +257,32 @@ E-1이 이미 쓰는 함수다 — 새로 만들면 `hasPre1990` 제외 로직 �
 | **E-4** | fixture 정정 3건(§8) | 테스트 | — |
 
 **권고 순서**: Pre-Do(P-3·P-5 실패 확인) → E-1 → E-4(fixture) → E-2 → E-3.
+
+### Do 결과 (2026-08-07)
+
+| | |
+|---|---|
+| **Pre-Do** | P-3·P-4·P-5·P-6·P-13·P-14 **6건 실패** 확인 후 착수. 나머지 8건이 회귀 기준선 |
+| **구현** | `postDeemedClauseARequiredError`(`transfer-tax-validate-clause-a.ts`) — E-1 바로 뒤에서 호출. **②는 `isSec164ClauseAFilled` 재사용**(§4.3) |
+| **fixture 정정** | 예고대로 **3건** — `usage-conversion-validate.test.ts` I-1 · E2E `INHERITED` 상수(테스트 2건이 공유) |
+| **anchor** | validate **14건**(P-1~P-14) · E2E **1건**(차단 → 보충적평가 보조계산 → ① 자동 채움 → 통과, 취득가액 **200,000,000**) |
+| **회귀** | `test:transfer` **5,666건** · `calc`+`components`+`lib/calc` **3,417건** · E2E `non-housing`+`mixed-use` **13건** · tsc 0 |
+| **파일 크기** | `transfer-tax-validate-asset.ts` **799줄** — 800 트리거 직하다. 다음 기능 작업 시 분리 필요(⚠️ 아래) |
+
+⚠️ **`transfer-tax-validate-asset.ts`가 799줄**이다. 이번엔 호출부 주석을 함수 JSDoc으로 일원화해
+트리거(800) 아래로 두었지만, **착지 목표(≤700)와는 거리가 있다**. 다음에 이 파일을 여는 작업에서
+**기회주의적 분리**를 할 것(루트 CLAUDE.md File Size Policy). §163⑨ 계열 블록(상가 인터셉트·E-1·
+post-deemed)이 자연스러운 이음매다.
+
+### E2E가 검증하는 것 — 차단만이 아니다
+
+`transfer-gift-163-9-sec164-flow.spec.ts` ⑥은 **통과 경로가 실제로 작동하는지**까지 본다.
+차단만 확인하면 §3의 「dead-end가 아니다」를 검증하지 못한다 — 그 전제가 이 설계의 핵심이므로
+E2E가 그것을 직접 증명해야 한다.
+
+⚠️ 셀렉터는 **probe로 확정**했다(e2e/CLAUDE.md §4). 처음에 `면적 입력`·`공시지가 입력 (원/㎡)`으로
+**추정했다가 타임아웃**했다 — 실제는 `원/㎡`(페이지 전체 1개)와 placeholder 없는 `DecimalInput`
+(`숫자 입력`, 박스 스코프)이었다.
 
 ---
 

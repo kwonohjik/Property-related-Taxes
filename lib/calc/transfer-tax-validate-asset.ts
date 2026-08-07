@@ -22,6 +22,7 @@ import { sec164CommercialStatus, isFullyFilled } from "./sec164-required-fields"
 import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
 import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
 import { clauseADeclarationError } from "./transfer-tax-validate-clause-a";
+import { postDeemedClauseARequiredError } from "./transfer-tax-validate-clause-a";
 import { isPhdEligible } from "./phd-eligibility";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
@@ -129,6 +130,11 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   //    먼저 받아 정작 채우다 만 칸을 못 찾는다. 술어는 ⑤ UI와 공유(`needsClauseADeclaration`).
   const clauseAError = clauseADeclarationError(asset, label);
   if (clauseAError) return clauseAError;
+
+  // ── post-deemed 상속: ①(상증법 평가액) 또는 ②(§164⑤~⑦) 필수 (근거·예외는 함수 JSDoc) ──
+  // ⚠️ E-1과 **같은 자리**여야 한다 — 위 조기 return(용도변경·부담부증여)보다 뒤면 dead code다.
+  const postDeemedError = postDeemedClauseARequiredError(asset, label);
+  if (postDeemedError) return postDeemedError;
 
   // ── 상업용건물·오피스텔 + 상속 (소령 §163⑨) — 환산 검증 전 우선 인터셉트 ──
   // §163⑨: 상속 상가는 상속개시일 상증법 평가액을 취득당시 실지거래가액으로 의제(환산 아님).
