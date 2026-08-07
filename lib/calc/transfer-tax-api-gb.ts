@@ -273,6 +273,28 @@ export function buildGeneralBuildingValuation(
               parseAmount(asset.gbBundledAcquisitionExpenses) ||
               parseAmount(asset.transferExpense) ||
               parseAmount(asset.directExpenses),
+            /**
+             * 🔴 **채택된 값의 「성질」**을 함께 보낸다 (2026-08-07 W-1a).
+             *
+             * 위 fallback은 세 후보를 **한 슬롯**에 담아 성질 정보를 지운다. 그 슬롯은
+             * `general-building-extension.ts`에서 **취득시** 기준시가 비율로 안분되는데,
+             * ②(`transferExpense`)가 채택되면 **양도비가 취득 축으로 안분**된다 —
+             * 「소득세법」 제100조 제2항 후문·본문이 정하는 시점(양도비 = **양도 당시**)과 어긋난다.
+             *
+             * ⚠️ **값을 빼지 않고 성질만 알린다.** ②를 fallback에서 제거하면 원건물 실가(A/B)
+             *    조합에서 양도비의 차감 경로가 사라진다 — 자산 단위 swap 판정은 실가 카드에
+             *    §97②1호 가산을 적용하지 않기 때문이다(`general-building-swap.ts` 자산 분기).
+             *
+             * · `capital`  ① 전용 필드 — 취득에 부수 ⇒ **취득시** 축(현행 유지)
+             * · `transfer` ② 양도비    — 양도에 부수 ⇒ **양도시** 축(정정 대상)
+             * · `mixed`    ③ legacy    — 두 성질이 섞인 덩어리 ⇒ **취득시** 유지
+             *              (근거 없이 바꾸면 기존 이력의 배분이 움직인다 — W-5 교리)
+             */
+            bundledExpenseNature: parseAmount(asset.gbBundledAcquisitionExpenses)
+              ? ("capital" as const)
+              : parseAmount(asset.transferExpense)
+                ? ("transfer" as const)
+                : ("mixed" as const),
           }
         : {}),
       // §97②2호 단서 swap(자산총액) — G2(전체환산)·G4(NBL)·G3(증축) 공통.

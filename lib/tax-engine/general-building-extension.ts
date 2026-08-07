@@ -204,9 +204,23 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     );
     building1Acq = bundledAcq - landAcq; // 잔액 보정
 
-    landExp = Math.floor(
-      safeMultiplyThenDivide(bundledExp, acqLandStdTotal, denom2),
-    );
+    /**
+     * 🔴 **성질별 안분 시점**(2026-08-07 W-1a).
+     *
+     * 「소득세법」 제100조 제2항 **후문**은 「공통되는 취득가액과 **양도비용**은 해당 자산의
+     * 가액에 비례하여 안분계산한다」이고, **본문**이 그 가액의 기준시점을 「**취득 또는 양도
+     * 당시의** 기준시가」로 나란히 든다 ⇒ **어디에 부수하는 지출인지가 시점을 정한다**.
+     *
+     * `actualBundledExpenses`는 세 후보를 한 슬롯에 담아 성질을 지우므로,
+     * 배관이 함께 보낸 `bundledExpenseNature`로 축을 고른다.
+     *
+     * ⚠️ `mixed`(legacy `directExpenses`)는 **취득시 유지**다 — 두 성질이 섞인 덩어리라
+     *    나눌 근거가 없고, 근거 없이 바꾸면 기존 이력의 배분이 움직인다(W-5 교리).
+     */
+    const expenseIsTransferNature = ext.bundledExpenseNature === "transfer";
+    landExp = expenseIsTransferNature
+      ? Math.floor(safeMultiplyThenDivide(bundledExp, landStdTotal, landStdTotal + buildingStdTotal))
+      : Math.floor(safeMultiplyThenDivide(bundledExp, acqLandStdTotal, denom2));
     building1Exp = bundledExp - landExp; // 잔액 보정
 
     originUsedEstimated = false;
