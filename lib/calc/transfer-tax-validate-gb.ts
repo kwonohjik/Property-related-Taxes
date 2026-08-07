@@ -219,6 +219,34 @@ export function validateGeneralBuildingAsset(
     if (!isSeparate && !parseAmount(asset.fixedAcquisitionPrice)) {
       return `${label}: 증여 신고가액(취득가액)을 입력하세요. 증여일 평가액을 취득당시 실지거래가액으로 사용합니다. (소득세법 시행령 §163⑨)`;
     }
+    /**
+     * V-7g **증여도 §163⑨ 단서의 §164 max를 받는다** (Phase 3 확장).
+     *
+     * 같은 항 본문이 「**상속 또는 증여**받은 자산」을 대상으로 하고, 단서 1호·2호도
+     * 「상속 또는 **증여**받은 토지/건물」이라고 쓴다. 상속과 같은 두 가지를 요구한다:
+     *
+     *   (a) **② 비교값**(취득시 기준시가) — 없으면 비교가 성립하지 않아 신고가액이 그대로
+     *       쓰이고, 그것이 더 작으면 조용히 과대과세가 된다(실측 86,265,000원).
+     *   (b) **분리 ON** — 조문은 「자산별」 비교를 요구하는데, 분리 OFF에서는 증여 신고가액이
+     *       **자산 단위 총액**으로만 들어와 파트별 ①을 알 수 없다. 상속은 전용 필드가 있어
+     *       이 제약이 없다.
+     *
+     * ⚠️ 게이트 밖에서는 둘 다 요구하지 않는다 — 단서는 두 경우에 한정된다(거짓 차단 금지).
+     */
+    const landGiftSec164 = isLandGift && partAcquisitionDates(asset).land < LAND_PRICE_NOTICE_START;
+    const buildingGiftSec164 =
+      isBuildingGift && isBeforeBuildingStdPriceNotice(asset.acquisitionDate);
+    if (landGiftSec164 || buildingGiftSec164) {
+      if (!isSeparate) {
+        return `${label}: 증여일이 기준시가 고시 전이라 토지·건물의 증여 신고가액을 **파트별로 나누어 입력하세요** — 「토지·건물 취득일 다름」을 켜면 파트별 칸이 열립니다. 각 파트의 신고가액과 §164 가액 중 많은 금액이 취득가액이기 때문입니다 (소득세법 시행령 §163⑨1호·2호).`;
+      }
+      if (landGiftSec164 && !effectiveGbLandPriceAtAcq(asset, formTransferDate ?? "")) {
+        return `${label}: 취득시 토지 공시지가를 입력하세요. 1990.8.30. 개별공시지가 고시 전 증여 토지는 증여 신고가액과 §164④ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨1호).`;
+      }
+      if (buildingGiftSec164 && !parseAmount(asset.gbAcqBuildingValue)) {
+        return `${label}: 취득시 건물기준시가 총액을 입력하세요. 건물 기준시가 고시 전 증여 건물은 증여 신고가액과 §164⑤ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨2호). [건물 기준시가 계산]으로 산정할 수 있습니다.`;
+      }
+    }
   }
 
   // ── 파트별 취득 입력 검증 (2026-08-05 P6) ─────────────────────────────
