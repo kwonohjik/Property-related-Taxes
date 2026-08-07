@@ -1,5 +1,5 @@
 /**
- * 일반건물 **상속 토지**의 §164④ 등급환산 브리지 — 「소득세법 시행령」 제163조 제9항 제1호.
+ * 일반건물 **상속 토지**의 §164④ 등급환산 브리지 — 「소득세법 시행령」 제163조 제9항 제1호 (상속·증여 공통).
  *
  * ## 왜 필요한가
  *
@@ -32,22 +32,34 @@ import {
 import { LAND_PRICE_NOTICE_START } from "./transfer-pre1990-commercial-bridge";
 import { partAcquisitionDates } from "./transfer-tax-split-acq-mode";
 
-/** §163⑨1호 게이트의 취득일 — GB 토지 파트 취득일(분리 ON이면 `landAcquisitionDate`). */
+/** §163⑨1호 게이트의 취득일 — GB 토지 파트 취득일(상속개시일·증여일). 분리 ON이면 `landAcquisitionDate`. */
 export function gbLandAcquisitionDate(asset: AssetForm): string {
   return partAcquisitionDates(asset).land;
 }
 
 /**
- * §163⑨1호 구간인가 — **상속 토지** + 취득일(상속개시일) < 1990-08-30.
+ * §163⑨1호 구간인가 — **상속·증여 토지** + 취득일(상속개시일·증여일) < 1990-08-30.
  *
  * ⚠️ 취득원인을 함께 본다. 매매 토지의 1990 이전 환산은 별도 경로
  * (`CompanionAcqPurchaseBlock`의 `showPre1990`)이고 근거 조문도 다르다.
+ * 세 경로는 **배타**다 — GB 카드가 `acquisitionCause`로 매매/상속/증여 블록을 갈라 렌더한다.
+ *
+ * ⚠️ **1985-01-01 하한을 함께 본다.** ④의 `acquisitionByInheritance`·`isLandGift`가 그 하한을
+ *    갖기 때문이다. 하한 없이 열면 pre-1985에서 **섹션은 뜨는데 ④가 그 값을 쓰지 않는다** —
+ *    「보이는데 아무 효과가 없는 칸」이 된다(`feedback_ui_engine_dual_truth_avoidance`).
+ *
+ *    🔴 pre-1985 상속 GB는 별도 결함이 있다 — 취득가액이 **0**으로 계산되고 validate가
+ *    통과한다(실측 세액 443,235,000). Phase 1이 「pre-1985는 기존 환산 fallback」을 전제했으나
+ *    O-3(2026-08-06)이 상속 파트의 환산을 **1985 하한 없이** 차단하면서 그 fallback이
+ *    사라졌다. 이 파일의 범위 밖이며 별건으로 다룬다.
  */
-export function isGbLandPre1990Inheritance(asset: AssetForm): boolean {
+export function isGbLandPre1990Sec163_9(asset: AssetForm): boolean {
   if (asset.assetKind !== "general_building") return false;
-  if (asset.acquisitionCause !== "inheritance") return false;
+  const cause = asset.acquisitionCause;
+  if (cause !== "inheritance" && cause !== "gift") return false;
   const acqDate = gbLandAcquisitionDate(asset);
-  return !!acqDate && acqDate < LAND_PRICE_NOTICE_START;
+  if (!acqDate) return false;
+  return acqDate >= "1985-01-01" && acqDate < LAND_PRICE_NOTICE_START;
 }
 
 /**
@@ -59,7 +71,7 @@ export function deriveGbPre1990LandPricePerSqmAtAcq(
   asset: AssetForm,
   transferDate: string,
 ): number | null {
-  if (!isGbLandPre1990Inheritance(asset)) return null;
+  if (!isGbLandPre1990Sec163_9(asset)) return null;
   if (!asset.pre1990Enabled || !transferDate) return null;
 
   const area = parseDecimal(asset.gbLandArea);
