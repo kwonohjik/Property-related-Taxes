@@ -209,19 +209,45 @@ export function validateGeneralBuildingAsset(
      * V-7 비-환산 파트의 실지거래가액 — 엔진이 던지기 전에 차단한다(같은 조건).
      *     별개 취득은 총액이 실재하지 않아 잔액 도출이 불가능하다(§97①1호·§114⑦).
      *
-     * ⚠️ **§163⑨ 파트는 제외**한다(O-3). 상속·증여 파트의 취득가액은 평가액이 정본이고
-     *    route helper가 `inheritedLandValue`/`inheritedBuildingValue`로 **override**하므로
-     *    파트 취득가액 칸은 계산 어디에도 쓰이지 않는다 — 실측으로 999,999,999를 넣어도
-     *    세액이 변하지 않았다. 요구하면 거짓 차단이고, 받아 두면 「적었는데 무시」가 된다.
-     *    상속 평가액 자체는 위 V3·V4가, 증여는 분리 OFF에서 자산 단위 칸이 요구한다.
+     * ⚠️ 제외 대상은 **상속 파트뿐**이다 (2026-08-07 정정).
+     *
+     *    상속 파트의 취득가액은 route helper가 `inheritedLandValue`/`inheritedBuildingValue`로
+     *    **override**하므로 파트 취득가액 칸이 계산 어디에도 쓰이지 않는다 — 실측으로
+     *    999,999,999를 넣어도 세액이 변하지 않았다. 요구하면 거짓 차단이고, 받아 두면
+     *    「적었는데 무시」가 된다(상속 평가액 자체는 위 V3·V4가 받는다).
+     *
+     * 🔴 **증여 파트에는 그 override가 없다.** 증여 평가액 전용 payload 필드가 존재하지 않아
+     *    (`giftedLandValue` 등 grep 0건) 파트 취득가액 칸이 **그대로 소비된다**. 종전에는
+     *    O-3이 술어 하나로 상속과 증여를 묶었고, 같은 커밋이 자산 단위 요구도 `!isSeparate`로
+     *    걷어내 **분리 ON + 증여 파트는 취득가액을 아무도 요구하지 않았다** — 실측 취득가액
+     *    0·0으로 통과, 산출세액 500,567,775(정상 224,840,590 대비 275,727,185원 과대).
+     *    O-3 이전에는 dead-end(차단)였으므로 실패 모드가 나빠진 회귀였다
+     *    (`feedback_shared_predicate_argument_parity`).
+     *
+     *    이 요구는 O-3이 **문서화한 설계 그대로**다 —
+     *    `gb-inheritance-gift-part-axis.anchor.test.ts:149`가 이미 「파트별 실지거래가액은
+     *    V-7이 요구하므로 검증 공백도 없다」고 적어 두었다.
      */
-    const landByStatute = isLandInherited || isLandGift;
-    const buildingByStatute = isBuildingInherited || isBuildingGift;
-    if (!landByStatute && landMode !== "estimated" && !parseAmount(asset.landAcquisitionPrice)) {
-      return `${label}: 토지 취득가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호).`;
+    const landOverriddenByInheritance = isLandInherited;
+    const buildingOverriddenByInheritance = isBuildingInherited;
+    /** 증여 파트는 그 파트의 증여 신고가액이 취득가액이다(§163⑨) — 문구를 나눈다. */
+    const partPriceError = (part: "토지" | "건물", byGift: boolean) =>
+      byGift
+        ? `${label}: ${part} 증여 신고가액(취득가액)을 입력하세요. 증여일 평가액을 취득당시 실지거래가액으로 사용합니다 (소득세법 시행령 §163⑨).`
+        : `${label}: ${part} 취득가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호).`;
+    if (
+      !landOverriddenByInheritance &&
+      landMode !== "estimated" &&
+      !parseAmount(asset.landAcquisitionPrice)
+    ) {
+      return partPriceError("토지", isLandGift);
     }
-    if (!buildingByStatute && buildingMode !== "estimated" && !parseAmount(asset.buildingAcquisitionPrice)) {
-      return `${label}: 건물 취득가액을 입력하세요. 별개 취득이라 총액에서 자동 계산되지 않습니다 (소득세법 §97①1호).`;
+    if (
+      !buildingOverriddenByInheritance &&
+      buildingMode !== "estimated" &&
+      !parseAmount(asset.buildingAcquisitionPrice)
+    ) {
+      return partPriceError("건물", isBuildingGift);
     }
   }
 

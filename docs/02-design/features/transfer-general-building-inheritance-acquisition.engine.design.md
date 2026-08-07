@@ -1,5 +1,8 @@
 # 일반건물(general_building) 상속 취득가액 — 엔진 설계 문서 (STEP 5)
 
+> 상태: **✅ Phase 1(C1) 구현 완료** — 커밋 `b8d71870`(2026-07-20).
+> ⚠️ **인용 file:line은 착수 시점(2026-07-20) 좌표**다. 그 뒤 `general-building-route-helper.ts`(613줄)가 **분할**돼 상속 분기는 현재 `general-building-route-actual.ts:341`에 있고, 2026-08-05~06 파트 축 재편(P3·P7·O-1·O-3)으로 §7 인계 항목의 전제도 바뀌었다. 현행 좌표·범위는 [[transfer-gb-inheritance-partial-phase2.plan.md]] §0.
+
 > 단일 소스 계획서: [`transfer-general-building-inheritance-acquisition.plan.md`](./transfer-general-building-inheritance-acquisition.plan.md)(STEP 1~4 자가검토·Q1·Q2 해소). UI 설계: [`.ui.design.md`](./transfer-general-building-inheritance-acquisition.ui.design.md)(STEP 12, Phase 1 = C1 확정).
 > 본 문서는 그 §4 확정 결정을 구현하는 **엔진 input/result 타입·알고리즘·API/Route 6 동기화 지점(⑨~⑭)**. 확정 결정 재-open 금지.
 > 겸용 선행: [`transfer-mixed-use-inheritance-acquisition.engine.design.md`](./transfer-mixed-use-inheritance-acquisition.engine.design.md)(PR#710) — 동일 §163⑨ 패턴.
