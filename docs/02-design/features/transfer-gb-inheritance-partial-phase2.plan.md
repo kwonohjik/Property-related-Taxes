@@ -1,6 +1,7 @@
 # 일반건물 **부분 상속**(C2·C2′·C3) 취득가액 — Phase 2 계획서
 
-> 상태: **계획 수립 · Do 미착수** (2026-08-07 작성 · 같은 날 재검토 §9 반영)
+> 상태: **✅ 구현 완료** (2026-08-07) — C2·C2′·C3 전부. 실측·게이트는 §10.
+> ⚠️ 아래 §5 P-1~P-3의 「현행 결함」 서술은 **착수 전 예측이고 3건 중 2건이 틀렸다**. 실측은 §10-1.
 > ✅ **선행 차단 해소**: §9-2의 라이브 결함(분리 ON + 증여 파트 → 취득가액 0·validate 통과, 실측 275,727,185원 과대)은 **같은 브랜치에서 수정 완료**. V-7의 제외를 상속 파트로 한정했다.
 > 선행: [[transfer-general-building-inheritance-acquisition.plan.md]] — Phase 1(C1) **구현 완료**(b8d71870, 2026-07-20). 본 계획서는 그 §7 「Phase 2 인계」를 잇는다.
 > 법령 근거는 선행 계획서 §2에서 **KoreanLaw 원문 검증 완료**(소득세법 시행령 MST 286211) — 재검증 불요, 재-open 금지.
@@ -283,3 +284,72 @@ G1에서 토지 500,000,000을 **입력했는데도** 결과가 「둘 다 공�
 
 ---
 관련: [[transfer-general-building-inheritance-acquisition.plan.md]] · [[project_transfer_pre_deemed_164_max_and_clause_a_b]] · [[feedback_sibling_path_already_implements_rule]] · [[feedback_shared_predicate_argument_parity]] · [[feedback_engine_comment_vs_impl_drift]] · [[feedback_open_item_wording_is_also_unverified]] · [[feedback_ui_gate_removes_sole_input_path]] · [[feedback_ui_engine_dual_truth_avoidance]] · [[feedback_explicit_prop_mapping_strip]]
+
+---
+
+## §10. 구현 완료 (2026-08-07)
+
+### §10-1. Pre-Do 실측 — 계획서 서술 3건 중 **2건이 틀렸다**
+
+V1을 우회해 payload로 직접 측정했다.
+
+| 케이스 | 계획서 서술 | **실측** |
+|---|---|---|
+| C2 (토지 매매·환산 + 건물 상속) | 「건물 환산+개산공제 오적용」 | **throw** 「건물 취득가액을 입력하세요」 — 오계산이 아니라 차단 |
+| C2′ (둘 다 실가 + 건물 상속) | 「건물분 안분(평가액 무반영)」 | **취득가액 0·0** · 산출세액 492,412,110 |
+| C3 (토지 상속 + 건물 매매) | 「토지분 0」 | **둘 다 0** — 입력한 건물 2억까지 버려짐 |
+
+원인은 **AND 게이트 둘**이었다: 실가 경로의 상속 분기(`route-actual.ts:341`)와 `hasBothPartPrices`(`:374`). 상속 파트에는 파트 가격이 없어 둘 다 false로 떨어졌다.
+
+> 📌 §8-3에 「미측정」으로 적어 둔 항목이 실제로 뒤집혔다. 서술을 믿고 「환산+개산공제를 끄는」 방향으로 착수했다면 **있지도 않은 결함을 고치고** 진짜 원인(AND 게이트)은 놓쳤을 것이다.
+
+### §10-2. 채택 — A안(파트 슬롯 정규화). **새 엔진 분기 0**
+
+```
+④ api-gb.ts   상속 파트 → landAcquisitionPrice / buildingAcquisitionPrice 슬롯
+                        ↓
+환산 경로  applyPartAcqModes  — 비-환산 파트만 교체 + 개산공제 파트별 0
+실가 경로  hasBothPartPrices — 두 파트가 다 차므로 안분 없이 직접 배정
+```
+
+**검산이 A안을 증명했다**: 같은 금액(5억·3억)을 파트 칸에 **손으로** 넣은 세액을 Pre-Do에서 재 두고(224,788,636), 상속 평가액이 그 슬롯에 실렸을 때 **한 원도 다르지 않음**을 anchor로 고정했다 — 상속은 취득가액의 *출처*이지 *금액*이 아니기 때문이다.
+
+C1은 실가 경로의 전용 분기가 **먼저** 잡아 값이 불변이다(세액 192,868,636 고정).
+
+### §10-3. 변경 지점
+
+| # | 파일 | 내용 |
+|---|---|---|
+| ④ | `transfer-tax-api-gb.ts` | 상속 평가액 → 파트 가격 슬롯 · 환산 return에 게이트 echo 추가(§9-1 해소) |
+| ⑧ | `transfer-tax-validate-gb.ts` | **V1 제거** · **V-5 신설**(부분 상속은 분리 ON) · V3·V4 파트별화 |
+| ⑤ | `GeneralBuildingAcquisitionCards.tsx` | 상속 파트의 파트 취득가액 칸 **숨김**(V-E dual-truth) + 안내 |
+| ⑦ | `BundledAllocationCard.tsx` | 파트별 §163⑨ 표시 블록 |
+| 타입 | `general-building.types.ts` · `general-building-valuation.ts` | `GeneralBuildingInput` 게이트 2필드 + 환산 경로 echo |
+
+### §10-4. 🔴 ⑦은 **처음에 도달하지 않는 파일을 고쳤다**
+
+`GeneralBuildingValuationDetailCard.tsx`의 라벨을 파트별로 바꿨는데, E2E가 그 문구를 못 찾았다. 원인은 **그 카드가 일반건물 결과 화면에 렌더되지 않는다**는 것이었다 — 일반건물은 자산 카드 2장을 만들어 aggregate 경로로 흐르므로 화면은 `BundledAllocationCard`다.
+
+**코드가 이미 경고하고 있었다** (`BundledAllocationCard.tsx:572`):
+
+> ⚠️ 일반건물은 자산 카드 2장을 만들어 aggregate 경로로 흐르므로 화면도 이 다자산 뷰다 (`TransferTaxResultView`의 GB 상세 카드는 이 경로에서 렌더되지 않는다). 표시를 붙일 곳을 여기로 잡지 않으면 **판정이 계산에만 반영되고 화면에는 안 보인다**.
+
+⇒ 수정을 되돌리고 `BundledAllocationCard`에 붙였다. **E2E가 없었으면 「⑦ 완료」로 보고했을 것이다** — 파일을 열어 고쳤고 tsc·vitest는 전부 통과했기 때문이다.
+
+> 📌 부수 확인: `GeneralBuildingValuationDetailCard`의 Phase 1(C1) 상속 라벨도 같은 이유로 **표시된 적이 없다**. 이번 ⑦ 블록이 C1·부분 상속을 함께 처리하므로 그 갭도 닫힌다. 카드 자체의 정리는 범위 밖(기존 dead code 임의 제거 금지).
+
+### §10-5. 게이트
+
+| | 결과 |
+|---|---|
+| **Pre-Do anchor** | 22건 중 **13건 실패 · 4건 통과**(C1 회귀만) — 정확한 분포 |
+| **mutation probe** ①파트 슬롯 미주입 ②환산 echo 제거 | 각각 **2건 실패** — 두 축 모두 잡힌다 |
+| `npm test` | **1,281파일 14,329건** 통과 — 회귀 **0** |
+| **E2E** | 신규 4건 + GB 계열 **21건** 통과 |
+| `tsc` · `lint` | **0** · **0 errors** |
+| 800줄 정책 | 최대 `BundledAllocationCard` **736**(트리거 800 미만) |
+
+### §10-6. 범위 밖으로 남긴 것
+
+- **§9-3(`hasBothPartPrices` AND)** — 수정 후 도달 불가가 됐다. 분리 ON이면 비상속 파트는 V-7이, 상속 파트는 API가 채우므로 항상 둘 다 찬다. 구조 자체는 그대로 두었다(불필요한 리팩터 회피).
+- 미공시 시기 max(§163⑨1·2호) · 상속×증축 · 상속×부담부증여 — §7 그대로.
