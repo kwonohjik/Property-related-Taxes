@@ -33,6 +33,7 @@ import { describe, it, expect } from "vitest";
 import { dispatchGeneralBuilding } from "@/app/api/calc/transfer/general-building-route-helper";
 import { buildGeneralBuildingValuation } from "@/lib/calc/transfer-tax-api-gb";
 import { validateGeneralBuildingAsset } from "@/lib/calc/transfer-tax-validate-gb";
+import { isGbLandPre1990Sec163_9 } from "@/lib/calc/transfer-pre1990-gb-bridge";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { makeMockRates } from "@/__tests__/tax-engine/_helpers/mock-rates";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -174,5 +175,73 @@ describe("G164-4 — 분리 OFF + 게이트 안은 파트별 비교가 불가하
     const a = offAsset({ landAcquisitionDate: "2005-05-01", acquisitionDate: "2005-05-01" });
     const r = run(a, 70_000_000);
     expect((r.landAcq ?? 0) + (r.buildingAcq ?? 0)).toBe(70_000_000);
+  });
+});
+
+/**
+ * G164-5 — §164④ **등급환산 파생**이 증여에서도 도달하는가.
+ *
+ * 1990.8.30. 이전 개별공시지가는 **존재하지 않으므로** 증여도 상속과 같은 문제를 갖는다.
+ * 게이트를 상속·증여 공통(`isGbLandPre1990Sec163_9`)으로 넓혔다.
+ *
+ * ⚠️ **1985-01-01 하한을 함께 본다** — ④의 `isLandGift`가 그 하한을 갖기 때문이다.
+ *    하한 없이 열면 pre-1985에서 섹션은 뜨는데 ④가 그 값을 쓰지 않는다.
+ */
+describe("G164-5 — 증여 §164④ 등급환산 파생", () => {
+  const graded = (over: Partial<AssetForm> = {}) =>
+    asset({
+      gbAcqLandPricePerSqm: "",
+      pre1990Enabled: true,
+      pre1990GradeMode: "number",
+      pre1990Grade_current: "100",
+      pre1990Grade_prev: "98",
+      pre1990Grade_atAcq: "80",
+      pre1990PricePerSqm_1990: "1000000",
+      ...over,
+    } as Partial<AssetForm>);
+
+  it("🔴 UI 게이트가 증여에서도 켜진다", () => {
+    expect(isGbLandPre1990Sec163_9(graded())).toBe(true);
+  });
+
+  it("🔴 파생값이 ② 비교값으로 쓰여 신고가액보다 커진다", () => {
+    expect(run(graded()).landAcq).toBeGreaterThan(50_000_000);
+  });
+
+  it("파생값이 있으면 ⑧이 차단하지 않는다", () => {
+    expect(v(graded())).toBeNull();
+  });
+
+  it("게이트 밖(2005년 증여)에서는 UI 게이트가 꺼진다", () => {
+    const a = graded({ landAcquisitionDate: "2005-05-01", acquisitionDate: "2005-05-01" });
+    expect(isGbLandPre1990Sec163_9(a)).toBe(false);
+  });
+
+  /**
+   * 🔑 pre-1985는 ④의 §163⑨ 게이트가 꺼진다(§176의2④ 의제취득 영역). UI도 함께 꺼야
+   * 「보이는데 아무 효과가 없는 칸」이 되지 않는다.
+   */
+  it("🔑 pre-1985 증여 — UI 게이트도 꺼진다 (④와 같은 하한)", () => {
+    const a = graded({ landAcquisitionDate: "1980-03-01", acquisitionDate: "1980-03-01" });
+    expect(isGbLandPre1990Sec163_9(a)).toBe(false);
+  });
+
+  it("🔑 pre-1985 상속도 같다 (④가 안 쓰는 칸을 띄우지 않는다)", () => {
+    const a = graded({
+      acquisitionCause: "inheritance",
+      gbBuildingAcquisitionCause: "inheritance",
+      landAcquisitionDate: "1980-03-01",
+      acquisitionDate: "1980-03-01",
+    });
+    expect(isGbLandPre1990Sec163_9(a)).toBe(false);
+  });
+
+  it("post-1985 상속은 종전대로 켜진다 (회귀 0)", () => {
+    const a = graded({
+      acquisitionCause: "inheritance",
+      gbBuildingAcquisitionCause: "inheritance",
+      publishedValueAtInheritance: "50000000",
+    });
+    expect(isGbLandPre1990Sec163_9(a)).toBe(true);
   });
 });

@@ -15,6 +15,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
 
 /** 증여일 1988 — post-1985(기존 §163⑨ 게이트 안) · 토지·건물 §164 게이트 모두 안 */
 function seedForm(over: Record<string, unknown> = {}) {
@@ -128,5 +129,27 @@ test.describe("일반건물 증여 — 미공시 시기 §164 max", () => {
     await page.getByText("신고서 양식", { exact: false }).first().waitFor({ timeout: 30_000 });
 
     await expect(page.getByText(/파트별로 나누어 입력하세요/)).toHaveCount(0);
+  });
+});
+
+test.describe("일반건물 증여 — §164④ 등급환산 UI", () => {
+  test("GF-5: 1990.8.30. 이전 증여 토지 → 등급환산 섹션이 열린다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seed(page);
+    // 자산 카드의 취득 정보 섹션을 편다
+    await expandAssetSection(page, 3);
+
+    await expect(
+      page.getByText(/1990\.8\.30\. 이전 증여 토지 — §164④ 등급환산/).first(),
+    ).toBeVisible();
+    await expect(page.getByText(/증여 신고가액 중/).first()).toBeVisible();
+  });
+
+  test("GF-6: pre-1985 증여는 섹션이 뜨지 않는다 (④ 게이트와 같은 하한)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seed(page, { landAcquisitionDate: "1980-03-01", acquisitionDate: "1980-03-01" });
+    await expandAssetSection(page, 3);
+
+    await expect(page.getByText(/§164④ 등급환산/)).toHaveCount(0);
   });
 });
