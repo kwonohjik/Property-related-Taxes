@@ -1,6 +1,7 @@
 # 일반건물 **부분 상속**(C2·C2′·C3) 취득가액 — Phase 2 계획서
 
-> 상태: **계획 수립 · Do 미착수** (2026-08-07 작성)
+> 상태: **계획 수립 · Do 미착수** (2026-08-07 작성 · 같은 날 재검토 §9 반영)
+> 🔴 **선행 차단**: §9-2의 라이브 결함(분리 ON + 증여 파트 → 취득가액 0·validate 통과, 실측 275,727,185원 과대)을 **먼저** 고칠 것. 본 Phase 2와 같은 게이트(V-7)를 건드리므로 순서가 뒤바뀌면 충돌한다.
 > 선행: [[transfer-general-building-inheritance-acquisition.plan.md]] — Phase 1(C1) **구현 완료**(b8d71870, 2026-07-20). 본 계획서는 그 §7 「Phase 2 인계」를 잇는다.
 > 법령 근거는 선행 계획서 §2에서 **KoreanLaw 원문 검증 완료**(소득세법 시행령 MST 286211) — 재검증 불요, 재-open 금지.
 
@@ -32,8 +33,8 @@
 | ④ API 변환 | ✅ **이미 파트별 독립** | `transfer-tax-api-gb.ts:166~179` — 토지·건물이 각각 `acquisitionByInheritance`/`buildingAcquisitionByInheritance`를 **따로** 세운다 |
 | ⑧ V2(추계 차단) | ✅ **이미 파트 축** | `transfer-tax-validate-gb.ts:126~128` — 상속 파트만 `actual` 요구 |
 | 엔진(환산 경로) | ✅ **이미 혼합 지원** | `general-building-part-acq.ts:120~140` — 환산 파트는 환산값 유지, 비-환산 파트만 파트 가격으로 교체 + 개산공제 파트별 0 |
-| 엔진(실가 경로) | ✅ **파트 가격 직접 사용** | `general-building-route-actual.ts:374~381` `hasBothPartPrices` |
-| **선례** | ✅ **증여는 이미 부분 취득 허용** | `transfer-tax-validate-gb.ts:154~158` — 「토지 매매 + 건물 증여」에서 토지만 환산이 정당하다고 명시 |
+| 엔진(실가 경로) | ⚠️ **두 파트가 다 있을 때만** | `general-building-route-actual.ts:374~381` `hasBothPartPrices`는 **AND**다 — 한쪽만이면 그 값도 버려진다(§9-3) |
+| **선례** | ⚠️ **증여 게이트는 파트 축이나, 그 경로에 라이브 결함이 있다** | `transfer-tax-validate-gb.ts:154~158` · 결함은 §9-2 |
 
 **막고 있는 것은 두 지점뿐이다**:
 
@@ -86,16 +87,25 @@
    실가 경로 → hasBothPartPrices   (route-actual.ts:374) · 안분 없이 직접 사용
 ```
 
-### 이 안이 성립하려면 (Do 전 검증 필수 — **측정: 미실시**)
+### 이 안이 성립하려면 (Do 전 검증 필수)
 
-| # | 검증 항목 | 방법 |
+| # | 검증 항목 | 상태 |
 |---|---|---|
-| V-A | C1을 A안으로 흘려도 **현행과 세액이 1원도 안 바뀌는가** | C1 기존 anchor 11건 GREEN 유지 |
-| V-B | 상속 파트의 `estimatedDeduction`이 **0**인가 (§163⑥ 미적용) | 환산 경로 C2 probe |
-| V-C | 결과 카드 「상속개시일 평가액」 라벨이 **파트별로** 붙는가 | echo 2필드 소비 지점 확인 |
-| V-D | `missingParts` 차단이 **평가액 미입력**과 충돌하지 않는가 | V3·V4와 이중 차단 여부 |
+| V-A | C1을 A안으로 흘려도 **현행과 세액이 1원도 안 바뀌는가** | 측정: 미실시 (C1 anchor 11건 GREEN 유지로 판정) |
+| V-B | 상속 파트의 `estimatedDeduction`이 **0**인가 (§163⑥ 미적용) | 측정: 미실시 |
+| V-C | 결과 카드 「상속개시일 평가액」 라벨이 **파트별로** 붙는가 | 측정: 미실시 |
+| V-D | `missingParts` 차단이 **평가액 미입력**과 충돌하지 않는가 | 측정: 미실시 |
+| **V-E** | **같은 슬롯을 두 칸이 다투지 않는가** | ⚠️ **문제 확인됨** — 아래 |
 
-> ⚠️ **위 4건은 아직 측정하지 않았다.** A안 채택은 V-A~V-D 실측 후 확정한다.
+### ⚠️ A안의 고유 위험 — dual-truth (2026-08-07 재검토에서 발견)
+
+분리 ON이면 **「토지/건물 취득가액」 파트 칸이 취득원인과 무관하게 렌더된다**(`GeneralBuildingAcquisitionCards.tsx:347~348`·`:430` — 조건은 `isSeparate`뿐, `mode === "actual"`이면 금액 칸도 노출 `:125`). 상속이면 그 위에 **「상속개시일 평가액」 칸**도 함께 뜬다(`:352` `CompanionAcqInheritanceBlock`).
+
+현행은 C1 분기가 파트 칸을 **무시**해서 충돌이 없다 — V-7 주석이 그 사실을 기록한다(「999,999,999를 넣어도 세액이 변하지 않았다」 `validate-gb.ts:214`). 뒤집으면 **지금도 보이는데 아무 효과가 없는 칸이 있다**는 뜻이다.
+
+A안은 이 슬롯을 살리므로 **두 칸이 같은 payload 슬롯에 쓰게 된다**. 어느 쪽이 이기는지 정하지 않으면 [[feedback_ui_engine_dual_truth_avoidance]] 위반이다.
+
+⇒ **A안 채택 시 상속 파트에서는 파트 취득가액 칸을 숨긴다**(평가액 칸이 유일 입력 경로). 숨기기 전에 [[feedback_ui_gate_removes_sole_input_path]] 점검 — 평가액 칸이 그 조합에서 실제로 렌더되는지 확인할 것.
 
 ### 대안 B: 전용 필드 혼합 분기 (`route-actual.ts:341`의 AND를 OR로 풀고 파트별 resolve)
 
@@ -125,14 +135,27 @@
 
 ### ④ API 변환 — `lib/calc/transfer-tax-api-gb.ts`
 
-`gbInheritanceFields`(:166~179)는 **이미 파트별**이라 변경 최소. A안 채택 시 `partModePayload`(:207~213)에 상속 파트의 가격·모드를 합류시킨다.
+`gbInheritanceFields`(:166~179)의 **조립**은 이미 파트별이다. 그러나 —
 
-⚠️ `:217` 「한 파트라도 환산이면 환산 경로」 — C2는 **환산 경로로 간다**. 상속 필드가 그 경로에도 실려 있는지 확인할 것(현행 주석은 「환산 모드=C2는 validate 차단이나 **대칭 전달**」이라고 적고 있다 — 즉 이미 전달된다).
+> 🔴 **`...gbInheritanceFields`는 실가 return(`:395`)에만 있다. 환산 return(`:233~282`)에는 없다.**
+>
+> 변수 위의 주석은 「두 분기 공통 상속 필드 (…환산 모드=C2는 validate 차단이나 **대칭 전달**)」이라고 적고 있으나 **구현이 따라가지 않는다**([[feedback_engine_comment_vs_impl_drift]]). C2 payload 실측에서 `inheritedBuildingValue`·`buildingAcquisitionByInheritance`가 **둘 다 부재**했다(2026-08-07 probe).
+>
+> V1이 C2를 막고 있어 오늘은 무해하지만, **C2를 여는 순간 상속 평가액이 환산 경로에 도달하지 못한다**. 배관 추가가 필요하다.
+
+A안 채택 시 `partModePayload`(:207~213)에 상속 파트의 가격·모드를 합류시킨다 — 이 객체는 **양 경로 모두에 spread**되므로(`:243`·`:395` 인근) 위 비대칭을 우회한다. 단 **결과 라벨용 echo 플래그는 별도**이므로 환산 return에도 명시 추가해야 한다.
+
+### ⑧ V-7 재편 (계획 초안에서 누락했던 지점)
+
+`validate-gb.ts:218~225`의 `landByStatute`/`buildingByStatute`는 「§163⑨ 파트는 파트 취득가액 칸을 요구하지 않는다」인데, 그 근거가 「route helper가 `inheritedLandValue`/`inheritedBuildingValue`로 **override**한다」이다. A안은 override를 없애고 파트 슬롯을 정본으로 삼으므로 **이 제외 규약이 성립하지 않게 된다**. 함께 재편할 것.
+
+> ⚠️ 이 술어는 **상속과 증여를 함께 묶는다** — 그런데 증여에는 override가 없다. §9-2 참조.
 
 ### 엔진
 
 - **환산 경로**: `general-building-part-acq.ts` — A안이면 **무변경 가능성**(측정: 미실시).
 - **실가 경로**: `general-building-route-actual.ts:341` — A안이면 C1 전용 분기의 존치 여부 재검토(중복이면 정리, 단 회귀 0 확인 후).
+- ⚠️ `hasBothPartPrices`(`:374~378`)는 **AND**다. 한쪽 파트 가격만 있으면 그 값까지 버리고 총액 안분으로 떨어진다 — 분리 ON에서는 총액이 0이라 **취득가액 0**이 된다(§9-3 실측). C3는 이 경로를 정면으로 밟으므로 **AND 완화 또는 상속 파트 우선 배정**이 필요하다.
 
 ### ⑤ UI
 
@@ -183,10 +206,74 @@
 > 이 절은 [[feedback_verify_before_report_no_inflation]]·W-1a §11.6 규칙에 따라 **예측과 실측을 분리**해 둔 것이다. 착수 시 여기부터 지운다.
 
 1. §3 V-A~V-D 4건 — A안 성립 조건
-2. §4 「환산 경로 무변경 가능성」
-3. §4 「분리 ON에서 자산 단위 칸이 사라지는지」
-4. §5 P-1~P-3의 **현행 결함 서술 자체** — 파트 축 재편 이후 미측정
-5. C2가 환산 경로에서 상속 필드를 실제로 수신하는지(주석은 「대칭 전달」이라 하나 미확인)
+2. §4 「환산 경로 무변경 가능성」(`part-acq.ts` 자체는 무변경일 수 있으나, 그 앞의 payload 조립은 §9-1로 변경 확정)
+3. §5 P-1~P-3의 **현행 결함 서술 자체** — 파트 축 재편 이후 미측정
+4. 상속 파트에서 파트 취득가액 칸을 숨겼을 때 평가액 칸이 그 조합에서 실제로 렌더되는지(V-E 후속)
+
+~~3. §4 「분리 ON에서 자산 단위 칸이 사라지는지」~~ → ✅ 해소: `GeneralBuildingAcquisitionCards.tsx:342` `hideAssetAcqAxis={isSeparate}` — 사라진다.
+~~5. C2가 환산 경로에서 상속 필드를 실제로 수신하는지~~ → ✅ 해소: **수신하지 않는다**(§9-1).
 
 ---
-관련: [[transfer-general-building-inheritance-acquisition.plan.md]] · [[project_transfer_pre_deemed_164_max_and_clause_a_b]] · [[feedback_sibling_path_already_implements_rule]] · [[feedback_open_item_wording_is_also_unverified]] · [[feedback_ui_gate_removes_sole_input_path]] · [[feedback_explicit_prop_mapping_strip]]
+
+## §9. 계획 초안 재검토 (2026-08-07) — 실측 3건
+
+> 초안을 쓴 직후 같은 세션에서 재검토했다. **초안의 추정 2건이 틀렸고, 그 과정에서 master의 라이브 결함 1건을 발견했다.**
+
+### §9-1. 🔴 초안 오류 — 「환산 경로도 상속 필드를 이미 받는다」는 **틀렸다**
+
+초안 §4는 코드 주석(「대칭 전달」)을 근거로 이미 전달된다고 적었다. **주석이 구현과 어긋나 있었다.**
+
+| 실측 (payload probe) | 결과 |
+|---|---|
+| C2(토지 환산 + 건물 상속) | `inheritedBuildingValue` **부재** · `buildingAcquisitionByInheritance` **부재** |
+| C1(둘 다 상속, 실가) | 두 필드 **존재** |
+
+`...gbInheritanceFields`가 실가 return(`:395`)에만 있다. ⇒ **C2는 배관 추가 필요.**
+
+> 📌 교훈: **주석을 실측 대신 쓰지 말 것.** 초안은 이것을 §8-5에 「미검증」으로 적어 두고도 §4 본문에서는 단정에 가깝게 서술했다 — 미검증 표시가 본문의 어조를 제어하지 못했다.
+
+### §9-2. 🔴 신규 발견 — **분리 ON + 증여 파트 → 취득가액 0, validate 통과** (master 라이브)
+
+초안은 「증여는 이미 부분 취득을 정상 처리한다」를 A안의 선례로 인용했다. **그 선례에 결함이 있다.**
+
+| 케이스 (분리 ON · 두 파트 실가 · 파트 취득가액 칸 공란) | validate |
+|---|---|
+| G0 매매 + 매매 (대조군) | ⛔ 「토지 취득가액을 입력하세요」 |
+| **G1 매매 + 증여** | **✅ 통과** |
+| **G2 증여 + 증여** | **✅ 통과** |
+| **G3 증여 + 매매** | **✅ 통과** |
+| G4 상속 + 상속 | ✅ 통과 (C1 분기가 평가액으로 override — 정상) |
+| G5 매매 + 상속 | ⛔ V1 차단 |
+| G6 pre-1985 증여 (게이트 false) | ⛔ 정상 차단 |
+
+**세액 실측**(G1 형상 · 양도가 16.2억):
+
+| | 취득가액 | 산출세액 |
+|---|---|---|
+| 통과된 상태 (파트 칸 공란) | 토지 **0** · 건물 **0** | **500,567,775** |
+| 정상 (토지 5억 · 건물 3억) | 500,000,000 · 300,000,000 | 224,840,590 |
+| **차이** | | **275,727,185원 과대** |
+
+**원인** — `8546dc32`(O-3, 2026-08-06)가 두 요구를 **동시에** 없앴다:
+
+```diff
+- if (!parseAmount(asset.fixedAcquisitionPrice)) {          // 자산 단위 요구
++ if (!isSeparate && !parseAmount(asset.fixedAcquisitionPrice)) {
++ const landByStatute = isLandInherited || isLandGift;      // 파트 요구에서 §163⑨ 제외
++ if (!landByStatute && landMode !== "estimated" && !parseAmount(asset.landAcquisitionPrice)) {
+```
+
+제외의 근거는 「route helper가 `inheritedLandValue`/`inheritedBuildingValue`로 **override**한다」인데, **그 override는 상속에만 있다** — 증여용 평가액 payload 필드는 **존재하지 않는다**(`giftedLandValue` 등 grep 0건). 술어 하나가 두 경로를 묶었으나 **인자가 같지 않았다**([[feedback_shared_predicate_argument_parity]]).
+
+⚠️ **실패 모드가 나빠졌다.** O-3 이전에는 자산 단위 칸을 요구하는데 그 칸이 화면에 없어 **dead-end(차단)** 였다. 지금은 **통과하고 틀린 값**을 낸다.
+
+⇒ **이 결함은 Phase 2보다 먼저 고쳐야 한다.** 수정 방향은 V-7의 제외를 **상속 파트로 한정**하는 것(증여 파트는 파트 취득가액 칸을 요구). A안을 채택하면 상속 제외도 함께 사라지므로 규약이 단순해진다.
+
+### §9-3. ⚠️ 부수 — 한쪽 파트 가격만 입력하면 **그 값도 버려진다**
+
+G1에서 토지 500,000,000을 **입력했는데도** 결과가 「둘 다 공란」과 **완전히 동일**했다(500,567,775). `hasBothPartPrices`가 AND(`route-actual.ts:374~378`)라 한쪽만이면 총액 안분으로 떨어지는데, 분리 ON에서는 총액이 0이기 때문이다(`hideAssetAcqAxis`).
+
+코드 주석은 「한쪽만 입력된 경우는 안분을 유지한다」를 **의도**로 적고 있으나(`:370~372`), 분리 ON에서는 **안분할 총액 자체가 없다**. C3(토지 상속 + 건물 매매)가 정확히 이 경로를 밟으므로 Phase 2 설계에 반영해야 한다.
+
+---
+관련: [[transfer-general-building-inheritance-acquisition.plan.md]] · [[project_transfer_pre_deemed_164_max_and_clause_a_b]] · [[feedback_sibling_path_already_implements_rule]] · [[feedback_shared_predicate_argument_parity]] · [[feedback_engine_comment_vs_impl_drift]] · [[feedback_open_item_wording_is_also_unverified]] · [[feedback_ui_gate_removes_sole_input_path]] · [[feedback_ui_engine_dual_truth_avoidance]] · [[feedback_explicit_prop_mapping_strip]]
