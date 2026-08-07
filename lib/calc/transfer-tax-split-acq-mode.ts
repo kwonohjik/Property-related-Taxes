@@ -394,3 +394,42 @@ export function resolveLandStdAtTransfer(a: {
   const stored = positive(a.landStandardPriceAtTransfer);
   return stored > 0 ? stored : undefined;
 }
+
+/**
+ * 🔴 **일반건물 실가 경로에서 취득시 기준시가가 실제로 쓰이는가** (2026-08-07 P-2).
+ *
+ * 실가 경로(`general-building-route-actual.ts`)는 일괄 취득가액·자본적지출을 **취득시** 기준시가
+ * 비율로 안분한다 — 「소득세법」 제100조 제2항 본문의 「**취득 당시**」다.
+ * 종전에는 양도시 비율을 썼고, 그래서 V-5가 「실가 파트의 기준시가는 계산 어디에도 쓰이지
+ * 않는다」고 적을 수 있었다. **그 전제가 바뀌었다.**
+ *
+ * **UI(노출)·validate(차단)·엔진(가드)이 이 함수 하나를 공유한다** — 조건을 각자 재기술하면
+ * dual-truth가 된다(위 `requiresAcqStdPrice`와 같은 교리).
+ *
+ * ⚠️ **거짓 요구 금지** — 취득 축 안분이 실제로 없는 두 경우는 제외한다:
+ *   · 파트별 실지취득가액이 **둘 다** 있으면 취득가액은 안분하지 않는다(§100② 전문 「구분 기장」)
+ *   · 자본적지출이 없거나, 있어도 파트별 직접 귀속이 **둘 다** 있으면 안분하지 않는다
+ */
+export interface GbActualAcqStdNeedFlags {
+  /** 자산 단위 취득가액 */
+  fixedAcquisitionPrice?: string | number;
+  landAcquisitionPrice?: string | number;
+  buildingAcquisitionPrice?: string | number;
+  /** 자산 단위 자본적지출(§97①2호) */
+  capitalExpenditure?: string | number;
+  landDirectExpenses?: string | number;
+  buildingDirectExpenses?: string | number;
+}
+
+export function needsGbActualAcqStdPrice(a: GbActualAcqStdNeedFlags): boolean {
+  const hasBothPartAcqPrices =
+    !empty(a.landAcquisitionPrice) && !empty(a.buildingAcquisitionPrice);
+  const hasBothPartCapex =
+    !empty(a.landDirectExpenses) && !empty(a.buildingDirectExpenses);
+
+  // ① 일괄 취득가액을 토지·건물로 나눠야 한다
+  if (!hasBothPartAcqPrices && !empty(a.fixedAcquisitionPrice)) return true;
+  // ② 자산 단위 자본적지출을 나눠야 한다
+  if (!empty(a.capitalExpenditure) && !hasBothPartCapex) return true;
+  return false;
+}

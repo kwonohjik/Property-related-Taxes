@@ -48,6 +48,10 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { GeneralBuildingNblSection } from "./GeneralBuildingNblSection";
 import { GeneralBuildingConversionSection } from "./GeneralBuildingConversionSection";
+import {
+  effectivePartAcqMode,
+  needsGbActualAcqStdPrice,
+} from "@/lib/calc/transfer-tax-split-acq-mode";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -206,20 +210,27 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
    * 종전 "② 취득시 기준시가" 카드의 게이트를 그대로 승계한다(자산 축으로 재편해도 조건 불변).
    */
   /**
-   * 🔴 **항상 노출한다**(2026-08-07 P-2). 종전에는 환산·증축·부담부증여에서만 열었는데,
-   * 실가 경로도 **취득 축 안분에 취득시 기준시가를 쓰게 됐다** —
-   * 「소득세법」 제100조 제2항 본문의 「**취득 당시**」다
-   * (`general-building-route-actual.ts` `acqLandRatioNum`).
+   * 🔴 **실가 경로에도 열린다**(2026-08-07 P-2). 종전에는 환산·증축·부담부증여에서만 열었는데,
+   * 실가 경로도 **취득 축 안분에 취득시 기준시가를 쓰게 됐다** — 「소득세법」 제100조 제2항
+   * 본문의 「**취득 당시**」다(`general-building-route-actual.ts` `acqLandRatioNum`).
    *
-   * 조건부로 숨기면 조건이 바뀔 때마다 **입력 칸이 없는데 차단되는 dead-end**가 생긴다
-   * (메모리 `feedback_ui_gate_removes_sole_input_path`). 계획서 §14가 **양도시** 기준시가를
-   * 「항상 축 A」로 단일화한 것과 같은 판단이다.
+   * ⚠️ **`true`로 항상 열지 않는다.** 그렇게 했더니 `showBatchLauncher`가 함께 켜져
+   *    **시점별 「건물 기준시가 계산」 런처가 숨었고**(일괄이 뜨면 시점별은 중복이라 숨는 규칙),
+   *    기존 E2E 2건(`building-stdprice-apply-timepoint`·`building-stdprice-modal-prefill`)이
+   *    깨졌다 — CI 실측. **필요할 때만** 연다.
    *
-   * ⚠️ **노출은 넓게, 차단은 정확히.** 필수 여부는 validate(V-5)가 「취득 축 안분이 실제로
-   *    필요한가」로 판정한다 — 파트별 실지취득가액이 둘 다 있으면 안분 자체가 없으므로
-   *    요구하지 않는다(거짓 차단 금지).
+   * 🔑 **validate·엔진과 같은 술어를 쓴다**(`needsGbActualAcqStdPrice`) — 조건을 각자 재기술하면
+   *    「칸이 없는데 차단」 또는 「칸은 있는데 안 쓰임」이 된다
+   *    (메모리 `feedback_ui_gate_removes_sole_input_path` · `feedback_validation_sync_8th_point`).
    */
-  const showAcqStdPrice = true;
+  const landAcqModeEff = effectivePartAcqMode(asset.landAcqMode, asset);
+  const buildingAcqModeEff = effectivePartAcqMode(asset.buildingAcqMode, asset);
+  const showAcqStdPrice =
+    landAcqModeEff === "estimated" ||
+    buildingAcqModeEff === "estimated" ||
+    asset.gbHasExtension ||
+    isBurdenedGift ||
+    needsGbActualAcqStdPrice(asset);
   /**
    * 2시점 일괄 계산 런처가 실제로 떠 있는가 — 시점별 계산기의 **대체 여부**를 가른다.
    *

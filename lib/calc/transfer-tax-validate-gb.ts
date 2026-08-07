@@ -9,6 +9,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { needsGbActualAcqStdPrice } from "./transfer-tax-split-acq-mode";
 
 /**
  * 일반건물 자산 전용 검증.
@@ -294,14 +295,9 @@ export function validateGeneralBuildingAsset(
    *    · 자본적지출이 없거나, 있어도 파트별 직접 귀속이 **둘 다** 있으면 안분하지 않는다
    */
   if (landMode === "actual" && buildingMode === "actual" && !asset.gbHasExtension) {
-    const hasBothPartAcqPrices =
-      !!parseAmount(asset.landAcquisitionPrice) && !!parseAmount(asset.buildingAcquisitionPrice);
-    const hasBothPartCapex =
-      !!parseAmount(asset.landDirectExpenses) && !!parseAmount(asset.buildingDirectExpenses);
-    const needsAcqAxis =
-      (!hasBothPartAcqPrices && !!parseAmount(asset.fixedAcquisitionPrice)) ||
-      (!!parseAmount(asset.capitalExpenditure) && !hasBothPartCapex);
-    if (needsAcqAxis) {
+    // 🔑 UI(`GeneralBuildingBlock.tsx` `showAcqStdPrice`)·엔진(`requireAcqStd`)과 **같은 술어**다.
+    //    각자 재기술하면 「칸이 없는데 차단」 또는 「차단 안 하는데 엔진이 throw」가 된다.
+    if (needsGbActualAcqStdPrice(asset)) {
       if (!parseAmount(asset.gbAcqLandPricePerSqm))
         return `${label}: 취득시 토지 공시지가를 입력하세요 — 취득가액·자본적지출을 토지·건물로 나누는 기준입니다 (소득세법 §100② 취득 당시 기준시가).`;
       if (!parseAmount(asset.gbAcqBuildingValue))

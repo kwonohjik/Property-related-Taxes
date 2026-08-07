@@ -654,6 +654,53 @@ validate·엔진 **둘 다 요구**해야 한다 — 조건 일치를 anchor 2�
 
 ---
 
+## §13.7 🔴 CI가 잡은 것 — **UI 게이트를 「항상 열기」로 하면 다른 게이트가 닫힌다**
+
+PR #1121 첫 CI에서 **E2E (1/4) 실패**. 로컬에서는 `gb-sale-split-30pct.spec.ts`만 돌렸기 때문에
+못 잡았다(전체 E2E 미실행 — **이것이 갭이었다**).
+
+**실패 2건** — 둘 다 `locator.click` 타임아웃:
+- `building-stdprice-apply-timepoint.spec.ts:50` (일반건물 양도시 섹션 모달)
+- `building-stdprice-modal-prefill.spec.ts:23` (일반건물 환산모드 prefill)
+
+### 원인 — 연쇄
+
+```
+showAcqStdPrice = true            (Phase 2에서 「항상 노출」로 바꿈)
+  → showBatchLauncher = showAcqStdPrice && canGbBatch   → **일괄 런처가 켜짐**
+    → 「일괄이 뜨면 시점별 계산기는 중복이라 숨긴다」 규칙 발동
+      → 시점별 「건물 기준시가 계산」 버튼 **소멸**
+        → 그 버튼을 클릭하는 기존 spec 2건이 타임아웃
+```
+
+**노출을 넓히려다 다른 입력 경로를 닫았다.** `GeneralBuildingBlock.tsx:226-230`이 경고하는
+바로 그 dead-end를 **반대 방향으로** 만든 셈이다.
+
+### 정정 — **UI·validate·엔진이 술어 하나를 공유한다**
+
+`lib/calc/transfer-tax-split-acq-mode.ts`에 **`needsGbActualAcqStdPrice(asset)`** 를 신설하고
+세 계층이 모두 그것을 부른다(같은 파일의 `requiresAcqStdPrice`가 split 경로에서 쓰는 교리와 동일).
+
+```
+showAcqStdPrice = 환산 || 증축 || 부담부증여 || needsGbActualAcqStdPrice(asset)
+validate V-5b   =                              needsGbActualAcqStdPrice(asset)
+엔진 requireAcqStd = 같은 조건을 런타임 가드로
+```
+
+⇒ **취득 축 안분이 실제로 필요할 때만** 열리고 차단한다. 필요 없으면 종전 레이아웃 그대로다.
+
+### 계약 되돌림
+
+Phase 2에서 반전했던 `gb-stdprice-asset-major-layout.anchor.test.tsx` A2·A4 **2건을 원복**했다 —
+좁힌 조건이 **원래 동작을 복원**했기 때문이다. 대신 **A2b 3건을 신설**해 신규 조건만 못박았다
+(취득가액 있으면 열림 · 자본적지출만 있어도 열림 · **파트별 실지취득가액 둘 다면 안 열림**).
+
+> 🔑 **교훈 두 가지**
+> ① **「항상 노출」은 안전한 선택이 아니다** — 다른 게이트의 입력이 되어 연쇄로 무언가를 닫을 수 있다.
+> ② **워크트리에서 UI 게이트를 건드렸으면 전체 E2E를 돌린다.** 관련 spec만 돌리면 연쇄를 못 본다.
+
+---
+
 ## §14 Phase — **P-3 → P-2 → P-1**
 
 ```
