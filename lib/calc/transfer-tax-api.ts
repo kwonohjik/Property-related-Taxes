@@ -154,7 +154,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // ⑬ 일반건물(토지+건물 일괄) 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
   const isGeneralBuilding = primary.assetKind === "general_building";
   const gbValuation = isGeneralBuilding
-    ? buildGeneralBuildingValuation(primary)
+    ? buildGeneralBuildingValuation(primary, form.transferDate)
     : undefined;
 
   // ⑬ 재개발/재건축 (시행령 §166) — assetKind "redevelopment_apt" 또는 "right_to_move_in" 시 빌드.

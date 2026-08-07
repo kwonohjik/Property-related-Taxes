@@ -10,6 +10,10 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { needsGbActualAcqStdPrice } from "./transfer-tax-split-acq-mode";
+// §163⑨ 단서 게이트 — ④ API 변환과 **같은 상수·같은 술어**를 쓴다(경계가 갈리면 두 정책이 된다).
+import { LAND_PRICE_NOTICE_START } from "./transfer-pre1990-commercial-bridge";
+import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
+import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 
 /**
  * 일반건물 자산 전용 검증.
@@ -152,6 +156,35 @@ export function validateGeneralBuildingAsset(
     }
     if (isBuildingInherited && !parseAmount(asset.gbBuildingInheritedValue)) {
       return `${label}: 상속개시일 건물 신고가액을 입력하세요.`;
+    }
+    /**
+     * V-6 **미공시 시기 상속은 ② 비교값(취득시 기준시가)을 요구한다** (Phase 3 신설).
+     *
+     * 「소득세법 시행령」 제163조 제9항 **단서**는 두 경우에 평가액과 §164 가액 중 **많은 금액**을
+     * 취득가액으로 한다 — 1호(1990.8.30. 개별공시지가 고시 전 상속 **토지**, §164④),
+     * 2호(건물 기준시가 고시 전 상속 **건물**, §164⑤). 비교 대상이 없으면 **비교 자체가
+     * 성립하지 않아** 평가액이 그대로 쓰이고, 그것이 더 작으면 조용히 과대과세가 된다
+     * (실측 86,265,000원 — 계획서 §2).
+     *
+     * ⚠️ **게이트 밖에서는 요구하지 않는다.** 상속 파트는 V2가 실가를 강제하므로 아래 V-5
+     *    (환산 파트만 기준시가 요구)에 걸리지 않는다 — 그래서 여기서 따로 받아야 하고,
+     *    동시에 게이트 밖까지 요구하면 **쓰이지 않는 값을 강요하는 거짓 차단**이 된다.
+     * ⚠️ 경계는 파트마다 다르다(토지 1990-08-30 · 건물 취득연도 2000/2001) — API 변환과
+     *    **같은 술어**를 쓴다(`transfer-tax-api-gb.ts`).
+     */
+    if (
+      isLandInherited &&
+      partAcquisitionDates(asset).land < LAND_PRICE_NOTICE_START &&
+      !effectiveGbLandPriceAtAcq(asset, formTransferDate ?? "")
+    ) {
+      return `${label}: 취득시 토지 공시지가를 입력하세요. 1990.8.30. 개별공시지가 고시 전 상속 토지는 상속개시일 평가액과 §164④ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨1호).`;
+    }
+    if (
+      isBuildingInherited &&
+      isBeforeBuildingStdPriceNotice(asset.acquisitionDate) &&
+      !parseAmount(asset.gbAcqBuildingValue)
+    ) {
+      return `${label}: 취득시 건물기준시가 총액을 입력하세요. 건물 기준시가 고시 전 상속 건물은 상속개시일 평가액과 §164⑤ 가액 중 **많은 금액**이 취득가액입니다 (소득세법 시행령 §163⑨2호). [건물 기준시가 계산]으로 산정할 수 있습니다.`;
     }
   }
 

@@ -35,6 +35,14 @@ import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { effectivePartAcqMode, type PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { capexHint } from "./capexHint";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import {
+  isGbLandPre1990Inheritance,
+  gbLandAcquisitionDate,
+  deriveGbPre1990LandPricePerSqmAtAcqString,
+} from "@/lib/calc/transfer-pre1990-gb-bridge";
 
 // ── 토지 취득원인 옵션 (이월과세 포함 4종) ──
 // Phase 2 (2026-05-12): 부담부증여는 "양도" 사건이므로 취득원인에서 분리.
@@ -375,6 +383,44 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onChange={landCardOnChange}
             transferDate={transferDate}
           />
+        )}
+
+        {/*
+          §163⑨1호 — 1990.8.30. 개별공시지가 고시 **전** 상속 토지는 상속개시일 평가액과
+          §164④ 가액 중 **많은 금액**이 취득가액이다. 그 시기의 개별공시지가는 **존재하지
+          않으므로**(그날이 최초 고시일) 등급환산 없이는 비교값을 입력할 방법이 없다.
+          상가 `CommercialInheritanceStdPriceSection`과 같은 배치다.
+        */}
+        {isGbLandPre1990Inheritance(asset) && (
+          <ToneCard
+            tone="amber"
+            title="1990.8.30. 이전 상속 토지 — §164④ 등급환산 (소득세법 시행령 §163⑨1호)"
+          >
+            <p className="text-xs text-amber-800">
+              상속개시일 현재 개별공시지가가 고시되기 전이라 토지등급으로 환산합니다. 아래 환산값과
+              상속개시일 평가액 중 <span className="font-semibold">많은 금액</span>이 토지 취득가액이
+              됩니다.
+            </p>
+            <Pre1990LandValuationInput
+              form={asset}
+              onChange={onChange}
+              acquisitionArea={asset.gbLandArea}
+              jibun={asset.addressJibun || undefined}
+              acquisitionDate={gbLandAcquisitionDate(asset)}
+              transferDate={transferDate}
+            />
+            <LandPriceLookupField
+              label="취득시 개별공시지가"
+              pricePerSqm={
+                asset.gbAcqLandPricePerSqm ||
+                deriveGbPre1990LandPricePerSqmAtAcqString(asset, transferDate ?? "")
+              }
+              onPricePerSqmChange={(v) => onChange({ gbAcqLandPricePerSqm: v })}
+              area={parseDecimal(asset.gbLandArea) || undefined}
+              referenceDate={gbLandAcquisitionDate(asset) || undefined}
+              jibun={asset.addressJibun || undefined}
+            />
+          </ToneCard>
         )}
 
         {/* 증여: 취득일 + 증여자 취득일 + 취득가액 */}
