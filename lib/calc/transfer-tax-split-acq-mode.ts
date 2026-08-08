@@ -14,6 +14,39 @@
 
 export type PartAcqMode = "actual" | "estimated" | "appraisal" | "salesCase";
 
+/** 양도가액 토지·건물 안분 방식 — 법정 우선순위 순(§100② → 부가령 §64①1호 → 같은 항 2호). */
+export type SaleSplitMode = "actual" | "appraisal" | "apportioned";
+
+/**
+ * 안분 방식 전환 patch — **쓰지 않는 쪽 값을 함께 비운다** (2026-08-07).
+ *
+ * 엔진 스위치는 `saleSplitMode`가 아니라 **값의 유무**다(`transfer-tax-api-split.ts:75` 실측).
+ * 모드만 바꾸고 값을 남기면 화면에 없는 값이 basis를 조용히 가른다:
+ *
+ * | 새 모드 | 비우는 값 | 이유 |
+ * |---|---|---|
+ * | `apportioned` | 감정평가 3필드 + 구분 양도가액 2필드 | 남기면 basis 서열상 감정평가가 이겨 「기준시가 안분」인데 감정평가로 계산된다 |
+ * | `appraisal` | 구분 양도가액 2필드 | 구분 기재를 철회한 의도와 어긋난다 |
+ * | `actual` | (없음) | 감정평가액은 §100③ 30% 판정의 **비교 대상**이라 여전히 유효하다 |
+ *
+ * **일반건물·주택 두 경로가 이 함수 하나를 공유한다** — 각자 구현하면 「어느 값을 비우는가」가
+ * 갈려 같은 화면이 다르게 동작한다(`feedback_ui_engine_dual_truth_avoidance`).
+ *
+ * 반환은 **한 덩어리 patch**다 — 나눠 호출하면 뒤가 앞을 stale spread로 덮는다
+ * (`feedback_multikey_patch_stale_spread_overwrite`).
+ */
+export function saleSplitModePatch(mode: SaleSplitMode): Record<string, string> {
+  const clearAppraisal = {
+    landAppraisalAtTransfer: "",
+    buildingAppraisalAtTransfer: "",
+    appraisalDateAtTransfer: "",
+  };
+  const clearDirect = { landTransferPrice: "", buildingTransferPrice: "" };
+  if (mode === "apportioned") return { saleSplitMode: mode, ...clearAppraisal, ...clearDirect };
+  if (mode === "appraisal") return { saleSplitMode: mode, ...clearDirect };
+  return { saleSplitMode: mode };
+}
+
 interface LegacyAcqFlags {
   isSalesCaseAcquisition?: boolean;
   isAppraisalAcquisition?: boolean;
