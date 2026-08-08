@@ -570,6 +570,7 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onFixedAcquisitionPriceChange={(v) =>
               onChange({ fixedAcquisitionPrice: v })
             }
+            isBurdenedGift={asset.transferType === "burdened_gift"}
           />
         )}
 
@@ -592,7 +593,10 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
           OFF에서는 두 취득원인이 항상 같으므로(불변식), 토지가 상속이면 건물도 상속이다.
           §163⑨은 파트별 평가액을 각각 요구한다(`transfer-tax-validate-gb.ts:154·157`).
         */}
-        {!isSeparate && asset.gbBuildingAcquisitionCause === "inheritance" && (
+        {/* ⚠️ 부담부증여 제외 — §159가 취득가액을 정하므로 이 평가액도 계산에 도달하지 않는다(§10-5). */}
+        {asset.transferType !== "burdened_gift" &&
+          !isSeparate &&
+          asset.gbBuildingAcquisitionCause === "inheritance" && (
           <GbBuildingInheritedValueCard asset={asset} onChange={onChange} />
         )}
       </ToneCard>
@@ -667,7 +671,8 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
         <PartAcqModeField part="building" asset={asset} onChange={onChange} showCapex={showPartCapex} />
 
         {/* §163⑨ 상속개시일 건물 신고가액 (Phase 1 = 토지·건물 모두 상속) */}
-        {asset.gbBuildingAcquisitionCause === "inheritance" && (
+        {asset.transferType !== "burdened_gift" &&
+          asset.gbBuildingAcquisitionCause === "inheritance" && (
           <GbBuildingInheritedValueCard asset={asset} onChange={onChange} />
         )}
       </ToneCard>

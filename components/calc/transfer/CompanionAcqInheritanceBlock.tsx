@@ -36,6 +36,23 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
   // 직접 산정(MixedUseAssetMajorStdPrice) — 여기의 자산 구분·취득가액 의제 특례는 겸용 엔진이
   // 소비하지 않는 dead 입력이라 숨긴다(CompanionAcqPurchaseBlock.tsx의 기존 isMixedUse 파생 패턴 재사용).
   const isMixedUse = !!asset.isMixedUseHouse;
+  /**
+   * 🔴 **부담부증여는 취득가액 축이 통째로 무효다** (2026-08-08 · 계획서 §10-5).
+   *
+   * 「소득세법 시행령」 제159조가 「양도로 보는 부분」의 취득가액을 **채무비율 × 자산별 기준시가**로
+   * 정하고, 엔진이 그 값으로 `acquisitionPrice`를 **덮어쓴다**(`transfer-tax-burdened-gift-step.ts`).
+   * 실측: 취득가액에 50억을 넣어도 세액이 변하지 않는다 — 일반건물·주택·토지·상가 **전 자산종류**
+   * 동일하다. ⑧ validate도 요구하지 않는다(부담부증여 분기가 조기 종결).
+   *
+   * ⇒ 띄우면 「입력했는데 세액이 그대로」인 칸이 된다(`feedback_ui_engine_dual_truth_avoidance`).
+   *   매매 경로는 이미 같은 판단이다(`CompanionAcqPurchaseBlock.tsx:262` 산정방식 게이트).
+   *
+   * ⚠️ **날짜 축은 남긴다.** 상속개시일은 취득일(= 보유기간 기산일, §95④)이고 피상속인 취득일은
+   *    §104②1호 단기보유 통산에 쓰인다 — 둘 다 부담부증여에서도 소비된다.
+   * ⚠️ 부담부증여 K-4(실지취득가 안분)의 입력은 `bgActualAcquisition*` **전용 필드**이고
+   *    `BurdenedGiftBlock`에 따로 있다 — 여기서 숨겨도 입력 경로가 사라지지 않는다.
+   */
+  const isBurdenedGift = asset.transferType === "burdened_gift";
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">
       <div className="grid grid-cols-2 gap-3">
@@ -105,8 +122,24 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
         </ToggleCard>
       )}
 
+      {/* 부담부증여 — §159가 취득가액을 정하므로 아래 취득가액 축을 숨긴다(위 주석). */}
+      {isBurdenedGift && (
+        <ToneCard
+          tone="amber"
+          title="취득가액 — 부담부증여 §159 자동 산정"
+          titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §159" label="§159 부담부증여" />}
+        >
+          <p className="text-xs text-amber-800">
+            부담부증여에서 <strong>양도로 보는 부분</strong>의 취득가액은 취득당시 기준시가에
+            <strong> 채무비율</strong>을 곱해 산정합니다. 상속개시일 평가액을 따로 적어도 계산에
+            쓰이지 않으므로 입력란을 표시하지 않습니다. 위 <strong>상속개시일</strong>은 보유기간
+            기산일로, <strong>피상속인 취득일</strong>은 단기보유 통산에 계속 사용됩니다.
+          </p>
+        </ToneCard>
+      )}
+
       {/* 상가건물·오피스텔 상속 — 자산구분(토지/주택) 무의미(상증법 §60~66 평가액 직접). 안내만. */}
-      {!isMixedUse && asset.assetKind === "commercial_building" && (
+      {!isBurdenedGift && !isMixedUse && asset.assetKind === "commercial_building" && (
         <ToneCard
           tone="amber"
           title="취득가액 — 상속개시일 상증법 평가액"
@@ -126,12 +159,12 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate }: 
           핵심 입력은 아래 "평가방법 + 신고가액". */}
 
       {/* 취득가액 산정 — 의제취득일(1985.1.1.) 전후 자동 분기 (pre/post, 비-겸용 전용) */}
-      {!isMixedUse && (
+      {!isBurdenedGift && !isMixedUse && (
         <InheritedAcquisitionDeemedSection asset={asset} onChange={onChange} transferDate={transferDate} />
       )}
 
       {/* 겸용주택 안내 — 자산 구분·취득가액 의제 특례 대신 §163⑨ 직접 산정 경로로 유도 */}
-      {isMixedUse && (
+      {!isBurdenedGift && isMixedUse && (
         <ToneCard
           tone="violet"
           title="취득가액 — 겸용주택 상속개시일 평가액 자동 적용"

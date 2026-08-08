@@ -264,6 +264,7 @@ export function CompanionAcquisitionCauseSection({
           onDonorAcquisitionDateChange={(v) => onChange({ donorAcquisitionDate: v })}
           fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
           onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
+          isBurdenedGift={asset.transferType === "burdened_gift"}
         />
       )}
 
