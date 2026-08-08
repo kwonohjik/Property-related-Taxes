@@ -313,6 +313,13 @@ export function consolidateResidenceMonths(
  * `ResidenceReqInput`이 이미 담고 있는 필드로 **내부 도출**해 호출부가 값을 고를 여지를 없앤다.
  * (겸용주택 어댑터가 `consolidateResidenceMonths`를 직접 호출하지만, 그 경로는
  *  `nonHousingToHousingConversion`을 아예 전달하지 않고 C-14가 조합을 차단해 우회가 불가능하다.)
+ *
+ * ⭐ **여기 들어오는 `residencePeriodMonths`는 이미 클램프된 값**이다(API 변환 계층
+ *    `clampResidenceToHousingPeriod` — 주거용 사용일 이전 거주를 잘라냈다). 그 클램프의 근거는
+ *    **§154① 괄호의 「그 보유기간 중 거주기간이 2년 이상」 + §154⑤ 단서**(그 보유기간을
+ *    주거용 사용일부터로 재정의)다 — 문언 그대로이지 창작이 아니다.
+ *    종전 계획서 R-G의 「명문 없는 불리 적용」 서술은 ①의 「그 보유기간 중」을 놓친 것이었다.
+ *    세액 anchor: `non-housing-to-housing-conversion.engine.test.ts` R-G-1~R-G-3.
  */
 export function resolveExemptionResidenceMonths(input: ResidenceReqInput): number {
   if (input.nonHousingToHousingConversion) return input.residencePeriodMonths;

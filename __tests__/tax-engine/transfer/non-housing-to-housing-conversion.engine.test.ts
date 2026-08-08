@@ -509,3 +509,90 @@ describe("K: 이월과세 × 용도변경 — 시나리오별 기산일", () => 
     ).toThrow(TaxCalculationError);
   });
 });
+
+/**
+ * R-G — 「그 보유기간 중 거주기간」 클램프가 §154① 비과세를 가른다 (2026-08-09)
+ *
+ * ## 이 블록이 존재하는 이유
+ *
+ * 종전 계획서는 이 클램프를 **「명문 없는 불리 적용」**(R-G)으로 기록하고, 근거 예규가 나오면
+ * 정식 근거로 승격하기로 남겨 뒀다. 2026-08-09 법문 전수 확인 결과 **그 서술이 틀렸다** —
+ * 근거는 이미 조문에 있다:
+ *
+ *   - **「소득세법 시행령」 제154조 제1항 괄호**: 취득 당시 조정대상지역 주택은
+ *     "해당 주택의 보유기간이 2년 … 이상이고 **그 보유기간 중 거주기간이 2년 이상**인 것"
+ *   - **같은 조 제5항**: "**제1항에 따른 보유기간**의 계산은 법 제95조제4항에 따른다.
+ *     다만, 주택이 아닌 건물을 사실상 주거용으로 사용하거나 … 그 보유기간은 해당 자산을
+ *     **사실상 주거용으로 사용한 날** … 부터 양도한 날까지로 한다."
+ *
+ * ⇒ ⑤ 단서가 「제1항의 보유기간」을 주거용 사용일부터로 **재정의**하고, ①이 요구하는 것은
+ *   **「그 보유기간 중」의 거주**다. 주거용 사용일 이전의 거주는 정의상 그 기간 안에 없다.
+ *   클램프는 문언 그대로이지 창작이 아니다.
+ *
+ * ❌ 종전 반대 근거였던 **§154⑥**("거주기간은 전입일부터 전출일까지")은 **개별 거주 구간의
+ *    시종을 정의**할 뿐 **어느 구간을 산입하는가**를 정하지 않는다. ①의 「그 보유기간 중」을
+ *    놓친 독법이었다. 이 논거를 되살리지 말 것.
+ *
+ * ⚠️ 예규·심판례는 여전히 **0건**이다(§154⑤ 단서가 2024-03-01 신설이라 실무 해석 미형성).
+ *    조문 해석으로 확정한 것이지 유권해석이 아니다 — 반대 해석이 나오면 재검토한다.
+ *
+ * ## 종전 anchor의 실질 결함
+ *
+ * `__tests__/calc/usage-conversion-api-pipeline.test.ts`의 C-10c는 제목이 "클램프가 비과세를
+ * 탈락시킨다"인데 **API body의 `residencePeriodMonths`만** 단언했다. 즉 **세액을 한 번도 보지
+ * 않았다** — 파이프라인 중간값만 보는 anchor다(`feedback_anchor_observes_wrong_stage`).
+ * 여기서 **끝까지** 단언한다.
+ */
+describe("R-G §154① 「그 보유기간 중 거주기간」 — 클램프의 세액 효과", () => {
+  /** 12억 이하 · 조정대상지역 취득 — 비과세 여부가 세액을 그대로 가른다. */
+  function rg(residencePeriodMonths: number, overrides: Partial<TransferTaxInput> = {}) {
+    return conv({
+      transferPrice: 1_000_000_000,
+      wasRegulatedAtAcquisition: true,
+      residencePeriodMonths,
+      ...toggle("2023-06-01"),
+      ...overrides,
+    });
+  }
+
+  // 거주 구간 2018-02-10 ~ 2026-01-27(94개월) 중 주거용 사용일 2023-06-01 이후는 31개월.
+  // API 계층(`clampResidenceToHousingPeriod`)이 잘라 엔진에 넣는 값이 클램프 후 개월 수다.
+  // 여기서는 그 두 세계를 엔진 입력으로 직접 대비한다.
+
+  it("R-G-1 클램프 후 거주 2년 미만 → 비과세 탈락 (세액이 실제로 발생한다)", () => {
+    const r = calculateTransferTax(rg(7), rates);
+
+    expect(r.isExempt).toBe(false);
+    /**
+     * 손 검산 — 이 값이 어디서 오는지 남긴다(숫자만 맞추는 anchor 방지).
+     *   양도차익      1,000,000,000 − 600,000,000 − 7,300,000 = 392,700,000
+     *   장특공제      거주 7개월이라 **표2 대상 탈락** → 표1 단독. 총 보유 7년 × 2% = 14%
+     *                 392,700,000 × 14% = 54,978,000
+     *   양도소득금액  392,700,000 − 54,978,000 = 337,722,000
+     *   과세표준      337,722,000 − 2,500,000(기본공제) = 335,222,000
+     *   산출세액      335,222,000 × 40% − 25,940,000 = 108,148,800
+     */
+    expect(r.calculatedTax).toBe(108_148_800);
+  });
+
+  it("R-G-2 같은 입력에 클램프를 걸지 않으면 비과세다 — 클램프가 세액을 가르는 증거", () => {
+    // ⚠️ 이 대조군이 없으면 R-G-1이 「클램프 때문」이 아니라 다른 이유로 과세된 경우와
+    //    구별되지 않는다(`feedback_negative_assertion_needs_mutation_probe`).
+    const r = calculateTransferTax(rg(94), rates);
+
+    expect(r.isExempt).toBe(true);
+    expect(r.calculatedTax).toBe(0);
+  });
+
+  it("R-G-3 취득 당시 비조정이면 클램프는 세액에 무영향 — 거주요건 자체가 없다", () => {
+    // §154① 괄호의 거주요건은 **취득 당시 조정대상지역** 주택에만 붙는다
+    // (`meetsOneHouseResidenceRequirement`의 `!wasRegulated` 단락).
+    // ⇒ 클램프의 사정거리는 조정지역으로 한정된다. 과잉 적용이 아니라는 근거다.
+    const clamped = calculateTransferTax(rg(7, { wasRegulatedAtAcquisition: false }), rates);
+    const raw = calculateTransferTax(rg(94, { wasRegulatedAtAcquisition: false }), rates);
+
+    expect(clamped.isExempt).toBe(true);
+    expect(clamped.calculatedTax).toBe(0);
+    expect(clamped.calculatedTax).toBe(raw.calculatedTax);
+  });
+});
