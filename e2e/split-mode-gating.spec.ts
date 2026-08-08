@@ -10,7 +10,14 @@
  * 새 UI 구조:
  *  - 토지 취득 방식: `part-acq-mode-land` (실거래가·환산취득가·감정가액·매매사례가액)
  *  - 건물 취득 방식: `part-acq-mode-building` (동일 4옵션, 토지와 완전 독립)
- *  - 양도 방식: `sale-split-mode` (구분양도(직접입력) | 일괄양도(양도시 기준시가 안분)) — 기본값 "일괄양도"
+ *  - 양도 방식: `sale-split-mode` — **3지선다**(구분양도 | 감정평가 | 기준시가 안분), 기본값 "기준시가 안분"
+ *
+ * ⚠️ **라벨 정본은 `SALE_SPLIT_MODE_OPTIONS`**(`components/calc/transfer/SaleSplitBasisExemptionCards.tsx`)다.
+ *    2026-08-08 정정 — #1139가 2지선다(구분양도(직접입력) | 일괄양도(양도시 기준시가 안분))를
+ *    3지선다로 바꾸면서 이 spec을 갱신하지 않아 **CI에서만** 14건이 90초 타임아웃으로 죽었다
+ *    (`locator.check`가 없는 radio를 기다린 것 — 값 `actual`/`apportioned`는 그대로다).
+ *    로컬은 #1139 이전 코드라 통과했고, CI는 PR 머지 커밋을 돌려 새 라벨을 만난다.
+ *    ⇒ 라벨을 바꾸면 이 spec도 함께 바꿀 것.
  *  - 부담부증여(② 양도정보 라디오) 선택 시 파트별 모드 선택 자체가 사라지고 안내만 표시
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -81,7 +88,7 @@ test.describe("파트별 취득 방식 게이팅 — 토지", () => {
     await expect(buildingAcqGroup(page)).toBeVisible();
     await expect(saleSplitGroup(page)).toBeVisible();
     await expect(landAcq(page)).toBeVisible();
-    // 양도 방식 기본값은 "일괄양도 (양도시 기준시가 안분)" — 구분양도 직접입력 칸은 미노출
+    // 양도 방식 기본값은 "기준시가 안분 (양도시 기준시가 비율)" — 구분양도 직접입력 칸은 미노출
     await expect(landTransfer(page), "기본값은 일괄양도이므로 양도가액 직접입력 칸 숨김").toHaveCount(0);
   });
 
@@ -117,7 +124,7 @@ test.describe("양도 방식 게이팅 — 취득과 독립", () => {
   test("구분양도(직접입력) → 토지·건물 양도가액 칸 노출", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
-    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (계약서에 구분 기재)" }).check();
     await expect(landTransfer(page)).toBeVisible();
     await expect(page.getByTestId("split-building-transfer-price")).toBeVisible();
   });
@@ -125,7 +132,7 @@ test.describe("양도 방식 게이팅 — 취득과 독립", () => {
   test("일괄양도(안분) → 양도시 기준시가 칸 노출, 직접입력 칸 숨김", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
-    await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "기준시가 안분 (양도시 기준시가 비율)" }).check();
     await expect(landTransfer(page)).toHaveCount(0);
     await expect(landTransferStdPrice(page)).toBeVisible();
   });
@@ -155,7 +162,7 @@ test.describe("양도시 기준시가 배치 — 항상 축 A (Phase 1-D)", () =
   test("구분양도 + 토지만 환산 → 파트 섹션이 아니라 축 A에 있다", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
-    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (계약서에 구분 기재)" }).check();
     await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
 
     await expect(
@@ -169,7 +176,7 @@ test.describe("양도시 기준시가 배치 — 항상 축 A (Phase 1-D)", () =
   test("구분양도 + 건물만 환산 → 같은 축 A 카드 하나뿐이다", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
-    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (계약서에 구분 기재)" }).check();
     await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
 
     await expect(saleAxisCard(page)).toBeVisible();
@@ -194,7 +201,7 @@ test.describe("양도시 기준시가 배치 — 항상 축 A (Phase 1-D)", () =
     await fillDateAndVerify(page, { year: "2025", month: "08", day: "29" }, {
       scope: page.locator('[data-asset-card-index="0"] [data-slot="field-card"]').filter({ hasText: "건물 취득일" }),
     });
-    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (계약서에 구분 기재)" }).check();
     await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
 
     // 이미지 11 — 취득시 건물기준시가 입력칸(주택도 파트 독립)
@@ -221,12 +228,12 @@ test.describe("양도시 기준시가 배치 — 항상 축 A (Phase 1-D)", () =
   test("모드를 오가도 카드는 축 A에 머문다 — 이동하지 않는다 (1-D 계약 반전)", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
-    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (계약서에 구분 기재)" }).check();
     await landAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
     await expect(saleAxisCard(page)).toBeVisible();
     await expect(landPartCard(page)).toHaveCount(0);
 
-    await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "기준시가 안분 (양도시 기준시가 비율)" }).check();
     await expect(saleAxisCard(page)).toBeVisible();
     // 불변식은 유지된다 — 같은 카드가 두 곳에 동시 노출되면 E2E strict mode가 깨진다.
     await expect(landPartCard(page)).toHaveCount(0);
@@ -240,7 +247,7 @@ test.describe("양도시 기준시가 자동 계산 (§99①1호 · 부가세령
   test("㎡당 공시지가 × 양도면적 → 양도시 토지 기준시가 자동 기록", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
-    await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "기준시가 안분 (양도시 기준시가 비율)" }).check();
 
     await page.getByTestId("split-land-std-transfer-persqm").fill("540000");
     await page.getByTestId("split-land-std-transfer-area").fill("206.6");
@@ -250,7 +257,7 @@ test.describe("양도시 기준시가 자동 계산 (§99①1호 · 부가세령
   test("🔴 건물분은 계산기로 산정 — 토지 입력이 건물 칸을 자동 도출하지 않는다", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
-    await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "기준시가 안분 (양도시 기준시가 비율)" }).check();
 
     // 주택이어도 「양도시 건물 기준시가 계산」 런처가 있어야 한다
     await expect(page.getByRole("button", { name: /양도시 건물 기준시가 계산/ })).toBeVisible();
@@ -270,7 +277,7 @@ test.describe("양도시 기준시가 자동 계산 (§99①1호 · 부가세령
   test("양도시 건물 기준시가 모달 — 단일 시점(취득 구조·용도·공시지가 미노출)", async ({ page }) => {
     test.setTimeout(90_000);
     await setupSplitAsset(page);
-    await saleSplitGroup(page).getByRole("radio", { name: "일괄양도 (양도시 기준시가 안분)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "기준시가 안분 (양도시 기준시가 비율)" }).check();
 
     await page.getByRole("button", { name: /양도시 건물 기준시가 계산/ }).click();
     const modal = page.getByRole("dialog").filter({ hasText: "계산 후 적용할 시점의 금액" });
@@ -414,7 +421,7 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
 
     // 실가로 되돌리고 양도가액을 구분 입력하면 취득시 기준시가는 계산 어디에도 등장하지 않는다
     await landAcqGroup(page).getByRole("radio", { name: "실거래가" }).check();
-    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (계약서에 구분 기재)" }).check();
     await landTransfer(page).fill("600000000");
     await expect(
       page.getByTestId("split-land-std-acq-card"),
@@ -434,7 +441,7 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
 
     // 2026-07-30 술어 ⑤절 폐지 — 실가/실가에서는 진입 시점부터 카드가 없다.
     // 구분양도 + 양도가액 입력 → 안분 근거 확보(이 검증의 본래 대상)
-    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (계약서에 구분 기재)" }).check();
     await landTransfer(page).fill("600000000");
 
     await expect(
@@ -559,7 +566,7 @@ test.describe("P6 — 파트별 취득시 기준시가 게이팅 (2026-07-30)", 
     await fillDateAndVerify(page, { year: "2025", month: "08", day: "29" }, {
       scope: page.locator('[data-asset-card-index="0"] [data-slot="field-card"]').filter({ hasText: "건물 취득일" }),
     });
-    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (직접입력)" }).check();
+    await saleSplitGroup(page).getByRole("radio", { name: "구분양도 (계약서에 구분 기재)" }).check();
     await buildingAcqGroup(page).getByRole("radio", { name: "환산취득가" }).check();
     await landAcqGroup(page).getByRole("radio", { name: "실거래가" }).check();
 

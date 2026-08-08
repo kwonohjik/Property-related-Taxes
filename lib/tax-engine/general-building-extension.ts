@@ -184,6 +184,34 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   // 원건물 실가 모드 여부 (옵션 B)
   const isOriginActual = ext.actualBundledAcquisitionPrice !== undefined;
 
+  /**
+   * 환산취득가(§176의2②) — **조합 C/D의 값이자, 조합 A에서 「환산 파트」가 쓸 값**이다.
+   *
+   * 종전에는 이 산식이 조합 C/D의 `else` 안에만 있었다. 그런데 `route-helper`가
+   * `actualBundledAcquisitionPrice`를 **항상 주입**하므로(0이어도 `!== undefined`)
+   * production에서는 `isOriginActual`이 늘 true이고 **조합 C/D에 도달하지 않는다**.
+   *
+   * 그 결과 환산 파트의 취득가액이 **0**이 됐다(2026-08-08 실측):
+   *   · 분리 OFF · 증축 · 환산 모드 · 일괄칸 비움 → 토지 0 · 건물1 0 (세액 454,035,000)
+   *   · 분리 ON · 증축 · 토지 실가 + 건물1 환산 → 건물1 **0** (증축 OFF 대조군 3,281,490)
+   *
+   * ⇒ 산식을 밖으로 꺼내 **파트 단위로** 고를 수 있게 한다. 조합 A라도 그 파트가 환산이면
+   *   일괄 취득가 안분값이 아니라 이 값을 쓴다 — 일괄 취득가는 애초에 그 파트의 몫이 아니다.
+   */
+  const convertedLandAcq = Math.floor(
+    safeMultiplyThenDivide(landTransferPrice, acqLandStdTotal, landStdTotal),
+  );
+  const convertedBuilding1Acq = Math.floor(
+    safeMultiplyThenDivide(building1TransferPrice, acqBuilding1StdTotal, buildingStdTotal),
+  );
+  /** 개산공제(§163⑥) — 환산 파트의 필요경비는 이것뿐이다(§97②2호). */
+  const convertedLandExp = computeEstimatedDeduction(acqLandStdTotal, rate, input.ownershipRatio);
+  const convertedBuilding1Exp = computeEstimatedDeduction(
+    acqBuilding1StdTotal,
+    rate,
+    input.ownershipRatio,
+  );
+
   let landAcq: number;
   let building1Acq: number;
   let landExp: number;
@@ -231,20 +259,12 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     // 토지 환산취득가: INT(토지 안분 양도가 × 취득시 공시지가 총액 / 양도시 공시지가 총액)
     // 건물1 환산취득가: INT(건물1 안분 양도가 × 취득시 건물기준시가 / 양도시 건물기준시가)
     // ⚠️ BigInt: 분자 ≈ 수억 × 수억 > MAX_SAFE_INTEGER — safeMultiplyThenDivide 사용
-    landAcq = Math.floor(
-      safeMultiplyThenDivide(landTransferPrice, acqLandStdTotal, landStdTotal),
-    );
-    building1Acq = Math.floor(
-      safeMultiplyThenDivide(
-        building1TransferPrice,
-        acqBuilding1StdTotal,
-        buildingStdTotal,
-      ),
-    );
+    landAcq = convertedLandAcq;
+    building1Acq = convertedBuilding1Acq;
 
     // 개산공제: 취득시 기준시가 × 3% (§163⑥ — 환산 모드에서는 필요경비 = 개산공제만)
-    landExp = computeEstimatedDeduction(acqLandStdTotal, rate, input.ownershipRatio);
-    building1Exp = computeEstimatedDeduction(acqBuilding1StdTotal, rate, input.ownershipRatio);
+    landExp = convertedLandExp;
+    building1Exp = convertedBuilding1Exp;
 
     originUsedEstimated = true;
   }
@@ -284,13 +304,32 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     (input.buildingAcqMode ?? "estimated") !== "estimated" &&
     !partAcq.missingParts.includes("건물");
 
+  /**
+   * 그 파트가 **환산**인가 — 조합 A(일괄 실가)라도 파트가 환산이면 일괄 안분값을 쓰지 않는다.
+   * 일괄 취득가는 「토지+건물1을 한 값으로 샀다」는 뜻이므로, 한 파트가 환산이라는 것은
+   * 애초에 그 파트가 그 일괄 값에 들어 있지 않다는 뜻이다.
+   *
+   * ⚠️ **`?? "estimated"` 기본값을 쓰지 않는다.** 파트 모드를 **명시하지 않은** 호출(엔진 직접
+   *    호출 테스트·레거시 payload)은 「환산이다」가 아니라 「원건물 모드를 따른다」는 뜻이다.
+   *    기본값으로 환산 취급하면 사례 33의 일괄 안분(토지 164,880,819)이 통째로 뒤집힌다.
+   *    ④ API 변환은 `partModePayload`로 **항상** 두 모드를 싣는다.
+   */
+  const landIsConverted = input.landAcqMode === "estimated";
+  const buildingIsConverted = input.buildingAcqMode === "estimated";
+
   if (landPartApplied) {
     landAcq = partAcq.acquisition.land;
     landExp = input.landDirectExpenses ?? 0;
+  } else if (isOriginActual && landIsConverted) {
+    landAcq = convertedLandAcq;
+    landExp = convertedLandExp;
   }
   if (buildingPartApplied) {
     building1Acq = partAcq.acquisition.building;
     building1Exp = input.buildingDirectExpenses ?? 0;
+  } else if (isOriginActual && buildingIsConverted) {
+    building1Acq = convertedBuilding1Acq;
+    building1Exp = convertedBuilding1Exp;
   }
 
   /**
@@ -299,8 +338,10 @@ export function buildGeneralBuildingAssetCardsWithExtension(
    * 붙는다. §163⑨ 평가액은 「취득당시의 실지거래가액으로 **본다**」이므로 가목이다 ⇒ 제외.
    * 대체되지 않은 파트는 원건물 모드(조합 A=실가 / C·D=환산)를 그대로 따른다.
    */
-  const landUsedEstimated = landPartApplied ? false : originUsedEstimated;
-  const building1UsedEstimated = buildingPartApplied ? false : originUsedEstimated;
+  const landUsedEstimated = landPartApplied ? false : landIsConverted || originUsedEstimated;
+  const building1UsedEstimated = buildingPartApplied
+    ? false
+    : buildingIsConverted || originUsedEstimated;
 
   // ── Step 3: 건물2 취득가·필요경비 결정 (건물2 모드 분기) ─────────────
   //
@@ -357,6 +398,24 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   // extensionUsedEstimated: 건물2 카드에 적용 (건물2 모드에 따라 결정됨)
   const assetCards: AssetCardForAggregate[] = [];
 
+  /**
+   * 토지 카드 취득일 — **`input.acquisitionDate`는 건물 취득일이다**
+   * (`general-building-route-actual.ts:73` 규약). 미주입 시 건물 취득일과 같다고 본다
+   * (「분리 OFF면 두 날짜가 같다」 불변식). 2-way와 **같은 식**이다
+   * (`general-building-valuation.ts:379`).
+   *
+   * 🔴 **종전에는 세 카드 모두 `input.acquisitionDate`를 그대로 썼다**(2026-08-08 정정).
+   *    payload는 값을 싣고 있었는데(`route-helper.ts:127` — `Date`로 coerce된다) 3-way가
+   *    읽지 않았다. #1137의 파트 가액과 같은 모양이다.
+   *
+   *    실측(토지 1995 · 건물 2020 · 2026 양도): 장기보유특별공제 합이 **81,999,999**로,
+   *    「토지도 2020」인 경우와 **정확히 같았다** — 토지의 31년 보유가 6년으로 계산됐다
+   *    (분리 ON·증축 OFF 대조군은 245,587,665).
+   *
+   * 「소득세법」 제95조 제4항: 「보유기간은 **그 자산의 취득일**부터 양도일까지로 한다」.
+   */
+  const landAcqDate = input.landAcquisitionDate ?? input.acquisitionDate;
+
   // 토지 카드 (비사업용 분할 포함 — 인정면적 직접 안분, round 의존 제거)
   if (!isWithinNblRatio && nonBusinessRatio > 0) {
     const landBusinessTransfer = apportionLandByBusinessArea(landTransferPrice, allowedLandArea, input.landArea);
@@ -372,7 +431,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       usedEstimatedAcquisition: landUsedEstimated,
       estimatedBase: landUsedEstimated ? landBusinessAcq : 0,
       estimatedDeduction: landUsedEstimated ? landBusinessExp : 0,
-      acquisitionDate: input.acquisitionDate,
+      acquisitionDate: landAcqDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
       landAcquisitionCause: input.landAcquisitionCause,
@@ -390,7 +449,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       usedEstimatedAcquisition: landUsedEstimated,
       estimatedBase: landUsedEstimated ? landAcq - landBusinessAcq : 0,
       estimatedDeduction: landUsedEstimated ? landExp - landBusinessExp : 0,
-      acquisitionDate: input.acquisitionDate,
+      acquisitionDate: landAcqDate,
       transferDate: input.transferDate,
       isNonBusinessLand: true,
       landAcquisitionCause: input.landAcquisitionCause,
@@ -409,7 +468,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       usedEstimatedAcquisition: landUsedEstimated,
       estimatedBase: landUsedEstimated ? landAcq : 0,
       estimatedDeduction: landUsedEstimated ? landExp : 0,
-      acquisitionDate: input.acquisitionDate,
+      acquisitionDate: landAcqDate,
       transferDate: input.transferDate,
       isNonBusinessLand: false,
       landAcquisitionCause: input.landAcquisitionCause,

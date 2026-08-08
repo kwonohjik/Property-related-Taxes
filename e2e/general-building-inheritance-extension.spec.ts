@@ -145,3 +145,114 @@ test.describe("일반건물 상속·증여 × 증축 — 입력 경로", () => {
     });
   });
 });
+
+/**
+ * ── Phase 2 (2026-08-08) — **분리 ON × 증축** ────────────────────────────────
+ *
+ * V-3(증축 × 분리 ON 차단)을 풀었다. 실제 갭은 3-way가 `landAcquisitionDate`를 읽지 않아
+ * 토지 보유기간이 건물 취득일로 계산된 것 하나였다(장특공제 실측 245,587,665 → 81,999,999).
+ *
+ * 이 해제가 **부분 상속·증여 × 증축**의 유일한 경로다 — 부분 상속은 V-5가 분리 ON을
+ * 요구하므로, V-3이 살아 있는 동안에는 두 규칙이 정면 충돌하는 dead-end였다.
+ */
+function seedSeparate(over: Record<string, unknown> = {}) {
+  return {
+    state: {
+      formData: {
+        assets: [
+          {
+            ...makeDefaultAsset(1),
+            assetKind: "general_building",
+            acquisitionCause: "purchase",
+            gbBuildingAcquisitionCause: "purchase",
+            hasSeperateLandAcquisitionDate: true,
+            landAcquisitionDate: "1995-05-01",
+            acquisitionDate: "2020-05-01",
+            landAcqMode: "actual",
+            buildingAcqMode: "actual",
+            landAcquisitionPrice: "500000000",
+            buildingAcquisitionPrice: "300000000",
+            gbAcqLandPricePerSqm: "2800000",
+            gbAcqBuildingValue: "2814470",
+            gbLandArea: "205",
+            gbBuildingArea: "300",
+            gbBuildingFootprintArea: "135",
+            gbZoneType: "commercial",
+            gbTransferLandPricePerSqm: "5514000",
+            gbTransferBuildingValue: "259072400",
+            actualSalePrice: "1620000000",
+            ...over,
+          },
+        ],
+        transferDate: "2026-02-16",
+        filingDate: "2026-04-30",
+        contractTotalPrice: "1620000000",
+        householdHousingCount: "1",
+        isRegulatedArea: false,
+        wasRegulatedAtAcquisition: false,
+        isUnregistered: false,
+      },
+      pendingMigration: false,
+    },
+    version: 0,
+  };
+}
+
+/** 분리 ON 시드는 건물 취득일이 2020이므로 증축일도 그 뒤여야 한다(「증축일 ≥ 늦은 취득일」 검증). */
+const EXTENSION_FIELDS_2022 = { ...EXTENSION_FIELDS, gbExtensionDate: "2022-06-01" };
+
+async function seedSep(page: Page, over: Record<string, unknown> = {}) {
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  await page.evaluate(
+    (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
+    seedSeparate(over),
+  );
+  await page.reload();
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+}
+
+test.describe("일반건물 분리 ON × 증축 — Phase 2", () => {
+  test("X-4: 분리 ON이면 「증축 있음」 토글이 보인다 (종전 V-3 차단으로 낼 이유가 없었다)", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await seedSep(page);
+    await expandAssetSection(page, 3);
+
+    await expect(page.getByText("증축 있음").first()).toBeVisible();
+  });
+
+  test("X-5: 분리 ON + 증축이 계산까지 도달한다", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedSep(page, EXTENSION_FIELDS_2022);
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+
+    await expect(
+      page.getByText(/증축\(건물2\)과 「토지·건물 취득일 다름」은 함께 지원하지 않습니다/),
+    ).toHaveCount(0);
+    await expect(page.getByText(/양도소득세 계산 결과|산출세액/).first()).toBeVisible({
+      timeout: 30_000,
+    });
+  });
+
+  test("X-6: 부분 상속(토지만) + 증축 — Phase 2의 목표 조합이 계산까지 간다", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedSep(page, {
+      ...EXTENSION_FIELDS_2022,
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: "1990-01-01",
+      publishedValueAtInheritance: "500000000",
+    });
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+
+    // 두 차단(V-3·V-5)이 모두 뜨지 않는다 — dead-end 해소.
+    await expect(page.getByText(/함께 지원하지 않습니다/)).toHaveCount(0);
+    await expect(page.getByText(/한쪽만 상속으로 취득했다면/)).toHaveCount(0);
+    await expect(page.getByText(/양도소득세 계산 결과|산출세액/).first()).toBeVisible({
+      timeout: 30_000,
+    });
+  });
+});
