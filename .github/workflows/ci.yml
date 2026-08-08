@@ -115,20 +115,28 @@ jobs:
   # `check`를 기다리지 않는다(`needs` 없음) — 병렬이라야 벽시계가 줄고, public 저장소는
   # Actions 분이 무료라 "typecheck가 깨졌을 때 낭비되는 E2E 분"이 비용이 아니다.
   e2e:
-    name: E2E (${{ matrix.shard }}/4)
+    name: E2E (${{ matrix.shard }}/6)
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     # 실측 역산: 894건을 2 worker로 전건 ~29분 → 4샤드면 샤드당 ~7분 + 준비 2분 ≈ 9분.
     # ⚠️ 이 값은 **취소된 실행에서 역산한 추정**이다. 첫 완주 후 실측으로 교체할 것.
+    #
+    # 🔴 **4→6 샤드 (2026-08-08).** 4샤드 구성에서 **샤드 3이 25분 타임아웃으로 반복 실패**했다
+    #    (#1139·#1140 각각, 재실행 포함 3회). 죽은 원인이 job 타임아웃이라 Playwright가 실패
+    #    요약을 출력하지도 `e2e-blob-3`을 업로드하지도 못해 **오류 메시지 자체가 남지 않았다** —
+    #    원인 규명이 막힌 지점이 그것이다.
+    #    같은 샤드를 로컬에서 fresh 서버 + `CI=1` + 2 worker로 돌리면 전건 통과한다(17.5초).
+    #    ⇒ 샤드당 부하를 낮춰 완주시키고, 그래도 실패하면 **실제 오류와 trace**를 얻는다.
+    #    public 저장소라 Actions 분은 무료이므로 비용은 벽시계뿐이고, 샤드가 늘면 오히려 준다.
     timeout-minutes: 25
     strategy:
       # 한 샤드가 깨져도 나머지를 끝까지 돌린다 — 실패가 한 샤드에 몰렸는지 전반적인지가
       # 원인 판단을 가른다. fail-fast면 그 구분이 사라진다.
       fail-fast: false
       matrix:
-        # ⚠️ 샤드 수를 바꾸면 아래 `--shard=N/4`의 분모도 함께 바꿔야 한다.
+        # ⚠️ 샤드 수를 바꾸면 아래 `--shard=N/6`의 분모도 함께 바꿔야 한다.
         #    어긋나면 일부 테스트가 어느 샤드에도 안 들어가 **조용히 실행되지 않는다**.
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
 
@@ -154,8 +162,8 @@ jobs:
       #
       # `blob` 리포터는 샤드별 부분 결과를 낸다 — 아래 `e2e-report` job이 HTML 하나로 합친다.
       # (config의 html 리포터를 CLI로 덮어쓴다. 샤드마다 별도 HTML을 내면 합칠 수 없다.)
-      - name: E2E 샤드 ${{ matrix.shard }}/4 (알려진 사전존재 실패 제외)
-        run: npx playwright test --shard=${{ matrix.shard }}/4 --reporter=list,blob
+      - name: E2E 샤드 ${{ matrix.shard }}/6 (알려진 사전존재 실패 제외)
+        run: npx playwright test --shard=${{ matrix.shard }}/6 --reporter=list,blob
         env:
           # 🔑 `e2e/law-*.spec.ts` 16 spec 중 **조문 본문을 단언하는 5건**
           # (POPUP-1·HTML-1·TBL-1·CITE-1·IMP-1)은 2026-08-06부터 **fixture mock**이라
