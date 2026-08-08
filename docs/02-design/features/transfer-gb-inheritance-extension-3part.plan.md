@@ -329,10 +329,36 @@ BG-3의 첫 단언은 `LandBuildingSplitSection`의 `part-acq-mode-land`를 봤�
 
 > 🔑 **`toHaveCount(0)`은 mutation probe 없이는 증거가 아니다.** 「없음」을 단언할 때는 「있어야 하는 조건」에서 실제로 나오는지 반드시 반대 방향으로 확인한다.
 
-### 10-5. 🟠 별건 관찰 — 부담부증여 × 상속 취득원인의 평가액 칸
+### 10-5. ✅ 부담부증여 × 상속·증여 취득원인의 취득가액 칸 (2026-08-08 종결)
 
-부담부증여에서 취득원인을 **상속**으로 고르면 `CompanionAcqInheritanceBlock`이 「상속개시일 평가액」 칸을 띄운다. 그런데 라우트는 `if (burdenedGiftInfo)` 분기가 `else if (acquisitionByInheritance && …)`보다 **먼저** 잡으므로(`general-building-route-actual.ts:300·341`) 그 값은 계산에 쓰이지 않는다 — §159가 취득가액을 정하기 때문이다. 취득원인 라디오 자체는 의미가 있다(취득일 = 상속개시일 → 보유기간).
+부담부증여에서 취득원인을 **상속**·**증여**로 고르면 각 블록이 취득가액 칸을 띄우는데, §159가 그 값을 덮어쓴다. 착수해 서술을 검증했고 **맞았다** — 다만 범위가 예상보다 넓었다.
 
-**10-1의 파트 취득가액과 같은 클래스**지만 **분리 축과 무관하다** — 분리 OFF의 단일 취득원인 라디오에도 상속이 있어 종전부터 있던 상태다. 그래서 이번 범위(V-4·V-5)에 넣지 않았다.
+#### 실측 — 전 자산종류가 같다
 
-> 착수하면 먼저 확인할 것: 그 칸을 숨기면 **§159 자체가 필요로 하는 입력**이 사라지지 않는지(취득시 기준시가는 `GeneralBuildingBlock`의 `showAcqStdPrice`가 따로 띄운다) · 증여 취득원인도 같은지.
+| 주입 | 결과 |
+|---|---|
+| 상속 평가액 50억(토지)·9억(건물) | 세액 **불변** |
+| 증여 신고가액 77억 | 세액 **불변** |
+| `acquisitionPrice` 0 vs 50억 (일반건물·주택·토지·상가) | **네 종류 모두 불변** |
+| ⑧ validate(부담부증여 + 상속, 평가액 공란) | `null` — 요구하지도 않는다 |
+
+일반건물만의 문제가 아니었다. `runBurdenedGiftStep`이 `workingInput.acquisitionPrice`를 §159 안분값으로 덮어쓰므로 **자산종류와 무관**하다. 그리고 **매매 경로는 이미 숨기고 있었다**(`CompanionAcqPurchaseBlock.tsx:262` — 전 자산종류) — 상속·증여만 예외였다.
+
+⇒ 대칭으로 맞췄다. 날짜 축(상속개시일·피상속인 취득일 / 증여일·증여자 취득일)은 **보유기간(§95④)·단기보유 통산(§104②1·2호)** 에 쓰이므로 남기고, 취득가액 축만 §159 안내 카드로 대체한다.
+
+| 층 | 파일 | 변경 |
+|---|---|---|
+| ⑤ UI | `CompanionAcqInheritanceBlock.tsx` | `isBurdenedGift`면 취득가액 축(`InheritedAcquisitionDeemedSection`·상가/겸용 안내) 대신 §159 안내 |
+| ⑤ UI | `CompanionAcqGiftBlock.tsx` | `isBurdenedGift` prop 신설 — 「증여 신고가액」 칸 대신 §159 안내 |
+| ⑤ UI | `GeneralBuildingAcquisitionCards.tsx` | `GbBuildingInheritedValueCard` 2곳 게이트 + 증여 블록에 prop 전달 |
+| ⑤ UI | `CompanionAcquisitionCauseSection.tsx` | 비-일반건물 경로에도 같은 prop 전달 |
+| anchor | `burdened-gift-acq-price-ignored.anchor.test.ts` (5건) | 네 자산종류 × 취득가액 0 vs 50억 동일 · 네 종류 상호 동일 |
+| E2E | `transfer-burdened-gift-acq-cause-price.spec.ts` (4건) | 상속·증여 칸 소멸 · **일반 양도 대조군** · 날짜 축 보존 |
+
+> 🔑 **IG-3(일반 양도 대조군)을 spec 안에 넣었다.** §10-4에서 배운 대로, 부정 단언은 양성 대조군이 같은 파일에 있어야 「대상을 잘못 짚어서 0」인 경우를 영구히 걸러낸다. 던져 버리는 mutation probe보다 낫다.
+
+#### 🟠 남은 것 — 이월과세(증여) 취득원인
+
+취득원인 라디오의 **「이월과세(증여)」**(`carryover_gift`)는 이번 범위에서 제외했다. 다른 셋과 달리 **칸 노출 문제가 아니라 성립 여부 자체가 미판정**이기 때문이다 — 「소득세법」 제97조의2 이월과세는 「배우자·직계존비속으로부터 증여받은 자산」을 양도할 때 적용되는데, 부담부증여의 양도자는 **증여자 본인**이다. 증여자가 자기 배우자에게서 10년 내 증여받은 자산을 부담부증여하는 경우 §97의2가 적용되는지는 **법령 확인이 선행**이어야 한다.
+
+> ⚠️ `burdened-gift-apportionment.ts:12`의 「양도자 = 증여자 본인이므로 §97의2 미적용」은 **이번 부담부증여가 이월과세를 촉발하지 않는다**는 뜻이지, 증여자의 **선행 취득**에 §97의2가 붙지 않는다는 판정이 아니다. 두 문장을 같은 것으로 읽지 말 것.
