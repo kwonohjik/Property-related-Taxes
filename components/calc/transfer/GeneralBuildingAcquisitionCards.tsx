@@ -152,6 +152,27 @@ function PartAcqModeField({
   const isInheritedPart = isLand
     ? asset.acquisitionCause === "inheritance"
     : asset.gbBuildingAcquisitionCause === "inheritance";
+  /**
+   * 🔴 **부담부증여는 이 축이 통째로 무효다** (2026-08-08 · V-4).
+   *
+   * 「소득세법 시행령」 제159조가 양도가액·취득가액을 **채무비율 × 자산별 기준시가**로 정하고,
+   * 라우트가 그 값으로 파트 취득가액을 **덮어쓴다**(`general-building-route-actual.ts:336-337`).
+   * 파트 자본적지출도 마찬가지다 — 부담부증여 분기는 `estimatedDeduction` 슬롯을 §159 안분값으로
+   * 채우므로 `landDirectExpenses`/`buildingDirectExpenses`를 읽지 않는다.
+   * 실측: 파트 취득가액에 9,999,999,999를 넣어도 세액이 변하지 않는다
+   * (`gb-burdened-gift-split-date.anchor.test.ts`).
+   *
+   * ⇒ 띄우면 「보이는데 아무 효과가 없는 칸」이 된다 — 바로 위 상속 파트 주석과 같은 이유이자
+   *   `LandBuildingSplitSection.tsx:397`이 이미 택한 판단이다
+   *   (`feedback_ui_engine_dual_truth_avoidance`).
+   *
+   * ⚠️ **입력 경로가 사라지지 않는다.** 부담부증여 K-4(실지취득가 안분)는 `bgActualAcquisitionLand`
+   *    등 **전용 필드**를 쓰고(`transfer-tax-api-burdened-gift.ts:86-97`) 그 칸은
+   *    `BurdenedGiftBlock`에 따로 있다 — 여기서 숨기는 것은 §159가 무시하는 축뿐이다.
+   * ⚠️ 분리 ON 전용 문제다 — 분리 OFF에서는 이 컴포넌트 자체가 렌더되지 않고, 자산 단위
+   *    산정방식은 `CompanionAcqPurchaseBlock:262`가 이미 부담부증여에서 숨긴다.
+   */
+  if (asset.transferType === "burdened_gift") return null;
   return (
     <>
       <FieldCard
