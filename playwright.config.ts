@@ -78,5 +78,29 @@ export default defineConfig({
     // CI는 **절대 재사용하지 않는다** — 위 PORT 주석 참조(로컬 트리 코드 테스트 방지).
     reuseExistingServer: !IS_CI,
     timeout: 120_000,
+    env: {
+      /**
+       * 🔴 **워크트리에는 `.env.local`이 없다** — `.gitignore`가 `.env*`를 제외하므로
+       * `git worktree add`로 만든 트리는 키를 물려받지 못한다. 그러면
+       * `app/law/page.tsx:10`의 `Boolean(process.env.KOREAN_LAW_OC)` 게이트가 **서버 렌더
+       * 단계에서** 검색창 대신 「API 키가 설정되지 않았습니다」 안내를 그린다
+       * ⇒ `law-*` **12건이 「통합 검색창을 찾을 수 없음」으로 타임아웃**한다(2026-08-09 실측).
+       *
+       * ⚠️ **`page.route` mock으로는 못 막는다.** mock은 브라우저 요청을 가로채는데,
+       *    이 게이트는 서버에서 화면을 갈라버려 검색창이 애초에 DOM에 없다.
+       *
+       * ⚠️ **「메인 트리에서 통과 = 코드 정상」이 아니다.** 워크트리끼리 대조하면 양쪽 다
+       *    키가 없어 **둘 다 실패**한다 — 「기존 실패」로 오판하기 쉽다(실제로 오판했다).
+       *
+       * CI는 저장소 secret으로 실제 키를 넣는다(`ci.yml:178`). 로컬 워크트리는 실호출이
+       * 목적이 아니므로 **게이트만 통과시키는 더미**로 충분하다 — 본문을 단언하는 5건은
+       * 이미 fixture mock이다(`e2e/_helpers/law-api-mock.ts`).
+       * 실제 키가 있으면(메인 트리·CI) **그 값을 그대로 쓴다** — 덮어쓰지 않는다.
+       *
+       * ⚠️ `reuseExistingServer`가 이미 뜬 서버를 재사용하면 이 env는 적용되지 않는다.
+       *    그 경우 서버를 띄운 쪽 환경이 그대로 쓰인다.
+       */
+      KOREAN_LAW_OC: process.env.KOREAN_LAW_OC ?? "e2e-dummy-oc",
+    },
   },
 });
