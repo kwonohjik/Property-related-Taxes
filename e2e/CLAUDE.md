@@ -42,3 +42,18 @@
 
 > ⚠️ **실호출 감시를 없애는 것이 아니다** — 스케줄 워크플로로 분리한다(`.github/workflows/law-api-health.yml`, `LAW_E2E_LIVE=1`).
 > 🪤 로컬 대조 실험 시 `.legal-cache/`(TTL 30일)가 mock 없이도 통과시켜 **검증을 무효로 만든다**. 반드시 `rm -rf .legal-cache` + dev 서버 재시작 후 확인할 것.
+
+### 5-1. `page.route` mock은 **서버 렌더 게이트**를 못 막는다
+
+mock은 브라우저 요청을 가로챌 뿐이다. 환경변수로 **화면 자체를 가르는** 게이트가 서버에 있으면
+검색창이 애초에 DOM에 없어 mock이 닿을 곳이 없다 — `app/law/page.tsx`의
+`Boolean(process.env.KOREAN_LAW_OC)`가 그 예다.
+
+`.gitignore`가 `.env*`를 제외하므로 **`git worktree add`로 만든 트리에는 `.env.local`이 없다.**
+그대로 두면 `law-*` **12건이 「통합 검색창을 찾을 수 없음」으로 타임아웃**한다(2026-08-09 실측).
+`playwright.config.ts`의 `webServer.env`가 폴백을 넣어 해소했다(anchor:
+`__tests__/e2e-config/law-oc-worktree-fallback.anchor.test.ts`).
+
+> 🪤 **워크트리끼리 대조하면 오판한다.** 양쪽 다 키가 없어 **둘 다 실패**하므로 「master에서도
+> 실패하니 기존 실패」로 읽힌다 — 그런데 **메인 트리에서는 통과**한다. 환경 기인 실패를 의심할
+> 때 대조군은 **메인 체크아웃**이어야 한다.
