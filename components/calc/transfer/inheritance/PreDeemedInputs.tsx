@@ -24,6 +24,7 @@ import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandV
 import { HouseValuationSection } from "./HouseValuationSection";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers";
+import { inheritanceReportedValuePartSuffix } from "@/lib/calc/inheritance-reported-value-scope";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -47,6 +48,8 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
   const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
   // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용). 파생은 공용 단일 소스.
   const houseKind = deriveInheritanceHouseKind(asset);
+  // 일반건물은 이 칸이 토지분이다(건물분 전용 칸이 따로 있다) — 판정·문구는 공용 단일 소스.
+  const partSuffix = inheritanceReportedValuePartSuffix(asset.assetKind);
 
   // 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 → 3-시점 보조 입력
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
@@ -351,10 +354,10 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
 
       {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — ②와 함께 **가목**을 이룬다(max(①,②)) */}
       <FieldCard
-        label="상속세 신고가액 (상증법 평가액)"
+        label={`상속세 신고가액 (상증법 평가액)${partSuffix.label}`}
         unit="원"
         // §163⑨ 본문 괄호가 소스 서열을 **강행**으로 정한다 — 결정·경정액이 있으면 그 가액이다(U2-F).
-        hint="상속세 신고서상 평가액. 세무서장등이 결정·경정한 가액이 있으면 그 가액을 입력하세요(§163⑨ 본문). 1984.12.31. 이전 취득분은 「소득세법」 부칙(법률 제4803호) §8상 취득시기가 1985.1.1.로 의제되므로 원칙은 그날 현재 평가액이며, 상속세 신고가액(상속개시일 기준)을 입력하는 경우 아래 §164④~⑦ 기준시가와 비교해 큰 금액이 적용됩니다. 그중 하나라도 확인되면 환산취득가는 적용하지 않습니다(소득세법 §97①1호 단서)."
+        hint={`상속세 신고서상 평가액. 세무서장등이 결정·경정한 가액이 있으면 그 가액을 입력하세요(§163⑨ 본문). 1984.12.31. 이전 취득분은 「소득세법」 부칙(법률 제4803호) §8상 취득시기가 1985.1.1.로 의제되므로 원칙은 그날 현재 평가액이며, 상속세 신고가액(상속개시일 기준)을 입력하는 경우 아래 §164④~⑦ 기준시가와 비교해 큰 금액이 적용됩니다. 그중 하나라도 확인되면 환산취득가는 적용하지 않습니다(소득세법 §97①1호 단서).${partSuffix.hint}`}
         trailing={
           <LawArticleModal
             legalBasis="상속세및증여세법 §60"
