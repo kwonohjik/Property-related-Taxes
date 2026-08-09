@@ -119,13 +119,34 @@ export function postDeemedClauseARequiredError(asset: AssetForm, label: string):
   // pre-deemed는 E-1이 담당한다(그쪽은 ③이 있어 선언이 성립한다).
   if (!baseDate || baseDate < DEEMED_ACQUISITION_DATE) return null;
 
-  // 취득가액의 실제 소스가 따로 있거나, 다른 게이트가 이미 막는 자산은 제외한다(§4.2).
-  //   · 겸용주택: `mixedAcq*` 3필드가 취득가액을 만든다
-  //   · 상가: 전용 블록이 같은 규칙으로 막는다 — 중복 차단은 메시지만 흐린다
-  //   · 재개발: §166③④ 별도 경로(권리가액·추가분담금)
+  /**
+   * 취득가액의 실제 소스가 따로 있거나, 다른 게이트가 이미 막는 자산은 제외한다(§4.2).
+   *
+   * ⚠️ **제외 사유는 전부 여기 적는다.** 종전에는 화이트리스트가 3종뿐이라 나머지 5종이
+   *    **말없이** 빠졌고, 그중 분양권은 **아무 게이트도 막지 않아** 취득가액 0으로 계산됐다
+   *    (2026-08-09 8종 전수 실측 — 실측표는 anchor JSDoc).
+   *
+   * | assetKind | 막는 주체 |
+   * |---|---|
+   * | `housing`·`land`·`building`·**`presale_right`** | **이 함수** |
+   * | 겸용주택(`isMixedUseHouse`) | `mixedAcq*` 3필드가 취득가액을 만든다 |
+   * | `commercial_building` | 전용 블록이 같은 규칙으로 막는다 — 중복 차단은 메시지만 흐린다 |
+   * | `redevelopment_apt`·`right_to_move_in` | §166①③④ 별도 경로. `validateRedevelopmentAsset`이 종전자산 취득가액(`redevActualAcquisitionPrice`)·환산 분모를 **필수**로 요구해 0이 되지 않는다(분기 전수 실측) |
+   * | `general_building` | `transfer-tax-validate-gb.ts`가 **파트별로** ①을 요구한다. 여기서 또 막으면 토지·건물 어느 쪽이 빈지 못 알려주는 일반 메시지가 먼저 나온다 |
+   *
+   * 🔴 **분양권은 제외 대상이 아니다.** 그 화면에는 직접 취득가액 칸이 **없어** ①(상속세
+   *    신고가액)이 **유일한 취득가액 입력 경로**다 — 비우면 대체 소스가 없다.
+   */
   if (asset.isMixedUseHouse) return null;
-  if (asset.assetKind === "commercial_building" || asset.assetKind === "redevelopment_apt") return null;
-  if (!["housing", "land", "building"].includes(asset.assetKind ?? "")) return null;
+  if (
+    asset.assetKind === "commercial_building" ||
+    asset.assetKind === "redevelopment_apt" ||
+    asset.assetKind === "right_to_move_in" ||
+    asset.assetKind === "general_building"
+  ) {
+    return null;
+  }
+  if (!["housing", "land", "building", "presale_right"].includes(asset.assetKind ?? "")) return null;
 
   // ⚠️ 상속의 ① 소스는 `publishedValueAtInheritance` **하나뿐**이다
   //    (`transfer-tax-api-inheritance.ts:52-54` — `fixedAcquisitionPrice`는 증여용).
