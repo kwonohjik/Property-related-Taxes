@@ -4,7 +4,10 @@
  * `calculateHoldingPeriod`만 의존하는 순수 leaf라 **클라이언트에서 직접 import해도 안전**하다.
  * 그것이 분리의 목적이다 — 「소득세법」 §95⑤(비주택→주택 용도변경) UI 미리보기가
  * 산식을 재구현하지 않고 엔진과 **같은 함수**를 쓴다.
- * (겸용주택 시간분할 `applyUsagePeriodSplit`은 `transfer-tax-mixed-use-period-split.ts`에 남는다.)
+ * ⚠️ 겸용주택 시간분할(`applyUsagePeriodSplit`)은 **2026-08-10 폐지**됐다 — 근거로 달려 있던
+ *    「집행기준 89-154-24」가 존재하지 않는 문서였고, §95④·사전-2021-법령해석재산-0333·
+ *    사전-2022-법규재산-0427이 「보유기간 = 취득일~양도일」을 명시한다. 이 leaf의 현재
+ *    소비처는 **§95⑤ 경로뿐**이다(`transfer-tax-lthd.ts` — 그쪽은 법이 기간을 나눈다).
  */
 import { calculateHoldingPeriod } from "./tax-utils";
 

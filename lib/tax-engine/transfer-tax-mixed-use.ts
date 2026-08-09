@@ -41,10 +41,6 @@ import {
   buildNonBusinessPart,
   buildTotalTax,
 } from "./transfer-tax-mixed-use-helpers";
-import {
-  calcUsagePeriodInfo,
-  applyUsagePeriodSplit,
-} from "./transfer-tax-mixed-use-period-split";
 
 // ──────────────────────────────────────────
 // 상수
@@ -306,64 +302,45 @@ export function calcMixedUseTransferTax(
     }
   }
 
-  // ─── 용도변경일 기반 LTHD 시간 비례 분할 (집행기준 89-154-24 취지) ───
-  // partialUsageChange.usageChangeDate 입력 + 유효 시 period-split 모드로 LTHD 재계산.
-  // 미입력·취득일 이전·양도일 이후이면 null 반환되어 표준 모드로 fallback.
-  const acqDateForSplit =
-    asset.landAcquisitionDate < asset.buildingAcquisitionDate
-      ? asset.landAcquisitionDate
-      : asset.buildingAcquisitionDate;
-  const periodInfo = calcUsagePeriodInfo(
-    acqDateForSplit,
-    asset.partialUsageChange?.usageChangeDate,
-    transferDate,
-  );
-
-  let housingPart: ReturnType<typeof buildHousingPart>;
-  let commercialPart: ReturnType<typeof buildCommercialPart>;
-  let usagePeriodSplit:
-    | ReturnType<typeof applyUsagePeriodSplit>["usagePeriodSplit"]
-    | undefined;
-
   // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 미제공 시 실거주로 fallback(비상속·별도세대 = 실거주).
   const table2ResidenceYears = asset.table2ResidencePeriodYears ?? asset.residencePeriodYears;
 
-  // Case A 4부분 안분 활성화 시 period-split 건너뛰기 — 엑셀 기준 전체 보유기간 단일 LTHD 적용.
-  const skipPeriodSplitForFourPart = !!housingAcqResult.phdResult?.fourPartApportionment;
-  if (periodInfo && asset.partialUsageChange && !skipPeriodSplitForFourPart) {
-    const split = applyUsagePeriodSplit(
-      housingGainSplit,
-      commercialGainSplit,
-      apportionment,
-      excessResult,
-      asset.residencePeriodYears,
-      table2ResidenceYears,
-      isOneHouseExempt,
-      periodInfo,
-      asset.partialUsageChange.direction,
-      housingAcqResult,
-      isUnregistered,
-      surchargeLthdExcluded,
-    );
-    housingPart = split.housingPart;
-    commercialPart = split.commercialPart;
-    usagePeriodSplit = split.usagePeriodSplit;
-  } else {
-    housingPart = buildHousingPart(
-      apportionment,
-      housingAcqResult,
-      housingGainSplit,
-      excessResult,
-      asset.residencePeriodYears,
-      table2ResidenceYears,
-      isOneHouseExempt,
-      isUnregistered,
-      surchargeLthdExcluded,
-    );
-    // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
-    //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
-    commercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
-  }
+  // ─── 🔴 2026-08-10 — 용도변경일 기반 LTHD **시간 비례 분할을 폐지**했다 ───
+  //
+  // 종전에는 `usageChangeDate`가 있으면 양도차익을 t1:t2로 쪼개고 각 조각에 **부분 보유연수**로
+  // LTHD를 매겼다(`applyUsagePeriodSplit`). 근거로 「집행기준 89-154-24 취지」를 달았으나
+  // **그 집행기준은 존재하지 않는다**. 법문·예규는 정반대다:
+  //
+  //   ① 「소득세법」 §95④ — "제2항에서 규정하는 자산의 **보유기간은 그 자산의 취득일부터
+  //      양도일까지**로 한다." 예외는 §97의2①(이월과세)과 가업상속공제 **둘뿐**이다.
+  //   ② **사전-2021-법령해석재산-0333**(법령해석과-4781, 2021.12.31.) — 겸용주택의 **주택부분을
+  //      상가로 용도변경**하여 양도한 사안에서 "§95②  장기보유특별공제율 적용을 위한
+  //      **보유기간 기산일은 해당 겸용주택의 취득일**로 하는 것임".
+  //   ③ **사전-2022-법규재산-0427**(법규과-1472, 2022.06.12.) — 고가 겸용주택에서
+  //      "**보유기간(해당 겸용주택의 취득일부터 양도일까지 기간)**" 이라 못박고, 표2는
+  //      "**주택 부분에 해당하는 건물 및 부수토지에 한정**"해 적용한다 ⇒ 나누는 축은
+  //      **기간이 아니라 부분(면적)**이다.
+  //   ④ 입법자는 기간을 나눌 때 **명문으로** 나눈다 — 재개발 §166⑤(구성요소별 보유기간),
+  //      §95⑤(비주택→주택: 기간별 **공제율 합산**, 양도차익 분할이 아니다).
+  //
+  // ⚠️ **예외 1건은 아직 미구현이다**(별도 범위) — **사전-2022-법규재산-0684**(2022.11.28.):
+  //    용도변경 전 기간이 §104⑦1호 **중과 주택**이어서 §95② 괄호로 LTHD **배제 자산**이었던
+  //    경우에는 기산일이 용도변경일이 된다. 이는 「기간 분할」이 아니라 「배제 자산이던 기간은
+  //    세지 않는다」는 별개 규칙이다. 구현 시 중과 판정과의 교차 설계가 필요하다.
+  const housingPart = buildHousingPart(
+    apportionment,
+    housingAcqResult,
+    housingGainSplit,
+    excessResult,
+    asset.residencePeriodYears,
+    table2ResidenceYears,
+    isOneHouseExempt,
+    isUnregistered,
+    surchargeLthdExcluded,
+  );
+  // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
+  //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
+  const commercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
 
   steps.push(buildHousingStep(housingPart, apportionment));
   steps.push(buildCommercialStep(commercialPart, apportionment));
@@ -510,7 +487,6 @@ export function calcMixedUseTransferTax(
     // §104⑦ 판정 echo — 세율·장특 배제와 결과 카드 표시가 **같은 값**을 보게 한다.
     multiHouseSurcharge,
     partialUsageChange,
-    usagePeriodSplit,
     amendmentDetail,
     // 상속 취득 게이트 echo (소령 §163⑨) — UI 재판정 방지용 단일 소스.
     acquisitionByInheritance: asset.acquisitionByInheritance,

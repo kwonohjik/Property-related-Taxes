@@ -8,12 +8,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { calcUsagePeriodInfo } from "@/lib/tax-engine/usage-period-info";
-import { calcUsagePeriodInfo as reExported } from "@/lib/tax-engine/transfer-tax-mixed-use-period-split";
 
 describe("calcUsagePeriodInfo — leaf 추출 후", () => {
-  it("기존 import 경로(period-split)가 re-export로 계속 동작한다", () => {
-    expect(reExported).toBe(calcUsagePeriodInfo);
-  });
 
   it("PDF 사례 30 — 비주택 4년 / 주택 3년 (완성연수)", () => {
     const info = calcUsagePeriodInfo(

@@ -67,7 +67,15 @@ describe("겸용주택 동일세대 상속 §154⑧3호 거주 통산 표2", () 
     expect(r.housingPart.longTermDeductionRate).toBeCloseTo(0.44, 5);
   });
 
-  it("앵커6 (period-split): 용도변경 겸용 + 실거주0 통산2년 → applyUsagePeriodSplit 표2 개방", () => {
+  it("앵커6: 용도변경 겸용 + 실거주0 통산2년 → 표2 개방 (period-split 폐지 후에도 불변)", () => {
+    /**
+     * 🔴 2026-08-10 — 종전 제목은 「applyUsagePeriodSplit 표2 개방」이었고 `usagePeriodSplit`가
+     *    생성되는지를 함께 단언했다. 시간비례 분할은 폐지됐다(근거 「집행기준 89-154-24」가
+     *    **존재하지 않는 문서**였고 §95④·사전-2021-법령해석재산-0333·사전-2022-법규재산-0427이
+     *    「보유기간 = 취득일~양도일」을 명시한다).
+     *
+     *    이 테스트가 지키던 **실질**은 §154⑧3호 통산 거주로 표2가 열리는가이고 그것은 그대로다.
+     */
     const r = run(
       base40({
         residencePeriodYears: 0,
@@ -78,8 +86,12 @@ describe("겸용주택 동일세대 상속 §154⑧3호 거주 통산 표2", () 
         },
       }),
     );
-    expect(r.usagePeriodSplit).toBeDefined();
     expect(r.housingPart.longTermDeductionTable).toBe(2);
+    // 용도변경일이 있어도 LTHD 보유기간은 전체(취득일~양도일)다 — 용도변경일 없는 경우와 동일.
+    const noChange = run(base40({ residencePeriodYears: 0, table2ResidencePeriodYears: 2 }));
+    expect(r.housingPart.longTermDeductionRate).toBe(
+      noChange.housingPart.longTermDeductionRate,
+    );
   });
 
   it("회귀 가드: table2 미제공 → residencePeriodYears fallback (기존 동작 불변)", () => {

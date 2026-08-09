@@ -274,32 +274,45 @@ export function mixedUseCommercialToHouseMirror(
  *    2026-05-01: 자동 안분 fallback 폐지 → 취득시 상가건물 기준시가가 입력값으로 직접 반영되어 anchor 재산출됨.
  */
 export const PARTIAL_USAGE_CHANGE_ANCHORS = {
+  /**
+   * 🔴 **2026-08-10 전면 정정 — 용도변경 시간비례 LTHD 분할 폐지에 따른 값**
+   *
+   * 종전 값은 `applyUsagePeriodSplit`(양도차익을 t1:t2로 쪼개 각 조각에 부분 보유연수로 LTHD)
+   * 의 산출이었다. 그 모델은 근거로 「집행기준 89-154-24」를 달고 있었으나 **그 집행기준은
+   * 존재하지 않는다**. 법문·예규는 정반대다:
+   *   · 「소득세법」 §95④ — 보유기간은 **취득일부터 양도일까지**(예외: §97의2①·가업상속뿐)
+   *   · **사전-2021-법령해석재산-0333** — 겸용주택 주택부분을 상가로 용도변경 후 양도한 사안에서
+   *     "§95② 장기보유특별공제율 적용을 위한 **보유기간 기산일은 해당 겸용주택의 취득일**"
+   *   · **사전-2022-법규재산-0427** — 고가 겸용주택 "보유기간(**취득일부터 양도일까지 기간**)",
+   *     표2는 "**주택 부분에 해당하는 건물 및 부수토지에 한정**" ⇒ 나누는 축은 부분(면적)이다
+   *
+   * ⭐ 종전 값 자체가 **내부 모순**을 담고 있었다 — 주택분 양도차익 433,502,054원인데
+   *    양도소득금액이 **576,295,246원**이었다(공제 후가 공제 전보다 크다). 표시 양도차익과
+   *    소득금액이 서로 다른 base에서 나온 것이다. 교정 후 292,421,098원으로 정합해졌다.
+   *
+   * ⚠️ 이 anchor는 **회귀 방어용 스냅샷**이지 PDF 정본값이 아니다(상가건물 기준시가 추정 기반).
+   */
   pdf_gap_house_to_commercial: {
     transferPrice: GAP_TRANSFER_PRICE,
     transferDate: GAP_TRANSFER_DATE,
-    // 양도가액 안분 (양도시 비율)
+    // 양도가액 안분 (양도시 비율) — 불변
     housingTransferPrice: 534_146_446,
     commercialTransferPrice: 765_853_554,
     housingRatio: 0.41088188227152805,
-    // 환산취득가 — 주택분(Case A: 전체 건물 기준 환산), 상가분(사용자 직접 입력)
+    // 환산취득가 — 불변
     housingEstimatedAcq: 98_541_280,
     commercialEstimatedAcq: 173_220_881,
-    // 양도차익
+    // 양도차익 — 상가분이 정정됐다(종전 182,236,563은 P2 몫만 담고 있었다)
     housingTransferGain: 433_502_054,
-    commercialTransferGain: 182_236_563,
-    // 양도소득금액 — 용도변경 시점 기반 LTHD 시간 비례 분할 (period split) 활성화
-    // LTHD 율은 완성 보유연수 기준 (§95②): P2 = 완성 11년(2011.8.5→2023.2.16) × 2% = 22%.
-    // (이전 anchor는 분수 11.534년 → 23.07% 과다공제 버그를 encode했음 — 완성연수 floor로 정정)
-    housingIncomeAmount: 576_295_246,
-    commercialIncomeAmount: 142_144_520,
-    // 합산 세액
-    // 2026-07-21 (#2): 비사업용 +10%p 중과 base를 과세표준 귀속분으로 정정(기본공제 250만 전액 nonBiz 귀속·
-    //   납세자 유리). 중과 base −250만 → 중과 −25만 → transferTax −250,000·localTax −25,000·totalPayable −275,000.
-    //   (이 anchor는 상가건물 기준시가 추정값 기반 "회귀 방어용" 스냅샷 — PDF 정본값 아님, 위 ⚠ 주석 참조.)
-    aggregateIncome: 740_079_354,
-    taxBase: 737_579_354,
-    transferTax: 275_757_286,
-    localTax: 27_575_728,
-    totalPayable: 303_333_014,
+    commercialTransferGain: 588_935_713,
+    // 양도소득금액 — LTHD 보유기간이 전체(취득일~양도일)로 바뀐 결과
+    housingIncomeAmount: 292_421_098,
+    commercialIncomeAmount: 412_255_000,
+    // 합산 세액 — 총 납부세액 303,333,014 → 289,967,374 (−13,365,640, 납세자 유리)
+    aggregateIncome: 715_706_439,
+    taxBase: 713_206_439,
+    transferTax: 263_606_704,
+    localTax: 26_360_670,
+    totalPayable: 289_967_374,
   },
 } as const;

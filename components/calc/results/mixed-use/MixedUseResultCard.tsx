@@ -37,7 +37,6 @@ import {
   Frac,
   FLine,
   PartialUsageChangeCard,
-  UsagePeriodSplitCard,
 } from "@/components/calc/results/mixed-use/MixedUseResultCardParts";
 import {
   mixedUseToFilingResult,
@@ -175,14 +174,6 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         <PartialUsageChangeCard
           puc={breakdown.partialUsageChange}
           reason={breakdown.calculationRoute.partialUsageChangeReason}
-        />
-      )}
-
-      {/* 0-A. 용도변경일 기반 LTHD 시간 비례 분할 (집행기준 89-154-24 취지) */}
-      {breakdown.usagePeriodSplit && breakdown.partialUsageChange && (
-        <UsagePeriodSplitCard
-          ups={breakdown.usagePeriodSplit}
-          direction={breakdown.partialUsageChange.direction}
         />
       )}
 
