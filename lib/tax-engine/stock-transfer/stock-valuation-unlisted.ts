@@ -51,10 +51,18 @@ export interface UnlistedValuationResult {
    *   E-5 정정: float ratio 필드 제거 — 분자·분모 분리.
    */
   transferStdPriceAfterFloor?: number;
-  /** 80% 하한 적용 여부 (§165④1 단서) */
+  /** 80% 하한 적용 여부 (§165④1 단서) — **양도**기준시가 */
   netAssetFloorApplied: boolean;
   /** 80% 하한값 (netAssetFloorApplied=true 시) */
   netAssetFloorValue?: number;
+  /**
+   * 80% 하한 적용 여부 — **취득**기준시가 (2026-08-09 신설).
+   *
+   * 양도측(`netAssetFloorApplied`)과 **독립적으로** 발동한다. 취득연도는 저수익이었으나
+   * 양도연도는 수익이 났다면 취득측만 참이 된다. 표시 계층이 「하한 발동」을 양도측만 보고
+   * 판단하면 그 경우를 놓친다.
+   */
+  acquisitionNetAssetFloorApplied?: boolean;
   /** 1주당 가중평균값 (floor 전) */
   weightedAvgRaw?: number;
   /** 1주당 순손익가치 */
@@ -451,14 +459,49 @@ export function calcUnlistedValuation(
   }
 
   // ─── 취득기준시가 (취득일 직전 사업연도 기준) ───
-  // 취득기준시가에도 동일 가중치 적용 (80% 하한은 양도기준시가에만)
+  //
+  // 가중치·80% 하한 **모두** 양도기준시가와 같은 규칙을 적용한다.
+  //
+  // 🔴 **2026-08-09 정정 — 종전에는 하한을 양도측에만 걸었다**(주석: "80% 하한은 양도기준시가에만").
+  //    그 취급에는 **확인된 근거가 0건**이었다. 코드 주석 → 계획서(「80% 하한 관행」) →
+  //    설계서가 서로를 인용하는 **자기참조 루프**였고, 도메인 최초 커밋부터 그대로였다.
+  //
+  //    반면 §165④1호 단서는 「**그 가중평균한 가액이** … 적은 경우에는 … **평가액으로 한다**」로
+  //    양도/취득을 가르지 않는다. §165④1호는 「1주당 가액의 평가」 방법 **전체**이고,
+  //    가·나목이 「**양도일 또는 취득일**이 속하는 사업연도…」라 **양쪽 다 이 방법으로 평가**한다.
+  //    ⇒ 단서는 그 평가방법의 일부다. **근거가 필요한 것은 「적용한다」가 아니라 「취득측은 뺀다」는 예외**다.
+  //
+  //    확증 3중: ① 위임 조문(법 §99①4호 **후단**)이 같은 문장에서 「**취득 당시의 기준시가**」를 다룬다
+  //             ② §165④1호 가·나목이 「양도일 또는 취득일」 병렬
+  //             ③ §165⑤이 「취득 당시의 기준시가는 **제4항에도 불구하고**…」라며 예외를 두고 그 안에서
+  //                「취득일 현재의 **제4항에 따른 평가액**」이라 쓴다 — 예외를 둔다는 것 자체가
+  //                **원칙적으로 취득 기준시가도 ④(하한 포함)로 평가**함을 전제한다.
+  //    조세심판례도 같은 환산 산식에서 「하나의 산식에서 동일한 자산을 2가지의 서로 다른 기준에 의하여
+  //    평가하는 것은 타당하지 아니하다」고 배척했다(국심1997경1195 외 5건·참조 국심1996부1246).
+  //
+  //    ⚠️ **직접 예규는 확보하지 못했다**(국세청 집행기준 99-165에도 하한 자체가 등장하지 않는다 —
+  //       단 같은 문서가 상증법 §54① 단서의 하한도 언급하지 않으므로 **침묵은 배제의 근거가 아니다**).
+  //       반대 근거는 문언·심판례·집행기준 어디에도 0건이다. 반대 해석이 나오면 재검토할 것.
+  //
+  // ⚠️ 연혁 게이팅은 `weights.hasFloor80`(= **양도일** 기준)이다. 가중치(niWeight·naWeight)가 이미
+  //    양도일 기준으로 양쪽에 동일 적용되고 있으므로 하한만 취득일 기준으로 가르면 오히려 어긋난다.
   let acquisitionWeightedRaw: number;
   if (niWeight === 0) {
     acquisitionWeightedRaw = acquisitionNa;
   } else {
     acquisitionWeightedRaw = calcWeightedAvgPerShare(acquisitionNi, acquisitionNa, niWeight, naWeight);
   }
-  const acquisitionStdPricePerShare = Math.floor(acquisitionWeightedRaw);
+
+  let acquisitionStdPricePerShare = Math.floor(acquisitionWeightedRaw);
+  let acquisitionNetAssetFloorApplied = false;
+  if (weights.hasFloor80) {
+    const acqFloor80 = acquisitionNa * STOCK_FLOOR_80_PCT;
+    if (acqFloor80 > acquisitionWeightedRaw) {
+      acquisitionStdPricePerShare = Math.floor(acqFloor80);
+      acquisitionNetAssetFloorApplied = true;
+      appliedRules.push("80%하한(취득기준시가)");
+    }
+  }
   const acquisitionStdPriceTotal = acquisitionStdPricePerShare * shareCount;
 
   // ─── [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 시 §81④ 1호 월할 보정 ───
@@ -537,6 +580,7 @@ export function calcUnlistedValuation(
     method: "weighted_avg",
     netAssetFloorApplied,
     netAssetFloorValue,
+    acquisitionNetAssetFloorApplied,
     weightedAvgRaw: transferWeightedRaw,
     netIncomeValue: transferNi,
     netAssetValue: transferNa,

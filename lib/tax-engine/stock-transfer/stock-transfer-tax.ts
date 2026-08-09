@@ -312,6 +312,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
               : "weighted_avg",
         netAssetFloorApplied: unlistedResult.netAssetFloorApplied,
         netAssetFloorValue: unlistedResult.netAssetFloorValue,
+        acquisitionNetAssetFloorApplied: unlistedResult.acquisitionNetAssetFloorApplied,
         finalPerShareValue: unlistedResult.perShareValue,
         weightedAvgPerShare: unlistedResult.weightedAvgRaw !== undefined
           ? Math.floor(unlistedResult.weightedAvgRaw)
@@ -366,6 +367,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
               : "weighted_avg",
         netAssetFloorApplied: unlistedResult.netAssetFloorApplied,
         netAssetFloorValue: unlistedResult.netAssetFloorValue,
+        acquisitionNetAssetFloorApplied: unlistedResult.acquisitionNetAssetFloorApplied,
         finalPerShareValue: unlistedResult.perShareValue,
         weightedAvgPerShare: unlistedResult.weightedAvgRaw !== undefined
           ? Math.floor(unlistedResult.weightedAvgRaw)
