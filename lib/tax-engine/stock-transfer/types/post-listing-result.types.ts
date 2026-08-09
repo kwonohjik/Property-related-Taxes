@@ -65,7 +65,15 @@ export type PostListingValuationResult = {
     };
     /** 사용된 모드 (디버깅·결과 카드 배지용) */
     mode: "simple" | "listing_only" | "full";
-    /** 80% 하한 비적용 명시 — 환산비율 단계 (회귀 보호용 echo) */
-    floor80NotApplied: true;
+    /**
+     * §165④1 단서(80% 하한) 발동 여부 — 환산식 **분모(상장연도)·분자(취득연도) 각각**.
+     *
+     * 🔴 2026-08-10: 종전 `floor80NotApplied: true`(리터럴)를 대체한다. §165⑤ 본문이
+     *    분자·분모를 「제4항에 따른 평가액」이라 부르고 하한은 그 제4항 제1호 **단서**이므로
+     *    「미적용」을 고정하던 종전 echo는 사실과 어긋났다.
+     *
+     * ⚠️ **비율에는 하한이 걸리지 않는다** — 환산비율이 0.8 미만이어도 0.8로 올리지 않는다.
+     */
+    floor80Applied: { listing: boolean; acquisition: boolean };
   };
 };

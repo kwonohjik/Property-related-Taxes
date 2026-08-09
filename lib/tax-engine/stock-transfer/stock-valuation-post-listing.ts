@@ -14,8 +14,23 @@
  *   PDF 사례 48 입력 일자 2009-08-21(상장)~2009-09-21 일치.
  *
  * 비상장 평가: (순손익가치 ÷ 10%) × 3/5 + 순자산가치 × 2/5
- *   (시행령 §165④1 본칙 — 부동산과다보유법인 §94①4 다목은 가중치 2:3 반전, calcUnlistedPerShareWeighted에 구현)
- *   80% 하한은 양도일 평가에만 적용. 환산비율 분자·분모에는 미적용.
+ *   (시행령 §165④1 본칙 — 부동산과다보유법인 §94①4 다목은 가중치 2:3 반전)
+ *
+ * 🔴 **2026-08-10 정정 — 종전에는 환산비율 분자·분모에 80% 하한을 걸지 않았다**
+ *   (종전 주석: "80% 하한은 양도일 평가에만 적용. 환산비율 분자·분모에는 미적용").
+ *   근거가 인용된 적이 **한 번도 없다** — §165④ 취득측 하한과 **같은 뿌리**의 자기참조였다
+ *   ([[project_stock_unlisted_acq_basis_floor80_open]]).
+ *
+ *   반면 §165⑤ 본문은 분자·분모를 각각 「취득일 현재의 **제4항에 따른 평가액**」·
+ *   「상장일 현재의 **제4항에 따른 평가액**」이라 부르고, 80% 하한은 바로 그 **제4항 제1호
+ *   단서**다. 후단의 §165⑨ 준용 트리거도 「제4항에 따른 평가액이 **같은 경우**」라
+ *   ⇒ **트리거 비교까지 하한 적용 후 값**이어야 한다.
+ *
+ *   ⇒ 평가액 산정은 `valuation-165-4-basis.ts`의 `calcSection165_4Value` **단일 정본**에 위임한다
+ *     (가중치·하한 연혁 게이팅 = 양도일 기준).
+ *
+ *   ⚠️ **하한은 「비율」에 걸리지 않는다** — 환산비율이 0.8 미만이어도 0.8로 끌어올리지 않는다.
+ *      분자·분모 각각의 평가액에 개별로 걸릴 뿐이다 (회귀 보호: PL-FLOOR-1·2).
  *
  * 환원율 10% 위임 체인 (Phase A 정정):
  *   소령 §165④1 가목 → 시행규칙 §81② → 상증법 시행규칙 §17 → 연간 100분의 10
@@ -46,6 +61,7 @@ import type {
 } from "./types/stock-transfer.types";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
+import { calcSection165_4Value } from "./valuation-165-4-basis";
 
 // §81④ 월할 헬퍼는 apply-81-4-accrual.ts로 추출(본체·준용 공용). import 경로 보존 위해 re-export.
 export { calcAccrualMonths } from "./apply-81-4-accrual";
@@ -208,7 +224,9 @@ export function calcNetAssetPerShare(
  * 일반: 순손익×3/5 + 순자산×2/5
  * 부동산과다보유법인 (§94①4 다목): 순손익×2/5 + 순자산×3/5 (반전)
  *
- * ★ 80% 하한 미적용 (환산비율 산정용). 양도일 평가는 별도.
+ * ⚠️ **이것은 「본칙」이지 「제4항에 따른 평가액」이 아니다** — 단서(80% 하한)도 연혁 게이팅도
+ *    들어 있지 않다. 산식 중간단계를 **표시**할 때만 쓴다.
+ *    실제 평가액이 필요한 곳(엔진·validate·프리뷰 결론값)은 `calcSection165_4Value`를 쓸 것.
  *
  * Phase C5 — Private → Export 전환 (UI Preview·anchor 재사용).
  */
@@ -246,10 +264,11 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
   const warnings: string[] = [];
 
   // detail base — full/listing_only 모드에서 채움
-  // Round 4 H-04: simple 모드도 mode + floor80NotApplied 명시 echo
+  // Round 4 H-04: simple 모드도 mode + 하한 발동 여부 명시 echo
+  // (초기값 false/false — 실제 값은 평가 후 아래에서 덮어쓴다. 조기 return 경로는 평가 전이라 false.)
   const detailBase: NonNullable<PostListingValuationResult["detail"]> = {
     mode,
-    floor80NotApplied: true,
+    floor80Applied: { listing: false, acquisition: false },
   };
 
   // 입력값 검증 (validate에서 차단해야 하지만 방어 처리)
@@ -303,7 +322,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
 
     detailExtended = {
       mode,
-      floor80NotApplied: true,
+      floor80Applied: { listing: false, acquisition: false }, // 아래 평가 후 확정
       closing,
       netIncome: niListing ? { listing: niListing, acquisition: niAcq } : undefined,
       netAsset: naListing ? { listing: naListing, acquisition: naAcq } : undefined,
@@ -313,19 +332,34 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
   // §165⑤ 가중치 반전 (부동산과다보유법인 §94①4 다목 — 별개 임계 50%)
   const isHeavyRE = input.isHeavyRealEstateForValuation === true;
 
-  // 상장일 직전 사업연도 비상장 평가
-  const listingYearPerShareValue = calcUnlistedPerShareWeighted(
+  // 상장일 직전 사업연도 「제4항에 따른 평가액」(= 환산식 분모)
+  const listingEval = calcSection165_4Value(
     listingYearNetIncomePerShare,
     listingYearNetAssetPerShare,
     isHeavyRE,
+    input.transferDate,
   );
+  const listingYearPerShareValue = listingEval.value;
 
-  // 취득일 직전 사업연도 비상장 평가
-  const acquisitionYearPerShareValue = calcUnlistedPerShareWeighted(
+  // 취득일 직전 사업연도 「제4항에 따른 평가액」(= 환산식 분자)
+  const acquisitionEval = calcSection165_4Value(
     acquisitionYearNetIncomePerShare,
     acquisitionYearNetAssetPerShare,
     isHeavyRE,
+    input.transferDate,
   );
+  const acquisitionYearPerShareValue = acquisitionEval.value;
+
+  if (listingEval.floorApplied || acquisitionEval.floorApplied) {
+    appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_FLOOR_80);
+  }
+  detailExtended = {
+    ...detailExtended,
+    floor80Applied: {
+      listing: listingEval.floorApplied,
+      acquisition: acquisitionEval.floorApplied,
+    },
+  };
 
   // 분모가 0인 경우 방어
   if (listingYearPerShareValue <= 0) {
@@ -382,6 +416,13 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     );
   } else if (valuesEqual && accrualToggle && hasPrePrior) {
     // C-3·C-5·C-6: §81④ 1호 월할 보정 발동
+    //
+    // 🟡 **전전사업연도 평가에는 하한을 걸지 않았다 — 의도적 미판단이다.**
+    //    「소득세법 시행규칙」 §81④의 전전연도 값이 「제4항에 따른 평가액」인지는 **본문 미확인**이다
+    //    (§165⑤ 본문은 분자·분모만 그렇게 부른다). 본체 경로
+    //    `stock-valuation-unlisted.ts`의 §165⑨ 블록도 전전연도를 하한 없이 쓰고 있어
+    //    **두 경로가 대칭**이다. 한쪽만 바꾸면 같은 규칙이 갈린다.
+    //    ⚠️ 시행규칙 §81④ 본문을 확인하면 **양쪽을 함께** 판단할 것.
     const prePrior = calcUnlistedPerShareWeighted(
       input.prePriorYearNetIncomePerShare!,
       input.prePriorYearNetAssetPerShare!,

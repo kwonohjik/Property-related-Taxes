@@ -8,10 +8,25 @@
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
 // 엔진 단일 진실 — 평가액 동일 판정 재구현 금지 (dual-truth 회피)
-import { calcUnlistedPerShareWeighted } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
+//
+// ⚠️ **`calcUnlistedPerShareWeighted`(본칙 가중평균)를 쓰면 안 된다** — 엔진은 「제4항에 따른
+//    평가액」(단서 80% 하한 + 연혁 게이팅 포함)으로 동일 여부를 판정한다. 본칙만 비교하면
+//    하한이 발동하는 입력에서 **엔진은 「같다」, validate는 「다르다」**가 되어 사용자에게
+//    "토글을 해제하세요"라는 거짓 경고가 뜬다.
+import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 
 function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
+}
+
+/**
+ * 연혁 게이팅 기준일. 미입력·형식오류면 undefined → 호출부가 판정을 **건너뛴다**
+ * (임의 기준일 fallback 금지 — 잘못된 시기의 법을 적용하게 된다).
+ */
+function parseTransferDate(s: string | undefined): Date | undefined {
+  if (isEmpty(s)) return undefined;
+  const d = new Date(s!);
+  return isNaN(d.getTime()) ? undefined : d;
 }
 
 function parseF(s: string): number {
@@ -94,10 +109,11 @@ function validateUnlistedValuationFields(
     if (isEmpty(form.prePriorYearNetAssetPerShare)) {
       errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
     }
-    if (valuationMode === "simple") {
+    const td = parseTransferDate(form.transferDate);
+    if (valuationMode === "simple" && td) {
       const heavyRE = form.isHeavyRealEstateForValuation;
-      const transferEval = calcUnlistedPerShareWeighted(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE);
-      const acqEval = calcUnlistedPerShareWeighted(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE);
+      const transferEval = calcSection165_4Value(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE, td).value;
+      const acqEval = calcSection165_4Value(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td).value;
       if (transferEval > 0 && transferEval !== acqEval) {
         errors.push({ field: "unlistedSameBizYearToggle", message: "양도연도·취득연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다. 토글을 해제하세요.", severity: "warning" });
       }
@@ -365,10 +381,11 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             errors.push({ field: "prePriorYearNetAssetPerShare", message: "전전사업연도 1주당 순자산가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
           }
           // C-7 경고: simple 모드 평가액 상이 시 토글 무의미 (full/listing_only는 합성 산출 — 엔진 warning에 위임)
-          if (detailMode === "simple") {
+          const td5 = parseTransferDate(form.transferDate);
+          if (detailMode === "simple" && td5) {
             const heavyRE = form.isHeavyRealEstateForValuation;
-            const listEval = calcUnlistedPerShareWeighted(parseF(form.listingYearNetIncomePerShare), parseF(form.listingYearNetAssetPerShare), heavyRE);
-            const acqEval = calcUnlistedPerShareWeighted(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE);
+            const listEval = calcSection165_4Value(parseF(form.listingYearNetIncomePerShare), parseF(form.listingYearNetAssetPerShare), heavyRE, td5).value;
+            const acqEval = calcSection165_4Value(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td5).value;
             if (listEval > 0 && listEval !== acqEval) {
               errors.push({ field: "monthlyAccrualToggle", message: "취득연도·상장연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다. 토글을 해제하세요.", severity: "warning" });
             }

@@ -23,7 +23,9 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 // 엔진 단일 진실 — 평가액 동일 판정(토글 노출 조건) 재구현 금지 (dual-truth 회피)
-import { calcUnlistedPerShareWeighted } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
+// ⚠️ 본칙 가중평균(`calcUnlistedPerShareWeighted`)이 아니라 「제4항에 따른 평가액」으로 비교해야
+//    엔진의 §165⑤ 후단 트리거 판정과 일치한다(80% 하한 단서 + 연혁 게이팅 포함).
+import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { PostListingClosingPriceTable, autoFillDates, dayOfWeek } from "./PostListingClosingPriceTable";
 import { PostListingCapitalEventSection } from "./PostListingCapitalEventSection";
@@ -47,18 +49,29 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
   // full/listing_only는 합성 산출이라 무조건 노출(엔진 C-7이 평가 상이 시 무시 처리).
   // 동일 판정은 엔진 헬퍼 단일 진실 (PostListingFormulaPreview와 동일 패턴).
   const heavyRE = form.isHeavyRealEstateForValuation;
-  const simpleListingEval = calcUnlistedPerShareWeighted(
-    parseAmount(form.listingYearNetIncomePerShare),
-    parseAmount(form.listingYearNetAssetPerShare),
-    heavyRE,
-  );
-  const simpleAcqEval = calcUnlistedPerShareWeighted(
-    parseAmount(form.acquisitionYearNetIncomePerShare),
-    parseAmount(form.acquisitionYearNetAssetPerShare),
-    heavyRE,
-  );
+  // 양도일 미입력·형식오류면 연혁 게이팅 기준이 없다 → 판정 불가로 보고 토글을 노출한다
+  // (임의 기준일 fallback 금지. 엔진 C-7이 평가 상이 시 warning으로 정리한다).
+  const transferDateForEval = form.transferDate ? new Date(form.transferDate) : undefined;
+  const evalDate =
+    transferDateForEval && !isNaN(transferDateForEval.getTime()) ? transferDateForEval : undefined;
+  const simpleListingEval = evalDate
+    ? calcSection165_4Value(
+        parseAmount(form.listingYearNetIncomePerShare),
+        parseAmount(form.listingYearNetAssetPerShare),
+        heavyRE,
+        evalDate,
+      ).value
+    : 0;
+  const simpleAcqEval = evalDate
+    ? calcSection165_4Value(
+        parseAmount(form.acquisitionYearNetIncomePerShare),
+        parseAmount(form.acquisitionYearNetAssetPerShare),
+        heavyRE,
+        evalDate,
+      ).value
+    : 0;
   const showAccrualToggle =
-    mode !== "simple" || (simpleListingEval > 0 && simpleListingEval === simpleAcqEval);
+    mode !== "simple" || !evalDate || (simpleListingEval > 0 && simpleListingEval === simpleAcqEval);
 
   // Enter 키 → 다음 입력 셀로 포커스 이동 (카드 내 순회).
   // 하위 컴포넌트(NetIncome/NetAsset/ClosingPriceTable)가 이미 자체 handler에서 preventDefault한 경우 패스.

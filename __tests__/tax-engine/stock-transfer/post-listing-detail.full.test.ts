@@ -85,7 +85,12 @@ describe("PL-FULL — 사례 EXAMPLE_POST_LISTING full mode 통합", () => {
     expect(result.acquiredBeforeListing).toBe(true);
     expect(result.postListingDetail).toBeDefined();
     expect(result.postListingDetail?.detail?.mode).toBe("full");
-    expect(result.postListingDetail?.detail?.floor80NotApplied).toBe(true);
+    // 사례 48은 순손익가치가 순자산가치보다 압도적으로 커 하한이 발동하지 않는다
+    // (상장 61,570/5,352 · 취득 44,520/4,348 — 가중평균이 순자산×80%를 크게 상회).
+    expect(result.postListingDetail?.detail?.floor80Applied).toEqual({
+      listing: false,
+      acquisition: false,
+    });
     expect(result.postListingDetail?.detail?.closing?.tradingDays).toBe(21);
     expect(result.postListingDetail?.detail?.closing?.avg).toBe(8_001);
     expect(result.postListingDetail?.detail?.netIncome?.listing.perShareValue).toBe(61_570);
@@ -223,8 +228,9 @@ describe("PL-FLOOR — 80% 하한 미적용 양방향 회귀 보호 (Round 4 H-0
     expect(result.acquisitionYearPerShareValue).toBe(50);
     expect(result.conversionRatio).toBeCloseTo(0.50, 4);
     expect(result.finalPerShareValue).toBe(5_000);   // 10,000 × 0.50 (8,000 아님!)
-    // detail.floor80NotApplied 명시
-    expect(result.detail?.floor80NotApplied).toBe(true);
+    // 이 픽스처는 NI == NA라 분자·분모 어느 쪽도 하한이 발동하지 않는다
+    // (가중평균 = NA > NA×0.8). 즉 비율 0.50은 **하한과 무관하게** 그대로 유지된다.
+    expect(result.detail?.floor80Applied).toEqual({ listing: false, acquisition: false });
   });
 });
 

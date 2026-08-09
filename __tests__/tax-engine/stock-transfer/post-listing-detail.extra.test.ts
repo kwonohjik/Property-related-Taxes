@@ -346,37 +346,77 @@ describe("PL-HEAVY-RE — isHeavyRealEstateForValuation 가중치 반전 (Case 4
       acquisitionYearNetIncomePerShare: 100,
       acquisitionYearNetAssetPerShare: 200,
     });
-    // 양 연도 동일값이므로 ratio = 1 → 둘 다 finalPerShareValue = 1000
-    expect(normal.listingYearPerShareValue).toBe(140);
-    expect(heavy.listingYearPerShareValue).toBe(160);
+    // 🔴 2026-08-10 정정 — 이 픽스처는 **하한 발동 케이스**였다.
+    //    순자산가치 200 × 80% = 160인데 일반 가중평균은 140이라 §165④1 **단서**가 걸린다
+    //    (「그 가중평균한 가액이 … 100분의 80을 곱한 금액보다 적은 경우에는 … 평가액으로 한다」).
+    //    종전 구현이 분자·분모에서 단서를 빼고 있어 140이 나왔던 것이고, **160이 맞다**.
+    //    ⇒ 하한이 걸리면 일반(3:2)과 반전(2:3)이 **같은 값으로 수렴한다** — 하한은 가중치와 무관하다.
+    expect(normal.listingYearPerShareValue).toBe(160); // 가중평균 140 → 하한 160
+    expect(heavy.listingYearPerShareValue).toBe(160);  // 가중평균 160 (하한과 동값, 미발동)
+    expect(normal.detail?.floor80Applied.listing).toBe(true);
+    expect(heavy.detail?.floor80Applied.listing).toBe(false);
   });
 
-  it("PL-HEAVY-RE-2 — 부동산과다 ratio 변화: 비대칭 입력 시 결과 다름", () => {
-    // 상장: 순손익 100, 순자산 200 → 일반 140 / 반전 160
-    // 취득: 순손익 200, 순자산 100 → 일반 160 / 반전 140
+  it("PL-HEAVY-RE-1b — 하한이 걸리지 않는 입력에서는 반전이 그대로 드러난다", () => {
+    // ⚠️ RE-1이 하한 때문에 수렴하므로, **가중치 반전 자체**를 지키는 대조군이 따로 필요하다.
+    //    순손익 300 / 순자산 100 → 하한은 80이라 어느 가중치로도 발동하지 않는다.
     const normal = calcPostListingConversion({
       ...baseInput(),
       isHeavyRealEstateForValuation: false,
       listingDatePriceAvg1Month: 1_000,
-      listingYearNetIncomePerShare: 100,
-      listingYearNetAssetPerShare: 200,
-      acquisitionYearNetIncomePerShare: 200,
+      listingYearNetIncomePerShare: 300,
+      listingYearNetAssetPerShare: 100,
+      acquisitionYearNetIncomePerShare: 300,
       acquisitionYearNetAssetPerShare: 100,
     });
     const heavy = calcPostListingConversion({
       ...baseInput(),
       isHeavyRealEstateForValuation: true,
       listingDatePriceAvg1Month: 1_000,
-      listingYearNetIncomePerShare: 100,
-      listingYearNetAssetPerShare: 200,
-      acquisitionYearNetIncomePerShare: 200,
+      listingYearNetIncomePerShare: 300,
+      listingYearNetAssetPerShare: 100,
+      acquisitionYearNetIncomePerShare: 300,
       acquisitionYearNetAssetPerShare: 100,
     });
-    // 일반: ratio = 160/140 ≈ 1.143
-    // 반전: ratio = 140/160 = 0.875
-    expect(normal.conversionRatio).toBeCloseTo(160 / 140, 4);
-    expect(heavy.conversionRatio).toBeCloseTo(140 / 160, 4);
+    expect(normal.listingYearPerShareValue).toBe(220); // 300×3/5 + 100×2/5
+    expect(heavy.listingYearPerShareValue).toBe(180);  // 300×2/5 + 100×3/5
+    expect(normal.detail?.floor80Applied).toEqual({ listing: false, acquisition: false });
+    expect(heavy.detail?.floor80Applied).toEqual({ listing: false, acquisition: false });
+  });
+
+  it("PL-HEAVY-RE-2 — 부동산과다 ratio 변화: 비대칭 입력 시 결과 다름", () => {
+    // 🔴 2026-08-10 정정 — 종전 픽스처(상장 순손익 100/순자산 200)는 **하한 발동 케이스**라
+    //    일반 쪽 분모가 140이 아니라 160으로 올라가 두 비율이 1.0으로 수렴했다.
+    //    이 테스트의 목적은 「가중치 반전이 비율을 바꾼다」이므로 **하한이 걸리지 않는 입력**으로 옮긴다.
+    //    (하한 발동 자체의 검증은 `post-listing-165-5-floor80.anchor.test.ts` PLF-1~PLF-6이 담당.)
+    //
+    // 상장: 순손익 200, 순자산 100 → 일반 160 / 반전 140  (하한 80 — 미발동)
+    // 취득: 순손익 300, 순자산 100 → 일반 220 / 반전 180  (하한 80 — 미발동)
+    const asym = {
+      listingDatePriceAvg1Month: 1_000,
+      listingYearNetIncomePerShare: 200,
+      listingYearNetAssetPerShare: 100,
+      acquisitionYearNetIncomePerShare: 300,
+      acquisitionYearNetAssetPerShare: 100,
+    };
+    const normal = calcPostListingConversion({
+      ...baseInput(),
+      isHeavyRealEstateForValuation: false,
+      ...asym,
+    });
+    const heavy = calcPostListingConversion({
+      ...baseInput(),
+      isHeavyRealEstateForValuation: true,
+      ...asym,
+    });
+    // 일반: ratio = 220/160 = 1.375
+    // 반전: ratio = 180/140 ≈ 1.2857
+    expect(normal.conversionRatio).toBeCloseTo(220 / 160, 4);
+    expect(heavy.conversionRatio).toBeCloseTo(180 / 140, 4);
     expect(normal.finalPerShareValue).not.toBe(heavy.finalPerShareValue);
+    // 하한이 이 픽스처를 건드리지 않았음을 명시 — 걸리면 위 비율이 수렴해 검증이 무의미해진다.
+    expect(normal.detail?.floor80Applied).toEqual({ listing: false, acquisition: false });
+    expect(heavy.detail?.floor80Applied).toEqual({ listing: false, acquisition: false });
   });
 });
 

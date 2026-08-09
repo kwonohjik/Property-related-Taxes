@@ -31,6 +31,9 @@ import {
   STOCK_LOSS_GAIN_DISCOUNT_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
 import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
+// §165④ 가중치·80% 하한 연혁은 §165⑤(취득후상장)·validate·UI 프리뷰와 **공용 정본**이다.
+// 여기에 사본을 두면 같은 조문이 두 곳에서 갈린다. [[feedback_ui_engine_dual_truth_avoidance]]
+import { getValuationWeights } from "./valuation-165-4-basis";
 
 // ============================================================
 // 평가 결과 타입
@@ -89,44 +92,8 @@ export interface UnlistedValuationResult {
 // 시기별 평가 연혁 — 양도일 기준 (§165④ 개정 이력)
 // ============================================================
 
-interface ValuationWeights {
-  niWeight: number;   // 순손익가치 가중치 (합계 5분의)
-  naWeight: number;   // 순자산가치 가중치 (합계 5분의)
-  hasFloor80: boolean; // 80% 하한 적용 여부
-}
-
-/**
- * 양도일 기준 시기별 평가 가중치 조회
- *
- * 연혁 (시행령 §165④ 개정):
- *   ~1998.12.31.      : 순자산 단독 (ni=0, na=5)
- *   1999.1.1.~2000.12.31.: 순손익 3/5 + 순자산 2/5 (80% 하한 없음)
- *   2001.1.1.~2004.12.31.: 순손익 3/5 + 순자산 2/5 (80% 하한 없음)
- *   2004.1.1.~2007.2.27.: 순손익 3/5 + 순자산 2/5 (80% 하한 없음)
- *   2007.2.28.~         : 순손익 3/5 + 순자산 2/5 + 80% 하한 (현행)
- *
- * ★ 연혁 5분기 (케이스 19):
- *   PR-2 범위에서는 1998↓ vs 2007.2.28.~ 2분기 정확 분기.
- *   중간 구간(1999~2007.2.27.)은 현행 가중치와 동일하나 80% 하한 미적용.
- */
-function getValuationWeights(transferDate: Date): ValuationWeights {
-  const ts = transferDate.getTime();
-
-  // 1998.12.31. 이하 — 순자산 단독 (연혁 분기 1)
-  const CUTOFF_1998 = new Date("1999-01-01").getTime();
-  if (ts < CUTOFF_1998) {
-    return { niWeight: 0, naWeight: 5, hasFloor80: false };
-  }
-
-  // 2007.2.28. 이상 — 현행 (80% 하한 포함)
-  const CUTOFF_2007_2_28 = new Date("2007-02-28").getTime();
-  if (ts >= CUTOFF_2007_2_28) {
-    return { niWeight: 3, naWeight: 2, hasFloor80: true };
-  }
-
-  // 1999.1.1.~2007.2.27. — 가중평균 동일하나 80% 하한 없음
-  return { niWeight: 3, naWeight: 2, hasFloor80: false };
-}
+// 연혁 게이트(`getValuationWeights`)는 `valuation-165-4-basis.ts`로 이관했다 — §165⑤ 경로와
+// 공용이다. 사본을 되살리지 말 것.
 
 // ============================================================
 // 가중평균 1주당 평가액 계산
