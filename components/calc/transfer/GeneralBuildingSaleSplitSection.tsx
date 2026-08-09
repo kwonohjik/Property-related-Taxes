@@ -1,7 +1,12 @@
 "use client";
 
 /**
- * 일반건물 — 토지·건물 **양도가액 결정 방식**(구분양도 / 일괄양도) 섹션 (Phase 2 ⑤).
+ * 일반건물 — **양도가액 토지·건물 안분 방식** 섹션 (Phase 2 ⑤).
+ *
+ * 선택지는 **3지선다**다 — 구분양도(§100②) / 감정평가(「부가가치세법 시행령」 §64①1호) /
+ * 기준시가 안분(같은 항 2호). 제목·선택지·전환 patch는 주택 경로와 **공유**한다
+ * (`SALE_SPLIT_SECTION_TITLE`·`SALE_SPLIT_MODE_OPTIONS`·`saleSplitModePatch`).
+ * ⚠️ 종전 주석의 「양도가액 결정 방식(구분양도 / 일괄양도)」은 #1138 이전 2지선다 시절 문구다.
  *
  * 계획서: `docs/02-design/features/general-building-sale-split-mode.plan.md` §5 · §6
  *
@@ -24,6 +29,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   SALE_SPLIT_MODE_OPTIONS,
+  SALE_SPLIT_SECTION_TITLE,
   SaleAppraisalFields,
   SaleSplitCompareBasisCard,
   SaleSplitExemptionCard,
@@ -58,7 +64,7 @@ export function GeneralBuildingSaleSplitSection({
 
   if (blockedReason) {
     return (
-      <ToneCard tone="emerald" sectionNum={sectionNum} title="양도가액 토지·건물 안분 방식">
+      <ToneCard tone="emerald" sectionNum={sectionNum} title={SALE_SPLIT_SECTION_TITLE}>
         <p className="text-xs leading-snug text-muted-foreground" data-testid="gb-sale-split-blocked">
           {blockedReason} 양도시 기준시가 비율로 안분합니다 (소득세법 시행령 §166⑥).
         </p>
@@ -67,7 +73,7 @@ export function GeneralBuildingSaleSplitSection({
   }
 
   return (
-    <ToneCard tone="emerald" sectionNum={sectionNum} title="양도가액 토지·건물 안분 방식">
+    <ToneCard tone="emerald" sectionNum={sectionNum} title={SALE_SPLIT_SECTION_TITLE}>
       <div data-testid="gb-sale-split-mode">
         <RadioCardGroup
           name="gbSaleSplitMode"

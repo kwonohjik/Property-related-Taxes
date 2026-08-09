@@ -263,14 +263,14 @@ describe("G8 — 환산 안내 문구 방향 (D3)", () => {
     render(<Harness init={{ ...ACTUAL_SPLIT_SALE, landAcqMode: "estimated" }} />);
     const note = estimatedNote("land")[0];
     expect(note, "testid 없이 텍스트 매칭하면 양쪽 환산 시 2개가 되어 strict 위반").toBeTruthy();
-    expect(note.textContent).toMatch(/위 「양도시 기준시가」 카드\(양도가액 결정 방식 아래\)/);
+    expect(note.textContent).toMatch(/위 「양도시 기준시가」 카드\(양도가액 토지·건물 안분 방식 아래\)/);
   });
 
   it("G8-e 일괄양도 — 안내가 축 A 「양도시 기준시가」 카드를 가리킨다", () => {
     render(<Harness init={{ ...ACTUAL_APPORTIONED, landAcqMode: "estimated" }} />);
     const note = estimatedNote("land")[0];
     expect(note).toBeTruthy();
-    expect(note.textContent).toMatch(/위 「양도시 기준시가」 카드\(양도가액 결정 방식 아래\)/);
+    expect(note.textContent).toMatch(/위 「양도시 기준시가」 카드\(양도가액 토지·건물 안분 방식 아래\)/);
   });
 
   it("G8-c DOM 순서 — 축 A와 취득시 카드가 모두 안내보다 앞", () => {

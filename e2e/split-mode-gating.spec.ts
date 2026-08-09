@@ -459,7 +459,7 @@ test.describe("P5 — 별개 취득 상단 축 A 숨김", () => {
     await expect(page.getByTestId("split-land-std-acq-card")).toBeVisible();
     await expect(page.getByTestId("split-land-std-transfer-card")).toHaveCount(0);
     await expect(page.getByTestId("split-land-estimated-note")).toContainText(
-      "위 「양도시 기준시가」 카드(양도가액 결정 방식 아래)",
+      "위 「양도시 기준시가」 카드(양도가액 토지·건물 안분 방식 아래)",
     );
   });
 

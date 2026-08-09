@@ -46,6 +46,18 @@ interface Props {
  * 종전에는 같은 축을 일반건물은 「일괄양도 (양도시 기준시가 비율로 안분)」, 주택은
  * 「일괄양도 (양도시 기준시가 안분)」으로 달리 불렀다.
  */
+/**
+ * 섹션 제목 — 라벨과 **같은 이유로** 한 곳에 둔다.
+ *
+ * 2026-08-08 사용자 확정 문구다(「양도가액 결정 방식」 → 「양도가액 토지·건물 안분 방식」).
+ * #1139가 선택지·전환 patch만 통일하고 제목은 각자 두어 주택 경로에 종전 문구가 남았다
+ * — 같은 축을 다르게 부르면 사용자가 다른 기능으로 읽는다(2026-08-09 화면 실측에서 발견).
+ *
+ * ⚠️ 이 문구를 바꾸면 축 B의 환산 안내(`LandBuildingSplitSection`의 `transferSource`)가
+ *    가리키는 이름도 함께 바꿔야 한다 — 없는 카드 이름을 가리키게 된다.
+ */
+export const SALE_SPLIT_SECTION_TITLE = "양도가액 토지·건물 안분 방식";
+
 export const SALE_SPLIT_MODE_OPTIONS: RadioCardOption<SaleSplitMode>[] = [
   { value: "actual", label: "구분양도 (계약서에 구분 기재)" },
   { value: "appraisal", label: "감정평가 (감정평가가액으로 안분)" },
