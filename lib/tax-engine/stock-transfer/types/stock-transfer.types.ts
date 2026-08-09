@@ -579,8 +579,14 @@ export type StockTransferResult = {
       | "monthly_avg_listed"
       | "halt_acquisition_conversion";
     weightedAvgPerShare?: number;
+    /** 80% 하한 적용 여부 (§165④1 단서) — **양도**기준시가 */
     netAssetFloorApplied: boolean;
     netAssetFloorValue?: number;
+    /**
+     * 80% 하한 적용 여부 — **취득**기준시가 (2026-08-09 신설).
+     * 양도측과 독립 발동한다(취득연도만 저수익인 경우 이쪽만 참).
+     */
+    acquisitionNetAssetFloorApplied?: boolean;
     finalPerShareValue: number;
     /** §163⑨ 환산 진단 — 분자(취득시 1주당 기준시가) */
     conversionAcqStdPerShare?: number;

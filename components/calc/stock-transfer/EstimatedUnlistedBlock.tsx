@@ -138,12 +138,19 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
     if (ni <= 0 && na <= 0) return null;
 
     if (isNetAssetOnly) {
+      // 순자산 단독(§165④3) → 80% 하한 없음 (양도측과 동일)
       return Math.floor(na);
     }
 
     const niW = isHeavyRE ? 2 : 3;
     const naW = isHeavyRE ? 3 : 2;
-    return Math.floor((ni * niW + na * naW) / 5);
+    const weighted = (ni * niW + na * naW) / 5;
+    // 🔴 **80% 하한은 취득기준시가에도 적용된다** (2026-08-09) — §165④1 단서는 양도·취득을
+    //    가르지 않는다. 위 `transferStdPricePreview`와 **같은 규칙**을 써야 엔진과 어긋나지 않는다
+    //    (`stock-valuation-unlisted.ts` 취득기준시가 블록). dual-truth 방지.
+    const floor80 = na * 0.8;
+    if (weighted > 0 && floor80 > weighted) return Math.floor(floor80);
+    return Math.floor(weighted);
   }, [
     acquisitionSideOnly,
     acqFaceValueOnly,
@@ -207,9 +214,11 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           )}
         </div>
         <p className="text-xs mt-1">
+          {/* 2026-08-09: `acquisitionSideOnly`일 때 "+ 80% 하한"을 빼던 분기를 제거했다 —
+              하한은 양도·취득 양쪽에 적용된다(§165④1 단서). 라벨이 엔진과 갈리면 안 된다. */}
           {isNetAssetOnly
             ? "순자산가치 단독 평가 (§165④3) — 80% 하한 미적용"
-            : `가중평균 = (순손익가치 × ${niWeight} + 순자산가치 × ${naWeight}) ÷ 5${acquisitionSideOnly ? "" : " + 80% 하한"}`}
+            : `가중평균 = (순손익가치 × ${niWeight} + 순자산가치 × ${naWeight}) ÷ 5 + 80% 하한`}
         </p>
         <p className="text-xs text-fuchsia-600 mt-1">
           입력값: 순손익가치 = 1주당 순손익액 ÷ 10% (이미 반영된 값으로 입력)

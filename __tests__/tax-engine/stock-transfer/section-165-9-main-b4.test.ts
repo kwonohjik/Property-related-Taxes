@@ -182,10 +182,18 @@ describe("B4 §165⑨ 본체 — 비상장 동일 기준시가 §81④ 1호", ()
     expect(r.warnings.some((w) => w.includes("§81④ 보정 평가액이 0 이하"))).toBe(true);
   });
 
-  it("B4-ENGINE-6 (M-7): 80% 하한 양도측만 발동 → 최종 상이 → 트리거 미성립", () => {
-    // 양도연도 weighted < 순자산×80% → 양도측만 floor 상향 → transferStd ≠ acqStd
-    // NI=10,000 NA=100,000: weighted=(10,000×3+100,000×2)/5=46,000, floor80=80,000 > 46,000 → 양도측 80,000
-    // 취득측 동일 입력이나 80% 하한 미적용 → acqStd=46,000 ≠ transferStd=80,000
+  /**
+   * 🔄 **2026-08-09 뒤집힘** — 종전 제목은 "80% 하한 양도측만 발동 → 최종 상이 → 트리거 미성립"이었다.
+   *
+   * 그 테스트는 **취득측 하한 미적용을 검증한 것이 아니라 전제로 이용**했다. §165④1 단서를
+   * 양도·취득 양쪽에 적용하도록 고치자 두 기준시가가 **같아져 §165⑨이 성립**한다.
+   *
+   * ⭐ **그게 옳은 결과다.** §165⑨은 「양도 당시 기준시가와 취득 당시 기준시가가 **같은 경우**」
+   *   §81④ 월할 가산을 적용하라는 규정인데, 종전에는 하한을 한쪽에만 걸어 두 값이
+   *   **인위적으로 달라져** 트리거가 막혀 있었다. 즉 하나의 결함이 §165⑨ 경로까지 잠갔다.
+   */
+  it("B4-ENGINE-6 (M-7): 하한이 양쪽에 걸려 기준시가가 같아지면 §165⑨이 성립한다", () => {
+    // NI=10,000 NA=100,000 → weighted=(10,000×3+100,000×2)/5=46,000, floor80=80,000 → 양쪽 다 80,000
     const r = calculateStockTransferTax(
       baseUnlistedInput({
         transferYearNetIncomePerShare: 10_000,
@@ -197,7 +205,17 @@ describe("B4 §165⑨ 본체 — 비상장 동일 기준시가 §81④ 1호", ()
         prePriorYearNetAssetPerShare: 30_000,
       }),
     );
-    expect(r.valuationDetail?.section1659Detail).toBeUndefined();
+
+    expect(r.valuationDetail?.netAssetFloorApplied).toBe(true);
+    expect(r.valuationDetail?.acquisitionNetAssetFloorApplied).toBe(true);
+    // §81④ 1호: 직전 80,000 + (직전 80,000 − 전전 30,000) × (보유 5개월 ÷ 12) = 100,833
+    expect(r.valuationDetail?.section1659Detail).toMatchObject({
+      prior: 80_000,
+      prePrior: 30_000,
+      holdingMonths: 5,
+      priorBizYearMonths: 12,
+      adjusted: 100_833,
+    });
   });
 
   it("B4-BOUNDARY-1: 보유월수 1개월 미만 → 1개월 절상", () => {
