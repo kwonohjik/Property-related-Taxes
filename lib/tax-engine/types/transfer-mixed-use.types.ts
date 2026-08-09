@@ -677,28 +677,14 @@ export interface MixedUseGainBreakdown {
   };
 
   /**
-   * 용도변경일 기반 LTHD 시간 비례 분할 결과 (Part A).
-   * usageChangeDate 입력 + 유효 시에만 생성. 미입력 시 undefined.
-   * 집행기준 89-154-24 취지 반영.
+   * 🔴 2026-08-10 폐지 — `usagePeriodSplit`(용도변경 시간비례 LTHD 분할).
+   *
+   * 근거로 달려 있던 「집행기준 89-154-24」는 **존재하지 않는 문서**였고, 법문·예규는 정반대다:
+   *   「소득세법」 §95④(보유기간 = 취득일~양도일) · 사전-2021-법령해석재산-0333(겸용주택
+   *   주택부분→상가 용도변경 시 **기산일 = 취득일**) · 사전-2022-법규재산-0427(고가 겸용주택
+   *   보유기간 = 취득일~양도일 · 표2는 **주택 부분에 한정** ⇒ 나누는 축은 기간이 아니라 부분).
+   * ❌ 이 필드를 되살리지 말 것. `partialUsageChange`는 **면적 안분·PHD Case A**용으로 남아 있다.
    */
-  usagePeriodSplit?: {
-    /** Period 1 = 취득일 ~ 용도변경일 (단일 용도 기간), 일 단위 */
-    period1Days: number;
-    /** Period 2 = 용도변경일 ~ 양도일 (혼용 기간), 일 단위 */
-    period2Days: number;
-    /** Period 1 양도차익 — 100% 단일 용도 */
-    period1Gain: number;
-    /** Period 2 양도차익 — 양도시점 기준시가 비율로 안분 */
-    period2HousingGain: number;
-    period2CommercialGain: number;
-    /** Period별 LTHD 공제율·공제액 */
-    period1LongTermDeductionRate: number;
-    period1LongTermDeductionAmount: number;
-    period2HousingLongTermDeductionRate: number;
-    period2HousingLongTermDeductionAmount: number;
-    period2CommercialLongTermDeductionRate: number;
-    period2CommercialLongTermDeductionAmount: number;
-  };
 
   /**
    * 수정신고·경정청구 상세 (국세기본법 §45·§45의2).
