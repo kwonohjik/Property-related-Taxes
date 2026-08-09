@@ -25,7 +25,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { collectCitedCitations } from "@/lib/legal-verification/coverage-collect";
-import { computeCoverageGap } from "@/lib/legal-verification/coverage";
+import { computeCoverageGap, articleKeys } from "@/lib/legal-verification/coverage";
 
 describe("법령 검증 커버리지", () => {
   it("legal-codes 인용 조문이 전부 VERIFICATION_MANIFEST에 등록돼 있다", () => {
@@ -38,8 +38,44 @@ describe("법령 검증 커버리지", () => {
 
   it("커버리지 모수가 비어 있지 않다 (수집기 자체가 깨지면 100%로 보인다)", () => {
     // `collectCitedCitations()`가 0건을 반환하면 uncovered도 0건이라 위 테스트가 통과한다.
-    // 그 위양성을 막는 하한선 — 현재 201조문이며, 대폭 줄면 수집기 회귀를 의심해야 한다.
+    // 그 위양성을 막는 하한선 — **현재 323조문**이며, 대폭 줄면 수집기 회귀를 의심해야 한다.
     const gap = computeCoverageGap(collectCitedCitations());
-    expect(gap.totalArticles).toBeGreaterThan(150);
+    expect(gap.totalArticles).toBeGreaterThan(280);
+  });
+
+  /**
+   * ⭐ **총량 하한만으로는 「시행령만 빠지는」 실패를 못 잡는다** (2026-08-09 · R-J 후속).
+   *
+   * 시행령·시행규칙을 `LAW_ALIAS` 화이트리스트와 매니페스트에 등재한 뒤 모수가
+   * 201 → **323**으로 늘었는데, 하한선은 등재 **이전**에 정한 **150** 그대로였다.
+   * 실측하면 시행령·시행규칙 기여분이 **112조문**이고 본법만 남으면 **211**이라,
+   * 그 112가 통째로 사라져도 `211 > 150`으로 **조용히 통과**했다.
+   *
+   * 이 갭은 정확히 R-J가 만들었던 상태로 되돌아가는 경로다 — 「시행령 60여 건이
+   * 몇 달간 숨어 있었다」(`coverage.ts` UNVERIFIABLE_LAW_NAMES 주석)의 재발.
+   * ⇒ **기여분에 독립 하한**을 둔다. 총량 하한을 올리는 것만으로는 부족하다
+   *   (본법 인용이 늘면 시행령이 줄어도 총량이 유지된다).
+   *
+   * ## mutation probe 실측 (2026-08-09) — 이 가드만 잡는다
+   *
+   * `LAW_ALIAS`에서 `"소득세법 시행령"`·`"소령"` 두 줄을 지우고 실행:
+   *
+   * | 단언 | 결과 |
+   * |---|---|
+   * | `uncovered = []` | ✅ 통과 — 빠진 조문은 **모수에서 사라지므로 uncovered에도 안 뜬다** |
+   * | `totalArticles > 280` | ✅ 통과 |
+   * | **이 테스트** | 🔴 **실패** (`expected 73 to be greater than 90`) |
+   *
+   * ⇒ 종전 구성이었다면 소득세법 시행령이 커버리지에서 통째로 빠져도 **전부 초록**이었다.
+   *   [[feedback_negative_assertion_needs_mutation_probe]]
+   */
+  it("시행령·시행규칙이 모수에 남아 있다 (본법만 남으면 총량 하한은 통과한다)", () => {
+    const keys = new Set(collectCitedCitations().flatMap(articleKeys));
+    const decreeKeys = [...keys].filter(
+      (k) => k.includes("시행령") || k.includes("시행규칙"),
+    );
+    // 현재 112조문. `LAW_ALIAS`에서 시행령 약칭이 빠지거나 수집기가 하위법령을
+    // 흘리면 여기가 먼저 빨개진다.
+    expect(decreeKeys.length).toBeGreaterThan(90);
   });
 });
