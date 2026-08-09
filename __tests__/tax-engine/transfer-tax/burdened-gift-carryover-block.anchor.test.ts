@@ -100,23 +100,45 @@ describe("CO-2 부담부증여를 얹으면 이월과세가 세액에 도달하�
     expect(withHigh.calculatedTax).toBe(alone.calculatedTax);
   });
 
-  it("취득원인 네 가지가 모두 같은 세액을 낸다 — 그래서 차단이 손해가 없다", () => {
+  it("🔴 취득원인 네 가지가 모두 같은 세액을 낸다 — 이월과세에 대해서는 **이것이 결함의 증상**이다", () => {
     /**
-     * §159가 취득가액을 정하므로 취득원인은 세액을 가르지 않는다. ⑧ 차단이 「증여로
-     * 선택하세요」라고 안내해도 사용자가 얻는 답이 **동일하다**는 것이 그 안내의 근거다.
+     * 🔴 **2026-08-09 재해석 — 종전 서술이 틀렸다.**
+     *
+     * 종전 제목·주석은 「그래서 차단이 손해가 없다」였다. 매매·상속·증여 셋이 같은 것은
+     * §159가 취득가액을 정하므로 **옳다**. 그러나 **이월과세는 달라야 한다**:
+     *
+     *   국세청 **재산세과-1059(2009.12.18.)** — 증여받은 자산을 다시 부담부증여하는 경우
+     *   「**시행령 §159 제1호에 따른 취득가액 산정 시** §97①1호에 따른 가액에
+     *     **이월과세 규정이 적용되는 것임**」
+     *
+     *   ⇒ 이월과세가 적용되면 §159①1호 **A의 기준 시점이 「원증여자의 취득 당시」로 옮겨진다**.
+     *     따라서 네 번째 값은 나머지 셋과 **달라야 한다**.
+     *
+     * ⚠️ 이 테스트는 「옳은 세액」이 아니라 **현행 미지원 상태**를 고정한다. ⑧가 조합을
+     *    차단하므로 사용자 경로로는 도달하지 않는다(엔진 단독 호출에서만 드러난다).
+     *    **엔진이 지원되면 이 테스트는 뒤집혀야 한다** — 그때 값을 맞추지 말고 삭제·재작성할 것.
+     *
+     * 설계: `docs/02-design/features/burdened-gift-carryover-159-97-2.plan.md`
      */
-    const taxes = [
+    const sameByDesign = [
       run(bg).calculatedTax,
       run({ ...bg, acquisitionCause: "gift", acquisitionPrice: 400_000_000 } as never).calculatedTax,
       run({ ...bg, acquisitionCause: "inheritance", acquisitionPrice: 400_000_000 } as never).calculatedTax,
-      run({ ...bg, acquisitionCause: "carryover_gift", carryoverTaxation: carryover(100_000_000) } as never).calculatedTax,
     ];
-    expect(new Set(taxes).size).toBe(1);
-    expect(taxes[0]).toBe(71_260_000);
+    expect(new Set(sameByDesign).size).toBe(1);
+    expect(sameByDesign[0]).toBe(71_260_000);
+
+    // 이월과세도 현재는 같은 값이다 — **법령상으로는 달라야 하는데** 엔진이 반영하지 못한다.
+    const carryoverTax = run({
+      ...bg,
+      acquisitionCause: "carryover_gift",
+      carryoverTaxation: carryover(100_000_000),
+    } as never).calculatedTax;
+    expect(carryoverTax).toBe(71_260_000); // ← 미지원 상태의 고정. 지원 시 뒤집힌다.
   });
 });
 
-describe("CO-3 ⑧ validate — 조합을 차단하고 「증여」로 안내한다", () => {
+describe("CO-3 ⑧ validate — 조합을 차단하고 「미지원」임을 밝힌다", () => {
   const base = {
     ...makeDefaultAsset(1),
     assetKind: "general_building" as const,
@@ -136,11 +158,17 @@ describe("CO-3 ⑧ validate — 조합을 차단하고 「증여」로 안내한
       { ...base, acquisitionCause: "carryover_gift" } as never,
       "자산1",
     );
-    expect(v).toMatch(/「이월과세\(증여\)」 취득원인과 함께 쓸 수 없습니다/);
-    expect(v).toMatch(/「증여」로 선택하세요/);
+    expect(v).toMatch(/아직 지원하지 않습니다/);
+    /**
+     * ⚠️ **「증여로 선택하세요」 안내를 되살리지 말 것** — 재산세과-1059에 따르면 이월과세가
+     *    적용되어야 하므로 취득원인을 증여로 바꾸면 **세액이 달라진다**. 종전 안내는
+     *    「세액은 동일합니다」라고 단언해 사용자를 **틀린 계산으로 유도**했다.
+     */
+    expect(v).not.toMatch(/세액은 동일/);
+    expect(v).toMatch(/재산세과-1059/);
   });
 
-  it("증여 → 통과 (안내가 가리키는 목적지가 실제로 열려 있다)", () => {
+  it("증여 → 통과 (부담부증여 자체는 증여 취득원인과 병용 가능하다)", () => {
     const v = validateBurdenedGiftAsset(
       { ...base, acquisitionCause: "gift" } as never,
       "자산1",
