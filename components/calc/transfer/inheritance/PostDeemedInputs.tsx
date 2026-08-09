@@ -23,6 +23,7 @@ import { HouseValuationSection } from "./HouseValuationSection";
 import { sec164HouseStatus, sec164LandStatus } from "@/lib/calc/sec164-required-fields";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers";
+import { inheritanceReportedValuePartSuffix } from "@/lib/calc/inheritance-reported-value-scope";
 import {
   Select,
   SelectContent,
@@ -58,6 +59,8 @@ interface Props {
 export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   const method = (asset.inheritanceValuationMethod || "") as ValuationMethod;
   const isSupplementary = method === "supplementary";
+  // 일반건물은 이 칸이 토지분이다(건물분 전용 칸이 따로 있다) — 판정·문구는 공용 단일 소스.
+  const partSuffix = inheritanceReportedValuePartSuffix(asset.assetKind);
 
   // 주택 자산 + 상속개시일 < 2005-04-30(개별주택가격 미공시) → §164⑦ 환산 위젯 노출.
   // 평가방법(isSupplementary) 무관 — §163⑨2호는 상증법 평가액과 §164⑦을 비교하여 큰 금액을
@@ -188,10 +191,10 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
       {/* ② 신고가액 */}
       {method && (
         <FieldCard
-          label="상속세 신고가액"
+          label={`상속세 신고가액${partSuffix.label}`}
           required
           unit="원"
-          hint="상속세 신고서 또는 결정통지서에 기재된 평가가액"
+          hint={`상속세 신고서 또는 결정통지서에 기재된 평가가액${partSuffix.hint}`}
         >
           <CurrencyInput
             label=""

@@ -170,7 +170,7 @@ export function validateGeneralBuildingAsset(
      *    평가액을 묻는 **거짓 차단**이 된다.
      */
     if (isLandInherited && !parseAmount(asset.publishedValueAtInheritance)) {
-      return `${label}: 상속개시일 토지 평가액을 입력하세요. (자산 구분 "토지" 선택 후 상속세 신고가액 또는 보충적평가)`;
+      return `${label}: 상속개시일 토지 평가액을 입력하세요. (취득원인 「상속」 → 「취득가액 의제 특례」에서 평가방법을 고르면 「상속세 신고가액 (토지분)」 칸이 나옵니다. 건물분은 합산하지 마세요 — 아래 「상속개시일 건물 신고가액」에 따로 입력합니다)`;
     }
     if (isBuildingInherited && !parseAmount(asset.gbBuildingInheritedValue)) {
       return `${label}: 상속개시일 건물 신고가액을 입력하세요.`;
