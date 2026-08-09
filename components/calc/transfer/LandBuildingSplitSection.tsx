@@ -323,7 +323,7 @@ function PartAcqInputs(props: {
   // 없는 카드 이름을 가리키면 사용자가 입력 위치를 찾지 못한다(2026-07-30 배치 분리).
   const transferSource = props.saleStdInPart
     ? `위 「${label} 양도시 기준시가」 카드`
-    : "위 「양도시 기준시가」 카드(양도가액 결정 방식 아래)";
+    : "위 「양도시 기준시가」 카드(양도가액 토지·건물 안분 방식 아래)";
   return (
     <ToneCard tone="amber" noDark bodyClassName="space-y-1">
       <p className="text-xs text-amber-900" data-testid={`split-${props.part}-estimated-note`}>

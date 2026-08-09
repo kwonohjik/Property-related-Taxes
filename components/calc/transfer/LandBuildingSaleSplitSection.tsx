@@ -25,6 +25,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TransferStdPriceCard } from "./TransferStdPriceCards";
 import {
   SALE_SPLIT_MODE_OPTIONS,
+  SALE_SPLIT_SECTION_TITLE,
   SaleAppraisalFields,
   SaleSplitCompareBasisCard,
   SaleSplitExemptionCard,
@@ -78,9 +79,8 @@ export function LandBuildingSaleSplitSection(props: Props) {
   return (
     <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
       <div className="space-y-1.5">
-        <p className="text-sm font-medium leading-tight">
-          이 자산의 토지·건물 양도가액 결정 방식
-        </p>
+        {/* 제목은 일반건물 경로와 **같은 상수**를 쓴다 — 각자 두면 또 갈라진다(#1139 누락 경위는 상수 JSDoc). */}
+        <p className="text-sm font-medium leading-tight">{SALE_SPLIT_SECTION_TITLE}</p>
         <div data-testid="sale-split-mode">
           <RadioCardGroup
             name="saleSplitMode"
