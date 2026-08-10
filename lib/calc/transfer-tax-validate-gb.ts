@@ -43,8 +43,27 @@ function validateGbCarryover(asset: AssetForm, label: string): string | null {
   const buildingIsCarryover = asset.gbBuildingAcquisitionCause === "carryover_gift";
   if (!landIsCarryover && !buildingIsCarryover) return null;
 
+  const c = asset.carryover;
+
   /**
-   * 🔴 **부담부증여는 여기서 손대지 않는다** (2026-08-10 정정).
+   * §97조의2 ① **관계요건** — 증여 **사건**의 사실이라 토지 쪽(`c`) 하나가 정본이다.
+   * 일반 경로(`transfer-tax-validate-asset.ts`)와 **같은 조건**을 본다 —
+   * 관계는 단독 필수화하지 않고, 사망을 선언했을 때만 요구한다.
+   *
+   * 🔑 **부담부증여 조기 반환보다 앞에 둔다** (O-3, 2026-08-10).
+   *    아래 조기 반환은 「당초 증여자」 입력 요구를 가로채지 않으려는 것인데,
+   *    ① 본문 요건은 그 요구와 **직교**다. 뒤에 두면 부담부증여에서 「그 외」를 고른
+   *    사용자가 **아무 안내 없이** 이월과세만 조용히 꺼진다(엔진은 정확히 배제하므로
+   *    세액은 맞지만, 왜 안 걸렸는지 화면이 말해 주지 않는다). BG-W-01·02가 고정한다.
+   */
+  if (c?.donorRelation === "other")
+    return `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`;
+
+  if (c?.donorDeceased && !c.donorRelation)
+    return `${label}: 증여자와의 관계를 선택하세요 (「소득세법」 제97조의2 제1항).`;
+
+  /**
+   * 🔴 **나머지는 부담부증여에서 손대지 않는다** (2026-08-10 정정).
    *
    * 초안은 「범위 밖이니 차단」이었다. **틀렸다** — 그 사이 다른 줄기(D-7a·D-7b,
    * `burdened-gift-carryover-159-97-2.plan.md`)가 **지원을 열었다**. 근거는 국세청
@@ -54,24 +73,12 @@ function validateGbCarryover(asset: AssetForm, label: string): string | null {
    * 여기서 차단 메시지를 띄우면 그 요구가 화면에 닿기 전에 가로채 **지원된 기능이 막힌다**
    * (E2E `transfer-burdened-gift-carryover-block.spec.ts` CB-2로 실측).
    *
-   * ⇒ 이 검증은 **일반 양도의 GB 이월과세**만 본다. 부담부증여는 그쪽 경로에 맡긴다.
+   * ⇒ 이 아래는 **일반 양도의 GB 이월과세**만 본다. 부담부증여는 그쪽 경로에 맡긴다.
    */
   if (asset.transferType === "burdened_gift") return null;
 
-  const c = asset.carryover;
   if (!c?.giftRegistryDate)
     return `${label}: 증여 등기접수일을 입력하세요 (「소득세법」 제97조의2 제3항 — 적용기간 기산일).`;
-
-  /**
-   * §97조의2 ① 관계요건 — 증여 **사건**의 사실이라 토지 쪽(`c`) 하나가 정본이다.
-   * 일반 경로(`transfer-tax-validate-asset.ts`)와 **같은 조건**을 본다 —
-   * 관계는 단독 필수화하지 않고, 사망을 선언했을 때만 요구한다.
-   */
-  if (c.donorRelation === "other")
-    return `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`;
-
-  if (c.donorDeceased && !c.donorRelation)
-    return `${label}: 증여자와의 관계를 선택하세요 (「소득세법」 제97조의2 제1항).`;
 
   const parts: Array<[CarryoverTaxationForm | undefined, string]> = [];
   if (landIsCarryover) parts.push([c, `${label} 토지`]);
