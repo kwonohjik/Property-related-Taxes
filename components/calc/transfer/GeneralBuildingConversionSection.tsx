@@ -42,6 +42,12 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
    * (사전-2024-법규재산-0161). 이 구간에서는 「예(중과 대상)」를 골라도 기산일이 취득일이므로
    * **묻는 것 자체가 오해를 만든다** ⇒ 라디오를 비활성화하고 사유를 표시한다.
    * 엔진(`resolveLTHDStartDate`)이 같은 leaf로 같은 판정을 하므로 화면과 세액이 갈리지 않는다.
+   *
+   * ❌ **validate(⑧)에는 이 게이트를 걸지 않는다** — 의도된 설계다.
+   *    저장된 값이 `true`인 채로 가능기 날짜가 들어와도 **세액은 항상 정확**하고(엔진이 같은 leaf로
+   *    흡수) 미리보기도 취득일을 보여준다(anchor ERA-4). 여기서 차단하면 구형 sessionStorage를 든
+   *    기존 사용자가 **아무것도 못 하게 막히는** 회귀가 된다([[feedback_blocking_validation_full_e2e_regression]]).
+   *    값을 자동으로 지우는 것도 금지다 — `useEffect → store` 미러링이 된다.
    */
   const exclusionEra = useMemo(() => {
     if (!asset.gbConversionDate) return null;
