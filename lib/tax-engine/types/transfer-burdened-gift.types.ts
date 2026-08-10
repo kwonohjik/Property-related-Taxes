@@ -154,6 +154,77 @@ export interface BurdenedGiftInfo {
   actualBuildingAcquisitionPrice?: number;
   /** K-4: 증여자 실지취득가액 — 단일자산 (housing·building·commercial_building). 취득시 기준시가 비율로 토지·건물 분배. */
   actualAcquisitionTotal?: number;
+
+  // === 이월과세(§97의2) — 시나리오 A 전용 취득 값 「두 번째 벌」 (2026-08-10 D-7a) ===
+  /**
+   * **당초 증여자** 취득 당시 값 한 벌 (「소득세법」 §97의2①1호).
+   *
+   * ## 왜 「덮어쓰기」가 아니라 「추가」인가
+   *
+   * §97의2②3호 비교는 **두 시나리오를 동시에** 요구한다
+   * (계획서 `burdened-gift-carryover-159-97-2.plan.md` §5.6.2):
+   *
+   * · 시나리오 **B**(미적용) = **양도인** 취득 당시 값 = 위 기존 필드들
+   * · 시나리오 **A**(적용)   = **당초 증여자** 취득 당시 값 = **이 객체**
+   *
+   * 한 칸의 의미를 토글로 바꾸면 비교 자체가 성립하지 않는다 ⇒ 별도 칸이 **필수**다.
+   *
+   * ## ⚠️ 용어 — 「증여자」가 두 사람을 가리킨다
+   *
+   * · **양도인**      = 부담부증여를 하는 사람(기존 UI의 「증여자」)
+   * · **당초 증여자** = 그 양도인에게 자산을 증여한 사람(= 이월과세의 증여자)
+   *
+   * ## 모드별 필수 칸 (§5.6.3)
+   *
+   * | 모드 | 필수 |
+   * |---|---|
+   * | K-1~K-3 `sangjeungbeop_standard` | `landStdPriceAtAcquisition` · `buildingStdPriceAtAcquisition` |
+   * | K-4 `acquisitionMethod: "actual"` | `actualLandAcquisitionPrice`+`actualBuildingAcquisitionPrice` **또는** `actualAcquisitionTotal` |
+   * | K-5 `acquisitionMethod: "converted"` | 위 기준시가 두 칸 (**환산은 이를 분자로 자동 추종** — 전용 칸 신설 금지) |
+   * | legacy (market·미지정) | `marketValueAtAcquisition` |
+   *
+   * ❌ 미입력 시 **양도인 값으로 fallback 금지** — 시나리오 A = B가 되어 §97의2가 조용히
+   *    무력화된다. `assertCarryoverDonorBasis()`가 fail-fast로 막는다.
+   */
+  carryoverDonorBasis?: BurdenedGiftCarryoverDonorBasis;
+
+  /**
+   * ⚠️ **엔진 내부 전달용 — 사용자 입력 칸이 아니다.**
+   *
+   * `calcCarryoverScenarios`가 시나리오 A의 `burdenedGiftInfo` 사본에만 실어 보내는
+   * 증여세 상당액(원본 총액)이다. §159 안분 단계가 **채무비율로 안분한 뒤 한도**를 적용해
+   * 필요경비에 산입한다(§97의2①3호 · 「소득세법 시행령」 §163의2②).
+   *
+   * ❌ `transferExpense`에 얹지 말 것 — ①기준시가·환산 모드는 실비를 읽지 않아 세액에
+   *    도달하지 않고(계획서 §5.7.4), ②§97②2호 단서(swap)의 나목에 섞여 판정을 오염시킨다.
+   */
+  carryoverGiftTaxAmount?: number;
+}
+
+/**
+ * 부담부증여 × 이월과세 — **당초 증여자 취득 당시** 값 한 벌 (§97의2①1호).
+ *
+ * 각 필드는 `BurdenedGiftInfo`의 동명 필드와 **같은 의미·같은 단위**이며, 기준 시점만
+ * 「양도인 취득 당시」 → 「당초 증여자 취득 당시」로 옮긴 것이다.
+ *
+ * ⚠️ 일반 양도 경로의 `carryoverTaxation.donorAcquisitionPrice`는 **단일 총액**이라
+ *    단위가 다르다. 부담부증여에서는 §159가 자산별로 안분하므로 **토지·건물 분리**가 정본이고
+ *    `donorAcquisitionPrice`는 쓰지 않는다(계획서 §5.7.6).
+ *    ❌ 단일 총액을 기준시가 비율로 자동 분배하지 말 것 — 분리 미입력은 차단한다.
+ */
+export interface BurdenedGiftCarryoverDonorBasis {
+  /** K-1~K-3·K-5: 당초 증여자 취득 당시 토지 기준시가. */
+  landStdPriceAtAcquisition?: number;
+  /** K-1~K-3·K-5: 당초 증여자 취득 당시 건물 기준시가 합계. 건물이 없으면 **0**(undefined 아님). */
+  buildingStdPriceAtAcquisition?: number;
+  /** K-4: 당초 증여자의 실지취득가액 — 토지. */
+  actualLandAcquisitionPrice?: number;
+  /** K-4: 당초 증여자의 실지취득가액 — 건물. */
+  actualBuildingAcquisitionPrice?: number;
+  /** K-4: 당초 증여자의 실지취득가액 — 단일자산 총액(토지·건물 분리 입력이 없을 때). */
+  actualAcquisitionTotal?: number;
+  /** legacy(market·미지정): 당초 증여자 취득 당시 시가 평가액. */
+  marketValueAtAcquisition?: number;
 }
 
 /**
@@ -300,6 +371,33 @@ export interface TransferBurdenedGiftBreakdown {
     finalTax: number;
     /** 적용 관계 */
     donorRelation: string;
+  };
+
+  /**
+   * 이월과세 증여세 상당액 산입 명세 (§97의2①3호 · 시행령 §163의2②) — 2026-08-10 D-7a.
+   *
+   * `info.carryoverGiftTaxAmount`가 있을 때만 채워진다(= 시나리오 A 전용).
+   *
+   * ## 순서가 곧 법령이다 — **안분 먼저, 한도 나중**
+   *
+   * · 시행령 §163의2② **본문**: 증여세 상당액 = 산출세액 × (2호 **「양도한 해당 자산가액」** ÷ 3호 과세가액).
+   *   부담부증여에서 「양도한」 것은 **채무액에 해당하는 부분뿐**이므로 여기가 `apportioned`다.
+   * · 같은 항 **후단**: 「**필요경비로 산입되는** 증여세 상당액은 양도가액에서 법 §97①·②의
+   *   금액을 공제한 잔액을 **한도**」 ⇒ 한도는 **산입액**에 걸린다 = 안분 **후** 값에 건다.
+   *
+   * ⚠️ 순서를 뒤집으면(한도 → 안분) 한도가 **과소 적용**된다. 안분으로 다시 줄어들기 때문이다.
+   */
+  carryoverGiftTax?: {
+    /** 입력된 증여세 상당액 원본(총액). */
+    raw: number;
+    /** 채무비율 안분 후 = raw × B ÷ C (시행령 §163의2②2호). */
+    apportioned: number;
+    /** 한도 = 「양도로 보는 부분」의 양도차익 (같은 항 후단). */
+    cap: number;
+    /** 실제 필요경비 산입액 = min(apportioned, cap). */
+    applied: number;
+    /** 한도가 실제로 깎았는가. */
+    limitApplied: boolean;
   };
 
   /**

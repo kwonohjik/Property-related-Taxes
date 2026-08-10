@@ -148,8 +148,31 @@ export function calculateTransferTax(
     }
   }
 
-  // STEP 0.48 부담부증여 §159 — 800줄 정책 분리 (P5): runBurdenedGiftStep
-  const bgStep = runBurdenedGiftStep(rawInput, workingInput, steps, warnings);
+  /**
+   * STEP 0.48 부담부증여 §159 — 800줄 정책 분리 (P5): runBurdenedGiftStep
+   *
+   * 🔴 **§159의 입력 소스는 `rawInput`이 원칙이되, 이월과세가 교체했으면 그쪽이 정본이다**
+   * (2026-08-10 D-7a). `runBurdenedGiftStep`은 §159 산정에 필요한 값을 첫 인자에서 읽는데,
+   * 종전에는 그것이 항상 `rawInput`이라 STEP 0.475가 만든 **시나리오 A의 입력이 통째로
+   * 무시**됐다 — 시나리오 A 내부 재귀 호출에서는 반영되는데 **채택 후 본 계산에서는 사라져**,
+   * 「비교는 A로 이겨 놓고 세액은 B로 내는」 상태가 된다.
+   *
+   * 교체 대상 3개는 모두 §97의2①이 직접 정한 것이다:
+   *   · `burdenedGiftInfo`      — 취득가액(1호) + 증여세 상당액(3호) 전달분
+   *   · `capitalExpenditure`    — 당초 증여자 자본적지출 합산분(2호). K-4가 읽는다
+   *   · `transferExpense`       — 위와 짝(§100② 성질별 안분에서 함께 쓰인다)
+   *
+   * 이월과세를 타지 않으면(`carryoverDetail` undefined) 종전과 **완전히 동일**하다.
+   */
+  const bgSourceInput: TransferTaxInput = carryoverDetail
+    ? {
+        ...rawInput,
+        burdenedGiftInfo: workingInput.burdenedGiftInfo,
+        capitalExpenditure: workingInput.capitalExpenditure,
+        transferExpense: workingInput.transferExpense,
+      }
+    : rawInput;
+  const bgStep = runBurdenedGiftStep(bgSourceInput, workingInput, steps, warnings);
   const transferBurdenedGiftBreakdown = bgStep.breakdown;
   workingInput = bgStep.workingInput;
 
@@ -358,6 +381,14 @@ export function calculateTransferTax(
       localIncomeTax: lit0,
       totalTax: pt0 + lit0,
       steps,
+      /**
+       * 🔴 **양도차손 경로에도 §159 명세를 싣는다** (2026-08-10 D-7a).
+       *
+       * 종전에는 이 조기반환에만 빠져 있어, 부담부증여로 양도차익이 0 이하가 되면
+       * 결과 화면이 **산출근거를 통째로 잃었다**. 이월과세 증여세 상당액 산입(§97의2①3호)은
+       * 한도까지 채우면 양도차익이 정확히 0이 되므로 이 경로를 **정상적으로** 탄다.
+       */
+      transferBurdenedGiftBreakdown,
       ...buildTransferResultDetails({
         multiHouseSurchargeResult,
         nonBusinessLandJudgment,

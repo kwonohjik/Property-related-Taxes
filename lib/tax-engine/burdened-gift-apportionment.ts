@@ -374,6 +374,60 @@ export function buildBurdenedGiftBreakdown(params: {
     }
   }
 
+  /**
+   * STEP 5.7 — **이월과세 증여세 상당액 산입** (§97의2①3호 · 시행령 §163의2②) — 2026-08-10 D-7a.
+   *
+   * `info.carryoverGiftTaxAmount`는 `calcCarryoverScenarios`가 **시나리오 A 사본에만** 실어 보낸다.
+   * 시나리오 B(이월과세 미적용)에는 없으므로 이 블록이 통째로 건너뛰어진다.
+   *
+   * ## 🔴 왜 여기(STEP 5.5 **뒤**)인가 — 두 가지가 동시에 걸려 있다
+   *
+   * 1. **§97②2호 단서(swap) 비교 대상 밖**이다. 증여세 상당액은 §97의2①3호가 독립적으로
+   *    산입하는 항목이지 가목(환산+개산공제)도 나목(자본적지출+양도비)도 아니다.
+   *    STEP 5.5 앞에 두면 나목에 섞여 **단서 판정을 오염**시킨다.
+   * 2. **개산공제 경로에도 도달해야 한다**. 종전에는 `transferExpense`에 얹었는데
+   *    K-1~K-3·K-5·legacy는 실비를 아예 읽지 않아(STEP 5 `else` = 개산공제) 결과 화면에는
+   *    「증여세 산입」이 뜨는데 **세액은 그대로**였다(계획서 §5.7.4 실측 D3-3 · 침묵 오답보다 나쁘다).
+   *    ⇒ 모드 분기 **바깥**의 필요경비 슬롯에 직접 얹는다.
+   *
+   * ## 순서: 안분 → 한도 (뒤집으면 한도가 과소 적용된다 — 타입 주석 참조)
+   *
+   * 토지·건물 배분은 **자산별 양도가액 비율**이다. 증여세 상당액은 「**양도한** 몫」에 대응하는
+   * 것이고(2호), §159가 채무를 나눈 축이 바로 그 양도가액이므로 같은 축을 쓴다.
+   * 잔액은 건물이 흡수한다(메모리 `feedback_floor_residual_absorption`).
+   */
+  let carryoverGiftTax: TransferBurdenedGiftBreakdown["carryoverGiftTax"];
+  const carryoverGiftTaxRaw = info.carryoverGiftTaxAmount ?? 0;
+  if (carryoverGiftTaxRaw > 0) {
+    const apportioned = apportionAcquisitionPrice(
+      carryoverGiftTaxRaw, assumedDebtAmount, giftValuation.max,
+    );
+    // 한도 = 「양도로 보는 부분」의 양도차익 = 양도가액 − (취득가액 + 그 밖의 필요경비).
+    //   시행령 §163의2② 후단의 「양도가액에서 법 §97① 및 ②의 금액을 공제한 잔액」.
+    const gainBeforeGiftTax =
+      (landTransferPrice + buildingTransferPrice) -
+      (landAcquisitionPrice + buildingAcquisitionPrice) -
+      (landEstimatedDeduction + buildingEstimatedDeduction);
+    const cap = Math.max(0, gainBeforeGiftTax);
+    const applied = Math.min(apportioned, cap);
+    carryoverGiftTax = {
+      raw: carryoverGiftTaxRaw,
+      apportioned,
+      cap,
+      applied,
+      limitApplied: apportioned > cap,
+    };
+    if (applied > 0) {
+      const totalTransfer = landTransferPrice + buildingTransferPrice;
+      const landShare =
+        totalTransfer === 0
+          ? 0
+          : safeMultiplyThenDivide(applied, landTransferPrice, totalTransfer);
+      landEstimatedDeduction += landShare;
+      buildingEstimatedDeduction += applied - landShare;
+    }
+  }
+
   // STEP 6: 무상이전분 — 증여재산 평가액(giftValuation.max) − 채무액 (상증법 §47③)
   const gratuitousPortion = giftValuation.max - assumedDebtAmount;
 
@@ -470,6 +524,7 @@ export function buildBurdenedGiftBreakdown(params: {
     acquisitionMethodUsed,
     ...(necessaryExpenseSwap ? { necessaryExpenseSwap } : {}),
     ...(convertedAcquisitionBeforeSwap ? { convertedAcquisitionBeforeSwap } : {}),
+    ...(carryoverGiftTax ? { carryoverGiftTax } : {}),
     giftTax: giftTaxSummary,
     perAsset: {
       land: {

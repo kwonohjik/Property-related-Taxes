@@ -12,8 +12,14 @@
 import { addYears } from "date-fns";
 import { calculateHoldingPeriod, computeLumpSumDeductionBase } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
+import {
+  assertCarryoverDonorBasis,
+  applyCarryoverDonorBasis,
+  isBurdenedGiftCarryover,
+} from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
+import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type {
   CarryoverTaxationDetail,
@@ -79,6 +85,11 @@ export function calcCarryoverScenarios(
     totalTax: number;
     /** §97②2호 단서 swap 발동 여부 — scenarioA 표시 라벨(개산공제 vs 양도비 등) 분기용 */
     swapApplied?: boolean;
+    /**
+     * 부담부증여 §159 안분 명세 — 시나리오 A의 증여세 산입 실적(안분·한도·산입액)을
+     * 여기서 회수한다(D-7a). 부담부증여가 아니면 undefined.
+     */
+    transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
   },
 ): CalcCarryoverResult | null {
 
@@ -170,6 +181,16 @@ export function calcCarryoverScenarios(
   }
 
   // ─────────────────────────────────────────────────────────
+  // Step 2d: 부담부증여 × 이월과세 게이트 (D-7a, 2026-08-10)
+  //   적용배제 판정(2a~2c) **뒤**에 둔다 — 기간초과·수용 등으로 어차피 미적용이면
+  //   시나리오 A를 만들지 않으므로 당초 증여자 값을 요구할 이유가 없다.
+  // ─────────────────────────────────────────────────────────
+  const isBurdenedGift = isBurdenedGiftCarryover(rawInput);
+  if (isBurdenedGift) {
+    assertCarryoverDonorBasis(rawInput.burdenedGiftInfo!, ct);
+  }
+
+  // ─────────────────────────────────────────────────────────
   // Step 3: 시행시기 가드 (donorCapex, §97조의2 ① 2호)
   // ─────────────────────────────────────────────────────────
   const donorCapexGuardApplied = rawInput.transferDate < DONOR_CAPEX_EFFECTIVE_DATE;
@@ -221,13 +242,61 @@ export function calcCarryoverScenarios(
   const inputABase: TransferTaxInput = {
     ...rawInput,
     acquisitionPrice: ct.useEstimatedAcquisition ? 0 : donorAcqPrice,
-    acquisitionDate: ct.donorAcquisitionDate,   // §95 ④ 보유기간 기산
+    acquisitionDate: ct.donorAcquisitionDate,   // §95 ④ 단서 보유기간 기산
+    /**
+     * 🔑 **부담부증여의 취득가액 축은 여기서만 움직인다**(D-7a).
+     *
+     * 위 `acquisitionPrice`는 §159가 읽지 않는다 — §159①1호의 A는 `burdenedGiftInfo`의
+     * 4개 모드에서 오기 때문이다. 그래서 **info 자체**를 당초 증여자 기준 사본으로 바꿔 끼운다.
+     * 증여세 상당액(§97의2①3호)도 같은 사본에 실어 §159 안분 단계로 넘긴다 —
+     * `transferExpense`에 얹으면 기준시가·환산 모드에서 **세액에 도달하지 못한다**(§5.7.4).
+     */
+    ...(isBurdenedGift
+      ? {
+          burdenedGiftInfo: applyCarryoverDonorBasis(
+            rawInput.burdenedGiftInfo!,
+            ct.giftTaxAmount,
+          ),
+        }
+      : {}),
     // §154① 거주요건 경과규정 판정은 수증자 실제 취득일 기준 (이월과세 의제는 필요경비 한정 §97의2①)
     residenceTransitionAcquisitionDate: ct.giftRegistryDate,
     capitalExpenditure: effectiveCapex,           // 합산된 capex (directSide swap용)
     carryoverTaxation: undefined,                // 재귀 방지
     acquisitionCause: "gift",                    // 하위 호환 (단순 증여)
   };
+
+  /**
+   * 4d′: **부담부증여 경로** — 2-pass를 돌지 않는다 (D-7a, 2026-08-10).
+   *
+   * §159 안분 단계(`burdened-gift-apportionment.ts` STEP 5.7)가 증여세 상당액의
+   * **안분 → 한도 → 산입**을 한 번에 처리하므로, 여기서 한도를 미리 계산해
+   * `transferExpense`에 얹는 아래 일반 경로는 **타면 안 된다**(이중 산입 + 모드별 미도달).
+   *
+   * 표시값(한도·산입액)은 결과에 실려 온 §159 명세에서 **역수신**한다.
+   */
+  if (isBurdenedGift) {
+    const resultABG = calculateTransferTax(inputABase, rates);
+    const cg = resultABG.transferBurdenedGiftBreakdown?.carryoverGiftTax;
+    return finishScenarios({
+      rawInput, ct, rates, calculateTransferTax,
+      applicablePeriodYears,
+      inputAFinal: inputABase,
+      resultA: resultABG,
+      donorAcqPrice,
+      giftTaxAddedToExpense: cg?.applied ?? 0,
+      giftTaxLimitApplied: cg?.limitApplied ?? false,
+      giftTaxLimitCap: cg?.cap ?? 0,
+      effectiveDonorCapex,
+      donorCapexGuardApplied,
+      effectiveCapex,
+      // §159 경로의 필요경비는 개산공제/실비/환산단서를 breakdown이 이미 확정했다.
+      // 시나리오 A 카드가 「개산공제」 라벨을 붙일 근거가 여기엔 없으므로 false.
+      necessaryExpenseIsLumpDeduction: false,
+      echoStdAtAcq: undefined,
+      echoStdAtTransfer: undefined,
+    });
+  }
 
   // 4d: 증여세 상당액 한도 계산 (설계 §6.5.1 — §163의2 ② 단서)
   // Step A-1: 증여세 가산 직전 양도차익 = gain_beforeGiftTax
@@ -292,25 +361,80 @@ export function calcCarryoverScenarios(
   }
 
   const resultA = calculateTransferTax(inputAFinal, rates);
+
+  return finishScenarios({
+    rawInput, ct, rates, calculateTransferTax,
+    applicablePeriodYears,
+    inputAFinal,
+    resultA,
+    donorAcqPrice,
+    giftTaxAddedToExpense,
+    giftTaxLimitApplied,
+    giftTaxLimitCap,
+    effectiveDonorCapex,
+    donorCapexGuardApplied,
+    effectiveCapex,
+    // swap 발동 시 본문 필요경비는 자본적지출+양도비이므로 개산공제가 아니다.
+    necessaryExpenseIsLumpDeduction:
+      ct.useEstimatedAcquisition === true && resultABeforeGiftTax.swapApplied !== true,
+    echoStdAtAcq,
+    echoStdAtTransfer,
+  });
+}
+
+/**
+ * Step 5~7 공통 꼬리 — Scenario B 계산 · §97의2②3호 비교 · 반환.
+ *
+ * 일반 양도 경로와 부담부증여 경로가 **같은 비교·채택 규칙**을 쓰도록 한 지점으로 모았다
+ * (D-7a). 두 경로가 다른 것은 시나리오 A를 **어떻게 만들었는가**뿐이다.
+ */
+function finishScenarios(args: {
+  rawInput: TransferTaxInput;
+  ct: NonNullable<TransferTaxInput["carryoverTaxation"]>;
+  rates: TaxRatesMap;
+  calculateTransferTax: (input: TransferTaxInput, rates: TaxRatesMap) => {
+    determinedTax: number;
+    transferGain: number;
+    longTermHoldingDeduction: number;
+    longTermHoldingRate: number;
+    taxBase: number;
+    calculatedTax: number;
+  };
+  applicablePeriodYears: 5 | 10;
+  inputAFinal: TransferTaxInput;
+  resultA: { determinedTax: number; transferGain: number };
+  donorAcqPrice: number;
+  giftTaxAddedToExpense: number;
+  giftTaxLimitApplied: boolean;
+  giftTaxLimitCap: number;
+  effectiveDonorCapex: number;
+  donorCapexGuardApplied: boolean;
+  effectiveCapex: number;
+  necessaryExpenseIsLumpDeduction: boolean;
+  echoStdAtAcq: number | undefined;
+  echoStdAtTransfer: number | undefined;
+}): CalcCarryoverResult {
+  const {
+    rawInput, ct, rates, calculateTransferTax, applicablePeriodYears,
+    inputAFinal, resultA, donorAcqPrice, echoStdAtAcq, echoStdAtTransfer,
+  } = args;
   const determinedTaxA = resultA.determinedTax;
 
-  // Scenario A 보유연수 (증여자 취득일 기산)
+  // Scenario A 보유연수 (§95④ 단서 — 당초 증여자 취득일 기산)
   const holdingA = calculateHoldingPeriod(ct.donorAcquisitionDate, rawInput.transferDate);
 
   const scenarioA: CarryoverScenarioADetail = {
     acquisitionPrice: donorAcqPrice,
     holdingPeriodYears: holdingA.years,
-    giftTaxAddedToExpense,
-    giftTaxLimitApplied,
-    giftTaxLimitCap,
-    donorCapexAddedToExpense: effectiveDonorCapex,
-    donorCapexGuardApplied,
-    effectiveCapex,
+    giftTaxAddedToExpense: args.giftTaxAddedToExpense,
+    giftTaxLimitApplied: args.giftTaxLimitApplied,
+    giftTaxLimitCap: args.giftTaxLimitCap,
+    donorCapexAddedToExpense: args.effectiveDonorCapex,
+    donorCapexGuardApplied: args.donorCapexGuardApplied,
+    effectiveCapex: args.effectiveCapex,
     acquisitionWasEstimated: ct.useEstimatedAcquisition,
     // 표시 라벨·산식 base echo — UI의 금액 자기일치 역추론을 대체한다(types 주석 참조).
-    // swap 발동 시 본문 필요경비는 자본적지출+양도비이므로 개산공제가 아니다.
-    necessaryExpenseIsLumpDeduction:
-      ct.useEstimatedAcquisition === true && resultABeforeGiftTax.swapApplied !== true,
+    necessaryExpenseIsLumpDeduction: args.necessaryExpenseIsLumpDeduction,
     lumpDeductionBase:
       echoStdAtAcq != null
         ? computeLumpSumDeductionBase(echoStdAtAcq, rawInput.ownershipRatio)
