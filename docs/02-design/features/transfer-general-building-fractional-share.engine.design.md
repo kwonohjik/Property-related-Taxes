@@ -97,11 +97,33 @@ E2E `GBF-28`(mutation probe로 「고치기 전엔 실패한다」 확인).
 > ⚠️ **`Number("")`는 0이다** — `shareIndexOf("land#")`가 「지분 0」이 되어 `assets[0]`을 집던 것을
 > anchor가 잡았다. 접미사를 `assets` 인덱스로 쓰는 이상 파싱 방어가 필수다.
 
-⚠️ **C-14는 폼에서 도달할 수 없다** — `landCarryoverTaxation`의 생산자가 `lib/calc/`·
-`components/`에 **0건**이다(grep 실측). 일반건물 토지 이월과세는 현재 **API 전용**이고
-**단건도 마찬가지**라 지분 축이 만든 갭이 아니다. 입력 UI가 생기면 ④ 변환의 지분율 스케일
-대상(`applyShareScale`)에 이 서브객체를 넣을지 **그때 판단**해야 한다
-(메모리 `feedback_api_trigger_without_input_path_is_noop`).
+### 🔴 C-14 서술 정정 (2026-08-10 후속 조사)
+
+종전에 여기 이렇게 적혀 있었다 — **결론이 틀렸다**:
+
+> ~~C-14는 폼에서 도달할 수 없다 — `landCarryoverTaxation`의 생산자가 0건이라 **API 전용**이다.~~
+
+필드 이름으로 grep한 사실은 맞지만, 경로를 끝까지 따라가면 **UI는 이미 있다**:
+
+- `GeneralBuildingAcquisitionCards.tsx:47~56` `LAND_CAUSE_OPTIONS`에 「이월과세(증여)」가 있고,
+  `:577~583`이 `CarryoverGiftBlock`을 렌더한다.
+- ④는 `buildCarryoverPayload`로 **top-level `carryoverTaxation`** 을 만든다.
+- 끊긴 곳은 **④가 GB payload에 `landCarryoverTaxation`을 안 싣는 것** 하나다
+  (`route.ts:425`도 top-level을 GB로 넘기지 않는다).
+
+실측(2026-08-10 probe): UI가 실제로 만드는 조합(`landAcquisitionCause: "carryover_gift"` +
+top-level `carryoverTaxation`, 서브객체 없음)은 **200 OK · 경고 0 · 세액 그대로**다.
+즉 사용자는 입력하는데 아무 일도 일어나지 않는다.
+
+⇒ 후속 작업은 「UI 신규 개발」이 아니라 **배선 1건**이다:
+[`docs/00-pm/transfer-gb-carryover-wiring.plan.md`](../../00-pm/transfer-gb-carryover-wiring.plan.md)
+
+> 📌 **교훈** — 「생산자 grep 0건」은 *그 필드가* 안 만들어진다는 뜻이지 *기능이* 없다는 뜻이 아니다.
+> 같은 개념을 **다른 키 이름**으로 만드는 경로가 있으면 결론이 뒤집힌다
+> (메모리 `feedback_open_item_wording_is_also_unverified` · `feedback_sibling_path_already_implements_rule`).
+
+지분율 스케일(`applyShareScale`)에 이 서브객체를 넣을지는 그 계획서 **Q3**에서 판단한다 —
+GBF-27이 「route에 이미 × r 된 값이 온다」를 전제로 통과하므로, 반대로 정하면 그 anchor를 함께 고쳐야 한다.
 
 ---
 
