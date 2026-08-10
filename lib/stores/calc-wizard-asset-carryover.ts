@@ -51,8 +51,24 @@ export interface CarryoverTaxationForm {
   donorStandardPriceAtTransfer: string;
   /** 증여자 취득가액 (원, 문자열) — 환산 미사용 시 직접 입력 */
   donorAcquisitionPrice: string;
-  /** 증여세 상당액 (§163의2 산식 기반, 사용자 입력) */
+  /**
+   * 증여세 상당액 (§163의2 산식 기반, **사용자가 이미 안분한 값**).
+   *
+   * ⚠️ 일반건물처럼 자산이 **토지·건물로 갈리는** 경우에는 이 칸을 쓰지 않는다 —
+   *    아래 `giftTaxCalculated`·`giftTaxBase`를 받아 엔진이 영 §163의2②로 파트별 산정한다.
+   *    의미가 다른 값이므로 **재정의하지 않고 병존**시킨다(설계 D9-4).
+   */
   giftTaxAmount: string;
+  /**
+   * 영 §163의2②1호 — 증여받은 자산에 대한 **증여세 산출세액** (증여 사건 1개).
+   * 일반건물 파트별 안분의 곱하는 수. 비워 두면 기존 `giftTaxAmount` 방식으로 동작한다.
+   */
+  giftTaxCalculated: string;
+  /**
+   * 영 §163의2②3호 — 「상속세 및 증여세법」 §47 **증여세 과세가액** (안분 **분모**).
+   * `giftTaxCalculated`와 **짝**이다 — 하나만 채우면 안분이 발동하지 않는다.
+   */
+  giftTaxBase: string;
   /** 증여자 자본적지출 (§97조의2 ① 2호, 2024.1.1. 이후 양도분) */
   donorCapitalExpenditure: string;
   /** 증여 당시 평가액 — 비교과세 시나리오 B 취득가액 */
@@ -72,6 +88,8 @@ export const CARRYOVER_DEFAULTS: CarryoverTaxationForm = {
   donorStandardPriceAtTransfer: "",
   donorAcquisitionPrice: "",
   giftTaxAmount: "",
+  giftTaxCalculated: "",
+  giftTaxBase: "",
   donorCapitalExpenditure: "",
   giftDateValuation: "",
   exclusionDeclared: {
@@ -120,6 +138,9 @@ export function migrateCarryoverFields(a: Record<string, unknown>): void {
     donorAcquisitionPrice:
       typeof raw.donorAcquisitionPrice === "string" ? raw.donorAcquisitionPrice : "",
     giftTaxAmount: typeof raw.giftTaxAmount === "string" ? raw.giftTaxAmount : "",
+    // ③ normalize — 신규 2필드(영 §163의2②1호·3호). 기존 sessionStorage에는 없으므로 빈 문자열.
+    giftTaxCalculated: typeof raw.giftTaxCalculated === "string" ? raw.giftTaxCalculated : "",
+    giftTaxBase: typeof raw.giftTaxBase === "string" ? raw.giftTaxBase : "",
     donorCapitalExpenditure:
       typeof raw.donorCapitalExpenditure === "string" ? raw.donorCapitalExpenditure : "",
     giftDateValuation:

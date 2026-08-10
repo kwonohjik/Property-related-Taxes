@@ -55,32 +55,28 @@ GB에서는 route가 읽지 않으므로 **무해한 중복**이다 — 다만 �
 
 ---
 
-## D3. ⑦ 결과 카드 — **렌더되지 않는다** (실측 확인)
+## D3. ⑦ 결과 카드 — 🔴 **이 절의 종전 결론이 틀렸다** (2026-08-10 정정)
 
-`CarryoverComparisonCard`는 두 곳에서만 렌더된다:
+종전에 이렇게 적었다:
 
-- `TransferTaxResultView.tsx:379` — `result.carryoverTaxationDetail`
-- `ValuationDetailCards.tsx:118` — `result.carryoverTaxationDetail`
+> ~~`CarryoverComparisonCard`는 단건 `result.carryoverTaxationDetail`만 읽는다. GB는
+> `mode: "bundled"`라 명세가 `aggregated.properties[]`에 실리므로 **렌더되지 않는다.**~~
 
-둘 다 **단건 `TransferTaxResult`의 top-level 필드**를 읽는다. 그런데 GB는 `mode: "bundled"`로
-`aggregated`를 돌려주고, 이월과세 명세는 **`aggregated.properties[].carryoverTaxationDetail`**
-(파트별)에 실린다 — 지분 anchor GBF-27에서 실측한 위치다.
+**틀렸다.** E2E K-16이 구현 없이 **바로 통과**해서 되짚어 보니:
 
-⇒ **④만 고치면 세액은 맞지만 「왜 이 세액인가」가 화면에 뜨지 않는다.**
-비교과세는 두 시나리오 중 큰 쪽을 택하는 구조라, 근거 미표시는 납세자가 검산할 수 없다는 뜻이다.
+`BundledAllocationCard`가 `aggregated.properties`를 순회하며 파트마다
+`<ValuationDetailCards result={breakdown} …/>`를 렌더한다(`:177`). 그 `result` prop은
+**단건 `TransferTaxResult`가 아니라 `PerPropertyBreakdown`**이고,
+`transfer-tax-aggregate-pickers.ts:44`가 거기에 `carryoverTaxationDetail`을 실어 준다.
 
-선택지:
+⇒ **비교과세 카드는 이미 파트별로 렌더된다.** 추가 작업이 **없다**.
 
-| 안 | 내용 |
-|---|---|
-| **가** | aggregate 결과에 top-level `carryoverTaxationDetail`을 **hoist**(파트가 1개일 때만) — 기존 카드 재사용 |
-| **나** | `ValuationDetailCards`가 `aggregated.properties[]`를 순회해 파트별로 카드를 렌더 — 지분 분할까지 자연히 대응 |
-
-**나**를 권한다. 가는 파트가 2개 이상(토지+건물, 지분 분할)이면 어느 하나만 보여주게 되어
-「표시가 실제와 어긋나는」 방향이다(메모리 `feedback_engine_result_display_drift`).
-다만 카드 제목에 **파트·지분 라벨**을 붙여야 한다.
-
----
+> 📌 **교훈** — `result`라는 **prop 이름**을 보고 「단건 결과」라고 단정했다. 호출부를 열지
+> 않고 타입 이름으로 의미를 추론한 것이 원인이다
+> (메모리 `feedback_ui_mode_flag_not_domain_semantics` — 모드 플래그·이름으로 도메인 의미를
+> 추론하지 말고 **조회 함수까지 읽어라**).
+>
+> 이 오판이 계획 §4 「⑦ 파트별 렌더」 항목과 D9-7 규모 추정(~40줄)을 부풀렸다. 실제 필요 작업 0.
 
 ## D4. ⑥ 사이드바 — 이월과세 특유 문제가 **아니다**
 

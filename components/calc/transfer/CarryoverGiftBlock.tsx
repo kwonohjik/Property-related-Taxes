@@ -74,6 +74,12 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
   // 시행시기 가드: 양도일 < 2024-01-01 이면 증여자 자본적지출 비활성
   const isAfter2024 = transferDate >= "2024-01-01";
 
+  /**
+   * 일반건물은 하나의 증여가 **토지·건물 두 자산**으로 갈린다 —
+   * 증여세 상당액을 엔진이 영 §163의2②로 안분하므로 입력 칸이 달라진다.
+   */
+  const isGeneralBuilding = asset.assetKind === "general_building";
+
   function updateCarryover(patch: Partial<CarryoverTaxationForm>) {
     onChange({ carryover: patchCarryover(asset.carryover, patch) });
   }
@@ -183,18 +189,53 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
           <p className="text-xs font-semibold text-amber-700">필요경비 가산</p>
         </div>
 
-        <FieldCard
-          label="증여세 상당액"
-          hint="소득세법 시행령 §163의2②: 증여세 산출세액 × (양도한 해당 자산가액 ÷ 증여세 과세가액). 미신고 시 0 입력."
-          trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
-        >
-          <CurrencyInput
-            label=""
-            value={c.giftTaxAmount}
-            onChange={(v) => updateCarryover({ giftTaxAmount: v })}
-            placeholder="증여세 상당액 (없으면 0)"
-          />
-        </FieldCard>
+        {/*
+          🔑 **일반건물은 자산이 토지·건물로 갈린다** — 증여세 상당액을 사용자가 안분해 넣으면
+             검산이 불가능하고, 두 파트 합이 산출세액을 넘어도 막을 수 없다.
+             ⇒ 산출세액·과세가액을 받아 **엔진이 영 §163의2②로 파트별 산정**한다.
+             다른 자산종류는 종전대로 안분된 값을 직접 받는다(의미가 다른 값이라 병존시킨다).
+        */}
+        {isGeneralBuilding ? (
+          <>
+            <FieldCard
+              label="증여세 산출세액"
+              hint="「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. 토지·건물 몫은 아래 과세가액으로 자동 안분됩니다."
+              trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
+            >
+              <CurrencyInput
+                label=""
+                value={c.giftTaxCalculated}
+                onChange={(v) => updateCarryover({ giftTaxCalculated: v })}
+                placeholder="증여세 산출세액 (없으면 0)"
+              />
+            </FieldCard>
+
+            <FieldCard
+              label="증여세 과세가액"
+              hint="「상속세 및 증여세법」 제47조 과세가액 — 안분 분모입니다. 증여받은 재산 전체 기준."
+            >
+              <CurrencyInput
+                label=""
+                value={c.giftTaxBase}
+                onChange={(v) => updateCarryover({ giftTaxBase: v })}
+                placeholder="증여세 과세가액"
+              />
+            </FieldCard>
+          </>
+        ) : (
+          <FieldCard
+            label="증여세 상당액"
+            hint="소득세법 시행령 §163의2②: 증여세 산출세액 × (양도한 해당 자산가액 ÷ 증여세 과세가액). 미신고 시 0 입력."
+            trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
+          >
+            <CurrencyInput
+              label=""
+              value={c.giftTaxAmount}
+              onChange={(v) => updateCarryover({ giftTaxAmount: v })}
+              placeholder="증여세 상당액 (없으면 0)"
+            />
+          </FieldCard>
+        )}
 
         <FieldCard
           label="증여자 자본적지출"

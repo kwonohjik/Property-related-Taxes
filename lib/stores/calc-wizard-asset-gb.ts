@@ -70,9 +70,25 @@ export interface GeneralBuildingFormSlice {
    * - "inheritance": 상속
    * - "gift": 증여
    * - "newConstruction": 신축(자가건축) — §114조의2 가산세 판정 기준
+   * - "carryover_gift": 배우자등 이월과세 — 법 §97의2①은 「**토지·건물** 등」이라 건물도 대상이다
    * undefined: 미선택 (⑧ validate에서 차단)
    */
-  gbBuildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "newConstruction";
+  gbBuildingAcquisitionCause?:
+    | "purchase"
+    | "inheritance"
+    | "gift"
+    | "newConstruction"
+    | "carryover_gift";
+  /**
+   * **건물 파트** 이월과세 입력 — `gbBuildingAcquisitionCause === "carryover_gift"` 시.
+   *
+   * 토지는 자산-수준 `carryover`를 쓰고, 건물은 이 필드를 쓴다. 증여자 취득일·취득가액이
+   * 파트마다 다를 수 있기 때문이다(법 §95④·§97의2①1호).
+   *
+   * 🔑 **증여 사건 정보(등기일·산출세액·과세가액·배제선언)는 `carryover` 쪽 하나만** 쓴다 —
+   *    하나의 증여이므로 두 벌을 두면 어긋난다.
+   */
+  buildingCarryover?: import("./calc-wizard-asset-carryover").CarryoverTaxationForm;
   /**
    * ⛔ `gbBuildingAcquisitionDate` 폐기 (2026-08-05 M-1a).
    * 건물 취득일은 **`acquisitionDate`**, 토지 취득일은 **`landAcquisitionDate`**다

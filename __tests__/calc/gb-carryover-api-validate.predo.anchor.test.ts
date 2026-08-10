@@ -1,5 +1,10 @@
 /**
- * Pre-Do anchor — 일반건물 × 이월과세의 **④ API 변환 · ⑧ validate** 계층.
+ * anchor — 일반건물 × 이월과세의 **④ API 변환 · ⑧ validate** 계층.
+ *
+ * ## ✅ 구현 착지 (2026-08-10)
+ *
+ * 작성 시점에는 10건이 `it.fails`였다. `buildGbCarryoverPayload`(④) +
+ * `validateGbCarryover`(⑧)로 **전건 `it` 전환**했다. 이제 회귀 방어선이다.
  *
  * 계획: `docs/00-pm/transfer-gb-carryover-wiring.plan.md`
  * 설계: `docs/02-design/features/transfer-gb-carryover-wiring.engine.design.md` D9-10(payload 계약)·D5
@@ -85,7 +90,7 @@ const build = (asset: AssetForm) =>
 
 const messages = (f: TransferFormData) => collectStepIssues(0, f).map((i) => i.message).join(" | ");
 
-describe("GB × 이월과세 — ④ 변환 Pre-Do anchor", () => {
+describe("GB × 이월과세 — ④ 변환 anchor", () => {
   // ══════════════════════════════════════════════════════════════════
   // K-01 — 폼에서 서브객체가 만들어진다 🔴 미구현
   // ══════════════════════════════════════════════════════════════════
@@ -100,7 +105,7 @@ describe("GB × 이월과세 — ④ 변환 Pre-Do anchor", () => {
       expect(v?.landAcquisitionCause).toBe("carryover_gift");
     });
 
-    it.fails("🔴 환산 경로 — 서브객체가 실린다", () => {
+    it("🔴 환산 경로 — 서브객체가 실린다", () => {
       const v = build(carryoverAsset());
       expect(v?.landCarryoverTaxation ?? v?.landCarryoverPart).toBeDefined();
     });
@@ -109,7 +114,7 @@ describe("GB × 이월과세 — ④ 변환 Pre-Do anchor", () => {
      * 🔑 **두 진입점을 각각 건다**(설계 D1-1). `landAcquisitionCause`를 싣는 코드가
      *    환산 경로와 실가 경로에 **따로** 있어, 한쪽만 고치면 모드에 따라 켜졌다 꺼졌다 한다.
      */
-    it.fails("🔴 실가 경로 — 서브객체가 실린다", () => {
+    it("🔴 실가 경로 — 서브객체가 실린다", () => {
       const v = build(
         carryoverAsset({
           useEstimatedAcquisition: false,
@@ -135,7 +140,7 @@ describe("GB × 이월과세 — ④ 변환 Pre-Do anchor", () => {
      *    (`BUILDING_CAUSE_OPTIONS`도 4종). 구현이 **타입과 옵션을 함께 넓혀야** 한다.
      *    그때까지는 `as unknown as`로 우회한다 — tsc가 0이어야 커밋할 수 있기 때문이다.
      */
-    it.fails("🔴 건물 파트 — `buildingCarryoverTaxation`이 실린다 (Q1)", () => {
+    it("🔴 건물 파트 — `buildingCarryoverTaxation`이 실린다 (Q1)", () => {
       const v = build(
         carryoverAsset({
           gbBuildingAcquisitionCause: "carryover_gift",
@@ -157,7 +162,7 @@ describe("GB × 이월과세 — ④ 변환 Pre-Do anchor", () => {
      *    「차단됐다」와 「애초에 안 만든다」가 구별되지 않는다.
      *    ⇒ **양성 대조군을 같은 테스트 안**에 둔다(메모리 `feedback_negative_assertion_needs_mutation_probe`).
      */
-    it.fails("🔑 부담부증여면 없고, 일반 양도면 있다 (음성 + 양성 한 쌍)", () => {
+    it("🔑 부담부증여면 없고, 일반 양도면 있다 (음성 + 양성 한 쌍)", () => {
       const burdened = build(
         carryoverAsset({ transferType: "burdened_gift" } as Partial<AssetForm>),
       );
@@ -184,7 +189,7 @@ describe("GB × 이월과세 — ④ 변환 Pre-Do anchor", () => {
     const share = (id: string, num: string, over: Partial<AssetForm> = {}) =>
       gbAsset({ assetId: id, ownershipNumerator: num, ownershipDenominator: "100", ...over });
 
-    it.fails("40% 지분의 증여자 취득가액이 **입력값 그대로** 실린다", () => {
+    it("40% 지분의 증여자 취득가액이 **입력값 그대로** 실린다", () => {
       const shares = buildGeneralBuildingShares(
         [
           share("a", "60"),
@@ -211,7 +216,7 @@ describe("GB × 이월과세 — ④ 변환 Pre-Do anchor", () => {
 // ══════════════════════════════════════════════════════════════════
 // K-13 — ⑧ validate 🔴 현재 0건
 // ══════════════════════════════════════════════════════════════════
-describe("GB × 이월과세 — ⑧ validate Pre-Do anchor", () => {
+describe("GB × 이월과세 — ⑧ validate anchor", () => {
   /**
    * 🔴 **가장 위험한 실패 모드**: `buildCarryoverPayload`는 `giftRegistryDate`·
    * `donorAcquisitionDate` 중 하나라도 비면 `undefined`를 돌려준다(`:45`).
@@ -225,28 +230,28 @@ describe("GB × 이월과세 — ⑧ validate Pre-Do anchor", () => {
     expect(msg).not.toMatch(/증여 등기접수일|증여자의 취득일/);
   });
 
-  it.fails("🔴 증여 등기접수일 미입력 → 차단", () => {
+  it("🔴 증여 등기접수일 미입력 → 차단", () => {
     const msg = messages(
       form([carryoverAsset({ carryover: carryoverForm({ giftRegistryDate: "" }) as never })]),
     );
     expect(msg).toMatch(/증여 등기접수일/);
   });
 
-  it.fails("🔴 증여자 취득일 미입력 → 차단 (법 §95④ 보유기간 기산일)", () => {
+  it("🔴 증여자 취득일 미입력 → 차단 (법 §95④ 보유기간 기산일)", () => {
     const msg = messages(
       form([carryoverAsset({ carryover: carryoverForm({ donorAcquisitionDate: "" }) as never })]),
     );
     expect(msg).toMatch(/증여자의 취득일/);
   });
 
-  it.fails("🔴 증여 당시 평가액 미입력 → 차단 (비교과세 B 취득가액)", () => {
+  it("🔴 증여 당시 평가액 미입력 → 차단 (비교과세 B 취득가액)", () => {
     const msg = messages(
       form([carryoverAsset({ carryover: carryoverForm({ giftDateValuation: "" }) as never })]),
     );
     expect(msg).toMatch(/증여 당시 평가액/);
   });
 
-  it.fails("🔴 실가 모드 + 증여자 취득가액 미입력 → 차단", () => {
+  it("🔴 실가 모드 + 증여자 취득가액 미입력 → 차단", () => {
     const msg = messages(
       form([
         carryoverAsset({
@@ -264,18 +269,19 @@ describe("GB × 이월과세 — ⑧ validate Pre-Do anchor", () => {
    * 🔑 **Σ 검증** — 안분 분모가 사용자 입력이라, 파트 합이 분모를 넘으면 증여세 상당액 합계가
    * 산출세액을 초과한다. 엔진이 막아주지 않으므로 ⑧에서 잡는다(설계 D5).
    */
-  it.fails("🔴 Σ 파트 자산가액 > 증여세 과세가액 → 차단", () => {
+  it("🔴 Σ 파트 자산가액 > 증여세 과세가액 → 차단", () => {
     const msg = messages(
       form([
         carryoverAsset({
-          // 위와 같은 이유로 `as unknown as` — 타입이 아직 `carryover_gift`를 모른다
           gbBuildingAcquisitionCause: "carryover_gift",
+          // 토지 400,000,000 + 건물 300,000,000 = 700,000,000 > 과세가액 500,000,000
           carryover: carryoverForm({
+            giftTaxCalculated: "100,000,000",
             giftTaxBase: "500,000,000",
-            giftDateAssetValue: "400,000,000",
-            buildingGiftDateAssetValue: "300,000,000", // 합 700,000,000 > 500,000,000
+            giftDateValuation: "400,000,000",
           }) as never,
-        } as unknown as Partial<AssetForm>),
+          buildingCarryover: carryoverForm({ giftDateValuation: "300,000,000" }) as never,
+        }),
       ]),
     );
     expect(msg).toMatch(/증여세 과세가액/);

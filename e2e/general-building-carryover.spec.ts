@@ -121,7 +121,6 @@ test.describe("일반건물 × 이월과세(§97의2)", () => {
   // K-17 — 폼에서 입력하면 세액이 **실제로** 바뀐다 🔴
   // ══════════════════════════════════════════════════════════════════
   test("K-17: 이월과세를 고르면 세액이 달라진다", async ({ page }) => {
-    test.fail(); // 🔴 미구현 — ④가 서브객체를 만들지 않아 조용히 무시된다
     test.setTimeout(150_000);
 
     const off = await seedAndCalculate(page, false);
@@ -140,7 +139,6 @@ test.describe("일반건물 × 이월과세(§97의2)", () => {
   // K-16 — 비교과세 근거 카드가 화면에 뜬다 🔴
   // ══════════════════════════════════════════════════════════════════
   test("K-16: 비교과세 결과 카드가 렌더된다", async ({ page }) => {
-    test.fail(); // 🔴 미구현 — 카드가 단건 `result.carryoverTaxationDetail`만 읽는다(설계 D3)
     test.setTimeout(120_000);
 
     await seedAndCalculate(page, true);

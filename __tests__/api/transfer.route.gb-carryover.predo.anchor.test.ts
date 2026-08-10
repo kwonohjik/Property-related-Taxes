@@ -1,22 +1,27 @@
 /**
- * Pre-Do anchor — 일반건물 × 배우자등 이월과세(§97의2) **route 계층**.
+ * anchor — 일반건물 × 배우자등 이월과세(§97의2) **route 계층**.
+ *
+ * ## ✅ 구현 착지 (2026-08-10)
+ *
+ * 작성 시점에는 12건이 `it.fails`였다(건물 파트·증여세 안분·한도·환산 모드).
+ * route 조립(`composeGbCarryover`) + 엔진 건물 카드 배선 + 환산 기준시가 주입으로
+ * **전건 `it` 전환**했다. 이제 이 파일은 **회귀 방어선**이다.
+ *
+ * ⚠️ 여기서 `it.fails`가 다시 필요해지면 **결함이 재발했다는 신호**다 — 표기를 바꾸지 말고
+ *    원인을 고칠 것.
  *
  * 계획: `docs/00-pm/transfer-gb-carryover-wiring.plan.md` (착수 조건 Q1~Q4 전건 확정)
  * 설계: `docs/02-design/features/transfer-gb-carryover-wiring.engine.design.md` D9
  * 정책: `feedback_pre_anchor_verification` — Do 진입 전 **실패하는** anchor로 설계를 환류한다.
  *
- * ## 지금 무엇이 되고 무엇이 안 되는가 (2026-08-10 실측)
+ * ## 착지 전에 무엇이 깨져 있었나 (2026-08-10 실측 — 회귀 판별용으로 남긴다)
  *
- * | | 상태 |
+ * | | 착지 전 |
  * |---|---|
- * | 토지 파트 `landCarryoverTaxation`(엔진 모양 직접 전달) | ✅ 동작 — K-02~K-06·K-11·K-12가 지금 green |
+ * | 토지 파트 `landCarryoverTaxation`(엔진 모양 직접 전달) | ✅ 이미 동작 |
  * | 건물 파트 | 🔴 배선 없음 — `buildingCarryoverTaxation` 미존재 |
- * | 증여세 파트별 안분(영 §163의2②) | 🔴 미구현 — 사용자가 안분한 값을 받는다 |
+ * | 증여세 파트별 안분(영 §163의2②) | 🔴 미구현 — 사용자가 안분한 값을 받았다 |
  * | 환산 모드 | 🔴 **취득가액 0** — 43,470,000원 과대과세(계획 §6 Q2) |
- * | 부담부증여 차단 | 🔴 미구현 |
- *
- * ⇒ `it.fails`인 것이 **아직 구현되지 않은 것**이다. 구현이 착지하면 `it`으로 전환한다.
- *   ⚠️ 여기서 `it.fails`가 **다시** 필요해지면 회귀 신호다 — 표기를 바꾸지 말고 원인을 고칠 것.
  *
  * ## 픽스처
  *
@@ -151,7 +156,7 @@ async function call(b: object) {
 type Result = Awaited<ReturnType<typeof call>>;
 const prop = (r: Result, id: string) => r.properties.find((p) => p.propertyId === id);
 
-describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
+describe("GB × 이월과세 — anchor (route)", () => {
   beforeEach(() => {
     vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
   });
@@ -263,7 +268,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
       buildingCarryoverTaxation: engineShaped(),
     });
 
-    it.fails("건물 카드에 carryoverTaxationDetail이 실린다", async () => {
+    it("건물 카드에 carryoverTaxationDetail이 실린다", async () => {
       const r = await call(buildingOnly);
       expect(prop(r, "building")?.carryoverTaxationDetail?.isEligible).toBe(true);
       expect(prop(r, "building")?.carryoverTaxationDetail?.scenarioA.acquisitionPrice).toBe(
@@ -271,7 +276,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
       );
     });
 
-    it.fails("🔑 건물만 움직이고 토지는 불변 (음성 + 양성 대조군)", async () => {
+    it("🔑 건물만 움직이고 토지는 불변 (음성 + 양성 대조군)", async () => {
       const base = await call(body());
       const r = await call(buildingOnly);
       expect(prop(r, "building")!.transferGain).not.toBe(prop(base, "building")!.transferGain);
@@ -294,7 +299,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
       buildingCarryoverTaxation: engineShaped({ donorAcquisitionPrice: 80_000_000 }),
     });
 
-    it.fails("두 카드가 각자 자기 증여자 취득가액을 쓴다", async () => {
+    it("두 카드가 각자 자기 증여자 취득가액을 쓴다", async () => {
       const r = await call(both);
       expect(prop(r, "land")?.carryoverTaxationDetail?.scenarioA.acquisitionPrice).toBe(150_000_000);
       expect(prop(r, "building")?.carryoverTaxationDetail?.scenarioA.acquisitionPrice).toBe(
@@ -311,7 +316,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
      * ⇒ **건물 증여자 취득일을 토지보다 이르게** 준다. 배선 전에는 건물이 2021(짧음)이라
      *    `building < land`, 배선 후에는 건물이 1995(가장 김)라 `building > land`가 된다.
      */
-    it.fails("파트별 증여자 취득일이 다르면 LTHD가 갈린다 (법 §95④)", async () => {
+    it("파트별 증여자 취득일이 다르면 LTHD가 갈린다 (법 §95④)", async () => {
       const r = await call(
         body({
           landAcquisitionCause: "carryover_gift",
@@ -348,7 +353,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
       buildingCarryoverPart: part(200_000_000),
     });
 
-    it.fails("토지 60,000,000 · 건물 40,000,000 (원 단위)", async () => {
+    it("토지 60,000,000 · 건물 40,000,000 (원 단위)", async () => {
       const r = await call(apportioned);
       expect(prop(r, "land")?.carryoverTaxationDetail?.scenarioA.giftTaxAddedToExpense).toBe(
         60_000_000,
@@ -366,7 +371,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
      * 이 픽스처는 자산가액 합(300,000,000 + 200,000,000)이 과세가액과 **같아** Σ = 산출세액이다.
      * 아래 「일부만 양도」 케이스가 일반형(Σ < 산출세액)을 함께 고정한다.
      */
-    it.fails("Σ 파트 증여세 상당액 = 100,000,000 (= 산출세액, 자산가액 합 = 과세가액)", async () => {
+    it("Σ 파트 증여세 상당액 = 100,000,000 (= 산출세액, 자산가액 합 = 과세가액)", async () => {
       const r = await call(apportioned);
       const sum =
         (prop(r, "land")?.carryoverTaxationDetail?.scenarioA.giftTaxAddedToExpense ?? 0) +
@@ -380,7 +385,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
      *   토지 floor(100,000,000 × 300,000,000 / 600,000,000) = 50,000,000
      *   건물 floor(100,000,000 × 200,000,000 / 600,000,000) = 33,333,333  ← **floor 확인**
      */
-    it.fails("일부만 양도 — 토지 50,000,000 · 건물 33,333,333 (floor)", async () => {
+    it("일부만 양도 — 토지 50,000,000 · 건물 33,333,333 (floor)", async () => {
       const r = await call(
         body({
           carryoverGiftEvent: { ...GIFT_EVENT, giftTaxBase: 600_000_000 },
@@ -398,7 +403,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
       );
     });
 
-    it.fails("비교과세 B 취득가액 = 그 파트의 giftDateAssetValue (같은 값을 겸한다)", async () => {
+    it("비교과세 B 취득가액 = 그 파트의 giftDateAssetValue (같은 값을 겸한다)", async () => {
       const r = await call(apportioned);
       expect(prop(r, "land")?.carryoverTaxationDetail?.scenarioB.acquisitionPrice).toBe(300_000_000);
       expect(prop(r, "building")?.carryoverTaxationDetail?.scenarioB.acquisitionPrice).toBe(
@@ -418,7 +423,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
      * 토지 양도가 500,000,000 · 증여자 취득가액 490,000,000 ⇒ 한도 ≈ 10,000,000
      * 안분 증여세 60,000,000 > 한도 ⇒ 절사되어야 한다.
      */
-    it.fails("한도 초과분이 절사된다", async () => {
+    it("한도 초과분이 절사된다", async () => {
       const r = await call(
         body({
           carryoverGiftEvent: GIFT_EVENT,
@@ -433,7 +438,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
     });
 
     /** 🔑 **미초과 대조군** — 없으면 「항상 절사」와 구별되지 않는다. */
-    it.fails("대조군 — 한도 미초과면 안분값 그대로", async () => {
+    it("대조군 — 한도 미초과면 안분값 그대로", async () => {
       const r = await call(
         body({
           carryoverGiftEvent: GIFT_EVENT,
@@ -463,7 +468,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
      *
      * 🔑 「≠ 0」이 아니라 **원 단위 일치**로 건다 — 부정 단언은 다른 이유로 0이 아닐 때도 통과한다.
      */
-    it.fails("환산취득가 = 150,000,000 (분모는 엔진이 아는 양도 당시 기준시가)", async () => {
+    it("환산취득가 = 150,000,000 (분모는 엔진이 아는 양도 당시 기준시가)", async () => {
       const r = await call(
         body({
           carryoverGiftEvent: GIFT_EVENT,
@@ -478,7 +483,7 @@ describe("GB × 이월과세 — Pre-Do anchor (route)", () => {
       expect(prop(r, "land")?.carryoverTaxationDetail?.scenarioA.acquisitionPrice).toBe(150_000_000);
     });
 
-    it.fails("🔴 회귀 가드 — 환산 모드에서 취득가액이 0이 되지 않는다", async () => {
+    it("🔴 회귀 가드 — 환산 모드에서 취득가액이 0이 되지 않는다", async () => {
       const r = await call(
         body({
           carryoverGiftEvent: GIFT_EVENT,
