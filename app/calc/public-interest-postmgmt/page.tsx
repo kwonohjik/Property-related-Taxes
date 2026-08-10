@@ -8,6 +8,7 @@
  *   · 3호(운용소득 목적 외) — 법 §48②3호 + 상증령 §40①2의2호 + 상증칙 §13②③
  *   · 4호(매각대금 3년) — 법 §48②4호 + 상증령 §38④ + §40①3호 가·나
  *   · 6호(의결권 행사) — 법 §48②6호 + §16②2호가목 + 상증령 §40①3의2호
+ *   · 8호(운용 의무 위반) — 법 §48②8호 + 상증령 §38⑧ + §40①4호·5호
  *
  * 영농(`/calc/inheritance-postmgmt`)·가업(`/calc/family-business-postmgmt`) 시뮬레이터와 병렬.
  * 순수 엔진을 클라이언트에서 직접 호출한다(API 불필요).
@@ -36,8 +37,9 @@ import { Clause1Form } from "./Clause1Form";
 import { Clause3Form } from "./Clause3Form";
 import { Clause4Form } from "./Clause4Form";
 import { Clause6Form } from "./Clause6Form";
+import { Clause8Form } from "./Clause8Form";
 
-type ClauseKind = "clause1" | "clause3" | "clause4" | "clause6";
+type ClauseKind = "clause1" | "clause3" | "clause4" | "clause6" | "clause8";
 
 const CLAUSE_OPTIONS: Array<{ value: ClauseKind; label: string; description: string }> = [
   {
@@ -62,6 +64,12 @@ const CLAUSE_OPTIONS: Array<{ value: ClauseKind; label: string; description: str
     label: "출연주식 의결권 행사 (§48②6호)",
     description:
       "20% 한도(§16②2호가목)를 적용받은 공익법인등이 「의결권을 행사하지 아니할 것」을 위반해 의결권을 행사한 경우",
+  },
+  {
+    value: "clause8",
+    label: "운용 의무 위반 (§48②8호)",
+    description:
+      "사업 종료 시 잔여재산을 국가 등에 귀속시키지 않았거나, 직접 공익목적사업의 혜택이 일부에게만 제공된 경우",
   },
 ];
 
@@ -136,6 +144,7 @@ function PublicInterestPostMgmtInner() {
       {clause === "clause3" && <Clause3Form />}
       {clause === "clause4" && <Clause4Form />}
       {clause === "clause6" && <Clause6Form />}
+      {clause === "clause8" && <Clause8Form />}
     </div>
   );
 }

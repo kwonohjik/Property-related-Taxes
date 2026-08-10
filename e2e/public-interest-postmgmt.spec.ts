@@ -333,3 +333,85 @@ test.describe("공익법인 출연주식 의결권 행사 (§48②6호)", () => 
     await expect(page.getByTestId("pi6-non-applicable")).not.toContainText("나목");
   });
 });
+
+/**
+ * §48②8호 — 운용 의무 위반 (상증령 §38⑧1호 잔여재산 · 2호 일부 혜택).
+ *
+ * 🔑 **단서 입력 블록이 2호에서만 나타나는가**가 이 블록의 핵심이다. 1호에 단서 UI가 있으면
+ *    근거 없이 유리하게 적용할 경로를 열어 준다(§40①5호는 「제38조제8항제2호 **본문**」이다).
+ */
+async function openClause8(page: Page) {
+  await page.goto("/calc/public-interest-postmgmt");
+  await page.getByRole("heading", { name: /공익법인 출연재산 사후관리/ }).waitFor();
+  await page.getByRole("radio", { name: /운용 의무 위반/ }).check();
+}
+
+test.describe("공익법인 운용 의무 위반 (§48②8호)", () => {
+  test("PI8-E2E-1: 1호 — 귀속시키지 아니한 잔여재산가액이 과세가액", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause8(page);
+    await page.getByTestId("pi8-residual-value").fill("500000000");
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi8-result");
+    await expect(box).toBeVisible();
+    // 5억 × 20% − 1천만 = 90,000,000
+    await expect(page.getByTestId("pi8-gift-tax")).toHaveText(/90,000,000/);
+    await expect(box.getByText(/상증령 §40①4호/).first()).toBeVisible();
+  });
+
+  test("PI8-E2E-2: ⭐ 단서 입력은 1호에 없고 2호에만 나타난다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause8(page);
+    // 1호 상태 — 단서 토글이 없다
+    await expect(page.getByRole("switch", { name: /수혜자 범위를 따로 정한 경우/ })).toHaveCount(0);
+
+    await page.getByRole("radio", { name: /일부에게만 혜택 제공/ }).check();
+    // 2호로 바꾸면 나타난다 (양성 대조군 — 부재 단언이 다른 이유로 통과하지 않게)
+    await expect(page.getByRole("switch", { name: /수혜자 범위를 따로 정한 경우/ })).toBeVisible();
+    // 입력 필드도 바뀐다
+    await expect(page.getByTestId("pi8-residual-value")).toHaveCount(0);
+    await expect(page.getByTestId("pi8-benefit-value")).toBeVisible();
+  });
+
+  test("PI8-E2E-3: 2호 — 3요건을 모두 갖추면 「추징 제외」로 뒤집힌다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause8(page);
+    await page.getByRole("radio", { name: /일부에게만 혜택 제공/ }).check();
+    await page.getByTestId("pi8-benefit-value").fill("300000000");
+
+    // 먼저 단서 없이 — 3억 × 20% − 1천만 = 50,000,000
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+    await expect(page.getByTestId("pi8-gift-tax")).toHaveText(/50,000,000/);
+
+    // 단서 3요건 충족
+    await page.getByRole("switch", { name: /수혜자 범위를 따로 정한 경우/ }).click();
+    await page.getByRole("switch", { name: /재정경제부장관과 협의함/ }).click();
+    await page.getByRole("switch", { name: /따로 수혜자의 범위를 정함/ }).click();
+    await page.getByRole("radio", { name: /가목 — 설립허가의 조건/ }).check();
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi8-result");
+    await expect(box.getByText(/추징 제외/).first()).toBeVisible();
+    await expect(page.getByTestId("pi8-exempt-reason")).toContainText("가목");
+    await expect(page.getByTestId("pi8-gift-tax")).toHaveCount(0);
+  });
+
+  test("PI8-E2E-4: 2호 — 협의를 빠뜨리면 제외되지 않는다 (3요건 중 하나만 빠져도)", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await openClause8(page);
+    await page.getByRole("radio", { name: /일부에게만 혜택 제공/ }).check();
+    await page.getByTestId("pi8-benefit-value").fill("300000000");
+
+    await page.getByRole("switch", { name: /수혜자 범위를 따로 정한 경우/ }).click();
+    // 협의 토글은 켜지 않는다
+    await page.getByRole("switch", { name: /따로 수혜자의 범위를 정함/ }).click();
+    await page.getByRole("radio", { name: /가목 — 설립허가의 조건/ }).check();
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    await expect(page.getByTestId("pi8-gift-tax")).toHaveText(/50,000,000/);
+    await expect(page.getByTestId("pi8-exempt-reason")).toHaveCount(0);
+  });
+});

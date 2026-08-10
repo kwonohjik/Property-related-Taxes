@@ -318,6 +318,73 @@ export interface PublicInterestVotingRightsResult {
 }
 
 // ============================================================
+// §48②8호 — 출연재산·직접 공익목적사업의 **운용 의무 위반**
+// ============================================================
+
+/** 상증령 §38⑧ 각 호 — 8호가 지시하는 「대통령령으로 정하는 바」 두 갈래. */
+export type OperationViolationKind =
+  /** 1호 — 사업을 종료한 때의 **잔여재산**을 국가·지자체·동일·유사 공익법인등에 귀속시키지 아니한 때 */
+  | "residual_not_transferred"
+  /** 2호 — 직접 공익목적사업 사용이 사회적 지위·직업·근무처·출생지 등에 의해 **일부에게만 혜택** */
+  | "benefit_to_limited_group";
+
+/** 상증령 §38⑧2호 **단서** 조건 유형 — 가목·나목. */
+export type BeneficiaryScopeCondition =
+  /** 가목 — 해당 공익법인등의 **설립허가의 조건**으로 붙인 경우 */
+  | "establishment_permit"
+  /** 나목 — 재산 추가출연에 따른 **정관 변경허가 조건**으로 붙인 경우 */
+  | "articles_amendment_permit"
+  /** 어느 조건으로도 붙이지 않음 — 단서 불성립 */
+  | "none";
+
+export interface PublicInterestOperationViolationInput {
+  /** 위반 유형 (상증령 §38⑧1호·2호). 과세가액은 **택일**이다. */
+  violation: OperationViolationKind;
+  /** 1호 — 귀속시키지 아니한 잔여재산가액 (원) — 상증령 §40①4호. */
+  unTransferredResidualValue?: number;
+  /**
+   * 2호 — 혜택을 받은 일부에게만 제공된 **재산가액 또는 경제적 이익에 상당하는 가액** (원)
+   * — 상증령 §40①5호.
+   */
+  limitedBenefitValue?: number;
+  /**
+   * 2호 **단서** — 세 요건을 **모두** 갖추면 8호에서 제외된다.
+   *
+   * ⚠️ 단서는 **2호에만** 붙는다. §40①5호가 「제38조제8항제2호 **본문**의 규정에 해당하게 되는
+   * 경우」라고 못박았고, 1호(잔여재산)에는 단서 자체가 없다 — 근거 없이 넓히지 않는다.
+   */
+  approvedBeneficiaryScope?: {
+    /** 주무부장관이 재정경제부장관과 **협의**했는가(권한 위임 시 위임기관과 관할세무서장의 협의). */
+    consulted: boolean;
+    /** 따로 **수혜자의 범위를 정했는가**. */
+    scopeDefined: boolean;
+    /** 가목(설립허가) 또는 나목(정관 변경허가) **조건으로 붙였는가**. */
+    conditionType: BeneficiaryScopeCondition;
+  };
+}
+
+export interface PublicInterestOperationViolationResult {
+  /** 추징 사유가 발생했는가 (단서 충족 시 false). */
+  isClawback: boolean;
+  /** 2호 단서로 제외된 경우의 사유 문구. */
+  exemptReason?: string;
+  /** 과세표준이 §55② 과세최저한(50만원) 미만이라 세액이 0인가. */
+  belowMinimumTaxBase: boolean;
+  /** 선택한 유형의 과세가액 (상증령 §40①4호·5호). 단서 충족 시 0. */
+  clawbackBase: number;
+  /** 증여세 과세표준 — §55② 미달 시 0. */
+  taxBase: number;
+  /** 추징 증여세 (§56 누진세율). */
+  giftTax: number;
+  /** 적용 한계세율 (표시용). */
+  appliedRate: number;
+  /** 누진공제 (표시용). */
+  progressiveDeduction: number;
+  steps: PublicInterestStep[];
+  warnings: string[];
+}
+
+// ============================================================
 // §48②5호·7호 — **가산세** (§78⑨)
 // ============================================================
 
