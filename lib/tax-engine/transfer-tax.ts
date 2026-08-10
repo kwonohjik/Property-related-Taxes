@@ -358,6 +358,14 @@ export function calculateTransferTax(
     }
     return {
       isExempt: false,
+      /**
+       * 🔑 **양도차손 경로에도 §89①3호 해당 여부를 실어야 한다** (2026-08-10 D-8).
+       *
+       * 이 조기반환은 「양도차익 ≤ 0」이라 세액이 0인 것이지 **비과세 판정이 없었던 것이
+       * 아니다**. 빠뜨리면 §97의2②2호 자동 판정이 「B는 1세대1주택이 아니다」로 오판해
+       * **이월과세를 잘못 배제**한다(anchor OH-2가 이 누락을 잡았다).
+       */
+      isPartialExempt: exemptionResult.isPartialExempt,
       // [F1] 경정 결과 양도차손(산출세액 0) → 조기반환. refund면 전액환급(determinedTax=0).
       amendmentDetail: input.amendment ? computeAmendment(input.amendment, 0) : undefined,
       exemptReason: exemptionResult.exemptReason,
@@ -637,6 +645,8 @@ export function calculateTransferTax(
   } = finalize;
   return {
     isExempt: false,
+    // §89①3호 각 목에는 해당하나 12억 초과분만 과세되는 상태(고가주택). D-8 ②2호 판정이 읽는다.
+    isPartialExempt: exemptionResult.isPartialExempt,
     exemptReason: exemptionResult.exemptReason,
     warnings: warnings.length > 0 ? warnings : undefined,
     transferGain,

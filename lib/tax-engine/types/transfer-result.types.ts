@@ -70,6 +70,19 @@ export interface UsageConversionDetail {
 export interface TransferTaxResult {
   /** 전액 비과세 여부 */
   isExempt: boolean;
+  /**
+   * **부분** 비과세 여부 — 「소득세법」 §89①3호 각 목에는 해당하나 12억 초과 고가주택이라
+   * 초과분만 과세되는 상태 (2026-08-10 D-8에서 승격).
+   *
+   * ## 왜 노출하는가 — `isExempt`만으로는 §89①3호 해당 여부를 알 수 없다
+   *
+   * 전액 비과세는 조기반환(`buildExemptEarlyResult`)이라 `isExempt: true`지만, **고가주택은
+   * 정상 경로를 끝까지 흘러 `isExempt: false`로 끝난다**. 그래서 「§89①3호 각 목의 주택
+   * (고가주택 **포함**)의 양도에 해당하는가」는 **`isExempt || isPartialExempt`**로 봐야 한다.
+   *
+   * 소비자: `calcCarryoverScenarios`의 §97의2②2호 자동 판정.
+   */
+  isPartialExempt?: boolean;
   /** 비과세 사유 */
   exemptReason?: string;
   /**
