@@ -253,3 +253,55 @@ describe("RS-W: 「그 외」 관계 차단", () => {
     expect(validateAssetAcquisition(spouse, "자산 1", "2030-05-31")).toBeNull();
   });
 });
+
+// ────────────────────────────────────────────────────────────
+// BG-W (O-3): 일반건물 × **부담부증여**에도 ⑧ 관계 검증이 닿는가
+//
+// `validateGbCarryover`는 부담부증여를 조기 반환으로 흘려보낸다 — 그쪽 ⑧이
+// 「당초 증여자」 두 벌을 따로 요구하기 때문이다(정당). 그런데 **관계 요건은
+// 그 요구와 직교**다. §97의2 ① **본문 요건**이라, 조기 반환보다 앞에 있어야
+// 「그 외」를 고른 사용자가 아무 안내 없이 이월과세만 조용히 꺼지는 일을 막는다.
+//
+// ⚠️ 엔진은 이미 정확히 배제한다(세액은 맞다) — 여기서 지키는 것은 **안내**다.
+// ────────────────────────────────────────────────────────────
+
+describe("BG-W (O-3): 일반건물 × 부담부증여 ⑧ 관계 검증", () => {
+  function makeGbBurdened(over: Partial<CarryoverTaxationForm>): AssetForm {
+    return {
+      ...makeCarryoverAsset(over),
+      assetKind: "general_building",
+      gbBuildingAcquisitionCause: "carryover_gift",
+      transferType: "burdened_gift",
+    };
+  }
+
+  it("BG-W-01: 「그 외」는 부담부증여에서도 취득원인 변경을 안내한다", () => {
+    const err = validateGeneralBuildingAsset(
+      makeGbBurdened({ donorRelation: "other" }),
+      "자산 1",
+      "2030-05-31",
+    );
+    expect(err).toContain("배우자 또는 직계존비속");
+  });
+
+  it("BG-W-02: 사망을 선언했으면 관계를 묻는다", () => {
+    const err = validateGeneralBuildingAsset(
+      makeGbBurdened({ donorDeceased: true }),
+      "자산 1",
+      "2030-05-31",
+    );
+    expect(err).toContain("증여자와의 관계");
+  });
+
+  it("BG-W-03: 【양성 대조군】 배우자·생존은 관계 메시지로 가로채지 않는다", () => {
+    // 부담부증여 경로가 「당초 증여자」 입력을 따로 요구할 수 있다 — 그건 통과시킨다.
+    // 여기서 금지하는 것은 **관계 메시지가 그보다 앞서 뜨는 것**뿐이다.
+    const err = validateGeneralBuildingAsset(
+      makeGbBurdened({ donorRelation: "spouse", donorDeceased: false }),
+      "자산 1",
+      "2030-05-31",
+    );
+    expect(err ?? "").not.toContain("배우자 또는 직계존비속");
+    expect(err ?? "").not.toContain("증여자와의 관계");
+  });
+});
