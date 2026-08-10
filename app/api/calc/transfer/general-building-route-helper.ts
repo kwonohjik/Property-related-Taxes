@@ -78,6 +78,37 @@ export function dispatchGeneralBuilding(
    */
   ownershipRatio?: number,
 ): GeneralBuildingRouteResult {
+  const coercedGbRaw = coerceGeneralBuildingPayload(gbRaw);
+  const buildingAcqDate = coercedGbRaw.buildingAcquisitionDate as Date | undefined;
+  const landAcqDateCoerced = coercedGbRaw.landAcquisitionDate as Date | undefined;
+  const buildingAcqCause = coercedGbRaw.buildingAcquisitionCause as
+    | "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
+  const coercedExtInfo = coercedGbRaw.extensionInfo as Record<string, unknown> | undefined;
+
+  return dispatchCoercedGeneralBuilding(
+    coercedGbRaw, buildingAcqDate, landAcqDateCoerced, buildingAcqCause, coercedExtInfo,
+    totalTransferPrice, transferDate, acquisitionDate,
+    actualAcquisitionPrice, actualExpenses,
+    taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
+    burdenedGiftInfo, expropriation, ownershipRatio,
+  );
+}
+
+/**
+ * ⑭ **`generalBuildingValuation` payload의 Date 변환 단일 소스**.
+ *
+ * Zod는 대부분의 날짜를 `z.string().date()`로만 **검증**하고 `Date`로 바꾸지 않는다.
+ * 미변환 값이 엔진에 도달하면 `from.getFullYear()`·`getTime()`이 런타임에 깨지거나
+ * `Date < string` **침묵 false**에 빠진다(`lib/api/date-coerce.ts`).
+ *
+ * 🔴 **단건(`dispatchGeneralBuilding`)과 지분(`general-building-fractional.ts`)이 이 함수를
+ *    공유해야 한다.** 지분 경로를 만들 때 이 변환을 건너뛰어 `conversionDate`가 문자열로
+ *    도달, `eventDate.getTime is not a function`으로 500이 났다(2026-08-10 실측).
+ *    새 진입점을 만들 때 변환을 다시 손으로 나열하지 말 것.
+ */
+export function coerceGeneralBuildingPayload(
+  gbRaw: Record<string, unknown>,
+): Record<string, unknown> {
   // buildingAcquisitionDate: Zod는 z.string().date()로만 검증 — Date 객체로 변환 안 됨.
   // 미변환 시 string이 buildGeneralBuildingAssetCards()의 acquisitionDate에 도달 →
   // monthsBetween(from, to)에서 from.getFullYear() TypeError 발생.
@@ -156,7 +187,34 @@ export function dispatchGeneralBuilding(
         }
       : {}),
   };
+  return coercedGbRaw;
+}
 
+/** `coerceGeneralBuildingPayload` 이후의 단건 분기 — 종전 `dispatchGeneralBuilding` 본문. */
+function dispatchCoercedGeneralBuilding(
+  coercedGbRaw: Record<string, unknown>,
+  buildingAcqDate: Date | undefined,
+  landAcqDateCoerced: Date | undefined,
+  buildingAcqCause:
+    | "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction",
+  coercedExtInfo: Record<string, unknown> | undefined,
+  totalTransferPrice: number,
+  transferDate: Date,
+  acquisitionDate: Date,
+  actualAcquisitionPrice: number,
+  actualExpenses: number,
+  taxYear: number,
+  annualBasicDeductionUsed: number | undefined,
+  priorReductionUsage: unknown[],
+  rates: TaxRatesMap,
+  burdenedGiftInfo?: BurdenedGiftInfo,
+  expropriation?: {
+    transferCause?: "general" | "public_expropriation";
+    compensationPerSqm?: number;
+    compensationBasisStdPrice?: number;
+  },
+  ownershipRatio?: number,
+): GeneralBuildingRouteResult {
   if (coercedGbRaw.actualPriceMode === true) {
     /**
      * 🔴 payload는 **스프레드로 통째 전달**한다 — 필드를 나열하지 않는다(2026-08-06).
@@ -240,13 +298,18 @@ export function dispatchGeneralBuilding(
  * buildingAcquisitionCause === "newConstruction" 시 isSelfBuilt=true 도출
  * (dispatchGeneralBuilding과 동일 로직 — 단위 테스트 직접 호출 경로 보호).
  */
-export function calculateGeneralBuildingTransfer(
-  gbv: GeneralBuildingValuationPayload,
-  taxYear: number,
-  annualBasicDeductionUsed: number | undefined,
-  priorReductionUsage: unknown[],
-  rates: TaxRatesMap,
-): GeneralBuildingRouteResult {
+/**
+ * 경로 A 카드 조립 — cards(`gbOut`) + §97②2호 swap 판정까지. aggregate **직전** 상태.
+ *
+ * 지분(%) 분할에서 지분마다 이것을 부른 뒤 카드를 concat해 aggregate를 1회만 한다
+ * (설계 `transfer-general-building-fractional-share.engine.design.md` D5).
+ * `swap`을 **여기서** 계산하는 것이 핵심이다 — 지분 루프 안에서 불리면 판정 단위가
+ * 자동으로 「지분 × 파트」가 된다(계획서 §3-4).
+ */
+export function buildEstimatedGeneralBuildingCards(gbv: GeneralBuildingValuationPayload): {
+  gbOut: ReturnType<typeof buildGeneralBuildingAssetCards>;
+  swap: ReturnType<typeof resolveGeneralBuildingSwap>;
+} {
   // buildingAcquisitionCause에서 isSelfBuilt 도출 (단일 진실 원천).
   // gbv.isSelfBuilt가 명시된 경우에도 buildingAcquisitionCause 우선 (deprecated 패턴 방어).
   const normalizedGbv: GeneralBuildingValuationPayload = {
@@ -279,6 +342,17 @@ export function calculateGeneralBuildingTransfer(
       ...(gbv.transferExpense !== undefined ? { transferExpense: gbv.transferExpense } : {}),
     },
   );
+  return { gbOut, swap };
+}
+
+export function calculateGeneralBuildingTransfer(
+  gbv: GeneralBuildingValuationPayload,
+  taxYear: number,
+  annualBasicDeductionUsed: number | undefined,
+  priorReductionUsage: unknown[],
+  rates: TaxRatesMap,
+): GeneralBuildingRouteResult {
+  const { gbOut, swap } = buildEstimatedGeneralBuildingCards(gbv);
   const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio, swap);
 
   const aggregated = calculateTransferTaxAggregate(

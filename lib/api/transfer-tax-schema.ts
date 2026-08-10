@@ -37,6 +37,7 @@ import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { redevelopmentSchema } from "./transfer-tax-redevelopment-schema";
 import {
   generalBuildingValuationSchema,
+  generalBuildingSharesSchema,
   commercialBuildingValuationSchema,
   commercialInheritanceValuationSchema,
   commercialAppurtenantLandSchema,
@@ -52,55 +53,17 @@ export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-buildin
 // 정의는 `./transfer-tax-building-schemas.ts` 참조.
 // 본 파일은 import만 + barrel re-export (위 import 블록 참조).
 
-// ─── ⑨ 장기임대주택 거주주택 비과세 특례 Zod enum (소령 §155⑳) ──────
-
-/** 시나리오: A=거주주택 양도, B=임대주택→거주주택 전환 후 양도(PHRP) */
-export const RentalScenarioEnum = z.enum(['A', 'B']);
-
-/** 임대구분: 장기일반·단기6년·구 임대주택법·기존사업자(나목)·미분양(라목) (의무기간·cap은 등록기준일·취득방법에서 파생) */
-export const RentalCategoryEnum = z.enum(['long_general', 'short_6y', 'pre_2018', 'existing_business', 'unsold_08_09']);
-
-/** 취득 방법: 매입·건설 */
-export const RentalAcqTypeEnum = z.enum(['purchase', 'construction']);
-
-/** 소재지역: 수도권·비수도권 (918 조정취득은 isExcluded918Rule 별도 축) */
-export const RentalRegionEnum = z.enum(['seoul-metro', 'non-metro']);
-
-/** ⑫ 임대주택 1호 Zod 객체 스키마 (미정의 시 침묵 stripping 방지) */
-export const rentalUnitSchema = z.object({
-  businessRegistrationDate: z.string().datetime(),
-  rentalRegistrationDate: z.string().datetime(),
-  rentalCategory: RentalCategoryEnum,
-  rentalAcquisitionType: RentalAcqTypeEnum,
-  isApartment: z.boolean(),
-  region: RentalRegionEnum,
-  isExcluded918Rule: z.boolean(),
-  hasContractDepositProof: z.boolean(),
-  isExcludedShortToLongChange: z.boolean(),
-  standardPriceAtRentalStart: z.number().int().nonnegative(),
-  acquisitionOfficialPrice: z.number().int().nonnegative(),
-  isNationalSizeHousing: z.boolean(),
-  landAreaM2: z.number().nonnegative().optional(),
-  totalFloorAreaM2: z.number().nonnegative().optional(),
-  hasMinimum2Units: z.boolean(),
-  hasMinimum5UnitsInCity: z.boolean(),
-  firstSaleContractDate: z.string().datetime().optional(),
-  rentalMonths: z.number().nonnegative(),
-  rentalAutoTermination: z.boolean(),
-  requirementsConfirmed: z.boolean(),
-});
-
-/** ⑫ 장기임대주택 거주주택 비과세 특례 Zod 스키마 (미정의 시 침묵 stripping 방지) */
-export const rentalHousingExceptionSchema = z.object({
-  applyException: z.boolean(),
-  scenario: RentalScenarioEnum,
-  rentalUnits: z.array(rentalUnitSchema).min(1),
-  priorResidenceTransferDate: z.string().datetime().optional(),
-  standardPriceAtAcquisitionForPhrp: z.number().int().nonnegative().optional(),
-  standardPriceAtPriorTransfer: z.number().int().nonnegative().optional(),
-  standardPriceAtTransferForPhrp: z.number().int().nonnegative().optional(),
-});
-
+// ─── ⑨ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) → leaf 분리 (800줄 정책) ──
+// 하위호환: 기존 import 경로를 그대로 유지하기 위해 전량 re-export한다.
+export {
+  RentalScenarioEnum,
+  RentalCategoryEnum,
+  RentalAcqTypeEnum,
+  RentalRegionEnum,
+  rentalUnitSchema,
+  rentalHousingExceptionSchema,
+} from "./transfer-tax-schema-rental-exception";
+import { rentalHousingExceptionSchema } from "./transfer-tax-schema-rental-exception";
 // ─── 단건 기본 필드 객체 (단건·다건 공유) ───────────────────────
 
 const propertyBaseShape = {
@@ -439,6 +402,14 @@ const propertyBaseShape = {
    * propertyType === "general_building" + 환산 모드 시 제공. 미정의 시 침묵 stripping 방지를 위해 명시 필수.
    */
   generalBuildingValuation: generalBuildingValuationSchema.optional(),
+  /**
+   * ⑫ 일반건물 × **지분(%) 분할 취득** — 지분별 완결 payload 배열.
+   *
+   * 존재하면 route가 5-a(일괄)보다 **앞에서** 가로채 지분 루프로 계산한다
+   * (`general-building-fractional.ts`). companion 경로를 쓰지 않으므로
+   * `companionAssets`의 `assetKind` enum을 넓힐 필요가 없다 — 그 경로의 회귀 0.
+   */
+  generalBuildingShares: generalBuildingSharesSchema.optional(),
   /**
    * ⑫ 부담부증여 입력 (소령 §159) — sibling 파일 정의.
    * acquisitionCause === "burdened_gift" 일 때 필수. 미정의 시 침묵 stripping 방지를 위해 명시 필수.

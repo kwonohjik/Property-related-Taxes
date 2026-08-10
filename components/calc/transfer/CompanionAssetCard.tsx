@@ -116,6 +116,25 @@ export function CompanionAssetCard({
   // 지분 모드 companion(자산2+): ① 기본정보·② 양도정보는 같은 물건·같은 양도 사건이라 자산1과
   // 동일 → 숨김(자산1에서 1회 입력·엔진 mergePrimaryBasic 병합). 자산1(index 0)은 항상 노출.
   const hideInheritedSections = splitMode === "fractional" && index > 0;
+
+  /**
+   * ③ 취득정보가 읽는 자산 — 지분 companion은 **`assetKind`만** primary값으로 덮는다.
+   *
+   * 🔴 지분 sibling은 `makeDefaultAsset`로 생성돼 `assetKind`가 **"housing"**이다
+   *    (`Step1.tsx` `handleFractionalToggle` → `calc-wizard-asset-factory.ts`).
+   *    ①을 숨기니 사용자가 고칠 수도 없고, ③의 자산종류 게이트
+   *    (`AssetSectionAcquisition.tsx` — `GeneralBuildingBlock` 등)가 **통째로 렌더되지 않는다**
+   *    ⇒ 취득시 기준시가 입력 경로가 사라져 배관을 다 고쳐도 세액이 안 변한다
+   *    (메모리 `feedback_ui_gate_removes_sole_input_path`).
+   *
+   * ⚠️ **`assetKind` 하나만** 덮는다. 병합 자산 전체를 넘기면 ③의 `onChange`가 물건-수준 값을
+   *    지분 카드에서 편집하는 경로를 열어 primary와 갈라진다(설계 D4-2 ㉯).
+   *    API·validate 쪽 동일 규칙은 `mergePrimaryBasic`이 담당한다 — **같은 축**이다.
+   */
+  const acquisitionAsset =
+    hideInheritedSections && primaryAsset
+      ? { ...asset, assetKind: primaryAsset.assetKind }
+      : asset;
   const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
   const isNewConstruction = asset.acquisitionCause === "newConstruction";
 
@@ -333,7 +352,7 @@ export function CompanionAssetCard({
         forceOpen={forceOpenAll}
       >
         <AssetSectionAcquisition
-          asset={asset}
+          asset={acquisitionAsset}
           onChange={onChange}
           transferDate={transferDate}
           isNewConstruction={isNewConstruction}

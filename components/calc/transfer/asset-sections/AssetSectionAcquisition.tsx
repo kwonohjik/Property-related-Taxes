@@ -64,7 +64,12 @@ export function AssetSectionAcquisition({
   const [pendingFractionalOff, setPendingFractionalOff] = useState(false);
 
   // 토글 B(지분 분할) 진입 차단 사유 — 이미 ON이면 차단 안 함(끄기 허용).
-  // 겸용주택·특수 자산종류(상가·일반건물·재개발)는 지분별 안분 UI 부재로 미지원(validate도 차단).
+  // 겸용주택·특수 자산종류(상가·재개발)는 지분별 안분 UI 부재로 미지원(validate도 차단).
+  //
+  // ✅ **일반건물은 2026-08-10부터 지원**한다 — 지분별 토지·건물 카드를 만들어 aggregate 1회로
+  //    계산하는 전용 경로가 생겼다(`app/api/calc/transfer/general-building-fractional.ts`).
+  //    ⚠️ 이 목록에서 `general_building`을 뺐을 때 **부담부증여·공익수용 차단이 살아난다** —
+  //       if-else 체인이라 앞 분기가 빠지면 뒤로 흘러간다(계획서 §2-2 · anchor GBF-14).
   const fractionalEntryBlockedReason =
     splitMode === "fractional"
       ? undefined
@@ -73,7 +78,6 @@ export function AssetSectionAcquisition({
         : asset.assetKind === "housing" && asset.isMixedUseHouse
           ? "겸용주택은 지분 분할 취득과 함께 사용할 수 없습니다."
           : asset.assetKind === "commercial_building" ||
-              asset.assetKind === "general_building" ||
               asset.assetKind === "redevelopment_apt"
             ? "이 자산 종류는 지분 분할 취득을 지원하지 않습니다."
             : asset.transferType === "burdened_gift" ||
@@ -328,6 +332,13 @@ export function AssetSectionAcquisition({
           asset={asset}
           onChange={onChange}
           transferDate={transferDate}
+          /**
+           * 지분 분할의 **2번째 이후 지분**은 취득측만 입력받는다.
+           * 양도시 기준시가·물건 사건(증축·용도변경)은 **물건-수준**이라 자산 1에서 한 번만 받고,
+           * API 변환(`mergeGbPropertyLevel`)이 전 지분에 복사한다 — 여기서 또 받으면
+           * 지분마다 다른 값이 들어가 Zod superRefine이 400을 던진다(설계 D1-3).
+           */
+          shareAcquisitionOnly={splitMode === "fractional" && !isFirst}
         />
       )}
 

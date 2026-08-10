@@ -69,9 +69,25 @@ interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
+  /**
+   * 지분(%) 분할의 **2번째 이후 지분** — 취득측만 입력받는다.
+   *
+   * 숨기는 것: **양도시 기준시가**(①② emerald 카드) · **물건 사건**(⑤ 증축 · 주택→상가 용도변경).
+   * 전부 **물건-수준**이라 자산 1에서 한 번 받고 API 변환이 전 지분에 복사한다(설계 D1-3·D2).
+   * 여기서 또 받으면 지분마다 값이 갈려 Zod superRefine이 400을 던진다.
+   *
+   * ⚠️ 증축 섹션 안에 **「양도시 건물2 기준시가」**가 있어 「emerald 카드만 숨기기」로는 부족하다
+   *    (2026-08-10 설계 개정 1에서 정정 — 숨김 축이 둘이다).
+   */
+  shareAcquisitionOnly?: boolean;
 }
 
-export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
+export function GeneralBuildingBlock({
+  asset,
+  onChange,
+  transferDate,
+  shareAcquisitionOnly = false,
+}: Props) {
   const isEstimated = asset.useEstimatedAcquisition;
   // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(이중입력 방지)
   const stdPriceAddress = {
@@ -356,6 +372,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             </div>
           )}
 
+          {!shareAcquisitionOnly && (
           <div data-gb-stdprice="transfer">
             <ToneCard tone="emerald" title="양도시" noDark>
               <LandPriceLookupField
@@ -369,6 +386,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               />
             </ToneCard>
           </div>
+          )}
         </ToneCard>
 
         {/* ② 건물 기준시가 (취득 → 양도) */}
@@ -424,6 +442,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
             </div>
           )}
 
+          {!shareAcquisitionOnly && (
           <div data-gb-stdprice="transfer">
             <ToneCard tone="emerald" title="양도시" noDark>
               {/* hint의 계산기 위치 안내는 실제 런처 위치를 따라간다 — 일괄이면 위, 아니면 아래. */}
@@ -445,6 +464,7 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
               )}
             </ToneCard>
           </div>
+          )}
 
           {/* 개산공제는 토지·건물 취득시 값을 함께 쓴다 — 두 그룹 뒤(②의 말미)에 둔다. */}
           {showAcqStdPrice && (
@@ -482,7 +502,10 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
 
         {/* ⑤ 증축 정보 (amber) — 환산취득가 모드 OR "토지·건물 일괄(증축분 별도)" 모드에서 표시.
             부담부증여 모드에서는 §159 자동 산정 — 증축 cross-cutting 비스코프이므로 숨김. */}
-        {!isBurdenedGift &&
+        {/* 🔒 증축은 **물건 사건**이다 — 지분 카드에서는 숨긴다(설계 D1-3·D4).
+            안에 「양도시 건물2 기준시가」가 있어 emerald 카드만 숨기는 것으로는 부족하다. */}
+        {!shareAcquisitionOnly &&
+          !isBurdenedGift &&
           (isEstimated || asset.gbHasExtension || bothPartsSuccession || isSeparateAcq) && (
           <ToggleCard
             tone="amber"
@@ -674,7 +697,11 @@ export function GeneralBuildingBlock({ asset, onChange, transferDate }: Props) {
 
         <GeneralBuildingNblSection asset={asset} onChange={onChange} />
 
-        <GeneralBuildingConversionSection asset={asset} onChange={onChange} transferDate={transferDate} />
+        {/* 🔒 주택→상가 용도변경·§99-164-10 최초공시도 **물건 사건** — 지분 카드에서 숨긴다.
+            적용 여부는 route가 지분 취득일로 판정한다(`general-building-share-events.ts`). */}
+        {!shareAcquisitionOnly && (
+          <GeneralBuildingConversionSection asset={asset} onChange={onChange} transferDate={transferDate} />
+        )}
 
       </div>
     </div>

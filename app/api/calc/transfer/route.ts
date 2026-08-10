@@ -19,6 +19,7 @@ import {
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
+import { calculateGeneralBuildingFractional } from "./general-building-fractional";
 import {
   resolveHousingContextFromCompanion,
   buildCompanionEngineInputs,
@@ -133,6 +134,36 @@ export async function POST(request: NextRequest) {
 
   // 단계 5: 계산 실행
   try {
+    // ─── 5-0. 일반건물 × 지분(%) 분할 취득 — **5-a보다 앞** ─────────
+    //
+    // 같은 물건을 지분별로 나눠 취득(취득일·취득원인·취득방식 상이)한 뒤 100%를 일괄 양도하는 경우.
+    // 지분마다 토지·건물 카드를 만들어 concat 후 aggregate를 1회만 한다.
+    //
+    // 🔴 **5-a보다 앞이어야 한다.** 뒤에 두면 companion 유무와 무관하게 일괄 분기가 먼저 잡아
+    //    일반건물 계산이 통째로 사라진다(`transfer.route.bundled-swallows-special.test.ts`).
+    //    조건에 `propertyType`을 함께 검사해 다른 특수 경로를 삼키지 않음을 명시한다
+    //    (메모리 `feedback_route_if_chain_order_swallows_branches`).
+    if (
+      data.propertyType === "general_building" &&
+      data.generalBuildingShares &&
+      data.generalBuildingShares.length > 1
+    ) {
+      const { apportionment, aggregated } = calculateGeneralBuildingFractional(
+        data.generalBuildingShares as never,
+        // 물건 전체(100%) 양도가액. 지분 모드에서는 `totalPropertyTransferPrice`가 정본이다.
+        data.totalPropertyTransferPrice ?? data.transferPrice,
+        transferDate,
+        transferDate.getFullYear(),
+        data.annualBasicDeductionUsed,
+        data.priorReductionUsage ?? [],
+        rates,
+      );
+      return NextResponse.json(
+        { data: { mode: "bundled" as const, apportionment, aggregated } },
+        { status: 200 },
+      );
+    }
+
     // ─── 5-a. 일괄양도 분기 (소득세법 시행령 §166 ⑥) ─────────────
     // companionAssets 존재 시 안분 → 자산별 상속 취득가액 → 다건 엔진
     //

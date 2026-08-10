@@ -73,8 +73,10 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       if (primaryAsset.assetKind === "housing" && primaryAsset.isMixedUseHouse) {
         issues.push({ step, assetIndex: 0, message: "겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
       } else if (
+        // ✅ `general_building` 제외 (2026-08-10) — 지분별 토지·건물 카드를 만들어 aggregate 1회로
+        //    계산하는 전용 경로가 생겼다(`app/api/calc/transfer/general-building-fractional.ts`).
+        //    상가·재개발은 그 경로가 없어 **계속 차단**한다.
         primaryAsset.assetKind === "commercial_building" ||
-        primaryAsset.assetKind === "general_building" ||
         primaryAsset.assetKind === "redevelopment_apt"
       ) {
         issues.push({ step, assetIndex: 0, message: "해당 자산 종류는 지분 분할 취득 계산을 지원하지 않습니다. 지분 분할 토글을 끄고 계산하세요." });
