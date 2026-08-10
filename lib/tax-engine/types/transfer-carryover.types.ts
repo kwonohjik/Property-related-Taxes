@@ -58,7 +58,7 @@ export interface CarryoverTaxationInput {
    * 배제 문언·시행시기 게이트가 **이 축으로 갈린다**(`carryover-donor-death.ts`).
    * 증여재산공제용 5분류(`bgDonorRelation`)와 **다른 축**이므로 재사용하지 않는다.
    */
-  donorRelation?: "spouse" | "lineal";
+  donorRelation?: "spouse" | "lineal" | "other";
   /**
    * §97조의2 ① 괄호 — 관계별로 **묻는 사실이 다르다**.
    * · spouse : 「**사망으로** 혼인관계가 소멸」 (이혼 소멸은 false — 이월과세가 **적용**된다)

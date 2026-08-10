@@ -60,12 +60,21 @@ export function CarryoverGiftExclusionSection({
   return (
     <div className="space-y-3">
       <ToneCard tone="violet" title="증여자와의 관계 (§97조의2 ①)">
+        {donorRelation === "other" && (
+          <p className="text-caption text-rose-700">
+            이월과세는 <strong>배우자 또는 직계존비속</strong>으로부터 증여받은 경우에만
+            적용됩니다. 취득 원인을 <strong>「증여」</strong>로 변경하세요.
+          </p>
+        )}
+
         <RadioCardGroup
           name={`carryover-donor-relation-${assetId}`}
           layout="inline"
           options={[
             { value: "spouse", label: "배우자" },
             { value: "lineal", label: "직계존비속" },
+            // §97의2①의 대상은 위 둘뿐이다. 고르면 ⑧이 취득원인 변경을 안내한다.
+            { value: "other", label: "그 외 (형제·친족 등)" },
           ]}
           value={donorRelation}
           onChange={(v) =>
@@ -84,8 +93,13 @@ export function CarryoverGiftExclusionSection({
                 ? `${deathDescription} 다만 2025.1.1. 이후 증여받은 자산부터 적용되는 규정이라, 이 증여에는 이월과세가 그대로 적용됩니다.`
                 : deathDescription
           }
-          disabled={donorRelation === ""}
-          disabledReason="증여자와의 관계를 먼저 선택하세요 — 관계에 따라 묻는 사실이 다릅니다."
+          // 「그 외」는 ① 요건 자체가 불충족이라 사망 여부를 물을 이유가 없다.
+          disabled={donorRelation === "" || donorRelation === "other"}
+          disabledReason={
+            donorRelation === "other"
+              ? "배우자·직계존비속이 아니면 이월과세 대상이 아닙니다."
+              : "증여자와의 관계를 먼저 선택하세요 — 관계에 따라 묻는 사실이 다릅니다."
+          }
           checked={donorDeceased}
           onCheckedChange={(v) => onRelationChange({ donorDeceased: v })}
         />

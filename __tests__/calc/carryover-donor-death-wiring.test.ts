@@ -10,6 +10,7 @@ import { describe, it, expect } from "vitest";
 import { buildCarryoverPayload } from "@/lib/calc/transfer-tax-api-carryover";
 import { buildGbCarryoverPayload } from "@/lib/calc/transfer-tax-api-gb-carryover";
 import { validateAssetAcquisition } from "@/lib/calc/transfer-tax-validate-asset";
+import { validateGeneralBuildingAsset } from "@/lib/calc/transfer-tax-validate-gb";
 import { propertySchema } from "@/lib/api/transfer-tax-schema";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -190,5 +191,65 @@ describe("DD-W ⑧: validation", () => {
       "2030-05-31",
     );
     expect(err).toBeNull();
+  });
+});
+
+// ────────────────────────────────────────────────────────────
+// RS: 대상 관계 범위 (§97의2① 본문) — 「그 외」는 이월과세가 성립하지 않는다
+// ────────────────────────────────────────────────────────────
+
+describe("RS-W: 「그 외」 관계 차단", () => {
+  it("RS-W-01: 일반 경로 ⑧ — 취득원인 변경을 안내하며 차단", () => {
+    const err = validateAssetAcquisition(
+      makeCarryoverAsset({ donorRelation: "other" }),
+      "자산 1",
+      "2030-05-31",
+    );
+    expect(err).toContain("배우자 또는 직계존비속");
+    expect(err).toContain("증여");
+  });
+
+  it("RS-W-02: 일반건물 ⑧도 같은 조건으로 차단한다 [두 경로 동기화]", () => {
+    const asset: AssetForm = {
+      ...makeCarryoverAsset({ donorRelation: "other" }),
+      assetKind: "general_building",
+      gbBuildingAcquisitionCause: "carryover_gift",
+    };
+    const err = validateGeneralBuildingAsset(asset, "자산 1", "2030-05-31");
+    expect(err).toContain("배우자 또는 직계존비속");
+  });
+
+  it("RS-W-03: ⑫ Zod가 'other'를 통과시킨다 (엔진이 판정한다)", () => {
+    const parsed = propertySchema.parse({
+      propertyType: "housing",
+      transferPrice: 1_000_000_000,
+      acquisitionPrice: 700_000_000,
+      transferDate: "2030-05-31",
+      acquisitionDate: "2010-01-01",
+      expenses: 0,
+      useEstimatedAcquisition: false,
+      isRegulatedArea: false,
+      wasRegulatedAtAcquisition: false,
+      isUnregistered: false,
+      isNonBusinessLand: false,
+      isOneHousehold: false,
+      householdHousingCount: 1,
+      residencePeriodMonths: 0,
+      acquisitionCause: "carryover_gift",
+      carryoverTaxation: {
+        giftRegistryDate: "2023-06-01",
+        donorAcquisitionDate: "2010-01-01",
+        useEstimatedAcquisition: false,
+        giftTaxAmount: 0,
+        giftDateValuation: 700_000_000,
+        donorRelation: "other",
+      },
+    }) as { carryoverTaxation: { donorRelation?: string } };
+    expect(parsed.carryoverTaxation.donorRelation).toBe("other");
+  });
+
+  it("RS-W-04: 배우자는 두 경로 모두 통과 [양성 대조군]", () => {
+    const spouse = makeCarryoverAsset({ donorRelation: "spouse" });
+    expect(validateAssetAcquisition(spouse, "자산 1", "2030-05-31")).toBeNull();
   });
 });

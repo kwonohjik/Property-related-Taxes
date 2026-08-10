@@ -198,6 +198,11 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     if (formTransferDate && c.giftRegistryDate >= formTransferDate)
       return `${label}: 증여 등기접수일은 양도일보다 이전이어야 합니다.`;
 
+    // (b-3a) §97조의2 ① 본문 — 대상은 **배우자·직계존비속뿐**이다.
+    // 그 외 관계는 이월과세 자체가 성립하지 않으므로 취득원인을 바꿔야 한다.
+    if (c.donorRelation === "other")
+      return `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`;
+
     // (b-3) §97조의2 ① 관계요건 — 사망을 선언했으면 관계가 있어야 판정이 갈린다.
     //
     // ⚠️ 관계를 **단독으로 필수화하지 않는다**. 구형 sessionStorage에는 이 필드가 없어
