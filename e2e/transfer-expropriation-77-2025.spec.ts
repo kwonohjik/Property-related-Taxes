@@ -41,7 +41,7 @@ async function gotoReductionStep(page: Page) {
 
   // 매매 → 환산취득가 → 취득일 2003-03-27
   await page.getByRole("button", { name: "매매", exact: true }).click();
-  await page.getByRole("button", { name: "환산취득가" }).click();
+  await page.getByRole("radio", { name: "환산취득가" }).click();
   await page.getByLabel("연도", { exact: true }).nth(2).fill("2003");
   await page.getByLabel("월", { exact: true }).nth(2).fill("03");
   await page.getByLabel("일", { exact: true }).nth(2).fill("27");
@@ -126,7 +126,7 @@ test.describe("비자발적 양도 감면 UI (§77 2025 개정 · §77의2 · §
 
     // 매매 → 실거래가 → 취득일 2003-03-27 → 취득가액 3억
     await page.getByRole("button", { name: "매매", exact: true }).click();
-    await page.getByRole("button", { name: "실거래가 계약서상 실거래가" }).click();
+    await page.getByRole("radio", { name: "실거래가 계약서상 실거래가" }).click();
     await page.getByLabel("연도", { exact: true }).nth(2).fill("2003");
     await page.getByLabel("월", { exact: true }).nth(2).fill("03");
     await page.getByLabel("일", { exact: true }).nth(2).fill("27");

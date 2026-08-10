@@ -292,17 +292,17 @@ export function GeneralBuildingBlock({
    */
   const showBatchLauncher = showAcqStdPrice && canGbBatch;
 
+  /*
+   * 🗑 카드 헤더(제목 「일반건물 (토지·건물 분리 산정)」 + 조문 인용줄 + §104의3 배지)는
+   *    **삭제했다** (2026-08-11 사용자 요청 — 화면만 차지하고 정보가 없었다).
+   *
+   * 조문 접근 경로는 유실되지 않는다: §104의3 링크는 **① 기본정보**의 비사업용토지 판정
+   * 섹션(`GeneralBuildingNblSection`)에, §176의2②는 아래 환산취득가 섹션에 각각 살아 있다.
+   * (그 섹션은 2026-08-11에 ③ 취득정보에서 ①로 나갔다 — 이 파일 상단 주석 참조.)
+   * 카드가 무엇인지는 바로 아래 「일반건물 — 취득 시나리오 가이드」가 말해 준다.
+   */
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
-      <div className="space-y-1">
-        <p className="text-sm font-semibold text-violet-900">일반건물 (토지·건물 분리 산정)</p>
-        {/* §104의3(비사업용토지 판정) 언급·법조문 칩은 제거했다(2026-08-11) — 그 섹션이
-            ① 기본정보로 나갔다. 여기 남기면 없는 섹션을 광고하고, 같은 칩이 ①의
-            `GeneralBuildingNblSection`에도 있어 화면에 두 번 뜬다. */}
-        <p className="text-xs text-violet-700">
-          소득세법 시행령 §176의2② (환산취득가)
-        </p>
-      </div>
       <div className="space-y-3">
 
         {/* 부담부증여 모드 안내 — §159 자동 산정으로 취득가액 산정 방식 라디오/실거래가/증축 토글 모두 숨김 */}

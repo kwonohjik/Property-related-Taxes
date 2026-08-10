@@ -23,7 +23,7 @@ async function setupLandEstimated(page: import("@playwright/test").Page) {
 
   // ③취득정보 — land는 취득원인 매매가 기본 선택. 환산취득가 버튼만 클릭.
   await expandAssetSection(page, 3);
-  await page.getByRole("button", { name: /환산취득가/ }).first().click();
+  await page.getByRole("radio", { name: /환산취득가/ }).first().click();
 }
 
 test.describe("§164⑨ 2호 공매·경락 — AuctionBlock 게이트", () => {

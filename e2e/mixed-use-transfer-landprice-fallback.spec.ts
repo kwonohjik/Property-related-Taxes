@@ -42,7 +42,7 @@ test.describe("겸용주택 — PHD 양도시 공시지가 fallback + 시점 순
 
     await expandAssetSection(page, 3);
     await page.getByRole("button", { name: "매매", exact: true }).click();
-    await page.getByRole("button", { name: "환산취득가" }).click();
+    await page.getByRole("radio", { name: "환산취득가" }).click();
     await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
       year: "1991",
       month: "09",

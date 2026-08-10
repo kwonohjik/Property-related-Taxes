@@ -93,3 +93,59 @@ export function OwnershipRatioInput({
     </FieldCard>
   );
 }
+
+/**
+ * 지분율 입력 + **100% 기준 입력 안내**를 한 덩어리로 묶은 블록 (2026-08-11 추출).
+ *
+ * 두 섹션이 배타적으로 렌더한다 — 지분 분할 모드는 ③ 취득정보 최상단(취득시기·원인이 지분마다
+ * 다른 최상위 분기라 그 자산을 규정하는 첫 입력값), 그 외에는 ① 기본정보 끝(자산 정체성).
+ * 위젯과 안내가 갈라지면 한쪽에만 안내가 붙는 사고가 나므로 **함께** 옮긴다.
+ */
+export function OwnershipRatioBlock({
+  numerator,
+  denominator,
+  onChange,
+  label,
+}: OwnershipRatioInputProps) {
+  return (
+    <>
+      <OwnershipRatioInput
+        numerator={numerator}
+        denominator={denominator}
+        onChange={onChange}
+        label={label}
+      />
+      {isFractionalRatioStr(numerator, denominator) && (
+        <div className="rounded-lg border-2 border-amber-300 bg-amber-50/70 px-4 py-3 text-sm">
+          <div className="flex items-start gap-2">
+            <span
+              aria-hidden
+              className="text-amber-600 font-bold text-base leading-none mt-0.5"
+            >
+              ⚠
+            </span>
+            <div className="space-y-1.5 flex-1">
+              <p className="font-semibold text-amber-900">
+                지분 모드 — 모든 금액을{" "}
+                <span className="underline">100% 기준</span>으로 입력하세요
+              </p>
+              <ul className="text-xs text-amber-800 space-y-0.5 leading-relaxed list-disc list-inside">
+                <li>
+                  <strong>양도가액·취득가액·필요경비</strong>는 물건 전체(100%) 기준으로
+                  입력합니다. 시스템이 지분율({numerator}/{denominator})을 자동으로 적용합니다.
+                </li>
+                <li>
+                  예: 60% 지분의 실제 매매가 600,000,000원 → 100% 기준{" "}
+                  <strong>1,000,000,000원</strong>으로 입력 (600M ÷ 0.6).
+                </li>
+                <li>
+                  상속 보충적평가는 공동주택가격(100%)을 그대로 입력하면 됩니다.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

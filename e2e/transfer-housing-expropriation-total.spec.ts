@@ -23,7 +23,7 @@ test.describe("주택 §164⑨ 1호 총액 트랙 — 보상 총액 2필드 게�
 
     // 주택은 기본 자산종류 — ③취득정보에서 환산취득가만 켠다
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: /환산취득가/ }).first().click();
+    await page.getByRole("radio", { name: /환산취득가/ }).first().click();
 
     // ②양도정보 — 양도원인=공익수용
     await expandAssetSection(page, 2);

@@ -8,7 +8,7 @@ import { useState } from "react";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-store";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { OwnershipRatioInput, isFractionalMode, type AssetSplitMode } from "../OwnershipRatioInput";
+import { OwnershipRatioBlock, type AssetSplitMode } from "../OwnershipRatioInput";
 import {
   Dialog,
   DialogContent,
@@ -85,65 +85,30 @@ export function AssetSectionAcquisition({
               ? "부담부증여·공익수용은 지분 분할 취득과 함께 사용할 수 없습니다."
               : undefined;
 
-  // 지분율 위젯 + 지분 모드 안내카드 — 단일 프래그먼트로 묶어 2위치 중 1곳만 렌더.
-  // 지분 모드(splitMode==="fractional")면 토글 B 직후(최상단), 그 외엔 취득원인 뒤(현행 위치).
+  /**
+   * 지분율 — **지분 분할 모드 전용**으로 여기 남는다 (2026-08-11 사용자 확정).
+   *
+   * 「공유 지분율」(비-지분 모드)은 ① 기본정보 끝으로 옮겼다(`AssetSectionBasic`). 그 자리에서는
+   * 「산정 방식 → 취득가액 → 기준시가」 흐름 한가운데를 끊었고, 지분은 취득 계산이 아니라
+   * **이 물건 중 내 몫**이라는 자산 정체성이기 때문이다. 지분 분할 모드의 「취득 지분율」은
+   * 취득시기·원인이 지분마다 다른 최상위 분기라 토글 B 직후(여기)가 맞다.
+   */
   const ratioBlock = (
-    <>
-      {/* 지분율 — 항상 노출 (단독 부분소유·함께양도·지분분할 전부. 구버전 ① 동작 보존).
-          라벨은 문맥별: 지분 분할="취득 지분율" / 그 외="공유 지분율". */}
-      <OwnershipRatioInput
-        numerator={asset.ownershipNumerator}
-        denominator={asset.ownershipDenominator}
-        label={splitMode === "fractional" ? "취득 지분율" : "공유 지분율"}
-        onChange={(patch) =>
-          onChange({
-            ...(patch.numerator !== undefined
-              ? { ownershipNumerator: patch.numerator }
-              : {}),
-            ...(patch.denominator !== undefined
-              ? { ownershipDenominator: patch.denominator }
-              : {}),
-          })
-        }
-      />
-      {isFractionalMode(
-        asset.ownershipNumerator,
-        asset.ownershipDenominator,
-      ) && (
-        <div className="rounded-lg border-2 border-amber-300 bg-amber-50/70 px-4 py-3 text-sm">
-          <div className="flex items-start gap-2">
-            <span
-              aria-hidden
-              className="text-amber-600 font-bold text-base leading-none mt-0.5"
-            >
-              ⚠
-            </span>
-            <div className="space-y-1.5 flex-1">
-              <p className="font-semibold text-amber-900">
-                지분 모드 — 모든 금액을{" "}
-                <span className="underline">100% 기준</span>으로 입력하세요
-              </p>
-              <ul className="text-xs text-amber-800 space-y-0.5 leading-relaxed list-disc list-inside">
-                <li>
-                  <strong>양도가액·취득가액·필요경비</strong>는 물건
-                  전체(100%) 기준으로 입력합니다. 시스템이 지분율(
-                  {asset.ownershipNumerator}/{asset.ownershipDenominator})을
-                  자동으로 적용합니다.
-                </li>
-                <li>
-                  예: 60% 지분의 실제 매매가 600,000,000원 → 100% 기준{" "}
-                  <strong>1,000,000,000원</strong>으로 입력 (600M ÷ 0.6).
-                </li>
-                <li>
-                  상속 보충적평가는 공동주택가격(100%)을 그대로 입력하면
-                  됩니다.
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    <OwnershipRatioBlock
+      numerator={asset.ownershipNumerator}
+      denominator={asset.ownershipDenominator}
+      label="취득 지분율"
+      onChange={(patch) =>
+        onChange({
+          ...(patch.numerator !== undefined
+            ? { ownershipNumerator: patch.numerator }
+            : {}),
+          ...(patch.denominator !== undefined
+            ? { ownershipDenominator: patch.denominator }
+            : {}),
+        })
+      }
+    />
   );
 
   return (
@@ -208,9 +173,6 @@ export function AssetSectionAcquisition({
         transferDate={transferDate}
         isNewConstruction={isNewConstruction}
       />
-
-      {/* 비-지분 모드: 지분율은 취득원인 뒤(현행 위치) 유지. */}
-      {splitMode !== "fractional" && ratioBlock}
 
       {/* 신축주택 — 부수토지 한도 산정 섹션 (영 §154⑦) */}
       {isNewConstruction && asset.assetKind === "housing" && (

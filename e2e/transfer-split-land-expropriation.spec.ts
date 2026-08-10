@@ -31,7 +31,7 @@ test.describe("건물 split 토지분 §164⑨ 1호 — 토지분 보상 2필드
   test("건물 split + 환산 + 수용 → 토지분 보상 총액 2필드 노출", async ({ page }) => {
     test.setTimeout(90_000);
     await setupBuildingSplit(page);
-    await page.getByRole("button", { name: /환산취득가/ }).first().click();
+    await page.getByRole("radio", { name: /환산취득가/ }).first().click();
 
     // ② 양도정보 — 양도원인 = 공익수용
     await expandAssetSection(page, 2);
