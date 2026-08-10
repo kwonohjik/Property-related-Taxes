@@ -385,6 +385,159 @@ export interface PublicInterestOperationViolationResult {
 }
 
 // ============================================================
+// §48②2호 — 출연재산·운용소득·매각대금으로 **주식등 취득** 시 보유비율 초과
+// ============================================================
+
+/** 상증령 §37① 각 호 — 초과부분 계산의 **기준일**이 취득 형태별로 다르다. */
+export type StockAcquisitionForm =
+  /** 1호 — 매매 또는 출연에 의한 취득 → **그 취득일** */
+  | "purchase_or_donation"
+  /** 2호 — 유상증자 배정 신주 취득 → 주주명부 폐쇄일·권리행사 기준일(주식회사 외: 사업연도 종료일) */
+  | "paid_in_capital_increase"
+  /** 3호 — 감자 → 감자 주주총회결의일이 속하는 연도의 주주명부폐쇄일(주식회사 외: 종료일) */
+  | "capital_reduction"
+  /** 4호 — 합병으로 합병법인 주식 취득 → 합병등기일이 속하는 기간 중 주주명부 폐쇄일·권리행사 기준일 */
+  | "merger";
+
+/** §16②2호 — 적용된 비율의 근거. */
+export type HoldingRatioClause = "default" | "ga" | "na" | "da";
+
+/**
+ * ## ⭐ 과세가액이 앞의 다섯 사유와 다르다
+ *
+ * 1·3·4·6·8호는 전부 「…재산의 **가액**」(평가액)이지만, 2호만 **「그 초과부분을 취득하는데
+ * 사용한 재산의 가액」**(상증령 §40①2호) — **취득자금**이다. 「초과 주식수 × 주당 평가액」으로
+ * 계산하면 틀린다.
+ *
+ * ## ⭐ 과세 단위는 「추가로 취득하는 주식」이다
+ *
+ * 합산분(가·나·다목)만으로 이미 한도를 넘었더라도 **취득하지 않은 주식에는 과세할 수 없다**
+ * — 과세가액이 「취득하는데 **사용한**」 재산의 가액이기 때문이다.
+ * ⇒ `과세대상주식수 = min(초과주식수, 이번 취득주식수)`.
+ * 근거 4건: `docs/02-design/features/public-interest-48-2-2-stock-acquisition.plan.md` §5.1.
+ *
+ * ## ⚠️ 1회 취득 단위다
+ *
+ * 여러 취득 건을 합산·안분하지 않는다 — 단가가 달라 「그 초과부분을 취득하는 데 사용한 재산의
+ * 가액」이 특정되지 않고, §37①이 취득 형태별 기준일을 두는 것도 건별 판정을 전제한다.
+ */
+export interface PublicInterestStockAcquisitionInput {
+  /** 취득 형태 — 상증령 §37① 기준일 분기. */
+  acquisitionForm: StockAcquisitionForm;
+  /**
+   * 판정 기준일 (ISO yyyy-MM-dd) — 상증령 §37①.
+   *
+   * ⚠️ 형태별로 의미가 다르고 **자동 도출이 불가능**하다(주주명부 폐쇄일·권리행사 기준일은
+   * 회사가 정한다). 추정 fallback 금지.
+   */
+  assessmentDate: string;
+  /** 발행주식총수등 (주) — 자기주식·자기출자지분 제외(법 §16② 괄호). */
+  totalShares: number;
+  /** 이번에 취득한 주식등 (주) — 과세 계기이자 과세 단위의 상한. */
+  acquiredShares: number;
+  /** **가목** — 취득 당시 해당 공익법인등이 보유하고 있는 동일한 내국법인의 주식등 (주). */
+  heldSharesAtAcquisition: number;
+  /**
+   * **나목** — 해당 내국법인과 특수관계에 있는 출연자(상증령 §37② → §2조의2③)가 해당
+   * 공익법인등 **외의 다른** 공익법인등에 출연한 동일한 내국법인의 주식등 (주).
+   */
+  otherCorpDonatedShares: number;
+  /**
+   * **다목** — 그 출연자로부터 재산을 출연받은 **다른** 공익법인등이 보유하고 있는 동일한
+   * 내국법인의 주식등 (주).
+   */
+  otherCorpHeldShares: number;
+  /** §16②2호 비율 결정 인자. */
+  holdingRatio: {
+    /** **나목** — 상호출자제한기업집단과 특수관계에 있는 공익법인등 → 5%. */
+    isMutualInvestmentRestrictedGroup: boolean;
+    /** **다목** — §48⑪ 각 호의 요건을 충족하지 못하는 공익법인등 → 5%. */
+    failsClause11Requirements: boolean;
+    /** **가목 1)** — 출연받은 주식등의 의결권을 행사하지 아니할 것. */
+    noVotingRights: boolean;
+    /** **가목 2)** — 자선ㆍ장학 또는 사회복지를 목적으로 할 것. */
+    isCharityPurpose: boolean;
+  };
+  /**
+   * 이번 취득에 **사용한 재산의 가액** (원) — 출연받은 재산·그 운용소득·매각대금.
+   *
+   * 매각대금은 「매각대금에 의하여 증가한 재산을 포함하며 매각에 따라 부담하는 국세·지방세는
+   * 제외」한다(법 §48②1호 본문 괄호 「이하 이 조에서 같다」 · 상증령 §38⑰) — §48②4호와 같은
+   * 정의다.
+   */
+  acquisitionCost: number;
+  /**
+   * 상증칙 §13① — 위 가액의 **산정이 곤란한 경우** 초과분의 법 §60~§66 평가액 (원).
+   * 주면 이 값이 과세가액이 된다. 모르면 생략.
+   */
+  chapter4ValueOfExcess?: number;
+  /**
+   * 단서 — 해당하면 §48②2호에서 **제외**된다.
+   *
+   * ⚠️ 준용되는 것은 §16③ **제1호 또는 제3호**뿐이다. **제2호**(초과보유일부터 3년 이내
+   * 초과분 매각)는 **출연 전용**이라 취득에 준용되지 않으므로 입력 자체를 두지 않는다.
+   */
+  exclusion?: {
+    /** §16③1호 — 주무관청이 목적사업 수행에 필요하다고 인정하는 경우(「출연」을 「취득」으로 봄). */
+    clause16_3_1: boolean;
+    /** §16③3호 — 「공익법인의 설립ㆍ운영에 관한 법률」 및 그 밖의 법령에 따른 취득. */
+    clause16_3_3: boolean;
+    /** 산학협력단 — 상증령 §37⑥ **3요건을 모두** 갖춘 경우. */
+    industryAcademic?: {
+      /** 1호 — 보유 기술을 출자해 기술지주회사 또는 신기술창업전문회사를 **설립**할 것. */
+      establishedByTechContribution: boolean;
+      /** 2호 — 기술지주회사 50% 이상 / 신기술창업전문회사 30% 이상 보유할 것. */
+      ratioMet: boolean;
+      /** 3호 — 그 회사가 **자회사 외의 주식등을 보유하지 아니할 것**. */
+      noOtherShares: boolean;
+    };
+  };
+}
+
+export interface PublicInterestStockAcquisitionResult {
+  /** §48②2호가 적용되는가 (단서·취득 없음이면 false). */
+  applies: boolean;
+  /** 단서로 제외된 경우의 사유. */
+  exemptReason?: string;
+  /** 적용 대상이 아닌 다른 사유(취득 주식 0 등). */
+  nonApplicableReason?: string;
+  /** 추징 사유가 발생했는가 (과세가액 > 0). */
+  isClawback: boolean;
+  /** 과세표준이 §55② 과세최저한(50만원) 미만이라 세액이 0인가. */
+  belowMinimumTaxBase: boolean;
+  /** 판정 기준일 (ISO) — echo. */
+  assessmentDate: string;
+  /** 적용 비율 (%) — 5 · 10 · 20. */
+  ratioPercent: number;
+  /** 그 비율의 근거 목. */
+  ratioClause: HoldingRatioClause;
+  /** 한도 주식수 = 발행주식총수등 × 비율 (정수가 아닐 수 있다). */
+  limitShares: number;
+  /** 취득 + 가목 + 나목 + 다목. */
+  totalCountedShares: number;
+  /** max(0, 합산 − 한도). */
+  excessShares: number;
+  /** ⭐ min(초과, 이번 취득) — 과세 단위. */
+  taxableShares: number;
+  /** 초과주식수가 취득주식수를 넘어 캡이 걸렸는가. */
+  excessCappedByAcquired: boolean;
+  /** 상증칙 §13① 평가액 경로를 썼는가. */
+  usedChapter4Value: boolean;
+  /** 과세가액. */
+  clawbackBase: number;
+  /** 증여세 과세표준 — §55② 미달 시 0. */
+  taxBase: number;
+  /** 추징 증여세 (§56 누진세율). */
+  giftTax: number;
+  /** 적용 한계세율 (표시용). */
+  appliedRate: number;
+  /** 누진공제 (표시용). */
+  progressiveDeduction: number;
+  steps: PublicInterestStep[];
+  warnings: string[];
+}
+
+// ============================================================
 // §48②5호·7호 — **가산세** (§78⑨)
 // ============================================================
 
