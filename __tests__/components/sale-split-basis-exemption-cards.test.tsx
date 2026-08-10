@@ -128,7 +128,7 @@ describe("⑤-1 — 감정평가는 안분 방식의 한 선택지다 (3-way)", 
 
   it("모드를 바꾸면 쓰지 않는 값을 함께 비운다 — 두 경로가 같은 규칙을 쓴다", () => {
     render(<Harness init={{ saleSplitMode: "appraisal", landAppraisalAtTransfer: "1,200,000,000" }} />);
-    fireEvent.click(screen.getByText(/기준시가 안분/));
+    fireEvent.click(screen.getByText(/양도시 기준시가 비율/));
     expect(lastPatch).toMatchObject({
       saleSplitMode: "apportioned",
       landAppraisalAtTransfer: "",

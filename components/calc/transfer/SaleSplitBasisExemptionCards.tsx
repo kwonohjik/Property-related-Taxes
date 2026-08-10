@@ -58,10 +58,21 @@ interface Props {
  */
 export const SALE_SPLIT_SECTION_TITLE = "양도가액 토지·건물 안분 방식";
 
+/**
+ * 라벨은 **괄호 안 설명문만** 남긴다 (2026-08-11 사용자 요청).
+ *
+ * 종전 「구분양도 (계약서에 구분 기재)」·「감정평가 (감정평가가액으로 안분)」·
+ * 「기준시가 안분 (양도시 기준시가 비율)」은 괄호 앞뒤가 같은 말의 중복이었다. 섹션 제목이
+ * 이미 「양도가액 토지·건물 안분 방식」이라 축은 제목이 말해 주므로, 선택지는 **무엇으로
+ * 나누는지**만 말하면 된다.
+ *
+ * ⚠️ E2E는 이 라벨을 접근성 이름으로 라디오를 고른다(`e2e/split-mode-gating.spec.ts`) —
+ *    바꾸면 그 spec의 `getByRole("radio", { name })`도 함께 바꿔야 한다.
+ */
 export const SALE_SPLIT_MODE_OPTIONS: RadioCardOption<SaleSplitMode>[] = [
-  { value: "actual", label: "구분양도 (계약서에 구분 기재)" },
-  { value: "appraisal", label: "감정평가 (감정평가가액으로 안분)" },
-  { value: "apportioned", label: "기준시가 안분 (양도시 기준시가 비율)" },
+  { value: "actual", label: "계약서에 구분 기재" },
+  { value: "appraisal", label: "감정평가가액으로 안분" },
+  { value: "apportioned", label: "양도시 기준시가 비율" },
 ];
 
 /**
