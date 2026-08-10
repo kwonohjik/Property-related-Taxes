@@ -68,7 +68,7 @@ describe("⑤-1 — 모드에 따라 입력 칸이 갈린다", () => {
 
   it("라디오를 바꾸면 폼에 반영된다", () => {
     render(<Harness />);
-    fireEvent.click(screen.getByRole("radio", { name: /구분양도/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /계약서에 구분 기재/ }));
     expect(lastPatch.saleSplitMode).toBe("actual");
   });
 
@@ -123,7 +123,7 @@ describe("⑤-3 — 감정평가는 라디오의 선택지이고, 구분양도�
         onChange={onChange}
       />,
     );
-    fireEvent.click(screen.getByText(/기준시가 안분/));
+    fireEvent.click(screen.getByText(/양도시 기준시가 비율/));
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({
         saleSplitMode: "apportioned",

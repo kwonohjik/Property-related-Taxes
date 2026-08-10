@@ -40,6 +40,18 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 // 선택지·전환 patch는 주택 경로(`LandBuildingSaleSplitSection`)와 **공유**한다 — 각자 두면
 // 같은 축을 다르게 부르거나 비우는 값이 갈린다(2026-08-08 주택 경로 통합).
 
+/**
+ * 섹션 제목 — **옵션 단추 라벨과 같은 타이포**로 렌더한다 (2026-08-11 사용자 요청).
+ *
+ * `ToneCard`의 기본 제목 스타일은 `text-xs font-semibold` + 톤 색인데, 이 카드의 선택지는
+ * inline `RadioCardGroup`이라 `text-sm` 기본 굵기·기본 색이다. 제목이 선택지보다 작고 굵어
+ * 위계가 뒤집혀 보였다. ⇒ 헤더 `<p>`의 클래스를 자식 `<span>`에서 덮는다 —
+ * `ToneCard`는 전 세목이 공유하는 primitive이므로 그쪽은 건드리지 않는다.
+ */
+const SECTION_TITLE = (
+  <span className="text-sm font-normal text-foreground">{SALE_SPLIT_SECTION_TITLE}</span>
+);
+
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
@@ -64,7 +76,7 @@ export function GeneralBuildingSaleSplitSection({
 
   if (blockedReason) {
     return (
-      <ToneCard tone="emerald" sectionNum={sectionNum} title={SALE_SPLIT_SECTION_TITLE}>
+      <ToneCard tone="emerald" sectionNum={sectionNum} title={SECTION_TITLE}>
         <p className="text-xs leading-snug text-muted-foreground" data-testid="gb-sale-split-blocked">
           {blockedReason} 양도시 기준시가 비율로 안분합니다 (소득세법 시행령 §166⑥).
         </p>
@@ -73,7 +85,7 @@ export function GeneralBuildingSaleSplitSection({
   }
 
   return (
-    <ToneCard tone="emerald" sectionNum={sectionNum} title={SALE_SPLIT_SECTION_TITLE}>
+    <ToneCard tone="emerald" sectionNum={sectionNum} title={SECTION_TITLE}>
       <div data-testid="gb-sale-split-mode">
         <RadioCardGroup
           name="gbSaleSplitMode"
