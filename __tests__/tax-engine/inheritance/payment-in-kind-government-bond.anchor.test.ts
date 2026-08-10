@@ -73,6 +73,7 @@ function mkInput(over: Partial<PaymentInKindInput["assets"]>): PaymentInKindInpu
       governmentBondValue: 0,
       unlistedStockValue: 0,
       tradableListedValue: 0,
+      restrictedListedValue: 0,
       grossFinancialValue: DEPOSIT,
       financialInstitutionDebt: 0,
       heirResidenceValue: 0,

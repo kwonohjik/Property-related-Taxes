@@ -37,6 +37,7 @@ import { FarmingCategorySection } from "@/components/calc/inheritance/FarmingCat
 import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/FamilyBusinessCategorySection";
 import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import { MajorShareholderStockToggle } from "@/components/calc/inheritance/unlisted-stock-v2/MajorShareholderStockToggle";
 import {
@@ -164,6 +165,24 @@ function EstateCommonAttributesSectionInner({
       {/* §22 금융재산공제 — 카테고리별 자동 노출 */}
       {visibility.financialDeduction === "default" && (
         <FinancialDeductionChip item={item} onUpdate={onUpdate} />
+      )}
+
+      {/* 물납 충당순위 — 최초상장 + 처분제한 (상증령 §74①2호가목 **단서** · §74②2호).
+          상장주식 한정. 상장주식은 가목 **본문**으로 충당에서 빠지지만, IPO 보호예수처럼
+          자본시장법상 처분이 제한된 것은 **단서**로 되살아나 충당 2순위가 된다.
+          묻지 않으면 납세자 **불리** 방향으로 굳는다(요건1 분자 누락 + §73①2호 한도2 과다차감)
+          → 자동 fallback 금지 원칙에 따라 명시 입력받는다. */}
+      {/* mode 게이트는 상위 `EstateCommonAttributesSection`이 이미 건다(inheritance 전용). */}
+      {item.category === "listed_stock" && (
+        <ToggleCard
+          tone="amber"
+          title="최초상장 + 처분제한 (물납 §74①2호가목 단서)"
+          description="최초로 거래소에 상장되어 물납허가통지서 발송일 전일 현재 자본시장법에 따라 처분이 제한된 경우(보호예수 등)에 켜세요. 켜면 물납 충당 대상에 포함되어 2순위가 되고(§74②2호), 물납 한도에서 차감하지 않습니다(§73①2호 「처분이 제한된 것은 제외한다」). 결정세액에는 영향이 없습니다."
+          checked={item.isNewlyListedDisposalRestricted === true}
+          onCheckedChange={(on) =>
+            onUpdate({ ...item, isNewlyListedDisposalRestricted: on })
+          }
+        />
       )}
 
       {/* hidden_expandable 펼침 영역 */}
