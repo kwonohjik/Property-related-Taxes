@@ -116,7 +116,37 @@ export function CompanionAssetCard({
   // 지분 모드 companion(자산2+): ① 기본정보·② 양도정보는 같은 물건·같은 양도 사건이라 자산1과
   // 동일 → 숨김(자산1에서 1회 입력·엔진 mergePrimaryBasic 병합). 자산1(index 0)은 항상 노출.
   const hideInheritedSections = splitMode === "fractional" && index > 0;
-  const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
+
+  /**
+   * ③ 취득정보가 읽는 자산 — 지분 companion은 **`assetKind`만** primary값으로 덮는다.
+   *
+   * 🔴 지분 sibling은 `makeDefaultAsset`로 생성돼 `assetKind`가 **"housing"**이다
+   *    (`Step1.tsx` `handleFractionalToggle` → `calc-wizard-asset-factory.ts`).
+   *    ①을 숨기니 사용자가 고칠 수도 없고, ③의 자산종류 게이트
+   *    (`AssetSectionAcquisition.tsx` — `GeneralBuildingBlock` 등)가 **통째로 렌더되지 않는다**
+   *    ⇒ 취득시 기준시가 입력 경로가 사라져 배관을 다 고쳐도 세액이 안 변한다
+   *    (메모리 `feedback_ui_gate_removes_sole_input_path`).
+   *
+   * ⚠️ **`assetKind` 하나만** 덮는다. 병합 자산 전체를 넘기면 ③의 `onChange`가 물건-수준 값을
+   *    지분 카드에서 편집하는 경로를 열어 primary와 갈라진다(설계 D4-2 ㉯).
+   *    API·validate 쪽 동일 규칙은 `mergePrimaryBasic`이 담당한다 — **같은 축**이다.
+   */
+  const acquisitionAsset =
+    hideInheritedSections && primaryAsset
+      ? { ...asset, assetKind: primaryAsset.assetKind }
+      : asset;
+  /**
+   * 카드 제목의 자산종류 — 지분 companion은 **primary값**으로 표시한다.
+   *
+   * 지분 sibling은 `makeDefaultAsset`로 생성돼 저장값이 "housing"이다. ③은 주입값으로
+   * 올바르게 렌더되는데(아래 `acquisitionAsset`) 제목만 「자산 2 — 주택」으로 남아
+   * **같은 카드가 두 자산종류를 말하는** 상태가 됐다(2026-08-10 스크린샷 실측).
+   */
+  const kindLabelSource =
+    splitMode === "fractional" && index > 0 && primaryAsset
+      ? primaryAsset.assetKind
+      : asset.assetKind;
+  const kindLabel = ASSET_KIND_LABELS[kindLabelSource] ?? kindLabelSource;
   const isNewConstruction = asset.acquisitionCause === "newConstruction";
 
   // 부수토지 일체과세 자동 분기 배지 (useEffect 금지 — useMemo 훅) / 날짜 순서 실시간 경고
@@ -333,7 +363,7 @@ export function CompanionAssetCard({
         forceOpen={forceOpenAll}
       >
         <AssetSectionAcquisition
-          asset={asset}
+          asset={acquisitionAsset}
           onChange={onChange}
           transferDate={transferDate}
           isNewConstruction={isNewConstruction}

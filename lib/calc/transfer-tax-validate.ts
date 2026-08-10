@@ -19,6 +19,7 @@ import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
 import { isMultiHouseSurchargeSuppressed, provisoGate, effectiveProvisoReason, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { mergeGbPropertyLevel } from "./transfer-tax-api-gb-shares";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -73,8 +74,10 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       if (primaryAsset.assetKind === "housing" && primaryAsset.isMixedUseHouse) {
         issues.push({ step, assetIndex: 0, message: "겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
       } else if (
+        // ✅ `general_building` 제외 (2026-08-10) — 지분별 토지·건물 카드를 만들어 aggregate 1회로
+        //    계산하는 전용 경로가 생겼다(`app/api/calc/transfer/general-building-fractional.ts`).
+        //    상가·재개발은 그 경로가 없어 **계속 차단**한다.
         primaryAsset.assetKind === "commercial_building" ||
-        primaryAsset.assetKind === "general_building" ||
         primaryAsset.assetKind === "redevelopment_apt"
       ) {
         issues.push({ step, assetIndex: 0, message: "해당 자산 종류는 지분 분할 취득 계산을 지원하지 않습니다. 지분 분할 토글을 끄고 계산하세요." });
@@ -112,12 +115,23 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     //    실측 결과 **양도차익이 단건과 동일**하고 필요경비도 음수가 아니다(계산 정상).
     //    일괄 집계 결과에 자산별 상세 카드가 안 실리는 **표시 갭**일 뿐이라 막을 근거가 없다.
     //    회귀 방어: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`
+    //
+    // 🔴 **이 가드는 「함께 양도」(서로 다른 물건) 전용이다** — 2026-08-10 E2E 실측으로 정정.
+    //    「같은 물건의 지분 분할」은 route 5-0(`general-building-fractional.ts`)이 5-a보다
+    //    **앞에서** 가로채므로 삼킴이 일어나지 않는다. 그런데 이 가드는 `assets.length > 1`만
+    //    보고 걸려서 지분 분할 일반건물이 **계산 자체를 못 하는** 상태였다
+    //    (vitest anchor는 payload를 손으로 만들어 route만 봤기 때문에 못 잡았다).
     if (form.assets.length > 1) {
       const SINGLE_ONLY: Array<[(a: AssetForm) => boolean, string]> = [
         [(a) => a.transferType === "burdened_gift", "부담부증여(소령 §159)"],
         [(a) => a.assetKind === "housing" && !!a.isMixedUseHouse, "겸용주택 분리계산"],
         [(a) => a.assetKind === "redevelopment_apt", "재개발·재건축(시행령 §166)"],
-        [(a) => a.assetKind === "general_building", "일반건물(토지·건물 일괄)"],
+        // 지분 분할(전 자산 fractional)은 전용 경로가 있으므로 제외한다.
+        ...(fullFractional
+          ? []
+          : ([[(a) => a.assetKind === "general_building", "일반건물(토지·건물 일괄)"]] as Array<
+              [(a: AssetForm) => boolean, string]
+            >)),
       ];
       for (const [match, label] of SINGLE_ONLY) {
         if (form.assets.some(match)) {
@@ -133,10 +147,19 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     // 자산별 검증 — 자산당 첫 오류 1건씩 일괄 수집.
     // 지분 모드 companion(i>0)은 ① 기본정보를 숨기므로 primary basic을 병합해 검사
     // (자산종류·면적이 primary값 → basic 미입력 spurious 차단 방지, 취득측은 companion 고유값 유지).
+    //
+    // 🔴 **일반건물은 GB 물건-수준까지 병합한다** — 2026-08-10 E2E 실측으로 추가.
+    //    지분 카드는 면적·양도시 기준시가·용도지역을 **UI에서 숨기므로**(`shareAcquisitionOnly`)
+    //    `mergePrimaryBasic`의 7키만으로는 「자산 2: 토지면적을 입력하세요」가 뜬다 —
+    //    화면에 칸이 없는데 입력하라는 **UI 통과 ↔ validate 차단 모순**이다(CLAUDE.md ⑧).
+    //    ④ API 변환과 **같은 함수**를 쓴다(단일 소스 — 목록이 갈리면 한쪽만 통과한다).
+    const isGbFractional = fullFractional && primaryAsset?.assetKind === "general_building";
     for (let i = 0; i < form.assets.length; i++) {
       const entry =
         fullFractional && i > 0 && primaryAsset
-          ? mergePrimaryBasic(form.assets[i], primaryAsset)
+          ? isGbFractional
+            ? mergeGbPropertyLevel(form.assets[i], primaryAsset)
+            : mergePrimaryBasic(form.assets[i], primaryAsset)
           : form.assets[i];
       const message = validateAssetEntry(entry, i, form);
       if (message) issues.push({ step, assetIndex: i, message });

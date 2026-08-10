@@ -127,18 +127,50 @@ export interface GeneralBuildingActualPricePayload {
 // ── 경로 B: 실거래가/감정가 모드 ─────────────────────────────────────
 
 /**
- * 실거래가/감정가 모드 — §166⑥ 비율로 실거래가 안분 + NBL 중과.
+ * 경로 B의 **카드 조립 결과** — aggregate 직전 상태.
  *
- * 취득가액·필요경비를 양도시 기준시가 비율로 토지·건물에 안분.
- * 환산취득가(③ 취득시 기준시가)는 사용하지 않으며 개산공제도 없음.
+ * 지분(%) 분할 취득에서 지분마다 카드를 만들어 **concat 후 aggregate 1회**를 하려면
+ * 「카드까지」와 「aggregate부터」가 갈려 있어야 한다
+ * (설계 `transfer-general-building-fractional-share.engine.design.md` D3-2-c).
  */
-export function calculateGeneralBuildingActualTransfer(
+export interface ActualGbCardsResult {
+  cards: AssetCardForAggregate[];
+  nonBusinessRatio: number;
+  /** NBL 판정 명세 — 결과 카드(`GeneralBuildingValuationDetailCard`)가 **가드 없이** 읽는다. */
+  nblDetail: {
+    buildingFootprintArea: number;
+    allowedLandArea: number;
+    isWithinNblRatio: boolean;
+    nonBusinessArea: number;
+    appliedMultiplier: number;
+    multiplierDetail: string;
+  };
+  /** §166⑥ 안분 분모 (양도시 토지 + 건물 기준시가) */
+  totalStd: number;
+  landStdAtTransfer: number;
+  transferBuildingStdPrice: number;
+  acqLandStdTotal?: number;
+  acqBuilding1StdTotal?: number;
+  bundledActualAcquisitionPrice?: number;
+  bundledActualExpenses?: number;
+  saleSplitJudgment?: SaleSplitJudgmentDetail;
+  transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
+  acquisitionByInheritance?: boolean;
+  buildingAcquisitionByInheritance?: boolean;
+}
+
+/**
+ * 경로 B 카드 조립 — §166⑥ 비율로 실거래가 안분 + NBL 중과.
+ *
+ * 취득가액·필요경비를 기준시가 비율로 토지·건물에 안분한다(성질별 시점 상이 — P-2).
+ * 환산취득가(③ 취득시 기준시가)는 사용하지 않으며 개산공제도 없음.
+ *
+ * ⚠️ **동작 무변경 추출**(2026-08-10 Phase A). 종전 `calculateGeneralBuildingActualTransfer`의
+ *    앞부분을 그대로 옮겼다 — 로직을 손대지 않는다.
+ */
+export function buildActualGeneralBuildingCards(
   payload: GeneralBuildingActualPricePayload,
-  taxYear: number,
-  annualBasicDeductionUsed: number | undefined,
-  priorReductionUsage: unknown[],
-  rates: TaxRatesMap,
-): GeneralBuildingRouteResult {
+): ActualGbCardsResult {
   const {
     totalTransferPrice, transferDate, acquisitionDate,
     landArea, buildingFootprintArea,
@@ -416,6 +448,9 @@ export function calculateGeneralBuildingActualTransfer(
     isWithinLimit: isWithinNblRatio,
     nonBusinessArea,
     nonBusinessRatio,
+    allowedLandArea,
+    multiplier: appliedMultiplier,
+    multiplierDetail,
   } = judgeAppurtenantLandExcess({
     landArea,
     buildingFootprintArea,
@@ -489,6 +524,50 @@ export function calculateGeneralBuildingActualTransfer(
     }
   }
 
+  return {
+    cards,
+    nonBusinessRatio,
+    nblDetail: {
+      buildingFootprintArea,
+      allowedLandArea,
+      isWithinNblRatio,
+      nonBusinessArea,
+      appliedMultiplier,
+      multiplierDetail,
+    },
+    totalStd,
+    landStdAtTransfer,
+    transferBuildingStdPrice,
+    // UI 자산별 산식 인라인 표시용 — 실가 모드에서도 gbDetail 노출 (사례 35 등).
+    acqLandStdTotal: acquisitionLandPricePerSqm
+      ? Math.floor(acquisitionLandPricePerSqm * landArea)
+      : undefined,
+    acqBuilding1StdTotal: acquisitionBuildingStdPrice ?? undefined,
+    bundledActualAcquisitionPrice: actualAcquisitionPrice ?? undefined,
+    bundledActualExpenses: actualExpenses ?? undefined,
+    saleSplitJudgment,
+    transferBurdenedGiftBreakdown,
+    acquisitionByInheritance,
+    buildingAcquisitionByInheritance,
+  };
+}
+
+/**
+ * 실거래가/감정가 모드 — 카드 조립(위) + aggregate.
+ *
+ * 단건 진입점. 지분 분할은 `general-building-fractional.ts`가
+ * `buildActualGeneralBuildingCards`를 지분마다 부른 뒤 aggregate를 **1회만** 한다.
+ */
+export function calculateGeneralBuildingActualTransfer(
+  payload: GeneralBuildingActualPricePayload,
+  taxYear: number,
+  annualBasicDeductionUsed: number | undefined,
+  priorReductionUsage: unknown[],
+  rates: TaxRatesMap,
+): GeneralBuildingRouteResult {
+  const built = buildActualGeneralBuildingCards(payload);
+  const { cards, nonBusinessRatio, totalStd, landStdAtTransfer } = built;
+
   const properties = buildProperties(cards, nonBusinessRatio);
   const aggregated = calculateTransferTaxAggregate(
     {
@@ -504,34 +583,36 @@ export function calculateGeneralBuildingActualTransfer(
   const apportionment = buildApportionment(
     cards, totalStd, nonBusinessRatio,
     landStdAtTransfer, null,
-    transferBuildingStdPrice, null,
+    built.transferBuildingStdPrice, null,
     false,
     "소득세법 시행령 §166⑥ · §104의3",
   );
 
-  // UI 자산별 산식 인라인 표시용 — 실가 모드에서도 gbDetail 노출 (사례 35 등).
   // landStdTotal·buildingStdTotal로 §166⑥ 안분 산식 빌더 활성화.
-  const acqLandStdTotalActual = acquisitionLandPricePerSqm
-    ? Math.floor(acquisitionLandPricePerSqm * landArea)
-    : undefined;
   aggregated.generalBuildingValuationDetail = {
     assetCards: cards,
     nonBusinessRatio,
     landStdTotal: landStdAtTransfer,
-    buildingStdTotal: transferBuildingStdPrice,
-    acqLandStdTotal: acqLandStdTotalActual,
-    acqBuilding1StdTotal: acquisitionBuildingStdPrice ?? undefined,
-    bundledActualAcquisitionPrice: actualAcquisitionPrice ?? undefined,
-    bundledActualExpenses: actualExpenses ?? undefined,
+    buildingStdTotal: built.transferBuildingStdPrice,
+    acqLandStdTotal: built.acqLandStdTotal,
+    acqBuilding1StdTotal: built.acqBuilding1StdTotal,
+    bundledActualAcquisitionPrice: built.bundledActualAcquisitionPrice,
+    bundledActualExpenses: built.bundledActualExpenses,
     /**
      * §100③ 판정 명세 — 화면(`BundledAllocationCard.tsx:575`)이 이 키를 읽는다.
      * 🔴 종전에는 이 객체를 만들면서 이 키만 빠져 있었다 ⇒ 판정해도 화면에 안 떴다(P-1).
      */
-    ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
+    ...(built.saleSplitJudgment ? { saleSplitJudgment: built.saleSplitJudgment } : {}),
     // §163⑨ 상속 취득가액 직접 산정 echo (결과 카드 라벨 분기용).
-    ...(acquisitionByInheritance ? { acquisitionByInheritance } : {}),
-    ...(buildingAcquisitionByInheritance ? { buildingAcquisitionByInheritance } : {}),
+    ...(built.acquisitionByInheritance ? { acquisitionByInheritance: true } : {}),
+    ...(built.buildingAcquisitionByInheritance
+      ? { buildingAcquisitionByInheritance: true }
+      : {}),
   } as GeneralBuildingOutput;
 
-  return { apportionment, aggregated, transferBurdenedGiftBreakdown };
+  return {
+    apportionment,
+    aggregated,
+    transferBurdenedGiftBreakdown: built.transferBurdenedGiftBreakdown,
+  };
 }

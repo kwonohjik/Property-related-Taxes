@@ -21,6 +21,7 @@ import {
   buildNewConstructionPayload,
 } from "./transfer-tax-api-body-blocks";
 import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildCommercialAppurtenantLand, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
@@ -155,6 +156,17 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isGeneralBuilding = primary.assetKind === "general_building";
   const gbValuation = isGeneralBuilding
     ? buildGeneralBuildingValuation(primary, form.transferDate)
+    : undefined;
+
+  /**
+   * ⑬ 일반건물 × **지분(%) 분할 취득** — 지분별 완결 payload 배열.
+   *
+   * 조건 미충족 시 `undefined`라 기존 경로가 그대로 돈다(회귀 0).
+   * 성립하면 아래에서 **`companionAssets`·`totalSalePrice` 등을 보내지 않는다** —
+   * 보내면 route의 `bundledOk`가 참이 되어 5-a(일괄)가 먼저 잡는다.
+   */
+  const gbShares = isGeneralBuilding
+    ? buildGeneralBuildingShares(form.assets, form.transferDate)
     : undefined;
 
   // ⑬ 재개발/재건축 (시행령 §166) — assetKind "redevelopment_apt" 또는 "right_to_move_in" 시 빌드.
@@ -646,8 +658,18 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(primary.familyBusinessInheritance !== undefined
       ? { familyBusinessInheritance: primary.familyBusinessInheritance }
       : {}),
+    /**
+     * ⑬ 일반건물 × 지분 분할 — 전용 배열. 존재하면 route가 5-a보다 앞에서 가로챈다.
+     * 누락 시 침묵 stripping (TypeScript 미감지 영역).
+     */
+    ...(gbShares !== undefined ? { generalBuildingShares: gbShares } : {}),
     // ── 일괄양도 (assets 2건 이상) ──
-    ...(form.assets.length > 1
+    //
+    // 🔴 **지분 분할 일반건물은 제외**한다. 이 블록을 함께 보내면 `totalSalePrice`+`companionAssets`로
+    //    route의 `bundledOk`가 참이 되는데, 새 분기가 앞에 있어 도달하지는 않더라도
+    //    payload에 **두 개의 서로 다른 계산 지시**가 실리는 모순 상태가 된다.
+    //    companion 경로를 아예 쓰지 않는 것이 이 설계의 회귀 0 근거다(설계 D1-1).
+    ...(form.assets.length > 1 && gbShares === undefined
       ? {
           totalSalePrice: parseAmount(form.contractTotalPrice),
           standardPriceAtTransferForApportion:
