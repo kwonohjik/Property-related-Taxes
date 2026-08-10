@@ -31,6 +31,15 @@ export interface TransferAssetSummaryRow {
   assetKind: AssetForm["assetKind"];
   salePrice: number;
   acqPrice: number;
+  /**
+   * 취득가액 라벨 — 표시값의 **범위가 자산 종류마다 다르므로** 라벨로 구분한다.
+   *
+   * 재개발·입주권(§166)의 취득가액은 자산 전체가 아니라 **인가 전 분 종전주택** 취득가액이다
+   * (인가 후 분은 분양가 = 권리가액 ± 청산금으로 따로 산정된다 — `RedevelopmentBlock.tsx:341`).
+   * 그냥 「취득가액」으로 두면 전체 취득가액으로 오독된다. 입력 카드 문구
+   * (「인가전 분 종전 주택 취득가액」)와 같은 어휘를 쓴다.
+   */
+  acqLabel: string;
   expense: number;
   reductionTypes: ReductionType[];
   /** «계산 후 표시» 플래그 (환산/안분 미충족 등) */
@@ -70,26 +79,111 @@ function toBundledKind(kind: AssetForm["assetKind"]): BundledAssetKind {
   return "building";
 }
 
-/**
- * 자산별 직접 취득가액 base (지분 ratio 적용 전 raw).
- *
- * 별개 취득(토지·건물 취득시기 상이)은 자산 전체 `fixedAcquisitionPrice`가 UI에서 숨겨지므로
- * 그 필드를 읽으면 0 또는 stale 총액이 표시된다 → 파트 합계로 대체한다.
- * 미확정 파트(환산·미입력)가 있으면 0을 돌려 pending 경로(fallback 체인)로 넘긴다 —
- * 부분합을 합계로 표시하면 총액으로 오독된다.
- */
-function directAcqRaw(a: AssetForm): number {
-  if (isSeparateAcquisition(a)) {
-    const { sum, pending } = separateAcqPartsSum(a);
-    return pending ? 0 : sum;
-  }
-  return a.isSalesCaseAcquisition ? parseRaw(a.similarSalesValue) : parseRaw(a.fixedAcquisitionPrice);
+/** 다필지 경로(§166⑥ 필지별 계산) 활성 판정 — API `transfer-tax-api.ts:140-141`과 동일 조건. */
+function isParcelMode(a: AssetForm): boolean {
+  return !!a.parcelMode && a.assetKind === "land" && (a.parcels?.length ?? 0) > 0;
 }
 
-/** 자산별 직접 필요경비 base (지분 ratio 적용 전 raw). */
+/** 재개발·입주권(§166) 경로 판정 — API `transfer-tax-api.ts:175-176`(`isRedevelopment`)과 동일 조건. */
+function isRedevelopmentPath(a: AssetForm): boolean {
+  return a.assetKind === "redevelopment_apt" || a.assetKind === "right_to_move_in";
+}
+
+/**
+ * 다필지 취득가액 합 — API `transfer-tax-api.ts:584`(`parcels[].acquisitionPrice`)와 같은 소스.
+ *
+ * 환산(`acquisitionMethod === "estimated"`) 필지는 API가 금액을 보내지 않고 엔진이 기준시가로
+ * 산정하므로 계산 후에야 확정된다 → `pending`. 미확정 필지가 있으면 부분합을 총액으로 표시하지
+ * 않는다(`separateAcqPartsSum`과 같은 정책 — 부분합 오독 차단).
+ */
+function parcelAcqSum(a: AssetForm): { sum: number; pending: boolean } {
+  let sum = 0;
+  let pending = false;
+  for (const p of a.parcels ?? []) {
+    if (p.acquisitionMethod === "estimated") {
+      pending = true;
+      continue;
+    }
+    const v = parseRaw(p.acquisitionPrice);
+    if (v <= 0) pending = true;
+    sum += v;
+  }
+  return { sum, pending };
+}
+
+/** 다필지 필요경비 합 — 필지별 자본적지출 + 양도비 (legacy 단일 `expenses` fallback). */
+function parcelExpenseSum(a: AssetForm): number {
+  return (a.parcels ?? []).reduce((acc, p) => {
+    const split = parseRaw(p.capitalExpenditure) + parseRaw(p.transferExpense);
+    return acc + (split > 0 ? split : parseRaw(p.expenses));
+  }, 0);
+}
+
+/**
+ * 자산별 직접 취득가액 base (지분 ratio 적용 전 raw) + 미확정 여부.
+ *
+ * **분기 순서·소스는 API 변환(`transfer-tax-api.ts:277-289` `acquisitionPrice`)의 정본을 미러링**한다 —
+ * 자산 종류마다 취득가액을 담는 필드가 다르고, 사이드바가 자기 규칙을 세우면 표시값과 실제
+ * 계산값이 갈린다(memory `feedback_ui_engine_dual_truth_avoidance`).
+ *
+ * 미확정(환산·미입력 파트)이 있으면 0 + `pending`을 돌려 fallback 체인으로 넘긴다 —
+ * 부분합을 합계로 표시하면 총액으로 오독된다.
+ */
+function directAcqRaw(a: AssetForm): { value: number; pending: boolean } {
+  // ① 재개발·입주권 — 상단 일반 취득가액 칸이 숨겨지고 §166 섹션 전용 필드를 쓴다.
+  //    승계조합원(사례 48)만 자산 카드 `fixedAcquisitionPrice` (API :283-286).
+  if (isRedevelopmentPath(a)) {
+    const v =
+      a.redevIsSuccessorMember === "yes"
+        ? parseRaw(a.fixedAcquisitionPrice)
+        : parseRaw(a.redevActualAcquisitionPrice);
+    return { value: v, pending: false };
+  }
+  // ② 다필지 — 자산 전체 취득가액이 없고 필지별로 실재한다 (API :277 `parcelModeActive` → 0 송신).
+  if (isParcelMode(a)) {
+    const { sum, pending } = parcelAcqSum(a);
+    return { value: pending ? 0 : sum, pending };
+  }
+  // ③ 별개 취득(토지·건물 취득시기 상이) — 자산 전체 칸이 숨겨져 파트 합계가 정본.
+  if (isSeparateAcquisition(a)) {
+    const { sum, pending } = separateAcqPartsSum(a);
+    return { value: pending ? 0 : sum, pending };
+  }
+  // ④ 매매사례가액
+  if (a.isSalesCaseAcquisition) return { value: parseRaw(a.similarSalesValue), pending: false };
+  // ⑤ 자산 전체 실가. 비어 있는데 파트별 실가가 있으면(일반건물 토지·건물 개별 입력) 파트 합계.
+  //    자산 전체 값이 있으면 그쪽이 우선 — stale 파트 값에 밀리지 않게 한다.
+  const fixed = parseRaw(a.fixedAcquisitionPrice);
+  if (fixed > 0) return { value: fixed, pending: false };
+  if (parseRaw(a.landAcquisitionPrice) > 0 || parseRaw(a.buildingAcquisitionPrice) > 0) {
+    const { sum, pending } = separateAcqPartsSum(a);
+    return { value: pending ? 0 : sum, pending };
+  }
+  return { value: 0, pending: false };
+}
+
+/**
+ * 자산별 직접 필요경비 base (지분 ratio 적용 전 raw).
+ *
+ * 취득가액과 같은 이유로 자산 종류별 소스가 다르다 — 재개발은 §166 인가 전·후 분리 입력,
+ * 다필지는 필지별, 일반건물은 토지·건물 파트별.
+ */
 function directExpenseRaw(a: AssetForm): number {
+  // 재개발·입주권 — API `transfer-tax-api-redev.ts:44-49`: 인가전 + (인가후 + 자본적지출 + 양도비)
+  if (isRedevelopmentPath(a)) {
+    return (
+      parseRaw(a.redevPreApprovalExpenses) +
+      parseRaw(a.redevPostApprovalExpenses) +
+      parseRaw(a.capitalExpenditure) +
+      parseRaw(a.transferExpense)
+    );
+  }
+  if (isParcelMode(a)) return parcelExpenseSum(a);
   const split = parseRaw(a.capitalExpenditure) + parseRaw(a.transferExpense);
-  return split > 0 ? split : parseRaw(a.directExpenses);
+  if (split > 0) return split;
+  const partSplit = parseRaw(a.landDirectExpenses) + parseRaw(a.buildingDirectExpenses);
+  if (partSplit > 0) return partSplit;
+  return parseRaw(a.directExpenses);
 }
 
 /**
@@ -148,7 +242,21 @@ export function computeTransferPerAssetSummary(
   const apportionedMap =
     !bundledResult && canApportion(formData) ? computeApportionedSaleMap(formData) : null;
 
-  // 단건 환산 프리뷰 게이트 — 현행 TransferTaxCalculator canPreviewEstimated와 동일.
+  /**
+   * 단건 환산 프리뷰 게이트 — **공통 §176의2② 경로**(양도가액 × 취득시 기준시가 ÷ 양도시 기준시가)를
+   * 타는 자산인가.
+   *
+   * 엔진의 환산 산식은 자산 종류를 보지 않는다(`transfer-tax-helpers.ts:312-330` —
+   * `input.useEstimatedAcquisition`만 판정). 따라서 게이트도 종류 화이트리스트가 아니라
+   * **전용 환산 경로를 타는 자산의 제외**로 정의한다. 종전의 `land || housing` 화이트리스트는
+   * 같은 산식을 쓰는 `building`·`presale_right`를 근거 없이 «계산 후 표시»에 묶어 두었다.
+   *
+   * 제외 대상(각자 별도 산식·별도 입력 필드):
+   *   · `general_building`   — 토지·건물 파트별 환산(`general-building-valuation.ts`)
+   *   · `commercial_building`— §164⑧ 기준시가 조정(`commercial-building-valuation.ts`)
+   *   · 재개발·입주권         — §166 인가 전·후 분리
+   *   · 겸용주택·다필지·별개취득·부담부증여 — 파트/필지 단위 계산
+   */
   const primary = formData.assets[0];
   const canPreviewEstimated =
     isSingle &&
@@ -158,7 +266,9 @@ export function computeTransferPerAssetSummary(
     !primary.isMixedUseHouse &&
     !primary.hasSeperateLandAcquisitionDate &&
     primary.transferType !== "burdened_gift" &&
-    (primary.assetKind === "land" || primary.assetKind === "housing");
+    primary.assetKind !== "general_building" &&
+    primary.assetKind !== "commercial_building" &&
+    !isRedevelopmentPath(primary);
 
   const rows: TransferAssetSummaryRow[] = formData.assets.map((a, i) => {
     const ratio = ownershipRatioOf(a);
@@ -169,6 +279,27 @@ export function computeTransferPerAssetSummary(
     const bundledAssetId = i === 0 ? "primary" : a.assetId;
     const bundledMatch = bundledResult?.apportionment.apportioned.find((p) => p.assetId === bundledAssetId);
 
+    /**
+     * **자산카드 분해 결과의 귀속** — 일반건물(§166⑥·§104의3 비사업용 분할)은 폼 자산 1건이
+     * 엔진에서 여러 자산카드로 쪼개져 돌아온다. 그때 `apportioned[].assetId`는 폼의 assetId가
+     * 아니라 **카드 ID**(`land_business`·`land_nbl`·`building` — `general-building-route-cards.ts:200`)라
+     * 위 매칭이 반드시 실패한다. 그 결과 계산을 마친 뒤에도 취득가액·필요경비가 «-»로 남았다.
+     *
+     * 폼 자산이 1건이면 카드 전부가 그 자산의 것이므로 합계로 귀속한다. 멀티 자산에서는
+     * 카드↔자산 대응이 성립하지 않으므로 적용하지 않는다(잘못된 자산에 남의 금액이 붙는다).
+     */
+    const bundledCards =
+      isSingle && bundledResult && !bundledMatch
+        ? bundledResult.apportionment.apportioned.reduce(
+            (acc, p) => ({
+              sale: acc.sale + p.allocatedSalePrice,
+              acq: acc.acq + p.allocatedAcquisitionPrice,
+              exp: acc.exp + p.allocatedExpenses,
+            }),
+            { sale: 0, acq: 0, exp: 0 },
+          )
+        : null;
+
     // ── 양도가액 ──
     let salePrice = 0;
     let salePending = false;
@@ -176,6 +307,10 @@ export function computeTransferPerAssetSummary(
     if (bundledMatch) {
       salePrice = bundledMatch.allocatedSalePrice;
       saleIsApportioned = bundledMatch.saleMode === "apportioned";
+    } else if (bundledCards && bundledCards.sale > 0) {
+      // 자산카드 분해(일반건물) — 카드 양도가액 합 = 그 자산의 양도가액. 카드 간 분할은
+      // 자산 내부 안분이므로 «기준시가 안분» 라벨은 붙이지 않는다.
+      salePrice = bundledCards.sale;
     } else if (apportionedMap && apportionedMap.has(a.assetId)) {
       // 안분 프리뷰 (지분 자산 포함 — 엔진과 동일하게 fixedSalePrice 제외·잔여흡수 반영).
       // 지분 자산은 고정값(«지분 N%»), 비지분 자산은 기준시가 안분값(«기준시가 안분»).
@@ -192,9 +327,10 @@ export function computeTransferPerAssetSummary(
     }
 
     // ── 취득가액 ──
-    const acqBase = directAcqRaw(a);
-    let acqPrice = fractional ? Math.floor(acqBase * ratio) : acqBase;
-    let acqPending = false;
+    const acqSource = directAcqRaw(a);
+    let acqPrice = fractional ? Math.floor(acqSource.value * ratio) : acqSource.value;
+    // 미확정 파트·필지가 있으면 계산 후 확정 — 부분합을 총액으로 표시하지 않는다.
+    let acqPending = acqSource.pending;
     if (mixedResult && i === 0) {
       // 겸용주택: 주택+상가 환산취득가액 합(전용 필드, 라벨 파싱 아님).
       acqPrice =
@@ -202,6 +338,14 @@ export function computeTransferPerAssetSummary(
         mixedResult.commercialPart.estimatedAcquisitionPrice;
     } else if (bundledMatch) {
       acqPrice = bundledMatch.allocatedAcquisitionPrice;
+    } else if (bundledCards) {
+      // 자산카드 분해(일반건물) — 카드별 취득가액 합. 엔진이 실제 쓴 값이라 환산·실가 모두 정확.
+      acqPrice = bundledCards.acq;
+      acqPending = false;
+    } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
+      // 다필지 — 필지별 결과 취득가액 합(환산 필지 포함). 계산 전 pending을 여기서 해소한다.
+      acqPrice = singleResult.parcelDetails.reduce((s, p) => s + p.acquisitionPrice, 0);
+      acqPending = false;
     } else if (acqPrice === 0 && isSingle) {
       // 단건 fallback 체인 (상속의제 → 계산 결과 환산 → 환산 프리뷰)
       if (a.inheritanceMode === "post-deemed" && a.inheritanceStartDate) {
@@ -217,6 +361,15 @@ export function computeTransferPerAssetSummary(
         acqPrice = singleResult.inheritedAcquisitionDetail.acquisitionPrice || 0;
       } else if (singleResult?.usedEstimatedAcquisition) {
         acqPrice = singleResult.estimatedBase ?? 0;
+      } else if (
+        singleResult?.commercialBuildingValuationDetail &&
+        !singleResult.swapApplied
+      ) {
+        // 상가·오피스텔(§164⑧) — STEP 0.35가 `useEstimatedAcquisition`을 false로 되돌리므로
+        // `usedEstimatedAcquisition`·`estimatedBase`가 비어 위 분기에 걸리지 않는다
+        // (`transfer-tax-commercial-step.ts:136` · `transfer-tax.ts:654`). 전용 상세에서 읽는다.
+        // §97②2호 swap이 발동하면 환산취득가액 대신 실가 쪽이 채택되므로 제외한다.
+        acqPrice = singleResult.commercialBuildingValuationDetail.estimatedAcquisitionTotal;
       } else if (canPreviewEstimated) {
         const stdAcq = parseRaw(a.standardPriceAtAcq);
         const stdTransfer = parseRaw(a.standardPriceAtTransfer);
@@ -235,7 +388,10 @@ export function computeTransferPerAssetSummary(
     // ── 필요경비 ──
     const expBase = directExpenseRaw(a);
     let expense = fractional ? Math.floor(expBase * ratio) : expBase;
-    let expensePending = false;
+    // 다필지에 환산 필지가 섞이면 그 필지의 개산공제(§163⑥)가 계산 후에야 확정된다 —
+    // 입력분만 더한 부분합을 총액으로 보이지 않게 pending으로 시작한다.
+    let expensePending = isParcelMode(a) && parcelAcqSum(a).pending;
+    if (expensePending) expense = 0;
     if (mixedResult && i === 0) {
       // 겸용주택 필요경비 = 주택·상가 각 토지·건물분 개산공제(§163⑥) 합.
       // (swap §97② 발동 시 실제 필요경비와 달라질 수 있음 — 계획서 §6 리스크 참조)
@@ -244,6 +400,13 @@ export function computeTransferPerAssetSummary(
         h.landAppraisalDed + h.buildingAppraisalDed + c.landAppraisalDed + c.buildingAppraisalDed;
     } else if (bundledMatch) {
       expense = bundledMatch.allocatedExpenses;
+    } else if (bundledCards) {
+      // 자산카드 분해(일반건물) — 카드별 필요경비 합(개산공제 포함).
+      expense = bundledCards.exp;
+    } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
+      // 다필지 — 필지별 결과 필요경비 합(환산 필지의 개산공제 §163⑥ 포함). pending 해소.
+      expense = singleResult.parcelDetails.reduce((s, p) => s + p.expenses, 0);
+      expensePending = false;
     } else if (expense === 0 && isSingle) {
       if (singleResult) {
         expense = singleResult.expenses ?? 0;
@@ -279,6 +442,12 @@ export function computeTransferPerAssetSummary(
       assetKind: a.assetKind,
       salePrice,
       acqPrice,
+      // 승계조합원(사례 48)은 종전주택을 소유하지 않아 「인가 전 분」이 성립하지 않는다 —
+      // 자산 카드 취득가액이 그대로 입주권 취득가액이므로 일반 라벨을 쓴다.
+      acqLabel:
+        isRedevelopmentPath(a) && a.redevIsSuccessorMember !== "yes"
+          ? "인가전 분 취득가액"
+          : "취득가액",
       expense,
       reductionTypes: (a.reductions ?? []).map((r) => r.type),
       salePending,

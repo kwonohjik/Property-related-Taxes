@@ -419,7 +419,8 @@ export default function TransferTaxCalculator({
               </p>
             )}
             {renderSidebarAmount("양도가액", row.salePrice, row.salePending, saleNote)}
-            {renderSidebarAmount("취득가액", row.acqPrice, row.acqPending)}
+            {/* 라벨은 자산 종류별 표시 범위에 따라 갈린다 — 재개발·입주권은 「인가전 분 취득가액」 */}
+            {renderSidebarAmount(row.acqLabel, row.acqPrice, row.acqPending)}
             {renderSidebarAmount("필요경비", row.expense, row.expensePending)}
             {/* 공제·감면 사항 라벨은 항상 표시 (감면 없으면 «-») */}
             <div className="border-t pt-1.5">
