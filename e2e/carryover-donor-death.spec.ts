@@ -156,6 +156,19 @@ test.describe("이월과세 증여자 사망 배제 — UI 입력 경로", () =>
     });
   });
 
+  test("RS-E1: 「그 외」를 고르면 사망 토글이 잠기고 안내가 뜬다", async ({ page }) => {
+    await openWizard(page);
+    await page.getByRole("radio", { name: /그 외/ }).first().check();
+
+    // ① 요건 자체가 불충족이므로 사망 여부를 물을 이유가 없다.
+    await expect(page.getByRole("switch", { name: /사망/ }).first()).toBeDisabled();
+    await expect(
+      page.getByText(/배우자 또는 직계존비속.*으로부터 증여받은 경우에만/).first(),
+    ).toBeVisible();
+
+    expect((await readCarryover(page)).donorRelation).toBe("other");
+  });
+
   test("DD-E5: 관계를 바꾸면 사망 선택이 초기화된다 [문언 의미가 바뀌므로]", async ({
     page,
   }) => {

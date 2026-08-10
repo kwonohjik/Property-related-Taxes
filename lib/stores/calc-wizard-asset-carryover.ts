@@ -77,7 +77,7 @@ export interface CarryoverTaxationForm {
    * §97조의2 ① 증여자와의 관계. "" = 미선택(⑧에서 차단).
    * 배제 문언·시행시기 게이트가 이 축으로 갈린다.
    */
-  donorRelation: "spouse" | "lineal" | "";
+  donorRelation: "spouse" | "lineal" | "other" | "";
   /**
    * §97조의2 ① 괄호 — 관계별로 묻는 사실이 다르다.
    * spouse=「사망으로 혼인관계 소멸」(이혼은 false) · lineal=「양도 당시 사망」.
@@ -160,7 +160,11 @@ export function migrateCarryoverFields(a: Record<string, unknown>): void {
     // ③ normalize — §97의2① 관계요건 2필드. 구형 sessionStorage에는 없다.
     // ⚠️ donorDeceased 기본값이 true로 새면 **기존 이월과세가 전부 배제**된다.
     donorRelation:
-      raw.donorRelation === "spouse" || raw.donorRelation === "lineal" ? raw.donorRelation : "",
+      raw.donorRelation === "spouse" ||
+      raw.donorRelation === "lineal" ||
+      raw.donorRelation === "other"
+        ? raw.donorRelation
+        : "",
     donorDeceased: raw.donorDeceased === true,
     exclusionDeclared: {
       expropriationWithin2Years: !!excl.expropriationWithin2Years,

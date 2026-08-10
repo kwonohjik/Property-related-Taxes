@@ -360,7 +360,7 @@ const propertyBaseShape = {
     donorCapitalExpenditure: z.number().int().nonnegative().optional(),
     giftDateValuation: z.number().int().nonnegative(),
     /** §97의2① 관계요건 — 증여자 사망 배제 판정축 */
-    donorRelation: z.enum(["spouse", "lineal"]).optional(),
+    donorRelation: z.enum(["spouse", "lineal", "other"]).optional(),
     donorDeceased: z.boolean().optional(),
     exclusionDeclared: z.object({
       expropriationWithin2Years: z.boolean().optional(),

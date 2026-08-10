@@ -93,6 +93,16 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         <LawArticleModal legalBasis="소득세법 §97의2" label="§97의2" />
       </div>
 
+      {/*
+        요건 안내 — 오입력을 **선택 시점에** 줄이는 주 방어.
+        「증여」와 「이월과세(증여)」의 차이를 모르면 형제 증여에도 이 원인을 고르게 된다.
+      */}
+      <p className="text-caption text-amber-800">
+        <strong>배우자 또는 직계존비속</strong>으로부터 증여받고, 증여일부터{" "}
+        <strong>10년</strong>(2023.1.1. 전 증여는 5년) 이내에 양도하는 경우에 적용됩니다.
+        그 밖의 관계로부터 증여받았다면 취득 원인을 <strong>「증여」</strong>로 선택하세요.
+      </p>
+
       {/* ① 증여 기본 정보 */}
       <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
         <div className="flex items-center gap-1.5">

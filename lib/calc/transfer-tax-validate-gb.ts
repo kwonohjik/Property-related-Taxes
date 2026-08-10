@@ -67,6 +67,9 @@ function validateGbCarryover(asset: AssetForm, label: string): string | null {
    * 일반 경로(`transfer-tax-validate-asset.ts`)와 **같은 조건**을 본다 —
    * 관계는 단독 필수화하지 않고, 사망을 선언했을 때만 요구한다.
    */
+  if (c.donorRelation === "other")
+    return `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`;
+
   if (c.donorDeceased && !c.donorRelation)
     return `${label}: 증여자와의 관계를 선택하세요 (「소득세법」 제97조의2 제1항).`;
 

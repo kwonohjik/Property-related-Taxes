@@ -1,5 +1,10 @@
 /**
- * §97조의2 ① — 증여자 사망 시 이월과세 적용배제 판정 (무의존 leaf).
+ * §97조의2 ① — 이월과세 **관계 요건** 판정 (무의존 leaf).
+ *
+ * 두 축을 함께 본다:
+ * · **대상 관계인가** — 「그 배우자 … 또는 직계존비속으로부터 증여받은」. 그 둘이 아니면
+ *   증여자 생존 여부와 무관하게 §97의2①이 적용되지 않는다.
+ * · **증여자가 사망했는가** — 아래 괄호 둘.
  *
  * 본문 괄호가 **둘**이고 성격이 다르다:
  *
@@ -32,10 +37,18 @@ export const LINEAL_DEATH_EXCLUSION_CUTOFF = new Date("2025-01-01");
  * @param giftRegistryDate  증여 등기접수일 — 직계존비속 게이트의 기준일
  */
 export function isCarryoverRelationExcluded(
-  relation: "spouse" | "lineal" | undefined,
+  relation: "spouse" | "lineal" | "other" | undefined,
   donorDeceased: boolean | undefined,
   giftRegistryDate: Date,
 ): boolean {
+  /**
+   * ① **대상 관계가 아니다** — 「그 배우자 … 또는 직계존비속으로부터 증여받은」.
+   *
+   * ⚠️ 사망 여부보다 **먼저** 본다. 이건 ② 각 호의 배제사유가 아니라 **① 본문 요건 불충족**이라
+   *    증여자가 살아 있어도 §97의2①이 적용되지 않는다.
+   */
+  if (relation === "other") return true;
+
   if (!donorDeceased) return false;
   if (relation === "spouse") return true;
   if (relation === "lineal") return giftRegistryDate >= LINEAL_DEATH_EXCLUSION_CUTOFF;
