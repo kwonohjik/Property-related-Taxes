@@ -35,6 +35,7 @@ import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import {
   buildProperties,
   buildApportionment,
+  SHARE_ID_SEPARATOR,
   type BundledLikeApportionmentResult,
   type GeneralBuildingRouteResult,
 } from "./general-building-route-cards";
@@ -63,8 +64,14 @@ export interface GeneralBuildingSharePayload {
   valuation: Record<string, unknown>;
 }
 
-/** 지분 인덱스 접미사 — 지분이 2건 이상일 때만 붙인다(단건 회귀 0). */
-const tagId = (propertyId: string, shareIdx: number) => `${propertyId}#${shareIdx}`;
+/**
+ * 지분 인덱스 접미사 — 지분이 2건 이상일 때만 붙인다(단건 회귀 0).
+ *
+ * 구분자는 `general-building-route-cards.ts`가 정본이다(`baseCardId`가 같은 문자로 벗긴다).
+ * 여기서 `"#"`를 다시 쓰면 한쪽만 바뀌었을 때 소비자가 조용히 매칭에 실패한다.
+ */
+const tagId = (propertyId: string, shareIdx: number) =>
+  `${propertyId}${SHARE_ID_SEPARATOR}${shareIdx}`;
 
 /**
  * swap 결정의 `Map` 키를 접미사 붙은 propertyId로 다시 맵핑한다.
