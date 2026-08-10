@@ -235,6 +235,27 @@ describe("D7a — 부담부증여 × 이월과세 세 축 배선", () => {
     expect(d?.exclusionReason).toBe("tax_comparison");
   });
 
+  it("A7-9 표시값도 §159 안분 후다 — 결과 카드가 **쓰이지 않는 값**을 보여주지 않는다", () => {
+    /**
+     * `carryoverTaxation.donorAcquisitionPrice`는 일반 양도 경로의 **단일 총액**이고
+     * 부담부증여에서는 §159가 `carryoverDonorBasis`로 자산별 취득가액을 따로 구하므로
+     * **계산에 쓰이지 않는다**(계획서 §5.7.6). 그런데 결과 카드는
+     * `scenarioA.acquisitionPrice`를 「취득가액」으로 그대로 찍는다
+     * ⇒ 그 값이 §159 안분값이 아니면 **화면과 계산이 어긋난다**.
+     */
+    const r = runBG(makeInfo(), makeCarryover({ donorAcquisitionPrice: 999_999_999 }));
+    const a = r.carryoverTaxationDetail!.scenarioA;
+    const perAsset = r.transferBurdenedGiftBreakdown!.perAsset;
+
+    // 표시값 = §159 안분 취득가액 합 = (1억 + 5천만) × 0.625
+    expect(a.acquisitionPrice).toBe(93_750_000);
+    expect(a.acquisitionPrice).toBe(
+      perAsset.land.acquisitionPrice + perAsset.building.acquisitionPrice,
+    );
+    // ❌ 입력한 donorAcquisitionPrice가 그대로 새어나오면 안 된다.
+    expect(a.acquisitionPrice).not.toBe(999_999_999);
+  });
+
   it("A7-8 이월과세를 켠 결과가 **부담부증여 단독과 다르다**", () => {
     const withCO = runBG(makeInfo(), makeCarryover());
     const without = runBG(makeInfo(), null);

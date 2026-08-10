@@ -48,7 +48,7 @@ const ACQUISITION_METHOD_OPTIONS = [
   {
     value: "actual",
     label: "실지취득가액 안분",
-    description: "증여자의 실제 취득가액 확인 시 — 실지취득가액 × 채무비율 (§97①1호가목)",
+    description: "양도인의 실제 취득가액 확인 시 — 실지취득가액 × 채무비율 (§97①1호가목)",
   },
   {
     value: "converted",
@@ -114,6 +114,20 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
   }, [asset.bgAnnualRentTotal, asset.bgMortgageSetAmount, lendingDeposit, mortgageDebt]);
 
   const isMarketMode = asset.bgValuationMode === "sangjeungbeop_market";
+  /**
+   * 이월과세(「소득세법」 §97의2) 조합인가 — **화면의 「증여자」가 두 사람이 되는 순간**이다.
+   *
+   * · **양도인**      = 부담부증여를 하는 사람(기존 입력 전부가 이 사람 기준)
+   * · **당초 증여자** = 그 양도인에게 이 자산을 증여한 사람(§97의2가 취득가액·보유기간을 여기로 옮긴다)
+   *
+   * 그래서 이 플래그가 켜지면 라벨을 「양도인」으로 못박고 「당초 증여자」 입력 한 벌을 연다.
+   * (계획서 `burdened-gift-carryover-159-97-2.plan.md` §5.6)
+   */
+  const isCarryover = asset.acquisitionCause === "carryover_gift";
+  /** K-1~K-3(기준시가) · K-5(환산) 모두 **취득시 기준시가**를 쓴다 — 환산은 이 값을 분자로 자동 추종. */
+  const coDonorNeedsStdPrice =
+    asset.bgValuationMode === "sangjeungbeop_standard" ||
+    asset.bgAcquisitionMethod === "converted";
   const fmt = (n: number) => n.toLocaleString("ko-KR");
 
   return (
@@ -123,7 +137,14 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
           부담부증여 (소득세법 시행령 §159)
         </p>
         <p className="text-xs text-fuchsia-700">
-          납세의무자: <b>증여자</b> · 양도가액 = 인수 채무액 · 보유기간 = 증여자 당초 취득일~증여일
+          납세의무자: <b>양도인</b>(증여하는 사람) · 양도가액 = 인수 채무액 ·{" "}
+          {isCarryover ? (
+            <>
+              보유기간 = <b>당초 증여자</b>의 취득일~증여일 (이월과세 §95④ 단서)
+            </>
+          ) : (
+            <>보유기간 = 양도인의 취득일~증여일</>
+          )}
         </p>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 시행령 §159" label="시행령 §159" />
@@ -276,7 +297,7 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
                 </FieldCard>
               ) : (
                 <FieldCard label="실지취득가액 (주택·건물 전체)"
-                  hint="증여자의 취득 당시 실지거래가액">
+                  hint="양도인의 취득 당시 실지거래가액">
                   <CurrencyInput label="" hideUnit
                     value={asset.bgActualAcquisitionTotal}
                     onChange={(v) => onChange({ bgActualAcquisitionTotal: v })} />
@@ -306,6 +327,124 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
                 : " 취득시·양도시 기준시가를 입력하세요."}
               {" "}개산공제(§163⑥ 3%) 자동 적용.
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ③-b 이월과세 §97의2 — 「당초 증여자」 취득 당시 값 한 벌 (D-7b) */}
+      {isCarryover && (
+        <div
+          className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 space-y-2"
+          data-testid="bg-codonor-block"
+        >
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-sky-900">
+              이월과세 — 「당초 증여자」 취득 당시 값
+            </span>
+            <LawArticleModal legalBasis="소득세법 §97조의2" label="§97의2①1호" />
+            <LawArticleModal legalBasis="소득세법 시행령 §159" label="시행령 §159①1호" />
+          </div>
+
+          <div className="rounded border border-sky-200 bg-white/70 p-2 text-caption text-sky-900 space-y-1">
+            <p>
+              <b>당초 증여자</b> = 지금 부담부증여를 하는 <b>양도인에게 이 자산을 증여한 사람</b>입니다.
+              위쪽 취득 입력(양도인 기준)과 <b>다른 사람</b>이니 혼동하지 마세요.
+            </p>
+            <p>
+              국세청 <b>재산세과-1059</b>에 따라, 증여받은 자산을 다시 부담부증여하면 시행령
+              §159①1호의 취득가액에 이월과세가 적용되어 <b>당초 증여자의 취득 당시</b> 가액을 씁니다.
+            </p>
+            <p>
+              두 벌을 <b>모두</b> 입력해야 합니다 — §97의2②3호가 「이월과세를 적용한 세액」과
+              「적용하지 않은 세액」을 <b>비교</b>하므로 양쪽 기준값이 동시에 필요합니다.
+            </p>
+          </div>
+
+          {coDonorNeedsStdPrice ? (
+            <>
+              <FieldCard
+                label="당초 증여자 취득 당시 토지 기준시가"
+                hint="개별공시지가 × 면적. 토지가 없으면 0을 입력하세요."
+              >
+                <CurrencyInput
+                  label=""
+                  hideUnit
+                  data-testid="bg-codonor-land-std"
+                  value={asset.bgCoDonorLandStdPriceAtAcq}
+                  onChange={(v) => onChange({ bgCoDonorLandStdPriceAtAcq: v })}
+                />
+              </FieldCard>
+              <FieldCard
+                label="당초 증여자 취득 당시 건물 기준시가"
+                hint="건물이 없으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
+              >
+                <CurrencyInput
+                  label=""
+                  hideUnit
+                  data-testid="bg-codonor-building-std"
+                  value={asset.bgCoDonorBuildingStdPriceAtAcq}
+                  onChange={(v) => onChange({ bgCoDonorBuildingStdPriceAtAcq: v })}
+                />
+              </FieldCard>
+              {asset.bgAcquisitionMethod === "converted" && (
+                <div className="rounded border border-sky-200 bg-sky-100/60 p-2 text-caption text-sky-800">
+                  환산취득가액은 이 두 칸을 <b>분자로 자동 사용</b>합니다 — 환산 전용 입력은 없습니다.
+                </div>
+              )}
+            </>
+          ) : asset.bgAcquisitionMethod === "actual" ? (
+            <>
+              {asset.assetKind === "general_building" || asset.assetKind === "land" ? (
+                <>
+                  <FieldCard label="당초 증여자의 토지 실지취득가액">
+                    <CurrencyInput
+                      label=""
+                      hideUnit
+                      data-testid="bg-codonor-actual-land"
+                      value={asset.bgCoDonorActualAcquisitionLand}
+                      onChange={(v) => onChange({ bgCoDonorActualAcquisitionLand: v })}
+                    />
+                  </FieldCard>
+                  {asset.assetKind === "general_building" && (
+                    <FieldCard label="당초 증여자의 건물 실지취득가액">
+                      <CurrencyInput
+                        label=""
+                        hideUnit
+                        data-testid="bg-codonor-actual-building"
+                        value={asset.bgCoDonorActualAcquisitionBuilding}
+                        onChange={(v) => onChange({ bgCoDonorActualAcquisitionBuilding: v })}
+                      />
+                    </FieldCard>
+                  )}
+                </>
+              ) : (
+                <FieldCard
+                  label="당초 증여자의 실지취득가액 (전체)"
+                  hint="당초 증여자가 이 자산을 취득할 때의 실지거래가액"
+                >
+                  <CurrencyInput
+                    label=""
+                    hideUnit
+                    data-testid="bg-codonor-actual-total"
+                    value={asset.bgCoDonorActualAcquisitionTotal}
+                    onChange={(v) => onChange({ bgCoDonorActualAcquisitionTotal: v })}
+                  />
+                </FieldCard>
+              )}
+            </>
+          ) : (
+            <FieldCard
+              label="당초 증여자 취득 당시 시가 평가액"
+              hint="상증법 §60② 시가(매매사례·감정·보상·경매·공매가)"
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                data-testid="bg-codonor-market"
+                value={asset.bgCoDonorMarketValueAtAcquisition}
+                onChange={(v) => onChange({ bgCoDonorMarketValueAtAcquisition: v })}
+              />
+            </FieldCard>
           )}
         </div>
       )}

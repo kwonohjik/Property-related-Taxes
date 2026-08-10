@@ -1,33 +1,33 @@
 /**
- * E2E: **부담부증여 × 이월과세(증여)** — 차단되고, 안내가 가리키는 곳이 실제로 열려 있다
+ * E2E: **부담부증여 × 이월과세(증여)** — 차단 → **지원 개시**(2026-08-10 D-7)
  *
- * 계획서: `docs/02-design/features/transfer-gb-inheritance-extension-3part.plan.md` §10-6
+ * 계획서: `docs/02-design/features/burdened-gift-carryover-159-97-2.plan.md`
  *
- * 두 스텝이 함께 돌지만 STEP 0.48(§159)이 STEP 0.475(§97의2)의 결과를 덮어써, 이월과세
- * 입력이 세액에 도달하지 않는다(실측 71,260,000 불변). 그런데 ⑧는 그 무시되는 값을
- * **요구**했다 — 「요구하는데 무시」다.
+ * ## 무엇이 바뀌었나
  *
- * 🔴 **2026-08-09 사유 정정** — 종전 서술은 「취득원인을 무엇으로 골라도 세액이 같으니
- *    「증여로 선택하세요」 안내가 손해 없다」였다. **틀렸다.**
+ * 종전에는 STEP 0.48(§159)이 STEP 0.475(§97의2)의 결과를 덮어써 이월과세 입력이 세액에
+ * 도달하지 않았고(실측 71,260,000 불변), 그래서 ⑧가 조합을 **차단**했다.
  *
- *    국세청 **재산세과-1059(2009.12.18.)**: 증여받은 자산을 다시 부담부증여하는 경우
- *    「**시행령 §159 제1호에 따른 취득가액 산정 시** §97①1호 가액에 **이월과세가 적용되는 것임**」
- *    ⇒ §159①1호 A의 기준 시점이 **원증여자의 취득 당시**로 옮겨져 **세액이 달라진다**.
+ * 근거는 국세청 **재산세과-1059(2009.12.18.)**다 — 증여받은 자산을 다시 부담부증여하면
+ * 「**시행령 §159 제1호에 따른 취득가액 산정 시** §97①1호 가액에 **이월과세가 적용되는 것임**」.
+ * D-7a가 §159 안분 단계에 세 축(취득가액 §97의2①1호 · 증여세 ①3호 · 보유기간 §95④ 단서)을
+ * 배선하고, D-7b가 ⑧를 **「두 벌 모두 입력」 요구**로 바꿨다.
  *
- *    차단 자체는 유지한다(엔진 미지원 — 열면 틀린 답이 나온다). 다만 안내가 사용자를
- *    「증여로 바꾸면 같다」는 **거짓 전제**로 유도하던 것을 「미지원」으로 정정했다.
- *
- *   CB-1. 부담부증여 + 이월과세 → 미지원 안내가 뜬다
- *   CB-2. 취득원인을 「증여」로 바꾸면 계산까지 간다 (부담부증여 자체는 증여와 병용 가능)
+ *   CB-1. 「당초 증여자」 값을 안 넣으면 **여전히 막힌다** (fallback 금지 — 시나리오 A=B가 되면
+ *         §97의2가 조용히 무력화된다)
+ *   CB-2. 넣으면 **계산까지 간다**
  *   CB-3. 일반 양도 + 이월과세는 막지 않는다 (회귀 0 · CB-1의 양성 대조군)
  *
  * ⚠️ 금액 anchor는 vitest가 담당한다
- *    (`__tests__/tax-engine/transfer-tax/burdened-gift-carryover-block.anchor.test.ts`).
+ *    (`__tests__/tax-engine/transfer-tax/burdened-gift-carryover-{block,d7a}.anchor.test.ts`).
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
-const BLOCK_MSG = /부담부증여 \+ 「이월과세\(증여\)」 조합은 아직 지원하지 않습니다/;
+/** ⑧ validate가 「당초 증여자」 값을 요구하는 문구. 종전의 「아직 지원하지 않습니다」를 대체한다. */
+const NEED_CODONOR_MSG = /「당초 증여자」.*입력하세요/;
+/** ❌ 되살아나면 안 되는 종전 차단 문구 — 지원이 열렸으므로 어디에도 있으면 안 된다. */
+const OLD_BLOCK_MSG = /조합은 아직 지원하지 않습니다/;
 
 function seedForm(over: Record<string, unknown> = {}) {
   return {
@@ -94,19 +94,23 @@ async function seedAndCalc(page: Page, over: Record<string, unknown> = {}) {
   await page.getByRole("button", { name: "세금 계산하기" }).click();
 }
 
-test.describe("부담부증여 × 이월과세(증여) — 차단과 그 목적지", () => {
-  test("CB-1: 차단 문구가 뜬다", async ({ page }) => {
+test.describe("부담부증여 × 이월과세(증여) — 지원 개시", () => {
+  test("CB-1: 「당초 증여자」 값이 없으면 계산이 막힌다 (fallback 금지)", async ({ page }) => {
     test.setTimeout(120_000);
     await seedAndCalc(page);
-    await expect(page.getByText(BLOCK_MSG).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(NEED_CODONOR_MSG).first()).toBeVisible({ timeout: 20_000 });
+    // 종전 차단 문구는 되살아나면 안 된다.
+    await expect(page.getByText(OLD_BLOCK_MSG)).toHaveCount(0);
   });
 
-  // ⚠️ 「세액은 동일하다」를 제목에서 뺐다 — 이월과세가 적용되어야 하므로 동일하지 않다(위 주석).
-  test("CB-2: 「증여」로 바꾸면 계산까지 간다", async ({ page }) => {
+  test("CB-2: 「당초 증여자」 기준시가를 넣으면 계산까지 간다", async ({ page }) => {
     test.setTimeout(120_000);
-    await seedAndCalc(page, { acquisitionCause: "gift", donorAcquisitionDate: "2012-01-01" });
+    await seedAndCalc(page, {
+      bgCoDonorLandStdPriceAtAcq: "1500000000",
+      bgCoDonorBuildingStdPriceAtAcq: "200000000",
+    });
 
-    await expect(page.getByText(BLOCK_MSG)).toHaveCount(0);
+    await expect(page.getByText(NEED_CODONOR_MSG)).toHaveCount(0);
     await expect(page.getByText(/양도소득세 계산 결과|산출세액/).first()).toBeVisible({
       timeout: 30_000,
     });
@@ -118,6 +122,6 @@ test.describe("부담부증여 × 이월과세(증여) — 차단과 그 목적�
     test.setTimeout(120_000);
     // ⚠️ 이 케이스가 없으면 CB-1이 「부담부증여라서」가 아니라 다른 이유로 막힌 것과 구별되지 않는다.
     await seedAndCalc(page, { transferType: "regular" });
-    await expect(page.getByText(BLOCK_MSG)).toHaveCount(0);
+    await expect(page.getByText(NEED_CODONOR_MSG)).toHaveCount(0);
   });
 });

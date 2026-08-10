@@ -51,6 +51,39 @@ export interface BurdenedGiftFormSlice {
   /** [신설] K-4 실지취득가액 — 단일자산 (housing·building·commercial_building). 원, string. */
   bgActualAcquisitionTotal: string;
 
+  // ── 이월과세(§97의2) — 「당초 증여자」 취득 당시 값 **두 번째 벌** (2026-08-10 D-7b) ──
+  /**
+   * ## ⚠️ 「증여자」가 두 사람을 가리킨다 — 용어를 먼저 고정한다
+   *
+   * · **양도인**      = 부담부증여를 하는 사람. 위 `bgActualAcquisition*` 등이 이 사람 기준이다.
+   * · **당초 증여자** = 그 양도인에게 자산을 증여한 사람. 아래 `bgCoDonor*`가 이 사람 기준이다.
+   *
+   * ## 왜 「덮어쓰기」가 아니라 「한 벌 더」인가
+   *
+   * 「소득세법」 §97의2②3호 비교는 **두 시나리오를 동시에** 요구한다:
+   * 시나리오 B(미적용)는 **양도인** 기준 값을, 시나리오 A(적용)는 **당초 증여자** 기준 값을 쓴다.
+   * 한 칸의 의미를 토글로 바꾸면 비교 자체가 성립하지 않는다.
+   * (계획서 `burdened-gift-carryover-159-97-2.plan.md` §5.6.2)
+   *
+   * ## 언제 필수인가
+   *
+   * `transferType === "burdened_gift"` **그리고** `acquisitionCause === "carryover_gift"`일 때만.
+   * 그 밖에는 빈 문자열로 두며 API 변환에서 `undefined`가 된다.
+   * ❌ 미입력 시 양도인 값으로 fallback 금지 — 시나리오 A = B가 되어 §97의2가 조용히 무력화된다.
+   */
+  /** 당초 증여자 취득 당시 **토지** 기준시가(총액). K-1~K-3·K-5에서 필수. 원, string. */
+  bgCoDonorLandStdPriceAtAcq: string;
+  /** 당초 증여자 취득 당시 **건물** 기준시가(총액). K-1~K-3·K-5에서 필수(건물 없으면 0). 원, string. */
+  bgCoDonorBuildingStdPriceAtAcq: string;
+  /** K-4: 당초 증여자의 실지취득가액 — 토지. 원, string. */
+  bgCoDonorActualAcquisitionLand: string;
+  /** K-4: 당초 증여자의 실지취득가액 — 건물. 원, string. */
+  bgCoDonorActualAcquisitionBuilding: string;
+  /** K-4: 당초 증여자의 실지취득가액 — 단일자산 총액. 원, string. */
+  bgCoDonorActualAcquisitionTotal: string;
+  /** legacy(시가·산정방식 미선택): 당초 증여자 취득 당시 시가 평가액. 원, string. */
+  bgCoDonorMarketValueAtAcquisition: string;
+
   // ── 증여세 통합 입력 (Phase 3) ──
   /** 증여자-수증자 관계 (상증법 §53 증여재산공제). "" = 미선택 (엔진 default: lineal_descendant). */
   bgDonorRelation:

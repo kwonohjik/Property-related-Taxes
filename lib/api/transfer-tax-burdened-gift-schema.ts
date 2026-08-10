@@ -39,6 +39,27 @@ export const burdenedGiftInfoSchema = z.object({
   /** 취득시 건물 기준시가. */
   buildingStdPriceAtAcquisition: z.number().int().nonnegative(),
   /**
+   * 이월과세(「소득세법」 §97의2①1호) — **당초 증여자** 취득 당시 값 한 벌 (D-7b).
+   *
+   * 바로 위 `*AtAcquisition` 필드들은 **양도인**(부담부증여를 하는 사람) 기준이고,
+   * 이 객체는 **그 양도인에게 자산을 증여한 사람** 기준이다. §97의2②3호 비교가 두 시나리오를
+   * 동시에 요구하므로 **둘 다** 필요하다.
+   *
+   * ⚠️ 여기서 `.optional()`인 것은 이월과세가 아닌 부담부증여가 훨씬 흔하기 때문이다.
+   *    이월과세일 때의 **필수 여부는 ⑧ validate와 엔진 `assertCarryoverDonorBasis`**가 지킨다
+   *    — 모드(K-1~K-3 / K-4 / K-5 / legacy)마다 필요한 칸이 다르므로 Zod 단독으로는 못 정한다.
+   */
+  carryoverDonorBasis: z
+    .object({
+      landStdPriceAtAcquisition: z.number().int().nonnegative().optional(),
+      buildingStdPriceAtAcquisition: z.number().int().nonnegative().optional(),
+      actualLandAcquisitionPrice: z.number().int().nonnegative().optional(),
+      actualBuildingAcquisitionPrice: z.number().int().nonnegative().optional(),
+      actualAcquisitionTotal: z.number().int().nonnegative().optional(),
+      marketValueAtAcquisition: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+  /**
    * 증여재산 평가용 양도시 건물 기준시가 (상증법 §61 — 층별 가감율 적용).
    * 미입력 시 양도세용 buildingStdPriceAtTransfer fallback.
    */

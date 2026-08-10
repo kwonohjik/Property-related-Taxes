@@ -277,13 +277,26 @@ export function calcCarryoverScenarios(
    */
   if (isBurdenedGift) {
     const resultABG = calculateTransferTax(inputABase, rates);
-    const cg = resultABG.transferBurdenedGiftBreakdown?.carryoverGiftTax;
+    const bgBreakdown = resultABG.transferBurdenedGiftBreakdown;
+    const cg = bgBreakdown?.carryoverGiftTax;
+    /**
+     * 🔴 **표시값도 §159 안분 후 값이어야 한다** (2026-08-10 D-7b).
+     *
+     * `donorAcqPrice`(= `ct.donorAcquisitionPrice`)는 **일반 양도 경로의 단일 총액**이고,
+     * 부담부증여에서는 §159①1호가 `carryoverDonorBasis`로 취득가액을 자산별로 따로 구하므로
+     * **계산에 쓰이지 않는다**(계획서 §5.7.6). 그대로 표시하면 결과 카드가
+     * 「취득가액 3억」이라 적는데 실제로는 93,750,000이 쓰인 상태가 된다
+     * (메모리 `feedback_engine_result_display_drift`).
+     */
+    const bgAcqPrice = bgBreakdown
+      ? bgBreakdown.perAsset.land.acquisitionPrice + bgBreakdown.perAsset.building.acquisitionPrice
+      : donorAcqPrice;
     return finishScenarios({
       rawInput, ct, rates, calculateTransferTax,
       applicablePeriodYears,
       inputAFinal: inputABase,
       resultA: resultABG,
-      donorAcqPrice,
+      donorAcqPrice: bgAcqPrice,
       giftTaxAddedToExpense: cg?.applied ?? 0,
       giftTaxLimitApplied: cg?.limitApplied ?? false,
       giftTaxLimitCap: cg?.cap ?? 0,

@@ -54,6 +54,41 @@ export interface BurdenedGiftInfoPayload {
   landStdPriceAtAcquisition: number;
   /** 취득시 건물 기준시가. housing 시 주택 단일 공시가격 통째로. land 시 0. */
   buildingStdPriceAtAcquisition: number;
+  /**
+   * 이월과세(§97의2①1호) — **당초 증여자** 취득 당시 값 한 벌. 위 필드들은 **양도인** 기준이다.
+   * 이월과세 취득원인이 아니면 undefined.
+   */
+  carryoverDonorBasis?: {
+    landStdPriceAtAcquisition?: number;
+    buildingStdPriceAtAcquisition?: number;
+    actualLandAcquisitionPrice?: number;
+    actualBuildingAcquisitionPrice?: number;
+    actualAcquisitionTotal?: number;
+    marketValueAtAcquisition?: number;
+  };
+}
+
+/**
+ * 「당초 증여자」 취득 당시 값 한 벌을 폼에서 뽑는다 (D-7b).
+ *
+ * 빈 문자열은 `undefined`로 떨어뜨린다 — **0과 미입력은 다르다**. 건물이 없는 토지 자산은
+ * 사용자가 `0`을 명시해야 하고, 그때는 `parseAmount`가 0을 돌려주므로 `undefined`가 아니다.
+ * (`?? undefined`가 아니라 빈 문자열 검사인 이유 — `parseAmount("") || undefined`로 쓰면
+ *  사용자가 입력한 **0이 미입력으로 둔갑**한다.)
+ */
+function buildCarryoverDonorBasis(
+  primary: AssetForm,
+): BurdenedGiftInfoPayload["carryoverDonorBasis"] {
+  const num = (v: string | undefined) =>
+    v !== undefined && v !== "" ? parseAmount(v) : undefined;
+  return {
+    landStdPriceAtAcquisition: num(primary.bgCoDonorLandStdPriceAtAcq),
+    buildingStdPriceAtAcquisition: num(primary.bgCoDonorBuildingStdPriceAtAcq),
+    actualLandAcquisitionPrice: num(primary.bgCoDonorActualAcquisitionLand),
+    actualBuildingAcquisitionPrice: num(primary.bgCoDonorActualAcquisitionBuilding),
+    actualAcquisitionTotal: num(primary.bgCoDonorActualAcquisitionTotal),
+    marketValueAtAcquisition: num(primary.bgCoDonorMarketValueAtAcquisition),
+  };
 }
 
 /**
@@ -99,6 +134,17 @@ export function buildBurdenedGiftInfo(primary: AssetForm): BurdenedGiftInfoPaylo
     giftBuildingStdPriceAtTransfer: primary.bgGiftBuildingStdPriceAtTransfer
       ? parseAmount(primary.bgGiftBuildingStdPriceAtTransfer)
       : undefined,
+    /**
+     * 이월과세(§97의2①1호) — 「당초 증여자」 취득 당시 값 한 벌 (D-7b).
+     *
+     * 이월과세 취득원인일 때만 싣는다. ❌ 값이 없다고 **양도인 값으로 대신하지 않는다** —
+     * 시나리오 A = B가 되어 §97의2가 조용히 무력화된다(엔진 `assertCarryoverDonorBasis`가
+     * fail-fast로 막고, ⑧ validate가 그 앞에서 사용자에게 알린다).
+     */
+    carryoverDonorBasis:
+      primary.acquisitionCause === "carryover_gift"
+        ? buildCarryoverDonorBasis(primary)
+        : undefined,
     // Phase 3: 증여세 통합 입력 (빈 문자열·미선택 시 undefined로 → 엔진 default 사용)
     donorRelation: primary.bgDonorRelation ? primary.bgDonorRelation : undefined,
     isMinorDonee: primary.bgIsMinorDonee || undefined,
