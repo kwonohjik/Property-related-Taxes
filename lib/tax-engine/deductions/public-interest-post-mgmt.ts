@@ -47,6 +47,8 @@ import { calcInheritanceGiftTax, findApplicableBracket } from "../inheritance-gi
 import { EXEMPTION } from "../legal-codes";
 import { applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";
 import type {
+  PublicInterestOperatingIncomeInput,
+  PublicInterestOperatingIncomeResult,
   PublicInterestPostMgmtInput,
   PublicInterestPostMgmtResult,
   PublicInterestSaleProceedsInput,
@@ -449,6 +451,172 @@ export function calcPublicInterestSaleProceeds(
     cappedOutsideUse,
     shortfall,
     outsideUseTaxable,
+    clawbackBase,
+    taxBase,
+    giftTax,
+    appliedRate: rate,
+    progressiveDeduction: deduction,
+    steps,
+    warnings,
+  };
+}
+
+// ============================================================
+// §48②3호 — 운용소득을 직접 공익목적사업 **외**에 사용
+// ============================================================
+
+/** 상증칙 §13② 단서 — 재무상태표상 가액이 제4장 평가액의 이 비율 **이하**면 제4장 평가액. */
+const CHAPTER4_SUBSTITUTE_PERCENT = 70;
+
+/**
+ * 공익법인등이 출연재산 **운용소득을 직접 공익목적사업 외에 사용**한 경우 — 상증법 §48②3호.
+ *
+ * ## 법령 (2026-08-10 실측)
+ *
+ * **법 §48②3호**:
+ * > "출연받은 재산을 수익용 또는 수익사업용으로 운용하는 경우로서 그 **운용소득을 직접
+ * >  공익목적사업 외에 사용**한 경우"
+ *
+ * **상증령 §40①2의2호** — 「대통령령으로 정하는 가액」:
+ * > "재정경제부령이 정하는 출연재산(직접공익목적사업에 사용한 분을 제외한다)의 **평가가액**
+ * >  × (**공익목적사업외에 사용한 금액** ÷ 제38조제5항의 규정에 의한 **운용소득**)"
+ *
+ * **상증칙 §13②** — 위 「평가가액」:
+ * > "…운용소득을 사용하여야 할 과세기간 또는 사업연도의 **직전** 과세기간 또는 사업연도 말
+ * >  현재 수익용이나 수익사업용으로 운용하는 …출연받은 재산의 **재무상태표상 가액**을 말한다.
+ * >  **다만**, 그 가액이 법 제4장에 따라 평가한 가액의 **100분의 70 이하**인 경우에는 법
+ * >  제4장에 따라 평가한 가액으로 한다."
+ *
+ * **상증칙 §13③**:
+ * > "제2항에 따른 출연재산 중 공익법인등이 **1년 이상 보유한 주식등**의 평가가액은 **제2항에도
+ * >  불구하고 그 액면가액**으로 한다."
+ *
+ * **집행기준 48-40-1 ③** — 「직접공익목적사업에 사용하지 않은 출연재산의 평가가액 ×
+ * (공익목적사업 외에 사용한 금액 ÷ 운용소득)」
+ *
+ * ## ⚠️ 과세가액은 운용소득이 아니라 **출연재산 평가가액**에 비율을 곱한다
+ *
+ * 분자·분모가 운용소득이라 「운용소득 × 비율」로 착각하기 쉽지만, 곱하는 대상은 출연재산
+ * 평가가액이다. 소액을 목적 외로 쓰더라도 **운용소득의 몇 배**가 과세될 수 있다(OI-1).
+ *
+ * ## ⚠️ 5호(가산세)와 사유가 다르다
+ *
+ * 3호는 「공익목적사업 **외** 사용」(증여세), §48②5호 전단은 「사용기준금액(80%)에 **미달**
+ * 사용」(§78⑨1호 가산세)이다. 후자는 `./public-interest-penalty`가 계산한다.
+ */
+export function calcPublicInterestOperatingIncome(
+  input: PublicInterestOperatingIncomeInput,
+): PublicInterestOperatingIncomeResult {
+  const steps: PublicInterestOperatingIncomeResult["steps"] = [];
+  const warnings: string[] = [];
+
+  const operatingIncome = Math.max(0, Math.floor(input.operatingIncome));
+  const bookValue = Math.max(0, Math.floor(input.bookValue));
+  const longHeldStockParValue = Math.max(0, Math.floor(input.longHeldStockParValue ?? 0));
+
+  // ── 상증칙 §13② 단서 — 재무상태표상 가액 ≤ 제4장 평가액 × 70% ────────────────
+  const chapter4Value =
+    input.chapter4Value === undefined ? undefined : Math.max(0, Math.floor(input.chapter4Value));
+  const substituteFloor =
+    chapter4Value === undefined
+      ? undefined
+      : applyRateFraction(chapter4Value, CHAPTER4_SUBSTITUTE_PERCENT, 100);
+  const chapter4ClauseApplied =
+    substituteFloor !== undefined && chapter4Value !== undefined && bookValue <= substituteFloor;
+  const nonStockValue = chapter4ClauseApplied ? (chapter4Value as number) : bookValue;
+
+  if (chapter4Value === undefined) {
+    warnings.push(
+      "법 **제4장 평가액**을 입력하지 않아 상증칙 §13② 단서(재무상태표상 가액이 제4장 평가액의 70% 이하이면 제4장 평가액으로 대체)를 적용하지 않았습니다 — 해당 여부를 확인하세요.",
+    );
+  }
+
+  // 상증칙 §13③ — 1년 이상 보유 주식등은 §13②에도 불구하고 액면가액.
+  const assetValue = nonStockValue + longHeldStockParValue;
+
+  steps.push({
+    label: "출연재산 평가가액",
+    formula:
+      (chapter4ClauseApplied
+        ? `제4장 평가액 ${nonStockValue.toLocaleString()} (재무상태표상 가액 ${bookValue.toLocaleString()}이 70% 이하라 단서 적용)`
+        : `재무상태표상 가액 ${nonStockValue.toLocaleString()}`) +
+      (longHeldStockParValue > 0
+        ? ` + 1년 이상 보유 주식등 액면가액 ${longHeldStockParValue.toLocaleString()}`
+        : ""),
+    amount: assetValue,
+    legalBasis: "상증칙 §13②③",
+  });
+
+  // ── 상증령 §40①2의2호 산식 ─────────────────────────────────────────────────
+  const rawOutsideUse = Math.max(0, Math.floor(input.outsideUseAmount));
+  let cappedOutsideUse = rawOutsideUse;
+  if (operatingIncome > 0 && rawOutsideUse > operatingIncome) {
+    cappedOutsideUse = operatingIncome;
+    warnings.push(
+      `공익목적사업 외 사용금액이 운용소득(${operatingIncome.toLocaleString()}원)을 초과해 운용소득으로 제한했습니다 — 산식의 비율은 1을 넘을 수 없습니다.`,
+    );
+  }
+
+  // 운용소득이 0 이하이면 분모가 없어 산식이 성립하지 않는다(0으로 나누지 않는다).
+  const clawbackBase =
+    operatingIncome > 0
+      ? safeMultiplyThenDivide(assetValue, cappedOutsideUse, operatingIncome)
+      : 0;
+
+  if (operatingIncome <= 0) {
+    warnings.push(
+      "운용소득이 0 이하라 상증령 §40①2의2호 산식(분모 = 운용소득)이 성립하지 않습니다 — 목적 외 사용할 운용소득 자체가 없습니다.",
+    );
+  }
+
+  steps.push({
+    label: "과세가액",
+    formula:
+      `평가가액 ${assetValue.toLocaleString()} ×` +
+      ` (공익목적사업 외 사용액 ${cappedOutsideUse.toLocaleString()}` +
+      ` ÷ 운용소득 ${operatingIncome.toLocaleString()})`,
+    amount: clawbackBase,
+    legalBasis: "상증령 §40①2의2호",
+  });
+
+  const { taxBase, giftTax, rate, deduction, belowMinimumTaxBase } =
+    applyMinimumTaxBase(clawbackBase);
+
+  if (belowMinimumTaxBase) {
+    warnings.push(
+      `과세표준이 ${GIFT_TAX_BASE_MIN.toLocaleString()}원 미만이라 증여세를 부과하지 않습니다(상증법 §55②).`,
+    );
+  }
+
+  steps.push({
+    label: "추징 증여세",
+    formula:
+      taxBase > 0
+        ? `과세표준 ${taxBase.toLocaleString()} × ${(rate * 100).toFixed(0)}%` +
+          (deduction > 0 ? ` − 누진공제 ${deduction.toLocaleString()}` : "")
+        : "과세표준 0 — 부과 세액 없음",
+    amount: giftTax,
+    legalBasis: "상증법 §56",
+  });
+
+  warnings.push(
+    "🔑 과세가액은 **운용소득이 아니라 출연재산 평가가액**에 비율을 곱합니다(상증령 §40①2의2호) — 목적 외 사용액이 적어도 운용소득을 넘는 금액이 과세될 수 있습니다.",
+  );
+  warnings.push(
+    "운용소득을 **사용기준금액(80%)에 미달**하게 사용한 것은 §48②**5호**로 §78⑨ **가산세** 대상이며 이 계산과 별개입니다 — 「공익법인 사후관리 가산세 계산기」를 이용하세요.",
+  );
+  warnings.push(
+    "영농(§18의3)·가업(§18의2) 사후관리와 달리 §48②에는 **이자상당액 가산 규정이 없습니다**. 이 계산에도 가산하지 않았습니다.",
+  );
+
+  return {
+    isClawback: clawbackBase > 0,
+    belowMinimumTaxBase,
+    chapter4ClauseApplied,
+    nonStockValue,
+    longHeldStockParValue,
+    assetValue,
+    cappedOutsideUse,
     clawbackBase,
     taxBase,
     giftTax,

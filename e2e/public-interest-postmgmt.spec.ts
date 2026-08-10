@@ -166,3 +166,89 @@ test.describe("공익법인 매각대금 사후관리 (§48②4호)", () => {
     await expect(page.getByTestId("pi4-gift-tax")).toHaveText(/^0/);
   });
 });
+
+/**
+ * §48②3호 — 운용소득 목적 외 사용.
+ *
+ * 🔑 이 블록이 지키는 것은 **평가가액 결정 경로가 화면에 전부 있는가**다. 상증칙 §13②
+ *    단서(제4장 평가액 70%)와 §13③(1년 이상 보유 주식등 = 액면가액)은 입력 칸이 없으면
+ *    엔진이 맞아도 사용자가 도달할 수 없다([[feedback_ui_gate_removes_sole_input_path]]).
+ */
+async function openClause3(page: Page) {
+  await page.goto("/calc/public-interest-postmgmt");
+  await page.getByRole("heading", { name: /공익법인 출연재산 사후관리/ }).waitFor();
+  await page.getByRole("radio", { name: /운용소득 목적 외 사용/ }).check();
+}
+
+/** 운용소득 2억 중 5천만 목적 외 사용 · 제4장 평가액 50억 */
+async function fillClause3Base(page: Page) {
+  await page.getByTestId("pi3-operating-income").fill("200000000");
+  await page.getByTestId("pi3-outside-use").fill("50000000");
+  await page.getByTestId("pi3-chapter4-value").fill("5000000000");
+}
+
+test.describe("공익법인 운용소득 목적 외 사용 (§48②3호)", () => {
+  test("PI3-E2E-1: 평가가액 × (외부사용액 ÷ 운용소득) → 증여세", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause3(page);
+    await fillClause3Base(page);
+    await page.getByTestId("pi3-book-value").fill("4000000000"); // 50억×70%=35억 초과 → 단서 미적용
+
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi3-result");
+    await expect(box).toBeVisible();
+    // 40억 × (5천만 ÷ 2억) = 10억 → 10억 × 30% − 6천만 = 240,000,000
+    await expect(page.getByTestId("pi3-gift-tax")).toHaveText(/240,000,000/);
+    await expect(box.getByText(/상증령 §40①2의2호/).first()).toBeVisible();
+    // 단서 배지는 나타나지 않는다
+    await expect(page.getByTestId("pi3-chapter4-applied")).toHaveCount(0);
+  });
+
+  test("PI3-E2E-2: ⭐ 70% 단서 → 제4장 평가액으로 대체된다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause3(page);
+    await fillClause3Base(page);
+    await page.getByTestId("pi3-book-value").fill("3000000000"); // 35억 이하 → 단서 발동
+
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    await expect(page.getByTestId("pi3-chapter4-applied")).toBeVisible();
+    // 50억 × 0.25 = 12.5억 → 12.5억 × 40% − 1.6억 = 340,000,000
+    await expect(page.getByTestId("pi3-gift-tax")).toHaveText(/340,000,000/);
+  });
+
+  test("PI3-E2E-3: ⭐ 1년 이상 보유 주식등 액면가액이 평가가액에 더해진다 (상증칙 §13③)", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await openClause3(page);
+    await fillClause3Base(page);
+    await page.getByTestId("pi3-book-value").fill("4000000000");
+    await page.getByTestId("pi3-stock-par-value").fill("1000000000");
+
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    // (40억 + 10억) × 0.25 = 12.5억 → 340,000,000 (주식을 빠뜨리면 240,000,000)
+    await expect(page.getByTestId("pi3-gift-tax")).toHaveText(/340,000,000/);
+  });
+
+  test("PI3-E2E-4: 제4장 평가액을 비우면 단서를 적용하지 않고 안내한다 (양성 대조군)", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await openClause3(page);
+    await page.getByTestId("pi3-operating-income").fill("200000000");
+    await page.getByTestId("pi3-outside-use").fill("50000000");
+    await page.getByTestId("pi3-book-value").fill("3000000000");
+
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi3-result");
+    await expect(box).toBeVisible();
+    // 단서 미적용 → 30억 × 0.25 = 7.5억 → 7.5억 × 30% − 6천만 = 165,000,000
+    await expect(page.getByTestId("pi3-gift-tax")).toHaveText(/165,000,000/);
+    await expect(page.getByTestId("pi3-chapter4-applied")).toHaveCount(0);
+    await expect(box.getByText(/제4장 평가액/).first()).toBeVisible();
+  });
+});
