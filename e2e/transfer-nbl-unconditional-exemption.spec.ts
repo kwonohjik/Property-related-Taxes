@@ -47,7 +47,7 @@ test.describe("비사업용 토지 무조건 의제 — UI가 엔진 판정 반�
 
     // 취득원인 매매 → 환산취득가 (취득일 입력칸 노출)
     await page.getByRole("button", { name: "매매", exact: true }).click();
-    await page.getByRole("button", { name: "환산취득가" }).click();
+    await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // 취득일 2015-06-01 (고시일 2017-04-23 기준 5년 이내 → 미충족 케이스)
     await page.getByLabel("연도", { exact: true }).nth(2).fill("2015");

@@ -88,7 +88,7 @@ test.describe("인천 중구 내동 6-20 학원용 토지 환산취득가액", (
     await page.getByRole("button", { name: "매매", exact: true }).click();
 
     // ─── 취득가액 산정방식: 환산취득가 ─────────────────────────────
-    await page.getByRole("button", { name: "환산취득가" }).click();
+    await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // ─── 취득일: 1997-02-03 (세 번째 DateInput 그룹, nth(2)) ─────────
     await page.getByLabel("연도", { exact: true }).nth(2).fill("1997");

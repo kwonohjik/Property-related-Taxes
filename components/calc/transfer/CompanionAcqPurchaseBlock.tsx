@@ -15,7 +15,6 @@
 import { useState, useEffect } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
-import { cn } from "@/lib/utils";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { SelfBuiltSection } from "./SelfBuiltSection";
@@ -31,6 +30,14 @@ import { SalesCaseSection } from "./SalesCaseSection";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+
+/**
+ * 취득가액 산정 방식 — 화면상 **단일 축**. 폼 모델(boolean 3개 + 증축 2필드)의 조합을
+ * 하나의 union으로 좁힌 것이라 여기서만 쓰인다(저장 필드가 아니다).
+ */
+type AcqBasisMode = "actual" | "estimated" | "appraisal" | "sales_case" | "mixed_extension";
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
 
@@ -51,6 +58,93 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     props.isAppraisalAcquisition !== true &&
     props.gbHasExtension === true &&
     props.gbExtensionAcquisitionMode === "estimated";
+
+  /**
+   * ── 취득가액 산정 방식 — **라디오 1축**으로 표현한다 (2026-08-11 사용자 요청) ──
+   *
+   * 폼 모델은 여전히 boolean 3개(+일반건물 증축 2필드)지만, 화면에서는 **하나만 고르는 축**이다.
+   * 종전에는 native `<button>` 카드 4개가 각자 자기 플래그만 만져서 조합 상태가 될 수 있었고,
+   * 라디오 semantics도 없어 키보드·스크린리더에서 그룹으로 읽히지 않았다.
+   * ⇒ 여기서 단일 union으로 좁히고(`acqBasisValue`), 되돌릴 때 나머지 플래그를 함께 정리한다.
+   */
+  const acqBasisValue: AcqBasisMode = isMixedExtension
+    ? "mixed_extension"
+    : props.isSalesCaseAcquisition
+      ? "sales_case"
+      : props.isAppraisalAcquisition
+        ? "appraisal"
+        : props.useEstimatedAcquisition
+          ? "estimated"
+          : "actual";
+
+  function handleAcqBasisChange(v: AcqBasisMode) {
+    // 일반건물에서 다른 옵션으로 나가면 증축 플래그를 되돌린다(정합성 — 종전 버튼과 동일).
+    const resetExtension = () => {
+      if (props.assetKind === "general_building") props.onGbHasExtensionChange?.(false);
+    };
+    switch (v) {
+      case "actual":
+        props.onUseEstimatedChange(false);
+        props.onIsAppraisalAcquisitionChange?.(false);
+        props.onIsSalesCaseAcquisitionChange?.(false);
+        resetExtension();
+        break;
+      case "estimated":
+        props.onUseEstimatedChange(true);
+        props.onIsAppraisalAcquisitionChange?.(false);
+        props.onIsSalesCaseAcquisitionChange?.(false);
+        resetExtension();
+        break;
+      case "appraisal":
+        props.onUseEstimatedChange(false);
+        props.onIsAppraisalAcquisitionChange?.(true);
+        props.onIsSalesCaseAcquisitionChange?.(false);
+        break;
+      case "sales_case":
+        props.onUseEstimatedChange(false);
+        props.onIsAppraisalAcquisitionChange?.(false);
+        props.onIsSalesCaseAcquisitionChange?.(true);
+        break;
+      case "mixed_extension":
+        props.onUseEstimatedChange(false); // ★ 원건물 실가
+        props.onIsAppraisalAcquisitionChange?.(false);
+        props.onGbHasExtensionChange?.(true);
+        props.onGbExtensionAcquisitionModeChange?.("estimated"); // 증축 환산
+        break;
+    }
+  }
+
+  /**
+   * 선택지 — 자산 종류로 갈린다.
+   *   · 일반건물: 감정가액·매매사례가액 **미표시**(§176의2②는 환산취득가만 규정),
+   *     대신 「토지·건물 일괄 (증축분 별도)」가 4번째 축으로 들어온다.
+   *   · 그 외: 실거래가·환산·감정가액·매매사례가액(콜백이 있을 때만).
+   */
+  const acqBasisOptions: RadioCardOption<AcqBasisMode>[] =
+    props.assetKind === "general_building"
+      ? [
+          { value: "actual", label: "실거래가", description: "계약서상 실거래가" },
+          { value: "estimated", label: "환산취득가", description: "양도가 × 기준시가 비율" },
+          {
+            value: "mixed_extension",
+            label: "토지·건물 일괄 (증축분 별도)",
+            description: "토지·원건물 실거래가 + 증축분 환산취득가",
+          },
+        ]
+      : [
+          { value: "actual", label: "실거래가", description: "계약서상 실거래가" },
+          { value: "estimated", label: "환산취득가", description: "양도가 × 기준시가 비율" },
+          { value: "appraisal", label: "감정가액", description: "개산공제 자동 적용" },
+          ...(props.onIsSalesCaseAcquisitionChange
+            ? ([
+                {
+                  value: "sales_case",
+                  label: "매매사례가액",
+                  description: "§176의2③1호 추계",
+                },
+              ] as RadioCardOption<AcqBasisMode>[])
+            : []),
+        ];
 
   const acqPricePerSqm = props.standardPricePerSqmAtAcq ?? internalPricePerSqmAtAcq;
   const onAcqPricePerSqmChange = props.onStandardPricePerSqmAtAcqChange ?? setInternalPricePerSqmAtAcq;
@@ -274,127 +368,14 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       {!isSeparateAcq && !props.hideAssetAcqAxis && (
       <div className="space-y-2">
         <label className="block text-sm font-medium">취득가액 산정 방식</label>
-        <div className={cn(
-          "grid gap-2",
-          props.assetKind === "general_building" ? "grid-cols-2" : "grid-cols-4",
-        )}>
-          <button
-            type="button"
-            onClick={() => {
-              props.onUseEstimatedChange(false);
-              props.onIsAppraisalAcquisitionChange?.(false);
-              props.onIsSalesCaseAcquisitionChange?.(false);
-              // 일반건물: 다른 옵션 선택 시 gbHasExtension reset (정합성 유지)
-              if (props.assetKind === "general_building") {
-                props.onGbHasExtensionChange?.(false);
-              }
-            }}
-            className={cn(
-              "rounded-md border-2 p-2 text-left transition-all",
-              !props.useEstimatedAcquisition && !props.isAppraisalAcquisition && !props.isSalesCaseAcquisition && !isMixedExtension
-                ? "border-primary bg-primary/5 text-primary"
-                : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
-              isMixedExtension && "opacity-60",
-            )}
-          >
-            <div className="text-sm font-semibold">실거래가</div>
-            <div className="text-caption text-muted-foreground leading-tight">
-              계약서상 실거래가
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              props.onUseEstimatedChange(true);
-              props.onIsAppraisalAcquisitionChange?.(false);
-              props.onIsSalesCaseAcquisitionChange?.(false);
-              // 일반건물: 다른 옵션 선택 시 gbHasExtension reset (정합성 유지)
-              if (props.assetKind === "general_building") {
-                props.onGbHasExtensionChange?.(false);
-              }
-            }}
-            className={cn(
-              "rounded-md border-2 p-2 text-left transition-all",
-              props.useEstimatedAcquisition && !isMixedExtension
-                ? "border-primary bg-primary/5 text-primary"
-                : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
-              isMixedExtension && "opacity-60",
-            )}
-          >
-            <div className="text-sm font-semibold">환산취득가</div>
-            <div className="text-caption text-muted-foreground leading-tight">
-              양도가 × 기준시가 비율
-            </div>
-          </button>
-          {/* 감정가액 — 일반건물에서는 미표시 (§176의2②는 환산취득가만 규정) */}
-          {props.assetKind !== "general_building" && (
-            <button
-              type="button"
-              onClick={() => {
-                props.onUseEstimatedChange(false);
-                props.onIsAppraisalAcquisitionChange?.(true);
-                props.onIsSalesCaseAcquisitionChange?.(false);
-              }}
-              className={cn(
-                "rounded-md border-2 p-2 text-left transition-all",
-                props.isAppraisalAcquisition
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
-              )}
-            >
-              <div className="text-sm font-semibold">감정가액</div>
-              <div className="text-caption text-muted-foreground leading-tight">
-                개산공제 자동 적용
-              </div>
-            </button>
-          )}
-          {/* 매매사례가액(추계) — §176의2③1호. 일반건물에서는 미표시 */}
-          {props.assetKind !== "general_building" && props.onIsSalesCaseAcquisitionChange && (
-            <button
-              type="button"
-              onClick={() => {
-                props.onUseEstimatedChange(false);
-                props.onIsAppraisalAcquisitionChange?.(false);
-                props.onIsSalesCaseAcquisitionChange!(true);
-              }}
-              className={cn(
-                "rounded-md border-2 p-2 text-left transition-all",
-                props.isSalesCaseAcquisition
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
-              )}
-            >
-              <div className="text-sm font-semibold">매매사례가액</div>
-              <div className="text-caption text-muted-foreground leading-tight">
-                §176의2③1호 추계
-              </div>
-            </button>
-          )}
-          {/* 일반건물 전용: 4번째 옵션 "쌍방+일방 (증축 있음)" */}
-          {props.assetKind === "general_building" && (
-            <button
-              type="button"
-              onClick={() => {
-                props.onUseEstimatedChange(false);                        // ★ 원건물 실가
-                props.onIsAppraisalAcquisitionChange?.(false);
-                props.onGbHasExtensionChange?.(true);
-                props.onGbExtensionAcquisitionModeChange?.("estimated");  // 증축 환산
-              }}
-              aria-pressed={isMixedExtension}
-              className={cn(
-                "rounded-lg border px-3 py-2 text-left transition-all",
-                isMixedExtension
-                  ? "border-amber-400 bg-amber-50 ring-1 ring-amber-300 shadow-sm"
-                  : "border-amber-200 bg-amber-50/40 hover:border-amber-300",
-              )}
-            >
-              <div className="text-sm font-semibold text-amber-900">토지·건물 일괄 (증축분 별도)</div>
-              <div className="text-caption text-amber-700 leading-tight">
-                토지·원건물 실거래가 + 증축분 환산취득가
-              </div>
-            </button>
-          )}
-        </div>
+        <RadioCardGroup
+          name="acqBasisMode"
+          tone="amber"
+          columns={acqBasisOptions.length === 4 ? 4 : 3}
+          options={acqBasisOptions}
+          value={acqBasisValue}
+          onChange={handleAcqBasisChange}
+        />
       </div>
       )}
 
