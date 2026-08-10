@@ -54,8 +54,21 @@ export interface CarryoverTaxationInput {
    */
   giftDateValuation: number;
   /**
+   * §97조의2 ① — 증여자와의 관계.
+   * 배제 문언·시행시기 게이트가 **이 축으로 갈린다**(`carryover-donor-death.ts`).
+   * 증여재산공제용 5분류(`bgDonorRelation`)와 **다른 축**이므로 재사용하지 않는다.
+   */
+  donorRelation?: "spouse" | "lineal";
+  /**
+   * §97조의2 ① 괄호 — 관계별로 **묻는 사실이 다르다**.
+   * · spouse : 「**사망으로** 혼인관계가 소멸」 (이혼 소멸은 false — 이월과세가 **적용**된다)
+   * · lineal : 「**양도 당시** 사망」
+   */
+  donorDeceased?: boolean;
+  /**
    * 적용배제 — 사용자 선언 (§97조의2 ② 1호·2호·④항).
    * ② 3호(비교과세)는 자동 판정이므로 선언 불필요.
+   * ⚠️ ① 관계요건(위 2필드)은 조문 계층이 달라 여기 넣지 않는다.
    */
   exclusionDeclared?: {
     /**

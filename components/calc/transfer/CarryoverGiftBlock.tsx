@@ -283,6 +283,11 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
           onChange={(patch) =>
             onChange({ carryover: patchExclusion(asset.carryover, patch) })
           }
+          donorRelation={c.donorRelation}
+          donorDeceased={c.donorDeceased}
+          giftRegistryDate={c.giftRegistryDate}
+          assetId={asset.assetId}
+          onRelationChange={updateCarryover}
         />
       </div>
     </div>

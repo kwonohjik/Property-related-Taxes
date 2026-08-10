@@ -198,6 +198,15 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     if (formTransferDate && c.giftRegistryDate >= formTransferDate)
       return `${label}: 증여 등기접수일은 양도일보다 이전이어야 합니다.`;
 
+    // (b-3) §97조의2 ① 관계요건 — 사망을 선언했으면 관계가 있어야 판정이 갈린다.
+    //
+    // ⚠️ 관계를 **단독으로 필수화하지 않는다**. 구형 sessionStorage에는 이 필드가 없어
+    //    필수화하면 기존 이월과세 입력이 전부 차단된다
+    //    (memory `feedback_blocking_validation_full_e2e_regression`).
+    //    사망 미선언이면 관계는 판정에 영향이 없다(`isCarryoverRelationExcluded`).
+    if (c.donorDeceased && !c.donorRelation)
+      return `${label}: 증여자와의 관계를 선택하세요 (소득세법 §97조의2 ①).`;
+
     // (c) 비교과세 B 시나리오 취득가
     if (parseAmount(c.giftDateValuation) <= 0)
       return `${label}: 증여 당시 평가액을 입력하세요.`;

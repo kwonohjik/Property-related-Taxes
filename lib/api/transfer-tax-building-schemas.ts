@@ -30,6 +30,9 @@ const carryoverTaxationEngineShape = z.object({
   giftTaxAmount: z.number().int().nonnegative(),
   donorCapitalExpenditure: z.number().int().nonnegative().optional(),
   giftDateValuation: z.number().int().nonnegative(),
+  /** §97의2① 관계요건 — 증여 **사건** 정보라 토지·건물 두 파트에 같은 값이 실린다. */
+  donorRelation: z.enum(["spouse", "lineal"]).optional(),
+  donorDeceased: z.boolean().optional(),
   exclusionDeclared: carryoverExclusionShape.optional(),
 });
 
@@ -276,6 +279,9 @@ export const generalBuildingValuationSchema = z.object({
       giftTaxCalculated: z.number().int().nonnegative(),
       /** 영 §163의2②3호 증여세 과세가액 — 안분 분모 */
       giftTaxBase: z.number().int().positive(),
+      /** §97의2① 관계요건 — 하나의 증여이므로 사건-수준이 정본이다. route가 두 파트에 복사한다. */
+      donorRelation: z.enum(["spouse", "lineal"]).optional(),
+      donorDeceased: z.boolean().optional(),
       exclusionDeclared: carryoverExclusionShape.optional(),
     })
     .optional(),

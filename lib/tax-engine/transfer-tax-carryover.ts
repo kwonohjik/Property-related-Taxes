@@ -18,6 +18,7 @@ import {
   isBurdenedGiftCarryover,
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
+import { isCarryoverRelationExcluded } from "./carryover-donor-death";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -128,11 +129,38 @@ export function calcCarryoverScenarios(
   }
 
   // ─────────────────────────────────────────────────────────
-  // Step 2b: 기간 판정 (§97조의2 ③ — 일수 기반 정밀 비교)
+  // Step 2b: 적용기간 연수 산정 (§97조의2 ③ · 부칙 제19196호 제18조)
+  //
+  // ⚠️ 판정보다 **먼저** 계산한다 — 아래 관계 배제도 이 값을 결과에 실어야 하고,
+  //    dummy 값을 넣으면 결과 카드가 「5년 룰」을 잘못 표시한다(2a의 family_business 참조).
   // ─────────────────────────────────────────────────────────
   const applicablePeriodYears: 5 | 10 =
     ct.giftRegistryDate < TEN_YEAR_RULE_CUTOFF ? 5 : 10;
 
+  // ─────────────────────────────────────────────────────────
+  // Step 2b′: 관계 요건 배제 (§97조의2 ① 괄호 — 증여자 사망)
+  //
+  // 기간보다 앞에 둔다. 관계 요건을 못 채우면 애초에 대상 자산이 아니다.
+  // 배우자=「사망으로 혼인관계 소멸」(이혼은 적용) · 직계존비속=「양도 당시 사망」(2025.1.1.~).
+  // ─────────────────────────────────────────────────────────
+  if (isCarryoverRelationExcluded(ct.donorRelation, ct.donorDeceased, ct.giftRegistryDate)) {
+    return {
+      detail: {
+        isEligible: false,
+        applicablePeriodYears,
+        exclusionReason: "relation_invalid",
+        scenarioA: makeEmptyScenarioA(),
+        scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
+        adoptedScenario: "B",
+        comparisonExclusion: false,
+      },
+      adoptedInput: buildInputB(rawInput, ct),
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Step 2b″: 기간 초과 판정 (§97조의2 ③ — 일수 기반 정밀 비교)
+  // ─────────────────────────────────────────────────────────
   const limitDate = addYears(ct.giftRegistryDate, applicablePeriodYears);
   const isPeriodExceeded = rawInput.transferDate > limitDate;
 
