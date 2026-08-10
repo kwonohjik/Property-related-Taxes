@@ -1,13 +1,21 @@
 "use client";
 
 /**
- * GeneralBuildingBlock ③ — **비사업용토지 판정** 섹션 (rose)
+ * 자산 카드 ① 기본정보 — **비사업용토지 판정** 섹션 (rose)
  *
  * 「소득세법」 제104조의3 제1항 제4호 나목 → 「지방세법」 제106조 제1항 제2호 →
  * 「지방세법 시행령」 제101조 제1항 제2호·제2항(적용배율표).
  *
  * `GeneralBuildingBlock`에서 분리했다(2026-08-04 P4 — 배치 런처 추가로 836줄 초과).
  * 배율·인정한도 파생값도 함께 옮겼다(이 섹션 전용).
+ *
+ * ## ③ 취득정보 → ① 기본정보 이전 (2026-08-11)
+ *
+ * 렌더 지점은 `asset-sections/AssetAreaSection.tsx`(「면적·규모」 카드 바로 아래) 하나뿐이다.
+ *  - 이 카드는 취득 사실이 아니라 **보유 중의 토지 이용 상태**를 묻는다.
+ *  - ③은 기본 접힘인데(`CompanionAssetCard.tsx` open 초기값 `{1:true}`) `gbZoneType`은
+ *    미선택 시 계산을 차단하는 **필수** 필드다 — 접힌 섹션에 숨은 필수 입력이었다.
+ *  - 한도 미리보기가 읽는 `gbBuildingFootprintArea`·`gbLandArea`의 입력 칸이 바로 위에 있다.
  */
 
 import { useMemo } from "react";
@@ -48,10 +56,12 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
     footprint > 0 && multiplierNum !== undefined ? footprint * multiplierNum : null;
   return (
     <>
-        {/* ④ 비사업용토지 판정 (rose) — 항상 표시 */}
+        {/* 비사업용토지 판정 (rose) — 항상 표시.
+            번호배지 없음: ① 기본정보의 형제 카드(「면적·규모」)와 동일하게 제목형이다.
+            종전 `sectionNum="③"`은 GeneralBuildingBlock 안에서의 순번이었고,
+            ①로 옮긴 뒤에는 ③(취득정보)를 가리키는 것으로 오독된다. */}
         <ToneCard
           tone="rose"
-          sectionNum="③"
           title="비사업용토지 판정"
           titleExtra={
             <span className="text-micro text-rose-500">
