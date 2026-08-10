@@ -44,13 +44,19 @@ function validateGbCarryover(asset: AssetForm, label: string): string | null {
   if (!landIsCarryover && !buildingIsCarryover) return null;
 
   /**
-   * 부담부증여 × 이월과세는 **범위 밖**이다 — 영 §159가 취득가액을 직접 정하므로
-   * 함께 적용하면 이중 계상이 된다(계획 §6 Q4). ④가 payload를 만들지 않으므로,
-   * **조용히 무시하지 않도록** 여기서 사유를 말한다.
+   * 🔴 **부담부증여는 여기서 손대지 않는다** (2026-08-10 정정).
+   *
+   * 초안은 「범위 밖이니 차단」이었다. **틀렸다** — 그 사이 다른 줄기(D-7a·D-7b,
+   * `burdened-gift-carryover-159-97-2.plan.md`)가 **지원을 열었다**. 근거는 국세청
+   * 재산세과-1059: 「영 §159 제1호에 따른 취득가액 산정 시 §97①1호 가액에 **이월과세가
+   * 적용되는 것임**」. 그쪽 ⑧는 「당초 증여자」 두 벌 입력을 요구한다.
+   *
+   * 여기서 차단 메시지를 띄우면 그 요구가 화면에 닿기 전에 가로채 **지원된 기능이 막힌다**
+   * (E2E `transfer-burdened-gift-carryover-block.spec.ts` CB-2로 실측).
+   *
+   * ⇒ 이 검증은 **일반 양도의 GB 이월과세**만 본다. 부담부증여는 그쪽 경로에 맡긴다.
    */
-  if (asset.transferType === "burdened_gift") {
-    return `${label}: 부담부증여는 「소득세법 시행령」 제159조가 취득가액을 정하므로 이월과세를 함께 적용하지 않습니다. 취득원인을 매매·상속·증여 중에서 고르세요.`;
-  }
+  if (asset.transferType === "burdened_gift") return null;
 
   const c = asset.carryover;
   if (!c?.giftRegistryDate)

@@ -95,11 +95,18 @@ export interface GbCarryoverPayload {
  */
 export function buildGbCarryoverPayload(asset: AssetForm): GbCarryoverPayload {
   /**
-   * 🔴 **부담부증여는 차단한다** (계획 §6 Q4).
+   * 🔴 **부담부증여에는 이 payload를 만들지 않는다** — 차단이 아니라 **중복 배선 회피**다.
    *
-   * 「소득세법 시행령」 §159가 부담부증여의 취득가액을 **직접 정한다**. 함께 배선하면
-   * 이중 적용이 되고 어느 쪽이 이겼는지 화면으로 알 수 없다. 조용한 이중 적용보다
-   * 명시적 차단이 안전하다 — ⑧이 안내 문구를 띄운다.
+   * 부담부증여 × 이월과세는 **다른 줄기가 이미 지원한다**(D-7a·D-7b,
+   * `burdened-gift-carryover-159-97-2.plan.md`). 그쪽은 영 §159 안분 단계에 세 축을
+   * 배선하고 `bgCoDonor*` 입력을 쓴다 — `landCarryoverTaxation`을 쓰지 않는다.
+   *
+   * 여기서 서브객체를 함께 실으면 **§159 경로와 §97의2 경로가 각각 취득가액을 만들어**
+   * 어느 쪽이 이겼는지 화면으로 알 수 없게 된다.
+   *
+   * ⚠️ **차단 메시지를 띄우지 않는다** — 초안은 ⑧에서 사유를 말하게 했는데, 그것이
+   *    그쪽 ⑧(「당초 증여자」 입력 요구)를 가로채 **지원된 기능을 막았다**
+   *    (E2E CB-2 실패로 실측, 2026-08-10 정정).
    */
   if (asset.transferType === "burdened_gift") return {};
 
