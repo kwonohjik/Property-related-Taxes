@@ -321,6 +321,7 @@ export function CompanionAssetCard({
             filingDeadline={filingDeadline}
             onFormChange={onFormChange}
             isFirst={index === 0}
+            splitMode={splitMode}
           />
         </AssetSection>
       )}

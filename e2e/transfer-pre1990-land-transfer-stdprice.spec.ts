@@ -44,7 +44,7 @@ test.describe("1990.8.30 이전 취득 토지 환산 — 양도시 기준시가"
     // 매매 → 환산취득가
     await page.getByRole("button", { name: "매매", exact: true }).click();
     await page.waitForTimeout(300);
-    await page.getByRole("button", { name: "환산취득가" }).click();
+    await page.getByRole("radio", { name: "환산취득가" }).click();
     await page.waitForTimeout(300);
 
     // 취득일 1985-03-01 (< 1990-08-30) → pre1990 환산 자동 활성화

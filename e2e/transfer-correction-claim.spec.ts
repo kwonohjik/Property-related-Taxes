@@ -61,7 +61,7 @@ async function seedOriginalLandReturn(page: Page) {
   await inputByLabel(page, "양도가액 (원)").fill("1000000000");
 
   await page.getByRole("button", { name: "매매", exact: true }).click();
-  await page.getByRole("button", { name: "실거래가 계약서상 실거래가" }).click();
+  await page.getByRole("radio", { name: "실거래가 계약서상 실거래가" }).click();
   await page.getByLabel("연도", { exact: true }).nth(2).fill("2010");
   await page.getByLabel("월", { exact: true }).nth(2).fill("03");
   await page.getByLabel("일", { exact: true }).nth(2).fill("27");

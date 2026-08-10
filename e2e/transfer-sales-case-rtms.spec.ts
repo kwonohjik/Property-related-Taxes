@@ -79,7 +79,7 @@ test.describe("양도세 매매사례가액 추계(§176의2③1호)", () => {
     await expandAssetSection(page, 3);
 
     // 취득가액 산정 방식: "매매사례가액" 모드 버튼 클릭
-    await card.getByRole("button", { name: /매매사례가액/ }).first().click();
+    await card.getByRole("radio", { name: /매매사례가액/ }).first().click();
 
     // SalesCaseSection 노출
     await expect(card.getByText("매매사례가액 (원)")).toBeVisible();

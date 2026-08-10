@@ -13,13 +13,16 @@
   - 깊은 인덱스 `.nth(2+)`는 금지 → 해당 날짜를 감싸는 컨테이너로 `scope` 한정.
   - `.nth(0)`/`.nth(1)`(페이지 상단 양도일·신고일)도 인덱스 시프트 위험이 잠재하니 가능하면 스코프.
 
-## 2. 버튼 — `name` + `exact:true` 는 설명 텍스트 합쳐짐 주의
+## 2. 선택지 카드 — `name` + `exact:true` 는 설명 텍스트 합쳐짐 주의
 
-버튼 안에 제목 div + 설명 div가 같이 있으면 accessible name이 **합쳐진다**
-(예: `환산취득가` 버튼의 실제 name = `"환산취득가양도가 × 기준시가 비율"`). `exact:true`로 제목만 매칭하면 0개로 실패한다.
+제목 + 설명이 한 컨트롤 안에 있으면 accessible name이 **합쳐진다**
+(예: 환산취득가의 실제 name = `"환산취득가양도가 × 기준시가 비율"`). `exact:true`로 제목만 매칭하면 0개로 실패한다.
 
-- ✅ 권장: 부분 매칭 `getByRole("button", { name: "환산취득가" })`, 또는 제목 텍스트를 직접 타겟 후 상위 button 클릭.
-- ⚠️ `exact:true`는 설명 div가 없는 단순 버튼에만.
+- ✅ 권장: 부분 매칭 `getByRole("radio", { name: "환산취득가" })`.
+- ⚠️ `exact:true`는 설명이 없는 단순 버튼에만.
+- ⚠️ **role이 바뀌었다**: 「취득가액 산정 방식」은 2026-08-11부터 native `<button>` 카드가 아니라
+  `RadioCardGroup`(**`radio`**)이다. 같은 라벨을 쓰는 파트별 라디오와 동시 렌더되는 화면에서는
+  `data-testid`로 스코프해야 strict mode 위반을 피한다(`landAcqGroup`·`buildingAcqGroup` 참조).
 
 ## 3. 결과 화면 라벨 중복 — visible/스코프 한정
 

@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * ① 기본정보 — 자산종류·겸용토글·소재지·입주권·자산명칭·면적·토지성격. (지분율은 ③ 취득정보로 이전)
+ * ① 기본정보 — 자산종류·겸용토글·소재지·입주권·자산명칭·면적·토지성격·공유 지분율.
+ * (지분율은 2026-06-30에 ③ 취득정보로 나갔다가 2026-08-11에 사용자 확정으로 되돌아왔다 —
+ *  지분 분할 모드의 「취득 지분율」만 ③에 남는다.)
  * CompanionAssetCard L175–472 JSX를 그대로 이동 (동작 변화 0).
  */
 import { Fragment } from "react";
@@ -28,6 +30,7 @@ import {
   areaResetPatchForAssetKind,
 } from "./AssetAreaSection";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
+import { OwnershipRatioBlock, type AssetSplitMode } from "../OwnershipRatioInput";
 
 const ASSET_KIND_OPTIONS = [
   { value: "housing", label: "주택" },
@@ -74,6 +77,11 @@ interface Props {
   onFormChange?: (patch: Partial<TransferFormData>) => void;
   /** 첫 자산(index 0) 여부 — §95⑤ 용도변경 토글 노출 게이트 (거주분이 assets[0] 전용) */
   isFirst?: boolean;
+  /**
+   * 자산 분할 모드 — 「공유 지분율」 노출 게이트.
+   * `"fractional"`이면 지분율은 ③ 취득정보 최상단에 「취득 지분율」로 뜨므로 여기서는 숨긴다.
+   */
+  splitMode?: AssetSplitMode;
 }
 
 export function AssetSectionBasic({
@@ -88,6 +96,7 @@ export function AssetSectionBasic({
   filingDeadline,
   onFormChange,
   isFirst,
+  splitMode,
 }: Props) {
   return (
     <>
@@ -314,6 +323,30 @@ export function AssetSectionBasic({
         <CompanionLandNatureBlock
           landNature={asset.landNature}
           onChange={onChange}
+        />
+      )}
+
+      {/* 공유 지분율 — ③ 취득정보에서 되돌아왔다 (2026-08-11 사용자 확정).
+          「이 물건 중 내 몫이 얼마인가」는 자산 정체성이라 ①이 제자리다. ③에서는
+          「취득가액 산정 방식 → 취득가액 → 기준시가」 흐름 한가운데를 끊었다.
+          ⚠️ 지분 분할 모드(splitMode==="fractional")에서는 여기가 아니라 ③ 최상단에
+             「취득 지분율」로 뜬다 — 취득시기·원인이 지분마다 다른 최상위 분기이기 때문이다.
+             두 자리는 **배타**다(둘 다 뜨면 같은 값을 두 곳에서 고치게 된다). */}
+      {splitMode !== "fractional" && (
+        <OwnershipRatioBlock
+          numerator={asset.ownershipNumerator}
+          denominator={asset.ownershipDenominator}
+          label="공유 지분율"
+          onChange={(patch) =>
+            onChange({
+              ...(patch.numerator !== undefined
+                ? { ownershipNumerator: patch.numerator }
+                : {}),
+              ...(patch.denominator !== undefined
+                ? { ownershipDenominator: patch.denominator }
+                : {}),
+            })
+          }
         />
       )}
 
