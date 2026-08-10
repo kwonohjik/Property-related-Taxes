@@ -23,6 +23,7 @@
  */
 
 import { Suspense, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/CurrencyInput";
@@ -31,6 +32,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Button } from "@/components/ui/button";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
+import { PublicInterestStepList } from "@/components/calc/shared/PublicInterestStepList";
 import {
   calcPublicInterestPostMgmt,
   calcPublicInterestSaleProceeds,
@@ -110,44 +112,6 @@ function sanitizeAmountParam(raw: string | null): string {
   const num = parseAmount(raw);
   if (!Number.isFinite(num) || num <= 0) return "";
   return String(Math.floor(num));
-}
-
-/** 두 갈래 결과가 같은 shape의 `steps`·`warnings`를 쓴다 — 표시 로직 단일 소스. */
-function ResultDetail({
-  steps,
-  warnings,
-}: Pick<PublicInterestPostMgmtResult, "steps" | "warnings">) {
-  return (
-    <>
-      <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-        <p className="text-sm font-semibold">산출 근거</p>
-        {steps.map((s, i) => (
-          <div key={i} className="flex justify-between gap-3 text-xs">
-            <span className="text-muted-foreground">
-              {s.label}
-              <span className="ml-1 text-micro text-blue-700">{s.legalBasis}</span>
-              <span className="block text-caption">{s.formula}</span>
-            </span>
-            {s.amount > 0 && (
-              <span className="tabular-nums font-medium whitespace-nowrap">
-                {formatKRW(s.amount)}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {warnings.length > 0 && (
-        <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-1">
-          {warnings.map((w, i) => (
-            <p key={i} className="text-caption text-amber-800">
-              · {w}
-            </p>
-          ))}
-        </div>
-      )}
-    </>
-  );
 }
 
 // ============================================================
@@ -292,7 +256,7 @@ function Clause1Form({ initialDonated }: { initialDonated: string }) {
             )}
           </div>
 
-          <ResultDetail steps={result.steps} warnings={result.warnings} />
+          <PublicInterestStepList steps={result.steps} warnings={result.warnings} />
         </section>
       )}
     </>
@@ -451,7 +415,7 @@ function Clause4Form() {
             )}
           </div>
 
-          <ResultDetail steps={result.steps} warnings={result.warnings} />
+          <PublicInterestStepList steps={result.steps} warnings={result.warnings} />
         </section>
       )}
     </>
@@ -492,6 +456,14 @@ function PublicInterestPostMgmtInner() {
           「그 사유가 발생한 날에 대통령령으로 정하는 가액을 공익법인등이 <b>증여받은 것으로 보아
           즉시 증여세를 부과</b>」합니다(§48② 본문). 영농·가업 사후관리와 달리 <b>이자상당액 가산
           규정이 없습니다</b>.
+        </p>
+        <p className="text-caption text-blue-700 dark:text-blue-300">
+          같은 항이라도 <b>5호·7호</b>(운용소득·매각대금 1년 30%·2년 60%·의무지출)는 증여세가
+          아니라 <b>§78⑨ 가산세</b>입니다 —{" "}
+          <Link href="/calc/public-interest-penalty" className="underline font-medium">
+            공익법인 사후관리 가산세 계산기
+          </Link>
+          를 이용하세요.
         </p>
       </div>
 

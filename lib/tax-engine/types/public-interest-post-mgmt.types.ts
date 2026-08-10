@@ -81,6 +81,14 @@ export interface PublicInterestPostMgmtResult {
   warnings: string[];
 }
 
+/** 세 엔진이 공유하는 산출 근거 한 줄. */
+export interface PublicInterestStep {
+  label: string;
+  formula: string;
+  amount: number;
+  legalBasis: string;
+}
+
 // ============================================================
 // §48②4호 — 출연재산 **매각대금** 3년 사후관리
 // ============================================================
@@ -167,5 +175,117 @@ export interface PublicInterestSaleProceedsResult {
   /** 산식·근거 단계. */
   steps: Array<{ label: string; formula: string; amount: number; legalBasis: string }>;
   /** 실무 주의 안내. */
+  warnings: string[];
+}
+
+// ============================================================
+// §48②5호·7호 — **가산세** (§78⑨)
+// ============================================================
+
+/**
+ * ## ⚠️ 세목이 다르다 — 1호·4호는 **증여세**, 5호·7호는 **가산세**
+ *
+ * §48② 본문이 갈라 놓았다: 「제1호부터 제4호까지, 제6호 및 제8호」는 「증여받은 것으로 보아
+ * 즉시 **증여세**를 부과」하고, 「제5호 및 제7호」는 「제78조제9항에 따른 **가산세**를 부과」한다.
+ * 그래서 §55② 과세최저한(50만원)·§56 누진세율이 여기엔 걸리지 않는다.
+ *
+ * ## ⚠️ 매각대금은 기간별로 세목이 갈린다 (집행기준 48-38-7)
+ *
+ * | 사용기간 | 최소사용실적 | 미달 시 |
+ * |---|---|---|
+ * | 1년 이내 | 30% | **가산세**(미달사용액 × 10%) ← 이 엔진 |
+ * | 2년 이내 | 60% | **가산세**(미달사용액 × 10%) ← 이 엔진 |
+ * | 3년 이내 | 90% | **증여세**(미달사용액) ← `calcPublicInterestSaleProceeds` |
+ */
+export interface PublicInterestPenaltyInput {
+  /** §78⑨1호 — 운용소득(§48②5호 전단). 해당 없으면 생략. */
+  operatingIncome?: {
+    /**
+     * 운용소득 (원) — 상증령 §38⑤ 「제1호 − 제2호」.
+     *
+     * 집행기준 48-38-6 산식: ①차가감 소득금액 − ②법인세등·이월결손금 + ③직전 사업연도
+     * 미달사용액(가산세 차감). 음수면 0으로 본다(서면-2021-법규법인-7926).
+     */
+    income: number;
+    /**
+     * 사용실적 (원) — 상증령 §38⑥ 「그 소득이 발생한 과세기간·사업연도 종료일부터 **1년 이내**」.
+     * 사업개시 5년 경과 시 당해 + 직전 4개 = **5년 평균**으로 계산할 수 있다.
+     */
+    usedAmount: number;
+  };
+
+  /** §78⑨2호 — 매각대금(§48②5호 후단). 해당 없으면 생략. */
+  saleProceeds?: {
+    /** 매각대금 (원) — 매각에 따라 부담한 국세·지방세 차감 후(상증령 §38⑰). */
+    proceeds: number;
+    /** 과세기간·사업연도 종료일부터 **1년 이내** 직접 공익목적사업 사용실적. */
+    usedWithin1y: number;
+    /** 같은 기산점부터 **2년 이내** 사용실적 **누계**. */
+    usedWithin2y: number;
+  };
+
+  /** §78⑨3호 — 의무지출(§48②7호). 해당 없으면 생략. */
+  mandatoryDistribution?: {
+    /**
+     * 「출연받은 재산의 가액」 (원) — 상증령 §38⑱.
+     *
+     * 직전 과세기간·사업연도 종료일 현재 재무상태표·운영성과표 기준, 수익용 또는 수익사업용으로
+     * 운용하는 재산(직접 공익목적사업용 재산 제외)의 **총자산가액 − (부채가액 + 당기순이익)**.
+     * 3년 이상 5년 미만 보유 상장주식은 직전 3개, 5년 이상은 직전 5개 종료일 평균액으로 한다.
+     */
+    assetBase: number;
+    /**
+     * §16②2호가목 공익법인등이 발행주식총수등의 **10%를 초과** 보유하는가.
+     * 참이면 기준금액 비율이 1% → **3%**가 된다(법 §48②7호 괄호).
+     */
+    exceedsTenPercentHolding: boolean;
+    /**
+     * §48②7호 **가목**의 공익법인등인가(주식등 보유비율 5% 초과 — 상증령 §38⑳).
+     * 참이면 §78⑨3호 가산세율이 10% → **200%**가 된다.
+     */
+    isClauseGaCorp: boolean;
+    /** 직접 공익목적사업에 사용한 금액 (원) — 상증령 §38⑲. */
+    usedAmount: number;
+  };
+}
+
+/** 호별 공통 — 기준금액·사용액·미달액·가산세. */
+export interface PenaltyClauseResult {
+  threshold: number;
+  used: number;
+  shortfall: number;
+  penalty: number;
+}
+
+export interface PublicInterestPenaltyResult {
+  /** §78⑨1호 — 운용소득. 입력이 없으면 undefined. */
+  operatingIncome?: PenaltyClauseResult;
+  /** §78⑨2호 — 매각대금. 1년·2년은 **별개 사업연도에 각각** 부과된다. */
+  saleProceeds?: {
+    threshold1y: number;
+    used1y: number;
+    shortfall1y: number;
+    penalty1y: number;
+    threshold2y: number;
+    used2y: number;
+    shortfall2y: number;
+    penalty2y: number;
+    /** penalty1y + penalty2y. */
+    penalty: number;
+  };
+  /** §78⑨3호 — 의무지출. */
+  mandatoryDistribution?: PenaltyClauseResult & {
+    /** 기준금액 비율의 분자 — 1 또는 3 (%). */
+    rateNumer: number;
+    /** 가산세율 — 10 또는 200 (%). */
+    penaltyRatePercent: number;
+  };
+  /** §78⑨ 후단 택일 결과 — 1호·3호 중 더 큰 쪽. */
+  clause1And3Applied: "clause1" | "clause3" | "none";
+  /** 택일 후 채택된 금액. */
+  clause1And3Penalty: number;
+  /** clause1And3Penalty + 2호 가산세. */
+  totalPenalty: number;
+  steps: PublicInterestStep[];
   warnings: string[];
 }
