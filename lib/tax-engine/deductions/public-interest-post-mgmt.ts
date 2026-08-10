@@ -43,9 +43,9 @@
 
 import { addYears, format, isAfter, parseISO } from "date-fns";
 
-import { calcInheritanceGiftTax, findApplicableBracket } from "../inheritance-gift-common";
 import { EXEMPTION } from "../legal-codes";
 import { applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";
+import { applyMinimumTaxBase, GIFT_TAX_BASE_MIN } from "./public-interest-gift-tax-base";
 import type {
   PublicInterestOperatingIncomeInput,
   PublicInterestOperatingIncomeResult,
@@ -56,35 +56,6 @@ import type {
   PublicInterestViolation,
   SaleProceedsViolation,
 } from "../types/public-interest-post-mgmt.types";
-
-/**
- * 상증법 §55② — 「과세표준이 50만원 미만이면 증여세를 부과하지 아니한다」.
- *
- * 본류 증여세(`gift-tax.ts`)가 이미 쓰는 규약과 같은 값이다. §48②는 「증여받은 것으로 보아
- * 증여세를 부과」하므로 이 과세최저한도 그대로 걸린다 — 특히 §48②4호 나목의 과세가액은
- * 「90% 기준 대비 미달분」이라 수십만원이 실제로 나온다.
- */
-const GIFT_TAX_BASE_MIN = 500_000;
-
-/** §55② 적용 — 과세표준과 산출세액을 함께 확정한다. */
-function applyMinimumTaxBase(clawbackBase: number): {
-  taxBase: number;
-  giftTax: number;
-  rate: number;
-  deduction: number;
-  belowMinimumTaxBase: boolean;
-} {
-  const below = clawbackBase > 0 && clawbackBase < GIFT_TAX_BASE_MIN;
-  const taxBase = below ? 0 : clawbackBase;
-  const { rate, deduction } = findApplicableBracket(taxBase);
-  return {
-    taxBase,
-    giftTax: calcInheritanceGiftTax(taxBase),
-    rate,
-    deduction,
-    belowMinimumTaxBase: below,
-  };
-}
 
 /** 상증령 §40①1호 각 목 라벨 */
 const VIOLATION_LABELS: Record<PublicInterestViolation, string> = {

@@ -252,6 +252,72 @@ export interface PublicInterestOperatingIncomeResult {
 }
 
 // ============================================================
+// §48②6호 — 출연받은 주식등의 **의결권 행사**
+// ============================================================
+
+/**
+ * ## ⭐ 한도는 20%인데 과세 기준선은 **10%**다
+ *
+ * §16②2호**가목** 요건(1 의결권 미행사 · 2 자선·장학·사회복지 목적)을 갖춘 공익법인등은
+ * **20%까지** 출연받아도 과세가액에 산입되지 않는다. 그런데 1)을 위반해 의결권을 행사하면
+ * 상증령 §40①3의2호가 정한 과세가액은 「의결권을 행사한 날에 발행주식총수등의 **100분의
+ * 10을 초과**하여 보유하고 있는 주식등의 가액」이다 — 「20% 초과분」이 아니다.
+ *
+ * ## ⭐ 나목·다목 공익법인등은 대상이 **아니다**
+ *
+ * 상호출자제한기업집단 특수관계(나목)·§48⑪ 요건 미충족(다목)은 애초에 5% 한도라 가목이
+ * 적용되지 않는다. §48②6호가 괄호로 명시적으로 뺐다.
+ */
+export interface PublicInterestVotingRightsInput {
+  /** 의결권을 행사한 날 (ISO yyyy-MM-dd) — 상증령 §40①3의2호의 평가·판정 기준일. */
+  exerciseDate: string;
+  /** 발행주식총수등 (주) — 자기주식·자기출자지분 제외(법 §16② 괄호). */
+  totalShares: number;
+  /** 공익법인등이 보유한 주식등 (주) — 의결권을 행사한 날 현재. */
+  heldShares: number;
+  /** 의결권을 행사한 날 현재 1주당 평가액 (원). */
+  pricePerShare: number;
+  /** §16②2호가목 1) 위반 — 실제로 출연받은 주식등의 의결권을 행사했는가. */
+  exercisedVotingRights: boolean;
+  /** §16②2호가목 2) — 자선ㆍ장학 또는 사회복지를 목적으로 하는가. */
+  isCharityPurpose: boolean;
+  /**
+   * §48②6호 괄호 — §16②2호 **나목**(상호출자제한기업집단과 특수관계) 또는 **다목**
+   * (§48⑪ 각 호의 요건 미충족)에 해당하는가. 해당하면 6호 대상에서 **제외**된다.
+   */
+  isNaDaMokCorp: boolean;
+}
+
+export interface PublicInterestVotingRightsResult {
+  /** §48②6호 요건이 성립하는가. */
+  applies: boolean;
+  /** 미적용 사유 (applies=false일 때). 세 사유를 구분해 담는다. */
+  nonApplicableReason?: string;
+  /** 추징 사유가 발생했는가 (과세가액 > 0). */
+  isClawback: boolean;
+  /** 과세표준이 §55② 과세최저한(50만원) 미만이라 세액이 0인가. */
+  belowMinimumTaxBase: boolean;
+  /** 의결권을 행사한 날 (ISO) — echo. */
+  exerciseDate: string;
+  /** 발행주식총수등의 10%에 해당하는 주식 수 (표시용 — 정수가 아닐 수 있다). */
+  tenPercentShares: number;
+  /** 10%를 초과해 보유한 주식 수. */
+  excessShares: number;
+  /** 과세가액 = 초과 주식수 × 1주당 평가액 (상증령 §40①3의2호). */
+  clawbackBase: number;
+  /** 증여세 과세표준 — §55② 미달 시 0. */
+  taxBase: number;
+  /** 추징 증여세 (§56 누진세율). */
+  giftTax: number;
+  /** 적용 한계세율 (표시용). */
+  appliedRate: number;
+  /** 누진공제 (표시용). */
+  progressiveDeduction: number;
+  steps: PublicInterestStep[];
+  warnings: string[];
+}
+
+// ============================================================
 // §48②5호·7호 — **가산세** (§78⑨)
 // ============================================================
 
