@@ -252,3 +252,84 @@ test.describe("공익법인 운용소득 목적 외 사용 (§48②3호)", () =>
     await expect(box.getByText(/제4장 평가액/).first()).toBeVisible();
   });
 });
+
+/**
+ * §48②6호 — 출연받은 주식등의 의결권 행사.
+ *
+ * 🔑 이 블록의 핵심은 **「한도 20% ↔ 과세 기준선 10%」가 화면 값으로 드러나는가**다.
+ *    엔진 anchor만으로는 사용자가 20% 한도를 근거로 「과세 없음」이라 오판하는 것을 못 막는다.
+ *
+ * ⚠️ 주식 수는 `IntegerInput`이라 `data-testid`가 DOM에 흐르지 않는다
+ *    ([[feedback_shared_card_testid_not_forwarded]]) — `getByLabel`로 접근한다.
+ */
+async function openClause6(page: Page) {
+  await page.goto("/calc/public-interest-postmgmt");
+  await page.getByRole("heading", { name: /공익법인 출연재산 사후관리/ }).waitFor();
+  await page.getByRole("radio", { name: /출연주식 의결권 행사/ }).check();
+}
+
+/** 발행 100만주 · 주당 1만원 · 2025-03-28 의결권 행사 */
+async function fillClause6Base(page: Page, heldShares: string) {
+  await fillDateAndVerify(page, { year: "2025", month: "3", day: "28" }, {
+    scope: page.getByTestId("pi6-exercise-date"),
+  });
+  await page.getByLabel("발행주식총수등").fill("1000000");
+  await page.getByLabel("보유한 주식등").fill(heldShares);
+  await page.getByTestId("pi6-price-per-share").fill("10000");
+}
+
+test.describe("공익법인 출연주식 의결권 행사 (§48②6호)", () => {
+  test("PI6-E2E-1: ⭐ 15% 보유 → 20% 한도 이내인데도 10% 초과분이 과세된다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause6(page);
+    await fillClause6Base(page, "150000"); // 15%
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi6-result");
+    await expect(box).toBeVisible();
+    // 초과 5만주 × 1만원 = 5억 → 5억 × 20% − 1천만 = 90,000,000
+    await expect(page.getByTestId("pi6-gift-tax")).toHaveText(/90,000,000/);
+    await expect(box.getByText(/상증령 §40①3의2호/).first()).toBeVisible();
+    // 「20% 한도 이내라 과세 0」이 아니다
+    await expect(page.getByTestId("pi6-gift-tax")).not.toHaveText(/^0/);
+  });
+
+  test("PI6-E2E-2: 경계 — 정확히 10% 보유면 추징 대상이 아니다 (양성 대조군)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause6(page);
+    await fillClause6Base(page, "100000"); // 10%
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi6-result");
+    await expect(box).toBeVisible();
+    await expect(box.getByText(/10% 초과 보유분 없음/)).toBeVisible();
+    await expect(page.getByTestId("pi6-gift-tax")).toHaveText(/^0/);
+  });
+
+  test("PI6-E2E-3: ⭐ 나목·다목 공익법인등은 §48②6호 대상이 아니다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause6(page);
+    await fillClause6Base(page, "150000");
+    await page.getByRole("switch", { name: /나목·다목에 해당/ }).click();
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi6-result");
+    await expect(box).toBeVisible();
+    await expect(box.getByText(/§48②6호 대상이 아닙니다/)).toBeVisible();
+    await expect(page.getByTestId("pi6-non-applicable")).toContainText("나목");
+    // 세액 표시 자체가 사라진다
+    await expect(page.getByTestId("pi6-gift-tax")).toHaveCount(0);
+  });
+
+  test("PI6-E2E-4: 의결권을 행사하지 않았으면 대상이 아니다 (사유가 구분된다)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause6(page);
+    await fillClause6Base(page, "150000");
+    await page.getByRole("switch", { name: /의결권을 행사했다/ }).click(); // ON → OFF
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    await expect(page.getByTestId("pi6-non-applicable")).toContainText("의결권을 행사하지 않았");
+    // 나목·다목 사유와 다른 문구여야 한다
+    await expect(page.getByTestId("pi6-non-applicable")).not.toContainText("나목");
+  });
+});
