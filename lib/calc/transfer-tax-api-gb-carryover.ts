@@ -51,9 +51,19 @@ function buildPart(c: CarryoverTaxationForm | undefined) {
  * 신규 2칸(산출세액·과세가액)을 채우지 않은 입력(기존 sessionStorage 포함)에서도
  * 이월과세가 **동작해야 한다** — 안 그러면 「입력했는데 세액 그대로」가 그대로 남는다.
  */
-function buildEngineShaped(c: CarryoverTaxationForm | undefined) {
+function buildEngineShaped(
+  c: CarryoverTaxationForm | undefined,
+  /**
+   * §97의2① 관계요건의 **정본**. 관계·사망은 파트가 아니라 **증여 사건**의 사실이라
+   * 건물 파트도 토지 쪽 값을 따라야 한다 — 건물 폼에는 이 입력이 없어서
+   * 그대로 두면 건물만 배제되지 않는다.
+   */
+  relationSource: CarryoverTaxationForm | undefined = c,
+) {
   if (!c?.giftRegistryDate || !c.donorAcquisitionDate) return undefined;
   return {
+    donorRelation: relationSource?.donorRelation || undefined,
+    donorDeceased: relationSource?.donorDeceased || undefined,
     giftRegistryDate: c.giftRegistryDate,
     donorAcquisitionDate: c.donorAcquisitionDate,
     donorAcquisitionPrice: c.useEstimatedAcquisition
@@ -132,7 +142,7 @@ export function buildGbCarryoverPayload(asset: AssetForm): GbCarryoverPayload {
     return {
       ...(landIsCarryover ? { landCarryoverTaxation: buildEngineShaped(c) } : {}),
       ...(buildingIsCarryover
-        ? { buildingCarryoverTaxation: buildEngineShaped(asset.buildingCarryover ?? c) }
+        ? { buildingCarryoverTaxation: buildEngineShaped(asset.buildingCarryover ?? c, c) }
         : {}),
     };
   }
@@ -142,6 +152,9 @@ export function buildGbCarryoverPayload(asset: AssetForm): GbCarryoverPayload {
       giftRegistryDate: c.giftRegistryDate,
       giftTaxCalculated,
       giftTaxBase,
+      // §97의2① 관계요건 — 사건-수준이 정본. route가 토지·건물 두 파트에 복사한다.
+      donorRelation: c.donorRelation || undefined,
+      donorDeceased: c.donorDeceased || undefined,
       ...(c.exclusionDeclared
         ? {
             exclusionDeclared: {

@@ -1,6 +1,6 @@
 # 양도세 이월과세 — 증여자 사망 시 §97의2① 적용배제
 
-> 상태: **계획·설계 완료 · Do 미착수**
+> 상태: ✅ **구현 완료** (2026-08-10) — anchor 22건 green · mutation probe 2회 통과 · 회귀 0건
 > 발단: 「법 §97의2① 본문 직독」(A-1 미결) 수행 중 파생 발견 (2026-08-10)
 > 브랜치: `worktree-carryover-donor-death`
 
@@ -166,23 +166,35 @@ throwaway probe(`makeMockRates` + `baseTransferInput`, 실행 후 삭제):
 
 ---
 
-## 7. Pre-Do anchor (Do 진입 전 작성 — 전부 `it.fails`로 실패 관측 후 착수)
+## 7. anchor — 22건 전건 green
+
+**엔진** `__tests__/tax-engine/transfer-tax/carryover-donor-death.anchor.test.ts` (9건)
 
 | ID | 케이스 | 단언 |
 |---|---|---|
 | DD-01 | A3 사별 | `exclusionReason === "relation_invalid"` · `adoptedScenario === "B"` |
-| DD-02 | A3 사별 | 결정세액 = **79,430,000** (§3.3 실측 · 현행은 169,060,000) |
-| DD-03 | A2 이혼 | **적용**됨 — `isEligible === true` (양성 대조군) |
-| DD-04 | A4 이혼 후 사망 | **적용**됨 (A3과 값이 갈리는지) |
+| DD-02 | A3 사별 | 결정세액 = **79,430,000** (현행은 169,060,000이었다) |
+| DD-03 | A2 이혼 | **적용** [양성 대조군] |
+| DD-04 | A4 이혼 후 사망 | **적용** · 세액 169,060,000 [양성 대조군] |
 | DD-05 | B2 직계존비속 사망 · 증여 2025.6.1. | 배제 |
-| DD-06 | B3 직계존비속 사망 · 증여 2024.6.1. | **적용**(게이트 반대편) |
-| DD-07 | GB 일반건물 경로 | 토지·건물 파트 모두 배제 도달 |
-| DD-08 | ⑫ Zod | 신규 필드가 strip되지 않고 엔진 input까지 도달 |
-| DD-09 | ⑧ validate | 관계 미선택 시 차단 |
+| DD-06 | B3 직계존비속 사망 · 증여 2024.6.1. | **적용** · 취득가액 3억 치환 [양성 대조군] |
+| DD-06b | 경계일 2025.1.1. 당일 | 배제(게이트 이후) |
+| DD-07e | 관계 미선택 + 사망만 true | 배제하지 않음 |
+| DD-08e | 두 필드 모두 없음 | 종전대로 동작 [회귀] |
 
-⭐ **DD-03·DD-04·DD-06이 이 기능의 방어선이다.** 배제 단언만 있으면 「전부 배제」로 구현해도 통과한다 — 메모리 `feedback_negative_assertion_needs_mutation_probe`.
+**배선** `__tests__/calc/carryover-donor-death-wiring.test.ts` (10건) — ④ 일반·GB 두 진입점 · ⑫ Zod · ⑧ validate.
+그중 **DD-W-05**(건물 파트가 토지 쪽 관계를 따르는가)와 **DD-W-09**(관계 미선택이어도 사망 미선언이면 통과)가 방어선이다.
 
-⭐ **mutation probe 필수**: 구현 후 배제 분기를 일부러 되돌려 DD-01·DD-02가 실제로 빨개지는지 확인한다.
+**기존 파일 정정** `carryover-relation-invalid.test.ts` (3건) — 낡은 전제(§3.2)를 폐기하고 진입조건 회귀 방어로 재정의.
+
+### mutation probe — 2회 실측
+
+| 되돌린 것 | 빨개진 것 | 살아남은 것 |
+|---|---|---|
+| 배제 전체 무력화(`return false`) | DD-01·02·05·06b (4건) | 양성 대조군 5건 |
+| 시행일 게이트 무력화(`lineal → 항상 true`) | **DD-06만** | 나머지 8건 |
+
+⇒ 「전부 배제」로 구현했으면 두 번째 probe가 잡는다. 방어선이 실제로 작동한다.
 
 ---
 

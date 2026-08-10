@@ -62,6 +62,14 @@ function validateGbCarryover(asset: AssetForm, label: string): string | null {
   if (!c?.giftRegistryDate)
     return `${label}: 증여 등기접수일을 입력하세요 (「소득세법」 제97조의2 제3항 — 적용기간 기산일).`;
 
+  /**
+   * §97조의2 ① 관계요건 — 증여 **사건**의 사실이라 토지 쪽(`c`) 하나가 정본이다.
+   * 일반 경로(`transfer-tax-validate-asset.ts`)와 **같은 조건**을 본다 —
+   * 관계는 단독 필수화하지 않고, 사망을 선언했을 때만 요구한다.
+   */
+  if (c.donorDeceased && !c.donorRelation)
+    return `${label}: 증여자와의 관계를 선택하세요 (「소득세법」 제97조의2 제1항).`;
+
   const parts: Array<[CarryoverTaxationForm | undefined, string]> = [];
   if (landIsCarryover) parts.push([c, `${label} 토지`]);
   if (buildingIsCarryover) parts.push([asset.buildingCarryover ?? c, `${label} 건물`]);

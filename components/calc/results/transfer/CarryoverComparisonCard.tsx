@@ -159,7 +159,8 @@ const EXCLUSION_REASON_LABELS: Record<string, string> = {
   one_house_exemption: "§97조의2 ② 2호 — 이월과세 적용 시 1세대1주택 비과세 해당 (고가주택 포함)",
   tax_comparison: "§97조의2 ② 3호 — 비교과세 (Scenario B 세액이 더 큼)",
   period_exceeded: "§97조의2 ③ — 적용기간 초과",
-  relation_invalid: "§97조의2 ① 단서 — 관계 요건 불충족 (사망 등으로 혼인 소멸)",
+  // 「단서」가 아니라 **괄호**다. 배우자=사망으로 혼인관계 소멸 / 직계존비속=양도 당시 사망.
+  relation_invalid: "§97조의2 ① — 증여자 사망으로 이월과세 대상에서 제외",
   family_business: "§97조의2 ④ — 가업상속공제 적용 자산",
 };
 

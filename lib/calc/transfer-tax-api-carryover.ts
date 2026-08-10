@@ -73,6 +73,9 @@ export function buildCarryoverPayload(
     giftTaxAmount: parseAmount(c.giftTaxAmount),
     donorCapitalExpenditure: capex > 0 ? capex : undefined,
     giftDateValuation: parseAmount(c.giftDateValuation),
+    // §97의2① 관계요건 — 미선택("")·미사망(false)은 전송하지 않는다(엔진 기본값과 동치).
+    donorRelation: c.donorRelation || undefined,
+    donorDeceased: c.donorDeceased || undefined,
     exclusionDeclared: {
       expropriationWithin2Years: c.exclusionDeclared.expropriationWithin2Years || undefined,
       oneHouseExemptionApplies: c.exclusionDeclared.oneHouseExemptionApplies || undefined,

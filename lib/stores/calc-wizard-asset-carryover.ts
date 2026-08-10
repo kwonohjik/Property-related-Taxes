@@ -73,6 +73,16 @@ export interface CarryoverTaxationForm {
   donorCapitalExpenditure: string;
   /** 증여 당시 평가액 — 비교과세 시나리오 B 취득가액 */
   giftDateValuation: string;
+  /**
+   * §97조의2 ① 증여자와의 관계. "" = 미선택(⑧에서 차단).
+   * 배제 문언·시행시기 게이트가 이 축으로 갈린다.
+   */
+  donorRelation: "spouse" | "lineal" | "";
+  /**
+   * §97조의2 ① 괄호 — 관계별로 묻는 사실이 다르다.
+   * spouse=「사망으로 혼인관계 소멸」(이혼은 false) · lineal=「양도 당시 사망」.
+   */
+  donorDeceased: boolean;
   /** 이월과세 적용배제 선언 */
   exclusionDeclared: CarryoverExclusionDeclared;
 }
@@ -92,6 +102,8 @@ export const CARRYOVER_DEFAULTS: CarryoverTaxationForm = {
   giftTaxBase: "",
   donorCapitalExpenditure: "",
   giftDateValuation: "",
+  donorRelation: "",
+  donorDeceased: false,
   exclusionDeclared: {
     expropriationWithin2Years: false,
     oneHouseExemptionApplies: false,
@@ -145,6 +157,11 @@ export function migrateCarryoverFields(a: Record<string, unknown>): void {
       typeof raw.donorCapitalExpenditure === "string" ? raw.donorCapitalExpenditure : "",
     giftDateValuation:
       typeof raw.giftDateValuation === "string" ? raw.giftDateValuation : "",
+    // ③ normalize — §97의2① 관계요건 2필드. 구형 sessionStorage에는 없다.
+    // ⚠️ donorDeceased 기본값이 true로 새면 **기존 이월과세가 전부 배제**된다.
+    donorRelation:
+      raw.donorRelation === "spouse" || raw.donorRelation === "lineal" ? raw.donorRelation : "",
+    donorDeceased: raw.donorDeceased === true,
     exclusionDeclared: {
       expropriationWithin2Years: !!excl.expropriationWithin2Years,
       oneHouseExemptionApplies: !!excl.oneHouseExemptionApplies,

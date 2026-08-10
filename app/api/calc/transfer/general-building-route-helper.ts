@@ -136,6 +136,9 @@ function composeGbCarryover(gbRaw: Record<string, unknown>): {
       donorCapitalExpenditure: part.donorCapitalExpenditure,
       // 영 §163의2②2호 분자 = 비교과세 시나리오 B 취득가액 (같은 값을 겸한다)
       giftDateValuation: assetValue,
+      // §97의2① 관계요건 — 증여 **사건**의 사실이라 토지·건물 두 파트에 같은 값이 실린다.
+      donorRelation: event.donorRelation,
+      donorDeceased: event.donorDeceased,
       exclusionDeclared: event.exclusionDeclared,
       // 환산 모드 분자 — 카드 조립 시 `standardPriceAtAcquisition`으로 꺼낸다(D9-8)
       donorStandardPriceAtAcquisition: part.donorStandardPriceAtAcquisition,
