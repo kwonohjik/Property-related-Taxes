@@ -168,6 +168,89 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
   });
 
   // ══════════════════════════════════════════════════════════════════
+  // GBF-21 — 「함께 양도」 가드가 지분 분할까지 막지 않는다 🔴
+  // ══════════════════════════════════════════════════════════════════
+  describe("GBF-21: SINGLE_ONLY 가드는 함께양도 전용", () => {
+    /**
+     * 🔴 **E2E가 잡은 갭**(2026-08-10). `collectStepIssues`에는 차단 블록이 **둘** 있다:
+     *   (1) 지분 모드 자산종류 차단 — GBF-13이 검증
+     *   (2) `assets.length > 1` **함께양도** 차단(`SINGLE_ONLY`) ← **이쪽을 놓쳤다**
+     *
+     * (2)는 「일괄(5-a)이 일반건물 분기를 삼킨다」가 근거인데, 지분 분할은 route 5-0이
+     * **5-a보다 앞에서** 가로채므로 삼킴이 없다. 그런데 `assets.length > 1`만 보고 걸려서
+     * 지분 분할 일반건물이 **계산 자체를 못 했다**.
+     *
+     * vitest anchor는 payload를 손으로 만들어 route를 불렀기 때문에 못 잡았다 —
+     * **폼 → 계산 전체 배관을 도는 E2E**가 필요했던 이유다.
+     */
+    it("지분 분할 일반건물은 「함께 양도와 같이 계산할 수 없습니다」가 뜨지 않는다", () => {
+      const msgs = messages(fractionalForm([SHARE_A, SHARE_B]));
+      expect(msgs.some((m) => m.includes("함께 양도와 같이 계산할 수 없습니다"))).toBe(false);
+    });
+
+    /**
+     * 🔑 **양성 대조군** — 진짜 함께양도(지분율 100%인 자산 2건)는 **계속 차단**되어야 한다.
+     * 이게 없으면 「가드를 통째로 없앴다」와 구별되지 않는다.
+     */
+    it("진짜 함께양도(전 자산 100%)는 계속 차단된다", () => {
+      const full1 = gbShare({ assetId: "f1", ownershipNumerator: "100", ownershipDenominator: "100" });
+      const full2 = gbShare({ assetId: "f2", ownershipNumerator: "100", ownershipDenominator: "100" });
+      const msgs = messages(fractionalForm([full1, full2]));
+      expect(msgs.some((m) => m.includes("일반건물(토지·건물 일괄)은(는) 함께 양도"))).toBe(true);
+    });
+
+    it("겸용주택·재개발·부담부증여의 함께양도 차단은 그대로다", () => {
+      const redev1 = gbShare({ assetId: "r1", assetKind: "redevelopment_apt", ownershipNumerator: "100", ownershipDenominator: "100" });
+      const redev2 = gbShare({ assetId: "r2", assetKind: "redevelopment_apt", ownershipNumerator: "100", ownershipDenominator: "100" });
+      const msgs = messages(fractionalForm([redev1, redev2]));
+      expect(msgs.some((m) => m.includes("재개발·재건축"))).toBe(true);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════
+  // GBF-22 — 화면에 없는 칸을 요구하지 않는다 (⑧ UI↔validate 모순 금지) 🔴
+  // ══════════════════════════════════════════════════════════════════
+  describe("GBF-22: 지분 카드의 물건-수준 필드를 validate가 요구하지 않는다", () => {
+    /**
+     * 🔴 **E2E가 잡은 두 번째 갭**(2026-08-10). 지분 카드는 면적·양도시 기준시가·용도지역을
+     * **UI에서 숨긴다**(`shareAcquisitionOnly`). 그런데 자산별 검증 루프가
+     * `mergePrimaryBasic`(7키)만 병합해서 「자산 2: 토지면적을 입력하세요」가 떴다 —
+     * **화면에 칸이 없는데 입력하라는** 모순이다(CLAUDE.md ⑧).
+     *
+     * ⇒ 일반건물 지분은 ④ API 변환과 **같은 함수**(`mergeGbPropertyLevel`)로 병합한다.
+     */
+    const BARE_SHARE = {
+      ...makeDefaultAsset(2),
+      // 지분 카드가 실제로 갖는 상태 — 물건-수준 GB 필드가 **비어 있다**(UI에서 안 받으니까).
+      acquisitionCause: "purchase",
+      gbBuildingAcquisitionCause: "purchase",
+      acquisitionDate: "2015-03-01",
+      ownershipNumerator: "40",
+      ownershipDenominator: "100",
+      useEstimatedAcquisition: true,
+      landAcqMode: "estimated",
+      buildingAcqMode: "estimated",
+      gbAcqLandPricePerSqm: "1,500,000",
+      gbAcqBuildingValue: "150,000,000",
+    } as AssetForm;
+
+    it("면적·양도시 기준시가 미입력 지분이 차단되지 않는다", () => {
+      const issues = issuesAt(fractionalForm([SHARE_A, BARE_SHARE]), 1);
+      expect(issues.map((i) => i.message)).toEqual([]);
+    });
+
+    /**
+     * 🔑 **양성 대조군** — 병합해도 채워지지 않는 **지분 고유** 필수값은 계속 차단되어야 한다.
+     * 이게 없으면 「지분 카드 검증을 통째로 껐다」와 구별되지 않는다.
+     */
+    it("지분 고유 필수값(취득시 기준시가)이 비면 계속 차단된다", () => {
+      const noAcqStd = { ...BARE_SHARE, gbAcqLandPricePerSqm: "", gbAcqBuildingValue: "" } as AssetForm;
+      const issues = issuesAt(fractionalForm([SHARE_A, noAcqStd]), 1);
+      expect(issues.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════
   // GBF-14 — 범위 밖 조합은 계속 차단 (계획 §2-2)
   // ══════════════════════════════════════════════════════════════════
   describe("GBF-14: 부담부증여·공익수용은 범위 밖 유지", () => {

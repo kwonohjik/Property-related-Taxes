@@ -135,7 +135,18 @@ export function CompanionAssetCard({
     hideInheritedSections && primaryAsset
       ? { ...asset, assetKind: primaryAsset.assetKind }
       : asset;
-  const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
+  /**
+   * 카드 제목의 자산종류 — 지분 companion은 **primary값**으로 표시한다.
+   *
+   * 지분 sibling은 `makeDefaultAsset`로 생성돼 저장값이 "housing"이다. ③은 주입값으로
+   * 올바르게 렌더되는데(아래 `acquisitionAsset`) 제목만 「자산 2 — 주택」으로 남아
+   * **같은 카드가 두 자산종류를 말하는** 상태가 됐다(2026-08-10 스크린샷 실측).
+   */
+  const kindLabelSource =
+    splitMode === "fractional" && index > 0 && primaryAsset
+      ? primaryAsset.assetKind
+      : asset.assetKind;
+  const kindLabel = ASSET_KIND_LABELS[kindLabelSource] ?? kindLabelSource;
   const isNewConstruction = asset.acquisitionCause === "newConstruction";
 
   // 부수토지 일체과세 자동 분기 배지 (useEffect 금지 — useMemo 훅) / 날짜 순서 실시간 경고

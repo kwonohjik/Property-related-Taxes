@@ -695,7 +695,12 @@ export function GeneralBuildingBlock({
           </ToggleCard>
         )}
 
-        <GeneralBuildingNblSection asset={asset} onChange={onChange} />
+        {/* 🔒 비사업용토지 판정(용도지역·허가미이행)도 **물건-수준**이다 —
+            「지방세법 시행령」 §101①2호·②의 배율은 물건의 용도지역으로 정해진다.
+            자산 1에서 한 번 받고 API 변환이 전 지분에 복사한다(`GB_PROPERTY_LEVEL_FORM_FIELDS`).
+            ⚠️ 숨기지 않으면 「용도지역 (필수) — 미선택 시 계산이 진행되지 않습니다」가 지분 카드에
+               미선택으로 떠서, 실제로는 병합돼 통과하는데도 사용자에게 거짓 경고를 보낸다. */}
+        {!shareAcquisitionOnly && <GeneralBuildingNblSection asset={asset} onChange={onChange} />}
 
         {/* 🔒 주택→상가 용도변경·§99-164-10 최초공시도 **물건 사건** — 지분 카드에서 숨긴다.
             적용 여부는 route가 지분 취득일로 판정한다(`general-building-share-events.ts`). */}
