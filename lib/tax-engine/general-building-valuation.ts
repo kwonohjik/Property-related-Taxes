@@ -20,6 +20,7 @@
 import { computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
+import { splitLandCarryover } from "./carryover-land-split";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-extension";
@@ -437,6 +438,16 @@ export function buildGeneralBuildingAssetCards(
     const landBusinessTransfer = apportionLandByBusinessArea(allocation.land, allowedLandArea, input.landArea);
     const landBusinessAcq = apportionLandByBusinessArea(acquisition.land, allowedLandArea, input.landArea);
     const landBusinessExp = apportionLandByBusinessArea(estimatedDeduction.land, allowedLandArea, input.landArea);
+    /**
+     * 🔴 이월과세 입력도 **함께 갈라야 한다** — 종전에는 두 카드가 `landCarryoverTaxation`을
+     *    통째로 받아 취득가액·증여 당시 평가액·증여세가 전부 **2배**로 들어갔다
+     *    (실측 과소분 8,706,426). 위 세 줄과 **같은 면적 비율**을 쓴다.
+     */
+    const splitCt = splitLandCarryover(
+      input.landCarryoverTaxation,
+      allowedLandArea,
+      input.landArea,
+    );
     assetCards.push({
       propertyId: "land_business",
       propertyLabel: "토지-사업용(1001)",
@@ -453,7 +464,7 @@ export function buildGeneralBuildingAssetCards(
       landAcquisitionCause: input.landAcquisitionCause,
       decedentAcquisitionDate: input.decedentAcquisitionDate,
       donorAcquisitionDate: input.donorAcquisitionDate,
-      carryoverTaxation: input.landCarryoverTaxation,
+      carryoverTaxation: splitCt.business,
     });
     // 토지 카드 2: 비사업용 초과분 (원단위 잔여 흡수)
     assetCards.push({
@@ -472,7 +483,7 @@ export function buildGeneralBuildingAssetCards(
       landAcquisitionCause: input.landAcquisitionCause,
       decedentAcquisitionDate: input.decedentAcquisitionDate,
       donorAcquisitionDate: input.donorAcquisitionDate,
-      carryoverTaxation: input.landCarryoverTaxation,
+      carryoverTaxation: splitCt.nbl,
     });
   } else {
     // 전체 사업용 (1장)
