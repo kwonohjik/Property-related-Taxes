@@ -90,6 +90,10 @@ export function calcCarryoverScenarios(
      * 여기서 회수한다(D-7a). 부담부증여가 아니면 undefined.
      */
     transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
+    /** §89①3호 각 목 해당 여부 — ②2호 자동 판정용(D-8). 전액 비과세. */
+    isExempt?: boolean;
+    /** 동상 — 12억 초과 고가주택(부분 비과세). `isExempt || isPartialExempt`가 ②2호 요건이다. */
+    isPartialExempt?: boolean;
   },
 ): CalcCarryoverResult | null {
 
@@ -294,6 +298,7 @@ export function calcCarryoverScenarios(
     return finishScenarios({
       rawInput, ct, rates, calculateTransferTax,
       applicablePeriodYears,
+      scenarioAIsOneHouse: resultABG.isExempt === true || resultABG.isPartialExempt === true,
       inputAFinal: inputABase,
       resultA: resultABG,
       donorAcqPrice: bgAcqPrice,
@@ -378,6 +383,7 @@ export function calcCarryoverScenarios(
   return finishScenarios({
     rawInput, ct, rates, calculateTransferTax,
     applicablePeriodYears,
+    scenarioAIsOneHouse: resultA.isExempt === true || resultA.isPartialExempt === true,
     inputAFinal,
     resultA,
     donorAcqPrice,
@@ -412,7 +418,11 @@ function finishScenarios(args: {
     longTermHoldingRate: number;
     taxBase: number;
     calculatedTax: number;
+    isExempt?: boolean;
+    isPartialExempt?: boolean;
   };
+  /** 시나리오 A가 §89①3호 각 목의 주택 양도에 해당하는가 — ②2호 판정의 한쪽 항(D-8). */
+  scenarioAIsOneHouse: boolean;
   applicablePeriodYears: 5 | 10;
   inputAFinal: TransferTaxInput;
   resultA: { determinedTax: number; transferGain: number };
@@ -477,6 +487,55 @@ function finishScenarios(args: {
     calculatedTax: resultB.calculatedTax,
     determinedTax: determinedTaxB,
   };
+
+  /**
+   * Step 5.5: **§97의2②2호 자동 판정** (2026-08-10 D-8).
+   *
+   * > 2. 제1항을 적용할 경우 제89조제1항제3호 각 목의 주택[…**고가주택**(이에 딸린 토지를
+   * >    포함한다)을 포함한다]의 양도에 **해당하게 되는 경우**
+   *
+   * ## 🔑 「해당하게 **되는**」은 **상태 변화**를 요구한다 — 예규 2건이 일치한다
+   *
+   * · **사전-2016-법령해석재산-0374**(법령해석과-3693, 2016.11.15.):
+   *   「같은 조 제1항 규정을 **적용하지 아니하는 경우에도** … 1세대1주택 고가주택의 양도에
+   *     해당하게 되는 경우 **제97조의2제2항제2호를 적용하지 않는 것**이며, 취득가액은 그
+   *     배우자의 취득 당시 금액으로 하고, 그 배우자의 보유기간을 통산하는 것입니다.」
+   * · **서면-2022-부동산-0068**(부동산납세과-3383, 2022.11.02. · 기재부 재산세제과-333 인용):
+   *   「§89①3호 각 목 외의 부분에 따른 **1세대 1주택에 해당하는 주택**을 배우자로부터
+   *     증여받아 양도하는 경우에는 … **§97의2②2호를 적용하지 않는 것**입니다.」
+   *
+   * ⇒ **이월과세를 적용하지 않아도 이미 1세대1주택이면 ②2호는 발동하지 않는다**
+   *   (= 이월과세를 그대로 **적용**한다). ②2호는 **이월과세를 적용해야 비로소** 1세대1주택이
+   *   되는 경우, 즉 **A는 해당하는데 B는 해당하지 않는** 조합에서만 걸린다.
+   *
+   * ## ⚠️ ②3호보다 **앞**에 둔다
+   *
+   * ②2호가 걸리면 ①을 적용하지 않으므로 ②3호의 세액 비교는 **하지 않는다**.
+   * 그래서 `comparisonExclusion`은 false다(비교로 배제된 것이 아니다).
+   *
+   * ## 왜 자동 판정이 필요했나 — ②3호가 대신해 주지 못하는 구간이 있다
+   *
+   * ②3호가 ②2호를 덮어 주는 것은 「A가 비과세로 **싸지기**」 때문이다. **A가 비싼 채로**
+   * 비과세에 해당하면(양도인 취득가액이 높아 B의 차익이 작은 경우) ②3호는 걸리지 않는다.
+   */
+  const oneHouseExclusion =
+    args.scenarioAIsOneHouse &&
+    !(resultB.isExempt === true || resultB.isPartialExempt === true);
+
+  if (oneHouseExclusion) {
+    return {
+      detail: {
+        isEligible: false,
+        applicablePeriodYears,
+        exclusionReason: "one_house_exemption",
+        scenarioA,
+        scenarioB,
+        adoptedScenario: "B",
+        comparisonExclusion: false,
+      },
+      adoptedInput: inputB,
+    };
+  }
 
   // ─────────────────────────────────────────────────────────
   // Step 6: 비교과세 (§97조의2 ② 3호)

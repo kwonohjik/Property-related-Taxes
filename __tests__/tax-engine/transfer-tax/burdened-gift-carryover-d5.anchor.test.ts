@@ -13,23 +13,27 @@
  * > 3. 제1항을 적용하여 계산한 양도소득 결정세액이 제1항을 적용하지 아니하고 계산한
  * >    양도소득 결정세액보다 **적은** 경우
  *
- * ## 이 anchor가 고정하는 것 (2026-08-10 D-7a 배선 후 갱신)
+ * ## ✅ D-8 완료(2026-08-10) — ②2호 **자동 판정**이 들어갔다
  *
- * · **D5-1·D5-2** — ②2호가 노리는 상황(A에서만 비과세 성립)이 실제로 생기지만, **②3호가 먼저**
- *   배제한다. 배선 전후로 세액은 달라졌으나 **결론(B 채택)은 그대로**다.
- * · **D5-3** — ②1호는 부담부증여에서 원리상 발현되지 않는다(수용 ≠ 부담부증여). 선언 시 배제만 확인.
- * · **D5-4** — 🔴 **②2호 미구현 사각지대**. ②3호가 못 잡는 조합이 실재한다.
+ * 이 파일은 하루에 두 번 뒤집혔다. D-7a(세 축 배선) 직후에는 「②3호가 먼저 배제한다」였고,
+ * D-8이 ②2호 자동 판정을 넣으면서 **배제 사유 자체가 바뀌었다**(`tax_comparison` →
+ * `one_house_exemption`).
  *
- * ## 🔴 D5-4가 고정하는 것은 「옳은 동작」이 아니라 **결함**이다
+ * ## 🔑 「해당하게 **되는**」은 **상태 변화**를 요구한다 — 예규 2건이 일치
  *
- * §97의2②2호는 「제1항을 적용할 경우 §89①3호 각 목의 주택(**고가주택 포함**)의 양도에
- * 해당하게 되는 경우」 이월과세를 **적용하지 않는다**고 정한다. 현행 엔진은 이 판정을
- * **사용자 선언**(`exclusionDeclared.oneHouseExemptionApplies`)으로만 받고 자동 판정이 없다.
+ * · **사전-2016-법령해석재산-0374**(2016.11.15.): 「제1항 규정을 **적용하지 아니하는 경우에도**
+ *   … 1세대1주택 고가주택의 양도에 해당하게 되는 경우 **§97의2②2호를 적용하지 않는 것**」
+ * · **서면-2022-부동산-0068**(2022.11.02. · 기재부 재산세제과-333 인용): 「§89①3호 각 목 외의
+ *   부분에 따른 **1세대 1주택에 해당하는 주택**을 배우자로부터 증여받아 양도하는 경우에는
+ *   … **§97의2②2호를 적용하지 않는 것**」
  *
- * ⚠️ **부담부증여가 만든 결함이 아니다** — 일반 양도 이월과세에서 동일하게 재현된다
- *    (2026-08-10 실측: 양도가 15억·당초 증여자 취득가 1천만·증여 당시 평가 15억 ⇒
- *     A 58,378,000 채택 · `exemptReason` "1세대1주택 고가주택"). 그래서 이 anchor는
- *    **현상을 고정**하고, 수정은 계획서 **D-8**로 분리했다(§5.10).
+ * ⇒ **A는 해당하는데 B는 해당하지 않는** 조합에서만 발동한다.
+ *   **D5-5가 그 반대쪽(둘 다 해당 → 미발동)을 고정**한다 — 없으면 「무조건 발동」과 구별되지 않는다.
+ *
+ * · **D5-1·D5-2** — ②2호가 **자동으로** 걸린다(종전 `tax_comparison`이 아니다)
+ * · **D5-3** — ②1호는 부담부증여에서 원리상 발현되지 않는다(수용 ≠ 부담부증여). 선언 시 배제만 확인
+ * · **D5-4** — ✅ **사각지대 닫힘**. A가 비싼 채로 비과세인 조합도 이제 ②2호가 잡는다
+ * · **D5-5** — 🔑 **상태 변화 조건의 양성 대조군**. B도 1세대1주택이면 ②2호는 **발동하지 않는다**
  */
 
 import { describe, it, expect } from "vitest";
@@ -101,7 +105,7 @@ function run(over: Partial<TransferTaxInput>) {
 }
 
 describe("D5 — §97의2② 1호·2호가 부담부증여에서 어떻게 발현되나", () => {
-  it("D5-1 ②2호: A에서만 1세대1주택 2년 보유가 성립하는데도 **자동 판정이 없다**", () => {
+  it("D5-1 ②2호가 **자동으로** 걸린다 — A에서만 1세대1주택 2년 보유가 성립한다", () => {
     const r = run({
       transferType: "burdened_gift",
       burdenedGiftInfo: bgInfoUnder12,
@@ -119,15 +123,15 @@ describe("D5 — §97의2② 1호·2호가 부담부증여에서 어떻게 발�
     expect(d?.scenarioA.determinedTax).toBe(0);
     expect(d?.scenarioB.determinedTax).toBe(168_000_000);
 
-    // 그런데 현행 엔진의 ②2호 경로는 **사용자 선언**(oneHouseExemptionApplies)뿐이라
-    // 자동 판정이 없다. 배제를 실제로 일으킨 것은 **②3호**(A < B)다.
-    expect(d?.exclusionReason).not.toBe("one_house_exemption");
-    expect(d?.exclusionReason).toBe("tax_comparison");
+    // 🔑 배제 사유가 **②2호**다 — 종전에는 사용자 선언이 없으면 ②3호(tax_comparison)로
+    //    떨어졌다. 세액은 같지만 **사유가 다르다**(②2호는 비교 이전에 적용을 배제한다).
+    expect(d?.exclusionReason).toBe("one_house_exemption");
+    expect(d?.comparisonExclusion).toBe(false);
     expect(d?.adoptedScenario).toBe("B");
     expect(r.calculatedTax).toBe(168_000_000);
   });
 
-  it("D5-2 ②2호 고가주택(C=15억): 여기서도 ②3호가 먼저 배제한다", () => {
+  it("D5-2 ②2호 고가주택(C=15억): 괄호가 고가주택을 **포함**하므로 동일하게 걸린다", () => {
     const r = run({
       transferType: "burdened_gift",
       burdenedGiftInfo: bgInfoOver12,
@@ -140,7 +144,8 @@ describe("D5 — §97의2② 1호·2호가 부담부증여에서 어떻게 발�
     // (D-7a 배선으로 취득가액이 당초 증여자 기준으로 낮아져 5,981,000 → 8,709,600으로 올랐다.)
     expect(d?.scenarioA.determinedTax).toBe(8_709_600);
     expect(d?.scenarioB.determinedTax).toBe(252_116_667);
-    expect(d?.exclusionReason).toBe("tax_comparison");
+    // §97의2②2호 괄호: 「비과세대상에서 제외되는 **고가주택**(이에 딸린 토지를 포함한다)을 포함한다」
+    expect(d?.exclusionReason).toBe("one_house_exemption");
     expect(d?.adoptedScenario).toBe("B");
   });
 
@@ -159,7 +164,7 @@ describe("D5 — §97의2② 1호·2호가 부담부증여에서 어떻게 발�
     expect(d?.adoptedScenario).toBe("B");
   });
 
-  it("D5-4 🔴 ②2호 사각지대 — ②3호가 **못 잡는** 조합이 실재한다 (현행=결함)", () => {
+  it("D5-4 ✅ 사각지대 닫힘 — A가 **비싼 채로** 비과세인 조합도 ②2호가 잡는다", () => {
     /**
      * ②3호가 ②2호를 대신해 주는 것은 「A가 비과세로 싸지기 때문」이다. 그렇다면
      * **A가 비싼 채로 비과세에 해당**하면 ②3호는 걸리지 않는다. 그 조합을 만든다:
@@ -184,21 +189,45 @@ describe("D5 — §97의2② 1호·2호가 부담부증여에서 어떻게 발�
     } as never);
     const d = r.carryoverTaxationDetail;
 
-    // ②3호는 「A가 **적은** 경우」만 배제한다 — 여기서는 A가 비싸서 걸리지 않는다.
+    // ②3호는 「A가 **적은** 경우」만 배제한다 — 여기서는 **A가 비싸서** 걸리지 않는다.
     expect(d?.scenarioB.determinedTax).toBe(0);
-    expect(d?.scenarioA.determinedTax).toBeGreaterThan(0);
-    expect(d?.adoptedScenario).toBe("A");
+    expect(d?.scenarioA.determinedTax).toBeGreaterThan(d!.scenarioB.determinedTax);
+    // 비교로 배제된 것이 아니다(②2호가 비교 이전에 적용을 배제한다).
     expect(d?.comparisonExclusion).toBe(false);
 
-    // 그런데 그 A는 **§89①3호 고가주택의 양도**다 ⇒ ②2호가 적용을 배제했어야 한다.
-    expect(r.exemptReason).toContain("고가주택");
-
     /**
-     * ⛔ 아래 단언은 **현행 결함을 고정**한 것이다. D-8에서 ②2호 자동 판정을 넣으면
-     *    `exclusionReason === "one_house_exemption"` · 세액 0으로 **뒤집혀야 한다**.
-     *    ❌ 그때 값을 맞추지 말고 이 테스트를 다시 쓸 것.
+     * 🔑 **여기가 D-8의 존재 이유다.** ②3호는 「A가 **적은** 경우」만 배제하므로 이 조합을
+     *    못 잡는다(A가 비싸다). ②2호 자동 판정이 없으면 §89①3호 고가주택 양도인데도
+     *    이월과세가 **적용**돼 10,324,640원이 부과됐다.
      */
-    expect(d?.exclusionReason).toBeUndefined();
-    expect(r.calculatedTax).toBeGreaterThan(0);
+    expect(d?.exclusionReason).toBe("one_house_exemption");
+    expect(d?.adoptedScenario).toBe("B");
+    // B가 채택되므로 B의 세액(0)이 최종이다.
+    expect(r.calculatedTax).toBe(0);
+  });
+
+  it("D5-5 🔑 양성 대조군 — **B도** 1세대1주택이면 ②2호는 발동하지 않는다", () => {
+    /**
+     * 「해당하게 **되는**」은 **상태 변화**를 요구한다(예규 2건 — 파일 헤더).
+     * 이 테스트가 없으면 구현이 「A가 비과세면 무조건 배제」인지 「A만 비과세일 때 배제」인지
+     * **구별되지 않는다**(메모리 `feedback_negative_assertion_needs_mutation_probe`).
+     *
+     * 픽스처: 증여를 2023-06-01로 **앞당겨** 시나리오 B의 보유기간도 2년을 넘긴다
+     * (2년 8개월). ⇒ 이월과세를 적용하지 않아도 이미 1세대1주택이다.
+     */
+    const r = run({
+      transferType: "burdened_gift",
+      burdenedGiftInfo: bgInfoUnder12,
+      acquisitionCause: "carryover_gift",
+      carryoverTaxation: { ...carryover, giftRegistryDate: new Date("2023-06-01") },
+    } as never);
+    const d = r.carryoverTaxationDetail;
+
+    // 두 시나리오 모두 2년 보유를 넘겨 **둘 다** 비과세에 해당한다.
+    expect(d?.scenarioA.holdingPeriodYears).toBe(25);
+    expect(d?.scenarioB.holdingPeriodYears).toBe(2);
+
+    // ⇒ ②2호는 걸리지 않는다. 배제된다면 그것은 ②3호(세액 비교)여야 한다.
+    expect(d?.exclusionReason).not.toBe("one_house_exemption");
   });
 });
