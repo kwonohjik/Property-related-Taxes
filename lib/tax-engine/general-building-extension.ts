@@ -25,6 +25,7 @@
 
 import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
+import { splitLandCarryover } from "./carryover-land-split";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
@@ -421,6 +422,13 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     const landBusinessTransfer = apportionLandByBusinessArea(landTransferPrice, allowedLandArea, input.landArea);
     const landBusinessAcq = apportionLandByBusinessArea(landAcq, allowedLandArea, input.landArea);
     const landBusinessExp = apportionLandByBusinessArea(landExp, allowedLandArea, input.landArea);
+    // 🔴 이월과세 입력도 함께 갈라야 한다 — 통째로 주면 금액이 2배가 된다.
+    //    `general-building-valuation.ts`의 같은 분기와 **동일한 술어·인자**.
+    const splitCt = splitLandCarryover(
+      input.landCarryoverTaxation,
+      allowedLandArea,
+      input.landArea,
+    );
     assetCards.push({
       propertyId: "land_business",
       propertyLabel: "토지-사업용(1001)",
@@ -437,7 +445,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       landAcquisitionCause: input.landAcquisitionCause,
       decedentAcquisitionDate: input.decedentAcquisitionDate,
       donorAcquisitionDate: input.donorAcquisitionDate,
-      carryoverTaxation: input.landCarryoverTaxation,
+      carryoverTaxation: splitCt.business,
     });
     assetCards.push({
       propertyId: "land_nbl",
@@ -455,7 +463,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       landAcquisitionCause: input.landAcquisitionCause,
       decedentAcquisitionDate: input.decedentAcquisitionDate,
       donorAcquisitionDate: input.donorAcquisitionDate,
-      carryoverTaxation: input.landCarryoverTaxation,
+      carryoverTaxation: splitCt.nbl,
     });
   } else {
     assetCards.push({
@@ -516,11 +524,29 @@ export function buildGeneralBuildingAssetCardsWithExtension(
           return bd ? { donorAcquisitionDate: bd } : {};
         })()
       : {}),
+    /**
+     * 🔴 건물 이월과세 (§97의2) — 종전에는 **주입 자체가 없었다.**
+     *
+     * 증축 없는 경로(`general-building-valuation.ts`)에는 실려 있었고 **여기만** 빠져 있어,
+     * 증축이 있으면 건물 §97의2가 통째로 no-op이었다(실측: 선언 유무로 세액 변화 **0**,
+     * 대조군은 12,084,228 움직임). 조건은 그쪽과 **같은 술어**를 쓴다.
+     * [[feedback_sibling_path_already_implements_rule]] · [[feedback_shared_predicate_argument_parity]]
+     */
+    ...(input.buildingCarryoverTaxation
+      ? { carryoverTaxation: input.buildingCarryoverTaxation }
+      : {}),
   });
 
-  // 건물2 카드 — 건물2 모드에 따라 usedEstimatedAcquisition 분기
-  // acquisitionDate = extensionDate (건물2 LTHD 기산점 = 증축일)
-  // isSelfBuilt: extensionAcquisitionCause==="newConstruction" → §114조의2 가산세 발동 가능
+  /**
+   * 건물2 카드 — 건물2 모드에 따라 usedEstimatedAcquisition 분기.
+   * acquisitionDate = extensionDate (건물2 LTHD 기산점 = 증축일)
+   * isSelfBuilt: extensionAcquisitionCause==="newConstruction" → §114조의2 가산세 발동 가능
+   *
+   * ⚠️ **이월과세는 싣지 않는다.** `extensionAcquisitionCause`는 타입상
+   *    `"purchase" | "newConstruction"` 뿐이라 이월과세가 취득원인으로 성립하지 않는다.
+   *    건물1과 건물2는 **같은 건물 자산**이므로 양쪽에 실으면 취득가액·증여세가 2배가 된다
+   *    (아래 토지 분할이 실제로 그 상태였다). GX-3이 이 부재를 고정한다.
+   */
   const building2IsSelfBuilt = ext.extensionAcquisitionCause === "newConstruction";
   assetCards.push({
     propertyId: "building2",
