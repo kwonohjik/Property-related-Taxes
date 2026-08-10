@@ -41,7 +41,7 @@ export interface CalcCarryoverResult {
 // ============================================================
 
 /**
- * §97조의2 ① 2호 후단 시행일 (2023.12.31. 신설 → 2024.1.1. 이후 양도분부터 적용).
+ * §97조의2 ① 2호 시행일 (2023.12.31. 개정 → 2024.1.1. 이후 양도분부터 적용).
  * 양도일 < 이 날짜이면 donorCapitalExpenditure 를 0으로 처리.
  */
 const DONOR_CAPEX_EFFECTIVE_DATE = new Date("2024-01-01");
@@ -170,7 +170,7 @@ export function calcCarryoverScenarios(
   }
 
   // ─────────────────────────────────────────────────────────
-  // Step 3: 시행시기 가드 (donorCapex, §97조의2 ① 2호 후단)
+  // Step 3: 시행시기 가드 (donorCapex, §97조의2 ① 2호)
   // ─────────────────────────────────────────────────────────
   const donorCapexGuardApplied = rawInput.transferDate < DONOR_CAPEX_EFFECTIVE_DATE;
   const effectiveDonorCapex = donorCapexGuardApplied

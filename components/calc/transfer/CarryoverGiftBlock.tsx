@@ -185,7 +185,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
 
         <FieldCard
           label="증여세 상당액"
-          hint="소득세법 §163의2: 증여세 × (해당 자산가액 ÷ 증여재산총액). 미신고 시 0 입력."
+          hint="소득세법 시행령 §163의2②: 증여세 산출세액 × (양도한 해당 자산가액 ÷ 증여세 과세가액). 미신고 시 0 입력."
           trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
         >
           <CurrencyInput
@@ -200,7 +200,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
           label="증여자 자본적지출"
           hint={
             isAfter2024
-              ? "증여자가 보유기간 중 지출한 자본적 지출액 (소득세법 §97조의2 ① 2호 후단)"
+              ? "증여자가 보유기간 중 지출한 자본적 지출액 (소득세법 §97조의2 ① 2호)"
               : "2024.1.1. 이후 양도분부터 적용 (2023.12.31. 신설)"
           }
           trailing={<LawArticleModal legalBasis="소득세법 §97의2 ① 2호" label="§97의2①2호" />}

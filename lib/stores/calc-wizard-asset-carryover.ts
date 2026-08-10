@@ -53,7 +53,7 @@ export interface CarryoverTaxationForm {
   donorAcquisitionPrice: string;
   /** 증여세 상당액 (§163의2 산식 기반, 사용자 입력) */
   giftTaxAmount: string;
-  /** 증여자 자본적지출 (§97조의2 ① 2호 후단, 2024.1.1. 이후 양도분) */
+  /** 증여자 자본적지출 (§97조의2 ① 2호, 2024.1.1. 이후 양도분) */
   donorCapitalExpenditure: string;
   /** 증여 당시 평가액 — 비교과세 시나리오 B 취득가액 */
   giftDateValuation: string;

@@ -43,7 +43,7 @@ export interface CarryoverTaxationInput {
    */
   giftTaxAmount: number;
   /**
-   * 증여자가 보유 중 지출한 자본적지출액 (§97조의2 ① 2호 후단, 2023.12.31. 신설).
+   * 증여자가 보유 중 지출한 자본적지출액 (§97조의2 ① 2호, 2023.12.31. 개정).
    * 리모델링·증축·발코니확장 등. 0 허용.
    * 시행시기 가드: 양도일 < 2024-01-01이면 엔진에서 0 처리, 결과에 경고 표시.
    */
@@ -89,7 +89,7 @@ export interface CarryoverScenarioADetail {
   holdingPeriodYears: number;
   /**
    * 필요경비 가산 — 증여세 상당액 (한도 적용 후 실제 가산 금액).
-   * §97조의2 ① 2호 전단, 시행령 §163의2
+   * §97조의2 ① 3호, 시행령 §163의2 ②
    */
   giftTaxAddedToExpense: number;
   /** 증여세 상당액 한도 발동 여부 (잔액 한도 = 증여세 가산 전 양도차익) */
@@ -98,7 +98,7 @@ export interface CarryoverScenarioADetail {
   giftTaxLimitCap: number;
   /**
    * 필요경비 가산 — 증여자 자본적지출 (시행시기 가드 후 실제 산입액).
-   * §97조의2 ① 2호 후단, 2023.12.31. 신설. 양도일 < 2024.1.1 시 0.
+   * §97조의2 ① 2호, 2023.12.31. 개정. 양도일 < 2024.1.1 시 0.
    */
   donorCapexAddedToExpense: number;
   /** 시행시기 가드 발동 여부 (양도일 < 2024-01-01 로 donorCapex 무시됨) */
