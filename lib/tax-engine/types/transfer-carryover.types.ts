@@ -97,6 +97,27 @@ export interface CarryoverScenarioADetail {
   /** 증여세 상당액 한도 캡 = 증여세 가산 직전 양도차익 */
   giftTaxLimitCap: number;
   /**
+   * **부담부증여 전용** — 증여세 상당액이 채무비율로 안분된 내역 (「소득세법 시행령」 §163의2② 2호).
+   *
+   * ## 왜 시나리오 A에 싣는가 — 결과 카드가 **채택과 무관하게** 설명해야 한다
+   *
+   * 최종 `TransferTaxResult.transferBurdenedGiftBreakdown`은 **채택된 시나리오의 것**이라
+   * B가 채택되면 A의 안분 내역이 사라진다. 그런데 비교 카드는 **A 컬럼을 항상 그린다** —
+   * 거기 뜬 `giftTaxAddedToExpense`가 입력액과 다른 이유를 설명하려면 A 자신이 들고 있어야 한다.
+   *
+   * 일반 양도에서는 안분이 없으므로 undefined다.
+   */
+  giftTaxApportionment?: {
+    /** 사용자가 입력한 증여세 상당액(총액). */
+    raw: number;
+    /** 채무비율 안분 후 = raw × 인수채무 ÷ 증여가액. */
+    apportioned: number;
+    /** 인수 채무액 B (산식 분자). */
+    debtAmount: number;
+    /** 증여가액 C (산식 분모). */
+    giftValuation: number;
+  };
+  /**
    * 필요경비 가산 — 증여자 자본적지출 (시행시기 가드 후 실제 산입액).
    * §97조의2 ① 2호, 2023.12.31. 개정. 양도일 < 2024.1.1 시 0.
    */

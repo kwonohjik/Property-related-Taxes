@@ -116,6 +116,50 @@ test.describe("부담부증여 × 이월과세(증여) — 지원 개시", () =>
     });
   });
 
+  test("CB-4: 증여세 상당액의 **안분 근거**가 화면에 뜬다", async ({ page }) => {
+    test.setTimeout(120_000);
+    /**
+     * 부담부증여에서는 산입액이 입력액과 다르다(채무비율 안분). 산식을 값 옆에 두지 않으면
+     * 사용자는 「왜 입력액과 다른가」를 알 수 없다 — 계산은 맞는데 **설명이 없는** 상태였다.
+     *
+     * ⚠️ **주택 자산으로 시드한다.** 일반건물(gb)은 route가 토지·건물 카드로 분해해
+     *    **bundled 모드**로 계산하는데 그 경로가 `carryoverTaxation`을 싣지 못한다
+     *    (부담부증여와 무관한 **기존 갭** — 부담부증여 없이 일반건물 + 이월과세만으로도
+     *     재현된다. route 하네스 실측 2026-08-10). 이 테스트의 대상은 **표시**이므로
+     *    이월과세가 실제로 도는 단건 경로에서 검증한다.
+     *
+     * 산수: 증여가액 C = 8,580,831,500 · 인수채무 B = 5억 · 증여세 1억
+     *       ⇒ 1억 × 5억 ÷ 8,580,831,500 = **5,826,941** (입력액과 다르다)
+     */
+    await seedAndCalc(page, {
+      assetKind: "housing",
+      standardPriceAtTransfer: "8580831500",
+      standardPriceAtAcq: "3148142064",
+      bgCoDonorLandStdPriceAtAcq: "0",
+      bgCoDonorBuildingStdPriceAtAcq: "1200000000",
+      carryover: {
+        giftRegistryDate: "2023-06-01",
+        donorAcquisitionDate: "2012-01-01",
+        donorAcquisitionCause: "purchase",
+        donorAcquisitionPrice: "100000000",
+        useEstimatedAcquisition: false,
+        estimationMode: "",
+        giftTaxAmount: "100000000",
+        donorCapitalExpenditure: "0",
+        giftDateValuation: "600000000",
+        exclusionDeclared: {},
+      },
+    });
+
+    // 이월과세 비교 카드가 뜨고, 그 안에 안분 산식이 있다.
+    await expect(
+      page.getByText(/증여세 상당액.*인수 채무액.*증여가액/).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // 안분 결과 금액과 조문 근거가 함께 보인다.
+    await expect(page.getByText(/5,826,941/).first()).toBeVisible();
+    await expect(page.getByText(/시행령 §163의2② 2호/).first()).toBeVisible();
+  });
+
   test("CB-3: 일반 양도 + 이월과세는 막지 않는다 (회귀 0 · CB-1의 양성 대조군)", async ({
     page,
   }) => {

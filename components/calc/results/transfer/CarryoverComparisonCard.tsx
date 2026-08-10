@@ -76,6 +76,12 @@ function InfoRow({ label, value, sub = false }: { label: string; value: string; 
 // ── Scenario A 상세 ──────────────────────────────────────────────
 
 function ScenarioAContent({ a, adopted }: { a: CarryoverScenarioADetail; adopted: boolean }) {
+  /**
+   * ⚠️ 안분 내역은 **시나리오 A 자신**이 들고 있다(`giftTaxApportionment`).
+   *    `result.transferBurdenedGiftBreakdown`은 **채택된 시나리오의 것**이라 B가 채택되면
+   *    사라지는데, 이 컬럼은 채택과 무관하게 항상 그려지기 때문이다(E2E CB-4가 이 갭을 잡았다).
+   */
+  const ap = a.giftTaxApportionment;
   return (
     <ScenarioCol label="[A] 이월과세 적용" adopted={adopted} determinedTax={a.determinedTax}>
       <div className="space-y-1">
@@ -101,9 +107,22 @@ function ScenarioAContent({ a, adopted }: { a: CarryoverScenarioADetail; adopted
             * 증여자 자본적지출: 2024.1.1. 이전 양도 — 가드 발동, 0 처리
           </p>
         )}
+        {/**
+          * 🔑 **부담부증여에서는 산입액이 입력액과 다르다** — 채무비율로 안분되기 때문이다
+          * (「소득세법 시행령」 §163의2② 2호 「양도한 해당 자산가액」). 산식을 값 옆에 두지
+          * 않으면 사용자는 「8천만을 넣었는데 왜 3,125만인가」를 알 수 없다.
+          */}
+        {ap && ap.apportioned !== ap.raw && (
+          <p className="text-micro text-muted-foreground pl-2 leading-relaxed">
+            * 증여세 상당액 {fmt(ap.raw)} × 인수 채무액 {fmt(ap.debtAmount)} ÷ 증여가액{" "}
+            {fmt(ap.giftValuation)} = <b>{fmt(ap.apportioned)}</b> (양도로 보는 부분만 산입 —
+            시행령 §163의2② 2호)
+          </p>
+        )}
         {a.giftTaxLimitApplied && (
-          <p className="text-micro text-amber-600 pl-2">
-            * 증여세 한도 발동 — 잔액한도 {fmt(a.giftTaxLimitCap)} 적용
+          <p className="text-micro text-amber-600 pl-2 leading-relaxed">
+            * 증여세 한도 발동 — {ap ? "안분액이 " : ""}「양도로 보는 부분」의 양도차익{" "}
+            {fmt(a.giftTaxLimitCap)}을 넘어 한도까지만 산입 (시행령 §163의2② 후단)
           </p>
         )}
       </div>

@@ -299,6 +299,16 @@ export function calcCarryoverScenarios(
       rawInput, ct, rates, calculateTransferTax,
       applicablePeriodYears,
       scenarioAIsOneHouse: resultABG.isExempt === true || resultABG.isPartialExempt === true,
+      // 표시용 안분 내역 — 채택이 B로 가더라도 A 컬럼이 스스로 설명할 수 있게 한다.
+      giftTaxApportionment:
+        cg && bgBreakdown
+          ? {
+              raw: cg.raw,
+              apportioned: cg.apportioned,
+              debtAmount: bgBreakdown.assumedDebtAmount,
+              giftValuation: bgBreakdown.giftValuation.max,
+            }
+          : undefined,
       inputAFinal: inputABase,
       resultA: resultABG,
       donorAcqPrice: bgAcqPrice,
@@ -423,6 +433,8 @@ function finishScenarios(args: {
   };
   /** 시나리오 A가 §89①3호 각 목의 주택 양도에 해당하는가 — ②2호 판정의 한쪽 항(D-8). */
   scenarioAIsOneHouse: boolean;
+  /** 부담부증여 전용 — 증여세 상당액 안분 내역(표시용). 일반 양도는 undefined. */
+  giftTaxApportionment?: CarryoverScenarioADetail["giftTaxApportionment"];
   applicablePeriodYears: 5 | 10;
   inputAFinal: TransferTaxInput;
   resultA: { determinedTax: number; transferGain: number };
@@ -452,6 +464,7 @@ function finishScenarios(args: {
     giftTaxAddedToExpense: args.giftTaxAddedToExpense,
     giftTaxLimitApplied: args.giftTaxLimitApplied,
     giftTaxLimitCap: args.giftTaxLimitCap,
+    giftTaxApportionment: args.giftTaxApportionment,
     donorCapexAddedToExpense: args.effectiveDonorCapex,
     donorCapexGuardApplied: args.donorCapexGuardApplied,
     effectiveCapex: args.effectiveCapex,
