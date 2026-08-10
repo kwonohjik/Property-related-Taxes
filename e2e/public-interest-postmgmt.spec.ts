@@ -77,3 +77,92 @@ test.describe("공익법인 사후관리 (§48②1호)", () => {
     await expect(page.getByText(/사전 입력되었습니다/)).toHaveCount(0);
   });
 });
+
+/**
+ * §48②4호 — 매각대금 3년.
+ *
+ * 🔑 **엔진 anchor가 고정한 「기산점이 과세기간 종료일」이 화면까지 도달하는지**가 이 블록의
+ *    존재 이유다. 결산일 입력이 없으면 엔진은 맞아도 사용자는 그 값을 넣을 길이 없다
+ *    ([[feedback_api_trigger_without_input_path_is_noop]]).
+ */
+async function openClause4(page: Page) {
+  await page.goto("/calc/public-interest-postmgmt");
+  await page.getByRole("heading", { name: /공익법인 출연재산 사후관리/ }).waitFor();
+  await page.getByRole("radio", { name: /매각대금 \(§48②4호\)/ }).check();
+}
+
+/** 매각대금 10억 · 2021-05-20 매각 · 12월 결산 · 2026-06-30 판정 */
+async function fillClause4Base(page: Page) {
+  await page.getByTestId("pi4-sale-proceeds").fill("1000000000");
+  await fillDateAndVerify(page, { year: "2021", month: "5", day: "20" }, {
+    scope: page.getByTestId("pi4-sale-date"),
+  });
+  await fillDateAndVerify(page, { year: "2021", month: "12", day: "31" }, {
+    scope: page.getByTestId("pi4-fiscal-year-end"),
+  });
+  await fillDateAndVerify(page, { year: "2026", month: "6", day: "30" }, {
+    scope: page.getByTestId("pi4-assessment-date"),
+  });
+}
+
+test.describe("공익법인 매각대금 사후관리 (§48②4호)", () => {
+  test("PI4-E2E-1: 나목 — 사용실적 8억 → 미달 1억 → 추징세액 1천만원", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause4(page);
+    await fillClause4Base(page);
+    await page.getByTestId("pi4-direct-use").fill("800000000");
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const resultBox = page.getByTestId("pi4-result");
+    await expect(resultBox).toBeVisible();
+    // 사용기준금액 9억 − 사용실적 8억 = 1억 → 1억 × 10% = 10,000,000
+    await expect(page.getByTestId("pi4-gift-tax")).toHaveText(/10,000,000/);
+    await expect(resultBox.getByText(/상증령 §40①3호 나목/).first()).toBeVisible();
+  });
+
+  test("PI4-E2E-2: ⭐ 기한이 매각일이 아니라 과세기간 종료일에서 나온다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause4(page);
+    await fillClause4Base(page);
+    await page.getByTestId("pi4-direct-use").fill("800000000");
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const resultBox = page.getByTestId("pi4-result");
+    await expect(resultBox).toBeVisible();
+    // 2021-12-31 + 3년
+    await expect(resultBox.getByText(/2024-12-31/).first()).toBeVisible();
+    // ❌ 매각일(2021-05-20) 기산이면 2024-05-20이 나온다 — 부재를 함께 단언한다.
+    await expect(resultBox.getByText(/2024-05-20/)).toHaveCount(0);
+  });
+
+  test("PI4-E2E-3: 가목 — 라디오를 바꾸면 입력 필드가 바뀌고 안분액이 나온다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause4(page);
+    await fillClause4Base(page);
+
+    await page.getByRole("radio", { name: /공익목적사업 외 사용/ }).check();
+    // 나목 필드가 사라지고 가목 필드가 나타난다 (라디오만 있고 입력 경로가 없으면 no-op).
+    await expect(page.getByTestId("pi4-direct-use")).toHaveCount(0);
+    await page.getByTestId("pi4-outside-use").fill("200000000");
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    // 9억 × 2억/10억 = 1.8억 → 1.8억 × 20% − 1천만 = 26,000,000
+    await expect(page.getByTestId("pi4-gift-tax")).toHaveText(/26,000,000/);
+    await expect(
+      page.getByTestId("pi4-result").getByText(/상증령 §40①3호 가목/).first(),
+    ).toBeVisible();
+  });
+
+  test("PI4-E2E-4: 90%를 채우면 추징 대상이 아니다 (양성 대조군)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause4(page);
+    await fillClause4Base(page);
+    await page.getByTestId("pi4-direct-use").fill("900000000");
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const resultBox = page.getByTestId("pi4-result");
+    await expect(resultBox).toBeVisible();
+    await expect(resultBox.getByText(/추징 대상 아님/)).toBeVisible();
+    await expect(page.getByTestId("pi4-gift-tax")).toHaveText(/^0/);
+  });
+});

@@ -55,8 +55,10 @@ export interface PublicInterestPostMgmtInput {
 }
 
 export interface PublicInterestPostMgmtResult {
-  /** 추징 대상인가 — 단서 충족 시 false. */
+  /** 추징 사유가 발생했는가 — 단서 충족 시 false. */
   isClawback: boolean;
+  /** 과세표준이 §55② 과세최저한(50만원) 미만이라 세액이 0인가. */
+  belowMinimumTaxBase: boolean;
   /** 단서로 제외된 경우의 사유 문구. 추징이면 undefined. */
   exemptReason?: string;
   /** 출연일부터 3년이 되는 날 (ISO) — 나목·다목 판정 경계. */
@@ -66,6 +68,95 @@ export interface PublicInterestPostMgmtResult {
   /** 추징 대상 가액 = min(violatedValue, donatedValue). 단서 충족 시 0. */
   clawbackBase: number;
   /** 증여세 과세표준 — 공익법인은 §53 증여재산공제 대상이 아니므로 과세가액과 같다. */
+  taxBase: number;
+  /** 추징 증여세 (§56 누진세율). */
+  giftTax: number;
+  /** 적용 한계세율 (표시용). */
+  appliedRate: number;
+  /** 누진공제 (표시용). */
+  progressiveDeduction: number;
+  /** 산식·근거 단계. */
+  steps: Array<{ label: string; formula: string; amount: number; legalBasis: string }>;
+  /** 실무 주의 안내. */
+  warnings: string[];
+}
+
+// ============================================================
+// §48②4호 — 출연재산 **매각대금** 3년 사후관리
+// ============================================================
+
+/**
+ * ## ⚠️ 1호와 **세 축이 다르다** — 1호 코드를 복사하면 조용히 틀린다
+ *
+ * | | §48②1호 (출연재산) | **§48②4호 (매각대금)** |
+ * |---|---|---|
+ * | 3년 기산점 | 출연받은 **날** | 매각한 날이 속하는 **과세기간·사업연도 종료일** (상증령 §38④) |
+ * | 판정 기준 | 「사용하지 아니한」 (정성) | 사용실적이 **매각대금의 90%에 미달** (정량) |
+ * | 부득이한 사유 단서 | **있다** (§48②1호 단서·상증령 §38③) | **없다** — 단서·시행령 모두 「제1호」에 한정 |
+ *
+ * 기산점 차이는 12월 결산 법인에서 최대 1년 가까이 벌어진다.
+ */
+export type SaleProceedsViolation =
+  /** 가목 — 매각대금을 직접 공익목적사업 **외**에 사용 */
+  | "used_outside_purpose"
+  /** 나목 — 3년 이내 사용실적이 사용기준금액(90%)에 **미달** */
+  | "under_use_threshold";
+
+export interface PublicInterestSaleProceedsInput {
+  /**
+   * 매각대금 (원).
+   *
+   * 법 §48②1호 본문 괄호(「이하 이 조에서 같다」)에 따라 **매각에 따라 부담하는 국세 및
+   * 지방세를 뺀** 금액이다(상증령 §38 — 「대통령령으로 정하는 공과금 등」).
+   */
+  saleProceeds: number;
+  /** 매각한 날 (ISO yyyy-MM-dd) — 표시용. 3년 기산점은 아래 `fiscalYearEndDate`다. */
+  saleDate: string;
+  /**
+   * 매각한 날이 속하는 **과세기간 또는 사업연도의 종료일** (ISO) — 상증령 §38④ 3년 기산점.
+   *
+   * ⚠️ 자동 도출하지 않는다. 공익법인마다 사업연도가 다르고(12월 결산이 다수이나 학교법인 등은
+   * 2월 말), 매각일만으로는 결정할 수 없다 — 추정 fallback은 세액을 조용히 바꾼다.
+   */
+  fiscalYearEndDate: string;
+  /** 판정 기준일 (ISO). */
+  assessmentDate: string;
+  /** 위반 유형 (상증령 §40①3호 가·나목). */
+  violation: SaleProceedsViolation;
+  /**
+   * 나목 — 3년 이내 **직접 공익목적사업에 사용한 실적** 누계 (원).
+   *
+   * 상증령 §38④: 매각대금으로 직접 공익목적사업용·수익용·수익사업용 재산을 취득한 경우를
+   * 포함하되, ① 공시대상기업집단 동일인관련자 관계인 공익법인이 그 기업집단 소속 법인의
+   * 의결권 있는 주식등을 취득한 경우와 ② 일시 취득한 재산은 **제외**한다.
+   */
+  directUseAmount?: number;
+  /** 가목 — 직접 공익목적사업 **외**에 사용한 금액 (원). */
+  outsideUseAmount?: number;
+}
+
+export interface PublicInterestSaleProceedsResult {
+  /** 추징 사유가 발생했는가 (과세가액 > 0). */
+  isClawback: boolean;
+  /** 과세표준이 §55② 과세최저한(50만원) 미만이라 세액이 0인가. */
+  belowMinimumTaxBase: boolean;
+  /** 상증령 §38④ — 과세기간 종료일부터 3년이 되는 날 (ISO). */
+  threeYearDeadline: string;
+  /** 판정 기준일이 위 기한을 지났는가. */
+  isAfterThreeYears: boolean;
+  /** 사용기준금액 = 매각대금 × 90% (상증령 §38④). */
+  useThreshold: number;
+  /** 매각대금 상한을 적용한 사용실적. */
+  cappedDirectUse: number;
+  /** 매각대금 상한을 적용한 공익목적사업 외 사용금액. */
+  cappedOutsideUse: number;
+  /** 나목 — 미달사용금액 = max(0, 사용기준금액 − 사용실적). */
+  shortfall: number;
+  /** 가목 — 사용기준금액 × (외부사용액 / 매각대금). */
+  outsideUseTaxable: number;
+  /** 선택한 목에 따른 과세가액. */
+  clawbackBase: number;
+  /** 증여세 과세표준 — §55② 미달 시 0. */
   taxBase: number;
   /** 추징 증여세 (§56 누진세율). */
   giftTax: number;
