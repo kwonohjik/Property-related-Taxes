@@ -11,7 +11,11 @@
  * 재귀 호출되면 두 시나리오 모두 STEP 0.48(§159)을 통과한다.
  * ⇒ 계획서 D-2가 걱정한 「§159 경로에 태우는 구조」는 **새로 만들 것이 없다**.
  *
- * ## 🔴 그런데 그래서 **더 나쁘다** — 한쪽 축만 살아남는다
+ * ## ✅ 2026-08-10 D-7a로 **전건 해소** — 아래 진단은 「해소 전」의 기록이다
+ *
+ * D2-2·D2-3은 정반대로 다시 쓰였다. 남은 가치는 **왜 그랬는지의 기록**과 D2-1 대조군이다.
+ *
+ * ## 🔴 (해소 전) 그래서 **더 나빴다** — 한쪽 축만 살아남았다
  *
  * 시나리오 A는 `acquisitionPrice`를 원증여자 가액으로 낮추지만 **§159는 그 값을 읽지 않는다**
  * (§159①1호의 A는 `burdenedGiftInfo`의 4개 모드에서 온다). 그래서:
@@ -56,6 +60,11 @@ const bgInfo: BurdenedGiftInfo = {
   buildingStdPriceAtTransfer: 200_000_000,
   landStdPriceAtAcquisition: 300_000_000,
   buildingStdPriceAtAcquisition: 100_000_000,
+  // D-7a 배선 후 필수 — 당초 증여자 취득 당시 값(§97의2①1호).
+  carryoverDonorBasis: {
+    landStdPriceAtAcquisition: 100_000_000,
+    buildingStdPriceAtAcquisition: 50_000_000,
+  },
 };
 
 /** 증여 2023-06-01(≥ 10년 룰 시행) · 양도 2026-02-16 ⇒ 적용기간 안. */
@@ -100,7 +109,17 @@ describe("D2 — 부담부증여 × §97의2②3호 비교", () => {
     expect(d?.comparisonExclusion).toBe(false);
   });
 
-  it("D2-2 🔴 부담부증여: A가 싸져 **이월과세가 자동 배제**된다 (방향이 뒤집힌다)", () => {
+  it("D2-2 ✅ 해소 — 취득가액 축이 배선되어 **부등호가 대조군과 같아졌다**", () => {
+    /**
+     * ## 2026-08-10 D-7a로 뒤집힌 테스트
+     *
+     * 종전에는 A = 43,615,000 < B = 71,260,000이라 §97의2②3호가 **이월과세를 자동으로 꺼버렸다**.
+     * §159①1호의 A가 `burdenedGiftInfo`에서 오는데 시나리오 A가 그것을 바꾸지 못해
+     * **취득가액 축만 사라지고 보유기간 축(하락 요인)만 살아남았기** 때문이다.
+     *
+     * `carryoverDonorBasis`가 §159에 주입되면서 A의 취득가액이 당초 증여자 기준
+     * (1.5억 × 채무비율 0.625 = 93,750,000)으로 낮아져 양도차익이 커졌다.
+     */
     const r = run({
       transferType: "burdened_gift",
       burdenedGiftInfo: bgInfo,
@@ -109,24 +128,22 @@ describe("D2 — 부담부증여 × §97의2②3호 비교", () => {
     } as never);
     const d = r.carryoverTaxationDetail;
 
-    expect(d?.scenarioA.determinedTax).toBe(43_615_000);
+    expect(d?.scenarioA.determinedTax).toBe(86_424_375);
     expect(d?.scenarioB.determinedTax).toBe(71_260_000);
-    // 대조군과 **부등호가 반대**다 — 이것이 결함의 증상이다.
-    expect(d?.scenarioA.determinedTax).toBeLessThan(d!.scenarioB.determinedTax);
-    expect(d?.adoptedScenario).toBe("B");
-    expect(d?.comparisonExclusion).toBe(true);
-    expect(d?.exclusionReason).toBe("tax_comparison");
-    // 결국 부담부증여 단독과 같은 세액이 된다 — 이월과세가 세액에 닿지 않는다.
-    expect(r.calculatedTax).toBe(71_260_000);
+    // 🔑 대조군(D2-1)과 **같은 방향**이다 — A가 비싸서 이월과세가 적용된다.
+    expect(d?.scenarioA.determinedTax).toBeGreaterThan(d!.scenarioB.determinedTax);
+    expect(d?.adoptedScenario).toBe("A");
+    expect(d?.comparisonExclusion).toBe(false);
+    expect(r.calculatedTax).toBe(86_424_375);
   });
 
-  it("D2-3 ⇒ 차단을 「그냥 푸는」 것이 금지되는 이유", () => {
+  it("D2-3 ✅ 해소 — 이월과세를 켠 결과가 **부담부증여 단독과 다르다**", () => {
     /**
-     * ⑧ validate 차단을 제거하면 사용자는 「이월과세를 검토했고 불리해서 미적용」이라는
-     * **판정**을 받는다. 그 판정은 §159가 취득가액 축을 삼킨 탓에 생긴 것이라 **근거가 없다**.
-     * 침묵 오답보다 나쁘다 — 사용자가 답을 받았다고 믿기 때문이다.
+     * 종전 D2-3은 「이월과세 판정을 거쳤는데 결과가 안 넣은 것과 **완전히 같다**」를 고정했고,
+     * 그것이 「차단만 해제」를 금지하는 근거였다(계획서 §5.4) — 사용자가 **근거 없는 판정**을
+     * 받기 때문이다.
      *
-     * ⇒ 계획서 §4.1 「부분 지원 금지」에 **경로 하나 더** 추가된다: 「차단만 해제」도 금지다.
+     * 세 축이 배선되면서 그 근거가 사라졌다. 이제 이월과세 판정은 실제 계산에 도달한다.
      */
     const withCarryover = run({
       transferType: "burdened_gift",
@@ -138,7 +155,8 @@ describe("D2 — 부담부증여 × §97의2②3호 비교", () => {
       transferType: "burdened_gift",
       burdenedGiftInfo: bgInfo,
     } as never);
-    // 「이월과세 판정」을 거쳤는데 결과는 이월과세를 안 넣은 것과 **완전히 같다**.
-    expect(withCarryover.calculatedTax).toBe(withoutCarryover.calculatedTax);
+
+    expect(withoutCarryover.calculatedTax).toBe(71_260_000);
+    expect(withCarryover.calculatedTax).not.toBe(withoutCarryover.calculatedTax);
   });
 });

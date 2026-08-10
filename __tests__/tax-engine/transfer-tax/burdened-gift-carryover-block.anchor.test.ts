@@ -87,38 +87,62 @@ describe("CO-1 대조군 — 이월과세 단독은 증여자 취득가액에 �
   });
 });
 
-describe("CO-2 부담부증여를 얹으면 이월과세가 세액에 도달하지 않는다", () => {
-  const bg = { transferType: "burdened_gift", burdenedGiftInfo } as Partial<TransferTaxInput>;
+describe("CO-2 ✅ 해소 — 이월과세가 세액에 도달한다 (2026-08-10 D-7a)", () => {
+  /**
+   * 종전 CO-2는 「증여자 취득가액을 흔들어도 부담부증여 단독과 같다(71,260,000)」를 고정했다.
+   * 그것이 ⑧ 차단의 근거였다. D-7a가 세 축을 배선하면서 **정반대로 다시 쓰였다**.
+   */
+  const bg = {
+    transferType: "burdened_gift",
+    burdenedGiftInfo: {
+      ...burdenedGiftInfo,
+      carryoverDonorBasis: {
+        landStdPriceAtAcquisition: 100_000_000,
+        buildingStdPriceAtAcquisition: 50_000_000,
+      },
+    },
+  } as Partial<TransferTaxInput>;
 
-  it("증여자 취득가액을 흔들어도 부담부증여 단독과 같다 (71,260,000)", () => {
+  /** 당초 증여자 기준 취득값을 바꾸는 헬퍼 — §159가 읽는 것은 **이쪽**이다. */
+  const withDonorStd = (land: number, building: number) =>
+    ({
+      ...bg,
+      burdenedGiftInfo: {
+        ...(bg.burdenedGiftInfo as object),
+        carryoverDonorBasis: {
+          landStdPriceAtAcquisition: land,
+          buildingStdPriceAtAcquisition: building,
+        },
+      },
+      acquisitionCause: "carryover_gift",
+      carryoverTaxation: carryover(100_000_000),
+    }) as never;
+
+  it("당초 증여자 취득 기준시가를 흔들면 **세액이 반응한다**", () => {
     const alone = run(bg);
-    const withLow = run({ ...bg, acquisitionCause: "carryover_gift", carryoverTaxation: carryover(100_000_000) } as never);
-    const withHigh = run({ ...bg, acquisitionCause: "carryover_gift", carryoverTaxation: carryover(700_000_000) } as never);
+    const low = run(withDonorStd(100_000_000, 50_000_000));
+    const high = run(withDonorStd(400_000_000, 200_000_000));
 
+    // 부담부증여 단독은 종전과 같다 — 이월과세를 켜지 않으면 아무것도 바뀌지 않는다(회귀 0).
     expect(alone.calculatedTax).toBe(71_260_000);
-    expect(withLow.calculatedTax).toBe(alone.calculatedTax);
-    expect(withHigh.calculatedTax).toBe(alone.calculatedTax);
+
+    // 🔑 이월과세를 켜면 단독과 **다르고**, 당초 증여자 취득가액에 따라 서로도 **다르다**.
+    expect(low.calculatedTax).not.toBe(alone.calculatedTax);
+    expect(high.calculatedTax).not.toBe(low.calculatedTax);
+    // 취득가액이 크면 양도차익이 작아 세액이 낮다.
+    expect(high.calculatedTax).toBeLessThan(low.calculatedTax);
   });
 
-  it("🔴 취득원인 네 가지가 모두 같은 세액을 낸다 — 이월과세에 대해서는 **이것이 결함의 증상**이다", () => {
+  it("✅ 취득원인 네 가지 중 **이월과세만 다른 값**을 낸다", () => {
     /**
-     * 🔴 **2026-08-09 재해석 — 종전 서술이 틀렸다.**
+     * 매매·상속·증여 셋이 같은 것은 §159가 취득가액을 정하므로 **옳다**.
+     * 그러나 이월과세는 달라야 한다 — 국세청 **재산세과-1059**(2009.12.18.):
      *
-     * 종전 제목·주석은 「그래서 차단이 손해가 없다」였다. 매매·상속·증여 셋이 같은 것은
-     * §159가 취득가액을 정하므로 **옳다**. 그러나 **이월과세는 달라야 한다**:
+     * > 「**시행령 §159 제1호에 따른 취득가액 산정 시** §97①1호에 따른 가액에
+     * >   **이월과세 규정이 적용되는 것임**」
      *
-     *   국세청 **재산세과-1059(2009.12.18.)** — 증여받은 자산을 다시 부담부증여하는 경우
-     *   「**시행령 §159 제1호에 따른 취득가액 산정 시** §97①1호에 따른 가액에
-     *     **이월과세 규정이 적용되는 것임**」
-     *
-     *   ⇒ 이월과세가 적용되면 §159①1호 **A의 기준 시점이 「원증여자의 취득 당시」로 옮겨진다**.
-     *     따라서 네 번째 값은 나머지 셋과 **달라야 한다**.
-     *
-     * ⚠️ 이 테스트는 「옳은 세액」이 아니라 **현행 미지원 상태**를 고정한다. ⑧가 조합을
-     *    차단하므로 사용자 경로로는 도달하지 않는다(엔진 단독 호출에서만 드러난다).
-     *    **엔진이 지원되면 이 테스트는 뒤집혀야 한다** — 그때 값을 맞추지 말고 삭제·재작성할 것.
-     *
-     * 설계: `docs/02-design/features/burdened-gift-carryover-159-97-2.plan.md`
+     * ⇒ §159①1호 A의 기준 시점이 「당초 증여자의 취득 당시」로 옮겨진다.
+     *   종전에는 네 값이 **전부 같아** 그 해석이 반영되지 않았다.
      */
     const sameByDesign = [
       run(bg).calculatedTax,
@@ -128,13 +152,9 @@ describe("CO-2 부담부증여를 얹으면 이월과세가 세액에 도달하�
     expect(new Set(sameByDesign).size).toBe(1);
     expect(sameByDesign[0]).toBe(71_260_000);
 
-    // 이월과세도 현재는 같은 값이다 — **법령상으로는 달라야 하는데** 엔진이 반영하지 못한다.
-    const carryoverTax = run({
-      ...bg,
-      acquisitionCause: "carryover_gift",
-      carryoverTaxation: carryover(100_000_000),
-    } as never).calculatedTax;
-    expect(carryoverTax).toBe(71_260_000); // ← 미지원 상태의 고정. 지원 시 뒤집힌다.
+    // 🔑 네 번째만 다르다.
+    const carryoverTax = run(withDonorStd(100_000_000, 50_000_000)).calculatedTax;
+    expect(carryoverTax).not.toBe(71_260_000);
   });
 });
 

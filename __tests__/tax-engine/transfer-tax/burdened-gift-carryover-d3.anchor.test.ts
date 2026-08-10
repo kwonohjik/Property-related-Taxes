@@ -51,6 +51,12 @@ const bgStandard: BurdenedGiftInfo = {
   buildingStdPriceAtTransfer: 200_000_000,
   landStdPriceAtAcquisition: 300_000_000,
   buildingStdPriceAtAcquisition: 100_000_000,
+  // D-7a 배선 후 필수 — 당초 증여자 취득 당시 값.
+  carryoverDonorBasis: {
+    landStdPriceAtAcquisition: 150_000_000,
+    buildingStdPriceAtAcquisition: 50_000_000,
+    actualAcquisitionTotal: 200_000_000,
+  },
 };
 
 /** K-4: 시가 모드 + 실지취득가 — 실비(자본적지출·양도비)가 살아 있는 유일한 분기. */
@@ -97,14 +103,19 @@ describe("D3 — §163의2② 증여세 상당액과 채무비율", () => {
     const bgOnly = run({ transferType: "burdened_gift", burdenedGiftInfo: bgStandard } as never);
     expect(bgOnly.transferGain).toBe(242_500_000);
 
-    // 이월과세를 얹었을 때의 한도가 그 값과 **같다** ⇒ 한도 축은 이미 「양도로 보는 부분」이다.
+    /**
+     * 이월과세를 얹으면 한도가 **커진다** — 취득가액이 당초 증여자 기준(2억)으로 낮아져
+     * 「양도로 보는 부분」의 양도차익 자체가 커지기 때문이다(D-7a 배선 후).
+     *   500,000,000(채무) − 125,000,000(2억 × 5/8) − 3,750,000(개산공제) = 371,250,000
+     * ⇒ 한도의 **축**은 그대로 「양도로 보는 부분의 양도차익」이다. 값만 §97의2를 따라 움직인다.
+     */
     const withCo = run({
       transferType: "burdened_gift",
       burdenedGiftInfo: bgStandard,
       acquisitionCause: "carryover_gift",
       carryoverTaxation: co(5_000_000_000),
     } as never);
-    expect(withCo.carryoverTaxationDetail?.scenarioA.giftTaxLimitCap).toBe(242_500_000);
+    expect(withCo.carryoverTaxationDetail?.scenarioA.giftTaxLimitCap).toBe(371_250_000);
 
     // 대조군 — 일반 양도(부담부증여 아님)에서는 자산 전체 양도차익이 한도다.
     const plain = run({
@@ -128,9 +139,9 @@ describe("D3 — §163의2② 증여세 상당액과 채무비율", () => {
     const expense50 = k4({ transferExpense: 50_000_000 });
 
     const APPORTIONED = 27_777_777; // 50,000,000 × 5억(채무) ÷ 9억(증여가액)
-    expect(giftNone.carryoverTaxationDetail?.scenarioA.transferGain).toBe(277_777_779);
+    expect(giftNone.carryoverTaxationDetail?.scenarioA.transferGain).toBe(388_888_890);
     expect(gift50.carryoverTaxationDetail?.scenarioA.transferGain).toBe(
-      277_777_779 - APPORTIONED,
+      388_888_890 - APPORTIONED,
     );
     expect(expenseNone.transferGain - expense50.transferGain).toBe(APPORTIONED);
 
@@ -138,15 +149,22 @@ describe("D3 — §163의2② 증여세 상당액과 채무비율", () => {
     expect(APPORTIONED).toBeLessThan(50_000_000);
   });
 
-  it("D3-3 🔴 그러나 기준시가 모드(K-1~K-3)에서는 세액에 **전혀 도달하지 않는다**", () => {
+  it("D3-3 ✅ 뒤집힘 — 기준시가 모드(K-1~K-3)에서도 증여세가 **세액에 도달한다**", () => {
     /**
-     * `giftTaxAddedToExpense`(표시값)는 커지는데 **결정세액이 움직이지 않는다**.
-     * 증여세를 `transferExpense`에 얹지만(`transfer-tax-carryover.ts:289`) 기준시가 모드는
-     * 개산공제 경로(§163⑥)라 실비를 아예 읽지 않기 때문이다.
+     * ## 이 테스트는 2026-08-10에 **정반대로 다시 쓰였다**
      *
-     * ⇒ D-2가 찾은 「취득가액 축 소멸」과 **같은 종류의 두 번째 소실**이다. 결과 화면에는
-     *   「증여세 상당액 산입」이 뜨는데 세액은 그대로 — 침묵 오답보다 나쁘다.
-     *   D-3은 「안분 비율을 고르는 문제」가 아니라 **배선을 만드는 문제**였다.
+     * 종전 D3-3은 「산입액 표시는 커지는데 결정세액이 안 움직인다」를 고정하고 있었다 —
+     * 증여세를 `transferExpense`에 얹었는데 기준시가 모드는 개산공제 경로(§163⑥)라 실비를
+     * 아예 읽지 않았기 때문이다(결과 화면엔 「산입」이 뜨는데 세액은 그대로 = 침묵 오답보다 나쁨).
+     *
+     * D-7a가 증여세를 **§159 안분 단계**(`burdened-gift-apportionment.ts` STEP 5.7)로 옮겨
+     * 모드 분기 **바깥**의 필요경비 슬롯에 얹으면서 그 소실이 사라졌다.
+     *
+     * ## 산입액이 **안분값**이라는 점도 함께 고정한다 (시행령 §163의2②2호)
+     *
+     * 종전에는 산입액이 입력 총액 그대로(50,000,000)였다. 이제 **채무비율 안분 후**다:
+     *   50,000,000 × 5억(채무) ÷ 8억(증여가액) = **31,250,000**
+     * 5,000,000,000은 안분해도 3,125,000,000이라 한도(371,250,000)에 걸린다.
      */
     const taxes = [0, 50_000_000, 5_000_000_000].map((gt) => {
       const r = run({
@@ -161,9 +179,12 @@ describe("D3 — §163의2② 증여세 상당액과 채무비율", () => {
       };
     });
 
-    // 산입액은 커진다 (표시상으로는 반영된 것처럼 보인다)
-    expect(taxes.map((t) => t.added)).toEqual([0, 50_000_000, 242_500_000]);
-    // 그런데 시나리오 A 세액은 **완전히 동일하다**
-    expect(taxes.map((t) => t.taxA)).toEqual([43_615_000, 43_615_000, 43_615_000]);
+    // 산입액 = 채무비율 안분 후(→ 한도)
+    expect(taxes.map((t) => t.added)).toEqual([0, 31_250_000, 371_250_000]);
+    // 🔑 그리고 시나리오 A 세액이 **단조 감소**한다 — 종전에는 셋이 완전히 같았다.
+    expect(taxes[1].taxA!).toBeLessThan(taxes[0].taxA!);
+    expect(taxes[2].taxA!).toBeLessThan(taxes[1].taxA!);
+    // 한도까지 산입하면 양도차익이 0이 되어 세액도 0이다.
+    expect(taxes[2].taxA).toBe(0);
   });
 });

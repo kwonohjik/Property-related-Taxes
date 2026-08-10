@@ -13,10 +13,23 @@
  * > 3. 제1항을 적용하여 계산한 양도소득 결정세액이 제1항을 적용하지 아니하고 계산한
  * >    양도소득 결정세액보다 **적은** 경우
  *
- * ## 이 anchor가 고정하는 것
+ * ## 이 anchor가 고정하는 것 (2026-08-10 D-7a 배선 후 갱신)
  *
- * D5-1 · D5-2는 **현행 동작의 관찰**이다 — 「이래야 한다」가 아니라 「지금 이렇다」.
- * D-7 배선 후 뒤집히면 그 자리에서 재해석한다(값 맞추기 금지).
+ * · **D5-1·D5-2** — ②2호가 노리는 상황(A에서만 비과세 성립)이 실제로 생기지만, **②3호가 먼저**
+ *   배제한다. 배선 전후로 세액은 달라졌으나 **결론(B 채택)은 그대로**다.
+ * · **D5-3** — ②1호는 부담부증여에서 원리상 발현되지 않는다(수용 ≠ 부담부증여). 선언 시 배제만 확인.
+ * · **D5-4** — 🔴 **②2호 미구현 사각지대**. ②3호가 못 잡는 조합이 실재한다.
+ *
+ * ## 🔴 D5-4가 고정하는 것은 「옳은 동작」이 아니라 **결함**이다
+ *
+ * §97의2②2호는 「제1항을 적용할 경우 §89①3호 각 목의 주택(**고가주택 포함**)의 양도에
+ * 해당하게 되는 경우」 이월과세를 **적용하지 않는다**고 정한다. 현행 엔진은 이 판정을
+ * **사용자 선언**(`exclusionDeclared.oneHouseExemptionApplies`)으로만 받고 자동 판정이 없다.
+ *
+ * ⚠️ **부담부증여가 만든 결함이 아니다** — 일반 양도 이월과세에서 동일하게 재현된다
+ *    (2026-08-10 실측: 양도가 15억·당초 증여자 취득가 1천만·증여 당시 평가 15억 ⇒
+ *     A 58,378,000 채택 · `exemptReason` "1세대1주택 고가주택"). 그래서 이 anchor는
+ *    **현상을 고정**하고, 수정은 계획서 **D-8**로 분리했다(§5.10).
  */
 
 import { describe, it, expect } from "vitest";
@@ -37,6 +50,11 @@ const bgInfoUnder12: BurdenedGiftInfo = {
   buildingStdPriceAtTransfer: 200_000_000,
   landStdPriceAtAcquisition: 300_000_000,
   buildingStdPriceAtAcquisition: 100_000_000,
+  // D-7a 배선 후 필수 — 당초 증여자 취득 당시 값(통상 더 낮다).
+  carryoverDonorBasis: {
+    landStdPriceAtAcquisition: 100_000_000,
+    buildingStdPriceAtAcquisition: 50_000_000,
+  },
 };
 
 /** 증여가액 C = 15억(12억 초과 → 고가주택) · 채무 B = 5억. */
@@ -119,7 +137,8 @@ describe("D5 — §97의2② 1호·2호가 부담부증여에서 어떻게 발�
     const d = r.carryoverTaxationDetail;
 
     // 고가주택이라 A가 0원이 아니라 12억 초과 안분분만 과세된다.
-    expect(d?.scenarioA.determinedTax).toBe(5_981_000);
+    // (D-7a 배선으로 취득가액이 당초 증여자 기준으로 낮아져 5,981,000 → 8,709,600으로 올랐다.)
+    expect(d?.scenarioA.determinedTax).toBe(8_709_600);
     expect(d?.scenarioB.determinedTax).toBe(252_116_667);
     expect(d?.exclusionReason).toBe("tax_comparison");
     expect(d?.adoptedScenario).toBe("B");
@@ -138,5 +157,48 @@ describe("D5 — §97의2② 1호·2호가 부담부증여에서 어떻게 발�
     const d = r.carryoverTaxationDetail;
     expect(d?.exclusionReason).toBe("expropriation");
     expect(d?.adoptedScenario).toBe("B");
+  });
+
+  it("D5-4 🔴 ②2호 사각지대 — ②3호가 **못 잡는** 조합이 실재한다 (현행=결함)", () => {
+    /**
+     * ②3호가 ②2호를 대신해 주는 것은 「A가 비과세로 싸지기 때문」이다. 그렇다면
+     * **A가 비싼 채로 비과세에 해당**하면 ②3호는 걸리지 않는다. 그 조합을 만든다:
+     *
+     * · 양도인 취득 기준시가 = 양도시와 **동일** ⇒ 시나리오 B의 양도차익 ≈ 0 (세액 0)
+     * · 당초 증여자 취득 기준시가 = **1천만** ⇒ 시나리오 A의 양도차익 최대
+     * · C = 15억 ⇒ 고가주택 ⇒ §89①3호 각 목의 「양도에 해당하게 되는 경우」 성립
+     */
+    const r = run({
+      transferType: "burdened_gift",
+      burdenedGiftInfo: {
+        ...bgInfoOver12,
+        landStdPriceAtAcquisition: 1_000_000_000,
+        buildingStdPriceAtAcquisition: 500_000_000,
+        carryoverDonorBasis: {
+          landStdPriceAtAcquisition: 10_000_000,
+          buildingStdPriceAtAcquisition: 0,
+        },
+      },
+      acquisitionCause: "carryover_gift",
+      carryoverTaxation: { ...carryover, donorAcquisitionPrice: 10_000_000 },
+    } as never);
+    const d = r.carryoverTaxationDetail;
+
+    // ②3호는 「A가 **적은** 경우」만 배제한다 — 여기서는 A가 비싸서 걸리지 않는다.
+    expect(d?.scenarioB.determinedTax).toBe(0);
+    expect(d?.scenarioA.determinedTax).toBeGreaterThan(0);
+    expect(d?.adoptedScenario).toBe("A");
+    expect(d?.comparisonExclusion).toBe(false);
+
+    // 그런데 그 A는 **§89①3호 고가주택의 양도**다 ⇒ ②2호가 적용을 배제했어야 한다.
+    expect(r.exemptReason).toContain("고가주택");
+
+    /**
+     * ⛔ 아래 단언은 **현행 결함을 고정**한 것이다. D-8에서 ②2호 자동 판정을 넣으면
+     *    `exclusionReason === "one_house_exemption"` · 세액 0으로 **뒤집혀야 한다**.
+     *    ❌ 그때 값을 맞추지 말고 이 테스트를 다시 쓸 것.
+     */
+    expect(d?.exclusionReason).toBeUndefined();
+    expect(r.calculatedTax).toBeGreaterThan(0);
   });
 });
