@@ -323,3 +323,59 @@ carryoverTaxation: input.buildingCarryoverTaxation,   // 🆕
   **양성 대조군**(비-부담부증여에서는 있다).
 
 > 그쪽 줄기(`burdened-gift-carryover-159-97-2.plan.md`)가 착지하면 이 차단을 재검토한다.
+
+---
+
+### D9-10. payload 계약 (anchor가 고정하는 키)
+
+UI가 만드는 입력과 엔진이 읽는 입력이 **모양이 다르다** — 엔진은 파트마다 완결된
+`carryoverTaxation`을 원하는데, UI는 사건 1벌 + 파트 N벌로 받는다(D9-1). route가 조립한다.
+
+```ts
+generalBuildingValuation: {
+  // ── 사건 (1개) ──
+  carryoverGiftEvent: {
+    giftRegistryDate: string,        // date
+    giftTaxCalculated: number,       // 영 §163의2②1호 산출세액
+    giftTaxBase: number,             // 영 §163의2②3호 과세가액 (> 0 — 안분 분모)
+    exclusionDeclared?: { ... },
+  },
+  // ── 파트 (토지·건물 각각, 그 파트가 carryover_gift일 때만) ──
+  landAcquisitionCause: "carryover_gift",
+  landCarryoverPart: {
+    donorAcquisitionDate: string,
+    donorAcquisitionPrice?: number,          // 실가 모드
+    donorCapitalExpenditure?: number,
+    giftDateAssetValue: number,              // 영 §163의2②2호 분자 + 비교과세 B 취득가액
+    useEstimatedAcquisition: boolean,
+    donorStandardPriceAtAcquisition?: number, // 환산 모드 분자 (D9-8)
+  },
+  buildingAcquisitionCause: "carryover_gift",
+  buildingCarryoverPart: { /* 동일 */ },
+}
+```
+
+route가 파트마다 조립하는 엔진 입력:
+
+```
+carryoverTaxation = {
+  giftRegistryDate      ← 사건
+  donorAcquisitionDate  ← 파트
+  donorAcquisitionPrice ← 파트
+  useEstimatedAcquisition ← 파트
+  giftDateValuation     ← 파트 giftDateAssetValue
+  giftTaxAmount         ← floor(사건.giftTaxCalculated × 파트.giftDateAssetValue ÷ 사건.giftTaxBase)
+  donorCapitalExpenditure ← 파트
+  exclusionDeclared     ← 사건
+}
+standardPriceAtAcquisition ← 파트 donorStandardPriceAtAcquisition   (환산 모드)
+standardPriceAtTransfer    ← GB가 계산 (토지 = perSqm × 면적 · 건물 = transferBuildingStdPrice)
+```
+
+#### 🔴 하위 호환 — 기존 `landCarryoverTaxation`을 **유지**한다
+
+`landCarryoverTaxation`(엔진 모양 그대로)은 이미 Zod·엔진·테스트
+(`general-building-case-7b-carryover.test.ts` 16건)·지분 anchor GBF-27이 쓴다.
+
+⇒ **`*CarryoverPart`가 있으면 조립해서 쓰고, 없으면 `*CarryoverTaxation`을 그대로 쓴다.**
+없애면 그 16건 + GBF-27이 깨진다.
