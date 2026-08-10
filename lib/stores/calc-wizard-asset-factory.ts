@@ -424,6 +424,13 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     bgActualAcquisitionLand: "",
     bgActualAcquisitionBuilding: "",
     bgActualAcquisitionTotal: "",
+    // 이월과세 §97의2 — 「당초 증여자」 취득 당시 값 두 번째 벌 (D-7b)
+    bgCoDonorLandStdPriceAtAcq: "",
+    bgCoDonorBuildingStdPriceAtAcq: "",
+    bgCoDonorActualAcquisitionLand: "",
+    bgCoDonorActualAcquisitionBuilding: "",
+    bgCoDonorActualAcquisitionTotal: "",
+    bgCoDonorMarketValueAtAcquisition: "",
     // Phase 3: 증여세 통합 입력
     bgDonorRelation: "",
     bgIsMinorDonee: false,

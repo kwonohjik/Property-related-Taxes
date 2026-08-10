@@ -79,8 +79,8 @@ function ScenarioAContent({ a, adopted }: { a: CarryoverScenarioADetail; adopted
   return (
     <ScenarioCol label="[A] 이월과세 적용" adopted={adopted} determinedTax={a.determinedTax}>
       <div className="space-y-1">
-        <InfoRow label="취득가액 [증여자 취득가]" value={fmt(a.acquisitionPrice)} />
-        <InfoRow label="보유기간 [증여자 기산]" value={`${a.holdingPeriodYears}년`} />
+        <InfoRow label="취득가액 [당초 증여자 취득가]" value={fmt(a.acquisitionPrice)} />
+        <InfoRow label="보유기간 [당초 증여자 기산]" value={`${a.holdingPeriodYears}년`} />
         <InfoRow label="양도차익" value={fmt(a.transferGain)} />
         {a.giftTaxAddedToExpense > 0 && (
           <InfoRow
@@ -91,7 +91,7 @@ function ScenarioAContent({ a, adopted }: { a: CarryoverScenarioADetail; adopted
         )}
         {a.donorCapexAddedToExpense > 0 && (
           <InfoRow
-            label="증여자 자본적지출 [§97조의2 ① 2호]"
+            label="당초 증여자 자본적지출 [§97조의2 ① 2호]"
             value={`+${fmt(a.donorCapexAddedToExpense)}`}
             sub
           />

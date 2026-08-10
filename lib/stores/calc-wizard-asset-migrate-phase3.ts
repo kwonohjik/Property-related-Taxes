@@ -174,6 +174,15 @@ export function applyPhase3Normalize(a: Record<string, unknown>): void {
   if (a.bgActualAcquisitionLand === undefined) a.bgActualAcquisitionLand = "";
   if (a.bgActualAcquisitionBuilding === undefined) a.bgActualAcquisitionBuilding = "";
   if (a.bgActualAcquisitionTotal === undefined) a.bgActualAcquisitionTotal = "";
+  // 이월과세 §97의2 「당초 증여자」 한 벌 (D-7b) — stale sessionStorage 가드
+  // (신규 필드는 옛 저장분에 없으므로 undefined로 도착한다 — CurrencyInput이 uncontrolled로
+  //  전환되는 것을 막으려면 빈 문자열로 채워야 한다. memory `feedback_new_asset_field_stale_sessionstorage_guard`)
+  if (a.bgCoDonorLandStdPriceAtAcq === undefined) a.bgCoDonorLandStdPriceAtAcq = "";
+  if (a.bgCoDonorBuildingStdPriceAtAcq === undefined) a.bgCoDonorBuildingStdPriceAtAcq = "";
+  if (a.bgCoDonorActualAcquisitionLand === undefined) a.bgCoDonorActualAcquisitionLand = "";
+  if (a.bgCoDonorActualAcquisitionBuilding === undefined) a.bgCoDonorActualAcquisitionBuilding = "";
+  if (a.bgCoDonorActualAcquisitionTotal === undefined) a.bgCoDonorActualAcquisitionTotal = "";
+  if (a.bgCoDonorMarketValueAtAcquisition === undefined) a.bgCoDonorMarketValueAtAcquisition = "";
   // 가업상속공제 §97의2④ — 미사용이면 undefined 유지 (3중 패턴: factory=undefined)
   if (a.familyBusinessInheritance === null) a.familyBusinessInheritance = undefined;
   // ── 매매사례가액(추계) 신규 필드 fallback (소령 §176의2③1호, 2026-06-15) ──
