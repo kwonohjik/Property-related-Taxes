@@ -28,8 +28,17 @@ export interface PaymentInKindAssets {
    * 납부세액 충당이 부족할 때만 조건부 산입 (엔진 computeEligibleRealSec에서 판정).
    */
   unlistedStockValue: number;
-  /** §73①2호 차감 — 처분제한 없는 거래소 상장 유가증권 (§74①2호가목 충당 제외) */
+  /** §73①2호 차감 — 처분제한 없는 거래소 상장 유가증권 (§74①2호가목 **본문** 충당 제외) */
   tradableListedValue: number;
+  /**
+   * §74①2호가목 **단서** — 최초 상장 + 자본시장법 처분제한 유가증권.
+   *
+   * 상장이지만 단서로 **충당 대상에 되살아난 것**이라 `tradableListedValue`와 정반대로 움직인다:
+   *   · 요건1/한도1 분자에 **산입**
+   *   · §73①2호 한도2에서 **차감하지 않는다**(「법령에 따라 처분이 제한된 것은 제외한다」)
+   *   · 충당순서 **§74②2호(2순위)**
+   */
+  restrictedListedValue: number;
   /** §73⑤ 금융재산 (금전·예금·특정금전신탁·보험금·어음 등) — 요건3 기준, 금융회사 채무 차감 前 gross */
   grossFinancialValue: number;
   /**

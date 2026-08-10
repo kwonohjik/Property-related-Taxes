@@ -48,14 +48,16 @@ function computeEligibleRealSec(input: PaymentInKindInput): number {
     realEstateValue,
     eligibleSecuritiesValue,
     governmentBondValue,
+    restrictedListedValue,
     unlistedStockValue,
     ineligibleManagementValue,
   } = input.assets;
   // §74①1호·2호가목 — 부동산 + 충당가능 유가증권(국채·공채·내국법인 증권·처분제한 상장).
   //   거래소 상장(처분제한 X, tradableListedValue)은 §74①2호가목 본문 제외.
   //   국채·공채는 §74②1호로 순위만 분리된 것이고 §74①2호 본문 열거이므로 분자에 합산한다.
+  //   처분제한 상장(가목 **단서**)은 본문 제외에서 되살아난 충당재산이므로 분자에 함께 넣는다.
   const baseEligible =
-    realEstateValue + eligibleSecuritiesValue + governmentBondValue;
+    realEstateValue + eligibleSecuritiesValue + governmentBondValue + restrictedListedValue;
   // §74①2호나목 단서 — 비상장주식은 상속에서 위 재산으로 납부세액 충당이 부족한 경우에만
   //   충당가능 유가증권. 부동산·상장으로 finalTax를 충당하면(≥) 비상장 미산입 (H-41).
   const unlistedEligible =
@@ -87,6 +89,7 @@ export function calcPaymentInKindAssessment(
     governmentBondValue,
     unlistedStockValue,
     tradableListedValue,
+    restrictedListedValue, // §74①2호가목 단서: isNewlyListedDisposalRestricted flag로 자동도출
     grossFinancialValue,
     financialInstitutionDebt,
     heirResidenceValue,
@@ -130,9 +133,12 @@ export function calcPaymentInKindAssessment(
   // 충당순서 (상증령 §74②)
   const availableByOrder = [
     governmentBondValue, // 1 국채·공채 (§74②1호 — isGovernmentBond flag 자동도출)
-    eligibleSecuritiesValue, // 2 상장유가증권(처분제한)
+    // 2 §74②2호 — 「가목 **단서**에 해당하는 유가증권(제1호 제외)으로서 거래소에 상장된 것」.
+    //   🔴 2026-08-10 정정: 종전에는 여기에 eligibleSecuritiesValue(= §74②**4호**)가 들어가고
+    //   4순위가 `0`으로 하드코딩돼 **법령 매핑이 한 칸씩 밀려** 있었다.
+    restrictedListedValue,
     Math.max(0, realEstateValue - heirResidenceValue), // 3 국내 부동산 (§74②3호 — 제6호 거주주택 제외)
-    0, // 4 그 밖의 유가증권
+    eligibleSecuritiesValue, // 4 §74②4호 — ①2호 유가증권 중 1·2·5호를 제외한 나머지
     unlistedStockValue, // 5 비상장주식
     heirResidenceValue, // 6 상속인 거주 주택·부수토지 (§74②6호)
   ];
@@ -200,13 +206,16 @@ export function calcPaymentInKindAssessment(
  *   - 대부금채권(receivable) → §73⑤ 비열거 → 충당 불가 (표시용 "금융" ≠)
  *   - 전환사채(convertible_bond) → §74①2호 내국법인 발행 증권 → 충당 유가증권 (표시용 "금융" ≠)
  *   - 부동산·기타 신탁수익권(§9) → §74①1호 "부동산" 아님(수익권) → 충당 불가 (현행 유지)
- * 국채·공채·처분제한 상장 유가증권 세분류 및 금융회사 채무 차감은 estate 마커 부재로 미도출(후속).
+ *   - 최초상장+처분제한 유가증권(§74①2호가목 **단서**) → `restrictedListed` (충당 2순위 — 2026-08-10)
+ * 마커 3종(`isGovernmentBond`·`isHeirResidenceProperty`·`isNewlyListedDisposalRestricted`)과
+ * 금융회사 채무 차감은 **모두 도출된다**. (종전 「estate 마커 부재로 미도출」 주석은 stale이었다.)
  */
 type PikLegalCategory =
   | "realEstate" // §74①1호 국내 소재 부동산
   | "financial" // §73⑤ 금융재산 (금전·예금·특정금전신탁·보험금·어음 등)
   | "eligibleSecurities" // §74①2호 충당가능 유가증권 (내국법인 발행 채권/증권)
   | "tradableListed" // 거래소 상장(처분제한 없음) — §73①2호 한도 차감
+  | "restrictedListed" // §74①2호가목 **단서** — 최초상장 + 자본시장법 처분제한 (충당 2순위)
   | "unlistedStock" // §74①2호나목 비상장주식 (최후순위·§73④ 캡)
   | "other"; // 충당 불가 (대부금채권·비금전 신탁수익권·퇴직금·무체재산·가상자산 등)
 
@@ -225,7 +234,9 @@ function classifyForPaymentInKind(item: EstateItem): PikLegalCategory {
       item.category === "unlisted_stock" ||
       item.unlistedStockData != null ||
       item.unlistedStockValuationV2 != null;
-    return isUnlisted ? "unlistedStock" : "tradableListed";
+    if (isUnlisted) return "unlistedStock";
+    // 상장 — 가목 **본문**은 충당에서 빼지만 **단서**(최초상장 + 처분제한)는 되살린다.
+    return item.isNewlyListedDisposalRestricted ? "restrictedListed" : "tradableListed";
   }
   if (summary === "realEstate") return "realEstate"; // 부동산·지상권
 
@@ -247,7 +258,7 @@ function classifyForPaymentInKind(item: EstateItem): PikLegalCategory {
  * estate 자동도출 — estateItems + result 평가액에서 PaymentInKindAssets 구성.
  * 분류는 `classifyForPaymentInKind`(§73⑤·§74① 법정분류). buildSummaryCategory(PDF표8) 아님.
  * 금융회사 채무(§10①1호)는 §14 담보채무 자동도출분(collateralDebtDetail.financialDebtAmount,
- * §22 순금융재산공제와 동일 근거)에서 합산. 국채·공채·처분제한 상장 세분류 마커는 후속.
+ * §22 순금융재산공제와 동일 근거)에서 합산.
  */
 export function derivePaymentInKindAssets(
   estateItems: EstateItem[],
@@ -261,6 +272,7 @@ export function derivePaymentInKindAssets(
   let heirResidenceValue = 0;
   let unlistedStockValue = 0;
   let tradableListedValue = 0;
+  let restrictedListedValue = 0;
   let eligibleSecuritiesValue = 0;
   let governmentBondValue = 0;
   let grossFinancialValue = 0;
@@ -304,6 +316,10 @@ export function derivePaymentInKindAssets(
       case "tradableListed":
         tradableListedValue += v;
         break;
+      case "restrictedListed":
+        // §74①2호가목 단서 — 충당 2순위·요건1 분자 산입·한도2 미차감
+        restrictedListedValue += v;
+        break;
       case "unlistedStock":
         unlistedStockValue += v;
         break;
@@ -322,6 +338,7 @@ export function derivePaymentInKindAssets(
     governmentBondValue, // §74②1호: isGovernmentBond flag로 자동도출 (§73⑤ 금융재산 제외)
     unlistedStockValue,
     tradableListedValue,
+    restrictedListedValue, // §74①2호가목 단서: isNewlyListedDisposalRestricted flag로 자동도출
     grossFinancialValue,
     financialInstitutionDebt,
     heirResidenceValue, // 갭4: isHeirResidenceProperty flag로 자동도출 (subset)

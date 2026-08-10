@@ -35,7 +35,8 @@ const base: PaymentInKindInput = {
     eligibleSecuritiesValue: 100_000_000, // 처분제한 상장(충당가능)
     governmentBondValue: 0,
     unlistedStockValue: 200_000_000,
-    tradableListedValue: 50_000_000, // 처분제한 없는 상장(§73①2호 차감)
+    tradableListedValue: 50_000_000,
+    restrictedListedValue: 0, // 처분제한 없는 상장(§73①2호 차감)
     grossFinancialValue: 200_000_000,
     financialInstitutionDebt: 0,
     heirResidenceValue: 100_000_000,
@@ -103,6 +104,7 @@ describe("물납 — 허용한도 min 산식 (상증령 §73①)", () => {
         realEstateValue: 1_000_000_000,
         grossFinancialValue: 100_000_000,
         tradableListedValue: 0,
+        restrictedListedValue: 0,
       },
     });
     expect(r.limit1).toBe(220_000_000); // 4억 × 11억 / 20억
@@ -259,6 +261,7 @@ describe("물납 — 상속인 거주주택 자동분류 (§74②6호, 갭4)", (
           governmentBondValue: 0,
           unlistedStockValue: 300_000_000,
           tradableListedValue: 0,
+          restrictedListedValue: 0,
           grossFinancialValue: 0,
           financialInstitutionDebt: 0,
           heirResidenceValue,
@@ -288,6 +291,7 @@ describe("물납 — 비상장 조건부 충당가능 (§74①2호나목 단서,
       governmentBondValue: 0,
       unlistedStockValue: 1_200_000_000, // 비상장 12억 (위주)
       tradableListedValue: 0,
+      restrictedListedValue: 0,
       grossFinancialValue: 0,
       financialInstitutionDebt: 0,
       heirResidenceValue: 0,
