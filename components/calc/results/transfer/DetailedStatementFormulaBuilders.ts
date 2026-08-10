@@ -622,7 +622,7 @@ export function buildAcquisitionPriceFormula(
     const a = coA.scenarioA;
     const donorCapexNote =
       a.donorCapexAddedToExpense > 0
-        ? ` (증여자 자본적지출 ${a.donorCapexAddedToExpense.toLocaleString()} 포함 §97의2①2호 후단)`
+        ? ` (증여자 자본적지출 ${a.donorCapexAddedToExpense.toLocaleString()} 포함 §97의2①2호)`
         : "";
     if (a.acquisitionWasEstimated) {
       const stdAcq = a.estimatedStdPriceAtAcquisition;
@@ -694,10 +694,10 @@ export function buildNecessaryExpenseFormula(
       const limitNote = a.giftTaxLimitApplied
         ? ` (한도 ${a.giftTaxLimitCap.toLocaleString()} = 증여세 가산 전 양도차익 적용)`
         : "";
-      parts.push(`증여세 상당액 ${gift.toLocaleString()}${limitNote} — 이월과세 §97의2①2호 전단·시행령 §163의2`);
+      parts.push(`증여세 상당액 ${gift.toLocaleString()}${limitNote} — 이월과세 §97의2①3호·시행령 §163의2②`);
     }
     const guardNote = a.donorCapexGuardApplied
-      ? " ※ 양도일 2024-01-01 전 — 증여자 자본적지출 불산입(§97의2①2호 후단 시행일)"
+      ? " ※ 양도일 2024-01-01 전 — 증여자 자본적지출 불산입(§97의2①2호 시행일)"
       : "";
     const body = parts.length > 1 ? `${parts.join(" + ")} = ${fmt(singleExp)}` : parts[0];
     return body + guardNote;
