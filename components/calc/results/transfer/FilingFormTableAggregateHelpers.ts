@@ -22,6 +22,17 @@ import {
 } from "./FilingFormTableHelpers";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
+import { baseCardId, shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
+
+/** 일반건물이 엔진 내부에서 분해하는 카드 id (지분 접미사 제거 후 기준). */
+const GB_CARD_BASE_IDS = new Set([
+  "land",
+  "land_business",
+  "land_nbl",
+  "building",
+  "building1",
+  "building2",
+]);
 
 export function buildAggregateRows(
   _result: TransferTaxResult,
@@ -56,13 +67,16 @@ export function buildAggregateRows(
     if (fromPropertyForm) return fromPropertyForm;
     if (!formData) return undefined;
     if (pid === "primary") return formData.assets[0];
-    // 일반건물(토지+건물 일괄) — 토지·건물 분해된 카드는 모두 assets[0]에서 취득일·필요경비 메타 가져옴
-    if (
-      formData.assets[0]?.assetKind === "general_building" &&
-      (pid === "land" || pid === "land_business" || pid === "land_nbl" ||
-       pid === "building" || pid === "building1" || pid === "building2")
-    ) {
-      return formData.assets[0];
+    // 일반건물(토지+건물 일괄) — 토지·건물 분해된 카드는 assets에서 취득일·필요경비 메타를 가져온다.
+    //
+    // 🔴 **지분(%) 분할이면 `assets[0]`이 아니다.** 카드 id는 `land#1` 꼴이고 접미사 인덱스가
+    //    곧 `assets`의 인덱스다(`transfer-tax-api-gb-shares.ts:168` — 같은 배열을 같은 순서로
+    //    순회해 태깅한다). 지분마다 취득일이 다른 것이 이 기능의 존재 이유이므로,
+    //    전부 `assets[0]`로 보내면 **신고서 취득일이 전 행 동일하게 틀린다**.
+    //    종전에는 정확 비교라 `land#1`이 여기서 아예 안 걸려 메타가 **누락**됐다.
+    if (formData.assets[0]?.assetKind === "general_building" && GB_CARD_BASE_IDS.has(baseCardId(pid))) {
+      const shareIdx = shareIndexOf(pid);
+      return shareIdx !== undefined ? formData.assets[shareIdx] : formData.assets[0];
     }
     const direct = formData.assets.find((a) => a.assetId === pid);
     if (direct) return direct;

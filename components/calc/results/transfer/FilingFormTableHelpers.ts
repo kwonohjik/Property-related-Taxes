@@ -10,6 +10,7 @@
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import type {
   AggregateTransferResult,
   PerPropertyBreakdown,
@@ -320,10 +321,13 @@ export function holdingPeriodFromDates(acq?: string, transfer?: string): string 
 export function getAcqDateForCard(asset: import("@/lib/stores/calc-wizard-asset").AssetForm | undefined, pid: string): string {
   if (!asset) return "";
   if (asset.assetKind !== "general_building") return asset.acquisitionDate || "";
-  if (pid === "building" || pid === "building1") {
+  // 🔴 지분(%) 분할 카드는 `building2#0` 꼴이라 접미사를 벗기고 봐야 한다 —
+  //    안 벗기면 증축분 카드가 default로 떨어져 **증축일 대신 원건물 취득일**을 표시한다.
+  const base = baseCardId(pid);
+  if (base === "building" || base === "building1") {
     return asset.acquisitionDate || "";
   }
-  if (pid === "building2") {
+  if (base === "building2") {
     return asset.gbExtensionDate || "";
   }
   return asset.acquisitionDate || "";

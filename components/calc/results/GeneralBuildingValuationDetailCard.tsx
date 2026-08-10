@@ -409,7 +409,13 @@ export function GeneralBuildingValuationDetailCard({
         </div>
       )}
 
-      {/* NBL 판정 결과 */}
+      {/* NBL 판정 결과
+          🔴 면적 2필드는 **가드 없이 읽으면 화면이 통째로 죽는다**(`toFixed` of undefined).
+             타입상 필수라 tsc가 잡지 못하는데, 실가 경로가 명세를 부분적으로만 채우는 조합이
+             있어 런타임에 undefined가 도달할 수 있다. 값이 없으면 이 블록을 통째로 건너뛴다 —
+             판정 근거를 반쪽만 보여주는 것보다 낫다. */}
+      {typeof detail.buildingFootprintArea === "number" &&
+       typeof detail.allowedLandArea === "number" && (
       <div className="rounded bg-sky-50/60 border border-sky-200 px-3 py-2 text-xs text-sky-800 space-y-1">
         <p className="font-semibold">비사업용토지 판정 (§104의3·§168의12)</p>
         <p>건물 수평투영면적 = <span className="tabular-nums font-medium">{detail.buildingFootprintArea.toFixed(2)} ㎡</span></p>
@@ -430,6 +436,7 @@ export function GeneralBuildingValuationDetailCard({
             </>
         }
       </div>
+      )}
     </div>
   );
 }
