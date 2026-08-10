@@ -5,6 +5,7 @@
  *
  * 법령 (KoreanLaw 실측 2026-08-10):
  *   · 1호(출연재산 3년) — 법 §48②1호(본문·단서) + 상증령 §40①1호 가·나·다
+ *   · 2호(주식등 취득 초과) — 법 §48②2호 + §16②2호·③ + 상증령 §37①②⑥ + §40①2호 + 상증칙 §13①
  *   · 3호(운용소득 목적 외) — 법 §48②3호 + 상증령 §40①2의2호 + 상증칙 §13②③
  *   · 4호(매각대금 3년) — 법 §48②4호 + 상증령 §38④ + §40①3호 가·나
  *   · 6호(의결권 행사) — 법 §48②6호 + §16②2호가목 + 상증령 §40①3의2호
@@ -34,18 +35,25 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 
 import { Clause1Form } from "./Clause1Form";
+import { Clause2Form } from "./Clause2Form";
 import { Clause3Form } from "./Clause3Form";
 import { Clause4Form } from "./Clause4Form";
 import { Clause6Form } from "./Clause6Form";
 import { Clause8Form } from "./Clause8Form";
 
-type ClauseKind = "clause1" | "clause3" | "clause4" | "clause6" | "clause8";
+type ClauseKind = "clause1" | "clause2" | "clause3" | "clause4" | "clause6" | "clause8";
 
 const CLAUSE_OPTIONS: Array<{ value: ClauseKind; label: string; description: string }> = [
   {
     value: "clause1",
     label: "출연받은 재산 (§48②1호)",
     description: "출연받은 날부터 3년 이내에 직접 공익목적사업 등에 사용하지 않은 경우 등",
+  },
+  {
+    value: "clause2",
+    label: "주식등 취득 보유비율 초과 (§48②2호)",
+    description:
+      "출연재산·운용소득·매각대금으로 내국법인 주식등을 취득해 §16②2호 비율(원칙 10%·가목 20%·나목·다목 5%)을 초과한 경우",
   },
   {
     value: "clause3",
@@ -141,6 +149,7 @@ function PublicInterestPostMgmtInner() {
       </div>
 
       {clause === "clause1" && <Clause1Form initialDonated={initialDonated} />}
+      {clause === "clause2" && <Clause2Form />}
       {clause === "clause3" && <Clause3Form />}
       {clause === "clause4" && <Clause4Form />}
       {clause === "clause6" && <Clause6Form />}

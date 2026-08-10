@@ -415,3 +415,127 @@ test.describe("공익법인 운용 의무 위반 (§48②8호)", () => {
     await expect(page.getByTestId("pi8-exempt-reason")).toHaveCount(0);
   });
 });
+
+/**
+ * §48②2호 — 주식등 취득 보유비율 초과.
+ *
+ * 🔑 이 블록이 지키는 두 축:
+ *   ① **과세가액이 평가액이 아니라 취득자금**이라는 것 — 취득가액을 바꾸면 세액이 바뀐다.
+ *   ② **과세 단위가 「추가로 취득한 주식」**이라는 것 — 합산분만으로 한도를 넘어도 취득분을 넘어
+ *      과세하지 않는다(계획서 §5.1 근거 4건).
+ *
+ * ⚠️ 주식 수는 `IntegerInput`이라 testid가 DOM에 흐르지 않는다 → `getByLabel`.
+ */
+async function openClause2(page: Page) {
+  await page.goto("/calc/public-interest-postmgmt");
+  await page.getByRole("heading", { name: /공익법인 출연재산 사후관리/ }).waitFor();
+  await page.getByRole("radio", { name: /주식등 취득 보유비율 초과/ }).check();
+}
+
+/** 발행 100만주 · 2025-04-10 취득 */
+async function fillClause2Base(
+  page: Page,
+  opts: { acquired: string; held: string; cost: string },
+) {
+  await fillDateAndVerify(page, { year: "2025", month: "4", day: "10" }, {
+    scope: page.getByTestId("pi2-assessment-date"),
+  });
+  await page.getByLabel("발행주식총수등").fill("1000000");
+  await page.getByLabel("이번에 취득한 주식등").fill(opts.acquired);
+  await page.getByLabel("가목 취득 당시 보유").fill(opts.held);
+  await page.getByLabel("나목 다른 공익법인 출연분").fill("0");
+  await page.getByLabel("다목 다른 공익법인 보유분").fill("0");
+  await page.getByTestId("pi2-acquisition-cost").fill(opts.cost);
+}
+
+test.describe("공익법인 주식등 취득 보유비율 초과 (§48②2호)", () => {
+  test("PI2-E2E-1: 한도 10만·합산 13만 → 초과 3만 → 취득가액 중 3/5이 과세가액", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause2(page);
+    await fillClause2Base(page, { acquired: "50000", held: "80000", cost: "1000000000" });
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi2-result");
+    await expect(box).toBeVisible();
+    // 10억 × 3만/5만 = 6억 → 6억 × 30% − 6천만 = 120,000,000
+    await expect(page.getByTestId("pi2-gift-tax")).toHaveText(/120,000,000/);
+    await expect(box.getByText(/상증령 §40①2호/).first()).toBeVisible();
+    // 캡 배지는 나타나지 않는다
+    await expect(page.getByTestId("pi2-capped")).toHaveCount(0);
+  });
+
+  test("PI2-E2E-2: ⭐ 합산분만으로 한도 초과 → 과세 대상이 취득분으로 제한된다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause2(page);
+    // 가목 12만주(12%) 보유 상태에서 1만주 취득(2억)
+    await fillClause2Base(page, { acquired: "10000", held: "120000", cost: "200000000" });
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    await expect(page.getByTestId("pi2-capped")).toBeVisible();
+    // 취득분 전부 = 2억 → 2억 × 20% − 1천만 = 30,000,000
+    await expect(page.getByTestId("pi2-gift-tax")).toHaveText(/30,000,000/);
+    // ❌ 초과 3만주 × 주당 2만원 = 6억 기준(120,000,000)이 되면 안 된다
+    await expect(page.getByTestId("pi2-gift-tax")).not.toHaveText(/120,000,000/);
+  });
+
+  test("PI2-E2E-3: ⭐ 나목이 가목을 이긴다 — 가목 요건을 다 켜도 5%", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause2(page);
+    await fillClause2Base(page, { acquired: "50000", held: "80000", cost: "1000000000" });
+
+    // 가목 두 요건 ON → 20%면 한도 20만 > 합산 13만이라 과세 0이어야 한다
+    await page.getByRole("switch", { name: /의결권을 행사하지 아니할 것/ }).click();
+    await page.getByRole("switch", { name: /자선ㆍ장학 또는 사회복지를 목적/ }).click();
+    // 그런데 나목도 ON → 5%로 떨어진다
+    // ⚠️ §16③1호 토글의 설명문에도 「상호출자제한기업집단과 특수관계」가 나온다(「…없는」).
+    //    「나목 —」으로 앵커해 strict mode 위반을 피한다(e2e/CLAUDE.md §3).
+    await page.getByRole("switch", { name: /^나목 — 상호출자제한기업집단/ }).click();
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi2-result");
+    await expect(box.getByText(/나목/).first()).toBeVisible();
+    // 한도 5만 · 합산 13만 → 초과 8만이나 취득 5만이 캡 → 취득가액 전액 10억
+    await expect(page.getByTestId("pi2-gift-tax")).toHaveText(/240,000,000/);
+  });
+
+  test("PI2-E2E-4: 가목 20% — 한도 이내면 추징 대상이 아니다 (양성 대조군)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause2(page);
+    await fillClause2Base(page, { acquired: "50000", held: "80000", cost: "1000000000" });
+    await page.getByRole("switch", { name: /의결권을 행사하지 아니할 것/ }).click();
+    await page.getByRole("switch", { name: /자선ㆍ장학 또는 사회복지를 목적/ }).click();
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi2-result");
+    await expect(box.getByText(/추징 대상 아님 \(20% 이내\)/)).toBeVisible();
+    await expect(page.getByTestId("pi2-gift-tax")).toHaveText(/^0/);
+  });
+
+  test("PI2-E2E-5: 단서 — §16③1호를 켜면 「제외」로 뒤집힌다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause2(page);
+    await fillClause2Base(page, { acquired: "50000", held: "80000", cost: "1000000000" });
+    await page.getByRole("switch", { name: /주무관청이 목적사업 수행에 필요하다고 인정/ }).click();
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    const box = page.getByTestId("pi2-result");
+    await expect(box.getByText(/§48②2호 대상이 아닙니다/)).toBeVisible();
+    await expect(page.getByTestId("pi2-non-applicable")).toContainText("제1호");
+    await expect(page.getByTestId("pi2-gift-tax")).toHaveCount(0);
+  });
+
+  test("PI2-E2E-6: 상증칙 §13① — 취득가액 산정 곤란 시 평가액 입력으로 전환된다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openClause2(page);
+    await fillClause2Base(page, { acquired: "50000", held: "80000", cost: "1000000000" });
+
+    await page.getByRole("switch", { name: /취득가액 산정이 곤란함/ }).click();
+    // 취득가액 입력이 사라지고 평가액 입력이 나타난다 (양성 대조군 쌍)
+    await expect(page.getByTestId("pi2-acquisition-cost")).toHaveCount(0);
+    await page.getByTestId("pi2-chapter4-value").fill("750000000");
+    await page.getByRole("button", { name: "추징세액 계산" }).click();
+
+    // 7.5억 × 30% − 6천만 = 165,000,000 (취득가액 경로였다면 120,000,000)
+    await expect(page.getByTestId("pi2-gift-tax")).toHaveText(/165,000,000/);
+  });
+});
