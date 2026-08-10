@@ -11,6 +11,7 @@ import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split
 import { LAND_PRICE_NOTICE_START } from "./transfer-pre1990-commercial-bridge";
 import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
+import { buildGbCarryoverPayload } from "./transfer-tax-api-gb-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 // ─── ④ 사례 33: 증축 extensionInfo 서브객체 변환 헬퍼 ───
@@ -395,6 +396,9 @@ export function buildGeneralBuildingValuation(
       ...(asset.acquisitionCause && asset.acquisitionCause !== "newConstruction"
         ? { landAcquisitionCause: asset.acquisitionCause }
         : {}),
+      // ⑫ 이월과세(§97의2) — 사건 1벌 + 파트 N벌. route가 영 §163의2②로 조립한다.
+      //    🔴 이것이 없어서 「입력했는데 세액 그대로」였다(계획 §2 ③).
+      ...buildGbCarryoverPayload(asset),
       ...(asset.decedentAcquisitionDate
         ? { decedentAcquisitionDate: asset.decedentAcquisitionDate }
         : {}),
@@ -530,6 +534,8 @@ export function buildGeneralBuildingValuation(
     ...(asset.acquisitionCause && asset.acquisitionCause !== "newConstruction"
       ? { landAcquisitionCause: asset.acquisitionCause }
       : {}),
+    // ⑫ 이월과세 — 🔴 **실가 경로에도 반드시** (설계 D1-1). 한쪽만 고치면 모드에 따라 켜졌다 꺼졌다 한다.
+    ...buildGbCarryoverPayload(asset),
     ...(asset.decedentAcquisitionDate ? { decedentAcquisitionDate: asset.decedentAcquisitionDate } : {}),
     ...(asset.donorAcquisitionDate ? { donorAcquisitionDate: asset.donorAcquisitionDate } : {}),
     // §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1)

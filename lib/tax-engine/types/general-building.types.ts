@@ -175,6 +175,16 @@ export type GeneralBuildingInput = {
    */
   landCarryoverTaxation?: CarryoverTaxationInput;
   /**
+   * **건물** 배우자등 이월과세 (§97의2) — `buildingAcquisitionCause === "carryover_gift"` 시.
+   *
+   * 법 §97의2①은 「**토지·건물** 등」이라 건물도 대상이다. 토지+건물을 함께 증여받는 것이
+   * 오히려 전형이므로 토지만 지원하면 반쪽이 된다(계획 §6 Q1).
+   *
+   * ⚠️ 파트마다 **자기 값**을 쓴다 — 증여자 취득일·취득가액이 토지와 다를 수 있고,
+   *    증여세 상당액은 영 §163의2②로 **자산별 안분**된 값이 들어온다.
+   */
+  buildingCarryoverTaxation?: CarryoverTaxationInput;
+  /**
    * 다른 피상속인 케이스 — 건물 전용 피상속인 취득일.
    * 미입력 시 `decedentAcquisitionDate` fallback (#6 같은 피상속인 호환).
    * `buildingAcquisitionCause === "inheritance"` 시 단기보유 기산점(영 §95④).
@@ -461,11 +471,23 @@ export type AssetCardForAggregate = {
   /** 토지 증여 시 증여자 취득일 (영 §95④ 단기보유 기산점). */
   donorAcquisitionDate?: Date;
   /**
-   * #7-b: 토지 배우자등 이월과세 (§97조의2) — 토지 카드에만 set.
+   * #7-b: 배우자등 이월과세 (§97조의2) — 토지·건물 카드 각각에 set.
    * 라우트가 TransferTaxItemInput.carryoverTaxation로 전달 →
    * aggregate가 단건 엔진 호출 시 자동 비교과세 수행.
    */
   carryoverTaxation?: CarryoverTaxationInput;
+  /**
+   * 환산 모드 이월과세 **분자** — 증여자 취득 당시 그 파트의 기준시가 (설계 D9-8).
+   * `buildProperties`가 카드 input의 `standardPriceAtAcquisition`으로 옮긴다.
+   */
+  carryoverDonorStandardPriceAtAcquisition?: number;
+  /**
+   * 환산 모드 이월과세 **분모** — 그 파트의 **양도 당시** 기준시가.
+   *
+   * 🔑 사용자에게 받지 않는다 — 일반건물이 이미 아는 값이다(토지 `perSqm × 면적` ·
+   *    건물 `transferBuildingStdPrice`). 받으면 화면 안분 산식과 계산이 갈린다.
+   */
+  standardPriceAtTransferForCarryover?: number;
   /**
    * 증축 건물 카드 여부 (사례 33 — building2 카드에만 true).
    * 결과 카드 배지 표시용. 산식에는 미사용.

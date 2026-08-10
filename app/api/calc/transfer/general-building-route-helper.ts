@@ -18,6 +18,7 @@
  */
 
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import {
   buildGeneralBuildingAssetCards,
@@ -95,6 +96,69 @@ export function dispatchGeneralBuilding(
 }
 
 /**
+ * 이월과세 서브객체 조립 — **파트 입력(신규)** 과 **엔진 모양(하위 호환)** 을 모두 받는다.
+ *
+ * 설계 D9-10. UI는 「증여 사건 1벌 + 파트 N벌」로 받고 엔진은 「파트마다 완결된 객체」를 원한다.
+ * 그 간극을 여기서 메운다.
+ *
+ * - `carryoverGiftEvent` + `*CarryoverPart`가 있으면 **조립**한다.
+ *   증여세 상당액은 영 §163의2②로 **산정**한다 — 사용자가 안분하지 않는다.
+ * - 없으면 `*CarryoverTaxation`(엔진 모양)을 그대로 쓴다.
+ *   🔴 이 경로를 없애면 API 직접 호출자와 기존 테스트 16건·GBF-27이 깨진다.
+ *
+ * ⚠️ **환산 모드 분자(`donorStandardPriceAtAcquisition`)는 여기서 카드로 못 보낸다** —
+ *    `standardPriceAtAcquisition`은 엔진 카드 input 필드라 `buildProperties`가 싣는다.
+ *    여기서는 서브객체에 담아 넘기고, 카드 조립 시점에 꺼낸다(설계 D9-8).
+ */
+function composeGbCarryover(gbRaw: Record<string, unknown>): {
+  land?: Record<string, unknown>;
+  building?: Record<string, unknown>;
+} {
+  const event = gbRaw.carryoverGiftEvent as Record<string, unknown> | undefined;
+
+  const fromPart = (partRaw: unknown): Record<string, unknown> | undefined => {
+    if (!event || !partRaw) return undefined;
+    const part = partRaw as Record<string, unknown>;
+    const assetValue = (part.giftDateAssetValue as number) ?? 0;
+    return {
+      giftRegistryDate: toOptionalDate(event.giftRegistryDate),
+      donorAcquisitionDate: toOptionalDate(part.donorAcquisitionDate),
+      donorAcquisitionPrice: part.donorAcquisitionPrice,
+      useEstimatedAcquisition: part.useEstimatedAcquisition === true,
+      // 영 §163의2② — 산출세액 × (해당 자산가액 ÷ 과세가액)
+      giftTaxAmount: apportionGiftTax(
+        {
+          giftTaxCalculated: (event.giftTaxCalculated as number) ?? 0,
+          giftTaxBase: (event.giftTaxBase as number) ?? 0,
+        },
+        assetValue,
+      ),
+      donorCapitalExpenditure: part.donorCapitalExpenditure,
+      // 영 §163의2②2호 분자 = 비교과세 시나리오 B 취득가액 (같은 값을 겸한다)
+      giftDateValuation: assetValue,
+      exclusionDeclared: event.exclusionDeclared,
+      // 환산 모드 분자 — 카드 조립 시 `standardPriceAtAcquisition`으로 꺼낸다(D9-8)
+      donorStandardPriceAtAcquisition: part.donorStandardPriceAtAcquisition,
+    };
+  };
+
+  const legacy = (raw: unknown): Record<string, unknown> | undefined => {
+    if (!raw) return undefined;
+    const ct = raw as Record<string, unknown>;
+    return {
+      ...ct,
+      giftRegistryDate: toOptionalDate(ct.giftRegistryDate),
+      donorAcquisitionDate: toOptionalDate(ct.donorAcquisitionDate),
+    };
+  };
+
+  return {
+    land: fromPart(gbRaw.landCarryoverPart) ?? legacy(gbRaw.landCarryoverTaxation),
+    building: fromPart(gbRaw.buildingCarryoverPart) ?? legacy(gbRaw.buildingCarryoverTaxation),
+  };
+}
+
+/**
  * ⑭ **`generalBuildingValuation` payload의 Date 변환 단일 소스**.
  *
  * Zod는 대부분의 날짜를 `z.string().date()`로만 **검증**하고 `Date`로 바꾸지 않는다.
@@ -130,15 +194,8 @@ export function coerceGeneralBuildingPayload(
   const buildingDecedentAcqDate = toOptionalDate(gbRaw.buildingDecedentAcquisitionDate);
   const buildingDonorAcqDate = toOptionalDate(gbRaw.buildingDonorAcquisitionDate);
 
-  // #7-b: 토지 이월과세 carryoverTaxation 객체 내부 Date 변환
-  const landCt = gbRaw.landCarryoverTaxation as Record<string, unknown> | undefined;
-  const coercedLandCt = landCt
-    ? {
-        ...landCt,
-        giftRegistryDate: toOptionalDate(landCt.giftRegistryDate),
-        donorAcquisitionDate: toOptionalDate(landCt.donorAcquisitionDate),
-      }
-    : undefined;
+  // #7-b: 이월과세 서브객체 — 파트 입력(신규)을 엔진 모양으로 조립하고 Date를 변환한다.
+  const { land: coercedLandCt, building: coercedBuildingCt } = composeGbCarryover(gbRaw);
 
   // ⑭ 사례 35: conversionDate Date 변환 (string → Date)
   const conversionDateCoerced = toOptionalDate(gbRaw.conversionDate);
@@ -163,6 +220,7 @@ export function coerceGeneralBuildingPayload(
     ...(buildingDecedentAcqDate ? { buildingDecedentAcquisitionDate: buildingDecedentAcqDate } : {}),
     ...(buildingDonorAcqDate ? { buildingDonorAcquisitionDate: buildingDonorAcqDate } : {}),
     ...(coercedLandCt ? { landCarryoverTaxation: coercedLandCt } : {}),
+    ...(coercedBuildingCt ? { buildingCarryoverTaxation: coercedBuildingCt } : {}),
     ...(coercedExtInfo ? { extensionInfo: coercedExtInfo } : {}),
     // ⑭ 양도시 감정평가가액의 **감정일자** — JSON 경유 후 문자열로 도착한다. `Date`로 바꾸지
     //    않으면 엔진의 유효 창 비교(`getTime()`)가 런타임에 깨진다(`lib/api/date-coerce.ts`).

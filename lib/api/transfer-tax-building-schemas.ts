@@ -10,6 +10,47 @@
 
 import { z } from "zod";
 
+/** 이월과세 적용배제 선언 (법 §97의2②) — 토지·건물 공통. */
+const carryoverExclusionShape = z.object({
+  expropriationWithin2Years: z.boolean().optional(),
+  oneHouseExemptionApplies: z.boolean().optional(),
+  isFamilyBusinessInheritedAsset: z.boolean().optional(),
+});
+
+/**
+ * **엔진이 읽는 모양**의 이월과세 서브객체 — 파트마다 완결돼 있다.
+ * 토지(`landCarryoverTaxation`)·건물(`buildingCarryoverTaxation`)이 같은 모양을 쓴다.
+ */
+const carryoverTaxationEngineShape = z.object({
+  giftRegistryDate: z.string().date(),
+  donorAcquisitionDate: z.string().date(),
+  donorAcquisitionPrice: z.number().int().nonnegative().optional(),
+  useEstimatedAcquisition: z.boolean(),
+  /** 그 파트에 귀속되는 **증여세 상당액**(이미 안분된 값). */
+  giftTaxAmount: z.number().int().nonnegative(),
+  donorCapitalExpenditure: z.number().int().nonnegative().optional(),
+  giftDateValuation: z.number().int().nonnegative(),
+  exclusionDeclared: carryoverExclusionShape.optional(),
+});
+
+/**
+ * **UI가 만드는 모양**의 파트별 이월과세 입력 (설계 D9-10).
+ * `giftTaxAmount`가 없다 — route가 영 §163의2②로 산정한다.
+ */
+const carryoverPartShape = z.object({
+  donorAcquisitionDate: z.string().date(),
+  donorAcquisitionPrice: z.number().int().nonnegative().optional(),
+  donorCapitalExpenditure: z.number().int().nonnegative().optional(),
+  /** 영 §163의2②2호 안분 분자 + 비교과세 시나리오 B 취득가액 (같은 값을 겸한다). */
+  giftDateAssetValue: z.number().int().nonnegative(),
+  useEstimatedAcquisition: z.boolean(),
+  /**
+   * 환산 모드 분자 — **증여자 취득 당시** 그 파트의 기준시가 (설계 D9-8).
+   * 분모(양도 당시)는 받지 않는다 — 일반건물이 이미 안다.
+   */
+  donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
+});
+
 /**
  * ⑨⑫ 일반건물(토지+건물 일괄) 환산취득가 계산 입력 스키마.
  *
@@ -211,25 +252,41 @@ export const generalBuildingValuationSchema = z.object({
   /**
    * #7-b: 토지 배우자등 이월과세 (§97조의2) — landAcquisitionCause === "carryover_gift" 시 필수.
    * 단건 엔진의 비교과세(이월 vs 통상 max) 로직이 토지 카드에 적용됨.
+   *
+   * 🔴 **없애지 말 것** — API 직접 호출 경로와 기존 테스트
+   * (`general-building-case-7b-carryover.test.ts` 16건 · 지분 anchor GBF-27)가 이 모양을 쓴다.
+   * 신규 `carryoverGiftEvent` + `*CarryoverPart`는 **추가**이지 대체가 아니다(설계 D9-10).
    */
-  landCarryoverTaxation: z
+  landCarryoverTaxation: carryoverTaxationEngineShape.optional(),
+  /**
+   * ⑫ 건물 파트 이월과세 (§97의2) — `buildingAcquisitionCause === "carryover_gift"` 시.
+   * 토지의 `landCarryoverTaxation`과 **같은 모양**이다(엔진이 카드별로 같은 규칙을 쓴다).
+   */
+  buildingCarryoverTaxation: carryoverTaxationEngineShape.optional(),
+  /**
+   * ⑫ **증여 사건** (파트로 나뉘지 않는 사실) — 영 §163의2②1호·3호.
+   *
+   * 이것이 있으면 route가 파트별 증여세 상당액을 **직접 산정**한다
+   * (`apportionGiftTax`). 없으면 `*CarryoverTaxation.giftTaxAmount`를 그대로 쓴다(하위 호환).
+   */
+  carryoverGiftEvent: z
     .object({
       giftRegistryDate: z.string().date(),
-      donorAcquisitionDate: z.string().date(),
-      donorAcquisitionPrice: z.number().int().nonnegative().optional(),
-      useEstimatedAcquisition: z.boolean(),
-      giftTaxAmount: z.number().int().nonnegative(),
-      donorCapitalExpenditure: z.number().int().nonnegative().optional(),
-      giftDateValuation: z.number().int().nonnegative(),
-      exclusionDeclared: z
-        .object({
-          expropriationWithin2Years: z.boolean().optional(),
-          oneHouseExemptionApplies: z.boolean().optional(),
-          isFamilyBusinessInheritedAsset: z.boolean().optional(),
-        })
-        .optional(),
+      /** 영 §163의2②1호 증여세 산출세액 */
+      giftTaxCalculated: z.number().int().nonnegative(),
+      /** 영 §163의2②3호 증여세 과세가액 — 안분 분모 */
+      giftTaxBase: z.number().int().positive(),
+      exclusionDeclared: carryoverExclusionShape.optional(),
     })
     .optional(),
+  /**
+   * ⑫ **파트별** 이월과세 입력 — `carryoverGiftEvent`와 짝을 이룬다(설계 D9-10).
+   *
+   * 🔑 `giftTaxAmount`가 **없다** — 사용자가 안분하지 않기 때문이다.
+   *    route가 `apportionGiftTax(event, giftDateAssetValue)`로 산정해 엔진 모양으로 조립한다.
+   */
+  landCarryoverPart: carryoverPartShape.optional(),
+  buildingCarryoverPart: carryoverPartShape.optional(),
   /**
    * ⑫ 사례 33 증축: 토지+건물1 일괄 취득가액 (원).
    * 환산취득가 모드에서 body.acquisitionPrice=0이므로 여기서 명시 전달.

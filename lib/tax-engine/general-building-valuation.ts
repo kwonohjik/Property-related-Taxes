@@ -274,6 +274,31 @@ function calculateEstimatedDeduction(
  *   TRANSFER.GENERAL_BUILDING_LUMP_DEDUCTION — §97②2호 + §163⑥
  *   NBL.BUILDING_SITE — §168의8 (건물 부수토지 배율)
  */
+/**
+ * 환산 모드 이월과세의 분자·분모를 카드에 실는다 (설계 D9-8) — 증축 경로와 공유한다.
+ *
+ * 분자는 `composeGbCarryover`가 서브객체에 담아 보낸 사용자 입력(증여자 취득 당시),
+ * 분모는 **그 파트의 양도 당시 기준시가**(엔진이 아는 값).
+ * 환산 모드가 아니거나 분자가 없으면 아무것도 하지 않는다 — 회귀 0.
+ */
+export function applyCarryoverEstimationBasis(
+  cards: AssetCardForAggregate[],
+  landStdAtTransfer: number,
+  buildingStdAtTransfer: number,
+): void {
+  for (const c of cards) {
+    const ct = c.carryoverTaxation as
+      | (typeof c.carryoverTaxation & { donorStandardPriceAtAcquisition?: number })
+      | undefined;
+    if (!ct?.useEstimatedAcquisition) continue;
+    const numerator = ct.donorStandardPriceAtAcquisition;
+    if (numerator === undefined) continue;
+    c.carryoverDonorStandardPriceAtAcquisition = numerator;
+    c.standardPriceAtTransferForCarryover =
+      c.propertyType === "land" ? landStdAtTransfer : buildingStdAtTransfer;
+  }
+}
+
 export function buildGeneralBuildingAssetCards(
   rawInput: GeneralBuildingInput,
 ): GeneralBuildingOutput {
@@ -512,6 +537,13 @@ export function buildGeneralBuildingAssetCards(
           return buildingDonor ? { donorAcquisitionDate: buildingDonor } : {};
         })()
       : {}),
+    /**
+     * 건물 이월과세 (§97의2) — 토지 카드와 **같은 축**.
+     * 법 §97의2①은 「토지·건물 등」이라 건물도 대상이다(계획 §6 Q1).
+     */
+    ...(input.buildingCarryoverTaxation
+      ? { carryoverTaxation: input.buildingCarryoverTaxation }
+      : {}),
   });
 
   // 산식 분모/분자 변수 (UI 자산별 산식 인라인 표시용 — 사례 31 경로)
@@ -521,6 +553,17 @@ export function buildGeneralBuildingAssetCards(
   const acqLandStdTotalForFormula = Math.floor(
     input.acquisitionLandPricePerSqm * input.landArea,
   );
+
+  /**
+   * 🔴 환산 모드 이월과세 기준시가 (설계 D9-8) — **카드 조립 후 일괄 주입**.
+   *
+   * `calcCarryoverScenarios`가 `standardPriceAtAcquisition ÷ standardPriceAtTransfer`로
+   * 환산하는데, 종전에는 GB 카드에 두 값이 없어 **취득가액이 0**이 됐다(43,470,000원 과대).
+   *
+   * 분모는 **그 파트의 양도 당시 기준시가** — 엔진이 아는 값을 쓴다. 사용자에게 받으면
+   * 화면의 §166⑥ 안분 산식과 계산이 갈린다.
+   */
+  applyCarryoverEstimationBasis(assetCards, landStdTotalForFormula, input.transferBuildingStdPrice);
 
   // 사례 35: 주택→상가 용도변경 3필드를 모든 자산 카드에 일괄 propagate
   if (input.houseToCommercialConversion) {

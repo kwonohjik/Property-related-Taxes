@@ -130,6 +130,30 @@ export function buildProperties(
                 : {}),
             }
           : {}),
+      // 🆕 건물 이월과세 (§97의2① 「토지·건물」) — 토지와 같은 축으로 넘긴다.
+      //    ⚠️ 위 `isBuilding` 분기는 `acquisitionCause`·decedent/donor만 넘겨서
+      //       여기서 별도로 싣지 않으면 **엔진 카드에는 있는데 단건 input에서 사라진다**(⑭ 침묵 strip).
+      ...(isBuilding && card.carryoverTaxation
+        ? { carryoverTaxation: card.carryoverTaxation }
+        : {}),
+      /**
+       * 🔴 **환산 모드 이월과세의 분자·분모** (설계 D9-8).
+       *
+       * `calcCarryoverScenarios`는 `standardPriceAtAcquisition ÷ standardPriceAtTransfer`로
+       * 환산하는데, 종전에는 GB 카드에 두 값이 **없어 취득가액이 0**이 됐다
+       * (실측 43,470,000원 과대 + 비교과세가 그 틀린 A를 채택).
+       *
+       * 분자는 사용자 입력(증여자 취득 당시), **분모는 그 파트의 양도 당시 기준시가**로
+       * 엔진이 아는 값을 쓴다 — 사용자에게 받으면 화면 산식과 계산이 갈린다.
+       */
+      ...(card.carryoverTaxation?.useEstimatedAcquisition &&
+      card.carryoverDonorStandardPriceAtAcquisition !== undefined &&
+      card.standardPriceAtTransferForCarryover !== undefined
+        ? {
+            standardPriceAtAcquisition: card.carryoverDonorStandardPriceAtAcquisition,
+            standardPriceAtTransfer: card.standardPriceAtTransferForCarryover,
+          }
+        : {}),
       // 사례 35: 주택→상가 용도변경 — 자산 공통 속성, 단건 엔진 LTHD 기산일 분기
       ...(card.houseToCommercialConversion
         ? {

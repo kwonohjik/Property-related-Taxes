@@ -56,10 +56,13 @@ const LAND_CAUSE_OPTIONS = [
 ] as const;
 
 // ── 건물 취득원인 옵션 (신축 포함 4종, 예제 정렬) ──
+// 「이월과세(증여)」 포함 — 법 §97의2①은 「**토지·건물** 등」이라 건물도 대상이다.
+// 토지+건물을 함께 증여받는 것이 오히려 전형이므로 토지만 두면 반쪽 지원이 된다.
 const BUILDING_CAUSE_OPTIONS = [
   { value: "purchase",         label: "매매" },
   { value: "inheritance",      label: "상속" },
   { value: "gift",             label: "증여" },
+  { value: "carryover_gift",   label: "이월과세(증여)" },
   { value: "newConstruction",  label: "신축(자가건축)" },
 ] as const;
 
@@ -655,6 +658,36 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onChange={setBuildingAcqDate}
           />
         </FieldCard>
+
+        {/*
+          건물 파트 이월과세 — 증여자 취득일·취득가액이 **토지와 다를 수 있다**
+          (법 §95④·§97의2①1호). 그래서 파트별로 받는다.
+
+          ⚠️ 증여 사건 정보(등기접수일·증여세 산출세액·과세가액·적용배제)는 **토지 쪽 블록 하나**가
+             정본이다 — 하나의 증여이므로 두 벌을 두면 어긋난다. 여기서는 파트 정보만 받는다.
+        */}
+        {asset.gbBuildingAcquisitionCause === "carryover_gift" && (
+          <>
+            {asset.acquisitionCause !== "carryover_gift" && (
+              <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+                증여 등기접수일·증여세 산출세액·과세가액은 **토지 취득** 카드의 이월과세 정보에서
+                한 번만 입력합니다(하나의 증여이기 때문입니다).
+              </p>
+            )}
+            <CarryoverGiftBlock
+              asset={{ ...asset, carryover: asset.buildingCarryover ?? asset.carryover }}
+              transferDate={transferDate ?? ""}
+              onChange={(patch) => {
+                // 🔑 건물 블록의 편집은 `buildingCarryover`로 간다 — 토지 값을 덮어쓰지 않는다.
+                if ("carryover" in patch && patch.carryover) {
+                  onChange({ buildingCarryover: patch.carryover });
+                  return;
+                }
+                onChange(patch);
+              }}
+            />
+          </>
+        )}
 
         {/* §114조의2 가산세 5년 이내 안내 배지 (useMemo 파생) */}
         {showPenaltyBadge && (
