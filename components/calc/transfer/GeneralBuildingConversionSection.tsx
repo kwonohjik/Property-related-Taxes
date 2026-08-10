@@ -21,6 +21,11 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DateInput } from "@/components/ui/date-input";
+import {
+  isMultiHouseLthdExclusionEra,
+  MULTI_HOUSE_LTHD_EXCLUSION_LIFTED,
+  MULTI_HOUSE_LTHD_EXCLUSION_RESTORED,
+} from "@/lib/tax-engine/data/lthd-multi-house-exclusion-era";
 
 interface Props {
   asset: AssetForm;
@@ -30,6 +35,21 @@ interface Props {
 }
 
 export function GeneralBuildingConversionSection({ asset, onChange, transferDate }: Props) {
+  /**
+   * 용도변경 시점의 「소득세법」 §95② 괄호가 다주택을 LTHD에서 **배제할 수 있었는가**.
+   *
+   * 2012.1.1~2018.3.31 용도변경분은 그 괄호에 다주택이 없어 배제 자산이 될 수 없다
+   * (사전-2024-법규재산-0161). 이 구간에서는 「예(중과 대상)」를 골라도 기산일이 취득일이므로
+   * **묻는 것 자체가 오해를 만든다** ⇒ 라디오를 비활성화하고 사유를 표시한다.
+   * 엔진(`resolveLTHDStartDate`)이 같은 leaf로 같은 판정을 하므로 화면과 세액이 갈리지 않는다.
+   */
+  const exclusionEra = useMemo(() => {
+    if (!asset.gbConversionDate) return null;
+    const d = new Date(asset.gbConversionDate);
+    if (Number.isNaN(d.getTime())) return null;
+    return isMultiHouseLthdExclusionEra(d);
+  }, [asset.gbConversionDate]);
+
   /**
    * 사례 35: 주택→상가 용도변경 미리보기 — 보유기간 기산일 + 표1 공제율 안내.
    * useMemo 순수 — useEffect 미러링 금지 정책 준수.
@@ -42,9 +62,10 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
     // 제94조 제1항 제1호가 각각 자산으로 드는 별개 자산이므로 기산일도 파트별이다(계획서 §3.6).
     // 미리보기 연수는 **이른 쪽**(=공제가 큰 쪽)이 아니라 건물 기준으로 잡는다 — 용도변경 대상이
     // 건물이고, 토지 기산일은 아래 label에 병기해 사용자가 두 값을 모두 본다.
-    const startISO = asset.gbWasMultiHouseAtConversion
-      ? asset.gbConversionDate
-      : asset.acquisitionDate;
+    // ⚠️ 「다주택이었나」만으로 기산일을 정하면 2012~2018 용도변경분이 틀린다(0161).
+    //    엔진과 같은 술어를 써야 화면 표시와 세액이 갈리지 않는다.
+    const startShifts = asset.gbWasMultiHouseAtConversion && exclusionEra === true;
+    const startISO = startShifts ? asset.gbConversionDate : asset.acquisitionDate;
     if (!startISO) return null;
     const start = new Date(startISO);
     const end = new Date(transferDate);
@@ -61,11 +82,13 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
     return {
       isUnder3Years,
       years,
-      label: asset.gbWasMultiHouseAtConversion
+      label: startShifts
         ? `보유기간 기산일 = 용도변경일 (${asset.gbConversionDate}) — 토지·건물 공통`
-        : asset.hasSeperateLandAcquisitionDate
-          ? `보유기간 기산일 — 토지 ${asset.landAcquisitionDate} / 건물 ${asset.acquisitionDate} (자산별 §95④)`
-          : `보유기간 기산일 = 당초 취득일 (${asset.acquisitionDate})`,
+        : asset.gbWasMultiHouseAtConversion
+          ? `보유기간 기산일 = 당초 취득일 (${asset.acquisitionDate}) — 용도변경일이 ${MULTI_HOUSE_LTHD_EXCLUSION_LIFTED}~${MULTI_HOUSE_LTHD_EXCLUSION_RESTORED} 사이라 그 시기 §95② 괄호에 다주택이 없었습니다`
+          : asset.hasSeperateLandAcquisitionDate
+            ? `보유기간 기산일 — 토지 ${asset.landAcquisitionDate} / 건물 ${asset.acquisitionDate} (자산별 §95④)`
+            : `보유기간 기산일 = 당초 취득일 (${asset.acquisitionDate})`,
       notice: isUnder3Years
         ? `보유기간 ${years}년 → 3년 미만 — 장기보유특별공제 0% (§95② 표1)`
         : `보유기간 ${years}년 → §95② 표1 ${rate}% (연 2%, 최대 30%)`,
@@ -77,6 +100,7 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
     asset.acquisitionDate,
     asset.landAcquisitionDate,
     asset.hasSeperateLandAcquisitionDate,
+    exclusionEra,
     transferDate,
   ]);
 
@@ -113,7 +137,7 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
           tone="fuchsia"
           variant="card"
           title="주택 → 상가 용도변경"
-          description="주택 전체를 근린생활시설 등 비주택으로 용도변경한 경우 ON. 다주택 상태에서 용도변경 시 변경일 이전 보유기간이 장기보유특별공제에서 배제됩니다."
+          description="주택 전체를 근린생활시설 등 비주택으로 용도변경한 경우 ON. 용도변경 당시 그 주택이 장기보유특별공제 대상에서 제외되는 중과 주택이었다면 변경일 이전 보유기간을 세지 않습니다."
           checked={asset.gbHouseToCommercialConversion}
           onCheckedChange={(v) => onChange({ gbHouseToCommercialConversion: v })}
           trailing={
@@ -122,7 +146,7 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
               label="근거"
               kind="ruling"
               summary={
-                "조정대상지역 다주택자가 주택을 상가로 용도변경한 후 중과배제기간(2022-05-10 ~ 2024-05-09) 중 양도하는 경우,\n장기보유특별공제 보유기간 기산일은 용도변경일로 한다.\n변경일 이전 보유기간은 장기보유특별공제 대상에서 배제된다.\n\n관련: 사전법규재산 2022-881 (2022.12.28) — 동일 취지\n     서울행법 2012구단26961 (2013.04.24) — 다주택자 용도변경 LTHD 배제 판결"
+                "1세대가 조정대상지역에 2주택을 보유한 상태에서 「소득세법」 제104조제7항제1호에 따른 양도소득세가 중과되는 1주택을\n근린생활시설로 용도변경하여 사용하다 이를 양도하는 경우, 같은 법 제95조제2항의 장기보유특별공제액을 계산함에 있어\n보유기간은 근린생활시설로 용도변경한 날을 기산일로 하여 계산하는 것입니다.\n\n관련: 사전법규재산 2022-881 (2022.12.28) — 동일 취지(0684를 인용)\n\n※ 판정 축은 「다주택이었나」가 아니라 「용도변경 당시 장기보유특별공제 배제 자산이었나」입니다.\n   사전-2024-법규재산-0161 (2024.05.03) — 「용도변경일 당시 장기보유특별공제가 적용되는 주택」을\n   상가로 용도변경한 경우 기산일은 그 건물의 당초 취득일로 한다(용도변경 당시 다주택이었더라도 동일).\n   같은 예규 각주: 2012.1.1.~2018.3.31.까지는 다주택자의 주택 양도에도 장기보유특별공제가 가능했다."
               }
             />
           }
@@ -138,8 +162,12 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
           </FieldCard>
 
           <FieldCard
-            label="변경 당시 다주택자(중과대상)였습니까?"
-            hint="'예' 선택 시 변경일 이전 보유기간은 장기보유특별공제에서 배제됩니다 (사전법규재산 2022-684·881 / 서울행법 2012구단26961)."
+            label="용도변경 당시 그 주택이 장기보유특별공제 대상에서 제외되는 중과 주택이었습니까?"
+            hint={
+              exclusionEra === false
+                ? `용도변경일이 ${MULTI_HOUSE_LTHD_EXCLUSION_LIFTED}~${MULTI_HOUSE_LTHD_EXCLUSION_RESTORED} 사이입니다. 그 시기 §95② 괄호는 다주택 주택을 배제하지 않았으므로 배제 자산일 수 없습니다 — 기산일은 당초 취득일입니다 (사전-2024-법규재산-0161).`
+                : "「소득세법」 §95② 괄호는 §104⑦ 각 호(조정대상지역 다주택 등) 자산을 장기보유특별공제에서 제외합니다. '예'이면 변경일 이전 보유기간을 세지 않습니다 (사전법규재산 2022-684·881)."
+            }
             trailing={<LawArticleModal legalBasis="소득세법 §95②" label="§95② 표1 장특공제" />}
           >
             <RadioCardGroup
@@ -152,8 +180,14 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
               }
               onChange={(v) => onChange({ gbWasMultiHouseAtConversion: v === "true" })}
               options={[
-                { value: "true", label: "예 (다주택)", description: "변경일 이전 보유기간 LTHD 배제 — 기산일 = 용도변경일" },
-                { value: "false", label: "아니오 (1주택)", description: "당초 취득일 기산 — 변경일 무영향" },
+                {
+                  value: "true",
+                  label: "예 (배제 자산)",
+                  description: "변경일 이전 보유기간 제외 — 기산일 = 용도변경일",
+                  // 배제될 수 없던 시기의 용도변경이면 이 선택지 자체가 성립하지 않는다.
+                  disabled: exclusionEra === false,
+                },
+                { value: "false", label: "아니오", description: "당초 취득일 기산 — 변경일 무영향" },
               ]}
             />
           </FieldCard>

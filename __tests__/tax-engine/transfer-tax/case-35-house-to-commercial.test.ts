@@ -96,12 +96,19 @@ describe("사례 35-2: 1주택 케이스 — 당초 취득일 기산 14년 = 28%
   });
 });
 
-describe("사례 35-3: 다주택 + 변경일~양도일 만 5년 = 10%", () => {
-  it("conversionDate=2015-01-01, transferDate=2020-01-15 → 표1 10%", () => {
+describe("사례 35-3: 배제 자산 + 변경일~양도일 만 5년 = 10%", () => {
+  /**
+   * ⚠️ 2026-08-11 날짜 정정 — 종전 픽스처는 `conversionDate=2015-01-01`이었다.
+   * 그 시기(2012.1.1~2018.3.31) §95② 괄호에는 다주택이 없어 **배제 자산일 수 없고**,
+   * 기산일은 당초 취득일이다(사전-2024-법규재산-0161). 종전 값은 그 결함을 고정하고 있었다.
+   * 이 케이스의 의도(변경일 기산 → 표1 % 산출)를 지키려면 용도변경일이 **배제기**에 있어야
+   * 하므로 2019-01-01로 옮기고 양도일도 같은 간격(만 5년)으로 옮겼다.
+   */
+  it("conversionDate=2019-01-01, transferDate=2024-01-15 → 표1 10%", () => {
     const input: TransferTaxInput = baseTransferInput({
       propertyType: "building",
       transferPrice: 800_000_000,
-      transferDate: new Date("2020-01-15"),
+      transferDate: new Date("2024-01-15"),
       acquisitionPrice: 400_000_000,
       acquisitionDate: new Date("2010-01-01"),
       expenses: 0,
@@ -109,21 +116,23 @@ describe("사례 35-3: 다주택 + 변경일~양도일 만 5년 = 10%", () => {
       householdHousingCount: 2,
       residencePeriodMonths: 0,
       houseToCommercialConversion: true,
-      conversionDate: new Date("2015-01-01"),
+      conversionDate: new Date("2019-01-01"),
       wasMultiHouseAtConversion: true,
     });
     const result = calculateTransferTax(input, RATES);
     expect(result.longTermHoldingRate).toBe(0.10);
-    expect(result.lthdStartDate.getTime()).toBe(new Date("2015-01-01").getTime());
+    expect(result.lthdStartDate.getTime()).toBe(new Date("2019-01-01").getTime());
   });
 });
 
 describe("사례 35-5: 경계값 — 변경일 +3년 0일 = 6% 진입", () => {
-  it("conversionDate=2017-06-01, transferDate=2020-06-02 → 표1 6%", () => {
+  // ⚠️ 2026-08-11 날짜 정정 — 종전 2017-06-01은 LTHD 가능기(2012.1.1~2018.3.31)라 기산일이
+  //    옮겨지지 않는다(0161). 보유연수 경계라는 의도만 지키고 배제기(2019-06-01)로 옮겼다.
+  it("conversionDate=2019-06-01, transferDate=2022-06-02 → 표1 6%", () => {
     const input: TransferTaxInput = baseTransferInput({
       propertyType: "building",
       transferPrice: 500_000_000,
-      transferDate: new Date("2020-06-02"),
+      transferDate: new Date("2022-06-02"),
       acquisitionPrice: 300_000_000,
       acquisitionDate: new Date("2010-01-01"),
       expenses: 0,
@@ -131,18 +140,18 @@ describe("사례 35-5: 경계값 — 변경일 +3년 0일 = 6% 진입", () => {
       householdHousingCount: 2,
       residencePeriodMonths: 0,
       houseToCommercialConversion: true,
-      conversionDate: new Date("2017-06-01"),
+      conversionDate: new Date("2019-06-01"),
       wasMultiHouseAtConversion: true,
     });
     const result = calculateTransferTax(input, RATES);
     expect(result.longTermHoldingRate).toBe(0.06);
   });
 
-  it("conversionDate=2017-06-01, transferDate=2020-06-01 → 만 2년 → 0%", () => {
+  it("conversionDate=2019-06-01, transferDate=2022-06-01 → 만 2년 → 0%", () => {
     const input: TransferTaxInput = baseTransferInput({
       propertyType: "building",
       transferPrice: 500_000_000,
-      transferDate: new Date("2020-06-01"),
+      transferDate: new Date("2022-06-01"),
       acquisitionPrice: 300_000_000,
       acquisitionDate: new Date("2010-01-01"),
       expenses: 0,
@@ -150,7 +159,7 @@ describe("사례 35-5: 경계값 — 변경일 +3년 0일 = 6% 진입", () => {
       householdHousingCount: 2,
       residencePeriodMonths: 0,
       houseToCommercialConversion: true,
-      conversionDate: new Date("2017-06-01"),
+      conversionDate: new Date("2019-06-01"),
       wasMultiHouseAtConversion: true,
     });
     const result = calculateTransferTax(input, RATES);
@@ -205,13 +214,26 @@ describe("resolveLTHDStartDate 순수 함수 단위 anchor", () => {
     expect(resolveLTHDStartDate(input).getTime()).toBe(new Date("2010-01-01").getTime());
   });
 
-  it("=true + wasMultiHouseAtConversion=true → conversionDate (다주택)", () => {
+  it("=true + wasMultiHouseAtConversion=true + 배제기 용도변경 → conversionDate", () => {
+    // ⚠️ 2026-08-11 날짜 정정 — 종전 2018-01-01은 LTHD 가능기라 기산일이 안 옮겨진다.
+    const input = baseTransferInput({
+      acquisitionDate: new Date("2010-01-01"),
+      houseToCommercialConversion: true,
+      conversionDate: new Date("2019-01-01"),
+      wasMultiHouseAtConversion: true,
+    });
+    expect(resolveLTHDStartDate(input).getTime()).toBe(new Date("2019-01-01").getTime());
+  });
+
+  it("🔴 =true + =true 라도 2012.1.1~2018.3.31 용도변경이면 acquisitionDate (0161)", () => {
+    // 축은 「다주택이었나」가 아니라 「그때 §95② 괄호로 배제 자산이었나」다.
+    // 상세·경계 전수는 conversion-lthd-start-date.anchor.test.ts.
     const input = baseTransferInput({
       acquisitionDate: new Date("2010-01-01"),
       houseToCommercialConversion: true,
       conversionDate: new Date("2018-01-01"),
       wasMultiHouseAtConversion: true,
     });
-    expect(resolveLTHDStartDate(input).getTime()).toBe(new Date("2018-01-01").getTime());
+    expect(resolveLTHDStartDate(input).getTime()).toBe(new Date("2010-01-01").getTime());
   });
 });
