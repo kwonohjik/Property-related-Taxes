@@ -214,4 +214,63 @@ test.describe("일반건물 × 지분 분할 취득", () => {
     // 지분 라벨이 결과에 노출된다
     await expect(page.getByText(/지분/).first()).toBeVisible();
   });
+
+  // ══════════════════════════════════════════════════════════════════
+  // GBF-28 — 표시 계층이 지분 접미사를 인식한다 🔴
+  // ══════════════════════════════════════════════════════════════════
+  /**
+   * PR #1163이 **라우트 표시**의 접미사 미인식을 고쳤지만, 같은 뿌리가 **UI 계층**에
+   * 남아 있었다(`DetailedStatementFormulaBuilders` · `FilingFormTableAggregateHelpers`).
+   * vitest anchor(`gb-fractional-display-share-suffix.anchor.test.ts`)가 헬퍼 단위를 잡고,
+   * 이 spec이 **실제 화면에 렌더되는지**를 잡는다 — 그 둘은 다른 질문이다(PR #1161 교훈).
+   */
+  test("GBF-28: 신고서 취득일이 지분별로 다르고, 자산별 산식이 렌더된다", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page);
+
+    for (const step of ["보유 상황", "감면·공제", "가산세"]) {
+      await page.getByRole("button", { name: step }).first().click();
+    }
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    await page.getByText("신고서 양식", { exact: false }).first().waitFor({ timeout: 30_000 });
+
+    /**
+     * 🔑 **신고서 취득일자** — 지분마다 다른 취득일이 그대로 실려야 한다.
+     *
+     * 종전에는 `findAssetByPropertyId`가 `land#1`을 인식하지 못해 **메타가 통째로 누락**됐다.
+     * 지분 취득일이 다른 것이 이 기능의 존재 이유이므로, 두 날짜가 **모두** 보여야 한다.
+     */
+    await expect(
+      page.getByText("2009-03-01").first(),
+      "신고서에 지분 A 취득일이 없다 — 카드→자산 매핑 회귀 의심",
+    ).toBeVisible();
+    await expect(
+      page.getByText("2015-03-01").first(),
+      "신고서에 지분 B 취득일이 없다 — 전 행이 assets[0]로 눌렸을 가능성",
+    ).toBeVisible();
+
+    /**
+     * 🔑 **상세명세서 자산별 산식**.
+     *
+     * ⚠️ 펼침 영역은 `hidden print:block`이라 **펴지 않으면 `toHaveText`가 그냥 통과**한다
+     *    (메모리 — 접힌 섹션 검증이 조용히 약해지는 함정). 반드시 열고 `toBeVisible`로 본다.
+     */
+    const expander = page.getByRole("button", { name: "자산별 펼치기" }).first();
+    await expander.click();
+
+    // §166⑥ 안분 산식이 실제로 만들어졌다 — 산식이 없으면 이 행 자체가 비어 있다
+    const formulaRow = page.locator("text=/[0-9,]+ × [0-9,]+ \\//").first();
+    await expect(
+      formulaRow,
+      "자산별 안분 산식이 렌더되지 않았다 — isLandProp이 접미사에 걸렸을 가능성",
+    ).toBeVisible();
+
+    /**
+     * 자산별 행이 **지분마다 따로** 뜬다. 카드 라벨은 `<지분 라벨> <카드 라벨>` 조합이고,
+     * 시드는 `makeDefaultAsset`의 기본 라벨(`자산 1`·`자산 2`)을 쓴다.
+     * 두 행이 모두 보여야 「지분별 표시」가 성립한다 — 한쪽만 뜨면 카드가 합쳐진 것이다.
+     */
+    await expect(page.getByText("├─ 자산 1 토지(1001)").first()).toBeVisible();
+    await expect(page.getByText("├─ 자산 2 토지(1001)").first()).toBeVisible();
+  });
 });

@@ -14,6 +14,7 @@ import type {
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-valuation";
 import type { GeneralBuildingSwapDecision } from "@/lib/tax-engine/general-building-swap";
+import { SHARE_ID_SEPARATOR, baseCardId } from "@/lib/tax-engine/general-building-share-id";
 
 export interface BundledLikeApportionmentResult {
   apportioned: Array<{
@@ -45,21 +46,10 @@ export interface GeneralBuildingRouteResult {
 // ── 공통 헬퍼 ──────────────────────────────────────────────────────────
 
 /**
- * 지분(%) 분할이 카드 id에 붙이는 구분자 — `land_business#0`.
- * 태깅은 `general-building-fractional.ts` `tagId`가 한다. **두 곳이 이 상수를 공유**해야
- * 접미사 규약이 갈라지지 않는다.
+ * 지분 접미사 규약은 **`lib/tax-engine/general-building-share-id.ts`가 정본**이다.
+ * 여기서 재수출하는 것은 하위 호환용 — 새 소비자는 leaf에서 직접 import할 것.
  */
-export const SHARE_ID_SEPARATOR = "#";
-
-/**
- * 지분 접미사를 벗긴 **원래** 카드 id.
- *
- * 🔴 이것 없이 `card.propertyId === "land_business"`로 비교하면 지분 분할에서 **항상 false**가
- *    되어, 사업용 토지 카드가 비사업용 비율로 표시된다(2026-08-10 실측: 기준시가 160,000,000이
- *    40,000,000으로, displayRatio 0.4가 0.1로 — 지분당 비율 합이 0.7). 세액은 이 값을 쓰지
- *    않으므로 **표시만 틀리는** 드리프트다(메모리 `feedback_engine_result_display_drift`).
- */
-export const baseCardId = (propertyId: string) => propertyId.split(SHARE_ID_SEPARATOR)[0];
+export { SHARE_ID_SEPARATOR, baseCardId };
 
 export function buildProperties(
   cards: AssetCardForAggregate[],

@@ -21,6 +21,7 @@ import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-va
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
 
 /**
  * 엔진 §95③ 12억 초과 안분 STEP formula(문자열)를 Frac 분수 표기로 변환 (PR #746 표준).
@@ -38,18 +39,48 @@ export function prorationFormulaAsFrac(formula: string): ReactNode {
   );
 }
 
-/** propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산 */
+/**
+ * propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산.
+ *
+ * 🔴 **`baseCardId`를 반드시 통과시킨다.** 지분(%) 분할 카드는 `land#0` 꼴이라 정확 비교로는
+ *    항상 false가 되어, 이 파일의 산식이 통째로 `undefined`를 돌려준다(= 화면에 산식이 안 뜬다).
+ *    2026-08-10 실측 — 규약은 `lib/tax-engine/general-building-share-id.ts`.
+ */
 function isLandProp(propertyId: string): boolean {
-  return (
-    propertyId === "land" ||
-    propertyId === "land_business" ||
-    propertyId === "land_nbl"
-  );
+  const id = baseCardId(propertyId);
+  return id === "land" || id === "land_business" || id === "land_nbl";
 }
 
-/** propertyId가 건물에 해당하는지 — 부담부증여 일반건물 단건/일괄 모드 */
+/** propertyId가 원건물에 해당하는지 — 사례 31 `building` · 사례 33 `building1` */
 function isBuildingProp(propertyId: string): boolean {
-  return propertyId === "building" || propertyId === "building1";
+  const id = baseCardId(propertyId);
+  return id === "building" || id === "building1";
+}
+
+/** 사례 33 증축분 건물 카드인지. */
+function isBuilding1Prop(propertyId: string): boolean {
+  return baseCardId(propertyId) === "building1";
+}
+
+/** 사례 33 증축분 건물 카드인지 (`building2`). */
+function isBuilding2Prop(propertyId: string): boolean {
+  return baseCardId(propertyId) === "building2";
+}
+
+/**
+ * `gb.assetCards`에서 **같은 지분의** 짝 카드를 찾는다.
+ *
+ * 🔴 base id만 보고 찾으면 지분 0의 건물 카드가 지분 1의 토지 산식에 끌려 들어간다
+ *    (일괄 실가 취득가 안분이 대표 사례 — 지분마다 `bundledAcquisitionPrice`가 다르다).
+ */
+function findSiblingCard(
+  cards: { propertyId: string; acquisitionPrice: number; transferPrice: number }[],
+  baseId: string,
+  selfPropertyId: string,
+) {
+  return cards.find(
+    (c) => baseCardId(c.propertyId) === baseId && isSameShare(c.propertyId, selfPropertyId),
+  );
 }
 
 // ── 포맷 헬퍼 ────────────────────────────────────────────────────
@@ -144,13 +175,13 @@ export function buildGbTransferFormula(
         ? [landStd, buildingStd, extStd]
         : [landStd, buildingStd];
 
-    if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
+    if (isLandProp(p.propertyId)) {
       return buildAllocationFormula(totalTransferPrice, landStd, denomParts, p.transferPrice);
     }
-    if (p.propertyId === "building" || p.propertyId === "building1") {
+    if (isBuildingProp(p.propertyId)) {
       return buildAllocationFormula(totalTransferPrice, buildingStd, denomParts, p.transferPrice);
     }
-    if (p.propertyId === "building2") {
+    if (isBuilding2Prop(p.propertyId)) {
       // 잔액 보정으로 산정됨 (사례 33)
       const land = denomParts.length >= 1 ? Math.floor((totalTransferPrice * landStd) / (landStd + buildingStd + extStd)) : 0;
       const b1 = Math.floor((totalTransferPrice * buildingStd) / (landStd + buildingStd + extStd));
@@ -222,11 +253,11 @@ export function buildGbAcquisitionFormula(
     const landStd = gb.landStdTotal;
     const buildingStd = gb.buildingStdTotal;
     if (landStd && buildingStd) {
-      if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
+      if (isLandProp(p.propertyId)) {
         // 토지 취득가 = 일괄 실가 × 양도시 토지기준시가 / (토지+건물 기준시가)
         return buildAllocationFormula(bundledAcq, landStd, [landStd, buildingStd], p.acquisitionPrice);
       }
-      if (p.propertyId === "building" || p.propertyId === "building1") {
+      if (isBuildingProp(p.propertyId)) {
         const landAcq = bundledAcq - p.acquisitionPrice;
         return buildResidualFormula(bundledAcq, [
           { label: "토지", value: landAcq },
@@ -241,22 +272,25 @@ export function buildGbAcquisitionFormula(
     const acqB1Std = gb.acqBuilding1StdTotal;
     if (!acqLandStd || !acqB1Std) return undefined;
 
-    if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
+    if (isLandProp(p.propertyId)) {
       // 토지: bundledAcq × acqLandStd / (acqLandStd + acqB1Std) — 취득시 비율 안분
-      const bundledAcq = displayValue + (gb.assetCards.find((c) => c.propertyId === "building1")?.acquisitionPrice ?? 0);
+      // 짝 카드는 **같은 지분**에서 찾는다 — 지분마다 일괄 취득가가 다르다.
+      const bundledAcq =
+        displayValue +
+        (findSiblingCard(gb.assetCards, "building1", p.propertyId)?.acquisitionPrice ?? 0);
       return buildAllocationFormula(bundledAcq, acqLandStd, [acqLandStd, acqB1Std], p.acquisitionPrice);
     }
-    if (p.propertyId === "building1") {
-      const landAcqCard = gb.assetCards.find((c) =>
-        c.propertyId === "land" || c.propertyId === "land_business" || c.propertyId === "land_nbl",
+    if (isBuilding1Prop(p.propertyId)) {
+      const landAcqCard = gb.assetCards.find(
+        (c) => isLandProp(c.propertyId) && isSameShare(c.propertyId, p.propertyId),
       );
       const bundledAcq = (landAcqCard?.acquisitionPrice ?? 0) + p.acquisitionPrice;
       return buildResidualFormula(bundledAcq, [
         { label: "토지", value: landAcqCard?.acquisitionPrice ?? 0 },
       ], p.acquisitionPrice);
     }
-    if (p.propertyId === "building2") {
-      const b2TransferCard = gb.assetCards.find((c) => c.propertyId === "building2");
+    if (isBuilding2Prop(p.propertyId)) {
+      const b2TransferCard = findSiblingCard(gb.assetCards, "building2", p.propertyId);
       const b2Transfer = b2TransferCard?.transferPrice ?? p.transferPrice;
       const acqExtStd = gb.acqExtensionStdTotal;
       const extStd = gb.extensionStdTotal;
@@ -276,13 +310,13 @@ export function buildGbAcquisitionFormula(
 
   if (!landStd || !buildingStd || !acqLandStd || !acqB1Std) return undefined;
 
-  if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
+  if (isLandProp(p.propertyId)) {
     return buildAllocationFormula(p.transferPrice, acqLandStd, [landStd], p.acquisitionPrice);
   }
-  if (p.propertyId === "building" || p.propertyId === "building1") {
+  if (isBuildingProp(p.propertyId)) {
     return buildAllocationFormula(p.transferPrice, acqB1Std, [buildingStd], p.acquisitionPrice);
   }
-  if (p.propertyId === "building2") {
+  if (isBuilding2Prop(p.propertyId)) {
     const acqExtStd = gb.acqExtensionStdTotal;
     const extStd = gb.extensionStdTotal;
     if (!acqExtStd || !extStd) {
@@ -336,14 +370,14 @@ export function buildGbExpenseFormula(
     if (totalExp <= 0 && displayExp <= 0) {
       return `자산별 양도비 = 0 (입력 없음)`;
     }
-    if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
+    if (isLandProp(p.propertyId)) {
       const landStd = gb.landStdTotal;
       const buildingStd = gb.buildingStdTotal;
       if (landStd && buildingStd) {
         return buildAllocationFormula(totalExp, landStd, [landStd, buildingStd], displayExp);
       }
     }
-    if (p.propertyId === "building" || p.propertyId === "building1") {
+    if (isBuildingProp(p.propertyId)) {
       return buildResidualFormula(totalExp, [
         { label: "토지", value: totalExp - displayExp },
       ], displayExp);
@@ -351,16 +385,16 @@ export function buildGbExpenseFormula(
     return `자산별 양도비 = ${fmt(displayExp)}`;
   }
 
-  if (p.propertyId === "land" || p.propertyId === "land_business" || p.propertyId === "land_nbl") {
+  if (isLandProp(p.propertyId)) {
     if (!gb.acqLandStdTotal) return undefined;
     // base는 엔진 echo(지분 기준시가) 우선 — 100% 값을 쓰면 지분 자산에서 산식이 값을 못 만든다.
     return `취득시 토지기준시가 ${fmt(gb.estimatedDeduction?.landBase ?? gb.acqLandStdTotal)} × 3% = ${fmt(displayExp)}`;
   }
-  if (p.propertyId === "building" || p.propertyId === "building1") {
+  if (isBuildingProp(p.propertyId)) {
     if (!gb.acqBuilding1StdTotal) return undefined;
     return `취득시 건물기준시가 ${fmt(gb.estimatedDeduction?.buildingBase ?? gb.acqBuilding1StdTotal)} × 3% = ${fmt(displayExp)}`;
   }
-  if (p.propertyId === "building2") {
+  if (isBuilding2Prop(p.propertyId)) {
     if (!gb.acqExtensionStdTotal) {
       return `사용자 직접 입력 (증축 실제 필요경비) = ${fmt(displayExp)}`;
     }
