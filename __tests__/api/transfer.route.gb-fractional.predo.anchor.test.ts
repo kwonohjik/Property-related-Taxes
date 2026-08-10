@@ -405,9 +405,16 @@ describe("GB × 지분 분할 — Pre-Do anchor", () => {
      *    그것은 **단건 경로와 동일한 기존 동작**이라 이 작업의 검증 대상이 아니다.
      *    대신 **ON/OFF 차분**으로 판정한다(연수 규약과 무관).
      */
+    /**
+     * ⚠️ **2026-08-11 날짜 정정** — 종전 `conversionDate: "2018-01-01"`은 기산일이 **안 움직인다**.
+     *    2012.1.1~2018.3.31 용도변경분은 그 시기 §95② 괄호에 다주택이 없어 배제 자산일 수 없다
+     *    (사전-2024-법규재산-0161). 이 블록의 의도는 「게이트가 **취득일**로 갈린다」이므로
+     *    용도변경일을 배제기(2019-01-01)로 옮겨 의도를 지켰다. 지분 A(2009)·B'(2015)는 변경 前,
+     *    B(2020)는 변경 後라는 관계는 그대로다.
+     */
     const CONVERSION = {
       houseToCommercialConversion: true,
-      conversionDate: "2018-01-01",
+      conversionDate: "2019-01-01",
       wasMultiHouseAtConversion: true,
     };
     const mkShares = (bDate: string, conv: object) => [
