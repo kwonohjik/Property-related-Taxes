@@ -37,19 +37,52 @@
  *
  * ## 범위
  *
- * §48②1호(출연재산 3년)만 다룬다. 같은 항 **4호**(매각대금 3년 — 상증령 §40①3호)는
- * 사용기준금액(§38④) 입력이 따로 필요해 분리했다. 5·7호는 **가산세**(§78⑨)라 축이 다르다.
+ * §48②**1호**(출연재산 3년)와 §48②**4호**(매각대금 3년 — 상증령 §38④·§40①3호)를 다룬다.
+ * 5·7호는 **가산세**(§78⑨)라 축이 다르다 — 이 파일에서 계산하지 않는다.
  */
 
 import { addYears, format, isAfter, parseISO } from "date-fns";
 
 import { calcInheritanceGiftTax, findApplicableBracket } from "../inheritance-gift-common";
 import { EXEMPTION } from "../legal-codes";
+import { applyRateFraction, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   PublicInterestPostMgmtInput,
   PublicInterestPostMgmtResult,
+  PublicInterestSaleProceedsInput,
+  PublicInterestSaleProceedsResult,
   PublicInterestViolation,
+  SaleProceedsViolation,
 } from "../types/public-interest-post-mgmt.types";
+
+/**
+ * 상증법 §55② — 「과세표준이 50만원 미만이면 증여세를 부과하지 아니한다」.
+ *
+ * 본류 증여세(`gift-tax.ts`)가 이미 쓰는 규약과 같은 값이다. §48②는 「증여받은 것으로 보아
+ * 증여세를 부과」하므로 이 과세최저한도 그대로 걸린다 — 특히 §48②4호 나목의 과세가액은
+ * 「90% 기준 대비 미달분」이라 수십만원이 실제로 나온다.
+ */
+const GIFT_TAX_BASE_MIN = 500_000;
+
+/** §55② 적용 — 과세표준과 산출세액을 함께 확정한다. */
+function applyMinimumTaxBase(clawbackBase: number): {
+  taxBase: number;
+  giftTax: number;
+  rate: number;
+  deduction: number;
+  belowMinimumTaxBase: boolean;
+} {
+  const below = clawbackBase > 0 && clawbackBase < GIFT_TAX_BASE_MIN;
+  const taxBase = below ? 0 : clawbackBase;
+  const { rate, deduction } = findApplicableBracket(taxBase);
+  return {
+    taxBase,
+    giftTax: calcInheritanceGiftTax(taxBase),
+    rate,
+    deduction,
+    belowMinimumTaxBase: below,
+  };
+}
 
 /** 상증령 §40①1호 각 목 라벨 */
 const VIOLATION_LABELS: Record<PublicInterestViolation, string> = {
@@ -145,6 +178,7 @@ export function calcPublicInterestPostMgmt(
     });
     return {
       isClawback: false,
+      belowMinimumTaxBase: false,
       exemptReason: reason,
       threeYearDeadline,
       isAfterThreeYears,
@@ -170,10 +204,15 @@ export function calcPublicInterestPostMgmt(
    *
    * §53 증여재산공제는 「거주자가 배우자·직계존비속·기타친족으로부터 증여받은 경우」의
    * 인적공제라 **공익법인등에는 적용되지 않는다**. 그래서 과세가액이 곧 과세표준이다.
+   * 다만 §55② 과세최저한(50만원)은 증여세 일반 규정이라 그대로 걸린다.
    */
-  const taxBase = clawbackBase;
-  const giftTax = calcInheritanceGiftTax(taxBase);
-  const { rate, deduction } = findApplicableBracket(taxBase);
+  const { taxBase, giftTax, rate, deduction, belowMinimumTaxBase } =
+    applyMinimumTaxBase(clawbackBase);
+  if (belowMinimumTaxBase) {
+    warnings.push(
+      `추징 대상 가액이 ${GIFT_TAX_BASE_MIN.toLocaleString()}원 미만이라 증여세를 부과하지 않습니다(상증법 §55②).`,
+    );
+  }
 
   steps.push({
     label: "추징 증여세",
@@ -198,8 +237,218 @@ export function calcPublicInterestPostMgmt(
 
   return {
     isClawback: true,
+    belowMinimumTaxBase,
     threeYearDeadline,
     isAfterThreeYears,
+    clawbackBase,
+    taxBase,
+    giftTax,
+    appliedRate: rate,
+    progressiveDeduction: deduction,
+    steps,
+    warnings,
+  };
+}
+
+// ============================================================
+// §48②4호 — 출연재산 **매각대금** 3년 사후관리
+// ============================================================
+
+/**
+ * 상증령 §38④ — 사용기준금액 비율. 「매각대금의 100분의 90」.
+ *
+ * ⚠️ §38⑦(1년 30%·2년 60%)와 혼동 금지 — 그쪽은 **§48②5호 가산세**(§78⑨)의 기준이고
+ *    이 엔진이 계산하는 §48②4호 증여세와 별개 축이다.
+ */
+const SALE_PROCEEDS_USE_RATIO = { numer: 90, denom: 100 } as const;
+
+/** 상증령 §40①3호 각 목 라벨 */
+const SALE_PROCEEDS_LABELS: Record<SaleProceedsViolation, string> = {
+  used_outside_purpose: "매각대금을 직접 공익목적사업 외에 사용 (상증령 §40①3호 가목)",
+  under_use_threshold: "3년 이내 사용기준금액(90%) 미달 사용 (상증령 §40①3호 나목)",
+};
+
+/**
+ * 공익법인등 출연재산 **매각대금** 사후관리 추징 — 상증법 §48②4호.
+ *
+ * ## 법령 (2026-08-10 실측)
+ *
+ * **법 §48②4호**:
+ * > "출연받은 재산을 매각하고 그 매각대금을 매각한 날부터 3년이 지난 날까지 **대통령령으로
+ * >  정하는 바에 따라 사용하지 아니한** 경우"
+ *
+ * **상증령 §38④** — 위 「대통령령으로 정하는 바에 따라 사용하지 아니한 경우」:
+ * > "**매각한 날이 속하는 과세기간 또는 사업연도의 종료일부터 3년 이내**에 매각대금 중 직접
+ * >  공익목적사업에 사용한 실적(매각대금으로 직접 공익목적사업용, 수익용 또는 수익사업용
+ * >  재산을 취득한 경우를 포함하며, […공시대상기업집단 동일인관련자…는 제외한다…)이
+ * >  **매각대금의 100분의 90에 미달**하는 경우"
+ *
+ * **상증령 §40①3호** — 「대통령령으로 정하는 가액」:
+ * > "가. 공익목적사업외에 사용한 분 : 제38조제4항의 규정에 의한 **사용기준금액 ×
+ * >     (공익목적사업외에 사용한 금액 ÷ 제38조제4항의 규정에 의한 매각대금)**
+ * >  나. 제38조제4항의 규정에 의한 사용기준금액에 미달하게 사용한 분 : 당해 **미달사용금액**"
+ *
+ * ## ⚠️ 기산점이 「매각한 날」이 아니다
+ *
+ * 법 본문만 읽으면 「매각한 날부터 3년」이지만, 그 문언이 곧바로 「**대통령령으로 정하는 바에
+ * 따라**」로 위임하고 시행령이 기산점을 **과세기간·사업연도 종료일**로 정했다. 12월 결산
+ * 법인이 1월에 매각하면 실질 기한이 약 4년이 된다. §48②1호(출연받은 **날** 기산)를 복사하면
+ * 조용히 틀린다.
+ *
+ * ## ⚠️ 4호에는 §48②1호 **단서가 없다**
+ *
+ * 부득이한 사유 + 보고 + 1년 이내 사용으로 제외되는 단서는 **1호에만** 붙어 있고, 상증령
+ * §38③도 「법 제48조제2항**제1호** 단서」를 정의한다. 근거 없이 4호로 넓히지 않는다
+ * ([[feedback_no_unfavorable_application_without_legal_basis]]의 반대 방향 — 유리한 적용도
+ * 근거가 있어야 한다).
+ *
+ * ## 이 엔진이 계산하지 않는 것
+ *
+ * · **§38⑨** — 이사·사용인의 불법행위나 분실·도난으로 감소한 금액은 매각대금에서 뺀다.
+ *   입증책임이 공익법인등에 있다(조심 2020중1194). 입력 단계에서 차감해 넣어야 한다.
+ * · **§48②5호** — 1년 30%·2년 60% 미달은 §78⑨ **가산세**다.
+ */
+export function calcPublicInterestSaleProceeds(
+  input: PublicInterestSaleProceedsInput,
+): PublicInterestSaleProceedsResult {
+  const steps: PublicInterestSaleProceedsResult["steps"] = [];
+  const warnings: string[] = [];
+
+  // ── 3년 기한 — 상증령 §38④ 「과세기간 또는 사업연도의 종료일부터」 ──────────────
+  // ⚠️ `toISOString()` 금지 — UTC 변환이 KST 자정을 전날로 롤백시킨다(§48②1호에서 실측).
+  const fiscalYearEnd = parseISO(input.fiscalYearEndDate);
+  const threeYear = addYears(fiscalYearEnd, 3);
+  const threeYearDeadline = format(threeYear, "yyyy-MM-dd");
+  const isAfterThreeYears = isAfter(parseISO(input.assessmentDate), threeYear);
+
+  const saleProceeds = Math.max(0, Math.floor(input.saleProceeds));
+  const useThreshold = applyRateFraction(
+    saleProceeds,
+    SALE_PROCEEDS_USE_RATIO.numer,
+    SALE_PROCEEDS_USE_RATIO.denom,
+  );
+
+  /** 사용실적·외부사용액 모두 「매각대금 중」이므로 매각대금이 상한이다. */
+  const capToProceeds = (raw: number | undefined, label: string): number => {
+    const v = Math.max(0, Math.floor(raw ?? 0));
+    if (v > saleProceeds) {
+      warnings.push(
+        `${label}이 매각대금(${saleProceeds.toLocaleString()}원)을 초과해 매각대금으로 제한했습니다.`,
+      );
+      return saleProceeds;
+    }
+    return v;
+  };
+
+  const cappedDirectUse = capToProceeds(input.directUseAmount, "직접 공익목적사업 사용실적");
+  const cappedOutsideUse = capToProceeds(input.outsideUseAmount, "공익목적사업 외 사용금액");
+
+  // ── 상증령 §40①3호 각 목 ───────────────────────────────────────────────────
+  // 「각목의 **구분**에 따라」이므로 선택한 목만 과세가액이 된다(가목+나목 합산 아님).
+  const shortfall =
+    input.violation === "under_use_threshold" ? Math.max(0, useThreshold - cappedDirectUse) : 0;
+  const outsideUseTaxable =
+    input.violation === "used_outside_purpose"
+      ? safeMultiplyThenDivide(useThreshold, cappedOutsideUse, saleProceeds)
+      : 0;
+  const clawbackBase =
+    input.violation === "used_outside_purpose" ? outsideUseTaxable : shortfall;
+
+  steps.push({
+    label: "위반 유형",
+    formula: SALE_PROCEEDS_LABELS[input.violation],
+    amount: 0,
+    legalBasis: "상증법 §48②4호",
+  });
+  steps.push({
+    label: "3년 경과 판정",
+    formula:
+      `매각일 ${input.saleDate} → 과세기간 종료일 ${input.fiscalYearEndDate} + 3년 =` +
+      ` ${threeYearDeadline} / 판정일 ${input.assessmentDate}` +
+      ` → ${isAfterThreeYears ? "3년 경과" : "3년 이내"}`,
+    amount: 0,
+    legalBasis: "상증령 §38④",
+  });
+  steps.push({
+    label: "사용기준금액",
+    formula: `매각대금 ${saleProceeds.toLocaleString()} × 90%`,
+    amount: useThreshold,
+    legalBasis: "상증령 §38④",
+  });
+
+  if (input.violation === "used_outside_purpose") {
+    steps.push({
+      label: "과세가액 (가목 안분)",
+      formula:
+        `사용기준금액 ${useThreshold.toLocaleString()} ×` +
+        ` (공익목적사업 외 사용액 ${cappedOutsideUse.toLocaleString()}` +
+        ` ÷ 매각대금 ${saleProceeds.toLocaleString()})`,
+      amount: outsideUseTaxable,
+      legalBasis: "상증령 §40①3호 가목",
+    });
+  } else {
+    steps.push({
+      label: "과세가액 (나목 미달사용금액)",
+      formula:
+        `사용기준금액 ${useThreshold.toLocaleString()} −` +
+        ` 사용실적 ${cappedDirectUse.toLocaleString()}`,
+      amount: shortfall,
+      legalBasis: "상증령 §40①3호 나목",
+    });
+  }
+
+  // 공익법인등은 §53 증여재산공제 대상이 아니므로 과세가액 = 과세표준(§55② 최저한만 적용).
+  const { taxBase, giftTax, rate, deduction, belowMinimumTaxBase } =
+    applyMinimumTaxBase(clawbackBase);
+
+  if (belowMinimumTaxBase) {
+    warnings.push(
+      `과세표준이 ${GIFT_TAX_BASE_MIN.toLocaleString()}원 미만이라 증여세를 부과하지 않습니다(상증법 §55②).`,
+    );
+  }
+
+  steps.push({
+    label: "추징 증여세",
+    formula:
+      taxBase > 0
+        ? `과세표준 ${taxBase.toLocaleString()} × ${(rate * 100).toFixed(0)}%` +
+          (deduction > 0 ? ` − 누진공제 ${deduction.toLocaleString()}` : "")
+        : "과세표준 0 — 부과 세액 없음",
+    amount: giftTax,
+    legalBasis: "상증법 §56",
+  });
+
+  warnings.push(
+    "§48②4호에는 **§48②1호 단서(부득이한 사유 보고 + 1년 이내 사용)가 없습니다** — 시행령 §38③도 「제1호 단서」만 정의합니다.",
+  );
+  warnings.push(
+    "3년 기산점은 **매각한 날이 아니라 매각한 날이 속하는 과세기간·사업연도의 종료일**입니다(상증령 §38④).",
+  );
+  warnings.push(
+    "매각한 날이 속하는 과세기간 종료일부터 **1년 이내 30%·2년 이내 60%**에 미달하면 §48②**5호**에 따른 **가산세**(§78⑨)가 별도로 부과됩니다 — 이 계산에는 포함하지 않았습니다.",
+  );
+  warnings.push(
+    "영농(§18의3)·가업(§18의2) 사후관리와 달리 §48②에는 **이자상당액 가산 규정이 없습니다**. 이 계산에도 가산하지 않았습니다.",
+  );
+  warnings.push(
+    "이사·사용인의 불법행위나 분실·도난으로 감소한 금액은 매각대금에서 뺍니다(상증령 §38⑨). 입증책임은 공익법인등에 있으므로(조심 2020중1194) 해당분을 차감해 입력하세요.",
+  );
+  if (!isAfterThreeYears) {
+    warnings.push(
+      "판정일이 아직 3년 이내입니다 — 기한 내에 사용기준금액(90%)을 채우면 추징 대상이 아닙니다.",
+    );
+  }
+
+  return {
+    isClawback: clawbackBase > 0,
+    belowMinimumTaxBase,
+    threeYearDeadline,
+    isAfterThreeYears,
+    useThreshold,
+    cappedDirectUse,
+    cappedOutsideUse,
+    shortfall,
+    outsideUseTaxable,
     clawbackBase,
     taxBase,
     giftTax,

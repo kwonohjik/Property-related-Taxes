@@ -1,9 +1,11 @@
 "use client";
 
 /**
- * 공익법인등 출연재산 사후관리 추징 시뮬레이터 — 상증법 §48②1호 (3년 추징)
+ * 공익법인등 출연재산 사후관리 추징 시뮬레이터 — 상증법 §48②1호·4호
  *
- * 법령 (KoreanLaw 실측 2026-08-10): 법 §48②1호(본문·단서) + 상증령 §40①1호 가·나·다
+ * 법령 (KoreanLaw 실측 2026-08-10):
+ *   · 1호(출연재산 3년) — 법 §48②1호(본문·단서) + 상증령 §40①1호 가·나·다
+ *   · 4호(매각대금 3년) — 법 §48②4호 + 상증령 §38④ + §40①3호 가·나
  *
  * 영농(`/calc/inheritance-postmgmt`)·가업(`/calc/family-business-postmgmt`) 시뮬레이터와 병렬.
  * 순수 엔진을 클라이언트에서 직접 호출한다(API 불필요).
@@ -13,6 +15,11 @@
  * · 납세의무자가 **공익법인등 본인**이다(상속인·수증자가 아니다)
  * · 부과 세목이 **증여세**다 — 「그 가액을 증여받은 것으로 보아 즉시 증여세를 부과」
  * · **이자상당액 규정이 없다**(영농 §18의3⑧·가업 §18의2⑤과 다름)
+ *
+ * ## ⚠️ 1호와 4호는 **3년 기산점이 다르다**
+ *
+ * 1호는 「출연받은 **날**」, 4호는 「매각한 날이 속하는 **과세기간·사업연도 종료일**」이다
+ * (상증령 §38④). 그래서 4호 폼은 결산일을 따로 받는다 — 매각일만으로 도출할 수 없다.
  */
 
 import { Suspense, useMemo, useState } from "react";
@@ -24,12 +31,34 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Button } from "@/components/ui/button";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
-import { calcPublicInterestPostMgmt } from "@/lib/tax-engine/deductions/public-interest-post-mgmt";
+import {
+  calcPublicInterestPostMgmt,
+  calcPublicInterestSaleProceeds,
+} from "@/lib/tax-engine/deductions/public-interest-post-mgmt";
 import type {
   PublicInterestPostMgmtInput,
   PublicInterestPostMgmtResult,
+  PublicInterestSaleProceedsInput,
+  PublicInterestSaleProceedsResult,
   PublicInterestViolation,
+  SaleProceedsViolation,
 } from "@/lib/tax-engine/types/public-interest-post-mgmt.types";
+
+type ClauseKind = "clause1" | "clause4";
+
+const CLAUSE_OPTIONS: Array<{ value: ClauseKind; label: string; description: string }> = [
+  {
+    value: "clause1",
+    label: "출연받은 재산 (§48②1호)",
+    description: "출연받은 날부터 3년 이내에 직접 공익목적사업 등에 사용하지 않은 경우 등",
+  },
+  {
+    value: "clause4",
+    label: "매각대금 (§48②4호)",
+    description:
+      "출연재산을 매각하고 그 매각대금을 과세기간 종료일부터 3년 이내에 90% 이상 사용하지 않은 경우",
+  },
+];
 
 const VIOLATION_OPTIONS: Array<{
   value: PublicInterestViolation;
@@ -53,6 +82,25 @@ const VIOLATION_OPTIONS: Array<{
   },
 ];
 
+const SALE_VIOLATION_OPTIONS: Array<{
+  value: SaleProceedsViolation;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "under_use_threshold",
+    label: "사용기준금액(90%) 미달",
+    description:
+      "3년 이내 직접 공익목적사업 사용실적이 매각대금의 90%에 미달 — 미달사용금액이 과세가액 (상증령 §40①3호 나목)",
+  },
+  {
+    value: "used_outside_purpose",
+    label: "공익목적사업 외 사용",
+    description:
+      "매각대금을 직접 공익목적사업 외에 사용 — 사용기준금액 × (외부사용액 ÷ 매각대금) (상증령 §40①3호 가목)",
+  },
+];
+
 /**
  * 결과 화면 링크가 넘긴 출연가액을 사전 채움한다.
  * 양수 정수만 수용 — 비수치는 ""로 떨어뜨려 `canCalculate`가 막게 한다.
@@ -64,9 +112,49 @@ function sanitizeAmountParam(raw: string | null): string {
   return String(Math.floor(num));
 }
 
-function PublicInterestPostMgmtInner() {
-  const searchParams = useSearchParams();
-  const initialDonated = sanitizeAmountParam(searchParams.get("donatedValue"));
+/** 두 갈래 결과가 같은 shape의 `steps`·`warnings`를 쓴다 — 표시 로직 단일 소스. */
+function ResultDetail({
+  steps,
+  warnings,
+}: Pick<PublicInterestPostMgmtResult, "steps" | "warnings">) {
+  return (
+    <>
+      <div className="rounded-lg border border-border bg-card p-4 space-y-2">
+        <p className="text-sm font-semibold">산출 근거</p>
+        {steps.map((s, i) => (
+          <div key={i} className="flex justify-between gap-3 text-xs">
+            <span className="text-muted-foreground">
+              {s.label}
+              <span className="ml-1 text-micro text-blue-700">{s.legalBasis}</span>
+              <span className="block text-caption">{s.formula}</span>
+            </span>
+            {s.amount > 0 && (
+              <span className="tabular-nums font-medium whitespace-nowrap">
+                {formatKRW(s.amount)}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {warnings.length > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-1">
+          {warnings.map((w, i) => (
+            <p key={i} className="text-caption text-amber-800">
+              · {w}
+            </p>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+// ============================================================
+// §48②1호 — 출연받은 재산 3년
+// ============================================================
+
+function Clause1Form({ initialDonated }: { initialDonated: string }) {
   const [donatedValue, setDonatedValue] = useState(initialDonated);
   const [donationDate, setDonationDate] = useState("");
   const [assessmentDate, setAssessmentDate] = useState("");
@@ -109,35 +197,7 @@ function PublicInterestPostMgmtInner() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 space-y-6">
-      <header className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold">공익법인 출연재산 사후관리 시뮬레이터</h1>
-          <HomeButton />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          상증법 §48②1호 + 시행령 §40①1호 — 출연받은 재산의 3년 사후관리 위반 시 추징 증여세 계산.
-        </p>
-      </header>
-
-      {initialDonated && (
-        <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 text-xs text-blue-700 dark:text-blue-300">
-          ⓘ 상속세 결과 화면에서 진입 — 출연재산가액{" "}
-          <strong>{formatKRW(parseAmount(initialDonated))}</strong>이 사전 입력되었습니다. 필요 시 수정 가능합니다.
-        </div>
-      )}
-
-      <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 space-y-1">
-        <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">
-          납세의무자는 공익법인등 본인입니다
-        </p>
-        <p className="text-caption text-blue-700 dark:text-blue-300">
-          「그 사유가 발생한 날에 대통령령으로 정하는 가액을 공익법인등이 <b>증여받은 것으로 보아
-          즉시 증여세를 부과</b>」합니다(§48② 본문). 영농·가업 사후관리와 달리 <b>이자상당액 가산
-          규정이 없습니다</b>.
-        </p>
-      </div>
-
+    <>
       <section className="space-y-3">
         <label className="block space-y-1">
           <span className="text-sm font-medium">출연받은 재산가액</span>
@@ -232,35 +292,221 @@ function PublicInterestPostMgmtInner() {
             )}
           </div>
 
-          <div className="rounded-lg border border-border bg-card p-4 space-y-2">
-            <p className="text-sm font-semibold">산출 근거</p>
-            {result.steps.map((s, i) => (
-              <div key={i} className="flex justify-between gap-3 text-xs">
-                <span className="text-muted-foreground">
-                  {s.label}
-                  <span className="ml-1 text-micro text-blue-700">{s.legalBasis}</span>
-                  <span className="block text-caption">{s.formula}</span>
-                </span>
-                {s.amount > 0 && (
-                  <span className="tabular-nums font-medium whitespace-nowrap">
-                    {formatKRW(s.amount)}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {result.warnings.length > 0 && (
-            <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-1">
-              {result.warnings.map((w, i) => (
-                <p key={i} className="text-caption text-amber-800">
-                  · {w}
-                </p>
-              ))}
-            </div>
-          )}
+          <ResultDetail steps={result.steps} warnings={result.warnings} />
         </section>
       )}
+    </>
+  );
+}
+
+// ============================================================
+// §48②4호 — 매각대금 3년
+// ============================================================
+
+function Clause4Form() {
+  const [saleProceeds, setSaleProceeds] = useState("");
+  const [saleDate, setSaleDate] = useState("");
+  const [fiscalYearEndDate, setFiscalYearEndDate] = useState("");
+  const [assessmentDate, setAssessmentDate] = useState("");
+  const [violation, setViolation] = useState<SaleProceedsViolation>("under_use_threshold");
+  const [directUseAmount, setDirectUseAmount] = useState("");
+  const [outsideUseAmount, setOutsideUseAmount] = useState("");
+
+  const [result, setResult] = useState<PublicInterestSaleProceedsResult | null>(null);
+
+  const canCalculate = useMemo(() => {
+    if (saleDate.length !== 10 || fiscalYearEndDate.length !== 10) return false;
+    if (assessmentDate.length !== 10) return false;
+    if (parseAmount(saleProceeds) <= 0) return false;
+    // 0도 유효값이라 「비어있지 않음」으로 판정한다(빈칸 → silent 0 방지).
+    const required = violation === "used_outside_purpose" ? outsideUseAmount : directUseAmount;
+    return required.trim().length > 0;
+  }, [
+    saleDate,
+    fiscalYearEndDate,
+    assessmentDate,
+    saleProceeds,
+    violation,
+    directUseAmount,
+    outsideUseAmount,
+  ]);
+
+  const handleCalculate = () => {
+    const input: PublicInterestSaleProceedsInput = {
+      saleProceeds: parseAmount(saleProceeds),
+      saleDate,
+      fiscalYearEndDate,
+      assessmentDate,
+      violation,
+      directUseAmount:
+        violation === "under_use_threshold" ? parseAmount(directUseAmount) : undefined,
+      outsideUseAmount:
+        violation === "used_outside_purpose" ? parseAmount(outsideUseAmount) : undefined,
+    };
+    setResult(calcPublicInterestSaleProceeds(input));
+  };
+
+  return (
+    <>
+      <div className="rounded-md border border-violet-200 bg-violet-50/40 dark:bg-violet-950/20 dark:border-violet-800 p-3 space-y-1">
+        <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
+          3년 기산점은 매각일이 아니라 과세기간 종료일입니다
+        </p>
+        <p className="text-caption text-violet-700 dark:text-violet-300">
+          법 §48②4호 본문은 「매각한 날부터 3년」이지만, 시행령 §38④가 「매각한 날이 속하는{" "}
+          <b>과세기간 또는 사업연도의 종료일부터 3년 이내</b>」로 정합니다. 12월 결산 법인이 연초에
+          매각하면 실질 기한이 약 4년이 됩니다.
+        </p>
+      </div>
+
+      <section className="space-y-3">
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">매각대금</span>
+          <span className="block text-caption text-muted-foreground">
+            매각에 따라 부담한 국세·지방세를 뺀 금액입니다(법 §48②1호 본문 괄호 · 상증령 §38).
+            이사·사용인의 불법행위나 분실·도난으로 감소한 금액도 차감해 입력하세요(상증령 §38⑨).
+          </span>
+          <CurrencyInput label="" hideUnit value={saleProceeds} onChange={setSaleProceeds} data-testid="pi4-sale-proceeds" />
+        </label>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">매각한 날</span>
+          <DateInput value={saleDate} onChange={setSaleDate} data-testid="pi4-sale-date" />
+        </label>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">매각한 날이 속하는 과세기간·사업연도 종료일</span>
+          <span className="block text-caption text-muted-foreground">
+            3년의 기산점입니다(상증령 §38④). 12월 결산이면 매각연도의 12월 31일, 학교법인 등 2월
+            결산이면 다음 해 2월 말일입니다.
+          </span>
+          <DateInput value={fiscalYearEndDate} onChange={setFiscalYearEndDate} data-testid="pi4-fiscal-year-end" />
+        </label>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">판정 기준일</span>
+          <DateInput value={assessmentDate} onChange={setAssessmentDate} data-testid="pi4-assessment-date" />
+        </label>
+
+        <div className="space-y-1">
+          <span className="text-sm font-medium">위반 유형 (상증령 §40①3호)</span>
+          <RadioCardGroup
+            name="pi4-violation"
+            layout="stack"
+            value={violation}
+            onChange={(v) => setViolation(v as SaleProceedsViolation)}
+            options={SALE_VIOLATION_OPTIONS}
+          />
+        </div>
+
+        {violation === "under_use_threshold" ? (
+          <label className="block space-y-1">
+            <span className="text-sm font-medium">3년 이내 직접 공익목적사업 사용실적</span>
+            <span className="block text-caption text-muted-foreground">
+              매각대금으로 직접 공익목적사업용·수익용·수익사업용 재산을 취득한 금액을 포함합니다.
+              일시 취득한 재산과, 공시대상기업집단 동일인관련자 관계인 경우 그 기업집단 소속 법인의
+              의결권 있는 주식 취득분은 제외합니다(상증령 §38④).
+            </span>
+            <CurrencyInput label="" hideUnit value={directUseAmount} onChange={setDirectUseAmount} data-testid="pi4-direct-use" />
+          </label>
+        ) : (
+          <label className="block space-y-1">
+            <span className="text-sm font-medium">공익목적사업 외에 사용한 금액</span>
+            <span className="block text-caption text-muted-foreground">
+              매각대금 중 직접 공익목적사업 외의 용도로 사용한 금액입니다. 매각대금을 넘을 수 없습니다.
+            </span>
+            <CurrencyInput label="" hideUnit value={outsideUseAmount} onChange={setOutsideUseAmount} data-testid="pi4-outside-use" />
+          </label>
+        )}
+
+        <Button onClick={handleCalculate} disabled={!canCalculate} className="w-full">
+          추징세액 계산
+        </Button>
+      </section>
+
+      {result && (
+        <section className="space-y-3" data-testid="pi4-result">
+          <div
+            className={
+              result.isClawback
+                ? "rounded-lg border border-rose-300 bg-rose-50/60 p-4 space-y-1"
+                : "rounded-lg border border-emerald-300 bg-emerald-50/60 p-4 space-y-1"
+            }
+          >
+            <p className="text-sm font-semibold">
+              {result.isClawback
+                ? "추징 대상입니다"
+                : violation === "under_use_threshold"
+                  ? "추징 대상 아님 (사용기준금액 90% 충족)"
+                  : "추징 대상 아님 (공익목적사업 외 사용 없음)"}
+            </p>
+            <p className="text-caption text-muted-foreground">추징 증여세</p>
+            <p className="text-2xl font-bold tabular-nums" data-testid="pi4-gift-tax">
+              {formatKRW(result.giftTax)}
+            </p>
+            {result.belowMinimumTaxBase && (
+              <p className="text-caption">
+                과세표준이 50만원 미만이라 증여세를 부과하지 않습니다 (상증법 §55②).
+              </p>
+            )}
+          </div>
+
+          <ResultDetail steps={result.steps} warnings={result.warnings} />
+        </section>
+      )}
+    </>
+  );
+}
+
+// ============================================================
+
+function PublicInterestPostMgmtInner() {
+  const searchParams = useSearchParams();
+  const initialDonated = sanitizeAmountParam(searchParams.get("donatedValue"));
+  const [clause, setClause] = useState<ClauseKind>("clause1");
+
+  return (
+    <div className="max-w-3xl mx-auto p-4 space-y-6">
+      <header className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-2xl font-bold">공익법인 출연재산 사후관리 시뮬레이터</h1>
+          <HomeButton />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          상증법 §48② — 출연받은 재산(1호)·매각대금(4호)의 3년 사후관리 위반 시 추징 증여세 계산.
+        </p>
+      </header>
+
+      {initialDonated && clause === "clause1" && (
+        <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 text-xs text-blue-700 dark:text-blue-300">
+          ⓘ 상속세 결과 화면에서 진입 — 출연재산가액{" "}
+          <strong>{formatKRW(parseAmount(initialDonated))}</strong>이 사전 입력되었습니다. 필요 시 수정 가능합니다.
+        </div>
+      )}
+
+      <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 space-y-1">
+        <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">
+          납세의무자는 공익법인등 본인입니다
+        </p>
+        <p className="text-caption text-blue-700 dark:text-blue-300">
+          「그 사유가 발생한 날에 대통령령으로 정하는 가액을 공익법인등이 <b>증여받은 것으로 보아
+          즉시 증여세를 부과</b>」합니다(§48② 본문). 영농·가업 사후관리와 달리 <b>이자상당액 가산
+          규정이 없습니다</b>.
+        </p>
+      </div>
+
+      <div className="space-y-1" data-testid="pi-clause-selector">
+        <span className="text-sm font-medium">추징 사유</span>
+        <RadioCardGroup
+          name="pi-clause"
+          layout="stack"
+          value={clause}
+          onChange={(v) => setClause(v as ClauseKind)}
+          options={CLAUSE_OPTIONS}
+        />
+      </div>
+
+      {clause === "clause1" ? <Clause1Form initialDonated={initialDonated} /> : <Clause4Form />}
     </div>
   );
 }
