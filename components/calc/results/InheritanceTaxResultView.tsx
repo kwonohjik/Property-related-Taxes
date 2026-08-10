@@ -439,6 +439,34 @@ export function InheritanceTaxResultView({
         </div>
       )}
 
+      {/* 공익법인 출연재산 사후관리 안내 (§48②1호 + 상증령 §40①1호) —
+          출연이 실제로 인정된 경우에만 노출한다. 납세의무자가 **공익법인등 본인**이라
+          상속인의 결정세액과는 무관하지만, 3년 사후관리 위반 시 공익법인이 증여세를 부담한다. */}
+      {(() => {
+        const pi = result.exemptionDetail?.itemResults.find(
+          (r) => r.ruleId === "inh_public_interest" && r.exemptAmount > 0,
+        );
+        if (!pi) return null;
+        return (
+          <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 space-y-2 print:hidden">
+            <p className="text-xs font-semibold text-blue-800 dark:text-blue-200">
+              공익법인 출연재산 사후관리 안내 (§48②1호)
+            </p>
+            <p className="text-caption text-blue-700 dark:text-blue-300">
+              출연받은 날부터 3년 이내에 직접 공익목적사업 등에 사용하지 않거나 용도 외에 사용하면,
+              그 가액을 <b>공익법인등이 증여받은 것으로 보아 즉시 증여세</b>가 부과됩니다.
+              부득이한 사유를 보고하고 사유가 없어진 날부터 1년 이내에 사용하면 제외됩니다(같은 호 단서).
+            </p>
+            <a
+              href={`/calc/public-interest-postmgmt?donatedValue=${pi.exemptAmount}`}
+              className="inline-block text-xs font-medium text-blue-700 dark:text-blue-300 underline hover:text-blue-900 dark:hover:text-blue-100"
+            >
+              → 사후관리 추징 시뮬레이터 진입
+            </a>
+          </div>
+        );
+      })()}
+
       {/* 가업상속공제 사후관리 안내 (§18의2⑤ + §15⑮⑯) */}
       {result.familyBusinessPostMgmtMeta && (
         <div className="rounded-md border border-blue-200 bg-blue-50/40 dark:bg-blue-950/20 dark:border-blue-800 p-3 space-y-2 print:hidden">
