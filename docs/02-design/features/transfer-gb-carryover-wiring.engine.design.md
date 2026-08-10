@@ -1,7 +1,7 @@
 # 일반건물 × 이월과세(§97의2) 배선 — 설계
 
 **계획서**: [`docs/00-pm/transfer-gb-carryover-wiring.plan.md`](../../00-pm/transfer-gb-carryover-wiring.plan.md)
-**작성**: 2026-08-10 · **상태**: 설계 — Q1 ✅확정(건물 포함), **Q2~Q4 미확정**. 구현 미착수.
+**작성**: 2026-08-10 · **상태**: 설계 — **Q1~Q4 전건 확정**. anchor 착수 가능.
 
 ---
 
@@ -49,9 +49,9 @@ GB에서는 route가 읽지 않으므로 **무해한 중복**이다 — 다만 �
 | Q | 상태 | 설계 반영 지점 |
 |---|---|---|
 | **Q1** 건물 파트 | ✅ **확정 — 건물 포함 · 하이브리드 입력** (계획 §6 Q1) | **D9** |
-| **Q2** 환산 모드 | 🟡 미확정 | `topLevelOverrides.standardPrice*`를 GB 파트 기준시가로 어떻게 옮길지. 그대로 태우면 **증여자 기준시가가 무시**될 수 있다(미검증) |
-| **Q3** 지분 스케일 | 🟡 미확정 | `applyShareScale` 목록에 금액 필드 추가 여부. GBF-27 anchor와 **정면 충돌** 가능 |
-| **Q4** 부담부증여 | 🟡 미확정 | `transferType === "burdened_gift"` 시 이 배선을 끄는가. §159가 취득가액을 삼키는 축과 **이중 적용** 위험 |
+| **Q2** 환산 모드 | ✅ **확정 — 파트별 「증여자 취득 당시 기준시가」 1칸** | **D9-2**·**D9-8**. 실측: 미처리 시 취득가액 0 → **43,470,000원 과대** |
+| **Q3** 지분 스케일 | ✅ **확정 — 스케일하지 않는다** | `applyShareScale` **미변경**. GBF-27 수정 불요 |
+| **Q4** 부담부증여 | ✅ **확정 — 차단** | **D9-9**. §159가 취득가액을 정하는 축과 이중 적용 회피 |
 
 ---
 
@@ -160,8 +160,9 @@ E2E는 **mutation probe**로 검증한다 — D1 배선을 되돌리면 K-17이 
 |---|---|
 | 비-GB 자산의 이월과세가 깨진다 | top-level `carryoverTaxation`을 **건드리지 않는다**(D1-2). 기존 carryover 테스트 스위트(`__tests__/tax-engine/transfer-tax/carryover-*.test.ts` 10+파일) 전건 통과 확인 |
 | GB 상속·증여 경로가 흔들린다 | `landAcquisitionCause` 분기 **옆에** 추가만 한다. 기존 분기 미변경 |
-| 지분 분할과 교차 | Q3 확정 전에는 **지분 + 이월과세 조합을 차단**하는 편이 안전하다 — 조용히 틀린 값보다 낫다 |
-| 부담부증여와 이중 적용 | Q4. 그쪽 줄기 착지 후 교차 |
+| 지분 분할과 교차 | Q3 확정 — **스케일 없음**. 각 지분이 별개 증여 사건이라 그 지분의 실제 값을 받는다. `applyShareScale` 미변경이라 GBF-27 회귀 0 |
+| 부담부증여와 이중 적용 | Q4 확정 — **차단**(D9-9). 그쪽 줄기 착지 후 교차 |
+| 🔴 **환산 모드 과대과세** | Q2 확정 — 파트별 증여자 취득 기준시가 배선(D9-8). **미처리 시 취득가액 0**이 되고 비교과세가 그 틀린 A를 채택한다 |
 
 ---
 
@@ -199,6 +200,11 @@ export interface CarryoverPartForm {
   donorAcquisitionPrice: string;   // 법 §97의2①1호
   donorCapitalExpenditure: string; // 법 §97의2①2호 (2024.1.1. 이후 양도분)
   giftDateAssetValue: string;      // 영 §163의2②2호 — 안분 **분자** + 비교과세 B 취득가액
+  /**
+   * 환산 모드 전용 — **증여자 취득 당시** 그 파트의 기준시가 (Q2).
+   * 분모(양도 당시 기준시가)는 받지 않는다 — GB가 이미 안다(D9-8).
+   */
+  donorStandardPriceAtAcquisition: string;
 }
 ```
 
@@ -267,3 +273,53 @@ carryoverTaxation: input.buildingCarryoverTaxation,   // 🆕
 | E2E (K-17) | ~120줄 |
 
 **합계 ≈ 1,150줄.** 토지만(안 C, ~415줄)의 **약 3배** — 계획 초판의 추정과 일치한다.
+
+---
+
+### D9-8. 환산 모드 배선 (Q2 확정)
+
+#### 실측 — 미처리 시 **취득가액 0**
+
+`calcCarryoverScenarios`(`transfer-tax-carryover.ts:226~228`)는 환산 모드에서
+`rawInput.standardPriceAtAcquisition`을 읽는데, GB 카드 input에는 그 필드가 없다
+(`buildProperties`가 매핑하지 않는다) ⇒ `stdAtAcq = 0` → **환산취득가 0**.
+
+| 모드 | 시나리오 A 취득가액 | 결정세액 |
+|---|---|---|
+| 실가 | 150,000,000 | 161,460,000 |
+| **환산(미처리)** | **0** | **204,930,000** ← 43,470,000 과대 |
+
+🔴 **비교과세가 오류를 증폭한다.** §97의2②3호는 세액이 큰 쪽을 채택하므로 **틀린 A가 뽑힌다**
+(`adoptedScenario: "A"` 실측). 규칙은 정확한데 입력이 0이라 최악의 답이 나온다.
+
+#### 설계 — 분자만 받고 분모는 엔진이 안다
+
+```
+환산취득가 = 그 파트의 양도가액 × (증여자 취득 당시 그 파트 기준시가 ÷ 그 파트의 양도 당시 기준시가)
+                                    └ 파트별 입력(D9-2)        └ GB가 이미 안다
+```
+
+- 토지 분모 = `transferLandPricePerSqm × landArea` · 건물 분모 = `transferBuildingStdPrice`.
+- ⇒ `buildProperties`가 카드마다 `standardPriceAtAcquisition`(입력) ·
+  `standardPriceAtTransfer`(GB 계산값)를 **함께** 실어준다.
+
+> ⚠️ **분모를 사용자에게 받지 않는다.** GB가 가진 값과 어긋나면 화면의 §166⑥ 안분 산식과
+> 실제 계산이 갈린다(메모리 `feedback_ui_engine_dual_truth_avoidance`).
+
+> 🔑 **anchor K-14는 「취득가액 ≠ 0」이 아니라 「기대 환산값과 원 단위 일치」로 건다.**
+> 부정 단언만 두면 다른 이유로 0이 아닐 때도 통과한다.
+
+---
+
+### D9-9. 부담부증여 차단 (Q4 확정)
+
+`transferType === "burdened_gift"`이면 GB 이월과세 배선을 **끄고 ⑧에서 차단 안내**한다.
+
+- **끄는 위치**: ④ — `buildGeneralBuildingValuation`이 `landCarryoverTaxation`·
+  `buildingCarryoverTaxation`을 **아예 만들지 않는다**. route·엔진은 손대지 않는다.
+- **안내**: 「부담부증여는 「소득세법 시행령」 제159조가 취득가액을 정하므로 이월과세를 함께
+  적용하지 않습니다」 — 조용히 무시하지 않는다(§2 ③의 재발 방지).
+- anchor **K-18**: 부담부증여 + 이월과세 선택 시 payload에 두 서브객체가 **없다** +
+  **양성 대조군**(비-부담부증여에서는 있다).
+
+> 그쪽 줄기(`burdened-gift-carryover-159-97-2.plan.md`)가 착지하면 이 차단을 재검토한다.
