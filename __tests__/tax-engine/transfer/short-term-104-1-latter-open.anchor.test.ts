@@ -43,7 +43,9 @@
  *
  * ⚠️ **실질 영향은 §104①2호 40% 축뿐이다** — 후단이 발동하려면 단일세율이 누진 한계세율(최고 45%)
  *   보다 낮아야 하는데, 단일세율 호는 40%·50%·60%·70%뿐이라 **40%(비주택 1~2년)만 후보**다.
- *   그마저 과세표준이 약 **19.7억**을 넘어야 역전된다(A-1이 그 경계를 실측 고정).
+ *   역전 경계는 과세표준 **1,318,800,000**이다 — `0.45T − 65,940,000 > 0.4T ⟺ 0.05T > 65,940,000`.
+ *   (2026-08-11 실측 정정: 종전 주석의 「약 19.7억」은 A-1 케이스 값 1,997,500,000을 경계로 오기한
+ *    것이었다. A-3이 5억 미발현을, 아래 A-6이 경계 자체를 고정한다.)
  *
  * 📌 이 파일이 빨개지면 **누군가 그 판단을 내린 것**이다. 계획서의 착수 조건(근거 확보)을
  *   충족했는지 먼저 확인하고, 충족했다면 이 anchor를 정정본으로 교체하라.
@@ -201,5 +203,31 @@ describe("§104① 후단 — 일반 단기 자산 × 1호 누진 (미판정·�
     expect([...r.groupTaxes.map((g) => g.group)].sort()).toEqual([...engineGroups].sort());
     // 각 그룹에 정확히 1건씩 — 겹치는 자산이 없다(배타성).
     for (const g of r.groupTaxes) expect(g.assetIds).toHaveLength(1);
+  });
+
+  it("A-6: 역전 경계는 과세표준 **1,318,800,000** — 종전 주석의 「약 19.7억」은 오기였다", () => {
+    // 0.45T − 65,940,000 > 0.4T ⟺ 0.05T > 65,940,000 ⟺ T > 1,318,800,000
+    // A-1(19.97억)은 「경계」가 아니라 그보다 한참 위의 한 케이스일 뿐이다.
+    const asShortTerm = (T: number) =>
+      calcTax(T, parsedRates, baseTransferInput(shortTermLand) as TransferTaxInput).calculatedTax;
+    const asProgressive = (T: number) =>
+      calcTax(
+        T,
+        parsedRates,
+        baseTransferInput({ ...shortTermLand, acquisitionDate: D("2010-01-01") }) as TransferTaxInput,
+      ).calculatedTax;
+
+    // 경계에서 정확히 동률
+    expect(asShortTerm(1_318_800_000)).toBe(527_520_000);
+    expect(asProgressive(1_318_800_000)).toBe(527_520_000);
+
+    // 아래 — 40%가 크다(쟁점 미발현)
+    expect(asShortTerm(1_200_000_000)).toBe(480_000_000);
+    expect(asProgressive(1_200_000_000)).toBe(474_060_000);
+
+    // 위 — 누진이 크다. 15억에서 이미 9,060,000 벌어진다(19.7억을 기다릴 필요가 없다).
+    expect(asShortTerm(1_500_000_000)).toBe(600_000_000);
+    expect(asProgressive(1_500_000_000)).toBe(609_060_000);
+    expect(asProgressive(1_500_000_000) - asShortTerm(1_500_000_000)).toBe(9_060_000);
   });
 });
