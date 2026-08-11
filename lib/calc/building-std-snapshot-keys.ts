@@ -42,8 +42,12 @@ export function idOfSnapshotKey(key: string): string {
  * 구버전 스냅샷이 PDF에서 2벌로 나왔다). 접두는 `idOfSnapshotKey`와 같은 집합으로 유지할 것.
  */
 export function snapshotKeyTimepoint(key: string): "acquisition" | "transfer" | null {
+  // 🔴 두 정규식은 **같은 접두 집합·같은 접미**여야 한다. 종전에는 양도 쪽에서 `phd`와
+  //    `-commercial`이 빠져 있어, PHD 3시점 개별 모달·겸용 상가 양도시 모달이 저장한 키가
+  //    필터를 통과하지 못했다 → `singleTimePoint` 플래그 이전에 저장된 스냅샷(이력 복원분)에서
+  //    **양도시 계산서에 취득당시 인스턴스가 덤으로 실린다**(2026-08-11 실측).
   if (/-(?:phd|gb|cbinh|cb|split)-acq(?:-commercial)?$/.test(key)) return "acquisition";
-  if (/-(?:gb|cb|split)-transfer$/.test(key)) return "transfer";
+  if (/-(?:phd|gb|cbinh|cb|split)-transfer(?:-commercial)?$/.test(key)) return "transfer";
   return null;
 }
 

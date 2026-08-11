@@ -8,7 +8,11 @@
  * 노출되지 않던 버그. 유입 = e62c95d0(#541) — 정규식(48fdc629 #525)이 먼저 확정됐는데 키만 규약 이탈.
  */
 import { describe, it, expect } from "vitest";
-import { idOfSnapshotKey, phdTimepointLabel } from "@/lib/calc/building-std-snapshot-keys";
+import {
+  idOfSnapshotKey,
+  phdTimepointLabel,
+  snapshotKeyTimepoint,
+} from "@/lib/calc/building-std-snapshot-keys";
 
 describe("idOfSnapshotKey — 소속 자산/재산 id 환원", () => {
   it("B2: 겸용 asset-major 상가 통합 모달 키 → assetId 환원 (결과탭 계산서 노출 조건)", () => {
@@ -49,6 +53,44 @@ describe("idOfSnapshotKey — 소속 자산/재산 id 환원", () => {
     expect(idOfSnapshotKey("bsp-a1-red-phd")).toBe("a1");
     const id = "3f9a1c2e-7b40-4d55-9f11-8ac2e6d0b7aa";
     expect(idOfSnapshotKey(`bsp-${id}-red-phd`)).toBe(id);
+  });
+});
+
+describe("snapshotKeyTimepoint — 반대 시점 인스턴스 필터 (전수 대칭)", () => {
+  /**
+   * 🔴 취득(`acq`) 정규식만 `phd`·`-commercial`을 포함하고 **양도(`transfer`)는 빠져 있었다**.
+   *
+   * 영향: `singleTimePoint` 플래그 도입 **이전에 저장된 스냅샷**(이력 복원분)은 엔진이 2시점
+   * 2벌을 내므로, 양도시 스냅샷인데 **취득당시 인스턴스가 함께 남아** 계산서에 덤으로 실린다
+   * (2026-08-11 실측: `bsp-a1-phd-transfer` → instances `["transfer","acq2001"]`).
+   * 현행 저장분은 플래그 덕에 1벌이라 무증상 — 그래서 조용하다.
+   *
+   * ⇒ 접두 집합은 `idOfSnapshotKey`와 **같게** 유지한다(파일 주석의 규약).
+   */
+  it("취득 시점 — 접두 전수 + 상가 접미", () => {
+    expect(snapshotKeyTimepoint("bsp-a1-gb-acq")).toBe("acquisition");
+    expect(snapshotKeyTimepoint("bsp-a1-cb-acq")).toBe("acquisition");
+    expect(snapshotKeyTimepoint("bsp-a1-cbinh-acq")).toBe("acquisition");
+    expect(snapshotKeyTimepoint("bsp-a1-phd-acq")).toBe("acquisition");
+    expect(snapshotKeyTimepoint("bsp-a1-split-acq")).toBe("acquisition");
+    expect(snapshotKeyTimepoint("bsp-a1-phd-acq-commercial")).toBe("acquisition");
+  });
+
+  it("🔴 양도 시점 — 취득과 같은 접두 집합 + 상가 접미", () => {
+    expect(snapshotKeyTimepoint("bsp-a1-gb-transfer")).toBe("transfer");
+    expect(snapshotKeyTimepoint("bsp-a1-cb-transfer")).toBe("transfer");
+    expect(snapshotKeyTimepoint("bsp-a1-split-transfer")).toBe("transfer");
+    // 종전 누락분 — PHD 3시점 개별 모달·겸용 상가 양도시 모달이 쓰는 키
+    expect(snapshotKeyTimepoint("bsp-a1-phd-transfer")).toBe("transfer");
+    expect(snapshotKeyTimepoint("bsp-a1-phd-transfer-commercial")).toBe("transfer");
+    expect(snapshotKeyTimepoint("bsp-a1-gb-transfer-commercial")).toBe("transfer");
+  });
+
+  it("시점 세그먼트가 없는 통합 모달 키는 null — 2시점 유지 (회귀 방어)", () => {
+    expect(snapshotKeyTimepoint("bsp-a1-split-both")).toBeNull();
+    expect(snapshotKeyTimepoint("bsp-a1-mx-commercial")).toBeNull();
+    expect(snapshotKeyTimepoint("bsp-a1-red-phd")).toBeNull();
+    expect(snapshotKeyTimepoint("bsp-estate-item-7")).toBeNull();
   });
 });
 

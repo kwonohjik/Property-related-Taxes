@@ -69,6 +69,13 @@ describe("getAcqDateForCard — GB 토지 카드는 토지 취득일 (L1)", () =
     expect(getAcqDateForCard(separateAsset, "building1")).toBe(BUILDING_ACQ);
   });
 
+  it("🔴 카드 id가 아닌 컬럼(다건 propertyId)은 자산 취득일 — 그 열은 자산 전체다", () => {
+    // 다건 모드는 컬럼 id가 `np1` 꼴(그 열 = GB 자산 한 건 전체)이다.
+    // 토지 분기를 default로 두면 이 열까지 토지 취득일로 바뀐다.
+    expect(getAcqDateForCard(separateAsset, "np1")).toBe(BUILDING_ACQ);
+    expect(getAcqDateForCard(separateAsset, "primary")).toBe(BUILDING_ACQ);
+  });
+
   it("대조군 — 분리 OFF면 토지도 자산 취득일 (무회귀)", () => {
     expect(getAcqDateForCard(sameDateAsset, "land")).toBe(BUILDING_ACQ);
     expect(getAcqDateForCard(sameDateAsset, "building")).toBe(BUILDING_ACQ);
