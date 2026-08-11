@@ -107,4 +107,37 @@ test.describe("미등기 양도 토글 — 자산 종류 게이트 (§104③)", 
     await page.getByText("건물 미등기 양도", { exact: true }).click();
     await expect(page.getByText(/미등기 파트만 70%가 적용됩니다/)).toBeVisible();
   });
+
+  /**
+   * §168① 제외 사유 안내 (C-6c).
+   *
+   * 엔진은 제외 사유를 판정하지 않는다 — 입력이 없다. 사용자가 제외 대상인데 토글을 켜면
+   * 70%가 그대로 적용돼 **과대 계산**되므로, 켠 시점에 확인을 유도하는 안내가 필요하다.
+   */
+  test("미등기를 켜면 §168① 제외 사유 안내가 뜬다 (상업용건물)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndGoToHolding(page, "commercial_building");
+
+    const notice = page.getByText("미등기양도자산에서 제외되는 경우", { exact: true });
+    // 대조군 — 켜기 전에는 없다.
+    await expect(notice).toHaveCount(0);
+
+    await page.getByText("미등기 양도", { exact: true }).click();
+    await expect(notice).toBeVisible();
+    // 각 호가 실제로 나열되는지 — 문구가 통째로 비어도 제목만으로는 통과하므로 본문을 짚는다.
+    await expect(page.getByText(/장기할부조건/)).toBeVisible();
+    await expect(page.getByText(/토지구획환지처분공고 전/)).toBeVisible();
+  });
+
+  test("일반건물도 축 하나만 켜면 §168① 안내가 뜬다", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndGoToHolding(page, "general_building");
+
+    const notice = page.getByText("미등기양도자산에서 제외되는 경우", { exact: true });
+    await expect(notice).toHaveCount(0);
+
+    // 폼-전역이 아니라 자산-수준 2축이므로, 그 축을 보지 않으면 안내가 안 뜬다.
+    await page.getByText("토지 미등기 양도", { exact: true }).click();
+    await expect(notice).toBeVisible();
+  });
 });

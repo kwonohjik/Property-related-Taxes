@@ -15,6 +15,8 @@
 
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
@@ -38,6 +40,16 @@ export function SpecialSituationSection({
   /** 첫 자산에만 패치를 적용한다 — 이 섹션은 주 자산 전용이다. */
   const patchPrimary = (patch: Partial<NonNullable<typeof primary>>) =>
     onChange({ assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)) });
+
+  /**
+   * 미등기 축이 하나라도 켜졌는가 — §168① 제외 사유 안내의 노출 조건.
+   * 일반건물은 토지·건물 2축이라 폼-전역 값만 보면 안 된다.
+   */
+  const anyUnregisteredOn =
+    (showFormLevelUnregistered && form.isUnregistered) ||
+    (primaryKind === "general_building" &&
+      !!primary &&
+      (primary.gbLandUnregistered || primary.gbBuildingUnregistered));
 
   return (
     <section className="rounded-xl border border-rose-200 bg-rose-50/30 p-4 dark:border-rose-900/50 dark:bg-rose-950/20">
@@ -86,6 +98,35 @@ export function SpecialSituationSection({
               </div>
             )}
           </>
+        )}
+
+        {/* §168① 제외 사유 안내 — 어느 축이든 미등기를 켰을 때만 띄운다.
+            엔진은 제외 사유를 판정하지 않는다(입력이 없다). 사용자가 제외 대상인데 토글을 켜면
+            70%가 그대로 적용돼 과대 계산되므로, 켠 시점에 확인을 유도한다. */}
+        {anyUnregisteredOn && (
+          <ToneCard tone="amber" title="미등기양도자산에서 제외되는 경우" noDark>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <LawArticleModal
+                legalBasis="소득세법 시행령 §168"
+                label="§168① 미등기양도제외 자산"
+              />
+            </div>
+            <p className="text-caption text-amber-700">
+              아래에 해당하면 등기를 하지 않고 양도해도 <strong>미등기양도자산으로 보지 않습니다</strong>.
+              계산기는 이 사유를 자동 판정하지 않으므로, 해당한다면 위 토글을 끄고 계산하세요.
+            </p>
+            <ul className="space-y-1 text-xs text-amber-900">
+              <li>• <strong>1호</strong> 장기할부조건으로 취득해 <strong>계약조건상</strong> 양도 당시 등기가 불가능한 자산</li>
+              <li>• <strong>2호</strong> 법률의 규정 또는 <strong>법원의 결정</strong>에 따라 양도 당시 등기가 불가능한 자산</li>
+              <li>• <strong>3호</strong> 농지의 교환·분합(법 §89①2호), 자경농지(조특법 §69①)·농지대토(§70①) 대상 토지</li>
+              <li>• <strong>4호</strong> 1세대1주택 비과세 대상 주택(법 §89①3호)으로서 「건축법」상 <strong>건축허가를 받지 못해</strong> 등기가 불가능한 자산</li>
+              <li>• <strong>6호</strong> 「도시개발법」상 도시개발사업이 끝나지 않아 토지 취득등기를 하지 못하고 양도하는 토지</li>
+              <li>• <strong>7호</strong> 건설사업자가 「도시개발법」에 따라 공사용역 대가로 취득한 체비지를 <strong>토지구획환지처분공고 전</strong>에 양도하는 토지</li>
+            </ul>
+            <p className="text-micro text-amber-600">
+              ※ 5호는 삭제된 조항이라 표시하지 않았습니다.
+            </p>
+          </ToneCard>
         )}
 
         {primaryKind === "land" && primary && (
