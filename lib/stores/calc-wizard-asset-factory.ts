@@ -357,7 +357,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     cbTotalLandArea: "",
     cbTotalBuildingFootprintArea: "",
     cbZoneType: "",
-    cbIsUnregistered: false,
+    cbUnapprovedBuilding: false,
     // ── 일반건물(토지+건물 일괄) 환산취득가 gb* 필드 (사례 31, 소득세법 시행령 §176의2②, §163⑥) ──
     // 환산 ON/OFF는 useEstimatedAcquisition 라디오로 통일 (2026-05-09)
     gbTransferLandPricePerSqm: "",
@@ -370,7 +370,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // ── 일반건물 비사업용토지 판정 (§104의3·§168의12, 2026-05-10) ──
     gbZoneType: "",
     gbIsMetropolitan: false,
-    gbIsUnregistered: false,
+    gbUnapprovedBuilding: false,
     // ── §104③ 미등기양도자산 (토지·건물 별도 판단 — 위 §101① 단서와 별개 축) ──
     gbLandUnregistered: false,
     gbBuildingUnregistered: false,

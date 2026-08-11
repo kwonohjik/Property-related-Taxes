@@ -41,7 +41,7 @@ export interface GeneralBuildingActualPricePayload {
   zoneType?: string;
   isMetropolitan?: boolean;
   /** 「지방세법 시행령」 §101① 단서 — 허가·사용승인 미이행(NBL 축). §104③과 무관. */
-  isUnregistered?: boolean;
+  unapprovedBuilding?: boolean;
   /** 「소득세법」 §104③ 미등기양도자산 — 토지 축 / 건물 축(별개 등기부). */
   unregisteredLand?: boolean;
   unregisteredBuilding?: boolean;
@@ -181,7 +181,7 @@ export function buildActualGeneralBuildingCards(
     transferLandPricePerSqm, transferBuildingStdPrice,
     // isMetropolitan은 더 이상 구조분해하지 않는다 — 「지방세법 시행령」 제101조 제2항
     //   배율에 수도권 축이 없다(2026-07-30 정정). payload 필드 자체는 하위호환으로 잔존.
-    zoneType, isUnregistered = false,
+    zoneType, unapprovedBuilding = false,
     actualAcquisitionPrice, actualExpenses,
     acquisitionLandPricePerSqm, acquisitionBuildingStdPrice,
     burdenedGiftInfo,
@@ -459,7 +459,7 @@ export function buildActualGeneralBuildingCards(
     landArea,
     buildingFootprintArea,
     zoneType,
-    isUnregistered,
+    unapprovedBuilding,
     context: "일반건물(실거래가)",
   });
 

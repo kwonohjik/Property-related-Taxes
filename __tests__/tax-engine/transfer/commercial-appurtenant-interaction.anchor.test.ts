@@ -147,7 +147,7 @@ describe("I-2 (C-13) — 공익수용 §164⑨과 부수토지 중과가 함께 
     const allNbl = calculateTransferTax(
       cb({
         ...EXPROPRIATION,
-        commercialAppurtenantLand: { ...APPURTENANT, isUnregistered: true },
+        commercialAppurtenantLand: { ...APPURTENANT, unapprovedBuilding: true },
       }),
       rates,
     );
@@ -166,7 +166,7 @@ describe("I-3 — §101① 단서(전량 비사업용)도 재구성을 넘어 �
     const allNbl = calculateTransferTax(
       cb({
         ...SWAP,
-        commercialAppurtenantLand: { ...APPURTENANT, isUnregistered: true },
+        commercialAppurtenantLand: { ...APPURTENANT, unapprovedBuilding: true },
       }),
       rates,
     );

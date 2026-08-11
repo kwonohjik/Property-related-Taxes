@@ -73,7 +73,7 @@ describe("결함 수정: 무허가(전체 비사업용) 시 0원 사업용 유�
   const input: GeneralBuildingInput = {
     ...BASE_PRICE_PARAMS,
     buildingFootprintArea: 100, // isUnregistered 경로에서는 무시됨
-    isUnregistered: true,
+    unapprovedBuilding: true,
   };
   const out = buildGeneralBuildingAssetCards(input);
 

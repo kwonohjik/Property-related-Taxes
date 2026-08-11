@@ -26,7 +26,7 @@ import { getOwnershipRatio, mergePrimaryBasic, isFullFractionalBundle } from "./
  * | `gbBuildingFootprintArea`               | `buildingFootprintArea`                           |
  * | `gbTransferLandPricePerSqm`             | `transferLandPricePerSqm`                         |
  * | `gbTransferBuildingValue`               | `transferBuildingStdPrice`                        |
- * | `gbZoneType`·`gbIsMetropolitan`·`gbIsUnregistered` | `zoneType`·`isMetropolitan`·`isUnregistered` |
+ * | `gbZoneType`·`gbIsMetropolitan`·`gbUnapprovedBuilding` | `zoneType`·`isMetropolitan`·`unapprovedBuilding` |
  * | `saleSplitMode`·`landTransferPrice`·`buildingTransferPrice`·`saleSplitExemption` | 양도 계약 단위 |
  * | `landAppraisalAtTransfer`·`buildingAppraisalAtTransfer`·`appraisalDateAtTransfer` | 감정 서열 |
  * | `gbHasExtension` + 증축 6필드(실가 2필드 제외) | `extensionInfo.*`                            |
@@ -47,8 +47,8 @@ const GB_PROPERTY_LEVEL_FORM_FIELDS = [
   // 물건 속성 (NBL)
   "gbZoneType",
   "gbIsMetropolitan",
-  "gbIsUnregistered",
-  // 물건 속성 (§104③ 미등기양도자산 — 위 `gbIsUnregistered`(§101① 단서)와 별개 축)
+  "gbUnapprovedBuilding",
+  // 물건 속성 (§104③ 미등기양도자산 — 위 `gbUnapprovedBuilding`(§101① 단서)과 별개 축)
   "gbLandUnregistered",
   "gbBuildingUnregistered",
   // 양도 계약 단위

@@ -158,7 +158,7 @@ describe("AssetAreaSection — 이전된 비사업용토지 판정·용도변경
 
   it("용도지역 라디오와 허가·사용승인 미이행 토글이 함께 온다 — 유일 입력 경로 보존", () => {
     const { getByText } = renderArea();
-    // gbZoneType·gbIsUnregistered는 이 카드가 **유일한** 쓰기 지점이다.
+    // gbZoneType·gbUnapprovedBuilding는 이 카드가 **유일한** 쓰기 지점이다.
     expect(getByText("용도지역 (필수)")).toBeTruthy();
     expect(getByText("허가·사용승인 미이행 건축물")).toBeTruthy();
   });

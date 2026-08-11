@@ -138,8 +138,8 @@ export function buildCommercialAppurtenantLand(asset: AssetForm): object | undef
     totalLandArea,
     totalBuildingFootprintArea,
     // §101① 단서 해당 시 배율이 불필요하므로 용도지역을 보내지 않아도 API refine을 통과한다.
-    ...(asset.cbIsUnregistered ? {} : { zoneType: asset.cbZoneType || undefined }),
-    ...(asset.cbIsUnregistered ? { isUnregistered: true } : {}),
+    ...(asset.cbUnapprovedBuilding ? {} : { zoneType: asset.cbZoneType || undefined }),
+    ...(asset.cbUnapprovedBuilding ? { unapprovedBuilding: true } : {}),
   };
 }
 

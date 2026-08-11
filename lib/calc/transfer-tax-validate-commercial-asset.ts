@@ -100,7 +100,7 @@ export function validateCommercialAppurtenantLand(asset: AssetForm, label: strin
   if (!(totalLand > 0)) return `${label}: 부수토지 판정 — 집합건물 전체 대지면적을 입력하세요.`;
   if (!(totalFootprint > 0))
     return `${label}: 부수토지 판정 — 집합건물 전체 바닥면적을 입력하세요.`;
-  if (!asset.cbIsUnregistered && !asset.cbZoneType)
+  if (!asset.cbUnapprovedBuilding && !asset.cbZoneType)
     return `${label}: 부수토지 판정 — 용도지역을 선택하세요 (지방세법 시행령 §101② 적용배율).`;
 
   return null;

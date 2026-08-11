@@ -355,11 +355,31 @@ GB 프리뷰(`previewGeneralBuildingEstimated`)는 **같은 payload 빌더를 �
 
 컴패니언 `assetKind` enum은 `housing|land|building` 3종으로 **전부 §94①1호 자산**이라 종류 게이트가 필요 없다(지분 분할 GB는 companion 경로를 쓰지 않는다 — `transfer-tax-schema-sub.ts:289`).
 
+### ✅ Q2 완료 (2026-08-11) — `isUnregistered` 두 축 이름 분리
+
+「지방세법 시행령」 §101① 단서(허가·사용승인 미이행) 축을 **`unapprovedBuilding`** 으로 개명해 §104③ 미등기양도자산과 이름이 겹치지 않게 했다. 이름은 UI 라벨·법제처 해석례 25-0823의 범위(건축허가·사용승인 + 용도변경 허가·사용승인)에 맞췄다.
+
+| 계층 | 종전 → 신규 |
+|---|---|
+| 폼(`AssetForm`) | `gbIsUnregistered`·`cbIsUnregistered` → `gbUnapprovedBuilding`·`cbUnapprovedBuilding` |
+| payload(Zod) | `generalBuildingValuation.isUnregistered` · `commercialAppurtenantLand.isUnregistered` → `unapprovedBuilding` |
+| 엔진 input | `GeneralBuildingInput`·`CommercialAppurtenantLandInput`·`AppurtenantLandExcessInput` → `unapprovedBuilding` |
+| 상수 | `UNREGISTERED_DETAIL` → `UNAPPROVED_DETAIL` |
+
+**legacy sessionStorage 마이그레이션**: `migrateGeneralBuildingFields`·`migrateAsset`이 구 필드 값을 새 이름으로 이전한 뒤 삭제한다(기존 세션 보존).
+
+#### 🔴 개명이 드러낸 기존 오류 2건
+
+1. **`burdened-gift-k4-...anchor.test.ts`의 주석이 틀려 있었다** — 「미등기(§104③)」라고 적고 플래그도 `isUnregistered`였으나 실제로 타는 것은 **NBL 배율 판정**(`judgeAppurtenantLandExcess`)이다. payload가 `as` 캐스팅이라 타입이 잡아주지 않았고, 개명 후 세액이 **1,031,013,501 → 846,575,027** 로 움직여 드러났다. 주석·이름·테스트명을 모두 정정했다.
+2. **전역 치환의 함정** — 같은 이름이 두 축에 쓰이므로 파일 단위 일괄 치환이 위험하다. `commercial-appurtenant-land-wiring.test.ts`의 **최상위 body `isUnregistered`(§104③ 필수 필드)** 까지 바뀌어 Zod 필수 검증이 깨졌다. TS는 못 잡고 테스트가 잡았다. ⇒ 개명은 **TS 에러가 지목한 라인만** 고치는 방식으로 진행해야 한다.
+
+검증: 전체 vitest **14,918** · GB·CB·NBL E2E **77** · tsc 0 · lint 0 error.
+
 ### ⏭️ 남은 작업
 
-**Q2**(`gbIsUnregistered`·`cbIsUnregistered` 개명) · **C-6c**(§168① 제외 사유 UI 미판단 — Q4와 동일 축)
+**C-6c**(§168① 제외 사유 UI 미판단 — Q4와 동일 축) 하나뿐이다.
 
-> ⚠️ **Q2 착수 시점 주의**: 워크트리 `transfer-fb-lthd-95-4-latter`가 locked 상태로 병렬 진행 중이다(PR #1193 분기). 이 개명은 폼·payload·엔진 leaf·Zod에 걸쳐 12파일 50곳이고 legacy sessionStorage 마이그레이션까지 필요해, 병렬 작업의 머지를 어렵게 만든다. **기능 변화는 0**이므로 그 작업이 끝난 뒤가 안전하다.
+🟡 범위 밖 기록: `calcTax` T-1의 미등기 70% 조기 반환 ↔ §104⑦ 다주택 중과(최고 75%) 우열(§7 C-6b 주).
 
 🟡 **범위 밖 기록**: `calcTax` T-1의 미등기 70% 조기 반환이 §104⑦ 다주택 중과(최고 75%)와 겹칠 때의 우열은 명문이 없다(§7 C-6b 주). GB는 주택이 아니라 이번 범위 밖 — memory `project_transfer_104_1_latter_short_term` 축과 함께 별건으로.
 

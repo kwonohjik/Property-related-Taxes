@@ -101,7 +101,7 @@ describe("CB-2 (C-2) — 초과분이 있으면 중과된다", () => {
 describe("CB-3 (C-6) — §101① 단서: 허가·사용승인 미이행은 전량 비사업용", () => {
   it("배율 무관 전량 중과 — 용도지역이 없어도 차단되지 않는다", () => {
     const r = calculateTransferTax(
-      cb({ commercialAppurtenantLand: { ...totals, isUnregistered: true } }),
+      cb({ commercialAppurtenantLand: { ...totals, unapprovedBuilding: true } }),
       rates,
     );
     expect(hasExcessStep(r)).toBe(true);
@@ -114,7 +114,7 @@ describe("CB-3 (C-6) — §101① 단서: 허가·사용승인 미이행은 전�
       rates,
     );
     const unregistered = calculateTransferTax(
-      cb({ commercialAppurtenantLand: { ...totals, zoneType: "green", isUnregistered: true } }),
+      cb({ commercialAppurtenantLand: { ...totals, zoneType: "green", unapprovedBuilding: true } }),
       rates,
     );
     expect(unregistered.calculatedTax).toBeGreaterThan(withinLimit.calculatedTax);

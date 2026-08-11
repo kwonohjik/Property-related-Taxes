@@ -49,7 +49,12 @@ function migrateGbAcquisitionDateConvention(a: Record<string, unknown>): void {
  */
 export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
   if (a.gbIsMetropolitan === undefined) a.gbIsMetropolitan = false;
-  if (a.gbIsUnregistered === undefined) a.gbIsUnregistered = false;
+  // 2026-08-11 개명(`gbIsUnregistered` → `gbUnapprovedBuilding`) — 구 세션 값 이전.
+  // 「지방세법 시행령」 §101① 단서 축이지 §104③ 미등기양도자산이 아니다.
+  if (a.gbUnapprovedBuilding === undefined) {
+    a.gbUnapprovedBuilding = a.gbIsUnregistered ?? false;
+  }
+  delete a.gbIsUnregistered;
   // §104③ 미등기양도자산 2필드 — stale sessionStorage 가드. 없으면 undefined가 그대로
   // payload에 실려 Zod optional을 통과하고, 엔진이 등기 자산으로 처리한다(종전 동작 = 안전측).
   if (a.gbLandUnregistered === undefined) a.gbLandUnregistered = false;

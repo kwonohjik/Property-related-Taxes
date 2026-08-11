@@ -156,7 +156,7 @@ describe("시나리오 E-2 — 무한소수 비율 면적 직접 안분 (§104�
 describe("시나리오 F — 무허가건축물 전체 비사업용", () => {
   const unregistered = buildGeneralBuildingAssetCards({
     ...BASE_INPUT,
-    isUnregistered: true,
+    unapprovedBuilding: true,
   });
 
   it("배율 0, 허용 한도 0, 전체 비사업용", () => {

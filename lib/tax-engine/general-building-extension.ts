@@ -394,7 +394,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     landArea: input.landArea,
     buildingFootprintArea: input.buildingFootprintArea,
     zoneType: input.zoneType,
-    isUnregistered: input.isUnregistered,
+    unapprovedBuilding: input.unapprovedBuilding,
     context: "일반건물(증축)",
   });
 

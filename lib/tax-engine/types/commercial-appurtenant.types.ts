@@ -49,5 +49,5 @@ export interface CommercialAppurtenantLandInput {
    * 범위는 무허가 신축에 한정되지 않는다. 「건축법」 §19②1호 용도변경 허가 미이행,
    * §19⑤·§22 사용승인 미이행도 포함된다(법제처 법령해석례 25-0823, 2026.02.03).
    */
-  isUnregistered?: boolean;
+  unapprovedBuilding?: boolean;
 }

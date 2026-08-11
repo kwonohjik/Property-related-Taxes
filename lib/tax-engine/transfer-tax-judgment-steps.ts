@@ -139,7 +139,7 @@ export function runCommercialAppurtenantLandStep(
     landArea: cal.totalLandArea,
     buildingFootprintArea: cal.totalBuildingFootprintArea,
     zoneType: cal.zoneType,
-    isUnregistered: cal.isUnregistered,
+    unapprovedBuilding: cal.unapprovedBuilding,
     context: "상업용건물",
   });
 
