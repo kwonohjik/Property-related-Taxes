@@ -710,8 +710,8 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     fbDeductionAppliedRate: number;
     /** 상속개시일 (YYYY-MM-DD) */
     inheritanceDate: string;
+    /** 피상속인 자본적지출 — §97의2④1호 base에 가산(적용률이 곱해진다) */
     decedentCapitalExpenditure?: number;
-    heirCapitalExpenditure?: number;
   };
 }
 

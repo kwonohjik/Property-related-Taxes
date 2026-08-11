@@ -19,7 +19,8 @@
  * DB 직접 호출 없음 — 순수 함수
  */
 
-import { applyRate } from "./tax-utils";
+import { applyRateFraction } from "./tax-utils";
+import { isFamilyBusinessCgtEra } from "./data/family-business-cgt-era";
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
@@ -43,7 +44,13 @@ type CalcFn = (
 export interface FamilyBusinessInheritanceTransferInput {
   /**
    * 피상속인 원취득가액 (원, 정수)
-   * 소법 §97의2④1호: "피상속인이 그 자산을 취득하기 위하여 지출한 금액"
+   *
+   * 소법 §97의2④1호: "피상속인의 취득가액(**제97조제1항제1호에 따른 금액**)"
+   *
+   * ⚠️ §97①1호는 가목(취득에 든 **실지거래가액**)이 원칙이되, **"가목의 실지거래가액을 확인할
+   *    수 없는 경우에 한정하여"** 나목(매매사례가액·감정가액·환산취득가액을 **순차** 적용)을 쓴다.
+   *    ⇒ "실제 지출한 금액"으로 좁혀 읽으면 피상속인이 오래전 취득해 실거래가를 확인할 수 없는
+   *    사안에서 나목 경로가 가려진다. (2026-08-11 정정 — 종전 주석이 그렇게 적혀 있었다.)
    */
   decedentAcquisitionPrice: number;
   /**
@@ -67,15 +74,16 @@ export interface FamilyBusinessInheritanceTransferInput {
   inheritanceDate: string;
   /**
    * 피상속인 자본적 지출액 (원, 정수, 선택)
-   * 소법 §97의2④ 단서: 피상속인이 지출한 자본적 지출도 의제 취득가 산식에 포함하는지 여부.
-   * 현행 조문에 명시적 규정이 없으므로 optional — 후속 법령 해석 시 반영.
+   *
+   * **§97의2④1호의 base에 가산**되어 적용률 r이 곱해진다(계획서 Q7 = 안 B).
+   * 근거: 자본적지출은 취득가액에 속하는 개념이고, §97의2**①**1호가 "취득할 **당시의**"로
+   * 시점을 못박은 것과 달리 ④1호에는 시점 한정어가 없다.
+   *
+   * ⚠️ **해석례 미확보 상태의 채택이다**(국세법령정보시스템 실측 0건). 안 C(§97①2호 필요경비로
+   *    **전액** 산입 — 적용률이 곱해지지 않는다)가 배제되지 않았다. 서면질의 회신이 C를 지지하면
+   *    `calcFamilyBusinessImputedAcquisitionPrice`의 1항 base에서 빼고 필요경비 항으로 옮긴다.
    */
   decedentCapitalExpenditure?: number;
-  /**
-   * 상속인(납세자) 자본적 지출액 (원, 정수, 선택)
-   * 소법 §97①2호 가목: 상속 취득 후 지출한 자본적 지출 — 일반 §97 경로에서 필요경비로 차감.
-   */
-  heirCapitalExpenditure?: number;
 }
 
 /**
@@ -126,39 +134,53 @@ export interface FamilyBusinessCgtDetail {
 
 // ─── 핵심 헬퍼 함수 ──────────────────────────────────────────
 
+/** 적용률 정수 basis — 소령 §163의2③ 산식은 나눗셈이라 소수 자릿수가 길 수 있다. */
+const RATE_SCALE = 1_000_000;
+
 /**
  * 소법 §97의2④ 의제 취득가액 산출
  *
- * 산식:
- *   피상속인 취득가 × 적용률 + 상속개시일 평가액 × (1 - 적용률)
+ * 산식 (1호 + 2호):
+ *   (피상속인 취득가액 + **피상속인 자본적지출**) × 적용률
+ *   + 상속개시일 평가액 × (1 − 적용률)
  *
- * 정수 연산:
- *   applyRate(amount, rate) = Math.floor(amount * rate)
- *   두 항을 각각 floor 후 합산 → ±1원 오차 허용 (정책: 1원 tolerance)
- *   단, rate + (1-rate) = 1.0이 아닌 부동소수점 오차 케이스는 허용.
+ * ## 피상속인 자본적지출을 1호 base에 넣는 이유 (계획서 Q7 = 안 B)
  *
- * @param decedentAcquisitionPrice 피상속인 원취득가액 (원)
+ * 자본적지출은 취득가액에 속하는 개념이고(법인세법 시행령 §72), §97의2**①**1호가
+ * "취득할 **당시의** §97①1호에 따른 금액"으로 시점을 못박은 것과 달리 **④1호에는 시점
+ * 한정어가 없다**. ⇒ 1호 base에 가산해 **적용률이 곱해지도록** 한다.
+ *
+ * ⚠️ **해석례 미확보 상태의 채택이다.** 국세법령정보시스템 실측 0건이고, 안 C(§97①2호
+ *    필요경비로 **전액** 산입 — 적용률이 곱해지지 않는다)를 배제할 결정적 근거는 없다.
+ *    회신이 C를 지지하면 **이 가산을 여기서 빼고 필요경비 항으로 옮겨야 한다.**
+ *    (anchor: `fb-lthd-95-4-latter.anchor.test.ts` M-4)
+ *
+ * ## 절사 — 잔액흡수가 아니라 문언대로
+ *
+ * 종전 구현은 2항을 `market − floor(market × r)`(잔액흡수)로 계산해 문언
+ * `floor(market × (1−r))`보다 **1원 컸다**. 두 항의 base가 서로 달라 `Σ = 전체`
+ * 불변식이 없으므로 잔액흡수를 쓸 자리가 아니다.
+ *
+ * `1 − rate`를 부동소수로 쓰면 안 된다(`1 − 0.8 = 0.19999999999999996` → 1원 과소).
+ * 적용률을 **정수 basis로 정규화**한 뒤 `applyRateFraction`(BigInt overflow 가드)으로
+ * 두 항을 각각 floor한다.
+ *
+ * @param decedentAcquisitionPrice 피상속인 원취득가액 (원) — §97①1호(실지거래가액. 확인 불가 시 매매사례·감정·환산 순차)
  * @param inheritanceMarketValue 상속개시일 현재 자산가액 (원)
- * @param fbDeductionAppliedRate 가업상속공제적용률 (0~1)
- * @returns 의제 취득가액 (원, Math.floor 적용)
+ * @param fbDeductionAppliedRate 가업상속공제적용률 (0~1) — 소령 §163의2③
+ * @param decedentCapitalExpenditure 피상속인 자본적지출액 (원, 기본 0)
+ * @returns 의제 취득가액 (원)
  */
 export function calcFamilyBusinessImputedAcquisitionPrice(
   decedentAcquisitionPrice: number,
   inheritanceMarketValue: number,
   fbDeductionAppliedRate: number,
+  decedentCapitalExpenditure = 0,
 ): number {
-  // 잔액 흡수 패턴 (feedback_floor_residual_absorption):
-  //   1 - rate 부동소수점 오차 방지.
-  //   term1 = Math.floor(decedent × rate)
-  //   term2 = Math.floor(market × rate) 별도 계산 → 각각 floor로 ±1원 오차 허용
-  //
-  // §97의2④ 산식:
-  //   의제취득가 = 피상속인 취득가 × 적용률 + 상속개시일 평가액 × (1 - 적용률)
-  // 두 항을 독립 applyRate로 계산 (1원 tolerance 정책 — pre-Do anchor FB-CGT-LAW-1).
-  const term1 = applyRate(decedentAcquisitionPrice, fbDeductionAppliedRate);
-  // (1 - fbDeductionAppliedRate) 부동소수점 오차 방지: 보완률을 분리 계산
-  // applyRate(market, 1 - rate) 대신 market - applyRate(market, rate) 패턴 사용.
-  const term2 = inheritanceMarketValue - applyRate(inheritanceMarketValue, fbDeductionAppliedRate);
+  const rateNumer = Math.round(fbDeductionAppliedRate * RATE_SCALE);
+  const decedentBase = decedentAcquisitionPrice + decedentCapitalExpenditure;
+  const term1 = applyRateFraction(decedentBase, rateNumer, RATE_SCALE);
+  const term2 = applyRateFraction(inheritanceMarketValue, RATE_SCALE - rateNumer, RATE_SCALE);
   return term1 + term2;
 }
 
@@ -231,15 +253,37 @@ export function applyFamilyBusinessCgtStep(
   const fb = rawInput.familyBusinessInheritance;
   if (!fb) return null;
 
+  // 0. G-1 시점 게이트 — 부칙 법률 제12169호 §12 "이 법 시행 후 **상속받아** 양도하는 분".
+  //    기준일은 **상속개시일**이지 양도일이 아니다. 미충족 시 특례 전부 미적용(일반 §97 경로)
+  //    — §95④ 후단도 함께 꺼진다(후단이 §97의2④1호의 적용률을 참조하므로).
+  if (!isFamilyBusinessCgtEra(new Date(fb.inheritanceDate))) return null;
+
   // 1. 의제 취득가액 산출 (소법 §97의2④)
   const imputedAcquisitionPrice = calcFamilyBusinessImputedAcquisitionPrice(
     fb.decedentAcquisitionPrice,
     fb.inheritanceMarketValue,
     fb.fbDeductionAppliedRate,
+    fb.decedentCapitalExpenditure ?? 0,
   );
 
-  // 2. 의제 취득가액으로 재귀 호출 — familyBusinessInheritance 제거하여 무한루프 차단
-  const inputWithoutFb: TransferTaxInput = { ...processedInput, familyBusinessInheritance: undefined };
+  // 2. 재귀 호출용 입력 — familyBusinessInheritance 제거하여 무한루프 차단.
+  //    §95④ 후단(LTHD 피상속인 기산)은 fb가 제거되므로 `fbLthdLatter`로 따로 실어 보낸다.
+  //    ⚠️ **두 재귀(의제 §97의2④ · 일반 §97) 모두**에 실린다 — 상증령 §15㉑의 두 세액은
+  //       다 "가업상속공제를 받고 양도하는 가업상속 재산"의 세액이고, 후단의 요건은
+  //       "가업상속공제가 적용된 비율에 해당하는 자산"이지 §97의2④ 적용 여부가 아니다(계획서 Q2).
+  const decedentAcqDate = processedInput.decedentAcquisitionDate;
+  const inputWithoutFb: TransferTaxInput = {
+    ...processedInput,
+    familyBusinessInheritance: undefined,
+    ...(decedentAcqDate
+      ? {
+          fbLthdLatter: {
+            appliedRate: fb.fbDeductionAppliedRate,
+            decedentAcquisitionDate: decedentAcqDate,
+          },
+        }
+      : {}),
+  };
   const imputedResult = calcFn(
     inputWithoutFb,
     rates,
