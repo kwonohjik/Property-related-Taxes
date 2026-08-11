@@ -24,6 +24,9 @@ import {
 import type { AddressValue } from "@/components/ui/address-search";
 import { isAcq2001LocationIndexTrack } from "@/lib/calc/phd-acq-land-price-track";
 import { pickAcqLocationIndexLandPrice } from "@/lib/calc/phd-acq-land-price-track";
+import { landPriceYearOf } from "@/lib/calc/building-std-batch-apply";
+import { sameLandPriceYear } from "@/lib/calc/building-std-batch-apply";
+import { SEPARATE_LAND_ACQ_LANDPRICE_HINT } from "@/lib/calc/building-std-batch-apply";
 
 // ─── Props ────────────────────────────────────────────────────────
 
@@ -179,10 +182,49 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     props.landPricePerSqmAtAcq,
     props.landPricePerSqmAtAcq2001,
   );
+  /**
+   * 공시지가 기준연도 — 아래 `PointBlock`이 실제로 쓰는 연도를 그대로 싣는다(사용자가 수동
+   * 변경한 연도 포함). 미선택이면 5/31 공시 규칙 추천값. `year`(고시 체계 연도)와 별개 축이다.
+   */
+  const lpYear = (selected: string, refDate?: string) =>
+    Number(selected) || landPriceYearOf(refDate);
+  /**
+   * 취득시 위치지수 공시지가의 축은 **건물 취득일**이다(§166⑥ 분리 — 부수토지 공시지가는
+   * 토지 취득일, 건물 기준시가·batch는 건물 취득일. `transfer-phd-building-stdprice-calculator`
+   * T9가 이 계약을 고정한다). ① 취득시 블록이 채우는 `landPricePerSqmAtAcq`는 **토지 취득일**
+   * 기준연도 값이므로, 두 기준연도가 다르면 그대로 쓸 수 없다 — 비우고 조회 필드로 연다.
+   */
+  const acqLandRefDate = props.acqLandReferenceDate ?? props.acquisitionDate;
+  const acqLandYearShared = sameLandPriceYear(props.acquisitionDate, acqLandRefDate);
+  const acqPre2001Track = isAcq2001LocationIndexTrack(acqYear);
+  const acqLandPriceSplit = !acqPre2001Track && !acqLandYearShared;
   const batchPoints = [
-    { key: "acquisition" as const, label: "취득시", year: acqYear, landPricePerM2: acqLandPerM2 },
-    { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(props.firstDisclosureDate), landPricePerM2: props.landPricePerSqmAtFirst },
-    { key: "transfer" as const, label: "양도시", year: yearOf(props.transferDate), landPricePerM2: props.landPricePerSqmAtTransfer },
+    {
+      key: "acquisition" as const,
+      label: "취득시",
+      year: acqYear,
+      landPriceYear: acqLandPriceSplit
+        ? landPriceYearOf(props.acquisitionDate)
+        : lpYear(props.landPriceYearAtAcq, acqLandRefDate),
+      landPricePerM2: acqLandPriceSplit ? "" : acqLandPerM2,
+      ...(acqLandPriceSplit
+        ? { lookupLandPrice: true, landPriceHint: SEPARATE_LAND_ACQ_LANDPRICE_HINT }
+        : {}),
+    },
+    {
+      key: "firstDisclosure" as const,
+      label: "최초공시일",
+      year: yearOf(props.firstDisclosureDate),
+      landPriceYear: lpYear(props.landPriceYearAtFirst, props.firstDisclosureDate),
+      landPricePerM2: props.landPricePerSqmAtFirst,
+    },
+    {
+      key: "transfer" as const,
+      label: "양도시",
+      year: yearOf(props.transferDate),
+      landPriceYear: lpYear(props.landPriceYearAtTransfer, props.transferDate),
+      landPricePerM2: props.landPricePerSqmAtTransfer,
+    },
   ];
   // housing 3시점 + commercial(양도 항상, 취득·최초공시는 Case A 산출 시) 라우팅. 값 있는 시점만.
   const applyBatch = (v: MultiPointStdPriceApply) => {
@@ -204,7 +246,10 @@ export function ThreePointStandardPriceInput(props: ThreePointStandardPriceInput
     // 취득은 **트랙이 갈린다**(§164⑤): ≤2000이면 모달 입력값은 2001.1.1 기준(위치지수 전용)이라
     // 취득당시 연도 토지값 필드에 넣으면 오염 → 전용 필드로 라우팅. ≥2001은 두 트랙이 같은 값 → 종전대로.
     // 종전에는 ≤2000을 **드롭**해 사용자 입력이 소실됐다(받을 그릇 부재). 핸들러 미주입 시 종전 동작 유지.
-    if (v.landPrices?.acquisition != null) {
+    // 토지·건물 취득일의 기준연도가 다르면 모달 값은 **건물 취득일 연도**라 ① 취득시 블록의
+    // 토지축 필드에 덮으면 부수토지 기준시가가 조용히 오염된다 — 받을 그릇이 없어 드롭한다
+    // (일반건물 `buildGeneralBuildingBatchPatch`와 동일 규칙).
+    if (v.landPrices?.acquisition != null && !acqLandPriceSplit) {
       if (isAcq2001LocationIndexTrack(acqYear))
         props.onLandPricePerSqmAtAcq2001Change?.(v.landPrices.acquisition);
       else props.onLandPricePerSqmAtAcqChange(v.landPrices.acquisition);

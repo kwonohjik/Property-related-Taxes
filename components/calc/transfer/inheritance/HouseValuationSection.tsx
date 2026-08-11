@@ -38,6 +38,7 @@ import {
 import { deriveSec163_9BaseDate } from "@/lib/calc/transfer-163-9-base-date";
 import { sec164AcqTimePointLabel } from "@/lib/calc/transfer-163-9-base-date";
 import { isDeemedAcquisitionApplied } from "@/lib/calc/transfer-163-9-base-date";
+import { landPriceYearOf } from "@/lib/calc/building-std-batch-apply";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ─── 공시지가 조회 + 토지기준시가 서브 컴포넌트 ──────────────────────────
@@ -262,10 +263,30 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
     const acqYear = yearOf(inheritanceDate);
     const acqLandPerM2 =
       acqYear != null && acqYear <= 2000 ? "" : asset.inhHouseValLandPricePerSqmAtInheritance;
+    // 공시지가 기준연도(5/31 공시)는 고시 체계 연도와 별개 축 — 아래 각 시점 공시지가 칸이
+    // 쓰는 연도(referenceDate 동일)를 그대로 싣는다.
     return [
-      { key: "acquisition" as const, label: "취득시(상속)", year: acqYear, landPricePerM2: acqLandPerM2 },
-      { key: "firstDisclosure" as const, label: "최초공시일", year: yearOf(firstRef), landPricePerM2: asset.inhHouseValLandPricePerSqmAtFirst },
-      { key: "transfer" as const, label: "양도시", year: yearOf(transferDate), landPricePerM2: asset.inhHouseValLandPricePerSqmAtTransfer },
+      {
+        key: "acquisition" as const,
+        label: "취득시(상속)",
+        year: acqYear,
+        landPriceYear: landPriceYearOf(inheritanceDate),
+        landPricePerM2: acqLandPerM2,
+      },
+      {
+        key: "firstDisclosure" as const,
+        label: "최초공시일",
+        year: yearOf(firstRef),
+        landPriceYear: landPriceYearOf(firstRef),
+        landPricePerM2: asset.inhHouseValLandPricePerSqmAtFirst,
+      },
+      {
+        key: "transfer" as const,
+        label: "양도시",
+        year: yearOf(transferDate),
+        landPriceYear: landPriceYearOf(transferDate),
+        landPricePerM2: asset.inhHouseValLandPricePerSqmAtTransfer,
+      },
     ];
   }, [
     inheritanceDate,

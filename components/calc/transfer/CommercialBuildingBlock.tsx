@@ -46,6 +46,8 @@ import { isCommercialPre1990Acquisition } from "@/lib/calc/transfer-pre1990-comm
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { resolveCbEra } from "@/lib/calc/commercial-cb-era";
 import { COMMERCIAL_FIRST_DISCLOSURE_YEAR } from "@/lib/calc/commercial-cb-era";
+import { COMMERCIAL_FIRST_DISCLOSURE_DATE } from "@/lib/calc/commercial-cb-era";
+import { landPriceYearOf } from "@/lib/calc/building-std-batch-apply";
 import { MultiPointBuildingStdPriceModal } from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
 import type { MultiPointStdPriceApply } from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
 import { canUseMultiPointStdPrice } from "@/lib/calc/building-std-multipoint-gate";
@@ -156,17 +158,26 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         key: "acquisition" as const,
         label: "취득시",
         year: acqYear,
+        // 공시지가 기준연도는 5/31 공시 규칙 — 아래 ② 공시지가 칸(referenceDate=취득일)과 같은 연도.
+        landPriceYear: landPriceYearOf(asset.acquisitionDate),
         landPricePerM2: isAcq2001LocationIndexTrack(acqYear) ? "" : asset.cbLandPricePerSqmAtAcq,
       },
       {
         key: "firstDisclosure" as const,
         label: "최초고시(2005)",
         year: COMMERCIAL_FIRST_DISCLOSURE_YEAR,
+        landPriceYear: landPriceYearOf(COMMERCIAL_FIRST_DISCLOSURE_DATE),
         landPricePerM2: asset.cbLandPricePerSqmAtFirst,
       },
-      { key: "transfer" as const, label: "양도시", year: transYear, landPricePerM2: asset.cbLandPricePerSqmAtTransfer },
+      {
+        key: "transfer" as const,
+        label: "양도시",
+        year: transYear,
+        landPriceYear: landPriceYearOf(transferDate),
+        landPricePerM2: asset.cbLandPricePerSqmAtTransfer,
+      },
     ],
-    [acqYear, transYear, asset.cbLandPricePerSqmAtAcq, asset.cbLandPricePerSqmAtFirst, asset.cbLandPricePerSqmAtTransfer],
+    [acqYear, transYear, transferDate, asset.acquisitionDate, asset.cbLandPricePerSqmAtAcq, asset.cbLandPricePerSqmAtFirst, asset.cbLandPricePerSqmAtTransfer],
   );
 
   /**
