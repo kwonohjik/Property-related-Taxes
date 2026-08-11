@@ -12,6 +12,7 @@
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import { toEngineInput, buildNtsReportContext } from "@/lib/calc/building-std-price-form";
 import { snapshotKeyTimepoint } from "@/lib/calc/building-std-snapshot-keys";
+import { BUILDING_STD_FIRST_YEAR } from "@/lib/calc/phd-building-std-batch";
 import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
 import { buildNtsReportModel, type NtsReportModel } from "@/lib/calc/nts-report-adapter";
 
@@ -35,6 +36,27 @@ export function buildBuildingStdReportsFromInput(
           instances: model.instances.filter((i) =>
             keyTimepoint === "transfer" ? i.markCell === "transfer" : i.markCell !== "transfer",
           ),
+        };
+      }
+      /**
+       * 🔴 배치(2시점 일괄)는 계산서를 **valuation(taxType=inheritance_gift) 스냅샷으로 재구성**한다.
+       *    PDF 부제는 `MARK_LABEL[inst.markCell]`을 그대로 찍으므로 양도 계산인데 "상속"으로 나온다.
+       *    화면(BuildingStdPriceReportSection)과 **같은 규칙**으로 키의 시점을 양도 맥락에 매핑한다
+       *    — 한쪽만 고치면 화면↔PDF가 어긋난다(이 파일 상단 주석의 단일 출처 규약).
+       *    상증 키(`bsp-estate-*`)는 `snapshotKeyTimepoint`가 null이라 상속 맥락 그대로 간다.
+       */
+      const reconstructedTimepoint =
+        snap.taxType !== "transfer" ? snapshotKeyTimepoint(key) : null;
+      if (reconstructedTimepoint) {
+        const mark =
+          reconstructedTimepoint === "transfer"
+            ? "transfer"
+            : Number(snap.valuationYear) < BUILDING_STD_FIRST_YEAR
+              ? "acq2000"
+              : "acq2001";
+        model = {
+          ...model,
+          instances: model.instances.map((i) => ({ ...i, markCell: mark })),
         };
       }
       if (model.instances.length > 0) out.push(model);

@@ -112,6 +112,38 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(screen.getAllByTestId("nts-bsp-x-2").length).toBe(1);
   });
 
+  it("🔴 일반건물 2시점 일괄(-gb-*) 배치 스냅샷 — 양도 맥락으로 표기(상속 오표기 정정)", () => {
+    // 배치는 계산서를 valuation(taxType=inheritance_gift) 스냅샷으로 **재구성**한다.
+    // Ⅰ.구분 마킹·제목 override가 종전에는 배치 전용 키(-phd-*·-cb-first)에만 걸려,
+    // 일반건물 배치 키(-gb-acq/-gb-transfer)는 재구성 맥락(상속)이 그대로 표시됐다.
+    // 실측(2026-08-11 브라우저): 제목 "상속 건물 기준시가 계산" + 상속세 칸 ○.
+    useBuildingStdSnapshotStore.setState({
+      snapshots: phdBatchToSnapshots(
+        {
+          building: {
+            builtYear: 2022,
+            parts: [{ floorArea: 300, category: "housing" as const, acquisition: tp(2), transfer: tp(2) }],
+          },
+          acquisition: { year: 2022, landPricePerM2: 3_000_000 },
+          transfer: { year: 2026, landPricePerM2: 5_000_000 },
+        },
+        "bsp-asset-x-gb",
+      ),
+    });
+    const inputData = { assets: [{ assetId: "asset-x" }] };
+    render(<BuildingStdPriceReportSection inputData={inputData} />);
+
+    // 취득시·양도시 2벌
+    expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
+    // 🔑 상속세 칸에 ○가 없어야 한다 (양도 계산이다)
+    screen.getAllByTestId("nts-bsp-1-inh").forEach((el) => expect(el.textContent ?? "").not.toContain("○"));
+    // 🔑 취득당시(2001↑)·양도당시 칸에 각각 ○
+    expect(screen.getAllByTestId("nts-bsp-1-acq2001").filter((el) => (el.textContent ?? "").includes("○")).length).toBe(1);
+    expect(screen.getAllByTestId("nts-bsp-1-transfer").filter((el) => (el.textContent ?? "").includes("○")).length).toBe(1);
+    // 🔑 제목이 상속 맥락이 아니다
+    expect(screen.queryByText(/상속 건물 기준시가 계산/)).toBeNull();
+  });
+
   it("감면 PHD 환산 통합 스냅샷(-red-phd) — 취득시·최초공시일 2벌 렌더(계산서 미출력 결함 정정)", async () => {
     const { initialBuildingStdPriceForm } = await import("../../lib/calc/building-std-price-form");
     // 취득시+최초공시시 2시점을 한 모달에서 계산하는 단일 스냅샷(transfer 모드, 최초공시=transYear).

@@ -120,6 +120,55 @@ describe("건물 기준시가 계산서 PDF — 시점 전용 키 필터", () =>
     expect(marksFor("bsp-a1-mx-commercial")).toHaveLength(2);
   });
 
+  /**
+   * 🔴 배치(2시점 일괄)는 계산서를 **valuation(taxType=inheritance_gift) 스냅샷으로 재구성**한다.
+   *    PDF 부제는 `MARK_LABEL[inst.markCell]`을 그대로 찍으므로, 양도 계산인데 **"상속"**으로
+   *    나온다(화면도 같은 오표기였다 — 2026-08-11 브라우저 실측). 키의 시점으로 양도 맥락 부여.
+   */
+  it("🔴 재구성 valuation 스냅샷(-gb-acq·-gb-transfer) → 상속이 아니라 양도 맥락", () => {
+    const valuationSnap = (year: string): BuildingStdPriceFormState => ({
+      ...initialBuildingStdPriceForm,
+      taxType: "inheritance_gift",
+      inheritanceGiftKind: "inheritance",
+      builtYear: "2010",
+      floorArea: "200",
+      valuationYear: year,
+      valLandPrice: "5000000",
+      valStructureKey: "rc",
+      valUsageNo: "1",
+      adjustmentMode: "manual",
+    });
+    const marks = buildBuildingStdReportsFromInput({
+      assets: [{ assetId: "a1" }],
+      buildingStdSnapshots: {
+        "bsp-a1-gb-acq": valuationSnap("2015"),
+        "bsp-a1-gb-transfer": valuationSnap("2025"),
+      },
+    }).flatMap((m) => m.instances.map((i) => i.markCell));
+    expect([...marks].sort()).toEqual(["acq2001", "transfer"]);
+  });
+
+  it("상증 키(bsp-estate-*)는 상속 맥락 유지 — 회귀 방어", () => {
+    const marks = buildBuildingStdReportsFromInput({
+      estateItems: [{ id: "item-7" }],
+      buildingStdSnapshots: {
+        "bsp-estate-item-7": {
+          ...initialBuildingStdPriceForm,
+          taxType: "inheritance_gift",
+          inheritanceGiftKind: "inheritance",
+          builtYear: "2010",
+          floorArea: "200",
+          valuationYear: "2024",
+          valLandPrice: "5000000",
+          valStructureKey: "rc",
+          valUsageNo: "1",
+          adjustmentMode: "manual",
+        },
+      },
+    }).flatMap((m) => m.instances.map((i) => i.markCell));
+    expect(marks).toEqual(["inheritance"]);
+  });
+
   // 단일 시점 모드 스냅샷은 엔진이 애초에 1벌만 낸다(필터 이전 단계에서 이미 해소)
   it("singleTimePoint 스냅샷 → 필터 없이도 1벌", () => {
     const marks = buildBuildingStdReportsFromInput({
