@@ -313,8 +313,9 @@ export function calcUnlistedValuation(
 
     // 양도기준시가 = 순자산 단독
     const transferStdPricePerShare = Math.floor(transferNa);
-    // 취득기준시가 = 순자산 단독
-    const acquisitionStdPricePerShare = Math.floor(acquisitionNa);
+    // 취득기준시가 = 순자산 단독 (이월과세면 **증여자 취득 당시** 값으로 대체 — §97의2①1호)
+    const acquisitionStdPricePerShare =
+      input.acquisitionStdPriceOverridePerShare ?? Math.floor(acquisitionNa);
     const acquisitionStdPriceTotal = acquisitionStdPricePerShare * shareCount;
 
     if (transferStdPricePerShare <= 0) {
@@ -468,6 +469,16 @@ export function calcUnlistedValuation(
       acquisitionNetAssetFloorApplied = true;
       appliedRules.push("80%하한(취득기준시가)");
     }
+  }
+  /**
+   * §97의2①1호 — 이월과세면 취득기준시가는 **증여자 취득 당시**의 것이다.
+   * 보충평가·80% 하한을 모두 마친 **뒤에** 덮어쓴다 — 증여자 값은 이미 확정된 사실이라
+   * 수증자 취득연도의 순손익·순자산으로 재가공할 대상이 아니기 때문이다.
+   * 분모(양도기준시가)는 이월과세와 무관하므로 그대로 둔다.
+   */
+  if (input.acquisitionStdPriceOverridePerShare !== undefined) {
+    acquisitionStdPricePerShare = input.acquisitionStdPriceOverridePerShare;
+    acquisitionNetAssetFloorApplied = false;
   }
   const acquisitionStdPriceTotal = acquisitionStdPricePerShare * shareCount;
 

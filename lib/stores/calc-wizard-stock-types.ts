@@ -84,6 +84,12 @@ export interface AcquisitionLotForm {
   acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "merger_split";
   decedentAcquisitionDate?: string;            // 상속 시 피상속인 취득일 (§104②1)
   donorAcquisitionDate?: string;               // 이월과세 시 증여자 취득일 (§104②2)
+  /** 이월과세 lot — 증여자 취득 당시 1주당 실지거래가액 (§97의2①1호). 없으면 승계하지 않는다. */
+  donorAcquisitionPrice?: string;
+  /** 이월과세 lot — 증여자와의 관계 (§97의2① 본문) */
+  donorRelation?: "spouse" | "lineal" | "other";
+  /** 이월과세 lot — 증여자 사망 (배우자=사별 / 직계존비속=양도 당시 사망) */
+  donorDeceased?: boolean;
   preMergerAcquisitionDate?: string;           // 합병·분할 시 종전 주식 취득일 (§104②3)
 }
 

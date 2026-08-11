@@ -130,6 +130,25 @@ export interface StockTransferFormData {
   acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "merger_split";
   decedentAcquisitionDate: string;     // 상속: 피상속인 취득일
   donorAcquisitionDate: string;        // 이월과세(carryover_gift): 증여자 취득일 §104②2
+
+  // ── §97의2① 이월과세 **본체(필요경비)** — `carryover_gift` 전용 ──
+  /** ① 본문 관계 요건 — 배우자 사별·직계존비속 양도당시 사망이면 §97의2① 미해당 */
+  donorRelation: "spouse" | "lineal" | "other" | "";
+  /** ① 본문 관계 요건 — 증여자 사망 사실 */
+  donorDeceased: boolean;
+  /** ①1호 가목 — 증여자 취득 당시 1주당 실지거래가액 */
+  donorAcquisitionPrice: string;
+  /** ①1호 나목 — 증여자 취득 당시 1주당 기준시가 (실가를 확인할 수 없어 환산하는 경우) */
+  donorAcquisitionStdPrice: string;
+  /** ①2호 — 증여자가 지출한 자본적지출액 총액 (⚠️ 양도비 §97①3호는 제외) */
+  donorCapitalExpenditure: string;
+  /** ①3호 × 영 §163의2②1호 — 증여세 산출세액 */
+  giftTaxAmount: string;
+  /** 영 §163의2②2호 — 양도한 해당 자산가액 (안분 분자) */
+  transferredAssetValue: string;
+  /** 영 §163의2②3호 — 상증법 §47 증여세 과세가액 (안분 분모) */
+  giftTaxableValue: string;
+
   preMergerAcquisitionDate: string;    // 합병·분할
 
   // ── §94①4 다목 누적 ──
@@ -485,6 +504,14 @@ export function createInitialStockFormData(): StockTransferFormData {
     acquisitionCause: "purchase",        // 3중 패턴 default
     decedentAcquisitionDate: "",
     donorAcquisitionDate: "",
+    donorRelation: "",
+    donorDeceased: false,
+    donorAcquisitionPrice: "",
+    donorAcquisitionStdPrice: "",
+    donorCapitalExpenditure: "",
+    giftTaxAmount: "",
+    transferredAssetValue: "",
+    giftTaxableValue: "",
     preMergerAcquisitionDate: "",
 
     cumulativeTransferRatio: "",

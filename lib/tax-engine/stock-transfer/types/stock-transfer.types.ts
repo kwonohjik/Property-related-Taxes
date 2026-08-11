@@ -148,6 +148,80 @@ export type StockTransferInput = {
   /** 합병·분할: 종전 주식 취득일 §104②3 */
   preMergerAcquisitionDate?: Date;
 
+  // ──────────────────────────────────────────────────────────
+  // §97의2① 이월과세 **본체(필요경비)** 입력 — `carryover_gift` 전용
+  //
+  // 계획서: docs/02-design/features/stock-carryover-97-2-necessary-expense.plan.md
+  // ⚠️ 세율 축(§104②2호)은 `donorAcquisitionDate` 하나로 끝나지만, 필요경비 축은
+  //    취득가액 승계(①1호)·증여자 자본적지출(①2호)·증여세 상당액(①3호) 셋을 모두 받는다.
+  // ──────────────────────────────────────────────────────────
+
+  /**
+   * §97의2① **관계 요건** — 증여자와의 관계. 무의존 leaf `carryover-donor-death.ts`가
+   * `donorDeceased`·증여일과 함께 판정한다(부동산과 **같은 leaf 재사용**).
+   */
+  donorRelation?: "spouse" | "lineal" | "other";
+  /**
+   * 증여자 사망 사실. 배우자 = 「사망으로 혼인관계가 소멸」 / 직계존비속 = 「양도 당시 사망」.
+   * 직계존비속 괄호는 2025.1.1. 이후 **증여분**부터다(부칙 제20615호 §8).
+   */
+  donorDeceased?: boolean;
+
+  /**
+   * §97의2①**1호** — 증여자가 취득할 당시의 **1주당** 실지거래가액(§97①1호 가목).
+   * 이 값이 있으면 취득가액을 이것으로 승계한다.
+   */
+  donorAcquisitionPrice?: number;
+  /**
+   * §97의2①1호 × §97①1호 **나목** — 증여자 취득 당시의 **1주당 기준시가**.
+   * 증여자의 실지거래가액을 확인할 수 없어 **증여자 기준으로 환산**할 때 분자로 쓴다.
+   */
+  donorAcquisitionStdPrice?: number;
+  /**
+   * §97의2①**2호** — 증여자가 그 자산에 대하여 지출한 §97①2호 금액(총액).
+   * ⚠️ **양도비(§97①3호)는 제외**한다 — ①2호가 §97①2호만 열거한다.
+   * ⚠️ 부동산의 `DONOR_CAPEX_EFFECTIVE_DATE`(2024-01-01) 가드는 **불필요**하다:
+   *    주식은 증여일 ≥ 2025.1.1.이어야 대상이라 양도일이 항상 그 뒤다(죽은 코드).
+   */
+  donorCapitalExpenditure?: number;
+
+  /** §97의2①**3호** × 영 §163의2②1호 — 증여세 **산출세액**(상증법 §56). */
+  giftTaxAmount?: number;
+  /** 영 §163의2②2호 — **양도한 해당 자산가액**(증여세가 과세된 증여세 과세가액). 안분 분자. */
+  transferredAssetValue?: number;
+  /** 영 §163의2②3호 — 상증법 §47에 따른 **증여세 과세가액**. 안분 분모. */
+  giftTaxableValue?: number;
+
+  /**
+   * 🔒 **엔진 내부 전용** — 시나리오 A가 확정한 증여세 상당액(안분·한도 반영 **후**).
+   * `stock-carryover.ts`가 채우며 **사용자 입력이 아니다**(zod·UI에 노출하지 않는다).
+   *
+   * ⚠️ **왜 `actualExpenses`에 더하지 않는가** — 환산 모드에서 `actualExpenses`는
+   * §97②2호 단서의 **나목(자본적지출 + 양도비)** 으로만 쓰인다. 증여세를 거기 넣으면
+   * ⓐ 단서 비교(가목 vs 나목)를 오염시키고 ⓑ 본문(개산공제) 채택 시 **차감되지 않고 사라진다**.
+   * 증여세는 단서 비교 **대상 밖**이므로 필요경비 확정 **후** 별도 가산한다
+   * (부동산이 같은 함정에 두 번 걸렸다 — `transfer-tax-carryover.ts:368-417`).
+   */
+  carryoverGiftTaxExpense?: number;
+
+  /**
+   * 🔒 **엔진 내부 전용** — 환산 분기의 **취득측 1주당 기준시가**를 강제 지정한다.
+   * `stock-carryover.ts`가 `donorAcquisitionStdPrice`로 채운다(사용자 입력이 아니다).
+   *
+   * §97의2①1호 × §97①1호 **나목**: 환산취득가의 분자는 「취득 당시 기준시가」인데
+   * 이월과세면 그것이 **증여자 취득 당시**의 것이다. 분모(양도측)는 이월과세와 무관하므로
+   * 건드리지 않는다 — 그래서 **취득측만** 오버라이드한다.
+   */
+  acquisitionStdPriceOverridePerShare?: number;
+
+  /**
+   * 🔒 **엔진 내부 전용** — §97의2① 채택 결과 마커. `stock-carryover.ts`가 채운다.
+   * `"applied"` = ①을 적용(시나리오 A) · `"excluded"` = ②3호 등으로 배제(시나리오 B).
+   * 결과 계층이 「왜 이 세액인가」를 설명하는 근거이며, B는 `acquisitionCause`를
+   * `"purchase"`로 되돌리므로 이 마커가 없으면 **배제됐다는 사실 자체가 사라진다**.
+   */
+  carryoverOutcome?: "applied" | "excluded";
+
   /** §94①4 다목 — 3년 누적 양도 비율 */
   cumulativeTransferRatio?: number;
 
@@ -461,6 +535,25 @@ export interface AcquisitionLot {
    * 포섭되면서 신설. 단순 증여(`gift`) lot에서는 기산에 쓰지 않는다.
    */
   donorAcquisitionDate?: Date;
+
+  // §97의2① 본체(필요경비) — lot 판. 단건 입력과 같은 의미다.
+  /** ①1호 — 증여자 취득 당시 **1주당** 실지거래가액. `resolveLotAcquisitionPrice`가 읽는다. */
+  donorAcquisitionPrice?: number;
+  /**
+   * ①2호 — 증여자 자본적지출(이 lot 분, 총액).
+   * 🟠 **아직 배선되지 않았다** — split 모드의 필요경비는 종목 축 `actualExpenses` 하나로
+   *    계산되므로 lot별 산입 경로가 없다. 계획서 「잔여」 참조.
+   */
+  donorCapitalExpenditure?: number;
+  /**
+   * ①3호 — 이 lot에 대응하는 증여세 상당액(영 §163의2② 안분 **후**).
+   * 🟠 **아직 배선되지 않았다** — 위와 같은 이유. 계획서 「잔여」 참조.
+   */
+  donorGiftTaxAmount?: number;
+  /** ① 관계 요건 — `carryover-donor-death.ts` 판정 인자 */
+  donorRelation?: "spouse" | "lineal" | "other";
+  /** ① 관계 요건 — 증여자 사망 사실 */
+  donorDeceased?: boolean;
 }
 
 export interface TransferLot {

@@ -276,6 +276,42 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                     />
                   </FieldCard>
                 )}
+                {lot.acquisitionCause === "carryover_gift" && (
+                  <FieldCard
+                    label="증여자 취득가액 (1주당)"
+                    hint="§97의2①1호 — 이 값이 있어야 취득가액이 승계됩니다"
+                  >
+                    <CurrencyInput
+                      label=""
+                      hideLabel
+                      value={lot.donorAcquisitionPrice ?? ""}
+                      onChange={(v) =>
+                        updateAcquisitionLot(idx, { donorAcquisitionPrice: v })
+                      }
+                    />
+                  </FieldCard>
+                )}
+                {lot.acquisitionCause === "carryover_gift" && (
+                  <FieldCard
+                    label="증여자와의 관계"
+                    hint="§97의2① 본문 — 배우자·직계존비속이 아니면 대상이 아닙니다"
+                  >
+                    <RadioCardGroup
+                      name={`lotDonorRelation-${idx}`}
+                      value={lot.donorRelation ?? ""}
+                      onChange={(v) =>
+                        updateAcquisitionLot(idx, {
+                          donorRelation: v as "spouse" | "lineal" | "other",
+                        })
+                      }
+                      options={[
+                        { value: "spouse", label: "배우자" },
+                        { value: "lineal", label: "직계존비속" },
+                        { value: "other", label: "그 밖" },
+                      ]}
+                    />
+                  </FieldCard>
+                )}
                 {lot.acquisitionCause === "merger_split" && (
                   <FieldCard label="종전 주식 취득일" hint="§104②3 보유기간 기산점">
                     <DateInput

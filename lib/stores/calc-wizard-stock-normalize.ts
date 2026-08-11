@@ -99,6 +99,15 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     acquisitionCause: enumField("acquisitionCause", ["purchase", "inheritance", "gift", "carryover_gift", "merger_split"], defaults.acquisitionCause),
     decedentAcquisitionDate: strField("decedentAcquisitionDate"),
     donorAcquisitionDate: strField("donorAcquisitionDate"),
+    // §97의2① 이월과세 본체(필요경비)
+    donorRelation: enumField("donorRelation", ["spouse", "lineal", "other", ""], defaults.donorRelation),
+    donorDeceased: boolField("donorDeceased", defaults.donorDeceased),
+    donorAcquisitionPrice: strField("donorAcquisitionPrice"),
+    donorAcquisitionStdPrice: strField("donorAcquisitionStdPrice"),
+    donorCapitalExpenditure: strField("donorCapitalExpenditure"),
+    giftTaxAmount: strField("giftTaxAmount"),
+    transferredAssetValue: strField("transferredAssetValue"),
+    giftTaxableValue: strField("giftTaxableValue"),
     preMergerAcquisitionDate: strField("preMergerAcquisitionDate"),
     cumulativeTransferRatio: strField("cumulativeTransferRatio"),
     nblRatioOfCorpAssets: strField("nblRatioOfCorpAssets"),
@@ -444,6 +453,13 @@ function normalizeAcquisitionLots(raw: unknown): AcquisitionLotForm[] {
         decedentAcquisitionDate: typeof o.decedentAcquisitionDate === "string" ? o.decedentAcquisitionDate : undefined,
         // 이월과세 lot — §104②2 증여자 취득일 (2025.1.1.~ 증여분)
         donorAcquisitionDate: typeof o.donorAcquisitionDate === "string" ? o.donorAcquisitionDate : undefined,
+        // §97의2①1호 — 증여자 취득 당시 1주당 실지거래가액 + 관계 요건
+        donorAcquisitionPrice: typeof o.donorAcquisitionPrice === "string" ? o.donorAcquisitionPrice : undefined,
+        donorRelation:
+          o.donorRelation === "spouse" || o.donorRelation === "lineal" || o.donorRelation === "other"
+            ? o.donorRelation
+            : undefined,
+        donorDeceased: typeof o.donorDeceased === "boolean" ? o.donorDeceased : undefined,
         preMergerAcquisitionDate: typeof o.preMergerAcquisitionDate === "string" ? o.preMergerAcquisitionDate : undefined,
       };
     })

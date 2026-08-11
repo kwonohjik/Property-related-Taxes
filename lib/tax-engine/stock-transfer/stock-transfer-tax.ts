@@ -34,27 +34,18 @@ const NBL_HEAVY_CORP_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]>
   "other_asset_block_shareholder_nbl",
   "other_asset_heavy_re_nbl",
 ]);
-import { calcPostListingConversion } from "./stock-valuation-post-listing";
-import type { PostListingValuationResult } from "./stock-valuation-post-listing";
-import { synthesizePostListingInput } from "./post-listing-flat-adapter";
-import { calcListedValuation } from "./stock-valuation-listed";
-import {
-  calcUnlistedValuation,
-  calcFaceValueTransferEstimated,
-  calcTransferStdPriceForFaceValue,
-  calcAcquisitionStdPerShareSupplementary,
-} from "./stock-valuation-unlisted";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import { buildPr2Detail } from "./stock-transfer-pr2-detail";
 import { applyCapitalAdjustmentsToLots } from "./lot-capital-adjustments";
-import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { allocateLots } from "./lot-allocation";
 import { calcSplitModeTax } from "./lot-allocation-tax";
 import { buildExemptResult } from "./stock-transfer-exempt-result";
 import { applyExemptZeroing } from "./apply-exempt-zeroing";
-import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
 import { calcSecuritiesTransactionTax } from "./securities-transaction-tax";
+import { resolveStockCarryover } from "./stock-carryover";
+import { resolveAcquisitionBasis } from "./stock-acquisition-basis";
 
 // ============================================================
 // split 모드 판정 헬퍼
@@ -98,7 +89,21 @@ export function calculateStockTransferTax(
     return calculateExitTax(input as ExitTaxInput);
   }
 
-  return calculateStockTransferTaxInternal(input as StockTransferInput);
+  /**
+   * §97의2① 이월과세 — 게이트 판정 + ②3호 비교(2-pass)를 **파이프라인 앞에서** 끝낸다.
+   *
+   * 단건도 다자산과 **같은 함수**를 탄다(dual-truth 방지). 종목이 하나면 「전체 결정세액」이
+   * 곧 그 종목의 결정세액이라 결과가 자연히 일치한다(계획서 §6.3).
+   *
+   * ⚠️ `carryover_gift`가 아니면 `resolveStockCarryover`가 입력을 **그대로** 돌려주므로
+   *    기존 경로는 한 톨도 바뀌지 않는다.
+   */
+  const [resolved] = resolveStockCarryover(
+    [input as StockTransferInput],
+    (list) => calculateStockTransferTaxInternal(list[0]).finalTax,
+    (i) => calculateStockTransferTaxInternal(i).transferIncome,
+  );
+  return calculateStockTransferTaxInternal(resolved);
 }
 
 /**
@@ -199,293 +204,22 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   }
 
   // ──────────────────────────────────────────────────────────
-  // STEP 3: 취득가액 결정
+  // STEP 3: 취득가액 결정 → `stock-acquisition-basis.ts` (800줄 정책 분할)
+  //   acquisitionMode 4종 + 환산 5분기를 그 파일이 가른다. 여기서는 결과만 받는다.
   // ──────────────────────────────────────────────────────────
-  let acquisitionPrice = 0;
-  let usedEstimatedAcquisition = false;
-  let estimatedBase: number | undefined;   // 개산공제 기준 = 취득기준시가 총액 (§163⑥4)
-  let postListingDetail: PostListingValuationResult | undefined;  // Round 4 C-04 echo
-  let estimatedDeduction: number | undefined;
-  let valuationDetail: StockTransferResult["valuationDetail"] | undefined;
-
   const { acquisitionMode } = input;
-
-  if (lotMatchingDetail) {
-    // split 모드 — lot 합계 취득가 사용 (actual만 허용 — Zod·validate에서 차단)
-    acquisitionPrice = lotMatchingDetail.totalAcquisitionPrice;
-    valuationDetail = {
-      method: "actual_acquisition",
-      netAssetFloorApplied: false,
-      finalPerShareValue:
-        lotMatchingDetail.weightedAvgPerShare ??
-        (lotMatchingDetail.matched[0]?.perShareBuyPrice ?? 0),
-    };
-  } else if (acquisitionMode === "actual") {
-    // 실거래가
-    acquisitionPrice = (input.perShareAcquisitionPrice ?? 0) * shareCount;
-    valuationDetail = {
-      method: "actual_acquisition",
-      netAssetFloorApplied: false,
-      finalPerShareValue: input.perShareAcquisitionPrice ?? 0,
-    };
-
-  } else if (acquisitionMode === "face_value") {
-    // §99①4 장부분실 액면가
-    // 취득기준시가 = 액면가, 양도기준시가 = 비상장 보충 평가
-    // 환산취득가 = 양도가 × (액면가 / 양도기준시가)
-    usedEstimatedAcquisition = true;
-    appliedRules.push("장부분실액면가");
-
-    // 양도기준시가 산출 (§165④1 가중평균 + 80% 하한)
-    const transferStdResult = calcTransferStdPriceForFaceValue(input);
-    const faceValue = input.faceValuePerShare ?? 0;
-
-    // 환산취득가 = 양도가 × 액면가 / 양도기준시가
-    acquisitionPrice = calcFaceValueTransferEstimated(
-      transferPrice,
-      faceValue,
-      transferStdResult.perShare,
-    );
-
-    // 개산공제 기준 = 취득기준시가 총액 = 액면가 × 주식수 (§163⑥4)
-    estimatedBase = faceValue * shareCount;
-
-    valuationDetail = {
-      method: "face_value",
-      netAssetFloorApplied: transferStdResult.netAssetFloorApplied,
-      netAssetFloorValue: transferStdResult.netAssetFloorValue,
-      finalPerShareValue: faceValue,
-    };
-
-    if (transferStdResult.netAssetFloorApplied) {
-      appliedRules.push("80%하한");
-    }
-
-  } else if (acquisitionMode === "estimated") {
-    // 환산취득가
-    usedEstimatedAcquisition = true;
-
-    if (input.acquiredBeforeListing) {
-      // [C-3] 거래정지(양도)+취득후상장은 법령상 양립 불가(§165⑤ 양도일 §3항 전제 ↔ §52의2③ 거래정지 제외).
-      //   validate G-5 + Zod refine 이중 차단 → 본 분기는 거래정지 미동반 전제(post-listing 先行 안전).
-      // 취득 후 상장 — §165⑤ 본문 (1주당 취득기준시가) + 시령 §176의2②1호 환산 (D-2 정정)
-      // §165⑤: 1주당 취득기준시가 = 상장일 이후 1개월 종가평균 × (취득연도/상장연도 가중평균)
-      // §176의2②1호: 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가)
-      const postListingResult = calcPostListingConversion(synthesizePostListingInput(input));
-      const acqStdPerShare = postListingResult.finalPerShareValue;
-      // §176의2②1호 환산 — transferStd 미입력 시 1주당 양도가 자동 fallback
-      const { transferStd, usedFallback } = resolveTransferStd(transferPrice, shareCount, input.transferDatePriceAvg1Month);
-      if (usedFallback) warnings.push("양도일 직전 1개월 종가평균 미입력 — 1주당 양도가를 §176의2②1호 환산 분모로 자동 사용");
-      acquisitionPrice = apply163_9Conversion(transferPrice, acqStdPerShare, transferStd, postListingResult.totalAcquisitionPrice);
-      estimatedBase = acqStdPerShare * shareCount;       // §163⑥4 base
-      postListingDetail = postListingResult;
-      const dailyMode = input.transferStdInputMode === "daily";
-      valuationDetail = {
-        method: "post_listing_conversion", netAssetFloorApplied: false, finalPerShareValue: acqStdPerShare,
-        conversionAcqStdPerShare: acqStdPerShare, conversionTransferStd: transferStd, conversionUsedFallback: usedFallback,
-        transferDailyModeUsed: dailyMode, transferDailyAverage: dailyMode ? (input.transferDatePriceAvg1Month ?? 0) : undefined,
-      };
-
-      for (const rule of postListingResult.appliedRules) {
-        if (!warnings.includes(rule)) warnings.push(rule);
-      }
-      warnings.push(...postListingResult.warnings);
-
-      if (postListingResult.monthlyAccrualApplied) {
-        appliedRules.push("월할가산");
-      }
-
-    } else if (input.tradingHaltAtTransfer) {
-      // 거래정지·관리종목 → 비상장 보충 평가 우회 (§165③)
-      appliedRules.push("거래정지우회");
-      const unlistedResult = calcUnlistedValuation(input, transferPrice);
-      acquisitionPrice = unlistedResult.totalAcquisitionPrice;
-      // 개산공제 기준 = 취득기준시가 총액
-      estimatedBase = unlistedResult.acquisitionStdPriceTotal;
-      // [C-2] 비상장 분기와 동일 passthrough — full/사례49/순자산단독/§165⑨ 결과 카드 정합
-      valuationDetail = {
-        method:
-          unlistedResult.method === "acq_face_value_only"
-            ? "acq_face_value_only"
-            : unlistedResult.method === "net_asset_only"
-              ? "net_asset_only"
-              : "weighted_avg",
-        netAssetFloorApplied: unlistedResult.netAssetFloorApplied,
-        netAssetFloorValue: unlistedResult.netAssetFloorValue,
-        acquisitionNetAssetFloorApplied: unlistedResult.acquisitionNetAssetFloorApplied,
-        finalPerShareValue: unlistedResult.perShareValue,
-        weightedAvgPerShare: unlistedResult.weightedAvgRaw !== undefined
-          ? Math.floor(unlistedResult.weightedAvgRaw)
-          : undefined,
-        acqFaceValuePerShare: input.acqFaceValuePerShare,
-        niPerShare: unlistedResult.netIncomeValue,
-        naPerShare: unlistedResult.netAssetValue,
-        isHeavyRE: input.isHeavyRealEstateForValuation,
-        netAssetOnlyReason: unlistedResult.netAssetOnlyReason,
-        acquisitionStdPriceTotal: unlistedResult.acquisitionStdPriceTotal,
-        section1659Detail: unlistedResult.section1659Detail,
-      };
-      if (unlistedResult.netAssetFloorApplied) {
-        appliedRules.push("80%하한");
-      }
-      if (unlistedResult.netAssetOnlyReason) {
-        appliedRules.push("80%하한미적용");
-      }
-      if (unlistedResult.section1659Detail) {
-        appliedRules.push("월할가산");
-      }
-      warnings.push(...unlistedResult.warnings);
-      for (const rule of unlistedResult.appliedRules) {
-        if (!appliedRules.includes(rule as typeof appliedRules[number])) {
-          // 문자열 규칙은 warnings로 전달
-          warnings.push(rule);
-        }
-      }
-
-    } else if (input.marketType === "unlisted") {
-      // 비상장 보충 평가 (§165④1 + 80% 하한 + 순자산 단독 4사유)
-      const unlistedResult = calcUnlistedValuation(input, transferPrice);
-      acquisitionPrice = unlistedResult.totalAcquisitionPrice;
-      // ★ PR-2 정정: estimatedBase = 취득기준시가 총액 (환산취득가 아님)
-      estimatedBase = unlistedResult.acquisitionStdPriceTotal;
-      // [부담부증여 §159] estimatedBase(개산공제 §163⑥4 base)에만 채무비율 안분.
-      // acquisitionPrice는 transferPrice(=채무B) 기반 환산이라 자동 안분됨 — 이중안분 금지.
-      if (
-        input.burdenedGiftDebtRatio !== undefined &&
-        input.burdenedGiftDebtRatio > 0 &&
-        input.burdenedGiftDebtRatio < 1
-      ) {
-        estimatedBase = Math.floor(estimatedBase * input.burdenedGiftDebtRatio);
-      }
-      valuationDetail = {
-        // [사례 49] acq_face_value_only는 그대로 passthrough (UI 결과 카드 분기용)
-        method:
-          unlistedResult.method === "acq_face_value_only"
-            ? "acq_face_value_only"
-            : unlistedResult.method === "net_asset_only"
-              ? "net_asset_only"
-              : "weighted_avg",
-        netAssetFloorApplied: unlistedResult.netAssetFloorApplied,
-        netAssetFloorValue: unlistedResult.netAssetFloorValue,
-        acquisitionNetAssetFloorApplied: unlistedResult.acquisitionNetAssetFloorApplied,
-        finalPerShareValue: unlistedResult.perShareValue,
-        weightedAvgPerShare: unlistedResult.weightedAvgRaw !== undefined
-          ? Math.floor(unlistedResult.weightedAvgRaw)
-          : undefined,
-        // [GAP-D 사례 49] FormulaCard 입력값 echo — 역산 회피
-        acqFaceValuePerShare: input.acqFaceValuePerShare,
-        niPerShare: unlistedResult.netIncomeValue,
-        naPerShare: unlistedResult.netAssetValue,
-        isHeavyRE: input.isHeavyRealEstateForValuation,
-        netAssetOnlyReason: unlistedResult.netAssetOnlyReason,
-        acquisitionStdPriceTotal: unlistedResult.acquisitionStdPriceTotal,
-        // [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 월할 보정 echo
-        section1659Detail: unlistedResult.section1659Detail,
-      };
-      if (unlistedResult.netAssetFloorApplied) {
-        appliedRules.push("80%하한");
-      }
-      if (unlistedResult.netAssetOnlyReason) {
-        appliedRules.push("80%하한미적용");
-      }
-      if (unlistedResult.section1659Detail) {
-        appliedRules.push("월할가산");
-      }
-      warnings.push(...unlistedResult.warnings);
-      for (const rule of unlistedResult.appliedRules) {
-        warnings.push(rule); // 비타입 문자열 규칙은 warnings로 전달
-      }
-
-    } else if (input.tradingHaltAtAcquisition) {
-      // [C-1] 취득일 거래정지 — 취득시 기준시가만 §165④ 보충 평가 (소령 §165③ 후문, §165⑤ 비적용 판정)
-      // 분모(양도시)는 1개월 종가평균 유지. unlisted 분기 뒤 배치 = 상장만 도달 (M-5 가드)
-      appliedRules.push("취득일거래정지우회");
-      const acqSide = calcAcquisitionStdPerShareSupplementary(input);
-      const haltTransferStd = Math.floor(input.transferDatePriceAvg1Month ?? 0);
-      if (acqSide.perShare <= 0 || haltTransferStd <= 0) {
-        // division 가드 — validate 우회(엔진 직접 호출) 방어
-        acquisitionPrice = 0;
-        estimatedBase = 0;
-        warnings.push(
-          haltTransferStd <= 0
-            ? "양도일 직전 1개월 종가평균이 0 이하 — 환산취득가 산출 불가"
-            : "취득시 보충평가액이 0 이하 — 취득연도 순손익·순자산가치를 확인하세요",
-        );
-      } else {
-        // 환산취득가 = 양도가 × (취득 보충평가 / 양도 종가평균) — BigInt overflow 안전, 총액 floor 1회
-        acquisitionPrice = Number(
-          (BigInt(transferPrice) * BigInt(acqSide.perShare)) / BigInt(haltTransferStd),
-        );
-        estimatedBase = acqSide.perShare * shareCount; // §163⑥4 base
-      }
-      valuationDetail = {
-        method: "halt_acquisition_conversion",
-        netAssetFloorApplied: false, // 분자(취득기준시가) 80% 하한 미적용 관행
-        finalPerShareValue: acqSide.perShare,
-        conversionAcqStdPerShare: acqSide.perShare,
-        conversionTransferStd: haltTransferStd,
-        weightedAvgPerShare: Math.floor(acqSide.weightedRaw),
-        niPerShare: input.acquisitionYearNetIncomePerShare,
-        naPerShare: input.acquisitionYearNetAssetPerShare,
-        isHeavyRE: input.isHeavyRealEstateForValuation,
-        netAssetOnlyReason: input.netAssetOnlyReason,
-        acquisitionStdPriceTotal: acqSide.perShare * shareCount,
-      };
-      warnings.push(...acqSide.warnings);
-      for (const rule of acqSide.appliedRules) {
-        warnings.push(rule); // 비타입 문자열 규칙(법령 인용)은 warnings로 전달
-      }
-
-    } else {
-      // 상장 — 1개월 종가평균 환산 (시행령 §176의2②1호 직접 적용 — D-2 정정)
-      const listedResult = calcListedValuation(input, transferPrice);
-      acquisitionPrice = listedResult.totalAcquisitionPrice;
-      // ★ Bug-B 정정: §163⑥4 개산공제 base = 취득기준시가 총액 (양도기준시가 아님)
-      estimatedBase = listedResult.stdPriceTotalForEstimatedDeduction;
-      valuationDetail = {
-        method: "monthly_avg_listed",
-        netAssetFloorApplied: false,
-        // ★ Bug-A 정정: 환산 후 1주당 취득가 (기존: 양도시 기준시가 그대로 = 잘못된 값)
-        finalPerShareValue: listedResult.perShareAcquisitionPrice,
-      };
-      // [B-4 M-8 §165⑨] 상장 종가평균 양도·취득 동일 — §81④ 2호(보정 없음) 정보성 안내.
-      // §81④ 1호 산식은 사업연도 기준시가 모수라 상장(§99①3 종가평균) 미적용.
-      if (
-        listedResult.perShareTransferStdPrice > 0 &&
-        listedResult.perShareTransferStdPrice === listedResult.perShareAcquisitionStdPrice
-      ) {
-        warnings.push("§165⑨ — 상장 양도·취득 종가평균이 동일합니다(§81④ 2호, 보정 없음).");
-      }
-    }
-
-  } else if (acquisitionMode === "sale_case") {
-    // R-1' 매매사례가액 — 영§176의2③1호 (주권상장법인 주식등 제외)
-    // 우선순위: acquisitionMarketSamplePrice → perShareAcquisitionPrice (legacy fallback)
-    const samplePerShare = input.acquisitionMarketSamplePrice && input.acquisitionMarketSamplePrice > 0
-      ? Math.floor(input.acquisitionMarketSamplePrice)
-      : (input.perShareAcquisitionPrice ?? 0);
-    acquisitionPrice = samplePerShare * shareCount;
-    valuationDetail = {
-      method: "actual_acquisition",
-      netAssetFloorApplied: false,
-      finalPerShareValue: samplePerShare,
-    };
-
-  } else {
-    // 이론상 도달 불가 — acquisitionMode 4종 enum 모두 위에서 분기됨
-    acquisitionPrice = 0;
-    valuationDetail = {
-      method: "actual_acquisition",
-      netAssetFloorApplied: false,
-      finalPerShareValue: 0,
-    };
-  }
-
-  // 개산공제 계산 (취득기준시가 총액 × 1%) — §163⑥4
-  // ★ PR-2 정정: estimatedBase = 취득기준시가 총액 (환산취득가가 아님)
-  if (usedEstimatedAcquisition && estimatedBase !== undefined && estimatedBase > 0) {
-    estimatedDeduction = Math.floor(estimatedBase * STOCK_ESTIMATED_EXPENSE_RATE);
-  }
+  const basis = resolveAcquisitionBasis(input, transferPrice, lotMatchingDetail);
+  const {
+    acquisitionPrice,
+    usedEstimatedAcquisition,
+    estimatedBase,
+    estimatedDeduction,
+    valuationDetail,
+    postListingDetail,
+  } = basis;
+  // 분할 전과 **같은 순서**로 병합한다 (appliedRules는 중복 제거 없이 push되던 그대로).
+  appliedRules.push(...basis.appliedRulesDelta);
+  warnings.push(...basis.warningsDelta);
 
   // STEP 3.5 + 3.7: PR-2 detail (매매사례가액 + 자본조정) — sibling helper
   // [A-2 STEP1-1] split 모드는 자본조정이 lot 전처리에서 이미 반영됨 → buildPr2Detail 글로벌 display 제외(이중적용 차단)
@@ -534,6 +268,36 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     expenses = input.actualExpenses ?? 0;
   } else {
     expenses = estimatedDeduction ?? 0;
+  }
+
+  /**
+   * §97의2①**3호** — 증여세 상당액은 필요경비가 **확정된 뒤** 가산한다.
+   *
+   * 🔑 **§97②2호 단서 비교 대상 밖**이다. 단서는 「가목(환산취득가 + 개산공제)」과
+   * 「나목(자본적지출 + 양도비)」만 견주는데, 증여세는 §97①2호도 3호도 아니기 때문이다.
+   * 그래서 위 swap 판정이 **끝난 다음** 더한다 — `actualExpenses`에 섞으면
+   * ⓐ 단서 비교가 오염되고 ⓑ 본문(개산공제) 채택 시 **차감되지 않고 사라진다**
+   * (부동산이 같은 함정에 두 번 걸렸다 — `transfer-tax-carryover.ts:368-417`).
+   *
+   * 값은 `stock-carryover.ts`가 영 §163의2②(안분 → 한도)까지 마쳐 넣어 준다.
+   */
+  expenses += input.carryoverGiftTaxExpense ?? 0;
+
+  /**
+   * §97의2① 채택 결과 안내 — **왜 이 세액인가**를 결과 계층이 설명할 수 있게 한다.
+   * 시나리오 B는 `acquisitionCause`를 `"purchase"`로 되돌리므로, 이 문구가 없으면
+   * 「이월과세를 골랐는데 적용되지 않았다」는 사실 자체가 결과에서 사라진다.
+   */
+  if (input.carryoverOutcome === "applied") {
+    warnings.push(
+      "§97의2① 이월과세 적용 — 취득가액을 증여자 취득 당시 금액으로 승계하고, " +
+        "세율 보유기간도 증여자 취득일부터 계산합니다(§104②2호).",
+    );
+  } else if (input.carryoverOutcome === "excluded") {
+    warnings.push(
+      "§97의2② — 이월과세를 적용하지 않습니다(적용 시 결정세액이 더 적거나 요건 미충족). " +
+        "취득가액은 증여 당시 평가액이고 세율 보유기간도 증여받은 날부터 계산합니다.",
+    );
   }
 
   // ──────────────────────────────────────────────────────────
