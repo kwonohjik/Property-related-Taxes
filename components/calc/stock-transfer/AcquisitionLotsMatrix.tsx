@@ -294,6 +294,45 @@ export function AcquisitionLotsMatrix({
                 )}
                 {lot.acquisitionCause === "carryover_gift" && (
                   <FieldCard
+                    label="증여자 자본적지출"
+                    hint="§97의2①2호 — 이 lot 전체 주식수 기준 총액. 매도한 주식수만큼 안분되어 산입됩니다"
+                  >
+                    <CurrencyInput
+                      label=""
+                      hideLabel
+                      value={lot.donorCapitalExpenditure ?? ""}
+                      onChange={(v) => updateLot(idx, { donorCapitalExpenditure: v })}
+                    />
+                  </FieldCard>
+                )}
+                {lot.acquisitionCause === "carryover_gift" && (
+                  <FieldCard
+                    label="증여세 산출세액"
+                    hint="§97의2①3호 — 이 lot을 증여받은 건의 증여세 산출세액"
+                  >
+                    <CurrencyInput
+                      label=""
+                      hideLabel
+                      value={lot.donorGiftTaxAmount ?? ""}
+                      onChange={(v) => updateLot(idx, { donorGiftTaxAmount: v })}
+                    />
+                  </FieldCard>
+                )}
+                {lot.acquisitionCause === "carryover_gift" && (
+                  <FieldCard
+                    label="증여세 과세가액"
+                    hint="영 §163의2② 안분 분모. 분자(양도한 자산가액)는 매도 주식수 × 증여 당시 평가액으로 계산됩니다"
+                  >
+                    <CurrencyInput
+                      label=""
+                      hideLabel
+                      value={lot.donorGiftTaxableValue ?? ""}
+                      onChange={(v) => updateLot(idx, { donorGiftTaxableValue: v })}
+                    />
+                  </FieldCard>
+                )}
+                {lot.acquisitionCause === "carryover_gift" && (
+                  <FieldCard
                     label="증여자와의 관계"
                     hint="§97의2① 본문 — 배우자·직계존비속이 아니면 대상이 아닙니다"
                   >

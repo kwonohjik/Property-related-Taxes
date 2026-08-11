@@ -127,5 +127,18 @@ test.describe("주식 이월과세 §97의2① — 필요경비 본체", () => {
     expect(
       (json.result.warnings as string[]).some((w) => w.includes("§97의2① 이월과세 적용")),
     ).toBe(true);
+
+    /**
+     * ⑦ A/B 비교 카드 — §97의2②3호가 견준 **두 결정세액**이 화면에 나와야 한다.
+     * `carryoverDetail`이 route → 결과뷰까지 도달했다는 증명이기도 하다
+     * (엔진이 맞아도 명시 매핑에서 조용히 사라질 수 있다 — P-8이 그랬다).
+     */
+    expect(json.result.carryoverDetail?.outcome).toBe("applied");
+    await expect(
+      page.getByText("§97의2① 이월과세 — 적용 / 미적용 비교"),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("전체 결정세액").first()).toBeVisible();
+    // A/B 1주당 취득가액이 나란히 표시된다 (승계 30,000 vs 증여 당시 80,000)
+    await expect(page.getByText("1주당 취득가액").first()).toBeVisible();
   });
 });

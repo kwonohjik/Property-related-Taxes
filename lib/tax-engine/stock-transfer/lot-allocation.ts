@@ -41,7 +41,18 @@ import {
 } from "@/lib/tax-engine/legal-codes/stock";
 import { STOCK_MAJOR_PROGRESSIVE_BRACKETS } from "./stock-rate-tables";
 import { isStockCarryoverEra } from "../data/carryover-scope-era";
-import { resolveLotAcquisitionPrice } from "./stock-carryover";
+import { isCarryoverRelationExcluded } from "../carryover-donor-death";
+import { accrueLotCarryoverExpense, resolveLotAcquisitionPrice } from "./stock-carryover";
+
+/**
+ * §97의2①2호·3호 누적기 — 매칭 3종이 공유한다.
+ * sub-lot이 만들어지는 **모든 지점**에서 한 번씩 호출되어야 한다(한 곳이라도 빠지면
+ * 그 산정방법에서만 조용히 산입이 사라진다).
+ */
+interface CarryoverExpenseAcc {
+  capex: number;
+  giftTax: number;
+}
 
 // ============================================================
 // §104② lot별 기산점 결정
@@ -60,7 +71,11 @@ import { resolveLotAcquisitionPrice } from "./stock-carryover";
  * 생략해도 **세율 결과는 같다** — 「증여 후 1년 초과」면 수증일 기산으로도 이미 1년 이상이라
  * §104①11호가목**2)**이고, 증여자 취득일로 소급해도 역시 가목2)다. 요건을 넘든 못 넘든
  * 귀결이 같으므로 세율 축에서는 무해하다(단건 경로 `calcHoldingPeriod`는 양도일을 알므로 판정한다).
- * §97의2① **본체(필요경비)**를 구현할 때는 이 요건이 실제로 갈리므로 그때 sub-lot 단위로 판정할 것.
+ * 필요경비 축은 실제로 갈리므로 `resolveLotAcquisitionPrice`가 `saleDate`를 받아 판정한다.
+ *
+ * 🔑 **관계 요건(ⓔ)은 여기서 판정한다** — 양도일이 필요 없기 때문이다(기준일은 **증여일**).
+ * 종전에는 연혁 게이트만 보고 배우자 사별·직계존비속 사망·관계 부적격을 흘려보내
+ * **소급 기산이 그대로 적용**됐다(P-9 — 단건 경로에서 고친 P-6과 같은 결함).
  */
 export function resolveLotStartDate(lot: AcquisitionLot): Date {
   switch (lot.acquisitionCause) {
@@ -69,8 +84,10 @@ export function resolveLotStartDate(lot: AcquisitionLot): Date {
     case "merger_split":
       return lot.preMergerAcquisitionDate ?? lot.acquisitionDate;
     case "carryover_gift":
-      // §104②2 — 증여자 취득일. 게이트: 증여일 ≥ 2025-01-01 (부칙 법률 제20615호 §8).
-      return lot.donorAcquisitionDate && isStockCarryoverEra(lot.acquisitionDate)
+      // §104②2 — 증여자 취득일. 게이트: 증여일 ≥ 2025-01-01 (부칙 법률 제20615호 §8) + 관계 요건.
+      return lot.donorAcquisitionDate &&
+        isStockCarryoverEra(lot.acquisitionDate) &&
+        !isCarryoverRelationExcluded(lot.donorRelation, lot.donorDeceased, lot.acquisitionDate)
         ? lot.donorAcquisitionDate
         : lot.acquisitionDate;
     case "gift":
@@ -161,6 +178,7 @@ export function allocateLots(
   specificMatchings?: SpecificMatching[],
 ): LotMatchingDetail {
   const warnings: string[] = [];
+  const carryover: CarryoverExpenseAcc = { capex: 0, giftTax: 0 };
 
   // 분모 0 가드 (validate에서 차단되어야 하지만 방어 코드)
   const totalBuyShares = acquisitionLots.reduce((s, l) => s + l.shareCount, 0);
@@ -173,6 +191,8 @@ export function allocateLots(
       totalGain: 0,
       shortTermGain: 0,
       longTermGain: 0,
+      carryoverDonorCapex: 0,
+      carryoverGiftTaxApportioned: 0,
       warnings: ["매수 lot 또는 매도 lot이 비어 있습니다"],
     };
   }
@@ -193,18 +213,19 @@ export function allocateLots(
       warnings.push("specific 모드에서 매칭이 비어 있습니다");
       return {
         method, matched: [], totalTransferPrice: 0, totalAcquisitionPrice: 0,
-        totalGain: 0, shortTermGain: 0, longTermGain: 0, warnings,
+        totalGain: 0, shortTermGain: 0, longTermGain: 0,
+        carryoverDonorCapex: 0, carryoverGiftTaxApportioned: 0, warnings,
       };
     }
-    matched = matchSpecific(remainingAcqLots, transferLots, specificMatchings, isMajorAndNonSME, isSME, warnings);
+    matched = matchSpecific(remainingAcqLots, transferLots, specificMatchings, isMajorAndNonSME, isSME, warnings, carryover);
   } else if (method === "moving_avg") {
     // [B-3] 진정 이동평균법 — 단가는 매도 시점 이동평균, 보유기간은 FIFO lot startDate
-    const r = matchMovingAvg(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings);
+    const r = matchMovingAvg(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover);
     matched = r.matched;
     weightedAvgPerShare = r.finalMovingAvgPrice;
   } else {
     // fifo — lot.acquisitionDate ASC + 매도일 ASC FIFO 매칭 (lot 단가)
-    matched = matchFifo(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings);
+    matched = matchFifo(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover);
   }
 
   // 합계 산출
@@ -223,6 +244,8 @@ export function allocateLots(
     shortTermGain,
     longTermGain,
     weightedAvgPerShare,
+    carryoverDonorCapex: carryover.capex,
+    carryoverGiftTaxApportioned: carryover.giftTax,
     warnings,
   };
 }
@@ -238,6 +261,7 @@ function matchSpecific(
   isMajorAndNonSME: boolean,
   isSME: boolean,
   warnings: string[],
+  carryover: CarryoverExpenseAcc,
 ): MatchedSubLot[] {
   const matched: MatchedSubLot[] = [];
   const acqById = new Map(acqLots.map((l) => [l.id ?? "", l]));
@@ -260,6 +284,7 @@ function matchSpecific(
     const isShortTerm = holdingDays < 365;
     // §97의2①1호 — 이월과세 lot이면 증여자 취득단가로 승계한다(1년 요건은 **매도 시점** 기준).
     const perShareBuyPrice = resolveLotAcquisitionPrice(acq, trn.transferDate);
+    accrue(carryover, acq, m.shareCount, trn.transferDate); // ①2호·①3호
     const perLotGain = (trn.perShareTransferPrice - perShareBuyPrice) * m.shareCount;
     const { appliedRate, subLotTax } = applySubLotRate(perLotGain, isShortTerm, isMajorAndNonSME, isSME);
     matched.push({
@@ -283,12 +308,25 @@ function matchSpecific(
 // fifo / moving_avg 매칭
 // ============================================================
 
+/** ①2호·①3호를 누적기에 더한다 — sub-lot 생성 지점마다 호출한다. */
+function accrue(
+  acc: CarryoverExpenseAcc,
+  lot: AcquisitionLot,
+  matchedShares: number,
+  saleDate: Date,
+): void {
+  const { capex, giftTax } = accrueLotCarryoverExpense(lot, matchedShares, saleDate);
+  acc.capex += capex;
+  acc.giftTax += giftTax;
+}
+
 function matchFifo(
   acqLots: RemainingAcqLot[],
   trnLots: TransferLot[],
   isMajorAndNonSME: boolean,
   isSME: boolean,
   warnings: string[],
+  carryover: CarryoverExpenseAcc,
 ): MatchedSubLot[] {
   // lot.acquisitionDate ASC (실제 매수일 — §104② 기산일 아님)
   const sortedAcq = [...acqLots].sort(
@@ -315,6 +353,7 @@ function matchFifo(
       const isShortTerm = holdingDays < 365;
       // §97의2①1호 — 이월과세 lot 승계(1년 요건은 **매도 시점** 기준)
       const perShareBuyPrice = resolveLotAcquisitionPrice(acq, trn.transferDate);
+      accrue(carryover, acq, matchedShares, trn.transferDate); // ①2호·①3호
       const perLotGain = (trn.perShareTransferPrice - perShareBuyPrice) * matchedShares;
       const { appliedRate, subLotTax } = applySubLotRate(
         perLotGain,
@@ -364,6 +403,7 @@ function matchMovingAvg(
   isMajorAndNonSME: boolean,
   isSME: boolean,
   warnings: string[],
+  carryover: CarryoverExpenseAcc,
 ): { matched: MatchedSubLot[]; finalMovingAvgPrice: number | undefined } {
   const sortedAcq = [...acqLots].sort(
     (a, b) => a.acquisitionDate.getTime() - b.acquisitionDate.getTime(),
@@ -407,6 +447,11 @@ function matchMovingAvg(
 
       const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
       const isShortTerm = holdingDays < 365;
+      /**
+       * ①2호·①3호는 **FIFO 물량 트랙**을 따른다 — 「어느 증여분 주식을 팔았나」의 문제이지
+       * 단가 평균과는 무관하다. 보유기간(§104②)을 FIFO lot으로 잡는 것과 같은 기준이다.
+       */
+      accrue(carryover, acq, matchedShares, trn.transferDate);
       const perLotGain = (trn.perShareTransferPrice - movingAvgPrice) * matchedShares;
       const { appliedRate, subLotTax } = applySubLotRate(perLotGain, isShortTerm, isMajorAndNonSME, isSME);
       matched.push({

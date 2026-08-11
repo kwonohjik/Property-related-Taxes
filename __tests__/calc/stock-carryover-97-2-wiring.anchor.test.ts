@@ -177,6 +177,55 @@ describe("W. split lot — 종전에 **body에서 통째로 누락**되던 경�
     // 엔진까지 — 승계된 단가로 매칭됐는가
     expect(result.lotMatchingDetail!.matched[0].perShareBuyPrice).toBe(30_000);
   });
+
+  /**
+   * lot 판 ①2호·①3호 — 종전에는 타입 필드만 있고 **읽는 곳도 입력구도 없었다**.
+   * `AcquisitionInfoBlock`(종목 축 입력구)은 `lotsMode === "single"`에서만 렌더되므로
+   * split 사용자는 두 조문을 아예 쓸 수 없었다.
+   */
+  it("W-10 lot ①2호 자본적지출이 body → 엔진 필요경비까지 도달한다", () => {
+    const f = splitForm();
+    f.acquisitionLots[0].donorCapitalExpenditure = "7000000";
+    const { body, result } = runPipeline(f);
+    const lot = (body.acquisitionLots as Record<string, unknown>[])[0];
+    expect(lot.donorCapitalExpenditure).toBe(7_000_000);
+    expect(result.lotMatchingDetail!.carryoverDonorCapex).toBe(7_000_000);
+    expect(result.expenses).toBe(7_000_000);
+  });
+
+  it("W-11 lot ①3호 증여세(산출세액 + 과세가액)가 안분되어 도달한다", () => {
+    const f = splitForm();
+    f.acquisitionLots[0].donorGiftTaxAmount = "100000000";
+    f.acquisitionLots[0].donorGiftTaxableValue = "800000000";
+    const { body, result } = runPipeline(f);
+    const lot = (body.acquisitionLots as Record<string, unknown>[])[0];
+    expect(lot.donorGiftTaxAmount).toBe(100_000_000);
+    expect(lot.donorGiftTaxableValue).toBe(800_000_000);
+    // 전량 매도 · 증여 주식가액 8억 = 과세가액 → 비율 1
+    expect(result.lotMatchingDetail!.carryoverGiftTaxApportioned).toBe(100_000_000);
+    expect(result.expenses).toBe(100_000_000);
+  });
+
+  it("W-12 lot 증여세 짝이 깨지면 **UI가 먼저** 막는다 (⑧⑩ 정합)", () => {
+    const f = splitForm();
+    f.acquisitionLots[0].donorGiftTaxAmount = "100000000"; // 과세가액 없음
+    const uiErrors = validateAllSteps(f).filter((e: StockValidationError) => e.severity === "error");
+    expect(
+      uiErrors.some((e: StockValidationError) =>
+        e.field === "acquisitionLots[0].donorGiftTaxableValue",
+      ),
+    ).toBe(true);
+  });
+
+  it("W-13 lot 신규 3필드도 UI 통과면 zod가 통과한다", () => {
+    const f = splitForm();
+    f.acquisitionLots[0].donorCapitalExpenditure = "7000000";
+    f.acquisitionLots[0].donorGiftTaxAmount = "100000000";
+    f.acquisitionLots[0].donorGiftTaxableValue = "800000000";
+    const uiErrors = validateAllSteps(f).filter((e: StockValidationError) => e.severity === "error");
+    expect(uiErrors).toEqual([]);
+    expect(stockTransferInputSchema.safeParse(buildStockTransferApiBody(f)).success).toBe(true);
+  });
 });
 
 describe("W. ⑧⑩ 정합 — UI validate 통과 ↔ API zod 통과가 어긋나지 않는다", () => {

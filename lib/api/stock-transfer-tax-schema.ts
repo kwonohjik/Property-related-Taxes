@@ -135,6 +135,12 @@ export const acquisitionLotSchema = z.object({
   donorAcquisitionDate: z.union([z.string(), z.date()]).optional(),
   /** 이월과세 lot — 증여자 취득 당시 1주당 실지거래가액 (§97의2①1호). 없으면 승계하지 않는다. */
   donorAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /** 이월과세 lot — 증여자 자본적지출 (§97의2①2호). lot 전체 주식수 기준 총액. */
+  donorCapitalExpenditure: z.number().int().nonnegative().optional(),
+  /** 이월과세 lot — 그 증여 건의 증여세 산출세액 (영 §163의2②1호) */
+  donorGiftTaxAmount: z.number().int().nonnegative().optional(),
+  /** 이월과세 lot — 그 증여 건의 증여세 과세가액 (영 §163의2②3호 · 안분 분모) */
+  donorGiftTaxableValue: z.number().int().nonnegative().optional(),
   /** 이월과세 lot — 관계 요건 (§97의2① 본문 괄호) */
   donorRelation: donorRelationSchema.optional(),
   donorDeceased: z.boolean().optional(),

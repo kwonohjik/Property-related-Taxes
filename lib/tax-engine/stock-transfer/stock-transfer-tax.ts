@@ -243,8 +243,20 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   let swapComparison: StockTransferResult["swapComparison"];
   const { expenseMode } = input;
 
+  /**
+   * §97의2①**2호** — split 모드의 증여자 자본적지출. lot마다 「매도된 몫」만 안분해
+   * `allocateLots`가 합산해 둔 값이다. 단건 모드의 종목 축 `donorCapitalExpenditure`는
+   * `stock-carryover.ts`가 이미 `actualExpenses`에 더해 넣었으므로 여기서 겹치지 않는다
+   * (split은 종목 축 취득원인이 `carryover_gift`가 아니라 그 경로를 타지 않는다).
+   *
+   * 🔑 **자본적지출은 §97②2호 단서의 「나목」이라 비교에 참여해야 한다** — 그래서
+   * 증여세(③호, 비교 대상 밖)와 달리 `directSide`에 먼저 합친다.
+   */
+  const lotDonorCapex = lotMatchingDetail?.carryoverDonorCapex ?? 0;
+  const directExpenses = (input.actualExpenses ?? 0) + lotDonorCapex;
+
   if (usedEstimatedAcquisition && estimatedDeduction !== undefined && estimatedDeduction > 0) {
-    const directSide = input.actualExpenses ?? 0; // 자본적지출 + 양도비 합계 (expenseMode 무관)
+    const directSide = directExpenses; // 자본적지출 + 양도비 합계 (expenseMode 무관)
     const estimatedSide = acquisitionPrice + estimatedDeduction; // 가목 = 환산취득가 + 개산공제
     if (directSide > estimatedSide) {
       // 단서 발동 — "적은 경우" 문리상 동률(==)은 본문
@@ -265,8 +277,14 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
       }
     }
   } else if (expenseMode === "actual") {
-    expenses = input.actualExpenses ?? 0;
+    expenses = directExpenses;
   } else {
+    /**
+     * 개산공제 모드 — ①2호를 **더하지 않는다**. §97②2호 본문은 「취득가액 + 개산공제」이고
+     * 자본적지출은 **단서(나목)로 갈아탈 때만** 산입되는 택일 항목이라, 여기 더하면
+     * 개산공제와 실비를 동시에 받는 **이중 공제**가 된다. 단건 경로도 증여자 자본적지출을
+     * `actualExpenses`에만 실어 같은 규약을 지킨다(`stock-carryover.ts` 시나리오 A).
+     */
     expenses = estimatedDeduction ?? 0;
   }
 
@@ -280,14 +298,44 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
    * (부동산이 같은 함정에 두 번 걸렸다 — `transfer-tax-carryover.ts:368-417`).
    *
    * 값은 `stock-carryover.ts`가 영 §163의2②(안분 → 한도)까지 마쳐 넣어 준다.
+   *
+   * split 모드는 lot마다 증여 건이 다를 수 있어 `allocateLots`가 lot별로 안분해 합산한다.
+   * **한도는 종목 단위**(영 §163의2② 후단 「양도가액에서 §97①·②의 금액을 공제한 잔액」)이므로
+   * 여기서 건다 — 필요경비가 확정된 지금이 그 잔액을 알 수 있는 첫 지점이다.
    */
-  expenses += input.carryoverGiftTaxExpense ?? 0;
+  const singleGiftTax = input.carryoverGiftTaxExpense ?? 0;
+  const lotGiftTaxRaw = lotMatchingDetail?.carryoverGiftTaxApportioned ?? 0;
+  let lotGiftTax = 0;
+  if (lotGiftTaxRaw > 0) {
+    const preGiftIncome = swapApplied
+      ? transferPrice - expenses
+      : transferPrice - acquisitionPrice - expenses;
+    lotGiftTax = Math.min(lotGiftTaxRaw, Math.max(0, preGiftIncome - singleGiftTax));
+  }
+  expenses += singleGiftTax + lotGiftTax;
 
   /**
    * §97의2① 채택 결과 안내 — **왜 이 세액인가**를 결과 계층이 설명할 수 있게 한다.
    * 시나리오 B는 `acquisitionCause`를 `"purchase"`로 되돌리므로, 이 문구가 없으면
    * 「이월과세를 골랐는데 적용되지 않았다」는 사실 자체가 결과에서 사라진다.
    */
+  /**
+   * ⑦ 결과 계층 — ②3호가 견준 **두 세액**과 ①1·2·3호의 실제 반영값을 나란히 남긴다.
+   * 시나리오 B는 `acquisitionCause`를 `"purchase"`로 되돌리므로 이 detail이 없으면
+   * 「비교가 있었다」는 사실 자체가 결과에서 사라진다.
+   */
+  const carryoverDetail: StockTransferResult["carryoverDetail"] = input.carryoverOutcome
+    ? {
+        outcome: input.carryoverOutcome,
+        appliedTotalTax: input.carryoverComparison?.appliedTotalTax ?? 0,
+        excludedTotalTax: input.carryoverComparison?.excludedTotalTax ?? 0,
+        donorAcquisitionPricePerShare: input.carryoverDonorPricePerShare,
+        giftDateValuationPerShare: input.carryoverGiftDateValuationPerShare,
+        donorCapexIncluded: (input.carryoverDonorCapexApplied ?? 0) + lotDonorCapex,
+        giftTaxIncluded: singleGiftTax + lotGiftTax,
+      }
+    : undefined;
+
   if (input.carryoverOutcome === "applied") {
     warnings.push(
       "§97의2① 이월과세 적용 — 취득가액을 증여자 취득 당시 금액으로 승계하고, " +
@@ -493,6 +541,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     warnings,
     appliedRules,
     lotMatchingDetail,
+    carryoverDetail,
     lotCapitalAdjustmentsDetail,
     // Round 4 C-02·C-04: 취득 후 상장 환산 echo (UI 결과 카드 게이트용)
     acquiredBeforeListing: input.acquiredBeforeListing,
