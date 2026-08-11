@@ -316,7 +316,12 @@ export function AssetSectionBasic({
 
 
       {/* 면적 섹션 (축 A/B/C + 전용 위젯) — 793줄 초과로 분리(2026-08-04) */}
-      <AssetAreaSection asset={asset} onChange={onChange} onAddAsset={onAddAsset} />
+      <AssetAreaSection
+        asset={asset}
+        onChange={onChange}
+        onAddAsset={onAddAsset}
+        transferDate={transferDate}
+      />
 
       {/* 토지 성격 — 부수토지 vs 독립 나대지 (사례 28 landNature 명시 입력 정책) */}
       {asset.assetKind === "land" && (

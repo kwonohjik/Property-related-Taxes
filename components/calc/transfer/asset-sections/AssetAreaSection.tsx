@@ -12,6 +12,8 @@
  *  - 축 A: 토지 면적 + 시나리오(same·partial·reduction·increase)
  *  - 축 B: 건물 연면적
  *  - 축 C: 건물 바닥면적(정착면적) + 부수토지 배율 소재지 구분
+ *  - 일반건물 한정: **비사업용토지 판정**(rose) + **주택→상가 용도변경**(fuchsia)
+ *    — ③ 취득정보에서 이전(2026-08-11). 사유는 렌더 지점 주석 참조.
  *
  * ## ⛔ 단일 필드를 2시점 쌍으로 확장하지 말 것 (F2 폐기 §11)
  *
@@ -42,6 +44,8 @@ import {
   AssetAreaGeneralBuilding,
   isGeneralBuildingAreaAsset,
 } from "./AssetAreaGeneralBuilding";
+import { GeneralBuildingNblSection } from "../GeneralBuildingNblSection";
+import { GeneralBuildingConversionSection } from "../GeneralBuildingConversionSection";
 import {
   AssetAreaRedevelopment,
   isRedevAreaAsset,
@@ -194,9 +198,11 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   /** 증환지(increase) 증가분 자동 추가용 — `ReplotIncreaseFields`가 소비 */
   onAddAsset?: (patch: Partial<AssetForm>) => void;
+  /** 양도일 — 일반건물 「주택→상가 용도변경」 보유기간 미리보기가 소비 */
+  transferDate?: string;
 }
 
-export function AssetAreaSection({ asset, onChange, onAddAsset }: Props) {
+export function AssetAreaSection({ asset, onChange, onAddAsset, transferDate }: Props) {
   return (
     <>
       {/* 면적 정보 — AREA_SCENARIOS_BY_ASSET_KIND 등재 자산유형 + 전용 위젯 보유 자산유형.
@@ -221,7 +227,34 @@ export function AssetAreaSection({ asset, onChange, onAddAsset }: Props) {
               ⚠️ 「건축물 바닥면적」(건축법 시행령 §119①3호)은 주택 「정착면적」
                  (소득세법 §89①3호)과 **다른 법령 개념**이다 — 통합 금지. */}
           {isGeneralBuildingAreaAsset(asset) && (
-            <AssetAreaGeneralBuilding asset={asset} onChange={onChange} />
+            <>
+              <AssetAreaGeneralBuilding asset={asset} onChange={onChange} />
+
+              {/* ── 비사업용토지 판정 + 주택→상가 용도변경 ─────────────────
+                  ③ 취득정보(`GeneralBuildingBlock`)에서 옮겨왔다(2026-08-11).
+
+                  둘 다 **취득 사실이 아니라 보유 중의 토지 이용·용도 상태**를 묻는다.
+                  ③은 기본 접힘인데(`CompanionAssetCard.tsx` open 초기값 `{1:true}`)
+                  `gbZoneType`은 미선택 시 계산을 차단하는 **필수 필드**여서
+                  (`transfer-tax-validate-gb.ts`) 접힌 섹션 안에 숨어 있었다.
+
+                  비사업용 판정은 바로 위 카드의 `gbBuildingFootprintArea`·`gbLandArea`를
+                  읽어 한도를 미리 계산한다 — 읽는 값과 쓰는 칸이 한 화면에 모인다.
+
+                  🔒 지분(%) 분할 2번째 이후 카드에서는 이 두 카드가 **물건-수준**이라
+                     노출하면 안 되는데(`GB_PROPERTY_LEVEL_FORM_FIELDS`가 자산 1의 값을
+                     전 지분에 복사한다), ① 기본정보 자체가 그 경우 통째로 숨겨지므로
+                     (`CompanionAssetCard.tsx` `hideInheritedSections =
+                      splitMode==="fractional" && index>0`) 별도 게이트가 필요 없다.
+                     종전 게이트 `shareAcquisitionOnly = splitMode==="fractional" && !isFirst`와
+                     `isFirst={index === 0}`이라 **동일 조건**이다. */}
+              <GeneralBuildingNblSection asset={asset} onChange={onChange} />
+              <GeneralBuildingConversionSection
+                asset={asset}
+                onChange={onChange}
+                transferDate={transferDate}
+              />
+            </>
           )}
 
           {/* ── 재개발·재건축 / 입주권 토지 면적 ──────────────────────────

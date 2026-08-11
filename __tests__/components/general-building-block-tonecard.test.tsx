@@ -19,11 +19,20 @@
  * **시점 tone(취득=amber·양도=emerald)은 각 그룹 안쪽 박스가 승계**한다. 톤 회귀 감시가
  * 끊기지 않도록 아래 단언을 안쪽 박스 기준으로 옮긴다(사라진 계약이 아니라 이동한 계약).
  * anchor(순서·게이트): `gb-stdprice-asset-major-layout.anchor.test.tsx`
+ *
+ * ## rev.4 (2026-08-11) — 비사업용토지 판정 카드도 ① 기본정보로 이전
+ *
+ * rev.2의 면적 카드와 같은 이동이다. rose 톤·`titleExtra`(§ 배지)·noDark 계약은
+ * `AssetAreaSection`(① 기본정보) 쪽 describe가 이어받는다. 이 블록에서는 **없어야**
+ * 한다는 단언으로 뒤집는다 — 두 곳에 동시에 남는 중복 회귀를 잡기 위함이다.
+ * ⚠️ 종전 `sectionNum="③"` 번호배지는 제거했다(① 안에서는 ③이 취득정보로 오독된다) —
+ *    제목형 카드가 됐으므로 배지 존재를 단언하지 않는다.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen } from "@testing-library/react";
 import { GeneralBuildingBlock } from "@/components/calc/transfer/GeneralBuildingBlock";
 import { AssetAreaGeneralBuilding } from "@/components/calc/transfer/asset-sections/AssetAreaGeneralBuilding";
+import { AssetAreaSection } from "@/components/calc/transfer/asset-sections/AssetAreaSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 
 afterEach(cleanup);
@@ -43,7 +52,7 @@ function renderBlock() {
 }
 
 describe("GeneralBuildingBlock — 섹션카드 <ToneCard> 전환 (회귀 0)", () => {
-  it("①②③ 섹션 제목이 톤별로 렌더 + ③ titleExtra(§ 배지) 보존", () => {
+  it("①② 섹션 제목이 톤별로 렌더된다", () => {
     const { getByText, getAllByText } = renderBlock();
     // ①② 그룹은 중립(slate), 시점 tone은 안쪽 박스가 승계 — 취득 2개(토지·건물)·양도 2개.
     expect(getByText("토지 공시지가 (토지기준시가)").className).toContain("text-slate-700");
@@ -54,17 +63,18 @@ describe("GeneralBuildingBlock — 섹션카드 <ToneCard> 전환 (회귀 0)", (
     expect(transferTitles).toHaveLength(2);
     for (const t of acqTitles) expect(t.className).toContain("text-amber-700");
     for (const t of transferTitles) expect(t.className).toContain("text-emerald-700");
-    expect(getByText("비사업용토지 판정").className).toContain("text-rose-700");
-    // ③ titleExtra(§ 배지) — 헤더 인라인 요소 보존.
-    // 🔄 2026-07-30: 인용 정정. GB 부수토지 배율은 「소득세법 시행령」 §168의12(주택)가 아니라
-    //   「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101 소관이다
-    //   (Phase D 배율 정정의 UI 잔재 제거 — anchor `gb-footprint-max-floor-area.anchor.test.tsx`).
-    expect(getByText("(§104의3①4호나목 · 지방세령 §101)")).toBeTruthy();
   });
 
   it("면적 카드는 이 블록에 없다 — ① 기본정보로 이전 (중복 0)", () => {
     renderBlock();
     expect(screen.queryByText("면적·규모")).toBeNull();
+  });
+
+  it("비사업용토지 판정·주택→상가 용도변경도 이 블록에 없다 — ① 기본정보로 이전 (중복 0)", () => {
+    renderBlock();
+    expect(screen.queryByText("비사업용토지 판정")).toBeNull();
+    expect(screen.queryByText("(§104의3①4호나목 · 지방세령 §101)")).toBeNull();
+    expect(screen.queryByText("주택 → 상가 용도변경")).toBeNull();
   });
 });
 
@@ -114,5 +124,52 @@ describe("AssetAreaGeneralBuilding — 이전된 면적 카드의 sky·noDark �
     expect(screen.getByText("취득·양도 당시 토지 면적")).toBeTruthy();
     expect(screen.getByText("건물 연면적")).toBeTruthy();
     expect(screen.getByText("건축물 바닥면적")).toBeTruthy();
+  });
+});
+
+/**
+ * rev.4 — 이전된 비사업용토지 판정 카드가 ① 기본정보(`AssetAreaSection`)에서 렌더되는지.
+ *
+ * 위 describe의 「이 블록에 없다」 단언과 **짝**이다. 두 단언이 함께 있어야 "옮겼다"가
+ * 증명된다 — 없음 단언만 두면 컴포넌트가 아예 렌더 불가가 돼도 통과한다
+ * ([[feedback_negative_assertion_needs_mutation_probe]]).
+ */
+describe("AssetAreaSection — 이전된 비사업용토지 판정·용도변경 카드 (① 기본정보)", () => {
+  function renderArea() {
+    return render(
+      <AssetAreaSection
+        asset={makeGbAsset()}
+        onChange={() => {}}
+        transferDate="2025-01-01"
+      />,
+    );
+  }
+
+  it("면적·규모 바로 아래에 비사업용토지 판정 카드가 rose 톤으로 렌더된다", () => {
+    const { getByText } = renderArea();
+    expect(getByText("면적·규모").className).toContain("text-sky-700");
+    expect(getByText("비사업용토지 판정").className).toContain("text-rose-700");
+  });
+
+  it("titleExtra(§ 배지)가 보존된다", () => {
+    // 「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101 소관.
+    expect(renderArea().getByText("(§104의3①4호나목 · 지방세령 §101)")).toBeTruthy();
+  });
+
+  it("용도지역 라디오와 허가·사용승인 미이행 토글이 함께 온다 — 유일 입력 경로 보존", () => {
+    const { getByText } = renderArea();
+    // gbZoneType·gbIsUnregistered는 이 카드가 **유일한** 쓰기 지점이다.
+    expect(getByText("용도지역 (필수)")).toBeTruthy();
+    expect(getByText("허가·사용승인 미이행 건축물")).toBeTruthy();
+  });
+
+  it("주택 → 상가 용도변경 카드도 함께 렌더된다", () => {
+    expect(renderArea().getByText("주택 → 상가 용도변경")).toBeTruthy();
+  });
+
+  it("번호배지 없는 제목형이다 — ① 안에서 ③은 취득정보로 오독된다", () => {
+    const title = renderArea().getByText("비사업용토지 판정");
+    // ToneCard: sectionNum 有 → 제목 앞 형제로 배지 <span>이 붙는다.
+    expect(title.parentElement?.textContent).not.toContain("③");
   });
 });

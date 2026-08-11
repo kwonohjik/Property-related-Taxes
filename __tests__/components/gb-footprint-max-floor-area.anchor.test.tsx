@@ -42,16 +42,21 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 
 import { GeneralBuildingBlock } from "@/components/calc/transfer/GeneralBuildingBlock";
-import { AssetAreaGeneralBuilding } from "@/components/calc/transfer/asset-sections/AssetAreaGeneralBuilding";
+import { AssetAreaSection } from "@/components/calc/transfer/asset-sections/AssetAreaSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(() => cleanup());
 
 /**
- * 면적 입력 위젯이 ① 기본정보로 이전됐으므로(2026-08-04) **두 컴포넌트를 함께** 렌더한다.
- * 사용자가 한 화면에서 보는 것과 같은 구성이며, 바닥면적 안내가 입력 라벨(①)과
- * 비사업용토지 산식 설명(③) 양쪽에 걸려 있다는 계약은 그대로 유지된다.
+ * 면적 입력 위젯이 ① 기본정보로 이전됐으므로(2026-08-04) **두 섹션을 함께** 렌더한다.
+ * 사용자가 한 화면에서 보는 것과 같은 구성이며, 바닥면적 안내가 입력 라벨과
+ * 비사업용토지 산식 설명 양쪽에 걸려 있다는 계약은 그대로 유지된다.
+ *
+ * 🔄 2026-08-11: 비사업용토지 판정 카드도 ①로 이전됐다. 종전엔 `AssetAreaGeneralBuilding`
+ *    (면적 3필드)와 `GeneralBuildingBlock`(산식 설명)을 나란히 렌더해 두 소스를 모았는데,
+ *    이제 **둘 다 ① 안**이라 `AssetAreaSection`(①의 면적 영역 전체) 하나로 모인다.
+ *    `GeneralBuildingBlock`은 「종전 오안내가 ③에도 없다」를 계속 감시하려고 남긴다.
  */
 function renderGb(over: Partial<AssetForm> = {}) {
   const asset: AssetForm = {
@@ -61,7 +66,7 @@ function renderGb(over: Partial<AssetForm> = {}) {
   } as AssetForm;
   render(
     <>
-      <AssetAreaGeneralBuilding asset={asset} onChange={vi.fn()} />
+      <AssetAreaSection asset={asset} onChange={vi.fn()} />
       <GeneralBuildingBlock asset={asset} onChange={vi.fn()} />
     </>,
   );
@@ -100,16 +105,17 @@ describe("법령 제약 고정 — 「건축법 시행령」 제119조 제1항�
 // ══════════════════════════════════════════════════════════
 describe("GB UI — 바닥면적 정의 안내", () => {
   /**
-   * 🔄 안내 소스가 **① 입력 hint → ③ 비사업용토지 섹션 단독**으로 바뀌었다 (2026-08-05).
+   * 🔄 안내 소스가 **① 입력 hint → 비사업용토지 섹션 단독**으로 바뀌었다 (2026-08-05).
    *
    * ① 면적 카드의 hint 3종을 사용자 요청으로 삭제했다(3필드 한 행 배치).
-   * 「각 층 중 최대·지하 포함」 안내는 ③ `GeneralBuildingNblSection.tsx:80`의 산식 설명에
+   * 「각 층 중 최대·지하 포함」 안내는 `GeneralBuildingNblSection`의 산식 설명에
    * 남아 있으므로 **정의가 화면에서 사라지지는 않았다** — 단언을 그 소스로 옮긴다.
    * 계획: `docs/02-design/features/general-building-area-row-always-visible.plan.md`
+   * ※ 2026-08-11 이후 그 섹션도 ① 안에 있다 — 두 소스가 같은 섹션에서 나온다.
    */
   it("라벨이 「건축물 바닥면적」이고 각 층 중 최대·지하 포함임을 안내한다", () => {
     renderGb();
-    // 입력 라벨(①) + ③ 섹션 산식 설명 두 곳에 반영된다(정정이 양쪽에 걸렸다는 증거)
+    // 입력 라벨 + 산식 설명 두 곳에 반영된다(정정이 양쪽에 걸렸다는 증거)
     expect(screen.getAllByText(/건축물 바닥면적/).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(/각 층 중 최대, 지하 포함/)).toBeInTheDocument();
   });

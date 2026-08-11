@@ -8,8 +8,6 @@
  *  ① 토지 공시지가 (slate) — 취득시(amber) → 양도시(emerald). 양도시는 항상, 취득시는 게이트
  *  ② 건물 기준시가 (slate) — 취득시(amber) → 양도시(emerald) + 2시점 일괄 계산 + 개산공제 안내
  *     증축 정보 (amber)    — 환산취득가 모드 OR gbHasExtension ON 시 (선택); 증축분 취득방식 서브 라디오로 4가지 조합 지원
- *  ③ 비사업용토지 판정 (rose)  — 항상 표시
- *      (「소득세법」 §104의3①4호나목 → 「지방세법」 §106①2호 → 「지방세법 시행령」 §101①2호·②)
  *
  * ## 배치 축을 시점 → 자산으로 바꿨다 (2026-08-05)
  *
@@ -26,7 +24,14 @@
  * ⚠️ 면적 3필드(토지·연면적·바닥면적)는 **① 기본정보**로 이전했다(2026-08-04) —
  *    `asset-sections/AssetAreaGeneralBuilding.tsx`. 연면적의 `isEstimated` 게이트는
  *    2026-08-05에 제거돼 3필드 모두 상시 노출된다. 여기에 면적 칸을 다시 추가하지 말 것.
- *    ※ `footprint`·`landArea` 파생값은 유지한다 — ③ 비사업용토지 한도 미리보기가 소비한다.
+ *
+ * ## ⚠️ 비사업용토지 판정·주택→상가 용도변경도 ① 기본정보로 이전했다 (2026-08-11)
+ *
+ * 둘 다 취득 사실이 아니라 **보유 중의 토지 이용·용도 상태**를 묻는다. 게다가 ③은
+ * 기본 접힘인데 `gbZoneType`은 미선택 시 계산을 차단하는 필수 필드라, 접힌 섹션 안에
+ * 숨은 필수 입력이 되어 있었다. 렌더 지점은 `asset-sections/AssetAreaSection.tsx`
+ * (면적 카드 바로 아래 — 한도 미리보기가 그 카드의 바닥면적·토지면적을 읽는다).
+ * ⚠️ 여기로 되돌리지 말 것. 지분 카드 숨김은 ①이 통째로 감춰지며 자동 처리된다.
  *
  * 정책 준수:
  *  - placeholder 숫자 예시 금지
@@ -46,8 +51,6 @@ import { MULTI_POINT_BLOCK_MESSAGE, multiPointBlockReason } from "@/lib/calc/bui
 import { buildGeneralBuildingBatchPatch, commercialAcqYear } from "@/lib/calc/building-std-batch-apply";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
-import { GeneralBuildingNblSection } from "./GeneralBuildingNblSection";
-import { GeneralBuildingConversionSection } from "./GeneralBuildingConversionSection";
 import {
   effectivePartAcqMode,
   needsGbActualAcqStdPrice,
@@ -72,12 +75,15 @@ interface Props {
   /**
    * 지분(%) 분할의 **2번째 이후 지분** — 취득측만 입력받는다.
    *
-   * 숨기는 것: **양도시 기준시가**(①② emerald 카드) · **물건 사건**(⑤ 증축 · 주택→상가 용도변경).
+   * 숨기는 것: **양도시 기준시가**(①② emerald 카드) · **물건 사건**(⑤ 증축).
    * 전부 **물건-수준**이라 자산 1에서 한 번 받고 API 변환이 전 지분에 복사한다(설계 D1-3·D2).
    * 여기서 또 받으면 지분마다 값이 갈려 Zod superRefine이 400을 던진다.
    *
    * ⚠️ 증축 섹션 안에 **「양도시 건물2 기준시가」**가 있어 「emerald 카드만 숨기기」로는 부족하다
    *    (2026-08-10 설계 개정 1에서 정정 — 숨김 축이 둘이다).
+   *
+   * ※ 비사업용토지 판정·주택→상가 용도변경은 2026-08-11에 ① 기본정보로 나갔다. 같은 성격의
+   *   물건-수준 입력이지만, ①이 지분 카드에서 통째로 숨겨지므로 이 플래그가 관여하지 않는다.
    */
   shareAcquisitionOnly?: boolean;
 }
@@ -290,8 +296,9 @@ export function GeneralBuildingBlock({
    * 🗑 카드 헤더(제목 「일반건물 (토지·건물 분리 산정)」 + 조문 인용줄 + §104의3 배지)는
    *    **삭제했다** (2026-08-11 사용자 요청 — 화면만 차지하고 정보가 없었다).
    *
-   * 조문 접근 경로는 유실되지 않는다: §104의3 링크는 같은 카드의 ③ 비사업용 섹션
-   * (`GeneralBuildingNblSection.tsx:64`)에, §176의2②는 아래 환산취득가 섹션에 각각 살아 있다.
+   * 조문 접근 경로는 유실되지 않는다: §104의3 링크는 **① 기본정보**의 비사업용토지 판정
+   * 섹션(`GeneralBuildingNblSection`)에, §176의2②는 아래 환산취득가 섹션에 각각 살아 있다.
+   * (그 섹션은 2026-08-11에 ③ 취득정보에서 ①로 나갔다 — 이 파일 상단 주석 참조.)
    * 카드가 무엇인지는 바로 아래 「일반건물 — 취득 시나리오 가이드」가 말해 준다.
    */
   return (
@@ -692,19 +699,6 @@ export function GeneralBuildingBlock({
               </div>
             )}
           </ToggleCard>
-        )}
-
-        {/* 🔒 비사업용토지 판정(용도지역·허가미이행)도 **물건-수준**이다 —
-            「지방세법 시행령」 §101①2호·②의 배율은 물건의 용도지역으로 정해진다.
-            자산 1에서 한 번 받고 API 변환이 전 지분에 복사한다(`GB_PROPERTY_LEVEL_FORM_FIELDS`).
-            ⚠️ 숨기지 않으면 「용도지역 (필수) — 미선택 시 계산이 진행되지 않습니다」가 지분 카드에
-               미선택으로 떠서, 실제로는 병합돼 통과하는데도 사용자에게 거짓 경고를 보낸다. */}
-        {!shareAcquisitionOnly && <GeneralBuildingNblSection asset={asset} onChange={onChange} />}
-
-        {/* 🔒 주택→상가 용도변경·§99-164-10 최초공시도 **물건 사건** — 지분 카드에서 숨긴다.
-            적용 여부는 route가 지분 취득일로 판정한다(`general-building-share-events.ts`). */}
-        {!shareAcquisitionOnly && (
-          <GeneralBuildingConversionSection asset={asset} onChange={onChange} transferDate={transferDate} />
         )}
 
       </div>
