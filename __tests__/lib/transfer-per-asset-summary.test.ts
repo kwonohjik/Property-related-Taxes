@@ -596,9 +596,17 @@ describe("computeTransferPerAssetSummary — 자산 종류별 가액 소스 (B �
     expect(r.acqPending).toBe(false);
   });
 
-  // B-11: 전용 환산 경로(일반건물·상가)는 프리뷰 대상이 아니다 — 별도 산식·별도 입력 필드라
-  //       공통 §176의2② 식으로 계산하면 실제 세액과 다른 값을 보여준다. «계산 후 표시»가 정답.
-  it("B-11 일반건물·상가 환산 — 계산 전 pending 유지 (오표시 방지)", () => {
+  /**
+   * B-11: 전용 환산 경로(일반건물·상가)는 **공통 §176의2② 식**의 프리뷰 대상이 아니다 —
+   * 그 식으로 계산하면 실제 세액과 다른 값을 보여준다.
+   *
+   * 📌 2026-08-11부터 두 종류에도 프리뷰가 있다. 다만 **전용 엔진 함수**를 재사용하며
+   *    (`transfer-estimated-preview.ts`), 그러려면 각자의 전용 입력(`gb…`·`cb…`)이 채워져야 한다.
+   *    아래 fixture는 공통 필드(`standardPriceAtAcq` 등)만 채우므로 프리뷰가 성립하지 않고
+   *    pending이 유지된다 — 부분 입력으로 반쪽 값을 내지 않는다는 것이 이 케이스의 취지다.
+   *    전용 입력이 채워진 경우는 `transfer-estimated-preview.test.ts` C-1·C-5가 다룬다.
+   */
+  it("B-11 일반건물·상가 환산 — 공통 식 프리뷰 미적용 (전용 입력 없으면 pending)", () => {
     for (const kind of ["general_building", "commercial_building"] as const) {
       useCalcWizardStore.getState().reset();
       useCalcWizardStore.setState((st) => ({

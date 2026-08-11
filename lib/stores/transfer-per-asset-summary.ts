@@ -22,6 +22,8 @@ import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/tax-utils";
+import { previewCommercialBuildingEstimated } from "@/lib/calc/transfer-estimated-preview";
+import { previewGeneralBuildingEstimated } from "@/lib/calc/transfer-estimated-preview";
 
 export interface TransferAssetSummaryRow {
   assetId: string;
@@ -256,6 +258,10 @@ export function computeTransferPerAssetSummary(
    *   · `commercial_building`— §164⑧ 기준시가 조정(`commercial-building-valuation.ts`)
    *   · 재개발·입주권         — §166 인가 전·후 분리
    *   · 겸용주택·다필지·별개취득·부담부증여 — 파트/필지 단위 계산
+   *
+   * ⚠️ 일반건물·상가는 이 게이트에서 빠지지만 **프리뷰가 없는 것은 아니다** — 각자 전용
+   *    엔진 함수를 재사용하는 `transfer-estimated-preview.ts`가 담당한다(아래 `dedicatedPreview`).
+   *    여기서 제외하는 것은 「공통 식으로 계산하지 말라」는 뜻이지 「미리 보여주지 말라」가 아니다.
    */
   const primary = formData.assets[0];
   const canPreviewEstimated =
@@ -273,6 +279,23 @@ export function computeTransferPerAssetSummary(
   const rows: TransferAssetSummaryRow[] = formData.assets.map((a, i) => {
     const ratio = ownershipRatioOf(a);
     const fractional = ratio < 1;
+
+    /**
+     * 전용 환산 프리뷰(일반건물·상가) — 계산 **전** 산출값. 산식은 재구현하지 않고 route가 쓰는
+     * 엔진 함수를 그대로 부른다(`transfer-estimated-preview.ts`). 입력이 덜 찼으면 null이라
+     * «계산 후 표시»가 유지된다.
+     *
+     * 단건 자산에만 적용한다 — 멀티 자산은 양도가액이 안분으로 갈리고 그 안분값이 환산 분자에
+     * 들어가므로, 자산 하나만 떼어 계산하면 실제와 다른 값이 나온다.
+     */
+    const dedicatedPreview =
+      isSingle && !result && a.useEstimatedAcquisition && a.transferType !== "burdened_gift"
+        ? a.assetKind === "commercial_building"
+          ? previewCommercialBuildingEstimated(a, formData)
+          : a.assetKind === "general_building"
+            ? previewGeneralBuildingEstimated(a, formData)
+            : null
+        : null;
     // bundled 결과의 primary(주 자산) 엔트리는 route.ts에서 assetId "primary"로 하드코딩됨
     // (companion만 실제 assetId 유지) → i===0 은 "primary"로 매칭. 미러링 누락 시
     // 주 자산이 bundledMatch 실패 → salePending("계산 후 표시")로 잘못 빠짐.
@@ -346,6 +369,16 @@ export function computeTransferPerAssetSummary(
       // 다필지 — 필지별 결과 취득가액 합(환산 필지 포함). 계산 전 pending을 여기서 해소한다.
       acqPrice = singleResult.parcelDetails.reduce((s, p) => s + p.acquisitionPrice, 0);
       acqPending = false;
+    } else if (dedicatedPreview) {
+      /**
+       * 일반건물·상가 전용 환산 프리뷰 — 계산 후 값과 **같은 엔진 함수**에서 나온다.
+       *
+       * `acqPrice === 0` 조건 **앞**에 둔다. 환산 모드에서는 자산 전체 실가 칸이 UI에서
+       * 숨겨지지만 폼 값은 보존되므로(토글 OFF 시 복원용), stale 실가가 남아 있으면 그것이
+       * 표시되어 **계산에 쓰이지 않는 금액**을 보여주게 된다. 환산이 확정한 값이 우선이다.
+       */
+      acqPrice = dedicatedPreview.acqPrice;
+      acqPending = false;
     } else if (acqPrice === 0 && isSingle) {
       // 단건 fallback 체인 (상속의제 → 계산 결과 환산 → 환산 프리뷰)
       if (a.inheritanceMode === "post-deemed" && a.inheritanceStartDate) {
@@ -406,6 +439,11 @@ export function computeTransferPerAssetSummary(
     } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
       // 다필지 — 필지별 결과 필요경비 합(환산 필지의 개산공제 §163⑥ 포함). pending 해소.
       expense = singleResult.parcelDetails.reduce((s, p) => s + p.expenses, 0);
+      expensePending = false;
+    } else if (dedicatedPreview) {
+      // 환산의 필요경비는 개산공제(§163⑥)이지 폼의 자본적지출이 아니다 — §97②2호 swap이
+      // 발동한 경우에만 실제 경비가 채택되며, 그 판정도 프리뷰 함수 안에서 끝난다.
+      expense = dedicatedPreview.expense;
       expensePending = false;
     } else if (expense === 0 && isSingle) {
       if (singleResult) {

@@ -37,12 +37,28 @@ import {
   type GeneralBuildingActualPricePayload,
 } from "./general-building-route-actual";
 
-/** 라우트가 받는 환산취득가 payload (Zod 통과 후 + Date 변환 포함). */
-export type GeneralBuildingValuationPayload = GeneralBuildingInput;
-
 // ── 분리 전 import 경로 유지용 재수출 (하위 호환) ──────────────────────
 export { calculateGeneralBuildingActualTransfer };
 export type { GeneralBuildingActualPricePayload, GeneralBuildingRouteResult };
+
+/**
+ * payload 정규화·카드 조립은 `lib/tax-engine/general-building-entry.ts`로 옮겼다 (2026-08-11).
+ *
+ * 이 파일은 `calculateTransferTaxAggregate`(→ `lib/db/tax-rates` → `next/headers`)를 함께
+ * import하므로 **클라이언트에서 불러올 수 없다**. 사이드바 환산 프리뷰가 카드 조립을 재사용해야
+ * 해서 순수 부분만 Layer 2로 내렸다. 기존 호출부·테스트를 위해 여기서 재수출한다.
+ */
+export {
+  coerceGeneralBuildingPayload,
+  buildEstimatedGeneralBuildingCards,
+  type GeneralBuildingValuationPayload,
+} from "@/lib/tax-engine/general-building-entry";
+// 재수출은 로컬 바인딩을 만들지 않는다 — 이 파일 본문에서도 쓰므로 별도로 들여온다.
+import {
+  coerceGeneralBuildingPayload,
+  buildEstimatedGeneralBuildingCards,
+  type GeneralBuildingValuationPayload,
+} from "@/lib/tax-engine/general-building-entry";
 
 
 // ── 통합 진입점 (route.ts에서 호출) ─────────────────────────────────────
@@ -93,162 +109,6 @@ export function dispatchGeneralBuilding(
     taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
     burdenedGiftInfo, expropriation, ownershipRatio,
   );
-}
-
-/**
- * 이월과세 서브객체 조립 — **파트 입력(신규)** 과 **엔진 모양(하위 호환)** 을 모두 받는다.
- *
- * 설계 D9-10. UI는 「증여 사건 1벌 + 파트 N벌」로 받고 엔진은 「파트마다 완결된 객체」를 원한다.
- * 그 간극을 여기서 메운다.
- *
- * - `carryoverGiftEvent` + `*CarryoverPart`가 있으면 **조립**한다.
- *   증여세 상당액은 영 §163의2②로 **산정**한다 — 사용자가 안분하지 않는다.
- * - 없으면 `*CarryoverTaxation`(엔진 모양)을 그대로 쓴다.
- *   🔴 이 경로를 없애면 API 직접 호출자와 기존 테스트 16건·GBF-27이 깨진다.
- *
- * ⚠️ **환산 모드 분자(`donorStandardPriceAtAcquisition`)는 여기서 카드로 못 보낸다** —
- *    `standardPriceAtAcquisition`은 엔진 카드 input 필드라 `buildProperties`가 싣는다.
- *    여기서는 서브객체에 담아 넘기고, 카드 조립 시점에 꺼낸다(설계 D9-8).
- */
-function composeGbCarryover(gbRaw: Record<string, unknown>): {
-  land?: Record<string, unknown>;
-  building?: Record<string, unknown>;
-} {
-  const event = gbRaw.carryoverGiftEvent as Record<string, unknown> | undefined;
-
-  const fromPart = (partRaw: unknown): Record<string, unknown> | undefined => {
-    if (!event || !partRaw) return undefined;
-    const part = partRaw as Record<string, unknown>;
-    const assetValue = (part.giftDateAssetValue as number) ?? 0;
-    return {
-      giftRegistryDate: toOptionalDate(event.giftRegistryDate),
-      donorAcquisitionDate: toOptionalDate(part.donorAcquisitionDate),
-      donorAcquisitionPrice: part.donorAcquisitionPrice,
-      useEstimatedAcquisition: part.useEstimatedAcquisition === true,
-      // 영 §163의2② — 산출세액 × (해당 자산가액 ÷ 과세가액)
-      giftTaxAmount: apportionGiftTax(
-        {
-          giftTaxCalculated: (event.giftTaxCalculated as number) ?? 0,
-          giftTaxBase: (event.giftTaxBase as number) ?? 0,
-        },
-        assetValue,
-      ),
-      donorCapitalExpenditure: part.donorCapitalExpenditure,
-      // 영 §163의2②2호 분자 = 비교과세 시나리오 B 취득가액 (같은 값을 겸한다)
-      giftDateValuation: assetValue,
-      // §97의2① 관계요건 — 증여 **사건**의 사실이라 토지·건물 두 파트에 같은 값이 실린다.
-      donorRelation: event.donorRelation,
-      donorDeceased: event.donorDeceased,
-      exclusionDeclared: event.exclusionDeclared,
-      // 환산 모드 분자 — 카드 조립 시 `standardPriceAtAcquisition`으로 꺼낸다(D9-8)
-      donorStandardPriceAtAcquisition: part.donorStandardPriceAtAcquisition,
-    };
-  };
-
-  const legacy = (raw: unknown): Record<string, unknown> | undefined => {
-    if (!raw) return undefined;
-    const ct = raw as Record<string, unknown>;
-    return {
-      ...ct,
-      giftRegistryDate: toOptionalDate(ct.giftRegistryDate),
-      donorAcquisitionDate: toOptionalDate(ct.donorAcquisitionDate),
-    };
-  };
-
-  return {
-    land: fromPart(gbRaw.landCarryoverPart) ?? legacy(gbRaw.landCarryoverTaxation),
-    building: fromPart(gbRaw.buildingCarryoverPart) ?? legacy(gbRaw.buildingCarryoverTaxation),
-  };
-}
-
-/**
- * ⑭ **`generalBuildingValuation` payload의 Date 변환 단일 소스**.
- *
- * Zod는 대부분의 날짜를 `z.string().date()`로만 **검증**하고 `Date`로 바꾸지 않는다.
- * 미변환 값이 엔진에 도달하면 `from.getFullYear()`·`getTime()`이 런타임에 깨지거나
- * `Date < string` **침묵 false**에 빠진다(`lib/api/date-coerce.ts`).
- *
- * 🔴 **단건(`dispatchGeneralBuilding`)과 지분(`general-building-fractional.ts`)이 이 함수를
- *    공유해야 한다.** 지분 경로를 만들 때 이 변환을 건너뛰어 `conversionDate`가 문자열로
- *    도달, `eventDate.getTime is not a function`으로 500이 났다(2026-08-10 실측).
- *    새 진입점을 만들 때 변환을 다시 손으로 나열하지 말 것.
- */
-export function coerceGeneralBuildingPayload(
-  gbRaw: Record<string, unknown>,
-): Record<string, unknown> {
-  // buildingAcquisitionDate: Zod는 z.string().date()로만 검증 — Date 객체로 변환 안 됨.
-  // 미변환 시 string이 buildGeneralBuildingAssetCards()의 acquisitionDate에 도달 →
-  // monthsBetween(from, to)에서 from.getFullYear() TypeError 발생.
-  const buildingAcqDate = toOptionalDate(gbRaw.buildingAcquisitionDate);
-  // M-1a — 토지 파트 취득일. 미주입 시 건물 취득일과 동일(분리 OFF)로 본다.
-  const landAcqDateCoerced = toOptionalDate(gbRaw.landAcquisitionDate);
-
-  // buildingAcquisitionCause: Zod 필수 강제 + normalizeAsset M-2 보완으로 항상 정의됨 보장.
-  // silent fallback 제거 (정책 #1 — 자동 안분 fallback 금지).
-  const buildingAcqCause = gbRaw.buildingAcquisitionCause as
-    | "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
-  // isSelfBuilt = buildingAcquisitionCause 에서 도출 (단일 진실 원천).
-  const isSelfBuilt = buildingAcqCause === "newConstruction";
-
-  // #4-a: 토지 상속·증여 보조 필드 Date 변환
-  const decedentAcqDate = toOptionalDate(gbRaw.decedentAcquisitionDate);
-  const donorAcqDate = toOptionalDate(gbRaw.donorAcquisitionDate);
-  // 다른 피상속인/증여자 분리: 건물 전용 보조 필드 Date 변환
-  const buildingDecedentAcqDate = toOptionalDate(gbRaw.buildingDecedentAcquisitionDate);
-  const buildingDonorAcqDate = toOptionalDate(gbRaw.buildingDonorAcquisitionDate);
-
-  // #7-b: 이월과세 서브객체 — 파트 입력(신규)을 엔진 모양으로 조립하고 Date를 변환한다.
-  const { land: coercedLandCt, building: coercedBuildingCt } = composeGbCarryover(gbRaw);
-
-  // ⑭ 사례 35: conversionDate Date 변환 (string → Date)
-  const conversionDateCoerced = toOptionalDate(gbRaw.conversionDate);
-
-  // ⑭ 사례 33: extensionInfo 내부 extensionDate Date 변환
-  const extInfo = gbRaw.extensionInfo as Record<string, unknown> | undefined;
-  const coercedExtInfo = extInfo
-    ? {
-        ...extInfo,
-        extensionDate: toOptionalDate(extInfo.extensionDate),
-      }
-    : undefined;
-
-  const coercedGbRaw: Record<string, unknown> = {
-    ...gbRaw,
-    ...(buildingAcqDate ? { buildingAcquisitionDate: buildingAcqDate } : {}),
-    ...(landAcqDateCoerced ? { landAcquisitionDate: landAcqDateCoerced } : {}),
-    isSelfBuilt,                         // boolean 도출 (gbRaw의 isSelfBuilt 덮어씀)
-    buildingAcquisitionCause: buildingAcqCause,
-    ...(decedentAcqDate ? { decedentAcquisitionDate: decedentAcqDate } : {}),
-    ...(donorAcqDate ? { donorAcquisitionDate: donorAcqDate } : {}),
-    ...(buildingDecedentAcqDate ? { buildingDecedentAcquisitionDate: buildingDecedentAcqDate } : {}),
-    ...(buildingDonorAcqDate ? { buildingDonorAcquisitionDate: buildingDonorAcqDate } : {}),
-    ...(coercedLandCt ? { landCarryoverTaxation: coercedLandCt } : {}),
-    ...(coercedBuildingCt ? { buildingCarryoverTaxation: coercedBuildingCt } : {}),
-    ...(coercedExtInfo ? { extensionInfo: coercedExtInfo } : {}),
-    // ⑭ 양도시 감정평가가액의 **감정일자** — JSON 경유 후 문자열로 도착한다. `Date`로 바꾸지
-    //    않으면 엔진의 유효 창 비교(`getTime()`)가 런타임에 깨진다(`lib/api/date-coerce.ts`).
-    ...(gbRaw.appraisalDateAtTransfer
-      ? { appraisalDateAtTransfer: toOptionalDate(gbRaw.appraisalDateAtTransfer) }
-      : {}),
-    // ⑭ 사례 35: 주택→상가 용도변경 필드 — Date 변환 후 GeneralBuildingInput에 주입
-    ...(gbRaw.houseToCommercialConversion
-      ? {
-          houseToCommercialConversion: true,
-          conversionDate: conversionDateCoerced,
-          wasMultiHouseAtConversion: gbRaw.wasMultiHouseAtConversion ?? false,
-        }
-      : {}),
-    // ⑭ 사례 35 후속-1: §99-164-10 환산주택가격 4필드 (number, Date 변환 불요)
-    ...(gbRaw.hasFirstDisclosure
-      ? {
-          hasFirstDisclosure: true,
-          firstDisclosurePrice: gbRaw.firstDisclosurePrice as number | undefined,
-          firstDisclosureLandStdPrice: gbRaw.firstDisclosureLandStdPrice as number | undefined,
-          firstDisclosureBuildingStdPrice: gbRaw.firstDisclosureBuildingStdPrice as number | undefined,
-        }
-      : {}),
-  };
-  return coercedGbRaw;
 }
 
 /** `coerceGeneralBuildingPayload` 이후의 단건 분기 — 종전 `dispatchGeneralBuilding` 본문. */
@@ -359,53 +219,6 @@ function dispatchCoercedGeneralBuilding(
  * buildingAcquisitionCause === "newConstruction" 시 isSelfBuilt=true 도출
  * (dispatchGeneralBuilding과 동일 로직 — 단위 테스트 직접 호출 경로 보호).
  */
-/**
- * 경로 A 카드 조립 — cards(`gbOut`) + §97②2호 swap 판정까지. aggregate **직전** 상태.
- *
- * 지분(%) 분할에서 지분마다 이것을 부른 뒤 카드를 concat해 aggregate를 1회만 한다
- * (설계 `transfer-general-building-fractional-share.engine.design.md` D5).
- * `swap`을 **여기서** 계산하는 것이 핵심이다 — 지분 루프 안에서 불리면 판정 단위가
- * 자동으로 「지분 × 파트」가 된다(계획서 §3-4).
- */
-export function buildEstimatedGeneralBuildingCards(gbv: GeneralBuildingValuationPayload): {
-  gbOut: ReturnType<typeof buildGeneralBuildingAssetCards>;
-  swap: ReturnType<typeof resolveGeneralBuildingSwap>;
-} {
-  // buildingAcquisitionCause에서 isSelfBuilt 도출 (단일 진실 원천).
-  // gbv.isSelfBuilt가 명시된 경우에도 buildingAcquisitionCause 우선 (deprecated 패턴 방어).
-  const normalizedGbv: GeneralBuildingValuationPayload = {
-    ...gbv,
-    isSelfBuilt: gbv.buildingAcquisitionCause === "newConstruction",
-  };
-  const gbOut = buildGeneralBuildingAssetCards(normalizedGbv);
-  /**
-   * §97②2호 판정 — 파트별 자본적지출이 있으면 **파트 단위**, 없으면 종전 **자산총액**(안 A).
-   * 단위 선택 근거는 `general-building-swap.ts` 헤더(O-1 · §97②2호 본문 「자산별로」).
-   */
-  const swap = resolveGeneralBuildingSwap(
-    gbOut.assetCards,
-    gbv.capitalExpenditure,
-    gbv.transferExpense,
-    {
-      // 모드 기본값은 `applyPartAcqModes`와 **같은 단일 소스**여야 한다(둘 다 미지정 시 환산).
-      ...(gbv.landDirectExpenses !== undefined
-        ? { land: { direct: gbv.landDirectExpenses, mode: gbv.landAcqMode ?? "estimated" } }
-        : {}),
-      ...(gbv.buildingDirectExpenses !== undefined
-        ? {
-            building: {
-              direct: gbv.buildingDirectExpenses,
-              mode: gbv.buildingAcqMode ?? "estimated",
-            },
-          }
-        : {}),
-      // 양도비는 파트로 나누지 않고 넘긴다 — 엔진이 §100② 후문(가액 비례)으로 안분한다.
-      ...(gbv.transferExpense !== undefined ? { transferExpense: gbv.transferExpense } : {}),
-    },
-  );
-  return { gbOut, swap };
-}
-
 export function calculateGeneralBuildingTransfer(
   gbv: GeneralBuildingValuationPayload,
   taxYear: number,
