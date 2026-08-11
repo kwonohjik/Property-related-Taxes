@@ -112,9 +112,24 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         const tp = phdTimepointLabel(key);
         // 연도 라벨: valuation 스냅샷은 valuationYear, transfer 취득 스냅샷은 acquisitionYear(valuationYear 부재).
         const yearLabel = snap.valuationYear || (isTransferAcq ? snap.acquisitionYear : "");
+        /**
+         * 🔴 배치는 계산서를 **valuation(taxType=inheritance_gift) 스냅샷으로 재구성**한다.
+         *    그래서 양도 계산인데도 제목이 "상속 건물 기준시가 계산"으로, Ⅰ.구분이 상속세 칸에
+         *    찍힌다. 종전 override는 배치 전용 키(`-phd-*`·`-cb-first`)에만 걸려 있어서
+         *    **일반건물 2시점 일괄(`-gb-acq`/`-gb-transfer`)이 그 그물을 빠져나갔다**
+         *    (2026-08-11 브라우저 실측).
+         *
+         *    ⇒ 재구성 스냅샷이 **양도 자산 키**(시점 세그먼트가 있는 키)로 저장돼 있으면
+         *       키의 시점으로 양도 맥락을 부여한다. 상증 키(`bsp-estate-*`)는
+         *       `snapshotKeyTimepoint`가 null이라 걸리지 않는다(그쪽은 상속 맥락이 정답).
+         */
+        const reconstructedTimepoint =
+          !tp && snap.taxType !== "transfer" ? snapshotKeyTimepoint(key) : null;
         const titleOverride = tp
           ? `${tp.timepoint} · ${tp.categoryLabel}${yearLabel ? ` (${yearLabel}년)` : ""}`
-          : undefined;
+          : reconstructedTimepoint
+            ? `${reconstructedTimepoint === "transfer" ? "양도시" : "취득시"}${yearLabel ? ` (${yearLabel}년)` : ""}`
+            : undefined;
         // Ⅰ.구분 마킹 — 상속(재구성 taxType) 대신 양도 맥락으로: 취득시·최초공시일=취득당시(2001↑), 양도시=양도당시.
         // 취득 ≤2000 transfer 스냅샷은 acq2000(2000.12.31 이전) 칸에 마킹.
         const markCellOverride: NtsReportInstance["markCell"] | undefined = tp
@@ -123,7 +138,14 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
             : isTransferAcq && Number(snap.acquisitionYear) < BUILDING_STD_FIRST_YEAR
               ? "acq2000"
               : "acq2001"
-          : undefined;
+          : reconstructedTimepoint
+            ? reconstructedTimepoint === "transfer"
+              ? "transfer"
+              // 재구성 취득 스냅샷의 연도는 `valuationYear`다(transfer 스냅샷의 acquisitionYear 아님).
+              : Number(snap.valuationYear) < BUILDING_STD_FIRST_YEAR
+                ? "acq2000"
+                : "acq2001"
+            : undefined;
         // 배치 스냅샷은 취득→최초→양도, 주택→상가 순으로 정렬. 비-배치는 삽입 순서 유지.
         // ⚠️ 정렬은 `tp.order`를 쓴다 — 라벨 문자열 매칭은 접두마다 달라(§164⑤ "최초공시일" ↔
         //    §164⑥ "최초고시(2005)") 새 접두가 붙을 때마다 조용히 0으로 떨어진다.
