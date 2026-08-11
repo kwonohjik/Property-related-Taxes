@@ -34,10 +34,26 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 
 /**
- * 취득가액 산정 방식 — 화면상 **단일 축**. 폼 모델(boolean 3개 + 증축 2필드)의 조합을
- * 하나의 union으로 좁힌 것이라 여기서만 쓰인다(저장 필드가 아니다).
+ * 취득가액 산정 방식 — 화면상 **단일 축**. 폼 모델(boolean 3개)의 조합을 하나의 union으로
+ * 좁힌 것이라 여기서만 쓰인다(저장 필드가 아니다).
+ *
+ * ## 🔄 `"mixed_extension"`을 제거했다 (2026-08-12 · 사용자 결정)
+ *
+ * 종전에는 일반건물에 「토지·건물 일괄 (증축분 별도)」라는 4번째 값이 있었다. 그런데 그것은
+ * **원건물 관점에서 `"actual"`과 같은 것**이었다 — 파생 조건이
+ * 「실가 ∧ 증축 있음 ∧ **증축분이 환산**」이라 조합 하나의 shortcut이었을 뿐이고,
+ * 실제 차이는 증축 토글 ON 여부뿐인데 그것은 아래 토글이 이미 표현한다.
+ *
+ * 그래서 축이 **둘**(① 원건물 실가/환산 × ② 증축 유무·증축분 방식)인 것을 라디오 1축으로
+ * 뭉쳐 세 가지 결함이 붙어 있었다:
+ *   · 「원건물 실가 + 증축 **실가**」는 라디오가 「실거래가」로 떨어져 상단에서 증축이 사라졌다
+ *   · 그 상태에서 라디오를 **다시 누르면** `resetExtension()`이 증축 입력을 통째로 지웠다
+ *   · 취득가액 라벨·hint·일괄 필요경비 칸이 그 4번째 값에만 걸려 나머지 조합에서 어긋났다
+ *
+ * ⇒ 라디오는 **원건물 취득가액 산정 방식**만 고르고, 증축은 토글이 전담한다.
+ * 계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §6 Q-1
  */
-type AcqBasisMode = "actual" | "estimated" | "appraisal" | "sales_case" | "mixed_extension";
+type AcqBasisMode = "actual" | "estimated" | "appraisal" | "sales_case";
 
 // ─── 메인 블록 ────────────────────────────────────────────────────
 
@@ -47,53 +63,55 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const [internalPricePerSqmAtTransfer, setInternalPricePerSqmAtTransfer] = useState("");
 
   /**
-   * "쌍방+일방 (증축 있음)" 4번째 라디오 파생 상태.
-   * 원건물 실가(useEstimatedAcquisition=false) + isAppraisalAcquisition≠true
-   * + gbHasExtension=true + gbExtensionAcquisitionMode="estimated"
-   * + assetKind="general_building" 일 때 활성화.
+   * **원건물을 일괄 실거래가로 취득 + 증축분이 있다** — 취득가액 칸의 성격을 가른다.
+   *
+   * 이 상태에서 「취득가액」은 토지·건물1을 한 값으로 산 **일괄 취득가액**이고, 엔진이
+   * 「소득세법」 제100조 제2항 본문의 **취득 당시** 기준시가 비율로 두 파트에 안분한다
+   * (`general-building-extension.ts` 조합 A/B 분기 · ④는 `bundledAcquisitionPrice`로 싣는다).
+   *
+   * ⚠️ **증축분 취득 방식(실가/환산)과 무관하다** — 그것은 별개 축이고 아래 증축 토글의
+   *    서브 라디오가 정한다. 종전 `isMixedExtension`은 여기에 `증축=환산` 조건을 달아,
+   *    「원건물 실가 + 증축 실가」에서 라벨·hint·일괄 필요경비 칸이 통째로 빠졌다
+   *    (계획서 D-6·D-7).
    */
-  const isMixedExtension =
+  const isBundledExtension =
     props.assetKind === "general_building" &&
     props.useEstimatedAcquisition === false &&  // ★ 원건물 실가
     props.isAppraisalAcquisition !== true &&
-    props.gbHasExtension === true &&
-    props.gbExtensionAcquisitionMode === "estimated";
+    props.gbHasExtension === true;
 
   /**
    * ── 취득가액 산정 방식 — **라디오 1축**으로 표현한다 (2026-08-11 사용자 요청) ──
    *
-   * 폼 모델은 여전히 boolean 3개(+일반건물 증축 2필드)지만, 화면에서는 **하나만 고르는 축**이다.
+   * 폼 모델은 여전히 boolean 3개지만, 화면에서는 **하나만 고르는 축**이다.
    * 종전에는 native `<button>` 카드 4개가 각자 자기 플래그만 만져서 조합 상태가 될 수 있었고,
    * 라디오 semantics도 없어 키보드·스크린리더에서 그룹으로 읽히지 않았다.
    * ⇒ 여기서 단일 union으로 좁히고(`acqBasisValue`), 되돌릴 때 나머지 플래그를 함께 정리한다.
+   *
+   * ⚠️ **증축 플래그는 건드리지 않는다** (2026-08-12). 종전에는 일반건물에서 라디오를 누를 때
+   *    `resetExtension()`이 `gbHasExtension`을 false로 되돌렸는데, 이미 「실거래가」가 선택된
+   *    상태에서 **같은 값을 다시 눌러도** 실행되어 증축 입력이 통째로 사라졌다(D-5).
+   *    원건물 축과 증축 축은 독립이므로 여기서 상대 축을 정리할 이유가 없다.
    */
-  const acqBasisValue: AcqBasisMode = isMixedExtension
-    ? "mixed_extension"
-    : props.isSalesCaseAcquisition
-      ? "sales_case"
-      : props.isAppraisalAcquisition
-        ? "appraisal"
-        : props.useEstimatedAcquisition
-          ? "estimated"
-          : "actual";
+  const acqBasisValue: AcqBasisMode = props.isSalesCaseAcquisition
+    ? "sales_case"
+    : props.isAppraisalAcquisition
+      ? "appraisal"
+      : props.useEstimatedAcquisition
+        ? "estimated"
+        : "actual";
 
   function handleAcqBasisChange(v: AcqBasisMode) {
-    // 일반건물에서 다른 옵션으로 나가면 증축 플래그를 되돌린다(정합성 — 종전 버튼과 동일).
-    const resetExtension = () => {
-      if (props.assetKind === "general_building") props.onGbHasExtensionChange?.(false);
-    };
     switch (v) {
       case "actual":
         props.onUseEstimatedChange(false);
         props.onIsAppraisalAcquisitionChange?.(false);
         props.onIsSalesCaseAcquisitionChange?.(false);
-        resetExtension();
         break;
       case "estimated":
         props.onUseEstimatedChange(true);
         props.onIsAppraisalAcquisitionChange?.(false);
         props.onIsSalesCaseAcquisitionChange?.(false);
-        resetExtension();
         break;
       case "appraisal":
         props.onUseEstimatedChange(false);
@@ -105,31 +123,24 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         props.onIsAppraisalAcquisitionChange?.(false);
         props.onIsSalesCaseAcquisitionChange?.(true);
         break;
-      case "mixed_extension":
-        props.onUseEstimatedChange(false); // ★ 원건물 실가
-        props.onIsAppraisalAcquisitionChange?.(false);
-        props.onGbHasExtensionChange?.(true);
-        props.onGbExtensionAcquisitionModeChange?.("estimated"); // 증축 환산
-        break;
     }
   }
 
   /**
    * 선택지 — 자산 종류로 갈린다.
-   *   · 일반건물: 감정가액·매매사례가액 **미표시**(§176의2②는 환산취득가만 규정),
-   *     대신 「토지·건물 일괄 (증축분 별도)」가 4번째 축으로 들어온다.
+   *   · 일반건물: 감정가액·매매사례가액 **미표시**(§176의2②는 환산취득가만 규정) ⇒ **2옵션**.
+   *     증축은 이 축이 아니라 아래 「증축 있음」 토글이 전담한다(2026-08-12 — 위 `AcqBasisMode` 주석).
    *   · 그 외: 실거래가·환산·감정가액·매매사례가액(콜백이 있을 때만).
    */
   const acqBasisOptions: RadioCardOption<AcqBasisMode>[] =
     props.assetKind === "general_building"
       ? [
-          { value: "actual", label: "실거래가", description: "계약서상 실거래가" },
-          { value: "estimated", label: "환산취득가", description: "양도가 × 기준시가 비율" },
           {
-            value: "mixed_extension",
-            label: "토지·건물 일괄 (증축분 별도)",
-            description: "토지·원건물 실거래가 + 증축분 환산취득가",
+            value: "actual",
+            label: "실거래가",
+            description: "계약서상 실거래가 (증축 시 토지·원건물 일괄)",
           },
+          { value: "estimated", label: "환산취득가", description: "양도가 × 기준시가 비율" },
         ]
       : [
           { value: "actual", label: "실거래가", description: "계약서상 실거래가" },
@@ -371,7 +382,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         <RadioCardGroup
           name="acqBasisMode"
           tone="amber"
-          columns={acqBasisOptions.length === 4 ? 4 : 3}
+          /* 옵션 수 = 열 수. 종전 `length === 4 ? 4 : 3`은 일반건물이 3옵션일 때 맞았는데,
+             2옵션으로 줄면서 오른쪽 1/3이 비고 카드가 좁아져 설명이 단어 중간에서 끊겼다
+             (2026-08-12 브라우저 실측). */
+          columns={Math.min(acqBasisOptions.length, 4) as 1 | 2 | 3 | 4}
           options={acqBasisOptions}
           value={acqBasisValue}
           onChange={handleAcqBasisChange}
@@ -428,7 +442,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             <>
               <CurrencyInput
                 label={
-                  isMixedExtension
+                  isBundledExtension
                     ? "토지·건물 일괄 취득가액 (원)"
                     : props.isAppraisalAcquisition
                       ? "감정가액 (원)"
@@ -454,10 +468,14 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                    * 자동 안분은 하지 않는다 — 계약서에 구분 기재돼 있으면 그 값이 우선하고
                    * (조심 2018부0572 "불분명한 경우"), 무조건 안분은 그 우선순위를 뭉갠다.
                    */
-                  props.asset?.areaScenario === "partial" && !isMixedUse && !isMixedExtension
+                  props.asset?.areaScenario === "partial" && !isMixedUse && !props.gbHasExtension
                     ? "일부 양도 — 양도한 부분에 대응하는 취득가액을 입력하세요. 계약서에 구분 기재돼 있으면 그 금액, 구분되지 않으면 취득 당시 기준시가(또는 취득 당시 감정가액) 비율로 안분한 금액입니다. 양도 당시 가액 기준 안분은 인정되지 않습니다."
-                    : isMixedExtension
-                    ? "엔진이 양도시 기준시가 비율로 토지·건물1에 자동 안분합니다. 일괄 금액 그대로 입력하세요."
+                    : isBundledExtension
+                    ? // 🔴 「양도시」가 아니라 **취득시** 기준시가 비율이다 (2026-08-12 D-6 정정).
+                      //    「소득세법」 제100조 제2항 본문의 「취득 당시」이며, 엔진도 그렇게 계산한다
+                      //    (`general-building-extension.ts` — QA 2026-05-11에 양도시 → 취득시로 정정됐는데
+                      //     이 문구만 종전 서술이 남아 있었다).
+                      "엔진이 취득시 기준시가 비율로 토지·건물1에 자동 안분합니다. 일괄 금액 그대로 입력하세요."
                     : isMixedUse && !props.isAppraisalAcquisition
                       ? "겸용주택 취득 실거래가(계약서상): 법 §100②에 따라 취득시 기준시가 비율로 주택분·상가분, 각 토지·건물에 자동 안분합니다. (위 “겸용주택 분리계산”의 취득시 기준시가가 안분 비율로 사용됩니다.)"
                       : props.isAppraisalAcquisition
@@ -469,11 +487,15 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               />
               {/* B4-2b 일부양도 취득가액 안분 계산기 — 실거래가 모드 전용.
                   환산 모드는 B4-1이 취득 기준시가 면적을 정정했으므로 이 축이 필요 없다.
-                  겸용·증축 일괄은 엔진이 §100② 기준시가 비율로 자동 안분한다(별개 축). */}
+                  겸용·증축 일괄은 엔진이 §100② 기준시가 비율로 자동 안분한다(별개 축).
+                  ⚠️ 증축 게이트를 `gbHasExtension`으로 **통일**했다(2026-08-12 Q-3). 종전에는
+                     `isMixedExtension`(=증축분 환산일 때만)이라 「원건물 실가 + 증축 실가」에서만
+                     이 계산기가 떠 비일관이었다. 면적 안분(일부양도)과 §166⑥ 3파트 안분은 축이
+                     달라 함께 태우려면 별도 설계가 필요하다(계획서 §14 O-4). */}
               {props.asset?.areaScenario === "partial" &&
                 !props.isAppraisalAcquisition &&
                 !isMixedUse &&
-                !isMixedExtension &&
+                !props.gbHasExtension &&
                 props.onAssetChange && (
                   <PartialAcqApportionSection
                     asset={props.asset}
@@ -482,8 +504,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                   />
                 )}
               {/* 사례 33 일괄 모드: 토지+건물1 일괄 취득 시 필요경비 (중개수수료·취득세·인지대 등 §97① 가목)
-                  엔진은 취득시 기준시가 비율로 토지·건물1에 자동 안분. */}
-              {isMixedExtension && props.asset && props.onAssetChange && (
+                  엔진은 취득시 기준시가 비율로 토지·건물1에 자동 안분.
+                  ⚠️ 게이트가 `isMixedExtension`(증축분 환산 한정)이던 때는 「원건물 실가 + 증축 실가」에서
+                     이 칸이 **사라져 입력 경로가 없었다**(D-7). 그러면 ④의 `bundledExpenses` fallback이
+                     양도비를 집어 성질이 뒤바뀐다 — `feedback_ui_gate_removes_sole_input_path`. */}
+              {isBundledExtension && props.asset && props.onAssetChange && (
                 <CurrencyInput
                   label="토지·건물 일괄 취득 시 필요경비 (원)"
                   value={props.asset.gbBundledAcquisitionExpenses ?? ""}

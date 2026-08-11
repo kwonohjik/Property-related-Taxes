@@ -60,6 +60,18 @@ function gbExtAsset(over: Partial<AssetForm> = {}): AssetForm {
   } as AssetForm;
 }
 
+/**
+ * 원건물 **실가**(조합 A) — 「② 채택 시 제외가 정본」이 성립하는 유일한 축.
+ * 그 조합에서만 `bundledExpenses`가 토지·건물1에 실제로 안분되어 **소비**된다.
+ */
+function gbExtAssetOriginActual(over: Partial<AssetForm> = {}): AssetForm {
+  return gbExtAsset({
+    useEstimatedAcquisition: false,
+    fixedAcquisitionPrice: "300,000,000",
+    ...over,
+  } as Partial<AssetForm>);
+}
+
 function calc(asset: AssetForm) {
   const gbv = buildGeneralBuildingValuation(asset) as Record<string, unknown>;
   const r = dispatchGeneralBuilding(
@@ -67,7 +79,9 @@ function calc(asset: AssetForm) {
     2_000_000_000,
     new Date("2024-03-01"),
     new Date("1999-05-24"),
-    0,
+    // 🔑 route.ts와 **같은 식**이어야 한다 — 종전 하드코딩 `0`은 환산 픽스처에서만 무해했고,
+    //    원건물 실가 픽스처를 쓰는 순간 일괄 취득가액이 0으로 도달한다(`route.ts` bundledAcq).
+    ((gbv.bundledAcquisitionPrice as number | undefined) ?? 0),
     (gbv.bundledExpenses as number) ?? 0,
     2024, 0, [], rates,
     undefined, {}, undefined,
@@ -123,12 +137,57 @@ describe("W-1b — 전용 필드 입력(① 채택) 시 양도비가 나목에 �
 /**
  * ② 채택(전용 필드 미입력)에서는 **제외가 정본**이다.
  * 「고쳤으니 무조건 넣자」로 되돌리면 같은 3억이 두 번 반영돼 **과소납부**가 된다.
+ *
+ * 🔄 **픽스처를 원건물 실가(조합 A)로 옮겼다** (2026-08-12 D-10).
+ *
+ * 종전에는 이 단언이 **환산 픽스처**(`gbExtAsset()` = 조합 C)로 쓰여 있었다. 그런데 조합 C에서는
+ * `bundledExpenses`가 **아무 데도 소비되지 않는다** — `general-building-extension.ts`가 환산 파트의
+ * 필요경비를 개산공제로 덮기 때문이다(2026-08-08 변경). 즉 「이미 소비했으니 빼자」는 이 규칙의
+ * 전제가 그 조합에서만 무너져 있었고, 결과는 **양도비가 §97②2호 나목에서 통째로 누락**이었다
+ * (실측 결정세액 28,979,117원 과대).
+ *
+ * ⇒ 규칙 자체는 유효하다. **성립하는 축(원건물 실가)** 으로 픽스처를 옮긴다.
+ *   조합 C·D의 반대 단언은 바로 아래 describe가 맡는다.
+ * 계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §4 D-10
  */
-describe("W-1b — 전용 필드 미입력(② 채택) 시 제외가 정본", () => {
+describe("W-1b — 원건물 실가 + 전용 필드 미입력(② 채택) 시 제외가 정본", () => {
   it("🔴 bundledExpenses가 곧 양도비다 — 나목에 또 넣지 않는다", () => {
-    const r = calc(gbExtAsset());
+    const r = calc(gbExtAssetOriginActual());
     expect(r.bundledExpenses).toBe(TRANSFER_EXP);
     expect(r.directSide).toBe(CAPEX);
+  });
+
+  it("전용 필드를 입력하면 ①에서 멈추고 양도비가 나목에 들어간다 (대조군)", () => {
+    const r = calc(
+      gbExtAssetOriginActual({ gbBundledAcquisitionExpenses: String(DEDICATED_BUNDLED) }),
+    );
+    expect(r.bundledExpenses).toBe(DEDICATED_BUNDLED);
+    expect(r.directSide).toBe(CAPEX + TRANSFER_EXP);
+  });
+});
+
+/**
+ * 🔴 **D-10 — 원건물 환산(조합 C·D)에서는 전용 필드 미입력이어도 양도비를 나목에 넣는다.**
+ *
+ * 「소득세법」 제97조 제2항 제2호 **단서 나목** = 「제1항제2호 **및** 제3호에 따른 금액의 **합계액**」
+ * ⇒ 양도비를 조건 없이 포함한다. 빼는 유일한 정당화는 **이중계상**인데, 원건물이 양쪽 다 환산이면
+ * `bundledExpenses`가 소비되지 않으므로 그 정당화가 성립하지 않는다.
+ *
+ * ⚠️ 이 단언과 바로 위 describe는 **대조군 쌍**이다 — 한쪽만 보면 「무조건 포함」이나
+ *    「무조건 제외」로 되돌아간다. 둘 다 틀렸다는 것이 W-1b·D-10의 결론이다.
+ */
+describe("D-10 — 원건물 환산이면 전용 필드 미입력이어도 나목에 포함", () => {
+  it("🔴 나목 = 자본적지출 + 양도비 (bundledExpenses는 소비되지 않는다)", () => {
+    const r = calc(gbExtAsset());
+    expect(r.bundledExpenses).toBe(TRANSFER_EXP); // fallback ②가 집기는 한다
+    expect(r.directSide).toBe(CAPEX + TRANSFER_EXP); // 그러나 소비되지 않으므로 나목에 포함
+  });
+
+  it("세액이 실제로 달라진다 — 양도비를 뺀 종전 동작과의 차액", () => {
+    const withExp = calc(gbExtAsset());
+    const withoutExp = calc(gbExtAsset({ transferExpense: "0" }));
+    expect(withoutExp.directSide).toBe(CAPEX);
+    expect(withoutExp.tax).toBeGreaterThan(withExp.tax);
   });
 });
 

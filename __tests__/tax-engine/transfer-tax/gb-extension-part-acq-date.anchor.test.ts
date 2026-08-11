@@ -121,8 +121,18 @@ describe("P2-1 — 3-way도 토지 파트 취득일을 쓴다", () => {
     expect(old.ltd).toBeGreaterThan(young.ltd);
   });
 
-  it("🔴 증축 ON의 장특공제가 「토지도 2020」 값(81,999,999)과 달라진다", () => {
-    expect(run(separate(EXTENSION)).ltd).not.toBe(81_999_999);
+  /**
+   * 🔄 **하드코딩 상수를 대조군 비교로 바꿨다** (2026-08-12).
+   *
+   * 종전에는 `not.toBe(81_999_999)`였는데, 그 상수는 「토지도 2020」인 경우의 장특공제였다.
+   * D-1 수정(§166⑥ 분모에 건물2 기준시가를 포함)으로 그 대조군 값 자체가 76,338,197로 바뀌자
+   * **상수와의 비교가 아무것도 잡지 못하는 단언**이 됐다 — 통과하지만 구별력이 없다.
+   * ⇒ 대조군을 그 자리에서 계산해 비교한다.
+   */
+  it("🔴 증축 ON의 장특공제가 「토지도 2020」 대조군과 달라진다", () => {
+    const landOld = run(separate(EXTENSION));
+    const landYoung = run(separate({ ...EXTENSION, landAcquisitionDate: "2020-05-01" }));
+    expect(landOld.ltd).not.toBe(landYoung.ltd);
   });
 
   it("증축 OFF 대조군은 종전 그대로 (실가 경로 — 회귀 0)", () => {
@@ -179,15 +189,30 @@ describe("P2-3 — 부분 상속 × 증축이 계산까지 간다", () => {
 });
 
 describe("P2-4 — 회귀 0", () => {
-  it("분리 OFF + 증축은 종전 그대로 (두 날짜가 같으므로 값이 움직이면 안 된다)", () => {
+  /**
+   * 🔄 **기준값 갱신 81,999,999 → 76,338,197** (2026-08-12 · D-1).
+   *
+   * 이 테스트의 주제는 「분리 OFF면 토지·건물 취득일이 같으므로 **분리 여부가 값을 바꾸지
+   * 않는다**」이고 그 성질은 불변이다. 바뀐 것은 **기준값**이다 — 종전에는 증축분 기준시가가
+   * §166⑥ 안분 분모에서 빠져 있어(D-1) 양도가액이 토지·건물1에 과대 배분됐다.
+   * 분모가 1,389,442,400 → 1,449,442,400으로 정정되면서 장특공제도 그만큼 줄었다.
+   *
+   * ⚠️ 값만 고치면 「분리 여부 무관」이라는 주제가 하드코딩에 묻힌다 ⇒ **대조군 비교를 함께** 둔다.
+   */
+  it("분리 OFF + 증축 — 두 날짜가 같으므로 분리 ON(토지도 2020)과 값이 같다", () => {
     const off = separate({
       ...EXTENSION,
       hasSeperateLandAcquisitionDate: false,
       landAcquisitionDate: "2020-05-01",
     } as Partial<AssetForm>);
+    const onSameDates = separate({
+      ...EXTENSION,
+      landAcquisitionDate: "2020-05-01",
+    } as Partial<AssetForm>);
     const r = run(off);
     expect(r.cardCount).toBe(3);
-    expect(r.ltd).toBe(81_999_999);
+    expect(r.ltd).toBe(76_338_197);
+    expect(r.ltd).toBe(run(onSameDates).ltd);
   });
 
   /**
@@ -231,24 +256,41 @@ describe("P2-4 — 회귀 0", () => {
       fixedAcquisitionPrice: "",
     } as Partial<AssetForm>);
     const r = run(converted);
-    expect(r.land).toBe(669_246_886);
-    expect(r.building1).toBe(3_281_490);
+    // 🔄 669,246,886 → 641,543,257 (2026-08-12 · D-1) — 아래 「혼합」 테스트 주석의 분모 정정.
+    expect(r.land).toBe(641_543_257);
+    expect(r.building1).toBe(3_145_652);
     expect(r.building2).toBe(300_000_000);
   });
 
   /**
-   * 혼합 모드의 환산 파트가 **증축 OFF 대조군과 같은 값**을 낸다 — 강한 교차검증이다.
-   * 증축은 건물2를 더하는 축이므로 건물1의 환산취득가는 증축 유무와 무관해야 한다.
+   * 🔴 **이 테스트의 「주장」이 틀렸었다** (2026-08-12 정정 — 값이 아니라 명제를 고쳤다).
+   *
+   * 종전 서술: 「증축은 건물2를 더하는 축이므로 건물1의 환산취득가는 증축 유무와 **무관해야**
+   * 한다 — 강한 교차검증이다」. 그리고 실제로 두 값이 같았다.
+   *
+   * **그것이 곧 D-1 결함의 증상이었다.** §166⑥ 양도가액 안분의 분모는 「토지 + 건물1 + 건물2」
+   * 기준시가인데, ④가 증축 실가 모드에서 건물2 기준시가를 싣지 않아 분모가 2-way와 **같았다**.
+   * 그래서 건물1의 안분 양도가액이 증축 유무와 무관했고, 그것을 분자로 삼는 환산취득가도 같았다.
+   *
+   * 조문대로면 **달라야 한다** — 증축이 있으면 총 양도가액이 3파트로 나뉘어 건물1 몫이 줄고,
+   * 「소득세법 시행령」 제176조의2 제2항의 환산취득가(= 안분 양도가 × 취득시/양도시 기준시가)도
+   * 그만큼 줄어든다. 분모 1,389,442,400 → 1,449,442,400 (건물2 60,000,000 포함) ⇒ 비율 0.9586.
+   *
+   * ⇒ 교차검증의 축을 **「같다」에서 「분모 비율만큼 줄어든다」**로 바꾼다.
+   *    이 테스트는 이제 D-1의 회귀를 잡는다 — 다시 같아지면 분모에서 건물2가 빠진 것이다.
    */
-  it("🔴 혼합(토지 실가 + 건물1 환산)의 건물1이 증축 OFF 대조군과 같다", () => {
+  it("🔴 혼합(토지 실가 + 건물1 환산)의 건물1이 증축 OFF 대조군보다 §166⑥ 분모만큼 작다", () => {
     const withExt = run(
       separate({ ...EXTENSION, buildingAcqMode: "estimated", buildingAcquisitionPrice: "" } as Partial<AssetForm>),
     );
     const withoutExt = run(
       separate({ buildingAcqMode: "estimated", buildingAcquisitionPrice: "" } as Partial<AssetForm>),
     );
-    expect(withExt.building1).toBe(3_281_490);
-    expect(withExt.building1).toBe(withoutExt.building1);
-    expect(withExt.ltd).toBe(withoutExt.ltd);
+    expect(withExt.building1).toBe(3_145_652);
+    expect(withoutExt.building1).toBe(3_281_490);
+    // 증축이 분모에 들어가면 건물1 몫이 줄어든다 — 「같다」면 D-1이 되살아난 것이다.
+    expect(withExt.building1).toBeLessThan(withoutExt.building1!);
+    // 장특공제도 같은 이유로 갈린다(증축 카드가 별도 보유기간을 가진다).
+    expect(withExt.ltd).not.toBe(withoutExt.ltd);
   });
 });

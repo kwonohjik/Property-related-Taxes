@@ -114,7 +114,23 @@ test.describe("일반건물 상속·증여 × 증축 — 입력 경로", () => {
     await expect(page.getByText("증축 있음").first()).toBeVisible();
   });
 
-  test("X-2: 매매 + 실가 모드는 종전대로 안 보인다 (회귀 0)", async ({ page }) => {
+  /**
+   * 🔄 **주장이 뒤집혔다** (2026-08-12 — 값이 아니라 명제를 고쳤다).
+   *
+   * 종전: 「매매 + 실가 모드는 종전대로 **안 보인다** (회귀 0)」.
+   * 그때는 매매 × 실거래가에서 증축을 켜는 진입점이 상단 라디오
+   * 「토지·건물 일괄 (증축분 별도)」였기 때문에 토글을 낼 이유가 없었다.
+   *
+   * 그 라디오를 **제거했으므로**(원건물 축과 증축 축 분리 — 사용자 결정) 이 토글이
+   * **유일한 진입점**이 됐다. 종전 게이트를 그대로 뒀다면 매매 × 실가 × 분리 OFF에서
+   * 증축이 dead-end가 된다(`feedback_ui_gate_removes_sole_input_path`).
+   *
+   * ⇒ 증축 유무는 **물건의 사실**이지 취득가액 산정 방식의 함수가 아니므로 항상 묻는다.
+   * 계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §6 Q-1
+   */
+  test("X-2: 매매 + 실가 모드에서도 보인다 (3번째 라디오 제거로 유일 진입점이 됐다)", async ({
+    page,
+  }) => {
     test.setTimeout(90_000);
     await seed(page, {
       acquisitionCause: "purchase",
@@ -126,7 +142,7 @@ test.describe("일반건물 상속·증여 × 증축 — 입력 경로", () => {
     });
     await expandAssetSection(page, 3);
 
-    await expect(page.getByText("증축 있음")).toHaveCount(0);
+    await expect(page.getByText("증축 있음").first()).toBeVisible();
   });
 
   test("X-3: 증축을 켠 상속 자산이 계산까지 도달한다 (하드 차단 해제)", async ({ page }) => {

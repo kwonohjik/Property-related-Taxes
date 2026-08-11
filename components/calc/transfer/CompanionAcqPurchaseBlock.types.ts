@@ -22,19 +22,19 @@ export interface BlockProps {
   isAppraisalAcquisition?: boolean;
   onIsAppraisalAcquisitionChange?: (v: boolean) => void;
   /**
-   * 일반건물 증축 여부 — "쌍방+일방 (증축 있음)" 4번째 라디오 옵션 전용.
-   * assetKind === "general_building" 시만 사용. 이 값이 true이면
-   * useEstimatedAcquisition=true·isAppraisalAcquisition=false 와 함께
-   * "원취득 실가 + 증축분 환산" 모드를 표시한다.
+   * 일반건물 증축 여부 — **읽기 전용**. `assetKind === "general_building"` 시만 의미가 있다.
+   *
+   * 이 블록은 이 값을 **취득가액 칸의 성격**을 가르는 데만 쓴다: 원건물이 실거래가이고
+   * 증축이 있으면 그 칸은 「토지·건물 일괄 취득가액」이 되고 일괄 필요경비 칸이 함께 열린다
+   * (`isBundledExtension`).
+   *
+   * 🔄 **쓰기 콜백(`onGbHasExtensionChange`)과 증축분 취득방식 2개는 제거했다** (2026-08-12).
+   *    종전에는 「토지·건물 일괄 (증축분 별도)」 4번째 라디오가 여기서 증축 플래그와 증축분
+   *    방식을 직접 만졌는데, 그 옵션을 없애고 증축을 아래 「증축 있음」 토글에 일원화했다.
+   *    ⇒ 증축 축의 쓰기 주체는 `GeneralBuildingBlock`의 토글·서브 라디오 **하나뿐**이다.
+   *    계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §6 Q-1
    */
   gbHasExtension?: boolean;
-  onGbHasExtensionChange?: (v: boolean) => void;
-  /**
-   * 증축분 취득방식 — "actual" | "estimated" | "" (미선택).
-   * assetKind === "general_building" + gbHasExtension === true 시만 사용.
-   */
-  gbExtensionAcquisitionMode?: string;
-  onGbExtensionAcquisitionModeChange?: (v: string) => void;
   fixedAcquisitionPrice: string;
   onFixedAcquisitionPriceChange: (v: string) => void;
   /** 환산취득가 분자: 취득시 기준시가 총액 (원) */

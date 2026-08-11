@@ -216,35 +216,27 @@ export function GeneralBuildingBlock({
   }
 
   const isBurdenedGift = asset.transferType === "burdened_gift";
-  /**
-   * 상속·증여 취득에서도 **증축 토글을 연다** (2026-08-07).
+  /*
+   * ## 🔴 증축 토글의 게이트를 **없앴다** (2026-08-12 · 계획서 Q-1 「나」 안)
    *
-   * 종전에는 증축 카드가 `isEstimated`(환산 모드)에서만 열렸다. 그런데 상속·증여는 §163⑨이
-   * 실가를 강제하므로 `isEstimated`가 **항상 false**이고, 증축을 켜는 다른 진입점인
-   * 「토지·건물 일괄(증축분 별도)」 라디오는 `CompanionAcqPurchaseBlock`(**매매 전용**)에만 있다.
-   * ⇒ 상속·증여에서는 증축을 **켤 방법 자체가 없었다** — 엔진·validate만 고치면 no-op이다
-   * (`feedback_api_trigger_without_input_path_is_noop`).
+   * 종전 게이트는 `isEstimated || gbHasExtension || bothPartsSuccession || isSeparateAcq`였다.
+   * 그 조건들은 전부 **「증축을 켤 다른 진입점이 없는 경우」를 하나씩 메운 패치**였다 —
+   * 매매 × 실거래가 모드에서는 「토지·건물 일괄(증축분 별도)」 라디오가 진입점 역할을 했고,
+   * 그것이 닿지 않는 상속·증여(2026-08-07)·분리 ON(2026-08-08)을 차례로 덧붙인 것이다.
    *
-   * ⚠️ **둘 다 상속 / 둘 다 증여**일 때만 연다. 부분 상속·증여 × 증축은 아직 dead-end다 —
-   *    V-5(부분 상속은 분리 ON 요구)와 V-3(증축 × 분리 ON 차단)이 정면 충돌한다.
-   *    계획서 `transfer-gb-inheritance-extension-3part.plan.md` §5 Phase 2.
+   * 그 라디오를 제거했으므로(원건물 축과 증축 축을 분리) **매매 × 실거래가 × 분리 OFF**가
+   * 어느 조건에도 걸리지 않아 증축을 켤 방법이 사라진다 — 종전 상속·증여가 겪은 것과 **같은
+   * dead-end**다(`feedback_ui_gate_removes_sole_input_path` · `feedback_api_trigger_without_input_path_is_noop`).
+   *
+   * ⇒ 애초에 **증축 유무는 물건의 사실이지 취득가액 산정 방식의 함수가 아니다.** 조건을 두는 것
+   *   자체가 축을 섞는 것이었다. 일반건물이면 항상 묻는다.
+   *   남는 제외는 **성질상 증축이 비스코프인 둘**뿐이다:
+   *     · `shareAcquisitionOnly` — 증축은 **물건 사건**이라 지분 카드에서 중복 입력 금지(설계 D1-3·D4)
+   *     · `isBurdenedGift`      — §159가 채무비율로 자동 산정하므로 취득방식 선택이 무의미
+   *
+   * ⚠️ 그 게이트만 쓰던 파생 `bothPartsSuccession`·`isSeparateAcq`도 함께 제거했다 —
+   *    조건이 사라지면서 미사용이 됐다(다른 용도로 되살리지 말 것).
    */
-  const bothPartsSuccession =
-    (asset.acquisitionCause === "inheritance" &&
-      asset.gbBuildingAcquisitionCause === "inheritance") ||
-    (asset.acquisitionCause === "gift" && asset.gbBuildingAcquisitionCause === "gift");
-  /**
-   * **분리 ON에서도 증축 토글을 연다** (2026-08-08 Phase 2).
-   *
-   * 종전에는 validate V-3이 「증축 × 분리 ON」을 하드 차단했으므로 화면에 낼 이유가 없었다.
-   * 그 차단을 풀었으니(3-way가 토지 파트 취득일을 읽게 됐다) 진입점이 필요하다 —
-   * 없으면 엔진·validate만 고친 **no-op**이 된다
-   * (`feedback_api_trigger_without_input_path_is_noop`).
-   *
-   * 이것이 **부분 상속·증여 × 증축**의 유일한 입력 경로다 — 부분 상속은 V-5가 분리 ON을
-   * 요구하므로 `bothPartsSuccession`(둘 다 상속/증여)에 걸리지 않는다.
-   */
-  const isSeparateAcq = asset.hasSeperateLandAcquisitionDate === true;
   /**
    * 취득시 기준시가(토지·건물)를 입력받는 조건 — 환산 분자 / 일괄 취득가 안분 / §159 환산.
    * 종전 "② 취득시 기준시가" 카드의 게이트를 그대로 승계한다(자산 축으로 재편해도 조건 불변).
@@ -318,11 +310,17 @@ export function GeneralBuildingBlock({
           <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3 text-xs space-y-1.5">
             <p className="font-semibold text-blue-800">일반건물 — 취득 시나리오 가이드</p>
             <ul className="text-blue-700 space-y-0.5">
-              <li>• <b>실거래가</b>: 토지·건물 일괄 취득가 입증 가능</li>
-              <li>• <b>환산취득가</b>: 토지+건물 전체 입증 불가, 모두 환산</li>
-              <li>• <b>토지·건물 일괄 (증축분 별도)</b>: 토지·원건물은 실거래가 일괄, 증축분만 환산</li>
+              <li>• <b>실거래가</b>: 토지·건물 취득가액을 계약서로 입증할 수 있는 경우</li>
+              <li>• <b>환산취득가</b>: 입증할 수 없어 양도가 × 기준시가 비율로 환산하는 경우</li>
+              {/* ⚠️ 아래 토글 제목(「증축 있음」)을 **그대로 인용하지 않는다** — E2E가
+                  `getByText("증축 있음")`로 그 토글을 잡으므로 같은 문자열이 안내문에 있으면
+                  셀렉터가 두 곳에 걸린다(2026-08-12 실측: 접힌 안내문에 매칭돼 실패). */}
               <li className="text-blue-600 mt-1">
-                • 그 외 4가지 조합 (쌍방+쌍방·일방+쌍방·일방+일방): 위 라디오 1/2 선택 후 증축 토글 ON → 서브 라디오로 증축분 취득방식 선택
+                • <b>증축한 부분이 있으면</b> 아래 증축 항목을 켜고 <b>증축분 취득 방식</b>을 따로 고릅니다 —
+                원취득분(토지·원건물)과 증축분은 <b>각각</b> 실거래가·환산취득가를 선택할 수 있고, 네 조합 모두 계산됩니다.
+              </li>
+              <li className="text-blue-600">
+                • 원취득분이 <b>실거래가</b>면 위 「취득가액」은 토지·원건물을 한 값으로 산 <b>일괄 취득가액</b>입니다 (취득 당시 기준시가 비율로 자동 안분).
               </li>
             </ul>
           </div>
@@ -496,18 +494,17 @@ export function GeneralBuildingBlock({
           )}
         </ToneCard>
 
-        {/* ⑤ 증축 정보 (amber) — 환산취득가 모드 OR "토지·건물 일괄(증축분 별도)" 모드에서 표시.
+        {/* ⑤ 증축 정보 (amber) — 일반건물이면 **항상** 표시한다(2026-08-12 · 위 게이트 주석).
+            증축 유무는 물건의 사실이지 취득가액 산정 방식의 함수가 아니다.
             부담부증여 모드에서는 §159 자동 산정 — 증축 cross-cutting 비스코프이므로 숨김. */}
         {/* 🔒 증축은 **물건 사건**이다 — 지분 카드에서는 숨긴다(설계 D1-3·D4).
             안에 「양도시 건물2 기준시가」가 있어 emerald 카드만 숨기는 것으로는 부족하다. */}
-        {!shareAcquisitionOnly &&
-          !isBurdenedGift &&
-          (isEstimated || asset.gbHasExtension || bothPartsSuccession || isSeparateAcq) && (
+        {!shareAcquisitionOnly && !isBurdenedGift && (
           <ToggleCard
             tone="amber"
             variant="card"
             title="증축 있음"
-            description="예제 '쌍방+일방' 케이스 — 원취득은 실가, 증축분(건물2)은 입증 불가로 환산취득가 적용. 토지 취득방식 라디오에서 '토지·건물 일괄 (증축분 별도)' 선택 시 자동 활성화."
+            description="원취득분(토지·원건물)과 별도로 증축한 건물분(건물2)이 있는 경우. 증축분의 취득가액 산정 방식은 원취득분과 무관하게 아래에서 따로 고릅니다."
             checked={asset.gbHasExtension}
             onCheckedChange={(v) => onChange({ gbHasExtension: v })}
           >

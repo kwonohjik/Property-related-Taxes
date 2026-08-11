@@ -616,6 +616,23 @@ export function validateGeneralBuildingAsset(
       if (!parseAmount(asset.gbAcquisitionExtensionBuildingStdPrice))
         return `${label}: 취득시(증축시) 건물2 기준시가 총액(원)을 입력하세요. ㎡당 단가가 아닌 총액(원)입니다.`;
     } else if (extMode === "actual") {
+      /**
+       * 🔴 **양도시 건물2 기준시가는 실가 모드에서도 필수다** (2026-08-12 D-1).
+       *
+       * 증축분을 실지거래가액으로 취득해도 **양도가액 안분**은 별개 축이다 —
+       * 「소득세법」 제100조 제2항 · 같은 법 시행령 제166조 제6항의 3-way 안분 분모가
+       * 「토지 + 건물1 + 건물2」 기준시가이기 때문이다. 이 값이 없으면 분모에서 건물2가 빠져
+       * **건물2 양도가액이 0**이 된다(잔액 흡수).
+       *
+       * 🔑 ④ `buildExtensionInfo`·⑫ Zod superRefine과 **같은 축**이다. 하나만 고치면
+       *    「검증 통과 ↔ 엔진 0 안분」 또는 「전송되는데 Zod가 막음」이 된다
+       *    (`feedback_validation_sync_8th_point`).
+       *
+       * 검사 순서는 화면 순서를 따른다 — 실가 모드 UI는 「양도시 건물2 기준시가」 →
+       * 「증축 실거래가」 → 「증축 실제 필요경비」 순으로 렌더한다.
+       */
+      if (!parseAmount(asset.gbTransferExtensionBuildingStdPrice))
+        return `${label}: 양도시 건물2 기준시가 총액(원)을 입력하세요 — 양도가액을 토지·건물1·건물2로 나누는 안분 분모입니다 (소득세법 시행령 §166⑥). ㎡당 단가가 아닌 총액(원)입니다.`;
       // 실거래가 모드: 증축 실거래가 필수 (필요경비는 0 허용)
       if (!parseAmount(asset.gbExtensionActualAcquisitionPrice))
         return `${label}: 증축 실거래가(원)를 입력하세요.`;

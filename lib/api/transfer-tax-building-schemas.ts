@@ -260,6 +260,23 @@ export const generalBuildingValuationSchema = z.object({
           });
         }
       } else if (ext.acquisitionMode === "actual") {
+        /**
+         * 🔴 **양도시 건물2 기준시가는 실가 모드에서도 필수다** (2026-08-12 D-1).
+         *
+         * 취득가액을 실지거래가액으로 정해도 **양도가액 안분**(「소득세법」 제100조 제2항 ·
+         * 같은 법 시행령 제166조 제6항)의 3-way 분모는 세 기준시가로 구성된다. 없으면
+         * 엔진 `extStdTotal`이 0이 되어 **건물2 양도가액이 0**이 된다.
+         *
+         * 🔑 ④ `buildExtensionInfo`·⑧ `validateGeneralBuildingAsset`과 **같은 축**이어야 한다.
+         */
+        if (!ext.transferExtensionBuildingStdPrice) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["transferExtensionBuildingStdPrice"],
+            message:
+              "실거래가 모드: 양도시 건물2 기준시가 총액(원)을 입력하세요 — §166⑥ 양도가액 안분 분모입니다.",
+          });
+        }
         if (!ext.actualAcquisitionPrice) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
