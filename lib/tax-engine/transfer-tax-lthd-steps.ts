@@ -33,6 +33,11 @@ export interface LthdStepArgs {
   lthdExclusionReason: LthdExclusionReason | undefined;
   /** §95⑤·⑥ 용도변경 적용 내역 — 있으면 보유분을 표1+표2로 나눠 표시한다. */
   usageConversionDetail?: UsageConversionDetail;
+  /**
+   * §95④ 후단(가업상속공제 적용 비율분 피상속인 기산) 공제율 분해 문구.
+   * 있으면 표1/표2 문구 대신 이것을 쓴다 — 두 기산일이 섞여 있어 단일 "보유 N년×2%" 표기가 성립하지 않는다.
+   */
+  fbLthdFormula?: string;
 }
 
 /** STEP 4 + 4.1 + 4.2 — 장특공제 본 step과 보유분/거주분 sub-step을 push한다. */
@@ -50,6 +55,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     lthd982Applied,
     lthdExclusionReason,
     usageConversionDetail: conv,
+    fbLthdFormula,
   } = args;
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
@@ -69,7 +75,9 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     : Math.min(holdingPeriod.years * 4, 40);
   const residencePct = conv ? conv.residencePct : Math.min(residenceYearsForStep * 4, 40);
 
-  const lthdFormulaRate = lthd982Applied
+  const lthdFormulaRate = fbLthdFormula
+    ? `${fbLthdFormula} (소득세법 §95④ 후단)`
+    : lthd982Applied
     ? `§98의2 특칙 — 표2 보유 ${holdingPeriod.years}년×4% = ${Math.round(longTermHoldingRate * 100)}% (40% 한도, 법 §98의2①1호)`
     : conv
     ? `비주택 보유 ${conv.nonHousingYears}년 표1 ${conv.table1Pct}% + 주택 보유 ${conv.housingYears}년 표2 ${conv.table2HoldingPct}%`

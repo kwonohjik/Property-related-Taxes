@@ -10,9 +10,9 @@
  *   - 상속개시일 현재 자산가액 (inheritanceMarketValue)
  *   - 가업상속공제적용률 (fbDeductionAppliedRate) 0~100% → 0~1 변환
  *   - 상속개시일 (inheritanceDate)
- * 2 선택 필드:
- *   - 피상속인 자본적 지출액 (decedentCapitalExpenditure)
- *   - 상속인 자본적 지출액 (heirCapitalExpenditure)
+ * 1 선택 필드:
+ *   - 피상속인 자본적 지출액 (decedentCapitalExpenditure) — §97의2④1호 base에 가산
+ *   (상속인 자본적 지출액은 2026-08-11에 제거했다 — 자산-수준 필요경비와 이중 공제가 된다.)
  *
  * 정책 준수:
  *   - useEffect → store 미러링 금지 (feedback_useeffect_store_mirror_forbidden)
@@ -32,6 +32,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { FamilyBusinessInheritanceHistoryModal } from "./FamilyBusinessInheritanceHistoryModal";
 import type { FamilyBusinessInheritancePrefill } from "@/lib/calc/family-business-inheritance-lookup";
+// 시점 판정은 엔진 leaf 단일 소스 재사용 (skill single-source-engine-helper)
+import { isFamilyBusinessAssetScopeDecreeEra } from "@/lib/tax-engine/data/family-business-cgt-era";
 
 // ── 타입 ──────────────────────────────────────────────────────
 
@@ -41,7 +43,6 @@ interface FamilyBusinessSlice {
   fbDeductionAppliedRate: number;  // 0~1
   inheritanceDate: string;
   decedentCapitalExpenditure?: number;
-  heirCapitalExpenditure?: number;
 }
 
 interface Props {
@@ -83,7 +84,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
 
   /** K10 prefill — 상속세 이력 modal 선택 콜백 */
   function handlePrefillFromHistory(prefill: FamilyBusinessInheritancePrefill) {
-    // 기존 decedentAcquisitionPrice·decedentCapitalExpenditure·heirCapitalExpenditure는 보존
+    // 기존 decedentAcquisitionPrice·decedentCapitalExpenditure는 보존
     onChange({
       familyBusinessInheritance: {
         decedentAcquisitionPrice: fb?.decedentAcquisitionPrice ?? prefill.decedentAcquisitionPrice,
@@ -91,7 +92,6 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
         fbDeductionAppliedRate: prefill.fbDeductionAppliedRate,
         inheritanceDate: prefill.inheritanceDate,
         decedentCapitalExpenditure: fb?.decedentCapitalExpenditure,
-        heirCapitalExpenditure: fb?.heirCapitalExpenditure,
       },
     });
   }
@@ -107,7 +107,6 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           fbDeductionAppliedRate: 0,
           inheritanceDate: asset.acquisitionDate || "",
           decedentCapitalExpenditure: undefined,
-          heirCapitalExpenditure: undefined,
         },
       });
     } else {
@@ -188,7 +187,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           <CurrencyInput
             label="피상속인 원취득가액 (원)"
             required
-            hint="소법 §97의2④1호 — 피상속인이 해당 자산을 취득하기 위해 실제 지출한 금액"
+            hint="소법 §97의2④1호 — 피상속인의 취득가액(소법 §97①1호). 실지거래가액이 원칙이며, 확인할 수 없는 경우에 한정해 매매사례가액·감정가액·환산취득가액을 순차 적용합니다"
             value={String(fb.decedentAcquisitionPrice || "")}
             onChange={(v) => patchFb({ decedentAcquisitionPrice: parseInt(v.replace(/,/g, ""), 10) || 0 })}
           />
@@ -231,7 +230,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           {/* ⑤ 피상속인 자본적 지출액 (선택) */}
           <CurrencyInput
             label="피상속인 자본적 지출액 (원) — 선택"
-            hint="피상속인이 보유 기간 중 지출한 인테리어·증축 등 — 없으면 비워두세요"
+            hint="피상속인이 보유 기간 중 지출한 인테리어·증축 등. 소법 §97의2④1호의 취득가액에 합산되어 가업상속공제적용률이 곱해집니다 — 없으면 비워두세요"
             value={String(fb.decedentCapitalExpenditure ?? "")}
             onChange={(v) => {
               const n = parseInt(v.replace(/,/g, ""), 10);
@@ -239,16 +238,27 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
             }}
           />
 
-          {/* ⑥ 상속인 자본적 지출액 (선택) */}
-          <CurrencyInput
-            label="상속인 자본적 지출액 (원) — 선택"
-            hint="상속 취득 후 상속인이 지출한 자본적 지출 (소법 §97①2호 가목) — 없으면 비워두세요"
-            value={String(fb.heirCapitalExpenditure ?? "")}
-            onChange={(v) => {
-              const n = parseInt(v.replace(/,/g, ""), 10);
-              patchFb({ heirCapitalExpenditure: isFinite(n) && n > 0 ? n : undefined });
-            }}
-          />
+          {/* 상속인 자본적 지출액은 자산-수준 필요경비로 일원화 (2026-08-11).
+              여기에 별도 입력구를 두면 자산-수준 입력과 이중 공제가 되고, 그것을 validation으로
+              막으면 "UI 통과 ↔ validate 차단" 모순이 생긴다. */}
+          <p className="text-xs text-muted-foreground">
+            상속인이 상속 취득 후 지출한 자본적 지출(소법 §97①2호)은 이 카드가 아니라
+            <strong> 자산의 필요경비 입력란</strong>에 적으세요.
+          </p>
+
+          {/* G-2/G-3 — 대상 자산 범위. 판정 근거가 양도일에 따라 갈린다(계획서 §3.3).
+              세액 게이트가 아니라 안내다 — "이 자산이 공제받은 자산인가"는 이 카드를 켜는
+              행위로 이미 선언되므로, 별도 토글을 두면 같은 선언을 두 번 받게 된다. */}
+          <p className="text-xs text-muted-foreground">
+            {(() => {
+              const basis = transferDate || asset.acquisitionDate;
+              if (!basis) return "대상 자산은 가업상속공제를 실제로 받은 자산에 한정됩니다.";
+              return isFamilyBusinessAssetScopeDecreeEra(new Date(basis))
+                ? "대상 자산은 개인가업의 사업용 자산 또는 법인가업의 주식등입니다 (소득세법 시행령 §163의2④)."
+                : "대상 자산은 가업상속공제를 실제로 받은 자산에 한정됩니다 (대법원 2026두30294 — 공제받은 주식과 받지 않은 주식을 구분·관리).";
+            })()}
+            {" "}공제받지 않은 자산이 섞여 있으면 자산을 나누어 입력하세요.
+          </p>
 
           {/* 의제 취득가액 미리보기 */}
           {previewValue !== null && (

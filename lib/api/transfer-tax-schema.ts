@@ -430,7 +430,6 @@ const propertyBaseShape = {
     fbDeductionAppliedRate: z.number().min(0).max(1),
     inheritanceDate: z.string().date(),
     decedentCapitalExpenditure: z.number().int().nonnegative().optional(),
-    heirCapitalExpenditure: z.number().int().nonnegative().optional(),
   }).optional(),
   /**
    * ⑫ 재개발/재건축 입력 (시행령 §166 본문) — sibling 파일 분리(800줄 정책).
