@@ -63,7 +63,7 @@ function run(over: Record<string, unknown> = {}) {
     transferLandPricePerSqm: T_LAND,
     transferBuildingStdPrice: T_BLDG,
     zoneType: "general_residential",
-    isUnregistered: false,
+    unapprovedBuilding: false,
     actualAcquisitionPrice: 2_500_000_000,
     actualExpenses: 0,
     acquisitionLandPricePerSqm: A_LAND,
@@ -127,15 +127,20 @@ describe("W-5 — 자본적지출은 취득시 · 양도비는 양도시 비율"
  * 🔑 **세액으로도 잰다.** 배분만 바뀌면 「표시만 달라진 것 아니냐」는 반문이 가능하다.
  * 토지·건물 **세율이 갈리는** 구성에서는 세액이 실제로 움직인다.
  *
- * 미등기(§104③) — 토지가 전부 비사업용초과분 카드로 떨어져 토지·건물 세율이 갈린다.
+ * 허가·사용승인 미이행(「지방세법 시행령」 §101① 단서) — 토지가 전부 비사업용초과분 카드로
+ * 떨어져 토지·건물 세율이 갈린다.
+ *
+ * ⚠️ **§104③ 미등기양도자산이 아니다.** 종전 주석이 「미등기(§104③)」라고 적고 플래그 이름도
+ *    `isUnregistered`였으나 실제로 타는 것은 NBL 배율 판정(`judgeAppurtenantLandExcess`)이다.
+ *    2026-08-11 개명으로 드러났다 — payload가 `as` 캐스팅이라 타입이 잡아주지 않았다.
  * 실측: 종전(둘 다 취득시) **1,031,095,740** → 현행 **1,031,013,501** = **82,239원** 차이.
  */
 describe("W-5 — 세율이 갈리면 세액이 움직인다", () => {
-  const ANS_UNREGISTERED_TAX = 1_031_013_501;
+  const ANS_UNAPPROVED_TAX = 1_031_013_501;
 
-  it("🔴 미등기 케이스 — 결정세액이 성질별 안분에 반응한다", () => {
-    const r = run({ isUnregistered: true, capitalExpenditure: 30_000_000, transferExpense: 10_000_000 });
-    expect(r.tax).toBe(ANS_UNREGISTERED_TAX);
+  it("🔴 허가·사용승인 미이행 케이스 — 결정세액이 성질별 안분에 반응한다", () => {
+    const r = run({ unapprovedBuilding: true, capitalExpenditure: 30_000_000, transferExpense: 10_000_000 });
+    expect(r.tax).toBe(ANS_UNAPPROVED_TAX);
   });
 
   it("세율이 같은 기본 케이스에서는 세액이 불변 — 총액 보존의 귀결", () => {

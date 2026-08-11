@@ -120,5 +120,5 @@ export interface CommercialBuildingFormSlice {
    * 「지방세법 시행령」 §101① 단서 — true 시 배율과 무관하게 부속토지 전량 비사업용.
    * 무허가 신축 + 불법 용도변경(허가·사용승인 미이행) 포함 — 법제처 해석례 25-0823.
    */
-  cbIsUnregistered: boolean;
+  cbUnapprovedBuilding: boolean;
 }

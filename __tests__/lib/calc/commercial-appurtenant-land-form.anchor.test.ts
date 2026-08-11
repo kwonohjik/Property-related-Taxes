@@ -28,7 +28,7 @@ describe("F-1 (①②③) — store 기본값·마이그레이션", () => {
     expect(a.cbTotalLandArea).toBe("");
     expect(a.cbTotalBuildingFootprintArea).toBe("");
     expect(a.cbZoneType).toBe("");
-    expect(a.cbIsUnregistered).toBe(false);
+    expect(a.cbUnapprovedBuilding).toBe(false);
   });
 });
 
@@ -51,15 +51,15 @@ describe("F-2 (⑬) — API 변환", () => {
     ).toBeUndefined();
   });
 
-  it("§101① 단서 시 zoneType을 생략하고 isUnregistered를 보낸다", () => {
+  it("§101① 단서 시 zoneType을 생략하고 unapprovedBuilding를 보낸다", () => {
     expect(
       buildCommercialAppurtenantLand(
-        cbAsset({ ...FULL, cbZoneType: "", cbIsUnregistered: true }),
+        cbAsset({ ...FULL, cbZoneType: "", cbUnapprovedBuilding: true }),
       ),
     ).toEqual({
       totalLandArea: 1200,
       totalBuildingFootprintArea: 200,
-      isUnregistered: true,
+      unapprovedBuilding: true,
     });
   });
 
@@ -110,7 +110,7 @@ describe("F-3 (⑧) — validate가 API 변환 조건과 일치한다", () => {
 
   it("§101① 단서면 용도지역 없이도 통과", () => {
     expect(
-      appurtenantError(cbAsset({ ...FULL, cbZoneType: "", cbIsUnregistered: true })),
+      appurtenantError(cbAsset({ ...FULL, cbZoneType: "", cbUnapprovedBuilding: true })),
     ).toBeNull();
   });
 

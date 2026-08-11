@@ -79,11 +79,11 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
         variant="chip"
         title="허가·사용승인 미이행 건축물"
         description="건축허가·사용승인을 받지 않았거나, 용도변경 허가·사용승인 없이 용도를 바꿔 사용 중인 건축물. 부속토지가 재산세 별도합산에서 제외되어 토지 전체가 비사업용 (배율 계산 없음)"
-        checked={asset.cbIsUnregistered}
-        onCheckedChange={(v) => onChange({ cbIsUnregistered: v })}
+        checked={asset.cbUnapprovedBuilding}
+        onCheckedChange={(v) => onChange({ cbUnapprovedBuilding: v })}
       />
 
-      {asset.cbIsUnregistered ? (
+      {asset.cbUnapprovedBuilding ? (
         <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-700">
           허가·사용승인 미이행 — 부속토지 전체 비사업용 (배율 계산 없음)
           <span className="mt-1 block text-caption text-rose-600">

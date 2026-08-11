@@ -24,7 +24,8 @@
  * 단서의 "허가 등"·"사용승인"이 「건축법」 §11 건축허가·§22 사용승인으로 한정되지 않으며,
  * **§19②1호 용도변경 허가**를 받지 않거나 **§19⑤ 본문·§22 사용승인**을 받지 않고 용도를
  * 변경해 사용 중인 경우도 포함된다고 회답했다(용도변경 이후 도래하는 과세기준일 기점).
- * ⇒ 입력 플래그 이름은 `isUnregistered`이나 의미는 **"허가·사용승인 미이행"** 전반이다.
+ * ⇒ 그래서 플래그 이름이 `unapprovedBuilding`이다. **§104③ 미등기양도자산과 무관하다** —
+ *   종전 이름 `isUnregistered`가 그 혼동을 실제로 만들었다(2026-08-11 개명).
  *
  * ## 미구현 (입력 부재)
  *
@@ -43,7 +44,7 @@ import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 
 /** §101① 단서 해당 시 표시 문구 — 배율 없이 전량 비사업용. */
-const UNREGISTERED_DETAIL = "허가·사용승인 미이행 건축물 — 전체 비사업용 (「지방세법 시행령」 제101조 제1항 단서)";
+const UNAPPROVED_DETAIL = "허가·사용승인 미이행 건축물 — 전체 비사업용 (「지방세법 시행령」 제101조 제1항 단서)";
 
 export interface AppurtenantLandExcessInput {
   /** 부속토지 전체 면적 (㎡) */
@@ -56,7 +57,7 @@ export interface AppurtenantLandExcessInput {
    * §101① 단서 해당 여부 — 허가·사용승인 미이행(불법 용도변경 포함, 해석례 25-0823).
    * true면 배율과 무관하게 부속토지 전량이 비사업용이다.
    */
-  isUnregistered?: boolean;
+  unapprovedBuilding?: boolean;
   /**
    * 오류 메시지 접두사 — 어느 입력 경로에서 났는지 사용자가 알 수 있게 한다.
    * 예: `"일반건물"`, `"일반건물(증축)"`, `"일반건물(실거래가)"`, `"상업용건물"`.
@@ -88,16 +89,16 @@ export interface AppurtenantLandExcessResult {
 export function judgeAppurtenantLandExcess(
   input: AppurtenantLandExcessInput,
 ): AppurtenantLandExcessResult {
-  const { landArea, buildingFootprintArea, zoneType, isUnregistered, context } = input;
+  const { landArea, buildingFootprintArea, zoneType, unapprovedBuilding, context } = input;
 
   let multiplier: number;
   let multiplierDetail: string;
   let allowedLandArea: number;
 
-  if (isUnregistered) {
+  if (unapprovedBuilding) {
     // §101① 단서 — 배율 계산 없이 전량 비사업용
     multiplier = 0;
-    multiplierDetail = UNREGISTERED_DETAIL;
+    multiplierDetail = UNAPPROVED_DETAIL;
     allowedLandArea = 0;
   } else {
     if (!zoneType) {

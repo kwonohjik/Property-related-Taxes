@@ -166,7 +166,7 @@ export function buildGeneralBuildingValuation(
   const nblFields = {
     zoneType: asset.gbZoneType || undefined,
     isMetropolitan: asset.gbIsMetropolitan,
-    isUnregistered: asset.gbIsUnregistered,
+    unapprovedBuilding: asset.gbUnapprovedBuilding,
   };
 
   /**

@@ -283,7 +283,7 @@ export type GeneralBuildingInput = {
    *   ② 세율군 — 라우트가 토지 카드에 실어 보내면 `classifyRateGroup`이 `unregistered`
    *      버킷(§104①10호 70%)으로 분류한다.
    *
-   * ⚠️ **`isUnregistered`(아래)와 다른 축이다.** 그쪽은 「지방세법 시행령」 §101① 단서의
+   * ⚠️ **`unapprovedBuilding`(아래)과 다른 축이다.** 그쪽은 「지방세법 시행령」 §101① 단서의
    *    허가·사용승인 미이행(비사업용 판정)이고, 이름만 닮았다.
    */
   unregisteredLand?: boolean;
@@ -306,11 +306,14 @@ export type GeneralBuildingInput = {
    * 「지방세법 시행령」 §101① **단서** 해당 여부 — true 시 배율 계산 없이 토지 전체 비사업용.
    * 근거: §101①단서(별도합산 제외) + 「소득세법」 §104의3①4호나목 → 비사업용.
    *
-   * 이름은 "unregistered"이나 범위는 **허가·사용승인 미이행 전반**이다 — 무허가 신축뿐 아니라
-   * 「건축법」 §19②1호 용도변경 허가·§19⑤·§22 사용승인을 받지 않고 용도를 바꿔 사용 중인
-   * 경우도 포함된다(법제처 법령해석례 25-0823, 2026.02.03).
+   * 범위는 **허가·사용승인 미이행 전반**이다 — 무허가 신축뿐 아니라 「건축법」 §19②1호
+   * 용도변경 허가·§19⑤·§22 사용승인을 받지 않고 용도를 바꿔 사용 중인 경우도 포함된다
+   * (법제처 법령해석례 25-0823, 2026.02.03).
+   *
+   * ⚠️ **§104③ 미등기양도자산(`unregisteredLand`·`unregisteredBuilding`)과 무관하다.**
+   *    종전 이름이 `isUnregistered`여서 그 혼동을 실제로 만들었다(2026-08-11 개명).
    */
-  isUnregistered?: boolean;
+  unapprovedBuilding?: boolean;
   // ── 사례 35: 주택→상가 용도변경 (사전법규재산 2022-684·881) ──
   /** 주택→상가 단일 용도변경 토글. true 시 conversionDate·wasMultiHouseAtConversion 필수. */
   houseToCommercialConversion?: boolean;

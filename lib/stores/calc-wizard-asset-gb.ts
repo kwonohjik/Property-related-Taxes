@@ -61,13 +61,16 @@ export interface GeneralBuildingFormSlice {
   /**
    * 「지방세법 시행령」 §101① 단서 해당 여부 — true 시 부속토지 전량 비사업용.
    * 무허가 신축 + 불법 용도변경(허가·사용승인 미이행) 포함 — 법제처 해석례 25-0823.
+   *
+   * ⚠️ **§104③ 미등기양도자산(아래 `gbLandUnregistered`·`gbBuildingUnregistered`)과 무관하다.**
+   *    종전 이름이 `gbIsUnregistered`여서 그 혼동을 실제로 만들었다(2026-08-11 개명).
    */
-  gbIsUnregistered: boolean;
+  gbUnapprovedBuilding: boolean;
 
   /**
    * 「소득세법」 §104③ **미등기양도자산** — 토지 축 / 건물 축.
    *
-   * ⚠️ **바로 위 `gbIsUnregistered`와 전혀 다른 축이다.** 그쪽은 「지방세법 시행령」 §101① 단서의
+   * ⚠️ **바로 위 `gbUnapprovedBuilding`과 전혀 다른 축이다.** 그쪽은 「지방세법 시행령」 §101① 단서의
    *    허가·사용승인 미이행(부속토지 전량 비사업용)이고, 이름만 닮았다.
    *
    * 일반건물은 등기 여부를 **토지·건물 각각** 판단한다 — 둘은 별개 부동산이고 등기부도 별도라

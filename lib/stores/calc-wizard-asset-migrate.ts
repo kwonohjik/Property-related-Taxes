@@ -588,7 +588,11 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.cbTotalLandArea === undefined) a.cbTotalLandArea = "";
   if (a.cbTotalBuildingFootprintArea === undefined) a.cbTotalBuildingFootprintArea = "";
   if (a.cbZoneType === undefined) a.cbZoneType = "";
-  if (a.cbIsUnregistered === undefined) a.cbIsUnregistered = false;
+  // 2026-08-11 개명(`cbIsUnregistered` → `cbUnapprovedBuilding`) — 구 세션 값 이전.
+  if (a.cbUnapprovedBuilding === undefined) {
+    a.cbUnapprovedBuilding = a.cbIsUnregistered ?? false;
+  }
+  delete a.cbIsUnregistered;
   if (a.cbEra === undefined) a.cbEra = "";
   // §164⑥ 단서 확인 토글 — 구 세션 미보유 시 false(미확인). 기존 값 보존.
   if (a.cbAcqBuildingStdBy164_5 === undefined) a.cbAcqBuildingStdBy164_5 = false;

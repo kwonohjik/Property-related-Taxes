@@ -101,11 +101,13 @@ export const generalBuildingValuationSchema = z.object({
   /**
    * 「지방세법 시행령」 §101① **단서** 해당 여부 — true 시 배율과 무관하게 부속토지 전량 비사업용.
    *
-   * 이름은 "unregistered"이나 범위는 **허가·사용승인 미이행 전반**이다. 법제처 법령해석례
-   * 25-0823(2026.02.03)은 단서의 "허가 등"·"사용승인"이 「건축법」 §11·§22로 한정되지 않으며
-   * **§19②1호 용도변경 허가 미이행**·**§19⑤·§22 사용승인 미이행**도 포함된다고 회답했다.
+   * 범위는 **허가·사용승인 미이행 전반**이다. 법제처 법령해석례 25-0823(2026.02.03)은 단서의
+   * "허가 등"·"사용승인"이 「건축법」 §11·§22로 한정되지 않으며 **§19②1호 용도변경 허가
+   * 미이행**·**§19⑤·§22 사용승인 미이행**도 포함된다고 회답했다.
+   *
+   * ⚠️ **§104③ 미등기양도자산(아래 `unregisteredLand`·`unregisteredBuilding`)과 무관하다.**
    */
-  isUnregistered: z.boolean().optional(),
+  unapprovedBuilding: z.boolean().optional(),
   /**
    * 「소득세법」 §104③ **미등기양도자산** — 토지 축 / 건물 축.
    *
@@ -422,8 +424,8 @@ export const GB_SHARE_PROPERTY_LEVEL_PATHS = [
   // 물건 속성 — NBL 배율(「지방세법 시행령」 §101①2호·②)
   "zoneType",
   "isMetropolitan",
-  "isUnregistered",
-  // 물건 속성 — §104③ 미등기양도자산(위 `isUnregistered`와 별개 축)
+  "unapprovedBuilding",
+  // 물건 속성 — §104③ 미등기양도자산(위 `unapprovedBuilding`과 별개 축)
   "unregisteredLand",
   "unregisteredBuilding",
   // 물건 사건 ① 증축 (실가 2필드 제외 — 위 주석)
@@ -576,12 +578,12 @@ export const commercialAppurtenantLandSchema = z
     /** 용도지역 — 「지방세법 시행령」 §101② 적용배율 결정. §101① 단서 해당 시에만 생략 가능. */
     zoneType: z.string().optional(),
     /** 「지방세법 시행령」 §101① 단서 — 허가·사용승인 미이행(불법 용도변경 포함, 해석례 25-0823) */
-    isUnregistered: z.boolean().optional(),
+    unapprovedBuilding: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
     // 엔진(`appurtenant-land-excess.ts`)이 용도지역 없이는 배율을 결정하지 못하고 throw한다.
     // §101① 단서 해당 시에는 배율 자체가 불필요하므로 면제한다.
-    if (!data.isUnregistered && !data.zoneType) {
+    if (!data.unapprovedBuilding && !data.zoneType) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["zoneType"],

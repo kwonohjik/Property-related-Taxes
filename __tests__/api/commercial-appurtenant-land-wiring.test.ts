@@ -30,7 +30,7 @@ const baseBody = () => ({
   isOneHousehold: false,
   isRegulatedArea: false,
   wasRegulatedAtAcquisition: false,
-  isUnregistered: false,
+  isUnregistered: false, // §104③ 최상위 필드(필수) — 부수토지 §101① 단서 축과 다르다
   isNonBusinessLand: false,
   residencePeriodMonths: 0,
   reductions: [],
@@ -69,7 +69,7 @@ describe("W-2 (⑩) — refine: 배율을 결정할 수 없는 입력은 API에�
     const r = commercialAppurtenantLandSchema.safeParse({
       totalLandArea: 1200,
       totalBuildingFootprintArea: 200,
-      isUnregistered: true,
+      unapprovedBuilding: true,
     });
     expect(r.success).toBe(true);
   });

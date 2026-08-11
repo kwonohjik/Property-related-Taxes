@@ -71,7 +71,7 @@ describe("AL-2 — 초과 여부·비율", () => {
 
 describe("AL-3 — §101① 단서: 허가·사용승인 미이행 시 전량 비사업용", () => {
   it("배율·용도지역과 무관하게 기준면적 0 · 전량 초과", () => {
-    const r = judgeAppurtenantLandExcess({ ...base, isUnregistered: true });
+    const r = judgeAppurtenantLandExcess({ ...base, unapprovedBuilding: true });
     expect(r.multiplier).toBe(0);
     expect(r.allowedLandArea).toBe(0);
     expect(r.isWithinLimit).toBe(false);
@@ -80,11 +80,11 @@ describe("AL-3 — §101① 단서: 허가·사용승인 미이행 시 전량 �
   });
 
   it("용도지역이 없어도 차단하지 않는다 (단서가 배율 판정보다 앞선다)", () => {
-    expect(() => judgeAppurtenantLandExcess({ ...base, isUnregistered: true })).not.toThrow();
+    expect(() => judgeAppurtenantLandExcess({ ...base, unapprovedBuilding: true })).not.toThrow();
   });
 
   it("문구가 §101① 단서 범위(불법 용도변경 포함)를 반영한다 — 해석례 25-0823", () => {
-    const detail = judgeAppurtenantLandExcess({ ...base, isUnregistered: true }).multiplierDetail;
+    const detail = judgeAppurtenantLandExcess({ ...base, unapprovedBuilding: true }).multiplierDetail;
     expect(detail).toContain("허가·사용승인 미이행");
     expect(detail).toContain("제101조 제1항 단서");
   });

@@ -85,17 +85,17 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
             variant="chip"
             title="허가·사용승인 미이행 건축물"
             description="건축허가·사용승인을 받지 않았거나, 용도변경 허가·사용승인 없이 용도를 바꿔 사용 중인 건축물. 부속토지가 재산세 별도합산에서 제외되어 토지 전체가 비사업용 (배율 계산 없음)"
-            checked={asset.gbIsUnregistered}
-            onCheckedChange={(v) => onChange({ gbIsUnregistered: v })}
+            checked={asset.gbUnapprovedBuilding}
+            onCheckedChange={(v) => onChange({ gbUnapprovedBuilding: v })}
           />
-          {asset.gbIsUnregistered && (
+          {asset.gbUnapprovedBuilding && (
             <div className="flex flex-wrap items-center gap-1.5">
               <LawArticleModal legalBasis="소득세법 §104의3 ① 4호 나목" label="§104의3①4호나목" />
               <LawArticleModal legalBasis="지방세법 시행령 §101 ① 단서" label="지방세법시행령 §101①단서" />
             </div>
           )}
 
-          {!asset.gbIsUnregistered && (
+          {!asset.gbUnapprovedBuilding && (
             <>
               {/* 용도지역 */}
               <FieldCard
@@ -133,7 +133,7 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
             </>
           )}
 
-          {asset.gbIsUnregistered && (
+          {asset.gbUnapprovedBuilding && (
             <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-700">
               무허가건축물 — 토지 전체 비사업용 (배율 계산 없음)
             </div>
