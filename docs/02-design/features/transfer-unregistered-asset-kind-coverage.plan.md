@@ -332,9 +332,34 @@ const allowsUnregistered = !UNREGISTERED_EXCLUDED_KINDS.includes(primaryKind);
 **🔴 Phase B가 만든 신규 갭을 Phase C에서 잡았다**: `previewCommercialBuildingEstimated`(사이드바 프리뷰)가 엔진 input을 **화이트리스트로 재조립**하는데 `isUnregistered`가 빠져 있었다 ⇒ 미등기 CB에서 **프리뷰 3% vs 결과 0.3%**(10배). 타입이 잡아주지 않는 자리다. 배선 + anchor U-3d(mutation probe로 실효성 확인) 추가.
 GB 프리뷰(`previewGeneralBuildingEstimated`)는 **같은 payload 빌더를 재사용**하므로 자동 정합했다.
 
+### ✅ Q1 종결 (2026-08-11) — 현행 제외가 옳다
+
+**분양권·입주권은 부동산등기법상 등기할 수 있는 권리가 아니다**(채권적 권리). §104③의 「그 자산 취득에 관한 등기를 하지 아니하고 양도」라는 요건이 성립할 수 없다.
+
+⚠️ **검색되는 판례 4건에 속지 말 것** — 「분양권의 양도가 **아닌** 미등기 양도자산으로 보아」(서울행정법원 2012구단1276)·「분양권이 미등기양도제외자산에 해당 여부」(대법원 2007두15865 심리불속행) 등은 **자산 종류의 실질 판정** 사안이다. 잔금을 (거의) 완납하고 목적물이 완성된 상태에서 등기 없이 판 경우 실질을 **부동산의 미등기 양도**로 재구성한 것이지, 분양권 자체에 §104③을 적용한 것이 아니다.
+
+⇒ UI도 정합한다: 그런 사안이면 자산 종류를 **주택/건물**로 고르고 미등기를 켜면 되고, 현행 게이트가 이미 그 조합을 지원한다.
+
+§94①2호 **나목(지상권)·다목(전세권·「등기된」 부동산임차권)** 은 등기 대상이라 §104③이 적용될 수 있으나, 앱에 해당 자산 종류가 없어 범위 밖이다.
+
+### ✅ Phase D 완료 (2026-08-11) — 컴패니언 자산-수준 미등기
+
+⑫Zod(`transfer-tax-schema-sub.ts:319`)·⑭엔진 매핑(`bundled-split-helpers.ts:246`)은 **이미 있었는데** ⑬payload 빌더(`buildAssetPayload`)가 값을 싣지 않아 컴패니언 미등기가 **항상 false**였다. 입력 UI도 없었다.
+
+| 지점 | 내용 |
+|---|---|
+| ①②③ | `AssetForm.isUnregistered` + 초기값 + stale 세션 가드 |
+| ⑤ UI | 자산 카드 ① 기본정보에 chip 토글 — **`!isFirst`(컴패니언)에만**. 주 자산은 폼-전역 값을 Step4 ⑤에서 받으므로 여기 두면 dual-truth |
+| ⑬ | `buildAssetPayload`에 `isUnregistered: asset.isUnregistered` |
+| 검증 | anchor 4건(두 축 독립성 포함 · mutation probe 확인) + E2E 2건 |
+
+컴패니언 `assetKind` enum은 `housing|land|building` 3종으로 **전부 §94①1호 자산**이라 종류 게이트가 필요 없다(지분 분할 GB는 companion 경로를 쓰지 않는다 — `transfer-tax-schema-sub.ts:289`).
+
 ### ⏭️ 남은 작업
 
-**Phase D** (컴패니언 자산-수준 미등기 입력) · **Q1**(입주권·분양권 제외 근거) · **Q2**(`gbIsUnregistered` 개명 — 이름 충돌이 이번에 실제 위험으로 확인됐다) · **C-6c**(§168① 제외 사유 UI 미판단 — Q4와 동일 축)
+**Q2**(`gbIsUnregistered`·`cbIsUnregistered` 개명) · **C-6c**(§168① 제외 사유 UI 미판단 — Q4와 동일 축)
+
+> ⚠️ **Q2 착수 시점 주의**: 워크트리 `transfer-fb-lthd-95-4-latter`가 locked 상태로 병렬 진행 중이다(PR #1193 분기). 이 개명은 폼·payload·엔진 leaf·Zod에 걸쳐 12파일 50곳이고 legacy sessionStorage 마이그레이션까지 필요해, 병렬 작업의 머지를 어렵게 만든다. **기능 변화는 0**이므로 그 작업이 끝난 뒤가 안전하다.
 
 🟡 **범위 밖 기록**: `calcTax` T-1의 미등기 70% 조기 반환이 §104⑦ 다주택 중과(최고 75%)와 겹칠 때의 우열은 명문이 없다(§7 C-6b 주). GB는 주택이 아니라 이번 범위 밖 — memory `project_transfer_104_1_latter_short_term` 축과 함께 별건으로.
 

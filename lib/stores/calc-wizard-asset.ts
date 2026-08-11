@@ -71,6 +71,17 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   assetKind: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building" | "redevelopment_apt";
   /** 입주권 승계조합원 여부 (assetKind === "right_to_move_in" 일 때만 의미) */
   isSuccessorRightToMoveIn: boolean;
+  /**
+   * 「소득세법」 §104③ 미등기양도자산 — **컴패니언(2번째 이후) 자산 전용**.
+   *
+   * 주 자산은 폼-전역 `TransferFormData.isUnregistered`(Step4 ⑤ 특수 상황)를 쓴다. 일괄양도는
+   * 자산마다 등기 여부가 다를 수 있어(한 물건은 등기·다른 물건은 미등기) 자산-수준 필드가 필요하다.
+   *
+   * ⚠️ 일반건물은 이 필드를 쓰지 않는다 — 토지·건물이 별개 등기부라 `gbLandUnregistered`·
+   *    `gbBuildingUnregistered` 2축이다. 컴패니언 `assetKind` enum에도 `general_building`이
+   *    없다(지분 분할 GB는 companion 경로를 쓰지 않는다 — `transfer-tax-schema-sub.ts:289`).
+   */
+  isUnregistered: boolean;
   /** 세대 Step(Step3/4)의 1세대1주택 비과세·다주택 중과 판정 기준 대표 자산 여부 */
   isPrimaryForHouseholdFlags: boolean;
   /** 양도시점 기준시가 (안분 키, 문자열) */

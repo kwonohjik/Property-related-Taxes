@@ -65,6 +65,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     assetLabel: `자산 ${index}`,
     assetKind: "housing",
     isSuccessorRightToMoveIn: false,
+    // §104③ 미등기양도자산 — 컴패니언 자산 전용(주 자산은 폼-전역 isUnregistered)
+    isUnregistered: false,
     isPrimaryForHouseholdFlags: index === 1,
     standardPriceAtTransfer: "",
     standardPriceAtTransferLabel: "",

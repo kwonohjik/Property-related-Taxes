@@ -625,6 +625,16 @@ export function buildAssetPayload(
     // 세대 단위 — form.isOneHousehold(토글) 사용. asset.isOneHousehold는 UI 미동기화(기본 false)라
     // companion 주택이 일괄양도에서 항상 1세대1주택 비과세 미적용되던 버그 정정.
     isOneHousehold: formIsOneHousehold ?? asset.isOneHousehold,
+    /**
+     * §104③ 미등기양도자산 — **자산 단위**다(세대 단위인 위 `isOneHousehold`와 다르다).
+     *
+     * 일괄양도는 물건마다 등기 여부가 다를 수 있어 자산-수준 값을 그대로 싣는다. 주 자산은
+     * 이 함수를 거치지 않고 폼-전역 값을 쓴다(`transfer-tax-api.ts:415`).
+     *
+     * ⑫Zod(`transfer-tax-schema-sub.ts:319`)·⑭엔진 매핑(`bundled-split-helpers.ts:246`)은
+     * 이미 있었고 **여기서만 빠져 있었다** — 그래서 컴패니언 미등기가 항상 false였다.
+     */
+    isUnregistered: asset.isUnregistered,
     fixedSalePrice,
     /** 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정) */
     totalPropertyTransferPrice: fractional ? totalContractPrice : undefined,
