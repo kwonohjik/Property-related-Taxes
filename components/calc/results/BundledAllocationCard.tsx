@@ -14,6 +14,21 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { SaleSplitJudgmentBlock } from "@/components/calc/results/transfer/SaleSplitJudgmentBlock";
+// 800줄 정책 — 일반건물 3-way 요약 표(사례 33)를 별도 파일로 분리(2026-08-11).
+import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
+import {
+  BuildingStdPriceReportSection,
+  hasBuildingStdReport,
+} from "@/components/calc/results/BuildingStdPriceReportSection";
+import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  TRANSFER_PRINT_SECTIONS,
+  type TransferPrintSectionId,
+} from "@/lib/print/transfer-print-sections";
+import { downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
+import { extractRelevantBuildingStdSnapshots } from "@/lib/storage/use-auto-save-calculation";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -187,177 +202,6 @@ function PropertyCard({
   );
 }
 
-// ─── 일반건물 3-way 요약 표 ───────────────────────────────────
-
-/**
- * 일반건물 증축 케이스(사례 33) 전용 — 토지(1001)·건물1(3001)·건물2(3002) 3열 요약 표.
- * 영 §102② 결손 통산 전·후 양도소득금액을 자산별로 분리 표시.
- *
- * 진입 조건: aggregated.properties 중 propertyLabel에 "3002" 포함한 항목이 있을 때.
- */
-function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransferResult }) {
-  // 3-way 유효성 확인: 정확히 3개 카드이고, 마지막 카드가 "증축건물(3002)"일 때만 렌더
-  const props = aggregated.properties;
-  if (props.length !== 3) return null;
-  const hasExtension = props.some((p) => p.propertyLabel.includes("3002"));
-  if (!hasExtension) return null;
-
-  const land = props.find((p) => p.propertyLabel.includes("1001")) ?? props[0];
-  const bld1 = props.find((p) => p.propertyLabel.includes("3001")) ?? props[1];
-  const bld2 = props.find((p) => p.propertyLabel.includes("3002")) ?? props[2];
-
-  // 통산 분배: 건물1 결손(음수 income)이 토지·건물2로 안분 흡수됨
-  const lossOffset1 = bld1.income < 0 ? Math.abs(bld1.income) : 0;
-  // 토지·건물2의 통산 흡수분 = lossOffsetFromOtherGroup (aggregate가 채움)
-  const landOffsetAbsorbed = land.lossOffsetFromSameGroup + land.lossOffsetFromOtherGroup;
-  const bld2OffsetAbsorbed = bld2.lossOffsetFromSameGroup + bld2.lossOffsetFromOtherGroup;
-
-  const fmt = (n: number) => {
-    if (n === 0) return "0";
-    return n < 0
-      ? `△${formatKRW(Math.abs(n))}`
-      : formatKRW(n);
-  };
-
-  // 결손 통산 분배량 (토지·건물2가 흡수한 양, 건물1은 결손 전액)
-  const landOffsetRow = landOffsetAbsorbed > 0 ? `△${formatKRW(landOffsetAbsorbed)}` : "-";
-  const bld1OffsetRow = lossOffset1 > 0 ? `+${formatKRW(lossOffset1)}` : "-";
-  const bld2OffsetRow = bld2OffsetAbsorbed > 0 ? `△${formatKRW(bld2OffsetAbsorbed)}` : "-";
-
-  return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm">
-      <h3 className="font-semibold text-base mb-1">일반건물 3-자산 요약 (영 §102② 결손 통산)</h3>
-      <p className="text-xs text-muted-foreground mb-3">
-        토지(1001) · 건물1(3001, 실가) · 증축건물2(3002, 환산) 소득 라인을 분리 표시.
-        건물1 결손이 토지·건물2에 안분 흡수됩니다.
-      </p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-xs text-muted-foreground">
-              <th className="pb-1 pr-2 text-left font-normal">구분</th>
-              <th className="pb-1 pr-2 text-right font-normal">
-                토지
-                <span className="ml-1 text-micro text-sky-600">(1001)</span>
-              </th>
-              <th className="pb-1 pr-2 text-right font-normal">
-                건물1
-                <span className="ml-1 text-micro text-emerald-600">(3001)</span>
-              </th>
-              <th className="pb-1 pr-2 text-right font-normal">
-                건물2
-                <span className="ml-1 text-micro text-fuchsia-600">(3002·증축)</span>
-              </th>
-              <th className="pb-1 text-right font-normal">합계</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* 양도가액 */}
-            <tr className="border-b border-border/40">
-              <td className="py-1 pr-2 text-muted-foreground">양도가액</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(land.transferPrice)}</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.transferPrice)}</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld2.transferPrice)}</td>
-              <td className="py-1 text-right font-mono font-semibold">
-                {formatKRW(land.transferPrice + bld1.transferPrice + bld2.transferPrice)}
-              </td>
-            </tr>
-            {/* 취득가액 */}
-            <tr className="border-b border-border/40">
-              <td className="py-1 pr-2 text-muted-foreground">취득가액</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(land.acquisitionPrice)}</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.acquisitionPrice)}</td>
-              <td className="py-1 pr-2 text-right font-mono">
-                {formatKRW(bld2.acquisitionPrice)}
-                <span className="ml-1 text-micro text-fuchsia-600">(환산)</span>
-              </td>
-              <td className="py-1 text-right font-mono font-semibold">
-                {formatKRW(land.acquisitionPrice + bld1.acquisitionPrice + bld2.acquisitionPrice)}
-              </td>
-            </tr>
-            {/* 필요경비 */}
-            <tr className="border-b border-border/40">
-              <td className="py-1 pr-2 text-muted-foreground">필요경비</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(land.necessaryExpense)}</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.necessaryExpense)}</td>
-              <td className="py-1 pr-2 text-right font-mono">
-                {formatKRW(bld2.necessaryExpense)}
-                <span className="ml-1 text-micro text-muted-foreground">(개산공제 §163⑥)</span>
-              </td>
-              <td className="py-1 text-right font-mono font-semibold">
-                {formatKRW(land.necessaryExpense + bld1.necessaryExpense + bld2.necessaryExpense)}
-              </td>
-            </tr>
-            {/* 양도차익 */}
-            <tr className="border-b border-border/40">
-              <td className="py-1 pr-2 font-medium">양도차익</td>
-              <td className="py-1 pr-2 text-right font-mono font-medium">{fmt(land.transferGain)}</td>
-              <td className={`py-1 pr-2 text-right font-mono font-medium ${bld1.transferGain < 0 ? "text-rose-600" : ""}`}>
-                {fmt(bld1.transferGain)}
-              </td>
-              <td className="py-1 pr-2 text-right font-mono font-medium">{fmt(bld2.transferGain)}</td>
-              <td className="py-1 text-right font-mono font-semibold">
-                {fmt(land.transferGain + bld1.transferGain + bld2.transferGain)}
-              </td>
-            </tr>
-            {/* 장기보유공제 */}
-            <tr className="border-b border-border/40">
-              <td className="py-1 pr-2 text-muted-foreground">장기보유공제</td>
-              <td className="py-1 pr-2 text-right font-mono">△{formatKRW(land.longTermHoldingDeduction)}</td>
-              <td className="py-1 pr-2 text-right font-mono text-muted-foreground">
-                {bld1.longTermHoldingDeduction > 0 ? `△${formatKRW(bld1.longTermHoldingDeduction)}` : "0"}
-              </td>
-              <td className="py-1 pr-2 text-right font-mono">
-                {bld2.longTermHoldingDeduction > 0 ? `△${formatKRW(bld2.longTermHoldingDeduction)}` : "0"}
-              </td>
-              <td className="py-1 text-right font-mono font-semibold">
-                △{formatKRW(land.longTermHoldingDeduction + bld1.longTermHoldingDeduction + bld2.longTermHoldingDeduction)}
-              </td>
-            </tr>
-            {/* 양도소득금액 (통산 전) */}
-            <tr className="border-b border-border/40 bg-muted/20">
-              <td className="py-1 pr-2 font-medium">양도소득금액</td>
-              <td className="py-1 pr-2 text-right font-mono font-medium">{fmt(land.income)}</td>
-              <td className={`py-1 pr-2 text-right font-mono font-medium ${bld1.income < 0 ? "text-rose-600" : ""}`}>
-                {fmt(bld1.income)}
-              </td>
-              <td className="py-1 pr-2 text-right font-mono font-medium">{fmt(bld2.income)}</td>
-              <td className="py-1 text-right font-mono font-semibold">
-                {fmt(land.income + bld1.income + bld2.income)}
-              </td>
-            </tr>
-            {/* 영 §102② 통산 흡수 */}
-            <tr className="border-b border-border/40">
-              <td className="py-1 pr-2 text-muted-foreground text-caption">
-                결손 통산 (영§102②)
-              </td>
-              <td className="py-1 pr-2 text-right font-mono text-rose-600 text-xs">{landOffsetRow}</td>
-              <td className="py-1 pr-2 text-right font-mono text-emerald-600 text-xs">{bld1OffsetRow}</td>
-              <td className="py-1 pr-2 text-right font-mono text-rose-600 text-xs">{bld2OffsetRow}</td>
-              <td className="py-1 text-right font-mono text-xs text-muted-foreground">0</td>
-            </tr>
-            {/* 통산 후 양도소득금액 */}
-            <tr className="bg-muted/40 font-semibold">
-              <td className="py-1.5 pr-2 text-sm">통산 후 양도소득금액</td>
-              <td className="py-1.5 pr-2 text-right font-mono">{formatKRW(land.incomeAfterOffset)}</td>
-              <td className="py-1.5 pr-2 text-right font-mono">{formatKRW(bld1.incomeAfterOffset)}</td>
-              <td className="py-1.5 pr-2 text-right font-mono">{formatKRW(bld2.incomeAfterOffset)}</td>
-              <td className="py-1.5 text-right font-mono">
-                {formatKRW(land.incomeAfterOffset + bld1.incomeAfterOffset + bld2.incomeAfterOffset)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        양도소득금액 합계는 통산 전후 동일하지만,{" "}
-        <strong>자산별 분포가 변경</strong>됩니다. 건물1 결손이 토지·건물2 양수에 흡수되어
-        세율 적용 기준 양도소득금액이 자산 단위로 재분배됩니다 (영 §102②).
-      </p>
-    </div>
-  );
-}
-
 // ─── 감면 타입 레이블 ─────────────────────────────────────────
 
 const REDUCTION_TYPE_LABELS: Record<string, string> = {
@@ -510,8 +354,47 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
 // ─── 메인 컴포넌트 ────────────────────────────────────────────
 
 export function BundledAllocationCard({ apportionment, aggregated, ownershipMap, formData, transferBurdenedGiftBreakdown, onBack, onReset }: Props) {
+  /**
+   * 출력 항목 선택 — 단건(`TransferTaxResultView`)과 동일한 패널.
+   * 일반건물·일괄양도는 이 카드가 결과뷰 종착지인데 종전에는 패널 자체가 없어
+   * 인쇄·PDF를 항목별로 고를 수 없었다(건물 기준시가 계산서 포함 — 2026-08-11 사용자 제보).
+   */
+  const [selectedPrintIds, setSelectedPrintIds] = useState<Set<string>>(() => new Set());
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const availablePrintIds = useMemo<Set<TransferPrintSectionId>>(() => {
+    const s = new Set<TransferPrintSectionId>(["form-table", "detailed-statement", "calculation"]);
+    if (hasBuildingStdReport({ assets: formData.assets })) s.add("building-std-report");
+    return s;
+  }, [formData]);
+
+  const handlePrintPdf = (pdfSections: string[]) =>
+    downloadSelectedPdf(
+      {
+        taxType: "transfer",
+        taxTypeLabel: "양도소득세",
+        // 합산 결과를 단건 result 형태로 어댑팅(신고서 표와 같은 어댑터 — 단일 소스).
+        resultData: aggregateToFilingResult(aggregated) as unknown as Record<string, unknown>,
+        // 건물 기준시가 계산서 PDF는 inputData.buildingStdSnapshots에서 재유도.
+        inputData: { buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: formData.assets }) },
+        filenamePrefix: "양도소득세_계산결과",
+      },
+      pdfSections,
+      setPdfBusy,
+    );
+
   return (
     <div className="space-y-6">
+      {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
+      <PrintSelectionPanel
+        allGroups={TRANSFER_PRINT_SECTIONS}
+        selectedIds={selectedPrintIds}
+        availableIds={availablePrintIds}
+        onChange={setSelectedPrintIds}
+        onPrintPdf={handlePrintPdf}
+        pdfReady={true}
+        pdfBusy={pdfBusy}
+      />
       {/* 부담부증여 §159·증여세 통합 명세 (일반건물 부담부증여 모드 전용) */}
       {transferBurdenedGiftBreakdown && (
         <BurdenedGiftDetailCard
@@ -671,6 +554,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         const hasRedev = !!adaptedResult.redevelopmentDetail;
         return (
           <>
+            <PrintSection id="form-table" selectedIds={selectedPrintIds}>
             <FilingFormTable
               result={adaptedResult}
               formData={formData}
@@ -686,13 +570,16 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
                   : undefined
               }
             />
+            </PrintSection>
             {/* ── 계산결과 상세명세서 (다건 모드) ── */}
-            <DetailedCalculationStatementCard
-              result={adaptedResult}
-              formData={formData}
-              asset={formData.assets[0]}
-              aggregate={aggregateMeta}
-            />
+            <PrintSection id="detailed-statement" selectedIds={selectedPrintIds}>
+              <DetailedCalculationStatementCard
+                result={adaptedResult}
+                formData={formData}
+                asset={formData.assets[0]}
+                aggregate={aggregateMeta}
+              />
+            </PrintSection>
           </>
         );
       })()}
@@ -700,7 +587,8 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
       {/* 일반건물 3-way 요약 표 (사례 33 증축 케이스 — 토지·건물1·건물2) */}
       <GeneralBuilding3WayTable aggregated={aggregated} />
 
-      {/* 자산별 세액 (요약 카드) */}
+      {/* 자산별 세액 (요약 카드) + 합산 과세 내역 = 출력 항목 「핵심 결과·계산 내역」 */}
+      <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
       <div className="space-y-3">
         <h3 className="font-semibold text-base">자산별 계산 결과</h3>
         {aggregated.properties.map((p) => (
@@ -722,6 +610,19 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
 
       {/* 합산 과세 내역 (납부세액 요약 대체) */}
       <AggregatedTaxSummary aggregated={aggregated} />
+      </PrintSection>
+
+      {/*
+        건물 기준시가 계산서 (모달 스냅샷 재유도 — 스냅샷 있을 때만 렌더)
+
+        🔴 일반건물은 토지·건물 카드로 분해돼 **bundled 결과**로 오므로 이 카드가 종착지다.
+           종전에는 단건(`TransferTaxResultView`)·겸용·상속·증여 뷰에만 배선돼 있어,
+           「2시점 건물기준시가 일괄 계산」으로 스냅샷을 저장해도 일반건물에서는 화면·인쇄·PDF
+           어디에도 계산서가 나오지 않았다(2026-08-11 사용자 제보).
+      */}
+      <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>
+        <BuildingStdPriceReportSection inputData={{ assets: formData.assets }} />
+      </PrintSection>
 
       {/* 하단 네비게이션 버튼 — 입력 단계 네비와 통일 (컴팩트 nav + 글자폭 CTA) */}
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">

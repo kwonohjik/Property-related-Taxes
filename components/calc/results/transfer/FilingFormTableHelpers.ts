@@ -11,6 +11,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
+import { partAcquisitionDates } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type {
   AggregateTransferResult,
   PerPropertyBreakdown,
@@ -310,7 +311,7 @@ export function holdingPeriodFromDates(acq?: string, transfer?: string): string 
  * GB(일반건물) 카드 propertyId별 정확한 취득일 산출.
  *
  * 엔진 내부 카드의 acquisitionDate를 UI에서도 동일하게 표시하기 위한 도메인 매핑:
- *  - 토지 카드(land·land_business·land_nbl) → 토지 취득일 (asset.acquisitionDate)
+ *  - 토지 카드(land·land_business·land_nbl) → 토지 취득일 (`partAcquisitionDates(asset).land`)
  *  - 원건물 카드(building·building1) → 건물 취득일 (M-1a 이후 `acquisitionDate`가 건물 취득일)
  *  - 증축건물 카드(building2) → 증축일 (gbExtensionDate, 영 §162①4호 빠른 날 — 사례 33)
  *
@@ -330,7 +331,11 @@ export function getAcqDateForCard(asset: import("@/lib/stores/calc-wizard-asset"
   if (base === "building2") {
     return asset.gbExtensionDate || "";
   }
-  return asset.acquisitionDate || "";
+  // 🔴 토지 카드는 **토지 취득일**이다 — M-1a 이후 `acquisitionDate`는 건물 취득일이라
+  //    그대로 쓰면 신축(자가건축)처럼 토지를 먼저 산 자산에서 토지 열 취득일자·보유기간이
+  //    건물 기준으로 표시된다(장특공제는 엔진이 토지 취득일로 계산하므로 표시만 어긋난다).
+  //    기산일 식은 엔진(`general-building-valuation.ts:412`)·API 변환과 **같은 단일 소스**를 쓴다.
+  return partAcquisitionDates(asset).land;
 }
 
 /**
