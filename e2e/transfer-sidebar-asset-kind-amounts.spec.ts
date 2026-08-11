@@ -160,8 +160,10 @@ test.describe("사이드바 자산 종류별 취득가액·필요경비", () => 
     const aside = page.locator('[data-slot="wizard-sidebar"]');
     await expect(aside.getByText("양도가액")).toBeVisible();
 
-    // 계산 전 — 환산은 전용 산식이라 «계산 후 표시»가 정답(공통 §176의2② 식으로 미리 계산하면 오표시).
-    await expect(sidebarRow(page, "취득가액")).toContainText("계산 후 표시");
+    // 계산 전 — 2026-08-11부터 전용 엔진 함수를 재사용한 **환산 프리뷰**가 표시된다
+    // (종전에는 «계산 후 표시»였다). 그 값이 계산 후와 같은지는
+    // `transfer-sidebar-estimated-preview.spec.ts`가 전담한다.
+    await expect(sidebarRow(page, "취득가액")).toContainText(/[0-9]{1,3}(,[0-9]{3})+/);
 
     // 계산 실행
     await page.getByRole("button", { name: "가산세", exact: true }).first().click();
