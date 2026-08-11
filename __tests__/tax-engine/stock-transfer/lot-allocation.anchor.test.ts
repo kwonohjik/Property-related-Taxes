@@ -41,6 +41,8 @@ function makeNonMajorLotDetail(totalGain: number): LotMatchingDetail {
     totalGain,
     shortTermGain: 0,
     longTermGain: totalGain,
+    carryoverDonorCapex: 0,
+    carryoverGiftTaxApportioned: 0,
     warnings: [],
   };
 }

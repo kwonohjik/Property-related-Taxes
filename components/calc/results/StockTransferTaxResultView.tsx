@@ -36,6 +36,7 @@ import {
 } from "@/lib/print/stock-transfer-print-sections";
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDetailCard";
+import { StockCarryoverComparisonCard } from "@/components/calc/results/StockCarryoverComparisonCard";
 import { LotCapitalAdjustmentsCard } from "@/components/calc/results/LotCapitalAdjustmentsCard";
 import { PostListingDetailCard } from "@/components/calc/results/PostListingDetailCard";
 import { CaseFortyNineFormulaCard } from "@/components/calc/stock-transfer/CaseFortyNineFormulaCard";
@@ -501,6 +502,11 @@ export function StockTransferTaxResultView({
           </p>
         )}
       </div>
+
+      {/* §97의2① 이월과세 적용/미적용 비교 (carryover_gift 종목 또는 이월과세 lot 보유 시) */}
+      {result.carryoverDetail && (
+        <StockCarryoverComparisonCard detail={result.carryoverDetail} />
+      )}
 
       {/* 분할 매수·분할 양도 매칭 상세 (split 모드만) */}
       {result.lotMatchingDetail && <LotMatchingDetailCard detail={result.lotMatchingDetail} />}

@@ -73,6 +73,13 @@ function mapAcquisitionLotToBody(lot: AcquisitionLotForm): Record<string, unknow
     if (lot.donorAcquisitionDate) o.donorAcquisitionDate = lot.donorAcquisitionDate;
     const donorPrice = parseIntOrUndef(lot.donorAcquisitionPrice ?? "");
     if (donorPrice !== undefined) o.donorAcquisitionPrice = donorPrice;
+    // §97의2①2호 증여자 자본적지출 · ①3호 증여세(산출세액 + 과세가액 = 안분 분모)
+    const donorCapex = parseIntOrUndef(lot.donorCapitalExpenditure ?? "");
+    if (donorCapex !== undefined) o.donorCapitalExpenditure = donorCapex;
+    const donorGiftTax = parseIntOrUndef(lot.donorGiftTaxAmount ?? "");
+    if (donorGiftTax !== undefined) o.donorGiftTaxAmount = donorGiftTax;
+    const donorGiftBase = parseIntOrUndef(lot.donorGiftTaxableValue ?? "");
+    if (donorGiftBase !== undefined) o.donorGiftTaxableValue = donorGiftBase;
     if (lot.donorRelation) o.donorRelation = lot.donorRelation;
     if (lot.donorDeceased) o.donorDeceased = true;
   }
