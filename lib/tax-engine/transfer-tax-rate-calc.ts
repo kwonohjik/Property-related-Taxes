@@ -1,27 +1,26 @@
 /**
- * 양도소득세 세액 결정 헬퍼 (순수 함수)
+ * 양도소득세 **세율 결정** 헬퍼 (순수 함수) — 「소득세법」 §104 축.
  *
- * transfer-tax-helpers.ts 에서 분리한 세율·세액·감면 계산 로직.
- *   H-6.5: calculateBuildingPenalty — §114조의2 가산세
- *   H-7:   calcTax                  — 세액 결정 (T-1 ~ T-4, + T-1.5 부수토지 일체과세)
- *   H-8:   calcReductions           — 감면 계산 (R-1 ~ R-5, 조특법 §127⑦ 중복배제)
- *   H-MP:  handleMultiParcelBranch  — 다필지 분리 계산 (소령 §166)
+ *   H-7:  calcTax             — 세액 결정 (T-1 ~ T-4, + T-1.5 부수토지 일체과세)
+ *   H-7a: compareWithClause1  — §104① **후단**(둘 이상 호에 해당하면 큰 산출세액)
  *
- * 부수토지 일체과세 세율 결정 (H-9)은 appurtenant-land-rate.ts 로 분리됨.
+ * 인접 축은 각각 별 파일이다 — 아래는 **기존 import 경로 유지를 위한 재수출**뿐이다:
+ *   · §114조의2 가산세  → transfer-tax-building-penalty.ts  (재수출 O)
+ *   · 감면(조특법 §127⑦) → transfer-tax-reductions-calc.ts   (재수출 O)
+ *   · §104 각 호 분류·버킷 키 → transfer-tax-rate-clause.ts   (재수출 O)
+ *   · 부수토지 일체과세 세율  → appurtenant-land-rate.ts       (재수출 O)
+ *   · 다필지 분리(영 §166)   → transfer-tax-multi-parcel-branch.ts
+ *     ⚠️ **재수출하지 않는다** — 그쪽이 `calcTax`를 쓰므로 되받으면 순환이 된다.
  */
 
-import { addYears } from "date-fns";
 import {
   applyRate,
   calculateProgressiveTax,
   calculateHoldingPeriod,
   isSurchargeSuspended,
-  truncateToWon,
-  calculateEstimatedAcquisitionPrice,
 } from "./tax-utils";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
-import { calcBasicDeduction } from "./transfer-tax-helpers";
 import { resolveCompanionLandRate } from "./appurtenant-land-rate";
 import { getEffectiveAcquisitionDate } from "./transfer-tax-lthd-start";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
@@ -32,7 +31,7 @@ export {
   type PrimaryContextForCompanionRate,
   type CompanionLandRateResolution,
 } from "./appurtenant-land-rate";
-import type { TransferTaxInput, CalculationStep, TransferTaxResult } from "./types/transfer.types";
+import type { TransferTaxInput } from "./types/transfer.types";
 import {
   type RateClause,
   shortTermClause,
@@ -46,90 +45,9 @@ export {
   PROGRESSIVE_RATE_CLAUSES,
   clauseBucketKey,
 } from "./transfer-tax-rate-clause";
-import { TRANSFER } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
-import {
-  calculateMultiParcelTransfer,
-} from "./multi-parcel-transfer";
-import {
-  type TransferTaxPenaltyResult,
-  calculateTransferTaxPenalty,
-} from "./transfer-tax-penalty";
-import type { Pre1990LandValuationResult } from "./pre-1990-land-valuation";
-import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
-import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
-
-// ============================================================
-// H-6.5: calculateBuildingPenalty — 소득세법 §114조의2 가산세
-// ============================================================
-
-export function calculateBuildingPenalty(
-  input: TransferTaxInput,
-  acquisitionPriceForPenalty: number,
-): { penalty: number; note: string } | null {
-  if (!input.isSelfBuilt) return null;
-
-  const method = input.acquisitionMethod;
-  const transferDate = input.transferDate;
-
-  if (transferDate < new Date("2018-01-01")) return null;
-
-  const isPenaltyMethod =
-    method === "estimated" ||
-    (method === "appraisal" && transferDate >= new Date("2020-01-01"));
-  if (!isPenaltyMethod) return null;
-
-  if (input.buildingType === "extension") {
-    if (transferDate < new Date("2020-01-01")) return null;
-    if ((input.extensionFloorArea ?? 0) <= 85) return null;
-  }
-
-  if (!input.constructionDate) return null;
-  // §114조의2 ① "취득일부터 5년 이내" — "이내"는 당일 포함 해석.
-  // 정확한 날짜 비교(addYears 5)로 윤년·30일/31일 월말 경계 안전 처리.
-  // 예: 취득 2018-03-31 → 5년 시점 2023-03-31. 양도일이 ≤ 2023-03-31이면 발동, > 이면 미적용.
-  // 기존 365.25 분모 방식은 윤년에서 부정확(예: 2020-02-29 + 5년 = 2025-02-28인데 1826일 / 365.25 = 4.9986).
-  const fifthAnniversary = addYears(input.constructionDate, 5);
-  if (transferDate.getTime() > fifthAnniversary.getTime()) return null;
-
-  const penalty = applyRate(acquisitionPriceForPenalty, 0.05);
-  const typeLabel = input.buildingType === "extension" ? "증축" : "신축";
-  const methodLabel = method === "appraisal" ? "감정가액" : "환산취득가액";
-  return {
-    penalty,
-    note: `${typeLabel} 5년 이내 양도 + ${methodLabel} 적용`,
-  };
-}
-
-/**
- * §114조의2① 증축부분 한정 penalty base — 정상·손실 경로 공통 (single-source).
- * 통상(비-부담부) 환산(K-5) 양도에서 base를 증축부분 한정 환산취득가로 산출.
- *   증축부분 환산취득가 = 양도가 × (증축부분 취득기준시가 ÷ 양도시 건물 기준시가) — calculateEstimatedAcquisitionPrice 재사용.
- * - 부담부증여(transferType/acquisitionCause)는 step override가 effectiveInput.estimatedBase에 증축부분 base를 이미 실으므로 배제(fullBuildingBase 그대로).
- * - 신축·비환산·증축필드 미입력 시 fullBuildingBase(건물 전체) 유지.
- * finalize STEP 10.5(정상 이익)와 transfer-tax.ts 손실 조기반환(§114조의2② 산출세액0) 양쪽에서 호출 — dual-truth 방지.
- */
-export function resolveExtensionPenaltyBase(
-  input: TransferTaxInput,
-  fullBuildingBase: number,
-): number {
-  const isBurdenedGiftPath =
-    input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift";
-  if (
-    !isBurdenedGiftPath &&
-    input.useEstimatedAcquisition &&
-    input.buildingType === "extension" &&
-    (input.extensionStdPriceAtAcquisition ?? 0) > 0 &&
-    (input.standardPriceAtTransfer ?? 0) > 0
-  ) {
-    return calculateEstimatedAcquisitionPrice(
-      input.transferPrice,
-      input.extensionStdPriceAtAcquisition!,
-      input.standardPriceAtTransfer!,
-    );
-  }
-  return fullBuildingBase;
-}
+// re-export — §114조의2 가산세 축은 별 파일로 옮겼으나 기존 import 경로를 유지한다.
+export { calculateBuildingPenalty, resolveExtensionPenaltyBase } from "./transfer-tax-building-penalty";
 
 // ============================================================
 // H-7: calcTax — 세액 결정 (T-1 ~ T-4)
@@ -183,6 +101,57 @@ export function computeBracketBreakdown(
   };
 }
 
+/**
+ * §104① **후단** — 「하나의 자산이 다음 각 호에 따른 세율 중 둘 이상에 해당할 때에는
+ * 해당 세율을 적용하여 계산한 양도소득 산출세액 중 **큰 것**을 그 세액으로 한다」
+ *
+ * 1호는 「제94조제1항제1호·제2호 및 제4호에 따른 자산」으로 **자산 종류만** 특정한다 —
+ * 보유기간·등기·용도 한정이 **없다**. 그래서 특례 호에 해당하는 자산도 **1호에 함께 해당**하고,
+ * 두 산출세액 중 큰 것이 그 자산의 산출세액이 된다.
+ * (계획서 `docs/02-design/features/transfer-104-1-latter-short-term.plan.md` §6-B)
+ *
+ * ### 어디에 적용하는가 — 「독립 세율」 호에만
+ *
+ * | 호 | 세율 구조 | 1호가 이길 수 있나 |
+ * |---|---|---|
+ * | 8호(비사토)·§104⑦(다주택 중과) | **§55① 누진 + 가산** | **불가** — 가산 ≥ 0이라 항등식으로 1호 이상 |
+ * | 2·3호(단기)·10호(미등기)·영§167의5(부수토지 일체과세) | **독립 단일세율** | **가능** — 세율표에 종속 |
+ *
+ * ⇒ 전자는 호출하지 않는다(순수 no-op). 후자는 **항상** 호출한다 — 「40%는 누진 45%보다
+ * 낮으니 …」 같은 **세율값 가정을 코드에 심지 않기 위해서**다. 세율은 DB(`tax_rates`)에서
+ * 오므로 누진 최고세율이 오르면 그 가정이 조용히 깨진다.
+ *
+ * 🔑 **`candidateClauses`는 1호가 이길 때만 1호를 싣는다.** §104⑤2호 단서의 그룹핑 조건이
+ *   「동일한 호의 세율이 **적용**되고」라 **적용** 호가 기준이기 때문이다. 무조건 실으면
+ *   `clauseBucketKey`가 누진 호 포함으로 판정해 **세율을 키에서 빼고**, 40% 비주택과 60% 주택
+ *   단기가 같은 버킷이 된다(분양권 함정과 동형 — `presale-clause-1-bucket-guard.anchor.test.ts`).
+ *   진 특례 호는 「각 **해당** 호별」 재계산 대상으로 후보에 함께 남긴다.
+ *
+ * @param specialTax     특례 호로 계산한 산출세액
+ * @param specialClauses 그 특례 호(들) — 1호가 이겨도 「해당 호」로 함께 싣는다
+ * @returns 1호가 **더 크면** 1호 결과, 아니면 `null`(호출부가 특례 결과를 그대로 반환)
+ */
+export function compareWithClause1(
+  taxBase: number,
+  brackets: ParsedRates["brackets"],
+  specialTax: number,
+  specialClauses: readonly (RateClause | undefined)[] | undefined,
+  specialLabel: string,
+): CalcTaxResult | null {
+  const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
+  // 「큰 것」이므로 **동률에서는 바뀌지 않는다** — 특례 호가 그대로 적용 호로 남는다.
+  if (progressiveTax <= specialTax) return null;
+  return {
+    calculatedTax: progressiveTax,
+    appliedRate: baseRate,
+    progressiveDeduction: deduction,
+    surchargeSuspended: false,
+    shortTermNote: `§104① 후단: ${specialLabel} 산출세액보다 §55① 누진세액이 커 1호를 적용`,
+    rateClause: "104-1-1",
+    candidateClauses: clauseSet("104-1-1", ...(specialClauses ?? [])),
+  };
+}
+
 export function calcTax(
   taxBase: number,
   parsedRates: ParsedRates,
@@ -191,11 +160,18 @@ export function calcTax(
 ): CalcTaxResult {
   const { brackets, surchargeRates, surchargeSpecialRules } = parsedRates;
 
-  // T-1: 미등기 70% 단일세율
+  // T-1: 미등기 70% 단일세율 (§104①10호)
   if (input.isUnregistered && surchargeRates.unregistered) {
     const flatRate = surchargeRates.unregistered.flatRate;
+    const unregisteredTax = applyRate(taxBase, flatRate);
+    // §104① 후단 — 10호는 §55①과 무관한 **독립 세율**이라 비교한다(현행 70% > 45%로 늘 10호 승).
+    // ※ §104⑦ 중과와의 우열은 별개 축이고 **비교하지 않는 것이 맞다** — ④·⑦ 후단이 비교 대상을
+    //   「제1항제2호 또는 제3호」로 한정 열거해 10호를 뺐다(계획서 C-6d ·
+    //   `unregistered-104-7-precedence.anchor.test.ts`).
+    const clause1 = compareWithClause1(taxBase, brackets, unregisteredTax, ["104-1-10"], "미등기 70%");
+    if (clause1) return clause1;
     return {
-      calculatedTax: applyRate(taxBase, flatRate),
+      calculatedTax: unregisteredTax,
       appliedRate: flatRate,
       progressiveDeduction: 0,
       surchargeSuspended: false,
@@ -268,6 +244,19 @@ export function calcTax(
       if (resolution.manualRate !== undefined) {
         // 단일세율 강제 (수동 또는 주택 단기보유 70%/60%)
         const isManualOverride = input.manualHoldingPeriodOverride !== undefined;
+        // §104① 후단 — **자동 분기(주택 단기 §104①2·3호)일 때만** 비교한다.
+        // 수동 오버라이드는 사용자가 세율을 강제한 것이라 해당 호를 단정할 수 없고
+        // (그래서 아래 반환도 `rateClause`를 싣지 않는다) 후단의 전제가 성립하지 않는다.
+        if (!isManualOverride) {
+          const manualClause1 = compareWithClause1(
+            taxBase,
+            brackets,
+            applyRate(taxBase, resolution.manualRate),
+            [unifiedShortTermClause(resolution.manualRate)],
+            `부수토지 일체과세 ${Math.round(resolution.manualRate * 100)}%`,
+          );
+          if (manualClause1) return manualClause1;
+        }
         return {
           calculatedTax: applyRate(taxBase, resolution.manualRate),
           appliedRate: resolution.manualRate,
@@ -289,6 +278,18 @@ export function calcTax(
         // 자동 분기: 부수토지 일체과세 (70% 또는 60%)
         // 한도 초과분(excessArea > 0)이 있어도 단건 엔진에서는 전체 taxBase에 단일세율 적용.
         // 초과분 분리는 aggregate/route 레이어에서 companion을 별도 자산으로 분리하여 처리.
+        //
+        // §104① 후단 — 여기서 강제되는 것은 주택 단기세율(§104①2·3호)이라 **독립 세율**이다.
+        // 그 토지도 §94①1호 자산이므로 1호에 함께 해당한다 ⇒ 비교한다.
+        const unifiedClause = unifiedShortTermClause(resolution.unifiedRate);
+        const unifiedClause1 = compareWithClause1(
+          taxBase,
+          brackets,
+          applyRate(taxBase, resolution.unifiedRate),
+          [unifiedClause],
+          `부수토지 일체과세 ${Math.round(resolution.unifiedRate * 100)}%`,
+        );
+        if (unifiedClause1) return unifiedClause1;
         return {
           calculatedTax: applyRate(taxBase, resolution.unifiedRate),
           appliedRate: resolution.unifiedRate,
@@ -380,6 +381,10 @@ export function calcTax(
     const nblBaseClause: RateClause = nblCrisisExcluded ? "104-1-1" : "104-1-8";
     // §104① 후단 비교 대상이 되는 **해당 호 집합** — 승자와 무관하게 아래 두 반환이 **공유**한다.
     // 2년 이상이면 단기 호에 해당하지 않아 하나뿐이다.
+    //
+    // ※ 8호 ↔ **1호**는 비교하지 않는다 — 8호 세액은 「§55① 누진 + 가산(≥0)」이라 **항등식으로**
+    //   1호 이상이다(`compareWithClause1` 표). 위기취득 배제로 가산이 0이면 동률인데, 그때는
+    //   `nblBaseClause` 자체가 `"104-1-1"`이라 이미 1호다. 단기 호는 독립 세율이라 아래에서 비교한다.
     const nblCandidates = clauseSet(
       nblBaseClause,
       nblShortTermRate !== null ? shortTermClause(holdingMonthsTotal) : undefined,
@@ -491,6 +496,22 @@ export function calcTax(
         };
       }
     }
+    // §104① 후단 — 단기 자산도 §94①1호·2호 자산이라 **1호에 함께 해당**한다(2·3호는 독립 세율).
+    // 종전에는 이 비교가 없어 40% 단기세율이 그대로 나갔다(과소 33,935,000 @ 과세표준 19.975억).
+    // 분양권 2년 이상(60%)은 `stClause`가 이미 `"104-1-1"`이라 비교 대상이 없다.
+    // ⚠️ ⑦ 중과가 발동 중이어도 안전하다 — ⑦ 세율은 누진 + 가산이라 항상 1호 이상이고,
+    //   여기 도달했다는 것은 그 ⑦조차 단기에 졌다는 뜻이므로 1호도 진다.
+    if (stClause !== "104-1-1") {
+      const clause1 = compareWithClause1(
+        taxBase,
+        brackets,
+        shortTermTax,
+        stCandidates,
+        `단기세율 ${Math.round(shortTermFlatRate * 100)}%`,
+      );
+      if (clause1) return clause1;
+    }
+
     return {
       calculatedTax: shortTermTax,
       appliedRate: shortTermFlatRate,
@@ -524,6 +545,7 @@ export function calcTax(
         surchargeSuspended: false,
         rateClause: surchargeClause(effectiveSurchargeType),
         // 2년 이상이라 §104⑦ 후단(단기 비교)이 없다 — 해당 호가 하나뿐이다.
+        // ※ **1호**와도 비교하지 않는다 — ⑦ 세액은 「§55① 누진 + 가산(≥0)」이라 항등식으로 1호 이상이다.
         candidateClauses: clauseSet(surchargeClause(effectiveSurchargeType)),
       };
     }
@@ -548,160 +570,3 @@ export function calcTax(
 // ============================================================
 
 export { calcReductions, type ReductionsResult } from "./transfer-tax-reductions-calc";
-import { calcReductions } from "./transfer-tax-reductions-calc";
-
-// ============================================================
-// H-MP: handleMultiParcelBranch — 다필지 분리 계산 (소령 §166)
-// rawInput.parcels가 있으면 필지별 분리 계산 후 조기 반환.
-// 없으면 null 반환 → 오케스트레이터가 단일 자산 경로로 계속 진행.
-// ============================================================
-
-export interface MultiParcelBranchContext {
-  rawInput: TransferTaxInput;
-  effectiveInput: TransferTaxInput;
-  input: TransferTaxInput;
-  parsedRates: ParsedRates;
-  multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
-  pre1990LandResult: Pre1990LandValuationResult | undefined;
-  carryoverDetail: CarryoverTaxationDetail | undefined;
-  /** 다필지 필지별 취득가액 override (options.acquisitionOverridesByAssetId). 없으면 기존 동작. */
-  options?: TransferTaxAcquisitionOptions;
-}
-
-export function handleMultiParcelBranch(
-  ctx: MultiParcelBranchContext,
-  steps: CalculationStep[],
-): TransferTaxResult | null {
-  const { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, options } = ctx;
-
-  if (!rawInput.parcels || rawInput.parcels.length === 0) return null;
-
-  // acquisitionOverridesByAssetId: 필지 ID별 취득가액 override 적용 (없는 필지는 기존값 유지)
-  const overrides = options?.acquisitionOverridesByAssetId;
-  const parcelsWithOverride = overrides
-    ? rawInput.parcels.map((p) =>
-        p.id !== undefined && Object.prototype.hasOwnProperty.call(overrides, p.id)
-          ? { ...p, acquisitionMethod: "actual" as const, acquisitionPrice: overrides[p.id] }
-          : p,
-      )
-    : rawInput.parcels;
-
-  const mpResult = calculateMultiParcelTransfer({
-    totalTransferPrice: effectiveInput.transferPrice,
-    transferDate: effectiveInput.transferDate,
-    // 공익수용 §164⑨ 1호 특례 게이트 — 필지별 판정에 필요(자산-수준 값).
-    transferCause: effectiveInput.transferCause,
-    propertyType: effectiveInput.propertyType,
-    parcels: parcelsWithOverride,
-    ownershipRatio: effectiveInput.ownershipRatio,
-  });
-  for (let pi = 0; pi < mpResult.parcelResults.length; pi++) {
-    const pr = mpResult.parcelResults[pi];
-    const parcelLabel = `필지 ${pi + 1}`;
-    const expenseDesc = pr.estimatedDeduction > 0
-      ? `개산공제 ${pr.estimatedDeduction.toLocaleString()}`
-      : pr.swapApplied
-        ? `자본적지출+양도비 ${pr.expenses.toLocaleString()} (§97②단서)`
-        : pr.expenses.toLocaleString();
-    steps.push({ label: `[${parcelLabel}] 양도차익`, formula: `안분가 ${pr.allocatedTransferPrice.toLocaleString()} - 취득가 ${pr.acquisitionPrice.toLocaleString()} - 경비 ${expenseDesc}`, amount: pr.transferGain });
-    steps.push({ label: `[${parcelLabel}] 장특공제`, formula: `${(pr.longTermHoldingRate * 100).toFixed(0)}%`, amount: pr.longTermHoldingDeduction, sub: true });
-  }
-  const mpTaxableGain = mpResult.totalTransferGain;
-  const mpLtd = mpResult.totalLongTermHoldingDeduction;
-  const mpTransferIncome = mpResult.totalTransferIncome;
-  steps.push({ label: "양도차익 합계", formula: "필지별 합산", amount: mpTaxableGain, legalBasis: TRANSFER.TRANSFER_GAIN });
-  steps.push({ label: "장기보유특별공제 합계", formula: "필지별 합산", amount: mpLtd, legalBasis: TRANSFER.LONG_TERM_DEDUCTION, sub: true });
-  steps.push({ label: "양도소득금액 합계", formula: `${mpTaxableGain.toLocaleString()} - ${mpLtd.toLocaleString()}`, amount: mpTransferIncome });
-
-  const mpBasicDeduction = input.skipBasicDeduction
-    ? 0
-    : calcBasicDeduction(mpTaxableGain, mpLtd, input.annualBasicDeductionUsed ?? 0, input.isUnregistered, parsedRates.basicDeductionRules);
-  const mpTaxBase = Math.max(0, mpTransferIncome - mpBasicDeduction);
-  steps.push({ label: "기본공제", formula: `${mpBasicDeduction.toLocaleString()}`, amount: mpBasicDeduction, legalBasis: TRANSFER.BASIC_DEDUCTION });
-  steps.push({ label: "과세표준", formula: `${mpTransferIncome.toLocaleString()} - ${mpBasicDeduction.toLocaleString()}`, amount: mpTaxBase, legalBasis: TRANSFER.TAX_BASE_CALC });
-
-  const mpTaxResult = calcTax(mpTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
-  steps.push({ label: "산출세액", formula: `${mpTaxBase.toLocaleString()} × ${Math.round(mpTaxResult.appliedRate * 100)}%${mpTaxResult.progressiveDeduction ? ` - 누진공제 ${mpTaxResult.progressiveDeduction.toLocaleString()}` : ""}`, amount: mpTaxResult.calculatedTax, legalBasis: TRANSFER.TAX_RATE });
-
-  const {
-    reductionAmount: mpReduction,
-    reductionType: mpReductionType,
-    reductionTypeApplied: mpReductionTypeApplied,
-    reducibleIncome: mpReducibleIncome,
-    rentalReductionDetail: mpRentalDetail,
-    newHousingReductionDetail: mpNewHousingDetail,
-    publicExpropriationDetail: mpExproDetail,
-    selfFarmingReductionDetail: mpSelfFarmingDetail,
-  } = calcReductions(
-    mpTaxResult.calculatedTax,
-    input.reductions,
-    parsedRates.selfFarmingRules,
-    input.rentalReductionDetails,
-    parsedRates.longTermRentalRules,
-    input.newHousingDetails,
-    parsedRates.newHousingMatrix,
-    input.transferDate,
-    mpTransferIncome,
-    mpBasicDeduction,
-    mpTaxBase,
-    input.acquisitionDate,
-    input.standardPriceAtAcquisition,
-    input.standardPriceAtTransfer,
-    // F-6: §97의2·§97의5 시한·하이브리드 contractDate fallback — 메인 경로(finalize)와 동일 인자.
-    // (마지막 positional 인자 — 순서 어긋남 없음. 다필지=토지라 numeric 영향은 사실상 없으나 일관성 확보)
-    input.assetContractDate,
-  );
-  const mpDeterminedTax = truncateToWon(Math.max(0, mpTaxResult.calculatedTax - mpReduction));
-  const mpPenaltyBase = effectiveInput.acquisitionMethod === "appraisal"
-    ? (effectiveInput.appraisalValue ?? 0)
-    : 0;
-  const mpPenaltyResult = calculateBuildingPenalty(effectiveInput, mpPenaltyBase);
-  const mpPenaltyTax = mpPenaltyResult?.penalty ?? 0;
-  const mpDeterminedTaxWithPenalty = mpDeterminedTax + mpPenaltyTax;
-  const mpLocalIncomeTax = applyRate(mpDeterminedTaxWithPenalty, 0.1);
-
-  let mpFilingDelayedPenalty = 0;
-  let mpPenaltyDetail: TransferTaxPenaltyResult | undefined;
-  if (input.filingPenaltyDetails || input.delayedPaymentDetails) {
-    mpPenaltyDetail = calculateTransferTaxPenalty({
-      filing: input.filingPenaltyDetails,
-      delayedPayment: input.delayedPaymentDetails,
-    });
-    mpFilingDelayedPenalty = mpPenaltyDetail?.totalPenalty ?? 0;
-  }
-
-  return {
-    isExempt: false,
-    transferGain: mpTaxableGain,
-    taxableGain: mpTaxableGain,
-    usedEstimatedAcquisition: false,
-    penaltyBase: 0, // 다필지 분기: 가산세는 §114조의2 건물 한정으로 토지 다필지 경로에 미적용
-    longTermHoldingDeduction: mpLtd,
-    longTermHoldingRate: mpTaxableGain > 0 ? mpLtd / mpTaxableGain : 0,
-    lthdStartDate: rawInput.acquisitionDate, // 다필지: 용도변경 분기 적용 안 됨, 당초 취득일
-    basicDeduction: mpBasicDeduction,
-    taxBase: mpTaxBase,
-    appliedRate: mpTaxResult.appliedRate,
-    progressiveDeduction: mpTaxResult.progressiveDeduction,
-    calculatedTax: mpTaxResult.calculatedTax,
-    surchargeType: mpTaxResult.surchargeType,
-    surchargeRate: mpTaxResult.surchargeRate,
-    isSurchargeSuspended: mpTaxResult.surchargeSuspended,
-    reductionAmount: mpReduction,
-    reductionType: mpReductionType,
-    reductionTypeApplied: mpReductionTypeApplied,
-    reducibleIncome: mpReducibleIncome,
-    determinedTax: mpDeterminedTax,
-    penaltyTax: mpPenaltyTax,
-    localIncomeTax: mpLocalIncomeTax,
-    totalTax: mpDeterminedTaxWithPenalty + mpLocalIncomeTax + mpFilingDelayedPenalty,
-    steps,
-    rentalReductionDetail: mpRentalDetail,
-    newHousingReductionDetail: mpNewHousingDetail,
-    publicExpropriationDetail: mpExproDetail,
-    selfFarmingReductionDetail: mpSelfFarmingDetail,
-    penaltyDetail: mpPenaltyDetail,
-    parcelDetails: mpResult.parcelResults,
-  };
-}
-
