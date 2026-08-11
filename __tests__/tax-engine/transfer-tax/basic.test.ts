@@ -487,28 +487,42 @@ describe("T-INH-RATE-LONG: 상속 자산 — 피상속인 취득일 보유기간
 });
 
 // ============================================================
-// T-GIFT-RATE-LONG: 증여 — 단기보유 단일세율 판정에 증여자 취득일 통산
+// T-GIFT-RATE-LONG: 증여 — 단기보유 단일세율 판정의 기산일 (§104②2호의 범위)
+//
+// 2026-08-11 정정 — 종전에는 `acquisitionCause: "gift"`(단순 증여)에도 증여자 취득일을
+// 통산해 단기세율을 피하는 것이 기대값이었다. 「소득세법」 §104②은 예외를 **3개 호로
+// 한정 열거**하고 2호의 대상은 「**제97조의2제1항에 해당하는 자산**」(=이월과세)뿐이므로,
+// 단순 증여는 본문 원칙(해당 자산의 취득일 = 영 §162①5호 「증여받은 날」)이 적용된다.
+// ⇒ 통산 케이스를 `carryover_gift`로 옮기고, 단순 증여는 미통산으로 고정한다.
+// 상세: docs/02-design/features/transfer-104-2-2-gift-carryover-scope.plan.md §1 D-1
 // ============================================================
 
-describe("T-GIFT-RATE-LONG: 증여 자산 — 증여자 취득일 보유기간 통산 (단기 단일세율 미적용)", () => {
-  it("증여일 6개월 전 양도지만 증여자 취득일 5년 전 → 누진세율 적용", () => {
-    const input = baseInput({
+describe("T-GIFT-RATE-LONG: 증여 자산 — 세율 보유기간 기산일 (§104②2호)", () => {
+  const giftRateInput = (cause: "gift" | "carryover_gift") =>
+    baseInput({
       propertyType: "land",
       transferPrice: 600_000_000,
       acquisitionPrice: 500_000_000,
       acquisitionDate: new Date("2023-07-01"),
       transferDate: new Date("2024-01-01"),
-      acquisitionCause: "gift",
+      acquisitionCause: cause,
       donorAcquisitionDate: new Date("2019-01-01"),
       isOneHousehold: false,
       householdHousingCount: 0,
       annualBasicDeductionUsed: 2_500_000,
     });
-    const result = calculateTransferTax(input, mockRates);
+
+  it("이월과세(carryover_gift) — 증여자 취득일 통산 → 단기 단일세율 미적용", () => {
+    const result = calculateTransferTax(giftRateInput("carryover_gift"), mockRates);
     // 토지 단기 단일세율(0.50/0.40) 미적용 확인
     expect(result.appliedRate).not.toBe(0.50);
     expect(result.appliedRate).not.toBe(0.40);
     expect(result.appliedRate).toBeLessThanOrEqual(0.45);
+  });
+
+  it("단순 증여(gift) — 증여받은 날 기산 → 토지 1년 미만 단기 50%", () => {
+    const result = calculateTransferTax(giftRateInput("gift"), mockRates);
+    expect(result.appliedRate).toBe(0.50);
   });
 });
 

@@ -4,7 +4,9 @@
  * 법령 근거:
  *  - 소득세법 §104② — 보유기간 기산점 (lot별 cause 분기)
  *    1호: 상속 → 피상속인 취득일
- *    2호: §97의2 (주식은 미적용 — gift는 수증일 = lot.acquisitionDate)
+ *    2호: §97의2① 이월과세 → 증여자 취득일 (`carryover_gift`).
+ *         **2025.1.1. 이후 증여분부터** — 법률 제20615호로 §94①3호 주식등이 ①에 포섭됐다.
+ *         단순 증여(`gift`)는 §97의2① 미해당이므로 수증일 = lot.acquisitionDate
  *    3호: 합병·분할 → 종전 주식 취득일
  *  - 소득세법 §104①11호 가목 1)·2) — 단기 30% / 누진 (대주주 + 비SME)
  *  - 소령 §163⑨ — 상속/증여 lot의 평가가액 (사용자 직접 입력)
@@ -38,6 +40,7 @@ import {
   STOCK_NON_MAJOR_NON_SME_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
 import { STOCK_MAJOR_PROGRESSIVE_BRACKETS } from "./stock-rate-tables";
+import { isStockCarryoverEra } from "../data/carryover-scope-era";
 
 // ============================================================
 // §104② lot별 기산점 결정
@@ -47,8 +50,16 @@ import { STOCK_MAJOR_PROGRESSIVE_BRACKETS } from "./stock-rate-tables";
  * lot별 §104② 보유기간 기산일.
  * - purchase: lot.acquisitionDate
  * - inheritance: lot.decedentAcquisitionDate ?? lot.acquisitionDate (fallback은 validate에서 차단되어야 함)
- * - gift: lot.acquisitionDate (수증일 — 주식은 §97의2 미적용, helpers.ts:54-58)
+ * - gift: lot.acquisitionDate (수증일 — §97의2① **미해당 선언**)
+ * - carryover_gift: lot.donorAcquisitionDate (§104②2) — **2025.1.1. 이후 증여 + 1년 이내 양도**만
  * - merger_split: lot.preMergerAcquisitionDate ?? lot.acquisitionDate
+ *
+ * ⚠️ **1년 요건(§97의2① 괄호)은 여기서 판정하지 않는다.** lot 기산일은 매도 매칭 **전에**
+ * 확정되므로 양도일이 정해지지 않았고, 하나의 매수 lot이 여러 매도 lot에 걸릴 수도 있다.
+ * 생략해도 **세율 결과는 같다** — 「증여 후 1년 초과」면 수증일 기산으로도 이미 1년 이상이라
+ * §104①11호가목**2)**이고, 증여자 취득일로 소급해도 역시 가목2)다. 요건을 넘든 못 넘든
+ * 귀결이 같으므로 세율 축에서는 무해하다(단건 경로 `calcHoldingPeriod`는 양도일을 알므로 판정한다).
+ * §97의2① **본체(필요경비)**를 구현할 때는 이 요건이 실제로 갈리므로 그때 sub-lot 단위로 판정할 것.
  */
 export function resolveLotStartDate(lot: AcquisitionLot): Date {
   switch (lot.acquisitionCause) {
@@ -56,6 +67,11 @@ export function resolveLotStartDate(lot: AcquisitionLot): Date {
       return lot.decedentAcquisitionDate ?? lot.acquisitionDate;
     case "merger_split":
       return lot.preMergerAcquisitionDate ?? lot.acquisitionDate;
+    case "carryover_gift":
+      // §104②2 — 증여자 취득일. 게이트: 증여일 ≥ 2025-01-01 (부칙 법률 제20615호 §8).
+      return lot.donorAcquisitionDate && isStockCarryoverEra(lot.acquisitionDate)
+        ? lot.donorAcquisitionDate
+        : lot.acquisitionDate;
     case "gift":
     case "purchase":
     default:

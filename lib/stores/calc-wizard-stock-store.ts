@@ -122,9 +122,14 @@ export interface StockTransferFormData {
   totalIssuedShares: string;     // 정수 문자열
 
   // ── 보유기간 기산점 §104② ──
-  acquisitionCause: "purchase" | "inheritance" | "gift" | "merger_split";  // 3중 패턴 default: "purchase"
+  /**
+   * 3중 패턴 default: "purchase".
+   * `carryover_gift` = 배우자·직계존비속 증여로 **§97의2①이 적용되는** 주식(2025.1.1.~ 증여분).
+   * 단순 증여(`gift`)와 갈라 두어야 §104②2호 통산 여부를 사용자가 선언할 수 있다.
+   */
+  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "merger_split";
   decedentAcquisitionDate: string;     // 상속: 피상속인 취득일
-  donorAcquisitionDate: string;        // 증여
+  donorAcquisitionDate: string;        // 이월과세(carryover_gift): 증여자 취득일 §104②2
   preMergerAcquisitionDate: string;    // 합병·분할
 
   // ── §94①4 다목 누적 ──

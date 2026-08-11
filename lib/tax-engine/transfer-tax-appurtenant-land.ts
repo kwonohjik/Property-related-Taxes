@@ -13,6 +13,7 @@
 import { calculateHoldingPeriod } from "./tax-utils";
 import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier } from "./appurtenant-land-rate";
+import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import { TRANSFER } from "./legal-codes";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
@@ -53,12 +54,18 @@ export function resolveLandStatutoryAcquisitionDate(input: TransferTaxInput): Da
   const land = input.landAcquisitionDate;
   if (!land) return undefined;
   const useLandCause = input.landAcquisitionCause !== undefined;
-  const cause = useLandCause ? input.landAcquisitionCause : input.acquisitionCause;
-  const decedent = useLandCause ? input.landDecedentAcquisitionDate : input.decedentAcquisitionDate;
-  const donor = useLandCause ? input.landDonorAcquisitionDate : input.donorAcquisitionDate;
-  if (cause === "inheritance" && decedent) return decedent;
-  if ((cause === "gift" || cause === "carryover_gift") && donor) return donor;
-  return land;
+  // 판정은 `transfer-rate-holding-basis.ts` 단일 소스 — **단순 증여(`gift`)는 통산하지 않는다**.
+  // 종전에는 `gift`도 증여자 취득일로 소급해 주택 단기 70%를 회피시켰다(계획서 D-3④).
+  return resolveRateBasisAcquisitionDate({
+    acquisitionCause: useLandCause ? input.landAcquisitionCause : input.acquisitionCause,
+    acquisitionDate: land,
+    decedentAcquisitionDate: useLandCause
+      ? input.landDecedentAcquisitionDate
+      : input.decedentAcquisitionDate,
+    donorAcquisitionDate: useLandCause
+      ? input.landDonorAcquisitionDate
+      : input.donorAcquisitionDate,
+  });
 }
 
 /**

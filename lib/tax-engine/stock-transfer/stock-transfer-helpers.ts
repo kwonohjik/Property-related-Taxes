@@ -13,6 +13,7 @@ import {
   STOCK_ELECTRONIC_FILING_CREDIT,
 } from "@/lib/tax-engine/legal-codes/stock";
 import { resolveThresholdFromDate } from "./stock-rate-tables";
+import { isStockCarryoverEra, isWithinCarryoverPeriod } from "../data/carryover-scope-era";
 
 // ============================================================
 // 보유기간 계산 (§104②)
@@ -34,8 +35,13 @@ export interface HoldingPeriodResult {
  * 보유기간 기산점 결정 (§104②)
  * - 매매(purchase): 취득일
  * - 상속(inheritance): 피상속인 취득일 (§104②1)
- * - 증여(gift): 수증일 (주식은 §97의2 미적용 → 일반 수증일 기산)
+ * - 증여(gift): 수증일 — §97의2① **미해당 선언**이므로 통산하지 않는다
+ * - 이월과세(carryover_gift): 증여자 취득일 (§104②2) — **2025.1.1. 이후 증여분만**
  * - 합병·분할(merger_split): 종전 주식 취득일 (§104②3)
+ *
+ * ⚠️ 종전 주석은 「주식은 §97의2 미적용(토지·건물·시설물이용권 한정)」이었다.
+ *    2024.12.31. 개정(법률 제20615호·시행 2025.1.1.)으로 **§94①3호 주식등이 §97의2①에
+ *    포섭**되면서 낡았다. §104②2호는 「§97의2①에 **해당하는 자산**」이므로 함께 확장된다.
  */
 export function calcHoldingPeriod(input: StockTransferInput): HoldingPeriodResult {
   const { acquisitionCause, acquisitionDate, transferDate } = input;
@@ -50,10 +56,26 @@ export function calcHoldingPeriod(input: StockTransferInput): HoldingPeriodResul
       startDate = decedentAcquisitionDate ?? acquisitionDate;
       appliedRule = STOCK.SECTION_104_2_1_INHERITANCE_START;
       break;
+    case "carryover_gift":
+      // §104②2 — 증여자 취득일. **두 게이트를 모두 통과해야 한다.**
+      //   ⓐ 증여일 ≥ 2025-01-01 (부칙 법률 제20615호 §8 — "시행 이후 **증여받는** 자산부터")
+      //   ⓑ 양도일부터 소급 **1년** 이내 증여 (§97의2① 괄호 — 주식은 10년이 아니라 1년)
+      // 게이트를 못 넘으면 §97의2①에 해당하지 않으므로 본문 원칙(수증일)으로 돌아간다.
+      if (
+        donorAcquisitionDate &&
+        isStockCarryoverEra(acquisitionDate) &&
+        isWithinCarryoverPeriod(acquisitionDate, transferDate, "stock")
+      ) {
+        startDate = donorAcquisitionDate;
+        appliedRule = STOCK.SECTION_104_2_2_GIFT_START;
+      } else {
+        startDate = acquisitionDate;
+        appliedRule = "소득세법 §104② 본문 (§97의2① 요건 미충족 — 수증일 기산)";
+      }
+      break;
     case "gift":
-      // 주식은 §97의2 미적용 → 일반 증여 수증일(acquisitionDate) 기산
-      // donorAcquisitionDate는 §97의2 이월과세(토지·건물·시설물이용권 한정)용이므로
-      // 주식 양도세에서는 무시. acquisitionDate(수증일)를 기산점으로 사용.
+      // 단순 증여 — 「증여」 선택 자체가 §97의2① 미해당 선언이다.
+      // `donorAcquisitionDate`가 입력돼 있어도 기산에 쓰지 않는다(값의 존재 ≠ 선언).
       startDate = acquisitionDate;
       appliedRule = "소득세법 §104② 본문 (일반 증여 수증일)";
       break;

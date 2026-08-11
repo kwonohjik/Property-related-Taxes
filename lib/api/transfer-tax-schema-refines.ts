@@ -138,13 +138,12 @@ export function addPropertyRefines(
     }
   }
   if (data.acquisitionCause === "gift") {
-    if (!data.donorAcquisitionDate) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["donorAcquisitionDate"],
-        message: "증여의 경우 증여자 취득일이 필수입니다",
-      });
-    } else if (data.donorAcquisitionDate >= data.acquisitionDate) {
+    // 증여자 취득일은 **필수가 아니다** — 단순 증여의 세율 보유기간은 「증여받은 날」부터이고
+    // (§104② 본문 + 영 §162①5호), §104②2호는 이월과세(`carryover_gift`)에만 적용된다.
+    // UI validate(`transfer-tax-validate-asset.ts`)도 같은 기준이다 — 한쪽만 풀면
+    // 「UI 통과 ↔ API 400」 모순이 된다(14지점 ⑧·⑩).
+    // 값이 있으면 순서만 검증한다.
+    if (data.donorAcquisitionDate && data.donorAcquisitionDate >= data.acquisitionDate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["donorAcquisitionDate"],

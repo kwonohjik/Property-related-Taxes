@@ -132,11 +132,18 @@ export type StockTransferInput = {
   shareCount: number;
   totalIssuedShares: number;
 
-  /** 보유기간 기산점 분기 §104② */
-  acquisitionCause: "purchase" | "inheritance" | "gift" | "merger_split";
+  /**
+   * 보유기간 기산점 분기 §104②.
+   *
+   * `carryover_gift` = 배우자·직계존비속으로부터 증여받아 **§97의2①이 적용되는** 주식.
+   * 2024.12.31. 개정(법률 제20615호·시행 2025.1.1.)으로 §94①3호 주식등이 §97의2① 대상에
+   * 포섭되면서 신설됐다 — 부칙 §8이 **「시행 이후 증여받는 자산부터」**라 기준은 **증여일**이다.
+   * 단순 증여(`gift`)는 §97의2① 미해당 선언이므로 수증일 기산을 유지한다.
+   */
+  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "merger_split";
   /** 상속: 피상속인 취득일 §104②1 */
   decedentAcquisitionDate?: Date;
-  /** §97의2 적용 시 증여자 취득일 §104②2 (주식은 §97의2 미적용 → 일반 증여는 수증일 기산) */
+  /** 이월과세(`carryover_gift`): 증여자 취득일 §104②2. 단순 증여(`gift`)에서는 기산에 쓰지 않는다. */
   donorAcquisitionDate?: Date;
   /** 합병·분할: 종전 주식 취득일 §104②3 */
   preMergerAcquisitionDate?: Date;
@@ -439,13 +446,21 @@ export interface AcquisitionLot {
   shareCount: number;
   /** 1주당 단가 (원). 상속/증여 lot도 §163⑨ 평가가액을 직접 입력 */
   perShareAcquisitionPrice: number;
-  /** lot별 취득원인 — §104② 보유기간 기산점 분기 */
-  acquisitionCause: "purchase" | "inheritance" | "gift" | "merger_split";
+  /**
+   * lot별 취득원인 — §104② 보유기간 기산점 분기.
+   * `carryover_gift`는 §97의2①이 적용되는 증여(2025.1.1.~ 증여분 · 배우자·직계존비속).
+   */
+  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "merger_split";
   /** 상속 lot: 피상속인 취득일 (§104②1) */
   decedentAcquisitionDate?: Date;
   /** 합병·분할 lot: 종전 주식 취득일 (§104②3) */
   preMergerAcquisitionDate?: Date;
-  // donorAcquisitionDate 제외 — 주식은 §97의2 미적용 (helpers.ts:54-58)
+  /**
+   * 이월과세 lot: 증여자 취득일 (§104②2).
+   * 2024.12.31. 개정(법률 제20615호·시행 2025.1.1.)으로 §94①3호 주식등이 §97의2①에
+   * 포섭되면서 신설. 단순 증여(`gift`) lot에서는 기산에 쓰지 않는다.
+   */
+  donorAcquisitionDate?: Date;
 }
 
 export interface TransferLot {

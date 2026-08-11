@@ -12,10 +12,16 @@
  *  - feedback_no_silent_apportion_fallback: cause 변경 시 보조 일자 store 값 유지
  *  - feedback_useeffect_store_mirror_forbidden: 모든 변경은 onChange 직접 patch
  *
- * 기존 안내 카드 3종 보존:
+ * 안내 카드:
  *  1. 단기 30% (§104②)
  *  2. inheritance 1985.12.31. 이전 의제취득일 (시행령 §162⑦3호)
- *  3. gift 수증일 안내 (§97의2 미적용)
+ *  3. gift 수증일 안내 (§104② 본문 — §97의2① 미해당 선언)
+ *  4. carryover_gift 증여자 취득일 입력 + 2025.1.1. 게이트 안내 (§104②2)
+ *
+ * ⚠️ 2026-08-11 — 주식은 2024.12.31. 개정(법률 제20615호·시행 2025.1.1.)으로 §97의2① 대상이
+ *    되었다. 종전 안내 「§97의2는 주식에 미적용」은 그 전 법이다.
+ *    `carryover_gift`(이월과세)를 골라야 §104②2호 통산이 적용된다 — 단순 증여와 구분한다.
+ *    계획서: docs/02-design/features/transfer-104-2-2-gift-carryover-scope.plan.md
  *
  * 의제취득일 자동 적용 (시행령 §162⑦3호):
  *  - 1985.12.31. 이전 입력 시 onChange 시점에 자동 1986-01-01 patch
@@ -47,6 +53,7 @@ interface AcquisitionInfoBlockProps {
     | "acquisitionDate"
     | "acquisitionCause"
     | "decedentAcquisitionDate"
+    | "donorAcquisitionDate"
     | "preMergerAcquisitionDate"
   >;
   onChange: (patch: Partial<StockTransferFormData>) => void;
@@ -55,14 +62,21 @@ interface AcquisitionInfoBlockProps {
 export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockProps) {
   // 3중 패턴 default — store factory와 일치
   const cause = form.acquisitionCause || "purchase";
-  const dateLabel = cause === "gift" ? "수증일" : "취득일";
-  // gift만 보조 정보(§97의2 미적용) 노출. purchase 등 자명 케이스는 hint 생략.
-  const dateHint = cause === "gift" ? "수증일 — §97의2 이월과세 미적용" : undefined;
+  const isGiftLike = cause === "gift" || cause === "carryover_gift";
+  const dateLabel = isGiftLike ? "수증일" : "취득일";
+  // 증여 계열만 보조 정보 노출. purchase 등 자명 케이스는 hint 생략.
+  const dateHint =
+    cause === "gift"
+      ? "수증일 기산 — §97의2① 미적용 (§104② 본문)"
+      : cause === "carryover_gift"
+        ? "증여받은 날 — 이 날짜가 2025.1.1. 이후여야 §104②2호가 적용됩니다"
+        : undefined;
 
   // 의제취득일 자동 변환 시 사용자 입력 원본을 임시 보관 (안내 메시지용)
   // store에는 변환된 값만 들어가므로 원본은 local state로만 유지
   const [acqOriginal, setAcqOriginal] = useState<string | null>(null);
   const [decedentOriginal, setDecedentOriginal] = useState<string | null>(null);
+  const [donorOriginal, setDonorOriginal] = useState<string | null>(null);
   const [preMergerOriginal, setPreMergerOriginal] = useState<string | null>(null);
 
   const handleAcqDateChange = (v: string) => {
@@ -75,6 +89,12 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
     const { coerced, applied } = coerceDeemed(v);
     setDecedentOriginal(applied ? v : null);
     onChange({ decedentAcquisitionDate: coerced });
+  };
+
+  const handleDonorDateChange = (v: string) => {
+    const { coerced, applied } = coerceDeemed(v);
+    setDonorOriginal(applied ? v : null);
+    onChange({ donorAcquisitionDate: coerced });
   };
 
   const handlePreMergerDateChange = (v: string) => {
@@ -122,7 +142,12 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
           options={[
             { value: "purchase", label: "매매", description: "취득일 기산" },
             { value: "inheritance", label: "상속", description: "피상속인 취득일 (§104②1)" },
-            { value: "gift", label: "증여", description: "수증일 (§97의2 미적용)" },
+            { value: "gift", label: "증여", description: "수증일 기산 (§104② 본문)" },
+            {
+              value: "carryover_gift",
+              label: "이월과세(증여)",
+              description: "증여자 취득일 (§104②2)",
+            },
             { value: "merger_split", label: "합병·분할", description: "종전 주식 (§104②3)" },
           ]}
         />
@@ -158,7 +183,41 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
       {cause === "gift" && (
         <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3">
           <p className="text-xs text-amber-800">
-            ⓘ 증여 주식은 수증일(= 취득일)부터 기산합니다. §97의2 이월과세는 주식에 미적용.
+            ⓘ 단순 증여 주식은 <strong>수증일</strong>(= 취득일)부터 기산합니다
+            (<LawArticleModal legalBasis="소득세법 §104 ②" label="§104② 본문" />).
+            배우자·직계존비속에게서 <strong>2025.1.1. 이후</strong> 증여받아 <strong>1년 이내</strong>에
+            양도한다면 <strong>「이월과세(증여)」</strong>를 선택하세요 — 증여자 취득일부터 기산해
+            단기 30%를 피할 수 있습니다.
+          </p>
+        </div>
+      )}
+
+      {/* carryover_gift nested 카드 — §104②2호 */}
+      {cause === "carryover_gift" && (
+        <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2">
+          <FieldCard
+            label="증여자 취득일 (§104②2)"
+            required
+            hint="단기 30% 세율 적용 여부를 증여자 취득일 → 양도일로 계산합니다"
+          >
+            <DateInput
+              value={form.donorAcquisitionDate ?? ""}
+              onChange={handleDonorDateChange}
+            />
+            {donorOriginal && form.donorAcquisitionDate === DEEMED_DATE && (
+              <p className="mt-2 rounded-md border border-amber-400 bg-amber-200/70 px-2 py-1.5 text-xs text-amber-900">
+                ⓘ 입력하신 증여자 취득일 {donorOriginal}은 1985.12.31. 이전이므로 의제취득일{" "}
+                <strong>1986.1.1.</strong>로 자동 변경되었습니다.{" "}
+                (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label="§162⑦3호" />)
+              </p>
+            )}
+          </FieldCard>
+          <p className="text-xs text-amber-800">
+            ⓘ 주식은 <strong>2024.12.31. 개정(법률 제20615호)</strong>으로 2025.1.1.부터
+            이월과세 대상이 되었습니다. <strong>증여일 기준</strong>이므로 2024.12.31. 이전에
+            증여받았다면 이 항목을 골라도 수증일 기산이 유지됩니다.
+            기간 요건은 부동산 10년이 아니라 <strong>1년</strong>입니다
+            (<LawArticleModal legalBasis="소득세법 §97의2" label="§97의2①" />).
           </p>
         </div>
       )}

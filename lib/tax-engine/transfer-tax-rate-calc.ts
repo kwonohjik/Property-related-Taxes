@@ -23,6 +23,7 @@ import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { resolveCompanionLandRate } from "./appurtenant-land-rate";
 import { getEffectiveAcquisitionDate } from "./transfer-tax-lthd-start";
+import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 // re-export — 기존 import 경로 하위 호환 유지
 export {
@@ -334,7 +335,9 @@ export function calcTax(
     };
   }
 
-  // 보유기간 기산 (§104② — 상속은 피상속인·증여이월은 증여자 취득일, 사례 48 승계조합원은 준공일).
+  // 보유기간 기산 (§104② — 상속은 피상속인·**이월과세**는 증여자 취득일, 사례 48 승계조합원은 준공일).
+  // 판정은 `transfer-rate-holding-basis.ts` 단일 소스. **단순 증여(`gift`)는 통산하지 않는다** —
+  // §104②2호의 대상은 「§97의2①에 **해당하는 자산**」뿐이고 단서는 3개 호 한정 열거다.
   // T-2 비사업용 토지 §104①후단 비교와 T-2.5 단기 특례세율이 공유.
   const successorRateBasis = getEffectiveAcquisitionDate(input);
   const isSuccessorRedev =
@@ -343,11 +346,7 @@ export function calcTax(
     input.redevelopment?.completionDate !== undefined;
   const rateBasisAcquisitionDate = isSuccessorRedev
     ? successorRateBasis
-    : input.acquisitionCause === "inheritance" && input.decedentAcquisitionDate
-      ? input.decedentAcquisitionDate
-      : input.acquisitionCause === "gift" && input.donorAcquisitionDate
-        ? input.donorAcquisitionDate
-        : input.acquisitionDate;
+    : resolveRateBasisAcquisitionDate(input);
   const holdingForRate = calculateHoldingPeriod(rateBasisAcquisitionDate, input.transferDate);
   const holdingMonthsTotal = holdingForRate.years * 12 + holdingForRate.months;
 
