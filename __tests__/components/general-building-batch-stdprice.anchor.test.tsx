@@ -38,7 +38,7 @@ const twoPointResult = {
 
 describe("A — 2시점 patch", () => {
   it("취득·양도 건물기준시가만 담는다 (최초고시 시점 없음)", () => {
-    const patch = buildGeneralBuildingBatchPatch(twoPointResult, { acquisitionDate: "2010-06-01" });
+    const patch = buildGeneralBuildingBatchPatch(twoPointResult, { acquisitionDate: "2010-06-01", landAcquisitionDate: "2010-06-01" });
     expect(patch).toEqual({
       gbAcqBuildingValue: "40000000",
       gbTransferBuildingValue: "90000000",
@@ -48,7 +48,7 @@ describe("A — 2시점 patch", () => {
   it("미산출 시점은 넣지 않는다 (기존 값 보존)", () => {
     const patch = buildGeneralBuildingBatchPatch(
       { transfer: { housing: 90_000_000 } },
-      { acquisitionDate: "2010-06-01" },
+      { acquisitionDate: "2010-06-01", landAcquisitionDate: "2010-06-01" },
     );
     expect(patch).toEqual({ gbTransferBuildingValue: "90000000" });
   });
@@ -58,7 +58,7 @@ describe("B·C — 공시지가 트랙과 취득 시점", () => {
   it("취득 ≤2000: 모달 공시지가를 취득당시 토지값에 넣지 않는다", () => {
     const patch = buildGeneralBuildingBatchPatch(
       { ...twoPointResult, landPrices: { acquisition: "300000", transfer: "1200000" } },
-      { acquisitionDate: "1998-04-01" },
+      { acquisitionDate: "1998-04-01", landAcquisitionDate: "1998-04-01" },
     );
     expect(patch.gbAcqLandPricePerSqm).toBeUndefined();
     expect(patch.gbTransferLandPricePerSqm).toBe("1200000");
@@ -67,7 +67,7 @@ describe("B·C — 공시지가 트랙과 취득 시점", () => {
   it("취득 ≥2001: 취득 공시지가도 반영", () => {
     const patch = buildGeneralBuildingBatchPatch(
       { ...twoPointResult, landPrices: { acquisition: "300000" } },
-      { acquisitionDate: "2010-06-01" },
+      { acquisitionDate: "2010-06-01", landAcquisitionDate: "2010-06-01" },
     );
     expect(patch.gbAcqLandPricePerSqm).toBe("300000");
   });
@@ -77,7 +77,7 @@ describe("B·C — 공시지가 트랙과 취득 시점", () => {
     //    건물 1999 → ≤2000 트랙 → 드롭
     const patch = buildGeneralBuildingBatchPatch(
       { ...twoPointResult, landPrices: { acquisition: "300000" } },
-      { acquisitionDate: "1999-08-20" },
+      { acquisitionDate: "1999-08-20", landAcquisitionDate: "1999-08-20" },
     );
     expect(patch.gbAcqLandPricePerSqm).toBeUndefined();
   });
@@ -98,7 +98,7 @@ describe("D — 게이트 연동", () => {
   it("취득연도 == 양도연도(§164⑧) → 사유 표시 + 시점별 계산기 유지", () => {
     render(
       <GeneralBuildingBlock
-        asset={gbAsset({ acquisitionDate: "2025-02-01" })}
+        asset={gbAsset({ acquisitionDate: "2025-02-01", landAcquisitionDate: "2025-02-01" })}
         onChange={() => {}}
         transferDate="2025-11-01"
       />,
@@ -113,7 +113,7 @@ describe("E — 취득 공시지가 자동입력 제외 안내 (2026-08-04)", ()
   it("취득 ≤2000: 트랙 안내 hint", () => {
     render(
       <GeneralBuildingBlock
-        asset={gbAsset({ acquisitionDate: "1998-04-01" })}
+        asset={gbAsset({ acquisitionDate: "1998-04-01", landAcquisitionDate: "1998-04-01" })}
         onChange={() => {}}
         transferDate="2025-05-01"
       />,

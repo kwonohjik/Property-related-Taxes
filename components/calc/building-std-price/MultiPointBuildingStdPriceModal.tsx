@@ -75,6 +75,25 @@ export interface StdPricePointSpec {
   year: number | undefined;
   /** ㎡당 공시지가 prefill(문자열) */
   landPricePerM2: string;
+  /**
+   * 공시지가 **기준연도** — 라벨·조회에 쓰는 연도. `year`와 **다른 축**이다.
+   *
+   * `year`는 건물기준시가 고시 체계 연도(구조·용도 코드표가 그 해 체계를 따른다)인 반면,
+   * 개별공시지가는 매년 5/31 공시라 그 이전 날짜의 기준연도는 **전년도**다
+   * (`recommendLandPriceYear` — 상위 화면 `LandPriceLookupField`가 쓰는 규칙과 동일).
+   * 예) 양도일 2026-02-19 → `year` 2026 · `landPriceYear` 2025.
+   *
+   * 미지정 시 `year`로 대체(종전 동작).
+   */
+  landPriceYear?: number;
+  /**
+   * 공시지가 칸을 Vworld 조회 필드(`LandPriceLookupField`)로 연다 — 기준연도는
+   * `landPriceYear ?? year`로 고정. 상위 화면 값을 그대로 쓸 수 없어 prefill을 비운 시점에
+   * 켠다(빈 칸만 남기면 사용자가 그 연도 공시지가를 구할 경로가 없다).
+   */
+  lookupLandPrice?: boolean;
+  /** `lookupLandPrice` 시 칸 위에 표시할 사유 안내. 미지정 시 미표시. */
+  landPriceHint?: string;
 }
 
 interface Props {
@@ -551,25 +570,34 @@ export function MultiPointBuildingStdPriceModal({
           <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
             <p className="text-xs font-semibold text-violet-700">위치지수 산정 공시지가</p>
             {points.map((p) => {
+              // 공시지가 기준연도 — 고시 체계 연도(`year`)와 별개 축(landPriceYear 주석 참조).
+              const lpYear = p.landPriceYear ?? p.year;
               // 취득시 ≤2000 = 2001.1.1 기준(§164⑤ 산정기준율) → Vworld 2001 자동조회 행
               const isAcqPre2001 =
                 p.key === "acquisition" && p.year != null && p.year <= 2000;
-              if (isAcqPre2001) {
+              // 조회 필드로 열 연도 — pre2001은 2001 고정, 그 외는 호출부가 켠 시점만.
+              const lookupYear = isAcqPre2001 ? 2001 : p.lookupLandPrice ? lpYear : undefined;
+              if (lookupYear != null) {
                 return (
                   <div key={p.key} className="space-y-2 rounded-lg border bg-card px-4 py-3">
-                    {/* 시점 식별 라벨 — 박스 내부 상단(최초공시일 FieldCard와 동일 위치·스타일) */}
+                    {/* 시점 식별 라벨 — 박스 내부 상단(최초공시일 FieldCard와 동일 위치·스타일).
+                        「기준」은 연도가 **법정 고정**인 §164⑤ 2001 행에만 붙인다 — 일반 조회 행은
+                        아래 FieldCard 행과 같은 문구여야 시점 라벨이 위젯 종류에 흔들리지 않는다. */}
                     <p className="text-sm font-medium leading-tight">
-                      {labelOf("acquisition")} (2001년 기준) 공시지가
+                      {labelOf(p.key)} ({lookupYear}년{isAcqPre2001 ? " 기준" : ""}) 공시지가
                     </p>
+                    {p.landPriceHint && !isAcqPre2001 && (
+                      <p className="text-caption text-muted-foreground">{p.landPriceHint}</p>
+                    )}
                     <LandPriceLookupField
-                      fixedYear={2001}
+                      fixedYear={lookupYear}
                       hideLandStdPrice
                       jibun={effJibun}
                       pricePerSqm={landPrices[p.key] ?? ""}
                       onPricePerSqmChange={(v) =>
                         setLandPrices((s) => ({ ...s, [p.key]: v }))
                       }
-                      placeholder="2001.1.1. 현재 공시지가"
+                      placeholder={isAcqPre2001 ? "2001.1.1. 현재 공시지가" : "원/㎡"}
                     />
                   </div>
                 );
@@ -582,7 +610,7 @@ export function MultiPointBuildingStdPriceModal({
                 <FieldCard
                   key={p.key}
                   label={`${labelOf(p.key)}${
-                    p.year ? ` (${p.year}년)` : " (연도 미상)"
+                    lpYear ? ` (${lpYear}년)` : " (연도 미상)"
                   } 공시지가`}
                   unit="원/㎡"
                   hint={

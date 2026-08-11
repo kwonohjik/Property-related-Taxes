@@ -49,6 +49,7 @@ import { MultiPointBuildingStdPriceModal } from "@/components/calc/building-std-
 import { canUseMultiPointStdPrice } from "@/lib/calc/building-std-multipoint-gate";
 import { MULTI_POINT_BLOCK_MESSAGE, multiPointBlockReason } from "@/lib/calc/building-std-multipoint-gate";
 import { buildGeneralBuildingBatchPatch, commercialAcqYear } from "@/lib/calc/building-std-batch-apply";
+import { buildGeneralBuildingBatchPoints } from "@/lib/calc/building-std-batch-apply";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import {
@@ -121,24 +122,13 @@ export function GeneralBuildingBlock({
     acquisitionYear: gbAcqYear,
     transferYear: gbTransferYear,
   });
-  /** 2시점 — 일반건물에는 최초고시 시점이 없다(§164⑥ 환산 경로가 아니다). */
+  /**
+   * 2시점 — 일반건물에는 최초고시 시점이 없다(§164⑥ 환산 경로가 아니다).
+   * 연도 2축(고시 체계 ↔ 공시지가 기준)·취득 공시지가 게이트는 순수 함수가 단일 소스다.
+   */
   const gbBatchPoints = useMemo(
-    () => [
-      {
-        key: "acquisition" as const,
-        label: "취득시",
-        year: gbAcqYear,
-        // 취득 ≤2000이면 모달 칸이 2001.1.1 기준(위치지수 전용) — 취득당시 토지값을 넣지 않는다.
-        landPricePerM2: gbAcqYear != null && gbAcqYear <= 2000 ? "" : asset.gbAcqLandPricePerSqm,
-      },
-      {
-        key: "transfer" as const,
-        label: "양도시",
-        year: gbTransferYear,
-        landPricePerM2: asset.gbTransferLandPricePerSqm,
-      },
-    ],
-    [gbAcqYear, gbTransferYear, asset.gbAcqLandPricePerSqm, asset.gbTransferLandPricePerSqm],
+    () => buildGeneralBuildingBatchPoints(asset, transferDate),
+    [asset, transferDate],
   );
 
   /**

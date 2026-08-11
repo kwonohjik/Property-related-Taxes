@@ -18,7 +18,11 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import type { MultiPointStdPriceApply } from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
+import type {
+  MultiPointStdPriceApply,
+  StdPricePointSpec,
+} from "@/components/calc/building-std-price/MultiPointBuildingStdPriceModal";
+import { recommendLandPriceYear } from "@/lib/utils/land-price-year";
 import { isAcq2001LocationIndexTrack } from "./phd-acq-land-price-track";
 import { isSec164_5ProvisoApplicable } from "./commercial-164-6-proviso";
 import { resolveCbEra } from "./commercial-cb-era";
@@ -29,6 +33,53 @@ export function commercialAcqYear(acquisitionDate: string | undefined): number |
     ? Number.parseInt(acquisitionDate.slice(0, 4), 10)
     : undefined;
 }
+
+/**
+ * 개별공시지가 **기준연도**(매년 5/31 공시 — 그 이전 날짜면 전년도).
+ *
+ * 상위 화면 `LandPriceLookupField`가 자동 선택하는 연도와 같은 규칙이다. 건물기준시가 고시
+ * 체계 연도(`commercialAcqYear`)와는 **다른 축**이라 섞어 쓰면 라벨·값의 연도가 어긋난다.
+ * 미완성 날짜는 undefined.
+ */
+export function landPriceYearOf(date: string | undefined): number | undefined {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return undefined;
+  const y = recommendLandPriceYear(date);
+  return Number.isFinite(y) ? y : undefined;
+}
+
+/**
+ * 취득시 토지 공시지가를 **건물 시점과 공유할 수 있는가**(일반건물 전용).
+ *
+ * 일반건물은 토지·건물 취득일이 다를 수 있다(`hasSeperateLandAcquisitionDate`). ① 토지 공시지가
+ * 칸은 **토지 취득일** 기준연도로 조회된 값인데, 건물 기준시가 위치지수에 필요한 것은 **건물
+ * 취득일** 기준연도 공시지가다 — 두 기준연도가 다르면 서로 다른 해의 값이라 prefill도
+ * 되돌려쓰기도 오염이다.
+ *
+ * 판정 축이 "취득일이 같은가"가 **아니라** "기준연도가 같은가"인 이유: 5/31 공시 규칙상
+ * 2022-01-10과 2022-03-05는 둘 다 2021년 기준으로 같은 공시지가를 쓴다.
+ * 판정 불가(날짜 미완성)면 `true` — 종전 동작을 유지한다.
+ */
+export function sharesAcqLandPriceYear(
+  asset: Pick<AssetForm, "acquisitionDate" | "landAcquisitionDate">,
+): boolean {
+  return sameLandPriceYear(asset.acquisitionDate, asset.landAcquisitionDate);
+}
+
+/**
+ * 두 날짜가 **같은 공시지가 기준연도**를 쓰는가. 판정 불가(미완성 날짜)면 `true`(종전 동작).
+ * 자산 폼이 아닌 곳(3시점 섹션 props 등)에서 같은 규칙을 재사용하기 위한 원형.
+ */
+export function sameLandPriceYear(a: string | undefined, b: string | undefined): boolean {
+  const ya = landPriceYearOf(a);
+  const yb = landPriceYearOf(b);
+  if (ya == null || yb == null) return true;
+  return ya === yb;
+}
+
+/** 토지·건물 취득일의 공시지가 기준연도가 달라 취득 공시지가를 비워 둘 때의 사유 안내(공용). */
+export const SEPARATE_LAND_ACQ_LANDPRICE_HINT =
+  "토지 취득일과 건물 취득일의 공시지가 기준연도가 달라 취득시 토지 공시지가를 자동으로 채우지 " +
+  "않았습니다 — 건물 취득일 기준연도로 조회하거나 직접 입력하세요.";
 
 /**
  * 배치 적용 patch 조립.
@@ -82,15 +133,59 @@ export function buildAcqBuildingStdEditPatch(
 // ── 일반건물(토지+건물 일괄) — 취득·양도 2시점 ─────────────────────────────
 
 /**
+ * 일반건물 배치 모달 시점 구성(취득·양도 2시점).
+ *
+ * 두 연도 축을 분리해 싣는다:
+ *   `year`          건물기준시가 고시 체계 연도(구조·용도 코드표) = 이벤트 연도
+ *   `landPriceYear` 위치지수용 개별공시지가 기준연도 = 5/31 공시 규칙(`landPriceYearOf`)
+ *
+ * 취득 공시지가 prefill은 두 사유로 비운다:
+ *   ≤2000       모달 칸이 2001.1.1 기준(§164⑤ 위치지수 전용) — 취득당시 토지값 트랙과 다르다
+ *   기준연도 상이 토지 취득일 기준으로 조회된 값이라 건물 시점에 쓸 수 없다(`sharesAcqLandPriceYear`)
+ * 후자는 빈 칸만 남기면 값을 구할 경로가 없어 조회 필드로 열어 준다.
+ */
+export function buildGeneralBuildingBatchPoints(
+  asset: Pick<
+    AssetForm,
+    "acquisitionDate" | "landAcquisitionDate" | "gbAcqLandPricePerSqm" | "gbTransferLandPricePerSqm"
+  >,
+  transferDate: string | undefined,
+): StdPricePointSpec[] {
+  const acqYear = commercialAcqYear(asset.acquisitionDate);
+  const acqPre2001 = isAcq2001LocationIndexTrack(acqYear);
+  const shared = sharesAcqLandPriceYear(asset);
+  return [
+    {
+      key: "acquisition",
+      label: "취득시",
+      year: acqYear,
+      landPriceYear: landPriceYearOf(asset.acquisitionDate),
+      landPricePerM2: acqPre2001 || !shared ? "" : asset.gbAcqLandPricePerSqm,
+      ...(!acqPre2001 && !shared
+        ? { lookupLandPrice: true, landPriceHint: SEPARATE_LAND_ACQ_LANDPRICE_HINT }
+        : {}),
+    },
+    {
+      key: "transfer",
+      label: "양도시",
+      year: commercialAcqYear(transferDate),
+      landPriceYear: landPriceYearOf(transferDate),
+      landPricePerM2: asset.gbTransferLandPricePerSqm,
+    },
+  ];
+}
+
+/**
  * 일반건물 배치 적용 patch.
  *
  * 상가와 달리 **최초고시 시점이 없고**(§164⑥ 환산 경로가 아니다) §164⑤ 준용 확인 토글도 없다.
  * 공시지가 되돌려쓰기의 취득 트랙 규칙은 동일하다 — 취득 ≤2000의 모달 값은 2001.1.1 기준이라
- * 취득당시 토지값(`gbAcqLandPricePerSqm`)에 넣지 않는다.
+ * 취득당시 토지값(`gbAcqLandPricePerSqm`)에 넣지 않는다. 토지·건물 취득일의 **기준연도가
+ * 다를 때도** 마찬가지다(모달 값은 건물 취득일 연도 — 토지축 필드에 덮으면 오염).
  */
 export function buildGeneralBuildingBatchPatch(
   v: MultiPointStdPriceApply,
-  asset: Pick<AssetForm, "acquisitionDate">,
+  asset: Pick<AssetForm, "acquisitionDate" | "landAcquisitionDate">,
 ): Partial<AssetForm> {
   const patch: Partial<AssetForm> = {};
   // 건물 취득일이 따로 있으면 그것이 건물분 기준시가의 시점이다(§166⑥ 별개취득).
@@ -101,7 +196,11 @@ export function buildGeneralBuildingBatchPatch(
   if (v.transfer?.housing != null) patch.gbTransferBuildingValue = String(v.transfer.housing);
 
   if (v.landPrices?.transfer) patch.gbTransferLandPricePerSqm = v.landPrices.transfer;
-  if (v.landPrices?.acquisition && !isAcq2001LocationIndexTrack(acqYear))
+  if (
+    v.landPrices?.acquisition &&
+    !isAcq2001LocationIndexTrack(acqYear) &&
+    sharesAcqLandPriceYear(asset)
+  )
     patch.gbAcqLandPricePerSqm = v.landPrices.acquisition;
 
   return patch;
