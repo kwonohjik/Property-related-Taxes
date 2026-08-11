@@ -18,7 +18,7 @@
 // `safeMultiplyThenDivide`는 Phase 2에서 미사용이 됐다 — 양도가 안분을 `resolveSaleApportionBasis`로
 // 옮기면서 그 함수 안으로 들어갔다(산식은 동일). 내 변경이 만든 고아 import만 제거한다.
 import { computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
-import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
+import { TRANSFER, ESTIMATED_DEDUCTION_RATE, estimatedDeductionRate } from "./legal-codes";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { splitLandCarryover } from "./carryover-land-split";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
@@ -219,14 +219,16 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
  *
  * 취득시 기준시가에 개산공제율을 곱해 필요경비를 산정한다.
  *
- * 토지 산식: INT(취득시 공시지가(원/㎡) × 면적 × 율)
- * 건물 산식: INT(취득시 건물기준시가 총액 × 율)
+ * 토지 산식: INT(취득시 공시지가(원/㎡) × 면적 × 토지율)
+ * 건물 산식: INT(취득시 건물기준시가 총액 × 건물율)
  *
- * 법정 기본율: 등기 자산 3%, 미등기 0.3%
+ * 법정 율: 등기 자산 3%, 미등기 0.3%(§163⑥1호 단서).
+ * **율을 토지·건물 따로 받는다** — 일반건물은 등기 여부를 두 부동산 각각 판단하기 때문이다.
  */
 function calculateEstimatedDeduction(
   input: GeneralBuildingInput,
-  rate: number,
+  landRate: number,
+  buildingRate: number,
 ): GeneralBuildingEstimatedDeduction {
   const acqLandStdTotal = Math.floor(
     input.acquisitionLandPricePerSqm * input.landArea,
@@ -234,10 +236,13 @@ function calculateEstimatedDeduction(
 
   // 공유지분 축소(§163⑥ base) — 성분별 독립 적용. 토지는 §99①1호 가목(개별공시지가),
   // 건물은 나목(국세청장 산정)으로 **별도 공시**라 결합 총액 개념이 없다.
-  const landDed = computeEstimatedDeduction(acqLandStdTotal, rate, input.ownershipRatio);
+  //
+  // 율도 성분별로 갈린다 — 일반건물은 등기 여부를 토지·건물 각각 판단하므로
+  // 한쪽만 미등기면 그 파트만 §163⑥1호 단서의 3/1000이 된다.
+  const landDed = computeEstimatedDeduction(acqLandStdTotal, landRate, input.ownershipRatio);
   const buildingDed = computeEstimatedDeduction(
     input.acquisitionBuildingStdPrice,
-    rate,
+    buildingRate,
     input.ownershipRatio,
   );
 
@@ -325,9 +330,11 @@ export function buildGeneralBuildingAssetCards(
 
   // ── 기존 2-way 분기 (사례 31·32 — extensionInfo 미입력 시) ──────────
 
-  // 개산공제율 결정 (기본 3%)
-  const rate =
-    input.estimatedDeductionRate ?? ESTIMATED_DEDUCTION_RATE_LAND_BUILDING;
+  // 개산공제율 결정 (§163⑥ 3% · 1호 단서 미등기 3/1000) — 토지·건물 **각각**.
+  // 율을 payload로 주입받지 않는다: 율은 미등기 여부의 함수이므로 이중 소스가 되면
+  // 한쪽만 갱신돼 조용히 어긋난다(2026-07-28 15곳 정정이 그 형태였다).
+  const landRate = estimatedDeductionRate(input.unregisteredLand);
+  const buildingRate = estimatedDeductionRate(input.unregisteredBuilding);
 
   // Step 1: 양도가 안분 (§166⑥) + 구분 기재 시 §100③ 30% 의제 판정 (Phase 2)
   // 법령 참조: TRANSFER.GENERAL_BUILDING_APPORTIONMENT
@@ -342,7 +349,7 @@ export function buildGeneralBuildingAssetCards(
 
   // Step 3: 개산공제 (§163⑥)
   // 법령 참조: TRANSFER.GENERAL_BUILDING_LUMP_DEDUCTION
-  const estimatedDeductionConverted = calculateEstimatedDeduction(input, rate);
+  const estimatedDeductionConverted = calculateEstimatedDeduction(input, landRate, buildingRate);
 
   /**
    * Step 3.5: **파트별 취득 방식** (2026-08-05 P3) — 비-환산 파트는 그 파트의 실지거래가액을

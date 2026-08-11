@@ -106,6 +106,21 @@ export const generalBuildingValuationSchema = z.object({
    * **§19②1호 용도변경 허가 미이행**·**§19⑤·§22 사용승인 미이행**도 포함된다고 회답했다.
    */
   isUnregistered: z.boolean().optional(),
+  /**
+   * 「소득세법」 §104③ **미등기양도자산** — 토지 축 / 건물 축.
+   *
+   * ⚠️ 바로 위 `isUnregistered`와 **전혀 다른 축**이다. 그쪽은 「지방세법 시행령」 §101① 단서의
+   *    허가·사용승인 미이행(비사업용 판정)이고, 이름만 닮았다. 같은 키를 재사용하면 NBL 판정이
+   *    조용히 오염된다.
+   *
+   * 일반건물은 토지·건물이 **별개 부동산이고 등기부도 별도**라 축을 둘로 나눈다. 건물만
+   * 미등기(무허가 신축)이고 토지는 등기된 조합이 실무에서 흔하다. 증축분(건물2)은 건물 축을
+   * 따른다(민법 §256 부합 — 표시변경등기이지 별도 소유권보존등기가 아니다).
+   *
+   * 엔진이 이 둘에서 개산공제율(§163⑥1호 단서)을 파생하므로 **율 필드는 보내지 않는다**.
+   */
+  unregisteredLand: z.boolean().optional(),
+  unregisteredBuilding: z.boolean().optional(),
   /** 양도시 개별공시지가 (원/㎡). 환산 분모 + §166⑥ 안분 비율. 모드 무관 필수. */
   transferLandPricePerSqm: z.number().int().positive(),
   /** 양도시 건물기준시가 총액 (원). 환산 분모 + §166⑥ 안분 비율. 모드 무관 필수. */
@@ -121,8 +136,9 @@ export const generalBuildingValuationSchema = z.object({
   /** 취득시 건물기준시가 총액 (원). 환산취득가 모드만 필수. */
   /** 위와 같은 이유로 `nonnegative` — 실가 파트는 0이 실린다. */
   acquisitionBuildingStdPrice: z.number().int().nonnegative().optional(),
-  /** 개산공제율 (기본 0.03 — ESTIMATED_DEDUCTION_RATE_LAND_BUILDING) */
-  estimatedDeductionRate: z.number().positive().max(1).optional(),
+  // 개산공제율 필드는 폐지됐다(2026-08-11) — 율은 미등기 여부의 함수이므로 엔진이
+  // `unregisteredLand`·`unregisteredBuilding`에서 파생한다. 율을 따로 실어 보내면
+  // 두 소스가 갈라져 한쪽만 갱신되는 사고가 난다(2026-07-28 15곳 정정이 그 형태였다).
   /** 실거래가/감정가 모드 플래그. true 시 route helper가 실거래가 안분 경로 사용. */
   actualPriceMode: z.boolean().optional(),
   /**
@@ -407,6 +423,9 @@ export const GB_SHARE_PROPERTY_LEVEL_PATHS = [
   "zoneType",
   "isMetropolitan",
   "isUnregistered",
+  // 물건 속성 — §104③ 미등기양도자산(위 `isUnregistered`와 별개 축)
+  "unregisteredLand",
+  "unregisteredBuilding",
   // 물건 사건 ① 증축 (실가 2필드 제외 — 위 주석)
   "extensionInfo.extensionDate",
   "extensionInfo.extensionArea",

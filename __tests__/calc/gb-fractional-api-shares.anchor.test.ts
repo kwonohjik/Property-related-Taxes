@@ -238,8 +238,9 @@ describe("④ 일반건물 지분 분할 — API 변환 anchor", () => {
      * 반대로 검증이 약해진다. 필드를 늘리면 이 숫자도 함께 갱신할 것
      * (메모리 `project_non_housing_to_housing_conversion`의 Pick 계약 개수 가드).
      */
-    it("30개", () => {
-      expect(GB_PROPERTY_LEVEL_FORM_FIELD_COUNT).toBe(30);
+    it("32개", () => {
+      // 2026-08-11: §104③ 미등기 2필드(gbLandUnregistered·gbBuildingUnregistered) 추가 → 30 → 32
+      expect(GB_PROPERTY_LEVEL_FORM_FIELD_COUNT).toBe(32);
     });
   });
 });

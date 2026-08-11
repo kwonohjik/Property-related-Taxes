@@ -180,50 +180,111 @@ describe("U3: 재개발 경로 미등기", () => {
 });
 
 // ════════════════════════════════════════════════════════════
-// U4 — 구조 가드: 리터럴 율 재유입 차단
+// U4 — 구조 가드: 고정 율 재유입 차단
 //
 //   겸용(주택분·상가분)·재개발 인가전은 입력 fixture가 커서 행위 anchor를 두지 않았다.
-//   대신 **결함의 형태 자체**(개산공제 호출에 율 리터럴 하드코딩)를 소스 수준에서 막는다.
+//   대신 **결함의 형태 자체**(개산공제 율을 미등기 여부와 무관하게 고정)를 소스 수준에서 막는다.
 //   이 결함은 "율을 안 넘겨서" 생겼지 "잘못 계산해서"가 아니므로, 이 가드가 원인을 직접 겨눈다.
+//
+// 🔴 **2026-08-11 확장 — 가드에 사각지대 둘이 있었다.**
+//
+//   원 가드는 (a) 숫자 **리터럴만** 검사하고 (b) `lib/tax-engine`만 훑었다. 그래서 정정 당시
+//   「일반건물·상가는 지켰다」로 오판된 두 경로를 **가드도 함께 놓쳤다**:
+//
+//     · 상가(`commercial-building-valuation.ts`) — `ESTIMATED_DEDUCTION_RATE.LAND_BUILDING`
+//       **상수 참조**라 리터럴 정규식에 걸리지 않았다. (2026-08-11 배선 완료)
+//     · 일반건물 — 율을 `lib/calc/transfer-tax-api-gb.ts`가 payload로 **주입**한다.
+//       `lib/tax-engine` 밖이라 스캔 범위 자체에 없었다. (Phase C 대기)
+//
+//   ⇒ (a) 상수 참조도 offender로 본다 — 율 인자는 `estimatedDeductionRate(...)` 호출만 허용.
+//      (b) 율이 **주입되는** 경로(`lib/calc`·`app/api/calc/transfer`)의 `estimatedDeductionRate:`
+//          프로퍼티 리터럴도 함께 검사한다.
 // ════════════════════════════════════════════════════════════
-describe("U4: 개산공제 호출에 율 리터럴 금지 (구조 가드)", () => {
-  it("lib/tax-engine 전역 — computeEstimatedDeduction 인자에 0.03/0.003 리터럴 0건", async () => {
-    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+describe("U4: 개산공제 율 고정 금지 (구조 가드)", () => {
+  const walkTs = async (dir: string): Promise<string[]> => {
+    const { readdirSync, statSync } = await import("node:fs");
     const { join } = await import("node:path");
-
-    const walk = (dir: string): string[] =>
-      readdirSync(dir).flatMap((e) => {
-        const p = join(dir, e);
+    const walk = (d: string): string[] =>
+      readdirSync(d).flatMap((e) => {
+        const p = join(d, e);
         return statSync(p).isDirectory() ? walk(p) : p.endsWith(".ts") ? [p] : [];
       });
+    return walk(dir);
+  };
 
+  /** 괄호 균형으로 `fn(` 부터 대응 `)` 까지를 잘라낸다 (여러 줄 호출 대응). */
+  const callsOf = (src: string, fn: string): string[] => {
+    const out: string[] = [];
+    let idx = src.indexOf(`${fn}(`);
+    while (idx !== -1) {
+      let depth = 0;
+      let end = idx;
+      for (let i = idx; i < src.length; i++) {
+        if (src[i] === "(") depth++;
+        else if (src[i] === ")") {
+          depth--;
+          if (depth === 0) { end = i; break; }
+        }
+      }
+      out.push(src.slice(idx, end + 1));
+      idx = src.indexOf(`${fn}(`, end);
+    }
+    return out;
+  };
+
+  it("lib/tax-engine — computeEstimatedDeduction 율 인자는 estimatedDeductionRate() 호출뿐", async () => {
+    const { readFileSync } = await import("node:fs");
     const offenders: string[] = [];
-    for (const file of walk("lib/tax-engine")) {
+
+    for (const file of await walkTs("lib/tax-engine")) {
       if (file.endsWith("tax-utils.ts")) continue; // 헬퍼 정의부(rate 파라미터 선언)
       const src = readFileSync(file, "utf8");
-      let idx = src.indexOf("computeEstimatedDeduction(");
-      while (idx !== -1) {
-        // 괄호 균형으로 호출 인자 전체를 잘라낸다 (여러 줄 호출 대응)
+      for (const call of callsOf(src, "computeEstimatedDeduction")) {
+        // 두 번째 인자(율)를 뽑는다 — 첫 인자와 율 사이의 최상위 콤마로 분리.
+        const inner = call.slice(call.indexOf("(") + 1, -1);
+        const args: string[] = [];
         let depth = 0;
-        let end = idx;
-        for (let i = idx; i < src.length; i++) {
-          if (src[i] === "(") depth++;
-          else if (src[i] === ")") {
-            depth--;
-            if (depth === 0) { end = i; break; }
-          }
+        let cur = "";
+        for (const ch of inner) {
+          if (ch === "(" || ch === "[" || ch === "{") depth++;
+          else if (ch === ")" || ch === "]" || ch === "}") depth--;
+          if (ch === "," && depth === 0) { args.push(cur); cur = ""; continue; }
+          cur += ch;
         }
-        const call = src.slice(idx, end + 1);
-        if (/,\s*0\.0{1,2}3\s*[,)]/.test(call)) {
-          offenders.push(`${file}: ${call.replace(/\s+/g, " ").slice(0, 90)}`);
+        args.push(cur);
+        const rateArg = (args[1] ?? "").trim();
+        if (!rateArg) continue;
+        // 허용: estimatedDeductionRate(...) 호출 / 호출부가 이미 판정해 넘긴 변수(dedRate 등)
+        if (rateArg.startsWith("estimatedDeductionRate(")) continue;
+        // 금지: 리터럴 0.03·0.003, 그리고 미등기 분기가 없는 상수 직접 참조
+        if (/^0\.0{1,2}3$/.test(rateArg) || rateArg.startsWith("ESTIMATED_DEDUCTION_RATE.")) {
+          offenders.push(`${file}: 율 인자 = ${rateArg}`);
         }
-        idx = src.indexOf("computeEstimatedDeduction(", end);
       }
     }
 
     expect(
       offenders,
-      "율은 estimatedDeductionRate(isUnregistered)로만 결정한다 — 리터럴은 미등기 분기를 조용히 죽인다",
+      "율은 estimatedDeductionRate(isUnregistered)로만 결정한다 — 리터럴·상수 직접 참조는 미등기 분기를 조용히 죽인다",
+    ).toEqual([]);
+  });
+
+  it("lib/calc·app/api — 주입되는 estimatedDeductionRate 값이 고정 리터럴이 아니다", async () => {
+    const { readFileSync } = await import("node:fs");
+    const offenders: string[] = [];
+
+    for (const dir of ["lib/calc", "app/api/calc/transfer"]) {
+      for (const file of await walkTs(dir)) {
+        const src = readFileSync(file, "utf8");
+        // `estimatedDeductionRate: 0.03` 형태의 payload 주입 — 미등기 분기가 없다.
+        const m = src.match(/estimatedDeductionRate:\s*0\.0{1,2}3\b/g);
+        if (m) offenders.push(`${file}: ${m.join(" · ")}`);
+      }
+    }
+
+    expect(
+      offenders,
+      "율을 주입하는 경로도 미등기 여부로 갈라야 한다 — 고정 주입은 엔진 안에서 분기할 방법을 없앤다",
     ).toEqual([]);
   });
 });

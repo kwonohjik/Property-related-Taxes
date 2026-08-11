@@ -50,6 +50,10 @@ function migrateGbAcquisitionDateConvention(a: Record<string, unknown>): void {
 export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
   if (a.gbIsMetropolitan === undefined) a.gbIsMetropolitan = false;
   if (a.gbIsUnregistered === undefined) a.gbIsUnregistered = false;
+  // §104③ 미등기양도자산 2필드 — stale sessionStorage 가드. 없으면 undefined가 그대로
+  // payload에 실려 Zod optional을 통과하고, 엔진이 등기 자산으로 처리한다(종전 동작 = 안전측).
+  if (a.gbLandUnregistered === undefined) a.gbLandUnregistered = false;
+  if (a.gbBuildingUnregistered === undefined) a.gbBuildingUnregistered = false;
   // ── 일반건물 건물 취득원인 마이그레이션 (M-1·M-2, 사례 32 이후 PR) ──
   // M-1: legacy gbIsSelfBuilt=true → gbBuildingAcquisitionCause="newConstruction" 자동 변환 후 삭제
   if ((a as Record<string, unknown>).gbIsSelfBuilt === true) {

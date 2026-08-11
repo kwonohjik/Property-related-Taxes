@@ -369,6 +369,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbZoneType: "",
     gbIsMetropolitan: false,
     gbIsUnregistered: false,
+    // ── §104③ 미등기양도자산 (토지·건물 별도 판단 — 위 §101① 단서와 별개 축) ──
+    gbLandUnregistered: false,
+    gbBuildingUnregistered: false,
     /**
      * ── 일반건물 건물 취득원인 + 건물 취득일 (사례 32 이후 PR) ──
      *

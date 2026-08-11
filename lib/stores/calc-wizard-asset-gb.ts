@@ -65,6 +65,22 @@ export interface GeneralBuildingFormSlice {
   gbIsUnregistered: boolean;
 
   /**
+   * 「소득세법」 §104③ **미등기양도자산** — 토지 축 / 건물 축.
+   *
+   * ⚠️ **바로 위 `gbIsUnregistered`와 전혀 다른 축이다.** 그쪽은 「지방세법 시행령」 §101① 단서의
+   *    허가·사용승인 미이행(부속토지 전량 비사업용)이고, 이름만 닮았다.
+   *
+   * 일반건물은 등기 여부를 **토지·건물 각각** 판단한다 — 둘은 별개 부동산이고 등기부도 별도라
+   * 건물만 미등기(무허가 신축)이고 토지는 등기된 조합이 실무에서 흔하다. 증축분(건물2 카드)은
+   * 건물 축을 따른다(민법 §256 부합 — 표시변경등기이지 별도 소유권보존등기가 아니다).
+   *
+   * 이 두 값이 가르는 것: ① 개산공제율(§163⑥1호 단서 3/1000) ② 세율군(§104①10호 70% 버킷).
+   * 그래서 GB는 폼-전역 `isUnregistered`를 쓰지 않는다(단일 boolean으로는 표현 불가).
+   */
+  gbLandUnregistered: boolean;
+  gbBuildingUnregistered: boolean;
+
+  /**
    * 건물 취득원인 (일반건물 전용, 사례 32 이후).
    * - "purchase": 매매
    * - "inheritance": 상속

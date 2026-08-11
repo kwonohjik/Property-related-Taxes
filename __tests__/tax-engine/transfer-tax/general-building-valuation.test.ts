@@ -78,7 +78,9 @@ function makeInput(overrides?: Partial<GeneralBuildingInput>): GeneralBuildingIn
     transferBuildingStdPrice: TRANSFER_BUILDING_STD_PRICE,
     acquisitionLandPricePerSqm: ACQUISITION_LAND_PRICE_PER_SQM,
     acquisitionBuildingStdPrice: ACQUISITION_BUILDING_STD_PRICE,
-    estimatedDeductionRate: ESTIMATED_DEDUCTION_RATE,
+    // `estimatedDeductionRate` 입력 필드는 폐지됐다(2026-08-11) — 율은 엔진이
+    // `unregisteredLand`·`unregisteredBuilding`에서 파생한다(§163⑥1호 단서).
+    // 미지정 = 등기 자산 = 3%로 종전과 동일하다.
     zoneType: "commercial",
     isMetropolitan: true,
     // 마이그레이션: buildingAcquisitionCause required (2026-05-10)

@@ -90,7 +90,7 @@ if (!allowsUnregistered && form.isUnregistered) patch.isUnregistered = false;
 | 겸용주택 (`housing`+`isMixedUseHouse`) | ✅ `transfer-tax-mixed-use-totals.ts:187` | ✅ `transfer-tax-mixed-use.ts:135-139` | ✅ | ✅ | ✅ `transfer-tax-mixed-use-housing.ts:202` | ✅ |
 | `redevelopment_apt` | ✅ 단건 공유 | ✅ 단건 공유(신규) | ✅ 단건 공유 | ✅ 단건 공유 | ✅ `redevelopment.ts:208,364` → `redevelopment-{split,housing-contribution,land-contribution}.ts`가 `estimatedDeductionRate(input.isUnregistered)` 사용 | ✅ **신규** |
 | `commercial_building` | ✅ 단건 공유 | (주택 아님 — 무관) | ✅ 단건 공유 | ✅ 단건 공유 | ✅ **신규** `commercial-building-valuation.ts` → `estimatedDeductionRate(input.isUnregistered)` | ✅ **신규** |
-| `general_building` (bundled) | ❌ | (주택 아님 — 무관) | ❌ | ❌ | ❌ **3% 고정** `lib/calc/transfer-tax-api-gb.ts:386` | ⛔ **한시 차단**(no-op 방지) |
+| `general_building` (bundled) | ✅ **신규** 카드별 매핑(`general-building-route-cards.ts`) | (주택 아님 — 무관) | ✅ 카드별 | ✅ 카드별 | ✅ **신규** 토지·건물 **각각** `estimatedDeductionRate()` 파생 | ✅ **신규** 2토글 |
 
 **경로 판정 근거(실측)**: `app/api/calc/transfer/route.ts`의 `propertyType` 분기는 **3개뿐**이다 — `:246 land` · `:319 mixed-use-house` · `:392 general_building`. `commercial_building`·`redevelopment_apt` 전용 분기는 **없다** ⇒ 둘 다 generic 단건 경로(`transfer-tax.ts`)를 탄다. 재개발은 엔진 내부에서 `transfer-tax.ts:216 isRedevelopmentActive(...)`로 서브엔진에 분기한다.
 
@@ -170,14 +170,52 @@ const allowsUnregistered = !UNREGISTERED_EXCLUDED_KINDS.includes(primaryKind);
 
 ### Phase C — 일반건물(bundled) §104③ 배선
 
-가장 손이 많이 가는 축. **토지·건물 카드 전부**에 걸어야 한다(§104③은 자산 전체 성질).
+#### 🔑 C-0. 등기 여부는 **토지·건물 각각** 판단한다 (2026-08-11 설계 정정)
 
-1. **⑫ Zod**: `lib/api/transfer-tax-building-schemas.ts`의 GB payload에 `unregisteredTransfer: z.boolean().optional()` 추가. **기존 `isUnregistered`(NBL·:108,560)와 별개 키**임을 주석으로 못박는다.
-2. **⑬ API 변환**: `lib/calc/transfer-tax-api-gb.ts` — `unregisteredTransfer: form.isUnregistered`. 같은 파일 `:386`의 `estimatedDeductionRate: 0.03`을 `estimatedDeductionRate(form.isUnregistered)`로.
-   - ⚠️ `lib/calc/transfer-tax-api-gb-shares.ts:50`의 GB 필드 화이트리스트(지분 경로)에도 신규 키를 등록해야 침묵 strip을 피한다.
-3. **⑭ Route 매핑**: `app/api/calc/transfer/general-building-route-cards.ts:92`의 `isUnregistered: false` 하드코딩을 payload 값으로 교체. **`general-building-route-actual.ts`(실가)·`general-building-route-helper.ts`(환산) 두 경로가 이 파일을 공유**하므로 한 곳 수정으로 양쪽이 덮인다 — **양쪽 anchor로 확인**.
-4. **증축 경로**: `general-building-extension.ts:63`도 `estimatedDeductionRate` 주입을 받으므로 3파트(토지·건물1·증축건물) 전부 확인.
-5. **§104⑤ 그룹핑**: GB bundled은 두 경로 모두 `calculateTransferTaxAggregate`를 탄다(`general-building-route-actual.ts:572` · `general-building-route-helper.ts:419`) ⇒ `classifyRateGroup`(`transfer-tax-aggregate-helpers.ts:57-61`)에 **반드시 도달**한다. 이 함수는 `item.isUnregistered`를 **최우선 분기**로 두어 `"unregistered"` 버킷을 반환하므로, GB 카드가 미등기로 들어오면 **토지·건물 전 파트가 같은 버킷**이 된다. 그것이 §104⑤2호 「해당 호별 합산」과 정합한지 확인 — memory `project_transfer_104_5_model_a_defect` · `project_transfer_104_5_short_term_part_bucket` 참조.
+일반건물은 「토지+건물 일괄」이지만 **토지와 건물은 별개 부동산이고 등기부도 별도**다. 건물만 미등기(무허가 신축 등)이고 토지는 등기된 조합이 실무에서 흔하고, 그 반대도 성립한다. §104③의 「그 자산 취득에 관한 등기를 하지 아니하고 양도」도 **자산별**로 읽힌다.
+
+⇒ **단일 boolean으로는 표현할 수 없다.** GB는 폼-전역 `form.isUnregistered`를 쓰지 않고 **자산-수준 2필드**를 갖는다.
+
+| 축 | 필드 | 영향 카드 |
+|---|---|---|
+| 토지 | `gbLandUnregistered` | `land_business` · `land_nbl` |
+| 건물 | `gbBuildingUnregistered` | `building` · 증축 건물2 (**C-6 확인 필요**) |
+
+✅ **엔진 구조가 이미 이를 받아들일 준비가 돼 있다** — `general-building-valuation.ts:237-242`의 `calculateEstimatedDeduction`이 개산공제를 `landDed`·`buildingDed`로 **이미 분리 산출**한다(주석: 「토지는 §99①1호 가목(개별공시지가), 건물은 나목(국세청장 산정)으로 **별도 공시**라 결합 총액 개념이 없다」). 단일 `rate` 파라미터를 `landRate`·`buildingRate`로 쪼개면 되고, 그 외 산식은 손대지 않는다.
+
+⚠️ **§104⑤ 재평가**: 한쪽만 미등기면 토지 카드와 건물 카드가 **서로 다른 세율군 버킷**으로 갈린다(`classifyRateGroup`이 `isUnregistered`를 최우선 분기로 두므로 — `transfer-tax-aggregate-helpers.ts:61`). Q3가 「미등기는 70% 비례세율이라 합산해도 동일」로 단순히 닫히지 않는다 — **한쪽만 미등기인 케이스가 진짜 검증 대상**이다.
+
+#### C-1~C-6 작업
+
+**토지·건물 카드 각각**에 해당 축의 플래그를 건다.
+
+1. **①②③ 폼**: `AssetForm`(`lib/stores/calc-wizard-asset-gb.ts`)에 `gbLandUnregistered`·`gbBuildingUnregistered` 2필드 + `makeDefaultAsset` 초기값 `false` + `calc-wizard-asset-migrate-phase3.ts` normalize fallback(stale sessionStorage 가드).
+   - ⚠️ **기존 `gbIsUnregistered`와 이름이 위험할 만큼 가깝다** — 그쪽은 「지방세법 시행령」 §101① 단서의 **허가·사용승인 미이행**(NBL 축)이다(§3.1). 신규 2필드 JSDoc에 이 구분을 명시한다. Q2(개명)는 별건.
+2. **⑤ UI**: ⑤ 특수 상황의 단일 「미등기 양도」 토글은 GB에서 계속 숨긴다(폼-전역 `isUnregistered`를 GB가 쓰지 않으므로). 대신 **토지·건물 2토글**을 배치한다 — 위치는 GB 자산 카드(파트별 입력이 모여 있는 곳) 또는 ⑤ 안의 GB 전용 블록. **UI 시니어 판단 필요**.
+3. **⑫ Zod**: `lib/api/transfer-tax-building-schemas.ts`의 GB payload에 `unregisteredLand`·`unregisteredBuilding` 추가. **기존 `isUnregistered`(NBL·:108,560)와 별개 키**임을 주석으로 못박는다. 개산공제율도 `estimatedDeductionRate` 단일 → `landEstimatedDeductionRate`·`buildingEstimatedDeductionRate` 2필드.
+4. **⑬ API 변환**: `lib/calc/transfer-tax-api-gb.ts` — 2필드 전달 + `:386`의 `estimatedDeductionRate: 0.03`을 파트별 `estimatedDeductionRate(gbLandUnregistered)` / `(gbBuildingUnregistered)`로.
+   - ⚠️ `lib/calc/transfer-tax-api-gb-shares.ts:50`의 GB 필드 화이트리스트(지분 경로)에도 신규 키를 **전부** 등록해야 침묵 strip을 피한다.
+5. **⑭ Route 매핑**: `app/api/calc/transfer/general-building-route-cards.ts:92`의 `isUnregistered: false` 하드코딩을 **카드별** 매핑으로 교체(`land_*` → 토지 플래그, `building`·증축 → 건물 플래그). **`general-building-route-actual.ts`(실가)·`general-building-route-helper.ts`(환산) 두 경로가 이 파일을 공유**하므로 한 곳 수정으로 양쪽이 덮인다 — **양쪽 anchor로 확인**.
+6. **엔진 율 분리**: `general-building-valuation.ts:229·330`의 단일 `rate` 파라미터를 `landRate`·`buildingRate`로 분리. `calculateEstimatedDeduction`은 이미 `landDed`/`buildingDed`를 나눠 산출하므로 **인자만 갈라 주면 된다**. `general-building-extension.ts:63`(증축)도 동일.
+7. ~~**§104⑤ 그룹핑 (Q3)**~~ ✅ **종결(2026-08-11) — 기존 anchor가 이미 잠그고 있다.**
+   GB bundled은 두 경로 모두 `calculateTransferTaxAggregate`를 탄다(`general-building-route-actual.ts:572` · `general-building-route-helper.ts:419`) ⇒ `classifyRateGroup`(`transfer-tax-aggregate-helpers.ts:57-61`)에 도달한다. 그 뒤 규칙은 `aggregate-progressive-clause-104-5.anchor.test.ts`가 **두 케이스 모두** 고정해 두었다:
+
+   | anchor | 케이스 | 규칙 |
+   |---|---|---|
+   | **B-39**(`:127`) | 미등기 2건 | 같은 호(10호) **합산 1회** — floor 1원으로 판별(자산별이면 140,000,000, 합산이면 **140,000,001**) |
+   | **B-40**(`:135`) | 누진 1건 + 미등기 1건 | 호가 다르므로 **버킷 분리 후 자산별 합**(68,980,000 + 70,000,000 = 138,980,000) |
+
+   ⇒ GB의 두 시나리오(양쪽 미등기 / 한쪽만 미등기)가 그대로 대응된다. **새 anchor 불필요.** 전제는 「토지 카드와 건물 카드를 **별개 자산**으로 본다」인데, 토지·건물은 별개 부동산이고 신고서도 행을 나누므로 §104⑤2호 「자산별」(= 호별 합산, 기재부 재산세제과-536) 해석과 정합한다.
+   - memory `project_transfer_104_5_model_a_defect` · `project_transfer_104_5_short_term_part_bucket` 참조.
+
+#### C-6. 착수 전 판정이 필요한 항목
+
+| ID | 질문 | 왜 중요한가 |
+|---|---|---|
+| **C-6a** | **증축 건물2 카드는 원건물과 같은 등기 축인가?** 증축은 통상 표시변경등기라 별도 소유권보존등기가 아니다 — 원건물 플래그를 따르는 것이 맞아 보이나 미확인 | 틀리면 3파트 중 하나가 잘못된 율·세율로 계산된다 |
+| ~~**C-6b**~~ ✅ | **판정(2026-08-11): 카드 구조 변경 불필요.** `calcTax` T-1(`transfer-tax-rate-calc.ts:194-205`)은 미등기면 **§104① 후단 비교 없이 70%로 조기 반환**하고 `candidateClauses`도 `104-1-10` 하나만 싣는다. GB 맥락에서는 결과가 옳다 — 경쟁 호가 8호(비사업용, 최고 55%)·§104④3호(지정지역 비사업용, 8호+10%p = 최고 65%)뿐이라 **70%가 항상 승자**다 | — |
+| 🟡 (범위 밖 기록) | 위 조기 반환은 **§104⑦ 다주택 중과**(§55① 최고 45% + 30%p = **75%**)와 겹칠 때는 70%를 골라 과소가 될 수 있다. 다만 §104① 후단은 문언상 「①항 각 호」 간 비교이고 ⑦항과의 우열은 명문이 없다. **GB는 주택이 아니라 이 계획의 범위 밖** — memory `project_transfer_104_1_latter_short_term`(🟠 재검토 필요) 축과 연결해 별건으로 다룰 것 | 미판정 |
+| **C-6c** | 미등기 + 환산 취득의 동시 성립이 §168① 제외 사유(장기할부·법원 결정 등)에 걸리는 경우 UI가 판단하지 않는다 | 현행 정책 유지(사용자 입력 그대로) — Q4와 동일 축 |
 
 ### Phase D — 컴패니언 자산-수준 미등기 입력 (선택 · 별건 권고)
 
@@ -277,10 +315,28 @@ const allowsUnregistered = !UNREGISTERED_EXCLUDED_KINDS.includes(primaryKind);
 
 부수 확인: GB는 UI가 잠겨 `formData.isUnregistered`가 항상 `false`이므로 사이드바 프리뷰(3%)와 엔진(3%)이 일치한다 — §5.1의 표시 불일치는 **현재 발생하지 않는다**. Phase C에서 UI를 열 때 `transfer-tax-api-gb.ts:386`을 함께 고쳐야 이 정합이 유지된다.
 
+### ✅ Phase C 완료 (2026-08-11) — 토지·건물 축 분리
+
+| 항목 | 내용 |
+|---|---|
+| **설계 변경** | 사용자 지적으로 **단일 boolean → 토지·건물 2축**으로 바꿨다. 둘은 별개 부동산·별개 등기부이고, 건물만 미등기(무허가 신축)인 조합이 실무에서 흔하다. 증축분(건물2)은 건물 축을 따른다(민법 §256 부합) |
+| **①②③ 폼** | `gbLandUnregistered`·`gbBuildingUnregistered` + factory 초기값 + migrate normalize |
+| **⑤ UI** | ⑤ 특수 상황 안 2토글 + 「미등기 파트만 70%」 안내. GB는 폼-전역 `isUnregistered` 미사용 |
+| **⑫⑬⑭** | Zod 2필드 · payload 빌더 `unregisteredFields`(**환산·실가 두 경로 모두**) · 지분 화이트리스트 · 카드별 매핑(`land_*`→토지, `building*`→건물) |
+| **엔진** | `rate` 단일 인자 → `landRate`·`buildingRate`. **율 payload 필드 폐지** — 율은 미등기 여부의 함수라 엔진이 파생한다(이중 소스 제거) |
+| **파일 분리** | Step4 812줄 초과 → `step4-sections/SpecialSituationSection.tsx` 추출(696줄 착지) |
+| 검증 | 전체 vitest **14,914** · GB·CB E2E **63** · anchor U-2a~d · U4 가드 GREEN · tsc 0 · lint 0 error |
+
+**Q6 규명**: 2026-07-28 정정(`75a6f29c`)이 GB·CB를 빠뜨린 것은 의도적 유보가 아니라 **오판**이었다 — 커밋 본문이 「일반건물·상가는 지켰다」고 적고 있다. 그때 세운 U4 구조 가드도 둘을 못 잡았다: (a) 정규식이 **숫자 리터럴만** 봐서 CB의 상수 참조를 놓쳤고, (b) 스캔 범위가 `lib/tax-engine`뿐이라 GB의 `lib/calc` 주입이 범위 밖이었다. ⇒ **가드를 두 축 모두 확장**했다(`unregistered-lump-deduction-rate.test.ts` U4).
+
+**🔴 Phase B가 만든 신규 갭을 Phase C에서 잡았다**: `previewCommercialBuildingEstimated`(사이드바 프리뷰)가 엔진 input을 **화이트리스트로 재조립**하는데 `isUnregistered`가 빠져 있었다 ⇒ 미등기 CB에서 **프리뷰 3% vs 결과 0.3%**(10배). 타입이 잡아주지 않는 자리다. 배선 + anchor U-3d(mutation probe로 실효성 확인) 추가.
+GB 프리뷰(`previewGeneralBuildingEstimated`)는 **같은 payload 빌더를 재사용**하므로 자동 정합했다.
+
 ### ⏭️ 남은 작업
 
-1. **Phase C** (일반건물 bundled 배선) — Q3(§104⑤ 그룹핑) 법령 검토 선행. 완료 시 `Step4.tsx`의 `UNREGISTERED_EXCLUDED_KINDS`에서 `general_building` 제거 + `unregistered-asset-kind-coverage.anchor.test.ts`의 U-2 기대값 반전
-2. **Phase D** (컴패니언 자산-수준 미등기 입력) · **Q1**(입주권·분양권 근거) · **Q2**(`gbIsUnregistered` 개명) · **Q6**(2026-07-28 정정에서 GB·CB가 빠진 경위)
+**Phase D** (컴패니언 자산-수준 미등기 입력) · **Q1**(입주권·분양권 제외 근거) · **Q2**(`gbIsUnregistered` 개명 — 이름 충돌이 이번에 실제 위험으로 확인됐다) · **C-6c**(§168① 제외 사유 UI 미판단 — Q4와 동일 축)
+
+🟡 **범위 밖 기록**: `calcTax` T-1의 미등기 70% 조기 반환이 §104⑦ 다주택 중과(최고 75%)와 겹칠 때의 우열은 명문이 없다(§7 C-6b 주). GB는 주택이 아니라 이번 범위 밖 — memory `project_transfer_104_1_latter_short_term` 축과 함께 별건으로.
 
 ### (참고) 착수 시점의 권고 순서
 

@@ -40,7 +40,11 @@ export interface GeneralBuildingActualPricePayload {
   transferBuildingStdPrice: number;
   zoneType?: string;
   isMetropolitan?: boolean;
+  /** 「지방세법 시행령」 §101① 단서 — 허가·사용승인 미이행(NBL 축). §104③과 무관. */
   isUnregistered?: boolean;
+  /** 「소득세법」 §104③ 미등기양도자산 — 토지 축 / 건물 축(별개 등기부). */
+  unregisteredLand?: boolean;
+  unregisteredBuilding?: boolean;
   actualAcquisitionPrice: number;
   actualExpenses: number;
   /** 부담부증여 §159①1호 산식용 — 취득시 토지 ㎡당 기준시가. 부담부증여 모드 시 필수. */
@@ -568,7 +572,10 @@ export function calculateGeneralBuildingActualTransfer(
   const built = buildActualGeneralBuildingCards(payload);
   const { cards, nonBusinessRatio, totalStd, landStdAtTransfer } = built;
 
-  const properties = buildProperties(cards, nonBusinessRatio);
+  const properties = buildProperties(cards, nonBusinessRatio, undefined, {
+    land: payload.unregisteredLand,
+    building: payload.unregisteredBuilding,
+  });
   const aggregated = calculateTransferTaxAggregate(
     {
       taxYear,
