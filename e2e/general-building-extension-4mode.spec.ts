@@ -130,6 +130,50 @@ test.describe("일반건물 증축 4조합 — 계산 도달", () => {
     await expect(page.getByText("(3002·증축)")).toBeVisible();
   });
 
+  /**
+   * 🔴 **D-11의 화면 도달 지점** (계획서 §4 D-11 · §14 O-3 종결).
+   *
+   * 부분 혼합(토지 실가 + 건물1 환산)은 **분리 ON에서만** 만들 수 있다 — 파트별 산정방식
+   * 라디오가 `GeneralBuildingAcquisitionCards`의 분리 ON 분기에만 있기 때문이다.
+   * 그 조합 × 증축에서 양도비가 payload에서 통째로 빠졌다(실측 58,948,319원 과대).
+   *
+   * 값은 `general-building-extension-transfer-expense.anchor.test.ts`가 고정한다.
+   * 여기서는 **그 조합의 입력 화면이 실재하고 계산까지 도달하는지**만 본다 —
+   * 입력 경로가 없으면 배관 수정은 no-op이다(메모리 `feedback_api_trigger_without_input_path_is_noop`).
+   */
+  test("D-11: 분리 ON × 부분 혼합 × 증축 — 파트별 산정방식 + 양도비 칸이 있고 계산에 도달한다", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await seed(page, {
+      ...EXT_ACTUAL,
+      hasSeperateLandAcquisitionDate: true,
+      landAcquisitionDate: "2008-03-01",
+      landAcqMode: "actual",
+      buildingAcqMode: "estimated",
+      landAcquisitionPrice: "500000000",
+      // V-8 — 부분 혼합에서 자산 단위 자본적지출은 validate가 막는다. 파트 칸이 정본이다.
+      capitalExpenditure: "",
+      landDirectExpenses: "100000000",
+      buildingDirectExpenses: "200000000",
+      transferExpense: "300000000",
+    });
+    await expandAssetSection(page, 3);
+    // 파트별 산정방식 라디오 — 이 조합의 유일한 진입점.
+    await expect(page.getByText("토지 취득가액 산정 방식").first()).toBeVisible();
+    await expect(page.getByText("건물 취득가액 산정 방식").first()).toBeVisible();
+
+    // 양도비 칸(§97① 나목)이 실재한다 — 배관이 살아도 칸이 없으면 no-op이다.
+    await expandAssetSection(page, 4);
+    await expect(page.getByText(/양도비 \(원\)/).first()).toBeVisible();
+
+    await calculate(page);
+    await expect(page.getByText(/양도소득세 계산 결과|산출세액/).first()).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText(/일반건물 3-자산 요약/)).toBeVisible();
+  });
+
   test("조합 D(원건물 환산 + 증축 실가)도 계산까지 도달한다", async ({ page }) => {
     test.setTimeout(120_000);
     await seed(page, {

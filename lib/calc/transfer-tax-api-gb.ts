@@ -523,12 +523,33 @@ export function buildGeneralBuildingValuation(
        * **합계액**」이라 양도비를 조건 없이 포함한다. 빼는 유일한 정당화가 이중계상인데
        * 그것이 성립하지 않으므로, 조합 C·D에서는 **항상 싣는다**.
        *
-       * ⚠️ **부분 혼합(토지 실가 + 건물1 환산)은 `bothEstimated === false`라 현행이 유지된다** —
-       *    그 조합은 실가 파트가 `bundledExpenses`를 실제로 소비하므로 이중계상 위험이 남는다.
-       *    환산 파트 나목의 정밀 안분은 별건이다(계획서 §14 O-3).
+       * ── 🔴 **`isSeparate` 추가** (2026-08-12 D-11 — 계획서 §14 O-3 종결) ──────────
+       *
+       * 종전 주석은 「부분 혼합(토지 실가 + 건물1 환산)은 실가 파트가 `bundledExpenses`를
+       * **실제로 소비**하므로 이중계상 위험이 남는다」였다. **그 전제가 틀렸다.**
+       *
+       * 부분 혼합은 **분리 ON에서만** 만들 수 있고(파트별 산정방식 라디오가
+       * `GeneralBuildingAcquisitionCards`의 분리 ON 분기에만 있다), 분리 ON이면
+       * `general-building-extension.ts`의 일괄 안분값이 **두 파트 모두에서 덮인다**:
+       *   · 비-환산 파트 → Step 2.5 `applyPartAcqModes`가 파트 가격으로 대체.
+       *     V-7이 그 값을 **필수로 요구**하므로 비어 있을 수 없다.
+       *   · 환산 파트     → 「파트가 환산이면 일괄 안분값을 쓰지 않는다」 분기가 §176의2② 값으로 대체.
+       *
+       * mutation 실측: 분리 ON에서 `gbBundledAcquisitionExpenses`를 0 → 5억으로 바꿔도
+       * 토지 카드 필요경비·결정세액이 **불변**이고, stale `fixedAcquisitionPrice` 9억이 payload에
+       * 실려도 토지 취득가액은 파트 가격 그대로다. 반면 분리 **OFF**(조합 A)는 같은 mutation에서
+       * 토지 필요경비 0 → 333,333,333 · 결정세액 155,801,082 → 17,789,329으로 크게 반응한다.
+       * ⇒ 이중계상이 성립하지 않는데도 양도비가 나목에서 통째로 빠졌다.
+       * 실측 **결정세액 58,948,319원 과대**(양도비 3억 기준).
+       *
+       * 범위는 부분 혼합에 한정되지 않는다 — **분리 ON × 증축 전부**(둘 다 실가 포함)가 같다.
+       *
+       * ⚠️ 분리 **OFF**는 종전 그대로다. 그쪽은 파트 취득가액 칸이 화면에 없어 일괄 안분값이
+       *    실가 파트의 정본으로 남고, 그때는 이중계상이 **실재한다**(위 대조군 수치).
        */
       ...((!asset.gbHasExtension ||
         bothEstimated ||
+        !!asset.hasSeperateLandAcquisitionDate ||
         !!parseAmount(asset.gbBundledAcquisitionExpenses)) &&
       parseAmount(asset.transferExpense)
         ? { transferExpense: parseAmount(asset.transferExpense) }

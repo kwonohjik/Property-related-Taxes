@@ -20,6 +20,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { buildGeneralBuildingValuation } from "@/lib/calc/transfer-tax-api-gb";
+import { validateGeneralBuildingAsset } from "@/lib/calc/transfer-tax-validate-gb";
 import { dispatchGeneralBuilding } from "@/app/api/calc/transfer/general-building-route-helper";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { makeMockRates } from "../_helpers/mock-rates";
@@ -63,11 +64,39 @@ function gbExtAsset(over: Partial<AssetForm> = {}): AssetForm {
 /**
  * 원건물 **실가**(조합 A) — 「② 채택 시 제외가 정본」이 성립하는 유일한 축.
  * 그 조합에서만 `bundledExpenses`가 토지·건물1에 실제로 안분되어 **소비**된다.
+ *
+ * ⚠️ 「분리 **OFF**」가 그 성립의 숨은 전제다 — 분리 ON이면 파트별 취득가액이 정본이라
+ *    일괄 경로 자체를 타지 않는다(아래 D-11).
  */
 function gbExtAssetOriginActual(over: Partial<AssetForm> = {}): AssetForm {
   return gbExtAsset({
     useEstimatedAcquisition: false,
     fixedAcquisitionPrice: "300,000,000",
+    ...over,
+  } as Partial<AssetForm>);
+}
+
+/** 분리 ON 파트별 자본적지출 — 자산 단위 칸은 V-8이 막으므로 파트 칸으로 옮긴다. */
+const PART_CAPEX = 400_000_000;
+
+/**
+ * **분리 ON**(토지·건물 취득일 다름) × 증축 — D-11이 사는 축.
+ *
+ * 토지 실가 + 건물 환산의 **부분 혼합**이며, 이 조합은 분리 ON에서만 만들 수 있다
+ * (파트별 산정방식 라디오가 `GeneralBuildingAcquisitionCards`의 분리 ON 분기에만 있다).
+ */
+function gbExtAssetSeparate(over: Partial<AssetForm> = {}): AssetForm {
+  return gbExtAsset({
+    hasSeperateLandAcquisitionDate: true,
+    landAcquisitionDate: "1999-05-24",
+    landAcqMode: "actual",
+    buildingAcqMode: "estimated",
+    landAcquisitionPrice: "300,000,000",
+    useEstimatedAcquisition: false,
+    // V-8 — 부분 혼합에서 자산 단위 자본적지출은 validate가 차단한다. 파트 칸이 정본이다.
+    capitalExpenditure: "",
+    landDirectExpenses: String(PART_CAPEX),
+    buildingDirectExpenses: String(PART_CAPEX),
     ...over,
   } as Partial<AssetForm>);
 }
@@ -95,6 +124,8 @@ function calc(asset: AssetForm) {
     tax: r.aggregated.determinedTax,
     directSide: r.aggregated.swapComparison?.directSide,
     bundledExpenses: gbv.bundledExpenses as number,
+    /** ④가 실제로 실었는가 — 세액이 같아도 배관이 끊겼는지 여기서 갈린다. */
+    transferExpensePayload: gbv.transferExpense as number | undefined,
   };
 }
 
@@ -188,6 +219,86 @@ describe("D-10 — 원건물 환산이면 전용 필드 미입력이어도 나�
     const withoutExp = calc(gbExtAsset({ transferExpense: "0" }));
     expect(withoutExp.directSide).toBe(CAPEX);
     expect(withoutExp.tax).toBeGreaterThan(withExp.tax);
+  });
+});
+
+/**
+ * 🔴 **D-11 — 분리 ON(토지·건물 취득일 다름)에서도 전용 필드 미입력이어야 양도비를 나목에 넣는다.**
+ *
+ * 계획서 §14 O-3을 실측으로 종결한 항목이다. 종전 서술은 「부분 혼합은 실가 파트가
+ * `bundledExpenses`를 **실제로 소비**하므로 이중계상 위험이 남는다」였는데, **그 전제가 틀렸다**.
+ *
+ * ── 실측 (2026-08-12) ────────────────────────────────────────────────────
+ * 분리 ON에서는 파트별 취득가액이 정본이라 **일괄 경로 자체를 타지 않는다**:
+ *   · `gbBundledAcquisitionExpenses`를 0 → 5억으로 바꿔도 토지 카드 필요경비·결정세액 **불변**
+ *   · stale `fixedAcquisitionPrice` 9억이 payload에 실려도 토지 취득가액은 **파트 가격 그대로**
+ *   ⇔ 대조군(분리 OFF·조합 A)은 같은 mutation에서 토지 필요경비 0 → 333,333,333,
+ *      결정세액 155,801,082 → 17,789,329으로 **크게 반응한다**
+ *
+ * ⇒ 이중계상이 성립하지 않는데도 양도비가 §97②2호 나목에서 통째로 빠졌다.
+ *   실측 **결정세액 58,948,319원 과대**(양도비 3억 · 별도 픽스처 기준 — probe 원값).
+ *
+ * 범위는 부분 혼합에 한정되지 않는다 — **분리 ON × 증축 전부**(둘 다 실가 포함)가 같은 결함이다.
+ *
+ * ⚠️ 위 「원건물 실가 + 전용 필드 미입력(② 채택) 시 제외가 정본」 describe와 **대조군 쌍**이다.
+ *    그쪽은 분리 **OFF**라 일괄 경로를 타고, 이쪽은 분리 **ON**이라 타지 않는다.
+ *    한쪽만 보면 다시 「무조건 포함」·「무조건 제외」로 되돌아간다.
+ */
+describe("D-11 — 분리 ON × 증축이면 전용 필드 미입력이어도 나목에 포함", () => {
+  it("전제 — 부분 혼합 × 증축 픽스처가 validate를 통과한다", () => {
+    expect(
+      validateGeneralBuildingAsset(gbExtAssetSeparate(), "자산1", "2024-03-01"),
+    ).toBeNull();
+  });
+
+  it("🔴 ④가 transferExpense를 싣는다 (종전에는 침묵 drop)", () => {
+    const r = calc(gbExtAssetSeparate());
+    expect(r.transferExpensePayload).toBe(TRANSFER_EXP);
+  });
+
+  it("🔴 세액이 실제로 달라진다 — 양도비를 뺀 종전 동작과의 차액", () => {
+    const withExp = calc(gbExtAssetSeparate());
+    const withoutExp = calc(gbExtAssetSeparate({ transferExpense: "0" }));
+    expect(withoutExp.transferExpensePayload).toBeUndefined();
+    expect(withoutExp.tax).toBeGreaterThan(withExp.tax);
+  });
+
+  it("분리 ON × 둘 다 실가에서도 싣는다 — 부분 혼합에 한정된 결함이 아니다", () => {
+    const r = calc(
+      gbExtAssetSeparate({
+        buildingAcqMode: "actual",
+        buildingAcquisitionPrice: "150,000,000",
+      }),
+    );
+    expect(r.transferExpensePayload).toBe(TRANSFER_EXP);
+  });
+
+  /**
+   * 🔑 **이 mutation이 D-11의 근거를 고정한다.**
+   *
+   * 「소비되지 않으므로 이중계상이 아니다」가 수정의 유일한 정당화이므로, 소비되지 않는다는
+   * 사실 자체를 테스트가 붙들어야 한다. 엔진이 나중에 분리 ON에서도 일괄 경비를 소비하도록
+   * 바뀌면 이 단언이 먼저 깨져 D-11 전제를 재검토하게 만든다
+   * (메모리 `feedback_negative_assertion_needs_mutation_probe`).
+   */
+  it("🔑 근거 mutation — 분리 ON에서는 일괄 필요경비를 바꿔도 세액이 불변이다", () => {
+    // ⚠️ **양도비를 0으로 고정**해야 한 변수만 움직인다. 양도비가 있으면
+    //    `gbBundledAcquisitionExpenses` 입력이 위 게이트까지 함께 열어 두 효과가 섞인다.
+    const zero = calc(gbExtAssetSeparate({ transferExpense: "0", gbBundledAcquisitionExpenses: "0" }));
+    const huge = calc(
+      gbExtAssetSeparate({ transferExpense: "0", gbBundledAcquisitionExpenses: "500,000,000" }),
+    );
+    expect(huge.tax).toBe(zero.tax);
+  });
+
+  it("🔑 대조군 — 분리 OFF(조합 A)에서는 같은 mutation이 세액을 바꾼다", () => {
+    const zero = calc(
+      gbExtAssetOriginActual({ transferExpense: "0", gbBundledAcquisitionExpenses: "0" }),
+    );
+    const huge = calc(
+      gbExtAssetOriginActual({ transferExpense: "0", gbBundledAcquisitionExpenses: "500,000,000" }),
+    );
+    expect(huge.tax).not.toBe(zero.tax);
   });
 });
 
