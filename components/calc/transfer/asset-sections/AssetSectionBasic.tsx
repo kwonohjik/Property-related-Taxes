@@ -25,6 +25,7 @@ import {
 } from "@/lib/calc/vworld-reverse-geocode";
 import { MixedUseToggleRow } from "../MixedUseSection";
 import { NonHousingConversionToggleRow } from "../NonHousingConversionSection";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import {
   AssetAreaSection,
   areaResetPatchForAssetKind,
@@ -176,6 +177,21 @@ export function AssetSectionBasic({
           </p>
         )}
       </div>
+
+      {/* 미등기 양도(§104③) — **컴패니언 자산 전용**.
+          주 자산은 폼-전역 값을 「보유 상황 ⑤ 특수 상황」에서 받으므로 여기 두면 dual-truth가 된다.
+          일괄양도는 물건마다 등기 여부가 다를 수 있어 자산-수준 입력이 필요하다.
+          컴패니언 `assetKind` enum은 housing·land·building 3종뿐이라(§94①1호 자산) 종류 게이트가 없다. */}
+      {!isFirst && (
+        <ToggleCard
+          variant="chip"
+          tone="rose"
+          title="미등기 양도"
+          description="70% 단일세율 — 장기보유공제·기본공제 배제, 개산공제 0.3%"
+          checked={asset.isUnregistered}
+          onCheckedChange={(v) => onChange({ isUnregistered: v })}
+        />
+      )}
 
       {/* 겸용주택 분리계산 토글 — 자산 종류가 주택일 때 상단에 노출.
           바로 아래 §95⑤ 토글과 **배타**라(일부만 주택 ↔ 전부 주택) 나란히 둔다. */}

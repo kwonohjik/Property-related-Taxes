@@ -48,6 +48,9 @@ export function migrateAsset(raw: unknown): AssetForm {
         ? "partial"
         : "same";
   }
+  // §104③ 미등기양도자산(컴패니언 자산-수준) — stale 세션 가드. 없으면 undefined가 payload에
+  // 실려 Zod optional을 통과하고 엔진이 등기 자산으로 처리한다(종전 동작 = 안전측).
+  if (a.isUnregistered === undefined) a.isUnregistered = false;
   // 축 B 파트별 독립(§99①1호 나목) — stale sessionStorage 자산에 필드가 없으면 빈 문자열로 정규화
   if (a.buildingStandardPriceAtAcq === undefined) a.buildingStandardPriceAtAcq = "";
   // 토지 파트 취득 원인(건물 신축 + 토지 상속·증여, 2026-07-30) — 구 세션 복원 방어
