@@ -54,6 +54,8 @@ export const ACQ_CAUSE_LABEL: Record<AcquisitionLotForm["acquisitionCause"], str
   purchase: "매매",
   inheritance: "상속",
   gift: "증여",
+  /** §97의2① 이월과세 — 2025.1.1.~ 증여분. §104②2호로 증여자 취득일 기산 */
+  carryover_gift: "이월과세(증여)",
   merger_split: "합병·분할",
 };
 
@@ -188,11 +190,17 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <FieldCard
-                  label={lot.acquisitionCause === "gift" ? "수증일" : "취득일"}
+                  label={
+                    lot.acquisitionCause === "gift" || lot.acquisitionCause === "carryover_gift"
+                      ? "수증일"
+                      : "취득일"
+                  }
                   hint={
                     lot.acquisitionCause === "gift"
-                      ? "수증일 — 주식은 §97의2 미적용"
-                      : undefined
+                      ? "수증일 기산 — §97의2① 미적용 (§104② 본문)"
+                      : lot.acquisitionCause === "carryover_gift"
+                        ? "증여받은 날 — 2025.1.1. 이후여야 §104②2호 적용"
+                        : undefined
                   }
                 >
                   <DateInput
@@ -233,7 +241,8 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                   hint={
                     lot.acquisitionCause === "inheritance"
                       ? "상속개시일 §60-66 평가가액 (원) — 소령 §163⑨"
-                      : lot.acquisitionCause === "gift"
+                      : lot.acquisitionCause === "gift" ||
+                          lot.acquisitionCause === "carryover_gift"
                       ? "수증일 §60-66 평가가액 (원) — 소령 §163⑨"
                       : lot.acquisitionCause === "merger_split"
                       ? "1주당 가중평균 취득원가 (원) — 소령 §163①4·5호"
@@ -250,6 +259,19 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                       value={lot.decedentAcquisitionDate ?? ""}
                       onChange={(v) =>
                         updateAcquisitionLot(idx, { decedentAcquisitionDate: v })
+                      }
+                    />
+                  </FieldCard>
+                )}
+                {lot.acquisitionCause === "carryover_gift" && (
+                  <FieldCard
+                    label="증여자 취득일"
+                    hint="§104②2 보유기간 기산점 — 수증일이 2025.1.1. 이후여야 적용됩니다"
+                  >
+                    <DateInput
+                      value={lot.donorAcquisitionDate ?? ""}
+                      onChange={(v) =>
+                        updateAcquisitionLot(idx, { donorAcquisitionDate: v })
                       }
                     />
                   </FieldCard>

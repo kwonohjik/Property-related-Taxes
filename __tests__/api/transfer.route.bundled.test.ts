@@ -380,10 +380,19 @@ describe("POST /api/calc/transfer — 컴패니언 acquisitionCause 분기", () 
     expect(land.allocatedAcquisitionPrice).toBe(GIFT_ACQ);
   });
 
-  it("증여 + donorAcquisitionDate 누락 → 400", async () => {
+  /**
+   * 2026-08-11 정정 — 종전 기대는 400(증여자 취득일 필수)이었다.
+   * 「소득세법」 §104②은 예외를 3개 호로 한정 열거하고 2호의 대상은
+   * 「§97의2제1항에 **해당하는 자산**」(= 이월과세)뿐이므로, 단순 증여의 세율 보유기간은
+   * 본문 원칙대로 **증여받은 날**부터다(법 §98 + 영 §162①5호).
+   * ⇒ 증여자 취득일은 **선택 입력**이고, 없다고 API가 막으면 안 된다.
+   * UI validate도 같은 기준이다 — 한쪽만 풀면 「UI 통과 ↔ API 400」 모순이 된다(14지점 ⑧·⑩).
+   * 계획서: docs/02-design/features/transfer-104-2-2-gift-carryover-scope.plan.md §1 D-1
+   */
+  it("증여 + donorAcquisitionDate 누락 → 200 (선택 입력)", async () => {
     const payload = buildPayload({
       assetId: "land-g2",
-      assetLabel: "증여 농지(불완전)",
+      assetLabel: "증여 농지(증여자 취득일 미입력)",
       assetKind: "land",
       standardPriceAtTransfer: LAND_STD_AT_TRANSFER,
       acquisitionCause: "gift",
@@ -392,8 +401,13 @@ describe("POST /api/calc/transfer — 컴패니언 acquisitionCause 분기", () 
       reductions: [],
     });
     const res = await POST(makeRequest(payload));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
   });
+
+  // 참고: 증여자 취득일 **순서 검증**(증여일보다 이전)은 메인 자산에만 있고 컴패니언에는
+  // 원래 없다(`transfer-tax-schema-refines.ts`는 `data.donorAcquisitionDate`만 본다).
+  // 이번 변경으로 생긴 차이가 아니므로 그대로 둔다 — 메인 자산 쪽 정합은
+  // `__tests__/calc/gift-donor-date-optional-parity.test.ts`가 고정한다.
 
   it("매매(실가) + fixedAcquisitionPrice 누락 → 400", async () => {
     const payload = buildPayload({

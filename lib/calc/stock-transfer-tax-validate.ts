@@ -226,6 +226,9 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
       if (lot.acquisitionCause === "inheritance" && isEmpty(lot.decedentAcquisitionDate)) {
         errors.push({ field: `acquisitionLots[${i}].decedentAcquisitionDate`, message: `매수 lot #${i + 1} (상속): 피상속인 취득일을 입력하세요 (§104②1)`, severity: "error" });
       }
+      if (lot.acquisitionCause === "carryover_gift" && isEmpty(lot.donorAcquisitionDate)) {
+        errors.push({ field: `acquisitionLots[${i}].donorAcquisitionDate`, message: `매수 lot #${i + 1} (이월과세): 증여자 취득일을 입력하세요 (§104②2)`, severity: "error" });
+      }
       if (lot.acquisitionCause === "merger_split" && isEmpty(lot.preMergerAcquisitionDate)) {
         errors.push({ field: `acquisitionLots[${i}].preMergerAcquisitionDate`, message: `매수 lot #${i + 1} (합병·분할): 종전 주식 취득일을 입력하세요 (§104②3)`, severity: "error" });
       }
@@ -328,6 +331,13 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
     errors.push({
       field: "decedentAcquisitionDate",
       message: "상속의 경우 피상속인 취득일을 입력하세요 (§104②1 — 단기 30% 기산점)",
+      severity: "error",
+    });
+  }
+  if (acquisitionCause === "carryover_gift" && isEmpty(form.donorAcquisitionDate)) {
+    errors.push({
+      field: "donorAcquisitionDate",
+      message: "이월과세(증여)의 경우 증여자 취득일을 입력하세요 (§104②2 — 단기 30% 기산점)",
       severity: "error",
     });
   }

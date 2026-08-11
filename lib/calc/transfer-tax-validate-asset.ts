@@ -500,8 +500,10 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
     } else if (asset.acquisitionCause === "gift") {
       if (!asset.fixedAcquisitionPrice || parseAmount(asset.fixedAcquisitionPrice) <= 0)
         return `${label}: 증여 신고가액을 입력하세요.`;
-      if (!asset.donorAcquisitionDate)
-        return `${label}: 증여자 취득일을 입력하세요.`;
+      // 증여자 취득일은 **필수가 아니다** — 단순 증여의 세율 보유기간은 「증여받은 날」부터이고
+      // (§104② 본문 + 영 §162①5호), §104②2호는 「§97의2①에 해당하는 자산」 = 이월과세
+      // (`carryover_gift`)에만 적용된다. 종전에는 「단기보유 통산」을 명목으로 필수였다.
+      // 값이 입력되면 순서 검증(`donorAcquisitionDate < acquisitionDate`)은 그대로 걸린다.
     } else if (asset.acquisitionCause === "burdened_gift") {
       // ⑧ 부담부증여 (소령 §159) — Phase 2 (2026-05-12): 메뉴 재설계로 acquisitionCause==="burdened_gift" 폐지.
       // 레거시 데이터는 normalize에서 transferType="burdened_gift" + acquisitionCause="gift" 로 자동 이전.

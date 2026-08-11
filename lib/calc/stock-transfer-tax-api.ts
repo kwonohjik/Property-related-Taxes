@@ -324,7 +324,8 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   if (acquisitionCause === "inheritance" && form.decedentAcquisitionDate) {
     body.decedentAcquisitionDate = form.decedentAcquisitionDate;
   }
-  if (acquisitionCause === "gift" && form.donorAcquisitionDate) {
+  // §104②2 통산은 **이월과세(carryover_gift)에서만** 일어난다 — 단순 증여(gift)는 수증일 기산.
+  if (acquisitionCause === "carryover_gift" && form.donorAcquisitionDate) {
     body.donorAcquisitionDate = form.donorAcquisitionDate;
   }
   if (acquisitionCause === "merger_split" && form.preMergerAcquisitionDate) {
@@ -383,6 +384,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
         };
         if (lot.acquisitionCause === "inheritance" && lot.decedentAcquisitionDate) {
           o.decedentAcquisitionDate = lot.decedentAcquisitionDate;
+        }
+        if (lot.acquisitionCause === "carryover_gift" && lot.donorAcquisitionDate) {
+          o.donorAcquisitionDate = lot.donorAcquisitionDate;
         }
         if (lot.acquisitionCause === "merger_split" && lot.preMergerAcquisitionDate) {
           o.preMergerAcquisitionDate = lot.preMergerAcquisitionDate;

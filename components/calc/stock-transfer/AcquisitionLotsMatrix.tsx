@@ -186,8 +186,18 @@ export function AcquisitionLotsMatrix({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <FieldCard
-                  label={lot.acquisitionCause === "gift" ? "수증일" : "취득일"}
-                  hint={lot.acquisitionCause === "gift" ? "수증일 — §97의2 미적용" : undefined}
+                  label={
+                    lot.acquisitionCause === "gift" || lot.acquisitionCause === "carryover_gift"
+                      ? "수증일"
+                      : "취득일"
+                  }
+                  hint={
+                    lot.acquisitionCause === "gift"
+                      ? "수증일 기산 — §97의2① 미적용 (§104② 본문)"
+                      : lot.acquisitionCause === "carryover_gift"
+                        ? "증여받은 날 — 2025.1.1. 이후여야 §104②2호 적용"
+                        : undefined
+                  }
                 >
                   <DateInput
                     value={lot.acquisitionDate}
@@ -228,7 +238,8 @@ export function AcquisitionLotsMatrix({
                   hint={
                     lot.acquisitionCause === "inheritance"
                       ? "상속개시일 §60-66 평가가액 (원)"
-                      : lot.acquisitionCause === "gift"
+                      : lot.acquisitionCause === "gift" ||
+                          lot.acquisitionCause === "carryover_gift"
                       ? "수증일 §60-66 평가가액 (원)"
                       : lot.acquisitionCause === "merger_split"
                       ? "1주당 가중평균 취득원가 (원)"
@@ -254,6 +265,17 @@ export function AcquisitionLotsMatrix({
                     <DateInput
                       value={lot.decedentAcquisitionDate ?? ""}
                       onChange={(v) => updateLot(idx, { decedentAcquisitionDate: v })}
+                    />
+                  </FieldCard>
+                )}
+                {lot.acquisitionCause === "carryover_gift" && (
+                  <FieldCard
+                    label="증여자 취득일"
+                    hint="§104②2 보유기간 기산점 — 수증일이 2025.1.1. 이후여야 적용됩니다"
+                  >
+                    <DateInput
+                      value={lot.donorAcquisitionDate ?? ""}
+                      onChange={(v) => updateLot(idx, { donorAcquisitionDate: v })}
                     />
                   </FieldCard>
                 )}

@@ -96,7 +96,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     transferDate: strField("transferDate"),
     shareCount: strField("shareCount"),
     totalIssuedShares: strField("totalIssuedShares"),
-    acquisitionCause: enumField("acquisitionCause", ["purchase", "inheritance", "gift", "merger_split"], defaults.acquisitionCause),
+    acquisitionCause: enumField("acquisitionCause", ["purchase", "inheritance", "gift", "carryover_gift", "merger_split"], defaults.acquisitionCause),
     decedentAcquisitionDate: strField("decedentAcquisitionDate"),
     donorAcquisitionDate: strField("donorAcquisitionDate"),
     preMergerAcquisitionDate: strField("preMergerAcquisitionDate"),
@@ -425,7 +425,7 @@ function normalizeExitTaxHoldings(raw: unknown): ExitTaxHoldingForm[] {
 
 function normalizeAcquisitionLots(raw: unknown): AcquisitionLotForm[] {
   if (!Array.isArray(raw)) return [];
-  const validCauses = ["purchase", "inheritance", "gift", "merger_split"] as const;
+  const validCauses = ["purchase", "inheritance", "gift", "carryover_gift", "merger_split"] as const;
   return raw
     .map((r): AcquisitionLotForm | null => {
       if (!r || typeof r !== "object") return null;
@@ -442,6 +442,8 @@ function normalizeAcquisitionLots(raw: unknown): AcquisitionLotForm[] {
         perShareAcquisitionPrice: typeof o.perShareAcquisitionPrice === "string" ? o.perShareAcquisitionPrice : "",
         acquisitionCause: cause,
         decedentAcquisitionDate: typeof o.decedentAcquisitionDate === "string" ? o.decedentAcquisitionDate : undefined,
+        // 이월과세 lot — §104②2 증여자 취득일 (2025.1.1.~ 증여분)
+        donorAcquisitionDate: typeof o.donorAcquisitionDate === "string" ? o.donorAcquisitionDate : undefined,
         preMergerAcquisitionDate: typeof o.preMergerAcquisitionDate === "string" ? o.preMergerAcquisitionDate : undefined,
       };
     })

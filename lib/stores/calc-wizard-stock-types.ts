@@ -80,8 +80,10 @@ export interface AcquisitionLotForm {
   acquisitionDate: string;                     // "YYYY-MM-DD" (gift는 수증일)
   shareCount: string;                          // 주
   perShareAcquisitionPrice: string;            // 원 (상속/증여 lot도 §163⑨ 평가가액 직접 입력)
-  acquisitionCause: "purchase" | "inheritance" | "gift" | "merger_split";
+  /** `carryover_gift` = §97의2①이 적용되는 증여 (2025.1.1.~ 증여분 · 배우자·직계존비속) */
+  acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "merger_split";
   decedentAcquisitionDate?: string;            // 상속 시 피상속인 취득일 (§104②1)
+  donorAcquisitionDate?: string;               // 이월과세 시 증여자 취득일 (§104②2)
   preMergerAcquisitionDate?: string;           // 합병·분할 시 종전 주식 취득일 (§104②3)
 }
 

@@ -15,6 +15,7 @@ import { calculateProgressiveTax } from "./tax-utils";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import type { SplitRatePart } from "./transfer-tax-split-rate";
 import { clauseBucketKey } from "./transfer-tax-rate-calc";
+import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   RateGroup,
@@ -60,12 +61,8 @@ export function classifyRateGroup(
 ): RateGroup {
   if (item.isUnregistered) return "unregistered";
 
-  const acqDate =
-    item.acquisitionCause === "inheritance" && item.decedentAcquisitionDate
-      ? item.decedentAcquisitionDate
-      : item.acquisitionCause === "gift" && item.donorAcquisitionDate
-        ? item.donorAcquisitionDate
-        : item.acquisitionDate;
+  // §104② 기산일 — `transfer-rate-holding-basis.ts` 단일 소스 (단순 증여는 통산 없음).
+  const acqDate = resolveRateBasisAcquisitionDate(item);
   const holdingMonths = monthsBetween(acqDate, item.transferDate);
   const isHousingLike =
     item.propertyType === "housing" ||

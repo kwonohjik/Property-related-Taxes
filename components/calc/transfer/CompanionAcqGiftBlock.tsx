@@ -4,7 +4,14 @@
  * 동반자산 증여 취득(gift) 입력 블록
  *
  * 증여 취득가액 = 증여세 신고가액 (또는 시가).
- * 증여자 취득일을 자체 입력받아 단기보유 통산(§104②2호) 정확도 확보.
+ *
+ * ⚠️ 2026-08-11 — 증여자 취득일은 **단기보유 통산용이 아니다**.
+ * 「소득세법」 §104②은 예외를 3개 호로 한정 열거하고 2호의 대상은
+ * 「§97의2제1항에 **해당하는 자산**」(= 이월과세)뿐이므로, 단순 증여의 세율 보유기간은
+ * 본문 원칙대로 **증여받은 날**부터다(법 §98 + 영 §162①5호).
+ * 통산이 필요하면 취득원인에서 **「이월과세(증여)」**를 선택해야 한다.
+ * 이 칸은 §97의2① 해당 여부 판정·비교과세 참고용으로 남긴다(선택 입력).
+ * 계획서: docs/02-design/features/transfer-104-2-2-gift-carryover-scope.plan.md §1 D-1·D-4
  */
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
@@ -47,7 +54,10 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
             value={props.donorAcquisitionDate}
             onChange={props.onDonorAcquisitionDateChange}
           />
-          <p className="text-caption text-muted-foreground">단기보유 통산용 (소득세법 §104②2호)</p>
+          <p className="text-caption text-muted-foreground">
+            선택 입력 — 세율 보유기간은 <strong>증여받은 날</strong>부터입니다. 증여자 취득일로
+            통산하려면 취득원인을 <strong>「이월과세(증여)」</strong>로 선택하세요 (소득세법 §104②2호).
+          </p>
         </div>
       </div>
 
@@ -60,8 +70,8 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
           <p className="text-xs text-amber-800">
             부담부증여에서 <strong>양도로 보는 부분</strong>의 취득가액은 취득당시 기준시가에
             <strong> 채무비율</strong>을 곱해 산정합니다. 증여 신고가액을 따로 적어도 계산에 쓰이지
-            않으므로 입력란을 표시하지 않습니다. 위 <strong>증여일</strong>은 보유기간 기산일로,
-            <strong> 증여자 취득일</strong>은 단기보유 통산에 계속 사용됩니다.
+            않으므로 입력란을 표시하지 않습니다. 위 <strong>증여일</strong>이 보유기간 기산일입니다
+            (단순 증여의 세율 보유기간은 증여받은 날부터 — 소득세법 §104② 본문).
           </p>
         </ToneCard>
       ) : (

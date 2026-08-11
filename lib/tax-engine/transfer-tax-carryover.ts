@@ -624,7 +624,21 @@ function buildInputB(
     useEstimatedAcquisition: false,           // B는 실가(증여 당시 평가액)
     capitalExpenditure: rawInput.capitalExpenditure, // 수증자 capex만 (증여자 capex 제외)
     carryoverTaxation: undefined,             // 재귀 방지
-    acquisitionCause: "purchase",             // B는 일반 취득으로 처리
+    /**
+     * B는 일반 취득으로 처리 — **세율 보유기간도 증여일 기산이 된다**(§104②2호 미적용).
+     *
+     * 이는 의도된 결과다. §104②2호의 대상은 「§97의2제1항에 **해당하는 자산**」인데,
+     * 구법(~2013.12.31)에서는 §104②2호가 「**제97조제4항**에 해당하는 자산」이었고
+     * 구 §97④가 배제사유(수용)를 **본문 안 「~한 경우 외에는」**으로 품고 있어서
+     * 배제 자산은 문언상 「④에 해당하는 자산」이 **아니었다**.
+     * 2014.1.1.(법률 제12169호)의 §97의2 이관은 개정이유에 **가업상속 ④ 신설만** 적힌
+     * **조문 정비**이므로 적용 범위는 그대로다.
+     * ⇒ §97의2②(수용·1세대1주택·세액비교)로 배제되면 증여자 취득일로 소급하지 않는다.
+     *
+     * 계획서 §2 ⑧ · §3.2 / anchor `rate-104-2-2-gift-scope.anchor.test.ts` C-1~C-3.
+     * ⚠️ 이 줄을 `"carryover_gift"`로 바꾸면 배제 자산에 통산이 들어가 과소과세가 된다.
+     */
+    acquisitionCause: "purchase",
     // preHousingDisclosure: B에서는 환산 사용 안 함 — 명시적으로 제거
     preHousingDisclosure: undefined,
   };

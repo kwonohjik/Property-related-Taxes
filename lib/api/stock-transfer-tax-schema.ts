@@ -46,6 +46,11 @@ export const acquisitionCauseSchema = z.enum([
   "purchase",
   "inheritance",
   "gift",
+  /**
+   * §97의2① 이월과세가 적용되는 증여 — §104②2호로 증여자 취득일 기산.
+   * 2024.12.31. 개정(법률 제20615호·시행 2025.1.1.)으로 §94①3호 주식등이 ①에 포섭되면서 추가.
+   */
+  "carryover_gift",
   "merger_split",
 ]);
 
@@ -123,6 +128,8 @@ export const acquisitionLotSchema = z.object({
   perShareAcquisitionPrice: z.number().int().positive(),
   acquisitionCause: acquisitionCauseSchema,
   decedentAcquisitionDate: z.union([z.string(), z.date()]).optional(),
+  /** 이월과세 lot — 증여자 취득일 (§104②2). 없으면 `resolveLotStartDate`가 수증일로 fallback. */
+  donorAcquisitionDate: z.union([z.string(), z.date()]).optional(),
   preMergerAcquisitionDate: z.union([z.string(), z.date()]).optional(),
 });
 

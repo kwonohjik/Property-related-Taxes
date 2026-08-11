@@ -43,6 +43,8 @@ const STOCK_DATE_FIELDS = [
   // 분할 매수·분할 양도 (Plan v2.2) — coerceDates dot-notation 배열 표기
   "acquisitionLots[].acquisitionDate",
   "acquisitionLots[].decedentAcquisitionDate",
+  // 이월과세 lot — §104②2 증여자 취득일 (2025.1.1.~ 증여분)
+  "acquisitionLots[].donorAcquisitionDate",
   "acquisitionLots[].preMergerAcquisitionDate",
   "transferLots[].transferDate",
   // R-1' 매매사례가액 거래일

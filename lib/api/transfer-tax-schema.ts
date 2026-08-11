@@ -639,13 +639,9 @@ export const propertySchema = z
               message: "증여 자산은 신고가액(취득가액) 필수",
             });
           }
-          if (!c.donorAcquisitionDate) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["companionAssets", i, "donorAcquisitionDate"],
-              message: "증여 자산은 증여자 취득일 필수",
-            });
-          }
+          // 증여자 취득일은 **필수가 아니다** — 단순 증여의 세율 보유기간은 「증여받은 날」부터
+          // (§104② 본문 + 영 §162①5호). §104②2호는 이월과세에만 적용된다.
+          // UI validate와 기준이 어긋나면 「UI 통과 ↔ API 400」 모순이 된다(14지점 ⑧·⑩).
           if (!c.acquisitionDate) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
