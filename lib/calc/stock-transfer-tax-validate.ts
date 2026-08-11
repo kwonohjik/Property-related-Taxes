@@ -237,6 +237,22 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
       if (lot.acquisitionCause === "carryover_gift" && isEmpty(lot.donorAcquisitionPrice)) {
         errors.push({ field: `acquisitionLots[${i}].donorAcquisitionPrice`, message: `매수 lot #${i + 1} (이월과세): 증여자 취득가액이 없으면 취득가액이 승계되지 않습니다 (§97의2①1호)`, severity: "warning" });
       }
+      /**
+       * ①3호 증여세는 **산출세액과 과세가액이 짝**이다 — 영 §163의2②가 둘의 비율로 안분하므로
+       * 한쪽만 있으면 계산되지 않고 조용히 0이 된다(단건 축의 안분 3종 짝 규칙과 같다).
+       * 분자(양도한 자산가액)는 엔진이 매도 주식수 × 증여 당시 평가액으로 구한다.
+       */
+      if (lot.acquisitionCause === "carryover_gift") {
+        const hasGiftTax = parseI(lot.donorGiftTaxAmount ?? "") > 0;
+        const hasGiftBase = parseI(lot.donorGiftTaxableValue ?? "") > 0;
+        if (hasGiftTax !== hasGiftBase) {
+          errors.push({
+            field: `acquisitionLots[${i}].donorGiftTaxableValue`,
+            message: `매수 lot #${i + 1} (이월과세): 증여세 산출세액과 과세가액을 함께 입력하세요 (영 §163의2② 안분)`,
+            severity: "error",
+          });
+        }
+      }
       if (lot.acquisitionCause === "merger_split" && isEmpty(lot.preMergerAcquisitionDate)) {
         errors.push({ field: `acquisitionLots[${i}].preMergerAcquisitionDate`, message: `매수 lot #${i + 1} (합병·분할): 종전 주식 취득일을 입력하세요 (§104②3)`, severity: "error" });
       }

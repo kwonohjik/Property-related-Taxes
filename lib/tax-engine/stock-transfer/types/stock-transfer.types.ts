@@ -222,6 +222,23 @@ export type StockTransferInput = {
    */
   carryoverOutcome?: "applied" | "excluded";
 
+  /**
+   * 🔒 **엔진 내부 전용** — ②3호 비교의 **두 세액**. `resolveStockCarryover`가 채운다.
+   * 「그 종목만 A/B로 토글했을 때의 **전체(그룹 합산) 결정세액**」이며, 조문이 실제로
+   * 견주는 두 숫자 그대로다(Q-2 — 「자산별 결정세액」은 조문에 없다).
+   */
+  carryoverComparison?: { appliedTotalTax: number; excludedTotalTax: number };
+  /** 🔒 엔진 내부 전용 — 시나리오 A가 산입한 증여자 자본적지출(①2호) echo. 표시 전용. */
+  carryoverDonorCapexApplied?: number;
+  /**
+   * 🔒 엔진 내부 전용 — A/B 표시용 1주당 취득가액 echo. **두 시나리오 모두** 채운다.
+   * 시나리오 A는 `perShareAcquisitionPrice`를 증여자 값으로 덮어쓰고 B는 승계 입력을 지우므로,
+   * 이 두 값이 없으면 결과 카드가 「무엇과 무엇을 견줬는지」를 복원할 수 없다.
+   */
+  carryoverGiftDateValuationPerShare?: number;
+  /** 🔒 엔진 내부 전용 — 위와 짝. 증여자 취득 당시 1주당 가액(①1호 가목). */
+  carryoverDonorPricePerShare?: number;
+
   /** §94①4 다목 — 3년 누적 양도 비율 */
   cumulativeTransferRatio?: number;
 
@@ -540,16 +557,25 @@ export interface AcquisitionLot {
   /** ①1호 — 증여자 취득 당시 **1주당** 실지거래가액. `resolveLotAcquisitionPrice`가 읽는다. */
   donorAcquisitionPrice?: number;
   /**
-   * ①2호 — 증여자 자본적지출(이 lot 분, 총액).
-   * 🟠 **아직 배선되지 않았다** — split 모드의 필요경비는 종목 축 `actualExpenses` 하나로
-   *    계산되므로 lot별 산입 경로가 없다. 계획서 「잔여」 참조.
+   * ①2호 — 증여자 자본적지출(이 lot **전체 주식수**에 대한 총액).
+   *
+   * 🔑 **매도된 몫만 산입한다** — `floor(총액 × 매칭주식수 / lot 주식수)`.
+   * 필요경비는 「양도한 자산」에 대응해야 하고, 영 §163의2②가 증여세를 「양도한 해당
+   * 자산가액」 비율로 안분하는 것과 같은 원리다. 전액을 산입하면 lot을 나눠 팔 때
+   * 팔지 않은 주식의 지출까지 차감된다.
    */
   donorCapitalExpenditure?: number;
   /**
-   * ①3호 — 이 lot에 대응하는 증여세 상당액(영 §163의2② 안분 **후**).
-   * 🟠 **아직 배선되지 않았다** — 위와 같은 이유. 계획서 「잔여」 참조.
+   * ①3호 × 영 §163의2②1호 — 이 lot을 증여한 건의 증여세 **산출세액**(상증법 §56).
+   *
+   * ⚠️ **안분 전 값이다.** 안분 분자(「양도한 해당 자산가액」)는 엔진이
+   * `매칭주식수 × lot.perShareAcquisitionPrice`(= 증여 당시 §163⑨ 평가가액)로 산출한다 —
+   * lot 자체가 그 증여로 받은 주식이므로 사용자에게 따로 물을 필요가 없다.
+   * 종목 축은 증여재산에 주식 외의 것이 섞일 수 있어 `transferredAssetValue`를 직접 받는다.
    */
   donorGiftTaxAmount?: number;
+  /** ①3호 × 영 §163의2②3호 — 그 증여 건의 **증여세 과세가액**(상증법 §47). 안분 분모. */
+  donorGiftTaxableValue?: number;
   /** ① 관계 요건 — `carryover-donor-death.ts` 판정 인자 */
   donorRelation?: "spouse" | "lineal" | "other";
   /** ① 관계 요건 — 증여자 사망 사실 */
@@ -608,6 +634,17 @@ export interface LotMatchingDetail {
   longTermGain: number;
   /** [B-3] moving_avg 이동평균 단가 — 마지막 매도 적용 단가(echo). 매도별 단가는 matched[].perShareBuyPrice */
   weightedAvgPerShare?: number;
+  /**
+   * §97의2①**2호** — 승계가 실제로 걸린 sub-lot들의 증여자 자본적지출 산입 합계.
+   * 매칭주식수 비율로 안분한 뒤 합산한 값이며, 종목 축 `actualExpenses`에 더해져
+   * §97②2호 단서의 **나목**으로 비교에 참여한다.
+   */
+  carryoverDonorCapex: number;
+  /**
+   * §97의2①**3호** — 승계 sub-lot들의 증여세 상당액 합계(영 §163의2② **안분 후·한도 전**).
+   * 한도(양도가액 − §97①·②의 금액)는 종목 단위라 오케스트레이터가 건다.
+   */
+  carryoverGiftTaxApportioned: number;
   warnings: string[];
 }
 
@@ -935,6 +972,31 @@ export type StockTransferResult = {
    * 비과세 분기에서도 검산용으로 echo (산출세액 0이지만 lot별 차익은 표시).
    */
   lotMatchingDetail?: LotMatchingDetail;
+
+  /**
+   * §97의2① 이월과세 — **왜 이 세액인가**를 결과 카드가 나란히 보여 주기 위한 상세.
+   * `acquisitionCause === "carryover_gift"`(또는 lot에 이월과세가 실린) 종목에서만 채워진다.
+   *
+   * ⚠️ `appliedTotalTax`·`excludedTotalTax`는 **이 종목의 세액이 아니라 전체 결정세액**이다.
+   * ②3호가 견주는 대상이 「양도소득 결정세액」(§92 계산순서를 거친 과세기간 단위)이기
+   * 때문이다 — 종목 세액을 표시하면 사용자가 「왜 이 차액으로 갈렸는지」를 검산할 수 없다.
+   */
+  carryoverDetail?: {
+    /** 채택 결과 — `"applied"` = ① 적용 / `"excluded"` = ②3호 등으로 배제 */
+    outcome: "applied" | "excluded";
+    /** ① 적용 시 전체 결정세액 */
+    appliedTotalTax: number;
+    /** ① 미적용 시 전체 결정세액 */
+    excludedTotalTax: number;
+    /** ①1호 — 승계 취득가액(1주당). split 모드는 lot마다 달라 undefined. */
+    donorAcquisitionPricePerShare?: number;
+    /** 시나리오 B의 취득가액(1주당) = 증여 당시 평가액. split 모드는 undefined. */
+    giftDateValuationPerShare?: number;
+    /** ①2호 — 실제 산입된 증여자 자본적지출 (A 채택 시에만 > 0) */
+    donorCapexIncluded: number;
+    /** ①3호 — 실제 산입된 증여세 상당액 (안분·한도 반영 후. A 채택 시에만 > 0) */
+    giftTaxIncluded: number;
+  };
 
   /**
    * Round 4 C-02 echo — 취득 후 상장 환산 활성 여부.

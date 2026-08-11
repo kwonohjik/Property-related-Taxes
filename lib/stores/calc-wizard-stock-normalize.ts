@@ -455,6 +455,12 @@ function normalizeAcquisitionLots(raw: unknown): AcquisitionLotForm[] {
         donorAcquisitionDate: typeof o.donorAcquisitionDate === "string" ? o.donorAcquisitionDate : undefined,
         // §97의2①1호 — 증여자 취득 당시 1주당 실지거래가액 + 관계 요건
         donorAcquisitionPrice: typeof o.donorAcquisitionPrice === "string" ? o.donorAcquisitionPrice : undefined,
+        // §97의2①2호·3호 — 증여자 자본적지출 · 증여세 산출세액 · 증여세 과세가액
+        donorCapitalExpenditure:
+          typeof o.donorCapitalExpenditure === "string" ? o.donorCapitalExpenditure : undefined,
+        donorGiftTaxAmount: typeof o.donorGiftTaxAmount === "string" ? o.donorGiftTaxAmount : undefined,
+        donorGiftTaxableValue:
+          typeof o.donorGiftTaxableValue === "string" ? o.donorGiftTaxableValue : undefined,
         donorRelation:
           o.donorRelation === "spouse" || o.donorRelation === "lineal" || o.donorRelation === "other"
             ? o.donorRelation

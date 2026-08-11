@@ -45,6 +45,8 @@ function makeLotDetail(lots: { gain: number; short: boolean }[]): LotMatchingDet
     totalGain,
     shortTermGain,
     longTermGain: totalGain - shortTermGain,
+    carryoverDonorCapex: 0,
+    carryoverGiftTaxApportioned: 0,
     warnings: [],
   };
 }

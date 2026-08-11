@@ -86,6 +86,15 @@ export interface AcquisitionLotForm {
   donorAcquisitionDate?: string;               // 이월과세 시 증여자 취득일 (§104②2)
   /** 이월과세 lot — 증여자 취득 당시 1주당 실지거래가액 (§97의2①1호). 없으면 승계하지 않는다. */
   donorAcquisitionPrice?: string;
+  /**
+   * 이월과세 lot — 증여자 자본적지출 (§97의2①2호). **이 lot 전체 주식수 기준 총액**을 넣는다.
+   * 엔진이 매도된 주식수 비율로 안분한다.
+   */
+  donorCapitalExpenditure?: string;
+  /** 이월과세 lot — 그 증여 건의 증여세 **산출세액** (§97의2①3호 · 영 §163의2②1호) */
+  donorGiftTaxAmount?: string;
+  /** 이월과세 lot — 그 증여 건의 증여세 **과세가액** (영 §163의2②3호 · 안분 분모) */
+  donorGiftTaxableValue?: string;
   /** 이월과세 lot — 증여자와의 관계 (§97의2① 본문) */
   donorRelation?: "spouse" | "lineal" | "other";
   /** 이월과세 lot — 증여자 사망 (배우자=사별 / 직계존비속=양도 당시 사망) */

@@ -85,22 +85,82 @@ export function resolveLotAcquisitionPrice(
   saleDate: Date,
 ): number {
   const own = lot.perShareAcquisitionPrice;
-  if (lot.acquisitionCause !== "carryover_gift") return own;
   if (lot.donorAcquisitionPrice === undefined) return own;
-  if (!isStockCarryoverEra(lot.acquisitionDate)) return own;
-  if (!isWithinCarryoverPeriod(lot.acquisitionDate, saleDate, "stock")) return own;
-  if (isCarryoverRelationExcluded(lot.donorRelation, lot.donorDeceased, lot.acquisitionDate)) {
-    return own;
-  }
-  return lot.donorAcquisitionPrice;
+  return isLotCarryoverApplicable(lot, saleDate) ? lot.donorAcquisitionPrice : own;
 }
 
-/** split 종목에 §97의2① 승계가 걸릴 lot이 하나라도 있는가 — ②3호 비교 대상 판정용 */
+/**
+ * **「이 sub-lot에 §97의2①이 걸리는가」** — 게이트 4축(종목 축 ⓐ는 lot의 `acquisitionCause`).
+ *
+ * ①1호(취득가액 승계)·①2호(증여자 자본적지출)·①3호(증여세 상당액)가 **같은 판정**을 써야 한다.
+ * 취득가액만 승계하고 자본적지출은 안 받는 식으로 갈리면 조문 하나를 반만 적용하는 것이 된다.
+ *
+ * ⚠️ ①1호는 **추가로** `donorAcquisitionPrice`가 있어야 의미가 있지만(없으면 승계할 값이 없다),
+ *    ①2호·①3호는 그 값과 무관하게 성립한다 — 그래서 여기서는 취득가액 유무를 보지 않는다.
+ */
+export function isLotCarryoverApplicable(lot: AcquisitionLot, saleDate: Date): boolean {
+  if (lot.acquisitionCause !== "carryover_gift") return false;
+  if (!isStockCarryoverEra(lot.acquisitionDate)) return false;
+  if (!isWithinCarryoverPeriod(lot.acquisitionDate, saleDate, "stock")) return false;
+  return !isCarryoverRelationExcluded(lot.donorRelation, lot.donorDeceased, lot.acquisitionDate);
+}
+
+/**
+ * lot 판 ①2호·①3호 — **매도된 몫만** 산입한다.
+ *
+ * · ①2호 자본적지출: `floor(총액 × 매칭주식수 / lot 주식수)`
+ * · ①3호 증여세: 영 §163의2② 안분 = `산출세액 × (양도한 해당 자산가액 / 증여세 과세가액)`.
+ *   분자는 **매칭주식수 × 증여 당시 1주당 평가액**(= `perShareAcquisitionPrice`, §163⑨)이다 —
+ *   lot 자체가 그 증여로 받은 주식이라 엔진이 안다(종목 축은 증여재산에 주식 외가 섞일 수
+ *   있어 사용자에게 직접 묻는다).
+ *
+ * 한도(영 §163의2② 후단)는 **종목 단위**라 여기서 걸지 않는다 — 오케스트레이터의 몫이다.
+ */
+export function accrueLotCarryoverExpense(
+  lot: AcquisitionLot,
+  matchedShares: number,
+  saleDate: Date,
+): { capex: number; giftTax: number } {
+  if (matchedShares <= 0 || lot.shareCount <= 0) return { capex: 0, giftTax: 0 };
+  if (!isLotCarryoverApplicable(lot, saleDate)) return { capex: 0, giftTax: 0 };
+
+  const totalCapex = lot.donorCapitalExpenditure ?? 0;
+  const capex =
+    totalCapex > 0
+      ? Number((BigInt(totalCapex) * BigInt(matchedShares)) / BigInt(lot.shareCount))
+      : 0;
+
+  const tax = lot.donorGiftTaxAmount ?? 0;
+  const taxable = lot.donorGiftTaxableValue ?? 0;
+  const transferred = matchedShares * lot.perShareAcquisitionPrice;
+  const giftTax =
+    tax > 0 && taxable > 0 && transferred > 0
+      ? Number((BigInt(tax) * BigInt(transferred)) / BigInt(taxable))
+      : 0;
+
+  return { capex, giftTax };
+}
+
+/**
+ * split 종목에 §97의2①이 걸릴 lot이 하나라도 있는가 — ②3호 비교 대상 판정용.
+ *
+ * 🔑 **기준은 `donorAcquisitionDate`다**(취득가액이 아니다). ①이 적용되면 그 자산은
+ * 「§97의2①에 해당하는 자산」이므로 **②3호 비교를 거쳐야 한다** — 승계할 취득가액을
+ * 입력하지 않아 효과가 세율 소급(§104②2호)뿐이더라도 마찬가지다. 종전에는
+ * `donorAcquisitionPrice`가 있는 lot만 대상으로 봐서, 세율 축만 걸린 lot이 **비교 없이
+ * 무조건 소급**됐다(P-10 — 단건 `isStockCarryoverEligible`은 날짜만 요구해 비대칭이었다).
+ */
 export function hasCarryoverLot(input: StockTransferInput): boolean {
   if (input.marketType === "other_asset") return false; // 계획서 §1.2
   return (input.acquisitionLots ?? []).some(
-    (l) => l.acquisitionCause === "carryover_gift" && l.donorAcquisitionPrice !== undefined,
+    (l) =>
+      l.acquisitionCause === "carryover_gift" &&
+      l.donorAcquisitionDate !== undefined &&
+      isStockCarryoverEra(l.acquisitionDate) &&
+      !isCarryoverRelationExcluded(l.donorRelation, l.donorDeceased, l.acquisitionDate),
   );
+  // 1년 요건(ⓓ)은 매도일을 알아야 하므로 여기서 보지 않는다 — 매칭 시점의
+  // `isLotCarryoverApplicable`이 판정하며, 넘기지 못하면 A와 B가 같아져 동률로 수렴한다.
 }
 
 // ============================================================
@@ -139,6 +199,9 @@ export function buildStockScenarioB(input: StockTransferInput): StockTransferInp
     ...input,
     // 배제됐다는 **사실**을 남긴다 — 아래에서 `acquisitionCause`를 되돌리므로 흔적이 사라진다.
     carryoverOutcome: "excluded",
+    // A/B 비교 표시용 echo — 아래에서 승계 입력을 전부 지우므로 여기서 떠 둔다.
+    carryoverGiftDateValuationPerShare: input.perShareAcquisitionPrice,
+    carryoverDonorPricePerShare: input.donorAcquisitionPrice,
     /**
      * split 모드 — **lot도 함께** 되돌린다. 종목 축만 바꾸면 `allocateLots`가 lot의
      * `carryover_gift`를 보고 계속 승계해 「배제됐는데 취득가액은 승계」가 된다.
@@ -152,6 +215,7 @@ export function buildStockScenarioB(input: StockTransferInput): StockTransferInp
             donorAcquisitionPrice: undefined,
             donorCapitalExpenditure: undefined,
             donorGiftTaxAmount: undefined,
+            donorGiftTaxableValue: undefined,
           }
         : l,
     ),
@@ -202,6 +266,10 @@ function buildStockScenarioABase(
       // ①3호 — 증여세는 필요경비 확정 **후** 가산한다(타입 주석 참조)
       carryoverGiftTaxExpense: giftTaxIncluded,
       carryoverOutcome: "applied",
+      // 표시 전용 echo — 위에서 `perShareAcquisitionPrice`를 덮어쓰므로 여기서 남겨 둔다.
+      carryoverDonorCapexApplied: donorCapex,
+      carryoverGiftDateValuationPerShare: input.perShareAcquisitionPrice,
+      carryoverDonorPricePerShare: input.donorAcquisitionPrice,
     };
   }
 
@@ -232,6 +300,8 @@ function buildStockScenarioABase(
     actualExpenses: (input.actualExpenses ?? 0) + donorCapex,
     carryoverGiftTaxExpense: giftTaxIncluded,
     carryoverOutcome: "applied",
+    carryoverDonorCapexApplied: donorCapex,
+    carryoverGiftDateValuationPerShare: input.perShareAcquisitionPrice,
   };
 }
 
@@ -382,5 +452,18 @@ export function resolveStockCarryover(
     }
   }
 
-  return materialize(best);
+  /**
+   * ②3호가 실제로 견준 **두 세액**을 결과 계층에 남긴다 — 그 종목만 토글한 전체 결정세액이다.
+   * `best`는 고정점이므로 「채택된 쪽 = 이 두 값 중 큰 쪽(동률이면 적용)」이 성립한다.
+   */
+  const chosen = materialize(best);
+  targets.forEach((assetIdx, bit) => {
+    const on = best | (1 << bit);
+    const off = best & ~(1 << bit);
+    chosen[assetIdx] = {
+      ...chosen[assetIdx],
+      carryoverComparison: { appliedTotalTax: tax[on], excludedTotalTax: tax[off] },
+    };
+  });
+  return chosen;
 }
