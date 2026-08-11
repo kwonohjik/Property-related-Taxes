@@ -29,7 +29,7 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 7종 (exact 매칭) */
+/** 선택 가능 leaf 8종 (exact 매칭) */
 export type MultiTransferPrintSectionId =
   | "form-table"
   | "summary"
@@ -37,7 +37,8 @@ export type MultiTransferPrintSectionId =
   | "reduction-recalc"
   | "group-tax"
   | "loss-offset"
-  | "per-property";
+  | "per-property"
+  | "building-std-report";
 
 /** 다중 양도세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type MultiTransferPrintSectionNode = GenericNode<MultiTransferPrintSectionId>;
@@ -67,6 +68,9 @@ export const MULTI_TRANSFER_PRINT_SECTIONS: MultiTransferPrintSectionGroup[] = [
       { id: "group-tax", label: "세율군별 분리 산출", channel: SCREEN },
       { id: "loss-offset", label: "차손 통산 표", channel: SCREEN },
       { id: "per-property", label: "건별 상세 (자산별 신고서)", channel: SCREEN },
+      // 건물 기준시가 계산서 — 「건물 기준시가 계산」 모달 스냅샷이 있는 자산이 있을 때만 가용.
+      // 단건·일반건물(bundled)·겸용·상속·증여와 동일 leaf id(2026-08-11 다건 배선).
+      { id: "building-std-report", label: "건물 기준시가 계산서", channel: SCREEN_PDF },
     ],
   },
 ];
