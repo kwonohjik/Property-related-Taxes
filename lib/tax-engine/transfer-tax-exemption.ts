@@ -575,6 +575,27 @@ export function checkExemption(
 ): ExemptionResult {
   const { one_house_exemption: rule, temporary_two_house: twoHouseRule } = oneHouseRules;
 
+  /**
+   * §91① — 미등기양도자산에는 **비과세** 규정을 적용하지 아니한다.
+   *
+   * 「제104조제3항에서 규정하는 미등기양도자산에 대하여는 이 법 또는 이 법 외의 법률 중
+   *  양도소득에 대한 소득세의 비과세에 관한 규정을 적용하지 아니한다.」
+   *
+   * 이 함수가 §89①3호(1세대1주택)·§155 각 특례를 **전부** 판정하는 단일 진입점이므로
+   * 여기서 한 번 막으면 전액 비과세·12억 초과 부분 비과세가 함께 배제된다.
+   *
+   * ⚠️ **배제 대상은 「비과세」뿐이다.** 조문 표제가 「비과세 또는 감면의 배제 등」이라
+   *    오독하기 쉬우나, 감면 배제는 §91②(매매계약서 거래가액 허위기재) 사유이고 미등기를
+   *    사유로 한 감면 배제는 §91에 없다 — 감면까지 끄면 법 근거 없는 불리 적용이 된다.
+   *    따라서 이 게이트는 `checkExemption` 안에만 두고 감면 라우터는 건드리지 않는다.
+   *
+   * 겸용주택 경로는 자체 게이트를 이미 갖고 있다(`transfer-tax-mixed-use.ts:135-139`) —
+   * 이중 적용돼도 결과는 같다(양쪽 다 배제).
+   */
+  if (input.isUnregistered) {
+    return { isExempt: false, isPartialExempt: false };
+  }
+
   if (!input.isOneHousehold || input.propertyType !== "housing") {
     return { isExempt: false, isPartialExempt: false };
   }
