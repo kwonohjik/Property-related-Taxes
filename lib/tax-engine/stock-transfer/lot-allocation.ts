@@ -41,6 +41,7 @@ import {
 } from "@/lib/tax-engine/legal-codes/stock";
 import { STOCK_MAJOR_PROGRESSIVE_BRACKETS } from "./stock-rate-tables";
 import { isStockCarryoverEra } from "../data/carryover-scope-era";
+import { resolveLotAcquisitionPrice } from "./stock-carryover";
 
 // ============================================================
 // §104② lot별 기산점 결정
@@ -257,7 +258,9 @@ function matchSpecific(
     acq.remaining -= m.shareCount;
     const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
     const isShortTerm = holdingDays < 365;
-    const perLotGain = (trn.perShareTransferPrice - acq.perShareAcquisitionPrice) * m.shareCount;
+    // §97의2①1호 — 이월과세 lot이면 증여자 취득단가로 승계한다(1년 요건은 **매도 시점** 기준).
+    const perShareBuyPrice = resolveLotAcquisitionPrice(acq, trn.transferDate);
+    const perLotGain = (trn.perShareTransferPrice - perShareBuyPrice) * m.shareCount;
     const { appliedRate, subLotTax } = applySubLotRate(perLotGain, isShortTerm, isMajorAndNonSME, isSME);
     matched.push({
       saleDate: trn.transferDate,
@@ -265,7 +268,7 @@ function matchSpecific(
       perShareSalePrice: trn.perShareTransferPrice,
       acquisitionDate: acq.startDate,
       buyShares: m.shareCount,
-      perShareBuyPrice: acq.perShareAcquisitionPrice,
+      perShareBuyPrice,
       holdingDays,
       isShortTerm,
       perLotGain,
@@ -310,7 +313,8 @@ function matchFifo(
 
       const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
       const isShortTerm = holdingDays < 365;
-      const perShareBuyPrice = acq.perShareAcquisitionPrice;
+      // §97의2①1호 — 이월과세 lot 승계(1년 요건은 **매도 시점** 기준)
+      const perShareBuyPrice = resolveLotAcquisitionPrice(acq, trn.transferDate);
       const perLotGain = (trn.perShareTransferPrice - perShareBuyPrice) * matchedShares;
       const { appliedRate, subLotTax } = applySubLotRate(
         perLotGain,
@@ -383,7 +387,7 @@ function matchMovingAvg(
     ) {
       const lot = sortedAcq[nextAcqToAbsorb];
       balanceQty += lot.shareCount;
-      balanceCost += lot.shareCount * lot.perShareAcquisitionPrice;
+      balanceCost += lot.shareCount * resolveLotAcquisitionPrice(lot, trn.transferDate);
       nextAcqToAbsorb += 1;
     }
     const movingAvgPrice = balanceQty > 0 ? Math.floor(balanceCost / balanceQty) : 0;

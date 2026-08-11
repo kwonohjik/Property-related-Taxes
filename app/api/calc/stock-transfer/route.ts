@@ -169,6 +169,23 @@ function buildEngineInput(coerced: Record<string, unknown>): StockTransferInput 
     decedentAcquisitionDate: coerced.decedentAcquisitionDate as Date | undefined,
     donorAcquisitionDate: coerced.donorAcquisitionDate as Date | undefined,
     preMergerAcquisitionDate: coerced.preMergerAcquisitionDate as Date | undefined,
+
+    /**
+     * §97의2① 이월과세 **본체(필요경비)**.
+     *
+     * ⚠️ **이 매핑을 빠뜨리면 zod를 통과한 값이 여기서 조용히 사라진다** — 명시 매핑이라
+     *    TypeScript가 잡지 못하고(모두 optional), 폼·API·zod가 다 맞아도 **세액이 안 움직인다**
+     *    (메모리 `feedback_explicit_prop_mapping_strip` ★★★).
+     *    실제로 Phase 6 E2E가 이 누락을 잡아냈다 — anchor는 엔진을 직접 부르므로 못 잡는다.
+     */
+    donorRelation: coerced.donorRelation as StockTransferInput["donorRelation"],
+    donorDeceased: coerced.donorDeceased as boolean | undefined,
+    donorAcquisitionPrice: coerced.donorAcquisitionPrice as number | undefined,
+    donorAcquisitionStdPrice: coerced.donorAcquisitionStdPrice as number | undefined,
+    donorCapitalExpenditure: coerced.donorCapitalExpenditure as number | undefined,
+    giftTaxAmount: coerced.giftTaxAmount as number | undefined,
+    transferredAssetValue: coerced.transferredAssetValue as number | undefined,
+    giftTaxableValue: coerced.giftTaxableValue as number | undefined,
     cumulativeTransferRatio: coerced.cumulativeTransferRatio as number | undefined,
     nblRatioOfCorpAssets: coerced.nblRatioOfCorpAssets as number | undefined,
     crossClause8TaxBase: coerced.crossClause8TaxBase as number | undefined,

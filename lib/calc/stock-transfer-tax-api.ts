@@ -11,6 +11,7 @@
  */
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import type { AcquisitionLotForm } from "@/lib/stores/calc-wizard-stock-types";
 import { SYNTH_SINGLE_TRANSFER_ID } from "@/lib/stores/calc-wizard-stock-store";
 import { adaptFlatToApiBody } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 import {
@@ -48,6 +49,39 @@ function parseIntOrZero(s: string): number {
 // 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback):
 //   환율·외화 단가 빈값 → undefined → Zod/validate에서 차단
 // ============================================================
+/**
+ * 매수 lot 폼 → API body (⑬ body spread).
+ *
+ * 🔑 **lots-only 모드와 split 모드가 이 함수 하나를 쓴다.** 종전에는 두 곳에 복사돼 있었고
+ * split 쪽에만 `donorAcquisitionDate` 매핑이 **빠져 있었다** — 그래서 split 모드에서는
+ * §104②2호 통산도 §97의2① 승계도 **엔진에 도달하지 못했다**(계획서 P-7).
+ * 분기를 늘릴 때 한쪽만 고치는 사고를 막으려면 여기 한 곳만 있어야 한다.
+ */
+function mapAcquisitionLotToBody(lot: AcquisitionLotForm): Record<string, unknown> {
+  const o: Record<string, unknown> = {
+    id: lot.id,
+    acquisitionDate: lot.acquisitionDate,
+    shareCount: parseIntOrUndef(lot.shareCount) ?? 0,
+    perShareAcquisitionPrice: parseIntOrUndef(lot.perShareAcquisitionPrice) ?? 0,
+    acquisitionCause: lot.acquisitionCause,
+  };
+  if (lot.acquisitionCause === "inheritance" && lot.decedentAcquisitionDate) {
+    o.decedentAcquisitionDate = lot.decedentAcquisitionDate;
+  }
+  if (lot.acquisitionCause === "carryover_gift") {
+    // §104②2호 세율 기산 + §97의2①1호 취득가액 승계
+    if (lot.donorAcquisitionDate) o.donorAcquisitionDate = lot.donorAcquisitionDate;
+    const donorPrice = parseIntOrUndef(lot.donorAcquisitionPrice ?? "");
+    if (donorPrice !== undefined) o.donorAcquisitionPrice = donorPrice;
+    if (lot.donorRelation) o.donorRelation = lot.donorRelation;
+    if (lot.donorDeceased) o.donorDeceased = true;
+  }
+  if (lot.acquisitionCause === "merger_split" && lot.preMergerAcquisitionDate) {
+    o.preMergerAcquisitionDate = lot.preMergerAcquisitionDate;
+  }
+  return o;
+}
+
 export function buildForeignStockApiBody(form: StockTransferFormData): Record<string, unknown> {
   const fgTransferPriceMode = form.fgTransferPriceMode || "per_share";       // 3중 패턴 default
   const acquisitionModeFS = form.acquisitionModeFS || "actual";               // 3중 패턴 default
@@ -325,8 +359,23 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     body.decedentAcquisitionDate = form.decedentAcquisitionDate;
   }
   // §104②2 통산은 **이월과세(carryover_gift)에서만** 일어난다 — 단순 증여(gift)는 수증일 기산.
-  if (acquisitionCause === "carryover_gift" && form.donorAcquisitionDate) {
-    body.donorAcquisitionDate = form.donorAcquisitionDate;
+  if (acquisitionCause === "carryover_gift") {
+    if (form.donorAcquisitionDate) body.donorAcquisitionDate = form.donorAcquisitionDate;
+    // ── §97의2① 본체(필요경비) ──
+    if (form.donorRelation) body.donorRelation = form.donorRelation;
+    if (form.donorDeceased) body.donorDeceased = true;
+    const donorPrice = parseIntOrUndef(form.donorAcquisitionPrice);
+    if (donorPrice !== undefined) body.donorAcquisitionPrice = donorPrice;      // ①1호 가목
+    const donorStd = parseIntOrUndef(form.donorAcquisitionStdPrice);
+    if (donorStd !== undefined) body.donorAcquisitionStdPrice = donorStd;        // ①1호 나목
+    const donorCapex = parseIntOrUndef(form.donorCapitalExpenditure);
+    if (donorCapex !== undefined) body.donorCapitalExpenditure = donorCapex;     // ①2호
+    const giftTax = parseIntOrUndef(form.giftTaxAmount);
+    if (giftTax !== undefined) body.giftTaxAmount = giftTax;                     // ①3호
+    const transferredVal = parseIntOrUndef(form.transferredAssetValue);
+    if (transferredVal !== undefined) body.transferredAssetValue = transferredVal;
+    const taxableVal = parseIntOrUndef(form.giftTaxableValue);
+    if (taxableVal !== undefined) body.giftTaxableValue = taxableVal;
   }
   if (acquisitionCause === "merger_split" && form.preMergerAcquisitionDate) {
     body.preMergerAcquisitionDate = form.preMergerAcquisitionDate;
@@ -374,25 +423,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
       // 엔진 변경 없음 — isSplitMode() 분기 그대로 사용
       // ─────────────────────────────────────────────────────────────
       body.costAllocationMethod = form.costAllocationMethod || "fifo";  // R-3 default
-      body.acquisitionLots = form.acquisitionLots.map((lot) => {
-        const o: Record<string, unknown> = {
-          id: lot.id,
-          acquisitionDate: lot.acquisitionDate,
-          shareCount: parseIntOrUndef(lot.shareCount) ?? 0,
-          perShareAcquisitionPrice: parseIntOrUndef(lot.perShareAcquisitionPrice) ?? 0,
-          acquisitionCause: lot.acquisitionCause,
-        };
-        if (lot.acquisitionCause === "inheritance" && lot.decedentAcquisitionDate) {
-          o.decedentAcquisitionDate = lot.decedentAcquisitionDate;
-        }
-        if (lot.acquisitionCause === "carryover_gift" && lot.donorAcquisitionDate) {
-          o.donorAcquisitionDate = lot.donorAcquisitionDate;
-        }
-        if (lot.acquisitionCause === "merger_split" && lot.preMergerAcquisitionDate) {
-          o.preMergerAcquisitionDate = lot.preMergerAcquisitionDate;
-        }
-        return o;
-      });
+      body.acquisitionLots = form.acquisitionLots.map(mapAcquisitionLotToBody);
       // 합성 transferLot — 폼 전역 단일 양도 정보로 1행 생성
       // ID prefix "__synth_single_transfer__" 로 사용자 입력 ID와 충돌 차단 (R-5)
       // total 모드 호환: transferActualInputMode === "total" 시 합계 → 1주당 단가 역산 (round)
@@ -598,22 +629,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // ── 분할 매수·분할 양도 (Plan v2.2) ──⑪⑫⑬
   if (form.lotsMode === "split") {
     body.costAllocationMethod = form.costAllocationMethod || "fifo";
-    body.acquisitionLots = form.acquisitionLots.map((lot) => {
-      const o: Record<string, unknown> = {
-        id: lot.id,
-        acquisitionDate: lot.acquisitionDate,
-        shareCount: parseIntOrUndef(lot.shareCount) ?? 0,
-        perShareAcquisitionPrice: parseIntOrUndef(lot.perShareAcquisitionPrice) ?? 0,
-        acquisitionCause: lot.acquisitionCause,
-      };
-      if (lot.acquisitionCause === "inheritance" && lot.decedentAcquisitionDate) {
-        o.decedentAcquisitionDate = lot.decedentAcquisitionDate;
-      }
-      if (lot.acquisitionCause === "merger_split" && lot.preMergerAcquisitionDate) {
-        o.preMergerAcquisitionDate = lot.preMergerAcquisitionDate;
-      }
-      return o;
-    });
+    body.acquisitionLots = form.acquisitionLots.map(mapAcquisitionLotToBody);
     body.transferLots = form.transferLots.map((lot) => ({
       id: lot.id,
       transferDate: lot.transferDate,

@@ -54,6 +54,9 @@ export const acquisitionCauseSchema = z.enum([
   "merger_split",
 ]);
 
+/** §97의2① 본문 — 증여자와의 관계. 배우자 사별·직계존비속 양도당시 사망이면 ① 미해당. */
+export const donorRelationSchema = z.enum(["spouse", "lineal", "other"]);
+
 export const filingTypeSchema = z.enum(["preliminary", "final", "revised"]);
 
 export const filingViolationSchema = z.enum(["none", "under_report", "non_report"]);
@@ -130,6 +133,11 @@ export const acquisitionLotSchema = z.object({
   decedentAcquisitionDate: z.union([z.string(), z.date()]).optional(),
   /** 이월과세 lot — 증여자 취득일 (§104②2). 없으면 `resolveLotStartDate`가 수증일로 fallback. */
   donorAcquisitionDate: z.union([z.string(), z.date()]).optional(),
+  /** 이월과세 lot — 증여자 취득 당시 1주당 실지거래가액 (§97의2①1호). 없으면 승계하지 않는다. */
+  donorAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /** 이월과세 lot — 관계 요건 (§97의2① 본문 괄호) */
+  donorRelation: donorRelationSchema.optional(),
+  donorDeceased: z.boolean().optional(),
   preMergerAcquisitionDate: z.union([z.string(), z.date()]).optional(),
 });
 
@@ -194,6 +202,26 @@ export const stockTransferInputSchema = z.object({
   decedentAcquisitionDate: z.union([z.string(), z.date()]).optional(),
   donorAcquisitionDate: z.union([z.string(), z.date()]).optional(),
   preMergerAcquisitionDate: z.union([z.string(), z.date()]).optional(),
+
+  // ── §97의2① 이월과세 **본체(필요경비)** — `carryover_gift` 전용 ──
+  // ⚠️ 엔진 내부 전용(`carryoverGiftTaxExpense`·`acquisitionStdPriceOverridePerShare`)은
+  //    **여기 넣지 않는다** — 사용자 입력이 아니라 `stock-carryover.ts`가 채우는 값이다.
+  /** ① 본문 괄호 — 증여자와의 관계 */
+  donorRelation: donorRelationSchema.optional(),
+  /** ① 본문 괄호 — 증여자 사망(배우자=사별 / 직계존비속=양도 당시 사망) */
+  donorDeceased: z.boolean().optional(),
+  /** ①1호 가목 — 증여자 취득 당시 1주당 실지거래가액 */
+  donorAcquisitionPrice: z.number().int().nonnegative().optional(),
+  /** ①1호 나목 — 증여자 취득 당시 1주당 기준시가(환산 분자) */
+  donorAcquisitionStdPrice: z.number().int().nonnegative().optional(),
+  /** ①2호 — 증여자 자본적지출 총액 (양도비 §97①3호 제외) */
+  donorCapitalExpenditure: z.number().int().nonnegative().optional(),
+  /** ①3호 × 영 §163의2②1호 — 증여세 산출세액 */
+  giftTaxAmount: z.number().int().nonnegative().optional(),
+  /** 영 §163의2②2호 — 양도한 해당 자산가액(안분 분자) */
+  transferredAssetValue: z.number().int().nonnegative().optional(),
+  /** 영 §163의2②3호 — 증여세 과세가액(안분 분모) */
+  giftTaxableValue: z.number().int().nonnegative().optional(),
 
   // §94①4 다목 부가
   cumulativeTransferRatio: z.number().min(0).max(1).optional(),

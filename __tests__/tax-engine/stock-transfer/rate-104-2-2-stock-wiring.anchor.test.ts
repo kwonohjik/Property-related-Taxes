@@ -89,8 +89,20 @@ describe("W 주식 §104②2호 — 폼에서 엔진까지 값이 도달한다",
     );
     expect(body.acquisitionCause).toBe("carryover_gift");
     expect(body.donorAcquisitionDate).toBe("2015-01-01");
-    expect(result.appliedRate).toBe(0.25);
-    expect(result.calculatedTax).toBe(84_375_000);
+    /**
+     * 🔴 **2026-08-11 갱신 — §97의2②3호가 위에 얹혔다.**
+     *
+     * 이 폼에는 **증여자 취득가액이 없다**(`donorAcquisitionPrice`는 Phase 5에서 폼에 추가된다).
+     * 승계 효과가 0이라 ①의 이득이 **세율 소급뿐**이고, 그러면 세액이 반드시 줄어 ②3호가
+     * 발동한다 ⇒ 이월과세 배제 ⇒ 수증일 기산 30%. (근거·유도식은 `rate-104-2-2-stock-gift.anchor` S-1)
+     *
+     * ⚠️ 세액만 보면 W-2(단순 증여)와 구별되지 않는다 — **배선 증명은 위 `body` 두 줄이 한다**
+     *    (W-2는 `donorAcquisitionDate`가 `undefined`다).
+     * 📌 Phase 5에서 폼에 증여자 취득가액이 붙으면 **승계가 실효적인 배선 케이스를 추가**해
+     *    「값이 세액까지 도달한다」를 세액으로도 고정할 것.
+     */
+    expect(result.appliedRate).toBe(0.3);
+    expect(result.calculatedTax).toBe(119_250_000);
   });
 
   /** W-2: 단순 증여는 §97의2① 미해당 선언 — 값이 있어도 body에 싣지 않는다. */

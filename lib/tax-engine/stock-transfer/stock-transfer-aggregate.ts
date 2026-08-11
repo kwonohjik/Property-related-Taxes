@@ -20,6 +20,7 @@ import {
   sumSecuritiesTransactionTax,
   type SecuritiesTransactionTaxTotal,
 } from "./securities-transaction-tax";
+import { resolveStockCarryover } from "./stock-carryover";
 
 // ============================================================
 // 다자산 합산 결과 타입
@@ -263,6 +264,28 @@ function computeOtherAssetComparativeTax(
 export function calculateStockTransferTaxAggregate(
   inputs: StockTransferInput[],
   deductionMode: "each_item" | "aggregate" = "aggregate",
+): StockTransferAggregateResult {
+  /**
+   * §97의2① 이월과세 — **여기가 ②3호 비교의 기준점**이다.
+   *
+   * ②3호가 비교하는 「양도소득 **결정세액**」은 §92의 계산 순서를 거친 **과세기간 단위**
+   * 개념이라 종목 단위로 비교하면 틀린다 — 주식은 §103② 기본공제가 **그룹 단위 연 1회**라
+   * 한 종목의 A/B가 **다른 종목의 세액까지** 움직이기 때문이다(계획서 §4 Q-2 · 실측 반례).
+   *
+   * ⚠️ `aggregateCore`는 이 resolve를 **다시 하지 않는다** — 순환을 만들지 않기 위해서다.
+   */
+  const resolved = resolveStockCarryover(
+    inputs,
+    (list) => aggregateCore(list, deductionMode).totalFinalTax,
+    (i) => calculateStockTransferTaxInternal(i).transferIncome,
+  );
+  return aggregateCore(resolved, deductionMode);
+}
+
+/** 합산 계산 본체 — 이월과세 A/B가 **이미 확정된** 입력을 받는다. */
+function aggregateCore(
+  inputs: StockTransferInput[],
+  deductionMode: "each_item" | "aggregate",
 ): StockTransferAggregateResult {
   const BASIC_DEDUCTION_LIMIT = 2_500_000;
 

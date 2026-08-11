@@ -229,6 +229,14 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
       if (lot.acquisitionCause === "carryover_gift" && isEmpty(lot.donorAcquisitionDate)) {
         errors.push({ field: `acquisitionLots[${i}].donorAcquisitionDate`, message: `매수 lot #${i + 1} (이월과세): 증여자 취득일을 입력하세요 (§104②2)`, severity: "error" });
       }
+      // §97의2① 본문 요건 — 미선택이면 엔진이 「배제하지 않음」으로 흘려보낸다(단건과 같은 규약).
+      if (lot.acquisitionCause === "carryover_gift" && isEmpty(lot.donorRelation)) {
+        errors.push({ field: `acquisitionLots[${i}].donorRelation`, message: `매수 lot #${i + 1} (이월과세): 증여자와의 관계를 선택하세요 (§97의2① 본문)`, severity: "error" });
+      }
+      // 승계 효과가 0이면 ②3호로 배제된다 — 차단이 아니라 경고다.
+      if (lot.acquisitionCause === "carryover_gift" && isEmpty(lot.donorAcquisitionPrice)) {
+        errors.push({ field: `acquisitionLots[${i}].donorAcquisitionPrice`, message: `매수 lot #${i + 1} (이월과세): 증여자 취득가액이 없으면 취득가액이 승계되지 않습니다 (§97의2①1호)`, severity: "warning" });
+      }
       if (lot.acquisitionCause === "merger_split" && isEmpty(lot.preMergerAcquisitionDate)) {
         errors.push({ field: `acquisitionLots[${i}].preMergerAcquisitionDate`, message: `매수 lot #${i + 1} (합병·분할): 종전 주식 취득일을 입력하세요 (§104②3)`, severity: "error" });
       }
@@ -334,12 +342,57 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
       severity: "error",
     });
   }
-  if (acquisitionCause === "carryover_gift" && isEmpty(form.donorAcquisitionDate)) {
-    errors.push({
-      field: "donorAcquisitionDate",
-      message: "이월과세(증여)의 경우 증여자 취득일을 입력하세요 (§104②2 — 단기 30% 기산점)",
-      severity: "error",
-    });
+  if (acquisitionCause === "carryover_gift") {
+    if (isEmpty(form.donorAcquisitionDate)) {
+      errors.push({
+        field: "donorAcquisitionDate",
+        message: "이월과세(증여)의 경우 증여자 취득일을 입력하세요 (§104②2 — 단기 30% 기산점)",
+        severity: "error",
+      });
+    }
+    /**
+     * §97의2① **본문 요건**이라 필수다 — 배우자·직계존비속이 아니면 애초에 대상이 아니고,
+     * 사망 여부에 따라 적용이 갈린다. 미선택이면 엔진이 「배제하지 않음」으로 흘려보내므로
+     * 여기서 막지 않으면 사용자가 모른 채 적용받는다.
+     */
+    if (isEmpty(form.donorRelation)) {
+      errors.push({
+        field: "donorRelation",
+        message: "이월과세(증여)의 경우 증여자와의 관계를 선택하세요 (§97의2① 본문)",
+        severity: "error",
+      });
+    }
+    /**
+     * ⚠️ **취득가액·증여세는 필수가 아니다** — 증여자 실지거래가액을 확인할 수 없으면
+     * §97①1호 **나목**(환산)으로 가고, 증여세가 없을 수도 있다. API zod도 전부 optional이라
+     * 두 계층 기준이 같다(⑧⑩ 정합 — 한쪽만 조이면 「UI 통과 → API 400」이 된다).
+     *
+     * 다만 **둘 다 비면 승계 효과가 0**이라 §97의2②3호로 배제되는 것이 보통이다.
+     * 그 사실은 결과 카드가 알린다(사전 차단하지 않는다 — 법 근거 없이 입력을 막지 않는다).
+     */
+    const hasDonorBasis =
+      !isEmpty(form.donorAcquisitionPrice) || !isEmpty(form.donorAcquisitionStdPrice);
+    if (!hasDonorBasis) {
+      errors.push({
+        field: "donorAcquisitionPrice",
+        message:
+          "증여자 취득가액 또는 증여자 취득 당시 기준시가 중 하나를 입력하세요 " +
+          "(§97의2①1호 — 없으면 취득가액이 승계되지 않아 이월과세가 배제됩니다)",
+        severity: "warning",
+      });
+    }
+    // 영 §163의2② 안분 — 증여세를 넣었으면 분자·분모가 함께 있어야 계산된다.
+    if (!isEmpty(form.giftTaxAmount)) {
+      if (isEmpty(form.transferredAssetValue) || isEmpty(form.giftTaxableValue)) {
+        errors.push({
+          field: "giftTaxableValue",
+          message:
+            "증여세 산출세액을 입력했다면 양도한 해당 자산가액과 증여세 과세가액도 입력하세요 " +
+            "(영 §163의2② 안분 분자·분모)",
+          severity: "error",
+        });
+      }
+    }
   }
   if (acquisitionCause === "merger_split" && isEmpty(form.preMergerAcquisitionDate)) {
     errors.push({
