@@ -1,15 +1,23 @@
 /**
  * 해외주식 양도소득세 — anchor 테스트 (PR-4A)
  *
- * 법령: §94①3다목 + §118의2~§118의8 (소득세법 2026.4.21. 시행)
- * 세율: §118의5 → §55① 6~45% 8구간 (BASIC_PROGRESSIVE_BRACKETS)
+ * 법령: §94①3다목 · **§118②**(§118의2~§118의4·§118의6 준용) · §103①2호 · §104①12호나목
+ * 세율: **§104①12호나목 20% 단일세율**
  *
- * 자가검증값 (디자인 §9.1 R3 정정 완료):
- *   FS-anchor-01: 산출세액 20,865,500 (8,800만~1.5억 구간 35%, 누진공제 15,440,000)
- *   FS-anchor-02: 외국납부세액공제 후 최종 18,165,500
- *   FS-anchor-03: 5년 미만 거주 → not_liable (세액 0)
- *   FS-anchor-04: 외국납부세액 한도 초과 시 한도만 공제
- *   FS-anchor-05: 기본공제 250만원 (§118의7) 적용 확인
+ * ⚠️ **2026-08-12 기대값 일괄 갱신 — 회귀가 아니라 법령 정정이다.**
+ *   종전 이 파일은 §118의5(§55① 6~45% 누진)와 §118의7(별도 기본공제)을 정본으로 고정했으나,
+ *   두 조문은 **§118②의 준용 목록에 없어** 국외주식에 적용되지 않는다.
+ *   > §118② "…제118조의2부터 제118조의4까지 및 제118조의6을 준용한다.
+ *   >        1. 제94조제1항제3호다목에 따른 자산의 양도로 발생하는 소득"
+ *   ⇒ 세율 20%(§104①12호나목) · 기본공제 §103①2호 · LTHD 미적용 근거는 §95②.
+ *   ⇒ 5년 요건(§118의2)·필요경비(§118의4)·외국납부세액(§118의6)은 **준용되어 그대로**다.
+ *   계획서: docs/02-design/features/foreign-stock-94-1-3-da-statute-track.plan.md
+ *
+ * 자가검증값 (20% 재산정):
+ *   FS-anchor-01: 산출세액 20,746,000 = floor(103,730,000 × 20%)
+ *   FS-anchor-03: 외국납부세액공제 후 최종 18,046,000
+ *   FS-anchor-04: 외국납부세액 한도 초과 시 한도(20,746,000)만 공제
+ *   FS-anchor-05: 기본공제 250만원 (§103①2호) 적용 확인
  *   FS-anchor-06: 지방소득세 10원 미만 절사 확인
  *
  * 법령 정확성 최우선 — 양도연도 세율 우선 (feedback_transfer_year_tax_rate)
@@ -34,11 +42,10 @@ import type { ForeignStockInput } from "@/lib/tax-engine/stock-transfer/types/fo
  *   transferCostKrw = 200 × 1,350 = 270,000
  *   necessaryExpensesKrw = 0 + 270,000 = 270,000
  *   transferGain = 202,500,000 − 96,000,000 − 270,000 = 106,230,000
- *   basicDeduction = 2,500,000 (§118의7)
+ *   basicDeduction = 2,500,000 (§103①2호)
  *   taxBase = 103,730,000
- *   §55① 8,800만~1.5억 구간: 103,730,000 × 35% − 15,440,000
- *     = 36,305,500 − 15,440,000 = 20,865,500
- *   localIncomeTax = floor10(20,865,500 × 0.1) = 2,086,550
+ *   §104①12호나목 20%: floor(103,730,000 × 0.2) = 20,746,000
+ *   localIncomeTax = floor10(20,746,000 × 0.1) = 2,074,600
  */
 const BASE_INPUT: ForeignStockInput = {
   marketType: "foreign_stock",
@@ -93,7 +100,7 @@ describe("FS-anchor-01: 미국 주식 기본 케이스 (§55① 누진 + §178�
     expect(result.transferGain).toBe(106_230_000);
   });
 
-  it("기본공제 §118의7 = 2,500,000", () => {
+  it("기본공제 §103①2호 = 2,500,000", () => {
     expect(result.basicDeduction).toBe(2_500_000);
   });
 
@@ -102,31 +109,31 @@ describe("FS-anchor-01: 미국 주식 기본 케이스 (§55① 누진 + §178�
   });
 
   it("§55① 적용 세율 = 35% (8,800만~1.5억 구간)", () => {
-    expect(result.appliedRate).toBe(0.35);
+    expect(result.appliedRate).toBe(0.2);
   });
 
   it("누진공제 = 15,440,000", () => {
-    expect(result.progressiveDeduction).toBe(15_440_000);
+    expect(result.progressiveDeduction).toBe(0); // §104①12호에 누진공제 없음
   });
 
   /**
    * 산출세액 = 103,730,000 × 35% − 15,440,000
-   *          = 36,305,500 − 15,440,000 = 20,865,500
+   *          = 36,305,500 − 15,440,000 = 20,746,000
    */
-  it("산출세액 = 20,865,500 (디자인 §9.1 R3 확정값)", () => {
-    expect(result.incomeTax).toBe(20_865_500);
+  it("산출세액 = 20,746,000 (디자인 §9.1 R3 확정값)", () => {
+    expect(result.incomeTax).toBe(20_746_000);
   });
 
-  it("지방소득세 = floor10(20,865,500 × 0.1) = 2,086,550", () => {
-    expect(result.localIncomeTax).toBe(2_086_550);
+  it("지방소득세 = floor10(20,746,000 × 0.1) = 2,074,600", () => {
+    expect(result.localIncomeTax).toBe(2_074_600);
   });
 
   it("외국납부세액 없음 → 최종세액 = 산출세액", () => {
-    expect(result.finalTax).toBe(20_865_500);
+    expect(result.finalTax).toBe(20_746_000);
   });
 
-  it("총 납부액 = finalTax + localIncomeTax = 22,952,050", () => {
-    expect(result.totalTax).toBe(20_865_500 + 2_086_550);
+  it("총 납부액 = finalTax + localIncomeTax = 22,820,600", () => {
+    expect(result.totalTax).toBe(20_746_000 + 2_074_600);
   });
 
   it("환율 echo (양도일·취득일 별도)", () => {
@@ -163,18 +170,17 @@ describe("FS-anchor-02: 환율 변동으로 KRW 차익 증가 (취득 1,100 → 
     expect(result.taxBase).toBe(119_500_000);
   });
 
-  it("§55① 세율 35% 구간 (8,800만~1.5억)", () => {
-    expect(result.appliedRate).toBe(0.35);
+  it("§104①12호나목 세율 20% (구간 없음)", () => {
+    expect(result.appliedRate).toBe(0.2);
   });
 
   /**
-   * 산출세액 = 119,500,000 × 35% − 15,440,000
-   *          = 41,825,000 − 15,440,000 = 26,385,000
+   * 산출세액 = floor(119,500,000 × 20%) = 23,900,000
    */
   it("산출세액 자가검증", () => {
-    const expected = Math.floor(119_500_000 * 0.35) - 15_440_000;
+    const expected = Math.floor(119_500_000 * 0.2);
     expect(result.incomeTax).toBe(expected);
-    expect(result.incomeTax).toBe(26_385_000);
+    expect(result.incomeTax).toBe(23_900_000);
   });
 });
 
@@ -185,10 +191,10 @@ describe("FS-anchor-03: 외국납부세액공제 한도 내 전액 공제 (credi
   /**
    * BASE_INPUT + foreignTaxPaidForeign: 2,000 USD
    *   foreignTaxPaidKrw = 2,000 × 1,350 = 2,700,000
-   *   foreignTaxCreditLimit = 20,865,500 (단일 자산 = 산출세액)
-   *   foreignTaxCreditApplied = min(2,700,000, 20,865,500) = 2,700,000
-   *   finalTax = 20,865,500 − 2,700,000 = 18,165,500
-   *   localIncomeTax = floor10(18,165,500 × 0.1) = 1,816,550
+   *   foreignTaxCreditLimit = 20,746,000 (단일 자산 = 산출세액)
+   *   foreignTaxCreditApplied = min(2,700,000, 20,746,000) = 2,700,000
+   *   finalTax = 20,746,000 − 2,700,000 = 18,046,000
+   *   localIncomeTax = floor10(18,046,000 × 0.1) = 1,804,600
    */
   const input: ForeignStockInput = {
     ...BASE_INPUT,
@@ -205,19 +211,19 @@ describe("FS-anchor-03: 외국납부세액공제 한도 내 전액 공제 (credi
   });
 
   it("공제한도 = 산출세액 전액 (단일 자산 §118의6)", () => {
-    expect(result.foreignTaxCreditLimit).toBe(20_865_500);
+    expect(result.foreignTaxCreditLimit).toBe(20_746_000);
   });
 
   it("외국납부세액 < 한도 → 전액 공제 (2,700,000)", () => {
     expect(result.foreignTaxCreditApplied).toBe(2_700_000);
   });
 
-  it("최종세액 = 20,865,500 − 2,700,000 = 18,165,500 (디자인 §9.1 R3 확정값)", () => {
-    expect(result.finalTax).toBe(18_165_500);
+  it("최종세액 = 20,746,000 − 2,700,000 = 18,165,500 (디자인 §9.1 R3 확정값)", () => {
+    expect(result.finalTax).toBe(18_046_000);
   });
 
-  it("지방소득세 = floor10(18,165,500 × 0.1) = 1,816,550", () => {
-    expect(result.localIncomeTax).toBe(1_816_550);
+  it("지방소득세 = floor10(18,165,500 × 0.1) = 1,804,600", () => {
+    expect(result.localIncomeTax).toBe(1_804_600);
   });
 });
 
@@ -226,9 +232,9 @@ describe("FS-anchor-03: 외국납부세액공제 한도 내 전액 공제 (credi
 // ============================================================
 describe("FS-anchor-04: 외국납부세액공제 한도 초과 → 한도만 공제", () => {
   /**
-   * 외국납부세액이 산출세액(20,865,500)보다 클 경우
-   * → 한도(20,865,500)만 공제, 초과분은 손실 (환급 불가)
-   * 예시: 외국납부세액 = 30,000 USD × 1,350 = 40,500,000원 > 한도 20,865,500
+   * 외국납부세액이 산출세액(20,746,000)보다 클 경우
+   * → 한도(20,746,000)만 공제, 초과분은 손실 (환급 불가)
+   * 예시: 외국납부세액 = 30,000 USD × 1,350 = 40,500,000원 > 한도 20,746,000
    */
   const input: ForeignStockInput = {
     ...BASE_INPUT,
@@ -244,15 +250,15 @@ describe("FS-anchor-04: 외국납부세액공제 한도 초과 → 한도만 공
     expect(result.foreignTaxPaidKrw).toBe(40_500_000);
   });
 
-  it("한도 = 산출세액 20,865,500", () => {
-    expect(result.foreignTaxCreditLimit).toBe(20_865_500);
+  it("한도 = 산출세액 20,746,000", () => {
+    expect(result.foreignTaxCreditLimit).toBe(20_746_000);
   });
 
-  it("실제 공제 = min(40,500,000, 20,865,500) = 한도 20,865,500", () => {
-    expect(result.foreignTaxCreditApplied).toBe(20_865_500);
+  it("실제 공제 = min(40,500,000, 20,746,000) = 한도 20,746,000", () => {
+    expect(result.foreignTaxCreditApplied).toBe(20_746_000);
   });
 
-  it("최종세액 = 20,865,500 − 20,865,500 = 0", () => {
+  it("최종세액 = 20,746,000 − 20,746,000 = 0", () => {
     expect(result.finalTax).toBe(0);
   });
 
@@ -262,9 +268,9 @@ describe("FS-anchor-04: 외국납부세액공제 한도 초과 → 한도만 공
 });
 
 // ============================================================
-// FS-anchor-05: 기본공제 250만원 §118의7 적용 확인
+// FS-anchor-05: 기본공제 250만원 §103①2호 적용 확인
 // ============================================================
-describe("FS-anchor-05: 기본공제 250만원 (§118의7) 적용", () => {
+describe("FS-anchor-05: 기본공제 250만원 (§103①2호) 적용", () => {
   it("양도차익 > 기본공제 → 공제 2,500,000 적용", () => {
     const result = calculateForeignStockTax(BASE_INPUT);
     expect(result.basicDeduction).toBe(2_500_000);
@@ -315,10 +321,10 @@ describe("FS-anchor-05: 기본공제 250만원 (§118의7) 적용", () => {
 // FS-anchor-06: 지방소득세 10원 미만 절사 확인
 // ============================================================
 describe("FS-anchor-06: 지방소득세 10원 미만 절사 (§47③ 준용)", () => {
-  it("BASE_INPUT — 산출세액 20,865,500 → 지방소득세 = floor10(2,086,550) = 2,086,550", () => {
+  it("BASE_INPUT — 산출세액 20,746,000 → 지방소득세 = floor10(2,074,600) = 2,074,600", () => {
     const result = calculateForeignStockTax(BASE_INPUT);
-    // 2,086,550은 이미 10원 단위
-    expect(result.localIncomeTax).toBe(2_086_550);
+    // 2,074,600은 이미 10원 단위
+    expect(result.localIncomeTax).toBe(2_074_600);
     expect(result.localIncomeTax % 10).toBe(0);
   });
 
@@ -351,8 +357,8 @@ describe("FS-anchor-06: 지방소득세 10원 미만 절사 (§47③ 준용)", (
       foreignTaxMethod: "credit",
     };
     const result = calculateForeignStockTax(input);
-    // finalTax = 18,165,500 → localIncomeTax = floor10(1,816,550) = 1,816,550
-    expect(result.localIncomeTax).toBe(1_816_550);
+    // finalTax = 18,046,000 → localIncomeTax = floor10(1,804,600) = 1,804,600
+    expect(result.localIncomeTax).toBe(1_804_600);
     expect(result.localIncomeTax % 10).toBe(0);
   });
 });
@@ -399,7 +405,7 @@ describe("FS-anchor-08: 외국납부세액 필요경비 산입 (§118의6 expens
    * transferGain = 202,500,000 − 96,000,000 − 2,970,000 = 103,530,000
    * basicDeduction = 2,500,000
    * taxBase = 101,030,000
-   * §55① 35% 구간: 101,030,000 × 35% − 15,440,000 = 35,360,500 − 15,440,000 = 19,920,500
+   * §104①12호나목 20%: floor(101,030,000 × 0.2) = 20,206,000
    */
   const input: ForeignStockInput = {
     ...BASE_INPUT,
@@ -429,10 +435,10 @@ describe("FS-anchor-08: 외국납부세액 필요경비 산입 (§118의6 expens
     expect(result.taxBase).toBe(101_030_000);
   });
 
-  it("산출세액 자가검증 (§55① 35%)", () => {
-    const expected = Math.floor(101_030_000 * 0.35) - 15_440_000;
+  it("산출세액 자가검증 (§104①12호나목 20%)", () => {
+    const expected = Math.floor(101_030_000 * 0.2);
     expect(result.incomeTax).toBe(expected);
-    expect(result.incomeTax).toBe(19_920_500);
+    expect(result.incomeTax).toBe(20_206_000);
   });
 });
 
@@ -472,8 +478,7 @@ describe("FS-anchor-09: 양도가액 총액 직접 입력 모드", () => {
 //   transferGain = 202,500,000 − 112,500,000 − 270,000 = 89,730,000
 //   basicDeduction = 2,500,000
 //   taxBase = 87,230,000
-//   §55① 5,000만~8,800만 구간: 87,230,000 × 24% − 5,760,000
-//           = 20,935,200 − 5,760,000 = 15,175,200
+//   §104①12호나목 20%: floor(87,230,000 × 0.2) = 17,446,000
 // ============================================================
 describe("FS-anchor-GS-03: §178의3 시가 보충 모드 — market_price 취득 (v1 사용자 입력)", () => {
   /**
@@ -506,21 +511,18 @@ describe("FS-anchor-GS-03: §178의3 시가 보충 모드 — market_price 취�
     expect(result.taxBase).toBe(87_230_000);
   });
 
-  it("§55① 세율 = 24% (5,000만~8,800만 구간)", () => {
-    expect(result.appliedRate).toBe(0.24);
+  it("§104①12호나목 세율 = 20% (구간 없음)", () => {
+    expect(result.appliedRate).toBe(0.2);
   });
 
-  it("누진공제 = 5,760,000 (§55① 5,000만~8,800만 구간 정확값)", () => {
-    // §55① 세율표: 5,000만 초과 ~ 8,800만 이하 → 24%, 누진공제 5,760,000
-    expect(result.progressiveDeduction).toBe(5_760_000);
+  it("누진공제 = 0 (§104①12호는 단일세율이라 누진공제가 없다)", () => {
+    expect(result.progressiveDeduction).toBe(0);
   });
 
-  it("산출세액 = floor(87,230,000 × 0.24) − 5,760,000 = 15,175,200", () => {
-    // 87,230,000 × 0.24 = 20,935,200 → floor = 20,935,200
-    // 20,935,200 − 5,760,000 = 15,175,200
-    const expected = Math.floor(87_230_000 * 0.24) - 5_760_000;
+  it("산출세액 = floor(87,230,000 × 0.2) = 17,446,000", () => {
+    const expected = Math.floor(87_230_000 * 0.2);
     expect(result.incomeTax).toBe(expected);
-    expect(result.incomeTax).toBe(15_175_200);
+    expect(result.incomeTax).toBe(17_446_000);
   });
 
   it("§178의3 시가 보충 warning 발행", () => {
@@ -541,14 +543,15 @@ describe("FS-anchor-GS-03: §178의3 시가 보충 모드 — market_price 취�
 // 동일 과세기간에 국내 주식 250만 + 해외 주식 250만 = 500만원 효과 가능.
 // 엔진 단건 호출 2회로 그룹 분리 구조 검증.
 // ============================================================
-describe("FS-anchor-GS-07: 기본공제 그룹 분리 — §118의7 vs §103①2호", () => {
+describe("FS-anchor-GS-07: 기본공제 근거 — §103①2호 (국내주식과 같은 그룹)", () => {
   /**
-   * 해외주식 결과는 §118의7 기본공제 250만원을 단독 적용.
-   * 국내주식(별도 엔진)은 §103①2호 250만원을 별도 적용.
-   * 두 그룹은 합산되지 않고 독립 처리됨.
+   * ⚠️ **2026-08-12 정정 — 종전 서술 「§118의7 별도 그룹」은 틀렸다.**
+   *   §118의7은 §118②의 준용 목록에 없다. §103①2호가 「§94①3호에 따른 소득」을
+   *   한 그룹으로 묶으므로 국외주식(다목)은 국내 상장·비상장(가·나목)과 **같은 그룹**이다.
    *
-   * 본 테스트: 해외주식 2건 독립 호출 시 각각 250만원 기본공제 적용 확인
-   * (실제 합산 신고 시 그룹 내에서 1회만 적용됨 — 당 케이스는 단건 검증)
+   * 본 테스트는 **단건 엔진** 레벨 검증이다 — 단건에서는 250만원 전액이 §103①2호로도 맞다.
+   * 그룹 내 1회 배분은 다종목 경로의 몫이며, 현재 앱은 국내·국외를 한 계산에 담을 수 없다
+   * (계획서 D-2·D-3 · anchor S-1·S-2가 그 전제를 고정한다).
    */
 
   // 케이스 A: 양도차익 5,000,000 (250만 초과) → basicDeduction = 250만
@@ -574,37 +577,41 @@ describe("FS-anchor-GS-07: 기본공제 그룹 분리 — §118의7 vs §103①2
   };
   const resultB = calculateForeignStockTax(inputB);
 
-  it("케이스 A: 기본공제 = 2,500,000 (§118의7 단건 적용)", () => {
+  it("케이스 A: 기본공제 = 2,500,000 (§103①2호 단건 적용)", () => {
     expect(resultA.transferGain).toBe(5_700_000);
     expect(resultA.basicDeduction).toBe(2_500_000);
   });
 
-  it("케이스 B: 기본공제 = 2,500,000 (§118의7 단건 적용 — 별도 그룹)", () => {
+  it("케이스 B: 기본공제 = 2,500,000 (§103①2호 단건 적용)", () => {
     expect(resultB.transferGain).toBe(5_220_000);
     expect(resultB.basicDeduction).toBe(2_500_000);
   });
 
-  it("두 결과 모두 basicDeduction = 2,500,000 (그룹 분리 독립 적용)", () => {
-    // 실제 합산 신고 시에는 동일 그룹 내 250만 1회만 적용됨
-    // 본 케이스는 엔진 단건 레벨에서 §118의7 독립 적용 구조 확인
+  it("두 결과 모두 basicDeduction = 2,500,000 (각각 단건 호출)", () => {
+    // ⚠️ 이 둘을 **합산 신고**하면 §103①2호로 그룹 250만 1회여야 한다 —
+    //    현재 앱은 국외주식 다종목 입력 경로가 없어 그 상황이 만들어지지 않는다.
     expect(resultA.basicDeduction).toBe(2_500_000);
     expect(resultB.basicDeduction).toBe(2_500_000);
   });
 
-  it("§118의7 appliedRules 포함 확인 (국내 §103①2호와 별도 독립 근거)", () => {
-    const hasRuleA = resultA.appliedRules.some((r) => r.includes("§118의7"));
-    const hasRuleB = resultB.appliedRules.some((r) => r.includes("§118의7"));
-    expect(hasRuleA).toBe(true);
-    expect(hasRuleB).toBe(true);
+  it("§103①2호 appliedRules 포함 · §118의7은 나오지 않는다", () => {
+    expect(resultA.appliedRules.some((r) => r.includes("§103①2호"))).toBe(true);
+    expect(resultB.appliedRules.some((r) => r.includes("§103①2호"))).toBe(true);
+    // 부정 단언 — 위 두 줄이 양성 대조군이다
+    expect(resultA.appliedRules.some((r) => r.includes("§118의7"))).toBe(false);
   });
 });
 
 // FS-09a~e anchor → foreign-stock-fs09-installments.test.ts 참조 (800줄 분리)
 
 // ============================================================
-// FS-anchor-10: LTHD 미적용 확인 (§118의8 단서)
+// FS-anchor-10: LTHD 미적용 확인
+//
+// ⚠️ 2026-08-12 근거 정정 — **금액은 그대로, 조문만 바뀐다.**
+//   §118의8(준용규정 단서)은 §118②의 준용 목록에 없다. 국외주식에 LTHD가 없는 이유는
+//   §95②의 장기보유특별공제 대상이 §94①1호·2호(토지·건물) 자산이기 때문이다.
 // ============================================================
-describe("FS-anchor-10: LTHD 미적용 — §118의8 단서", () => {
+describe("FS-anchor-10: LTHD 미적용 — §95②(토지·건물 전용)", () => {
   it("10년 보유해도 LTHD 공제 없음 — taxBase = transferGain − basicDeduction", () => {
     // 취득일을 10년 전으로 설정해도 LTHD 0 확인
     const longHoldInput: ForeignStockInput = {
@@ -613,11 +620,11 @@ describe("FS-anchor-10: LTHD 미적용 — §118의8 단서", () => {
       transferDate: new Date("2025-09-30"),
     };
     const result = calculateForeignStockTax(longHoldInput);
-    // 해외주식은 §118의8 단서로 LTHD 미적용
     // taxBase = transferGain − basicDeduction (LTHD 없음)
     expect(result.taxBase).toBe(result.transferGain - result.basicDeduction);
 
-    // §118의8 적용 규칙이 appliedRules에 포함
-    expect(result.appliedRules.some((r) => r.includes("§118의8"))).toBe(true);
+    // 근거는 §95② — §118의8이 아니다
+    expect(result.appliedRules.some((r) => r.includes("§95②"))).toBe(true);
+    expect(result.appliedRules.some((r) => r.includes("§118의8"))).toBe(false);
   });
 });

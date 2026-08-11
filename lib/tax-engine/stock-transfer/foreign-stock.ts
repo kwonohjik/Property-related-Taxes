@@ -1,24 +1,35 @@
 /**
- * 해외주식 양도소득세 — 순수 엔진 (PR-4A + FS-09)
+ * 국외주식 양도소득세 — 순수 엔진 (§94①3다목 트랙 + FS-09)
  *
- * 법령: 소득세법 §94①3다목 + §118의2~§118의8 (2026.4.21. 시행)
- * 시행령: §157의3, §178의3, §178의5, §178의7
+ * 🔑 **트랙의 근거는 법 §118②(준용규정)** 이다:
+ *   "다음 각 호의 소득에 대한 양도소득세액의 계산에 관하여는
+ *    **제118조의2부터 제118조의4까지 및 제118조의6을 준용**한다.
+ *    1. **제94조제1항제3호다목**에 따른 자산의 양도로 발생하는 소득"
+ *
+ * ⇒ 준용 O: §118의2(5년 요건) · §118의3(양도가액) · §118의4(필요경비·외화환산 위임) · §118의6(외국납부세액)
+ * ⇒ 준용 X: **§118의5(세율)** · **§118의7(기본공제)** · §118의8(LTHD 배제 단서)
+ *
+ * 법령: 소득세법 §94①3다목 · §118② · §102①2호 · §103①2호 · §104①12호나목
+ *       + 준용 §118의2~§118의4·§118의6
+ * 시행령: §157의3(범위), §178의3(시가), §178의5(외화환산), §178의7(외국납부세액 범위)
  *
  * 계산 흐름:
- *   STEP 1: 납세의무 확인 (§118의2 — 5년 이상 거주자)
- *   STEP 2: 양도가액 원화 환산 (§178의5)
+ *   STEP 1: 납세의무 확인 (§118② → §118의2 — 5년 이상 거주자)
+ *   STEP 2: 양도가액 원화 환산 (영 §178의5)
  *     FS-09: transferReceiptMode="installments" 시 §178의5② 장기할부 시점별 환율 적용
- *     single: 기존 단일 환율 적용 (회귀 0)
- *   STEP 3: 취득가액 원화 환산 (§178의5)
- *   STEP 4: 필요경비 원화 환산 (§118의4)
+ *     single: 단일 환율 적용
+ *   STEP 3: 취득가액 원화 환산 (영 §178의5)
+ *   STEP 4: 필요경비 원화 환산 (§118② → §118의4)
  *   STEP 5: 외국납부세액 필요경비 산입 처리 (foreignTaxMethod="expense" 시)
- *   STEP 6: 양도차익 (§118의8 §95 준용 단서 — LTHD 미적용)
- *   STEP 7: 기본공제 §118의7 250만원 (§103①·§118의10④와 별도 그룹)
+ *   STEP 6: 양도차익 (장기보유특별공제 없음 — §95②가 §94①1·2호 자산 전용)
+ *   STEP 7: 기본공제 §103①2호 250만원 (국내주식 §94①3호 가·나목과 **같은 그룹**)
  *   STEP 8: 과세표준
- *   STEP 9: §118의5 → §55① 6~45% 8구간 누진세율
- *   STEP 10: 외국납부세액공제 §118의6 (credit 선택 시)
- *   STEP 11: 지방소득세 §103의3 10원 미만 절사
+ *   STEP 9: **§104①12호나목 20% 단일세율**
+ *   STEP 10: 외국납부세액공제 §118② → §118의6 (credit 선택 시)
+ *   STEP 11: 지방소득세 10원 미만 절사
  *   STEP 12: 최종 결과 조립
+ *
+ * 계획서: docs/02-design/features/foreign-stock-94-1-3-da-statute-track.plan.md
  */
 
 import type {
@@ -27,10 +38,11 @@ import type {
   InstallmentReceipt,
   InstallmentReceiptDetail,
 } from "./types/foreign-stock.types";
-import { BASIC_PROGRESSIVE_BRACKETS } from "./stock-rate-tables";
+import { applyRate } from "@/lib/tax-engine/tax-utils";
 import {
   STOCK_FOREIGN,
   STOCK_FOREIGN_BASIC_DEDUCTION,
+  STOCK_FOREIGN_RATE,
   STOCK_FOREIGN_RESIDENT_MIN_YEARS,
 } from "@/lib/tax-engine/legal-codes/stock";
 
@@ -38,48 +50,11 @@ import {
 // 내부 상수
 // ============================================================
 
-/** §118의7 기본공제 250만원 (국내 §103①2호·국외전출세 §118의10④와 별도) */
+/** §103①2호 기본공제 250만원 (국내주식 §94①3호 가·나목과 같은 그룹) */
 const BASIC_DEDUCTION_AMOUNT = STOCK_FOREIGN_BASIC_DEDUCTION;
 
-/** §118의2 납세의무 요건 — 5년 이상 거주자 */
+/** §118② → §118의2 납세의무 요건 — 5년 이상 거주자 */
 const MIN_RESIDENT_YEARS = STOCK_FOREIGN_RESIDENT_MIN_YEARS;
-
-// ============================================================
-// 내부 유틸: 누진세율 적용 (§55① 8구간)
-// ============================================================
-
-/**
- * §118의5 → §55① 준용 누진세율 적용
- * BASIC_PROGRESSIVE_BRACKETS (6~45% 8구간) 재사용
- */
-function applyBasicProgressiveTax(taxBase: number): {
-  rate: number;
-  progressiveDeduction: number;
-  tax: number;
-} {
-  if (taxBase <= 0) return { rate: 0, progressiveDeduction: 0, tax: 0 };
-
-  for (const bracket of BASIC_PROGRESSIVE_BRACKETS) {
-    const max = bracket.max ?? Infinity;
-    if (taxBase <= max) {
-      const rawTax = Math.floor(taxBase * bracket.rate) - bracket.deduction;
-      return {
-        rate: bracket.rate,
-        progressiveDeduction: bracket.deduction,
-        tax: Math.max(0, rawTax),
-      };
-    }
-  }
-
-  // 최고 구간 (45%)
-  const last = BASIC_PROGRESSIVE_BRACKETS[BASIC_PROGRESSIVE_BRACKETS.length - 1];
-  const rawTax = Math.floor(taxBase * last.rate) - last.deduction;
-  return {
-    rate: last.rate,
-    progressiveDeduction: last.deduction,
-    tax: Math.max(0, rawTax),
-  };
-}
 
 /** 10원 미만 절사 (§47③ 준용 — 지방소득세) */
 function floorTen(n: number): number {
@@ -269,24 +244,36 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   const necessaryExpensesKrw = capitalExpKrw + transferCostKrw + extraExpenseFromForeignTax;
 
   // ──────────────────────────────────────────────────────────
-  // STEP 6: 양도차익 (§118의8 §95 준용 — LTHD 미적용 명문)
+  // STEP 6: 양도차익 — 장기보유특별공제 없음
+  //
+  // ⚠️ 근거가 §118의8 단서가 **아니다**. §118의8은 §118②의 준용 목록에 없다.
+  //    §95②의 장기보유특별공제 대상이 §94①1호·2호 자산이라 주식에는 애초에 붙지 않는다.
+  //    (금액은 종전과 같고 근거만 정정 — 계획서 §5.3)
   // ──────────────────────────────────────────────────────────
   const transferGain = transferPriceKrw - acquisitionPriceKrw - necessaryExpensesKrw;
-  appliedRules.push(STOCK_FOREIGN.SECTION_118_8_NO_LTHD);
+  appliedRules.push(STOCK_FOREIGN.SECTION_95_2_NO_LTHD);
 
   if (transferGain < 0) {
     warnings.push(`양도손실 발생 (${transferGain.toLocaleString()}원) — 동일 과세기간 다른 해외주식 양도차익과 통산 가능`);
   }
 
   // ──────────────────────────────────────────────────────────
-  // STEP 7: 기본공제 §118의7 250만원
-  // (§103①2호 국내주식 그룹·§118의10④ 국외전출세 그룹과 별도)
+  // STEP 7: 기본공제 §103①2호 250만원
+  //
+  // ⚠️ §118의7(별도 그룹)이 **아니다** — §118②의 준용 목록에 없다.
+  //    §103①2호가 「§94①3호에 따른 소득」을 한 그룹으로 묶으므로 국내 상장·비상장 주식과
+  //    **같은 그룹**에서 연 1회다.
+  //
+  // 🔑 현재 이 앱은 국내주식과 국외주식을 **한 계산에 담을 수 없다**
+  //    (`marketType`이 폼-전역이고 다종목 `items` 경로에 국외주식이 없다).
+  //    따라서 단독 계산에서는 250만원 전액이 맞다. 그룹 배분은 다종목 입력이 생길 때
+  //    `stock-transfer-aggregate.ts`가 맡는다 — 계획서 D-2·D-3.
   // ──────────────────────────────────────────────────────────
   // 손실 시 기본공제 0 처리
   const basicDeduction = transferGain > 0
     ? Math.min(BASIC_DEDUCTION_AMOUNT, transferGain)
     : 0;
-  appliedRules.push(STOCK_FOREIGN.SECTION_118_7_BASIC_DEDUCTION);
+  appliedRules.push(STOCK_FOREIGN.SECTION_103_1_2_BASIC_DEDUCTION);
 
   // ──────────────────────────────────────────────────────────
   // STEP 8: 과세표준
@@ -294,10 +281,22 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   const taxBase = Math.max(0, transferGain - basicDeduction);
 
   // ──────────────────────────────────────────────────────────
-  // STEP 9: §118의5 → §55① 누진세율 적용 (6~45% 8구간)
+  // STEP 9: §104①12호나목 — 20% 단일세율
+  //
+  // ⚠️ §118의5(§55① 6~45% 누진)는 §118②의 준용 목록에 **없다**.
+  // ⚠️ 보유기간 구분 없음 — §104①11호가목1)의 「1년 미만 30%」는 가·나목 전용.
+  // ⚠️ 가목 「중소기업의 주식등 10%」는 외국법인에 중소기업 규정을 적용하지 않아 도달 불가
+  //    (계획서 §4 Q-1).
   // ──────────────────────────────────────────────────────────
-  const { rate, progressiveDeduction, tax: incomeTax } = applyBasicProgressiveTax(taxBase);
-  appliedRules.push(STOCK_FOREIGN.SECTION_118_5_TAX_RATE);
+  //
+  // 🔑 `applyRate`(= floor(x × 0.2))를 그대로 쓴다 — 2026-08-12 실측으로 **1원 오차 0건**.
+  //    0~20억 5배수 전수 + 1~300만 1단위 전수를 `applyRateFraction(x, 2, 10)`과 대조해 확인했다.
+  //    0.70이 `applyFairMarketRatio`를 필요로 했던 것과 방향이 반대다 — 0.7의 double은 실제보다
+  //    **작아서** floor가 1원 깎였지만, 0.2의 double은 실제보다 **커서** 깎이지 않는다.
+  const rate = taxBase > 0 ? STOCK_FOREIGN_RATE : 0;
+  const progressiveDeduction = 0; // §104①12호에 누진공제 없음
+  const incomeTax = applyRate(taxBase, STOCK_FOREIGN_RATE);
+  appliedRules.push(STOCK_FOREIGN.SECTION_104_1_12_TAX_RATE);
 
   // ──────────────────────────────────────────────────────────
   // STEP 10: 외국납부세액공제 §118의6 (credit 선택 시)

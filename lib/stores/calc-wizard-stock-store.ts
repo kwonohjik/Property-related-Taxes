@@ -339,7 +339,7 @@ export interface StockTransferFormData {
   /** [B-1②a] 1일당 이자율 (소수, 국기령 §43의3② 연도별 변동 — 사용자 입력) */
   etDeferralInterestDailyRate: string;
 
-  // ── PR-4A 해외주식 전용 필드 (§94①3 다목 + §118의2~§118의8) ──
+  // ── PR-4A 해외주식 전용 필드 (§94①3 다목 · §118② 준용 트랙) ──
   // 활성 조건: marketType === "foreign_stock"
   /** 국내 주소·거소 거주 연수 (만 년 수) — 5년 이상 시 납세의무 충족 (§118의2) */
   yearsResidentInKorea: string;         // DecimalInput 소수 없이 정수 문자열 "7"

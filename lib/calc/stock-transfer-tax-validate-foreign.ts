@@ -19,6 +19,10 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
+import {
+  FOREIGN_STOCK_TRACK_START,
+  isBeforeForeignStockTrack,
+} from "@/lib/tax-engine/data/foreign-stock-track-era";
 
 function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
@@ -73,6 +77,20 @@ export function validateStep1Foreign(form: StockTransferFormData): StockValidati
   }
   if (isEmpty(form.transferDate)) {
     errors.push({ field: "transferDate", message: "양도일을 입력하세요", severity: "error" });
+  } else if (isBeforeForeignStockTrack(form.transferDate)) {
+    // 🔑 §94①3호다목 트랙 개시일(양도일 2020-01-01) 이전은 **지원하지 않는다**.
+    //    구 §118의2 3호 트랙(구 §118의5 2호 세율·구 §118의7 2호 별도 기본공제)이라
+    //    현행 20% 단일세율로 계산하면 조용히 틀린다.
+    //    ⚠️ 서버(⑫ foreignStockInputSchema)에도 **같은 상수로** 동일 규칙이 걸려 있다 —
+    //       여기만 막으면 API 직접 호출로 뚫린다.
+    errors.push({
+      field: "transferDate",
+      message:
+        `${FOREIGN_STOCK_TRACK_START} 이전 양도는 지원하지 않습니다. ` +
+        "국외주식이 §94①3호다목으로 옮겨진 것은 법률 제16834호(2019.12.31.) 부칙에 따라 " +
+        "2020년 1월 1일 이후 양도분부터이며, 그 이전은 구 §118의2 트랙이라 계산 방식이 다릅니다.",
+      severity: "error",
+    });
   }
 
   // 주식 수 필수

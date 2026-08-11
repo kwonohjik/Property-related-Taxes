@@ -9,6 +9,10 @@
  */
 
 import { z } from "zod";
+import {
+  FOREIGN_STOCK_TRACK_START,
+  isBeforeForeignStockTrack,
+} from "@/lib/tax-engine/data/foreign-stock-track-era";
 
 // ============================================================
 // ⑨ Zod enum 정의 (8차 정정 — 7종 enum)
@@ -596,7 +600,7 @@ export const stockTransferAggregateInputSchema = z.object({
 // ============================================================
 // ⑫ PR-4A 해외주식 양도소득세 Zod 입력 스키마 (14지점 ⑨⑫)
 //
-// 법령: §94①3다목 + §118의2~§118의8
+// 법령: §94①3다목 · §118②(§118의2~§118의4·§118의6 준용) · §103①2호 · §104①12호나목
 // 주의: TypeScript는 이 스키마의 필드 누락을 감지하지 못함 (⑫ 점검 필수)
 // ============================================================
 
@@ -739,6 +743,21 @@ export const foreignStockInputSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["foreignTaxPaidForeign"],
       message: "외국에서 납부한 세액 (외화)을 입력하세요",
+    });
+  }
+
+  // ⑫ §94①3호다목 트랙 개시일 이전 양도 차단 (계획서 §6.5)
+  //
+  // 🔑 클라이언트 ⑧(`stock-transfer-tax-validate-foreign.ts`)과 **같은 술어**를 쓴다.
+  //    ⑧만 막으면 API 직접 호출로 뚫려 「차단 중」이 거짓말이 된다.
+  // ⚠️ 취득일에는 걸지 않는다 — 2020년 이전 취득 후 2020년 이후 양도는 정상 케이스다.
+  if (isBeforeForeignStockTrack(d.transferDate)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["transferDate"],
+      message:
+        `${FOREIGN_STOCK_TRACK_START} 이전 양도는 지원하지 않습니다 ` +
+        "(구 §118의2 3호 트랙 — 법률 제16834호 부칙 §1·§2②)",
     });
   }
 });

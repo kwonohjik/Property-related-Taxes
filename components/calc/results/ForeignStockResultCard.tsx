@@ -8,7 +8,11 @@
  *   - 법정 용어 우선 (산출세액·과세표준·양도소득금액)
  *   - 숫자 끝 "원" 단위 표기 금지 (feedback_no_won_suffix)
  *
- * 법조문 참조: §118의2 / §118의4 / §118의5 / §118의6 / §178의5
+ * 법조문 참조: §94①3호다목 · §118②(준용 다리) · §103①2호(기본공제) · §104①12호나목(세율)
+ *   + 준용 §118의2(5년 요건)·§118의3(양도가액)·§118의4(필요경비)·§118의6(외국납부세액) · 영 §178의5(환산)
+ *
+ * ⚠️ §118의5(§55① 누진)·§118의7(별도 기본공제)·§118의8은 §118②의 준용 목록에 **없다** —
+ *    화면 인용에서 되살리지 말 것. 계획서 foreign-stock-94-1-3-da-statute-track.plan.md
  */
 
 import type { ForeignStockResult } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
@@ -160,7 +164,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
 
       {/* 양도차익 계산 */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-1">
-        <p className="text-xs font-semibold text-slate-500 mb-2">양도차익 계산 (§118의8 준용)</p>
+        <p className="text-xs font-semibold text-slate-500 mb-2">양도차익 계산 (§118② → §118의3·§118의4 준용)</p>
 
         <Row label="양도가액 (원화 환산)" value={result.transferPriceKrw} />
         <Row label="취득가액 (원화 환산)" value={result.acquisitionPriceKrw} indent />
@@ -178,33 +182,33 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
           highlight
         />
         <Row
-          label="기본공제 (§118의7)"
+          label="기본공제 (§103①2호)"
           value={result.basicDeduction}
-          sub="250만원 (§103①·§118의10④와 별도 그룹)"
+          sub="연 250만원 — 국내 상장·비상장 주식(§94①3호 가·나목)과 같은 그룹"
           indent
         />
         <Divider />
         <Row
           label="과세표준"
           value={result.taxBase}
-          sub="양도차익 − 기본공제 (장기보유특별공제 미적용 — §118의8 단서)"
+          sub="양도차익 − 기본공제 (장기보유특별공제 미적용 — §95②는 토지·건물 전용)"
           highlight
         />
       </div>
 
-      {/* 세율 적용 (§118의5 → §55①) */}
+      {/* 세율 적용 (§104①12호나목) */}
       <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-1">
-        <p className="text-xs font-semibold text-slate-500 mb-2">세율 적용 (§118의5 → §55① 6~45% 8구간)</p>
+        <p className="text-xs font-semibold text-slate-500 mb-2">세율 적용 (§104①12호나목)</p>
 
         <Row
           label={`적용 세율: ${pct(result.appliedRate)}`}
-          value={`누진공제 ${fmt(result.progressiveDeduction)}`}
-          sub="§55① 8구간 누진세율"
+          value="단일세율"
+          sub="§94①3호다목 자산 — 보유기간에 따른 구분 없음"
         />
         <Row
           label="산출세액"
           value={result.incomeTax}
-          sub={`과세표준 ${fmt(result.taxBase)} × ${pct(result.appliedRate)} − 누진공제 ${fmt(result.progressiveDeduction)}`}
+          sub={`과세표준 ${fmt(result.taxBase)} × ${pct(result.appliedRate)}`}
           highlight
         />
 
