@@ -335,7 +335,13 @@ export function getAcqDateForCard(asset: import("@/lib/stores/calc-wizard-asset"
   //    그대로 쓰면 신축(자가건축)처럼 토지를 먼저 산 자산에서 토지 열 취득일자·보유기간이
   //    건물 기준으로 표시된다(장특공제는 엔진이 토지 취득일로 계산하므로 표시만 어긋난다).
   //    기산일 식은 엔진(`general-building-valuation.ts:412`)·API 변환과 **같은 단일 소스**를 쓴다.
-  return partAcquisitionDates(asset).land;
+  //
+  // ⚠️ **토지 카드 id를 명시 열거한다.** default로 두면 카드 id가 아닌 컬럼(다건 모드의
+  //    propertyId — 그 열은 GB 자산 **전체**다)까지 토지 취득일로 바뀐다.
+  if (base === "land" || base === "land_business" || base === "land_nbl") {
+    return partAcquisitionDates(asset).land;
+  }
+  return asset.acquisitionDate || "";
 }
 
 /**
