@@ -20,6 +20,32 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
   const bld1 = props.find((p) => p.propertyLabel.includes("3001")) ?? props[1];
   const bld2 = props.find((p) => p.propertyLabel.includes("3002")) ?? props[2];
 
+  /**
+   * 🔴 **자산별 취득가액 산정 방식은 카드에서 파생한다** (2026-08-12 D-9).
+   *
+   * 종전에는 「건물1(실가) · 건물2(환산)」·「(환산)」·「(개산공제 §163⑥)」가 **하드코딩**돼
+   * 사례 33(원건물 실가 + 증축 환산) 하나만 맞았다. 원취득분·증축분은 **각각** 실거래가·환산을
+   * 고를 수 있으므로(4조합) 나머지 세 조합에서는 전부 거짓 표시였다.
+   *
+   * 🔑 소스는 `aggregated.generalBuildingValuationDetail.assetCards`다 —
+   *    `PerPropertyBreakdown`(위 `props`)에는 `usedEstimatedAcquisition`이 **없다**
+   *    (`TransferValuationDetailSource`의 Pick 목록에 미포함). 같은 `aggregated` 객체 안에
+   *    이미 실려 있으므로 prop 추가 없이 읽는다.
+   * 계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §4 D-9
+   */
+  const gbCards = aggregated.generalBuildingValuationDetail?.assetCards;
+  const isEstimatedOf = (propertyId: string): boolean | undefined =>
+    gbCards?.find((c) => c.propertyId === propertyId)?.usedEstimatedAcquisition;
+  const landEstimated = isEstimatedOf("land");
+  const bld1Estimated = isEstimatedOf("building1");
+  const bld2Estimated = isEstimatedOf("building2");
+
+  /** 취득가액 옆 산정 방식 배지 — 카드를 못 찾으면 아무것도 붙이지 않는다(거짓 표시 금지). */
+  const acqBadge = (estimated: boolean | undefined, tone: string) =>
+    estimated === undefined ? null : (
+      <span className={`ml-1 text-micro ${tone}`}>{estimated ? "(환산)" : "(실거래가)"}</span>
+    );
+
   // 통산 분배: 건물1 결손(음수 income)이 토지·건물2로 안분 흡수됨
   const lossOffset1 = bld1.income < 0 ? Math.abs(bld1.income) : 0;
   // 토지·건물2의 통산 흡수분 = lossOffsetFromOtherGroup (aggregate가 채움)
@@ -42,8 +68,8 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
     <div className="rounded-lg border bg-card p-4 shadow-sm">
       <h3 className="font-semibold text-base mb-1">일반건물 3-자산 요약 (영 §102② 결손 통산)</h3>
       <p className="text-xs text-muted-foreground mb-3">
-        토지(1001) · 건물1(3001, 실가) · 증축건물2(3002, 환산) 소득 라인을 분리 표시.
-        건물1 결손이 토지·건물2에 안분 흡수됩니다.
+        토지(1001) · 건물1(3001) · 증축건물2(3002) 소득 라인을 분리 표시.
+        자산별 취득가액 산정 방식은 취득가액 옆에 표기됩니다. 건물1 결손이 토지·건물2에 안분 흡수됩니다.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -79,11 +105,17 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
             {/* 취득가액 */}
             <tr className="border-b border-border/40">
               <td className="py-1 pr-2 text-muted-foreground">취득가액</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(land.acquisitionPrice)}</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.acquisitionPrice)}</td>
+              <td className="py-1 pr-2 text-right font-mono">
+                {formatKRW(land.acquisitionPrice)}
+                {acqBadge(landEstimated, "text-sky-600")}
+              </td>
+              <td className="py-1 pr-2 text-right font-mono">
+                {formatKRW(bld1.acquisitionPrice)}
+                {acqBadge(bld1Estimated, "text-emerald-600")}
+              </td>
               <td className="py-1 pr-2 text-right font-mono">
                 {formatKRW(bld2.acquisitionPrice)}
-                <span className="ml-1 text-micro text-fuchsia-600">(환산)</span>
+                {acqBadge(bld2Estimated, "text-fuchsia-600")}
               </td>
               <td className="py-1 text-right font-mono font-semibold">
                 {formatKRW(land.acquisitionPrice + bld1.acquisitionPrice + bld2.acquisitionPrice)}
@@ -96,7 +128,12 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
               <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.necessaryExpense)}</td>
               <td className="py-1 pr-2 text-right font-mono">
                 {formatKRW(bld2.necessaryExpense)}
-                <span className="ml-1 text-micro text-muted-foreground">(개산공제 §163⑥)</span>
+                {/* 환산 파트만 개산공제(§163⑥)다 — 실가 파트는 실제 지출액(§97②1호). */}
+                {bld2Estimated !== undefined && (
+                  <span className="ml-1 text-micro text-muted-foreground">
+                    {bld2Estimated ? "(개산공제 §163⑥)" : "(실제 필요경비)"}
+                  </span>
+                )}
               </td>
               <td className="py-1 text-right font-mono font-semibold">
                 {formatKRW(land.necessaryExpense + bld1.necessaryExpense + bld2.necessaryExpense)}

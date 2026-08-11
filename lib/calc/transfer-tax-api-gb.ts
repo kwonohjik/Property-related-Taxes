@@ -83,8 +83,36 @@ function buildExtensionInfo(
       `[buildExtensionInfo] 실가 모드 actualAcquisitionPrice 누락 — validate 단계에서 차단되어야 함 (asset.assetId=${asset.assetId})`
     );
   }
+  /**
+   * 🔴 **양도시 건물2 기준시가는 실가 모드에서도 싣는다** (2026-08-12 D-1).
+   *
+   * 종전에는 이 분기가 그 필드를 빼먹었다. 그래서 엔진
+   * `general-building-extension.ts:77` `extStdTotal = … ?? 0`이 **0**이 되고, §166⑥ 3-way
+   * 안분 분모에서 건물2가 통째로 빠져 **건물2 양도가액이 0**이 됐다(잔액 흡수 `:95-96`).
+   * 토지·건물1이 총액을 다 가져가 과대 배분되고, 그 오염이 환산 분자를 타고 **취득가액까지**
+   * 전파된다(실측: 조합 D 토지 취득가액 250,000,000 — 정상 235,294,117).
+   *
+   * 🔑 **양도가액 안분은 취득가액 산정 방식과 무관한 별개 축이다** — 「소득세법」 제100조 제2항 ·
+   *    같은 법 시행령 제166조 제6항. 증축분을 실지거래가액으로 취득했어도 양도가액을 3파트로
+   *    나누려면 세 기준시가가 모두 필요하다.
+   *
+   * ⚠️ UI는 실가 모드에서도 이 칸을 **이미 렌더한다**(`GeneralBuildingBlock.tsx` 실가 분기 —
+   *    hint가 「§166⑥ 양도가액 안분 분모 계산에 필요합니다」라고 명시). 받는데 보내지 않는
+   *    상태였다. 취득시 기준시가(`acquisitionExtensionBuildingStdPrice`)는 실가 모드에서
+   *    쓰이지 않으므로 **여기서도 싣지 않는다**(환산 분자 전용).
+   *
+   * 미입력은 validate가 먼저 차단한다 — 여기 도달하면 우회 버그이므로 fail-fast
+   * (자동 0 fallback 금지 · `feedback_no_silent_apportion_fallback`).
+   */
+  const transferExtStdPrice = parseAmount(asset.gbTransferExtensionBuildingStdPrice);
+  if (!transferExtStdPrice) {
+    throw new Error(
+      `[buildExtensionInfo] 실가 모드 transferExtensionBuildingStdPrice 누락 — §166⑥ 안분 분모에 필요. validate 단계에서 차단되어야 함 (asset.assetId=${asset.assetId})`
+    );
+  }
   return {
     ...base,
+    transferExtensionBuildingStdPrice: transferExtStdPrice,
     actualAcquisitionPrice: actualAcq,
     actualExpenses: parseAmount(asset.gbExtensionActualExpenses) || 0,
   };
@@ -477,8 +505,31 @@ export function buildGeneralBuildingValuation(
        * 빠졌다**. 실측 **결정세액 121,962,280원 과대**(양도비 3억 기준).
        *
        * ⇒ **①이 채택됐을 때만** 넣는다. 「무조건 제외」도 「무조건 포함」도 틀렸다.
+       *
+       * ── 🔴 **`bothEstimated` 추가** (2026-08-12 D-10) ──────────────────────────────
+       *
+       * 위 규칙의 전제는 「`bundledExpenses`가 그 값을 **소비한다**」인데, **원건물이 양쪽 다
+       * 환산이면 소비하지 않는다**. `general-building-extension.ts`가 일괄 안분 필요경비를
+       * 계산한 직후 환산 파트에서 **개산공제로 덮기** 때문이다(같은 파일 「파트가 환산이면
+       * 일괄 안분값을 쓰지 않는다」 분기 — 2026-08-08 추가). 그 변경으로 W-1b의 전제가
+       * 조합 C·D에서만 무너졌는데 게이트는 그대로 남아 있었다.
+       *
+       * mutation 실측: 조합 C에서 `bundledExpenses`를 10,000,000 → 5,000,000으로 바꿔도
+       * 토지·건물1 필요경비가 **개산공제 6,000,000·3,000,000에 고정**된다(= 안분값이 아니다).
+       * ⇒ 이중계상이 성립할 수 없는데도 양도비가 나목에서 빠졌다.
+       * 실측 **결정세액 28,979,117원 과대**(자본적지출 8억·양도비 3억 기준).
+       *
+       * 「소득세법」 제97조 제2항 제2호 **단서 나목**은 「제1항제2호 **및** 제3호에 따른 금액의
+       * **합계액**」이라 양도비를 조건 없이 포함한다. 빼는 유일한 정당화가 이중계상인데
+       * 그것이 성립하지 않으므로, 조합 C·D에서는 **항상 싣는다**.
+       *
+       * ⚠️ **부분 혼합(토지 실가 + 건물1 환산)은 `bothEstimated === false`라 현행이 유지된다** —
+       *    그 조합은 실가 파트가 `bundledExpenses`를 실제로 소비하므로 이중계상 위험이 남는다.
+       *    환산 파트 나목의 정밀 안분은 별건이다(계획서 §14 O-3).
        */
-      ...((!asset.gbHasExtension || !!parseAmount(asset.gbBundledAcquisitionExpenses)) &&
+      ...((!asset.gbHasExtension ||
+        bothEstimated ||
+        !!parseAmount(asset.gbBundledAcquisitionExpenses)) &&
       parseAmount(asset.transferExpense)
         ? { transferExpense: parseAmount(asset.transferExpense) }
         : {}),

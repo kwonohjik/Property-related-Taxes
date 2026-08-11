@@ -433,12 +433,9 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
             isAppraisalAcquisition={asset.isAppraisalAcquisition}
             onIsAppraisalAcquisitionChange={(v) => onChange({ isAppraisalAcquisition: v })}
+            // 증축은 **읽기만** 한다 — 취득가액 칸이 「일괄 취득가액」인지 가르는 용도.
+            // 쓰기 주체는 `GeneralBuildingBlock`의 「증축 있음」 토글 하나뿐이다(2026-08-12).
             gbHasExtension={asset.gbHasExtension}
-            onGbHasExtensionChange={(v) => onChange({ gbHasExtension: v })}
-            gbExtensionAcquisitionMode={asset.gbExtensionAcquisitionMode}
-            onGbExtensionAcquisitionModeChange={(v) =>
-              onChange({ gbExtensionAcquisitionMode: v as AssetForm["gbExtensionAcquisitionMode"] })
-            }
             fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
             standardPriceAtAcq={asset.standardPriceAtAcq}
