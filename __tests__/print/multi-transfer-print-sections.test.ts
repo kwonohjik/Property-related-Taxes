@@ -18,7 +18,7 @@ import {
   type MultiTransferPrintSectionId,
 } from "@/lib/print/multi-transfer-print-sections";
 
-// 설계 §2.6 기준 leaf 7종 (form-table = 상단 합산 신고서 양식 추가)
+// 설계 §2.6 기준 leaf 8종 (form-table = 상단 합산 신고서 양식 · building-std-report 2026-08-11 추가)
 const ALL_LEAVES: MultiTransferPrintSectionId[] = [
   "form-table",
   "summary",
@@ -27,9 +27,10 @@ const ALL_LEAVES: MultiTransferPrintSectionId[] = [
   "group-tax",
   "loss-offset",
   "per-property",
+  "building-std-report",
 ];
 
-const PDF_LEAVES: MultiTransferPrintSectionId[] = ["form-table", "summary"];
+const PDF_LEAVES: MultiTransferPrintSectionId[] = ["form-table", "summary", "building-std-report"];
 
 describe("양도세(다중) 선택 출력 레지스트리 — Pre-Do anchor (PR-F2)", () => {
   it("PD-mtr-1: 선택 0건이면 모든 섹션이 print:hidden", () => {
@@ -48,7 +49,7 @@ describe("양도세(다중) 선택 출력 레지스트리 — Pre-Do anchor (PR-
     }
   });
 
-  it("PD-mtr-3: flattenPrintSectionIds는 7개 유니크 leaf, group: 접두 없음", () => {
+  it("PD-mtr-3: flattenPrintSectionIds는 8개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length);
@@ -58,7 +59,7 @@ describe("양도세(다중) 선택 출력 레지스트리 — Pre-Do anchor (PR-
     }
   });
 
-  it("PD-mtr-4: pdfEligibleIds는 form-table·summary 2종 (신고서 양식 + 합산 계산 대표)", () => {
+  it("PD-mtr-4: pdfEligibleIds는 form-table·summary·building-std-report 3종", () => {
     const ids = pdfEligibleIds();
     expect([...ids].sort()).toEqual([...PDF_LEAVES].sort());
   });

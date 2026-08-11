@@ -22,6 +22,11 @@ import {
   RATE_GROUP_COLORS,
 } from "./MultiTransferPropertyBreakdown";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import {
+  BuildingStdPriceReportSection,
+  hasBuildingStdReport,
+} from "@/components/calc/results/BuildingStdPriceReportSection";
+import { extractRelevantBuildingStdSnapshots } from "@/lib/storage/use-auto-save-calculation";
 import { downloadSelectedPdf } from "@/components/calc/results/transfer/TransferTaxResultViewHelpers";
 import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
 import {
@@ -295,7 +300,16 @@ export function MultiTransferTaxResultView({
     () => new Set()
   );
 
-  // 현재 결과뷰에 실제 렌더되는 leaf id (설계 §2.6 — sub 컴포넌트 내부 가드라 6개 항상)
+  /**
+   * 건물 기준시가 계산서 소속 판정용 — 다건은 건별 form을 가지므로 전 건의 자산을 모은다.
+   * (스냅샷 키의 assetId가 이 목록 JSON에 등장하는지로 이 계산 소속을 가린다.)
+   */
+  const allAssets = useMemo(
+    () => properties.flatMap((p) => p.form?.assets ?? []),
+    [properties],
+  );
+
+  // 현재 결과뷰에 실제 렌더되는 leaf id (설계 §2.6 — sub 컴포넌트 내부 가드라 7개 항상)
   const availablePrintIds = useMemo<Set<MultiTransferPrintSectionId>>(() => {
     const s = new Set<MultiTransferPrintSectionId>();
     s.add("form-table");
@@ -305,8 +319,10 @@ export function MultiTransferTaxResultView({
     s.add("group-tax");
     s.add("loss-offset");
     s.add("per-property");
+    // 계산서는 모달 스냅샷이 있는 자산이 있을 때만 렌더된다 → 그때만 선택 가능.
+    if (hasBuildingStdReport({ assets: allAssets })) s.add("building-std-report");
     return s;
-  }, []);
+  }, [allAssets]);
 
   // 선택 항목 클라이언트 PDF 다운로드 — Helpers downloadSelectedPdf 위임 (로컬 result react-pdf 생성)
   const handlePrintPdf = (pdfSections: string[]) =>
@@ -315,6 +331,8 @@ export function MultiTransferTaxResultView({
         taxType: "transfer_multi",
         taxTypeLabel: "양도소득세 (다건)",
         resultData: result as unknown as Record<string, unknown>,
+        // 건물 기준시가 계산서 PDF는 inputData.buildingStdSnapshots에서 재유도.
+        inputData: { buildingStdSnapshots: extractRelevantBuildingStdSnapshots({ assets: allAssets }) },
         filenamePrefix: "양도소득세_계산결과",
       },
       pdfSections,
@@ -400,6 +418,11 @@ export function MultiTransferTaxResultView({
           />
         ))}
       </div>
+      </PrintSection>
+
+      {/* 건물 기준시가 계산서 (모달 스냅샷 재유도 — 스냅샷 있을 때만 렌더) */}
+      <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>
+        <BuildingStdPriceReportSection inputData={{ assets: allAssets }} />
       </PrintSection>
 
       {/* 합산 계산 과정 토글은 명세서 카드 내 'EngineStepsSubToggle'로 통합됨 (2026-05-12) */}

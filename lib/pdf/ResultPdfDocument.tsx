@@ -785,8 +785,9 @@ export function ResultPdfDocument({
         />
       )}
 
-      {/* 건물 기준시가 계산서 — 양도·상속·증여 공통(input_data 스냅샷 재유도) */}
-      {(taxType === "transfer" || taxType === "inheritance" || taxType === "gift") && (
+      {/* 건물 기준시가 계산서 — 양도(단건·다건)·상속·증여 공통(input_data 스냅샷 재유도).
+          `transfer_multi`는 다건 결과뷰의 taxType이다 — 빠뜨리면 선택해도 PDF에 조용히 안 실린다. */}
+      {(taxType === "transfer" || taxType === "transfer_multi" || taxType === "inheritance" || taxType === "gift") && (
         <BuildingStdReportPdfPages
           models={buildBuildingStdReportsFromInput(inputData)}
           selectedSectionIds={selectedSectionIds}
