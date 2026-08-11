@@ -41,6 +41,39 @@ const isHousingLike = (pt: string) =>
   pt === "presale_right" ||
   pt === "redevelopment_apt";
 
+/**
+ * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
+ *
+ * §104③은 미등기양도자산을 「제94조제1항제1호 및 제2호에서 규정하는 자산」으로 정의한다 —
+ * 1호가 토지·건물이므로 **건물·토지인 한 종류를 가리지 않는다**. 종전에는 주택·토지·건물
+ * 3종만 화이트리스트로 열어 상업용건물·일반건물·재개발APT에서 입력 경로 자체가 없었다.
+ *
+ * 그래서 **제외 목록으로 뒤집었다** — 신규 자산 종류가 생겼을 때 조용히 빠지지 않는다.
+ *
+ * - `""`                            : assetKind 미선택 방어. 화이트리스트가 갖고 있던 성질이라
+ *                                     블랙리스트 전환 시 명시하지 않으면 사라진다.
+ * - `right_to_move_in`·`presale_right` : §94①2호 「부동산을 취득할 수 있는 권리」. 소유권이전
+ *                                     등기 대상이 아니어서 「취득에 관한 등기를 하지 아니하고
+ *                                     양도」가 성립하지 않는다는 종전 판단을 유지한다.
+ * - `general_building`              : ⚠️ **한시 제외**. bundled 경로가 §104③을 엔진에 전달하지
+ *                                     않아(`general-building-route-cards.ts`가 `isUnregistered:
+ *                                     false` 고정) 토글을 열면 세액이 전혀 변하지 않는 no-op이
+ *                                     된다. 배선 완료 시 이 항목을 제거한다.
+ *                                     계획서: docs/02-design/features/transfer-unregistered-asset-kind-coverage.plan.md §4 Phase C
+ *
+ * 렌더 조건(⑤ 특수 상황)과 assetKind 전환 리셋 `useEffect`가 **이 상수를 공유**한다 —
+ * 두 곳이 술어를 따로 정의하면 「화면에 없는데 폼 값은 남는」 stale 전송이 재발한다.
+ */
+const UNREGISTERED_EXCLUDED_KINDS: readonly string[] = [
+  "",
+  "right_to_move_in",
+  "presale_right",
+  "general_building", // TODO(Phase C): bundled 배선 완료 시 제거
+];
+
+const allowsUnregisteredToggle = (assetKind: string) =>
+  !UNREGISTERED_EXCLUDED_KINDS.includes(assetKind);
+
 // ============================================================
 // Step 4: 보유 상황
 // ============================================================
@@ -276,7 +309,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
   // assetKind 변경 시 표시되지 않는 필드 값 초기화
   //   - 조정대상지역 체크박스: 주택(housing)에서만 표시 → 그 외 false
-  //   - 미등기 양도: 토지·건물·주택에서만 표시 → 그 외 false
+  //   - 미등기 양도: UNREGISTERED_EXCLUDED_KINDS 제외 종류에서만 표시 → 그 외 false
   useEffect(() => {
     const patch: Partial<TransferFormData> = {};
     if (primaryKind !== "housing") {
@@ -286,11 +319,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       if (form.isRegulatedAreaTouched) patch.isRegulatedAreaTouched = false;
       if (form.wasRegulatedAtAcquisitionTouched) patch.wasRegulatedAtAcquisitionTouched = false;
     }
-    const allowsUnregistered =
-      primaryKind === "housing" ||
-      primaryKind === "land" ||
-      primaryKind === "building";
-    if (!allowsUnregistered && form.isUnregistered) {
+    // 렌더 조건과 **같은 술어**를 쓴다 — 따로 정의하면 화면에 없는 값이 엔진에 도달한다.
+    if (!allowsUnregisteredToggle(primaryKind) && form.isUnregistered) {
       patch.isUnregistered = false;
     }
     // 비사업용 토지: 토글이 토지에서만 렌더되므로(아래 primaryKind === "land" 블록) 종류를 바꾸면
@@ -659,10 +689,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       <section className="rounded-xl border border-rose-200 bg-rose-50/30 p-4 dark:border-rose-900/50 dark:bg-rose-950/20">
       <SectionHeader title="⑤ 특수 상황" description="미등기·비사업용 토지·다주택 중과 해당 여부를 확인하세요" />
       <div className="space-y-2">
-        {/* 미등기 양도 — 주택·토지·건물만 표시 (입주권·분양권은 등기 개념 없음) */}
-        {(primaryKind === "housing" ||
-          primaryKind === "land" ||
-          primaryKind === "building") && (
+        {/* 미등기 양도 — §94①1호(토지·건물) 자산이면 종류 무관. 제외는 UNREGISTERED_EXCLUDED_KINDS */}
+        {allowsUnregisteredToggle(primaryKind) && (
           <ToggleCard
             checked={form.isUnregistered}
             onCheckedChange={(v) => onChange({ isUnregistered: v })}

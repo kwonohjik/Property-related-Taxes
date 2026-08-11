@@ -16,7 +16,7 @@
  */
 
 import { applyRate, computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
-import { TRANSFER, ESTIMATED_DEDUCTION_RATE } from "./legal-codes";
+import { TRANSFER, estimatedDeductionRate } from "./legal-codes";
 import { ACQ_BASE_RATE_MAX_ACQ_YEAR } from "./data/building-standard-price";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type {
@@ -297,11 +297,11 @@ function _calcPreDisclosure(
     );
 
   // ── Step 6: 개산공제 — §97②2호 + §163⑥ ──
-  // 취득당시의 기준시가(P_A) × 3%
-  // 개산공제 총액 = INT(P_A × 0.03)
+  // 취득당시의 기준시가(P_A) × 3% (미등기양도자산은 §163⑥1호 단서 0.3%)
+  // 개산공제 총액 = INT(P_A × 율)
   const estimatedDeductionTotal = computeEstimatedDeduction(
     estimatedBasisAtAcq,
-    ESTIMATED_DEDUCTION_RATE.LAND_BUILDING,
+    estimatedDeductionRate(input.isUnregistered),
     input.ownershipRatio,
   );
 
@@ -397,10 +397,10 @@ function _calcPostDisclosure(
     estimatedAcquisitionBuilding = split.building;
   }
 
-  // ── 개산공제: 취득시 호별총액 × 3% ──
+  // ── 개산공제: 취득시 호별총액 × 3% (미등기양도자산은 §163⑥1호 단서 0.3%) ──
   const estimatedDeductionTotal = computeEstimatedDeduction(
     unitTotalAtAcq,
-    ESTIMATED_DEDUCTION_RATE.LAND_BUILDING,
+    estimatedDeductionRate(input.isUnregistered),
     input.ownershipRatio,
   );
 

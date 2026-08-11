@@ -100,6 +100,9 @@ export function runCommercialBuildingStep(
       ...effectiveCbInput,
       acquisitionYear: input.acquisitionDate.getFullYear(),
       ownershipRatio: input.ownershipRatio,
+      // §163⑥1호 단서 — 미등기양도자산 개산공제율 0.3%. `ownershipRatio`와 같은 파생 주입이라
+      // API 신규 필드가 없다(⑫⑬⑭ 동기화 불필요). 서브엔진 재판정 금지 — 원값을 그대로 내린다.
+      isUnregistered: input.isUnregistered,
       ...(monthsToFirst > 0 && { holdingMonthsToFirstDisclosure: monthsToFirst }),
     },
     input.transferPrice,

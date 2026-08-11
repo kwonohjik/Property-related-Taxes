@@ -96,6 +96,16 @@ export interface CommercialBuildingValuationInput {
    * 설계: docs/02-design/features/transfer-fractional-lump-sum-deduction.engine.design.md §2.1
    */
   ownershipRatio?: number;
+  /**
+   * 미등기양도자산(「소득세법」 §104③) 여부 — **개산공제율 선택 전용**.
+   *
+   * 「소득세법 시행령」 §163⑥1호 단서에 따라 미등기 자산의 개산공제율은 3%가 아니라
+   * **3/1000(0.3%)** 이다. 율 산출은 `estimatedDeductionRate()` 단일 경유(서브엔진 재판정 금지).
+   *
+   * 호출부가 `TransferTaxInput.isUnregistered`를 그대로 내려준다 — `ownershipRatio`와 같은
+   * 파생 주입 패턴이라 API에 새 필드가 생기지 않는다(⑫⑬⑭ 동기화 불필요).
+   */
+  isUnregistered?: boolean;
 }
 
 /**
