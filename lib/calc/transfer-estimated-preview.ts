@@ -94,7 +94,10 @@ export function previewCommercialBuildingEstimated(
 
   // 엔진 input 중 CB STEP이 읽는 필드만 채운다 — 나머지는 이 단계에서 소비되지 않는다.
   // (`runCommercialBuildingStep`은 propertyType·useEstimatedAcquisition·commercialBuildingValuation·
-  //  transferPrice·transferCause 계열만 본다. swap 판정은 capitalExpenditure·transferExpense.)
+  //  transferPrice·transferCause·isUnregistered 계열만 본다. swap 판정은 capitalExpenditure·transferExpense.)
+  //
+  // ⚠️ **읽는 필드가 늘면 여기도 함께 늘려야 한다.** 이 객체는 화이트리스트라 빠뜨려도 타입이
+  //    잡아주지 않고, 프리뷰만 조용히 다른 값을 낸다(계산 전 ≠ 계산 후).
   const input = {
     propertyType: "commercial_building",
     transferPrice,
@@ -106,6 +109,9 @@ export function previewCommercialBuildingEstimated(
     transferExpense: parseRaw(asset.transferExpense) || undefined,
     useEstimatedAcquisition: true,
     acquisitionCause: asset.acquisitionCause || undefined,
+    // §104③ 미등기 → 개산공제율 0.3%(§163⑥1호 단서). 폼-전역 값이 그대로 엔진에 가므로
+    // 프리뷰도 같은 값을 봐야 한다 — 빠뜨리면 사이드바 3% vs 결과 0.3%로 10배 어긋난다.
+    isUnregistered: form.isUnregistered,
     commercialBuildingValuation: cbv,
   } as unknown as TransferTaxInput;
 

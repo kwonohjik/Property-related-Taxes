@@ -34,7 +34,7 @@ const BASE = {
   transferBuildingStdPrice: 20_629_440,
   acquisitionLandPricePerSqm: 2_800_000,
   acquisitionBuildingStdPrice: 2_814_470,
-  estimatedDeductionRate: 0.03,
+  // 율 입력 필드 폐지(2026-08-11) — 미지정 = 등기 자산 3%(종전과 동일).
   buildingAcquisitionCause: "purchase" as const,
   zoneType: "commercial",
 };

@@ -86,10 +86,25 @@ test.describe("미등기 양도 토글 — 자산 종류 게이트 (§104③)", 
     await expect(page.getByText("미등기 양도", { exact: true })).toHaveCount(0);
   });
 
-  test("일반건물: 토글이 노출되지 않는다 (Phase C 배관 완료까지 한시 제외)", async ({ page }) => {
+  test("일반건물: 토지·건물 2토글이 나오고 단일 토글은 없다", async ({ page }) => {
     test.setTimeout(60_000);
     await seedAndGoToHolding(page, "general_building");
-    // Phase C에서 bundled 경로에 §104③을 배선하면 이 단언을 뒤집는다.
+
+    // 토지·건물은 별개 부동산·별개 등기부라 축이 둘이다.
+    await expect(page.getByText("토지 미등기 양도", { exact: true })).toBeVisible();
+    await expect(page.getByText("건물 미등기 양도", { exact: true })).toBeVisible();
+    // 폼-전역 단일 토글은 GB에서 쓰지 않는다(단일 boolean으로 표현 불가).
     await expect(page.getByText("미등기 양도", { exact: true })).toHaveCount(0);
+  });
+
+  test("일반건물: 한쪽만 켜면 「미등기 파트만 70%」 안내가 뜬다", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndGoToHolding(page, "general_building");
+
+    // 대조군 — 켜기 전에는 안내가 없다(부정 단언이 다른 이유로 통과하지 않게 고정).
+    await expect(page.getByText(/미등기 파트만 70%가 적용됩니다/)).toHaveCount(0);
+
+    await page.getByText("건물 미등기 양도", { exact: true }).click();
+    await expect(page.getByText(/미등기 파트만 70%가 적용됩니다/)).toBeVisible();
   });
 });

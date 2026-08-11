@@ -51,10 +51,22 @@ export interface GeneralBuildingRouteResult {
  */
 export { SHARE_ID_SEPARATOR, baseCardId };
 
+/**
+ * §104③ 미등기양도자산 — **토지·건물 각각**의 판정 결과.
+ *
+ * 일반건물은 두 부동산이 별개 등기부를 가지므로 축이 둘이다. 증축분(건물2 카드)은 건물 축을
+ * 따른다(민법 §256 부합 — 표시변경등기이지 별도 소유권보존등기가 아니다).
+ */
+export interface GbUnregisteredAxes {
+  land?: boolean;
+  building?: boolean;
+}
+
 export function buildProperties(
   cards: AssetCardForAggregate[],
   nonBusinessRatio: number,
   swap?: GeneralBuildingSwapDecision,
+  unregistered?: GbUnregisteredAxes,
 ): TransferTaxItemInput[] {
   return cards.map((card) => {
     const isBuilding = card.propertyType === "general_building_unit";
@@ -89,7 +101,17 @@ export function buildProperties(
       residencePeriodMonths: 0,
       isRegulatedArea: false,
       wasRegulatedAtAcquisition: false,
-      isUnregistered: false,
+      /**
+       * §104③ 미등기양도자산 — **카드가 속한 부동산의 축**을 싣는다.
+       *
+       * 종전에는 `false` 하드코딩이라 폼에서 미등기를 켜도 엔진에 도달하지 못했다(세액 변화 0).
+       * 토지·건물이 별개 등기부를 갖는 이상 자산 단위 단일 플래그로는 표현할 수 없어 축을 둘로
+       * 나눴다 — `land_business`·`land_nbl`은 토지 축, `building1`·`building2`(증축)는 건물 축.
+       *
+       * 이 값이 `classifyRateGroup`(`transfer-tax-aggregate-helpers.ts:61`)의 최우선 분기라
+       * 한쪽만 미등기면 그 카드만 §104①10호(70%) 버킷으로 갈린다.
+       */
+      isUnregistered: (isBuilding ? unregistered?.building : unregistered?.land) ?? false,
       reductions: [],
       // 건물 카드만 §114조의2 가산세 발동 정보 패스스루
       // 토지 카드는 소득세법 §114조의2 ① 적용 대상 아님

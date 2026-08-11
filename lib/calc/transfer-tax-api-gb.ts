@@ -170,6 +170,23 @@ export function buildGeneralBuildingValuation(
   };
 
   /**
+   * §104③ 미등기양도자산 — **토지·건물 각각**(별개 부동산·별개 등기부).
+   *
+   * ⚠️ 위 `nblFields.isUnregistered`(「지방세법 시행령」 §101① 단서 — 허가·사용승인 미이행)와
+   *    **별개 축**이다. 이름이 닮았을 뿐 판정도 효과도 다르다.
+   *
+   * 개산공제율(§163⑥1호 단서)은 엔진이 이 둘에서 파생하므로 **율은 보내지 않는다** —
+   * 율을 함께 실으면 두 소스가 갈라져 한쪽만 갱신되는 사고가 난다.
+   *
+   * 🔑 `nblFields`와 같은 이유로 **객체로 뽑았다**: payload 조립 경로가 환산(`:372`)·실가(`:498`)
+   *    둘이라, 한쪽에만 인라인으로 넣으면 그 모드에서 조용히 누락된다.
+   */
+  const unregisteredFields = {
+    unregisteredLand: asset.gbLandUnregistered,
+    unregisteredBuilding: asset.gbBuildingUnregistered,
+  };
+
+  /**
    * §163⑨ 상속 취득가액 직접 산정 게이트.
    *
    * 🔴 **1985-01-01 하한을 제거했다** (2026-08-07). 종전 근거는 「pre-1985 상속·증여는
@@ -383,7 +400,7 @@ export function buildGeneralBuildingValuation(
       // C2(토지 환산 + 건물 상속) — 결과 카드 파트별 라벨의 유일 소스. 종전 누락(§9-1).
       // 값(평가액)은 위 `partModePayload`의 파트 가격 슬롯으로 흐르므로 여기서는 **게이트만** 보낸다.
       ...gbInheritanceEcho,
-      estimatedDeductionRate: 0.03, // §163⑥ 등기 자산 3% 고정
+      ...unregisteredFields,
       buildingAcquisitionDate: partAcquisitionDates(asset).building || undefined,
       landAcquisitionDate: partAcquisitionDates(asset).land || undefined,
       // isSelfBuilt: gbBuildingAcquisitionCause에서 도출 (A안: gbIsSelfBuilt 필드 폐지)
@@ -541,6 +558,7 @@ export function buildGeneralBuildingValuation(
     // §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1)
     ...gbInheritanceFields,
     ...nblFields,
+    ...unregisteredFields,
     // 사례 35: 주택→상가 용도변경 — actual 모드도 동일 LTHD 분기
     ...(asset.gbHouseToCommercialConversion
       ? {

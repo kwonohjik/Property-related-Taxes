@@ -274,7 +274,14 @@ export function calculateGeneralBuildingFractional(
     const tagged = tagCards(built.cards, idx, share.shareLabel);
     const swap = built.swap ? remapSwap(built.swap, idx) : undefined;
 
-    allProperties.push(...buildProperties(tagged, built.nonBusinessRatio, swap));
+    // §104③ 미등기 — 지분 경로도 토지·건물 축을 싣는다. 여기서 빠뜨리면 **지분 모드에서만**
+    // 미등기가 조용히 무시된다(단독 모드는 정상이라 발견이 늦다).
+    allProperties.push(
+      ...buildProperties(tagged, built.nonBusinessRatio, swap, {
+        land: gated.unregisteredLand as boolean | undefined,
+        building: gated.unregisteredBuilding as boolean | undefined,
+      }),
+    );
     const ap = buildApportionment(
       tagged,
       built.totalStd,

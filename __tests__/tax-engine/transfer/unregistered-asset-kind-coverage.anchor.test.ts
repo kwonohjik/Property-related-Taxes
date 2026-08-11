@@ -10,10 +10,16 @@
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import {
+  buildGeneralBuildingAssetCards,
+  type GeneralBuildingInput,
+} from "@/lib/tax-engine/general-building-valuation";
+import { buildProperties } from "@/app/api/calc/transfer/general-building-route-cards";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 
 const rates = makeMockRates();
+const D = (s: string) => new Date(s);
 
 /**
  * 재개발/재건축 APT — 관리처분인가 전후 3분할(시행령 §166).
@@ -60,23 +66,74 @@ describe("anchor U-1 — 재개발/재건축 APT × 미등기", () => {
 });
 
 /**
- * U-2 — 일반건물(토지+건물 일괄)은 **bundled 경로**라 단건 엔진을 타지 않는다.
+ * U-2 — 일반건물(토지+건물 일괄)은 **bundled 경로**이고, 등기 여부를 **토지·건물 각각** 판단한다.
  *
- * 🔴 현행 갭: `app/api/calc/transfer/general-building-route-cards.ts`가 카드→엔진 매핑에서
- *    `isUnregistered: false`를 **하드코딩**한다. 그래서 폼에서 미등기를 켜도 엔진에 도달하지
- *    않는다(세액 변화 0의 no-op). 배관이 없는 채로 UI만 열면 사용자가 켠 토글이 조용히
- *    무시되므로, `Step4.tsx`의 `UNREGISTERED_EXCLUDED_KINDS`가 일반건물을 **한시 제외**한다.
+ * 둘은 별개 부동산이고 등기부도 별도라, 건물만 미등기(무허가 신축)이고 토지는 등기된 조합이
+ * 실무에서 흔하다. 그래서 자산 단위 단일 boolean이 아니라 축을 둘로 나눴다
+ * (`unregisteredLand`·`unregisteredBuilding`).
  *
- * 아래는 그 하드코딩을 **현행 동작으로 고정**해 두는 회귀 감지선이다. Phase C에서 배선하면
- * 이 테스트가 깨지고, 그때 기대값을 뒤집으면서 UI 한시 제외도 함께 푼다.
- * (Phase C는 §104⑤ 그룹핑 정합 검토(Q3) 선행 — 계획서 §7)
+ * 종전에는 `general-building-route-cards.ts`가 `isUnregistered: false`를 **하드코딩**해
+ * 폼에서 켜도 엔진에 도달하지 못했다(세액 변화 0의 no-op). 2026-08-11에 배선했다.
+ *
+ * 이 anchor가 잠그는 것 둘:
+ *   ① 개산공제율(§163⑥1호 단서) — 파트별로 갈린다
+ *   ② 카드→엔진 `isUnregistered` 매핑 — 토지 카드는 토지 축, 건물 카드는 건물 축
  */
-describe("anchor U-2 — 일반건물 bundled 경로 미등기 미배선 (Phase C 대기)", () => {
-  it("route 카드 매핑이 isUnregistered를 false로 고정하고 있다", async () => {
-    const src = await import("node:fs/promises").then((fs) =>
-      fs.readFile("app/api/calc/transfer/general-building-route-cards.ts", "utf-8"),
-    );
-    // Phase C에서 payload 값을 전달하도록 바꾸면 이 단언이 깨진다 — 그때 UI 한시 제외도 해제한다.
-    expect(src).toContain("isUnregistered: false");
+describe("anchor U-2 — 일반건물 미등기: 토지·건물 축 분리", () => {
+  const gbInput = (o: Partial<GeneralBuildingInput> = {}): GeneralBuildingInput => ({
+    totalTransferPrice: 1_500_000_000,
+    transferDate: D("2024-06-01"),
+    acquisitionDate: D("2014-06-01"),
+    landArea: 200,
+    buildingArea: 300,
+    buildingFootprintArea: 100,
+    transferLandPricePerSqm: 3_000_000,
+    transferBuildingStdPrice: 200_000_000,
+    acquisitionLandPricePerSqm: 1_000_000,
+    acquisitionBuildingStdPrice: 100_000_000,
+    zoneType: "commercial",
+    buildingAcquisitionCause: "purchase" as const,
+    ...o,
+  });
+
+  // 취득시 base: 토지 = 1,000,000 × 200 = 200,000,000 · 건물 = 100,000,000
+  const LAND_DED_REGISTERED = 6_000_000; //  200,000,000 × 3%
+  const LAND_DED_UNREGISTERED = 600_000; //  200,000,000 × 0.3%
+  const BLDG_DED_REGISTERED = 3_000_000; //  100,000,000 × 3%
+  const BLDG_DED_UNREGISTERED = 300_000; //  100,000,000 × 0.3%
+
+  it("U-2a: 둘 다 등기 → 토지·건물 모두 3% (종전 동작)", () => {
+    const out = buildGeneralBuildingAssetCards(gbInput());
+    expect(out.estimatedDeduction.land).toBe(LAND_DED_REGISTERED);
+    expect(out.estimatedDeduction.building).toBe(BLDG_DED_REGISTERED);
+  });
+
+  it("U-2b: **토지만** 미등기 → 토지만 0.3%, 건물은 3% 유지", () => {
+    const out = buildGeneralBuildingAssetCards(gbInput({ unregisteredLand: true }));
+    expect(out.estimatedDeduction.land).toBe(LAND_DED_UNREGISTERED);
+    // 축이 섞이면 이 단언이 깨진다 — 단일 율로 되돌아가는 회귀를 잡는 지점이다.
+    expect(out.estimatedDeduction.building).toBe(BLDG_DED_REGISTERED);
+  });
+
+  it("U-2c: **건물만** 미등기 → 건물만 0.3%, 토지는 3% 유지", () => {
+    const out = buildGeneralBuildingAssetCards(gbInput({ unregisteredBuilding: true }));
+    expect(out.estimatedDeduction.land).toBe(LAND_DED_REGISTERED);
+    expect(out.estimatedDeduction.building).toBe(BLDG_DED_UNREGISTERED);
+  });
+
+  it("U-2d: 카드→엔진 매핑이 축을 지킨다 — 토지 카드만 isUnregistered", () => {
+    const out = buildGeneralBuildingAssetCards(gbInput({ unregisteredLand: true }));
+    const properties = buildProperties(out.assetCards, out.nonBusinessRatio, undefined, {
+      land: true,
+      building: false,
+    });
+    for (const p of properties) {
+      const isLand = p.propertyType === "land";
+      // 종전 하드코딩(`isUnregistered: false`)이면 토지 카드가 false로 떨어져 깨진다.
+      expect(p.isUnregistered, `${p.propertyId} 축 불일치`).toBe(isLand);
+    }
+    // 대조군 — 카드가 실제로 둘 다 존재해야 위 루프가 의미를 갖는다(빈 배열 통과 방지).
+    expect(properties.some((p) => p.propertyType === "land")).toBe(true);
+    expect(properties.some((p) => p.propertyType === "general_building_unit")).toBe(true);
   });
 });

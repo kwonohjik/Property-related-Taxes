@@ -227,7 +227,11 @@ export function calculateGeneralBuildingTransfer(
   rates: TaxRatesMap,
 ): GeneralBuildingRouteResult {
   const { gbOut, swap } = buildEstimatedGeneralBuildingCards(gbv);
-  const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio, swap);
+  // §104③ 미등기 — 토지·건물 축을 카드별로 싣는다(엔진 input에서 그대로 전달).
+  const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio, swap, {
+    land: gbv.unregisteredLand,
+    building: gbv.unregisteredBuilding,
+  });
 
   const aggregated = calculateTransferTaxAggregate(
     {

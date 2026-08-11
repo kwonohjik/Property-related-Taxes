@@ -48,6 +48,9 @@ const GB_PROPERTY_LEVEL_FORM_FIELDS = [
   "gbZoneType",
   "gbIsMetropolitan",
   "gbIsUnregistered",
+  // 물건 속성 (§104③ 미등기양도자산 — 위 `gbIsUnregistered`(§101① 단서)와 별개 축)
+  "gbLandUnregistered",
+  "gbBuildingUnregistered",
   // 양도 계약 단위
   "saleSplitMode",
   "landTransferPrice",

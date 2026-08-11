@@ -17,11 +17,10 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
-import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
 import { HousesListSection } from "./step4-sections/HousesListSection";
 import { TemporaryTwoHouseSection } from "./step4-sections/TemporaryTwoHouseSection";
+import { SpecialSituationSection } from "./step4-sections/SpecialSituationSection";
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { SpecialHouseExclusionSection } from "@/components/calc/transfer/SpecialHouseExclusionSection";
@@ -55,11 +54,10 @@ const isHousingLike = (pt: string) =>
  * - `right_to_move_in`·`presale_right` : §94①2호 「부동산을 취득할 수 있는 권리」. 소유권이전
  *                                     등기 대상이 아니어서 「취득에 관한 등기를 하지 아니하고
  *                                     양도」가 성립하지 않는다는 종전 판단을 유지한다.
- * - `general_building`              : ⚠️ **한시 제외**. bundled 경로가 §104③을 엔진에 전달하지
- *                                     않아(`general-building-route-cards.ts`가 `isUnregistered:
- *                                     false` 고정) 토글을 열면 세액이 전혀 변하지 않는 no-op이
- *                                     된다. 배선 완료 시 이 항목을 제거한다.
- *                                     계획서: docs/02-design/features/transfer-unregistered-asset-kind-coverage.plan.md §4 Phase C
+ * - `general_building`              : **자산-수준 2필드를 쓴다**(아래 GB 전용 블록). 토지·건물이
+ *                                     별개 부동산·별개 등기부라 단일 boolean으로 표현할 수 없어
+ *                                     `gbLandUnregistered`·`gbBuildingUnregistered`로 나눴다.
+ *                                     ⇒ 폼-전역 토글은 GB에서 띄우지 않는다.
  *
  * 렌더 조건(⑤ 특수 상황)과 assetKind 전환 리셋 `useEffect`가 **이 상수를 공유**한다 —
  * 두 곳이 술어를 따로 정의하면 「화면에 없는데 폼 값은 남는」 stale 전송이 재발한다.
@@ -68,7 +66,7 @@ const UNREGISTERED_EXCLUDED_KINDS: readonly string[] = [
   "",
   "right_to_move_in",
   "presale_right",
-  "general_building", // TODO(Phase C): bundled 배선 완료 시 제거
+  "general_building", // 자산-수준 2필드로 대체 (폼-전역 isUnregistered 미사용)
 ];
 
 const allowsUnregisteredToggle = (assetKind: string) =>
@@ -685,88 +683,14 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         </section>
       )}
 
-      {/* ⑤ 특수 상황 — 중과·배제 트리거 (비과세 특례 이후 위치) */}
-      <section className="rounded-xl border border-rose-200 bg-rose-50/30 p-4 dark:border-rose-900/50 dark:bg-rose-950/20">
-      <SectionHeader title="⑤ 특수 상황" description="미등기·비사업용 토지·다주택 중과 해당 여부를 확인하세요" />
-      <div className="space-y-2">
-        {/* 미등기 양도 — §94①1호(토지·건물) 자산이면 종류 무관. 제외는 UNREGISTERED_EXCLUDED_KINDS */}
-        {allowsUnregisteredToggle(primaryKind) && (
-          <ToggleCard
-            checked={form.isUnregistered}
-            onCheckedChange={(v) => onChange({ isUnregistered: v })}
-            title="미등기 양도"
-            description="70% 단일세율 적용 — 장기보유공제·기본공제 전액 배제"
-            tone="rose"
-          />
-        )}
-
-        {primaryKind === "land" && primary && (
-          <ToggleCard
-            checked={primary.isNonBusinessLand ?? false}
-            onCheckedChange={(v) =>
-              onChange({
-                assets: form.assets.map((a, i) =>
-                  i === 0
-                    ? {
-                        ...a,
-                        isNonBusinessLand: v,
-                        // 체크 해제 시 상세 판정도 끔. 체크 시는 현재 상태 유지(라디오로 선택).
-                        nblUseDetailedJudgment: v ? a.nblUseDetailedJudgment : false,
-                      }
-                    : a
-                ),
-              })
-            }
-            title="비사업용 토지 여부 검토"
-            description="해당 시 기본세율 +10%p 중과 대상"
-            tone="rose"
-          >
-            {/* P3: 재촌 요건 안내 */}
-            <div className="rounded-md bg-muted/40 border border-border/60 px-3 py-2 text-xs text-muted-foreground space-y-1">
-              <p className="font-medium text-foreground/70">농지·임야 재촌(在村) 요건 — 아래 중 하나 충족 시 사업용</p>
-              <ul className="space-y-0.5 pl-2">
-                <li>• 토지 소재지와 <strong>동일 시·군·구</strong>에 거주</li>
-                <li>• 토지 소재지와 <strong>연접한 시·군·구</strong>에 거주</li>
-                <li>• 토지 소재지와 거주지 사이 <strong>직선거리 30km 이내</strong></li>
-              </ul>
-              <p className="text-muted-foreground/70 text-micro mt-1">소득세법 시행령 §168조의8 — 정밀 판정을 원하시면 세무사 확인 권장</p>
-            </div>
-
-            {/* 판정 상태 라디오 */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-foreground/70">판정 상태</p>
-              <RadioCardGroup
-                name={`nbl-mode-${primary.assetId}`}
-                tone="rose"
-                value={primary.nblUseDetailedJudgment ? "detailed" : "completed"}
-                onChange={(v) =>
-                  onChange({
-                    assets: form.assets.map((a, i) =>
-                      i === 0 ? { ...a, nblUseDetailedJudgment: v === "detailed" } : a
-                    ),
-                  })
-                }
-                options={[
-                  { value: "completed", label: "이미 비사업용으로 판정 완료", description: "바로 +10%p 중과세 적용" },
-                  { value: "detailed", label: "판정 도움 필요", description: "지목·재촌·자경 입력으로 엔진이 자동 판정" },
-                ]}
-              />
-            </div>
-          </ToggleCard>
-        )}
-      </div>
-
-      {/* 비사업용 토지 상세 판정 — "판정 도움" 모드 선택 시만 표시 */}
-      {primaryKind === "land" && primary?.isNonBusinessLand && primary?.nblUseDetailedJudgment && primary && (
-        <NblSectionContainer
-          asset={primary}
-          transferDate={form.transferDate}
-          onAssetChange={(patch) =>
-            onChange({ assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)) })
-          }
-        />
-      )}
-      </section>
+      {/* ⑤ 특수 상황 — 중과·배제 트리거 (비과세 특례 이후 위치).
+          800줄 정책으로 `step4-sections/SpecialSituationSection.tsx`로 분리(2026-08-11). */}
+      <SpecialSituationSection
+        form={form}
+        onChange={onChange}
+        primaryKind={primaryKind}
+        showFormLevelUnregistered={allowsUnregisteredToggle(primaryKind)}
+      />
     </div>
   );
 }

@@ -31,8 +31,8 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
 import { applyPartAcqModes } from "./general-building-part-acq";
 import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
+import { estimatedDeductionRate } from "./legal-codes";
 import {
-  ESTIMATED_DEDUCTION_RATE_LAND_BUILDING,
   type GeneralBuildingInput,
   type GeneralBuildingOutput,
   type AssetCardForAggregate,
@@ -59,8 +59,12 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   input: GeneralBuildingInput,
   ext: NonNullable<GeneralBuildingInput["extensionInfo"]>,
 ): GeneralBuildingOutput {
-  const rate =
-    input.estimatedDeductionRate ?? ESTIMATED_DEDUCTION_RATE_LAND_BUILDING;
+  // 개산공제율(§163⑥ 3% · 1호 단서 미등기 3/1000) — 토지·건물 **각각**.
+  // 건물2(증축)는 건물1과 같은 축을 쓴다: 증축분은 민법 §256 부합으로 기존 건물의 일부가 되고,
+  // 등기도 별도 소유권보존등기가 아니라 표시변경등기라 「그 자산 취득에 관한 등기」(§104③)는
+  // 건물 1동 단위로 판단한다.
+  const landRate = estimatedDeductionRate(input.unregisteredLand);
+  const buildingRate = estimatedDeductionRate(input.unregisteredBuilding);
 
   // ── Step 1: 양도가 3-way 안분 (§166⑥) ─────────────────────────────
   // 분모: 양도시 토지기준시가 + 건물1기준시가 + 건물2기준시가 (원 총액 통일)
@@ -206,10 +210,10 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     safeMultiplyThenDivide(building1TransferPrice, acqBuilding1StdTotal, buildingStdTotal),
   );
   /** 개산공제(§163⑥) — 환산 파트의 필요경비는 이것뿐이다(§97②2호). */
-  const convertedLandExp = computeEstimatedDeduction(acqLandStdTotal, rate, input.ownershipRatio);
+  const convertedLandExp = computeEstimatedDeduction(acqLandStdTotal, landRate, input.ownershipRatio);
   const convertedBuilding1Exp = computeEstimatedDeduction(
     acqBuilding1StdTotal,
-    rate,
+    buildingRate,
     input.ownershipRatio,
   );
 
@@ -368,7 +372,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     );
     // 개산공제: 취득시 건물2 기준시가 × 3% (§163⑥ — 취득시 기준시가 기준)
     // ★ 환산취득가(building2Acq) × 3% 아님 (설계 §5 확정)
-    building2EstDeduction = computeEstimatedDeduction(acqExtStd, rate, input.ownershipRatio);
+    building2EstDeduction = computeEstimatedDeduction(acqExtStd, buildingRate, input.ownershipRatio);
     extensionUsedEstimated = true;
   } else {
     // 실가 직접 입력 — 개산공제 없음 (실가 취득비용은 별도 필요경비로 처리)
