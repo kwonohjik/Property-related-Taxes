@@ -128,7 +128,9 @@ describe("F-3-1 — 상업용건물 부담부증여 + §95 표1", () => {
     expect(bg.gratuitousPortion).toBe(600_000_000);
     const gt = bg.giftTax!;
     expect(gt.donorRelation).toBe("lineal_descendant");
-    expect(gt.grossGiftValue).toBe(600_000_000);
+    // §47① — grossGiftValue는 **채무 차감 전 총 평가액(C)**이다. 차감은 과세가액에서 이뤄진다.
+    // (2026-08-12 정정: 종전에는 C − B를 넣어 별지10호 ⑰에 이미 뺀 값이 표시됐다)
+    expect(gt.grossGiftValue).toBe(1_000_000_000); // C = 10억, B = 4억 → 무상 6억
     expect(gt.deduction).toBe(50_000_000);
     expect(gt.taxBase).toBe(550_000_000);
     expect(gt.computedTax).toBe(105_000_000);
