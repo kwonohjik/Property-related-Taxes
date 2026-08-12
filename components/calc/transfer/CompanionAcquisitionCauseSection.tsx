@@ -37,6 +37,8 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
   isNewConstruction: boolean;
+  /** 지분 카드(fractional split 2번째 이후) — 일반건물 증축 유무 토글을 숨긴다(물건 사건). */
+  shareAcquisitionOnly?: boolean;
 }
 
 export function CompanionAcquisitionCauseSection({
@@ -44,6 +46,7 @@ export function CompanionAcquisitionCauseSection({
   onChange,
   transferDate,
   isNewConstruction,
+  shareAcquisitionOnly,
 }: Props) {
   // 일반건물(토지+건물 일괄) — 토지/건물 2카드로 분리 표시
   if (asset.assetKind === "general_building") {
@@ -52,6 +55,7 @@ export function CompanionAcquisitionCauseSection({
         asset={asset}
         onChange={onChange}
         transferDate={transferDate}
+        shareAcquisitionOnly={shareAcquisitionOnly}
       />
     );
   }

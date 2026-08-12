@@ -9,15 +9,15 @@
  *
  *   U1. 일반건물 「취득가액 산정 방식」은 **2옵션**이다 (「토지·건물 일괄 (증축분 별도)」 제거)
  *   U2. 증축 토글은 **취득가액 산정 방식과 무관하게** 항상 보인다 (dead-end 금지)
- *   U3. 원건물 실가 + 증축이면 취득가액 라벨이 「토지·건물 일괄 취득가액」 —
+ *   U3. 원건물 실가 + 증축이면 취득가액 라벨이 「토지·원건물 일괄 취득가액 (증축분 제외)」 —
  *       **증축분 방식(실가/환산)과 무관**하다
- *   U4. 같은 조건에서 「토지·건물 일괄 취득 시 필요경비」 칸이 열린다
+ *   U4. 같은 조건에서 「토지·원건물 일괄 취득 시 필요경비」 칸이 열린다
  *   U5. 결과 표 배지는 카드의 `usedEstimatedAcquisition`에서 파생된다 (하드코딩 금지)
  *
  * ⚠️ **대조군 쌍으로 읽을 것** — 조합 A만 통과하는 것은 구별력이 없다. 그것이 종전 결함의 모양이었다.
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { GeneralBuildingBlock } from "@/components/calc/transfer/GeneralBuildingBlock";
 import { CompanionAcqPurchaseBlock } from "@/components/calc/transfer/CompanionAcqPurchaseBlock";
 import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
@@ -41,12 +41,16 @@ function gbAsset(over: Partial<AssetForm> = {}): AssetForm {
 }
 
 /** `CompanionAcqPurchaseBlock`의 필수 props를 최소로 채운다. */
-function renderAcqBlock(asset: AssetForm) {
+function renderAcqBlock(
+  asset: AssetForm,
+  opts: { shareAcquisitionOnly?: boolean; onAssetChange?: (p: Partial<AssetForm>) => void } = {},
+) {
   return render(
     <CompanionAcqPurchaseBlock
       assetKind="general_building"
       asset={asset}
-      onAssetChange={() => {}}
+      shareAcquisitionOnly={opts.shareAcquisitionOnly}
+      onAssetChange={opts.onAssetChange ?? (() => {})}
       acquisitionDate={asset.acquisitionDate}
       onAcquisitionDateChange={() => {}}
       useEstimatedAcquisition={!!asset.useEstimatedAcquisition}
@@ -131,7 +135,7 @@ describe("U2 — 증축 토글은 취득가액 산정 방식과 무관하게 보
 // ── U3 · U4 · 취득가액 칸의 성격 ────────────────────────────────────────
 
 describe("U3 — 취득가액 라벨은 증축분 방식과 무관하다", () => {
-  it("원건물 실가 + 증축 **환산** → 「토지·건물 일괄 취득가액」", () => {
+  it("원건물 실가 + 증축 **환산** → 「토지·원건물 일괄 취득가액 (증축분 제외)」", () => {
     renderAcqBlock(
       gbAsset({
         useEstimatedAcquisition: false,
@@ -139,7 +143,7 @@ describe("U3 — 취득가액 라벨은 증축분 방식과 무관하다", () =>
         gbExtensionAcquisitionMode: "estimated",
       }),
     );
-    expect(screen.getByText(/토지·건물 일괄 취득가액/)).toBeInTheDocument();
+    expect(screen.getByText(/토지·원건물 일괄 취득가액/)).toBeInTheDocument();
   });
 
   it("🔴 원건물 실가 + 증축 **실가** → 같은 라벨 (종전에는 「취득가액」으로 떨어졌다)", () => {
@@ -150,12 +154,12 @@ describe("U3 — 취득가액 라벨은 증축분 방식과 무관하다", () =>
         gbExtensionAcquisitionMode: "actual",
       }),
     );
-    expect(screen.getByText(/토지·건물 일괄 취득가액/)).toBeInTheDocument();
+    expect(screen.getByText(/토지·원건물 일괄 취득가액/)).toBeInTheDocument();
   });
 
   it("증축이 없으면 일반 라벨이다 (대조군)", () => {
     renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: false }));
-    expect(screen.queryByText(/토지·건물 일괄 취득가액/)).toBeNull();
+    expect(screen.queryByText(/토지·원건물 일괄 취득가액/)).toBeNull();
   });
 });
 
@@ -169,13 +173,104 @@ describe("U4 — 일괄 필요경비 칸도 증축분 방식과 무관하게 열
           gbExtensionAcquisitionMode: mode,
         }),
       );
-      expect(screen.getByText(/토지·건물 일괄 취득 시 필요경비/)).toBeInTheDocument();
+      expect(screen.getByText(/토지·원건물 일괄 취득 시 필요경비/)).toBeInTheDocument();
     });
   }
 
   it("증축이 없으면 열리지 않는다 (대조군)", () => {
     renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: false }));
-    expect(screen.queryByText(/토지·건물 일괄 취득 시 필요경비/)).toBeNull();
+    expect(screen.queryByText(/토지·원건물 일괄 취득 시 필요경비/)).toBeNull();
+  });
+});
+
+// ── U6~U9 · 증축 유무를 **취득가액 칸 앞에서** 묻는다 (2026-08-12 UX 정정) ──
+
+/**
+ * 🔴 **혼동의 구조적 원인**: `gbHasExtension`이 바로 아래 취득가액 칸의 라벨·hint·「일괄
+ * 필요경비」 칸 존재를 모두 가르는데, 유일한 쓰기 지점이 ②건물 기준시가 **뒤**의
+ * 「증축 있음」 토글이었다 ⇒ 사용자가 그 칸을 채우는 시점에 증축 개념이 화면에 없어
+ * **증축 포함 총액**을 넣게 됐다(CLAUDE.md 「모드 토글은 영향 필드 직전」 위반).
+ *
+ * 두 토글은 같은 필드를 양방향 read/write한다 — 별도 필드 신설·`useEffect` 미러링 금지.
+ */
+describe("U6 — 증축 유무 토글이 취득가액 칸보다 **앞**에 온다", () => {
+  it("DOM 순서: 토글 → 취득가액 입력", () => {
+    const { container } = renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }));
+    const toggle = screen.getByText("증축한 부분이 있음");
+    const price = container.querySelector('[data-testid="fixed-acquisition-price"]');
+    expect(price).not.toBeNull();
+    /* 순서 비교는 문자열 위치가 아니라 DOM 관계로 — `DOCUMENT_POSITION_FOLLOWING`(4)이
+       서면 toggle이 price보다 앞이다. 마크업이 바뀌어도 「앞」의 의미는 유지된다. */
+    expect(
+      toggle.compareDocumentPosition(price!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("토글을 켜면 `gbHasExtension`을 쓴다 (읽기 전용이 아니다)", () => {
+    const patches: Array<Partial<AssetForm>> = [];
+    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }), {
+      onAssetChange: (p) => patches.push(p),
+    });
+    fireEvent.click(screen.getByRole("switch"));
+    expect(patches).toContainEqual({ gbHasExtension: true });
+  });
+});
+
+describe("U7 — 지분 카드에는 증축 유무 토글이 없다 (증축은 물건 사건)", () => {
+  it("shareAcquisitionOnly면 숨는다", () => {
+    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }), { shareAcquisitionOnly: true });
+    expect(screen.queryByText("증축한 부분이 있음")).toBeNull();
+  });
+
+  it("대조군 — 첫 카드에는 있다", () => {
+    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }));
+    expect(screen.getByText("증축한 부분이 있음")).toBeInTheDocument();
+  });
+});
+
+/**
+ * 🪤 **E2E 셀렉터 보호 — 토글 제목은 화면에 정확히 1회만 나온다.**
+ *
+ * `general-building-fractional-share.spec.ts`는 지분 카드에서 `getByText("증축 있음")`을
+ * `toHaveCount(0)`으로 단언하고, 다른 spec들은 `.first()`로 `GeneralBuildingBlock`의 상세
+ * 토글을 잡는다. 안내문이 토글 제목을 **그대로 인용**하면 그 셀렉터가 두 곳에 걸린다.
+ *
+ * 🔴 실제로 밟았다(2026-08-12): 취득가액 hint에 「증축한 부분이 있음」을 인용했더니
+ *    `getByText("증축한 부분이 있음")`이 2 elements로 strict mode 위반이 났다.
+ *    ⇒ hint는 "위 토글을 먼저 켜세요"로 바꿨다. **안내문에 토글 제목을 쓰지 말 것.**
+ */
+describe("U8 — 토글 제목이 안내문에 중복 인용되지 않는다", () => {
+  const countOf = (needle: string) =>
+    (document.body.textContent ?? "").split(needle).length - 1;
+
+  it("「증축 있음」(아래 상세 토글 제목)은 이 블록에 아예 없다", () => {
+    for (const on of [false, true]) {
+      cleanup();
+      renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: on }));
+      expect(countOf("증축 있음")).toBe(0);
+    }
+  });
+
+  it("「증축한 부분이 있음」(이 블록 토글 제목)은 **정확히 1회**다", () => {
+    for (const on of [false, true]) {
+      cleanup();
+      renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: on }));
+      // 0이면 토글이 사라진 것, 2 이상이면 안내문이 제목을 인용한 것 — 둘 다 회귀다.
+      expect(countOf("증축한 부분이 있음")).toBe(1);
+    }
+  });
+});
+
+describe("U9 — 증축 OFF에서도 취득가액 칸이 원취득분만 받는다고 알린다", () => {
+  it("일반건물 · 실거래가 · 증축 OFF → 안내 hint가 있다", () => {
+    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: false }));
+    expect(screen.getByText(/증축분을 뺀 원취득분만 입력합니다/)).toBeInTheDocument();
+  });
+
+  it("증축 ON이면 그 hint 대신 일괄 취득가액 설명으로 바뀐다 (대조군)", () => {
+    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: true }));
+    expect(screen.queryByText(/증축분을 뺀 원취득분만 입력합니다/)).toBeNull();
+    expect(screen.getByText(/증축분을 뺀 원취득분\(토지·원건물\)을 한 값으로 산/)).toBeInTheDocument();
   });
 });
 
