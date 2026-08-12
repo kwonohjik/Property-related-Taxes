@@ -245,3 +245,84 @@ describe("BuildingStdPriceReportSection — 시점 전용 키 필터", () => {
     expect(screen.getAllByText(/양도당시 기준시가 계산/).length).toBe(1);
   });
 });
+
+/**
+ * 접힘 헤더 제목 구별 (H1) — 2026-08-12 사용자 제보
+ *
+ * 종전 헤더는 `titleOverride`가 없으면 전부 "(인쇄 서식)"이라, 한 계산에 계산서가 여러 장이면
+ * **제목만 보고는 어느 것인지 알 수 없었다**(실측 스크린샷: 세 장 중 두 장이 동일 제목).
+ * 시점·건물 구분·소재지는 서식 안에 이미 있으므로 헤더로 끌어올린다.
+ *
+ * ⚠️ 펼친 서식의 제목(`INSTANCE_TITLE`)과 Ⅰ.구분 마킹은 **변경 대상이 아니다** — 위 S9가 고정한다.
+ */
+describe("BuildingStdPriceReportSection — 접힘 헤더 제목 구별", () => {
+  const snapshot = (address?: string): BuildingStdPriceFormState => ({
+    ...initialBuildingStdPriceForm,
+    taxType: "transfer",
+    builtYear: "2010",
+    floorArea: "200",
+    acquisitionYear: "2015",
+    acqStructureKey: "rc",
+    acqUsageNo: "1",
+    acqLandPrice: "5000000",
+    transferYear: "2025",
+    transStructureKey: "rc",
+    transUsageNo: "1",
+    transLandPrice: "7500000",
+    ...(address ? { addressJibun: address } : {}),
+  });
+
+  const headers = () =>
+    screen
+      .getAllByRole("button", { name: /국세청.*계산서/ })
+      .map((el) => (el.textContent ?? "").replace(/▼|▲|펼치기|접기/g, "").trim());
+
+  it("H1-a 같은 자산의 취득·양도 + 증축분이 서로 다른 제목", () => {
+    useBuildingStdSnapshotStore.setState({
+      snapshots: {
+        "bsp-asset-x-gb-acq": snapshot(),
+        "bsp-asset-x-gb-transfer": snapshot(),
+        "bsp-asset-x-gb-ext-transfer": snapshot(),
+      },
+    });
+    render(<BuildingStdPriceReportSection inputData={{ assets: [{ assetId: "asset-x" }] }} />);
+
+    const titles = headers();
+    expect(titles.length).toBe(3);
+    // 🔑 회귀의 본질 — 제목이 서로 달라야 한다(종전엔 3장 모두 "(인쇄 서식)")
+    expect(new Set(titles).size).toBe(3);
+    expect(titles.some((t) => t.includes("일반건물") && t.includes("취득당시"))).toBe(true);
+    expect(titles.some((t) => t.includes("일반건물") && t.includes("양도당시"))).toBe(true);
+    expect(titles.some((t) => t.includes("증축분(건물2)"))).toBe(true);
+    expect(titles.some((t) => t.includes("인쇄 서식"))).toBe(false);
+  });
+
+  it("H1-b 시점·구분이 같아도 소재지가 다르면 갈린다(다건 결과뷰)", () => {
+    useBuildingStdSnapshotStore.setState({
+      snapshots: {
+        "bsp-a1-gb-transfer": snapshot("서울 강남구 역삼동 1"),
+        "bsp-a2-gb-transfer": snapshot("서울 마포구 공덕동 2"),
+      },
+    });
+    render(
+      <BuildingStdPriceReportSection inputData={{ assets: [{ assetId: "a1" }, { assetId: "a2" }] }} />,
+    );
+
+    const titles = headers();
+    expect(titles.length).toBe(2);
+    expect(new Set(titles).size).toBe(2);
+    expect(titles.some((t) => t.includes("역삼동 1"))).toBe(true);
+    expect(titles.some((t) => t.includes("공덕동 2"))).toBe(true);
+  });
+
+  it("H1-c 배치 스냅샷은 종전 제목 유지 + 구분 라벨 미중복", () => {
+    useBuildingStdSnapshotStore.setState({ snapshots: phdBatchToSnapshots(INPUT, PREFIX) });
+    render(<BuildingStdPriceReportSection inputData={{ assets: [{ assetId: "asset-x" }] }} />);
+
+    const titles = headers();
+    expect(titles.length).toBe(3);
+    expect(titles.some((t) => t.includes("취득시 · 주택분"))).toBe(true);
+    // 배치 제목에는 건물 구분 라벨을 붙이지 않는다(주택분/상가분이 이미 있다)
+    expect(titles.some((t) => t.includes("일반건물"))).toBe(false);
+  });
+});
