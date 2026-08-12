@@ -1,0 +1,115 @@
+/**
+ * E2E: 부담부증여 결과탭 — 증여세 신고서 양식(별지 제10호) 출력
+ *
+ * 요구의 핵심은 **위치**다 — 「건물 기준시가 계산서」 바로 위.
+ * `PrintSection`이 `data-print-id`를 DOM에 남기므로(`PrintSection.tsx:27`) 기준시가 계산서
+ * 내부가 스냅샷 부재로 비어 있어도 **래퍼는 존재**해 순서를 정확히 비교할 수 있다.
+ *
+ * 계획서: docs/01-plan/features/burdened-gift-filing-form-in-transfer-result.plan.md
+ */
+import { test, expect, type Page } from "@playwright/test";
+import { expandAssetSection } from "./_helpers/expandAssetSection";
+import { fillDateAndVerify } from "./_helpers/tax-flow";
+import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
+
+/**
+ * 인수채무 B = 보증금 10억 + 차입금 31.2억 = 41.2억.
+ * 증여재산가액 C는 `stdPrice`로 조절한다 — C > B면 무상이전분이 남아 증여세가 산출된다.
+ */
+function seedAsset(stdPrice: string) {
+  return {
+    ...makeDefaultAsset(1),
+    assetKind: "commercial_building" as const,
+    transferType: "burdened_gift" as const,
+    bgValuationMode: "sangjeungbeop_standard" as const,
+    bgLendingDepositTotal: "1000000000",
+    bgMortgageDebtAmount: "3120000000",
+    bgDonorRelation: "lineal_descendant" as const,
+    bgGiftBuildingStdPriceAtTransfer: stdPrice,
+    standardPriceAtTransfer: stdPrice,
+    standardPriceAtAcq: "800000000",
+    acquisitionCause: "purchase" as const,
+    acquisitionDate: "2012-01-01",
+  };
+}
+
+const FORM = '[data-print-id="gift-filing-form"]';
+const STD_REPORT = '[data-print-id="building-std-report"]';
+
+async function calcTo(page: Page, stdPrice: string) {
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  await page.evaluate((asset) => {
+    sessionStorage.setItem(
+      "transfer-tax-wizard",
+      JSON.stringify({
+        state: { formData: { assets: [asset], transferDate: "2025-03-15" }, pendingMigration: false },
+        version: 0,
+      }),
+    );
+  }, seedAsset(stdPrice));
+  await page.reload();
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+  const card = page.locator('[data-asset-card-index="0"]');
+  await fillDateAndVerify(page, { year: "2025", month: "03", day: "15" }, { scope: card });
+  await expandAssetSection(page, 2);
+
+  for (let i = 0; i < 4; i++) {
+    const next = page.getByRole("button", { name: /다음|계산하기/ }).last();
+    if (!(await next.isVisible().catch(() => false))) break;
+    await next.click();
+    await page.waitForTimeout(500);
+  }
+  // ⚠️ 결과 도달 판정에 `getByText("총 납부세액")`을 쓰지 말 것 — 같은 라벨이 요약 카드(인쇄용
+  //    hidden)에도 있어 `.first()`가 hidden을 잡고 toBeVisible이 실패한다(e2e/CLAUDE.md §3).
+  //    기준시가 계산서 PrintSection 래퍼는 결과 화면에서 항상 렌더되므로 이것으로 판정한다.
+  await expect(page.locator(STD_REPORT)).toHaveCount(1, { timeout: 20000 });
+}
+
+test.describe("부담부증여 결과탭 — 증여세 신고서 양식", () => {
+  test("BGF-1: 무상이전분이 있으면 서식이 렌더된다", async ({ page }) => {
+    await calcTo(page, "5000000000"); // C 50억 > B 41.2억 → 무상이전분 8.8억
+    await expect(page.locator(FORM)).toHaveCount(1);
+    await expect(
+      page.getByText("증여세 신고서 양식 (별지 제10호서식 [2020.03.13. 개정])"),
+    ).toBeVisible();
+  });
+
+  test("BGF-2: 납세의무자가 수증자임을 밝힌다 (양도세와 주체가 다름)", async ({ page }) => {
+    await calcTo(page, "5000000000");
+    const notice = page.locator(FORM).getByText(/납세의무자는.*수증자/);
+    await expect(notice).toBeVisible();
+  });
+
+  test("BGF-3: 서식이 건물 기준시가 계산서보다 앞에 온다 (요구의 핵심)", async ({ page }) => {
+    await calcTo(page, "5000000000");
+    // 두 PrintSection 래퍼는 내용 유무와 무관하게 존재한다 → DOM 순서 비교가 항상 성립
+    await expect(page.locator(STD_REPORT)).toHaveCount(1);
+    const order = await page.evaluate(
+      ([f, s]) => {
+        const form = document.querySelector(f);
+        const std = document.querySelector(s);
+        if (!form || !std) return null;
+        // Node.DOCUMENT_POSITION_FOLLOWING = 4 → form 다음에 std가 온다
+        return (form.compareDocumentPosition(std) & 4) !== 0;
+      },
+      [FORM, STD_REPORT],
+    );
+    expect(order).toBe(true);
+  });
+
+  test("BGF-4: ⑰ 증여재산가액 = 무상이전분 880,000,000", async ({ page }) => {
+    await calcTo(page, "5000000000"); // C 50억 − B 41.2억 = 8.8억
+    await expect(page.locator('[data-testid="bg-besshi10-⑰"]')).toContainText("880,000,000");
+  });
+
+  /**
+   * 채무액이 증여가액을 전부 덮으면(B = C) 무상이전분이 0이라 증여세 자체가 산출되지 않는다.
+   * ⚠️ 관계(donorRelation) 미선택은 미렌더 조건이 아니다 — 엔진에 fallback이 있다.
+   */
+  test("BGF-5: 무상이전분이 0이면 서식이 없다", async ({ page }) => {
+    await calcTo(page, "2000000000"); // 보충적 20억 < 담보평가 41.2억 → C = B → 무상이전분 0
+    await expect(page.locator(FORM)).toHaveCount(0);
+  });
+});

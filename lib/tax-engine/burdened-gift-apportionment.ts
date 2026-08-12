@@ -509,6 +509,8 @@ export function buildBurdenedGiftBreakdown(params: {
       priorGiftCredit: giftResult.creditDetail.giftTaxCredit,
       finalTax: giftResult.finalTax,
       donorRelation,
+      // 별지 제10호서식 행 — 재계산 없이 그대로 전달(양도세 결과탭 서식이 이 배열만 읽는다).
+      besshi10Rows: giftResult.besshi10Rows,
     };
   }
 

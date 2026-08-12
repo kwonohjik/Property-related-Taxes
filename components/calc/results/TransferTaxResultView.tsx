@@ -43,6 +43,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
 import {
   BuildingStdPriceReportSection,
   hasBuildingStdReport,
@@ -504,6 +505,27 @@ export function TransferTaxResultView({
               ? { exemptionNote: formData.assets[0].saleSplitExemptionNote }
               : {})}
           />
+        </PrintSection>
+      )}
+
+      {/* 증여세 신고서 양식(별지 제10호) — 부담부증여 무상이전분에 대한 증여세.
+          엔진이 이미 산출해 둔 행 배열(breakdown.giftTax.besshi10Rows)을 그대로 렌더한다.
+          무상이전분이 0(채무액이 증여가액 전부를 덮음)이면 giftTax 자체가 없어 미렌더된다. */}
+      {result.transferBurdenedGiftBreakdown?.giftTax?.besshi10Rows && (
+        <PrintSection id="gift-filing-form" selectedIds={selectedPrintIds}>
+          <div className="space-y-2">
+            {/* ⚠️ 납세의무자가 다르다 — 양도세는 증여자, 증여세는 수증자.
+                이 안내 없이 서식만 두면 증여자가 자기 신고서로 오해할 수 있다. */}
+            <p className="rounded-md bg-violet-50 dark:bg-violet-900/20 px-3 py-2 text-xs text-violet-800 dark:text-violet-300 print:bg-transparent">
+              아래 서식은 <b>무상이전분(증여가액 − 채무액)</b>에 대한 증여세로,
+              납세의무자는 <b>수증자</b>입니다. 이 화면의 양도소득세(납세의무자: 증여자)와는
+              신고·납부 주체가 다릅니다.
+            </p>
+            <GiftTaxFilingFormTable
+              rows={result.transferBurdenedGiftBreakdown.giftTax.besshi10Rows}
+              testIdPrefix="bg-besshi10-"
+            />
+          </div>
         </PrintSection>
       )}
 

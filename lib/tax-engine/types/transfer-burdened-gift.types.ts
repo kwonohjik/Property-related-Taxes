@@ -7,6 +7,8 @@
  *    이름 충돌 방지를 위해 양도세 측은 `TransferBurdenedGiftBreakdown`으로 명명.
  */
 
+import type { FilingFormRow } from "./inheritance-gift-form-detail.types";
+
 /**
  * 상증법 §60~§66 증여재산 평가 모드.
  *
@@ -348,7 +350,13 @@ export interface TransferBurdenedGiftBreakdown {
 
   /**
    * Phase 2: 증여세 명세 (calcGiftTax 결과 요약).
-   * burdenedGiftInfo.donorRelation 제공 시만 채워짐 — 미제공 시 undefined.
+   *
+   * 채워지는 조건은 **증여일 + 무상이전분 > 0**이다
+   * (`burdened-gift-apportionment.ts:437` `params.giftDate && gratuitousPortion > 0`).
+   * ⚠️ 종전 주석은 "donorRelation 제공 시만"이라 적혀 있었으나 **부정확**하다 —
+   * 같은 파일 `:438`에 `info.donorRelation ?? "lineal_descendant"` fallback이 있어
+   * 관계를 고르지 않아도 채워진다. 채무액이 증여가액 전부를 덮으면(B = C) 무상이전분이
+   * 0이 되어 이 필드가 undefined가 된다(anchor BG-B10-5).
    */
   giftTax?: {
     /** 증여재산가액 = gratuitousPortion */
@@ -371,6 +379,15 @@ export interface TransferBurdenedGiftBreakdown {
     finalTax: number;
     /** 적용 관계 */
     donorRelation: string;
+    /**
+     * 별지 제10호서식 행 배열 — `calcGiftTax` 결과를 그대로 전달(재계산 없음).
+     *
+     * 양도세 결과탭의 증여세 신고서 서식이 이 배열만 읽는다
+     * (`GiftTaxFilingFormTable` · `FilingForm10PdfPage` 공통 소비 형태).
+     * 요약 필드들과 같은 `giftResult`에서 나오므로 값이 어긋날 수 없다 —
+     * 그 일치는 `burdened-gift-besshi10.anchor.test.ts` BG-B10-3이 고정한다.
+     */
+    besshi10Rows: FilingFormRow[];
   };
 
   /**

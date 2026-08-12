@@ -25,6 +25,8 @@ const ALL_LEAVES: TransferPrintSectionId[] = [
   "calculation",
   "phd",
   "split-detail",
+  // 부담부증여 무상이전분의 증여세 신고서(별지 제10호). 화면은 기준시가 계산서 바로 위.
+  "gift-filing-form",
   "building-std-report",
 ];
 
@@ -47,7 +49,7 @@ describe("양도세(단일) 선택 출력 레지스트리 — Pre-Do anchor (PR-
     }
   });
 
-  it("PD-tr-3: flattenPrintSectionIds는 6개 유니크 leaf, group: 접두 없음", () => {
+  it("PD-tr-3: flattenPrintSectionIds는 7개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length);
