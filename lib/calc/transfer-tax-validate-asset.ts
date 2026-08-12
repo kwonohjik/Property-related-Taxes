@@ -489,7 +489,23 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
 
   // 5) 취득가액 — 실거래가·감정가액 모두 fixedAcquisitionPrice 입력 루틴.
   //    ※ 재개발/재건축(assetKind === "redevelopment_apt")은 위 §166 분기에서 이미 return 처리됨.
-  if (!isEstimated && !hasPre1990) {
+  //
+  // 🔴 **부담부증여 제외** (2026-08-12 · O-2).
+  //
+  // 부담부증여는 취득가액을 「소득세법 시행령」 제159조 제1항 제1호가 **자동 산정**한다
+  // (기준시가 모드 = 취득시 기준시가 × 채무비율 / 시가 모드 = K-4 실지·K-5 환산). 그래서 UI도
+  // 자산 전체 취득가액 칸을 숨긴다(`CompanionAcqPurchaseBlock.tsx:366` 게이트).
+  //
+  // 그런데 이 검사에는 그 게이트가 없어, **입력할 칸이 화면에 없는데 그 칸을 채우라고 막는**
+  // 상태였다 — 바로 아래 별개 취득 주석이 경고하는 그 함정에 부담부증여만 빠져 있었다.
+  // 실측(2026-08-12): `housing`·`building`·`land`·`commercial_building` 4종 모두
+  // 「자산: 취득가액을 입력하세요」로 **계산이 영구 차단**됐다(취득원인 무관).
+  //
+  // 시가 모드 K-4의 실지취득가액은 `bgActual*` 필드이고 `validateBurdenedGiftAsset`(4)가 따로
+  // 검사한다 — 여기서 `fixedAcquisitionPrice`를 요구할 이유가 없다.
+  //
+  // 설계: docs/02-design/features/burdened-gift-acq-std-price-input-path.plan.md §9 O-2
+  if (!isEstimated && !hasPre1990 && asset.transferType !== "burdened_gift") {
     if (asset.acquisitionCause === "purchase") {
       // ⚠️ **별개 취득(토지·건물 취득시점 상이)은 총액을 요구하지 않는다**.
       // UI가 자산 전체 취득가액 칸을 숨기고(`CompanionAcqPurchaseBlock` isSeparateAcq 게이트 —

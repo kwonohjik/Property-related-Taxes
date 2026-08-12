@@ -21,6 +21,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { needsBgAcqStdPriceInput, resolveBgAcqStdPrice } from "./burdened-gift-acq-std-price";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 const SUPPORTED_KINDS = [
@@ -164,6 +165,23 @@ export function validateBurdenedGiftAsset(
     if (!parseAmount(asset.gbAcqBuildingValue)) {
       return `${label}: 부담부증여 — 취득시 건물 기준시가를 입력하세요 (소령 §159①1호 환산).`;
     }
+  }
+
+  /**
+   * (5-c) 기준시가 모드 — **취득시 기준시가 필수** (2026-08-12 신설 · O-1).
+   *
+   * §159①1호 A괄호의 취득가액은 「취득시 기준시가 × 채무비율」이다. 이 값이 0이면 취득가액도
+   * 0이 되어 양도차익이 통째로 부풀지만(실측 257,500,000원 과대), 종전에는 **입력 화면도
+   * validate도 없어** 아무도 알려주지 않았다. 자동 fallback은 금지이므로(루트 CLAUDE.md
+   * 「미입력은 검증 오류로 차단」) 여기서 막는다.
+   *
+   * ⚠️ 게이트·값 해석은 **UI(⑤)와 같은 함수**를 쓴다 — 술어가 갈리면 「칸은 뜨는데 계산은
+   *    막힌다」가 된다. `general_building`은 (5-b)가 gb* 축으로 따로 검사한다.
+   */
+  if (needsBgAcqStdPriceInput(asset) && resolveBgAcqStdPrice(asset) <= 0) {
+    return asset.assetKind === "land"
+      ? `${label}: 부담부증여 기준시가 모드 — 취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율입니다 (소득세법 시행령 제159조 제1항 제1호).`
+      : `${label}: 부담부증여 기준시가 모드 — 「② 양도정보」의 취득시 기준시가를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율이므로, 미입력 시 취득가액이 0으로 계산됩니다 (소득세법 시행령 제159조 제1항 제1호).`;
   }
 
   // (6) Phase 3 — 사전증여 행별 부분 입력 검증

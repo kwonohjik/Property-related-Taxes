@@ -110,9 +110,13 @@ interface BlockProps {
 }
 
 /**
- * assetKind → StandardPriceInput propertyKind 변환
+ * assetKind → StandardPriceInput propertyKind 변환.
+ *
+ * ⚠️ **부담부증여 「취득시 기준시가」 칸(`AssetSectionTransfer`)이 같은 함수를 쓴다** —
+ * 같은 물건의 취득·양도가 다른 모드(총액 vs 단가×면적)로 갈리지 않도록 단일 소스로 둔다.
+ * 복제하지 말 것.
  */
-function toPropertyKind(
+export function toPropertyKind(
   assetKind: BlockProps["assetKind"],
 ): "land" | "building_non_residential" | "house_individual" | "house_apart" {
   if (assetKind === "housing") return "house_individual";

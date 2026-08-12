@@ -7,8 +7,12 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { TransferModeBlock } from "../TransferModeBlock";
 import { isExprValuationEligibleAssetKind } from "@/lib/tax-engine/expropriation-scope";
-import { CompanionSaleModeBlock, type BundledSaleMode } from "../CompanionSaleModeBlock";
+import { CompanionSaleModeBlock, toPropertyKind, type BundledSaleMode } from "../CompanionSaleModeBlock";
 import { GeneralBuildingSaleSplitSection } from "../GeneralBuildingSaleSplitSection";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
+
 
 interface Props {
   asset: AssetForm;
@@ -116,6 +120,75 @@ export function AssetSectionTransfer({
           onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
         />
       )}
+
+      {/*
+        🔴 **취득시 기준시가** — 부담부증여 기준시가 모드 전용 (2026-08-12 신설).
+
+        ## 왜 여기 있나
+
+        §159①1호 A괄호의 취득가액은 **취득시 기준시가 × 채무비율**이다. 그런데 이 값을 입력할
+        화면이 **어디에도 없었다** — `CompanionAcqPurchaseBlock`의 기준시가 입력이
+        `transferType !== "burdened_gift"` 게이트(:366) 안에 있어 통째로 사라지고, 대신 뜨는
+        안내가 「자동 도출됩니다」라고 **사실과 다르게** 말해 왔다.
+
+        결과는 조용한 과대과세였다(실측: 취득가액 0 · 개산공제 0 → 양도차익 257,500,000원 과대).
+        validate도 기준시가 모드는 검사하지 않아 아무도 알려주지 않았다.
+
+        ⇒ **양도시 기준시가 바로 아래**에 둔다. 두 값의 비율이 곧 계산이라 나란히 놓여야 검증되고,
+           계산 순서(양도시 → 채무비율 → 취득가액)와도 일치한다.
+
+        ## 게이트가 위 양도시 칸과 다른 점
+
+        양도시 칸과 **같은 조건**(부담부증여 아님·GB·시가 모드 제외)에 더해, 이 칸은 부담부증여
+        **전용**이다 — 일반 양도의 취득시 기준시가는 환산취득가 모드에서
+        `CompanionAcqPurchaseBlock`이 이미 받는다(중복 입력 금지).
+
+        ⚠️ `general_building`은 제외한다 — `gbAcqLandPricePerSqm`·`gbAcqBuildingValue` 전용 입력이
+           있고 API가 그것을 쓴다(`transfer-tax-api-burdened-gift.ts:169-180`). 여기 칸을 만들면
+           **두 곳 입력 → 엔진은 gb* 만 사용**이라 조용히 무시되는 칸이 된다.
+
+        설계: docs/02-design/features/burdened-gift-acq-std-price-input-path.plan.md §5 D-1
+      */}
+      {needsBgAcqStdPriceInput(asset) && (
+          <div
+            className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2"
+            data-testid="bg-acq-std-price"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
+                §159
+              </span>
+              <p className="text-xs font-semibold text-amber-800">취득시 기준시가</p>
+              <LawArticleModal legalBasis="소득세법 시행령 §159" label="시행령 §159" />
+            </div>
+            <p className="text-caption text-amber-700">
+              취득가액 = <b>취득시 기준시가 × 채무비율</b>(소령 §159①1호). 위 양도시 기준시가와
+              같은 기준(상증법 §60~§66)으로 취득 당시 값을 입력하세요.
+            </p>
+            <StandardPriceInput
+              // 위 양도시 칸과 **같은 매핑 함수**를 쓴다(모드 불일치 방지 — 그 함수 JSDoc 참조).
+              // `CompanionSaleModeBlock`의 assetKind 축소 타입에 맞춰 좁힌다.
+              propertyKind={toPropertyKind(
+                asset.assetKind === "housing" || asset.assetKind === "land"
+                  ? asset.assetKind
+                  : "building",
+              )}
+              totalPrice={asset.standardPriceAtAcq}
+              onTotalPriceChange={(v) => onChange({ standardPriceAtAcq: v })}
+              pricePerSqm={asset.standardPricePerSqmAtAcq}
+              onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
+              area={asset.acquisitionArea || undefined}
+              onAreaChange={(v) => onChange({ acquisitionArea: v })}
+              jibun={asset.addressJibun || undefined}
+              dong={asset.addressDong || undefined}
+              ho={asset.addressHo || undefined}
+              // 공시가격 조회 기준일은 **취득일**이다 — 양도일을 넘기면 취득 당시가 아닌 값이 조회된다
+              referenceDate={asset.acquisitionDate || undefined}
+              label="취득시 기준시가 (원)"
+              hint="§159①1호 A괄호 — 채무비율을 곱해 취득가액이 된다"
+            />
+          </div>
+        )}
 
       {/*
         🔀 **양도가액 토지·건물 안분 방식** — ③ 취득의 `GeneralBuildingBlock`에서 이전했다
