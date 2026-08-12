@@ -377,7 +377,15 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
              — 토지·건물 독립 선택」 헤더가 맥락을 대신한다. */}
       {!isSeparateAcq && !props.hideAssetAcqAxis && (
       <div className="space-y-2">
-        <label className="block text-sm font-medium">취득가액 산정 방식</label>
+        {/* 증축이 있으면 이 라디오가 고르는 것은 **원취득분(토지·원건물)**의 방식뿐이다 —
+            증축분은 증축 카드의 「증축분 취득 방식」이 따로 정한다(별개 축).
+            증축이 없으면 「원건물」이라는 대비 개념이 없으므로 종전 라벨을 쓴다
+            (취득가액·필요경비 라벨과 같은 규칙). */}
+        <label className="block text-sm font-medium">
+          {isGeneralBuilding && props.gbHasExtension
+            ? "토지·원건물 취득가액 산정 방식"
+            : "취득가액 산정 방식"}
+        </label>
         <RadioCardGroup
           name="acqBasisMode"
           tone="amber"
@@ -392,39 +400,13 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       </div>
       )}
 
-      {/* 증축 유무 — **취득가액 칸 직전**에 묻는다 (2026-08-12 UX 정정).
-          이 플래그가 바로 아래 취득가액 칸의 라벨·hint·「일괄 필요경비」 칸 존재를 모두 가르는데
-          (`isBundledExtension`), 종전에는 유일한 쓰기 지점이 ②건물 기준시가 **뒤**의
-          「증축 있음」 토글이라 사용자가 이 칸을 채우는 시점에 증축 개념이 화면에 없었다.
-          ⇒ 증축이 있는 물건인데 증축 포함 총액을 넣는 오입력이 구조적으로 유도됐다.
+      {/* 🔀 증축 유무 토글은 `GeneralBuildingAcquisitionCards` **최상단으로 이동**했다
+          (2026-08-12 사용자 요청 — 「토지·건물 취득일 다름」 바로 아래).
 
-          ⚠️ 제목에 「증축 있음」이라는 **연속 문자열을 쓰지 않는다** — E2E 다수가
-             `getByText("증축 있음")`로 아래쪽 상세 토글을 잡고, 지분 카드에서는
-             `toHaveCount(0)`으로 부재를 단언한다(`general-building-fractional-share.spec.ts`).
-             같은 문자열이 여기 생기면 그 셀렉터가 두 곳에 걸린다.
-
-          🔗 상세 입력(증축일·면적·기준시가·증축분 방식)은 여전히 아래 토글이 전담한다 —
-             둘은 **같은 `gbHasExtension` 필드를 양방향 read/write**한다(별도 필드·useEffect
-             미러링 금지). 여기서 켜면 아래 카드가 자동으로 펼쳐진다. */}
-      {isGeneralBuilding
-        && !props.hideAssetAcqAxis
-        && !props.shareAcquisitionOnly
-        && props.asset
-        && props.onAssetChange && (
-        <ToggleCard
-          tone="amber"
-          size="sm"
-          title="증축한 부분이 있음"
-          description="원취득분(토지·원건물)과 별도로 증축한 건물분이 있으면 켜세요. 아래 취득가액 칸의 의미가 달라집니다."
-          checked={!!props.asset.gbHasExtension}
-          onCheckedChange={(v) => props.onAssetChange!({ gbHasExtension: v })}
-        >
-          <p className="text-caption text-amber-800 dark:text-amber-300">
-            아래 취득가액 칸에는 <b>증축분을 뺀 원취득분(토지·원건물)</b>만 입력하세요.
-            증축일·증축 연면적·증축분 취득가액은 이 카드 아래쪽의 <b>증축 항목</b>에서 이어서 입력합니다.
-          </p>
-        </ToggleCard>
-      )}
+          여기(취득가액 라디오 직후)는 취득가액 칸과 가장 가까웠지만 **매매 취득 전용 블록**이고
+          분리 ON에서도 숨겨져, 6경로 중 매매·분리OFF 1곳에서만 보였다(실측). 나머지 5경로는
+          아래 상세 카드의 스위치가 유일한 진입점이라 **매매·분리OFF에서만 토글이 둘**이었다.
+          ⇒ 모든 취득원인이 공유하는 자리로 올려 중복을 없앴다. 여기에 되살리지 말 것. */}
 
       {/* 개별주택가격 미공시 취득 토글 — 환산취득가 + housing 자산(또는 토지·건물 분리 모드)
          자동 트리거 조건(housing || isMixedUse)과 일치시켜 모순 방지.

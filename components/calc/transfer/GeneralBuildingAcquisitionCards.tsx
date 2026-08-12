@@ -390,6 +390,43 @@ export function GeneralBuildingAcquisitionCards({
       />
 
       {/*
+        증축 유무 — **모든 취득원인이 공유하는 자리**에 둔다 (2026-08-12 사용자 요청으로 재배치).
+
+        ## 왜 여기인가
+
+        이 플래그는 아래 취득가액 칸의 성격을 가르므로 그보다 **위**여야 하고(CLAUDE.md
+        「모드 토글은 영향 필드 직전」), 동시에 **모든 경로**에서 켤 수 있어야 한다.
+
+        종전에는 `CompanionAcqPurchaseBlock`(취득가액 라디오 직후)에 있었는데 그 블록은
+        **매매 취득 전용**이고 분리 ON에서도 숨겨져, 6경로 중 1곳에서만 보였다(실측):
+
+          매매·분리OFF ✅ / 매매·분리ON ❌ / 상속 ❌ / 증여 ❌ / 신축 ❌ / 이월과세 ❌
+
+        그래서 아래 상세 카드가 나머지 5경로의 **유일한 진입점** 역할을 겸했고, 매매·분리OFF
+        에서만 토글이 둘로 보였다. 여기로 올려 중복을 없애면서 dead-end도 막는다
+        (`feedback_ui_gate_removes_sole_input_path`).
+
+        ⚠️ 아래 `GeneralBuildingExtensionSection`은 이제 **스위치가 없는 상세 입력 카드**다 —
+           쓰기 주체는 이 토글 하나뿐이다. 거기에 스위치를 되살리지 말 것.
+        ⚠️ 제목에 「증축 있음」이라는 연속 문자열을 쓰지 않는다 — E2E가 그 문자열로 상세 카드를
+           잡던 이력이 있어 셀렉터가 두 곳에 걸린다(`feedback_hint_quoting_toggle_title_breaks_selector`).
+
+        제외 2가지는 성질상 증축이 비스코프다:
+          · 지분 카드 — 증축은 **물건 사건**이라 첫 카드가 전담(설계 D1-3·D4)
+          · 부담부증여 — §159가 채무비율로 자동 산정하므로 취득방식 선택이 무의미
+      */}
+      {!shareAcquisitionOnly && asset.transferType !== "burdened_gift" && (
+        <ToggleCard
+          variant="card"
+          tone="amber"
+          title="증축한 부분이 있음"
+          description="원취득분(토지·원건물)과 별도로 증축한 건물분(건물2)이 있으면 켜세요. 아래 취득가액 칸의 의미가 달라지고, 증축분 상세 입력이 열립니다."
+          checked={!!asset.gbHasExtension}
+          onCheckedChange={(v) => onChange({ gbHasExtension: v })}
+        />
+      )}
+
+      {/*
         ── 취득 카드 (sky) ──
         분리 OFF면 **토지·건물 공통 「취득」 카드 하나**, ON이면 「📌 토지 취득」이 된다(U-1·U-6).
 
@@ -448,7 +485,6 @@ export function GeneralBuildingAcquisitionCards({
             // 유무 토글이 같은 필드를 쓴다(2026-08-12 UX 정정 — types.ts `gbHasExtension` 주석).
             // 상세 입력(증축일·면적·기준시가·방식)은 `GeneralBuildingBlock` 토글이 계속 전담한다.
             gbHasExtension={asset.gbHasExtension}
-            shareAcquisitionOnly={shareAcquisitionOnly}
             fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
             standardPriceAtAcq={asset.standardPriceAtAcq}

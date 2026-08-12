@@ -19,6 +19,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { GeneralBuildingBlock } from "@/components/calc/transfer/GeneralBuildingBlock";
+import { GeneralBuildingAcquisitionCards } from "@/components/calc/transfer/GeneralBuildingAcquisitionCards";
 import { CompanionAcqPurchaseBlock } from "@/components/calc/transfer/CompanionAcqPurchaseBlock";
 import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset";
@@ -49,7 +50,6 @@ function renderAcqBlock(
     <CompanionAcqPurchaseBlock
       assetKind="general_building"
       asset={asset}
-      shareAcquisitionOnly={opts.shareAcquisitionOnly}
       onAssetChange={opts.onAssetChange ?? (() => {})}
       acquisitionDate={asset.acquisitionDate}
       onAcquisitionDateChange={() => {}}
@@ -87,10 +87,30 @@ describe("U1 — 일반건물 취득가액 산정 방식은 2옵션이다", () =
 // ── U2 · 증축 토글 진입점 ───────────────────────────────────────────────
 
 /**
- * 🔴 3번째 라디오를 제거하면서 **증축을 켤 유일한 경로**가 이 토글이 됐다.
- * 종전 게이트(`isEstimated || gbHasExtension || bothPartsSuccession || isSeparateAcq`)를
- * 그대로 뒀다면 **매매 × 실거래가 × 분리 OFF**에서 증축이 dead-end가 됐다.
+ * 🔀 **토글은 `GeneralBuildingAcquisitionCards` 최상단에 있다** (2026-08-12 재배치).
+ *
+ * 종전에는 두 곳에 있었다 — 취득가액 라디오 직후(`CompanionAcqPurchaseBlock`)와
+ * 상세 카드(`GeneralBuildingExtensionSection`)의 스위치. 그런데 앞의 것은 **매매 취득
+ * 전용 블록**이고 분리 ON에서도 숨겨져, 6경로 중 매매·분리OFF 1곳에서만 보였다.
+ * 결과: 그 1곳에서만 토글이 둘로 보이고, 나머지 5경로는 상세 카드 스위치가 유일 진입점.
+ *
+ * ⇒ 모든 취득원인이 공유하는 자리로 올리고 상세 카드의 스위치는 없앴다.
+ *   아래 `U2b`가 **6경로 전수**를 고정한다 — 하나라도 빠지면 그 경로에서 증축이 dead-end다
+ *   (`feedback_ui_gate_removes_sole_input_path`).
  */
+const EXT_TOGGLE = "증축한 부분이 있음";
+
+function renderCards(over: Partial<AssetForm> = {}, props: { shareAcquisitionOnly?: boolean } = {}) {
+  return render(
+    <GeneralBuildingAcquisitionCards
+      asset={gbAsset(over)}
+      onChange={() => {}}
+      transferDate="2024-06-01"
+      shareAcquisitionOnly={props.shareAcquisitionOnly}
+    />,
+  );
+}
+
 describe("U2 — 증축 토글은 취득가액 산정 방식과 무관하게 보인다", () => {
   const cases: Array<[string, Partial<AssetForm>]> = [
     ["실거래가 · 증축 OFF (종전에 dead-end였던 조합)", { useEstimatedAcquisition: false }],
@@ -101,35 +121,47 @@ describe("U2 — 증축 토글은 취득가액 산정 방식과 무관하게 보
 
   for (const [label, over] of cases) {
     it(label, () => {
-      render(
-        <GeneralBuildingBlock asset={gbAsset(over)} onChange={() => {}} transferDate="2024-06-01" />,
-      );
-      expect(screen.getByText("증축 있음")).toBeInTheDocument();
+      renderCards(over);
+      expect(screen.getByText(EXT_TOGGLE)).toBeInTheDocument();
     });
   }
 
   it("부담부증여에서는 숨긴다 (§159 자동 산정 — 비스코프)", () => {
-    render(
-      <GeneralBuildingBlock
-        asset={gbAsset({ transferType: "burdened_gift" } as Partial<AssetForm>)}
-        onChange={() => {}}
-        transferDate="2024-06-01"
-      />,
-    );
-    expect(screen.queryByText("증축 있음")).toBeNull();
+    renderCards({ transferType: "burdened_gift" } as Partial<AssetForm>);
+    expect(screen.queryByText(EXT_TOGGLE)).toBeNull();
   });
 
   it("지분 카드에서는 숨긴다 (물건 사건 — 중복 입력 금지)", () => {
-    render(
-      <GeneralBuildingBlock
-        asset={gbAsset({ gbHasExtension: true })}
-        onChange={() => {}}
-        transferDate="2024-06-01"
-        shareAcquisitionOnly
-      />,
-    );
-    expect(screen.queryByText("증축 있음")).toBeNull();
+    renderCards({ gbHasExtension: true }, { shareAcquisitionOnly: true });
+    expect(screen.queryByText(EXT_TOGGLE)).toBeNull();
   });
+});
+
+/**
+ * 🔑 **이 재배치의 존재 이유**. 종전 실측(2026-08-12):
+ *   매매·분리OFF ✅ / 매매·분리ON ❌ / 상속 ❌ / 증여 ❌ / 신축 ❌ / 이월과세 ❌
+ * 한 경로라도 false로 돌아가면 그 경로에서 증축을 켤 방법이 사라진다.
+ */
+describe("U2b — 취득원인·분리 6경로 **전수**에서 토글이 보인다", () => {
+  const paths: Array<[string, Partial<AssetForm>]> = [
+    ["매매 · 분리OFF", { acquisitionCause: "purchase" }],
+    ["매매 · 분리ON", {
+      acquisitionCause: "purchase",
+      hasSeperateLandAcquisitionDate: true,
+      gbBuildingAcquisitionCause: "purchase",
+    }],
+    ["상속", { acquisitionCause: "inheritance" }],
+    ["증여", { acquisitionCause: "gift" }],
+    ["신축(자가건축)", { acquisitionCause: "newConstruction" }],
+    ["이월과세(증여)", { acquisitionCause: "carryover_gift" }],
+  ];
+
+  for (const [label, over] of paths) {
+    it(label, () => {
+      renderCards(over as Partial<AssetForm>);
+      expect(screen.getByText(EXT_TOGGLE)).toBeInTheDocument();
+    });
+  }
 });
 
 // ── U3 · U4 · 취득가액 칸의 성격 ────────────────────────────────────────
@@ -194,83 +226,132 @@ describe("U4 — 일괄 필요경비 칸도 증축분 방식과 무관하게 열
  * 두 토글은 같은 필드를 양방향 read/write한다 — 별도 필드 신설·`useEffect` 미러링 금지.
  */
 describe("U6 — 증축 유무 토글이 취득가액 칸보다 **앞**에 온다", () => {
-  it("DOM 순서: 토글 → 취득가액 입력", () => {
-    const { container } = renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }));
-    const toggle = screen.getByText("증축한 부분이 있음");
+  it("DOM 순서: 토글 → 취득가액 입력 (매매 경로 — 두 요소가 한 트리에 있다)", () => {
+    const { container } = renderCards({ acquisitionCause: "purchase", useEstimatedAcquisition: false });
+    const toggle = screen.getByText(EXT_TOGGLE);
     const price = container.querySelector('[data-testid="fixed-acquisition-price"]');
     expect(price).not.toBeNull();
     /* 순서 비교는 문자열 위치가 아니라 DOM 관계로 — `DOCUMENT_POSITION_FOLLOWING`(4)이
-       서면 toggle이 price보다 앞이다. 마크업이 바뀌어도 「앞」의 의미는 유지된다. */
+       서면 toggle이 price보다 앞이다. 마크업이 바뀌어도 「앞」의 의미는 유지된다.
+       (역방향이 거짓·포함관계가 아님은 2026-08-12 probe로 실측했다.) */
     expect(
       toggle.compareDocumentPosition(price!) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
-  it("토글을 켜면 `gbHasExtension`을 쓴다 (읽기 전용이 아니다)", () => {
+  it("토글을 켜면 `gbHasExtension`을 쓴다", () => {
     const patches: Array<Partial<AssetForm>> = [];
-    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }), {
-      onAssetChange: (p) => patches.push(p),
-    });
-    fireEvent.click(screen.getByRole("switch"));
+    render(
+      <GeneralBuildingAcquisitionCards
+        asset={gbAsset({ acquisitionCause: "purchase" })}
+        onChange={(p) => patches.push(p)}
+        transferDate="2024-06-01"
+      />,
+    );
+    /* 「토지·건물 취득일 다름」이 첫 스위치라 증축 토글은 두 번째다 —
+       인덱스 가정이 깨지면 이 단언이 먼저 실패한다(라벨로 스코프할 수 없는 구조). */
+    const switches = screen.getAllByRole("switch");
+    fireEvent.click(switches[1]);
     expect(patches).toContainEqual({ gbHasExtension: true });
   });
 });
 
 describe("U7 — 지분 카드에는 증축 유무 토글이 없다 (증축은 물건 사건)", () => {
   it("shareAcquisitionOnly면 숨는다", () => {
-    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }), { shareAcquisitionOnly: true });
-    expect(screen.queryByText("증축한 부분이 있음")).toBeNull();
+    renderCards({ useEstimatedAcquisition: false }, { shareAcquisitionOnly: true });
+    expect(screen.queryByText(EXT_TOGGLE)).toBeNull();
   });
 
   it("대조군 — 첫 카드에는 있다", () => {
-    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false }));
-    expect(screen.getByText("증축한 부분이 있음")).toBeInTheDocument();
+    renderCards({ useEstimatedAcquisition: false });
+    expect(screen.getByText(EXT_TOGGLE)).toBeInTheDocument();
   });
 });
 
 /**
  * 🪤 **E2E 셀렉터 보호 — 토글 제목은 화면에 정확히 1회만 나온다.**
  *
- * `general-building-fractional-share.spec.ts`는 지분 카드에서 `getByText("증축 있음")`을
- * `toHaveCount(0)`으로 단언하고, 다른 spec들은 `.first()`로 `GeneralBuildingBlock`의 상세
- * 토글을 잡는다. 안내문이 토글 제목을 **그대로 인용**하면 그 셀렉터가 두 곳에 걸린다.
- *
+ * 안내문이 토글 제목을 **그대로 인용**하면 그 제목으로 컨트롤을 잡는 셀렉터가 두 곳에 걸린다.
  * 🔴 실제로 밟았다(2026-08-12): 취득가액 hint에 「증축한 부분이 있음」을 인용했더니
- *    `getByText("증축한 부분이 있음")`이 2 elements로 strict mode 위반이 났다.
- *    ⇒ hint는 "위 토글을 먼저 켜세요"로 바꿨다. **안내문에 토글 제목을 쓰지 말 것.**
+ *    `getByText`가 2 elements로 strict mode 위반이 났다 → "위 토글을 먼저 켜세요"로 정정.
+ *
+ * 🔀 2026-08-12 재배치 후: 상세 카드의 스위치를 없앴으므로 「증축 있음」은 **어디에도 없다**.
+ *    그 문자열이 되살아나면 종전 중복 상태로 돌아간 것이다.
  */
-describe("U8 — 토글 제목이 안내문에 중복 인용되지 않는다", () => {
+describe("U8 — 토글 제목 중복 금지", () => {
   const countOf = (needle: string) =>
     (document.body.textContent ?? "").split(needle).length - 1;
 
-  it("「증축 있음」(아래 상세 토글 제목)은 이 블록에 아예 없다", () => {
+  it("「증축 있음」(종전 상세 카드 스위치 제목)은 이제 존재하지 않는다", () => {
     for (const on of [false, true]) {
       cleanup();
-      renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: on }));
+      render(
+        <>
+          <GeneralBuildingAcquisitionCards
+            asset={gbAsset({ acquisitionCause: "purchase", gbHasExtension: on })}
+            onChange={() => {}}
+            transferDate="2024-06-01"
+          />
+          <GeneralBuildingBlock
+            asset={gbAsset({ acquisitionCause: "purchase", gbHasExtension: on })}
+            onChange={() => {}}
+            transferDate="2024-06-01"
+          />
+        </>,
+      );
       expect(countOf("증축 있음")).toBe(0);
     }
   });
 
-  it("「증축한 부분이 있음」(이 블록 토글 제목)은 **정확히 1회**다", () => {
+  it("「증축한 부분이 있음」은 **정확히 1회**다 (0=소실 · 2+=중복 재발)", () => {
     for (const on of [false, true]) {
       cleanup();
-      renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: on }));
-      // 0이면 토글이 사라진 것, 2 이상이면 안내문이 제목을 인용한 것 — 둘 다 회귀다.
-      expect(countOf("증축한 부분이 있음")).toBe(1);
+      render(
+        <>
+          <GeneralBuildingAcquisitionCards
+            asset={gbAsset({ acquisitionCause: "purchase", gbHasExtension: on })}
+            onChange={() => {}}
+            transferDate="2024-06-01"
+          />
+          <GeneralBuildingBlock
+            asset={gbAsset({ acquisitionCause: "purchase", gbHasExtension: on })}
+            onChange={() => {}}
+            transferDate="2024-06-01"
+          />
+        </>,
+      );
+      expect(countOf(EXT_TOGGLE)).toBe(1);
     }
   });
 });
 
-describe("U9 — 증축 OFF에서도 취득가액 칸이 원취득분만 받는다고 알린다", () => {
-  it("일반건물 · 실거래가 · 증축 OFF → 안내 hint가 있다", () => {
-    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: false }));
-    expect(screen.getByText(/증축분을 뺀 원취득분만 입력합니다/)).toBeInTheDocument();
+/**
+ * 상세 카드는 **스위치가 없는 입력 카드**다 — 켜고 끄는 주체는 위 토글 하나뿐이다.
+ * 여기에 스위치가 되살아나면 매매·분리OFF에서 토글이 둘로 보이던 상태가 재발한다.
+ */
+describe("U8b — 증축 상세 카드에는 스위치가 없다", () => {
+  it("gbHasExtension ON에서 GeneralBuildingBlock의 switch 개수 = 0", () => {
+    render(
+      <GeneralBuildingBlock
+        asset={gbAsset({ gbHasExtension: true, useEstimatedAcquisition: true })}
+        onChange={() => {}}
+        transferDate="2024-06-01"
+      />,
+    );
+    expect(screen.queryAllByRole("switch")).toHaveLength(0);
+    // 대조군 — 카드 자체는 렌더된다(스위치만 사라진 것이지 카드가 사라진 게 아니다)
+    expect(screen.getByText("증축 정보")).toBeInTheDocument();
   });
 
-  it("증축 ON이면 그 hint 대신 일괄 취득가액 설명으로 바뀐다 (대조군)", () => {
-    renderAcqBlock(gbAsset({ useEstimatedAcquisition: false, gbHasExtension: true }));
-    expect(screen.queryByText(/증축분을 뺀 원취득분만 입력합니다/)).toBeNull();
-    expect(screen.getByText(/증축분을 뺀 원취득분\(토지·원건물\)을 한 값으로 산/)).toBeInTheDocument();
+  it("gbHasExtension OFF면 카드가 아예 없다 (렌더 게이트)", () => {
+    render(
+      <GeneralBuildingBlock
+        asset={gbAsset({ gbHasExtension: false, useEstimatedAcquisition: true })}
+        onChange={() => {}}
+        transferDate="2024-06-01"
+      />,
+    );
+    expect(screen.queryByText("증축 정보")).toBeNull();
   });
 });
 

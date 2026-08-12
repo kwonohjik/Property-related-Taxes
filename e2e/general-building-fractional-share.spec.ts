@@ -150,12 +150,12 @@ test.describe("일반건물 × 지분 분할 취득", () => {
      */
     // 양성 대조군: 자산1에는 양도측·증축이 있다
     await expect(asset1.getByText("양도시 토지 공시지가").first()).toBeVisible();
-    await expect(asset1.getByText("증축 있음").first()).toBeVisible();
+    await expect(asset1.getByText("증축한 부분이 있음").first()).toBeVisible();
 
     // 음성: 자산2에는 없다 (물건-수준이라 자산1에서 한 번만 받는다)
     await expect(asset2.getByText("양도시 토지 공시지가")).toHaveCount(0);
     await expect(asset2.getByText("양도시 건물기준시가")).toHaveCount(0);
-    await expect(asset2.getByText("증축 있음")).toHaveCount(0);
+    await expect(asset2.getByText("증축한 부분이 있음")).toHaveCount(0);
   });
 
   // ══════════════════════════════════════════════════════════════════
