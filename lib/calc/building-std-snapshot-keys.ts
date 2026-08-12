@@ -68,6 +68,31 @@ export function snapshotKeyTimepoint(key: string): "acquisition" | "transfer" | 
 }
 
 /**
+ * 계산서 접힘 헤더의 **건물 구분** 라벨 — 없으면 null.
+ *
+ * 헤더는 시점(취득당시/양도당시)만으로는 구별되지 않는다. 한 계산에 일반건물 본체와
+ * 증축분(건물2), 상가건물이 함께 있으면 「양도당시」 카드가 여러 장 나란히 뜬다
+ * (2026-08-12 사용자 제보 — 세 장 중 두 장이 같은 제목).
+ *
+ * ⚠️ **접힘 헤더 전용**이다. 펼친 서식의 제목(`INSTANCE_TITLE`)과 Ⅰ.구분 마킹은 건드리지 않는다 —
+ *    그쪽은 국세청 서식 재현이고 `building-std-report-phd-section.test.tsx` S9가 고정하고 있다.
+ * ⚠️ 접두 열거 순서는 `idOfSnapshotKey`·`snapshotKeyTimepoint`와 **같은 규율**이다 —
+ *    긴 접두(`gb-ext`·`cbinh`)를 짧은 것(`gb`·`cb`)보다 앞에 둔다.
+ *
+ * 배치(`-phd-*`·`-cb-first`)·감면 환산(`-red-phd`)·상증(`bsp-estate-*`)은 null이다 —
+ * 그 제목이 이미 시점·주택분/상가분·세목을 밝히므로 붙이면 중복된다.
+ */
+export function snapshotKindLabel(key: string): string | null {
+  if (/-gb-ext-(?:acq|transfer)$/.test(key)) return "증축분(건물2)";
+  if (/-gb-(?:acq|transfer)$/.test(key)) return "일반건물";
+  if (/-cbinh-acq$/.test(key)) return "상가건물(상속취득)";
+  if (/-cb-(?:acq|transfer)$/.test(key)) return "상가건물";
+  if (/-mx-commercial$/.test(key)) return "겸용 상가분";
+  if (/-split-(?:acq|transfer|both)$/.test(key)) return "토지·건물 분리 건물분";
+  return null;
+}
+
+/**
  * 증축분(건물2) 계산서인가 — 제목에 「증축분」을 붙이고 취득 시점을 「증축시」로 바꾼다.
  *
  * 원건물 계산서와 **같은 자산·같은 2시점**이라 구별 표기가 없으면 「양도시」 계산서가 두 장

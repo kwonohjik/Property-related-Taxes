@@ -18,6 +18,7 @@ import {
   isExtensionSnapshotKey,
   phdTimepointLabel,
   snapshotKeyTimepoint,
+  snapshotKindLabel,
 } from "@/lib/calc/building-std-snapshot-keys";
 import { BUILDING_STD_FIRST_YEAR } from "@/lib/calc/phd-building-std-batch";
 import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
@@ -51,6 +52,8 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
       model: NtsReportModel;
       titleOverride?: string;
       markCellOverride?: NtsReportInstance["markCell"];
+      /** 접힘 헤더의 건물 구분 — 시점만으로는 본체/증축분/상가가 같은 제목이 된다. */
+      kindLabel?: string;
       rank: number;
     };
     if (!inputData) return [] as ReportItem[];
@@ -164,7 +167,9 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         //    §164⑥ "최초고시(2005)") 새 접두가 붙을 때마다 조용히 0으로 떨어진다.
         const rank = tp ? tp.order * 2 + (tp.category === "commercial" ? 1 : 0) : 100 + seq;
         seq++;
-        out.push({ key, model, titleOverride, markCellOverride, rank });
+        // 배치(tp)는 제목에 이미 주택분/상가분·시점이 있어 구분 라벨을 붙이면 중복된다.
+        const kindLabel = tp ? undefined : (snapshotKindLabel(key) ?? undefined);
+        out.push({ key, model, titleOverride, markCellOverride, kindLabel, rank });
       } catch {
         // 스냅샷이 불완전/구버전이면 graceful 생략 (서식 미표시).
       }
@@ -177,8 +182,8 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
 
   return (
     <div className="space-y-6">
-      {reports.map(({ key, model, titleOverride, markCellOverride }) => (
-        <NtsBuildingStdPriceReport key={key} model={model} titleOverride={titleOverride} markCellOverride={markCellOverride} />
+      {reports.map(({ key, model, titleOverride, markCellOverride, kindLabel }) => (
+        <NtsBuildingStdPriceReport key={key} model={model} titleOverride={titleOverride} markCellOverride={markCellOverride} kindLabel={kindLabel} />
       ))}
     </div>
   );
