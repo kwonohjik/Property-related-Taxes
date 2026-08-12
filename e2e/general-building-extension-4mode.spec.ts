@@ -101,11 +101,11 @@ test.describe("일반건물 증축 4조합 — UI 축", () => {
     await expect(page.getByText("환산취득가").first()).toBeVisible();
   });
 
-  test("U2: 실거래가 모드에서도 「증축 있음」 토글이 보인다 (유일 진입점)", async ({ page }) => {
+  test("U2: 실거래가 모드에서도 「증축한 부분이 있음」 토글이 보인다 (유일 진입점)", async ({ page }) => {
     test.setTimeout(90_000);
     await seed(page);
     await expandAssetSection(page, 3);
-    await expect(page.getByText("증축 있음").first()).toBeVisible();
+    await expect(page.getByText("증축한 부분이 있음").first()).toBeVisible();
   });
 });
 

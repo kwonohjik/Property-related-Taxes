@@ -43,14 +43,6 @@ export interface BlockProps {
    *    계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §6 Q-1
    */
   gbHasExtension?: boolean;
-  /**
-   * 지분 카드(fractional split의 2번째 이후 자산)인가 — 증축 유무 토글을 숨긴다.
-   *
-   * 증축은 **물건 사건**이라 첫 카드에서 한 번만 받는다(`GeneralBuildingBlock`의
-   * `shareAcquisitionOnly`와 같은 축). 지분 카드에 유무 토글을 노출하면 그 카드의
-   * `gbHasExtension`(자산별 독립 필드)이 켜져 물건-수준 사실이 자산별로 갈린다.
-   */
-  shareAcquisitionOnly?: boolean;
   fixedAcquisitionPrice: string;
   onFixedAcquisitionPriceChange: (v: string) => void;
   /** 환산취득가 분자: 취득시 기준시가 총액 (원) */

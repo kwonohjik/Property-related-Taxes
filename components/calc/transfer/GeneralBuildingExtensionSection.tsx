@@ -10,7 +10,7 @@
  */
 
 import { useMemo } from "react";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
@@ -152,18 +152,18 @@ export function GeneralBuildingExtensionSection({
 
   return (
     <>
-        {/* ⑤ 증축 정보 (amber) — 일반건물이면 **항상** 표시한다(2026-08-12 · 위 게이트 주석).
-            증축 유무는 물건의 사실이지 취득가액 산정 방식의 함수가 아니다.
-            부담부증여 모드에서는 §159 자동 산정 — 증축 cross-cutting 비스코프이므로 숨김. */}
-        {/* 🔒 증축은 **물건 사건**이다 — 지분 카드에서는 숨긴다(설계 D1-3·D4).
-            안에 「양도시 건물2 기준시가」가 있어 emerald 카드만 숨기는 것으로는 부족하다. */}
-        <ToggleCard
+        {/* ⑤ 증축 정보 — **스위치 없는 상세 입력 카드**다 (2026-08-12 사용자 요청).
+            켜고 끄는 것은 `GeneralBuildingAcquisitionCards` 최상단의 「증축한 부분이 있음」
+            토글 **하나뿐**이다. 종전에는 여기에도 스위치가 있어 매매·분리OFF에서 토글이 둘로
+            보였다 — 여기에 스위치를 되살리면 그 중복이 재발한다.
+            렌더 게이트(지분 카드·부담부증여 제외)는 호출부가 진다. */}
+        {/* 제목 크기는 안쪽 필드 라벨(「증축일」 등 `text-sm`)과 맞춘다 (2026-08-12 사용자 요청).
+            `ToneCard`의 기본 제목은 서브섹션용 `text-xs`라 카드 제목이 내용보다 작아 보였다.
+            임의 px가 아니라 정본 클래스를 쓴다(폰트 게이트 준수 — components/calc/CLAUDE.md). */}
+        <ToneCard
           tone="amber"
-          variant="card"
-          title="증축 있음"
-          description="원취득분(토지·원건물)과 별도로 증축한 건물분(건물2)이 있는 경우. 증축분의 취득가액 산정 방식은 원취득분과 무관하게 아래에서 따로 고릅니다."
-          checked={asset.gbHasExtension}
-          onCheckedChange={(v) => onChange({ gbHasExtension: v })}
+          title={<span className="text-sm">증축 정보</span>}
+          bodyClassName="space-y-3"
         >
           {/* 증축일 */}
           <FieldCard
@@ -400,7 +400,7 @@ export function GeneralBuildingExtensionSection({
               <p className="text-micro text-amber-700">엔진 실제 계산값은 결과 단계에서 확인됩니다.</p>
             </div>
           )}
-        </ToggleCard>
+        </ToneCard>
     </>
   );
 }

@@ -10,7 +10,7 @@
  * ⇒ 엔진·validate만 고치면 **화면에서 도달 불가**였다
  * (`feedback_api_trigger_without_input_path_is_noop`).
  *
- *   X-1. 상속 취득 → 「증축 있음」 토글이 **보인다**
+ *   X-1. 상속 취득 → 「증축한 부분이 있음」 토글이 **보인다**
  *   X-2. 매매 + 실가 모드 → 종전대로 **안 보인다** (회귀 0)
  *   X-3. 증축을 켠 상속 자산이 **계산까지 도달한다** (하드 차단 해제)
  *
@@ -91,12 +91,12 @@ async function seed(page: Page, over: Record<string, unknown> = {}) {
 }
 
 test.describe("일반건물 상속·증여 × 증축 — 입력 경로", () => {
-  test("X-1: 상속 취득이면 「증축 있음」 토글이 보인다", async ({ page }) => {
+  test("X-1: 상속 취득이면 「증축한 부분이 있음」 토글이 보인다", async ({ page }) => {
     test.setTimeout(90_000);
     await seed(page);
     await expandAssetSection(page, 3);
 
-    await expect(page.getByText("증축 있음").first()).toBeVisible();
+    await expect(page.getByText("증축한 부분이 있음").first()).toBeVisible();
   });
 
   test("X-1b: 증여 취득도 같다", async ({ page }) => {
@@ -111,7 +111,7 @@ test.describe("일반건물 상속·증여 × 증축 — 입력 경로", () => {
     });
     await expandAssetSection(page, 3);
 
-    await expect(page.getByText("증축 있음").first()).toBeVisible();
+    await expect(page.getByText("증축한 부분이 있음").first()).toBeVisible();
   });
 
   /**
@@ -142,7 +142,7 @@ test.describe("일반건물 상속·증여 × 증축 — 입력 경로", () => {
     });
     await expandAssetSection(page, 3);
 
-    await expect(page.getByText("증축 있음").first()).toBeVisible();
+    await expect(page.getByText("증축한 부분이 있음").first()).toBeVisible();
   });
 
   test("X-3: 증축을 켠 상속 자산이 계산까지 도달한다 (하드 차단 해제)", async ({ page }) => {
@@ -229,14 +229,14 @@ async function seedSep(page: Page, over: Record<string, unknown> = {}) {
 }
 
 test.describe("일반건물 분리 ON × 증축 — Phase 2", () => {
-  test("X-4: 분리 ON이면 「증축 있음」 토글이 보인다 (종전 V-3 차단으로 낼 이유가 없었다)", async ({
+  test("X-4: 분리 ON이면 「증축한 부분이 있음」 토글이 보인다 (종전 V-3 차단으로 낼 이유가 없었다)", async ({
     page,
   }) => {
     test.setTimeout(90_000);
     await seedSep(page);
     await expandAssetSection(page, 3);
 
-    await expect(page.getByText("증축 있음").first()).toBeVisible();
+    await expect(page.getByText("증축한 부분이 있음").first()).toBeVisible();
   });
 
   test("X-5: 분리 ON + 증축이 계산까지 도달한다", async ({ page }) => {

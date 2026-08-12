@@ -473,7 +473,10 @@ export function GeneralBuildingBlock({
             게이트는 **여기가 진다**: 증축은 물건 사건이라 지분 카드에서 숨기고(설계 D1-3·D4),
             부담부증여는 §159 자동 산정이라 증축이 비스코프다. 안에 「양도시 건물2 기준시가」가
             있어 emerald 카드만 숨기는 것으로는 부족하다. */}
-        {!shareAcquisitionOnly && !isBurdenedGift && (
+        {/* 🔑 `gbHasExtension`이 렌더 게이트다 — 카드 자체에 스위치가 없으므로(2026-08-12
+            사용자 요청) 켜기 전에는 아예 뜨지 않는다. 켜는 곳은 `GeneralBuildingAcquisitionCards`
+            최상단의 「증축한 부분이 있음」 토글 하나뿐이다. */}
+        {asset.gbHasExtension && !shareAcquisitionOnly && !isBurdenedGift && (
           <GeneralBuildingExtensionSection
             asset={asset}
             onChange={onChange}
