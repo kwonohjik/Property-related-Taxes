@@ -100,7 +100,7 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
       {/* 3필드 1행 (3열, 라벨 상단 stacked) — 모바일은 1열. CB(`AssetAreaCommercial`)와 동일 배치. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
         <FieldCard
-          label={isPartial ? "양도분 토지 면적" : "취득·양도 당시 토지 면적"}
+          label={isPartial ? "양도분 토지 면적" : "토지 면적"}
           unit="㎡"
           stacked
         >

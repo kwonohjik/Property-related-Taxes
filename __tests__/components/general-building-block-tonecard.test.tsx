@@ -101,7 +101,7 @@ describe("AssetAreaGeneralBuilding — 이전된 면적 카드의 sky·noDark �
 
   it("환산 모드에서 면적 3필드가 모두 렌더된다", () => {
     const { getByText } = renderArea();
-    expect(getByText("취득·양도 당시 토지 면적")).toBeTruthy();
+    expect(getByText("토지 면적")).toBeTruthy();
     expect(getByText("건물 연면적")).toBeTruthy();
     expect(getByText("건축물 바닥면적")).toBeTruthy();
   });
@@ -121,7 +121,7 @@ describe("AssetAreaGeneralBuilding — 이전된 면적 카드의 sky·noDark �
         onChange={() => {}}
       />,
     );
-    expect(screen.getByText("취득·양도 당시 토지 면적")).toBeTruthy();
+    expect(screen.getByText("토지 면적")).toBeTruthy();
     expect(screen.getByText("건물 연면적")).toBeTruthy();
     expect(screen.getByText("건축물 바닥면적")).toBeTruthy();
   });

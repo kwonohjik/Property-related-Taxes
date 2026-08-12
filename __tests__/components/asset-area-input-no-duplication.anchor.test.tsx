@@ -153,7 +153,7 @@ describe("상가 면적 — ③ 취득정보에서 제거됨 (중복 0)", () => 
 
 /** 재개발 토지 면적 라벨 개수 */
 function redevAreaLabelCount() {
-  return screen.queryAllByText("취득·양도 당시 토지 면적 (㎡)").length;
+  return screen.queryAllByText("토지 면적 (㎡)").length;
 }
 
 function renderRedevBasic(over: Partial<AssetForm>) {

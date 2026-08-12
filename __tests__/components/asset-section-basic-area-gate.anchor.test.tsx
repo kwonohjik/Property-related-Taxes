@@ -66,9 +66,9 @@ describe("R-1 — assetKind별 면적 섹션 렌더 여부", () => {
     expect(screen.getByText(/취득·양도 당시 면적 \(㎡\)/)).toBeInTheDocument();
   });
 
-  it("R-5 housing: 라벨이 「취득·양도 당시 토지 면적」 (원칙 C — 대상어 명시)", () => {
+  it("R-5 housing: 라벨이 「토지 면적」 (2026-08-12 단축 — 원칙 C 예외)", () => {
     renderBasic("housing");
-    expect(screen.getByText(/취득·양도 당시 토지 면적 \(㎡\)/)).toBeInTheDocument();
+    expect(screen.getByText(/토지 면적 \(㎡\)/)).toBeInTheDocument();
   });
 
   /**
@@ -103,7 +103,7 @@ describe("R-1 — assetKind별 면적 섹션 렌더 여부", () => {
     renderBasic("building");
     expect(screen.getByTestId("area-scenario-select")).toBeInTheDocument();
     // 라벨은 「토지 면적」이다 — PR #912의 "건물 연면적" 오라벨링은 제거됐다
-    expect(screen.getByText(/취득·양도 당시 토지 면적 \(㎡\)/)).toBeInTheDocument();
+    expect(screen.getByText(/토지 면적 \(㎡\)/)).toBeInTheDocument();
     expect(screen.queryByText(/취득·양도 당시 건물 연면적 \(㎡\)/)).not.toBeInTheDocument();
   });
 

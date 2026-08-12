@@ -49,11 +49,11 @@ test.describe("건물 기준시가 모달 — 자산값 자동입력(prefill)", 
     await fillDateAndVerify(page, { year: "2010", month: "07", day: "12" }, { scope: acqDateScope });
 
     // ① 면적·규모: 토지 면적 78.1, 건물 연면적 100 (FieldCard 라벨로 스코프 — placeholder 기본값 중복 회피)
-    // 라벨은 taxonomy 원칙 C 표준형 "취득·양도 당시 토지 면적"(2026-07-30) — hint의 "토지면적"에
+    // 라벨 "토지 면적"(2026-08-12 단축 — 종전 "취득·양도 당시 토지 면적") — hint의 "토지면적"에
     // 우연히 매칭되던 종전 셀렉터("토지면적")를 라벨 본문으로 명시화.
     const card = page.locator('[data-asset-card-index="0"]');
     await card
-      .locator('[data-slot="field-card"]', { hasText: "취득·양도 당시 토지 면적" })
+      .locator('[data-slot="field-card"]', { hasText: "토지 면적" })
       .getByRole("textbox")
       .fill("78.1");
     await card
