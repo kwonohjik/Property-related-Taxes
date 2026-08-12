@@ -25,10 +25,19 @@
 import { describe, it, expect } from "vitest";
 import { calculateForeignStockTax } from "@/lib/tax-engine/stock-transfer/foreign-stock";
 import type { ForeignStockInput } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   foreignStockInputSchema,
   stockTransferInputSchema,
 } from "@/lib/api/stock-transfer-tax-schema";
+import { stockTransferAggregateInputSchema } from "@/lib/api/stock-transfer-tax-schema";
+
+/** 클라이언트 변환기 원문 — S-4 트립와이어가 `items` 전송 배선 유무를 본다. */
+const stockTransferApiSource = readFileSync(
+  resolve(process.cwd(), "lib/calc/stock-transfer-tax-api.ts"),
+  "utf8",
+);
 import { validateStep1Foreign } from "@/lib/calc/stock-transfer-tax-validate-foreign";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isBeforeForeignStockTrack } from "@/lib/tax-engine/data/foreign-stock-track-era";
@@ -343,29 +352,49 @@ describe("G — 2020-01-01 이전 양도는 두 계층 모두에서 차단된다
 });
 
 // ============================================================
-// S 시리즈 — 구조 트립와이어 (D-2·D-3이 왜 아직 열려 있는가)
+// S 시리즈 — 구조 트립와이어
 //
-// §103①2호(기본공제 공동 그룹)·§102①2호(통산)는 **법령상 실재하는 요구**지만
-// 이 앱에서는 **도달할 수 없다**. 2026-08-12 실측:
+// ## 🔴 2026-08-12 개정 — 종전 S-1이 **울려야 할 때 울리지 않았다**
 //
-//   ① `StockTransferInput.marketType`에 "foreign_stock"이 **없다**
-//      (`types/stock-transfer.types.ts:21`) ⇒ 다종목 `items`에 국외주식이 못 들어간다
-//   ② 클라이언트 변환기 `lib/calc/stock-transfer-tax-api.ts`는 `items`를 **한 번도 보내지 않는다**
-//      (grep 0건) ⇒ aggregate 경로에 UI 진입점이 없다
-//   ③ `marketType`이 **폼-전역** 단일 필드(`calc-wizard-stock-store.ts:77`)
-//      ⇒ 한 계산에 국내주식과 국외주식을 함께 담을 수 없다
-//   ④ §102② 통산은 **국내주식 경로에도 미구현**이다 (probe 실측:
-//      이익 10,000,000 + 손실 −5,000,000을 함께 넣어도 결정세액이 이익 단독과 동일한 1,500,000)
+// 종전 S-1은 「다종목 `items` 스키마는 국외주식을 받지 않는다」를
+// **`stockTransferInputSchema`**(국내 단건 스키마)로 단언했다. 그런데 `items`가 실제로 쓰는
+// 스키마는 `stockTransferAggregateInputSchema.items`이고, D-3에서 그것을
+// **`aggregateStockItemSchema`(국내 ∪ 국외) union**으로 넓혔는데도 S-1은 그대로 통과했다 —
+// 국내 단건 스키마는 여전히 국외를 거부하기 때문이다.
 //
-// ⇒ 단독 계산에서 250만원 1회는 §103①2호로도 **맞는 값**이라 현재 틀린 세액이 나오지 않는다.
-//    이 트립와이어는 위 전제가 깨지는 순간(다종목 UI·items 배선·marketType 확장) 실패해
-//    「기본공제 그룹 배분과 통산을 함께 처리하라」고 알리는 역할을 한다.
+// ⇒ **트립와이어가 다른 단계를 보고 있었다**([[feedback_anchor_observes_wrong_stage]]).
+//   전제가 뒤집혔는데 초록불이 유지되는 것이 가장 나쁜 실패다. 이제 **실제 `items` 스키마**를
+//   본다.
 //
-// 계획서 D-2·D-3 · Phase 3.
+// ## 남은 전제 (2026-08-12 실측)
+//
+// 엔진·API는 열렸지만 **클라이언트 경로는 아직 없다**:
+//   · `lib/calc/stock-transfer-tax-api.ts` — `items` grep **0건** (aggregate로 보내지 않는다)
+//   · `calc-wizard-stock-store.ts:77` — `marketType`이 **폼-전역** 단일 필드
+//   ⇒ 사용자는 아직 국외주식 2종목을 입력할 수 없다. Phase 5(다종목 UI)가 그것을 연다.
 // ============================================================
 
-describe("S — D-2·D-3 도달 불가 전제 (깨지면 Phase 3을 열어야 한다)", () => {
-  it("S-1 다종목 items 스키마는 국외주식을 받지 않는다", () => {
+describe("S — 다종목 경로 구조 (D-3 완료 후)", () => {
+  it("S-1 🆕 **실제** items 스키마(union)는 국외주식을 받는다 — D-3 완료", () => {
+    // `body()`는 국외주식 body다(marketType: "foreign_stock").
+    const parsed = stockTransferAggregateInputSchema.safeParse({
+      items: [body("2025-06-01"), body("2025-09-01")],
+      deductionMode: "aggregate",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("S-2 [음성 대조군] 알 수 없는 marketType은 거부된다 — union이 아무거나 받는 게 아니다", () => {
+    const parsed = stockTransferAggregateInputSchema.safeParse({
+      items: [{ ...body("2025-06-01"), marketType: "bogus_market" }],
+      deductionMode: "aggregate",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("S-3 국내 **단건** 스키마는 여전히 국외주식을 거부한다 — 경로가 섞이지 않았다", () => {
+    // 단건 `POST`는 `marketType === "foreign_stock"`이면 `handleForeignStock`으로 가야 한다.
+    // 국내 단건 스키마가 국외를 받기 시작하면 그 분기가 무의미해진다.
     const parsed = stockTransferInputSchema.safeParse({
       ...body("2025-06-01"),
       marketType: "foreign_stock",
@@ -373,17 +402,11 @@ describe("S — D-2·D-3 도달 불가 전제 (깨지면 Phase 3을 열어야 �
     expect(parsed.success).toBe(false);
   });
 
-  it("S-2 [양성 대조군] 같은 스키마가 국내 비상장은 받는다 — S-1이 다른 이유로 실패한 게 아니다", () => {
-    // marketType만 바꾼 것이 아니라 국내주식 필수 필드 집합이 다르므로,
-    // 「marketType 자체가 거부된다」는 것만 좁혀서 단언한다.
-    const parsed = stockTransferInputSchema.safeParse({
-      ...body("2025-06-01"),
-      marketType: "unlisted",
-    });
-    const marketTypeIssue = parsed.success
-      ? undefined
-      : parsed.error.issues.find((i) => i.path.join(".") === "marketType");
-    expect(marketTypeIssue).toBeUndefined();
+  it("S-4 [트립와이어] 클라이언트는 아직 `items`를 보내지 않는다 — Phase 5가 열면 여기가 깨진다", () => {
+    // 엔진·API가 열려도 입력 경로가 없으면 사용자에게는 아무 변화가 없다
+    // ([[feedback_api_trigger_without_input_path_is_noop]]).
+    // Phase 5에서 다종목 UI가 붙으면 이 단언을 **삭제**하고 실제 전송 anchor로 바꾼다.
+    expect(stockTransferApiSource).not.toContain("items:");
   });
 });
 

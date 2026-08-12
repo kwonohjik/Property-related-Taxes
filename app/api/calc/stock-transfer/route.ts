@@ -24,6 +24,7 @@ import {
 import { coerceDates } from "@/lib/api/date-coerce";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import type { AggregateStockItemInput } from "@/lib/tax-engine/stock-transfer/foreign-stock-aggregate-adapter";
 import type { ExitTaxInput, ExitTaxHolding } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import { exitTaxInputSchema } from "@/lib/api/stock-transfer-tax-schema";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
@@ -268,10 +269,13 @@ async function handleAggregate(body: unknown): Promise<NextResponse> {
 
   const { items: rawItems, deductionMode } = parsed.data;
 
-  // ⑭ 각 종목 Date 변환
-  const engineInputs: StockTransferInput[] = rawItems.map((item) => {
-    const coerced = coerceDates(item as Record<string, unknown>, [...STOCK_DATE_FIELDS]);
-    return buildEngineInput(coerced);
+  // ⑭ 각 종목 Date 변환 — 국내/국외를 **종목마다** 갈라 매핑한다.
+  //    `marketType`이 종목 축이라 한 배열에 국내주식과 국외주식이 섞일 수 있다
+  //    (§102①2호 통산·§103①2호 공동 기본공제가 그것을 요구한다).
+  const engineInputs: AggregateStockItemInput[] = rawItems.map((item) => {
+    const raw = item as Record<string, unknown>;
+    if (raw.marketType === "foreign_stock") return buildForeignEngineInput(raw);
+    return buildEngineInput(coerceDates(raw, [...STOCK_DATE_FIELDS]));
   });
 
   try {
@@ -310,8 +314,26 @@ async function handleForeignStock(body: unknown): Promise<NextResponse> {
     );
   }
 
+  const engineInput = buildForeignEngineInput(parsed.data as Record<string, unknown>);
+
+  try {
+    const result = calculateStockTransferTax(engineInput);
+    return NextResponse.json({ result }, { status: 200 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
+ * ⑭ 국외주식 Zod 출력 → 엔진 input 매핑 (Date 변환 포함).
+ *
+ * 🔑 **단건 `handleForeignStock`과 다종목 `handleAggregate`가 공유한다.** 이 매핑을 복제하면
+ *   두 경로의 ⑭가 갈라져, 한쪽에만 새 필드가 도달하는 침묵 stripping이 생긴다
+ *   ([[feedback_api_zod_schema_sync]]).
+ */
+function buildForeignEngineInput(rawInput: Record<string, unknown>): ForeignStockInput {
   // ⑭ Date 직렬화 변환 (string → Date)
-  const rawInput = parsed.data as Record<string, unknown>;
   const coerced = coerceDates(rawInput, [...FOREIGN_STOCK_DATE_FIELDS]);
 
   // ⑭ FS-09: transferInstallmentReceipts[] 내 receiptDate 개별 toDate() 변환
@@ -324,8 +346,7 @@ async function handleForeignStock(body: unknown): Promise<NextResponse> {
     exchangeRate: r.exchangeRate,
   }));
 
-  // ⑭ 엔진 input 매핑
-  const engineInput: ForeignStockInput = {
+  return {
     marketType: "foreign_stock",
 
     yearsResidentInKorea: coerced.yearsResidentInKorea as number,
@@ -363,14 +384,6 @@ async function handleForeignStock(body: unknown): Promise<NextResponse> {
 
     isElectronicFiling: coerced.isElectronicFiling as boolean,
   };
-
-  try {
-    const result = calculateStockTransferTax(engineInput);
-    return NextResponse.json({ result }, { status: 200 });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
 }
 
 // ============================================================

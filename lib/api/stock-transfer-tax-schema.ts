@@ -579,23 +579,11 @@ export function addStockRefines(
   });
 }
 
-/**
- * 다자산 합산 입력 스키마 — 종목별 배열
- *
- * 같은 연도 복수 종목 양도 시 합산신고:
- *   - §103② 기본공제 250만원은 그룹별 1회 한정
- *   - 각 종목 결과 개별 계산 후 합산
+/*
+ * 다자산 합산 입력 스키마(`stockTransferAggregateInputSchema`)는 **파일 하단**에 있다 —
+ * `items`가 `foreignStockInputSchema`를 union으로 참조하는데 그 스키마가 아래에서 정의되기
+ * 때문이다(const는 호이스팅되지 않는다).
  */
-export const stockTransferAggregateInputSchema = z.object({
-  /** 양도 종목 배열 (최소 1개, 최대 100 — 요청당 계산 비용 상한) */
-  items: stockTransferInputSchema.array().min(1).max(100),
-  /**
-   * 다자산 합산 시 §103② 기본공제 그룹별 한도 적용 방식
-   * - "each_item": 각 종목별 개별 공제 (단건과 동일 — 과다공제 가능)
-   * - "aggregate": 합산 후 그룹별 1회 공제 (법령 정합)
-   */
-  deductionMode: z.enum(["each_item", "aggregate"]).default("aggregate"),
-});
 
 // ============================================================
 // ⑫ PR-4A 해외주식 양도소득세 Zod 입력 스키마 (14지점 ⑨⑫)
@@ -760,6 +748,38 @@ export const foreignStockInputSchema = z.object({
         "(구 §118의2 3호 트랙 — 법률 제16834호 부칙 §1·§2②)",
     });
   }
+});
+
+// ============================================================
+// 다자산 합산 입력 스키마 — 종목별 배열 (국내주식 + 국외주식)
+//
+// 같은 과세기간에 복수 종목을 양도할 때의 합산신고:
+//   · §102①2호 — 국내·국외주식이 **같은 호**라 양도차손 통산 대상
+//   · §103①2호 — 기본공제 250만원 **공동 그룹** 연 1회
+//   · §103② — 먼저 양도한 자산부터 배분
+//   · §118의6①1호 — 국외 종목 외국납부세액 공제한도 A × B / C 안분
+//
+// ⚠️ **`marketType`으로 갈리는 discriminated union**이다. 국외주식은
+//    `marketType: "foreign_stock"`이고 필수 필드 집합이 국내와 완전히 다르다.
+//    ⇒ `z.union`이라 실패 메시지가 두 갈래로 나온다. 어느 쪽 스키마를 의도했는지는
+//      `marketType`을 보면 알 수 있다.
+// ============================================================
+
+/** 합산 대상 종목 1건 — 국내주식 또는 국외주식 */
+export const aggregateStockItemSchema = z.union([
+  foreignStockInputSchema,
+  stockTransferInputSchema,
+]);
+
+export const stockTransferAggregateInputSchema = z.object({
+  /** 양도 종목 배열 (최소 1개, 최대 100 — 요청당 계산 비용 상한) */
+  items: aggregateStockItemSchema.array().min(1).max(100),
+  /**
+   * 다자산 합산 시 §103① 기본공제 그룹별 한도 적용 방식
+   * - "each_item": 각 종목별 개별 공제 (단건과 동일 — 과다공제 가능)
+   * - "aggregate": 합산 후 그룹별 1회 공제 (법령 정합)
+   */
+  deductionMode: z.enum(["each_item", "aggregate"]).default("aggregate"),
 });
 
 // ============================================================

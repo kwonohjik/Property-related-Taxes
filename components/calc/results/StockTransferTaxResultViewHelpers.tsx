@@ -224,6 +224,7 @@ export function ProgressiveTaxBreakdown({ result }: { result: StockTransferResul
 // ── RuleBadges ──
 
 const RULE_BADGE: Record<string, string> = {
+  "국외주식§118②준용": "bg-sky-100 text-sky-700 border-sky-200",
   "§94②우선": "bg-rose-100 text-rose-700 border-rose-200",
   "80%하한": "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
   "80%하한미적용": "bg-fuchsia-50 text-fuchsia-600 border-fuchsia-200",
@@ -250,6 +251,7 @@ const RULE_BADGE_LAW_MAP: Record<
   NonNullable<StockTransferResult["appliedRules"]>[number],
   string
 > = {
+  "국외주식§118②준용": "소득세법 §118②1호",
   "§94②우선": "소득세법 §94②",
   "80%하한": "소득세법 시행령 §165④1",
   "80%하한미적용": "소득세법 시행령 §165④1",

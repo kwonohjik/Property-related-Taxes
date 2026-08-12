@@ -17,6 +17,8 @@ import {
   STOCK_NON_MAJOR_NON_SME_RATE,
   STOCK,
 } from "@/lib/tax-engine/legal-codes/stock";
+import { STOCK_FOREIGN_RATE } from "@/lib/tax-engine/legal-codes/stock";
+import { STOCK_FOREIGN } from "@/lib/tax-engine/legal-codes/stock";
 
 // ============================================================
 // 세율 적용 결과 타입
@@ -281,6 +283,25 @@ export function applyStockTaxRate(
         isShortTermRate: false,
       };
     }
+
+    // --------------------------------------------------------
+    // 국외주식 §94①3호다목 — §104①12호나목 **20% 단일세율**
+    // --------------------------------------------------------
+    //
+    // 🔒 **이 case를 지우면 아래 `default`가 세액 0을 반환해 조용히 세금이 사라진다**
+    //   (위 §104①9호 주석과 같은 함정). 다종목 aggregate가 국외주식을 이 함수로 보낸다.
+    //
+    // ⚠️ 보유기간 구분이 없다 — §104①11호가목1)의 「1년 미만 30%」는 **가·나목 전용**이라
+    //   다목에 오지 않는다. `isShortTermHolding`을 보지 않는 것이 맞다.
+    // ⚠️ 가목(중소기업의 주식등 10%)은 현재 도달 경로가 없다 — 서식 각주가 가리키는 10%는
+    //   「**우리나라 중소기업**이 해외 시장에 상장한 주식」인데 그 SME 입력이 아직 없다(별건).
+    case "foreign_stock":
+      return {
+        appliedRate: STOCK_FOREIGN_RATE,
+        calculatedTax: Math.floor(taxBase * STOCK_FOREIGN_RATE),
+        appliedRuleRef: STOCK_FOREIGN.SECTION_104_1_12_TAX_RATE,
+        isShortTermRate: false,
+      };
 
     // --------------------------------------------------------
     // 스코프 외 (외국법인 등) — validate에서 차단되어야 함
