@@ -354,32 +354,30 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
       {/* ① 건물 기본 */}
       <SectionCard num={1} title="건물 기본" tone="sky">
         <ReferenceSiteLinks sites={[REFERENCE_SITES.buildingRegister]} />
-        <FieldCard label="신축연도" hint="준공·사용승인 연도">
-          <DecimalInput value={f.builtYear} onChange={(v) => set("builtYear", v)} placeholder="신축연도 (4자리)" thousandSeparator={false} />
-        </FieldCard>
-        {showFloorArea && showLandArea ? (
-          <div className="grid grid-cols-2 gap-2">
-            <FieldCard label="건물 연면적" className="sm:grid-cols-[96px_1fr]">
+        {/* 신축연도 + 보이는 면적 칸을 한 행에 — 복합구조는 연면적이 숨어 2열이 된다. */}
+        <div
+          className={
+            showFloorArea && showLandArea
+              ? "grid grid-cols-1 sm:grid-cols-3 gap-2"
+              : showFloorArea || showLandArea
+                ? "grid grid-cols-1 sm:grid-cols-2 gap-2"
+                : "grid gap-2"
+          }
+        >
+          <FieldCard label="신축연도" hint="준공·사용승인 연도" className="sm:grid-cols-[88px_1fr]">
+            <DecimalInput value={f.builtYear} onChange={(v) => set("builtYear", v)} placeholder="신축연도 (4자리)" thousandSeparator={false} />
+          </FieldCard>
+          {showFloorArea && (
+            <FieldCard label="건물 연면적" className="sm:grid-cols-[88px_1fr]">
               <DecimalInput value={f.floorArea} onChange={(v) => set("floorArea", v)} unit="㎡" placeholder="건물 연면적" />
             </FieldCard>
-            <FieldCard label="토지 면적" className="sm:grid-cols-[96px_1fr]">
+          )}
+          {showLandArea && (
+            <FieldCard label="토지 면적" className="sm:grid-cols-[88px_1fr]">
               <DecimalInput value={f.landAreaM2} onChange={(v) => set("landAreaM2", v)} unit="㎡" placeholder="부속토지 면적" />
             </FieldCard>
-          </div>
-        ) : (
-          <>
-            {showFloorArea && (
-              <FieldCard label="건물 연면적">
-                <DecimalInput value={f.floorArea} onChange={(v) => set("floorArea", v)} unit="㎡" placeholder="건물 연면적" />
-              </FieldCard>
-            )}
-            {showLandArea && (
-              <FieldCard label="토지 면적">
-                <DecimalInput value={f.landAreaM2} onChange={(v) => set("landAreaM2", v)} unit="㎡" placeholder="부속토지 면적" />
-              </FieldCard>
-            )}
-          </>
-        )}
+          )}
+        </div>
         {showFloorAreaSourceNotice && (
           <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
             건물 연면적이 비어 있습니다 — ① 기본정보 「면적·규모」에서 입력하면 이 계산기에 자동 반영됩니다.

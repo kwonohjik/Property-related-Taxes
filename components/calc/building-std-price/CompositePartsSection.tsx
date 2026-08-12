@@ -141,29 +141,33 @@ export function CompositePartsSection({
               </button>
             )}
           </div>
-          <FieldCard label="부분 명칭" hint="예: 지상1, 지하1 점포(선택)">
-            <input
-              type="text"
-              value={p.label}
-              onChange={(e) => update(i, { label: e.target.value })}
-              placeholder="부분 명칭 (선택)"
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </FieldCard>
-          <FieldCard label="구조">
-            <BuildingStructureSelect year={year} value={p.structureKey} onChange={(v) => update(i, { structureKey: v })} />
-          </FieldCard>
-          <FieldCard label={forTransfer ? "양도시 용도" : "용도"}>
-            <BuildingUsageSelect year={year} value={p.usageNo} onChange={(v) => update(i, { usageNo: v })} />
-          </FieldCard>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <FieldCard label="부분 명칭" hint="예: 지상1, 지하1 점포(선택)" className="sm:grid-cols-[76px_1fr]">
+              <input
+                type="text"
+                value={p.label}
+                onChange={(e) => update(i, { label: e.target.value })}
+                placeholder="부분 명칭 (선택)"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </FieldCard>
+            <FieldCard label="면적" hint="해당 부분 연면적" className="sm:grid-cols-[76px_1fr]">
+              <DecimalInput value={p.floorArea} onChange={(v) => update(i, { floorArea: v })} unit="㎡" placeholder="부분 면적" />
+            </FieldCard>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <FieldCard label="구조" className="sm:grid-cols-[76px_1fr]">
+              <BuildingStructureSelect year={year} value={p.structureKey} onChange={(v) => update(i, { structureKey: v })} />
+            </FieldCard>
+            <FieldCard label={forTransfer ? "양도시 용도" : "용도"} className="sm:grid-cols-[76px_1fr]">
+              <BuildingUsageSelect year={year} value={p.usageNo} onChange={(v) => update(i, { usageNo: v })} />
+            </FieldCard>
+          </div>
           {forTransfer && (
             <FieldCard label="취득시 용도" hint="연도별 용도체계 상이 — 취득시점 기준 선택">
               <BuildingUsageSelect year={acqYear} value={p.acqUsageNo} onChange={(v) => update(i, { acqUsageNo: v })} />
             </FieldCard>
           )}
-          <FieldCard label="면적" hint="해당 부분 연면적">
-            <DecimalInput value={p.floorArea} onChange={(v) => update(i, { floorArea: v })} unit="㎡" placeholder="부분 면적" />
-          </FieldCard>
           {!forTransfer && (
             <>
               <FieldCard label="부분 조정률">
@@ -240,7 +244,12 @@ export function CompositePartsSection({
         </div>
       ))}
 
-      <Button variant="outline" size="sm" onClick={add} className="w-full">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={add}
+        className="w-full border-violet-300 bg-violet-100 font-semibold text-violet-800 hover:bg-violet-200 hover:text-violet-900"
+      >
         + 부분 추가
       </Button>
 

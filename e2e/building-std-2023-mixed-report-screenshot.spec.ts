@@ -48,6 +48,8 @@ test("마.주거+상업 복합 — 계산서 양식 보고서 스크린샷(200,5
   await selectOption(page, "용도 선택", /^41\./);
   await page.getByPlaceholder("부분 명칭 (선택)").fill("지상1(슈퍼)");
   await page.getByPlaceholder("부분 면적").fill("100");
+  // 부분 조정률 기본값이 「특성으로 계산」(2026-08-12)이라 번호 칸은 라디오 전환 후 열린다.
+  await page.getByRole("radio", { name: "직접 입력(%·번호)" }).nth(0).check();
   await page.getByPlaceholder("조정률 번호 (선택)", { exact: true }).fill("9,20");
   await page.getByPlaceholder("공용 조정률 번호 (선택)", { exact: true }).fill("9,24");
 

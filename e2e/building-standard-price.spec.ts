@@ -125,6 +125,8 @@ test("복합구조 + 공용시설 안분 — 합계 187,640,000", async ({ page 
   await selectOption(page, "구조 선택", /철근콘크리트조/);
   await selectOption(page, "용도 선택", /^41\./);
   await page.getByPlaceholder("부분 면적").fill("100");
+  // 부분 조정률 기본값이 「특성으로 계산」(2026-08-12)이라 %·번호 칸은 라디오 전환 후 열린다.
+  await page.getByRole("radio", { name: "직접 입력(%·번호)" }).nth(0).check();
   await page.getByPlaceholder("100").nth(0).fill("108"); // 조정률%
   await page.getByPlaceholder("100").nth(1).fill("54"); // 공용 조정률%
 
@@ -133,6 +135,7 @@ test("복합구조 + 공용시설 안분 — 합계 187,640,000", async ({ page 
   await selectOption(page, "구조 선택", /철근콘크리트조/);
   await selectOption(page, "용도 선택", /^2\./);
   await page.getByPlaceholder("부분 면적").nth(1).fill("200");
+  await page.getByRole("radio", { name: "직접 입력(%·번호)" }).nth(1).check();
   await page.getByPlaceholder("100").nth(2).fill("100"); // 부분2 조정률%
   await page.getByPlaceholder("100").nth(3).fill("60"); // 부분2 공용 조정률%
 
@@ -277,6 +280,8 @@ test("계산서 서식 — 상속 복합 작성례(3) ⑪ 200,540,000", async ({
   await selectOption(page, "구조 선택", /철근콘크리트조/);
   await selectOption(page, "용도 선택", /^41\./);
   await page.getByPlaceholder("부분 면적").fill("100");
+  // 부분 조정률 기본값이 「특성으로 계산」(2026-08-12)이라 번호 칸은 라디오 전환 후 열린다.
+  await page.getByRole("radio", { name: "직접 입력(%·번호)" }).nth(0).check();
   await page.getByPlaceholder("조정률 번호 (선택)", { exact: true }).fill("9,20");
   await page.getByPlaceholder("공용 조정률 번호 (선택)", { exact: true }).fill("9,24");
 

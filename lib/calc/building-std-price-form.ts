@@ -196,7 +196,10 @@ export function emptyCompositePart(): CompositePartForm {
     adjustmentNos: "",
     sharedAdjustmentRate: "",
     sharedAdjustmentNos: "",
-    adjustmentMode: "manual",
+    // 신규 부분은 「특성으로 계산」이 기본(2026-08-12 사용자 요청).
+    // 계산 결과는 종전과 동일하다 — 특성·수동 어느 쪽도 값이 비면 parseNos("")·pickFeatures(null)이
+    // 모두 undefined라 `resolvePartAdjustment`의 (2) 특성 분기로 흘러 건물 전체 특성만 적용된다.
+    adjustmentMode: "features",
     specialFeatures: null,
   };
 }

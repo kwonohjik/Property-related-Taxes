@@ -22,8 +22,19 @@ const form = (o: Partial<BuildingStdPriceFormState>): BuildingStdPriceFormState 
   ...o,
 });
 
-/** 복합 부분 fixture — 신규 필드(acqUsageNo·조정률 번호) 기본값 채움 */
-const cp = (o: Partial<CompositePartForm>): CompositePartForm => ({ ...emptyCompositePart(), ...o });
+/**
+ * 복합 부분 fixture — 신규 필드(acqUsageNo·조정률 번호) 기본값 채움.
+ *
+ * `adjustmentMode`를 명시하는 이유: 아래 anchor는 전부 조정률을 **직접 입력**(%·번호)하는
+ * 시나리오다. 폼 기본값이 `features`로 바뀌면(2026-08-12) `toCompositePart`가 수동 필드를
+ * 엔진에 전달하지 않아 조정률이 통째로 빠진다 — 시나리오가 기본값에 의존하지 않도록 고정한다.
+ * (`features` 시나리오는 호출부에서 `...o`로 덮어쓰면 된다.)
+ */
+const cp = (o: Partial<CompositePartForm>): CompositePartForm => ({
+  ...emptyCompositePart(),
+  adjustmentMode: "manual",
+  ...o,
+});
 
 describe("building-std-price 폼 변환 (④) — 엔진 anchor 연동", () => {
   it("BSP-01 상증 폼 → 224,600,000 (엔진 anchor 일치)", () => {
