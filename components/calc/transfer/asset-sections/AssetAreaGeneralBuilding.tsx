@@ -110,7 +110,26 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
           />
         </FieldCard>
 
-        <FieldCard label={isPartial ? "양도분 건물 연면적" : "건물 연면적"} unit="㎡" stacked>
+        {/* 🔤 증축이 있으면 이 값은 **양도 당시 = 원건물 + 증축분 합계**다.
+            건물기준시가 계산에 쓰이는 것은 원건물분이므로, 그 면적은 ③ 취득정보의
+            「당초 취득 시 원건물 연면적」이 따로 받는다(2026-08-12 사용자 지적).
+            여기 값은 엔진 계산에 들어가지 않는다 — `calc-wizard-asset-gb.ts` 주석 참조. */}
+        <FieldCard
+          label={
+            isPartial
+              ? "양도분 건물 연면적"
+              : asset.gbHasExtension
+                ? "건물 연면적 (양도 당시)"
+                : "건물 연면적"
+          }
+          unit="㎡"
+          stacked
+          hint={
+            asset.gbHasExtension
+              ? "증축분을 포함한 양도 당시 전체 연면적. 원건물만의 연면적은 ③ 취득정보에서 따로 입력합니다."
+              : undefined
+          }
+        >
           <DecimalInput
             value={asset.gbBuildingArea}
             onChange={(v) => onChange({ gbBuildingArea: v })}

@@ -622,6 +622,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.gbAcqBuildingValue === undefined) a.gbAcqBuildingValue = "";
   if (a.gbLandArea === undefined) a.gbLandArea = "";
   if (a.gbBuildingArea === undefined) a.gbBuildingArea = "";
+  /* 신설(2026-08-12) — 기존 폼에는 없다. 빈 값이면 계산기가 `gbBuildingArea`로 fallback하므로
+     legacy 자산의 동작은 종전과 같다(증축이 있으면 전체 연면적으로 계산되던 것 그대로). */
+  if (a.gbOriginalBuildingArea === undefined) a.gbOriginalBuildingArea = "";
   // legacy: gbBuildingFloors → gbBuildingFootprintArea 흡수 (균등층 가정 변환, 2026-05-09)
   const legacyFloorsRaw = (a as Record<string, unknown>).gbBuildingFloors;
   const legacyFloors = typeof legacyFloorsRaw === "string" ? parseInt(legacyFloorsRaw, 10) : 0;

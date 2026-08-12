@@ -40,6 +40,9 @@ const GB_PROPERTY_LEVEL_FORM_FIELDS = [
   // 면적
   "gbLandArea",
   "gbBuildingArea",
+  /* 원건물 연면적 — 물건 사건이라 첫 카드가 전담한다(증축과 같은 축). payload 키는 없다:
+     엔진에 가지 않고 건물1 기준시가 계산기 prefill로만 쓰인다. */
+  "gbOriginalBuildingArea",
   "gbBuildingFootprintArea",
   // 양도시 기준시가
   "gbTransferLandPricePerSqm",
