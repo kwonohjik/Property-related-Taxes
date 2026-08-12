@@ -27,6 +27,7 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -80,17 +81,7 @@ const CB_ERA_OPTIONS = [
 
 export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props) {
   // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(이중입력 방지)
-  const stdPriceAddress = {
-    road: asset.addressRoad,
-    jibun: asset.addressJibun,
-    building: asset.buildingName,
-    detail: asset.addressDetail,
-    lng: asset.longitude,
-    lat: asset.latitude,
-    pnu: asset.addressPnu,
-    dong: asset.addressDong || undefined,
-    ho: asset.addressHo || undefined,
-  };
+  const stdPriceAddress = stdPriceAddressOf(asset);
   const isOn = asset.useEstimatedAcquisition && asset.assetKind === "commercial_building";
   // 취득일에서 자동 판정(2005-01-01 경계) — 사용자가 라디오를 직접 고르면 그 값이 우선한다.
   // API 변환·validate도 같은 `resolveCbEra`를 쓴다(3중 패턴 — dual-truth 방지).

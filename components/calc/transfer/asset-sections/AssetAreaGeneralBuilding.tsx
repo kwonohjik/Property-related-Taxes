@@ -105,6 +105,7 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
           stacked
         >
           <DecimalInput
+            data-testid="gb-land-area"
             value={asset.gbLandArea}
             onChange={(v) => onChange({ gbLandArea: v })}
           />
@@ -131,6 +132,7 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
           }
         >
           <DecimalInput
+            data-testid="gb-building-area"
             value={asset.gbBuildingArea}
             onChange={(v) => onChange({ gbBuildingArea: v })}
           />
@@ -138,6 +140,7 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
 
         <FieldCard label="건축물 바닥면적" unit="㎡" stacked>
           <DecimalInput
+            data-testid="gb-footprint-area"
             value={asset.gbBuildingFootprintArea}
             onChange={(v) => onChange({ gbBuildingFootprintArea: v })}
           />

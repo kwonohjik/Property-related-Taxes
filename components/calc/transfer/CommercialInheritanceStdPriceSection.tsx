@@ -36,6 +36,7 @@ import {
 } from "@/lib/calc/transfer-163-9-base-date";
 import { sec164CommercialStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 
 interface Props {
   asset: AssetForm;
@@ -69,17 +70,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
   const shared = parseFloat(asset.cbSharedArea || "0") || 0;
   const totalFloorArea = exclusive + shared > 0 ? parseFloat((exclusive + shared).toFixed(2)) : null;
   // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(CommercialBuildingBlock와 동일 AddressValue).
-  const stdPriceAddress = {
-    road: asset.addressRoad,
-    jibun: asset.addressJibun,
-    building: asset.buildingName,
-    detail: asset.addressDetail,
-    lng: asset.longitude,
-    lat: asset.latitude,
-    pnu: asset.addressPnu,
-    dong: asset.addressDong || undefined,
-    ho: asset.addressHo || undefined,
-  };
+  const stdPriceAddress = stdPriceAddressOf(asset);
 
   return (
     <ToneCard tone="amber" title="§164⑥ 취득당시 기준시가 (선택 — 상증법 평가액과 큰 금액 적용)" noDark>

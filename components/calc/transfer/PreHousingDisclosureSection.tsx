@@ -16,6 +16,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ThreePointStandardPriceInput } from "./ThreePointStandardPriceInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 
 // ─── Props ────────────────────────────────────────────────────────
@@ -69,17 +70,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
   const housePropertyKind = housingType === "apartment" ? "house_apart" : "house_individual";
 
   // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
-  const stdPriceAddress = {
-    road: asset.addressRoad,
-    jibun: asset.addressJibun,
-    building: asset.buildingName,
-    detail: asset.addressDetail,
-    lng: asset.longitude,
-    lat: asset.latitude,
-    pnu: asset.addressPnu,
-    dong: asset.addressDong || undefined,
-    ho: asset.addressHo || undefined,
-  };
+  const stdPriceAddress = stdPriceAddressOf(asset);
 
   return (
     <div className="space-y-4 rounded-md border border-primary/30 bg-primary/5 p-4">
