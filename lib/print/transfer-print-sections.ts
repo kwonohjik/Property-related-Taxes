@@ -36,6 +36,7 @@ export type TransferPrintSectionId =
   | "calculation"
   | "phd"
   | "split-detail"
+  | "gift-filing-form"
   | "building-std-report";
 
 /** 양도세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
@@ -63,6 +64,10 @@ export const TRANSFER_PRINT_SECTIONS: TransferPrintSectionGroup[] = [
       { id: "calculation", label: "핵심 결과·계산 내역", channel: SCREEN_PDF },
       { id: "phd", label: "개별주택가격 미공시 환산", channel: SCREEN },
       { id: "split-detail", label: "토지/건물 분리 양도차익", channel: SCREEN },
+      // 부담부증여 무상이전분의 증여세 신고서. 화면 순서(기준시가 계산서 바로 위)와 트리 순서를 맞춘다.
+      // channel이 SCREEN인 이유: PDF 페이지 컴포넌트(FilingForm10PdfPage)는 이미 있으나
+      // 양도세 PDF 파이프라인(ResultPdfDocument)에 배선하는 것은 별건이다(계획서 §9).
+      { id: "gift-filing-form", label: "증여세 신고서 양식 (별지 제10호)", channel: SCREEN },
       { id: "building-std-report", label: "건물 기준시가 계산서", channel: SCREEN_PDF },
     ],
   },

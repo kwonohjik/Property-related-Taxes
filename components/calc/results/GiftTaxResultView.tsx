@@ -307,7 +307,11 @@ export function GiftTaxResultView({
       {/* Phase B: 신고서 양식 표 (12행 / 18행) */}
       {hasFilingFormTable && (
         <PrintSection id="filing-form-10" selectedIds={selectedPrintIds}>
-          <GiftTaxFilingFormTable result={result} testIdPrefix="besshi10-0-" />
+          <GiftTaxFilingFormTable
+            rows={result.besshi10Rows}
+            warnings={result.warnings}
+            testIdPrefix="besshi10-0-"
+          />
         </PrintSection>
       )}
 
@@ -336,7 +340,11 @@ export function GiftTaxResultView({
                     </span>
                   )}
                 </div>
-                <GiftTaxFilingFormTable result={sr} testIdPrefix={`besshi10-${i + 1}-`} />
+                <GiftTaxFilingFormTable
+                  rows={sr.besshi10Rows}
+                  warnings={sr.warnings}
+                  testIdPrefix={`besshi10-${i + 1}-`}
+                />
               </div>
             ))}
           </div>

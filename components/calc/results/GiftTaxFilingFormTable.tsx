@@ -12,18 +12,25 @@
  */
 
 import { useState } from "react";
-import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { FilingFormRow } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { BesshiColumn } from "@/components/calc/results/shared/BesshiRow";
 
+/**
+ * ⚠️ props는 `GiftTaxResult` 전체가 아니라 **실제로 읽는 두 가지**만 받는다.
+ * 같은 서식의 PDF 페이지(`FilingForm10PdfPage`)가 이미 `rows`만 받으므로 시그니처가 통일된다.
+ * 덕분에 `GiftTaxResult`를 갖지 않는 호출부(부담부증여 양도세 결과탭 —
+ * `breakdown.giftTax.besshi10Rows`만 보유)도 같은 컴포넌트를 쓸 수 있다.
+ */
 interface Props {
-  result: GiftTaxResult;
+  rows: FilingFormRow[] | undefined;
+  /** 결과 하단 안내(화면 전용 — 인쇄 시 숨김). 없으면 미표시 */
+  warnings?: string[];
   /** BesshiRow data-testid prefix — E2E 셀렉터용. 예: "besshi10-0-" → tr[data-testid="besshi10-0-④"] */
   testIdPrefix?: string;
 }
 
-export function GiftTaxFilingFormTable({ result, testIdPrefix }: Props) {
+export function GiftTaxFilingFormTable({ rows, warnings, testIdPrefix }: Props) {
   const [showLaw, setShowLaw] = useState(false);
-  const rows = result.besshi10Rows;
 
   if (!rows || rows.length === 0) return null;
 
@@ -53,13 +60,13 @@ export function GiftTaxFilingFormTable({ result, testIdPrefix }: Props) {
         <BesshiColumn rows={rightRows} showLaw={showLaw} testIdPrefix={testIdPrefix} />
       </div>
 
-      {result.warnings.length > 0 && (
+      {warnings && warnings.length > 0 && (
         <div className="rounded-md bg-rose-50/70 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 p-3 print:hidden">
           <p className="text-xs font-semibold text-rose-700 dark:text-rose-300 mb-1">
             안내 사항
           </p>
           <ul className="text-xs text-rose-600 dark:text-rose-400 space-y-1 list-disc list-inside">
-            {result.warnings.map((w, i) => (
+            {warnings.map((w, i) => (
               <li key={i}>{w}</li>
             ))}
           </ul>
