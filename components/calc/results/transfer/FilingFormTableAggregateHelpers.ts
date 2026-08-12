@@ -122,6 +122,14 @@ export function buildAggregateRows(
     // 다건 multi: 자산별 양도일 (bundled는 propertyFormMap 미주입 → 단일 transferDate 폴백)
     const colTransferDate = aggregate.propertyFormMap?.get(col)?.transferDate ?? transferDate;
     const a = findAssetByPropertyId(col);
+    /**
+     * 이 열이 **일반건물 일괄이 엔진 내부에서 쪼갠 파트**인가(토지·건물1·건물2).
+     * 다건 양도의 「자산」과 달리 독립 신고 단위가 아니라 한 자산의 계산 파트다 —
+     * 아래 세액 행에서 이 구별이 필요하다(`findAssetByPropertyId`와 같은 판정).
+     */
+    const isGbPartColumn =
+      formData?.assets[0]?.assetKind === "general_building" &&
+      GB_CARD_BASE_IDS.has(baseCardId(col));
     // GB 카드별 정확한 취득일(원건물=건물취득일·증축건물=증축일·토지=토지취득일).
     // 일반 자산은 asset.acquisitionDate 그대로.
     const acqDate = getAcqDateForCard(a, col);
@@ -201,14 +209,35 @@ export function buildAggregateRows(
     setNum("basicDeduction", col, null);
     setNum("taxBase", col, null);
 
-    // 자산별 세액 (참고)
-    setNum("calculatedTax", col, p.refCalculatedTax);
-    // 감면세액 ≤ 산출세액, «산출 − 감면 = 결정» 자기일관 (reductionAggregated 미cap 표시 정정).
-    setNum("reductionTax", col, Math.max(0, p.refCalculatedTax - p.refDeterminedTax));
-    setNum("determinedTax", col, p.refDeterminedTax);
+    /**
+     * 자산별 세액 (참고) — **일반건물이 엔진 내부에서 쪼갠 파트 열에는 싣지 않는다**
+     * (2026-08-12 사용자 지적).
+     *
+     * `refCalculatedTax`는 「자산 단독 참고값」이고 `Σ ref ≠ 합계`는 비교과세의 본질이라
+     * 설계상 의도된 것이다(`transfer-tax-aggregate-helpers.ts` — ❌역안분 재제안 금지).
+     * 다건 양도에서는 그 값이 **예정신고 단위**라 의미가 있으므로 그대로 둔다.
+     *
+     * 그러나 GB 일괄(토지·건물1·건물2)은 **한 자산이 쪼개진 계산 파트**다. 바로 위
+     * 과세표준·기본공제가 이미 합산-only(자산 셀 `-`)인데 그 아래 세액만 파트별로 뜨면
+     * **과세표준 없이 유도된 값**이 나란히 서고, 누진 합산이라 합도 맞지 않는다
+     * (실측: 5,810,841 + 0 + 132,315 = 5,943,156 ≠ 합계 6,340,103).
+     * ⇒ 산출세액부터는 합계만 표시한다.
+     */
     const assetPenalty = (p.penaltyTax ?? 0) + (p.filingDelayedPenaltyTax ?? 0);
-    setNum("penaltyTax", col, assetPenalty);
-    setNum("totalDeterminedTax", col, p.refDeterminedTax + assetPenalty);
+    if (isGbPartColumn) {
+      setNum("calculatedTax", col, null);
+      setNum("reductionTax", col, null);
+      setNum("determinedTax", col, null);
+      setNum("penaltyTax", col, null);
+      setNum("totalDeterminedTax", col, null);
+    } else {
+      setNum("calculatedTax", col, p.refCalculatedTax);
+      // 감면세액 ≤ 산출세액, «산출 − 감면 = 결정» 자기일관 (reductionAggregated 미cap 표시 정정).
+      setNum("reductionTax", col, Math.max(0, p.refCalculatedTax - p.refDeterminedTax));
+      setNum("determinedTax", col, p.refDeterminedTax);
+      setNum("penaltyTax", col, assetPenalty);
+      setNum("totalDeterminedTax", col, p.refDeterminedTax + assetPenalty);
+    }
 
     // shortTermNote — 부수토지 일체과세 등 특수 세율 주석. 자산 열에 개별 저장.
     if (p.shortTermNote) {

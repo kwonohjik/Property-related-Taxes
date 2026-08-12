@@ -124,6 +124,12 @@ interface ShareCards {
   landStdAtAcq: number | null;
   buildingStdAtTransfer: number;
   buildingStdAtAcq: number | null;
+  /**
+   * 증축분(건물2) 기준시가 — 증축이 없으면 0.
+   * 표시용 안분 표에서 건물2 행이 건물1 값을 쓰지 않게 한다(2026-08-12 · 단건 경로와 같은 축).
+   */
+  extensionStdAtTransfer: number;
+  extensionStdAtAcq: number;
   usedEstimated: boolean;
   legalBasis: string;
 }
@@ -143,6 +149,12 @@ function buildShareCards(
   const landArea = (gbv.landArea as number) ?? 0;
   const landStdAtTransfer = ((gbv.transferLandPricePerSqm as number) ?? 0) * landArea;
   const buildingStdAtTransfer = (gbv.transferBuildingStdPrice as number) ?? 0;
+  /* 증축분(건물2) — 두 분기 공통. 엔진 §166⑥ 분모와 같은 구성으로 표시 분모를 맞춘다. */
+  const ext = gbv.extensionInfo as
+    | { transferExtensionBuildingStdPrice?: number; acquisitionExtensionBuildingStdPrice?: number }
+    | undefined;
+  const extensionStdAtTransfer = ext?.transferExtensionBuildingStdPrice ?? 0;
+  const extensionStdAtAcq = ext?.acquisitionExtensionBuildingStdPrice ?? 0;
 
   if (gbv.actualPriceMode === true) {
     const built = buildActualGeneralBuildingCards({
@@ -157,11 +169,13 @@ function buildShareCards(
       cards: built.cards,
       nonBusinessRatio: built.nonBusinessRatio,
       detailBase: { ...built.nblDetail, nonBusinessRatio: built.nonBusinessRatio },
-      totalStd: built.totalStd,
+      totalStd: built.totalStd + extensionStdAtTransfer,
       landStdAtTransfer: built.landStdAtTransfer,
       landStdAtAcq: null,
       buildingStdAtTransfer: built.transferBuildingStdPrice,
       buildingStdAtAcq: null,
+      extensionStdAtTransfer,
+      extensionStdAtAcq,
       usedEstimated: false,
       legalBasis: "소득세법 시행령 §166⑥ · §104의3",
     };
@@ -185,11 +199,13 @@ function buildShareCards(
     // 환산 경로는 `gbOut` 자체가 완전한 `GeneralBuildingOutput`이다.
     detailBase: gbOut as unknown as Record<string, unknown>,
     swap,
-    totalStd: landStdAtTransfer + buildingStdAtTransfer,
+    totalStd: landStdAtTransfer + buildingStdAtTransfer + extensionStdAtTransfer,
     landStdAtTransfer,
     landStdAtAcq: acqLandPerSqm * landArea,
     buildingStdAtTransfer,
     buildingStdAtAcq: (gbv.acquisitionBuildingStdPrice as number) ?? 0,
+    extensionStdAtTransfer,
+    extensionStdAtAcq,
     usedEstimated: true,
     legalBasis: "소득세법 시행령 §166⑥ · §176의2② · §163⑥",
   };
@@ -293,6 +309,8 @@ export function calculateGeneralBuildingFractional(
       built.usedEstimated,
       built.legalBasis,
       swap,
+      built.extensionStdAtTransfer,
+      built.extensionStdAtAcq,
     );
     allApportioned.push(...ap.apportioned);
     totalStandardAtTransfer += ap.totalStandardAtTransfer;

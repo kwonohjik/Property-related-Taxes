@@ -201,6 +201,19 @@ export function buildApportionment(
   /** §97②2호 단서 swap(안 A) — 발동 자산은 사이드바 표시도 취득가액0·필요경비=배분나목으로 반영
    *  (엔진 buildProperties와 동일). 미전달 시 swap 미반영(실가 경로 등). */
   swap?: GeneralBuildingSwapDecision,
+  /**
+   * 증축분(건물2) 기준시가 — **증축 케이스에서만** 전달한다.
+   *
+   * 🔴 미전달이면 건물2 카드가 건물1 값을 그대로 쓴다(2026-08-12 사용자 지적 전까지의 동작).
+   *    카드 분류가 `propertyType === "land"` **2분류**뿐이라 건물1·건물2가 같은 슬롯에
+   *    떨어졌기 때문이다 — 화면에 증축건물(3002) 기준시가가 건물(3001)과 같은 값으로 뜨고,
+   *    호출부의 `totalStd`에도 증축분이 빠져 **비율 합이 100%를 넘었다**(실측 102.29%).
+   *
+   * ⚠️ 세액에는 영향이 없다 — `allocatedSalePrice`는 엔진 카드(`card.transferPrice`)를
+   *    그대로 싣고, 그 값은 §166⑥ 3-way 안분으로 이미 정확히 계산돼 있다. 표시 전용 결함이다.
+   */
+  extensionStdAtTransfer?: number,
+  extensionStdAtAcq?: number,
 ): BundledLikeApportionmentResult {
   return {
     apportioned: cards.map((card) => {
@@ -209,10 +222,20 @@ export function buildApportionment(
       const landRatio = nonBusinessRatio > 0 && isLandCard
         ? (baseCardId(card.propertyId) === "land_business" ? (1 - nonBusinessRatio) : nonBusinessRatio)
         : 1;
-      const stdAtTransfer = isLandCard ? landStdAtTransfer * landRatio : buildingStdAtTransfer;
+      /* 증축분(건물2)은 건물1과 **다른 기준시가**를 쓴다 — 종전에는 `isLandCard` 2분류라
+         둘이 같은 슬롯에 떨어졌다(위 `extensionStdAtTransfer` 주석). 지분 분할 카드는
+         `building2#0` 꼴이라 접미사를 벗기고 비교한다(`land_business`와 같은 규칙). */
+      const isExtensionCard = baseCardId(card.propertyId) === "building2";
+      const stdAtTransfer = isLandCard
+        ? landStdAtTransfer * landRatio
+        : isExtensionCard
+          ? (extensionStdAtTransfer ?? 0)
+          : buildingStdAtTransfer;
       const stdAtAcq = isLandCard
         ? (landStdAtAcq !== null ? landStdAtAcq * landRatio : 0)
-        : (buildingStdAtAcq !== null ? buildingStdAtAcq : 0);
+        : isExtensionCard
+          ? (extensionStdAtAcq ?? 0)
+          : (buildingStdAtAcq !== null ? buildingStdAtAcq : 0);
       // swap 발동 카드: 환산취득가 미차감(0)·필요경비=배분나목 (엔진 buildProperties:118-126 정합).
       const swapNabok = swap?.allocation.get(card.propertyId);
       const isSwapCard = swapNabok !== undefined;

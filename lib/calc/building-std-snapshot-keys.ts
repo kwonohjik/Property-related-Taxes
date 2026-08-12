@@ -20,7 +20,10 @@ export function idOfSnapshotKey(key: string): string {
         // ⚠️ 접두는 **전수 열거**한다 — 누락되면 id가 잘리지 않아 inputData 매칭이 실패하고
         //    그 자산의 계산서가 **조용히 미출력**된다(2026-07-29 실측: split·cbinh 3종이 그 상태였다).
         //    긴 접두(cbinh)를 짧은 것(cb)보다 앞에 둔다. 신규 키 규약 추가 시 여기도 함께 갱신할 것.
-        .replace(/-(?:gb|cbinh|cb|phd|split)-(?:acq|first|transfer)(?:-commercial)?$/, "")
+        // 🪤 `gb-ext`(증축분 건물2)는 **`gb`보다 앞**이어야 한다 — 짧은 것이 먼저 매칭되면
+        //    `-gb-ext-acq`가 통째로 걸리지 않아 id가 `{assetId}-gb-ext`로 잘못 환원되고,
+        //    inputData 매칭이 실패해 **증축분 계산서가 조용히 미출력**된다(2026-08-12 실측).
+        .replace(/-(?:gb-ext|gb|cbinh|cb|phd|split)-(?:acq|first|transfer)(?:-commercial)?$/, "")
         .replace(/-mx-commercial$/, "")
         // 별개취득 건물분 취득·양도 **통합 모달**(2026-07-30) — 한 폼에서 2시점을 계산하므로
         // 시점 세그먼트가 없다(mx-commercial과 같은 구조). 시점 필터도 적용하지 않는다.
@@ -46,9 +49,24 @@ export function snapshotKeyTimepoint(key: string): "acquisition" | "transfer" | 
   //    `-commercial`이 빠져 있어, PHD 3시점 개별 모달·겸용 상가 양도시 모달이 저장한 키가
   //    필터를 통과하지 못했다 → `singleTimePoint` 플래그 이전에 저장된 스냅샷(이력 복원분)에서
   //    **양도시 계산서에 취득당시 인스턴스가 덤으로 실린다**(2026-08-11 실측).
-  if (/-(?:phd|gb|cbinh|cb|split)-acq(?:-commercial)?$/.test(key)) return "acquisition";
-  if (/-(?:phd|gb|cbinh|cb|split)-transfer(?:-commercial)?$/.test(key)) return "transfer";
+  // `gb-ext`는 `gb`보다 앞 — `idOfSnapshotKey`와 **같은 접두 집합**이어야 한다(위 주석).
+  if (/-(?:phd|gb-ext|gb|cbinh|cb|split)-acq(?:-commercial)?$/.test(key)) return "acquisition";
+  if (/-(?:phd|gb-ext|gb|cbinh|cb|split)-transfer(?:-commercial)?$/.test(key)) return "transfer";
   return null;
+}
+
+/**
+ * 증축분(건물2) 계산서인가 — 제목에 「증축분」을 붙이고 취득 시점을 「증축시」로 바꾼다.
+ *
+ * 원건물 계산서와 **같은 자산·같은 2시점**이라 구별 표기가 없으면 「양도시」 계산서가 두 장
+ * 나란히 떠서 어느 쪽이 건물1인지 알 수 없다. 증축분의 취득 시점은 원건물 취득일이 아니라
+ * **증축일**(「소득세법 시행령」 제162조 제1항 제4호)이므로 시점 이름도 다르다.
+ *
+ * ⚠️ 화면(`BuildingStdPriceReportSection`)과 PDF(`building-std-pdf-data`)가 **함께** 쓴다 —
+ *    한쪽만 고치면 같은 계산의 화면과 PDF가 어긋난다(이 파일의 단일 출처 규약).
+ */
+export function isExtensionSnapshotKey(key: string): boolean {
+  return /-gb-ext-(?:acq|transfer)$/.test(key);
 }
 
 /**

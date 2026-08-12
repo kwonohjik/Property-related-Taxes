@@ -271,7 +271,14 @@ export function calculateGeneralBuildingTransfer(
 
   const landStdAtTransfer = gbv.transferLandPricePerSqm * gbv.landArea;
   const landStdAtAcq = gbv.acquisitionLandPricePerSqm * gbv.landArea;
-  const totalStd = landStdAtTransfer + gbv.transferBuildingStdPrice;
+  /**
+   * 🔴 **증축분(건물2)을 분모에 포함한다** (2026-08-12 사용자 지적).
+   * 엔진의 §166⑥ 안분 분모는 `토지 + 건물1 + 건물2`인데(`general-building-extension.ts`),
+   * 표시용 `totalStd`만 건물2를 빠뜨려 **비율 합이 100%를 넘었다**(실측 102.29%).
+   */
+  const extStdAtTransfer = gbv.extensionInfo?.transferExtensionBuildingStdPrice ?? 0;
+  const extStdAtAcq = gbv.extensionInfo?.acquisitionExtensionBuildingStdPrice ?? 0;
+  const totalStd = landStdAtTransfer + gbv.transferBuildingStdPrice + extStdAtTransfer;
 
   const apportionment = buildApportionment(
     gbOut.assetCards, totalStd, gbOut.nonBusinessRatio,
@@ -280,6 +287,7 @@ export function calculateGeneralBuildingTransfer(
     true,
     "소득세법 시행령 §166⑥ · §176의2② · §163⑥",
     swap, // §97②2호 swap 발동 시 사이드바 표시 정합 (환산 경로 전용)
+    extStdAtTransfer, extStdAtAcq,
   );
 
   return { apportionment, aggregated };
