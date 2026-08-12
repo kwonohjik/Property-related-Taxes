@@ -132,7 +132,7 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
 
       {/* 부담부증여 펼침 — BurdenedGiftBlock 재사용 */}
       {isBurdenedGift && isSupported && (
-        <BurdenedGiftBlock asset={asset} onChange={onChange} />
+        <BurdenedGiftBlock asset={asset} onChange={onChange} transferDate={transferDate} />
       )}
 
       {/* 공익수용·협의매수 상세 펼침 */}

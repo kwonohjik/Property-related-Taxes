@@ -24,10 +24,17 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { bgGiftStdPriceLauncherSpec } from "@/lib/calc/burdened-gift-std-price-launcher";
 
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /**
+   * 폼-전역 양도일 = **증여일**(YYYY-MM-DD). ④ 상속·증여 계산기의 평가 기준일로 넘긴다 —
+   * 모달이 `eventDate`로 받아 상증 평가연도를 도출한다(`BuildingStdPriceForm.tsx:124-127`).
+   */
+  transferDate?: string;
 }
 
 const VALUATION_MODE_OPTIONS = [
@@ -90,7 +97,24 @@ const DONOR_RELATION_OPTIONS = [
   },
 ] as const;
 
-export function BurdenedGiftBlock({ asset, onChange }: Props) {
+export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
+  /**
+   * ④ 상속·증여 계산기 런처 사양 — null이면 미노출.
+   * ⚠️ 주입 규칙(건물분 단독 vs 부수토지 합산)이 자산마다 반대다. 판단은 전부 이 함수에 있다.
+   */
+  const stdPriceLauncher = bgGiftStdPriceLauncherSpec(asset);
+  // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(이중입력 방지)
+  const stdPriceAddress = {
+    road: asset.addressRoad,
+    jibun: asset.addressJibun,
+    building: asset.buildingName,
+    detail: asset.addressDetail,
+    lng: asset.longitude,
+    lat: asset.latitude,
+    pnu: asset.addressPnu,
+    dong: asset.addressDong || undefined,
+    ho: asset.addressHo || undefined,
+  };
   // 인수 채무액 = 임대보증금 + 담보차입금 (소령 §159 — 양도가액)
   const lendingDeposit = parseAmount(asset.bgLendingDepositTotal) || 0;
   const mortgageDebt = parseAmount(asset.bgMortgageDebtAmount) || 0;
@@ -449,7 +473,10 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
         </div>
       )}
 
-      {/* ④ 증여재산 평가용 건물 기준시가 (상증법 §61 — 층별 가감율 적용) */}
+      {/* ④ 증여재산 평가용 건물 기준시가 (상증법 §61 — 층별 가감율 적용).
+          시가 모드에서는 평가액이 시가로 통째 대체되어 이 값이 쓰이지 않고(상증법 §60②~④ ·
+          `burdened-gift-valuation.ts:134-137`), 토지 자산은 건물이 없다 — 둘 다 숨긴다. */}
+      {!isMarketMode && asset.assetKind !== "land" && (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
@@ -460,18 +487,49 @@ export function BurdenedGiftBlock({ asset, onChange }: Props) {
           </p>
           <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
         </div>
-        <FieldCard
-          label="건물기준시가(상속 증여시)"
-          hint="미입력 시 양도세용 양도시 건물기준시가 값을 그대로 사용."
-        >
+        {stdPriceLauncher?.needsAppurtenantLand && (
+          <p className="text-caption text-emerald-700">
+            이 자산의 증여재산 평가액은 <b>건물 + 부수토지</b> 합계입니다. 계산기에서 부수토지
+            면적·개별공시지가를 함께 입력하세요(「상속세 및 증여세법」 제61조 제1항 제1호·제2호).
+          </p>
+        )}
+        <FieldCard label="건물기준시가(상속 증여시)">
           <CurrencyInput
             label=""
             hideUnit
+            data-testid="bg-gift-building-std"
             value={asset.bgGiftBuildingStdPriceAtTransfer}
             onChange={(v) => onChange({ bgGiftBuildingStdPriceAtTransfer: v })}
           />
         </FieldCard>
+        {stdPriceLauncher && (
+          <div className="flex justify-end">
+            <BuildingStdPriceModalButton
+              buttonLabel="건물 기준시가 계산 (상속·증여)"
+              lockedTaxType="inheritance_gift"
+              initialAddress={stdPriceAddress}
+              snapshotKey={`bsp-${asset.assetId}-bggift`}
+              prefill={{
+                floorArea: stdPriceLauncher.floorArea,
+                landAreaM2: stdPriceLauncher.landAreaM2,
+                // 상증 1시점 공시지가 — 자산 폼 값이 있으면 즉시 채우고, 없으면 모달의
+                // 조회 필드(LandPriceLookupField)로 사용자가 조회한다(dead-end 아님).
+                valuationLandPricePerSqm: stdPriceLauncher.landPricePerSqm,
+                // 증여일 = 양도일. 모달이 eventDate로 받아 상증 평가연도를 도출한다
+                // (`BuildingStdPriceForm.tsx:124-127`).
+                transferDate,
+              }}
+              // 주입 규칙은 자산마다 반대다 — `compose`가 단일 출처다(합산 여부를 여기서 판단 금지).
+              onApply={(v, land) =>
+                onChange({
+                  bgGiftBuildingStdPriceAtTransfer: String(stdPriceLauncher.compose(v, land)),
+                })
+              }
+            />
+          </div>
+        )}
       </div>
+      )}
 
       {/* ⑤ Phase 3 — 증여세 통합 입력 (수증자 정보) */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 space-y-2">
