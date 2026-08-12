@@ -374,14 +374,10 @@ export function GeneralBuildingExtensionSection({
             </FieldCard>
           )}
 
-          {(asset.gbExtensionAcquisitionMode === "estimated" || !asset.gbExtensionAcquisitionMode) && (
-            <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-700 space-y-0.5">
-              <p className="font-semibold">환산취득가 (§176의2②)</p>
-              <p>건물2 양도가 × (취득시 건물기준시가 ÷ 양도시 건물기준시가)</p>
-              <p className="mt-0.5 font-semibold">개산공제 (§163⑥)</p>
-              <p>취득시 건물기준시가 총액 × 3%</p>
-            </div>
-          )}
+          {/* 🗑 환산취득가(§176의2②)·개산공제(§163⑥) 산식 안내 박스는 **삭제했다**
+              (2026-08-12 사용자 요청 — ② 원건물 쪽 개산공제 박스와 같은 정리).
+              산식은 결과 화면의 상세명세서·계산근거가 실제 값과 함께 보여준다.
+              바로 아래 「안분 미리보기」가 입력 단계의 확인 수단으로 남는다. */}
 
           {/* 안분 미리보기 — 4가지 조합 모두 지원, 필수 입력 완료 시에만 표시 */}
           {allocationPreview && (
