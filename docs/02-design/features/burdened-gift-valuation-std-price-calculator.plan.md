@@ -355,6 +355,10 @@ const spec = bgGiftStdPriceLauncherSpec(asset);   // useMemo 불요 — 순수·
 > 📌 이 객체 구성은 현재 5곳에 복제돼 있다(`GeneralBuildingBlock`·`CommercialBuildingBlock`·
 > `CommercialInheritanceStdPriceSection`·`LandBuildingSplitSection`·`PreHousingDisclosureSection`).
 > 공용 헬퍼 추출이 타당해 보이나 **이번 PR 범위 밖**이다(Surgical Changes) — 언급만 한다.
+>
+> ✅ **후속 해소(2026-08-12)** — §11. ⚠️ 위 「5곳」은 **실측치가 아니었다. 실제로는 8곳**이다
+> (`mixed-use/MixedUseLegacyStdPrice`·`mixed-use/MixedUseAssetMajorStdPrice`·이 PR이 추가한
+> `BurdenedGiftBlock`이 빠져 있었다). 세는 것도 grep으로 셀 일이지 기억으로 쓸 일이 아니다.
 
 ### 4.7 ④ 섹션 게이트 (§2.2·§3의 죽은 입력 정리)
 
@@ -527,6 +531,8 @@ P5. 회귀
    `data-testid="bg-gift-building-std"`를 부여했다(E2E 셀렉터 안정성).
 3. **GB 면적 3필드는 전부 `placeholder="숫자 입력"`** — `AssetAreaGeneralBuilding`은 testid가 없어
    E2E가 순서로 잡는다([0] 토지 · [1] 연면적 · [2] 바닥면적). 향후 testid 부여 여지(범위 밖).
+   → ✅ **해소(§11-③)**. ⚠️ 다만 「E2E가 순서로 잡는다」는 **이 spec에만 해당**했다 — 전수 기재가
+   아니었다(기존 spec은 sessionStorage 주입·라벨 기반). 실측 없이 일반화한 서술이다.
 
 ---
 
@@ -594,13 +600,72 @@ P5. 회귀
 
 ## 9. 범위 밖 (명시)
 
-- **O-1: 부담부증여 기준시가 모드의 취득시 기준시가 입력 경로** — §5.1 (별건 조사)
-- `stdPriceAddress` 공용 헬퍼 추출(5곳 중복) — §4.6
+- **O-1: 부담부증여 기준시가 모드의 취득시 기준시가 입력 경로** — §5.1 (별건 조사) → ✅ PR #1227
+- `stdPriceAddress` 공용 헬퍼 추출(5곳 중복) — §4.6 → ✅ **후속 PR에서 해소(§11-①)**
 - `TransferModeBlock.tsx:126-128`의 「부담부증여 미지원 자산 종류」 안내문이 4종만 열거하는데
   실제 `SUPPORTED_ASSET_KINDS`는 5종이다(`TransferModeBlock.tsx:51`) — **문구 stale, 이번 PR 무관**
+  → ✅ **후속 PR에서 해소(§11-②)**
 - 엔진·API·Zod·validate 전부
 
 ---
+
+## 11. 후속 정리 3건 (2026-08-12 — 별도 PR)
+
+계획 단계에서 「범위 밖」으로 미룬 3건을 한 PR로 처리했다. **셋 다 세액을 틀리게 하지 않는다** —
+구조·표시·테스트 취약성이다. 착수 전 실측에서 계획서 기재 두 곳이 틀린 것이 드러났다.
+
+### ① `stdPriceAddress` 8곳 복제 → `stdPriceAddressOf(asset)` 단일 출처
+
+**5곳이 아니라 8곳이었다**(위 §4.6 정정). 전 복제본의 값은 일치했지만 그것이 안전을 뜻하지 않는다 —
+**이 구조는 이미 한 번 터졌다**:
+
+> `0bb6d345`(PR #1054) 「자산 카드 소재지·동호 미전달로 **조회 기능이 죽어 있었다**」
+> 지번만 넘어가 `pnu`가 없었고 건축물대장 조회가 비활성이었다.
+> 커밋 메시지 그대로 「**5개 호출부가 모두 같은 상태였다**」.
+
+⇒ `components/calc/transfer/asset-std-price-address.ts` 신설. 고칠 곳이 **8 → 1**.
+`AddressValue`의 `exclusiveArea`·`standardPrice`는 **의도적으로 넘기지 않는다** — 복제본 8곳 중
+어느 것도 넘기지 않았고, 추출은 배선을 바꾸는 작업이 아니다.
+
+**안전망 실측**: 헬퍼에서 `pnu` 한 줄을 뺀 mutation(=#1054 재현)에 유닛 **2건 실패**.
+
+### ② 미지원 안내문 — 하드코딩 열거를 배열 파생으로
+
+`commercial_building`이 F-3에서 지원에 편입됐는데 문구만 남아, **같은 문장이 상업용건물을
+지원 목록에서 빼면서 동시에 "후속 예정"으로도** 적는 자기모순 상태였다.
+
+**영향은 과장하지 않는다**: 이 문구는 `!isSupported`일 때만 뜬다 — 상가건물 사용자에게는 보이지도
+않고 계산도 정상이다. 오독하는 사람은 미지원 3종을 고른 사용자뿐이고 **세액 영향은 0**이다.
+
+⇒ `SUPPORTED_ASSET_KINDS`에서 파생 + 라벨은 자산 카드 헤더와 같은 출처(`ASSET_KIND_LABELS`).
+「현재 선택: `general_building`」의 **raw enum 노출**도 라벨로 바꿨다(내부 id 노출 금지 규칙).
+
+**안전망 실측**: 문구를 종전 하드코딩으로 되돌린 mutation에 anchor **2건 실패**.
+
+### ③ GB 면적 3필드 `data-testid` 부여
+
+⚠️ **계획서 §7.2의 「E2E가 순서로 잡는다」는 전수 기재가 아니었다.** nth로 잡는 곳은 이 PR이
+추가한 `burdened-gift-std-price-calculator.spec.ts` **한 곳뿐**이고, 기존 spec은 대부분
+sessionStorage 주입이며 `building-stdprice-modal-prefill`은 **라벨 기반**이다.
+그리고 `DecimalInput`은 **이미 `data-testid`를 지원한다**(`DecimalInput.tsx:28`) — 컴포넌트 수정 불필요.
+
+고칠 값어치는 라벨이 **모드에 따라 4가지로 변한다**는 데 있다:
+
+| 조건 | 토지 | 연면적 |
+|---|---|---|
+| 기본 | 취득·양도 당시 토지 면적 | 건물 연면적 |
+| `isPartial` | **양도분** 토지 면적 | **양도분** 건물 연면적 |
+| `gbHasExtension` | (동일) | 건물 연면적 **(양도 당시)** |
+
+`building-stdprice-modal-prefill.spec.ts:56`이 고정 문자열로 잡으므로 일부 양도 시나리오에서는
+스코프가 0개가 된다 — 같은 파일 45~47줄에 이미 동일한 사고 기록이 있다(「그 스코프가 0개가 됐다
+→ **testid는 분리 ON/OFF 양쪽에서 살아 있다**」). 순서(nth)는 더 나쁘다: 필드가 하나 끼어들면
+**조용히 다른 칸을 채우고 테스트는 통과**한다.
+
+### 검증
+
+`tsc` 0건 · lint 0 errors · 신규 유닛 8건 · **E2E 57건**(건물기준시가 모달 배선 8개 컴포넌트 전수:
+GB·CB·상가상속·PHD·토지건물분리·겸용 2종·부담부증여).
 
 ## 10. 파일 크기
 

@@ -42,6 +42,7 @@
 
 import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
@@ -110,17 +111,7 @@ export function GeneralBuildingBlock({
    */
   const gbOriginalArea = gbBuildingStdPriceFloorArea(asset);
   // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(이중입력 방지)
-  const stdPriceAddress = {
-    road: asset.addressRoad,
-    jibun: asset.addressJibun,
-    building: asset.buildingName,
-    detail: asset.addressDetail,
-    lng: asset.longitude,
-    lat: asset.latitude,
-    pnu: asset.addressPnu,
-    dong: asset.addressDong || undefined,
-    ho: asset.addressHo || undefined,
-  };
+  const stdPriceAddress = stdPriceAddressOf(asset);
 
   // ── P4: 취득·양도 2시점 일괄 계산(배치) 배선 — 계획서 §4.2·§5 P4 ────────────
   // 건물분 기준시가의 취득 시점은 **건물 취득일**이 따로 있으면 그것이다(§166⑥ 별개취득).

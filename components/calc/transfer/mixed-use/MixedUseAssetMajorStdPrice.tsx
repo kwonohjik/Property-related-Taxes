@@ -10,6 +10,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
 
 interface Props {
@@ -111,17 +112,7 @@ export function MixedUseAssetMajorStdPrice({
   // ⚠️ 2001.1.1 값(phdLandPricePerSqmAtAcq2001)은 고정 기준일이라 이 축과 무관 → 게이트 대상 아님.
   const canPrefillAcqLandPrice = acqLandReferenceDate === asset.acquisitionDate;
 
-  const stdPriceAddress = {
-    road: asset.addressRoad,
-    jibun: asset.addressJibun,
-    building: asset.buildingName,
-    detail: asset.addressDetail,
-    lng: asset.longitude,
-    lat: asset.latitude,
-    pnu: asset.addressPnu,
-    dong: asset.addressDong || undefined,
-    ho: asset.addressHo || undefined,
-  };
+  const stdPriceAddress = stdPriceAddressOf(asset);
   // snapshotKey는 대상 필드 기준 — 취득·양도 통합 단일 키.
   // ⚠️ `bsp-{id}-phd-…`를 쓰면 안 된다: 주택분 배치 모달(MultiPointBuildingStdPriceModal)이
   // replaceSnapshotsByPrefix(`bsp-{id}-phd`)로 그 접두 키를 전부 교체하므로, 용도변경 없음(Case B)에선

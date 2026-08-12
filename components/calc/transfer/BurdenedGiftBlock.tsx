@@ -17,6 +17,7 @@
 
 import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -135,17 +136,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
    */
   const stdPriceLauncher = bgGiftStdPriceLauncherSpec(asset);
   // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(이중입력 방지)
-  const stdPriceAddress = {
-    road: asset.addressRoad,
-    jibun: asset.addressJibun,
-    building: asset.buildingName,
-    detail: asset.addressDetail,
-    lng: asset.longitude,
-    lat: asset.latitude,
-    pnu: asset.addressPnu,
-    dong: asset.addressDong || undefined,
-    ho: asset.addressHo || undefined,
-  };
+  const stdPriceAddress = stdPriceAddressOf(asset);
   // 인수 채무액 = 임대보증금 + 담보차입금 (소령 §159 — 양도가액)
   const lendingDeposit = parseAmount(asset.bgLendingDepositTotal) || 0;
   const mortgageDebt = parseAmount(asset.bgMortgageDebtAmount) || 0;

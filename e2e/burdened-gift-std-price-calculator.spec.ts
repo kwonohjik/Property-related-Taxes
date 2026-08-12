@@ -113,12 +113,12 @@ test.describe("부담부증여 증여재산 평가 — 상속·증여 계산기"
     test.setTimeout(120_000);
     const card = await enterBurdenedGift(page, "일반건물(토지+건물 일괄)");
 
-    // GB 면적 3필드는 ① 기본정보 전용 카드(`AssetAreaGeneralBuilding`) — 전부 placeholder가
-    // "숫자 입력"이라 순서로 잡는다: [0] 토지 면적 · [1] 건물 연면적(전체) · [2] 바닥면적.
+    // GB 면적 3필드는 ① 기본정보 전용 카드(`AssetAreaGeneralBuilding`).
+    // ⚠️ 순서(nth)·라벨로 잡지 않는다 — 라벨이 「일부 양도」·「증축」 토글에 따라 4가지로 바뀌고,
+    //    순서는 필드가 하나 끼어들면 **조용히 다른 칸을 채우고 테스트는 통과**한다.
     await expandAssetSection(page, 1);
-    const gbAreas = card.getByPlaceholder("숫자 입력");
-    await gbAreas.nth(0).fill("100");        // 토지 면적 — 모달이 부수토지를 산출하게 둔다
-    await gbAreas.nth(1).fill(FLOOR_AREA);   // 건물 연면적(전체) = 모달 prefill 소스
+    await card.getByTestId("gb-land-area").fill("100");        // 모달이 부수토지를 산출하게 둔다
+    await card.getByTestId("gb-building-area").fill(FLOOR_AREA); // 연면적(전체) = 모달 prefill 소스
 
     // R-2 — GB 「양도시 토지 공시지가」(③ 취득정보). 원/㎡ 칸은 [0]=취득시 · [1]=양도시.
     await expandAssetSection(page, 3);

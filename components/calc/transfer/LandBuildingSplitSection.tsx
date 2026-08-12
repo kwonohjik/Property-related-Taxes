@@ -30,6 +30,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TransferLandStdPartCard } from "./TransferStdPriceCards";
 import { TransferBuildingStdPartCard } from "./TransferStdPriceCards";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { capexHint } from "./capexHint";
 
@@ -125,17 +126,7 @@ function PartAcqStdPrice(props: {
   showTransfer?: boolean;
 }) {
   const { asset, onChange } = props;
-  const stdPriceAddress = {
-    road: asset.addressRoad,
-    jibun: asset.addressJibun,
-    building: asset.buildingName,
-    detail: asset.addressDetail,
-    lng: asset.longitude,
-    lat: asset.latitude,
-    pnu: asset.addressPnu,
-    dong: asset.addressDong || undefined,
-    ho: asset.addressHo || undefined,
-  };
+  const stdPriceAddress = stdPriceAddressOf(asset);
 
   if (props.part === "land") {
     return (

@@ -22,6 +22,7 @@
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ASSET_KIND_LABELS } from "./asset-labels";
 import { BurdenedGiftBlock } from "./BurdenedGiftBlock";
 import { ExpropriationBlock } from "./ExpropriationBlock";
 import { AuctionBlock } from "./AuctionBlock";
@@ -47,7 +48,27 @@ const TRANSFER_TYPE_OPTIONS: {
 ];
 
 // F-3 (2026-05-12): commercial_building 확장 — 부담부증여 지원 자산 종류
-const SUPPORTED_ASSET_KINDS = ["housing", "land", "building", "general_building", "commercial_building"];
+const SUPPORTED_ASSET_KINDS: AssetForm["assetKind"][] = [
+  "housing",
+  "land",
+  "building",
+  "general_building",
+  "commercial_building",
+];
+
+/**
+ * 미지원 안내문의 자산 열거는 **위 배열에서 파생**한다 — 손으로 쓰지 않는다.
+ *
+ * 종전에는 「주택·토지·건물·일반건물」이라고 하드코딩돼 있었다. F-3에서 상업용건물이
+ * 지원에 편입됐는데 문구만 남아, 같은 문장 안에서 지원 목록엔 빠져 있으면서
+ * "후속 예정"으로도 적힌 자기모순 상태였다. 다음 편입 때 또 어긋나지 않도록 파생시킨다.
+ * 라벨은 자산 카드 헤더와 같은 출처(`ASSET_KIND_LABELS`)를 써서 사용자가 대조할 수 있게 한다.
+ */
+const SUPPORTED_LABELS = SUPPORTED_ASSET_KINDS.map((k) => ASSET_KIND_LABELS[k]).join(", ");
+const UNSUPPORTED_LABELS = (Object.keys(ASSET_KIND_LABELS) as AssetForm["assetKind"][])
+  .filter((k) => !SUPPORTED_ASSET_KINDS.includes(k))
+  .map((k) => ASSET_KIND_LABELS[k])
+  .join(", ");
 
 export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
   // transferCause=공익수용이면 그것을 우선 표시, 아니면 transferType(일반/부담부증여)
@@ -124,8 +145,8 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
         <div className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-xs text-rose-800">
           <p className="font-semibold">부담부증여 미지원 자산 종류</p>
           <p className="mt-1">
-            현재 부담부증여는 <b>주택·토지·건물·일반건물</b>에서만 지원됩니다.
-            (현재 선택: <code>{asset.assetKind}</code>) — 상업용건물·오피스텔·입주권 등은 후속 PR 예정.
+            현재 부담부증여는 <b>{SUPPORTED_LABELS}</b>에서만 지원됩니다.
+            (현재 선택: {ASSET_KIND_LABELS[asset.assetKind]}) — {UNSUPPORTED_LABELS}는 후속 지원 예정입니다.
           </p>
         </div>
       )}
