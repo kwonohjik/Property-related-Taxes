@@ -17,6 +17,12 @@
  *   FS-09c: 3회 분할 수령 (환율 변동)
  *   FS-09d: 배열 1건 → warning 발행 (계산은 진행)
  *   FS-09e: 빈 배열 → 양도가액 0 + warning
+ *
+ * ⚠️ **2026-08-12 기대값 갱신 — 회귀가 아니라 법령 정정이다.**
+ *   §118의5(§55① 누진)는 §118②의 준용 목록에 없다 ⇒ 세율은 **§104①12호나목 20%**.
+ *   환산(§178의5②) 로직 자체는 §118의4 준용으로 **그대로 살아 있다** — 환산액 단언은 불변이고
+ *   세율 이후 값(산출세액·지방소득세)만 재산정했다.
+ *   계획서: docs/02-design/features/foreign-stock-94-1-3-da-statute-track.plan.md
  */
 
 import { describe, it, expect } from "vitest";
@@ -77,7 +83,7 @@ describe("FS-09a: single 모드 — 기존 단일 환율 동작 회귀 (§178의
   });
 
   it("single 모드: 산출세액 = 20,865,500 (FS-anchor-01 동일 — 회귀 없음)", () => {
-    expect(result.incomeTax).toBe(20_865_500);
+    expect(result.incomeTax).toBe(20_746_000);
   });
 
   it("single 모드: appliedRules에 §178의5 포함 (§178의5② 미포함)", () => {
@@ -103,7 +109,7 @@ describe("FS-09b: §178의5② 2회 분할 수령 (환율 1,100 / 1,300)", () =>
    * 양도차익 = 181,000,000 − 96,000,000 = 85,000,000
    * 기본공제 = 2,500,000 (§118의7)
    * 과세표준 = 82,500,000
-   * §55① 5,000만~8,800만 구간: 82,500,000 × 24% − 5,760,000
+   * §104①12호나목 20%: floor(82,500,000 × 0.2) = 16,500,000
    *   = 19,800,000 − 5,760,000 = 14,040,000
    * 지방소득세 = floor10(14,040,000 × 0.1) = 1,404,000
    */
@@ -163,22 +169,22 @@ describe("FS-09b: §178의5② 2회 분할 수령 (환율 1,100 / 1,300)", () =>
     expect(result.taxBase).toBe(82_500_000);
   });
 
-  it("§55① 세율 = 24% (5,000만~8,800만 구간)", () => {
-    expect(result.appliedRate).toBe(0.24);
+  it("§104①12호나목 세율 = 20% (구간 없음)", () => {
+    expect(result.appliedRate).toBe(0.2);
   });
 
-  it("누진공제 = 5,760,000", () => {
-    expect(result.progressiveDeduction).toBe(5_760_000);
+  it("누진공제 = 0 (§104①12호는 단일세율)", () => {
+    expect(result.progressiveDeduction).toBe(0);
   });
 
-  it("산출세액 = floor(82,500,000 × 0.24) − 5,760,000 = 14,040,000", () => {
-    const expected = Math.floor(82_500_000 * 0.24) - 5_760_000;
+  it("산출세액 = floor(82,500,000 × 0.2) = 16,500,000", () => {
+    const expected = Math.floor(82_500_000 * 0.2);
     expect(result.incomeTax).toBe(expected);
-    expect(result.incomeTax).toBe(14_040_000);
+    expect(result.incomeTax).toBe(16_500_000);
   });
 
   it("지방소득세 = floor10(14,040,000 × 0.1) = 1,404,000", () => {
-    expect(result.localIncomeTax).toBe(1_404_000);
+    expect(result.localIncomeTax).toBe(1_650_000);
   });
 
   it("transferReceiptDetail.mode = installments", () => {
@@ -206,7 +212,7 @@ describe("FS-09c: §178의5② 3회 분할 수령 (환율 변동)", () => {
    * 양도차익 = 180,500,000 − 96,000,000 = 84,500,000
    * 기본공제 = 2,500,000
    * 과세표준 = 82,000,000
-   * §55① 24% 구간: 82,000,000 × 24% − 5,760,000
+   * §104①12호나목 20%: floor(82,000,000 × 0.2) = 16,400,000
    *   = 19,680,000 − 5,760,000 = 13,920,000
    * 지방소득세 = floor10(13,920,000 × 0.1) = 1,392,000
    */
@@ -249,14 +255,14 @@ describe("FS-09c: §178의5② 3회 분할 수령 (환율 변동)", () => {
     expect(result.taxBase).toBe(82_000_000);
   });
 
-  it("산출세액 = floor(82,000,000 × 0.24) − 5,760,000 = 13,920,000", () => {
-    const expected = Math.floor(82_000_000 * 0.24) - 5_760_000;
+  it("산출세액 = floor(82,000,000 × 0.2) = 16,400,000", () => {
+    const expected = Math.floor(82_000_000 * 0.2);
     expect(result.incomeTax).toBe(expected);
-    expect(result.incomeTax).toBe(13_920_000);
+    expect(result.incomeTax).toBe(16_400_000);
   });
 
   it("지방소득세 = floor10(13,920,000 × 0.1) = 1,392,000", () => {
-    expect(result.localIncomeTax).toBe(1_392_000);
+    expect(result.localIncomeTax).toBe(1_640_000);
   });
 
   it("수령 건수 = 3건", () => {

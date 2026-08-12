@@ -51,6 +51,21 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /**
+     * 국외주식(§94①3호다목)에 §118의2~§118의4·§118의6을 준용하는 **다리 조문**.
+     * 이 조가 바뀌면 국외주식 트랙 전체(5년 요건·필요경비·외국납부세액)가 흔들린다.
+     * 계획서: foreign-stock-94-1-3-da-statute-track.plan.md §2 ①
+     */
+    id: "TRANSFER.APPLIES_MUTATIS_MUTANDIS",
+    citation: "소득세법 §118",
+    keywords: [
+      "준용규정",
+      "제118조의2부터 제118조의4까지 및 제118조의6을 준용",
+      "제94조제1항제3호다목에 따른 자산의 양도로 발생하는 소득",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER.PRELIMINARY_RETURN",
     citation: "소득세법 §105",
     keywords: ["예정신고", "양도일이 속하는 달의 말일부터 2개월", "양도소득과세표준"],

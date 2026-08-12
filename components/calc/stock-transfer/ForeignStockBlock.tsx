@@ -3,7 +3,8 @@
 /**
  * ForeignStockBlock — 해외주식 양도소득세 입력 블록 (PR-4A, ⑤ 동기화 지점)
  *
- * 법령: 소득세법 §94①3 다목 + §118의2~§118의8 (2026.4.21. 시행)
+ * 법령: 소득세법 §94①3 다목 · §118②(§118의2~§118의4·§118의6 준용)
+ *       세율 §104①12호나목 20% · 기본공제 §103①2호 (2020-01-01 이후 양도분)
  * 시행령: §157의3, §178의3, §178의5, §178의7
  *
  * 입력 순서 = 엔진 계산 로직 순서 (feedback_ui_order_follows_logic):
@@ -20,6 +21,7 @@
  */
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { FOREIGN_STOCK_TRACK_START } from "@/lib/tax-engine/data/foreign-stock-track-era";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { Tone } from "@/components/calc/shared/tones";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -172,7 +174,15 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
               onChange={(v) => onChange({ acquisitionDate: v })}
             />
           </FieldCard>
-          <FieldCard label="양도일" required>
+          {/*
+            §94①3호다목 트랙은 2020-01-01 이후 양도분부터다(법률 제16834호 부칙 §1·§2②).
+            실제 차단은 ⑧ validate와 ⑫ Zod가 한다 — 여기 hint는 사전 안내일 뿐이다.
+          */}
+          <FieldCard
+            label="양도일"
+            required
+            hint={`${FOREIGN_STOCK_TRACK_START} 이후 양도분만 지원합니다 (그 이전은 구 §118의2 트랙)`}
+          >
             <DateInput
               value={form.transferDate}
               onChange={(v) => onChange({ transferDate: v })}

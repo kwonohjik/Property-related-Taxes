@@ -4,7 +4,7 @@
  * MarketTypeBlock — 시장 유형 선택 (Step 1)
  *
  * §94①3 가목 (상장) / 나목 (비상장) / §94①4 다·라목 (기타자산)
- * §94①3 다목 (외국법인·해외상장) — `foreign_stock` 옵션 (foreign-stock.ts, PR-4A §118의2~§118의8)
+ * §94①3 다목 (외국법인·해외상장) — `foreign_stock` 옵션 (foreign-stock.ts · §118② 준용 트랙)
  * 국외전출세 §118의9~§118의16 — `exit_tax` 옵션 (exit-tax.ts, PR-4B)
  * 정정 (B-2, 2026-06-12): 이전 "본 계산기 미지원" 주석은 해외주식·국외전출세 본체
  *   구현(PR-4A/4B) 이후 stale — 옵션 :48·53 + 엔진 분기(route.ts) 완비됨.
@@ -47,7 +47,7 @@ const MARKET_OPTIONS = [
   {
     value: "foreign_stock" as const,
     label: "해외주식",
-    description: "외국법인 발행 주식 (§94①3 다목 + §118의2~§118의8)",
+    description: "외국법인 발행 주식 (§94①3 다목 · 세율 §104①12호나목 20%)",
   },
   {
     value: "exit_tax" as const,
