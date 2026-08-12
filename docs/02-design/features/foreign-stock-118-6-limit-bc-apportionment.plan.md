@@ -275,9 +275,9 @@ PR #1212의 D-5 표시 정정이 **이 파일을 빠뜨렸다**. 2026-08-12 실�
 | **2** | `foreign-tax-credit-limit.ts` 순수 함수 + 단위 테스트 (§6.2·6.3) | ✅ 23건 · **mutation 4종 전부 사살**(§7.2) |
 | **3** | 단건 경로를 그 함수로 교체 (`rows.length === 1`) | ✅ **stock-transfer 1,003건 전부 통과 · 세액 무변화** |
 | **4** | D-3 어댑터 + `items` union + aggregate 배선 (§6.1) — **접근 1만** | ✅ N-1 국내 세액 불변(2,456건) · FA 시리즈 16건 · **mutation 3종 사살**(§7.3) |
-| **5** | 다종목 UI (종목 추가·삭제) — **접근 1만** | ⑤⑥⑦ 14지점 동기화 |
-| **6** | 표시 (§6.4) + 신고서식 | 산식이 한국어 풀어쓰기 · Q-5 사유 노출 |
-| **7** | E2E + 전체 회귀 | tsc 0 · lint 0 · `npm test` 전건 · 주식 E2E |
+| **5** | 다종목 UI (종목 추가·삭제) — **접근 1만** | ✅ 「편집기 + 목록」(§7.4) · store anchor 10건 · E2E 3건 |
+| **6** | 표시 (§6.4) + 신고서식 | ✅ `StockAggregateSummaryCard` — 종목별 표 + 통산 + B/C 한도. 신고서식 다종목은 잔여 |
+| **7** | E2E + 전체 회귀 | ✅ tsc 0 · lint 0 · `npm test` 전건 · E2E 3건 |
 
 🔑 **Phase 3을 4보다 먼저** 두는 이유: 순수 함수 교체가 **세액을 바꾸지 않는다**는 것을 다종목
 배선 **전에** 확인해 두면, Phase 4에서 세액이 바뀔 때 원인이 배선임을 즉시 안다.
@@ -366,6 +366,40 @@ anchor **FA-2-2**가 잡았다(기대 0 / 실제 9,500,000).
 | M-A2 `applyStockTaxRate`의 `foreign_stock` case 제거 (→ 세액 0) | **8건 실패** ✅ |
 | M-B STEP 3.5 B/C 안분 건너뛰기 (한도 = 산출세액 전액) | **6건 실패** ✅ |
 | M-C 총계에서 외국납부세액공제 미차감 | **2건 실패** ✅ |
+
+## §7.4 Phase 5 — 「편집기 + 목록」을 택한 이유
+
+### 계획(§6.1)은 종목별 폼 분해를 전제했지만, 실측하니 비용이 맞지 않았다
+
+`StockTransferFormData`는 **240개 넘는 필드가 한 종목**을 서술한다(대주주 판정·환산 3시점·
+비상장 보충평가 행-수준 74필드·국외 필드·국외전출세 필드…). 신고 단위 필드는 **7개뿐**이다.
+
+종목별로 쪼개면 **38개 Block 컴포넌트의 props를 전부** 바꿔야 하고, 그 변경의 대부분이
+세액 로직에 닿지 않는다 — 회귀 위험만 늘린다.
+
+⇒ **`formData` = 편집 중인 종목**, `savedItems[]` = 확정한 종목. 계산 시 `[...savedItems, formData]`를
+items로 보낸다. **기존 입력 UI는 한 줄도 바뀌지 않았다.**
+
+### 신고 단위 7필드는 승계한다
+
+`filingType`·`filingDate`·`isElectronicFiling`·`filingViolation`·`isFraudulent`·
+`isInternationalTransaction`·`realEstateGroupBasicDeductionUsed`.
+
+종목마다 다른 신고일을 갖는 것은 성립하지 않는다(하나의 신고서다). 매번 다시 입력하게 하면
+사용자가 종목별로 다른 값을 넣어 **가산세가 종목마다 달라지는** 잘못된 결과가 나온다.
+anchor **MI-1-2**가 승계를, **MI-1-3**이 종목 축 필드의 **비**승계를 함께 고정한다.
+
+### 국외전출세는 합산 배열에 못 들어간다
+
+route의 if-체인이 `items`를 **먼저** 보므로(`route.ts:78`), `exit_tax`를 items에 넣으면
+국외전출세 분기(:86 이후)에 도달하지 못한 채 aggregate로 흘러간다 —
+[[feedback_route_if_chain_order_swallows_branches]]. `assertNoExitTaxItem`이 **던진다**(anchor MI-4-3).
+UI에서도 `marketType === "exit_tax"`면 종목 목록 카드를 렌더하지 않는다.
+
+### 부수 — 800줄 정책
+
+`calc-wizard-stock-store.ts`가 886줄이 되어 폼 타입·초기값을 `calc-wizard-stock-form.ts`로
+분리했다(232 + 667). 기존 import 경로는 store의 re-export로 **전부 보존**된다.
 
 ## §8 검증 기준
 
