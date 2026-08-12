@@ -170,7 +170,7 @@ function SingleTransferResultCard({
         )}
         {result.basicDeduction > 0 && (
           <Row
-            label="양도소득기본공제 (§103②)"
+            label="양도소득기본공제 (§103①1호)"
             value={`(−) ${formatKRW(result.basicDeduction)}`}
             sub
             deduction

@@ -1,7 +1,8 @@
 /**
  * 주식 양도소득세 — 다자산 합산 엔진 (Layer 2 — Orchestrator on Orchestrator)
  *
- * 동일 과세기간 내 2건 이상 종목을 양도할 때 §103② 기본공제 그룹별 1회 한도를 반영한다.
+ * 동일 과세기간 내 2건 이상 종목을 양도할 때 §103①(각 호별 연 250만원 **한도**)과
+ * §103②(**먼저 양도한 자산부터** 배분)를 반영한다.
  * 기존 단건 엔진(`calculateStockTransferTaxInternal`)을 종목별로 재사용하며,
  * 상위에서 그룹별 기본공제 배분·합산·증권거래세 정보성 echo 합산을 수행.
  *
@@ -21,6 +22,8 @@ import {
   type SecuritiesTransactionTaxTotal,
 } from "./securities-transaction-tax";
 import { resolveStockCarryover } from "./stock-carryover";
+import { offsetLossesCore } from "@/lib/tax-engine/loss-offset-core";
+import { resolveStockRateKey } from "./stock-transfer-rate-calc";
 
 // ============================================================
 // 다자산 합산 결과 타입
@@ -97,8 +100,8 @@ export interface StockTransferAggregateResult {
   totalTransferIncome: number;
   /**
    * 그룹별 기본공제 합계
-   * - stock: §103②2호 그룹 (주식 §94①3 가·나목)
-   * - real_estate_and_other_asset: §103②1호 그룹 (기타자산 §94①4)
+   * - stock: §103①2호 그룹 (주식 §94①3 가·나목)
+   * - real_estate_and_other_asset: §103①1호 그룹 (기타자산 §94①4)
    */
   basicDeductionByGroup: {
     stock: number;
@@ -112,9 +115,17 @@ export interface StockTransferAggregateResult {
    * (`otherAssetComparativeTax` 참조).
    */
   totalCalculatedTax: number;
+
+  /**
+   * §102②·시행령 §167의2① 양도차손 통산 요약 — **주식 그룹**(§102①2호)만.
+   * 통산도 소멸도 없으면 undefined.
+   *   `totalOffset` 이익 자산에 배분된 차손 총액
+   *   `unusedLoss` 통산하지 못하고 소멸한 차손 (양도소득에 결손금 이월 없음)
+   */
+  lossOffset?: { totalOffset: number; unusedLoss: number };
   /**
    * §104⑤ 비교과세(기타자산 그룹) echo — 대상이 2건 미만이면 `undefined`.
-   * `"aggregate"` 모드에서만 만들어진다(§103② 기본공제가 정상 배분되는 실제 신고 경로).
+   * `"aggregate"` 모드에서만 만들어진다(§103①·② 기본공제가 정상 배분되는 실제 신고 경로).
    */
   otherAssetComparativeTax?: OtherAssetComparativeTax;
   /** 합산 가산세 */
@@ -134,7 +145,7 @@ export interface StockTransferAggregateResult {
   totalSecuritiesTransactionTax: SecuritiesTransactionTaxTotal;
 }
 
-/** §103②1호 그룹 키 — 기타자산(§94①4호)은 부동산과 같은 기본공제 그룹이다. */
+/** §103①1호 그룹 키 — 기타자산(§94①4호)은 부동산과 같은 기본공제 그룹이다. */
 const OTHER_ASSET_GROUP = "real_estate_and_other_asset" as const;
 
 /** §104①9호(비사업용 토지 과다소유법인 주식) 카테고리 — 다목·라목 **둘 다**에 얹힌다. */
@@ -174,7 +185,8 @@ const NBL_HEAVY_CORP_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]>
  *
  * ⚠️ **주식(§94①3호 가·나목)은 대상이 아니다** — 본문이 3호를 열거하지 않는다.
  * ⚠️ **차손 통산(§102②)은 이 함수의 범위가 아니다** — 차손 자산은 `taxBase`가 0이라 합계에
- *   기여하지 않으며, 종전 동작과 동일하다(통산 미구현은 별건).
+ *   기여하지 않는다. 2026-08-12에 **주식 그룹**(§102①2호)에는 통산이 들어갔지만
+ *   **기타자산 그룹**(§102①1호)은 아직이라(STEP 1.5 주석), 여기 들어오는 값은 종전과 같다.
  *
  * @returns 대상이 2건 미만이면 `undefined`(§104⑤은 「둘 이상 양도」가 요건이다)
  */
@@ -251,7 +263,7 @@ function computeOtherAssetComparativeTax(
 }
 
 /**
- * 다자산 합산 계산 — §103② 기본공제 그룹별 1회 한도 적용
+ * 다자산 합산 계산 — §103①(그룹별 연 250만원 한도) + §103②(먼저 양도한 자산부터 배분)
  *
  * "aggregate" 모드:
  *   1. 각 종목 단건 계산 (realEstateGroupBasicDeductionUsed 연동)
@@ -269,7 +281,7 @@ export function calculateStockTransferTaxAggregate(
    * §97의2① 이월과세 — **여기가 ②3호 비교의 기준점**이다.
    *
    * ②3호가 비교하는 「양도소득 **결정세액**」은 §92의 계산 순서를 거친 **과세기간 단위**
-   * 개념이라 종목 단위로 비교하면 틀린다 — 주식은 §103② 기본공제가 **그룹 단위 연 1회**라
+   * 개념이라 종목 단위로 비교하면 틀린다 — 주식은 §103① 기본공제가 **그룹 단위 연 1회**라
    * 한 종목의 A/B가 **다른 종목의 세액까지** 움직이기 때문이다(계획서 §4 Q-2 · 실측 반례).
    *
    * ⚠️ `aggregateCore`는 이 resolve를 **다시 하지 않는다** — 순환을 만들지 않기 위해서다.
@@ -294,11 +306,14 @@ function aggregateCore(
     //
     // §104⑤ 비교과세를 여기서는 적용하지 않는다:
     //   · `inputs.length === 1` — 법문 요건이 「자산을 **둘 이상** 양도하는 경우」다.
-    //   · `each_item` — §103② 기본공제 **중복을 허용**하는 진단 모드라 애초에 유효한 신고가
+    //   · `each_item` — §103① 기본공제 **중복을 허용**하는 진단 모드라 애초에 유효한 신고가
     //     아니다(위 함수 주석). 실제 신고 경로는 `"aggregate"`이며 Zod 기본값도 그쪽이다
     //     (`lib/api/stock-transfer-tax-schema.ts:548`).
     const items = inputs.map((input) => calculateStockTransferTaxInternal(input));
-    const totalTransferIncome = items.reduce((s, r) => s + r.transferIncome, 0);
+    // 합계가 음수면 과세 소득은 0이다 — 양도소득에 결손금 이월이 없다(§102①후단·§102②).
+    // 부동산 정본과 대칭(`multi-parcel-transfer.ts:478`). 종전에는 clamp가 없어 신고서식에
+    // **음수 양도소득금액**이 그대로 흘렀다.
+    const totalTransferIncome = Math.max(0, items.reduce((s, r) => s + r.transferIncome, 0));
     const totalCalculatedTax = items.reduce((s, r) => s + r.calculatedTax, 0);
     const totalUnderReportPenalty = items.reduce((s, r) => s + r.underReportPenalty, 0);
     const electronicFilingCredit = items.some((r) => r.electronicFilingCredit > 0)
@@ -333,7 +348,7 @@ function aggregateCore(
     };
   }
 
-  // "aggregate" 모드 — §103② 그룹별 기본공제 1회 한도 배분
+  // "aggregate" 모드 — §103① 그룹별 기본공제 1회 **한도** + §103② 배분 **순서**
   // STEP 1: 각 종목 기본공제 최대 소진으로 단건 계산 (순수 소득금액 파악)
   const rawItems = inputs.map((input) =>
     calculateStockTransferTaxInternal({
@@ -343,14 +358,49 @@ function aggregateCore(
     }),
   );
 
-  // STEP 2: 그룹별 소득금액 합산
-  const stockGroupIncome = rawItems
-    .filter((r) => r.basicDeductionGroup === "stock")
-    .reduce((s, r) => s + r.transferIncome, 0);
+  // STEP 1.5: §102② 양도차손 통산 (영 §167의2①) — **§92②2호 「양도소득금액」 단계**라
+  //           기본공제(§103)보다 **먼저** 온다.
+  //
+  // 🔑 통산은 **§102① 각 호별로만** 한다. 주식(2호)과 기타자산(1호)은 서로 통산하지 못하므로
+  //    코어를 **그룹마다 따로** 돌린다. 하나로 합쳐 돌리면 영 §167의2①2호의 「다른 세율 pro-rata」가
+  //    호 경계를 넘어버린다(§102①후단 「다른 호의 소득금액과 합산하지 아니한다」 위반).
+  //
+  // ⚠️ **기타자산 그룹은 이번 범위 밖이다.** 그 분기는 `calculateStockTransferTaxInternal`을
+  //    입력에서 다시 돌려 결과를 통째로 갈아끼우는 구조라 통산 소득을 주입할 자리가 없고,
+  //    §104⑤ 비교과세(`computeOtherAssetComparativeTax`)와도 얽힌다. 기타자산은 부동산과 같은
+  //    §102①1호 그룹이므로 본래 부동산 aggregate와 함께 통산되어야 하는데 그 경로도 아직 없다.
+  //    ⇒ 현재는 **주식 그룹만** 통산한다. 기타자산 그룹 통산은 별건으로 남긴다(anchor로 고정).
+  const stockIdx = rawItems
+    .map((r, i) => ({ r, i }))
+    .filter((x) => x.r.basicDeductionGroup === "stock")
+    .map((x) => x.i);
+
+  const stockOffset = offsetLossesCore(
+    stockIdx.map((i) => ({
+      income: rawItems[i].transferIncome,
+      rateKey: resolveStockRateKey(
+        rawItems[i].taxCategory,
+        inputs[i].isSmallMediumEnterprise,
+        rawItems[i].isShortTermHolding,
+      ),
+      exempt: rawItems[i].isExempt,
+    })),
+  );
+
+  /** 통산 후 양도소득금액 — 주식 그룹만 갈아끼우고 기타자산은 원값 유지. */
+  const offsetIncome: number[] = rawItems.map((r) => r.transferIncome);
+  stockIdx.forEach((globalIdx, localIdx) => {
+    offsetIncome[globalIdx] = stockOffset.incomeAfterOffset[localIdx];
+  });
+  const totalLossOffset = stockOffset.rows.reduce((s, row) => s + row.amount, 0);
+
+  // STEP 2: 그룹별 소득금액 합산 — **통산 후** 기준(§92② 순서)
+  const stockGroupIncome = stockIdx.reduce((s, i) => s + offsetIncome[i], 0);
 
   const otherAssetGroupIncome = rawItems
-    .filter((r) => r.basicDeductionGroup === "real_estate_and_other_asset")
-    .reduce((s, r) => s + r.transferIncome, 0);
+    .map((r, i) => ({ r, i }))
+    .filter((x) => x.r.basicDeductionGroup === "real_estate_and_other_asset")
+    .reduce((s, x) => s + offsetIncome[x.i], 0);
 
   const stockBasicDeduction = Math.min(Math.max(0, stockGroupIncome), BASIC_DEDUCTION_LIMIT);
   const otherAssetBasicDeduction = Math.min(
@@ -360,26 +410,47 @@ function aggregateCore(
 
   // STEP 3: 종목별 기본공제 순차 배분 후 재계산
   //
-  // §103② 기본공제는 그룹별 연간 1회 250만원.
-  // 입력 순서 기준 앞 종목부터 최대 소진.
+  // **한도**는 §103①(각 호별 연 250만원)이고, **배분 순서**는 §103②다.
+  //   §103② 「… 해당 과세기간에 **먼저 양도한 자산**의 양도소득금액에서부터 순서대로 공제한다」
+  //   별지 제84호서식 작성요령 7번도 「해당 연도 중 **먼저 양도하는 자산**의 양도소득금액에서부터
+  //   차례대로 공제」로 같은 말을 한다.
   //
-  // 주식 그룹(그룹2):
-  //   - 엔진 내부 calcBasicDeduction은 "stock" 그룹을 항상 min(income, 250만) 적용
-  //   - realEstateGroupBasicDeductionUsed로 제어 불가 (별도 그룹)
-  //   - 해결: 첫 종목은 input 그대로(기본공제 full), 나머지는 transferIncome을
-  //     "이전 소진량만큼 빼서" 과표를 조정한 결과를 rawItems[i] 기반으로 패치
+  // 🔴 2026-08-12 정정 — 종전에는 **입력 순서**로 배분했다. 같은 사실관계인데 종목을 입력한
+  //   순서만 바꾸면 세액이 달라졌다(실측: 20% 종목 2월 + 30% 종목 11월 → 4,250,000 vs 4,500,000,
+  //   **250,000 차이**). 세율이 다른 종목이 섞이면 어느 쪽이 공제를 받느냐가 세액을 바꾼다.
   //
-  // 기타자산 그룹(그룹1):
+  // ⚠️ 동일 양도일의 우선순위는 **법문·서식 어디에도 없다** — 입력 순서로 안정 정렬한다.
+  // ⚠️ §103② 전단의 「감면소득금액 외의 양도소득금액에서 먼저 공제」는 **주식에 해당 사항이
+  //    없다** — 조특법 「양도소득세의 감면」 조문(§43·§69·§70·§77·§85·§97·§99)이 전부
+  //    부동산·토지·주택이고, 주식 특례(조특법 §14①·§13)는 감면이 아니라 **양도소득 불산입**이다.
+  //
+  // 주식 그룹(§103①2호):
+  //   - 엔진 내부 calcBasicDeduction은 "stock" 그룹에 **항상** min(income, 250만)을 적용해
+  //     잔여 한도를 모른다 → 정확한 잔여액(deductThis)으로 결과를 패치한다.
+  // 기타자산 그룹(§103①1호):
   //   - realEstateGroupBasicDeductionUsed로 직접 제어 가능
 
   let stockUsed = 0;        // 주식 그룹 기본공제 누적 사용량
   let otherAssetUsed = 0;   // 기타자산 그룹 누적 사용량
 
-  const processedItems = inputs.map((input, i) => {
+  /**
+   * §103② 배분 순회 순서 — **양도일 오름차순**, 동일자는 입력 순서(안정 정렬).
+   * 결과 배열은 **입력 순서를 유지**한다(결과뷰·신고서식이 입력 순서를 전제한다) —
+   * 순회 순서와 출력 순서를 분리하는 것이 이 두 줄의 목적이다.
+   */
+  const allocationOrder = inputs
+    .map((input, i) => ({ i, t: input.transferDate.getTime() }))
+    .sort((a, b) => a.t - b.t || a.i - b.i)
+    .map((x) => x.i);
+
+  const processedByIndex = new Array<StockTransferResult>(inputs.length);
+  const processItem = (i: number): StockTransferResult => {
+    const input = inputs[i];
     const r = rawItems[i];
     if (r.isExempt) return r;
 
-    const income = r.transferIncome;
+    // 통산 후 양도소득금액. 기타자산 그룹은 통산 미적용이라 원값이 그대로 온다(STEP 1.5 주석).
+    const income = offsetIncome[i];
 
     if (r.basicDeductionGroup === "stock") {
       // 이 종목에서 실제 적용할 기본공제
@@ -390,7 +461,7 @@ function aggregateCore(
       // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 종전에는 `deductThis > 0`이면 무조건
       // 엔진 전량 재계산으로 보냈는데, 순수 엔진 `calcBasicDeduction`은 주식 그룹에 **항상**
       // `min(income, 2,500,000)`을 적용한다. 그래서 앞 종목이 한도를 일부만 쓴 경우
-      // 뒤 종목이 **250만원 전액을 다시 공제**받아 그룹 한도(§103②2호)를 넘겼다.
+      // 뒤 종목이 **250만원 전액을 다시 공제**받아 그룹 한도(§103①2호)를 넘겼다.
       //   실측: 종목A가 1,000,000 사용 → 종목B가 잔여 1,500,000이 아니라 2,500,000 공제
       //        → 그룹 합계 3,500,000 (한도 초과) → 과세표준·산출세액 과소.
       //
@@ -408,6 +479,9 @@ function aggregateCore(
       const newFinalize = finalizeStockTax(newCalculatedTax, input);
       return {
         ...r,
+        // 통산 후 값으로 갈아끼운다 — 그래야 `taxBase = transferIncome − basicDeduction`
+        // 항등식이 유지된다(표시 산식과 세액이 어긋나면 안 된다).
+        transferIncome: income,
         basicDeduction: deductThis,
         taxBase: taxBaseAfterDeduction,
         appliedRate: rateResult.appliedRate,
@@ -429,9 +503,20 @@ function aggregateCore(
       otherAssetUsed += recalc.basicDeduction;
       return recalc;
     }
-  });
+  };
 
-  const totalTransferIncome = processedItems.reduce((s, r) => s + r.transferIncome, 0);
+  // §103② 순서로 **순회**하되, 결과는 **입력 순서**로 되돌린다.
+  for (const i of allocationOrder) {
+    processedByIndex[i] = processItem(i);
+  }
+  const processedItems = processedByIndex;
+
+  // 통산 후 합계. 기타자산 그룹은 통산 미적용이라 음수가 남을 수 있어 clamp를 유지한다
+  // (주식 그룹은 `incomeAfterOffset`이 이미 0 이상이다).
+  const totalTransferIncome = Math.max(
+    0,
+    processedItems.reduce((s, r) => s + r.transferIncome, 0),
+  );
 
   // §104⑤ 비교과세 — 기타자산 그룹만 호별 합산으로 다시 낸다(위 함수 주석 참조).
   // 주식 그룹은 §104⑤ 대상이 아니라 종전대로 단건 합계다.
@@ -465,6 +550,9 @@ function aggregateCore(
     },
     totalTaxBase: processedItems.reduce((s, r) => s + r.taxBase, 0),
     totalCalculatedTax,
+    ...(totalLossOffset > 0 || stockOffset.unusedLoss > 0
+      ? { lossOffset: { totalOffset: totalLossOffset, unusedLoss: stockOffset.unusedLoss } }
+      : {}),
     ...(otherAssetComparativeTax ? { otherAssetComparativeTax } : {}),
     totalUnderReportPenalty,
     electronicFilingCredit,

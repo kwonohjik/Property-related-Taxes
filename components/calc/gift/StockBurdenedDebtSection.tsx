@@ -207,6 +207,7 @@ export function StockBurdenedDebtSection({
                 hint="증여자가 주식을 취득한 날짜. 보유기간(§95) 및 대주주 판정(§157) 기준으로 사용됩니다."
               >
                 <DateInput
+                  data-testid={`stock-bg-acq-date-${item.id}`}
                   value={
                     bgt?.acquisitionDate instanceof Date
                       ? bgt.acquisitionDate.toISOString().slice(0, 10)

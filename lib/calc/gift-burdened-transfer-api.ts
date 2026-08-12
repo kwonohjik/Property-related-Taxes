@@ -347,6 +347,24 @@ export async function callGiftBurdenedTransferAPI(
  *
  * isOnMarketTransaction=false 고정: 부담부증여 = 장외 양도 (§94①3가목2)
  */
+/**
+ * §105①2호 주식등 예정신고 기한 — 「양도일이 속하는 반기의 말일부터 2개월」.
+ * 반환 `YYYY-MM-DD`. 양도일이 비어 있으면 빈 문자열(Zod가 걸러낸다).
+ */
+function computeStockPreliminaryFilingDueDate(transferDate: string): string {
+  if (!transferDate) return "";
+  const year = Number(transferDate.slice(0, 4));
+  const month = Number(transferDate.slice(5, 7));
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return "";
+  // 기산일 = 반기 말일의 다음 날 (상반기 → 7/1, 하반기 → 다음 해 1/1)
+  const start =
+    month <= 6 ? new Date(Date.UTC(year, 6, 1)) : new Date(Date.UTC(year + 1, 0, 1));
+  // 2개월이 되는 날의 전일이 만료일
+  const due = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 2, 1));
+  due.setUTCDate(due.getUTCDate() - 1);
+  return due.toISOString().slice(0, 10);
+}
+
 export function buildGiftStockBurdenedTransferBody(
   item: EstateItem,
   form: FormState,
@@ -387,6 +405,12 @@ export function buildGiftStockBurdenedTransferBody(
   // 양도일 = 증여일 (부담부증여 시점)
   const transferDate = form.giftDate ?? "";
 
+  // §105①2호 — 주식등의 예정신고 기한은 「양도일이 속하는 **반기**의 말일부터 2개월」.
+  // 민법 §160② 기산일(반기 말일 다음날)에서 2개월이 되는 날의 전일이 만료일이므로
+  // 상반기 양도 → 8/31, 하반기 양도 → 다음 해 2/28(윤년 2/29).
+  // 기한 내 신고를 전제한 값이다(filingViolation="none"과 짝) — 지연 가산세가 붙지 않는다.
+  const filingDate = computeStockPreliminaryFilingDueDate(transferDate);
+
   // 주식 종목명 (결과 표시용)
   const stockName = item.name?.trim() || "주식(부담부증여)";
 
@@ -399,13 +423,25 @@ export function buildGiftStockBurdenedTransferBody(
     totalIssuedShares,
 
     // 양도 정보 — 양도가액 = 채무인수액, 장외 고정
+    transferPriceMode: "actual" as const,
     transferActualInputMode: "total" as const,
     transferTotalPrice: assumedDebtForGift,
     transferDate,
     isOnMarketTransaction: false, // 부담부증여 = 장외 (§94①3가목2)
 
     // 취득 정보
+    acquisitionMode: bgt.acquisitionMode,
     acquisitionDate: acquisitionDateStr,
+    /**
+     * 증여자의 당초 취득 원인. 별도 입력 UI가 없어(설계 §매핑표 「Phase 2 SCOPE OUT」)
+     * 중립값 `"purchase"`를 쓴다 — §104② 보유기간 기산일이 `acquisitionDate` 그대로가 된다.
+     * 상속·합병 기산 특례를 임의로 적용하지 않는다(법 근거 없이 유리·불리 적용 금지).
+     */
+    acquisitionCause: "purchase" as const,
+    /** Phase 2 SCOPE OUT — §165⑤ 취득 후 상장 환산 미적용 */
+    acquiredBeforeListing: false,
+    tradingHaltAtTransfer: false,
+    bookLost: false,
 
     // 대주주 판정 (부담부에 무관한 필드들 — 기본값 0/false)
     selfShareRatio: 0,
@@ -430,6 +466,26 @@ export function buildGiftStockBurdenedTransferBody(
 
     // 대주주 여부 (상장에서 중과 판정용)
     isMajorShareholder: bgt.isMajorShareholder ?? false,
+
+    /**
+     * 필요경비 모드는 취득 모드에 종속(설계 §매핑표).
+     * 환산(estimated) → §163⑥4 개산공제 발동 / 실지(actual) → 개산공제 미발동, 실비 미입력 시 0.
+     */
+    expenseMode: bgt.acquisitionMode === "estimated" ? ("estimated" as const) : ("actual" as const),
+
+    // 신고 정보 — 기한 내 예정신고 전제. 가산세·전자신고공제를 임의로 적용하지 않는다.
+    filingType: "preliminary" as const,
+    filingDate,
+    isElectronicFiling: false,
+    filingViolation: "none" as const,
+    isFraudulent: false,
+    isInternationalTransaction: false,
+
+    /**
+     * §103①1호(부동산·기타자산) 그룹 기본공제 소진량. 이 경로는 주식(§103①2호 그룹)만
+     * 계산하므로 0이다 — 같은 증여 건의 부동산 부담부 양도세는 별도 라우트에서 처리된다.
+     */
+    realEstateGroupBasicDeductionUsed: 0,
   };
 
   // ─── 취득가액 모드별 안분 ───
@@ -480,13 +536,65 @@ export async function callGiftStockBurdenedTransferAPI(
     throw new Error(`주식 양도소득세 API 오류 ${res.status}: ${text}`);
   }
 
-  // 라우트 응답 형태: { data: StockTransferResult } (stock-transfer route 참조)
+  // 라우트 응답 형태: **`{ result: StockTransferResult }`**
+  // (`app/api/calc/stock-transfer/route.ts:128` — 단건 분기).
+  //
+  // 🔴 2026-08-12 정정: 종전에는 `json.data`를 읽었다. 그건 **부동산** 라우트의 형태
+  // (`{ data: { mode, result } }` — 위 callGiftBurdenedTransferAPI)를 복사해 온 것이고
+  // 주식 라우트는 `data`를 **주지 않는다**. 실측: 단건 응답 `hasData:false / hasResult:true`.
+  // 항상 undefined → 항상 throw → GiftTaxForm의 빈 catch가 삼켜, 주식 부담부증여
+  // 양도소득세가 화면에 **아예 표시되지 않았다**.
   const json = (await res.json()) as {
-    data?: StockTransferResult;
+    result?: StockTransferResult;
   };
-  const result = json.data;
+  const result = json.result;
   if (!result) {
     throw new Error("주식 양도소득세 계산 결과를 받지 못했습니다.");
   }
   return result;
+}
+
+/**
+ * callGiftStockBurdenedTransferAggregateAPI — 주식 부담부 자산 N건 → **1회** POST → 종목별 결과 배열
+ *
+ * 종목마다 단건 호출을 돌리면 §103①2호 주식 그룹 기본공제 250만원을 **각각** 받아
+ * 그룹 연 1회 한도를 넘는다(실측: 2종목 3,000,000 vs 정답 3,500,000 — 500,000 과소).
+ * 별지 제84호서식 작성요령 7번도 「주식은 … 양도소득금액 **통산액**에서 연 250만원을 공제」라고
+ * 적는다. ⇒ `items` 배열로 **aggregate 분기**(`route.ts:78`)를 태워 그룹 한도를 1회로 만든다.
+ *
+ * 1건이어도 같은 경로를 쓴다 — `aggregateCore`의 `inputs.length === 1` 분기가 단건과 동치임을
+ * anchor A-5가 고정한다. 경로를 둘로 두면 드리프트가 생긴다.
+ *
+ * 반환 배열의 **순서·길이는 입력과 1:1**이다(엔진이 `inputs.map`으로 만든다).
+ */
+export async function callGiftStockBurdenedTransferAggregateAPI(
+  items: EstateItem[],
+  form: FormState,
+): Promise<StockTransferResult[]> {
+  const body = {
+    items: items.map((item) => buildGiftStockBurdenedTransferBody(item, form)),
+    deductionMode: "aggregate" as const,
+  };
+
+  const res = await fetch("/api/calc/stock-transfer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`주식 양도소득세 API 오류 ${res.status}: ${text}`);
+  }
+
+  // aggregate 분기 응답 형태: `{ result: StockTransferAggregateResult, mode: "aggregate" }`
+  // (`app/api/calc/stock-transfer/route.ts:279`)
+  const json = (await res.json()) as {
+    result?: { items?: StockTransferResult[] };
+  };
+  const results = json.result?.items;
+  if (!results) {
+    throw new Error("주식 양도소득세 계산 결과를 받지 못했습니다.");
+  }
+  return results;
 }

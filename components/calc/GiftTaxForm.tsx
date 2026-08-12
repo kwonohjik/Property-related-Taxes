@@ -26,7 +26,8 @@ import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.type
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
 import { buildGiftTaxInput, buildSimultaneousGiftInputs } from "@/lib/calc/gift-api";
 import { calcGiftTax } from "@/lib/tax-engine/gift-tax";
-import { callGiftBurdenedTransferAPI, callGiftStockBurdenedTransferAPI } from "@/lib/calc/gift-burdened-transfer-api";
+import { callGiftBurdenedTransferAPI } from "@/lib/calc/gift-burdened-transfer-api";
+import { callGiftStockBurdenedTransferAggregateAPI } from "@/lib/calc/gift-burdened-transfer-api";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import {
@@ -238,16 +239,28 @@ export function GiftTaxForm() {
         (it) => it.burdenedGiftStockTransferTax !== undefined,
       );
       if (stockBurdenedItems.length > 0) {
-        const stockTxResults: StockTransferResult[] = [];
-        for (const item of stockBurdenedItems) {
-          try {
-            const stockTxResult = await callGiftStockBurdenedTransferAPI(item, form);
-            if (stockTxResult) stockTxResults.push(stockTxResult);
-          } catch {
-            // 단건 실패 — 증여세 결과는 이미 표시됨. 주식 양도세는 증여세 결과에 부가이므로 무시
-          }
+        // 종목별 단건 호출이 아니라 **1회 aggregate 호출**이다 — §103①2호 주식 그룹
+        // 기본공제 250만원은 과세기간당 1회라, 종목마다 호출하면 각각 공제받아 한도를 넘는다
+        // (실측 2종목: 3,000,000 → 정답 3,500,000). 별지 제84호서식 작성요령 7번도
+        // 「주식은 … 양도소득금액 통산액에서 연 250만원을 공제」라고 적는다.
+        try {
+          const stockTxResults = await callGiftStockBurdenedTransferAggregateAPI(
+            stockBurdenedItems,
+            form,
+          );
+          setStockTransferTaxResults(stockTxResults);
+        } catch (e) {
+          // 🔴 종전에는 빈 catch로 삼켰다. 그 침묵 때문에 body 필수필드 누락(400)과
+          // 응답 키 불일치가 **화면에 아무 신호도 남기지 않고** 기능을 죽여 놓았다.
+          // 부동산 부담부와 같은 배너로 표면화한다(합산 호출이라 전건 실패다).
+          const msg = e instanceof Error ? e.message : String(e);
+          setTransferTaxError((prev) =>
+            [prev, `주식 부담부증여 양도소득세 계산에 실패했습니다.\n${msg}`]
+              .filter(Boolean)
+              .join("\n"),
+          );
+          setStockTransferTaxResults([]);
         }
-        setStockTransferTaxResults(stockTxResults);
       } else {
         setStockTransferTaxResults([]);
       }

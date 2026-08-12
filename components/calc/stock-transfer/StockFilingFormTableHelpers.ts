@@ -242,8 +242,8 @@ export function buildRows(
   // 기본공제 그룹 라벨
   const basicDeductGroupLabel = (r: StockTransferResult) =>
     r.basicDeductionGroup === "stock"
-      ? "§103②2호 (주식 그룹)"
-      : "§103②1호 (부동산·기타자산 그룹)";
+      ? "§103①2호 (주식 그룹)"
+      : "§103①1호 (부동산·기타자산 그룹)";
 
   const rows: RowDef[] = [];
 
@@ -462,6 +462,21 @@ export function buildRows(
     highlight: true,
   });
 
+  // 18-1. 양도차손 통산 (§102② · 시행령 §167의2) — 다자산 모드에서 통산이 일어난 경우만.
+  //   부동산 정본이 `calculationSteps`에 한 행으로 노출하는 것과 대칭이다
+  //   (`transfer-tax-aggregate.ts` 「양도차손 통산 (§102② · 시행령 §167의2)」).
+  //   잔여 차손은 **소멸**한다(양도소득에 결손금 이월 없음) — 그 사실을 라벨에 남긴다.
+  if (aggregate?.aggregated.lossOffset) {
+    const { totalOffset, unusedLoss } = aggregate.aggregated.lossOffset;
+    rows.push({
+      label:
+        unusedLoss > 0
+          ? `18-1. 양도차손 통산 (§102②·영 §167의2) — 잔여 ${unusedLoss.toLocaleString()} 소멸(이월 불가)`
+          : "18-1. 양도차손 통산 (§102②·영 §167의2)",
+      values: val(0, () => -totalOffset, () => null),
+    });
+  }
+
   // 19. 양도소득금액 (LTHD 미적용 — 주식은 동일)
   rows.push({
     label: "19. 양도소득금액 (= 양도차익, 장특공제 없음)",
@@ -476,9 +491,9 @@ export function buildRows(
 
   // ── [F] 과세표준 (20~22) ──────────────────────────────────────
 
-  // 20. 기본공제 (§103② 그룹)
+  // 20. 기본공제 (§103① 그룹)
   rows.push({
-    label: "20. 기본공제 (§103② 그룹별 250만 한도)",
+    label: "20. 기본공제 (§103① 그룹별 250만 한도)",
     values: val(
       result.basicDeduction,
       (agg) =>
