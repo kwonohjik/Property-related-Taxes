@@ -76,7 +76,7 @@ async function enterBurdenedGift(page: Page, kindLabel: string) {
  * @param landPriceAutoFilled 상위 폼의 양도시 공시지가가 자동입력되어 있어야 하는가(R-2)
  */
 /**
- * ④ 「건물기준시가(상속 증여시)」 입력칸.
+ * ④ 증여재산 평가 기준시가 입력칸(라벨은 자산별 — testid로 잡는다).
  * ⚠️ 순서(`금액 입력` placeholder의 last 등)로 잡지 말 것 — 한 카드에 같은 placeholder가
  *    9개 있다(실측). `data-testid`가 유일하게 안정적이다.
  */

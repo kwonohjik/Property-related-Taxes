@@ -50,6 +50,37 @@ const VALUATION_MODE_OPTIONS = [
   },
 ] as const;
 
+/**
+ * ④ 「증여재산 평가」 칸의 자산별 라벨 — **그 칸이 무엇을 담는지가 자산마다 다르다**.
+ *
+ * 종전 라벨 「건물기준시가(상속 증여시)」는 두 방향으로 어긋났다:
+ *  · 기준일 — 상증 평가 기준일은 **증여일**이다(양도일과 값은 같지만 용어가 다르다).
+ *  · 범위   — `general_building`만 순수 건물분이고, 나머지 3종은 **토지를 포함**한다.
+ *    (§61①2호 건물 / 3호 오피스텔·상업용건물 = 토지·건물 일괄 / 4호 주택 = 부수토지 포함)
+ *    「건물」이라고만 쓰면 토지분을 뺀 금액을 넣게 되어 평가액이 조용히 과소해진다.
+ *
+ * `building`은 hint를 두지 않는다 — 아래 부수토지 안내 문단이 같은 말을 이미 한다.
+ */
+const GIFT_STD_PRICE_FIELD: Partial<
+  Record<AssetForm["assetKind"], { label: string; hint?: string }>
+> = {
+  general_building: {
+    label: "증여일 건물 기준시가",
+    hint: "건물분만 입력하세요(상증법 §61①2호). 토지분은 개별공시지가로 따로 산출됩니다.",
+  },
+  building: {
+    label: "증여일 기준시가 (부수토지 포함)",
+  },
+  housing: {
+    label: "증여일 주택 기준시가",
+    hint: "개별주택가격·공동주택가격 — 부수토지를 포함해 일괄 고시된 가액(상증법 §61①4호)",
+  },
+  commercial_building: {
+    label: "증여일 기준시가 (토지·건물 일괄)",
+    hint: "국세청장이 토지와 건물을 일괄 고시한 가액(상증법 §61①3호)",
+  },
+};
+
 // 취득가액 산정방식 (시가 모드 — 소득세법 §100① 양도·취득 산정방식 일치 원칙)
 const ACQUISITION_METHOD_OPTIONS = [
   {
@@ -473,7 +504,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
         </div>
       )}
 
-      {/* ④ 증여재산 평가용 건물 기준시가 (상증법 §61 — 층별 가감율 적용).
+      {/* ④ 증여재산 평가액 — 증여일 현재 기준시가(상증법 §61). 담는 범위는 자산마다 다르다
+          (`GIFT_STD_PRICE_FIELD` 참조 — 건물분만 vs 토지 포함).
           시가 모드에서는 평가액이 시가로 통째 대체되어 이 값이 쓰이지 않고(상증법 §60②~④ ·
           `burdened-gift-valuation.ts:134-137`), 토지 자산은 건물이 없다 — 둘 다 숨긴다. */}
       {!isMarketMode && asset.assetKind !== "land" && (
@@ -483,7 +515,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
             §61
           </span>
           <p className="text-xs font-semibold text-emerald-800">
-            증여재산 평가 — 양도시 건물 기준시가 (층별 가감율 적용)
+            증여재산 평가 — 증여일 현재 기준시가
           </p>
           <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
         </div>
@@ -493,7 +525,10 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
             면적·개별공시지가를 함께 입력하세요(「상속세 및 증여세법」 제61조 제1항 제1호·제2호).
           </p>
         )}
-        <FieldCard label="건물기준시가(상속 증여시)">
+        <FieldCard
+          label={GIFT_STD_PRICE_FIELD[asset.assetKind]?.label ?? "증여일 현재 기준시가"}
+          hint={GIFT_STD_PRICE_FIELD[asset.assetKind]?.hint}
+        >
           <CurrencyInput
             label=""
             hideUnit
