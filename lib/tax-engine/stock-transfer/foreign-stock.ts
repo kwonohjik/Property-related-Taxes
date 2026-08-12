@@ -300,13 +300,30 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
 
   // ──────────────────────────────────────────────────────────
   // STEP 10: 외국납부세액공제 §118의6 (credit 선택 시)
+  //
+  // 한도 = A × B / C (§118의6①1호)
+  //   A: 「제118조의5에 따라 계산한 해당 과세기간의 국외자산에 대한 양도소득 산출세액」
+  //   B: 해당 국외자산 양도소득금액   C: 해당 과세기간의 국외자산에 대한 양도소득금액
+  //
+  // 🔑 **A = §104①12호로 계산한 산출세액**이다(= 바로 위 `incomeTax`). A가 지시하는
+  //    §118의5를 문언 그대로 §55① 누진으로 읽지 않는 이유(2026-08-12 DRF·서식 실측):
+  //      ① §118②의 준용 열거가 §118의2~§118의4·§118의6뿐 ⇒ §55① 적용 근거가 없다.
+  //      ② §118의5①의 「국외자산」은 §118의2가 정하는데 그 **3호·4호가 삭제**되어
+  //         국외주식은 §118의5의 적용대상 자체가 아니다.
+  //      ③ 영 §178의7(§118의6② 위임)은 A를 재정의하지 않는다.
+  //      ④ 별지 제84호서식 부표 1 세율표가 국외주식 산출세액을 10%·20%로 계산하고,
+  //         §55① 비교(⑩란 가·나)는 「§94①1호·2호 및 4호 자산」 전용이다.
+  //    계획서 §4 Q-3 종결 · anchor F 시리즈(`foreign-stock-94-1-3-da-track.anchor.test.ts`).
+  //
+  // ⚠️ **B/C 안분은 미구현**이다. 이 엔진은 국외자산을 하나만 보므로 B = C(비율 1)로
+  //    계산된다 — 단건에서는 맞지만, 한 과세기간에 국외주식이 둘 이상이면 종목마다
+  //    한도를 전액으로 잡아 **과대공제**가 된다. 구조상 C를 알 수 있는 aggregate 레벨로
+  //    옮겨야 하므로 D-3(aggregate 편입) 이후에만 구현 가능하다 — 계획서 §3.4·§6.3 D-4 잔여.
   // ──────────────────────────────────────────────────────────
   let foreignTaxCreditLimit: number | undefined;
   let foreignTaxCreditApplied: number | undefined;
 
   if (input.foreignTaxMethod === "credit" && input.hasForeignTax && foreignTaxPaidKrw > 0) {
-    // 단일 국외자산 → 한도 = 산출세액 전액
-    // (복수 자산 합산 시: 한도 = 산출세액 × 해외원천소득 / 총소득 — v1 단건)
     foreignTaxCreditLimit = incomeTax;
     foreignTaxCreditApplied = Math.min(foreignTaxPaidKrw, foreignTaxCreditLimit);
     appliedRules.push(STOCK_FOREIGN.SECTION_118_6_CREDIT_METHOD);
