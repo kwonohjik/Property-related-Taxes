@@ -22,19 +22,35 @@ export interface BlockProps {
   isAppraisalAcquisition?: boolean;
   onIsAppraisalAcquisitionChange?: (v: boolean) => void;
   /**
-   * 일반건물 증축 여부 — **읽기 전용**. `assetKind === "general_building"` 시만 의미가 있다.
+   * 일반건물 증축 여부. `assetKind === "general_building"` 시만 의미가 있다.
    *
-   * 이 블록은 이 값을 **취득가액 칸의 성격**을 가르는 데만 쓴다: 원건물이 실거래가이고
-   * 증축이 있으면 그 칸은 「토지·건물 일괄 취득가액」이 되고 일괄 필요경비 칸이 함께 열린다
-   * (`isBundledExtension`).
+   * 이 값이 **취득가액 칸의 성격**을 가른다: 원건물이 실거래가이고 증축이 있으면 그 칸은
+   * 「토지·원건물 일괄 취득가액」이 되고 일괄 필요경비 칸이 함께 열린다(`isBundledExtension`).
    *
-   * 🔄 **쓰기 콜백(`onGbHasExtensionChange`)과 증축분 취득방식 2개는 제거했다** (2026-08-12).
-   *    종전에는 「토지·건물 일괄 (증축분 별도)」 4번째 라디오가 여기서 증축 플래그와 증축분
-   *    방식을 직접 만졌는데, 그 옵션을 없애고 증축을 아래 「증축 있음」 토글에 일원화했다.
-   *    ⇒ 증축 축의 쓰기 주체는 `GeneralBuildingBlock`의 토글·서브 라디오 **하나뿐**이다.
+   * 🔄 **읽기 전용이 아니다** (2026-08-12 UX 정정). 취득가액 칸 **직전**에 유무 토글을 두어
+   *    `props.onAssetChange({ gbHasExtension })`로 쓴다 — 종전에는 쓰기 주체가
+   *    `GeneralBuildingBlock`의 「증축 있음」 토글 하나뿐이었는데, 그 토글이 ②건물 기준시가
+   *    **뒤**에 있어 사용자가 취득가액 칸을 채우는 시점에 증축 개념이 화면에 아직 없었다
+   *    (⇒ 증축 포함 총액을 넣게 된다). CLAUDE.md 「모드 토글은 영향 필드 직전」 규칙.
+   *
+   *    ⚠️ 두 토글은 **같은 필드를 양방향 read/write**한다(별도 필드 신설·`useEffect` 미러링
+   *       금지 — components/calc/CLAUDE.md 「같은 의미 폼 필드의 양방향 read/write 통합」).
+   *       아래쪽 토글은 상세 입력(증축일·면적·기준시가·증축분 방식)을 계속 전담한다.
+   *
+   * 🪤 **종전 결함과 혼동하지 말 것**: 제거된 것은 「토지·건물 일괄 (증축분 별도)」라는 **4번째
+   *    라디오 옵션**이었다(취득가액 산정 방식 축이 증축 축을 겸해 조합 상태가 됐다). 여기 토글은
+   *    라디오와 **별개 축**이라 그 문제가 재현되지 않는다.
    *    계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §6 Q-1
    */
   gbHasExtension?: boolean;
+  /**
+   * 지분 카드(fractional split의 2번째 이후 자산)인가 — 증축 유무 토글을 숨긴다.
+   *
+   * 증축은 **물건 사건**이라 첫 카드에서 한 번만 받는다(`GeneralBuildingBlock`의
+   * `shareAcquisitionOnly`와 같은 축). 지분 카드에 유무 토글을 노출하면 그 카드의
+   * `gbHasExtension`(자산별 독립 필드)이 켜져 물건-수준 사실이 자산별로 갈린다.
+   */
+  shareAcquisitionOnly?: boolean;
   fixedAcquisitionPrice: string;
   onFixedAcquisitionPriceChange: (v: string) => void;
   /** 환산취득가 분자: 취득시 기준시가 총액 (원) */

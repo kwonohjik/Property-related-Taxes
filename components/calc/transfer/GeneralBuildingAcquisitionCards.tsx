@@ -106,6 +106,12 @@ interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
+  /**
+   * 지분 카드(fractional split의 2번째 이후) — 물건-수준 입력을 숨긴다.
+   * 여기서는 취득가액 칸 직전의 **증축 유무 토글**만 가린다(증축은 물건 사건이라 첫 카드 전담 —
+   * `GeneralBuildingBlock`의 같은 이름 prop과 한 축이다).
+   */
+  shareAcquisitionOnly?: boolean;
 }
 
 /**
@@ -261,7 +267,12 @@ function GbBuildingInheritedValueCard({
   );
 }
 
-export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate }: Props) {
+export function GeneralBuildingAcquisitionCards({
+  asset,
+  onChange,
+  transferDate,
+  shareAcquisitionOnly = false,
+}: Props) {
   // §114조의2 가산세 5년 이내 여부 (useMemo — useEffect 미러링 금지 정책)
   const showPenaltyBadge = useMemo(() => {
     if (
@@ -433,9 +444,11 @@ export function GeneralBuildingAcquisitionCards({ asset, onChange, transferDate 
             onUseEstimatedChange={(v) => onChange({ useEstimatedAcquisition: v })}
             isAppraisalAcquisition={asset.isAppraisalAcquisition}
             onIsAppraisalAcquisitionChange={(v) => onChange({ isAppraisalAcquisition: v })}
-            // 증축은 **읽기만** 한다 — 취득가액 칸이 「일괄 취득가액」인지 가르는 용도.
-            // 쓰기 주체는 `GeneralBuildingBlock`의 「증축 있음」 토글 하나뿐이다(2026-08-12).
+            // 증축 — 취득가액 칸이 「일괄 취득가액」인지 가르고(읽기), 그 칸 **직전**의
+            // 유무 토글이 같은 필드를 쓴다(2026-08-12 UX 정정 — types.ts `gbHasExtension` 주석).
+            // 상세 입력(증축일·면적·기준시가·방식)은 `GeneralBuildingBlock` 토글이 계속 전담한다.
             gbHasExtension={asset.gbHasExtension}
+            shareAcquisitionOnly={shareAcquisitionOnly}
             fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
             onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
             standardPriceAtAcq={asset.standardPriceAtAcq}
