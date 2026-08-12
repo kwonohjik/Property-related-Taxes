@@ -69,7 +69,7 @@ describe("A1 — 토지(취득·양도) → 건물(취득·양도) 순서", () =
 });
 
 describe("A2 — 취득시 게이트 승계 (실가·비증축·비부담부)", () => {
-  it("취득 축 안분이 없으면 취득 박스·일괄 런처·개산공제 안내가 모두 없다", () => {
+  it("취득 축 안분이 없으면 취득 박스·일괄 런처가 모두 없다", () => {
     const { container } = renderBlock({ useEstimatedAcquisition: false });
     const boxes = Array.from(
       container.querySelectorAll<HTMLElement>("[data-gb-stdprice]"),
@@ -78,7 +78,8 @@ describe("A2 — 취득시 게이트 승계 (실가·비증축·비부담부)", 
     expect(screen.queryByText("취득시 토지 공시지가")).toBeNull();
     expect(screen.queryByText("취득시 건물기준시가")).toBeNull();
     expect(screen.queryByTestId("gb-building-std-batch-open")).toBeNull();
-    expect(screen.queryByText("개산공제 (§163⑥)")).toBeNull();
+    /* 개산공제 안내 박스는 2026-08-12에 삭제됐다(사용자 요청) — 단언을 남기면 게이트와
+       무관하게 항상 참이라 구별력이 없다. */
   });
 
   /**
