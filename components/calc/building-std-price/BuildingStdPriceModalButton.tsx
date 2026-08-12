@@ -64,6 +64,17 @@ interface Props {
     acqLandPricePerSqm2001?: string;
     /** 양도당시 ㎡당 개별공시지가 — 트랙 구분 없음(같은 필지·같은 시점). */
     transferLandPricePerSqm?: string;
+    /**
+     * 상속·증여(1시점) 모드의 ㎡당 개별공시지가 — 평가기준일 당시 값.
+     *
+     * 양도 트랙(`acqLandPricePerSqm`·`transferLandPricePerSqm`)과 **폼 필드가 다르다**
+     * (`valLandPrice`). 값이 없으면 모달의 `LandPriceLookupField`로 사용자가 조회·입력한다 —
+     * 이 prefill은 그 수고를 없앨 뿐 유일 입력 경로가 아니다.
+     *
+     * ⚠️ `lockedTaxType="inheritance_gift"` 호출부에서만 의미가 있다. 양도 모드에서 넘기면
+     *    폼에 그 값이 앉지만 계산에 쓰이지 않는다(상증 섹션이 렌더되지 않으므로).
+     */
+    valuationLandPricePerSqm?: string;
   };
   /**
    * 둘째 시점 라벨 override(기본 "양도 시점"). PHD 감면처럼 "취득시 + 최초고시시" 2시점을
@@ -131,6 +142,8 @@ export function BuildingStdPriceModalButton({
         ...(prefill.landAreaM2 ? { landAreaM2: prefill.landAreaM2 } : {}),
         ...(acqLandPrice ? { acqLandPrice } : {}),
         ...(prefill.transferLandPricePerSqm ? { transLandPrice: prefill.transferLandPricePerSqm } : {}),
+        // 상증 1시점 트랙 — 양도 트랙과 폼 필드가 다르다(valLandPrice). 빈 값은 미주입.
+        ...(prefill.valuationLandPricePerSqm ? { valLandPrice: prefill.valuationLandPricePerSqm } : {}),
         ...(prefill.acquisitionDate
           ? {
               acquisitionEventDate: prefill.acquisitionDate,

@@ -17,6 +17,7 @@ import {
   idOfSnapshotKey,
   snapshotKeyTimepoint,
   isExtensionSnapshotKey,
+  phdTimepointLabel,
 } from "@/lib/calc/building-std-snapshot-keys";
 
 const ID = "asset-1";
@@ -63,5 +64,41 @@ describe("isExtensionSnapshotKey — 제목 구별(원건물 계산서와 나란
     expect(isExtensionSnapshotKey(`bsp-${ID}-gb-acq`)).toBe(false);
     expect(isExtensionSnapshotKey(`bsp-${ID}-cb-transfer`)).toBe(false);
     expect(isExtensionSnapshotKey(`bsp-estate-${ID}`)).toBe(false);
+  });
+});
+
+/**
+ * 부담부증여 ④ 「증여재산 평가」 상속·증여 계산기 키(`-bggift`) — 2026-08-12 편입.
+ *
+ * 상증 1시점이라 시점 세그먼트가 없다(`bsp-estate-*`와 같은 구조). 두 방향이 모두 계약이다:
+ *   · `idOfSnapshotKey`   에 **넣어야** 계산서가 출력된다.
+ *   · `snapshotKeyTimepoint`에 **넣으면 안 된다** — 증여 계산서가 양도 계산서로 둔갑한다.
+ */
+describe("-bggift — 부담부증여 증여재산 평가 계산기 키", () => {
+  it("K-1 idOfSnapshotKey가 자산 id로 환원한다", () => {
+    expect(idOfSnapshotKey(`bsp-${ID}-bggift`)).toBe(ID);
+  });
+
+  it("🔴 K-1 구별력 — 미등록이면 `-bggift`가 남아 계산서가 조용히 미출력된다", () => {
+    expect(idOfSnapshotKey(`bsp-${ID}-bggift`)).not.toBe(`${ID}-bggift`);
+  });
+
+  /**
+   * 🛑 PDF 경로(`building-std-pdf-data.ts:48-49`)는 `snap.taxType !== "transfer"`일 때도
+   * 이 함수를 불러 **양도 배치가 재구성한 상증 스냅샷**을 양도 맥락으로 되돌린다.
+   * `-bggift`는 진짜 상속·증여 계산이므로 null이어야 상속·증여 맥락 그대로 간다.
+   */
+  it("K-2 snapshotKeyTimepoint는 null이어야 한다 (상속·증여 맥락 보존)", () => {
+    expect(snapshotKeyTimepoint(`bsp-${ID}-bggift`)).toBeNull();
+  });
+
+  it("K-3 증축분·배치 라벨 대상이 아니다", () => {
+    expect(isExtensionSnapshotKey(`bsp-${ID}-bggift`)).toBe(false);
+    expect(phdTimepointLabel(`bsp-${ID}-bggift`)).toBeNull();
+  });
+
+  it("🪤 `gb`를 부분문자열로 포함하지만 `-gb-` 접두 규칙에 걸리지 않는다", () => {
+    expect(idOfSnapshotKey(`bsp-${ID}-gb-transfer`)).toBe(ID);
+    expect(idOfSnapshotKey(`bsp-${ID}-bggift`)).toBe(ID);
   });
 });

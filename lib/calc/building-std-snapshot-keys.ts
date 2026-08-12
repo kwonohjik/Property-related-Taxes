@@ -29,7 +29,12 @@ export function idOfSnapshotKey(key: string): string {
         // 시점 세그먼트가 없다(mx-commercial과 같은 구조). 시점 필터도 적용하지 않는다.
         .replace(/-split-both$/, "")
         // 감면 조문 PHD 환산 통합 모달(취득시+최초공시시 단일 스냅샷) — 규약 편입.
-        .replace(/-red-phd$/, "");
+        .replace(/-red-phd$/, "")
+        /**
+         * 부담부증여 ④ 「증여재산 평가」 상속·증여 계산기(상증 1시점) — 시점 세그먼트 없음.
+         * ⛔ `snapshotKeyTimepoint`에는 **추가하지 말 것** — 아래 그 함수의 주석 참조.
+         */
+        .replace(/-bggift$/, "");
 }
 
 /**
@@ -50,6 +55,13 @@ export function snapshotKeyTimepoint(key: string): "acquisition" | "transfer" | 
   //    필터를 통과하지 못했다 → `singleTimePoint` 플래그 이전에 저장된 스냅샷(이력 복원분)에서
   //    **양도시 계산서에 취득당시 인스턴스가 덤으로 실린다**(2026-08-11 실측).
   // `gb-ext`는 `gb`보다 앞 — `idOfSnapshotKey`와 **같은 접두 집합**이어야 한다(위 주석).
+  //
+  // 🛑 **`-bggift`(부담부증여 증여재산 평가)는 여기 넣지 않는다** — `idOfSnapshotKey`와 달리
+  //    이 함수는 **양도 맥락 전용**이다. PDF 경로(`building-std-pdf-data.ts:48-49`)가 반대 조건
+  //    (`snap.taxType !== "transfer"`)으로도 이 함수를 불러 **양도 배치가 재구성한 상증 스냅샷을
+  //    양도 맥락으로 되돌린다**. `-bggift`는 진짜 상속·증여 계산이므로 여기서 null이어야
+  //    `bsp-estate-*`와 같이 상속·증여 맥락 그대로 간다 — 추가하면 **증여 계산서가 양도
+  //    계산서로 둔갑**한다. 「대칭을 맞춘다」는 이유로 넣지 말 것.
   if (/-(?:phd|gb-ext|gb|cbinh|cb|split)-acq(?:-commercial)?$/.test(key)) return "acquisition";
   if (/-(?:phd|gb-ext|gb|cbinh|cb|split)-transfer(?:-commercial)?$/.test(key)) return "transfer";
   return null;
