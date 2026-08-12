@@ -402,11 +402,16 @@ describe("S — 다종목 경로 구조 (D-3 완료 후)", () => {
     expect(parsed.success).toBe(false);
   });
 
-  it("S-4 [트립와이어] 클라이언트는 아직 `items`를 보내지 않는다 — Phase 5가 열면 여기가 깨진다", () => {
-    // 엔진·API가 열려도 입력 경로가 없으면 사용자에게는 아무 변화가 없다
-    // ([[feedback_api_trigger_without_input_path_is_noop]]).
-    // Phase 5에서 다종목 UI가 붙으면 이 단언을 **삭제**하고 실제 전송 anchor로 바꾼다.
-    expect(stockTransferApiSource).not.toContain("items:");
+  it("S-4 ✅ 클라이언트가 `items`를 보낸다 — Phase 5 완료 (트립와이어가 예정대로 울렸다)", () => {
+    // 종전 S-4는 「클라이언트가 아직 items를 안 보낸다」는 **전제**를 고정하는 트립와이어였다.
+    // Phase 5에서 `callStockTransferTaxAggregateAPI`가 배선되자 **설계대로 실패**했고
+    // (pre-push 전체 회귀에서 검출), 여기서 실제 전송 anchor로 교체했다.
+    //
+    // 이제 고정하는 것: 다종목 합산 경로가 **실재한다**. 지워지면 §103①2호 공동 기본공제·
+    // §102② 통산·§118의6①1호 B/C가 전부 도달 불가로 되돌아간다.
+    expect(stockTransferApiSource).toContain("callStockTransferTaxAggregateAPI");
+    expect(stockTransferApiSource).toContain("items:");
+    expect(stockTransferApiSource).toContain('deductionMode: "aggregate"');
   });
 });
 

@@ -19,6 +19,7 @@ import {
   shouldSkipNetIncome,
 } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-aggregate";
 
 // ============================================================
 // ③ normalize helper (빈 문자열 → undefined / 숫자 파싱)
@@ -694,4 +695,67 @@ export async function callStockTransferTaxAPI(
 
   const data = await res.json();
   return data.result as StockTransferResult;
+}
+
+// ============================================================
+// ⑬ callStockTransferTaxAggregateAPI — 다종목 합산 POST
+// ============================================================
+
+/**
+ * 여러 종목을 **한 신고**로 합산 계산한다 (`{ items, deductionMode: "aggregate" }`).
+ *
+ * ## 왜 합산이어야 하는가 (종목별 단건 호출과 다른 점)
+ *
+ * · **§103①2호** — 기본공제 250만원이 주식 그룹 **연 1회**다. 종목별로 따로 호출하면
+ *   종목마다 250만원을 받아 과소과세가 된다.
+ * · **§102②** — 양도차손 통산이 종목 간에 일어난다. 따로 호출하면 손실이 버려진다.
+ * · **§118의6①1호** — 국외 종목의 외국납부세액 공제한도 `A × B / C`는 C(그 과세기간
+ *   국외자산 전체의 양도소득금액)를 알아야 한다. 단건에서는 계산 자체가 불가능하다.
+ *
+ * 별지 제84호서식 작성요령 7번도 「주식은 … **국내ㆍ국외주식 양도소득금액 통산액**에서
+ * 연 250만원을 공제」로 같은 말을 한다.
+ *
+ * ⚠️ **국외전출세(`exit_tax`)는 이 경로에 넣지 않는다** — 별도 과세 트랙이고 route도 분기가
+ *    다르다. 호출자가 걸러야 한다(`assertNoExitTaxItem`).
+ */
+export async function callStockTransferTaxAggregateAPI(
+  forms: StockTransferFormData[],
+): Promise<StockTransferAggregateResult> {
+  assertNoExitTaxItem(forms);
+
+  const body = {
+    items: forms.map((f) => buildStockTransferApiBody(f)),
+    deductionMode: "aggregate" as const,
+  };
+
+  const res = await fetch("/api/calc/stock-transfer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(err.error ?? `HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.result as StockTransferAggregateResult;
+}
+
+/**
+ * 국외전출세 종목이 합산 배열에 섞이는 것을 **조용히 통과시키지 않는다**.
+ *
+ * route의 if-체인은 `items`를 **먼저** 보므로(`route.ts:78`), exit_tax를 items에 넣으면
+ * 국외전출세 분기(:100)에 도달하지 못한 채 aggregate로 흘러간다 —
+ * [[feedback_route_if_chain_order_swallows_branches]].
+ */
+function assertNoExitTaxItem(forms: StockTransferFormData[]): void {
+  const idx = forms.findIndex((f) => f.marketType === "exit_tax");
+  if (idx >= 0) {
+    throw new Error(
+      `국외전출세(${idx + 1}번째 종목)는 다종목 합산 대상이 아닙니다 — ` +
+        "§118의10④ 별도 기본공제 그룹이며 과세 트랙이 다릅니다.",
+    );
+  }
 }

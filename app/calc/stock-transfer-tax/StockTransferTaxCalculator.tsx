@@ -21,6 +21,9 @@ import { Step4 } from "./steps/Step4";
 import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { callStockTransferTaxAPI } from "@/lib/calc/stock-transfer-tax-api";
+import { callStockTransferTaxAggregateAPI } from "@/lib/calc/stock-transfer-tax-api";
+import { StockItemListCard } from "@/components/calc/stock-transfer/StockItemListCard";
+import { StockAggregateSummaryCard } from "@/components/calc/results/StockAggregateSummaryCard";
 import { validateStep1, validateStep2, validateStep3 } from "@/lib/calc/stock-transfer-tax-validate";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { runStockManualSave, formatStockSaveMessage } from "@/components/calc/stock-transfer-save-handler";
@@ -43,8 +46,24 @@ export default function StockTransferTaxCalculator() {
   const error = useStockTransferStore((s) => s.error);
   const isLoading = useStockTransferStore((s) => s.isLoading);
 
-  const { setStep, updateFormData, setResult, setError, setLoading, reset } =
-    useStockTransferStore();
+  const savedItems = useStockTransferStore((s) => s.savedItems);
+  const aggregateResult = useStockTransferStore((s) => s.aggregateResult);
+
+  const {
+    setStep, updateFormData, setResult, setAggregateResult, setError, setLoading, reset,
+    commitCurrentItem, editSavedItem, removeSavedItem,
+  } = useStockTransferStore();
+
+  /**
+   * 종목 확정 게이트 — 종목명과 시장 분류가 없으면 목록에서 구분할 수 없다.
+   * ⚠️ 전체 validate를 걸지 않는다: 사용자가 종목을 오가며 채우는 흐름을 막게 된다.
+   *   최종 계산 시점에 route의 Zod가 종목별로 검증한다(⑫).
+   */
+  const canCommitCurrentItem =
+    formData.securityName.trim() !== "" && formData.marketType !== "";
+  const commitDisabledReason = canCommitCurrentItem
+    ? undefined
+    : "종목명과 시장 분류를 입력해야 종목을 확정할 수 있습니다.";
   // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
   useResetOnNewParam(reset);
 
@@ -115,19 +134,31 @@ export default function StockTransferTaxCalculator() {
   }, [currentStep, router, setStep]);
 
   // 계산 실행
+  //
+  // 🔑 확정한 종목이 있으면 **합산 경로**로 간다. 종목별로 단건 호출을 반복하면
+  //    §103①2호 기본공제가 종목마다 250만원씩 적용되고(과소과세), §102② 통산과
+  //    §118의6①1호 B/C 안분이 아예 계산되지 않는다.
   const handleCalculate = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await callStockTransferTaxAPI(formData);
-      setResult(res);
+      if (savedItems.length > 0) {
+        const agg = await callStockTransferTaxAggregateAPI([...savedItems, formData]);
+        setAggregateResult(agg);
+        // 결과 화면·이력이 단건 `result`를 전제하므로 **마지막(편집 중이던) 종목**을 대표로 둔다.
+        setResult(agg.items[agg.items.length - 1] ?? null);
+      } else {
+        const res = await callStockTransferTaxAPI(formData);
+        setAggregateResult(null);
+        setResult(res);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "계산 오류가 발생했습니다.";
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [formData, setLoading, setError, setResult]);
+  }, [formData, savedItems, setLoading, setError, setResult, setAggregateResult]);
 
   const handleReset = useCallback(() => {
     reset();
@@ -180,7 +211,25 @@ export default function StockTransferTaxCalculator() {
           {/* 폼 영역 */}
           <div className="flex-1 min-w-0">
             {currentStep === 0 && (
-              <Step1 form={formData} onChange={updateFormData} />
+              <>
+                {/*
+                  다종목 합산신고 — §103①2호 기본공제는 국내·국외주식 통산액에서 연 1회이므로
+                  여러 종목을 **한 계산**에 담아야 한다. 국외전출세는 별도 트랙이라 제외한다.
+                */}
+                {formData.marketType !== "exit_tax" && (
+                  <div className="mb-8">
+                    <StockItemListCard
+                      savedItems={savedItems}
+                      onAddCurrent={commitCurrentItem}
+                      onEdit={editSavedItem}
+                      onRemove={removeSavedItem}
+                      canAddCurrent={canCommitCurrentItem}
+                      addDisabledReason={commitDisabledReason}
+                    />
+                  </div>
+                )}
+                <Step1 form={formData} onChange={updateFormData} />
+              </>
             )}
             {currentStep === 1 && (
               <Step2 form={formData} onChange={updateFormData} />
@@ -189,13 +238,24 @@ export default function StockTransferTaxCalculator() {
               <Step3 form={formData} onChange={updateFormData} />
             )}
             {currentStep === 3 && (
-              <Step4
-                result={result}
-                form={formData}
-                error={error}
-                isLoading={isLoading}
-                onCalculate={handleCalculate}
-              />
+              <>
+                {/* 다종목 합산 시 — 종목별 요약·통산·외국납부세액 한도를 먼저 보인다. */}
+                {aggregateResult && (
+                  <div className="mb-8">
+                    <StockAggregateSummaryCard
+                      aggregate={aggregateResult}
+                      names={[...savedItems, formData].map((f) => f.securityName)}
+                    />
+                  </div>
+                )}
+                <Step4
+                  result={result}
+                  form={formData}
+                  error={error}
+                  isLoading={isLoading}
+                  onCalculate={handleCalculate}
+                />
+              </>
             )}
 
             {/* 하단 네비게이션 */}
