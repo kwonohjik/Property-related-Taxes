@@ -13,6 +13,10 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
+import {
+  BurdenedGiftFilingFormSection,
+  hasBurdenedGiftFilingForm,
+} from "@/components/calc/results/transfer/BurdenedGiftFilingFormSection";
 import { SaleSplitJudgmentBlock } from "@/components/calc/results/transfer/SaleSplitJudgmentBlock";
 // 800줄 정책 — 일반건물 3-way 요약 표(사례 33)를 별도 파일로 분리(2026-08-11).
 import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
@@ -364,9 +368,10 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
 
   const availablePrintIds = useMemo<Set<TransferPrintSectionId>>(() => {
     const s = new Set<TransferPrintSectionId>(["form-table", "detailed-statement", "calculation"]);
+    if (hasBurdenedGiftFilingForm(transferBurdenedGiftBreakdown)) s.add("gift-filing-form");
     if (hasBuildingStdReport({ assets: formData.assets })) s.add("building-std-report");
     return s;
-  }, [formData]);
+  }, [formData, transferBurdenedGiftBreakdown]);
 
   const handlePrintPdf = (pdfSections: string[]) =>
     downloadSelectedPdf(
@@ -620,6 +625,16 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
            「2시점 건물기준시가 일괄 계산」으로 스냅샷을 저장해도 일반건물에서는 화면·인쇄·PDF
            어디에도 계산서가 나오지 않았다(2026-08-11 사용자 제보).
       */}
+      {/* 증여세 신고서 양식(별지 제10호) — 부담부증여 무상이전분. 기준시가 계산서 바로 위.
+          🔴 일반건물 부담부증여는 route가 `mode: "bundled"`로 분기해 이 카드가 종착지다 —
+             단건 뷰(`TransferTaxResultView`)에만 배선하면 여기서 통째로 사라진다
+             (2026-08-12 사용자 제보로 발견. 「건물 기준시가 계산서」가 2026-08-11에 겪은 것과 같은 실패). */}
+      {hasBurdenedGiftFilingForm(transferBurdenedGiftBreakdown) && (
+        <PrintSection id="gift-filing-form" selectedIds={selectedPrintIds}>
+          <BurdenedGiftFilingFormSection breakdown={transferBurdenedGiftBreakdown} />
+        </PrintSection>
+      )}
+
       <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>
         <BuildingStdPriceReportSection inputData={{ assets: formData.assets }} />
       </PrintSection>
