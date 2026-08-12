@@ -104,6 +104,20 @@ const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
    *      안전해지지만, 별건이다 — 필요해지면 그때 확장한다.
    */
   building: ["same"],
+  /**
+   * 일반건물 — `partial` 허용, 단 **축 A(면적 2칸)는 렌더하지 않는다**(O-4 · 2026-08-12).
+   *
+   * 전용 카드 `AssetAreaGeneralBuilding`이 면적 3필드와 「일부 양도」 토글을 함께 갖는다.
+   * 여기 등재하는 것은 **허용 시나리오의 단일 소스**를 지키기 위함이다 —
+   * `areaResetPatchForAssetKind`가 자산유형 전환 시 stale `partial`을 정리하려면
+   * 이 표를 봐야 하고, 미등재로 두면 일반건물에서 켠 `partial`이 상가 등으로 넘어간다.
+   *
+   * ⚠️ `building`과 달리 `partial`이 안전한 이유: 일반건물은 면적이 **단일 필드**라
+   *    취득·양도 기준시가 곱셈에서 **약분**된다(`AssetAreaGeneralBuilding` 주석·
+   *    `area-axis-single-field-invariant.anchor.test.ts`). `building`의 A-6 회귀는
+   *    `acquisitionArea`/`transferArea` **2칸**이 서로 다른 면적을 받아서 생긴 것이다.
+   */
+  general_building: ["same", "partial"],
 };
 
 /**
@@ -183,9 +197,20 @@ export function areaResetPatchForAssetKind(
 ): Partial<AssetForm> {
   const allowed = areaScenarioOptions({ ...asset, assetKind: nextKind });
   const current = asset.areaScenario ?? "same";
-  if (allowed.length === 0 || allowed.includes(current)) return {};
+  if (allowed.includes(current)) return {};
+  /**
+   * 🔴 **허용 목록이 비어도 `same`으로 되돌린다** (O-4 · 2026-08-12).
+   *
+   * 종전에는 `allowed.length === 0`이면 패치를 만들지 않아 stale 시나리오가 그대로 넘어갔다.
+   * 일반건물에 `partial`을 열기 전에는 그것을 켤 경로가 land·housing뿐이라 드러나지 않았으나
+   * (그 둘에서 상가로 넘기면 이미 같은 문제였다), 이제 진입점이 늘어 실제로 새는 경로가 된다
+   * (메모리 `feedback_ui_gate_expansion_activates_latent_defect`).
+   *
+   * 새면 `CompanionAcqPurchaseBlock`의 일부양도 안분 계산기가 **그 축이 없는 자산유형에서**
+   * 뜬다 — 그 게이트는 `areaScenario === "partial"`만 보기 때문이다.
+   */
   return {
-    areaScenario: allowed[0],
+    areaScenario: allowed[0] ?? "same",
     replottingConfirmDate: "",
     entitlementArea: "",
     allocatedArea: "",
@@ -280,8 +305,12 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, transferDate }: 
                  부수토지는 가목으로 별도 평가된다. 끄면 토지 면적의 입력 경로가 사라져
                  validate가 "토지 면적을 입력하세요"로 차단하는 dead-end가 된다
                  (`transfer-tax-validate-split.ts:115,155,247`).
-                 축 A가 불필요한 자산유형은 `AREA_SCENARIOS_BY_ASSET_KIND` 미등재로 표현한다. */}
-          {areaScenarioOptions(asset).length > 0 && (
+                 축 A가 불필요한 자산유형은 `AREA_SCENARIOS_BY_ASSET_KIND` 미등재로 표현한다.
+              ⚠️ **일반건물은 예외적으로 등재하되 여기서 제외**한다(O-4) — 시나리오 허용 여부는
+                 위 표가 단일 소스여야 `areaResetPatchForAssetKind`가 stale을 정리할 수 있는데,
+                 면적 입력은 전용 카드(`AssetAreaGeneralBuilding`)가 이미 담당하기 때문이다.
+                 등재만 하고 이 게이트를 안 막으면 같은 면적을 두 곳에서 받게 된다. */}
+          {areaScenarioOptions(asset).length > 0 && !isGeneralBuildingAreaAsset(asset) && (
           <>
           <div
             className={cn(

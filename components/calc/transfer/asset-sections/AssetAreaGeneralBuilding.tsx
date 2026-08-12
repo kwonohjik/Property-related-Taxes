@@ -41,6 +41,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 
 interface Props {
   asset: AssetForm;
@@ -53,18 +54,63 @@ export function isGeneralBuildingAreaAsset(asset: AssetForm): boolean {
 }
 
 export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
+  const isPartial = (asset.areaScenario ?? "same") === "partial";
   return (
     <ToneCard tone="sky" title="면적·규모" noDark>
+      {/*
+        ── 일부 양도 (O-4 · 2026-08-12) ──────────────────────────────────────
+        `AssetAreaSection`의 축 A(면적 입력 방식 Select)를 쓰지 않고 여기 둔다 —
+        그쪽은 `acquisitionArea`/`transferArea` **2칸**을 함께 렌더하는데 일반건물은
+        아래 전용 3필드가 이미 그 역할을 하므로 같은 면적을 두 곳에서 받게 된다
+        (`AssetAreaSection.tsx` 미등재 사유 주석).
+
+        ⚠️ **취득·양도 2시점으로 나누지 않는다.** 그것이 `building`에서 `partial`을
+           되돌린 이유다(PR #912 — 면적비가 단가비를 상쇄해 양도차익 0, anchor A-6).
+           이 카드는 단일 필드를 유지하고 **의미만** 「양도분」으로 바꾼다:
+           환산취득가 = 양도가 × (취득단가 × 면적)/(양도단가 × 면적) 이므로 면적이
+           **약분**되어 어느 쪽으로 해석하든 비율이 왜곡되지 않는다.
+      */}
+      <ToggleCard
+        variant="chip"
+        tone="amber"
+        title="일부 양도"
+        description="취득한 토지·건물 중 일부만 양도한 경우 ON"
+        checked={isPartial}
+        onCheckedChange={(v) => onChange({ areaScenario: v ? "partial" : "same" })}
+      />
+
+      {isPartial && (
+        <ToneCard tone="amber" noDark className="mt-2">
+          <p className="text-xs text-amber-800">
+            아래 면적과 「양도시·취득시 기준시가」를 <strong>양도한 부분 기준</strong>으로
+            입력하세요. 양도하지 않고 남긴 부분은 포함하지 않습니다.
+          </p>
+          <p className="text-caption text-amber-700 mt-1">
+            부수토지 한도(「소득세법」 제104조의3 제1항 제4호 나목)도 이 면적으로 판정합니다 —
+            토지만 일부 양도했다면 바닥면적은 <strong>건물 전체 값 그대로</strong> 두고,
+            건물도 함께 나눠 양도했다면 바닥면적도 양도분으로 넣으세요.
+          </p>
+          <p className="text-caption text-amber-700 mt-1">
+            취득가액(실거래가)은 전체 금액이므로 <strong>③ 취득정보</strong>의 안분 계산기로
+            양도분을 산출해 적용하세요. 환산취득가 모드는 위 면적·기준시가만으로 자동 계산됩니다.
+          </p>
+        </ToneCard>
+      )}
+
       {/* 3필드 1행 (3열, 라벨 상단 stacked) — 모바일은 1열. CB(`AssetAreaCommercial`)와 동일 배치. */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <FieldCard label="취득·양도 당시 토지 면적" unit="㎡" stacked>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+        <FieldCard
+          label={isPartial ? "양도분 토지 면적" : "취득·양도 당시 토지 면적"}
+          unit="㎡"
+          stacked
+        >
           <DecimalInput
             value={asset.gbLandArea}
             onChange={(v) => onChange({ gbLandArea: v })}
           />
         </FieldCard>
 
-        <FieldCard label="건물 연면적" unit="㎡" stacked>
+        <FieldCard label={isPartial ? "양도분 건물 연면적" : "건물 연면적"} unit="㎡" stacked>
           <DecimalInput
             value={asset.gbBuildingArea}
             onChange={(v) => onChange({ gbBuildingArea: v })}
