@@ -19,6 +19,7 @@
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
+import type { StockAggregateMeta } from "@/components/calc/stock-transfer/StockFilingFormTableHelpers";
 import { StockTaxpayerHeaderCard } from "@/components/calc/stock-transfer/StockTaxpayerHeaderCard";
 import { KiwoomFetchSourceBadge } from "@/components/calc/KiwoomFetchSourceBadge";
 import { useEffect, useRef, useState, useMemo } from "react";
@@ -82,6 +83,13 @@ interface StockTransferTaxResultViewProps {
   unlistedValuationMode?: "simple" | "full";
   /** [사례 49] 취득시 장부분실 액면가 활성 시 결과 헤더에 배지 표시 */
   acqFaceValueOnly?: boolean;
+  /**
+   * 다종목 합산 결과 — 별지 제84호서식에 **종목별 열 + 합계 열**을 만든다.
+   *
+   * 없으면 서식이 단건(합계 열 1개)으로 렌더된다. 종목이 2건 이상인데 이걸 넘기지 않으면
+   * 서식이 마지막 종목만 보여주어 **신고서가 실제 신고 내용과 달라진다**.
+   */
+  aggregate?: StockAggregateMeta;
 }
 
 // 분류 배지 라벨
@@ -185,6 +193,7 @@ export function StockTransferTaxResultView({
   kiwoomLastFetchedAt,
   unlistedValuationMode = "simple",
   acqFaceValueOnly = false,
+  aggregate,
 }: StockTransferTaxResultViewProps) {
   const categoryLabel = TAX_CATEGORY_LABEL[result.taxCategory] ?? result.taxCategory;
   const categoryLegalBasis = CATEGORY_LAW_MAP[result.taxCategory] ?? "";
@@ -353,7 +362,7 @@ export function StockTransferTaxResultView({
 
         {/* ── 신고서 양식 표 (32행 고정 — 비과세 시에도 렌더) ── */}
         <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
-        <StockFilingFormTable result={result} {...filingHeaderProps} />
+        <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
         </PrintSection>
 
         {/* appliedRules 배지 (항상 인쇄) */}
@@ -556,7 +565,7 @@ export function StockTransferTaxResultView({
 
       {/* ── 신고서 양식 표 (32행 고정) ── */}
       <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
-      <StockFilingFormTable result={result} {...filingHeaderProps} />
+      <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
       </PrintSection>
 
       {/* PR 로드맵 카드 (항상 — 개발용 로드맵) */}

@@ -52,6 +52,13 @@ export function StockItemListCard({
   onRemove,
   canAddCurrent,
   addDisabledReason,
+  /**
+   * 확정 버튼 노출 여부.
+   *
+   * 🔑 **기본은 false다.** 양도가액·취득가액은 2단계, 필요경비·신고는 3단계에서 입력하므로
+   * 1단계에서 확정하면 **금액이 빈 종목**이 목록에 들어간다. 확정 버튼은 마지막 입력 단계에만 둔다.
+   */
+  showAddButton = false,
 }: {
   savedItems: StockTransferFormData[];
   onAddCurrent: () => void;
@@ -59,6 +66,7 @@ export function StockItemListCard({
   onRemove: (index: number) => void;
   canAddCurrent: boolean;
   addDisabledReason?: string;
+  showAddButton?: boolean;
 }) {
   const total = savedItems.length + 1; // 목록 + 편집 중 1건
 
@@ -118,20 +126,24 @@ export function StockItemListCard({
         </p>
       </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={onAddCurrent}
-        disabled={!canAddCurrent}
-        title={!canAddCurrent ? addDisabledReason : undefined}
-        data-testid="stock-item-add"
-      >
-        + 이 종목을 확정하고 다음 종목 입력
-      </Button>
-      {!canAddCurrent && addDisabledReason && (
-        <p className="text-caption text-amber-700">{addDisabledReason}</p>
+      {showAddButton && (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={onAddCurrent}
+            disabled={!canAddCurrent}
+            title={!canAddCurrent ? addDisabledReason : undefined}
+            data-testid="stock-item-add"
+          >
+            + 이 종목을 확정하고 다음 종목 입력
+          </Button>
+          {!canAddCurrent && addDisabledReason && (
+            <p className="text-caption text-amber-700">{addDisabledReason}</p>
+          )}
+        </>
       )}
     </ToneCard>
   );

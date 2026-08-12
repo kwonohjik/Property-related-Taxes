@@ -16,6 +16,7 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 import type { ForeignStockResult } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import type { StockAggregateMeta } from "@/components/calc/stock-transfer/StockFilingFormTableHelpers";
 
 interface Step4Props {
   result: StockTransferResult | null;
@@ -23,9 +24,14 @@ interface Step4Props {
   error: string | null;
   isLoading: boolean;
   onCalculate: () => void;
+  /**
+   * 다종목 합산 결과 — 별지 제84호서식이 **종목별 열 + 합계 열**로 렌더된다.
+   * 미전달 시 서식이 마지막 종목만 보여주어 실제 신고 내용과 달라진다.
+   */
+  aggregate?: StockAggregateMeta;
 }
 
-export function Step4({ result, form, error, isLoading, onCalculate }: Step4Props) {
+export function Step4({ result, form, error, isLoading, onCalculate, aggregate }: Step4Props) {
   const shareCount = parseInt(form.shareCount || "0", 10);
 
   // 결과 화면 진입 시 자동 계산 — result/error/loading 모두 비어 있을 때 1회 실행.
@@ -80,8 +86,28 @@ export function Step4({ result, form, error, isLoading, onCalculate }: Step4Prop
             </button>
           </div>
 
-          {/* PR-4B 국외전출세 — 별도 결과 카드 (ExitTaxResult 타입) */}
-          {form.marketType === "exit_tax" ? (
+          {/*
+            🔑 **다종목이면 종목 타입과 무관하게 통합 결과뷰**를 쓴다.
+            단건 전용 카드(국외전출세·해외주식)는 `form`(= 편집 중이던 **마지막** 종목) 하나만
+            보여주므로, 다종목인데 마지막 종목이 해외였다는 이유로 그쪽으로 빠지면
+            **별지 제84호서식과 다른 종목들이 통째로 사라진다**.
+          */}
+          {aggregate ? (
+            <StockTransferTaxResultView
+              result={result}
+              aggregate={aggregate}
+              shareCount={shareCount}
+              filingViolation={form.filingViolation || "none"}
+              isFraudulent={form.isFraudulent}
+              isInternationalTransaction={form.isInternationalTransaction}
+              securityName={form.securityName}
+              securityCode={form.securityCode}
+              brokerage={form.brokerage}
+              transferDate={form.transferDate}
+              accountNumberMasked={form.accountNumberMasked}
+            />
+          ) : /* PR-4B 국외전출세 — 별도 결과 카드 (ExitTaxResult 타입) */
+          form.marketType === "exit_tax" ? (
             <ExitTaxResultCard result={result as unknown as ExitTaxResult} />
           ) : /* PR-4A 해외주식 — 별도 결과 카드 (ForeignStockResult 타입) */
           form.marketType === "foreign_stock" ? (
@@ -92,6 +118,7 @@ export function Step4({ result, form, error, isLoading, onCalculate }: Step4Prop
           ) : (
             <StockTransferTaxResultView
               result={result}
+              aggregate={aggregate}
               shareCount={shareCount}
               filingViolation={form.filingViolation || "none"}
               isFraudulent={form.isFraudulent}
