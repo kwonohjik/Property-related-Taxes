@@ -7,6 +7,7 @@
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
+import { resolveStockRateKey } from "@/lib/tax-engine/stock-transfer/stock-transfer-rate-calc";
 
 // ── Props ──────────────────────────────────────────────────────
 
@@ -110,6 +111,33 @@ function sectionLabel(appliedSection94: StockTransferResult["appliedSection94"])
     "①4라": "§94①4 라목 — 부동산과다보유",
   };
   return map[appliedSection94] ?? `§94 ${appliedSection94}`;
+}
+
+/**
+ * ③ 세율구분 그룹 라벨 — 별지 제84호서식 작성요령 4번의 「세율이 같은 자산」 축.
+ *
+ * 엔진의 `resolveStockRateKey`와 **같은 축**을 쓴다(§102② 통산 그룹과 동일) — 서식의 합산
+ * 단위와 통산 단위가 같은 것이 아니라, 둘 다 「세율」을 축으로 삼기 때문이다.
+ * 다른 축을 쓰면 표시와 계산이 어긋난다([[feedback_ui_engine_dual_truth_avoidance]]).
+ */
+function rateGroupLabel(r: StockTransferResult): string {
+  if (r.isExempt) return "비과세 (합산 제외)";
+  const key = resolveStockRateKey(
+    r.taxCategory,
+    // 중소기업 축은 결과에 남지 않는다 — 세율에서 역산한다(10%면 중소, 20%면 비중소).
+    r.appliedRate === 0.1,
+    r.isShortTermHolding,
+  );
+  const LABEL: Record<string, string> = {
+    "10": "10% 그룹",
+    "20": "20% 그룹 (국내 비대주주·국외주식 공통)",
+    "20_25": "20~25% 그룹 (대주주 누진)",
+    "30": "30% 그룹 (비중소 대주주 1년 미만)",
+    other_asset_progressive: "기타자산 누진 (③란 합산 제외)",
+    other_asset_progressive_nbl: "기타자산 §104①9호 (③란 합산 제외)",
+    exempt_or_out_of_scope: "비과세·범위 밖",
+  };
+  return LABEL[key] ?? key;
 }
 
 function acquisitionModeLabel(mode: StockTransferResult["acquisitionMode"]): string {
@@ -542,6 +570,26 @@ export function buildRows(
     ),
   });
 
+  // 23-1. ③ 세율구분 그룹 — 별지 제84호서식 작성요령 4번
+  //
+  // > 4. ③ 세율구분란: 주식의 경우에는 주식양도소득금액계산명세서(별지 제84호서식 부표 2)의
+  // >    ④ 주식등 종류코드란의 **세율이 같은 자산**(기타자산 주식은 제외합니다)을 합산하여 적습니다.
+  //
+  // 이 표는 종목별 열이라 실제 서식의 ③란에 **어느 종목끼리 한 칸에 합산되는지**가 드러나지
+  // 않는다. 그 그룹 키를 그대로 보여 옮겨 적을 때 헷갈리지 않게 한다.
+  // 🔑 국외주식(코드 61·62)은 국내 비대주주와 **같은 축**이다 — 세율이 같으면 같은 칸이다.
+  if (isMulti) {
+    rows.push({
+      label: "23-1.   ③ 세율구분 그룹 (작성요령 4번 — 세율이 같은 자산을 합산)",
+      values: val(
+        null,
+        () => "— (아래 종목별 그룹 참조)",
+        (item) => rateGroupLabel(item),
+      ),
+      indent: true,
+    });
+  }
+
   // 24. 누진공제 (조건부)
   rows.push({
     label: "24.   누진공제 (§55 / §104①11 가목2)",
@@ -564,6 +612,39 @@ export function buildRows(
     highlight: true,
     separatorAfter: true,
   });
+
+  // 25-1. 외국납부세액공제 §118의6①1호 — 별지 제84호서식 ⑫란
+  //
+  // 서식은 ⑩ 산출세액 → ⑪ 감면세액 → **⑫ 외국납부세액공제** 순서다. 국외주식(§94①3호다목)이
+  // 있을 때만 값이 생기므로, 종목이 하나도 해당하지 않으면 행 자체를 넣지 않는다.
+  //
+  // 🔑 한도 = A × B / C (A = 국외주식 산출세액 합계 · B = 해당 종목 양도소득금액 ·
+  //    C = 국외주식 양도소득금액 합계). 단건은 B = C라 한도 = A다.
+  //    ⚠️ 한도가 그 종목 **자신의 산출세액을 넘을 수 있어** 종목 열의 합이 합계 열과
+  //    어긋날 수 있다 — 「해당 과세기간의 산출세액에서 공제」(§118의6①1호 본문)라
+  //    공제 대상이 과세기간 전체이기 때문이다(엔진 STEP 3.5 주석 참조).
+  const foreignCreditItems = aggregate?.items.filter(
+    (r) => r.foreignDetail?.foreignTaxCreditApplied !== undefined,
+  );
+  const hasForeignCredit =
+    result.foreignDetail?.foreignTaxCreditApplied !== undefined ||
+    (foreignCreditItems?.length ?? 0) > 0;
+
+  if (hasForeignCredit) {
+    rows.push({
+      label: "25-1. 외국납부세액공제 §118의6①1호 (한도 = 산출세액 × 해당 종목 소득 ÷ 국외주식 소득)",
+      values: val(
+        result.foreignDetail?.foreignTaxCreditApplied ?? null,
+        () =>
+          aggregate?.items.reduce(
+            (s, r) => s + (r.foreignDetail?.foreignTaxCreditApplied ?? 0),
+            0,
+          ) ?? null,
+        (item) => item.foreignDetail?.foreignTaxCreditApplied ?? null,
+      ),
+      indent: true,
+    });
+  }
 
   // ── [H] 가산세·공제 (26~28) ───────────────────────────────────
 
@@ -645,11 +726,19 @@ export function buildRows(
     ),
   });
 
-  // 행 수 검증 (항상 32행)
-  if (rows.length !== 32) {
+  // 행 수 검증 — 기본 32행 + **조건부 행**
+  //
+  // 조건부 행을 늘릴 때는 여기 기대값도 함께 올려야 한다. 안 그러면 콘솔이 상시 경고를 뱉어
+  // **진짜 행 누락을 알려주는 신호가 죽는다**(경고 피로).
+  //   · 23-1 ③ 세율구분 그룹 — 다종목일 때만
+  //   · 25-1 ⑫ 외국납부세액공제 — 국외주식이 있을 때만
+  const expectedRows = 32 + (isMulti ? 1 : 0) + (hasForeignCredit ? 1 : 0);
+  if (rows.length !== expectedRows) {
     // 개발 중 경고 — 프로덕션에서도 안전하게 통과
     if (typeof console !== "undefined") {
-      console.warn(`[StockFilingFormTable] 행 수 이상: 기대 32행, 실제 ${rows.length}행`);
+      console.warn(
+        `[StockFilingFormTable] 행 수 이상: 기대 ${expectedRows}행, 실제 ${rows.length}행`,
+      );
     }
   }
 

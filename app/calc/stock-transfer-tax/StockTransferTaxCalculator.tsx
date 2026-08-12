@@ -218,6 +218,7 @@ export default function StockTransferTaxCalculator() {
                 */}
                 {formData.marketType !== "exit_tax" && (
                   <div className="mb-8">
+                    {/* 1단계는 **목록만** — 확정 버튼은 마지막 입력 단계(3단계)에 있다. */}
                     <StockItemListCard
                       savedItems={savedItems}
                       onAddCurrent={commitCurrentItem}
@@ -235,7 +236,33 @@ export default function StockTransferTaxCalculator() {
               <Step2 form={formData} onChange={updateFormData} />
             )}
             {currentStep === 2 && (
-              <Step3 form={formData} onChange={updateFormData} />
+              <>
+                <Step3 form={formData} onChange={updateFormData} />
+                {/*
+                  🔑 확정 버튼은 **마지막 입력 단계**에 둔다 — 양도가액은 2단계, 필요경비·신고는
+                  3단계라 1단계에서 확정하면 금액이 빈 종목이 목록에 들어간다.
+                  확정 후에는 1단계로 돌려 다음 종목을 처음부터 입력하게 한다.
+                */}
+                {formData.marketType !== "exit_tax" && (
+                  <div className="mt-8">
+                    <StockItemListCard
+                      savedItems={savedItems}
+                      onAddCurrent={() => {
+                        commitCurrentItem();
+                        setStep(0);
+                      }}
+                      onEdit={(i) => {
+                        editSavedItem(i);
+                        setStep(0);
+                      }}
+                      onRemove={removeSavedItem}
+                      canAddCurrent={canCommitCurrentItem}
+                      addDisabledReason={commitDisabledReason}
+                      showAddButton
+                    />
+                  </div>
+                )}
+              </>
             )}
             {currentStep === 3 && (
               <>
@@ -254,6 +281,11 @@ export default function StockTransferTaxCalculator() {
                   error={error}
                   isLoading={isLoading}
                   onCalculate={handleCalculate}
+                  aggregate={
+                    aggregateResult
+                      ? { items: aggregateResult.items, aggregated: aggregateResult }
+                      : undefined
+                  }
                 />
               </>
             )}
