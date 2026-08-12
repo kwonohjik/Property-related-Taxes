@@ -39,6 +39,7 @@ import type {
   InstallmentReceiptDetail,
 } from "./types/foreign-stock.types";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
+import { computeForeignTaxCreditLimits } from "./foreign-tax-credit-limit";
 import {
   STOCK_FOREIGN,
   STOCK_FOREIGN_BASIC_DEDUCTION,
@@ -315,17 +316,26 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   //         §55① 비교(⑩란 가·나)는 「§94①1호·2호 및 4호 자산」 전용이다.
   //    계획서 §4 Q-3 종결 · anchor F 시리즈(`foreign-stock-94-1-3-da-track.anchor.test.ts`).
   //
-  // ⚠️ **B/C 안분은 미구현**이다. 이 엔진은 국외자산을 하나만 보므로 B = C(비율 1)로
-  //    계산된다 — 단건에서는 맞지만, 한 과세기간에 국외주식이 둘 이상이면 종목마다
-  //    한도를 전액으로 잡아 **과대공제**가 된다. 구조상 C를 알 수 있는 aggregate 레벨로
-  //    옮겨야 하므로 D-3(aggregate 편입) 이후에만 구현 가능하다 — 계획서 §3.4·§6.3 D-4 잔여.
+  // 🔑 **이 엔진은 국외자산을 하나만 본다** ⇒ B = C(비율 1) ⇒ 한도 = A.
+  //    산식은 `computeForeignTaxCreditLimits`(무의존 leaf)에 **단일 소스**로 두고 여기서는
+  //    1건짜리 배열로 호출한다 — 다종목 aggregate 경로와 산식이 갈라지면
+  //    [[feedback_ui_engine_dual_truth_avoidance]]가 된다.
+  //    다종목 안분은 C를 알 수 있는 aggregate 레벨이 맡는다(계획서 §6.2).
   // ──────────────────────────────────────────────────────────
   let foreignTaxCreditLimit: number | undefined;
   let foreignTaxCreditApplied: number | undefined;
 
   if (input.foreignTaxMethod === "credit" && input.hasForeignTax && foreignTaxPaidKrw > 0) {
-    foreignTaxCreditLimit = incomeTax;
-    foreignTaxCreditApplied = Math.min(foreignTaxPaidKrw, foreignTaxCreditLimit);
+    const [row] = computeForeignTaxCreditLimits([
+      {
+        // B — 단건이라 통산 대상이 없다. 양도차익 = 양도소득금액(LTHD 미적용 §95②)
+        incomeAfterOffset: Math.max(0, transferGain),
+        incomeTax,
+        foreignTaxPaidKrw,
+      },
+    ]);
+    foreignTaxCreditLimit = row.limit;
+    foreignTaxCreditApplied = row.applied;
     appliedRules.push(STOCK_FOREIGN.SECTION_118_6_CREDIT_METHOD);
   }
 
