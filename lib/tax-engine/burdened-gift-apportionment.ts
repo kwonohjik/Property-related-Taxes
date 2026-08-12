@@ -461,13 +461,22 @@ export function buildBurdenedGiftBreakdown(params: {
       giftDate: giftDateStr,
       donorRelation,
       donor: giftDonor,
-      // 부담부증여 무상이전분을 단일 자산으로 평가 — marketValue 직접 입력(이미 §60~§66 Max 평가 완료된 가액).
+      /**
+       * 증여재산을 **총 평가액(C)** 으로 넣고 인수채무(B)를 §47① 차감 항목으로 넘긴다.
+       *
+       * ⚠️ 종전에는 `marketValue: gratuitousPortion`(= C − B)을 넣고 채무를 전달하지 않았다.
+       * 과세가액 ㉔는 같게 나오지만 **별지 제10호서식의 의미가 틀린다** — ⑰ 증여재산가액에
+       * 이미 채무를 뺀 값이 들어가고 ㉒ 채무액이 0으로 표시됐다(2026-08-12 사용자 지적).
+       * 상증법 §47①은 "증여재산가액에서 수증자가 인수한 채무를 뺀 금액"이므로 두 값이
+       * 서식에 각각 드러나야 한다. 과세가액·세액은 이 변경으로 달라지지 않는다.
+       */
       giftItems: [
         {
-          id: "burdened-gift-gratuitous",
+          id: "burdened-gift",
           category: "real_estate_building",
-          name: "부담부증여 무상이전분",
-          marketValue: gratuitousPortion,
+          name: "부담부증여 증여재산",
+          marketValue: giftValuation.max, // C = §60~§66 Max 평가액 (gratuitousPortion = C − B)
+          assumedDebtForGift: assumedDebtAmount, // B
         },
       ],
       // Phase 3 후속: 10년 이내 사전증여 합산 (상증법 §47②·§58)

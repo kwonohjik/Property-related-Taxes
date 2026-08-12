@@ -359,7 +359,14 @@ export interface TransferBurdenedGiftBreakdown {
    * 0이 되어 이 필드가 undefined가 된다(anchor BG-B10-5).
    */
   giftTax?: {
-    /** 증여재산가액 = gratuitousPortion */
+    /**
+     * 증여재산가액 = **채무 차감 전 총 평가액(C)** = `sangjeungbeopValuation.max`.
+     *
+     * ⚠️ 무상이전분(C − B)이 아니다. 상증법 §47①이 「증여재산가액에서 수증자가 인수한 채무를
+     * 뺀 금액」을 과세가액으로 정하므로, 별지 제10호서식은 ⑰(총 평가액)과 ㉒(채무액)을
+     * 각각 표시하고 ㉔에서 차감한다. 무상이전분은 `gratuitousPortion`이 갖는다.
+     * (2026-08-12 정정 — 종전에는 여기에 C − B를 담아 ⑰에 이미 뺀 값이 표시됐다. 세액은 불변.)
+     */
     grossGiftValue: number;
     /** 증여재산공제 (직계비속 5천만 등) */
     deduction: number;

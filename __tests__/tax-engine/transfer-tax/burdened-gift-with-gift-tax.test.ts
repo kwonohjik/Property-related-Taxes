@@ -75,7 +75,8 @@ describe("P3-1 — 직계비속 부담부증여 + 신고기한 내", () => {
     const result = calculateTransferTax(input, rates);
     const gt = result.transferBurdenedGiftBreakdown!.giftTax!;
     expect(gt.donorRelation).toBe("lineal_descendant");
-    expect(gt.grossGiftValue).toBe(500_000_000);
+    // §47① — 채무 차감 전 총 평가액(C). 무상이전분(C − B)은 gratuitousPortion이 갖는다.
+    expect(gt.grossGiftValue).toBe(1_000_000_000);
   });
 
   it("증여재산공제 = 50,000,000 (직계비속) → 과세표준 450,000,000", () => {
@@ -288,11 +289,12 @@ describe("P3-5 — 10년 이내 사전증여 합산 (§47②·§58)", () => {
     burdenedGiftInfo: info,
   });
 
-  it("사전증여 200M 합산 → grossGiftValue (당기) = 500M, taxBase = 650M", () => {
+  it("사전증여 200M 합산 → grossGiftValue (당기 총 평가액) = 1,000M, taxBase = 650M", () => {
     const result = calculateTransferTax(input, rates);
     const gt = result.transferBurdenedGiftBreakdown!.giftTax!;
-    // 당기 증여재산가액 (Phase 3 grossGiftValue는 당기만, 합산은 taxBase에서)
-    expect(gt.grossGiftValue).toBe(500_000_000);
+    // 당기 증여재산가액 = **채무 차감 전 총 평가액(C)**. 합산은 taxBase에서.
+    // 과세가액은 C − B = 500M이며 taxBase가 그 위에서 산출된다(아래 단언이 고정).
+    expect(gt.grossGiftValue).toBe(1_000_000_000);
     // 누적 과세표준 = (500M + 200M) − 50M = 650M
     expect(gt.taxBase).toBe(650_000_000);
   });

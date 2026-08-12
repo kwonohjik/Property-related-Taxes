@@ -94,10 +94,24 @@ describe("부담부증여 별지 제10호서식 행 전달", () => {
     expect(amountOf(rows, "㊳")).toBe(g.priorGiftCredit ?? 0); // 기납부세액 §58
   });
 
-  it("BG-B10-4: ⑰ 증여재산가액 = 무상이전분", () => {
+  /**
+   * 상증법 §47① — 「증여재산가액에서 수증자가 인수한 채무를 뺀 금액」.
+   * ⑰에는 **채무 차감 전 총 평가액(C)**, ㉒에 인수채무(B)가 각각 드러나야 한다.
+   *
+   * ⚠️ 종전 구현은 ⑰에 이미 뺀 값(C − B)을 넣고 ㉒를 0으로 뒀다 — ㉔ 과세가액은 같지만
+   * 서식의 의미가 틀렸다(2026-08-12 사용자 지적).
+   */
+  it("BG-B10-4: ⑰ 총 평가액(C) − ㉒ 채무(B) = ㉔ 과세가액", () => {
     const bg = calc().transferBurdenedGiftBreakdown!;
-    expect(amountOf(bg.giftTax!.besshi10Rows, "⑰")).toBe(bg.gratuitousPortion);
-    expect(bg.giftTax!.grossGiftValue).toBe(bg.gratuitousPortion);
+    const rows = bg.giftTax!.besshi10Rows;
+    const C = bg.sangjeungbeopValuation.max;
+    const B = bg.assumedDebtAmount;
+
+    expect(amountOf(rows, "⑰")).toBe(C);
+    expect(amountOf(rows, "㉒")).toBe(B);
+    expect(amountOf(rows, "㉔")).toBe(bg.gratuitousPortion); // = C − B
+    expect(C - B).toBe(bg.gratuitousPortion); // 자기검증
+    expect(bg.giftTax!.grossGiftValue).toBe(C);
   });
 
   /**

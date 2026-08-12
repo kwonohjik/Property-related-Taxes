@@ -187,7 +187,10 @@ describe("사례 34 — 통합 anchor (PDF p.534·537·538)", () => {
     const result = calculateTransferTax(input, rates);
     const gt = result.transferBurdenedGiftBreakdown!.giftTax!;
     expect(gt).toBeDefined();
-    expect(gt.grossGiftValue).toBe(4_458_295_360);
+    // §47① — grossGiftValue는 **채무 차감 전 총 평가액(C)**. 과세가액 = C − B = 4,458,295,360.
+    // (2026-08-12 정정: 종전에는 C − B를 담아 별지10호 ⑰에 이미 뺀 값이 표시됐다. 세액은 불변.)
+    expect(gt.grossGiftValue).toBe(8_578_295_360); // C
+    expect(gt.grossGiftValue - 4_120_000_000).toBe(4_458_295_360); // C − B = 무상이전분
     expect(gt.deduction).toBe(50_000_000); // 직계비속 §53
     expect(gt.taxBase).toBe(4_408_295_360);
     expect(gt.computedTax).toBe(1_744_147_680); // §56 누진세율 50% 구간
@@ -424,7 +427,8 @@ describe("시가 모드 — sangjeungbeop_market", () => {
     // Phase 2 증여세 — 무상이전분 58.8억 케이스
     // 58.8억 - 5천만 = 58.3억 → 50% × 58.3억 - 4.6억 = 24.55억
     expect(b.giftTax?.donorRelation).toBe("lineal_descendant");
-    expect(b.giftTax?.grossGiftValue).toBe(5_880_000_000);
+    // §47① — 채무 차감 전 총 평가액(C = 100억). 무상이전분 58.8억은 gratuitousPortion(위 단언).
+    expect(b.giftTax?.grossGiftValue).toBe(10_000_000_000);
     // 산출세액 정수 양수 보장 (회귀 가드)
     expect(result.calculatedTax).toBeGreaterThan(0);
     expect(result.localIncomeTax).toBeGreaterThan(0);

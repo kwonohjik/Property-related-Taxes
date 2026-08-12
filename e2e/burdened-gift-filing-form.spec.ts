@@ -99,9 +99,16 @@ test.describe("부담부증여 결과탭 — 증여세 신고서 양식", () => 
     expect(order).toBe(true);
   });
 
-  test("BGF-4: ⑰ 증여재산가액 = 무상이전분 880,000,000", async ({ page }) => {
-    await calcTo(page, "5000000000"); // C 50억 − B 41.2억 = 8.8억
-    await expect(page.locator('[data-testid="bg-besshi10-⑰"]')).toContainText("880,000,000");
+  /**
+   * 상증법 §47① — 「증여재산가액에서 수증자가 인수한 채무를 뺀 금액」이 과세가액이다.
+   * ⑰에는 **채무 차감 전 총 평가액**, ㉒에 채무액이 각각 드러나야 한다.
+   * (2026-08-12 사용자 지적 — 종전에는 ⑰에 이미 뺀 값이 들어가고 ㉒가 0으로 표시됐다)
+   */
+  test("BGF-4: ⑰ 총 평가액 − ㉒ 채무액 = ㉔ 과세가액", async ({ page }) => {
+    await calcTo(page, "5000000000"); // C 50억, B 41.2억 → 과세가액 8.8억
+    await expect(page.locator('[data-testid="bg-besshi10-⑰"]')).toContainText("5,000,000,000");
+    await expect(page.locator('[data-testid="bg-besshi10-㉒"]')).toContainText("4,120,000,000");
+    await expect(page.locator('[data-testid="bg-besshi10-㉔"]')).toContainText("880,000,000");
   });
 
   /**
