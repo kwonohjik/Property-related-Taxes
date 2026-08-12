@@ -366,6 +366,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbAcqBuildingValue: "",
     gbLandArea: "",
     gbBuildingArea: "",
+    gbOriginalBuildingArea: "",
     gbBuildingFootprintArea: "",
     // ── 일반건물 비사업용토지 판정 (§104의3·§168의12, 2026-05-10) ──
     gbZoneType: "",

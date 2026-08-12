@@ -176,6 +176,83 @@ export function buildGeneralBuildingBatchPoints(
 }
 
 /**
+ * 건물1(원건물) 기준시가 계산기에 넘길 **연면적**.
+ *
+ * 🔑 **세액에 닿는 유일한 경로다.** `gbBuildingArea`는 엔진이 소비하지 않지만(payload
+ * `buildingArea`로 실릴 뿐 미사용), 이 값은 계산기 → `gbAcqBuildingValue`/
+ * `gbTransferBuildingValue` → §166⑥ 3-way 안분 분모로 흘러간다. 증축이 있는데 전체
+ * 연면적을 쓰면 건물1 기준시가가 과대해지고 안분이 통째로 어긋난다(2026-08-12 사용자 지적).
+ *
+ * 3곳(2시점 일괄·취득시 단일·양도시 단일)이 같은 값을 써야 하므로 **함수 하나로 고정**한다 —
+ * 인라인 `||`를 복제하면 한 곳만 고쳐질 때 조용히 갈린다(dual-truth).
+ *
+ * 미입력이면 `gbBuildingArea`로 fallback한다: legacy 자산에는 신설 필드가 없고, 여기서
+ * 빈 값을 내보내면 모달이 연면적 0으로 계산하거나 입력 경로가 사라진다(dead-end 금지).
+ */
+export function gbBuildingStdPriceFloorArea(
+  asset: Pick<AssetForm, "gbOriginalBuildingArea" | "gbBuildingArea">,
+): string {
+  return asset.gbOriginalBuildingArea || asset.gbBuildingArea;
+}
+
+/**
+ * 일반건물 **증축분(건물2)** 배치 모달 시점 구성 — 증축시·양도시 2시점.
+ *
+ * 원건물(`buildGeneralBuildingBatchPoints`)과 축이 하나 다르다: 취득 시점이 **증축일**이다
+ * (「소득세법 시행령」 제162조 제1항 제4호 — 건축물대장 사용승인일). 증축분은 그 시점에
+ * 비로소 존재하므로 원건물 취득일로 계산하면 없는 건물의 기준시가를 산정하게 된다.
+ *
+ * 공시지가는 **위치지수 산정에만** 쓰이고 필지가 같으므로 원건물과 같은 값을 싣는다 —
+ * 다만 취득 트랙 게이트(≤2000의 2001.1.1 기준 문제)는 증축일 연도로 다시 판정한다.
+ */
+export function buildGeneralBuildingExtensionBatchPoints(
+  asset: Pick<AssetForm, "gbExtensionDate" | "gbTransferLandPricePerSqm">,
+  transferDate: string | undefined,
+): StdPricePointSpec[] {
+  const extYear = commercialAcqYear(asset.gbExtensionDate);
+  return [
+    {
+      key: "acquisition",
+      label: "증축시",
+      year: extYear,
+      landPriceYear: landPriceYearOf(asset.gbExtensionDate),
+      /* 증축일 당시 공시지가는 폼에 없다(원건물 취득일 기준 값뿐) — 조회로 연다.
+         빈 칸만 남기면 위치지수를 구할 경로가 사라진다(dead-end 금지). */
+      landPricePerM2: "",
+      lookupLandPrice: true,
+      landPriceHint: "증축 완료 시점의 개별공시지가 — 위치지수 산정용입니다.",
+    },
+    {
+      key: "transfer",
+      label: "양도시",
+      year: commercialAcqYear(transferDate),
+      landPriceYear: landPriceYearOf(transferDate),
+      landPricePerM2: asset.gbTransferLandPricePerSqm,
+    },
+  ];
+}
+
+/**
+ * 증축분 배치 적용 patch — 건물2 기준시가 2필드로 간다.
+ *
+ * ⚠️ 원건물 필드(`gbAcqBuildingValue`·`gbTransferBuildingValue`)를 건드리지 않는다.
+ *    같은 모달 결과 형태를 쓰지만 **목적지가 다른 파트**다 — 섞이면 §166⑥ 안분 분모가
+ *    통째로 어긋난다.
+ * ⚠️ 공시지가도 되돌려쓰지 않는다. 증축시 공시지가는 원건물 취득시 축(`gbAcqLandPricePerSqm`)과
+ *    시점이 다르고, 양도시 값은 원건물 쪽에서 이미 관리한다.
+ */
+export function buildGeneralBuildingExtensionBatchPatch(
+  v: MultiPointStdPriceApply,
+): Partial<AssetForm> {
+  const patch: Partial<AssetForm> = {};
+  if (v.acquisition?.housing != null)
+    patch.gbAcquisitionExtensionBuildingStdPrice = String(v.acquisition.housing);
+  if (v.transfer?.housing != null)
+    patch.gbTransferExtensionBuildingStdPrice = String(v.transfer.housing);
+  return patch;
+}
+
+/**
  * 일반건물 배치 적용 patch.
  *
  * 상가와 달리 **최초고시 시점이 없고**(§164⑥ 환산 경로가 아니다) §164⑤ 준용 확인 토글도 없다.

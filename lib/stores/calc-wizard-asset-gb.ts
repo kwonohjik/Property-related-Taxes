@@ -26,8 +26,31 @@ export interface GeneralBuildingFormSlice {
    *    왜곡(B-4)이 재발한다. anchor `area-axis-single-field-invariant.anchor.test.ts`.
    */
   gbLandArea: string;
-  /** 건물 연면적(㎡). 자산 식별·표시용. */
+  /**
+   * 건물 연면적(㎡) — **양도 당시** 기준. 증축이 있으면 원건물 + 증축분 **합계**다.
+   *
+   * 자산 식별·표시용이며 **엔진 계산에 들어가지 않는다**(payload `buildingArea`로 실리지만
+   * 소비처 없음 — 2026-08-12 전수 확인). 비사업용토지 부수토지 한도는 **바닥면적**
+   * (`gbBuildingFootprintArea`)이 담당하고 연면적은 쓰지 않는다.
+   *
+   * 실효 경로는 하나뿐이다: **건물기준시가 계산기의 연면적 prefill**. 증축이 있으면 그
+   * 계산기가 산정하는 것은 **건물1(원건물)** 기준시가이므로 이 값이 아니라
+   * `gbOriginalBuildingArea`를 써야 한다(아래).
+   */
   gbBuildingArea: string;
+  /**
+   * **당초 취득한 원건물(건물1)의 연면적**(㎡) — 증축분 제외. 증축이 있을 때만 입력받는다.
+   *
+   * 🔀 **파트 축이지 시점 축이 아니다.** `area-axis-single-field-invariant.anchor.test.ts`가
+   *    금지하는 것은 **같은 파트의 면적을 취득/양도 2시점으로 쪼개는 것**이고(면적이 약분되지
+   *    않아 환산비율이 부푼다 — B-4), 여기서 나누는 축은 엔진이 이미 별개로 다루는
+   *    **건물1 / 건물2**다(`general-building-extension.ts` 3-way 안분). 그래서 이 필드는
+   *    취득시·양도시 **양쪽 계산에 같은 값**이 쓰인다 — 단일성은 그대로다.
+   *
+   * 엔진에 전달되지 않는다 — 건물1 기준시가 계산기 prefill 전용이다. 미입력이면 계산기가
+   * `gbBuildingArea`로 fallback한다(dead-end 금지). 증축분 면적은 `gbExtensionArea`가 진다.
+   */
+  gbOriginalBuildingArea: string;
   /**
    * 건축물 바닥면적(㎡) — 「지방세법 시행령」 제101조 제1항 제2호 부수토지 한도의 곱셈 기준.
    *

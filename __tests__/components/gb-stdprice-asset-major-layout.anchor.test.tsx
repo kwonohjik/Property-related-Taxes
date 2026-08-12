@@ -81,10 +81,22 @@ describe("A2 — 취득시 게이트 승계 (실가·비증축·비부담부)", 
     expect(screen.queryByText("개산공제 (§163⑥)")).toBeNull();
   });
 
+  /**
+   * 이 계약이 보는 것은 **취득시 입력칸의 존재**이지 라벨 문자열이 아니다.
+   * 2026-08-12에 증축 ON이면 라벨이 「취득시 **원건물** 기준시가」로 좁아졌다 —
+   * ②가 받는 것이 건물1분뿐임을 화면에 드러내기 위해서다(§166⑥ 3-way 분모에서
+   * 건물2가 이중 계상되는 오입력 차단). 계약의 취지는 그대로다.
+   */
   it("증축 모드에서는 실가라도 취득시 입력이 살아난다", () => {
     renderBlock({ useEstimatedAcquisition: false, gbHasExtension: true });
     expect(screen.getByText("취득시 토지 공시지가")).toBeTruthy();
+    expect(screen.getAllByText("취득시 원건물 기준시가").length).toBeGreaterThan(0);
+  });
+
+  it("증축이 없으면 라벨은 종전 그대로다 (대조군 — 라벨 분기가 증축 축에만 걸린다)", () => {
+    renderBlock({ useEstimatedAcquisition: true });
     expect(screen.getAllByText("취득시 건물기준시가").length).toBeGreaterThan(0);
+    expect(screen.queryByText("취득시 원건물 기준시가")).toBeNull();
   });
 });
 
