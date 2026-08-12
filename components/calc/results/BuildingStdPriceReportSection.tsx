@@ -15,6 +15,7 @@ import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-
 import { toEngineInput, buildNtsReportContext } from "@/lib/calc/building-std-price-form";
 import {
   idOfSnapshotKey,
+  isExtensionSnapshotKey,
   phdTimepointLabel,
   snapshotKeyTimepoint,
 } from "@/lib/calc/building-std-snapshot-keys";
@@ -125,10 +126,22 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
          */
         const reconstructedTimepoint =
           !tp && snap.taxType !== "transfer" ? snapshotKeyTimepoint(key) : null;
+        /**
+         * 증축분(건물2)은 원건물과 **같은 자산·같은 2시점**이라 구별 표기가 없으면
+         * 「양도시」 계산서가 두 장 나란히 떠서 어느 쪽이 건물1인지 알 수 없다.
+         * 취득 시점 이름도 다르다 — 증축분의 취득은 **증축일**이다(영 §162①4호).
+         */
+        const isExt = isExtensionSnapshotKey(key);
         const titleOverride = tp
           ? `${tp.timepoint} · ${tp.categoryLabel}${yearLabel ? ` (${yearLabel}년)` : ""}`
           : reconstructedTimepoint
-            ? `${reconstructedTimepoint === "transfer" ? "양도시" : "취득시"}${yearLabel ? ` (${yearLabel}년)` : ""}`
+            ? `${
+                reconstructedTimepoint === "transfer"
+                  ? "양도시"
+                  : isExt
+                    ? "증축시"
+                    : "취득시"
+              }${isExt ? " · 증축분(건물2)" : ""}${yearLabel ? ` (${yearLabel}년)` : ""}`
             : undefined;
         // Ⅰ.구분 마킹 — 상속(재구성 taxType) 대신 양도 맥락으로: 취득시·최초공시일=취득당시(2001↑), 양도시=양도당시.
         // 취득 ≤2000 transfer 스냅샷은 acq2000(2000.12.31 이전) 칸에 마킹.
