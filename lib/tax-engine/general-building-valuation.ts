@@ -25,6 +25,7 @@ import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-extension";
 import { applyConvertedHousingPriceOverride } from "./general-building-converted-housing";
+import { buildConvertedHousingDetail } from "./general-building-converted-housing";
 import { calculateConvertedAcquisition } from "./general-building-converted-acquisition";
 import { applyPartAcqModes } from "./general-building-part-acq";
 import { resolveSaleApportionBasis } from "./sale-split-apportion-basis";
@@ -312,6 +313,15 @@ export function buildGeneralBuildingAssetCards(
   // hasFirstDisclosure=true 시 acquisition*StdPrice를 환산주택가격 안분값으로 override.
   // 이후 모든 다운스트림 로직(2-way·3-way·NBL 등)은 effective input 사용 → 변경 최소화.
   const input = applyConvertedHousingPriceOverride(rawInput);
+  /**
+   * 산정 근거를 결과에 싣는다(2026-08-13). **`rawInput`으로 계산한다** — `input`은 이미
+   * 덮어쓴 뒤라 분자(취득당시 기준시가)가 환산값으로 바뀌어 있어, 그것으로 다시 계산하면
+   * 화면에 「환산주택가격 = 환산주택가격 × … ÷ …」이라는 순환한 숫자가 뜬다.
+   *
+   * ⚠️ 두 갈래(3-way 증축 · 2-way) **모두**에 실어야 한다 — 한쪽만 채우면 증축이 있는
+   *    자산에서만 근거가 사라진다.
+   */
+  const convertedHousing = buildConvertedHousingDetail(rawInput);
 
   // ── 증축 분기 (사례 33 — extensionInfo 활성 시 3-way 안분) ──────────
   if (input.extensionInfo) {
@@ -325,7 +335,8 @@ export function buildGeneralBuildingAssetCards(
      * ⚠️ 감정평가가액은 **증축 경로에 전달하지 않는다** — 감정은 토지·건물 2필드뿐이라 건물을
      *    본체·증축으로 다시 나눌 근거가 없다. validate가 그 조합을 먼저 막는다.
      */
-    return buildGeneralBuildingAssetCardsWithExtension(input, input.extensionInfo);
+    const extOut = buildGeneralBuildingAssetCardsWithExtension(input, input.extensionInfo);
+    return convertedHousing ? { ...extOut, convertedHousing } : extOut;
   }
 
   // ── 기존 2-way 분기 (사례 31·32 — extensionInfo 미입력 시) ──────────
@@ -599,6 +610,8 @@ export function buildGeneralBuildingAssetCards(
     ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
     acquisition,
     estimatedDeduction,
+    // §99-164-10 산정 근거 — 증축 분기(위)와 **같이** 실어야 한다.
+    ...(convertedHousing ? { convertedHousing } : {}),
     buildingFootprintArea: input.buildingFootprintArea,
     appliedMultiplier,
     multiplierDetail,

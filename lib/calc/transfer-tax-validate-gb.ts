@@ -8,13 +8,17 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { partAcquisitionDates, effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { needsGbActualAcqStdPrice } from "./transfer-tax-split-acq-mode";
 // §163⑨ 단서 게이트 — ④ API 변환과 **같은 상수·같은 술어**를 쓴다(경계가 갈리면 두 정책이 된다).
 import { LAND_PRICE_NOTICE_START } from "./transfer-pre1990-commercial-bridge";
 import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
+import { isGbFirstDisclosureApplicable } from "./gb-first-disclosure";
+import { gbFirstDisclosureLandStdPriceOf } from "./gb-first-disclosure";
+// 800줄 정책 분리(2026-08-13) — 로직 이동만, 계약 불변.
+import { validateGbCarryover } from "./transfer-tax-validate-gb-carryover";
+import { validateGbSaleAxis } from "./transfer-tax-validate-gb-sale";
 
 /**
  * 일반건물 자산 전용 검증.
@@ -27,91 +31,6 @@ import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
  * @param formTransferDate  폼-전역 양도일 (YYYY-MM-DD) — 증축일 상한 검증에 사용
  * @returns 오류 메시지 (있을 경우) | null (검증 통과)
  */
-/**
- * ⑧ 이월과세(§97의2) 입력 검증 — 일반건물 전용.
- *
- * 🔴 **가장 위험한 실패 모드를 막는다.** ④ `buildGbCarryoverPayload`는 증여 등기접수일이나
- *    증여자 취득일이 비면 서브객체를 만들지 않는다 ⇒ **조용히 미발동**으로 되돌아간다.
- *    사용자는 입력했다고 믿는데 세액이 안 바뀐다 — 이 기능이 애초에 고치려던 그 증상이다.
- *
- * ⇒ ④와 **같은 조건**을 본다(메모리 `feedback_shared_predicate_argument_parity`).
- *
- * ⚠️ **UI에 있는 칸만 요구한다.** 건물 파트를 안 골랐으면 건물 칸을 묻지 않는다.
- */
-function validateGbCarryover(asset: AssetForm, label: string): string | null {
-  const landIsCarryover = asset.acquisitionCause === "carryover_gift";
-  const buildingIsCarryover = asset.gbBuildingAcquisitionCause === "carryover_gift";
-  if (!landIsCarryover && !buildingIsCarryover) return null;
-
-  const c = asset.carryover;
-
-  /**
-   * §97조의2 ① **관계요건** — 증여 **사건**의 사실이라 토지 쪽(`c`) 하나가 정본이다.
-   * 일반 경로(`transfer-tax-validate-asset.ts`)와 **같은 조건**을 본다 —
-   * 관계는 단독 필수화하지 않고, 사망을 선언했을 때만 요구한다.
-   *
-   * 🔑 **부담부증여 조기 반환보다 앞에 둔다** (O-3, 2026-08-10).
-   *    아래 조기 반환은 「당초 증여자」 입력 요구를 가로채지 않으려는 것인데,
-   *    ① 본문 요건은 그 요구와 **직교**다. 뒤에 두면 부담부증여에서 「그 외」를 고른
-   *    사용자가 **아무 안내 없이** 이월과세만 조용히 꺼진다(엔진은 정확히 배제하므로
-   *    세액은 맞지만, 왜 안 걸렸는지 화면이 말해 주지 않는다). BG-W-01·02가 고정한다.
-   */
-  if (c?.donorRelation === "other")
-    return `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`;
-
-  if (c?.donorDeceased && !c.donorRelation)
-    return `${label}: 증여자와의 관계를 선택하세요 (「소득세법」 제97조의2 제1항).`;
-
-  /**
-   * 🔴 **나머지는 부담부증여에서 손대지 않는다** (2026-08-10 정정).
-   *
-   * 초안은 「범위 밖이니 차단」이었다. **틀렸다** — 그 사이 다른 줄기(D-7a·D-7b,
-   * `burdened-gift-carryover-159-97-2.plan.md`)가 **지원을 열었다**. 근거는 국세청
-   * 재산세과-1059: 「영 §159 제1호에 따른 취득가액 산정 시 §97①1호 가액에 **이월과세가
-   * 적용되는 것임**」. 그쪽 ⑧는 「당초 증여자」 두 벌 입력을 요구한다.
-   *
-   * 여기서 차단 메시지를 띄우면 그 요구가 화면에 닿기 전에 가로채 **지원된 기능이 막힌다**
-   * (E2E `transfer-burdened-gift-carryover-block.spec.ts` CB-2로 실측).
-   *
-   * ⇒ 이 아래는 **일반 양도의 GB 이월과세**만 본다. 부담부증여는 그쪽 경로에 맡긴다.
-   */
-  if (asset.transferType === "burdened_gift") return null;
-
-  if (!c?.giftRegistryDate)
-    return `${label}: 증여 등기접수일을 입력하세요 (「소득세법」 제97조의2 제3항 — 적용기간 기산일).`;
-
-  const parts: Array<[CarryoverTaxationForm | undefined, string]> = [];
-  if (landIsCarryover) parts.push([c, `${label} 토지`]);
-  if (buildingIsCarryover) parts.push([asset.buildingCarryover ?? c, `${label} 건물`]);
-
-  for (const [p, partLabel] of parts) {
-    if (!p?.donorAcquisitionDate)
-      return `${partLabel}: 증여자의 취득일을 입력하세요 (「소득세법」 제95조 제4항 — 보유기간 기산일).`;
-    if (!parseAmount(p.giftDateValuation))
-      return `${partLabel}: 증여 당시 평가액을 입력하세요 (비교과세 시나리오 B 취득가액).`;
-    if (p.useEstimatedAcquisition) {
-      if (!p.estimationMode)
-        return `${partLabel}: 증여자 취득가액의 환산 방식을 선택하세요.`;
-      if (!parseAmount(p.donorStandardPriceAtAcquisition))
-        return `${partLabel}: 증여자 취득 당시 기준시가를 입력하세요 (환산 분자).`;
-    } else if (!parseAmount(p.donorAcquisitionPrice)) {
-      return `${partLabel}: 증여자의 취득가액을 입력하세요 (「소득세법」 제97조의2 제1항 제1호).`;
-    }
-  }
-
-  /**
-   * 🔑 **Σ 검증** — 영 §163의2②의 안분 분모가 사용자 입력이라, 파트 합이 분모를 넘으면
-   *    증여세 상당액 합계가 산출세액을 초과한다. 엔진은 파트별로만 보므로 여기서 잡는다.
-   *    (분모를 안 넣었으면 legacy `giftTaxAmount` 경로라 검증 대상이 아니다.)
-   */
-  const giftTaxBase = parseAmount(c.giftTaxBase);
-  if (giftTaxBase > 0) {
-    const sum = parts.reduce((s, [p]) => s + parseAmount(p?.giftDateValuation), 0);
-    if (sum > giftTaxBase)
-      return `${label}: 파트별 증여 당시 평가액 합계(${sum.toLocaleString()}원)가 증여세 과세가액(${giftTaxBase.toLocaleString()}원)을 초과합니다.`;
-  }
-  return null;
-}
 
 export function validateGeneralBuildingAsset(
   asset: AssetForm,
@@ -708,74 +627,40 @@ export function validateGeneralBuildingAsset(
     }
   }
 
-  // ── 사례 35 후속-1: §99-164-10 환산주택가격 4필드 필수 ──
-  if (asset.gbHasFirstDisclosure === true) {
-    if (!asset.useEstimatedAcquisition) {
-      return `${label}: 환산주택가격 입력은 환산취득가 모드에서만 가능합니다.`;
-    }
+  /**
+   * ── 사례 35 후속-1: §99-164-10 환산주택가격 3필드 필수 ──
+   *
+   * 🔑 **게이트가 「차단」에서 「무시」로 바뀌었다**(2026-08-13 · 계획서 §7.5 D-1).
+   *
+   * 종전에는 `!useEstimatedAcquisition`이면 **에러를 반환**했다. 그런데 모드 전환
+   * (`CompanionAcqPurchaseBlock` `handleAcqBasisChange`)은 `gbHasFirstDisclosure`를
+   * 되돌리지 않고, 토글은 환산 모드에서만 렌더된다 ⇒ 실거래가로 바꾼 순간 **끄는 UI가
+   * 없는 채로 계산이 막혔다**(복구하려면 다시 환산을 골라야 함을 사용자가 알 수 없다).
+   *
+   * 형제 기능 §164⑤ PHD가 같은 상황을 이미 「잔존해도 무시」로 처리한다
+   * (`transfer-tax-validate-asset.ts` — `if (usesPhd && isEstimated)`). 같은 계약으로 맞춘다.
+   *
+   * ⚠️ **PHD의 술어를 그대로 복제하지 않는다.** PHD는 플래그 축(`useEstimatedAcquisition`)인데
+   *    일반건물은 토지·건물 파트 축이 있고 **API가 파트 축으로 payload를 싣는다**
+   *    (`transfer-tax-api-gb.ts` `anyEstimated`). 플래그 축으로 검증하면 분리 취득 +
+   *    파트만 환산에서 「validate는 통과시켰는데 Zod가 400」이 된다.
+   *    ⇒ UI 노출·validate·API 세 층이 `isGbFirstDisclosureApplicable` 하나를 공유한다.
+   *
+   * 토지는 ㎡당 단가 × 면적으로 파생하되 구형 총액 입력을 fallback으로 받는다 —
+   * **UI·API와 같은 순수 함수**를 쓴다(⑧ 규칙: fallback 있는 필드는 validate도 같은 fallback).
+   */
+  if (asset.gbHasFirstDisclosure === true && isGbFirstDisclosureApplicable(asset)) {
     if (!parseAmount(asset.gbFirstDisclosurePrice)) {
       return `${label}: 최초공시주택가격을 입력하세요 (§99-164-10).`;
     }
-    if (!parseAmount(asset.gbFirstDisclosureLandStdPrice)) {
-      return `${label}: 최초공시 당시 토지 기준시가를 입력하세요.`;
+    if (!gbFirstDisclosureLandStdPriceOf(asset)) {
+      return `${label}: 최초공시 당시 토지 공시지가(원/㎡)를 입력하세요.`;
     }
     if (!parseAmount(asset.gbFirstDisclosureBuildingStdPrice)) {
       return `${label}: 최초공시 당시 건물 기준시가를 입력하세요.`;
     }
   }
 
-  // ── 양도시 감정평가가액 — 3필드 all-or-nothing (부가령 §64①1호 단서) ────────────
-  // ⚠️ 구분양도 블록 **밖**이다 — 감정가액은 일괄양도의 안분 basis이기도 하다. 안으로 넣으면
-  //    일괄양도에서 불완전 입력이 그대로 통과해 조용히 기준시가로 후퇴한다.
-  //    (split V8과 같은 규칙 — `transfer-tax-validate-split.ts`)
-  const landApp = parseAmount(asset.landAppraisalAtTransfer) || 0;
-  const buildingApp = parseAmount(asset.buildingAppraisalAtTransfer) || 0;
-  const anyAppraisal = landApp > 0 || buildingApp > 0;
-  /**
-   * 🔴 **감정일자는 요구하지 않는다**(2026-08-06 · Q-9 확정 — 계획서 §21). 시기 요건 판정을
-   * 폐지했으므로 일자는 선택 입력이다. 「양쪽 모두」는 비율 산출의 **산술적 필요조건**이라 유지한다.
-   */
-  if (anyAppraisal && (landApp <= 0 || buildingApp <= 0)) {
-    return `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
-  }
-
-  // ── 구분양도(§100②) — Phase 2 ────────────────────────────────────────────────
-  // 게이트는 API 전송(`transfer-tax-api-gb.ts` `saleSplitFields`)과 **같은 축**이다.
-  // 여기서 조건을 재기술하면 「전송되는데 차단 안 함」 또는 그 반대가 된다.
-  if (asset.saleSplitMode === "actual") {
-    const landIn = parseAmount(asset.landTransferPrice) || 0;
-    const buildingIn = parseAmount(asset.buildingTransferPrice) || 0;
-
-    /**
-     * ✅ **증축 조합 차단은 Q-4 확정으로 해제됐다**(2026-08-06) — 건물 구분값을 본체·증축에
-     * **양도 당시 기준시가 비율**로 나눈다(그 외의 방법이 없다는 것이 사용자 확정 사항).
-     *
-     * ⚠️ 다만 **감정평가가액과는 함께 쓸 수 없다** — 감정은 토지·건물 2필드뿐이라 건물을 다시
-     *    본체·증축으로 나눌 근거가 없다. 조용히 무시하면 사용자는 감정가액이 반영된 줄 안다.
-     */
-    if (asset.gbHasExtension && anyAppraisal) {
-      return `${label}: 증축이 있는 건물에서는 감정평가가액으로 안분할 수 없습니다 — 감정평가가액은 토지·건물 두 값뿐이라 건물분을 본체와 증축분으로 다시 나눌 근거가 없습니다. 양도시 기준시가 비율로 안분됩니다.`;
-    }
-
-    // S-11 — 부담부증여는 §159가 채무비율로 자동 산정하므로 구분 기재가 성립하지 않는다.
-    if (isBurdenedGiftGB && (landIn > 0 || buildingIn > 0)) {
-      return `${label}: 부담부증여는 양도가액을 인수 채무액 기준으로 자동 산정하므로 토지·건물 구분 기재를 쓸 수 없습니다 (소득세법 시행령 §159).`;
-    }
-
-    /**
-     * ⚠️ **합계(= 총 양도가액) 검증은 여기서 하지 않는다** — 이 함수는 자산 하나만 받는데,
-     *    단건 일반건물의 총 양도가액은 **폼-전역 `contractTotalPrice`**에서 온다
-     *    (`transfer-tax-api.ts:232-238` — `asset.actualSalePrice`가 아니다).
-     *    자산 필드로 검증하면 **엉뚱한 값과 비교**하게 되므로 총액을 확실히 아는
-     *    엔진(`allocateBundledTransferPrice`)이 담당한다.
-     */
-
-    // R-5 — §166⑧ 예외는 30% 의제를 면제해 **세액을 바꾼다**. 근거 없이 켤 수 있으면
-    // 가드를 무력화하는 스위치가 된다(split V9와 같은 규칙).
-    if (asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
-      return `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`;
-    }
-  }
-
-  return null;
+  // ── 양도 축(감정평가가액 · 구분양도 §100②) — 800줄 정책으로 분리(2026-08-13) ──
+  return validateGbSaleAxis(asset, label, isBurdenedGiftGB);
 }

@@ -513,6 +513,77 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         </div>
       )}
 
+      {/*
+        §99-164-10 환산주택가격 — 취득당시 기준시가를 **덮어쓴 근거**.
+
+        ⚠️ 여기 붙이는 이유는 바로 위 §163⑨ 블록과 같다 — 일반건물은 aggregate 경로로 흐르므로
+           `GeneralBuildingValuationDetailCard`(TransferTaxResultView 전용)는 렌더되지 않는다.
+           그쪽에만 두면 계산에는 반영되고 화면에는 안 보인다
+           (memory `feedback_transfer_result_view_is_not_one` — 2회 재발한 함정).
+      */}
+      {aggregated.generalBuildingValuationDetail?.convertedHousing && (
+        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 text-sm space-y-1">
+          <p className="font-semibold text-violet-900">
+            환산주택가격 — 양도소득세 집행기준 99-164-10
+          </p>
+          <p className="text-xs text-violet-800">
+            취득 당시 주택으로 개별주택가격이 고시된 뒤 상가로 용도변경했으므로, 최초공시주택가격을
+            자산별 기준시가 비율로 환산해 <b>취득 당시 기준시가</b>로 사용합니다.
+          </p>
+          {(() => {
+            const c = aggregated.generalBuildingValuationDetail!.convertedHousing!;
+            const rows: Array<[string, number, string?]> = [
+              ["최초공시주택가격", c.firstDisclosurePrice],
+              ["취득 당시 토지 기준시가", c.acqLandStd],
+              ["취득 당시 건물 기준시가", c.acqBuildingStd],
+              ["최초공시 당시 토지 기준시가", c.firstDiscLand],
+              ["최초공시 당시 건물 기준시가", c.firstDiscBuilding],
+            ];
+            return (
+              <>
+                <ul className="text-xs text-violet-900 space-y-0.5 pt-1">
+                  {rows.map(([label, v]) => (
+                    <li key={label} className="flex items-baseline justify-between gap-3">
+                      <span>{label}</span>
+                      <span className="font-mono tabular-nums whitespace-nowrap">
+                        {formatKRW(v)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="pt-1 text-xs text-violet-800">
+                  환산주택가격 = 최초공시주택가격 {formatKRW(c.firstDisclosurePrice)} × 취득 당시
+                  기준시가 합계 {formatKRW(c.acqTotal)} ÷ 최초공시 당시 기준시가 합계{" "}
+                  {formatKRW(c.firstDiscTotal)}
+                </p>
+                <ul className="text-xs text-violet-900 space-y-0.5 pt-1">
+                  <li className="flex items-baseline justify-between gap-3">
+                    <span className="font-semibold">환산주택가격</span>
+                    <span className="font-mono tabular-nums font-semibold whitespace-nowrap">
+                      {formatKRW(c.converted)}
+                    </span>
+                  </li>
+                  <li className="flex items-baseline justify-between gap-3">
+                    <span>
+                      토지분<span className="ml-1 text-violet-600">(취득 당시 기준시가 비율 안분)</span>
+                    </span>
+                    <span className="font-mono tabular-nums whitespace-nowrap">
+                      {formatKRW(c.convertedLand)}
+                    </span>
+                  </li>
+                  <li className="flex items-baseline justify-between gap-3">
+                    <span>건물분</span>
+                    <span className="font-mono tabular-nums whitespace-nowrap">
+                      {formatKRW(c.convertedBuilding)}
+                    </span>
+                  </li>
+                </ul>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
       {/* §97② 2호 단서 swap 발동 표시 (일반건물 환산 자산총액 판정 — F10) */}
       {aggregated.swapApplied && aggregated.swapComparison && (
         <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1">

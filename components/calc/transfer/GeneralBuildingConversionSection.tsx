@@ -18,8 +18,7 @@
 import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
@@ -114,31 +113,9 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
     transferDate,
   ]);
 
-  /** 사례 35 후속-1 §99-164-10 환산주택가격 미리보기 — useMemo 순수 */
-  const convertedHousingPreview = useMemo(() => {
-    if (!asset.gbHasFirstDisclosure) return null;
-    const firstDisc = parseAmount(asset.gbFirstDisclosurePrice);
-    const firstDiscLand = parseAmount(asset.gbFirstDisclosureLandStdPrice);
-    const firstDiscBld = parseAmount(asset.gbFirstDisclosureBuildingStdPrice);
-    const acqLandPerSqm = parseAmount(asset.gbAcqLandPricePerSqm ?? "");
-    const acqBld = parseAmount(asset.gbAcqBuildingValue ?? "");
-    const landArea = parseDecimal(asset.gbLandArea ?? "");
-    if (!firstDisc || !firstDiscLand || !firstDiscBld || !acqLandPerSqm || !acqBld || !landArea) return null;
-    const acqLand = Math.floor(acqLandPerSqm * landArea);
-    const acqTotal = acqLand + acqBld;
-    const firstDiscTotal = firstDiscLand + firstDiscBld;
-    if (firstDiscTotal <= 0 || acqTotal <= 0) return null;
-    const converted = Math.floor(firstDisc * acqTotal / firstDiscTotal);
-    return { converted, firstDisc, acqTotal, firstDiscTotal };
-  }, [
-    asset.gbHasFirstDisclosure,
-    asset.gbFirstDisclosurePrice,
-    asset.gbFirstDisclosureLandStdPrice,
-    asset.gbFirstDisclosureBuildingStdPrice,
-    asset.gbAcqLandPricePerSqm,
-    asset.gbAcqBuildingValue,
-    asset.gbLandArea,
-  ]);
+  /* 🔀 §99-164-10 환산주택가격 미리보기 useMemo도 ③ 취득정보로 함께 옮겼다 (2026-08-13).
+        그 산식의 분자(취득당시 토지·건물 기준시가)가 저쪽 ①②의 입력이라, 값과 미리보기가
+        같은 화면에 있어야 사용자가 어긋남을 바로 본다. → `GeneralBuildingBlock.tsx` */
 
   return (
     <>
@@ -217,60 +194,29 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
             </div>
           )}
 
-          {/* 사례 35 후속-1: §99-164-10 환산주택가격 (환산취득가 모드만) */}
+          {/*
+            🔀 **§99-164-10 환산주택가격 블록은 ③ 취득정보로 이전했다** (2026-08-13 · 사용자 요청).
+
+            이유는 두 가지다:
+             1. **입력이 흩어져 있었다.** 최초공시 당시 토지·건물 기준시가는 ③ 취득정보의
+                「① 토지 공시지가」·「② 건물 기준시가」가 받는 취득시·양도시 값과 **같은 축의
+                다른 시점**이다. 두 화면에 나뉘어 있어 사용자가 ①↔③을 오가야 했다.
+             2. **취득 사실이다.** 환산취득가 산정 방법이므로 취득정보가 제 자리다. 반면 이
+                카드가 계속 받는 용도변경일·배제자산 여부는 **보유 중의 용도 상태**라 ①에 남는다.
+
+            이전 후 그쪽은 「토지 3시점 · 최초고시 개별주택가격 · 건물 3시점」으로 통합됐고,
+            건물기준시가 일괄 계산도 2시점 → 3시점으로 넓어졌다.
+            ⇒ `components/calc/transfer/GeneralBuildingBlock.tsx` · 계획서
+              `docs/02-design/features/gb-first-disclosure-3point-integration.plan.md`
+            ⚠️ 여기로 되돌리지 말 것.
+          */}
           {asset.useEstimatedAcquisition && (
-            <ToggleCard
-              tone="fuchsia"
-              variant="card"
-              title="주택으로 최초공시 후 상가로 용도변경 (환산취득가)"
-              description="취득가액을 모르는 경우 §99-164-10 환산주택가격으로 취득당시 기준시가를 환산합니다."
-              checked={asset.gbHasFirstDisclosure}
-              onCheckedChange={(v) => onChange({ gbHasFirstDisclosure: v })}
-              trailing={
-                <PrecedentArticleModal
-                  citation="양도소득세 집행기준 99-164-10"
-                  label="집행기준"
-                  kind="interpretation"
-                  summary={
-                    "취득당시에는 주택으로 개별주택가격이 고시된 이후 상가건물로 용도를 변경하여 양도하는 경우,\n취득 시 기준시가는 환산주택가격을 자산별 기준시가로 안분하여 토지와 주택분 기준시가를 각각 산정하며,\n양도 시 기준시가는 일반건물과 토지에 대한 기준시가를 적용하여 계산한다.\n\n취득당시의 환산주택가격(기준시가) =\n  최초공시주택가격 × (토지 취득당시의 기준시가 + 건물 취득당시의 기준시가)\n               ÷ (주택가격 최초공시 당시의 토지기준시가와 건물기준시가의 합계액)"
-                  }
-                />
-              }
-            >
-              <FieldCard label="최초공시주택가격" unit="원"
-                hint="주택가격이 최초로 고시된 시점의 개별주택가격 총액 (원)">
-                <CurrencyInput label="최초공시주택가격" hideUnit
-                  value={asset.gbFirstDisclosurePrice}
-                  onChange={(v) => onChange({ gbFirstDisclosurePrice: v })} />
-              </FieldCard>
-              <FieldCard label="최초공시 당시 토지 기준시가" unit="원"
-                hint="최초공시 시점 개별공시지가 × 면적 총액 (원)">
-                <CurrencyInput label="최초공시 당시 토지 기준시가" hideUnit
-                  value={asset.gbFirstDisclosureLandStdPrice}
-                  onChange={(v) => onChange({ gbFirstDisclosureLandStdPrice: v })} />
-              </FieldCard>
-              <FieldCard label="최초공시 당시 건물 기준시가" unit="원"
-                hint="최초공시 시점 건물 기준시가 총액 (원)">
-                <CurrencyInput label="최초공시 당시 건물 기준시가" hideUnit
-                  value={asset.gbFirstDisclosureBuildingStdPrice}
-                  onChange={(v) => onChange({ gbFirstDisclosureBuildingStdPrice: v })} />
-              </FieldCard>
-              {convertedHousingPreview && (
-                <div className="rounded border bg-rose-100/60 border-rose-300 px-3 py-2 text-xs text-rose-800">
-                  <p className="font-semibold">
-                    환산주택가격 = {convertedHousingPreview.converted.toLocaleString("ko-KR")} 원
-                  </p>
-                  <p className="mt-1">
-                    = {convertedHousingPreview.firstDisc.toLocaleString("ko-KR")}
-                    {" × "}
-                    {convertedHousingPreview.acqTotal.toLocaleString("ko-KR")}
-                    {" ÷ "}
-                    {convertedHousingPreview.firstDiscTotal.toLocaleString("ko-KR")}
-                  </p>
-                  <p className="mt-1 text-rose-600">근거: 양도소득세 집행기준 99-164-10</p>
-                </div>
-              )}
-            </ToggleCard>
+            <ToneCard tone="violet" noDark className="p-2.5">
+              <p className="text-caption text-violet-800">
+                취득 당시 주택으로 개별주택가격이 고시된 뒤 상가로 바꾼 경우의{" "}
+                <b>환산주택가격(§99-164-10)</b> 입력은 <b>③ 취득정보</b>의 일반건물 영역에 있습니다.
+              </p>
+            </ToneCard>
           )}
         </ToggleCard>
     </>
