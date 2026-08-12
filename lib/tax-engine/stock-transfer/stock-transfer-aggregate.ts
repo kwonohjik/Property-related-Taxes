@@ -24,6 +24,23 @@ import {
 import { resolveStockCarryover } from "./stock-carryover";
 import { offsetLossesCore } from "@/lib/tax-engine/loss-offset-core";
 import { resolveStockRateKey } from "./stock-transfer-rate-calc";
+import { calculateForeignStockTax } from "./foreign-stock";
+import { computeForeignTaxCreditLimits } from "./foreign-tax-credit-limit";
+import {
+  isForeignStockItem,
+  toStockTransferResult,
+  type AggregateStockItemInput,
+} from "./foreign-stock-aggregate-adapter";
+
+/**
+ * §104①11호나목의 「중소기업」 플래그 — 국외주식 입력에는 없는 축이다.
+ *
+ * 국외주식(§94①3호다목)은 §104①12호로 가고 그 분기는 이 플래그를 보지 않으므로 false로 둔다.
+ * (서식 각주가 가리키는 「우리나라 중소기업의 해외상장주식 10%」 경로는 아직 입력이 없다 — 별건.)
+ */
+function smeFlag(input: AggregateStockItemInput): boolean {
+  return isForeignStockItem(input) ? false : input.isSmallMediumEnterprise;
+}
 
 // ============================================================
 // 다자산 합산 결과 타입
@@ -192,8 +209,10 @@ const NBL_HEAVY_CORP_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]>
  */
 function computeOtherAssetComparativeTax(
   items: StockTransferResult[],
-  inputs: StockTransferInput[],
+  inputs: AggregateStockItemInput[],
 ): OtherAssetComparativeTax | undefined {
+  // 대상은 **기타자산 그룹**뿐이다. 국외주식은 `basicDeductionGroup: "stock"`이라
+  // 여기서 자동으로 걸러진다(§104⑤이 「1호·2호 및 **4호**」만 열거해 3호가 빠지는 것과 같은 이유).
   const targets = items
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => r.basicDeductionGroup === OTHER_ASSET_GROUP && !r.isExempt);
@@ -227,7 +246,7 @@ function computeOtherAssetComparativeTax(
       applyStockTaxRate(
         bucketBase,
         rep.r.taxCategory,
-        inputs[rep.i].isSmallMediumEnterprise,
+        smeFlag(inputs[rep.i]),
         rep.r.isShortTermHolding,
       ).calculatedTax,
     );
@@ -274,7 +293,7 @@ function computeOtherAssetComparativeTax(
  *   - 각 종목 그대로 합산 (기본공제 중복 가능 — 단건 계산 보조용)
  */
 export function calculateStockTransferTaxAggregate(
-  inputs: StockTransferInput[],
+  inputs: AggregateStockItemInput[],
   deductionMode: "each_item" | "aggregate" = "aggregate",
 ): StockTransferAggregateResult {
   /**
@@ -285,21 +304,52 @@ export function calculateStockTransferTaxAggregate(
    * 한 종목의 A/B가 **다른 종목의 세액까지** 움직이기 때문이다(계획서 §4 Q-2 · 실측 반례).
    *
    * ⚠️ `aggregateCore`는 이 resolve를 **다시 하지 않는다** — 순환을 만들지 않기 위해서다.
+   *
+   * 🔑 **국외주식은 이월과세 대상이 아니다** — §97의2①은 배우자·직계존비속에게서 **증여받은**
+   *   자산의 취득가액을 증여자 기준으로 되돌리는 규정이고, `ForeignStockInput`에는 그 축
+   *   (`acquisitionCause`)이 아예 없다. 그래서 국내 종목만 뽑아 resolve하고 **원래 자리로
+   *   되돌려 놓는다** — 순서를 유지해야 §103②(양도일 순) 배분이 어긋나지 않는다.
+   *
+   * ⚠️ 다만 ②3호가 비교하는 「결정세액」은 **과세기간 전체**라, 비교용 합산에는 국외 종목도
+   *   **포함**해야 한다. 그래서 콜백 안에서 전체 배열을 재조립해 넘긴다.
    */
-  const resolved = resolveStockCarryover(
-    inputs,
-    (list) => aggregateCore(list, deductionMode).totalFinalTax,
+  const domesticIdx: number[] = [];
+  inputs.forEach((input, i) => {
+    if (!isForeignStockItem(input)) domesticIdx.push(i);
+  });
+
+  const mergeDomestic = (list: StockTransferInput[]): AggregateStockItemInput[] => {
+    const merged = [...inputs];
+    domesticIdx.forEach((globalIdx, localIdx) => {
+      merged[globalIdx] = list[localIdx];
+    });
+    return merged;
+  };
+
+  const resolvedDomestic = resolveStockCarryover(
+    domesticIdx.map((i) => inputs[i] as StockTransferInput),
+    (list) => aggregateCore(mergeDomestic(list), deductionMode).totalFinalTax,
     (i) => calculateStockTransferTaxInternal(i).transferIncome,
   );
-  return aggregateCore(resolved, deductionMode);
+
+  return aggregateCore(mergeDomestic(resolvedDomestic), deductionMode);
 }
 
 /** 합산 계산 본체 — 이월과세 A/B가 **이미 확정된** 입력을 받는다. */
 function aggregateCore(
-  inputs: StockTransferInput[],
+  inputs: AggregateStockItemInput[],
   deductionMode: "each_item" | "aggregate",
 ): StockTransferAggregateResult {
   const BASIC_DEDUCTION_LIMIT = 2_500_000;
+
+  /** 종목 1건 단건 계산 — 국내·국외 엔진을 갈라 부르고 결과 타입을 하나로 맞춘다. */
+  const calcOne = (
+    input: AggregateStockItemInput,
+    over: Partial<StockTransferInput> = {},
+  ): StockTransferResult =>
+    isForeignStockItem(input)
+      ? toStockTransferResult(input, calculateForeignStockTax(input))
+      : calculateStockTransferTaxInternal({ ...input, ...over });
 
   if (deductionMode === "each_item" || inputs.length === 1) {
     // 단건 또는 each_item 모드 — 개별 계산 합산
@@ -309,7 +359,7 @@ function aggregateCore(
     //   · `each_item` — §103① 기본공제 **중복을 허용**하는 진단 모드라 애초에 유효한 신고가
     //     아니다(위 함수 주석). 실제 신고 경로는 `"aggregate"`이며 Zod 기본값도 그쪽이다
     //     (`lib/api/stock-transfer-tax-schema.ts:548`).
-    const items = inputs.map((input) => calculateStockTransferTaxInternal(input));
+    const items = inputs.map((input) => calcOne(input));
     // 합계가 음수면 과세 소득은 0이다 — 양도소득에 결손금 이월이 없다(§102①후단·§102②).
     // 부동산 정본과 대칭(`multi-parcel-transfer.ts:478`). 종전에는 clamp가 없어 신고서식에
     // **음수 양도소득금액**이 그대로 흘렀다.
@@ -319,13 +369,26 @@ function aggregateCore(
     const electronicFilingCredit = items.some((r) => r.electronicFilingCredit > 0)
       ? 20_000
       : 0;
+    // §118의6①1호 외국납부세액공제는 **산출세액에서 차감**된다. 이 단축 분기(단건·each_item)도
+    // 반드시 빼야 한다 — 국외 종목의 `finalTax`에는 이미 반영돼 있는데 총계에서 빠지면
+    // 종목 세액과 결정세액이 어긋난다(anchor FA-2-2가 이 누락을 잡았다).
+    const totalForeignTaxCreditShort = items.reduce(
+      (s, r) => s + (r.foreignDetail?.foreignTaxCreditApplied ?? 0),
+      0,
+    );
     // 결정세액 10원 미만 절사 — 단건 finalizeStockTax·aggregate 분기와 대칭
     // (구성요소가 모두 10배수라 현재 실수치 불변이나, 향후 변경 대비 정합 유지)
     const totalFinalTax = Math.max(
       0,
-      floorTen(totalCalculatedTax + totalUnderReportPenalty - electronicFilingCredit),
+      floorTen(
+        totalCalculatedTax -
+          totalForeignTaxCreditShort +
+          totalUnderReportPenalty -
+          electronicFilingCredit,
+      ),
     );
-    const totalLocalIncomeTax = Math.floor((totalCalculatedTax * 0.10) / 10) * 10;
+    const totalLocalIncomeTax =
+      Math.floor(((totalCalculatedTax - totalForeignTaxCreditShort) * 0.10) / 10) * 10;
 
     return {
       items,
@@ -351,11 +414,8 @@ function aggregateCore(
   // "aggregate" 모드 — §103① 그룹별 기본공제 1회 **한도** + §103② 배분 **순서**
   // STEP 1: 각 종목 기본공제 최대 소진으로 단건 계산 (순수 소득금액 파악)
   const rawItems = inputs.map((input) =>
-    calculateStockTransferTaxInternal({
-      ...input,
-      // 부동산 그룹은 이미 소진됨으로 처리 → 실질적 기본공제 0
-      realEstateGroupBasicDeductionUsed: BASIC_DEDUCTION_LIMIT,
-    }),
+    // 부동산 그룹은 이미 소진됨으로 처리 → 실질적 기본공제 0 (국외주식엔 해당 축이 없다)
+    calcOne(input, { realEstateGroupBasicDeductionUsed: BASIC_DEDUCTION_LIMIT }),
   );
 
   // STEP 1.5: §102② 양도차손 통산 (영 §167의2①) — **§92②2호 「양도소득금액」 단계**라
@@ -380,7 +440,7 @@ function aggregateCore(
       income: rawItems[i].transferIncome,
       rateKey: resolveStockRateKey(
         rawItems[i].taxCategory,
-        inputs[i].isSmallMediumEnterprise,
+        smeFlag(inputs[i]),
         rawItems[i].isShortTermHolding,
       ),
       exempt: rawItems[i].isExempt,
@@ -471,11 +531,35 @@ function aggregateCore(
       const rateResult = applyStockTaxRate(
         taxBaseAfterDeduction,
         r.taxCategory,
-        input.isSmallMediumEnterprise,
+        smeFlag(input),
         r.isShortTermHolding,
         r.isExempt, // 비과세 분기 산식 echo
       );
       const newCalculatedTax = floorTen(rateResult.calculatedTax);
+
+      // 🔑 **국외주식은 `finalizeStockTax`를 타지 않는다.** 그 함수는 국내 신고 축
+      //   (`filingType`·`filingDate`·`filingViolation`·`isFraudulent`…)을 읽는데
+      //   `ForeignStockInput`에는 그 필드가 없다. 국외주식 단건 엔진도 가산세를 계산하지
+      //   않으므로(기존 갭) 여기서도 0을 유지해 **단건과 다종목의 세액을 일치**시킨다.
+      //   외국납부세액공제는 C를 알아야 하므로 STEP 3.5에서 일괄 반영한다.
+      if (isForeignStockItem(input)) {
+        return {
+          ...r,
+          transferIncome: income,
+          basicDeduction: deductThis,
+          taxBase: taxBaseAfterDeduction,
+          appliedRate: rateResult.appliedRate,
+          progressiveDeduction: rateResult.progressiveDeduction,
+          calculatedTax: newCalculatedTax,
+          underReportPenalty: 0,
+          latePaymentPenalty: 0,
+          electronicFilingCredit: 0,
+          // STEP 3.5에서 외국납부세액공제를 반영해 다시 쓴다.
+          finalTax: newCalculatedTax,
+          localIncomeTax: floorTen(newCalculatedTax * 0.1),
+        };
+      }
+
       const newFinalize = finalizeStockTax(newCalculatedTax, input);
       return {
         ...r,
@@ -494,7 +578,10 @@ function aggregateCore(
         localIncomeTax: newFinalize.localIncomeTax,
       };
     } else {
-      // 기타자산 그룹: realEstateGroupBasicDeductionUsed로 직접 제어
+      // 기타자산 그룹: realEstateGroupBasicDeductionUsed로 직접 제어.
+      // 국외주식은 `basicDeductionGroup`이 항상 "stock"이라 이 갈래에 오지 않는다 — 도달하면
+      // 어댑터가 그룹을 잘못 준 것이므로 조용히 국내 엔진으로 넘기지 않고 그대로 돌려준다.
+      if (isForeignStockItem(input)) return r;
       const adjustedInput: StockTransferInput = {
         ...input,
         realEstateGroupBasicDeductionUsed: otherAssetUsed,
@@ -510,6 +597,69 @@ function aggregateCore(
     processedByIndex[i] = processItem(i);
   }
   const processedItems = processedByIndex;
+
+  // ──────────────────────────────────────────────────────────
+  // STEP 3.5: §118의6①1호 외국납부세액 공제한도 — A × B / C
+  //
+  // 여기까지 와야 A(국외 종목 산출세액 합)와 C(국외 종목 통산 후 양도소득금액 합)가
+  // 모두 확정된다. 단건 엔진은 C를 알 수 없어 B = C로 계산하고, 그것이 종목마다
+  // **A 전액을 한도로 주는** 과대공제였다(계획서 §3).
+  //
+  // ⚠️ 국외 종목이 1건이면 B = C라 한도 = A — 단건 경로와 정확히 같은 값이 나온다.
+  // ⚠️ `foreignTaxMethod: "expense"`(필요경비 산입)를 고른 종목은 애초에 공제 대상이 아니라
+  //    단건 엔진이 `foreignTaxCreditLimit`을 undefined로 둔다. 그 종목은 외국세 0으로 넘겨
+  //    한도 배분에서 자기 몫을 요구하지 않게 한다 — 다만 **B와 A에는 그대로 들어간다**
+  //    (그 종목도 「해당 과세기간의 국외자산」이다).
+  //
+  // 🔑 **한도가 그 종목 자신의 산출세액을 넘을 수 있다.** 한도는 「A × 소득 비율」인데 §103②
+  //    기본공제가 특정 종목에 몰리면 그 종목의 산출세액만 낮아지기 때문이다(실측: 2종목 동액
+  //    이익에서 먼저 양도한 종목의 한도 9,750,000 > 자기 산출세액 9,500,000).
+  //    이것을 종목 세액으로 자르지 **않는다** — §118의6①1호 본문이 「**해당 과세기간의**
+  //    양도소득 산출세액에서 공제」라 공제 대상이 **과세기간 전체**이기 때문이다. 자르면
+  //    근거 없이 납세자에게 불리해진다([[feedback_no_unfavorable_application_without_legal_basis]]).
+  //
+  // ⚠️ 그 결과 **Σ 종목 finalTax ≠ totalFinalTax**가 될 수 있다(위 예에서 250,000 차이).
+  //    이는 결함이 아니라 **과세기간 단위 공제**의 성질이며, 이 엔진에는 이미 같은 구조가 있다 —
+  //    전자신고세액공제도 종목별 값과 별개로 합산 1회다(`anyElectronic ? 20_000 : 0`).
+  // ──────────────────────────────────────────────────────────
+  const foreignIdx: number[] = [];
+  inputs.forEach((input, i) => {
+    if (isForeignStockItem(input)) foreignIdx.push(i);
+  });
+
+  let totalForeignTaxCredit = 0;
+  if (foreignIdx.length > 0) {
+    const limits = computeForeignTaxCreditLimits(
+      foreignIdx.map((i) => ({
+        incomeAfterOffset: Math.max(0, processedItems[i].transferIncome),
+        incomeTax: processedItems[i].calculatedTax,
+        // 세액공제를 고른 종목만 자기 몫을 쓴다(필요경비 산입 선택 시 undefined).
+        foreignTaxPaidKrw:
+          processedItems[i].foreignDetail?.foreignTaxCreditLimit === undefined
+            ? 0
+            : (processedItems[i].foreignDetail?.foreignTaxPaidKrw ?? 0),
+      })),
+    );
+
+    foreignIdx.forEach((globalIdx, localIdx) => {
+      const item = processedItems[globalIdx];
+      const { limit, applied } = limits[localIdx];
+      const usesCredit = item.foreignDetail?.foreignTaxCreditLimit !== undefined;
+      const taxAfterCredit = Math.max(0, item.calculatedTax - applied);
+      totalForeignTaxCredit += applied;
+
+      processedItems[globalIdx] = {
+        ...item,
+        finalTax: taxAfterCredit,
+        localIncomeTax: floorTen(taxAfterCredit * 0.1),
+        foreignDetail: {
+          ...item.foreignDetail!,
+          foreignTaxCreditLimit: usesCredit ? limit : undefined,
+          foreignTaxCreditApplied: usesCredit ? applied : undefined,
+        },
+      };
+    });
+  }
 
   // 통산 후 합계. 기타자산 그룹은 통산 미적용이라 음수가 남을 수 있어 clamp를 유지한다
   // (주식 그룹은 `incomeAfterOffset`이 이미 0 이상이다).
@@ -535,11 +685,16 @@ function aggregateCore(
   const anyElectronic = inputs.some((inp) => inp.isElectronicFiling);
   const electronicFilingCredit = anyElectronic && totalCalculatedTax > 0 ? 20_000 : 0;
 
+  // 🔑 외국납부세액공제는 **산출세액에서 차감**된다(§118의6①1호 본문) — 결정세액·지방소득세
+  //    양쪽에 반영해야 한다. 국내 종목만 있으면 `totalForeignTaxCredit`이 0이라 종전과 같다.
   const totalFinalTax = Math.max(
     0,
-    floorTen(totalCalculatedTax + totalUnderReportPenalty - electronicFilingCredit),
+    floorTen(
+      totalCalculatedTax - totalForeignTaxCredit + totalUnderReportPenalty - electronicFilingCredit,
+    ),
   );
-  const totalLocalIncomeTax = Math.floor((totalCalculatedTax * 0.10) / 10) * 10;
+  const totalLocalIncomeTax =
+    Math.floor(((totalCalculatedTax - totalForeignTaxCredit) * 0.10) / 10) * 10;
 
   return {
     items: processedItems,

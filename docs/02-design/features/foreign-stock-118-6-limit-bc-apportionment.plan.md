@@ -274,7 +274,7 @@ PR #1212의 D-5 표시 정정이 **이 파일을 빠뜨렸다**. 2026-08-12 실�
 | **1** | Pre-Do anchor — §5 매트릭스를 **현행 코드에** 걸어 통과/실패 기록 | ✅ §7.1 참조 — **기존 안전망의 세율 사각지대**를 mutation으로 발견해 characterization 신설 |
 | **2** | `foreign-tax-credit-limit.ts` 순수 함수 + 단위 테스트 (§6.2·6.3) | ✅ 23건 · **mutation 4종 전부 사살**(§7.2) |
 | **3** | 단건 경로를 그 함수로 교체 (`rows.length === 1`) | ✅ **stock-transfer 1,003건 전부 통과 · 세액 무변화** |
-| **4** | D-3 어댑터 + `items` union + aggregate 배선 (§6.1) — **접근 1만** | N-1 국내주식 세액 불변 · 국외 2종목 계산 성립 |
+| **4** | D-3 어댑터 + `items` union + aggregate 배선 (§6.1) — **접근 1만** | ✅ N-1 국내 세액 불변(2,456건) · FA 시리즈 16건 · **mutation 3종 사살**(§7.3) |
 | **5** | 다종목 UI (종목 추가·삭제) — **접근 1만** | ⑤⑥⑦ 14지점 동기화 |
 | **6** | 표시 (§6.4) + 신고서식 | 산식이 한국어 풀어쓰기 · Q-5 사유 노출 |
 | **7** | E2E + 전체 회귀 | tsc 0 · lint 0 · `npm test` 전건 · 주식 E2E |
@@ -321,6 +321,51 @@ Phase 4의 실패 모드(「국외 갈래가 국내 종목까지 삼켜 전 종�
   guard의 실제 진입 경로는 「**양수 B 2건 + 상쇄 음수**로 C = 0」뿐 ⇒ 그 케이스 신설.
 
 ⇒ [[feedback_negative_assertion_needs_mutation_probe]] — **통과 건수는 증거가 아니다**를 다시 확인.
+
+## §7.3 Phase 4 실측 — 설계에서 바뀐 것과 새로 찾은 결함
+
+### 설계 대비 변경
+
+| 항목 | 계획 | 실제 |
+|---|---|---|
+| `appliedSection94` | 언급 없음 | union에 **다목이 없어** `"①3다"` 신설 — 없으면 국외주식을 표현할 수 없다 |
+| `appliedRules` | 언급 없음 | 국내 **태그 union**이라 국외 조문 문자열을 못 넣는다 ⇒ 태그 `"국외주식§118②준용"` 1개 + 원문은 `foreignDetail.appliedRules`로 분리 |
+| `applyStockTaxRate` | 언급 없음 | 🔴 **`foreign_stock` case가 없으면 `default`가 세액 0을 조용히 반환**한다(파일 자체가 §104①9호 주석으로 같은 함정을 경고). case 추가 |
+| 이월과세 | 언급 없음 | `resolveStockCarryover`가 `StockTransferInput[]` 전용 ⇒ **국내만 뽑아 resolve 후 원위치**. 단 ②3호 비교 합산에는 국외도 포함(과세기간 단위 개념) |
+| ⑭ Route | 「items union」만 | 국외 매핑을 `buildForeignEngineInput`으로 **추출해 단건·다종목이 공유** — 복제하면 ⑭가 갈라진다 |
+
+### 🆕 새로 찾은 결함 — 단건 단축 분기의 외국납부세액공제 누락
+
+`aggregateCore`의 `inputs.length === 1 || each_item` 단축 분기가 `totalFinalTax`·`totalLocalIncomeTax`에서
+**외국납부세액공제를 빼지 않았다**. 종목 `finalTax`에는 반영돼 있어 **종목 세액과 결정세액이 어긋났다**.
+anchor **FA-2-2**가 잡았다(기대 0 / 실제 9,500,000).
+
+### ⚖️ 한도가 자기 산출세액을 넘는 국면 — **자르지 않기로 결정**
+
+§103② 기본공제가 특정 종목에 몰리면 그 종목의 산출세액만 낮아지는데 한도는 **소득 비율**로 나오므로
+한도 > 자기 세액이 될 수 있다(실측: 9,750,000 > 9,500,000).
+
+**자르지 않는다** — §118의6①1호 본문이 「**해당 과세기간의** 양도소득 산출세액에서 공제」라 공제 대상이
+과세기간 전체다. 자르면 근거 없이 불리해진다([[feedback_no_unfavorable_application_without_legal_basis]]).
+
+⇒ 그 결과 **Σ 종목 finalTax ≠ totalFinalTax**(250,000)가 되는데, 이 엔진에는 **이미 같은 구조**가 있다 —
+전자신고세액공제도 종목별 값과 별개로 합산 1회다. anchor **FA-1-7**이 이것을 의도로 고정한다.
+
+### 🔴 S 트립와이어가 울려야 할 때 울리지 않았다
+
+종전 S-1은 「items가 국외를 받지 않는다」를 **`stockTransferInputSchema`**(국내 단건)로 단언했다.
+`items`가 실제로 쓰는 스키마를 union으로 넓혔는데도 **초록불이 유지**됐다 — 국내 단건 스키마는
+여전히 국외를 거부하기 때문이다. ⇒ [[feedback_anchor_observes_wrong_stage]].
+**실제 `stockTransferAggregateInputSchema`를 보도록 고쳤고**, 남은 전제(클라이언트 `items` 미전송)는
+**S-4**가 소스 grep으로 고정한다.
+
+### mutation 3종 (FA + 세율 다양성 22건 대상)
+
+| 변이 | 결과 |
+|---|---|
+| M-A2 `applyStockTaxRate`의 `foreign_stock` case 제거 (→ 세액 0) | **8건 실패** ✅ |
+| M-B STEP 3.5 B/C 안분 건너뛰기 (한도 = 산출세액 전액) | **6건 실패** ✅ |
+| M-C 총계에서 외국납부세액공제 미차감 | **2건 실패** ✅ |
 
 ## §8 검증 기준
 

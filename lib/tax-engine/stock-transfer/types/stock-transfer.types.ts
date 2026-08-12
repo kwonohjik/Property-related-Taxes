@@ -681,6 +681,12 @@ export type StockTransferResult = {
     | "①3가2)"
     | "①3나_본문"
     | "①3나_단서"
+    /**
+     * §94①3호**다목** — 국외주식(외국법인 발행 또는 외국 시장 상장).
+     * aggregate에 국외주식이 편입되면서 추가됐다. 종전에는 다목을 표현할 수단이 없어
+     * 국외주식이 이 결과 타입에 들어올 수 없었다.
+     */
+    | "①3다"
     | "①4다"
     | "①4라";
 
@@ -964,6 +970,12 @@ export type StockTransferResult = {
     | "F15F16대차사모펀드자동가산"
     | "판정기준일특수분기"
     | "본인미보유강제합산"
+    /**
+     * 국외주식(§94①3호다목) — §118②이 §118의2~§118의4·§118의6을 준용하는 트랙.
+     * 국외 엔진이 만드는 **조문 문자열 목록은 `foreignDetail.appliedRules`**에 있다.
+     * 이 union은 국내 분기 태그 집합이라 자유 문자열을 섞지 않는다.
+     */
+    | "국외주식§118②준용"
   >;
 
   /**
@@ -1024,6 +1036,38 @@ export type StockTransferResult = {
    *   - transferPrice=0: totalTax=0·warning 없음 → 미표시
    */
   securitiesTransactionTax?: import("../securities-transaction-tax").SecuritiesTransactionTaxResult;
+
+  /**
+   * 국외주식(§94①3호다목) 전용 값 — `taxCategory`가 `"foreign_stock"`·`"out_of_scope_foreign"`일 때만 정의된다.
+   *
+   * 다종목 aggregate에 국외주식이 편입되면서 추가됐다. 국내주식 결과와 **한 배열**에 담기지만
+   * 종목명·통화 환율·외국납부세액처럼 국내주식에 없는 값이 있어 여기 모아 둔다
+   * (평평하게 올리면 국내 종목마다 `undefined` 필드가 늘어난다).
+   *
+   * 🔑 `foreignTaxCreditLimit`은 **§118의6①1호 A × B / C**다. 단건은 B = C라 산출세액 전액이지만,
+   *    다종목이면 종목마다 A의 일부다 — `stock-transfer-aggregate.ts`가 배분해 채운다.
+   */
+  foreignDetail?: {
+    stockName: string;
+    countryCode: string;
+    shareCount: number;
+    transferExchangeRate: number;
+    acquisitionExchangeRate: number;
+    foreignTaxExchangeRate?: number;
+    /** 원화 환산 외국납부세액 */
+    foreignTaxPaidKrw?: number;
+    /** §118의6①1호 공제한도 = A × B / C */
+    foreignTaxCreditLimit?: number;
+    /** 실제 공제액 = min(외국납부세액, 한도) */
+    foreignTaxCreditApplied?: number;
+    /** 필요경비 산입 선택 시 산입액 */
+    foreignTaxExpenseApplied?: number;
+    transferReceiptDetail?: import("./foreign-stock.types").InstallmentReceiptDetail;
+    /** §118의2 5년 요건 미충족 사유 */
+    ineligibleReason?: string;
+    /** 국외 엔진이 남긴 조문 근거 문자열 (상위 `appliedRules` union에 섞지 않는다) */
+    appliedRules: string[];
+  };
 };
 
 // PostListingValuationResult는 파일 상단에서 import + re-export (sibling 분리).
