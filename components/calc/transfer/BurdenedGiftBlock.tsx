@@ -101,6 +101,8 @@ const ACQUISITION_METHOD_OPTIONS = [
 //   lineal_descendant       = 수증자가 직계비속(성년) — 증여자가 직계비속(자녀→부모 방향) (§53③)
 //   lineal_ascendant_adult  = 증여자가 직계존속, 수증자 성년 (§53② 본문)
 //   lineal_ascendant_minor  = 증여자가 직계존속, 수증자 미성년 (§53② 단서)
+// `description`은 화면에 렌더하지 않는다(2026-08-12 — 3열 배치로 옵션 카드 폭이 좁아져 제거).
+// 공제액 근거로 남겨둔다 — 되살리려면 RadioCardGroup options에 description을 다시 매핑하면 된다.
 const DONOR_RELATION_OPTIONS = [
   {
     value: "lineal_descendant",
@@ -199,19 +201,20 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
 
       {/* ① 평가 모드 라디오 */}
       <FieldCard
+        stacked
         label="양도(증여) 평가 유형"
-        hint="상증법 §60~§66. 사례 34는 기준시가 모드."
-        trailing={
-          <div className="flex flex-wrap items-center gap-1.5">
+        badge={
+          <span className="grid grid-cols-3 gap-1.5">
             <LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />
             <LawArticleModal legalBasis="상속세및증여세법 §62" label="상증법 §62" />
             <LawArticleModal legalBasis="상속세및증여세법 §66" label="상증법 §66" />
-          </div>
+          </span>
         }
       >
         <RadioCardGroup
           name="bgValuationMode"
           layout="stack"
+          columns={2}
           value={asset.bgValuationMode || ""}
           onChange={(v) => onChange({ bgValuationMode: v as AssetForm["bgValuationMode"] })}
           options={VALUATION_MODE_OPTIONS.map((o) => ({
@@ -232,47 +235,43 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
             엔진이 지분분으로 환산합니다(소령 §159 — 평가액 A·C만 지분분, 채무 B는 실제 인수액).
           </p>
         )}
-        <FieldCard
-          label={isFractional ? "임대보증금 (지분 인수분)" : "임대보증금 총액"}
-          hint="채무로 인수 + 임대평가 환산에도 사용 (상증령 §50⑦)"
-          trailing={<LawArticleModal legalBasis="상속세및증여세법 시행령 §50 ⑦" label="상증령 §50⑦" />}
-        >
-          <CurrencyInput label=""
-            hideUnit
-            value={asset.bgLendingDepositTotal}
-            onChange={(v) => onChange({ bgLendingDepositTotal: v })}
-          />
-        </FieldCard>
-        <FieldCard
-          label={isFractional ? "담보차입금 (지분 인수분)" : "담보차입금 (실제 채무잔액)"}
-          hint="채무로 인수 — 담보평가 산정에도 사용"
-        >
-          <CurrencyInput label=""
-            hideUnit
-            value={asset.bgMortgageDebtAmount}
-            onChange={(v) => onChange({ bgMortgageDebtAmount: v })}
-          />
-        </FieldCard>
-        <FieldCard
-          label="연간 임대료 (선택)"
-          hint="임대평가 환산용 — 채무 아님. 환산식: 보증금 + 임대료/12%"
-        >
-          <CurrencyInput label=""
-            hideUnit
-            value={asset.bgAnnualRentTotal}
-            onChange={(v) => onChange({ bgAnnualRentTotal: v })}
-          />
-        </FieldCard>
-        <FieldCard
-          label="(근)저당권 설정액 (선택)"
-          hint="미입력 시 담보차입금 = 설정액 가정. 실제 잔액과 다를 때만 입력"
-        >
-          <CurrencyInput label=""
-            hideUnit
-            value={asset.bgMortgageSetAmount}
-            onChange={(v) => onChange({ bgMortgageSetAmount: v })}
-          />
-        </FieldCard>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <FieldCard
+            stacked
+            label={isFractional ? "임대보증금 (지분 인수분)" : "임대보증금 총액"}
+            trailing={<LawArticleModal legalBasis="상속세및증여세법 시행령 §50 ⑦" label="상증령 §50⑦" />}
+          >
+            <CurrencyInput label=""
+              hideUnit
+              value={asset.bgLendingDepositTotal}
+              onChange={(v) => onChange({ bgLendingDepositTotal: v })}
+            />
+          </FieldCard>
+          <FieldCard
+            stacked
+            label={isFractional ? "담보차입금 (지분 인수분)" : "담보차입금 (실제 채무잔액)"}
+          >
+            <CurrencyInput label=""
+              hideUnit
+              value={asset.bgMortgageDebtAmount}
+              onChange={(v) => onChange({ bgMortgageDebtAmount: v })}
+            />
+          </FieldCard>
+          <FieldCard stacked label="연간 임대료 (선택)">
+            <CurrencyInput label=""
+              hideUnit
+              value={asset.bgAnnualRentTotal}
+              onChange={(v) => onChange({ bgAnnualRentTotal: v })}
+            />
+          </FieldCard>
+          <FieldCard stacked label="(근)저당권 설정액 (선택)">
+            <CurrencyInput label=""
+              hideUnit
+              value={asset.bgMortgageSetAmount}
+              onChange={(v) => onChange({ bgMortgageSetAmount: v })}
+            />
+          </FieldCard>
+        </div>
       </div>
 
       {/* ③ 시가 모드 — 양도시 시가 + 취득가액 산정방식 (K-4 실지 / K-5 환산) */}
@@ -509,6 +508,32 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
             증여재산 평가 — 증여일 현재 기준시가
           </p>
           <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
+          {stdPriceLauncher && (
+            <div className="ml-auto">
+              <BuildingStdPriceModalButton
+                buttonLabel="건물 기준시가 계산 (상속·증여)"
+                lockedTaxType="inheritance_gift"
+                initialAddress={stdPriceAddress}
+                snapshotKey={`bsp-${asset.assetId}-bggift`}
+                prefill={{
+                  floorArea: stdPriceLauncher.floorArea,
+                  landAreaM2: stdPriceLauncher.landAreaM2,
+                  // 상증 1시점 공시지가 — 자산 폼 값이 있으면 즉시 채우고, 없으면 모달의
+                  // 조회 필드(LandPriceLookupField)로 사용자가 조회한다(dead-end 아님).
+                  valuationLandPricePerSqm: stdPriceLauncher.landPricePerSqm,
+                  // 증여일 = 양도일. 모달이 eventDate로 받아 상증 평가연도를 도출한다
+                  // (`BuildingStdPriceForm.tsx:124-127`).
+                  transferDate,
+                }}
+                // 주입 규칙은 자산마다 반대다 — `compose`가 단일 출처다(합산 여부를 여기서 판단 금지).
+                onApply={(v, land) =>
+                  onChange({
+                    bgGiftBuildingStdPriceAtTransfer: String(stdPriceLauncher.compose(v, land)),
+                  })
+                }
+              />
+            </div>
+          )}
         </div>
         {stdPriceLauncher?.needsAppurtenantLand && (
           <p className="text-caption text-emerald-700">
@@ -528,32 +553,6 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
             onChange={(v) => onChange({ bgGiftBuildingStdPriceAtTransfer: v })}
           />
         </FieldCard>
-        {stdPriceLauncher && (
-          <div className="flex justify-end">
-            <BuildingStdPriceModalButton
-              buttonLabel="건물 기준시가 계산 (상속·증여)"
-              lockedTaxType="inheritance_gift"
-              initialAddress={stdPriceAddress}
-              snapshotKey={`bsp-${asset.assetId}-bggift`}
-              prefill={{
-                floorArea: stdPriceLauncher.floorArea,
-                landAreaM2: stdPriceLauncher.landAreaM2,
-                // 상증 1시점 공시지가 — 자산 폼 값이 있으면 즉시 채우고, 없으면 모달의
-                // 조회 필드(LandPriceLookupField)로 사용자가 조회한다(dead-end 아님).
-                valuationLandPricePerSqm: stdPriceLauncher.landPricePerSqm,
-                // 증여일 = 양도일. 모달이 eventDate로 받아 상증 평가연도를 도출한다
-                // (`BuildingStdPriceForm.tsx:124-127`).
-                transferDate,
-              }}
-              // 주입 규칙은 자산마다 반대다 — `compose`가 단일 출처다(합산 여부를 여기서 판단 금지).
-              onApply={(v, land) =>
-                onChange({
-                  bgGiftBuildingStdPriceAtTransfer: String(stdPriceLauncher.compose(v, land)),
-                })
-              }
-            />
-          </div>
-        )}
       </div>
       )}
 
@@ -577,12 +576,14 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
           무상이전분(증여가액 C − 채무액 B)에 대한 증여세 동시 산출. 수증자가 별도 신고·납부.
         </p>
         <FieldCard
+          stacked
           label="증여자-수증자 관계"
           hint="상증법 §53 증여재산공제 차등 적용. 미선택 시 직계비속(성년) 기본값."
         >
           <RadioCardGroup
             name="bgDonorRelation"
             layout="stack"
+            columns={3}
             value={asset.bgDonorRelation || ""}
             onChange={(v) =>
               onChange({ bgDonorRelation: v as AssetForm["bgDonorRelation"] })
@@ -590,7 +591,6 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
             options={DONOR_RELATION_OPTIONS.map((o) => ({
               value: o.value,
               label: o.label,
-              description: o.description,
             }))}
           />
         </FieldCard>

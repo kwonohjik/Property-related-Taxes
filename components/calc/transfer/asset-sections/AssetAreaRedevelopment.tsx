@@ -71,7 +71,7 @@ export function AssetAreaRedevelopment({ asset, onChange }: Props) {
   return (
     <ToneCard tone="sky" title="면적 정보 (㎡)" noDark>
       <FieldCard
-        label="취득·양도 당시 토지 면적 (㎡)"
+        label="토지 면적 (㎡)"
         hint={
           isLand
             ? "§166③ 분자·분모 공통 면적. 취득·관리처분 시점 동일 가정."

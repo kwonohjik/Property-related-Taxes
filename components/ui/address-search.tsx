@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useHangulTyping } from "@/hooks/use-hangul-typing";
 import {
   Select,
   SelectContent,
@@ -134,11 +135,20 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
     }
   }, []);
 
+  const applyQuery = useCallback(
+    (q: string) => {
+      setQuery(q);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => search(q), 300);
+    },
+    [search],
+  );
+
+  // IME가 영문 상태여도 한글로 입력되게 한다 (브라우저는 IME 언어를 강제할 수 없음)
+  const hangul = useHangulTyping({ value: query, onChange: applyQuery, enabled: !disabled });
+
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const q = e.target.value;
-    setQuery(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => search(q), 300);
+    applyQuery(e.target.value);
   }
 
   async function fetchUnits(pnu: string, jibun: string) {
@@ -223,6 +233,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
             if (results.length > 0) setIsOpen(true);
           }}
           onKeyDown={(e) => {
+            hangul.onKeyDown(e);
             if (e.key === "Enter") {
               e.preventDefault();
               if (debounceRef.current) clearTimeout(debounceRef.current);

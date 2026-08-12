@@ -7,7 +7,7 @@
  *
  * 본 스펙이 확인하는 것:
  *   1. 주택 선택 시 ① 기본정보에 면적 입력 칸이 노출된다 (PHD 토글과 무관)
- *   2. 라벨이 「취득·양도 당시 토지 면적 (㎡)」 (원칙 C — 대상어 명시)
+ *   2. 라벨이 「토지 면적 (㎡)」 (2026-08-12 단축 — 원칙 C 예외, area-taxonomy.md 참조)
  *   3. 환지 시나리오 옵션은 노출되지 않는다 (소득령 §162의2 = 토지 제도)
  *   4. 면적 칸이 화면에 중복 노출되지 않는다
  *
@@ -38,7 +38,7 @@ test.describe("주택 기본정보 면적 입력 (Phase 2 게이트 확대)", ()
     await expect(scenarioSelect).toBeVisible();
 
     // 2) 라벨 — 주택은 「토지 면적」으로 대상어 명시
-    await expect(page.getByText("취득·양도 당시 토지 면적 (㎡)")).toBeVisible();
+    await expect(page.getByText("토지 면적 (㎡)")).toBeVisible();
 
     // 3) 환지 옵션 부재 — 허용 목록은 same·partial 뿐
     await scenarioSelect.click();
@@ -149,7 +149,7 @@ test.describe("Phase F1 — 기본정보 건물 면적(축 B·C)", () => {
     await expect(page.getByTestId("basic-building-floor-area")).toBeVisible();
     // 부수토지가 가목으로 별도 평가되므로 축 A가 필요하다
     await expect(page.getByTestId("area-scenario-select")).toHaveCount(1);
-    await expect(page.getByText(/취득·양도 당시 토지 면적 \(㎡\)/)).toBeVisible();
+    await expect(page.getByText(/토지 면적 \(㎡\)/)).toBeVisible();
     // 축 C — 장래 대비 입력(P3)
     await expect(page.getByTestId("basic-building-footprint-area")).toBeVisible();
     await expect(page.getByText(/아직 세액 계산에 반영되지 않습니다/)).toBeVisible();

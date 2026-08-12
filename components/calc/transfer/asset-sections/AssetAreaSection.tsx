@@ -130,8 +130,8 @@ const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
  */
 const AREA_LABEL_BY_ASSET_KIND: Partial<Record<AssetForm["assetKind"], string>> = {
   land: "취득·양도 당시 면적 (㎡)",
-  housing: "취득·양도 당시 토지 면적 (㎡)",
-  building: "취득·양도 당시 토지 면적 (㎡)",
+  housing: "토지 면적 (㎡)",
+  building: "토지 면적 (㎡)",
 };
 
 /**
