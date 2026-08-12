@@ -174,6 +174,43 @@ test.describe("일반건물 증축 4조합 — 계산 도달", () => {
     await expect(page.getByText(/일반건물 3-자산 요약/)).toBeVisible();
   });
 
+  /**
+   * 🔴 **O-4 — 일부 양도 × 증축**(계획서 §15).
+   *
+   * 종전에는 두 겹으로 막혀 있었다: ① 일반건물이 `AREA_SCENARIOS_BY_ASSET_KIND` 미등재라
+   * `areaScenario`를 `"partial"`로 만들 UI 경로가 없었고, ② 안분 계산기 게이트에
+   * `!gbHasExtension`이 있었다(Q-3).
+   *
+   * 여기서는 **토글이 화면에 있고, 켜면 안분 계산기가 열리며, 계산까지 도달하는지**를 본다.
+   * 값·검증은 `gb-partial-transfer-extension.anchor.test.tsx`가 고정한다.
+   */
+  test("O-4: 일부 양도 × 증축 — 토글 → 안분 계산기 → 계산 도달", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seed(page, {
+      ...EXT_ACTUAL,
+      areaScenario: "partial",
+      // 「구분됨」을 미리 골라 둔다 — 미선택이면 validate가 계산을 막는다(V-9).
+      partialAcqDistinct: "yes",
+    });
+
+    // ① 기본정보 — 「일부 양도」 토글이 면적 카드에 있다.
+    await expandAssetSection(page, 1);
+    await expect(page.getByText("일부 양도").first()).toBeVisible();
+    await expect(page.getByText("양도분 토지 면적")).toBeVisible();
+    // 축 A(면적 입력 방식 Select)는 뜨지 않는다 — 같은 면적을 두 곳에서 받지 않는다.
+    await expect(page.getByText("면적 입력 방식")).toHaveCount(0);
+
+    // ③ 취득정보 — 안분 계산기가 증축에서도 열린다.
+    await expandAssetSection(page, 3);
+    await expect(page.getByText("구분됨").first()).toBeVisible();
+
+    await calculate(page);
+    await expect(page.getByText(/양도소득세 계산 결과|산출세액/).first()).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText(/일반건물 3-자산 요약/)).toBeVisible();
+  });
+
   test("조합 D(원건물 환산 + 증축 실가)도 계산까지 도달한다", async ({ page }) => {
     test.setTimeout(120_000);
     await seed(page, {

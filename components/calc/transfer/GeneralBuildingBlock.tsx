@@ -216,6 +216,8 @@ export function GeneralBuildingBlock({
   }
 
   const isBurdenedGift = asset.transferType === "burdened_gift";
+  /** 일부 양도(O-4) — 증축분 취득가액·필요경비도 「양도분 기준」으로 안내한다. */
+  const isPartialTransfer = (asset.areaScenario ?? "same") === "partial";
   /*
    * ## 🔴 증축 토글의 게이트를 **없앴다** (2026-08-12 · 계획서 Q-1 「나」 안)
    *
@@ -599,10 +601,17 @@ export function GeneralBuildingBlock({
                   />
                 </FieldCard>
 
+                {/* 🔑 일부 양도(O-4)에서는 이 두 칸도 **양도분 기준**이다 — 증축분 취득가액은
+                    ③ 상단의 일괄 취득가액 안분 계산기가 다루지 않는 별도 슬롯이기 때문이다
+                    (그 계산기는 `fixedAcquisitionPrice` = 토지+원건물 일괄만 산출한다). */}
                 <FieldCard
                   label="증축 실거래가"
                   unit="원"
-                  hint="증축 시 실제로 지출한 비용. 영수증·계약서 등으로 입증 가능한 경우만."
+                  hint={
+                    isPartialTransfer
+                      ? "증축 시 실제로 지출한 비용 중 양도한 부분에 대응하는 금액. 증축분을 통째로 양도했다면 전액, 일부만 양도했다면 취득 당시 가치 비율로 안분한 금액을 넣으세요."
+                      : "증축 시 실제로 지출한 비용. 영수증·계약서 등으로 입증 가능한 경우만."
+                  }
                 >
                   <CurrencyInput
                     label="증축 실거래가"
@@ -615,7 +624,11 @@ export function GeneralBuildingBlock({
                 <FieldCard
                   label="증축 실제 필요경비"
                   unit="원"
-                  hint="증축 시 발생한 중개수수료·인지대 등. 없으면 비워두세요."
+                  hint={
+                    isPartialTransfer
+                      ? "증축 시 발생한 중개수수료·인지대 등 중 양도한 부분에 대응하는 금액. 없으면 비워두세요."
+                      : "증축 시 발생한 중개수수료·인지대 등. 없으면 비워두세요."
+                  }
                 >
                   <CurrencyInput
                     label="증축 실제 필요경비"

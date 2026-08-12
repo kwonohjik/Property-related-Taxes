@@ -569,6 +569,38 @@ export function validateGeneralBuildingAsset(
   // 공통 취득일 검증
   if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
 
+  /**
+   * V-9 일부 양도(O-4 · 2026-08-12) — 「양도분 취득가액이 구분되는가」 선택 강제.
+   *
+   * 실거래가 모드는 엔진이 「전체 → 양도분」 축소를 하지 않으므로 사용자가 **양도분 대응**
+   * 금액을 넣어야 정답이 된다. 전체 취득가액을 그대로 넣으면 양도차익이 과소 계상되고
+   * 시스템이 그것을 감지할 수 없다(「자동 안분 fallback 금지 — 미입력은 차단」 정책).
+   *
+   * ⚠️ **`transfer-tax-validate-asset.ts`의 같은 규칙은 일반건물에 닿지 않는다** —
+   *    그 파일 `:165`가 일반건물을 이 함수로 early return시키기 때문이다. 거기 있는
+   *    `partialConfirmed`는 `acquisitionArea`/`transferArea` 2칸을 보는데 일반건물은
+   *    `gbLandArea` 단일 필드를 쓴다(`AssetAreaGeneralBuilding`) ⇒ `NaN > NaN` = false.
+   *    그래서 같은 보호를 **여기에** 둔다(메모리 `feedback_validation_sync_8th_point`).
+   *
+   * 일반건물은 **토글 ON 자체가 일부양도 확정**이라 중간 상태 게이트가 필요 없다.
+   *
+   * ⚠️ 증축이 있어도 요구한다. 그 경우 `fixedAcquisitionPrice`는 「토지+원건물 **일괄**」이고
+   *    엔진이 §166⑥으로 토지·건물1에 나누지만, 그것은 **부분 간 배분**이지
+   *    「전체 → 양도분」 축소가 아니다 — 두 축은 순차로 겹친다.
+   * ⚠️ 환산·감정·매매사례는 요구하지 않는다 — 면적·기준시가를 양도분으로 입력하면
+   *    환산취득가가 그대로 양도분 기준이 된다(면적은 취득·양도 곱셈에서 약분된다).
+   */
+  if (
+    (asset.areaScenario ?? "same") === "partial" &&
+    !asset.useEstimatedAcquisition &&
+    !asset.isAppraisalAcquisition &&
+    !asset.isSalesCaseAcquisition &&
+    parseAmount(asset.fixedAcquisitionPrice) > 0 &&
+    !asset.partialAcqDistinct
+  ) {
+    return `${label}: 일부 양도 — 「양도분 취득가액이 구분되는가」를 선택하세요. 전체 취득가액을 그대로 입력하면 양도차익이 과소 계상됩니다. (③ 취득정보)`;
+  }
+
   // ⑧ 사례 33: 증축(gbHasExtension=true) 추가 검증
   if (asset.gbHasExtension) {
     /**

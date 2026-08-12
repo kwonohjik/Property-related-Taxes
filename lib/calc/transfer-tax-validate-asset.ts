@@ -368,7 +368,12 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
        *   1. **일부양도가 확정된 상태**만 — 양쪽 면적이 입력되고 `acq > tr`일 때.
        *      한쪽만 입력된 중간 상태나 `acq === tr`(사실상 same)에서 요구하면 입력을 방해한다.
        *   2. **취득가액이 입력된 실거래가 경로**만 — 환산·감정·매매사례는 B4-1이 기준시가
-       *      면적을 정정했고, 겸용·증축 일괄은 엔진이 §100② 비율로 안분한다.
+       *      면적을 정정했고, 겸용 일괄은 엔진이 §100② 비율로 안분한다.
+       *
+       * ⚠️ **일반건물은 여기 오지 않는다** — `:165`가 `validateGeneralBuildingAsset`으로
+       *    early return하기 때문이다. 그쪽은 축 A 2칸이 없어 `acq > tr`가 항상 false라
+       *    같은 규칙을 여기에 써 봐야 dead code다. 대응 검증은 `transfer-tax-validate-gb.ts`
+       *    (「일부 양도」 토글 ON 자체가 확정 상태)에 둔다 — O-4 · 2026-08-12.
        */
       const partialConfirmed = acq > 0 && tr > 0 && acq > tr;
       const isActualPriceMode =
