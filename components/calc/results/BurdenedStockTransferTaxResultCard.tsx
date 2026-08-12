@@ -15,7 +15,9 @@
  *            = 기준시가 환산 자동 안분          [환산 상장 모드]
  *   필요경비 = 개산공제 1% (소법 §163⑥)  [환산 모드]
  *   양도소득금액 = 양도가액 − 취득가액 − 필요경비
- *   양도소득 기본공제 = 2,500,000원 (§103②)
+ *   양도소득 기본공제 = 2,500,000원 (§103①2호 — 주식 그룹 **과세기간당 1회**.
+ *     종목이 둘 이상이면 aggregate 경로가 먼저 양도한 종목부터 소진시키므로,
+ *     뒤 종목은 0이 되고 카드에 「앞 종목에서 한도 소진」으로 표시된다.)
  *   과세표준 = 양도소득금액 − 기본공제
  *   산출세액 = 과세표준 × 세율 (§104①11)
  *   지방소득세 = 산출세액 × 10%
@@ -122,13 +124,21 @@ function SingleStockTransferResultCard({
           />
         )}
         <Row label="양도소득금액" value={formatKRW(result.transferIncome)} />
-        {result.basicDeduction > 0 && (
+        {result.basicDeduction > 0 ? (
           <Row
-            label="양도소득 기본공제 (§103②)"
+            label="양도소득 기본공제 (§103①2호)"
             value={`(−) ${formatKRW(result.basicDeduction)}`}
             sub
             deduction
           />
+        ) : (
+          index > 0 && (
+            <Row
+              label="양도소득 기본공제 (§103①2호)"
+              value="앞 종목에서 한도 소진"
+              sub
+            />
+          )
         )}
         <Row label="양도소득 과세표준" value={formatKRW(result.taxBase)} highlight />
         <Row

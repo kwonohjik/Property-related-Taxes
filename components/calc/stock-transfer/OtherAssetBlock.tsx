@@ -49,7 +49,7 @@ export function OtherAssetBlock({ form, onChange }: OtherAssetBlockProps) {
           <p className="text-xs mt-1">
             <LawArticleModal legalBasis="소득세법 §94 ① 3호" label="§94①3" />(상장·비상장)과{" "}
             <LawArticleModal legalBasis="소득세법 §94 ① 4호" label="§94①4" />(기타자산)를 동시에 충족하면 제4호(기타자산)가 우선 적용됩니다.
-            기본공제도 부동산 그룹(<LawArticleModal legalBasis="소득세법 §103 ②" label="§103②" />)에 합산됩니다.
+            기본공제도 부동산 그룹(<LawArticleModal legalBasis="소득세법 §103 ①" label="§103①1호" />)에 합산됩니다.
           </p>
         </div>
       )}

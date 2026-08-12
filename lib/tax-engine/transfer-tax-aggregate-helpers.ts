@@ -16,6 +16,7 @@ import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import type { SplitRatePart } from "./transfer-tax-split-rate";
 import { clauseBucketKey } from "./transfer-tax-rate-calc";
 import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
+import { offsetLossesCore } from "./loss-offset-core";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   RateGroup,
@@ -170,138 +171,42 @@ export interface LossOffsetOutput {
   unusedLoss: number;
 }
 
+/**
+ * 부동산 다자산 §102② 통산 — **`offsetLossesCore`의 얇은 어댑터**.
+ *
+ * 2026-08-12: 알고리즘 본체를 `lib/tax-engine/loss-offset-core.ts`(무의존 leaf)로 **추출**했다.
+ * 주식 다종목도 같은 통산을 써야 하는데 복제하면 한쪽만 고쳐지는 드리프트가 나기 때문이다
+ * (계획서 `stock-102-2-loss-offset-and-103-deduction-order.plan.md` §6.1 설계 A).
+ *
+ * 여기가 하는 일은 **도메인 ↔ 코어 번역** 둘뿐이다:
+ *   - `rateKey` = **`RateGroup`** — 부동산의 「같은 세율을 적용받는 자산」 축.
+ *     ⚠️ 이건 §104⑤ 버킷 판정과 결합된 load-bearing 분류다(`classifyRateGroup` 주석 참조).
+ *        **주식은 축이 다르다**(적용 세율 값) — 그래서 축 결정을 코어가 아니라 호출자에 둔다.
+ *   - 코어가 돌려주는 **인덱스** 기반 `rows`를 `propertyId` 기반 `LossOffsetRow`로 환원.
+ *
+ * 거동 고정: `__tests__/tax-engine/transfer-tax-loss-offset-characterization.test.ts` (41건).
+ * 추출 전후로 이 파일이 통째로 통과해야 한다.
+ */
 export function offsetLosses(records: AssetRecord[]): LossOffsetOutput {
-  const n = records.length;
-  const fromSame: number[] = new Array(n).fill(0);
-  const fromOther: number[] = new Array(n).fill(0);
-  const table: LossOffsetRow[] = [];
-
-  const byGroup = new Map<RateGroup, number[]>();
-  records.forEach((r, i) => {
-    if (r.result.isExempt) return;
-    const list = byGroup.get(r.rateGroup) ?? [];
-    list.push(i);
-    byGroup.set(r.rateGroup, list);
-  });
-
-  const remainingLossByGroup = new Map<RateGroup, number>();
-  const remainingGainByAsset: number[] = records.map((r) => (r.result.isExempt ? 0 : Math.max(0, r.income)));
-
-  for (const [group, idxList] of byGroup) {
-    const gainIdx = idxList.filter((i) => records[i].income > 0);
-    const lossIdx = idxList.filter((i) => records[i].income < 0);
-    const totalGain = gainIdx.reduce((s, i) => s + records[i].income, 0);
-    const totalLossAbs = lossIdx.reduce((s, i) => s + Math.abs(records[i].income), 0);
-    const offsetPool = Math.min(totalGain, totalLossAbs);
-
-    if (offsetPool > 0 && totalGain > 0) {
-      let distributed = 0;
-      gainIdx.forEach((gi, pos) => {
-        const isLast = pos === gainIdx.length - 1;
-        const share = isLast
-          ? offsetPool - distributed
-          : Math.floor((records[gi].income * offsetPool) / totalGain);
-        if (share > 0) {
-          fromSame[gi] += share;
-          remainingGainByAsset[gi] -= share;
-          let lossShareRemaining = share;
-          lossIdx.forEach((li, lpos) => {
-            const isLastLoss = lpos === lossIdx.length - 1;
-            const fromThis = isLastLoss
-              ? lossShareRemaining
-              : Math.min(
-                  lossShareRemaining,
-                  Math.floor((Math.abs(records[li].income) * share) / totalLossAbs),
-                );
-            if (fromThis > 0) {
-              table.push({
-                fromPropertyId: records[li].item.propertyId,
-                toPropertyId: records[gi].item.propertyId,
-                amount: fromThis,
-                scope: "same_group",
-              });
-              lossShareRemaining -= fromThis;
-            }
-          });
-        }
-        distributed += share;
-      });
-    }
-
-    remainingLossByGroup.set(group, totalLossAbs - offsetPool);
-  }
-
-  const totalRemainingLoss = [...remainingLossByGroup.values()].reduce((s, v) => s + v, 0);
-  const totalRemainingGain = remainingGainByAsset.reduce((s, v) => s + v, 0);
-  const offsetPool2 = Math.min(totalRemainingLoss, totalRemainingGain);
-
-  if (offsetPool2 > 0 && totalRemainingGain > 0) {
-    const lossGroups = [...remainingLossByGroup.entries()].filter(([, v]) => v > 0);
-    const gainIndices = remainingGainByAsset
-      .map((g, i) => ({ i, g }))
-      .filter((x) => x.g > 0);
-
-    let consumedGain = 0;
-    gainIndices.forEach((gx, pos) => {
-      const isLast = pos === gainIndices.length - 1;
-      const share = isLast
-        ? offsetPool2 - consumedGain
-        : Math.floor((gx.g * offsetPool2) / totalRemainingGain);
-      if (share > 0) {
-        fromOther[gx.i] += share;
-        let remainingShare = share;
-        lossGroups.forEach(([lossGroup, lossGroupRemain], lgPos) => {
-          if (lossGroupRemain <= 0) return;
-          const isLastGroup = lgPos === lossGroups.length - 1;
-          const fromThisGroup = isLastGroup
-            ? remainingShare
-            : Math.min(
-                remainingShare,
-                Math.floor((lossGroupRemain * share) / totalRemainingLoss),
-              );
-          if (fromThisGroup > 0) {
-            const lossIdxInGroup = records
-              .map((r, i) => ({ i, r }))
-              .filter((x) => x.r.rateGroup === lossGroup && x.r.income < 0);
-            const groupLossTotal = lossIdxInGroup.reduce((s, x) => s + Math.abs(x.r.income), 0);
-            let distributed = 0;
-            lossIdxInGroup.forEach((lx, lpos) => {
-              const isLastAsset = lpos === lossIdxInGroup.length - 1;
-              const fromThisAsset = isLastAsset
-                ? fromThisGroup - distributed
-                : Math.floor((Math.abs(lx.r.income) * fromThisGroup) / groupLossTotal);
-              if (fromThisAsset > 0) {
-                table.push({
-                  fromPropertyId: lx.r.item.propertyId,
-                  toPropertyId: records[gx.i].item.propertyId,
-                  amount: fromThisAsset,
-                  scope: "other_group",
-                });
-                distributed += fromThisAsset;
-              }
-            });
-            remainingShare -= fromThisGroup;
-          }
-        });
-      }
-      consumedGain += share;
-    });
-  }
-
-  const unusedLoss = totalRemainingLoss - offsetPool2;
-
-  const incomeAfterOffset = records.map((r, i) => {
-    if (r.result.isExempt) return 0;
-    if (r.income < 0) return 0;
-    return Math.max(0, r.income - fromSame[i] - fromOther[i]);
-  });
+  const core = offsetLossesCore(
+    records.map((r) => ({
+      income: r.income,
+      rateKey: r.rateGroup,
+      exempt: r.result.isExempt,
+    })),
+  );
 
   return {
-    lossOffsetTable: table,
-    lossOffsetFromSame: fromSame,
-    lossOffsetFromOther: fromOther,
-    incomeAfterOffset,
-    unusedLoss,
+    lossOffsetTable: core.rows.map((row) => ({
+      fromPropertyId: records[row.from].item.propertyId,
+      toPropertyId: records[row.to].item.propertyId,
+      amount: row.amount,
+      scope: row.scope,
+    })),
+    lossOffsetFromSame: core.fromSame,
+    lossOffsetFromOther: core.fromOther,
+    incomeAfterOffset: core.incomeAfterOffset,
+    unusedLoss: core.unusedLoss,
   };
 }
 

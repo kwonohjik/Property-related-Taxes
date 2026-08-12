@@ -74,6 +74,67 @@ export function applyBasicProgressiveRate(taxBase: number): {
 // ============================================================
 
 /**
+ * §167의2①「같은 세율을 적용받는 자산」 판정 축 — **주식 전용**.
+ *
+ * 근거: 소득세법 시행규칙 **별지 제84호서식 작성요령 4번** —
+ *   「주식의 경우에는 …부표 2의 ④ **주식등 종류코드란의 세율이 같은 자산**(기타자산 주식은
+ *    제외합니다)을 **합산하여** 적습니다.」
+ * 부표 2 코드표가 세율을 **{10% · 20∼25% · 20% · 30%}** 4종으로 정한다.
+ *
+ * ⚠️ **「호」 축이 아니다.** §104①11호 하나에 10%·20%·20∼25%·30%가 전부 들어 있어서
+ *    호로 묶으면 30% 자산과 10% 자산이 같은 군이 되어 서식과 어긋난다.
+ *    (부동산이 「호」 축 `classifyRateGroup`을 쓰는 것은 §104⑤ 버킷과 결합돼서이고,
+ *     주식은 §104⑤ 대상이 아니다 — 법 §104⑤ 본문은 §94①1·2·4호만 열거한다.)
+ *
+ * ⚠️ **누진표(20∼25%)는 하나의 세율**로 묶는다. 산출된 `appliedRate` 수치로 나누면
+ *    그 값이 과세표준에 의존하고 과세표준은 통산 결과에 의존해 **순환**이 된다.
+ *
+ * 기타자산(§94①4호)은 §102①**1호** 그룹이라 애초에 다른 통산군이다 — 여기서 `"other_asset"`로
+ * 내보내되, 호출자가 **§102① 호 그룹별로 코어를 따로 돌려** 그룹 간 통산을 차단한다.
+ *
+ * 반환값은 `offsetLossesCore`의 `rateKey`로 그대로 쓰인다.
+ */
+export function resolveStockRateKey(
+  taxCategory: StockTransferResult["taxCategory"],
+  isSmallMediumEnterprise: boolean,
+  isShortTermHolding: boolean,
+): string {
+  switch (taxCategory) {
+    // 기타자산 — §55① 누진(§104①9호는 +10%p). §102①1호 그룹이라 주식과 섞이지 않는다.
+    case "other_asset_block_shareholder":
+    case "other_asset_heavy_re":
+      return "other_asset_progressive";
+    case "other_asset_block_shareholder_nbl":
+    case "other_asset_heavy_re_nbl":
+      return "other_asset_progressive_nbl";
+
+    // 비대주주 — §104①11호나목: 중소 10% / 그 밖 20%
+    case "listed_otc_non_major":
+    case "listed_off_market_non_major":
+    case "unlisted_non_major":
+      return isSmallMediumEnterprise ? "10" : "20";
+
+    // 대주주 — 가목1) 비중소 1년미만 30% / 가목2) 20∼25% 누진
+    case "listed_major":
+    case "unlisted_major":
+      return !isSmallMediumEnterprise && isShortTermHolding ? "30" : "20_25";
+
+    // 국외주식 §104①12호 — 나목 20%. 국내 비대주주 비중소(20%)와 **같은 축**이다
+    // (서식 부표 2에서 코드 61과 42·22가 모두 20%, 작성요령 7번 「국내ㆍ국외주식 … 통산액」).
+    case "foreign_stock":
+      return "20";
+
+    // 비과세·범위 밖 — 통산 대상이 아니다(호출자가 exempt로 제외한다). 축은 무의미.
+    case "listed_non_major_in_market":
+    case "kotc_sme_mid_exempt":
+    case "kotc_venture_exempt":
+    case "out_of_scope_foreign":
+    case "exit_tax":
+      return "exempt_or_out_of_scope";
+  }
+}
+
+/**
  * 과세표준에 세율 적용 — taxCategory 기반 분기
  *
  * PR-1 범위:

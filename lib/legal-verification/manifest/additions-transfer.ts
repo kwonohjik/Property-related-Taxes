@@ -52,6 +52,22 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   },
   {
     /**
+     * 양도소득 기본공제 — **한도는 ①, 순서는 ②**. 두 축이 한 조에 있어 인용이 자주 엇갈린다
+     * (실측 2026-08-12: 코드 여러 곳이 「한도」를 §103②로 잘못 적고 있었다).
+     * 미등록이면 개정돼도 `verify:legal`이 조용히 건너뛴다.
+     * 계획서: stock-102-2-loss-offset-and-103-deduction-order.plan.md §9.4
+     */
+    id: "TRANSFER.BASIC_DEDUCTION",
+    citation: "소득세법 §103",
+    keywords: [
+      "양도소득 기본공제",
+      "각각 연 250만원을 공제",
+      "먼저 양도한 자산의 양도소득금액에서부터 순서대로 공제",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    /**
      * 국외주식(§94①3호다목)에 §118의2~§118의4·§118의6을 준용하는 **다리 조문**.
      * 이 조가 바뀌면 국외주식 트랙 전체(5년 요건·필요경비·외국납부세액)가 흔들린다.
      * 계획서: foreign-stock-94-1-3-da-statute-track.plan.md §2 ①
