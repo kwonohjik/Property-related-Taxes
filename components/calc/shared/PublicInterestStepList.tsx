@@ -10,6 +10,7 @@
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { PublicInterestStep } from "@/lib/tax-engine/types/public-interest-post-mgmt.types";
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 export function PublicInterestStepList({
   steps,
@@ -27,7 +28,7 @@ export function PublicInterestStepList({
             <span className="text-muted-foreground">
               {s.label}
               <span className="ml-1 text-micro text-blue-700">{s.legalBasis}</span>
-              <span className="block text-caption">{s.formula}</span>
+              <span className="block text-caption"><FormulaText value={s.formula} /></span>
             </span>
             {s.amount > 0 && (
               <span className="tabular-nums font-medium whitespace-nowrap">

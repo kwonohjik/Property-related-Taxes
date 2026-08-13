@@ -4,6 +4,7 @@
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { DeemedGiftResult } from "@/lib/tax-engine/gift-deemed/types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 export function RelatedCorpResultSection({ result }: { result: DeemedGiftResult }) {
   const breakdown = result.recipientBreakdown;
@@ -33,8 +34,7 @@ export function RelatedCorpResultSection({ result }: { result: DeemedGiftResult 
             )}
             <tr>
               <td className="text-muted-foreground">
-                거래비율 ({(result.tradeRatioNumer ?? 0).toLocaleString()} ÷{" "}
-                {(result.tradeRatioDenom ?? 0).toLocaleString()})
+                거래비율 <Frac top={(result.tradeRatioNumer ?? 0).toLocaleString()} bottom={(result.tradeRatioDenom ?? 0).toLocaleString()} />
               </td>
               <td className="text-right">
                 {tradeRatio.denom > 0 ? ((tradeRatio.numer / tradeRatio.denom) * 100).toFixed(2) : "0.00"}%

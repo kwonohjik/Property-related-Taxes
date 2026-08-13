@@ -9,6 +9,7 @@
  */
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 type Detail = NonNullable<TransferTaxResult["pre1990LandValuationDetail"]>;
 
@@ -22,7 +23,7 @@ export function Pre1990LandValuationDetailCard({ detail }: { detail: Detail }) {
                 <div className="text-xs space-y-1 mt-2">
                   <div>
                     <span className="text-muted-foreground">공식: </span>
-                    <code className="text-caption">{detail.breakdown.formula}</code>
+                    <code className="text-caption"><FormulaText value={detail.breakdown.formula} /></code>
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2">
                     <span className="text-muted-foreground">취득시 등급가액</span>

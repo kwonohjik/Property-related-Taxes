@@ -20,6 +20,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ExpandToggleButton, expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import {
   STATEMENT_GROUPS,
@@ -233,7 +234,7 @@ function EngineStepsSubToggle({ steps }: { steps: import("@/lib/tax-engine/trans
                 {step.label}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 break-words leading-relaxed">
-                {step.formula}
+                <FormulaText value={step.formula} />
               </p>
               {step.legalBasis && !step.sub && (
                 <LawArticleModal legalBasis={step.legalBasis} />
@@ -343,7 +344,7 @@ function ItemRow({ item }: { item: StatementItem }) {
             // 긴 산식(자산별 안분 등) 줄바꿈 처리: break-words로 단어 단위 줄바꿈,
             // PDF 인쇄에서도 가로 잘림 방지.
             <p className="text-xs text-muted-foreground mt-0.5 ml-6 leading-relaxed break-words">
-              {item.formula}
+              <FormulaText value={item.formula} />
             </p>
           )}
           {item.note && (
@@ -393,7 +394,7 @@ function PerAssetRow({ row }: { row: PerAssetValue }) {
         {row.formula && (
           // 자산별 산식(예: "330,000,000 × 339,492,000 / (...)") 줄바꿈 처리.
           <p className="text-micro text-muted-foreground mt-0.5 ml-3 break-words leading-relaxed">
-            {row.formula}
+            <FormulaText value={row.formula} />
           </p>
         )}
       </div>

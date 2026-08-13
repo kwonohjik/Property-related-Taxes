@@ -4,6 +4,7 @@ import { useState } from "react";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { ExcessDividendDetail } from "@/lib/tax-engine/gift-deemed/types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ─────────────────────────────────────────────────────────────
 // §41의2 초과배당 상세 섹션 (ExcessDividendDetail echo)
@@ -81,7 +82,7 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
               </tr>
               <tr className="border-t border-sky-100">
                 <td className="py-1.5 pr-2 text-muted-foreground">
-                  ② 비율 (최대주주 과소 ÷ 총과소배당)
+                  ② 비율 <Frac top="최대주주 과소" bottom="총과소배당" />
                 </td>
                 <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {detail.ratioDenom > 0

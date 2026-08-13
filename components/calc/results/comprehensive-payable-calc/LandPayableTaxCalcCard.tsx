@@ -19,6 +19,7 @@ import { getLandStandardRateBracket } from "@/lib/tax-engine/comprehensive-land-
 import { won, eok, pct, StepLine, Bullet, GaNaDaLine } from "./payable-calc-helpers";
 import { CurrentJurisdictionBlock, LandPriorYearBreakdown } from "./land-payable-sections";
 import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 type LandResult = AggregateLandTaxResult | SeparateAggregateLandTaxResult;
 
@@ -141,7 +142,7 @@ function LandStep2({ result, kind, yr, testPrefix }: { result: LandResult; kind:
       </Bullet>
       <StepLine badge="ⓓ" badgeShape="circle" label="공제할 재산세액" formula="(ⓐ × ⓑ / ⓒ)" amount={c.creditAmount} indent={1} />
       <Bullet indent={2}>
-        {won(c.propertyTaxAmount)} × ({won(c.comprehensiveTaxBase)} / {won(c.propertyTaxBase)}) = {won(c.creditAmount)}
+        {won(c.propertyTaxAmount)} × <Frac top={won(c.comprehensiveTaxBase)} bottom={won(c.propertyTaxBase)} /> = {won(c.creditAmount)}
       </Bullet>
     </div>
   );

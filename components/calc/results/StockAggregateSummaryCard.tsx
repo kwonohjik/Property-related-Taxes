@@ -15,6 +15,7 @@
 
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-aggregate";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const won = (n: number) => `${n.toLocaleString()}원`;
 
@@ -127,7 +128,7 @@ export function StockAggregateSummaryCard({
       {foreignItems.length > 0 && (
         <ToneCard tone="violet" title="외국납부세액 공제한도 (소득세법 §118의6①1호)">
           <p className="text-xs text-muted-foreground">
-            공제한도 = 국외주식 산출세액 합계 × 해당 종목 양도소득금액 ÷ 국외주식 양도소득금액 합계
+            공제한도 = 국외주식 산출세액 합계 × <Frac top="해당 종목 양도소득금액" bottom="국외주식 양도소득금액 합계" />
           </p>
           <ul className="space-y-1.5">
             {foreignItems.map(({ r, i }) => (

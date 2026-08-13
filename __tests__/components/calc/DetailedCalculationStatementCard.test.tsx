@@ -441,14 +441,17 @@ describe("DetailedCalculationStatementCard — 다건 모드 (사례 33 일괄+�
       fireEvent.click(t);
     }
 
-    // 사용자 지정 형식의 산식이 화면에 표시됨
-    // 토지: 330,000,000 × 339,492,000 / (339,492,000+12,308,310+54,501,720) = 275,736,648
-    expect(
-      screen.getAllByText(/330,000,000 × 339,492,000 \/ \(339,492,000\+12,308,310\+54,501,720\)/).length,
-    ).toBeGreaterThan(0);
-    // 건물(3001): 분자가 12,308,310
-    expect(
-      screen.getAllByText(/330,000,000 × 12,308,310 \/ \(339,492,000\+12,308,310\+54,501,720\)/).length,
-    ).toBeGreaterThan(0);
+    // 산식은 분수(Frac)로 표시된다 — "분자 / 분모" 한 줄 나열 금지 (사용자 지시).
+    // 토지: 330,000,000 × [339,492,000 / (339,492,000+12,308,310+54,501,720)] = 275,736,648
+    const denom = "(339,492,000+12,308,310+54,501,720)";
+    const fracOf = (numerator: string) =>
+      screen.getAllByText(numerator).filter((el) => {
+        const frac = el.parentElement; // Frac 래퍼 (분자·분모 span 2개)
+        return frac?.textContent === `${numerator}${denom}`;
+      });
+    expect(fracOf("339,492,000").length).toBeGreaterThan(0);
+    expect(fracOf("12,308,310").length).toBeGreaterThan(0);
+    // 슬래시 나열 형식은 더 이상 존재하지 않아야 한다.
+    expect(screen.queryAllByText(/339,492,000 \/ \(/).length).toBe(0);
   });
 });

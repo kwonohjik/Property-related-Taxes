@@ -27,6 +27,7 @@ import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { bgGiftStdPriceLauncherSpec } from "@/lib/calc/burdened-gift-std-price-launcher";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   asset: AssetForm;
@@ -366,7 +367,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
           {asset.bgAcquisitionMethod === "converted" && (
             <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800">
-              환산취득가액 = 양도가액(채무액) × 취득시 기준시가 ÷ 양도시 기준시가 (시행령 §176의2②2호).
+              환산취득가액 = 양도가액(채무액) × <Frac top="취득시 기준시가" bottom="양도시 기준시가" /> (시행령 §176의2②2호).
               {asset.assetKind === "general_building"
                 ? " 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 입력하세요."
                 : " 취득시·양도시 기준시가를 입력하세요."}

@@ -16,6 +16,7 @@
 
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { CommercialBuildingValuationResult } from "@/lib/tax-engine/types/commercial-building.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /**
  * 엔진 결과 타입 — `lib/tax-engine/types/commercial-building.types.ts` **직접 사용**.
@@ -54,7 +55,7 @@ interface Props {
 }
 
 function Row({ label, value, sub = false, highlight = false }: {
-  label: string;
+  label: React.ReactNode;
   value: string | number | null | undefined;
   sub?: boolean;
   highlight?: boolean;
@@ -125,17 +126,17 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <Row label={`양도시 호별총액 = 양도시 ㎡당 호별고시가 × 연면적 ${detail.floorAreaTotal.toFixed(2)} ㎡`} value={detail.unitPriceTotalAtTransfer} />
             {isPreDisclosure && detail.estimatedBasisAtAcq !== undefined && (
               <Row
-                label="취득시 환산기준시가 = INT(최초고시 호별총액 × 취득시 기준시가합 ÷ 최초고시시 기준시가합) — 시행령 §164⑥"
+                label={<>취득시 환산기준시가 = INT(최초고시 호별총액 × <Frac top="취득시 기준시가합" bottom="최초고시시 기준시가합" />) — 시행령 §164⑥</>}
                 value={detail.estimatedBasisAtAcq}
                 sub
               />
             )}
             <Row
-              label={`환산취득가 합계 = INT(양도가액 ${formatKRW(transferPrice)} × 취득시 환산기준시가 ÷ 양도시 호별총액) — §176조의2②2호`}
+              label={<>환산취득가 합계 = INT(양도가액 {formatKRW(transferPrice)} × <Frac top="취득시 환산기준시가" bottom="양도시 호별총액" />) — §176조의2②2호</>}
               value={detail.estimatedAcquisitionTotal}
               highlight
             />
-            <Row label="환산취득가 토지분 = INT(합계 × 취득시 토지기준시가 ÷ 취득시 기준시가합)" value={detail.estimatedAcquisitionLand} sub />
+            <Row label={<>환산취득가 토지분 = INT(합계 × <Frac top="취득시 토지기준시가" bottom="취득시 기준시가합" />)</>} value={detail.estimatedAcquisitionLand} sub />
             <Row label="환산취득가 건물분 = 합계 − 토지분" value={detail.estimatedAcquisitionBuilding} sub />
           </tbody>
         </table>

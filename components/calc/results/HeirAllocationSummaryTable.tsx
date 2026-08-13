@@ -20,6 +20,7 @@ import {
 import { HorizontalScrollContainer } from "@/components/calc/shared/HorizontalScrollContainer";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ExpandToggleButton } from "./shared/ExpandToggleButton";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   result: InheritanceTaxResult;
@@ -238,8 +239,7 @@ export function HeirAllocationSummaryTable({
         />
         ·집행기준 19-17-1
         <span className="ml-2 opacity-70">
-          (간접배부 산식: 지정값 × (상속인별 과세가액상당액 − 사전증여가액) ÷
-          배부대상 과세가액, 원 미만 절사)
+          (간접배부 산식: 지정값 × <Frac top="(상속인별 과세가액상당액 − 사전증여가액)" bottom="배부대상 과세가액" />, 원 미만 절사)
         </span>
       </p>
       </div>

@@ -8,6 +8,7 @@
  * eligible: emerald + 산식 단계 + 농특세 + 중과 배제 각주. 불적용: rose + 사유 목록.
  */
 
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import type {
   New99Result,
   Unsold988Result,
@@ -105,7 +106,7 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
           <div key={i} className="text-xs">
             <span className="font-medium text-emerald-900 dark:text-emerald-200">{s.label}</span>
             {s.formula && (
-              <p className="text-caption text-emerald-800/80 dark:text-emerald-300/80 mt-0.5">{s.formula}</p>
+              <p className="text-caption text-emerald-800/80 dark:text-emerald-300/80 mt-0.5">{<FormulaText value={s.formula} />}</p>
             )}
           </div>
         ))}

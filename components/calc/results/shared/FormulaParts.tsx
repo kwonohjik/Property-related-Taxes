@@ -22,3 +22,32 @@ export function Frac({ top, bottom }: { top: React.ReactNode; bottom: React.Reac
 export function FLine({ children }: { children: React.ReactNode }) {
   return <span className="block">{children}</span>;
 }
+
+/**
+ * 문자열 산식 안의 `분자 / 분모`를 `Frac` 세로 분수로 치환해 렌더한다.
+ *
+ * 대상은 **숫자(콤마 포함) 또는 괄호로 묶인 수식**이 양쪽에 있는 나눗셈만이다.
+ * "소득세법 §97 / 시행령 §163" 같은 법령 인용 슬래시는 치환하지 않는다.
+ */
+const OPERAND = String.raw`(?:\([^()]*\)|\d[\d,]*(?:\.\d+)?%?)`;
+const FRACTION_RE = new RegExp(`(${OPERAND})\\s*[/÷]\\s*(${OPERAND})`, "g");
+
+export function renderFormula(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  FRACTION_RE.lastIndex = 0;
+  while ((m = FRACTION_RE.exec(text)) !== null) {
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(<Frac key={m.index} top={m[1]} bottom={m[2]} />);
+    last = m.index + m[0].length;
+  }
+  if (parts.length === 0) return text;
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
+
+/** ReactNode 산식 — 문자열이면 분수 치환, 이미 JSX면 그대로. */
+export function FormulaText({ value }: { value: React.ReactNode }) {
+  return <>{typeof value === "string" ? renderFormula(value) : value}</>;
+}
