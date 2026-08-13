@@ -109,6 +109,25 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   /** 거주요건 맥락에서 기준일을 부르는 이름 — 라벨·안내 문구가 공유한다. */
   const judgmentDateLabel = conversionActive ? "용도변경일" : "취득일";
 
+  /**
+   * 토지만 출자한 조합원입주권 — 1세대1주택 특례(비과세·LTHD 표2) 대상이 아니다.
+   *
+   *   §89①4호 본문: 「…관리처분계획의 인가일… 현재 제3호가목에 해당하는 **기존주택을 소유하는
+   *     세대**」가 요건 ⇒ 토지 출자는 인가일 현재 기존주택이 없어 불성립.
+   *   §95② 단서: 「1세대 1주택…에 해당하는 **자산**」 ⇒ 종전자산이 주택이 아니면 표2 진입 불가.
+   *
+   * 엔진도 같은 술어로 차단한다(`transfer-tax-redevelopment.ts` `isLandContributedRight`).
+   * subject fallback은 API 변환·validate와 동일(미입력 시 입주권 자산 → "right").
+   */
+  const isLandContributedRight =
+    primary?.redevOriginalAssetType === "land" &&
+    (primary?.redevSubject || (primaryKind === "right_to_move_in" ? "right" : "apt")) === "right";
+  /**
+   * 표시용 1세대 여부 — 토지 출자 입주권이면 저장값과 무관하게 false로 보인다.
+   * store에 쓰지 않는다(useEffect 미러링 금지). 엔진이 같은 술어로 무시하므로 결과와 어긋나지 않는다.
+   */
+  const isOneHouseholdEffective = form.isOneHousehold && !isLandContributedRight;
+
   const primaryAddress =
     (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
   // 법정동코드(주소검색 PNU 앞 10자리) — 있으면 동 단위 정밀 판정 경로
@@ -381,11 +400,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         <div className="space-y-3">
           {/* 1세대 여부 */}
           <ToggleCard
-            checked={form.isOneHousehold}
+            checked={isOneHouseholdEffective}
             onCheckedChange={(v) => onChange({ isOneHousehold: v })}
             title="1세대 해당"
             description="독립적인 생계를 유지하는 세대"
             tone="violet"
+            disabled={isLandContributedRight}
+            disabledReason="토지를 출자한 조합원입주권은 1세대1주택 특례(비과세·장기보유특별공제 표2) 대상이 아닙니다. 관리처분계획 인가일 현재 기존주택을 소유한 세대만 해당합니다 (소득세법 §89①4호 본문·§95② 단서)."
           />
 
           {/* 주택 수 */}
@@ -456,7 +477,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 ))}
               </div>
               {/* §89①4호 가목 본문 요건 안내 */}
-              {form.isOneHousehold && form.householdRightCount === "1" && form.householdHousingCount === "0" && (
+              {isOneHouseholdEffective && form.householdRightCount === "1" && form.householdHousingCount === "0" && (
                 <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900">
                   <p className="font-medium">1세대1입주권 비과세 요건 (양도일 현재)</p>
                   <p className="mt-0.5 text-caption leading-relaxed text-violet-800">

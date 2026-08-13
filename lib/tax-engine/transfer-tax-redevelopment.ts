@@ -59,7 +59,27 @@ export function calculateRedevelopmentTax(
   baseSteps: CalculationStep[],
 ): TransferTaxResult {
   const steps: CalculationStep[] = [...baseSteps];
-  const isOneHouseSingle = input.isOneHousehold === true && input.householdHousingCount === 1;
+  // 토지만 출자한 조합원입주권은 1세대1주택 특례(비과세·LTHD 표2) 대상이 아니다.
+  //
+  //   §89①4호 본문 — 「조합원입주권을 1개 보유한 1세대[…관리처분계획의 인가일… 현재
+  //     **제3호가목에 해당하는 기존주택을 소유하는 세대**]가 …양도하는 경우」
+  //     ⇒ 토지 출자는 인가일 현재 기존주택이 없어 비과세 요건 자체가 불성립.
+  //   §95② 단서 — 「…1세대 1주택(이에 딸린 토지를 포함한다)에 해당하는 **자산**의 경우에는
+  //     …표 2…」 ⇒ 종전자산이 주택이 아니면 표2 진입 불가(표1만).
+  //
+  // 환산 경로는 이미 `isOneHouseSingle: false` 고정이었으나
+  // (`redevelopment-land-contribution.ts:166`) 실가 경로(`runOriginalMember`)는
+  // 이 값을 그대로 전달해(`redevelopment.ts:535`) 표2가 적용됐다(2026-08-13 제보).
+  //
+  // ⚠️ subject="right" 한정 — 토지를 출자하고 **완공 APT**를 양도하는 경우(subject="apt")는
+  //    주택 양도라 §89①3호·§95② 표2 대상이 될 수 있다.
+  const isLandContributedRight =
+    input.redevelopment!.subject === "right" &&
+    input.redevelopment!.originalAssetType === "land";
+  const isOneHouseSingle =
+    !isLandContributedRight &&
+    input.isOneHousehold === true &&
+    input.householdHousingCount === 1;
 
   // ─ Step A: redevelopment orchestrator 호출 ─
   const redevRaw: RedevelopmentResult = runRedevelopment({
