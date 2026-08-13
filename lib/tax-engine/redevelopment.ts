@@ -16,7 +16,7 @@
  *   산출세액 56,799,400 / 지방소득세 5,679,940 / 세액합계 62,479,340
  */
 
-import { computeLumpSumDeductionBase, calculateHoldingPeriod } from "./tax-utils";
+import { computeLumpSumDeductionBase, calculateHoldingPeriod, safeMultiplyThenDivide } from "./tax-utils";
 import {
   computeRedevelopmentSplit,
   type RedevelopmentSplitInput,
@@ -541,6 +541,27 @@ function runOriginalMember(
   const postApprovalLthdAmt = splitLthdAmount(split.postApprovalExistingHouse.gain, lthd.postApprovalExistingHouse);
   const settlementLthdAmt = splitLthdAmount(split.settlement.gain, lthd.settlement);
 
+  // 인가전 분 표시용 필요경비 — 청산금 **수령** 분기는 §166①2호 나목 비율로 안분한다.
+  //
+  // 나목은 인가전 양도차익 전체에 (평가액 − 지급받은 청산금) / 평가액 을 곱한다
+  // (`redevelopment-settlement.ts:169`). 그 차익은 **원액 필요경비를 차감한 뒤** 곱해지므로
+  // 실효 차감액은 이미 안분값이다. 양도가액·취득가액도 같은 비율로 안분된 값이 표시되는데
+  // (`splitReceive`) 필요경비만 원액을 표시하면 신고서 인가전 분 열이
+  // 「양도가액 − 취득가액 − 필요경비 ≠ 양도차익」으로 어긋난다(2026-08-13 제보).
+  // 납부·APT 분기는 안분이 없어 원액이 그대로 정합이다.
+  const rawPreApprovalExpenses = preApprovalNecessaryExpense(
+    split.estimatedLumpDeduction ?? 0,
+    redevelopment.preApprovalExpenses,
+  );
+  const preApprovalDisplayExpenses =
+    isRight && redevelopment.settlementDirection === "receive" && redevelopment.rightsValue > 0
+      ? safeMultiplyThenDivide(
+          rawPreApprovalExpenses,
+          split.preApproval.apportionedTransfer, // = 평가액 − 청산금 (splitReceive의 분자와 동일)
+          redevelopment.rightsValue,
+        )
+      : rawPreApprovalExpenses;
+
   const preApprovalDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: split.preApproval.apportionedTransfer,
     apportionedAcquisition: split.preApproval.apportionedAcquisition,
@@ -551,7 +572,7 @@ function runOriginalMember(
     lthdRate: lthd.preApproval.applicable ? lthd.preApproval.rate : 0,
     branchAcqDate: acquisitionDate,
     branchTransferDate: isRight ? redevelopment.approvalDate : transferDate,
-    expenses: preApprovalNecessaryExpense(split.estimatedLumpDeduction ?? 0, redevelopment.preApprovalExpenses),
+    expenses: preApprovalDisplayExpenses,
     residenceStartDate: priorResStart,
     residenceEndDate: priorResEnd,
     residenceMonths: priorMonths,
