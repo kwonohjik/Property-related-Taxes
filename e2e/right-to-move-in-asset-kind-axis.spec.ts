@@ -16,7 +16,11 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
-function seedForm(assetKind: "right_to_move_in" | "redevelopment_apt", redevSubject = "") {
+function seedForm(
+  assetKind: "right_to_move_in" | "redevelopment_apt",
+  redevSubject = "",
+  settlementDirection: "pay" | "receive" = "pay",
+) {
   return {
     state: {
       formData: {
@@ -30,7 +34,7 @@ function seedForm(assetKind: "right_to_move_in" | "redevelopment_apt", redevSubj
           useEstimatedAcquisition: false,
           redevApprovalLawBasis: "urban_renovation_art_74",
           redevOriginalAssetType: "housing",
-          redevSettlementDirection: "pay",
+          redevSettlementDirection: settlementDirection,
           redevApprovalDate: "2016-10-23",
           redevRightsValue: "300000000",
           redevSettlementAmount: "50000000",
@@ -41,7 +45,11 @@ function seedForm(assetKind: "right_to_move_in" | "redevelopment_apt", redevSubj
         transferDate: "2026-03-02",
         filingDate: "2026-04-30",
         contractTotalPrice: "420000000",
-        householdHousingCount: "2",
+        // ⑥ 「거주개월 분리 입력」은 1세대1주택 게이트를 탄다
+        // (`Step1.tsx:233` — isOneHousehold === true && householdHousingCount === "1").
+        // A-6·A-7이 그 카드의 자산종류 분기를 보려면 게이트가 먼저 열려 있어야 한다.
+        isOneHousehold: true,
+        householdHousingCount: "1",
         isRegulatedArea: false,
         wasRegulatedAtAcquisition: false,
         isUnregistered: false,
@@ -56,12 +64,13 @@ async function openAcquisitionStep(
   page: Page,
   assetKind: "right_to_move_in" | "redevelopment_apt",
   redevSubject = "",
+  settlementDirection: "pay" | "receive" = "pay",
 ) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(assetKind, redevSubject),
+    seedForm(assetKind, redevSubject, settlementDirection),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -113,5 +122,41 @@ test.describe("자산 종류 축 — 입주권 / 재개발APT", () => {
     await expect(selected).toHaveClass(/bg-primary/);
     // 승격됐으므로 완공APT 전용 카드는 사라진다.
     await expect(page.getByText("조합원 구분")).toHaveCount(0);
+  });
+
+  /**
+   * A-6·A-7 (2026-08-14) — 완공 APT 전용 입력 2종의 대칭 회귀.
+   *
+   * 둘 다 **신축 APT가 존재해야** 성립하는 사실이라 완공 전 권리 양도인 입주권에는 없다.
+   * 종전에는 입주권 화면에 그대로 노출됐고, 값이 세액을 조용히 바꿨다(실측):
+   *   ③-a 청산금 수령분 단독 신고 → 양도가액이 청산금 수령액으로 교체(양도차익 1.7억 소실)
+   *   ⑥  거주개월 분리 입력       → 입주권 LTHD 14% → 68%
+   */
+  test("A-6: 입주권에는 완공APT 전용 입력 2종이 없다 (청산금 수령 · 1세대1주택)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await openAcquisitionStep(page, "right_to_move_in", "", "receive");
+
+    await expect(page.getByText("청산금 수령분 단독 신고")).toHaveCount(0);
+    await expect(page.getByText("거주개월 분리 입력", { exact: false })).toHaveCount(0);
+    // 입주권 고유 입력은 그대로 있어야 한다 (과잉 숨김 방지).
+    await expect(page.getByText("청산금 방향").first()).toBeVisible();
+    await expect(page.getByText("권리가액").first()).toBeVisible();
+  });
+
+  test("A-7: 재개발APT에는 두 입력이 남는다 (사례 45·46 회귀 방지)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await openAcquisitionStep(page, "redevelopment_apt", "", "receive");
+
+    await expect(page.getByText("청산금 수령분 단독 신고").first()).toBeVisible();
+    await expect(page.getByText("거주개월 분리 입력", { exact: false }).first()).toBeVisible();
+  });
+
+  test("A-8: ④ 섹션 조문이 자산 종류를 따른다 (입주권 §166① / 완공APT §166②1호)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await openAcquisitionStep(page, "right_to_move_in");
+    await expect(page.getByText("재개발 일정·금액 (시행령 §166①)").first()).toBeVisible();
+
+    await openAcquisitionStep(page, "redevelopment_apt");
+    await expect(page.getByText("재개발 일정·금액 (시행령 §166②1호)").first()).toBeVisible();
   });
 });
