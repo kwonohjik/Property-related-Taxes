@@ -313,21 +313,35 @@ describe("C39 — 조합원입주권 right+receive 단독주택 환산취득가 
 
   // ── 신고서 양식 합계 역산 검증 (memory `feedback_redev_filing_form_acquisition_inverse`) ──
 
-  it("[C39-20] 신고서 합계 취득가 역산 = 149,400,000 (= 320M − 3.6M − 167M)", () => {
+  it("[C39-20] 신고서 합계 취득가 역산 = 150,000,000 (= 320M − 3.0M − 167M)", () => {
     // 합계 취득가액 = 합계 양도가 − 합계 필요경비 − 합계 양도차익 (역산 공식)
-    // = 320,000,000 − 3,600,000 − 167,000,000 = 149,400,000
+    // = 320,000,000 − 3,000,000 − 167,000,000 = 150,000,000
+    //
+    // ★ 2026-08-13 정정: 종전 149,400,000은 안분 전 개산공제 3,600,000을 쓴 값이었다.
+    //   C39-18과 함께 정정 — 근거는 C39-18 주석 참조.
     const transferTotal = detail.settlement.apportionedTransfer; // 320M (실제 양도가)
-    const expensesTotal = detail.preApproval.expenses ?? 0;       // 3,600,000 (개산공제)
+    const expensesTotal = detail.preApproval.expenses ?? 0;       // 3,000,000 (안분 후 개산공제)
     const gainTotal = detail.total.gain;                           // 167,000,000
     const inversedAcquisition = transferTotal - expensesTotal - gainTotal;
-    expect(inversedAcquisition).toBe(149_400_000);
+    expect(inversedAcquisition).toBe(150_000_000);
   });
 
   // ── 신고서 양식 필요경비 (memory `feedback_estimated_deduction_separation`) ──
 
-  it("[C39-18] preApproval.expenses = 3,600,000 (환산 모드 개산공제 분리 표시)", () => {
-    // §163⑥ 개산공제는 필요경비 항목으로 분리 표시 — 취득가액에 합산 금지
-    expect(detail.preApproval.expenses).toBe(3_600_000);
+  it("[C39-18] preApproval.expenses = 3,000,000 (개산공제 3,600,000 × 250/300 안분)", () => {
+    // §163⑥ 개산공제는 필요경비 항목으로 분리 표시 — 취득가액에 합산 금지 (종전 규약 유지).
+    //
+    // ★ 2026-08-13 정정 (사용자 제보): 종전 3,600,000(안분 전 원액)은 **신고서 인가전 분 열을
+    //   자기모순**으로 만들었다 — 같은 열의 양도가액 250,000,000(=권리가액 300M의 안분)과
+    //   취득가액 150,000,000(=환산취득가 180M의 안분)은 이미 §166①2호 나목 비율이 적용된
+    //   값인데 필요경비만 원액이면 250M − 150M − 3.6M = 96.4M ≠ 양도차익 97M이 된다.
+    //
+    //   나목 산식은 (권리가액 − 환산취득가 − 개산공제) 전체에 salePriceTotal/권리가액 을 곱하므로
+    //   (`redevelopment-housing-contribution.ts:189~197`) **실효 차감액은 이미 안분값 3,000,000**
+    //   이다. 즉 세액은 종전에도 옳았고 표시만 어긋나 있었다.
+    //
+    //   §163⑥ 산출값(안분 전) 3,600,000은 C39-2·C39-echo-2가 계속 고정한다 — 소실 없음.
+    expect(detail.preApproval.expenses).toBe(3_000_000);
   });
 
   // ── 분기 확인 — 환산 분기가 올바르게 진입했는지 확인 ──
