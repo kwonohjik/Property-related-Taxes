@@ -32,6 +32,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Button } from "@/components/ui/button";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   asset: AssetForm;
@@ -169,8 +170,8 @@ export function PartialAcqApportionSection({ asset, onChange, onApply }: Props) 
                   data-testid="partial-acq-result"
                 >
                   <p>
-                    양도분 취득가액 = 전체 취득가액 × 양도분 {basisLabel} ÷ (양도분 + 잔여분{" "}
-                    {basisLabel})
+                    양도분 취득가액 = 전체 취득가액 ×{" "}
+                    <Frac top={`양도분 ${basisLabel}`} bottom={`(양도분 + 잔여분 ${basisLabel})`} />
                   </p>
                   <p className="font-semibold tabular-nums">
                     {computed.toLocaleString()} 원

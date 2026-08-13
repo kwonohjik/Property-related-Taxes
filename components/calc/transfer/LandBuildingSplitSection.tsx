@@ -33,6 +33,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { capexHint } from "./capexHint";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 export type { PartAcqMode };
 
@@ -318,7 +319,7 @@ function PartAcqInputs(props: {
   return (
     <ToneCard tone="amber" noDark bodyClassName="space-y-1">
       <p className="text-xs text-amber-900" data-testid={`split-${props.part}-estimated-note`}>
-        {label} 환산취득가 = {label} 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가)
+        {label} 환산취득가 = {label} 양도가액 × <Frac top="취득시 기준시가" bottom="양도시 기준시가" />
         <br />· 취득시 기준시가 → {acqSource}
         <br />· 양도시 기준시가 → {transferSource}
       </p>

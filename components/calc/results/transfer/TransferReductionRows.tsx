@@ -9,6 +9,7 @@
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /** §99의3 신축주택 과세특례 상세 (적용/불가 양쪽) */
 export function New993DetailCard({
@@ -132,9 +133,9 @@ export function PublicExpropriationDetailCard({
       ) : (
         <>
           <div className="space-y-0.5 border-t border-primary/20 pt-1.5">
-            <p className="text-muted-foreground">⑤ 감면세액 = 산출세액 × 감면대상소득금액 / 과세표준</p>
+            <p className="text-muted-foreground">⑤ 감면세액 = 산출세액 × <Frac top="감면대상소득금액" bottom="과세표준" /></p>
             <p className="font-medium">
-              {formatKRW(calculatedTax ?? 0)} × {formatKRW(bd.reducibleIncome)} / {formatKRW(taxBase ?? 0)}
+              {formatKRW(calculatedTax ?? 0)} × <Frac top={formatKRW(bd.reducibleIncome)} bottom={formatKRW(taxBase ?? 0)} />
               {" = "}{formatKRW(d.rawReductionAmount)}
             </p>
           </div>

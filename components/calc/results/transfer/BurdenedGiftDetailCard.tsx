@@ -135,7 +135,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
             <td className="text-right font-mono">{fmt(bg.assumedDebtAmount)}원</td>
           </tr>
           <tr>
-            <td className="py-1 pr-2">채무비율 = 채무액 ÷ 증여재산 평가액</td>
+            <td className="py-1 pr-2">채무비율 = <Frac top="채무액" bottom="증여재산 평가액" /></td>
             <td className="text-right font-mono">{(bg.debtRatio * 100).toFixed(4)}%</td>
           </tr>
           {/* 자산별 취득가액 산식 (소령 §159①1호) — 3경로 분기 (8개 동기화 지점 ⑦) */}

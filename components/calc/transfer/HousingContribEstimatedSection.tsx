@@ -24,6 +24,7 @@ import { useMemo } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   asset: AssetForm;
@@ -62,7 +63,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
       <div className="rounded-md bg-fuchsia-100/60 border border-fuchsia-200 p-2 text-caption text-fuchsia-900 leading-relaxed">
         <p className="font-semibold mb-0.5">§164⑤ 환산취득가 산식</p>
         <p>
-          환산취득가 = 권리가액 × (취득당시 개별주택가격 ÷ 인가당시 부근 개별주택가격)
+          환산취득가 = 권리가액 × <Frac top="취득당시 개별주택가격" bottom="인가당시 부근 개별주택가격" />
         </p>
         <p className="mt-0.5 text-micro text-fuchsia-700">
           ※ 분자: 취득일 직전 최근 개별주택가격(공시일 기준) / 분모: 관리처분인가일 직전 최근 개별주택가격
@@ -104,7 +105,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
           <p className="font-semibold text-fuchsia-800">미리보기 — §164⑤ 환산취득가</p>
           <p className="font-mono">
             환산취득가 = {parseAmount(asset.redevRightsValue).toLocaleString("ko-KR")}{" "}
-            × ({stdAtAcq.toLocaleString("ko-KR")} / {stdAtApproval.toLocaleString("ko-KR")}){" "}
+            × <Frac top={stdAtAcq.toLocaleString("ko-KR")} bottom={stdAtApproval.toLocaleString("ko-KR")} />{" "}
             = <span className="font-semibold">{preview.convertedAcquisition.toLocaleString("ko-KR")}</span>
           </p>
           <p className="font-mono">

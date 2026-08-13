@@ -25,6 +25,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { isSec164_8ProvisoApplicable, stdPriceSumAt } from "@/lib/calc/commercial-164-6-proviso";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   asset: AssetForm;
@@ -48,7 +49,8 @@ export function Sec164_8ProvisoInput({ asset, onChange }: Props) {
         따라 <b>§164⑧(기준시가 상승률 참작)을 준용</b>합니다.
       </p>
       <p className="text-caption text-rose-700">
-        취득당시 기준시가 = 최초고시 기준시가 × A ÷ [A + (A − B) × C ÷ D] · A·C는 자동 산출
+        취득당시 기준시가 = 최초고시 기준시가 ×{" "}
+        <Frac top="A" bottom={<>A + (A − B) × <Frac top="C" bottom="D" /></>} /> · A·C는 자동 산출
       </p>
 
       <FieldCard

@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 export const AREA_INPUT_CLASS = "w-full border rounded-md px-3 py-2 text-sm bg-background";
 
@@ -104,7 +105,7 @@ export function ReplotReductionFields({
           <div>
             의제 취득면적:{" "}
             <strong>
-              {asset.priorLandArea}㎡ × ({asset.allocatedArea}㎡ ÷ {asset.entitlementArea}㎡) = {effArea}㎡
+              {asset.priorLandArea}㎡ × <Frac top={`${asset.allocatedArea}㎡`} bottom={`${asset.entitlementArea}㎡`} /> = {effArea}㎡
             </strong>{" "}(자동 적용)
           </div>
           <div>양도면적: <strong>{asset.allocatedArea}㎡</strong> (= 교부면적)</div>

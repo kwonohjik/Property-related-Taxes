@@ -45,6 +45,7 @@ import {
 } from "./DetailedStatementFormulaBuilders";
 import { applyRedevelopmentOverrides } from "./DetailedStatementRedevelopmentBuilders";
 import { reductionEligibleIncome, incomeDeductionReducible } from "./reduction-eligible-income";
+import { INCOME_DEDUCTION_5YEAR_FORMULA } from "./DetailedStatementFormulaNodes";
 
 // 타입·그룹 정의는 DetailedStatementConfig.ts로 분리 (800줄 정책). 하위 호환 re-export.
 export type { PerAssetValue, StatementItem, GroupDef } from "./DetailedStatementConfig";
@@ -610,7 +611,7 @@ export function buildStatementItems(
       // 조문별 산출근거를 ⑦ 상세 카드(IncomeDeductionDetailCard)가 노출하므로 신고서 행은 일반 문구.
       !isAggregate && result.new993Detail
         ? buildNew993ReducibleFormula(result.new993Detail, singleIncome)
-        : "소득금액차감방식(§90②) 5년 안분 감면대상 양도소득금액 = 양도소득금액 × (5년시점 − 취득시 공시가격) ÷ (양도시 − 취득시 공시가격)",
+        : INCOME_DEDUCTION_5YEAR_FORMULA,
     legalBasis: "조세특례제한법 §99의3·§99·§98의8 등 · 소득세법 §90②",
     note: "신축·미분양 등 소득금액차감 감면 — 소득금액에서 직접 차감(세액감면방식 아님)",
   });

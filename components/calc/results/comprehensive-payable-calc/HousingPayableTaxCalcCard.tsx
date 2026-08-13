@@ -360,7 +360,7 @@ function Step2({
         testId="payable-step2-d"
       />
       <Bullet indent={2}>
-        {won(c.totalPropertyTax)} × ({won(c.comprehensiveTaxBase)} / {won(c.propertyTaxBase)}) ={" "}
+        {won(c.totalPropertyTax)} × <Frac top={won(c.comprehensiveTaxBase)} bottom={won(c.propertyTaxBase)} /> ={" "}
         {won(c.creditAmount)}
       </Bullet>
     </div>

@@ -11,6 +11,7 @@ import type {
   LandPreviousYearEquivalent,
 } from "@/lib/tax-engine/types/comprehensive.types";
 import { won, eok, pct, StepLine, Bullet, DashBullet, ParcelDot, JurisdictionHeader } from "./payable-calc-helpers";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /** 필지 공시가격 산식 "200㎡ × 50%(지분율) × 4,300,000원 = 4.3억원" */
 function parcelFormula(p: { area: number; shareRatio: number; pricePerSqm: number; officialValue: number }): string {
@@ -144,7 +145,7 @@ export function LandPriorYearBreakdown({
       </Bullet>
       <Bullet indent={4}>총표준세율재산세액 : {won(dt.stdTaxDenominator)}</Bullet>
       <Bullet indent={4}>
-        공제할 재산세액 : {won(pye.propertyTaxEquiv)} × ({won(dt.stdTaxNumerator)} / {won(dt.stdTaxDenominator)}) ={" "}
+        공제할 재산세액 : {won(pye.propertyTaxEquiv)} × <Frac top={won(dt.stdTaxNumerator)} bottom={won(dt.stdTaxDenominator)} /> ={" "}
         {won(dt.creditAmount)}
       </Bullet>
     </>

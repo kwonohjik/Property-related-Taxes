@@ -21,6 +21,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
+import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   asset: AssetForm;
@@ -438,9 +439,9 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
             관리처분 직전 토지기준시가 = {landAreaNumber ? `${fmt(landAreaNumber)} ㎡ × ` : ""}{fmt(parseAmount(asset.redevLandPricePerSqmAtApproval) || 0)} 원/㎡ = {fmt(preview.approval)}
           </p>
           <p className="text-amber-700">
-            환산취득가 = floor({fmt(preview.rights)} × {fmt(preview.acq)} / {fmt(preview.approval)})
+            환산취득가 = floor({fmt(preview.rights)} × <Frac top={fmt(preview.acq)} bottom={fmt(preview.approval)} />)
           </p>
-          <p className="text-amber-700 font-mono">= {preview.formula} = {fmt(preview.convertedAcq)}</p>
+          <p className="text-amber-700 font-mono">= <FormulaText value={preview.formula} /> = {fmt(preview.convertedAcq)}</p>
           <p className="text-amber-700">
             개산공제 (§163⑥) = floor({fmt(preview.acq)} × 3%) = {fmt(preview.estDeduction)}
           </p>

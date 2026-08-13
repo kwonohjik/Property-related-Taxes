@@ -9,6 +9,7 @@
 
 import { cn } from "@/lib/utils";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type {
   CarryoverTaxationDetail,
   CarryoverScenarioADetail,
@@ -114,8 +115,12 @@ function ScenarioAContent({ a, adopted }: { a: CarryoverScenarioADetail; adopted
           */}
         {ap && ap.apportioned !== ap.raw && (
           <p className="text-micro text-muted-foreground pl-2 leading-relaxed">
-            * 증여세 상당액 {fmt(ap.raw)} × 인수 채무액 {fmt(ap.debtAmount)} ÷ 증여가액{" "}
-            {fmt(ap.giftValuation)} = <b>{fmt(ap.apportioned)}</b> (양도로 보는 부분만 산입 —
+            * 증여세 상당액 {fmt(ap.raw)} ×{" "}
+            <Frac
+              top={`인수 채무액 ${fmt(ap.debtAmount)}`}
+              bottom={`증여가액 ${fmt(ap.giftValuation)}`}
+            />{" "}
+            = <b>{fmt(ap.apportioned)}</b> (양도로 보는 부분만 산입 —
             시행령 §163의2② 2호)
           </p>
         )}

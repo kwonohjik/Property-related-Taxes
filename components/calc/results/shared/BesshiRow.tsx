@@ -11,6 +11,7 @@
  */
 
 import type { FilingFormRow } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { FormulaText } from "./FormulaParts";
 
 function formatAmount(n: number): string {
   return n.toLocaleString("ko-KR");
@@ -50,7 +51,7 @@ export function BesshiRow({
         <span>{row.label}</span>
         {row.formula && row.display !== "rate" && (
           <span className="ml-1 text-micro text-gray-500 dark:text-gray-400">
-            ({row.formula})
+            ({<FormulaText value={row.formula} />})
           </span>
         )}
       </td>
@@ -58,7 +59,7 @@ export function BesshiRow({
       <td className="py-1.5 px-2 text-right font-mono tabular-nums whitespace-nowrap">
         {row.display === "rate" ? (
           <span className="font-bold text-violet-700 dark:text-violet-300">
-            {row.formula}
+            {<FormulaText value={row.formula} />}
           </span>
         ) : row.display === "dash" ? (
           <span className="text-gray-400">—</span>

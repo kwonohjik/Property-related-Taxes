@@ -34,6 +34,7 @@ import { downloadSelectedPdf } from "@/components/calc/results/transfer/Transfer
 import { extractRelevantBuildingStdSnapshots } from "@/lib/storage/use-auto-save-calculation";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   apportionment: BundledApportionmentResult;
@@ -552,9 +553,11 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
                   ))}
                 </ul>
                 <p className="pt-1 text-xs text-violet-800">
-                  환산주택가격 = 최초공시주택가격 {formatKRW(c.firstDisclosurePrice)} × 취득 당시
-                  기준시가 합계 {formatKRW(c.acqTotal)} ÷ 최초공시 당시 기준시가 합계{" "}
-                  {formatKRW(c.firstDiscTotal)}
+                  환산주택가격 = 최초공시주택가격 {formatKRW(c.firstDisclosurePrice)} ×{" "}
+                  <Frac
+                    top={`취득 당시 기준시가 합계 ${formatKRW(c.acqTotal)}`}
+                    bottom={`최초공시 당시 기준시가 합계 ${formatKRW(c.firstDiscTotal)}`}
+                  />
                 </p>
                 <ul className="text-xs text-violet-900 space-y-0.5 pt-1">
                   <li className="flex items-baseline justify-between gap-3">

@@ -29,6 +29,7 @@ import {
 } from "@/lib/print/comprehensive-print-sections";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { ComprehensiveFilingFormSection } from "@/components/calc/results/comprehensive-filing";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import {
   HousingPayableTaxCalcCard,
   LandPayableTaxCalcCard,
@@ -360,7 +361,7 @@ function HousingTaxSection({
             <span>{formatKRW(propertyTaxCredit.totalPropertyTax)}</span>
           </div>
           <div className="flex justify-between">
-            <span>안분 비율 (종부세 과세표준분 표준세율 재산세 ÷ 전체 표준세율 재산세)</span>
+            <span>안분 비율 <Frac top="종부세 과세표준분 표준세율 재산세" bottom="전체 표준세율 재산세" /></span>
             <span>{formatRate(propertyTaxCredit.ratio)}</span>
           </div>
         </div>
@@ -397,9 +398,11 @@ function HousingTaxSection({
               {oneHouseDeduction.apportionmentRatio && (
                 <div className="flex justify-between mt-0.5">
                   <span>
-                    1주택분 안분 (
-                    {formatKRW(oneHouseDeduction.apportionmentRatio.mainHouseAssessedValue)} ÷{" "}
-                    {formatKRW(oneHouseDeduction.apportionmentRatio.totalAssessedValue)})
+                    1주택분 안분{" "}
+                    <Frac
+                      top={formatKRW(oneHouseDeduction.apportionmentRatio.mainHouseAssessedValue)}
+                      bottom={formatKRW(oneHouseDeduction.apportionmentRatio.totalAssessedValue)}
+                    />
                   </span>
                   <span>§9⑦⑨</span>
                 </div>

@@ -5,6 +5,7 @@ import {
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { AmendmentDetail } from "@/lib/tax-engine/types/transfer-amendment.types";
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 /** 금액 행 — 라벨 좌 / 금액 우측정렬 고정폭(amount-column-align 정책). */
 function Row({
@@ -109,7 +110,7 @@ export function AmendmentResultCard({
                 <div key={i}>
                   <Row label={s.label} value={formatKRW(s.amount)} />
                   {s.formula && (
-                    <p className="pl-2 text-caption text-muted-foreground">{s.formula}</p>
+                    <p className="pl-2 text-caption text-muted-foreground">{<FormulaText value={s.formula} />}</p>
                   )}
                 </div>
               ))}
@@ -176,7 +177,7 @@ export function AmendmentResultCard({
               <div key={i}>
                 <Row label={s.label} value={formatKRW(s.amount)} />
                 {s.formula && (
-                  <p className="pl-2 text-caption text-muted-foreground">{s.formula}</p>
+                  <p className="pl-2 text-caption text-muted-foreground">{<FormulaText value={s.formula} />}</p>
                 )}
               </div>
             ))}

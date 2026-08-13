@@ -456,7 +456,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <Row
             label={
               isRightSubject && settlementDirection === "receive"
-                ? "안분 취득가액(=종전취득가 × 청산금 ÷ 권리가액)"
+                ? <>안분 취득가액(=종전취득가 × <Frac top="청산금" bottom="권리가액" />)</>
                 : "안분 취득가액(=청산금)"
             }
             value={settlement.apportionedAcquisition}
@@ -528,7 +528,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
   );
 }
 
-function Row({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
+function Row({ label, value, highlight }: { label: React.ReactNode; value: number; highlight?: boolean }) {
   return (
     <div className="flex items-center justify-between text-caption">
       <span className="text-violet-700">{label}</span>

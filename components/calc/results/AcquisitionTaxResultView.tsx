@@ -32,6 +32,7 @@ import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPan
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
 import { formatIsoStamp } from "@/lib/utils/file-download";
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import {
   ACQUISITION_PRINT_SECTIONS,
   type AcquisitionPrintSectionId,
@@ -668,7 +669,7 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
                 <div key={i} className="px-4 py-3 flex justify-between gap-4">
                   <div className="min-w-0">
                     <p className="font-medium">{step.label}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{step.formula}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{<FormulaText value={step.formula} />}</p>
                     {step.legalBasis && (
                       <LawArticleModal legalBasis={step.legalBasis} />
                     )}
