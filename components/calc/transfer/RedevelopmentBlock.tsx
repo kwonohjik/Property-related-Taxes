@@ -43,7 +43,6 @@ import {
   SuccessorMemberSection,
 } from "./RedevelopmentBlockCards";
 import {
-  SUBJECT_OPTIONS,
   ORIGINAL_ASSET_OPTIONS,
   SETTLEMENT_OPTIONS,
   ACQ_MODE_OPTIONS,
@@ -133,29 +132,14 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
       </div>
       )}
 
-      {/* ① sky: 양도 대상 */}
-      <ToneCard tone="sky" sectionNum={1} title="양도 대상 (시행령 §166)" bodyClassName="space-y-2" noDark>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <LawArticleModal legalBasis="소득세법 시행령 §166" label="시행령 §166" />
-          <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 단서" />
-          <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호" />
-        </div>
-        <RadioCardGroup
-          name={`redevSubject-${asset.assetId}`}
-          value={asset.redevSubject || (asset.assetKind === "right_to_move_in" ? "right" : "apt")}
-          onChange={(v) => {
-            // assetKind가 right_to_move_in이면 right 고정 (변경 불가)
-            // assetKind가 redevelopment_apt이면 apt/right 선택 가능
-            onChange({ redevSubject: v as "" | "right" | "apt" });
-          }}
-          options={SUBJECT_OPTIONS.map((o) => ({
-            ...o,
-            // right_to_move_in 선택 시 "apt" 옵션 비활성
-            disabled: asset.assetKind === "right_to_move_in" && o.value === "apt",
-          }))}
-          layout="stack"
-        />
-      </ToneCard>
+      {/* ① 「양도 대상」 라디오는 폐지됐다 (2026-08-13 축 일원화).
+          양도 대상은 **자산 종류**가 결정한다:
+            입주권(`right_to_move_in`)     → 조합원입주권 양도 (§166① · §95② 단서 · §89①4호)
+            재개발APT(`redevelopment_apt`) → 완공 신축주택 양도 (§166②)
+          종전 라디오는 「APT 자산인데 입주권 양도」 같은 불일치 조합을 허용했고, 같은 사실을
+          두 곳(자산 종류 + 라디오)에서 입력받아 축이 이중화돼 있었다.
+          `redevSubject`는 `redevSubjectPatchForAssetKind`가 자산 종류에서 파생해 채우고,
+          저장된 불일치 조합은 `calc-wizard-asset-migrate.ts`가 자산 종류를 승격시켜 흡수한다. */}
 
       {/* ② emerald: 출자 자산 */}
       <ToneCard tone="emerald" sectionNum={2} title="출자 자산" bodyClassName="space-y-2" noDark>
@@ -171,8 +155,14 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         />
       </ToneCard>
 
-      {/* ②-a rose: 조합원 구분 (사례 48 — 승계조합원) */}
-      <SuccessorMemberSection asset={asset} onChange={onChange} />
+      {/* ②-a rose: 조합원 구분 (사례 48 — 승계조합원) — **완공 APT 양도 전용**.
+          사례 48은 「관리처분 후 입주권을 승계취득 → **신축APT를 양도**」다. 입주권 자산은
+          입주권 자체를 양도하므로 이 분기가 성립하지 않는다.
+          입주권의 승계 여부는 ① 기본정보의 「조합원 유형」(`isSuccessorRightToMoveIn`)이 받는다
+          — §95② 본문 괄호 「조합원으로부터 취득한 것은 제외」에 따른 LTHD 배제용으로,
+          이 카드(`redevIsSuccessorMember`, §166 우회 산식)와는 다른 사실이다.
+          두 카드를 한 화면에 함께 노출하면 같은 질문이 두 번 나온 것처럼 읽힌다. */}
+      {!isRightSubject && <SuccessorMemberSection asset={asset} onChange={onChange} />}
 
       {/* ③ amber: 청산금 방향 (승계조합원 모드 시 숨김 — 본 PR 미지원) */}
       {asset.redevIsSuccessorMember !== "yes" && (

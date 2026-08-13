@@ -7,11 +7,6 @@
  * 로직 없이 라벨·설명·법령 근거만 나열하므로 렌더 파일에서 떼어내도 응집도 손실이 없다.
  */
 
-export const SUBJECT_OPTIONS = [
-  { value: "apt" as const, label: "완공 APT 양도", description: "조합 신축주택 양도 (시행령 §166②) — 사례 40·41·44~47" },
-  { value: "right" as const, label: "입주권 양도", description: "관리처분 인가 후 조합원 입주권 양도 (시행령 §166① · §95② 단서 + §89①4호 가목) — 사례 36~39" },
-];
-
 export const ORIGINAL_ASSET_OPTIONS = [
   { value: "housing" as const, label: "주택 출자", description: "기존 주택(공동주택·단독주택)을 조합에 출자 — 사례 41·44~47" },
   { value: "land" as const, label: "토지 출자", description: "기존 토지를 조합에 출자 — 사례 37(입주권)·40(APT 양도)" },

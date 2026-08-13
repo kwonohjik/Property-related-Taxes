@@ -538,6 +538,22 @@ export function migrateAsset(raw: unknown): AssetForm {
   }
   // ③ 재개발/재건축 redev* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   if (a.redevSubject === undefined) a.redevSubject = "";
+  /**
+   * 양도 대상 축을 **자산 종류로 일원화**한다 (2026-08-13).
+   *
+   *   입주권(`right_to_move_in`)  = 조합원입주권 양도 전담 (§166① · §95② 단서 · §89①4호)
+   *   재개발APT(`redevelopment_apt`) = 재개발·재건축으로 완공된 APT 양도 전담 (§166②)
+   *
+   * 종전에는 재개발APT 자산 안의 ① 「양도 대상」 라디오(`redevSubject`)가 축을 겸해
+   * 「APT 자산인데 입주권 양도」 조합이 저장될 수 있었다. 그 라디오를 없애면서, 이미 저장된
+   * 조합은 **자산 종류를 승격시켜 의미를 보존**한다(값을 버리면 완공APT 계산으로 조용히 바뀐다).
+   */
+  if (a.assetKind === "redevelopment_apt" && a.redevSubject === "right") {
+    a.assetKind = "right_to_move_in";
+  }
+  // 이후 `redevSubject`는 자산 종류에서 파생한다 — 저장값은 하위호환 잔재이므로 정규화해 둔다.
+  if (a.assetKind === "right_to_move_in") a.redevSubject = "right";
+  else if (a.assetKind === "redevelopment_apt") a.redevSubject = "apt";
   if (a.redevApprovalLawBasis === undefined) a.redevApprovalLawBasis = "";
   if (a.redevOriginalAssetType === undefined || a.redevOriginalAssetType === "") a.redevOriginalAssetType = "housing";
   if (a.redevSettlementDirection === undefined) a.redevSettlementDirection = "";

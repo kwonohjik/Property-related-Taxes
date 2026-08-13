@@ -307,8 +307,12 @@ export function AssetSectionAcquisition({
         />
       )}
 
-      {/* 재개발/재건축 (시행령 §166) — assetKind === "redevelopment_apt" 시만 표시 (사례 44) */}
-      {asset.assetKind === "redevelopment_apt" && (
+      {/* 재개발/재건축 (시행령 §166) — 재개발APT(완공 신축주택 양도) + 입주권(조합원입주권 양도).
+          종전에는 `redevelopment_apt` 하나만 열려 있어 **입주권을 고르면 §166 입력 UI가 아예 없었다**
+          (관리처분 인가일·권리가액·청산금을 넣을 곳이 없음, 2026-08-13 제보).
+          API 변환(`transfer-tax-api.ts:176`)·validate(`transfer-tax-validate-asset.ts:172`)·
+          블록 내부 분기는 이미 두 종류를 모두 §166 경로로 처리하고 있었다 — UI만 빠져 있었다. */}
+      {(asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") && (
         <RedevelopmentBlock asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
       )}
     </>
