@@ -92,6 +92,28 @@ function preApprovalNecessaryExpense(
   return estimatedDeduction > 0 ? estimatedDeduction : preApprovalExpenses;
 }
 
+/**
+ * 인가전 분 표시용 필요경비를 §166①2호 나목 비율로 안분한다.
+ *
+ * 나목은 인가전 양도차익 **전체**에 (평가액 − 지급받은 청산금) / 평가액 을 곱한다. 그 차익은
+ * 필요경비를 원액으로 차감한 뒤 곱해지므로 **실효 차감액은 이미 안분값**이다. 같은 객체의
+ * 양도가액·취득가액도 안분된 값이 표시되므로, 필요경비만 원액을 두면 신고서 인가전 분 열이
+ * 「양도가액 − 취득가액 − 필요경비 ≠ 양도차익」으로 어긋난다(2026-08-13 제보).
+ *
+ * 수령 분기 전용 — 납부·완공APT 분기는 안분 자체가 없어 호출하지 않는다.
+ *
+ * @param apportionedTransfer 안분된 의제양도가액 (= 평가액 − 수령청산금, 나목의 분자와 동일)
+ * @param rightsValue 권리가액 (나목의 분모)
+ */
+function apportionPreApprovalExpenses(
+  rawExpenses: number,
+  apportionedTransfer: number,
+  rightsValue: number,
+): number {
+  if (rightsValue <= 0) return rawExpenses;
+  return safeMultiplyThenDivide(rawExpenses, apportionedTransfer, rightsValue);
+}
+
 
 export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput {
   /** 입주권 양도 시 승계조합원 여부 (§95② 단서 — LTHD 0) */
@@ -378,10 +400,19 @@ function runHousingContribReceiveEstimated(
     lthdRate: housingResult.lthdRate,
     branchAcqDate: acquisitionDate,
     branchTransferDate: redevelopment.approvalDate,   // §166⑤1호 종기 = 인가일
-    // 필요경비 (신고서 양식 표 표시용) — §166①2호 나목 택일.
-    expenses: preApprovalNecessaryExpense(
-      housingResult.estimatedDeduction,
-      redevelopment.preApprovalExpenses ?? 0,
+    // 필요경비 (신고서 양식 표 표시용) — §166①2호 나목 택일 **후 안분**.
+    //
+    // 나목은 (권리가액 − 환산취득가 − 개산공제)에 salePriceTotal / 권리가액 을 곱한다
+    // (`redevelopment-housing-contribution.ts:189~197`). 즉 실효 차감액은 이미 안분값이다.
+    // 위 양도가액·취득가액도 같은 비율로 안분된 값을 표시하므로 필요경비만 원액을 두면
+    // 신고서 인가전 분 열이 「양도가액 − 취득가액 − 필요경비 ≠ 양도차익」으로 어긋난다.
+    expenses: apportionPreApprovalExpenses(
+      preApprovalNecessaryExpense(
+        housingResult.estimatedDeduction,
+        redevelopment.preApprovalExpenses ?? 0,
+      ),
+      housingResult.preApprovalApportionedTransfer, // = salePriceTotal (평가액 − 수령청산금)
+      redevelopment.rightsValue,
     ),
     residenceStartDate: undefined,
     residenceEndDate: undefined,
@@ -541,21 +572,16 @@ function runOriginalMember(
   const postApprovalLthdAmt = splitLthdAmount(split.postApprovalExistingHouse.gain, lthd.postApprovalExistingHouse);
   const settlementLthdAmt = splitLthdAmount(split.settlement.gain, lthd.settlement);
 
-  // 인가전 분 표시용 필요경비 — 청산금 **수령** 분기는 §166①2호 나목 비율로 안분한다.
-  //
-  // 나목은 인가전 양도차익 전체에 (평가액 − 지급받은 청산금) / 평가액 을 곱한다
-  // (`redevelopment-settlement.ts:169`). 그 차익은 **원액 필요경비를 차감한 뒤** 곱해지므로
-  // 실효 차감액은 이미 안분값이다. 양도가액·취득가액도 같은 비율로 안분된 값이 표시되는데
-  // (`splitReceive`) 필요경비만 원액을 표시하면 신고서 인가전 분 열이
-  // 「양도가액 − 취득가액 − 필요경비 ≠ 양도차익」으로 어긋난다(2026-08-13 제보).
-  // 납부·APT 분기는 안분이 없어 원액이 그대로 정합이다.
+  // 인가전 분 표시용 필요경비 — 청산금 **수령** 분기만 §166①2호 나목 비율로 안분
+  // (`apportionPreApprovalExpenses` 주석 참조 · 산식은 `redevelopment-settlement.ts:169`).
+  // 납부·완공APT 분기는 안분이 없어 원액이 그대로 정합이다.
   const rawPreApprovalExpenses = preApprovalNecessaryExpense(
     split.estimatedLumpDeduction ?? 0,
     redevelopment.preApprovalExpenses,
   );
   const preApprovalDisplayExpenses =
-    isRight && redevelopment.settlementDirection === "receive" && redevelopment.rightsValue > 0
-      ? safeMultiplyThenDivide(
+    isRight && redevelopment.settlementDirection === "receive"
+      ? apportionPreApprovalExpenses(
           rawPreApprovalExpenses,
           split.preApproval.apportionedTransfer, // = 평가액 − 청산금 (splitReceive의 분자와 동일)
           redevelopment.rightsValue,
