@@ -201,24 +201,48 @@ export function buildEstimatedGeneralBuildingCards(gbv: GeneralBuildingValuation
   };
   const gbOut = buildGeneralBuildingAssetCards(normalizedGbv);
   /**
-   * §97②2호 판정 — 파트별 자본적지출이 있으면 **파트 단위**, 없으면 종전 **자산총액**(안 A).
-   * 단위 선택 근거는 `general-building-swap.ts` 헤더(O-1 · §97②2호 본문 「자산별로」).
+   * §97②2호 판정 단위 — **혼합 모드**면 파트 축, 그 밖에는 종전 **자산총액**(안 A).
+   *
+   * 🔴 종전에는 `landDirectExpenses !== undefined`만으로 파트 항목을 실었다. 그래서 파트가
+   *    **실가인데 그 칸을 비우면** 항목 자체가 사라져 `resolvePerPart`가 그 파트를 건너뛰고
+   *    (`estimatedCards.length === 0 → continue`), §100② 후문으로 그 파트에 안분됐어야 할
+   *    **양도비가 통째로 소실**됐다(2026-08-13 실측: 토지 실가 + 건물 환산 · 양도비 3억 ·
+   *    토지 자본적지출 공란에서 결정세액 434,548,681 — 토지 칸에 1원만 넣으면 344,916,000).
+   *    ④ 변환도 truthy일 때만 실어 「0 입력」과 「미입력」이 같은 상태였다.
+   *
+   * ⇒ 판정 단위를 **모드**로 정한다. 두 파트의 모드가 다르면(혼합) 조문 취급 자체가 갈리므로
+   *   (실가 파트 §97②1호 **가산** ↔ 환산 파트 같은 항 2호 단서 **택일**) 파트 축이 정본이고,
+   *   자본적지출은 `?? 0`으로 둔다 — 「비움」이 그 파트를 판정에서 지우면 안 된다.
+   *   모드 미지정의 기본값은 `applyPartAcqModes`(`general-building-part-acq.ts`)와 **같은**
+   *   `"estimated"`다 — 두 곳이 갈리면 카드와 판정이 서로 다른 파트를 본다
+   *   (`feedback_shared_predicate_argument_parity`).
+   *
+   * ⚠️ **「비-환산이면 파트 축」으로 넓히면 안 된다**(2026-08-13 실측 2건 red).
+   *    두 파트가 **같은 모드**면 파트별 입력 칸이 애초에 존재하지 않는다 — 파트 산정방식·파트
+   *    자본적지출 위젯은 **분리 ON에서만** 렌더되고(`GeneralBuildingAcquisitionCards`의
+   *    `PartAcqModeField`), 분리 OFF에서는 모드가 자산 단위 플래그에서 파생될 뿐이다.
+   *    그 상태에서 파트 축으로 전환하면 `resolvePerPart`가 읽지 않는 **자산 단위 자본적지출이
+   *    조용히 사라진다**(분리 OFF·실가·증축 픽스처에서 8억이 나목에서 소실 — W-1b anchor).
+   *    자산 단위 칸을 막는 validate V-8도 **분리 ON 안에만** 있다.
+   *
+   * 파트 자본적지출이 **명시**되면 모드가 같아도 파트 축을 유지한다 — 종전 계약이고, ④는
+   * `bothEstimated`이면 파트 칸을 보내지 않으므로 실질적으로 분리 ON 입력에서만 성립한다.
    */
+  const landMode = gbv.landAcqMode ?? "estimated";
+  const buildingMode = gbv.buildingAcqMode ?? "estimated";
+  const usePartAxis =
+    landMode !== buildingMode ||
+    gbv.landDirectExpenses !== undefined ||
+    gbv.buildingDirectExpenses !== undefined;
   const swap = resolveGeneralBuildingSwap(
     gbOut.assetCards,
     gbv.capitalExpenditure,
     gbv.transferExpense,
     {
-      // 모드 기본값은 `applyPartAcqModes`와 **같은 단일 소스**여야 한다(둘 다 미지정 시 환산).
-      ...(gbv.landDirectExpenses !== undefined
-        ? { land: { direct: gbv.landDirectExpenses, mode: gbv.landAcqMode ?? "estimated" } }
-        : {}),
-      ...(gbv.buildingDirectExpenses !== undefined
+      ...(usePartAxis
         ? {
-            building: {
-              direct: gbv.buildingDirectExpenses,
-              mode: gbv.buildingAcqMode ?? "estimated",
-            },
+            land: { direct: gbv.landDirectExpenses ?? 0, mode: landMode },
+            building: { direct: gbv.buildingDirectExpenses ?? 0, mode: buildingMode },
           }
         : {}),
       // 양도비는 파트로 나누지 않고 넘긴다 — 엔진이 §100② 후문(가액 비례)으로 안분한다.

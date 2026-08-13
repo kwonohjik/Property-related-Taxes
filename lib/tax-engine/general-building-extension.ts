@@ -293,13 +293,19 @@ export function buildGeneralBuildingAssetCardsWithExtension(
    *    조합 C/D 환산)을 유지한다 — **자동 안분 fallback이 아니라 기존 정본**이다.
    *    (2-way 경로가 `missingParts`에서 throw하는 것은 거기엔 대체 산출값이 없기 때문이다.)
    */
+  /**
+   * 개산공제 인자는 **환산 개산공제**(§163⑥ = 취득시 기준시가 × 3%)를 그대로 넘긴다 —
+   * 원건물 모드와 무관한 값이다. 종전에는 `originUsedEstimated ? landExp : 0`이라
+   * production(`route-helper`가 `actualBundledAcquisitionPrice`를 항상 주입 → `isOriginActual`
+   * 상시 true)에서 **항상 0**이 들어가, `applyPartAcqModes`가 감정가액·매매사례가액 파트에
+   * 남겨 주는 개산공제(`part-acq.ts` `landDeductible = mode !== "actual"`)가 0으로 뭉개졌다.
+   * 2-way 경로는 `estimatedDeductionConverted`를 넘긴다 — **같은 인자여야 한다**
+   * (`feedback_shared_predicate_argument_parity`).
+   */
   const partAcq = applyPartAcqModes(
     input,
     { land: landAcq, building: building1Acq },
-    {
-      land: originUsedEstimated ? landExp : 0,
-      building: originUsedEstimated ? building1Exp : 0,
-    },
+    { land: convertedLandExp, building: convertedBuilding1Exp },
   );
   /** 그 파트가 파트별 실지거래가액으로 실제 대체됐는가 — 모드가 비-환산이고 값이 있을 때. */
   const landPartApplied =
@@ -322,16 +328,29 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   const landIsConverted = input.landAcqMode === "estimated";
   const buildingIsConverted = input.buildingAcqMode === "estimated";
 
+  /**
+   * 🔴 **파트 자본적지출을 여기서 필요경비에 싣지 않는다**(2026-08-13 정정).
+   *
+   * 종전에는 `landExp = input.landDirectExpenses ?? 0`이었다. 그런데 같은 값이
+   * `general-building-entry.ts`를 통해 `resolveGeneralBuildingSwap`의 `partAxis.direct`로도
+   * 들어가 §97②1호 **가산**(`addition`)으로 배분되고, 최종 엔진 input은
+   * `expenses = card.expenses + directAddition`(`general-building-route-cards.ts`)이라
+   * **같은 지출이 두 번 차감**됐다(실측: 토지 자본적지출 30,000,000 → 엔진 input 60,000,000,
+   * 결정세액 412,282,803 · 정상 421,732,803 대비 9,450,000 과소).
+   *
+   * 2-way 경로는 `applyPartAcqModes`가 돌려주는 개산공제만 카드에 싣고 자본적지출은 swap의
+   * `addition` **단일 경로**에 맡긴다 — 3-way도 같아야 한다.
+   */
   if (landPartApplied) {
     landAcq = partAcq.acquisition.land;
-    landExp = input.landDirectExpenses ?? 0;
+    landExp = partAcq.estimatedDeduction.land;
   } else if (isOriginActual && landIsConverted) {
     landAcq = convertedLandAcq;
     landExp = convertedLandExp;
   }
   if (buildingPartApplied) {
     building1Acq = partAcq.acquisition.building;
-    building1Exp = input.buildingDirectExpenses ?? 0;
+    building1Exp = partAcq.estimatedDeduction.building;
   } else if (isOriginActual && buildingIsConverted) {
     building1Acq = convertedBuilding1Acq;
     building1Exp = convertedBuilding1Exp;

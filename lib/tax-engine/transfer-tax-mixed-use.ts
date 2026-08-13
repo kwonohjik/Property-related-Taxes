@@ -272,11 +272,22 @@ export function calcMixedUseTransferTax(
    * ⚠️ **환산 경로 전용**이다 — 실가·상속·증여(`usesDeemedAcq`)는 §97②**1호** 가산이거나
    *    §163⑨ 의제라 단서 대상이 아니다.
    *
+   * ⚠️ **감정가액·매매사례가액(`useAppraisalSalesAcquisition`)도 단서 대상이 아니다**(2026-08-13 F19).
+   *    단서는 「취득가액을 **환산취득가액**으로 하는 경우」 한정이고, 감정가액·매매사례가액
+   *    (「소득세법 시행령」 §176의2②③)은 같은 호 **본문**이다. 겸용의 감정·매매사례 경로는
+   *    취득가액 총액을 법 §100②로 안분해 **직접 차감**하는 경로라, 단서가 발동하면 그 안분값이
+   *    통째로 0이 되어 취득가액이 소멸한다(과소과세 실측 129,309,577). 단건 엔진
+   *    (`transfer-tax-helpers.ts` `isConversionMode = useEstimatedAcquisition === true`)과
+   *    일반건물(`general-building-swap.ts` — appraisal·salesCase는 무동작)이 이미 같은 규칙이다.
+   *
    * 🔑 **재호출은 3개면 된다** — `calcExcessLandRatio`(STEP 5·6)는 gain에 의존하지 않고
    *    `(asset, derived, transferDate)`만 받으므로 다시 돌릴 필요가 없다.
    */
   const provisoEligible =
-    !asset.acquisitionByInheritance && !asset.acquisitionByGift && !asset.useActualAcquisition;
+    !asset.acquisitionByInheritance &&
+    !asset.acquisitionByGift &&
+    !asset.useActualAcquisition &&
+    !asset.useAppraisalSalesAcquisition;
   const provisoDeclared =
     asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined;
   let necessaryExpenseProviso: MixedUseGainBreakdown["necessaryExpenseProviso"];

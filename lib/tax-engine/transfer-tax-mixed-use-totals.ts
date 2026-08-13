@@ -4,6 +4,7 @@
  */
 
 import { applyRate, calculateProgressiveTax } from "./tax-utils";
+import { compareWithClause1 } from "./transfer-tax-rate-calc";
 import { calcLongTermRate, type ExcessLandResult } from "./transfer-tax-mixed-use-helpers";
 import type {
   MixedUseHousingPart,
@@ -132,16 +133,29 @@ export function buildTotalTax(
       remaining -= used;
     }
 
-    // 2호 — 세율이 같은 **호**끼리만 묶어 1회 계산(단서), 나머지는 자산별.
+    // 2호 — 누진 호(§104①1호)만 과세표준을 합산해 1회 계산하고, 단기 호는 **자산별**로 계산한다.
     //   중과 파트(§104⑦1·3호)는 §104①1호와 **다른 호**라 누진 그룹에 합류하지 않는다.
     //   겸용의 주택 파트는 하나뿐이라 중과 그룹은 항상 단독이다.
-    const byRate = new Map<string, number>();
+    //
+    // 🔴 **§104① 후단은 파트(=자산)마다 건다** — 2026-08-13 F20.
+    //   후단은 "하나의 자산이 … 둘 이상에 **해당**할 때에는 … 산출세액 중 **큰 것**"이고,
+    //   보유 1~2년 상가토지·상가건물은 §94①1호 자산이라 §104①1호(§55① 누진)와 2호(40%)에
+    //   **동시에 해당**한다. §104⑤2호 본문도 "제1항부터 제4항까지 및 제7항의 **규정에 따라**
+    //   계산한 자산별 양도소득 산출세액 합계액"이라 파트 세액에 후단이 **내장**되어야 한다.
+    //
+    //   ⚠️ 종전에는 같은 세율 파트를 한 버킷으로 묶어 `applyRate(합계, r)` 한 줄로 끝내
+    //      비교 자체를 하지 않았다(실측 34,060,000 과소).
+    //   ⚠️ **버킷 합계에 MAX를 씌우면 안 된다** — 후단의 단위는 「하나의 자산」이고 누진세액은
+    //      볼록(P(Σbᵢ) ≥ ΣP(bᵢ))이라, 합계 기준 비교는 조문이 허용하지 않는 합산 효과를 만들어
+    //      **과다과세**가 된다. 비교는 반드시 파트 단위다.
+    //   ⚠️ 규칙을 손으로 다시 쓰지 않는다 — 단건 정본 `compareWithClause1`에 위임한다.
     let progressiveBase = 0;
     let sum = 0;
-    rateParts.forEach((_, i) => {
+    rateParts.forEach((part, i) => {
       const addon = addonOf(i);
       if (addon > 0) {
-        // §104⑦ 본문 — §55① 누진세율 + 가산율
+        // §104⑦ 본문 — §55① 누진세율 + 가산율.
+        // 가산율 ≥ 0이라 항상 §104①1호(누진) 이상 → 후단에서 1호가 이길 수 없다(비교 생략).
         const surcharged = calculateProgressiveTax(bases[i], brackets) + applyRate(bases[i], addon);
         const st = rates[i];
         // §104⑦ **후단** — 보유 2년 미만이면 §104①2·3호 세액과 MAX
@@ -153,10 +167,17 @@ export function buildTotalTax(
         progressiveBase += bases[i]; // 누진 호(§104①1호)는 과세표준 합산 후 1회
         return;
       }
-      byRate.set(String(r), (byRate.get(String(r)) ?? 0) + bases[i]);
+      const shortTermTax = applyRate(bases[i], r);
+      const clause1 = compareWithClause1(
+        bases[i],
+        brackets,
+        shortTermTax,
+        undefined,
+        `${part.kind} 단기세율 ${(r * 100).toFixed(0)}%`,
+      );
+      sum += clause1 ? clause1.calculatedTax : shortTermTax;
     });
     if (progressiveBase > 0) sum += calculateProgressiveTax(progressiveBase, brackets);
-    for (const [r, base] of byRate) sum += applyRate(base, Number(r));
     return { tax: sum, maxRate: Math.max(...rateParts.map((_, i) => effRate(i))) };
   })();
   // 적용된 누진세율 구간 추출 (UI 산식 표시용)
