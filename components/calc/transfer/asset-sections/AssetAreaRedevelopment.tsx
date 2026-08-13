@@ -36,6 +36,27 @@ interface Props {
 }
 
 /** 이 위젯이 담당하는 자산유형인지 */
+/**
+ * 자산 종류 → `redevSubject` 파생 patch (2026-08-13 축 일원화).
+ *
+ *   입주권(`right_to_move_in`)      → "right" (조합원입주권 양도 — §166①)
+ *   재개발APT(`redevelopment_apt`)  → "apt"   (완공 신축주택 양도 — §166②)
+ *
+ * 종전에는 재개발 블록 안 ① 「양도 대상」 라디오가 축을 겸해 「APT 자산인데 입주권 양도」
+ * 같은 불일치 조합이 저장될 수 있었다. 그 라디오를 없애고 자산 종류가 축을 결정한다.
+ * 저장된 불일치 조합은 `calc-wizard-asset-migrate.ts`가 자산 종류를 승격시켜 흡수한다.
+ *
+ * 재개발 자산이 아니면 빈 patch — 다른 자산 종류의 잔재 값은 건드리지 않는다
+ * (자산 종류를 되돌리면 그대로 복귀).
+ */
+export function redevSubjectPatchForAssetKind(
+  assetKind: AssetForm["assetKind"],
+): Partial<AssetForm> {
+  if (assetKind === "right_to_move_in") return { redevSubject: "right" };
+  if (assetKind === "redevelopment_apt") return { redevSubject: "apt" };
+  return {};
+}
+
 export function isRedevAreaAsset(asset: AssetForm): boolean {
   return (
     asset.assetKind === "redevelopment_apt" ||

@@ -30,6 +30,7 @@ import {
   AssetAreaSection,
   areaResetPatchForAssetKind,
 } from "./AssetAreaSection";
+import { redevSubjectPatchForAssetKind } from "./AssetAreaRedevelopment";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
 import { OwnershipRatioBlock, type AssetSplitMode } from "../OwnershipRatioInput";
 
@@ -148,6 +149,7 @@ export function AssetSectionBasic({
                   onChange({
                     assetKind: opt.value,
                     ...areaResetPatchForAssetKind(asset, opt.value),
+                    ...redevSubjectPatchForAssetKind(opt.value),
                   })
                 }
                 className={cn(
