@@ -226,11 +226,40 @@ export interface GeneralBuildingFormSlice {
   gbWasMultiHouseAtConversion: boolean | null;
 
   // ── 사례 35 후속-1: §99-164-10 환산주택가격 (취득가액 불명 케이스) ──
-  /** "주택으로 최초공시 후 상가로 용도변경" 토글. 환산 모드에서만 의미. */
+  /**
+   * "주택으로 최초공시 후 상가로 용도변경" 토글.
+   *
+   * 노출·검증 조건은 `isGbFirstDisclosureApplicable`(`lib/calc/gb-first-disclosure.ts`)이
+   * 단일 소스다 — **파트 축**(토지·건물 중 하나라도 환산)이지 `useEstimatedAcquisition`
+   * 플래그 단독이 아니다. 플래그로 판정하면 분리 취득 + 파트만 환산에서 API와 어긋난다.
+   */
   gbHasFirstDisclosure: boolean;
+  /**
+   * 주택가격이 최초로 고시된 날 (YYYY-MM-DD).
+   *
+   * ① 최초공시 시점 개별공시지가의 **기준연도 추천·Vworld 조회**와 ② 건물기준시가
+   * 3시점 일괄 계산의 **고시 체계 연도**가 이 값을 읽는다.
+   *
+   * ⚠️ 상가(§164⑥)의 「최초고시 2005」처럼 상수로 고정할 수 **없다** — 그쪽은 국세청장의
+   *    전국 단일 고시 사건이지만 개별주택가격은 시장·군수·구청장이 물건별로 공시하고,
+   *    집행기준 99-164-10도 연도를 못박지 않는다. §164⑤ PHD(`phdFirstDisclosureDate`)와
+   *    같은 성격이라 같은 방식(날짜 입력)을 쓴다.
+   */
+  gbFirstDisclosureDate: string;
   /** 최초공시주택가격 (원). gbHasFirstDisclosure=true 시 필수. */
   gbFirstDisclosurePrice: string;
-  /** 최초공시 당시 토지 기준시가 총액 (원). */
+  /**
+   * 최초공시 당시 **㎡당 개별공시지가** (원/㎡). `LandPriceLookupField`.
+   * 토지 기준시가 총액은 저장하지 않고 `× gbLandArea`로 파생한다 — 취득·양도 시점과 같은 계약.
+   */
+  gbFirstDisclosureLandPricePerSqm: string;
+  /**
+   * 최초공시 당시 토지 기준시가 **총액** (원) — **legacy**.
+   *
+   * 종전 UI가 총액을 직접 받던 필드다. 통합 후 입력 UI는 위 ㎡당 단가로 바뀌었지만,
+   * 구형 sessionStorage 호환을 위해 **폐지하지 않는다**. 소비는 반드시
+   * `gbFirstDisclosureLandStdPriceOf()`를 거친다(단가 우선 · 총액 fallback).
+   */
   gbFirstDisclosureLandStdPrice: string;
   /** 최초공시 당시 건물 기준시가 총액 (원). */
   gbFirstDisclosureBuildingStdPrice: string;

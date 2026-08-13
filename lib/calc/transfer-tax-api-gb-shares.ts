@@ -77,7 +77,9 @@ const GB_PROPERTY_LEVEL_FORM_FIELDS = [
   "gbWasMultiHouseAtConversion",
   // 물건 사건 ③ 최초공시
   "gbHasFirstDisclosure",
+  "gbFirstDisclosureDate",
   "gbFirstDisclosurePrice",
+  "gbFirstDisclosureLandPricePerSqm",
   "gbFirstDisclosureLandStdPrice",
   "gbFirstDisclosureBuildingStdPrice",
 ] as const satisfies readonly (keyof AssetForm)[];

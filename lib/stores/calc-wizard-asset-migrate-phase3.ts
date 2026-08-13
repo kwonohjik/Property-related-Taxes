@@ -127,7 +127,11 @@ export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
   if (a.gbWasMultiHouseAtConversion === undefined) a.gbWasMultiHouseAtConversion = null;
   // 사례 35 후속-1
   if (a.gbHasFirstDisclosure === undefined) a.gbHasFirstDisclosure = false;
+  if (a.gbFirstDisclosureDate === undefined) a.gbFirstDisclosureDate = "";
   if (a.gbFirstDisclosurePrice === undefined) a.gbFirstDisclosurePrice = "";
+  // 신규(2026-08-13 3시점 통합). legacy 자산은 총액(`…LandStdPrice`)만 갖고 있고 단가는 빈 값이다
+  // — `gbFirstDisclosureLandStdPriceOf()`의 fallback이 그 총액을 계속 쓴다(회귀 0).
+  if (a.gbFirstDisclosureLandPricePerSqm === undefined) a.gbFirstDisclosureLandPricePerSqm = "";
   if (a.gbFirstDisclosureLandStdPrice === undefined) a.gbFirstDisclosureLandStdPrice = "";
   if (a.gbFirstDisclosureBuildingStdPrice === undefined) a.gbFirstDisclosureBuildingStdPrice = "";
   // §163⑨ 상속 취득가액 직접 산정 (Phase 1) — 구 세션 복원 방어

@@ -17,7 +17,7 @@
  * ⚠️ **대조군 쌍으로 읽을 것** — 조합 A만 통과하는 것은 구별력이 없다. 그것이 종전 결함의 모양이었다.
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
 import { GeneralBuildingBlock } from "@/components/calc/transfer/GeneralBuildingBlock";
 import { GeneralBuildingAcquisitionCards } from "@/components/calc/transfer/GeneralBuildingAcquisitionCards";
 import { CompanionAcqPurchaseBlock } from "@/components/calc/transfer/CompanionAcqPurchaseBlock";
@@ -330,7 +330,7 @@ describe("U8 — 토글 제목 중복 금지", () => {
  * 여기에 스위치가 되살아나면 매매·분리OFF에서 토글이 둘로 보이던 상태가 재발한다.
  */
 describe("U8b — 증축 상세 카드에는 스위치가 없다", () => {
-  it("gbHasExtension ON에서 GeneralBuildingBlock의 switch 개수 = 0", () => {
+  it("gbHasExtension ON에서 **증축 카드 안** switch 개수 = 0", () => {
     render(
       <GeneralBuildingBlock
         asset={gbAsset({ gbHasExtension: true, useEstimatedAcquisition: true })}
@@ -338,9 +338,24 @@ describe("U8b — 증축 상세 카드에는 스위치가 없다", () => {
         transferDate="2024-06-01"
       />,
     );
-    expect(screen.queryAllByRole("switch")).toHaveLength(0);
     // 대조군 — 카드 자체는 렌더된다(스위치만 사라진 것이지 카드가 사라진 게 아니다)
-    expect(screen.getByText("증축 정보")).toBeInTheDocument();
+    const title = screen.getByText("증축 정보");
+    expect(title).toBeInTheDocument();
+
+    /**
+     * 🔎 **범위를 증축 카드로 좁혔다** (2026-08-13).
+     *
+     * 종전에는 `GeneralBuildingBlock` 전체의 switch를 셌다. 그때 이 블록에 스위치가 하나도
+     * 없었기에 쓸 수 있던 **프록시**였을 뿐, 계약 자체는 헤더가 적은 대로
+     * 「**증축 상세 카드**에 스위치가 없다」다(증축 토글이 둘로 보이던 중복의 재발 방지).
+     *
+     * §99-164-10 최초공시 토글이 같은 블록에 들어오면서(3시점 통합) 프록시가 깨졌다.
+     * 그 토글은 증축과 **무관한 다른 축**이므로 계약을 약화시키지 않는다 —
+     * 대신 세는 범위를 증축 카드로 정확히 좁힌다.
+     */
+    const extCard = title.closest("div.rounded-lg") as HTMLElement | null;
+    expect(extCard).not.toBeNull();
+    expect(within(extCard!).queryAllByRole("switch")).toHaveLength(0);
   });
 
   it("gbHasExtension OFF면 카드가 아예 없다 (렌더 게이트)", () => {

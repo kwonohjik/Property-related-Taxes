@@ -411,7 +411,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbWasMultiHouseAtConversion: null,
     // ── 사례 35 후속-1: §99-164-10 환산주택가격 ──
     gbHasFirstDisclosure: false,
+    gbFirstDisclosureDate: "",
     gbFirstDisclosurePrice: "",
+    gbFirstDisclosureLandPricePerSqm: "",
     gbFirstDisclosureLandStdPrice: "",
     gbFirstDisclosureBuildingStdPrice: "",
     gbBuildingInheritedValue: "",

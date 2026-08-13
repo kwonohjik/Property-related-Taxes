@@ -12,6 +12,7 @@ import { LAND_PRICE_NOTICE_START } from "./transfer-pre1990-commercial-bridge";
 import { isBeforeBuildingStdPriceNotice } from "./commercial-164-6-proviso";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { buildGbCarryoverPayload } from "./transfer-tax-api-gb-carryover";
+import { gbFirstDisclosureLandStdPriceOf } from "./gb-first-disclosure";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 // ─── ④ 사례 33: 증축 extensionInfo 서브객체 변환 헬퍼 ───
@@ -563,12 +564,29 @@ export function buildGeneralBuildingValuation(
             wasMultiHouseAtConversion: asset.gbWasMultiHouseAtConversion ?? false,
           }
         : {}),
-      // 사례 35 후속-1: §99-164-10 환산주택가격 (환산 모드만, useEstimatedAcquisition=true 분기)
-      ...(asset.gbHasFirstDisclosure
+      /**
+       * 사례 35 후속-1: §99-164-10 환산주택가격.
+       *
+       * 🔑 **`&& anyEstimated`가 필수다**(2026-08-13). 이 블록을 감싼 분기는
+       * `anyEstimated || gbHasExtension`이라 **실거래가 + 증축**에서도 열린다. 조건을
+       * `gbHasFirstDisclosure` 단독으로 두면 그 조합에서 stale 플래그가 payload에 실려
+       * 엔진이 `applyConvertedHousingPriceOverride`를 적용한다 — 실가로 계산해야 할
+       * 취득가액이 조용히 환산값으로 바뀐다(계획서 §7.5 (b)).
+       *
+       * 종전에는 validate가 「환산취득가 모드에서만 가능합니다」로 차단해 우연히 막고
+       * 있었다. 그 차단을 파트 축 무시로 바꾸면서(D-1) 이 게이트가 그 역할을 승계한다.
+       *
+       * ⚠️ UI 노출·validate와 **같은 축**이어야 한다 — `isGbFirstDisclosureApplicable`가
+       *    쓰는 것도 `effectivePartAcqMode` 2개의 OR로 `anyEstimated`와 동일하다.
+       *
+       * 토지 기준시가는 **총액을 저장하지 않는다** — ㎡당 단가 × 면적으로 파생하되
+       * 구형 자산의 총액 입력을 fallback으로 받는다(`gbFirstDisclosureLandStdPriceOf`).
+       */
+      ...(asset.gbHasFirstDisclosure && anyEstimated
         ? {
             hasFirstDisclosure: true,
             firstDisclosurePrice: parseAmount(asset.gbFirstDisclosurePrice) || undefined,
-            firstDisclosureLandStdPrice: parseAmount(asset.gbFirstDisclosureLandStdPrice) || undefined,
+            firstDisclosureLandStdPrice: gbFirstDisclosureLandStdPriceOf(asset) || undefined,
             firstDisclosureBuildingStdPrice: parseAmount(asset.gbFirstDisclosureBuildingStdPrice) || undefined,
           }
         : {}),

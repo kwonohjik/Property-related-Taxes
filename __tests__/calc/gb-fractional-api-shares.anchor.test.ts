@@ -238,13 +238,16 @@ describe("④ 일반건물 지분 분할 — API 변환 anchor", () => {
      * 반대로 검증이 약해진다. 필드를 늘리면 이 숫자도 함께 갱신할 것
      * (메모리 `project_non_housing_to_housing_conversion`의 Pick 계약 개수 가드).
      */
-    it("33개", () => {
+    it("35개", () => {
       // 2026-08-11: §104③ 미등기 2필드(gbLandUnregistered·gbBuildingUnregistered) 추가 → 30 → 32
       // 2026-08-12: 원건물 연면적(gbOriginalBuildingArea) 추가 → 33.
       //   payload 키는 **없다**(엔진에 가지 않고 건물1 기준시가 계산기 prefill 전용).
       //   그래도 목록에 넣는 이유: 물건 속성이라 지분마다 다를 수 없고, 복사되지 않으면
       //   지분 카드의 계산기가 `gbBuildingArea`(증축 포함 전체)로 fallback해 건물1을 과대 산정한다.
-      expect(GB_PROPERTY_LEVEL_FORM_FIELD_COUNT).toBe(33);
+      // 2026-08-13: §99-164-10 3시점 통합으로 최초공시일·㎡당 공시지가 2필드 추가 → 35.
+      //   둘 다 물건 속성이다(그 건물이 언제 최초 고시됐는지·그때 그 필지의 공시지가는 얼마였는지).
+      //   지분마다 다를 수 없고, 복사되지 않으면 지분마다 환산주택가격이 갈려 Zod가 400을 던진다.
+      expect(GB_PROPERTY_LEVEL_FORM_FIELD_COUNT).toBe(35);
     });
   });
 });

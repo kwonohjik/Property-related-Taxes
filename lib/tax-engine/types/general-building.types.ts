@@ -554,6 +554,13 @@ export type GeneralBuildingOutput = {
   acquisition: GeneralBuildingAcquisition;
   /** 개산공제 결과 */
   estimatedDeduction: GeneralBuildingEstimatedDeduction;
+  /**
+   * §99-164-10 환산주택가격 산정 상세 — `hasFirstDisclosure`로 실제 환산이 적용됐을 때만.
+   *
+   * 이 값은 **취득당시 기준시가를 덮어쓴 근거**다. 종전에는 override가 조용히 값만 바꾸고
+   * 사라져 결과 화면에서 「취득당시 기준시가가 왜 이 값인지」를 볼 수 없었다(2026-08-13 추가).
+   */
+  convertedHousing?: import("../general-building-converted-housing").ConvertedHousingDetail;
 
   // 비사업용토지 판정
   /** 건축물 바닥면적 (㎡) — 각 층 중 최대(지하 포함). 사용자 직접 입력 */

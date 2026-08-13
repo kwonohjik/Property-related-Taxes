@@ -148,12 +148,40 @@ export function buildGeneralBuildingBatchPoints(
   asset: Pick<
     AssetForm,
     "acquisitionDate" | "landAcquisitionDate" | "gbAcqLandPricePerSqm" | "gbTransferLandPricePerSqm"
-  >,
+  > &
+    /**
+     * 최초공시 3필드는 **optional**이다 — 없으면 종전 2시점 그대로다(회귀 0).
+     * 프로덕션 호출부는 `asset` 전체를 넘기므로 항상 채워지고, 2시점만 검증하는 기존
+     * anchor fixture는 리터럴 4필드로 계속 통과한다.
+     */
+    Partial<
+      Pick<
+        AssetForm,
+        "gbHasFirstDisclosure" | "gbFirstDisclosureDate" | "gbFirstDisclosureLandPricePerSqm"
+      >
+    >,
   transferDate: string | undefined,
 ): StdPricePointSpec[] {
   const acqYear = commercialAcqYear(asset.acquisitionDate);
   const acqPre2001 = isAcq2001LocationIndexTrack(acqYear);
   const shared = sharesAcqLandPriceYear(asset);
+  /**
+   * 최초공시 시점(§99-164-10) — **조건부**로 낀다. 2026-08-13 3시점 통합.
+   *
+   * ⚠️ 종전 주석은 「일반건물에는 최초고시 시점이 없다(§164⑥ 환산 경로가 아니다)」였다.
+   *    §164⑥(상가 호별고시)이 없는 것은 맞지만, **§99-164-10(주택가격 최초공시)**라는
+   *    다른 축의 최초공시가 있다 — 취득 당시 주택이었다가 상가로 용도변경한 경우다.
+   *
+   * 연도가 확정돼야 낀다: 배치는 시점별 고시 체계 연도로 구조·용도 코드표를 고르므로
+   * `year`가 undefined면 그 시점을 계산에서 제외한다. 날짜 미입력 상태에서 빈 시점을
+   * 띄우면 사용자가 「칸은 있는데 산출되지 않는」 자리를 보게 된다.
+   *
+   * ⚠️ 상가와 달리 **연도를 상수로 고정할 수 없다**(`COMMERCIAL_FIRST_DISCLOSURE_YEAR`).
+   *    개별주택가격은 물건별로 최초 공시 시점이 다르다 — 사용자 입력 날짜가 유일한 소스다.
+   */
+  const firstYear = asset.gbHasFirstDisclosure
+    ? commercialAcqYear(asset.gbFirstDisclosureDate)
+    : undefined;
   return [
     {
       key: "acquisition",
@@ -165,6 +193,17 @@ export function buildGeneralBuildingBatchPoints(
         ? { lookupLandPrice: true, landPriceHint: SEPARATE_LAND_ACQ_LANDPRICE_HINT }
         : {}),
     },
+    ...(firstYear != null
+      ? ([
+          {
+            key: "firstDisclosure",
+            label: "최초공시시",
+            year: firstYear,
+            landPriceYear: landPriceYearOf(asset.gbFirstDisclosureDate),
+            landPricePerM2: asset.gbFirstDisclosureLandPricePerSqm ?? "",
+          },
+        ] as StdPricePointSpec[])
+      : []),
     {
       key: "transfer",
       label: "양도시",
@@ -255,7 +294,10 @@ export function buildGeneralBuildingExtensionBatchPatch(
 /**
  * 일반건물 배치 적용 patch.
  *
- * 상가와 달리 **최초고시 시점이 없고**(§164⑥ 환산 경로가 아니다) §164⑤ 준용 확인 토글도 없다.
+ * 상가의 §164⑥ 호별고시 최초고시(2005 고정)는 없지만, **§99-164-10 주택가격 최초공시**
+ * 시점은 있다(2026-08-13 통합 — `gbHasFirstDisclosure` 시에만 실린다). §164⑤ 준용 확인
+ * 토글은 여전히 없다.
+ *
  * 공시지가 되돌려쓰기의 취득 트랙 규칙은 동일하다 — 취득 ≤2000의 모달 값은 2001.1.1 기준이라
  * 취득당시 토지값(`gbAcqLandPricePerSqm`)에 넣지 않는다. 토지·건물 취득일의 **기준연도가
  * 다를 때도** 마찬가지다(모달 값은 건물 취득일 연도 — 토지축 필드에 덮으면 오염).
@@ -271,8 +313,23 @@ export function buildGeneralBuildingBatchPatch(
 
   if (v.acquisition?.housing != null) patch.gbAcqBuildingValue = String(v.acquisition.housing);
   if (v.transfer?.housing != null) patch.gbTransferBuildingValue = String(v.transfer.housing);
+  /**
+   * 최초공시 시점(§99-164-10) — 3시점 통합(2026-08-13).
+   *
+   * ⚠️ **목적지가 원건물 필드와 다르다.** 같은 모달 결과 형태를 쓰지만 `gbAcqBuildingValue`에
+   *    섞이면 §99-164-10 분자(취득당시)와 분모(최초공시당시)가 같은 값이 되어 환산주택가격이
+   *    항상 「최초공시주택가격 그대로」가 된다 — 조용히 틀린다.
+   * ⚠️ 시점이 실리지 않았으면(2시점 구성) 기존 값을 보존한다 — 다른 시점의 산출이
+   *    최초공시 입력을 지우면 안 된다.
+   */
+  if (v.firstDisclosure?.housing != null)
+    patch.gbFirstDisclosureBuildingStdPrice = String(v.firstDisclosure.housing);
 
   if (v.landPrices?.transfer) patch.gbTransferLandPricePerSqm = v.landPrices.transfer;
+  /* 최초공시 공시지가 되돌려쓰기 — 취득분과 달리 트랙 게이트가 없다(2001.1.1 위치지수 문제는
+     취득 ≤2000 전용이고, 최초공시 시점은 주택가격이 고시된 해라 그 이전일 수 없다). */
+  if (v.landPrices?.firstDisclosure)
+    patch.gbFirstDisclosureLandPricePerSqm = v.landPrices.firstDisclosure;
   if (
     v.landPrices?.acquisition &&
     !isAcq2001LocationIndexTrack(acqYear) &&

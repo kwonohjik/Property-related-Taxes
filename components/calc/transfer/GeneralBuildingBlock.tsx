@@ -53,8 +53,15 @@ import { buildGeneralBuildingBatchPatch, commercialAcqYear } from "@/lib/calc/bu
 import { buildGeneralBuildingBatchPoints } from "@/lib/calc/building-std-batch-apply";
 import { gbBuildingStdPriceFloorArea } from "@/lib/calc/building-std-batch-apply";
 import { GeneralBuildingExtensionSection } from "./GeneralBuildingExtensionSection";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
+import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
+import { isGbFirstDisclosureApplicable } from "@/lib/calc/gb-first-disclosure";
+import { gbFirstDisclosureLandStdPriceOf } from "@/lib/calc/gb-first-disclosure";
+import { gbFirstDisclosureUsesLegacyLandTotal } from "@/lib/calc/gb-first-disclosure";
 import {
   effectivePartAcqMode,
   needsGbActualAcqStdPrice,
@@ -137,6 +144,53 @@ export function GeneralBuildingBlock({
 
   /* 증축분(건물2) 2시점 게이트·points는 `GeneralBuildingExtensionSection`이 자체 계산한다 —
      증축일 축은 그 카드 안에서만 쓰이므로 여기 둘 이유가 없다(2026-08-12 분리). */
+
+  /**
+   * §99-164-10 최초공시 — **노출 축**(2026-08-13 통합).
+   *
+   * 🔑 `useEstimatedAcquisition` 단독이 **아니다.** API가 payload를 싣는 조건이 파트 축
+   * (`anyEstimated`)이라, 플래그로 판정하면 **분리 취득 + 파트만 환산**에서 어긋난다 —
+   * API는 보낼 준비가 됐는데 토글이 없어 입력 경로가 사라진다. UI·validate·API가
+   * `isGbFirstDisclosureApplicable` 하나를 공유한다(계획서 §7.5).
+   */
+  const fdApplicable = isGbFirstDisclosureApplicable(asset);
+  /**
+   * ①② 안의 최초공시 시점 박스 렌더 조건 — **토글과 항상 함께** 뜨고 함께 사라진다.
+   *
+   * ⚠️ `gbHasFirstDisclosure` 단독으로 걸면, 실거래가로 전환했을 때 토글은 사라졌는데
+   *    (`fdApplicable=false`) ①②에 최초공시 칸만 유령처럼 남는다.
+   */
+  const fdOn = asset.gbHasFirstDisclosure && fdApplicable && !shareAcquisitionOnly;
+  /** 구형 자산: 단가 없이 총액만 저장된 상태 — 그 값이 계산에 쓰이는 중임을 알린다. */
+  const fdUsesLegacyLandTotal = gbFirstDisclosureUsesLegacyLandTotal(asset);
+
+  /**
+   * §99-164-10 환산주택가격 미리보기 — `GeneralBuildingConversionSection`에서 이전(2026-08-13).
+   * useMemo 순수 — `useEffect → store` 미러링 금지 정책 준수.
+   *
+   * 토지 항은 **순수 함수**를 쓴다(단가 × 면적 || legacy 총액) — API·validate와 같은 소스라야
+   * 미리보기 금액과 실제 세액이 갈리지 않는다.
+   */
+  const convertedHousingPreview = useMemo(() => {
+    if (!asset.gbHasFirstDisclosure) return null;
+    const firstDisc = parseAmount(asset.gbFirstDisclosurePrice);
+    const firstDiscLand = gbFirstDisclosureLandStdPriceOf(asset);
+    const firstDiscBld = parseAmount(asset.gbFirstDisclosureBuildingStdPrice);
+    const acqLandPerSqm = parseAmount(asset.gbAcqLandPricePerSqm ?? "");
+    const acqBld = parseAmount(asset.gbAcqBuildingValue ?? "");
+    const landArea = parseDecimal(asset.gbLandArea ?? "");
+    if (!firstDisc || !firstDiscLand || !firstDiscBld || !acqLandPerSqm || !acqBld || !landArea)
+      return null;
+    const acqLand = Math.floor(acqLandPerSqm * landArea);
+    const acqTotal = acqLand + acqBld;
+    const firstDiscTotal = firstDiscLand + firstDiscBld;
+    if (firstDiscTotal <= 0 || acqTotal <= 0) return null;
+    const converted = Math.floor((firstDisc * acqTotal) / firstDiscTotal);
+    return { converted, firstDisc, acqTotal, firstDiscTotal };
+    /* 의존성은 `asset` 하나다 — 토지 항이 순수 함수(`gbFirstDisclosureLandStdPriceOf(asset)`)를
+       거치므로 개별 필드를 나열해도 lint가 「불필요한 의존성」으로 잡는다. 자산 폼은 patch마다
+       새 객체라 실질 재계산 빈도도 같다. */
+  }, [asset]);
 
   const isBurdenedGift = asset.transferType === "burdened_gift";
   /** 일부 양도(O-4) — 증축분 취득가액·필요경비도 「양도분 기준」으로 안내한다. */
@@ -255,6 +309,87 @@ export function GeneralBuildingBlock({
             `asset-sections/AssetAreaGeneralBuilding.tsx` — 연면적 게이트는 2026-08-05에
             제거돼 상시 노출된다. 여기에 면적 칸을 다시 추가하지 말 것. */}
 
+        {/*
+          §99-164-10 환산주택가격 — ① 기본정보의 「주택 → 상가 용도변경」 카드에서
+          이전했다 (2026-08-13 · 사용자 요청 · 이미지7·8).
+
+          **자리**: 「취득 시나리오 가이드」 직후 · ① 토지 공시지가 직전. 토글이 게이트하는
+          입력 칸(①②의 최초공시 시점 박스)이 바로 아래에 이어지므로 흐름이 끊기지 않는다.
+
+          🔒 **지분(%) 분할 2번째 이후에서는 숨긴다.** 최초공시는 **물건 사건**이라
+             `GB_PROPERTY_LEVEL_FORM_FIELDS`가 자산 1의 값을 전 지분에 복사한다. 여기서 또
+             받으면 지분마다 값이 갈려 Zod superRefine이 400을 던진다.
+             ⚠️ 종전에는 ① 기본정보가 통째로 숨겨져 자동 보호됐다 — 이전하면서 그 보호가
+                사라졌으므로 **명시적 게이트가 필수**다(계획서 §2.5·K-6).
+        */}
+        {!shareAcquisitionOnly && fdApplicable && (
+          <ToggleCard
+            tone="violet"
+            variant="card"
+            title="주택으로 최초공시 후 상가로 용도변경 (환산취득가)"
+            description="취득 당시 주택으로 개별주택가격이 고시된 뒤 상가로 용도변경한 경우 ON. §99-164-10 환산주택가격으로 취득당시 기준시가를 환산합니다."
+            checked={asset.gbHasFirstDisclosure}
+            onCheckedChange={(v) => onChange({ gbHasFirstDisclosure: v })}
+            trailing={
+              <PrecedentArticleModal
+                citation="양도소득세 집행기준 99-164-10"
+                label="집행기준"
+                kind="interpretation"
+                summary={
+                  "취득당시에는 주택으로 개별주택가격이 고시된 이후 상가건물로 용도를 변경하여 양도하는 경우,\n취득 시 기준시가는 환산주택가격을 자산별 기준시가로 안분하여 토지와 주택분 기준시가를 각각 산정하며,\n양도 시 기준시가는 일반건물과 토지에 대한 기준시가를 적용하여 계산한다.\n\n취득당시의 환산주택가격(기준시가) =\n  최초공시주택가격 × (토지 취득당시의 기준시가 + 건물 취득당시의 기준시가)\n               ÷ (주택가격 최초공시 당시의 토지기준시가와 건물기준시가의 합계액)"
+                }
+              />
+            }
+          >
+            {/* 최초공시일 — 아래 ①②의 최초공시 시점이 이 날짜로 공시지가 기준연도와
+                건물기준시가 고시 체계 연도를 정한다. 그래서 금액 칸보다 먼저 온다.
+                ⚠️ 상가(§164⑥)의 2005 고정과 달리 **상수화할 수 없다** — 개별주택가격은
+                   물건별로 최초 공시 시점이 다르다. */}
+            <FieldCard
+              label="최초공시일"
+              hint="그 주택의 개별주택가격이 최초로 고시된 날. 아래 ①② 최초공시 시점의 공시지가 기준연도·건물기준시가 계산에 쓰입니다."
+            >
+              <DateInput
+                value={asset.gbFirstDisclosureDate}
+                onChange={(v) => onChange({ gbFirstDisclosureDate: v })}
+              />
+            </FieldCard>
+
+            {/* 최초공시주택가격 — §99-164-10 산식의 피승수. 토지·건물 어느 축도 아닌
+                **주택 단일 가격**이라 ①(토지)·②(건물) 어디에도 넣지 않고 여기 둔다. */}
+            <FieldCard
+              label="최초공시주택가격"
+              unit="원"
+              hint="주택가격이 최초로 고시된 시점의 개별주택가격 총액 (원)"
+            >
+              <CurrencyInput
+                label="최초공시주택가격"
+                hideUnit
+                value={asset.gbFirstDisclosurePrice}
+                onChange={(v) => onChange({ gbFirstDisclosurePrice: v })}
+              />
+            </FieldCard>
+
+            {convertedHousingPreview && (
+              <ToneCard tone="violet" noDark className="p-2.5">
+                <p className="text-xs font-semibold text-violet-900">
+                  환산주택가격 = {convertedHousingPreview.converted.toLocaleString("ko-KR")} 원
+                </p>
+                <p className="mt-1 text-caption text-violet-800">
+                  = {convertedHousingPreview.firstDisc.toLocaleString("ko-KR")}
+                  {" × "}
+                  {convertedHousingPreview.acqTotal.toLocaleString("ko-KR")}
+                  {" ÷ "}
+                  {convertedHousingPreview.firstDiscTotal.toLocaleString("ko-KR")}
+                </p>
+                <p className="mt-1 text-caption text-violet-700">
+                  근거: 양도소득세 집행기준 99-164-10
+                </p>
+              </ToneCard>
+            )}
+          </ToggleCard>
+        )}
+
         {/* ① 토지 공시지가 (취득 → 양도) — 3시점 화면(`ThreePointAssetMajorRender`)과 같은
             **자산 축** 배치. 시점 정체성은 안쪽 amber(취득)/emerald(양도) 박스가 그대로 진다. */}
         <ToneCard
@@ -287,6 +422,51 @@ export function GeneralBuildingBlock({
                       : "취득일 전년도 기준 개별공시지가 (원/㎡)"
                   }
                 />
+              </ToneCard>
+            </div>
+          )}
+
+          {/* 최초공시시 — §99-164-10 분모. 취득(amber)·양도(emerald) 사이에 시간 순으로 놓는다.
+              tone violet은 3시점 화면(`ThreePointAssetMajorRender`)의 최초공시 계약과 같다. */}
+          {fdOn && (
+            <div data-gb-stdprice="first">
+              <ToneCard tone="violet" title="최초공시시" noDark>
+                <LandPriceLookupField
+                  label="최초공시시 토지 공시지가"
+                  pricePerSqm={asset.gbFirstDisclosureLandPricePerSqm}
+                  onPricePerSqmChange={(v) => onChange({ gbFirstDisclosureLandPricePerSqm: v })}
+                  area={parseDecimal(asset.gbLandArea) || undefined}
+                  referenceDate={asset.gbFirstDisclosureDate || undefined}
+                  jibun={asset.addressJibun}
+                  pricePerSqmTestId="gb-first-land-price"
+                  landStdPriceTestId="gb-first-land-std"
+                  hint={
+                    asset.gbFirstDisclosureDate
+                      ? "주택가격 최초공시 시점의 개별공시지가 (원/㎡)"
+                      : "주택가격 최초공시 시점의 개별공시지가 (원/㎡). 위 최초공시일을 입력하면 연도 조회가 활성화됩니다."
+                  }
+                />
+                {/* 구형 자산 — 단가 없이 총액만 저장된 상태. 안내가 없으면 화면은 비어 있는데
+                    계산은 그 총액으로 도는 유령 값이 된다. 지우면 fallback이 끊긴다. */}
+                {fdUsesLegacyLandTotal && (
+                  <ToneCard tone="amber" noDark className="p-2.5">
+                    <p className="text-caption text-amber-800">
+                      이전에 저장된 토지 기준시가 총액{" "}
+                      <b>{parseAmount(asset.gbFirstDisclosureLandStdPrice).toLocaleString("ko-KR")}원</b>
+                      을 사용하고 있습니다. 위에 ㎡당 공시지가를 입력하면 그 값이 우선합니다.
+                    </p>
+                    <div className="mt-1.5 flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        data-testid="gb-first-land-legacy-clear"
+                        onClick={() => onChange({ gbFirstDisclosureLandStdPrice: "" })}
+                      >
+                        저장된 총액 지우기
+                      </Button>
+                    </div>
+                  </ToneCard>
+                )}
               </ToneCard>
             </div>
           )}
@@ -396,6 +576,33 @@ export function GeneralBuildingBlock({
                     <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-gb-acq`} applyTimePoint="acquisition" hideFloorAreaInput prefill={{ floorArea: gbOriginalArea, landAreaM2: asset.gbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ gbAcqBuildingValue: String(v) })} />
                   </div>
                 )}
+              </ToneCard>
+            </div>
+          )}
+
+          {/* 최초공시시 건물 기준시가 — §99-164-10 분모의 건물 항.
+              ⚠️ 증축이 있어도 이 값은 **원건물분**이다. 증축은 취득 이후 사건이라 최초공시
+                 당시에 존재하지 않았거나 분모에 들어가면 안 된다(엔진도 원건물 필드만
+                 override한다 — `general-building-converted-housing.ts`). */}
+          {fdOn && (
+            <div data-gb-stdprice="first">
+              <ToneCard tone="violet" title="최초공시시" noDark>
+                <FieldCard
+                  label="최초공시시 건물 기준시가"
+                  unit="원"
+                  hint={
+                    showBatchLauncher
+                      ? "주택가격 최초공시 시점의 건물 기준시가 총액 (원). 모르면 위 일괄 계산으로 산정."
+                      : "주택가격 최초공시 시점의 건물 기준시가 총액 (원)."
+                  }
+                >
+                  <CurrencyInput
+                    label="최초공시시 건물 기준시가"
+                    hideUnit
+                    value={asset.gbFirstDisclosureBuildingStdPrice}
+                    onChange={(v) => onChange({ gbFirstDisclosureBuildingStdPrice: v })}
+                  />
+                </FieldCard>
               </ToneCard>
             </div>
           )}
