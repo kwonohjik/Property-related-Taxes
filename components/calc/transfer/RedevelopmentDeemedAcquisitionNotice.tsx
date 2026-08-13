@@ -44,8 +44,8 @@ export function RedevelopmentDeemedAcquisitionNotice({
         <p className="text-xs text-violet-800">
           증여로 취득한 종전자산은 증여일 현재 상증법 §60~66 평가액(증여세 신고가액)을 종전자산 취득가액으로
           봅니다. 증여 신고가액은 항상 확인 가능하므로 §166③ 환산취득가·§163⑥ 개산공제는 적용하지 않습니다.
-          <span className="font-semibold"> &ldquo;환산취득가 사용&rdquo; 토글을 OFF</span>로 두고 아래 &ldquo;인가전 분 종전
-          주택 취득가액(실가 모드)&rdquo;에 증여 신고가액을 입력하세요.
+          아래 &ldquo;인가전 분 종전 부동산 취득가액&rdquo;에서 <span className="font-semibold">&ldquo;실지거래가액&rdquo;</span>을
+          선택하고 증여 신고가액을 입력하세요.
         </p>
       </ToneCard>
     );

@@ -55,7 +55,7 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     asset.redevIsSuccessorMember !== "yes" &&
     asset.useEstimatedAcquisition
   ) {
-    return `${label}: 증여 취득 종전자산은 환산취득가를 지원하지 않습니다. 증여일 평가액(증여세 신고가액)이 취득가액이므로 "환산취득가 사용" 토글을 OFF로 전환하고 종전자산 취득가액에 증여 신고가액을 입력하세요. (소득세법 시행령 §163⑨)`;
+    return `${label}: 증여 취득 종전자산은 환산취득가를 지원하지 않습니다. 증여일 평가액(증여세 신고가액)이 취득가액이므로 ⑤ 「인가전 분 종전 부동산 취득가액」에서 "실지거래가액"을 선택하고 증여 신고가액을 입력하세요. (소득세법 시행령 §163⑨)`;
   }
 
   // ── subject="right" 전용 검증 (사례 36) ──
@@ -84,12 +84,12 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     // 실가 모드(사례 42)는 runOriginalMember 경로로 분기 — computeRedevelopmentSplit 가 originalAssetType 무관하게 §166①2호 정확 적용.
     // ※ 사례 42 anchor toBe 검증은 보류(snapshot only) — 양도코리아 PDF와 교재 답 상이 (design.md:31 행 #7 HOLD 유지).
     if (subject === "apt" && settlementDirection === "receive" && asset.useEstimatedAcquisition) {
-      return `${label}: 토지 출자 + 완공 APT 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR (사례 43) 지원 예정입니다. 취득가액을 확인할 수 있으면 "환산취득가 사용" 토글을 OFF로 전환하세요.`;
+      return `${label}: 토지 출자 + 완공 APT 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR (사례 43) 지원 예정입니다. 취득가액을 확인할 수 있으면 ⑤ 「인가전 분 종전 부동산 취득가액」에서 "실지거래가액"을 선택하세요.`;
     }
     // land + right + 환산 + receive: 후속 PR (runLandContribEstimated가 settlementPaid로 pay만 가정 —
     // §166②2호·§166①2호 수령 산식 미구현). 실가 receive는 아래 #1(A)로 개방.
     if (subject === "right" && settlementDirection !== "pay" && asset.useEstimatedAcquisition) {
-      return `${label}: 토지 출자 + 입주권 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR에서 지원됩니다. 취득가액을 확인할 수 있으면 "환산취득가 사용" 토글을 OFF로 전환하세요.`;
+      return `${label}: 토지 출자 + 입주권 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR에서 지원됩니다. 취득가액을 확인할 수 있으면 ⑤ 「인가전 분 종전 부동산 취득가액」에서 "실지거래가액"을 선택하세요.`;
     }
     // land + right + 실가 (pay·receive 모두): #1(A) 지원 — runOriginalMember→computeRightPay(§166①1호, pay)/
     // computeRightReceive(§166①2호, receive)가 종전자산 actualAcquisitionPrice=신고가액 사용(환산 §166③ 아님).

@@ -56,12 +56,24 @@ export function isRedevAreaAsset(asset: AssetForm): boolean {
  */
 export function shouldShowRedevValuationSection(asset: AssetForm): boolean {
   if (asset.redevIsSuccessorMember === "yes") return false;
-  const isHousingContribEstimated =
+  return !isHousingContribEstimatedBranch(asset);
+}
+
+/**
+ * 단독주택 출자 §164⑤ PHD 2-point 분기 — 일반 환산 카드 대신 전용 카드
+ * (`HousingContribEstimatedSection`)를 쓰는 조합.
+ *
+ * `shouldShowRedevValuationSection`과 취득가액 모드 라디오(`RedevelopmentBlock` ⑤)가
+ * **같은 술어**를 써야 한다. 복제하면 환산을 골랐는데 아무 입력칸도 안 뜨거나
+ * 두 카드가 동시에 뜬다.
+ */
+export function isHousingContribEstimatedBranch(asset: AssetForm): boolean {
+  return (
     asset.redevOriginalAssetType === "housing" &&
     (asset.redevSubject === "right" || asset.assetKind === "right_to_move_in") &&
     asset.redevSettlementDirection === "receive" &&
-    asset.useEstimatedAcquisition === true;
-  return !isHousingContribEstimated;
+    asset.useEstimatedAcquisition === true
+  );
 }
 
 export function AssetAreaRedevelopment({ asset, onChange }: Props) {

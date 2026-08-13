@@ -12,7 +12,7 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -161,14 +161,11 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
 
   const landAreaNumber = parseDecimal(asset.redevLandArea) || undefined;
 
+  // 모드 선택은 상위 ⑤ 「종전 부동산 취득가액」 섹션의 라디오가 담당한다
+  // (종전에는 이 컴포넌트가 「환산취득가 사용」 ToggleCard로 모드까지 겸했다 — 2026-08-13 통합).
+  // 여기는 **환산을 고른 뒤의 입력 본문**만 렌더한다.
   return (
-    <ToggleCard
-      tone="rose"
-      checked={asset.useEstimatedAcquisition}
-      onCheckedChange={(v) => onChange({ useEstimatedAcquisition: v })}
-      title="환산취득가 사용"
-      description="취득가액 확인 불가 시 기준시가 비율로 환산 (시행령 §166③ + §176의2②2호)"
-    >
+    <ToneCard tone="rose" noDark bodyClassName="space-y-2">
       <div className="space-y-2">
 
         {/* ── 사례 37: 토지 출자 분기 ── */}
@@ -326,7 +323,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
           </>
         )}
       </div>
-    </ToggleCard>
+    </ToneCard>
   );
 }
 
