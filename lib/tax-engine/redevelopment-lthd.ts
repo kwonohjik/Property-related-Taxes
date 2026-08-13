@@ -139,8 +139,17 @@ export function computeRedevelopmentLthd(
       approvalDate,
       isSuccessorRightToMoveIn: isSuccessorRightToMoveIn ?? false,
       isOneHouseSingle: effectiveOneHouseSingle,
-      // 입주권은 인가전 분만 LTHD → 기존건물분 거주월수만 의미 있음
-      residencePeriodMonths: existingResidenceMonths,
+      /**
+       * 입주권은 인가전 분만 LTHD → **종전주택 거주월수만** 의미 있다.
+       *
+       * ⚠️ `newHouseResidenceMonths`(신축 APT 거주월수, 사례 45)를 더하지 않는다 —
+       * 입주권은 완공 **전** 권리 양도라 신축 거주가 존재할 수 없다. 종전에는 위
+       * `existingResidenceMonths`(= prior + new)를 그대로 넘겨, 신축 거주월수만 입력해도
+       * 인가전 분 LTHD가 표1 14% → 표2 68%까지 올라갔다(2026-08-14 실측).
+       * 입력 UI·API에도 게이트를 뒀지만(`RedevelopmentBlock` · `buildRedevelopmentPayload`),
+       * 별도 조립 경로(다건 route 등)까지 덮으려면 엔진이 정본이어야 한다.
+       */
+      residencePeriodMonths: hasSplitResidence ? prior : input.residencePeriodMonths ?? 0,
     });
   }
 

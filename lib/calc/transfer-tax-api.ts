@@ -228,19 +228,33 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
 
   // 사례 46 — receiveOnly 모드: transferPrice = settlementAmount, transferDate = settlementSaleDate 자동 미러
   // memory `mirror-pattern` 3중 패턴 (UI display + API + validate). 엔진은 receiveOnly 분기에서 transferPrice 무시 — 2중 안전망.
-  const isReceiveOnly = isRedevelopment && primary.redevReceiveOnlyMode === "yes";
+  //
+  // ⚠️ **완공 APT 양도(subject="apt") 전용이다.** 엔진의 receiveOnly 구현은 `computeAptReceive`
+  //    (redevelopment-split.ts) 안에만 있어 입주권(subject="right") 분기에는 대응 산식이 없다.
+  //    subject 가드 없이 두면 「양도차익 0 강제」는 걸리지 않은 채 여기서 양도가액만 청산금 수령액으로
+  //    교체돼 **양도차익이 조용히 사라진다**(실측: 4.2억 양도 → 청산금 분 양도차익 1.7억 → 0).
+  //    subject는 `redevPayload`가 단일 소스 — UI display fallback과 같은 값이다(복제 금지).
+  const isReceiveOnly =
+    isRedevelopment && redevPayload?.subject === "apt" && primary.redevReceiveOnlyMode === "yes";
   const receiveOnlySettlementAmount = isReceiveOnly ? parseAmount(primary.redevSettlementAmount) : 0;
   const receiveOnlyTransferDate = isReceiveOnly && primary.redevSettlementSaleDate
     ? primary.redevSettlementSaleDate
     : null;
 
-  // 재개발/재건축 입주권 양도(subject="right") 시 엔진 routing 키를 right_to_move_in으로 remap.
-  //   - UI assetKind="redevelopment_apt"는 사업 분류(재개발/재건축 사업), redevSubject가 실제 양도 객체
-  //   - 엔진 isRedevelopmentActive(`lib/tax-engine/redevelopment.ts:340-348`)는 propertyType ↔ subject 1:1 매핑 요구
-  //     · redevelopment_apt → subject="apt" 필수
-  //     · right_to_move_in → subject="right" 필수
-  //   - 부정합 조합(redevelopment_apt + subject="right") 시 엔진이 일반 양도 분기로 routing되어
-  //     redevelopmentDetail 미생성 + LTHD 전체 양도차익 일괄 적용 회귀 발생
+  // 부정합 조합(assetKind="redevelopment_apt" + redevSubject="right") 방어 remap.
+  //
+  //   - 엔진 `isRedevelopmentActive`(lib/tax-engine/redevelopment.ts:786-789)는 propertyType ↔ subject
+  //     1:1 매핑을 요구한다: redevelopment_apt → "apt" / right_to_move_in → "right".
+  //     어긋나면 엔진이 일반 양도 분기로 routing돼 redevelopmentDetail 미생성 +
+  //     LTHD가 전체 양도차익에 일괄 적용되는 회귀가 난다.
+  //
+  //   - **양도 대상 축은 2026-08-13(PR #1245)부터 자산 종류가 단독으로 결정한다.**
+  //     종전 주석의 「assetKind는 사업 분류이고 redevSubject가 실제 양도 객체」 모델은 폐지됐다.
+  //     ① 라디오가 사라졌고 `redevSubjectPatchForAssetKind`가 자산 종류에서 파생하며,
+  //     저장값은 `calc-wizard-asset-migrate.ts`가 자산 종류를 승격시켜 흡수한다
+  //     (store persist merge · legacy migration · 이력 복원 3경로 모두 `migrateAsset` 경유).
+  //     ⇒ 정상 경로에서는 **도달하지 않는다**. 마이그레이션을 거치지 않고 조립된 입력
+  //     (직접 fixture 등)만을 위한 안전망으로 남긴다.
   const isRedevelopmentRightTransfer =
     primary.assetKind === "redevelopment_apt" && primary.redevSubject === "right";
 

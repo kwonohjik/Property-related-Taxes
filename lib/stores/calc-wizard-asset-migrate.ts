@@ -554,6 +554,28 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 이후 `redevSubject`는 자산 종류에서 파생한다 — 저장값은 하위호환 잔재이므로 정규화해 둔다.
   if (a.assetKind === "right_to_move_in") a.redevSubject = "right";
   else if (a.assetKind === "redevelopment_apt") a.redevSubject = "apt";
+
+  /**
+   * 완공 APT 양도 전용 필드를 입주권 자산에서 **비운다** (2026-08-14).
+   *
+   *   `redevReceiveOnlyMode`      = 청산금 수령분 단독 신고 (사례 46)
+   *   `redevNewHouseResidenceMonths` = 신축 APT 거주월수 (사례 45)
+   *
+   * 둘 다 **신축 APT가 존재해야** 성립하는 사실이라 완공 전 권리 양도인 입주권에는 없다.
+   * 종전에는 두 필드가 입주권에서도 입력·송신돼 세액을 조용히 바꿨다(2026-08-14 실측:
+   * 전자는 양도가액을 청산금 수령액으로 교체해 양도차익 1.7억 소실, 후자는 LTHD 14%→68%).
+   *
+   * 입력 UI를 숨기는 것만으로는 **이미 저장된 값이 남는다** — 그리고 카드가 사라져
+   * 사용자가 끌 수단도 없다. 그래서 validate 차단이 아니라 여기서 정규화한다
+   * ([[feedback-ui-gate-removes-sole-input-path]]).
+   *
+   * ⚠️ 이 정규화는 **세액을 바꾼다** — 위 승격(`redevelopment_apt` + `right` → 입주권)을 거친
+   * 자산이 대상이면 종전의 잘못된 값이 사라지고 정상 값으로 바뀐다. 의도된 정정이다.
+   */
+  if (a.assetKind === "right_to_move_in") {
+    a.redevReceiveOnlyMode = "";
+    a.redevNewHouseResidenceMonths = "";
+  }
   if (a.redevApprovalLawBasis === undefined) a.redevApprovalLawBasis = "";
   if (a.redevOriginalAssetType === undefined || a.redevOriginalAssetType === "") a.redevOriginalAssetType = "housing";
   if (a.redevSettlementDirection === undefined) a.redevSettlementDirection = "";
