@@ -21,7 +21,9 @@
 ## PDCA 5단계
 
 1. **PM/Plan**: 법령 근거. 엔진+UI 시니어 동시 호출. 신규 세목 UI 첫 진입 시 `docs/02-design/features/_new-tax-ui-kickoff.checklist.md`.
-2. **Design**: `_template.engine.design.md` 복사. **케이스 인벤토리 표 행≥1 필수** — 비면 Do 진입 금지.
+2. **Design**: **케이스 인벤토리 표 행≥1 필수** — 비면 Do 진입 금지.
+   산출물은 **조건부**다(2026-08-13 · `plan-design-self-review-loop` v4 § 산출물 게이트): 기본은 **통합 계획서 하나**(케이스 매트릭스 + 설계 + 테스트 계획)이고, `_template.engine.design.md` 복사는 ⓐ여러 세션·PR에 걸침(계획서 500줄↑ 또는 Phase 3개↑) ⓑUI 위젯 5개↑ 신설 ⓒ다른 맥락에서 이어받음 중 **하나라도** 해당할 때 한다.
+   ⚠️ 종전 「엔진 타입이 바뀌면 design.md 2개 강제」는 **폐기**됐다 — 실측 준수율 8%(plan.md 12건 중 1건)에 미준수 건들의 품질이 오히려 양호해, 판정축을 **「세액이 바뀌는가」**로 옮겼다. 케이스 인벤토리 요구는 **그대로**이며 통합 계획서 안에서 충족하면 된다.
 3. **Do**: 엔진 = 엔진+anchor. UI = 14개 동기화 지점. 디자인 갱신 없이 우회 금지.
 4. **Check**: `ui-engine-sync-checker` + QA + 브라우저 수동 확인.
 5. **Act**: 회귀 후속 + 디자인 환류. 상태: `.bkit/state/pdca-status.json`.
