@@ -564,7 +564,17 @@ export function buildAssetPayload(
     assetLabel: asset.assetLabel,
     assetKind: toEngineAssetKind(asset.assetKind),
     // ④ 공익수용 §164⑨ 1호 특례 — **컴패니언 자산도 지원**(계획 Q5).
-    // `transferCause`는 §77 감면용으로 이미 위 스키마에 있으나, min[] 3후보 값은 여기서 실어야
+    //
+    // 🔴 `transferCause`는 **1호 트랙의 게이트**다(엔진 `applyExpropriationValuation`:112 ·
+    //    `applyHousingExpropriationValuation`:257). 이것을 싣지 않으면 아래 min[] 후보값을
+    //    아무리 실어도 1호는 **한 번도 발동하지 않는다**. 게이트는 1호가 도달하는 트랙
+    //    (원/㎡ 가·나목 + 주택 총액 라목)의 합집합 — 그 밖은 아래와 같은 이유로 막는다.
+    //    ⚠️ 2호(공매·경락)는 조문상 수용을 요건으로 하지 않으므로 `transferCause`에 **종속시키지 않는다**.
+    ...((isExprValuationEligibleAssetKind(asset.assetKind) ||
+      isHousingExprEligibleAssetKind(asset.assetKind)) && asset.transferCause
+      ? { transferCause: asset.transferCause }
+      : {}),
+    // min[] 3후보 값은 여기서 실어야
     // `buildCompanionEngineInputs`가 엔진 input에 매핑할 수 있다(⑫ 컴패니언 스키마 동반 필수).
     //
     // ⚠️ **적격 자산일 때만 전송**(UI 노출 조건과 동일 — `isExprValuationEligibleAssetKind`).

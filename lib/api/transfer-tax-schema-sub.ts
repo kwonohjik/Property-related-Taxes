@@ -295,6 +295,34 @@ export const companionAssetSchema = z.object({
   /** 취득시점 기준시가 (선택) — totalAcquisitionPrice 안분 또는 매매 estimated 환산 시 키 */
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   /**
+   * ⑫ 공익수용·공매 §164⑨ 특례 — **컴패니언 자산도 대상**(소득세법 시행령 §164⑨).
+   *
+   * §164⑨은 법 §99①1호 **가목~라목(토지·건물·오피스텔/상업용 건물·주택) 전부**를 대상으로 하는
+   * **자산 단위** 규정이고, 「주된 자산 전용」·「일괄양도 제외」 문언이 본문·괄호·단서 어디에도 없다.
+   * 나아가 법 §100② → 영 §166⑥ → 「부가가치세법 시행령」 §64①1호가 일괄양도 안분 키를
+   * **기준시가**로 지정하므로, 컴패니언의 양도 당시 기준시가는 법적으로 살아있는 값이고
+   * §164⑨이 바로 그 값을 계산하는 규정이다.
+   *
+   * 🔴 이 9필드가 없으면 ④(`buildAssetPayload`)가 실은 값을 Zod가 **조용히 떼어내**
+   *    ⑭(`bundled-split-helpers.ts`)의 매핑이 이미 있어도 엔진에 도달하지 못한다.
+   *    (실측: 400이 아니라 200 + 특례 미적용값 — 화면에는 입력값이 그대로 보인다.)
+   *
+   * 타입은 단건 `propertyBaseShape`(transfer-tax-schema.ts)와 **동일**해야 한다.
+   * ⚠️ 2호(공매·경락)는 조문상 수용을 요건으로 하지 않는다 — `transferCause`에 종속시키지 말 것.
+   */
+  transferCause: z.enum(["general", "public_expropriation"]).optional(),
+  /** §164⑨1호 원/㎡ 트랙 (가·나목) — 엔진이 게이트, 여기선 strip 방지 */
+  standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),
+  transferArea: z.number().positive().optional(),
+  compensationPerSqm: z.number().int().nonnegative().optional(),
+  compensationBasisStdPrice: z.number().int().nonnegative().optional(),
+  /** §164⑨2호 공매·경락 — 1호와 독립 요건(수용 불요) */
+  isAuctionTransfer: z.boolean().optional(),
+  auctionPrice: z.number().int().nonnegative().optional(),
+  /** §164⑨1호 주택 총액 트랙 (라목) — 개별·공동주택가격은 총액이라 원/㎡ 분해가 없다 */
+  housingCompensationTotal: z.number().int().nonnegative().optional(),
+  housingCompensationBasisTotal: z.number().int().nonnegative().optional(),
+  /**
    * 공유지분율 (0<r≤1) — 필요경비 개산공제(§163⑥) base 축소 전용. ⑫ 침묵 stripping 방지.
    * 기준시가는 물건 전체 값을 유지하고 개산공제만 「지분 기준시가 × 3%」가 된다.
    */

@@ -95,6 +95,14 @@ describe("C-6 기타토지 PDF p.1706 흐름도", () => {
   });
 
   it("N4: 2% 이상 → 별도합산 사업용 (carve-out 미진입·회귀)", () => {
+    // 이 테스트의 주제는 **2% 기준(나대지 간주)** 이다 — 2% 이상이면 Step 3-2 carve-out에
+    // 들어가지 않는다는 회귀 방어.
+    // 🔴 2026-08(F28): Step 0.6 배율 게이트가 「별도합산 선언(`separate`)」으로 정정되면서
+    //   이 입력(일반주거 4배 × 바닥 200㎡ = 허용 800㎡ < 부속토지 1,000㎡)이 배율 초과에
+    //   걸려 비사업용이 됐다. 배율 초과 판정 자체는 정정 후 동작이 옳다(별도 anchor
+    //   `other-land-building-multiplier.anchor.test.ts` BM-2가 전담). 여기서는 주제인
+    //   2% 기준만 남기기 위해 바닥면적을 250㎡(×4 = 1,000㎡ = 부속토지)로 맞춰 배율 축을
+    //   중립화한다 — 기대값을 뒤집는 대신 교란 변수를 제거하는 쪽을 택했다.
     const r = judgeOtherLand(
       base({
         landArea: 1000,
@@ -103,7 +111,7 @@ describe("C-6 기타토지 PDF p.1706 흐름도", () => {
           hasBuilding: true,
           buildingStandardValue: 25_000_000, // 2% = 20M, 25M ≥ 20M → 2% 이상
           landStandardValue: 1_000_000_000,
-          buildingFloorArea: 200,
+          buildingFloorArea: 250, // §101② 일반주거 4배 → 허용 1,000㎡ = 부속토지 (배율 이내)
           isRelatedToResidenceOrBusiness: false,
         },
       }),

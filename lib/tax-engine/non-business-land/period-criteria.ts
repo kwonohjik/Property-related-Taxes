@@ -40,7 +40,6 @@ import {
   mergeOverlappingPeriods,
   sumDaysInWindow,
 } from "./utils/period-math";
-import { calculateGraceDaysInWindow } from "./grace-period";
 
 export type PeriodCriteriaUsed = "3y-2y" | "5y-3y" | "ratio" | "none";
 
@@ -67,7 +66,10 @@ export interface PeriodCriteriaResult {
   totalOwnershipDays: number;
   /** 유효 사업용 일수 (전체 보유기간 클립, 유예기간 가산 포함) */
   effectiveBusinessDays: number;
-  /** 유예기간 가산 일수 (전체 보유기간 window 내, §168조의14①) */
+  /**
+   * 유예기간 가산 일수 (전체 보유기간 window 내, §168조의14①).
+   * 사업용 사용기간과의 **합집합 증가분** — 이미 사업용인 날과 겹치는 유예기간은 0으로 잡힌다.
+   */
   gracePeriodDays: number;
   /** §168조의6 소유기간 버킷 (1=5년이상·2=3~5년·3=3년미만). 디버깅·테스트용 echo */
   ownershipBucket?: 1 | 2 | 3;
@@ -129,7 +131,7 @@ export function getThresholdRatio(
  * 3가지 기간기준 중 하나라도 충족하면 사업용 인정 (OR 판정).
  * PASS 즉시 반환하여 최소 비용으로 판정.
  *
- * @param gracePeriods - 유예기간 목록 (§168조의14 ①). 제공 시 각 window에 가산됨.
+ * @param gracePeriods - 유예기간 목록 (§168조의14 ①). 제공 시 사업용 사용기간과 **합집합**으로 묶인다.
  */
 export function meetsPeriodCriteria(
   effectivePeriods: DateInterval[],
@@ -141,7 +143,21 @@ export function meetsPeriodCriteria(
 ): PeriodCriteriaResult {
   const ownershipStart = getOwnershipStart(acquisitionDate);
   const totalOwnershipDays = Math.max(0, differenceInDays(transferDate, ownershipStart));
-  const merged = mergeOverlappingPeriods(effectivePeriods);
+  const businessOnlyMerged = mergeOverlappingPeriods(effectivePeriods);
+
+  // 유예기간(§168조의14①)은 "사업용에 사용한 기간으로 본다"는 **의제**다 — 별도의 일수를
+  // 덧붙이는 것이 아니라 그 날을 사업용 사용일로 보는 것이므로 사업용 사용기간과 **합집합**
+  // 이어야 한다. 산술 합산하면 겹치는 날이 두 번 계산된다(§168조의14①5·6호는 기산일이
+  // 취득일이라 구조적으로 겹친다 — grace-reason-period.ts). 합집합이므로 각 창의 일수는
+  // 창 길이를 넘을 수 없고, "창을 꽉 채운 것처럼 보이는" min-clip 인공물도 생기지 않는다.
+  const graceIntervals: DateInterval[] =
+    gracePeriods && gracePeriods.length > 0
+      ? gracePeriods.map((p) => ({ start: p.startDate, end: p.endDate }))
+      : [];
+  const merged =
+    graceIntervals.length > 0
+      ? mergeOverlappingPeriods([...effectivePeriods, ...graceIntervals])
+      : businessOnlyMerged;
 
   // 직전 3년 창
   const threeYearsAgo = addYears(transferDate, -3);
@@ -156,19 +172,17 @@ export function meetsPeriodCriteria(
   // 전체 보유기간 창
   const windowFull: DateInterval = { start: ownershipStart, end: transferDate };
 
-  // 사업용 사용 일수 (각 창)
-  let effectiveBusinessDays3y = sumDaysInWindow(merged, window3Years.start, window3Years.end);
-  let effectiveBusinessDays5y = sumDaysInWindow(merged, window5Years.start, window5Years.end);
-  let totalEffectiveBusinessDays = sumDaysInWindow(merged, windowFull.start, windowFull.end);
+  // 사업용 사용 일수 (각 창) — merged 는 이미 유예기간과의 합집합
+  const effectiveBusinessDays3y = sumDaysInWindow(merged, window3Years.start, window3Years.end);
+  const effectiveBusinessDays5y = sumDaysInWindow(merged, window5Years.start, window5Years.end);
+  const totalEffectiveBusinessDays = sumDaysInWindow(merged, windowFull.start, windowFull.end);
 
-  // 유예기간 가산 (§168조의14 ①) — 제공된 경우에만
-  let gracePeriodDaysApplied = 0;
-  if (gracePeriods && gracePeriods.length > 0) {
-    gracePeriodDaysApplied = calculateGraceDaysInWindow(gracePeriods, windowFull);
-    effectiveBusinessDays3y += calculateGraceDaysInWindow(gracePeriods, window3Years);
-    effectiveBusinessDays5y += calculateGraceDaysInWindow(gracePeriods, window5Years);
-    totalEffectiveBusinessDays += gracePeriodDaysApplied;
-  }
+  // 유예기간 가산 일수 echo (§168조의14①) = 합집합 증가분. 사업용 사용기간과 완전히 겹치는
+  // 유예기간은 사업용 일수를 늘리지 않으므로 0이다(결과 카드 "유예기간 가산"의 의미와 일치).
+  const gracePeriodDaysApplied =
+    graceIntervals.length > 0
+      ? totalEffectiveBusinessDays - sumDaysInWindow(businessOnlyMerged, windowFull.start, windowFull.end)
+      : 0;
 
   // 전체 보유기간 초과 클리핑
   const effectiveBusinessDays = Math.min(totalEffectiveBusinessDays, totalOwnershipDays);

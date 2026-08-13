@@ -32,6 +32,7 @@ import { allocateBasicDeduction } from "./transfer-tax-aggregate-helpers";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
+import { computeAmendment } from "./transfer-tax-amendment";
 
 /**
  * §155⑳ 시나리오 B(임대→거주 전환 PHRP) 여부 — STEP 1a 전액 비과세 조기 반환 억제 게이트.
@@ -272,6 +273,28 @@ function resolveClause5Tax(args: {
 }
 
 /**
+ * §155⑳ 특례가 쓰는 **12억 고가주택 판정·안분 분모**(`calculateRentalHousingException`의 `S`).
+ *
+ * 이 저장소의 12억 분모 정본은 「물건 전체 양도가액」이다 —
+ * `calcOneHouseProration`(`transfer-tax-helpers.ts`) · `resolveTaxableGain`(`transfer-tax-taxable-gain.ts`) ·
+ * `checkExemption`(`transfer-tax-exemption.ts`)이 모두 같은 축을 쓴다. 지분 모드는 `transferPrice`에
+ * **본인 지분 안분액**을 싣고 총 물건가는 `totalPropertyTransferPrice`로 따로 전달한다
+ * (`lib/calc/transfer-tax-api.ts` 지분 분기).
+ *
+ * 종전에는 이 경로만 `transferPrice`를 그대로 봐서, 총 20억 물건의 1/2 지분(본인 10억)이
+ * 12억 이하로 판정돼 RH-A1(전액 비과세)로 빠졌다 — 일반 경로는 같은 입력에서 부분과세였다.
+ *
+ * ⚠️ `burdenedGiftDenominator`(부담부증여 — 소령 §159 해석 B: 분모 = 증여가액 C)는 이 체인에
+ *   **넣지 않는다**. 「부담부증여 × §155⑳」 조합의 도달성이 확인되지 않았고, 그 조합에서 분모를
+ *   바꾸면 검증되지 않은 축이 함께 움직인다. 부담부증여 입력에서는 현행(`transferPrice`)을 그대로
+ *   유지해 **동작 변화 0**을 보장한다(별도 검토 대상).
+ */
+function resolveHighValueDenominator(effectiveInput: TransferTaxInput): number {
+  if (effectiveInput.burdenedGiftDenominator !== undefined) return effectiveInput.transferPrice;
+  return effectiveInput.totalPropertyTransferPrice ?? effectiveInput.transferPrice;
+}
+
+/**
  * STEP 2.5: 장기임대주택 거주주택 비과세 특례 처리.
  * gain 계산 완료 후 호출. 호출측은 `if (effectiveInput.rentalHousingException?.applyException)` 가드 후 호출.
  */
@@ -294,7 +317,7 @@ export function runRentalHousingExceptionStep(
   const rhe = calculateRentalHousingException(
     effectiveInput.rentalHousingException!,
     housingGain,
-    effectiveInput.transferPrice,
+    resolveHighValueDenominator(effectiveInput),
     holdYears,
     liveYears,
     holdYears,    // 거주주택 보유연수 (B 시나리오 시 PHRP 보유연수와 동일)
@@ -408,7 +431,21 @@ export function runRentalHousingExceptionStep(
     undefined,
   );
 
+  // 수정신고(경정) — 이 경로도 finalize STEP 12.5·재개발 Step H.5와 **동형**이어야 한다.
+  // 특례가 적용되면 `finalizeTransferTax`를 거치지 않으므로 종전에는 `input.amendment`가 있어도
+  // `amendmentDetail`이 undefined로 반환돼 결과 화면에서 추가납부세액이 통째로 사라졌다
+  // (양도차손 조기반환이 `transfer-tax.ts:371`에서 같은 이유로 이 필드를 명시적으로 싣는다).
+  // 인자 축은 finalize와 동일한 「감면 전 결정세액」 — 이 경로는 감면이 없어 산출세액과 같다.
+  // `amendmentDetail`은 totalTax에 반영되지 않는 echo이므로 세액은 불변이다.
+  const amendmentDetail = input.amendment
+    ? computeAmendment(input.amendment, rheDeterminedTax)
+    : undefined;
+  if (amendmentDetail) {
+    for (const s of amendmentDetail.steps) steps.push({ ...s, sub: s.sub ?? true });
+  }
+
   return {
+    amendmentDetail,
     // 배율 초과분이 남아 있으면 자산 전체가 비과세된 것이 아니다(그 부분은 전액 과세된다).
     isExempt: totalTaxableIncome === 0,
     exemptReason: totalTaxableIncome === 0 ? "장기임대주택 보유자 거주주택 비과세 (§155⑳)" : undefined,
