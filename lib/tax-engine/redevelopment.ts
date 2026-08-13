@@ -636,17 +636,28 @@ function runOriginalMember(
     lthdResidencePart: postApprovalLthdAmt.residencePart,
   };
 
-  // 청산금분 기산일: 납부=인가일~양도일, 수령=취득일~settlementSaleDate
+  // 청산금분 기산일
+  //   - 완공APT(isApt): 납부=인가일~양도일, 수령=취득일~settlementSaleDate
+  //   - 입주권(isRight): 인가일~양도일 (납부·수령 공통)
+  //
+  // 입주권은 종전에 `isApt ? ... : undefined`라 일자가 비어 신고서 인가후 분 열의
+  // 취득일자·양도일자가 "-"로 표시됐다(2026-08-13 제보 — 실가 모드에서 노출).
+  // 환산 경로는 이미 인가일~양도일을 넣고 있어(`:293·294`, `:457·458`) 같은 값으로 맞춘다.
+  // §166①2호 가목의 인가후 분은 인가일 이후 기간이다(LTHD 미적용은 §95② 단서 — 일자 표시와 별개).
   const settlementAcqDate = isApt
     ? redevelopment.settlementDirection === "pay"
       ? redevelopment.approvalDate
       : acquisitionDate
-    : undefined;
+    : isRight
+      ? redevelopment.approvalDate
+      : undefined;
   const settlementTransferDate = isApt
     ? redevelopment.settlementDirection === "pay"
       ? transferDate
       : (redevelopment.settlementSaleDate ?? transferDate)
-    : undefined;
+    : isRight
+      ? transferDate
+      : undefined;
 
   const settlementDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: split.settlement.apportionedTransfer,
