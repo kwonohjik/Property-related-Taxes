@@ -195,13 +195,18 @@ export function ExemptionAtApprovalCard({
       noDark
     >
       <p className="text-caption text-violet-800 leading-relaxed">
-        서면2016-법령해석재산-2705 (2017.02.13) — 청산금 수령분 1세대1주택 비과세 판정 시
+        서면2016-법령해석재산-2705 (2016.09.12) — 청산금 수령분 1세대1주택 비과세 판정 시
         보유주택수는 양도일 기준이나 보유·거주요건은 관리처분계획인가일 기준으로 충족 여부를 판단합니다.
+      </p>
+      <p className="text-caption text-violet-700 leading-relaxed">
+        ※ 자동 판정은 <span className="font-semibold">관리처분계획인가일 기준</span>(원칙)입니다.
+        인가일 이후에도 주택인 상태가 유지되어 <span className="font-semibold">양도일 기준</span>으로
+        판단해야 하는 경우에는 아래에서 직접 선택하세요.
       </p>
       <div className="flex flex-wrap gap-2">
         <LawArticleModal legalBasis="소득세법 시행령 §154 ①" label="시행령 §154①" />
         <PrecedentArticleModal
-          citation="서면2016-법령해석재산-2705 (2017.02.13)"
+          citation="서면2016-법령해석재산-2705 (2016.09.12)"
           label="서면2016-2705 (판정 시점)"
           kind="ruling"
           summary="청산금 수령분의 1세대1주택 비과세 판정 시 보유주택수 여부는 양도일 현재 기준으로 판정하고, 보유 및 거주요건은 종전주택을 조합에 제공한 시점(관리처분계획인가일 현재)에 충족해야 한다."

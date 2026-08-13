@@ -112,7 +112,7 @@ export function computeRedevelopmentLthd(
   const { subject, approvalDate, settlementDirection, settlementSaleDate } = redevelopment;
 
   // ─ 사례 46 가드: exemptionEligibleAtApproval=false 시 표1 강등 ─
-  // 서면2016-법령해석재산-2705 (2017.02.13) — 청산금 수령분 1세대1주택 비과세 판정 시점:
+  // 서면2016-법령해석재산-2705 (2016.09.12) — 청산금 수령분 1세대1주택 비과세 판정 시점:
   // 보유·거주요건은 관리처분계획인가일 현재 기준. 인가일 기준 2년 미충족 시
   // 1세대1주택 비과세 미해당 → LTHD 표2 진입 차단, 표1 강제.
   // undefined 시 legacy isOneHouseSingle fallback (사례 44·45 회귀 안전).
