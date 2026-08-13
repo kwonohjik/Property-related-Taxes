@@ -6,7 +6,7 @@
  */
 
 import type { CalculationStep } from "./transfer.types";
-import type { ExcludedHouse, ExclusionReason } from "../multi-house-surcharge";
+import type { ExcludedHouse, ExclusionReason, MultiHouseSurchargeResult } from "../multi-house-surcharge";
 import type { NonBusinessLandJudgment } from "../non-business-land";
 import type { RentalReductionResult } from "../rental-housing-reduction";
 import type { NewHousingReductionResult } from "../new-housing-reduction";
@@ -240,6 +240,19 @@ export interface TransferTaxResult {
     /** 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택 세율 중과배제(기본세율). 장특 배제는 유지. */
     rateSurchargeStatutoryExcluded?: boolean;
   };
+  /**
+   * houses[] 정밀 다주택 중과 판정의 **원본 결과** echo (2026-08-13 F01). 세액 로직 불변.
+   *
+   * 바로 위 `multiHouseSurchargeDetail`은 **표시용 부분집합**이라 세율 재계산에 필요한
+   * `surchargeApplicable`·`surchargeType`·`isSurchargeSuspended`가 없다. 그래서 다건 집계
+   * (`transfer-tax-aggregate-helpers.ts`)가 자산별 세액을 다시 구할 때 이 판정을 재사용하지
+   * 못하고 **원시 플래그**(householdHousingCount·isRegulatedArea)로 되돌아가, 단건이 배제한
+   * 중과가 다건에서 되살아났다.
+   *
+   * 정밀 결과를 **재판정하지 않고 그대로 싣는다** — 집계가 `runMultiHouseSurchargeStep`을
+   * 다시 부르면 이중 진실이 된다.
+   */
+  multiHouseSurchargeEvaluation?: MultiHouseSurchargeResult;
   /**
    * 비사업용 토지 판정 상세 결과 (nonBusinessLandDetails 제공 시만 포함)
    * UI에서 사업용/비사업용 판정 근거 표시용

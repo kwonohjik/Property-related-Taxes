@@ -162,6 +162,20 @@ interface ExemptionResult {
   isExempt: boolean;
   isPartialExempt: boolean;
   exemptReason?: string;
+  /**
+   * 「소득세법 시행령」 §159의4 표2 대상 판정용 echo — **§155 각 항에 따라 1세대1주택으로 본** 경우.
+   *
+   * 같은 조는 표2 대상을 「1주택(**제155조**ㆍ제155조의2ㆍ제156조의2ㆍ제156조의3 및 그 밖의 규정에
+   * 따라 1세대 1주택으로 보는 주택을 포함한다)을 보유하고 보유기간 중 거주기간이 2년 이상인 것」으로
+   * 정의한다. 즉 표2 「1주택」은 **실제 보유 주택 수가 아니라 의제를 포함한 개념**이다.
+   * 「따라 … 보는」이므로 사용자가 켠 플래그가 아니라 **각 항의 요건을 실제로 충족해 의제가 성립한
+   * 경우**만이며, 그 판정을 내리는 곳이 여기(`checkExemption`)뿐이라 결과로 echo한다.
+   *
+   * ⚠️ 이번 범위는 **§155①④⑤⑦⑧**뿐이다. §155의2(장기저당담보)·§156의2(주택+조합원입주권)·
+   *    §156의3(주택+분양권)은 괄호에 함께 열거돼 있으나 **손대지 않았다** — 별건 백로그다.
+   * ⚠️ 거주 2년 요건은 연언(AND)이므로 별개다. 표2 게이트의 `table2ResidenceYears >= 2`는 유지된다.
+   */
+  deemedOneHouseBy155?: boolean;
 }
 
 /** §155⑱ 각 호 라벨 (exemptReason 표시용) — 내부 id 노출 금지 원칙에 따라 한국어로 환원 */
@@ -645,13 +659,30 @@ export function checkExemption(
     const provisoReason = input.oneHouseExemptionProviso?.reason;
     const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
 
+    /**
+     * §154① 보유 2년 사전게이트 — 2026-08-13 F09로 **두 가지**를 고쳤다.
+     *
+     * (a) **기산일**을 `resolveExemptionHoldingStartDate` 정본으로 바꾼다. 종전에는
+     *     `previousAcquisitionDate`로 raw 보유기간을 계산해, §154⑤(용도변경 주거용 사용일)·
+     *     §154⑧3호(동일세대 상속 통산 backdate)를 반영한 정본이 「충족」이라 본 자산을
+     *     12줄 뒤 정본 판정(`meetsOneHouseHoldingResidence`)보다 **먼저 거부**했다
+     *     (실측: 동일세대 상속 통산 기산 2012-01-01인데 raw 1년 2개월로 차단 → 328,350,000).
+     *
+     * (b) **`return`이 아니라 조건 분기**로 바꾼다. 종전에는 일시적 2주택 토글이 켜져 있기만
+     *     하면 아래 E-3.7(§155⑧)·E-3.8(§155⑦)·E-3.5(§155④⑤)가 **아예 평가되지 않았다**
+     *     (실측: 농어촌·부득이·합가 단독이면 0원인데 토글 동시 ON이면 328,350,000).
+     *
+     * ⚠️ `!provisoRelaxesHolding` 화이트리스트 조건은 **유지**한다. `meetsOneHouseHoldingResidence`는
+     *    proviso === "both"면 화이트리스트와 무관하게 보유요건을 면제하는데, 나·다목(해외이주·
+     *    국외거주)을 §155① 준용에서 뺀 것은 `TEMP_TWO_HOUSE_PROVISO_REASONS`의 명시적 설계다.
+     *    이 조건을 함께 없애면 다자산 경로(정규화 없음)에서 과다 비과세가 난다.
+     */
     const prevHolding = calculateHoldingPeriod(
-      input.temporaryTwoHouse.previousAcquisitionDate,
+      resolveExemptionHoldingStartDate(input),
       input.transferDate,
     );
-    if (!provisoRelaxesHolding && prevHolding.years < rule.minHoldingYears) {
-      return { isExempt: false, isPartialExempt: false };
-    }
+    const meetsPrevHolding =
+      provisoRelaxesHolding || prevHolding.years >= rule.minHoldingYears;
 
     // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 종전에는 타이밍(요건 A·B)만 보고
     //   비과세를 줬다. §155①은 "…국내에 1주택을 소유한 것으로 **보아 제154조제1항을 적용**한다"이므로
@@ -661,7 +692,7 @@ export function checkExemption(
     //   `provisoRelaxesHolding` 케이스는 종전대로 통과한다.
     //   바로 아래 E-3.5(합가 §155④⑤)는 이미 "§154① 보유·거주"를 요건으로 명시하고 있어
     //   같은 조 구조에서 E-3만 빠져 있던 내부 불일치였다.
-    if (timing.overall && meetsOneHouseHoldingResidence(input, rule)) {
+    if (meetsPrevHolding && timing.overall && meetsOneHouseHoldingResidence(input, rule)) {
       // 적용된 특례 근거를 결과에 남긴다 — 어느 조항으로 요건이 완화됐는지 납세자가 확인할 수 있어야 한다.
       const basisParts: string[] = [];
       if (provisoRelaxesHolding) basisParts.push(`§154① 단서 ${PROVISO_LABEL[provisoReason!]}`);
@@ -677,9 +708,9 @@ export function checkExemption(
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       if (priceCheck <= rule.maxExemptPrice) {
-        return { isExempt: true, isPartialExempt: false, exemptReason: `일시적 2주택 비과세${provisoLabel}` };
+        return { isExempt: true, isPartialExempt: false, exemptReason: `일시적 2주택 비과세${provisoLabel}`, deemedOneHouseBy155: true };
       }
-      return { isExempt: false, isPartialExempt: true, exemptReason: `일시적 2주택 고가주택${provisoLabel}` };
+      return { isExempt: false, isPartialExempt: true, exemptReason: `일시적 2주택 고가주택${provisoLabel}`, deemedOneHouseBy155: true };
     }
   }
 
@@ -695,9 +726,9 @@ export function checkExemption(
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       if (priceCheck <= rule.maxExemptPrice) {
-        return { isExempt: true, isPartialExempt: false, exemptReason: `${label} 비과세${basis}` };
+        return { isExempt: true, isPartialExempt: false, exemptReason: `${label} 비과세${basis}`, deemedOneHouseBy155: true };
       }
-      return { isExempt: false, isPartialExempt: true, exemptReason: `${label} 고가주택${basis}` };
+      return { isExempt: false, isPartialExempt: true, exemptReason: `${label} 고가주택${basis}`, deemedOneHouseBy155: true };
     }
   }
 
@@ -707,9 +738,9 @@ export function checkExemption(
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
     if (priceCheck <= rule.maxExemptPrice) {
-      return { isExempt: true, isPartialExempt: false, exemptReason: `농어촌주택 비과세${basis}` };
+      return { isExempt: true, isPartialExempt: false, exemptReason: `농어촌주택 비과세${basis}`, deemedOneHouseBy155: true };
     }
-    return { isExempt: false, isPartialExempt: true, exemptReason: `농어촌주택 고가주택${basis}` };
+    return { isExempt: false, isPartialExempt: true, exemptReason: `농어촌주택 고가주택${basis}`, deemedOneHouseBy155: true };
   }
 
   // E-3.5: 합가 비과세 (§155④⑤ 혼인·동거봉양) — 합가일부터 10년 내 "먼저 양도" 주택 1세대1주택 의제.
@@ -730,9 +761,9 @@ export function checkExemption(
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       if (priceCheck <= rule.maxExemptPrice) {
-        return { isExempt: true, isPartialExempt: false, exemptReason: `${mergeLabel} 1세대1주택 비과세` };
+        return { isExempt: true, isPartialExempt: false, exemptReason: `${mergeLabel} 1세대1주택 비과세`, deemedOneHouseBy155: true };
       }
-      return { isExempt: false, isPartialExempt: true, exemptReason: `${mergeLabel} 고가주택` };
+      return { isExempt: false, isPartialExempt: true, exemptReason: `${mergeLabel} 고가주택`, deemedOneHouseBy155: true };
     }
   }
 
