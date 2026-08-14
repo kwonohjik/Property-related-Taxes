@@ -310,18 +310,6 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     return `${label}: 「감정평가」를 선택했으면 토지·건물 감정평가가액을 입력하세요 — 비워두면 양도시 기준시가 비율로 안분됩니다 (부가가치세법 시행령 §64①1호 단서).`;
   }
 
-  if (asset.saleSplitMode !== "actual") return null;
-
-  // ── V9. §166⑧ 예외 — 근거 필수 (계획서 §12.6) ───────────────────────────────────────
-  // 예외를 선택하면 §100③ 30% 의제가 발동하지 않아 **세액이 달라진다**. 근거 없이 켤 수 있으면
-  // 가드를 무력화하는 스위치가 된다 ⇒ 근거를 필수로 해 남용을 억제하고 신고서 각주 재료로 쓴다.
-  //
-  // ⚠️ 구분양도에서만 검사한다 — 예외를 골라 둔 채 일괄양도로 되돌리면 API가 전송하지 않으므로
-  //    (`transfer-tax-api-split.ts` `saleDirectActive` 게이트) 차단할 이유가 없다(값은 보존).
-  if (asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
-    return `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`;
-  }
-
   // ── 총액이 자산 필드와 1:1이 아닌 경로는 미검증(위 ⚠️ 참조) ──
   // 지분 판정은 API 정본(`transfer-tax-api.ts:140` primaryFractional = getOwnershipRatio(primary) < 1.0)과
   // 동일 헬퍼 재사용 — 기본 자산은 100/100이라 "필드 존재 여부"로 판정하면 항상 지분 모드가 된다.
@@ -330,27 +318,75 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     asset.assetKind === "redevelopment_apt" ||
     getOwnershipRatio(asset) < 1.0;
 
-  // ① 양도가액 — 총액 = actualSalePrice (단건 자산 카드 입력)
-  if (!skipTotals) {
-    const totalTransfer = parseAmount(asset.actualSalePrice ?? "");
-    if (totalTransfer > 0) {
-      const land = opt(asset.landTransferPrice);
-      const building = opt(asset.buildingTransferPrice);
-      if (isSplitPairOverflow(totalTransfer, land, building)) {
-        return land != null && building != null
-          ? `${label}: 토지·건물 양도가액의 합이 양도가액(${totalTransfer.toLocaleString()}원)을 초과합니다.`
-          : `${label}: ${land != null ? "토지" : "건물"} 양도가액이 양도가액(${totalTransfer.toLocaleString()}원)을 초과합니다 — 나머지가 음수가 됩니다.`;
+  /**
+   * 🔴 **early-return 범위 정정**(2026-08-13).
+   *
+   * 종전에는 여기서 `if (asset.saleSplitMode !== "actual") return null;`로 통째로 반환해
+   * ②취득가액·③자본적지출 초과 가드까지 함께 꺼졌다. 두 가드는 **양도가액 축과 무관**한데
+   * (취득가액 2필드·자본적지출 2필드는 `saleSplitMode`와 무관하게 전송된다 —
+   * `transfer-tax-api-split.ts`), API 기본값이 `saleSplitMode ?? "apportioned"`라서
+   * **기본 경로 전체가 미검증**이었다. 파일 머리말(:6-8)이 선언한 계약("엔진은 clamp하지 않는다
+   * — 그 모순 입력을 여기서 차단한다")이 기본 모드에서 성립하지 않았다.
+   *
+   * ⇒ 양도가액 축에 종속인 V9·①만 이 블록 안에 남기고, ②·③은 모드 무관으로 내린다.
+   *   (V1·V2를 early-return **앞**에 둔 :141-150과 같은 이유·같은 방향의 정정이다.)
+   */
+  if (asset.saleSplitMode === "actual") {
+    // ── V9. §166⑧ 예외 — 근거 필수 (계획서 §12.6) ───────────────────────────────────────
+    // 예외를 선택하면 §100③ 30% 의제가 발동하지 않아 **세액이 달라진다**. 근거 없이 켤 수 있으면
+    // 가드를 무력화하는 스위치가 된다 ⇒ 근거를 필수로 해 남용을 억제하고 신고서 각주 재료로 쓴다.
+    //
+    // ⚠️ 구분양도에서만 검사한다 — 예외를 골라 둔 채 일괄양도로 되돌리면 API가 전송하지 않으므로
+    //    (`transfer-tax-api-split.ts` `saleDirectActive` 게이트) 차단할 이유가 없다(값은 보존).
+    if (asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
+      return `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`;
+    }
+
+    // ① 양도가액 — 총액 = actualSalePrice (단건 자산 카드 입력)
+    // ⚠️ 구분양도 전용이다 — 양도가액 2필드는 `saleDirectActive`(= `saleSplitMode === "actual"`)
+    //    게이트로만 전송되므로, 일괄양도에서 잔존값을 근거로 차단하면 입력 칸 없는 dead-end가 된다.
+    if (!skipTotals) {
+      const totalTransfer = parseAmount(asset.actualSalePrice ?? "");
+      if (totalTransfer > 0) {
+        const land = opt(asset.landTransferPrice);
+        const building = opt(asset.buildingTransferPrice);
+        if (isSplitPairOverflow(totalTransfer, land, building)) {
+          return land != null && building != null
+            ? `${label}: 토지·건물 양도가액의 합이 양도가액(${totalTransfer.toLocaleString()}원)을 초과합니다.`
+            : `${label}: ${land != null ? "토지" : "건물"} 양도가액이 양도가액(${totalTransfer.toLocaleString()}원)을 초과합니다 — 나머지가 음수가 됩니다.`;
+        }
       }
     }
   }
 
-  // ② 취득가액 — 실거래가·감정가액 모드만(환산·매매사례는 총액을 사용자가 입력하지 않는다)
+  // ② 취득가액 — **양쪽 파트가 모두 직접입력 모드(실거래가·감정가액)이고 모두 본인 소유**일 때만.
+  //
+  // 판정 술어는 API 전송 게이트(`transfer-tax-api-split.ts`의 `landAcqDirectActive`·
+  // `buildingAcqDirectActive`)와 **같은 값**이어야 한다 — 어긋나면 "UI 통과 ↔ validate 차단"
+  // 모순이 된다(⑧ 규칙). 종전 조건은 자산-수준 레거시 플래그(`useEstimatedAcquisition`·
+  // `isSalesCaseAcquisition`)였는데, 전송 게이트는 **파트별**이라 축이 어긋나 있었다.
+  //
+  // 왜 "양쪽 모두"인가 — 잔액 규칙(`splitPair`)은 **반대쪽 파트가 그 잔액을 실제로 소비할 때만**
+  // 모순을 만든다. 한쪽이 환산·매매사례이거나 비소유이면 그 파트는 총액을 참조하지 않으므로
+  // (환산 = 파트 양도가 × 기준시가 비율 · 비소유 파트의 양도차익은 폐기된다) 잔액이 계산되고도
+  // 버려진다. 실측: land=estimated + building=actual(900,000,000, 총액 500,000,000)에서
+  // 토지분은 환산식으로 200,000,000이 나오고 잔액 −400,000,000은 소비되지 않는다.
+  // 그 조합까지 막으면 입력 칸이 없는데 차단되는 dead-end가 된다.
+  //
   // ⚠️ **별개 취득은 제외**(V4): 취득가액 축에서 잔액 규칙 자체가 폐지돼 "합 = 총액" 불변식이
   //    성립하지 않는다. 파트 합이 상단 총액과 달라도 정상이며(총액은 사후 집계일 뿐),
   //    잔존한 `fixedAcquisitionPrice`로 차단하면 정당한 입력이 막힌다.
-  const isEstimated = asset.useEstimatedAcquisition === true;
-  const isSalesCase = asset.isSalesCaseAcquisition === true;
-  if (!skipTotals && !isEstimated && !isSalesCase && !isSeparateAcquisition(asset)) {
+  const selfOwns = asset.selfOwns ?? "both";
+  const landAcqDirectActive =
+    selfOwns !== "building_only" && (landMode === "actual" || landMode === "appraisal");
+  const buildingAcqDirectActive =
+    selfOwns !== "land_only" && (buildingMode === "actual" || buildingMode === "appraisal");
+  if (
+    !skipTotals &&
+    landAcqDirectActive &&
+    buildingAcqDirectActive &&
+    !isSeparateAcquisition(asset)
+  ) {
     const totalAcq = parseAmount(asset.fixedAcquisitionPrice ?? "");
     if (totalAcq > 0) {
       const land = opt(asset.landAcquisitionPrice);
