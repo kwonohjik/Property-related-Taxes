@@ -572,10 +572,37 @@ export function migrateAsset(raw: unknown): AssetForm {
    * ⚠️ 이 정규화는 **세액을 바꾼다** — 위 승격(`redevelopment_apt` + `right` → 입주권)을 거친
    * 자산이 대상이면 종전의 잘못된 값이 사라지고 정상 값으로 바뀐다. 의도된 정정이다.
    */
+  /**
+   * 입주권에서 **도달 불가 입력 3종**을 비운다 (2026-08-23).
+   *
+   *   `isAppraisalAcquisition` · `isSalesCaseAcquisition`
+   *     = 상단 축 A(일반 「취득가액 산정 방식」) 라디오가 켜던 추계 플래그. 그 라디오를 입주권에서
+   *       제거했으므로 이제 **끄는 수단이 없다**. 남아 있으면 API가 취득가액을 0으로 보내
+   *       「인가전 양도차익 = 권리가액 − 0」으로 오류 없이 과대과세된다(실측 — 계획서 §2.1).
+   *       API 쪽에도 무력화 가드를 뒀지만(`transfer-tax-api.ts` `isRightToMoveIn`) 저장값 자체를
+   *       정리해 두어야 화면·사이드바 표시까지 일관된다.
+   *
+   *   `redevIsSuccessorMember`
+   *     = 사례 48 **완공APT** 승계조합원(신축APT 양도) 필드. 입주권의 승계 여부는 ① 기본정보의
+   *       `isSuccessorRightToMoveIn`이 받는다 — **다른 사실**이다(#1245에서 ②-a 카드를 완공APT
+   *       전용으로 분리). 입주권에 stale `"yes"`가 남으면 ⑤ 취득가액 카드가 숨겨지고
+   *       `validateRedevelopmentAsset`이 「준공일을 입력하세요」로 막는데, 그 입력칸도 같은 숨겨진
+   *       섹션 안에 있어 **채울 칸 없는 영구 차단**이 된다(실측 — 계획서 §2.4(3)).
+   *
+   * ⚠️ `useEstimatedAcquisition`은 **비우지 않는다** — 원조합원 입주권에서는 ⑤ 카드의
+   *    실가/환산 라디오가 이 필드를 정본으로 쓴다. 비우면 §166③ 환산 모드가 꺼진다.
+   *    승계조합원의 환산 차단은 API(`isEstimated` 정의)와 ⑧ validate가 담당한다.
+   */
   if (a.assetKind === "right_to_move_in") {
     a.redevReceiveOnlyMode = "";
     a.redevNewHouseResidenceMonths = "";
+    a.isAppraisalAcquisition = false;
+    a.isSalesCaseAcquisition = false;
+    a.redevIsSuccessorMember = "";
   }
+  // 승계조합원 입주권 취득가액 (§97①1호 가목) — sessionStorage 호환
+  if (a.successorRightAcqPrice === undefined) a.successorRightAcqPrice = "";
+  if (a.successorRightAddedContribution === undefined) a.successorRightAddedContribution = "";
   if (a.redevApprovalLawBasis === undefined) a.redevApprovalLawBasis = "";
   if (a.redevOriginalAssetType === undefined || a.redevOriginalAssetType === "") a.redevOriginalAssetType = "housing";
   if (a.redevSettlementDirection === undefined) a.redevSettlementDirection = "";

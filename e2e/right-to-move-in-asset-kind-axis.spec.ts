@@ -20,6 +20,7 @@ function seedForm(
   assetKind: "right_to_move_in" | "redevelopment_apt",
   redevSubject = "",
   settlementDirection: "pay" | "receive" = "pay",
+  extraAsset: Record<string, unknown> = {},
 ) {
   return {
     state: {
@@ -41,6 +42,7 @@ function seedForm(
           redevPreApprovalExpenses: "0",
           redevPostApprovalExpenses: "0",
           redevActualAcquisitionPrice: "180000000",
+          ...extraAsset,
         }],
         transferDate: "2026-03-02",
         filingDate: "2026-04-30",
@@ -65,12 +67,13 @@ async function openAcquisitionStep(
   assetKind: "right_to_move_in" | "redevelopment_apt",
   redevSubject = "",
   settlementDirection: "pay" | "receive" = "pay",
+  extraAsset: Record<string, unknown> = {},
 ) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(assetKind, redevSubject, settlementDirection),
+    seedForm(assetKind, redevSubject, settlementDirection, extraAsset),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -149,6 +152,121 @@ test.describe("자산 종류 축 — 입주권 / 재개발APT", () => {
 
     await expect(page.getByText("청산금 수령분 단독 신고").first()).toBeVisible();
     await expect(page.getByText("거주개월 분리 입력", { exact: false }).first()).toBeVisible();
+  });
+
+  /**
+   * A-9~A-12 (2026-08-23) — 상단 축 A(일반 「취득가액 산정 방식」·「취득가액」) 제거 +
+   * 승계조합원 입주권 전용 경로.
+   *
+   * 계획서: docs/02-design/features/right-to-move-in-top-acq-axis-removal.plan.md
+   *
+   * 종전 결함(실측):
+   *   · 상단 축 A가 입주권에도 보였는데, 실거래가 모드에서는 **무시**되고(§166 섹션 필드가 정본)
+   *     감정·매매사례를 고르면 취득가액이 **0**이 되어 오류 없이 과대과세됐다.
+   *   · 승계조합원 입주권은 「승계조합원 모드를 ON 하세요」 안내가 화면에 없는 토글을 가리켜
+   *     **어느 경로로도 계산할 수 없었다**.
+   */
+  test("A-9: 입주권(원조합원)에 상단 축 A가 없고 §166 입력은 그대로다", async ({ page }) => {
+    test.setTimeout(60_000);
+    await openAcquisitionStep(page, "right_to_move_in");
+
+    // ⚠️ `exact: true` 필수 — 대체 안내 카드가 「상단 일반 "취득가액 산정 방식·취득가액" 입력은
+    //    표시하지 않습니다」로 **제목을 인용**하므로 substring 매칭이면 안내문에 걸린다.
+
+    await expect(page.getByText("취득가액 산정 방식", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("매매사례가액", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("감정가액", { exact: true })).toHaveCount(0);
+    // 대체 안내가 어디에 입력하는지 지목한다.
+    await expect(page.getByText("재개발 §166①1호 인가전 분에서 차감").first()).toBeVisible();
+    // 과잉 숨김 방지 — 입주권 고유 입력은 그대로.
+    await expect(page.getByText("재개발 일정·금액 (시행령 §166①)").first()).toBeVisible();
+    await expect(page.getByText("인가전 분 종전 부동산 취득가액").first()).toBeVisible();
+  });
+
+  test("A-10: 완공APT에도 상단 축 A는 없다 (기존 동작 회귀 확인)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await openAcquisitionStep(page, "redevelopment_apt");
+
+    await expect(page.getByText("취득가액 산정 방식", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("취득가액 — 재개발 §166②1호 자동 산정").first()).toBeVisible();
+  });
+
+  test("A-11: 승계조합원 입주권은 §166 카드 대신 전용 취득 카드가 나온다", async ({ page }) => {
+    test.setTimeout(60_000);
+    await openAcquisitionStep(page, "right_to_move_in", "", "pay", {
+      isSuccessorRightToMoveIn: true,
+      acquisitionDate: "2020-05-01",
+      successorRightAcqPrice: "350000000",
+      successorRightAddedContribution: "90000000",
+    });
+
+    // 전용 카드 — §97①1호 가목 실지거래가액 2칸
+    await expect(page.getByText("조합원입주권 승계취득 정보").first()).toBeVisible();
+    await expect(page.getByText("승계취득가액").first()).toBeVisible();
+    await expect(page.getByText("취득 후 납입 추가분담금").first()).toBeVisible();
+    // 합계 미리보기 (350,000,000 + 90,000,000)
+    await expect(page.getByText("440,000,000").first()).toBeVisible();
+
+    // §166 입력·상단 축 A는 모두 없다 — 승계자는 §166①의 적용 대상이 아니다.
+    await expect(page.getByText("취득가액 산정 방식", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("권리가액", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("청산금 방향", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("인가전 분 종전 부동산 취득가액", { exact: true })).toHaveCount(0);
+  });
+
+  test("A-12: stale 완공APT 필드가 남아 있어도 입주권 화면이 정상 렌더된다", async ({ page }) => {
+    test.setTimeout(60_000);
+    // 완공APT 시절 값 3종을 주입 — 마이그레이션이 비워야 한다.
+    await openAcquisitionStep(page, "right_to_move_in", "", "pay", {
+      redevIsSuccessorMember: "yes",
+      isAppraisalAcquisition: true,
+      isSalesCaseAcquisition: true,
+    });
+
+    // stale `redevIsSuccessorMember="yes"`가 살아 있으면 ⑤ 카드가 숨겨지고
+    // validate가 「준공일을 입력하세요」로 막는다(그 입력칸도 숨겨져 영구 차단).
+    await expect(page.getByText("인가전 분 종전 부동산 취득가액").first()).toBeVisible();
+    await expect(page.getByText("조합원 구분")).toHaveCount(0);
+    await expect(page.getByText("준공일", { exact: false })).toHaveCount(0);
+  });
+
+  /**
+   * A-13 (2026-08-23) — **계산까지 도달**하는지. 종전에는 승계조합원 입주권이
+   * 「인가일은 취득일 이후여야 합니다. … "승계조합원 모드"를 ON 하세요」로 막혔고,
+   * 그 안내가 가리키는 토글은 화면에 없어 **영구 차단**이었다(계획서 §2.4(3) 실측).
+   *
+   * 계산 결과도 확인한다 — §166 3분할이 아니라 §97①1호 가목 단순 차감이어야 한다.
+   *   양도가액 420,000,000 − (승계취득가 350,000,000 + 추가분담금 20,000,000) = 50,000,000
+   */
+  test("A-13: 승계조합원 입주권이 계산까지 도달하고 §97①1호로 산정된다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openAcquisitionStep(page, "right_to_move_in", "", "pay", {
+      isSuccessorRightToMoveIn: true,
+      acquisitionDate: "2020-05-01",
+      successorRightAcqPrice: "350000000",
+      successorRightAddedContribution: "20000000",
+    });
+
+    for (const step of ["보유 상황", "감면·공제", "가산세"]) {
+      await page.getByRole("button", { name: step }).first().click();
+    }
+
+    const rp = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    const resp = await rp;
+    expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()}`).toBe(true);
+
+    const body = await resp.json();
+    const result = body.data?.result ?? body.data;
+    expect(result.transferGain, "양도가액 − (승계취득가 + 추가분담금)").toBe(50_000_000);
+    expect(result.longTermHoldingDeduction, "§95② 괄호 — 승계분 LTHD 없음").toBe(0);
+    expect(result.redevelopmentDetail, "§166 3분할을 타면 안 된다").toBeUndefined();
+
+    // 결과 화면이 실제로 렌더된다 (redevelopmentDetail 부재 경로 — 계획서 V-4)
+    await expect(page.getByText(/양도차익/).first()).toBeVisible();
   });
 
   test("A-8: ④ 섹션 조문이 자산 종류를 따른다 (입주권 §166① / 완공APT §166②1호)", async ({ page }) => {

@@ -201,6 +201,9 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
   const cases: Array<[string, (f: ReturnType<typeof baseForm>) => void]> = [
     ["부담부증여", (f) => { f.assets[0] = { ...f.assets[0], transferType: "burdened_gift" }; }],
     ["재개발", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "redevelopment_apt" }; }],
+    // 2026-08-23 추가 — 종전에는 이 가드에 빠져 있어 §166 sub-object 없이 일반 양도로 조용히 오산됐다.
+    ["입주권(원조합원)", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "right_to_move_in" }; }],
+    ["입주권(승계조합원)", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "right_to_move_in", isSuccessorRightToMoveIn: true }; }],
     ["겸용주택", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "housing", isMixedUseHouse: true }; }],
     ["일반건물", (f) => { f.assets[0] = { ...f.assets[0], assetKind: "general_building" }; }],
     ["이월과세", (f) => { f.assets[0] = { ...f.assets[0], acquisitionCause: "carryover_gift" }; }],
