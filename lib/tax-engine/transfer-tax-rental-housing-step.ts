@@ -418,9 +418,42 @@ export function runRentalHousingExceptionStep(
     });
   }
 
+  /**
+   * ── 조특법 감면 병용 **고지** (F08) ────────────────────────────────────
+   *
+   * 🔴 이 경로는 `finalizeTransferTax`를 거치지 않아 `calcReductions`가 **아예 호출되지 않는다**.
+   *    그래서 사용자가 고른 감면이 **한 줄의 안내도 없이 0이 된다**.
+   *    실측(2026-08-23 · mock 세율): 같은 자산에서 특례를 끄면 조특법 §77 공익수용 감면
+   *    **80,660,250**이 잡히는데, 켜면 감면 0 · 경고 0건 · 관련 step 0건이었다.
+   *
+   * **왜 지금 계산하지 않는가** — 두 축이 갈린다:
+   *   · **§99·§99의3**(신축주택) — 고가주택 배제 단서가 **명문**이라 0이 정답이다.
+   *   · **그 밖의 조문**(§77·§97 시리즈·§97의5·§98의8·§99의2 등) — 배제 문언이 **없다**.
+   *     병용 가부를 직접 판단한 예규·심판례를 **찾지 못했고**, 소득금액 차감형 감면을
+   *     「소득세법 시행령」 §161 안분의 **앞/뒤 어디에 얹을지** 정한 명문도 없다.
+   *
+   * ⇒ 근거가 확정될 때까지 **계산에 반영하지 않되, 반영하지 않았다는 사실을 표시한다**.
+   *   침묵이 가장 나쁜 선택지다 — 사용자는 감면이 적용된 줄 안다.
+   *
+   * 계획서: `docs/00-pm/transfer-review-2026-08-open-items.plan.md` §F08
+   */
+  const requestedReductions = input.reductions ?? [];
+  const reductionNotice =
+    requestedReductions.length > 0
+      ? `선택한 감면 ${requestedReductions.length}건은 이 계산에 반영되지 않았습니다 — 거주주택 비과세 특례(소득세법 시행령 §155⑳)를 적용한 경우의 감면 병용 여부는 조문·해석례로 확정되지 않았습니다. 「조세특례제한법」 §99·§99의3은 고가주택 배제 단서가 명문이므로 적용 대상이 아닙니다.`
+      : undefined;
+  if (reductionNotice) {
+    steps.push({
+      label: "조특법 감면 — 미반영",
+      formula: reductionNotice,
+      amount: 0,
+      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+    });
+  }
+
   // L-2 (2026-06-03): 특례 경로는 finalizeTransferTax를 거치지 않으므로
   // 신고불성실·납부지연 가산세를 emitPenaltySteps로 직접 반영 (미입력 시 no-op).
-  const rheDeterminedTax = rheTaxResult.calculatedTax; // 특례 경로 감면 없음
+  const rheDeterminedTax = rheTaxResult.calculatedTax; // 특례 경로 감면 없음(위 고지 참조)
   const rheLocalIncomeTax = applyRate(rheDeterminedTax, 0.1);
   const { penaltyDetail, filingDelayedPenalty } = emitPenaltySteps(
     input,
@@ -446,6 +479,8 @@ export function runRentalHousingExceptionStep(
 
   return {
     amendmentDetail,
+    // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
+    ...(reductionNotice ? { warnings: [reductionNotice] } : {}),
     // 배율 초과분이 남아 있으면 자산 전체가 비과세된 것이 아니다(그 부분은 전액 과세된다).
     isExempt: totalTaxableIncome === 0,
     exemptReason: totalTaxableIncome === 0 ? "장기임대주택 보유자 거주주택 비과세 (§155⑳)" : undefined,
