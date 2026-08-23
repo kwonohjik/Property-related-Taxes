@@ -95,35 +95,27 @@ test.describe("소재지 한글 자동 입력", () => {
     await input.click();
 
     /**
-     * 이 테스트의 검증 범위는 「**전체선택 상태의 첫 자모가 기존 값을 대체하는가**」다.
+     * ⚠️ **`delay: 100`은 장식이 아니다** — 이 상수가 이 테스트의 검증력 전부다.
      *
-     * 🔴 **그 뒤 이어지는 조합은 여기서 보지 않는다** (2026-08-23 축소 — 사유 아래).
+     * Playwright 기본값(`delay:0`)으로 치면 네 키가 한 프레임 안에 다 들어가
+     * **수정 전에도 통과한다**. 사람의 타이핑 간격에서만 결함이 드러났다(각 5회 실측):
      *
-     * 종전에는 `rkfk`를 한 번에 쳐서 `가라`를 단언했는데, **다른 결함**이 그 구간에 겹쳐
-     * 있었다 — 브라우저가 controlled `value` 변경 시 **선택 범위를 클램프해 유지**한다.
-     * Playwright 실측:
+     *     delay=0 → 5/5 통과      delay=10·30·50·100 → **0/5**
      *
-     *     첫 키 전 : value `테헤란로`  selection (0,4)
-     *     첫 키 후 : value `ㄱ`        selection **(0,1)**   ← 범위가 남는다
-     *     둘째 키 후: value `ㅏ`                              ← 훅이 「선택 있음 = 대체」로 읽어 초성 유실
+     * 원인은 `SelectOnFocusProvider`의 rAF `select()`가 첫 키보다 **늦게** 실행되어
+     * 이미 `ㄱ`이 된 입력을 다시 전체선택한 것이었다(selection `(0,1)`).
+     * 둘째 키에서 `useHangulTyping`이 그 범위를 「대체 의도」로 오판해 초성이 사라졌다
+     * (`가라` → `ㅏ라`). 지금은 rAF 콜백에 keydown 가드가 있다.
      *
-     * 즉 `가라`를 치면 `ㅏ라`가 된다. **실사용자도 겪는 제품 결함**이며, 이 테스트가 검증하려던
-     * 「대체」와는 별개 사안이다. 두 가지가 한 단언에 얽혀 있어 CI가 상시 빨간불이었다
-     * (master 기준 로컬 5회 전부 실패).
+     * ⇒ 이 상수를 지우면 테스트가 **조용히 무의미해진다**. 계약은
+     *   `__tests__/components/select-on-focus-provider.anchor.test.tsx`(SOF-2)가 함께 고정한다.
      *
-     * ⚠️ **덮은 것이 아니다** — `known-failures.ts`에 넣지 않았고, 결함은
-     *    `hooks/use-hangul-typing.ts`의 「알려진 제약」에 측정값과 함께 등재했다.
-     *    거기서 고쳐지면 이 테스트를 `rkfk` 전체로 되돌릴 것.
-     *
-     * 시도해 봤지만 통하지 않은 것(재검토 방지):
-     *  · 단언 분리 후 `toHaveValue("ㄱ")` 대기 — 값은 맞아도 **선택 범위는 접히지 않는다**
-     *  · emit 직후 `el.setSelectionRange(len, len)`으로 캐럿 접기 — 5회 중 2회만 통과
-     *    (React가 커밋 시 선택을 복원하는 경로와 경합)
+     * 실측·기각안: `docs/02-design/features/select-on-focus-raf-race.plan.md`
      */
-    await page.keyboard.type("r");
+    await page.keyboard.type("rkfk", { delay: 100 }); // 가라
     await expect(
       input,
-      "전체선택 상태의 첫 자모가 기존 값을 대체해야 한다",
-    ).toHaveValue("ㄱ");
+      "전체선택 상태에서 새로 친 글자가 온전히 조합되어야 한다",
+    ).toHaveValue("가라");
   });
 });
