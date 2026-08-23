@@ -17,7 +17,7 @@
  *   - 청산금 수령액: 50,000,000
  *   - 취득일: 2008-04-09 (acquisitionPrice 미입력 — 환산 모드)
  *   - 취득당시 개별주택가격(분자): 120,000,000
- *   - 인가당시 부근 개별주택가격(분모): 200,000,000
+ *   - 인가당시 개별주택가격(분모): 200,000,000
  *   - 인가전·인가후 필요경비: 0
  *   - 1세대1주택 미충족 (다주택자)
  *   - originalAssetType: "housing" / useEstimatedAcquisition: true
@@ -97,7 +97,7 @@ function case39RedevInfo(): RedevelopmentInfo {
     postApprovalExpenses: 0,
     originalAssetType: "housing",
     housingStdPriceAtAcq: 120_000_000,   // §166③ 분자 — 취득당시 개별주택가격
-    housingStdPriceAtApproval: 200_000_000, // §166③ 분모 — 인가당시 부근 개별주택가격
+    housingStdPriceAtApproval: 200_000_000, // §166③ 분모 — 인가당시 개별주택가격
     acquisitionRounding: "floor",
   };
 }

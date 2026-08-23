@@ -134,7 +134,7 @@ export interface RedevelopmentInfo {
   housingStdPriceAtAcq?: number;
 
   /**
-   * §164⑤ PHD 분모 — 인가당시 부근 개별주택가격 (원, 총액).
+   * §164⑤ PHD 분모 — 인가당시 개별주택가격 (원, 총액).
    * originalAssetType="housing" + subject="right" + useEstimatedAcquisition=true 시 필수.
    * 관리처분인가일 직전 최근 공시 기준 (예: 인가일 2013-10-23 → 2013-01-01 공시값).
    *
@@ -693,7 +693,7 @@ export interface RedevelopmentResult {
     estimatedDeduction: number;
     /** 취득당시 개별주택가격 (원, §164⑤ 분자) */
     housingStdPriceAtAcq: number;
-    /** 인가당시 부근 개별주택가격 (원, §164⑤ 분모) */
+    /** 인가당시 개별주택가격 (원, §164⑤ 분모) */
     housingStdPriceAtApproval: number;
     /** 인가전 분 LTHD (원) */
     preApprovalLTHD: number;

@@ -275,7 +275,7 @@ export function addPropertyRefines(
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["redevelopment", "housingStdPriceAtApproval"],
-          message: "단독주택 출자 환산취득가 — 인가당시 부근 개별주택가격(§164⑤ 분모) 필수",
+          message: "단독주택 출자 환산취득가 — 인가당시 개별주택가격(§164⑤ 분모) 필수",
         });
       }
     }

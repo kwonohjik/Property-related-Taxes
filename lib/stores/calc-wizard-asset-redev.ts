@@ -261,7 +261,7 @@ export interface RedevelopmentFormSlice {
   redevHousingStdPriceAtAcq: string;
 
   /**
-   * §164⑤ 분모 — 인가당시 부근 개별주택가격 (원, 총액).
+   * §164⑤ 분모 — 인가당시 개별주택가격 (원, 총액).
    * originalAssetType="housing" + subject="right" + direction="receive" + useEstimated=true 시 필수.
    */
   redevHousingStdPriceAtApproval: string;
