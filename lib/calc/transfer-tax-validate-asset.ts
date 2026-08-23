@@ -107,7 +107,23 @@ function validateParcelMode(primary: AssetForm, formTransferDate?: string): stri
 }
 
 /** 자산 카드 1건의 취득 정보 검증 (취득가·환산·1990·신축) */
-export function validateAssetAcquisition(asset: AssetForm, label: string, formTransferDate?: string): string | null {
+export function validateAssetAcquisition(
+  asset: AssetForm,
+  label: string,
+  formTransferDate?: string,
+  /**
+   * 첫 자산이 아닌 자산(함께양도 컴패니언·지분 2번째 이후) 여부.
+   *
+   * 🔴 **§164⑤ 3-시점 환산(PHD) 11필드 요구를 끄는 데만 쓴다.** ④가 PHD를 싣는 지점은
+   *    `buildPreHousingDisclosurePayload(primary, …)` **한 곳뿐**이라 첫 자산이 아니면
+   *    그 값이 엔진에 도달하지 않는다(⑫·⑭를 배관해도 `calcSplitGain`이
+   *    `landAcquisitionDate` 부재로 `null` — 실측 응답 바이트 동일).
+   *    종전에는 채우지 않으면 진행이 막히고 채우면 통째로 버려졌다.
+   *    ⑤도 같은 축에서 토글을 숨긴다(`CompanionAcqPurchaseBlock.isNonPrimaryAsset`) —
+   *    두 층이 **같은 사실**(첫 자산 여부)을 보게 해서 UI 통과↔validate 차단 모순을 막는다.
+   */
+  isNonPrimaryAsset = false,
+): string | null {
   // ── 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) ──
   // ⚠️ **모든 조기 return보다 앞**이다 — 부담부증여(C-24)·겸용주택(C-14)·이월과세(C-21)는
   //    각자 전용 검증으로 빠져나가므로, 뒤에 두면 차단이 필요한 바로 그 조합에서 dead code가 된다.
@@ -434,7 +450,9 @@ export function validateAssetAcquisition(asset: AssetForm, label: string, formTr
   //   standardPriceAtAcq / standardPriceAtTransfer 직접 입력 불요.
   // 겸용주택 PHD는 위 isMixedUseHouse 분기에서 이미 return되어 이 줄에 도달하지 않음.
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(사례 23 공동주택 등)해도 PHD 경로는 표준시가 직접 입력 불요.
-  const usesPhd = asset.usePreHousingDisclosure === true;
+  // 🔴 첫 자산이 아니면 PHD는 ④가 싣지 않아 엔진에 도달하지 않는다 ⇒ 11필드를 요구하지 않는다.
+  //    (stale `usePreHousingDisclosure`가 남아 있어도 dead-end를 만들지 않는다.)
+  const usesPhd = asset.usePreHousingDisclosure === true && !isNonPrimaryAsset;
 
   if (isEstimated && !hasPre1990 && !usesPhd) {
     if (!asset.standardPriceAtAcq || parseAmount(asset.standardPriceAtAcq) <= 0)
@@ -707,7 +725,8 @@ export function validateAssetEntry(
   }
 
   // 자산별 취득 정보 검증 (취득일 + 취득가 + 환산 + 1990 + 신축)
-  const acqError = validateAssetAcquisition(a, label, form.transferDate);
+  // `index > 0` = 첫 자산 아님 ⇒ §164⑤ PHD 요구 해제 (⑤ `isNonPrimaryAsset`와 같은 술어).
+  const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0);
   if (acqError) return acqError;
 
   // ⑧ 가업상속공제 §97의2④ 의제 취득가액 — 토글 ON 시 4필드 전수 입력 강제

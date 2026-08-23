@@ -175,6 +175,9 @@ export function AssetSectionAcquisition({
         /* 아래 `GeneralBuildingBlock`과 **같은 술어**여야 한다 — 지분 카드에서 증축 상세는
            숨기면서 유무 토글만 노출되면 물건-수준 사실이 자산별로 갈린다. */
         shareAcquisitionOnly={splitMode === "fractional" && !isFirst}
+        /* §164⑤ PHD는 ④가 primary에만 싣는다 — 첫 자산이 아니면 토글 대신 안내를 띄운다.
+           `shareAcquisitionOnly`와 달리 **분할 모드를 가리지 않는다**(함께양도 컴패니언도 대상). */
+        isNonPrimaryAsset={!isFirst}
       />
 
       {/* 신축주택 — 부수토지 한도 산정 섹션 (영 §154⑦) */}

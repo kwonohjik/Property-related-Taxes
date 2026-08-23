@@ -433,9 +433,22 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
          겸용주택 모드에서는 MixedUseStandardPriceInputs 내부의 PHD 토글을 사용하므로 여기서는 숨긴다. */}
       {/* 별개 취득에서는 상단 환산 라디오가 숨겨지므로 `useEstimatedAcquisition`이 아니라
           **파트 모드**로 판정한다 — 어느 한 파트든 환산이면 §164⑤ 대상이다. */}
+      {/* 🔴 첫 자산이 아니면 PHD는 **엔진에 도달하지 않는다** — 토글 대신 안내만 띄운다.
+          근거·실측은 `CompanionAcqPurchaseBlock.types.ts`의 `isNonPrimaryAsset` 주석. */}
       {!isMixedUse && (props.assetKind === "housing" || isSplit)
         && (props.useEstimatedAcquisition
             || (isSeparateAcq && (effLandAcqMode === "estimated" || effBuildingAcqMode === "estimated")))
+        && props.isNonPrimaryAsset && (
+        <p className="rounded-md border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
+          이 자산은 <strong>취득 당시 기준시가를 직접 입력</strong>합니다. 개별주택가격 미공시 취득
+          3-시점 환산(「소득세법 시행령」 §164⑤)은 <strong>첫 자산에서만</strong> 적용됩니다.
+        </p>
+      )}
+
+      {!isMixedUse && (props.assetKind === "housing" || isSplit)
+        && (props.useEstimatedAcquisition
+            || (isSeparateAcq && (effLandAcqMode === "estimated" || effBuildingAcqMode === "estimated")))
+        && !props.isNonPrimaryAsset
         && props.asset && props.onAssetChange && (
         <ToggleCard
           tone="amber"
