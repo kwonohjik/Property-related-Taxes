@@ -192,6 +192,12 @@
 
 F16 (a) 구현 중 발견됐고 **F16이 만든 것이 아니라 이미 살아 있던** 항목들이다.
 
+> 📋 **잔여 7건의 작업 계획서**: [`transfer-f16-spinoff-items.plan.md`](transfer-f16-spinoff-items.plan.md)
+> (2026-08-23 · 인용 전수 재검증 · 배치 B-1~B-5 · Q 4건 · V 8건).
+> 🔴 **7건 중 5건이 수치 미측정**이라 착수 전 재현이 선행 조건이다.
+> 🔴 **N-2(`splitCompanionIntoTwo`)는 「1줄 수정」이 아니다** — F16이 컴패니언 `carryoverTaxation`을
+> 도달 가능하게 만들어, 지금 활성화하면 두 파트에 **2배 계상**이 켜진다.
+
 | 항목 | 실측 | 위치 |
 |---|---|---|
 | **§97의2②3호 비교 스코프 자산별 → 신고단위** | 조문상 신고단위 확정(§104⑤ 근거). divergence 16/562·4,570,000~39,125,000·**전부 현행 과소**. ⚠️ memory `project_stock_carryover_97_2_necessary_expense_open.md:169-172`의 「갭 없음」과 **상충**(재현 불가) — 착수 시 선결 | `transfer-tax-carryover.ts:585-587` |
