@@ -26,8 +26,10 @@
  * ※ 영 §154⑦(§89①3호 위임)은 **비과세 축**이라 여기서는 근거가 아니다 — 배율 수치만 동일하다.
  */
 
+import type { z } from "zod";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
-import type { TransferReduction } from "@/lib/tax-engine/types/transfer.types";
+import type { reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
+import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { resolveCompanionLandRate } from "@/lib/tax-engine/appurtenant-land-rate";
 import {
   calculateHoldingPeriod,
@@ -40,6 +42,7 @@ import {
 } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
 import type { InheritanceAssetKind } from "@/lib/tax-engine/inheritance-acquisition-price";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 // ─── 사례 28 자동 분기 양방향 확장 ───────────────────────────────
 // 자산 순서와 무관하게(primary가 land여도) companion에서 housing을 검색하여
@@ -104,6 +107,16 @@ interface CompanionRawAsset {
   acquisitionDate?: string;
   acquisitionCause: TransferTaxItemInput["acquisitionCause"];
   decedentAcquisitionDate?: string;
+  /**
+   * §154⑧3호 상속주택 자체 양도 — 동일세대 게이트 + 통산 보유 기산일·통산 거주 개월.
+   * ⑫(`companionAssetSchema`)·⑬(`buildAssetPayload`)에는 있는데 ⑭만 빠져 있었다(F13):
+   * 세 값이 엔진에 도달하지 않아 컴패니언 상속주택의 §154① 비과세가 통째로 사라졌다.
+   * (엔진이 `acquisitionCause === "inheritance"` 게이트를 내부에서 판정하므로 여기서는 원값만 전달 —
+   *  단건 `engine-input.ts:71-73`과 같은 형태.)
+   */
+  decedentSameHouseholdBeforeInheritance?: boolean;
+  decedentCohabitationHoldingStartDate?: string;
+  decedentCohabitationResidenceMonths?: number;
   donorAcquisitionDate?: string;
   assetContractDate?: string;
   capitalExpenditure?: number;
@@ -128,12 +141,14 @@ interface CompanionRawAsset {
   isUnregistered?: boolean;
   isNonBusinessLand?: boolean;
   isOneHousehold?: boolean;
-  reductions?: Array<{
-    type: string;
-    businessApprovalDate?: string;
-    incorporationDate?: string;
-    [key: string]: unknown;
-  }>;
+  /**
+   * ⑫ `companionAssetSchema.reductions`(= `z.array(reductionSchema)`)의 파싱 결과 그대로.
+   *
+   * 🔴 느슨한 `Array<{ type: string; [key: string]: unknown }>`로 두면 안 된다 —
+   *    정본 매퍼(`mapReductionsToEngine`)가 요구하는 판별 유니온과 어긋나 캐스팅으로 때우게 되고,
+   *    variant별 일자 변환 누락을 컴파일러가 다시 못 잡는다(F14가 그렇게 발생했다).
+   */
+  reductions?: Array<z.infer<typeof reductionSchema>>;
   manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
   /**
    * 토지 성질 명시 입력 (assetKind === "land" 전용).
@@ -144,6 +159,12 @@ interface CompanionRawAsset {
   landNature?: "appurtenant_to_housing" | "non_appurtenant";
   areaM2?: number;
   totalPropertyTransferPrice?: number;
+  /**
+   * 공유지분율 (0<r≤1) — 필요경비 개산공제(§163⑥) base 축소 전용.
+   * ⑫(`companionAssetSchema:ownershipRatio`)·⑬(`buildAssetPayload`)에는 있었는데 ⑭만 빠져 있어
+   * 지분 자산의 개산공제가 100% 기준시가로 계산됐다(F39).
+   */
+  ownershipRatio?: number;
 }
 
 interface CompanionApportioned {
@@ -173,6 +194,8 @@ interface CompanionBuildContext {
     householdHousingCount: number;
     isRegulatedArea: boolean;
     wasRegulatedAtAcquisition: boolean;
+    /** 주택 부수토지 컴패니언이 상속받는 거주기간 (F12) — 세대 단위 3값과 같은 취급. */
+    residencePeriodMonths: number;
     propertyType: TransferTaxItemInput["propertyType"];
     buildingFootprintArea?: number;
     isUrbanArea?: boolean;
@@ -225,6 +248,9 @@ export function buildCompanionEngineInputs(
       c.acquisitionCause === "purchase" && (c.useEstimatedAcquisition ?? false),
     standardPriceAtAcquisition: c.standardPriceAtAcquisition,
     standardPriceAtTransfer: c.standardPriceAtTransfer,
+    // ⑭ 개산공제(§163⑥) base 지분 축소 — 기준시가는 물건 전체 값을 유지하고 개산공제만 지분분이 된다.
+    //    단건 `engine-input.ts:218`·겸용 `route.ts:333`과 같은 축(F39).
+    ownershipRatio: c.ownershipRatio,
     // 공익수용 §164⑨ 1호 환산 min[] 특례 — 컴패니언 자산 지원(계획 Q5).
     // 엔진이 게이트 판정(적격 자산·환산·수용·2009.02.04·후보>0) — 여기선 원값만 전달.
     // ⚠️ 이 매핑이 없으면 ⑫ Zod를 통과한 값이 엔진에 **도달하지 못한다**(명시 매핑 = 침묵 strip 지점).
@@ -240,7 +266,23 @@ export function buildCompanionEngineInputs(
     housingCompensationTotal: c.housingCompensationTotal,
     housingCompensationBasisTotal: c.housingCompensationBasisTotal,
     householdHousingCount: ctx.primaryEngineInput.householdHousingCount,
-    residencePeriodMonths: c.residencePeriodMonths ?? 0,
+    /**
+     * ⑬ `buildAssetPayload`가 컴패니언 payload에 `residencePeriodMonths`를 **한 번도 싣지 않아**
+     * 컴패니언은 항상 거주 0개월이었다(F12) — 「소득세법 시행령」 §159의4 표2 대상 판정
+     * (거주 2년 이상)에 영영 진입하지 못했다.
+     *
+     * 주택 부수토지(`landNature === "appurtenant_to_housing"`)는 §104①2호 괄호·§155⑳ 축에서
+     * 주택과 일체로 다뤄지고 `transfer-tax-lthd.ts` L-1b도 「1세대1주택 여부·거주기간을 주택과
+     * 공유」를 전제로 짜여 있으므로, 이 경우에만 primary 주택의 거주기간을 상속한다.
+     *
+     * ⚠️ **별개 주택 컴패니언에는 상속시키지 않는다** — 일괄 상속하면 자기 거주요건을 갖추지 못한
+     *    컴패니언 주택이 primary의 거주기간으로 §154① 비과세·표2를 잘못 여는 방향이 된다.
+     */
+    residencePeriodMonths:
+      c.residencePeriodMonths ??
+      (c.landNature === "appurtenant_to_housing"
+        ? ctx.primaryEngineInput.residencePeriodMonths
+        : 0),
     isRegulatedArea: ctx.primaryEngineInput.isRegulatedArea,
     wasRegulatedAtAcquisition: ctx.primaryEngineInput.wasRegulatedAtAcquisition,
     isUnregistered: c.isUnregistered ?? false,
@@ -248,8 +290,18 @@ export function buildCompanionEngineInputs(
     isOneHousehold: c.isOneHousehold ?? false,
     acquisitionCause: c.acquisitionCause,
     decedentAcquisitionDate: decedent,
+    // ⑭ §154⑧3호 통산 3필드 — 없으면 컴패니언 상속주택의 비과세·표2 대상판정이 열리지 않는다(F13).
+    //    ⚠️ 일자는 `toOptionalDate` 필수: JSON 경유 string이 그대로 도달하면
+    //       `decedentCohabitationHoldingStartDate < acquisitionDate` 비교가 침묵 false가 된다.
+    decedentSameHouseholdBeforeInheritance: c.decedentSameHouseholdBeforeInheritance,
+    decedentCohabitationHoldingStartDate: toOptionalDate(c.decedentCohabitationHoldingStartDate),
+    decedentCohabitationResidenceMonths: c.decedentCohabitationResidenceMonths,
     donorAcquisitionDate: donor,
-    reductions: mapCompanionReductions(c.reductions ?? []),
+    // ⑭ 감면 일자 변환은 **단건과 같은 정본 매퍼**를 쓴다(`route-reductions-mapper.ts`).
+    //    전용 매퍼를 두면 variant가 늘 때마다 한쪽만 갱신되어 「같은 감면인데 자산1과 자산2의
+    //    세액이 다르다」가 된다(F14 실측: §77의3 감면율 40%↔25%, §97 임대 전액 소실,
+    //    §99의4·§98의9는 `.getTime is not a function` 500).
+    reductions: mapReductionsToEngine(c.reductions ?? []),
     propertyId: c.assetId,
     propertyLabel: c.assetLabel ?? "",
     manualHoldingPeriodOverride: effectiveOverride,
@@ -452,38 +504,10 @@ export function splitCompanionIntoTwo(
   return [appurtenant, excess];
 }
 
-/**
- * reductions 배열을 Date 변환하는 공통 헬퍼.
- * route.ts에서 중복 사용하던 로직을 추출.
- */
-export function mapCompanionReductions(
-  reductions: Array<{
-    type: string;
-    businessApprovalDate?: string;
-    incorporationDate?: string;
-    [key: string]: unknown;
-  }>,
-): TransferReduction[] {
-  return reductions.map((r): TransferReduction => {
-    if (r.type === "public_expropriation") {
-      return { ...r, businessApprovalDate: new Date(r.businessApprovalDate!) } as TransferReduction;
-    }
-    // §77의2 대토보상 — 사업인정고시일 string → Date (optional). 미상 시 undefined (Date<string 비교 함정 방지)
-    if (r.type === "replacement_land_comp") {
-      return {
-        ...r,
-        businessApprovalDate: r.businessApprovalDate ? new Date(r.businessApprovalDate) : undefined,
-      } as TransferReduction;
-    }
-    if (r.type === "self_farming") {
-      return {
-        ...r,
-        incorporationDate: r.incorporationDate ? new Date(r.incorporationDate) : undefined,
-      } as TransferReduction;
-    }
-    return r as TransferReduction;
-  });
-}
+// mapCompanionReductions 삭제됨 (2026-08-13, F14):
+//   27 variant 중 3개(public_expropriation·replacement_land_comp·self_farming)만 Date 변환하고
+//   나머지는 string 그대로 통과시켜 컴패니언에서만 다른 세액이 나왔다.
+//   정본은 `route-reductions-mapper.ts`의 `mapReductionsToEngine` 하나다.
 
 // ─── 일괄양도 안분 준비·실행 헬퍼 (route.ts (1)~(4.5) 추출, 800줄 정책) ───
 // 상속 보충평가 취득가액 → companion 취득가액 → BundledAssetInput 조립 → 안분 →

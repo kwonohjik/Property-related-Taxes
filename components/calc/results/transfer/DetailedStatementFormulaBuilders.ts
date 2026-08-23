@@ -542,8 +542,17 @@ export function buildSurtaxAndLocalTaxItems(
   items: Map<string, StatementItem>,
   result: TransferTaxResult,
   totalPenalty: number,
+  /**
+   * 집계(다건·일괄) 모드의 농어촌특별세 — 엔진 2-pass 산정 합계(`aggregated.ruralSurtax`).
+   *
+   * 집계 어댑터(`aggregateToFilingResult`)는 단건 detail(`new993Detail` 등)을 담지 않아
+   * `incomeDeductionRuralSurtax(result)`가 항상 0이 된다. 같은 화면의 신고서 표는
+   * `aggregated.ruralSurtax`를 싣고 `aggregated.totalTax`에도 합산돼 있으므로,
+   * 넘기지 않으면 명세서만 0으로 어긋난다. 단건은 `undefined`(종전 동작).
+   */
+  aggregateRuralSurtax?: number,
 ): void {
-  const ruralSurtaxValue = incomeDeductionRuralSurtax(result);
+  const ruralSurtaxValue = aggregateRuralSurtax ?? incomeDeductionRuralSurtax(result);
   items.set("ruralSurtax", {
     label: "농어촌특별세",
     value: ruralSurtaxValue,

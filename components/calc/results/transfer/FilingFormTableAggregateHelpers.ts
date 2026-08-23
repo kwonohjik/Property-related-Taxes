@@ -326,7 +326,18 @@ export function buildAggregateRows(
   setNum("determinedTax", "total", aggregated.determinedTax);
   setNum("penaltyTax", "total", aggregated.penaltyTax);
   setNum("totalDeterminedTax", "total", aggregated.determinedTax + aggregated.penaltyTax);
-  setNum("ruralSurtax", "total", 0);
+  /**
+   * 농어촌특별세 — 엔진 2-pass 산정값(`transfer-tax-aggregate.ts`)을 그대로 싣는다.
+   *
+   * 종전에는 `0` 리터럴이라, 일괄(bundled) + 소득금액차감 감면(§99의3 등) 케이스에서
+   * 실제 부과되는 농특세가 서식에서 통째로 사라졌다(엔진 `totalTax`에는 합산돼 있어
+   * 같은 화면의 총 납부세액과 그 금액만큼 어긋났다). 단건 `FilingFormTableHelpers.ts`가
+   * `incomeDeductionRuralSurtax(result)`를 싣는 것과 같은 층위다.
+   *
+   * 자산 열은 위 루프에서 `null`(합산-only) — 농특세는 감면 전후 산출세액 차액의 20%라
+   * 자산별로 나누어지지 않는다.
+   */
+  setNum("ruralSurtax", "total", aggregated.ruralSurtax ?? 0);
   const localCalcTotal = Math.floor((aggregated.determinedTax + aggregated.penaltyTax) * 0.1);
   setNum("localCalculatedTax", "total", localCalcTotal);
   setNum("localReduction", "total", 0);

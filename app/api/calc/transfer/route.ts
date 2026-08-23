@@ -280,6 +280,8 @@ export async function POST(request: NextRequest) {
             householdHousingCount: engineInput.householdHousingCount,
             isRegulatedArea: engineInput.isRegulatedArea,
             wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
+            // 부수토지 컴패니언 전용 상속값 (F12) — 세대 단위 3값과 같은 층위.
+            residencePeriodMonths: engineInput.residencePeriodMonths,
             propertyType: engineInput.propertyType,
             buildingFootprintArea: engineInput.buildingFootprintArea,
             isUrbanArea: engineInput.isUrbanArea,

@@ -189,6 +189,7 @@ function PropertyCard({
         result={breakdown}
         calculatedTax={breakdown.refCalculatedTax}
         taxBase={breakdown.taxBaseShare}
+        longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
       />
       {/*
         평가·판정 산출근거 (R1-a) — 상가 환산 §164⑥·비사업용토지·다주택 중과·PHD 등.

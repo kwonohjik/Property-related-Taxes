@@ -145,6 +145,14 @@ async function addApartmentWithDebt(page: Parameters<typeof fillDateAndVerify>[0
   await expect(debtInput).toBeVisible();
   await fillAndVerify(debtInput, "200000000");
 
+  // 인수 채무의 **내역** — 양도세 §159의 양도가액 B가 이 칸에서 나온다(④가 `mortgageDebtAmount`로
+  // 싣는다). 종전 픽스처는 §47①만 채워 B=0인 채로 돌았고, 모킹 spec이라 그 0을 못 봤다(F26).
+  // ⑧ C-4b가 「§47① = 임대보증금 + 저당권 채무액」을 요구하므로 합계를 맞춘다.
+  await fillAndVerify(
+    dialog.getByRole("textbox", { name: "저당권 등에 의해 담보된 채권액" }),
+    "200000000",
+  );
+
   // §47③ 안내 확인
   await expect(dialog.getByText("§47③ 주의")).toBeVisible();
 
@@ -371,9 +379,13 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       const collateralChecked = await collateralToggle.getAttribute("aria-checked");
       if (collateralChecked !== "true") await collateralToggle.click();
 
-      // §47① 채무
+      // §47① 채무 + 그 내역 (⑧ C-4b — 위 헬퍼 주석 참조)
       const debtInput = dialog.getByRole("textbox", { name: "수증자 인수 채무액 (§47①)" });
       await fillAndVerify(debtInput, "100000000");
+      await fillAndVerify(
+        dialog.getByRole("textbox", { name: "저당권 등에 의해 담보된 채권액" }),
+        "100000000",
+      );
 
       // 양도소득세 토글 ON — ToggleCard switch role
       const transferToggle = dialog.getByRole("switch", { name: /양도소득세 함께 계산/ });
@@ -481,6 +493,11 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       }
       const debtInput = dialog.getByRole("textbox", { name: "수증자 인수 채무액 (§47①)" });
       await fillAndVerify(debtInput, "150000000");
+      // 인수 채무 내역 (⑧ C-4b — 위 헬퍼 주석 참조)
+      await fillAndVerify(
+        dialog.getByRole("textbox", { name: "저당권 등에 의해 담보된 채권액" }),
+        "150000000",
+      );
 
       // 양도소득세 토글 ON — ToggleCard switch role
       const transferToggle = dialog.getByRole("switch", { name: /양도소득세 함께 계산/ });

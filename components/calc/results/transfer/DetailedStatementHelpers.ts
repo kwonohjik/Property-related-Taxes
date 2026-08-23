@@ -761,7 +761,9 @@ export function buildStatementItems(
   });
 
   // ── 7단계: 부가세·지방세 ───────────────────────────────────
-  buildSurtaxAndLocalTaxItems(items, result, totalPenalty);
+  // 집계 모드의 농특세는 엔진 2-pass 산정 합계가 정본 — 어댑터가 단건 detail을 안 담아 종전엔 0이었다.
+  const aggRuralSurtax = isAggregate ? aggregate!.aggregated.ruralSurtax ?? 0 : undefined;
+  buildSurtaxAndLocalTaxItems(items, result, totalPenalty, aggRuralSurtax);
 
   // ── 재개발 3분할 overrides (단건·환산 모드, isAggregate와 mutually exclusive) ──
   // result.redevelopmentDetail 존재 시 1단계 양도차익 산정 그룹 항목에 perAsset[] 3분할 부착.
