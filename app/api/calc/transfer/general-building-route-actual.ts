@@ -637,7 +637,7 @@ export function buildActualGeneralBuildingCards(
  * 단건 진입점. 지분 분할은 `general-building-fractional.ts`가
  * `buildActualGeneralBuildingCards`를 지분마다 부른 뒤 aggregate를 **1회만** 한다.
  */
-export function calculateGeneralBuildingActualTransfer(
+export function runActualGeneralBuildingOnce(
   payload: GeneralBuildingActualPricePayload,
   taxYear: number,
   annualBasicDeductionUsed: number | undefined,

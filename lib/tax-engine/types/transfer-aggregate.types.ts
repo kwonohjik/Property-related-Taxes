@@ -382,6 +382,27 @@ export interface AggregateTransferResult {
    */
   filingUnitPenaltyDetail?: TransferTaxPenaltyResult;
 
+  /**
+   * **부담부증여 × 배우자등 이월과세** 판정 명세 (F27 — 일반건물 §159 분기 전용).
+   *
+   * 단건 경로의 `carryoverTaxationDetail`과 **다른 축**이다: 저쪽은 자산 1건의 A/B이고,
+   * 이쪽은 카드 여러 장이 이루는 **신고 전체**의 A/B다(§97의2②3호가 「양도소득 **결정세액**」을
+   * 비교하므로 카드 단위로는 판정할 수 없다).
+   */
+  burdenedGiftCarryoverDetail?: {
+    isEligible: boolean;
+    applicablePeriodYears: 5 | 10;
+    /** 채택 시나리오 — A: §97의2① 적용 · B: 미적용(②3호로 되돌아간 경우 포함) */
+    adoptedScenario: "A" | "B";
+    /** 신고단위 결정세액 — ②3호 비교의 두 항 */
+    determinedTaxA: number;
+    determinedTaxB: number;
+    /** §95④ 단서 보유기간 기산일 */
+    donorAcquisitionDate: Date;
+    /** §97의2①3호 증여세 상당액 (§159 안분 단계가 한도까지 처리) */
+    giftTaxAmount: number;
+  };
+
   /** 지방소득세 = (결정+가산) × 10%, 천원 절사 */
   localIncomeTax: number;
   /** 농어촌특별세 = §99의3 등 소득금액차감 감면세액 × 20% (농특세법 §3·§5). 감면 없으면 0. */

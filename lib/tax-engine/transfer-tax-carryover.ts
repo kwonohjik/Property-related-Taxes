@@ -9,7 +9,6 @@
  * Layer 2 (Pure Engine): DB 직접 호출 없음. 세율 데이터는 매개변수로 주입받음.
  */
 
-import { addYears } from "date-fns";
 import { calculateHoldingPeriod, computeLumpSumDeductionBase } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
@@ -18,7 +17,7 @@ import {
   isBurdenedGiftCarryover,
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
-import { isCarryoverRelationExcluded } from "./carryover-donor-death";
+import { judgeCarryoverEligibility } from "./transfer-tax-carryover-eligibility";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -53,11 +52,8 @@ export interface CalcCarryoverResult {
  */
 const DONOR_CAPEX_EFFECTIVE_DATE = new Date("2024-01-01");
 
-/**
- * 부칙 (2022.12.31. 법률 제19196호) — 10년 룰 시작일.
- * 증여 등기접수일 < 이 날짜이면 5년 룰, 이후이면 10년 룰.
- */
-const TEN_YEAR_RULE_CUTOFF = new Date("2023-01-01");
+// 「10년 룰」 경계 상수(부칙 제19196호 §18)는 판정 leaf
+// `transfer-tax-carryover-eligibility.ts`가 정본이다 — 여기서 따로 두면 두 벌이 된다.
 
 // ============================================================
 // 메인 헬퍼: calcCarryoverScenarios
@@ -118,98 +114,22 @@ export function calcCarryoverScenarios(
   const ct = rawInput.carryoverTaxation;
 
   // ─────────────────────────────────────────────────────────
-  // Step 2a: 가업상속공제 자산 방어코드 (validation에서 이미 차단됨)
-  // ─────────────────────────────────────────────────────────
-  if (ct.exclusionDeclared?.isFamilyBusinessInheritedAsset) {
-    return {
-      detail: {
-        isEligible: false,
-        applicablePeriodYears: 5, // dummy
-        exclusionReason: "family_business",
-        scenarioA: makeEmptyScenarioA(),
-        scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
-        adoptedScenario: "B",
-        comparisonExclusion: false,
-      },
-      adoptedInput: buildInputB(rawInput, ct),
-    };
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // Step 2b: 적용기간 연수 산정 (§97조의2 ③ · 부칙 제19196호 제18조)
+  // Step 2: 적용배제 판정 (§97의2①괄호·②1·2호·③) — **공용 leaf**
   //
-  // ⚠️ 판정보다 **먼저** 계산한다 — 아래 관계 배제도 이 값을 결과에 실어야 하고,
-  //    dummy 값을 넣으면 결과 카드가 「5년 룰」을 잘못 표시한다(2a의 family_business 참조).
+  // 🔑 판정 자체는 `transfer-tax-carryover-eligibility.ts`가 정본이다. 일반건물 부담부증여
+  //    경로(F27)가 단건 엔진을 거치지 않고 같은 판정을 해야 해서 술어를 하나로 뒀다 —
+  //    복사하면 같은 사실관계가 경로에 따라 갈린다.
+  //    여기서는 그 판정 결과를 **이 함수의 반환 모양**(시나리오 B 고정)으로 옮기기만 한다.
   // ─────────────────────────────────────────────────────────
-  const applicablePeriodYears: 5 | 10 =
-    ct.giftRegistryDate < TEN_YEAR_RULE_CUTOFF ? 5 : 10;
+  const eligibility = judgeCarryoverEligibility(ct, rawInput.transferDate);
+  const applicablePeriodYears = eligibility.applicablePeriodYears;
 
-  // ─────────────────────────────────────────────────────────
-  // Step 2b′: 관계 요건 배제 (§97조의2 ① 괄호 — 증여자 사망)
-  //
-  // 기간보다 앞에 둔다. 관계 요건을 못 채우면 애초에 대상 자산이 아니다.
-  // 배우자=「사망으로 혼인관계 소멸」(이혼은 적용) · 직계존비속=「양도 당시 사망」(2025.1.1.~).
-  // ─────────────────────────────────────────────────────────
-  if (isCarryoverRelationExcluded(ct.donorRelation, ct.donorDeceased, ct.giftRegistryDate)) {
+  if (!eligibility.isEligible) {
     return {
       detail: {
         isEligible: false,
         applicablePeriodYears,
-        exclusionReason: "relation_invalid",
-        scenarioA: makeEmptyScenarioA(),
-        scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
-        adoptedScenario: "B",
-        comparisonExclusion: false,
-      },
-      adoptedInput: buildInputB(rawInput, ct),
-    };
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // Step 2b″: 기간 초과 판정 (§97조의2 ③ — 일수 기반 정밀 비교)
-  // ─────────────────────────────────────────────────────────
-  const limitDate = addYears(ct.giftRegistryDate, applicablePeriodYears);
-  const isPeriodExceeded = rawInput.transferDate > limitDate;
-
-  if (isPeriodExceeded) {
-    return {
-      detail: {
-        isEligible: false,
-        applicablePeriodYears,
-        exclusionReason: "period_exceeded",
-        scenarioA: makeEmptyScenarioA(),
-        scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
-        adoptedScenario: "B",
-        comparisonExclusion: false,
-      },
-      adoptedInput: buildInputB(rawInput, ct),
-    };
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // Step 2c: 사용자 선언 적용배제
-  // ─────────────────────────────────────────────────────────
-  if (ct.exclusionDeclared?.expropriationWithin2Years) {
-    return {
-      detail: {
-        isEligible: false,
-        applicablePeriodYears,
-        exclusionReason: "expropriation",
-        scenarioA: makeEmptyScenarioA(),
-        scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
-        adoptedScenario: "B",
-        comparisonExclusion: false,
-      },
-      adoptedInput: buildInputB(rawInput, ct),
-    };
-  }
-
-  if (ct.exclusionDeclared?.oneHouseExemptionApplies) {
-    return {
-      detail: {
-        isEligible: false,
-        applicablePeriodYears,
-        exclusionReason: "one_house_exemption",
+        exclusionReason: eligibility.exclusionReason!,
         scenarioA: makeEmptyScenarioA(),
         scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
         adoptedScenario: "B",

@@ -51,6 +51,14 @@ export interface GbAssetLevelInputs {
   filingPenaltyDetails?: import("@/lib/tax-engine/types/transfer.types").TransferTaxInput["filingPenaltyDetails"];
   /** 신고서 단위 납부지연 가산세 (국세기본법 §47의4). */
   delayedPaymentDetails?: import("@/lib/tax-engine/types/transfer.types").TransferTaxInput["delayedPaymentDetails"];
+  /**
+   * 배우자등 이월과세 (「소득세법」 §97의2) — **부담부증여 §159 분기 전용**(F27).
+   *
+   * 비-부담부증여 일반건물은 이 값을 쓰지 않는다 — 그쪽은 카드에 실린
+   * `landCarryoverTaxation`·`buildingCarryoverTaxation`을 **단건 엔진**이 파트별로 처리한다
+   * (④ `buildGbCarryoverPayload`가 부담부증여에서 `{}`를 반환해 두 줄기가 겹치지 않는다).
+   */
+  carryoverTaxation?: import("@/lib/tax-engine/types/transfer.types").TransferTaxInput["carryoverTaxation"];
 }
 
 export interface GeneralBuildingRouteResult {

@@ -33,10 +33,9 @@ import {
   type GeneralBuildingRouteResult,
   type GbAssetLevelInputs,
 } from "./general-building-route-cards";
-import {
-  calculateGeneralBuildingActualTransfer,
-  type GeneralBuildingActualPricePayload,
-} from "./general-building-route-actual";
+import type { GeneralBuildingActualPricePayload } from "./general-building-route-actual";
+// F27 진입점은 별도 파일이다 — 카드 조립(actual)과 시나리오 비교(carryover)는 층이 다르다.
+import { calculateGeneralBuildingActualTransfer } from "./general-building-route-carryover";
 
 // ── 분리 전 import 경로 유지용 재수출 (하위 호환) ──────────────────────
 export { calculateGeneralBuildingActualTransfer };

@@ -453,6 +453,17 @@ export async function POST(request: NextRequest) {
           reductions: engineInput.reductions,
           filingPenaltyDetails: engineInput.filingPenaltyDetails,
           delayedPaymentDetails: engineInput.delayedPaymentDetails,
+          /**
+           * ⑭ 배우자등 이월과세 (F27) — **부담부증여 §159 분기가 소비한다**.
+           *
+           * 종전에는 ⑧이 「당초 증여자」 기준시가 두 칸을 필수로 요구하면서 그 값이
+           * 엔진에 닿지 않았다(실측 Δ 0). 여기서 넘겨야 §159 안분 앞에 §97의2①1호
+           * 취득가액 치환·①3호 증여세 산입이 얹힌다.
+           *
+           * ⚠️ raw `data.carryoverTaxation` 금지 — Zod 출력은 일자가 string이라
+           *    §97의2③ 기간 비교·§95④ 단서 기산이 침묵 오작동한다.
+           */
+          carryoverTaxation: engineInput.carryoverTaxation,
         },
       );
       return NextResponse.json(
