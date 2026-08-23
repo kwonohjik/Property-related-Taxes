@@ -54,6 +54,14 @@ export type TransferReduction =
       // 조특법 §77의3 — 개발제한구역 지정에 따른 매수대상 토지 감면 (40%/25%)
       type: "gb_designated_land";
       branch: "in_zone" | "released";
+      /**
+       * ① 매수 경로 — 「개발제한구역법」 §17 토지매수 청구 / §20 협의매수.
+       * **감면율은 가르지 않는다**(호(1호/2호)가 정한다) — 가르는 것은 **대상 범위**다:
+       * §17①은 「매수대상토지」(토지만), §20①은 「토지와 그 토지의 정착물」.
+       * 그래서 일반건물 route가 카드 단위로 이 값을 보고 건물 파트에서 제외한다
+       * (`general-building-route-cards.ts` `reductionsForCard`). ②는 미전달.
+       */
+      purchaseRoute?: "claim" | "negotiated";
       designationDate: Date;
       /** ①매수청구·협의매수일 / ②사업인정고시일 */
       triggerDate: Date;

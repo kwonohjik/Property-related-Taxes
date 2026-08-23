@@ -52,6 +52,7 @@ import {
   countActiveReductionsByCategory,
   evaluateAllPeriods,
   isReductionCategoryAllowedForAssetKind,
+  isReductionAllowedForAssetKind,
   type TransferReductionId,
   type ReductionCategory,
   type PeriodCheckContext,
@@ -332,6 +333,8 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
         type="self_farming"
         checked={reductions.some((r) => r.type === "self_farming")}
         onToggle={() => toggleStandalone("self_farming")}
+        allowed={isReductionAllowedForAssetKind("self_farming", asset.assetKind)}
+        disabledReason={`🌾 토지 양도에만 적용되는 감면입니다 (현재 자산: ${ASSET_KIND_LABEL[asset.assetKind]})`}
       />
 
       {/* ── 그룹 카테고리 3개 ── */}
@@ -407,20 +410,29 @@ function StandaloneCheckbox({
   type,
   checked,
   onToggle,
+  allowed = true,
+  disabledReason,
 }: {
   type: "self_farming" | "public_expropriation" | "gb_designated_land" | "replacement_land_comp";
   checked: boolean;
   onToggle: () => void;
+  /** 자산 종류 게이트 — false면 신규 선택을 막는다 */
+  allowed?: boolean;
+  disabledReason?: string;
 }) {
   const { label, desc } = STANDALONE_LABELS[type];
+  // ⚠ **이미 선택된 것은 항상 해제할 수 있어야 한다.** 자산 종류를 바꿔 stale 선택이 남은 경우
+  //   disabled로 잠그면 ⑧이 "감면 선택을 해제하세요"라고 안내하면서 해제 수단이 없는 dead-end가 된다.
+  const disabled = !allowed && !checked;
   return (
     <ToggleCard
       checked={checked}
       onCheckedChange={onToggle}
       title={label}
-      description={desc}
+      description={!allowed && disabledReason ? disabledReason : desc}
       tone="emerald"
       size="sm"
+      disabled={disabled}
     />
   );
 }

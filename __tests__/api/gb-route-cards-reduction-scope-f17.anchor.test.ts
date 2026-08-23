@@ -7,7 +7,7 @@
  * §2 1호 → §3 2호로 위임되어 「토지와 함께 … 필요한 입목, **건물**, 그 밖에 토지에 정착된
  * 물건」을 명문에 담는다. 조특령 §72에 자산 종류를 좁히는 문언이 없다.
  *
- * ## §77의3 — **건물은 §20 협의매수 경로에서만** 대상이다 ⇒ 현행은 토지 파트 한정
+ * ## §77의3 — **건물은 §20 협의매수 경로에서만** 대상이다 ⇒ `purchaseRoute`가 가른다
  *
  * 조특법 §77의3①은 「해당 토지등을 같은 법 **제17조**에 따른 토지매수의 청구 또는 같은 법
  * **제20조**에 따른 협의매수를 통하여 … 양도」로 두 경로를 병렬 열거하는데, 대상 범위가 다르다
@@ -18,13 +18,13 @@
  * | §17① | 「… 그 효용이 현저히 감소된 토지나 … 사실상 불가능하게 된 토지(이하 "**매수대상토지**")」 | **토지만** |
  * | §20① | 「개발제한구역의 **토지와 그 토지의 정착물**(이하 "토지등")」 | 토지 + **건물** |
  *
- * 현행 입력축은 `branch: "in_zone" | "released"`(①/②)뿐이라 **§17/§20을 구분하지 못한다**.
- * 근거 없이 건물분까지 감면하는 것보다 **입증된 범위(토지)로 좁히는 것**이 맞다 —
- * 감면은 예외이고 입증 책임이 납세자에게 있다.
- *
- * ⚠️ 이 좁힘은 **잠정**이다. §77의3은 세부 입력 위젯이 없어 ⑧에서 차단되므로(실측:
- *    체크만 하면 「개발제한구역 지정일을 선택하세요」) 현재 관측 가능한 조합이 아니다.
- *    입력 UI와 매수 경로축은 **한 배치**로 다뤄야 한다 — 계획서 §1.2 별건.
+ * 🔴 **정정 (2026-08-24)** — F17-A 당시 이 파일은 두 가지를 잘못 적었다:
+ * 1. 「입력축이 §17/§20을 구분하지 못한다」 ⇒ **`purchaseRoute` 축을 신설**해 구분한다.
+ *    `claim`(§17)일 때만 건물 파트에서 빠지고, `negotiated`(§20)·②는 건물분도 대상이다.
+ * 2. 「§77의3은 세부 입력 위젯이 없어 ⑧에서 차단된다」 ⇒ **사실이 아니었다.** 서브패널은
+ *    `app/calc/transfer-tax/steps/Step5.tsx`에 처음부터 있었고, 값을 채우면 ⑧을 통과해
+ *    엔진까지 도달한다(P-0 실측: land 자산 감면 174,774,000원). 당시 관측한 차단은
+ *    **기본값이 비어 있어서**였지 위젯 부재가 아니다.
  */
 import { describe, it, expect } from "vitest";
 import { buildProperties } from "@/app/api/calc/transfer/general-building-route-cards";
@@ -60,11 +60,26 @@ const RED_77: TransferReduction = {
   businessApprovalDate: D("2024-01-01"),
 };
 
+/** ① §17 토지매수 청구 — 「매수대상토지」라 건물분은 대상이 아니다. */
 const RED_77_3: TransferReduction = {
   type: "gb_designated_land",
   branch: "in_zone",
+  purchaseRoute: "claim",
   designationDate: D("2000-01-01"),
   triggerDate: D("2024-01-01"),
+  residedFromAcqToTrigger: true,
+};
+
+/** ① §20 협의매수 — 「토지와 그 토지의 정착물」이라 건물분도 대상이다. */
+const RED_77_3_NEGOTIATED: TransferReduction = { ...RED_77_3, purchaseRoute: "negotiated" };
+
+/** ② 해제 후 — 공익사업법 협의매수·수용이라 §17/§20 축 자체가 없다(「토지등」). */
+const RED_77_3_RELEASED: TransferReduction = {
+  type: "gb_designated_land",
+  branch: "released",
+  designationDate: D("2000-01-01"),
+  triggerDate: D("2024-01-01"),
+  releasedDate: D("2023-06-01"),
   residedFromAcqToTrigger: true,
 };
 
@@ -83,9 +98,26 @@ describe("F17-A leaf · 카드별 감면 범위", () => {
     expect(byId(props, "building").reductions![0].type).toBe("public_expropriation");
   });
 
-  it("GBS-03: 🔴 §77의3은 **건물 카드에서 빠진다** (§17 매수대상토지 = 토지만)", () => {
+  it("GBS-03: 🔴 §17 매수청구면 §77의3이 **건물 카드에서 빠진다** (매수대상토지 = 토지만)", () => {
     const props = buildProperties(CARDS, 0, undefined, undefined, [RED_77_3]);
     expect(byId(props, "land").reductions).toHaveLength(1);
+    expect(byId(props, "building").reductions).toHaveLength(0);
+  });
+
+  it("GBS-06: 🔴 §20 협의매수면 **건물 카드에도 남는다** (「토지와 그 토지의 정착물」)", () => {
+    const props = buildProperties(CARDS, 0, undefined, undefined, [RED_77_3_NEGOTIATED]);
+    expect(byId(props, "land").reductions).toHaveLength(1);
+    expect(byId(props, "building").reductions!.map((r) => r.type)).toEqual(["gb_designated_land"]);
+  });
+
+  it("GBS-07: ② 해제 후(공익사업법)도 건물 카드에 남는다 — §17/§20 축 대상이 아니다", () => {
+    const props = buildProperties(CARDS, 0, undefined, undefined, [RED_77_3_RELEASED]);
+    expect(byId(props, "building").reductions).toHaveLength(1);
+  });
+
+  it("GBS-08: ① 경로 미상은 **좁은 쪽(제외)** 으로 남긴다 (⑧이 앞서 차단하지만 방어)", () => {
+    const noRoute = { ...RED_77_3, purchaseRoute: undefined };
+    const props = buildProperties(CARDS, 0, undefined, undefined, [noRoute]);
     expect(byId(props, "building").reductions).toHaveLength(0);
   });
 

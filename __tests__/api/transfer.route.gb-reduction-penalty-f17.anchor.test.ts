@@ -207,6 +207,52 @@ describe("F17-A · 일반건물 감면 배관", () => {
   });
 });
 
+/**
+ * §77의3 매수 경로축(2026-08-24) — **route를 통과하는 유일한 관측 지점**.
+ *
+ * ⚠️ 카드 필터 자체는 `gb-route-cards-reduction-scope-f17.anchor.test.ts`가 leaf 직접 호출로
+ *    덮는데, **그 방식은 ⑫ Zod를 태우지 않는다**. 실측: Zod에서 `purchaseRoute`를 지운
+ *    뮤테이션에 leaf anchor + 단건 route anchor **20/20이 전건 통과**했다(구별력 0).
+ *    N-6(A)가 기록한 「route에 body를 직접 넣는 anchor는 ④를 안 태운다」의 **거울상**이다 —
+ *    층을 건너뛰는 anchor는 그 층의 결함을 못 본다. 그래서 여기 route 경유 케이스를 둔다.
+ */
+describe("§77의3 매수 경로 × 일반건물 파트", () => {
+  const RED_77_3 = (purchaseRoute: "claim" | "negotiated") => [
+    {
+      type: "gb_designated_land",
+      branch: "in_zone",
+      purchaseRoute,
+      // 취득 2009-03-01 < 지정일 ⇒ §77의3①1호(지정일 이전 취득 + 거주) 40% 성립.
+      designationDate: "2010-01-01",
+      triggerDate: "2024-01-01",
+      residedFromAcqToTrigger: true,
+    },
+  ];
+
+  it("GBRT-01: 🔴 §20 협의매수는 **건물 파트에도 감면이 붙는다** (「토지와 그 토지의 정착물」)", async () => {
+    const r = await post(gbAsset(), { reductions: RED_77_3("negotiated") });
+    const building = r.properties.find((p) => p.propertyId === "building")!;
+    expect(building.reductionAggregated).toBeGreaterThan(0);
+  });
+
+  it("GBRT-02: 🔴 §17 매수청구는 **건물 파트가 빠진다** (「매수대상토지」 = 토지만)", async () => {
+    const r = await post(gbAsset(), { reductions: RED_77_3("claim") });
+    const land = r.properties.find((p) => p.propertyId === "land")!;
+    const building = r.properties.find((p) => p.propertyId === "building")!;
+    expect(land.reductionAggregated).toBeGreaterThan(0);
+    expect(building.reductionAggregated ?? 0).toBe(0);
+  });
+
+  it("GBRT-03: 🔴 경로가 **세액을 실제로 가른다** — ⑫에서 strip되면 두 값이 같아진다", async () => {
+    const claim = await post(gbAsset(), { reductions: RED_77_3("claim") });
+    const negotiated = await post(gbAsset(), { reductions: RED_77_3("negotiated") });
+
+    expect(claim.reductionAmount).toBe(41_164_666);
+    expect(negotiated.reductionAmount).toBe(82_329_332);
+    expect(negotiated.determinedTax).toBeLessThan(claim.determinedTax);
+  });
+});
+
 describe("F17-A · 일반건물 가산세 배관", () => {
   it("GBP-01: 🔴 무신고 가산세가 총세액에 반영된다 (종전 Δ 0)", async () => {
     const base = await post(gbAsset());

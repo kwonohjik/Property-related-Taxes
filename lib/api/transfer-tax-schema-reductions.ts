@@ -70,6 +70,11 @@ export const reductionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("gb_designated_land"),
     branch: z.union([z.literal("in_zone"), z.literal("released")]),
+    /**
+     * ① 매수 경로 — 「개발제한구역법」 §17(토지매수 청구, 매수대상**토지**) / §20(협의매수, 토지등).
+     * ②는 공익사업법 경로라 미전달. optional인 이유는 ② payload에는 이 키가 없기 때문이다.
+     */
+    purchaseRoute: z.union([z.literal("claim"), z.literal("negotiated")]).optional(),
     designationDate: z.string().date(),
     triggerDate: z.string().date(),
     releasedDate: z.string().date().optional(),

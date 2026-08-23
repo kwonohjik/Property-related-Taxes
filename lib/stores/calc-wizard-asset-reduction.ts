@@ -68,6 +68,13 @@ export type AssetReductionForm =
       type: "gb_designated_land";
       /** ①구역 내 / ②해제 후 */
       gbBranch: "in_zone" | "released";
+      /**
+       * ① 매수 경로 — 「개발제한구역법」 §17 토지매수의 청구 / §20 협의매수.
+       * 3-state: "" 미선택(⑧ 차단) · 두 경로의 **대상 범위가 달라** 기본값을 줄 수 없다
+       * (§17①은 「매수대상토지」로 토지만, §20①은 「토지와 그 토지의 정착물」).
+       * ②(released)는 공익사업법 경로라 이 축을 쓰지 않는다.
+       */
+      gbPurchaseRoute?: "" | "claim" | "negotiated";
       /** 개발제한구역 지정일 (YYYY-MM-DD) */
       gbDesignationDate: string;
       /** ①매수청구·협의매수일 / ②사업인정고시일 (YYYY-MM-DD) */

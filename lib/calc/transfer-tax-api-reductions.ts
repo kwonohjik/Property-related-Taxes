@@ -87,6 +87,10 @@ export function toEngineReductions(
       return {
         type: "gb_designated_land" as const,
         branch: r.gbBranch,
+        // ② 해제 후 경로는 공익사업법이라 §17/§20 축이 없다 — 키 자체를 싣지 않는다.
+        ...(r.gbBranch === "in_zone" && r.gbPurchaseRoute
+          ? { purchaseRoute: r.gbPurchaseRoute }
+          : {}),
         designationDate: r.gbDesignationDate,
         triggerDate: r.gbTriggerDate,
         releasedDate: r.gbReleasedDate || undefined,
