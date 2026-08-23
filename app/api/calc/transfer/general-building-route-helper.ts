@@ -31,6 +31,7 @@ import {
   buildProperties,
   buildApportionment,
   type GeneralBuildingRouteResult,
+  type GbAssetLevelInputs,
 } from "./general-building-route-cards";
 import {
   calculateGeneralBuildingActualTransfer,
@@ -39,7 +40,7 @@ import {
 
 // ── 분리 전 import 경로 유지용 재수출 (하위 호환) ──────────────────────
 export { calculateGeneralBuildingActualTransfer };
-export type { GeneralBuildingActualPricePayload, GeneralBuildingRouteResult };
+export type { GeneralBuildingActualPricePayload, GeneralBuildingRouteResult, GbAssetLevelInputs };
 
 /**
  * payload 정규화·카드 조립은 `lib/tax-engine/general-building-entry.ts`로 옮겼다 (2026-08-11).
@@ -94,6 +95,11 @@ export function dispatchGeneralBuilding(
    * `gbRaw`는 `generalBuildingValuation` 서브객체라 이 값을 담고 있지 않다 — 명시 전달이 필수.
    */
   ownershipRatio?: number,
+  /**
+   * ⑭ 자산-수준 감면·가산세 (F17) — 카드 조립 이후 단계가 소비한다.
+   * 위치 인자가 이미 12개라 **묶음 객체**로 받는다(순서 착오 방지).
+   */
+  assetLevel?: GbAssetLevelInputs,
 ): GeneralBuildingRouteResult {
   const coercedGbRaw = coerceGeneralBuildingPayload(gbRaw);
   const buildingAcqDate = coercedGbRaw.buildingAcquisitionDate as Date | undefined;
@@ -107,7 +113,7 @@ export function dispatchGeneralBuilding(
     totalTransferPrice, transferDate, acquisitionDate,
     actualAcquisitionPrice, actualExpenses,
     taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
-    burdenedGiftInfo, expropriation, ownershipRatio,
+    burdenedGiftInfo, expropriation, ownershipRatio, assetLevel,
   );
 }
 
@@ -135,6 +141,7 @@ function dispatchCoercedGeneralBuilding(
     compensationBasisStdPrice?: number;
   },
   ownershipRatio?: number,
+  assetLevel?: GbAssetLevelInputs,
 ): GeneralBuildingRouteResult {
   if (coercedGbRaw.actualPriceMode === true) {
     /**
@@ -168,7 +175,7 @@ function dispatchCoercedGeneralBuilding(
         buildingAcquisitionDate: buildingAcqDate,
         buildingAcquisitionCause: buildingAcqCause,
       },
-      taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
+      taxYear, annualBasicDeductionUsed, priorReductionUsage, rates, assetLevel,
     );
   }
   // ⑭ 사례 33: 증축 경로에서 actualBundledAcquisitionPrice/Expenses 주입
@@ -206,7 +213,7 @@ function dispatchCoercedGeneralBuilding(
 
   return calculateGeneralBuildingTransfer(
     gbPayload,
-    taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
+    taxYear, annualBasicDeductionUsed, priorReductionUsage, rates, assetLevel,
   );
 }
 
@@ -225,13 +232,14 @@ export function calculateGeneralBuildingTransfer(
   annualBasicDeductionUsed: number | undefined,
   priorReductionUsage: unknown[],
   rates: TaxRatesMap,
+  assetLevel?: GbAssetLevelInputs,
 ): GeneralBuildingRouteResult {
   const { gbOut, swap } = buildEstimatedGeneralBuildingCards(gbv);
   // §104③ 미등기 — 토지·건물 축을 카드별로 싣는다(엔진 input에서 그대로 전달).
   const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio, swap, {
     land: gbv.unregisteredLand,
     building: gbv.unregisteredBuilding,
-  });
+  }, assetLevel?.reductions);
 
   const aggregated = calculateTransferTaxAggregate(
     {
@@ -240,6 +248,9 @@ export function calculateGeneralBuildingTransfer(
       annualBasicDeductionUsed: annualBasicDeductionUsed ?? 0,
       basicDeductionAllocation: "MAX_BENEFIT",
       priorReductionUsage: (priorReductionUsage ?? []) as never,
+      // 신고서 단위 가산세 — 카드마다 실으면 같은 신고의 가산세가 카드 수만큼 배가된다.
+      filingPenaltyDetails: assetLevel?.filingPenaltyDetails,
+      delayedPaymentDetails: assetLevel?.delayedPaymentDetails,
     },
     rates,
   );

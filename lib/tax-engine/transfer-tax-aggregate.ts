@@ -19,7 +19,12 @@ import {
   type CalculationStep,
 } from "./transfer-tax";
 import { computeAmendment } from "./transfer-tax-amendment";
-import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
+import { calculateTransferTaxPenalty } from "./transfer-tax-penalty";
+import {
+  aggregateReductions,
+  allocateAggregateReductions,
+  computeAggregateTaxCreditRuralSurtax,
+} from "./transfer-tax-aggregate-reduction-step";
 import {
   resolveFilingUnitCarryoverScope,
   type CarryoverScenarioOverrides,
@@ -28,12 +33,6 @@ import { computeSettlement } from "./transfer-tax-settlement";
 import { TRANSFER } from "./legal-codes";
 import { TaxCalculationError } from "./tax-errors";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
-import {
-  applyAnnualLimits,
-  applyFiveYearLimits,
-  buildLimitGroups,
-  lookupLimit,
-} from "./aggregate-reduction-limits";
 import {
   validateInput,
   classifyRateGroup,
@@ -350,119 +349,17 @@ function computeAggregateOnce(
     }
   }
 
-  // M-8: 감면 합산 — 유형별 비율 재계산 (조특법 §69 + §127의2 + §133)
-  // 1) 각 자산이 노출한 reducibleIncome을 유형별로 집계
-  // 2) 합산 과세표준 기준으로 `safeMultiplyThenDivide(calculatedTax, 유형별 reducibleIncome, taxBase)` 재계산
-  // 3) §133 유형별 연간 한도 적용 (자경·축산·어업 1억원 그룹 / 공익수용 2억원 단독 등)
-  // 4) 유형이 없는 레거시 감면은 건별 단순 합산으로 폴백
-  //
-  // 분모 주의: 반드시 aggregate taxBase(차손 통산 + 기본공제 반영)여야 한다.
-  // 합산양도소득금액이나 각 건별 taxBase를 쓰면 과대감면이 발생한다.
-  // 세액감면(§69·§77 등) 비율 재계산 분모 — income-deduction 반영 후 과세표준(감면후 기준).
-  const aggregateTaxBase = Math.max(
-    0,
-    taxableAfterReduction.reduce((s, v) => s + v, 0) - totalBasicDeduction,
-  );
-  const reducibleByType = new Map<string, { income: number; assetIds: string[] }>();
-  for (const r of assetRecords) {
-    if (r.result.isExempt) continue;
-    const type = r.result.reductionTypeApplied;
-    const income = r.result.reducibleIncome ?? 0;
-    if (!type || income <= 0) continue;
-    const existing = reducibleByType.get(type) ?? { income: 0, assetIds: [] };
-    existing.income += income;
-    existing.assetIds.push(r.item.propertyId);
-    reducibleByType.set(type, existing);
-  }
-
-  // 조특법 §133 유형별 연간 한도 — `aggregate-reduction-limits.ts` 모듈 사용.
-  // 유형별 원시 감면세액을 계산한 뒤 그룹 단위로 capping.
-  const rawByType = new Map<string, number>();
-  for (const [type, entry] of reducibleByType.entries()) {
-    const raw =
-      aggregateTaxBase > 0
-        ? safeMultiplyThenDivide(calculatedTax, entry.income, aggregateTaxBase)
-        : 0;
-    rawByType.set(type, raw);
-  }
-  // §133 한도는 양도연도 분기 그룹(2025+ §77 그룹 2억/3억, 이전 1억/2억).
-  const transferYear = input.taxYear;
-  const limitGroups = buildLimitGroups(transferYear);
-  const { cappedByType: annuallyCapped, capInfoByType } = applyAnnualLimits(rawByType, limitGroups);
-
-  // §133 5년 누적 한도 추가 capping
-  const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
-    annuallyCapped,
-    input.priorReductionUsage ?? [],
-    transferYear,
-    limitGroups,
-  );
-  const cappedByType = fiveYearCappedByType;
-
-  const reductionBreakdown: ReductionBreakdownEntry[] = [];
-  let totalAggregatedReduction = 0;
-  for (const [type, entry] of reducibleByType.entries()) {
-    const raw = rawByType.get(type) ?? 0;
-    const capped = cappedByType.get(type) ?? 0;
-    const info = capInfoByType.get(type);
-    const fiveInfo = fiveYearCapInfoByType.get(type);
-    const annualLimit =
-      info && Number.isFinite(info.annualLimit) ? info.annualLimit : 0;
-    const annuallyCappedReduction = annuallyCapped.get(type) ?? capped;
-    const fiveYearLimitVal =
-      fiveInfo && Number.isFinite(fiveInfo.fiveYearLimit) ? fiveInfo.fiveYearLimit : 0;
-    reductionBreakdown.push({
-      type,
-      legalBasis: info?.legalBasis
-        ? `${lookupLimit(type).groupTypes.length > 0 ? resolveTypeLegalBasis(type) : TRANSFER.REDUCTION_OVERLAP_EXCLUSION} + ${info.legalBasis}`
-        : resolveTypeLegalBasis(type),
-      totalReducibleIncome: entry.income,
-      aggregateTaxBase,
-      aggregateCalculatedTax: calculatedTax,
-      rawAggregateReduction: raw,
-      annualLimit,
-      annuallyCappedReduction,
-      cappedAggregateReduction: capped,
-      cappedByLimit: info?.cappedByLimit ?? false,
-      fiveYearLimit: fiveYearLimitVal,
-      priorGroupSum: fiveInfo?.priorGroupSum ?? 0,
-      fiveYearRemaining: fiveInfo && Number.isFinite(fiveInfo.remaining) ? fiveInfo.remaining : 0,
-      cappedByFiveYearLimit: fiveInfo?.cappedByFiveYear ?? false,
-      assetIds: entry.assetIds,
-    });
-    totalAggregatedReduction += capped;
-  }
-
-  // 유형이 지정되지 않은 감면(reducibleIncome 미노출 레거시 경로)은 건별 단순 합산
-  const legacyReductionAmount = assetRecords.reduce((s, r) => {
-    if (r.result.isExempt) return s;
-    // 재계산 경로(reducibleByType)는 reducibleIncome>0 인 유형만 처리한다.
-    // reductionTypeApplied는 있으나 reducibleIncome 미노출인 세액감면(§97·§98·§99 계열 등)은
-    // 이 레거시 단순합에 포함해야 소실되지 않는다(건별 §127⑦ 이미 적용된 reductionAmount).
-    if (r.result.reductionTypeApplied && (r.result.reducibleIncome ?? 0) > 0) return s;
-    return s + (r.result.reductionAmount ?? 0);
-  }, 0);
-
-  const reductionAmount = Math.min(
+  // M-8: 감면 합산 — 유형별 비율 재계산 + 조특법 §133 한도. 상세는 reduction-step ① 참조.
+  const { reductionBreakdown, reductionAmount } = aggregateReductions({
+    assetRecords,
     calculatedTax,
-    totalAggregatedReduction + legacyReductionAmount,
-  );
-
-  // 세율군 혼재 시 경고 (PDF 사례 범위 외)
-  if (comparedTaxApplied === "groups" && reducibleByType.size > 0) {
-    warnings.push(
-      "비교과세가 세율군별로 적용된 상황에서 감면 재계산은 전체 산출세액 기준으로 이루어졌습니다. 세율군 혼재 시 정확한 안분은 별도 로직이 필요합니다.",
-    );
-  }
-
-  steps.push({
-    label: "감면세액 (합산 재계산)",
-    formula:
-      reducibleByType.size > 0
-        ? `유형별 재계산: ${[...reducibleByType.keys()].join(", ")} | 원시 ${totalAggregatedReduction === 0 ? "0" : totalAggregatedReduction.toLocaleString()} + 레거시 ${legacyReductionAmount.toLocaleString()}`
-        : `건별 단순합 ${legacyReductionAmount.toLocaleString()} (유형 미지정 감면만 존재)`,
-    amount: reductionAmount,
-    legalBasis: TRANSFER.REDUCTION_ANNUAL_LIMIT,
+    taxableAfterReduction,
+    totalBasicDeduction,
+    taxYear: input.taxYear,
+    priorReductionUsage: input.priorReductionUsage ?? [],
+    comparedByGroups: comparedTaxApplied === "groups",
+    steps,
+    warnings,
   });
 
   const determinedTaxBeforePenalty = Math.max(0, calculatedTax - reductionAmount);
@@ -483,84 +380,84 @@ function computeAggregateOnce(
     (s, r) => s + (r.result.isExempt ? 0 : r.result.penaltyDetail?.totalPenalty ?? 0),
     0,
   );
-  const penaltyTax = perAssetBuildingPenalty + perAssetFilingDelayedPenalty;
+  /**
+   * M-9b: **신고서 단위** 신고불성실·납부지연 가산세 (F17).
+   *
+   * 일반건물처럼 **자산 1건이 내부 카드 여러 장으로 쪼개지는 경로**를 위한 것이다.
+   * 카드마다 실으면 같은 신고 1건의 가산세가 카드 수만큼 배가되므로, 신고 단위로 1회 계산한다.
+   *
+   * 🔑 base는 **집계 결정세액**을 주입한다 — 단건 route가 2-pass로 하던 일
+   * (`route.ts:460` 「먼저 가산세 없이 계산하여 결정세액 확보 후 주입」)을 여기서는
+   * 이미 그 값을 알고 있으므로 1-pass로 끝낸다. 호출부가 보낸 `determinedTax`는 화면에서
+   * 계산되기 전 값이라 신뢰하지 않는다.
+   *
+   * ⚠️ 자산별 입력과 **동시에 들어오면 둘 다 부과된다** — 타입 주석이 상호배타를 명시하고,
+   *    실제로 그런 payload를 만드는 경로는 없다(일반건물은 신고단위, 다건은 자산별).
+   */
+  const filingUnitPenaltyDetail =
+    input.filingPenaltyDetails || input.delayedPaymentDetails
+      ? calculateTransferTaxPenalty({
+          filing: input.filingPenaltyDetails
+            ? {
+                ...input.filingPenaltyDetails,
+                determinedTax: determinedTaxBeforePenalty,
+                reductionAmount,
+              }
+            : undefined,
+          delayedPayment: input.delayedPaymentDetails
+            ? {
+                ...input.delayedPaymentDetails,
+                // 미납세액 0 = 결정세액 전액 미납으로 본다(단건 route와 같은 규약).
+                unpaidTax:
+                  input.delayedPaymentDetails.unpaidTax === 0
+                    ? determinedTaxBeforePenalty
+                    : input.delayedPaymentDetails.unpaidTax,
+              }
+            : undefined,
+        })
+      : undefined;
+
+  const penaltyTax =
+    perAssetBuildingPenalty +
+    perAssetFilingDelayedPenalty +
+    (filingUnitPenaltyDetail?.totalPenalty ?? 0);
 
   // M-10: 지방소득세 (원 미만 절사 — 지방세법 §103의3)
   // 과세표준 = 결정세액 + §114조의2 건물 가산세만 (단건 엔진 finalize와 동일).
   // 신고불성실·납부지연 가산세(국세기본법 §47의2~5)는 지방소득세 부과대상이 아니므로 base 제외.
   const localIncomeTax = applyRate(determinedTaxBeforePenalty + perAssetBuildingPenalty, 0.1);
-  // ── 감면 배분 선계산 — floor 잔액 말단 흡수 ────────────────────────────
-  //
-  // 2026-07-29 정정(#591 감사 R7 — 표시 자기일관성, 세액 불변): 같은 감면 유형의 자산들이
-  // 각각 독립 floor되어 **Σ배분액이 cappedAggregateReduction과 최대 (n−1)원 어긋났다**.
-  // 화면에는 "감면 합계"와 "자산별 감면"이 나란히 나오므로 1원 차이도 자기모순으로 보인다.
-  //
-  // 정책: 안분은 마지막 항목이 잔액을 흡수해 `Σ = 전체` 불변식을 지킨다
-  // (memory `feedback_floor_residual_absorption`). 총 감면액(capped) 자체는 불변이므로
-  // 세액에는 영향이 없다.
-  const reductionAllocations = new Map<number, number>();
-  {
-    /** 감면유형 → 그 유형에 속하는 자산 인덱스(입력 순서 유지) */
-    const groupIdx = new Map<string, number[]>();
-    assetRecords.forEach((r, idx) => {
-      const type = r.result.reductionTypeApplied;
-      const reducible = r.result.isExempt ? 0 : r.result.reducibleIncome ?? 0;
-      if (!type || reducible <= 0) return;
-      const entry = reductionBreakdown.find((b) => b.type === type);
-      if (!entry || entry.totalReducibleIncome <= 0) return;
-      const list = groupIdx.get(type);
-      if (list) list.push(idx);
-      else groupIdx.set(type, [idx]);
-    });
-
-    for (const [type, idxList] of groupIdx) {
-      const entry = reductionBreakdown.find((b) => b.type === type)!;
-      let allocated = 0;
-      idxList.forEach((idx, i) => {
-        const isLast = i === idxList.length - 1;
-        if (isLast) {
-          // 말단 흡수 — 나머지 전액. floor 누적 오차가 여기로 모인다.
-          reductionAllocations.set(idx, entry.cappedAggregateReduction - allocated);
-          return;
-        }
-        const reducible = assetRecords[idx].result.reducibleIncome ?? 0;
-        const share = Math.floor(
-          entry.cappedAggregateReduction * (reducible / entry.totalReducibleIncome),
-        );
-        reductionAllocations.set(idx, share);
-        allocated += share;
-      });
-    }
-  }
+  // 감면 배분 — floor 잔액 말단 흡수(Σ = 전체 불변식). 상세는 reduction-step ② 참조.
+  const reductionAllocations = allocateAggregateReductions(assetRecords, reductionBreakdown);
 
   /**
    * 세액감면형 감면의 **농어촌특별세** — 단건 경로(STEP 8.8)와 **같은 판정표**를 쓴다.
-   *
-   * 위 `ruralSurtax`는 **소득금액 차감형**(§99의3 등) 전용이라 §77·§77의2·§77의3·§97 시리즈에는
-   * 한 원도 붙지 않았다. 「농어촌특별세법」 §5①1호는 조특법 감면세액 × 20%를 정하고, 비과세는
-   * 시행령 §4가 **열거**한 것뿐이다(§69는 비과세 · §77은 **직접 경작한 토지**만 비과세).
-   *
-   * 🔑 **자산별 배분액으로 판정한다** — 「직접 경작」 여부는 자산마다 다르므로 유형 합계로는
-   *    가를 수 없다. 그래서 `reductionAllocations`(§133 한도까지 반영된 자산별 몫)를 쓴다.
+   * 위 `ruralSurtax`는 소득금액 차감형(§99의3 등) 전용이라 §77 계열에는 한 원도 붙지 않았다.
+   * 판정·근거는 `transfer-tax-aggregate-reduction-step.ts` ③ 참조.
    */
-  let ruralSurtaxCredit = 0;
-  for (const [idx, allocated] of reductionAllocations) {
-    if (allocated <= 0) continue;
-    const rec = assetRecords[idx];
-    const verdict = resolveTaxCreditRuralSurtax({
-      reductionTypeApplied: rec.result.reductionTypeApplied,
-      reductionAmount: allocated,
-      isSelfCultivatedExpropriatedLand: (rec.item as { isSelfCultivatedExpropriatedLand?: boolean })
-        .isSelfCultivatedExpropriatedLand,
-    });
-    ruralSurtaxCredit += verdict.surtax;
-  }
-  if (ruralSurtaxCredit > 0) {
+  const ruralSurtaxCredit = computeAggregateTaxCreditRuralSurtax(
+    assetRecords,
+    reductionAllocations,
+    steps,
+  );
+
+  // 신고서 단위 가산세 — 세액에 이미 들어가 있으므로 **근거를 화면에 남긴다**(침묵 금지).
+  if (filingUnitPenaltyDetail && filingUnitPenaltyDetail.totalPenalty > 0) {
+    const fp = filingUnitPenaltyDetail.filingPenalty;
+    const dp = filingUnitPenaltyDetail.delayedPaymentPenalty;
     steps.push({
-      label: "농어촌특별세 (감면세액 × 20%)",
-      formula: `자산별 감면세액 합계 × 20% = ${ruralSurtaxCredit.toLocaleString()} (농어촌특별세법 §5①1호 · 시행령 §4 비과세 열거 제외분)`,
-      amount: ruralSurtaxCredit,
-      legalBasis: "농어촌특별세법 §5①1호",
+      label: "가산세 (신고서 단위)",
+      formula: [
+        fp && fp.filingPenalty > 0
+          ? `신고불성실 ${fp.penaltyBase.toLocaleString()} × ${(fp.penaltyRate * 100).toFixed(0)}%`
+          : null,
+        dp && dp.delayedPaymentPenalty > 0
+          ? `납부지연 ${dp.unpaidTax.toLocaleString()} × ${dp.elapsedDays}일 × ${(dp.dailyRate * 100).toFixed(3)}%`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" + "),
+      amount: filingUnitPenaltyDetail.totalPenalty,
+      legalBasis: "국세기본법 §47의2·§47의3·§47의4",
     });
   }
 
@@ -717,6 +614,7 @@ function computeAggregateOnce(
     settlementTotalDue: settlement.settlementTotalDue,
     penaltyTax,
     // 가산세 상세는 자산별로 properties[i].penaltyDetail 에서 노출.
+    ...(filingUnitPenaltyDetail ? { filingUnitPenaltyDetail } : {}),
     localIncomeTax,
     ruralSurtax: ruralSurtaxAll,
     totalTax,

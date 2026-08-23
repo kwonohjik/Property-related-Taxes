@@ -77,6 +77,25 @@ export interface AggregateTransferInput {
   priorPaidTax?: number;
   /** 예정신고 기납부 지방소득세 (원). 미지정 0. */
   priorPaidLocalTax?: number;
+  /**
+   * **신고서 단위** 신고불성실·납부지연 가산세 (국세기본법 §47의2·§47의3·§47의4).
+   *
+   * ## 자산별 입력(`properties[].filingPenaltyDetails`)과 무엇이 다른가
+   *
+   * 다건 신고(여러 자산을 각각 예정신고)는 **자산별**이 맞다 — 국세기본법 §47의2①의 base가
+   * 「그 신고로 납부하여야 할 세액」이고 ⑤이 예정신고분·확정신고분을 분리하기 때문이다(F03).
+   *
+   * 그러나 **일반건물처럼 하나의 자산이 내부적으로 여러 카드로 쪼개지는 경우**는 다르다.
+   * 카드마다 실으면 같은 신고 1건의 가산세가 **카드 수만큼 배가된다**. 이 필드는 그런 경로가
+   * 「신고 1건 = 가산세 1회」를 표현하기 위한 것이다.
+   *
+   * ⚠️ 자산별 입력과 **동시에 쓰지 않는다** — 쓰면 같은 신고에 두 번 부과된다.
+   *
+   * 🔑 `determinedTax`·`reductionAmount`·`unpaidTax`는 **엔진이 집계값으로 덮어쓴다**
+   *    (단건 route의 2-pass와 같은 규약 — 호출부가 미리 알 수 없는 값이다).
+   */
+  filingPenaltyDetails?: TransferTaxInput["filingPenaltyDetails"];
+  delayedPaymentDetails?: TransferTaxInput["delayedPaymentDetails"];
 }
 
 /**
@@ -351,8 +370,17 @@ export interface AggregateTransferResult {
    */
   amendmentDetail?: AmendmentDetail;
 
-  /** 자산별 §114의2 + 자산별 신고불성실/납부지연 합계 (자산별 상세는 properties[i].penaltyDetail). */
+  /**
+   * 자산별 §114의2 + 자산별 신고불성실/납부지연 + **신고서 단위** 가산세 합계
+   * (자산별 상세는 `properties[i].penaltyDetail`, 신고서 단위 상세는 아래 `filingUnitPenaltyDetail`).
+   */
   penaltyTax: number;
+
+  /**
+   * 신고서 단위 신고불성실·납부지연 가산세 상세 (F17 — 입력 `filingPenaltyDetails`가 있을 때만).
+   * 결과 화면이 「신고불성실 얼마 · 납부지연 얼마」를 풀어 쓰는 데 쓴다.
+   */
+  filingUnitPenaltyDetail?: TransferTaxPenaltyResult;
 
   /** 지방소득세 = (결정+가산) × 10%, 천원 절사 */
   localIncomeTax: number;

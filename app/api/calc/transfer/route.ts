@@ -438,6 +438,22 @@ export async function POST(request: NextRequest) {
           compensationBasisStdPrice: data.compensationBasisStdPrice,
         },
         data.ownershipRatio,
+        /**
+         * ⑭ 자산-수준 감면·가산세 (F17, 2026-08-23).
+         *
+         * 종전에는 이 두 가지가 **여기서 버려졌다** — 클라이언트는 자산 종류와 무관하게
+         * `reductions`·`filingPenaltyDetails`를 싣고 Zod도 받는데, GB 분기가 인자로 넘기지
+         * 않아 세액이 1원도 안 움직였다(실측 Δ 0 · 같은 payload가 단건 경로에서는 움직인다).
+         *
+         * ⚠️ `data.reductions`(raw)가 아니라 **`engineInput.reductions`**를 쓴다 —
+         *    Zod 출력은 일자가 string이라 §77①의 「소급 2년」 비교가 침묵 오작동한다
+         *    (`mapReductionsToEngine`가 Date로 바꾼 값이 정본).
+         */
+        {
+          reductions: engineInput.reductions,
+          filingPenaltyDetails: engineInput.filingPenaltyDetails,
+          delayedPaymentDetails: engineInput.delayedPaymentDetails,
+        },
       );
       return NextResponse.json(
         {

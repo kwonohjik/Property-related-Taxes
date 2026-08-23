@@ -30,6 +30,7 @@ import {
   buildProperties,
   buildApportionment,
   type GeneralBuildingRouteResult,
+  type GbAssetLevelInputs,
 } from "./general-building-route-cards";
 
 /** 실거래가/감정가 모드 NBL 전용 payload. */
@@ -642,6 +643,8 @@ export function calculateGeneralBuildingActualTransfer(
   annualBasicDeductionUsed: number | undefined,
   priorReductionUsage: unknown[],
   rates: TaxRatesMap,
+  /** ⑭ 자산-수준 감면·가산세 (F17). 환산 경로와 **같은 규약**이어야 한다. */
+  assetLevel?: GbAssetLevelInputs,
 ): GeneralBuildingRouteResult {
   const built = buildActualGeneralBuildingCards(payload);
   const { cards, nonBusinessRatio, totalStd, landStdAtTransfer } = built;
@@ -649,7 +652,7 @@ export function calculateGeneralBuildingActualTransfer(
   const properties = buildProperties(cards, nonBusinessRatio, undefined, {
     land: payload.unregisteredLand,
     building: payload.unregisteredBuilding,
-  });
+  }, assetLevel?.reductions);
   const aggregated = calculateTransferTaxAggregate(
     {
       taxYear,
@@ -657,6 +660,9 @@ export function calculateGeneralBuildingActualTransfer(
       annualBasicDeductionUsed: annualBasicDeductionUsed ?? 0,
       basicDeductionAllocation: "MAX_BENEFIT",
       priorReductionUsage: (priorReductionUsage ?? []) as never,
+      // 신고서 단위 가산세 — 카드별 입력이 아니다(같은 신고가 카드 수만큼 배가되는 것을 막는다).
+      filingPenaltyDetails: assetLevel?.filingPenaltyDetails,
+      delayedPaymentDetails: assetLevel?.delayedPaymentDetails,
     },
     rates,
   );
