@@ -68,6 +68,11 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 승계조합원 입주권 취득가액 (§97①1호 가목) — 원조합원 §166① 경로와 별개 축
     successorRightAcqPrice: "",
     successorRightAddedContribution: "",
+    // §165① 기준시가 4칸 — 승계 입주권 추계 전용
+    successorRightStdPaidAtAcq: "",
+    successorRightStdPremiumAtAcq: "",
+    successorRightStdPaidAtTransfer: "",
+    successorRightStdPremiumAtTransfer: "",
     // §104③ 미등기양도자산 — 컴패니언 자산 전용(주 자산은 폼-전역 isUnregistered)
     isUnregistered: false,
     isPrimaryForHouseholdFlags: index === 1,

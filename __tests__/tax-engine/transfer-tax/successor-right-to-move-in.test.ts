@@ -204,6 +204,91 @@ describe("일반 경로 위임의 부수 효과 — 계획서 §9 V-1·V-2·V-3 
   });
 });
 
+/**
+ * ── R-12 (2026-08-23) — 승계 입주권의 추계 3종이 세액까지 도달한다 ────────────────
+ *
+ * 근거 (KoreanLaw 본문 실독):
+ *   법 §94①2호**가목** 「부동산을 취득할 수 있는 권리」 ⇒ 조합원입주권이 여기 해당
+ *   법 §99①2호 가목 → 영 **§165①** 「취득일 또는 양도일까지 납입한 금액과 그 시점 현재의
+ *     프리미엄에 상당하는 금액을 합한 금액」 — 기준시가 산정 **명문**
+ *   영 §176의2②**2호** 「법 제94조제1항제1호 및 **제2호가목**에 따른 … 부동산을 취득할 수 있는
+ *     권리의 경우에는 (양도당시 실지거래가액 등) × (취득당시 기준시가 ÷ 양도당시 기준시가)」
+ *   영 §176의2③ 추계 순서 — 매매사례 → 감정 → 환산 → 기준시가
+ *
+ * **엔진은 변경하지 않았다.** 승계는 §166을 타지 않고 §97①1호 일반 경로로 가므로 추계 3종이
+ * 이미 동작한다 — R-12는 ④ 변환 게이트와 ⑤ UI·⑧ validate를 여는 배관 작업이었다.
+ * 이 anchor는 **엔진 쪽 계약**을 고정한다(배관 anchor는 `__tests__/calc/transfer-right-acq-axis.test.ts`).
+ *
+ * 개산공제는 **1%** 다 — 입주권은 §94①2호 가목이라 영 §163⑥**4호**(1/100)이고,
+ * 7%인 3호는 나목(지상권)·다목(전세권·등기임차권)만 열거한다(PR #1257).
+ */
+describe("R-12 승계 입주권 추계 3종 (§176의2③)", () => {
+  /** 양도 8억 · §165① 취득 3억 / 양도 6억 ⇒ 환산 = 8억 × 3/6 = 4억 · 개산공제 = 3억 × 1% */
+  const TP = 800_000_000;
+  const STD_ACQ = 300_000_000;
+  const DEDUCTION_1PCT = 3_000_000;
+
+  function estimationInput(over: Partial<TransferTaxInput>): TransferTaxInput {
+    return successorInput({
+      transferPrice: TP,
+      acquisitionPrice: 0,
+      standardPriceAtAcquisition: STD_ACQ,
+      ...over,
+    });
+  }
+
+  it("R12-1: 환산 → 양도가액 × (취득 기준시가 ÷ 양도 기준시가) − 개산공제 1%", () => {
+    const r = calculateTransferTax(
+      estimationInput({ useEstimatedAcquisition: true, standardPriceAtTransfer: 600_000_000 }),
+      mockRates,
+    );
+    expect(r.transferGain).toBe(TP - 400_000_000 - DEDUCTION_1PCT);
+    // 승계는 §166을 타지 않는다 — 3분할이 생기면 경로가 잘못 잡힌 것이다.
+    expect(r.redevelopmentDetail).toBeUndefined();
+  });
+
+  it("R12-2: 감정가액 → 감정가 − 개산공제 1% (§176의2③2호)", () => {
+    const r = calculateTransferTax(
+      estimationInput({ acquisitionMethod: "appraisal", appraisalValue: 400_000_000 }),
+      mockRates,
+    );
+    expect(r.transferGain).toBe(TP - 400_000_000 - DEDUCTION_1PCT);
+  });
+
+  it("R12-3: 매매사례가액 → 매매사례가 − 개산공제 1% (§176의2③1호)", () => {
+    const r = calculateTransferTax(
+      estimationInput({ acquisitionMethod: "salesCase", similarSalesValue: 420_000_000 }),
+      mockRates,
+    );
+    expect(r.transferGain).toBe(TP - 420_000_000 - DEDUCTION_1PCT);
+  });
+
+  /**
+   * 🔴 이것이 ⑧ validate가 §165① 기준시가를 **필수**로 요구하는 이유다.
+   * 기준시가가 없으면 환산 분자가 0이라 취득가액이 통째로 사라지고, **오류 없이** 양도가액
+   * 전액이 양도차익이 된다. 화면에서 이 상태에 도달할 수 없어야 한다.
+   */
+  it("R12-4: 기준시가 없이 환산하면 취득가액이 0이 된다 — ⑧이 막아야 하는 이유", () => {
+    const r = calculateTransferTax(
+      successorInput({ transferPrice: TP, acquisitionPrice: 0, useEstimatedAcquisition: true }),
+      mockRates,
+    );
+    expect(r.transferGain).toBe(TP);
+  });
+
+  it("R12-5: LTHD는 여전히 0 — §95② 「조합원으로부터 취득한 것은 제외」는 추계와 무관", () => {
+    const r = calculateTransferTax(
+      estimationInput({
+        useEstimatedAcquisition: true,
+        standardPriceAtTransfer: 600_000_000,
+        residencePeriodMonths: 120,
+      }),
+      mockRates,
+    );
+    expect(r.longTermHoldingDeduction ?? 0).toBe(0);
+  });
+});
+
 describe("원조합원 입주권 무변경 트립와이어", () => {
   /** 사례 36 CORE — §166①1호 (청산금 납부) */
   it("A-10: 원조합원은 §166 3분할을 그대로 탄다", () => {

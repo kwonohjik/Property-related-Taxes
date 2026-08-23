@@ -603,6 +603,11 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 승계조합원 입주권 취득가액 (§97①1호 가목) — sessionStorage 호환
   if (a.successorRightAcqPrice === undefined) a.successorRightAcqPrice = "";
   if (a.successorRightAddedContribution === undefined) a.successorRightAddedContribution = "";
+  // §165① 기준시가 4칸 — 승계 입주권 추계(R-12). stale 저장값에는 없다.
+  if (a.successorRightStdPaidAtAcq === undefined) a.successorRightStdPaidAtAcq = "";
+  if (a.successorRightStdPremiumAtAcq === undefined) a.successorRightStdPremiumAtAcq = "";
+  if (a.successorRightStdPaidAtTransfer === undefined) a.successorRightStdPaidAtTransfer = "";
+  if (a.successorRightStdPremiumAtTransfer === undefined) a.successorRightStdPremiumAtTransfer = "";
   if (a.redevApprovalLawBasis === undefined) a.redevApprovalLawBasis = "";
   if (a.redevOriginalAssetType === undefined || a.redevOriginalAssetType === "") a.redevOriginalAssetType = "housing";
   if (a.redevSettlementDirection === undefined) a.redevSettlementDirection = "";
