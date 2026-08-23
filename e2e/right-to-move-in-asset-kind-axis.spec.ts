@@ -269,6 +269,35 @@ test.describe("자산 종류 축 — 입주권 / 재개발APT", () => {
     await expect(page.getByText(/양도차익/).first()).toBeVisible();
   });
 
+  /**
+   * A-14 (2026-08-23) — 청산금 **수령**은 취득가액을 깎는 사안이 아니라 **별개의 양도**다.
+   *
+   * 종전 hint는 「청산금을 수령한 경우는 현재 지원하지 않습니다」로만 적혀 있어, 사용자가
+   * **신고 의무 자체를 모를 수** 있었다. 「미지원」과 「따로 신고해야 한다」는 전혀 다른 정보다.
+   *
+   * 근거: 국세청 **사전-2023-법규재산-0450**(2024-06-27) — 승계조합원이 이전고시 후 조합으로부터
+   * 지급받은 청산금 상당액은 양도소득세 과세대상이며, 양도시기는 소유권 이전고시일의 다음날이고
+   * §105에 따라 신고. 관련 법령이 §88·§98·§105이지 **§97(취득가액)이 아니다**.
+   */
+  test("A-14: 승계조합원 입주권에 청산금 수령 시 별도 신고 안내가 나온다", async ({ page }) => {
+    test.setTimeout(60_000);
+    await openAcquisitionStep(page, "right_to_move_in", "", "pay", {
+      isSuccessorRightToMoveIn: true,
+      acquisitionDate: "2020-05-01",
+      successorRightAcqPrice: "350000000",
+    });
+
+    // ⚠️ exact: true — 추가분담금 hint에도 「청산금」이 나온다(제목만 잡기 위함)
+    await expect(page.getByText("청산금을 수령한 경우", { exact: true })).toBeVisible();
+
+    // 핵심 — 「지원하지 않는다」로 끝나지 않고 **신고 의무**를 알려야 한다
+    await expect(page.getByText(/별개의 양도/).first()).toBeVisible();
+    await expect(page.getByText(/따로 양도소득세를 신고/).first()).toBeVisible();
+
+    // 종전 문구가 남아 있으면 안 된다 (정정이 실제로 반영됐는지)
+    await expect(page.getByText("청산금을 수령한 경우는 현재 지원하지 않습니다")).toHaveCount(0);
+  });
+
   test("A-8: ④ 섹션 조문이 자산 종류를 따른다 (입주권 §166① / 완공APT §166②1호)", async ({ page }) => {
     test.setTimeout(60_000);
     await openAcquisitionStep(page, "right_to_move_in");
