@@ -88,6 +88,8 @@ export function calcMixedUseTransferTax(
     houseCountExclusionRules,
     surchargeSpecialRules,
     regulatedAreaHistory,
+    // F17-B — 조특법 §69 자경농지 감면 규칙(감면 계산이 요구한다).
+    selfFarmingRules,
   } = parseRatesFromMap(rates);
 
   // ── 영 §154① 본문 — 1세대1주택 비과세 **보유 2년** 요건 ─────────────────────────
@@ -445,6 +447,21 @@ export function calcMixedUseTransferTax(
     basicDeductionRules.annualLimit,
     rateParts,
     isUnregistered,
+    /**
+     * 산출세액 이후 — 조특법 감면 · 농특세 · 가산세 (F17-B).
+     * 종전에는 이 축이 통째로 없어 폼에서 §77을 골라도 세액이 안 움직였다(실측 Δ 0).
+     */
+    {
+      reductions: asset.reductions,
+      selfFarmingRules,
+      transferDate,
+      acquisitionDate: asset.landAcquisitionDate,
+      priorReductionUsage: asset.priorReductionUsage,
+      filingPenaltyDetails: asset.filingPenaltyDetails,
+      delayedPaymentDetails: asset.delayedPaymentDetails,
+      isSelfCultivatedExpropriatedLand: asset.isSelfCultivatedExpropriatedLand,
+      warnings,
+    },
   );
   steps.push(buildTotalStep(total));
 

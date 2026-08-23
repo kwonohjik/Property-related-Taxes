@@ -32,7 +32,7 @@ import {
 import { computeSettlement } from "./transfer-tax-settlement";
 import { TRANSFER } from "./legal-codes";
 import { TaxCalculationError } from "./tax-errors";
-import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
+import { applyRate } from "./tax-utils";
 import {
   validateInput,
   classifyRateGroup,
@@ -46,7 +46,6 @@ import {
   incomeDeductionReducibleOf,
   ruralSurtaxExemptReducibleOf,
   computeGroupsAndComparison,
-  resolveTypeLegalBasis,
 } from "./transfer-tax-aggregate-pickers";
 
 export { classifyRateGroup };

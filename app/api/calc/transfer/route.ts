@@ -366,6 +366,20 @@ export async function POST(request: NextRequest) {
             : undefined,
         landAcquisitionDate: new Date(data.mixedUse.landAcquisitionDate),
         buildingAcquisitionDate: new Date(data.mixedUse.buildingAcquisitionDate),
+        /**
+         * ⑭ 조특법 감면·가산세 (F17-B) — 전부 **폼-전역** 값이라 `data.mixedUse`에 없다.
+         *
+         * 종전에는 겸용 엔진에 이 축이 아예 없어서, 폼에서 §77 공익수용을 골라도 세액이
+         * 1원도 안 움직였다(실측 `totalPayable` 60,853,408 → 60,853,408). 가산세도 같다.
+         *
+         * ⚠️ raw `data.reductions` 금지 — Zod 출력은 일자가 string이라 §77①의 「소급 2년」
+         *    비교가 침묵 오작동한다(`mapReductionsToEngine` 변환본이 정본).
+         */
+        reductions: engineInput.reductions,
+        filingPenaltyDetails: engineInput.filingPenaltyDetails,
+        delayedPaymentDetails: engineInput.delayedPaymentDetails,
+        priorReductionUsage: data.priorReductionUsage ?? [],
+        isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,
         preHousingDisclosure: phdInput,
         partialUsageChange: data.mixedUse.partialUsageChange
           ? {

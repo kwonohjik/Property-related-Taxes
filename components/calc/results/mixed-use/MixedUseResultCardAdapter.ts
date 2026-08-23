@@ -66,10 +66,18 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     progressiveDeduction: t.progressiveDeduction,
     calculatedTax: adoptedCalculatedTax(t),
     isSurchargeSuspended: false,
-    reductionAmount: 0,
-    determinedTax: t.transferTax,
-    penaltyBase: 0, // 겸용주택 어댑터: 가산세 미적용 경로 (MixedUseGainBreakdown에 penaltyBase 없음)
-    penaltyTax: 0,
+    /**
+     * 🔴 종전에는 이 네 줄이 **0 하드코딩**이었다(F17-B, 2026-08-23).
+     *
+     * 겸용 엔진에 감면·가산세 축 자체가 없어서 0이 «맞는» 값이었지만, 그래서 결과 카드에
+     * 「감면 미적용」이라는 고지조차 없이 사용자가 고른 §77이 사라졌다. 엔진이 계산하게 된
+     * 지금 그대로 두면 **계산과 표시가 갈린다**(memory `feedback_engine_result_display_drift`).
+     */
+    reductionAmount: t.reductionAmount,
+    determinedTax: t.determinedTax,
+    // §114조의2 환산가액적용가산세는 겸용 경로에 없다 — 신고불성실·납부지연만 온다.
+    penaltyBase: 0,
+    penaltyTax: t.penaltyTax,
     localIncomeTax: localTax,
     totalTax: t.totalPayable,
     // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)로 CalculationStep[]과

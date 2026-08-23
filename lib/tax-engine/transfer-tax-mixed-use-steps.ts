@@ -204,6 +204,10 @@ export function buildRejectionResult(warning: string): MixedUseGainBreakdown {
       progressiveDeduction: 0,
       nonBusinessSurcharge: 0,
       transferTax: 0,
+      reductionAmount: 0,
+      determinedTax: 0,
+      penaltyTax: 0,
+      ruralSurtax: 0,
       localTax: 0,
       totalPayable: 0,
     },
@@ -314,7 +318,26 @@ export function buildTotalStep(t: ReturnType<typeof buildTotalTax>): MixedUseSte
         ? [{ label: "비사업용토지 +10%p 가산세", value: t.nonBusinessSurcharge }]
         : []),
       { label: "양도소득세", value: t.transferTax },
+      /**
+       * 감면·농특세·가산세 (F17-B) — **0이면 감춘다**. 사용자가 고르지 않은 항목에
+       * 「0원」 줄이 뜨면 노이즈이고, 고른 경우에는 근거가 반드시 보여야 한다.
+       */
+      ...(t.reductionAmount > 0
+        ? [
+            {
+              label: `감면세액${t.reductionType ? ` — ${t.reductionType}` : ""}`,
+              value: t.reductionAmount,
+            },
+            { label: "결정세액", value: t.determinedTax },
+          ]
+        : []),
       { label: "지방소득세 (10%)", value: t.localTax },
+      ...(t.penaltyTax > 0
+        ? [{ label: "가산세 (신고불성실·납부지연)", value: t.penaltyTax }]
+        : []),
+      ...(t.ruralSurtax > 0
+        ? [{ label: "농어촌특별세 (감면세액 × 20%)", value: t.ruralSurtax }]
+        : []),
       { label: "총 납부세액", value: t.totalPayable, isResult: true },
     ],
   };
