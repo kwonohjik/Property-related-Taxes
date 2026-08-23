@@ -125,14 +125,37 @@ export function calculateTransferTaxAggregate(
           nonBusinessLandAreaRatio: nblJudgment.surcharge.nonBusinessAreaRatio,
         }
       : undefined;
-    const correctedItem: TransferTaxItemInput = nblOverride ? { ...item, ...nblOverride } : item;
-    const correctedSingleInput: TransferTaxInput = nblOverride
-      ? { ...singleInput, ...nblOverride }
+    /**
+     * 배우자등 이월과세(§97의2) — **채택된 시나리오의 §104② 기산 사실**로 item을 교정.
+     *
+     * 단건 엔진은 STEP 0.475에서 `workingInput`을 채택 시나리오 입력으로 갈아탄 뒤 세율을
+     * 정한다(A=증여자 취득일·`gift` / B=증여 등기접수일·`purchase`). 그런데 여기 `item`은
+     * **원본**이라 `acquisitionCause`가 `"carryover_gift"` 그대로다 —
+     * 아래 두 소비자가 **채택 결과를 못 보고** 최상위 `donorAcquisitionDate` 유무만으로 갈렸다:
+     *   · `classifyRateGroup`      (M-2 세율군 = §104⑤ 버킷·§102② 통산 범위·기본공제 우선순위)
+     *   · `aggregateByGroup`→`calcTax` (`correctedSingleInput`이 곧 `taxRateInput`)
+     *
+     * 실측(토지 10억 · 증여자 2010-01-01 취득 · 2025-09-01 증여 · 2026-06-01 양도, mock 세율):
+     *   · **A 채택**인데 `short_term`으로 분류 → 단건 228,660,000 vs 일괄 315,000,000 (**+86,340,000 과대**)
+     *   · **B 채택**인데 `progressive`로 분류 → 단건 350,000,000 vs 일괄 258,060,000 (**−91,940,000 과소**)
+     * 두 방향이 **정확히 반대**라 최상위 `donorAcquisitionDate` 배선만으로는 한쪽을 고치면
+     * 다른 쪽이 깨진다 — 교정은 「채택 결과를 반영」하는 이 층에서만 성립한다.
+     * anchor `aggregate-carryover-adopted-rate-basis.anchor.test.ts` (되돌리면 C-2·C-5·C-6 3건 red).
+     *
+     * ⚠️ 사실을 그대로 덮어쓸 뿐 「어느 세율군인가」를 넘기지 않는다(엔진 헬퍼는 사실만 받는다).
+     */
+    const rateBasisOverride = result.carryoverTaxationDetail?.adoptedRateBasis;
+    const hasOverride = nblOverride !== undefined || rateBasisOverride !== undefined;
+    const correctedItem: TransferTaxItemInput = hasOverride
+      ? { ...item, ...nblOverride, ...rateBasisOverride }
+      : item;
+    const correctedSingleInput: TransferTaxInput = hasOverride
+      ? { ...singleInput, ...nblOverride, ...rateBasisOverride }
       : singleInput;
     return { item, correctedItem, correctedSingleInput, singleInput, result };
   });
 
-  // M-2: 세율군 분류 — 정밀판정 교정 item 기준 (원시 플래그 오분류 방지)
+  // M-2: 세율군 분류 — 정밀판정·이월과세 채택 교정 item 기준 (원시 플래그 오분류 방지)
   const classified = perAsset.map((pa) => ({
     ...pa,
     rateGroup: classifyRateGroup(pa.correctedItem, pa.result),

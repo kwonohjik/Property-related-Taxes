@@ -7,6 +7,8 @@
  * acquisitionCause === "carryover_gift" 일 때만 유효.
  */
 
+import type { RateBasisFacts } from "../transfer-rate-holding-basis";
+
 // ============================================================
 // 입력 타입
 // ============================================================
@@ -238,4 +240,30 @@ export interface CarryoverTaxationDetail {
   adoptedScenario: "A" | "B";
   /** ② 3호 비교과세 적용배제 여부 (B 채택 시 true) */
   comparisonExclusion: boolean;
+  /**
+   * **[echo] 채택 시나리오가 실제로 쓴 §104② 기산 사실.** 단건 세액에는 영향이 없다
+   * (이미 그 입력으로 계산된 결과를 그대로 되비출 뿐이다).
+   *
+   * ## 왜 필요한가 — 다건 엔진이 「채택 결과」를 볼 방법이 없었다
+   *
+   * 단건 엔진은 STEP 0.475에서 `workingInput`을 **채택 시나리오의 입력**으로 갈아탄 뒤
+   * 세율을 정한다. 시나리오 A는 `acquisitionDate`가 **증여자 취득일**(+ `acquisitionCause`는
+   * `"gift"`)이고, 시나리오 B는 **증여 등기접수일**(+ `"purchase"`)이다
+   * (`transfer-tax-carryover.ts` `inputABase` · `buildInputB`).
+   *
+   * 반면 다건 엔진(`transfer-tax-aggregate.ts`)의 세율군 분류(`classifyRateGroup`)와
+   * 그룹 세액 재계산(`aggregateByGroup` → `calcTax`)은 **원본 item**을 본다. 그 item은
+   * `acquisitionCause === "carryover_gift"` 그대로라 §104②2호 판정이 **채택 결과와 무관하게**
+   * 최상위 `donorAcquisitionDate`의 유무만으로 갈렸다 — A를 채택했는데 `short_term`으로,
+   * B를 채택했는데 `progressive`로 분류되는 어긋남이다.
+   *
+   * ## 왜 재도출이 아니라 echo인가
+   *
+   * 「A면 증여자 취득일, B면 등기접수일」을 다건 쪽에서 다시 유도하면 시나리오 입력 구성이
+   * 바뀔 때 한쪽만 따라가는 dual-truth가 된다. 그래서 **단건이 실제로 쓴 입력**을 그대로 싣는다.
+   *
+   * 형태는 §104② 판정 헬퍼가 받는 **사실 집합**(`RateBasisFacts`)과 동일하다 —
+   * 소비자는 이 값을 그대로 입력에 덮어쓰기만 하면 된다(판단을 넘기지 않는다).
+   */
+  adoptedRateBasis?: RateBasisFacts;
 }

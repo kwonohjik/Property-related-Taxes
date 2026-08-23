@@ -60,6 +60,7 @@ import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails, 
 import { computeAmendment } from "./transfer-tax-amendment";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
+import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveAcquisitionOverride, type TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
@@ -136,7 +137,13 @@ export function calculateTransferTax(
       calculateTransferTax,
     );
     if (carryoverResult) {
-      carryoverDetail = carryoverResult.detail;
+      // [echo] 채택 시나리오가 실제로 쓴 §104② 기산 사실. **단건 세액 불변**(바로 아래에서
+      // workingInput이 되는 그 입력을 되비출 뿐) — 소비자는 다건 엔진이다
+      // (타입 주석 `CarryoverTaxationDetail.adoptedRateBasis` 참조).
+      carryoverDetail = {
+        ...carryoverResult.detail,
+        adoptedRateBasis: pickRateBasisFacts(carryoverResult.adoptedInput),
+      };
       // 채택 시나리오 입력으로 workingInput 교체 → 이후 STEP 0.5~11이 그대로 통과
       workingInput = carryoverResult.adoptedInput;
       steps.push({
