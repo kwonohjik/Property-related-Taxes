@@ -5,7 +5,8 @@
 > 아래는 **정답이 하나로 갈리지 않아 결정 전 착수 금지**로 남긴 것이다.
 > 원 5건 중 **F35·F16이 2026-08-23 해소**됐고, **3건(F03·F08·F23)이 남았다**.
 > F35 → `d1eeaf89`·`2d3b8c13`·`b10702fd` · F16 → `ce8fbce5`(Phase 0)·`53783c31`(선행)·`ceafe4b1`(본체)
-> 부수 해소: **F15**(배치 누락분) `8cef41cc` · **classifyRateGroup**(F16 조사 중 발견) `53783c31`
+> 부수 해소: **F15**(배치 누락분) `8cef41cc` · **classifyRateGroup**(F16 조사 중 발견) `53783c31` ·
+> **GB 지분 이월과세 미스케일**(F16이 연 별건 9건 중 1건 — 아래 전용 섹션. 🔴 **계획서 Q3 반전 · 재가 대기**)
 
 ## 상태 요약
 
@@ -195,13 +196,84 @@ F16 (a) 구현 중 발견됐고 **F16이 만든 것이 아니라 이미 살아 �
 |---|---|---|
 | **§97의2②3호 비교 스코프 자산별 → 신고단위** | 조문상 신고단위 확정(§104⑤ 근거). divergence 16/562·4,570,000~39,125,000·**전부 현행 과소**. ⚠️ memory `project_stock_carryover_97_2_necessary_expense_open.md:169-172`의 「갭 없음」과 **상충**(재현 불가) — 착수 시 선결 | `transfer-tax-carryover.ts:585-587` |
 | **`splitCompanionIntoTwo`가 dead code** | `resolveCompanionSplit`이 `landNature`를 안 넘겨 `resolveCompanionLandRate`가 **항상 `applied:false`**. §167의5 한도초과 분리가 도달 불가(트리거 조건 충족 픽스처로 실측) | `bundled-split-helpers.ts:462-473` |
-| **GB 지분 경로 이월과세 미스케일** | `applyShareScale`이 `land/buildingCarryoverTaxation` 서브객체를 스케일하지 않는다. GB는 별도 빌더(`transfer-tax-api-gb-carryover.ts`)라 A-10이 파급되지 않는다 | `transfer-tax-api-gb-shares.ts` |
+| ~~**GB 지분 경로 이월과세 미스케일**~~ | ✅ **2026-08-23 해소** — 아래 §「GB 지분 이월과세 스케일」 참조. 실측 **결정세액 62,914,160원 과소**(60:40 격자). ⚠️ 종전 계획서 **Q3 결정을 반전**했다 — 사용자 재가 대기 | `transfer-tax-api-gb-carryover.ts` |
 | **`giftTaxAmount` 지분 스케일 여부** | 미스케일(현행) 유지. 바꾸려면 `OwnershipRatioInput` 안내 문구와 함께 결정. anchor R-1c가 조용한 변경을 막는다 | `transfer-tax-api-carryover.ts` |
 | 부담부증여 aggregate **양도가액 열 0** | 수정 전후 모두 열 산술이 깨져 있다(§159 유상분은 `burdenedGiftInfo`에서 파생). ⑧이 마법사 경로를 막지만 **GB route는 aggregate를 거쳐 도달** | `transfer-tax-aggregate.ts` |
 | 환산 산식 텍스트 드리프트 | A-9로 이월과세 자산의 `acquisitionPrice`가 채택값이 되어, 이월과세 × 환산에서 인쇄된 피연산자가 결과를 유도하지 않을 수 있다. **표시 전용·수치 미측정** | `DetailedStatementFormulaBuilders.ts:314·317·325` |
 | §97②2호 swap 잔여 드리프트 | 환산취득가액이 양도차익에서 차감되지 않는데 표시 열은 환산 재산식을 그린다. 이번 픽스처에서 미발현·**수치 미측정** | `transfer-tax-helpers.ts:250-258` |
 | 컴패니언 phd/apd 배관 부재 | ⑫에 `preHousingDisclosure` 필드 자체가 없다. base가 더 과대였으므로 **방향은 나빠지지 않았다**. (a)⑫ 배관 / (b)⑧ 차단 판단 필요 | `transfer-tax-schema-sub.ts` |
 | `schema-sub.ts` 706줄 | 착지목표 ≤700을 6줄 초과(hard cap 800 미만) | — |
+
+## GB 지분 이월과세 스케일 (2026-08-23) — 🔴 **확정 결정 반전 · 사용자 재가 대기**
+
+`applyShareScale`이 이월과세 서브객체를 지분율로 줄이지 않아, 지분 양도가액만 × r 되고
+증여자 취득가액은 100% 그대로 남았다. 결과는 **음수 양도차익 → 허수 차손 통산**이다.
+
+**실측(60:40 · 40%가 이월과세, route POST)**
+
+| | 결정세액 | `land#1` 양도차익 | 타 지분 차손 잠식 |
+|---|---|---|---|
+| 수정 전 | **44,549,040** | **−140,000,000** | 47,848,101 × 2 + 44,303,798 |
+| 수정 후 | **107,463,200** | +34,000,000 | **0** |
+
+⇒ **62,914,160원 과소.** 지분이 작을수록 커진다(1/4에서 결정세액 **0**까지 관측).
+
+**스케일 판정표** — `PART_SCALE`·`ENGINE_SHAPED_SCALE`·`GIFT_EVENT_SCALE`
+(`transfer-tax-api-gb-carryover.ts`). `Record<keyof …, boolean>`이라 **필드가 늘면 tsc가 누락을 잡는다**
+— 종전 키-배열 열거가 새 필드를 조용히 빠뜨린 것이 이 결함의 원인이다.
+
+| × r | 미스케일 |
+|---|---|
+| `donorAcquisitionPrice` · `donorCapitalExpenditure` · `giftDateAssetValue`/`giftDateValuation` | `donorStandardPriceAtAcquisition`(기준시가) · `giftTaxAmount` · `giftTaxCalculated` · `giftTaxBase` |
+
+- 🔴 **기준시가 금지** — 환산 분모가 물건-수준(100%)이고 `ownershipRatio`가 이미 개산공제 base를
+  줄인다. 스케일하면 이중 축소(실측: 취득가액 100,000,000 → 40,000,000, 세액 **16,800,000 과대**).
+- ⚠️ **`giftTaxAmount` 미스케일** — F16 A-10·anchor R-1c 결정 승계. **뒤집지 말 것.**
+- **사건 2필드 미스케일** — 분자만 × r 하면 §163의2② 안분이 정확히 지분 몫이 된다.
+  분모까지 줄이면 약분돼 무효, 계수만 줄이면 근거 없이 한 번 더 깎는다.
+
+### 🔴 반전한 결정 — 재가 필요
+
+`docs/00-pm/transfer-gb-carryover-wiring.plan.md` **Q3**(2026-08-10, `14cd5862`)가
+「스케일하지 않는다」로 확정하고 anchor **K-15**가 고정하고 있었다. 반전 근거 3건(전부 재확인):
+
+1. ⭐ **Q3가 성립 요건으로 못박은 「3중 일치」의 첫 항목이 끝내 구현되지 않았다.**
+   Q3 원문: 「UI 안내 = **이 지분에 대한** 실제 값을 입력하세요」 ·
+   실측: `components/calc/transfer/CarryoverGiftBlock.tsx`(305줄)에 `지분`·`100%` **0건**.
+2. ⭐ **같은 화면이 정반대를 안내한다.** `OwnershipRatioInput.tsx:129-141` —
+   「지분 모드 — 모든 금액을 **100% 기준**으로 입력하세요 … **양도가액·취득가액·필요경비**는
+   물건 전체(100%) 기준으로 입력합니다」. 증여자 취득가액 = 취득가액,
+   증여자 자본적지출 = §97의2① 필요경비 ⇒ 배너가 이미 포섭한다.
+3. ⭐ **미스케일 유지 시 컴패니언 경로와 dual-truth.** 같은 request body 안에서
+   top-level `carryoverTaxation`은 × r, GB 지분은 100%가 된다.
+
+> ⚠️ **Q3 원문의 핵심 논거는 살아 있고 구현이 그것을 지킨다.** Q3는 「증여세 산출세액은
+> 물건 전체 기준 시세 같은 값이 아니다」라고 했는데, 구현은 증여세 3필드를 **전부 미스케일**로
+> 남겼다. 반전한 것은 **취득가액·자본적지출·평가액** 3필드뿐이다.
+
+> 🔑 **되돌리려면 UI부터.** ④만 되돌리면 화면과 계산이 다시 갈린다. 되돌릴 경우
+> F16 A-10(컴패니언)·anchor R-1a/R-1b도 함께 되돌려야 한다.
+
+### 🔴 남은 UI 갭 (출하 전 닫아야 함 — 문구 미결정)
+
+배너는 「양도가액·취득가액·**필요경비**는 100% 기준」이라고 하는데, **증여세 상당액도
+§97의2① 필요경비**다. 그런데 그 칸은 미스케일이다. 사용자가 배너를 문자 그대로 읽고
+100% 기준 값을 넣으면 필요경비가 **1/r 배 과대**가 된다.
+⇒ `CarryoverGiftBlock.tsx`의 증여세 상당액·기준시가 두 칸 hint에 예외를 명시해야 계약이 닫힌다.
+**UI 문구는 임의로 정하지 않았다.** (동일 갭이 컴패니언 경로에도 있다.)
+
+### 🆕 이 작업이 새로 연 별건
+
+| 항목 | 실측 | 위치 |
+|---|---|---|
+| 🔴 **legacy 모양 × 환산 이월과세 → 취득가액 0** | ⑫ `carryoverTaxationEngineShape`에 `donorStandardPriceAtAcquisition` **필드가 없어** 조용히 strip된다. `buildEngineShaped`는 「취득가액 0을 피한다(설계 D9-8)」는 주석과 함께 싣는데 ⑫가 버린다. **단건 경로에도 있다**(실측 land acq=0 · gain 430,000,000). F15와 같은 침묵 strip 부류 | `transfer-tax-building-schemas.ts:30-44` |
+| 🔴 **GB 실가 경로가 이월과세를 통째로 무시** | `general-building-route-actual.ts`에 `carryoverTaxation` 배선 **0건**. ④는 `transfer-tax-api-gb.ts:645`에서 실가 분기에도 싣는데(주석: 「실가 경로에도 반드시(설계 D1-1)」) 엔진이 안 읽는다. **지분 특유 아님.** ⑧ 차단 여부 미확인 | `general-building-route-actual.ts` |
+| 🟠 GB 지분 × 실가에서 세액 `null` + 「경비(NaN」 인쇄 | `general-building-fractional.ts:160`이 `actualAcquisitionPrice`·`actualExpenses`를 안 넘긴다(단건은 `general-building-route-helper.ts:163-164`에서 넘긴다) | `general-building-fractional.ts:160` |
+| 🟡 건물 파트 fallback이 토지 값을 복제 | `asset.buildingCarryover ?? c` — 건물 폼이 비면 두 파트가 **같은** 증여자 취득가액을 받아 합계가 증여 전체의 2배. ⑧ 강제 여부 미확인. **지분 축과 독립** | `transfer-tax-api-gb-carryover.ts` |
+| 🟡 `giftTaxCalculated`·`giftTaxBase` hint 해석 미확정 | 「증여받은 자산 **전체**」가 「증여 사건 전체」인지 「물건 100% 기준」인지 문구로 안 갈린다. **현행(미스케일) 유지**했고 UI 미접촉. 후자가 정본이면 `giftTaxBase`도 × r 대상 | `CarryoverGiftBlock.tsx` |
+
+**미측정으로 남긴 것**: 건물 파트만 `carryover_gift`인 조합의 route 세액 ·
+환산 × 지분 조합의 route 세액 · 지분 3건 이상 · 마지막 지분 잔액 흡수와의 상호작용.
 
 ## 부록 — 이 문서에 없는 것
 

@@ -9,6 +9,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildGeneralBuildingValuation } from "./transfer-tax-api-gb";
+import { applyGbCarryoverShareScale } from "./transfer-tax-api-gb-carryover";
 import { getOwnershipRatio, mergePrimaryBasic, isFullFractionalBundle } from "./transfer-tax-api-helpers";
 
 /**
@@ -147,7 +148,13 @@ export function applyShareScale(
         : {}),
     };
   }
-  return out;
+  /**
+   * 이월과세(§97의2) 서브객체 5종은 **키 이름 배열로 다룰 수 없다** — 같은 객체 안에서
+   * 필드마다 스케일 여부가 갈린다(취득가액·필요경비는 × r, 기준시가·`giftTaxAmount`는 금지).
+   * ⇒ 그 필드들을 **만드는 파일**이 분류표를 들고 있게 위임한다. 새 필드가 늘면 그쪽
+   *   `Record<keyof …, boolean>`이 tsc로 누락을 잡는다.
+   */
+  return applyGbCarryoverShareScale(out, ratio);
 }
 
 export interface GeneralBuildingSharePayloadOut {
