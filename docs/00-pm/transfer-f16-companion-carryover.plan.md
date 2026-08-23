@@ -1,5 +1,13 @@
 # F16 — 컴패니언 자산 이월과세(§97의2) ⑫ 부재 · 작업 계획
 
+
+> ✅ **2026-08-23 갱신 — Q-3(D-6) 해소됨.** `8cef41cc`로 ⑭ `engine-input.ts`의
+> `donorRelation`·`donorDeceased` 침묵 strip을 수정했다(= 리뷰 F15). 2필드 추가가 아니라
+> **열거 자체를 spread로 교체**해 같은 결함의 재발을 구조적으로 막았고, anchor 7건(구별력 5 red)을
+> 심었다. 실측 22,450,000 과대 해소(시나리오 의존 — 계획서 축 C의 106,722,000은 다른 픽스처 값).
+> ⚠️ 이 수정은 **단건 경로 전용**이다 — 컴패니언(⑫⑭)은 여전히 결함 상태이며 Q-1이 남아 있다.
+> 아래 D-6 서술은 착수 시점 기록으로 보존한다.
+
 > 대상: [`transfer-review-2026-08-open-items.plan.md`](transfer-review-2026-08-open-items.plan.md) **F16**
 > 기준 커밋: `5d14dbdc` (worktree `transfer-code-review`) · 실측일 **2026-08-23**
 > 본 문서의 모든 file:line·수치는 위 커밋에서 **파일을 열어 확인**했거나 **route POST 실행**으로 측정한 값이다.

@@ -783,7 +783,7 @@ Regression anchor worth adding, as proposed: feed one payload per date-bearing v
 | 심각도 | **high** |
 | 도달성 | reachable-via-ui |
 | 탐지 축 | plumbing |
-| 조치 | — |
+| 조치 | ✅ **2026-08-23 수정** (`8cef41cc`) — ⚠️ 원래 어느 배치에도 배정되지 않아 누락됐던 항목 |
 
 **결함**
 
