@@ -28,8 +28,18 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
   // assetKind="right_to_move_in" 시 redevSubject 미입력이면 "right" fallback
   // (경로 A 버그 수정: assetKind="right_to_move_in" + redevSubject="" → "apt" 오변환 차단)
   const subjectDefault = asset.assetKind === "right_to_move_in" ? "right" : "apt";
+  const subject = (asset.redevSubject || subjectDefault) as "right" | "apt";
+  /**
+   * 완공 APT 양도 전용 필드 게이트.
+   *
+   * `receiveOnlyMode`(사례 46) · `newHouseResidenceMonths`(사례 45)는 **신축 APT가 존재해야**
+   * 성립하는 사실이다. 입주권은 완공 전 권리 양도라 두 개념이 성립하지 않으며, 엔진도
+   * 입주권 분기에서 receiveOnlyMode를 읽지 않는다(`computeAptReceive` 전용).
+   * 게이트가 없으면 stale 저장값이 그대로 흘러 양도가액·LTHD를 조용히 바꾼다.
+   */
+  const isApt = subject === "apt";
   return {
-    subject: (asset.redevSubject || subjectDefault) as "right" | "apt",
+    subject,
     approvalLawBasis: (asset.redevApprovalLawBasis || "urban_renovation_art_74") as "urban_renovation_art_74" | "small_housing_art_29",
     approvalDate: asset.redevApprovalDate,
     // 사례 48 — 승계조합원 모드: redev 권리가액 필드 숨김 → 자산 카드 fixedAcquisitionPrice 자동 미러 (UI 무결성용).
@@ -89,7 +99,8 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     priorHouseResidenceMonths: asset.redevPriorHouseResidenceMonths
       ? parseInt(asset.redevPriorHouseResidenceMonths.replace(/,/g, ""), 10)
       : undefined,
-    newHouseResidenceMonths: asset.redevNewHouseResidenceMonths
+    // 신축 APT 거주월수 — 완공 APT 양도 전용(위 `isApt` 주석).
+    newHouseResidenceMonths: isApt && asset.redevNewHouseResidenceMonths
       ? parseInt(asset.redevNewHouseResidenceMonths.replace(/,/g, ""), 10)
       : undefined,
     // 거주기간(입주일·퇴거일) — 결과 카드 산정 근거 표시용 pass-through
@@ -98,8 +109,11 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     newResidenceStartDate: asset.redevNewResidenceStartDate || undefined,
     newResidenceEndDate: asset.redevNewResidenceEndDate || undefined,
     // 사례 46 — 청산금 수령분 단독 신고 + 비과세 판정 시점 override
+    // receiveOnlyMode는 완공 APT 양도 전용(위 `isApt` 주석) — 입주권은 미송신.
     receiveOnlyMode:
-      asset.redevReceiveOnlyMode === "yes"
+      !isApt
+        ? undefined
+        : asset.redevReceiveOnlyMode === "yes"
         ? true
         : asset.redevReceiveOnlyMode === "no"
           ? false

@@ -699,99 +699,13 @@ function runOriginalMember(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// finalize 입력 빌더 — transfer-tax-finalize.ts LTHD 3줄 emit 용
-// ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * finalize emit 용 LTHD 라인 3줄 산출.
- * code === 'LTHD' 라인 ID + 금액·율·gain·holdingMonths 노출.
- *
- * FilingFormTable 3열 표시와 1:1 매칭되어야 함 (anchor: lines.length === 3).
- */
-export interface RedevelopmentLthdEmitLine {
-  lineId: "preApproval" | "postApprovalExistingHouse" | "settlement";
-  code: "LTHD";
-  gain: number;
-  rate: number;
-  amount: number;
-  holdingMonths: number;
-  applicable: boolean;
-}
-
-export function buildLthdEmitLines(result: RedevelopmentResult): RedevelopmentLthdEmitLine[] {
-  // 사례 48 — 승계조합원 분기: postApprovalExistingHouse 단일 line emit.
-  if (result.successorMemberApplied === true) {
-    return [
-      {
-        lineId: "postApprovalExistingHouse",
-        code: "LTHD",
-        gain: result.postApprovalExistingHouse.gain,
-        rate: result.postApprovalExistingHouse.lthdRate,
-        amount: result.postApprovalExistingHouse.lthd,
-        holdingMonths: result.postApprovalExistingHouse.holdingMonths,
-        applicable:
-          result.postApprovalExistingHouse.lthd > 0 ||
-          result.postApprovalExistingHouse.gain > 0,
-      },
-    ];
-  }
-
-  return [
-    {
-      lineId: "preApproval",
-      code: "LTHD",
-      gain: result.preApproval.gain,
-      rate: result.preApproval.lthdRate,
-      amount: result.preApproval.lthd,
-      holdingMonths: result.preApproval.holdingMonths,
-      applicable: result.preApproval.lthd > 0 || result.preApproval.gain > 0,
-    },
-    {
-      lineId: "postApprovalExistingHouse",
-      code: "LTHD",
-      gain: result.postApprovalExistingHouse.gain,
-      rate: result.postApprovalExistingHouse.lthdRate,
-      amount: result.postApprovalExistingHouse.lthd,
-      holdingMonths: result.postApprovalExistingHouse.holdingMonths,
-      applicable:
-        result.postApprovalExistingHouse.lthd > 0 ||
-        result.postApprovalExistingHouse.gain > 0,
-    },
-    {
-      lineId: "settlement",
-      code: "LTHD",
-      gain: result.settlement.gain,
-      rate: result.settlement.lthdRate,
-      amount: result.settlement.lthd,
-      holdingMonths: result.settlement.holdingMonths,
-      applicable: result.settlement.lthd > 0 || result.settlement.gain > 0,
-    },
-  ];
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 활성 분기 판정 (transfer-tax.ts STEP 분기용)
-// ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * TransferTaxInput.redevelopment 존재 + propertyType 호환 여부 판정.
- *
- * propertyType="redevelopment_apt" 또는 "right_to_move_in" + redevelopment 입력 시 활성.
- * 그 외는 false → transfer-tax.ts 의 일반 분기 사용.
- */
-export function isRedevelopmentActive(
-  propertyType: string,
-  redevelopment: RedevelopmentInfo | undefined,
-): boolean {
-  if (redevelopment == null) return false;
-  if (propertyType === "redevelopment_apt") return redevelopment.subject === "apt";
-  if (propertyType === "right_to_move_in") return redevelopment.subject === "right";
-  return false;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
 // Re-export 편의용
 // ──────────────────────────────────────────────────────────────────────────────
+
+// 분기 활성 판정·finalize emit 빌더는 `redevelopment-dispatch.ts`로 분리됐다(2026-08-23, 800줄 정책).
+// 기존 import 경로를 유지하기 위해 여기서 re-export한다.
+export { isRedevelopmentActive, buildLthdEmitLines } from "./redevelopment-dispatch";
+export type { RedevelopmentLthdEmitLine } from "./redevelopment-dispatch";
 
 export type { RedevelopmentInfo, RedevelopmentResult, RedevelopmentBranchDetail } from "./types/transfer-redevelopment.types";
 export { computeRedevelopmentValuation } from "./redevelopment-valuation";

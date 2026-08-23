@@ -383,7 +383,54 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           </p>
         </div>
       )}
-      {props.asset?.transferType !== "burdened_gift" && props.asset?.assetKind !== "redevelopment_apt" && (
+      {/* 조합원입주권 모드 — 상단 축 A 숨김. 문구는 **조합원 유형에 따라 갈린다** (2026-08-23).
+          종전에는 이 게이트에 `right_to_move_in`이 빠져 있어 상단 축 A가 그대로 보였는데,
+          그 값은 실거래가 모드에서 **무시**되고(§166 섹션의 전용 필드가 정본) 감정·매매사례를
+          고르면 취득가액이 **0**이 되어 오류 없이 과대과세됐다(계획서 §2.1 실측). */}
+      {props.asset?.assetKind === "right_to_move_in" && (
+        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 space-y-1.5">
+          {props.asset?.isSuccessorRightToMoveIn ? (
+            <>
+              <p className="text-sm font-semibold text-violet-900">
+                취득가액 — 승계취득 §97①1호 가목
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <LawArticleModal legalBasis="소득세법 §97 ① 1호" label="§97①1호" />
+                <LawArticleModal legalBasis="소득세법 §95 ②" label="§95②" />
+              </div>
+              <p className="text-xs text-violet-800">
+                시행령 §166①은 <b>조합에 기존건물과 그 부수토지를 제공하고 취득한</b> 조합원에게 적용됩니다.
+                승계조합원은 제공한 사실이 없어 §166① 안분(인가전·인가후) 대상이 아니며, 취득가액은
+                아래 <b>조합원입주권 승계취득 정보</b>에서 실지거래가액으로 입력합니다.
+              </p>
+              <p className="text-caption text-violet-700">
+                ※ 장기보유특별공제는 적용되지 않습니다 (§95② — 조합원으로부터 취득한 것은 제외).
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-violet-900">
+                취득가액 — 재개발 §166①1호 인가전 분에서 차감
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <LawArticleModal legalBasis="소득세법 시행령 §166 ① 1호" label="시행령 §166①1호" />
+                <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
+              </div>
+              <p className="text-xs text-violet-800">
+                조합원입주권 양도차익은 인가전 분(권리가액 − 종전 부동산 취득가액)과 인가후 분으로 나누어
+                계산합니다. 종전 부동산의 취득가액은 아래 <b>⑤ 인가전 분 종전 부동산 취득가액</b>에서
+                입력하므로, 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
+              </p>
+              <p className="text-caption text-violet-700">
+                ※ 취득가액을 확인할 수 없는 경우의 대체수단은 §166③ <b>환산</b>입니다(감정가액·매매사례가액 아님).
+              </p>
+            </>
+          )}
+        </div>
+      )}
+      {props.asset?.transferType !== "burdened_gift" &&
+        props.asset?.assetKind !== "redevelopment_apt" &&
+        props.asset?.assetKind !== "right_to_move_in" && (
       <>
       {/* 별개 취득(토지·건물 취득시기 상이) — 자산 전체 축 A 입력을 숨긴다.
           "총 취득가액"은 사후 합계일 뿐 실재하지 않으므로(소득세법 §97①1호·§114⑦,

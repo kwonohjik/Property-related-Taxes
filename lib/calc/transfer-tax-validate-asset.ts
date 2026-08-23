@@ -38,6 +38,8 @@ import { validateRentalHousingException } from "./transfer-tax-validate-rental-e
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
+import { validateSuccessorRightAsset } from "./transfer-tax-validate-successor-right";
+import { isSuccessorRightTransfer } from "./transfer-successor-right";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateMixedUseAsset } from "./transfer-tax-validate-mixed-use-asset";
@@ -180,6 +182,21 @@ export function validateAssetAcquisition(
   // ── 일반건물(토지+건물 일괄) 전용 검증 — transfer-tax-validate-gb.ts 위임 ──
   if (asset.assetKind === "general_building") {
     return validateGeneralBuildingAsset(asset, label, formTransferDate);
+  }
+
+  /**
+   * ── 승계조합원 입주권 (§97①1호 가목) — §166 검증 **이전**에 가른다 (2026-08-23) ──
+   *
+   * §166①은 「조합에 기존건물과 그 부수토지를 **제공하고 취득한**」 조합원으로 요건을 한정하므로
+   * 승계자는 대상이 아니다. 그대로 `validateRedevelopmentAsset`을 태우면 권리가액·청산금 방향 등
+   * **입력할 수 없는 값**을 요구하게 된다 — 실제로 종전에는 「승계조합원 모드를 ON 하세요」 안내가
+   * 화면에 없는 토글(②-a, #1245에서 완공APT 전용으로 분리)을 가리켜 영구 차단이었다.
+   * 술어는 `transfer-successor-right.ts` 단일 소스(UI·API·사이드바 공용).
+   */
+  if (isSuccessorRightTransfer(asset)) {
+    const successorError = validateSuccessorRightAsset(asset, label);
+    if (successorError) return successorError;
+    return null;
   }
 
   // ── 재개발/재건축 (시행령 §166) — assetKind="redevelopment_apt" 또는 "right_to_move_in" 시 ──

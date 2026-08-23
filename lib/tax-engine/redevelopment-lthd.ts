@@ -112,7 +112,7 @@ export function computeRedevelopmentLthd(
   const { subject, approvalDate, settlementDirection, settlementSaleDate } = redevelopment;
 
   // ─ 사례 46 가드: exemptionEligibleAtApproval=false 시 표1 강등 ─
-  // 서면2016-법령해석재산-2705 (2017.02.13) — 청산금 수령분 1세대1주택 비과세 판정 시점:
+  // 서면2016-법령해석재산-2705 (2016.09.12) — 청산금 수령분 1세대1주택 비과세 판정 시점:
   // 보유·거주요건은 관리처분계획인가일 현재 기준. 인가일 기준 2년 미충족 시
   // 1세대1주택 비과세 미해당 → LTHD 표2 진입 차단, 표1 강제.
   // undefined 시 legacy isOneHouseSingle fallback (사례 44·45 회귀 안전).
@@ -139,8 +139,17 @@ export function computeRedevelopmentLthd(
       approvalDate,
       isSuccessorRightToMoveIn: isSuccessorRightToMoveIn ?? false,
       isOneHouseSingle: effectiveOneHouseSingle,
-      // 입주권은 인가전 분만 LTHD → 기존건물분 거주월수만 의미 있음
-      residencePeriodMonths: existingResidenceMonths,
+      /**
+       * 입주권은 인가전 분만 LTHD → **종전주택 거주월수만** 의미 있다.
+       *
+       * ⚠️ `newHouseResidenceMonths`(신축 APT 거주월수, 사례 45)를 더하지 않는다 —
+       * 입주권은 완공 **전** 권리 양도라 신축 거주가 존재할 수 없다. 종전에는 위
+       * `existingResidenceMonths`(= prior + new)를 그대로 넘겨, 신축 거주월수만 입력해도
+       * 인가전 분 LTHD가 표1 14% → 표2 68%까지 올라갔다(2026-08-14 실측).
+       * 입력 UI·API에도 게이트를 뒀지만(`RedevelopmentBlock` · `buildRedevelopmentPayload`),
+       * 별도 조립 경로(다건 route 등)까지 덮으려면 엔진이 정본이어야 한다.
+       */
+      residencePeriodMonths: hasSplitResidence ? prior : input.residencePeriodMonths ?? 0,
     });
   }
 

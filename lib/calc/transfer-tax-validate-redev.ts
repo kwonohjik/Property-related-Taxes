@@ -231,7 +231,7 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
       return `${label}: 단독주택 출자 환산취득가 — 취득당시 개별주택가격을 입력하세요. (§164⑤ 분자)`;
     }
     if (parseAmount(asset.redevHousingStdPriceAtApproval) <= 0) {
-      return `${label}: 단독주택 출자 환산취득가 — 인가당시 부근 개별주택가격을 입력하세요. (§164⑤ 분모)`;
+      return `${label}: 단독주택 출자 환산취득가 — 인가당시 개별주택가격을 입력하세요. (§164⑤ 분모)`;
     }
     // housing+right+receive+estimated 분기는 일반 D(managementDisposalHousingPrice) 검증 skip
     // (§166③ 분모 구조가 다름 — §164⑤ PHD 산식 별도 적용)

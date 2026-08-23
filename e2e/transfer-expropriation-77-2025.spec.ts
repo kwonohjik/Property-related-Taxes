@@ -156,9 +156,18 @@ test.describe("비자발적 양도 감면 UI (§77 2025 개정 · §77의2 · §
       page.getByText("④ 자산별 감면금액 = (보상분 소득 − 기본공제) × 감면율"),
     ).toBeVisible();
     await expect(page.getByText(/현금 = \(.+ − .+\) × \d+% =/)).toBeVisible();
-    await expect(
-      page.getByText("⑤ 감면세액 = 산출세액 × 감면대상소득금액 / 과세표준"),
-    ).toBeVisible();
+    /**
+     * ⑤ 감면세액 산식 — 🔄 2026-08-23 정정 (PR #1240 분수 표기 통일과 함께 갱신되지 않았다)
+     *
+     * `TransferReductionRows.tsx:136`이 `산출세액 × 감면대상소득금액 / 과세표준` →
+     * `산출세액 × <Frac top="감면대상소득금액" bottom="과세표준" />`로 바뀌었다.
+     * `Frac`은 분자·분모를 별도 `<span>`으로 쌓아 `/`를 렌더하지 않으므로 종전 완전일치
+     * 문자열은 **영구히 매칭될 수 없다**. 분수 표기에서도 성립하는 형태로 바꾼다.
+     */
+    const reductionFormula = page.getByText("⑤ 감면세액 = 산출세액 ×");
+    await expect(reductionFormula).toBeVisible();
+    await expect(reductionFormula.getByText("감면대상소득금액", { exact: true })).toBeVisible();
+    await expect(reductionFormula.getByText("과세표준", { exact: true })).toBeVisible();
 
     // 별지84호 부표2 — ⑲ 세액감면대상금액 = 양도소득금액 전액(§90①·감면율 前),
     // 감면후 소득금액 = 양도소득금액(§90① 소득 미차감). rate-곱값(53,425,403) 금지.

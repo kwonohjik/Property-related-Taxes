@@ -65,6 +65,14 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     assetLabel: `자산 ${index}`,
     assetKind: "housing",
     isSuccessorRightToMoveIn: false,
+    // 승계조합원 입주권 취득가액 (§97①1호 가목) — 원조합원 §166① 경로와 별개 축
+    successorRightAcqPrice: "",
+    successorRightAddedContribution: "",
+    // §165① 기준시가 4칸 — 승계 입주권 추계 전용
+    successorRightStdPaidAtAcq: "",
+    successorRightStdPremiumAtAcq: "",
+    successorRightStdPaidAtTransfer: "",
+    successorRightStdPremiumAtTransfer: "",
     // §104③ 미등기양도자산 — 컴패니언 자산 전용(주 자산은 폼-전역 isUnregistered)
     isUnregistered: false,
     isPrimaryForHouseholdFlags: index === 1,
@@ -489,7 +497,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevLandPricePerSqmAtApproval: "", // §166③ 분모 ㎡당 단가 (LandPriceLookupField 신규 입력 경로)
     // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
     redevHousingStdPriceAtAcq: "",    // §164⑤ 분자 — 취득당시 개별주택가격
-    redevHousingStdPriceAtApproval: "", // §164⑤ 분모 — 인가당시 부근 개별주택가격
+    redevHousingStdPriceAtApproval: "", // §164⑤ 분모 — 인가당시 개별주택가격
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
     redevCompletionDate: "",

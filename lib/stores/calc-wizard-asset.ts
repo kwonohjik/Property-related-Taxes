@@ -72,6 +72,55 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 입주권 승계조합원 여부 (assetKind === "right_to_move_in" 일 때만 의미) */
   isSuccessorRightToMoveIn: boolean;
   /**
+   * 조합원입주권 **승계취득가액** (원) — `isSuccessorRightToMoveIn === true` 전용.
+   *
+   * 승계조합원은 「소득세법 시행령」 §166①의 적용 대상이 아니다 — 그 항은 「조합원이 당해 조합에
+   * 기존건물과 그 부수토지를 **제공하고 취득한** 입주자로 선정된 지위를 양도하는 경우」로 요건을
+   * 한정하는데, 승계자는 제공한 사실이 없다. 따라서 취득가액은 §97①1호 가목의 **실지거래가액**
+   * 이고, 그 구성은 「권리가액 상당 + 프리미엄」이다(기준-2025-법규재산-0057, 2025-06-19).
+   *
+   * ⚠️ §166 섹션의 `redevActualAcquisitionPrice`(= 인가 **전** 종전 부동산의 취득가액)와는
+   *    **다른 사실**이다. 승계자에게는 「인가 전 종전 부동산」 자체가 없다. 한 필드로 겸용하면
+   *    라벨을 문자대로 따른 사용자가 종전 소유자의 취득가액을 넣어 과대과세된다(실측 97,922,000원).
+   */
+  successorRightAcqPrice: string;
+  /**
+   * 조합원입주권 승계취득 **이후 납입한 추가분담금**(원) — `isSuccessorRightToMoveIn === true` 전용.
+   *
+   * 기준-2025-법규재산-0057은 승계취득 케이스의 취득가액을 「권리가액 + 취득 이후 조합원
+   * 분양계약에 따라 납입한 추가분담금 + (입증되는) 프리미엄」의 합으로 본다. API 변환이
+   * `successorRightAcqPrice`와 합산해 엔진 `acquisitionPrice` 한 값으로 보낸다(엔진 필드 신설 없음).
+   *
+   * 미입력("")은 0으로 본다 — 승계 직후 양도라 추가분담금이 없을 수 있다.
+   */
+  successorRightAddedContribution: string;
+
+  /**
+   * ── 승계 입주권 §165① 기준시가 4칸 — 추계(환산·감정·매매사례) 전용 ──────────────
+   *
+   * 「소득세법 시행령」 §165①: 법 §99①2호 **가목**의 「대통령령으로 정하는 방법에 따라 평가한
+   * 가액」이란 「**취득일 또는 양도일까지 납입한 금액과 취득일 또는 양도일 현재의 프리미엄에
+   * 상당하는 금액을 합한 금액**」을 말한다.
+   *
+   * ⇒ 시점마다 **납입액 + 프리미엄** 2칸으로 받고 합산한다. 합계 1칸으로 받지 않는 이유는
+   *   §165①의 구성과 1:1이라 사용자가 검산할 수 있고, 화면 미리보기로 합계를 확인시킬 수 있어서다.
+   *   합산은 `transfer-successor-right.ts`의 헬퍼가 **단일 소스**로 수행한다(UI 미리보기·④ 변환 공용).
+   *
+   * ⚠️ 기존 `standardPriceAtAcq`·`standardPriceAtTransfer`와 **다른 칸**이다. 그 둘은 토지·건물의
+   *    개별공시지가·건물기준시가(§99①1호)를 받는 칸이고, 이쪽은 §99①2호 가목의 권리 기준시가다.
+   *    엔진에는 둘 다 `standardPriceAtAcquisition`/`standardPriceAtTransfer` 한 쌍으로 도달하므로
+   *    ④ 변환에서 **승계일 때만** 이 4칸의 합계로 교체한다.
+   *
+   * 사용 범위:
+   *   · 환산       → 4칸 전부 (§176의2②2호 분자·분모)
+   *   · 감정·매매사례 → 취득 2칸만 (§163⑥ 개산공제 base)
+   *   · 실거래가    → 미사용
+   */
+  successorRightStdPaidAtAcq: string;
+  successorRightStdPremiumAtAcq: string;
+  successorRightStdPaidAtTransfer: string;
+  successorRightStdPremiumAtTransfer: string;
+  /**
    * 「소득세법」 §104③ 미등기양도자산 — **컴패니언(2번째 이후) 자산 전용**.
    *
    * 주 자산은 폼-전역 `TransferFormData.isUnregistered`(Step4 ⑤ 특수 상황)를 쓴다. 일괄양도는

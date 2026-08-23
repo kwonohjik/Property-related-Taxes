@@ -554,6 +554,60 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 이후 `redevSubject`는 자산 종류에서 파생한다 — 저장값은 하위호환 잔재이므로 정규화해 둔다.
   if (a.assetKind === "right_to_move_in") a.redevSubject = "right";
   else if (a.assetKind === "redevelopment_apt") a.redevSubject = "apt";
+
+  /**
+   * 완공 APT 양도 전용 필드를 입주권 자산에서 **비운다** (2026-08-14).
+   *
+   *   `redevReceiveOnlyMode`      = 청산금 수령분 단독 신고 (사례 46)
+   *   `redevNewHouseResidenceMonths` = 신축 APT 거주월수 (사례 45)
+   *
+   * 둘 다 **신축 APT가 존재해야** 성립하는 사실이라 완공 전 권리 양도인 입주권에는 없다.
+   * 종전에는 두 필드가 입주권에서도 입력·송신돼 세액을 조용히 바꿨다(2026-08-14 실측:
+   * 전자는 양도가액을 청산금 수령액으로 교체해 양도차익 1.7억 소실, 후자는 LTHD 14%→68%).
+   *
+   * 입력 UI를 숨기는 것만으로는 **이미 저장된 값이 남는다** — 그리고 카드가 사라져
+   * 사용자가 끌 수단도 없다. 그래서 validate 차단이 아니라 여기서 정규화한다
+   * ([[feedback-ui-gate-removes-sole-input-path]]).
+   *
+   * ⚠️ 이 정규화는 **세액을 바꾼다** — 위 승격(`redevelopment_apt` + `right` → 입주권)을 거친
+   * 자산이 대상이면 종전의 잘못된 값이 사라지고 정상 값으로 바뀐다. 의도된 정정이다.
+   */
+  /**
+   * 입주권에서 **도달 불가 입력 3종**을 비운다 (2026-08-23).
+   *
+   *   `isAppraisalAcquisition` · `isSalesCaseAcquisition`
+   *     = 상단 축 A(일반 「취득가액 산정 방식」) 라디오가 켜던 추계 플래그. 그 라디오를 입주권에서
+   *       제거했으므로 이제 **끄는 수단이 없다**. 남아 있으면 API가 취득가액을 0으로 보내
+   *       「인가전 양도차익 = 권리가액 − 0」으로 오류 없이 과대과세된다(실측 — 계획서 §2.1).
+   *       API 쪽에도 무력화 가드를 뒀지만(`transfer-tax-api.ts` `isRightToMoveIn`) 저장값 자체를
+   *       정리해 두어야 화면·사이드바 표시까지 일관된다.
+   *
+   *   `redevIsSuccessorMember`
+   *     = 사례 48 **완공APT** 승계조합원(신축APT 양도) 필드. 입주권의 승계 여부는 ① 기본정보의
+   *       `isSuccessorRightToMoveIn`이 받는다 — **다른 사실**이다(#1245에서 ②-a 카드를 완공APT
+   *       전용으로 분리). 입주권에 stale `"yes"`가 남으면 ⑤ 취득가액 카드가 숨겨지고
+   *       `validateRedevelopmentAsset`이 「준공일을 입력하세요」로 막는데, 그 입력칸도 같은 숨겨진
+   *       섹션 안에 있어 **채울 칸 없는 영구 차단**이 된다(실측 — 계획서 §2.4(3)).
+   *
+   * ⚠️ `useEstimatedAcquisition`은 **비우지 않는다** — 원조합원 입주권에서는 ⑤ 카드의
+   *    실가/환산 라디오가 이 필드를 정본으로 쓴다. 비우면 §166③ 환산 모드가 꺼진다.
+   *    승계조합원의 환산 차단은 API(`isEstimated` 정의)와 ⑧ validate가 담당한다.
+   */
+  if (a.assetKind === "right_to_move_in") {
+    a.redevReceiveOnlyMode = "";
+    a.redevNewHouseResidenceMonths = "";
+    a.isAppraisalAcquisition = false;
+    a.isSalesCaseAcquisition = false;
+    a.redevIsSuccessorMember = "";
+  }
+  // 승계조합원 입주권 취득가액 (§97①1호 가목) — sessionStorage 호환
+  if (a.successorRightAcqPrice === undefined) a.successorRightAcqPrice = "";
+  if (a.successorRightAddedContribution === undefined) a.successorRightAddedContribution = "";
+  // §165① 기준시가 4칸 — 승계 입주권 추계(R-12). stale 저장값에는 없다.
+  if (a.successorRightStdPaidAtAcq === undefined) a.successorRightStdPaidAtAcq = "";
+  if (a.successorRightStdPremiumAtAcq === undefined) a.successorRightStdPremiumAtAcq = "";
+  if (a.successorRightStdPaidAtTransfer === undefined) a.successorRightStdPaidAtTransfer = "";
+  if (a.successorRightStdPremiumAtTransfer === undefined) a.successorRightStdPremiumAtTransfer = "";
   if (a.redevApprovalLawBasis === undefined) a.redevApprovalLawBasis = "";
   if (a.redevOriginalAssetType === undefined || a.redevOriginalAssetType === "") a.redevOriginalAssetType = "housing";
   if (a.redevSettlementDirection === undefined) a.redevSettlementDirection = "";

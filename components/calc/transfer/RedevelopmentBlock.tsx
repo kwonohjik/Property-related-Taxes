@@ -1,18 +1,28 @@
 "use client";
 
 /**
- * RedevelopmentBlock — 재개발/재건축 양도소득세 입력 섹션 (사례 44 UI)
+ * RedevelopmentBlock — 재개발/재건축 양도소득세 입력 섹션
  *
- * assetKind === "redevelopment_apt" 진입 시 렌더.
- * 시행령 §166②1호 (APT 양도 + 청산금 납부 — 사례 44 핵심) + §166③ (환산취득가) + §164⑦ 단서.
+ * **두 자산 종류의 공용 블록**이다 (2026-08-13 축 일원화 · PR #1245):
+ *   입주권(`right_to_move_in`)     → 조합원입주권 양도 (§166① — 사례 36~39)
+ *   재개발APT(`redevelopment_apt`) → 완공 신축주택 양도 (§166② — 사례 40~48)
+ * 공통 입력이 대부분이라 컴포넌트를 나누지 않고 `isRightSubject`로 분기한다.
+ * §166③ (환산취득가) + §164⑦ 단서 포함.
  *
- * 구조:
- *  ① sky:    양도 대상 (apt 고정, right disabled)
- *  ② emerald: 출자 자산 (housing 고정, land disabled)
- *  ③ amber:  청산금 방향 (pay 고정, receive disabled)
- *  ④ violet: 재개발 일정·금액 + 분양가 미리보기
- *  ⑤ sky:    인가전 분 종전 부동산 취득가액 — 실가/환산 라디오 + 고른 쪽 입력 UI
- *            (2026-08-13 통합: 종전 실가 카드 + 「환산취득가 사용」 ToggleCard 2분리 구조 폐지)
+ * 구조 (✱ = 완공 APT 양도 전용):
+ *  ②  emerald: 출자 자산 (토지·주택)
+ *  ②-a rose:  조합원 구분 (사례 48) ✱
+ *  ③  amber:  청산금 방향 (pay/receive)
+ *  ③-a rose:  청산금 수령분 단독 신고 (사례 46) ✱
+ *  ③-c violet: 비과세 보유 요건 (사례 46·47)
+ *  ④  violet: 재개발 일정·금액 + 분양가 미리보기 (조문 표기는 자산 종류별)
+ *  ⑤  sky:    인가전 분 종전 부동산 취득가액 — 실가/환산 라디오 + 고른 쪽 입력 UI
+ *             (2026-08-13 통합: 종전 실가 카드 + 「환산취득가 사용」 ToggleCard 2분리 구조 폐지)
+ *  ⑥  emerald: 거주개월 분리 입력 (사례 45) ✱
+ *
+ * ✱ 표시 항목은 **신축 APT가 존재해야** 성립하는 사실이라 입주권에서 숨긴다.
+ *   숨기지 않으면 값이 API·엔진까지 흘러 세액을 조용히 바꾼다 (2026-08-14 실측 —
+ *   ③-a는 양도가액이 청산금 수령액으로 교체, ⑥은 입주권 LTHD 14% → 68%).
  *
  * 정책 준수:
  *  - native checkbox/radio 금지 → ToggleCard / RadioCardGroup
@@ -34,7 +44,10 @@ import { RedevelopmentValuationSection } from "./RedevelopmentValuationSection";
 import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSplitSection";
 import { RedevelopmentRightExemptionSection } from "./RedevelopmentRightExemptionSection";
 import { HousingContribEstimatedSection } from "./HousingContribEstimatedSection";
-import { RedevelopmentDeemedAcquisitionNotice } from "./RedevelopmentDeemedAcquisitionNotice";
+import {
+  RedevelopmentDeemedAcquisitionNotice,
+  RedevelopmentSec163_9PriorityNotice,
+} from "./RedevelopmentDeemedAcquisitionNotice";
 import {
   SettlementAnnouncementDateField,
   ReceiveOnlyToggleCard,
@@ -177,8 +190,12 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         </ToneCard>
       )}
 
-      {/* ③-a rose: 청산금 수령분 단독 신고 토글 (사례 46 — receiveOnlyMode) */}
-      {asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" && (
+      {/* ③-a rose: 청산금 수령분 단독 신고 토글 (사례 46 — receiveOnlyMode) — **완공 APT 양도 전용**.
+          엔진의 `receiveOnlyMode` 구현은 `computeAptReceive`(redevelopment-split.ts) 안에만 있다.
+          입주권에서 켜면 「인가전·인가후 양도차익 0 강제」는 걸리지 않은 채
+          `transfer-tax-api.ts`가 양도가액만 청산금 수령액으로 교체해 **양도차익이 사라진다**
+          (실측: 양도가액 4.2억 → 0.5억, 청산금 분 양도차익 1.7억 → 0). */}
+      {!isRightSubject && asset.redevIsSuccessorMember !== "yes" && asset.redevSettlementDirection === "receive" && (
         <ReceiveOnlyToggleCard asset={asset} onChange={onChange} />
       )}
 
@@ -194,10 +211,23 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         <ExemptionAtApprovalCard asset={asset} onChange={onChange} />
       )}
 
-      {/* ④ violet: 재개발 일정·금액 */}
-      <ToneCard tone="violet" sectionNum={4} title="재개발 일정·금액 (시행령 §166②1호)" bodyClassName="space-y-2" noDark>
+      {/* ④ violet: 재개발 일정·금액.
+          근거 조문이 양도 대상에 따라 다르다 — 입주권은 §166①(조합원입주권 양도차익),
+          완공 APT는 §166②1호(신축주택 양도차익). 종전에는 §166②1호로 고정 표기해
+          입주권 화면에 틀린 조문이 나왔다. */}
+      <ToneCard
+        tone="violet"
+        sectionNum={4}
+        title={`재개발 일정·금액 (시행령 ${isRightSubject ? "§166①" : "§166②1호"})`}
+        bodyClassName="space-y-2"
+        noDark
+      >
         <div className="flex flex-wrap items-center gap-1.5">
-          <LawArticleModal legalBasis="소득세법 시행령 §166 ② 1호" label="시행령 §166②1호" />
+          {isRightSubject ? (
+            <LawArticleModal legalBasis="소득세법 시행령 §166 ①" label="시행령 §166①" />
+          ) : (
+            <LawArticleModal legalBasis="소득세법 시행령 §166 ② 1호" label="시행령 §166②1호" />
+          )}
           <LawArticleModal legalBasis="소득세법 시행령 §166 ④" label="시행령 §166④" />
           <LawArticleModal legalBasis="소득세법 §97 ①" label="§97①" />
           <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
@@ -349,6 +379,11 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           bodyClassName="space-y-2"
           noDark
         >
+          {/* §163⑨ 상속·증여 평가액이 이 섹션의 값보다 우선한다는 표시 (R-10).
+              모드 라디오 **위**에 둔다 — 실가·환산 어느 쪽을 골라도 같이 무시되므로
+              섹션 전체에 걸리는 사실이다(실측 8조합). */}
+          <RedevelopmentSec163_9PriorityNotice asset={asset} />
+
           <RadioCardGroup
             name={`redevAcqMode-${asset.assetId}`}
             value={asset.useEstimatedAcquisition ? "estimated" : "actual"}
@@ -383,8 +418,13 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         </ToneCard>
       )}
 
-      {/* §⑤ 거주월수 분리 입력 (사례 45 — 1세대1주택 + 12억 초과) — 승계조합원 모드 시 숨김 (본 PR 미지원) */}
-      {asset.redevIsSuccessorMember !== "yes" && (
+      {/* §⑤ 거주월수 분리 입력 (사례 45 — 1세대1주택 + 12억 초과) — **완공 APT 양도 전용**.
+          「기존주택 거주월수 / 신축주택 거주월수」 분리는 신축 APT가 존재해야 성립한다.
+          입주권은 완공 전 권리 양도라 신축 거주가 있을 수 없는데, 게이트가 없으면 그 값이
+          `existingResidenceMonths = prior + new`로 합산돼 입주권 LTHD를 부풀린다
+          (실측: 신축 거주 120개월만 입력 → LTHD 14% → 68%).
+          승계조합원 모드 시에도 숨김 (본 PR 미지원). */}
+      {!isRightSubject && asset.redevIsSuccessorMember !== "yes" && (
         <RedevelopmentResidenceSplitSection asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
       )}
     </div>

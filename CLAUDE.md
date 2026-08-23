@@ -182,12 +182,41 @@ pre-push에는 넣지 않는다 — 매 푸시에 붙으면 개발 흐름이 끊
 
 ```bash
 scripts/ship.sh <branch> "<commit message>"          # 즉시 머지 + 원격/로컬 브랜치 삭제 + master 동기화
-scripts/ship.sh <branch> "<commit message>" --auto   # CI 통과 후 자동 머지(감독 불필요)
+scripts/ship.sh <branch> "<commit message>" --auto   # ⚠️ 이 저장소에서는 즉시 머지와 같다 (아래)
 ```
 
 - **전제**: master에서 작업 변경분을 들고 실행(자동으로 새 브랜치 분기)하거나, 이미 `<branch>`에 있는 상태.
 - **진짜 게이트는 `git push` 시 pre-push(tsc + 전체 test)뿐**. master에 브랜치 보호가 없어 **CI는 머지를 차단하지 않음** → 즉시 머지 모드는 CI를 기다리지 않는다. (2026-07-31부터 CI는 **PR에서만** 돌고 머지 후 push 실행은 없다 — 위 사용량 정책.)
-- repo 설정 `deleteBranchOnMerge: true`(원격 자동삭제) + `allowAutoMerge: true`(`--auto`) 적용됨.
+- repo 설정 `deleteBranchOnMerge: true`(원격 자동삭제) + `allowAutoMerge: true` 적용됨.
+
+#### 🔴 `--auto`는 「CI 통과 후 머지」가 아니다 — 실측 정정 (2026-08-23)
+
+**종전 기재는 「CI 통과 후 자동 머지(감독 불필요)」였다. 틀렸다.** GitHub의 auto-merge는
+**머지를 막고 있는 것**(필수 상태 체크·필수 리뷰)이 있어야 예약된다. 이 저장소는 **master에
+브랜치 보호가 없어** PR이 생성 즉시 `MERGEABLE`이 되고, 그러면 GitHub은 예약을 거부한다:
+
+```
+GraphQL: Pull request is in clean status (enablePullRequestAutoMerge)
+```
+
+⚠️ **더 위험한 것은 재시도다.** PR 체크가 돌기 시작한 뒤 `gh pr merge <n> --auto --merge`를
+다시 부르면 **에러 없이 exit 0으로 즉시 머지된다**(2026-08-23 PR #1249 실측 — CI 7 job이
+`pending`인 상태에서 머지됨). `autoMergeRequest`는 여전히 `null`이라 **예약 실패로 오독하기
+쉽다** — 「예약이 안 걸렸으니 아직 안 머지됐겠지」가 아니라 **이미 머지된 것**이다.
+
+⇒ **CI 통과를 기다려야 하면 `--auto`를 믿지 말고 두 단계로 나눈다**:
+
+```bash
+git push -u origin <branch> && gh pr create --fill --base master   # ship.sh 대신 수동 2단계
+gh pr checks <n> --watch --fail-fast                               # green 확인 (파이프 금지)
+gh pr merge <n> --merge --delete-branch                            # 확인 후 머지
+```
+
+- `--fail-fast`가 있어야 한 job 실패 시 즉시 멈춘다.
+- **파이프를 걸지 말 것** — `gh pr checks --watch | tail`은 실패해도 exit 0이다
+  (memory `feedback_gh_watch_pipe_exit0_false_green`).
+- `gh pr merge --auto`를 **확인 목적으로도 부르지 말 것** — 그 호출 자체가 머지다.
+- 브랜치 보호를 켜면 `--auto`가 본래 의미대로 동작한다. 켜기 전까지 위 2단계가 정본이다.
 - **lint 갭 해소(2026-07-31)**: pre-push가 이제 전체 `npm run lint`도 돌린다(26초). 종전의 "lint는 CI에서만" 갭은 없다.
 - **효율**: 작은 수정 여러 개를 한 브랜치에 모아 1회 ship → CI 실행 횟수↓.
 - `.claude/commands/`(로컬 개인 슬래시 커맨드)는 `.git/info/exclude`로 제외됨 → `git add -A` 오염 없음.

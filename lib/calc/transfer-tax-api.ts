@@ -26,6 +26,11 @@ import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
+import { isSuccessorRightTransfer } from "./transfer-successor-right";
+import { successorRightAcquisitionTotal } from "./transfer-successor-right";
+import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
+import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
+import { buildParcelsPayload } from "./transfer-tax-api-parcels";
 import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
@@ -95,8 +100,49 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
 
   // 취득가 산정방식은 자산-수준 플래그에서 도출 (Step1↔Step3 통합 후).
   // 폼-전역 form.acquisitionMethod / form.appraisalValue 는 더 이상 사용하지 않음.
-  const isSalesCase = primary.isSalesCaseAcquisition === true;
-  const isAppraisal = !isSalesCase && primary.isAppraisalAcquisition === true;
+  /**
+   * 조합원입주권 — 추계 3형 중 **감정가액·매매사례가액은 입력 경로 자체가 없다**(2026-08-23).
+   *
+   * 원조합원(§166①)의 취득가액은 「기존건물과 그 부수토지의 취득가액」이고, 확인할 수 없는 경우의
+   * 대체수단은 §166③ **환산**으로 법이 이미 정해 두었다. 승계조합원(§97①1호 가목)은 승계 매입가가
+   * 실지거래가액이다. 어느 쪽도 §176의2③ 감정·매매사례 추계를 쓰지 않으며, 엔진도 §166 경로에서
+   * `appraisalValue`·`similarSalesValue`를 **읽지 않는다**(`transfer-tax-redevelopment.ts:90`).
+   *
+   * 종전에는 상단 축 A 라디오로 그 두 방식을 고를 수 있었고, 고르면 `acquisitionPrice`가 **0**이 되어
+   * 「인가전 양도차익 = 권리가액 − 0」으로 **오류 없이 과대과세**됐다. 상단 축 A는 UI에서 제거하되,
+   * 이미 저장된 stale 플래그가 남아 있어도 계산이 틀어지지 않도록 여기서 무력화한다.
+   * (완공APT는 본 PR 범위 밖 — 현행 동작을 유지한다. anchor A-8이 트립와이어다.)
+   */
+  const isRightToMoveIn = primary.assetKind === "right_to_move_in";
+  /** 승계조합원 입주권 — §166 미적용(§97①1호 가목). 술어는 `transfer-successor-right.ts` 단일 소스. */
+  const isSuccessorRight = isSuccessorRightTransfer(primary);
+  /**
+   * 추계 게이트 — **원조합원 입주권만** 막는다 (R-12, 2026-08-23).
+   *
+   * 종전에는 `!isRightToMoveIn`이라 승계조합원까지 함께 막혔다. 원조합원(§166①)은 취득가액
+   * 확인 불가 시의 대체수단을 §166③ **환산으로 법이 이미 정해 두었고**, 엔진도 §166 경로에서
+   * `appraisalValue`·`similarSalesValue`를 읽지 않는다 ⇒ 계속 막는다(R-9에서 §166③ 전속 확정).
+   *
+   * 승계조합원은 §166을 타지 않고 §97①1호 일반 경로로 가므로 §176의2③ 추계 3종이 그대로
+   * 적용된다. 기준시가는 §99①2호 가목 → 영 **§165①**(납입액 + 프리미엄)이 명문으로 정한다.
+   */
+  /**
+   * ⚠️ **두 게이트는 범위가 다르다** — 종전 코드가 그랬고, R-12도 그 구분을 지킨다.
+   *
+   * | | 종전 | 현행(R-12) |
+   * |---|---|---|
+   * | 감정·매매사례 | `!isRightToMoveIn` — **입주권 전체** 차단 | 원조합원만 차단 |
+   * | 환산 | `!isSuccessorRight` — **승계만** 차단 | 차단 없음 |
+   *
+   * 원조합원의 `useEstimatedAcquisition`은 §166③ 환산(종전 부동산)을 켜는 플래그라
+   * **원래부터 통과해야 한다**. 이것을 `blocksEstimation` 하나로 묶으면 §166③ 환산이 꺼진다
+   * (P-9 ⑦ 실측에서 `useEst=false`로 잡혔다).
+   */
+  const blocksAppraisalSalesCase = isRightToMoveIn && !isSuccessorRight;
+  const isSalesCase = !blocksAppraisalSalesCase && primary.isSalesCaseAcquisition === true;
+  const isAppraisal =
+    !blocksAppraisalSalesCase && !isSalesCase && primary.isAppraisalAcquisition === true;
+  // 승계 입주권 환산은 §176의2②2호(입주권 자체) · 원조합원 환산은 §166③(종전 부동산) — 둘 다 통과.
   const isEstimated = !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
   // pre1990 토지등급 환산은 §176의2④ 의제취득(pre-1985) 영역. post-1985 증여는 §163⑨ 신고가액이
   // 취득당시 실지거래가액으로 확인 가능 → 토지등급 환산 배제. pre1990Enabled은 환산 클릭 시 set되는
@@ -172,8 +218,13 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // ⑬ 재개발/재건축 (시행령 §166) — assetKind "redevelopment_apt" 또는 "right_to_move_in" 시 빌드.
   // redevSubject는 buildRedevelopmentPayload에서 UI display fallback("apt"/"right")과 동일하게 보정.
   // assetKind 자체가 전용 분기이므로 추가 enum 입력은 요구하지 않는다(3중 패턴 정합).
+  //
+  // ⚠️ **승계조합원 입주권은 제외한다** (2026-08-23). §166①은 「조합에 기존건물과 그 부수토지를
+  //    **제공하고 취득한**」 조합원으로 요건을 한정하므로 승계자는 대상이 아니다 — 재개발 페이로드
+  //    자체를 만들지 않아 엔진이 일반 분기(§97①1호 가목)를 타게 한다(`isSuccessorRight` 위에서 정의).
   const isRedevelopment =
-    primary.assetKind === "redevelopment_apt" || primary.assetKind === "right_to_move_in";
+    !isSuccessorRight &&
+    (primary.assetKind === "redevelopment_apt" || isRightToMoveIn);
   const redevPayload = isRedevelopment ? buildRedevelopmentPayload(primary) : undefined;
 
   // ⑬ 부담부증여 (소령 §159) — Phase 2 (2026-05-12): transferType 분기 + 모든 propertyType 지원
@@ -228,19 +279,33 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
 
   // 사례 46 — receiveOnly 모드: transferPrice = settlementAmount, transferDate = settlementSaleDate 자동 미러
   // memory `mirror-pattern` 3중 패턴 (UI display + API + validate). 엔진은 receiveOnly 분기에서 transferPrice 무시 — 2중 안전망.
-  const isReceiveOnly = isRedevelopment && primary.redevReceiveOnlyMode === "yes";
+  //
+  // ⚠️ **완공 APT 양도(subject="apt") 전용이다.** 엔진의 receiveOnly 구현은 `computeAptReceive`
+  //    (redevelopment-split.ts) 안에만 있어 입주권(subject="right") 분기에는 대응 산식이 없다.
+  //    subject 가드 없이 두면 「양도차익 0 강제」는 걸리지 않은 채 여기서 양도가액만 청산금 수령액으로
+  //    교체돼 **양도차익이 조용히 사라진다**(실측: 4.2억 양도 → 청산금 분 양도차익 1.7억 → 0).
+  //    subject는 `redevPayload`가 단일 소스 — UI display fallback과 같은 값이다(복제 금지).
+  const isReceiveOnly =
+    isRedevelopment && redevPayload?.subject === "apt" && primary.redevReceiveOnlyMode === "yes";
   const receiveOnlySettlementAmount = isReceiveOnly ? parseAmount(primary.redevSettlementAmount) : 0;
   const receiveOnlyTransferDate = isReceiveOnly && primary.redevSettlementSaleDate
     ? primary.redevSettlementSaleDate
     : null;
 
-  // 재개발/재건축 입주권 양도(subject="right") 시 엔진 routing 키를 right_to_move_in으로 remap.
-  //   - UI assetKind="redevelopment_apt"는 사업 분류(재개발/재건축 사업), redevSubject가 실제 양도 객체
-  //   - 엔진 isRedevelopmentActive(`lib/tax-engine/redevelopment.ts:340-348`)는 propertyType ↔ subject 1:1 매핑 요구
-  //     · redevelopment_apt → subject="apt" 필수
-  //     · right_to_move_in → subject="right" 필수
-  //   - 부정합 조합(redevelopment_apt + subject="right") 시 엔진이 일반 양도 분기로 routing되어
-  //     redevelopmentDetail 미생성 + LTHD 전체 양도차익 일괄 적용 회귀 발생
+  // 부정합 조합(assetKind="redevelopment_apt" + redevSubject="right") 방어 remap.
+  //
+  //   - 엔진 `isRedevelopmentActive`(lib/tax-engine/redevelopment.ts:786-789)는 propertyType ↔ subject
+  //     1:1 매핑을 요구한다: redevelopment_apt → "apt" / right_to_move_in → "right".
+  //     어긋나면 엔진이 일반 양도 분기로 routing돼 redevelopmentDetail 미생성 +
+  //     LTHD가 전체 양도차익에 일괄 적용되는 회귀가 난다.
+  //
+  //   - **양도 대상 축은 2026-08-13(PR #1245)부터 자산 종류가 단독으로 결정한다.**
+  //     종전 주석의 「assetKind는 사업 분류이고 redevSubject가 실제 양도 객체」 모델은 폐지됐다.
+  //     ① 라디오가 사라졌고 `redevSubjectPatchForAssetKind`가 자산 종류에서 파생하며,
+  //     저장값은 `calc-wizard-asset-migrate.ts`가 자산 종류를 승격시켜 흡수한다
+  //     (store persist merge · legacy migration · 이력 복원 3경로 모두 `migrateAsset` 경유).
+  //     ⇒ 정상 경로에서는 **도달하지 않는다**. 마이그레이션을 거치지 않고 조립된 입력
+  //     (직접 fixture 등)만을 위한 안전망으로 남긴다.
   const isRedevelopmentRightTransfer =
     primary.assetKind === "redevelopment_apt" && primary.redevSubject === "right";
 
@@ -275,11 +340,17 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     totalPropertyTransferPrice: primaryFractional ? totalContractPrice : undefined,
     transferDate: receiveOnlyTransferDate || form.transferDate,
     acquisitionPrice:
-      hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive
+      // 승계조합원 입주권 — §97①1호 가목 실지거래가액 = 승계취득가 + 취득 후 추가분담금
+      // (기준-2025-법규재산-0057). §166 3분할을 타지 않으므로 청산금이 별도 차감되지 않는다.
+      // 승계 + **추계**면 실가 2칸을 보내지 않는다 — 엔진이 `appraisalValue ?? acquisitionPrice`
+      // 로 후퇴할 때 실가가 남아 있으면 고른 추계값 대신 그것이 취득가액이 된다(R-12).
+      isSuccessorRight && !(isEstimated || isAppraisal || isSalesCase)
+        ? successorRightAcquisitionTotal(primary)
+        : hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive
         ? 0
         : isRedevelopment
           ? // 재개발 + 실가 모드 — 두 경로 분기:
-            //  · 사례 48 승계조합원: 자산 카드 fixedAcquisitionPrice 사용 (상속·증여·매매 통합 흐름)
+            //  · 사례 48 승계조합원(완공APT): 자산 카드 fixedAcquisitionPrice 사용
             //  · 그 외(사례 45/46 원조합원): §166 섹션 내부의 redevActualAcquisitionPrice 사용
             primary.redevIsSuccessorMember === "yes"
               ? parseAmount(primary.fixedAcquisitionPrice)
@@ -329,6 +400,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       ? undefined
       : isCarryoverGeneral
         ? (parseAmount(primary.carryover?.donorStandardPriceAtAcquisition ?? "") || undefined)
+        // 승계 입주권은 §99①2호 가목 → 영 §165①(납입액 + 프리미엄) — **다른 칸**이다 (R-12).
+        // 추계 3종 모두 개산공제(§163⑥4호 1%) base로 취득당시 기준시가를 쓴다.
+        : isSuccessorRight && (isEstimated || isAppraisal || isSalesCase)
+          ? successorRightStdPriceAtAcq(primary) || undefined
         : isEstimated || isSplitActive
           // 분리 모드(토지·건물 취득일/소유자 상이) 추가 전송 — §166⑥ 안분 비율(calcApportionRatio,
           // split-gain.ts:26-36)이 취득시 기준시가 3요소를 요구한다. 종전에는 isEstimated에서만
@@ -344,6 +419,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? parseAmount(primary.standardPriceAtTransfer) || undefined
         : isCarryoverGeneral
           ? (parseAmount(primary.carryover?.donorStandardPriceAtTransfer ?? "") || undefined)
+          // 승계 입주권 환산 분모 — §165①(양도일까지 납입액 + 양도일 프리미엄) (R-12).
+          // 감정·매매사례는 분모가 필요 없어 보내지 않는다.
+          : isSuccessorRight && isEstimated
+            ? successorRightStdPriceAtTransfer(primary) || undefined
           : isEstimated
             ? parseAmount(primary.standardPriceAtTransfer) || undefined
             : undefined,
@@ -529,117 +608,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
     ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     ...buildPenaltyAmendmentPayload(form),
+    // ⑬ 다필지(§114⑦) — 필지별 페이로드 조립은 `transfer-tax-api-parcels.ts`로 분리(2026-08-23, 800줄 정책).
     ...(parcelModeActive
-      ? {
-          parcels: primary.parcels.map((p) => {
-            const scenario = p.areaScenario ?? "partial";
-            const isReduction = scenario === "reduction";
-
-            /**
-             * 지분 스케일 — **금액 필드 전용**. 자산-수준 `transferPrice`가 이미
-             * `applyRatio(totalContractPrice, primaryRatio)`로 지분분인데(:212) 필지 금액이
-             * 물건 전체(100%)로 남으면 **양도가액 지분분 − 취득가액 100%** 혼합 스케일이 된다
-             * (실측: 지분 50%에서 양도차익 8,000만 vs 정본 2억 8,000만 — **2억 과소**).
-             * §97② 단서 swap 비교(자본적지출+양도비 vs 환산+개산공제)도 같은 이유로 뒤집힌다.
-             *
-             * ⚠️ **면적·기준시가·보상단가는 스케일하지 않는다** — 면적은 필지 간 안분 비율의
-             *    분자·분모로 함께 나타나 상쇄되고, 기준시가·보상단가는 물건의 단가라
-             *    환산 산식에서 분자·분모로 상쇄된다. `ratioed`(makeRatioed)와 달리 **0을
-             *    undefined로 바꾸지 않아** 기존 필드별 undefined 규약을 보존한다.
-             * (P3 PR #843이 split 파트 필드에서 고친 것과 동형 — 계획서 §10 별건 A3)
-             */
-            const scaleAmt = (n: number) =>
-              primaryFractional ? applyRatio(n, primaryRatio) : n;
-
-            /**
-             * 취득 기준시가 산정용 면적 (B4-1b, 2026-07-30).
-             *
-             * 엔진은 `standardAtAcq = floor(acqArea × sqmAtAcq)`로 쓴다
-             * (`multi-parcel-transfer.ts:349`). 따라서 **취득 당시 단가에 곱할 면적**이며,
-             * 일부양도(`partial`)에서는 취득 전체가 아니라 **양도한 부분의 면적**이다 —
-             * 단건 경로와 같은 규약(`resolveAcqAreaForStdPrice`)이다.
-             *
-             * 근거: 「소득세법 시행령」 제176조의2 제2항 제2호의 "취득당시의 기준시가"는
-             * 법 제114조 제7항 문맥상 **양도자산의** 것이고, 조심 2018부0572(2018.05.03,
-             * 기각)도 "**각 필지의** 취득 당시 기준시가"를 안분 기준으로 삼았다.
-             *
-             * 감환지는 **먼저** 처리한다 — UI/여기서 의제취득면적
-             * (`priorLandArea × allocatedArea / entitlementArea`)을 계산하므로 그 뒤에
-             * 또 양도분을 적용하면 **이중 안분**이 된다(계획서 BR4).
-             * 증환지는 `entitlementArea < allocatedArea`라 `partial` 판정에 걸리지 않는다.
-             *
-             * `effectiveAcquisitionArea`(엔진 결과 echo, `:459`)도 이 값으로 표시되는데,
-             * 계산 재사용처가 없는 **표시 전용**이라 정정된 값이 노출되는 것이 맞다.
-             */
-            const finalAcqArea = isReduction
-              ? (parseFloat(p.priorLandArea) * parseFloat(p.allocatedArea)) /
-                parseFloat(p.entitlementArea)
-              // ⚠️ `scenario`를 명시 주입한다 — 필지 기본값은 `"partial"`(`:498`)이지만
-              //    헬퍼 기본값은 `"same"`이다. `p`를 그대로 넘기면 `areaScenario`가
-              //    undefined인 구 세션 필지에서 정정이 조용히 미적용된다.
-              : resolveAcqAreaForStdPrice({ ...p, areaScenario: scenario }) ?? 0;
-
-            // 감환지: 양도면적 = 교부면적 (UI에서 transferArea=allocatedArea로 이미 동기화)
-            const finalTransferArea = isReduction
-              ? parseFloat(p.allocatedArea) || 0
-              : parseFloat(p.transferArea) || 0;
-
-            return {
-              id: p.id,
-              acquisitionDate:
-                p.useDayAfterReplotting && p.replottingConfirmDate
-                  ? p.replottingConfirmDate
-                  : p.acquisitionDate,
-              acquisitionMethod: p.acquisitionMethod,
-              acquisitionPrice:
-                p.acquisitionMethod === "actual" ? scaleAmt(parseAmount(p.acquisitionPrice)) : undefined,
-              acquisitionArea: finalAcqArea,
-              transferArea: finalTransferArea,
-              standardPricePerSqmAtAcq:
-                p.acquisitionMethod === "estimated"
-                  ? parseFloat(p.standardPricePerSqmAtAcq) || 0
-                  : undefined,
-              standardPricePerSqmAtTransfer:
-                p.acquisitionMethod === "estimated"
-                  ? parseFloat(p.standardPricePerSqmAtTransfer) || 0
-                  : undefined,
-              // 공익수용 §164⑨ 1호 — 필지별 min[] 특례. 환산 방식일 때만 의미(엔진이 최종 게이트).
-              compensationPerSqm:
-                p.acquisitionMethod === "estimated"
-                  ? parseAmount(p.compensationPerSqm) || undefined
-                  : undefined,
-              compensationBasisStdPrice:
-                p.acquisitionMethod === "estimated"
-                  ? parseAmount(p.compensationBasisStdPrice) || undefined
-                  : undefined,
-              expenses:
-                p.acquisitionMethod === "actual" ? scaleAmt(parseAmount(p.expenses)) : undefined,
-              // §97② 단서 swap — 두 필드 합 > 0이면 분리 전송, 아니면 undefined (swap 비활성)
-              capitalExpenditure:
-                (parseAmount(p.capitalExpenditure) || parseAmount(p.transferExpense))
-                  ? scaleAmt(parseAmount(p.capitalExpenditure))
-                  : undefined,
-              transferExpense:
-                (parseAmount(p.capitalExpenditure) || parseAmount(p.transferExpense))
-                  ? scaleAmt(parseAmount(p.transferExpense))
-                  : undefined,
-              useDayAfterReplotting: p.useDayAfterReplotting || undefined,
-              replottingConfirmDate:
-                p.useDayAfterReplotting && p.replottingConfirmDate
-                  ? p.replottingConfirmDate
-                  : undefined,
-              entitlementArea: isReduction
-                ? parseFloat(p.entitlementArea) || undefined
-                : undefined,
-              allocatedArea: isReduction
-                ? parseFloat(p.allocatedArea) || undefined
-                : undefined,
-              priorLandArea: isReduction
-                ? parseFloat(p.priorLandArea) || undefined
-                : undefined,
-            };
-          }),
-        }
+      ? { parcels: buildParcelsPayload(primary.parcels, primaryFractional, primaryRatio) }
       : {}),
     ...buildPreHousingDisclosurePayload(primary, isMixed),
     // ── landNature (토지 자산 성격 — 부수토지 vs 독립 나대지) ──

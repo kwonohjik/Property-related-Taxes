@@ -4,7 +4,7 @@
  * 사례 39: 조합원입주권 양도(right) + 청산금 수령(receive) + 취득실거래가 불명(환산)
  *
  * 법령 근거:
- * - 소득세법 §166③  : 환산취득가 = 권리가액 × (취득당시 개별주택가격 ÷ 인가당시 부근 개별주택가격)
+ * - 소득세법 §166③  : 환산취득가 = 권리가액 × (취득당시 개별주택가격 ÷ 인가당시 개별주택가격)
  *     ※ 재개발 맥락에서 "양도 당시" = 의제양도시점(관리처분인가일) 기준
  * - 소득세법 §163⑥  : 개산공제 = floor(취득당시 개별주택가격 × 3%)
  * - 소득세법 §95②   : 별표2 [비고] 1호 — 인가전 분만 LTHD 적용, 인가후·청산금 0
@@ -41,7 +41,7 @@ export interface RedevHousingContribReceiveEstimatedInput {
   settlementReceived: number;
   /** §166③ 분자 — 취득당시 개별주택가격 (원, 총액) */
   housingStdPriceAtAcq: number;
-  /** §166③ 분모 — 인가당시 부근 개별주택가격 (원, 총액) */
+  /** §166③ 분모 — 인가당시 개별주택가격 (원, 총액) */
   housingStdPriceAtApproval: number;
   /** 인가전 필요경비 (원) — 미입력 시 0 */
   preApprovalExpenses: number;

@@ -134,7 +134,7 @@ export interface RedevelopmentInfo {
   housingStdPriceAtAcq?: number;
 
   /**
-   * §164⑤ PHD 분모 — 인가당시 부근 개별주택가격 (원, 총액).
+   * §164⑤ PHD 분모 — 인가당시 개별주택가격 (원, 총액).
    * originalAssetType="housing" + subject="right" + useEstimatedAcquisition=true 시 필수.
    * 관리처분인가일 직전 최근 공시 기준 (예: 인가일 2013-10-23 → 2013-01-01 공시값).
    *
@@ -282,7 +282,7 @@ export interface RedevelopmentInfo {
   /**
    * 관리처분계획인가일 기준 1세대1주택 비과세 보유·거주 요건 충족 여부.
    *
-   * 서면2016-법령해석재산-2705 (2017.02.13):
+   * 서면2016-법령해석재산-2705 (2016.09.12):
    *   - 보유주택수: 양도일 현재 기준 (§154①)
    *   - 보유·거주요건: 관리처분계획인가일 현재 기준 (해석례)
    *
@@ -693,7 +693,7 @@ export interface RedevelopmentResult {
     estimatedDeduction: number;
     /** 취득당시 개별주택가격 (원, §164⑤ 분자) */
     housingStdPriceAtAcq: number;
-    /** 인가당시 부근 개별주택가격 (원, §164⑤ 분모) */
+    /** 인가당시 개별주택가격 (원, §164⑤ 분모) */
     housingStdPriceAtApproval: number;
     /** 인가전 분 LTHD (원) */
     preApprovalLTHD: number;

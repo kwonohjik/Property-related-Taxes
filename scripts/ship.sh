@@ -8,10 +8,21 @@
 #
 # 사용법:
 #   scripts/ship.sh <branch> "<commit message>"          # 즉시 머지 + 브랜치 삭제 + master 동기화
-#   scripts/ship.sh <branch> "<commit message>" --auto   # CI 통과 후 자동 머지(감독 불필요)
+#   scripts/ship.sh <branch> "<commit message>" --auto   # ⚠️ 아래 경고 — 즉시 머지와 사실상 같다
 #
 # 전제: master에서 작업 변경분을 들고 실행하거나, 이미 <branch>에 있는 상태.
-#       repo 설정 deleteBranchOnMerge=true(원격 자동삭제) + allowAutoMerge=true(--auto) 적용됨.
+#       repo 설정 deleteBranchOnMerge=true(원격 자동삭제) + allowAutoMerge=true 적용됨.
+#
+# 🔴 --auto 경고 (2026-08-23 실측 정정, PR #1249):
+#   GitHub auto-merge는 "머지를 막고 있는 것"(필수 체크·리뷰)이 있어야 예약된다. 이 저장소는
+#   master에 브랜치 보호가 없어 PR이 즉시 MERGEABLE이 되고, GitHub은 예약을 거부한다
+#   ("Pull request is in clean status"). 그리고 체크가 돌기 시작한 뒤 재시도하면
+#   에러 없이 exit 0으로 **즉시 머지**된다 — CI 통과를 기다리지 않는다.
+#   ⇒ CI green을 기다려야 하면 이 스크립트를 쓰지 말고 수동 2단계로:
+#        git push -u origin <b> && gh pr create --fill --base master
+#        gh pr checks <n> --watch --fail-fast     # 파이프 금지(파이프 걸면 실패해도 exit 0)
+#        gh pr merge <n> --merge --delete-branch
+#   브랜치 보호를 켜면 --auto가 본래 의미대로 동작한다.
 #
 set -euo pipefail
 

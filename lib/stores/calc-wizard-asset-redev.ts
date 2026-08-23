@@ -197,7 +197,7 @@ export interface RedevelopmentFormSlice {
 
   /**
    * 관리처분계획인가일 기준 1세대1주택 비과세 보유·거주 요건 충족 여부 (override).
-   * 서면2016-법령해석재산-2705 (2017.02.13) — 청산금 수령분 비과세 판정 시점.
+   * 서면2016-법령해석재산-2705 (2016.09.12) — 청산금 수령분 비과세 판정 시점.
    * UI 자동 산정: monthsBetween(acquisitionDate, redevApprovalDate) ≥ 24 → "yes".
    * 빈문자열 = 자동 산정값 사용. "yes"/"no" = 사용자 override.
    */
@@ -261,7 +261,7 @@ export interface RedevelopmentFormSlice {
   redevHousingStdPriceAtAcq: string;
 
   /**
-   * §164⑤ 분모 — 인가당시 부근 개별주택가격 (원, 총액).
+   * §164⑤ 분모 — 인가당시 개별주택가격 (원, 총액).
    * originalAssetType="housing" + subject="right" + direction="receive" + useEstimated=true 시 필수.
    */
   redevHousingStdPriceAtApproval: string;

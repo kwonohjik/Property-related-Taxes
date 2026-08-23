@@ -52,7 +52,28 @@ interface Props {
 export function redevSubjectPatchForAssetKind(
   assetKind: AssetForm["assetKind"],
 ): Partial<AssetForm> {
-  if (assetKind === "right_to_move_in") return { redevSubject: "right" };
+  if (assetKind === "right_to_move_in") {
+    return {
+      redevSubject: "right",
+      /**
+       * 세션 내 전환 경로의 stale 정리 (2026-08-23).
+       *
+       * `calc-wizard-asset-migrate.ts`의 입주권 정규화는 **저장값 재수화 시점**에만 돈다.
+       * 다른 자산 종류에서 입주권으로 **지금 바꾸는** 경우에는 그 경로를 거치지 않으므로
+       * 여기서 같은 3필드를 비운다. 한쪽만 두면 「새로고침해야 정상화되는」 상태가 된다.
+       *
+       *  · `isAppraisalAcquisition`·`isSalesCaseAcquisition` — 입주권에는 감정·매매사례 추계
+       *    입력 경로가 없다(상단 축 A 제거). 남으면 취득가액이 0으로 전송된다.
+       *  · `redevIsSuccessorMember` — 사례 48 **완공APT** 전용 필드. 입주권의 승계 여부는
+       *    ① 기본정보 `isSuccessorRightToMoveIn`이 받는다(다른 사실).
+       *
+       * ⚠️ `useEstimatedAcquisition`은 건드리지 않는다 — ⑤ 카드 실가/환산 라디오의 정본이다.
+       */
+      isAppraisalAcquisition: false,
+      isSalesCaseAcquisition: false,
+      redevIsSuccessorMember: "",
+    };
+  }
   if (assetKind === "redevelopment_apt") return { redevSubject: "apt" };
   return {};
 }
