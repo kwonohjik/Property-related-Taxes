@@ -30,6 +30,7 @@ import type { z } from "zod";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { companionAssetSchema, reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
+import { splitAcquisitionShape } from "@/lib/api/transfer-tax-schema-split";
 import { resolveCompanionSplit, splitCompanionIntoTwo } from "./bundled-companion-split";
 import {
   calculateHoldingPeriod,
@@ -100,7 +101,20 @@ export function resolveHousingContextFromCompanion(
 // ─── companion engineInput 빌드 + split 분기 통합 헬퍼 ────────────
 // route.ts의 인라인 60줄을 헬퍼로 추출 (800줄 정책 준수).
 
-interface CompanionRawAsset {
+/**
+ * ⑭ 분리취득 축은 **⑫ 스키마에서 파생**한다 (N-6(A), 2026-08-23).
+ *
+ * 아래 `CompanionRawAsset`은 손으로 쓴 인터페이스라, ⑫에 필드가 늘어도 여기 적지 않으면
+ * 그 값이 **조용히 사라진다** — 이 파일 주석이 스스로 경고하는 실패 모드다(F13·F15 실사고).
+ * 분리취득 축은 필드가 24개라 손으로 유지할 수 없으므로 타입을 스키마에 **묶어 둔다**:
+ * ⑫에 필드가 늘면 여기서 컴파일 에러가 나거나 자동으로 따라온다.
+ */
+type CompanionSplitFields = Pick<
+  z.infer<typeof companionAssetSchema>,
+  keyof typeof splitAcquisitionShape
+>;
+
+interface CompanionRawAsset extends CompanionSplitFields {
   assetId: string;
   assetLabel?: string;
   assetKind: "housing" | "land" | "building";
@@ -250,7 +264,51 @@ export function buildCompanionEngineInputs(
   const propertyType: TransferTaxItemInput["propertyType"] =
     c.assetKind === "housing" ? "housing" : c.assetKind === "building" ? "building" : "land";
 
+  /**
+   * ⑭ 분리취득 축 — ⑫가 통과시킨 필드를 **그대로** 엔진 모양으로 옮긴다.
+   * 일자만 Date로 바꾸고, 나머지는 숫자·enum이라 변환이 없다.
+   */
+  const splitFields = {
+    landAcquisitionDate: toOptionalDate(c.landAcquisitionDate),
+    landAcquisitionCause: c.landAcquisitionCause,
+    landDecedentAcquisitionDate: toOptionalDate(c.landDecedentAcquisitionDate),
+    landDonorAcquisitionDate: toOptionalDate(c.landDonorAcquisitionDate),
+    selfOwns: c.selfOwns,
+    landAcqMode: c.landAcqMode,
+    buildingAcqMode: c.buildingAcqMode,
+    isSeparateAcquisition: c.isSeparateAcquisition,
+    landAcquisitionPrice: c.landAcquisitionPrice,
+    buildingAcquisitionPrice: c.buildingAcquisitionPrice,
+    landDirectExpenses: c.landDirectExpenses,
+    buildingDirectExpenses: c.buildingDirectExpenses,
+    landSalesCaseValue: c.landSalesCaseValue,
+    buildingSalesCaseValue: c.buildingSalesCaseValue,
+    saleSplitMode: c.saleSplitMode,
+    landTransferPrice: c.landTransferPrice,
+    buildingTransferPrice: c.buildingTransferPrice,
+    landAppraisalAtTransfer: c.landAppraisalAtTransfer,
+    buildingAppraisalAtTransfer: c.buildingAppraisalAtTransfer,
+    // 🔴 엔진은 **Date**를 요구한다 — string 그대로 두면 감정 유효창
+    //    [(양도연도−1)-01-01, 양도연도-12-31] 비교가 침묵 false가 된다.
+    appraisalDateAtTransfer: toOptionalDate(c.appraisalDateAtTransfer),
+    saleSplitExemption: c.saleSplitExemption,
+    landStandardPriceAtTransfer: c.landStandardPriceAtTransfer,
+    buildingStandardPriceAtTransfer: c.buildingStandardPriceAtTransfer,
+    buildingStandardPriceAtAcquisition: c.buildingStandardPriceAtAcquisition,
+  };
+
   const companionEngine: TransferTaxItemInput = {
+    /**
+     * ⑭ 토지·건물 **분리취득** 축 (N-6(A), 2026-08-23) — **키를 열거하지 않는다**.
+     *
+     * 위 `carryoverTaxation`과 같은 규약이다: 열거형은 ⑫·④가 실제로 보내는 필드를 빠뜨려
+     * 침묵 strip을 만든다. spread는 키를 세지 않으므로 ⑫에 필드가 늘면 여기 수정 없이 따라간다.
+     *
+     * ⚠️ 일자 4개는 `toOptionalDate` 필수 — JSON 경유 string이 그대로 도달하면
+     *    `calcSplitGain`의 취득일 비교·§104② 기산이 **침묵 오작동**한다.
+     * ⚠️ 스프레드를 **맨 앞에** 둔다 — 아래 명시 매핑(`acquisitionDate`·`expenses` 등)이 이긴다.
+     */
+    ...splitFields,
     propertyType,
     transferPrice: a.allocatedSalePrice,
     totalPropertyTransferPrice: c.totalPropertyTransferPrice,

@@ -227,6 +227,8 @@ export const presaleRightSchema = z.object({
 // 순환 import 방지: 본 파일의 rentHistorySchema·vacancyPeriodSchema를 그쪽에서 import.
 import { reductionSchema } from "./transfer-tax-schema-reductions";
 export { reductionSchema };
+// ⑫ 분리취득 축 — 단건·컴패니언 공용 shape (leaf라 TDZ 안전).
+import { splitAcquisitionShape } from "./transfer-tax-schema-split";
 
 export const filingPenaltyDetailsSchema = z.object({
   determinedTax:     z.number().int().nonnegative(),
@@ -285,6 +287,17 @@ export const inheritanceValuationSchema = z.object({
 // companionAssets는 주 자산과 기준시가 비율로 안분될 보조 자산들이다.
 
 export const companionAssetSchema = z.object({
+  /**
+   * ⑫ 토지·건물 **분리취득** 축 (N-6(A), 2026-08-23) — 단건과 **같은 shape**을 spread한다.
+   *
+   * 🔴 종전에는 이 축의 필드가 **하나도 없었다**. ⑤ UI(`CompanionAcqPurchaseBlock`의
+   * 「토지·건물 취득일 다름」 토글)는 자산 인덱스를 보지 않아 컴패니언에도 렌더되고,
+   * ④ 빌더(`buildSplitPayload`)도 `AssetForm`을 받는 공용 함수인데, ⑫에 칸이 없어
+   * **조용히 strip**됐다 ⇒ 컴패니언에서 분리취득을 켜도 세액이 1원도 안 움직였다.
+   *
+   * ⚠️ 목록을 여기 **복사하지 않는다** — 두 벌이면 단건에 필드가 늘 때 컴패니언만 빠진다.
+   */
+  ...splitAcquisitionShape,
   assetId: z.string().min(1),
   assetLabel: z.string().min(1),
   assetKind: z.enum(["housing", "land", "building"]),

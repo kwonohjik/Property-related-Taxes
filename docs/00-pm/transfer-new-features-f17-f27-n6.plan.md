@@ -303,3 +303,30 @@ N-6 (B) 조사에서 확정된 사실: **`calcSplitGain`이 `!input.landAcquisit
 
 **주석 드리프트 정정**: `transfer-tax-rental-housing-step.ts`의 「농특세는 이 경로에도 붙이지
 않는다」가 `0b8aa295` 이후 **옛말**이 돼 있었다 — 실제로는 붙는다. 정정했다.
+
+### 8.5 트랙 D (N-6(A) 컴패니언 분리취득) — ✅ 완료
+
+**⭐ 착수 전 조사가 계획을 바꿨다.** §5는 「⑤ UI부터 만들어야 한다」고 적었지만 실측 결과
+**⑤는 이미 있었다** — `CompanionAcqPurchaseBlock`의 `isSplitable`은 `assetKind`만 보고
+자산 인덱스를 보지 않아 컴패니언 카드에도 「토지·건물 취득일 다름」 토글이 렌더된다.
+④의 `buildSplitPayload`도 처음부터 **`AssetForm`을 받는 자산-무관 함수**였다.
+
+| 층 | 종전 | 현행 |
+|---|---|---|
+| ⑤ UI | 렌더됨 | (무변경) |
+| ④ 변환 | 공용 빌더를 **부르지 않음** | `buildSplitPayload(asset, …)` 호출 |
+| ⑫ Zod | 필드 **0건** → 침묵 strip | `splitAcquisitionShape` **공용 spread** |
+| ⑭ 매핑 | 손으로 쓴 `CompanionRawAsset`에 없음 | 타입을 ⑫에서 **파생**(`Pick<z.infer<…>, keyof shape>`) |
+
+**실측**: 결정세액 174,270,000(분리 OFF) → **164,060,000**(분리 ON) · Δ **10,210,000**.
+장특공제 63,000,000 → **88,500,000**(토지 2005 취득 기산). **단건과 양도차익·장특공제가 동일**
+(dual-truth 없음).
+
+**⑭ 타입이 실제 결함을 잡았다** — `appraisalDateAtTransfer`를 string 그대로 넘기자 tsc가
+「Date가 필요하다」고 막았다. 그대로 뒀다면 감정 유효창 비교가 **침묵 false**가 됐을 것이다.
+
+**anchor 7건** · 구별력 M7(④ 되돌림) **1/7** · M8(⑫ shape 제거) **4/7**.
+
+> 🔴 **M7이 처음엔 0/5였다** — route에 body를 직접 넣는 anchor는 **④를 태우지 않는다**.
+> 이 저장소가 반복해 기록한 함정(「엔진 anchor로는 route 결함을 못 잡는다」)의 **거울상**이다.
+> ④를 직접 부르는 N6-06·N6-07을 추가해 덮었다.

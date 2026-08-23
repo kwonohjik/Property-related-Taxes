@@ -7,6 +7,8 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+// ④ 분리취득 축 — 단건과 **같은 공용 빌더**(자산-무관 함수라 컴패니언도 그대로 쓴다).
+import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
 import {
   isExprValuationEligibleAssetKind,
   isAuctionEligibleAssetKind,
@@ -408,6 +410,26 @@ export function buildAssetPayload(
     : fixedSalePriceRaw;
 
   return {
+    /**
+     * ④ 토지·건물 **분리취득** 축 (N-6(A), 2026-08-23) — 단건과 **같은 공용 빌더**를 쓴다.
+     *
+     * `buildSplitPayload`는 처음부터 `AssetForm`을 받는 자산-무관 함수였고, ⑤ UI의
+     * 「토지·건물 취득일 다름」 토글도 자산 인덱스를 보지 않는다. 그런데 이 빌더가 그것을
+     * **부르지 않아** 컴패니언에서 분리취득을 켜도 값이 통째로 사라졌다(⑫에도 칸이 없었다).
+     *
+     * ⚠️ 스프레드를 **맨 앞에** 둔다 — 아래 명시 키(`standardPriceAtAcquisition` 등)가
+     *    이기도록. `buildSplitPayload`는 별개취득에서 결합 총액을 `undefined`로 덮어쓰는데,
+     *    그 override는 **단건 body에서만** 성립하는 규약이다(본체가 먼저 설정하고 빌더가 뒤에
+     *    온다). 컴패니언은 순서가 반대라 여기서는 앞에 둔다.
+     * ⚠️ 부담부증여는 제외된다 — `isSplitPayloadActive`가 막는다(§159가 총액을 override하므로
+     *    파트 직접 입력과 결합하면 잔액이 음수가 된다).
+     */
+    ...buildSplitPayload(asset, {
+      isBurdenedGift: asset.transferType === "burdened_gift",
+      // PHD(§164⑤)는 컴패니언 미지원 — N-6 (B)에서 ⑤·⑧을 함께 닫았다.
+      usesPhd: false,
+      ratioed: makeRatioed(ratio, fractional),
+    }),
     assetId: asset.assetId,
     assetLabel: asset.assetLabel,
     assetKind: toEngineAssetKind(asset.assetKind),
