@@ -533,7 +533,7 @@ export function buildRows(
     setStr("moveIn", "housingBuilding", firstMoveIn ? fmtDate(firstMoveIn) : "-");
     setStr("residencePeriod", "housingLand", fmtPeriod(residenceMonthsTotal));
     setStr("residencePeriod", "housingBuilding", fmtPeriod(residenceMonthsTotal));
-    fourPartFinancials(hp, cp, setNum);
+    fourPartFinancials(hp, cp, mu.nonBusinessLandPart, setNum);
   } else if (mode === "split-2col" && sp) {
     setStr("transferDate", "land", fmtDate(transferDate));
     setStr("transferDate", "building", fmtDate(transferDate));
@@ -655,9 +655,12 @@ export function buildRows(
     const hpBuildRatio = 1 - hpLandRatio;
     const cpLandRatio = mu.commercialPart.transferGain > 0 ? mu.commercialPart.landTransferGain / mu.commercialPart.transferGain : 0.5;
     const cpBuildRatio = 1 - cpLandRatio;
-    setNum("ltHoldingPart", "total", hpSplit.holdingAmount + cpSplit.holdingAmount);
+    // 배율초과 비사업용토지 장특은 표1 **보유분** 단독(거주분 없음) — 보유 기간분 행에 싣는다.
+    // 누락하면 「장기보유특별공제 합계 ≠ 보유분 + 거주분」이 되어 합계 열 내부가 어긋난다.
+    const nbLtDeduction = mu.nonBusinessLandPart?.longTermDeductionAmount ?? 0;
+    setNum("ltHoldingPart", "total", hpSplit.holdingAmount + cpSplit.holdingAmount + nbLtDeduction);
     setNum("ltResidencePart", "total", hpSplit.residenceAmount);
-    setNum("ltHoldingPart", "housingLand", Math.floor(hpSplit.holdingAmount * hpLandRatio));
+    setNum("ltHoldingPart", "housingLand", Math.floor(hpSplit.holdingAmount * hpLandRatio) + nbLtDeduction);
     setNum("ltHoldingPart", "housingBuilding", Math.floor(hpSplit.holdingAmount * hpBuildRatio));
     setNum("ltHoldingPart", "commercialLand", Math.floor(cpSplit.holdingAmount * cpLandRatio));
     setNum("ltHoldingPart", "commercialBuilding", Math.floor(cpSplit.holdingAmount * cpBuildRatio));

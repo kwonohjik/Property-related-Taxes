@@ -403,7 +403,7 @@ export function buildStatementItems(
     formula:
       lthStep?.formula ??
       (mu
-        ? `주택분 ${mu.housingPart.longTermDeductionAmount.toLocaleString()}원 + 비주택분(상가) ${mu.commercialPart.longTermDeductionAmount.toLocaleString()}원 = ${(mu.housingPart.longTermDeductionAmount + mu.commercialPart.longTermDeductionAmount).toLocaleString()}원 (부분별 공제율 상이 — 아래 주택분/상가분 분리)`
+        ? `주택분 ${mu.housingPart.longTermDeductionAmount.toLocaleString()}원 + 비주택분(상가) ${mu.commercialPart.longTermDeductionAmount.toLocaleString()}원${mu.nonBusinessLandPart ? ` + 배율초과 부수토지(비사업용) ${mu.nonBusinessLandPart.longTermDeductionAmount.toLocaleString()}원` : ""} = ${(mu.housingPart.longTermDeductionAmount + mu.commercialPart.longTermDeductionAmount + (mu.nonBusinessLandPart?.longTermDeductionAmount ?? 0)).toLocaleString()}원 (부분별 공제율 상이 — 아래 부분별 분리)`
         : `과세대상 양도차익 × ${(result.longTermHoldingRate * 100).toFixed(0)}% (보유 + 거주)`),
     legalBasis: lthStep?.legalBasis ?? "소득세법 §95②·별표 표1·표2",
     perAsset: isAggregate
@@ -504,6 +504,17 @@ export function buildStatementItems(
       formula: `상가분 과세대상 양도차익 × 표1 [보유 ${cYears}년 ${pct(c.longTermDeductionRate)}] = ${c.longTermDeductionAmount.toLocaleString()}원 (거주기간 공제 없음)`,
       legalBasis: "소득세법 §95② 별표 표1",
     });
+    // 배율초과 부수토지(비사업용) — 1세대1주택 비과세 안분 대상이 아니라 전액 과세되므로
+    // 그 양도차익에 표1 보유분 공제율을 적용한다(거주기간 공제 없음).
+    const nbPart = mu.nonBusinessLandPart;
+    if (nbPart) {
+      items.set("ltNonBusinessPart", {
+        label: " 배율초과 부수토지(비사업용) 장특",
+        value: nbPart.longTermDeductionAmount,
+        formula: `배율초과 부수토지 양도차익 ${nbPart.transferGain.toLocaleString()}원 × 표1 ${pct(nbPart.longTermDeductionRate)} = ${nbPart.longTermDeductionAmount.toLocaleString()}원 (거주기간 공제 없음)`,
+        legalBasis: "소득세법 §95② 별표 표1",
+      });
+    }
   } else {
     items.set("ltHoldingPart", {
       label: " 보유 기간분 장특",
