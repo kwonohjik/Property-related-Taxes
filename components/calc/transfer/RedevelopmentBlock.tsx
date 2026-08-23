@@ -44,7 +44,10 @@ import { RedevelopmentValuationSection } from "./RedevelopmentValuationSection";
 import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSplitSection";
 import { RedevelopmentRightExemptionSection } from "./RedevelopmentRightExemptionSection";
 import { HousingContribEstimatedSection } from "./HousingContribEstimatedSection";
-import { RedevelopmentDeemedAcquisitionNotice } from "./RedevelopmentDeemedAcquisitionNotice";
+import {
+  RedevelopmentDeemedAcquisitionNotice,
+  RedevelopmentSec163_9PriorityNotice,
+} from "./RedevelopmentDeemedAcquisitionNotice";
 import {
   SettlementAnnouncementDateField,
   ReceiveOnlyToggleCard,
@@ -376,6 +379,11 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           bodyClassName="space-y-2"
           noDark
         >
+          {/* §163⑨ 상속·증여 평가액이 이 섹션의 값보다 우선한다는 표시 (R-10).
+              모드 라디오 **위**에 둔다 — 실가·환산 어느 쪽을 골라도 같이 무시되므로
+              섹션 전체에 걸리는 사실이다(실측 8조합). */}
+          <RedevelopmentSec163_9PriorityNotice asset={asset} />
+
           <RadioCardGroup
             name={`redevAcqMode-${asset.assetId}`}
             value={asset.useEstimatedAcquisition ? "estimated" : "actual"}

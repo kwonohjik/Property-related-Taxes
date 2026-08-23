@@ -20,19 +20,26 @@ function buildInput(opts: {
   useEstimatedAcquisition: boolean;
   inhDate: string;
   reportedValue?: number;
+  /** ⑤ 「인가전 분 종전 부동산 취득가액」이 실어 보내는 값 (E·F에서만 비0) */
+  acquisitionPrice?: number;
+  cause?: "inheritance" | "gift";
+  propertyType?: "redevelopment_apt" | "right_to_move_in";
 }): TransferTaxInput {
   return baseTransferInput({
-    propertyType: "redevelopment_apt",
-    acquisitionCause: "inheritance",
+    propertyType: opts.propertyType ?? "redevelopment_apt",
+    acquisitionCause: opts.cause ?? "inheritance",
     transferPrice: 525_000_000,
     transferDate: new Date("2026-02-16"),
     acquisitionDate: new Date(opts.inhDate),
-    acquisitionPrice: 0,
+    acquisitionPrice: opts.acquisitionPrice ?? 0,
     useEstimatedAcquisition: opts.useEstimatedAcquisition,
     isOneHousehold: false,
     householdHousingCount: 2,
     residencePeriodMonths: 0,
-    redevelopment: case44RedevelopmentInfo(),
+    redevelopment:
+      opts.propertyType === "right_to_move_in"
+        ? { ...case44RedevelopmentInfo(), subject: "right" as const }
+        : case44RedevelopmentInfo(),
     inheritedAcquisition: opts.reportedValue
       ? {
           inheritanceDate: new Date(opts.inhDate),
@@ -85,5 +92,98 @@ describe("재개발 상속 §163⑨ 취득가액 정합", () => {
     const salesInput = { ...input, acquisitionCause: "purchase" as const, inheritedAcquisition: undefined };
     const r = calculateTransferTax(salesInput, mockRates);
     expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(141_221_534);
+  });
+
+  /**
+   * ── E·F: ⑤ 「인가전 분 종전 부동산 취득가액」과의 **우선순위** ──────────────────
+   *
+   * A~D는 `acquisitionPrice: 0`으로 고정돼 있어 「§163⑨이 ⑤ 값을 이긴다」를 **증명하지 못한다**
+   * (0을 이겨도 이긴 것처럼 보인다). E·F는 ⑤에 비0을 실어 그 사각지대를 메운다.
+   *
+   * 이 단언이 `RedevelopmentSec163_9PriorityNotice`가 화면에서 주장하는 사실의 근거다 —
+   * 안내문이 「아래 값은 계산에 쓰이지 않습니다」라고 말하려면 여기서 참이어야 한다.
+   * (`__tests__/components/redev-163-9-priority-notice.anchor.test.tsx`)
+   *
+   * ⛔ E·F를 지우면 안내문이 근거 없는 문장이 된다.
+   */
+  it("E. ⑤에 비0 실가가 있어도 상속평가액이 이긴다 (안내문의 근거)", () => {
+    const r = calculateTransferTax(
+      buildInput({
+        useEstimatedAcquisition: false,
+        inhDate: "2005-04-09",
+        reportedValue: 200_000_000,
+        acquisitionPrice: 77_777_777,
+      }),
+      mockRates,
+    );
+    // ⑤ 값(77,777,777)이 아니라 §163⑨ 평가액이 채택된다.
+    expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(200_000_000);
+  });
+
+  it("E'. ⑤ 값이 평가액보다 커도 결과는 불변 — max가 아니라 **대체**다", () => {
+    const r = calculateTransferTax(
+      buildInput({
+        useEstimatedAcquisition: false,
+        inhDate: "2005-04-09",
+        reportedValue: 200_000_000,
+        acquisitionPrice: 400_000_000,
+      }),
+      mockRates,
+    );
+    expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(200_000_000);
+  });
+
+  it("F. 증여도 같다 — §163⑨ 본문이 「상속 또는 증여」다 (입주권 축에서 실측)", () => {
+    const r = calculateTransferTax(
+      buildInput({
+        useEstimatedAcquisition: false,
+        inhDate: "2005-04-09",
+        reportedValue: 200_000_000,
+        acquisitionPrice: 77_777_777,
+        cause: "gift",
+        propertyType: "right_to_move_in",
+      }),
+      mockRates,
+    );
+    expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(200_000_000);
+  });
+
+  /**
+   * F'는 F와 달리 ⑤ 값을 평가액보다 **크게** 잡는다.
+   *
+   * 뮤테이션 실측(2026-08-23): STEP 0.45의 대입(`inheritance-acquisition-helpers.ts:264`)을
+   * `Math.max(result, current)`로 바꿔도 **E·E'·F는 전부 통과했다**.
+   *   · E·F  — ⑤(77,777,777) < 평가액(2억)이라 max여도 답이 같다.
+   *   · E'   — 상속은 `transfer-tax.ts:231`이 §166 분기에서 **한 번 더** 덮어써서 가려진다.
+   * 증여에는 그 두 번째 override가 없다(:229 조건이 `=== "inheritance"`). 그래서
+   * **증여 × ⑤>평가액**이 STEP 0.45의 대입 자체를 겨누는 유일한 조합이다.
+   *
+   * ⛔ 이 케이스를 지우면 「대체가 아니라 max」로 바뀌어도 아무도 실패하지 않는다.
+   */
+  it("F'. 증여 + ⑤가 평가액보다 커도 평가액이 이긴다 — STEP 0.45 대입 봉인", () => {
+    const r = calculateTransferTax(
+      buildInput({
+        useEstimatedAcquisition: false,
+        inhDate: "2005-04-09",
+        reportedValue: 200_000_000,
+        acquisitionPrice: 400_000_000,
+        cause: "gift",
+        propertyType: "right_to_move_in",
+      }),
+      mockRates,
+    );
+    expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(200_000_000);
+  });
+
+  it("G. §163⑨ 평가액이 없으면 ⑤ 값이 그대로 쓰인다 — 안내가 뜨지 않아야 하는 경우", () => {
+    const r = calculateTransferTax(
+      buildInput({
+        useEstimatedAcquisition: false,
+        inhDate: "2005-04-09",
+        acquisitionPrice: 77_777_777,
+      }),
+      mockRates,
+    );
+    expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(77_777_777);
   });
 });
