@@ -143,6 +143,18 @@ export interface BlockProps {
   onSimilarSalesSourceChange?: (v: "rtms_auto" | undefined) => void;
   /** 취득 주소 시군구코드 — RTMS 자동조회 버튼 활성화 조건 */
   acquisitionSigunguCode?: string;
+  /**
+   * 첫 자산이 아닌 자산(함께양도 컴패니언·지분 2번째 이후) 여부.
+   *
+   * 🔴 **§164⑤ 3-시점 환산(PHD) 토글을 숨기는 데 쓴다.** ④가 PHD를 싣는 지점은
+   *    `buildPreHousingDisclosurePayload(primary, …)` **한 곳뿐**이고 primary 전용이라,
+   *    첫 자산이 아닌 자산에서는 사용자가 11칸을 채워도 **엔진에 도달하지 않는다**
+   *    (⑫·⑭를 배관해도 `calcSplitGain`이 `landAcquisitionDate` 부재로 `null`을 반환해
+   *     PHD 분기에 진입조차 못 한다 — 실측 응답 바이트 동일).
+   *    종전에는 ⑧이 그 11칸을 **필수로 요구**해서, 채우지 않으면 진행이 막히고
+   *    채우면 통째로 버려졌다.
+   */
+  isNonPrimaryAsset?: boolean;
 }
 
 /** assetKind → StandardPriceInput propertyKind 변환 */

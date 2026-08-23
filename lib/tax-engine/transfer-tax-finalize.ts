@@ -12,7 +12,8 @@
  */
 
 import { applyRate, truncateToWon } from "./tax-utils";
-import { applyAnnualLimits, applyFiveYearLimits, buildLimitGroups } from "./aggregate-reduction-limits";
+import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
+import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
@@ -71,6 +72,42 @@ function patchNew993SurtaxSteps(
     }
     return s;
   });
+}
+
+/**
+ * 🔴 **§114조의2 — 토지·건물 분리 자산의 판정 축은 「건물 파트」다** (2026-08-13).
+ *
+ * 「소득세법」 제114조의2 제1항은 base를 **「해당 건물의」 감정가액 또는 환산취득가액**으로
+ * 명시한다(증축은 증축 부분 한정). 그런데 분리(§166⑥) 자산에서 게이트·base는 둘 다
+ * **자산-수준** 값에서 왔다:
+ *
+ *   · 게이트: `calculateBuildingPenalty`가 읽는 `acquisitionMethod` — 파트 라디오
+ *     (`landAcqMode`/`buildingAcqMode`)는 이 값을 갱신하지 않는다. 건물 파트가 환산이어도
+ *     자산-수준이 실가면 **가산세가 발동하지 않는다**(실측: 0원).
+ *   · base: `calcTransferGain`의 split 분기가 `estimatedBase = 토지 + 건물 합계`를 낸다.
+ *     자산-수준을 환산으로 돌려 게이트를 켜면 이번엔 **토지 실취득가까지 base에 섞인다**
+ *     (실측: 425,000,000 × 5% = 21,250,000 — 법정 정답 225,000,000 × 5% = 11,250,000의 약 1.9배).
+ *
+ * ⇒ 두 값을 **파트-국소 신호**(`SplitPartResult.acqMode`·`acquisitionPrice`)에서 가져온다.
+ *   자산-수준 `useEstimatedAcquisition`을 파트에서 역파생하는 방식은 **채택하지 않는다** —
+ *   그 플래그의 소비 지점이 이 엔진 안에만 35곳이고(split-gain `deriveLegacyAcqMode`의 모드
+ *   미지정 파트 자동 환산 승격 · helpers `estimatedBase` 합계화 · 상가 STEP 0.35 · 공익수용
+ *   평가 · 재개발), 과소를 과대로 바꿀 뿐이다. 같은 교리를 이미 쓰는 선례는
+ *   `app/api/calc/transfer/general-building-route-cards.ts`(카드가 속한 파트의 축만 싣는다).
+ *
+ * 건물 파트가 실가·매매사례이면 `undefined`를 반환해 **종전 자산-수준 경로를 그대로 둔다**
+ * (§114조의2 대상이 아니므로 `calculateBuildingPenalty`가 어차피 null을 낸다).
+ *
+ * ⚠️ 손실 조기반환 경로(`transfer-tax.ts` — §114조의2②, 산출세액 0에도 적용)는 **아직 이 축을
+ *    쓰지 않는다**. 그쪽도 같은 불일치를 갖고 있으므로 배선할 때 이 함수를 재사용할 것
+ *    (재구현하면 dual-truth가 된다 — `resolveExtensionPenaltyBase`와 같은 이유로 export한다).
+ */
+export function resolveSplitBuildingPenaltyAxis(
+  splitDetail: TransferTaxResult["splitDetail"],
+): { acquisitionMethod: "estimated" | "appraisal"; base: number } | undefined {
+  const mode = splitDetail?.building.acqMode;
+  if (mode !== "estimated" && mode !== "appraisal") return undefined;
+  return { acquisitionMethod: mode, base: splitDetail!.building.acquisitionPrice };
 }
 
 export interface FinalizeArgs {
@@ -287,41 +324,17 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   });
 
   // ── STEP 8.5: §133② 5년 누적 한도 — 과거 4개 과세연도 감면 이력 차감 ──
+  // 규칙은 `transfer-tax-reduction-cap.ts` 단일 소스 — §155⑳ 특례 경로와 공용이다(F08).
   // aggregate 경로(2자산 이상·일반건물 dispatch)는 transfer-tax-aggregate.ts M-8에서
   // 동일 모듈(applyFiveYearLimits)로 별도 적용 — per-asset 입력에는 이력이 없어 이중 차감 없음.
-  let cappedReductionAmount = reductionAmount;
-  const priorUsage = input.priorReductionUsage ?? [];
-  if (reductionAmount > 0 && reductionTypeApplied && priorUsage.length > 0) {
-    // 연간 한도 선처리 — applyFiveYearLimits 인자 계약("연간 캡 적용 후 값") 준수.
-    // 현행 자경·공익수용은 calcReductions 내부에서 이미 연간 캡이 적용되어 등가(no-op)이나,
-    // 내부 캡 없는 감면 유형이 향후 추가될 때 silent 과감면을 방지한다.
-    // §133 한도는 양도연도 분기 그룹(2025+ §77 그룹 2억/3억, 이전 1억/2억)으로 적용.
-    const limitGroups = buildLimitGroups(input.transferDate.getFullYear());
-    const { cappedByType: annuallyCappedByType, capInfoByType } = applyAnnualLimits(
-      new Map([[reductionTypeApplied, reductionAmount]]),
-      limitGroups,
-    );
-    const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
-      annuallyCappedByType,
-      priorUsage,
-      input.transferDate.getFullYear(),
-      limitGroups,
-    );
-    const fiveInfo = fiveYearCapInfoByType.get(reductionTypeApplied);
-    const annualInfo = capInfoByType.get(reductionTypeApplied);
-    const capped = fiveYearCappedByType.get(reductionTypeApplied) ?? reductionAmount;
-    if (capped < reductionAmount) {
-      steps.push({
-        label: "§133 종합한도",
-        formula: fiveInfo?.cappedByFiveYear
-          ? `감면세액 ${reductionAmount.toLocaleString()} → ${capped.toLocaleString()} (5년 한도 ${fiveInfo.fiveYearLimit.toLocaleString()} − 과거 4개 연도 누적 ${fiveInfo.priorGroupSum.toLocaleString()} = 잔여 ${fiveInfo.remaining.toLocaleString()})`
-          : `감면세액 ${reductionAmount.toLocaleString()} → ${capped.toLocaleString()} (연간 한도 ${Number.isFinite(annualInfo?.annualLimit) ? annualInfo!.annualLimit.toLocaleString() : ""})`,
-        amount: capped,
-        legalBasis: fiveInfo?.cappedByFiveYear ? fiveInfo.legalBasis : annualInfo?.legalBasis ?? "",
-      });
-      cappedReductionAmount = capped;
-    }
-  }
+  const cap = applyReductionStatutoryCap({
+    reductionAmount,
+    reductionTypeApplied,
+    transferYear: input.transferDate.getFullYear(),
+    priorUsage: input.priorReductionUsage ?? [],
+  });
+  const cappedReductionAmount = cap.cappedAmount;
+  if (cap.step) steps.push(cap.step);
 
   // ── STEP 8.7: 하이브리드(§98의7·§99의2) 5년 내 세액감면 농어촌특별세 — 감면세액 × 20% ──
   // 농특세법 §2①1호 "조특법에 따라 감면받는 세액". §98의3·§98의5(P3)는 농특세령 §4⑦1호 비과세 —
@@ -396,13 +409,23 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   // 시나리오 A의 실가 전환에서 undefined), 발동 게이트인 calculateBuildingPenalty가 **이미**
   // effectiveInput.acquisitionMethod를 읽으므로(rate-calc.ts:58·63-66) 그 경로는 penaltyTax=0으로 수렴한다.
   // 즉 종전에는 "게이트는 effectiveInput / base는 raw input"으로 층위가 어긋나 있었고 이 변경이 그 불일치를 없앤다.
-  let penaltyBase = effectiveInput.acquisitionMethod === "appraisal"
-    ? (effectiveInput.appraisalValue ?? 0)
-    : (isEstimatedMode ? effectiveEstimatedBase : 0);
+  // 🔴 **토지·건물 분리 자산은 「건물 파트」가 §114조의2의 축이다** (2026-08-13).
+  //    `resolveSplitBuildingPenaltyAxis` 참조 — 게이트(산정방식)·base 둘 다 건물 파트에서 온다.
+  const splitPenaltyAxis = resolveSplitBuildingPenaltyAxis(splitDetailForRate);
+  let penaltyBase = splitPenaltyAxis
+    ? splitPenaltyAxis.base
+    : effectiveInput.acquisitionMethod === "appraisal"
+      ? (effectiveInput.appraisalValue ?? 0)
+      : (isEstimatedMode ? effectiveEstimatedBase : 0);
   // §114조의2① 통상(비-부담부) 증축: penalty base를 증축부분 환산취득가로 교체 (부담부는 step override가 effectiveInput.estimatedBase에 반영).
   // 손실 조기반환(transfer-tax.ts)과 동일 헬퍼 — single-source, dual-truth 방지.
   penaltyBase = resolveExtensionPenaltyBase(input, penaltyBase);
-  const penaltyResult = calculateBuildingPenalty(effectiveInput, penaltyBase);
+  const penaltyResult = calculateBuildingPenalty(
+    splitPenaltyAxis
+      ? { ...effectiveInput, acquisitionMethod: splitPenaltyAxis.acquisitionMethod }
+      : effectiveInput,
+    penaltyBase,
+  );
   const penaltyTax = penaltyResult?.penalty ?? 0;
   const determinedTaxWithPenalty = determinedTax + penaltyTax;
 
@@ -426,7 +449,50 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   );
 
   // ── STEP 11: 총 납부세액 ──
-  const ruralSurtaxTotal = ruralSurtax993 + ruralSurtaxHybrid;
+  /**
+   * ── STEP 8.8: 세액감면형 감면의 농어촌특별세 (감면세액 × 20%) ──────────────
+   *
+   * 「농어촌특별세법」 §5①1호가 **조특법 감면세액 × 20%**를 농특세로 정하는데, 종전에는
+   * **차감형(§99의3)과 하이브리드(§98의7·§99의2 등)에만** 계산하고 §77·§77의2·§77의3·§97 시리즈
+   * 에는 **아예 계산하지 않았다**(실측: §77 감면 67,700,250에 농특세 0).
+   *
+   * 비과세는 **열거주의**다 — 농특세령 §4①1호가 「§66부터 §70까지 … §77[**직접 경작한 토지**로
+   * 한정] …」로 열거하므로, §69 자경농지는 무조건 비과세이고 §77은 조건부이며 그 밖의 조문
+   * (§77의2·§77의3·§97 시리즈)은 **과세**다. 판정은 `transfer-tax-rural-surtax.ts` 단일 소스.
+   *
+   * ⚠️ 하이브리드는 **위 STEP 8.7이 이미 계산**했으므로 여기서 제외한다(이중 부과 방지).
+   */
+  let ruralSurtaxCredit = 0;
+  if (
+    reductionTypeApplied !== undefined &&
+    HYBRID_ARTICLE[reductionTypeApplied] === undefined &&
+    cappedReductionAmount > 0
+  ) {
+    const verdict = resolveTaxCreditRuralSurtax({
+      reductionTypeApplied,
+      reductionAmount: cappedReductionAmount,
+      isSelfCultivatedExpropriatedLand: input.isSelfCultivatedExpropriatedLand,
+    });
+    ruralSurtaxCredit = verdict.surtax;
+    if (verdict.surtax > 0) {
+      steps.push({
+        label: "농어촌특별세 (감면세액 × 20%)",
+        formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${verdict.surtax.toLocaleString()} — ${verdict.reason}`,
+        amount: verdict.surtax,
+        legalBasis: verdict.legalBasis,
+      });
+    } else if (verdict.verdict === "unknown") {
+      // 침묵 금지 — 근거를 못 찾아 부과하지 않았다는 사실 자체를 남긴다.
+      steps.push({
+        label: "농어촌특별세 — 미판정",
+        formula: verdict.reason,
+        amount: 0,
+        legalBasis: verdict.legalBasis,
+      });
+    }
+  }
+
+  const ruralSurtaxTotal = ruralSurtax993 + ruralSurtaxHybrid + ruralSurtaxCredit;
   const totalTax = determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal;
   steps.push({
     label: "총 납부세액",

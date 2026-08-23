@@ -29,9 +29,15 @@ interface ScenarioColProps {
   adopted: boolean;
   children: React.ReactNode;
   determinedTax: number;
+  /**
+   * 신고단위(다건) 비교로 채택이 결정됐는가.
+   * 이때 배지에서 「더 큰 세액」 문구를 뺀다 — 자산별 두 금액만 보면 **작은 쪽이 채택될 수 있고**,
+   * 그것이 오류가 아니기 때문이다(§92③2호 결정세액은 신고 전체 기준).
+   */
+  filingUnit: boolean;
 }
 
-function ScenarioCol({ label, adopted, children, determinedTax }: ScenarioColProps) {
+function ScenarioCol({ label, adopted, children, determinedTax, filingUnit }: ScenarioColProps) {
   return (
     <div
       className={cn(
@@ -45,7 +51,7 @@ function ScenarioCol({ label, adopted, children, determinedTax }: ScenarioColPro
         <p className="text-xs font-semibold text-muted-foreground">{label}</p>
         {adopted && (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-caption font-bold text-emerald-700">
-            ✓ 채택 (더 큰 세액)
+            {filingUnit ? "✓ 채택" : "✓ 채택 (더 큰 세액)"}
           </span>
         )}
       </div>
@@ -76,7 +82,11 @@ function InfoRow({ label, value, sub = false }: { label: string; value: string; 
 
 // ── Scenario A 상세 ──────────────────────────────────────────────
 
-function ScenarioAContent({ a, adopted }: { a: CarryoverScenarioADetail; adopted: boolean }) {
+function ScenarioAContent({ a, adopted, filingUnit }: {
+  a: CarryoverScenarioADetail;
+  adopted: boolean;
+  filingUnit: boolean;
+}) {
   /**
    * ⚠️ 안분 내역은 **시나리오 A 자신**이 들고 있다(`giftTaxApportionment`).
    *    `result.transferBurdenedGiftBreakdown`은 **채택된 시나리오의 것**이라 B가 채택되면
@@ -84,7 +94,12 @@ function ScenarioAContent({ a, adopted }: { a: CarryoverScenarioADetail; adopted
    */
   const ap = a.giftTaxApportionment;
   return (
-    <ScenarioCol label="[A] 이월과세 적용" adopted={adopted} determinedTax={a.determinedTax}>
+    <ScenarioCol
+      label="[A] 이월과세 적용"
+      adopted={adopted}
+      determinedTax={a.determinedTax}
+      filingUnit={filingUnit}
+    >
       <div className="space-y-1">
         <InfoRow label="취득가액 [당초 증여자 취득가]" value={fmt(a.acquisitionPrice)} />
         <InfoRow label="보유기간 [당초 증여자 기산]" value={`${a.holdingPeriodYears}년`} />
@@ -137,16 +152,18 @@ function ScenarioAContent({ a, adopted }: { a: CarryoverScenarioADetail; adopted
 
 // ── Scenario B 상세 ──────────────────────────────────────────────
 
-function ScenarioBContent({ b, adopted, isComparisonExclusion }: {
+function ScenarioBContent({ b, adopted, isComparisonExclusion, filingUnit }: {
   b: CarryoverScenarioBDetail;
   adopted: boolean;
   isComparisonExclusion: boolean;
+  filingUnit: boolean;
 }) {
   return (
     <ScenarioCol
       label={`[B] 미적용 (비교과세)${isComparisonExclusion ? " ← 비교과세 세액 역전" : ""}`}
       adopted={adopted}
       determinedTax={b.determinedTax}
+      filingUnit={filingUnit}
     >
       <div className="space-y-1">
         <InfoRow label="취득가액 [증여 당시 평가액]" value={fmt(b.acquisitionPrice)} />
@@ -180,6 +197,13 @@ interface Props {
 
 export function CarryoverComparisonCard({ detail }: Props) {
   const adoptedA = detail.adoptedScenario === "A";
+  /**
+   * 다건 신고에서는 §97의2②3호의 비교가 **신고 전체 결정세액**(§92③2호)으로 이뤄진다.
+   * 그때 아래 A·B 두 금액은 **그 자산만 떼어낸 값**이라 채택 결과를 설명하지 못한다 —
+   * A/B 전환이 세율군을 바꿔 다른 자산과의 누진 합산이 함께 움직이기 때문이다.
+   * ⇒ 신고단위 비교값이 있으면 그것을 **판정 근거로** 함께 보여준다.
+   */
+  const filing = detail.filingUnitComparison;
 
   const periodLabel =
     detail.applicablePeriodYears === 10
@@ -215,11 +239,12 @@ export function CarryoverComparisonCard({ detail }: Props) {
 
       {/* A·B 두 시나리오 나란히 */}
       <div className="flex gap-3">
-        <ScenarioAContent a={detail.scenarioA} adopted={adoptedA} />
+        <ScenarioAContent a={detail.scenarioA} adopted={adoptedA} filingUnit={filing !== undefined} />
         <ScenarioBContent
           b={detail.scenarioB}
           adopted={!adoptedA}
           isComparisonExclusion={detail.comparisonExclusion}
+          filingUnit={filing !== undefined}
         />
       </div>
 
@@ -227,10 +252,34 @@ export function CarryoverComparisonCard({ detail }: Props) {
       <div className="rounded-md border-t pt-3 space-y-1 text-xs text-muted-foreground">
         <div className="flex justify-between font-semibold text-foreground text-sm">
           <span>채택 시나리오: {detail.adoptedScenario} ({detail.adoptedScenario === "A" ? "이월과세 적용" : "비교과세 미적용"})</span>
-          <span>신고세액 = max(A, B) = {fmt(Math.max(detail.scenarioA.determinedTax, detail.scenarioB.determinedTax))}</span>
+          {filing === undefined && (
+            <span>신고세액 = max(A, B) = {fmt(Math.max(detail.scenarioA.determinedTax, detail.scenarioB.determinedTax))}</span>
+          )}
         </div>
+        {filing !== undefined && (
+          <div className="rounded-md border border-sky-200 bg-sky-50/60 px-3 py-2 space-y-0.5">
+            <p className="font-semibold text-sky-800">
+              판정 근거 — 신고 전체 결정세액 비교 (§92③2호 · 다건 신고)
+            </p>
+            <div className="flex justify-between text-sky-900 tabular-nums">
+              <span>이월과세 적용 시</span>
+              <span>{fmt(filing.determinedTaxWithCarryover)}</span>
+            </div>
+            <div className="flex justify-between text-sky-900 tabular-nums">
+              <span>적용하지 않을 시</span>
+              <span>{fmt(filing.determinedTaxWithout)}</span>
+            </div>
+            <p className="text-sky-700">
+              위 A·B 금액은 이 자산만 떼어낸 값입니다. §97조의2 ② 3호는 신고 전체의 결정세액을
+              비교하므로, 두 판정이 갈릴 수 있습니다.
+            </p>
+          </div>
+        )}
         {detail.comparisonExclusion && (
-          <p className="text-rose-600">※ §97조의2 ② 3호 비교과세 — Scenario B 채택 (세액 역전)</p>
+          <p className="text-rose-600">
+            ※ §97조의2 ② 3호 비교과세 — Scenario B 채택 (세액 역전
+            {filing !== undefined ? " · 신고 전체 결정세액 기준" : ""})
+          </p>
         )}
       </div>
     </div>

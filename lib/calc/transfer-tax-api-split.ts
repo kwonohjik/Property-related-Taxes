@@ -66,10 +66,32 @@ export function buildSplitPayload(
   const buildingAcqMode = effectivePartAcqMode(primary.buildingAcqMode, primary);
   const saleSplitMode = primary.saleSplitMode ?? "apportioned";
 
+  // 🔴 **비소유 파트 차단** — 소유 축(`selfOwns`)이 취득가액 전송 게이트의 일부다(2026-08-13).
+  //
+  // UI는 비소유 파트의 취득가액 칸을 렌더하지 않고(LandBuildingSplitSection `landOwned` 게이트)
+  // validate도 그 파트를 건너뛴다(`validateSeparateAcqParts` :55-80 `p.owned`). 그런데 게이트가
+  // `selfOwns`를 보지 않으면 **`both`일 때 입력해 둔 값이 그대로 남아** 전송된다
+  // (`AssetOwnershipSplitSection`은 전환 시 값을 지우지 않는다 — 토글 복귀 시 복원 규약).
+  //
+  // 엔진 `splitPair`(transfer-tax-split-gain.ts)는 한쪽만 입력되면 반대쪽을 `총액 − 입력값`으로
+  // 도출하므로, **화면에 없는 잔존값이 본인 파트 취득가액을 결정**하고 §166⑥ 기준시가 비율
+  // 안분이 조용히 우회된다(실측: 건물 취득가액 125,000,000 → 50,000,000, 총세액 +27,604,500).
+  //
+  // 술어는 `separateAcqPartsSum`(transfer-tax-split-acq-mode.ts:125·131)·
+  // `validateSeparateAcqParts`(transfer-tax-validate-split.ts:59·66)와 **같은 값**이어야 한다 —
+  // 어긋나면 "UI 통과 ↔ validate 차단" 모순이 생긴다(⑧ 규칙).
+  //
+  // ⚠️ **기준시가 필드로 확대하지 않는다** — 비소유 토지의 취득시 기준시가 카드는 일부러
+  //    렌더된다(주택 라목 결합 공시에서 건물분을 역산하는 유일 경로). 물건 속성값이라 소유 축과 무관하다.
+  const selfOwns = primary.selfOwns ?? "both";
+  const landOwned = selfOwns !== "building_only";
+  const buildingOwned = selfOwns !== "land_only";
   // 파트별 취득가액 직접입력 게이트 — actual·appraisal 모드만(환산·매매사례는 총액을 사용자가 입력하지 않음).
   // UI가 분리 칸을 노출하는 조건과 동일(LandBuildingSplitSection showAcqInputs 파트별 판정).
-  const landAcqDirectActive = isSplitActive && (landAcqMode === "actual" || landAcqMode === "appraisal");
-  const buildingAcqDirectActive = isSplitActive && (buildingAcqMode === "actual" || buildingAcqMode === "appraisal");
+  const landAcqDirectActive =
+    isSplitActive && landOwned && (landAcqMode === "actual" || landAcqMode === "appraisal");
+  const buildingAcqDirectActive =
+    isSplitActive && buildingOwned && (buildingAcqMode === "actual" || buildingAcqMode === "appraisal");
   // 양도가액 직접입력 게이트 — saleSplitMode==="actual"(구분양도) 시만.
   //
   // 🔴 **엔진은 `saleSplitMode`를 읽지 않는다** (2026-08-06 실측 — `types/transfer.types.ts`의
@@ -172,10 +194,10 @@ export function buildSplitPayload(
       : {}),
     // 파트별 매매사례가액 — salesCase 모드 시만. 별개 취득이면 미입력 = 차단(§176의2③1호 —
     // 탐색 창이 파트별 취득일 ±3개월로 달라 총액 안분 근거 없음), 동시 취득이면 §166⑥ 안분 fallback.
-    ...(isSplitActive && landAcqMode === "salesCase"
+    ...(isSplitActive && landOwned && landAcqMode === "salesCase"
       ? { landSalesCaseValue: ratioed(primary.landSalesCaseValue) }
       : {}),
-    ...(isSplitActive && buildingAcqMode === "salesCase"
+    ...(isSplitActive && buildingOwned && buildingAcqMode === "salesCase"
       ? { buildingSalesCaseValue: ratioed(primary.buildingSalesCaseValue) }
       : {}),
     // 자본적지출 2필드 — 모드 무관 항상 입력 가능(UI 상시 노출).

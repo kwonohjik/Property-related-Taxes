@@ -32,6 +32,11 @@ function buildingItem(
     name: "정안빌딩",
     standardPrice: 1_000_000_000, // 양도시 기준시가(평가액 — 채무 초과 경고 회피용)
     assumedDebtForGift: 400_000_000,
+    // §47① 인수채무액의 **내역**. ⑧ C-4b(2026-08 F26)가 「§47① = 임대보증금 + 저당권 채무액」
+    // 일치를 요구하므로 픽스처에도 채운다 — 종전에는 두 칸이 비어 있어(합계 0) 엔진 §159의
+    // 양도가액 B가 0이 되는 입력 형태를 그대로 통과시키고 있었다.
+    leaseDeposit: 250_000_000,
+    mortgageAmount: 150_000_000,
     burdenedGiftTransferTax: {
       acquisitionDate: new Date("2012-01-01"),
       standardPriceAtAcquisition: bgt.standardPriceAtAcquisition ?? 0,

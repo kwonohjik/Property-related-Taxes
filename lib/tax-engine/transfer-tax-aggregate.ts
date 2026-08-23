@@ -19,16 +19,20 @@ import {
   type CalculationStep,
 } from "./transfer-tax";
 import { computeAmendment } from "./transfer-tax-amendment";
+import { calculateTransferTaxPenalty } from "./transfer-tax-penalty";
+import {
+  aggregateReductions,
+  allocateAggregateReductions,
+  computeAggregateTaxCreditRuralSurtax,
+} from "./transfer-tax-aggregate-reduction-step";
+import {
+  resolveFilingUnitCarryoverScope,
+  type CarryoverScenarioOverrides,
+} from "./transfer-tax-aggregate-carryover-scope";
 import { computeSettlement } from "./transfer-tax-settlement";
 import { TRANSFER } from "./legal-codes";
 import { TaxCalculationError } from "./tax-errors";
-import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
-import {
-  applyAnnualLimits,
-  applyFiveYearLimits,
-  buildLimitGroups,
-  lookupLimit,
-} from "./aggregate-reduction-limits";
+import { applyRate } from "./tax-utils";
 import {
   validateInput,
   classifyRateGroup,
@@ -42,7 +46,6 @@ import {
   incomeDeductionReducibleOf,
   ruralSurtaxExemptReducibleOf,
   computeGroupsAndComparison,
-  resolveTypeLegalBasis,
 } from "./transfer-tax-aggregate-pickers";
 
 export { classifyRateGroup };
@@ -77,13 +80,70 @@ export type {
   AggregateTransferResult,
 };
 
+/**
+ * **[표시 전용]** 배우자등 이월과세(§97의2) 자산의 「취득가액 열」 정본 —
+ * 채택 시나리오의 취득가액. 이월과세 자산이 아니면 `undefined`(호출측이 종전 축을 쓴다).
+ *
+ * ## 왜 필요한가 — 취득가액 열만 STEP 0.475 **이전** 축에 남아 있었다
+ *
+ * 단건 엔진은 STEP 0.475에서 `workingInput`을 **채택 시나리오의 입력**으로 갈아탄 뒤
+ * `transferGain`을 산출한다(`transfer-tax.ts`). 그런데 아래 호출부의 종전 취득가액은
+ * `r.singleInput`(= 갈아타기 **전** 원본)에서 왔다. 두 값이 서로 다른 시점을 보므로
+ * 신고서 열이 이렇게 어긋난다:
+ *
+ * | 픽스처 | 취득가액 열(종전) | 필요경비 열(종전) | 채택 취득가액 |
+ * |---|---|---|---|
+ * | 함께양도 primary 이월과세 · B 채택 | **0** | **300,000,000** | 300,000,000 |
+ * | 일반건물 토지 파트 이월과세 · A 채택 | 250,000,000(수증자 환산) | **−70,000,000** | 150,000,000 |
+ *
+ * 필요경비가 음수인 경우 UI clamp(`Math.max(0, …)` —
+ * `FilingFormTableAggregateHelpers` · `DetailedStatementHelpers`)에 잘려
+ * 「양도가액 − 취득가액 − 필요경비 = 양도차익」 자기검산이 **화면에서** 깨진다
+ * (위 GB 픽스처 실측: 500,000,000 − 250,000,000 − 0 = 250,000,000 ≠ 320,000,000).
+ *
+ * ## 왜 재도출이 아니라 채택값 참조인가
+ *
+ * 「A면 증여자 취득가액, B면 증여 당시 평가액」을 여기서 다시 유도하면 시나리오 입력 구성이
+ * 바뀔 때 한쪽만 따라가는 dual-truth가 된다. 두 값은 **단건이 실제로 쓴 취득가액**이다 —
+ * A는 `inputAFinal.acquisitionPrice`(환산 모드면 §97①1호나목 환산액), B는
+ * `buildInputB`의 `acquisitionPrice`(= `giftDateValuation`)이고, 적용배제 조기반환
+ * (관계·기간·수용·1세대1주택·가업상속) 역시 전부 `adoptedScenario: "B"` +
+ * `makeEmptyScenarioB(giftDateValuation)`이라 같은 값으로 수렴한다
+ * (`transfer-tax-carryover.ts`).
+ *
+ * 🔒 **세액 불변** — 취득가액·필요경비 열은 `PerPropertyBreakdown`의 표시 필드이고
+ *    세액 경로(`taxableAfterReduction`·`groupTaxes`)는 이 값을 읽지 않는다.
+ *    직전 `adoptedRateBasis` echo(M-1)와 같은 「채택 결과를 표시 축에 반영」 패턴이다.
+ */
+function adoptedCarryoverAcquisitionPrice(
+  detail:
+    | {
+        adoptedScenario: "A" | "B";
+        scenarioA: { acquisitionPrice: number };
+        scenarioB: { acquisitionPrice: number };
+      }
+    | undefined,
+): number | undefined {
+  if (!detail) return undefined;
+  return detail.adoptedScenario === "A"
+    ? detail.scenarioA.acquisitionPrice
+    : detail.scenarioB.acquisitionPrice;
+}
+
 // ============================================================
 // 메인 진입점
 // ============================================================
 
-export function calculateTransferTaxAggregate(
+/**
+ * 집계 1회 계산 — **주어진 이월과세 시나리오 assignment 하에서** 신고 전체를 계산한다.
+ *
+ * 공개 진입점은 아래 {@link calculateTransferTaxAggregate}다. 그쪽이 §97의2②3호를
+ * **신고단위 결정세액**으로 판정하기 위해 이 함수를 여러 번 부른다.
+ */
+function computeAggregateOnce(
   input: AggregateTransferInput,
   rates: TaxRatesMap,
+  carryoverOverrides: CarryoverScenarioOverrides,
 ): AggregateTransferResult {
   const warnings: string[] = [];
   const steps: CalculationStep[] = [];
@@ -106,7 +166,13 @@ export function calculateTransferTaxAggregate(
     // 그대로 route까지 전파되는데, 다건에서는 어느 자산이 원인인지 메시지만으로 알 수 없다.
     let result;
     try {
-      result = calculateTransferTax(singleInput, rates);
+      // §97의2②3호 — 신고단위 비교 결과를 내려보낸다(지정 없으면 단건 엔진이 자체 판정).
+      const scenarioOverride = carryoverOverrides[assetIdx];
+      result = calculateTransferTax(
+        singleInput,
+        rates,
+        scenarioOverride ? { carryoverScenarioOverride: scenarioOverride } : undefined,
+      );
     } catch (e: unknown) {
       if (e instanceof TaxCalculationError) {
         throw new TaxCalculationError(e.code, `자산 ${assetIdx + 1}: ${e.message}`, {
@@ -125,14 +191,37 @@ export function calculateTransferTaxAggregate(
           nonBusinessLandAreaRatio: nblJudgment.surcharge.nonBusinessAreaRatio,
         }
       : undefined;
-    const correctedItem: TransferTaxItemInput = nblOverride ? { ...item, ...nblOverride } : item;
-    const correctedSingleInput: TransferTaxInput = nblOverride
-      ? { ...singleInput, ...nblOverride }
+    /**
+     * 배우자등 이월과세(§97의2) — **채택된 시나리오의 §104② 기산 사실**로 item을 교정.
+     *
+     * 단건 엔진은 STEP 0.475에서 `workingInput`을 채택 시나리오 입력으로 갈아탄 뒤 세율을
+     * 정한다(A=증여자 취득일·`gift` / B=증여 등기접수일·`purchase`). 그런데 여기 `item`은
+     * **원본**이라 `acquisitionCause`가 `"carryover_gift"` 그대로다 —
+     * 아래 두 소비자가 **채택 결과를 못 보고** 최상위 `donorAcquisitionDate` 유무만으로 갈렸다:
+     *   · `classifyRateGroup`      (M-2 세율군 = §104⑤ 버킷·§102② 통산 범위·기본공제 우선순위)
+     *   · `aggregateByGroup`→`calcTax` (`correctedSingleInput`이 곧 `taxRateInput`)
+     *
+     * 실측(토지 10억 · 증여자 2010-01-01 취득 · 2025-09-01 증여 · 2026-06-01 양도, mock 세율):
+     *   · **A 채택**인데 `short_term`으로 분류 → 단건 228,660,000 vs 일괄 315,000,000 (**+86,340,000 과대**)
+     *   · **B 채택**인데 `progressive`로 분류 → 단건 350,000,000 vs 일괄 258,060,000 (**−91,940,000 과소**)
+     * 두 방향이 **정확히 반대**라 최상위 `donorAcquisitionDate` 배선만으로는 한쪽을 고치면
+     * 다른 쪽이 깨진다 — 교정은 「채택 결과를 반영」하는 이 층에서만 성립한다.
+     * anchor `aggregate-carryover-adopted-rate-basis.anchor.test.ts` (되돌리면 C-2·C-5·C-6 3건 red).
+     *
+     * ⚠️ 사실을 그대로 덮어쓸 뿐 「어느 세율군인가」를 넘기지 않는다(엔진 헬퍼는 사실만 받는다).
+     */
+    const rateBasisOverride = result.carryoverTaxationDetail?.adoptedRateBasis;
+    const hasOverride = nblOverride !== undefined || rateBasisOverride !== undefined;
+    const correctedItem: TransferTaxItemInput = hasOverride
+      ? { ...item, ...nblOverride, ...rateBasisOverride }
+      : item;
+    const correctedSingleInput: TransferTaxInput = hasOverride
+      ? { ...singleInput, ...nblOverride, ...rateBasisOverride }
       : singleInput;
     return { item, correctedItem, correctedSingleInput, singleInput, result };
   });
 
-  // M-2: 세율군 분류 — 정밀판정 교정 item 기준 (원시 플래그 오분류 방지)
+  // M-2: 세율군 분류 — 정밀판정·이월과세 채택 교정 item 기준 (원시 플래그 오분류 방지)
   const classified = perAsset.map((pa) => ({
     ...pa,
     rateGroup: classifyRateGroup(pa.correctedItem, pa.result),
@@ -259,119 +348,17 @@ export function calculateTransferTaxAggregate(
     }
   }
 
-  // M-8: 감면 합산 — 유형별 비율 재계산 (조특법 §69 + §127의2 + §133)
-  // 1) 각 자산이 노출한 reducibleIncome을 유형별로 집계
-  // 2) 합산 과세표준 기준으로 `safeMultiplyThenDivide(calculatedTax, 유형별 reducibleIncome, taxBase)` 재계산
-  // 3) §133 유형별 연간 한도 적용 (자경·축산·어업 1억원 그룹 / 공익수용 2억원 단독 등)
-  // 4) 유형이 없는 레거시 감면은 건별 단순 합산으로 폴백
-  //
-  // 분모 주의: 반드시 aggregate taxBase(차손 통산 + 기본공제 반영)여야 한다.
-  // 합산양도소득금액이나 각 건별 taxBase를 쓰면 과대감면이 발생한다.
-  // 세액감면(§69·§77 등) 비율 재계산 분모 — income-deduction 반영 후 과세표준(감면후 기준).
-  const aggregateTaxBase = Math.max(
-    0,
-    taxableAfterReduction.reduce((s, v) => s + v, 0) - totalBasicDeduction,
-  );
-  const reducibleByType = new Map<string, { income: number; assetIds: string[] }>();
-  for (const r of assetRecords) {
-    if (r.result.isExempt) continue;
-    const type = r.result.reductionTypeApplied;
-    const income = r.result.reducibleIncome ?? 0;
-    if (!type || income <= 0) continue;
-    const existing = reducibleByType.get(type) ?? { income: 0, assetIds: [] };
-    existing.income += income;
-    existing.assetIds.push(r.item.propertyId);
-    reducibleByType.set(type, existing);
-  }
-
-  // 조특법 §133 유형별 연간 한도 — `aggregate-reduction-limits.ts` 모듈 사용.
-  // 유형별 원시 감면세액을 계산한 뒤 그룹 단위로 capping.
-  const rawByType = new Map<string, number>();
-  for (const [type, entry] of reducibleByType.entries()) {
-    const raw =
-      aggregateTaxBase > 0
-        ? safeMultiplyThenDivide(calculatedTax, entry.income, aggregateTaxBase)
-        : 0;
-    rawByType.set(type, raw);
-  }
-  // §133 한도는 양도연도 분기 그룹(2025+ §77 그룹 2억/3억, 이전 1억/2억).
-  const transferYear = input.taxYear;
-  const limitGroups = buildLimitGroups(transferYear);
-  const { cappedByType: annuallyCapped, capInfoByType } = applyAnnualLimits(rawByType, limitGroups);
-
-  // §133 5년 누적 한도 추가 capping
-  const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
-    annuallyCapped,
-    input.priorReductionUsage ?? [],
-    transferYear,
-    limitGroups,
-  );
-  const cappedByType = fiveYearCappedByType;
-
-  const reductionBreakdown: ReductionBreakdownEntry[] = [];
-  let totalAggregatedReduction = 0;
-  for (const [type, entry] of reducibleByType.entries()) {
-    const raw = rawByType.get(type) ?? 0;
-    const capped = cappedByType.get(type) ?? 0;
-    const info = capInfoByType.get(type);
-    const fiveInfo = fiveYearCapInfoByType.get(type);
-    const annualLimit =
-      info && Number.isFinite(info.annualLimit) ? info.annualLimit : 0;
-    const annuallyCappedReduction = annuallyCapped.get(type) ?? capped;
-    const fiveYearLimitVal =
-      fiveInfo && Number.isFinite(fiveInfo.fiveYearLimit) ? fiveInfo.fiveYearLimit : 0;
-    reductionBreakdown.push({
-      type,
-      legalBasis: info?.legalBasis
-        ? `${lookupLimit(type).groupTypes.length > 0 ? resolveTypeLegalBasis(type) : TRANSFER.REDUCTION_OVERLAP_EXCLUSION} + ${info.legalBasis}`
-        : resolveTypeLegalBasis(type),
-      totalReducibleIncome: entry.income,
-      aggregateTaxBase,
-      aggregateCalculatedTax: calculatedTax,
-      rawAggregateReduction: raw,
-      annualLimit,
-      annuallyCappedReduction,
-      cappedAggregateReduction: capped,
-      cappedByLimit: info?.cappedByLimit ?? false,
-      fiveYearLimit: fiveYearLimitVal,
-      priorGroupSum: fiveInfo?.priorGroupSum ?? 0,
-      fiveYearRemaining: fiveInfo && Number.isFinite(fiveInfo.remaining) ? fiveInfo.remaining : 0,
-      cappedByFiveYearLimit: fiveInfo?.cappedByFiveYear ?? false,
-      assetIds: entry.assetIds,
-    });
-    totalAggregatedReduction += capped;
-  }
-
-  // 유형이 지정되지 않은 감면(reducibleIncome 미노출 레거시 경로)은 건별 단순 합산
-  const legacyReductionAmount = assetRecords.reduce((s, r) => {
-    if (r.result.isExempt) return s;
-    // 재계산 경로(reducibleByType)는 reducibleIncome>0 인 유형만 처리한다.
-    // reductionTypeApplied는 있으나 reducibleIncome 미노출인 세액감면(§97·§98·§99 계열 등)은
-    // 이 레거시 단순합에 포함해야 소실되지 않는다(건별 §127⑦ 이미 적용된 reductionAmount).
-    if (r.result.reductionTypeApplied && (r.result.reducibleIncome ?? 0) > 0) return s;
-    return s + (r.result.reductionAmount ?? 0);
-  }, 0);
-
-  const reductionAmount = Math.min(
+  // M-8: 감면 합산 — 유형별 비율 재계산 + 조특법 §133 한도. 상세는 reduction-step ① 참조.
+  const { reductionBreakdown, reductionAmount } = aggregateReductions({
+    assetRecords,
     calculatedTax,
-    totalAggregatedReduction + legacyReductionAmount,
-  );
-
-  // 세율군 혼재 시 경고 (PDF 사례 범위 외)
-  if (comparedTaxApplied === "groups" && reducibleByType.size > 0) {
-    warnings.push(
-      "비교과세가 세율군별로 적용된 상황에서 감면 재계산은 전체 산출세액 기준으로 이루어졌습니다. 세율군 혼재 시 정확한 안분은 별도 로직이 필요합니다.",
-    );
-  }
-
-  steps.push({
-    label: "감면세액 (합산 재계산)",
-    formula:
-      reducibleByType.size > 0
-        ? `유형별 재계산: ${[...reducibleByType.keys()].join(", ")} | 원시 ${totalAggregatedReduction === 0 ? "0" : totalAggregatedReduction.toLocaleString()} + 레거시 ${legacyReductionAmount.toLocaleString()}`
-        : `건별 단순합 ${legacyReductionAmount.toLocaleString()} (유형 미지정 감면만 존재)`,
-    amount: reductionAmount,
-    legalBasis: TRANSFER.REDUCTION_ANNUAL_LIMIT,
+    taxableAfterReduction,
+    totalBasicDeduction,
+    taxYear: input.taxYear,
+    priorReductionUsage: input.priorReductionUsage ?? [],
+    comparedByGroups: comparedTaxApplied === "groups",
+    steps,
+    warnings,
   });
 
   const determinedTaxBeforePenalty = Math.max(0, calculatedTax - reductionAmount);
@@ -392,18 +379,94 @@ export function calculateTransferTaxAggregate(
     (s, r) => s + (r.result.isExempt ? 0 : r.result.penaltyDetail?.totalPenalty ?? 0),
     0,
   );
-  const penaltyTax = perAssetBuildingPenalty + perAssetFilingDelayedPenalty;
+  /**
+   * M-9b: **신고서 단위** 신고불성실·납부지연 가산세 (F17).
+   *
+   * 일반건물처럼 **자산 1건이 내부 카드 여러 장으로 쪼개지는 경로**를 위한 것이다.
+   * 카드마다 실으면 같은 신고 1건의 가산세가 카드 수만큼 배가되므로, 신고 단위로 1회 계산한다.
+   *
+   * 🔑 base는 **집계 결정세액**을 주입한다 — 단건 route가 2-pass로 하던 일
+   * (`route.ts:460` 「먼저 가산세 없이 계산하여 결정세액 확보 후 주입」)을 여기서는
+   * 이미 그 값을 알고 있으므로 1-pass로 끝낸다. 호출부가 보낸 `determinedTax`는 화면에서
+   * 계산되기 전 값이라 신뢰하지 않는다.
+   *
+   * ⚠️ 자산별 입력과 **동시에 들어오면 둘 다 부과된다** — 타입 주석이 상호배타를 명시하고,
+   *    실제로 그런 payload를 만드는 경로는 없다(일반건물은 신고단위, 다건은 자산별).
+   */
+  const filingUnitPenaltyDetail =
+    input.filingPenaltyDetails || input.delayedPaymentDetails
+      ? calculateTransferTaxPenalty({
+          filing: input.filingPenaltyDetails
+            ? {
+                ...input.filingPenaltyDetails,
+                determinedTax: determinedTaxBeforePenalty,
+                reductionAmount,
+              }
+            : undefined,
+          delayedPayment: input.delayedPaymentDetails
+            ? {
+                ...input.delayedPaymentDetails,
+                // 미납세액 0 = 결정세액 전액 미납으로 본다(단건 route와 같은 규약).
+                unpaidTax:
+                  input.delayedPaymentDetails.unpaidTax === 0
+                    ? determinedTaxBeforePenalty
+                    : input.delayedPaymentDetails.unpaidTax,
+              }
+            : undefined,
+        })
+      : undefined;
+
+  const penaltyTax =
+    perAssetBuildingPenalty +
+    perAssetFilingDelayedPenalty +
+    (filingUnitPenaltyDetail?.totalPenalty ?? 0);
 
   // M-10: 지방소득세 (원 미만 절사 — 지방세법 §103의3)
   // 과세표준 = 결정세액 + §114조의2 건물 가산세만 (단건 엔진 finalize와 동일).
   // 신고불성실·납부지연 가산세(국세기본법 §47의2~5)는 지방소득세 부과대상이 아니므로 base 제외.
   const localIncomeTax = applyRate(determinedTaxBeforePenalty + perAssetBuildingPenalty, 0.1);
+  // 감면 배분 — floor 잔액 말단 흡수(Σ = 전체 불변식). 상세는 reduction-step ② 참조.
+  const reductionAllocations = allocateAggregateReductions(assetRecords, reductionBreakdown);
+
+  /**
+   * 세액감면형 감면의 **농어촌특별세** — 단건 경로(STEP 8.8)와 **같은 판정표**를 쓴다.
+   * 위 `ruralSurtax`는 소득금액 차감형(§99의3 등) 전용이라 §77 계열에는 한 원도 붙지 않았다.
+   * 판정·근거는 `transfer-tax-aggregate-reduction-step.ts` ③ 참조.
+   */
+  const ruralSurtaxCredit = computeAggregateTaxCreditRuralSurtax(
+    assetRecords,
+    reductionAllocations,
+    steps,
+  );
+
+  // 신고서 단위 가산세 — 세액에 이미 들어가 있으므로 **근거를 화면에 남긴다**(침묵 금지).
+  if (filingUnitPenaltyDetail && filingUnitPenaltyDetail.totalPenalty > 0) {
+    const fp = filingUnitPenaltyDetail.filingPenalty;
+    const dp = filingUnitPenaltyDetail.delayedPaymentPenalty;
+    steps.push({
+      label: "가산세 (신고서 단위)",
+      formula: [
+        fp && fp.filingPenalty > 0
+          ? `신고불성실 ${fp.penaltyBase.toLocaleString()} × ${(fp.penaltyRate * 100).toFixed(0)}%`
+          : null,
+        dp && dp.delayedPaymentPenalty > 0
+          ? `납부지연 ${dp.unpaidTax.toLocaleString()} × ${dp.elapsedDays}일 × ${(dp.dailyRate * 100).toFixed(3)}%`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" + "),
+      amount: filingUnitPenaltyDetail.totalPenalty,
+      legalBasis: "국세기본법 §47의2·§47의3·§47의4",
+    });
+  }
+
   // 농특세는 지방소득세 base 아님(결정세액+건물가산세만) — totalTax에만 가산.
-  const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax + ruralSurtax;
+  const ruralSurtaxAll = ruralSurtax + ruralSurtaxCredit;
+  const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax + ruralSurtaxAll;
 
   steps.push({
     label: "총 납부세액",
-    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtax > 0 ? ` + 농특세 ${ruralSurtax.toLocaleString()}` : ""}`,
+    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtaxAll > 0 ? ` + 농특세 ${ruralSurtaxAll.toLocaleString()}` : ""}`,
     amount: totalTax,
   });
 
@@ -420,49 +483,6 @@ export function calculateTransferTaxAggregate(
     steps.push(settlement.step);
   }
 
-  // ── 감면 배분 선계산 — floor 잔액 말단 흡수 ────────────────────────────
-  //
-  // 2026-07-29 정정(#591 감사 R7 — 표시 자기일관성, 세액 불변): 같은 감면 유형의 자산들이
-  // 각각 독립 floor되어 **Σ배분액이 cappedAggregateReduction과 최대 (n−1)원 어긋났다**.
-  // 화면에는 "감면 합계"와 "자산별 감면"이 나란히 나오므로 1원 차이도 자기모순으로 보인다.
-  //
-  // 정책: 안분은 마지막 항목이 잔액을 흡수해 `Σ = 전체` 불변식을 지킨다
-  // (memory `feedback_floor_residual_absorption`). 총 감면액(capped) 자체는 불변이므로
-  // 세액에는 영향이 없다.
-  const reductionAllocations = new Map<number, number>();
-  {
-    /** 감면유형 → 그 유형에 속하는 자산 인덱스(입력 순서 유지) */
-    const groupIdx = new Map<string, number[]>();
-    assetRecords.forEach((r, idx) => {
-      const type = r.result.reductionTypeApplied;
-      const reducible = r.result.isExempt ? 0 : r.result.reducibleIncome ?? 0;
-      if (!type || reducible <= 0) return;
-      const entry = reductionBreakdown.find((b) => b.type === type);
-      if (!entry || entry.totalReducibleIncome <= 0) return;
-      const list = groupIdx.get(type);
-      if (list) list.push(idx);
-      else groupIdx.set(type, [idx]);
-    });
-
-    for (const [type, idxList] of groupIdx) {
-      const entry = reductionBreakdown.find((b) => b.type === type)!;
-      let allocated = 0;
-      idxList.forEach((idx, i) => {
-        const isLast = i === idxList.length - 1;
-        if (isLast) {
-          // 말단 흡수 — 나머지 전액. floor 누적 오차가 여기로 모인다.
-          reductionAllocations.set(idx, entry.cappedAggregateReduction - allocated);
-          return;
-        }
-        const reducible = assetRecords[idx].result.reducibleIncome ?? 0;
-        const share = Math.floor(
-          entry.cappedAggregateReduction * (reducible / entry.totalReducibleIncome),
-        );
-        reductionAllocations.set(idx, share);
-        allocated += share;
-      });
-    }
-  }
 
   // properties breakdown 조립 — 합산 재계산 후 건별 배분액 포함
   const properties: PerPropertyBreakdown[] = assetRecords.map((r, idx) => {
@@ -484,11 +504,13 @@ export function calculateTransferTaxAggregate(
 
     // 실제 적용 취득가액 (환산 시 재산식), 필요경비는 §97 개산공제 포함 역산
     const tsfStd = r.singleInput.standardPriceAtTransfer ?? 0;
-    const effectiveAcquisitionPrice = r.result.usedEstimatedAcquisition
-      ? (tsfStd > 0
-          ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
-          : 0)
-      : r.singleInput.acquisitionPrice;
+    const effectiveAcquisitionPrice =
+      adoptedCarryoverAcquisitionPrice(r.result.carryoverTaxationDetail) ??
+      (r.result.usedEstimatedAcquisition
+        ? (tsfStd > 0
+            ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
+            : 0)
+        : r.singleInput.acquisitionPrice);
     // 비과세 자산: gross(exemptGrossGain)와 취득가액으로 필요경비 역산(환산 시 개산공제분).
     //   → 신고서 양식 컬럼 교차검산(양도가액 − 취득가액 − 필요경비 = 전체 양도차익) 정합.
     // 비-비과세: 엔진 transferGain으로 역산(개산공제·양도비 포함).
@@ -591,12 +613,73 @@ export function calculateTransferTaxAggregate(
     settlementTotalDue: settlement.settlementTotalDue,
     penaltyTax,
     // 가산세 상세는 자산별로 properties[i].penaltyDetail 에서 노출.
+    ...(filingUnitPenaltyDetail ? { filingUnitPenaltyDetail } : {}),
     localIncomeTax,
-    ruralSurtax,
+    ruralSurtax: ruralSurtaxAll,
     totalTax,
     steps,
     warnings,
     ...(amendmentDetail ? { amendmentDetail } : {}),
+  };
+}
+
+
+// ============================================================
+// 공개 진입점 — §97의2②3호를 **신고단위 결정세액**으로 판정한다
+// ============================================================
+
+/**
+ * 다건 양도소득세 집계.
+ *
+ * 단건 엔진은 §97의2②3호의 A/B 비교를 **자기 자산만 놓고** 한다. 자산이 1건이면 그 값이 곧
+ * 신고 전체의 결정세액이라 옳지만, **여러 건이면 틀린다** — A/B 전환이 세율군을 바꿔
+ * §104⑤ 누진 합산·§102② 통산·§103 기본공제 배분이 함께 움직이기 때문이다
+ * (`transfer-tax-aggregate-carryover-scope.ts` 머리주석 · 실측 300 격자 중 7건, 전부 과소).
+ *
+ * 그래서 여기서 집계를 여러 번 돌려 **신고 전체 결정세액**으로 비교하고, 그 결과를
+ * `carryoverScenarioOverride`로 단건 엔진에 내려보낸다.
+ *
+ * **자산 1건이거나 이월과세 자산이 없으면 호출 1회**로 종전과 동일하게 끝난다.
+ */
+export function calculateTransferTaxAggregate(
+  input: AggregateTransferInput,
+  rates: TaxRatesMap,
+): AggregateTransferResult {
+  const memo = new Map<string, AggregateTransferResult>();
+  const run = (overrides: CarryoverScenarioOverrides): AggregateTransferResult => {
+    const key = JSON.stringify(overrides);
+    const hit = memo.get(key);
+    if (hit) return hit;
+    const computed = computeAggregateOnce(input, rates, overrides);
+    memo.set(key, computed);
+    return computed;
+  };
+
+  // 1) 강제 없이 1회 — ②1호·②2호·③ 기간·관계로 **이미 배제된** 자산을 가려낸다.
+  //    그 배제들은 ②3호보다 앞서므로 비교 대상이 아니다(`finishScenarios` 조기 반환).
+  const baseline = run({});
+  const eligible = baseline.properties.flatMap((p, idx) =>
+    p.carryoverTaxationDetail?.isEligible === true ? [idx] : [],
+  );
+  if (eligible.length === 0) return baseline;
+
+  // 2) 신고단위 비교로 채택 시나리오 확정
+  const { overrides, comparisons } = resolveFilingUnitCarryoverScope(
+    eligible,
+    (ov) => run(ov).determinedTax,
+  );
+  const final = run(overrides);
+
+  // 3) 비교 실적을 자산별 detail에 실어 준다 — 결과 화면이 **신고단위 두 값**을 그대로 보여준다.
+  //    (단건 세액만 보여주면 「A가 작은데 A를 채택했다」는 자기모순 화면이 된다.)
+  return {
+    ...final,
+    properties: final.properties.map((p, idx) => {
+      const cmp = comparisons.get(idx);
+      const detail = p.carryoverTaxationDetail;
+      if (!cmp || !detail) return p;
+      return { ...p, carryoverTaxationDetail: { ...detail, filingUnitComparison: cmp } };
+    }),
   };
 }
 

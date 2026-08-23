@@ -51,6 +51,7 @@ import {
   calcBasicDeduction,
   applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
+import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { calculateBuildingPenalty, resolveExtensionPenaltyBase } from "./transfer-tax-building-penalty";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
@@ -59,6 +60,7 @@ import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails, 
 import { computeAmendment } from "./transfer-tax-amendment";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
+import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveAcquisitionOverride, type TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
@@ -133,15 +135,27 @@ export function calculateTransferTax(
       rates,
       // calculateTransferTax를 주입 — 재귀 호출 시 carryoverTaxation=undefined이므로 무한 루프 없음
       calculateTransferTax,
+      // ②3호 비교 결과 강제 — 다건 엔진(신고단위 비교)만 지정한다. 단건은 undefined.
+      options?.carryoverScenarioOverride,
     );
     if (carryoverResult) {
-      carryoverDetail = carryoverResult.detail;
+      // [echo] 채택 시나리오가 실제로 쓴 §104② 기산 사실. **단건 세액 불변**(바로 아래에서
+      // workingInput이 되는 그 입력을 되비출 뿐) — 소비자는 다건 엔진이다
+      // (타입 주석 `CarryoverTaxationDetail.adoptedRateBasis` 참조).
+      carryoverDetail = {
+        ...carryoverResult.detail,
+        adoptedRateBasis: pickRateBasisFacts(carryoverResult.adoptedInput),
+      };
       // 채택 시나리오 입력으로 workingInput 교체 → 이후 STEP 0.5~11이 그대로 통과
       workingInput = carryoverResult.adoptedInput;
       steps.push({
         label: "배우자등 이월과세 판정",
         formula: carryoverResult.detail.isEligible
-          ? `Scenario A(결정세액 ${carryoverResult.detail.scenarioA.determinedTax.toLocaleString()}) vs B(${carryoverResult.detail.scenarioB.determinedTax.toLocaleString()}) → ${carryoverResult.detail.adoptedScenario} 채택`
+          ? `Scenario A(결정세액 ${carryoverResult.detail.scenarioA.determinedTax.toLocaleString()}) vs B(${carryoverResult.detail.scenarioB.determinedTax.toLocaleString()}) → ${carryoverResult.detail.adoptedScenario} 채택${
+              // 다건 신고에서는 판정이 **신고 전체 결정세액**(§92③2호)으로 이뤄진다.
+              // 그 사실을 적지 않으면 위 두 금액만 보고 「작은 쪽이 채택됐다」는 오독이 생긴다.
+              options?.carryoverScenarioOverride ? " (신고 전체 결정세액 비교 · §92③2호)" : ""
+            }`
           : `이월과세 적용배제 (사유: ${carryoverResult.detail.exclusionReason ?? "없음"})`,
         amount: 0,
         legalBasis: TRANSFER.CARRYOVER_TAXATION,
@@ -352,18 +366,42 @@ export function calculateTransferTax(
     pb0 = resolveExtensionPenaltyBase(input, pb0);
     const pr0 = calculateBuildingPenalty(effectiveInput, pb0);
     const pt0 = pr0?.penalty ?? 0;
-    if (pt0 > 0) {
-      steps.push({
-        label: "신축·증축 가산세",
-        formula: `${pb0.toLocaleString()} × 5% (${pr0!.note})`,
-        amount: pt0,
-        legalBasis: TRANSFER.BUILDING_PENALTY,
-      });
-    }
     const lit0 = pt0 > 0 ? applyRate(pt0, 0.1) : 0;
     if (pt0 > 0) {
       steps.push({ label: "지방소득세", formula: `${pt0.toLocaleString()} × 10%`, amount: lit0, legalBasis: TRANSFER.LOCAL_INCOME_TAX });
-      steps.push({ label: "총 납부세액", formula: `가산세 ${pt0.toLocaleString()} + 지방소득세 ${lit0.toLocaleString()}`, amount: pt0 + lit0, legalBasis: TRANSFER.BUILDING_PENALTY });
+    }
+    /**
+     * 🔑 **양도차손 경로도 국세기본법 §47의2~§47의4 가산세를 싣는다** (2026-08-13 F33).
+     *
+     * 「소득세법」 §92③3호는 양도소득 **총결정세액**을 「양도소득 결정세액에 제114조의2,
+     * 제115조 및 「국세기본법」 제47조의2부터 제47조의4까지에 따른 가산세를 더하여」 계산하도록
+     * 정한다. 종전 조기반환은 §114조의2만 싣고 국기법 가산세를 **통째로 버렸다** —
+     * `penaltyDetail`이 undefined가 되어 산출근거 표시까지 사라졌다.
+     *
+     * 결정세액이 0이어도 base가 양수일 수 있는 축이 둘 있다:
+     *   · §47의3① — 「초과신고한 **환급세액**」(`filingPenaltyDetails.excessRefundAmount`)
+     *   · §47의4①1·2호 — 「납부하지 아니한 세액」·「초과환급받은 세액」(`delayedPaymentDetails.unpaidTax`)
+     * 순수 차손이고 초과환급·미납이 없으면 `calculateFilingPenalty`가 base 0으로 0을 반환하므로
+     * 종전과 값이 같다(조심 2012서2857 — 통산으로 세액이 소멸해도 그 이전의 과소신고·미납분
+     * 가산세는 유지된다. 예정신고·납부의무는 확정신고·납부의무와 별개의 독립적 의무).
+     *
+     * ⚠️ **지방소득세 base는 §114조의2분(pt0)만이다** — 정상 경로(`transfer-tax-finalize.ts`
+     *    STEP 10)·다건 집계(`transfer-tax-aggregate.ts`)와 같은 축을 유지한다. 신고불성실·
+     *    납부지연분을 base에 넣으면 「지방세 산출세액 ≠ result.localIncomeTax」 불일치가 생긴다.
+     *
+     * §114조의2 step은 `emitPenaltySteps`가 「환산가액적용가산세 (§114조의2)」로 통합 emit한다
+     * (정상 경로와 동일) — 종전의 별도 「신축·증축 가산세」 push는 여기서 중복이 되므로 없앴다.
+     */
+    const { penaltyDetail: lossPenaltyDetail, filingDelayedPenalty: lossFilingDelayed } =
+      emitPenaltySteps(input, steps, 0, pt0, pb0, pr0?.note);
+    const lossTotalTax = pt0 + lit0 + lossFilingDelayed;
+    if (lossTotalTax > 0) {
+      steps.push({
+        label: "총 납부세액",
+        formula: `가산세 합계 ${(pt0 + lossFilingDelayed).toLocaleString()} + 지방소득세 ${lit0.toLocaleString()}`,
+        amount: lossTotalTax,
+        legalBasis: TRANSFER.BUILDING_PENALTY,
+      });
     }
     return {
       isExempt: false,
@@ -396,7 +434,9 @@ export function calculateTransferTax(
       penaltyTax: pt0,
       penaltyBase: pt0 > 0 ? pb0 : 0,
       localIncomeTax: lit0,
-      totalTax: pt0 + lit0,
+      // 국기법 §47의2~§47의4분(lossFilingDelayed)은 지방소득세 base에 넣지 않는다 — 위 주석 참조.
+      penaltyDetail: lossPenaltyDetail,
+      totalTax: lossTotalTax,
       steps,
       /**
        * 🔴 **양도차손 경로에도 §159 명세를 싣는다** (2026-08-10 D-7a).
@@ -406,6 +446,9 @@ export function calculateTransferTax(
        * 한도까지 채우면 양도차익이 정확히 0이 되므로 이 경로를 **정상적으로** 탄다.
        */
       transferBurdenedGiftBreakdown,
+      // 다건 집계는 `skipLossFloor=true`로 차손 자산도 이 경로를 태운 뒤 세율을 다시 구한다 —
+      // 정상 경로와 같은 정밀 판정을 쓰도록 여기서도 echo한다 (F01).
+      multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
       ...buildTransferResultDetails({
         multiHouseSurchargeResult,
         nonBusinessLandJudgment,
@@ -478,9 +521,22 @@ export function calculateTransferTax(
   // STEP 4: 장기보유특별공제 (장기임대 특례율 포함 — §97의3·§97의4는 L-2' 블록)
   // §99의4 eligible 시 exemptionJudgeInput(유효 주택수) 전달 — 표2 판정도 §89①3호 의제 체인
   // (소령 §159의4 "그 밖의 규정에 따라 1세대 1주택으로 보는 주택 포함"). 중과 isSurchargeCase는 원본(R-D).
+  /**
+   * 「소득세법 시행령」 §159의4 표2 대상 축 — **§155 각 항 의제를 포함한 「1주택」** (2026-08-13 F10).
+   *
+   * `runHouseCountExclusionStep`이 §99의4·§98의9·감면주택·§155②③ 상속주택을 이미 주택수에서
+   * 차감하지만, §155①(일시적 2주택)·④⑤(합가)·⑦(농어촌)·⑧(수도권 밖 부득이)은 주택수를 깎지 않고
+   * `checkExemption` 내부 분기로만 판정한다. 그래서 12억 초과 고가주택 과세분에 표1(최대 30%)이
+   * 적용됐다(실측: 표1 16% 총세액 23,633,500 ↔ 표2 64% 총세액 5,838,642).
+   *
+   * 술어는 **`checkExemption`의 판정 결과 하나**다 — 주택수를 깎는 방식은 `checkExemption`이
+   * `householdHousingCount === 2`로 의제 분기를 게이팅하므로 의제 판정 자체를 도달 불가로 만든다.
+   * 표2 **대상** 축에만 쓰고 중과·12억 안분 축은 불변이다.
+   */
+  const deemedOneHouseBy155 = exemptionResult.deemedOneHouseBy155 === true;
   // eslint-disable-next-line prefer-const -- deduction·rate는 STEP 4.05 §98의2 특칙에서 재할당
   let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, usageConversionDetail, exclusionReason: lthdExclusionReason, fbLthdFormula } =
-    calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail);
+    calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail, deemedOneHouseBy155);
   // §154⑧3호: 표2 "대상 판정"용 통산 거주연수 (동일세대 상속 통산 반영) — rate calc와 동일 exemptionJudgeInput.
   // 거주분 공제율 표시는 실거주(residenceYearsForStep) 유지 — 대상판정/공제율 분리 (rate↔display drift 방지).
   const table2ResidenceYearsForStep = Math.floor(resolveExemptionResidenceMonths(exemptionJudgeInput) / 12);
@@ -489,9 +545,11 @@ export function calculateTransferTax(
   // ①의 "각 표 외의 부분 본문 불구" 범위 밖 — 특례 적용 시 유지 (항상 ≥ 표2 보유 단독).
   let lthd982Applied = false;
   if (surchargeExclusionByReduction.appliedId === "unsold_98_2") {
+    // 표2 대상 축은 위 STEP 4와 **같은 술어**를 쓴다 — 여기만 실제 주택수를 보면 §155 의제
+    // 자산에서 「STEP 4는 표2인데 §98의2 특칙은 표2가 아니라고 본다」는 세 번째 진실이 생긴다.
     const isOneHouseSpecial982 =
       exemptionJudgeInput.isOneHousehold &&
-      exemptionJudgeInput.householdHousingCount === 1 &&
+      (exemptionJudgeInput.householdHousingCount === 1 || deemedOneHouseBy155) &&
       table2ResidenceYearsForStep >= 2 &&
       longTermHoldingDeduction > 0;
     if (!isOneHouseSpecial982) {
@@ -510,7 +568,9 @@ export function calculateTransferTax(
     residenceYearsForStep: Math.floor(effectiveInput.residencePeriodMonths / 12),
     table2ResidenceYearsForStep,
     isOneHousehold: exemptionJudgeInput.isOneHousehold,
-    householdHousingCount: exemptionJudgeInput.householdHousingCount,
+    // 표시 축도 계산 축과 맞춘다 — §159의4 의제 1세대1주택은 표2를 적용받으므로 산식 문구도
+    // 표2(보유 4% + 거주 4%)여야 한다. 어긋나면 「공제율 64%인데 문구는 표1」 drift가 난다.
+    householdHousingCount: deemedOneHouseBy155 ? 1 : exemptionJudgeInput.householdHousingCount,
     lthd982Applied,
     lthdExclusionReason,
     // §95⑤ 적용 시 보유분을 표1+표2로 나눠 표시한다 — 없으면 종전 표2 문구 그대로.
@@ -644,6 +704,11 @@ export function calculateTransferTax(
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
+    // §77의3·§77의2 — finalize가 필수로 돌려주는데 종전에는 이 두 키만 구조분해에서 빠져
+    // 결과에 실리지 않았다(TransferTaxResult가 optional이라 TS가 못 잡는다). 그 결과
+    // 상세 카드·다건 breakdown·별지84호 부표2 ⑲가 모두 undefined를 받았다.
+    gbDesignatedLandDetail,
+    replacementLandDetail,
     selfFarmingReductionDetail,
     rental97TaxDetail,
     determinedTax,
@@ -686,6 +751,10 @@ export function calculateTransferTax(
     surchargeRate: taxResult.surchargeRate,
     isSurchargeSuspended: taxResult.surchargeSuspended,
     rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded,
+    // houses[] 정밀 판정 원본 echo — 다건 집계가 자산별 세액을 다시 구할 때 **같은 판정**을
+    // 쓰도록 그대로 싣는다(표시용 multiHouseSurchargeDetail에는 surchargeApplicable·
+    // surchargeType·isSurchargeSuspended가 없어 재사용할 수 없다). 세액 로직 불변 — F01.
+    multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
     nblSurchargeExcluded: taxResult.nblSurchargeExcluded,
     shortTermNote: taxResult.shortTermNote,
     reductionAmount,
@@ -710,6 +779,8 @@ export function calculateTransferTax(
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
+    gbDesignatedLandDetail,
+    replacementLandDetail,
     selfFarmingReductionDetail,
     rental97LthdDetail,
     usageConversionDetail,

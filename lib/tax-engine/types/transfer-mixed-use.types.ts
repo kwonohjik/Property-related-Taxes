@@ -311,6 +311,22 @@ export interface MixedUseAssetInput {
   isUnregistered?: boolean;
 
   /**
+   * 🔴 **조특법 감면·가산세** (F17-B, 2026-08-23) — 종전에는 이 축이 **통째로 없었다**.
+   *
+   * 클라이언트는 자산 종류와 무관하게 `reductions`·`filingPenaltyDetails`를 body에 싣고
+   * Zod·⑧도 통과시키는데, 겸용 분기가 엔진에 넘기지 않아 **세액이 1원도 안 움직였다**
+   * (실측 `totalPayable` 60,853,408 → 60,853,408). 호출부가 `TransferTaxInput`의 같은 이름
+   * 필드를 그대로 내려준다(서브엔진 재판정 금지 — `ownershipRatio`·`isUnregistered`와 같은 경로).
+   */
+  reductions?: import("./transfer.types").TransferReduction[];
+  filingPenaltyDetails?: import("./transfer.types").TransferTaxInput["filingPenaltyDetails"];
+  delayedPaymentDetails?: import("./transfer.types").TransferTaxInput["delayedPaymentDetails"];
+  /** 조특법 §133 5년 누적 한도 판정용 과거 이력 */
+  priorReductionUsage?: { year: number; type: string; amount: number }[];
+  /** §77 농특세 비과세 — 「직접 경작한 토지」(농특세령 §4①1호) */
+  isSelfCultivatedExpropriatedLand?: boolean;
+
+  /**
    * 🔴 **자산 단위 공통 자본적지출**(「소득세법」 제97조 제1항 제2호) — 2026-08-07 신설(W-3).
    *
    * 종전에는 겸용주택에 필요경비를 넣을 **경로 자체가 없었다**(UI가 칸을 숨기고
@@ -552,11 +568,34 @@ export interface MixedUseTotalTax {
   rateBasis?: "progressive" | "clause2" | "unregistered";
   /** 적용된 §104⑦ 다주택 중과 가산율(0.20·0.30). 미적용 시 undefined. */
   surchargeAddon?: number;
-  /** 양도소득세 */
+  /** 양도소득세 **산출세액** (감면 차감 전) */
   transferTax: number;
-  /** 지방소득세 (10%) */
+  /**
+   * 조특법 감면세액 (F17-B, 2026-08-23) — **세액감면형만**.
+   *
+   * 종전에는 이 필드 자체가 없어서 겸용주택에서 §77 공익수용을 골라도 세액이 1원도
+   * 안 움직였다(실측 Δ 0 · `MixedUseAssetInput`에 감면 필드 0건).
+   *
+   * ⚠️ **차감형·하이브리드**(`ALL_INCOME_DEDUCTION_IDS` 11종)는 여기 들어오지 않는다 —
+   *    양도소득금액을 차감하는 구조인데 겸용은 소득금액이 **주택분·상가분·비사토분**으로
+   *    갈려 있어 어느 파트에서 빼야 하는지 정한 명문이 없다(§155⑳ 경로의 §161 안분과 같은
+   *    성질의 미결). 그 사실은 `warnings`로 고지한다.
+   */
+  reductionAmount: number;
+  /** 채택된 감면 유형 라벨 (표시용). 감면 없으면 undefined. */
+  reductionType?: string;
+  /** 결정세액 = 산출세액 − 감면세액 */
+  determinedTax: number;
+  /**
+   * 신고불성실·납부지연 가산세 (국세기본법 §47의2~§47의4).
+   * 국세기본법 §47의3④의 부적용 사유는 한정 열거이고 **자산 종류에 따른 예외가 없다**.
+   */
+  penaltyTax: number;
+  /** 농어촌특별세 = 감면세액 × 20% (농특세법 §5①1호 · 비과세는 시행령 §4 열거) */
+  ruralSurtax: number;
+  /** 지방소득세 (결정세액 × 10%) */
   localTax: number;
-  /** 총 납부세액 */
+  /** 총 납부세액 = 결정세액 + 지방소득세 + 가산세 + 농특세 */
   totalPayable: number;
 }
 

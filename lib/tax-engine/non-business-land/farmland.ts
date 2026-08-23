@@ -5,7 +5,7 @@
  *   Step 3-1   재촌·자경 기간기준
  *   Step 3-1-1 재촌·자경 간주 (사용의제, §168-8 ③)
  *   Step 3-2   도시지역 밖 농지? → 사업용
- *   Step 3-2-1 도시지역 內 편입유예 (1년 이상 재촌자경 or 사용의제 → 3년)
+ *   Step 3-2-1 도시지역 內 편입유예 (편입일 소급 1년 재촌자경 or 사용의제 → 3년)
  */
 
 import { NBL } from "../legal-codes";
@@ -30,7 +30,7 @@ import {
   mergeOverlappingPeriods,
   sumDaysInWindow,
 } from "./utils/period-math";
-import { differenceInDays } from "date-fns";
+import { addDays, differenceInDays } from "date-fns";
 
 type FarmlandMode = "real" | "deemed";
 
@@ -71,19 +71,32 @@ export function checkFarmlandDeeming(input: NonBusinessLandInput): {
 }
 
 /**
- * 보유기간 중 "1년 이상 재촌·자경" 충족 여부 (§168-8 ⑤1호 농지 편입유예 요건).
+ * "편입일부터 소급하여 1년 이상 재촌·자경" 충족 여부 (§168-8 ⑤1호 농지 편입유예 요건).
  *
- * 법문 "편입된 날부터 소급하여 1년 이상 재촌하면서 자경하던 농지" 의 해석상
- * **연속 1년(365일)** 구간이 존재해야 한다. 여러 구간의 합산으로 1년을 채우는
- * 것은 법문 문언 "1년 이상 재촌하면서 자경하던"과 양립하지 않으므로 인정하지 않는다.
- * (Bug-04 수정)
+ * 법문은 "**편입된 날부터 소급하여** 1년 이상 재촌하면서 자경하던 농지"다 — 기산점이
+ * **도시지역 편입일**이고, 그로부터 거슬러 1년 구간에 재촌·자경이 있어야 한다.
+ * "1년 이상 재촌하면서 자경하던"이므로 **연속**이어야 한다(여러 구간 합산 불가, Bug-04).
+ * ⇒ merge 후 **단일 구간**이 [편입일−365일, 편입일]을 통째로 덮는지만 본다.
+ *
+ * ⚠️ 종전에는 인자가 구간 배열뿐이라 **보유기간 아무 곳의** 연속 365일이면 통과했다.
+ *    "편입 직전 1년엔 자경 공백이었으나 과거에 1년 이상 자경했던" 농지가 요건을 충족한
+ *    것으로 처리됐다(2026-08 F28~F30 리뷰).
+ *
+ * 편입일이 없으면 기산점을 세울 수 없으므로 **미충족**으로 본다 — 자동 통과 fallback은
+ * 이 저장소 정책상 금지다. 실질 영향은 없다: 편입일이 없으면 `checkIncorporationGrace`가
+ * 어차피 유예를 적용하지 않는다(판정 결과는 같고 FAIL 사유 문구만 앞당겨진다).
+ *
+ * 편입일이 취득일보다 앞서면(취득 전 이미 도시지역) 소급 1년 구간이 소유 개시 전이라
+ * 재촌∩자경일 수 없어 자동으로 미충족이 된다 — **법문대로의 귀결이며 버그가 아니다.**
  */
-function hasAtLeastOneYearSelfFarming(combined: DateInterval[]): boolean {
+function hasOneYearSelfFarmingBeforeIncorporation(
+  combined: DateInterval[],
+  urbanIncorporationDate: Date | undefined,
+): boolean {
+  if (!urbanIncorporationDate) return false;
+  const windowStart = addDays(urbanIncorporationDate, -365);
   const merged = mergeOverlappingPeriods(combined);
-  for (const p of merged) {
-    if (differenceInDays(p.end, p.start) >= 365) return true;
-  }
-  return false;
+  return merged.some((p) => p.start <= windowStart && p.end >= urbanIncorporationDate);
 }
 
 /**
@@ -219,17 +232,23 @@ export function judgeFarmland(
   // ── Step 3-2-1: 도시지역 內 농지 — 편입유예 검토 ──────────────────
   appliedLaws.push(NBL.FARMLAND_URBAN_GRACE);
 
-  // 편입유예 요건: real 모드는 "1년 이상 재촌자경" 필수, deemed 모드는 바로 3년 유예
-  if (mode === "real" && !hasAtLeastOneYearSelfFarming(effectivePeriodsForLastStep)) {
+  // 편입유예 요건: real 모드는 "편입일부터 소급 1년 이상 재촌자경" 필수(§168-8 ⑤1호),
+  // deemed 모드는 ⑤2호(제3항 각 호) 경로라 바로 3년 유예.
+  if (
+    mode === "real" &&
+    !hasOneYearSelfFarmingBeforeIncorporation(effectivePeriodsForLastStep, input.urbanIncorporationDate)
+  ) {
     steps.push({
       id: "region_grace_requirement",
-      label: "Step 3-2-1 편입유예 요건 (1년 이상 재촌자경)",
+      label: "Step 3-2-1 편입유예 요건 (편입일 소급 1년 재촌자경)",
       status: "FAIL",
-      detail: "재촌자경 기간이 1년 미만 — 편입유예 요건 미충족",
+      detail: input.urbanIncorporationDate
+        ? `편입일 ${input.urbanIncorporationDate.toISOString().slice(0, 10)}부터 소급 1년 구간에 연속 재촌·자경 없음 — 편입유예 요건 미충족`
+        : "도시지역 편입일 미제공 — 소급 1년 기산점을 세울 수 없어 편입유예 요건 미충족",
       legalBasis: NBL.FARMLAND_URBAN_GRACE,
     });
     return buildFail(
-      "도시지역 內 농지 + 편입유예 요건(1년 재촌자경) 미충족",
+      "도시지역 內 농지 + 편입유예 요건(편입일 소급 1년 재촌자경) 미충족",
       steps,
       appliedLaws,
       warnings,

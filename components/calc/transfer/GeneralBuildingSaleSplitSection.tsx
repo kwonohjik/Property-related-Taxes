@@ -74,6 +74,23 @@ export function GeneralBuildingSaleSplitSection({
 }: Props) {
   const mode = asset.saleSplitMode ?? "apportioned";
 
+  /**
+   * 🔴 **증축이면 「감정평가가액으로 안분」 선택지만** 비활성화한다.
+   *
+   * 감정평가가액은 토지·건물 두 값뿐이라 건물분을 본체·증축으로 다시 나눌 근거가 없다 —
+   * 3-way 엔진(`general-building-extension.ts`)이 감정 필드를 아예 읽지 않아, 종전에는 이 모드를
+   * 고르면 입력한 감정가액이 **조용히 버려졌다**(⑧ `transfer-tax-validate-gb-sale.ts`가 같은 축을
+   * 차단한다).
+   *
+   * ⚠️ **섹션 전체를 `blockedReason`으로 덮지 않는다** — 증축 × 구분 기재는 Q-4 확정으로
+   *    **허용**이고(§100② 건물분을 양도시 기준시가 비율로 재분할), 그 계약을 anchor 3건이 고정한다.
+   */
+  const options = hasExtension
+    ? SALE_SPLIT_MODE_OPTIONS.map((o) =>
+        o.value === "appraisal" ? { ...o, disabled: true } : o,
+      )
+    : SALE_SPLIT_MODE_OPTIONS;
+
   if (blockedReason) {
     return (
       <ToneCard tone="emerald" sectionNum={sectionNum} title={SECTION_TITLE}>
@@ -91,11 +108,22 @@ export function GeneralBuildingSaleSplitSection({
           name="gbSaleSplitMode"
           tone="emerald"
           layout="inline"
-          options={SALE_SPLIT_MODE_OPTIONS}
+          options={options}
           value={mode}
           onChange={(v) => onChange(saleSplitModePatch(v) as Partial<AssetForm>)}
         />
       </div>
+
+      {/* inline 레이아웃은 옵션 `hint`를 렌더하지 않으므로 사유를 그룹 아래에 적는다. */}
+      {hasExtension && (
+        <p
+          className="text-caption leading-snug text-amber-800"
+          data-testid="gb-sale-split-appraisal-disabled"
+        >
+          증축이 있는 건물은 <strong>감정평가가액으로 안분</strong>할 수 없습니다 — 감정평가가액은
+          토지·건물 두 값뿐이라 건물분을 본체와 증축분으로 다시 나눌 근거가 없습니다.
+        </p>
+      )}
 
       {mode === "actual" && (
         <div className="space-y-2">

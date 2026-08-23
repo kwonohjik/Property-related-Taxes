@@ -49,13 +49,14 @@ describe("DD-W ④: 일반 경로 payload", () => {
     const r = buildCarryoverPayload(
       makeCarryoverAsset({ donorRelation: "spouse", donorDeceased: true }),
       "2030-05-31",
+      1,
     );
     expect(rec(r?.carryoverTaxation).donorRelation).toBe("spouse");
     expect(rec(r?.carryoverTaxation).donorDeceased).toBe(true);
   });
 
   it("DD-W-02: 미선택·미사망은 전송하지 않는다 (엔진 기본값과 동치)", () => {
-    const r = buildCarryoverPayload(makeCarryoverAsset(), "2030-05-31");
+    const r = buildCarryoverPayload(makeCarryoverAsset(), "2030-05-31", 1);
     expect(rec(r?.carryoverTaxation).donorRelation).toBeUndefined();
     expect(rec(r?.carryoverTaxation).donorDeceased).toBeUndefined();
   });

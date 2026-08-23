@@ -19,6 +19,9 @@ const FIELD_LABEL: Record<string, string> = {
   useEstimatedAcquisition: "환산취득가 사용",
   standardPriceAtAcquisition: "취득시 기준시가",
   standardPriceAtTransfer: "양도시 기준시가",
+  // §166⑥ 일괄양도 안분 키 — 주 자산은 폼-전역, 컴패니언은 자산-수준 전용 필드.
+  // 화면 라벨은 위와 같다(같은 「양도시 기준시가」 칸에서 입력한다).
+  standardPriceAtTransferForApportion: "양도시 기준시가",
 
   // 거주·세대
   residencePeriodMonths: "거주기간",

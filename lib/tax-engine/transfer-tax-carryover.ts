@@ -9,7 +9,6 @@
  * Layer 2 (Pure Engine): DB 직접 호출 없음. 세율 데이터는 매개변수로 주입받음.
  */
 
-import { addYears } from "date-fns";
 import { calculateHoldingPeriod, computeLumpSumDeductionBase } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
@@ -18,7 +17,7 @@ import {
   isBurdenedGiftCarryover,
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
-import { isCarryoverRelationExcluded } from "./carryover-donor-death";
+import { judgeCarryoverEligibility } from "./transfer-tax-carryover-eligibility";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -53,11 +52,8 @@ export interface CalcCarryoverResult {
  */
 const DONOR_CAPEX_EFFECTIVE_DATE = new Date("2024-01-01");
 
-/**
- * 부칙 (2022.12.31. 법률 제19196호) — 10년 룰 시작일.
- * 증여 등기접수일 < 이 날짜이면 5년 룰, 이후이면 10년 룰.
- */
-const TEN_YEAR_RULE_CUTOFF = new Date("2023-01-01");
+// 「10년 룰」 경계 상수(부칙 제19196호 §18)는 판정 leaf
+// `transfer-tax-carryover-eligibility.ts`가 정본이다 — 여기서 따로 두면 두 벌이 된다.
 
 // ============================================================
 // 메인 헬퍼: calcCarryoverScenarios
@@ -96,6 +92,13 @@ export function calcCarryoverScenarios(
     /** 동상 — 12억 초과 고가주택(부분 비과세). `isExempt || isPartialExempt`가 ②2호 요건이다. */
     isPartialExempt?: boolean;
   },
+  /**
+   * §97의2②3호 **세액 비교 결과 강제** — 다건 엔진이 「신고단위 결정세액」으로 비교할 때만 쓴다.
+   * `undefined`면 종전과 동일하게 이 함수가 스스로 A/B를 비교한다.
+   * ⚠️ 앞선 배제(②1호·②2호·③ 기간·관계)는 이 값보다 **우선**한다 — Step 6에만 개입한다.
+   * @see docs/00-pm/transfer-n1-carryover-filing-unit.plan.md
+   */
+  scenarioOverride?: "A" | "B",
 ): CalcCarryoverResult | null {
 
   // ─────────────────────────────────────────────────────────
@@ -111,98 +114,22 @@ export function calcCarryoverScenarios(
   const ct = rawInput.carryoverTaxation;
 
   // ─────────────────────────────────────────────────────────
-  // Step 2a: 가업상속공제 자산 방어코드 (validation에서 이미 차단됨)
-  // ─────────────────────────────────────────────────────────
-  if (ct.exclusionDeclared?.isFamilyBusinessInheritedAsset) {
-    return {
-      detail: {
-        isEligible: false,
-        applicablePeriodYears: 5, // dummy
-        exclusionReason: "family_business",
-        scenarioA: makeEmptyScenarioA(),
-        scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
-        adoptedScenario: "B",
-        comparisonExclusion: false,
-      },
-      adoptedInput: buildInputB(rawInput, ct),
-    };
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // Step 2b: 적용기간 연수 산정 (§97조의2 ③ · 부칙 제19196호 제18조)
+  // Step 2: 적용배제 판정 (§97의2①괄호·②1·2호·③) — **공용 leaf**
   //
-  // ⚠️ 판정보다 **먼저** 계산한다 — 아래 관계 배제도 이 값을 결과에 실어야 하고,
-  //    dummy 값을 넣으면 결과 카드가 「5년 룰」을 잘못 표시한다(2a의 family_business 참조).
+  // 🔑 판정 자체는 `transfer-tax-carryover-eligibility.ts`가 정본이다. 일반건물 부담부증여
+  //    경로(F27)가 단건 엔진을 거치지 않고 같은 판정을 해야 해서 술어를 하나로 뒀다 —
+  //    복사하면 같은 사실관계가 경로에 따라 갈린다.
+  //    여기서는 그 판정 결과를 **이 함수의 반환 모양**(시나리오 B 고정)으로 옮기기만 한다.
   // ─────────────────────────────────────────────────────────
-  const applicablePeriodYears: 5 | 10 =
-    ct.giftRegistryDate < TEN_YEAR_RULE_CUTOFF ? 5 : 10;
+  const eligibility = judgeCarryoverEligibility(ct, rawInput.transferDate);
+  const applicablePeriodYears = eligibility.applicablePeriodYears;
 
-  // ─────────────────────────────────────────────────────────
-  // Step 2b′: 관계 요건 배제 (§97조의2 ① 괄호 — 증여자 사망)
-  //
-  // 기간보다 앞에 둔다. 관계 요건을 못 채우면 애초에 대상 자산이 아니다.
-  // 배우자=「사망으로 혼인관계 소멸」(이혼은 적용) · 직계존비속=「양도 당시 사망」(2025.1.1.~).
-  // ─────────────────────────────────────────────────────────
-  if (isCarryoverRelationExcluded(ct.donorRelation, ct.donorDeceased, ct.giftRegistryDate)) {
+  if (!eligibility.isEligible) {
     return {
       detail: {
         isEligible: false,
         applicablePeriodYears,
-        exclusionReason: "relation_invalid",
-        scenarioA: makeEmptyScenarioA(),
-        scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
-        adoptedScenario: "B",
-        comparisonExclusion: false,
-      },
-      adoptedInput: buildInputB(rawInput, ct),
-    };
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // Step 2b″: 기간 초과 판정 (§97조의2 ③ — 일수 기반 정밀 비교)
-  // ─────────────────────────────────────────────────────────
-  const limitDate = addYears(ct.giftRegistryDate, applicablePeriodYears);
-  const isPeriodExceeded = rawInput.transferDate > limitDate;
-
-  if (isPeriodExceeded) {
-    return {
-      detail: {
-        isEligible: false,
-        applicablePeriodYears,
-        exclusionReason: "period_exceeded",
-        scenarioA: makeEmptyScenarioA(),
-        scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
-        adoptedScenario: "B",
-        comparisonExclusion: false,
-      },
-      adoptedInput: buildInputB(rawInput, ct),
-    };
-  }
-
-  // ─────────────────────────────────────────────────────────
-  // Step 2c: 사용자 선언 적용배제
-  // ─────────────────────────────────────────────────────────
-  if (ct.exclusionDeclared?.expropriationWithin2Years) {
-    return {
-      detail: {
-        isEligible: false,
-        applicablePeriodYears,
-        exclusionReason: "expropriation",
-        scenarioA: makeEmptyScenarioA(),
-        scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
-        adoptedScenario: "B",
-        comparisonExclusion: false,
-      },
-      adoptedInput: buildInputB(rawInput, ct),
-    };
-  }
-
-  if (ct.exclusionDeclared?.oneHouseExemptionApplies) {
-    return {
-      detail: {
-        isEligible: false,
-        applicablePeriodYears,
-        exclusionReason: "one_house_exemption",
+        exclusionReason: eligibility.exclusionReason!,
         scenarioA: makeEmptyScenarioA(),
         scenarioB: makeEmptyScenarioB(ct.giftDateValuation),
         adoptedScenario: "B",
@@ -324,7 +251,7 @@ export function calcCarryoverScenarios(
       ? bgBreakdown.perAsset.land.acquisitionPrice + bgBreakdown.perAsset.building.acquisitionPrice
       : donorAcqPrice;
     return finishScenarios({
-      rawInput, ct, rates, calculateTransferTax,
+      rawInput, ct, rates, calculateTransferTax, scenarioOverride,
       applicablePeriodYears,
       scenarioAIsOneHouse: resultABG.isExempt === true || resultABG.isPartialExempt === true,
       // 표시용 안분 내역 — 채택이 B로 가더라도 A 컬럼이 스스로 설명할 수 있게 한다.
@@ -419,7 +346,7 @@ export function calcCarryoverScenarios(
   const resultA = calculateTransferTax(inputAFinal, rates);
 
   return finishScenarios({
-    rawInput, ct, rates, calculateTransferTax,
+    rawInput, ct, rates, calculateTransferTax, scenarioOverride,
     applicablePeriodYears,
     scenarioAIsOneHouse: resultA.isExempt === true || resultA.isPartialExempt === true,
     inputAFinal,
@@ -459,6 +386,8 @@ function finishScenarios(args: {
     isExempt?: boolean;
     isPartialExempt?: boolean;
   };
+  /** §97의2②3호 비교 결과 강제(다건 신고단위 비교 전용). undefined면 자체 비교. */
+  scenarioOverride?: "A" | "B";
   /** 시나리오 A가 §89①3호 각 목의 주택 양도에 해당하는가 — ②2호 판정의 한쪽 항(D-8). */
   scenarioAIsOneHouse: boolean;
   /** 부담부증여 전용 — 증여세 상당액 안분 내역(표시용). 일반 양도는 undefined. */
@@ -580,10 +509,23 @@ function finishScenarios(args: {
 
   // ─────────────────────────────────────────────────────────
   // Step 6: 비교과세 (§97조의2 ② 3호)
-  // 동률(A === B)이면 A 채택 (단서 조건은 "적은 경우" — 동률은 적용 유지)
   // ─────────────────────────────────────────────────────────
+  /**
+   * 🔑 **비교 단위는 「양도소득 결정세액」(§92③2호)이다 — 신고단위 개념이다.**
+   *
+   * 자산이 1건이면 이 함수가 비교하는 단건 결정세액이 곧 신고 전체의 결정세액이라 그대로 옳다.
+   * **자산이 여러 건이면 그렇지 않다** — A/B 전환은 그 자산의 **세율군까지 바꾸므로**
+   * (A=증여자 취득일 기산 / B=증여 등기접수일 기산) 다른 자산과의 §104⑤ 누진 합산·§102② 통산이
+   * 함께 움직이는데, 단건 비교는 그 효과를 **구조적으로 볼 수 없다**.
+   * 실측: 300 격자 중 7건이 뒤집혔고 **전부 현행 과소**였다(750,000~20,900,000).
+   *
+   * 그래서 다건 엔진은 집계를 A/B 두 번 돌려 비교한 결과를 `scenarioOverride`로 내려보낸다
+   * (`transfer-tax-aggregate-carryover-scope.ts`). 여기서는 **그 값을 그대로 따른다**.
+   *
+   * 동률(A === B)이면 A 채택 — 단서 조건이 「**적은** 경우」라 동률은 적용 유지다.
+   */
   const adoptedScenario: "A" | "B" =
-    determinedTaxA >= determinedTaxB ? "A" : "B";
+    args.scenarioOverride ?? (determinedTaxA >= determinedTaxB ? "A" : "B");
   const comparisonExclusion = adoptedScenario === "B";
 
   // ─────────────────────────────────────────────────────────

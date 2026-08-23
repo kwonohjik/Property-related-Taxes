@@ -497,6 +497,16 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 여기서 막지 않으면 **화면에 없는 값이** §104①8호 +10%p 중과를 붙인다(과대과세).
     // 폼 값 자체는 보존한다 — 토지로 되돌리면 그대로 복귀.
     isNonBusinessLand: primary.assetKind === "land" ? (primary.isNonBusinessLand ?? false) : false,
+    /**
+     * §77 공익수용 감면의 **농어촌특별세 비과세** 판정값(농특세령 §4①1호 괄호).
+     * 감면 항목에 붙어 있는 사실을 **자산 수준**으로 올려 보낸다 — 엔진은 감면 유형이 확정된
+     * 뒤(STEP 8.8·집계 M-8 후)에 이 값을 보므로 감면 payload 안이 아니라 자산 축이 맞다.
+     * 체크하지 않았으면 `undefined`로 둔다(엔진이 「입증되지 않음 = 과세」로 처리한다).
+     */
+    isSelfCultivatedExpropriatedLand:
+      (primary.reductions ?? []).some(
+        (r) => r.type === "public_expropriation" && r.expropriationSelfCultivated === true,
+      ) || undefined,
     isSuccessorRightToMoveIn:
       primary.assetKind === "right_to_move_in"
         ? primary.isSuccessorRightToMoveIn
@@ -697,7 +707,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 배우자등 이월과세 (§97조의2)
     ...(primary.acquisitionCause === "carryover_gift" && primary.carryover
       ? (() => {
-          const payload = buildCarryoverPayload(primary, form.transferDate);
+          const payload = buildCarryoverPayload(primary, form.transferDate, primaryRatio);
           return payload ? { carryoverTaxation: payload.carryoverTaxation } : {};
         })()
       : {}),

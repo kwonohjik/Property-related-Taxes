@@ -17,11 +17,7 @@
 
 import { createElement, Fragment, type ReactNode } from "react";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
-import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
-import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
-import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
 
 /**
  * 엔진 §95③ 12억 초과 안분 STEP formula(문자열)를 Frac 분수 표기로 변환 (PR #746 표준).
@@ -38,370 +34,16 @@ export function prorationFormulaAsFrac(formula: string): ReactNode {
     createElement(Frac, { top: m[2], bottom: m[3] }),
   );
 }
-
-/**
- * propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산.
- *
- * 🔴 **`baseCardId`를 반드시 통과시킨다.** 지분(%) 분할 카드는 `land#0` 꼴이라 정확 비교로는
- *    항상 false가 되어, 이 파일의 산식이 통째로 `undefined`를 돌려준다(= 화면에 산식이 안 뜬다).
- *    2026-08-10 실측 — 규약은 `lib/tax-engine/general-building-share-id.ts`.
- */
-function isLandProp(propertyId: string): boolean {
-  const id = baseCardId(propertyId);
-  return id === "land" || id === "land_business" || id === "land_nbl";
-}
-
-/** propertyId가 원건물에 해당하는지 — 사례 31 `building` · 사례 33 `building1` */
-function isBuildingProp(propertyId: string): boolean {
-  const id = baseCardId(propertyId);
-  return id === "building" || id === "building1";
-}
-
-/** 사례 33 증축분 건물 카드인지. */
-function isBuilding1Prop(propertyId: string): boolean {
-  return baseCardId(propertyId) === "building1";
-}
-
-/** 사례 33 증축분 건물 카드인지 (`building2`). */
-function isBuilding2Prop(propertyId: string): boolean {
-  return baseCardId(propertyId) === "building2";
-}
-
-/**
- * `gb.assetCards`에서 **같은 지분의** 짝 카드를 찾는다.
- *
- * 🔴 base id만 보고 찾으면 지분 0의 건물 카드가 지분 1의 토지 산식에 끌려 들어간다
- *    (일괄 실가 취득가 안분이 대표 사례 — 지분마다 `bundledAcquisitionPrice`가 다르다).
- */
-function findSiblingCard(
-  cards: { propertyId: string; acquisitionPrice: number; transferPrice: number }[],
-  baseId: string,
-  selfPropertyId: string,
-) {
-  return cards.find(
-    (c) => baseCardId(c.propertyId) === baseId && isSameShare(c.propertyId, selfPropertyId),
-  );
-}
-
-// ── 포맷 헬퍼 ────────────────────────────────────────────────────
-
-function fmt(n: number | undefined): string {
-  if (n === undefined || !isFinite(n)) return "-";
-  return n.toLocaleString("ko-KR");
-}
-
-/**
- * 표준 안분 산식 형식 빌더.
- *
- * @param totalValue   분자에 곱해지는 합계 (예: 양도가 330,000,000)
- * @param numerator    분자 (예: 토지 기준시가 339,492,000)
- * @param denomParts   분모 구성 부분 (예: [339,492,000, 12,308,310, 54,501,720])
- * @param resultValue  최종 결과값 (잔액 보정 반영)
- * @returns "330,000,000 × 339,492,000 / (339,492,000+12,308,310+54,501,720) = 275,736,648"
- */
-export function buildAllocationFormula(
-  totalValue: number,
-  numerator: number,
-  denomParts: number[],
-  resultValue: number,
-): string {
-  const denomStr =
-    denomParts.length === 1
-      ? fmt(denomParts[0])
-      : `(${denomParts.map(fmt).join("+")})`;
-  return `${fmt(totalValue)} × ${fmt(numerator)} / ${denomStr} = ${fmt(resultValue)}`;
-}
-
-/** 잔액 보정 안내 — 다중 floor 오차를 잔액으로 흡수하는 마지막 카드 표기 */
-export function buildResidualFormula(
-  totalValue: number,
-  prevSubtractions: { label: string; value: number }[],
-  resultValue: number,
-): string {
-  const prevStr = prevSubtractions.map((p) => `${p.label} ${fmt(p.value)}`).join(" - ");
-  return `${fmt(totalValue)} - ${prevStr} = ${fmt(resultValue)} (잔액 보정)`;
-}
-
-// ── 사례 분기 판정 ────────────────────────────────────────────────
-
-/** 사례 33(증축 있음) 여부 — extensionStdTotal이 채워지면 true */
-function isExtensionCase(gb: GeneralBuildingOutput | undefined): boolean {
-  return !!gb?.extensionStdTotal && gb.extensionStdTotal > 0;
-}
-
-/** 사례 33 일괄 모드(원건물 실가) 여부 — asset의 일괄 취득가가 입력되어 있는가 */
-function isBundledActualCase(asset: AssetForm | undefined): boolean {
-  if (!asset) return false;
-  // 사례 33 일괄 모드 신호: gbHasExtension + !useEstimatedAcquisition
-  return !!asset.gbHasExtension && !asset.useEstimatedAcquisition;
-}
-
-// ── 양도가액 산식 (§166⑥ 안분) ───────────────────────────────────
-
-/**
- * 양도가액 자산별 산식.
- *  - 사례 31: totalTransfer × landStd / (landStd + buildingStd)
- *  - 사례 33: totalTransfer × landStd / (landStd + buildingStd + extensionStd)
- *  - 그 외(사례 27·28·일반 다건): 자산별 직접 입력값 fallback
- */
-export function buildGbTransferFormula(
-  p: PerPropertyBreakdown,
-  gb: GeneralBuildingOutput | undefined,
-  totalTransferPrice: number,
-  burdenedGift?: TransferBurdenedGiftBreakdown,
-): string | undefined {
-  // 부담부증여 §159①2호 분기 (우선 적용) — 자산별 양도가액 = 자산기준시가 × 채무액 / 양도시 보충적평가
-  if (burdenedGift) {
-    const asset = isLandProp(p.propertyId)
-      ? burdenedGift.perAsset.land
-      : isBuildingProp(p.propertyId)
-        ? burdenedGift.perAsset.building
-        : undefined;
-    if (asset) {
-      const debt = burdenedGift.assumedDebtAmount;
-      const max = burdenedGift.sangjeungbeopValuation.max;
-      // 양도가액 = 자산별 양도시 기준시가 × 채무액 / 양도시 보충적평가 (소령 §159①2호)
-      return `양도가액 = 자산기준시가 × 채무액 / 양도시 보충적평가 (소령 §159①2호)\n        = ${fmt(asset.sangjeungbeopValue)} × ${fmt(debt)} / ${fmt(max)}\n        = ${fmt(p.transferPrice)}`;
-    }
-  }
-
-  // 일반건물(사례 31·33) 분기 — gbDetail 존재 시 §166⑥ 안분 산식
-  if (gb && gb.landStdTotal && gb.buildingStdTotal) {
-    const landStd = gb.landStdTotal;
-    const buildingStd = gb.buildingStdTotal;
-    const extStd = gb.extensionStdTotal ?? 0;
-    const denomParts =
-      isExtensionCase(gb) && extStd > 0
-        ? [landStd, buildingStd, extStd]
-        : [landStd, buildingStd];
-
-    if (isLandProp(p.propertyId)) {
-      return buildAllocationFormula(totalTransferPrice, landStd, denomParts, p.transferPrice);
-    }
-    if (isBuildingProp(p.propertyId)) {
-      return buildAllocationFormula(totalTransferPrice, buildingStd, denomParts, p.transferPrice);
-    }
-    if (isBuilding2Prop(p.propertyId)) {
-      // 잔액 보정으로 산정됨 (사례 33)
-      const land = denomParts.length >= 1 ? Math.floor((totalTransferPrice * landStd) / (landStd + buildingStd + extStd)) : 0;
-      const b1 = Math.floor((totalTransferPrice * buildingStd) / (landStd + buildingStd + extStd));
-      return buildResidualFormula(totalTransferPrice, [
-        { label: "토지", value: land },
-        { label: "건물(3001)", value: b1 },
-      ], p.transferPrice);
-    }
-  }
-
-  // 일반 다건(사례 27 분할취득·사례 28 일괄양도 등) fallback —
-  // 자산별 양도가액은 사용자 입력 또는 엔진 안분 결과를 그대로 사용.
-  // 안분 산식이 케이스별로 다양해 단순 입력값 표기로 통일 (검증 가능성 우선).
-  return `자산별 입력 또는 엔진 산정 양도가액 = ${fmt(p.transferPrice)}`;
-}
-
-// ── 취득가액 산식 ─────────────────────────────────────────────────
-
-/**
- * 취득가액 자산별 산식.
- *  - 사례 31 (환산): allocation.land × acqLandStd / landStd  (§176의2②)
- *  - 사례 33 일괄(원건물 실가): bundledAcq × acqLandStd / (acqLandStd + acqBuilding1Std)
- *  - 사례 33 건물2 환산: building2Transfer × acqExtensionStd / extensionStd
- *
- * 사례 33에서 '일괄'·'환산' 분기는 asset.useEstimatedAcquisition + asset.gbHasExtension으로 판정.
- */
-export function buildGbAcquisitionFormula(
-  p: PerPropertyBreakdown,
-  gb: GeneralBuildingOutput | undefined,
-  asset: AssetForm | undefined,
-  burdenedGift?: TransferBurdenedGiftBreakdown,
-): string | undefined {
-  // 부담부증여 §159①1호 분기 (우선 적용) — 자산별 취득가액 = 취득시 자산기준시가 × 채무액 / 증여재산 평가액
-  if (burdenedGift) {
-    const bgAsset = isLandProp(p.propertyId)
-      ? burdenedGift.perAsset.land
-      : isBuildingProp(p.propertyId)
-        ? burdenedGift.perAsset.building
-        : undefined;
-    if (bgAsset) {
-      const debt = burdenedGift.assumedDebtAmount;
-      const giftMax = burdenedGift.giftValuation.max;
-      return `취득가액 = 취득시 자산기준시가 × 채무액 / 증여재산 평가액 (소령 §159①1호 단서 — 기준시가 모드 환산)\n        = ${fmt(bgAsset.stdPriceAtAcquisition)} × ${fmt(debt)} / ${fmt(giftMax)}\n        = ${fmt(p.acquisitionPrice)}`;
-    }
-  }
-
-  // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 자본적지출 합산 산식 표기
-  if (!gb) {
-    if (p.capitalExpenditureForDisplay > 0) {
-      return `취득가액 ${fmt(p.acquisitionPrice)} + 자본적지출 ${fmt(p.capitalExpenditureForDisplay)} = ${fmt(p.acquisitionPrice + p.capitalExpenditureForDisplay)} (신고서 양식: 자본적지출 §97① 가목 합산 표시)`;
-    }
-    return `자산별 취득가액 = ${fmt(p.acquisitionPrice)}`;
-  }
-
-  // 자본적지출은 신고서 양식 표시 관행에 따라 취득가액에 합산되어 표시됨.
-  // 산식은 안분 결과만 표기하고 자본적지출은 별도 메모 처리 (단순화).
-  const displayValue = p.acquisitionPrice + p.capitalExpenditureForDisplay;
-
-  // ── 실가 모드 분기 (사례 35 등 — 환산취득가 미사용, 일괄 실가 안분) ──
-  // bundledActualAcquisitionPrice가 채워져 있으면 실가 모드.
-  // §166⑥ 양도시 기준시가 비율로 일괄 취득가액 안분 → 토지·건물별 취득가.
-  if (
-    gb.bundledActualAcquisitionPrice !== undefined &&
-    !gb.extensionStdTotal &&
-    !gb.acqExtensionStdTotal &&
-    !asset?.useEstimatedAcquisition
-  ) {
-    const bundledAcq = gb.bundledActualAcquisitionPrice;
-    const landStd = gb.landStdTotal;
-    const buildingStd = gb.buildingStdTotal;
-    if (landStd && buildingStd) {
-      if (isLandProp(p.propertyId)) {
-        // 토지 취득가 = 일괄 실가 × 양도시 토지기준시가 / (토지+건물 기준시가)
-        return buildAllocationFormula(bundledAcq, landStd, [landStd, buildingStd], p.acquisitionPrice);
-      }
-      if (isBuildingProp(p.propertyId)) {
-        const landAcq = bundledAcq - p.acquisitionPrice;
-        return buildResidualFormula(bundledAcq, [
-          { label: "토지", value: landAcq },
-        ], p.acquisitionPrice);
-      }
-    }
-  }
-
-  // ── 사례 33 일괄+증축 (원건물 실가) ──────────────────────────
-  if (isExtensionCase(gb) && isBundledActualCase(asset)) {
-    const acqLandStd = gb.acqLandStdTotal;
-    const acqB1Std = gb.acqBuilding1StdTotal;
-    if (!acqLandStd || !acqB1Std) return undefined;
-
-    if (isLandProp(p.propertyId)) {
-      // 토지: bundledAcq × acqLandStd / (acqLandStd + acqB1Std) — 취득시 비율 안분
-      // 짝 카드는 **같은 지분**에서 찾는다 — 지분마다 일괄 취득가가 다르다.
-      const bundledAcq =
-        displayValue +
-        (findSiblingCard(gb.assetCards, "building1", p.propertyId)?.acquisitionPrice ?? 0);
-      return buildAllocationFormula(bundledAcq, acqLandStd, [acqLandStd, acqB1Std], p.acquisitionPrice);
-    }
-    if (isBuilding1Prop(p.propertyId)) {
-      const landAcqCard = gb.assetCards.find(
-        (c) => isLandProp(c.propertyId) && isSameShare(c.propertyId, p.propertyId),
-      );
-      const bundledAcq = (landAcqCard?.acquisitionPrice ?? 0) + p.acquisitionPrice;
-      return buildResidualFormula(bundledAcq, [
-        { label: "토지", value: landAcqCard?.acquisitionPrice ?? 0 },
-      ], p.acquisitionPrice);
-    }
-    if (isBuilding2Prop(p.propertyId)) {
-      const b2TransferCard = findSiblingCard(gb.assetCards, "building2", p.propertyId);
-      const b2Transfer = b2TransferCard?.transferPrice ?? p.transferPrice;
-      const acqExtStd = gb.acqExtensionStdTotal;
-      const extStd = gb.extensionStdTotal;
-      if (!acqExtStd || !extStd) {
-        // 실가 모드 — 직접 입력값
-        return `사용자 직접 입력 (증축 실거래가) = ${fmt(p.acquisitionPrice)}`;
-      }
-      return buildAllocationFormula(b2Transfer, acqExtStd, [extStd], p.acquisitionPrice);
-    }
-  }
-
-  // ── 사례 31 환산취득가 (또는 사례 33 환산 모드) ───────────────
-  const landStd = gb.landStdTotal;
-  const buildingStd = gb.buildingStdTotal;
-  const acqLandStd = gb.acqLandStdTotal;
-  const acqB1Std = gb.acqBuilding1StdTotal;
-
-  if (!landStd || !buildingStd || !acqLandStd || !acqB1Std) return undefined;
-
-  if (isLandProp(p.propertyId)) {
-    return buildAllocationFormula(p.transferPrice, acqLandStd, [landStd], p.acquisitionPrice);
-  }
-  if (isBuildingProp(p.propertyId)) {
-    return buildAllocationFormula(p.transferPrice, acqB1Std, [buildingStd], p.acquisitionPrice);
-  }
-  if (isBuilding2Prop(p.propertyId)) {
-    const acqExtStd = gb.acqExtensionStdTotal;
-    const extStd = gb.extensionStdTotal;
-    if (!acqExtStd || !extStd) {
-      return `사용자 직접 입력 (증축 실거래가) = ${fmt(p.acquisitionPrice)}`;
-    }
-    return buildAllocationFormula(p.transferPrice, acqExtStd, [extStd], p.acquisitionPrice);
-  }
-  return undefined;
-}
-
-// ── 필요경비 산식 (개산공제 §163⑥) ─────────────────────────────────
-
-/**
- * 필요경비 자산별 산식 — 개산공제 = 취득시 기준시가 × 3%.
- * 자본적지출은 신고서 양식 표시 관행에 따라 취득가액에 흡수되어 본 행에는 양도비만 남음.
- */
-export function buildGbExpenseFormula(
-  p: PerPropertyBreakdown,
-  gb: GeneralBuildingOutput | undefined,
-  burdenedGift?: TransferBurdenedGiftBreakdown,
-): string | undefined {
-  // 부담부증여 §163⑥ 분기 — 자산별 개산공제 = 안분 취득가액 × 3%
-  if (burdenedGift) {
-    const bgAsset = isLandProp(p.propertyId)
-      ? burdenedGift.perAsset.land
-      : isBuildingProp(p.propertyId)
-        ? burdenedGift.perAsset.building
-        : undefined;
-    if (bgAsset) {
-      return `필요경비 = 안분 취득가액 × 3% (개산공제, 소령 §163⑥)\n        = ${fmt(bgAsset.acquisitionPrice)} × 0.03\n        = ${fmt(bgAsset.estimatedDeduction)}`;
-    }
-  }
-
-  const displayExp = Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
-
-  // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 양도비만 표기
-  if (!gb) {
-    if (p.capitalExpenditureForDisplay > 0) {
-      return `필요경비 ${fmt(p.necessaryExpense)} − 자본적지출 ${fmt(p.capitalExpenditureForDisplay)}(취득가액 흡수) = 양도비 ${fmt(displayExp)}`;
-    }
-    return `자산별 양도비 합계 = ${fmt(displayExp)} (§97① 나목)`;
-  }
-
-  // ── 실가 모드 분기 (사례 35 등) — §166⑥ 양도가 비율로 일괄 실가 양도비 안분 ──
-  const isActualBundledMode =
-    gb.bundledActualAcquisitionPrice !== undefined &&
-    !gb.extensionStdTotal &&
-    !gb.acqExtensionStdTotal;
-  if (isActualBundledMode) {
-    const totalExp = gb.bundledActualExpenses ?? 0;
-    if (totalExp <= 0 && displayExp <= 0) {
-      return `자산별 양도비 = 0 (입력 없음)`;
-    }
-    if (isLandProp(p.propertyId)) {
-      const landStd = gb.landStdTotal;
-      const buildingStd = gb.buildingStdTotal;
-      if (landStd && buildingStd) {
-        return buildAllocationFormula(totalExp, landStd, [landStd, buildingStd], displayExp);
-      }
-    }
-    if (isBuildingProp(p.propertyId)) {
-      return buildResidualFormula(totalExp, [
-        { label: "토지", value: totalExp - displayExp },
-      ], displayExp);
-    }
-    return `자산별 양도비 = ${fmt(displayExp)}`;
-  }
-
-  if (isLandProp(p.propertyId)) {
-    if (!gb.acqLandStdTotal) return undefined;
-    // base는 엔진 echo(지분 기준시가) 우선 — 100% 값을 쓰면 지분 자산에서 산식이 값을 못 만든다.
-    return `취득시 토지기준시가 ${fmt(gb.estimatedDeduction?.landBase ?? gb.acqLandStdTotal)} × 3% = ${fmt(displayExp)}`;
-  }
-  if (isBuildingProp(p.propertyId)) {
-    if (!gb.acqBuilding1StdTotal) return undefined;
-    return `취득시 건물기준시가 ${fmt(gb.estimatedDeduction?.buildingBase ?? gb.acqBuilding1StdTotal)} × 3% = ${fmt(displayExp)}`;
-  }
-  if (isBuilding2Prop(p.propertyId)) {
-    if (!gb.acqExtensionStdTotal) {
-      return `사용자 직접 입력 (증축 실제 필요경비) = ${fmt(displayExp)}`;
-    }
-    return `취득시 증축건물기준시가 ${fmt(gb.acqExtensionStdTotal)} × 3% = ${fmt(displayExp)}`;
-  }
-  return undefined;
-}
+// ── 일반건물(GB) 파트별 산식 — `DetailedStatementGbFormulas.ts`로 분리 (800줄 정책) ───
+// 재-export: 종전 이 파일에서 import하던 소비자(테스트 포함)가 깨지지 않게 한다.
+export {
+  buildAllocationFormula,
+  buildResidualFormula,
+  buildGbTransferFormula,
+  buildGbAcquisitionFormula,
+  buildGbExpenseFormula,
+} from "./DetailedStatementGbFormulas";
+import { fmt } from "./DetailedStatementGbFormulas";
 
 // ── 단순 산식 (자산별 동일 산식) ──────────────────────────────────
 
@@ -542,8 +184,17 @@ export function buildSurtaxAndLocalTaxItems(
   items: Map<string, StatementItem>,
   result: TransferTaxResult,
   totalPenalty: number,
+  /**
+   * 집계(다건·일괄) 모드의 농어촌특별세 — 엔진 2-pass 산정 합계(`aggregated.ruralSurtax`).
+   *
+   * 집계 어댑터(`aggregateToFilingResult`)는 단건 detail(`new993Detail` 등)을 담지 않아
+   * `incomeDeductionRuralSurtax(result)`가 항상 0이 된다. 같은 화면의 신고서 표는
+   * `aggregated.ruralSurtax`를 싣고 `aggregated.totalTax`에도 합산돼 있으므로,
+   * 넘기지 않으면 명세서만 0으로 어긋난다. 단건은 `undefined`(종전 동작).
+   */
+  aggregateRuralSurtax?: number,
 ): void {
-  const ruralSurtaxValue = incomeDeductionRuralSurtax(result);
+  const ruralSurtaxValue = aggregateRuralSurtax ?? incomeDeductionRuralSurtax(result);
   items.set("ruralSurtax", {
     label: "농어촌특별세",
     value: ruralSurtaxValue,
@@ -676,14 +327,24 @@ export function buildAcquisitionPriceFormula(
     const estBase = (result.estimatedBase ?? 0).toLocaleString();
     const stdAcq = result.estimatedStdPriceAtAcquisition;
     const stdTransfer = result.estimatedStdPriceAtTransfer;
+    /**
+     * §97② 2호 단서 swap 채택 시 **이 금액은 양도차익에서 차감되지 않는다**
+     * (필요경비 전체가 나목 = 자본적지출 + 양도비. `transfer-tax-helpers.ts` `swap_to_direct`).
+     * 고지가 없으면 취득가액·필요경비·양도차익 세 행이 나란히 놓였을 때 산술이 안 맞아 보인다
+     * (실측: 10억 − 1억 − 4억 = 5억인데 양도차익은 6억). 양도차익 산식 자체는 엔진 step이
+     * 「양도가 − 필요경비」로 정확히 적고 있으므로, 여기서는 **차감 제외 사실만** 덧붙인다.
+     */
+    const swapNote = result.swapApplied
+      ? " ※ §97②2호 단서 적용 — 이 금액은 차감되지 않습니다(필요경비 전체가 자본적지출+양도비)"
+      : "";
     return stdAcq != null && stdTransfer != null
       ? estFrac(
           `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
           stdAcq,
           stdTransfer,
-          `${capExStr} — 시행령 §163·§176의2②`,
+          `${capExStr} — 시행령 §163·§176의2②${swapNote}`,
         )
-      : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2`;
+      : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2${swapNote}`;
   }
   return `취득가액 ${(singleAcq - capEx).toLocaleString()}${capExStr} (실제 거래가액)`;
 }

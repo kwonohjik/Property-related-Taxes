@@ -84,8 +84,11 @@ export function buildGiftBurdenedTransferBody(
   // ─── A. 증여세가 이미 보유 → 변환 전달 ───
 
   // 채무인수액 → 양도가액 (소득세법 §88: 부담부증여 양도가액 = 수증자 채무인수액)
-  // assumedDebtForGift: §47① 수증자 실제 인수 채무액 → §159 안분 전 양도가액 총액
-  // leaseDeposit·mortgageAmount: §66 평가 하한 목적 별개 필드 (부담부증여 양도가액과 무관)
+  // assumedDebtForGift: §47① 수증자 실제 인수 채무액 → body.transferPrice(placeholder)
+  // leaseDeposit·mortgageAmount: 증여세 폼에서는 §66 평가 하한(담보·임대) 목적으로 입력받지만,
+  //   아래 burdenedGiftInfo에서 lendingDepositTotal·mortgageDebtAmount 슬롯으로 실려 엔진 §159의
+  //   **양도가액 B**가 된다 — 「양도가액과 무관」이라던 종전 주석은 오기다(F26 실측).
+  //   두 축의 일치는 ⑧ C-4b가 강제한다(`components/calc/gift-tax-form-validate.ts`).
   const assumedDebtForGift = item.assumedDebtForGift ?? 0;
   const burdenedGiftTransferPrice = assumedDebtForGift; // §159 양도가액 B = 채무인수총액
   const leaseDeposit = item.leaseDeposit ?? 0;
@@ -121,8 +124,16 @@ export function buildGiftBurdenedTransferBody(
 
   // mortgageSetAmount: MVP에서 설정액 = 인수액 동일 가정.
   // 저당권 설정액(대출한도)과 실제 채권액(인수액)이 다른 경우는 Phase 2 별도 입력 필드 예정.
-  // MVP는 sangjeungbeop_standard 단일 모드이며 일부인수는 validate에서 차단하므로
-  // 자동 가정의 영향 범위가 제한적 (단일진실: validate ⑧이 leaseDeposit+mortgageAmount 일치 강제).
+  //
+  // 🔴 2026-08 정정 (코드리뷰 F26): 종전 주석은 「MVP는 sangjeungbeop_standard 단일 모드」·
+  //    「일부인수는 validate에서 차단」이라고 적었는데 **둘 다 사실이 아니었다** —
+  //    valuationMode는 K-4/K-5(sangjeungbeop_market)까지 분기하고(:97-98),
+  //    ⑧(`components/calc/gift-tax-form-validate.ts`)은 그때 `assumedDebtForGift > 0`만 보았다.
+  //    그 결과 §47① 인수채무액과 아래 두 칸(leaseDeposit·mortgageAmount)이 어긋나도 통과했고,
+  //    엔진 §159의 양도가액 B는 **두 칸의 합**이라 세액이 조용히 0원이 되거나 과대해졌다.
+  //    ⇒ ⑧에 C-4b 불일치 차단을 신설했다(`review-2026-08-f26.test.ts`). 아래 두 칸은 여전히
+  //    §66 평가(담보·임대 하한)와 §159 양도가액을 **겸용**하므로, 그 겸용을 푸는 축 신설은
+  //    별도 PR 범위다(설계상 「일부 인수」 비범위).
   const mortgageSetAmount = mortgageAmount;
 
   // 증여세 side에서 오는 부담부증여 정보

@@ -32,6 +32,8 @@ export function getStandaloneDefault(type: StandaloneReductionType): AssetReduct
     return {
       type: "gb_designated_land",
       gbBranch: "in_zone",
+      // 3-state 미선택 — §17(토지만)과 §20(토지등)은 대상 범위가 달라 어느 쪽도 안전한 기본값이 아니다.
+      gbPurchaseRoute: "",
       gbDesignationDate: "",
       gbTriggerDate: "",
       gbReleasedDate: "",

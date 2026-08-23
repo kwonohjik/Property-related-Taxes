@@ -68,6 +68,9 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     // 지분 모드(같은 물건 분할취득) 여부 — companion ① 기본정보 UI 숨김 대응.
     const fullFractional = isFullFractionalBundle(form.assets);
     const primaryAsset = form.assets[0];
+    // 일반건물 × 지분 분할 — ④가 `generalBuildingShares` 전용 배열을 보내고 `companionAssets`를
+    // 아예 만들지 않는 경로(`transfer-tax-api.ts:672`). companion 축 가드·병합 양쪽이 이 술어를 쓴다.
+    const isGbFractional = fullFractional && primaryAsset?.assetKind === "general_building";
 
     // 지분 모드 미지원 조합 차단 — 지분별 안분 UI 부재 또는 양도가액 모델 비양립.
     if (fullFractional && primaryAsset) {
@@ -142,6 +145,38 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
           });
         }
       }
+
+      /**
+       * 컴패니언 **매매사례가액 추계**(소득세법 시행령 제176조의2 제3항 제1호) 차단 —
+       * ⑧↔⑩ 모순 해소 (2026-08 코드리뷰 F41).
+       *
+       * ⑩ `companionAssetSchema`(`transfer-tax-schema-sub.ts:286~`)에는 `acquisitionMethod`·
+       * `similarSalesValue`가 **없다**. 그래서 ④ `buildAssetPayload`도 그 값을 담지 않고,
+       * companion superRefine(`transfer-tax-schema.ts:600~626`)이 매매(실가)로 보아
+       * `fixedAcquisitionPrice`를 요구한다 — 실측 400:
+       *   {"companionAssets.0.fixedAcquisitionPrice":["매매(실가) 시 취득가액 필수"]}
+       * 그런데 ⑧(`transfer-tax-validate-asset.ts:331~333`)은 `similarSalesValue`만 있으면
+       * 통과시킨다. 사용자는 **화면에 없는 「취득가액」**을 요구받은 채 계산을 끝낼 수 없다.
+       * 다물건 계산기와 같은 「침묵 오산보다 명시 차단」 정책을 여기에도 둔다.
+       *
+       * ⚠️ 술어는 **컴패니언(`i > 0`)만** 본다. primary의 매매사례가액은 `transfer-tax-api.ts:361`이
+       *    정상 배관하고(`__tests__/lib/calc/transfer-sales-case-wiring.test.ts`) Zod도 통과한다(실측)
+       *    — `some()`으로 전 자산을 보면 **지원되는 조합까지** 막힌다.
+       *
+       * ⚠️ 일반건물 지분 분할은 제외한다 — ④가 `companionAssets`를 아예 만들지 않아 위 400이
+       *    나지 않고(실측 parse ok), 일반건물의 추계 축은 파트별 `landAcqMode`/`buildingAcqMode`라
+       *    자산-수준 플래그와 축 자체가 다르다.
+       */
+      if (!isGbFractional) {
+        for (let i = 1; i < form.assets.length; i++) {
+          if (form.assets[i].isSalesCaseAcquisition !== true) continue;
+          issues.push({
+            step,
+            assetIndex: i,
+            message: `자산 ${i + 1}: 매매사례가액 추계(소득세법 시행령 제176조의2 제3항 제1호)는 첫 번째 자산에서만 계산할 수 있습니다. 함께 양도 토글을 끄고 단건으로 계산하거나, 이 자산의 취득가액 산정 방식을 실지거래가액·환산·감정가액 중에서 선택하세요.`,
+          });
+        }
+      }
     }
 
     // 자산별 검증 — 자산당 첫 오류 1건씩 일괄 수집.
@@ -153,7 +188,6 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     //    `mergePrimaryBasic`의 7키만으로는 「자산 2: 토지면적을 입력하세요」가 뜬다 —
     //    화면에 칸이 없는데 입력하라는 **UI 통과 ↔ validate 차단 모순**이다(CLAUDE.md ⑧).
     //    ④ API 변환과 **같은 함수**를 쓴다(단일 소스 — 목록이 갈리면 한쪽만 통과한다).
-    const isGbFractional = fullFractional && primaryAsset?.assetKind === "general_building";
     for (let i = 0; i < form.assets.length; i++) {
       const entry =
         fullFractional && i > 0 && primaryAsset

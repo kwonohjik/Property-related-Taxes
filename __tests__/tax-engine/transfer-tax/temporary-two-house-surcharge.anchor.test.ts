@@ -145,8 +145,15 @@ describe("Phase B — §167의10①15호 일시적 2주택 중과 배제", () =>
     const r = calc({ newAcq: "2025-01-01", transfer: "2026-06-01" });
     expect(r.multiHouseSurchargeDetail!.exclusionReasons[0].type).toBe("temporary_two_house");
     expect(r.surchargeType).toBeUndefined();
-    expect(r.calculatedTax).toBe(147_780_000); // 현행(배관 미도달) 284,910,000 — 차액 137,130,000
-    expect(r.totalTax).toBe(162_558_000);
+    // 🔁 2026-08-13 기대값 갱신 (F10) — 종전 147,780,000 / 162,558,000.
+    //   이 anchor의 주제는 **§167의10①15호 중과 배제**이고, 세액 숫자는 작성 당시의 장특공제
+    //   (표1 8년×2% = 16%)에서 파생된 값이었다. §155① 의제 1세대1주택은 「소득세법 시행령」
+    //   §159의4에 따라 **표2 대상**이므로(같은 조 괄호가 「제155조 … 에 따라 1세대 1주택으로
+    //   보는 주택을 포함한다」) 12억 초과 과세분 장특은 보유 8년×4% + 거주 3년×4% = 44%다.
+    //   과세표준 434,300,000 → 288,700,000 으로 줄어 산출세액이 89,766,000이 된다.
+    //   중과 배제 판정(exclusionReasons·surchargeType)은 그대로이므로 anchor의 주제는 불변이다.
+    expect(r.calculatedTax).toBe(89_766_000);
+    expect(r.totalTax).toBe(98_742_600);
   });
 
   it("T-B2 🔴 N2 (新 2020-06-01 · 양 2022-01-01 · 조정) → 「비과세 O / 중과배제 X」 소멸", () => {
@@ -155,7 +162,8 @@ describe("Phase B — §167의10①15호 일시적 2주택 중과 배제", () =>
     const r = calc({ newAcq: "2020-06-01", transfer: "2022-01-01" });
     expect(r.exemptReason).toBe("일시적 2주택 고가주택"); // §155① 의제 성립
     expect(r.multiHouseSurchargeDetail!.exclusionReasons[0].type).toBe("temporary_two_house");
-    expect(r.calculatedTax).toBe(168_580_000); // 현행 284,910,000 — 차액 116,330,000
+    // 🔁 2026-08-13 기대값 갱신 (F10) — 종전 168,580,000. 위와 같은 이유(표1 6% → 표2 24%).
+    expect(r.calculatedTax).toBe(131_140_000);
   });
 
   it("T-B3 N4 (新 2015-01-01 — 기한 초과) → 배제 없음 · 중과 유지 (회귀)", () => {
@@ -168,7 +176,9 @@ describe("Phase B — §167의10①15호 일시적 2주택 중과 배제", () =>
   it("T-B4 N5 (비조정) → 중과 대상 아님 (회귀)", () => {
     const r = calc({ newAcq: "2025-01-01", transfer: "2026-06-01", region: "26110" });
     expect(r.surchargeType).toBeUndefined();
-    expect(r.calculatedTax).toBe(147_780_000);
+    // 🔁 2026-08-13 기대값 갱신 (F10) — 종전 147,780,000. 비조정이라 중과는 애초에 없고,
+    //    바뀐 것은 §159의4 표2 적용(16% → 44%)뿐이다.
+    expect(r.calculatedTax).toBe(89_766_000);
   });
 
   it("T-B5 N6 (양 2026-05-09 · 유예 활성) → **배제가 먼저** — 세액 불변, 경로 변경", () => {
@@ -177,7 +187,9 @@ describe("Phase B — §167의10①15호 일시적 2주택 중과 배제", () =>
     const r = calc({ newAcq: "2025-01-01", transfer: "2026-05-09", suspensionActive: true });
     expect(r.multiHouseSurchargeDetail!.exclusionReasons[0].type).toBe("temporary_two_house");
     expect(r.isSurchargeSuspended).toBe(false);
-    expect(r.calculatedTax).toBe(147_780_000); // 현행 유예 경로와 **동일 세액**
+    // 🔁 2026-08-13 기대값 갱신 (F10) — 종전 147,780,000. 「배제 경로 ↔ 유예 경로 동일 세액」이라는
+    //    이 케이스의 논지는 유지된다(둘 다 중과 미적용 + 표2). 절대값만 표2 반영으로 이동.
+    expect(r.calculatedTax).toBe(89_766_000);
   });
 
   it("T-B5b 유예 활성 + 의제 미성립 → 유예 경로 유지 (회귀)", () => {

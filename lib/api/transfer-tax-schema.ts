@@ -48,6 +48,7 @@ export {
   commercialAppurtenantLandSchema,
 } from "./transfer-tax-building-schemas";
 export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-building-schemas";
+import { addCompanionAcquisitionCauseRefines } from "./transfer-tax-schema-companion-refines";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
 // 정의는 `./transfer-tax-building-schemas.ts` 참조.
@@ -132,6 +133,11 @@ const propertyBaseShape = {
   regionCode: z.string().length(10).optional(),
   isUnregistered: z.boolean(),
   isNonBusinessLand: z.boolean(),
+  /**
+   * ⑫ §77 공익수용 감면의 농어촌특별세 비과세 판정(농특세령 §4①1호 「직접 경작한 토지」 한정).
+   * 없으면 엔진이 「입증되지 않음 = 과세」로 처리한다.
+   */
+  isSelfCultivatedExpropriatedLand: z.boolean().optional(),
   isSuccessorRightToMoveIn: z.boolean().optional(),
   isOneHousehold: z.boolean(),
   temporaryTwoHouse: temporaryTwoHouseSchema.optional(),
@@ -362,6 +368,17 @@ const propertyBaseShape = {
     /** §97의2① 관계요건 — 증여자 사망 배제 판정축 */
     donorRelation: z.enum(["spouse", "lineal", "other"]).optional(),
     donorDeceased: z.boolean().optional(),
+    /**
+     * 환산 모드 분자 — 증여자 취득 당시 기준시가 (설계 D9-8).
+     * `carryoverTaxationEngineShape`와 **필드·타입 11개 전부 일치**를 유지해야 한다(V-5).
+     *
+     * ⚠️ 단건(비-GB) 경로에서는 **현재 아무도 읽지 않는다** — 유일한 소비자가
+     *    `general-building-valuation.ts`의 `applyCarryoverEstimationBasis`이고,
+     *    단건은 최상위 `standardPriceAtAcquisition/Transfer`(`transfer-tax-api-carryover.ts`
+     *    `topLevelOverrides`)로 환산한다. parity 유지 + 향후 침묵 strip 방지용이다
+     *    (mutation 실측: 이 줄을 지워도 `__tests__/api`·`calc`·`tax-engine/transfer` 3,040건 전건 green).
+     */
+    donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
     exclusionDeclared: z.object({
       expropriationWithin2Years: z.boolean().optional(),
       oneHouseExemptionApplies: z.boolean().optional(),
@@ -582,84 +599,33 @@ export const propertySchema = z
             message: "apportioned 모드: 주 자산의 양도시점 기준시가 필수",
           });
         }
-        // 컴패니언도 지분 모드(totalPropertyTransferPrice 설정됨)면 standardPriceAtTransfer 면제
+        // 컴패니언도 지분 모드(totalPropertyTransferPrice 설정됨)면 안분 키 면제
         for (let i = 0; i < companions.length; i++) {
           const c = companions[i];
           const isFractionalCompanion = c.totalPropertyTransferPrice !== undefined;
-          if (!isFractionalCompanion && (!c.standardPriceAtTransfer || c.standardPriceAtTransfer! <= 0)) {
+          /**
+           * §166⑥ 안분 키 — **실제로 안분에 쓰이는 값**을 그대로 본다
+           * (`bundled-split-helpers.ts` `prepareBundledApportionment`의 키 선택식과 동일).
+           *
+           * 🔑 전용 키(`standardPriceAtTransferForApportion`)를 우선한다. 이월과세 general
+           *    환산 컴패니언에서 `standardPriceAtTransfer`는 ④가 **증여자** 기준시가로
+           *    덮어쓰는 칸이라 사용자 입력 여부를 대변하지 못한다(D-5·V-10).
+           *    구필드 fallback은 전용 키를 모르는 직접 호출자 하위호환이다.
+           */
+          const apportionKey =
+            c.standardPriceAtTransferForApportion ?? c.standardPriceAtTransfer;
+          if (!isFractionalCompanion && (!apportionKey || apportionKey <= 0)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
-              path: ["companionAssets", i, "standardPriceAtTransfer"],
+              path: ["companionAssets", i, "standardPriceAtTransferForApportion"],
               message: "apportioned 모드: 양도시 기준시가 필수",
             });
           }
         }
       }
 
-      // ── 컴패니언별 acquisitionCause 검증 ──
-      for (let i = 0; i < companions.length; i++) {
-        const c = companions[i];
-        if (c.acquisitionCause === "purchase") {
-          if (c.useEstimatedAcquisition) {
-            if (!c.standardPriceAtAcquisition || c.standardPriceAtAcquisition <= 0) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ["companionAssets", i, "standardPriceAtAcquisition"],
-                message: "매매(환산) 시 취득시 기준시가 필수",
-              });
-            }
-            if (!c.standardPriceAtTransfer || c.standardPriceAtTransfer <= 0) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ["companionAssets", i, "standardPriceAtTransfer"],
-                message: "매매(환산) 시 양도시 기준시가 필수",
-              });
-            }
-          } else {
-            if (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ["companionAssets", i, "fixedAcquisitionPrice"],
-                message: "매매(실가) 시 취득가액 필수",
-              });
-            }
-          }
-          if (!c.acquisitionDate) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["companionAssets", i, "acquisitionDate"],
-              message: "매매 자산은 취득일 필수",
-            });
-          }
-        } else if (c.acquisitionCause === "gift") {
-          if (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["companionAssets", i, "fixedAcquisitionPrice"],
-              message: "증여 자산은 신고가액(취득가액) 필수",
-            });
-          }
-          // 증여자 취득일은 **필수가 아니다** — 단순 증여의 세율 보유기간은 「증여받은 날」부터
-          // (§104② 본문 + 영 §162①5호). §104②2호는 이월과세에만 적용된다.
-          // UI validate와 기준이 어긋나면 「UI 통과 ↔ API 400」 모순이 된다(14지점 ⑧·⑩).
-          if (!c.acquisitionDate) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["companionAssets", i, "acquisitionDate"],
-              message: "증여 자산은 증여일 필수",
-            });
-          }
-        } else if (c.acquisitionCause === "inheritance") {
-          // P2c: 상속 취득가액은 inheritanceValuation(신고가액) 경로로 항상 전송 (manual/fixedAcquisitionPrice 폐기).
-          if (!c.decedentAcquisitionDate) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["companionAssets", i, "decedentAcquisitionDate"],
-              message: "상속 자산은 피상속인 취득일 필수",
-            });
-          }
-        }
-      }
+      // ── 컴패니언별 acquisitionCause 검증 — 별도 파일로 분리 (800줄 정책, F16) ──
+      addCompanionAcquisitionCauseRefines(companions, data.transferDate, ctx);
 
       // assetId 중복 금지
       const ids = companions.map((a) => a.assetId);

@@ -13,6 +13,8 @@
  *     ※ rentalHousingExceptionDetail(임대주택 비과세 §155⑳)과 별개
  *   - rental97LthdDetail          — §97의3 장기보유특별공제 특례 (Phase 2)
  *   - rental97TaxDetail           — §97·§97의2·§97의5 세액감면 (Phase 2)
+ *   - usageConversionDetail       — 비주택→주택 용도변경 LTHD (소득세법 §95⑤·⑥)
+ *     ※ 감면은 아니지만 LTHD가 낳는 echo라 `rental97LthdDetail`과 같은 계약에 실린다.
  */
 
 import type { TransferReductionDetailSource } from "@/lib/tax-engine/types/transfer-result.types";
@@ -32,6 +34,7 @@ import {
 } from "./TransferReductionRows";
 import { ReplacementLand77_2DetailCard } from "./ReplacementLand77_2DetailCard";
 import { GbDesignatedLand77_3DetailCard } from "./GbDesignatedLand77_3DetailCard";
+import { UsageConversionDetailCard } from "./UsageConversionDetailCard";
 
 interface Props {
   /**
@@ -47,10 +50,33 @@ interface Props {
    */
   calculatedTax: number;
   taxBase: number;
+  /**
+   * 장기보유특별공제 총액 — §95⑤ 용도변경 카드(`UsageConversionDetailCard`)의 머리글 값.
+   *
+   * ⚠️ `calculatedTax`·`taxBase`와 같은 이유로 **명시 prop**이다. 계약 타입
+   * `TransferReductionDetailSource`에는 `longTermHoldingDeduction`이 없고(감면 detail만 모은
+   * Pick), 일괄·다건에서는 자산별 값(`breakdown.longTermHoldingDeduction`)이라 의미가 다르다.
+   * 필수로 둬야 호출부 누락이 컴파일 에러로 드러난다(침묵 누락 방지).
+   */
+  longTermHoldingDeduction: number;
+  /**
+   * 다건(multi) 결과뷰 전용 — §77·§77의2·§77의3 카드에서 ⑤ 감면세액·capping을 숨기고
+   * ①~④ 구성만 보인다. 최종 감면세액은 조특법 §133 **합산 재계산 카드**가 낸다.
+   *
+   * 단건·일괄(bundled)은 기본값 `false` — 자산별 산출세액·과세표준으로 ⑤까지 표시한다.
+   */
+  aggregatedContext?: boolean;
 }
 
-export function ReductionDetailCards({ result, calculatedTax, taxBase }: Props) {
+export function ReductionDetailCards({
+  result,
+  calculatedTax,
+  taxBase,
+  longTermHoldingDeduction,
+  aggregatedContext = false,
+}: Props) {
   const hasAny =
+    !!result.usageConversionDetail ||
     !!result.selfFarmingReductionDetail ||
     !!result.inheritedAcquisitionDetail ||
     !!result.inheritedHouseValuationDetail ||
@@ -81,6 +107,14 @@ export function ReductionDetailCards({ result, calculatedTax, taxBase }: Props) 
 
   return (
     <>
+      {/* 비주택 → 주택 용도변경 §95⑤·⑥ — 보유분이 표1+표2로 나뉜 근거.
+          미적용(토글 없음·2025-01-01 전 양도·표2 대상 아님)이면 필드 자체가 없다. */}
+      {result.usageConversionDetail && (
+        <UsageConversionDetailCard
+          detail={result.usageConversionDetail}
+          deduction={longTermHoldingDeduction}
+        />
+      )}
       {result.selfFarmingReductionDetail && (
         <SelfFarmingReductionDetailCard detail={result.selfFarmingReductionDetail} />
       )}
@@ -154,6 +188,7 @@ export function ReductionDetailCards({ result, calculatedTax, taxBase }: Props) 
           detail={result.publicExpropriationDetail}
           calculatedTax={calculatedTax}
           taxBase={taxBase}
+          aggregatedContext={aggregatedContext}
         />
       )}
       {result.replacementLandDetail && (
@@ -161,6 +196,7 @@ export function ReductionDetailCards({ result, calculatedTax, taxBase }: Props) 
           detail={result.replacementLandDetail}
           calculatedTax={calculatedTax}
           taxBase={taxBase}
+          aggregatedContext={aggregatedContext}
         />
       )}
       {result.gbDesignatedLandDetail && (
@@ -168,6 +204,7 @@ export function ReductionDetailCards({ result, calculatedTax, taxBase }: Props) 
           detail={result.gbDesignatedLandDetail}
           calculatedTax={calculatedTax}
           taxBase={taxBase}
+          aggregatedContext={aggregatedContext}
         />
       )}
       {/* P5 모드 2 — 보유 감면주택 주택수 제외 (2026-06-12 리뷰 H-2) */}

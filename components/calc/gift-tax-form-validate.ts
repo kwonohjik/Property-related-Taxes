@@ -177,6 +177,26 @@ export function validateStep(step: number, form: FormState): string | null {
       if (assumedDebt <= 0) {
         return `${itemLabel}: 수증자 인수 채무액(§47①)을 입력하세요. 채무인수가 있어야 양도소득세가 발생합니다. "양도소득세 함께 계산" 토글을 끄거나 채무액을 입력하세요.`;
       }
+
+      // C-4b: §47① 인수채무액 ↔ 임대보증금·저당권 채무액 **불일치 차단** (2026-08 코드리뷰 F26).
+      //
+      // ④ buildGiftBurdenedTransferBody(:154-155)는 leaseDeposit·mortgageAmount를 엔진 §159
+      // 양도가액 B 슬롯(lendingDepositTotal·mortgageDebtAmount)에 그대로 싣고, 엔진은 그 합을
+      // 채무비율 분자로 쓴다(burdened-gift-valuation.ts computeDebtRatio). 그런데 증여세 폼에서
+      // 그 두 칸은 §66 평가 하한 목적이고 실제 인수채무는 assumedDebtForGift(§47①)라 축이 다르다.
+      // 두 축이 어긋나면 **화면 경고 없이 세액이 틀린다** — 실측(공시가 8억·취득시 기준시가 4억·
+      // 취득 2009-06-01·증여 2024-03-01):
+      //   · §47① 5억 + 두 칸 공란       → B=0        → 결정세액 0원 (정답 45,458,000 전액 소실)
+      //   · §47① 3억 + 두 칸 합계 5억   → B=5억      → 45,458,000 (정답 20,351,000 · 25,107,000 과대)
+      //
+      // 엔진 슬롯의 의미는 바꿀 수 없다 — 양도세 마법사 자체 경로(transfer-tax-api-burdened-gift.ts:107-108)와
+      // §47③ 초과부담부 차단(burdened-gift-eligibility.ts:56-57)이 같은 슬롯을 인수채무로 쓰고 있고,
+      // 엔진 anchor 다수가 현행 산식을 고정한다. ⇒ 두 축이 같은 값이 되도록 ⑧에서 강제한다
+      // (자동 보정 금지 — 미입력·불일치는 차단이 이 저장소의 정답).
+      const bgDebtDetail = (bgItem.leaseDeposit ?? 0) + (bgItem.mortgageAmount ?? 0);
+      if (bgDebtDetail !== assumedDebt) {
+        return `${itemLabel}: 수증자 인수 채무액(§47① ${assumedDebt.toLocaleString()}원)과 임대보증금·저당권 채무액의 합계(${bgDebtDetail.toLocaleString()}원)가 일치하지 않습니다. 양도소득세 §159 양도가액은 임대보증금·저당권 채무액 칸에서 산정되므로, 인수한 채무의 내역을 두 칸에 나누어 §47① 금액과 같아지도록 입력하세요.`;
+      }
     }
     // ─── end 부동산 부담부증여 양도소득세 ───
 

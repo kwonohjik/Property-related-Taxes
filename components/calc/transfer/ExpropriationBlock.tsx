@@ -192,6 +192,33 @@ export function ExpropriationBlock({
         />
       </div>
 
+      {/**
+        * 농어촌특별세 비과세 판정 — 「농어촌특별세법 시행령」 §4①1호
+        *
+        * 같은 호는 §77 감면의 농특세 비과세를 「「조세특례제한법」 제69조제1항 본문에 따른 거주자가
+        * **직접 경작한 토지**(8년 이상 경작할 것의 요건은 적용하지 아니한다)로 **한정**」한다.
+        * ⇒ 이 칸이 없으면 자경 농민이 비과세를 주장할 경로 자체가 없다(감면세액 × 20%가 그대로 붙는다).
+        * ⚠️ §69 자경농지 **감면**의 8년 요건과 별개다 — 조문이 그 요건을 적용하지 않는다고 명시한다.
+        */}
+      <div className="space-y-1.5">
+        <label className="block text-sm font-medium">직접 경작한 토지 여부</label>
+        <RadioCardGroup
+          name="exprSelfCultivated"
+          tone="rose"
+          value={expr?.expropriationSelfCultivated ? "yes" : "no"}
+          onChange={(v) => updateExpr({ expropriationSelfCultivated: v === "yes" })}
+          layout="inline"
+          options={[
+            { value: "no", label: "아니오", description: "감면세액의 20%가 농어촌특별세로 부과됩니다" },
+            {
+              value: "yes",
+              label: "예",
+              description: "농어촌특별세 비과세 (농어촌특별세법 시행령 §4①1호 — 8년 경작 요건 불요)",
+            },
+          ]}
+        />
+      </div>
+
       {showValuationMin && (
         <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
           <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">

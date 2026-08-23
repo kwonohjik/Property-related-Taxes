@@ -11,7 +11,10 @@ import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-agg
 import {
   apportionLandByBusinessArea,
   allocateBundledTransferPrice,
+  applyCarryoverEstimationBasis,
 } from "@/lib/tax-engine/general-building-valuation";
+import { splitLandCarryover } from "@/lib/tax-engine/carryover-land-split";
+import type { CarryoverTaxationInput } from "@/lib/tax-engine/types/transfer-carryover.types";
 import type { SaleSplitExemption } from "@/lib/tax-engine/sale-split-deemed-unclear";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";
@@ -27,6 +30,7 @@ import {
   buildProperties,
   buildApportionment,
   type GeneralBuildingRouteResult,
+  type GbAssetLevelInputs,
 } from "./general-building-route-cards";
 
 /** 실거래가/감정가 모드 NBL 전용 payload. */
@@ -127,6 +131,36 @@ export interface GeneralBuildingActualPricePayload {
   decedentAcquisitionDate?: Date;
   /** 증여 시 증여자 취득일 (영 §95④). */
   donorAcquisitionDate?: Date;
+  /**
+   * 🔴 배우자등 이월과세(「소득세법」 §97의2①) — 토지·건물 파트별 서브객체.
+   *
+   * ## 종전 결함 (2026-08-23 P-C)
+   *
+   * 데이터는 **이미 도착해 있었다**. ④(`transfer-tax-api-gb.ts`의 실가 return)가
+   * `buildGbCarryoverPayload(asset)`를 스프레드하고, `coerceGeneralBuildingPayload`
+   * (`general-building-entry.ts`)가 **모드와 무관하게** 두 키를 붙여 보내며,
+   * 실가 dispatch(`general-building-route-helper.ts`)가 payload를 통째 스프레드한다.
+   * 그런데 이 타입에 필드가 없고 아래 구조분해가 꺼내지 않아 **여기서 조용히 증발**했다
+   * (`as unknown as` 캐스트라 tsc도 침묵). ⑤·⑧ 어디에도 모드 게이트가 없어
+   * 「실가 모드 + 이월과세」는 정상적으로 만들어지는 조합인데도 세액이 **1원도 안 바뀌었다**
+   * (실측 299,010,000 → 299,010,000 · 배선 후 225,090,000).
+   *
+   * ## 취득가액 축 셋의 우열 (§159①1호 · §100② · §97의2①)
+   *
+   * 1. **§159①1호(부담부증여)** 와는 **결합하지 않는다** — ④ `buildGbCarryoverPayload`가
+   *    `transferType === "burdened_gift"`에서 `{}`를 반환한다(중복 배선 회피).
+   *    그쪽은 `bgCoDonor*` 입력으로 §159 안분 단계에 이월과세를 얹는 **다른 줄기**다.
+   * 2. **§100②(파트 실지거래가액 · 자산 총액 안분)** 와는 **다투지 않는다**. 이월과세는
+   *    이 라우트에서 취득가액을 **덮지 않기 때문**이다 — 카드에 서브객체를 실어 보내면
+   *    단건 엔진 `calcCarryoverScenarios`가 시나리오 A(증여자 취득가액 승계)와
+   *    B(`giftDateValuation`)를 **각각 통째로 교체해** 계산하고 세액이 큰 쪽을 채택한다
+   *    (`transfer-tax-carryover.ts` `buildInputB:622` · `inputABase:410`).
+   *    ⇒ 이월과세가 **발동하면** 위 §100② 값은 어느 시나리오에도 쓰이지 않고,
+   *      **배제되면**(기간 초과·관계·가업상속) 엔진이 시나리오 B로 되돌린다.
+   *    ⇒ 라우트 단계에서 우열을 판정할 것이 없다. 환산 경로가 같은 이유로 서브객체만 싣는다.
+   */
+  landCarryoverTaxation?: CarryoverTaxationInput;
+  buildingCarryoverTaxation?: CarryoverTaxationInput;
 }
 // ── 경로 B: 실거래가/감정가 모드 ─────────────────────────────────────
 
@@ -196,6 +230,7 @@ export function buildActualGeneralBuildingCards(
     landTransferPrice, buildingTransferPrice,
     landAppraisalAtTransfer, buildingAppraisalAtTransfer,
     saleSplitExemption,
+    landCarryoverTaxation, buildingCarryoverTaxation,
   } = payload;
 
   /**
@@ -470,11 +505,25 @@ export function buildActualGeneralBuildingCards(
     const landBizTransfer = apportionLandByBusinessArea(landTransfer, businessArea, landArea);
     const landBizAcq = apportionLandByBusinessArea(landAcq, businessArea, landArea);
     const landBizExp = apportionLandByBusinessArea(landExp, businessArea, landArea);
+    /**
+     * 🔴 이월과세 입력도 **함께 갈라야 한다** — 환산 경로와 **같은 헬퍼·같은 인자**다
+     *    (`general-building-valuation.ts:460`). 두 카드에 통째로 복사하면 증여자 취득가액·
+     *    증여 당시 평가액·증여세가 전부 **2배**로 들어간다(환산에서 실측된 과소 8,706,426).
+     *
+     * 🔑 인자가 실제로 같다: 환산은 `splitLandCarryover(ct, allowedLandArea, landArea)`를
+     *    쓰는데, 이 분기의 `businessArea = landArea − nonBusinessArea`이고
+     *    `nonBusinessArea = max(0, landArea − allowedLandArea)`(`appurtenant-land-excess.ts:124`)라
+     *    분기 조건(`landArea > allowedLandArea`) 아래에서 `businessArea === allowedLandArea`다.
+     *    위 세 줄의 `apportionLandByBusinessArea`와도 같은 술어·같은 인자다
+     *    (메모리 `feedback_shared_predicate_argument_parity`).
+     */
+    const splitCt = splitLandCarryover(landCarryoverTaxation, businessArea, landArea);
     cards.push({
       propertyId: "land_business", propertyLabel: "토지-사업용(1001)", propertyType: "land",
       transferPrice: landBizTransfer, acquisitionPrice: landBizAcq, expenses: landBizExp,
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
       acquisitionDate: landCardDate, transferDate, isNonBusinessLand: false,
+      carryoverTaxation: splitCt.business,
     } as unknown as AssetCardForAggregate);
     cards.push({
       propertyId: "land_nbl", propertyLabel: "토지-비사업용초과분(1002)", propertyType: "land",
@@ -483,6 +532,7 @@ export function buildActualGeneralBuildingCards(
       expenses: landExp - landBizExp,
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
       acquisitionDate: landCardDate, transferDate, isNonBusinessLand: true,
+      carryoverTaxation: splitCt.nbl,
     } as unknown as AssetCardForAggregate);
   } else {
     cards.push({
@@ -490,6 +540,7 @@ export function buildActualGeneralBuildingCards(
       transferPrice: landTransfer, acquisitionPrice: landAcq, expenses: landExp,
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
       acquisitionDate: landCardDate, transferDate, isNonBusinessLand: false,
+      carryoverTaxation: landCarryoverTaxation,
     } as unknown as AssetCardForAggregate);
   }
   cards.push({
@@ -497,6 +548,11 @@ export function buildActualGeneralBuildingCards(
     transferPrice: buildingTransfer, acquisitionPrice: buildingAcq, expenses: buildingExp,
     usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
     acquisitionDate: buildingCardDate, transferDate, isNonBusinessLand: false,
+    /**
+     * 건물 이월과세 — 법 §97의2①은 「토지·건물 등」이라 건물도 대상이다. 환산 경로와 달리
+     * 실가 경로의 건물 카드는 **1장뿐**이라 분할이 없다(NBL은 토지 축이다).
+     */
+    carryoverTaxation: buildingCarryoverTaxation,
   } as unknown as AssetCardForAggregate);
 
   // §95④ 단기보유 기산점 보강 (actual 분기 기존 결측 — 상속·증여 취득원인 + 피상속인/증여자 취득일).
@@ -518,6 +574,25 @@ export function buildActualGeneralBuildingCards(
       }
     }
   }
+
+  /**
+   * 🔑 **환산 경로와 같은 것 · 다른 것** (`general-building-valuation.ts:593` 대비).
+   *
+   * **같다** — 이 주입은 「GB 파트를 환산으로 평가하느냐」와 **직교**다.
+   * `carryoverTaxation.useEstimatedAcquisition`은 **증여자의** 취득가액을 모를 때
+   * 그것을 §97①1호 나목·영 §163⑨로 환산하느냐는 축이고(`transfer-carryover.types.ts:31-40`),
+   * ⑤(`GeneralBuildingAcquisitionCards.tsx:627`)도 ⑧(`transfer-tax-validate-gb-carryover.ts:79-84`)도
+   * `landAcqMode`를 보지 않는다 — 실가 모드에서도 열려 있고 분자를 **필수로 요구**한다.
+   * ⇒ 여기서 빼면 그 필수 입력이 도달하지 못해 시나리오 A 취득가액이 **0**이 된다(P-B와 같은 모양).
+   *
+   * **다르다** — 함수 안에서 `useEstimatedAcquisition`이 아니면 즉시 건너뛰므로,
+   * 실가 모드 카드의 `usedEstimatedAcquisition: false`(GB 파트 축)는 손대지 않는다. 회귀 0.
+   *
+   * 분모는 **파트의 양도 당시 기준시가 전액**을 넘긴다 — NBL 2분할 카드에서도 분자를 쪼개지
+   * 않으므로(`splitLandCarryover`는 금액 4칸만 자른다) 분자·분모가 같은 기준을 유지한다.
+   * 환산 경로가 넘기는 값과 같은 축이다.
+   */
+  applyCarryoverEstimationBasis(cards, landStdAtTransfer, transferBuildingStdPrice);
 
   // 사례 35: 주택→상가 용도변경 — 모든 자산 카드에 일괄 propagate
   if (houseToCommercialConversion) {
@@ -562,12 +637,14 @@ export function buildActualGeneralBuildingCards(
  * 단건 진입점. 지분 분할은 `general-building-fractional.ts`가
  * `buildActualGeneralBuildingCards`를 지분마다 부른 뒤 aggregate를 **1회만** 한다.
  */
-export function calculateGeneralBuildingActualTransfer(
+export function runActualGeneralBuildingOnce(
   payload: GeneralBuildingActualPricePayload,
   taxYear: number,
   annualBasicDeductionUsed: number | undefined,
   priorReductionUsage: unknown[],
   rates: TaxRatesMap,
+  /** ⑭ 자산-수준 감면·가산세 (F17). 환산 경로와 **같은 규약**이어야 한다. */
+  assetLevel?: GbAssetLevelInputs,
 ): GeneralBuildingRouteResult {
   const built = buildActualGeneralBuildingCards(payload);
   const { cards, nonBusinessRatio, totalStd, landStdAtTransfer } = built;
@@ -575,7 +652,7 @@ export function calculateGeneralBuildingActualTransfer(
   const properties = buildProperties(cards, nonBusinessRatio, undefined, {
     land: payload.unregisteredLand,
     building: payload.unregisteredBuilding,
-  });
+  }, assetLevel?.reductions);
   const aggregated = calculateTransferTaxAggregate(
     {
       taxYear,
@@ -583,6 +660,9 @@ export function calculateGeneralBuildingActualTransfer(
       annualBasicDeductionUsed: annualBasicDeductionUsed ?? 0,
       basicDeductionAllocation: "MAX_BENEFIT",
       priorReductionUsage: (priorReductionUsage ?? []) as never,
+      // 신고서 단위 가산세 — 카드별 입력이 아니다(같은 신고가 카드 수만큼 배가되는 것을 막는다).
+      filingPenaltyDetails: assetLevel?.filingPenaltyDetails,
+      delayedPaymentDetails: assetLevel?.delayedPaymentDetails,
     },
     rates,
   );

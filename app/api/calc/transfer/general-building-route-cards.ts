@@ -12,6 +12,7 @@ import type {
   TransferTaxItemInput,
   AggregateTransferResult,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
+import type { TransferReduction } from "@/lib/tax-engine/transfer-tax";
 import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-valuation";
 import type { GeneralBuildingSwapDecision } from "@/lib/tax-engine/general-building-swap";
 import { SHARE_ID_SEPARATOR, baseCardId } from "@/lib/tax-engine/general-building-share-id";
@@ -34,6 +35,30 @@ export interface BundledLikeApportionmentResult {
   residualAbsorbedBy: string | null;
   legalBasis: string;
   warnings: string[];
+}
+
+/**
+ * 자산-수준 입력 중 **카드 조립 이후 단계**가 소비하는 것들 (F17, 2026-08-23).
+ *
+ * 종전에는 `dispatchGeneralBuilding`의 위치 인자를 늘려 왔는데 이미 12개라 새 값을 더하면
+ * 호출부에서 순서를 틀리기 쉽다. 이 묶음은 **카드 배열이 아니라 신고 전체**에 걸리는 값이라
+ * 성격도 다르다.
+ */
+export interface GbAssetLevelInputs {
+  /** 조특법 감면 (⑭ Date 변환 완료본). 카드마다 실린다 — `buildProperties` 참조. */
+  reductions?: TransferReduction[];
+  /** 신고서 단위 신고불성실 가산세 (국세기본법 §47의2·§47의3). */
+  filingPenaltyDetails?: import("@/lib/tax-engine/types/transfer.types").TransferTaxInput["filingPenaltyDetails"];
+  /** 신고서 단위 납부지연 가산세 (국세기본법 §47의4). */
+  delayedPaymentDetails?: import("@/lib/tax-engine/types/transfer.types").TransferTaxInput["delayedPaymentDetails"];
+  /**
+   * 배우자등 이월과세 (「소득세법」 §97의2) — **부담부증여 §159 분기 전용**(F27).
+   *
+   * 비-부담부증여 일반건물은 이 값을 쓰지 않는다 — 그쪽은 카드에 실린
+   * `landCarryoverTaxation`·`buildingCarryoverTaxation`을 **단건 엔진**이 파트별로 처리한다
+   * (④ `buildGbCarryoverPayload`가 부담부증여에서 `{}`를 반환해 두 줄기가 겹치지 않는다).
+   */
+  carryoverTaxation?: import("@/lib/tax-engine/types/transfer.types").TransferTaxInput["carryoverTaxation"];
 }
 
 export interface GeneralBuildingRouteResult {
@@ -62,11 +87,67 @@ export interface GbUnregisteredAxes {
   building?: boolean;
 }
 
+/**
+ * 자산-수준 조특법 감면 — **카드마다 같은 배열을 싣는다**(F17, 2026-08-23).
+ *
+ * ## 왜 카드마다인가
+ *
+ * 일반건물은 하나의 자산이지만 엔진에는 토지·비사토·건물1·건물2 **카드**로 들어간다.
+ * 감면은 카드별 양도소득금액에서 계산되고, `calculateTransferTaxAggregate`가
+ * 유형별로 합산한 뒤 **조특법 §133② 한도를 집계 단계에서 1회** 적용한다
+ * (`aggregate-reduction-limits.ts`). ⇒ 같은 배열을 4장에 실어도 한도가 4배가 되지 않는다.
+ *
+ * §77·§77의2의 감면율은 **보상액 비율**로만 결정되고 금액은 각 카드의 양도소득금액에서
+ * 안분되므로(`public-expropriation-reduction.ts` ①), 카드마다 실어도 이중계상이 아니다.
+ *
+ * ## 종전 결함 (리뷰 F17)
+ *
+ * 여기가 `reductions: []` **하드코딩**이라, 폼에서 §77 공익수용을 선택해도 세액이 1원도
+ * 바뀌지 않았다(실측 결정세액 204,930,000 → 204,930,000 · `reductionAmount` 0).
+ * 클라이언트는 자산 종류와 무관하게 `reductions`를 싣고 Zod도 받으며 validate도 통과시켜,
+ * 「입력은 되는데 침묵 무시」 상태였다. **같은 파일이 같은 모양의 결함을 이미 한 번 고쳤다** —
+ * 바로 위 `isUnregistered`의 `false` 하드코딩이다.
+ */
+function reductionsForCard(
+  reductions: TransferReduction[] | undefined,
+  isBuilding: boolean,
+): TransferReduction[] {
+  if (!reductions || reductions.length === 0) return [];
+  if (!isBuilding) return reductions;
+  /**
+   * 🔑 **§77의3은 건물 파트에서 뺀다** — 매수 경로가 대상 범위를 가르기 때문이다.
+   *
+   * 조특법 §77의3①은 「해당 **토지등**을 같은 법 **제17조**에 따른 토지매수의 청구 또는
+   * 같은 법 **제20조**에 따른 협의매수를 통하여 … 양도함으로써 발생하는 소득」이라고
+   * 두 경로를 병렬 열거하는데, 「개발제한구역의 지정 및 관리에 관한 특별조치법」에서
+   * 두 경로의 대상이 다르다:
+   *
+   * · §17① — 「… 그 효용이 현저히 감소된 토지나 … 사실상 불가능하게 된 토지
+   *   (이하 "**매수대상토지**"라 한다)」 ⇒ **토지만**
+   * · §20① — 「개발제한구역의 **토지와 그 토지의 정착물**(이하 "토지등"이라 한다)」
+   *   ⇒ 토지 + **건물**
+   *
+   * ⇒ **`purchaseRoute`(①의 §17/§20 축)가 건물 파트의 포함 여부를 가른다.**
+   * `claim`(§17)일 때만 건물 파트에서 뺀다. `negotiated`(§20)·②(해제 후 공익사업법 협의매수·
+   * 수용)는 「토지등」이라 건물분도 대상이다.
+   *
+   * ⚠️ 축이 없던 때(F17-A)는 **무조건 제외**였다 — 근거 없이 건물분까지 감면하는 것보다
+   *    입증된 범위로 좁히는 쪽이 맞았기 때문이다. 축이 생긴 지금은 §20 납세자의 건물분을
+   *    부당하게 깎지 않는다. `purchaseRoute` 미상(②가 아닌데 값이 없음)은 ⑧이 차단하므로
+   *    여기 도달하지 않지만, 도달하면 **좁은 쪽(제외)** 으로 남긴다.
+   */
+  return reductions.filter(
+    (r) => !(r.type === "gb_designated_land" && r.branch === "in_zone" && r.purchaseRoute !== "negotiated"),
+  );
+}
+
 export function buildProperties(
   cards: AssetCardForAggregate[],
   nonBusinessRatio: number,
   swap?: GeneralBuildingSwapDecision,
   unregistered?: GbUnregisteredAxes,
+  /** 자산-수준 조특법 감면 (⑭ Date 변환 완료본 — `mapReductionsToEngine` 출력). */
+  reductions?: TransferReduction[],
 ): TransferTaxItemInput[] {
   return cards.map((card) => {
     const isBuilding = card.propertyType === "general_building_unit";
@@ -112,7 +193,7 @@ export function buildProperties(
        * 한쪽만 미등기면 그 카드만 §104①10호(70%) 버킷으로 갈린다.
        */
       isUnregistered: (isBuilding ? unregistered?.building : unregistered?.land) ?? false,
-      reductions: [],
+      reductions: reductionsForCard(reductions, isBuilding),
       // 건물 카드만 §114조의2 가산세 발동 정보 패스스루
       // 토지 카드는 소득세법 §114조의2 ① 적용 대상 아님
       acquisitionMethod: isBuilding && card.usedEstimatedAcquisition ? "estimated" : "actual",
