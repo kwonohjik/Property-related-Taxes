@@ -12,6 +12,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
+import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm, CarryoverEstimationMode } from "@/lib/stores/calc-wizard-asset-carryover";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -92,6 +93,20 @@ export function CarryoverEstimationSection({
             <br />
             개산공제 = 취득시 기준시가 × 3% (소득세법 시행령 §163⑥)
           </p>
+
+          {/*
+            지분(공유) 모드 — 기준시가 2칸은 ④ 변환에서 **의도적으로 미스케일**이다
+            (`transfer-tax-api-carryover.ts` topLevelOverrides · `-gb-carryover.ts` PART_SCALE).
+            위 환산 산식에서 분자·분모로 함께 나타나 지분율이 약분되므로, 두 칸 모두
+            공시된 가격(물건 전체 기준)을 그대로 넣어야 기준이 맞는다.
+            판정 술어는 `OwnershipRatioInput`과 동일 소스(`isFractionalOwnership`).
+          */}
+          {isFractionalOwnership(asset) && (
+            <p className="text-xs text-amber-800">
+              지분 모드 — 취득시·양도시 기준시가는 공시된 가격(물건 전체 기준)을 두 칸 모두 그대로
+              입력합니다. 지분율로 나누지 않습니다.
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
           </div>

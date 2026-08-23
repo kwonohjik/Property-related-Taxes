@@ -188,18 +188,14 @@ describe("GBSC — 일반건물 지분 × 이월과세: ④ 지분율 스케일"
 
   /**
    * ⚠️ **이 케이스가 고정하는 것은 ④ 계약뿐이다 — 엔진까지 가지 않는다.**
-   *
-   * legacy 모양(`landCarryoverTaxation`)의 ⑫ 스키마
-   * `carryoverTaxationEngineShape`(`lib/api/transfer-tax-building-schemas.ts:30-44`)에는
-   * `donorStandardPriceAtAcquisition` **필드가 아예 없어** Zod가 조용히 strip한다.
-   * (`carryoverPartShape`(`:49-61`)에는 있다 — 신규 경로만 통과한다.)
-   *
-   * ⇒ 「환산 산식 이중 축소 방지」가 **실제로 성립하는 경로**는 아래 GBSC-03b(part)다.
    *   여기서는 ④가 그 값을 스케일하지 않는다는 계약만 고정한다.
    *
-   * 🔴 그 strip 자체는 **이 축과 무관한 별건 결함**이다 — `buildEngineShaped`가
-   *    「이 경로에서도 실어야 취득가액 0을 피한다(설계 D9-8)」는 주석과 함께 싣는데
-   *    ⑫가 버린다. **단건 경로에도 있다.** open-items 문서에 기록했다.
+   * ✅ **2026-08-23 해소** — 종전에는 legacy 모양(`landCarryoverTaxation`)의 ⑫ 스키마
+   *    `carryoverTaxationEngineShape`에 `donorStandardPriceAtAcquisition` **필드가 아예 없어**
+   *    Zod가 조용히 strip했고(단건 GB 43,470,000 과대), 그래서 「환산 산식 이중 축소 방지」가
+   *    실제로 성립하는 경로는 GBSC-03b(part)뿐이었다. ⑫ 2벌에 필드를 추가해 legacy도 도달한다.
+   *    엔진까지 태운 세액 고정은 `transfer.route.gb-carryover-legacy-estimated.anchor.test.ts`
+   *    (GBLE-05)가 맡는다.
    */
   it("GBSC-03: 🔴 기준시가는 스케일하지 않는다 — legacy 모양 ④ 계약", () => {
     const s = shares([

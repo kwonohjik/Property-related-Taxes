@@ -447,7 +447,7 @@ export const companionAssetSchema = z.object({
    *    Zod에서 **조용히 strip**됐다 — 400이 아니라 200 + 컴패니언 취득가액 **0**이었다(D-1).
    *
    * shape은 GB 파트용 `carryoverTaxationEngineShape`를 **재사용**한다. 단건
-   * (`transfer-tax-schema.ts`) 인라인 shape과 필드·타입 10개가 전부 일치한다(V-5 기계 대조).
+   * (`transfer-tax-schema.ts`) 인라인 shape과 필드·타입 11개가 전부 일치한다(V-5 기계 대조).
    * ⚠️ `giftTaxAmount`의 **의미**만 소비자마다 다르다 — GB 파트는 「이미 안분된 값」,
    *    컴패니언·단건은 사용자가 영 §163의2②로 산정해 넣은 **자산 전체분**이다.
    */

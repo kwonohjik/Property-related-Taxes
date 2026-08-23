@@ -68,6 +68,13 @@ export interface CarryoverTaxationInput {
    */
   donorDeceased?: boolean;
   /**
+   * 환산 모드 분자 — **증여자 취득 당시** 그 자산(파트)의 기준시가.
+   * `useEstimatedAcquisition === true`일 때만 의미가 있다.
+   * 분모(양도 당시 기준시가)는 받지 않는다 — 엔진이 아는 값을 쓴다(설계 D9-8).
+   * 소비자는 `general-building-valuation.ts`의 `applyCarryoverEstimationBasis` 하나다.
+   */
+  donorStandardPriceAtAcquisition?: number;
+  /**
    * 적용배제 — 사용자 선언 (§97조의2 ② 1호·2호·④항).
    * ② 3호(비교과세)는 자동 판정이므로 선언 불필요.
    * ⚠️ ① 관계요건(위 2필드)은 조문 계층이 달라 여기 넣지 않는다.

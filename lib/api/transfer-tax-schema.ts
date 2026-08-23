@@ -363,6 +363,17 @@ const propertyBaseShape = {
     /** §97의2① 관계요건 — 증여자 사망 배제 판정축 */
     donorRelation: z.enum(["spouse", "lineal", "other"]).optional(),
     donorDeceased: z.boolean().optional(),
+    /**
+     * 환산 모드 분자 — 증여자 취득 당시 기준시가 (설계 D9-8).
+     * `carryoverTaxationEngineShape`와 **필드·타입 11개 전부 일치**를 유지해야 한다(V-5).
+     *
+     * ⚠️ 단건(비-GB) 경로에서는 **현재 아무도 읽지 않는다** — 유일한 소비자가
+     *    `general-building-valuation.ts`의 `applyCarryoverEstimationBasis`이고,
+     *    단건은 최상위 `standardPriceAtAcquisition/Transfer`(`transfer-tax-api-carryover.ts`
+     *    `topLevelOverrides`)로 환산한다. parity 유지 + 향후 침묵 strip 방지용이다
+     *    (mutation 실측: 이 줄을 지워도 `__tests__/api`·`calc`·`tax-engine/transfer` 3,040건 전건 green).
+     */
+    donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
     exclusionDeclared: z.object({
       expropriationWithin2Years: z.boolean().optional(),
       oneHouseExemptionApplies: z.boolean().optional(),
