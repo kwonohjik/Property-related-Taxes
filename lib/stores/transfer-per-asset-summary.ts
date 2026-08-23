@@ -19,6 +19,10 @@ import type { AssetForm } from "./calc-wizard-asset";
 import type { ReductionType } from "./calc-wizard-asset-reduction";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
+import {
+  isSuccessorRightTransfer,
+  successorRightAcquisitionTotal,
+} from "@/lib/calc/transfer-successor-right";
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/tax-utils";
@@ -132,6 +136,12 @@ function parcelExpenseSum(a: AssetForm): number {
  * 부분합을 합계로 표시하면 총액으로 오독된다.
  */
 function directAcqRaw(a: AssetForm): { value: number; pending: boolean } {
+  // ①-0 승계조합원 입주권 — §166 미적용(§97①1호 가목). 승계취득가 + 취득 후 추가분담금.
+  //     ①보다 **앞**에 둔다 — `isRedevelopmentPath`가 assetKind만 보므로 순서를 바꾸면
+  //     승계 자산이 §166 필드(빈 값)를 읽어 0으로 표시된다. API 변환의 분기 순서와 동일.
+  if (isSuccessorRightTransfer(a)) {
+    return { value: successorRightAcquisitionTotal(a), pending: false };
+  }
   // ① 재개발·입주권 — 상단 일반 취득가액 칸이 숨겨지고 §166 섹션 전용 필드를 쓴다.
   //    승계조합원(사례 48)만 자산 카드 `fixedAcquisitionPrice` (API :283-286).
   if (isRedevelopmentPath(a)) {
@@ -480,10 +490,18 @@ export function computeTransferPerAssetSummary(
       assetKind: a.assetKind,
       salePrice,
       acqPrice,
-      // 승계조합원(사례 48)은 종전주택을 소유하지 않아 「인가 전 분」이 성립하지 않는다 —
-      // 자산 카드 취득가액이 그대로 입주권 취득가액이므로 일반 라벨을 쓴다.
+      /**
+       * 승계조합원은 종전 부동산을 소유한 적이 없어 「인가 전 분」이 성립하지 않는다 —
+       * 두 종류 모두 일반 라벨을 쓴다.
+       *   · 완공APT 승계조합원(사례 48, `redevIsSuccessorMember`) — §166 안분 우회
+       *   · 입주권 승계조합원(`isSuccessorRightToMoveIn`)          — §166 미적용(§97①1호 가목)
+       * 후자를 빠뜨리면 「승계취득가액 + 추가분담금」 합계에 「인가전 분」 라벨이 붙어
+       * 화면의 입력 카드와 사이드바가 서로 다른 개념을 가리킨다(2026-08-23 브라우저 실측).
+       */
       acqLabel:
-        isRedevelopmentPath(a) && a.redevIsSuccessorMember !== "yes"
+        isRedevelopmentPath(a) &&
+        a.redevIsSuccessorMember !== "yes" &&
+        !isSuccessorRightTransfer(a)
           ? "인가전 분 취득가액"
           : "취득가액",
       expense,

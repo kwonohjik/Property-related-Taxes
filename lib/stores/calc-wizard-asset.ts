@@ -72,6 +72,29 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 입주권 승계조합원 여부 (assetKind === "right_to_move_in" 일 때만 의미) */
   isSuccessorRightToMoveIn: boolean;
   /**
+   * 조합원입주권 **승계취득가액** (원) — `isSuccessorRightToMoveIn === true` 전용.
+   *
+   * 승계조합원은 「소득세법 시행령」 §166①의 적용 대상이 아니다 — 그 항은 「조합원이 당해 조합에
+   * 기존건물과 그 부수토지를 **제공하고 취득한** 입주자로 선정된 지위를 양도하는 경우」로 요건을
+   * 한정하는데, 승계자는 제공한 사실이 없다. 따라서 취득가액은 §97①1호 가목의 **실지거래가액**
+   * 이고, 그 구성은 「권리가액 상당 + 프리미엄」이다(기준-2025-법규재산-0057, 2025-06-19).
+   *
+   * ⚠️ §166 섹션의 `redevActualAcquisitionPrice`(= 인가 **전** 종전 부동산의 취득가액)와는
+   *    **다른 사실**이다. 승계자에게는 「인가 전 종전 부동산」 자체가 없다. 한 필드로 겸용하면
+   *    라벨을 문자대로 따른 사용자가 종전 소유자의 취득가액을 넣어 과대과세된다(실측 97,922,000원).
+   */
+  successorRightAcqPrice: string;
+  /**
+   * 조합원입주권 승계취득 **이후 납입한 추가분담금**(원) — `isSuccessorRightToMoveIn === true` 전용.
+   *
+   * 기준-2025-법규재산-0057은 승계취득 케이스의 취득가액을 「권리가액 + 취득 이후 조합원
+   * 분양계약에 따라 납입한 추가분담금 + (입증되는) 프리미엄」의 합으로 본다. API 변환이
+   * `successorRightAcqPrice`와 합산해 엔진 `acquisitionPrice` 한 값으로 보낸다(엔진 필드 신설 없음).
+   *
+   * 미입력("")은 0으로 본다 — 승계 직후 양도라 추가분담금이 없을 수 있다.
+   */
+  successorRightAddedContribution: string;
+  /**
    * 「소득세법」 §104③ 미등기양도자산 — **컴패니언(2번째 이후) 자산 전용**.
    *
    * 주 자산은 폼-전역 `TransferFormData.isUnregistered`(Step4 ⑤ 특수 상황)를 쓴다. 일괄양도는

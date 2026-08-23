@@ -157,21 +157,37 @@ describe("R-PAY-8 — subject=apt fallback 시 LTHD 126M 재현 (회귀 차단 a
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// R-PAY-9 — 승계조합원: preApproval.lthd = 0 (§95② 단서)
+// R-PAY-9 — 승계조합원: §166 미적용 + LTHD 0
+//
+// 🔄 2026-08-23 갱신 — 종전 [R-PAY-9]는 `redevelopmentDetail.preApproval.lthd === 0`을 단언했다.
+//    그 단언은 **승계조합원에게도 §166① 3분할이 성립한다**는 전제 위에 있었는데, 시행령 §166①은
+//    「조합원이 **당해 조합에 기존건물과 그 부수토지를 제공하고 취득한** 입주자로 선정된 지위를
+//    양도하는 경우」로 요건을 한정한다 — 승계자는 제공한 사실이 없어 적용 대상이 아니다.
+//    ⇒ 「인가전 LTHD가 0」이 아니라 「**인가전 분 자체가 없다**」가 정확한 진술이다.
+//    LTHD 0이라는 원래 취지는 [R-PAY-9b]가 그대로 지킨다.
+//    계획서: docs/02-design/features/right-to-move-in-top-acq-axis-removal.plan.md §2.4
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe("R-PAY-9 — 승계조합원 (isSuccessorRightToMoveIn=true) — LTHD 전액 0", () => {
+describe("R-PAY-9 — 승계조합원 (isSuccessorRightToMoveIn=true) — §166 미적용 · LTHD 전액 0", () => {
   const successorInput = baseInput({
     isSuccessorRightToMoveIn: true,
   });
   const result = calculateTransferTax(successorInput, mockRates);
 
-  it("[R-PAY-9] 승계조합원 인가전 LTHD = 0 (§95② 단서 — 조합원으로부터 취득)", () => {
-    expect(result.redevelopmentDetail?.preApproval.lthd).toBe(0);
+  it("[R-PAY-9] 승계조합원은 §166① 3분할을 타지 않는다 (시행령 §166① 「제공하고 취득한」 요건)", () => {
+    expect(result.redevelopmentDetail).toBeUndefined();
   });
 
-  it("[R-PAY-9b] 승계조합원 총 LTHD = 0", () => {
+  it("[R-PAY-9b] 승계조합원 총 LTHD = 0 (§95② 괄호 — 조합원으로부터 취득한 것은 제외)", () => {
     expect(result.longTermHoldingDeduction).toBe(0);
+  });
+
+  it("[R-PAY-9c] 양도차익 = 양도가액 − 취득가액 (§97①1호 가목 일반 원칙)", () => {
+    // 520,000,000 − 100,000,000 = 420,000,000
+    // ※ 원조합원 경로(§166①1호)의 합계 200M + 130M = 330M 과 다르다 —
+    //   그쪽은 청산금 90M을 별도 차감하기 때문이다. 승계조합원의 취득가액에는
+    //   납입한 추가분담금이 이미 포함돼야 한다(기준-2025-법규재산-0057).
+    expect(result.transferGain).toBe(420_000_000);
   });
 });
 

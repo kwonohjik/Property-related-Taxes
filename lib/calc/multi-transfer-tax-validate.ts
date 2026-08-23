@@ -57,6 +57,18 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (a.assetKind === "redevelopment_apt") {
     return "재개발·재건축(시행령 §166)은 단건 계산기에서만 지원됩니다.";
   }
+  /**
+   * 조합원입주권 — `redevelopment_apt`와 **같은 이유**로 차단한다 (2026-08-23).
+   *
+   * 종전에는 이 가드에 빠져 있었다. 다건 화면은 단건 마법사를 그대로 임베드하므로
+   * (`app/calc/transfer-tax/multi/MultiTransferTaxCalculator.tsx`) 입주권 자산을 만들 수 있는데,
+   * 다건 변환(`multi-transfer-tax-api.ts`)은 §166 sub-object도 승계취득 필드도 만들지 않고
+   * `fixedAcquisitionPrice`를 취득가액으로 쓴다 ⇒ **일반 양도로 조용히 오산**됐다.
+   * 상단 축 A를 제거하면서 그 칸마저 사라지므로(취득가액 0 + 입력칸 없음) 명시 차단으로 바꾼다.
+   */
+  if (a.assetKind === "right_to_move_in") {
+    return "조합원입주권(시행령 §166① / 승계취득분 §97①1호)은 단건 계산기에서만 지원됩니다.";
+  }
   if (a.assetKind === "housing" && a.isMixedUseHouse) {
     return "겸용주택 분리계산은 단건 계산기에서만 지원됩니다.";
   }

@@ -30,6 +30,8 @@ import { CommercialInheritanceStdPriceSection } from "../CommercialInheritanceSt
 import { CommercialAppurtenantLandSection } from "../CommercialAppurtenantLandSection";
 import { GeneralBuildingBlock } from "../GeneralBuildingBlock";
 import { RedevelopmentBlock } from "../RedevelopmentBlock";
+import { SuccessorRightAcquisitionBlock } from "../SuccessorRightAcquisitionBlock";
+import { isSuccessorRightTransfer } from "@/lib/calc/transfer-successor-right";
 import { NonHousingConversionExpandedPanel } from "../NonHousingConversionSection";
 
 interface Props {
@@ -312,8 +314,16 @@ export function AssetSectionAcquisition({
           (관리처분 인가일·권리가액·청산금을 넣을 곳이 없음, 2026-08-13 제보).
           API 변환(`transfer-tax-api.ts:176`)·validate(`transfer-tax-validate-asset.ts:172`)·
           블록 내부 분기는 이미 두 종류를 모두 §166 경로로 처리하고 있었다 — UI만 빠져 있었다. */}
-      {(asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") && (
-        <RedevelopmentBlock asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
+      {/* 승계조합원 입주권은 §166①의 「조합에 기존건물을 제공하고 취득한 조합원」이 아니다
+          (2026-08-23). 권리가액·청산금 방향 같은 §166 입력이 성립하지 않으므로 전용 블록으로
+          가른다 — 취득가액은 §97①1호 가목 실지거래가액(승계취득가 + 추가분담금)이다.
+          술어는 `transfer-successor-right.ts` 단일 소스(API·validate·사이드바 공용). */}
+      {isSuccessorRightTransfer(asset) ? (
+        <SuccessorRightAcquisitionBlock asset={asset} onChange={onChange} />
+      ) : (
+        (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") && (
+          <RedevelopmentBlock asset={asset} onChange={onChange} isOneHouseSingle={isOneHouseSingle} />
+        )
       )}
     </>
   );

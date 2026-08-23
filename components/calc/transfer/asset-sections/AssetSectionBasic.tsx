@@ -31,6 +31,7 @@ import {
   areaResetPatchForAssetKind,
 } from "./AssetAreaSection";
 import { redevSubjectPatchForAssetKind } from "./AssetAreaRedevelopment";
+import { successorRightTogglePatch } from "@/lib/calc/transfer-successor-right";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
 import { OwnershipRatioBlock, type AssetSplitMode } from "../OwnershipRatioInput";
 
@@ -295,9 +296,7 @@ export function AssetSectionBasic({
               <button
                 key={String(opt.value)}
                 type="button"
-                onClick={() =>
-                  onChange({ isSuccessorRightToMoveIn: opt.value })
-                }
+                onClick={() => onChange(successorRightTogglePatch(opt.value))}
                 className={cn(
                   "rounded-md border-2 p-2 text-left transition-all",
                   asset.isSuccessorRightToMoveIn === opt.value
