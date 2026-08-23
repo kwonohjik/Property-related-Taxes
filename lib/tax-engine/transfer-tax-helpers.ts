@@ -19,6 +19,8 @@ import {
 } from "./tax-utils";
 import { TaxRateNotFoundError } from "./tax-errors";
 import { TRANSFER } from "./legal-codes";
+// 로컬 변수명 `estimatedDeductionRate`와 충돌하므로 별칭. 신규 import는 한 줄 한 named(ESLint --fix 함정).
+import { estimatedDeductionRate as resolveEstimatedDeductionRate } from "./legal-codes";
 import {
   resolveConversionDenominatorAtTransfer,
   type ExpropriationValuationDetail,
@@ -301,13 +303,21 @@ export function calcTransferGain(input: TransferTaxInput): TransferGainResult {
   let expropriationValuationDetail: ExpropriationValuationDetail | undefined;
   let auctionValuationDetail: AuctionValuationDetail | undefined, housingExpropriationValuationDetail: HousingExpropriationValuationDetail | undefined;
 
-  // 개산공제율 (소득세법 시행령 §163⑥1호·2호가목): 토지·건물·주택 = 3/100.
-  // 단, §104③ 미등기양도자산은 3/1000(0.3%).
+  // 개산공제율 (소득세법 시행령 §163⑥): 토지 1호·건물 2호 = 3/100, §104③ 미등기양도자산 3/1000.
+  // 🔴 2026-08-23 정정 — 종전에는 리터럴 `0.03`을 써서 **자산 종류를 전혀 보지 않았다**.
+  //    입주권·분양권은 법 §94①2호 **가목**이라 §163⑥**4호 = 1/100**인데 3%가 붙었다
+  //    (분양권은 ⑧ validate 통과·⑤ UI 노출로 **도달 가능한 활성 결함**이었다 — 취득기준시가
+  //    3억이면 개산공제 9,000,000 vs 법정 3,000,000 = **6,000,000 과대**).
+  //    같은 파일의 `estimatedDeductionRate()` 주석이 이미 「리터럴 0.03 금지」를 명시했는데
+  //    이 지점만 규칙 밖에 있었다. 이제 단일 함수를 경유한다.
   // ⚠️ base는 `computeEstimatedDeduction`이 **지분 기준시가**로 축소한다 —
   //    `standardPriceAtAcquisition`은 물건 전체(100%) 값이고, 같은 필요경비 산식의 다른 항인
   //    환산취득가액은 `transferPrice`를 통해 이미 지분 스케일이라 §97②2호 가목의 **합계액**이
   //    한쪽만 100%면 어긋난다(설계: transfer-fractional-lump-sum-deduction.plan.md §1).
-  const estimatedDeductionRate = input.isUnregistered ? 0.003 : 0.03;
+  const estimatedDeductionRate = resolveEstimatedDeductionRate(
+    input.isUnregistered,
+    input.propertyType,
+  );
 
   if (input.useEstimatedAcquisition) {
     // #3 §164⑨ 특례 — 양도시 기준시가(환산 분모)를 1호(per-sqm·주택총액)·2호(공매경락) 배타로 확정.
