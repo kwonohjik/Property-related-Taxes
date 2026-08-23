@@ -48,12 +48,26 @@ test.describe("부담부증여 양도세 — 취득가액 산정방식 (K-4/K-5)
     await expect(convertedRadio).toBeVisible();
     await expect(actualRadio).toBeVisible();
 
-    // K-5 환산 선택 → 환산 산식 안내 노출 (§176의2②2호)
+    /**
+     * K-5 환산 선택 → 환산 산식 안내 노출 (§176의2②2호)
+     *
+     * 🔄 2026-08-23 정정 — 종전 단언은 `… × 취득시 기준시가 ÷ 양도시 기준시가`였다.
+     *    PR #1240(2026-08-13, 산식 나눗셈 전면 분수 표기 통일)이 `BurdenedGiftBlock.tsx:370`의
+     *    `÷`를 `<Frac top bottom />`으로 바꿨는데 **E2E spec은 함께 갱신되지 않았다**
+     *    (#1240 커밋의 `e2e/` 변경 0건). `Frac`은 분자·분모를 별도 `<span>`으로 쌓아 올려
+     *    `÷` 문자를 아예 렌더하지 않으므로 그 정규식은 영구히 매칭될 수 없다.
+     *    ⇒ 분수 표기에서도 성립하는 형태로 바꾼다 — 문장 도입부 + 분자·분모 각각 + 근거 조문.
+     *    (본 PR과 무관한 기존 실패다. 컴포넌트 소스가 origin/master와 동일함을 확인했다.)
+     */
     await convertedRadio.check();
     await expect(convertedRadio).toBeChecked();
-    await expect(
-      card.getByText(/환산취득가액 = 양도가액\(채무액\) × 취득시 기준시가 ÷ 양도시 기준시가/),
-    ).toBeVisible();
+    const convertedNotice = card.getByText(/환산취득가액 = 양도가액\(채무액\) ×/);
+    await expect(convertedNotice).toBeVisible();
+    // 분수 표기(Frac) — 분자·분모가 각각 렌더된다
+    await expect(convertedNotice.getByText("취득시 기준시가", { exact: true })).toBeVisible();
+    await expect(convertedNotice.getByText("양도시 기준시가", { exact: true })).toBeVisible();
+    // 근거 조문이 같은 안내 안에 있다
+    await expect(convertedNotice).toContainText("시행령 §176의2②2호");
 
     // K-4 실지 선택 → 실지취득가 입력 + 자본적지출·양도비 노출 (§97①1호가목)
     await actualRadio.check();
