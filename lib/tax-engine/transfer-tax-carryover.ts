@@ -96,6 +96,13 @@ export function calcCarryoverScenarios(
     /** 동상 — 12억 초과 고가주택(부분 비과세). `isExempt || isPartialExempt`가 ②2호 요건이다. */
     isPartialExempt?: boolean;
   },
+  /**
+   * §97의2②3호 **세액 비교 결과 강제** — 다건 엔진이 「신고단위 결정세액」으로 비교할 때만 쓴다.
+   * `undefined`면 종전과 동일하게 이 함수가 스스로 A/B를 비교한다.
+   * ⚠️ 앞선 배제(②1호·②2호·③ 기간·관계)는 이 값보다 **우선**한다 — Step 6에만 개입한다.
+   * @see docs/00-pm/transfer-n1-carryover-filing-unit.plan.md
+   */
+  scenarioOverride?: "A" | "B",
 ): CalcCarryoverResult | null {
 
   // ─────────────────────────────────────────────────────────
@@ -324,7 +331,7 @@ export function calcCarryoverScenarios(
       ? bgBreakdown.perAsset.land.acquisitionPrice + bgBreakdown.perAsset.building.acquisitionPrice
       : donorAcqPrice;
     return finishScenarios({
-      rawInput, ct, rates, calculateTransferTax,
+      rawInput, ct, rates, calculateTransferTax, scenarioOverride,
       applicablePeriodYears,
       scenarioAIsOneHouse: resultABG.isExempt === true || resultABG.isPartialExempt === true,
       // 표시용 안분 내역 — 채택이 B로 가더라도 A 컬럼이 스스로 설명할 수 있게 한다.
@@ -419,7 +426,7 @@ export function calcCarryoverScenarios(
   const resultA = calculateTransferTax(inputAFinal, rates);
 
   return finishScenarios({
-    rawInput, ct, rates, calculateTransferTax,
+    rawInput, ct, rates, calculateTransferTax, scenarioOverride,
     applicablePeriodYears,
     scenarioAIsOneHouse: resultA.isExempt === true || resultA.isPartialExempt === true,
     inputAFinal,
@@ -459,6 +466,8 @@ function finishScenarios(args: {
     isExempt?: boolean;
     isPartialExempt?: boolean;
   };
+  /** §97의2②3호 비교 결과 강제(다건 신고단위 비교 전용). undefined면 자체 비교. */
+  scenarioOverride?: "A" | "B";
   /** 시나리오 A가 §89①3호 각 목의 주택 양도에 해당하는가 — ②2호 판정의 한쪽 항(D-8). */
   scenarioAIsOneHouse: boolean;
   /** 부담부증여 전용 — 증여세 상당액 안분 내역(표시용). 일반 양도는 undefined. */
@@ -580,10 +589,23 @@ function finishScenarios(args: {
 
   // ─────────────────────────────────────────────────────────
   // Step 6: 비교과세 (§97조의2 ② 3호)
-  // 동률(A === B)이면 A 채택 (단서 조건은 "적은 경우" — 동률은 적용 유지)
   // ─────────────────────────────────────────────────────────
+  /**
+   * 🔑 **비교 단위는 「양도소득 결정세액」(§92③2호)이다 — 신고단위 개념이다.**
+   *
+   * 자산이 1건이면 이 함수가 비교하는 단건 결정세액이 곧 신고 전체의 결정세액이라 그대로 옳다.
+   * **자산이 여러 건이면 그렇지 않다** — A/B 전환은 그 자산의 **세율군까지 바꾸므로**
+   * (A=증여자 취득일 기산 / B=증여 등기접수일 기산) 다른 자산과의 §104⑤ 누진 합산·§102② 통산이
+   * 함께 움직이는데, 단건 비교는 그 효과를 **구조적으로 볼 수 없다**.
+   * 실측: 300 격자 중 7건이 뒤집혔고 **전부 현행 과소**였다(750,000~20,900,000).
+   *
+   * 그래서 다건 엔진은 집계를 A/B 두 번 돌려 비교한 결과를 `scenarioOverride`로 내려보낸다
+   * (`transfer-tax-aggregate-carryover-scope.ts`). 여기서는 **그 값을 그대로 따른다**.
+   *
+   * 동률(A === B)이면 A 채택 — 단서 조건이 「**적은** 경우」라 동률은 적용 유지다.
+   */
   const adoptedScenario: "A" | "B" =
-    determinedTaxA >= determinedTaxB ? "A" : "B";
+    args.scenarioOverride ?? (determinedTaxA >= determinedTaxB ? "A" : "B");
   const comparisonExclusion = adoptedScenario === "B";
 
   // ─────────────────────────────────────────────────────────

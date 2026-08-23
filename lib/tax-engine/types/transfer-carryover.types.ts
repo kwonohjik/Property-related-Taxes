@@ -248,6 +248,24 @@ export interface CarryoverTaxationDetail {
   /** ② 3호 비교과세 적용배제 여부 (B 채택 시 true) */
   comparisonExclusion: boolean;
   /**
+   * **[다건 전용] ②3호를 신고단위 결정세액으로 비교한 실적.**
+   *
+   * `scenarioA.determinedTax`·`scenarioB.determinedTax`는 **그 자산만** 떼어낸 값이라
+   * 다건에서는 채택 결과를 설명하지 못한다(A가 작은데 A를 채택하는 조합이 실재한다 —
+   * A/B 전환이 세율군을 바꿔 다른 자산과의 §104⑤ 누진 합산이 함께 움직이기 때문이다).
+   * 다건 엔진은 집계를 두 번 돌린 **신고 전체 결정세액**을 여기에 싣는다.
+   *
+   * 단건 계산에서는 **항상 undefined** — 그때는 위 두 값이 곧 신고 전체 결정세액이다.
+   *
+   * @see lib/tax-engine/transfer-tax-aggregate-carryover-scope.ts
+   */
+  filingUnitComparison?: {
+    /** §97의2①을 **적용**했을 때의 신고 전체 결정세액 */
+    determinedTaxWithCarryover: number;
+    /** **적용하지 않았을** 때의 신고 전체 결정세액 */
+    determinedTaxWithout: number;
+  };
+  /**
    * **[echo] 채택 시나리오가 실제로 쓴 §104② 기산 사실.** 단건 세액에는 영향이 없다
    * (이미 그 입력으로 계산된 결과를 그대로 되비출 뿐이다).
    *

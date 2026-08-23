@@ -135,6 +135,8 @@ export function calculateTransferTax(
       rates,
       // calculateTransferTax를 주입 — 재귀 호출 시 carryoverTaxation=undefined이므로 무한 루프 없음
       calculateTransferTax,
+      // ②3호 비교 결과 강제 — 다건 엔진(신고단위 비교)만 지정한다. 단건은 undefined.
+      options?.carryoverScenarioOverride,
     );
     if (carryoverResult) {
       // [echo] 채택 시나리오가 실제로 쓴 §104② 기산 사실. **단건 세액 불변**(바로 아래에서
@@ -149,7 +151,11 @@ export function calculateTransferTax(
       steps.push({
         label: "배우자등 이월과세 판정",
         formula: carryoverResult.detail.isEligible
-          ? `Scenario A(결정세액 ${carryoverResult.detail.scenarioA.determinedTax.toLocaleString()}) vs B(${carryoverResult.detail.scenarioB.determinedTax.toLocaleString()}) → ${carryoverResult.detail.adoptedScenario} 채택`
+          ? `Scenario A(결정세액 ${carryoverResult.detail.scenarioA.determinedTax.toLocaleString()}) vs B(${carryoverResult.detail.scenarioB.determinedTax.toLocaleString()}) → ${carryoverResult.detail.adoptedScenario} 채택${
+              // 다건 신고에서는 판정이 **신고 전체 결정세액**(§92③2호)으로 이뤄진다.
+              // 그 사실을 적지 않으면 위 두 금액만 보고 「작은 쪽이 채택됐다」는 오독이 생긴다.
+              options?.carryoverScenarioOverride ? " (신고 전체 결정세액 비교 · §92③2호)" : ""
+            }`
           : `이월과세 적용배제 (사유: ${carryoverResult.detail.exclusionReason ?? "없음"})`,
         amount: 0,
         legalBasis: TRANSFER.CARRYOVER_TAXATION,

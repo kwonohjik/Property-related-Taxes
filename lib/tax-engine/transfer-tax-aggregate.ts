@@ -19,6 +19,10 @@ import {
   type CalculationStep,
 } from "./transfer-tax";
 import { computeAmendment } from "./transfer-tax-amendment";
+import {
+  resolveFilingUnitCarryoverScope,
+  type CarryoverScenarioOverrides,
+} from "./transfer-tax-aggregate-carryover-scope";
 import { computeSettlement } from "./transfer-tax-settlement";
 import { TRANSFER } from "./legal-codes";
 import { TaxCalculationError } from "./tax-errors";
@@ -131,9 +135,16 @@ function adoptedCarryoverAcquisitionPrice(
 // 메인 진입점
 // ============================================================
 
-export function calculateTransferTaxAggregate(
+/**
+ * 집계 1회 계산 — **주어진 이월과세 시나리오 assignment 하에서** 신고 전체를 계산한다.
+ *
+ * 공개 진입점은 아래 {@link calculateTransferTaxAggregate}다. 그쪽이 §97의2②3호를
+ * **신고단위 결정세액**으로 판정하기 위해 이 함수를 여러 번 부른다.
+ */
+function computeAggregateOnce(
   input: AggregateTransferInput,
   rates: TaxRatesMap,
+  carryoverOverrides: CarryoverScenarioOverrides,
 ): AggregateTransferResult {
   const warnings: string[] = [];
   const steps: CalculationStep[] = [];
@@ -156,7 +167,13 @@ export function calculateTransferTaxAggregate(
     // 그대로 route까지 전파되는데, 다건에서는 어느 자산이 원인인지 메시지만으로 알 수 없다.
     let result;
     try {
-      result = calculateTransferTax(singleInput, rates);
+      // §97의2②3호 — 신고단위 비교 결과를 내려보낸다(지정 없으면 단건 엔진이 자체 판정).
+      const scenarioOverride = carryoverOverrides[assetIdx];
+      result = calculateTransferTax(
+        singleInput,
+        rates,
+        scenarioOverride ? { carryoverScenarioOverride: scenarioOverride } : undefined,
+      );
     } catch (e: unknown) {
       if (e instanceof TaxCalculationError) {
         throw new TaxCalculationError(e.code, `자산 ${assetIdx + 1}: ${e.message}`, {
@@ -672,6 +689,66 @@ export function calculateTransferTaxAggregate(
     steps,
     warnings,
     ...(amendmentDetail ? { amendmentDetail } : {}),
+  };
+}
+
+
+// ============================================================
+// 공개 진입점 — §97의2②3호를 **신고단위 결정세액**으로 판정한다
+// ============================================================
+
+/**
+ * 다건 양도소득세 집계.
+ *
+ * 단건 엔진은 §97의2②3호의 A/B 비교를 **자기 자산만 놓고** 한다. 자산이 1건이면 그 값이 곧
+ * 신고 전체의 결정세액이라 옳지만, **여러 건이면 틀린다** — A/B 전환이 세율군을 바꿔
+ * §104⑤ 누진 합산·§102② 통산·§103 기본공제 배분이 함께 움직이기 때문이다
+ * (`transfer-tax-aggregate-carryover-scope.ts` 머리주석 · 실측 300 격자 중 7건, 전부 과소).
+ *
+ * 그래서 여기서 집계를 여러 번 돌려 **신고 전체 결정세액**으로 비교하고, 그 결과를
+ * `carryoverScenarioOverride`로 단건 엔진에 내려보낸다.
+ *
+ * **자산 1건이거나 이월과세 자산이 없으면 호출 1회**로 종전과 동일하게 끝난다.
+ */
+export function calculateTransferTaxAggregate(
+  input: AggregateTransferInput,
+  rates: TaxRatesMap,
+): AggregateTransferResult {
+  const memo = new Map<string, AggregateTransferResult>();
+  const run = (overrides: CarryoverScenarioOverrides): AggregateTransferResult => {
+    const key = JSON.stringify(overrides);
+    const hit = memo.get(key);
+    if (hit) return hit;
+    const computed = computeAggregateOnce(input, rates, overrides);
+    memo.set(key, computed);
+    return computed;
+  };
+
+  // 1) 강제 없이 1회 — ②1호·②2호·③ 기간·관계로 **이미 배제된** 자산을 가려낸다.
+  //    그 배제들은 ②3호보다 앞서므로 비교 대상이 아니다(`finishScenarios` 조기 반환).
+  const baseline = run({});
+  const eligible = baseline.properties.flatMap((p, idx) =>
+    p.carryoverTaxationDetail?.isEligible === true ? [idx] : [],
+  );
+  if (eligible.length === 0) return baseline;
+
+  // 2) 신고단위 비교로 채택 시나리오 확정
+  const { overrides, comparisons } = resolveFilingUnitCarryoverScope(
+    eligible,
+    (ov) => run(ov).determinedTax,
+  );
+  const final = run(overrides);
+
+  // 3) 비교 실적을 자산별 detail에 실어 준다 — 결과 화면이 **신고단위 두 값**을 그대로 보여준다.
+  //    (단건 세액만 보여주면 「A가 작은데 A를 채택했다」는 자기모순 화면이 된다.)
+  return {
+    ...final,
+    properties: final.properties.map((p, idx) => {
+      const cmp = comparisons.get(idx);
+      const detail = p.carryoverTaxationDetail;
+      if (!cmp || !detail) return p;
+      return { ...p, carryoverTaxationDetail: { ...detail, filingUnitComparison: cmp } };
+    }),
   };
 }
 

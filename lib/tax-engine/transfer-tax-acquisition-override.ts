@@ -40,6 +40,24 @@ export interface TransferTaxAcquisitionOptions {
    * key가 없는 자산: 기존 acquisitionPrice 그대로 (명시 override만 적용)
    */
   acquisitionOverridesByAssetId?: Record<string, number>;
+
+  /**
+   * **§97의2②3호 비교 결과 강제** — 다건 엔진이 「신고단위 결정세액」으로 비교하기 위한 채널.
+   *
+   * - `undefined`: 단건 엔진이 **스스로** ②3호를 판정한다(자산 1건 신고의 정본 동작).
+   * - `"A"`/`"B"`: **Step 6의 세액 비교만** 이 값으로 대체한다. ②1호(수용)·②2호(1세대1주택)·
+   *   ③ 기간초과·관계 부적격 등 **앞선 배제는 그대로 우선**한다(`finishScenarios`의 조기 반환).
+   *
+   * ## 왜 input이 아니라 options인가
+   *
+   * 이것은 **엔진 내부 제어값**이지 납세자가 신고하는 사실이 아니다. `TransferTaxInput`에 두면
+   * 14 동기화 지점(⑫Zod·⑬body·⑭Route)을 타야 하고, 그 순간 **API로 채택 시나리오를 강제할 수
+   * 있게 된다** — ②3호는 법이 정한 자동 비교라 사용자가 고를 수 있어서는 안 된다.
+   *
+   * @see lib/tax-engine/transfer-tax-aggregate-carryover-scope.ts (유일한 지정자)
+   * @see docs/00-pm/transfer-n1-carryover-filing-unit.plan.md
+   */
+  carryoverScenarioOverride?: "A" | "B";
 }
 
 // ============================================================
