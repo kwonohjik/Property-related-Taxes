@@ -20,6 +20,33 @@ test.beforeEach(async ({ page }) => {
     }),
   );
   await page.goto("/calc/property-tax");
+
+  /**
+   * 🔴 **한글 인터셉트가 살아날 때까지 기다린다** (2026-08-23 — CI 간헐 실패 해소)
+   *
+   * 이 spec의 검증 대상은 `useHangulTyping`의 **keydown 인터셉터**다. 그런데 React가
+   * 핸들러를 붙이기 전에 키가 도착하면 그 키는 그냥 사라진다 — 입력이 controlled
+   * (`AddressSearch`의 `value={query}`)라 브라우저가 넣은 영문자도 즉시 되돌려진다.
+   * 결과는 **앞 몇 글자만 유실**되는 형태다(실측: `rkr` → `각`이어야 하는데 `ㅏㄱ`,
+   * `xpgpfksfh 152` → `테헤란로 152`여야 하는데 `ㅏㄴ로 152`).
+   *
+   * ⚠️ `waitForLoadState("networkidle")`로는 해소되지 않는다(실측 3회 전부 실패) —
+   *    dev 서버의 HMR 소켓 때문에 idle 신호가 하이드레이션을 보증하지 못한다.
+   *    **인터셉트가 실제로 동작하는지**를 직접 확인하는 것이 유일하게 통하는 신호였다.
+   *
+   * 실측(각 3회): 워밍업 없음 → 매 회 3건 실패 / 워밍업 → 3회 전부 5건 통과.
+   *
+   * ⚠️ 이 워밍업은 **단언을 약화시키지 않는다** — 조합 결과 검증은 아래 각 테스트가 그대로 한다.
+   *    여기서 보는 것은 「인터셉터가 붙었는가」뿐이고, 붙지 않으면 15초 뒤 실패한다.
+   */
+  const probe = page.getByPlaceholder(ADDR_PLACEHOLDER);
+  await probe.click();
+  await expect(async () => {
+    await probe.fill("");
+    await page.keyboard.type("r");
+    await expect(probe).toHaveValue("ㄱ");
+  }).toPass({ timeout: 15_000 });
+  await probe.fill("");
 });
 
 test.describe("소재지 한글 자동 입력", () => {
