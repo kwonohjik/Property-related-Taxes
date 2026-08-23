@@ -95,7 +95,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
 
         <FieldCard
           label="취득 후 납입 추가분담금"
-          hint="승계취득 이후 조합원 분양계약에 따라 납입한 금액. 없으면 비워두세요. 청산금을 수령한 경우는 현재 지원하지 않습니다."
+          hint="승계취득 이후 조합원 분양계약에 따라 납입한 금액. 없으면 비워두세요. 받은 청산금이 있다면 아래 안내를 확인하세요."
         >
           <CurrencyInput
             label=""
@@ -117,6 +117,24 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
             </div>
           </div>
         )}
+      </ToneCard>
+
+      {/* 청산금 **수령** — 이 계산의 취득가액을 깎는 사안이 아니라 별개의 양도다.
+          종전 hint는 「현재 지원하지 않습니다」로만 적혀 있어 **사용자가 신고 의무 자체를 모를 수** 있었다.
+          근거: 국세청 사전-2023-법규재산-0450 (2024-06-27) — 관련 법령이 §88·§98·§105이지 §97이 아니다. */}
+      <ToneCard tone="amber" title="청산금을 수령한 경우" bodyClassName="space-y-1.5" noDark>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 §105" label="§105" />
+        </div>
+        <p className="text-xs text-amber-800">
+          수령한 청산금은 <b>위 취득가액에 넣지 않습니다</b>. 소유권 이전고시일의 <b>다음날</b>을
+          양도일로 하는 <b>별개의 양도</b>에 해당하여, 그 청산금에 대해 <b>따로 양도소득세를 신고</b>해야
+          합니다. 이 계산기는 그 별건 계산을 지원하지 않습니다.
+        </p>
+        <p className="text-caption text-amber-700">
+          근거: 국세청 사전-2023-법규재산-0450 (2024-06-27) — 승계조합원이 이전고시 후 조합으로부터
+          지급받은 청산금 상당액은 양도소득세 과세대상.
+        </p>
       </ToneCard>
 
       <ToneCard tone="rose" title="장기보유특별공제 미적용" bodyClassName="space-y-1.5" noDark>
