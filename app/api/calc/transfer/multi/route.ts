@@ -26,6 +26,8 @@ import { mapHousesToEngine, mapGracePeriodToEngine } from "@/lib/api/transfer-ro
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
+import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-preliminary-filing";
+import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 
 export async function POST(request: NextRequest) {
   // Rate Limiting — 분당 15회 (단건 30회의 절반)
@@ -340,11 +342,30 @@ export async function POST(request: NextRequest) {
     // 1차: 가산세 미주입 상태로 자산별 결정세액 산출.
     const baseResult = calculateTransferTaxAggregate(engineInput, rates);
 
+    /**
+     * 🔴 가산세 base는 **예정신고 세액**이다 — 집계 1차 pass의 자산별 standalone 값이 아니다(F03).
+     *
+     * 종전에는 `baseResult.properties[idx].determinedTax`를 그대로 넣었는데, 그 값은
+     * `skipBasicDeduction: true`로 계산된다(집계가 §103 기본공제를 신고 단위로 따로 배분한다).
+     * 그래서 **기본공제가 빠진 세액**이 base가 됐다 — 실측 200,000(0.85%) 과대.
+     *
+     * 「국세기본법」 §47의2①의 base는 「그 신고로 납부하여야 할 세액」이고 괄호가 **예정신고를
+     * 포함**한다. 그 세액은 「소득세법」 §107①이 정한 (양도차익 − 장특 − **기본공제**) × 세율이다.
+     * 기본공제 배분 순서는 §103②이 「먼저 양도한 자산부터 순서대로」로 **명문화**했다.
+     */
+    const preliminary = computePreliminaryFilingTaxes(
+      engineInput.properties as unknown as TransferTaxInput[],
+      rates,
+      engineInput.annualBasicDeductionUsed,
+      calculateTransferTax,
+    );
+
     // 자산별 결정세액·미납세액 주입 후 2차 계산 (가산세 자산별 합산 반영).
     const enrichedProperties = engineInput.properties.map((p, idx) => {
+      const pre = preliminary.get(idx);
       const breakdown = baseResult.properties[idx];
-      const determinedTax = breakdown?.determinedTax ?? 0;
-      const reductionAmount = breakdown?.reductionAmount ?? 0;
+      const determinedTax = pre?.determinedTax ?? breakdown?.determinedTax ?? 0;
+      const reductionAmount = pre?.reductionAmount ?? breakdown?.reductionAmount ?? 0;
       const enriched: TransferTaxItemInput = { ...p };
       if (p.filingPenaltyDetails) {
         enriched.filingPenaltyDetails = {
