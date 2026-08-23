@@ -726,7 +726,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 배우자등 이월과세 (§97조의2)
     ...(primary.acquisitionCause === "carryover_gift" && primary.carryover
       ? (() => {
-          const payload = buildCarryoverPayload(primary, form.transferDate);
+          const payload = buildCarryoverPayload(primary, form.transferDate, primaryRatio);
           return payload ? { carryoverTaxation: payload.carryoverTaxation } : {};
         })()
       : {}),

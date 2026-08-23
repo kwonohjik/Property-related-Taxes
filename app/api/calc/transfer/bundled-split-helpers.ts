@@ -28,7 +28,7 @@
 
 import type { z } from "zod";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
-import type { reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
+import type { companionAssetSchema, reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { resolveCompanionLandRate } from "@/lib/tax-engine/appurtenant-land-rate";
 import {
@@ -42,7 +42,7 @@ import {
 } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
 import type { InheritanceAssetKind } from "@/lib/tax-engine/inheritance-acquisition-price";
-import { toOptionalDate } from "@/lib/api/date-coerce";
+import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 
 // ─── 사례 28 자동 분기 양방향 확장 ───────────────────────────────
 // 자산 순서와 무관하게(primary가 land여도) companion에서 housing을 검색하여
@@ -165,6 +165,14 @@ interface CompanionRawAsset {
    * 지분 자산의 개산공제가 100% 기준시가로 계산됐다(F39).
    */
   ownershipRatio?: number;
+  /**
+   * ⑭ 배우자등 이월과세 §97의2 — **⑫(`companionAssetSchema`)의 파싱 결과 그대로**.
+   *
+   * 🔴 느슨한 인라인 타입으로 다시 적으면 안 된다 — ⑫에 필드가 늘 때 한쪽만 갱신되어
+   *    조용히 strip된다(F14가 `reductions`에서 그렇게 발생했다).
+   *    일자는 아직 **string**이다(JSON 경유) — 매핑에서 `toDate`로 변환한다.
+   */
+  carryoverTaxation?: z.infer<typeof companionAssetSchema>["carryoverTaxation"];
 }
 
 interface CompanionApportioned {
@@ -223,8 +231,17 @@ export function buildCompanionEngineInputs(
     c.acquisitionCause === "inheritance" && c.decedentAcquisitionDate
       ? new Date(c.decedentAcquisitionDate)
       : undefined;
+  /**
+   * ⑭ 증여자 취득일 — `gift`뿐 아니라 **`carryover_gift`에도 싣는다**(D-2).
+   *
+   * 🔴 종전 게이트는 `"gift"` 하나뿐이라 **쓰이지 않는 경우에만 싣고, 쓰이는 경우에 버렸다** —
+   *    `transfer-rate-holding-basis.ts`의 §104②2호 보유기간 소급은 `carryover_gift`에서만
+   *    이 값을 읽는다(`gift`는 「증여받은 날」 기산이라 값이 있어도 통산하지 않는다).
+   *    ⇒ 컴패니언 이월과세의 단기보유 세율 판정이 영영 발화하지 않았다.
+   */
   const donor =
-    c.acquisitionCause === "gift" && c.donorAcquisitionDate
+    (c.acquisitionCause === "gift" || c.acquisitionCause === "carryover_gift") &&
+    c.donorAcquisitionDate
       ? new Date(c.donorAcquisitionDate)
       : undefined;
   // companion 자체 수동 override 사용 (폼-수준 userModeOverride 제거됨).
@@ -244,8 +261,16 @@ export function buildCompanionEngineInputs(
     expenses: a.allocatedExpenses,
     capitalExpenditure: c.capitalExpenditure,
     transferExpense: c.transferExpense,
-    useEstimatedAcquisition:
-      c.acquisitionCause === "purchase" && (c.useEstimatedAcquisition ?? false),
+    /**
+     * ⑭ 환산취득가 사용 여부 — **원값만 전달**한다(acquisitionCause 재게이트 금지).
+     *
+     * 🔴 종전 `c.acquisitionCause === "purchase" &&` 게이트는 이월과세 `general` 환산
+     *    (§97①1호나목)을 컴패니언에서 통째로 죽였다 — ④가 `topLevelOverrides`로 실은
+     *    `useEstimatedAcquisition: true`가 여기서 false로 눌렸다.
+     *    단건 경로(`engine-input.ts`)는 원값을 그대로 넘긴다 ⇒ 재게이트가 곧
+     *    「단건 ≠ 일괄」 dual-truth였다. 어느 취득원인에 환산이 성립하는지는 엔진이 판정한다.
+     */
+    useEstimatedAcquisition: c.useEstimatedAcquisition ?? false,
     standardPriceAtAcquisition: c.standardPriceAtAcquisition,
     standardPriceAtTransfer: c.standardPriceAtTransfer,
     // ⑭ 개산공제(§163⑥) base 지분 축소 — 기준시가는 물건 전체 값을 유지하고 개산공제만 지분분이 된다.
@@ -297,6 +322,31 @@ export function buildCompanionEngineInputs(
     decedentCohabitationHoldingStartDate: toOptionalDate(c.decedentCohabitationHoldingStartDate),
     decedentCohabitationResidenceMonths: c.decedentCohabitationResidenceMonths,
     donorAcquisitionDate: donor,
+    /**
+     * ⑭ 배우자등 이월과세 §97의2 — **키를 열거하지 않는다**(spread + 일자만 덮어쓰기).
+     *
+     * 단건 `engine-input.ts`가 F15에서 같은 형태로 고쳐졌다 — 열거형은 ⑫·④가 실제로
+     * 보내던 `donorRelation`·`donorDeceased`를 빠뜨려 침묵 strip했다. spread는 **키를 세지
+     * 않으므로 누락이 구조적으로 불가능**하다(⑫에 필드가 늘면 여기 수정 없이 따라간다).
+     *
+     * ⚠️ 일자 2개는 `toDate` 필수 — JSON 경유 string이 그대로 도달하면
+     *    `Date < string` 비교가 **침묵 false**가 된다(`lib/api/date-coerce.ts`).
+     * ⚠️ 게이트(`acquisitionCause === "carryover_gift"`)는 엔진이 판정한다
+     *    (`transfer-tax.ts` STEP 0.475) — 여기선 원값만 전달한다.
+     */
+    carryoverTaxation: c.carryoverTaxation
+      ? {
+          ...c.carryoverTaxation,
+          giftRegistryDate: toDate(
+            c.carryoverTaxation.giftRegistryDate,
+            "companionAssets[].carryoverTaxation.giftRegistryDate",
+          ),
+          donorAcquisitionDate: toDate(
+            c.carryoverTaxation.donorAcquisitionDate,
+            "companionAssets[].carryoverTaxation.donorAcquisitionDate",
+          ),
+        }
+      : undefined,
     // ⑭ 감면 일자 변환은 **단건과 같은 정본 매퍼**를 쓴다(`route-reductions-mapper.ts`).
     //    전용 매퍼를 두면 variant가 늘 때마다 한쪽만 갱신되어 「같은 감면인데 자산1과 자산2의
     //    세액이 다르다」가 된다(F14 실측: §77의3 감면율 40%↔25%, §97 임대 전액 소실,
@@ -538,7 +588,14 @@ interface BundledCompanionForApportion {
   assetKind: "housing" | "land" | "building";
   acquisitionCause: TransferTaxItemInput["acquisitionCause"];
   useEstimatedAcquisition?: boolean;
+  /** §97①1호나목 환산 분모(4.5 매매 estimated). 이월과세 general에서는 증여자 축 값이다. */
   standardPriceAtTransfer?: number;
+  /**
+   * §166⑥ **안분 키** — 사용자가 입력한 자산-수준 「양도시 기준시가」(⑫ 전용 필드).
+   * `standardPriceAtTransfer`와 나눠 두지 않으면 이월과세 general 환산 컴패니언에서
+   * 안분 키가 증여자 기준시가로 치환된다(D-5·V-10).
+   */
+  standardPriceAtTransferForApportion?: number;
   standardPriceAtAcquisition?: number;
   directExpenses?: number;
   fixedAcquisitionPrice?: number;
@@ -623,7 +680,10 @@ export function prepareBundledApportionment(
         assetId: c.assetId,
         assetLabel: c.assetLabel,
         assetKind: c.assetKind,
-        standardPriceAtTransfer: c.standardPriceAtTransfer ?? 0,
+        // §166⑥ 안분 키 — 전용 필드 우선. 구필드 fallback은 전용 키를 모르는 직접 호출자 하위호환
+        // (⑩ superRefine의 `apportionKey` 선택식과 **같은 식**이어야 한다 — 단일 기준).
+        standardPriceAtTransfer:
+          c.standardPriceAtTransferForApportion ?? c.standardPriceAtTransfer ?? 0,
         standardPriceAtAcquisition: c.standardPriceAtAcquisition,
         directExpenses: c.directExpenses,
         fixedAcquisitionPrice: companionFixedAcq[i],

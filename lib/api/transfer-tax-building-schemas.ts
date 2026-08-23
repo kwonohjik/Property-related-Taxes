@@ -20,8 +20,14 @@ const carryoverExclusionShape = z.object({
 /**
  * **엔진이 읽는 모양**의 이월과세 서브객체 — 파트마다 완결돼 있다.
  * 토지(`landCarryoverTaxation`)·건물(`buildingCarryoverTaxation`)이 같은 모양을 쓴다.
+ *
+ * 🔑 **컴패니언 자산(`companionAssetSchema`)도 이 shape을 쓴다**(A-1/A-2).
+ *    단건 `transfer-tax-schema.ts`의 인라인 shape과 필드·타입이 **10개 전부 일치**함을
+ *    기계 대조로 확인했다(V-5). ⚠️ 아래 `giftTaxAmount` 주석의 「이미 안분된 값」은
+ *    **GB 파트 축 한정 서술**이다 — 컴패니언·단건에서는 사용자가 영 §163의2②로 직접
+ *    산정해 넣은 **자산 전체분**이다(소비자별 의미 차이, 타입 차이는 없다).
  */
-const carryoverTaxationEngineShape = z.object({
+export const carryoverTaxationEngineShape = z.object({
   giftRegistryDate: z.string().date(),
   donorAcquisitionDate: z.string().date(),
   donorAcquisitionPrice: z.number().int().nonnegative().optional(),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
 
 // ─── ⑩ 장기임대주택 거주주택 비과세 특례 enum 재export (컴패니언) ─
 
@@ -288,10 +289,24 @@ export const companionAssetSchema = z.object({
   assetLabel: z.string().min(1),
   assetKind: z.enum(["housing", "land", "building"]),
   /**
-   * 양도시점 기준시가 (안분 키) — 주택: 개별주택가격, 토지: 공시지가×면적.
-   * apportioned 모드에서 필수, actual 모드(fixedSalePrice 사용)에서는 선택.
+   * 양도시점 기준시가 — **§97①1호나목 환산 분모**(매매 estimated·이월과세 general 환산).
+   *
+   * 🔴 **안분 키가 아니다.** 이월과세 `general` 환산 컴패니언에서 ④가 이 칸을
+   *    **증여자의** 양도시 기준시가로 덮어쓰기 때문이다
+   *    (`lib/calc/transfer-tax-api-carryover.ts` `topLevelOverrides`).
+   *    §166⑥ 안분 키는 아래 `standardPriceAtTransferForApportion`이다.
    */
   standardPriceAtTransfer: z.number().int().positive().optional(),
+  /**
+   * §166⑥ **안분 키** — 사용자가 자산 카드에 입력한 「양도시 기준시가」.
+   * 주택: 개별주택가격, 토지: 공시지가×면적. apportioned 모드에서 필수
+   * (actual 모드·지분 컴패니언은 선택 — `transfer-tax-schema.ts` superRefine).
+   *
+   * 🔑 주 자산의 폼-전역 `standardPriceAtTransferForApportion`과 **같은 역할**이다.
+   *    이 필드가 없으면 이월과세 general 환산 컴패니언에서 안분 키가 증여자 기준시가로
+   *    치환된다(D-5).
+   */
+  standardPriceAtTransferForApportion: z.number().int().positive().optional(),
   /** 취득시점 기준시가 (선택) — totalAcquisitionPrice 안분 또는 매매 estimated 환산 시 키 */
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   /**
@@ -424,6 +439,19 @@ export const companionAssetSchema = z.object({
   approvalCertificateDate: z.string().date().optional(),
   temporaryApprovalDate: z.string().date().optional(),
   actualUseDate: z.string().date().optional(),
+  /**
+   * ⑫ 배우자등 이월과세 §97의2 — `acquisitionCause === "carryover_gift"` 시 필수
+   * (필수 판정은 `transfer-tax-schema.ts`의 컴패니언 superRefine `carryover_gift` arm).
+   *
+   * 🔴 이 필드가 없던 동안 ④(`buildAssetPayload` → `buildCarryoverPayload`)가 싣던 값이
+   *    Zod에서 **조용히 strip**됐다 — 400이 아니라 200 + 컴패니언 취득가액 **0**이었다(D-1).
+   *
+   * shape은 GB 파트용 `carryoverTaxationEngineShape`를 **재사용**한다. 단건
+   * (`transfer-tax-schema.ts`) 인라인 shape과 필드·타입 10개가 전부 일치한다(V-5 기계 대조).
+   * ⚠️ `giftTaxAmount`의 **의미**만 소비자마다 다르다 — GB 파트는 「이미 안분된 값」,
+   *    컴패니언·단건은 사용자가 영 §163의2②로 산정해 넣은 **자산 전체분**이다.
+   */
+  carryoverTaxation: carryoverTaxationEngineShape.optional(),
 });
 
 // ─── superRefine 공통 검증 — 별도 파일로 분리 (800줄 정책) ──────

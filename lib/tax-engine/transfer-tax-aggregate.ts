@@ -77,6 +77,56 @@ export type {
   AggregateTransferResult,
 };
 
+/**
+ * **[표시 전용]** 배우자등 이월과세(§97의2) 자산의 「취득가액 열」 정본 —
+ * 채택 시나리오의 취득가액. 이월과세 자산이 아니면 `undefined`(호출측이 종전 축을 쓴다).
+ *
+ * ## 왜 필요한가 — 취득가액 열만 STEP 0.475 **이전** 축에 남아 있었다
+ *
+ * 단건 엔진은 STEP 0.475에서 `workingInput`을 **채택 시나리오의 입력**으로 갈아탄 뒤
+ * `transferGain`을 산출한다(`transfer-tax.ts`). 그런데 아래 호출부의 종전 취득가액은
+ * `r.singleInput`(= 갈아타기 **전** 원본)에서 왔다. 두 값이 서로 다른 시점을 보므로
+ * 신고서 열이 이렇게 어긋난다:
+ *
+ * | 픽스처 | 취득가액 열(종전) | 필요경비 열(종전) | 채택 취득가액 |
+ * |---|---|---|---|
+ * | 함께양도 primary 이월과세 · B 채택 | **0** | **300,000,000** | 300,000,000 |
+ * | 일반건물 토지 파트 이월과세 · A 채택 | 250,000,000(수증자 환산) | **−70,000,000** | 150,000,000 |
+ *
+ * 필요경비가 음수인 경우 UI clamp(`Math.max(0, …)` —
+ * `FilingFormTableAggregateHelpers` · `DetailedStatementHelpers`)에 잘려
+ * 「양도가액 − 취득가액 − 필요경비 = 양도차익」 자기검산이 **화면에서** 깨진다
+ * (위 GB 픽스처 실측: 500,000,000 − 250,000,000 − 0 = 250,000,000 ≠ 320,000,000).
+ *
+ * ## 왜 재도출이 아니라 채택값 참조인가
+ *
+ * 「A면 증여자 취득가액, B면 증여 당시 평가액」을 여기서 다시 유도하면 시나리오 입력 구성이
+ * 바뀔 때 한쪽만 따라가는 dual-truth가 된다. 두 값은 **단건이 실제로 쓴 취득가액**이다 —
+ * A는 `inputAFinal.acquisitionPrice`(환산 모드면 §97①1호나목 환산액), B는
+ * `buildInputB`의 `acquisitionPrice`(= `giftDateValuation`)이고, 적용배제 조기반환
+ * (관계·기간·수용·1세대1주택·가업상속) 역시 전부 `adoptedScenario: "B"` +
+ * `makeEmptyScenarioB(giftDateValuation)`이라 같은 값으로 수렴한다
+ * (`transfer-tax-carryover.ts`).
+ *
+ * 🔒 **세액 불변** — 취득가액·필요경비 열은 `PerPropertyBreakdown`의 표시 필드이고
+ *    세액 경로(`taxableAfterReduction`·`groupTaxes`)는 이 값을 읽지 않는다.
+ *    직전 `adoptedRateBasis` echo(M-1)와 같은 「채택 결과를 표시 축에 반영」 패턴이다.
+ */
+function adoptedCarryoverAcquisitionPrice(
+  detail:
+    | {
+        adoptedScenario: "A" | "B";
+        scenarioA: { acquisitionPrice: number };
+        scenarioB: { acquisitionPrice: number };
+      }
+    | undefined,
+): number | undefined {
+  if (!detail) return undefined;
+  return detail.adoptedScenario === "A"
+    ? detail.scenarioA.acquisitionPrice
+    : detail.scenarioB.acquisitionPrice;
+}
+
 // ============================================================
 // 메인 진입점
 // ============================================================
@@ -507,11 +557,13 @@ export function calculateTransferTaxAggregate(
 
     // 실제 적용 취득가액 (환산 시 재산식), 필요경비는 §97 개산공제 포함 역산
     const tsfStd = r.singleInput.standardPriceAtTransfer ?? 0;
-    const effectiveAcquisitionPrice = r.result.usedEstimatedAcquisition
-      ? (tsfStd > 0
-          ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
-          : 0)
-      : r.singleInput.acquisitionPrice;
+    const effectiveAcquisitionPrice =
+      adoptedCarryoverAcquisitionPrice(r.result.carryoverTaxationDetail) ??
+      (r.result.usedEstimatedAcquisition
+        ? (tsfStd > 0
+            ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
+            : 0)
+        : r.singleInput.acquisitionPrice);
     // 비과세 자산: gross(exemptGrossGain)와 취득가액으로 필요경비 역산(환산 시 개산공제분).
     //   → 신고서 양식 컬럼 교차검산(양도가액 − 취득가액 − 필요경비 = 전체 양도차익) 정합.
     // 비-비과세: 엔진 transferGain으로 역산(개산공제·양도비 포함).
