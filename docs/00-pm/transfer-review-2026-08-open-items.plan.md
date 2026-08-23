@@ -1,9 +1,11 @@
-# 양도소득세 코드리뷰 2026-08 — 미결 4건 (원 5건 → F35 해소)
+# 양도소득세 코드리뷰 2026-08 — 미결 3건 (원 5건 → F35·F16 해소)
 
 > 2026-08 전면 코드리뷰([`docs/reviews/transfer-tax-code-review-2026-08.md`](../reviews/transfer-tax-code-review-2026-08.md))의 확정 결함 44건 중
 > **36건은 Wave 1~5로 수정 완료**(`9dd29b62`·`f6225ff2`·`1a65df9f`·`6821ea97`·`f167b70e`)했고,
 > 아래는 **정답이 하나로 갈리지 않아 결정 전 착수 금지**로 남긴 것이다.
-> 원 5건 중 **F35는 2026-08-23 해소**됐고(`d1eeaf89`·`2d3b8c13`·`b10702fd`), **4건이 남았다**.
+> 원 5건 중 **F35·F16이 2026-08-23 해소**됐고, **3건(F03·F08·F23)이 남았다**.
+> F35 → `d1eeaf89`·`2d3b8c13`·`b10702fd` · F16 → `ce8fbce5`(Phase 0)·`53783c31`(선행)·`ceafe4b1`(본체)
+> 부수 해소: **F15**(배치 누락분) `8cef41cc` · **classifyRateGroup**(F16 조사 중 발견) `53783c31`
 
 ## 상태 요약
 
@@ -11,7 +13,7 @@
 |---|---|---|---|---|
 | **F03** | 다건 자산별 가산세 base | 계산 축 오류 | +200,000 (0.93%) 과대 | **위임입법에 자산별 가산세 칸이 없다** |
 | **F08** | §155⑳ 특례 × 조특법 감면 병용 | 감면 침묵 소실 | 감면 전액 | 병용 가부 **예규·심판례 부존재** |
-| **F16** | 컴패니언 이월과세 ⑫ 부재 | 배관 단절 | 취득가액 0 | 정식 지원의 **스케일 충돌 위험 미실측** |
+| ~~F16~~ | ~~컴패니언 이월과세 ⑫ 부재~~ | — | — | ✅ **2026-08-23 해소** — (a) 정식 지원 (`ceafe4b1`) |
 | **F23** | split 자산 §97①3호 양도비 유실 | 진짜 기능 공백 | 양도비 전액 | 파트 칸 **입력 경로 자체가 없다** |
 | ~~F35~~ | ~~겸용 배율초과 비사토 신고서 표시~~ | — | — | ✅ **2026-08-23 해소** — (나) 채택 (`d1eeaf89`·`2d3b8c13`) |
 
@@ -184,6 +186,22 @@
    가산이 맞다. 같은 객체 안에서 축이 갈린다.
 5. **「4열 합 = 합계」는 정확히 성립하지 않는다.** floor 잔차로 ±2원 어긋나고 기존 anchor도
    ±4원 tolerance로 설계돼 있다 — 판정선은 0이 아니라 4원이다.
+
+## 🆕 F16 작업이 새로 연 별건 (착수 전 확인 필요)
+
+F16 (a) 구현 중 발견됐고 **F16이 만든 것이 아니라 이미 살아 있던** 항목들이다.
+
+| 항목 | 실측 | 위치 |
+|---|---|---|
+| **§97의2②3호 비교 스코프 자산별 → 신고단위** | 조문상 신고단위 확정(§104⑤ 근거). divergence 16/562·4,570,000~39,125,000·**전부 현행 과소**. ⚠️ memory `project_stock_carryover_97_2_necessary_expense_open.md:169-172`의 「갭 없음」과 **상충**(재현 불가) — 착수 시 선결 | `transfer-tax-carryover.ts:585-587` |
+| **`splitCompanionIntoTwo`가 dead code** | `resolveCompanionSplit`이 `landNature`를 안 넘겨 `resolveCompanionLandRate`가 **항상 `applied:false`**. §167의5 한도초과 분리가 도달 불가(트리거 조건 충족 픽스처로 실측) | `bundled-split-helpers.ts:462-473` |
+| **GB 지분 경로 이월과세 미스케일** | `applyShareScale`이 `land/buildingCarryoverTaxation` 서브객체를 스케일하지 않는다. GB는 별도 빌더(`transfer-tax-api-gb-carryover.ts`)라 A-10이 파급되지 않는다 | `transfer-tax-api-gb-shares.ts` |
+| **`giftTaxAmount` 지분 스케일 여부** | 미스케일(현행) 유지. 바꾸려면 `OwnershipRatioInput` 안내 문구와 함께 결정. anchor R-1c가 조용한 변경을 막는다 | `transfer-tax-api-carryover.ts` |
+| 부담부증여 aggregate **양도가액 열 0** | 수정 전후 모두 열 산술이 깨져 있다(§159 유상분은 `burdenedGiftInfo`에서 파생). ⑧이 마법사 경로를 막지만 **GB route는 aggregate를 거쳐 도달** | `transfer-tax-aggregate.ts` |
+| 환산 산식 텍스트 드리프트 | A-9로 이월과세 자산의 `acquisitionPrice`가 채택값이 되어, 이월과세 × 환산에서 인쇄된 피연산자가 결과를 유도하지 않을 수 있다. **표시 전용·수치 미측정** | `DetailedStatementFormulaBuilders.ts:314·317·325` |
+| §97②2호 swap 잔여 드리프트 | 환산취득가액이 양도차익에서 차감되지 않는데 표시 열은 환산 재산식을 그린다. 이번 픽스처에서 미발현·**수치 미측정** | `transfer-tax-helpers.ts:250-258` |
+| 컴패니언 phd/apd 배관 부재 | ⑫에 `preHousingDisclosure` 필드 자체가 없다. base가 더 과대였으므로 **방향은 나빠지지 않았다**. (a)⑫ 배관 / (b)⑧ 차단 판단 필요 | `transfer-tax-schema-sub.ts` |
+| `schema-sub.ts` 706줄 | 착지목표 ≤700을 6줄 초과(hard cap 800 미만) | — |
 
 ## 부록 — 이 문서에 없는 것
 
