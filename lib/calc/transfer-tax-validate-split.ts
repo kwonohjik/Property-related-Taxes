@@ -413,5 +413,32 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
     }
   }
 
+  /**
+   * ④ **자산 단위 자본적지출은 split에서 계산에 도달하지 않는다** — 파트 칸으로 안내한다.
+   *
+   * 🔴 실측(2026-08-23): `hasSeperateLandAcquisitionDate` 자산에 자산 전체 자본적지출
+   *    30,000,000을 넣어도 **실가·환산 두 모드 모두 세액 변화 0**이다. `calcSplitGain`은
+   *    파트 칸(`landDirectExpenses`·`buildingDirectExpenses`)만 읽는다. 화면에는 칸이 그대로
+   *    보이므로 **입력하고도 조용히 버려지는** 상태였다.
+   *
+   * 자동 안분으로 메우지 않는다 — 「소득세법」 §100② 후문은 「공통되는 **취득가액과 양도비용**」만
+   * 안분 대상으로 열거하고 **자본적지출은 열거하지 않는다**. 게다가 §97②2호가 파트별로 갈리므로
+   * (실가 파트는 **가산**, 환산 파트는 가목↔나목 **택일**) 귀속 파트를 모르면 조문대로 계산할 수 없다.
+   *
+   * 일반건물 경로가 이미 같은 판단을 하고 있다(`transfer-tax-validate-gb.ts` V-8 —
+   * 「자산 전체 칸은 두 파트가 모두 환산취득가액일 때만」). 여기서는 그 예외조차 성립하지 않는다 —
+   * 위 실측대로 **환산에서도** 도달하지 않기 때문이다.
+   *
+   * ⚠️ **양도비(§97①3호)는 대상이 아니다.** 그쪽은 §100② 후문의 명문 열거라 엔진이 파트에
+   *    안분한다(`transfer-tax-split-gain.ts` ③-b). 자산 전체 칸을 그대로 쓰면 된다.
+   */
+  if (asset.assetKind !== "general_building" && parseAmount(asset.capitalExpenditure ?? "") > 0) {
+    const hasPartCapex =
+      opt(asset.landDirectExpenses) != null || opt(asset.buildingDirectExpenses) != null;
+    if (!hasPartCapex) {
+      return `${label}: 토지·건물을 나눠 계산하는 자산은 자본적지출도 토지분·건물분 칸에 각각 입력하세요. 자산 전체 칸은 계산에 반영되지 않습니다 (소득세법 §97②2호는 실가 파트는 가산, 환산 파트는 가목·나목 택일이라 귀속 파트를 알아야 하고, §100② 후문은 자본적지출을 안분 대상으로 열거하지 않습니다). 양도비는 자산 전체 칸을 그대로 쓰면 됩니다.`;
+    }
+  }
+
   return null;
 }
