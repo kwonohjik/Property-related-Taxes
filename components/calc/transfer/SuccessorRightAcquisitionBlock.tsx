@@ -38,11 +38,44 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { successorRightAcquisitionTotal } from "@/lib/calc/transfer-successor-right";
+import { successorRightStdPriceAtAcq } from "@/lib/calc/transfer-successor-right";
+import { successorRightStdPriceAtTransfer } from "@/lib/calc/transfer-successor-right";
+import { successorRightEstimationMode } from "@/lib/calc/transfer-successor-right";
+import { SuccessorRightStdPriceSection } from "./SuccessorRightStdPriceSection";
 
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+}
+
+type AcqMode = ReturnType<typeof successorRightEstimationMode>;
+
+/**
+ * 취득가액 산정 방식 — 「소득세법 시행령」 §176의2③의 **추계 순서**를 화면 순서로 그대로 쓴다.
+ *   실지거래가액(§97①1호 가목) → 매매사례(③1호) → 감정(③2호) → 환산(③3호)
+ *
+ * ⚠️ 순서를 바꾸지 말 것. 법정 순위이고, 사용자가 위에서부터 검토하도록 배치한 것이다.
+ */
+const ACQ_MODE_OPTIONS: { value: AcqMode; label: string; description: string }[] = [
+  { value: "actual", label: "실지거래가액", description: "승계취득 시 실제로 지급한 금액 (§97①1호 가목)" },
+  { value: "salesCase", label: "매매사례가액", description: "취득일 전후 3개월 이내 동일·유사 자산의 매매사례 (§176의2③1호)" },
+  { value: "appraisal", label: "감정가액", description: "취득일 전후 3개월 이내 2 이상 감정평가법인등 평가액의 평균 (§176의2③2호)" },
+  { value: "estimated", label: "환산취득가액", description: "양도가액 × (취득당시 기준시가 ÷ 양도당시 기준시가) (§176의2②2호·③3호)" },
+];
+
+/**
+ * 3개 boolean 플래그를 **하나만 참**으로 좁힌다 — 단일 배치 patch로 돌려주지 않으면
+ * 두 번째 `onChange`의 spread가 첫 번째를 덮어써 조합 상태가 남는다
+ * (memory `feedback_multikey_patch_stale_spread_overwrite`).
+ */
+function acqModePatch(mode: AcqMode): Partial<AssetForm> {
+  return {
+    useEstimatedAcquisition: mode === "estimated",
+    isAppraisalAcquisition: mode === "appraisal",
+    isSalesCaseAcquisition: mode === "salesCase",
+  };
 }
 
 export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
@@ -56,6 +89,13 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
       }),
     [successorRightAcqPrice, successorRightAddedContribution],
   );
+
+  // 산정 방식 — ④ 변환·⑧ validate와 **같은 술어**(dual-truth 방지)
+  const mode = successorRightEstimationMode(asset);
+  const isActual = mode === "actual";
+  // §165① 기준시가 미리보기 — 저장하지 않는다(합산은 ④ 변환과 같은 헬퍼)
+  const stdAtAcq = successorRightStdPriceAtAcq(asset);
+  const stdAtTransfer = successorRightStdPriceAtTransfer(asset);
 
   return (
     <div className="space-y-3">
@@ -81,31 +121,82 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
           />
         </FieldCard>
 
+        {/* 취득가액 산정 방식 — §176의2③ 추계 순서 (R-12). 원조합원은 §166③ 환산 전속이라
+            이 라디오가 없다(④ 변환의 `blocksEstimation`이 게이트). */}
+        {/* ⚠️ 라벨에 「승계」를 붙인다 — 상단 축 A(`CompanionAcqPurchaseBlock`의 산정방식 라디오)와
+            **다른 축**임이 드러나야 한다. 그쪽은 §166 경로(원조합원)의 축이고 이쪽은 §97①1호
+            일반 경로의 축이다. 같은 문구를 쓰면 사용자도 셀렉터도 둘을 구분하지 못한다. */}
         <FieldCard
-          label="승계취득가액"
-          hint="조합원입주권을 양수하며 실제로 지급한 금액. 권리가액 상당액에 프리미엄을 지급했다면 포함합니다(객관적 입증자료 필요)."
+          label="승계취득가액 산정 방식"
+          hint="실지거래가액을 확인할 수 없을 때만 추계를 씁니다. 매매사례 → 감정 → 환산 순서로 검토합니다(시행령 §176의2③)."
         >
-          <CurrencyInput
-            label=""
-            value={asset.successorRightAcqPrice}
-            onChange={(v) => onChange({ successorRightAcqPrice: v })}
-            hideUnit
+          <RadioCardGroup
+            name={`successorAcqMode-${asset.assetId}`}
+            value={mode}
+            onChange={(v) => onChange(acqModePatch(v as AcqMode))}
+            options={ACQ_MODE_OPTIONS}
           />
         </FieldCard>
 
-        <FieldCard
-          label="취득 후 납입 추가분담금"
-          hint="승계취득 이후 조합원 분양계약에 따라 납입한 금액. 없으면 비워두세요. 받은 청산금이 있다면 아래 안내를 확인하세요."
-        >
-          <CurrencyInput
-            label=""
-            value={asset.successorRightAddedContribution}
-            onChange={(v) => onChange({ successorRightAddedContribution: v })}
-            hideUnit
-          />
-        </FieldCard>
+        {isActual && (
+          <>
+            <FieldCard
+              label="승계취득가액"
+              hint="조합원입주권을 양수하며 실제로 지급한 금액. 권리가액 상당액에 프리미엄을 지급했다면 포함합니다(객관적 입증자료 필요)."
+            >
+              <CurrencyInput
+                label=""
+                value={asset.successorRightAcqPrice}
+                onChange={(v) => onChange({ successorRightAcqPrice: v })}
+                hideUnit
+              />
+            </FieldCard>
 
-        {total > 0 && (
+            <FieldCard
+              label="취득 후 납입 추가분담금"
+              hint="승계취득 이후 조합원 분양계약에 따라 납입한 금액. 없으면 비워두세요. 받은 청산금이 있다면 아래 안내를 확인하세요."
+            >
+              <CurrencyInput
+                label=""
+                value={asset.successorRightAddedContribution}
+                onChange={(v) => onChange({ successorRightAddedContribution: v })}
+                hideUnit
+              />
+            </FieldCard>
+          </>
+        )}
+
+        {mode === "salesCase" && (
+          <FieldCard
+            label="매매사례가액"
+            hint="취득일 전후 3개월 이내에 있었던 동일하거나 유사한 자산의 매매사례가액입니다."
+          >
+            <CurrencyInput
+              label=""
+              value={asset.similarSalesValue}
+              onChange={(v) => onChange({ similarSalesValue: v })}
+              hideUnit
+            />
+          </FieldCard>
+        )}
+
+        {mode === "appraisal" && (
+          <FieldCard
+            label="감정가액"
+            hint="취득일 전후 3개월 이내에 2 이상의 감정평가법인등이 평가한 가액의 평균액입니다(기준시가 10억 이하는 1개 가능)."
+          >
+            <CurrencyInput
+              label=""
+              value={asset.fixedAcquisitionPrice}
+              onChange={(v) => onChange({ fixedAcquisitionPrice: v })}
+              hideUnit
+            />
+          </FieldCard>
+        )}
+
+        {!isActual && <SuccessorRightStdPriceSection asset={asset} onChange={onChange} mode={mode} stdAtAcq={stdAtAcq} stdAtTransfer={stdAtTransfer} />}
+
+        {isActual && total > 0 && (
           <div className="rounded-md border border-sky-200 bg-sky-100/60 p-2.5 text-caption text-sky-900 space-y-1">
             <div className="font-semibold">미리보기 — 취득가액 합계</div>
             <div className="font-mono tabular-nums">

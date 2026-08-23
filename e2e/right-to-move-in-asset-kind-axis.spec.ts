@@ -207,8 +207,18 @@ test.describe("자산 종류 축 — 입주권 / 재개발APT", () => {
     // 합계 미리보기 (350,000,000 + 90,000,000)
     await expect(page.getByText("440,000,000").first()).toBeVisible();
 
-    // §166 입력·상단 축 A는 모두 없다 — 승계자는 §166①의 적용 대상이 아니다.
-    await expect(page.getByText("취득가액 산정 방식", { exact: true })).toHaveCount(0);
+    /**
+     * R-12(2026-08-23) — 승계 전용 **산정 방식 축**이 생겼다(§176의2③ 추계 3종).
+     * 라벨은 「**승계**취득가액 산정 방식」으로, 상단 축 A와 구분된다.
+     *
+     * 🔴 종전 라인 `getByText("취득가액 산정 방식").toHaveCount(0)`은 **아무것도 잡지 못했다** —
+     *   양도세 화면에는 그 문구를 쓰는 위젯이 애초에 없었다(상단 축 A는 `FieldCard` 라벨 없이
+     *   라디오만 렌더한다). 항상 참인 단언이라 판별력이 0이었고, R-12가 그 문구를 처음 도입하면서
+     *   드러났다. 이제 **존재**를 단언해 실제 계약을 고정한다.
+     */
+    await expect(page.getByText("승계취득가액 산정 방식", { exact: true })).toBeVisible();
+
+    // §166 입력은 없다 — 승계자는 §166①의 적용 대상이 아니다.
     await expect(page.getByText("권리가액", { exact: true })).toHaveCount(0);
     await expect(page.getByText("청산금 방향", { exact: true })).toHaveCount(0);
     await expect(page.getByText("인가전 분 종전 부동산 취득가액", { exact: true })).toHaveCount(0);

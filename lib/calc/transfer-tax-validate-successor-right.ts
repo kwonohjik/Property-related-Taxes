@@ -24,6 +24,10 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+// 술어·합산은 `transfer-successor-right.ts` 단일 소스 — ④ 변환·⑤ UI와 같은 함수를 쓴다.
+import { successorRightEstimationMode } from "./transfer-successor-right";
+import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
+import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 
 /**
  * 승계조합원 입주권 자산 검증.
@@ -51,32 +55,71 @@ export function validateSuccessorRightAsset(asset: AssetForm, label: string): st
     return `${label}: 관리처분계획 인가일이 취득일보다 나중입니다. 인가 전에 종전 부동산을 보유하셨다면 ① 기본정보의 「조합원 유형」을 "원조합원"으로 바꾸세요. (시행령 §166①)`;
   }
 
-  // ── 취득가액 (§97①1호 가목) ──
-  const acqPrice = parseAmount(asset.successorRightAcqPrice);
-  if (acqPrice <= 0) {
-    return `${label}: 조합원입주권 승계취득가액을 입력하세요. (소득세법 §97①1호 가목 — 취득에 든 실지거래가액)`;
+  /**
+   * ── 취득가액 산정 방식 (§97①1호) ────────────────────────────────────────────
+   *
+   * R-12(2026-08-23)로 추계 3종이 열렸다. 근거는 조사에서 확정됐다:
+   *   · 조합원입주권 = 법 §94①2호 **가목**(부동산을 취득할 수 있는 권리)
+   *   · 기준시가 = §99①2호 가목 → 영 **§165①**(납입액 + 프리미엄) — **명문**
+   *   · 환산 산식 = 영 §176의2②**2호**가 「제2호가목 … 부동산을 취득할 수 있는 권리」를 명시 대상
+   *   · 추계 순서 = 영 §176의2③ (매매사례 → 감정 → 환산 → 기준시가)
+   *
+   * ⛔ **원조합원에는 열리지 않는다** — §166③ 환산이 전속이다(R-9). 게이트는 ④ 변환의
+   *    `blocksEstimation`이 담당하고, 여기는 승계 자산만 들어온다.
+   */
+  const mode = successorRightEstimationMode(asset);
+
+  if (mode === "actual") {
+    const acqPrice = parseAmount(asset.successorRightAcqPrice);
+    if (acqPrice <= 0) {
+      return `${label}: 조합원입주권 승계취득가액을 입력하세요. (소득세법 §97①1호 가목 — 취득에 든 실지거래가액)`;
+    }
+
+    /**
+     * 추가분담금은 **음수 입력만** 막는다. 미입력("")은 0으로 본다 — 승계 직후 양도라
+     * 납입분이 없을 수 있다(자동 안분 fallback이 아니라 「없음」의 정상 표현).
+     */
+    if (parseAmount(asset.successorRightAddedContribution) < 0) {
+      return `${label}: 취득 후 납입한 추가분담금은 0 이상이어야 합니다.`;
+    }
+
+    return null;
   }
 
   /**
-   * 추가분담금은 **음수 입력만** 막는다. 미입력("")은 0으로 본다 — 승계 직후 양도라
-   * 납입분이 없을 수 있다(자동 안분 fallback이 아니라 「없음」의 정상 표현).
+   * ── 추계 3종 공통 — §165① **취득당시** 기준시가 필수 ──────────────────────────
+   *
+   * 세 모드 모두 §163⑥(개산공제) base로 취득당시 기준시가를 쓴다. 미입력이면 개산공제가
+   * 0이 되고, 환산에서는 **분자가 0이라 취득가액 자체가 0**이 된다.
+   * 🔴 실측(P-8 ⑤): 기준시가를 비운 채 환산을 돌리면 양도차익이 **양도가액 전액**(8억)이 됐다.
+   *   오류 없이 조용히 과대과세되므로 여기서 반드시 막는다.
+   *
+   * 두 칸(납입액·프리미엄) 중 **하나만** 채워도 합계가 양수면 통과시킨다 — 프리미엄 없이
+   * 취득했거나(=0) 납입 전 단계일 수 있어 각 칸을 개별 필수로 만들 근거가 없다.
    */
-  if (parseAmount(asset.successorRightAddedContribution) < 0) {
-    return `${label}: 취득 후 납입한 추가분담금은 0 이상이어야 합니다.`;
+  if (successorRightStdPriceAtAcq(asset) <= 0) {
+    return `${label}: 추계 취득가액을 쓰려면 취득당시 기준시가(취득일까지 납입한 금액 + 취득일 현재 프리미엄)를 입력하세요. (소득세법 시행령 §165① — 조합원입주권의 §99①2호 가목 기준시가)`;
   }
 
-  /**
-   * 환산·감정·매매사례 추계는 **본 PR 미지원**이다.
-   *
-   * §166③ 환산은 「제1항 및 제2항을 적용할 때」의 규정이라 승계에는 적용되지 않고, §97①1호
-   * 나목(§176의2③ 매매사례·감정·환산)을 쓰려면 조합원입주권의 §99①2호 기준시가(영 §165)가
-   * 필요한데 그 산정 경로가 아직 없다. 근거 없이 숫자를 만들지 않는다.
-   *
-   * ⚠️ 정상 경로에서는 여기 도달하지 않는다 — 상단 축 A는 UI에서 제거됐고, 조합원 유형 토글이
-   *    `useEstimatedAcquisition`을 false로 되돌린다. stale 저장값에 대한 마지막 안전망이다.
-   */
-  if (asset.useEstimatedAcquisition) {
-    return `${label}: 승계취득한 조합원입주권은 환산취득가액을 지원하지 않습니다. 승계취득 당시 실지거래가액을 입력하세요. (소득세법 §97①1호 가목)`;
+  if (mode === "estimated") {
+    // 환산 분모 — §176의2②2호의 「양도당시 기준시가」. 0이면 0으로 나눠 환산이 성립하지 않는다.
+    if (successorRightStdPriceAtTransfer(asset) <= 0) {
+      return `${label}: 환산취득가액을 쓰려면 양도당시 기준시가(양도일까지 납입한 금액 + 양도일 현재 프리미엄)를 입력하세요. (소득세법 시행령 §165① · §176의2②2호)`;
+    }
+    return null;
+  }
+
+  if (mode === "appraisal") {
+    // 감정가액은 기존 실가 입력 루틴과 같은 칸을 쓴다(`fixedAcquisitionPrice`) — ④ 변환과 동일 소스.
+    if (parseAmount(asset.fixedAcquisitionPrice) <= 0) {
+      return `${label}: 감정가액을 입력하세요. (소득세법 시행령 §176의2③2호 — 취득일 전후 3개월 이내 2 이상의 감정평가법인등이 평가한 가액의 평균액)`;
+    }
+    return null;
+  }
+
+  // salesCase
+  if (parseAmount(asset.similarSalesValue) <= 0) {
+    return `${label}: 매매사례가액을 입력하세요. (소득세법 시행령 §176의2③1호 — 취득일 전후 3개월 이내 동일·유사 자산의 매매사례가액)`;
   }
 
   return null;

@@ -28,6 +28,8 @@ import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { isSuccessorRightTransfer } from "./transfer-successor-right";
 import { successorRightAcquisitionTotal } from "./transfer-successor-right";
+import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
+import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 import { buildParcelsPayload } from "./transfer-tax-api-parcels";
 import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
@@ -114,11 +116,34 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isRightToMoveIn = primary.assetKind === "right_to_move_in";
   /** 승계조합원 입주권 — §166 미적용(§97①1호 가목). 술어는 `transfer-successor-right.ts` 단일 소스. */
   const isSuccessorRight = isSuccessorRightTransfer(primary);
-  const isSalesCase = !isRightToMoveIn && primary.isSalesCaseAcquisition === true;
-  const isAppraisal = !isRightToMoveIn && !isSalesCase && primary.isAppraisalAcquisition === true;
-  // 승계조합원 입주권은 환산 미지원(입주권의 §99①2호 기준시가 산정 경로 부재 — ⑧ validate가 차단).
-  const isEstimated =
-    !isSalesCase && !isAppraisal && !isSuccessorRight && primary.useEstimatedAcquisition;
+  /**
+   * 추계 게이트 — **원조합원 입주권만** 막는다 (R-12, 2026-08-23).
+   *
+   * 종전에는 `!isRightToMoveIn`이라 승계조합원까지 함께 막혔다. 원조합원(§166①)은 취득가액
+   * 확인 불가 시의 대체수단을 §166③ **환산으로 법이 이미 정해 두었고**, 엔진도 §166 경로에서
+   * `appraisalValue`·`similarSalesValue`를 읽지 않는다 ⇒ 계속 막는다(R-9에서 §166③ 전속 확정).
+   *
+   * 승계조합원은 §166을 타지 않고 §97①1호 일반 경로로 가므로 §176의2③ 추계 3종이 그대로
+   * 적용된다. 기준시가는 §99①2호 가목 → 영 **§165①**(납입액 + 프리미엄)이 명문으로 정한다.
+   */
+  /**
+   * ⚠️ **두 게이트는 범위가 다르다** — 종전 코드가 그랬고, R-12도 그 구분을 지킨다.
+   *
+   * | | 종전 | 현행(R-12) |
+   * |---|---|---|
+   * | 감정·매매사례 | `!isRightToMoveIn` — **입주권 전체** 차단 | 원조합원만 차단 |
+   * | 환산 | `!isSuccessorRight` — **승계만** 차단 | 차단 없음 |
+   *
+   * 원조합원의 `useEstimatedAcquisition`은 §166③ 환산(종전 부동산)을 켜는 플래그라
+   * **원래부터 통과해야 한다**. 이것을 `blocksEstimation` 하나로 묶으면 §166③ 환산이 꺼진다
+   * (P-9 ⑦ 실측에서 `useEst=false`로 잡혔다).
+   */
+  const blocksAppraisalSalesCase = isRightToMoveIn && !isSuccessorRight;
+  const isSalesCase = !blocksAppraisalSalesCase && primary.isSalesCaseAcquisition === true;
+  const isAppraisal =
+    !blocksAppraisalSalesCase && !isSalesCase && primary.isAppraisalAcquisition === true;
+  // 승계 입주권 환산은 §176의2②2호(입주권 자체) · 원조합원 환산은 §166③(종전 부동산) — 둘 다 통과.
+  const isEstimated = !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
   // pre1990 토지등급 환산은 §176의2④ 의제취득(pre-1985) 영역. post-1985 증여는 §163⑨ 신고가액이
   // 취득당시 실지거래가액으로 확인 가능 → 토지등급 환산 배제. pre1990Enabled은 환산 클릭 시 set되는
   // uncleaable 래치(CompanionAcqPurchaseBlock:92)라 gift 실거래가 전환 후 stale true로 남을 수 있으므로
@@ -317,7 +342,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     acquisitionPrice:
       // 승계조합원 입주권 — §97①1호 가목 실지거래가액 = 승계취득가 + 취득 후 추가분담금
       // (기준-2025-법규재산-0057). §166 3분할을 타지 않으므로 청산금이 별도 차감되지 않는다.
-      isSuccessorRight
+      // 승계 + **추계**면 실가 2칸을 보내지 않는다 — 엔진이 `appraisalValue ?? acquisitionPrice`
+      // 로 후퇴할 때 실가가 남아 있으면 고른 추계값 대신 그것이 취득가액이 된다(R-12).
+      isSuccessorRight && !(isEstimated || isAppraisal || isSalesCase)
         ? successorRightAcquisitionTotal(primary)
         : hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive
         ? 0
@@ -373,6 +400,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       ? undefined
       : isCarryoverGeneral
         ? (parseAmount(primary.carryover?.donorStandardPriceAtAcquisition ?? "") || undefined)
+        // 승계 입주권은 §99①2호 가목 → 영 §165①(납입액 + 프리미엄) — **다른 칸**이다 (R-12).
+        // 추계 3종 모두 개산공제(§163⑥4호 1%) base로 취득당시 기준시가를 쓴다.
+        : isSuccessorRight && (isEstimated || isAppraisal || isSalesCase)
+          ? successorRightStdPriceAtAcq(primary) || undefined
         : isEstimated || isSplitActive
           // 분리 모드(토지·건물 취득일/소유자 상이) 추가 전송 — §166⑥ 안분 비율(calcApportionRatio,
           // split-gain.ts:26-36)이 취득시 기준시가 3요소를 요구한다. 종전에는 isEstimated에서만
@@ -388,6 +419,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? parseAmount(primary.standardPriceAtTransfer) || undefined
         : isCarryoverGeneral
           ? (parseAmount(primary.carryover?.donorStandardPriceAtTransfer ?? "") || undefined)
+          // 승계 입주권 환산 분모 — §165①(양도일까지 납입액 + 양도일 프리미엄) (R-12).
+          // 감정·매매사례는 분모가 필요 없어 보내지 않는다.
+          : isSuccessorRight && isEstimated
+            ? successorRightStdPriceAtTransfer(primary) || undefined
           : isEstimated
             ? parseAmount(primary.standardPriceAtTransfer) || undefined
             : undefined,

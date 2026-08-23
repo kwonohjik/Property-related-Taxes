@@ -175,20 +175,73 @@ describe("입주권 취득가액 축 — 승계조합원 (§166 미적용 · §9
     expect(cap.body?.acquisitionPrice).toBe(SUCCESSOR_ACQ);
   });
 
-  it("A-5c: stale 상단 축 A·⑤ 값이 남아 있어도 승계 필드가 이긴다", async () => {
+  /**
+   * 🔴 2026-08-23 **범위 축소** (R-12) — 종전에는 `isSalesCaseAcquisition`·`useEstimatedAcquisition`도
+   * 「stale 노이즈」로 함께 넣고 무시됨을 단언했다. 이제 그 둘은 승계에서 **정식 입력**이다
+   * (§165① 기준시가 경로가 열렸다). 따라서 이 케이스는 **실거래가 모드 한정**으로 좁히고,
+   * 추계 활성화는 아래 A-5d가 별도로 고정한다.
+   *
+   * 여기 남는 stale은 여전히 stale이다:
+   *   `fixedAcquisitionPrice`      — 감정 모드 전용 칸(실가 모드에서는 승계 2칸이 정본)
+   *   `redevActualAcquisitionPrice` — **원조합원 §166 전용**(승계는 §166 대상이 아니다)
+   */
+  it("A-5c: 실가 모드 — stale 감정칸·§166칸이 남아 있어도 승계 2칸이 이긴다", async () => {
     const cap = captureBody();
     await callTransferTaxAPI(
       makeForm(
         successorRight({
           fixedAcquisitionPrice: "999999999",
           redevActualAcquisitionPrice: "888888888",
-          isSalesCaseAcquisition: true,
-          useEstimatedAcquisition: true,
         }),
       ),
     );
     expect(cap.body?.acquisitionPrice).toBe(SUCCESSOR_ACQ + SUCCESSOR_CONTRIB);
     expect(cap.body?.useEstimatedAcquisition).toBe(false);
+  });
+
+  /**
+   * R-12 — 승계 입주권의 추계 3종. 근거: 법 §94①2호**가목** → §99①2호 가목 → 영 **§165①**
+   * (납입액 + 프리미엄) · 환산 산식 영 §176의2②**2호** · 추계 순서 영 §176의2③.
+   *
+   * ⚠️ **추계 모드에서 승계 2칸을 보내면 안 된다** — 엔진이 `appraisalValue ?? acquisitionPrice`로
+   *    후퇴할 때 실가가 남아 있으면 고른 추계값 대신 그것이 취득가액이 된다.
+   */
+  it("A-5d: 매매사례 모드 → acquisitionPrice 0 · 승계 2칸 미송신", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(
+      makeForm(
+        successorRight({
+          isSalesCaseAcquisition: true,
+          similarSalesValue: "420000000",
+          successorRightStdPaidAtAcq: "300000000",
+        }),
+      ),
+    );
+    expect(cap.body?.acquisitionMethod).toBe("salesCase");
+    expect(cap.body?.acquisitionPrice).toBe(0);
+    expect(cap.body?.similarSalesValue).toBe(420_000_000);
+    // §163⑥ 개산공제 base — §165① 합계가 실린다
+    expect(cap.body?.standardPriceAtAcquisition).toBe(300_000_000);
+  });
+
+  it("A-5e: 환산 모드 → §165① 4칸이 취득·양도 기준시가 한 쌍으로 합산돼 실린다", async () => {
+    const cap = captureBody();
+    await callTransferTaxAPI(
+      makeForm(
+        successorRight({
+          useEstimatedAcquisition: true,
+          successorRightStdPaidAtAcq: "250000000",
+          successorRightStdPremiumAtAcq: "50000000",
+          successorRightStdPaidAtTransfer: "500000000",
+          successorRightStdPremiumAtTransfer: "100000000",
+        }),
+      ),
+    );
+    expect(cap.body?.acquisitionMethod).toBe("estimated");
+    expect(cap.body?.useEstimatedAcquisition).toBe(true);
+    expect(cap.body?.acquisitionPrice).toBe(0);
+    expect(cap.body?.standardPriceAtAcquisition).toBe(300_000_000); // 250,000,000 + 50,000,000
+    expect(cap.body?.standardPriceAtTransfer).toBe(600_000_000); // 500,000,000 + 100,000,000
   });
 });
 
