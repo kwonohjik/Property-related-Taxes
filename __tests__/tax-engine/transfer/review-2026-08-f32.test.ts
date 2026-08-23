@@ -49,7 +49,13 @@ describe("F32 — §77의2·§77의3 감면 detail이 단건 결과에 실린다
     expect(r.reductionTypeApplied).toBe("replacement_land_comp");
     expect(r.reductionAmount).toBe(35_112_167);
     expect(r.determinedTax).toBe(139_577_833);
-    expect(r.totalTax).toBe(153_535_616);
+    /**
+     * 🔴 **2026-08-23 갱신 — 농어촌특별세가 추가됐다.** 종전 153,535,616은 결정세액 + 지방소득세뿐이었다.
+     * §77의2(대토보상)는 「농어촌특별세법 시행령」 §4①1호의 **비과세 열거에 없다**
+     * (그 호는 §66~§70·§72①·§77[직접 경작 토지 한정]·§102·§104의2만 든다).
+     * ⇒ 같은 법 §5①1호에 따라 감면세액 35,112,167 × 20% = **7,022,433**이 부과된다.
+     */
+    expect(r.totalTax).toBe(153_535_616 + 7_022_433);
 
     // 본체: detail이 실제로 실린다.
     expect(r.replacementLandDetail).toBeDefined();
@@ -108,7 +114,11 @@ describe("F32 — §77의2·§77의3 감면 detail이 단건 결과에 실린다
     expect(r.reductionTypeApplied).toBe("gb_designated_land");
     expect(r.reductionAmount).toBe(69_876_000);
     expect(r.determinedTax).toBe(104_814_000);
-    expect(r.totalTax).toBe(115_295_400);
+    /**
+     * 🔴 **2026-08-23 갱신 — 농어촌특별세 추가.** §77의3(개발제한구역)도 농특세령 §4①1호의
+     * 비과세 열거에 없다 ⇒ 감면세액 69,876,000 × 20% = **13,975,200**.
+     */
+    expect(r.totalTax).toBe(115_295_400 + 13_975_200);
 
     expect(r.gbDesignatedLandDetail).toBeDefined();
     expect(r.gbDesignatedLandDetail!.isEligible).toBe(true);

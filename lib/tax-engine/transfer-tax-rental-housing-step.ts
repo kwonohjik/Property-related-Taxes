@@ -23,6 +23,7 @@ import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { calcTax, computeBracketBreakdown, calcReductions } from "./transfer-tax-rate-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
+import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
 import { getReductionLegalBasis } from "./transfer-tax-helpers";
 import type { RateGroup } from "./types/transfer-aggregate.types";
@@ -518,6 +519,24 @@ export function runRentalHousingExceptionStep(
 
   // L-2 (2026-06-03): 특례 경로는 finalizeTransferTax를 거치지 않으므로
   // 신고불성실·납부지연 가산세를 emitPenaltySteps로 직접 반영 (미입력 시 no-op).
+  /**
+   * 농어촌특별세 — 일반 경로(STEP 8.8)와 **같은 판정표**를 쓴다(`transfer-tax-rural-surtax.ts`).
+   * 여기서만 빼면 같은 감면이 특례 여부에 따라 농특세가 달라진다.
+   */
+  const rheSurtaxVerdict = resolveTaxCreditRuralSurtax({
+    reductionTypeApplied: reductionResult.reductionTypeApplied,
+    reductionAmount: rheReductionAmount,
+    isSelfCultivatedExpropriatedLand: effectiveInput.isSelfCultivatedExpropriatedLand,
+  });
+  if (rheSurtaxVerdict.surtax > 0) {
+    steps.push({
+      label: "농어촌특별세 (감면세액 × 20%)",
+      formula: `감면세액 ${rheReductionAmount.toLocaleString()} × 20% = ${rheSurtaxVerdict.surtax.toLocaleString()} — ${rheSurtaxVerdict.reason}`,
+      amount: rheSurtaxVerdict.surtax,
+      legalBasis: rheSurtaxVerdict.legalBasis,
+    });
+  }
+
   const rheDeterminedTax = Math.max(0, rheTaxResult.calculatedTax - rheReductionAmount);
   const rheLocalIncomeTax = applyRate(rheDeterminedTax, 0.1);
   const { penaltyDetail, filingDelayedPenalty } = emitPenaltySteps(
@@ -593,7 +612,7 @@ export function runRentalHousingExceptionStep(
     penaltyTax: 0,
     penaltyBase: 0,
     localIncomeTax: rheLocalIncomeTax,
-    totalTax: rheDeterminedTax + rheLocalIncomeTax + filingDelayedPenalty,
+    totalTax: rheDeterminedTax + rheLocalIncomeTax + filingDelayedPenalty + rheSurtaxVerdict.surtax,
     steps,
     rentalHousingExceptionDetail: rhe,
     penaltyDetail,

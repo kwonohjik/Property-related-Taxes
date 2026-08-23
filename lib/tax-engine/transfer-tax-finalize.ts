@@ -13,6 +13,7 @@
 
 import { applyRate, truncateToWon } from "./tax-utils";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
+import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
@@ -448,7 +449,50 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   );
 
   // ── STEP 11: 총 납부세액 ──
-  const ruralSurtaxTotal = ruralSurtax993 + ruralSurtaxHybrid;
+  /**
+   * ── STEP 8.8: 세액감면형 감면의 농어촌특별세 (감면세액 × 20%) ──────────────
+   *
+   * 「농어촌특별세법」 §5①1호가 **조특법 감면세액 × 20%**를 농특세로 정하는데, 종전에는
+   * **차감형(§99의3)과 하이브리드(§98의7·§99의2 등)에만** 계산하고 §77·§77의2·§77의3·§97 시리즈
+   * 에는 **아예 계산하지 않았다**(실측: §77 감면 67,700,250에 농특세 0).
+   *
+   * 비과세는 **열거주의**다 — 농특세령 §4①1호가 「§66부터 §70까지 … §77[**직접 경작한 토지**로
+   * 한정] …」로 열거하므로, §69 자경농지는 무조건 비과세이고 §77은 조건부이며 그 밖의 조문
+   * (§77의2·§77의3·§97 시리즈)은 **과세**다. 판정은 `transfer-tax-rural-surtax.ts` 단일 소스.
+   *
+   * ⚠️ 하이브리드는 **위 STEP 8.7이 이미 계산**했으므로 여기서 제외한다(이중 부과 방지).
+   */
+  let ruralSurtaxCredit = 0;
+  if (
+    reductionTypeApplied !== undefined &&
+    HYBRID_ARTICLE[reductionTypeApplied] === undefined &&
+    cappedReductionAmount > 0
+  ) {
+    const verdict = resolveTaxCreditRuralSurtax({
+      reductionTypeApplied,
+      reductionAmount: cappedReductionAmount,
+      isSelfCultivatedExpropriatedLand: input.isSelfCultivatedExpropriatedLand,
+    });
+    ruralSurtaxCredit = verdict.surtax;
+    if (verdict.surtax > 0) {
+      steps.push({
+        label: "농어촌특별세 (감면세액 × 20%)",
+        formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${verdict.surtax.toLocaleString()} — ${verdict.reason}`,
+        amount: verdict.surtax,
+        legalBasis: verdict.legalBasis,
+      });
+    } else if (verdict.verdict === "unknown") {
+      // 침묵 금지 — 근거를 못 찾아 부과하지 않았다는 사실 자체를 남긴다.
+      steps.push({
+        label: "농어촌특별세 — 미판정",
+        formula: verdict.reason,
+        amount: 0,
+        legalBasis: verdict.legalBasis,
+      });
+    }
+  }
+
+  const ruralSurtaxTotal = ruralSurtax993 + ruralSurtaxHybrid + ruralSurtaxCredit;
   const totalTax = determinedTaxWithPenalty + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal;
   steps.push({
     label: "총 납부세액",

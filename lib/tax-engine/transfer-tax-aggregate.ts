@@ -19,6 +19,7 @@ import {
   type CalculationStep,
 } from "./transfer-tax";
 import { computeAmendment } from "./transfer-tax-amendment";
+import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import {
   resolveFilingUnitCarryoverScope,
   type CarryoverScenarioOverrides,
@@ -488,28 +489,6 @@ function computeAggregateOnce(
   // 과세표준 = 결정세액 + §114조의2 건물 가산세만 (단건 엔진 finalize와 동일).
   // 신고불성실·납부지연 가산세(국세기본법 §47의2~5)는 지방소득세 부과대상이 아니므로 base 제외.
   const localIncomeTax = applyRate(determinedTaxBeforePenalty + perAssetBuildingPenalty, 0.1);
-  // 농특세는 지방소득세 base 아님(결정세액+건물가산세만) — totalTax에만 가산.
-  const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax + ruralSurtax;
-
-  steps.push({
-    label: "총 납부세액",
-    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtax > 0 ? ` + 농특세 ${ruralSurtax.toLocaleString()}` : ""}`,
-    amount: totalTax,
-  });
-
-  // M-11: 예정신고 기납부세액 정산 (소득세법 §111③) — 항상 실행(P??0).
-  // amendment 와 상호배타는 validate/UI 가드이며 엔진은 방어적으로 항상 처리한다.
-  const settlement = computeSettlement({
-    determinedTax: determinedTaxBeforePenalty,
-    penaltyTax,
-    localIncomeTax,
-    priorPaidTax: input.priorPaidTax ?? 0,
-    priorPaidLocalTax: input.priorPaidLocalTax ?? 0,
-  });
-  if (settlement.priorPaidTax > 0 || settlement.priorPaidLocalTax > 0) {
-    steps.push(settlement.step);
-  }
-
   // ── 감면 배분 선계산 — floor 잔액 말단 흡수 ────────────────────────────
   //
   // 2026-07-29 정정(#591 감사 R7 — 표시 자기일관성, 세액 불변): 같은 감면 유형의 자산들이
@@ -553,6 +532,61 @@ function computeAggregateOnce(
       });
     }
   }
+
+  /**
+   * 세액감면형 감면의 **농어촌특별세** — 단건 경로(STEP 8.8)와 **같은 판정표**를 쓴다.
+   *
+   * 위 `ruralSurtax`는 **소득금액 차감형**(§99의3 등) 전용이라 §77·§77의2·§77의3·§97 시리즈에는
+   * 한 원도 붙지 않았다. 「농어촌특별세법」 §5①1호는 조특법 감면세액 × 20%를 정하고, 비과세는
+   * 시행령 §4가 **열거**한 것뿐이다(§69는 비과세 · §77은 **직접 경작한 토지**만 비과세).
+   *
+   * 🔑 **자산별 배분액으로 판정한다** — 「직접 경작」 여부는 자산마다 다르므로 유형 합계로는
+   *    가를 수 없다. 그래서 `reductionAllocations`(§133 한도까지 반영된 자산별 몫)를 쓴다.
+   */
+  let ruralSurtaxCredit = 0;
+  for (const [idx, allocated] of reductionAllocations) {
+    if (allocated <= 0) continue;
+    const rec = assetRecords[idx];
+    const verdict = resolveTaxCreditRuralSurtax({
+      reductionTypeApplied: rec.result.reductionTypeApplied,
+      reductionAmount: allocated,
+      isSelfCultivatedExpropriatedLand: (rec.item as { isSelfCultivatedExpropriatedLand?: boolean })
+        .isSelfCultivatedExpropriatedLand,
+    });
+    ruralSurtaxCredit += verdict.surtax;
+  }
+  if (ruralSurtaxCredit > 0) {
+    steps.push({
+      label: "농어촌특별세 (감면세액 × 20%)",
+      formula: `자산별 감면세액 합계 × 20% = ${ruralSurtaxCredit.toLocaleString()} (농어촌특별세법 §5①1호 · 시행령 §4 비과세 열거 제외분)`,
+      amount: ruralSurtaxCredit,
+      legalBasis: "농어촌특별세법 §5①1호",
+    });
+  }
+
+  // 농특세는 지방소득세 base 아님(결정세액+건물가산세만) — totalTax에만 가산.
+  const ruralSurtaxAll = ruralSurtax + ruralSurtaxCredit;
+  const totalTax = determinedTaxBeforePenalty + penaltyTax + localIncomeTax + ruralSurtaxAll;
+
+  steps.push({
+    label: "총 납부세액",
+    formula: `결정세액 ${determinedTaxBeforePenalty.toLocaleString()} + 가산세 ${penaltyTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}${ruralSurtaxAll > 0 ? ` + 농특세 ${ruralSurtaxAll.toLocaleString()}` : ""}`,
+    amount: totalTax,
+  });
+
+  // M-11: 예정신고 기납부세액 정산 (소득세법 §111③) — 항상 실행(P??0).
+  // amendment 와 상호배타는 validate/UI 가드이며 엔진은 방어적으로 항상 처리한다.
+  const settlement = computeSettlement({
+    determinedTax: determinedTaxBeforePenalty,
+    penaltyTax,
+    localIncomeTax,
+    priorPaidTax: input.priorPaidTax ?? 0,
+    priorPaidLocalTax: input.priorPaidLocalTax ?? 0,
+  });
+  if (settlement.priorPaidTax > 0 || settlement.priorPaidLocalTax > 0) {
+    steps.push(settlement.step);
+  }
+
 
   // properties breakdown 조립 — 합산 재계산 후 건별 배분액 포함
   const properties: PerPropertyBreakdown[] = assetRecords.map((r, idx) => {
@@ -684,7 +718,7 @@ function computeAggregateOnce(
     penaltyTax,
     // 가산세 상세는 자산별로 properties[i].penaltyDetail 에서 노출.
     localIncomeTax,
-    ruralSurtax,
+    ruralSurtax: ruralSurtaxAll,
     totalTax,
     steps,
     warnings,

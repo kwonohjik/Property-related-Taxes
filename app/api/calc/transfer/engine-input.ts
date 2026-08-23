@@ -65,6 +65,8 @@ export function buildTransferEngineInput(
     regionCode: data.regionCode,
     isUnregistered: data.isUnregistered,
     isNonBusinessLand: data.isNonBusinessLand,
+    // ⑭ §77 농특세 비과세 판정(농특세령 §4①1호) — 미전달 시 엔진이 과세로 처리한다.
+    isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,
     isSuccessorRightToMoveIn: data.isSuccessorRightToMoveIn,
     acquisitionCause: data.acquisitionCause,
     decedentAcquisitionDate: toOptionalDate(data.decedentAcquisitionDate),

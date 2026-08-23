@@ -328,6 +328,17 @@ export interface TransferTaxInput {
   residenceTransitionAcquisitionDate?: Date;
   /** 조세특례 감면 목록 */
   reductions: TransferReduction[];
+  /**
+   * **§77 공익수용 감면 전용** — 수용된 토지를 거주자가 **직접 경작**했는가.
+   *
+   * 「농어촌특별세법 시행령」 §4①1호가 §77 감면의 농특세 비과세를 「「조세특례제한법」 제69조제1항
+   * 본문에 따른 거주자가 **직접 경작한 토지**(8년 이상 경작할 것의 요건은 적용하지 아니한다)로
+   * **한정**」한다. ⇒ 이 값이 true일 때만 농특세가 비과세된다.
+   *
+   * ⚠️ **미입력은 비과세로 보지 않는다** — 비과세가 예외이므로 입증되지 않으면 과세한다.
+   * ⚠️ §69 자경농지 감면의 「8년」 요건과 **별개**다(그 요건은 적용하지 않는다고 조문이 명시).
+   */
+  isSelfCultivatedExpropriatedLand?: boolean;
   /** 당해 연도 기사용 기본공제 (원) */
   annualBasicDeductionUsed: number;
   /**

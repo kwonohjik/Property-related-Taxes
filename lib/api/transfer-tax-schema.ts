@@ -133,6 +133,11 @@ const propertyBaseShape = {
   regionCode: z.string().length(10).optional(),
   isUnregistered: z.boolean(),
   isNonBusinessLand: z.boolean(),
+  /**
+   * ⑫ §77 공익수용 감면의 농어촌특별세 비과세 판정(농특세령 §4①1호 「직접 경작한 토지」 한정).
+   * 없으면 엔진이 「입증되지 않음 = 과세」로 처리한다.
+   */
+  isSelfCultivatedExpropriatedLand: z.boolean().optional(),
   isSuccessorRightToMoveIn: z.boolean().optional(),
   isOneHousehold: z.boolean(),
   temporaryTwoHouse: temporaryTwoHouseSchema.optional(),
