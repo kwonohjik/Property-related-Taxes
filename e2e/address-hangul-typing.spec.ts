@@ -93,7 +93,23 @@ test.describe("소재지 한글 자동 입력", () => {
     // 전역 SelectOnFocusProvider가 포커스 시 전체 선택한다
     await input.blur();
     await input.click();
-    await page.keyboard.type("rkfk");
+
+    /**
+     * 🔴 **첫 글자를 따로 단언한다** (2026-08-23 — CI 간헐 실패 해소)
+     *
+     * 이 테스트의 핵심은 「전체선택 상태에서 첫 글자가 기존 값을 **대체**하는가」다.
+     * 그 첫 emit 직후 React가 controlled value를 다시 세팅하는데, **선택 영역이 아직
+     * (0,1)로 남아 있는 순간**에 다음 키가 도착하면 훅이 「선택 영역 있음 → 조합 리셋」으로
+     * 처리해 방금 만든 초성이 버려진다(실측: `가라`여야 하는데 **`ㅏ라`** — 첫 ㄱ만 유실).
+     * 빠른 기기에서는 선택이 먼저 접혀 통과하므로 CI(2 worker)에서만 드러났다.
+     *
+     * ⇒ 첫 글자 결과를 먼저 확인해 선택 영역이 정리될 때까지 기다린다.
+     *    **단언은 오히려 강해진다** — 「대체가 첫 키에서 일어났다」를 명시적으로 본다.
+     */
+    await page.keyboard.type("r");
+    await expect(input, "전체선택 상태의 첫 자모가 기존 값을 대체해야 한다").toHaveValue("ㄱ");
+
+    await page.keyboard.type("kfk");
     await expect(input).toHaveValue("가라");
   });
 });
