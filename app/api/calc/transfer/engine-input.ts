@@ -82,16 +82,26 @@ export function buildTransferEngineInput(
         }
       : undefined,
     donorAcquisitionDate: toOptionalDate(data.donorAcquisitionDate),
+    // ⑭ 이월과세 §97의2 — **키를 열거하지 않는다**(spread + 일자만 덮어쓰기).
+    //    종전 열거형은 ⑫·④가 실제로 보내던 `donorRelation`·`donorDeceased`(① 관계요건
+    //    배제 판정축)를 빠뜨려 침묵 strip했다 — 단건 경로에서만 배제가 죽었다
+    //    (일반건물 경로 `general-building-route-cards.ts`는 객체를 통째로 넘겨 정상이었다).
+    //    spread는 **키를 세지 않으므로 누락이 구조적으로 불가능**하다 — ⑫에 필드가 늘면
+    //    ⑭ 수정 없이 따라간다. Date 2개만 명시 변환한다(date-coerce 정책).
+    //    ⚠️ 반대 방향은 tsc가 잡지 못한다(probe 실측: ⑫에만 있는 잉여 필드를 넣어도
+    //       `npx tsc --noEmit` 0건 — spread에는 excess property check가 걸리지 않는다).
+    //       ⑫에 엔진 미수용 필드를 추가할 때는 여기서 걸러낼 것.
     carryoverTaxation: data.carryoverTaxation
       ? {
-          giftRegistryDate: new Date(data.carryoverTaxation.giftRegistryDate),
-          donorAcquisitionDate: new Date(data.carryoverTaxation.donorAcquisitionDate),
-          donorAcquisitionPrice: data.carryoverTaxation.donorAcquisitionPrice,
-          useEstimatedAcquisition: data.carryoverTaxation.useEstimatedAcquisition,
-          giftTaxAmount: data.carryoverTaxation.giftTaxAmount,
-          donorCapitalExpenditure: data.carryoverTaxation.donorCapitalExpenditure,
-          giftDateValuation: data.carryoverTaxation.giftDateValuation,
-          exclusionDeclared: data.carryoverTaxation.exclusionDeclared,
+          ...data.carryoverTaxation,
+          giftRegistryDate: toDate(
+            data.carryoverTaxation.giftRegistryDate,
+            "carryoverTaxation.giftRegistryDate",
+          ),
+          donorAcquisitionDate: toDate(
+            data.carryoverTaxation.donorAcquisitionDate,
+            "carryoverTaxation.donorAcquisitionDate",
+          ),
         }
       : undefined,
     isOneHousehold: data.isOneHousehold,
