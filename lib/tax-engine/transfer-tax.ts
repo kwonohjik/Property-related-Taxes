@@ -226,8 +226,47 @@ export function calculateTransferTax(
     // 상속 종전자산: §163⑨ 상속개시일 평가액이 확인되면 취득가액이 "확인 가능"하므로 §166③ 환산·
     // §163⑥ 개산공제를 배제하고 실가(상속평가액)를 종전자산 취득가액으로 사용한다(§166③은 취득가액
     // 확인 불가 시에만 적용). 미확인 시 override 미발동 → 현행 §166③ 유지.
+    //
+    // 🔴 **`options.acquisitionOverride`가 있으면 발동하지 않는다** (R-15 · 2026-08-23).
+    //
+    //   `resolveAcquisitionOverride`(STEP 0.46)의 계약은 「STEP 2 결정 결과를 무시하고 본 값 강제」다.
+    //   그런데 이 블록이 그 뒤에 돌면서 취득가액을 §163⑨ 평가액으로 **되돌리고 있었다**.
+    //
+    //   실제 발동 경로는 **가업상속공제 §97의2④**다 — `applyFamilyBusinessCgtStep`이
+    //   `{ acquisitionOverride: imputedAcquisitionPrice }`로 재귀 호출하는데, 그 재귀 입력에는
+    //   `inheritedAcquisition`이 그대로 남아 있고 `acquisitionCause`도 `"inheritance"`라 여기 걸린다.
+    //
+    //   실측 (재개발APT · 양도 9억 · 피상속인 취득가 5억 · 상속개시일 평가액 1억 · 적용률 0.5):
+    //
+    //   | | 의제세액 | 일반세액 |
+    //   |---|---|---|
+    //   | `inheritedAcquisition` 없음 | 135,133,664 | 211,178,735 |
+    //   | 있음 (종전) | **211,178,735** | 211,178,735 |  ← 의제 산식이 일반과 같아졌다
+    //
+    //   의제세액 **76,045,071원 과대**. ⑤ UI가 assetKind 분기 없이 렌더되고 ④⑫⑭ 배관도 모두
+    //   있어 **도달 가능한 활성 결함**이었다(⑧ validate 통과 실측).
+    //
+    //   법령상으로도 override가 이긴다 — 「소득세법」 §97의2④는 **법률 단서**로
+    //   「가업상속공제가 적용된 자산 … **다만, 취득가액은 다음 각 호의 금액을 합한 금액으로 한다**
+    //    (1호 피상속인 취득가액 × 적용률 + 2호 상속개시일 자산가액 × (1−적용률))」이라고 정한다.
+    //   §163⑨은 시행령이고 「§97①1호 가목을 적용할 때」의 규정이라 이 특례를 덮을 수 없다.
+    //
+    // 📌 **override가 없을 때 이 블록은 no-op이다** (코드 분석 · R-15).
+    //   `resolveInheritedRedevelopmentAcqPrice`가 반환하는 값은 STEP 0.45가 이미
+    //   `input.acquisitionPrice`에 넣은 값과 항상 같다:
+    //     · post-deemed → `r.acquisitionPrice` 그대로
+    //     · pre-deemed  → `max(reported, sec164)` = `clauseA`이고,
+    //       `calcPreDeemed`의 `acquisitionPrice`도 `clauseA > 0 ? clauseA : converted`다.
+    //       `selectedMethod === "converted"`는 `clauseA === 0`일 때뿐이라 그때는 여기서 null을 반환한다.
+    //   그래서 뮤테이션으로 이 블록을 통째로 무력화해도 회귀가 0건이었다(R-10 M-4).
+    //   ⛔ 그렇다고 **지우지는 말 것** — 위 override 가드가 이 블록의 유일한 실효 동작이고,
+    //      `resolveInheritedRedevelopmentAcqPrice`의 「채택 여부가 아니라 확인 가능 여부」 계약을
+    //      명시적으로 표현하는 지점이기도 하다.
     let redevInput = effectiveInput;
-    if (effectiveInput.acquisitionCause === "inheritance") {
+    if (
+      effectiveInput.acquisitionCause === "inheritance" &&
+      options?.acquisitionOverride === undefined
+    ) {
       const inhAcqPrice = resolveInheritedRedevelopmentAcqPrice(inheritedAcquisitionStep);
       if (inhAcqPrice !== null) {
         redevInput = { ...effectiveInput, acquisitionPrice: inhAcqPrice, useEstimatedAcquisition: false };
