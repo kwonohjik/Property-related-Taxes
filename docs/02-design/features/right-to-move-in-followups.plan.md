@@ -2,7 +2,7 @@
 
 - 작성일: 2026-08-23
 - 선행: [`right-to-move-in-top-acq-axis-removal.plan.md`](right-to-move-in-top-acq-axis-removal.plan.md) §8-A 「남은 후속 항목」 (PR #1245·#1246·#1247·#1249)
-- 상태: **R-9·R-10·R-12·R-13 전건 종결** (2026-08-23)
+- 상태: **R-9·R-10·R-12·R-13·R-14 전건 종결** (2026-08-23)
 
 > ⚠️ **이 계획서의 첫 결론은 「선행 계획서의 후속 항목 서술 중 2건이 틀렸다」이다.**
 > R-12와 R-13은 「법령 근거 미확보」로 적혀 있었으나, 실제로는 **명문이 있고**(R-12)
@@ -507,6 +507,50 @@ R-12를 시작하기 전에 현행 차단과 엔진 도달성을 재고, 그 과
 > 「청산금을 수령한 경우는…」과 **substring 충돌**할 뻔했다. hint를 「받은 청산금이 있다면…」으로
 > 바꿔 제목이 `exact: true`로 유일하게 잡히도록 했다.
 > (같은 함정: memory `feedback_hint_quoting_toggle_title_breaks_selector`)
+
+### ✅ R-14도 종결됐다 (2026-08-23) — 실체 없음
+
+R-10 §3.2(b)에서 분리해 나간 R-14(「§163⑨ 평가액 **자동 산정** 부재」)는 **전제가 반증됐다.**
+
+**UI 실측** (`CompanionAcquisitionCauseSection` RTL 렌더):
+
+| | 입주권 | 완공APT | housing | land |
+|---|---|---|---|---|
+| 평가방법 선택 | ✅ | ✅ | ✅ | ✅ |
+| 보충적평가 보조계산 | ✅ | ✅ | ✅ | ✅ |
+| 증여 신고가액 칸 | ✅ | ✅ | ✅ | ✅ |
+| 면적 입력 | — | — | — | ✅ |
+
+`AssetSectionAcquisition`이 **assetKind 분기 없이** 렌더하므로 입주권·완공APT도 `housing`과
+**동일한 자동 산정 UI**를 받는다. `land`만 면적을 더 묻는데, 그것은 §163⑨ land 분기가
+단가×면적이기 때문이다 — 정합.
+
+> 🔑 **R-14는 R-10 초기 오진의 파생물이었다.** 「§163⑨ 칸은 엔진에 도달하지 않는다」는
+> `acquisitionPrice` 한 갈래만 보고 `inheritedAcquisition` 갈래를 놓친 서술이고, §3.2-a가
+> 그것을 정정했다. 그런데 정정 **전에** 분리돼 나간 R-14가 옛 서술을 그대로 들고 나갔다.
+> (memory `feedback_plan_gate_survives_after_override`)
+
+**다만 조사 중 실재하는 계약 하나가 드러났다.** 엔진 `legacyFallback`은 `reportedValue`가
+**없을 때만** 돌고, 거기서 `computeSupplementary`가 `assetKind`로 산식을 가른다:
+
+| assetKind | 산식 | 실측(공시지가 3,000,000/㎡ · 200㎡) |
+|---|---|---|
+| `land` | 단가 × 면적 | 인가전 취득 **600,000,000** · 양도차익 207,218,500 |
+| `house_apart`(입주권 고정) | 총액 그대로 | 인가전 취득 **3,000,000** · 양도차익 **804,218,500** |
+
+차이 **597,000,000**. 그러나 **클라이언트 경로에서는 도달하지 않는다** —
+`buildInheritedAcquisitionPayload`가 post-deemed·pre-deemed 양쪽 모두 `reportedValue`를
+싣고, 값이 없으면 payload 자체를 보내지 않는다(P-16 실측).
+
+⇒ 그 **도달 불가**를 anchor로 고정했다(`__tests__/calc/inherited-acquisition-reported-value-always.anchor.test.ts`).
+계약이 깨지면 위 597,000,000이 실제 세액에 나타난다.
+
+> ⚠️ **처음 쓴 anchor는 버렸다.** 엔진 레벨로 「assetKind가 세액에 영향 없다」를 고정하려 했는데,
+> fixture에 `reportedValue`가 있어 `computeSupplementary`에 **애초에 도달하지 않았다** —
+> 뮤테이션 2회(M-12·M-13)가 **둘 다 통과**해서 드러났다
+> (memory `feedback_anchor_observes_wrong_stage`). 도달 조건을 찾아 배관 anchor로 다시 썼다.
+
+---
 
 **R-9는 Phase 없음**(코드 변경 없이 종결) · **R-14**(§163⑨ 자동 산정)는 본 계획서 범위 밖.
 
