@@ -12,7 +12,7 @@
  */
 
 import { applyRate, truncateToWon } from "./tax-utils";
-import { applyAnnualLimits, applyFiveYearLimits, buildLimitGroups } from "./aggregate-reduction-limits";
+import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
@@ -323,41 +323,17 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   });
 
   // ── STEP 8.5: §133② 5년 누적 한도 — 과거 4개 과세연도 감면 이력 차감 ──
+  // 규칙은 `transfer-tax-reduction-cap.ts` 단일 소스 — §155⑳ 특례 경로와 공용이다(F08).
   // aggregate 경로(2자산 이상·일반건물 dispatch)는 transfer-tax-aggregate.ts M-8에서
   // 동일 모듈(applyFiveYearLimits)로 별도 적용 — per-asset 입력에는 이력이 없어 이중 차감 없음.
-  let cappedReductionAmount = reductionAmount;
-  const priorUsage = input.priorReductionUsage ?? [];
-  if (reductionAmount > 0 && reductionTypeApplied && priorUsage.length > 0) {
-    // 연간 한도 선처리 — applyFiveYearLimits 인자 계약("연간 캡 적용 후 값") 준수.
-    // 현행 자경·공익수용은 calcReductions 내부에서 이미 연간 캡이 적용되어 등가(no-op)이나,
-    // 내부 캡 없는 감면 유형이 향후 추가될 때 silent 과감면을 방지한다.
-    // §133 한도는 양도연도 분기 그룹(2025+ §77 그룹 2억/3억, 이전 1억/2억)으로 적용.
-    const limitGroups = buildLimitGroups(input.transferDate.getFullYear());
-    const { cappedByType: annuallyCappedByType, capInfoByType } = applyAnnualLimits(
-      new Map([[reductionTypeApplied, reductionAmount]]),
-      limitGroups,
-    );
-    const { fiveYearCappedByType, fiveYearCapInfoByType } = applyFiveYearLimits(
-      annuallyCappedByType,
-      priorUsage,
-      input.transferDate.getFullYear(),
-      limitGroups,
-    );
-    const fiveInfo = fiveYearCapInfoByType.get(reductionTypeApplied);
-    const annualInfo = capInfoByType.get(reductionTypeApplied);
-    const capped = fiveYearCappedByType.get(reductionTypeApplied) ?? reductionAmount;
-    if (capped < reductionAmount) {
-      steps.push({
-        label: "§133 종합한도",
-        formula: fiveInfo?.cappedByFiveYear
-          ? `감면세액 ${reductionAmount.toLocaleString()} → ${capped.toLocaleString()} (5년 한도 ${fiveInfo.fiveYearLimit.toLocaleString()} − 과거 4개 연도 누적 ${fiveInfo.priorGroupSum.toLocaleString()} = 잔여 ${fiveInfo.remaining.toLocaleString()})`
-          : `감면세액 ${reductionAmount.toLocaleString()} → ${capped.toLocaleString()} (연간 한도 ${Number.isFinite(annualInfo?.annualLimit) ? annualInfo!.annualLimit.toLocaleString() : ""})`,
-        amount: capped,
-        legalBasis: fiveInfo?.cappedByFiveYear ? fiveInfo.legalBasis : annualInfo?.legalBasis ?? "",
-      });
-      cappedReductionAmount = capped;
-    }
-  }
+  const cap = applyReductionStatutoryCap({
+    reductionAmount,
+    reductionTypeApplied,
+    transferYear: input.transferDate.getFullYear(),
+    priorUsage: input.priorReductionUsage ?? [],
+  });
+  const cappedReductionAmount = cap.cappedAmount;
+  if (cap.step) steps.push(cap.step);
 
   // ── STEP 8.7: 하이브리드(§98의7·§99의2) 5년 내 세액감면 농어촌특별세 — 감면세액 × 20% ──
   // 농특세법 §2①1호 "조특법에 따라 감면받는 세액". §98의3·§98의5(P3)는 농특세령 §4⑦1호 비과세 —

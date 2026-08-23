@@ -21,7 +21,10 @@ import type {
 } from "./types/transfer.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
-import { calcTax, computeBracketBreakdown } from "./transfer-tax-rate-calc";
+import { calcTax, computeBracketBreakdown, calcReductions } from "./transfer-tax-rate-calc";
+import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
+import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
+import { getReductionLegalBasis } from "./transfer-tax-helpers";
 import type { RateGroup } from "./types/transfer-aggregate.types";
 import {
   resolveAppurtenantLandExcess,
@@ -419,32 +422,94 @@ export function runRentalHousingExceptionStep(
   }
 
   /**
-   * ── 조특법 감면 병용 **고지** (F08) ────────────────────────────────────
+   * ── 조특법 감면 (F08) ──────────────────────────────────────────────────
    *
-   * 🔴 이 경로는 `finalizeTransferTax`를 거치지 않아 `calcReductions`가 **아예 호출되지 않는다**.
-   *    그래서 사용자가 고른 감면이 **한 줄의 안내도 없이 0이 된다**.
-   *    실측(2026-08-23 · mock 세율): 같은 자산에서 특례를 끄면 조특법 §77 공익수용 감면
-   *    **80,660,250**이 잡히는데, 켜면 감면 0 · 경고 0건 · 관련 step 0건이었다.
+   * 🔴 종전에는 이 경로가 `finalizeTransferTax`를 거치지 않는다는 **구현상의 이유로**
+   *    사용자가 고른 감면을 한 줄의 안내도 없이 0으로 만들었다(실측: §77 공익수용
+   *    **80,660,250**이 특례를 끄면 잡히고 켜면 0).
    *
-   * **왜 지금 계산하지 않는가** — 두 축이 갈린다:
-   *   · **§99·§99의3**(신축주택) — 고가주택 배제 단서가 **명문**이라 0이 정답이다.
-   *   · **그 밖의 조문**(§77·§97 시리즈·§97의5·§98의8·§99의2 등) — 배제 문언이 **없다**.
-   *     병용 가부를 직접 판단한 예규·심판례를 **찾지 못했고**, 소득금액 차감형 감면을
-   *     「소득세법 시행령」 §161 안분의 **앞/뒤 어디에 얹을지** 정한 명문도 없다.
+   * **병용을 막는 명문이 없다.** 「조세특례제한법」 §127(중복지원의 배제)은 ⑦에서
+   * 「둘 이상의 **감면규정**이 동시 적용되면 하나를 선택」이라고 정할 뿐, 「소득세법 시행령」
+   * §155⑳ 비과세 특례와 감면의 병용을 배제하는 규정은 두지 않았다. 비과세분은 애초에
+   * 과세대상이 아니고, **과세되는 부분**(고가주택 초과분·배율 초과 부수토지분)에 대해
+   * 감면을 적용하는 구조 자체는 일반 경로와 다르지 않다.
+   * ⇒ 근거 없이 0으로 만드는 것이 오히려 정당화되지 않는다.
    *
-   * ⇒ 근거가 확정될 때까지 **계산에 반영하지 않되, 반영하지 않았다는 사실을 표시한다**.
-   *   침묵이 가장 나쁜 선택지다 — 사용자는 감면이 적용된 줄 안다.
+   * ## 두 축을 가른다
+   *
+   * · **세액감면형**(§69 자경농지·§77 공익수용·§77의2 대토·§97 시리즈 등) — 산출세액에서
+   *   감면세액을 빼는 구조라 이 경로에도 **그대로 적용된다**. 일반 경로와 **같은 함수**
+   *   (`calcReductions`)와 **같은 한도 규칙**(`applyReductionStatutoryCap`)을 쓴다.
+   * · **차감형·하이브리드**({@link ALL_INCOME_DEDUCTION_IDS} 11종 — §99의3·§99·§98 시리즈) —
+   *   **양도소득금액을 차감**하는 구조인데, 그것을 「소득세법 시행령」 §161 안분의 **앞/뒤
+   *   어디에 얹을지 정한 명문이 없다**. 추정으로 자리를 정하면 조용히 틀린다.
+   *   ⇒ 계산에 넣지 않고 **넣지 않았다는 사실을 표시**한다(종전 고지 유지).
+   *
+   * ⚠️ **농특세는 이 경로에도 붙이지 않는다** — 일반 경로도 §77 감면에 농특세를 계산하지
+   *    않기 때문이다(실측: `ruralSurtax` 필드 자체가 undefined · 관련 step 0건).
+   *    「농어촌특별세법 시행령」 §4①1호는 §77 감면의 농특세 비과세를 **「직접 경작한 토지」로
+   *    한정**하므로 주택·비자경 토지에는 농특세가 붙어야 한다 — 그러나 그것은 **두 경로에
+   *    공통인 별건 결함**이고, 여기서만 고치면 같은 감면이 경로에 따라 달라진다.
    *
    * 계획서: `docs/00-pm/transfer-review-2026-08-open-items.plan.md` §F08
    */
-  const requestedReductions = input.reductions ?? [];
+  const allReductions = input.reductions ?? [];
+  const incomeDeductionIds = new Set<string>(ALL_INCOME_DEDUCTION_IDS);
+  /** 차감형·하이브리드 — 이 경로가 계산하지 않는 축(§161 안분 위치 명문 부재). */
+  const deferredReductions = allReductions.filter((r) => incomeDeductionIds.has(r.type));
+  /** 세액감면형 — 일반 경로와 동일하게 계산한다. */
+  const taxCreditReductions = allReductions.filter((r) => !incomeDeductionIds.has(r.type));
+
+  const reductionResult = calcReductions(
+    rheTaxResult.calculatedTax,
+    taxCreditReductions,
+    parsedRates.selfFarmingRules,
+    effectiveInput.rentalReductionDetails,
+    parsedRates.longTermRentalRules,
+    // 신축주택(§99·§99의3)은 차감형이라 여기 넘기지 않는다 — 위 축 분리와 일관.
+    undefined,
+    parsedRates.newHousingMatrix,
+    effectiveInput.transferDate,
+    // 감면대상 소득 안분의 분모 — 이 경로의 **과세대상** 양도소득금액(장특 반영 후).
+    Math.max(0, totalTaxableIncome),
+    rheBasicDeduction,
+    rheTaxBase,
+    effectiveInput.acquisitionDate,
+    effectiveInput.standardPriceAtAcquisition,
+    effectiveInput.standardPriceAtTransfer,
+    effectiveInput.assetContractDate,
+  );
+
+  const cap = applyReductionStatutoryCap({
+    reductionAmount: reductionResult.reductionAmount,
+    reductionTypeApplied: reductionResult.reductionTypeApplied,
+    transferYear: effectiveInput.transferDate.getFullYear(),
+    priorUsage: effectiveInput.priorReductionUsage ?? [],
+  });
+  const rheReductionAmount = cap.cappedAmount;
+
+  if (rheReductionAmount > 0 || reductionResult.reductionType) {
+    steps.push({
+      label: "감면세액",
+      formula: reductionResult.reductionType
+        ? `${reductionResult.reductionType} 감면 ${rheReductionAmount.toLocaleString()}`
+        : "감면 없음",
+      amount: rheReductionAmount,
+      legalBasis: getReductionLegalBasis(
+        reductionResult.reductionType,
+        reductionResult.publicExpropriationDetail?.useLegacyRates,
+      ),
+    });
+  }
+  if (cap.step) steps.push(cap.step);
+
   const reductionNotice =
-    requestedReductions.length > 0
-      ? `선택한 감면 ${requestedReductions.length}건은 이 계산에 반영되지 않았습니다 — 거주주택 비과세 특례(소득세법 시행령 §155⑳)를 적용한 경우의 감면 병용 여부는 조문·해석례로 확정되지 않았습니다. 「조세특례제한법」 §99·§99의3은 고가주택 배제 단서가 명문이므로 적용 대상이 아닙니다.`
+    deferredReductions.length > 0
+      ? `선택한 감면 중 ${deferredReductions.length}건(양도소득금액 차감형)은 이 계산에 반영되지 않았습니다 — 거주주택 비과세 특례(소득세법 시행령 §155⑳)의 §161 안분과 차감 순서를 정한 규정이 없습니다. 「조세특례제한법」 §99·§99의3은 고가주택 배제 단서가 명문이므로 적용 대상이 아닙니다.`
       : undefined;
   if (reductionNotice) {
     steps.push({
-      label: "조특법 감면 — 미반영",
+      label: "조특법 감면 — 미반영 (차감형)",
       formula: reductionNotice,
       amount: 0,
       legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
@@ -453,7 +518,7 @@ export function runRentalHousingExceptionStep(
 
   // L-2 (2026-06-03): 특례 경로는 finalizeTransferTax를 거치지 않으므로
   // 신고불성실·납부지연 가산세를 emitPenaltySteps로 직접 반영 (미입력 시 no-op).
-  const rheDeterminedTax = rheTaxResult.calculatedTax; // 특례 경로 감면 없음(위 고지 참조)
+  const rheDeterminedTax = Math.max(0, rheTaxResult.calculatedTax - rheReductionAmount);
   const rheLocalIncomeTax = applyRate(rheDeterminedTax, 0.1);
   const { penaltyDetail, filingDelayedPenalty } = emitPenaltySteps(
     input,
@@ -507,7 +572,23 @@ export function runRentalHousingExceptionStep(
     progressiveDeduction: rheTaxResult.progressiveDeduction,
     calculatedTax: rheTaxResult.calculatedTax,
     isSurchargeSuspended: false,
-    reductionAmount: 0,
+    /**
+     * 감면 fan-out — **다건(aggregate) 전파**까지 포함한다(F08).
+     *
+     * `transfer-tax-aggregate.ts` M-8은 `reductionTypeApplied`·`reducibleIncome`을 보고
+     * 유형별로 합산해 §133 한도를 다시 적용한다. 종전처럼 0을 반환하면 다건 신고에서
+     * 이 자산의 감면만 **조용히 사라진다** — 단건에서 고쳐도 다건에서 되살아나는 결함이 된다.
+     */
+    reductionAmount: rheReductionAmount,
+    reductionType: reductionResult.reductionType,
+    reductionTypeApplied: reductionResult.reductionTypeApplied,
+    reducibleIncome: reductionResult.reducibleIncome,
+    rentalReductionDetail: reductionResult.rentalReductionDetail,
+    publicExpropriationDetail: reductionResult.publicExpropriationDetail,
+    gbDesignatedLandDetail: reductionResult.gbDesignatedLandDetail,
+    replacementLandDetail: reductionResult.replacementLandDetail,
+    selfFarmingReductionDetail: reductionResult.selfFarmingReductionDetail,
+    rental97TaxDetail: reductionResult.rental97TaxDetail,
     determinedTax: rheDeterminedTax,
     penaltyTax: 0,
     penaltyBase: 0,
