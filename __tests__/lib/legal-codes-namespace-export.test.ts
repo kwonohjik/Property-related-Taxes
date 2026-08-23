@@ -67,7 +67,7 @@ const MODULES: ReadonlyArray<{
       "SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW", "isWithinSurchargeSuspensionWindow",
       // transfer-nbl.ts (재수출)
       "NBL", "NBL_REVENUE_THRESHOLDS", "getNblRevenueThreshold",
-      "ESTIMATED_DEDUCTION_RATE", "estimatedDeductionRate",
+      "ESTIMATED_DEDUCTION_RATE", "estimatedDeductionRate", "isSec163_6Clause4Asset",
       // transfer-house.ts (재수출)
       "MULTI_HOUSE", "INHERITED_HOUSE", "MIXED_USE", "TRANSFER_RENTAL_HOUSING",
       "TRANSFER_REDUCTION_ARTICLE", "REDEVELOPMENT", "LTHD_EXCLUSION_LABEL",
