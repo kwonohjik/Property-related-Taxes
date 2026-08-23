@@ -71,7 +71,10 @@ export const BURDENED_GIFT_TRANSFER = {
    *   ⇒ 일반건물 부담부증여 × 이월과세는 실제로 배선돼 있다
    *     (`general-building-route-actual.ts` `calculateGeneralBuildingActualTransfer`).
    */
-  CARRYOVER_97_2:               "소득세법 §97의2 — 배우자등 이월과세 (양도일 소급 10년 · 법률 제19196호)",
+  // ⚠️ 상수 **값**에 「법률 제NNNNN호」를 쓰지 않는다 — 법령 검증 스캐너가 그것을
+  //    「법률」이라는 별개 법령 인용으로 읽어 모수 밖 인용으로 잡는다
+  //    (`__tests__/lib/legal-verification-unverifiable.test.ts`). 개정 근거는 위 주석에 둔다.
+  CARRYOVER_97_2:               "소득세법 §97의2 — 배우자등 이월과세 (양도일 소급 10년)",
 
   /**
    * 상속세 및 증여세법 §60~§66 — 증여재산 평가.
