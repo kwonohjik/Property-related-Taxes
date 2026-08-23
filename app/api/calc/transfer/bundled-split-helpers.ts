@@ -30,7 +30,7 @@ import type { z } from "zod";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { companionAssetSchema, reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
-import { resolveCompanionLandRate } from "@/lib/tax-engine/appurtenant-land-rate";
+import { resolveCompanionSplit, splitCompanionIntoTwo } from "./bundled-companion-split";
 import {
   calculateHoldingPeriod,
   calculateEstimatedAcquisitionPrice,
@@ -390,169 +390,18 @@ export function buildCompanionEngineInputs(
   return [companionEngine];
 }
 
-// ─── 타입 ───────────────────────────────────────────────────────
+// ─── 한도초과 분리 (영 §167의5) — `bundled-companion-split.ts`로 분리 (800줄 정책) ───
+// 재-export: 종전 이 파일에서 import하던 소비자가 깨지지 않게 한다.
+export {
+  resolveCompanionSplit,
+  splitCompanionIntoTwo,
+  type CompanionSplitContext,
+  type PrimarySplitContext,
+  type CompanionSplitNotApplied,
+  type CompanionSplitApplied,
+  type CompanionSplitResult,
+} from "./bundled-companion-split";
 
-/** split 판정에 필요한 companion 정보 요약 */
-export interface CompanionSplitContext {
-  assetId: string;
-  assetLabel: string;
-  assetKind: "housing" | "land" | "building";
-  areaM2?: number;
-  manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
-  /** 토지 성질 명시 입력 — "appurtenant_to_housing"일 때만 split 진입 */
-  landNature?: "appurtenant_to_housing" | "non_appurtenant";
-}
-
-/** split 판정에 필요한 primary 컨텍스트 */
-export interface PrimarySplitContext {
-  acquisitionCause?: string;
-  buildingFootprintArea?: number;
-  isUrbanArea?: boolean;
-  appurtenantLandZone?:
-    | "metropolitan_residential"
-    | "non_metropolitan_or_green"
-    | "non_urban";
-  holdingMonths: number;
-  propertyType: TransferTaxItemInput["propertyType"];
-  bundledSaleMode?: "actual" | "apportioned";
-}
-
-/** split 불필요 */
-export type CompanionSplitNotApplied = { applied: false };
-
-/** split 필요 — 비율 포함 */
-export type CompanionSplitApplied = {
-  applied: true;
-  limitArea: number;
-  excessArea: number;
-  /** 한도 내(부수토지) 비율 (0~1) */
-  appurtenantRatio: number;
-  /** 한도 초과 비율 (0~1) */
-  excessRatio: number;
-};
-
-/** split 결과 — applied=false면 split 불필요 */
-export type CompanionSplitResult = CompanionSplitNotApplied | CompanionSplitApplied;
-
-// ─── 함수 ───────────────────────────────────────────────────────
-
-/**
- * companion을 한도 내/초과로 분리할지 판정하고 비율을 반환.
- */
-export function resolveCompanionSplit(
-  companion: CompanionSplitContext,
-  primary: PrimarySplitContext,
-  /** 양도일 — 영 §167의5 배율 경과조치(2022.1.1., 부칙 §39) 판정용. */
-  transferDate?: Date,
-): CompanionSplitResult {
-  // split 진입 조건:
-  //   1. companion이 토지이고 landNature === "appurtenant_to_housing" (명시적 부수토지 선언)
-  //   2. 면적 확인 가능 (areaM2 > 0)
-  //   3. 수동 오버라이드 없음 (manualHoldingPeriodOverride === undefined)
-  // 이전 조건 "acquisitionCause === newConstruction"은 landNature 명시 입력으로 대체됨.
-  if (
-    companion.assetKind !== "land" ||
-    companion.landNature !== "appurtenant_to_housing" ||
-    !companion.areaM2 ||
-    companion.areaM2 <= 0 ||
-    companion.manualHoldingPeriodOverride !== undefined
-  ) {
-    return { applied: false };
-  }
-
-  const resolution = resolveCompanionLandRate(
-    { assetKind: "land", area: companion.areaM2 },
-    {
-      propertyType: primary.propertyType,
-      holdingMonths: primary.holdingMonths,
-      buildingFootprintArea: primary.buildingFootprintArea,
-      isUrbanArea: primary.isUrbanArea,
-      appurtenantLandZone: primary.appurtenantLandZone,
-      bundledSaleMode: primary.bundledSaleMode,
-    },
-    transferDate,
-  );
-
-  if (!resolution.applied || !resolution.excessArea || resolution.excessArea <= 0) {
-    return { applied: false };
-  }
-
-  const limitArea = resolution.limitArea!;
-  const excessArea = resolution.excessArea;
-  const totalArea = companion.areaM2;
-
-  // 비율은 정밀 부동소수로 유지, 금액 안분 시에만 floor 적용
-  const excessRatio = excessArea / totalArea;
-  const appurtenantRatio = limitArea / totalArea;
-
-  return { applied: true, limitArea, excessArea, appurtenantRatio, excessRatio };
-}
-
-/**
- * companion 엔진 입력 기반(base)과 split 결과를 받아
- * [appurtenant, excess] 두 TransferTaxItemInput을 반환.
- *
- * 금액 안분 (Math.floor — 정수 보존, Math.round 금지):
- *   excess 몫 = Math.floor(전체 × excessRatio)
- *   appurtenant 몫 = 전체 - excess 몫 (나머지 귀속)
- */
-export function splitCompanionIntoTwo(
-  base: TransferTaxItemInput,
-  split: CompanionSplitApplied,
-  primaryCtx: NonNullable<TransferTaxItemInput["primaryContextForCompanionRate"]>,
-): [TransferTaxItemInput, TransferTaxItemInput] {
-  const { appurtenantRatio, excessRatio, limitArea } = split;
-
-  // 금액 안분 헬퍼 — floor 적용, 나머지는 appurtenant에 귀속
-  function splitAmount(total: number): { appurtenant: number; excess: number } {
-    const excess = Math.floor(total * excessRatio);
-    return { appurtenant: total - excess, excess };
-  }
-
-  const xferSplit = splitAmount(base.transferPrice);
-  const acqSplit = splitAmount(base.acquisitionPrice);
-  const expSplit = splitAmount(base.expenses ?? 0);
-  const capexSplit = splitAmount(base.capitalExpenditure ?? 0);
-  const texpSplit = splitAmount(base.transferExpense ?? 0);
-
-  // 자산 A: 부수토지 한도 내 — primaryContextForCompanionRate 유지 (70% 적용)
-  const appurtenant: TransferTaxItemInput = {
-    ...base,
-    propertyId: `${base.propertyId}__appurtenant`,
-    propertyLabel: `${base.propertyLabel}(부수토지 한도 내)`,
-    transferPrice: xferSplit.appurtenant,
-    acquisitionPrice: acqSplit.appurtenant,
-    expenses: expSplit.appurtenant,
-    capitalExpenditure: capexSplit.appurtenant > 0 ? capexSplit.appurtenant : undefined,
-    transferExpense: texpSplit.appurtenant > 0 ? texpSplit.appurtenant : undefined,
-    acquisitionArea: limitArea,
-    // 부수토지 → 주택 세율(70%) 자동 적용을 위해 primaryCtx 그대로 유지
-    primaryContextForCompanionRate: primaryCtx,
-  };
-
-  // 자산 B: 한도 초과 — primaryContextForCompanionRate 제거 (토지 본래 보유기간 적용)
-  //   영 §167의5 한도 초과분은 주택부수토지가 아니다 → 토지 본래 보유기간 기준 §104① 적용.
-  //   ⚠️ 초과분은 「소득세법」 §104의3①5호(위임 영 §168의12)에 따라 **비사업용 토지**에도
-  //      해당할 수 있으나(정의요건) 기간요건(영 §168의6)은 별도이며, 현재 이 분기는
-  //      isNonBusinessLand를 사용자 입력값 그대로 상속한다 — 자동 적용하지 않는다.
-  const excess: TransferTaxItemInput = {
-    ...base,
-    propertyId: `${base.propertyId}__excess`,
-    propertyLabel: `${base.propertyLabel}(한도 초과)`,
-    transferPrice: xferSplit.excess,
-    acquisitionPrice: acqSplit.excess,
-    expenses: expSplit.excess,
-    capitalExpenditure: capexSplit.excess > 0 ? capexSplit.excess : undefined,
-    transferExpense: texpSplit.excess > 0 ? texpSplit.excess : undefined,
-    acquisitionArea: split.excessArea,
-    // 한도 초과분은 주택 일체과세 배제 → primaryContext 없음
-    primaryContextForCompanionRate: undefined,
-    // 수동 오버라이드도 없음 (본래 보유기간 기준 세율 자동 적용)
-    manualHoldingPeriodOverride: undefined,
-  };
-
-  return [appurtenant, excess];
-}
 
 // mapCompanionReductions 삭제됨 (2026-08-13, F14):
 //   27 variant 중 3개(public_expropriation·replacement_land_comp·self_farming)만 Date 변환하고
