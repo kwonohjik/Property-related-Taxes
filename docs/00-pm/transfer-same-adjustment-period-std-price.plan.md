@@ -311,12 +311,12 @@ sameAdjustmentPeriod?: {
 | ✅ **P-0.5** | **월수 헬퍼 통일**(Q-1) — `calcStdPriceMonths` 신설 후 **`transfer-tax-commercial-step.ts:182` private `monthsBetween` 1곳만** 위임. 🔴 **`transfer-tax-aggregate-helpers.ts:146`(보유기간 내림)·`property-valuation/fiscal-year-annualize.ts:28`(상증)은 손대지 않는다 — 다른 축**(F-2) | **V-1** 회귀 diff 첨부 · 움직인 anchor 기대값 정정 · 미대상 2곳 무변경 grep |
 | ✅ **P-1** | leaf 3종 신설 + 단위 테스트(가·나목·하한·cap·월수 경계) | 사례1=169,000,000 · 사례2=218,333,333 **GREEN** |
 | ✅ **P-2** | `TransferTaxInput.sameAdjustmentPeriod` 타입 + STEP 0.47 배선 + `steps` 산출근거 1건 | 단건 엔진 anchor |
-| **P-3** | ⑫Zod(`transfer-tax-*schemas.ts`) · ⑬body spread · ⑭route 매핑 (Date 변환 `toDate`) | grep 자가점검 3건 |
-| **P-4** | `building-standard-price.ts:426` 트리거를 `classifySameAdjustmentPeriod`로 교체 + 하한 적용. 🔴 `commercial-building-valuation.ts`는 **비율 곱 core만 공유·`applyFloor:false`**(F-1 — 위임 아님) | 기존 상가 anchor **회귀 0**(부정형 단언 → **P-4 mutation**: `applyFloor`를 강제 `true`로 뒤집으면 상가 anchor가 실패해야 한다) |
-| **P-5** | ⑤UI — 자산 카드에 §164⑧ 섹션(`ToggleCard`+`RadioCardGroup` 가/나목) · ⑥사이드바 · ⑦결과 카드 산식 | E2E 1건 |
-| **P-6** | 겸용·일괄양도·다필지·부담부증여 경로 배선 (§5-2 표) | 경로별 anchor |
-| **P-7** | §80③ 대체 산정 3종 + §80④ 준용 | 케이스 매트릭스 전수 |
-| **P-8** 🆕 | **자동 조회 배선**(Q-2) — 전기·새 기준시가 + 고시일자→조정월수 파생. 자산 5종별 소스 분기 + **수동 fallback**. 🔑 **연도 선택은 §164③**(직전 고시분) — `recommendLandPriceYear()`(`lib/utils/land-price-year.ts:22`) 재사용, **취득/양도 비대칭 금지**(memory `feedback_standard_price_year_164_3_prior`) | V-6 결과대로 유형별 · 조회 실패 E2E 1건 · §164③ 연도 anchor |
+| ✅ **P-3** | ⑫Zod(`transfer-tax-*schemas.ts`) · ⑬body spread · ⑭route 매핑 (Date 변환 `toDate`) | grep 자가점검 3건 |
+| ✅ **P-4** | `building-standard-price.ts:426` 트리거를 `classifySameAdjustmentPeriod`로 교체 + 하한 적용. 🔴 `commercial-building-valuation.ts`는 **비율 곱 core만 공유·`applyFloor:false`**(F-1 — 위임 아님) | 기존 상가 anchor **회귀 0**(부정형 단언 → **P-4 mutation**: `applyFloor`를 강제 `true`로 뒤집으면 상가 anchor가 실패해야 한다) |
+| ✅ **P-5** | ⑤UI — 자산 카드에 §164⑧ 섹션(`ToggleCard`+`RadioCardGroup` 가/나목) · ⑥사이드바 · ⑦결과 카드 산식 | E2E 1건 |
+| ✅ **P-6** | 겸용·일괄양도·다필지·부담부증여 경로 배선 (§5-2 표) | 경로별 anchor |
+| ✅ **P-7** | §80③ 대체 산정 3종 + §80④ 준용 | 케이스 매트릭스 전수 |
+| ✅ **P-8** 🆕 | **자동 조회 배선**(Q-2) — 전기·새 기준시가 + 고시일자→조정월수 파생. 자산 5종별 소스 분기 + **수동 fallback**. 🔑 **연도 선택은 §164③**(직전 고시분) — `recommendLandPriceYear()`(`lib/utils/land-price-year.ts:22`) 재사용, **취득/양도 비대칭 금지**(memory `feedback_standard_price_year_164_3_prior`) | V-6 결과대로 유형별 · 조회 실패 E2E 1건 · §164③ 연도 anchor |
 
 **파일 크기 주의**: `lib/tax-engine/transfer-tax.ts`는 **현재 847줄로 hard cap 800을 이미 초과**했다. STEP 0.47은 본문에 인라인하지 말고 **`transfer-tax-same-period-step.ts` 신설 후 1줄 호출**로 넣는다(`runInheritedAcquisitionStep` 패턴 차용). 기회주의적 분리 대상이나 **본 작업 범위 밖**으로 두고 별건 기록.
 
@@ -543,7 +543,7 @@ const sec164_8Applicable = combinedStdAtAcq === combinedStdAtFirst;
 > 🔑 **교훈**: 「anchor가 있다」와 「anchor가 그 경로를 탄다」는 다르다. 게이트가 닫힌 fixture는
 > 조용히 통과하며 커버리지 착시를 만든다. 배선 anchor는 **구별력(값이 갈리는가)** 을 먼저 확인한다.
 
-### 다음 → P-3 (⑫⑬⑭)
+### 다음 → P-3 (⑫⑬⑭) — ✅ 완료(§16)
 
 
 ---
@@ -603,3 +603,161 @@ STEP 0.47 호출을 무력화(`false ? … : undefined`)했을 때:
 
 **P-3** — ⑫Zod(`sameAdjustmentPeriodSchema`) · ⑬body spread · ⑭route 매핑.
 현재 엔진은 받을 준비가 됐지만 **API를 통해서는 도달하지 못한다**(⑫에서 침묵 strip).
+
+
+---
+
+## §16. 착수 기록 — P-3 ~ P-8 완료 (2026-08-24)
+
+### P-3 API 배선 (⑫⑬⑭)
+
+| 지점 | 파일 |
+|---|---|
+| ⑫ Zod | `transfer-tax-schema-sub.ts` `sameAdjustmentPeriodSchema`(신설) + 컴패니언 · `transfer-tax-schema.ts` 메인 |
+| ④⑬ | `transfer-same-adjustment-period-input.ts`(신설, **단일 소스**) → 단건·다건·컴패니언 3경로 공용 |
+| ⑭ | `engine-input.ts` · `multi/route.ts` · `bundled-split-helpers.ts`(+`CompanionRawAsset` 타입) |
+| anchor | `__tests__/calc/same-adjustment-period-api-pipeline.test.ts` **8건** — ②③④⑬⑫⑭ 전 계층 관통 + OFF 구별력 |
+
+`priceSource`도 ⑫⑬⑭를 통과시킨다 — 세액 무영향이라고 빼면 결과 화면의 「자동 조회」 배지가 조용히 사라진다.
+
+### P-4 건물계산기 트리거 교체
+
+`building-standard-price.ts:426`의 `transferYear === acquisitionYear`를 법정 요건
+(`transferYear <= acquisitionYear + 1`)으로 넓히고 §80①1호 단서(하한)를 적용했다.
+
+#### 🔴 발견 D-4 — 트리거를 넓히자 **기존 호출부가 무너졌다**
+
+`phd-3point-batch.anchor` 2건이 즉시 실패했다. 3시점 배치는 보유월수를 쓰지 않는데, 넓어진
+트리거가 그 입력을 §164⑧ 분기로 끌어들여 *"보유월수 필수 입력"*으로 떨어뜨렸다.
+
+원인은 **트리거의 의미가 달라졌다는 것**이다. 「연도 동일」은 연 1회 고시 전제에서
+「같은 고시분」을 사실상 함의했지만, **연도가 다르면 서로 다른 고시분일 수 있어** §164⑧의
+전제(취득·양도 기준시가 동일)가 깨진다. 이 계산기는 기준시가를 **산출하는 주체**라 그
+동일성을 스스로 알 수 없다.
+
+⇒ **연도 교차 구간은 호출부가 `holdingMonths`를 줄 때만 진입**하도록 가드를 넣었다.
+같은 연도는 종전 그대로다(회귀 0).
+
+> 🔑 게이트를 넓힐 때는 **넓어진 쪽으로 들어오는 기존 호출부**를 봐야 한다
+> (memory `feedback_ui_gate_expansion_activates_latent_defect`와 같은 구조).
+
+`commercial-building-valuation.ts`는 **위임이 아니라 core 공유**로 바꿨다 —
+`applyFloor: false`로 2026-07-28 결정(하한 미적용)을 보존한다.
+**mutation 확인**: `applyFloor`를 `true`로 뒤집으면 상가 anchor **1건이 실패**한다 —
+종전에는 이 결정을 지키는 안전망이 없었다.
+
+### P-5 UI (①~⑧)
+
+- ① `AssetForm` +7 (`sapEnabled`·`sapFormula`·`sapPriorStdPrice`·`sapNewStdPrice`·`sapAdjustMonths`·`sapPriorBasis`·`sapPriceSource`) · ② factory 기본 **OFF** · ③ `migrateAsset` stale 가드
+- ⑤ `SameAdjustmentPeriodSection.tsx`(신설) — `ToggleCard` + 가/나목 `RadioCardGroup` + §80③ 근거 4택
+- ⑥ `transfer-per-asset-summary.ts` — 사이드바 프리뷰가 **엔진과 같은 leaf** 사용
+- ⑦ `DetailedStatementFormulaBuilders.ts` — 환산 산식에 §164⑧ 고지.
+  **결과뷰 4개 전부가 상세 명세서 카드를 렌더**함을 실측 확인(2·3·2·2회) ⇒ 한 곳이면 네 경로 도달
+- ⑧ `transfer-tax-validate-sec164.ts` `sameAdjustmentPeriodError` — ④와 **같은 fallback**
+  (조정월수 미입력은 차단하지 않는다)
+
+### P-6 특수 경로 — 실측으로 갈렸다
+
+| 경로 | 판정 | 근거 |
+|---|---|---|
+| 다건·일괄 | ✅ **자동 도달** | `transfer-tax-aggregate.ts:171`이 항목마다 `calculateTransferTax`를 부른다 → STEP 0.47이 항목별로 적용 |
+| 다필지 | ✅ **자동 도달** | `handleMultiParcelBranch`가 STEP 0.47 이후의 `input`을 받는다 |
+| **겸용주택** | 🔴 **미도달 → 명시 차단** | `calcMixedUseTransferTax`가 **별도 진입점**(route.ts:392) |
+| **부담부증여** | 🔴 **미도달 → 명시 차단** | 안분이 `landStdPriceAtTransfer`·`buildingStdPriceAtTransfer`라는 **다른 필드**를 쓴다 |
+
+두 경로 모두 §80⑤ 후단(*"토지와 건물 기준시가 조정월수가 서로 다른 경우에는 각각 계산하여
+합한 금액으로 한다"*)에 따라 **부분별 전기 기준시가·조정월수**가 필요한데, 현재 입력 모델은
+자산당 1쌍뿐이다. 한 쌍을 양쪽에 쓰면 **조용히 틀린 세액**이 나온다.
+
+⇒ 입력 모델을 부분 축으로 확장하기 전까지 **⑧에서 차단하고 사유를 말한다**. ⑤ 게이트도 같은
+조건으로 막아 차단 메시지만 보게 두지 않는다. **침묵 no-op보다 차단이 낫다.**
+
+### P-7 §80③ 전기 기준시가 부존재 대체
+
+`calcPriorStdPriceSubstitute` — 3호(비율환산) 우선, 합계액이 없으면 **§80④ 준용**으로 2호
+(최초고시 × 기준율). 둘 다 불가하면 `null`(**추정하지 않는다**).
+1호(인근토지)는 **산정이 아니라 조사**라 계산 대상에서 제외하고 출처 표기만 한다.
+
+### P-8 자동 조회 (Q-2)
+
+- `same-adjustment-period-lookup.ts`(신설) — §164③ 연도 선택(`recommendLandPriceYear` 재사용,
+  **취득·양도 비대칭 금지**) + §80②1호 조정월수 파생
+- `standard-price/route.ts` — **`announcedDateEstimated` 플래그 신설**. 종전에는 추정 공시일
+  (`stdrYear + "0429"`)이 실제값과 **같은 필드로 섞여** 나가 호출부가 구분할 수 없었다.
+  추정이면 조정월수 파생을 **끄고 수동 입력으로 안내**한다 — 월 경계(4/29 ↔ 5/1)에서 1개월이
+  어긋나기 때문이다.
+- 조회는 **UI 층에서만** 한다. 엔진 leaf는 숫자만 받는다(Layer 2 순수성).
+- 조회 실패·미고시는 **수동 입력을 열어둔다** — 자동 조회를 필수 게이트로 만들면 입력 경로가 사라진다.
+
+### 잔여 (범위 밖 명시)
+
+| 항목 | 사유 |
+|---|---|
+| 겸용주택·부담부증여 **부분별 축** | §80⑤ 후단 대응에 입력 모델 확장 필요. 현재는 차단 |
+| §80③1호 인근토지 **자동 선정** | 유사 토지 판단은 엔진 대상이 아니다 |
+| `transfer-tax.ts` 800줄 분해 | 종전부터 초과 상태. 별건 |
+
+
+---
+
+## §17. 코드 품질 게이트 — `/code-review high` 결과 및 처리 (2026-08-25)
+
+리뷰가 **High 2 · Medium 3 · Low 3**을 냈고 전건 실증 지적이었다. High/Medium은 전건 수정, Low는 2건 수정·1건 기록.
+
+### High
+
+**H-1 — ⑤ 게이트와 ⑧ 차단이 겹쳐 dead-end**
+`SameAdjustmentPeriodSection`은 토글을 **끌 수 있는 유일한 위젯**인데 렌더 조건이 좁고,
+`sameAdjustmentPeriodError`는 `sapEnabled`만 보고 차단한다. 토글을 켠 뒤 취득가액 산정 방식을
+실지거래가액으로 되돌리면 **섹션은 사라지고 차단은 남아** 빠져나올 수 없다.
+겸용·부담부증여 차단 메시지가 *"「…환산」을 꺼주세요"*라고 하는데 정확히 그 조건에서 토글이
+사라지는 것도 같은 함정이었다.
+⇒ **`asset.sapEnabled ||` 를 게이트 앞에 붙여 켜져 있으면 항상 렌더**한다.
+
+**H-2 — 자동 조회가 `propertyType`을 안 보내 토지에서 엉뚱한 값**
+route 기본값이 `housing`(`standard-price/route.ts:221`)이라 토지 자산에서 개별공시지가 대신
+주택 공시가격이 조회된다. 게다가 토지 분기의 `price`는 **원/㎡**(총액 아님)로 단위축도 다르다.
+⇒ `propertyType` 명시 + 토지는 **면적을 곱해 총액 환산**, 면적을 모르면 **채우지 않고 안내**한다.
+
+### Medium
+
+**M-3 — 나목에 cap이 없어 비율이 100%를 넘는다**
+V-2 전수 실측은 「나목 요건이 성립할 때」의 이야기였는데 **엔진은 그 요건을 검증하지 않는다**
+(새 고시일을 입력받지 않는다). 실측 반례: 취득 2005-03-01 · 양도 2006-11-01 → 보유 21월 /
+조정 12월 → `1억 + 1천만 × 21/12 = 117,500,000` — **실제 새 기준시가 1.1억을 넘어선다**.
+⇒ 법문에 없는 clamp를 넣는 대신 **요건 위반 조합을 계산 대상에서 뺀다**(엔진 no-op) +
+**⑧이 사유를 말한다**(침묵 no-op 아님).
+
+**M-4 — §164⑥ 분모의 절사 방향이 바뀌어 1원 회귀**
+`applyFloor: false` 경로는 delta가 음수인데, 크기를 먼저 floor하고 부호를 되붙이면
+**0 방향 절사**가 되어 종전 `Math.floor(A + (A−B)·ratio)`의 아래 방향과 1원 갈린다
+(실측 A=100·B=111·C=5·D=12 → 종전 **95** / 부호분리 **96**).
+leaf 주석이 근거로 든 「delta ≤ 0 단락」은 `applyFloor` 참일 때만 발동해 **이 경로에 성립하지 않았다**.
+⇒ 음수 delta는 **종전 산식을 그대로** 쓴다. anchor 3건으로 고정.
+
+**M-5 — 넓힌 게이트가 실 입력 경로에서 도달 불가**
+엔진 게이트를 `transferYear <= acquisitionYear + 1`로 넓혔지만, `holdingMonths`를 채우는
+**유일한 프로덕션 호출부**(`building-std-price-form.ts:490`)가 **같은 연도일 때만** 채운다.
+⇒ 새 조건절이 **어떤 실제 입력으로도 진입할 수 없었다** — 인용한 집행기준 2건은 여전히 미해결.
+
+⇒ 폼에 **`crossYearSameAdjust` opt-in**을 신설했다. 같은 연도는 연 1회 고시 전제상 자동이지만,
+연도가 다르면 서로 다른 고시분일 수 있어 §164⑧ 전제를 계산기가 확인할 수 없다 —
+**사용자가 명시할 때만** 환산 경로로 간다. `validateBuildingStdPriceForm`도 같은 축으로 넓혔고,
+`BuildingStdPriceForm`에 토글을 노출했다. 도달성 anchor 4건.
+
+> 🔑 **「게이트를 넓혔다」와 「입력이 그 게이트에 닿는다」는 다르다.** 엔진만 열고 폼을 그대로
+> 두면 조건절은 dead code다(memory `feedback_api_trigger_without_input_path_is_noop`와 같은 축).
+
+### Low
+
+- **L-6** 내 변경이 고아로 만든 `calcSameYearTransferStdPrice`(16줄) **제거**.
+  `calcPriorStdPriceSubstitute`는 §80③ 구현체로 남기되 **UI 미배선**임을 §16 잔여에 기록.
+- **L-7** 조회 결과에 금액이 없으면 기존 입력을 빈 값으로 덮어쓰던 것 → **덮어쓰지 않고 안내**.
+- **L-8** (기록만) 사이드바 프리뷰는 `standardPriceAtTransfer` raw를, ⑤ 게이트는 증환지 fallback이
+  적용된 `effTotal`을 본다. 증환지 증가분 자산에서 UI는 섹션을 띄우지만 사이드바는 종전 값을
+  보여준다. 표시 계층 한정이라 세액 무영향 — **별건**.
+
+### 리뷰가 확인해 준 것
+
+⑫⑬⑭ 배관은 단건·다건·컴패니언 **3경로 모두 연결**돼 있고, 겸용·부담부증여 미도달이 ⑧에서
+차단 처리돼 있음이 독립 검증됐다.
