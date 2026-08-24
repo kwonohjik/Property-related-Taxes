@@ -8,6 +8,7 @@
  * 노출되지 않던 버그. 유입 = e62c95d0(#541) — 정규식(48fdc629 #525)이 먼저 확정됐는데 키만 규약 이탈.
  */
 import { describe, it, expect } from "vitest";
+import { batchSnapshotKeys } from "@/lib/calc/phd-batch-snapshots";
 import {
   idOfSnapshotKey,
   phdTimepointLabel,
@@ -171,10 +172,15 @@ describe("phdTimepointLabel — 배치 시점 라벨", () => {
   });
 });
 
-describe("B1 — 배치 모달 replaceSnapshotsByPrefix 삭제 범위", () => {
-  // building-std-snapshot-store.ts:38 `!k.startsWith(`${prefix}-`)` 규칙 재현.
-  // 배치 모달 prefix = `bsp-{id}-phd` (MixedUsePreHousingDisclosureSection:205).
-  const survivesBatchReapply = (key: string) => !key.startsWith("bsp-a1-phd-");
+describe("B1 — 배치 모달 스냅샷 교체 삭제 범위", () => {
+  /**
+   * ⚠️ 규칙을 **재현하지 않고 실제 함수를 쓴다**. 종전에는 `!key.startsWith("bsp-a1-phd-")`로
+   * 베껴 뒀는데, 삭제 규칙이 접두 매칭에서 **키 집합**으로 바뀌어도(2026-08-24 B-7)
+   * 이 테스트는 그대로 통과했다 — 규칙 복제는 회귀를 못 잡는다.
+   * 배치 모달 prefix = `bsp-{id}-phd` (MixedUsePreHousingDisclosureSection:205).
+   */
+  const survivesBatchReapply = (key: string) =>
+    !new Set(batchSnapshotKeys("bsp-a1-phd")).has(key);
 
   it("B1: 상가 통합 모달 스냅샷이 배치 재적용에 삭제되지 않는다", () => {
     expect(survivesBatchReapply("bsp-a1-mx-commercial")).toBe(true);

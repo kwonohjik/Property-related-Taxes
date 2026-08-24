@@ -56,13 +56,50 @@ after : bsp-a1-cb-acq · bsp-a1-gb-acq · bsp-a1-gb-transfer
 **닫혀 있다**. 그 6종만 지우면 접두 겹침이 원천 차단된다. `-ext`처럼 세그먼트가 더 붙은 키는
 애초에 그 집합에 없다.
 
-### 검증
+### 구현 — ✅ 완료 (2026-08-24, 권고안 B 채택)
 
-- probe를 anchor로 승격 — `gb` 배치가 `gb-ext` 스냅샷을 **보존**한다
-- 배치 재실행 시 **자기 시점 축소**는 여전히 정리된다(3시점 → 2시점 시 남은 1건 삭제).
-  이것이 `replaceSnapshotsByPrefix`의 원래 목적이므로 회귀시키면 안 된다
-  (`MultiPointBuildingStdPriceModal.tsx:323` 주석의 「부분 제거·시점 축소로 생긴 stale 계산서 방지」)
-- `cb`↔`cbinh` 비겹침 회귀
+- `batchSnapshotKeys(prefix)` 신설(`phd-batch-snapshots.ts`) — 배치가 만들 수 있는 **6종**
+  (`{acq|first|transfer}` × `(-commercial)?`). `phdBatchToSnapshots`의 `snapKey` 조립과 같은 규칙.
+- store API를 `replaceSnapshotsByPrefix(prefix, …)` → **`replaceBatchSnapshots(removeKeys, …)`**
+  로 교체. 키 지식은 `lib/calc`에 두고 store는 순수 데이터 조작만 한다.
+- 호출부(`MultiPointBuildingStdPriceModal.tsx:323`) 배선.
+
+### 🔑 규칙을 **복제한 테스트**가 회귀를 못 잡고 있었다
+
+`building-std-snapshot-keys.test.ts`의 「B1 — 삭제 범위」가 `!key.startsWith("bsp-a1-phd-")`로
+규칙을 **베껴** 두고 있었다. 삭제 규칙이 접두 매칭에서 키 집합으로 바뀌어도 **그대로 통과**한다.
+⇒ 실제 함수(`batchSnapshotKeys`)를 쓰도록 고쳤다. 규칙 복제는 안전망이 아니다.
+
+주석 2곳(`building-std-snapshot-keys.ts` 헤더 · `MixedUseAssetMajorStdPrice.tsx:118`)도 갱신했다 —
+구 API 이름과 「접두 삭제」 전제를 그대로 두면 다음 독자를 오도한다.
+
+### 검증 — ✅ 완료
+
+- 🔴 `gb` 배치가 `gb-ext` 스냅샷을 **보존**한다(probe → anchor 승격)
+- 배치 재실행 시 **자기 시점 축소**는 그대로 정리된다(3시점 → 2시점) — 원래 목적 보존
+- 상가 접미(`-commercial`)는 자기 집합이라 정리 · `cb`↔`cbinh` 비겹침 · 다른 자산 키 불변
+- `batchSnapshotKeys`가 `-ext` 세그먼트 키를 **집합에 담지 않는다**는 것 자체를 anchor로 고정
+- mutation probe 2종(키 집합 무력화 · 접두 매칭으로 회귀) → 각각 4건·1건 실패
+
+### 리뷰 Low 2건 추가 반영
+
+- **JSDoc 고아화**: `batchSnapshotKeys`를 삽입하면서 `phdBatchToSnapshots`의 기존 doc 블록을
+  가로챘다 — 원 함수가 문서 없이 남고, 떠 있는 블록은 엉뚱한 함수를 설명했다. 제자리로 돌렸다.
+- **규칙 복제**: `["acq","first","transfer"]`를 하드코딩해 `KEYWORD` 맵과 중복시켰다.
+  **이 PR이 테스트 주석으로 지적한 바로 그 실패 모드를 구현 쪽에서 저지른 것**이다.
+  `KEYWORD`를 모듈 스코프로 올려 생성·삭제 두 경로가 공유하게 했다 — `Record<PointKey, …>`라
+  시점이 늘면 컴파일 에러로 잡힌다.
+- 회귀: vitest **전체 16,240건** · 배치 E2E **18건** · tsc 0 · lint 0 errors
+
+### 정합 작업 — ✅ 이 PR에서 처리
+
+**정정**: 초판은 `building-std-snapshot-applicability.ts`가 「PR #1270에 있어 이 브랜치에 없다」고
+적었으나 **틀렸다** — 그 파일은 #1268(`50c7f8dc`)로 **이미 master에 있다**(#1270은 케이스를
+추가했을 뿐). 그대로 뒀다면 존재하지 않는 함수 이름을 가리키는 주석을 안고 머지될 뻔했다.
+⇒ 이 PR에서 `replaceBatchSnapshots`로 갱신했다.
+
+남은 2곳(`building-std-snapshot-store.ts:24` · `phd-batch-snapshots.ts:144`)은
+「**종전에는** ~였다」는 역사 기술이라 그대로 둔다.
 
 ---
 
@@ -87,11 +124,18 @@ after : bsp-a1-cb-acq · bsp-a1-gb-acq · bsp-a1-gb-transfer
   **계산서 재구성 전용**이다. 3시점을 transfer 폼(2시점)에 담을 수 없어 시점마다 1시점
   평가 스냅샷으로 재현한다(`phd-batch-snapshots.ts:147` 주석) — **구조적 이유가 있다**.
 
-### 지금 상태 (PR #1270 M-2 수정 이후)
+### ⚠️ 지금 상태 — **머지 여부에 따라 갈린다** (2026-08-24 리뷰 정정)
 
-세목이 어긋나는 복원분은 버리므로 **오작동은 없다**(빈 폼 + 올바른 모드).
-다만 **정정 경로가 끊긴다**: 배치로 계산한 직후 단일시점 모달을 열면 빈 폼이라
-「방금 계산했는데 왜 비어 있지」가 된다. 사용자에게는 데이터 손실처럼 보인다.
+**정정**: 초판은 「PR #1270 M-2 수정 이후 오작동은 없다」고 단정했으나, **#1270은 아직
+머지되지 않았다**. 그 전제 위에서 B-6을 후순위로 미룬 것은 **거짓 안전 주장**이었다.
+
+| 시점 | 동작 |
+|---|---|
+| **#1270 머지 전 (현재 master)** | 🔴 `BuildingStdPriceForm`이 `initialForm`을 `lockedTaxType` **뒤에** 펼쳐 복원된 `taxType`이 이긴다. GB 배치(`GeneralBuildingBlock.tsx:541`)가 `bsp-{id}-gb-acq`에 valuation 스냅샷을 쓴 뒤 「취득시 건물 기준시가 계산」(`:576`, `lockedTaxType="transfer"`, **같은 키**)을 열면 **상증 평가 모드로 렌더되고 세목 라디오는 숨겨져** 양도 트랙으로 되돌릴 수 없다. 적용하면 valuation 트랙 값이 transfer 필드로 들어간다 |
+| **#1270 머지 후** | 세목이 어긋나는 복원분을 버리므로 오작동은 없다(빈 폼 + 올바른 모드). 다만 **정정 경로가 끊긴다** — 배치 직후 단일시점 모달이 빈 폼이라 「방금 계산했는데 왜 비어 있지」가 된다 |
+
+⇒ **#1270 머지가 B-6의 실질적 선행 조건**이다. 머지 전에는 위 표의 첫 행이 실제 버그이므로,
+#1270이 지연되면 B-6을 앞당겨야 한다.
 
 ### 설계 후보
 
