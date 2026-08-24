@@ -71,6 +71,37 @@ function findAsset(
 }
 
 /**
+ * 구 감면 PHD 키가 조문별 신 키로 **대체되었는가**.
+ *
+ * 구 키는 조문을 알 수 없으므로 「어느 조문의 계산인지」를 직접 맞출 수 없다. 대신
+ * **덮이지 않은 PHD 조문이 남아 있는가**를 본다 — 하나라도 남아 있으면 구 키가 그 조문의
+ * 계산일 수 있으므로 살린다. 모든 PHD-ON 조문이 각자의 신 키를 가졌다면 구 키가 가리킬
+ * 대상이 없으므로 대체된 것이다.
+ *
+ * 판정 근거(`reductions`)가 없으면 **대체로 보지 않는다** — 이 파일의 「판정 불능은 통과」 원칙.
+ */
+function isLegacyRedPhdSuperseded(
+  inputData: Record<string, unknown>,
+  assetId: string,
+  articleKeys: readonly string[],
+): boolean {
+  const asset = findAsset(inputData, assetId);
+  const reductions = asset ? (asset as { reductions?: unknown }).reductions : undefined;
+  if (!Array.isArray(reductions)) return false;
+  const covered = new Set(
+    articleKeys.map((k) => redPhdArticle(k)?.reductionType).filter((t): t is string => !!t),
+  );
+  const hasUncoveredPhdArticle = reductions.some((r) => {
+    if (!r || typeof r !== "object") return false;
+    const phdOn = Object.entries(r).some(([k, v]) => k.startsWith("phdMode") && v === true);
+    if (!phdOn) return false;
+    const type = (r as { type?: unknown }).type;
+    return typeof type !== "string" || !covered.has(type);
+  });
+  return !hasUncoveredPhdArticle;
+}
+
+/**
  * 이 스냅샷을 계산서로 내보내도 되는가.
  *
  * ⚠️ **판정 대상이 아닌 키는 항상 `true`**(현행 동작 유지)다. 키마다 성립 조건이 다르므로
@@ -97,17 +128,20 @@ export function isBuildingStdSnapshotApplicable(
    * 한 조문에 계산서가 **4장**(신 키 2 + 구 키 2) 찍힌다 — 저장 `input_data`와 서버 PDF도 같다
    * (2026-08-24 코드 리뷰 실측). 계획서의 「새 키로 저장되면 자연히 대체된다」는 **틀렸다**.
    *
-   * ⚖️ 구 키는 **조문을 알 수 없다**. 그것이 다른 조문의 계산이었다면 이 규칙이 그 계산서를
-   *    지운다 — 그래도 이쪽을 택한다: (a) 중복 4장은 어느 것이 맞는지 알 수 없게 만들고,
-   *    (b) 지워진 조문은 다시 계산하면 신 키로 살아나며, (c) 구 키는 조문 구분 이전 잔재라
-   *    같은 자산에서 새 계산이 일어났다면 이미 낡았다고 보는 편이 실제에 가깝다.
+   * ⚖️ 구 키는 **조문을 알 수 없다**. 「신 키가 하나라도 있으면 대체」로 두면 다른 조문의
+   *    계산서를 지운다 — §99의3을 구 키로 계산해 둔 상태에서 §98의8을 새로 계산하면
+   *    §99의3 계산서가 사라지고, 저장 경로도 같은 술어를 쓰므로 **손실이 영속화**된다
+   *    (2026-08-24 코드 리뷰 Low). ⇒ 아래 `isLegacyRedPhdSuperseded`로 좁힌다:
+   *    **PHD가 켜진 조문이 모두 신 키로 덮였을 때만** 구 키를 대체된 것으로 본다.
    */
   if (allKeys && /-red-phd$/.test(key)) {
     const id = idOfSnapshotKey(key);
-    const supersededByArticleKey = allKeys.some(
+    const articleKeys = allKeys.filter(
       (k) => k !== key && /-red\d+-phd$/.test(k) && idOfSnapshotKey(k) === id,
     );
-    if (supersededByArticleKey) return false;
+    if (articleKeys.length > 0 && isLegacyRedPhdSuperseded(inputData, id, articleKeys)) {
+      return false;
+    }
   }
 
   // 재개발 §164⑦ PHD 환산 — 트리거가 꺼지면 그 계산은 적용되지 않는다.

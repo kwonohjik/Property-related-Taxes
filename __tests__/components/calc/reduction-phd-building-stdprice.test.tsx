@@ -5,7 +5,7 @@
  * - PHD ON 시 취득시·최초공시시 건물 기준시가에 "건물 기준시가 계산" 버튼 노출.
  * - prefillAcqLandPrice: §164⑤ 위치지수 트랙 게이팅(≤2000 미주입).
  */
-import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { ReductionPhdInput } from "@/components/calc/transfer/ReductionPhdInput";
 // 헬퍼는 lib 단일 출처로 이동(2026-08-24) — 재개발 §164⑦ PHD와 공용.
@@ -225,5 +225,46 @@ describe("ReductionPhdInput — 스냅샷 키 조문 축", () => {
   it("prefix 없으면 구 키로 fallback — 호출부 계약 유지", async () => {
     const keys = await captureSnapshotKeys({ assetId: "a1" });
     expect(keys[0]).toBe("bsp-a1-red-phd");
+  });
+});
+
+/**
+ * 🔴 세목이 어긋나는 복원분을 버릴 때 **호출부 prefill까지 버리면 안 된다**
+ * (2026-08-24 코드 리뷰 Medium — 세목 불일치 가드를 넣으면서 생긴 결함).
+ *
+ * `initialForm = { ...restoredForm, ...prefillForm }`인데 `taxType`은 `restoredForm`만
+ * 갖는다. 필터를 병합 결과에 걸면 모달이 통째로 빈다.
+ */
+describe("BuildingStdPriceModalButton — 세목 불일치 복원분과 prefill 분리", () => {
+  it("복원분 세목이 달라도 호출부 prefill(연면적·토지면적)은 살아난다", async () => {
+    const { useBuildingStdSnapshotStore } = await import("@/lib/stores/building-std-snapshot-store");
+    const { initialBuildingStdPriceForm } = await import("@/lib/calc/building-std-price-form");
+    const { BuildingStdPriceModalButton } = await import(
+      "@/components/calc/building-std-price/BuildingStdPriceModalButton"
+    );
+    useBuildingStdSnapshotStore.setState({
+      snapshots: {
+        "bsp-x1-red993-phd": {
+          ...initialBuildingStdPriceForm,
+          taxType: "inheritance_gift",
+          builtYear: "1998",
+        },
+      },
+    });
+    render(
+      <BuildingStdPriceModalButton
+        lockedTaxType="transfer"
+        snapshotKey="bsp-x1-red993-phd"
+        prefill={{ floorArea: "84.9", landAreaM2: "120.5" }}
+        onApplyBoth={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /건물 기준시가 계산/ }));
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+    // prefill은 살아 있다
+    expect(within(dialog).queryByDisplayValue("84.9")).not.toBeNull();
+    expect(within(dialog).queryByDisplayValue("120.5")).not.toBeNull();
+    // 세목이 다른 복원분(신축연도 1998)은 버려졌다
+    expect(within(dialog).queryByDisplayValue("1998")).toBeNull();
   });
 });

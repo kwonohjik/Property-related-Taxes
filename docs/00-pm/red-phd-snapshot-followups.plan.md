@@ -175,6 +175,24 @@ lock을 뒤로 옮긴 뒤로는 그 키를 양도 모드로 열어 **취득당�
 
 > 배치 스냅샷을 단일시점 모달이 같은 키로 읽는 **구조 자체**는 별건으로 남긴다(B-6).
 
+### 🔴 2차 리뷰 — Medium 1 + Low 1 (2026-08-24)
+
+**M-3(Medium). 세목 불일치 가드가 호출부 prefill까지 버렸다.**
+`initialForm = { ...restoredForm, ...prefillForm }`인데 `taxType`은 **`restoredForm`만** 갖는다.
+필터를 병합 결과에 걸어서, 복원분 세목이 어긋나면 **호출부가 넘긴 prefill이 함께 사라져
+모달이 통째로 빈다**(재개발 기준 `landAreaM2`·`acquisitionDate`·`transferDate`·공시지가 2종).
+`singleTimePoint`도 날아가는데 그건 자동입력값이 아니라 **호출부 계약**이라, 사라지면
+`applyTimePoint` 런처가 조용히 2시점 모드로 되돌아간다.
+⇒ 필터를 **`restoredForm`에만** 적용하고 `prefillForm`은 무조건 유지. anchor + mutation probe.
+(폼을 직접 렌더하는 경로용 이중 방어로 `BuildingStdPriceForm`의 가드는 남긴다.)
+
+**M-4(Low). 구 키 대체 규칙이 다른 조문의 계산서를 지웠다.**
+「신 키가 하나라도 있으면 대체」는 너무 넓다 — §99의3을 구 키로 계산해 둔 상태에서 §98의8을
+새로 계산하면 §99의3 계산서가 사라지고, 저장 경로도 같은 술어를 쓰므로 **손실이 영속화**된다.
+⇒ `isLegacyRedPhdSuperseded`로 좁혔다: **PHD가 켜진 조문이 모두 신 키로 덮였을 때만** 대체.
+덮이지 않은 PHD-ON 조문이 하나라도 남아 있으면 구 키가 그 조문의 계산일 수 있으므로 살린다.
+판정 근거(`reductions`)가 없으면 대체로 보지 않는다(판정 불능은 통과 원칙).
+
 ### Low 1건 — E2E spec 헤더 정정
 
 `red-phd-two-article-snapshot-keys.spec.ts`는 런처 4개만 단언하므로 **키 분리를 검증하지

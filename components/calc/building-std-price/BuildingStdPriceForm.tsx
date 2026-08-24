@@ -135,6 +135,10 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
        * lock을 앞에 두면(종전) 반대로 **잠긴 세목이 무시**되어 되돌릴 수 없는 모드에 갇힌다.
        * ⇒ 세목이 어긋나면 **복원하지 않는다** — 빈 폼 + 올바른 모드가 유일하게 일관된 상태다.
        * (2026-08-24 코드 리뷰 지적. 배치 스냅샷을 단일시점 모달이 그대로 읽는 구조 자체는 별건.)
+       *
+       * ⚠️ 모달 경로(`BuildingStdPriceModalButton`)는 **복원분에만** 이 필터를 걸어 호출부
+       *    prefill을 살린다 — 여기서 병합 결과 전체를 버리면 prefill까지 사라지기 때문이다.
+       *    이 가드는 폼을 **직접 렌더하는 경로**(독립 페이지·테스트)의 이중 방어로 남긴다.
        */
       ...(lockedTaxType && initialForm?.taxType && initialForm.taxType !== lockedTaxType
         ? {}

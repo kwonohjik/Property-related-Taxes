@@ -99,10 +99,54 @@ describe("다건 양도 경로도 같은 판정", () => {
 describe("구 키 대체 판정 — allKeys를 줬을 때만 작동", () => {
   const ON = { assets: [{ assetId: "a1", reductions: [{ type: "new_99_3", phdMode993: true }] }] };
 
-  it("같은 자산에 조문별 신 키가 있으면 구 키는 제외된다", () => {
+  it("PHD-ON 조문이 모두 신 키로 덮였으면 구 키는 제외된다", () => {
     const keys = ["bsp-a1-red-phd", "bsp-a1-red993-phd"];
     expect(isBuildingStdSnapshotApplicable("bsp-a1-red-phd", ON, keys)).toBe(false);
     expect(isBuildingStdSnapshotApplicable("bsp-a1-red993-phd", ON, keys)).toBe(true);
+  });
+
+  /**
+   * 🔴 「신 키가 하나라도 있으면 대체」로 두면 **다른 조문의 계산서를 지운다**.
+   * 저장 경로도 같은 술어를 쓰므로 손실이 영속화된다(2026-08-24 코드 리뷰 Low).
+   */
+  it("덮이지 않은 PHD-ON 조문이 남아 있으면 구 키를 살린다", () => {
+    // §99의3은 구 키로 계산해 둔 상태, §98의8만 새로 계산 → §99의3 계산서가 사라지면 안 된다
+    const twoOn = {
+      assets: [{
+        assetId: "a1",
+        reductions: [
+          { type: "new_99_3", phdMode993: true },
+          { type: "unsold_98_8", phdMode988: true },
+        ],
+      }],
+    };
+    const keys = ["bsp-a1-red-phd", "bsp-a1-red988-phd"];
+    expect(isBuildingStdSnapshotApplicable("bsp-a1-red-phd", twoOn, keys)).toBe(true);
+    // 둘 다 신 키를 가지면 구 키는 가리킬 대상이 없다
+    const bothKeys = ["bsp-a1-red-phd", "bsp-a1-red988-phd", "bsp-a1-red993-phd"];
+    expect(isBuildingStdSnapshotApplicable("bsp-a1-red-phd", twoOn, bothKeys)).toBe(false);
+  });
+
+  it("PHD가 꺼진 조문은 덮개 대상이 아니다 — 구 키를 붙잡지 않는다", () => {
+    const oneOnOneOff = {
+      assets: [{
+        assetId: "a1",
+        reductions: [
+          { type: "new_99_3", phdMode993: false },
+          { type: "unsold_98_8", phdMode988: true },
+        ],
+      }],
+    };
+    expect(
+      isBuildingStdSnapshotApplicable("bsp-a1-red-phd", oneOnOneOff, ["bsp-a1-red-phd", "bsp-a1-red988-phd"]),
+    ).toBe(false);
+  });
+
+  it("판정 근거(reductions)가 없으면 대체로 보지 않는다 — 판정 불능은 통과", () => {
+    const noRed = { assets: [{ assetId: "a1" }] };
+    expect(
+      isBuildingStdSnapshotApplicable("bsp-a1-red-phd", noRed, ["bsp-a1-red-phd", "bsp-a1-red993-phd"]),
+    ).toBe(true);
   });
 
   it("신 키가 없으면 구 키는 그대로 남는다 (이력 단독 복원)", () => {
