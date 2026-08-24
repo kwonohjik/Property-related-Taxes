@@ -19,6 +19,7 @@ import {
   phdTimepointLabel,
   snapshotKeyTimepoint,
   snapshotKindLabel,
+  redPhdArticleLabel,
 } from "@/lib/calc/building-std-snapshot-keys";
 import { isBuildingStdSnapshotApplicable } from "@/lib/calc/building-std-snapshot-applicability";
 import { BUILDING_STD_FIRST_YEAR } from "@/lib/calc/phd-building-std-batch";
@@ -38,7 +39,7 @@ export function hasBuildingStdReport(inputData: Record<string, unknown> | undefi
     // 소속(자산이 존재하는가) + 적용성(그 계산의 **조건이 아직 성립하는가**) 둘 다 봐야 한다.
     // 적용성 게이트가 없던 동안, 재개발 취득일을 정정해 §164⑦ 트리거가 풀려도 계산서가
     // 계속 나왔다(2026-08-24 실측). 판정은 `building-std-snapshot-applicability` 단일 소스.
-    return id !== "" && inputStr.includes(id) && isBuildingStdSnapshotApplicable(k, inputData);
+    return id !== "" && inputStr.includes(id) && isBuildingStdSnapshotApplicable(k, inputData, keys);
   });
 }
 
@@ -62,13 +63,15 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
     };
     if (!inputData) return [] as ReportItem[];
     const inputStr = JSON.stringify(inputData);
+    // 키 사이 관계 판정(구 감면 PHD 키 대체 여부)에 전체 목록이 필요하다.
+    const allKeys = Object.keys(snapshots);
     const out: ReportItem[] = [];
     let seq = 0;
     for (const [key, snap] of Object.entries(snapshots)) {
       const id = idOfSnapshotKey(key);
       if (id === "" || !inputStr.includes(id)) continue;
       // 적용성 게이트 — `hasBuildingStdReport`와 **같은 술어**여야 한다(섹션 유무와 내용 어긋남 방지).
-      if (!isBuildingStdSnapshotApplicable(key, inputData)) continue;
+      if (!isBuildingStdSnapshotApplicable(key, inputData, allKeys)) continue;
       try {
         const result = calcBuildingStandardPrice(toEngineInput(snap));
         let model = buildNtsReportModel(buildNtsReportContext(snap), result);
@@ -98,10 +101,12 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         //   `-redev-phd` 재개발 §166③ 환산의 §164⑦ 본문 — RedevelopmentValuationSection
         // ⚠️ `-red-phd$`는 `-redev-phd`에 매칭되지 않는다(접미가 다르다) — 그래도 아래처럼
         //    긴 쪽(`redev`)을 먼저 시험해 `building-std-snapshot-keys.ts`의 열거 규율과 맞춘다.
+        // 감면 PHD는 한 자산에 **두 조문**이 나란히 뜰 수 있다(B-4) — 조문 라벨로 구별한다.
+        const redArticle = redPhdArticleLabel(key);
         const phdConversionKind = /-redev-phd$/.test(key)
           ? { suffix: "재개발 환산 §164⑦" }
-          : /-red-phd$/.test(key)
-            ? { suffix: "감면 PHD 환산 §164⑤" }
+          : /-red\d*-phd$/.test(key)
+            ? { suffix: redArticle ? `${redArticle} 감면 PHD 환산 §164⑤` : "감면 PHD 환산 §164⑤" }
             : null;
         if (phdConversionKind) {
           const acqInst = model.instances.find((i) => i.markCell !== "transfer");

@@ -119,8 +119,30 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             pnu: initialAddress.pnu ?? "",
           }
         : {}),
-      // 직전 입력 스냅샷 복원(정정) — 소재지 prefill보다 우선(스냅샷에 소재지 포함)
-      ...(initialForm ?? {}),
+      /**
+       * 직전 입력 스냅샷 복원(정정) — 소재지 prefill보다 우선(스냅샷에 소재지 포함).
+       *
+       * 🔴 **세목이 다른 복원분은 통째로 버린다.**
+       *
+       * 한 키에 두 종류가 들어올 수 있다:
+       *  · 이 모달이 저장한 같은 세목 스냅샷 — 복원해야 정정이 된다
+       *  · **다른 세목 스냅샷** — ① 세목 라디오가 있던 시절 상증으로 저장된 것,
+       *    ② 배치 모달(`MultiPointBuildingStdPriceModal`)이 계산서 재구성용으로 쓴
+       *    valuation 모드 스냅샷(`phdBatchToSnapshots` — `val*` 필드만 채우고 `acq*`는 빈 값).
+       *
+       * 후자를 그대로 얹으면 **필드 트랙이 어긋난다**: 양도 모드로 열리는데 취득당시
+       * 구조·용도·공시지가가 전부 비어 있어 「값이 복원된 것처럼 보이지만 계산 불가」가 된다.
+       * lock을 앞에 두면(종전) 반대로 **잠긴 세목이 무시**되어 되돌릴 수 없는 모드에 갇힌다.
+       * ⇒ 세목이 어긋나면 **복원하지 않는다** — 빈 폼 + 올바른 모드가 유일하게 일관된 상태다.
+       * (2026-08-24 코드 리뷰 지적. 배치 스냅샷을 단일시점 모달이 그대로 읽는 구조 자체는 별건.)
+       *
+       * ⚠️ 모달 경로(`BuildingStdPriceModalButton`)는 **복원분에만** 이 필터를 걸어 호출부
+       *    prefill을 살린다 — 여기서 병합 결과 전체를 버리면 prefill까지 사라지기 때문이다.
+       *    이 가드는 폼을 **직접 렌더하는 경로**(독립 페이지·테스트)의 이중 방어로 남긴다.
+       */
+      ...(lockedTaxType && initialForm?.taxType && initialForm.taxType !== lockedTaxType
+        ? {}
+        : (initialForm ?? {})),
       /**
        * 🔴 세목 고정은 **복원 스냅샷보다 뒤**에 와야 한다 — 호출부 계약이 저장값을 이긴다.
        *
@@ -133,6 +155,10 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
        * 스냅샷은 sessionStorage와 이력 `input_data.buildingStdSnapshots` 양쪽에 남아
        * 이력을 다시 열 때도 재수화된다(`HistoryClient.tsx:268`). 즉 과거 저장분이 계속 살아난다.
        * (2026-08-24 코드 리뷰 지적 — `reduction-phd-building-stdprice.test.tsx`가 고정한다.)
+       *
+       * ⚠️ 위 `initialForm` 스프레드가 **세목 불일치 복원분을 이미 버리므로** 이 lock은
+       *    보통 같은 값을 다시 쓰는 셈이다. 그래도 남긴다 — 복원분이 `taxType`을 아예
+       *    갖지 않는 구버전일 때 lock이 유일한 보장이다.
        */
       ...(lockedTaxType ? { taxType: lockedTaxType } : {}),
     };

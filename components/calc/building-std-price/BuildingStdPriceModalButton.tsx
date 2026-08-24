@@ -204,7 +204,22 @@ export function BuildingStdPriceModalButton({
             transferSectionLabel={transferSectionLabel}
             hideFloorAreaInput={hideFloorAreaInput}
             initialAddress={initialAddress}
-            initialForm={{ ...restoredForm, ...prefillForm }}
+            /**
+             * 🔴 **세목이 어긋나는 복원분만** 버린다 — 호출부 prefill은 항상 살린다.
+             *
+             * `restoredForm`만 `taxType`을 갖는다(`prefillForm`은 갖지 않는다). 필터를
+             * 병합 결과에 걸면 **호출부가 넘긴 prefill까지 함께 사라져** 모달이 통째로 빈다
+             * (재개발 호출부 기준 `landAreaM2`·`acquisitionDate`·`transferDate`·공시지가 2종).
+             * `singleTimePoint`도 함께 날아가는데, 그건 자동입력값이 아니라 **호출부 계약**이라
+             * 사라지면 `applyTimePoint` 런처가 조용히 2시점 모드로 되돌아간다.
+             * (2026-08-24 코드 리뷰 Medium — 세목 불일치 가드를 넣으면서 생긴 결함.)
+             */
+            initialForm={{
+              ...(lockedTaxType && restoredForm?.taxType && restoredForm.taxType !== lockedTaxType
+                ? {}
+                : restoredForm),
+              ...prefillForm,
+            }}
             onResult={(r, fa, err, _report, landTotal, snapshot) => {
               setResult(r);
               setFloorArea(fa);

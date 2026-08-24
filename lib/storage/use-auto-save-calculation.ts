@@ -27,7 +27,7 @@ export function extractRelevantBuildingStdSnapshots(
     const id = idOfSnapshotKey(k);
     // 소속 + **적용성**(그 계산의 조건이 아직 성립하는가) — 결과탭 렌더와 같은 술어를 쓴다.
     // 여기서 걸러야 서버 PDF(input_data.buildingStdSnapshots에서 재유도)도 함께 정리된다.
-    if (id && inputStr.includes(id) && isBuildingStdSnapshotApplicable(k, inputData)) {
+    if (id && inputStr.includes(id) && isBuildingStdSnapshotApplicable(k, inputData, keys)) {
       relevant[k] = all[k];
     }
   }

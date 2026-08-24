@@ -265,6 +265,59 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     });
   });
 
+  /**
+   * B-4 — 한 자산에 **두 조문**의 감면 PHD 계산서가 나란히 뜬다.
+   * 종전 키는 조문 구분이 없어 나중 계산이 앞 계산을 덮어썼다 → 계산서가 1장뿐이었다.
+   */
+  it("두 조문(§99의3 · §98의8)의 감면 PHD 스냅샷 → 계산서 4장 + 제목에 조문 구별", async () => {
+    const { initialBuildingStdPriceForm } = await import("../../lib/calc/building-std-price-form");
+    const snap = {
+      ...initialBuildingStdPriceForm,
+      taxType: "transfer" as const,
+      builtYear: "2001", floorArea: "84.9",
+      acquisitionYear: "2003", transferYear: "2006",
+      acqStructureKey: "rc", acqUsageNo: "2", acqLandPrice: "2000000",
+      transStructureKey: "rc", transUsageNo: "2", transLandPrice: "2100000",
+    };
+    useBuildingStdSnapshotStore.setState({
+      snapshots: {
+        "bsp-asset-k-red993-phd": snap,
+        "bsp-asset-k-red988-phd": snap,
+      },
+    });
+    const inputData = { assets: [{ assetId: "asset-k" }] };
+    expect(hasBuildingStdReport(inputData)).toBe(true);
+    render(<BuildingStdPriceReportSection inputData={inputData} />);
+
+    // 조문 2개 × 시점 2개
+    expect(screen.getAllByTestId("nts-bsp-report").length).toBe(4);
+    // 제목은 접힘 헤더와 펼친 서식 양쪽에 렌더되므로 개수 대신 **존재**로 단언한다
+    // (개수에 기대면 렌더 구조 변경에 취약하다). 핵심은 두 조문이 **구별된다**는 것.
+    expect(screen.getAllByText(/§99의3 감면 PHD 환산/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/§98의8 감면 PHD 환산/).length).toBeGreaterThan(0);
+  });
+
+  it("구 키(`-red-phd`)는 조문 표기 없이 종전 제목 그대로 — 저장분 호환", async () => {
+    const { initialBuildingStdPriceForm } = await import("../../lib/calc/building-std-price-form");
+    useBuildingStdSnapshotStore.setState({
+      snapshots: {
+        "bsp-asset-k-red-phd": {
+          ...initialBuildingStdPriceForm,
+          taxType: "transfer" as const,
+          builtYear: "2001", floorArea: "84.9",
+          acquisitionYear: "2003", transferYear: "2006",
+          acqStructureKey: "rc", acqUsageNo: "2", acqLandPrice: "2000000",
+          transStructureKey: "rc", transUsageNo: "2", transLandPrice: "2100000",
+        },
+      },
+    });
+    render(<BuildingStdPriceReportSection inputData={{ assets: [{ assetId: "asset-k" }] }} />);
+    expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
+    // 조문 표기가 붙지 않은 종전 제목 그대로
+    expect(screen.getAllByText(/취득시 \(감면 PHD 환산 §164⑤\)/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/§99의3 감면 PHD 환산/)).toBeNull();
+  });
+
   it("소속되지 않는 스냅샷(다른 assetId)은 렌더 안 함", () => {
     useBuildingStdSnapshotStore.setState({ snapshots: phdBatchToSnapshots(INPUT, PREFIX) });
     expect(hasBuildingStdReport({ assets: [{ assetId: "other" }] })).toBe(false);
