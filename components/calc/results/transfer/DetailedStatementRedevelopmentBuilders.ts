@@ -12,6 +12,8 @@
 
 import type { StatementItem, PerAssetValue } from "./DetailedStatementHelpers";
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
+import { redevBranchTotals } from "./redev-acquisition-inverse";
+import { inverseRedevAcquisition } from "./redev-acquisition-inverse";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 분할 정의
@@ -444,7 +446,7 @@ export function applyLandContribOverrides(
   const transferItem = items.get("transferPrice");
   if (transferItem) {
     transferItem.formula =
-      "토지 출자 §166① — 인가전(권리가액 의제) + 인가후(양도가액 − 권리가액 − 청산금)";
+      "합계 = 실지 양도가액. 분할 표시는 §166① — 인가전(권리가액 의제)·인가후(양도가액 − 권리가액 − 청산금)이며 단계별 의제라 합계와 다르다";
     transferItem.legalBasis = "소득세법 시행령 §166①1호 · §166④";
     transferItem.perAsset = [
       {
@@ -463,10 +465,16 @@ export function applyLandContribOverrides(
   // 취득가액
   const acqItem = items.get("acquisitionPrice");
   if (acqItem) {
-    const sumAcq = pre.apportionedAcquisition + post.apportionedAcquisition;
-    acqItem.value = sumAcq;
+    // 합계는 **역산**이다 — §166은 파트가 단계별 의제라 파트 합이 실제 취득가액이 아니다.
+    // 신고서 양식과 같은 leaf·같은 인자를 쓴다(`redev-acquisition-inverse.ts`).
+    const lcTotals = redevBranchTotals(redev);
+    acqItem.value = inverseRedevAcquisition({
+      totalTransferPrice,
+      totalExpenses: lcTotals.expenses,
+      totalGain: lcTotals.gain,
+    });
     acqItem.formula =
-      "토지 출자 §166③ 환산 — 인가전(환산취득가) + 인가후(권리가액 의제)";
+      "토지 출자 §166③ — 합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (단계별 의제 구조상 파트 합과 다름)";
     acqItem.legalBasis = "소득세법 시행령 §166③";
     acqItem.note = undefined;
     acqItem.perAsset = [
@@ -487,8 +495,8 @@ export function applyLandContribOverrides(
   // 필요경비
   const expItem = items.get("expenses");
   if (expItem) {
-    expItem.value = lcd.estimatedDeduction;
-    expItem.formula = "개산공제 (§163⑥) = 취득당시 토지 기준시가 × 3% — 인가전 분에만 적용";
+    expItem.value = redevBranchTotals(redev).expenses;
+    expItem.formula = "분할별 필요경비 합 — 인가전 개산공제(§163⑥) + 인가후 분 필요경비";
     expItem.legalBasis = "소득세법 시행령 §163⑥";
     expItem.perAsset = [
       {
@@ -606,16 +614,18 @@ export function applyRedevelopmentOverrides(
   const isRightSubject = subject === "right";
   const isRightReceive = isRightSubject && settlementDirection === "receive";
 
-  // 양도가액 — 합계는 totalTransferPrice 유지
+  // 양도가액 — 합계는 totalTransferPrice 유지.
+  // ⚠️ 산식 문구는 **합계가 아니라 분할 구조**를 설명한다. 종전 문구("인가전 + 인가후 + 청산금")는
+  //    합계가 그 셋의 합인 것처럼 읽혀 값(계약총액)과 어긋났다 — 파트 합은 실제 양도가액이 아니다.
   const transferItem = items.get("transferPrice");
   if (transferItem) {
     if (isRightReceive) {
-      transferItem.formula = "입주권 양도 §166①2호 — 인가전(권리가액−청산금 의제) + 청산금 수령분(청산금 의제)";
+      transferItem.formula = "합계 = 실지 양도가액. 분할 표시는 §166①2호 — 인가전(권리가액−청산금 의제)·청산금 수령분(청산금 의제)이며 단계별 의제라 합계와 다르다";
       transferItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166④";
     } else {
       transferItem.formula = isRightSubject
-        ? "입주권 양도 §166① — 인가전(권리가액 의제) + 인가후·청산금(양도가액 − 권리가액 − 청산금 납부액)"
-        : "재개발 §166 — 인가전(권리가액 의제) + 인가후(분양가 안분) + 청산금(분양가 안분)";
+        ? "합계 = 실지 양도가액. 분할 표시는 §166① — 인가전(권리가액 의제)·인가후·청산금(양도가액 − 권리가액 − 청산금 납부액)이며 단계별 의제라 합계와 다르다"
+        : "합계 = 실지 양도가액. 분할 표시는 §166 — 인가전(권리가액 의제)·인가후(분양가 안분)·청산금(분양가 안분)이며 단계별 의제라 합계와 다르다";
       transferItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①·④" : "소득세법 시행령 §166①·②·④";
     }
     transferItem.perAsset = buildRedevPerAssetForTransfer(redev, totalTransferPrice, subject, settlementDirection);
@@ -625,18 +635,21 @@ export function applyRedevelopmentOverrides(
   const acqItem = items.get("acquisitionPrice");
   if (acqItem) {
     // 합계: 분할별 apportionedAcquisition 합
-    const sumAcq =
-      redev.preApproval.apportionedAcquisition +
-      redev.postApprovalExistingHouse.apportionedAcquisition +
-      redev.settlement.apportionedAcquisition;
-    acqItem.value = sumAcq;
+    // 합계는 **역산**이다 — 파트 합(단계별 의제)이 아니라 자기일관식에서 얻는다.
+    // 신고서 양식과 같은 leaf·같은 인자(`redevBranchTotals`)를 쓴다.
+    const acqTotals = redevBranchTotals(redev);
+    acqItem.value = inverseRedevAcquisition({
+      totalTransferPrice,
+      totalExpenses: acqTotals.expenses,
+      totalGain: acqTotals.gain,
+    });
     if (isRightReceive) {
-      acqItem.formula = "입주권 §166①2호 — 인가전(실가 또는 환산 − 안분 취득가) + 청산금 분(종전취득가 × 청산금/권리가)";
+      acqItem.formula = "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166①2호 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(실가 또는 환산 − 안분 취득가)·청산금 분(종전취득가 × 청산금/권리가)";
       acqItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166③";
     } else {
       acqItem.formula = isRightSubject
-        ? "입주권 양도 §166① — 인가전(§166③ 환산 또는 실가) + 인가후·청산금(권리가액+청산금 의제)"
-        : "재개발 §166 — 인가전(§166③ 환산 또는 실가) + 인가후(권리가액 의제) + 청산금(청산금 의제)";
+        ? "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(§166③ 환산 또는 실가)·인가후·청산금(권리가액+청산금 의제)"
+        : "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(§166③ 환산 또는 실가)·인가후(권리가액 의제)·청산금(청산금 의제)";
       acqItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①③ · §163" : "소득세법 시행령 §166③ · §163";
     }
     acqItem.note = undefined;
@@ -646,8 +659,8 @@ export function applyRedevelopmentOverrides(
   // 필요경비 — 개산공제(§163⑥, 인가전만)
   const expItem = items.get("expenses");
   if (expItem) {
-    expItem.value = redev.estimatedLumpDeduction ?? 0;
-    expItem.formula = "개산공제 (§163⑥) = 취득당시 라목값 × 3% — 인가전 분에만 적용";
+    expItem.value = redevBranchTotals(redev).expenses;
+    expItem.formula = "분할별 필요경비 합 — 인가전 개산공제(§163⑥) + 인가후·청산금 분 필요경비";
     expItem.legalBasis = "소득세법 시행령 §163⑥";
     expItem.perAsset = buildRedevPerAssetForExpense(redev, subject, settlementDirection);
   }

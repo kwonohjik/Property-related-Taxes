@@ -286,18 +286,47 @@ describe("applyRedevelopmentOverrides — StatementItem 갱신", () => {
     expect(item.perAsset).toHaveLength(3);
   });
 
-  it("acquisitionPrice: 합계 = 분할별 합산", () => {
+  // ★ 의도 정정(2026-08-24) — 종전 기대값은 **파트 합**(141,221,534 + 219,218,500 + 92,781,500)이었다.
+  //   §166은 파트가 단계별 의제라 파트 합은 실제 취득가액이 아니다. 그래서 신고서 양식은
+  //   처음부터 역산(양도 − 경비 − 차익)을 썼고, 명세서만 파트 합이라 **같은 화면에서 취득가액이 갈렸다**.
+  //   계획서: docs/02-design/features/redev-statement-acquisition-inverse.plan.md
+  it("acquisitionPrice: 합계 = 역산 (양도가액 − 필요경비 − 양도차익) — 신고서 양식과 동일", () => {
     const items = buildBaseItems();
     applyRedevelopmentOverrides(items, detail, totalTransferPrice);
     const item = items.get("acquisitionPrice")!;
-    expect(item.value).toBe(141_221_534 + 219_218_500 + 92_781_500);
+    const branchExpenses =
+      (detail.preApproval.expenses ?? 0) +
+      (detail.postApprovalExistingHouse.expenses ?? 0) +
+      (detail.settlement.expenses ?? 0);
+    const branchGain =
+      detail.preApproval.gain + detail.postApprovalExistingHouse.gain + detail.settlement.gain;
+    expect(item.value).toBe(totalTransferPrice - branchExpenses - branchGain);
+    // 파트별 내역은 그대로 유지된다 — 단계별 의제 값 자체는 정보로 유효하다.
     expect(item.perAsset).toHaveLength(3);
   });
 
-  it("expenses: 합계 = estimatedLumpDeduction", () => {
+  it("자기일관성 — 양도가액 − 취득가액 − 필요경비 == 양도차익", () => {
     const items = buildBaseItems();
     applyRedevelopmentOverrides(items, detail, totalTransferPrice);
-    expect(items.get("expenses")!.value).toBe(2_551_049);
+    const t = Number(items.get("transferPrice")!.value);
+    const a = Number(items.get("acquisitionPrice")!.value);
+    const e = Number(items.get("expenses")!.value);
+    const branchGain =
+      detail.preApproval.gain + detail.postApprovalExistingHouse.gain + detail.settlement.gain;
+    expect(t - a - e).toBe(branchGain);
+  });
+
+  // ★ 의도 정정(2026-08-24) — 종전 기대값은 개산공제만(estimatedLumpDeduction 2,551,049)이었다.
+  //   신고서 양식은 **분할별 필요경비 합**을 쓴다. 두 카드가 필요경비도 다르게 표시하고 있었고,
+  //   그 차이가 취득가액 역산의 피감수를 어긋나게 해 정정이 함께 필요했다.
+  it("expenses: 합계 = 분할별 필요경비 합 — 신고서 양식과 동일", () => {
+    const items = buildBaseItems();
+    applyRedevelopmentOverrides(items, detail, totalTransferPrice);
+    const branchExpenses =
+      (detail.preApproval.expenses ?? 0) +
+      (detail.postApprovalExistingHouse.expenses ?? 0) +
+      (detail.settlement.expenses ?? 0);
+    expect(items.get("expenses")!.value).toBe(branchExpenses);
   });
 
   it("transferGain: 합계 그대로 (회귀 보존)", () => {
