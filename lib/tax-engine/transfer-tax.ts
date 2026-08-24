@@ -53,13 +53,10 @@ import {
   calcBasicDeduction,
   applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
-import { emitPenaltySteps } from "./transfer-tax-helpers";
-import { calculateBuildingPenalty, resolveExtensionPenaltyBase } from "./transfer-tax-building-penalty";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { finalizeTransferTax, resolveLTHDStartDate, buildTransferResultDetails, buildExemptEarlyResult } from "./transfer-tax-finalize";
-import { computeAmendment } from "./transfer-tax-amendment";
+import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { calcCarryoverScenarios } from "./transfer-tax-carryover";
 import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
