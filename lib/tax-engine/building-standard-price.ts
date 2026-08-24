@@ -26,7 +26,6 @@ import {
   stdPriceFromPerM2,
   calcMechBreakdown,
   calcAcqBaseBreakdown,
-  calcSameYearTransferStdPrice,
   calcSpecialAdjustmentRate,
   describeSpecialAdjustment,
   selectSpecialAdjustment,
@@ -36,6 +35,7 @@ import {
   normalizeAncillary,
 } from "./building-standard-price-helpers";
 import { resolveAcqBaseGroup, resolveAcqBaseRate } from "./data/building-standard-price";
+import { calcSameAdjustmentPeriodStdPrice } from "./same-adjustment-period-std-price";
 
 export type {
   BuildingStandardPriceInput,
@@ -422,10 +422,28 @@ export function calcBuildingStandardPrice(
   // 취득 ≤2000 단독: 산정기준율 환산 echo(계산서 ※표 소스 — 복합 경로와 대칭)
   const acqBaseConversion = acqBaseConversionOf(acquisition, input.floorArea);
 
-  // 동일연도(§164⑧) 환산 분기
-  if (transferYear === acquisitionYear) {
+  // 동일조정기간(§164⑧) 환산 분기.
+  //
+  // ⚠️ **2026-08-24 정정** — 종전 조건은 `transferYear === acquisitionYear`(연도 동일)로
+  //    법문보다 좁았다. 시행규칙 §80①1호 본문은 *"취득일이 속하는 연도의 **다음 연도 말일**
+  //    이전에 양도하는 경우"*라 **연도가 달라도 성립**한다. 집행기준 계산사례 2건
+  //    (2005 취득 → 2006 양도)이 모두 이 분기에 도달하지 못하고 있었다.
+  //
+  //    이 계산기는 기준시가를 **산출하는 주체**라 「양도당시 == 취득당시」를 사전에 알 수 없다 —
+  //    그 동일성은 이 분기의 전제다. 요건 판정 leaf `classifySameAdjustmentPeriod`는 두
+  //    기준시가를 인자로 받으므로 산출 이전인 여기서는 쓸 수 없고, §80①1호의 **기간 축만** 편다.
+  //
+  // 🔑 **연도 교차 구간은 호출부가 보유월수를 줄 때만 진입한다.**
+  //    같은 연도면 새 기준시가가 고시되지 않았음이 사실상 확정되지만(연 1회 고시),
+  //    연도가 다르면 서로 **다른 고시분**일 수 있어 §164⑧의 전제가 깨진다. 그 판단은
+  //    호출부가 하고, 그 신호가 `holdingMonths`다. 이 가드가 없으면 3시점 배치처럼
+  //    보유월수를 쓰지 않는 기존 호출부가 통째로 "보유월수 필수" 오류로 떨어진다
+  //    (2026-08-24 `phd-3point-batch.anchor` 회귀로 실측).
+  const isSameYear = transferYear === acquisitionYear;
+  const inSameAdjustmentWindow = transferYear <= acquisitionYear + 1;
+  if (isSameYear || (inSameAdjustmentWindow && input.holdingMonths !== undefined)) {
     if (input.holdingMonths === undefined || !(input.holdingMonths > 0)) {
-      throw new BuildingStdPriceError("동일연도 양도(§164⑧): 보유월수 필수 입력");
+      throw new BuildingStdPriceError("동일조정기간 양도(§164⑧): 보유월수 필수 입력");
     }
     const adjustMonths = input.adjustMonths ?? 12;
     const formula = input.sameYearFormula ?? "prev";
@@ -459,12 +477,18 @@ export function calcBuildingStandardPrice(
       // 제1산식 delta = acqStd − prevStd
       delta = acqStd - prevBd.standardPrice;
     }
-    const transferStd = calcSameYearTransferStdPrice(
-      acqStd,
-      delta,
-      input.holdingMonths,
-      adjustMonths,
-    );
+    // §80①1호 본문 단서(하한) 포함 — 계산값이 취득당시 기준시가보다 적으면 취득당시를 쓴다.
+    // 종전 `calcSameYearTransferStdPrice`에는 이 단서가 없었다.
+    const converted = calcSameAdjustmentPeriodStdPrice({
+      formula,
+      standardPriceAtAcquisition: acqStd,
+      ...(formula === "prev"
+        ? { priorStandardPrice: acqStd - delta } // delta = acqStd − prevStd
+        : { newStandardPrice: acqStd + delta }), // delta = newStd − acqStd
+      holdingMonths: input.holdingMonths,
+      adjustmentMonths: adjustMonths,
+    });
+    const transferStd = converted.value;
     const transfer: BuildingStdPriceBreakdown = { ...acquisition, standardPrice: transferStd };
     return {
       acquisition,

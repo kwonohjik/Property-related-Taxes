@@ -131,6 +131,17 @@ export interface TransferTaxInput {
   standardPriceAtAcquisition?: number;
   /** 양도시 기준시가 (환산취득가 사용 시 필수) */
   standardPriceAtTransfer?: number;
+  /**
+   * 동일조정기간 내 취득·양도 시 「양도당시 기준시가」 환산 입력
+   * — 소득세법 시행령 §164⑧ · 시행규칙 §80①~⑤.
+   *
+   * 미제공이면 STEP 0.47은 no-op이다(회귀 0). 제공되고 §164⑧ 요건
+   * (양도당시 기준시가 == 취득당시 기준시가)이 성립할 때만 `standardPriceAtTransfer`가 치환된다.
+   *
+   * 자산 종류를 가리지 않는다 — 토지·건물·개별주택·공동주택·오피스텔·상업용건물 공통
+   * (시행규칙 §80①1호가목 괄호가 개별주택가격·공동주택가격 공시를 명시적으로 포함).
+   */
+  sameAdjustmentPeriod?: SameAdjustmentPeriodTransferInput;
   // ── 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) — 모두 optional, 미제공 시 현행 ──
   /** 양도원인 — "public_expropriation" 시 §164⑨1호 특례 게이트 후보. 2호(공매·경락)는 아래 isAuctionTransfer. */
   transferCause?: "general" | "public_expropriation";
@@ -843,6 +854,32 @@ export interface TransferTaxInput {
 // TransferReduction union — transfer-reduction-input.types.ts로 분리 (800줄 정책, 2026-06-11)
 export type { TransferReduction } from "./transfer-reduction-input.types";
 import type { TransferReduction } from "./transfer-reduction-input.types";
+
+/**
+ * §164⑧ · 시행규칙 §80① 환산 입력 — 자산 종류와 무관한 사실만 담는다.
+ *
+ * `holdingMonths`는 **입력받지 않는다** — 이미 필수인 `acquisitionDate`·`transferDate`에서
+ * 엔진이 §80⑤(1월 미만 절상 · 초일산입 예규)로 파생한다.
+ */
+export interface SameAdjustmentPeriodTransferInput {
+  /**
+   * 가목(`prev`) — 양도일까지 새 기준시가 미고시 → 전기 대비 상승률
+   * 나목(`new`)  — 양도일부터 2월이 되는 날이 속하는 월 말일까지 새 기준시가 고시 +
+   *                **거주자가 이 산식으로 확정신고를 선택**한 경우(§80①1호나목)
+   * 미지정 시 `"prev"`.
+   */
+  formula?: "prev" | "new";
+  /** 가목 — 전기의 기준시가 (§80②2호). §80③ 대체 산정값도 이 필드로 주입한다 */
+  priorStandardPrice?: number;
+  /** 나목 — 새로운 기준시가 */
+  newStandardPrice?: number;
+  /** 기준시가 조정월수 (§80②1호). 미입력 시 12 */
+  adjustmentMonths?: number;
+  /** 전기 기준시가 부존재 시 대체 산정 근거 (§80③1~3호) — 표시·검증 전용, 계산 무영향 */
+  priorBasis?: "direct" | "nearby_land" | "first_notice_rate" | "ratio_conversion";
+  /** 값의 출처 — 자동 조회 / 수동 입력. 표시·감사 전용, 계산 무영향 */
+  priceSource?: "lookup" | "manual";
+}
 
 export interface CalculationStep {
   /** 단계명 (예: '양도차익 계산') */

@@ -46,6 +46,9 @@ export function buildTransferEngineInput(
     useEstimatedAcquisition: data.useEstimatedAcquisition,
     standardPriceAtAcquisition: data.standardPriceAtAcquisition,
     standardPriceAtTransfer: data.standardPriceAtTransfer,
+    // ⑭ §164⑧ 동일조정기간 환산 (TS 미감지 침묵 strip 주의 — 중첩 객체 통째 매핑).
+    //    날짜 필드가 없어 coerceDates는 불요하다.
+    sameAdjustmentPeriod: data.sameAdjustmentPeriod,
     // ⑭ §164⑨ 특례 (TS 미감지 침묵 strip 주의): 1호 per-sqm(가~다목)·2호 공매경락·1호 주택총액(라목)
     transferCause: data.transferCause,
     standardPricePerSqmAtTransfer: data.standardPricePerSqmAtTransfer,

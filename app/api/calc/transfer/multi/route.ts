@@ -130,6 +130,8 @@ export async function POST(request: NextRequest) {
       // 개산공제(§163⑥) base 축소 — 기준시가는 raw, 엔진이 개산공제에서만 적용
       ownershipRatio: p.ownershipRatio,
       standardPriceAtTransfer: p.standardPriceAtTransfer,
+      // ⑭ §164⑧ 동일조정기간 환산 — 누락 시 침묵 strip
+      sameAdjustmentPeriod: p.sameAdjustmentPeriod,
       householdHousingCount: p.householdHousingCount,
       residencePeriodMonths: p.residencePeriodMonths,
       isRegulatedArea: p.isRegulatedArea,

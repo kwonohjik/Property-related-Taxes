@@ -286,6 +286,24 @@ export const inheritanceValuationSchema = z.object({
 // 주 자산 정보는 propertyBaseShape의 기본 필드로 들어오고,
 // companionAssets는 주 자산과 기준시가 비율로 안분될 보조 자산들이다.
 
+/**
+ * ⑫ 동일조정기간 내 취득·양도 시 「양도당시 기준시가」 환산 (소령 §164⑧ · 소칙 §80①~⑤).
+ *
+ * 엔진이 요건을 게이트하므로 스키마는 **형태만** 검증한다. 여기 없으면 route에서
+ * 침묵 strip되어 엔진에 도달하지 못한다.
+ *
+ * `priorBasis`·`priceSource`는 계산에 영향이 없지만 결과 화면의 근거·배지 표시에 쓰이므로
+ * 함께 통과시킨다 — 「세액 무영향이니 빼도 된다」가 침묵 strip의 전형이다.
+ */
+export const sameAdjustmentPeriodSchema = z.object({
+  formula: z.enum(["prev", "new"]).optional(),
+  priorStandardPrice: z.number().int().nonnegative().optional(),
+  newStandardPrice: z.number().int().nonnegative().optional(),
+  adjustmentMonths: z.number().int().positive().optional(),
+  priorBasis: z.enum(["direct", "nearby_land", "first_notice_rate", "ratio_conversion"]).optional(),
+  priceSource: z.enum(["lookup", "manual"]).optional(),
+});
+
 export const companionAssetSchema = z.object({
   /**
    * ⑫ 토지·건물 **분리취득** 축 (N-6(A), 2026-08-23) — 단건과 **같은 shape**을 spread한다.
@@ -322,6 +340,8 @@ export const companionAssetSchema = z.object({
   standardPriceAtTransferForApportion: z.number().int().positive().optional(),
   /** 취득시점 기준시가 (선택) — totalAcquisitionPrice 안분 또는 매매 estimated 환산 시 키 */
   standardPriceAtAcquisition: z.number().int().positive().optional(),
+  /** ⑫ §164⑧ 환산 — 컴패니언 자산도 자기 취득·양도일 축으로 판정된다 */
+  sameAdjustmentPeriod: sameAdjustmentPeriodSchema.optional(),
   /**
    * ⑫ 공익수용·공매 §164⑨ 특례 — **컴패니언 자산도 대상**(소득세법 시행령 §164⑨).
    *

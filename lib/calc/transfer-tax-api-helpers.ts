@@ -110,6 +110,7 @@ export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undef
 }
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
 import { toEngineReductions } from "./transfer-tax-api-reductions";
+import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 export { toEngineReductions } from "./transfer-tax-api-reductions";
 
 // ─── ④ 상업용건물·오피스텔 환산취득가 (소령 §164⑥) — transfer-tax-api-commercial.ts로 분리 (800줄 정책, 재export 호환) ───
@@ -479,6 +480,8 @@ export function buildAssetPayload(
     standardPriceAtTransfer: stdAtTransferForApportion,
     /** §166⑥ 안분 키 — override 대상이 아니다(위 const JSDoc 참조). */
     standardPriceAtTransferForApportion: stdAtTransferForApportion,
+    // ④ §164⑧ 동일조정기간 환산 — 단건과 같은 빌더(단일 소스)
+    sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(asset),
     standardPriceAtAcquisition:
       asset.acquisitionCause === "purchase" && asset.useEstimatedAcquisition && asset.standardPriceAtAcq
         ? parseAmount(asset.standardPriceAtAcq)

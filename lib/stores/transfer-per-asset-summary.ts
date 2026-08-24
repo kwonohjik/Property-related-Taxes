@@ -28,6 +28,8 @@ import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionmen
 import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/tax-utils";
 import { previewCommercialBuildingEstimated } from "@/lib/calc/transfer-estimated-preview";
 import { previewGeneralBuildingEstimated } from "@/lib/calc/transfer-estimated-preview";
+import { buildSameAdjustmentPeriodInput } from "@/lib/calc/transfer-same-adjustment-period-input";
+import { calcStdPriceMonths, classifySameAdjustmentPeriod, calcSameAdjustmentPeriodStdPrice } from "@/lib/tax-engine/same-adjustment-period-std-price";
 
 export interface TransferAssetSummaryRow {
   assetId: string;
@@ -238,6 +240,42 @@ function computeApportionedSaleMap(formData: TransferFormData): Map<string, numb
   }
 }
 
+/**
+ * ⑥ 사이드바 환산 프리뷰용 「양도당시 기준시가」 — §164⑧ 적용 후 값.
+ *
+ * 엔진(STEP 0.47)과 **같은 leaf**를 쓴다. 별도 산식을 두면 사이드바만 다른 값을 보여준다.
+ * 요건 미충족·토글 OFF면 입력값을 그대로 돌려주므로 종전 동작과 같다(회귀 0).
+ */
+function previewStdPriceAtTransfer(a: AssetForm, transferDate: string | undefined): number {
+  const raw = parseRaw(a.standardPriceAtTransfer);
+  const sap = buildSameAdjustmentPeriodInput(a);
+  if (!sap || !transferDate || !a.acquisitionDate) return raw;
+
+  const acqDate = new Date(`${a.acquisitionDate}T00:00:00`);
+  const tsfDate = new Date(`${transferDate}T00:00:00`);
+  const acq = parseRaw(a.standardPriceAtAcq);
+  if (classifySameAdjustmentPeriod({
+    standardPriceAtAcquisition: acq,
+    standardPriceAtTransfer: raw,
+    acquisitionDate: acqDate,
+    transferDate: tsfDate,
+  }) !== "clause_1") {
+    return raw;
+  }
+
+  const holdingMonths = calcStdPriceMonths(acqDate, tsfDate);
+  if (!(holdingMonths > 0)) return raw;
+
+  return calcSameAdjustmentPeriodStdPrice({
+    formula: sap.formula ?? "prev",
+    standardPriceAtAcquisition: acq,
+    priorStandardPrice: sap.priorStandardPrice,
+    newStandardPrice: sap.newStandardPrice,
+    holdingMonths,
+    adjustmentMonths: sap.adjustmentMonths ?? 12,
+  }).value;
+}
+
 export function computeTransferPerAssetSummary(
   formData: TransferFormData,
   result: TransferAPIResult | null,
@@ -415,7 +453,9 @@ export function computeTransferPerAssetSummary(
         acqPrice = singleResult.commercialBuildingValuationDetail.estimatedAcquisitionTotal;
       } else if (canPreviewEstimated) {
         const stdAcq = parseRaw(a.standardPriceAtAcq);
-        const stdTransfer = parseRaw(a.standardPriceAtTransfer);
+        // ⑥ §164⑧ 동일조정기간 환산 — 사이드바 추정도 엔진과 **같은 leaf**를 쓴다.
+        //    안 쓰면 취득·양도 기준시가가 같은 구간에서 사이드바만 「양도차익 0」을 보여준다.
+        const stdTransfer = previewStdPriceAtTransfer(a, formData.transferDate);
         const sale = parseRaw(a.actualSalePrice);
         acqPrice =
           stdAcq > 0 && stdTransfer > 0 && sale > 0

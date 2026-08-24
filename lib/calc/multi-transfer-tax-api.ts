@@ -16,6 +16,7 @@ import { buildHouseholdSpecialPayload } from "@/lib/calc/transfer-tax-api-body-b
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
+import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 
 const isHousingLike = (pt: string) =>
   pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
@@ -146,6 +147,8 @@ export function buildPropertyPayload(form: TransferFormData) {
     useEstimatedAcquisition: isSalesCase ? false : isEstimated,
     standardPriceAtAcquisition: isEstimated ? parseAmount(primary?.standardPriceAtAcq ?? "") : undefined,
     standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") : undefined,
+    // ⑬ §164⑧ 동일조정기간 환산 — 단건과 같은 빌더(단일 소스)
+    sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(primary),
     acquisitionMethod: isSalesCase ? "salesCase" : isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual",
     // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고
     // 엔진이 개산공제 지점에서만 적용한다(단건 정본 `transfer-tax-api.ts:205-207`).

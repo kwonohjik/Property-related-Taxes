@@ -309,7 +309,7 @@ test("계산서 서식 — 상속 복합 작성례(3) ⑪ 200,540,000", async ({
   await expect(page.getByTestId("nts-bsp-3-row0")).toContainText("0.9(9)");
 });
 
-test("동일연도 §164⑧ — 양도시점 상세 숨김 + 환산 62,450,000", async ({ page }) => {
+test("동일조정기간 §164⑧ — 양도시점 상세 숨김 + 환산 62,450,000", async ({ page }) => {
   await page.goto(URL);
   // 기본 양도 모드
   await page.getByPlaceholder("신축연도 (4자리)").fill("2005");
@@ -323,11 +323,16 @@ test("동일연도 §164⑧ — 양도시점 상세 숨김 + 환산 62,450,000",
   await page.getByRole("option", { name: /아파트/ }).first().click();
   await page.getByPlaceholder("원/㎡").first().fill("4500000");
 
-  // 양도연도 = 취득연도 → 양도당시 구조·용도·공시지가 숨김 + 동일연도 섹션 노출
+  // 양도연도 = 취득연도 → 양도당시 구조·용도·공시지가 숨김 + §164⑧ 섹션 노출
+  //
+  // ⚠️ 2026-08-25 라벨 정정: "동일연도 환산" → "동일조정기간 환산".
+  //    §164⑧·시행규칙 §80①1호는 *"취득일이 속하는 연도의 **다음 연도 말일** 이전 양도"*라
+  //    연도가 달라도 성립한다 — "동일연도"는 법문보다 좁은 표현이었다.
+  //    같은 연도는 그 구간의 부분집합이므로 이 케이스의 동작은 종전과 같다.
   await selectOption(page, "연도 선택", "2010년");
   await expect(page.getByText("양도당시 구조·용도·공시지가 입력이 필요 없습니다", { exact: false })).toBeVisible();
   await expect(page.getByText("양도당시 구조", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("동일연도 환산 (§164⑧)")).toBeVisible();
+  await expect(page.getByText("동일조정기간 환산 (§164⑧)")).toBeVisible();
 
   // §164⑧ 제1산식: 취득전기 공시지가 + 보유월수
   await page.getByPlaceholder("원/㎡").nth(1).fill("4000000"); // 취득전기 공시지가

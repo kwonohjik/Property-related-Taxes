@@ -19,6 +19,7 @@ import { applyRate, computeEstimatedDeduction, computeLumpSumDeductionBase, safe
 import { TRANSFER, estimatedDeductionRate } from "./legal-codes";
 import { ACQ_BASE_RATE_MAX_ACQ_YEAR } from "./data/building-standard-price";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { calcSameAdjustmentPeriodStdPrice } from "./same-adjustment-period-std-price";
 import type {
   CommercialBuildingValuationInput,
   CommercialBuildingValuationResult,
@@ -122,11 +123,24 @@ export function calcSec164_8AdjustedDenominator(
   const D = adjustMonths ?? SEC_164_8_DEFAULT_ADJUST_MONTHS;
   if (B === undefined || B <= 0 || C === undefined || C <= 0 || D <= 0) return null;
 
-  // 100분의 100 한도 (시행규칙 §80①1호가목)
-  const ratio = Math.min(C / D, 1);
-  const denominator = A + (A - B) * ratio;
+  // 산식 core는 §164⑧ 본체와 **공유**한다(`same-adjustment-period-std-price.ts`) —
+  // 100분의 100 한도(§80①1호가목)·분수 정수 연산이 한 곳에만 있게 한다.
+  //
+  // 🔴 `applyFloor: false` — 이 경로가 구하는 값은 「양도당시 기준시가」가 아니라
+  //    「**취득**당시 기준시가의 **분모**」다. §80①1호 본문 단서(계산값 < 취득당시면 취득당시)는
+  //    양도당시 기준시가를 규율하는 규정이라 여기 대상이 아니고, 적용하면 A < B(기준시가 하락)
+  //    구간에서 명문 근거 없이 납세자에게 불리해진다(2026-07-28 결정 유지).
+  //    ❌ 「단서는 1호 본문이니 여기도 걸어야 한다」 재제안 금지.
+  const denominator = calcSameAdjustmentPeriodStdPrice({
+    formula: "prev",
+    standardPriceAtAcquisition: A,
+    priorStandardPrice: B,
+    holdingMonths: C,
+    adjustmentMonths: D,
+    applyFloor: false,
+  }).value;
   // 분모가 0 이하면 나눗셈이 성립하지 않는다 — 산정 불가로 처리(탐지만).
-  return denominator > 0 ? Math.floor(denominator) : null;
+  return denominator > 0 ? denominator : null;
 }
 
 /**
