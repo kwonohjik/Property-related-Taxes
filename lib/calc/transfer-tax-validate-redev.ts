@@ -14,6 +14,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -243,13 +244,14 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   }
 
   // ── §164⑦ 본문 발동 트리거 여부 ──
-  // housing+right+receive+estimated 분기는 §164⑤ PHD 2-point 별도 산식 → §164⑦ 검증 skip
+  // housing+right+receive+estimated 분기는 §164⑤ PHD 2-point 별도 산식 → §164⑦ 검증 skip.
+  //
+  // 🔑 날짜·모드 판정은 `isRedevPhdTriggered` **단일 소스**다(2026-08-24 B-3). 종전에는 여기서
+  //    직접 비교해 **의제취득일 보정이 빠져 있었고**, UI·결과탭 게이트와 판정이 갈릴 수 있었다.
+  //    이 분기 배제(`isHousingRightReceiveEstimated`)만 validate 고유 조건으로 남긴다 —
+  //    그 플래그는 이 함수 안에서 계산되므로 술어 인자로 올리지 않는다.
   const isPreDisclosureTriggered =
-    !isHousingRightReceiveEstimated &&
-    !!asset.useEstimatedAcquisition &&
-    !!asset.redevFirstDisclosureDate &&
-    !!asset.acquisitionDate &&
-    new Date(asset.acquisitionDate) < new Date(asset.redevFirstDisclosureDate);
+    !isHousingRightReceiveEstimated && isRedevPhdTriggered(asset);
 
   if (isPreDisclosureTriggered) {
     // 본문 발동 — PHD 패턴 7필드 모두 필수

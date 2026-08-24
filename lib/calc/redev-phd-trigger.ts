@@ -19,12 +19,22 @@
  * 술어를 그 인자까지 받도록 넓히면 UI·게이트 호출부가 쓰지도 않는 인자를 나르게 된다.
  * ⇒ **조건이 진짜로 같은 곳만** 이 함수를 쓴다. 합치려면 그 플래그의 소재부터 정리할 것.
  *
- * ## ⚠️ `isPhdEligible`(`phd-eligibility.ts`)과도 별개다
+ * ## 날짜 비교는 `isPhdEligible`에 위임한다 (2026-08-24 B-3)
  *
- * 그쪽은 **의제취득일(1985-01-01) 보정**이 있다. 최초공시일이 2005/2006인 실무 입력에서는
- * 두 판정 결과가 같지만(보정이 결과를 바꾸려면 최초공시일 ≤ 1985여야 한다), 같은 함수로
- * 묶으면 재개발 트리거의 의미가 조용히 바뀔 수 있다. 통합은 별건으로 검토할 것.
+ * 종전에는 이 파일이 날짜를 직접 비교해 **의제취득일(1985-01-01) 보정이 빠져 있었다**.
+ * 「소득세법 시행령」 제164조 제7항 본문은 「…공시되기 전에 **취득한** 주택」이라고만 하고
+ * 취득시기 자체는 일반 규정에 맡긴다(1984-12-31 이전 취득 → 1985-01-01 취득 의제,
+ * 소득세법 부칙 — `TRANSFER.DEEMED_ACQUISITION_DATE_BASIS`).
+ *
+ * 이 저장소는 그 해석을 이미 `isPhdEligible`로 채택해 **⑧ validate · ⑩ Zod refine ·
+ * 겸용 validate** 등 실제 차단 게이트에서 쓰고 있었다 — 재개발 경로만 빠져 있어 같은
+ * §164⑦을 두 경로가 다르게 봤다. 새 해석을 들이는 게 아니라 **적용 범위를 맞춘 것**이다.
+ *
+ * ⚠️ **방향이 반대인 지점 하나**: `isPhdEligible`은 날짜가 비면 `true`(게이트 미발동 —
+ *    필수입력 검증이 따로 막는다)지만, 이 트리거는 `false`(발동 안 함)여야 한다.
+ *    그래서 날짜 존재를 **여기서 먼저** 확인한 뒤 위임한다.
  */
+import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 
 /** 판정에 필요한 필드만 — 폼 전체(AssetForm)를 요구하지 않아 저장된 input_data에도 쓸 수 있다. */
 export interface RedevPhdTriggerFields {
@@ -36,15 +46,13 @@ export interface RedevPhdTriggerFields {
 }
 
 /**
- * §164⑦ 본문 발동 여부. 환산 모드 + 두 날짜가 모두 있고 취득일이 최초공시일보다 이르면 true.
- *
- * 날짜 비교는 `Date` 객체로 한다 — 종전 인라인 판정과 **같은 연산**을 유지해 치환이
- * 동작을 바꾸지 않게 한다(문자열 비교로 바꾸면 비정형 입력에서 결과가 갈릴 수 있다).
+ * §164⑦ 본문 발동 여부. 환산 모드 + 두 날짜가 모두 있고, 의제취득일을 반영한 유효취득일이
+ * 최초공시일보다 이르면 true.
  */
 export function isRedevPhdTriggered(a: RedevPhdTriggerFields): boolean {
   if (!a.useEstimatedAcquisition) return false;
   if (!a.acquisitionDate || !a.redevFirstDisclosureDate) return false;
-  return new Date(a.acquisitionDate) < new Date(a.redevFirstDisclosureDate);
+  return isPhdEligible(a.acquisitionDate, a.redevFirstDisclosureDate);
 }
 
 /**
