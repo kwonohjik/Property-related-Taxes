@@ -79,6 +79,25 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.sapNewStdPrice === undefined) a.sapNewStdPrice = "";
   if (a.sapAdjustMonths === undefined) a.sapAdjustMonths = "";
   if (a.sapPriorBasis === undefined) a.sapPriorBasis = "direct";
+  if (a.sapFirstNoticeStdPrice === undefined) a.sapFirstNoticeStdPrice = "";
+  if (a.sapNoticeBaseRate === undefined) a.sapNoticeBaseRate = "";
+  if (a.sapPriorLandBuildingSum === undefined) a.sapPriorLandBuildingSum = "";
+  if (a.sapAcqLandBuildingSum === undefined) a.sapAcqLandBuildingSum = "";
+  /**
+   * ③ 종전 저장분 정규화 — §80③ 대체 산정이 **피연산자 입력**으로 바뀌기 전에는
+   * 사용자가 근거만 고르고 값을 **직접 타이핑**했다. 그 자산을 그대로 열면 ⑤가 칸을
+   * 파생값 전용(읽기 전용)으로 잠그고 ⑧이 「피연산자를 입력하세요」로 차단해
+   * **이미 입력한 값을 쓸 수 없는 상태**가 된다.
+   * ⇒ 피연산자가 비어 있는데 값이 있으면 근거를 `direct`로 되돌린다(값 보존).
+   */
+  if (
+    (a.sapPriorBasis === "first_notice_rate" || a.sapPriorBasis === "ratio_conversion") &&
+    !a.sapFirstNoticeStdPrice && !a.sapNoticeBaseRate &&
+    !a.sapPriorLandBuildingSum && !a.sapAcqLandBuildingSum &&
+    !!a.sapPriorStdPrice
+  ) {
+    a.sapPriorBasis = "direct";
+  }
   if (a.sapPriceSource === undefined) a.sapPriceSource = "manual";
   if (a.expropriationNoticeDate === undefined) a.expropriationNoticeDate = "";
   // §164⑨ 1호 특례 보상필드 — 자산-수준(단건 경로)

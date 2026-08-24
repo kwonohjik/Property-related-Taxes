@@ -23,7 +23,8 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -32,6 +33,7 @@ import {
   priorNoticeYearFor,
   deriveAdjustmentMonths,
 } from "@/lib/calc/same-adjustment-period-lookup";
+import { calcPriorStdPriceSubstitute } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** §80①1호 기간 요건 — 취득일이 속하는 연도의 다음 연도 말일 이전 양도 */
@@ -56,6 +58,11 @@ export interface SameAdjustmentPeriodSectionProps {
     | "sapAdjustMonths"
     | "sapPriorBasis"
     | "sapPriceSource"
+    | "sapFirstNoticeStdPrice"
+    | "sapNoticeBaseRate"
+    | "sapPriorLandBuildingSum"
+    | "sapAcqLandBuildingSum"
+    | "standardPriceAtAcq"
     | "acquisitionDate"
   >;
   onChange: (patch: Partial<AssetForm>) => void;
@@ -94,6 +101,42 @@ export function SameAdjustmentPeriodSection({
   >({ status: "idle" });
 
   const canLookup = Boolean(jibun && asset.acquisitionDate);
+
+  const priorBasis = asset.sapPriorBasis ?? "direct";
+  const isDerivedBasis = priorBasis === "first_notice_rate" || priorBasis === "ratio_conversion";
+
+  /**
+   * §80③ 대체 산정 — 피연산자가 바뀔 때마다 **엔진 leaf로 다시 계산**해
+   * `sapPriorStdPrice`를 같은 patch에 실어 보낸다.
+   *
+   * - `useEffect → store` 미러링을 쓰지 않는다(무한 루프 위험 · 프로젝트 금지 규칙).
+   * - 키를 나눠 두 번 patch하면 뒤 patch가 앞 patch를 stale spread로 덮으므로
+   *   반드시 **한 번의 배치 patch**로 보낸다(memory `multikey_patch_stale_spread`).
+   * - 산식은 UI에 복제하지 않는다 — 엔진과 같은 `calcPriorStdPriceSubstitute`를 부른다.
+   */
+  function withSubstitute(patch: Partial<AssetForm>): Partial<AssetForm> {
+    const next = { ...asset, ...patch };
+    const basis = next.sapPriorBasis ?? "direct";
+    if (basis !== "first_notice_rate" && basis !== "ratio_conversion") return patch;
+
+    const rate = parseFloat((next.sapNoticeBaseRate ?? "").replace(/,/g, ""));
+    const derived = calcPriorStdPriceSubstitute(
+      basis === "first_notice_rate"
+        ? {
+            firstNoticeStdPrice: parseAmount(next.sapFirstNoticeStdPrice ?? ""),
+            // 화면은 %, leaf는 배율(1.0 = 100%)
+            noticeBaseRate: Number.isFinite(rate) ? rate / 100 : undefined,
+          }
+        : {
+            standardPriceAtAcquisition: parseAmount(next.standardPriceAtAcq ?? ""),
+            priorLandBuildingSum: parseAmount(next.sapPriorLandBuildingSum ?? ""),
+            acquisitionLandBuildingSum: parseAmount(next.sapAcqLandBuildingSum ?? ""),
+          },
+    );
+    // 대체 산정 중에는 이 칸을 파생값이 **전유**한다. 피연산자가 덜 채워졌으면
+    // 비워 두고 ⑧이 사유를 말한다 — 옛 값을 남기면 「무엇의 결과인지」가 어긋난다.
+    return { ...patch, sapPriorStdPrice: derived ? String(derived.value) : "", sapPriceSource: "manual" };
+  }
 
   /**
    * 전기의 기준시가 자동 조회 (§164③ 직전 고시분 + §80②1호 조정월수 파생).
@@ -209,21 +252,114 @@ export function SameAdjustmentPeriodSection({
         ]}
       />
 
+      {formula === "prev" && (
+        <FieldCard
+          label="전기의 기준시가 산정 근거"
+          hint="해당 자산에 전기의 기준시가가 없으면 시행규칙 §80③에 따라 대체 산정한다. 2호·3호를 고르면 아래 피연산자로 값을 자동 산정한다."
+        >
+          <RadioCardGroup
+            name="sapPriorBasis"
+            value={priorBasis}
+            onChange={(v) => onChange(withSubstitute({ sapPriorBasis: v }))}
+            tone="sky"
+            layout="inline"
+            lawLinks="소득세법"
+            options={[
+              { value: "direct" as const, label: "실제 전기 기준시가", description: "§80②2호 — 취득당시 결정일 전일의 기준시가" },
+              { value: "nearby_land" as const, label: "인근토지 전기 기준시가", description: "§80③1호 — 토지: 지목·이용상황이 유사한 인근토지" },
+              { value: "first_notice_rate" as const, label: "최초고시 × 기준율", description: "§80③2호 — 건물: 국세청장 최초고시 기준시가 × 고시 기준율" },
+              { value: "ratio_conversion" as const, label: "합계액 비율환산", description: "§80③3호 — 오피스텔·상업용건물·주택: 취득당시 × (전기 합계 ÷ 취득당시 합계)" },
+            ]}
+          />
+        </FieldCard>
+      )}
+
+      {formula === "prev" && priorBasis === "first_notice_rate" && (
+        <>
+          <FieldCard
+            label="국세청장이 최초로 고시한 기준시가"
+            required
+            hint="시행규칙 §80③2호 — 전기의 기준시가가 없는 건물의 대체 기준"
+          >
+            <CurrencyInput
+              label="국세청장이 최초로 고시한 기준시가"
+              hideLabel
+              value={asset.sapFirstNoticeStdPrice ?? ""}
+              onChange={(v) => onChange(withSubstitute({ sapFirstNoticeStdPrice: v }))}
+            />
+          </FieldCard>
+          <FieldCard
+            label="고시 기준율"
+            required
+            unit="%"
+            hint="취득연도·신축연도·구조·내용연수를 고려하여 국세청장이 고시한 기준율 (시행규칙 §80③2호)"
+          >
+            <DecimalInput
+              value={asset.sapNoticeBaseRate ?? ""}
+              onChange={(v) => onChange(withSubstitute({ sapNoticeBaseRate: v }))}
+              unit="%"
+              data-testid="sap-notice-base-rate"
+            />
+          </FieldCard>
+        </>
+      )}
+
+      {formula === "prev" && priorBasis === "ratio_conversion" && (
+        <>
+          <FieldCard
+            label="전기의 토지·건물 기준시가 합계액"
+            required
+            hint="시행규칙 §80③3호 — 전기의 (가목 + 나목) 합계액"
+          >
+            <CurrencyInput
+              label="전기의 토지·건물 기준시가 합계액"
+              hideLabel
+              value={asset.sapPriorLandBuildingSum ?? ""}
+              onChange={(v) => onChange(withSubstitute({ sapPriorLandBuildingSum: v }))}
+            />
+          </FieldCard>
+          <FieldCard
+            label="취득당시의 토지·건물 기준시가 합계액"
+            required
+            hint="시행규칙 §80③3호 — 취득당시의 (가목 + 나목) 합계액. 취득당시 기준시가는 위 취득 정보에서 가져온다."
+          >
+            <CurrencyInput
+              label="취득당시의 토지·건물 기준시가 합계액"
+              hideLabel
+              value={asset.sapAcqLandBuildingSum ?? ""}
+              onChange={(v) => onChange(withSubstitute({ sapAcqLandBuildingSum: v }))}
+            />
+          </FieldCard>
+        </>
+      )}
+
       {formula === "prev" ? (
         <FieldCard
           label="전기의 기준시가"
           required
-          hint="취득당시 기준시가 결정일 전일의 기준시가 (시행규칙 §80②2호)"
-          badge={asset.sapPriceSource === "lookup" ? "자동 조회" : undefined}
+          hint={
+            isDerivedBasis
+              ? "위 피연산자로 시행규칙 §80③에 따라 산정한 값입니다. 직접 입력하려면 산정 근거를 「실제 전기 기준시가」로 되돌리세요."
+              : "취득당시 기준시가 결정일 전일의 기준시가 (시행규칙 §80②2호)"
+          }
+          badge={
+            isDerivedBasis
+              ? "§80③ 산정"
+              : asset.sapPriceSource === "lookup"
+                ? "자동 조회"
+                : undefined
+          }
           trailing={
-            <Button
-              type="button"
-              variant="modalLauncher"
-              onClick={lookupPrior}
-              disabled={!canLookup || lookupState.status === "loading"}
-            >
-              {lookupState.status === "loading" ? "조회 중…" : "직전 고시분 조회"}
-            </Button>
+            isDerivedBasis ? undefined : (
+              <Button
+                type="button"
+                variant="modalLauncher"
+                onClick={lookupPrior}
+                disabled={!canLookup || lookupState.status === "loading"}
+              >
+                {lookupState.status === "loading" ? "조회 중…" : "직전 고시분 조회"}
+              </Button>
+            )
           }
           warning={lookupState.status === "error" ? lookupState.message : undefined}
         >
@@ -231,6 +367,7 @@ export function SameAdjustmentPeriodSection({
             label="전기의 기준시가"
             hideLabel
             value={asset.sapPriorStdPrice}
+            disabled={isDerivedBasis}
             onChange={(v) => onChange({ sapPriorStdPrice: v, sapPriceSource: "manual" })}
           />
         </FieldCard>
@@ -245,28 +382,6 @@ export function SameAdjustmentPeriodSection({
             hideLabel
             value={asset.sapNewStdPrice}
             onChange={(v) => onChange({ sapNewStdPrice: v, sapPriceSource: "manual" })}
-          />
-        </FieldCard>
-      )}
-
-      {formula === "prev" && (
-        <FieldCard
-          label="전기의 기준시가 산정 근거"
-          hint="해당 자산에 전기의 기준시가가 없으면 시행규칙 §80③에 따라 대체 산정한 값을 위 칸에 입력하고, 그 근거를 선택하세요."
-        >
-          <RadioCardGroup
-            name="sapPriorBasis"
-            value={asset.sapPriorBasis ?? "direct"}
-            onChange={(v) => onChange({ sapPriorBasis: v })}
-            tone="sky"
-            layout="inline"
-            lawLinks="소득세법"
-            options={[
-              { value: "direct" as const, label: "실제 전기 기준시가", description: "§80②2호 — 취득당시 결정일 전일의 기준시가" },
-              { value: "nearby_land" as const, label: "인근토지 전기 기준시가", description: "§80③1호 — 토지: 지목·이용상황이 유사한 인근토지" },
-              { value: "first_notice_rate" as const, label: "최초고시 × 기준율", description: "§80③2호 — 건물: 국세청장 최초고시 기준시가 × 고시 기준율" },
-              { value: "ratio_conversion" as const, label: "합계액 비율환산", description: "§80③3호 — 오피스텔·상업용건물·주택: 취득당시 × (전기 합계 ÷ 취득당시 합계)" },
-            ]}
           />
         </FieldCard>
       )}

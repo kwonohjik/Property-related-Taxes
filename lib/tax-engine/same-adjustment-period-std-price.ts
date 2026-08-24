@@ -28,7 +28,7 @@
  * 계획: docs/00-pm/transfer-same-adjustment-period-std-price.plan.md
  */
 
-import { safeMultiplyThenDivide } from "./tax-utils";
+import { applyRateFraction, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER } from "./legal-codes/transfer";
 
 /** §80①1호 각 목 — 가목(전기 대비) | 나목(새 고시 대비) */
@@ -192,7 +192,11 @@ export function calcPriorStdPriceSubstitute(
   const { firstNoticeStdPrice: first, noticeBaseRate: rate } = args;
   if (first !== undefined && first > 0 && rate !== undefined && rate > 0) {
     return {
-      value: Math.floor(first * rate),
+      // ⚠️ `Math.floor(first * rate)`는 부동소수 곱이라 **1원 적게** 나올 수 있다.
+      //    실측: 15,000,000 × 50.03% → float 7,504,499 / 정확 7,504,500.
+      //    기준율을 만분율 정수로 되돌려 분수 연산한다(memory
+      //    `feedback_applyrate_fractional_rate_one_won_error`). 0.01%p까지 표현한다.
+      value: applyRateFraction(first, Math.round(rate * 10_000), 10_000),
       basis: "first_notice_rate",
       legalBasis: TRANSFER.SAME_ADJ_PERIOD_PRIOR_SUBSTITUTE_2,
     };

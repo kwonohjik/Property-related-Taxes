@@ -104,6 +104,39 @@ export function sameAdjustmentPeriodError(
   }
 
   const formula = asset.sapFormula ?? "prev";
+
+  /**
+   * §80③ 대체 산정 — 피연산자가 덜 채워지면 ⑤가 「전기의 기준시가」를 비운 채로 두고,
+   * ④는 그 빈 값을 보고 `sameAdjustmentPeriod`를 아예 보내지 않는다(침묵 no-op).
+   * 아래 「전기의 기준시가가 필요합니다」보다 **먼저** 사유를 특정해 말한다.
+   */
+  if (formula === "prev") {
+    const basis = asset.sapPriorBasis ?? "direct";
+    if (
+      basis === "first_notice_rate" &&
+      !(parseAmount(asset.sapFirstNoticeStdPrice ?? "") > 0 &&
+        parseFloat((asset.sapNoticeBaseRate ?? "").replace(/,/g, "")) > 0)
+    ) {
+      return (
+        `${label}: 전기의 기준시가를 「최초고시 × 기준율」로 산정하려면 ` +
+        `국세청장이 최초로 고시한 기준시가와 고시 기준율을 모두 입력하세요` +
+        `(소득세법 시행규칙 §80③2호).`
+      );
+    }
+    if (
+      basis === "ratio_conversion" &&
+      !(parseAmount(asset.standardPriceAtAcq ?? "") > 0 &&
+        parseAmount(asset.sapPriorLandBuildingSum ?? "") > 0 &&
+        parseAmount(asset.sapAcqLandBuildingSum ?? "") > 0)
+    ) {
+      return (
+        `${label}: 전기의 기준시가를 「합계액 비율환산」으로 산정하려면 취득당시 기준시가와 ` +
+        `전기·취득당시의 토지·건물 기준시가 합계액이 모두 필요합니다` +
+        `(소득세법 시행규칙 §80③3호).`
+      );
+    }
+  }
+
   const raw = formula === "prev" ? asset.sapPriorStdPrice : asset.sapNewStdPrice;
   if (!raw || parseAmount(raw) <= 0) {
     return formula === "prev"
