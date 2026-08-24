@@ -122,8 +122,8 @@ export function isBuildingStdSnapshotApplicable(
   /**
    * 🔴 **구 감면 PHD 키(`-red-phd`)가 조문별 신 키로 대체된 경우** — 제외한다.
    *
-   * `saveSnapshot`은 **추가만 한다**(`replaceSnapshotsByPrefix`는 `bsp-{id}-phd` 접두 전용이라
-   * `-red…-phd`를 건드리지 않는다). 그래서 B-4 이전에 저장된 이력을 열어 구 키가 세션에
+   * `saveSnapshot`은 **추가만 한다**(유일한 삭제 API인 `replaceBatchSnapshots`는 배치가 만든
+   * 키 집합 전용이라 `-red…-phd`를 건드리지 않는다). 그래서 B-4 이전에 저장된 이력을 열어 구 키가 세션에
    * 재수화된 뒤(`HistoryClient.tsx:266`) 같은 조문을 다시 계산하면 **두 키가 공존**하고,
    * 한 조문에 계산서가 **4장**(신 키 2 + 구 키 2) 찍힌다 — 저장 `input_data`와 서버 PDF도 같다
    * (2026-08-24 코드 리뷰 실측). 계획서의 「새 키로 저장되면 자연히 대체된다」는 **틀렸다**.
