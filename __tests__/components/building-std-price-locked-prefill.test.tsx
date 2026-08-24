@@ -147,3 +147,53 @@ describe("BuildingStdPriceModalButton — prefill 변환·병합 통합", () => 
     expect(screen.queryByDisplayValue("283.06")).toBeNull();
   });
 });
+
+/**
+ * 🔴 **세목이 다른 복원 스냅샷은 통째로 버린다** (2026-08-24 코드 리뷰 Medium).
+ *
+ * 한 `snapshotKey`에 두 종류가 들어올 수 있다:
+ *  · 이 모달이 저장한 **같은 세목** 스냅샷 — 복원해야 정정이 된다
+ *  · **다른 세목** 스냅샷 — 세목 라디오가 있던 시절 상증으로 저장된 것,
+ *    또는 배치 모달(`MultiPointBuildingStdPriceModal`)이 계산서 재구성용으로 쓴
+ *    valuation 모드 스냅샷(`phdBatchToSnapshots` — `val*`만 채우고 `acq*`는 빈 값)
+ *
+ * 후자를 그대로 얹으면 양도 모드로 열리는데 취득당시 필드가 비어 「복원된 척하지만
+ * 계산 불가」가 된다. lock을 앞에 두면(종전) 반대로 잠긴 세목이 무시되어 되돌릴 수
+ * 없는 모드에 갇힌다. ⇒ 세목이 어긋나면 복원하지 않는다.
+ */
+describe("BuildingStdPriceForm — 세목 불일치 복원분", () => {
+  const restored = (taxType: "transfer" | "inheritance_gift") => ({
+    taxType,
+    builtYear: "1998",
+    valuationYear: "2005",
+    valStructureKey: "rc",
+  });
+
+  it("lockedTaxType과 다른 세목의 복원분은 반영하지 않는다", () => {
+    render(
+      <BuildingStdPriceForm
+        lockedTaxType="transfer"
+        initialForm={restored("inheritance_gift")}
+        onResult={() => {}}
+      />,
+    );
+    // 복원분이 버려졌으므로 신축연도 값이 남지 않는다 — 남으면 필드 트랙이 섞인 것이다
+    expect(screen.queryByDisplayValue("1998")).toBeNull();
+  });
+
+  it("같은 세목의 복원분은 그대로 반영한다 (정정 경로 보존)", () => {
+    render(
+      <BuildingStdPriceForm
+        lockedTaxType="transfer"
+        initialForm={restored("transfer")}
+        onResult={() => {}}
+      />,
+    );
+    expect(screen.queryByDisplayValue("1998")).not.toBeNull();
+  });
+
+  it("lockedTaxType이 없으면(독립 페이지) 복원분을 그대로 쓴다 — 회귀 방어", () => {
+    render(<BuildingStdPriceForm initialForm={restored("inheritance_gift")} onResult={() => {}} />);
+    expect(screen.queryByDisplayValue("1998")).not.toBeNull();
+  });
+});

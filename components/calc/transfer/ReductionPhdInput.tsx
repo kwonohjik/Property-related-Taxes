@@ -85,13 +85,30 @@ export function ReductionPhdInput({
   snapshotKeyPrefix,
   assetId,
 }: ReductionPhdInputProps) {
-  // 건물 기준시가 계산서 스냅샷 키 — 취득시·최초공시시 두 모달 버튼이 공유(단일 스냅샷 idempotent 갱신).
-  // assetId 있으면 `bsp-${assetId}-red-phd` 규약(결과탭 노출) — 없으면 legacy prefix fallback.
-  const buildingStdSnapshotKey = assetId
-    ? `bsp-${assetId}-red-phd`
-    : snapshotKeyPrefix
-      ? `${snapshotKeyPrefix}-bsp`
-      : undefined;
+  /**
+   * 건물 기준시가 계산서 스냅샷 키 — 취득시·최초공시시 두 모달 버튼이 공유
+   * (단일 스냅샷 idempotent 갱신).
+   *
+   * 🔑 **조문 세그먼트(`snapshotKeyPrefix`)가 키에 들어간다** (2026-08-24 B-4).
+   * 종전에는 `assetId`가 있으면 `bsp-${assetId}-red-phd` 하나를 써서 **조문을 구분하지 않았고**,
+   * 조문별 폼이 넘기는 prefix(`red993`·`red99`·`red988`…)가 무시됐다.
+   * 감면 그룹 라디오는 **같은 category 안에서만** 배타이고(`toggleGroupRadio`), PHD를 가진
+   * 8개 조문은 `new_housing`(2) · `unsold_housing`(6) **두 category에 걸쳐** 있다 ⇒ 두 조문의
+   * PHD를 동시에 입력할 수 있고, 그때 나중 계산이 앞 계산의 스냅샷을 **덮어썼다**
+   * (재오픈 시 다른 조문의 입력이 복원되고, 계산서도 2장이어야 할 것이 1장만 나왔다).
+   *
+   * ⚠️ 키 규약은 `lib/calc/building-std-snapshot-keys.ts`가 단일 소스다 — 세그먼트 형태를
+   *    바꾸면 `idOfSnapshotKey`·`redPhdArticleLabel`도 함께 고쳐야 한다(미등재 시 결과탭
+   *    계산서가 **조용히 미출력**된다).
+   */
+  const buildingStdSnapshotKey =
+    assetId && snapshotKeyPrefix
+      ? `bsp-${assetId}-${snapshotKeyPrefix}-phd`
+      : assetId
+        ? `bsp-${assetId}-red-phd`
+        : snapshotKeyPrefix
+          ? `${snapshotKeyPrefix}-bsp`
+          : undefined;
   // 자동 활성화 권장 — 취득일 < 최초공시일
   const autoRecommended = useMemo(() => {
     if (!acquisitionDate || !value.firstDisclosureDate) return false;

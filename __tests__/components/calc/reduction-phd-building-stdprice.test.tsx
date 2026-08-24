@@ -167,3 +167,63 @@ describe("ReductionPhdInput — 토지 공시지가 Vworld 자동조회", () => 
     lookupBtns.forEach((b) => expect(b).toBeDisabled());
   });
 });
+
+/**
+ * B-4 — 감면 PHD 스냅샷 키에 **조문 세그먼트**가 들어간다.
+ *
+ * ⚠️ 이 anchor가 없으면 키 생성 변경이 **아무 테스트에도 안 걸린다**(2026-08-24 mutation probe
+ *    실측: 키 생성을 구 방식으로 되돌려도 전건 통과했다). `idOfSnapshotKey`·`redPhdArticleLabel`은
+ *    키 **문자열**을 받는 순수 함수라, 그 문자열을 누가 만드는지는 검증하지 않는다.
+ *    (memory `feedback_leaf_anchor_skips_zod_layer`와 같은 층위 착오)
+ */
+describe("ReductionPhdInput — 스냅샷 키 조문 축", () => {
+  async function captureSnapshotKeys(props: {
+    assetId?: string;
+    snapshotKeyPrefix?: string;
+  }): Promise<string[]> {
+    const keys: string[] = [];
+    vi.resetModules();
+    vi.doMock("@/components/calc/building-std-price/BuildingStdPriceModalButton", () => ({
+      BuildingStdPriceModalButton: ({ snapshotKey }: { snapshotKey?: string }) => {
+        if (snapshotKey) keys.push(snapshotKey);
+        return <button type="button">건물 기준시가 계산</button>;
+      },
+    }));
+    const { ReductionPhdInput: Stubbed } = await import(
+      "@/components/calc/transfer/ReductionPhdInput"
+    );
+    render(
+      <Stubbed
+        acquisitionDate="2003-11-28"
+        value={{ phdMode: true, firstDisclosureDate: "2006-01-01", landAreaSqm: "84" }}
+        onChange={vi.fn()}
+        {...props}
+      />,
+    );
+    vi.doUnmock("@/components/calc/building-std-price/BuildingStdPriceModalButton");
+    return keys;
+  }
+
+  it("assetId + 조문 prefix → `bsp-{assetId}-{조문}-phd`", async () => {
+    const keys = await captureSnapshotKeys({ assetId: "a1", snapshotKeyPrefix: "red993" });
+    expect(new Set(keys)).toEqual(new Set(["bsp-a1-red993-phd"]));
+  });
+
+  it("🔑 조문이 다르면 키도 다르다 — 종전에는 둘 다 `bsp-a1-red-phd`라 서로 덮어썼다", async () => {
+    const k993 = await captureSnapshotKeys({ assetId: "a1", snapshotKeyPrefix: "red993" });
+    const k988 = await captureSnapshotKeys({ assetId: "a1", snapshotKeyPrefix: "red988" });
+    expect(k993[0]).not.toBe(k988[0]);
+    expect(k988[0]).toBe("bsp-a1-red988-phd");
+  });
+
+  it("두 런처가 **같은** 키를 공유한다 (단일 스냅샷 idempotent 갱신)", async () => {
+    const keys = await captureSnapshotKeys({ assetId: "a1", snapshotKeyPrefix: "red99" });
+    expect(keys.length).toBe(2);
+    expect(keys[0]).toBe(keys[1]);
+  });
+
+  it("prefix 없으면 구 키로 fallback — 호출부 계약 유지", async () => {
+    const keys = await captureSnapshotKeys({ assetId: "a1" });
+    expect(keys[0]).toBe("bsp-a1-red-phd");
+  });
+});

@@ -6,7 +6,7 @@
  *   · 겸용 asset-major 상가 통합 모달 `bsp-${assetId}-mx-commercial` — 취득·양도 2시점을 한 폼에서
  *     계산하므로 시점 세그먼트가 없다(gb/cb와 같은 transfer 모드 단일 스냅샷).
  *     ⚠️ phd prefix를 쓰면 배치 모달의 replaceSnapshotsByPrefix(`bsp-{id}-phd`)에 삭제된다 → `mx` 분리.
- *   · PHD 환산 통합 모달(취득시+최초공시시 2시점 단일 스냅샷) — 감면 §164⑤ `bsp-${assetId}-red-phd`,
+ *   · PHD 환산 통합 모달(취득시+최초공시시 2시점 단일 스냅샷) — 감면 §164⑤ `bsp-${assetId}-red{조문}-phd`,
  *     재개발 §164⑦ `bsp-${assetId}-redev-phd`. 시점 세그먼트 없음(`snapshotKeyTimepoint` null 유지).
  *
  * `idOfSnapshotKey`는 use-auto-save-calculation(이력 동봉 필터)·BuildingStdPriceReportSection
@@ -37,8 +37,19 @@ export function idOfSnapshotKey(key: string): string {
          *    anchor: `__tests__/calc/building-std-snapshot-keys.test.ts` (redev-phd describe)
          */
         .replace(/-redev-phd$/, "")
-        // 감면 조문 PHD 환산 통합 모달(취득시+최초공시시 단일 스냅샷) — 규약 편입.
-        .replace(/-red-phd$/, "")
+        /**
+         * 감면 조문 PHD 환산 통합 모달(취득시+최초공시시 단일 스냅샷).
+         *
+         * `\d*`는 **조문 세그먼트**다 — `red993`·`red99`·`red988`… (2026-08-24 B-4).
+         * 종전에는 조문 구분 없이 `-red-phd` 하나여서 한 자산에서 두 조문의 PHD를 쓰면
+         * 스냅샷이 **서로를 덮어썼다**(감면 그룹 라디오는 같은 category 안에서만 배타이고,
+         * PHD 보유 8개 조문은 new_housing·unsold_housing 두 category에 걸쳐 있다).
+         * `\d*`가 0회도 매칭하므로 **구 키(`-red-phd`)는 그대로 환원된다** — 이미 저장된
+         * 이력·세션 스냅샷 호환. 마이그레이션하지 않는다(표시 전용 데이터라 새 계산이
+         * 새 키로 저장되면 자연히 대체된다).
+         * 🪤 `-redev-phd`는 `red` 뒤가 숫자가 아니라 이 정규식에 걸리지 않는다(위에서 먼저 처리).
+         */
+        .replace(/-red\d*-phd$/, "")
         /**
          * 부담부증여 ④ 「증여재산 평가」 상속·증여 계산기(상증 1시점) — 시점 세그먼트 없음.
          * ⛔ `snapshotKeyTimepoint`에는 **추가하지 말 것** — 아래 그 함수의 주석 참조.
@@ -163,4 +174,43 @@ export function phdTimepointLabel(key: string): {
       ? "상가분"
       : "주택분";
   return { timepoint, category, categoryLabel, order };
+}
+
+/**
+ * 감면 PHD 스냅샷 키의 **조문 라벨** — 대상이 아니거나 조문 세그먼트가 없으면 null.
+ *
+ * 한 자산에 두 조문의 PHD 계산서가 나란히 뜰 수 있으므로(B-4), 제목이 같으면 어느 조문의
+ * 계산인지 알 수 없다 — `snapshotKindLabel`이 일반건물/증축분을 가르는 것과 같은 이유다.
+ *
+ * ⚠️ **규칙으로 추론하지 않고 명시 열거**한다. `red99`→§99 / `red992`→§99의2 처럼 자릿수
+ *    규칙이 그럴듯해 보이지만, 신규 조문에서 규칙이 깨지면 **조용히 틀린 조문명**이 찍힌다.
+ *    미등록 prefix는 null이라 제목이 조문 없이 나갈 뿐 — 안전한 쪽으로 실패한다.
+ * ⚠️ 구 키(`-red-phd`, 조문 세그먼트 없음)도 null이다 — 종전 제목 그대로 유지.
+ */
+const RED_PHD_ARTICLE: Record<string, { label: string; reductionType: string }> = {
+  red99: { label: "§99", reductionType: "new_99" },
+  red992: { label: "§99의2", reductionType: "unsold_99_2" },
+  red993: { label: "§99의3", reductionType: "new_99_3" },
+  red983: { label: "§98의3", reductionType: "unsold_98_3" },
+  red985: { label: "§98의5", reductionType: "unsold_98_5" },
+  red986: { label: "§98의6", reductionType: "unsold_98_6" },
+  red987: { label: "§98의7", reductionType: "unsold_98_7" },
+  red988: { label: "§98의8", reductionType: "unsold_98_8" },
+};
+
+export function redPhdArticleLabel(key: string): string | null {
+  return redPhdArticle(key)?.label ?? null;
+}
+
+/**
+ * 감면 PHD 키 → 조문 정보(라벨 + `AssetReductionForm.type`). 대상이 아니면 null.
+ *
+ * `reductionType`은 **적용성 게이트**(`building-std-snapshot-applicability`)가 쓴다 —
+ * 「그 조문이 아직 후보에 있고 PHD 모드가 켜져 있는가」를 판정하려면 키 세그먼트를
+ * 폼의 `type`으로 옮겨야 한다. 매핑은 각 조문 폼의 `snapshotKeyPrefix` ↔ `type`을
+ * 실측해 확정했다(2026-08-24, 8종 1:1).
+ */
+export function redPhdArticle(key: string): { label: string; reductionType: string } | null {
+  const m = key.match(/-(red\d+)-phd$/);
+  return m ? (RED_PHD_ARTICLE[m[1]] ?? null) : null;
 }
