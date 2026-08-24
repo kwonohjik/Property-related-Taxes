@@ -276,6 +276,14 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                 <BuildingStdPriceModalButton
                   buttonLabel="건물 기준시가 계산"
                   transferSectionLabel="최초공시 시점"
+                  /**
+                   * 🔴 반드시 고정한다 — 없으면 모달에 세목 라디오가 뜨고, 사용자가
+                   * 「상속·증여(1시점)」로 바꾸면 결과 카드가 `onApply`(여기선 **미배선**)를
+                   * 부르는 「이 금액 적용」 버튼을 낸다. 두 필드 중 아무것도 안 채워지는
+                   * **침묵 no-op**인데 스냅샷은 저장돼, 결과탭에 「취득시 (재개발 환산 §164⑦)」
+                   * 라벨을 단 상증 계산서가 한 장 뜬다. 이 호출부는 양도 2시점 전용이다.
+                   */
+                  lockedTaxType="transfer"
                   initialAddress={stdPriceAddressOf(asset)}
                   snapshotKey={`bsp-${asset.assetId}-redev-phd`}
                   prefill={{

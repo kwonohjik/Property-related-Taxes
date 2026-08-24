@@ -210,3 +210,37 @@ K-3의 제목:
 
 **세액 무변경**: 엔진·`useMemo` 산식·`transfer-tax-api-redev.ts`·`transfer-tax-validate-redev.ts`
 미변경. 재개발 엔진 테스트 전건 통과가 이를 뒷받침한다.
+
+## 9. 코드 품질 게이트 결과 (`/code-review high`, 2026-08-24)
+
+리뷰어가 tsc·eslint·vitest(360파일 3,286건)를 직접 돌리고, 신규 키를 키 규약 소비처 4곳
+(`idOfSnapshotKey`·`snapshotKeyTimepoint`·`snapshotKindLabel`·`phdTimepointLabel`)과
+`use-auto-save-calculation`·PDF 경로·`replaceSnapshotsByPrefix` 호출부까지 추적했다.
+`redevLandArea`→`landAreaM2` 매핑(연면적 아님)·헬퍼 이동의 순환 부재도 확인됐다.
+
+### 🔴 Medium 1건 — 수정 완료
+
+**`lockedTaxType` 미전달**(`RedevelopmentValuationSection.tsx`). 없으면 모달에 세목 라디오가
+뜨고(`BuildingStdPriceForm.tsx:281`), 사용자가 「상속·증여(1시점)」로 바꾸면 결과 카드가
+`onApply`를 부르는 「이 금액 적용」 버튼을 낸다. 이 호출부는 `onApplyBoth`만 배선했으므로
+**두 필드 중 아무것도 채워지지 않는 침묵 no-op**인데, `saveSnapshot`은 실행되어 결과탭에
+「취득시 (재개발 환산 §164⑦)」 라벨을 단 상증 계산서가 한 장 뜬다.
+
+⇒ `lockedTaxType="transfer"` 추가. E2E P-2에 세목 라디오 부재 단언을 넣고 **mutation probe로
+구별력을 실측**했다(prop 제거 → P-2 실패).
+
+> 선례 `ReductionPhdInput`에도 같은 구멍이 있다. 기존 코드라 이번 diff에서는 건드리지 않는다
+> (Surgical) — **별건 후보**로 남긴다.
+
+### Low 2건
+
+- **L-1 (기록만, 후속 별건)**: `-redev-phd` 스냅샷이 **§164⑦ 트리거가 꺼질 때 무효화되지 않는다.**
+  블록 게이트는 `acquisitionDate < redevFirstDisclosureDate`라는 **파생 조건**인데
+  `building-std-snapshot-store`에는 `replaceSnapshotsByPrefix` 외에 삭제 API가 없다.
+  시나리오: 취득일 2003 입력 → 계산기 사용(스냅샷 저장) → 취득일을 2010으로 **정정** →
+  §164⑦ 블록은 사라지고 산식도 그 필드를 안 쓰는데, 결과탭·PDF는 계산서 2장을 계속 찍는다.
+  `-red-phd`는 명시 토글(`phdMode`)이 게이트라 덜 흔하지만, 여기는 **날짜 정정**이라 일상적으로 뒤집힌다.
+  ⛔ useEffect로 트리거 변화를 감지해 삭제하는 방식은 **store 미러링 금지 정책**과 충돌한다 —
+  해법 설계가 필요하므로 이번 범위 밖으로 둔다.
+- **L-2 (수정 완료)**: `BuildingStdPriceReportSection`의 신규 주석이 존재하지 않는 변수
+  `isRedev`를 언급했다(실제 코드는 `phdConversionKind`). 주석↔구현 드리프트라 즉시 정정.

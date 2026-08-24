@@ -100,6 +100,12 @@ test.describe("재개발 §164⑦ PHD — 기준시가 항목축 재편", () => 
     // 모달 본문 — 둘째 시점 라벨이 "최초공시 시점"으로 override 된다
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(page.getByText(/최초공시 시점/).first()).toBeVisible();
+
+    // 🔴 세목은 양도로 **고정**이어야 한다(lockedTaxType). 라디오가 뜨면 사용자가
+    //    「상속·증여(1시점)」로 바꿀 수 있고, 그 모드의 적용 버튼은 이 호출부에 미배선인
+    //    onApply를 불러 **침묵 no-op**이 되면서 잘못된 스냅샷만 남는다.
+    await expect(page.getByRole("radio", { name: /상속·증여\(1시점\)/ })).toHaveCount(0);
+    await expect(page.getByRole("radio", { name: /양도\(취득·양도 2시점\)/ })).toHaveCount(0);
   });
 
   test("P-3: §164⑦ 미발동이면 두 섹션·런처가 없고 단일 라목값 칸이 뜬다", async ({ page }) => {

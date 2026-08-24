@@ -90,8 +90,8 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         // 두 호출부가 같은 구조다 — 조문만 다르다:
         //   `-red-phd`   감면 조문 PHD 환산 (§164⑤) — ReductionPhdInput
         //   `-redev-phd` 재개발 §166③ 환산의 §164⑦ 본문 — RedevelopmentValuationSection
-        // ⚠️ 정규식에 `redev`를 **먼저** 두지 않아도 `-red-phd$`는 `-redev-phd`에 매칭되지 않지만
-        //    (접미가 다르다), 라벨 분기는 키로 판정하므로 아래 `isRedev`를 쓴다.
+        // ⚠️ `-red-phd$`는 `-redev-phd`에 매칭되지 않는다(접미가 다르다) — 그래도 아래처럼
+        //    긴 쪽(`redev`)을 먼저 시험해 `building-std-snapshot-keys.ts`의 열거 규율과 맞춘다.
         const phdConversionKind = /-redev-phd$/.test(key)
           ? { suffix: "재개발 환산 §164⑦" }
           : /-red-phd$/.test(key)
