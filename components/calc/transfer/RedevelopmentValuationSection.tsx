@@ -18,6 +18,9 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
+import { prefillAcqLandPrice } from "@/lib/calc/phd-acq-land-price-track";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
@@ -237,38 +240,79 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             {/* 토지 면적은 ① 기본정보로 이전했다 (2026-08-04) —
                 `asset-sections/AssetAreaRedevelopment.tsx`. 여기에 다시 추가하지 말 것. */}
 
+            {/* ── 토지 기준시가 — 2시점을 한 섹션에 (2026-08-24 항목축 재편) ──
+                종전에는 「취득시(Sum_A)」·「최초공시 당시(Sum_F)」 **시점축** 2박스가
+                각각 토지·건물을 담았다. 같은 종류의 값을 나란히 보게 항목축으로 바꿨다.
+                Sum_A·Sum_F 합계는 아래 미리보기 박스가 값과 함께 그대로 보여준다. */}
             <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
-              <p className="text-caption font-semibold text-rose-700">취득시 (Sum_A 산정)</p>
+              <p className="text-caption font-semibold text-rose-700">토지 기준시가</p>
               <LandPriceLookupField
                 label="취득시 개별공시지가 (원/㎡)"
-                hint="Vworld API 조회 — 기준연도 = 취득연도"
+                hint="Vworld API 조회 — 기준연도 = 취득연도. Sum_A 구성"
                 pricePerSqm={asset.redevLandPricePerSqmAtAcq}
                 onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
                 area={landAreaNumber}
                 referenceDate={asset.acquisitionDate}
                 jibun={asset.addressJibun || undefined}
               />
-              <FieldCard label="취득시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원) — 수동 입력">
-                <CurrencyInput label=""
-                  value={asset.redevBuildingStdPriceAtAcq}
-                  onChange={(v) => onChange({ redevBuildingStdPriceAtAcq: v })}
-                  hideUnit
-                />
-              </FieldCard>
-            </div>
-
-            <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
-              <p className="text-caption font-semibold text-rose-700">최초공시 당시 (Sum_F 산정)</p>
               <LandPriceLookupField
                 label="최초공시 당시 개별공시지가 (원/㎡)"
-                hint="Vworld API 조회 — 기준연도 = 최초공시연도 (단독 2005, 공동 2006)"
+                hint="Vworld API 조회 — 기준연도 = 최초공시연도 (단독 2005, 공동 2006). Sum_F 구성"
                 pricePerSqm={asset.redevLandPricePerSqmAtFirst}
                 onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtFirst: v })}
                 area={landAreaNumber}
                 referenceDate={asset.redevFirstDisclosureDate}
                 jibun={asset.addressJibun || undefined}
               />
-              <FieldCard label="최초공시 당시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원) — 수동 입력">
+            </div>
+
+            {/* ── 건물 기준시가 — 2시점 + 계산기 런처 1개 ──
+                종전에는 두 칸 모두 "수동 입력"이라 이 자산에는 계산기 진입점이 아예 없었다.
+                감면 PHD(`ReductionPhdInput`)와 **같은 2시점 구조**이므로 같은 모달을
+                `onApplyBoth`로 배선한다 — 한 번 계산해 두 필드를 동시에 채운다. */}
+            <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-caption font-semibold text-rose-700">건물 기준시가</p>
+                <BuildingStdPriceModalButton
+                  buttonLabel="건물 기준시가 계산"
+                  transferSectionLabel="최초공시 시점"
+                  initialAddress={stdPriceAddressOf(asset)}
+                  snapshotKey={`bsp-${asset.assetId}-redev-phd`}
+                  prefill={{
+                    landAreaM2: asset.redevLandArea || undefined,
+                    acquisitionDate: asset.acquisitionDate,
+                    transferDate: asset.redevFirstDisclosureDate,
+                    /**
+                     * ⚠️ 취득연도 ≤2000이면 `undefined`가 온다 — 그 구간의 위치지수는
+                     * **2001.1.1 현재** 공시지가를 써야 하는데 재개발 폼에 그 필드가 없기 때문이다
+                     * (트랙 규칙·근거 조문은 `lib/calc/phd-acq-land-price-track.ts` 단일 소스).
+                     * §164⑦ 발동 조건이 「취득일 < 최초공시일(2005/2006)」이라 ≤2000 취득이 흔하다.
+                     * 그때는 모달 안 `LandPriceLookupField`로 사용자가 직접 조회한다(dead-end 아님).
+                     */
+                    acqLandPricePerSqm: prefillAcqLandPrice(
+                      asset.acquisitionDate,
+                      asset.redevLandPricePerSqmAtAcq,
+                    ),
+                    transferLandPricePerSqm: asset.redevLandPricePerSqmAtFirst || undefined,
+                  }}
+                  /* 두 필드를 **단일 배치 patch**로 — 두 번 나눠 부르면 뒤 patch가 앞 값을
+                     stale spread로 덮는다(memory `feedback_multikey_patch_stale_spread_overwrite`). */
+                  onApplyBoth={(acq, first) =>
+                    onChange({
+                      redevBuildingStdPriceAtAcq: String(acq),
+                      redevBuildingStdPriceAtFirst: String(first),
+                    })
+                  }
+                />
+              </div>
+              <FieldCard label="취득시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원). Sum_A 구성 — 계산기 결과 수정 가능">
+                <CurrencyInput label=""
+                  value={asset.redevBuildingStdPriceAtAcq}
+                  onChange={(v) => onChange({ redevBuildingStdPriceAtAcq: v })}
+                  hideUnit
+                />
+              </FieldCard>
+              <FieldCard label="최초공시 당시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원). Sum_F 구성 — 계산기 결과 수정 가능">
                 <CurrencyInput label=""
                   value={asset.redevBuildingStdPriceAtFirst}
                   onChange={(v) => onChange({ redevBuildingStdPriceAtFirst: v })}

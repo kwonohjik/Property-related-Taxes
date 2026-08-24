@@ -6,12 +6,14 @@
  *   · 겸용 asset-major 상가 통합 모달 `bsp-${assetId}-mx-commercial` — 취득·양도 2시점을 한 폼에서
  *     계산하므로 시점 세그먼트가 없다(gb/cb와 같은 transfer 모드 단일 스냅샷).
  *     ⚠️ phd prefix를 쓰면 배치 모달의 replaceSnapshotsByPrefix(`bsp-{id}-phd`)에 삭제된다 → `mx` 분리.
+ *   · PHD 환산 통합 모달(취득시+최초공시시 2시점 단일 스냅샷) — 감면 §164⑤ `bsp-${assetId}-red-phd`,
+ *     재개발 §164⑦ `bsp-${assetId}-redev-phd`. 시점 세그먼트 없음(`snapshotKeyTimepoint` null 유지).
  *
  * `idOfSnapshotKey`는 use-auto-save-calculation(이력 동봉 필터)·BuildingStdPriceReportSection
  * (결과탭 렌더 소속판정) 두 소비처가 공유한다(드리프트 방지).
  */
 
-/** 스냅샷 키에서 자산/재산 id 추출 (소속 판정용). gb/cb/phd + first + -commercial + mx + red-phd 전부 환원. */
+/** 스냅샷 키에서 자산/재산 id 추출 (소속 판정용). gb/cb/phd + first + -commercial + mx + red-phd + redev-phd 전부 환원. */
 export function idOfSnapshotKey(key: string): string {
   return key.startsWith("bsp-estate-")
     ? key.slice("bsp-estate-".length)
@@ -28,6 +30,13 @@ export function idOfSnapshotKey(key: string): string {
         // 별개취득 건물분 취득·양도 **통합 모달**(2026-07-30) — 한 폼에서 2시점을 계산하므로
         // 시점 세그먼트가 없다(mx-commercial과 같은 구조). 시점 필터도 적용하지 않는다.
         .replace(/-split-both$/, "")
+        /**
+         * 재개발 §164⑦ PHD 환산 통합 모달(취득시+최초공시시 단일 스냅샷) — 규약 편입.
+         * 🪤 **`-red-phd`보다 앞**이어야 한다 — 접미가 겹치지는 않지만(`-redev-phd` ≠ `-red-phd`)
+         *    긴 접두를 먼저 두는 이 파일의 규율을 따른다(`gb-ext` > `gb`와 같은 이유).
+         *    anchor: `__tests__/calc/building-std-snapshot-keys.test.ts` (redev-phd describe)
+         */
+        .replace(/-redev-phd$/, "")
         // 감면 조문 PHD 환산 통합 모달(취득시+최초공시시 단일 스냅샷) — 규약 편입.
         .replace(/-red-phd$/, "")
         /**
@@ -79,7 +88,7 @@ export function snapshotKeyTimepoint(key: string): "acquisition" | "transfer" | 
  * ⚠️ 접두 열거 순서는 `idOfSnapshotKey`·`snapshotKeyTimepoint`와 **같은 규율**이다 —
  *    긴 접두(`gb-ext`·`cbinh`)를 짧은 것(`gb`·`cb`)보다 앞에 둔다.
  *
- * 배치(`-phd-*`·`-cb-first`)·감면 환산(`-red-phd`)·상증(`bsp-estate-*`)은 null이다 —
+ * 배치(`-phd-*`·`-cb-first`)·PHD 환산(`-red-phd`·`-redev-phd`)·상증(`bsp-estate-*`)은 null이다 —
  * 그 제목이 이미 시점·주택분/상가분·세목을 밝히므로 붙이면 중복된다.
  */
 export function snapshotKindLabel(key: string): string | null {

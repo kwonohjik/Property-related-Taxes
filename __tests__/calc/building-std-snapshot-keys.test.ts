@@ -47,6 +47,17 @@ describe("idOfSnapshotKey — 소속 자산/재산 id 환원", () => {
     expect(idOfSnapshotKey(`bsp-${id}-phd-acq`)).toBe(id);
   });
 
+  it("재개발 §164⑦ PHD 환산 통합 모달 키(-redev-phd) → assetId 환원 (결과탭 계산서 노출 조건)", () => {
+    // 재개발 §166③ 환산의 §164⑦ 본문 발동 시 취득시+최초공시시 2시점을 한 모달에서 계산하는
+    // 단일 스냅샷. 미등재면 id가 `a1-redev-phd`로 잘리지 않아 결과탭 계산서가 조용히 미출력된다.
+    // ⚠️ `-red-phd`(감면 §164⑤)와 접미가 겹치지 않도록 **긴 쪽을 먼저** 치환한다.
+    expect(idOfSnapshotKey("bsp-a1-redev-phd")).toBe("a1");
+    const uuid = "3f9a1c2e-7b40-4d55-9f11-8ac2e6d0b7aa";
+    expect(idOfSnapshotKey(`bsp-${uuid}-redev-phd`)).toBe(uuid);
+    // 감면 PHD 키가 재개발 정규식에 잡히지 않는지(역방향 오염 방어)
+    expect(idOfSnapshotKey("bsp-a1-red-phd")).toBe("a1");
+  });
+
   it("감면 PHD 환산 통합 모달 키(-red-phd) → assetId 환원 (결과탭 계산서 노출 조건)", () => {
     // 감면 조문(§99·§99의2·§98의3/5/6/7/8·§99의3) PHD 환산 시 취득시+최초공시시 2시점을
     // 한 모달에서 계산하는 단일 스냅샷. 규약 편입 전 `red993-bsp`는 소속 판정 탈락 → 계산서 미출력.
@@ -90,6 +101,9 @@ describe("snapshotKeyTimepoint — 반대 시점 인스턴스 필터 (전수 대
     expect(snapshotKeyTimepoint("bsp-a1-split-both")).toBeNull();
     expect(snapshotKeyTimepoint("bsp-a1-mx-commercial")).toBeNull();
     expect(snapshotKeyTimepoint("bsp-a1-red-phd")).toBeNull();
+    // 재개발 §164⑦ PHD 통합 모달 — 취득시+최초공시시 2 인스턴스를 모두 살려야 한다.
+    // 시점 필터가 걸리면 한쪽 인스턴스가 사라져 계산서가 1장만 뜬다.
+    expect(snapshotKeyTimepoint("bsp-a1-redev-phd")).toBeNull();
     expect(snapshotKeyTimepoint("bsp-estate-item-7")).toBeNull();
   });
 });
