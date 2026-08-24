@@ -7,6 +7,8 @@
  * P0-2 원칙: 세율 × 금액 곱셈은 반드시 applyRate() 사용.
  */
 import { TRANSFER } from "./legal-codes";
+import { buildLossTransferTaxResult } from "./transfer-tax-loss-return";
+import { buildNormalTransferTaxResult } from "./transfer-tax-normal-return";
 import {
   applyRate,
   isSurchargeSuspended,
@@ -401,113 +403,28 @@ export function calculateTransferTax(
     legalBasis: TRANSFER.TRANSFER_GAIN,
   });
 
-  // 양도 손실(또는 0): 가산세는 §114조의2 ②에 따라 산출세액 없어도 부과
-  // aggregate 엔진에서 skipLossFloor=true로 호출 시 음수 차익도 이 분기로 흡수되어야 함
+  // 양도 손실(또는 0): 가산세는 §114조의2 ②에 따라 산출세액 없어도 부과.
+  // aggregate 엔진에서 skipLossFloor=true로 호출 시 음수 차익도 이 분기로 흡수된다.
+  // 결과 조립은 `transfer-tax-loss-return.ts` (파일 크기 정책 분리 — 동작 무변경).
   if (transferGain <= 0) {
-    // ⚠️ acquisitionMethod 판정은 effectiveInput 기준 — finalize.ts penaltyBase와 동일 이유·동일 근거
-    // (부담부증여는 §159 스텝이 정규화하나 원본 input에는 UI가 보존한 stale 산정방식이 남는다).
-    let pb0 = effectiveInput.acquisitionMethod === "appraisal"
-      ? (effectiveInput.appraisalValue ?? 0)
-      : ((input.useEstimatedAcquisition || effectiveInput.usedEstimatedAcquisition)
-          ? (estimatedBase || effectiveInput.estimatedBase || 0)
-          : 0);
-    // §114조의2① 손실(산출세액 0, ②) 경로도 증축부분 한정 base 적용 — 정상 경로 finalize와 동일 헬퍼(dual-truth 방지)
-    pb0 = resolveExtensionPenaltyBase(input, pb0);
-    const pr0 = calculateBuildingPenalty(effectiveInput, pb0);
-    const pt0 = pr0?.penalty ?? 0;
-    const lit0 = pt0 > 0 ? applyRate(pt0, 0.1) : 0;
-    if (pt0 > 0) {
-      steps.push({ label: "지방소득세", formula: `${pt0.toLocaleString()} × 10%`, amount: lit0, legalBasis: TRANSFER.LOCAL_INCOME_TAX });
-    }
-    /**
-     * 🔑 **양도차손 경로도 국세기본법 §47의2~§47의4 가산세를 싣는다** (2026-08-13 F33).
-     *
-     * 「소득세법」 §92③3호는 양도소득 **총결정세액**을 「양도소득 결정세액에 제114조의2,
-     * 제115조 및 「국세기본법」 제47조의2부터 제47조의4까지에 따른 가산세를 더하여」 계산하도록
-     * 정한다. 종전 조기반환은 §114조의2만 싣고 국기법 가산세를 **통째로 버렸다** —
-     * `penaltyDetail`이 undefined가 되어 산출근거 표시까지 사라졌다.
-     *
-     * 결정세액이 0이어도 base가 양수일 수 있는 축이 둘 있다:
-     *   · §47의3① — 「초과신고한 **환급세액**」(`filingPenaltyDetails.excessRefundAmount`)
-     *   · §47의4①1·2호 — 「납부하지 아니한 세액」·「초과환급받은 세액」(`delayedPaymentDetails.unpaidTax`)
-     * 순수 차손이고 초과환급·미납이 없으면 `calculateFilingPenalty`가 base 0으로 0을 반환하므로
-     * 종전과 값이 같다(조심 2012서2857 — 통산으로 세액이 소멸해도 그 이전의 과소신고·미납분
-     * 가산세는 유지된다. 예정신고·납부의무는 확정신고·납부의무와 별개의 독립적 의무).
-     *
-     * ⚠️ **지방소득세 base는 §114조의2분(pt0)만이다** — 정상 경로(`transfer-tax-finalize.ts`
-     *    STEP 10)·다건 집계(`transfer-tax-aggregate.ts`)와 같은 축을 유지한다. 신고불성실·
-     *    납부지연분을 base에 넣으면 「지방세 산출세액 ≠ result.localIncomeTax」 불일치가 생긴다.
-     *
-     * §114조의2 step은 `emitPenaltySteps`가 「환산가액적용가산세 (§114조의2)」로 통합 emit한다
-     * (정상 경로와 동일) — 종전의 별도 「신축·증축 가산세」 push는 여기서 중복이 되므로 없앴다.
-     */
-    const { penaltyDetail: lossPenaltyDetail, filingDelayedPenalty: lossFilingDelayed } =
-      emitPenaltySteps(input, steps, 0, pt0, pb0, pr0?.note);
-    const lossTotalTax = pt0 + lit0 + lossFilingDelayed;
-    if (lossTotalTax > 0) {
-      steps.push({
-        label: "총 납부세액",
-        formula: `가산세 합계 ${(pt0 + lossFilingDelayed).toLocaleString()} + 지방소득세 ${lit0.toLocaleString()}`,
-        amount: lossTotalTax,
-        legalBasis: TRANSFER.BUILDING_PENALTY,
-      });
-    }
-    return {
-      isExempt: false,
-      /**
-       * 🔑 **양도차손 경로에도 §89①3호 해당 여부를 실어야 한다** (2026-08-10 D-8).
-       *
-       * 이 조기반환은 「양도차익 ≤ 0」이라 세액이 0인 것이지 **비과세 판정이 없었던 것이
-       * 아니다**. 빠뜨리면 §97의2②2호 자동 판정이 「B는 1세대1주택이 아니다」로 오판해
-       * **이월과세를 잘못 배제**한다(anchor OH-2가 이 누락을 잡았다).
-       */
-      isPartialExempt: exemptionResult.isPartialExempt,
-      // [F1] 경정 결과 양도차손(산출세액 0) → 조기반환. refund면 전액환급(determinedTax=0).
-      amendmentDetail: input.amendment ? computeAmendment(input.amendment, 0) : undefined,
-      exemptReason: exemptionResult.exemptReason,
-      warnings: warnings.length > 0 ? warnings : undefined,
-      transferGain: transferGain,
-      taxableGain: transferGain,
-      usedEstimatedAcquisition: usedEstimated,
-      longTermHoldingDeduction: 0,
-      lthdStartDate: resolveLTHDStartDate(effectiveInput),
-      longTermHoldingRate: 0,
-      basicDeduction: 0,
-      taxBase: 0,
-      appliedRate: 0,
-      progressiveDeduction: 0,
-      calculatedTax: 0,
-      isSurchargeSuspended: false,
-      reductionAmount: 0,
-      determinedTax: 0,
-      penaltyTax: pt0,
-      penaltyBase: pt0 > 0 ? pb0 : 0,
-      localIncomeTax: lit0,
-      // 국기법 §47의2~§47의4분(lossFilingDelayed)은 지방소득세 base에 넣지 않는다 — 위 주석 참조.
-      penaltyDetail: lossPenaltyDetail,
-      totalTax: lossTotalTax,
+    return buildLossTransferTaxResult({
+      input,
+      effectiveInput,
+      estimatedBase,
       steps,
-      /**
-       * 🔴 **양도차손 경로에도 §159 명세를 싣는다** (2026-08-10 D-7a).
-       *
-       * 종전에는 이 조기반환에만 빠져 있어, 부담부증여로 양도차익이 0 이하가 되면
-       * 결과 화면이 **산출근거를 통째로 잃었다**. 이월과세 증여세 상당액 산입(§97의2①3호)은
-       * 한도까지 채우면 양도차익이 정확히 0이 되므로 이 경로를 **정상적으로** 탄다.
-       */
+      warnings,
+      transferGain,
+      usedEstimated,
+      exemptionResult,
       transferBurdenedGiftBreakdown,
-      // 다건 집계는 `skipLossFloor=true`로 차손 자산도 이 경로를 태운 뒤 세율을 다시 구한다 —
-      // 정상 경로와 같은 정밀 판정을 쓰도록 여기서도 echo한다 (F01).
-      multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
-      ...buildTransferResultDetails({
-        multiHouseSurchargeResult,
-        nonBusinessLandJudgment,
-        pre1990LandResult,
-        carryoverDetail,
-        inheritedAcquisitionStep,
-        cbStep,
-        splitDetail,
-      }),
-    };
+      multiHouseSurchargeResult,
+      nonBusinessLandJudgment,
+      pre1990LandResult,
+      carryoverDetail,
+      inheritedAcquisitionStep,
+      cbStep,
+      splitDetail,
+    });
   }
 
   // STEP 2.5: 장기임대주택 보유자 거주주택 비과세 특례 (소령 §155⑳ + §161)
@@ -706,10 +623,11 @@ export function calculateTransferTax(
   const taxResult = resolveSplitAwareTax({ taxBase, transferIncome, basicDeduction, splitDetail, parsedRates, taxRateInput, multiHouseSurchargeResult });
   steps.push(buildCalculatedTaxStep(taxResult, taxBase));
 
-  // STEP 7.5 ~ 11/12: 산출세액 이후 단계 통합 (transfer-tax-finalize.ts)
-  const finalize = finalizeTransferTax({
+  // STEP 7.5 ~ 11/12: 산출세액 이후 단계 + 결과 조립 (transfer-tax-normal-return.ts)
+  return buildNormalTransferTaxResult({
     input,
     effectiveInput,
+    rawInput,
     steps,
     taxResult,
     taxRateInput,
@@ -717,6 +635,7 @@ export function calculateTransferTax(
     multiHouseSurchargeResult,
     taxableGain,
     longTermHoldingDeduction,
+    longTermHoldingRate,
     basicDeduction,
     taxBase,
     estimatedBase,
@@ -733,125 +652,28 @@ export function calculateTransferTax(
     unsold982PreliminaryResult: incomeDeduction.unsold982Detail,
     unsold984PreliminaryResult: incomeDeduction.unsold984Detail,
     unsold98PreliminaryResult: incomeDeduction.unsold98Detail,
-  });
-  const {
-    new993FinalResult,
-    new99FinalResult,
-    unsold988FinalResult,
-    unsold987FinalResult,
-    unsold992FinalResult,
-    unsold983FinalResult,
-    unsold985FinalResult,
-    unsold986FinalResult,
-    unsold982FinalResult,
-    unsold984FinalResult,
-    unsold98FinalResult,
-    reductionAmount,
-    reductionType,
-    reductionTypeApplied,
-    reducibleIncome,
-    rentalReductionDetail,
-    newHousingReductionDetail,
-    publicExpropriationDetail,
-    // §77의3·§77의2 — finalize가 필수로 돌려주는데 종전에는 이 두 키만 구조분해에서 빠져
-    // 결과에 실리지 않았다(TransferTaxResult가 optional이라 TS가 못 잡는다). 그 결과
-    // 상세 카드·다건 breakdown·별지84호 부표2 ⑲가 모두 undefined를 받았다.
-    gbDesignatedLandDetail,
-    replacementLandDetail,
-    selfFarmingReductionDetail,
-    rental97TaxDetail,
-    determinedTax,
-    penaltyTax,
-    penaltyBase,
-    localIncomeTax,
-    penaltyDetail,
-    totalTax,
-    amendmentDetail,
-  } = finalize;
-  return {
-    isExempt: false,
-    // §89①3호 각 목에는 해당하나 12억 초과분만 과세되는 상태(고가주택). D-8 ②2호 판정이 읽는다.
-    isPartialExempt: exemptionResult.isPartialExempt,
-    exemptReason: exemptionResult.exemptReason,
-    warnings: warnings.length > 0 ? warnings : undefined,
+    exemptionResult,
+    warnings,
     transferGain,
-    taxableGain,
-    usedEstimatedAcquisition: usedEstimated,
-    estimatedBase: usedEstimated ? estimatedBase : undefined,
-    estimatedDeduction: usedEstimated ? estimatedDeduction : undefined,
-    estimatedStdPriceAtAcquisition: effectiveInput.useEstimatedAcquisition && !splitDetail ? effectiveInput.standardPriceAtAcquisition : undefined,
-    estimatedStdPriceAtTransfer: effectiveInput.useEstimatedAcquisition && !splitDetail ? effectiveInput.standardPriceAtTransfer : undefined,
-    expenses: appliedExpenses,
+    usedEstimated,
+    estimatedDeduction,
+    appliedExpenses,
     swapApplied,
     swapComparison,
     expropriationValuationDetail,
     auctionValuationDetail,
     housingExpropriationValuationDetail,
-    capitalExpenditureForDisplay: rawInput.capitalExpenditure ?? 0,
-    longTermHoldingDeduction,
-    longTermHoldingRate,
-    lthdStartDate: resolveLTHDStartDate(effectiveInput),
-    basicDeduction,
-    taxBase,
-    appliedRate: taxResult.appliedRate,
-    progressiveDeduction: taxResult.progressiveDeduction,
-    calculatedTax: taxResult.calculatedTax,
-    surchargeType: taxResult.surchargeType,
-    surchargeRate: taxResult.surchargeRate,
-    isSurchargeSuspended: taxResult.surchargeSuspended,
-    rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded,
-    // houses[] 정밀 판정 원본 echo — 다건 집계가 자산별 세액을 다시 구할 때 **같은 판정**을
-    // 쓰도록 그대로 싣는다(표시용 multiHouseSurchargeDetail에는 surchargeApplicable·
-    // surchargeType·isSurchargeSuspended가 없어 재사용할 수 없다). 세액 로직 불변 — F01.
-    multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
-    nblSurchargeExcluded: taxResult.nblSurchargeExcluded,
-    shortTermNote: taxResult.shortTermNote,
-    reductionAmount,
-    reductionType,
-    reductionTypeApplied,
-    reducibleIncome,
-    determinedTax,
-    penaltyTax,
-    penaltyBase,
-    localIncomeTax,
-    totalTax,
-    steps,
-    ...buildTransferResultDetails({
-      multiHouseSurchargeResult,
-      nonBusinessLandJudgment,
-      pre1990LandResult,
-      carryoverDetail,
-      inheritedAcquisitionStep,
-      cbStep,
-      splitDetail,
-    }),
-    rentalReductionDetail,
-    newHousingReductionDetail,
-    publicExpropriationDetail,
-    gbDesignatedLandDetail,
-    replacementLandDetail,
-    selfFarmingReductionDetail,
+    nonBusinessLandJudgment,
+    pre1990LandResult,
+    carryoverDetail,
+    inheritedAcquisitionStep,
+    cbStep,
     rental97LthdDetail,
     usageConversionDetail,
     lthdExclusionReason,
-    rental97TaxDetail,
     new994Detail,
     unsold989Detail,
-    penaltyDetail,
-    amendmentDetail,
-    new993Detail: new993FinalResult,
-    new99Detail: new99FinalResult,
-    unsold988Detail: unsold988FinalResult,
-    unsold987Detail: unsold987FinalResult,
-    unsold992Detail: unsold992FinalResult,
-    unsold983Detail: unsold983FinalResult,
-    unsold985Detail: unsold985FinalResult,
-    unsold986Detail: unsold986FinalResult,
-    unsold982Detail: unsold982FinalResult,
-    unsold984Detail: unsold984FinalResult,
-    unsold98Detail: unsold98FinalResult,
-    specialHouseExclusionDetail:
-      specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
+    specialHouseExclusionDetail,
     transferBurdenedGiftBreakdown,
-  };
+  });
 }
