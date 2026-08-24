@@ -15,6 +15,7 @@ import {
   type CommercialBuildingValuationResult,
 } from "./commercial-building-valuation";
 import type { TransferTaxInput } from "./types/transfer.types";
+import { calcStdPriceMonths } from "./same-adjustment-period-std-price";
 
 export interface CommercialBuildingStepResult {
   /** 엔진 input 덮어쓰기용 업데이트된 acquisitionPrice·expenses */
@@ -174,14 +175,16 @@ const COMMERCIAL_FIRST_DISCLOSURE_DATE = new Date("2005-01-01");
 /**
  * 두 날짜 사이 개월 수 — §164⑧ 준용의 C(보유기간 월수).
  *
- * 시행규칙 §80⑤ "1월미만의 일수는 1월로 한다" → 끝수는 올린다.
- * 달력 월 차이(`raw`)가 이미 그 규칙과 일치한다:
- *   · 일자가 도달했으면(`to.date >= from.date`) 정확히 `raw`개월 경과
- *   · 도달 전이면 `raw-1`개월 경과 + 끝수 → §80⑤로 올려 `raw`
+ * ⚠️ **2026-08-24 정정** — 종전 구현은 달력 월 차이(`raw`)를 그대로 썼고, 주석은
+ * *"일자가 도달했으면 정확히 raw개월 경과"*라고 단정했다. **끝수를 놓쳤다**:
+ * 응당일에 도달한 **뒤에도** 남는 일수가 있으면 시행규칙 §80⑤(*"1월미만의 일수는 1월로
+ * 한다"*)에 따라 한 달을 더 올려야 한다. 실측 `2005-09-07 → 2006-06-10`은 만 9개월 경과
+ * 후 4일이 남아 **10월**인데 종전 구현은 9를 반환했다.
+ *
+ * ⇒ §80⑤ 축의 단일 출처인 `calcStdPriceMonths`에 위임한다(초일산입 예규 재산 46014-205 포함).
+ *   `transfer-tax-aggregate-helpers.ts`의 동명 `monthsBetween`은 **보유기간 내림** 축
+ *   (§95 장기보유특별공제·§104 세율)이라 **별개다 — 통합하지 않는다.**
  */
 function monthsBetween(from: Date, to: Date): number {
-  if (!(from instanceof Date) || Number.isNaN(from.getTime())) return 0;
-  if (to.getTime() <= from.getTime()) return 0;
-  const raw = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
-  return Math.max(raw, 1);
+  return calcStdPriceMonths(from, to);
 }
