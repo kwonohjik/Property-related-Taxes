@@ -382,6 +382,8 @@ import {
   incomeDeductionRuralSurtax,
 } from "./reduction-eligible-income";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
+import { redevBranchTotals } from "./redev-acquisition-inverse";
+import { inverseRedevAcquisition } from "./redev-acquisition-inverse";
 export { fmtCell } from "./FilingFormTableRowDefs";
 
 export function buildRows(
@@ -574,16 +576,14 @@ export function buildRows(
     //   자기일관성(양도가 = 취득가 + 필요경비 + 차익) 자동 보장.
     //   전 분기 공통 적용 — redev-right-pay/receive/land-pay/4split/승계조합원.
     //   사례 37 검산: 520M − 103M − 217M = 200M (환산취득가 = §166③ 결과).
-    const isSuccessor = r.successorMemberApplied === true;
-    const totalExpensesForInverse = isSuccessor
-      ? (r.postApprovalExistingHouse.expenses ?? 0)
-      : (r.preApproval.expenses ?? 0)
-        + (r.postApprovalExistingHouse.expenses ?? 0)
-        + (r.settlement.expenses ?? 0);
-    const totalGainForInverse = isSuccessor
-      ? r.postApprovalExistingHouse.gain
-      : r.preApproval.gain + r.postApprovalExistingHouse.gain + r.settlement.gain;
-    const inverseAcquisition = (totalTransferPrice || 0) - totalExpensesForInverse - totalGainForInverse;
+    //   산식·분기 합은 계산명세서와 **공용 leaf**를 쓴다 — 종전엔 여기만 역산이고 명세서는
+    //   파트 합이라 같은 화면에서 취득가액이 갈렸다(`redev-acquisition-inverse.ts` 주석 참조).
+    const branchTotals = redevBranchTotals(r);
+    const inverseAcquisition = inverseRedevAcquisition({
+      totalTransferPrice: totalTransferPrice || 0,
+      totalExpenses: branchTotals.expenses,
+      totalGain: branchTotals.gain,
+    });
     setNum("acquisitionPrice", "total", inverseAcquisition);
     // 필요경비 합계는 redev 분기 합으로 이미 설정됨 — 덮어쓰기 금지.
   } else if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
