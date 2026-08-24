@@ -7,6 +7,7 @@ import { generateTitle } from "./title-generator";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import { idOfSnapshotKey } from "@/lib/calc/building-std-snapshot-keys";
+import { isBuildingStdSnapshotApplicable } from "@/lib/calc/building-std-snapshot-applicability";
 import type { LocalTaxType } from "./types";
 
 /**
@@ -24,7 +25,11 @@ export function extractRelevantBuildingStdSnapshots(
   const relevant: Record<string, BuildingStdPriceFormState> = {};
   for (const k of keys) {
     const id = idOfSnapshotKey(k);
-    if (id && inputStr.includes(id)) relevant[k] = all[k];
+    // 소속 + **적용성**(그 계산의 조건이 아직 성립하는가) — 결과탭 렌더와 같은 술어를 쓴다.
+    // 여기서 걸러야 서버 PDF(input_data.buildingStdSnapshots에서 재유도)도 함께 정리된다.
+    if (id && inputStr.includes(id) && isBuildingStdSnapshotApplicable(k, inputData)) {
+      relevant[k] = all[k];
+    }
   }
   return Object.keys(relevant).length > 0 ? relevant : undefined;
 }

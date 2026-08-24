@@ -187,7 +187,15 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
       transStructureKey: "rc", transUsageNo: "2", transLandPrice: "1400000",
     };
     useBuildingStdSnapshotStore.setState({ snapshots: { "bsp-asset-r-redev-phd": redevForm } });
-    const inputData = { assets: [{ assetId: "asset-r" }] };
+    // 트리거 필드를 실제 폼과 같이 채운다 — 적용성 게이트(L-1)가 이 값으로 판정한다.
+    const inputData = {
+      assets: [{
+        assetId: "asset-r",
+        useEstimatedAcquisition: true,
+        acquisitionDate: "2003-05-10",
+        redevFirstDisclosureDate: "2005-04-30",
+      }],
+    };
 
     // 규약 편입(idOfSnapshotKey) 미적용이면 여기서 false — 계산서가 조용히 사라진다.
     expect(hasBuildingStdReport(inputData)).toBe(true);
@@ -205,6 +213,56 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(
       screen.getAllByTestId("nts-bsp-1-transfer").filter((el) => (el.textContent ?? "").includes("○")).length,
     ).toBe(0);
+  });
+
+  /**
+   * L-1 — §164⑦ 트리거가 꺼지면 그 스냅샷의 계산서도 사라져야 한다.
+   * 계획서: docs/00-pm/redev-phd-snapshot-staleness-gate.plan.md
+   *
+   * 소속 판정이 `inputStr.includes(id)` 뿐이라, 스냅샷을 만든 **조건이 아직 성립하는지**는
+   * 아무도 보지 않았다. 취득일을 정정해 트리거가 풀려도 계산서 2장이 계속 찍혔다(2026-08-24 실측).
+   */
+  describe("L-1: §164⑦ 트리거 상태와 계산서 노출", () => {
+    const redevSnap = () => ({
+      ...initialBuildingStdPriceForm,
+      taxType: "transfer" as const,
+      builtYear: "2001", floorArea: "84.9",
+      acquisitionYear: "2003", transferYear: "2005",
+      acqStructureKey: "rc", acqUsageNo: "2", acqLandPrice: "1400000",
+      transStructureKey: "rc", transUsageNo: "2", transLandPrice: "1400000",
+    });
+    const assetOf = (over: Record<string, unknown>) => ({
+      assets: [{
+        assetId: "asset-r",
+        assetKind: "redevelopment_apt",
+        useEstimatedAcquisition: true,
+        acquisitionDate: "2003-05-10",
+        redevFirstDisclosureDate: "2005-04-30",
+        ...over,
+      }],
+    });
+
+    it("V-1 트리거 OFF(취득일을 최초공시일 이후로 정정) → 계산서 0장", () => {
+      useBuildingStdSnapshotStore.setState({ snapshots: { "bsp-asset-r-redev-phd": redevSnap() } });
+      const inputData = assetOf({ acquisitionDate: "2010-03-01" });
+      expect(hasBuildingStdReport(inputData)).toBe(false);
+      const { container } = render(<BuildingStdPriceReportSection inputData={inputData} />);
+      expect(container.firstChild).toBeNull();
+    });
+
+    it("V-2 트리거 ON은 그대로 2장 (과잉 차단 방지)", () => {
+      useBuildingStdSnapshotStore.setState({ snapshots: { "bsp-asset-r-redev-phd": redevSnap() } });
+      const inputData = assetOf({});
+      expect(hasBuildingStdReport(inputData)).toBe(true);
+      render(<BuildingStdPriceReportSection inputData={inputData} />);
+      expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
+    });
+
+    it("V-3 실가 모드로 되돌리면(useEstimatedAcquisition=false) 0장", () => {
+      useBuildingStdSnapshotStore.setState({ snapshots: { "bsp-asset-r-redev-phd": redevSnap() } });
+      const inputData = assetOf({ useEstimatedAcquisition: false });
+      expect(hasBuildingStdReport(inputData)).toBe(false);
+    });
   });
 
   it("소속되지 않는 스냅샷(다른 assetId)은 렌더 안 함", () => {

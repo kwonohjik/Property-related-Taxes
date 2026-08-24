@@ -21,6 +21,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { prefillAcqLandPrice } from "@/lib/calc/phd-acq-land-price-track";
+import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
@@ -39,10 +40,8 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     const D = parseAmount(asset.redevManagementDisposalHousingPrice);
     if (rights <= 0 || D <= 0) return null;
 
-    const provisionTriggered =
-      !!asset.acquisitionDate &&
-      !!asset.redevFirstDisclosureDate &&
-      new Date(asset.acquisitionDate) < new Date(asset.redevFirstDisclosureDate);
+    // 이 지점은 위 `useEstimatedAcquisition` 조기 반환 뒤라 환산 모드가 보장된다.
+    const provisionTriggered = isRedevPhdTriggered(asset);
 
     const A = parseAmount(asset.redevFirstDisclosureHousingPrice);
     const area = parseDecimal(asset.redevLandArea);
@@ -157,10 +156,15 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     asset.actualSalePrice,
   ]);
 
-  const isPreDisclosureTriggered =
-    !!asset.acquisitionDate &&
-    !!asset.redevFirstDisclosureDate &&
-    new Date(asset.acquisitionDate) < new Date(asset.redevFirstDisclosureDate);
+  /**
+   * §164⑦ 본문 발동 — 판정은 `lib/calc/redev-phd-trigger.ts` **단일 소스**.
+   *
+   * 종전에는 이 파일 안에서만 같은 식이 두 번 복제돼 있었고, 결과탭 계산서 게이트(L-1)가
+   * 세 번째가 될 참이었다. 갈리면 「화면에는 블록이 없는데 계산서는 나오는」 어긋남이 된다.
+   * (이 컴포넌트는 상위 `RedevelopmentBlock`이 환산 모드에서만 렌더하므로
+   *  술어의 `useEstimatedAcquisition` 조건은 항상 충족된다 — 동작 동일.)
+   */
+  const isPreDisclosureTriggered = isRedevPhdTriggered(asset);
 
   const landAreaNumber = parseDecimal(asset.redevLandArea) || undefined;
 

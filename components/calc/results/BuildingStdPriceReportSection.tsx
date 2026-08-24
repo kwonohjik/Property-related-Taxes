@@ -20,6 +20,7 @@ import {
   snapshotKeyTimepoint,
   snapshotKindLabel,
 } from "@/lib/calc/building-std-snapshot-keys";
+import { isBuildingStdSnapshotApplicable } from "@/lib/calc/building-std-snapshot-applicability";
 import { BUILDING_STD_FIRST_YEAR } from "@/lib/calc/phd-building-std-batch";
 import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
 import { buildNtsReportModel, type NtsReportModel, type NtsReportInstance } from "@/lib/calc/nts-report-adapter";
@@ -34,7 +35,10 @@ export function hasBuildingStdReport(inputData: Record<string, unknown> | undefi
   const inputStr = JSON.stringify(inputData);
   return keys.some((k) => {
     const id = idOfSnapshotKey(k);
-    return id !== "" && inputStr.includes(id);
+    // 소속(자산이 존재하는가) + 적용성(그 계산의 **조건이 아직 성립하는가**) 둘 다 봐야 한다.
+    // 적용성 게이트가 없던 동안, 재개발 취득일을 정정해 §164⑦ 트리거가 풀려도 계산서가
+    // 계속 나왔다(2026-08-24 실측). 판정은 `building-std-snapshot-applicability` 단일 소스.
+    return id !== "" && inputStr.includes(id) && isBuildingStdSnapshotApplicable(k, inputData);
   });
 }
 
@@ -63,6 +67,8 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
     for (const [key, snap] of Object.entries(snapshots)) {
       const id = idOfSnapshotKey(key);
       if (id === "" || !inputStr.includes(id)) continue;
+      // 적용성 게이트 — `hasBuildingStdReport`와 **같은 술어**여야 한다(섹션 유무와 내용 어긋남 방지).
+      if (!isBuildingStdSnapshotApplicable(key, inputData)) continue;
       try {
         const result = calcBuildingStandardPrice(toEngineInput(snap));
         let model = buildNtsReportModel(buildNtsReportContext(snap), result);

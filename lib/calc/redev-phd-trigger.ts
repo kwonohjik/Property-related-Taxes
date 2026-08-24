@@ -1,0 +1,111 @@
+/**
+ * 재개발 환산취득가 — §164⑦ 본문 발동 여부 (단일 소스).
+ *
+ * 「소득세법 시행령」 제164조 제7항 본문은 취득 당시 개별주택가격·공동주택가격이
+ * **고시되지 않았던** 경우에 최초 공시분에서 취득당시 라목값을 역산하게 한다.
+ * 재개발 환산(§166③)은 그 라목값을 분자로 쓰므로 같은 게이트를 탄다.
+ *
+ * ## 왜 뽑았는가
+ *
+ * 같은 판정이 세 곳에 복제돼 있었고(UI 2 + validate 1), 여기에 계산서 노출 게이트가
+ * 네 번째로 붙을 참이었다. 조건이 갈리면 「화면에는 블록이 없는데 계산서는 나오는」
+ * 어긋남이 조용히 생긴다 — 실제로 L-1이 그 형태의 결함이다.
+ * 계획서: `docs/00-pm/redev-phd-snapshot-staleness-gate.plan.md`
+ *
+ * ## ⚠️ `transfer-tax-validate-redev.ts`는 여기에 합치지 않았다
+ *
+ * 그쪽 조건에는 `isHousingRightReceiveEstimated`(housing+right+receive+estimated →
+ * §164⑤ 별도 산식) **배제가 하나 더** 붙어 있고, 그 플래그는 validate 내부에서 계산된다.
+ * 술어를 그 인자까지 받도록 넓히면 UI·게이트 호출부가 쓰지도 않는 인자를 나르게 된다.
+ * ⇒ **조건이 진짜로 같은 곳만** 이 함수를 쓴다. 합치려면 그 플래그의 소재부터 정리할 것.
+ *
+ * ## ⚠️ `isPhdEligible`(`phd-eligibility.ts`)과도 별개다
+ *
+ * 그쪽은 **의제취득일(1985-01-01) 보정**이 있다. 최초공시일이 2005/2006인 실무 입력에서는
+ * 두 판정 결과가 같지만(보정이 결과를 바꾸려면 최초공시일 ≤ 1985여야 한다), 같은 함수로
+ * 묶으면 재개발 트리거의 의미가 조용히 바뀔 수 있다. 통합은 별건으로 검토할 것.
+ */
+
+/** 판정에 필요한 필드만 — 폼 전체(AssetForm)를 요구하지 않아 저장된 input_data에도 쓸 수 있다. */
+export interface RedevPhdTriggerFields {
+  /** ⑤ 「종전 부동산 취득가액」 라디오 — 환산 모드에서만 이 축이 열린다 */
+  useEstimatedAcquisition?: boolean;
+  acquisitionDate?: string;
+  /** 개별주택가격/공동주택가격 최초 공시일 (단독 2005-04-30 · 공동 2006-04-28) */
+  redevFirstDisclosureDate?: string;
+}
+
+/**
+ * §164⑦ 본문 발동 여부. 환산 모드 + 두 날짜가 모두 있고 취득일이 최초공시일보다 이르면 true.
+ *
+ * 날짜 비교는 `Date` 객체로 한다 — 종전 인라인 판정과 **같은 연산**을 유지해 치환이
+ * 동작을 바꾸지 않게 한다(문자열 비교로 바꾸면 비정형 입력에서 결과가 갈릴 수 있다).
+ */
+export function isRedevPhdTriggered(a: RedevPhdTriggerFields): boolean {
+  if (!a.useEstimatedAcquisition) return false;
+  if (!a.acquisitionDate || !a.redevFirstDisclosureDate) return false;
+  return new Date(a.acquisitionDate) < new Date(a.redevFirstDisclosureDate);
+}
+
+/**
+ * §164⑦ PHD 환산 **섹션이 지금도 열려 있는가** — 그 섹션이 이 계산의 유일한 생산자다.
+ *
+ * 트리거(모드+날짜)만 보면 절반만 막는다. `RedevelopmentValuationSection`은 아래 5중 게이트를
+ * 모두 통과해야 렌더되고, 그중 어느 하나가 꺼져도 §164⑦ 계산은 적용되지 않는다:
+ *
+ * | # | 위치 | 조건 |
+ * |---|---|---|
+ * | 1 | `AssetSectionAcquisition.tsx:327` | `assetKind ∈ {redevelopment_apt, right_to_move_in}` |
+ * | 2 | `AssetSectionAcquisition.tsx:324` | 승계조합원 **입주권**이 아님(`isSuccessorRightTransfer`) |
+ * | 3 | `RedevelopmentBlock.tsx:373` | `redevIsSuccessorMember !== "yes"` |
+ * | 4 | `RedevelopmentBlock.tsx:395` | 환산 모드(`useEstimatedAcquisition`) |
+ * | 5 | `RedevelopmentBlock.tsx:407` | 단독주택 출자 §164⑤ 분기가 아님(`isHousingContribEstimatedBranch`) |
+ *
+ * ## ⚠️ 미확인 필드는 **차단하지 않는다**
+ *
+ * 각 조건은 그 근거 필드가 **명시적으로 확인될 때만** false를 낸다. 구버전·부분 `input_data`에
+ * 필드가 없으면 판단을 보류(통과)한다 — 과잉 차단은 「계산했는데 계산서가 없다」는 반대 방향
+ * 결함이고, 이미 저장된 이력을 지우는 쪽이 더 나쁘다.
+ *
+ * ## ⚠️ 조건 2·3·5는 다른 파일의 술어와 **같은 판정**이어야 한다
+ *
+ * 그 술어들(`isSuccessorRightTransfer`·`shouldShowRedevValuationSection`)은 `AssetForm` 전체를
+ * 받도록 되어 있어 `Record<string, unknown>`인 저장 input_data에는 그대로 쓸 수 없다.
+ * ⇒ 여기서는 조건을 직접 표현하고, **동기화는 anchor가 고정한다**
+ * (`__tests__/calc/redev-phd-trigger.test.ts` — 「가시성 술어 동기화」 describe).
+ * 저쪽 조건을 바꾸면 그 anchor가 먼저 빨개진다.
+ */
+export interface RedevPhdSectionFields extends RedevPhdTriggerFields {
+  assetKind?: unknown;
+  isSuccessorRightToMoveIn?: unknown;
+  redevIsSuccessorMember?: unknown;
+  redevOriginalAssetType?: unknown;
+  redevSubject?: unknown;
+  redevSettlementDirection?: unknown;
+}
+
+export function isRedevPhdSectionActive(a: RedevPhdSectionFields): boolean {
+  // 1) 자산 종류 축 — 값이 있는데 재개발 계열이 아니면 블록 자체가 없다.
+  if (
+    typeof a.assetKind === "string" &&
+    a.assetKind !== "redevelopment_apt" &&
+    a.assetKind !== "right_to_move_in"
+  ) {
+    return false;
+  }
+  // 2) 승계조합원 입주권 — §166①의 조합원이 아니라 전용 블록(SuccessorRightAcquisitionBlock)으로 간다.
+  if (a.assetKind === "right_to_move_in" && a.isSuccessorRightToMoveIn === true) return false;
+  // 3) 승계조합원(완공APT) — ⑤ 섹션 전체를 숨긴다.
+  if (a.redevIsSuccessorMember === "yes") return false;
+  // 4) 환산 모드 + 취득일 < 최초공시일
+  if (!isRedevPhdTriggered(a)) return false;
+  // 5) 단독주택 출자 §164⑤ 2-point 분기 — 전용 카드가 대신 뜬다(§164⑦ 아님).
+  if (
+    a.redevOriginalAssetType === "housing" &&
+    (a.redevSubject === "right" || a.assetKind === "right_to_move_in") &&
+    a.redevSettlementDirection === "receive"
+  ) {
+    return false;
+  }
+  return true;
+}
