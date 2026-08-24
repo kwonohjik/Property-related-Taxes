@@ -35,6 +35,7 @@ import {
   buildNtsReportContext,
   computeValuationLandTotal,
   buildAddressPatch,
+  isRestorableSnapshot,
 } from "@/lib/calc/building-std-price-form";
 import { buildNtsReportModel, type NtsReportModel } from "@/lib/calc/nts-report-adapter";
 import {
@@ -139,10 +140,14 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
        * ⚠️ 모달 경로(`BuildingStdPriceModalButton`)는 **복원분에만** 이 필터를 걸어 호출부
        *    prefill을 살린다 — 여기서 병합 결과 전체를 버리면 prefill까지 사라지기 때문이다.
        *    이 가드는 폼을 **직접 렌더하는 경로**(독립 페이지·테스트)의 이중 방어로 남긴다.
+       *
+       * 🔑 판정은 모달과 **같은 술어**(`isRestorableSnapshot`)를 쓴다. 종전에는 여기만
+       *    `taxType`을 직접 비교해, 2선 방어가 1선보다 **약했다** — `taxType: "transfer"`인
+       *    배치 스냅샷(취득 ≤2000 acqBase)을 그대로 통과시켰다(2026-08-24 리뷰 지적).
        */
-      ...(lockedTaxType && initialForm?.taxType && initialForm.taxType !== lockedTaxType
-        ? {}
-        : (initialForm ?? {})),
+      ...(isRestorableSnapshot(initialForm as BuildingStdPriceFormState | undefined, lockedTaxType)
+        ? (initialForm ?? {})
+        : {}),
       /**
        * 🔴 세목 고정은 **복원 스냅샷보다 뒤**에 와야 한다 — 호출부 계약이 저장값을 이긴다.
        *

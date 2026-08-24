@@ -7,11 +7,12 @@
  * + 자산 폼 값 자동입력(prefill) 검증 — 연면적·토지면적·취득/양도 연도·일자.
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 
 afterEach(cleanup);
 import { BuildingStdPriceForm } from "@/components/calc/building-std-price/BuildingStdPriceForm";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
+import { initialBuildingStdPriceForm } from "@/lib/calc/building-std-price-form";
 
 const ADDR = {
   road: "서울특별시 서초구 남부순환로297나길 13",
@@ -192,8 +193,79 @@ describe("BuildingStdPriceForm — 세목 불일치 복원분", () => {
     expect(screen.queryByDisplayValue("1998")).not.toBeNull();
   });
 
+  /**
+   * 🔴 **폼 직접 렌더 경로의 2선 방어**가 1선(모달)보다 약하면 안 된다.
+   *
+   * 취득 ≤2000 배치 스냅샷은 `taxType: "transfer"`로 나온다 — 세목만 보는 가드는
+   * **그대로 통과시킨다**(2026-08-24 리뷰 지적). 두 층이 같은 술어를 써야 한다.
+   */
+  it("🔴 transfer 세목이어도 배치 산출분은 반영하지 않는다 (2선 방어)", () => {
+    render(
+      <BuildingStdPriceForm
+        lockedTaxType="transfer"
+        initialForm={{ ...restored("transfer"), origin: "batch" }}
+        onResult={() => {}}
+      />,
+    );
+    expect(screen.queryByDisplayValue("1998")).toBeNull();
+  });
+
   it("lockedTaxType이 없으면(독립 페이지) 복원분을 그대로 쓴다 — 회귀 방어", () => {
     render(<BuildingStdPriceForm initialForm={restored("inheritance_gift")} onResult={() => {}} />);
     expect(screen.queryByDisplayValue("1998")).not.toBeNull();
+  });
+});
+
+/**
+ * B-6 — 배치 산출 스냅샷은 **복원하지 않고 이유를 밝힌다**.
+ * 계획서: docs/00-pm/building-std-snapshot-key-namespace.plan.md (B-6)
+ */
+describe("BuildingStdPriceModalButton — 배치 산출 스냅샷", () => {
+  const batchSnap = {
+    ...initialBuildingStdPriceForm,
+    origin: "batch" as const,
+    taxType: "transfer" as const,
+    builtYear: "1998",
+  };
+
+  it("배치 스냅샷은 복원하지 않고, 그 이유를 안내한다", async () => {
+    const { useBuildingStdSnapshotStore } = await import("@/lib/stores/building-std-snapshot-store");
+    useBuildingStdSnapshotStore.setState({ snapshots: { "bsp-b1-gb-acq": batchSnap } });
+    render(
+      <BuildingStdPriceModalButton
+        lockedTaxType="transfer"
+        snapshotKey="bsp-b1-gb-acq"
+        applyTimePoint="acquisition"
+        prefill={{ floorArea: "84.9" }}
+        onApply={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /건물 기준시가 계산/ }));
+    const dialog = await screen.findByRole("dialog");
+    // 배치 값(신축연도 1998)은 얹히지 않는다
+    expect(within(dialog).queryByDisplayValue("1998")).toBeNull();
+    // 호출부 prefill은 살아 있다
+    expect(within(dialog).queryByDisplayValue("84.9")).not.toBeNull();
+    // 이유를 밝힌다
+    expect(within(dialog).queryByTestId("bsp-restore-skipped-notice")).not.toBeNull();
+  });
+
+  it("단일시점 스냅샷은 복원하고 안내를 띄우지 않는다", async () => {
+    const { useBuildingStdSnapshotStore } = await import("@/lib/stores/building-std-snapshot-store");
+    useBuildingStdSnapshotStore.setState({
+      snapshots: { "bsp-b2-gb-acq": { ...batchSnap, origin: "single" as const } },
+    });
+    render(
+      <BuildingStdPriceModalButton
+        lockedTaxType="transfer"
+        snapshotKey="bsp-b2-gb-acq"
+        applyTimePoint="acquisition"
+        onApply={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /건물 기준시가 계산/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByDisplayValue("1998")).not.toBeNull();
+    expect(within(dialog).queryByTestId("bsp-restore-skipped-notice")).toBeNull();
   });
 });

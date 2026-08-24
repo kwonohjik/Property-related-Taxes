@@ -5,6 +5,7 @@
  * 엔진을 클라이언트에서 직접 호출(정적 데이터·순수 함수). 용도는 번호(usageNo) 기반.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { phdTimepointLabel } from "@/lib/calc/building-std-snapshot-keys";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type {
   BuildingStandardPriceInput,
@@ -105,6 +106,22 @@ export const initialApartmentConversionForm: ApartmentConversionForm = {
 
 export interface BuildingStdPriceFormState {
   taxType: BuildingStdPriceTaxType;
+  /**
+   * 이 스냅샷을 만든 **생산자** — 복원 대상 판정 전용(표시·엔진 무관).
+   *
+   * 배치 모달과 단일시점 모달은 **같은 키**를 쓰는데(`bsp-{id}-gb-acq` 등) 담는 것이 다르다:
+   *  · `batch`  — 계산서 재구성용. 3시점을 transfer 폼(2시점)에 담을 수 없어 **시점마다 따로**
+   *    재현한다(`phd-batch-snapshots.ts`). ≥2001은 valuation 1시점(`val*` 트랙),
+   *    ≤2000은 transfer 모드지만 **양도 시점이 2001 더미**다 — 어느 쪽도 정정 입력이 아니다.
+   *  · `single` — 단일시점 모달이 저장한 **정정용** 폼 입력(`acq*`/`trans*` 트랙).
+   *
+   * 다른 생산자의 스냅샷을 복원하면 필드 트랙이 어긋나 「값이 복원된 척하지만 계산 불가」가 된다.
+   * 종전에는 `taxType` 불일치로 걸렀는데, 그건 **세목이지 생산자가 아니다** — 배치가 transfer
+   * 모드를 쓰게 되는 날 조용히 깨진다(2026-08-24 B-6).
+   *
+   * ⚠️ 구버전 저장분에는 **없다**(`undefined`). 그때는 판정 불능이므로 `taxType` 판정만 적용한다.
+   */
+  origin?: "batch" | "single";
   /** 상증 세분(계산서 Ⅰ 상속세/증여세 ○ 위치) — 표시 전용, 엔진 미전달 */
   inheritanceGiftKind: "inheritance" | "gift";
   /** 계산서 Ⅰ 일자(양도일/상속·증여일) — 선택, 서식 표기 전용. 미입력 시 "{연도}년" */
@@ -206,6 +223,8 @@ export function emptyCompositePart(): CompositePartForm {
 
 export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   taxType: "transfer",
+  // 폼이 만드는 스냅샷은 단일시점 모달의 정정용 입력이다(배치는 phdBatchToSnapshots가 따로 찍는다).
+  origin: "single",
   inheritanceGiftKind: "inheritance",
   eventDate: "",
   acquisitionEventDate: "",
@@ -373,6 +392,48 @@ function applyAncillary(base: BuildingStandardPriceInput, f: BuildingStdPriceFor
  */
 function isSameYearTransfer(acqYear: number | undefined, transferYear: number | undefined): boolean {
   return acqYear !== undefined && acqYear === transferYear;
+}
+
+/**
+ * 복원 스냅샷을 **정정 소스로 쓸 수 있는가** — 모달이 `initialForm`에 얹기 전 판정.
+ *
+ * 같은 키에 두 생산자가 쓴다(B-6). 세 조건은 **각각 다른 위험**을 막는다:
+ *
+ * ### 1) `origin === "batch"` — 배치 산출물
+ *
+ * ⚠️ **「valuation이라서」가 아니다.** 배치 출력은 두 갈래이고 **둘 다** 이 폼의 정정 입력이
+ * 될 수 없다:
+ *  · 시점연도 ≥2001 → valuation 1시점(`val*` 트랙). 양도 2시점 폼에 얹으면 취득당시 칸이 빈다.
+ *  · 시점연도 ≤2000 → **`taxType: "transfer"`** 로 나온다(`buildTransferAcqSnapshot`).
+ *    필드 트랙은 같지만 **양도 시점이 2001 더미**다 — 복원하면 「양도시 적용」이 더미
+ *    데이터로 계산한 값을 폼에 밀어넣는다. 이쪽은 아래 `taxType` 조건으로 **막히지 않는다**.
+ *
+ * ⇒ 「transfer 배치는 트랙이 같으니 복원해도 된다」로 가드를 좁히지 말 것. 더미 시점이 이유다.
+ *
+ * ### 2) `taxType` 불일치 — 세목 라디오가 있던 시절 다른 세목으로 저장된 분
+ *
+ * 잠긴 세목으로 열리는데 트랙이 반대라 「값이 복원된 척하지만 계산 불가」가 된다.
+ *
+ * ### 3) `origin` 부재 + **배치 전용 키** — 구버전 저장분 보정
+ *
+ * 이력(`input_data.buildingStdSnapshots`)에서 재수화된 구버전 분에는 `origin`이 없다.
+ * 그중 **배치만 만드는 키**(`-phd-{acq|first|transfer}`·`-cb-first` — `phdTimepointLabel`이
+ * 식별)는 생산자를 키로 알 수 있으므로 배치로 취급한다. 그러지 않으면 ≤2000 배치 저장분이
+ * 위 1)의 더미 시점 위험을 그대로 안고 복원된다(2026-08-24 리뷰 지적).
+ *
+ * (계획서: `docs/00-pm/building-std-snapshot-key-namespace.plan.md`)
+ */
+export function isRestorableSnapshot(
+  restored: BuildingStdPriceFormState | undefined,
+  lockedTaxType?: BuildingStdPriceTaxType,
+  /** 스냅샷 키 — 주면 `origin`이 없는 구버전 분도 배치 전용 키로 판별한다. */
+  snapshotKey?: string,
+): boolean {
+  if (!restored) return false;
+  if (restored.origin === "batch") return false;
+  if (!restored.origin && snapshotKey && phdTimepointLabel(snapshotKey)) return false;
+  if (lockedTaxType && restored.taxType && restored.taxType !== lockedTaxType) return false;
+  return true;
 }
 
 export function toEngineInput(f: BuildingStdPriceFormState): BuildingStandardPriceInput {

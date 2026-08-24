@@ -201,14 +201,17 @@ export function phdBatchToSnapshots(
             ? { year: point.year, landPricePerM2: landPrice2001PerM2 }
             : undefined;
       if (effPoint) {
-        out[snapKey] =
-          resolved.length === 1
+        out[snapKey] = {
+          ...(resolved.length === 1
             ? buildTransferAcqSnapshot(resolved[0], builtYear, effPoint)
-            : buildTransferAcqCompositeSnapshot(resolved, builtYear, effPoint);
+            : buildTransferAcqCompositeSnapshot(resolved, builtYear, effPoint)),
+          // 생산자 표식 — 단일시점 모달이 이 스냅샷을 **복원 소스로 쓰지 않게** 한다(B-6).
+          origin: "batch",
+        };
       }
       return;
     }
-    out[snapKey] = buildValuationSnapshot(resolved, builtYear, point);
+    out[snapKey] = { ...buildValuationSnapshot(resolved, builtYear, point), origin: "batch" };
   };
 
   // housing — 3시점
