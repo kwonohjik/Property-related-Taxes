@@ -137,10 +137,36 @@ PR #1267에서 재개발 호출부에 대해 고친 것과 **같은 결함**이�
 
 두 호출부에 `lockedTaxType="transfer"` 추가. 1줄 × 2.
 
-### 검증
+### 검증 — ✅ 완료 (2026-08-24)
 
-- 모달을 열어 세목 라디오가 **없음**을 단언(기존 `reduction-phd-building-stdprice.test.tsx`에 추가)
-- mutation probe: prop 제거 → 실패 확인
+- anchor 작성 → **먼저 실패 확인**(`expected <input …> to be null` — 라디오가 실제로 렌더됐다)
+- 두 호출부에 `lockedTaxType="transfer"` 추가 → 통과
+- **anchor를 전수화했다**: 처음엔 첫 런처만 열어 확인했는데, mutation probe로 **둘째 호출부가
+  사각지대**임을 실측했다(둘째만 제거해도 통과). `it.each`로 런처 2개를 각각 연다 —
+  이제 어느 쪽을 제거해도 실패한다.
+- 회귀: vitest **전체 16,237건** · 건물기준시가 모달 E2E **40건** · tsc 0 · lint 0
+
+### 🔴 리뷰가 잡은 **잔여 구멍** — `lockedTaxType`이 복원 스냅샷에 졌다
+
+`BuildingStdPriceForm.tsx:111`에서 lock 스프레드가 `initialForm`(= `{...restoredForm, ...prefillForm}`)
+**보다 앞**에 있어, 복원된 스냅샷의 `taxType`이 lock을 덮어썼다.
+
+⇒ **이 버그를 이미 겪은 사용자는 고쳐도 고쳐지지 않는다.** 세목 라디오가 있던 시절 상증 모드로
+저장한 스냅샷(`taxType: "inheritance_gift"`)은 sessionStorage와 이력
+`input_data.buildingStdSnapshots` 양쪽에 남아 이력을 다시 열 때 재수화된다
+(`HistoryClient.tsx:268`). 모달을 열면 **상증 1시점으로 복원되는데 라디오는 숨겨져 되돌릴 길이
+없고**, 적용 버튼이 미배선 `onApply`를 불러 침묵 no-op이 되며 그 스냅샷이 다시 저장된다.
+
+⇒ lock 스프레드를 `initialForm` **뒤**로 옮겼다 — 호출부 계약이 저장값을 이긴다.
+이 변경은 `lockedTaxType`을 쓰는 **호출부 17곳 전체**에 영향하므로 전체 vitest·모달 E2E 40건으로
+회귀를 확인했다. mutation probe로 구별력 실측(순서 원복 → 상증 1시점 모드로 열려 실패).
+
+### anchor를 라벨 무관 단언으로 바꿨다
+
+`queryByRole("radio", { name: /상속·증여\(1시점\)/ })`는 라디오가 올바로 숨겨졌을 때와
+**옵션 라벨이 개칭됐을 때** 모두 null이라, 후자에서 테스트가 통과하며 아무것도 검증하지 않는다
+(CLAUDE.md의 `toContainText("0")` 무력화와 같은 실패 모드). 그룹 자체의 부재
+(`dialog.querySelector('[name="taxType"]')`)로 단언한다.
 
 ---
 

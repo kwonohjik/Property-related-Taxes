@@ -207,6 +207,14 @@ export function ReductionPhdInput({
                 <BuildingStdPriceModalButton
                   buttonLabel="건물 기준시가 계산"
                   transferSectionLabel="최초고시 시점"
+                  /**
+                   * 🔴 세목 고정 — 없으면 모달에 세목 라디오가 뜨고, 사용자가
+                   * 「상속·증여(1시점)」로 바꾸면 결과 카드가 `onApply`(여기선 **미배선**)를
+                   * 부르는 「이 금액 적용」 버튼을 낸다. 두 필드 중 아무것도 안 채워지는
+                   * **침묵 no-op**인데 스냅샷은 저장돼, 결과탭에 「감면 PHD 환산 §164⑤」
+                   * 라벨을 단 상증 계산서가 남는다. 이 호출부는 양도 2시점 전용이다.
+                   */
+                  lockedTaxType="transfer"
                   initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
                   snapshotKey={buildingStdSnapshotKey}
                   prefill={{
@@ -235,6 +243,14 @@ export function ReductionPhdInput({
                 <BuildingStdPriceModalButton
                   buttonLabel="건물 기준시가 계산"
                   transferSectionLabel="최초고시 시점"
+                  /**
+                   * 🔴 세목 고정 — 없으면 모달에 세목 라디오가 뜨고, 사용자가
+                   * 「상속·증여(1시점)」로 바꾸면 결과 카드가 `onApply`(여기선 **미배선**)를
+                   * 부르는 「이 금액 적용」 버튼을 낸다. 두 필드 중 아무것도 안 채워지는
+                   * **침묵 no-op**인데 스냅샷은 저장돼, 결과탭에 「감면 PHD 환산 §164⑤」
+                   * 라벨을 단 상증 계산서가 남는다. 이 호출부는 양도 2시점 전용이다.
+                   */
+                  lockedTaxType="transfer"
                   initialAddress={jibun ? { road: "", jibun, building: "", detail: "", lng: "", lat: "" } : undefined}
                   snapshotKey={buildingStdSnapshotKey}
                   prefill={{

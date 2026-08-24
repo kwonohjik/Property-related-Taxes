@@ -108,7 +108,6 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
   const [f, setF] = useState<BuildingStdPriceFormState>(() => {
     const base: BuildingStdPriceFormState = {
       ...initialBuildingStdPriceForm,
-      ...(lockedTaxType ? { taxType: lockedTaxType } : {}),
       ...(initialAddress
         ? {
             addressRoad: initialAddress.road,
@@ -122,6 +121,20 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
         : {}),
       // 직전 입력 스냅샷 복원(정정) — 소재지 prefill보다 우선(스냅샷에 소재지 포함)
       ...(initialForm ?? {}),
+      /**
+       * 🔴 세목 고정은 **복원 스냅샷보다 뒤**에 와야 한다 — 호출부 계약이 저장값을 이긴다.
+       *
+       * 종전에는 이 스프레드가 `initialForm`보다 **앞**에 있어, 복원된 스냅샷의 `taxType`이
+       * lock을 덮어썼다. 그 결과: 세목 라디오가 없던 시절 상증 모드로 저장한 스냅샷
+       * (`taxType: "inheritance_gift"`)을 가진 사용자는, 호출부가 `lockedTaxType="transfer"`로
+       * 고쳐진 뒤에도 모달을 열면 **상증 1시점 모드로 복원되는데 라디오는 숨겨져 되돌릴 길이 없다**
+       * → 적용 버튼이 미배선 `onApply`를 불러 침묵 no-op이 되고 그 스냅샷이 다시 저장된다.
+       *
+       * 스냅샷은 sessionStorage와 이력 `input_data.buildingStdSnapshots` 양쪽에 남아
+       * 이력을 다시 열 때도 재수화된다(`HistoryClient.tsx:268`). 즉 과거 저장분이 계속 살아난다.
+       * (2026-08-24 코드 리뷰 지적 — `reduction-phd-building-stdprice.test.tsx`가 고정한다.)
+       */
+      ...(lockedTaxType ? { taxType: lockedTaxType } : {}),
     };
     // 상속·증여 평가연도는 eventDate에서 단일 도출(factory=normalize=UI 일치)
     return { ...base, valuationYear: deriveYearFromEventDate(base.eventDate) };
