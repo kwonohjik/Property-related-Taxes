@@ -8,11 +8,11 @@
 
 | # | 항목 | 심각도 | 성격 | 독립성 |
 |---|---|---|---|---|
-| **F1** | 다자산(묶음양도) gracePeriod 미연결 | 🔴 silent 오세액 | 배관 갭 | 독립 |
-| F2 | 기간 만료일 초일불산입(민법 §157) | 🟡 경계 1일 | 유권해석+엔진 | 독립 |
-| F3 | §155⑳ 시나리오 A 조기반환 갭 | 🟠 | 엔진 판정 | 독립(별 도메인) |
-| F4 | 3시점 모달 연면적 round2 미적용(홈택스 938원 차이) | 🟡 표시/정밀 | 환산 | 독립 |
-| F5 | ReductionPhdInput dual-truth 해소 | 🟠 | 리팩터 | 독립 |
+| ~~F1~~ ✅PR#759 | 다자산 gracePeriod 미연결 | 🔴 | 배관 | native per-property·⑬⑭ |
+| ~~F2~~ ✅PR#760 | 기간 만료일 초일불산입 | 🟡 | 엔진 | civilMonthsDeadline(국기법§4→민법§157·§160) |
+| ~~F3~~ ✅PR#761 | §155⑳ 시나리오 A 조기반환 갭 | 🟠 | 엔진 | canEarlyReturnPrhp·anchor P7 |
+| 🟠 F4 보류 | 3시점 연면적 round2(홈택스 938원) | 🟡 | 환산 | **재현 케이스 필요** — 주경로 이미 round2·엔진 no-op·근본원인 미확정(과대주장 금지) |
+| ~~F5~~ ✅PR#762 | ReductionPhdInput dual-truth | 🟠 | UI | buildAssetPhdSnapshot·자산 PHD 가져오기 버튼 활성화 |
 
 각 항목 독립적 → 개별 PR 권장. F1 최우선(과세 정확성 직접 영향).
 
