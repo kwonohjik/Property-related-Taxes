@@ -25,9 +25,8 @@ import type { PerPropertyBreakdown, RateGroup } from "@/lib/tax-engine/transfer-
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
-import { PublicExpropriationDetailCard } from "@/components/calc/results/transfer/TransferReductionRows";
-import { ReplacementLand77_2DetailCard } from "@/components/calc/results/transfer/ReplacementLand77_2DetailCard";
-import { GbDesignatedLand77_3DetailCard } from "@/components/calc/results/transfer/GbDesignatedLand77_3DetailCard";
+import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
 
 
 /**
@@ -64,6 +63,27 @@ function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
     totalTax: determinedTax + totalPenalty + localIncomeTax,
     steps: b.steps,
   };
+}
+
+/**
+ * 자산별 산출세액(참고) — 엔진이 다건 컨텍스트로 미리 계산한 `refCalculatedTax`.
+ *
+ * 🔴 **가드가 있어야 하는 이유**: 결과는 IndexedDB에 저장·복원된다. 옛 저장 결과·HMR 부분
+ * 적용 등으로 이 필드가 없는 breakdown이 도달할 수 있고, 그대로 `.toLocaleString()`을 부르면
+ * `TypeError`로 결과 페이지 전체가 죽는다. 없으면 「과세표준 기여분 × 세율 − 누진차감」으로
+ * 인라인 재계산한다(NaN 차단).
+ *
+ * 아코디언(`PropertyBreakdownAccordion`)과 감면 재계산 표(`MultiTransferTaxResultView`)가
+ * **같은 값**을 보여야 하므로 단일 소스로 둔다.
+ */
+export function resolveRefCalculatedTax(b: PerPropertyBreakdown): number {
+  if (typeof b.refCalculatedTax === "number") return b.refCalculatedTax;
+  if (b.isExempt) return 0;
+  const effectiveRate = (b.appliedRate ?? 0) + (b.surchargeRate ?? 0);
+  return Math.max(
+    0,
+    Math.floor((b.taxBaseShare ?? 0) * effectiveRate) - (b.progressiveDeduction ?? 0),
+  );
 }
 
 export function formatKRW(amount: number): string {
@@ -110,18 +130,9 @@ export function PropertyBreakdownAccordion({
 
   // 자산별 산출세액·결정세액(참고) — 엔진이 다건 컨텍스트로 미리 계산한 값 사용.
   // 자산이 1건일 때 합산 산출세액과 일치. 비교과세 적용 시 자산별 합 ≠ 합산 산출세액일 수 있어 "(참고)" 표기.
-  // 옛 데이터·HMR 부분 적용 등으로 새 필드가 누락된 경우 인라인 재계산 fallback (NaN 차단).
+  // 옛 데이터·HMR 부분 적용 등 누락 시 fallback은 `resolveRefCalculatedTax`가 담당(단일 소스).
   const effectiveRate = (breakdown.appliedRate ?? 0) + (breakdown.surchargeRate ?? 0);
-  const refCalculatedTaxFallback = breakdown.isExempt
-    ? 0
-    : Math.max(
-        0,
-        Math.floor((breakdown.taxBaseShare ?? 0) * effectiveRate) - (breakdown.progressiveDeduction ?? 0),
-      );
-  const refCalculatedTax =
-    typeof breakdown.refCalculatedTax === "number"
-      ? breakdown.refCalculatedTax
-      : refCalculatedTaxFallback;
+  const refCalculatedTax = resolveRefCalculatedTax(breakdown);
   const refDeterminedTax =
     typeof breakdown.refDeterminedTax === "number"
       ? breakdown.refDeterminedTax
@@ -317,16 +328,40 @@ export function PropertyBreakdownAccordion({
             </div>
           )}
 
-          {/* 비자발적 양도 감면 §77·§77의2·§77의3 — 자산별 ①~④ 구성 (최종 감면세액은 합산 재계산 카드) */}
-          {breakdown.publicExpropriationDetail?.isEligible && (
-            <PublicExpropriationDetailCard detail={breakdown.publicExpropriationDetail} aggregatedContext />
-          )}
-          {breakdown.replacementLandDetail?.isEligible && (
-            <ReplacementLand77_2DetailCard detail={breakdown.replacementLandDetail} aggregatedContext />
-          )}
-          {breakdown.gbDesignatedLandDetail?.isEligible && (
-            <GbDesignatedLand77_3DetailCard detail={breakdown.gbDesignatedLandDetail} aggregatedContext />
-          )}
+          {/*
+            감면·평가·판정 산출근거 — 단건·일괄과 **같은 공용 컴포넌트**를 재사용한다.
+
+            종전에는 §77·§77의2·§77의3 3종만 인라인 렌더해, 엔진이 `pickReductionDetails`·
+            `pickValuationDetails`(`transfer-tax-aggregate.ts`)로 자산별 breakdown에 실어 보낸
+            나머지 산출근거(비사업용 토지 정밀판정·다주택 중과 상세·§69 자경농지·§155⑳ 등)가
+            화면에서 버려졌다. 세액에는 영향이 없는 표시 갭이었다.
+
+            ⚠️ **다건 전용 렌더러를 새로 만들지 않는다** — 소스 동기화 가드
+            (`__tests__/api/transfer.route.bundled-swallows-special.test.ts`)가 공용 컴포넌트
+            파일만 검사하므로, 별도 목록을 두면 같은 침묵 누락이 재발한다.
+
+            `aggregatedContext`는 §77 계열 카드에서 ⑤ 감면세액·capping을 숨긴다 —
+            다건의 최종 감면세액은 조특법 §133 합산 재계산 카드가 낸다.
+            금액 prop은 자산별 **참고값**(`refCalculatedTax`·`taxBaseShare`)이다.
+          */}
+          <ReductionDetailCards
+            result={breakdown}
+            calculatedTax={refCalculatedTax}
+            taxBase={breakdown.taxBaseShare}
+            longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
+            aggregatedContext
+          />
+          <ValuationDetailCards
+            result={breakdown}
+            transferPrice={breakdown.transferPrice}
+            transferGain={breakdown.transferGain}
+            longTermDeduction={breakdown.longTermHoldingDeduction}
+            taxableIncome={breakdown.incomeAfterOffset}
+            assetKind={property?.form?.assets?.[0]?.assetKind}
+            {...(property?.form?.assets?.[0]?.saleSplitExemptionNote
+              ? { exemptionNote: property.form.assets[0].saleSplitExemptionNote }
+              : {})}
+          />
 
           {/* 신고서 양식 표 — 자산별 (PR-F2: printScoped 버튼 제거, 패널 per-property로 통일) */}
           <div className="mt-2">

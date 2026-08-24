@@ -52,6 +52,56 @@ export interface CommercialGainSplit {
   inheritedAcquisitionDetail?: InheritedAcquisitionDetail;
 }
 
+/**
+ * 🔴 §97②2호 **단서**(나목 채택)를 **PHD Case A 4부분** split에 반영한다 — 2026-08-13 F18.
+ * 주택분(`applyHousingProviso`)의 대칭 함수 — 같은 규칙·같은 축을 쓴다.
+ * 4부분 어댑터는 `swapToDirect`를 읽지 않아 단서가 통째로 무효였다(과다과세).
+ */
+function applyCommercialProviso(
+  base: CommercialGainSplit,
+  args: {
+    asset: MixedUseAssetInput;
+    derived: MixedUseDerivedAreas;
+    acqDerived: MixedUseDerivedAreas;
+    acqLandStd: number;
+    acqBuildingStd: number;
+    transferLandStd: number;
+    transferBuildingStd: number;
+    acqStdOverride: { housingStd?: number; commercialStd?: number };
+  },
+): CommercialGainSplit {
+  const { landAppraisalDed, buildingAppraisalDed } = resolvePartNecessaryExpense({
+    partDirect: undefined,
+    commonCapitalExpenditure: apportionAcquisitionPrice(
+      args.asset.capitalExpenditure ?? 0,
+      args.asset,
+      args.acqDerived,
+      args.acqStdOverride,
+    ).commercialAcqPrice,
+    commonTransferExpense: apportionTransferPrice(
+      args.asset.transferExpense ?? 0,
+      args.asset,
+      args.derived,
+    ).commercialTransferPrice,
+    acqLandStd: args.acqLandStd,
+    acqBuildingStd: args.acqBuildingStd,
+    transferLandStd: args.transferLandStd,
+    transferBuildingStd: args.transferBuildingStd,
+  });
+  const landGain = base.landTransferPrice - landAppraisalDed;
+  const buildingGain = base.buildingTransferPrice - buildingAppraisalDed;
+  return {
+    ...base,
+    landAcqPrice: 0,
+    buildingAcqPrice: 0,
+    landAppraisalDed,
+    buildingAppraisalDed,
+    landGain,
+    buildingGain,
+    totalGain: landGain + buildingGain,
+  };
+}
+
 export function calcCommercialGainSplit(
   commercialTransferPrice: number,
   asset: MixedUseAssetInput,
@@ -67,7 +117,22 @@ export function calcCommercialGainSplit(
   // Case A 4부분 안분 — 별도 어댑터 호출
   const fp = housingAcqResult?.phdResult?.fourPartApportionment;
   if (fp) {
-    return buildCommercialGainSplitFromFourPart(fp, asset, transferDate);
+    const fpSplit = buildCommercialGainSplitFromFourPart(fp, asset, transferDate);
+    if (!swapToDirect) return fpSplit;
+    // §97②2호 단서(나목) — 4부분은 취득·양도 시점 기준시가가 fp 안에 4갈래로 다 있다(F18).
+    return applyCommercialProviso(fpSplit, {
+      asset,
+      derived,
+      acqDerived: acqDerived ?? derived,
+      acqLandStd: fp.commercialLandStdAtAcq,
+      acqBuildingStd: fp.commercialBuildingStdAtAcq,
+      transferLandStd: fp.commercialLandStdAtTransfer,
+      transferBuildingStd: fp.commercialBuildingStdAtTransfer,
+      acqStdOverride: {
+        housingStd: fp.housingLandStdAtAcq + fp.housingBuildingStdAtAcq,
+        commercialStd: fp.commercialLandStdAtAcq + fp.commercialBuildingStdAtAcq,
+      },
+    });
   }
 
   // 상속·증여·매매실가 취득 + §164⑨1호 공익수용 특례 조합 — 미지원(가드).
@@ -174,8 +239,16 @@ export function calcCommercialGainSplit(
    * 🔴 자산 단위 **공통** 자본적지출·양도비의 **상가분 안분분**(2026-08-07 W-3).
    * 주택분과 **같은 헬퍼·같은 축**을 쓴다 — 자본적지출=취득시 · 양도비=양도시(§100② 후문).
    */
+  // ⚠️ PHD(§164⑦ 미공시) + 단서 조합에서는 `acquisitionStandardPrice.housingPrice`가 부재라
+  //    주택분 분자가 0이 되어 **상가분이 나목 전액을 흡수**한다(F18). PHD가 역산한 취득시
+  //    개별주택가격(P_A_est)을 주입해 축을 복원한다. 주택분(`applyHousingProviso`)과 같은 축이라
+  //    두 파트의 합이 나목과 정확히 일치한다(잔액 흡수).
+  const phdAcqStdOverride =
+    swapToDirect && housingAcqResult?.phdResult
+      ? { housingStd: housingAcqResult.phdResult.estimatedHousingPriceAtAcquisition }
+      : undefined;
   const commonCapexCommercial = apportionAcquisitionPrice(
-    asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived,
+    asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived, phdAcqStdOverride,
   ).commercialAcqPrice;
   const commonTransferExpCommercial = apportionTransferPrice(
     asset.transferExpense ?? 0, asset, derived,

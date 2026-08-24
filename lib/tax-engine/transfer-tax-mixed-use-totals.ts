@@ -4,6 +4,14 @@
  */
 
 import { applyRate, calculateProgressiveTax } from "./tax-utils";
+import { calcReductions } from "./transfer-tax-reductions-calc";
+import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
+import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
+import { calculateTransferTaxPenalty } from "./transfer-tax-penalty";
+import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
+import type { TransferReduction, TransferTaxInput } from "./types/transfer.types";
+import type { ParsedRates } from "./transfer-tax-helpers";
+import { compareWithClause1 } from "./transfer-tax-rate-calc";
 import { calcLongTermRate, type ExcessLandResult } from "./transfer-tax-mixed-use-helpers";
 import type {
   MixedUseHousingPart,
@@ -91,6 +99,12 @@ export function buildTotalTax(
    * (§95② 장특 배제·§91① 비과세 배제는 각 part 조립 단계에서 이미 반영된다.)
    */
   isUnregistered = false,
+  /**
+   * 산출세액 **이후** 단계 — 조특법 감면 · 농어촌특별세 · 가산세 (F17-B, 2026-08-23).
+   *
+   * 미전달이면 종전과 완전히 같은 값을 낸다(감면 0 · 가산세 0 · 지방소득세 base = 산출세액).
+   */
+  postTax?: MixedUsePostTaxInput,
 ): MixedUseTotalTax {
   const BASIC_DEDUCTION = isUnregistered ? 0 : basicDeductionLimit;
 
@@ -132,16 +146,29 @@ export function buildTotalTax(
       remaining -= used;
     }
 
-    // 2호 — 세율이 같은 **호**끼리만 묶어 1회 계산(단서), 나머지는 자산별.
+    // 2호 — 누진 호(§104①1호)만 과세표준을 합산해 1회 계산하고, 단기 호는 **자산별**로 계산한다.
     //   중과 파트(§104⑦1·3호)는 §104①1호와 **다른 호**라 누진 그룹에 합류하지 않는다.
     //   겸용의 주택 파트는 하나뿐이라 중과 그룹은 항상 단독이다.
-    const byRate = new Map<string, number>();
+    //
+    // 🔴 **§104① 후단은 파트(=자산)마다 건다** — 2026-08-13 F20.
+    //   후단은 "하나의 자산이 … 둘 이상에 **해당**할 때에는 … 산출세액 중 **큰 것**"이고,
+    //   보유 1~2년 상가토지·상가건물은 §94①1호 자산이라 §104①1호(§55① 누진)와 2호(40%)에
+    //   **동시에 해당**한다. §104⑤2호 본문도 "제1항부터 제4항까지 및 제7항의 **규정에 따라**
+    //   계산한 자산별 양도소득 산출세액 합계액"이라 파트 세액에 후단이 **내장**되어야 한다.
+    //
+    //   ⚠️ 종전에는 같은 세율 파트를 한 버킷으로 묶어 `applyRate(합계, r)` 한 줄로 끝내
+    //      비교 자체를 하지 않았다(실측 34,060,000 과소).
+    //   ⚠️ **버킷 합계에 MAX를 씌우면 안 된다** — 후단의 단위는 「하나의 자산」이고 누진세액은
+    //      볼록(P(Σbᵢ) ≥ ΣP(bᵢ))이라, 합계 기준 비교는 조문이 허용하지 않는 합산 효과를 만들어
+    //      **과다과세**가 된다. 비교는 반드시 파트 단위다.
+    //   ⚠️ 규칙을 손으로 다시 쓰지 않는다 — 단건 정본 `compareWithClause1`에 위임한다.
     let progressiveBase = 0;
     let sum = 0;
-    rateParts.forEach((_, i) => {
+    rateParts.forEach((part, i) => {
       const addon = addonOf(i);
       if (addon > 0) {
-        // §104⑦ 본문 — §55① 누진세율 + 가산율
+        // §104⑦ 본문 — §55① 누진세율 + 가산율.
+        // 가산율 ≥ 0이라 항상 §104①1호(누진) 이상 → 후단에서 1호가 이길 수 없다(비교 생략).
         const surcharged = calculateProgressiveTax(bases[i], brackets) + applyRate(bases[i], addon);
         const st = rates[i];
         // §104⑦ **후단** — 보유 2년 미만이면 §104①2·3호 세액과 MAX
@@ -153,10 +180,17 @@ export function buildTotalTax(
         progressiveBase += bases[i]; // 누진 호(§104①1호)는 과세표준 합산 후 1회
         return;
       }
-      byRate.set(String(r), (byRate.get(String(r)) ?? 0) + bases[i]);
+      const shortTermTax = applyRate(bases[i], r);
+      const clause1 = compareWithClause1(
+        bases[i],
+        brackets,
+        shortTermTax,
+        undefined,
+        `${part.kind} 단기세율 ${(r * 100).toFixed(0)}%`,
+      );
+      sum += clause1 ? clause1.calculatedTax : shortTermTax;
     });
     if (progressiveBase > 0) sum += calculateProgressiveTax(progressiveBase, brackets);
-    for (const [r, base] of byRate) sum += applyRate(base, Number(r));
     return { tax: sum, maxRate: Math.max(...rateParts.map((_, i) => effRate(i))) };
   })();
   // 적용된 누진세율 구간 추출 (UI 산식 표시용)
@@ -187,7 +221,12 @@ export function buildTotalTax(
   const unregisteredTax = isUnregistered ? applyRate(taxBase, 0.7) : null;
   const usesClause2 = unregisteredTax === null && clause2 !== null && clause2.tax > clause1;
   const transferTax = unregisteredTax ?? (usesClause2 ? clause2.tax : clause1);
-  const localTax = applyRate(transferTax, 0.10);
+
+  // ── 산출세액 이후 — 감면 · 농특세 · 가산세 (F17-B) ────────────────────────
+  const post = computeMixedUsePostTax(transferTax, aggregateIncome, BASIC_DEDUCTION, taxBase, postTax);
+  const determinedTax = Math.max(0, transferTax - post.reductionAmount);
+  // 지방소득세 base는 **결정세액**이다(지방세법 §103의3) — 신고불성실·납부지연 가산세는 제외.
+  const localTax = applyRate(determinedTax, 0.10);
 
   return {
     aggregateIncome,
@@ -201,7 +240,147 @@ export function buildTotalTax(
     ...(housingSurchargeAddon !== undefined ? { surchargeAddon: housingSurchargeAddon } : {}),
     nonBusinessSurcharge,
     transferTax,
+    reductionAmount: post.reductionAmount,
+    ...(post.reductionType ? { reductionType: post.reductionType } : {}),
+    determinedTax,
+    penaltyTax: post.penaltyTax,
+    ruralSurtax: post.ruralSurtax,
     localTax,
-    totalPayable: transferTax + localTax,
+    totalPayable: determinedTax + localTax + post.penaltyTax + post.ruralSurtax,
+  };
+}
+
+// ── 산출세액 이후 단계 — 감면 · 농어촌특별세 · 가산세 (F17-B, 2026-08-23) ──────────
+
+/**
+ * 겸용주택 산출세액 이후 단계의 입력.
+ *
+ * ## 종전 결함 (리뷰 F17)
+ *
+ * 겸용 분기(`route.ts`)는 `calcMixedUseTransferTax(...)`만 부르고 `MixedUseAssetInput`에
+ * 감면 필드가 **0건**이었다. 그런데 `UnifiedReductionPanel`은 자산 종류 게이트 없이 §77 등을
+ * 렌더하고 ⑧·⑫도 통과시킨다 ⇒ **침묵 무시**. 실측: §77 공익수용(현금 8억)을 골라도
+ * `totalPayable` 60,853,408 → **60,853,408**(Δ 0). 무신고 가산세도 Δ 0이었다.
+ *
+ * ## 법령
+ *
+ * · 조특법 §77①의 「토지등」은 공익사업법 §2 1호 → §3 2호로 위임되어 **건물을 명문에 담는다**.
+ *   조특령 §72에 자산 종류를 좁히는 문언이 없다 ⇒ 겸용주택도 대상이다.
+ *   (선례: 조심 2009광2620은 **주상겸용 건축물 수용** 사안이다.)
+ * · 국세기본법 §47의3④의 부적용 사유는 **한정 열거**이고 겸용주택을 담고 있지 않다 ⇒
+ *   자산 종류를 이유로 가산세를 0으로 두는 근거 조문이 **부존재**한다.
+ */
+export interface MixedUsePostTaxInput {
+  /** 자산-수준 조특법 감면 (⑭ Date 변환 완료본) */
+  reductions?: TransferReduction[];
+  /** DB 세율 — 자경농지 감면 규칙 */
+  selfFarmingRules?: ParsedRates["selfFarmingRules"];
+  transferDate: Date;
+  acquisitionDate?: Date;
+  /** 조특법 §133 5년 누적 한도 판정용 과거 이력 */
+  priorReductionUsage?: { year: number; type: string; amount: number }[];
+  filingPenaltyDetails?: TransferTaxInput["filingPenaltyDetails"];
+  delayedPaymentDetails?: TransferTaxInput["delayedPaymentDetails"];
+  /** §77 농특세 비과세 — 「직접 경작한 토지」(농특세령 §4①1호) */
+  isSelfCultivatedExpropriatedLand?: boolean;
+  /** 부수효과 — 차감형 감면을 계산하지 않았다는 사실을 여기 담는다(침묵 금지). */
+  warnings?: string[];
+}
+
+interface MixedUsePostTaxResult {
+  reductionAmount: number;
+  reductionType?: string;
+  ruralSurtax: number;
+  penaltyTax: number;
+}
+
+const EMPTY_POST: MixedUsePostTaxResult = { reductionAmount: 0, ruralSurtax: 0, penaltyTax: 0 };
+
+function computeMixedUsePostTax(
+  calculatedTax: number,
+  aggregateIncome: number,
+  basicDeduction: number,
+  taxBase: number,
+  input: MixedUsePostTaxInput | undefined,
+): MixedUsePostTaxResult {
+  if (!input) return EMPTY_POST;
+
+  const all = input.reductions ?? [];
+  const incomeDeductionIds = new Set<string>(ALL_INCOME_DEDUCTION_IDS);
+  /**
+   * 🔑 **차감형은 계산하지 않고 고지한다** — §155⑳ 경로(F08)와 **같은 판단**이다.
+   *
+   * 차감형은 **양도소득금액을 차감**하는데 겸용은 소득금액이 주택분·상가분·비사토분으로
+   * 갈려 있어 **어느 파트에서 빼는지 정한 명문이 없다**. 추정으로 자리를 정하면 조용히 틀린다.
+   */
+  const deferred = all.filter((r) => incomeDeductionIds.has(r.type));
+  const taxCredit = all.filter((r) => !incomeDeductionIds.has(r.type));
+  if (deferred.length > 0 && input.warnings) {
+    input.warnings.push(
+      `선택하신 감면 ${deferred.length}건(소득금액 차감형)은 이 계산에 반영되지 않았습니다 — ` +
+        "겸용주택은 양도소득금액이 주택분·상가분·비사업용토지분으로 나뉘는데, " +
+        "차감형 감면을 어느 부분에서 차감할지 정한 명문 규정이 없습니다.",
+    );
+  }
+
+  const result =
+    taxCredit.length > 0
+      ? calcReductions(
+          calculatedTax,
+          taxCredit,
+          input.selfFarmingRules,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          input.transferDate,
+          Math.max(0, aggregateIncome),
+          basicDeduction,
+          taxBase,
+          input.acquisitionDate,
+        )
+      : { reductionAmount: 0, reductionType: undefined, reductionTypeApplied: undefined };
+
+  // 조특법 §133 한도 — 단건 finalize·§155⑳ 경로와 **같은 헬퍼**를 쓴다(복사하면 갈린다).
+  const cap = applyReductionStatutoryCap({
+    reductionAmount: result.reductionAmount,
+    reductionTypeApplied: result.reductionTypeApplied,
+    transferYear: input.transferDate.getFullYear(),
+    priorUsage: input.priorReductionUsage ?? [],
+  });
+  const reductionAmount = Math.min(cap.cappedAmount, calculatedTax);
+
+  // 농어촌특별세 — 세 경로 공용 판정표(농특세법 §5①1호 · 비과세는 시행령 §4 열거).
+  const surtax = resolveTaxCreditRuralSurtax({
+    reductionTypeApplied: result.reductionTypeApplied,
+    reductionAmount,
+    isSelfCultivatedExpropriatedLand: input.isSelfCultivatedExpropriatedLand,
+  });
+
+  // 가산세 — base(결정세액·미납세액)는 **여기서 주입**한다(호출부가 미리 알 수 없는 값이다).
+  const determinedTax = Math.max(0, calculatedTax - reductionAmount);
+  const penalty =
+    input.filingPenaltyDetails || input.delayedPaymentDetails
+      ? calculateTransferTaxPenalty({
+          filing: input.filingPenaltyDetails
+            ? { ...input.filingPenaltyDetails, determinedTax, reductionAmount }
+            : undefined,
+          delayedPayment: input.delayedPaymentDetails
+            ? {
+                ...input.delayedPaymentDetails,
+                unpaidTax:
+                  input.delayedPaymentDetails.unpaidTax === 0
+                    ? determinedTax
+                    : input.delayedPaymentDetails.unpaidTax,
+              }
+            : undefined,
+        })
+      : undefined;
+
+  return {
+    reductionAmount,
+    ...(result.reductionType ? { reductionType: result.reductionType } : {}),
+    ruralSurtax: surtax.surtax,
+    penaltyTax: penalty?.totalPenalty ?? 0,
   };
 }

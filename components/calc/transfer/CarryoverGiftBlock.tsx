@@ -22,6 +22,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CarryoverGiftExclusionSection } from "./CarryoverGiftExclusionSection";
 import { CarryoverEstimationSection } from "./CarryoverEstimationSection";
+import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -41,6 +42,26 @@ const DONOR_CAUSE_OPTIONS = [
   { value: "inheritance" as const, label: "상속" },
   { value: "gift" as const, label: "증여" },
 ];
+
+/**
+ * 지분(공유) 모드에서 **증여세 칸에만** 붙는 예외 안내.
+ *
+ * `OwnershipRatioBlock`의 배너는 「양도가액·취득가액·필요경비는 물건 전체(100%) 기준으로
+ * 입력합니다. 시스템이 지분율을 자동으로 적용합니다」라고 선언한다. 그런데 증여세 3칸
+ * (산출세액·과세가액·상당액)은 ④ 변환에서 **의도적으로 미스케일**이다
+ * (`lib/calc/transfer-tax-api-carryover.ts` · `-gb-carryover.ts`의 `giftTaxAmount` ·
+ * `GIFT_EVENT_SCALE`) — 증여세 신고서에 적힌 실제 금액이고, 「100% 기준 증여세」라는
+ * 관측 가능한 금액이 존재하지 않기 때문이다.
+ *
+ * 🔴 증여세 상당액은 「소득세법」 §97의2① **3호**의 필요경비다(`legal-codes/transfer.ts`
+ *    `CARRYOVER_GIFT_TAX_EXPENSE`). ⚠️ **2호가 아니다** — 2호는 아래 「증여자 자본적지출」
+ *    칸이다(같은 파일 `:288`·`:291`). 「① 2호 (전단)」은 2023.12.31. 개정 **전** 구조이고
+ *    2026-08-10에 이미 정정된 인용이니 되돌리지 말 것.
+ *    배너를 문자 그대로 읽어 100%로 환산해 넣으면 필요경비가 지분율의 역수배로
+ *    들어간다 ⇒ 예외를 명시한다.
+ */
+const SHARE_MODE_GIFT_TAX_HINT =
+  " 지분 모드 예외 — 100% 기준으로 환산하지 말고 증여세 신고서에 적힌 금액을 그대로 입력합니다(위 「양도가액·취득가액·필요경비는 100% 기준」 안내가 적용되지 않는 칸입니다).";
 
 // ── Props ──────────────────────────────────────────────────────
 interface Props {
@@ -79,6 +100,14 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
    * 증여세 상당액을 엔진이 영 §163의2②로 안분하므로 입력 칸이 달라진다.
    */
   const isGeneralBuilding = asset.assetKind === "general_building";
+
+  /**
+   * 지분(공유) 모드 여부 — 판정 술어는 `OwnershipRatioInput`이 쓰는 것과 **같은 소스**다
+   * (`isFractionalOwnership` → `isFractionalRatioStr` → `isFractionalRatio`).
+   * 두 곳이 각자 판정하면 배너는 뜨는데 예외 안내는 안 뜨는 어긋남이 난다.
+   */
+  const shareMode = isFractionalOwnership(asset);
+  const giftTaxShareHint = shareMode ? SHARE_MODE_GIFT_TAX_HINT : "";
 
   function updateCarryover(patch: Partial<CarryoverTaxationForm>) {
     onChange({ carryover: patchCarryover(asset.carryover, patch) });
@@ -209,7 +238,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
           <>
             <FieldCard
               label="증여세 산출세액"
-              hint="「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. 토지·건물 몫은 아래 과세가액으로 자동 안분됩니다."
+              hint={
+                "「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. 토지·건물 몫은 아래 과세가액으로 자동 안분됩니다." +
+                giftTaxShareHint
+              }
               trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
             >
               <CurrencyInput
@@ -222,7 +254,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
 
             <FieldCard
               label="증여세 과세가액"
-              hint="「상속세 및 증여세법」 제47조 과세가액 — 안분 분모입니다. 증여받은 재산 전체 기준."
+              hint={
+                "「상속세 및 증여세법」 제47조 과세가액 — 안분 분모입니다. 증여받은 재산 전체 기준." +
+                giftTaxShareHint
+              }
             >
               <CurrencyInput
                 label=""
@@ -235,7 +270,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         ) : (
           <FieldCard
             label="증여세 상당액"
-            hint="소득세법 시행령 §163의2②: 증여세 산출세액 × (양도한 해당 자산가액 ÷ 증여세 과세가액). 미신고 시 0 입력."
+            hint={
+              "소득세법 시행령 §163의2②: 증여세 산출세액 × (양도한 해당 자산가액 ÷ 증여세 과세가액). 미신고 시 0 입력." +
+              giftTaxShareHint
+            }
             trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
           >
             <CurrencyInput

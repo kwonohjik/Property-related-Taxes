@@ -26,6 +26,8 @@ import { mapHousesToEngine, mapGracePeriodToEngine } from "@/lib/api/transfer-ro
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
+import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-preliminary-filing";
+import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 
 export async function POST(request: NextRequest) {
   // Rate Limiting — 분당 15회 (단건 30회의 절반)
@@ -102,6 +104,9 @@ export async function POST(request: NextRequest) {
     const base: Omit<TransferTaxInput, "annualBasicDeductionUsed" | "skipBasicDeduction" | "skipLossFloor"> = {
       propertyType: p.propertyType,
       transferPrice: p.transferPrice,
+      // ⑭ 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용(⑬이 지분 모드에서만 전송).
+      //    누락하면 지분 자산의 §95③ 고가주택 안분 분모가 지분 양도가액이 되어 안분이 틀린다.
+      totalPropertyTransferPrice: p.totalPropertyTransferPrice,
       transferDate: toDate(p.transferDate, "transferDate"),
       acquisitionPrice: p.acquisitionPrice,
       acquisitionDate: toDate(p.acquisitionDate, "acquisitionDate"),
@@ -143,8 +148,30 @@ export async function POST(request: NextRequest) {
         ? {
             previousAcquisitionDate: toDate(p.temporaryTwoHouse.previousAcquisitionDate, "temporaryTwoHouse.previousAcquisitionDate"),
             newAcquisitionDate: toDate(p.temporaryTwoHouse.newAcquisitionDate, "temporaryTwoHouse.newAcquisitionDate"),
+            // ⑭ §155⑯·⑱ — boolean·enum이라 Date 변환은 없지만 명시 전달하지 않으면 침묵 strip된다
+            //    (단건 정본 `app/api/calc/transfer/engine-input.ts:102-107`).
+            publicInstitutionRelocation: p.temporaryTwoHouse.publicInstitutionRelocation,
+            relocatedSigunguCode: p.temporaryTwoHouse.relocatedSigunguCode,
+            newHouseSigunguCode: p.temporaryTwoHouse.newHouseSigunguCode,
+            disposalDelayReason: p.temporaryTwoHouse.disposalDelayReason,
           }
         : undefined,
+      // ⑭ §155⑧ 수도권 밖 부득이 — resolvedDate는 string이라 Date 변환 필수(미제공 = 미해소).
+      unavoidableOutsideCapitalHouse: p.unavoidableOutsideCapitalHouse
+        ? {
+            reason: p.unavoidableOutsideCapitalHouse.reason,
+            resolvedDate: toOptionalDate(p.unavoidableOutsideCapitalHouse.resolvedDate),
+          }
+        : undefined,
+      // ⑭ §155⑦ 농어촌주택 — acquisitionDate만 Date 변환 대상. 나머지는 boolean·number라 그대로 통과.
+      ruralHouse: p.ruralHouse
+        ? {
+            ...p.ruralHouse,
+            acquisitionDate: toOptionalDate(p.ruralHouse.acquisitionDate),
+          }
+        : undefined,
+      // ⑭ §155④⑤ 합가 후 첫 양도 — 엔진 게이트가 `=== true`를 요구(transfer-tax-exemption.ts).
+      isFirstTransferredInMerge: p.isFirstTransferredInMerge,
       // ⑭ §156의2⑤ 대체주택 비과세 특례 — string 일자 → Date 변환 (date-coerce)
       replacementHouse: p.replacementHouse
         ? {
@@ -201,6 +228,10 @@ export async function POST(request: NextRequest) {
         : undefined,
       acquisitionMethod: p.acquisitionMethod,
       appraisalValue: p.appraisalValue,
+      // ⑭ 매매사례가액 추계(§176의2③1호) — 형제 모드 appraisalValue와 동일 층위.
+      //    누락 시 salesCase 모드에서 엔진이 `similarSalesValue ?? acquisitionPrice`(=0)로 후퇴해
+      //    취득가액이 통째로 0이 된다(⑬은 이미 전송, ⑫Zod도 수락 — 여기서만 침묵 strip됐다).
+      similarSalesValue: p.similarSalesValue,
       isSelfBuilt: p.isSelfBuilt,
       buildingType: p.buildingType,
       constructionDate: toOptionalDate(p.constructionDate),
@@ -311,11 +342,30 @@ export async function POST(request: NextRequest) {
     // 1차: 가산세 미주입 상태로 자산별 결정세액 산출.
     const baseResult = calculateTransferTaxAggregate(engineInput, rates);
 
+    /**
+     * 🔴 가산세 base는 **예정신고 세액**이다 — 집계 1차 pass의 자산별 standalone 값이 아니다(F03).
+     *
+     * 종전에는 `baseResult.properties[idx].determinedTax`를 그대로 넣었는데, 그 값은
+     * `skipBasicDeduction: true`로 계산된다(집계가 §103 기본공제를 신고 단위로 따로 배분한다).
+     * 그래서 **기본공제가 빠진 세액**이 base가 됐다 — 실측 200,000(0.85%) 과대.
+     *
+     * 「국세기본법」 §47의2①의 base는 「그 신고로 납부하여야 할 세액」이고 괄호가 **예정신고를
+     * 포함**한다. 그 세액은 「소득세법」 §107①이 정한 (양도차익 − 장특 − **기본공제**) × 세율이다.
+     * 기본공제 배분 순서는 §103②이 「먼저 양도한 자산부터 순서대로」로 **명문화**했다.
+     */
+    const preliminary = computePreliminaryFilingTaxes(
+      engineInput.properties as unknown as TransferTaxInput[],
+      rates,
+      engineInput.annualBasicDeductionUsed,
+      calculateTransferTax,
+    );
+
     // 자산별 결정세액·미납세액 주입 후 2차 계산 (가산세 자산별 합산 반영).
     const enrichedProperties = engineInput.properties.map((p, idx) => {
+      const pre = preliminary.get(idx);
       const breakdown = baseResult.properties[idx];
-      const determinedTax = breakdown?.determinedTax ?? 0;
-      const reductionAmount = breakdown?.reductionAmount ?? 0;
+      const determinedTax = pre?.determinedTax ?? breakdown?.determinedTax ?? 0;
+      const reductionAmount = pre?.reductionAmount ?? breakdown?.reductionAmount ?? 0;
       const enriched: TransferTaxItemInput = { ...p };
       if (p.filingPenaltyDetails) {
         enriched.filingPenaltyDetails = {

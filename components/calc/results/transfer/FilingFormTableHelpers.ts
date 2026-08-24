@@ -533,7 +533,7 @@ export function buildRows(
     setStr("moveIn", "housingBuilding", firstMoveIn ? fmtDate(firstMoveIn) : "-");
     setStr("residencePeriod", "housingLand", fmtPeriod(residenceMonthsTotal));
     setStr("residencePeriod", "housingBuilding", fmtPeriod(residenceMonthsTotal));
-    fourPartFinancials(hp, cp, setNum);
+    fourPartFinancials(hp, cp, mu.nonBusinessLandPart, setNum);
   } else if (mode === "split-2col" && sp) {
     setStr("transferDate", "land", fmtDate(transferDate));
     setStr("transferDate", "building", fmtDate(transferDate));
@@ -655,9 +655,12 @@ export function buildRows(
     const hpBuildRatio = 1 - hpLandRatio;
     const cpLandRatio = mu.commercialPart.transferGain > 0 ? mu.commercialPart.landTransferGain / mu.commercialPart.transferGain : 0.5;
     const cpBuildRatio = 1 - cpLandRatio;
-    setNum("ltHoldingPart", "total", hpSplit.holdingAmount + cpSplit.holdingAmount);
+    // 배율초과 비사업용토지 장특은 표1 **보유분** 단독(거주분 없음) — 보유 기간분 행에 싣는다.
+    // 누락하면 「장기보유특별공제 합계 ≠ 보유분 + 거주분」이 되어 합계 열 내부가 어긋난다.
+    const nbLtDeduction = mu.nonBusinessLandPart?.longTermDeductionAmount ?? 0;
+    setNum("ltHoldingPart", "total", hpSplit.holdingAmount + cpSplit.holdingAmount + nbLtDeduction);
     setNum("ltResidencePart", "total", hpSplit.residenceAmount);
-    setNum("ltHoldingPart", "housingLand", Math.floor(hpSplit.holdingAmount * hpLandRatio));
+    setNum("ltHoldingPart", "housingLand", Math.floor(hpSplit.holdingAmount * hpLandRatio) + nbLtDeduction);
     setNum("ltHoldingPart", "housingBuilding", Math.floor(hpSplit.holdingAmount * hpBuildRatio));
     setNum("ltHoldingPart", "commercialLand", Math.floor(cpSplit.holdingAmount * cpLandRatio));
     setNum("ltHoldingPart", "commercialBuilding", Math.floor(cpSplit.holdingAmount * cpBuildRatio));
@@ -719,10 +722,26 @@ export function buildRows(
   setNum("calculatedTax", "total", result.calculatedTax);
   setNum("reductionTax", "total", result.reductionAmount);
   setNum("determinedTax", "total", result.determinedTax);
-  setNum("penaltyTax", "total", result.penaltyTax);
-  setNum("totalDeterminedTax", "total", result.determinedTax + result.penaltyTax);
+  /**
+   * ㉘ 가산세액 — **두 축의 합**이다(「소득세법」 제92조 제3항 제3호).
+   *   · `result.penaltyTax`      : 「소득세법」 제114조의2 환산가액적용가산세
+   *   · `result.penaltyDetail`   : 「국세기본법」 제47조의2~제47조의4 신고불성실·납부지연
+   *
+   * 종전에는 §114조의2분만 실어, 같은 화면의 상세명세서(`DetailedStatementHelpers.ts`)·
+   * 다건 신고서 표(`FilingFormTableAggregateHelpers.ts`)·상단 총납부세액 카드가 합산해 보여주는
+   * 값과 이 표만 어긋났다. 「신고서 양식」은 단독 print leaf라 이 표만 인쇄하면 국기법
+   * 가산세가 통째로 빠진 서식이 나온다.
+   */
+  const totalPenalty = result.penaltyTax + (result.penaltyDetail?.totalPenalty ?? 0);
+  setNum("penaltyTax", "total", totalPenalty);
+  setNum("totalDeterminedTax", "total", result.determinedTax + totalPenalty);
   // Round 11 (2026-05-06): §99의3 등 감면 적용 시 농어촌특별세 (감면세액 × 20%, 농특세법 §3·§5)
   setNum("ruralSurtax", "total", incomeDeductionRuralSurtax(result));
+  /**
+   * ⚠️ 지방소득세 산출세액 base는 **§114조의2분만**이다 — 국기법 가산세는 제외한다.
+   * 엔진(`transfer-tax-finalize.ts` STEP 10)·집계(`transfer-tax-aggregate.ts`)가 같은 축이라
+   * 여기에 `totalPenalty`를 쓰면 「지방세 산출세액 ≠ result.localIncomeTax」 불일치가 생긴다.
+   */
   const localCalc = Math.floor((result.determinedTax + result.penaltyTax) * 0.1);
   setNum("localCalculatedTax", "total", localCalc);
   setNum("localReduction", "total", 0);

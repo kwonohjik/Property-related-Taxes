@@ -34,23 +34,31 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     b.housingPart.buildingAppraisalDed +
     b.commercialPart.landAppraisalDed +
     b.commercialPart.buildingAppraisalDed;
+  // 배율초과 비사업용토지 — 「소득세법」 제104조 제5항 본문 후단에 따라 **별개 자산으로 보아**
+  // 산출세액을 계산하는 **과세** 대상이다. 주택분 안분과세분(`proratedTaxableGain`)은 비사토를
+  // 이미 떼어낸 뒤의 값이므로 여기서 더하지 않으면 신고서의 「비과세 양도차익」으로 오계상된다.
+  // ⚠️ `transferGain`은 비사토를 **이미 포함한 gross**(`hp.transferGain` = 안분 전 gainSplit 합)다
+  //    — 더하면 이중계상이므로 건드리지 않는다.
+  const nb = b.nonBusinessLandPart;
+  const nbTaxableGain = nb?.transferGain ?? 0;
+  const nbLtDeduction = nb?.longTermDeductionAmount ?? 0;
+  const taxableGain =
+    b.housingPart.proratedTaxableGain + b.commercialPart.transferGain + nbTaxableGain;
+  const longTermHoldingDeduction =
+    b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount + nbLtDeduction;
   return {
     isExempt: false,
     transferGain: b.housingPart.transferGain + b.commercialPart.transferGain,
-    taxableGain: b.housingPart.proratedTaxableGain + b.commercialPart.transferGain,
+    taxableGain,
     usedEstimatedAcquisition: !isDeemedOrActual,
     // 환산·추계 분기: 취득가액(추계)·개산공제를 실제 값으로 표시. 실가/의제는 undefined(실가 역산 분기 사용).
     estimatedBase: isDeemedOrActual ? undefined : acqPrice,
     estimatedDeduction: isDeemedOrActual ? undefined : acqDeduction,
     expenses: acqDeduction,
-    longTermHoldingDeduction: b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount,
-    // 겸용은 주택분(표2 가능)·상가분(표1)이 서로 다른 공제율이라 단일 rate가 없음 —
+    longTermHoldingDeduction,
+    // 겸용은 주택분(표2 가능)·상가분(표1)·비사토(표1)가 서로 다른 공제율이라 단일 rate가 없음 —
     // 상단 요약 산식용 실효 blended rate = 장특공제 합계 ÷ 과세대상 양도차익 합계.
-    longTermHoldingRate:
-      b.housingPart.proratedTaxableGain + b.commercialPart.transferGain > 0
-        ? (b.housingPart.longTermDeductionAmount + b.commercialPart.longTermDeductionAmount) /
-          (b.housingPart.proratedTaxableGain + b.commercialPart.transferGain)
-        : 0,
+    longTermHoldingRate: taxableGain > 0 ? longTermHoldingDeduction / taxableGain : 0,
     lthdStartDate: new Date(0), // mixed-use 합산 mock: 표시용
     basicDeduction: t.basicDeduction,
     taxBase: t.taxBase,
@@ -58,10 +66,18 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     progressiveDeduction: t.progressiveDeduction,
     calculatedTax: adoptedCalculatedTax(t),
     isSurchargeSuspended: false,
-    reductionAmount: 0,
-    determinedTax: t.transferTax,
-    penaltyBase: 0, // 겸용주택 어댑터: 가산세 미적용 경로 (MixedUseGainBreakdown에 penaltyBase 없음)
-    penaltyTax: 0,
+    /**
+     * 🔴 종전에는 이 네 줄이 **0 하드코딩**이었다(F17-B, 2026-08-23).
+     *
+     * 겸용 엔진에 감면·가산세 축 자체가 없어서 0이 «맞는» 값이었지만, 그래서 결과 카드에
+     * 「감면 미적용」이라는 고지조차 없이 사용자가 고른 §77이 사라졌다. 엔진이 계산하게 된
+     * 지금 그대로 두면 **계산과 표시가 갈린다**(memory `feedback_engine_result_display_drift`).
+     */
+    reductionAmount: t.reductionAmount,
+    determinedTax: t.determinedTax,
+    // §114조의2 환산가액적용가산세는 겸용 경로에 없다 — 신고불성실·납부지연만 온다.
+    penaltyBase: 0,
+    penaltyTax: t.penaltyTax,
     localIncomeTax: localTax,
     totalTax: t.totalPayable,
     // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)로 CalculationStep[]과

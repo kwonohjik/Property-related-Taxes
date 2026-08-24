@@ -9,6 +9,10 @@ import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { toEngineReductions, toRentalHousingExceptionApi, buildPre1990LandPayload } from "@/lib/calc/transfer-tax-api-helpers";
+import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
+import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
+import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
+import { buildHouseholdSpecialPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
@@ -73,11 +77,32 @@ export function buildPropertyPayload(form: TransferFormData) {
   const isEstimated = !isSalesCase && !isAppraisal && (primary?.useEstimatedAcquisition ?? false);
   const acquisitionCause = primary?.acquisitionCause ?? "purchase";
 
+  // ④⑬ 공유 지분율 — 폼 입력은 100% 기준이고 API 변환이 × ratio를 적용한다
+  // (`OwnershipRatioInput.tsx` 규약 · 단건 정본 `transfer-tax-api.ts:198-206`).
+  // 단독 소유(100/100)면 ratio=1.0·fractional=false라 아래 전 필드가 무변경(no-op)이다.
+  const primaryRatio = primary ? getOwnershipRatio(primary) : 1.0;
+  const primaryFractional = primaryRatio < 1.0;
+  // 추계 가액(감정가·매매사례가액) 전용 스케일 적용기 — 단건과 동일(`transfer-tax-api.ts:201`).
+  const ratioed = makeRatioed(primaryRatio, primaryFractional);
+
   // §97② 단서 swap 분리 입력 — 단건과 동일: 두 필드 중 하나라도 입력되면 분리 전송.
-  const capEx = parseAmount(primary?.capitalExpenditure ?? "");
+  const capEx = primaryFractional
+    ? applyRatio(parseAmount(primary?.capitalExpenditure ?? ""), primaryRatio)
+    : parseAmount(primary?.capitalExpenditure ?? "");
   const directTransferExpense = parseAmount(primary?.transferExpense ?? "");
   const formTotalTransferExpense = parseAmount(form.totalTransferExpense ?? "");
-  const effectiveTransferExpense = directTransferExpense > 0 ? directTransferExpense : formTotalTransferExpense;
+  // 양도비 안분 — 단건 primary 규약(`transfer-tax-api.ts:210-219`)을 그대로 따른다.
+  //   1) 자산-수준 직접 입력(>0): 지분 모드면 × ratio
+  //   2) 지분 모드 + 폼-수준 총 양도비: × ratio
+  //   3) 단독 모드: 폼-수준 값을 그대로 (현행 다건 동작 유지)
+  const effectiveTransferExpense =
+    directTransferExpense > 0
+      ? primaryFractional
+        ? applyRatio(directTransferExpense, primaryRatio)
+        : directTransferExpense
+      : primaryFractional && formTotalTransferExpense > 0
+        ? applyRatio(formTotalTransferExpense, primaryRatio)
+        : formTotalTransferExpense;
 
   // ⑬ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 토글 OFF 시 undefined, body에서 제외
   const rhPayload = primary ? toRentalHousingExceptionApi(primary) : undefined;
@@ -88,19 +113,33 @@ export function buildPropertyPayload(form: TransferFormData) {
   // (1990 환산은 route ⑭·엔진이 지원 — 아래 pre1990Land spread로 전송.)
   return {
     propertyType: primaryKind,
-    transferPrice: parseAmount(form.contractTotalPrice),
+    transferPrice: primaryFractional
+      ? applyRatio(parseAmount(form.contractTotalPrice), primaryRatio)
+      : parseAmount(form.contractTotalPrice),
+    /** ⑬ 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미전송) */
+    totalPropertyTransferPrice: primaryFractional
+      ? parseAmount(form.contractTotalPrice)
+      : undefined,
     transferDate: form.transferDate,
     // 상속: (b) 취득가액 소스 단일화 — fixedAcquisitionPrice(현행 직접입력) 우선, 없으면 publishedValueAtInheritance(신고가액).
     // 통합 UI(P2b)가 상속 fixedAcq 입력을 제거하면 publishedValue로 자동 전환(과도기 fallback, mirror-pattern 3중).
-    acquisitionPrice: (isEstimated || isAppraisal || isSalesCase)
-      ? 0
-      : acquisitionCause === "inheritance"
-        ? parseAmount(primary?.fixedAcquisitionPrice ?? "0") || parseAmount(primary?.publishedValueAtInheritance ?? "0")
-        : parseAmount(primary?.fixedAcquisitionPrice ?? "0"),
+    acquisitionPrice: (() => {
+      if (isEstimated || isAppraisal || isSalesCase) return 0;
+      const raw =
+        acquisitionCause === "inheritance"
+          ? parseAmount(primary?.fixedAcquisitionPrice ?? "0") ||
+            parseAmount(primary?.publishedValueAtInheritance ?? "0")
+          : parseAmount(primary?.fixedAcquisitionPrice ?? "0");
+      return primaryFractional ? applyRatio(raw, primaryRatio) : raw;
+    })(),
     acquisitionDate: primary?.acquisitionDate ?? "",
     // 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary?.assetContractDate || undefined,
-    expenses: (isEstimated || isAppraisal || isSalesCase) ? 0 : parseAmount(primary?.directExpenses ?? "0"),
+    expenses: (isEstimated || isAppraisal || isSalesCase)
+      ? 0
+      : primaryFractional
+        ? applyRatio(parseAmount(primary?.directExpenses ?? "0"), primaryRatio)
+        : parseAmount(primary?.directExpenses ?? "0"),
     // §97② 단서 swap — 둘 다 0이면 undefined로 보내 swap 비활성 (단건과 동일 게이트)
     capitalExpenditure: (capEx || effectiveTransferExpense) ? capEx : undefined,
     transferExpense: (capEx || effectiveTransferExpense) ? (effectiveTransferExpense || undefined) : undefined,
@@ -108,10 +147,14 @@ export function buildPropertyPayload(form: TransferFormData) {
     standardPriceAtAcquisition: isEstimated ? parseAmount(primary?.standardPriceAtAcq ?? "") : undefined,
     standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") : undefined,
     acquisitionMethod: isSalesCase ? "salesCase" : isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual",
-    // 감정가 모드 — 단건과 동일하게 자산 카드의 취득가 입력란(fixedAcquisitionPrice)이 감정가
-    appraisalValue: isAppraisal ? parseAmount(primary?.fixedAcquisitionPrice ?? "0") : undefined,
+    // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고
+    // 엔진이 개산공제 지점에서만 적용한다(단건 정본 `transfer-tax-api.ts:205-207`).
+    ownershipRatio: primaryFractional ? primaryRatio : undefined,
+    // 감정가 모드 — 단건과 동일하게 자산 카드의 취득가 입력란(fixedAcquisitionPrice)이 감정가.
+    // 감정·매매사례는 acquisitionPrice가 0이고 이 값이 취득가액이 되므로 총액과 같은 지분 스케일이 필요하다.
+    appraisalValue: isAppraisal ? (ratioed(primary?.fixedAcquisitionPrice) ?? 0) : undefined,
     // ④⑬ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
-    similarSalesValue: isSalesCase ? (parseAmount(primary?.similarSalesValue ?? "") || undefined) : undefined,
+    similarSalesValue: isSalesCase ? ratioed(primary?.similarSalesValue) : undefined,
     isSelfBuilt: primary?.isSelfBuilt || undefined,
     buildingType: primary?.buildingType || undefined,
     constructionDate: primary?.isSelfBuilt && primary?.constructionDate ? primary.constructionDate : undefined,
@@ -157,17 +200,14 @@ export function buildPropertyPayload(form: TransferFormData) {
         : undefined,
     isOneHousehold: form.isOneHousehold,
     reductions,
-    ...(form.temporaryTwoHouseSpecial &&
-    primary?.acquisitionDate &&
-    form.newHouseAcquisitionDate
-      ? {
-          temporaryTwoHouse: {
-            // 종전주택 취득일 = 양도 자산 취득일(단일소스)
-            previousAcquisitionDate: primary.acquisitionDate,
-            newAcquisitionDate: form.newHouseAcquisitionDate,
-          },
-        }
-      : {}),
+    // ⑬ §155⑤ 일시적 2주택(§155⑯⑱ 포함) · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 —
+    //    단건과 **같은 빌더**를 쓴다. 종전에는 일시적 2주택 두 날짜만 인라인 전송해
+    //    §155⑯·⑱ 4필드와 §155⑦·⑧ 블록이 통째로 누락됐다(다건 Step4는 단건 Step4를 그대로 임베드하므로
+    //    화면에는 토글이 보인다).
+    ...(primary ? buildHouseholdSpecialPayload(form, primary) : {}),
+    // ⑬ §155④⑤ 합가 후 첫 양도 — 엔진 비과세 게이트가 `=== true`를 요구한다(transfer-tax-exemption.ts).
+    //    marriageMerge·parentalCareMerge만 보내고 이 플래그를 빠뜨리면 특례가 조용히 미발동한다.
+    ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
     // ⑬ 1990.8.30. 이전 취득 토지 환산 (route ⑭·엔진 STEP 0.4 지원) — 단건과 공용 헬퍼
     ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),

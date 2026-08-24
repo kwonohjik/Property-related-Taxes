@@ -65,3 +65,21 @@ export function resolveRateBasisAcquisitionDate(facts: RateBasisFacts): Date {
   // 본문 — 해당 자산의 취득일
   return facts.acquisitionDate;
 }
+
+/**
+ * 입력에서 **§104② 기산 사실만** 추린다. 판정은 하지 않는다(위 `resolveRateBasisAcquisitionDate` 전용).
+ *
+ * 용도는 **전파**다 — 어떤 입력으로 계산했는지를 결과에 실어(echo) 다른 엔진이 같은 사실 위에서
+ * 세율을 다시 정할 수 있게 한다. 현재 소비자는 이월과세 채택 시나리오 → 다건 엔진 경로
+ * (`CarryoverTaxationDetail.adoptedRateBasis` 주석 참조).
+ *
+ * ⚠️ 「어느 세율군인가」 같은 **판단은 담지 않는다** — 사실만 옮긴다.
+ */
+export function pickRateBasisFacts(facts: RateBasisFacts): RateBasisFacts {
+  return {
+    acquisitionCause: facts.acquisitionCause,
+    acquisitionDate: facts.acquisitionDate,
+    decedentAcquisitionDate: facts.decedentAcquisitionDate,
+    donorAcquisitionDate: facts.donorAcquisitionDate,
+  };
+}

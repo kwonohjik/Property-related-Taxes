@@ -6,7 +6,7 @@
  * 활성 조건:
  *   originalAssetType="housing" + subject="right" + direction="receive" + useEstimatedAcquisition=true
  *
- * 사례 39: 취득당시 개별주택가격(분자) + 인가당시 부근 개별주택가격(분모) → 환산취득가 도출
+ * 사례 39: 취득당시 개별주택가격(분자) + 인가당시 개별주택가격(분모) → 환산취득가 도출
  *
  * 법령 근거:
  *   - §164⑤: 환산취득가 = floor(권리가액 × 취득시PHD / 인가시PHD)
@@ -63,7 +63,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
       <div className="rounded-md bg-fuchsia-100/60 border border-fuchsia-200 p-2 text-caption text-fuchsia-900 leading-relaxed">
         <p className="font-semibold mb-0.5">§164⑤ 환산취득가 산식</p>
         <p>
-          환산취득가 = 권리가액 × <Frac top="취득당시 개별주택가격" bottom="인가당시 부근 개별주택가격" />
+          환산취득가 = 권리가액 × <Frac top="취득당시 개별주택가격" bottom="인가당시 개별주택가격" />
         </p>
         <p className="mt-0.5 text-micro text-fuchsia-700">
           ※ 분자: 취득일 직전 최근 개별주택가격(공시일 기준) / 분모: 관리처분인가일 직전 최근 개별주택가격
@@ -86,9 +86,9 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
         />
       </FieldCard>
 
-      {/* 인가당시 부근 개별주택가격 (분모) */}
+      {/* 인가당시 개별주택가격 (분모) */}
       <FieldCard
-        label="인가당시 부근 개별주택가격 (§164⑤ 분모)"
+        label="인가당시 개별주택가격 (§164⑤ 분모)"
         hint="관리처분 인가일 직전 최근 공시된 개별주택가격 총액 (원). 인가일이 2013-10-23이면 2013-01-01 공시 가격."
       >
         <CurrencyInput

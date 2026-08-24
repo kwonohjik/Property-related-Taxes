@@ -39,6 +39,69 @@ export interface HousingGainSplit {
   buildingHoldingYears: number;
 }
 
+/**
+ * 🔴 §97②2호 **단서**(나목 채택)를 **PHD 경로** split에 반영한다 — 2026-08-13 F18.
+ *
+ * PHD 분기(§164⑦ 미공시)는 조기 return이라 아래 §97 분기의 `swapToDirect` 처리
+ * (취득가액 슬롯 0 + 필요경비 = 나목 안분분)에 **한 번도 도달하지 못했다**. 결과적으로
+ * 주택분만 본문(환산취득가 + 개산공제)으로 남아 자산 전체 필요경비가 「본문 + 단서」
+ * 하이브리드가 됐고, 나목은 상가분이 전액 흡수했다.
+ *
+ * 비-PHD 분기와 **같은 규칙**을 적용한다:
+ *   · 취득가액 슬롯 = **0** — 가목이 「환산취득가액 + 개산공제」의 **합계액**이므로
+ *     나목 채택 시 취득가액을 따로 빼면 이중차감이다.
+ *   · 필요경비 = 나목의 **이 파트 안분분**. 성질별로 축이 갈린다(「소득세법」 §100② 본문·후문):
+ *       자본적지출(§97①2호) → **취득시** 기준시가 · 양도비(§97①3호) → **양도시** 기준시가
+ *
+ * ⚠️ PHD + 상속·증여 분기는 오케스트레이터의 `provisoEligible`이 false라 여기 도달하지 않는다
+ *    (§163⑨ 실지거래가액 의제는 단서 대상이 아니다).
+ */
+function applyHousingProviso(
+  base: HousingGainSplit,
+  args: {
+    asset: MixedUseAssetInput;
+    derived: MixedUseDerivedAreas;
+    acqDerived: MixedUseDerivedAreas;
+    acqLandStd: number;
+    acqBuildingStd: number;
+    transferLandStd: number;
+    transferBuildingStd: number;
+    /** PHD 모드에서 부재한 취득시 개별주택가격 축 복원 (`apportionAcquisitionPrice` 참조). */
+    acqStdOverride: { housingStd?: number; commercialStd?: number };
+  },
+): HousingGainSplit {
+  const { landAppraisalDed, buildingAppraisalDed } = resolvePartNecessaryExpense({
+    partDirect: undefined,
+    commonCapitalExpenditure: apportionAcquisitionPrice(
+      args.asset.capitalExpenditure ?? 0,
+      args.asset,
+      args.acqDerived,
+      args.acqStdOverride,
+    ).housingAcqPrice,
+    commonTransferExpense: apportionTransferPrice(
+      args.asset.transferExpense ?? 0,
+      args.asset,
+      args.derived,
+    ).housingTransferPrice,
+    acqLandStd: args.acqLandStd,
+    acqBuildingStd: args.acqBuildingStd,
+    transferLandStd: args.transferLandStd,
+    transferBuildingStd: args.transferBuildingStd,
+  });
+  const landGain = base.landTransferPrice - landAppraisalDed;
+  const buildingGain = base.buildingTransferPrice - buildingAppraisalDed;
+  return {
+    ...base,
+    landAcqPrice: 0,
+    buildingAcqPrice: 0,
+    landAppraisalDed,
+    buildingAppraisalDed,
+    landGain,
+    buildingGain,
+    totalGain: landGain + buildingGain,
+  };
+}
+
 export function calcHousingGainSplit(
   housingTransferPrice: number,
   housingAcqResult: HousingEstimatedAcqResult,
@@ -57,13 +120,39 @@ export function calcHousingGainSplit(
   const housingEstimatedAcq = housingAcqResult.estimatedAcq;
   const effectiveAcqDerived = acqDerived ?? derived;
 
+  // 양도시 토지/건물 기준시가 (양도가액 안분용 + §97②2호 단서의 **양도비** 안분 축).
+  // 개별주택공시가격은 토지+건물 일괄이므로, 양도시 토지분 = 공시지가 × 주택부수토지 면적,
+  // 양도시 건물분 = 개별주택공시가격 - 토지분 (음수 방지).
+  // ⚠️ PHD 분기도 단서 처리에서 이 값을 쓰므로 **분기 위로** 올려둔다(2026-08-13 F18).
+  const transferLandStd =
+    asset.transferStandardPrice.landPricePerSqm * derived.residentialLandArea;
+  const transferHousingTotal = asset.transferStandardPrice.housingPrice;
+  const transferBuildingStd = Math.max(transferHousingTotal - transferLandStd, 0);
+  const transferTotal = transferLandStd + transferBuildingStd;
+
   // PHD 분기 — 산식 상세에서 토지/건물 안분값 직접 사용
   if (housingAcqResult.phdResult) {
     const phd = housingAcqResult.phdResult;
     // Case A 4부분 안분 — 별도 파일로 분리 (transfer-tax-mixed-use-fourpart.ts)
     if (phd.fourPartApportionment) {
       // 동적 import 대신 require 회피 — 상위 helpers는 4부분 어댑터를 직접 호출
-      return buildHousingGainSplitFromFourPart(phd.fourPartApportionment, asset, transferDate);
+      const fp = phd.fourPartApportionment;
+      const fpSplit = buildHousingGainSplitFromFourPart(fp, asset, transferDate);
+      if (!swapToDirect) return fpSplit;
+      // 4부분도 취득·양도 시점 기준시가가 fp 안에 4갈래로 다 있으므로 그 축을 그대로 쓴다.
+      return applyHousingProviso(fpSplit, {
+        asset,
+        derived,
+        acqDerived: effectiveAcqDerived,
+        acqLandStd: fp.housingLandStdAtAcq,
+        acqBuildingStd: fp.housingBuildingStdAtAcq,
+        transferLandStd: fp.housingLandStdAtTransfer,
+        transferBuildingStd: fp.housingBuildingStdAtTransfer,
+        acqStdOverride: {
+          housingStd: fp.housingLandStdAtAcq + fp.housingBuildingStdAtAcq,
+          commercialStd: fp.commercialLandStdAtAcq + fp.commercialBuildingStdAtAcq,
+        },
+      });
     }
 
     // 상속(§163⑨2호 max) — 개산공제 미적용, 필요경비는 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
@@ -118,7 +207,7 @@ export function calcHousingGainSplit(
       asset.buildingAcquisitionDate,
       transferDate,
     );
-    return {
+    const phdSplit: HousingGainSplit = {
       totalGain,
       landGain,
       buildingGain,
@@ -133,18 +222,22 @@ export function calcHousingGainSplit(
       landHoldingYears,
       buildingHoldingYears,
     };
+    if (!swapToDirect) return phdSplit;
+    // §97②2호 단서(나목) — 취득시 축은 PHD가 역산한 취득시 개별주택가격(P_A_est)과
+    // 그 토지/건물 성분(`land/buildingHousingAtAcquisition`, 합 = P_A_est)이다.
+    return applyHousingProviso(phdSplit, {
+      asset,
+      derived,
+      acqDerived: effectiveAcqDerived,
+      acqLandStd: phd.landHousingAtAcquisition,
+      acqBuildingStd: phd.buildingHousingAtAcquisition,
+      transferLandStd,
+      transferBuildingStd,
+      acqStdOverride: { housingStd: phd.estimatedHousingPriceAtAcquisition },
+    });
   }
 
   // 기존 §97 분기 — 시행령 §166⑥: 양도가액은 양도시 비율, 취득가액은 취득시 비율로 안분
-
-  // 양도시 토지/건물 기준시가 (양도가액 안분용 — 분기 위에서 먼저 계산)
-  // 개별주택공시가격은 토지+건물 일괄이므로, 양도시 토지분 = 공시지가 × 주택부수토지 면적,
-  // 양도시 건물분 = 개별주택공시가격 - 토지분 (음수 방지).
-  const transferLandStd =
-    asset.transferStandardPrice.landPricePerSqm * derived.residentialLandArea;
-  const transferHousingTotal = asset.transferStandardPrice.housingPrice;
-  const transferBuildingStd = Math.max(transferHousingTotal - transferLandStd, 0);
-  const transferTotal = transferLandStd + transferBuildingStd;
 
   // 취득시 토지/건물 기준시가 (취득가액 안분 + 개산공제 base)
   let acqLandStd: number;

@@ -46,19 +46,33 @@ function appurtenantLandInput(over: Partial<TransferTaxInput>, holdingMonths: nu
 describe("D1 — 부수토지 일체과세 LTHD 3년 게이트 (§95②)", () => {
   const TAXABLE_GAIN = 100_000_000;
 
-  it("표1(일반): 주 주택 30개월(2.5년) 보유 → LTHD 배제 (deduction 0, rate 0)", () => {
-    // §95②: 보유 3년 미만 → 장기보유공제 없음. (버그 시 표1 min(2×2%,30%)=4% → 4,000,000)
+  it("표1(일반): 주 주택 30개월이어도 **토지 자신**이 3년 5개월 → 표1 6% (F11 정정)", () => {
+    // 🔁 2026-08-13 기대값 갱신 (F11) — 종전 기대는 deduction 0 / rate 0 이었다.
+    //
+    // 갱신이 정당한 이유: 이 파일 헤더가 밝히듯 D1은 #591 감사 R7이 **24개월 게이트를 36개월로**
+    //   고치며 만든 테스트다. 「그 36개월을 **누구 것으로** 세는가」라는 축은 검토된 적이 없고,
+    //   부수 효과로 「주 주택 보유기간」이라는 잘못된 축이 고정됐다.
+    //   「소득세법」 §95④ 본문은 「제2항에서 규정하는 자산의 보유기간은 **그 자산의 취득일부터
+    //   양도일까지**」이고, 같은 항 단서의 예외는 §97의2①(이월과세)·가업상속공제 적용비율분 둘로
+    //   **한정 열거**돼 부수토지 예외가 없다. 일체과세 근거인 §104①2호 괄호는 「이하 **이 항에서**
+    //   같다」라 그 정의확장을 제104조 제1항 내부로 한정하므로 §95 보유기간 축으로 전이되지 않는다.
+    //   ⇒ 표1 대상인 이 케이스(다주택 — 표2 비대상)는 토지 자신의 보유기간으로 판정해야 한다.
+    //
+    // 픽스처의 토지는 2021-01-01 취득 → 2024-06-01 양도 = 3년 4개월 30일(= 3년) ⇒ 표1 3×2% = 6%.
     const input = appurtenantLandInput(
       { isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0 },
       30,
     );
     const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, RULES, false, false);
-    expect(res.deduction).toBe(0);
-    expect(res.rate).toBe(0);
+    expect(res.rate).toBeCloseTo(0.06, 10);
+    expect(res.deduction).toBe(6_000_000);
   });
 
   it("표2(1세대1주택): 주 주택 30개월 + 거주 30개월 → LTHD 배제 (deduction 0)", () => {
     // 버그 시 표2 (보유 2년×4% + 거주 2년×4%) = 16% → 16,000,000. §95② 3년 미만이므로 0.
+    // ⚠️ 표2 축은 F11에서 **손대지 않았다** — 기재부 재산세제과-1183의 「표1(토지) vs 표2(주택)
+    //    중 큰 공제율」 규칙은 표2가 보유 단일축이던 시기(~2018) 해석이라 현행 2축 표2에
+    //    어떻게 대입할지가 미확정이다(예규·심판례 부존재). 그 판단 전까지 현행 유지.
     const input = appurtenantLandInput(
       { isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 30 },
       30,
@@ -68,10 +82,29 @@ describe("D1 — 부수토지 일체과세 LTHD 3년 게이트 (§95②)", () =>
     expect(res.rate).toBe(0);
   });
 
-  it("경계: 주 주택 35개월(3년 미만) → LTHD 배제 (deduction 0)", () => {
+  it("경계: 주 주택 35개월이어도 표1은 토지 축 → rate 6% (F11 정정)", () => {
+    // 🔁 2026-08-13 기대값 갱신 (F11) — 위 케이스와 같은 이유. 종전 기대는 0이었다.
+    //    3년 게이트도 §95④상 **토지 자신의 보유기간**으로 판정하므로 주 주택 35개월은 무관하다.
     const input = appurtenantLandInput(
       { isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0 },
       35,
+    );
+    const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, RULES, false, false);
+    expect(res.rate).toBeCloseTo(0.06, 10);
+    expect(res.deduction).toBe(6_000_000);
+  });
+
+  it("경계: 토지 3년 미만이면 표1도 배제 — 3년 게이트는 토지 축 (F11)", () => {
+    // 토지 2022-01-01 취득 → 2024-06-01 양도 = 2년 5개월 ⇒ §95② 진입요건 미달로 0.
+    // (주 주택은 168개월 = 14년이지만 표1 축이 아니므로 공제가 생기지 않는다.)
+    const input = appurtenantLandInput(
+      {
+        isOneHousehold: false,
+        householdHousingCount: 2,
+        residencePeriodMonths: 0,
+        acquisitionDate: new Date("2022-01-01"),
+      },
+      168,
     );
     const res = calcLongTermHoldingDeduction(TAXABLE_GAIN, input, RULES, false, false);
     expect(res.deduction).toBe(0);
@@ -80,6 +113,7 @@ describe("D1 — 부수토지 일체과세 LTHD 3년 게이트 (§95②)", () =>
 
   it("경계: 주 주택 36개월(정확히 3년) 표1 → rate 6%, deduction 6,000,000", () => {
     // §95② 표1: 보유 3년 × 2% = 6%. applyRate(1억, 0.06) = 6,000,000.
+    // (F11 후에는 토지 자신도 3년 4개월이라 같은 6%가 나온다 — 두 축이 우연히 일치하는 케이스.)
     const input = appurtenantLandInput(
       { isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0 },
       36,

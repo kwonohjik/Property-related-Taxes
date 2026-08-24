@@ -74,6 +74,7 @@ export const STATEMENT_GROUPS: GroupDef[] = [
       "ltHousingHolding",
       "ltHousingResidence",
       "ltCommercialPart",
+      "ltNonBusinessPart",
       "ltHoldingPart",
       "ltResidencePart",
     ],

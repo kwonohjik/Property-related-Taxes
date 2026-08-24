@@ -29,6 +29,7 @@ export { REDUCTION_METADATA, ALL_REDUCTION_IDS, getReductionsByCategory, CATEGOR
 export {
   isReductionCategoryAllowedForAssetKind,
   isReductionAllowedForAssetKind,
+  isGbClaimRouteAllowedForAssetKind,
   type ReductionAssetKind,
 } from "./asset-kind-gate";
 export type { ReductionMetadata, CategoryUiSchema } from "./metadata";

@@ -145,17 +145,27 @@ export function apportionTransferPrice(
  *
  * ⚠️ 취득시 상가부수토지 면적은 `acqDerived.commercialLandArea`. house_to_commercial 등
  *    용도변경 조합은 실가 모드 미지원(엔진 throw)이라 여기 도달하지 않음.
+ *
+ * @param acqStdOverride 취득시 기준시가 축 **직접 주입** — §164⑦ 미공시(PHD) 전용(2026-08-13 F18).
+ *   PHD 모드에서는 `acquisitionStandardPrice.housingPrice`가 **구조적으로 부재**하다(UI가 그 칸을
+ *   숨기고, 값 자체를 PHD가 3시점으로 역산한다). 그대로 두면 분자가 0 → `housingRatio` 0 →
+ *   자산 단위 공통 자본적지출의 **주택분 안분분이 통째로 소멸**하고 상가분이 전액을 흡수한다.
+ *   PHD가 역산한 취득시 개별주택가격(P_A_est)·4부분 취득시 기준시가를 주입해 축을 복원한다.
+ *   미전달 필드는 종전 `acquisitionStandardPrice` 기반 값으로 그대로 계산한다.
  */
 export function apportionAcquisitionPrice(
   totalAcqPrice: number,
   asset: MixedUseAssetInput,
   acqDerived: MixedUseDerivedAreas,
+  acqStdOverride?: { housingStd?: number; commercialStd?: number },
 ): { housingRatio: number; housingAcqPrice: number; commercialAcqPrice: number } {
-  const housingStd = asset.acquisitionStandardPrice.housingPrice ?? 0;
+  const housingStd = acqStdOverride?.housingStd ?? (asset.acquisitionStandardPrice.housingPrice ?? 0);
   const commercialLandStd = Math.floor(
     asset.acquisitionStandardPrice.landPricePerSqm * acqDerived.commercialLandArea,
   );
-  const commercialStd = commercialLandStd + asset.acquisitionStandardPrice.commercialBuildingPrice;
+  const commercialStd =
+    acqStdOverride?.commercialStd ??
+    commercialLandStd + asset.acquisitionStandardPrice.commercialBuildingPrice;
   const totalStd = housingStd + commercialStd;
   // totalStd<=0은 validation(취득시 기준시가 3필드 필수)에서 선차단되어 실경로 도달 불가 — 방어적 균등 0.5.
   // (양도가액 apportionTransferPrice는 미러이나 이 극단 fallback만 0 반환으로 다름 — 도달 불가라 영향 없음.)

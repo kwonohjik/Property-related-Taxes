@@ -53,7 +53,7 @@
 | 거주기간 | 신축·기존 모두 거주 없음 (§95²④ 거주공제 미적용) |
 
 **PDF 산식**:
-- **환산취득가** = 권리가액 × (취득시 기준시가 / 인가시 부근 기준시가) = **2.5억 × 1.2/1.5 = 2억** *(§164⑤ 패턴, 사례 39와 동일 구조)*
+- **환산취득가** = 권리가액 × (취득시 기준시가 / 인가시 기준시가) = **2.5억 × 1.2/1.5 = 2억** *(§164⑤ 패턴, 사례 39와 동일 구조)*
 - **개산공제** = 취득당시 기준시가 × 3% = **1.2억 × 3% = 3,600,000** *(§163⑥)*
 - **인가전 양도차익** = (권리가액 − 환산취득가 − 개산공제) + [양도가 안분 종전분]
   - = (2.5억 − 2억 − 0.036억) + 90,025,906
@@ -98,7 +98,7 @@
 ### 3-1. 환산 산식 (PDF 검증)
 
 ```
-환산취득가 = 권리가액 × (취득시 공동주택공시가격 / 인가시 부근 공동주택공시가격)
+환산취득가 = 권리가액 × (취득시 공동주택공시가격 / 인가시 공동주택공시가격)
           = 250,000,000 × 120,000,000 / 150,000,000 = 200,000,000
 
 개산공제 = 취득시 공동주택공시가격 × 3% = 120,000,000 × 3% = 3,600,000
@@ -122,7 +122,7 @@
 ```ts
 // 사례 39 기존 필드:
 // housingStdPriceAtAcq?: number;       // 취득당시 (분자)
-// housingStdPriceAtApproval?: number;  // 인가당시 부근 (분모)
+// housingStdPriceAtApproval?: number;  // 인가당시 (분모)
 
 // 본 사례에서 신규 추가 없음 — 같은 두 필드를 subject="apt" + pay 경로에서도 사용
 ```
@@ -139,7 +139,7 @@ export function calcAptContribPayEstimated(args: {
   transferPrice: number;          // 525M
   settlementPaid: number;         // 136M (불입)
   housingStdPriceAtAcq: number;   // 120M (취득당시 공동주택공시가격)
-  housingStdPriceAtApproval: number; // 150M (인가시 부근 공동주택공시가격)
+  housingStdPriceAtApproval: number; // 150M (인가시 공동주택공시가격)
   preApprovalExpenses: number;
   postApprovalExpenses: number;
 }): {
@@ -265,7 +265,7 @@ Pre-Do 진단 출력 (사례 40 실가) 그대로:
   - default 정책 (memory `feedback_store_default_vs_ui_display_fallback`): factory default `"single"` 명시, normalize에서 빈값→"single", UI는 직접 사용(fallback 제거)
 - 환산 모드 (`useEstimated=true`) + `subject="apt"` + `direction="pay"` + `originalAssetType="housing"` 조건에서 **PHD 2-point 입력 카드** 노출:
   - 취득당시 공동주택공시가격 (원, 정수, 면적 곱한 총액 — memory `feedback_3point_input_consistency`)
-  - 인가당시 부근 공동주택공시가격 (원, 정수)
+  - 인가당시 공동주택공시가격 (원, 정수)
   - (옵션) `ApartmentPriceLookupField` 신규 — 1차 PR은 수기 입력
 - `subject="apt"` 토글이 활성 → 양도가액 525M은 **신축APT 양도가**로 표시 (현재 인프라 그대로)
 

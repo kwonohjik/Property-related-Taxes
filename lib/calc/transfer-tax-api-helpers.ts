@@ -3,15 +3,12 @@
  * transfer-tax-api.ts 800줄 정책에 따라 분리.
  */
 
-import { effectiveCommercialLandPriceAtAcq } from "./transfer-pre1990-commercial-bridge";
-import { resolveCbEra } from "./commercial-cb-era";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
-import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
-import { deriveRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
+// ④ 분리취득 축 — 단건과 **같은 공용 빌더**(자산-무관 함수라 컴패니언도 그대로 쓴다).
+import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
 import {
   isExprValuationEligibleAssetKind,
   isAuctionEligibleAssetKind,
@@ -115,174 +112,12 @@ export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undef
 import { toEngineReductions } from "./transfer-tax-api-reductions";
 export { toEngineReductions } from "./transfer-tax-api-reductions";
 
-// ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑥, §176조의2②2호) ───
+// ─── ④ 상업용건물·오피스텔 환산취득가 (소령 §164⑥) — transfer-tax-api-commercial.ts로 분리 (800줄 정책, 재export 호환) ───
+export { buildCommercialAppurtenantLand } from "./transfer-tax-api-commercial";
+export { buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
 
-/**
- * AssetForm → `commercialAppurtenantLand` 서브객체 변환 (⑬).
- *
- * 부수토지 초과분 비사업용 판정(「지방세법 시행령」 §101①2호·§101②) 입력.
- * **취득방법과 무관**하게 동작하므로 아래 환산 전용 변환과 게이트가 다르다.
- *
- * 두 면적이 모두 입력됐을 때만 payload를 만든다 — 하나만 있으면 판정이 불가능하고,
- * 부분 입력을 보내면 API refine이 400을 내 사용자가 원인을 알기 어렵다.
- * ⑧ validate가 같은 조건("둘 다 입력 or 둘 다 공란")을 강제한다.
- */
-export function buildCommercialAppurtenantLand(asset: AssetForm): object | undefined {
-  if (asset.assetKind !== "commercial_building") return undefined;
-
-  const totalLandArea = parseDecimal(asset.cbTotalLandArea);
-  const totalBuildingFootprintArea = parseDecimal(asset.cbTotalBuildingFootprintArea);
-  if (!(totalLandArea > 0) || !(totalBuildingFootprintArea > 0)) return undefined;
-
-  return {
-    totalLandArea,
-    totalBuildingFootprintArea,
-    // §101① 단서 해당 시 배율이 불필요하므로 용도지역을 보내지 않아도 API refine을 통과한다.
-    ...(asset.cbUnapprovedBuilding ? {} : { zoneType: asset.cbZoneType || undefined }),
-    ...(asset.cbUnapprovedBuilding ? { unapprovedBuilding: true } : {}),
-  };
-}
-
-/**
- * AssetForm cb* 필드 → commercialBuildingValuation 서브객체 변환.
- * 필수 필드 미입력 시 undefined 반환 — validate에서 먼저 차단되므로 silent 처리.
- * ⑧ 주의: validate와 동일 조건으로 undefined 반환. UI 통과 → 여기서 undefined → 엔진 미도달 방지.
- */
-export function buildCommercialBuildingValuation(
-  asset: AssetForm,
-  transferDate = "",
-): object | undefined {
-  if (asset.assetKind !== "commercial_building" || !asset.useEstimatedAcquisition) {
-    return undefined;
-  }
-  // 취득일에서 자동 판정(2005-01-01 경계) — UI 표시·validate와 **같은 함수**를 쓴다(3중 패턴).
-  const era = resolveCbEra(asset);
-  if (!era) return undefined;
-
-  const exclusiveArea = parseDecimal(asset.cbExclusiveArea);
-  const sharedArea = parseDecimal(asset.cbSharedArea);
-  const landArea = parseDecimal(asset.cbLandArea);
-  const unitPriceAtTransfer = parseAmount(asset.cbUnitPriceAtTransfer);
-  const unitPriceAtFirstOrAcq = parseAmount(asset.cbUnitPriceAtFirstOrAcq);
-  const landPriceAtTransfer = parseAmount(asset.cbLandPricePerSqmAtTransfer);
-
-  // 공통 필수 필드 검증 — 0이면 undefined 반환 (validate에서 먼저 차단)
-  if (!exclusiveArea || !sharedArea || !landArea
-      || !unitPriceAtTransfer || !unitPriceAtFirstOrAcq || !landPriceAtTransfer) {
-    return undefined;
-  }
-
-  // isPreDisclosure — 적용 cbEra(명시 선택 ?? 취득일 파생)가 "pre_disclosure" 이면 true
-  const isPreDisclosure = era === "pre_disclosure";
-
-  const base = {
-    isPreDisclosure,
-    exclusiveArea,
-    commonArea: sharedArea,
-    landArea,
-    unitPriceAtTransfer,
-    // pre_disclosure: unitPriceAtFirstOrAcq = 최초고시(2005) ㎡당 호별고시가
-    // post_disclosure: unitPriceAtFirstOrAcq = 취득시 ㎡당 호별고시가
-    ...(isPreDisclosure
-      ? { unitPriceAtFirstDisclosure: unitPriceAtFirstOrAcq }
-      : { unitPriceAtAcquisition: unitPriceAtFirstOrAcq }),
-    landPriceAtTransfer,
-  };
-
-  if (isPreDisclosure) {
-    const buildingAtAcq = parseAmount(asset.cbBuildingStdPriceAtAcq);
-    const buildingAtFirst = parseAmount(asset.cbBuildingStdPriceAtFirst);
-    const buildingAtTransfer = parseAmount(asset.cbBuildingStdPriceAtTransfer);
-    // §164④ — 취득 1990-08-30 이전이면 가목의 가액이 없어 토지등급 환산값을 쓴다(⑧ 동일 fallback).
-    const landAtAcq = effectiveCommercialLandPriceAtAcq(asset, transferDate);
-    const landAtFirst = parseAmount(asset.cbLandPricePerSqmAtFirst);
-    if (!buildingAtAcq || !buildingAtFirst || !buildingAtTransfer
-        || !landAtAcq || !landAtFirst) {
-      return undefined;
-    }
-    // §164⑧ 준용(괄호 단서) 보조 입력 — 값이 있을 때만 전달. 미전달 시 엔진은 탐지만 한다.
-    const prevSum = parseAmount(asset.cbPrevStdPriceSum);
-    const adjustMonths = parseInt((asset.cbStdPriceAdjustMonths || "").replace(/,/g, ""), 10);
-    return {
-      ...base,
-      buildingStdPriceAtAcquisition: buildingAtAcq,
-      buildingStdPriceAtFirstDisclosure: buildingAtFirst,
-      buildingStdPriceAtTransfer: buildingAtTransfer,
-      landPriceAtAcquisition: landAtAcq,
-      landPriceAtFirstDisclosure: landAtFirst,
-      ...(prevSum > 0 && { prevStdPriceSum: prevSum }),
-      ...(Number.isFinite(adjustMonths) && adjustMonths > 0 && { stdPriceAdjustMonths: adjustMonths }),
-    };
-  }
-
-  // post_disclosure: 취득시 개별공시지가 필수 (취득 ≥2005이므로 §164④ 구간은 아니나 fallback 동일)
-  const landAtAcq = effectiveCommercialLandPriceAtAcq(asset, transferDate);
-  if (!landAtAcq) return undefined;
-  return { ...base, landPriceAtAcquisition: landAtAcq };
-}
-
-// ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
-
-/**
- * AssetForm.rentalHousingException → API payload 변환.
- * applyException=false 또는 rentalUnits 미입력 시 undefined 반환 (⑬ body 미포함).
- * 자동 안분 fallback 금지 — 미입력은 validate에서 차단.
- */
-export function toRentalHousingExceptionApi(asset: AssetForm): object | undefined {
-  const rh = asset.rentalHousingException;
-  if (!rh?.applyException) return undefined;
-  if (!rh.rentalUnits || rh.rentalUnits.length === 0) return undefined;
-
-  return {
-    applyException: true,
-    scenario: rh.scenario,
-    rentalUnits: rh.rentalUnits.map((u) => ({
-      businessRegistrationDate: u.businessRegistrationDate
-        ? (u.businessRegistrationDate.includes('T') ? u.businessRegistrationDate : `${u.businessRegistrationDate}T00:00:00.000Z`)
-        : undefined,
-      rentalRegistrationDate: u.rentalRegistrationDate
-        ? (u.rentalRegistrationDate.includes('T') ? u.rentalRegistrationDate : `${u.rentalRegistrationDate}T00:00:00.000Z`)
-        : undefined,
-      rentalCategory: u.rentalCategory,
-      rentalAcquisitionType: u.rentalAcquisitionType,
-      // boolean 요건 필드는 stale sessionStorage·이력 로드(migrateAsset 우회) 유닛에서 undefined일 수 있어
-      // ?? false로 방어 — Zod required boolean 400 차단(false = 요건 미해당, validate의 !u.X와 동일 관용).
-      isApartment: u.isApartment ?? false,
-      region: u.region,
-      isExcluded918Rule: u.isExcluded918Rule ?? false,
-      hasContractDepositProof: u.hasContractDepositProof ?? false,
-      isExcludedShortToLongChange: u.isExcludedShortToLongChange ?? false,
-      standardPriceAtRentalStart: parseAmount(u.standardPriceAtRentalStart) || 0,
-      acquisitionOfficialPrice: parseAmount(u.acquisitionOfficialPrice) || 0,
-      isNationalSizeHousing: u.isNationalSizeHousing ?? false,
-      // 건설임대 규모요건 — 미입력(빈값)이면 undefined 전송(엔진이 SIZE_REQUIRED 판정)
-      landAreaM2: parseDecimal(u.rentalLandArea) || undefined,
-      totalFloorAreaM2: parseDecimal(u.rentalTotalFloorArea) || undefined,
-      hasMinimum2Units: u.hasMinimum2Units ?? false,
-      hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity ?? false,
-      firstSaleContractDate: u.firstSaleContractDate
-        ? (u.firstSaleContractDate.includes('T') ? u.firstSaleContractDate : `${u.firstSaleContractDate}T00:00:00.000Z`)
-        : undefined,
-      rentalMonths: deriveRentalMonths(u),
-      rentalAutoTermination: u.rentalAutoTermination ?? false,
-      requirementsConfirmed: u.requirementsConfirmed ?? false,
-    })),
-    priorResidenceTransferDate: rh.priorResidenceTransferDate
-      ? (rh.priorResidenceTransferDate.includes('T')
-        ? rh.priorResidenceTransferDate
-        : `${rh.priorResidenceTransferDate}T00:00:00.000Z`)
-      : undefined,
-    // 환산취득가 모드 연동 시 자산-수준 기준시가가 단일 소스 (§161① = 환산 분자·분모와 동일 값).
-    // fallback이 아닌 소스 ternary — stale rhe override가 침묵으로 이기는 경로 차단.
-    standardPriceAtAcquisitionForPhrp: isPhrpStdPriceLinked(asset)
-      ? parseAmount(asset.standardPriceAtAcq) || undefined
-      : parseAmount(rh.standardPriceAtAcquisitionForPhrp ?? "") || undefined,
-    standardPriceAtPriorTransfer: parseAmount(rh.standardPriceAtPriorTransfer ?? "") || undefined,
-    standardPriceAtTransferForPhrp: isPhrpStdPriceLinked(asset)
-      ? parseAmount(asset.standardPriceAtTransfer) || undefined
-      : parseAmount(rh.standardPriceAtTransferForPhrp ?? "") || undefined,
-  };
-}
+// ─── ④ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — transfer-tax-api-rental-housing.ts로 분리 (800줄 정책, 재export 호환) ───
+export { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 
 export function toEngineAssetKind(
   kind: AssetForm["assetKind"]
@@ -503,6 +338,21 @@ export function buildAssetPayload(
           return p > 0 && a > 0 ? Math.floor(p * a) : undefined;
         })();
 
+  /**
+   * §166⑥ **안분 키** — 사용자가 자산 카드에 입력한 「양도시 기준시가」(증환지 증가분은 파생값).
+   *
+   * 🔑 아래 `standardPriceAtTransfer`와 **같은 식에서 출발하지만 역할이 다르다**(V-10).
+   *    이월과세 `general` 환산 컴패니언에서는 `...cp.topLevelOverrides`가
+   *    `standardPriceAtTransfer`를 **증여자 축 환산 분모**(§97①1호나목)로 덮어쓰므로,
+   *    안분 키를 같은 칸에 실으면 사용자 입력값이 사라진다. 그래서 전용 키로 나눠 보낸다 —
+   *    primary가 이미 `standardPriceAtTransferForApportion`(폼-전역)으로 두 역할을 분리해
+   *    보내는 것과 **같은 방식**이다.
+   */
+  const stdAtTransferForApportion =
+    parseAmount(asset.standardPriceAtTransfer) > 0
+      ? parseAmount(asset.standardPriceAtTransfer)
+      : replotIncStdAtTransfer;
+
   // 감환지: acquisitionArea에 의제취득면적이 UI에서 이미 계산됨
   const effectiveLandArea = asset.acquisitionArea ? parseFloat(asset.acquisitionArea) : undefined;
 
@@ -560,11 +410,41 @@ export function buildAssetPayload(
     : fixedSalePriceRaw;
 
   return {
+    /**
+     * ④ 토지·건물 **분리취득** 축 (N-6(A), 2026-08-23) — 단건과 **같은 공용 빌더**를 쓴다.
+     *
+     * `buildSplitPayload`는 처음부터 `AssetForm`을 받는 자산-무관 함수였고, ⑤ UI의
+     * 「토지·건물 취득일 다름」 토글도 자산 인덱스를 보지 않는다. 그런데 이 빌더가 그것을
+     * **부르지 않아** 컴패니언에서 분리취득을 켜도 값이 통째로 사라졌다(⑫에도 칸이 없었다).
+     *
+     * ⚠️ 스프레드를 **맨 앞에** 둔다 — 아래 명시 키(`standardPriceAtAcquisition` 등)가
+     *    이기도록. `buildSplitPayload`는 별개취득에서 결합 총액을 `undefined`로 덮어쓰는데,
+     *    그 override는 **단건 body에서만** 성립하는 규약이다(본체가 먼저 설정하고 빌더가 뒤에
+     *    온다). 컴패니언은 순서가 반대라 여기서는 앞에 둔다.
+     * ⚠️ 부담부증여는 제외된다 — `isSplitPayloadActive`가 막는다(§159가 총액을 override하므로
+     *    파트 직접 입력과 결합하면 잔액이 음수가 된다).
+     */
+    ...buildSplitPayload(asset, {
+      isBurdenedGift: asset.transferType === "burdened_gift",
+      // PHD(§164⑤)는 컴패니언 미지원 — N-6 (B)에서 ⑤·⑧을 함께 닫았다.
+      usesPhd: false,
+      ratioed: makeRatioed(ratio, fractional),
+    }),
     assetId: asset.assetId,
     assetLabel: asset.assetLabel,
     assetKind: toEngineAssetKind(asset.assetKind),
     // ④ 공익수용 §164⑨ 1호 특례 — **컴패니언 자산도 지원**(계획 Q5).
-    // `transferCause`는 §77 감면용으로 이미 위 스키마에 있으나, min[] 3후보 값은 여기서 실어야
+    //
+    // 🔴 `transferCause`는 **1호 트랙의 게이트**다(엔진 `applyExpropriationValuation`:112 ·
+    //    `applyHousingExpropriationValuation`:257). 이것을 싣지 않으면 아래 min[] 후보값을
+    //    아무리 실어도 1호는 **한 번도 발동하지 않는다**. 게이트는 1호가 도달하는 트랙
+    //    (원/㎡ 가·나목 + 주택 총액 라목)의 합집합 — 그 밖은 아래와 같은 이유로 막는다.
+    //    ⚠️ 2호(공매·경락)는 조문상 수용을 요건으로 하지 않으므로 `transferCause`에 **종속시키지 않는다**.
+    ...((isExprValuationEligibleAssetKind(asset.assetKind) ||
+      isHousingExprEligibleAssetKind(asset.assetKind)) && asset.transferCause
+      ? { transferCause: asset.transferCause }
+      : {}),
+    // min[] 3후보 값은 여기서 실어야
     // `buildCompanionEngineInputs`가 엔진 input에 매핑할 수 있다(⑫ 컴패니언 스키마 동반 필수).
     //
     // ⚠️ **적격 자산일 때만 전송**(UI 노출 조건과 동일 — `isExprValuationEligibleAssetKind`).
@@ -594,10 +474,11 @@ export function buildAssetPayload(
           housingCompensationBasisTotal: parseAmount(asset.housingCompensationBasisTotal) || undefined,
         }
       : {}),
-    standardPriceAtTransfer:
-      parseAmount(asset.standardPriceAtTransfer) > 0
-        ? parseAmount(asset.standardPriceAtTransfer)
-        : replotIncStdAtTransfer,
+    // §97①1호나목 **환산 분모**. 이월과세 general 환산에서만 아래 `cp.topLevelOverrides`가
+    // 증여자 양도시 기준시가로 덮어쓴다 — 그 override는 의도된 것이다.
+    standardPriceAtTransfer: stdAtTransferForApportion,
+    /** §166⑥ 안분 키 — override 대상이 아니다(위 const JSDoc 참조). */
+    standardPriceAtTransferForApportion: stdAtTransferForApportion,
     standardPriceAtAcquisition:
       asset.acquisitionCause === "purchase" && asset.useEstimatedAcquisition && asset.standardPriceAtAcq
         ? parseAmount(asset.standardPriceAtAcq)
@@ -670,7 +551,7 @@ export function buildAssetPayload(
     // 이월과세(증여) 전용 서브객체 — carryover_gift 시만 빌드
     // "general" 환산 모드에서 topLevelOverrides.standardPrice* 를 최상위에 주입
     ...(() => {
-      const cp = buildCarryoverPayload(asset, transferDate);
+      const cp = buildCarryoverPayload(asset, transferDate, ratio);
       if (!cp) return {};
       return {
         carryoverTaxation: cp.carryoverTaxation,

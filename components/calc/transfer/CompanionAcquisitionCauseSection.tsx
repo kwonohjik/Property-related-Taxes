@@ -39,6 +39,11 @@ interface Props {
   isNewConstruction: boolean;
   /** 지분 카드(fractional split 2번째 이후) — 일반건물 증축 유무 토글을 숨긴다(물건 사건). */
   shareAcquisitionOnly?: boolean;
+  /**
+   * 첫 자산이 아닌 자산 여부 — §164⑤ 3-시점 환산(PHD) 토글 노출 게이트.
+   * 근거는 `CompanionAcqPurchaseBlock.types.ts`의 `isNonPrimaryAsset` 주석.
+   */
+  isNonPrimaryAsset?: boolean;
 }
 
 export function CompanionAcquisitionCauseSection({
@@ -47,6 +52,7 @@ export function CompanionAcquisitionCauseSection({
   transferDate,
   isNewConstruction,
   shareAcquisitionOnly,
+  isNonPrimaryAsset,
 }: Props) {
   // 일반건물(토지+건물 일괄) — 토지/건물 2카드로 분리 표시
   if (asset.assetKind === "general_building") {
@@ -147,6 +153,7 @@ export function CompanionAcquisitionCauseSection({
 
       {asset.acquisitionCause === "purchase" && (
         <CompanionAcqPurchaseBlock
+          isNonPrimaryAsset={isNonPrimaryAsset}
           acquisitionDate={asset.acquisitionDate}
           onAcquisitionDateChange={(v) => onChange({ acquisitionDate: v })}
           isSalesCaseAcquisition={asset.isSalesCaseAcquisition}

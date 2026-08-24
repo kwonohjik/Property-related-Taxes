@@ -10,6 +10,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import { isReductionAllowedForAssetKind, REDUCTION_METADATA, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
+import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
@@ -55,6 +56,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         if (!isReductionAllowedForAssetKind(r.type, asset.assetKind)) {
           const gateLabel =
             REDUCTION_METADATA[r.type as keyof typeof REDUCTION_METADATA]?.uiLabel ?? "이 감면";
+          // §69는 반대 방향 게이트다 — 「토지 전용」이라 주택 문구를 쓰면 사유가 거꾸로 안내된다.
+          if (r.type === "self_farming")
+            return fail(
+              "자경농지 감면(조특법 §69)은 토지 양도에만 적용됩니다. 자산 종류를 확인하거나 감면 선택을 해제하세요.",
+            );
           return fail(`${gateLabel} 감면은 주택 양도에만 적용됩니다. 자산 종류를 확인하거나 감면 선택을 해제하세요.`);
         }
         if (r.type === "public_expropriation") {
@@ -68,6 +74,15 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("사업인정고시일은 양도일보다 이전이어야 합니다.");
         }
         if (r.type === "gb_designated_land") {
+          // ① 매수 경로 — §17(매수대상토지)과 §20(토지등)은 대상 범위가 달라 사용자 사실 입력이 필요하다.
+          if (r.gbBranch === "in_zone") {
+            if (!r.gbPurchaseRoute)
+              return fail("개발제한구역 매수 경로(매수청구 §17 / 협의매수 §20)를 선택하세요.");
+            if (r.gbPurchaseRoute === "claim" && !isGbClaimRouteAllowedForAssetKind(asset.assetKind))
+              return fail(
+                "토지매수 청구(개발제한구역법 §17)는 「매수대상토지」에 대한 제도라 토지분만 감면 대상입니다. 협의매수(§20)를 선택했는지 확인하거나 토지 자산으로 입력하세요.",
+              );
+          }
           if (!r.gbDesignationDate) return fail("개발제한구역 지정일을 선택하세요.");
           if (!r.gbTriggerDate) return fail(r.gbBranch === "released" ? "사업인정고시일을 선택하세요." : "매수청구·협의매수일을 선택하세요.");
           if (r.gbBranch === "released" && !r.gbReleasedDate) return fail("개발제한구역 해제일을 선택하세요.");

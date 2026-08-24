@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
 
 // ─── ⑩ 장기임대주택 거주주택 비과세 특례 enum 재export (컴패니언) ─
 
@@ -226,6 +227,8 @@ export const presaleRightSchema = z.object({
 // 순환 import 방지: 본 파일의 rentHistorySchema·vacancyPeriodSchema를 그쪽에서 import.
 import { reductionSchema } from "./transfer-tax-schema-reductions";
 export { reductionSchema };
+// ⑫ 분리취득 축 — 단건·컴패니언 공용 shape (leaf라 TDZ 안전).
+import { splitAcquisitionShape } from "./transfer-tax-schema-split";
 
 export const filingPenaltyDetailsSchema = z.object({
   determinedTax:     z.number().int().nonnegative(),
@@ -284,16 +287,69 @@ export const inheritanceValuationSchema = z.object({
 // companionAssets는 주 자산과 기준시가 비율로 안분될 보조 자산들이다.
 
 export const companionAssetSchema = z.object({
+  /**
+   * ⑫ 토지·건물 **분리취득** 축 (N-6(A), 2026-08-23) — 단건과 **같은 shape**을 spread한다.
+   *
+   * 🔴 종전에는 이 축의 필드가 **하나도 없었다**. ⑤ UI(`CompanionAcqPurchaseBlock`의
+   * 「토지·건물 취득일 다름」 토글)는 자산 인덱스를 보지 않아 컴패니언에도 렌더되고,
+   * ④ 빌더(`buildSplitPayload`)도 `AssetForm`을 받는 공용 함수인데, ⑫에 칸이 없어
+   * **조용히 strip**됐다 ⇒ 컴패니언에서 분리취득을 켜도 세액이 1원도 안 움직였다.
+   *
+   * ⚠️ 목록을 여기 **복사하지 않는다** — 두 벌이면 단건에 필드가 늘 때 컴패니언만 빠진다.
+   */
+  ...splitAcquisitionShape,
   assetId: z.string().min(1),
   assetLabel: z.string().min(1),
   assetKind: z.enum(["housing", "land", "building"]),
   /**
-   * 양도시점 기준시가 (안분 키) — 주택: 개별주택가격, 토지: 공시지가×면적.
-   * apportioned 모드에서 필수, actual 모드(fixedSalePrice 사용)에서는 선택.
+   * 양도시점 기준시가 — **§97①1호나목 환산 분모**(매매 estimated·이월과세 general 환산).
+   *
+   * 🔴 **안분 키가 아니다.** 이월과세 `general` 환산 컴패니언에서 ④가 이 칸을
+   *    **증여자의** 양도시 기준시가로 덮어쓰기 때문이다
+   *    (`lib/calc/transfer-tax-api-carryover.ts` `topLevelOverrides`).
+   *    §166⑥ 안분 키는 아래 `standardPriceAtTransferForApportion`이다.
    */
   standardPriceAtTransfer: z.number().int().positive().optional(),
+  /**
+   * §166⑥ **안분 키** — 사용자가 자산 카드에 입력한 「양도시 기준시가」.
+   * 주택: 개별주택가격, 토지: 공시지가×면적. apportioned 모드에서 필수
+   * (actual 모드·지분 컴패니언은 선택 — `transfer-tax-schema.ts` superRefine).
+   *
+   * 🔑 주 자산의 폼-전역 `standardPriceAtTransferForApportion`과 **같은 역할**이다.
+   *    이 필드가 없으면 이월과세 general 환산 컴패니언에서 안분 키가 증여자 기준시가로
+   *    치환된다(D-5).
+   */
+  standardPriceAtTransferForApportion: z.number().int().positive().optional(),
   /** 취득시점 기준시가 (선택) — totalAcquisitionPrice 안분 또는 매매 estimated 환산 시 키 */
   standardPriceAtAcquisition: z.number().int().positive().optional(),
+  /**
+   * ⑫ 공익수용·공매 §164⑨ 특례 — **컴패니언 자산도 대상**(소득세법 시행령 §164⑨).
+   *
+   * §164⑨은 법 §99①1호 **가목~라목(토지·건물·오피스텔/상업용 건물·주택) 전부**를 대상으로 하는
+   * **자산 단위** 규정이고, 「주된 자산 전용」·「일괄양도 제외」 문언이 본문·괄호·단서 어디에도 없다.
+   * 나아가 법 §100② → 영 §166⑥ → 「부가가치세법 시행령」 §64①1호가 일괄양도 안분 키를
+   * **기준시가**로 지정하므로, 컴패니언의 양도 당시 기준시가는 법적으로 살아있는 값이고
+   * §164⑨이 바로 그 값을 계산하는 규정이다.
+   *
+   * 🔴 이 9필드가 없으면 ④(`buildAssetPayload`)가 실은 값을 Zod가 **조용히 떼어내**
+   *    ⑭(`bundled-split-helpers.ts`)의 매핑이 이미 있어도 엔진에 도달하지 못한다.
+   *    (실측: 400이 아니라 200 + 특례 미적용값 — 화면에는 입력값이 그대로 보인다.)
+   *
+   * 타입은 단건 `propertyBaseShape`(transfer-tax-schema.ts)와 **동일**해야 한다.
+   * ⚠️ 2호(공매·경락)는 조문상 수용을 요건으로 하지 않는다 — `transferCause`에 종속시키지 말 것.
+   */
+  transferCause: z.enum(["general", "public_expropriation"]).optional(),
+  /** §164⑨1호 원/㎡ 트랙 (가·나목) — 엔진이 게이트, 여기선 strip 방지 */
+  standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),
+  transferArea: z.number().positive().optional(),
+  compensationPerSqm: z.number().int().nonnegative().optional(),
+  compensationBasisStdPrice: z.number().int().nonnegative().optional(),
+  /** §164⑨2호 공매·경락 — 1호와 독립 요건(수용 불요) */
+  isAuctionTransfer: z.boolean().optional(),
+  auctionPrice: z.number().int().nonnegative().optional(),
+  /** §164⑨1호 주택 총액 트랙 (라목) — 개별·공동주택가격은 총액이라 원/㎡ 분해가 없다 */
+  housingCompensationTotal: z.number().int().nonnegative().optional(),
+  housingCompensationBasisTotal: z.number().int().nonnegative().optional(),
   /**
    * 공유지분율 (0<r≤1) — 필요경비 개산공제(§163⑥) base 축소 전용. ⑫ 침묵 stripping 방지.
    * 기준시가는 물건 전체 값을 유지하고 개산공제만 「지분 기준시가 × 3%」가 된다.
@@ -396,6 +452,19 @@ export const companionAssetSchema = z.object({
   approvalCertificateDate: z.string().date().optional(),
   temporaryApprovalDate: z.string().date().optional(),
   actualUseDate: z.string().date().optional(),
+  /**
+   * ⑫ 배우자등 이월과세 §97의2 — `acquisitionCause === "carryover_gift"` 시 필수
+   * (필수 판정은 `transfer-tax-schema.ts`의 컴패니언 superRefine `carryover_gift` arm).
+   *
+   * 🔴 이 필드가 없던 동안 ④(`buildAssetPayload` → `buildCarryoverPayload`)가 싣던 값이
+   *    Zod에서 **조용히 strip**됐다 — 400이 아니라 200 + 컴패니언 취득가액 **0**이었다(D-1).
+   *
+   * shape은 GB 파트용 `carryoverTaxationEngineShape`를 **재사용**한다. 단건
+   * (`transfer-tax-schema.ts`) 인라인 shape과 필드·타입 11개가 전부 일치한다(V-5 기계 대조).
+   * ⚠️ `giftTaxAmount`의 **의미**만 소비자마다 다르다 — GB 파트는 「이미 안분된 값」,
+   *    컴패니언·단건은 사용자가 영 §163의2②로 산정해 넣은 **자산 전체분**이다.
+   */
+  carryoverTaxation: carryoverTaxationEngineShape.optional(),
 });
 
 // ─── superRefine 공통 검증 — 별도 파일로 분리 (800줄 정책) ──────

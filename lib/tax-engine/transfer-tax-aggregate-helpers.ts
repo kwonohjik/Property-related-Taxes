@@ -14,6 +14,7 @@ import {
 import { calculateProgressiveTax } from "./tax-utils";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import type { SplitRatePart } from "./transfer-tax-split-rate";
+import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { clauseBucketKey } from "./transfer-tax-rate-calc";
 import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import { offsetLossesCore } from "./loss-offset-core";
@@ -120,7 +121,16 @@ export function classifyRateGroup(
 
   const multiHouseByResult =
     result.surchargeType === "multi_house_2" || result.surchargeType === "multi_house_3plus";
+  /**
+   * 원시 플래그 fallback은 **정밀 판정이 없을 때만** 쓴다 (2026-08-13 F01).
+   *
+   * `transfer-tax.ts` STEP 3이 이미 「houses[] 정밀 결과가 정본, 없을 때만 원시 fallback」
+   * 규약을 구현한다. 여기만 그 규약을 따르지 않아, 단건이 §167의3 배제로 중과를 걷어낸
+   * 자산이 다건에서 `multi_house_surcharge` 그룹으로 되살아났다(실측 +122,250,000).
+   * `rateGroup`은 §102② 통산 범위·기본공제 배분 우선순위에도 직결되므로 표시용 분류가 아니다.
+   */
   const multiHouseByInput =
+    result.multiHouseSurchargeEvaluation === undefined &&
     isHousingLike &&
     item.isRegulatedArea &&
     item.householdHousingCount >= 2;
@@ -342,6 +352,10 @@ export function aggregateByGroup(
       splitDetail: records[i].result.splitDetail,
       parsedRates,
       taxRateInput: records[i].correctedSingleInput,
+      // houses[] 정밀 중과 판정 — 단건 엔진이 낸 **그 판정**을 그대로 넘긴다 (2026-08-13 F01).
+      // 빠뜨리면 `calcTax`가 원시 플래그(householdHousingCount·isRegulatedArea)로 중과를
+      // **재판정**해 단건이 배제한 중과가 다건에서 되살아난다(optional이라 TS가 못 잡는다).
+      multiHouseSurchargeResult: records[i].result.multiHouseSurchargeEvaluation,
     });
     // 파트가 있는 자산만 **자산 단독 세액**을 기록한다(§4.12 — 표시 정확화용).
     // 자산은 그룹 하나에만 속하므로 이 대입은 자산당 1회다.
@@ -429,6 +443,8 @@ export function aggregateByGroup(
               //   `buildLandRateInput`으로 §104② 기산일을 확정했고, 비사업용 파트는
               //   `nonBusinessLandAreaRatio`를 1로 되돌린 입력이다.
               rateInput: p.rateInput,
+              // 파트는 자산 n에서 나왔으므로 그 자산의 정밀 중과 판정을 함께 나른다 (F01).
+              mhResult: records[idxList[n]].result.multiHouseSurchargeEvaluation,
             }))
           : [
               {
@@ -437,6 +453,7 @@ export function aggregateByGroup(
                 appliedRate: a.rate,
                 candidateClauses: a.candidateClauses,
                 rateInput: records[idxList[n]].correctedSingleInput,
+                mhResult: records[idxList[n]].result.multiHouseSurchargeEvaluation,
               },
             ],
       );
@@ -461,7 +478,7 @@ export function aggregateByGroup(
         // `allocatedBasic[i] ≤ incomeAfterOffset[i]`이고, 파트 과세표준의 합은 자산 과세표준과
         // 같다(`computeSplitPartTax:286`가 어긋나면 `null`을 반환해 파트를 만들지 않는다).
         const mergedBase = bucket.reduce((s, p) => s + p.taxBase, 0);
-        const tr = calcTax(mergedBase, parsedRates, bucket[0].rateInput);
+        const tr = calcTax(mergedBase, parsedRates, bucket[0].rateInput, bucket[0].mhResult);
         groupCalculatedTax += tr.calculatedTax;
         appliedRate = Math.max(appliedRate, tr.appliedRate);
       }
@@ -512,6 +529,8 @@ export function aggregateByGroup(
         candidateClauses: SplitRatePart["candidateClauses"];
         rateInput: TransferTaxInput;
         surchargeRate?: number;
+        /** 파트가 속한 자산의 houses[] 정밀 중과 판정 — 버킷 합산 재계산에 그대로 넘긴다 (F01). */
+        mhResult?: MultiHouseSurchargeResult;
       };
       const clauseParts: ClausePart[] = perAsset.flatMap((a, n) =>
         a.parts
@@ -522,6 +541,7 @@ export function aggregateByGroup(
               candidateClauses: p.candidateClauses,
               rateInput: p.rateInput,
               surchargeRate: p.surchargeRate,
+              mhResult: records[idxList[n]].result.multiHouseSurchargeEvaluation,
             }))
           : [
               {
@@ -531,6 +551,7 @@ export function aggregateByGroup(
                 candidateClauses: a.candidateClauses,
                 rateInput: records[idxList[n]].correctedSingleInput,
                 surchargeRate: a.surcharge,
+                mhResult: records[idxList[n]].result.multiHouseSurchargeEvaluation,
               },
             ],
       );
@@ -554,7 +575,7 @@ export function aggregateByGroup(
         } else {
           // 같은 호 → 과세표준을 **합산해 1회** 계산한다(§104⑤2호 본문 · 예규 §1.6-A).
           // 대표 파트의 `rateInput`을 쓴다 — 같은 호라 세율 규칙이 같고, 재구성하면 dual-truth다.
-          bucketTax = calcTax(bucketBase, parsedRates, bucket[0].rateInput).calculatedTax;
+          bucketTax = calcTax(bucketBase, parsedRates, bucket[0].rateInput, bucket[0].mhResult).calculatedTax;
         }
         groupCalculatedTax += bucketTax;
 

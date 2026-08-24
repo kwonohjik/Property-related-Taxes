@@ -7,6 +7,8 @@
  * acquisitionCause === "carryover_gift" 일 때만 유효.
  */
 
+import type { RateBasisFacts } from "../transfer-rate-holding-basis";
+
 // ============================================================
 // 입력 타입
 // ============================================================
@@ -65,6 +67,13 @@ export interface CarryoverTaxationInput {
    * · lineal : 「**양도 당시** 사망」
    */
   donorDeceased?: boolean;
+  /**
+   * 환산 모드 분자 — **증여자 취득 당시** 그 자산(파트)의 기준시가.
+   * `useEstimatedAcquisition === true`일 때만 의미가 있다.
+   * 분모(양도 당시 기준시가)는 받지 않는다 — 엔진이 아는 값을 쓴다(설계 D9-8).
+   * 소비자는 `general-building-valuation.ts`의 `applyCarryoverEstimationBasis` 하나다.
+   */
+  donorStandardPriceAtAcquisition?: number;
   /**
    * 적용배제 — 사용자 선언 (§97조의2 ② 1호·2호·④항).
    * ② 3호(비교과세)는 자동 판정이므로 선언 불필요.
@@ -238,4 +247,48 @@ export interface CarryoverTaxationDetail {
   adoptedScenario: "A" | "B";
   /** ② 3호 비교과세 적용배제 여부 (B 채택 시 true) */
   comparisonExclusion: boolean;
+  /**
+   * **[다건 전용] ②3호를 신고단위 결정세액으로 비교한 실적.**
+   *
+   * `scenarioA.determinedTax`·`scenarioB.determinedTax`는 **그 자산만** 떼어낸 값이라
+   * 다건에서는 채택 결과를 설명하지 못한다(A가 작은데 A를 채택하는 조합이 실재한다 —
+   * A/B 전환이 세율군을 바꿔 다른 자산과의 §104⑤ 누진 합산이 함께 움직이기 때문이다).
+   * 다건 엔진은 집계를 두 번 돌린 **신고 전체 결정세액**을 여기에 싣는다.
+   *
+   * 단건 계산에서는 **항상 undefined** — 그때는 위 두 값이 곧 신고 전체 결정세액이다.
+   *
+   * @see lib/tax-engine/transfer-tax-aggregate-carryover-scope.ts
+   */
+  filingUnitComparison?: {
+    /** §97의2①을 **적용**했을 때의 신고 전체 결정세액 */
+    determinedTaxWithCarryover: number;
+    /** **적용하지 않았을** 때의 신고 전체 결정세액 */
+    determinedTaxWithout: number;
+  };
+  /**
+   * **[echo] 채택 시나리오가 실제로 쓴 §104② 기산 사실.** 단건 세액에는 영향이 없다
+   * (이미 그 입력으로 계산된 결과를 그대로 되비출 뿐이다).
+   *
+   * ## 왜 필요한가 — 다건 엔진이 「채택 결과」를 볼 방법이 없었다
+   *
+   * 단건 엔진은 STEP 0.475에서 `workingInput`을 **채택 시나리오의 입력**으로 갈아탄 뒤
+   * 세율을 정한다. 시나리오 A는 `acquisitionDate`가 **증여자 취득일**(+ `acquisitionCause`는
+   * `"gift"`)이고, 시나리오 B는 **증여 등기접수일**(+ `"purchase"`)이다
+   * (`transfer-tax-carryover.ts` `inputABase` · `buildInputB`).
+   *
+   * 반면 다건 엔진(`transfer-tax-aggregate.ts`)의 세율군 분류(`classifyRateGroup`)와
+   * 그룹 세액 재계산(`aggregateByGroup` → `calcTax`)은 **원본 item**을 본다. 그 item은
+   * `acquisitionCause === "carryover_gift"` 그대로라 §104②2호 판정이 **채택 결과와 무관하게**
+   * 최상위 `donorAcquisitionDate`의 유무만으로 갈렸다 — A를 채택했는데 `short_term`으로,
+   * B를 채택했는데 `progressive`로 분류되는 어긋남이다.
+   *
+   * ## 왜 재도출이 아니라 echo인가
+   *
+   * 「A면 증여자 취득일, B면 등기접수일」을 다건 쪽에서 다시 유도하면 시나리오 입력 구성이
+   * 바뀔 때 한쪽만 따라가는 dual-truth가 된다. 그래서 **단건이 실제로 쓴 입력**을 그대로 싣는다.
+   *
+   * 형태는 §104② 판정 헬퍼가 받는 **사실 집합**(`RateBasisFacts`)과 동일하다 —
+   * 소비자는 이 값을 그대로 입력에 덮어쓰기만 하면 된다(판단을 넘기지 않는다).
+   */
+  adoptedRateBasis?: RateBasisFacts;
 }

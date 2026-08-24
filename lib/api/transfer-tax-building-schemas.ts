@@ -20,8 +20,14 @@ const carryoverExclusionShape = z.object({
 /**
  * **엔진이 읽는 모양**의 이월과세 서브객체 — 파트마다 완결돼 있다.
  * 토지(`landCarryoverTaxation`)·건물(`buildingCarryoverTaxation`)이 같은 모양을 쓴다.
+ *
+ * 🔑 **컴패니언 자산(`companionAssetSchema`)도 이 shape을 쓴다**(A-1/A-2).
+ *    단건 `transfer-tax-schema.ts`의 인라인 shape과 필드·타입이 **11개 전부 일치**함을
+ *    기계 대조로 확인했다(V-5). ⚠️ 아래 `giftTaxAmount` 주석의 「이미 안분된 값」은
+ *    **GB 파트 축 한정 서술**이다 — 컴패니언·단건에서는 사용자가 영 §163의2②로 직접
+ *    산정해 넣은 **자산 전체분**이다(소비자별 의미 차이, 타입 차이는 없다).
  */
-const carryoverTaxationEngineShape = z.object({
+export const carryoverTaxationEngineShape = z.object({
   giftRegistryDate: z.string().date(),
   donorAcquisitionDate: z.string().date(),
   donorAcquisitionPrice: z.number().int().nonnegative().optional(),
@@ -33,6 +39,18 @@ const carryoverTaxationEngineShape = z.object({
   /** §97의2① 관계요건 — 증여 **사건** 정보라 토지·건물 두 파트에 같은 값이 실린다. */
   donorRelation: z.enum(["spouse", "lineal", "other"]).optional(),
   donorDeceased: z.boolean().optional(),
+  /**
+   * 환산 모드 분자 — **증여자 취득 당시** 그 파트의 기준시가 (설계 D9-8).
+   *
+   * 🔴 이 필드가 없던 동안 ④(`buildEngineShaped`)가 「이 경로에서도 실어야 취득가액 0을
+   *    피한다」는 주석과 함께 싣던 값이 여기서 **조용히 strip**됐다 — 400이 아니라 200 +
+   *    환산취득가액 **0**이었다(단건 GB 실측 204,930,000 vs 정상 161,460,000).
+   *    ⑧(`transfer-tax-validate-gb-carryover.ts`)이 환산 모드에서 이 칸을 **필수로 요구**하는데
+   *    ⑫가 버리고 있었다. 아래 `carryoverPartShape`(신규 경로)에는 처음부터 있었다.
+   *
+   * 분모(양도 당시)는 받지 않는다 — 일반건물이 이미 안다.
+   */
+  donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
   exclusionDeclared: carryoverExclusionShape.optional(),
 });
 

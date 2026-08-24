@@ -294,9 +294,7 @@ export function applyCarryoverEstimationBasis(
   buildingStdAtTransfer: number,
 ): void {
   for (const c of cards) {
-    const ct = c.carryoverTaxation as
-      | (typeof c.carryoverTaxation & { donorStandardPriceAtAcquisition?: number })
-      | undefined;
+    const ct = c.carryoverTaxation;
     if (!ct?.useEstimatedAcquisition) continue;
     const numerator = ct.donorStandardPriceAtAcquisition;
     if (numerator === undefined) continue;

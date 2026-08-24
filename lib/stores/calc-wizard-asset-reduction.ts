@@ -52,12 +52,29 @@ export type AssetReductionForm =
       expropriationBondHoldingYears: "none" | "3" | "5";
       /** 사업인정고시일 (YYYY-MM-DD) */
       expropriationApprovalDate: string;
+      /**
+       * 수용된 토지를 **거주자가 직접 경작**했는가 — **농어촌특별세 비과세 판정 전용**.
+       *
+       * 「농어촌특별세법 시행령」 §4①1호가 §77 감면의 농특세 비과세를 「「조세특례제한법」
+       * 제69조제1항 본문에 따른 거주자가 **직접 경작한 토지**(8년 이상 경작할 것의 요건은
+       * 적용하지 아니한다)로 **한정**」한다.
+       * ⚠️ §69 자경농지 **감면** 요건(8년)과 별개다 — 조문이 그 요건을 적용하지 않는다고 명시한다.
+       * ⚠️ 미체크는 「입증되지 않음」이라 농특세가 부과된다(비과세가 예외다).
+       */
+      expropriationSelfCultivated?: boolean;
     }
   | {
       // 조특법 §77의3 — 개발제한구역 매수 토지 감면
       type: "gb_designated_land";
       /** ①구역 내 / ②해제 후 */
       gbBranch: "in_zone" | "released";
+      /**
+       * ① 매수 경로 — 「개발제한구역법」 §17 토지매수의 청구 / §20 협의매수.
+       * 3-state: "" 미선택(⑧ 차단) · 두 경로의 **대상 범위가 달라** 기본값을 줄 수 없다
+       * (§17①은 「매수대상토지」로 토지만, §20①은 「토지와 그 토지의 정착물」).
+       * ②(released)는 공익사업법 경로라 이 축을 쓰지 않는다.
+       */
+      gbPurchaseRoute?: "" | "claim" | "negotiated";
       /** 개발제한구역 지정일 (YYYY-MM-DD) */
       gbDesignationDate: string;
       /** ①매수청구·협의매수일 / ②사업인정고시일 (YYYY-MM-DD) */

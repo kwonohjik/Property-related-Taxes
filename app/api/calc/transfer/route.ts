@@ -280,6 +280,8 @@ export async function POST(request: NextRequest) {
             householdHousingCount: engineInput.householdHousingCount,
             isRegulatedArea: engineInput.isRegulatedArea,
             wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
+            // 부수토지 컴패니언 전용 상속값 (F12) — 세대 단위 3값과 같은 층위.
+            residencePeriodMonths: engineInput.residencePeriodMonths,
             propertyType: engineInput.propertyType,
             buildingFootprintArea: engineInput.buildingFootprintArea,
             isUrbanArea: engineInput.isUrbanArea,
@@ -364,6 +366,20 @@ export async function POST(request: NextRequest) {
             : undefined,
         landAcquisitionDate: new Date(data.mixedUse.landAcquisitionDate),
         buildingAcquisitionDate: new Date(data.mixedUse.buildingAcquisitionDate),
+        /**
+         * ⑭ 조특법 감면·가산세 (F17-B) — 전부 **폼-전역** 값이라 `data.mixedUse`에 없다.
+         *
+         * 종전에는 겸용 엔진에 이 축이 아예 없어서, 폼에서 §77 공익수용을 골라도 세액이
+         * 1원도 안 움직였다(실측 `totalPayable` 60,853,408 → 60,853,408). 가산세도 같다.
+         *
+         * ⚠️ raw `data.reductions` 금지 — Zod 출력은 일자가 string이라 §77①의 「소급 2년」
+         *    비교가 침묵 오작동한다(`mapReductionsToEngine` 변환본이 정본).
+         */
+        reductions: engineInput.reductions,
+        filingPenaltyDetails: engineInput.filingPenaltyDetails,
+        delayedPaymentDetails: engineInput.delayedPaymentDetails,
+        priorReductionUsage: data.priorReductionUsage ?? [],
+        isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,
         preHousingDisclosure: phdInput,
         partialUsageChange: data.mixedUse.partialUsageChange
           ? {
@@ -436,6 +452,33 @@ export async function POST(request: NextRequest) {
           compensationBasisStdPrice: data.compensationBasisStdPrice,
         },
         data.ownershipRatio,
+        /**
+         * ⑭ 자산-수준 감면·가산세 (F17, 2026-08-23).
+         *
+         * 종전에는 이 두 가지가 **여기서 버려졌다** — 클라이언트는 자산 종류와 무관하게
+         * `reductions`·`filingPenaltyDetails`를 싣고 Zod도 받는데, GB 분기가 인자로 넘기지
+         * 않아 세액이 1원도 안 움직였다(실측 Δ 0 · 같은 payload가 단건 경로에서는 움직인다).
+         *
+         * ⚠️ `data.reductions`(raw)가 아니라 **`engineInput.reductions`**를 쓴다 —
+         *    Zod 출력은 일자가 string이라 §77①의 「소급 2년」 비교가 침묵 오작동한다
+         *    (`mapReductionsToEngine`가 Date로 바꾼 값이 정본).
+         */
+        {
+          reductions: engineInput.reductions,
+          filingPenaltyDetails: engineInput.filingPenaltyDetails,
+          delayedPaymentDetails: engineInput.delayedPaymentDetails,
+          /**
+           * ⑭ 배우자등 이월과세 (F27) — **부담부증여 §159 분기가 소비한다**.
+           *
+           * 종전에는 ⑧이 「당초 증여자」 기준시가 두 칸을 필수로 요구하면서 그 값이
+           * 엔진에 닿지 않았다(실측 Δ 0). 여기서 넘겨야 §159 안분 앞에 §97의2①1호
+           * 취득가액 치환·①3호 증여세 산입이 얹힌다.
+           *
+           * ⚠️ raw `data.carryoverTaxation` 금지 — Zod 출력은 일자가 string이라
+           *    §97의2③ 기간 비교·§95④ 단서 기산이 침묵 오작동한다.
+           */
+          carryoverTaxation: engineInput.carryoverTaxation,
+        },
       );
       return NextResponse.json(
         {

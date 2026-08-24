@@ -6,9 +6,18 @@
  * 「지방세법 시행령」 §101①2호 본문은 별도합산 대상을 "건축물의 바닥면적…에 제2항에 따른
  * 용도지역별 적용배율을 곱하여 산정한 면적 **범위의 토지**"로 한정한다.
  *
- * 그런데 `other-land.ts`는 사용자가 고른 `propertyTaxType: "special_sum"`(별도합산)을
+ * 그런데 `other-land.ts`는 사용자가 고른 `propertyTaxType`(별도합산)을
  * **그대로 신뢰**하고 배율을 검증하지 않았다 — 배율을 아무리 초과해도 전량 사업용이었다.
  * 목장용지·공장용지에서 고친 것과 같은 「사용자 선언을 검증 없이 수용」 패턴이다.
+ *
+ * > 🔴 **2026-08 정정(F28)**: 이 파일은 원래 `propertyTaxType: "special_sum"`을
+ * > "별도합산 선언"으로 적어 두었으나 **그 enum 읽기가 반대였다**. 정본은
+ * > `separate`=별도합산 · `special_sum`=분리과세다(UI Select `OtherLandDetailSection.tsx`,
+ * > `other-land.ts`의 factory route 매핑 `separate_taxation → "special_sum"`, NBL 상수 인용이
+ * > 모두 이 매핑을 쓴다). 법령 축도 하나뿐이다 — 「지방세법 시행령」 §101(제목
+ * > "**별도합산**과세대상 토지의 범위") ①2호·②의 용도지역별 적용배율은 별도합산 전용이고,
+ * > 분리과세(§106①3호·영 §102)에는 일반건축물 배율이 존재하지 않는다.
+ * > ⇒ base()의 리터럴을 `separate`로 정정했다. 단언 자체는 정정 전후 모두 법령상 옳다.
  *
  * > ⚠️ **기존 테스트는 하나도 깨지지 않았다**(2026-08-06 실측: NBL 384건 GREEN).
  * > 이 분기를 타는 케이스가 없었다는 뜻이므로, 아래 anchor가 **유일한 도달 증명**이다.
@@ -49,7 +58,7 @@ function base(landArea: number, over: Partial<NonBusinessLandInput> = {}): NonBu
     acquisitionDate: d("2014-01-01"),
     transferDate: d("2024-01-01"),
     otherLand: {
-      propertyTaxType: "special_sum", // 사용자가 「별도합산」을 선언한다
+      propertyTaxType: "separate", // 사용자가 「별도합산」을 선언한다 (분리과세는 "special_sum")
       hasBuilding: true,
       buildingFloorArea: 100,
       buildingStandardValue: 100_000_000,

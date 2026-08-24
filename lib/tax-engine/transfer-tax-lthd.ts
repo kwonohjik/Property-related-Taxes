@@ -64,6 +64,13 @@ export function calcLongTermHoldingDeduction(
   isSuspended: boolean,
   longTermRentalRules?: LongTermRentalRuleSet,
   splitDetail?: SplitGainResult,
+  /**
+   * 「소득세법 시행령」 §159의4 — 표2 대상 「1주택」에는 **§155 각 항에 따라 1세대1주택으로 보는
+   * 주택**이 포함된다. 그 의제 성립 판정은 `checkExemption`이 유일하게 내리므로 그 결과를
+   * **단일 술어**로 받는다(주택 수를 깎아 흉내내면 `checkExemption`의 의제 분기 자체가 도달 불가가 된다).
+   * 표2 게이트에만 쓰고 12억 안분 축(`isProratedSplit`)·§95⑤ 진입조건은 건드리지 않는다.
+   */
+  deemedOneHouseBy155?: boolean,
 ): LongTermHoldingResult {
   // L-0: 미등기 — 배제
   if (input.isUnregistered) {
@@ -84,46 +91,65 @@ export function calcLongTermHoldingDeduction(
   }
 
   // L-1b: 부수토지 일체과세 (landNature === "appurtenant_to_housing")
-  // — 포괄적 일체과세 원칙: primary 주택의 보유기간·거주기간 기준 표 1/2 적용
-  // — 단기보유(1년 미만 → 70%, 1~2년 → 60%) 시에는 LTHD 배제 (세율에서 이미 처리됨)
-  // — 2년 이상 보유 시 주택 기준 LTHD 적용 (primaryContextForCompanionRate에서 holdingMonths 사용)
+  // — 세율(§104①2호 괄호·영 §167의5)은 주택과 일체로 판정하나, **장기보유특별공제의 보유기간은
+  //   토지 자신의 것**이다 (아래 참조).
   if (
     input.propertyType === "land" &&
     input.landNature === "appurtenant_to_housing" &&
     input.primaryContextForCompanionRate
   ) {
     const ctx = input.primaryContextForCompanionRate;
-    // primary 주택 보유기간 기준
     const primaryHoldingYears = Math.floor(ctx.holdingMonths / 12);
-    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 게이트가 24개월(2년)이라
-    //   주 주택 2~3년 보유 구간에서 **존재하지 않는 장기보유특별공제**가 부여됐다.
-    //   §95②의 진입요건은 **보유기간 3년 이상**이며, 같은 함수의 일반 경로
-    //   `rateForYears`도 `years < 3 → 0` 게이트를 갖고 있다(내부 불일치였다).
-    //   24개월 게이트는 "2년 미만 = 단기세율"이라는 **다른 규칙**을 LTHD 요건으로
-    //   착각한 것이다 — 단기세율 여부와 LTHD 3년 요건은 별개 판정이다.
-    if (ctx.holdingMonths < 36) {
-      const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
-      return { deduction: 0, rate: 0, holdingPeriod: { years: holding.years, months: holding.months } };
-    }
-    // 2년 이상: primary 주택 기준 LTHD 계산
-    // 부수토지는 1세대1주택 여부·거주기간을 주택과 공유
+    /**
+     * 2026-08-13 정정 (F11 — **세액 변경**): 표1 공제율과 3년 진입요건이 primary **주택**의
+     * 보유개월을 보고 있었다. 「소득세법」 §95④ 본문은 「제2항에서 규정하는 자산의 보유기간은
+     * **그 자산의 취득일부터 양도일까지**로 한다」이고, 같은 항 **단서의 예외는 §97의2①(이월과세)와
+     * 가업상속공제 적용비율분 둘로 한정 열거**돼 부수토지 예외가 없다. §95②의 진입요건
+     * 「보유기간이 3년 이상인 것」도 이 정의를 따른다.
+     *
+     * 일체과세 근거인 §104①2호 괄호는 「주택(이에 딸린 토지…를 포함한다. **이하 이 항에서 같다**)」라
+     * 정의확장을 **제104조 제1항 내부로 한정**한다 — §95(장특) 보유기간 축으로 전이되지 않는다.
+     * 세율 축 근거를 장특에 원용한 것이 오류의 원인이었다.
+     *
+     * 실측: 토지 2021-06-01 취득(양도 2024-06-01 기준 2년 11개월) · 주 주택 14년 · 양도 5억/취득 1억
+     *   → 종전 표1 28%(112,000,000 공제)·총세액 97,405,000
+     *   → 토지 축 0%·총세액 146,366,000 (48,961,000 과소과세였다).
+     *
+     * ⚠️ **표2(1세대1주택) 축은 그대로 둔다.** 기획재정부 재산세제과-1183(2010.12.10)은
+     *    「토지 전체보유기간에 따른 **표1**의 공제율과 주택 부수토지로서의 보유기간에 따른
+     *    **표2**의 공제율 중 **큰** 공제율」을 적용하라고 하나, 그 예규들은 전부 표2가 보유
+     *    **단일축**이던 시기(~2018) 것이라 현행 2축 표2(보유분+거주분)에 max를 어떻게 대입할지가
+     *    **미확정**이다(nts 48건·6건, 조세심판원 5건 전수 조회 결과 부존재). 여기서는 §95④ 문리만으로
+     *    확정되는 **표1 축·3년 게이트**만 고친다.
+     */
+    const landHolding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+    // 부수토지는 1세대1주택 여부·거주기간을 주택과 공유. 표2 대상 판정은 본 게이트(:아래 L-3)와
+    // **같은 술어**여야 한다 — 한쪽만 §159의4 의제를 반영하면 부수토지 경로가 어긋난다.
     const isOneHouseSingleForCompanion =
-      input.isOneHousehold && input.householdHousingCount === 1;
+      input.isOneHousehold && (input.householdHousingCount === 1 || deemedOneHouseBy155 === true);
     const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(거주분 공제율)
     const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12); // 통산(대상 판정)
-    // 표2(1세대1주택 — 보유분 4% + 실거주분 4%, 각 40% 캡) / 표1(일반 보유 × 2%, 30% 캡).
-    // 정본 위임 — 외곽 `holdingMonths < 36` return이 정본의 3년 가드와 등가라 중복 판정 없음.
+    const useTable2ForCompanion = isOneHouseSingleForCompanion && table2ResidenceYears >= 2;
+    // 표2(1세대1주택 — 보유분 4% + 실거주분 4%, 각 40% 캡)는 주택 보유연수,
+    // 표1(일반 보유 × 2%, 30% 캡)은 **토지 자신의** 보유연수.
+    const companionHoldingYears = useTable2ForCompanion ? primaryHoldingYears : landHolding.years;
+    // 3년 진입요건도 같은 축이다 — `calcLongTermRate` 정본에 3년 가드가 내장돼 있어
+    // 외곽 게이트를 따로 두지 않는다(종전 `ctx.holdingMonths < 36` 외곽 return은 축이 어긋나 있었다).
     const companionRate = calcLongTermRate(
-      primaryHoldingYears,
+      companionHoldingYears,
       residenceYears,
-      isOneHouseSingleForCompanion && table2ResidenceYears >= 2,
+      useTable2ForCompanion,
     );
     const deduction = companionRate > 0 ? applyRate(taxableGain, companionRate) : 0;
-    const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
+    // 표시용 보유기간은 **공제율을 만든 축**과 맞춘다 — 어긋나면 산식이 자기모순으로 출력된다
+    // (실측 종전: "보유 2년×2% = 28% | 보유기간 2년 11개월").
+    const displayHolding = useTable2ForCompanion
+      ? { years: primaryHoldingYears, months: ctx.holdingMonths % 12 }
+      : { years: landHolding.years, months: landHolding.months };
     return {
       deduction,
       rate: companionRate,
-      holdingPeriod: { years: holding.years, months: holding.months },
+      holdingPeriod: displayHolding,
     };
   }
 
@@ -144,8 +170,19 @@ export function calcLongTermHoldingDeduction(
     }
   }
 
+  /**
+   * ⚠️ **두 축이 같은 이름을 쓰지 않도록 나눈다** (2026-08-13 F10).
+   *   · `isOneHouseSingle`        — 실제 보유 주택 수 축. §95⑤ 진입조건·12억 초과분 안분에 쓴다.
+   *   · `isOneHouseForTable2`     — 「소득세법 시행령」 §159의4 표2 **대상** 축. §155 의제를 포함한다.
+   * §159의4는 표2 대상을 「1주택(제155조 … 및 그 밖의 규정에 따라 1세대 1주택으로 보는 주택을
+   * 포함한다)을 보유하고 보유기간 중 거주기간이 2년 이상인 것」으로 정의하므로, 실제 주택 수만
+   * 보면 §155①④⑤⑦⑧ 의제 주택이 표1(최대 30%)로 떨어진다
+   * (실측: 12억 초과 고가주택에서 표1 16% vs 표2 64% — 총세액 23,633,500 vs 5,838,642).
+   */
   const isOneHouseSingle =
     input.isOneHousehold && input.householdHousingCount === 1;
+  const isOneHouseForTable2 =
+    isOneHouseSingle || (input.isOneHousehold && deemedOneHouseBy155 === true);
   const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(표2 거주분 공제율)
   // §154⑧3호: 표2 "대상 판정"은 동일세대 상속 통산 거주 (공제율은 실거주 residenceYears 유지).
   const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12);
@@ -156,6 +193,10 @@ export function calcLongTermHoldingDeduction(
   // 게이트는 §95⑤ 본문("제89조 제1항 제3호 각 목의 어느 하나에 해당하는 자산")이 여는
   // 표2 대상 요건과 같다 — 시행령 §159의4가 §95⑤을 명시 포함한다.
   // 배제 경로(L-0 미등기·L-0a 분양권·L-1 중과·L-1b 부수토지·L-1c 임대특례)는 위에서 이미 return했다.
+  // ⚠️ 여기는 **실제 1주택 축(`isOneHouseSingle`)을 유지**한다 — §159의4가 §95⑤을 포함하므로
+  //    §155 의제까지 넓히는 것이 법령상으로는 정합하나, 그 확대는 용도변경 혼합공제 진입조건을
+  //    함께 넓히는 별개 변경이라 이번 범위(표2 대상 축)에 넣지 않았다. 넓혀도 dead-end는 아니다
+  //    — 진입하지 못하면 아래 L-3이 §159의4 축(`useTable2`)으로 표2를 적용한다.
   if (
     input.nonHousingToHousingConversion &&
     input.transferDate >= LTHD_CONVERSION_95_5_CUTOFF &&
@@ -223,7 +264,9 @@ export function calcLongTermHoldingDeduction(
   //        대상 판정은 통산(table2ResidenceYears), 공제율 거주분은 실거주(residenceYears).
   //   L-4: 일반 표1 — 보유 × 2%, 30% 캡.
   //   3년 가드는 정본에 내장돼 있다.
-  const useTable2 = isOneHouseSingle && table2ResidenceYears >= 2;
+  // §159의4는 「1주택(의제 포함)을 보유하**고** 거주 2년 이상」이라는 **연언(AND)**이다 —
+  // 의제만으로 표2가 열리지 않으며 거주 2년 요건은 그대로 유지된다.
+  const useTable2 = isOneHouseForTable2 && table2ResidenceYears >= 2;
   const rateForYears = (years: number): number =>
     calcLongTermRate(years, residenceYears, useTable2);
 
@@ -240,6 +283,9 @@ export function calcLongTermHoldingDeduction(
       : selfOwns === "land_only"
         ? splitDetail.land.transferPrice
         : input.transferPrice;
+    // ⚠️ 여기는 **12억 안분 축**이지 표2 대상 축이 아니다 — 이름이 비슷해도 다른 판정이므로
+    //    §159의4 의제(`isOneHouseForTable2`)를 대입하지 않는다. 12억 안분은 STEP 3
+    //    (`resolveTaxableGain`)이 `checkExemption`의 `isPartialExempt`로 이미 판정한 축이다.
     const isProratedSplit = isOneHouseSingle && selfTransferPrice > THRESHOLD;
     const proratePartGain = (g: number): number => {
       if (!isProratedSplit || g <= 0) return g;

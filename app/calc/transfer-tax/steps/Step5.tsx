@@ -315,6 +315,22 @@ function AssetReductionBlock({
               ]}
             />
           </div>
+          {gbDesignated.gbBranch === "in_zone" && (
+            <div>
+              <p className="block text-xs font-medium mb-1">매수 경로</p>
+              <RadioCardGroup
+                name={`gbPurchaseRoute-${assetIndex}`}
+                layout="inline"
+                tone="sky"
+                value={gbDesignated.gbPurchaseRoute ?? ""}
+                onChange={(v) => updateReduction("gb_designated_land", { gbPurchaseRoute: v })}
+                options={[
+                  { value: "claim", label: "토지매수 청구 (§17)", description: "매수대상토지 — 토지분만 감면 대상" },
+                  { value: "negotiated", label: "협의매수 (§20)", description: "토지와 그 토지의 정착물" },
+                ]}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium mb-1">개발제한구역 지정일</label>

@@ -18,6 +18,7 @@ import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPan
 import {
   PropertyBreakdownAccordion,
   formatKRW,
+  resolveRefCalculatedTax,
   RATE_GROUP_LABELS,
   RATE_GROUP_COLORS,
 } from "./MultiTransferPropertyBreakdown";
@@ -135,8 +136,15 @@ function ReductionRecalculationSection({
                         {perAsset.map((p) => (
                           <tr key={p.propertyId}>
                             <td>{labelMap.get(p.propertyId) ?? p.propertyLabel}</td>
+                            {/*
+                              「건별 산출세액」 — 자산별 산출세액(참고) `refCalculatedTax`.
+                              종전에는 감면세액(`reductionAmount`)을 그리고 목적지 없는 화살표를
+                              남겨, 옆 「건별 단독감면」 열과 같은 숫자가 나란히 떴다
+                              (감면율 = 감면 ÷ 산출 검산 불가). 옛 저장 결과에서 필드가 없을 수
+                              있으므로 아코디언과 같은 가드(`resolveRefCalculatedTax`)를 쓴다.
+                            */}
                             <td className="text-right tabular-nums">
-                              {p.reductionAmount.toLocaleString()} → {/* standaloneTax 필드는 미노출 */}
+                              {resolveRefCalculatedTax(p).toLocaleString()}
                             </td>
                             <td className="text-right tabular-nums">
                               {p.reductionAmount.toLocaleString()}

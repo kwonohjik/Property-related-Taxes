@@ -189,6 +189,7 @@ function PropertyCard({
         result={breakdown}
         calculatedTax={breakdown.refCalculatedTax}
         taxBase={breakdown.taxBaseShare}
+        longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
       />
       {/*
         평가·판정 산출근거 (R1-a) — 상가 환산 §164⑥·비사업용토지·다주택 중과·PHD 등.
@@ -331,6 +332,25 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
               {filingDelayedSum > 0 && (
                 <Row label="· 신고불성실·납부지연 가산세" value={formatKRW(filingDelayedSum)} sub />
               )}
+              {/**
+               * 신고서 단위 가산세 (F17) — 일반건물처럼 **자산 1건이 카드 여러 장으로 쪼개지는**
+               * 경로는 자산별이 아니라 신고 단위로 1회 계산된다. 그래서 위 `filingDelayedSum`
+               * (자산별 합)에는 잡히지 않는다 — 합계만 바뀌고 내역이 비면 사용자는 근거를 못 본다.
+               */}
+              {(() => {
+                const fu = aggregated.filingUnitPenaltyDetail;
+                if (!fu || fu.totalPenalty <= 0) return null;
+                const rate = fu.filingPenalty?.penaltyRate;
+                return (
+                  <Row
+                    label={`· 신고불성실·납부지연 가산세 (신고서 단위${
+                      rate ? ` · ${(rate * 100).toFixed(0)}%` : ""
+                    })`}
+                    value={formatKRW(fu.totalPenalty)}
+                    sub
+                  />
+                );
+              })()}
             </>
           )}
 
