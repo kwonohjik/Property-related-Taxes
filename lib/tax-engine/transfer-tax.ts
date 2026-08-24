@@ -65,6 +65,7 @@ import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveAcquisitionOverride, type TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 import { applyFamilyBusinessCgtStep } from "./transfer-tax-family-business";
+import { runSameAdjustmentPeriodStep } from "./transfer-tax-same-period-step";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 export { calcTax } from "./transfer-tax-rate-calc";
 
@@ -126,6 +127,15 @@ export function calculateTransferTax(
   if (fbResult) return fbResult;
   // STEP 0.46: 외부 취득가액 override 적용 (options 없으면 no-op)
   input = resolveAcquisitionOverride(input, options);
+  // STEP 0.47: 동일조정기간 내 취득·양도 → 양도당시 기준시가 환산 (소령 §164⑧·소칙 §80①~⑤).
+  //   기준시가가 확정된 직후의 **단일 정규화 지점**이다 — 여기서 치환하면 환산취득가액·
+  //   기준시가 과세·감면 안분·LTHD·중과 판정이 전부 자동으로 따라온다.
+  //   sameAdjustmentPeriod 미제공이거나 요건 미충족이면 undefined → no-op(회귀 0).
+  const samePeriodStep = runSameAdjustmentPeriodStep(input);
+  if (samePeriodStep) {
+    input = samePeriodStep.updatedInput;
+    steps.push(samePeriodStep.step);
+  }
   let workingInput = input;
   // STEP 0.475: 배우자등 이월과세 §97조의2 (carryoverTaxation 없으면 skip, 재귀 시 자동 skip)
   let carryoverDetail: CarryoverTaxationDetail | undefined;
