@@ -5,7 +5,9 @@
  *   · PHD 3시점 `bsp-${assetId}-phd-{acq|first|transfer}` (상가분은 `…-commercial` 접미).
  *   · 겸용 asset-major 상가 통합 모달 `bsp-${assetId}-mx-commercial` — 취득·양도 2시점을 한 폼에서
  *     계산하므로 시점 세그먼트가 없다(gb/cb와 같은 transfer 모드 단일 스냅샷).
- *     ⚠️ phd prefix를 쓰면 배치 모달의 replaceSnapshotsByPrefix(`bsp-{id}-phd`)에 삭제된다 → `mx` 분리.
+ *     ⚠️ 종전 배치 삭제가 **접두 매칭**이라 phd prefix를 쓰면 `bsp-{id}-phd` 배치에 삭제됐다
+ *        → `mx`로 분리했다. 삭제 규칙은 2026-08-24(B-7)에 **키 집합**(`batchSnapshotKeys`)으로
+ *        바뀌어 접두 겹침이 사라졌지만, 이 분리는 그대로 둔다(키 의미가 다르다).
  *   · PHD 환산 통합 모달(취득시+최초공시시 2시점 단일 스냅샷) — 감면 §164⑤ `bsp-${assetId}-red{조문}-phd`,
  *     재개발 §164⑦ `bsp-${assetId}-redev-phd`. 시점 세그먼트 없음(`snapshotKeyTimepoint` null 유지).
  *

@@ -49,7 +49,7 @@ import {
   type PhdBatchInput,
   type PhdPartCategory,
 } from "@/lib/calc/phd-building-std-batch";
-import { phdBatchToSnapshots } from "@/lib/calc/phd-batch-snapshots";
+import { phdBatchToSnapshots, batchSnapshotKeys } from "@/lib/calc/phd-batch-snapshots";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 
 /** 시점별 적용 결과 — 산출된 카테고리만 채워짐(원 정수) */
@@ -205,7 +205,7 @@ export function MultiPointBuildingStdPriceModal({
   // 마지막 계산에 쓴 입력 — "모두 적용" 시 스냅샷 재구성용
   const [computedInput, setComputedInput] = useState<PhdBatchInput | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const replaceSnapshotsByPrefix = useBuildingStdSnapshotStore((s) => s.replaceSnapshotsByPrefix);
+  const replaceBatchSnapshots = useBuildingStdSnapshotStore((s) => s.replaceBatchSnapshots);
 
   // 시점별 구조·용도 옵션 기준 연도 — 각 시점의 연도 체계. ≤2000은 2001 체계(엔진 acqBase가 2001표 사용).
   const yearOf = (k: StdPricePointSpec["key"]) => points.find((p) => p.key === k)?.year;
@@ -320,7 +320,12 @@ export function MultiPointBuildingStdPriceModal({
     if (!result) return;
     // 산출 근거 스냅샷 저장(재구성) — 결과탭 「건물 기준시가 계산서」 재유도용. prefix 미주입 시 생략.
     if (snapshotPrefix && computedInput) {
-      replaceSnapshotsByPrefix(snapshotPrefix, phdBatchToSnapshots(computedInput, snapshotPrefix));
+      // 삭제 대상은 **배치가 만들 수 있는 키 집합**이다 — 접두 매칭이면 `-ext` 같은
+      // 하위 세그먼트 키까지 삼킨다(`batchSnapshotKeys` 주석의 실측 사례).
+      replaceBatchSnapshots(
+        batchSnapshotKeys(snapshotPrefix),
+        phdBatchToSnapshots(computedInput, snapshotPrefix),
+      );
     }
     // 입력된 시점 공시지가만 외부 섹션으로 되돌려쓰기(빈값은 외부 미변경).
     const lp: NonNullable<MultiPointStdPriceApply["landPrices"]> = {};

@@ -125,6 +125,44 @@ function buildTransferAcqCompositeSnapshot(
 }
 
 /**
+ * 시점 → 키 세그먼트. `batchSnapshotKeys`(삭제 대상 집합)와 `phdBatchToSnapshots`(생성)가
+ * **함께 쓴다** — 세그먼트를 한쪽에만 추가하면 새 시점의 스냅샷이 생성은 되는데 재적용 시
+ * 지워지지 않아, 이 삭제 경로가 막으려던 stale 계산서가 그대로 남는다.
+ * `Record<PointKey, …>`라 `PointKey`에 멤버가 늘면 **여기서 컴파일 에러**가 난다.
+ */
+const KEYWORD: Record<PointKey, "acq" | "first" | "transfer"> = {
+  acquisition: "acq",
+  firstDisclosure: "first",
+  transfer: "transfer",
+};
+
+/**
+ * 배치가 **만들 수 있는 스냅샷 키 전수** — 삭제 대상 집합의 단일 소스.
+ *
+ * ## 왜 접두가 아니라 집합인가
+ *
+ * 종전에는 `replaceSnapshotsByPrefix`가 `k.startsWith(prefix + "-")`로 지웠는데,
+ * **접두를 삼켰다**: `bsp-a1-gb-ext-acq`(증축분·건물2)가 `bsp-a1-gb-`로 시작하는 바람에
+ * GB 본체 일괄 계산을 실행하면 **증축분 계산서가 조용히 사라졌다**(2026-08-24 probe 실측).
+ *
+ * `phdBatchToSnapshots`가 만드는 키는 `${prefix}-{acq|first|transfer}(-commercial)?`로
+ * **6종에 닫혀 있다**. 그 집합만 지우면 겹침 개념 자체가 사라진다 — `-ext`처럼 세그먼트가
+ * 더 붙은 키는 애초에 집합에 없다.
+ *
+ * ⚠️ 시점 세그먼트는 `KEYWORD`(생성 경로와 공유)에서 온다 — 복제하지 않는다.
+ *    anchor: `__tests__/calc/building-std-batch-snapshot-keys.test.ts`
+ */
+export function batchSnapshotKeys(prefix: string): string[] {
+  const out: string[] = [];
+  // ⚠️ 세그먼트를 여기 **베끼지 않는다** — 생성(`phdBatchToSnapshots`)과 같은 `KEYWORD`를 쓴다.
+  //    규칙 복제는 이 PR의 테스트 주석이 지적한 바로 그 실패 모드다.
+  for (const seg of Object.values(KEYWORD)) {
+    out.push(`${prefix}-${seg}`, `${prefix}-${seg}-commercial`);
+  }
+  return out;
+}
+
+/**
  * 배치 입력 → 스냅샷 맵. 키: `${prefix}-{acq|first|transfer}[-commercial]`.
  * computePhdThreePointStdPrice와 동일한 시점×카테고리 산정 로직을 미러(산출되는 슬롯만 스냅샷 생성).
  */
@@ -137,12 +175,6 @@ export function phdBatchToSnapshots(
   const housing = parts.filter((p) => p.category === "housing");
   const commercial = parts.filter((p) => p.category === "commercial");
   const out: Record<string, BuildingStdPriceFormState> = {};
-
-  const KEYWORD: Record<PointKey, "acq" | "first" | "transfer"> = {
-    acquisition: "acq",
-    firstDisclosure: "first",
-    transfer: "transfer",
-  };
 
   // ≥2001 valuation 재현 가능한 시점만 스냅샷 생성(≤2000 acqBase는 C조건으로 생략).
   // 각 부분을 해당 시점 구조·용도로 해석(partAtPoint 공유) — 미지정 부분 제외.

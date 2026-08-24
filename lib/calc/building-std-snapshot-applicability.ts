@@ -10,7 +10,7 @@
  *
  * ## 왜 store 삭제가 아니라 표시 게이트인가
  *
- * 스냅샷 스토어에는 `replaceSnapshotsByPrefix` 외에 삭제 API가 없고, 트리거는 **날짜 비교라는
+ * 스냅샷 스토어에는 `replaceBatchSnapshots`(배치 재적용 전용) 외에 삭제 API가 없고, 트리거는 **날짜 비교라는
  * 파생 조건**이라 변화를 감지하려면 `useEffect → store` 미러링이 필요하다 — 금지 정책이다.
  * 게다가 날짜를 되돌리면(오타 정정) 계산서가 그냥 돌아와야 하는데 삭제는 재계산을 강요한다.
  * 순수 술어로 거르면 입력이 조건을 다시 만족하는 순간 자동 복귀한다.
@@ -122,8 +122,8 @@ export function isBuildingStdSnapshotApplicable(
   /**
    * 🔴 **구 감면 PHD 키(`-red-phd`)가 조문별 신 키로 대체된 경우** — 제외한다.
    *
-   * `saveSnapshot`은 **추가만 한다**(`replaceSnapshotsByPrefix`는 `bsp-{id}-phd` 접두 전용이라
-   * `-red…-phd`를 건드리지 않는다). 그래서 B-4 이전에 저장된 이력을 열어 구 키가 세션에
+   * `saveSnapshot`은 **추가만 한다**(유일한 삭제 API인 `replaceBatchSnapshots`는 배치가 만든
+   * 키 집합 전용이라 `-red…-phd`를 건드리지 않는다). 그래서 B-4 이전에 저장된 이력을 열어 구 키가 세션에
    * 재수화된 뒤(`HistoryClient.tsx:266`) 같은 조문을 다시 계산하면 **두 키가 공존**하고,
    * 한 조문에 계산서가 **4장**(신 키 2 + 구 키 2) 찍힌다 — 저장 `input_data`와 서버 PDF도 같다
    * (2026-08-24 코드 리뷰 실측). 계획서의 「새 키로 저장되면 자연히 대체된다」는 **틀렸다**.
