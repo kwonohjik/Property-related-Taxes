@@ -47,6 +47,7 @@ import { INCOME_DEDUCTION_5YEAR_FORMULA } from "./DetailedStatementFormulaNodes"
 export type { PerAssetValue, StatementItem, GroupDef } from "./DetailedStatementConfig";
 export { STATEMENT_GROUPS } from "./DetailedStatementConfig";
 import type { PerAssetValue, StatementItem } from "./DetailedStatementConfig";
+import { resolveReceiveOnlyDisplay } from "./receive-only-display";
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────
 
@@ -108,7 +109,14 @@ export function buildStatementItems(
   acquisitionDateOverride?: string,
 ): Map<string, StatementItem> {
   const items = new Map<string, StatementItem>();
-  const transferDate = formData?.transferDate ?? "";
+  // receiveOnly(사례 46) — 신고단위 양도가액·양도일은 청산금 분 단독이다(§166①2호 가목).
+  // ④ API 변환(`transfer-tax-api.ts:332`·`:341`)과 같은 규칙을 ⑦ 표시에 적용한다.
+  const receiveOnly = resolveReceiveOnlyDisplay(
+    result,
+    transferPriceOverride ?? (formData?.contractTotalPrice ? Number(formData.contractTotalPrice) : 0),
+    formData?.transferDate ?? "",
+  );
+  const transferDate = receiveOnly.transferDate;
   const primary = asset ?? formData?.assets[0];
   const isAggregate = !!aggregate && aggregate.properties.length > 0;
   const properties = aggregate?.properties ?? [];
@@ -121,10 +129,8 @@ export function buildStatementItems(
     transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
   }).transferBurdenedGiftBreakdown;
 
-  // 양도가액 우선순위: override > result.steps의 amount > 0
-  const totalTransferPrice =
-    transferPriceOverride ??
-    (formData?.contractTotalPrice ? Number(formData.contractTotalPrice) : 0);
+  // 양도가액 우선순위: receiveOnly 보정 > override > result.steps의 amount > 0
+  const totalTransferPrice = receiveOnly.transferPrice;
 
   // ── 1단계: 일자·기간 ────────────────────────────────────────
   items.set("transferDate", {
