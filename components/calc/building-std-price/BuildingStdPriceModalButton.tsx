@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { BuildingStdPriceForm } from "./BuildingStdPriceForm";
 import { BuildingStdPriceResultCard } from "./BuildingStdPriceResultCard";
 import type { BuildingStandardPriceResult } from "@/lib/tax-engine/building-standard-price";
-import { deriveYearFromEventDate } from "@/lib/calc/building-std-price-form";
+import { deriveYearFromEventDate, isRestorableSnapshot } from "@/lib/calc/building-std-price-form";
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import type { AddressValue } from "@/components/ui/address-search";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
@@ -117,6 +117,17 @@ export function BuildingStdPriceModalButton({
   const restoredForm = useBuildingStdSnapshotStore((s) =>
     snapshotKey ? s.snapshots[snapshotKey] : undefined,
   );
+  // 키까지 넘긴다 — `origin`이 없는 구버전 저장분도 **배치 전용 키**로 생산자를 가른다.
+  const restorable = isRestorableSnapshot(restoredForm, lockedTaxType, snapshotKey);
+  /**
+   * 저장된 값이 있는데 **쓰지 못한** 경우 — 이유를 밝힌다.
+   *
+   * 사용자에게는 이유가 무엇이든 「방금 계산했는데 왜 비어 있지」로 보인다. 원인은 둘이다:
+   * 배치 산출분(계산서 재구성 전용이라 이 폼의 트랙으로 되살릴 수 없다) · 다른 세목 저장분.
+   * 문구는 원인을 단정하지 않고 **둘 다 예시로** 든다 — 판정 이유를 UI가 다시 계산하면
+   * `isRestorableSnapshot`과 갈릴 수 있다(단일 소스 규율).
+   */
+  const restoreSkippedNotice = !!restoredForm && !restorable;
 
   // 상위 자산 폼 값 자동입력 — 빈 값은 미주입(사용자 이전 입력 보존). 연도는 완성형 날짜에서만 파생.
   const acqYear = prefill?.acquisitionDate ? deriveYearFromEventDate(prefill.acquisitionDate) : "";
@@ -159,7 +170,9 @@ export function BuildingStdPriceModalButton({
 
   const apply = (v: number, land?: number) => {
     onApply?.(v, land && land > 0 ? land : undefined);
-    if (snapshotKey && formSnapshot) saveSnapshot(snapshotKey, formSnapshot);
+    // 이 모달이 저장하는 것은 언제나 **정정용 단일시점 입력**이다 — 복원분의 origin이
+    // 섞여 들어오지 않도록 명시 주입한다.
+    if (snapshotKey && formSnapshot) saveSnapshot(snapshotKey, { ...formSnapshot, origin: "single" });
     setOpen(false);
     setResult(null);
     setError(null);
@@ -169,7 +182,9 @@ export function BuildingStdPriceModalButton({
   // 취득·양도 동시 적용 — 겸용 상가건물 등 한 번 계산으로 두 시점 필드를 함께 채움.
   const applyBoth = (acq: number, transfer: number) => {
     onApplyBoth?.(acq, transfer);
-    if (snapshotKey && formSnapshot) saveSnapshot(snapshotKey, formSnapshot);
+    // 이 모달이 저장하는 것은 언제나 **정정용 단일시점 입력**이다 — 복원분의 origin이
+    // 섞여 들어오지 않도록 명시 주입한다.
+    if (snapshotKey && formSnapshot) saveSnapshot(snapshotKey, { ...formSnapshot, origin: "single" });
     setOpen(false);
     setResult(null);
     setError(null);
@@ -199,6 +214,17 @@ export function BuildingStdPriceModalButton({
             </DialogDescription>
           </DialogHeader>
 
+          {restoreSkippedNotice && (
+            <p
+              data-testid="bsp-restore-skipped-notice"
+              className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-caption text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+            >
+              이 시점에 저장된 값이 있지만 <b>이 폼의 입력 형태와 달라 불러오지 않았습니다</b>
+              (예: <b>일괄 계산</b>으로 산출된 값, 다른 세목으로 저장된 값). 정정하려면 일괄
+              계산을 다시 실행하거나, 이 폼에서 처음부터 입력해 적용하세요.
+            </p>
+          )}
+
           <BuildingStdPriceForm
             lockedTaxType={lockedTaxType}
             transferSectionLabel={transferSectionLabel}
@@ -215,9 +241,10 @@ export function BuildingStdPriceModalButton({
              * (2026-08-24 코드 리뷰 Medium — 세목 불일치 가드를 넣으면서 생긴 결함.)
              */
             initialForm={{
-              ...(lockedTaxType && restoredForm?.taxType && restoredForm.taxType !== lockedTaxType
-                ? {}
-                : restoredForm),
+              // 복원 가능 판정은 `isRestorableSnapshot` 단일 소스(생산자 + 세목).
+              // ⚠️ 판정은 **복원분에만** 건다 — 호출부 prefill은 항상 살린다(그것까지 버리면
+              //    모달이 통째로 빈다. `singleTimePoint`는 자동입력값이 아니라 호출부 계약이다).
+              ...(restorable ? restoredForm : {}),
               ...prefillForm,
             }}
             onResult={(r, fa, err, _report, landTotal, snapshot) => {
