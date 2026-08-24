@@ -21,6 +21,7 @@ import {
 } from "./sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { resolveSapPriorStdPrice } from "./transfer-same-adjustment-period-input";
 import { calcStdPriceMonths } from "@/lib/tax-engine/same-adjustment-period-std-price";
 
 function message(label: string, s: Sec164FieldStatus): string {
@@ -137,8 +138,12 @@ export function sameAdjustmentPeriodError(
     }
   }
 
-  const raw = formula === "prev" ? asset.sapPriorStdPrice : asset.sapNewStdPrice;
-  if (!raw || parseAmount(raw) <= 0) {
+  // ④와 **같은 leaf**로 구한다 — §80③ 파생 근거에서는 `sapPriorStdPrice`가 비어 있고
+  // 값은 피연산자에서 나온다. 여기서 raw만 보면 「UI 통과 ↔ 검증 차단」 모순이 된다.
+  const resolved = formula === "prev"
+    ? resolveSapPriorStdPrice(asset)
+    : parseAmount(asset.sapNewStdPrice ?? "");
+  if (resolved <= 0) {
     return formula === "prev"
       ? `${label}: 동일조정기간 환산(소득세법 시행규칙 §80①1호가목)에는 전기의 기준시가가 필요합니다.`
       : `${label}: 동일조정기간 환산(소득세법 시행규칙 §80①1호나목)에는 새로운 기준시가가 필요합니다.`;

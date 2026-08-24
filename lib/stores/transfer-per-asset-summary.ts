@@ -211,8 +211,25 @@ function canApportion(formData: TransferFormData): boolean {
   if (formData.assets.length < 2) return false;
   if (parseRaw(formData.contractTotalPrice) <= 0) return false;
   return formData.assets.every(
-    (a) => ownershipRatioOf(a) < 1 || parseRaw(a.standardPriceAtTransfer) > 0,
+    (a, i) => ownershipRatioOf(a) < 1 || apportionStdPriceAtTransfer(formData, a, i) > 0,
   );
+}
+
+/**
+ * 안분 키로 쓸 「양도시 기준시가」 — ④(`buildAssetPayload`)와 **같은 축**.
+ *
+ * 증환지 증가분은 자기 칸을 입력받지 않고 당초분에서 파생하는데, 종전에는 사이드바만
+ * raw를 읽어 **엔진은 안분하는데 화면은 아무것도 못 보여주는** 상태가 됐다(L-8 실체).
+ * ④가 `slice(1)`에만 파생을 적용하므로 여기서도 **index ≥ 1**에만 적용한다.
+ */
+function apportionStdPriceAtTransfer(
+  formData: TransferFormData,
+  a: AssetForm,
+  index: number,
+): number {
+  const raw = parseRaw(a.standardPriceAtTransfer);
+  if (raw > 0 || index === 0) return raw;
+  return replotIncrementStdPriceAtTransfer(a, formData.assets[0]) ?? 0;
 }
 
 /**
@@ -223,13 +240,13 @@ function canApportion(formData: TransferFormData): boolean {
  */
 function computeApportionedSaleMap(formData: TransferFormData): Map<string, number> | null {
   const total = parseRaw(formData.contractTotalPrice);
-  const assets: BundledAssetInput[] = formData.assets.map((a) => {
+  const assets: BundledAssetInput[] = formData.assets.map((a, i) => {
     const ratio = ownershipRatioOf(a);
     return {
       assetId: a.assetId,
       assetLabel: a.assetLabel,
       assetKind: toBundledKind(a.assetKind),
-      standardPriceAtTransfer: parseRaw(a.standardPriceAtTransfer),
+      standardPriceAtTransfer: apportionStdPriceAtTransfer(formData, a, i),
       fixedSalePrice: ratio < 1 ? Math.floor(total * ratio) : undefined,
     };
   });
@@ -247,24 +264,15 @@ function computeApportionedSaleMap(formData: TransferFormData): Map<string, numb
  * 엔진(STEP 0.47)과 **같은 leaf**를 쓴다. 별도 산식을 두면 사이드바만 다른 값을 보여준다.
  * 요건 미충족·토글 OFF면 입력값을 그대로 돌려주므로 종전 동작과 같다(회귀 0).
  */
-function previewStdPriceAtTransfer(
-  a: AssetForm,
-  transferDate: string | undefined,
-  primary: AssetForm | undefined,
-): number {
+function previewStdPriceAtTransfer(a: AssetForm, transferDate: string | undefined): number {
   /**
-   * 🔴 증환지 증가분은 자기 「양도시 기준시가」를 입력받지 않고 당초분에서 파생한다.
-   *    이 fallback이 없으면 ⑤·④·⑧은 파생값을 보는데 사이드바만 빈 값을 봐서
-   *    §164⑧ 요건 판정이 어긋난다(L-8). ④⑧과 **같은 leaf**를 쓴다.
-   *
-   *    ⚠️ 관측되는 구성은 **자산이 1건일 때뿐**이다 — 아래 호출부가 `isSingle` 분기
-   *       안에 있어 다건 환산은 프리뷰 자체를 하지 않는다(「계산 후 표시」). 당초분을
-   *       지워 증가분만 남긴 폼이 그 경로다(실측: 미적용 0/pending → 적용 93,023,255).
+   * ⚠️ 증환지 fallback을 **여기서는 쓰지 않는다.** 이 함수는 `isSingle` 분기 안에서만
+   *    불리는데, 자산이 1건이면 당초분이 자기 자신이 되어 「자기 ㎡당 × 자기 면적」으로
+   *    파생하게 된다. 그런데 ④는 `form.assets.slice(1)`에만 파생을 적용하고 primary는
+   *    입력값을 그대로 쓰므로(`transfer-tax-api.ts:681`·`:426`), 파생하면 **엔진이
+   *    재현할 수 없는 금액**을 사이드바가 보여준다. 값을 안 보여주는 편이 정직하다.
    */
-  const raw =
-    parseRaw(a.standardPriceAtTransfer) ||
-    replotIncrementStdPriceAtTransfer(a, primary) ||
-    0;
+  const raw = parseRaw(a.standardPriceAtTransfer);
   const sap = buildSameAdjustmentPeriodInput(a);
   if (!sap || !transferDate || !a.acquisitionDate) return raw;
 
@@ -472,7 +480,7 @@ export function computeTransferPerAssetSummary(
         const stdAcq = parseRaw(a.standardPriceAtAcq);
         // ⑥ §164⑧ 동일조정기간 환산 — 사이드바 추정도 엔진과 **같은 leaf**를 쓴다.
         //    안 쓰면 취득·양도 기준시가가 같은 구간에서 사이드바만 「양도차익 0」을 보여준다.
-        const stdTransfer = previewStdPriceAtTransfer(a, formData.transferDate, formData.assets[0]);
+        const stdTransfer = previewStdPriceAtTransfer(a, formData.transferDate);
         const sale = parseRaw(a.actualSalePrice);
         acqPrice =
           stdAcq > 0 && stdTransfer > 0 && sale > 0

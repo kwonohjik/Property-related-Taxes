@@ -57,48 +57,63 @@ describe("leaf — 파생 조건", () => {
   });
 });
 
-// ── ⑥ 사이드바 — L-8 ────────────────────────────────────────────────
-describe("⑥ 사이드바 §164⑧ 프리뷰가 증환지 파생값을 본다 (L-8)", () => {
-  function seed(extra: Partial<AssetForm> = {}) {
+// ── ⑥ 사이드바 안분 — L-8 실체 ─────────────────────────────────────
+/**
+ * 🔴 **관측되는 구성은 「당초분 + 증환지 증가분」 2자산 안분이다.**
+ *
+ * 증가분은 자기 「양도시 기준시가」를 입력받지 않는데, 종전 사이드바는 raw만 읽어
+ * 안분 자체를 포기했다(`sale: 0, pending: true`). 반면 ④는 파생해서 엔진에 보내므로
+ * **엔진은 안분하는데 화면은 아무것도 못 보여주는** 상태였다.
+ *
+ * ⚠️ 단건(자산 1건)에는 적용하지 않는다 — ④가 `slice(1)`에만 파생하므로 primary를
+ *    파생하면 엔진이 재현할 수 없는 금액이 된다.
+ */
+describe("⑥ 안분 프리뷰가 증환지 파생값을 본다 (L-8)", () => {
+  function seed(incExtra: Partial<AssetForm> = {}) {
     useCalcWizardStore.setState((st) => ({
       formData: {
         ...st.formData,
         transferDate: "2005-11-01",
-        assets: [{
-          ...makeDefaultAsset(1),
-          assetKind: "land",
-          isReplotIncrement: true,
-          standardPricePerSqmAtTransfer: "1000000",
-          acquisitionDate: "2005-03-01",
-          transferArea: "50",
-          standardPriceAtTransfer: "",       // ← 파생 대상
-          standardPriceAtAcq: "50000000",
-          actualSalePrice: "100000000",
-          useEstimatedAcquisition: true,
-          sapEnabled: true,
-          sapFormula: "prev" as const,
-          sapPriorStdPrice: "45000000",
-          ...extra,
-        }],
+        contractTotalPrice: "600000000",
+        bundledSaleMode: "apportioned" as const,
+        assets: [
+          {
+            ...makeDefaultAsset(1),
+            assetKind: "land" as const,
+            acquisitionDate: "2005-03-01",
+            standardPricePerSqmAtTransfer: "1000000",
+            standardPriceAtTransfer: "100000000",
+          },
+          {
+            ...makeDefaultAsset(2),
+            assetKind: "land" as const,
+            isReplotIncrement: true,
+            acquisitionDate: "2005-03-01",
+            transferArea: "20",
+            standardPriceAtTransfer: "",     // ← 파생 대상 (1,000,000 × 20 = 20,000,000)
+            ...incExtra,
+          },
+        ],
       },
     }));
     const { formData, result } = useCalcWizardStore.getState();
-    return computeTransferPerAssetSummary(formData, result).rows[0];
+    return computeTransferPerAssetSummary(formData, result).rows;
   }
 
-  it("파생값으로 §164⑧ 요건이 성립해 환산취득가액이 나온다", () => {
-    // 파생 양도시 기준시가 5천만 = 취득당시 5천만 ⇒ §164⑧ 발동
-    // 양도당시 = 5천만 + (5천만 − 4.5천만) × 9 ÷ 12 = 53,750,000
-    // 환산취득 = 1억 × 5천만 ÷ 53,750,000
-    const row = seed();
-    expect(row.acqPrice).toBe(93_023_255);
-    expect(row.acqPending).toBe(false);
+  it("증가분 칸이 비어도 파생값으로 안분한다", () => {
+    const rows = seed();
+    // 기준시가 1억 : 2천만 = 5 : 1 ⇒ 6억을 5억 / 1억으로 안분
+    expect(rows.map((r) => r.salePrice)).toEqual([500_000_000, 100_000_000]);
   });
 
-  it("파생이 불가능하면 종전대로 「계산 후 표시」", () => {
-    const row = seed({ transferArea: "" });
-    expect(row.acqPrice).toBe(0);
-    expect(row.acqPending).toBe(true);
+  it("파생 불가면 종전대로 안분하지 않는다 — 추정 금지", () => {
+    const rows = seed({ transferArea: "" });
+    expect(rows.every((r) => r.salePrice === 0)).toBe(true);
+  });
+
+  it("증가분이 자기 값을 직접 입력하면 그 값이 우선한다", () => {
+    const rows = seed({ standardPriceAtTransfer: "20000000" });
+    expect(rows.map((r) => r.salePrice)).toEqual([500_000_000, 100_000_000]);
   });
 });
 

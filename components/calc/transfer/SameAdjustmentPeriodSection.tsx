@@ -23,7 +23,7 @@
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ import {
   priorNoticeYearFor,
   deriveAdjustmentMonths,
 } from "@/lib/calc/same-adjustment-period-lookup";
-import { calcPriorStdPriceSubstitute } from "@/lib/tax-engine/same-adjustment-period-std-price";
+import { resolveSapPriorStdPrice } from "@/lib/calc/transfer-same-adjustment-period-input";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** §80①1호 기간 요건 — 취득일이 속하는 연도의 다음 연도 말일 이전 양도 */
@@ -106,37 +106,13 @@ export function SameAdjustmentPeriodSection({
   const isDerivedBasis = priorBasis === "first_notice_rate" || priorBasis === "ratio_conversion";
 
   /**
-   * §80③ 대체 산정 — 피연산자가 바뀔 때마다 **엔진 leaf로 다시 계산**해
-   * `sapPriorStdPrice`를 같은 patch에 실어 보낸다.
+   * §80③ 대체 산정값은 **저장하지 않는다** — 읽는 시점에 ④⑧과 같은 leaf로 구한다.
    *
-   * - `useEffect → store` 미러링을 쓰지 않는다(무한 루프 위험 · 프로젝트 금지 규칙).
-   * - 키를 나눠 두 번 patch하면 뒤 patch가 앞 patch를 stale spread로 덮으므로
-   *   반드시 **한 번의 배치 patch**로 보낸다(memory `multikey_patch_stale_spread`).
-   * - 산식은 UI에 복제하지 않는다 — 엔진과 같은 `calcPriorStdPriceSubstitute`를 부른다.
+   * onChange에서 계산해 적어 두면 3호의 피연산자인 「취득당시의 기준시가」가 **다른
+   * 섹션**에서 바뀔 때 이 값만 낡은 채로 남는다. 화면·검증·엔진이 서로 다른 값을 보게 된다.
+   * 저장하지 않으므로 근거를 「실제 전기 기준시가」로 되돌리면 직접 입력값이 그대로 살아 있다.
    */
-  function withSubstitute(patch: Partial<AssetForm>): Partial<AssetForm> {
-    const next = { ...asset, ...patch };
-    const basis = next.sapPriorBasis ?? "direct";
-    if (basis !== "first_notice_rate" && basis !== "ratio_conversion") return patch;
-
-    const rate = parseFloat((next.sapNoticeBaseRate ?? "").replace(/,/g, ""));
-    const derived = calcPriorStdPriceSubstitute(
-      basis === "first_notice_rate"
-        ? {
-            firstNoticeStdPrice: parseAmount(next.sapFirstNoticeStdPrice ?? ""),
-            // 화면은 %, leaf는 배율(1.0 = 100%)
-            noticeBaseRate: Number.isFinite(rate) ? rate / 100 : undefined,
-          }
-        : {
-            standardPriceAtAcquisition: parseAmount(next.standardPriceAtAcq ?? ""),
-            priorLandBuildingSum: parseAmount(next.sapPriorLandBuildingSum ?? ""),
-            acquisitionLandBuildingSum: parseAmount(next.sapAcqLandBuildingSum ?? ""),
-          },
-    );
-    // 대체 산정 중에는 이 칸을 파생값이 **전유**한다. 피연산자가 덜 채워졌으면
-    // 비워 두고 ⑧이 사유를 말한다 — 옛 값을 남기면 「무엇의 결과인지」가 어긋난다.
-    return { ...patch, sapPriorStdPrice: derived ? String(derived.value) : "", sapPriceSource: "manual" };
-  }
+  const derivedPrior = isDerivedBasis ? resolveSapPriorStdPrice(asset) : 0;
 
   /**
    * 전기의 기준시가 자동 조회 (§164③ 직전 고시분 + §80②1호 조정월수 파생).
@@ -260,7 +236,7 @@ export function SameAdjustmentPeriodSection({
           <RadioCardGroup
             name="sapPriorBasis"
             value={priorBasis}
-            onChange={(v) => onChange(withSubstitute({ sapPriorBasis: v }))}
+            onChange={(v) => onChange({ sapPriorBasis: v })}
             tone="sky"
             layout="inline"
             lawLinks="소득세법"
@@ -285,7 +261,7 @@ export function SameAdjustmentPeriodSection({
               label="국세청장이 최초로 고시한 기준시가"
               hideLabel
               value={asset.sapFirstNoticeStdPrice ?? ""}
-              onChange={(v) => onChange(withSubstitute({ sapFirstNoticeStdPrice: v }))}
+              onChange={(v) => onChange({ sapFirstNoticeStdPrice: v })}
             />
           </FieldCard>
           <FieldCard
@@ -296,7 +272,7 @@ export function SameAdjustmentPeriodSection({
           >
             <DecimalInput
               value={asset.sapNoticeBaseRate ?? ""}
-              onChange={(v) => onChange(withSubstitute({ sapNoticeBaseRate: v }))}
+              onChange={(v) => onChange({ sapNoticeBaseRate: v })}
               unit="%"
               data-testid="sap-notice-base-rate"
             />
@@ -315,7 +291,7 @@ export function SameAdjustmentPeriodSection({
               label="전기의 토지·건물 기준시가 합계액"
               hideLabel
               value={asset.sapPriorLandBuildingSum ?? ""}
-              onChange={(v) => onChange(withSubstitute({ sapPriorLandBuildingSum: v }))}
+              onChange={(v) => onChange({ sapPriorLandBuildingSum: v })}
             />
           </FieldCard>
           <FieldCard
@@ -327,7 +303,7 @@ export function SameAdjustmentPeriodSection({
               label="취득당시의 토지·건물 기준시가 합계액"
               hideLabel
               value={asset.sapAcqLandBuildingSum ?? ""}
-              onChange={(v) => onChange(withSubstitute({ sapAcqLandBuildingSum: v }))}
+              onChange={(v) => onChange({ sapAcqLandBuildingSum: v })}
             />
           </FieldCard>
         </>
@@ -366,7 +342,7 @@ export function SameAdjustmentPeriodSection({
           <CurrencyInput
             label="전기의 기준시가"
             hideLabel
-            value={asset.sapPriorStdPrice}
+            value={isDerivedBasis ? (derivedPrior > 0 ? String(derivedPrior) : "") : asset.sapPriorStdPrice}
             disabled={isDerivedBasis}
             onChange={(v) => onChange({ sapPriorStdPrice: v, sapPriceSource: "manual" })}
           />

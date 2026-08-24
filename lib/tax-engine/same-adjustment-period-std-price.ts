@@ -194,9 +194,11 @@ export function calcPriorStdPriceSubstitute(
     return {
       // ⚠️ `Math.floor(first * rate)`는 부동소수 곱이라 **1원 적게** 나올 수 있다.
       //    실측: 15,000,000 × 50.03% → float 7,504,499 / 정확 7,504,500.
-      //    기준율을 만분율 정수로 되돌려 분수 연산한다(memory
-      //    `feedback_applyrate_fractional_rate_one_won_error`). 0.01%p까지 표현한다.
-      value: applyRateFraction(first, Math.round(rate * 10_000), 10_000),
+      //    기준율을 정수 분수로 되돌려 분수 연산한다(memory
+      //    `feedback_applyrate_fractional_rate_one_won_error`).
+      //    분모는 1e8 — 화면 입력(`DecimalInput`)이 소수 자릿수를 제한하지 않으므로
+      //    1e4로 잡으면 `12.345%` 같은 입력이 **조용히 반올림**된다.
+      value: applyRateFraction(first, Math.round(rate * 100_000_000), 100_000_000),
       basis: "first_notice_rate",
       legalBasis: TRANSFER.SAME_ADJ_PERIOD_PRIOR_SUBSTITUTE_2,
     };

@@ -1,10 +1,11 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import { SameAdjustmentPeriodSection } from "@/components/calc/transfer/SameAdjustmentPeriodSection";
 import { sameAdjustmentPeriodError } from "@/lib/calc/transfer-tax-validate-sec164";
 import { migrateAsset } from "@/lib/stores/calc-wizard-asset-migrate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { calcPriorStdPriceSubstitute } from "@/lib/tax-engine/same-adjustment-period-std-price";
+import { resolveSapPriorStdPrice, buildSameAdjustmentPeriodInput } from "@/lib/calc/transfer-same-adjustment-period-input";
 
 afterEach(cleanup);
 
@@ -31,76 +32,124 @@ describe("§80③2호 — 기준율 곱이 1원 적게 나오지 않는다", () 
 });
 
 // ── ⑤ UI — 피연산자 → 파생 ──────────────────────────────────────────
-function renderSection(overrides: Record<string, unknown>, onChange = vi.fn()) {
-  const asset = { ...makeDefaultAsset(1), sapEnabled: true, acquisitionDate: "2005-03-01", ...overrides };
-  render(
-    <SameAdjustmentPeriodSection
-      asset={asset}
-      onChange={onChange}
-      transferDate="2005-11-01"
-    />,
-  );
-  return { asset, onChange };
-}
 
-/** 라벨(`hideLabel`이라 aria-label로만 남는다)로 입력칸을 집는다 */
-function fieldFor(label: string): HTMLElement {
-  return screen.getByLabelText(label);
-}
+describe("⑤⑧④ §80③ 대체 산정 — 읽는 시점에 같은 leaf로 파생한다", () => {
+  const base = { ...makeDefaultAsset(1), sapEnabled: true, acquisitionDate: "2005-03-01" };
 
-describe("⑤ §80③ 대체 산정 — 피연산자 입력이 전기 기준시가를 파생시킨다", () => {
-  it("2호: 기준율을 채우면 같은 patch에 전기 기준시가가 실린다", () => {
-    const { onChange } = renderSection({
-      sapPriorBasis: "first_notice_rate",
-      sapFirstNoticeStdPrice: "150,000,000",
-    });
-    fireEvent.change(screen.getByTestId("sap-notice-base-rate"), { target: { value: "98.1" } });
-    const last = onChange.mock.calls.at(-1)![0];
-    // 파생값이 피연산자와 **같은 batch**에 실려야 한다 — 나눠 보내면 뒤 patch가 앞을 덮는다.
-    expect(last.sapNoticeBaseRate).toBe("98.1");
-    expect(last.sapPriorStdPrice).toBe("147150000");
+  it("2호: 최초고시 × 기준율", () => {
+    expect(
+      resolveSapPriorStdPrice({
+        ...base,
+        sapPriorBasis: "first_notice_rate",
+        sapFirstNoticeStdPrice: "150,000,000",
+        sapNoticeBaseRate: "98.1",
+      }),
+    ).toBe(147_150_000);
   });
 
-  it("3호: 합계액 두 칸이 차면 취득당시 기준시가로 비율환산한다", () => {
-    const { onChange } = renderSection({
+  it("3호: 취득당시 × 전기합계 ÷ 취득당시합계", () => {
+    expect(
+      resolveSapPriorStdPrice({
+        ...base,
+        sapPriorBasis: "ratio_conversion",
+        standardPriceAtAcq: "200,000,000",
+        sapPriorLandBuildingSum: "180,000,000",
+        sapAcqLandBuildingSum: "200,000,000",
+      }),
+    ).toBe(180_000_000);
+  });
+
+  /**
+   * 🔴 3호의 「취득당시의 기준시가」는 **다른 섹션**에서 편집된다. 파생값을 저장해 두면
+   *    그쪽을 고쳐도 이 값만 낡은 채로 남아 엔진에 낡은 값이 간다. 저장하지 않으므로
+   *    다시 읽으면 곧바로 따라온다.
+   */
+  it("취득당시 기준시가를 다른 섹션에서 고치면 파생값이 즉시 따라온다", () => {
+    const a = {
+      ...base,
+      sapPriorBasis: "ratio_conversion" as const,
+      standardPriceAtAcq: "200,000,000",
+      sapPriorLandBuildingSum: "180,000,000",
+      sapAcqLandBuildingSum: "200,000,000",
+    };
+    expect(resolveSapPriorStdPrice(a)).toBe(180_000_000);
+    expect(resolveSapPriorStdPrice({ ...a, standardPriceAtAcq: "300,000,000" })).toBe(270_000_000);
+  });
+
+  it("파생 근거는 직접 입력값을 읽지도 쓰지도 않는다 — 근거를 되돌리면 그대로 살아 있다", () => {
+    const a = {
+      ...base,
+      sapPriorStdPrice: "999,999,999",
+      sapPriorBasis: "first_notice_rate" as const,
+      sapFirstNoticeStdPrice: "150,000,000",
+      sapNoticeBaseRate: "98.1",
+    };
+    expect(resolveSapPriorStdPrice(a)).toBe(147_150_000);          // 직접 입력값 무시
+    expect(resolveSapPriorStdPrice({ ...a, sapPriorBasis: "direct" })).toBe(999_999_999); // 보존
+  });
+
+  it("④가 엔진에 보내는 값도 같은 leaf에서 나온다", () => {
+    const input = buildSameAdjustmentPeriodInput({
+      ...base,
       sapPriorBasis: "ratio_conversion",
       standardPriceAtAcq: "200,000,000",
       sapPriorLandBuildingSum: "180,000,000",
+      sapAcqLandBuildingSum: "200,000,000",
     });
-    fireEvent.change(fieldFor("취득당시의 토지·건물 기준시가 합계액"), {
-      target: { value: "200000000" },
-    });
-    const last = onChange.mock.calls.at(-1)![0];
-    expect(last.sapPriorStdPrice).toBe("180000000"); // 2억 × 1.8억 ÷ 2억
+    expect(input?.priorStandardPrice).toBe(180_000_000);
   });
 
-  it("피연산자가 덜 차면 파생값을 비운다 — 옛 값을 남기지 않는다", () => {
-    const { onChange } = renderSection({
-      sapPriorBasis: "ratio_conversion",
-      standardPriceAtAcq: "200,000,000",
-      sapPriorStdPrice: "999,999,999",
-    });
-    fireEvent.change(fieldFor("전기의 토지·건물 기준시가 합계액"), {
-      target: { value: "180000000" },
-    });
-    // 취득당시 합계액이 아직 없다 → 산정 불가 ⇒ 빈 값 + ⑧이 사유를 말한다
-    expect(onChange.mock.calls.at(-1)![0].sapPriorStdPrice).toBe("");
+  it("피연산자가 덜 차면 0 — 추정하지 않고 ⑧이 사유를 말한다", () => {
+    expect(
+      resolveSapPriorStdPrice({
+        ...base,
+        sapPriorBasis: "ratio_conversion",
+        standardPriceAtAcq: "200,000,000",
+        sapPriorLandBuildingSum: "180,000,000",
+      }),
+    ).toBe(0);
   });
 
   it("파생 근거에서는 「전기의 기준시가」 칸이 잠긴다 — 이중 진실 차단", () => {
-    renderSection({ sapPriorBasis: "first_notice_rate" });
-    const locked = screen
-      .getAllByRole("textbox")
-      .filter((el) => (el as HTMLInputElement).disabled);
-    expect(locked.length).toBe(1);
+    render(
+      <SameAdjustmentPeriodSection
+        asset={{ ...base, sapPriorBasis: "first_notice_rate" }}
+        onChange={vi.fn()}
+        transferDate="2005-11-01"
+      />,
+    );
+    expect(
+      screen.getAllByRole("textbox").filter((el) => (el as HTMLInputElement).disabled).length,
+    ).toBe(1);
   });
 
   it("direct면 잠기지 않는다", () => {
-    renderSection({ sapPriorBasis: "direct" });
-    const locked = screen
-      .getAllByRole("textbox")
-      .filter((el) => (el as HTMLInputElement).disabled);
-    expect(locked.length).toBe(0);
+    render(
+      <SameAdjustmentPeriodSection
+        asset={{ ...base, sapPriorBasis: "direct" }}
+        onChange={vi.fn()}
+        transferDate="2005-11-01"
+      />,
+    );
+    expect(
+      screen.getAllByRole("textbox").filter((el) => (el as HTMLInputElement).disabled).length,
+    ).toBe(0);
+  });
+
+  it("파생값이 화면에 표시된다", () => {
+    render(
+      <SameAdjustmentPeriodSection
+        asset={{
+          ...base,
+          sapPriorBasis: "first_notice_rate",
+          sapFirstNoticeStdPrice: "150,000,000",
+          sapNoticeBaseRate: "98.1",
+        }}
+        onChange={vi.fn()}
+        transferDate="2005-11-01"
+      />,
+    );
+    expect(screen.getByLabelText("전기의 기준시가")).toHaveValue("147,150,000");
   });
 });
 
