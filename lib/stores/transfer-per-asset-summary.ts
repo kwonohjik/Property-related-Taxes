@@ -29,6 +29,7 @@ import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/
 import { previewCommercialBuildingEstimated } from "@/lib/calc/transfer-estimated-preview";
 import { previewGeneralBuildingEstimated } from "@/lib/calc/transfer-estimated-preview";
 import { buildSameAdjustmentPeriodInput } from "@/lib/calc/transfer-same-adjustment-period-input";
+import { replotIncrementStdPriceAtTransfer } from "@/lib/calc/replot-increment-std-price";
 import { calcStdPriceMonths, classifySameAdjustmentPeriod, calcSameAdjustmentPeriodStdPrice } from "@/lib/tax-engine/same-adjustment-period-std-price";
 
 export interface TransferAssetSummaryRow {
@@ -210,8 +211,25 @@ function canApportion(formData: TransferFormData): boolean {
   if (formData.assets.length < 2) return false;
   if (parseRaw(formData.contractTotalPrice) <= 0) return false;
   return formData.assets.every(
-    (a) => ownershipRatioOf(a) < 1 || parseRaw(a.standardPriceAtTransfer) > 0,
+    (a, i) => ownershipRatioOf(a) < 1 || apportionStdPriceAtTransfer(formData, a, i) > 0,
   );
+}
+
+/**
+ * 안분 키로 쓸 「양도시 기준시가」 — ④(`buildAssetPayload`)와 **같은 축**.
+ *
+ * 증환지 증가분은 자기 칸을 입력받지 않고 당초분에서 파생하는데, 종전에는 사이드바만
+ * raw를 읽어 **엔진은 안분하는데 화면은 아무것도 못 보여주는** 상태가 됐다(L-8 실체).
+ * ④가 `slice(1)`에만 파생을 적용하므로 여기서도 **index ≥ 1**에만 적용한다.
+ */
+function apportionStdPriceAtTransfer(
+  formData: TransferFormData,
+  a: AssetForm,
+  index: number,
+): number {
+  const raw = parseRaw(a.standardPriceAtTransfer);
+  if (raw > 0 || index === 0) return raw;
+  return replotIncrementStdPriceAtTransfer(a, formData.assets[0]) ?? 0;
 }
 
 /**
@@ -222,13 +240,13 @@ function canApportion(formData: TransferFormData): boolean {
  */
 function computeApportionedSaleMap(formData: TransferFormData): Map<string, number> | null {
   const total = parseRaw(formData.contractTotalPrice);
-  const assets: BundledAssetInput[] = formData.assets.map((a) => {
+  const assets: BundledAssetInput[] = formData.assets.map((a, i) => {
     const ratio = ownershipRatioOf(a);
     return {
       assetId: a.assetId,
       assetLabel: a.assetLabel,
       assetKind: toBundledKind(a.assetKind),
-      standardPriceAtTransfer: parseRaw(a.standardPriceAtTransfer),
+      standardPriceAtTransfer: apportionStdPriceAtTransfer(formData, a, i),
       fixedSalePrice: ratio < 1 ? Math.floor(total * ratio) : undefined,
     };
   });
@@ -247,6 +265,13 @@ function computeApportionedSaleMap(formData: TransferFormData): Map<string, numb
  * 요건 미충족·토글 OFF면 입력값을 그대로 돌려주므로 종전 동작과 같다(회귀 0).
  */
 function previewStdPriceAtTransfer(a: AssetForm, transferDate: string | undefined): number {
+  /**
+   * ⚠️ 증환지 fallback을 **여기서는 쓰지 않는다.** 이 함수는 `isSingle` 분기 안에서만
+   *    불리는데, 자산이 1건이면 당초분이 자기 자신이 되어 「자기 ㎡당 × 자기 면적」으로
+   *    파생하게 된다. 그런데 ④는 `form.assets.slice(1)`에만 파생을 적용하고 primary는
+   *    입력값을 그대로 쓰므로(`transfer-tax-api.ts:681`·`:426`), 파생하면 **엔진이
+   *    재현할 수 없는 금액**을 사이드바가 보여준다. 값을 안 보여주는 편이 정직하다.
+   */
   const raw = parseRaw(a.standardPriceAtTransfer);
   const sap = buildSameAdjustmentPeriodInput(a);
   if (!sap || !transferDate || !a.acquisitionDate) return raw;

@@ -11,6 +11,7 @@ import { CompanionSaleModeBlock, toPropertyKind, type BundledSaleMode } from "..
 import { GeneralBuildingSaleSplitSection } from "../GeneralBuildingSaleSplitSection";
 import { SameAdjustmentPeriodSection } from "../SameAdjustmentPeriodSection";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { replotIncrementStdPriceAtTransfer } from "@/lib/calc/replot-increment-std-price";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -45,13 +46,10 @@ export function AssetSectionTransfer({
   const isReplotInc = !!asset.isReplotIncrement && !!primaryAsset;
   const fbPerSqm = isReplotInc ? (primaryAsset!.standardPricePerSqmAtTransfer || "") : "";
   const effPerSqm = asset.standardPricePerSqmAtTransfer || fbPerSqm;
-  const fbTotal = (() => {
-    if (!isReplotInc) return "";
-    const p = parseFloat((fbPerSqm || "").replace(/,/g, ""));
-    const a = parseFloat((asset.transferArea || "").replace(/,/g, ""));
-    return p > 0 && a > 0 ? String(Math.floor(p * a)) : "";
-  })();
-  const effTotal = asset.standardPriceAtTransfer || fbTotal;
+  // ④⑥⑧과 **같은 leaf**로 파생한다 — 규칙을 각자 복제하면 한 곳만 빠져도 조용히 어긋난다.
+  const fbTotalNum = replotIncrementStdPriceAtTransfer(asset, primaryAsset);
+  const fbTotal = fbTotalNum !== undefined ? String(fbTotalNum) : "";
+  const effTotal = parseAmount(asset.standardPriceAtTransfer) > 0 ? asset.standardPriceAtTransfer : fbTotal;
   return (
     <>
       {/*

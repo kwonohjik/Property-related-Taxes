@@ -19,6 +19,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
 import { sec164PartialInputError, sameAdjustmentPeriodError } from "./transfer-tax-validate-sec164";
 import { clauseADeclarationError } from "./transfer-tax-validate-clause-a";
@@ -735,11 +736,9 @@ export function validateAssetEntry(
         return `${label}: 계약서상 양도가액을 입력하세요.`;
     } else {
       // 증환지 증가분은 당초분(assets[0]) ㎡당 기준시가 × 증가분 면적으로 파생(live fallback) →
-      // 자기 standardPriceAtTransfer 없어도 통과 (UI/API와 동일 fallback, 모순 차단).
+      // 자기 standardPriceAtTransfer 없어도 통과 (⑤·⑥·④와 **같은 leaf**, 모순 차단).
       const replotIncDerivable =
-        a.isReplotIncrement &&
-        parseAmount(form.assets[0]?.standardPricePerSqmAtTransfer) > 0 &&
-        parseFloat((a.transferArea || "").replace(/,/g, "")) > 0;
+        replotIncrementStdPriceAtTransfer(a, form.assets[0]) !== undefined;
       if (!replotIncDerivable && (!a.standardPriceAtTransfer || parseAmount(a.standardPriceAtTransfer) <= 0))
         return `${label}: 양도시 기준시가를 입력하세요.`;
     }

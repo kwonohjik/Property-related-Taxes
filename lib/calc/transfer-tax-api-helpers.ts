@@ -7,6 +7,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 // ④ 분리취득 축 — 단건과 **같은 공용 빌더**(자산-무관 함수라 컴패니언도 그대로 쓴다).
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
 import {
@@ -329,15 +330,8 @@ export function buildAssetPayload(
   const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause, asset.expropriationNoticeDate);
 
   // 증환지 증가분: standardPriceAtTransfer 빈값 시 당초분(primary) ㎡당 × 증가분 면적 파생.
-  // UI live fallback(AssetSectionTransfer)과 동일 규칙 — 증가분 추가 순서 무관하게 안분 키 도달 보장.
-  const replotIncStdAtTransfer =
-    parseAmount(asset.standardPriceAtTransfer) > 0 || !asset.isReplotIncrement || !primary
-      ? undefined
-      : (() => {
-          const p = parseAmount(primary.standardPricePerSqmAtTransfer);
-          const a = parseFloat((asset.transferArea || "").replace(/,/g, ""));
-          return p > 0 && a > 0 ? Math.floor(p * a) : undefined;
-        })();
+  // ⑤·⑥·⑧과 **같은 leaf** — 규칙을 복제하면 한 곳만 빠뜨려도 조용히 어긋난다.
+  const replotIncStdAtTransfer = replotIncrementStdPriceAtTransfer(asset, primary);
 
   /**
    * §166⑥ **안분 키** — 사용자가 자산 카드에 입력한 「양도시 기준시가」(증환지 증가분은 파생값).

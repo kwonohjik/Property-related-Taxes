@@ -154,8 +154,23 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   sapNewStdPrice: string;
   /** 기준시가 조정월수 (§80②1호). 빈 값이면 12 */
   sapAdjustMonths: string;
-  /** 전기 기준시가 부존재 시 대체 산정 근거 (§80③1~3호) — 표시 전용 */
+  /** 전기 기준시가 부존재 시 대체 산정 근거 (§80③1~3호) */
   sapPriorBasis: "direct" | "nearby_land" | "first_notice_rate" | "ratio_conversion";
+  /**
+   * §80③ 대체 산정 피연산자 — **UI 전용**이다(엔진에 보내지 않는다).
+   *
+   * 산정 결과는 `calcPriorStdPriceSubstitute`(엔진 leaf)로 계산해 `sapPriorStdPrice`에
+   * 적어 넣는다. 즉 엔진이 받는 값은 여전히 「전기의 기준시가」 하나뿐이고, 피연산자는
+   * 그 값을 어떻게 얻었는지를 폼에 남겨 재편집 가능하게 하는 역할만 한다.
+   */
+  /** §80③2호 — 국세청장이 최초로 고시한 기준시가 */
+  sapFirstNoticeStdPrice: string;
+  /** §80③2호 — 취득연도·신축연도·구조·내용연수를 고려해 고시한 기준율 (%) */
+  sapNoticeBaseRate: string;
+  /** §80③3호 — 전기의 (가목 + 나목) 합계액 */
+  sapPriorLandBuildingSum: string;
+  /** §80③3호 — 취득당시의 (가목 + 나목) 합계액 */
+  sapAcqLandBuildingSum: string;
   /** 값 출처 — 자동 조회 / 수동 입력. 표시 전용 */
   sapPriceSource: "lookup" | "manual";
   /** 환산 사용 여부 토글 — OFF면 ④가 `sameAdjustmentPeriod`를 아예 보내지 않는다 */
