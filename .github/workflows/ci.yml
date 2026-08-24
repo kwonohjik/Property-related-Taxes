@@ -41,11 +41,48 @@ name: CI
 #    가장 큰 덩어리인 E2E를 **4샤드**로 나눈다. 두 job은 서로 기다리지 않는다
 #    (`needs` 없음) — public 저장소는 Actions 분이 무료라 벽시계가 유일한 비용이다.
 #
+# ## 🔴 2026-08-25 — 병목은 E2E가 아니라 vitest였다 (job 재분할)
+#
+# E2E를 6샤드로 나눈 뒤 **임계 경로가 `check` job으로 옮겨갔다**. 실측(run 32738876959):
+# check 976초(16.3분) 중 **vitest가 862초(88%)**, E2E 최장 샤드는 476초(7.9분)였다.
+#
+# 원인 둘을 실측으로 갈랐다:
+#   1. **전역 jsdom** — `vitest.config.ts`가 순수 함수 엔진 테스트까지 jsdom을 세웠다.
+#      전건 1482파일 CPU 1811초 중 **environment가 545초(30%)** 였고, 실제 테스트 실행은
+#      89초였다. `.test.tsx` = jsdom / `.test.ts` = node로 가르니 **CPU −28%**(1811→1305초).
+#      DOM이 실제로 필요한 파일은 전건의 10%뿐이었다(근거는 vitest.config.ts 주석).
+#   2. **샤딩 부재** — E2E만 나뉘어 있었다. `--shard=N/4`가 CPU를 정확히 1/4로 가른다.
+#
+# ⇒ `check`(typecheck+lint) / `test`(vitest 4샤드) / `e2e`(6샤드)의 3-job 구성으로 바꿨다.
+#
+# ## ✅ 호스팅 러너 실측 (run 32782638501 · 32783795938, 2회)
+#
+#   | job              | 소요       | 내역                                   |
+#   |------------------|-----------|----------------------------------------|
+#   | typecheck + lint | 175초     | npm ci 27 · typecheck 38 · **lint 94** |
+#   | test 4샤드       | 259~300초 | npm ci 23 · **vitest 253초**           |
+#   | E2E 6샤드        | 285~458초 |                                        |
+#   | 리포트 병합      | 45초      |                                        |
+#
+#   **벽시계 976초(16.3분) → 461·504초(7.7~8.4분), 약 −50%.**
+#   임계 경로는 예정대로 E2E로 옮겨갔다(최장 샤드 + 리포트 = 벽시계).
+#
+#   ⚠️ **E2E 샤드는 run마다 285~458초로 흔들린다**(러너 인스턴스 변동). 1회 측정으로
+#     벽시계를 단정하지 말 것 — 461초만 보고 「7.7분」이라 적으면 낙관적이다.
+#
+# ⚠️ **「CPU ÷ 샤드 수」 추정은 과소평가한다** — 샤드당 155초로 예상했으나 실측 253초
+#    (**1.6배**)였다. 샤딩은 테스트 실행을 나누지만 **transform·import 같은 고정비는
+#    샤드마다 중복**된다(전건 import 1100초는 파일이 1/4이어도 공통 모듈만큼 반복된다).
+#    샤드를 더 늘려도 이 고정비 아래로는 내려가지 않는다.
+#
+# ✅ **샤드 커버리지 실측 검증**: 4샤드 합집합 1488파일 = 디스크 1488파일, 샤드 간 중복 0,
+#    누락 0(json 리포터로 파일 집합 대조). 「조용한 미실행」이 없음을 확인했다.
+#
 # ## 역할 분담 — pre-push와 중복되지 않게
 #
 #   · **pre-push**(매 푸시, 빠름): 폰트·톤 + typecheck + lint + **범위 선택** 테스트
 #     → `scripts/select-test-scope.sh`로 변경 경로에 맞는 세목만
-#   · **CI**(PR 1회, 철저): fresh checkout + `npm ci` + typecheck + lint + **전체** 테스트 + E2E
+#   · **CI**(PR 1회, 철저): fresh checkout + `npm ci` + typecheck + lint + **전체** 테스트(4샤드) + E2E
 #     → 러너가 매번 깨끗한 환경이라 로컬 node_modules가 가리던 lockfile·의존성 문제가
 #       드러난다. 로컬 pre-push가 못 주는 신호가 이것이라 CI는 **전체 테스트**를 돌린다
 #       (범위를 좁히면 pre-push의 재탕이 된다).
@@ -68,14 +105,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── job 1: 타입 · 린트 · 단위 테스트 ────────────────────────────────────
+  # ── job 1: 타입 · 린트 ──────────────────────────────────────────────────
+  #
+  # 🔴 **vitest를 여기서 떼어냈다** (2026-08-25). 종전엔 typecheck·lint·test가 한 job에
+  #    직렬로 붙어 있었고, 실측(run 32738876959) 976초 중 **vitest가 862초(88%)** 였다.
+  #    E2E는 이미 6샤딩으로 8분 이하라 **전체 벽시계 16.3분을 이 job 하나가 결정**했다.
+  #
+  #      | 단계      | 소요 |
+  #      |-----------|------|
+  #      | npm ci    | 17s  |
+  #      | typecheck | 22s  |
+  #      | lint      | 59s  |
+  #      | **vitest**| **862s** |
+  #
+  #    ⇒ typecheck·lint(81초)를 별도 job으로 남기고 vitest는 아래 `test` job에서 샤딩한다.
+  #      둘은 서로 기다리지 않는다 — public 저장소는 Actions 분이 무료라 벽시계가 유일한 비용이다.
   check:
-    name: typecheck + lint + test
+    name: typecheck + lint
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    # 호스팅 러너 실측(run 30962559594): npm ci·typecheck·lint 2.5분 + vitest 18.7분 ≈ 21분.
-    # 1.5배 여유로 30분. ⚠️ Mac 수치로 조정하지 말 것(위 표).
-    timeout-minutes: 30
+    # 호스팅 러너 실측(run 32782638501): 175초(typecheck 38 + lint 94 + 준비 43).
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -100,9 +150,42 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # pre-push는 범위 선택 테스트만 돌린다 → CI는 전체를 돌려 그 갭을 메운다.
-      - name: Test (전체)
-        run: npm test
+  # ── job 2: 단위 테스트 (4샤드 병렬) ─────────────────────────────────────
+  #
+  # pre-push는 범위 선택 테스트만 돌린다(`scripts/select-test-scope.sh`) → CI는 전체를 돌려
+  # 그 갭을 메운다. 범위를 좁히면 pre-push의 재탕이 되므로 **좁히지 않고 샤딩으로** 줄인다.
+  #
+  # 실측(2026-08-25, 로컬 전건 1482파일): `--shard=1/4`가 CPU 1305초의 정확히 1/4인 328초를
+  # 가져갔다 — 파일 단위 균등 분할이 잘 먹는다. CI 2 worker 기준 샤드당 ~155초 + 준비 ~28초.
+  #
+  # ⚠️ **샤드 수를 바꾸면 아래 `--shard=N/4`의 분모도 함께** 바꿔야 한다. 어긋나면 일부
+  #    테스트가 어느 샤드에도 안 들어가 **조용히 실행되지 않는다**(E2E와 같은 함정).
+  test:
+    name: test (${{ matrix.shard }}/4)
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    # 호스팅 러너 실측(run 32782638501): 259~287초. 3배 여유로 15분.
+    # ⚠️ 로컬 Mac 수치로 조정하지 말 것 — 러너가 다르면 다른 숫자다(#1059의 교훈).
+    timeout-minutes: 15
+    strategy:
+      # 한 샤드가 깨져도 나머지를 끝까지 돌린다 — 실패가 한 샤드에 몰렸는지 전반적인지가
+      # 원인 판단을 가른다.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install deps (fresh)
+        run: npm ci
+
+      - name: Test 샤드 ${{ matrix.shard }}/4 (전체 중)
+        run: npx vitest run --shard=${{ matrix.shard }}/4
 
   # ── job 2: E2E (4샤드 병렬) ─────────────────────────────────────────────
   #
