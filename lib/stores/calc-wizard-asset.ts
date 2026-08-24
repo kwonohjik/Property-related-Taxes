@@ -138,6 +138,29 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 양도시 기준시가 레이블 (API 조회 결과 표시용) */
   standardPriceAtTransferLabel: string;
   /**
+   * ① 동일조정기간 내 취득·양도 시 「양도당시 기준시가」 환산 (소령 §164⑧ · 소칙 §80①~⑤).
+   *
+   * 취득·양도 기준시가가 같아지는 구간(보유기간 중 새 기준시가 미고시)에서만 의미가 있다.
+   * 환산 모드에서 두 값이 같으면 환산취득가액 = 양도가액이 되어 양도차익이 0이 되므로,
+   * 이 입력이 없으면 과세 자체가 성립하지 않는다.
+   *
+   * ⚠️ 3중 패턴 — 여기 기본값(`sapFormula: "prev"`)은 ④ API 변환·⑧ validation과 **같아야** 한다.
+   */
+  /** 가목("prev", 기본) | 나목("new" — 양도일+2월 내 새 고시 + 확정신고 선택) */
+  sapFormula: "prev" | "new";
+  /** 가목 — 전기의 기준시가 (§80②2호) */
+  sapPriorStdPrice: string;
+  /** 나목 — 새로운 기준시가 */
+  sapNewStdPrice: string;
+  /** 기준시가 조정월수 (§80②1호). 빈 값이면 12 */
+  sapAdjustMonths: string;
+  /** 전기 기준시가 부존재 시 대체 산정 근거 (§80③1~3호) — 표시 전용 */
+  sapPriorBasis: "direct" | "nearby_land" | "first_notice_rate" | "ratio_conversion";
+  /** 값 출처 — 자동 조회 / 수동 입력. 표시 전용 */
+  sapPriceSource: "lookup" | "manual";
+  /** 환산 사용 여부 토글 — OFF면 ④가 `sameAdjustmentPeriod`를 아예 보내지 않는다 */
+  sapEnabled: boolean;
+  /**
    * 직접 귀속 필요경비 (deprecated — backward-compat 유지).
    * 신규 입력은 `capitalExpenditure` + `transferExpense` 분리 사용.
    */

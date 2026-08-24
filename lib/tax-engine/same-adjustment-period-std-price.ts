@@ -133,6 +133,74 @@ export function classifySameAdjustmentPeriod(
     : "clause_2";
 }
 
+/**
+ * §80③ — 「전기의 기준시가」가 없는 경우의 **대체 산정**.
+ *
+ * 실측 본문:
+ *  - 1호 **토지**: 해당 토지와 지목·이용상황 등이 유사한 **인근토지의 전기 기준시가**
+ *  - 2호 **§99①1호나목 건물**: `국세청장이 해당 건물에 최초로 고시한 기준시가 × 국세청장 고시 기준율`
+ *  - 3호 **다목(오피스텔·상업용건물)·라목(주택)**:
+ *    `전기 = 취득당시 기준시가 × (전기의 가목+나목 합계액 ÷ 취득당시의 가목+나목 합계액)`
+ *  - §80④: 3호 적용 시 취득당시 또는 전기의 **나목 가액이 없으면 2호를 준용**한다.
+ *
+ * ⚠️ 1호(인근토지)는 **산정이 아니라 조사**다 — 유사 토지를 고르는 것은 엔진이 할 수 없다.
+ *    호출부가 조사한 값을 그대로 `priorStandardPrice`로 넣고 `priorBasis: "nearby_land"`로
+ *    출처만 표기한다. 여기 함수는 2호·3호만 계산한다.
+ */
+export interface PriorStdPriceSubstituteArgs {
+  /** 2호 — 국세청장이 최초로 고시한 기준시가 */
+  firstNoticeStdPrice?: number;
+  /** 2호 — 취득연도·신축연도·구조·내용연수를 고려해 국세청장이 고시한 기준율(1.0 = 100%) */
+  noticeBaseRate?: number;
+  /** 3호 — 취득당시의 기준시가 */
+  standardPriceAtAcquisition?: number;
+  /** 3호 — 전기의 (가목 + 나목) 합계액 */
+  priorLandBuildingSum?: number;
+  /** 3호 — 취득당시의 (가목 + 나목) 합계액 */
+  acquisitionLandBuildingSum?: number;
+}
+
+export interface PriorStdPriceSubstituteResult {
+  value: number;
+  basis: "first_notice_rate" | "ratio_conversion";
+  legalBasis: string;
+}
+
+/**
+ * §80③2호·3호 + §80④ 준용 — 전기 기준시가 대체 산정.
+ *
+ * 3호(비율환산)를 우선 시도하고, 합계액이 없으면(=§80④의 「나목 가액이 없는 경우」)
+ * 2호를 준용한다. 둘 다 불가하면 `null` — **추정하지 않는다**.
+ */
+export function calcPriorStdPriceSubstitute(
+  args: PriorStdPriceSubstituteArgs,
+): PriorStdPriceSubstituteResult | null {
+  const { standardPriceAtAcquisition: acq, priorLandBuildingSum: priorSum,
+          acquisitionLandBuildingSum: acqSum } = args;
+
+  // 3호 — 다목·라목 비율환산
+  if (acq !== undefined && acq > 0 && priorSum !== undefined && priorSum > 0 &&
+      acqSum !== undefined && acqSum > 0) {
+    return {
+      value: safeMultiplyThenDivide(acq, priorSum, acqSum),
+      basis: "ratio_conversion",
+      legalBasis: TRANSFER.SAME_ADJ_PERIOD_PRIOR_SUBSTITUTE_3,
+    };
+  }
+
+  // 2호 (§80④ 준용 포함) — 최초고시 기준시가 × 기준율
+  const { firstNoticeStdPrice: first, noticeBaseRate: rate } = args;
+  if (first !== undefined && first > 0 && rate !== undefined && rate > 0) {
+    return {
+      value: Math.floor(first * rate),
+      basis: "first_notice_rate",
+      legalBasis: TRANSFER.SAME_ADJ_PERIOD_PRIOR_SUBSTITUTE_2,
+    };
+  }
+
+  return null;
+}
+
 export interface SameAdjustmentPeriodArgs {
   formula: SameAdjustmentPeriodFormula;
   /** 취득당시의 기준시가 (원) */
@@ -237,12 +305,23 @@ export function calcSameAdjustmentPeriodStdPrice(
   const capApplied = capEligible && holdingMonths > adjustmentMonths;
   const effectiveMonths = capApplied ? adjustmentMonths : holdingMonths;
 
-  // 2. 분수 정수 연산. 부호는 크기 계산 후 되붙여 양·음 경로를 하나로 유지한다.
-  const magnitude = safeMultiplyThenDivide(Math.abs(delta), effectiveMonths, adjustmentMonths);
-  const adjustment = delta >= 0 ? magnitude : -magnitude;
+  // 2. 분수 정수 연산 — **양수 delta 전용**.
+  //
+  // 🔴 음수 delta는 `applyFloor: false`(§164⑥ 준용)에서만 도달한다. 그 경로에서 크기를 먼저
+  //    floor하고 부호를 되붙이면 **0 방향 절사**가 되어, 종전 구현
+  //    `Math.floor(A + (A−B) × ratio)`의 **아래 방향 절사**와 1원 갈린다
+  //    (실측 A=100·B=111·C=5·D=12 → 종전 95 / 부호분리 96).
+  //    §164⑥ 준용은 기존 결과를 보존해야 하므로 **종전 산식을 그대로 쓴다**.
+  //
+  //    `applyFloor: true`(§164⑧ 본체)에서는 위 1번 단락이 음수를 이미 걸러내므로 이 분기에
+  //    delta ≤ 0으로 들어올 수 없다 — 정수 연산의 이점은 §164⑧ 경로에서 온전히 유지된다.
+  const value =
+    delta >= 0
+      ? Math.floor(acq + safeMultiplyThenDivide(delta, effectiveMonths, adjustmentMonths))
+      : Math.floor(acq + (delta * effectiveMonths) / adjustmentMonths);
 
   return {
-    value: Math.floor(acq + adjustment),
+    value,
     capApplied,
     flooredToAcquisition: false,
     legalBasis,

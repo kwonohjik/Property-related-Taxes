@@ -71,6 +71,15 @@ export function migrateAsset(raw: unknown): AssetForm {
     a.decedentCohabitationResidenceMonths = "";
   // 공익수용·협의매수 (2026-07-02): 양도원인·사업인정고시일 (구 세션 복원 방어)
   if (a.transferCause === undefined) a.transferCause = "general";
+  // ③ §164⑧ 환산 — 구 sessionStorage에는 이 키들이 없다. 미보정 시 `sapFormula`가 undefined인
+  //    채로 RadioCardGroup에 내려가 선택이 비어 보이고, ④가 `formula: undefined`를 보낸다.
+  if (a.sapEnabled === undefined) a.sapEnabled = false;
+  if (a.sapFormula === undefined) a.sapFormula = "prev";
+  if (a.sapPriorStdPrice === undefined) a.sapPriorStdPrice = "";
+  if (a.sapNewStdPrice === undefined) a.sapNewStdPrice = "";
+  if (a.sapAdjustMonths === undefined) a.sapAdjustMonths = "";
+  if (a.sapPriorBasis === undefined) a.sapPriorBasis = "direct";
+  if (a.sapPriceSource === undefined) a.sapPriceSource = "manual";
   if (a.expropriationNoticeDate === undefined) a.expropriationNoticeDate = "";
   // §164⑨ 1호 특례 보상필드 — 자산-수준(단건 경로)
   if (a.compensationPerSqm === undefined) a.compensationPerSqm = "";

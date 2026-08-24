@@ -20,7 +20,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
-import { sec164PartialInputError } from "./transfer-tax-validate-sec164";
+import { sec164PartialInputError, sameAdjustmentPeriodError } from "./transfer-tax-validate-sec164";
 import { clauseADeclarationError } from "./transfer-tax-validate-clause-a";
 import { postDeemedClauseARequiredError } from "./transfer-tax-validate-clause-a";
 import { validateCommercialInheritanceAsset } from "./transfer-tax-validate-commercial-asset";
@@ -142,6 +142,10 @@ export function validateAssetAcquisition(
   // 분기하지 않는다. **상속 상가 블록(:아래)보다 앞**이어야 증여 경로가 도달한다.
   const sec164Error = sec164PartialInputError(asset, label);
   if (sec164Error) return sec164Error;
+
+  // ⑧ §164⑧ 동일조정기간 환산 — 토글 ON인데 상대 기준시가가 비면 침묵 no-op이 된다.
+  const sapError = sameAdjustmentPeriodError(asset, label, formTransferDate);
+  if (sapError) return sapError;
 
   // ── E-1: 「가목 확인 불가」 명시 선언 (법 §97①1호 단서 · U2-E) ──
   // pre-deemed에서 ①·② 모두 미충족이면 엔진이 **조용히** ③(나목)으로 간다. 법문상 나목은

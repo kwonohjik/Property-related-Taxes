@@ -27,6 +27,7 @@ import {
   inheritedAcquisitionSchema,
   inheritanceHouseValuationSchema,
   companionAssetSchema,
+  sameAdjustmentPeriodSchema,
   parcelSchema,
   preHousingDisclosureSchema,
   mixedUseAssetSchema,
@@ -107,6 +108,8 @@ const propertyBaseShape = {
   useEstimatedAcquisition: z.boolean(),
   standardPriceAtAcquisition: z.number().int().positive().optional(),
   standardPriceAtTransfer: z.number().int().positive().optional(),
+  // ⑫ 동일조정기간 양도당시 기준시가 환산 (소령 §164⑧·소칙 §80①~⑤) — 엔진이 게이트, strip 방지
+  sameAdjustmentPeriod: sameAdjustmentPeriodSchema.optional(),
   // ⑫ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) — 엔진이 게이트, strip 방지
   transferCause: z.enum(["general", "public_expropriation"]).optional(),
   standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),

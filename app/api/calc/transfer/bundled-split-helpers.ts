@@ -138,6 +138,8 @@ interface CompanionRawAsset extends CompanionSplitFields {
   useEstimatedAcquisition?: boolean;
   standardPriceAtAcquisition?: number;
   standardPriceAtTransfer?: number;
+  /** §164⑧ 동일조정기간 환산 (⑫ companionAssetSchema와 같은 형태) */
+  sameAdjustmentPeriod?: import("@/lib/tax-engine/types/transfer.types").SameAdjustmentPeriodTransferInput;
   // 공익수용 §164⑨ 1호 환산 min[] 특례 (계획 Q5 — 컴패니언 지원).
   // ⑫ `transfer-tax-schema-sub.ts` 컴패니언 스키마와 1:1이어야 한다(누락 시 침묵 strip).
   transferCause?: "general" | "public_expropriation";
@@ -331,6 +333,9 @@ export function buildCompanionEngineInputs(
     useEstimatedAcquisition: c.useEstimatedAcquisition ?? false,
     standardPriceAtAcquisition: c.standardPriceAtAcquisition,
     standardPriceAtTransfer: c.standardPriceAtTransfer,
+    // ⑭ §164⑧ 동일조정기간 환산 — 컴패니언도 자기 취득·양도일 축으로 판정된다.
+    //    이 명시 매핑이 없으면 ⑫를 통과한 값이 엔진에 도달하지 못한다(침묵 strip).
+    sameAdjustmentPeriod: c.sameAdjustmentPeriod,
     // ⑭ 개산공제(§163⑥) base 지분 축소 — 기준시가는 물건 전체 값을 유지하고 개산공제만 지분분이 된다.
     //    단건 `engine-input.ts:218`·겸용 `route.ts:333`과 같은 축(F39).
     ownershipRatio: c.ownershipRatio,

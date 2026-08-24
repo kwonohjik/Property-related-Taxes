@@ -9,6 +9,9 @@ import { TransferModeBlock } from "../TransferModeBlock";
 import { isExprValuationEligibleAssetKind } from "@/lib/tax-engine/expropriation-scope";
 import { CompanionSaleModeBlock, toPropertyKind, type BundledSaleMode } from "../CompanionSaleModeBlock";
 import { GeneralBuildingSaleSplitSection } from "../GeneralBuildingSaleSplitSection";
+import { SameAdjustmentPeriodSection } from "../SameAdjustmentPeriodSection";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
@@ -197,6 +200,44 @@ export function AssetSectionTransfer({
         양도가액(`CompanionSaleModeBlock`) **바로 뒤**에 둔다 — 총액을 정한 다음 그것을 나누는
         순서라 로직 순서와 화면 순서가 일치한다(components/calc/CLAUDE.md 「UI 순서 = 로직 순서」).
       */}
+      {/*
+        §164⑧ 동일조정기간 환산 — **양도시 기준시가 입력 바로 뒤**.
+
+        취득·양도 기준시가가 같아지는 구간에서만 의미가 있고, 그 판정에 두 값이 모두 필요하다.
+        환산 모드가 아니면 기준시가가 세액 산식에 들어가지 않으므로 노출하지 않는다.
+
+        ⚠️ 기간 요건(§80①1호) 미충족은 **숨기지 않는다** — 섹션 안에서 안내한다.
+           숨기면 사용자가 왜 칸이 없는지 알 수 없고, 그것이 곧 「입력 경로 부재」가 된다.
+      */}
+      {/*
+        🔴 **`sapEnabled`가 켜져 있으면 조건과 무관하게 **항상** 렌더한다.**
+
+        이 섹션은 토글을 **끌 수 있는 유일한 위젯**이다. 조건이 어긋났다고 숨기면
+        ⑧ validation(`sameAdjustmentPeriodError`)은 `sapEnabled`만 보고 계속 차단하는데
+        사용자는 끌 방법이 없어 마법사에서 빠져나오지 못한다 —
+        「validate 차단은 dead-end」(memory `feedback_ui_gate_removes_sole_input_path`).
+
+        겸용주택·부담부증여 차단 메시지가 *"「…환산」을 꺼주세요"*라고 말하는데 정작 그 조건에서
+        토글이 사라지는 것이 같은 함정이었다.
+      */}
+      {(asset.sapEnabled ||
+        (asset.useEstimatedAcquisition &&
+          !asset.isMixedUseHouse &&
+          asset.transferType !== "burdened_gift" &&
+          parseAmount(effTotal) > 0 &&
+          parseAmount(effTotal) === parseAmount(asset.standardPriceAtAcq))) && (
+          <SameAdjustmentPeriodSection
+            asset={asset}
+            onChange={onChange}
+            transferDate={transferDate}
+            jibun={asset.addressJibun || undefined}
+            dong={asset.addressDong || undefined}
+            ho={asset.addressHo || undefined}
+            assetKind={asset.assetKind}
+            landAreaSqm={parseDecimal(asset.acquisitionArea) || undefined}
+          />
+        )}
+
       {asset.assetKind === "general_building" && (
         <GeneralBuildingSaleSplitSection
           asset={asset}

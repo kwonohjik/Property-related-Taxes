@@ -337,12 +337,28 @@ export function buildAcquisitionPriceFormula(
     const swapNote = result.swapApplied
       ? " ※ §97②2호 단서 적용 — 이 금액은 차감되지 않습니다(필요경비 전체가 자본적지출+양도비)"
       : "";
+    /**
+     * ⑦ §164⑧ 동일조정기간 환산 고지.
+     *
+     * 분모(양도당시 기준시가)가 **입력값이 아니라 환산값**일 때 그 사실을 밝힌다. 없으면
+     * 사용자가 입력한 기준시가와 산식의 분모가 달라 보여 오류로 오해한다.
+     *
+     * 🔑 이 빌더는 상세 계산 명세서 카드가 쓰고, 그 카드는 **양도세 결과뷰 4개 전부**가
+     *    렌더한다(TransferTaxResultView · BundledAllocationCard · MultiTransferTaxResultView ·
+     *    MixedUseResultCard) — 여기 한 곳이면 네 경로 모두 도달한다.
+     */
+    const sapApplied = result.steps?.some(
+      (s) => s.label.includes("동일조정기간") && !s.label.includes("미적용"),
+    );
+    const sapNote = sapApplied
+      ? " ※ 분모의 양도당시 기준시가는 보유기간 중 새 기준시가가 고시되지 않아 시행령 §164⑧·시행규칙 §80①에 따라 환산한 값입니다"
+      : "";
     return stdAcq != null && stdTransfer != null
       ? estFrac(
           `환산취득가 ${estBase} = 양도가액 ${totalTransferPrice.toLocaleString()} × `,
           stdAcq,
           stdTransfer,
-          `${capExStr} — 시행령 §163·§176의2②${swapNote}`,
+          `${capExStr} — 시행령 §163·§176의2②${swapNote}${sapNote}`,
         )
       : `취득가액(추계) ${estBase}${capExStr} — 소득세법 §97 / 시행령 §163·§176의2${swapNote}`;
   }

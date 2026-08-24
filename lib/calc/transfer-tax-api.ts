@@ -37,6 +37,7 @@ import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import {
   buildInheritedAcquisitionPayload,
   buildInheritedHouseValuationPayload,
@@ -426,6 +427,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           : isEstimated
             ? parseAmount(primary.standardPriceAtTransfer) || undefined
             : undefined,
+    // ⑬ §164⑧ 동일조정기간 양도당시 기준시가 환산 (소령 §164⑧·소칙 §80①~⑤)
+    sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(primary),
     // ⑬ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호)
     ...buildExpropriationInput(primary),
     acquisitionMethod: hasPre1990 || isMixed

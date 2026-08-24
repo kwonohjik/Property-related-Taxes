@@ -142,7 +142,16 @@ export interface BuildingStdPriceFormState {
   transStructureKey: string;
   transUsageNo: string;
   transLandPrice: string;
-  holdingMonths: string; // 동일연도 환산 — 필수
+  /**
+   * 연도 교차 §164⑧ 환산 **opt-in** (취득연도+1년 이내 양도).
+   *
+   * 같은 연도는 연 1회 고시 전제상 「같은 고시분」이 사실상 확정돼 자동 적용된다.
+   * 연도가 다르면 **서로 다른 고시분일 수 있어** §164⑧ 전제(취득·양도 기준시가 동일)가
+   * 깨진다 — 이 계산기는 기준시가를 산출하는 주체라 그 동일성을 스스로 알 수 없다.
+   * ⇒ 사용자가 명시할 때만 환산 경로로 간다.
+   */
+  crossYearSameAdjust: boolean;
+  holdingMonths: string; // 동일조정기간 환산 — 필수
   adjustMonths: string; // 동일연도 조정월수(기본 "12")
   sameYearFormula: SameYearFormula;
   newNoticePrice: string; // 제2산식
@@ -236,6 +245,7 @@ export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   transLandPrice: "",
   holdingMonths: "",
   adjustMonths: "12",
+  crossYearSameAdjust: false,
   sameYearFormula: "prev",
   newNoticePrice: "",
   prevLandPrice: "",
@@ -487,8 +497,14 @@ export function toEngineInput(f: BuildingStdPriceFormState): BuildingStandardPri
       usageNo: intOrUndef(f.acqUsageNo) ?? 0,
       landPricePerM2: parseAmount(f.acqLandPrice),
     };
-    // 동일연도(§164⑧) 환산 — 양도당시 구조·용도·공시지가 불요(취득 기준시가를 환산)
-    if (base.acquisitionYear !== undefined && base.acquisitionYear === base.transferYear) {
+    // 동일조정기간(§164⑧) 환산 — 양도당시 구조·용도·공시지가 불요(취득 기준시가를 환산).
+    // 같은 연도는 자동, 연도 교차(취득연도+1년 이내)는 `crossYearSameAdjust` opt-in.
+    if (
+      base.acquisitionYear !== undefined &&
+      base.transferYear !== undefined &&
+      (base.acquisitionYear === base.transferYear ||
+        (f.crossYearSameAdjust && base.transferYear <= base.acquisitionYear + 1))
+    ) {
       base.holdingMonths = intOrUndef(f.holdingMonths);
       base.adjustMonths = intOrUndef(f.adjustMonths);
       base.sameYearFormula = f.sameYearFormula;
@@ -683,8 +699,12 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
   // 양도시(당해연도) 검증 — 양도년도 ≥ 2001(일반 산식). 취득은 2000이전이면 산정기준율.
   // 동일연도(§164⑧)는 취득 기준시가를 환산하므로 양도당시 구조·용도·공시지가 불요(toEngineInput과 동기).
   const sameYear = acqY === transY;
+  // 연도 교차 opt-in도 같은 필수 입력을 요구한다(엔진 진입 조건과 동일 축).
+  const crossYearAdjust =
+    !sameYear && f.crossYearSameAdjust && acqY !== undefined && transY !== undefined &&
+    transY <= acqY + 1;
   if (!hasUsageIndexYear(transY) || !hasLocationIndexYear(transY)) return `${transY}년 양도시 지수 자료가 없습니다.`;
-  if (!sameYear) {
+  if (!sameYear && !crossYearAdjust) {
     if (!f.transStructureKey) return "양도당시 건물 구조를 선택하세요.";
     if (intOrUndef(f.transUsageNo) === undefined) return "양도당시 건물 용도를 선택하세요.";
     if (!(parseAmount(f.transLandPrice) > 0)) return "양도당시 ㎡당 개별공시지가를 입력하세요.";
@@ -696,9 +716,9 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
   if (!(parseAmount(f.acqLandPrice) > 0)) return "취득당시 ㎡당 개별공시지가를 입력하세요.";
 
   // 동일연도 환산
-  if (sameYear) {
+  if (sameYear || crossYearAdjust) {
     const hm = intOrUndef(f.holdingMonths);
-    if (hm === undefined || hm <= 0) return "동일연도 양도는 보유월수를 입력하세요(1개월 미만=1).";
+    if (hm === undefined || hm <= 0) return "동일조정기간 양도는 보유월수를 입력하세요(1개월 미만=1).";
     const am = intOrUndef(f.adjustMonths);
     if (am === undefined || am <= 0) return "기준시가 조정월수를 입력하세요(연 1회 고시=12).";
     if (f.sameYearFormula === "new") {

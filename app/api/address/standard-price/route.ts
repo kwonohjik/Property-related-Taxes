@@ -321,12 +321,19 @@ export async function GET(request: NextRequest) {
     const indvdHit = pickUnit(indvdItems, "housePc", dong, ho);
     if (indvdHit) {
       // pblntfDe 없음 → stdrYear + "0429" 로 공시일 추정
+      //
+      // 🔴 **추정값임을 응답에 표시한다** — 종전에는 실제 공시일과 **같은 필드로 섞여** 나가
+      //    호출부가 구분할 수 없었다. 이 값을 그대로 §164⑧ 「기준시가 조정월수」
+      //    (시행규칙 §80②1호 — 결정일 기준 월수) 산출에 쓰면 월 경계(4/29 vs 5/1)에서
+      //    **1개월이 어긋난다**. 추정이면 호출부가 자동 파생을 끄고 수동 입력으로 돌려야 한다.
+      const announcedDateEstimated = !indvdHit.item.pblntfDe;
       const announcedDate = indvdHit.item.pblntfDe
         ?? `${indvdHit.item.stdrYear ?? year}0429`;
       return NextResponse.json({
         pnu, priceType: "indvd_housing_price",
         year: indvdHit.item.stdrYear, price: indvdHit.price,
         announcedDate,
+        announcedDateEstimated,
         ldCodeNm: indvdHit.item.ldCodeNm,
         units: buildUnitList(indvdItems, "housePc"),
         message: `${indvdHit.item.stdrYear}년 개별주택 공시가격`,

@@ -101,6 +101,24 @@ export function runSameAdjustmentPeriodStep(
   if (counterpart === undefined || !(counterpart >= 0)) return undefined;
   if (!(holdingMonths > 0) || !(adjustmentMonths > 0)) return undefined;
 
+  /**
+   * 🔴 **나목: 보유월수 > 조정월수는 요건 위반이다 — 계산하지 않는다.**
+   *
+   * 나목(§80①1호나목)은 *"양도일부터 2월이 되는 날이 속하는 월의 말일까지 새로운 기준시가가
+   * 고시된 경우"*가 전제다. 그 전제 아래에서는 조정월수(취득 결정일 ~ 새 결정일 전일)가
+   * 보유월수(취득일 ~ 양도일)를 항상 덮으므로 법문에 100분의 100 한도가 없다.
+   *
+   * 그러나 **엔진은 그 전제를 검증하지 않는다** — 새 고시일을 입력받지 않기 때문이다.
+   * 전제가 깨진 조합(예: 취득 2005-03-01 · 양도 2006-11-01 → 보유 21월 / 조정 12월)을
+   * 그대로 곱하면 비율이 175%가 되어 **양도당시 기준시가가 실제 새 기준시가를 넘어선다**
+   * (100,000,000 + 10,000,000 × 21/12 = 117,500,000 > 새 기준시가 110,000,000).
+   * 분모가 부풀어 환산취득가액이 과소해지고 세액이 과대해진다.
+   *
+   * ⇒ 법문에 없는 clamp를 넣지 않고, **요건 위반 입력을 계산 대상에서 뺀다**.
+   *   사용자에게는 ⑧ validation이 사유를 말한다(침묵 no-op이 아니다).
+   */
+  if (formula === "new" && holdingMonths > adjustmentMonths) return undefined;
+
   const converted = calcSameAdjustmentPeriodStdPrice({
     formula,
     standardPriceAtAcquisition: acq,

@@ -260,6 +260,13 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
   // 둘째 시점 라벨 접두어 — 섹션 라벨에서 " 시점" 제거("최초고시 시점"→"최초고시"). 기본 "양도".
   const t2 = transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도";
   const sameYear = f.taxType === "transfer" && f.acquisitionYear !== "" && f.acquisitionYear === f.transferYear;
+  /** §80①1호 본문 — 취득일이 속하는 연도의 다음 연도 말일 이전 양도(연도 교차 구간) */
+  const crossYearWindow =
+    f.taxType === "transfer" &&
+    f.acquisitionYear !== "" &&
+    f.transferYear !== "" &&
+    Number(f.transferYear) > Number(f.acquisitionYear) &&
+    Number(f.transferYear) <= Number(f.acquisitionYear) + 1;
   const valYear = f.valuationYear ? parseInt(f.valuationYear, 10) : undefined;
   // 조정률 모달용 구조지수 — 평가시점 구조 선택값에서 도출(I 지붕재료는 구조지수 100 미만만 활성). 미선택 = 0
   const valStructureIndex = useMemo(() => {
@@ -608,8 +615,26 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             )}
           </SectionCard>
 
-          {sameYear && !isMech && (
-            <SectionCard num={4} title="동일연도 환산 (§164⑧)" tone="rose">
+          {/*
+            연도 교차 §164⑧ opt-in — 취득연도 다음 연도 말일 이전 양도(시행규칙 §80①1호 본문).
+            같은 연도는 연 1회 고시 전제상 자동이지만, 연도가 다르면 **서로 다른 고시분일 수
+            있어** §164⑧ 전제(취득·양도 기준시가 동일)를 계산기가 확인할 수 없다.
+            ⇒ 사용자가 명시할 때만 환산 경로로 간다. 이 토글이 없으면 아래 §164⑧ 섹션이
+               연도 교차에서 **영원히 열리지 않아** 폼-엔진 배선이 도달 불가가 된다.
+          */}
+          {!sameYear && !isMech && crossYearWindow && (
+            <ToggleCard
+              checked={f.crossYearSameAdjust}
+              onCheckedChange={(v) => set("crossYearSameAdjust", v)}
+              title="동일조정기간 환산 적용 (§164⑧)"
+              description="보유기간 중 새 기준시가가 고시되지 않아 취득·양도 기준시가가 같은 경우 — 취득일이 속하는 연도의 다음 연도 말일 이전 양도"
+              tone="rose"
+              lawLinks="소득세법"
+            />
+          )}
+
+          {(sameYear || (crossYearWindow && f.crossYearSameAdjust)) && !isMech && (
+            <SectionCard num={4} title="동일조정기간 환산 (§164⑧)" tone="rose">
               <RadioCardGroup
                 name="sameYearFormula"
                 tone="rose"
