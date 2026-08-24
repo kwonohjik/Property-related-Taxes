@@ -7,7 +7,9 @@
  */
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { ReductionPhdInput, prefillAcqLandPrice } from "@/components/calc/transfer/ReductionPhdInput";
+import { ReductionPhdInput } from "@/components/calc/transfer/ReductionPhdInput";
+// 헬퍼는 lib 단일 출처로 이동(2026-08-24) — 재개발 §164⑦ PHD와 공용.
+import { prefillAcqLandPrice } from "@/lib/calc/phd-acq-land-price-track";
 
 afterEach(() => {
   cleanup();

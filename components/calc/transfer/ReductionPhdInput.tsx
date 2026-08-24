@@ -24,25 +24,11 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
-import { deriveYearFromEventDate } from "@/lib/calc/building-std-price-form";
+import { prefillAcqLandPrice } from "@/lib/calc/phd-acq-land-price-track";
 import {
   calcReductionAcquisitionStdPrice,
   canCalcReductionPhd,
 } from "@/lib/tax-engine/transfer-reductions";
-
-/** 국세청 신축가격기준액 고시 최초 연도 — 이전 연도는 위치지수 트랙(2001 공시지가)이 별도 필요. */
-const BUILDING_STD_FIRST_YEAR = 2001;
-
-/**
- * 모달 land price prefill — §164⑤ 위치지수 트랙 게이팅.
- * 이벤트연도 ≥2001에서만 해당 연도 ㎡당 공시지가를 주입(위치지수 오산 방지).
- * ≤2000이면 undefined(모달에서 2001.1.1 공시지가 직접 입력).
- */
-export function prefillAcqLandPrice(eventDate: string | undefined, landPricePerSqm: string | undefined): string | undefined {
-  if (!eventDate || !landPricePerSqm) return undefined;
-  const year = parseInt(deriveYearFromEventDate(eventDate) || "0", 10);
-  return year >= BUILDING_STD_FIRST_YEAR ? landPricePerSqm : undefined;
-}
 
 // ============================================================================
 // Props

@@ -83,10 +83,21 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
           };
         }
         if (model.instances.length === 0) continue;
-        // 감면 PHD 환산 통합 스냅샷(-red-phd) — 취득시·최초공시시 2 인스턴스를 시점별 계산서로 분리.
-        // §164⑤ 환산은 두 시점 모두 "취득 시점 측" 기준시가이므로 양도당시(transfer) 마킹이 아닌
+        // PHD 환산 통합 스냅샷 — 취득시·최초공시시 2 인스턴스를 시점별 계산서로 분리.
+        // 환산은 두 시점 모두 "취득 시점 측" 기준시가이므로 양도당시(transfer) 마킹이 아닌
         // 취득당시 칸에 마킹(취득시=연도별 acq2000/acq2001, 최초공시일=acq2001).
-        if (/-red-phd$/.test(key)) {
+        //
+        // 두 호출부가 같은 구조다 — 조문만 다르다:
+        //   `-red-phd`   감면 조문 PHD 환산 (§164⑤) — ReductionPhdInput
+        //   `-redev-phd` 재개발 §166③ 환산의 §164⑦ 본문 — RedevelopmentValuationSection
+        // ⚠️ `-red-phd$`는 `-redev-phd`에 매칭되지 않는다(접미가 다르다) — 그래도 아래처럼
+        //    긴 쪽(`redev`)을 먼저 시험해 `building-std-snapshot-keys.ts`의 열거 규율과 맞춘다.
+        const phdConversionKind = /-redev-phd$/.test(key)
+          ? { suffix: "재개발 환산 §164⑦" }
+          : /-red-phd$/.test(key)
+            ? { suffix: "감면 PHD 환산 §164⑤" }
+            : null;
+        if (phdConversionKind) {
           const acqInst = model.instances.find((i) => i.markCell !== "transfer");
           const firstInst = model.instances.find((i) => i.markCell === "transfer");
           const acqIsPre2001 = Number(snap.acquisitionYear) < BUILDING_STD_FIRST_YEAR;
@@ -94,7 +105,7 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
             out.push({
               key: `${key}-acq`,
               model: { ...model, instances: [acqInst] },
-              titleOverride: "취득시 (감면 PHD 환산 §164⑤)",
+              titleOverride: `취득시 (${phdConversionKind.suffix})`,
               markCellOverride: acqIsPre2001 ? "acq2000" : "acq2001",
               rank: 200 + seq,
             });
@@ -103,7 +114,7 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
             out.push({
               key: `${key}-first`,
               model: { ...model, instances: [firstInst] },
-              titleOverride: "최초공시일 (감면 PHD 환산 §164⑤)",
+              titleOverride: `최초공시일 (${phdConversionKind.suffix})`,
               markCellOverride: "acq2001",
               rank: 201 + seq,
             });
