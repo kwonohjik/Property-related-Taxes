@@ -46,6 +46,79 @@ describe("ReductionPhdInput — 건물 기준시가 계산 버튼", () => {
     expect(buttons.length).toBe(2);
   });
 
+  /**
+   * 🔴 세목은 **양도로 고정**이어야 한다(`lockedTaxType`).
+   *
+   * 라디오가 뜨면 사용자가 「상속·증여(1시점)」로 바꿀 수 있고, 그 모드의 결과 카드는
+   * `onApply`를 부르는 「이 금액 적용」 버튼을 낸다. 이 호출부는 `onApplyBoth`만
+   * 배선했으므로 **두 필드 중 아무것도 채워지지 않는 침묵 no-op**인데, `saveSnapshot`은
+   * 실행되어 결과탭에 「감면 PHD 환산 §164⑤」 라벨을 단 **상증 계산서**가 남는다.
+   *
+   * 같은 결함을 재개발 호출부에서 먼저 고쳤다(PR #1267) — 여기가 그 선례였다.
+   * 계획서: docs/00-pm/red-phd-snapshot-followups.plan.md (B-5)
+   */
+  it.each([
+    [0, "취득시 건물 기준시가"],
+    [1, "최초공시시 건물 기준시가"],
+  ])(
+    "모달을 열면 세목 라디오가 없다 — 런처 #%i(%s), 양도 2시점 전용(lockedTaxType)",
+    async (index) => {
+      // ⚠️ **두 런처를 모두** 확인한다. 하나만 보면 나머지 호출부의 prop 누락이
+      //    anchor를 통과한다(2026-08-24 mutation probe로 그 사각지대를 실측했다).
+      render(
+        <ReductionPhdInput
+          acquisitionDate="2003-11-28"
+          jibun="경기도 수원시 영통구 영통동 957-6"
+          snapshotKeyPrefix="red993"
+          value={{ phdMode: true, firstDisclosureDate: "2006-01-01", landAreaSqm: "84" }}
+          onChange={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getAllByRole("button", { name: /건물 기준시가 계산/ })[index]);
+      const dialog = await waitFor(() => screen.getByRole("dialog"));
+      /**
+       * ⚠️ **라벨 문자열로 단언하지 않는다.** `queryByRole("radio", { name: /상속·증여/ })`는
+       * 라디오가 올바로 숨겨졌을 때와 **옵션 라벨이 개칭됐을 때** 모두 null을 돌려준다 —
+       * 후자에서는 테스트가 통과하면서 아무것도 검증하지 않는다(CLAUDE.md의
+       * `toContainText("0")` 무력화와 같은 실패 모드). 그룹 자체의 부재로 본다.
+       */
+      expect(dialog.querySelector('[name="taxType"]')).toBeNull();
+    },
+  );
+
+  /**
+   * 🔴 **복원 스냅샷이 lock을 이기지 못한다** — 호출부 계약이 저장값보다 우선.
+   *
+   * 세목 라디오가 있던 시절 상증 모드로 저장된 스냅샷을 가진 사용자는, lock을 건 뒤에도
+   * 모달을 열면 상증 1시점으로 복원되는데 라디오가 없어 되돌릴 수 없었다(2026-08-24 리뷰 지적).
+   */
+  it("복원 스냅샷의 taxType이 inheritance_gift여도 양도 모드로 열린다", async () => {
+    const { useBuildingStdSnapshotStore } = await import("@/lib/stores/building-std-snapshot-store");
+    const { initialBuildingStdPriceForm } = await import("@/lib/calc/building-std-price-form");
+    useBuildingStdSnapshotStore.setState({
+      snapshots: {
+        "bsp-asset-9-red-phd": {
+          ...initialBuildingStdPriceForm,
+          taxType: "inheritance_gift",
+          builtYear: "2001",
+          floorArea: "84.9",
+        },
+      },
+    });
+    render(
+      <ReductionPhdInput
+        acquisitionDate="2003-11-28"
+        assetId="asset-9"
+        value={{ phdMode: true, firstDisclosureDate: "2006-01-01", landAreaSqm: "84" }}
+        onChange={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getAllByRole("button", { name: /건물 기준시가 계산/ })[0]);
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+    // 양도 2시점 모드의 표식 — 둘째 시점 섹션 라벨이 뜬다(상증 1시점에는 없다).
+    expect(dialog.textContent).toContain("최초고시 시점");
+  });
+
   it("PHD OFF 시 계산 버튼 미노출", () => {
     render(
       <ReductionPhdInput
