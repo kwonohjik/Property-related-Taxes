@@ -289,3 +289,76 @@ describe("A-11w §164⑥ 준용 C 배선 (calcStdPriceMonths 도달)", () => {
     expect(basisOf("2004-03-01")).not.toBe(basisOf("2004-03-15"));
   });
 });
+
+// ════════════════════════════════════════════════════════════════════
+// §80③ — 「전기의 기준시가」 부존재 시 대체 산정 (+ §80④ 준용)
+// ════════════════════════════════════════════════════════════════════
+import { calcPriorStdPriceSubstitute } from "../../../lib/tax-engine/same-adjustment-period-std-price";
+
+describe("SAP — §80③ 전기 기준시가 대체 산정", () => {
+  it("3호 비율환산 (다목·라목): 취득당시 × 전기합계 ÷ 취득당시합계", () => {
+    const r = calcPriorStdPriceSubstitute({
+      standardPriceAtAcquisition: 200_000_000,
+      priorLandBuildingSum: 180_000_000,
+      acquisitionLandBuildingSum: 200_000_000,
+    });
+    expect(r!.value).toBe(180_000_000); // 200,000,000 × 180/200
+    expect(r!.basis).toBe("ratio_conversion");
+    expect(r!.legalBasis).toContain("§80 ③ 3호");
+  });
+
+  it("§80④ 준용 — 나목 합계액이 없으면 2호(최초고시 × 기준율)로 떨어진다", () => {
+    const r = calcPriorStdPriceSubstitute({
+      standardPriceAtAcquisition: 200_000_000,
+      // 합계액 부재 → 3호 불가
+      firstNoticeStdPrice: 150_000_000,
+      noticeBaseRate: 0.981,
+    });
+    expect(r!.value).toBe(147_150_000); // floor(150,000,000 × 0.981)
+    expect(r!.basis).toBe("first_notice_rate");
+    expect(r!.legalBasis).toContain("§80 ③ 2호");
+  });
+
+  it("둘 다 불가하면 null — 추정하지 않는다", () => {
+    expect(calcPriorStdPriceSubstitute({ standardPriceAtAcquisition: 200_000_000 })).toBeNull();
+    expect(calcPriorStdPriceSubstitute({})).toBeNull();
+  });
+
+  it("1호(인근토지)는 계산 대상이 아니다 — 조사값을 그대로 쓴다", () => {
+    // 유사 토지 선정은 엔진이 할 수 없다. 여기 함수는 2호·3호만 계산한다.
+    expect(calcPriorStdPriceSubstitute({ priorLandBuildingSum: 100 })).toBeNull();
+  });
+});
+
+describe("SAP — applyFloor:false (§164⑥ 준용) 절사 방향 보존", () => {
+  // 🔴 크기를 먼저 floor하고 부호를 되붙이면 0 방향 절사가 되어 종전과 1원 갈린다.
+  //    §164⑥ 준용은 기존 결과를 보존해야 한다.
+  const legacy = (A: number, B: number, C: number, D: number) =>
+    Math.floor(A + (A - B) * Math.min(C / D, 1));
+
+  it("A=100 · B=111 · C=5 · D=12 → 95 (종전과 동일)", () => {
+    const r = calcSameAdjustmentPeriodStdPrice({
+      formula: "prev", standardPriceAtAcquisition: 100, priorStandardPrice: 111,
+      holdingMonths: 5, adjustmentMonths: 12, applyFloor: false,
+    });
+    expect(r.value).toBe(95);
+    expect(r.value).toBe(legacy(100, 111, 5, 12));
+  });
+
+  it("A=2억 · B=2.1억 · C=7 · D=12 → 종전과 동일", () => {
+    const r = calcSameAdjustmentPeriodStdPrice({
+      formula: "prev", standardPriceAtAcquisition: 200_000_000, priorStandardPrice: 210_000_000,
+      holdingMonths: 7, adjustmentMonths: 12, applyFloor: false,
+    });
+    expect(r.value).toBe(legacy(200_000_000, 210_000_000, 7, 12));
+  });
+
+  it("applyFloor:true(§164⑧ 본체)는 음수 delta가 단락에서 걸러진다", () => {
+    const r = calcSameAdjustmentPeriodStdPrice({
+      formula: "prev", standardPriceAtAcquisition: 100, priorStandardPrice: 111,
+      holdingMonths: 5, adjustmentMonths: 12,
+    });
+    expect(r.value).toBe(100);
+    expect(r.flooredToAcquisition).toBe(true);
+  });
+});
