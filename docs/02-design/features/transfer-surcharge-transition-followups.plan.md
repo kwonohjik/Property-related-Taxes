@@ -11,7 +11,7 @@
 | ~~F1~~ ✅PR#759 | 다자산 gracePeriod 미연결 | 🔴 | 배관 | native per-property·⑬⑭ |
 | ~~F2~~ ✅PR#760 | 기간 만료일 초일불산입 | 🟡 | 엔진 | civilMonthsDeadline(국기법§4→민법§157·§160) |
 | ~~F3~~ ✅PR#761 | §155⑳ 시나리오 A 조기반환 갭 | 🟠 | 엔진 | canEarlyReturnPrhp·anchor P7 |
-| 🟠 F4 보류 | 3시점 연면적 round2(홈택스 938원) | 🟡 | 환산 | **재현 케이스 필요** — 주경로 이미 round2·엔진 no-op·근본원인 미확정(과대주장 금지) |
+| 🟠 F4 | 3시점 연면적 round2(홈택스 938원) | 🟡 | 환산 | ✅**재현됨**(2026-08-24 probe) — ❌「엔진 no-op」은 오판정. API조회만 안전·**수기/복합합산 2경로 도달**. 착수 선결 = **홈택스 반올림 규칙 확인 1건** |
 | ~~F5~~ ✅PR#762 | ReductionPhdInput dual-truth | 🟠 | UI | buildAssetPhdSnapshot·자산 PHD 가져오기 버튼 활성화 |
 
 각 항목 독립적 → 개별 PR 권장. F1 최우선(과세 정확성 직접 영향).
@@ -80,7 +80,56 @@ callMultiTransferTaxAPI(multiForm, properties: PropertyItem[])
 
 건물기준시가 3시점 환산 모달에서 연면적에 `round2()` 미적용 → 홈택스 공시값과 938원 차이(기존 식별). [[project_building_std_lookup_year_gate_and_collective_unit]] 계열.
 
-- **작업**: 3시점 환산 모달 연면적 곱셈 전 `area-utils.round2()` 적용(표시=계산 일치 강제). 홈택스 anchor로 938원 차이 해소 확인.
+### 🔴 2026-08-24 조사 — 재현됨. 종전 「엔진 no-op」 판정은 오판이다
+
+> 종전 기재: 「주경로 이미 round2·엔진 no-op·근본원인 미확정」. **셋 중 앞의 둘이 틀렸다.**
+> round2된 것은 **건축물대장 API 조회 경로 하나뿐**이고, 엔진 영향은 no-op이 아니라 **최대 `pricePerM2 × 0.005`**다.
+
+**계산 지점 — 반올림이 없다** (실측 file:line):
+
+| 지점 | 코드 | round2 |
+|---|---|---|
+| 엔진 곱셈 | `building-standard-price-helpers.ts:106-112` `Math.floor(pricePerM2 × floorArea)` | ❌ |
+| 3시점 모달 → 엔진 | `MultiPointBuildingStdPriceModal.tsx:262` `parseDecimal(r.floorArea)` | ❌ |
+| 복합 부분 합산 | `phd-building-std-batch.ts:115` `parts.reduce((s,p) => s + p.floorArea, 0)` | ❌ |
+
+`pricePerM2`는 1,000원 절사된 정수라 **Δ = pricePerM2 × δ**가 정확히 성립한다(δ = 소수 3자리 잔차, ≤0.005).
+
+**probe 실측** (신축 2010·rc·용도1 · 취득 2015 / 양도 2025):
+
+| 연면적 raw | round2 | 취득 Δ | 양도 Δ |
+|---|---|---|---|
+| 76.502 | 76.50 | +1,607 | +1,800 |
+| 76.505 | 76.51 | −4,020 | −4,500 |
+| 100.004 | 100.00 | +3,216 | +3,600 |
+| 84.997 | 85.00 | −2,412 | −2,700 |
+
+### 938원의 출처 — 3자리 소수는 「전유 + 공용」에서 구조적으로 발생한다
+
+출처는 `phd-3point-first-disclosure-pre2001.plan.md:65`(263.452 vs 홈택스 263.45)이고, 그 263.452의 정체는 `transfer-tax-apartment-pre-disclosure.engine.design.md:25` — **전용 192.15 + 공유 71.302**다. ⇒ **사용자 실수가 아니라 집합건물의 정상 입력**이며 δ는 0.002로 고정된다.
+
+실사례 파라미터 재현 (probe):
+
+| 시점 | pricePerM2 | raw 263.452 | round2 263.45 | Δ |
+|---|---|---|---|---|
+| 2001 기준(공시지가 820,000) | 328,000 | 86,412,256 | 86,411,600 | 656 |
+| 양도 2022(공시지가 5,930,000) | 505,000 | 133,043,260 | 133,042,250 | 1,010 |
+
+⚠️ **메커니즘은 재현되나 정확히 938원인 시점은 복원하지 못했다.** `Δ = pricePerM2 × 0.002`이므로 **938원 ⇔ pricePerM2 = 469,000원/㎡**가 필요조건이다. 2026-07-23 분석이 본 시점은 위 두 시점과 다른 구조·용도·연도 조합이며 **미확보**다.
+
+### 도달 경로 — 2/3이 열려 있다
+
+| 경로 | round2 | 판정 |
+|---|---|---|
+| 건축물대장 API 조회 | ✅ `building-register-map.ts:294` `round2(sum)` | 안전 — 「주경로 이미 round2」의 유일한 근거 |
+| **수기 입력** | ❌ `DecimalInput.tsx:54-59`는 문자만 거르고 **자릿수 제한 없음** | 🔴 도달 |
+| **복합 부분별 합산** | ❌ `sumArea` | 🔴 도달 — 전유/공용을 2행으로 넣으면 자동 발생 |
+
+### ⛔ 착수 선결 — 홈택스 반올림 규칙 확인 1건 (미검증)
+
+**「홈택스가 연면적을 2자리로 반올림한다」는 전제 자체가 미확인이다.** 계획서의 「홈택스 263.45」 기재가 유일한 근거이고 실제 계산기 실행 대조는 하지 않았다. **이 전제가 틀리면 수정 방향이 뒤집힌다** — 홈택스가 원값을 쓴다면 현행이 맞고 `round2`가 오히려 오차를 만든다. 확인 전 착수 금지.
+
+- **작업**(전제 확인 후): `MultiPointBuildingStdPriceModal.tsx:262` · `phd-building-std-batch.ts:115,136,175` · 필요 시 `BuildingStdPriceForm.tsx:267`에 `area-utils.round2()` 적용(표시=계산 일치 강제) + anchor 고정.
 - **주의**: 면적 안분 잔액 흡수 규칙([[feedback_area_apportion_residual_absorption]]) 준수.
 - **독립**: 환산 도메인.
 
