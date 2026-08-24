@@ -51,6 +51,7 @@ import {
   hasBuildingStdReport,
 } from "@/components/calc/results/BuildingStdPriceReportSection";
 import { extractRelevantBuildingStdSnapshots } from "@/lib/storage/use-auto-save-calculation";
+import { resolveReceiveOnlyDisplay } from "@/components/calc/results/transfer/receive-only-display";
 import {
   TRANSFER_PRINT_SECTIONS,
   type TransferPrintSectionId,
@@ -159,6 +160,15 @@ export function TransferTaxResultView({
   // (호출부에서 asset 안 넘기는 경우 carryover 정보 표시 위해 필수)
   const resolvedAsset = asset ?? formData?.assets[0];
 
+  // receiveOnly(사례 46) — 신고단위 양도가액·양도일 보정.
+  // 이월과세 비교 분기는 FilingFormTable에 redevSubject를 함께 넘겨 redev 공존을 상정하므로,
+  // 시나리오 B 카드도 같은 leaf를 태운다(계획서 §6-3 지점 C).
+  const receiveOnlyDisplay = resolveReceiveOnlyDisplay(
+    result,
+    transferPriceOverride ?? Number(formData?.contractTotalPrice ?? 0),
+    formData?.transferDate ?? "",
+  );
+
   // 이월과세(§97조의2) 모드 판정
   const carryoverDetail = result.carryoverTaxationDetail;
   const isCarryoverMode = !!carryoverDetail?.isEligible;
@@ -243,8 +253,8 @@ export function TransferTaxResultView({
             <CarryoverScenarioBFilingCard
               scenarioB={carryoverDetail.scenarioB}
               adopted={!adoptedA}
-              transferPrice={transferPriceOverride ?? Number(formData?.contractTotalPrice ?? 0)}
-              transferDate={formData?.transferDate}
+              transferPrice={receiveOnlyDisplay.transferPrice}
+              transferDate={receiveOnlyDisplay.transferDate}
               giftRegistryDate={resolvedAsset?.carryover?.giftRegistryDate}
             />
           </div>

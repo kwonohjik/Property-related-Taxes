@@ -381,6 +381,7 @@ import {
   incomeDeductionReducible,
   incomeDeductionRuralSurtax,
 } from "./reduction-eligible-income";
+import { resolveReceiveOnlyDisplay } from "./receive-only-display";
 export { fmtCell } from "./FilingFormTableRowDefs";
 
 export function buildRows(
@@ -399,7 +400,6 @@ export function buildRows(
   }
 
   const primary = asset ?? formData?.assets[0];
-  const transferDate = formData?.transferDate ?? "";
   const acquisitionDate =
     acquisitionDateOverride && acquisitionDateOverride !== ""
       ? acquisitionDateOverride
@@ -418,10 +418,18 @@ export function buildRows(
     isFinite(ownNum) && isFinite(ownDen) && ownDen > 0 && ownNum > 0
       ? Math.min(ownNum / ownDen, 1.0)
       : 1.0;
-  const totalTransferPrice =
+  // receiveOnly(사례 46) — 신고단위 양도가액·양도일은 청산금 분 단독이다(§166①2호 가목).
+  // ④ API 변환(`transfer-tax-api.ts:332`·`:341`)과 같은 규칙을 ⑦ 표시에 적용한다.
+  // 미발동이면 fallback을 그대로 돌려주므로 아래 지분 안분 분기가 종전대로 살아 있다.
+  const receiveOnly = resolveReceiveOnlyDisplay(
+    result,
     transferPriceOverride === undefined && ownRatio < 1.0
       ? Math.floor(rawTotalPrice * ownRatio)
-      : rawTotalPrice;
+      : rawTotalPrice,
+    formData?.transferDate ?? "",
+  );
+  const transferDate = receiveOnly.transferDate;
+  const totalTransferPrice = receiveOnly.transferPrice;
   const rawExpenses = Number(primary?.directExpenses || 0);
   const totalExpenses =
     transferPriceOverride === undefined && ownRatio < 1.0
