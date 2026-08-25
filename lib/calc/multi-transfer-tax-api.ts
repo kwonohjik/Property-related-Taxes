@@ -18,8 +18,7 @@ import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 
-const isHousingLike = (pt: string) =>
-  pt === "housing" || pt === "right_to_move_in" || pt === "presale_right";
+import { isHousingLike } from "./housing-like-asset";
 
 /** TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용) */
 export function buildPropertyPayload(form: TransferFormData) {
