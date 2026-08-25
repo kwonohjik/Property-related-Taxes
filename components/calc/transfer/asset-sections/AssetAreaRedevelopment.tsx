@@ -30,6 +30,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 
+import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
@@ -110,12 +111,13 @@ export function shouldShowRedevValuationSection(asset: AssetForm): boolean {
  * 두 카드가 동시에 뜬다.
  */
 export function isHousingContribEstimatedBranch(asset: AssetForm): boolean {
-  return (
-    asset.redevOriginalAssetType === "housing" &&
-    (asset.redevSubject === "right" || asset.assetKind === "right_to_move_in") &&
-    asset.redevSettlementDirection === "receive" &&
-    asset.useEstimatedAcquisition === true
-  );
+  return isHousingContribEstimatedAxes({
+    originalAssetType: asset.redevOriginalAssetType,
+    // subject 미입력 fallback — 입주권 자산이면 "right"(④ 변환·⑧ validate와 동일 fallback).
+    subject: asset.redevSubject || (asset.assetKind === "right_to_move_in" ? "right" : undefined),
+    settlementDirection: asset.redevSettlementDirection,
+    useEstimatedAcquisition: asset.useEstimatedAcquisition,
+  });
 }
 
 export function AssetAreaRedevelopment({ asset, onChange }: Props) {

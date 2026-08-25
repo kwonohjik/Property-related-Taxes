@@ -79,16 +79,29 @@ describe("audit redev-2: 인가전 분 양도차익 산식 개산공제 §163⑥
     expect(step!.formula).toContain(ESTIMATED_DEDUCTION.toLocaleString()); // "2,551,049"
   });
 
+  /**
+   * ⚠️ **2026-08-25 기대 항 수 정정 (E1-02)** — 자기일관성이라는 이 테스트의 취지는 그대로다.
+   *
+   * 종전 산식은 「… − 필요경비 0 − 개산공제 2,551,049」로 **두 항을 나란히** 보여줬다.
+   * 그런데 §166①1호 후단·①2호 나목은 필요경비를
+   * 「법 제97조제1항제2호 및 제3호 **또는** 제163조제6항에 따른 필요경비」로 규정한다 —
+   * **택일**이라 실제로 차감되는 항은 언제나 **하나**다. 두 항을 다 보여주면
+   * 신고서 인가전 분 열(택일 값 1개)과 서로 다른 진실이 된다.
+   *
+   * ⇒ 환산 모드이므로 §163⑥ 개산공제 하나만 표시한다. `PRE_APPROVAL_EXPENSES`(0)는
+   *   **표시되지 않는 것이 맞다**(값이 0이라 산술 결과도 동일 — 세액 불변).
+   */
   it("산식 항 산술 결과 == step.amount (자기일관성 — 첫 항 − 나머지 항 합)", () => {
     const nums = extractNumbers(step!.formula);
-    // 의제양도가액 219,218,500 / 취득가 141,221,534 / 필요경비 0 / 개산공제 2,551,049
+    // 의제양도가액 219,218,500 / 취득가 141,221,534 / 개산공제(택일) 2,551,049
     expect(nums).toEqual([
       APPORTIONED_TRANSFER,
       APPORTIONED_ACQUISITION,
-      PRE_APPROVAL_EXPENSES,
       ESTIMATED_DEDUCTION,
     ]);
     const reconstructed = nums[0] - nums.slice(1).reduce((a, b) => a + b, 0);
     expect(reconstructed).toBe(step!.amount);
+    // 택일이 지켜졌는지 — 실가 항(§97①2·3호) 라벨이 함께 나오면 안 된다.
+    expect(step!.formula).not.toContain("§97①2·3호");
   });
 });

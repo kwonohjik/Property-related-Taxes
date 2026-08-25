@@ -18,6 +18,7 @@ import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
+import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 export function validateRedevelopmentAsset(asset: AssetForm, label: string): string | null {
   // ── 분기 결정 필드 ──
   // UI display fallback과 동일(RedevelopmentBlock.tsx) + API 변환(buildRedevelopmentPayload).
@@ -248,11 +249,13 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   // ── 환산 모드 검증 ──
   // 사례 39 — 단독주택 출자 §164⑤ PHD 2-point: housing + right + receive + useEstimated 조합 시 전용 검증
   // 3중 패턴(UI/API/validate) 동기화 (memory `feedback_validation_sync_8th_point`)
-  const isHousingRightReceiveEstimated =
-    originalAssetType === "housing" &&
-    subject === "right" &&
-    settlementDirection === "receive" &&
-    asset.useEstimatedAcquisition === true;
+  // 네 지점(⑤ UI · ⑧ validate · ⑫ Zod · 엔진 dispatch) 공용 leaf — 복제 금지 (E1-04).
+  const isHousingRightReceiveEstimated = isHousingContribEstimatedAxes({
+    originalAssetType,
+    subject,
+    settlementDirection,
+    useEstimatedAcquisition: asset.useEstimatedAcquisition,
+  });
 
   if (isHousingRightReceiveEstimated) {
     // §164⑤ 분자·분모 모두 필수 (미입력 → 자동 안분 fallback 금지)

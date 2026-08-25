@@ -37,6 +37,35 @@ import type {
   RedevelopmentValuationMeta,
 } from "./types/transfer-redevelopment.types";
 
+
+/**
+ * §166①1호 후단·①2호 나목 인가전 필요경비 — **택일(or)**.
+ *
+ * 조문은 "법 제97조제1항제2호 및 제3호 **또는** 제163조제6항에 따른 필요경비"라고 규정한다.
+ * "및"이 아니라 "**또는**"이므로 합산하지 않는다:
+ *   · §166③ 환산취득가를 쓴 경우 → §163⑥ **개산공제**
+ *   · 실지 취득가액을 쓴 경우      → §97①2·3호 **실제 자본적지출·양도비**
+ *
+ * 2026-07-29 정정(#591 감사 R7): 종전 3개 **표시** 지점이 모두 `개산공제 + 인가전필요경비`로
+ * 합산해 신고서 표시 필요경비가 과대(→ 표시 행 자기모순)였다. 환산 여부는 개산공제
+ * 존재로 판정한다(실가 모드에서는 §163⑥이 적용되지 않아 0).
+ *
+ * 🔴 2026-08-25 정정(E1-02 — **세액 변경**): 그때 고친 것은 **표시**뿐이었고 **본류인
+ *    `computeRedevelopmentSplit`의 양도차익 산식은 여전히 둘을 모두 뺐다**. 그래서 환산 모드에서
+ *    인가전 필요경비를 입력하면 세액이 그만큼 과소해지고(실측 2,660,000), 동시에 신고서 열은
+ *    택일 값만 표시해 「양도가액 − 취득가액 − 필요경비 ≠ 양도차익」으로 어긋났다.
+ *    ⇒ 이 헬퍼를 `redevelopment-split.ts`로 옮겨 **계산과 표시가 한 함수를 보게** 한다
+ *    (`redevelopment.ts`는 이미 이 모듈을 import하므로 방향이 맞다 — 역방향이면 순환이다).
+ *
+ * 대비: 같은 호 **가목**(인가후)은 §163⑥ 병기가 없어 실제 필요경비만 차감한다 — 무변경.
+ */
+export function preApprovalNecessaryExpense(
+  estimatedDeduction: number,
+  preApprovalExpenses: number,
+): number {
+  return estimatedDeduction > 0 ? estimatedDeduction : preApprovalExpenses;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 입력·결과
 // ──────────────────────────────────────────────────────────────────────────────
@@ -197,9 +226,12 @@ export function computeRedevelopmentSplit(
 
   // ─ Step C: 인가전 양도차익 ─
   // 양도가액(의제) = 권리가액
-  // 양도차익 = 권리가액 − 취득가액 − 개산공제 − preApprovalExpenses
+  // 양도차익 = 권리가액 − 취득가액 − **필요경비(택일)**
+  //   택일: 환산이면 §163⑥ 개산공제 / 실가면 §97①2·3호 실제 필요경비 (위 헬퍼 doc 참조)
   const preApprovalGainBeforeAdjust =
-    redevelopment.rightsValue - oldAcquisitionPrice - estimatedLumpDeduction - redevelopment.preApprovalExpenses;
+    redevelopment.rightsValue -
+    oldAcquisitionPrice -
+    preApprovalNecessaryExpense(estimatedLumpDeduction, redevelopment.preApprovalExpenses);
 
   // ─ Step C: 분기별 분할 ─
   const isPay = redevelopment.settlementDirection === "pay";

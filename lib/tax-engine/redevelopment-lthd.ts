@@ -25,6 +25,44 @@ import { applyRate } from "./tax-utils";
 import { calculateHoldingPeriod } from "./tax-utils";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
 
+
+/**
+ * §95② 단서 표2 진입의 **1세대1주택 축** — 실가·환산 경로 **공용 leaf**.
+ *
+ * `exemptionEligibleAtApproval === false`(인가일 기준 요건 미충족 자기선언)는 표2를 강등한다
+ * (서면2016-법령해석재산-2705). `undefined`는 강등하지 않는다 — 「선언하지 않음」이지
+ * 「미충족의 적극적 선언」이 아니다.
+ *
+ * 🔑 2026-08-25(E2-03): 환산 경로(`redevelopment-housing-contribution.ts`)가 이 값을
+ *    **`false` 상수로** 넘기고 있어, 취득가액 산정 방식이 LTHD 표를 갈랐다. 두 경로가
+ *    같은 함수를 보게 해 **인자 동일성**까지 맞춘다(memory `feedback_shared_predicate_argument_parity`).
+ */
+export function resolveRedevEffectiveOneHouseSingle(input: {
+  redevelopment: { exemptionEligibleAtApproval?: boolean };
+  isOneHouseSingle?: boolean;
+}): boolean {
+  return input.redevelopment.exemptionEligibleAtApproval === false
+    ? false
+    : (input.isOneHouseSingle ?? false);
+}
+
+/**
+ * 입주권(subject="right") 인가전 분 LTHD에 쓰이는 **거주월수** — 실가·환산 경로 공용 leaf.
+ *
+ * 입주권은 인가전 분만 LTHD를 받으므로 **종전주택 거주월수만** 의미가 있다.
+ * ⚠️ `newHouseResidenceMonths`(신축 APT 거주월수)를 더하지 않는다 — 입주권은 완공 **전**
+ *    권리 양도라 신축 거주가 존재할 수 없다.
+ */
+export function resolveRightResidenceMonths(input: {
+  priorHouseResidenceMonths?: number;
+  newHouseResidenceMonths?: number;
+  residencePeriodMonths?: number;
+}): number {
+  const hasSplit =
+    input.priorHouseResidenceMonths !== undefined || input.newHouseResidenceMonths !== undefined;
+  return hasSplit ? (input.priorHouseResidenceMonths ?? 0) : (input.residencePeriodMonths ?? 0);
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 입력·결과
 // ──────────────────────────────────────────────────────────────────────────────
@@ -116,10 +154,7 @@ export function computeRedevelopmentLthd(
   // 보유·거주요건은 관리처분계획인가일 현재 기준. 인가일 기준 2년 미충족 시
   // 1세대1주택 비과세 미해당 → LTHD 표2 진입 차단, 표1 강제.
   // undefined 시 legacy isOneHouseSingle fallback (사례 44·45 회귀 안전).
-  const effectiveOneHouseSingle =
-    redevelopment.exemptionEligibleAtApproval === false
-      ? false
-      : (input.isOneHouseSingle ?? false);
+  const effectiveOneHouseSingle = resolveRedevEffectiveOneHouseSingle(input);
 
   // ─ 거주월수 귀속 분리 (사례 45 — 시행령 §154⑧ + 사전법령해석재산 2020-386) ─
   // 신규 두 필드(prior/new)가 모두 undefined 시 legacy fallback:
@@ -149,7 +184,7 @@ export function computeRedevelopmentLthd(
        * 입력 UI·API에도 게이트를 뒀지만(`RedevelopmentBlock` · `buildRedevelopmentPayload`),
        * 별도 조립 경로(다건 route 등)까지 덮으려면 엔진이 정본이어야 한다.
        */
-      residencePeriodMonths: hasSplitResidence ? prior : input.residencePeriodMonths ?? 0,
+      residencePeriodMonths: resolveRightResidenceMonths(input),
     });
   }
 

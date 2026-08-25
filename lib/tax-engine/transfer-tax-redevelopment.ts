@@ -254,15 +254,22 @@ export function calculateRedevelopmentTax(
     input,
   );
 
-  // ─ Step A.8: §95② 장기보유특별공제 배제 (다주택 중과 대상) ─
+  // ─ Step A.8: §95② 장기보유특별공제 배제 ─
   //
-  // 「소득세법」 §95② — 「"장기보유 특별공제액"이란 제94조제1항제1호에 따른 자산(제104조제3항에
-  // 따른 미등기양도자산과 **같은 조 제7항 각 호에 따른 자산은 제외한다**)으로서 …」
+  // 「소득세법」 §95② — 「"장기보유 특별공제액"이란 제94조제1항제1호에 따른 자산(**제104조제3항에
+  // 따른 미등기양도자산**과 **같은 조 제7항 각 호에 따른 자산은 제외한다**)으로서 …」
   // 재개발 신축주택(완공 APT)은 §94①1호 자산(건물)이라 이 괄호가 그대로 걸린다.
   //
-  // ⚠️ **일반 경로의 배제(`transfer-tax-lthd.ts` L-1)를 타지 않는다** — 재개발은 LTHD를
+  // ⚠️ **일반 경로의 배제(`transfer-tax-lthd.ts` L-0·L-1)를 타지 않는다** — 재개발은 LTHD를
   //    `runRedevelopment`가 **분기별로** 산정해 넘기므로 배제가 자동으로 따라오지 않는다.
-  //    그래서 여기서 같은 술어(`resolveSurchargeApplication` 단일 소스)로 직접 건다.
+  //    그래서 여기서 직접 건다.
+  //
+  // 🔴 **괄호는 둘을 배제하는데 종전에는 하나만 걸었다** (2026-08-25 — E2-04).
+  //    트리거가 `isSurchargeApplied`(§104⑦) 하나뿐이라 **미등기양도자산(§104③)에도 LTHD가
+  //    그대로 차감**됐다. 미등기를 켜면 세율(70%)·기본공제(0)는 정상으로 바뀌므로 화면상
+  //    「반영됐다」처럼 보여 결함이 드러나지 않았다(실측 산출세액 112,840,000원 과소).
+  //    일반 경로는 L-0에서 `isUnregistered`를 가장 먼저 보고 `exclusionReason: "unregistered"`를
+  //    반환한다 — **사유 우선순위도 그쪽에 맞춘다**(미등기가 중과보다 앞).
   //
   // 🔑 **분기 3개와 합계를 함께 0으로** 만든다. 합계만 0으로 두면 결과 화면이
   //    「공제 0인데 분기엔 값이 있다」로 어긋난다(memory `feedback_engine_result_display_drift`).
@@ -271,12 +278,28 @@ export function calculateRedevelopmentTax(
     multiHouseSurchargeResult,
     parsedRates.surchargeSpecialRules,
   );
+  const lthdExcludedByUnregistered = input.isUnregistered === true;
   const lthdExcludedBySurcharge = surchargeApplication.isSurchargeApplied;
-  const redevAfterRight: RedevelopmentResult = lthdExcludedBySurcharge
+  const lthdExclusionReason: "unregistered" | "multi_house_surcharge" | undefined =
+    lthdExcludedByUnregistered
+      ? "unregistered"
+      : lthdExcludedBySurcharge
+        ? "multi_house_surcharge"
+        : undefined;
+  const redevAfterRight: RedevelopmentResult = lthdExclusionReason
     ? applyLthdExclusion(redevAfterRightRaw)
     : redevAfterRightRaw;
 
-  if (lthdExcludedBySurcharge) {
+  if (lthdExclusionReason === "unregistered") {
+    steps.push({
+      label: "장기보유특별공제 배제 (미등기양도자산)",
+      formula:
+        `§95② 괄호 — 「제104조제3항에 따른 미등기양도자산 … 은 제외한다」. ` +
+        `배제 전 공제액 ${redevAfterRightRaw.total.lthd.toLocaleString()}`,
+      amount: 0,
+      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+    });
+  } else if (lthdExclusionReason === "multi_house_surcharge") {
     steps.push({
       label: "장기보유특별공제 배제 (다주택 중과)",
       formula:
@@ -672,10 +695,11 @@ export function calculateRedevelopmentTax(
      * 채우는데 재개발 경로만 비어 있었다. 그러면 상세명세서·결과 카드가 「양도차익 × **0%**」로만
      * 표시해 **왜 0인지 알 수 없다**(memory `feedback_engine_result_display_drift`).
      *
-     * 배제 여부와 이 필드는 **같은 술어**(`lthdExcludedBySurcharge`)에서 나온다 — 따로 판정하면
-     * 「공제는 0인데 사유는 없다」는 세 번째 진실이 생긴다.
+     * 배제 여부와 이 필드는 **같은 술어**(`lthdExclusionReason`)에서 나온다 — 따로 판정하면
+     * 「공제는 0인데 사유는 없다」는 세 번째 진실이 생긴다. 그래서 Step A.8이 사유까지 확정하고
+     * 여기서는 그 값을 그대로 싣는다(2026-08-25 미등기 사유 추가 — E2-04).
      */
-    ...(lthdExcludedBySurcharge ? { lthdExclusionReason: "multi_house_surcharge" as const } : {}),
+    ...(lthdExclusionReason ? { lthdExclusionReason } : {}),
     /**
      * 🔴 **조특법 감면 — 종전에는 `0` 하드코딩이었다** (E3-02).
      *

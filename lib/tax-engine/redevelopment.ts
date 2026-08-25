@@ -20,6 +20,7 @@ import { computeLumpSumDeductionBase, calculateHoldingPeriod, safeMultiplyThenDi
 import {
   computeRedevelopmentSplit,
   type RedevelopmentSplitInput,
+  preApprovalNecessaryExpense,
 } from "./redevelopment-split";
 import { computeRedevelopmentLthd, applyLthdToGain } from "./redevelopment-lthd";
 import { runSuccessorMember } from "./redevelopment-successor";
@@ -35,6 +36,8 @@ import type {
   RedevelopmentBranchDetail,
 } from "./types/transfer-redevelopment.types";
 
+import { isHousingContribEstimatedAxes } from "./redevelopment-branch-gate";
+import { resolveRedevEffectiveOneHouseSingle, resolveRightResidenceMonths } from "./redevelopment-lthd";
 // ──────────────────────────────────────────────────────────────────────────────
 // Orchestrator 입력
 // ──────────────────────────────────────────────────────────────────────────────
@@ -71,26 +74,6 @@ function toBranchHolding(
   return { holdingMonths: hp.years * 12 + hp.months, holdingDays: hp.days };
 }
 
-/**
- * §166①2호 나목 인가전 필요경비 — **택일(or)**.
- *
- * 조문은 "법 제97조제1항제2호 및 제3호 **또는** 제163조제6항에 따른 필요경비"라고 규정한다.
- * "및"이 아니라 "**또는**"이므로 합산하지 않는다:
- *   · §166③ 환산취득가를 쓴 경우 → §163⑥ **개산공제**
- *   · 실지 취득가액을 쓴 경우      → §97①2·3호 **실제 자본적지출·양도비**
- *
- * 2026-07-29 정정(#591 감사 R7): 종전 3개 지점이 모두 `개산공제 + 인가전필요경비`로
- * 합산해 신고서 표시 필요경비가 과대(→ 표시 행 자기모순)였다. 환산 여부는 개산공제
- * 존재로 판정한다(실가 모드에서는 §163⑥이 적용되지 않아 0).
- *
- * 대비: 같은 호 **가목**(인가후)은 §163⑥ 병기가 없어 실제 필요경비만 차감한다 — 무변경.
- */
-function preApprovalNecessaryExpense(
-  estimatedDeduction: number,
-  preApprovalExpenses: number,
-): number {
-  return estimatedDeduction > 0 ? estimatedDeduction : preApprovalExpenses;
-}
 
 /**
  * 인가전 분 표시용 필요경비를 §166①2호 나목 비율로 안분한다.
@@ -164,11 +147,16 @@ export function runRedevelopment(
   // 사례 39 — 주택 출자 입주권 + 청산금 수령 + §166③ PHD 2-point 환산취득가 분기.
   // 구분 조건: housingStdPriceAtAcq + housingStdPriceAtApproval (PHD 직접 입력)를 사용.
   // ※ 사례 36-A2-ii(managementDisposalHousingPrice+acquisitionHousingPrice 사용 §166③ 경로)와 다름.
+  // 네 축은 공용 leaf가 판정한다(⑤ UI · ⑧ validate · ⑫ Zod와 동일 — E1-04).
+  // PHD 2필드 > 0은 **엔진 고유 조건**이다 — 값이 있어야 §164⑤ 산식을 돌릴 수 있다.
+  // 이 조건을 leaf에 넣으면 ⑤·⑧·⑫가 「값이 없으면 분기가 아니다」로 읽혀 요구 자체를 못 한다.
   if (
-    input.redevelopment.originalAssetType === "housing" &&
-    input.redevelopment.subject === "right" &&
-    input.redevelopment.settlementDirection === "receive" &&
-    input.useEstimatedAcquisition === true &&
+    isHousingContribEstimatedAxes({
+      originalAssetType: input.redevelopment.originalAssetType,
+      subject: input.redevelopment.subject,
+      settlementDirection: input.redevelopment.settlementDirection,
+      useEstimatedAcquisition: input.useEstimatedAcquisition,
+    }) &&
     (input.redevelopment.housingStdPriceAtAcq ?? 0) > 0 &&
     (input.redevelopment.housingStdPriceAtApproval ?? 0) > 0
   ) {
@@ -402,6 +390,10 @@ function runHousingContribReceiveEstimated(
     housingStdPriceAtApproval: redevelopment.housingStdPriceAtApproval ?? 0,
     preApprovalExpenses: redevelopment.preApprovalExpenses ?? 0,
     postApprovalExpenses: redevelopment.postApprovalExpenses ?? 0,
+    // 실가 경로(`computeRedevelopmentLthd`)와 **같은 leaf**로 파생한다 — 인자 동일성까지
+    // 맞춰야 「같은 함수를 쓰는데 결과가 다른」 상태가 생기지 않는다 (E2-03).
+    isOneHouseSingle: resolveRedevEffectiveOneHouseSingle(input),
+    residencePeriodMonths: resolveRightResidenceMonths(input),
     ownershipRatio: input.ownershipRatio,
     isUnregistered: input.isUnregistered,
   });

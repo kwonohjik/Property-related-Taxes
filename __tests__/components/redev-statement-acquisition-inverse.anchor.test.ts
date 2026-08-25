@@ -54,7 +54,15 @@ const SCENARIOS: Scenario[] = [
   mk("S1 C44 apt+pay", { propertyType: "redevelopment_apt", transferPrice: 525_000_000, transferDate: new Date("2026-02-16"), acquisitionDate: new Date("2002-04-09"), acquisitionPrice: 200_000_000, useEstimatedAcquisition: false, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0, redevelopment: case44RedevelopmentInfo() },
     "apt", "pay", 525_000_000, "2026-02-16", "2002-04-09", 292_781_500, 0),
   mk("S2 C45 apt+pay", { propertyType: "redevelopment_apt", transferPrice: 900_000_000, transferDate: new Date("2024-01-26"), acquisitionDate: new Date("2002-04-09"), acquisitionPrice: 200_000_000, useEstimatedAcquisition: false, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0, redevelopment: case45RedevelopmentInfo() },
-    "apt", "pay", 900_000_000, "2024-01-26", "2002-04-09", 432_000_000, 18_000_000),
+    // 🔴 2026-08-25 기대값 정정 (E1-03) — 432,000,000 → 491,000,000.
+    //    사례 45는 인가후양도차익이 **음수**인 케이스다:
+    //      분양가 950,000,000(= 권리가액 650,000,000 + 납부청산금 300,000,000)
+    //      인가후양도차익 = 900,000,000 − 950,000,000 − 인가후 필요경비 9,000,000 = **−59,000,000**
+    //    종전 `splitAptPay`는 이 음수를 0으로 clamp해 통째로 버렸고, 그만큼 양도차익이 부풀어
+    //    **역산 취득가액이 59,000,000 낮게** 나왔다. 차이가 정확히 그 금액이다.
+    //    §166②1호는 clamp 없는 대수적 합이므로 음수가 흘러야 하고, 그 결과 역산 취득가액은
+    //    실제 취득가액(실가 200,000,000 + 납부청산금 300,000,000 = 500,000,000)에 **더 가까워진다**.
+    "apt", "pay", 900_000_000, "2024-01-26", "2002-04-09", 491_000_000, 18_000_000),
   mk("S3 C47 apt+receive", { propertyType: "redevelopment_apt", transferPrice: 2_000_000_000, transferDate: new Date("2022-03-01"), acquisitionDate: new Date("2001-01-01"), acquisitionPrice: 100_000_000, useEstimatedAcquisition: false, isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 252, redevelopment: case47RedevelopmentInfo() },
     "apt", "receive", 2_000_000_000, "2022-03-01", "2001-01-01", 1_230_000_000, 0),
   mk("S4 C38 right+receive", { propertyType: "right_to_move_in", transferPrice: 320_000_000, transferDate: new Date("2023-03-02"), acquisitionDate: new Date("2009-04-09"), acquisitionPrice: 180_000_000, useEstimatedAcquisition: false, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0,

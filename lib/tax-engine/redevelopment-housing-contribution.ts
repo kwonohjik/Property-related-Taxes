@@ -43,6 +43,21 @@ export interface RedevHousingContribReceiveEstimatedInput {
   housingStdPriceAtAcq: number;
   /** §166③ 분모 — 인가당시 개별주택가격 (원, 총액) */
   housingStdPriceAtApproval: number;
+  /**
+   * **§95② 단서 표2 진입 축** — 1세대1주택 여부 (2026-08-25 신설 · E2-03).
+   *
+   * 종전에는 이 필드가 없어 `computeRightLthd`에 `false` 상수를 넘겼고, 그 결과
+   * **취득가액 산정 방식(실가/환산)이 LTHD 표를 갈랐다** — §95②·시행령 §159의4 어디에도
+   * 없는 축이다. 호출부(`redevelopment.ts`)가 실가 경로와 **같은 leaf**로 파생한 값을 넘긴다.
+   *
+   * ⚠️ 여기서 재판정하지 않는다 — 호출부 값 그대로 (같은 파일 `ownershipRatio`·`isUnregistered` 주석과 동일 원칙).
+   */
+  isOneHouseSingle: boolean;
+  /**
+   * 인가전 분 LTHD 거주월수 (§159의4 「거주기간 2년 이상」) — 2026-08-25 신설 · E2-03.
+   * 입주권은 인가전 분만 LTHD를 받으므로 **종전주택 거주월수**다(신축 거주는 존재할 수 없다).
+   */
+  residencePeriodMonths: number;
   /** 인가전 필요경비 (원) — 미입력 시 0 */
   preApprovalExpenses: number;
   /** 인가후 필요경비 (원) — 미입력 시 0 */
@@ -207,14 +222,18 @@ export function calcRedevHousingContribReceiveEstimated(
   // ── Step 6: LTHD 율 산출 ────────────────────────────────────────────────
   // computeRightLthd 재사용 (§166⑤1호 — 취득일 ~ 인가일):
   //   - 주택 출자도 원조합원 기준 → isSuccessorRightToMoveIn = false
-  //   - 1세대1주택 특례 미적용 → isOneHouseSingle = false
-  //   - 거주기간 0 (본 사례 39 다주택 가정 — 1세대1주택 분기는 UI PR에서 처리)
+  //
+  // 🔴 2026-08-25 정정(E2-03 — **세액 변경**): 종전에는 `isOneHouseSingle: false`,
+  //    `residencePeriodMonths: 0`을 **상수로** 넘겼다(주석: 「1세대1주택 분기는 UI PR에서 처리」).
+  //    상위 오케스트레이터는 같은 사실관계에서 이 값을 정상 산정해 내려보내고 **실가 경로는
+  //    그것을 소비해 표2를 적용**했다 ⇒ 취득가액 산정 방식이 LTHD 표를 갈랐다
+  //    (실측: 실가는 1세대1주택이 세액을 11,797,500원 움직이는데 환산은 0원).
   const lthdResult = computeRightLthd({
     acquisitionDate: input.acquisitionDate,
     approvalDate: input.approvalDate,
     isSuccessorRightToMoveIn: false,
-    isOneHouseSingle: false,
-    residencePeriodMonths: 0,
+    isOneHouseSingle: input.isOneHouseSingle,
+    residencePeriodMonths: input.residencePeriodMonths,
   });
 
   // preApproval 브랜치에서 보유율·월수 추출
@@ -222,14 +241,15 @@ export function calcRedevHousingContribReceiveEstimated(
   const holdingYears = Math.floor(preApprovalBranch.holdingMonths / 12);
 
   // ── Step 7: LTHD 금액 산출 ──────────────────────────────────────────────
-  // §95② 별표2(표1) 보유율 적용 — holdingRate (residenceRate 미포함)
   // 법령 근거: REDEVELOPMENT.LTHD_RIGHT_TABLE1_ANNOTATION
   void REDEVELOPMENT.LTHD_RIGHT_TABLE1_ANNOTATION; // 상수 참조 (dead-code 방어)
-
-  const preApprovalLTHD = applyLthdToGain(
-    preApprovalGain,
-    preApprovalBranch.holdingRate,
-  );
+  //
+  // 🔴 2026-08-25 정정(E2-03): 종전에는 `holdingRate`(보유분)**만** 썼다. 그 전제는 바로 위에서
+  //    `isOneHouseSingle: false`를 상수로 넘겨 **표1이 강제**됐다는 것이었다(표1은 거주분이 0).
+  //    1세대1주택 축을 살린 지금은 표2 진입이 가능하고, 표2는 **보유분 + 거주분**이므로
+  //    `rate`(= holdingRate + residenceRate)를 써야 한다. 표1에서는 residenceRate가 0이라
+  //    종전 동작이 그대로 유지된다(하위호환).
+  const preApprovalLTHD = applyLthdToGain(preApprovalGain, preApprovalBranch.rate);
 
   // 인가후 LTHD = 0 (§95② 별표2 [비고] 1호 — 입주권은 부동산 외 §94①2호)
   const postApprovalLTHD = 0 as number; // TS 좁힘 회피를 위해 as number
@@ -256,7 +276,7 @@ export function calcRedevHousingContribReceiveEstimated(
     lthdHoldingStartDate: input.acquisitionDate,
     lthdHoldingEndDate: input.approvalDate,
     lthdHoldingYears: holdingYears,
-    lthdRate: preApprovalBranch.holdingRate,
+    lthdRate: preApprovalBranch.rate,
     preApprovalApportionedAcquisition,
     preApprovalApportionedTransfer,
   };
