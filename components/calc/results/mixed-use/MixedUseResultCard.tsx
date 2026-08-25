@@ -82,7 +82,9 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
     );
   }
 
-  const { apportionment: a, housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t, multiHouseSurcharge: mhs } = breakdown;
+  // `multiHouseSurcharge`는 더 이상 구조분해하지 않는다 — §95② 배제 표시가 그것을 **재도출**하던
+  // 것을 엔진 echo(`surchargeLthdExclusion`)로 대체했기 때문이다(2026-08-25).
+  const { apportionment: a, housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t, surchargeLthdExclusion } = breakdown;
   const totalTransfer = a.housingTransferPrice + a.commercialTransferPrice;
   // 상속 취득가액 직접 산정(소령 §163⑨) — 단일 소스: calculationRoute.acquisitionConversionRoute만 판독.
   // (part-level acqPriceSource는 dual-truth 회피로 미채택 — plan §4.5 정본 결정)
@@ -434,22 +436,29 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           />
         )}
         {(() => {
-          // §95② 본문 괄호 — §104⑦ 각 호(다주택 중과) 해당 주택은 장기보유특별공제 배제.
-          // 판정은 엔진 결과(multiHouseSurcharge)를 그대로 읽는다 — 재도출 금지(계산-표시 drift 차단).
-          const mh = mhs;
-          const lthdExcludedBySurcharge =
-            !!mh && mh.surchargeType !== "none" && !mh.isSurchargeSuspended;
+          /**
+           * §95② 본문 괄호 — §104⑦ 각 호(다주택 중과) 해당 주택은 장기보유특별공제 배제.
+           *
+           * 🔴 **엔진이 확정한 `surchargeLthdExclusion`을 읽는다 — 재도출 금지** (2026-08-25).
+           *    종전에는 주석만 그렇게 적고 실제로는 `mhs.surchargeType !== "none" && !isSuspended`를
+           *    **다시 계산**했다. 그래서 원시 플래그 fallback으로 배제된 경우(`mhs`가 아예 없다)
+           *    「장기보유공제 (표1, **0.0%**)」로 표시돼 **보유기간이 짧아서 0인 것처럼** 읽혔다.
+           */
+          const excl = surchargeLthdExclusion;
           return (
             <Row
               label={
-                lthdExcludedBySurcharge
+                excl
                   ? "장기보유공제 (배제)"
                   : `장기보유공제 (표${h.longTermDeductionTable}, ${fmtPct(h.longTermDeductionRate)})`
               }
               value={`△ ${fmt(h.longTermDeductionAmount)}`}
               formula={
-                lthdExcludedBySurcharge
-                  ? `조정대상지역 ${mh.effectiveHouseCount}주택 중과 대상 주택 — 장기보유특별공제 배제 (소득세법 §95② 본문 괄호·§104⑦)`
+                excl
+                  ? `조정대상지역 ${excl.houseCount}주택 중과 대상 주택 — 장기보유특별공제 배제 (소득세법 §95② 본문 괄호·§104⑦)` +
+                    (excl.fromFallback
+                      ? " ※ 세대 보유 주택 목록 미입력 — 「세대 보유 주택 수」로 판정한 근사입니다."
+                      : "")
                   : h.longTermDeductionTable === 2
                     ? "보유연수×4% + 거주연수×4% (최대 80%)"
                     : "보유연수×2% (최대 30%)"

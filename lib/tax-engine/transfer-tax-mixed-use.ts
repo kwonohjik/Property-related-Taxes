@@ -15,6 +15,7 @@ import {
   resolveDeemedOneHouseBy155,
 } from "./transfer-tax-exemption";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
+import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
 import { computeAmendment } from "./transfer-tax-amendment";
@@ -201,10 +202,66 @@ export function calcMixedUseTransferTax(
   //
   // ⚠️ 적용 범위는 **주택분 한정**이다. §104⑦의 대상이 「주택(이에 딸린 토지를 포함한다)」이므로
   //    상가건물·상가부수토지, 배율초과 비사업용 토지(§104①8호 자산)에는 미치지 않는다.
-  const surchargeLthdExcluded =
-    multiHouseSurcharge !== undefined &&
-    multiHouseSurcharge.surchargeType !== "none" &&
-    !multiHouseSurcharge.isSurchargeSuspended;
+  /**
+   * 🔴 **정밀 판정이 없으면 원시 플래그로 fallback한다** (2026-08-25).
+   *
+   * 종전에는 `multiHouseSurcharge === undefined`이면 중과가 **통째로 미적용**됐다. 그런데 그
+   * 객체는 `houses[]`가 있어야만 조립된다(`route.ts` — 「`houses` 미전송이면 undefined」)
+   * ⇒ 사용자가 **세대 보유 주택 목록을 채우지 않으면** 조정지역 다주택인데도 중과가 안 걸렸다.
+   * 실측 505,484,136원 과소과세(세율 0.65 → 0.45 · 주택분 장특공제 0 → 445,655,171).
+   *
+   * 일반 주택(`housing`)·재개발APT는 같은 상황에서 fallback으로 중과가 걸린다 —
+   * **겸용만 달랐다**(자산 종류가 세액을 가르는 좌우 불일치).
+   *
+   * 🔑 `propertyType`으로 **`"housing"`을 넘긴다.** §104⑦의 대상은 「주택」이고 겸용에서
+   *    중과가 미치는 것은 **주택분**이다(아래 두 번째 ⚠️). `"mixed-use-house"`를 넘기면
+   *    `SURCHARGE_FALLBACK_PROPERTY_TYPES`를 넓혀야 하는데, 그 집합은 일괄·직접호출 경로의
+   *    `calculateTransferTax`도 함께 보므로 **이 결함과 무관한 곳까지 움직인다**.
+   *
+   * ⚠️ fallback은 **근사**다 — 주택 수 제외(영 §167의3① 각 호)·상속 5년 배제·혼인 합가 차감을
+   *    반영하지 못한다. 그래서 정밀 판정이 있으면 leaf가 **그것을 우선**하고(재판정 없음),
+   *    fallback으로 계산했을 때는 아래에서 경고를 남긴다.
+   */
+  const surchargeApplication = resolveSurchargeApplication(
+    {
+      propertyType: "housing",
+      isRegulatedArea:
+        asset.surchargeFallback?.isRegulatedArea ?? asset.multiHouse?.isRegulatedArea ?? false,
+      householdHousingCount: asset.surchargeFallback?.householdHousingCount ?? 0,
+      transferDate,
+    },
+    multiHouseSurcharge,
+    surchargeSpecialRules,
+  );
+
+  /**
+   * 정밀 판정 없이 원시 플래그로 **실제 중과를 건** 경우 — 화면에 근사임을 알린다.
+   *
+   * ⚠️ 술어가 `isSurchargeCase`가 **아니다**. 한시 유예(영 §167의3①12의2) 중에는 `case`가
+   *    true여도 세율·장특 어느 쪽도 움직이지 않는다 — 그때 「중과를 적용했습니다」를 띄우면
+   *    **하지 않은 일을 했다고 말하는 것**이 된다(실측: 2026-05-09 양도에서 경고만 떴다).
+   */
+  const surchargeFromFallback =
+    multiHouseSurcharge === undefined && surchargeApplication.isSurchargeApplied;
+
+  // §95② 본문 괄호 — 「제104조 제7항 각 호에 따른 자산」의 장기보유특별공제 **배제**.
+  //
+  // ⚠️ 술어가 `surchargeApplicable`이 **아니다**. 2008 위기취득 배제(부칙 §9270호 §14①)는
+  //    **세율만** 배제하고 `surchargeType`은 유지하므로 §104⑦ 각 호 해당 자산인 것은 변함이 없다
+  //    → 장특 배제는 존속한다(서울행정법원 2024구단72950 국승 ·
+  //    `types/multi-house-surcharge.types.ts:410-412`). 반면 한시 유예(§167의3①12의2)는
+  //    각 호에서 빼주는 것이라 장특이 살아난다. 단건 정본도 같은 조합이다
+  //    (`transfer-tax-helpers.ts:458-461` — `isSurcharge && !isSuspended`).
+  //    leaf의 `isSurchargeApplied`가 정확히 그 조합(`isSurchargeCase && !isSuspended`)이다.
+  const surchargeLthdExcluded = surchargeApplication.isSurchargeApplied;
+
+  if (surchargeFromFallback) {
+    warnings.push(
+      "세대 보유 주택 목록이 입력되지 않아 「세대 보유 주택 수」와 조정대상지역 여부만으로 다주택 중과를 적용했습니다. " +
+        "주택 수 제외 특례(소득세법 시행령 §167의3① 각 호)·상속주택 5년 배제·혼인 합가 차감은 반영되지 않았습니다 — " +
+        "정확한 판정을 원하시면 보유 주택 목록을 입력하세요.",
+    );
+  }
 
   // 파생값 (면적 비율)
   const derived = computeDerivedAreas(asset);
@@ -389,10 +446,13 @@ export function calcMixedUseTransferTax(
   // ⚠️ 세율의 술어는 `surchargeApplicable`이다(장특 배제와 **다르다**). 2008 위기취득
   //    (부칙 §9270호 §14①)은 **세율만** 배제하므로 여기서는 빠지고, 장특 배제는 존속한다.
   // ⚠️ `resolveSurchargeAddonRate`는 2018-04-01 이전 양도에 **null**을 돌려준다(중과 신설 전).
+  //    ⇒ 두 축을 각각 노출하는 leaf(`isSurchargeApplied` ↔ `isRateSurchargeApplied`)를 그대로 쓴다.
+  //      위 §95② 배제와 **같은 판정 객체**에서 나오므로 「장특은 배제인데 세율은 그대로」가 생길 수 없다.
   const surchargeAddon =
-    multiHouseSurcharge?.surchargeApplicable &&
-    multiHouseSurcharge.surchargeType !== "none"
-      ? resolveSurchargeAddonRate(transferDate, multiHouseSurcharge.surchargeType) ?? undefined
+    surchargeApplication.isRateSurchargeApplied &&
+    surchargeApplication.effectiveSurchargeType !== "none"
+      ? resolveSurchargeAddonRate(transferDate, surchargeApplication.effectiveSurchargeType) ??
+        undefined
       : undefined;
 
   // P6(계획서 D-8) — 배율초과 비사업용 토지도 §104⑤2호 파트로 들어가므로 종전의
@@ -520,6 +580,21 @@ export function calcMixedUseTransferTax(
     warnings,
     // §104⑦ 판정 echo — 세율·장특 배제와 결과 카드 표시가 **같은 값**을 보게 한다.
     multiHouseSurcharge,
+    /**
+     * §95② 배제 echo — 카드가 `multiHouseSurcharge`로 **재도출하던 것**을 대체한다.
+     * fallback 경로에는 그 객체가 없어 카드가 배제를 못 알아봤다(실측: 「표1, 0.0%」로 표시).
+     */
+    ...(surchargeLthdExcluded
+      ? {
+          surchargeLthdExclusion: {
+            houseCount:
+              multiHouseSurcharge?.effectiveHouseCount ??
+              asset.surchargeFallback?.householdHousingCount ??
+              0,
+            fromFallback: surchargeFromFallback,
+          },
+        }
+      : {}),
     partialUsageChange,
     amendmentDetail,
     // 상속 취득 게이트 echo (소령 §163⑨) — UI 재판정 방지용 단일 소스.

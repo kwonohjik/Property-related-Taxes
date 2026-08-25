@@ -185,6 +185,32 @@ export interface MixedUseAssetInput {
     isRegulatedArea: boolean;
   };
 
+  /**
+   * 🔴 법 §104⑦ 중과 **원시 플래그 fallback** — `multiHouse`(정밀)가 없을 때만 쓴다.
+   *
+   * ## 왜 필요한가 (2026-08-25)
+   *
+   * `multiHouse`는 `houses[]`가 있어야 조립된다(`route.ts` — 「`houses` 미전송이면 undefined →
+   * 엔진이 중과 판정을 건너뛴다」). 그래서 사용자가 **세대 보유 주택 목록을 채우지 않으면
+   * 겸용주택에는 중과가 통째로 미적용**됐다 — 실측 505,484,136원 과소과세
+   * (조정지역·2주택: 세율 0.65→0.45 · 주택분 장특공제 0→445,655,171).
+   *
+   * 일반 주택(`housing`)·재개발APT는 같은 상황에서 `SURCHARGE_FALLBACK_PROPERTY_TYPES`로
+   * 중과가 걸린다. **겸용만 달랐다** — 자산 종류가 세액을 가르는 좌우 불일치였다.
+   *
+   * ⚠️ **fallback은 근사다.** 주택 수 제외(영 §167의3① 각 호)·상속 5년 배제·혼인 합가 차감을
+   *    반영하지 못한다. 그래서 정밀 판정이 있으면 **재판정하지 않고** 그것을 쓰고,
+   *    fallback으로 계산했을 때는 결과에 경고를 남긴다(`warnings`).
+   *
+   * 🔑 `householdHousingCount`는 **양도하는 겸용주택 자신을 포함한** 세대 보유 주택 수다.
+   *    §104⑦ 각 호의 「1세대 2주택」이 세대 소유분 전체를 세므로 +1 보정을 하지 않는다.
+   *    일반 주택 경로(`transfer-tax-surcharge-predicate.ts`)도 같은 규약이다.
+   */
+  surchargeFallback?: {
+    isRegulatedArea: boolean;
+    householdHousingCount: number;
+  };
+
   // ── §164⑨1호 공익수용 특례 (계획 P7/D8, 일반 §97 전용) ──
   // 목별 독립 적용: 주택분(라목 개별주택가격 총액) + 상가분(가목 토지 기준시가). 상가 건물분·모든
   // 안분은 원값(§80⑧·§166⑥·D16-GB). 차감은 각 부분 환산 분모에만. PHD·4부분은 미적용(후속).
@@ -690,6 +716,27 @@ export interface MixedUseGainBreakdown {
    * (계산-표시 drift 차단 — `feedback_engine_result_display_drift`).
    */
   multiHouseSurcharge?: MultiHouseSurchargeResult;
+
+  /**
+   * 🔴 §95② 장기보유특별공제 **배제 판정 echo** — 표시가 계산을 **재도출하지 않게** 한다.
+   *
+   * ## 왜 필요한가 (2026-08-25)
+   *
+   * `MixedUseResultCard`는 「판정은 엔진 결과를 그대로 읽는다 — 재도출 금지」라 적어 두고도
+   * 실제로는 `multiHouseSurcharge.surchargeType !== "none" && !isSurchargeSuspended`를
+   * **다시 계산**했다. 그래서 원시 플래그 fallback으로 배제된 경우
+   * (`multiHouseSurcharge`가 아예 없다) 화면이 **「장기보유공제 (표1, 0.0%)」**로 표시됐다 —
+   * 공제는 0인데 **보유기간이 짧아서 0인 것처럼** 읽혔다.
+   *
+   * ⇒ 배제 여부·표시 문구에 필요한 값을 **엔진이 확정해 실어 보낸다**.
+   *    미배제면 `undefined`(카드가 종전 산식 표시를 유지한다).
+   */
+  surchargeLthdExclusion?: {
+    /** 표시 문구용 세대 주택 수 — 정밀은 `effectiveHouseCount`, fallback은 입력값 그대로. */
+    houseCount: number;
+    /** 원시 플래그 근사로 판정했는가 — 화면이 한계를 함께 말해야 한다. */
+    fromFallback: boolean;
+  };
   /**
    * 보유 중 일부 용도변경 메타 — 결과 카드 "취득시점 자산 구성" 섹션 표시용.
    * partialUsageChange 토글 OFF 시 undefined.
