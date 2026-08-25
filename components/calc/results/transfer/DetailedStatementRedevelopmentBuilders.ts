@@ -12,6 +12,8 @@
 
 import type { StatementItem, PerAssetValue } from "./DetailedStatementHelpers";
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
+import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
+import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
 import { redevBranchTotals } from "./redev-acquisition-inverse";
 import { inverseRedevAcquisition } from "./redev-acquisition-inverse";
 
@@ -604,10 +606,19 @@ export function applyRedevelopmentOverrides(
   totalTransferPrice: number,
   subject?: "apt" | "right",
   settlementDirection?: "pay" | "receive",
+  /**
+   * §95② 장기보유특별공제 **배제 사유** — 있으면 분할별 산식 대신 사유를 쓴다.
+   *
+   * 재개발은 자체 산식 빌더를 쓰므로 일반 경로의 `buildLthdFallbackFormulas`(배제 시
+   * 「0원 — 사유」로 대체)를 타지 않는다. 그래서 배제돼도 「양도차익 × **0%** (보유 21년 1개월)」로
+   * 표시돼 **보유기간이 짧아서 0인 것처럼** 읽혔다.
+   */
+  lthdExclusionReason?: LthdExclusionReason,
 ): void {
   // 사례 37 — 토지 출자 §166③ 분기: landContribDetail 존재 시 2분할 산식으로 오버라이드
   if (redev.landContribDetail) {
     applyLandContribOverrides(items, redev, totalTransferPrice);
+    applyLthdExclusionOverride(items, lthdExclusionReason);
     return;
   }
 
@@ -722,4 +733,27 @@ export function applyRedevelopmentOverrides(
     incomeItem.legalBasis = "소득세법 §95①";
     incomeItem.perAsset = buildRedevPerAssetForIncome(redev, subject, settlementDirection);
   }
+
+  applyLthdExclusionOverride(items, lthdExclusionReason);
+}
+
+/**
+ * §95② 배제 시 장특공제 행을 **사유로 덮는다** — 분할별 산식은 이때 의미가 없다.
+ *
+ * 일반 경로(`buildLthdFallbackFormulas`)와 **같은 라벨 소스**(`LTHD_EXCLUSION_LABEL`)를 쓴다.
+ * 문구를 따로 쓰면 같은 배제가 화면 두 곳에서 다르게 읽힌다.
+ */
+function applyLthdExclusionOverride(
+  items: Map<string, StatementItem>,
+  reason: LthdExclusionReason | undefined,
+): void {
+  if (!reason) return;
+  const ltItem = items.get("ltDeduction");
+  if (!ltItem) return;
+
+  const label = LTHD_EXCLUSION_LABEL[reason];
+  ltItem.formula = `0원 — ${label}`;
+  ltItem.legalBasis = "소득세법 §95② 본문 괄호 · §104⑦";
+  // 분할별 값도 전부 0이므로 「분할별 산식」을 남기면 0%가 보유기간 탓으로 읽힌다.
+  ltItem.perAsset = undefined;
 }

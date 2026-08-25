@@ -449,6 +449,70 @@ Test Files  1491 passed | 1 skipped (1492)
 
 - **E2E 실브라우저 확인 — 미수행.** UI 변경이 0(④⑤ 무변경)이고 엔진 내부 술어만 바뀌었으나,
   완료 조건상 명시한다.
-- **결과뷰 배선(직전 계획서 §7.5 E)** — 별도 배치.
+- **결과뷰 배선(직전 계획서 §7.5 E)** — §10에서 이어서 수행.
 - **겸용주택 fallback 미포함**(과소과세 방향) — 별건. RT-14가 경계를 지킨다.
 - **유예 창 나·다목**(토지거래허가 조건부 배제) — 별건.
+
+---
+
+## §10 결과뷰 배선 (직전 계획서 §7.5 **E**)
+
+### §10.1 🔴 착수 전 실측이 「대상 2개」를 뒤집었다
+
+직전 계획서는 「대상은 **2개**: `TransferTaxResultView`(단건) · `MultiTransferTaxResultView`(다건)」라 했다. **다건은 대상이 아니다.**
+
+`lib/calc/multi-transfer-tax-validate.ts:57`
+
+```ts
+if (a.assetKind === "redevelopment_apt") {
+  return "재개발·재건축(시행령 §166)은 단건 계산기에서만 지원됩니다.";
+}
+```
+
+입주권도 같은 이유로 차단한다(`:69`). 일괄(bundled) 경로도 마찬가지다 — `aggregateToFilingResult`가 `redevelopmentDetail`을 아예 싣지 않고, `transfer-result.types.ts:466`이 「`redevelopmentDetail`은 해당 자산이 **일괄에서 차단되어(PR #854) 도달 불가**」로 명시한다.
+
+⇒ **실제 대상은 단건 하나**다(memory `feedback_transfer_result_view_is_not_one`의 역방향 — 뷰가 4개라고 넷 다 손대는 것도 아니다).
+
+### §10.2 🔴 「배선이 안 됐다」도 절반만 맞았다
+
+| 표시 요소 | 종전 상태 |
+|---|---|
+| 중과 배지(`surchargeType`) | **이미 나온다** — 직전 배치가 필드를 실었고 `TransferTaxResultView:419`가 렌더한다 |
+| 장특공제 배제 **사유** | ❌ 재개발 경로가 `lthdExclusionReason`을 **안 싣는다** |
+
+실측 대조:
+
+| 경로 | `lthdExclusionReason` |
+|---|---|
+| 일반 주택 · 조정 3주택 | `multi_house_surcharge` |
+| **재개발APT · 조정 3주택** | **`undefined`** |
+
+재개발은 **자체 산식 빌더**(`DetailedStatementRedevelopmentBuilders.ts`)를 쓰므로 일반 경로의 배제 대체(`buildLthdFallbackFormulas` — 「0원 — 사유」)를 타지 않는다. 그래서 화면에 「315,000,000 × **0%** (보유 21년 1개월) = 0」이 남아 **보유기간이 짧아서 0인 것처럼** 읽혔다(memory `feedback_engine_result_display_drift`).
+
+### §10.3 변경 지점 (4곳)
+
+| # | 파일 | 내용 |
+|---|---|---|
+| E-a | `lib/tax-engine/transfer-tax-redevelopment.ts` | `lthdExcludedBySurcharge` **같은 술어**에서 `lthdExclusionReason` 탑재 |
+| E-b | `DetailedStatementRedevelopmentBuilders.ts` | `applyLthdExclusionOverride` — 배제 시 분할 산식 대신 사유. `perAsset`도 비운다 |
+| E-c | `DetailedStatementHelpers.ts:655` | `applyRedevelopmentOverrides`에 사유 전달 |
+| E-d | `RedevelopmentDetailCard.tsx` + `TransferTaxResultView.tsx` | 카드 배너 + prop 배선 |
+
+라벨은 **`LTHD_EXCLUSION_LABEL` 단일 소스**다 — 문구를 따로 쓰면 같은 배제가 화면 두 곳에서 다르게 읽힌다.
+
+### §10.4 anchor 8건 + mutation **6/6**
+
+`lthd-exclusion-display.anchor.test.ts`(LX-01~05) · `redevelopment-lthd-exclusion-banner.test.tsx`(LXU-01~03)
+
+| ID | 무력화 | 실패 |
+|---|---|---|
+| E-1 | 엔진 `lthdExclusionReason` 미탑재(종전 상태) | 5 |
+| E-2 | 배제 여부와 무관하게 항상 탑재(**술어 분리**) | 3 |
+| E-3 | 상세명세서 override 미호출 | 2 |
+| E-4 | `perAsset` 비우기 제거(분할 산식 잔존) | 1 |
+| E-5 | Helpers가 사유를 안 넘김(배선 끊기) | 2 |
+| E-6 | 카드 배너 제거 | 2 |
+
+> **E-2가 핵심이다** — 배제 여부와 사유가 **같은 술어**에서 나오는지를 잰다. 따로 판정하면
+> 「공제는 살아 있는데 사유는 붙어 있다」는 세 번째 진실이 생긴다.
+> LX-02가 비조정·1주택과 **유예 중** 두 경우로 그것을 고정한다.

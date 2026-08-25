@@ -340,6 +340,15 @@ export function calculateRedevelopmentTax(
      * 그 위험을 새로 활성화**한다(memory `feedback_ui_gate_expansion_activates_latent_defect`).
      */
     multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
+    /**
+     * 🔑 **배제한 이유를 화면까지 보낸다** — 일반 경로(`transfer-tax-lthd.ts`)는 이 필드를
+     * 채우는데 재개발 경로만 비어 있었다. 그러면 상세명세서·결과 카드가 「양도차익 × **0%**」로만
+     * 표시해 **왜 0인지 알 수 없다**(memory `feedback_engine_result_display_drift`).
+     *
+     * 배제 여부와 이 필드는 **같은 술어**(`lthdExcludedBySurcharge`)에서 나온다 — 따로 판정하면
+     * 「공제는 0인데 사유는 없다」는 세 번째 진실이 생긴다.
+     */
+    ...(lthdExcludedBySurcharge ? { lthdExclusionReason: "multi_house_surcharge" as const } : {}),
     reductionAmount: 0,
     determinedTax,
     penaltyTax: 0,

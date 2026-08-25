@@ -609,6 +609,7 @@ export function TransferTaxResultView({
           settlementDirection={
             (formData?.assets?.[0]?.redevSettlementDirection as "pay" | "receive" | undefined) ?? "pay"
           }
+          {...(result.lthdExclusionReason ? { lthdExclusionReason: result.lthdExclusionReason } : {})}
         />
       )}
 
