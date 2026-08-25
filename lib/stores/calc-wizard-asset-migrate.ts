@@ -16,6 +16,10 @@ import {
 import { migratePartialAreaApportionFields } from "./calc-wizard-asset-partial-area";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "./calc-wizard-asset-factory";
 import type { AssetForm } from "./calc-wizard-asset";
+import {
+  exemptionAtApprovalInScope,
+  postApprovalExpensesInScope,
+} from "@/lib/calc/redev-field-scope";
 
 /**
  * 금액 문자열(CurrencyInput 저장 규약 — 콤마 포함)이 양수인가.
@@ -668,6 +672,15 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 사례 46 — 청산금 수령분 단독 신고
   if (a.redevReceiveOnlyMode === undefined) a.redevReceiveOnlyMode = "";
   if (a.redevExemptionEligibleAtApproval === undefined) a.redevExemptionEligibleAtApproval = "";
+
+  // 축을 벗어난 재개발 저장값 정규화 (U1-01 · U1-02) — 근거·범위는 `lib/calc/redev-field-scope.ts`.
+  // 재개발 자산에만 적용한다 — 다른 종류의 잔재는 종류를 되돌리면 복귀해야 한다.
+  if (a.assetKind === "redevelopment_apt" || a.assetKind === "right_to_move_in") {
+    // 술어가 읽는 4필드는 위에서 모두 기본값이 채워졌다(`a`는 아직 raw 레코드다).
+    const redevAxes = a as unknown as AssetForm;
+    if (!exemptionAtApprovalInScope(redevAxes)) a.redevExemptionEligibleAtApproval = "";
+    if (!postApprovalExpensesInScope(redevAxes)) a.redevPostApprovalExpenses = "";
+  }
   // 사례 36 — 1세대1입주권 비과세 C-1 안전장치
   if (a.redevPriorHouseHoldingMonths === undefined) a.redevPriorHouseHoldingMonths = "";
   // §89①4호 나목 — 그 1주택 취득일 (구 sessionStorage에는 없다)

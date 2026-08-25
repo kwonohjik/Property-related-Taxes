@@ -15,6 +15,11 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import {
+  resolveRedevSubject,
+  exemptionAtApprovalInScope,
+  postApprovalExpensesInScope,
+} from "./redev-field-scope";
 
 /**
  * AssetForm redev* 필드 → RedevelopmentInfo 서브객체 변환.
@@ -27,8 +32,7 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
   // UI display fallback과 동일(RedevelopmentBlock.tsx). 3중 패턴(UI/API/validate).
   // assetKind="right_to_move_in" 시 redevSubject 미입력이면 "right" fallback
   // (경로 A 버그 수정: assetKind="right_to_move_in" + redevSubject="" → "apt" 오변환 차단)
-  const subjectDefault = asset.assetKind === "right_to_move_in" ? "right" : "apt";
-  const subject = (asset.redevSubject || subjectDefault) as "right" | "apt";
+  const subject = resolveRedevSubject(asset);
   /**
    * 완공 APT 양도 전용 필드 게이트.
    *
@@ -54,7 +58,12 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     // 인가후 분 필요경비 = redev 전용 입력 + 자본적지출(§97① 가목) + 양도비(§97① 나목)
     // 신축APT 양도 시점에 발생한 자본적지출·양도비는 인가후 분에 귀속.
     postApprovalExpenses: (() => {
-      const redevPost = asset.redevPostApprovalExpenses ? parseAmount(asset.redevPostApprovalExpenses) : 0;
+      // U1-02 — 승계조합원 전용 칸이다. 원조합원으로 되돌리면 화면에서 사라지지만 저장값은 남고,
+      //         그 축에는 지울 위젯이 없다 ⇒ **범위 밖이면 합산하지 않는다**(마이그레이션과 2중선).
+      const redevPost =
+        postApprovalExpensesInScope(asset) && asset.redevPostApprovalExpenses
+          ? parseAmount(asset.redevPostApprovalExpenses)
+          : 0;
       const capex = parseAmount(asset.capitalExpenditure);
       const transferExp = parseAmount(asset.transferExpense);
       const total = redevPost + capex + transferExp;
@@ -118,8 +127,12 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
         : asset.redevReceiveOnlyMode === "no"
           ? false
           : undefined,
-    exemptionEligibleAtApproval:
-      asset.redevExemptionEligibleAtApproval === "yes"
+    // U1-01 — ③-c 카드는 「완공APT + 청산금 수령 + 원조합원」에서만 열린다. 방향을 되돌리면
+    //         카드가 사라지는데 완공APT에는 이 값을 지울 다른 위젯이 없다(§⑥ 토글은 입주권 전용)
+    //         ⇒ **범위 밖이면 보내지 않는다**. 남으면 엔진이 LTHD를 표1로 강등한다(§95② 별표2).
+    exemptionEligibleAtApproval: !exemptionAtApprovalInScope(asset)
+      ? undefined
+      : asset.redevExemptionEligibleAtApproval === "yes"
         ? true
         : asset.redevExemptionEligibleAtApproval === "no"
           ? false

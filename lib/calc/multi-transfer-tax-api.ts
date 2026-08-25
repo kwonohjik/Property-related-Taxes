@@ -19,6 +19,7 @@ import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 
 import { isHousingLike } from "./housing-like-asset";
+import { buildPresaleRightsPayload } from "./presale-rights-payload";
 
 /** TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용) */
 export function buildPropertyPayload(form: TransferFormData) {
@@ -33,6 +34,13 @@ export function buildPropertyPayload(form: TransferFormData) {
 
   // ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (단건 API와 동일 공용 빌더 — drift 차단)
   const nblRaw = primary ? buildNonBusinessLandRaw(primary, form.transferDate) : undefined;
+
+  // ⑬ 세대 보유 분양권·입주권 — 단건과 **같은 leaf**(P1-02).
+  //    다건 마법사는 단건 Step4를 그대로 임베드해 화면에는 이 위젯이 뜨는데, 종전 ⑬은 이 키를
+  //    아예 만들지 않아 §104⑦2호·4호 판정이 조용히 빠졌다(실측 79,750,000원 과소).
+  const presaleRightsPayload = primary
+    ? buildPresaleRightsPayload(primary.assetKind, form.presaleRights)
+    : undefined;
 
   const housesPayload =
     isHousingLike(primaryKind) && form.houses.length > 0
@@ -214,6 +222,7 @@ export function buildPropertyPayload(form: TransferFormData) {
     // ⑬ 1990.8.30. 이전 취득 토지 환산 (route ⑭·엔진 STEP 0.4 지원) — 단건과 공용 헬퍼
     ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
+    ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
     // ⑬ 다주택 중과 한시 유예/경과조치 — houses 제공 시에만 엔진이 소비 (단건 callTransferTaxAPI와 동일 게이트).
     // 다건은 자산별 form이라 gracePeriod도 native per-property.
     ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),

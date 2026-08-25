@@ -20,7 +20,7 @@ import {
   buildPreHousingDisclosurePayload,
   buildNewConstructionPayload,
 } from "./transfer-tax-api-body-blocks";
-import { isHousingLike, toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildCommercialAppurtenantLand, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildCommercialAppurtenantLand, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
@@ -28,6 +28,7 @@ import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { isSuccessorRightTransfer } from "./transfer-successor-right";
 import { successorRightAcquisitionTotal } from "./transfer-successor-right";
+import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 import { buildParcelsPayload } from "./transfer-tax-api-parcels";
@@ -82,22 +83,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     form.sellingHouseExclusion,
   );
 
-  // ── 세대 보유 분양권·입주권 (취득일 입력분만 — 2021.1.1 이후 취득분 주택수 산입) ──
-  const presaleRightsPayload =
-    isHousingLike(primary.assetKind) && form.presaleRights.length > 0
-      ? form.presaleRights
-          .filter((p) => p.acquisitionDate)
-          .map((p) => ({
-            id: p.id,
-            type: p.type,
-            acquisitionDate: p.acquisitionDate,
-            region: p.region,
-            regionCriteria: p.regionCriteria,
-            rightValue: p.rightValue ? parseAmount(p.rightValue) || undefined : undefined,
-            isSpouseOwned: p.isSpouseOwned,
-            regionCode: p.regionCode || undefined,
-          }))
-      : undefined;
+  // ── 세대 보유 분양권·입주권 (취득일 입력분만 — §104⑦2호·4호 주택수 산입) ──
+  // 다건 ⑬과 **같은 leaf**를 쓴다 — 종전에는 다건에 이 규칙이 아예 없어 침묵 소실했다(P1-02).
+  const presaleRightsPayload = buildPresaleRightsPayload(primary.assetKind, form.presaleRights);
 
   // 취득가 산정방식은 자산-수준 플래그에서 도출 (Step1↔Step3 통합 후).
   // 폼-전역 form.acquisitionMethod / form.appraisalValue 는 더 이상 사용하지 않음.
@@ -251,6 +239,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const primaryFractional = primaryRatio < 1.0;
   // 지분 스케일 적용기 — 금액 필드 전용 단일 진입점 (transfer-tax-api-split.ts).
   const ratioed = makeRatioed(primaryRatio, primaryFractional);
+  /**
+   * 지분(공유) 모드 스케일러 — **숫자 금액용**.
+   *
+   * 화면 규약은 「모든 금액을 100% 기준으로 입력하고 시스템이 지분율을 적용한다」이다
+   * (`OwnershipRatioInput.tsx:13`). 종전 `acquisitionPrice` 삼항은 이 규칙을 **가장 마지막
+   * 갈래에만** 붙여 두어 승계조합원 입주권·§166 재개발 갈래가 100%로 새 나갔다(U2-03).
+   * ⇒ 삼항 **전체를 한 번** 감싸 갈래가 늘어도 규칙이 따라오게 한다.
+   */
+  const shareOf = (v: number): number => (primaryFractional ? applyRatio(v, primaryRatio) : v);
   // 파트 필드 전송은 buildSplitPayload 담당 — 여기선 §166⑥ 안분 3요소 게이트로만 쓴다.
   const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift);
   // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고,
@@ -340,7 +337,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     /** 12억 안분 분모용 총 물건 양도가액 — primary 지분 모드 전용 */
     totalPropertyTransferPrice: primaryFractional ? totalContractPrice : undefined,
     transferDate: receiveOnlyTransferDate || form.transferDate,
-    acquisitionPrice:
+    // ⚠️ 지분 안분(`shareOf`)은 **삼항 전체**에 건다 — 갈래별로 붙이면 새 갈래가 규칙을 빠뜨린다(U2-03).
+    acquisitionPrice: shareOf(
       // 승계조합원 입주권 — §97①1호 가목 실지거래가액 = 승계취득가 + 취득 후 추가분담금
       // (기준-2025-법규재산-0057). §166 3분할을 타지 않으므로 청산금이 별도 차감되지 않는다.
       // 승계 + **추계**면 실가 2칸을 보내지 않는다 — 엔진이 `appraisalValue ?? acquisitionPrice`
@@ -356,9 +354,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             primary.redevIsSuccessorMember === "yes"
               ? parseAmount(primary.fixedAcquisitionPrice)
               : parseAmount(primary.redevActualAcquisitionPrice)
-          : primaryFractional
-            ? applyRatio(parseAmount(primary.fixedAcquisitionPrice), primaryRatio)
-            : parseAmount(primary.fixedAcquisitionPrice),
+          : parseAmount(primary.fixedAcquisitionPrice),
+    ),
     acquisitionDate: parcelModeActive
       ? firstParcelAcqDate
       : primary.acquisitionCause === "carryover_gift"

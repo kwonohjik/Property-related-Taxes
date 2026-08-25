@@ -31,6 +31,7 @@ import { previewGeneralBuildingEstimated } from "@/lib/calc/transfer-estimated-p
 import { buildSameAdjustmentPeriodInput } from "@/lib/calc/transfer-same-adjustment-period-input";
 import { replotIncrementStdPriceAtTransfer } from "@/lib/calc/replot-increment-std-price";
 import { calcStdPriceMonths, classifySameAdjustmentPeriod, calcSameAdjustmentPeriodStdPrice } from "@/lib/tax-engine/same-adjustment-period-std-price";
+import { postApprovalExpensesInScope } from "@/lib/calc/redev-field-scope";
 
 export interface TransferAssetSummaryRow {
   assetId: string;
@@ -184,11 +185,13 @@ function directAcqRaw(a: AssetForm): { value: number; pending: boolean } {
  * 다필지는 필지별, 일반건물은 토지·건물 파트별.
  */
 function directExpenseRaw(a: AssetForm): number {
-  // 재개발·입주권 — API `transfer-tax-api-redev.ts:44-49`: 인가전 + (인가후 + 자본적지출 + 양도비)
+  // 재개발·입주권 — API `transfer-tax-api-redev.ts`: 인가전 + (인가후 + 자본적지출 + 양도비)
+  // ⚠️ 인가후 분은 **승계조합원 축에서만** 합산한다 — API가 같은 술어로 게이트하므로(U1-02)
+  //    여기서만 더하면 사이드바가 계산에 쓰이지 않는 금액을 보여준다.
   if (isRedevelopmentPath(a)) {
     return (
       parseRaw(a.redevPreApprovalExpenses) +
-      parseRaw(a.redevPostApprovalExpenses) +
+      (postApprovalExpensesInScope(a) ? parseRaw(a.redevPostApprovalExpenses) : 0) +
       parseRaw(a.capitalExpenditure) +
       parseRaw(a.transferExpense)
     );

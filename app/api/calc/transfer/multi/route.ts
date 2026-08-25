@@ -22,7 +22,7 @@ import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
-import { mapHousesToEngine, mapGracePeriodToEngine } from "@/lib/api/transfer-route-multi-house";
+import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } from "@/lib/api/transfer-route-multi-house";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { mapReductionsToEngine } from "../route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
@@ -189,6 +189,9 @@ export async function POST(request: NextRequest) {
       nonBusinessLandDetails: buildNblEngineInput(p.nonBusinessLandRaw),
       // ⑭ 다건도 단건과 동일 공용 헬퍼 — P2 특례(인구감소·부득이사유·장기임대 등) + ⑬ 소형신축/미분양 전 필드 도달 (선재 strip 갭 해소)
       houses: mapHousesToEngine(p.houses),
+      // ⑭ 세대 보유 분양권·입주권 — 단건 route와 동일 공용 헬퍼(취득일 string→Date).
+      //    ⑬과 함께 배선해야 도달한다(P1-02 — 종전에는 두 층 모두 비어 있었다).
+      presaleRights: mapPresaleRightsToEngine(p.presaleRights),
       sellingHouseId: p.sellingHouseId,
       // ⑭ 다주택 중과 한시 유예/경과조치 — 단건 route와 동일 공용 헬퍼(Date 변환). 자산별 gracePeriod.
       gracePeriod: mapGracePeriodToEngine(p.gracePeriod),

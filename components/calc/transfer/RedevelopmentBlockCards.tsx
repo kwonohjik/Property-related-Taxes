@@ -305,7 +305,10 @@ export function SuccessorMemberSection({
         redevRightsValue: "",
       });
     } else {
-      onChange({ redevIsSuccessorMember: "no" });
+      // U1-02 — 「예」 분기가 이미 쓰는 패턴 그대로. 「인가후 필요경비」는 승계 전용 칸이라
+      //         되돌리면 화면에서 사라지는데 값은 남아 인가후 양도차익을 조용히 깎는다
+      //         (시행령 §166①1호). 원조합원에는 그 금액을 지울 칸이 없다.
+      onChange({ redevIsSuccessorMember: "no", redevPostApprovalExpenses: "" });
     }
   };
 

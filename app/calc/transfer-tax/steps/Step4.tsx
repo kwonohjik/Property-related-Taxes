@@ -649,6 +649,25 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <SectionHeader title="④ 주택수·중과 판정" description="세대 전체 보유 주택·양도일 조정대상지역으로 다주택 중과를 판정합니다" />
           <div className="space-y-3">
+            {/*
+              세대 보유 분양권·입주권 — §104⑦2호(1주택 + 1개 → +20%p)·4호(합 3 이상 → +30%p).
+
+              `householdHousingCount`는 「세대 보유 **주택** 수」이고 분양권·입주권은 **별도 집계**다
+              (`house-count-divergence.ts:43`). 그런데 이 목록의 유일한 렌더 지점이 아래
+              `HousesListSection`(2채 이상 게이트) 안이라, 2호가 겨냥한 **바로 그 상태**(주택 1채)에서
+              분양권을 알릴 화면이 없었다 — 엔진은 이미 판정하므로 입력 경로만 끊긴 no-op이었다(U2-05).
+
+              ⚠️ 2채 이상에서는 아래 `HousesListSection`이 같은 `form.presaleRights`를 렌더한다.
+                 두 벌이 뜨면 같은 배열을 두 컴포넌트가 각각 patch해 마지막 것이 이긴다.
+            */}
+            {parseInt(form.householdHousingCount || "0") < 2 && (
+              <PresaleRightsSection
+                rights={form.presaleRights}
+                onChange={(presaleRights) => onChange({ presaleRights })}
+                showSpouseOwned={!!form.marriageDate}
+              />
+            )}
+
             {/* 세대 보유 주택 목록 + 분양권 + 감면주택 주택수 제외 (시행령 §167의3 주택 수 산정) */}
             {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
               <>
