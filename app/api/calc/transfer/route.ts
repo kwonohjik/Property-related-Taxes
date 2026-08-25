@@ -364,6 +364,21 @@ export async function POST(request: NextRequest) {
                 gracePeriod: engineInput.gracePeriod,
               }
             : undefined,
+        /**
+         * ⑭ 법 §104⑦ 중과 **원시 플래그 fallback** — 위 `multiHouse`가 `houses` 없이는
+         * 조립되지 않아 겸용주택에 중과가 통째로 미적용되던 것을 메운다(실측 505,484,136원 과소).
+         *
+         * ⚠️ **`multiHouse`와 나란히, 조건 없이 항상 보낸다.** 「houses가 없을 때만」으로 좁히면
+         *    엔진이 정밀 판정을 갖고도 원시 플래그를 못 받아 표시 문구를 만들지 못한다.
+         *    우선순위(정밀 > fallback)는 `resolveSurchargeApplication`이 판단한다.
+         */
+        surchargeFallback: {
+          isRegulatedArea: data.isRegulatedArea,
+          // 🔑 양도하는 겸용주택 **자신을 포함한** 세대 보유 주택 수 — §104⑦ 각 호의
+          //    「1세대 2주택」이 세대 소유분 전체를 세므로 +1 보정을 하지 않는다.
+          //    일반 주택 경로(`transfer-tax-surcharge-predicate.ts`)와 같은 규약이다.
+          householdHousingCount: data.householdHousingCount,
+        },
         landAcquisitionDate: new Date(data.mixedUse.landAcquisitionDate),
         buildingAcquisitionDate: new Date(data.mixedUse.buildingAcquisitionDate),
         /**
