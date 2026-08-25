@@ -128,19 +128,24 @@ export function ReductionDetailCards({
         <NewHousingReductionDetailCard detail={result.newHousingReductionDetail} />
       )}
       {result.rentalReductionDetail && (
-        <RentalReductionDetailCard detail={result.rentalReductionDetail} />
+        <RentalReductionDetailCard
+          detail={result.rentalReductionDetail}
+          calculatedTax={calculatedTax}
+        />
       )}
       {/* §97 시리즈 Phase 2 — 정밀 계산 결과 카드 */}
       {result.rental97LthdDetail && (
         <Rental97DetailCard
           detail={result.rental97LthdDetail}
           effectLabel="장기보유특별공제 특례 (§97의3)"
+          calculatedTax={calculatedTax}
         />
       )}
       {result.rental97TaxDetail && (
         <Rental97DetailCard
           detail={result.rental97TaxDetail}
           effectLabel="장기임대주택 세액감면"
+          calculatedTax={calculatedTax}
         />
       )}
       {/* §99의4 농어촌·고향주택 주택수 제외 (2026-06-11) */}
