@@ -584,21 +584,61 @@ function runOriginalMember(
   const postApprovalLthdAmt = splitLthdAmount(split.postApprovalExistingHouse.gain, lthd.postApprovalExistingHouse);
   const settlementLthdAmt = splitLthdAmount(split.settlement.gain, lthd.settlement);
 
-  // 인가전 분 표시용 필요경비 — 청산금 **수령** 분기만 §166①2호 나목 비율로 안분
+  // 인가전 분 표시용 필요경비 — 청산금 **수령** 분기는 §166①2호 나목 비율로 안분
   // (`apportionPreApprovalExpenses` 주석 참조 · 산식은 `redevelopment-settlement.ts:169`).
-  // 납부·완공APT 분기는 안분이 없어 원액이 그대로 정합이다.
+  // 납부 분기는 안분이 없어 원액이 그대로 정합이다.
+  //
+  // 🔴 2026-08-26 정정(E1-05 — **표시 전용**): 종전 게이트는 `isRight &&`가 붙어 있었고
+  //    주석도 「완공APT 분기는 안분이 없어」라고 적었다. 그러나 `computeAptReceive`는
+  //    완공APT **수령**에도 §166①2호 나목 안분을 그대로 적용한다(§166②2호 준용) —
+  //    양도가액·취득가액·양도차익이 모두 축소되는데 필요경비만 원액으로 남아
+  //    인가전 분 열이 어긋났다(실측 Δ5,000,000). 주석 자체가 오판의 근거였다.
   const rawPreApprovalExpenses = preApprovalNecessaryExpense(
     split.estimatedLumpDeduction ?? 0,
     redevelopment.preApprovalExpenses,
   );
   const preApprovalDisplayExpenses =
-    isRight && redevelopment.settlementDirection === "receive"
+    redevelopment.settlementDirection === "receive"
       ? apportionPreApprovalExpenses(
           rawPreApprovalExpenses,
           split.preApproval.apportionedTransfer, // = 평가액 − 청산금 (splitReceive의 분자와 동일)
           redevelopment.rightsValue,
         )
       : rawPreApprovalExpenses;
+
+  /**
+   * 인가후 필요경비 **표시 몫** — 엔진이 한 번만 차감한 금액을 열에 나눠 붙인다.
+   *
+   * 🔴 2026-08-26 신설(E1-06 — **표시 전용**): 종전에는 인가후 기존주택분과 청산금분에
+   *    **각각 원액**이 붙어 신고서 필요경비 열 합계가 정확히 2배가 됐다(실측 9,000,000 → 18,000,000).
+   *
+   * 분기별로 「엔진이 어디서 차감했는가」가 다르다 — 그 자리에만 붙인다:
+   *
+   * | 분기 | 차감 위치 | 표시 |
+   * |---|---|---|
+   * | 완공APT + 납부 | `splitAptPay` 이전 인가후양도차익에서 1회 → 평가액:청산금 비율로 갈림 | 같은 비율로 안분 |
+   * | 완공APT + 수령 | `computeAptReceive`의 인가후 기존주택분에서만 | 기존주택분 전액 · 청산금분 0 |
+   * | 완공APT + 수령(단독신고) | **차감 없음**(receiveOnly 조기반환이 값을 쓰지 않는다) | 양쪽 0 |
+   * | 입주권 (납부·수령) | 청산금분(§166①1호·①2호 가목)에서 1회 | 청산금분 전액 (종전과 동일) |
+   */
+  const rawPostApprovalExpenses = redevelopment.postApprovalExpenses ?? 0;
+  const postApprovalExpenseShare = ((): { existingHouse: number; settlement: number } => {
+    if (!isApt) return { existingHouse: 0, settlement: rawPostApprovalExpenses };
+    if (redevelopment.receiveOnlyMode === true) return { existingHouse: 0, settlement: 0 };
+    if (redevelopment.settlementDirection === "receive") {
+      return { existingHouse: rawPostApprovalExpenses, settlement: 0 };
+    }
+    // §166②1호 — 분양가 = 평가액 + 납부청산금. floor 잔차는 청산금분이 흡수한다
+    // (`splitAptPay`의 양도차익 분할과 같은 규약 — memory `feedback_floor_residual_absorption`).
+    const salePriceTotal = redevelopment.rightsValue + redevelopment.settlementAmount;
+    if (salePriceTotal <= 0) return { existingHouse: rawPostApprovalExpenses, settlement: 0 };
+    const existingHouse = safeMultiplyThenDivide(
+      rawPostApprovalExpenses,
+      redevelopment.rightsValue,
+      salePriceTotal,
+    );
+    return { existingHouse, settlement: rawPostApprovalExpenses - existingHouse };
+  })();
 
   const preApprovalDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: split.preApproval.apportionedTransfer,
@@ -637,7 +677,7 @@ function runOriginalMember(
       : 0,
     branchAcqDate: isApt ? acquisitionDate : undefined,
     branchTransferDate: isApt ? transferDate : undefined,
-    expenses: isApt ? (redevelopment.postApprovalExpenses ?? 0) : 0,
+    expenses: postApprovalExpenseShare.existingHouse,
     // 인가후 분 입주일 = 종전주택 입주일 (없으면 신축주택 입주일 fallback)
     // 인가후 분 퇴거일 = 신축주택 퇴거일 (없으면 종전주택 퇴거일 fallback)
     // §154⑧ 통산 거주 — 가장 이른 입주~가장 늦은 퇴거 구간 표시.
@@ -681,7 +721,8 @@ function runOriginalMember(
     lthdRate: lthd.settlement.applicable ? lthd.settlement.rate : 0,
     branchAcqDate: settlementAcqDate,
     branchTransferDate: settlementTransferDate,
-    expenses: redevelopment.postApprovalExpenses ?? 0, // §166①2호 가목: 인가후 분 필요경비 (양도비·자본적지출)
+    // §166①2호 가목(입주권): 인가후 분 필요경비 전액 · 완공APT는 위 `postApprovalExpenseShare` 참조
+    expenses: postApprovalExpenseShare.settlement,
     residenceStartDate: isApt ? newResStart : undefined,
     residenceEndDate: isApt ? newResEnd : undefined,
     residenceMonths: isApt ? newMonths : undefined,

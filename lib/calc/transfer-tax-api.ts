@@ -29,6 +29,7 @@ import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { isSuccessorRightTransfer } from "./transfer-successor-right";
 import { successorRightAcquisitionTotal } from "./transfer-successor-right";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
+import { isReceiveOnlyFiling } from "./redev-field-scope";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 import { buildParcelsPayload } from "./transfer-tax-api-parcels";
@@ -283,8 +284,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   //    subject 가드 없이 두면 「양도차익 0 강제」는 걸리지 않은 채 여기서 양도가액만 청산금 수령액으로
   //    교체돼 **양도차익이 조용히 사라진다**(실측: 4.2억 양도 → 청산금 분 양도차익 1.7억 → 0).
   //    subject는 `redevPayload`가 단일 소스 — UI display fallback과 같은 값이다(복제 금지).
-  const isReceiveOnly =
-    isRedevelopment && redevPayload?.subject === "apt" && primary.redevReceiveOnlyMode === "yes";
+  // 술어는 `redev-field-scope.ts` 단일 소스 — ⑥ 사이드바가 **같은 함수**를 쓴다(C1-05).
+  // 종전에는 여기에만 있어 사이드바가 계약 총액을 신고단위 양도가액으로 표시했다.
+  const isReceiveOnly = isReceiveOnlyFiling(primary);
   const receiveOnlySettlementAmount = isReceiveOnly ? parseAmount(primary.redevSettlementAmount) : 0;
   const receiveOnlyTransferDate = isReceiveOnly && primary.redevSettlementSaleDate
     ? primary.redevSettlementSaleDate

@@ -34,13 +34,43 @@ export const HIGH_VALUE_THRESHOLD = 1_200_000_000;
  * 보유분/거주분(`lthdHoldingPart`·`lthdResidencePart`)은 값이 있을 때만 0으로 덮는다
  * (undefined를 0으로 바꾸면 「분해 없음」이 「분해했는데 0」으로 뜻이 바뀐다).
  */
+/**
+ * LTHD 분해 필드(보유분·거주분)를 **0으로 덮는다** — 값이 정의돼 있을 때만.
+ *
+ * undefined를 0으로 바꾸면 「분해 없음」(§95② 표1 등)이 「분해했는데 0」으로 뜻이 바뀌어
+ * 신고서가 없는 구분을 인쇄한다.
+ */
+function zeroLthdParts(b: RedevelopmentBranchDetail): Partial<RedevelopmentBranchDetail> {
+  return {
+    ...(b.lthdHoldingPart !== undefined ? { lthdHoldingPart: 0 } : {}),
+    ...(b.lthdResidencePart !== undefined ? { lthdResidencePart: 0 } : {}),
+  };
+}
+
+/**
+ * LTHD 총액을 축소했을 때 분해 필드를 **같은 비율로** 다시 나눈다.
+ *
+ * 보유분 비율(`lthdHoldingPart / lthd`)을 보존하고 floor 잔차는 거주분이 흡수한다
+ * (memory `feedback_floor_residual_absorption`) — 「공제 = 보유분 + 거주분」이 항상 성립한다.
+ */
+function scaleLthdParts(
+  b: RedevelopmentBranchDetail,
+  scaledLthd: number,
+): Partial<RedevelopmentBranchDetail> {
+  const hasSplit = b.lthdHoldingPart !== undefined || b.lthdResidencePart !== undefined;
+  if (!hasSplit) return {};
+  if (scaledLthd <= 0) return { lthdHoldingPart: 0, lthdResidencePart: 0 };
+  const holdingFraction = b.lthd > 0 ? (b.lthdHoldingPart ?? 0) / b.lthd : 1;
+  const holdingPart = Math.floor(scaledLthd * holdingFraction);
+  return { lthdHoldingPart: holdingPart, lthdResidencePart: scaledLthd - holdingPart };
+}
+
 export function applyLthdExclusion(r: RedevelopmentResult): RedevelopmentResult {
   const zeroBranch = (b: RedevelopmentBranchDetail): RedevelopmentBranchDetail => ({
     ...b,
     lthd: 0,
     lthdRate: 0,
-    ...(b.lthdHoldingPart !== undefined ? { lthdHoldingPart: 0 } : {}),
-    ...(b.lthdResidencePart !== undefined ? { lthdResidencePart: 0 } : {}),
+    ...zeroLthdParts(b),
   });
   return {
     ...r,
@@ -82,25 +112,14 @@ export function applyHighValueAllocation(
     const taxableGain = Math.floor(originalGain * taxableRatio);
     const nontaxableGain = originalGain - taxableGain; // 정수연산 보존: 비과세 = 안분 전 - 과세대상
     const taxableLthd = branch.lthdRate > 0 ? Math.floor(taxableGain * branch.lthdRate) : 0;
-    // 12억 안분 후 보유분/거주분 비율은 lthdHoldingPart/lthd 비율로 보존
-    const hasSplit = branch.lthdHoldingPart !== undefined || branch.lthdResidencePart !== undefined;
-    let taxableHoldingPart: number | undefined;
-    let taxableResidencePart: number | undefined;
-    if (hasSplit && taxableLthd > 0) {
-      const holdingFraction = branch.lthd > 0 ? (branch.lthdHoldingPart ?? 0) / branch.lthd : 1;
-      taxableHoldingPart = Math.floor(taxableLthd * holdingFraction);
-      taxableResidencePart = taxableLthd - taxableHoldingPart;
-    } else if (hasSplit) {
-      taxableHoldingPart = 0;
-      taxableResidencePart = 0;
-    }
     return {
       ...branch,
       gain: taxableGain,
       lthd: taxableLthd,
       gainBeforeAllocation: originalGain,
       nontaxableGain,
-      ...(hasSplit ? { lthdHoldingPart: taxableHoldingPart, lthdResidencePart: taxableResidencePart } : {}),
+      // 12억 안분 후 보유분/거주분은 같은 비율로 재산정 (공용 leaf — E3-05로 4곳 단일화)
+      ...scaleLthdParts(branch, taxableLthd),
     };
   };
 
@@ -234,6 +253,9 @@ export function applySettlementExemption(
     lthdAfterAllocation: redev.settlement.lthd,
     gain: 0,
     lthd: 0,
+    // 🔴 2026-08-26 신설(E3-05) — 종전에는 분해 2필드가 원값으로 남아 신고서가
+    //    「청산금 열 공제 0 · 보유분 52,500,000」을 함께 인쇄했다.
+    ...zeroLthdParts(redev.settlement),
   };
 
   // total 재계산 (settlement 마스킹 반영)
@@ -407,6 +429,9 @@ export function applyOneRightExemption(
       lthdAfterAllocation: branch.lthd,
       gain: 0,
       lthd: 0,
+      // 🔴 2026-08-26 신설(E3-05) — 분해 2필드를 남기면 전액 비과세인데도
+      //    신고서 보유분 열에 210,000,000이 인쇄된다(실측).
+      ...zeroLthdParts(branch),
     });
     return {
       ...redev,
@@ -438,6 +463,9 @@ export function applyOneRightExemption(
         lthd: taxableLthd,
         gainBeforeAllocation: originalGain,
         nontaxableGain,
+        // 🔴 2026-08-26 신설(E3-05) — `applyHighValueAllocation`과 **같은 leaf**를 쓴다.
+        //    종전에는 이쪽만 분해를 안 건드려 안분 후 공제 84,000,000 vs 보유분 210,000,000이 됐다.
+        ...scaleLthdParts(branch, taxableLthd),
       };
     };
 
