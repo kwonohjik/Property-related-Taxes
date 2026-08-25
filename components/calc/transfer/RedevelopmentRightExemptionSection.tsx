@@ -4,13 +4,15 @@
  * RedevelopmentRightExemptionSection — 1세대1입주권 비과세 카드 (사례 36)
  *
  * assetKind="right_to_move_in" && redevSubject="right" 시 진입.
- * §89①4호 가목 비과세 요건 자기선언 + C-1 안전장치 3종.
+ * §89①4호 **가목·나목** 비과세 요건 자기선언 + C-1 안전장치 3종.
+ * (나목은 2026-08-25 신설 — C1-03. 「그 1주택 취득일부터 3년 이내」 판정용 DateInput 포함)
  *
  * 구조:
  *  §0-A  sky:    입주권 양도 안내 카드 (LTHD 대상 인가전 차익만)
  *  §⑥    violet: 1세대1입주권 비과세 카드
  *    ├── ToggleCard (redevExemptionEligibleAtApproval 기존 필드 재사용)
  *    ├── 보유·거주 월수 입력 (DecimalInput — 월수, 정수)
+ *    ├── 나목 — 세대 보유 1주택 취득일 (DateInput)
  *    ├── 12억 초과 자동 안내 (transferPrice > 12억 + 토글 ON 시)
  *    ├── (a) useMemo 자동 검증 → (b) rose 경고 카드 조건부 노출
  *    └── (c) 면책 문구 (토글 ON 시만)
@@ -27,6 +29,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { DateInput } from "@/components/ui/date-input";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -162,16 +165,33 @@ export function RedevelopmentRightExemptionSection({
               />
             </FieldCard>
 
+            {/* §89①4호 나목 — 그 1주택의 취득일 (3년 요건 판정) */}
+            <FieldCard
+              label="세대 보유 1주택의 취득일 (나목)"
+              hint="세대가 입주권 외에 주택을 1채 보유한 경우에만 입력합니다. 그 주택을 취득한 날부터 3년 이내에 입주권을 양도해야 비과세됩니다. 세대 주택이 0채(가목)이면 비워 두세요."
+            >
+              <DateInput
+                value={asset.redevOtherHouseAcquisitionDate}
+                onChange={(v) => onChange({ redevOtherHouseAcquisitionDate: v })}
+              />
+            </FieldCard>
+
             {/* Step3 보유 상황 안내 링크 */}
             <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 text-caption text-violet-900 leading-relaxed">
               <p className="font-semibold">Step 2 보유 상황 입력 필요</p>
               <p className="mt-0.5">
-                §89①4호 가목 본문: 양도일 현재 다른 주택 없음 + 1입주권만 보유.
+                §89①4호는 <span className="font-semibold">가목·나목 중 하나</span>를 충족하면 비과세됩니다.
+                두 목 모두 <span className="font-semibold">세대 보유 분양권이 없을 것</span>을 요구합니다.
                 <br />
-                → &ldquo;보유 상황&rdquo; 단계에서 <span className="font-semibold">세대 보유 주택 수 = 0채</span> 및{" "}
-                <span className="font-semibold">세대 보유 입주권 수 = 1개(양도 대상 포함)</span>를 입력하세요.
+                <span className="font-semibold">가목</span> — 양도일 현재 다른 주택 또는 분양권을 보유하지 아니할 것
+                → &ldquo;보유 상황&rdquo;에서 <span className="font-semibold">세대 보유 주택 수 = 0채</span>.
                 <br />
-                양도하는 입주권 자체도 카운트에 <span className="font-semibold">포함</span>됩니다.
+                <span className="font-semibold">나목</span> — 1입주권 외에 1주택을 보유(분양권 미보유)하고, 그 1주택
+                취득일부터 <span className="font-semibold">3년 이내</span>에 입주권을 양도할 것
+                → <span className="font-semibold">세대 보유 주택 수 = 1채</span> + 위 취득일 입력.
+                <br />
+                어느 목이든 <span className="font-semibold">세대 보유 입주권 수 = 1개(양도 대상 포함)</span>여야
+                하며, 양도하는 입주권 자체도 카운트에 <span className="font-semibold">포함</span>됩니다.
               </p>
             </div>
 

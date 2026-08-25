@@ -214,6 +214,17 @@ export interface RedevelopmentFormSlice {
    */
   redevPriorHouseHoldingMonths: string;
 
+  /**
+   * **§89①4호 「나」목 전용** — 양도일 현재 세대가 보유한 「그 1주택」의 취득일 (YYYY-MM-DD).
+   *
+   * 나목: 「양도일 현재 1조합원입주권 외에 **1주택**을 보유한 경우(분양권을 보유하지 아니하는
+   * 경우로 한정한다)로서 **해당 1주택을 취득한 날부터 3년 이내**에 해당 조합원입주권을 양도할 것」
+   *
+   * 세대 주택 수가 **1채일 때만** 의미가 있다(0채는 가목·2채 이상은 어느 목도 불성립).
+   * 빈문자열 = 미입력 → 3년 요건을 판정할 수 없으므로 나목 미적용(비과세·12억 안분 모두 없음).
+   */
+  redevOtherHouseAcquisitionDate: string;
+
   // ── 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land") ──
 
   /**

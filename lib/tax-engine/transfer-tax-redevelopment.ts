@@ -19,7 +19,14 @@
  */
 
 import { runRedevelopment, isRedevelopmentActive } from "./redevelopment";
-import { calcTax } from "./transfer-tax-rate-calc";
+import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
+import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
+import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
+import {
+  resolveIncomeDeduction,
+  buildIncomeDeductionStep,
+  RATE_SPECIAL_REDUCTION_IDS,
+} from "./transfer-reductions/income-deduction-router";
 import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import {
   HIGH_VALUE_THRESHOLD,
@@ -31,7 +38,7 @@ import {
   emitRedevelopmentSteps,
 } from "./transfer-tax-redevelopment-transforms";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
-import { calcBasicDeduction } from "./transfer-tax-helpers";
+import { calcBasicDeduction, getReductionLegalBasis } from "./transfer-tax-helpers";
 import { applyRate, truncateToWon } from "./tax-utils";
 import { REDEVELOPMENT, TRANSFER } from "./legal-codes";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
@@ -118,6 +125,25 @@ export function calculateRedevelopmentTax(
     input.isOneHousehold === true &&
     input.householdHousingCount === 1;
 
+  /**
+   * ⚠️ **LTHD 표2 진입은 §89①4호와 다른 축이다 — 술어를 공유하지 않는다.**
+   *
+   * 리뷰(E3-03)는 「12억 안분과 LTHD 표2가 같은 술어를 써야 한다」고 제안했다. **법령 실독으로
+   * 기각한다.** 표2의 근거는 §89①4호가 아니라 §95② 단서 → **시행령 §159의4**이고, 그 문언은:
+   *
+   * > 법 제95조제2항 표 외의 부분 단서 … 에서 "대통령령으로 정하는 1세대 1주택"이란 각각
+   * > **1세대가 양도일 현재 국내에 1주택**(제155조·제155조의2·제156조의2·제156조의3 및 그 밖의
+   * > 규정에 따라 1세대 1주택으로 보는 주택을 포함한다)**을 보유**하고 **보유기간 중 거주기간이
+   * > 2년 이상**인 것을 말한다.
+   *
+   * ⇒ 판정 기준은 **「양도일 현재 세대 주택 수 1 + 거주 2년」**이지 §89①4호 나목의 3년 요건이
+   *   아니다. 현행 `isOneHouseSingle`이 이 문언과 정확히 일치한다.
+   *
+   * 실제로 나목 술어로 바꿔 보니 **기존 12건이 실패**했다(`case-redev-right-12억-1house` 9 ·
+   * `case-redev-right-transfer-pay-lthd-split` 1 · `land-contributed-right-no-one-house` 1 등) —
+   * 그 spec들이 §159의4를 옳게 encode하고 있었다. 「연관돼 보이는 두 판정」이 실은 다른 조문에서
+   * 나온다는 사례로 남긴다.
+   */
   // ─ Step A: redevelopment orchestrator 호출 ─
   const redevRaw: RedevelopmentResult = runRedevelopment({
     redevelopment: input.redevelopment!,
@@ -169,11 +195,18 @@ export function calculateRedevelopmentTax(
   //    (2026-08-25 — E3-01). 종전에는 §154① 보유·거주 요건도, §91① 미등기 배제도 보지 않고
   //    「세대 주택수 1」만으로 안분을 걸었다. 그러면 12억 **이하**에서는 비과세가 없는데
   //    12억 **초과**에서는 요건 무검증 안분이 걸리는 모순이 생긴다.
-  //    `exemptionResult` 미제공(subject="right") 시에는 종전 술어를 유지한다 — 그 경로의
-  //    12억 처리는 `applyOneRightExemption`이 §89①4호 기준으로 따로 판정한다.
+  //
+  // 🔴 **subject="right"는 이 경로를 아예 타지 않는다** (2026-08-25 — E3-03).
+  //    조합원입주권의 12억 안분은 §89①4호 **각 목 외의 부분 단서**이고, 그 요건 판정과 안분은
+  //    Step A.7 `applyOneRightExemption`이 전담한다. 종전에는 여기서 `isOneHouseSingle`
+  //    (= 세대 주택수 1)만으로 **apt용 안분**이 걸려, §89①4호 요건을 하나도 충족하지 못한
+  //    세대에도 과세대상 양도차익이 1/5 수준으로 깎였다
+  //    (실측: 15억·주택1채 → 479,638,500 → 70,485,800 · Δ 409,152,700 과소).
   const isHighValue = aptExemption
     ? aptExemption.isPartialExempt === true
-    : isOneHouseSingle && input.transferPrice > HIGH_VALUE_THRESHOLD;
+    : input.redevelopment!.subject !== "right" &&
+      isOneHouseSingle &&
+      input.transferPrice > HIGH_VALUE_THRESHOLD;
   const allocated: RedevelopmentResult = isHighValue
     ? applyHighValueAllocation(redevAfterExemption, input.transferPrice, input.redevelopment!)
     : redevAfterExemption;
@@ -277,13 +310,44 @@ export function calculateRedevelopmentTax(
   emitRedevelopmentSteps(steps, redevAfterRight, input.redevelopment!);
 
   // ─ Step C: 양도소득금액 ─
-  const transferIncome = redevAfterRight.total.taxableIncome;
+  const transferIncomeBefore993 = redevAfterRight.total.taxableIncome;
   steps.push({
     label: "양도소득금액",
     formula: `양도차익 ${redevAfterRight.total.gain.toLocaleString()} - 장기보유공제 ${redevAfterRight.total.lthd.toLocaleString()}`,
-    amount: transferIncome,
+    amount: transferIncomeBefore993,
     legalBasis: REDEVELOPMENT.GAIN_BASE,
   });
+
+  /**
+   * ─ Step C.5: **차감형** 감면 (§99의3·§99·§98의8 + 하이브리드 5년 후) ─ (E3-02)
+   *
+   * 조특법 감면은 효과 방식이 둘로 갈린다 — **양도소득금액을 차감**하는 형(차감형)과
+   * **산출세액을 차감**하는 형(세액감면형). 차감형은 과세표준을 바꾸므로 **산출세액보다 앞**에
+   * 와야 하고, 세액감면형은 산출세액 뒤(Step F.5)에 온다. 정상 경로의 STEP 4.6과 같은 자리다
+   * (`transfer-tax.ts`).
+   *
+   * 종전 이 분기는 `input.reductions`를 **한 번도 읽지 않았다** — 두 트랙 모두 침묵 소실했다.
+   * 감면 자산종류 게이트(`transfer-reductions/asset-kind-gate.ts`)가 `redevelopment_apt`·
+   * `right_to_move_in`을 **허용 자산으로 명시**하고 ④·⑫도 통과시키므로, 감면은 엔진 input까지
+   * 정상 도달한 뒤 여기서 사라졌다.
+   */
+  let transferIncome = transferIncomeBefore993;
+  const incomeDeduction = resolveIncomeDeduction(input.reductions, {
+    transferDate: input.transferDate,
+    acquisitionDate: input.acquisitionDate,
+    assetContractDate: input.assetContractDate,
+    transferPrice: input.transferPrice,
+    // 고가주택 가액 요건은 물건 전체 기준 — Step A의 §95③ 12억 안분과 같은 소스를 쓴다.
+    totalPropertyTransferPrice: input.totalPropertyTransferPrice,
+    standardPriceAtTransfer: input.standardPriceAtTransfer,
+    transferIncome: transferIncomeBefore993,
+  });
+  if (incomeDeduction.appliedId) {
+    transferIncome = Math.max(0, transferIncomeBefore993 - incomeDeduction.reducible);
+  }
+  if (incomeDeduction.stepLabel) {
+    steps.push(buildIncomeDeductionStep(incomeDeduction, transferIncomeBefore993, transferIncome));
+  }
 
   // ─ Step D: 기본공제 (STEP 5) ─
   // calcBasicDeduction(taxableGain, lth) 시그니처: afterLTH = taxableGain - lth.
@@ -311,8 +375,25 @@ export function calculateRedevelopmentTax(
     legalBasis: TRANSFER.TAX_BASE_CALC,
   });
 
-  // ─ Step F: 산출세액 (STEP 7) — calcTax 재사용 ─
-  const taxResult = calcTax(taxBase, parsedRates, input, multiHouseSurchargeResult);
+  /**
+   * ─ Step F: 산출세액 (STEP 7) — calcTax 재사용 ─
+   *
+   * 세율 특칙 두 개를 정상 경로(`transfer-tax.ts` STEP 7)와 **같은 술어**로 건다 (E3-02).
+   * 차감형 감면을 배선하면서 이 특칙을 빠뜨리면, 감면은 반영되는데 세율만 틀린
+   * **새로운 조용한 오답**이 생긴다.
+   *   · P3 (§98의3④·§98의5③·§98의6③) — 적격 시 단기세율(§104①2·3호) 배제
+   *   · P5 (§98①1호)                  — 세율 20% 단일 강제 (§104① 불구)
+   */
+  const rateSpecialActive =
+    incomeDeduction.eligibleId !== undefined &&
+    RATE_SPECIAL_REDUCTION_IDS.includes(incomeDeduction.eligibleId);
+  const flatRate20Active = incomeDeduction.eligibleId === "unsold_98";
+  const taxRateInput = flatRate20Active
+    ? { ...input, forceFlatRate20: true }
+    : rateSpecialActive
+      ? { ...input, suppressShortTermRate: true }
+      : input;
+  const taxResult = calcTax(taxBase, parsedRates, taxRateInput, multiHouseSurchargeResult);
   const fmtPct = (r: number) => `${Math.round(r * 100)}%`;
   steps.push({
     label: "산출세액",
@@ -321,9 +402,162 @@ export function calculateRedevelopmentTax(
     legalBasis: TRANSFER.TAX_RATE,
   });
 
-  // ─ Step G: 지방소득세 (10%, 원 미만 절사) ─
-  // 재개발 경로는 §114조의2 환산가액적용가산세 대상이 아니므로 determinedTax = 산출세액.
-  const determinedTax = taxResult.calculatedTax;
+  /**
+   * ─ Step F.2: **차감형** 감면의 농어촌특별세 (2-pass) ─ (E3-02)
+   *
+   * 차감형은 세액이 아니라 **양도소득금액**을 줄이므로 감면세액이 직접 드러나지 않는다.
+   * 「농어촌특별세법」 §2①1호의 「소득공제」에 해당하므로, 과세표준을 **감면 전 소득금액으로
+   * 다시 세워 산출세액을 한 번 더 구한 뒤 그 차액**을 감면세액으로 본다 —
+   * 정상 경로 `transfer-tax-finalize.ts` STEP 7.5와 같은 2-pass다.
+   *
+   * ⚠️ Step C.5만 배선하고 이 블록을 빠뜨리면 **차감은 되는데 농특세만 0**이 된다 —
+   *    감면 소실을 고치면서 새 과소과세를 만드는 셈이다.
+   */
+  let ruralSurtax993 = 0;
+  if (incomeDeduction.appliedId) {
+    const activePrelim =
+      incomeDeduction.new993Detail ??
+      incomeDeduction.new99Detail ??
+      incomeDeduction.unsold988Detail ??
+      incomeDeduction.unsold987Detail ??
+      incomeDeduction.unsold992Detail ??
+      incomeDeduction.unsold983Detail ??
+      incomeDeduction.unsold985Detail ??
+      incomeDeduction.unsold986Detail;
+    // 농특세 비과세 (농특세령 §4⑦1호 — §98의3·§98의5): 차감 효과는 유지하고 농특세만 0.
+    const isSurtaxExempt =
+      activePrelim !== undefined &&
+      "ruralSurtaxExempt" in activePrelim &&
+      activePrelim.ruralSurtaxExempt === true;
+    const taxBaseBefore993 = Math.max(0, transferIncomeBefore993 - basicDeduction);
+    const taxResultBefore993 = calcTax(
+      taxBaseBefore993,
+      parsedRates,
+      taxRateInput,
+      multiHouseSurchargeResult,
+    );
+    const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
+    ruralSurtax993 = isSurtaxExempt ? 0 : applyRate(taxReduction993, 0.2);
+    if (ruralSurtax993 > 0) {
+      steps.push({
+        label: "차감형 감면 농어촌특별세 (감면세액 × 20%)",
+        formula: `(감면 전 산출세액 ${taxResultBefore993.calculatedTax.toLocaleString()} − 감면 후 산출세액 ${taxResult.calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax993.toLocaleString()}`,
+        amount: ruralSurtax993,
+        legalBasis: TRANSFER.RURAL_SURTAX_993,
+      });
+    }
+  }
+
+  /**
+   * ─ Step F.5: **세액감면형** 감면 (§77·§77의2·§77의3·§97 시리즈 등) ─ (E3-02)
+   *
+   * 정상 경로 `transfer-tax-finalize.ts` STEP 8과 같은 인자·같은 순서로 `calcReductions`를
+   * 부른다. 조특법 §127⑦ 중복배제(후보 배열 max)·§133② 5년 누적한도도 그 함수/모듈이 담당하므로
+   * 여기서 다시 판정하지 않는다 — **판정을 복사하면 두 번째 진실이 생긴다**.
+   */
+  const {
+    reductionAmount,
+    reductionType,
+    reductionTypeApplied,
+    reducibleIncome,
+    rentalReductionDetail,
+    newHousingReductionDetail,
+    publicExpropriationDetail,
+    gbDesignatedLandDetail,
+    replacementLandDetail,
+    selfFarmingReductionDetail,
+    rental97TaxDetail,
+  } = calcReductions(
+    taxResult.calculatedTax,
+    input.reductions,
+    parsedRates.selfFarmingRules,
+    input.rentalReductionDetails,
+    parsedRates.longTermRentalRules,
+    input.newHousingDetails,
+    parsedRates.newHousingMatrix,
+    input.transferDate,
+    // 양도소득금액 = 과세양도차익 − 장기보유특별공제 (§77 감면 소득 안분 기준)
+    Math.max(0, redevAfterRight.total.gain - redevAfterRight.total.lthd),
+    basicDeduction,
+    taxBase,
+    input.acquisitionDate,
+    input.standardPriceAtAcquisition,
+    input.standardPriceAtTransfer,
+    input.assetContractDate,
+  );
+  steps.push({
+    label: "감면세액",
+    formula: reductionType ? `${reductionType} 감면 ${reductionAmount.toLocaleString()}` : "감면 없음",
+    amount: reductionAmount,
+    legalBasis: getReductionLegalBasis(reductionType, publicExpropriationDetail?.useLegacyRates),
+  });
+
+  // ─ Step F.6: 조특법 §133② 5년 누적 한도 ─
+  const cap = applyReductionStatutoryCap({
+    reductionAmount,
+    reductionTypeApplied,
+    transferYear: input.transferDate.getFullYear(),
+    priorUsage: input.priorReductionUsage ?? [],
+  });
+  const cappedReductionAmount = cap.cappedAmount;
+  if (cap.step) steps.push(cap.step);
+
+  /**
+   * ─ Step F.7: 농어촌특별세 ─ 「농어촌특별세법」 §5①1호 (감면세액 × 20%)
+   *
+   * 하이브리드(5년 내 세액감면형 미분양)와 그 밖의 세액감면형을 **배타적으로** 가른다 —
+   * 같은 감면에 두 번 부과하지 않기 위해서다. 과세/비과세 열거 판정은
+   * `transfer-tax-rural-surtax.ts` 단일 소스이고, 판정 못 한 유형은 **부과하지 않되 사유를 남긴다**
+   * (법 근거 없는 불리 적용 금지).
+   */
+  let ruralSurtax = 0;
+  if (reductionTypeApplied !== undefined && cappedReductionAmount > 0) {
+    const isHybrid = HYBRID_ARTICLE[reductionTypeApplied] !== undefined;
+    if (isHybrid) {
+      ruralSurtax = applyRate(cappedReductionAmount, 0.2);
+      steps.push({
+        label: `${HYBRID_ARTICLE[reductionTypeApplied]} 농어촌특별세 (감면세액 × 20%)`,
+        formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${ruralSurtax.toLocaleString()}`,
+        amount: ruralSurtax,
+        legalBasis: "농어촌특별세법 §5①1호",
+      });
+    } else {
+      const verdict = resolveTaxCreditRuralSurtax({
+        reductionTypeApplied,
+        reductionAmount: cappedReductionAmount,
+        isSelfCultivatedExpropriatedLand: input.isSelfCultivatedExpropriatedLand,
+      });
+      ruralSurtax = verdict.surtax;
+      if (verdict.surtax > 0) {
+        steps.push({
+          label: "농어촌특별세 (감면세액 × 20%)",
+          formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${verdict.surtax.toLocaleString()} — ${verdict.reason}`,
+          amount: verdict.surtax,
+          legalBasis: verdict.legalBasis,
+        });
+      } else if (verdict.verdict === "unknown") {
+        // 침묵 금지 — 근거를 못 찾아 부과하지 않았다는 사실 자체를 남긴다.
+        steps.push({
+          label: "농어촌특별세 — 미판정",
+          formula: verdict.reason,
+          amount: 0,
+          legalBasis: verdict.legalBasis,
+        });
+      }
+    }
+  }
+
+  // ─ Step G: 결정세액 = 산출세액 − 감면 (원 미만 절사) · 지방소득세 (10%, 원 미만 절사) ─
+  // 재개발 경로는 §114조의2 환산가액적용가산세 대상이 아니므로 가산세분 가산은 없다.
+  const determinedTax = truncateToWon(Math.max(0, taxResult.calculatedTax - cappedReductionAmount));
+  if (cappedReductionAmount > 0) {
+    steps.push({
+      label: "결정세액",
+      formula: `산출세액 ${taxResult.calculatedTax.toLocaleString()} - 감면 ${cappedReductionAmount.toLocaleString()} (원 미만 절사)`,
+      amount: determinedTax,
+      legalBasis: TRANSFER.FINAL_TAX,
+    });
+  }
   const localIncomeTax = truncateToWon(applyRate(determinedTax, 0.1));
   if (determinedTax > 0) {
     steps.push({
@@ -347,13 +581,15 @@ export function calculateRedevelopmentTax(
     undefined,
   );
 
-  // ─ Step H: 세액합계 ─
-  const totalTax = determinedTax + localIncomeTax + filingDelayedPenalty;
+  // ─ Step H: 세액합계 ─ (농특세는 §5①1호 감면분 — 정상 경로 STEP 11과 동일하게 합산한다)
+  const ruralSurtaxTotal = ruralSurtax + ruralSurtax993;
+  const totalTax = determinedTax + localIncomeTax + filingDelayedPenalty + ruralSurtaxTotal;
   steps.push({
     label: "세액합계",
-    formula: filingDelayedPenalty > 0
+    formula: (filingDelayedPenalty > 0
       ? `총결정세액 ${(determinedTax + totalAllPenalty).toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`
-      : `산출세액 ${determinedTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`,
+      : `${cappedReductionAmount > 0 ? "결정세액" : "산출세액"} ${determinedTax.toLocaleString()} + 지방소득세 ${localIncomeTax.toLocaleString()}`)
+      + (ruralSurtaxTotal > 0 ? ` + 농특세 ${ruralSurtaxTotal.toLocaleString()}` : ""),
     amount: totalTax,
     legalBasis: REDEVELOPMENT.GAIN_BASE,
   });
@@ -440,7 +676,28 @@ export function calculateRedevelopmentTax(
      * 「공제는 0인데 사유는 없다」는 세 번째 진실이 생긴다.
      */
     ...(lthdExcludedBySurcharge ? { lthdExclusionReason: "multi_house_surcharge" as const } : {}),
-    reductionAmount: 0,
+    /**
+     * 🔴 **조특법 감면 — 종전에는 `0` 하드코딩이었다** (E3-02).
+     *
+     * 이 분기는 `finalizeTransferTax`를 타지 않고 결과를 직접 조립하는데, `input.reductions`를
+     * 한 번도 읽지 않아 감면세액·감면유형·각 detail·농특세가 **전부 소실**했다. 감면 게이트가
+     * 재개발·입주권을 허용 자산으로 명시하고 ④·⑫도 통과시키므로, 사용자에게는 감면이 선택된
+     * 상태로 보이는데 세액은 미선택과 **1원도 다르지 않았다**(실측: 응답 전 필드 동일).
+     *
+     * 값은 §133② 5년 누적한도 반영본(`cappedReductionAmount`)이다 — 결정세액 산식과 같은 값을
+     * 실어야 「표시된 감면액으로 역산하면 결정세액이 안 맞는」 세 번째 진실이 생기지 않는다.
+     */
+    reductionAmount: cappedReductionAmount,
+    reductionType,
+    reductionTypeApplied,
+    reducibleIncome,
+    rentalReductionDetail,
+    newHousingReductionDetail,
+    publicExpropriationDetail,
+    gbDesignatedLandDetail,
+    replacementLandDetail,
+    selfFarmingReductionDetail,
+    rental97TaxDetail,
     determinedTax,
     penaltyTax: 0,
     penaltyBase: 0,

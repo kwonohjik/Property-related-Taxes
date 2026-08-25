@@ -262,15 +262,101 @@ export function applySettlementExemption(
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
+ * 「양도일 현재 세대가 **분양권**을 보유하는가」 — §89①4호 **가·나목 공용 leaf**.
+ *
+ * 두 목이 같은 사실을 요구한다:
+ *   · 가목 — 「양도일 현재 다른 주택 **또는 분양권**을 보유하지 아니할 것」
+ *   · 나목 — 「… 1주택을 보유한 경우(**분양권을 보유하지 아니하는 경우로 한정한다**)로서 …」
+ *
+ * ⚠️ **`presaleRights.length`를 세면 안 된다.** 이 배열은 「분양권」과 「조합원입주권」을 함께
+ *    담는 목록(`PresaleRight.type`)이고, 조문이 배제하는 것은 **분양권**뿐이다. 조합원입주권
+ *    개수는 본문과 `householdRightCount`가 이미 본다 — 길이로 세면 양도 대상 입주권 자신을
+ *    목록에 적어 넣은 사용자가 근거 없이 비과세를 잃는다.
+ *
+ * ⚠️ **미제공(undefined)은 「보유하지 않음」으로 본다.** 비과세를 배제하는 방향이 불리 적용이라,
+ *    사실이 입력되지 않았다는 이유만으로 납세자에게 불리하게 단정하지 않는다. 사용자가 분양권을
+ *    선언할 입력 경로는 ⑤가 함께 열어야 한다(열지 않으면 이 게이트는 no-op이다).
+ */
+export function householdHoldsPresaleRight(input: TransferTaxInput): boolean {
+  return input.presaleRights?.some((p) => p.type === "presale_right") === true;
+}
+
+/** §89①4호 나목 — 「해당 1주택을 취득한 날부터 **3년** 이내에 해당 조합원입주권을 양도할 것」 */
+const CLAUSE_NA_YEARS = 3;
+
+/**
+ * **§89①4호 전용 술어** — 어느 목으로 비과세가 성립하는가 (2026-08-25 신설 · C1-03 · E3-03).
+ *
+ * ## 왜 별도 술어인가
+ *
+ * 종전에는 두 판정이 **서로 다른 값**을 보고 있었다:
+ *   · 전액 비과세  → `applyOneRightExemption`의 4조건(가목만)
+ *   · 12억 안분    → `isOneHouseSingle`(= 세대 주택수 1) — **요건을 하나도 보지 않는다**
+ *
+ * 그래서 12억 **이하**에서는 나목 충족자에게 줄 비과세가 없어 과대과세가 나고(C1-03),
+ * 12억 **초과**에서는 요건 미검증 안분이 걸려 과소과세가 났다(E3-03 · 실측 Δ 409,152,700).
+ * 한 조문의 요건이므로 **하나의 술어**가 두 효과를 함께 가른다.
+ *
+ * ## 조문 (법제처 실독 — 소득세법 [시행 2026-07-01] §89①4호)
+ *
+ * > 조합원입주권을 **1개** 보유한 1세대[관리처분계획의 인가일 … 현재 제3호가목에 해당하는
+ * > 기존주택을 소유하는 세대]가 다음 각 목의 **어느 하나**의 요건을 충족하여 양도하는 경우 …
+ * > 가. 양도일 현재 다른 주택 또는 분양권을 보유하지 아니할 것
+ * > 나. 양도일 현재 1조합원입주권 외에 1주택을 보유한 경우(분양권을 보유하지 아니하는 경우로
+ * >     한정한다)로서 해당 1주택을 취득한 날부터 3년 이내에 해당 조합원입주권을 양도할 것
+ *
+ * 본문 요건(인가일 현재 §89①3호가목 기존주택 소유)은 `exemptionEligibleAtApproval` 자기선언으로
+ * 받는다 — 기존 설계를 그대로 승계한다(이중 판정 금지).
+ *
+ * ⚠️ 호출부가 `subject === "right"` 가드를 이미 걸었다고 가정한다. 완공 신축주택(subject="apt")은
+ *    §89①**3호**이고 `checkExemption`이 담당한다.
+ */
+export function resolveOneRightExemptionClause(
+  redevInfo: NonNullable<TransferTaxInput["redevelopment"]>,
+  input: TransferTaxInput,
+): "ga" | "na" | undefined {
+  // ── 각 목 공통(본문) ──
+  if (
+    redevInfo.exemptionEligibleAtApproval !== true ||
+    input.isOneHousehold !== true ||
+    input.householdRightCount !== 1 // 「조합원입주권을 1개 보유한 1세대」
+  ) {
+    return undefined;
+  }
+
+  // 가·나목 **양쪽**이 분양권 미보유를 요구한다 — 목을 가르기 전에 한 번 본다.
+  if (householdHoldsPresaleRight(input)) return undefined;
+
+  // ── 가목: 다른 주택 0채 ──
+  if (input.householdHousingCount === 0) return "ga";
+
+  // ── 나목: 1주택 + 그 주택 취득일부터 3년 이내 양도 ──
+  if (input.householdHousingCount === 1) {
+    const acquired = redevInfo.otherHouseAcquisitionDate;
+    // 취득일 미입력이면 3년 요건을 **판정할 수 없다**. 「모르니까 준다」도, 「모르니까 뺏는다」도
+    // 하지 않는다 — 나목 불성립으로 두고(비과세·안분 모두 미적용) 화면이 사유를 안내한다.
+    if (!acquired) return undefined;
+    const deadline = new Date(acquired);
+    deadline.setFullYear(deadline.getFullYear() + CLAUSE_NA_YEARS);
+    return input.transferDate <= deadline ? "na" : undefined;
+  }
+
+  return undefined;
+}
+
+/**
  * 사례 36 — §89①4호 가목 1세대1입주권 비과세 게이트.
  *
- * 트리거 (AND 4조건):
+ * 트리거 (AND 5조건):
  *   1. subject === "right"  ◀── 사례 45/47 (apt) 경로 완전 격리
  *   2. exemptionEligibleAtApproval === true  ◀── 기존 필드 재사용 (사례 47 도입)
  *      (인가일 기준 종전주택 §89①3호 가목 요건 충족 — 사용자 자기선언)
  *   3. householdHousingCount === 0 AND householdRightCount === 1
  *      (양도일 현재 다른 주택 없음 + 1입주권만 — §89①4호 가목 본문)
  *   4. isOneHousehold === true
+ *   5. **세대 보유 분양권 없음** — 가목 「다른 주택 **또는 분양권**을 보유하지 아니할 것」
+ *      (2026-08-25 신설 — L1-03. 종전에는 법문의 이 부분이 게이트·주석·UI 안내문에서
+ *       모두 지워져 있어, 분양권 보유 세대도 전액 비과세됐다. 실측 Δ 58,910,000)
  *
  * 동작:
  *   - transferPrice ≤ 12억 → 3분기 모두 gain/lthd 0 마스킹 → 산출세액 0 (전액 비과세)
@@ -303,13 +389,11 @@ export function applyOneRightExemption(
     return redev;
   }
 
-  // 트리거 조건 2~4: 자기선언 + 세대 구성
-  if (
-    redevInfo.exemptionEligibleAtApproval !== true ||
-    input.isOneHousehold !== true ||
-    input.householdHousingCount !== 0 ||
-    input.householdRightCount !== 1
-  ) {
+  // 트리거 조건 2~5: 본문 + 가·나목 — 단일 술어(`resolveOneRightExemptionClause`)에 위임한다.
+  // 종전에는 여기서 조건을 직접 나열해 **가목만** 구현돼 있었고(나목 부재 = C1-03),
+  // 12억 안분은 이 함수 밖에서 요건 없이 발동했다(E3-03).
+  const clause = resolveOneRightExemptionClause(redevInfo, input);
+  if (!clause) {
     return redev;
   }
 
@@ -330,6 +414,7 @@ export function applyOneRightExemption(
       settlement: maskBranch(redev.settlement),
       total: { gain: 0, lthd: 0, taxableIncome: 0 },
       oneRightExemptionApplied: true,
+      oneRightExemptionClause: clause,
     };
   } else {
     // ── 12억 초과 안분과세 (§89①4호 가목 단서 + §95③) ──
@@ -375,6 +460,7 @@ export function applyOneRightExemption(
         taxableIncome: totalGain - totalLthd,
       },
       oneRightHighValueApplied: true,
+      oneRightExemptionClause: clause,
       highValueAllocation: {
         nontaxableGain: nontaxableGainTotal,
         taxableGain: taxableGainTotal,

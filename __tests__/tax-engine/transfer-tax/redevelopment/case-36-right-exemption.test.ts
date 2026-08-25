@@ -13,6 +13,8 @@
  *   3. isOneHousehold === true
  *   4. householdHousingCount === 0 (다른 주택 없음)
  *   5. householdRightCount === 1 (1입주권만)
+ *   6. 세대 보유 분양권 없음 — 가목 「다른 주택 **또는 분양권**을 보유하지 아니할 것」
+ *      (2026-08-25 신설 L1-03. 본 spec의 fixture는 presaleRights 미제공이라 회귀 없음)
  *
  * 12억 이하: 전액 비과세 → calculatedTax = 0, localIncomeTax = 0
  * 12억 초과: §89①4호 가목 단서 + §95③ 안분 → taxableRatio = (15억−12억)/15억 = 0.2

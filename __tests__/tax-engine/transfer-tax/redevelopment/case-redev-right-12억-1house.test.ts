@@ -3,7 +3,21 @@
  *
  * 법령 근거:
  *   - 시행령 §166①1호 — 입주권 + 청산금 납부 시 인가후 + 인가전 단순 합산
- *   - §95③ + 시행령 §160 — 1세대1주택 고가주택 12억 초과분 과세대상 안분
+ *   - §95③ + 시행령 §160 — 12억 초과분 과세대상 안분
+ *
+ * ⚠️ **2026-08-25 fixture 정정 (E3-03 · C1-03)** — 세액·산식은 그대로, **요건 2개를 채웠다**.
+ *
+ * §95③의 문언은 「제89조제1항제3호에 따라 … 제외되는 고가주택 … **및 같은 항 제4호 각 목 외의
+ * 부분 단서에 따라 양도소득의 비과세대상에서 제외되는 조합원입주권**에 해당하는 자산의 …」이다.
+ * 즉 조합원입주권의 12억 안분은 **§89①4호 본문·각 목 요건을 충족해 「단서로 제외된」 경우**에만
+ * 성립한다. 종전 fixture는 `householdHousingCount: 1`만 두고
+ *   · 본문 요건(인가일 현재 §89①3호가목 기존주택 소유) = `exemptionEligibleAtApproval`
+ *   · 나목 요건(그 1주택 취득일부터 3년 이내 양도)     = `otherHouseAcquisitionDate`
+ * 둘 다 비워 둔 채 안분을 기대했다 — 엔진이 「세대 주택수 1」만으로 안분을 걸고 있었기 때문이다
+ * (E3-03. 요건 미충족 사안에 안분이 걸려 실측 Δ 409,152,700 과소).
+ *
+ * 엔진을 조문에 맞춘 뒤 이 fixture는 **요건을 선언해야** 같은 경로를 탄다. 산식·기대값은
+ * 1원도 바뀌지 않았다 — 바뀐 것은 「그 안분이 legal하게 성립하는가」의 전제뿐이다.
  *   - 시행령 §166⑤1호 — 인가전 LTHD 보유기간 = 취득일 ~ 관리처분 인가일
  *   - §95② 단서 — 입주권 양도 시 인가전 분만 LTHD (인가후·청산금 분 0)
  *   - §55 (2023년 누진세율표) — 양도연도 직접 적용 (외부 PDF 추종 금지)
@@ -67,6 +81,10 @@ function baseRedevInfo(): RedevelopmentInfo {
     postApprovalExpenses: 0,
     originalAssetType: "housing",
     acquisitionRounding: "floor",
+    // §89①4호 본문 — 인가일 현재 §89①3호가목 기존주택 소유 (자기선언)
+    exemptionEligibleAtApproval: true,
+    // §89①4호 나목 — 그 1주택 취득일. 2021-06-01 취득 → 2023-03-02 양도 = 1년 9개월 < 3년
+    otherHouseAcquisitionDate: new Date("2021-06-01"),
   };
 }
 
@@ -153,20 +171,42 @@ describe("R-3 — 입주권(right) + 청산금 납부 + 1세대1주택 + 양도�
 // R-3-8 — 안분비 0 검증: 양도가 = 12억 정확히 → isHighValue=false → 전액 과세
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe("R-3-8 — 양도가 12억 정확히 (안분 미발동 — 전액 과세, 비과세 아님)", () => {
+/**
+ * R-3-8 — 12억 **경계**.
+ *
+ * ⚠️ **2026-08-25 기대값 정정**: 종전 제목은 「안분 미발동 — 전액 **과세**, 비과세 아님」이었다.
+ *    그 전제는 이 fixture가 §89①4호 요건을 충족하지 못한다는 것이었는데(요건 2필드 미입력),
+ *    엔진이 요건을 보지 않아 12억 초과에서는 안분이 걸리고 12억 이하에서는 아무 일도 없는
+ *    **자기모순**이 그대로 spec에 굳어 있었다.
+ *
+ *    요건을 채운 지금은 조문대로다 — §89①4호 각 목 외의 부분 단서는 「양도 당시 실지거래가액이
+ *    **12억원을 초과**하는 경우에는 양도소득세를 과세한다」이므로, **정확히 12억이면 초과가
+ *    아니라 전액 비과세**다. 경계는 12억 초과 여부 하나로 일관된다.
+ */
+describe("R-3-8 — 양도가 12억 정확히 (§89①4호 단서 미발동 → 전액 비과세)", () => {
   const input12 = baseInput({ transferPrice: 1_200_000_000 });
   const result12 = calculateTransferTax(input12, mockRates);
 
-  it("[R-3-8a] 양도가 12억 정확히 → 12억 안분 미발동 (isHighValue=false)", () => {
-    // transferPrice <= 12억 → isHighValue = false → applyHighValueAllocation 미발동
-    // highValueAllocation 미부착 (undefined)
+  it("[R-3-8a] 12억 정확히 → 안분 미발동 (highValueAllocation 미부착)", () => {
     expect(result12.redevelopmentDetail?.highValueAllocation).toBeUndefined();
+    expect(result12.redevelopmentDetail?.oneRightHighValueApplied).toBeUndefined();
   });
 
-  it("[R-3-8b] 양도가 12억 정확히 → 인가전 분 양도차익 전액 과세 (안분비 없음)", () => {
-    // 12억 안분 없음 → preApproval.gain = 200,000,000 그대로
-    // (right+pay: §166①1호 단순 합산, 인가전 분은 200M)
-    expect(result12.redevelopmentDetail?.preApproval.gain).toBe(200_000_000);
+  it("[R-3-8b] 12억 정확히 → §89①4호 나목 전액 비과세 (「12억원을 초과하는 경우」가 아니다)", () => {
+    expect(result12.redevelopmentDetail?.oneRightExemptionApplied).toBe(true);
+    expect(result12.redevelopmentDetail?.oneRightExemptionClause).toBe("na");
+    expect(result12.redevelopmentDetail?.preApproval.gain).toBe(0);
+    expect(result12.totalTax).toBe(0);
+  });
+
+  it("[R-3-8c] 12억 + 1원 → 단서 발동, 안분 과세로 전환 (경계 구별력)", () => {
+    const over = calculateTransferTax(baseInput({ transferPrice: 1_200_000_001 }), mockRates);
+    // 전액 비과세 → 안분 과세로 **분기가 바뀐다**. 다만 안분비가 1/12억이라 과세대상 양도차익은
+    // 사실상 0이고 세액도 0이다 — 경계에서 세액이 튀지 않는다(불연속 없음)는 것 자체가 확인점이다.
+    expect(over.redevelopmentDetail?.oneRightExemptionApplied).toBeUndefined();
+    expect(over.redevelopmentDetail?.oneRightHighValueApplied).toBe(true);
+    expect(over.redevelopmentDetail?.preApproval.gainBeforeAllocation).toBe(200_000_000);
+    expect(over.redevelopmentDetail?.preApproval.gain).toBe(0);
   });
 });
 

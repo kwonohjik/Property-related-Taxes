@@ -24,6 +24,7 @@ import { SpecialSituationSection } from "./step4-sections/SpecialSituationSectio
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { SpecialHouseExclusionSection } from "@/components/calc/transfer/SpecialHouseExclusionSection";
+import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
@@ -477,10 +478,24 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900">
                   <p className="font-medium">1세대1입주권 비과세 요건 (양도일 현재)</p>
                   <p className="mt-0.5 text-caption leading-relaxed text-violet-800">
-                    다른 주택 없음(0채) + 1입주권만(1개) 조건 충족.
+                    다른 주택 없음(0채) + 1입주권만(1개) + <b>분양권 미보유</b> 조건 충족.
                     자산 카드의 §⑥ 비과세 토글 ON 및 인가일 기준 보유·거주요건도 함께 확인하세요.
                   </p>
                 </div>
+              )}
+
+              {/*
+                세대 보유 분양권 — §89①4호 가목 「다른 주택 **또는 분양권**을 보유하지 아니할 것」.
+                ④ 주택수·중과 판정 섹션은 세대 주택 2채 이상에서만 이 목록을 렌더하는데, 가목이
+                요구하는 상태는 「주택 0채」라 **분양권을 선언할 경로가 전무했다**(L1-03).
+                ④가 이미 렌더 중이면 중복이므로 2채 미만에서만 연다 — 값은 같은 `form.presaleRights`다.
+              */}
+              {parseInt(form.householdHousingCount || "0") < 2 && (
+                <PresaleRightsSection
+                  rights={form.presaleRights}
+                  onChange={(presaleRights) => onChange({ presaleRights })}
+                  showSpouseOwned={!!form.marriageDate}
+                />
               )}
             </div>
           )}
