@@ -532,9 +532,27 @@ fixture로 주입하므로 엔진 echo 주입을 지키지 못한다. 엔진 ech
 
 ### 잔여
 
-- **D-5**(5년 내 세액감면 경로의 감면세액 대입 과정) — Q-3 기본안 「포함」이었으나 PR-3 범위에서
-  제외했다. 5년 내 경로는 `calcReductions`가 산출세액 확정 후 감면액을 채우므로 **표시 층이 다르다**.
 - **D-6**(세액감면방식 「세액감면대상금액」 행) — Q-4대로 범위 밖.
+
+---
+
+## 9-E. ✅ PR-4 완료 (2026-08-25) — D-5
+
+5년 내 양도(세액감면 경로)의 `formulaSteps`는 「양도소득세의 100분의 100에 상당하는 세액을
+감면」이라는 **안내 문구 1줄뿐**이고 `value: 0`이었다(`unsold-hybrid.ts:229-233`) —
+감면세액이 얼마인지는 별도 줄로 나오지만 **어떻게 나왔는지**가 없었다.
+
+**표시 층에서 해결한다.** 엔진 평가 시점(`computeHybridEffect`)에는 산출세액을 모르고,
+감면액은 `evaluateHybridTaxAmountFromReductions`가 `applyRate(ctx.calculatedTax, rate)`로
+나중에 채운다(`unsold-hybrid.ts:666`). 그래서 엔진 echo가 아니라 카드 prop이 맞다.
+
+- `IncomeDeductionDetailCard`에 `calculatedTax` **필수 prop** 추가 → 호출부 **10곳** 전부 전달
+  (필수라 누락이 컴파일 에러로 드러난다 — tsc 통과로 실증)
+- `isTaxAmountMode`일 때만 산출근거 블록: `감면세액 = 산출세액 × 감면율` + `86,270,000 × 100% = 86,270,000`
+- 소득금액차감 경로에는 렌더하지 않는다(그쪽은 `formulaSteps`가 담당) — anchor로 고정
+
+anchor 3건 + mutation(블록 게이트를 끄면 **2건 실패**) 검증.
+검증: tsc 0건 · `__tests__/components` + `__tests__/calc` 375파일 3454건 전건 통과.
 
 ---
 

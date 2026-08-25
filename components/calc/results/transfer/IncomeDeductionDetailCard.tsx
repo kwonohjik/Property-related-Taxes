@@ -15,6 +15,16 @@ import type {
   UnsoldHybridResult,
 } from "@/lib/tax-engine/types/transfer.types";
 
+/**
+ * 산출세액 — 5년 내 세액감면 경로(§99의2 등 하이브리드)의 「산출세액 × 감면율 = 감면세액」 기준값.
+ *
+ * ⚠️ `result`에서 읽지 않고 **명시 prop**으로 받는다 — 일괄·다건에서는 자산별 값이 달라
+ * 이름이 같으면 의미가 뭉개진다(§77 계열·§97 시리즈 카드와 동일 규약).
+ */
+interface CalculatedTaxProp {
+  calculatedTax: number;
+}
+
 type Detail =
   | { kind: "new_99"; result: New99Result }
   | { kind: "unsold_98_8"; result: Unsold988Result }
@@ -26,6 +36,8 @@ type Detail =
   | { kind: "unsold_98_2"; result: UnsoldHybridResult }
   | { kind: "unsold_98_4"; result: UnsoldHybridResult }
   | { kind: "unsold_98"; result: UnsoldHybridResult };
+
+type Props = Detail & CalculatedTaxProp;
 
 const TITLES: Record<Detail["kind"], string> = {
   new_99: "§99 — 신축주택 양도소득세 감면 (IMF 1차)",
@@ -45,7 +57,7 @@ const HYBRID_KINDS: ReadonlyArray<string> = [
   "unsold_98_2", "unsold_98_4", "unsold_98",
 ];
 
-export function IncomeDeductionDetailCard({ kind, result }: Detail) {
+export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props) {
   const title = TITLES[kind];
   // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
   const isHybrid = HYBRID_KINDS.includes(kind);
@@ -123,6 +135,18 @@ export function IncomeDeductionDetailCard({ kind, result }: Detail) {
           </div>
         )}
       </div>
+
+      {/* 5년 내 세액감면 경로 — 산출근거 (D-5). 소득금액차감 경로는 위 formulaSteps가 담당한다. */}
+      {isTaxAmountMode && (
+        <div className="rounded border border-emerald-200 bg-white/70 dark:border-emerald-800/40 dark:bg-emerald-950/40 p-2.5 space-y-1.5">
+          <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">감면세액 산출근거</p>
+          <p className="text-caption text-muted-foreground">감면세액 = 산출세액 × 감면율</p>
+          <p className="text-xs font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+            {calculatedTax.toLocaleString()} × {hybridRatePct}% ={" "}
+            {(result as UnsoldHybridResult).reductionAmount.toLocaleString()}
+          </p>
+        </div>
+      )}
 
       {result.ruralSurtax > 0 && (
         <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">

@@ -262,3 +262,58 @@ describe("D-8 적용 불가 — 사유 표시 (PR-2)", () => {
     expect(bodyText()).not.toContain("적용 불가");
   });
 });
+
+describe("D-5 5년 내 세액감면 경로 — 감면세액 산출근거", () => {
+  const within5y = {
+    id: "unsold_99_2" as const,
+    isEligible: true,
+    ineligibleReasons: [],
+    isWithin5Years: true,
+    effectCategory: "tax_amount" as const,
+    taxReductionRate: 1,
+    reductionAmount: 86_270_000,
+    reducibleTransferIncome: 0,
+    fiveYearRatio: 1,
+    signCase: "within_5_years" as const,
+    formulaSteps: [
+      {
+        label: "취득일부터 5년 이내 양도 — 양도소득세 100% 세액감면",
+        value: 0,
+        formula: "조특법 §99의2 — 양도소득세의 100분의 100에 상당하는 세액을 감면 (감면세액 단계 적용)",
+      },
+    ],
+    taxReductionForRuralSurtax: 0,
+    ruralSurtax: 0,
+    ruralSurtaxExempt: false,
+    legalBasis: "조특법 §99의2",
+  };
+
+  it("「산출세액 × 감면율 = 감면세액」에 값이 대입된다", () => {
+    renderCards({ unsold992Detail: within5y }, 86_270_000);
+    expect(screen.getByText("감면세액 산출근거")).toBeTruthy();
+    expect(bodyText()).toContain("감면세액 = 산출세액 × 감면율");
+    expect(bodyText()).toContain("86,270,000 × 100% = 86,270,000");
+  });
+
+  it("🔴 구별력 — 산출세액 prop이 산식에 실제로 쓰인다", () => {
+    renderCards(
+      { unsold992Detail: { ...within5y, taxReductionRate: 0.5, reductionAmount: 1_000_000 } },
+      2_000_000,
+    );
+    expect(bodyText()).toContain("2,000,000 × 50% = 1,000,000");
+  });
+
+  it("🔴 소득금액차감 경로에는 이 블록이 없다 (경로 구분)", () => {
+    renderCards({
+      unsold992Detail: {
+        ...within5y,
+        isWithin5Years: false,
+        effectCategory: "income_deduction",
+        reductionAmount: 0,
+        reducibleTransferIncome: 0,
+        signCase: "neg_pos",
+      },
+    });
+    expect(screen.queryByText("감면세액 산출근거")).toBeNull();
+  });
+});
