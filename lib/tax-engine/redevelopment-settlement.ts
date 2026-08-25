@@ -79,7 +79,19 @@ export function splitAptPay(
 ): AptPaySplit {
   const salePriceTotal = rightsValue + settlementAmount;
 
-  if (salePriceTotal <= 0 || postApprovalGain <= 0) {
+  /**
+   * 🔴 2026-08-25 정정(E1-03 — **세액 변경**): 종전에는 `postApprovalGain <= 0`도 조기 반환해
+   *    **음수 인가후양도차익을 통째로 버렸다**. §166②1호는 clamp 없는 **대수적 합**이고,
+   *    두 안분분을 더하면 분모가 약분돼 **합계 = 인가후 + 인가전**이 된다 — 즉 §166①1호(입주권)
+   *    합계와 같아야 한다. clamp 때문에 음수분이 사라져 인가전 이익만 남았고, 같은 사실을
+   *    자산 종류만 바꿔 태우면 다른 양도차익이 나왔다(실측 250,000,000 vs 100,000,000).
+   *
+   *    음수 차익의 최종 처리는 양도소득금액 단계(`total.taxableIncome`의 `Math.max(0, …)`)가
+   *    이미 담당한다 — **분기 단계에서 자를 이유가 없다**.
+   *
+   * ⚠️ 남은 조기 반환은 **분모 0 방어**뿐이다(평가액·청산금이 모두 0).
+   */
+  if (salePriceTotal <= 0) {
     return {
       settlementGain: 0,
       postApprovalExistingHouseGain: 0,

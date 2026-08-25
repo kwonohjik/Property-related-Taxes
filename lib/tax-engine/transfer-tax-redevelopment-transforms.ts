@@ -15,6 +15,7 @@
  */
 
 import { REDEVELOPMENT } from "./legal-codes";
+import { preApprovalNecessaryExpense } from "./redevelopment-split";
 import type {
   TransferTaxInput,
   RedevelopmentResult,
@@ -571,17 +572,25 @@ export function emitRedevelopmentSteps(
   // 실가 모드(개산공제 0)에서는 항을 붙이지 않아 종전 표시가 유지된다.
   // 결과 루트 필드 — 타입 주석이 "인가전 양도차익에서 차감됨. 실가 모드 시 0 또는 undefined"로
   // 이 step 전용임을 명시하고 있다(`transfer-redevelopment.types.ts:577-581`).
+  //
+  // 🔴 2026-08-25 정정(E1-02): 종전 산식은 **필요경비와 개산공제를 나란히 두 항으로** 보여줬다.
+  //    §166①1호 후단·①2호 나목은 「§97①2·3호 **또는** §163⑥」 **택일**이라 실제로 차감되는 항은
+  //    언제나 **하나**다. 두 항을 다 보여주면 (a) 신고서 인가전 분 열(택일 값 1개)과 서로 다른
+  //    진실이 되고 (b) 산식 산술이 amount와 맞지 않는다.
+  //    ⇒ 계산과 같은 헬퍼(`preApprovalNecessaryExpense`)가 고른 **하나만** 근거와 함께 표시한다.
   const preApprovalLumpDeduction = redev.estimatedLumpDeduction ?? 0;
+  const preApprovalExpenseChosen = preApprovalNecessaryExpense(
+    preApprovalLumpDeduction,
+    redevInfo.preApprovalExpenses,
+  );
+  const preApprovalExpenseLabel =
+    preApprovalLumpDeduction > 0 ? "개산공제(시행령 §163⑥)" : "필요경비(법 §97①2·3호)";
   steps.push({
     label: "인가전 분 양도차익",
     formula:
       `의제 양도가액 ${redev.preApproval.apportionedTransfer.toLocaleString()}` +
       ` - 취득가 ${redev.preApproval.apportionedAcquisition.toLocaleString()}` +
-      ` - 필요경비 ${redevInfo.preApprovalExpenses.toLocaleString()}` +
-      // 개산공제 항의 근거(§163⑥)는 step 전체의 legalBasis(§166①·②)와 다르므로 항에 병기한다.
-      (preApprovalLumpDeduction > 0
-        ? ` - 개산공제(시행령 §163⑥) ${preApprovalLumpDeduction.toLocaleString()}`
-        : ""),
+      ` - ${preApprovalExpenseLabel} ${preApprovalExpenseChosen.toLocaleString()}`,
     amount: redev.preApproval.gain,
     legalBasis: redevInfo.subject === "apt" ? REDEVELOPMENT.APT_PAY : REDEVELOPMENT.RIGHT_PAY,
   });

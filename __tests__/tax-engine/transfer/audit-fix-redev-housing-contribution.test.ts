@@ -39,6 +39,11 @@ function run(preApprovalExpenses: number) {
     housingStdPriceAtApproval: 200_000_000, // §166③ 분모
     preApprovalExpenses,
     postApprovalExpenses: 0,
+    // E2-03 신설 필수 축 — 이 spec들은 표1 전제(다주택)라 종전 동작과 동일하다.
+    // 상수 `false`/`0`을 **명시**하게 둔 것은 의도다: 기본값을 주면 새 호출부가
+    // 축을 조용히 빠뜨려도 컴파일이 통과해 같은 결함이 재발한다.
+    isOneHouseSingle: false,
+    residencePeriodMonths: 0,
   });
 }
 

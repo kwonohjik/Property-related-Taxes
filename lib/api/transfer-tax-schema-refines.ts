@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 
+import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 /**
  * propertySchema.superRefine 에 주입되는 공통 검증 로직.
  * 단건·다건 스키마 모두 재사용.
@@ -259,10 +260,15 @@ export function addPropertyRefines(
   // 3중 패턴(UI/API/validate) 동기화 — UI 통과 ↔ validate 차단 모순 방지
   if (data.redevelopment) {
     const rd = data.redevelopment as Record<string, unknown>;
-    const isHousingEstimated =
-      rd.originalAssetType === "housing" &&
-      rd.subject === "right" &&
-      (data as Record<string, unknown>).useEstimatedAcquisition === true;
+    // 🔴 2026-08-25 정정(E1-04): 종전에는 여기서 축을 직접 나열하면서 **청산금 방향을 빠뜨려**
+    //    납부 조합이 400으로 막혔다(입력 UI도 없어 dead-end). 네 지점이 같은 leaf를 본다.
+    const isHousingEstimated = isHousingContribEstimatedAxes({
+      originalAssetType: rd.originalAssetType as string | undefined,
+      subject: rd.subject as string | undefined,
+      settlementDirection: rd.settlementDirection as string | undefined,
+      useEstimatedAcquisition: (data as Record<string, unknown>)
+        .useEstimatedAcquisition as boolean | undefined,
+    });
     if (isHousingEstimated) {
       if (!rd.housingStdPriceAtAcq || (rd.housingStdPriceAtAcq as number) <= 0) {
         ctx.addIssue({

@@ -15,6 +15,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
@@ -366,11 +367,41 @@ export function SuccessorMemberSection({
             />
           </FieldCard>
 
+          {/*
+            §95② 표2(시행령 §159의4) 거주기간 — 2026-08-25 신설 (E1-08).
+
+            종전에는 승계조합원 화면에 거주기간 입력이 **하나도 없었다**
+            (`RedevelopmentBlock.tsx`가 거주월수 분리 카드를 승계 모드에서 숨겼고, Step4의
+            거주기간 섹션은 `primaryKind === "housing"`에서만 렌더된다). 그 상태에서 엔진만
+            고치면 표2에 **영원히 도달하지 못한다**(memory `feedback_api_trigger_without_input_path_is_noop`).
+
+            ⚠️ 「신축주택」 거주기간이다 — 이 분기의 보유기간이 **준공일 기산**이라
+               그 구간 안의 거주만 §159의4의 「보유기간 중 거주기간」에 해당한다.
+               승계 전 종전주택 거주는 타인의 거주라 무관하다.
+          */}
+          <FieldCard
+            label="신축주택 거주기간 (개월)"
+            hint="준공일~양도일 사이 신축아파트에 실제 거주한 개월 수. 1세대1주택이고 24개월 이상이면 장기보유특별공제가 표2(보유 4%/년 + 거주 4%/년, 최대 80%)로 적용됩니다."
+            trailing={
+              <LawArticleModal
+                legalBasis="소득세법 시행령 §159의4"
+                label="시행령 §159의4"
+              />
+            }
+          >
+            <DecimalInput
+              value={asset.redevNewHouseResidenceMonths}
+              onChange={(v: string) => onChange({ redevNewHouseResidenceMonths: v })}
+              placeholder="준공일 이후 실거주 개월 수"
+            />
+          </FieldCard>
+
           <div className="rounded-md border border-sky-200 bg-sky-50 p-2.5 text-caption text-sky-900 space-y-1 leading-relaxed">
             <div className="font-semibold">승계조합원 신축APT 양도 분기</div>
             <ul className="list-disc pl-4 space-y-0.5">
               <li>보유기간 = 양도일 − 준공일 (사전-2019-법령해석재산-0649)</li>
               <li>장기보유특별공제·세율의 기산일 = 준공일</li>
+              <li>1세대1주택 + 신축주택 거주 2년 이상 → 장특공제 표2 (§95② 단서·시행령 §159의4)</li>
               <li>§166 인가전·인가후 안분 산식 미적용 (단순 차감)</li>
               <li>1세대1주택 비과세는 준공일 기준 2년 보유 충족 시 적용</li>
             </ul>

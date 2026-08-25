@@ -24,23 +24,13 @@
  */
 
 import { calculateHoldingPeriod } from "./tax-utils";
-import { applyLthdToGain } from "./redevelopment-lthd";
+import { applyLthdToGain, computeLthdRateSplit } from "./redevelopment-lthd";
 import { TaxRateNotFoundError } from "./tax-errors";
 import type {
   RedevelopmentBranchDetail,
   RedevelopmentResult,
 } from "./types/transfer-redevelopment.types";
 import type { RedevelopmentOrchestratorInput } from "./redevelopment";
-
-/**
- * 표1 (소법 §95② 별표) LTHD 율 산정.
- * 3년 미만 = 0 / 3년차 = 6% / 매년 +2% / 15년+ = 30% 캡.
- */
-function computeTable1Rate(years: number): number {
-  if (years < 3) return 0;
-  if (years >= 15) return 0.3;
-  return 0.06 + (years - 3) * 0.02;
-}
 
 /**
  * 승계조합원 분기 — 단순 차감 산식 + 준공일 기산 LTHD/세율.
@@ -101,8 +91,30 @@ export function runSuccessorMember(
   const holdingMonths = holdingPeriod.years * 12 + holdingPeriod.months;
   const holdingDays = holdingPeriod.days;
 
-  // ─ Step 3: LTHD 표1 적용 ─
-  const lthdRate = computeTable1Rate(holdingPeriod.years);
+  /**
+   * ─ Step 3: LTHD ─ §95② 표1/표2 (시행령 §159의4)
+   *
+   * 🔴 2026-08-25 정정(E1-08 — **세액 변경**): 종전에는 이 파일이 **표1 전용 함수를 자체 정의**해
+   *    `isOneHouseSingle`·거주월수를 한 번도 읽지 않았다. 그런데 이 파일 헤더는 이 분기를
+   *    「단순 housing 양도와 **동치** 처리」라고 선언하고, **상위 오케스트레이터는 같은 입력을
+   *    1세대1주택으로 인정해 §95③ 12억 안분을 발동**시킨다 — 한 계산 안에서 1세대1주택 여부가
+   *    두 개의 답을 가졌고, 방향은 납세자에게 불리했다(표1 0.22 vs 표2 0.80).
+   *
+   *    §95②의 「조합원으로부터 취득한 것은 제외한다」 괄호는 **§94①2호가목 조합원입주권**에 붙은
+   *    것이다. 승계조합원이 **준공 후 신축주택**을 양도하면 그 자산은 §94①**1호**(건물)이므로
+   *    그 괄호가 걸리지 않는다 — 표 판단은 §159의4 축(양도일 현재 1주택 + 거주 2년)을 그대로 탄다.
+   *
+   * ⚠️ 거주월수는 **신축주택 거주월수**(`newHouseResidenceMonths`)다 — 이 분기의 보유기간이
+   *    **준공일 기산**(시행령 §162①4호)이라 그 구간 안의 거주만 §159의4의 「보유기간 중 거주기간」에
+   *    해당한다. 종전주택 거주월수(`priorHouseResidenceMonths`)는 승계 전 타인의 거주라 무관하다.
+   */
+  const successorResidenceMonths = redevelopment.newHouseResidenceMonths ?? 0;
+  const lthdSplit = computeLthdRateSplit(
+    holdingPeriod.years,
+    input.isOneHouseSingle ?? false,
+    Math.floor(successorResidenceMonths / 12),
+  );
+  const lthdRate = lthdSplit.total;
   const lthdAmount = gain > 0 && lthdRate > 0 ? applyLthdToGain(gain, lthdRate) : 0;
 
   // ─ Step 4: 세율 라벨 (보유기간 기준 — UI/anchor 검증용) ─
