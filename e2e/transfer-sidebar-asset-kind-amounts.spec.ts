@@ -124,6 +124,12 @@ function redevActualSeed() {
           redevSettlementAmount: "92781500",
           redevActualAcquisitionPrice: "180000000",
           redevPreApprovalExpenses: "2000000",
+          /**
+           * ⚠️ 「인가후 필요경비」는 **승계조합원 전용 칸**이다(`RedevelopmentBlock.tsx` —
+           *    `redevIsSuccessorMember === "yes"` 게이트 안). 이 seed는 원조합원이므로
+           *    화면에서는 만들 수 없는 상태이고, 재수화 시 마이그레이션이 비운다(U1-02).
+           *    seed에 남겨 **그 정규화가 실제로 도는지**를 아래 단언이 지키게 한다.
+           */
           redevPostApprovalExpenses: "3000000",
         }],
         transferDate: "2026-02-16",
@@ -197,8 +203,10 @@ test.describe("사이드바 자산 종류별 취득가액·필요경비", () => 
 
     // §166 전용 필드에서 읽은 금액 (redevActualAcquisitionPrice)
     await expect(sidebarRow(page, "인가전 분 취득가액")).toContainText("180,000,000");
-    // 필요경비는 인가 전·후 합이라 범위 구분이 없다 — 라벨 유지. 2,000,000 + 3,000,000
-    await expect(sidebarRow(page, "필요경비")).toContainText("5,000,000");
+    // 필요경비는 인가 전·후 합이라 범위 구분이 없다 — 라벨 유지.
+    // 원조합원이므로 인가후 3,000,000은 마이그레이션이 비운다(U1-02) ⇒ 인가전 2,000,000만 남는다.
+    await expect(sidebarRow(page, "필요경비")).toContainText("2,000,000");
+    await expect(sidebarRow(page, "필요경비")).not.toContainText("5,000,000");
   });
 
   test("다필지 토지 실가 — 계산 전에도 필지 합계가 표시된다", async ({ page }) => {

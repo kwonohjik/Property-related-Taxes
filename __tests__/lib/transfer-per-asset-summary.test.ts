@@ -345,7 +345,14 @@ describe("computeTransferPerAssetSummary — 자산 종류별 가액 소스 (B �
 
   // B-3: 재개발·입주권 — 상단 일반 취득가액 칸이 숨겨지고 §166 전용 필드를 쓴다
   //      (API :283-286 · RedevelopmentBlock.tsx:344 "상단 일반 취득가액 입력 대신 본 값이 자동 사용").
-  it("B-3 재개발 실가 — redevActualAcquisitionPrice + 인가 전·후 필요경비", () => {
+  /**
+   * ⚠️ 2026-08-25(U1-02) — 「인가후 필요경비」는 **승계조합원 전용 칸**이다
+   *    (`RedevelopmentBlock.tsx` — `asset.redevIsSuccessorMember === "yes"` 게이트 안에만 있다).
+   *    종전 픽스처는 원조합원에 그 값을 넣고 합산을 기대했는데, 그 상태는 화면에서 만들 수 없고
+   *    ④ 변환도 이제 같은 술어로 제외한다(`postApprovalExpensesInScope`). 사이드바가 계산에
+   *    쓰이지 않는 금액을 보여주지 않도록 기대값을 API 규칙에 맞춘다. 승계 축은 B-3b가 지킨다.
+   */
+  it("B-3 재개발 실가(원조합원) — redevActualAcquisitionPrice + 인가전 필요경비 + 자본적지출", () => {
     useCalcWizardStore.setState((st) => ({
       formData: {
         ...st.formData,
@@ -365,9 +372,33 @@ describe("computeTransferPerAssetSummary — 자산 종류별 가액 소스 (B �
 
     const r = compute().rows[0];
     expect(r.acqPrice).toBe(400_000_000);
-    expect(r.expense).toBe(6_000_000); // 2M(인가전) + 3M(인가후) + 1M(자본적지출)
+    // 2M(인가전) + 1M(자본적지출). 인가후 3M은 승계 전용 칸이라 원조합원에서는 제외된다(U1-02).
+    expect(r.expense).toBe(3_000_000);
     // 표시 범위가 자산 전체가 아니라 인가 전 분이므로 라벨로 구분한다(전체 취득가액 오독 차단).
     expect(r.acqLabel).toBe("인가전 분 취득가액");
+  });
+
+  // B-3b: 같은 픽스처에 승계조합원 축을 켜면 인가후 필요경비가 다시 합산된다 (U1-02 구별력 가드).
+  it("B-3b 재개발 승계조합원 — 인가후 필요경비가 합산된다", () => {
+    useCalcWizardStore.setState((st) => ({
+      formData: {
+        ...st.formData,
+        assets: [
+          {
+            ...makeDefaultAsset(1),
+            assetKind: "redevelopment_apt",
+            actualSalePrice: "925000000",
+            redevIsSuccessorMember: "yes",
+            fixedAcquisitionPrice: "400000000",
+            redevPreApprovalExpenses: "2000000",
+            redevPostApprovalExpenses: "3000000",
+            capitalExpenditure: "1000000",
+          },
+        ],
+      },
+    }));
+
+    expect(compute().rows[0].expense).toBe(6_000_000);
   });
 
   // B-4: 승계조합원(사례 48)만 자산 카드 `fixedAcquisitionPrice` — API :283-285 분기 일치.

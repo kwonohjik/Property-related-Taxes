@@ -73,6 +73,11 @@ export function redevSubjectPatchForAssetKind(
       isAppraisalAcquisition: false,
       isSalesCaseAcquisition: false,
       redevIsSuccessorMember: "",
+      /**
+       * `redevPostApprovalExpenses` — ②-a 승계조합원 전용 칸이다(U1-02). `redevIsSuccessorMember`를
+       * 비우는 것만으로는 금액이 남아 ⑥ 사이드바 합계에 계속 잡힌다.
+       */
+      redevPostApprovalExpenses: "",
     };
   }
   if (assetKind === "redevelopment_apt") return { redevSubject: "apt" };
