@@ -208,3 +208,57 @@ describe("D-11 §99 구 방식 — 일수 안분 산출근거", () => {
     expect(t).not.toContain("일 ÷");
   });
 });
+
+describe("D-8 적용 불가 — 사유 표시 (PR-2)", () => {
+  it("§77 공익수용이 적용 불가여도 카드가 뜨고 사유가 보인다", () => {
+    renderCards({
+      publicExpropriationDetail: {
+        isEligible: false,
+        notEligibleReason:
+          "사업인정고시일부터 소급하여 2년 이전에 취득한 토지등이 아닙니다 (조특법 §77①).",
+        reductionAmount: 0,
+        rateSetApplied: "current_2018",
+        // breakdown은 적용 불가 분기에서 참조되지 않는다
+      },
+    });
+    expect(bodyText()).toContain("공익사업 수용 감면 (조특법 §77) — 적용 불가");
+    expect(bodyText()).toContain("소급하여 2년 이전에 취득한 토지등이 아닙니다");
+  });
+
+  it("🔴 구별력 — 감면 미입력(detail 부재)이면 카드가 뜨지 않는다", () => {
+    const { container } = renderCards({});
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("적용 가능하면 종전대로 산출근거 카드가 뜬다 (회귀 방지)", () => {
+    renderCards({
+      publicExpropriationDetail: {
+        isEligible: true,
+        rateSetApplied: "current_2018",
+        reductionAmount: 1_000_000,
+        rawReductionAmount: 1_000_000,
+        weightedRate: 0.1,
+        useLegacyRates: false,
+        cappedByAnnualLimit: false,
+        appliedAnnualLimit: 100_000_000,
+        legalBasis: "조세특례제한법 §77",
+        warnings: [],
+        breakdown: {
+          cashRate: 0.1,
+          bondRate: 0,
+          cashAmount: 100_000_000,
+          bondAmount: 0,
+          cashIncome: 10_000_000,
+          bondIncome: 0,
+          basicDeductionOnCash: 2_500_000,
+          basicDeductionOnBond: 0,
+          cashReduction: 1_000_000,
+          bondReduction: 0,
+          reducibleIncome: 10_000_000,
+        },
+      },
+    });
+    expect(bodyText()).toContain("공익사업 수용 감면 상세 (조특법 §77)");
+    expect(bodyText()).not.toContain("적용 불가");
+  });
+});

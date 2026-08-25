@@ -97,7 +97,7 @@ export function ReductionDetailCards({
     !!result.unsold984Detail ||
     !!result.unsold98Detail ||
     !!result.new993Detail ||
-    !!result.publicExpropriationDetail?.isEligible ||
+    !!result.publicExpropriationDetail ||
     !!result.replacementLandDetail ||
     !!result.gbDesignatedLandDetail ||
     !!(result.specialHouseExclusionDetail &&
@@ -187,8 +187,11 @@ export function ReductionDetailCards({
       )}
       {/* §99의3 신축주택 과세특례 — 양도소득금액 차감 방식 5년 안분 산식 */}
       {result.new993Detail && <New993DetailCard detail={result.new993Detail} />}
-      {/* 비자발적 양도 감면 §77·§77의2·§77의3 — 감면세액 산출근거(변수값) */}
-      {result.publicExpropriationDetail?.isEligible && (
+      {/* 비자발적 양도 감면 §77·§77의2·§77의3 — 감면세액 산출근거(변수값).
+          적용 불가여도 렌더한다 — 카드가 사유를 표시한다(§77의2·§77의3과 동일).
+          detail은 §77 감면을 입력했을 때만 생성되므로(transfer-tax-reductions-calc.ts:171)
+          미입력 시 카드가 뜨지 않는다. */}
+      {result.publicExpropriationDetail && (
         <PublicExpropriationDetailCard
           detail={result.publicExpropriationDetail}
           calculatedTax={calculatedTax}
