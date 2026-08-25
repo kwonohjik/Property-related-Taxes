@@ -38,6 +38,23 @@ import { applyRate } from "./tax-utils";
 /** 「농어촌특별세법」 §5①1호 — 조특법 감면세액에 대한 세율. */
 export const RURAL_SURTAX_RATE = 0.2;
 
+/**
+ * **하이브리드(미분양주택) 감면 — 5년 내 「세액감면」 방식의 조문 라벨**.
+ *
+ * 이 표에 있는 id는 `resolveTaxCreditRuralSurtax`의 대상이 **아니다** — 하이브리드는
+ * 호출부가 전용 분기에서 이미 농특세를 계산하므로, 그 분기와 §5①1호 일반 분기가
+ * **같은 감면에 두 번 부과하지 않도록** 가르는 것이 이 표의 유일한 용도다.
+ *
+ * 2026-08-25에 `transfer-tax-finalize.ts`의 지역 상수에서 끌어올렸다 —
+ * `transfer-tax-redevelopment.ts`(§166 분기)가 두 번째 호출부가 되면서, 표를 복사하면
+ * 조문이 추가될 때 한쪽만 갱신돼 **재개발 경로에서만 이중 부과**가 되기 때문이다.
+ */
+export const HYBRID_ARTICLE: Record<string, string> = {
+  unsold_98_7: "§98의7", unsold_99_2: "§99의2",
+  unsold_98_3: "§98의3", unsold_98_5: "§98의5", unsold_98_6: "§98의6",
+  unsold_98_4: "§98의4",
+};
+
 export type RuralSurtaxVerdict =
   /** 조문이 비과세로 열거한 감면 */
   | "exempt"

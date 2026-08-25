@@ -52,6 +52,9 @@ export const redevelopmentSchema = z
     // 엔진 계산에는 직접 미사용 (비과세 판단은 exemptionEligibleAtApproval 기준).
     // §89①4호 가목 → §89①3호 가목 보유 2년 요건 참조.
     priorHouseHoldingMonths: z.number().int().nonnegative().optional(),
+    // §89①4호 나목 — 「해당 1주택을 취득한 날부터 3년 이내에 해당 조합원입주권을 양도할 것」
+    // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거된다.
+    otherHouseAcquisitionDate: z.string().date().optional(),
     // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
     // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
     landStdPriceAtAcq: z.number().int().nonnegative().optional(),

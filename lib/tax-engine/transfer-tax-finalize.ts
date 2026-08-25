@@ -13,7 +13,7 @@
 
 import { applyRate, truncateToWon } from "./tax-utils";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
-import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
+import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
@@ -340,11 +340,6 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   // 농특세법 §2①1호 "조특법에 따라 감면받는 세액". §98의3·§98의5(P3)는 농특세령 §4⑦1호 비과세 —
   // 본 2조문은 비과세 열거 없음 (plan §2-1).
   let ruralSurtaxHybrid = 0;
-  const HYBRID_ARTICLE: Record<string, string> = {
-    unsold_98_7: "§98의7", unsold_99_2: "§99의2",
-    unsold_98_3: "§98의3", unsold_98_5: "§98의5", unsold_98_6: "§98의6",
-    unsold_98_4: "§98의4",
-  };
   if (
     reductionTypeApplied !== undefined &&
     HYBRID_ARTICLE[reductionTypeApplied] !== undefined &&

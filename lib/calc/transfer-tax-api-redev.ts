@@ -130,6 +130,10 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
       asset.redevPriorHouseHoldingMonths
         ? parseInt(asset.redevPriorHouseHoldingMonths.replace(/,/g, ""), 10) || undefined
         : undefined,
+    // §89①4호 나목 — 그 1주택 취득일. 미입력이면 undefined로 두어 나목을 적용하지 않는다
+    // (엔진이 판정 불가 → 비과세·12억 안분 모두 미적용). ⑫ Zod는 date string을 받고
+    // ⑭ route가 Date로 바꾼다 — 그 변환이 빠지면 `Date < string` 비교가 조용히 false가 된다.
+    otherHouseAcquisitionDate: asset.redevOtherHouseAcquisitionDate || undefined,
     // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
     // 3중 패턴(UI/API/validate): LandPriceLookupField(단가×면적) 우선 > legacy 총액 직접 입력 fallback.
     // UI·validate와 동일 우선순위 — API layer 단독 변환 금지(silent stripping 차단).

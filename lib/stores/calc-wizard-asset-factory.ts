@@ -503,6 +503,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevExemptionEligibleAtApproval: "",
     // 사례 36 — 1세대1입주권 비과세 C-1 안전장치
     redevPriorHouseHoldingMonths: "",
+    redevOtherHouseAcquisitionDate: "", // §89①4호 나목 — 그 1주택 취득일
     // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
     redevLandStdPriceAtAcq: "",      // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
     redevLandStdPriceAtApproval: "", // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
