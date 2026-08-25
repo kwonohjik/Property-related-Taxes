@@ -286,6 +286,44 @@ export function computeRedevelopmentValuation(
   info: RedevelopmentInfo,
   acquisitionDate: Date,
 ): ConvertedAcquisitionResult | null {
+  /**
+   * ── 토지 출자 §166③ 환산 (2026-08-25 신설 — E1-01) ──────────────────────────
+   *
+   * 종전자산이 **토지**면 §166③의 분자·분모가 주택 라목값(공동주택·개별주택가격)이 아니라
+   * **개별공시지가**다. 그래서 아래 주택 경로(`managementDisposalHousingPrice` 필요)는 토지
+   * 입력으로는 절대 발동하지 않고 `null`을 반환했다.
+   *
+   * 🔴 그 결과 `runRedevelopment`가 「토지 + 환산」을 통째로 별도 분기(`runLandContribEstimated`)로
+   *    빼돌렸고, 그 분기가 §166**①**1호(입주권) 구조를 강제해 **완공 신축주택 양도(subject="apt")
+   *    까지 §166①로 계산**됐다. 즉 취득가액 산정 방식(실가/환산) 토글 하나가 §166 적용 항을 바꿨다
+   *    (실측 산출세액 89,576,716원 과대 — §166⑤2호 LTHD가 통째로 사라진다).
+   *
+   * §166③은 「**제1항 및 제2항을 적용할 때** … 취득가액을 확인할 수 없는 경우」의 **취득가액 대체
+   * 규정**이지 ①·②의 선택축이 아니다. ⇒ 여기서 토지 환산취득가를 산출해 주면
+   * `computeRedevelopmentSplit`이 subject에 따라 ①(입주권) / ②(신축주택)로 정상 라우팅한다.
+   *
+   * `numerator`에 취득당시 개별공시지가를 실으면 상위 Step B의 §163⑥ 개산공제(토지 3%)가 그대로
+   * 따라온다 — `redevelopment-land-contribution.ts`와 같은 값이다(양쪽 다
+   * `estimatedDeductionRate(isUnregistered)` 단일 경유).
+   */
+  if (info.originalAssetType === "land") {
+    const acqLandPrice = info.landStdPriceAtAcq ?? 0;
+    const approvalLandPrice = info.landStdPriceAtApproval ?? 0;
+    if (acqLandPrice <= 0 || approvalLandPrice <= 0) return null;
+    return {
+      acquisitionPrice: safeMultiplyThenDivide(info.rightsValue, acqLandPrice, approvalLandPrice),
+      meta: {
+        method: "estimated_post_disclosure_decree_166_3",
+        numerator: acqLandPrice,
+        denominator: approvalLandPrice,
+        rationale:
+          `§166③ 토지 출자 환산 — 평가액 ${info.rightsValue.toLocaleString()} × ` +
+          `(취득당시 개별공시지가 ${acqLandPrice.toLocaleString()} ÷ ` +
+          `인가당시 개별공시지가 ${approvalLandPrice.toLocaleString()})`,
+      },
+    };
+  }
+
   if (
     info.managementDisposalHousingPrice == null ||
     info.managementDisposalHousingPrice <= 0

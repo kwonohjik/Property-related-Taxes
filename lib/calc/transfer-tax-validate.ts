@@ -129,6 +129,34 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         [(a) => a.transferType === "burdened_gift", "부담부증여(소령 §159)"],
         [(a) => a.assetKind === "housing" && !!a.isMixedUseHouse, "겸용주택 분리계산"],
         [(a) => a.assetKind === "redevelopment_apt", "재개발·재건축(시행령 §166)"],
+        /**
+         * 🔴 **조합원입주권·분양권 — 2026-08-25 추가.** 종전에는 이 목록에 없어 **침묵 오산**했다.
+         *
+         * · **입주권**: 2026-07-28 `5591e0b9`가 이 목록을 만들 당시 입주권 양도는
+         *   `assetKind="redevelopment_apt" + redevSubject="right"`로 모델링돼 있어 **위 줄이 함께 막았다**.
+         *   2026-08-13 `52c1180d`(#1245)가 축을 자산 종류로 일원화해 입주권을 `right_to_move_in`으로
+         *   옮기면서 그 차단이 통째로 비켜갔다. 실측: 컴패니언 입주권의 응답 JSON이
+         *   「§166 필드를 하나도 넣지 않은 순수 주택」과 **바이트 단위로 동일**했다 —
+         *   관리처분 인가일·권리가액·청산금·인가전 취득가액이 화면에는 입력된 채 계산에 한 필드도 닿지 않는다.
+         *   (`buildRedevelopmentPayload`는 `transfer-tax-api.ts`에서 **primary 전용** 호출뿐이고
+         *    컴패니언 Zod `companionAssetSchema`에는 `redevelopment` 키 자체가 없다.)
+         *
+         * · **분양권**: `toEngineAssetKind`(`transfer-tax-api-helpers.ts`)가 `presale_right`를
+         *   `"housing"`으로 접어 보낸다. 그러면 §104①1호 60% 단일세율·§95② 장기보유특별공제 배제·
+         *   시행령 §163⑥4호 개산공제 1%가 전부 사라지고 일반 주택으로 계산된다(실측 111,485,000원 과소).
+         *   컴패니언 Zod enum이 `["housing","land","building"]` 3종뿐이라 축을 열려면 ⑩⑭까지 함께
+         *   확장해야 하고, 그렇게 해도 입주권은 §166 서브객체가 없어 여전히 오산이다.
+         *
+         * ⇒ 도메인 오너 결정(2026-08-25): **명시 차단**. 「침묵 오산보다 명시 차단이 안전하다」는
+         *   `multi-transfer-tax-validate.ts:57-71`이 이미 택한 방향이고, 다물건 계산기는
+         *   2026-08-23에 같은 이유로 입주권을 이미 차단했다 — 함께양도 경로만 빠져 있었다.
+         *
+         * ⚠️ 축을 정식으로 열려면(컴패니언 분양권 지원) ⑩ `companionAssetSchema.assetKind` enum +
+         *   ⑭ `bundled-split-helpers.ts` 매핑 + `toEngineAssetKind` fold 제거가 **함께** 가야 한다.
+         *   한 곳만 열면 다시 침묵 오산이 된다.
+         */
+        [(a) => a.assetKind === "right_to_move_in", "조합원입주권(시행령 §166①)"],
+        [(a) => a.assetKind === "presale_right", "분양권(소득세법 §104①1호)"],
         // 지분 분할(전 자산 fractional)은 전용 경로가 있으므로 제외한다.
         ...(fullFractional
           ? []
