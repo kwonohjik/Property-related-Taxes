@@ -68,3 +68,34 @@ export function postApprovalExpensesInScope(
 ): boolean {
   return asset.redevIsSuccessorMember === "yes";
 }
+
+/**
+ * 「청산금 수령분 **단독 신고**」인가 — ④ API 변환·⑥ 사이드바 공용 술어 (C1-05).
+ *
+ * 이 모드에서는 **신고 단위가 청산금 수령액**이고 양도일이 소유권이전 고시일이다.
+ * ④는 그 규칙대로 `transferPrice`를 바꿔 보내고 ⑦ 결과뷰도 같은 값을 표시하는데,
+ * ⑥ 사이드바만 폼 원본(`actualSalePrice` = 계약 총액)을 읽어 자산 합계까지 그 값으로 채웠다
+ * (실측 사이드바 1,200,000,000 vs ④ 300,000,000).
+ *
+ * ⚠️ **완공APT 전용이다** — 엔진의 receiveOnly 구현은 `computeAptReceive` 안에만 있어
+ *    입주권(`subject === "right"`)에는 대응 산식이 없다. 가드 없이 양도가액만 바꾸면
+ *    양도차익이 조용히 사라진다(`transfer-tax-api.ts`의 같은 주석 참조).
+ * ⚠️ 승계조합원 입주권은 §166 페이로드 자체를 만들지 않으므로 대상이 아니다.
+ */
+export function isReceiveOnlyFiling(
+  asset: Pick<
+    AssetForm,
+    "assetKind" | "redevSubject" | "redevReceiveOnlyMode" | "isSuccessorRightToMoveIn"
+  >,
+): boolean {
+  const isRedevelopmentAsset =
+    asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in";
+  const isSuccessorRight =
+    asset.assetKind === "right_to_move_in" && asset.isSuccessorRightToMoveIn === true;
+  return (
+    isRedevelopmentAsset &&
+    !isSuccessorRight &&
+    resolveRedevSubject(asset) === "apt" &&
+    asset.redevReceiveOnlyMode === "yes"
+  );
+}

@@ -22,7 +22,11 @@ import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-
 import {
   isSuccessorRightTransfer,
   successorRightAcquisitionTotal,
+  successorRightEstimationMode,
 } from "@/lib/calc/transfer-successor-right";
+import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
+import { redevBranchTotals } from "@/components/calc/results/transfer/redev-acquisition-inverse";
+import { inverseRedevAcquisition } from "@/components/calc/results/transfer/redev-acquisition-inverse";
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/tax-utils";
@@ -140,11 +144,31 @@ function parcelExpenseSum(a: AssetForm): number {
  * 부분합을 합계로 표시하면 총액으로 오독된다.
  */
 function directAcqRaw(a: AssetForm): { value: number; pending: boolean } {
-  // ①-0 승계조합원 입주권 — §166 미적용(§97①1호 가목). 승계취득가 + 취득 후 추가분담금.
+  // ①-0 승계조합원 입주권 — §166 미적용(§97①1호 가목).
   //     ①보다 **앞**에 둔다 — `isRedevelopmentPath`가 assetKind만 보므로 순서를 바꾸면
   //     승계 자산이 §166 필드(빈 값)를 읽어 0으로 표시된다. API 변환의 분기 순서와 동일.
+  //
+  // 🔴 2026-08-26 정정(U2-04): 종전에는 **산정 방식과 무관하게** 실가 2칸 합을 확정값으로
+  //    표시했다. 산정 방식 라디오는 boolean 3개만 뒤집고 실가 2칸을 비우지 않으므로(전용 필드를
+  //    비우는 것은 「조합원 유형」 토글뿐), 환산으로 바꾸면 화면에서 사라진 값이 사이드바에만
+  //    남았다 — ④는 `acquisitionPrice: 0`을 보내고 §165① 기준시가로 환산한다
+  //    (실측 사이드바 500,000,000 vs 엔진 환산취득가 200,000,000).
+  //    ⇒ ④와 **같은 술어**(`successorRightEstimationMode`)로 갈래를 나눈다.
   if (isSuccessorRightTransfer(a)) {
-    return { value: successorRightAcquisitionTotal(a), pending: false };
+    switch (successorRightEstimationMode(a)) {
+      case "actual":
+        return { value: successorRightAcquisitionTotal(a), pending: false };
+      // ④ `similarSalesValue`(영 §176의2③1호) — 승계는 §166을 안 타므로 추계 3종이 열린다.
+      case "salesCase":
+        return { value: parseRaw(a.similarSalesValue), pending: false };
+      // ④ `appraisalValue`(영 §176의2③2호)는 `fixedAcquisitionPrice`를 싣는다.
+      case "appraisal":
+        return { value: parseRaw(a.fixedAcquisitionPrice), pending: false };
+      // 환산(영 §176의2②2호)은 계산 후 확정 — 0을 돌려 공통 fallback 체인의
+      // 「미계산 + 환산 → pending」 규칙에 맡긴다(여기서 pending을 세우면 계산 후에도 남는다).
+      case "estimated":
+        return { value: 0, pending: false };
+    }
   }
   // ① 재개발·입주권 — 상단 일반 취득가액 칸이 숨겨지고 §166 섹션 전용 필드를 쓴다.
   //    승계조합원(사례 48)만 자산 카드 `fixedAcquisitionPrice` (API :283-286).
@@ -403,7 +427,17 @@ export function computeTransferPerAssetSummary(
     let salePrice = 0;
     let salePending = false;
     let saleIsApportioned = false;
-    if (bundledMatch) {
+    /**
+     * 청산금 수령분 **단독 신고** — 신고 단위가 청산금 수령액이다(C1-05).
+     *
+     * ④가 `transferPrice`를 이 값으로 바꿔 보내므로(다른 모드보다 **우선**한다) 여기서도
+     * 체인 맨 앞에 둔다. 술어·인자 모두 ④와 같은 leaf를 쓴다
+     * (memory `feedback_shared_predicate_argument_parity`).
+     */
+    const receiveOnlySalePrice = isReceiveOnlyFiling(a) ? parseRaw(a.redevSettlementAmount) : 0;
+    if (receiveOnlySalePrice > 0) {
+      salePrice = receiveOnlySalePrice;
+    } else if (bundledMatch) {
       salePrice = bundledMatch.allocatedSalePrice;
       saleIsApportioned = bundledMatch.saleMode === "apportioned";
     } else if (bundledCards && bundledCards.sale > 0) {
@@ -425,6 +459,22 @@ export function computeTransferPerAssetSummary(
       salePrice = parseRaw(a.actualSalePrice);
     }
 
+    /**
+     * §166 재개발·입주권 — 계산 후 합계 취득가액·필요경비 (C1-04).
+     *
+     * 신고서·계산명세서가 쓰는 **같은 leaf**를 그대로 쓴다. 파트 합이 아니라 **역산**인 이유는
+     * §166이 단계별 의제라 「파트 합 ≠ 양도가액」이 설계상 정상이기 때문이다
+     * (`redev-acquisition-inverse.ts` 헤더 주석).
+     *
+     * 🔴 종전에는 계산 전 «계산 후 표시»를 안내하고도 계산 후 **«-»**가 남았다 —
+     *    `directAcqRaw`가 §166 실가 필드만 읽어 환산 모드에서 0이고, fallback이 보는
+     *    `estimatedBase`를 §166 결과가 싣지 않기 때문이다(실측: 값은 분기 안에 있었다).
+     */
+    const redevResultTotals =
+      singleResult?.redevelopmentDetail && i === 0
+        ? redevBranchTotals(singleResult.redevelopmentDetail)
+        : null;
+
     // ── 취득가액 ──
     const acqSource = directAcqRaw(a);
     let acqPrice = fractional ? Math.floor(acqSource.value * ratio) : acqSource.value;
@@ -444,6 +494,13 @@ export function computeTransferPerAssetSummary(
     } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
       // 다필지 — 필지별 결과 취득가액 합(환산 필지 포함). 계산 전 pending을 여기서 해소한다.
       acqPrice = singleResult.parcelDetails.reduce((s, p) => s + p.acquisitionPrice, 0);
+      acqPending = false;
+    } else if (redevResultTotals) {
+      acqPrice = inverseRedevAcquisition({
+        totalTransferPrice: salePrice,
+        totalExpenses: redevResultTotals.expenses,
+        totalGain: redevResultTotals.gain,
+      });
       acqPending = false;
     } else if (dedicatedPreview) {
       /**
@@ -517,6 +574,10 @@ export function computeTransferPerAssetSummary(
     } else if (isParcelMode(a) && singleResult?.parcelDetails?.length) {
       // 다필지 — 필지별 결과 필요경비 합(환산 필지의 개산공제 §163⑥ 포함). pending 해소.
       expense = singleResult.parcelDetails.reduce((s, p) => s + p.expenses, 0);
+      expensePending = false;
+    } else if (redevResultTotals) {
+      // §166 — 분기별 필요경비 합(환산 경로의 §163⑥ 개산공제 포함). 위 역산과 **같은 인자**다.
+      expense = redevResultTotals.expenses;
       expensePending = false;
     } else if (dedicatedPreview) {
       // 환산의 필요경비는 개산공제(§163⑥)이지 폼의 자본적지출이 아니다 — §97②2호 swap이

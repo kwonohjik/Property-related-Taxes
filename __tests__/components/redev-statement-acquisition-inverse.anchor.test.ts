@@ -62,7 +62,14 @@ const SCENARIOS: Scenario[] = [
     //    **역산 취득가액이 59,000,000 낮게** 나왔다. 차이가 정확히 그 금액이다.
     //    §166②1호는 clamp 없는 대수적 합이므로 음수가 흘러야 하고, 그 결과 역산 취득가액은
     //    실제 취득가액(실가 200,000,000 + 납부청산금 300,000,000 = 500,000,000)에 **더 가까워진다**.
-    "apt", "pay", 900_000_000, "2024-01-26", "2002-04-09", 491_000_000, 18_000_000),
+    // 🔴 2026-08-26 2차 정정 (E1-06) — 491,000,000/18,000,000 → 500,000,000/**9,000,000**.
+    //    인가후 필요경비 9,000,000이 기존주택분·청산금분 **두 열에 각각 전액** 붙어 있었다
+    //    (§166②1호는 나누기 **전에** 한 번만 차감한다). 합계 필요경비가 정확히 2배였고,
+    //    역산 취득가액은 그만큼 낮게 나왔다.
+    //    ⇒ 정정 후 역산값이 **실제 취득가액과 정확히 일치**한다:
+    //      실가 200,000,000 + 납부청산금 300,000,000 = **500,000,000**.
+    //      위 E1-03 주석이 「더 가까워진다」고 적어 둔 방향의 나머지 9,000,000이 이것이었다.
+    "apt", "pay", 900_000_000, "2024-01-26", "2002-04-09", 500_000_000, 9_000_000),
   mk("S3 C47 apt+receive", { propertyType: "redevelopment_apt", transferPrice: 2_000_000_000, transferDate: new Date("2022-03-01"), acquisitionDate: new Date("2001-01-01"), acquisitionPrice: 100_000_000, useEstimatedAcquisition: false, isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 252, redevelopment: case47RedevelopmentInfo() },
     "apt", "receive", 2_000_000_000, "2022-03-01", "2001-01-01", 1_230_000_000, 0),
   mk("S4 C38 right+receive", { propertyType: "right_to_move_in", transferPrice: 320_000_000, transferDate: new Date("2023-03-02"), acquisitionDate: new Date("2009-04-09"), acquisitionPrice: 180_000_000, useEstimatedAcquisition: false, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0,
