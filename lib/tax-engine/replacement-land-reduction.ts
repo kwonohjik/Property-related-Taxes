@@ -46,7 +46,7 @@ export interface ReplacementLandResult {
   reductionRate: number;
   /** 대토보상 / (현금보상 + 대토보상) */
   replacementRatio: number;
-  /** 대토보상분 감면대상 양도소득금액 (기본공제 前) — 별지84호 부표2 ⑲ 세액감면대상금액용 echo */
+  /** 대토보상분 감면대상 양도소득금액 (기본공제 前) — 별지84호 부표 1 ⑲ 세액감면대상금액용 echo */
   eligibleTransferIncome?: number;
   /** 대토보상분 소득 (기본공제 배정 후) */
   replacementTaxableIncome: number;

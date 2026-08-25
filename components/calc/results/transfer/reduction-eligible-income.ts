@@ -1,5 +1,5 @@
 /**
- * 별지 제84호서식 부표2 ⑲ 세액감면대상금액 = 감면대상 양도소득금액
+ * 별지 제84호서식 부표 1 ⑲ 세액감면대상금액 = 감면대상 양도소득금액
  * (소득세법 §90① 세액감면방식 — 감면율·기본공제 적용 前).
  *
  * 기재요령: ⑲ = 「양도자산의 감면소득금액」. §90①은 세액을 감면(소득금액 미차감).
@@ -90,4 +90,38 @@ export function pickIncomeDeductionFormulaSource(
     return { ...d, articleLabel: INCOME_DEDUCTION_LABELS[i] };
   }
   return undefined;
+}
+
+/**
+ * ⑲ 세액감면대상금액의 **산출 근거 문구** — 조문별로 기준이 다르므로 그 이유를 밝힌다.
+ *
+ * 값은 `reductionEligibleIncome`이 낸다. 여기서는 「왜 그 값인가」만 설명한다
+ * (dual-truth 회피 — 산식을 다시 계산하지 않는다).
+ */
+export function eligibleIncomeBasisText(
+  reductionTypeApplied: string | undefined,
+  value: number,
+): string {
+  const v = value.toLocaleString();
+  switch (reductionTypeApplied) {
+    case "public_expropriation":
+      return `양도소득금액 전액 ${v} (자산 전부가 감면 대상 — 조세특례제한법 §77)`;
+    case "gb_designated_land":
+      return `양도소득금액 전액 ${v} (자산 전부가 감면 대상 — 조세특례제한법 §77의3)`;
+    case "replacement_land_comp":
+      return `대토보상분 감면 대상 양도소득금액 ${v} (조세특례제한법 §77의2)`;
+    case "self_farming":
+    case "self_farming_incorp":
+    case "self_farming_inherited":
+      return `자경 감면 대상 양도소득금액 ${v} (조세특례제한법 §69 — 편입 부분감면 시 감면비율 반영)`;
+    case "rental_97_main":
+    case "rental_97_proviso":
+    case "rental_97_2":
+    case "rental_97_5":
+      return `임대기간 중 발생한 양도소득 ${v} (조세특례제한법 §97 계열 — 임대기간 분 안분)`;
+    default:
+      return value > 0
+        ? `감면 적용 대상 양도소득금액 ${v}`
+        : "감면 대상 없음";
+  }
 }

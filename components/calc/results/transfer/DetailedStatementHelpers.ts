@@ -44,6 +44,7 @@ import {
   reductionEligibleIncome,
   incomeDeductionReducible,
   pickIncomeDeductionFormulaSource,
+  eligibleIncomeBasisText,
 } from "./reduction-eligible-income";
 import { INCOME_DEDUCTION_5YEAR_FORMULA } from "./DetailedStatementFormulaNodes";
 
@@ -461,9 +462,11 @@ export function buildStatementItems(
   items.set("reductionTargetIncome", {
     label: "세액감면대상금액",
     value: eligibleValue,
+    // ⑲는 **감면율을 곱하기 前** 대상 소득금액이다(부표1 작성방법 14번 — 감면율은 16번 별도 칸).
+    // 조문마다 기준이 달라(전액/대토보상분/임대기간 안분) 그 근거를 함께 보인다.
     formula: isAggregate
       ? `자산별 감면 적용 대상 양도소득금액 합계 = ${eligibleValue.toLocaleString()} (§90① 세액감면방식 — 감면율·기본공제 前)`
-      : `감면 적용 대상 양도소득금액 = ${eligibleValue.toLocaleString()} (§90① 세액감면방식 — 감면율·기본공제 前, 조세특례제한법 §69·§77 등)`,
+      : `${eligibleIncomeBasisText(result.reductionTypeApplied, eligibleValue)} — §90① 세액감면방식이라 감면율·기본공제를 곱하기 전 금액이며, 소득금액에서 차감하지 않습니다`,
     legalBasis: "소득세법 §90① · 조세특례제한법 §127",
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
