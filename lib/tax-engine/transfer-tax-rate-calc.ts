@@ -17,8 +17,8 @@ import {
   applyRate,
   calculateProgressiveTax,
   calculateHoldingPeriod,
-  isSurchargeSuspended,
 } from "./tax-utils";
+import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { resolveCompanionLandRate } from "./appurtenant-land-rate";
@@ -305,21 +305,18 @@ export function calcTax(
     // applied=false → 기존 경로(본래 보유기간 기준) 계속 진행
   }
 
-  const isSurchargeCase = multiHouseSurchargeResult
-    ? multiHouseSurchargeResult.surchargeType !== "none"
-    : (input.propertyType === "housing" || input.propertyType === "right_to_move_in" || input.propertyType === "presale_right") &&
-      input.isRegulatedArea &&
-      input.householdHousingCount >= 2;
-
-  const suspended = multiHouseSurchargeResult
-    ? multiHouseSurchargeResult.isSurchargeSuspended
-    : isSurchargeCase
-      ? isSurchargeSuspended(
-          surchargeSpecialRules,
-          input.transferDate,
-          input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2",
-        )
-      : false;
+  // 술어는 `transfer-tax-surcharge-predicate.ts` **단일 소스**다 (2026-08-25).
+  // 종전에는 이 자리와 `transfer-tax.ts` STEP 4 앞에 같은 판정이 복제돼 있었고,
+  // 두 복제본 모두 `redevelopment_apt`를 빠뜨렸다 — 같은 파일 `isHousingLikeProp`(:434)이
+  // 「신축APT는 주택」으로 단기세율을 매기는 것과 정면으로 모순이었다.
+  // ⚠️ **세율 축(`isRateSurchargeApplied`)도 leaf에서 받는다** — 종전에는 이 아래에서
+  //   `multiHouseSurchargeResult.surchargeApplicable`을 **직접** 읽어 leaf를 우회했고,
+  //   그래서 자산 게이트(§104⑦ 「주택」)가 세율에 닿지 못했다(실측: 입주권 정밀 경로 0.68).
+  const {
+    isSuspended: suspended,
+    isRateSurchargeApplied: surchargeApplicable,
+    effectiveSurchargeType,
+  } = resolveSurchargeApplication(input, multiHouseSurchargeResult, surchargeSpecialRules);
 
   const roundRate = (r: number) => Math.round(r * 10000) / 10000;
 
@@ -417,13 +414,6 @@ export function calcTax(
       candidateClauses: nblCandidates,
     };
   }
-
-  const surchargeApplicable = multiHouseSurchargeResult
-    ? multiHouseSurchargeResult.surchargeApplicable
-    : isSurchargeCase && !suspended;
-
-  const effectiveSurchargeType = multiHouseSurchargeResult?.surchargeType
-    ?? (input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2");
 
   // T-2.5: 단기보유 특례세율 (소득세법 §104①2~3호, 7~8호)
   // 사례 48 — 승계조합원 신축APT 양도 시 기산일 = 준공일 (사전-2019-법령해석재산-0649).

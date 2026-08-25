@@ -33,7 +33,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
-import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { makeMockRates, makeMockRatesWithHouseEngine, baseTransferInput } from "../_helpers/mock-rates";
 import type { RedevelopmentInfo } from "@/lib/tax-engine/types/transfer-redevelopment.types";
 
 const mockRates = makeMockRates();
@@ -161,16 +161,42 @@ describe("승계조합원 입주권 — §166 미적용 (엔진 가드)", () => 
 });
 
 describe("일반 경로 위임의 부수 효과 — 계획서 §9 V-1·V-2·V-3 해소", () => {
+  /**
+   * 🔴 **2026-08-25 관측 지점 이설** — 종전 이 케이스는 `mockRates`(유예 `suspended_until:
+   * 2026-05-09`) + `transferDate: 2026-02-16`이라 **중과가 애초에 유예 중인 조합**을 봤다.
+   * 단언은 옳은데 구별력이 0이었다: 날짜만 2026-06-01로 옮기면 실측 8,040,000 → 25,290,000으로
+   * 갈렸다(엔진이 입주권에 30%p를 붙이고 있었다). memory `feedback_anchor_observes_wrong_stage`.
+   *
+   * ⇒ **유예 종료 후**를 본다(`makeMockRatesWithHouseEngine`은 `surcharge_suspended: false`).
+   *    유예 창 계약은 바로 아래 `V-1b`가 따로 지킨다.
+   */
   it("V-1: 세대 3주택이어도 §104⑦ 다주택 중과가 붙지 않는다 (입주권은 주택이 아니다)", () => {
+    const noSuspend = makeMockRatesWithHouseEngine();
+    const afterWindow = new Date("2026-06-01");
+    const base = calculateTransferTax(successorInput({ transferDate: afterWindow }), noSuspend);
+    const threeHouses = calculateTransferTax(
+      successorInput({
+        transferDate: afterWindow,
+        isOneHousehold: true,
+        householdHousingCount: 3,
+        isRegulatedArea: true,
+      }),
+      noSuspend,
+    );
+    // 중과가 붙으면 세액이 올라간다 — 같으면 §104⑦ 미적용이다.
+    expect(threeHouses.calculatedTax).toBe(base.calculatedTax);
+    expect(threeHouses.surchargeType).toBeUndefined();
+    expect(threeHouses.transferGain).toBe(EXPECTED_GAIN);
+    expect(threeHouses.longTermHoldingDeduction).toBe(0); // 승계분 — §95② 괄호로 별도 배제
+  });
+
+  it("V-1b: 유예 창 안에서도 중과가 없다 (두 사유가 겹쳐도 결론은 같다)", () => {
     const base = calculateTransferTax(successorInput(), mockRates);
     const threeHouses = calculateTransferTax(
       successorInput({ isOneHousehold: true, householdHousingCount: 3, isRegulatedArea: true }),
       mockRates,
     );
-    // 중과가 붙으면 세액이 올라간다 — 같으면 §104⑦ 미적용이다.
     expect(threeHouses.calculatedTax).toBe(base.calculatedTax);
-    expect(threeHouses.transferGain).toBe(EXPECTED_GAIN);
-    expect(threeHouses.longTermHoldingDeduction).toBe(0);
   });
 
   it("V-2: 보유 1~2년 세율이 1년 미만과 2년 이상 사이에 놓인다 (§104①4호)", () => {

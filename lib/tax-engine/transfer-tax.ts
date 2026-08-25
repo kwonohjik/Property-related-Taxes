@@ -9,10 +9,8 @@
 import { TRANSFER } from "./legal-codes";
 import { buildLossTransferTaxResult } from "./transfer-tax-loss-return";
 import { buildNormalTransferTaxResult } from "./transfer-tax-normal-return";
-import {
-  applyRate,
-  isSurchargeSuspended,
-} from "./tax-utils";
+import { applyRate } from "./tax-utils";
+import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import {
   type Pre1990LandValuationResult,
   calculatePre1990LandValuation,
@@ -295,7 +293,10 @@ export function calculateTransferTax(
         redevInput = { ...effectiveInput, acquisitionPrice: inhAcqPrice, useEstimatedAcquisition: false };
       }
     }
-    return calculateRedevelopmentTax(redevInput, parsedRates, steps);
+    // 🔴 종전에는 `multiHouseSurchargeResult`를 **넘기지 않았다** — STEP 0.5(`:219`)에서
+    //    판정해 놓고 이 분기가 버렸다. 형제 경로 둘(`buildExemptEarlyResult` ·
+    //    `handleMultiParcelBranch`)은 처음부터 넘기고 있었다.
+    return calculateRedevelopmentTax(redevInput, parsedRates, steps, multiHouseSurchargeResult);
   }
 
   // STEP 0.9 + 0.95: 주택수 제외(§99의4·§98의9·보유 감면주택·상속주택) → 비과세 판정용 유효 주택수 산정.
@@ -465,21 +466,19 @@ export function calculateTransferTax(
   // 입력 참조는 effectiveInput으로 통일 — 최종 파생 입력(carryover·부담부·NBL·상업용 반영).
   // 현재 8필드(propertyType·지역·주택수·1주택·거주·기본공제)는 파생 STEP이 불변이라 동치이나,
   // 향후 파생 STEP이 주택수·지역을 바꿔도 silent 오류가 없도록 effectiveInput 고정.
-  const isSurchargeCase = multiHouseSurchargeResult
-    ? multiHouseSurchargeResult.surchargeType !== "none"
-    : (effectiveInput.propertyType === "housing" || effectiveInput.propertyType === "right_to_move_in" || effectiveInput.propertyType === "presale_right") &&
-      effectiveInput.isRegulatedArea &&
-      effectiveInput.householdHousingCount >= 2;
-
-  const effectiveHouseCount = multiHouseSurchargeResult
-    ? multiHouseSurchargeResult.effectiveHouseCount
-    : effectiveInput.householdHousingCount;
-  const surchargeTypeKey = effectiveHouseCount >= 3 ? "multi_house_3plus" : "multi_house_2";
-  const suspendedResult = multiHouseSurchargeResult
-    ? multiHouseSurchargeResult.isSurchargeSuspended
-    : isSurchargeCase
-      ? isSurchargeSuspended(parsedRates.surchargeSpecialRules, input.transferDate, surchargeTypeKey)
-      : false;
+  // 술어는 `transfer-tax-surcharge-predicate.ts` **단일 소스**다 — 종전에는 이 자리와
+  // `calcTax`(rate-calc)에 같은 판정이 복제돼 있었고, 두 복제본 모두 `redevelopment_apt`를
+  // 빠뜨려 재개발 신축주택에 중과가 통째로 미적용됐다(§104⑦·영 §167의3①12의2).
+  const { isSurchargeCase, isSuspended: suspendedResult } = resolveSurchargeApplication(
+    {
+      propertyType: effectiveInput.propertyType,
+      isRegulatedArea: effectiveInput.isRegulatedArea,
+      householdHousingCount: effectiveInput.householdHousingCount,
+      transferDate: input.transferDate,
+    },
+    multiHouseSurchargeResult,
+    parsedRates.surchargeSpecialRules,
+  );
 
   // STEP 4: 장기보유특별공제 (장기임대 특례율 포함 — §97의3·§97의4는 L-2' 블록)
   // §99의4 eligible 시 exemptionJudgeInput(유효 주택수) 전달 — 표2 판정도 §89①3호 의제 체인

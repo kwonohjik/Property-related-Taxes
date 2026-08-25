@@ -131,8 +131,9 @@ export function toEngineAssetKind(
 // ─── ④ 일반건물(토지+건물 일괄) API 변환 — transfer-tax-api-gb.ts로 분리 (800줄 정책, 재export 호환) ───
 export { buildGeneralBuildingValuation } from "./transfer-tax-api-gb";
 
-export const isHousingLike = (kind: AssetForm["assetKind"]) =>
-  kind === "housing" || kind === "right_to_move_in" || kind === "presale_right";
+// ⑤ 렌더 게이트와 **같은 소스**를 쓴다 — 종전에는 세 벌이 복제돼 `redevelopment_apt`가
+// 여기만 빠져 있었다(`lib/calc/housing-like-asset.ts` 헤더 참조). 재export로 호출부 호환 유지.
+export { isHousingLike } from "./housing-like-asset";
 
 /**
  * 분자·분모(number)에서 지분 모드 여부 판정. 단일 진실 공급원.

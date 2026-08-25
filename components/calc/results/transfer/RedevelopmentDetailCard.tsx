@@ -18,6 +18,8 @@
  */
 
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
+import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
+import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 
@@ -34,6 +36,14 @@ interface Props {
    * "receive" 분기 전용 처리는 후속 PR. 미전달 시 "pay" fallback.
    */
   settlementDirection?: "pay" | "receive";
+  /**
+   * §95② 장기보유특별공제 **배제 사유** — 엔진 `TransferTaxResult.lthdExclusionReason` 그대로.
+   *
+   * 배제되면 아래 세 분기의 `lthdRate`가 전부 0이 되는데, 그 상태로는 화면이
+   * 「양도차익 × **0%**」로만 보여 **왜 0인지 알 수 없다**. 사유를 함께 받아 배너로 알린다.
+   * 라벨은 `LTHD_EXCLUSION_LABEL` 단일 소스(일반 경로 상세명세서와 같은 문구).
+   */
+  lthdExclusionReason?: LthdExclusionReason;
 }
 
 // 신규 라벨 상수 (계획서 §3-4 (B) — DetailedStatement 라벨 동기화)
@@ -43,7 +53,7 @@ export const BRANCH_LABEL_RIGHT_RECEIVE_POSTAPPROVAL = "인가후 분 (§166①2
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
 
-export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDirection = "pay" }: Props) {
+export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDirection = "pay", lthdExclusionReason }: Props) {
   const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution, successorMemberApplied, successorMemberDetail, oneRightExemptionApplied, oneRightHighValueApplied } = detail;
 
   // subject="right": 입주권 양도 분기 (사례 36)
@@ -103,6 +113,21 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </>
         )}
       </div>
+
+      {/* §95② 장기보유특별공제 배제 — 세 분기가 모두 0이 된 **이유**를 알린다 */}
+      {lthdExclusionReason && (
+        <div className="rounded-md bg-amber-50 border border-amber-300 p-3 text-caption text-amber-900 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">§95② 본문 괄호</span>
+            <span className="font-semibold">장기보유특별공제 배제</span>
+          </div>
+          <p>{LTHD_EXCLUSION_LABEL[lthdExclusionReason]}</p>
+          <p className="text-amber-800">
+            아래 세 분기(인가전 분 · 인가후 기존건물분 · 청산금 분)의 공제율이 모두 0%로 표시되는 것은
+            이 배제 때문입니다. 보유기간이 짧아서가 아닙니다.
+          </p>
+        </div>
+      )}
 
       {/* 사례 36 — 1세대1입주권 비과세 배지 + 안내 */}
       {isRightSubject && oneRightExemptionApplied && !oneRightHighValueApplied && (

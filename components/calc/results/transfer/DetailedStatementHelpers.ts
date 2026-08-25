@@ -658,7 +658,7 @@ export function buildStatementItems(
       primary?.redevSettlementDirection === "pay" || primary?.redevSettlementDirection === "receive"
         ? primary.redevSettlementDirection
         : undefined;
-    applyRedevelopmentOverrides(items, result.redevelopmentDetail, totalTransferPrice, redevSubject, redevSettlementDir);
+    applyRedevelopmentOverrides(items, result.redevelopmentDetail, totalTransferPrice, redevSubject, redevSettlementDir, result.lthdExclusionReason);
   }
 
   return items;

@@ -34,11 +34,7 @@ const SUSPENSION_END_KO = (() => {
   return `${y}.${Number(m)}.${Number(d)}.`;
 })();
 
-const isHousingLike = (pt: string) =>
-  pt === "housing" ||
-  pt === "right_to_move_in" ||
-  pt === "presale_right" ||
-  pt === "redevelopment_apt";
+import { isHousingLike } from "@/lib/calc/housing-like-asset";
 
 /**
  * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
