@@ -14,6 +14,10 @@ import { InheritanceSelectedBesshiPages } from "@/lib/pdf/inheritance-besshi-pag
 import { GiftSelectedBesshiPages } from "@/lib/pdf/gift-besshi-pages";
 import { BuildingStdReportPdfPages } from "@/lib/pdf/BuildingStdReportPdfPages";
 import { buildBuildingStdReportsFromInput } from "@/lib/calc/building-std-pdf-data";
+// ⑲ 세액감면대상금액은 조문별로 기준이 다르다(§77·§77의3 = 양도소득금액 전액 / §77의2 = 대토보상분 echo).
+// 화면·신고서와 **같은 헬퍼**를 써야 값이 갈리지 않는다 — 순수 함수라 레이어 역행 없이 재사용한다
+// (dual-truth 회피: memory `single-source-engine-helper`).
+import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type {
   Heir,
   InheritanceTaxResult,
@@ -195,9 +199,20 @@ function TransferSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?:
   const taxableGain = (num(r.taxableGain) ?? transferGain) as number;
   const incomeAmount = Math.max(0, taxableGain - ltdAmount);
   const reducibleIncome = (num(r.reducibleIncome) ?? 0) as number;
+  const eligible19 = reductionEligibleIncome(
+    r.reductionTypeApplied as string | undefined,
+    incomeAmount,
+    reducibleIncome,
+    (r.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
+  );
   const new993 = r.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
   const new993Reducible = (new993?.isEligible && new993.reducibleTransferIncome) ? new993.reducibleTransferIncome : 0;
-  const incomeAmountAfter = Math.max(0, incomeAmount - reducibleIncome - new993Reducible);
+  // 「감면후 소득금액」에서 빼는 것은 **§90②(소득금액 차감방식)뿐**이다.
+  // §90①(세액감면방식)은 세액을 감면할 뿐 소득금액을 줄이지 않는다
+  // — 별지84호 본 서식 ⑧ 과세표준 = ④+⑤−⑥−⑦에서 차감 대상 ⑥은 「소득감면대상 소득금액」이고,
+  //   작성방법 6번이 이를 §90② 적용 시로 한정한다.
+  // 종전에는 세액감면분(reducibleIncome)까지 빼서 화면(DetailedStatementHelpers)과 어긋났다.
+  const incomeAmountAfter = Math.max(0, incomeAmount - new993Reducible);
   const ruralSurtax = new993?.ruralSurtax ?? 0;
   const penaltyTax = (num(r.penaltyTax) ?? 0) as number;
   const determinedTax = (num(r.determinedTax) ?? 0) as number;
@@ -214,7 +229,7 @@ function TransferSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?:
         {num(r.longTermHoldingRate) !== undefined && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제 ({fmtRate(r.longTermHoldingRate)})</Text><Text style={s.val}>{ltdAmount > 0 ? `- ${fmt(ltdAmount)}` : "해당없음"}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(incomeAmount)}</Text></View>
         {num(r.nontaxableGainAmount) !== undefined && (r.nontaxableGainAmount as number) > 0 && (<View style={s.row}><Text style={s.lblSub}>비과세 양도소득금액 (소령 §161①)</Text><Text style={s.val}>- {fmt(r.nontaxableGainAmount)}</Text></View>)}
-        <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{reducibleIncome > 0 ? fmt(reducibleIncome) : "0"}</Text></View>
+        <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{eligible19 > 0 ? fmt(eligible19) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{new993Reducible > 0 ? fmt(new993Reducible) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(incomeAmountAfter)}</Text></View>
         {num(r.basicDeduction) !== undefined && (<View style={s.row}><Text style={s.lbl}>기본공제</Text><Text style={s.val}>{(r.basicDeduction as number) > 0 ? `- ${fmt(r.basicDeduction)}` : "0"}</Text></View>)}
@@ -308,7 +323,13 @@ function TransferMultiSection({ r, selectedSectionIds }: { r: R; selectedSection
   let aggNew993Reducible = 0;
   let aggRuralSurtax = 0;
   for (const p of props) {
-    aggReducibleIncome += (num(p.reducibleIncome) ?? 0) as number;
+    // D-13 — 자산별로 화면과 같은 헬퍼를 태운 뒤 합산한다(§77 계열은 「양도소득금액 전액」 분기)
+    aggReducibleIncome += reductionEligibleIncome(
+      p.reductionType as string | undefined,
+      (num(p.income) ?? 0) as number,
+      (num(p.reducibleIncome) ?? 0) as number,
+      (p.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
+    );
     const np = p.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
     if (np?.isEligible) {
       aggNew993Reducible += np.reducibleTransferIncome ?? 0;
@@ -316,7 +337,8 @@ function TransferMultiSection({ r, selectedSectionIds }: { r: R; selectedSection
     }
   }
   const totalIncomeAfterOffset = (num(r.totalIncomeAfterOffset) ?? 0) as number;
-  const incomeAmountAfter = Math.max(0, totalIncomeAfterOffset - aggReducibleIncome - aggNew993Reducible);
+  // D-14 — 세액감면분(aggReducibleIncome)은 소득금액에서 빼지 않는다(위 단건과 같은 근거)
+  const incomeAmountAfter = Math.max(0, totalIncomeAfterOffset - aggNew993Reducible);
   const determinedTax = (num(r.determinedTax) ?? 0) as number;
   const penaltyTax = (num(r.penaltyTax) ?? 0) as number;
   const totalDeterminedTax = determinedTax + penaltyTax;
@@ -367,9 +389,15 @@ function TransferMultiSection({ r, selectedSectionIds }: { r: R; selectedSection
           {props.map((p, idx) => {
             const np = p.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
             const propIncome = (num(p.income) ?? 0) as number;
-            const propReducibleIncome = (num(p.reducibleIncome) ?? 0) as number;
+            const propReducibleIncome = reductionEligibleIncome(
+              p.reductionType as string | undefined,
+              propIncome,
+              (num(p.reducibleIncome) ?? 0) as number,
+              (p.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
+            );
             const propNew993Reducible = (np?.isEligible && np.reducibleTransferIncome) ? np.reducibleTransferIncome : 0;
-            const propIncomeAfter = Math.max(0, propIncome - propReducibleIncome - propNew993Reducible);
+            // D-14 — 세액감면분은 소득금액에서 빼지 않는다(§90①은 세액만 감면)
+            const propIncomeAfter = Math.max(0, propIncome - propNew993Reducible);
             return (
               <View key={idx} style={{ marginBottom: 8 }}>
                 <Text style={{ fontSize: 8, fontWeight: 700, color: C.muted, marginBottom: 3 }}>{str(p.propertyLabel) ?? `자산 ${idx + 1}`}{bool(p.isExempt) ? "  [비과세]" : ""}</Text>

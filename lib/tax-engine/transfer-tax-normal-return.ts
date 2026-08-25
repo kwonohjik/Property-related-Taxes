@@ -107,7 +107,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     publicExpropriationDetail,
     // §77의3·§77의2 — finalize가 필수로 돌려주는데 종전에는 이 두 키만 구조분해에서 빠져
     // 결과에 실리지 않았다(TransferTaxResult가 optional이라 TS가 못 잡는다). 그 결과
-    // 상세 카드·다건 breakdown·별지84호 부표2 ⑲가 모두 undefined를 받았다.
+    // 상세 카드·다건 breakdown·별지84호 부표 1 ⑲가 모두 undefined를 받았다.
     gbDesignatedLandDetail,
     replacementLandDetail,
     selfFarmingReductionDetail,

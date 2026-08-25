@@ -105,7 +105,13 @@ export function calcReductions(
     const rentalResult = calculateRentalReduction(detailsWithTax, longTermRentalRules);
     rentalReductionDetail = rentalResult;
     if (rentalResult.isEligible && rentalResult.reductionAmount > 0) {
-      candidates.push({ amount: rentalResult.reductionAmount, type: "long_term_rental" });
+      // ⑲ 세액감면대상금액(별지84호 부표 1) = 「§90① 세액감면방식 적용 시 양도자산의 감면소득금액」.
+      // **감면율은 서식의 별도 칸**(부표 1 작성방법 16번)이므로 여기에는 감면율을 곱하지 않는다.
+      candidates.push({
+        amount: rentalResult.reductionAmount,
+        type: "long_term_rental",
+        reducibleIncome: transferIncome,
+      });
     }
   }
 
@@ -128,7 +134,18 @@ export function calcReductions(
         rental97Result.effectCategory === "tax_amount" &&
         rental97Result.reductionAmount > 0
       ) {
-        candidates.push({ amount: rental97Result.reductionAmount, type: rental97Result.id });
+        // §97의5①은 「임대기간 중 발생한 양도소득」이 감면 대상이므로 안분비율을 곱한다.
+        // §97 본문·단서·§97의2는 rentalGainRatio가 1이라 자동으로 전액이 된다.
+      // ⑲ 세액감면대상금액(별지84호 부표 1) = 「§90① 세액감면방식 적용 시 양도자산의 감면소득금액」.
+      // **감면율은 서식의 별도 칸**(부표 1 작성방법 16번)이므로 여기에는 감면율을 곱하지 않는다.
+        candidates.push({
+          amount: rental97Result.reductionAmount,
+          type: rental97Result.id,
+          reducibleIncome:
+            transferIncome === undefined
+              ? undefined
+              : applyRate(transferIncome, rental97Result.rentalGainRatio),
+        });
       }
     }
   }
@@ -151,7 +168,13 @@ export function calcReductions(
         hybridResult.effectCategory === "tax_amount" &&
         hybridResult.reductionAmount > 0
       ) {
-        candidates.push({ amount: hybridResult.reductionAmount, type: hybridResult.id });
+      // ⑲ 세액감면대상금액(별지84호 부표 1) = 「§90① 세액감면방식 적용 시 양도자산의 감면소득금액」.
+      // **감면율은 서식의 별도 칸**(부표 1 작성방법 16번)이므로 여기에는 감면율을 곱하지 않는다.
+        candidates.push({
+          amount: hybridResult.reductionAmount,
+          type: hybridResult.id,
+          reducibleIncome: transferIncome,
+        });
       }
     }
   }
@@ -162,7 +185,13 @@ export function calcReductions(
     const newHousingResult = determineNewHousingReduction(detailsWithTax, newHousingMatrix);
     newHousingReductionDetail = newHousingResult;
     if (newHousingResult.isEligible && newHousingResult.reductionAmount > 0) {
-      candidates.push({ amount: newHousingResult.reductionAmount, type: "new_housing" });
+      // ⑲ 세액감면대상금액(별지84호 부표 1) = 「§90① 세액감면방식 적용 시 양도자산의 감면소득금액」.
+      // **감면율은 서식의 별도 칸**(부표 1 작성방법 16번)이므로 여기에는 감면율을 곱하지 않는다.
+      candidates.push({
+        amount: newHousingResult.reductionAmount,
+        type: "new_housing",
+        reducibleIncome: transferIncome,
+      });
     }
   }
 
