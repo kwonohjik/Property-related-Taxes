@@ -64,3 +64,30 @@ export function incomeDeductionRuralSurtax(
 ): number {
   return incomeDeductionDetails(result).reduce((s, d) => s + (d?.ruralSurtax ?? 0), 0);
 }
+
+/** 조문 표시명 — 3단계 상세명세 산식 꼬리표 */
+const INCOME_DEDUCTION_LABELS = [
+  "§99의3", "§99", "§98의8", "§98의7", "§99의2",
+  "§98의3", "§98의5", "§98의6", "§98의2", "§98의4", "§98",
+] as const;
+
+/**
+ * 3단계 상세명세 「소득금액 감면대상」 행이 쓸 **산식 소스 1건**을 고른다.
+ *
+ * §127⑦로 실제 적용은 1건이므로 첫 번째 존재하는 detail을 쓴다
+ * (`incomeDeductionDetails`와 **같은 순서**를 공유해 라벨이 어긋나지 않는다).
+ * 감면액이 0이어도 고른다 — 0인 이유를 산식으로 보여주기 위해서다.
+ */
+export function pickIncomeDeductionFormulaSource(
+  result: import("@/lib/tax-engine/transfer-tax").TransferTaxResult,
+):
+  | (import("./DetailedStatementFormulaBuilders").IncomeDeductionFormulaSource)
+  | undefined {
+  const details = incomeDeductionDetails(result);
+  for (let i = 0; i < details.length; i++) {
+    const d = details[i];
+    if (!d) continue;
+    return { ...d, articleLabel: INCOME_DEDUCTION_LABELS[i] };
+  }
+  return undefined;
+}

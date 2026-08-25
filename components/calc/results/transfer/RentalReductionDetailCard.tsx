@@ -11,6 +11,11 @@ import type { RentalReductionResult } from "@/lib/tax-engine/rental-housing-redu
 
 interface Props {
   detail: RentalReductionResult;
+  /**
+   * 산출세액 — 「감면세액 = 산출세액 × 감면율」 산식의 기준값.
+   * ⚠️ `detail`에서 읽지 않고 명시 prop (§77 계열·§97 시리즈 카드와 동일 규약).
+   */
+  calculatedTax: number;
 }
 
 function formatN(n: number): string {
@@ -35,7 +40,7 @@ const LAW_VERSION_LABELS: Record<string, string> = {
   post_2020_08_18: "3차 개정 (2020.8.18 이후)",
 };
 
-export function RentalReductionDetailCard({ detail }: Props) {
+export function RentalReductionDetailCard({ detail, calculatedTax }: Props) {
   const {
     isEligible,
     ineligibleReasons,
@@ -152,6 +157,15 @@ export function RentalReductionDetailCard({ detail }: Props) {
             </span>
           </div>
         )}
+      </div>
+
+      {/* 산출근거 — 라벨 산식 + 값 대입 (§77의2 카드와 동일 규약) */}
+      <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs space-y-1.5">
+        <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">감면세액 산출근거</p>
+        <p className="text-muted-foreground">감면세액 = 산출세액 × 감면율</p>
+        <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+          {formatN(calculatedTax)} × {formatRate(reductionRate)} = {formatN(reductionAmount)}
+        </p>
       </div>
 
       {/* 연간 한도 */}

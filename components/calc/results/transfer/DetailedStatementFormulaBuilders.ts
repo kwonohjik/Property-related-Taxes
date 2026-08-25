@@ -228,46 +228,112 @@ export function buildSurtaxAndLocalTaxItems(
 }
 
 /**
- * §99의3 소득금액 감면대상(§90② 소득금액차감) 산식 — 실제 변수값 인라인 + 분수 Frac 표기(PR #746 표준).
+ * 소득금액차감방식(§90②) 감면대상 산식의 **공용 계약**.
+ *
+ * §99의3·§99·§98의8·하이브리드 8조문이 모두 「양도소득금액 × (5년시점−취득) ÷ (양도−취득)」
+ * 형태를 쓰므로 한 빌더로 처리한다. 다만 **§99만 분모가 다르다**(재개발 변형은 종전주택
+ * 취득시 기준시가가 분모) — 그래서 빌더가 조문을 분기하지 않고 **분자·분모·라벨을 인자로 받는다**.
+ */
+export interface IncomeDeductionFormulaSource {
+  /** 조문 표시명 — 산식 꼬리표 (예: "§99의3") */
+  articleLabel: string;
+  isWithin5Years: boolean;
+  reducibleTransferIncome: number;
+  transferIncomeApplied?: number;
+  standardPriceAtAcquisition?: number;
+  standardPriceAt5Years?: number;
+  standardPriceAtTransfer?: number;
+  /** §99 재개발 변형 전용 — 분모의 기준시가(종전주택 취득시) */
+  previousHouseStdPriceApplied?: number;
+  /** 감면 0의 사유 판별용 — 부호 케이스 */
+  signCase?: string;
+}
+
+/** 감면 0인 이유를 부호 케이스로 풀어쓴다(사용자 요청: 세액이 없어도 과정을 보인다). */
+function describeZeroReason(src: IncomeDeductionFormulaSource): string {
+  const acq = src.standardPriceAtAcquisition;
+  const y5 = src.standardPriceAt5Years;
+  const tr = src.standardPriceAtTransfer;
+  if (acq != null && y5 != null && y5 <= acq) {
+    return "5년이 되는 날의 기준시가가 취득 당시 기준시가보다 낮아 5년간 발생한 양도소득금액이 없다";
+  }
+  if (acq != null && tr != null && tr <= acq) {
+    return "양도 당시 기준시가가 취득 당시 기준시가보다 낮아 안분 분모가 0 이하다";
+  }
+  return "기준시가 부호 조건을 충족하지 못했다";
+}
+
+/**
+ * 소득금액 감면대상(§90② 소득금액차감) 산식 — 실제 변수값 인라인 + 분수 Frac 표기(PR #746 표준).
  * 5년 이내 = 전액 차감 / 5년 후 = 양도소득금액 × (5년시점−취득) ÷ (양도−취득) 안분.
- * 부호 케이스(양도시 기준시가 하락 등)로 전액·0 감면인 경우는 Frac 대신 서술.
+ *
+ * 감면액이 0이어도 **값이 대입된 산식과 0인 사유를 함께** 보인다 — 결과만 0으로 두면
+ * 왜 0인지 화면에서 알 수 없다.
+ */
+export function buildIncomeDeductionReducibleFormula(
+  src: IncomeDeductionFormulaSource,
+  income: number,
+): ReactNode {
+  const reducible = src.reducibleTransferIncome;
+  const base = src.transferIncomeApplied ?? income;
+  const article = src.articleLabel;
+  if (src.isWithin5Years) {
+    return `양도소득금액 ${base.toLocaleString()} 전액 차감 (취득 후 5년 이내 양도 — ${article})`;
+  }
+  const acq = src.standardPriceAtAcquisition;
+  const y5 = src.standardPriceAt5Years;
+  const tr = src.standardPriceAtTransfer;
+  // echo가 없는 구 저장 이력 — 값 없이 결과만 (graceful fallback)
+  if (acq == null || y5 == null || tr == null) {
+    return reducible > 0
+      ? `양도소득금액 ${base.toLocaleString()} × 5년 안분비율 = ${reducible.toLocaleString()} (${article} §90② 소득금액차감)`
+      : `감면 대상 없음 (${article} — 5년 안분 결과 0)`;
+  }
+  // 분모는 조문별로 다르다 — §99 재개발 변형만 종전주택 취득시 기준시가
+  const denomBase = src.previousHouseStdPriceApplied ?? acq;
+  const denomLabel = src.previousHouseStdPriceApplied != null ? "종전주택 취득시" : "취득시";
+  const numerator = y5 - acq;
+  const denominator = tr - denomBase;
+  const frac = createElement(Frac, {
+    top: `5년시점 기준시가 ${y5.toLocaleString()} − 취득시 ${acq.toLocaleString()} = ${numerator.toLocaleString()}`,
+    bottom: `양도시 기준시가 ${tr.toLocaleString()} − ${denomLabel} ${denomBase.toLocaleString()} = ${denominator.toLocaleString()}`,
+  });
+  // 감면 0 — 값은 그대로 보이고 사유를 덧붙인다
+  if (reducible <= 0) {
+    return createElement(
+      Fragment,
+      null,
+      `양도소득금액 ${base.toLocaleString()} × `,
+      frac,
+      ` = 0 (${article} — ${describeZeroReason(src)})`,
+    );
+  }
+  // 전액 감면 — 분수 표기가 부적합(비율 ≥ 1)
+  if (reducible >= base) {
+    return `양도소득금액 ${base.toLocaleString()} 전액 감면 (양도시 기준시가가 5년시점 이하 — ${article})`;
+  }
+  return createElement(
+    Fragment,
+    null,
+    `양도소득금액 ${base.toLocaleString()} × `,
+    frac,
+    ` = ${reducible.toLocaleString()} (${article} §90② 소득금액차감)`,
+  );
+}
+
+/**
+ * §99의3 전용 래퍼 — 기존 호출부 유지용. 공용 빌더에 위임한다.
  */
 export function buildNew993ReducibleFormula(
   detail: NonNullable<TransferTaxResult["new993Detail"]>,
   income: number,
 ): ReactNode {
-  const reducible = detail.reducibleTransferIncome;
-  const base = detail.transferIncomeApplied ?? income;
-  // 5년 이내 양도 — 양도소득금액 전액 차감
-  if (detail.isWithin5Years) {
-    return `양도소득금액 ${base.toLocaleString()} 전액 차감 (취득 후 5년 이내 양도 — 조특법 §99의3)`;
-  }
-  if (reducible <= 0) {
-    return "감면 대상 없음 (5년시점·양도시 기준시가 부호 조건 미충족 — 재산 2014-2035)";
-  }
-  const acq = detail.standardPriceAtAcquisition;
-  const y5 = detail.standardPriceAt5Years;
-  const tr = detail.standardPriceAtTransfer;
-  if (acq == null || y5 == null || tr == null) {
-    return `양도소득금액 ${base.toLocaleString()} × 5년 안분비율 = ${reducible.toLocaleString()} (§99의3 §90② 소득금액차감)`;
-  }
-  // 전액 감면(양도시 기준시가 하락 등) — 분수 표기 부적합
-  if (reducible >= base) {
-    return `양도소득금액 ${base.toLocaleString()} 전액 감면 (양도시 기준시가가 5년시점 이하 — 조특법 §99의3)`;
-  }
-  const numerator = y5 - acq;
-  const denominator = tr - acq;
-  return createElement(
-    Fragment,
-    null,
-    `양도소득금액 ${base.toLocaleString()} × `,
-    createElement(Frac, {
-      top: `5년시점 기준시가 ${y5.toLocaleString()} − 취득시 ${acq.toLocaleString()} = ${numerator.toLocaleString()}`,
-      bottom: `양도시 기준시가 ${tr.toLocaleString()} − 취득시 ${acq.toLocaleString()} = ${denominator.toLocaleString()}`,
-    }),
-    ` = ${reducible.toLocaleString()} (§99의3 §90② 소득금액차감)`,
+  return buildIncomeDeductionReducibleFormula(
+    { ...detail, articleLabel: "§99의3" },
+    income,
   );
 }
+
 
 /**
  * 취득가액 산식 — 단건은 실제 변수값(양도차익 항목과 동일 표기), 다건은 자산별 합계 요약.

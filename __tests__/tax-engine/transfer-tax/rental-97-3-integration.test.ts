@@ -75,3 +75,63 @@ describe("§97의3 통합 anchor (B-1)", () => {
     expect(result.rental97LthdDetail?.isEligible).toBe(false);
   });
 });
+
+
+// ─────────────────────────────────────────────────────────────────
+// PR-1 D-9 — 결과 카드 산식 표시용 echo 배선 anchor
+//
+// ⚠️ 카드 렌더 테스트(__tests__/components/transfer-reduction-formula-cards.test.tsx)는
+//    detail을 fixture로 직접 주입하므로 **엔진의 echo 주입을 지키지 못한다**
+//    (mutation으로 실측 확인 — echo를 제거해도 카드 테스트는 전건 통과했다).
+//    그래서 엔진 단계에서 별도로 고정한다.
+// ─────────────────────────────────────────────────────────────────
+describe("§97의3 — 결과 카드 산식 echo (D-9)", () => {
+  const rates = makeMockRates();
+
+  it("공제액 산출에 쓰인 값이 rental97LthdDetail에 echo된다", () => {
+    const result = calculateTransferTax(
+      baseTransferInput({
+        propertyType: "housing",
+        transferPrice: 800_000_000,
+        acquisitionPrice: 300_000_000,
+        acquisitionDate: new Date("2014-01-01"),
+        transferDate: new Date("2024-06-01"),
+        isOneHousehold: true,
+        householdHousingCount: 2,
+        isRegulatedArea: false,
+        residencePeriodMonths: 0,
+        reductions: [
+          {
+            type: "rental_97_3",
+            registrationDate: new Date("2014-01-01"),
+            rentalStartDate: new Date("2014-01-01"),
+            isTaxRegistered: true,
+            rentIncreaseViolated: false,
+            officialPriceAtStart: 400_000_000,
+            isNationalHousingScale: true,
+            region: "capital",
+            propertyType: "non_apartment",
+            rentalHousingType: "long_term_private",
+            isConvertedFromShortTerm: false,
+          },
+        ],
+      }),
+      rates,
+    );
+    const raw = result.rental97LthdDetail;
+    expect(raw).toBeDefined();
+    // union narrowing — echo는 LTHD 특례 효과(RentalLthdEffect)에만 있다
+    if (!raw || !raw.isEligible || raw.effectCategory !== "long_term_holding_special") {
+      throw new Error("§97의3 LTHD 특례가 적용되지 않았다 — anchor 전제 실패");
+    }
+    const d = raw;
+    // echo 4종 — 카드가 「양도차익 × 특례율 = 공제액」 산식을 값으로 쓰는 근거
+    expect(d.gainApplied).toBe(500_000_000);
+    expect(d.deductionApplied).toBe(350_000_000);
+    expect(d.rentalGainApplied).toBe(500_000_000); // ratio=1 → 전액 임대분
+    expect(d.nonRentalGainApplied).toBe(0);
+    expect(d.baseLthdRate).toBeGreaterThan(0); // 일반 공제율(§95② 표)
+    // echo는 표시 전용 — 실제 공제액과 반드시 일치해야 한다(드리프트 방지)
+    expect(d.deductionApplied).toBe(result.longTermHoldingDeduction);
+  });
+});

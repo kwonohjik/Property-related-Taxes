@@ -16,6 +16,13 @@ interface Props {
   detail: Rental97Result;
   /** 표시 레이블 구분 ("장기보유특별공제 특례" | "세액감면") */
   effectLabel?: string;
+  /**
+   * 산출세액 — 세액감면형(§97·§97의2·§97의5) 산식 「산출세액 × 임대기간 분 비율 × 감면율」의 기준값.
+   *
+   * ⚠️ `detail`에서 읽지 않고 **명시 prop**으로 받는다 — 일괄·다건에서는 자산별 값이 달라
+   * 이름이 같으면 의미가 뭉개진다(`ReductionDetailCards`의 §77 계열과 동일 규약).
+   */
+  calculatedTax: number;
 }
 
 function formatN(n: number): string {
@@ -24,6 +31,12 @@ function formatN(n: number): string {
 
 function formatRate(rate: number): string {
   return `${(rate * 100).toFixed(0)}%`;
+}
+
+/** 소수 이하가 있으면 살려서 표기 (일반 공제율 24% · 안분비율 85.3% 등) */
+function formatRateFine(rate: number): string {
+  const pct = rate * 100;
+  return `${Number.isInteger(pct) ? pct.toFixed(0) : pct.toFixed(1)}%`;
 }
 
 const ARTICLE_LABELS: Record<string, string> = {
@@ -35,7 +48,7 @@ const ARTICLE_LABELS: Record<string, string> = {
   rental_97_5: "§97의5 — 장기일반민간임대 100% 감면",
 };
 
-export function Rental97DetailCard({ detail, effectLabel }: Props) {
+export function Rental97DetailCard({ detail, effectLabel, calculatedTax }: Props) {
   if (!detail.isEligible) {
     return (
       <div className="rounded-lg border border-rose-300 bg-rose-50/80 dark:border-rose-700/50 dark:bg-rose-950/30 p-4 space-y-3">
@@ -71,7 +84,22 @@ export function Rental97DetailCard({ detail, effectLabel }: Props) {
       additionalRate?: number;
       rentalGainRatio: number;
       eligibleRentalYears: number;
+      // [echo] transfer-tax-lthd.ts가 공제액 산출 직후 실어 보낸다 (표시 전용)
+      baseLthdRate?: number;
+      gainApplied?: number;
+      rentalGainApplied?: number;
+      nonRentalGainApplied?: number;
+      deductionApplied?: number;
     };
+    // 산식은 echo가 모두 있을 때만 — 구 저장 이력에는 없다(graceful fallback)
+    const hasLthdEcho =
+      lthdEffect.gainApplied !== undefined &&
+      lthdEffect.deductionApplied !== undefined &&
+      lthdEffect.baseLthdRate !== undefined;
+    const isPartialRental =
+      lthdEffect.rentalGainRatio < 1 &&
+      lthdEffect.rentalGainApplied !== undefined &&
+      lthdEffect.nonRentalGainApplied !== undefined;
     return (
       <div className="rounded-lg border border-violet-200 bg-violet-50/50 dark:border-violet-800/40 dark:bg-violet-950/20 p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
@@ -113,6 +141,53 @@ export function Rental97DetailCard({ detail, effectLabel }: Props) {
             </div>
           )}
         </div>
+
+        {/* 산출근거 — 라벨 산식 + 값 대입 (§77의2 카드와 동일 규약) */}
+        {hasLthdEcho && (
+          <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs space-y-1.5">
+            <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
+              장기보유특별공제 산출근거
+            </p>
+            {lthdEffect.overrideRate !== undefined ? (
+              isPartialRental ? (
+                <>
+                  <p className="text-muted-foreground">
+                    장기보유특별공제 = 임대기간 분 양도차익 × 특례 공제율 + 비임대 분 양도차익 × 일반 공제율
+                  </p>
+                  <p className="text-muted-foreground">
+                    임대기간 분 양도차익 = 양도차익{" "}
+                    <span className="font-mono text-foreground">{formatN(lthdEffect.gainApplied!)}</span> × 안분비율{" "}
+                    <span className="font-mono text-foreground">{formatRateFine(lthdEffect.rentalGainRatio)}</span> ={" "}
+                    <span className="font-mono text-foreground">{formatN(lthdEffect.rentalGainApplied!)}</span>
+                  </p>
+                  <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
+                    {formatN(lthdEffect.rentalGainApplied!)} × {formatRate(lthdEffect.overrideRate)} +{" "}
+                    {formatN(lthdEffect.nonRentalGainApplied!)} × {formatRateFine(lthdEffect.baseLthdRate!)} ={" "}
+                    {formatN(lthdEffect.deductionApplied!)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">장기보유특별공제 = 양도차익 × 특례 공제율</p>
+                  <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
+                    {formatN(lthdEffect.gainApplied!)} × {formatRate(lthdEffect.overrideRate)} ={" "}
+                    {formatN(lthdEffect.deductionApplied!)}
+                  </p>
+                </>
+              )
+            ) : (
+              <>
+                <p className="text-muted-foreground">
+                  장기보유특별공제 = 양도차익 × (일반 공제율 + 추가 공제율)
+                </p>
+                <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
+                  {formatN(lthdEffect.gainApplied!)} × ({formatRateFine(lthdEffect.baseLthdRate!)} +{" "}
+                  {formatRateFine(lthdEffect.additionalRate ?? 0)}) = {formatN(lthdEffect.deductionApplied!)}
+                </p>
+              </>
+            )}
+          </div>
+        )}
 
         {lthdEffect.rentalGainRatio < 1 && (
           <p className="text-micro text-violet-700 dark:text-violet-400">
@@ -168,6 +243,30 @@ export function Rental97DetailCard({ detail, effectLabel }: Props) {
               <span className="text-muted-foreground">임대기간 분 비율</span>
               <span className="font-mono">{(taxEffect.rentalGainRatio * 100).toFixed(1)}%</span>
             </div>
+          )}
+        </div>
+
+        {/* 산출근거 — 라벨 산식 + 값 대입 (§77의2 카드와 동일 규약) */}
+        <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs space-y-1.5">
+          <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">감면세액 산출근거</p>
+          {taxEffect.rentalGainRatio < 1 ? (
+            <>
+              <p className="text-muted-foreground">
+                감면세액 = 산출세액 × 임대기간 분 비율 × 감면율
+              </p>
+              <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+                {formatN(calculatedTax)} × {formatRateFine(taxEffect.rentalGainRatio)} ×{" "}
+                {formatRate(taxEffect.reductionRate)} = {formatN(taxEffect.reductionAmount)}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground">감면세액 = 산출세액 × 감면율</p>
+              <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+                {formatN(calculatedTax)} × {formatRate(taxEffect.reductionRate)} ={" "}
+                {formatN(taxEffect.reductionAmount)}
+              </p>
+            </>
           )}
         </div>
 

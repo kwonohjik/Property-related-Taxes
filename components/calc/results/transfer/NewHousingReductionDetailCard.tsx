@@ -41,6 +41,9 @@ export function NewHousingReductionDetailCard({ detail }: Props) {
     isWithinFiveYearWindow,
     reducibleGain,
     fiveYearRatio,
+    totalCapitalGainApplied,
+    reductionDaysApplied,
+    totalDaysApplied,
     isExcludedFromHouseCount,
     isExcludedFromMultiHouseSurcharge,
     warnings,
@@ -131,15 +134,26 @@ export function NewHousingReductionDetailCard({ detail }: Props) {
           ) : (
             <>
               <p className="text-muted-foreground">
-                5년 이내 취득분 안분 비율:{" "}
-                <span className="font-mono text-foreground">{(fiveYearRatio * 100).toFixed(4)}%</span>
+                감면대상 양도차익 = 전체 양도차익 × 감면대상 보유일수 ÷ 전체 보유일수
               </p>
-              <p className="text-muted-foreground">
-                감면대상 양도차익 = 전체 양도차익 × 5년 안분 비율
-              </p>
-              <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
-                = {formatN(reducibleGain)}
-              </p>
+              {totalCapitalGainApplied !== undefined &&
+              reductionDaysApplied !== undefined &&
+              totalDaysApplied ? (
+                <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+                  {formatN(totalCapitalGainApplied)} × {formatN(reductionDaysApplied)}일 ÷{" "}
+                  {formatN(totalDaysApplied)}일 = {formatN(reducibleGain)}
+                </p>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    5년 이내 취득분 안분 비율:{" "}
+                    <span className="font-mono text-foreground">{(fiveYearRatio * 100).toFixed(4)}%</span>
+                  </p>
+                  <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+                    = {formatN(reducibleGain)}
+                  </p>
+                </>
+              )}
             </>
           )}
         </div>

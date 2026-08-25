@@ -84,6 +84,20 @@ export function PublicExpropriationDetailCard({
   /** 다건뷰: ⑤ 감면세액·capping을 숨기고 ①~④ 구성만 표시 (최종액은 §133 합산 재계산 카드가 담당). */
   aggregatedContext?: boolean;
 }) {
+  // 적용 불가 — 사유를 표시한다(§77의2·§77의3 카드와 동일 규약).
+  // 종전에는 `ReductionDetailCards`가 `?.isEligible` 게이트로 카드를 통째로 숨겨,
+  // 감면을 입력했는데도 **왜 적용되지 않았는지 알 수 없었다**.
+  if (!d.isEligible) {
+    return (
+      <div className="mx-2 my-2 rounded-md border border-dashed border-rose-300 bg-rose-50/70 dark:bg-rose-950/30 px-3 py-2 text-xs text-rose-900 dark:text-rose-200 space-y-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="font-medium">공익사업 수용 감면 (조특법 §77) — 적용 불가</p>
+          <LawArticleModal legalBasis="조세특례제한법 §77" label="§77" />
+        </div>
+        {d.notEligibleReason && <p>{d.notEligibleReason}</p>}
+      </div>
+    );
+  }
   const bd = d.breakdown;
   return (
     <div className="mx-2 my-2 rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs space-y-1.5">

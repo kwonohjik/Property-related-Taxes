@@ -105,6 +105,19 @@ export interface New99Result {
   /** 재개발·재건축 변형 적용 여부 (산식 표시 분기) */
   redevelopedVariantApplied: boolean;
   formulaSteps: New993FormulaStep[];
+  /**
+   * [echo] 3단계 상세명세 「소득금액 감면대상」 행의 Frac 분수 산식 표시용.
+   * §99의3(`New993Result`)과 같은 이름·같은 의미 — 공용 빌더가 한 계약을 본다.
+   */
+  transferIncomeApplied?: number;
+  standardPriceAtAcquisition?: number;
+  standardPriceAt5Years?: number;
+  standardPriceAtTransfer?: number;
+  /**
+   * [echo] 재개발·재건축 변형 전용 — 분모가 「양도시 − **종전주택** 취득시」다.
+   * `redevelopedVariantApplied === true`일 때만 세팅.
+   */
+  previousHouseStdPriceApplied?: number;
   taxReductionForRuralSurtax: number;
   ruralSurtax: number;
   legalBasis: string;
@@ -276,6 +289,13 @@ export function evaluateNew99(input: New99Input): New99Result {
     signCase,
     redevelopedVariantApplied: variant,
     formulaSteps,
+    // [echo] 3단계 명세 Frac 산식 표시용 — 안분에 쓰인 값 그대로(계산 무관).
+    // 5년 이내 전액 차감 경로(안분 없음)에서는 기준시가가 0일 수 있어 표시측이 판별한다.
+    transferIncomeApplied: input.transferIncome,
+    standardPriceAtAcquisition: stdAtAcq,
+    standardPriceAt5Years: stdAt5Y,
+    standardPriceAtTransfer: stdAtTransfer,
+    ...(variant ? { previousHouseStdPriceApplied: stdAtPrev } : {}),
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
     legalBasis,

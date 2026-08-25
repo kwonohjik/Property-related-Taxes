@@ -418,7 +418,20 @@ export function calcLongTermHoldingDeduction(
     const deduction = applyRate(rentalGain, rental97Eval.overrideRate) + applyRate(nonRentalGain, rate);
     const blendedRate =
       rental97Eval.overrideRate * rental97Eval.rentalGainRatio + rate * (1 - rental97Eval.rentalGainRatio);
-    return { deduction, rate: blendedRate, holdingPeriod, rental97LthdDetail: rental97Eval };
+    return {
+      deduction,
+      rate: blendedRate,
+      holdingPeriod,
+      // [echo] 결과 카드 산식 표시용 — 계산에는 관여하지 않는다(위 값 그대로 실어 보낸다)
+      rental97LthdDetail: {
+        ...rental97Eval,
+        baseLthdRate: rate,
+        gainApplied: positiveGain,
+        rentalGainApplied: rentalGain,
+        nonRentalGainApplied: nonRentalGain,
+        deductionApplied: deduction,
+      },
+    };
   }
   if (
     rental97Eval?.isEligible &&
@@ -428,11 +441,18 @@ export function calcLongTermHoldingDeduction(
     // §97의4: 보유기간별 공제율(§95② 표)에 추가율 가산 — 기본 공제율이 0(보유 3년 미만)이면 가산 불가
     if (rate > 0) {
       const combined = rate + rental97Eval.additionalRate;
+      const combinedDeduction = applyRate(taxableGain, combined);
       return {
-        deduction: applyRate(taxableGain, combined),
+        deduction: combinedDeduction,
         rate: combined,
         holdingPeriod,
-        rental97LthdDetail: rental97Eval,
+        // [echo] 산식 표시용 — 계산 무관
+        rental97LthdDetail: {
+          ...rental97Eval,
+          baseLthdRate: rate,
+          gainApplied: taxableGain,
+          deductionApplied: combinedDeduction,
+        },
       };
     }
     return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail: rental97Eval };

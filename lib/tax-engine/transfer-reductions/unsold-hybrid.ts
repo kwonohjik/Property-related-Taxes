@@ -74,6 +74,15 @@ export interface UnsoldHybridResult {
   fiveYearRatio: number;
   signCase: New993SignCase;
   formulaSteps: New993FormulaStep[];
+  /**
+   * [echo] 3단계 상세명세 「소득금액 감면대상」 행의 Frac 분수 산식 표시용.
+   * 5년 후 안분 경로에서만 세팅된다(5년 내 세액감면 경로는 안분이 없다).
+   * §99의3(`New993Result`)과 **같은 이름·같은 의미**로 맞춘다 — 공용 빌더가 한 계약을 본다.
+   */
+  transferIncomeApplied?: number;
+  standardPriceAtAcquisition?: number;
+  standardPriceAt5Years?: number;
+  standardPriceAtTransfer?: number;
   /** 농특세 (finalize에서 채움 — 양 경로) */
   taxReductionForRuralSurtax: number;
   ruralSurtax: number;
@@ -297,6 +306,11 @@ export function computeHybridEffect(input: HybridEffectInput): UnsoldHybridResul
     fiveYearRatio: allocation.ratio,
     signCase: allocation.signCase,
     formulaSteps,
+    // [echo] 산식 표시용 — 위 안분에 쓰인 값 그대로(계산 무관)
+    transferIncomeApplied: input.transferIncome,
+    standardPriceAtAcquisition: stdAtAcq,
+    standardPriceAt5Years: stdAt5Y,
+    standardPriceAtTransfer: stdAtTransfer,
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
     ruralSurtaxExempt,

@@ -193,6 +193,21 @@ export interface RentalLthdEffect {
    */
   rentalGainRatio: number;
   eligibleRentalYears: number;
+  /**
+   * [echo] 결과 카드 산식 표시용 — `transfer-tax-lthd.ts`가 공제액 산출 직후 채운다.
+   * 계산에는 관여하지 않는다(표시 전용). 평가 시점(`rental-97-3.ts`)에는 양도차익을 모르므로
+   * 여기서는 optional이고, LTHD 단계를 거치지 않은 경로에서는 undefined다.
+   */
+  /** 일반 장기보유특별공제율(§95② 표) — 특례율과 대비해 보여준다 */
+  baseLthdRate?: number;
+  /** 임대기간 분 양도차익 = 양도차익 × rentalGainRatio */
+  rentalGainApplied?: number;
+  /** 비임대 분 양도차익 = 양도차익 − 임대분 */
+  nonRentalGainApplied?: number;
+  /** 실제 적용된 장기보유특별공제액 */
+  deductionApplied?: number;
+  /** 안분 전 양도차익 (음수 clamp 후) */
+  gainApplied?: number;
 }
 
 /** §97 본문/단서·§97의2·§97의5 — 산출세액 단계(STEP 7) 효과 */

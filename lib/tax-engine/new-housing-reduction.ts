@@ -80,6 +80,13 @@ export interface NewHousingReductionResult {
   reducibleGain: number;
   /** 5년 안분 비율 */
   fiveYearRatio: number;
+  /**
+   * [echo] 결과 카드 산식 표시용 — 계산에는 관여하지 않는다.
+   * 안분은 「전체 양도차익 × 감면대상 일수 ÷ 전체 보유일수」이므로 일수를 그대로 보여준다.
+   */
+  totalCapitalGainApplied?: number;
+  reductionDaysApplied?: number;
+  totalDaysApplied?: number;
 
   /** 다주택 산정에서 제외 여부 */
   isExcludedFromHouseCount: boolean;
@@ -103,10 +110,25 @@ function calculateReducibleGain(
   acquisitionDate: Date,
   disposalDate: Date,
   reductionYears = 5,
-): { reducibleGain: number; taxableGain: number; ratio: number; isWithinWindow: boolean } {
+): {
+  reducibleGain: number;
+  taxableGain: number;
+  ratio: number;
+  isWithinWindow: boolean;
+  /** [echo] 결과 카드 산식 표시용 — 안분 일수 (계산에는 이미 반영된 값) */
+  reductionDays: number;
+  totalDays: number;
+} {
   const totalDays = differenceInDays(disposalDate, acquisitionDate);
   if (totalDays <= 0) {
-    return { reducibleGain: 0, taxableGain: totalCapitalGain, ratio: 0, isWithinWindow: false };
+    return {
+      reducibleGain: 0,
+      taxableGain: totalCapitalGain,
+      ratio: 0,
+      isWithinWindow: false,
+      reductionDays: 0,
+      totalDays: 0,
+    };
   }
 
   // 윤년을 고려하여 만 N년 날짜 계산 (addYears 사용)
@@ -127,6 +149,8 @@ function calculateReducibleGain(
     taxableGain: totalCapitalGain - reducibleGain,
     ratio,
     isWithinWindow,
+    reductionDays: clampedDays,
+    totalDays,
   };
 }
 
@@ -346,7 +370,7 @@ export function determineNewHousingReduction(
   }
 
   // ── Step 3: 5년 이내 양도 여부 (fiveYearWindowRule 적용 조문만) ──
-  const { reducibleGain, taxableGain: _taxableGain, ratio, isWithinWindow } =
+  const { reducibleGain, taxableGain: _taxableGain, ratio, isWithinWindow, reductionDays, totalDays } =
     calculateReducibleGain(input.totalCapitalGain, input.acquisitionDate, input.transferDate, 5);
 
   // ── Step 4: 감면율 결정 ──
@@ -403,6 +427,10 @@ export function determineNewHousingReduction(
     isWithinFiveYearWindow: isWithinWindow,
     reducibleGain,
     fiveYearRatio: ratio,
+    // [echo] 산식 표시용 — 계산 무관
+    totalCapitalGainApplied: input.totalCapitalGain,
+    reductionDaysApplied: reductionDays,
+    totalDaysApplied: totalDays,
     isExcludedFromHouseCount,
     isExcludedFromMultiHouseSurcharge,
     warnings,

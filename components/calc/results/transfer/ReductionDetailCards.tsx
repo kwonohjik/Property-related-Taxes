@@ -97,7 +97,7 @@ export function ReductionDetailCards({
     !!result.unsold984Detail ||
     !!result.unsold98Detail ||
     !!result.new993Detail ||
-    !!result.publicExpropriationDetail?.isEligible ||
+    !!result.publicExpropriationDetail ||
     !!result.replacementLandDetail ||
     !!result.gbDesignatedLandDetail ||
     !!(result.specialHouseExclusionDetail &&
@@ -128,19 +128,24 @@ export function ReductionDetailCards({
         <NewHousingReductionDetailCard detail={result.newHousingReductionDetail} />
       )}
       {result.rentalReductionDetail && (
-        <RentalReductionDetailCard detail={result.rentalReductionDetail} />
+        <RentalReductionDetailCard
+          detail={result.rentalReductionDetail}
+          calculatedTax={calculatedTax}
+        />
       )}
       {/* §97 시리즈 Phase 2 — 정밀 계산 결과 카드 */}
       {result.rental97LthdDetail && (
         <Rental97DetailCard
           detail={result.rental97LthdDetail}
           effectLabel="장기보유특별공제 특례 (§97의3)"
+          calculatedTax={calculatedTax}
         />
       )}
       {result.rental97TaxDetail && (
         <Rental97DetailCard
           detail={result.rental97TaxDetail}
           effectLabel="장기임대주택 세액감면"
+          calculatedTax={calculatedTax}
         />
       )}
       {/* §99의4 농어촌·고향주택 주택수 제외 (2026-06-11) */}
@@ -148,42 +153,45 @@ export function ReductionDetailCards({
       {/* §98의9 수도권 밖 준공후미분양 주택수 제외 (2026-06-11) */}
       {result.unsold989Detail && <Unsold989DetailCard detail={result.unsold989Detail} />}
       {/* P1 차감형 (2026-06-11): §99 신축주택 IMF 1차 · §98의8 준공후미분양 50% */}
-      {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} />}
+      {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} calculatedTax={calculatedTax} />}
       {result.unsold988Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} />
+        <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} calculatedTax={calculatedTax} />
       )}
       {/* P2 하이브리드 (2026-06-11): §98의7 9억↓ 미분양 · §99의2 신축·미분양·1세대1주택 */}
       {result.unsold987Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} />
+        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} calculatedTax={calculatedTax} />
       )}
       {result.unsold992Detail && (
-        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} />
+        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} calculatedTax={calculatedTax} />
       )}
       {/* P3 하이브리드 (2026-06-12) */}
       {result.unsold983Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} />
+        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} calculatedTax={calculatedTax} />
       )}
       {result.unsold985Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} />
+        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} calculatedTax={calculatedTax} />
       )}
       {result.unsold986Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} />
+        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} calculatedTax={calculatedTax} />
       )}
       {/* P4 (2026-06-12) */}
       {result.unsold982Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_2" result={result.unsold982Detail} />
+        <IncomeDeductionDetailCard kind="unsold_98_2" result={result.unsold982Detail} calculatedTax={calculatedTax} />
       )}
       {result.unsold984Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} />
+        <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} calculatedTax={calculatedTax} />
       )}
       {/* P5 (2026-06-12) */}
       {result.unsold98Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} />
+        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} calculatedTax={calculatedTax} />
       )}
       {/* §99의3 신축주택 과세특례 — 양도소득금액 차감 방식 5년 안분 산식 */}
       {result.new993Detail && <New993DetailCard detail={result.new993Detail} />}
-      {/* 비자발적 양도 감면 §77·§77의2·§77의3 — 감면세액 산출근거(변수값) */}
-      {result.publicExpropriationDetail?.isEligible && (
+      {/* 비자발적 양도 감면 §77·§77의2·§77의3 — 감면세액 산출근거(변수값).
+          적용 불가여도 렌더한다 — 카드가 사유를 표시한다(§77의2·§77의3과 동일).
+          detail은 §77 감면을 입력했을 때만 생성되므로(transfer-tax-reductions-calc.ts:171)
+          미입력 시 카드가 뜨지 않는다. */}
+      {result.publicExpropriationDetail && (
         <PublicExpropriationDetailCard
           detail={result.publicExpropriationDetail}
           calculatedTax={calculatedTax}
