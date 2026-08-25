@@ -13,7 +13,10 @@
  * 같은 산식을 쓰는지**를 헬퍼 계약 수준에서 고정한다.
  */
 import { describe, it, expect } from "vitest";
-import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
+import {
+  reductionEligibleIncome,
+  eligibleIncomeBasisText,
+} from "@/components/calc/results/transfer/reduction-eligible-income";
 
 const INCOME = 100_000_000;
 /** §77 계열은 result.reducibleIncome이 감면율을 곱한 값이라 ⑲에 직접 쓰면 안 된다 */
@@ -60,5 +63,39 @@ describe("D-14 — 「감면후 소득금액」은 §90②만 차감한다", () 
     expect(pdfOld).toBe(0);
     expect(incomeAfter(INCOME, 0)).toBe(INCOME);
     expect(pdfOld).not.toBe(incomeAfter(INCOME, 0));
+  });
+});
+
+describe("Phase 2 — ⑲ 산출 근거 문구 (조문별 기준을 밝힌다)", () => {
+  it("§77 — 「자산 전부가 감면 대상」임을 밝힌다", () => {
+    const t = eligibleIncomeBasisText("public_expropriation", INCOME);
+    expect(t).toContain("양도소득금액 전액 100,000,000");
+    expect(t).toContain("자산 전부가 감면 대상");
+    expect(t).toContain("§77");
+  });
+
+  it("§77의2 — 대토보상분임을 밝힌다", () => {
+    expect(eligibleIncomeBasisText("replacement_land_comp", 40_000_000)).toContain("대토보상분");
+  });
+
+  it("§69 — 편입 부분감면 시 감면비율이 반영됨을 밝힌다", () => {
+    const t = eligibleIncomeBasisText("self_farming", 80_000_000);
+    expect(t).toContain("자경 감면 대상 양도소득금액 80,000,000");
+    expect(t).toContain("§69");
+  });
+
+  it("§97 계열 — 임대기간 안분임을 밝힌다 (§97의5① 「임대기간 중 발생한 양도소득」)", () => {
+    const t = eligibleIncomeBasisText("rental_97_5", 60_000_000);
+    expect(t).toContain("임대기간 중 발생한 양도소득 60,000,000");
+  });
+
+  it("🔴 구별력 — 감면 없으면 「감면 대상 없음」", () => {
+    expect(eligibleIncomeBasisText(undefined, 0)).toBe("감면 대상 없음");
+  });
+
+  it("하이브리드 5년 내 등 그 밖의 조문 — 대상 소득금액을 그대로 밝힌다", () => {
+    expect(eligibleIncomeBasisText("unsold_99_2", 282_000_000)).toContain(
+      "감면 적용 대상 양도소득금액 282,000,000",
+    );
   });
 });
