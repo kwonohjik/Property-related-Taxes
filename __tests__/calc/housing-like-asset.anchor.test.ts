@@ -25,7 +25,7 @@ import { describe, it, expect } from "vitest";
 import { isHousingLike, HOUSING_LIKE_ASSET_KINDS } from "@/lib/calc/housing-like-asset";
 import { isHousingLike as fromApiHelpers } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildHousesPayload } from "@/lib/calc/transfer-tax-api-houses";
-import { SURCHARGE_FALLBACK_PROPERTY_TYPES } from "@/lib/tax-engine/transfer-tax-surcharge-predicate";
+import { SURCHARGE_SUBJECT_PROPERTY_TYPES } from "@/lib/tax-engine/transfer-tax-surcharge-predicate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
@@ -72,10 +72,21 @@ describe("주택 계열 술어 — 단일 소스", () => {
     expect(buildHousesPayload(asset("building"), houses, 0, undefined)).toBeUndefined();
   });
 
-  it("HL-06: ⚠️ 엔진 중과 집합과 **별개 상수**다 — 합치면 별건 정정이 입력 경로를 끊는다", () => {
-    // 지금은 원소가 같다. 그러나 **같은 객체여서는 안 된다** —
-    // §104⑦ 정정(입주권 제외)이 이 집합까지 좁히면 입주권 양도자가 주택 수를 못 센다.
-    expect(HOUSING_LIKE_ASSET_KINDS).not.toBe(SURCHARGE_FALLBACK_PROPERTY_TYPES);
-    expect(HOUSING_LIKE_ASSET_KINDS.has("right_to_move_in")).toBe(true);
+  it("HL-06: ⚠️ 엔진 §104⑦ 집합과 **원소가 갈린다** — 합치면 정정이 입력 경로를 끊는다", () => {
+    // 2026-08-25 승격: 종전엔 원소가 같아 `.not.toBe`(객체 동일성)로만 고정했다.
+    // §104⑦ 정정으로 **실제로 갈렸다** — 이제 차집합을 직접 단언한다.
+    expect(HOUSING_LIKE_ASSET_KINDS).not.toBe(SURCHARGE_SUBJECT_PROPERTY_TYPES);
+
+    // 🔑 입주권·분양권은 **④⑤에는 있고 엔진 §104⑦에는 없다**.
+    //    입주권 양도자도 세대 주택 수를 세야 하므로 ④에서 빼면 입력 경로가 끊긴다.
+    for (const k of ["right_to_move_in", "presale_right"] as const) {
+      expect(HOUSING_LIKE_ASSET_KINDS.has(k), `④⑤: ${k}`).toBe(true);
+      expect(SURCHARGE_SUBJECT_PROPERTY_TYPES.has(k), `§104⑦: ${k}`).toBe(false);
+    }
+
+    // 반대 방향 — 겸용주택은 **엔진에는 있고 ④ 자산종류 축에는 없다**
+    // (`assetKind === "housing"` + `isMixedUseHouse`로 파생되므로 이 집합의 원소가 아니다).
+    expect(SURCHARGE_SUBJECT_PROPERTY_TYPES.has("mixed-use-house")).toBe(true);
+    expect(HOUSING_LIKE_ASSET_KINDS.has("mixed-use-house")).toBe(false);
   });
 });

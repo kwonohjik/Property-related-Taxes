@@ -31,10 +31,19 @@
  * 배제 대상이라면 그 기산 규칙을 둘 이유가 없다. §167의3① 1~13호의 배제 열거에
  * 「재개발로 취득한 주택」은 **없다**.
  *
- * ⚠️ **`right_to_move_in`(조합원입주권)이 이 집합에 있는 것은 별도 쟁점이다.**
- *    §104⑦은 「주택」만 대상이고 조합원입주권은 §94①2호가목의 **권리**다. 승계조합원 입주권이
- *    일반 경로로 내려오면 30%p가 붙는 것을 실측했다(세율 0.7). **현행 동작을 그대로 옮겼을 뿐**
- *    이 파일에서 판단을 바꾸지 않는다 — 별건 계획서에서 다룬다(과대과세 축이라 방향이 반대다).
+ * ## 축이 **둘**이다 — 「양도 대상인가」와 「원시 플래그로 추정할 것인가」 (2026-08-25)
+ *
+ * 계획서 `docs/00-pm/transfer-right-to-move-in-surcharge-scope.plan.md`.
+ *
+ * | 집합 | 원소 | 걸리는 곳 |
+ * |---|---|---|
+ * | `SURCHARGE_SUBJECT_PROPERTY_TYPES` | housing · redevelopment_apt · mixed-use-house | **정밀·fallback 공통 전제** |
+ * | `SURCHARGE_FALLBACK_PROPERTY_TYPES`(module-private) | housing · redevelopment_apt | 정밀 판정이 없을 때만 |
+ *
+ * 🔑 **둘을 합치면 안 된다.** 겸용주택은 ④가 `assetKind === "housing"` 기준으로 `houses[]`를
+ *    보내므로(`lib/calc/transfer-tax-api.ts:78,240`) **정밀 경로에 도달한다** — 대상 집합에서 빼면
+ *    현행 중과가 사라진다. 반대로 fallback 집합에 넣으면 원시 플래그만으로 중과가 **새로** 걸린다.
+ *    ⇒ 대상에는 넣고 fallback에는 넣지 않는다(겸용 fallback 미포함은 **별건**).
  */
 
 import { isSurchargeSuspended } from "./tax-utils";
@@ -47,15 +56,35 @@ import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.ty
 type SurchargeSpecialRulesArg = Parameters<typeof isSurchargeSuspended>[0];
 
 /**
- * `houses[]` 정밀 판정이 없을 때(fallback) 중과 축에 오르는 자산 종류.
+ * §104⑦의 **양도 대상**이 되는 자산 종류 — 「다음 각 호의 어느 하나에 해당하는 **주택**
+ * (이에 딸린 토지를 포함한다)을 **양도하는 경우**」.
+ *
+ * 조합원입주권(§94①2호**가**목)·분양권(§94①2호**나**목)은 **여기 없다**. ⑦ 각 호에서 둘은
+ * 「1세대가 1주택과 **조합원입주권 또는 분양권**을 1개 보유한 경우의 **해당 주택**」처럼
+ * **주택 수를 세는 요소**로만 등장하고, 세율을 더할 대상은 언제나 「해당 **주택**」이다.
+ *
+ * ⚠️ 이 집합은 **`lib/calc/housing-like-asset.ts`의 `HOUSING_LIKE_ASSET_KINDS`와 다르다.**
+ *    그쪽은 ④⑤ **주택 수 입력 경로**의 축이라 입주권·분양권을 포함해야 한다 — 입주권 양도자도
+ *    세대 주택 수를 센다. 두 집합을 합치면 이 정정이 입력 경로를 끊는다(anchor HL-06).
+ */
+export const SURCHARGE_SUBJECT_PROPERTY_TYPES: ReadonlySet<string> = new Set([
+  "housing",
+  "redevelopment_apt",
+  "mixed-use-house",
+]);
+
+/**
+ * `houses[]` 정밀 판정이 **없을 때만** 원시 플래그(조정지역·주택수)로 중과를 추정할 자산 종류.
+ *
+ * `SURCHARGE_SUBJECT_PROPERTY_TYPES`의 부분집합이며 `mixed-use-house`가 빠져 있다 — 겸용주택은
+ * 자체 분기가 주택분·상가분을 나눠 계산하므로 세대 주택수 플래그만으로 중과를 걸지 않는다.
+ * **현행 동작 보존**이고 판단을 바꾸지 않는다(별건).
  *
  * ⚠️ 이 집합을 넓히면 **세율과 장특공제가 동시에** 움직인다 — §95②이 §104⑦ 각 호 자산을
  *    장특공제에서 제외하므로 한쪽만 열면 「세율은 중과인데 장특은 그대로」라는 위법 상태가 된다.
  */
-export const SURCHARGE_FALLBACK_PROPERTY_TYPES: ReadonlySet<string> = new Set([
+const SURCHARGE_FALLBACK_PROPERTY_TYPES: ReadonlySet<string> = new Set([
   "housing",
-  "right_to_move_in",
-  "presale_right",
   "redevelopment_apt",
 ]);
 
@@ -67,12 +96,23 @@ export interface SurchargeApplicationInput {
 }
 
 export interface SurchargeApplication {
-  /** 중과 대상 케이스인가 (유예 여부와 무관) */
+  /** 중과 대상 케이스인가 (유예 여부와 무관) — **§95② 장특공제 배제 축** */
   isSurchargeCase: boolean;
   /** 한시배제(유예) 중인가 — 영 §167의3①12의2 가목 등 */
   isSuspended: boolean;
   /** 실제로 중과가 걸리는가 = `isSurchargeCase && !isSuspended` */
   isSurchargeApplied: boolean;
+  /**
+   * **세율 가산 축** — `isSurchargeApplied`와 다르다.
+   *
+   * 위기취득 배제(`rateSurchargeStatutoryExcluded`)는 **세율만** 빼고 `surchargeType`은 남긴다
+   * (`multi-house-surcharge.ts:320` — 「세율만 배제: surchargeType은 유지 → §95② 장기보유
+   * 특별공제 배제 판정 보존」). 그래서 두 축을 각각 노출한다. 종전에는 `calcTax`가 이 값을
+   * **자기 안에서 따로 만들어** leaf를 우회했고, 자산 게이트가 세율 축에 닿지 못했다.
+   */
+  isRateSurchargeApplied: boolean;
+  /** 세율 가산에 쓸 중과 유형. 양도 대상 자산이 아니면 `"none"`. */
+  effectiveSurchargeType: "none" | "multi_house_2" | "multi_house_3plus";
   effectiveHouseCount: number;
   surchargeTypeKey: "multi_house_2" | "multi_house_3plus";
 }
@@ -89,11 +129,26 @@ export function resolveSurchargeApplication(
   multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined,
   surchargeSpecialRules: SurchargeSpecialRulesArg,
 ): SurchargeApplication {
-  const isSurchargeCase = multiHouseSurchargeResult
-    ? multiHouseSurchargeResult.surchargeType !== "none"
-    : SURCHARGE_FALLBACK_PROPERTY_TYPES.has(input.propertyType) &&
-      input.isRegulatedArea === true &&
-      input.householdHousingCount >= 2;
+  /**
+   * 🔑 **자산 게이트는 함수 최상단의 단일 전제다.**
+   *
+   * 정밀 판정(`multiHouseSurchargeResult`)은 `houses[]`만 보고 「세대에 중과 대상이 있는가」를
+   * 답할 뿐 **양도 대상이 무엇인지 모른다** — ④는 입주권 양도에도 `houses[]`를 싣는다
+   * (`transfer-tax-api-houses.ts:30`). 그래서 게이트를 fallback 분기 안에만 두면 정밀 경로가
+   * 그대로 뚫린다(실측: 입주권 정밀 경로 세율 0.68).
+   *
+   * 아래 네 값이 **함께** 닫혀야 한다. 지점마다 `&&`를 붙이는 방식은 이 파일이 고치고 있는
+   * 결함의 발생 기전 그 자체다.
+   */
+  const isSubjectAsset = SURCHARGE_SUBJECT_PROPERTY_TYPES.has(input.propertyType);
+
+  const isSurchargeCase =
+    isSubjectAsset &&
+    (multiHouseSurchargeResult
+      ? multiHouseSurchargeResult.surchargeType !== "none"
+      : SURCHARGE_FALLBACK_PROPERTY_TYPES.has(input.propertyType) &&
+        input.isRegulatedArea === true &&
+        input.householdHousingCount >= 2);
 
   const effectiveHouseCount = multiHouseSurchargeResult
     ? multiHouseSurchargeResult.effectiveHouseCount
@@ -111,6 +166,16 @@ export function resolveSurchargeApplication(
     isSurchargeCase,
     isSuspended,
     isSurchargeApplied: isSurchargeCase && !isSuspended,
+    isRateSurchargeApplied:
+      isSubjectAsset &&
+      (multiHouseSurchargeResult
+        ? multiHouseSurchargeResult.surchargeApplicable
+        : isSurchargeCase && !isSuspended),
+    // fallback은 **원시 주택수**(`effectiveHouseCount` 아님)를 쓴다 — 종전 `calcTax` 동작 보존.
+    effectiveSurchargeType: !isSubjectAsset
+      ? "none"
+      : (multiHouseSurchargeResult?.surchargeType ??
+        (input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2")),
     effectiveHouseCount,
     surchargeTypeKey,
   };
