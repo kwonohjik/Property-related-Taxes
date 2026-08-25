@@ -442,6 +442,7 @@ A만 고치면 그 사용자에게는 여전히 중과가 0이다.
   `SURCHARGE_FALLBACK_PROPERTY_TYPES`에서 `right_to_move_in`을 빼는 변경이며,
   **`HOUSING_LIKE_ASSET_KINDS`(④·⑤)에서는 빼면 안 된다**(입주권 양도자도 주택 수를 센다).
   두 상수를 **별개로 둔 이유**가 이것이다(`housing-like-asset.ts` 헤더 · anchor HL-06).
-- **§1.3 범위 밖** — 유예 창 나·다목(토지거래허가 조건부 배제, 2026-09-09/11-09) 구현 여부 미확인.
+- ~~**§1.3 범위 밖** — 유예 창 나·다목(토지거래허가 조건부 배제, 2026-09-09/11-09) 구현 여부 미확인.~~
+  ✅ **종결 (2026-08-25 실측)** — **이미 전건 구현**돼 있었다. 상세: `transfer-surcharge-grace-na-da-closure.md`.
 - **E(결과뷰)** — `surchargeType`·`lthdExclusionReason` 표시. 엔진은 `surchargeType`을 이제
   싣지만 **결과뷰 2개(단건·다건) 배선은 미수행**이다.

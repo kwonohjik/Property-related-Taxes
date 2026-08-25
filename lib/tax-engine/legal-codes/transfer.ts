@@ -393,7 +393,14 @@ export const SURCHARGE_EXCLUSION_WINDOW = {
  * 다주택 중과 한시배제 — **양도일 기준 전면배제 윈도우**(단일 출처).
  * 근거(KoreanLaw 실측 2026-07-19): 소득세법 시행령 §167의3①12의2·§167의10①12의2 —
  *   "법 §95④ 보유기간 2년 이상인 주택으로서 2026년 5월 9일까지 양도하는 주택"은 중과 제외.
- * 하한(2022-05-10)은 12의2 조항 최초 신설 부칙 시행일(행위시법). 상한(2026-05-09)은 가목.
+ * 하한(2022-05-10)은 12의2 조항 최초 신설 부칙 시행일(행위시법). 상한(2026-05-09)은 **가목**.
+ *
+ * ⚠️ **이 상수는 가목 전용이다 — 나·다목은 별도 경로다.** 나목(토지거래허가 대상)·다목(허가
+ *    대상 아님)은 2026-05-09 **이후**에도 계약일부터 4/6개월(2026-05-10 이후 계약은 절대기한
+ *    2026-09-09/11-09) 이내 양도 시 배제한다. 판정은 `multi-house-surcharge-exclusion.ts`의
+ *    `checkGracePeriodExemption`, 지역별 개월 수는 `transitionExemptionMonths`,
+ *    상수는 `legal-codes/surcharge-transition.ts`의 `SURCHARGE_TRANSITION`이다.
+ *    「상한 = 2026-05-09」만 보고 나·다목을 미구현으로 오인하지 말 것(2026-08-25 실측 확인).
  * 엔진 세율시드 `suspended_until` · `GRACE_PERIOD_END` · UI 술어가 모두 이 상수를 참조(3중 드리프트 방지).
  */
 export const SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW = {
