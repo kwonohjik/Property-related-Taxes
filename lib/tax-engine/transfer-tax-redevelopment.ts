@@ -27,6 +27,7 @@ import {
   applyHighValueAllocation,
   applySettlementExemption,
   applyOneRightExemption,
+  applyAptOneHouseExemption,
   emitRedevelopmentSteps,
 } from "./transfer-tax-redevelopment-transforms";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
@@ -41,6 +42,7 @@ import type {
   TransferTaxResult,
   RedevelopmentResult,
   CalculationStep,
+  CarryoverTaxationDetail,
 } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 
@@ -73,6 +75,25 @@ export function calculateRedevelopmentTax(
    * 미제공이면 `resolveSurchargeApplication`이 원시 플래그로 fallback한다.
    */
   multiHouseSurchargeResult?: MultiHouseSurchargeResult,
+  /**
+   * STEP 0.65 호출부가 넘기는 값들 — 이 분기가 메인 파이프라인을 **조기 이탈**하기 때문에
+   * 상류에서 이미 판정해 둔 것을 명시적으로 받아야 결과에 실린다.
+   * 넘기지 않으면 종전과 동일하게 동작한다(additive).
+   */
+  opts?: {
+    /**
+     * §89①3호가목 비과세 판정 결과 (subject="apt" 전용 — `transfer-tax.ts` STEP 0.65에서 산정).
+     * 조합원입주권(subject="right")은 §89①4호이고 `applyOneRightExemption`이 담당하므로 undefined다.
+     */
+    exemptionResult?: { isExempt: boolean; isPartialExempt: boolean; exemptReason?: string };
+    /** §97의2 배우자등 이월과세 A/B 판정 근거 (STEP 0.475 산출). */
+    carryoverDetail?: CarryoverTaxationDetail;
+    /**
+     * STEP 0 ~ 0.65 사이에 누적된 비차단 안내(부담부증여 다주택 경고 등).
+     * 정상 경로는 `transfer-tax-finalize.ts`가 결과에 그대로 싣는데 이 분기만 버리고 있었다.
+     */
+    warnings?: string[];
+  },
 ): TransferTaxResult {
   const steps: CalculationStep[] = [...baseSteps];
   // 토지만 출자한 조합원입주권은 1세대1주택 특례(비과세·LTHD 표2) 대상이 아니다.
@@ -114,13 +135,48 @@ export function calculateRedevelopmentTax(
     isUnregistered: input.isUnregistered,
   });
 
+  /**
+   * ─ Step A.45: §89①3호가목 **전액 비과세** (완공 신축주택 전용) — 2026-08-25 신설 (E3-01) ─
+   *
+   * 판정은 `transfer-tax.ts` STEP 0.65가 일반 주택 경로와 **같은 `checkExemption`**으로 내려
+   * `opts.exemptionResult`로 넘긴다. 여기서는 그 결과를 마스킹에만 쓴다(판정 이중화 금지).
+   * subject="right"(조합원입주권)는 §89①**4호**이고 Step A.7 `applyOneRightExemption`이 담당하므로
+   * 호출부가 undefined를 넘긴다 — 이 블록은 no-op이 된다.
+   */
+  const aptExemption =
+    input.redevelopment!.subject === "apt" ? opts?.exemptionResult : undefined;
+  const redevAfterExemption = applyAptOneHouseExemption(
+    redevRaw,
+    input.redevelopment!,
+    aptExemption?.isExempt === true,
+  );
+  if (redevAfterExemption.aptOneHouseExemptionApplied) {
+    steps.push({
+      label: "1세대1주택 비과세",
+      formula:
+        `§89①3호 가목 — ${aptExemption?.exemptReason ?? "1세대1주택 요건 충족"} + ` +
+        `양도가액 ${input.transferPrice.toLocaleString()} ≤ 12억 → 전액 비과세`,
+      amount: 0,
+      legalBasis: REDEVELOPMENT.GAIN_BASE,
+    });
+  }
+
   // ─ Step A.5: STEP 3 (12억 안분) — §95③·시행령 §160 ─
   // 1세대1주택 + 양도가액 > 12억 시: 분기별 양도차익·LTHD 를 taxableRatio 비례 축소.
   // 그 외: redevRaw.total 그대로 사용 (사례 44 회귀 0).
-  const isHighValue = isOneHouseSingle && input.transferPrice > HIGH_VALUE_THRESHOLD;
+  //
+  // 🔴 **트리거가 `isOneHouseSingle`(세대 주택수 1)에서 `checkExemption` 판정으로 바뀌었다**
+  //    (2026-08-25 — E3-01). 종전에는 §154① 보유·거주 요건도, §91① 미등기 배제도 보지 않고
+  //    「세대 주택수 1」만으로 안분을 걸었다. 그러면 12억 **이하**에서는 비과세가 없는데
+  //    12억 **초과**에서는 요건 무검증 안분이 걸리는 모순이 생긴다.
+  //    `exemptionResult` 미제공(subject="right") 시에는 종전 술어를 유지한다 — 그 경로의
+  //    12억 처리는 `applyOneRightExemption`이 §89①4호 기준으로 따로 판정한다.
+  const isHighValue = aptExemption
+    ? aptExemption.isPartialExempt === true
+    : isOneHouseSingle && input.transferPrice > HIGH_VALUE_THRESHOLD;
   const allocated: RedevelopmentResult = isHighValue
-    ? applyHighValueAllocation(redevRaw, input.transferPrice, input.redevelopment!)
-    : redevRaw;
+    ? applyHighValueAllocation(redevAfterExemption, input.transferPrice, input.redevelopment!)
+    : redevAfterExemption;
 
   if (isHighValue && allocated.highValueAllocation) {
     const ha = allocated.highValueAllocation;
@@ -313,7 +369,42 @@ export function calculateRedevelopmentTax(
 
   // ─ Step I: TransferTaxResult 빌드 ─
   return {
-    isExempt: redevAfterRight.oneRightExemptionApplied === true, // 전액 비과세 시 true
+    /**
+     * 전액 비과세 — 두 규정이 각각 자기 축에서 판정한다.
+     *   · `oneRightExemptionApplied`      : 조합원입주권 §89①**4호** 가목 (`applyOneRightExemption`)
+     *   · `aptOneHouseExemptionApplied`   : 완공 신축주택 §89①**3호** 가목 (2026-08-25 신설 — E3-01)
+     * subject 가드로 서로 배타적이라 OR로 합쳐도 두 규정이 겹치지 않는다.
+     */
+    isExempt:
+      redevAfterRight.oneRightExemptionApplied === true ||
+      redevAfterRight.aptOneHouseExemptionApplied === true,
+    /**
+     * 🔴 **부분 비과세(고가주택) 플래그 — 종전에는 이 분기가 채우지 않았다** (E3-06).
+     *
+     * `transfer-tax-carryover.ts:351`의 §97의2②2호 자동 판정이
+     * `resultA.isExempt === true || resultA.isPartialExempt === true`를 보는데,
+     * 재개발 자산에서는 이 필드가 항상 undefined라 **언제나 false**였다.
+     */
+    isPartialExempt:
+      redevAfterRight.oneRightHighValueApplied === true || (isHighValue && !!allocated.highValueAllocation),
+    ...(opts?.exemptionResult?.exemptReason
+      ? { exemptReason: opts.exemptionResult.exemptReason }
+      : {}),
+    /**
+     * 🔴 **§97의2 이월과세 A/B 판정 근거 — 종전에는 통째로 소실됐다** (E3-06).
+     *
+     * STEP 0.475가 A/B를 계산해 `workingInput`까지 교체해 놓고, 이 분기가 조기 반환하며
+     * detail을 담지 않았다(정상 경로는 `transfer-tax-finalize.ts`의 `buildTransferResultDetails`가
+     * `carryoverTaxationDetail: ctx.carryoverDetail`로 싣는다). 파급 셋:
+     *   ① 결과 화면 `CarryoverComparisonCard` 미표시 — 취득가액이 증여자 것으로 바뀐 근거를 볼 수 없다
+     *   ② 다건 집계가 `p.carryoverTaxationDetail?.isEligible === true`로 §97의2②3호 신고단위 비교
+     *      대상을 추리므로(`transfer-tax-aggregate.ts:661-663`) 재개발·입주권 자산이 조용히 빠진다
+     *   ③ `adoptedCarryoverAcquisitionPrice(...)`가 undefined가 되어 신고서 표시 취득가액이
+     *      수증자 취득가액으로 되돌아간다(`transfer-tax-aggregate.ts:508`)
+     */
+    ...(opts?.carryoverDetail ? { carryoverTaxationDetail: opts.carryoverDetail } : {}),
+    /** 비차단 안내 — 정상 경로와 동형으로 항상 키를 싣는다(종전에는 키 자체가 없었다). */
+    warnings: opts?.warnings ?? [],
     transferGain: redevAfterRight.total.gain,
     taxableGain: redevAfterRight.total.gain,
     usedEstimatedAcquisition: input.useEstimatedAcquisition ?? false,

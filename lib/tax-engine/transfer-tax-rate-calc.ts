@@ -25,6 +25,7 @@ import { resolveCompanionLandRate } from "./appurtenant-land-rate";
 import { getEffectiveAcquisitionDate } from "./transfer-tax-lthd-start";
 import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
+import { resolveShortTermRate, type ShortTermAssetClass } from "./data/short-term-rate-history";
 // re-export — 기존 import 경로 하위 호환 유지
 export {
   resolveCompanionLandRate,
@@ -425,25 +426,58 @@ export function calcTax(
     input.propertyType === "redevelopment_apt"; // 신축APT는 주택 — §104①2/3호 60%/70%
   // P3 특칙 (§98의3④·§98의5③·§98의6③): 세율 = §104①1호 강제 — 단기세율(§104①2·3호) 배제.
   // "§104①3호 불구" 법문이나 "세율은 1호" 강제이므로 2호(1년 미만)도 배제됨 (설계 검토 #4).
-  const shortTermFlatRate = input.suppressShortTermRate
+  /**
+   * 🔴 **양도일(시행일) 축 도입 (2026-08-25 — S1-01).**
+   *
+   * 종전 식은 `input.transferDate`를 **한 번도 읽지 않고** 현행(2021-06-01 시행) 세율만 적용했다.
+   * 그런데 「1년 미만 70% / 1~2년 60% / 2년 이상 분양권 60%」는 전부 **2021-06-01 시행분**이다
+   * (법률 제17477호, 2020-08-18 공포). 그 전에는 §104①이 이렇게 달랐다(법제처 DRF 실독):
+   *   · 1호 = §55① 누진 — **분양권 괄호 없음**
+   *   · 2호 = 40%[주택·조합원입주권 **제외** ⇒ 누진]
+   *   · 3호 = 50%(주택·조합원입주권 **40%**)
+   *   · 4호 = **조정대상지역 주택분양권 50%** (2018-01-01 신설 → 2020-08-18 삭제)
+   *
+   * 같은 저장소가 §104⑦ 가산율은 `resolveSurchargeAddonRate`로, §55① 누진표는
+   * `loadFallbackTransferRates(targetDate)`로 **이미 양도일 축을 타는데** 이 식만 빠져 있었다.
+   * 수정신고·경정청구 화면과 다건 `taxYear`(min 2000)가 과거 양도일을 정면으로 지원하므로
+   * 도달 가능한 결함이었다(실측: 2020-06-01 양도 분양권 5년 보유 — 60% 178,500,000 vs
+   * 법정 누진 93,650,000 = **84,850,000원 과대**).
+   *
+   * 시행일별 표·근거는 `data/short-term-rate-history.ts` 주석 참조.
+   */
+  const shortTermAssetClass: ShortTermAssetClass =
+    input.propertyType === "presale_right"
+      ? "presale_right"
+      : isHousingLikeProp
+        ? "housing_or_right"
+        : "other";
+  const shortTermResolution = input.suppressShortTermRate
     ? null
-    : holdingMonthsTotal < 12 ? (isHousingLikeProp ? 0.70 : 0.50) :
-      holdingMonthsTotal < 24 ? (isHousingLikeProp ? 0.60 : 0.40) :
-      // §104①1호: 분양권은 보유기간과 무관하게 60% 단일세율(2년 이상도 60%).
-      // (주택·조합원입주권은 2년 이상 시 일반 누진세율이므로 여기서 제외 — null 유지.)
-      input.propertyType === "presale_right" ? 0.60 :
-      null;
+    : resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, {
+        isRegulatedArea: input.isRegulatedArea,
+        // §104①4호 단서 — 「1세대가 보유하고 있는 주택이 없는 경우로서 대통령령으로 정하는 경우」.
+        // 시행령이 정하는 세부 요건까지는 입력에 없으므로 무주택 사실만 반영한다(과잉 과세 회피).
+        householdHasNoHouse: input.householdHousingCount === 0,
+      });
+  const shortTermFlatRate = shortTermResolution?.rate ?? null;
   const shortTermNote =
-    holdingMonthsTotal < 12 ? "보유기간 1년 미만 특례세율 적용" :
-    holdingMonthsTotal < 24 ? "보유기간 2년 미만 특례세율 적용" :
-    input.propertyType === "presale_right" ? "분양권 60% 세율(소득세법 §104①1호)" :
-    undefined;
+    shortTermFlatRate === null
+      ? undefined
+      : shortTermResolution?.clause === "104-1-4"
+        ? "조정대상지역 주택분양권 50% 세율(소득세법 §104①4호 — 2018.1.1~2021.5.31 양도분)"
+        : shortTermResolution?.clause === "104-1-1"
+          ? "분양권 60% 세율(소득세법 §104①1호)"
+          : holdingMonthsTotal < 12
+            ? "보유기간 1년 미만 특례세율 적용"
+            : "보유기간 2년 미만 특례세율 적용";
 
   if (shortTermFlatRate !== null) {
     const shortTermTax = applyRate(taxBase, shortTermFlatRate);
-    // 분양권 2년 이상 60%는 §104①**1호** 단일세율이다(위 주석) — 2·3호가 아니다.
+    // 호는 시행일별 표가 함께 돌려준다 — 분양권 2년 이상 60%는 §104①**1호**(2·3호가 아니다),
+    // 2018~2021.5 조정대상지역 분양권은 **4호**다.
     const stClause: RateClause =
-      holdingMonthsTotal < 24 ? shortTermClause(holdingMonthsTotal) : "104-1-1";
+      shortTermResolution?.clause ??
+      (holdingMonthsTotal < 24 ? shortTermClause(holdingMonthsTotal) : "104-1-1");
     // §104③: 다주택 중과세율과 비교하여 더 높은 세율 적용.
     // 중과 정보·가산율은 **후보 판정에도 필요**하므로 비교 블록 밖에서 구한다
     // (종전에는 `if` 안에 있어 「해당 호 집합」을 만들 수 없었다).

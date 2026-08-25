@@ -364,7 +364,12 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       {/* 재개발/재건축 APT 모드 — 상단의 일반 "취득가액 산정 방식"·"취득가액" 입력 영역 숨김.
           §166②1호 인가후 분의 분양가(= 권리가액 ± 청산금)는 결정론적으로 도출되므로
           사용자 직접 입력이 불필요. 인가전 분의 환산취득가/감정가액은 아래 §166 섹션 내부에서 처리. */}
-      {props.asset?.assetKind === "redevelopment_apt" && (
+      {props.asset?.assetKind === "redevelopment_apt" &&
+        // 🔴 승계조합원(§162①4호)은 제외한다 (2026-08-25 — E2-01).
+        //    아래 §166 ⑤ 섹션이 승계 모드에서 숨겨지므로, 이 카드가 「아래에서 입력한다」고
+        //    안내하면 **두 카드가 서로를 가리키는 순환**이 된다. 실제로 그 상태에서 매매 취득의
+        //    취득가액 입력 칸이 화면 어디에도 없어 0이 엔진에 도달했다.
+        props.asset?.redevIsSuccessorMember !== "yes" && (
         <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 space-y-1.5">
           <p className="text-sm font-semibold text-violet-900">
             취득가액 — 재개발 §166②1호 자동 산정
@@ -429,7 +434,12 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         </div>
       )}
       {props.asset?.transferType !== "burdened_gift" &&
-        props.asset?.assetKind !== "redevelopment_apt" &&
+        // 🔴 승계조합원 완공APT는 **상단 취득가액이 유일한 입력 경로**다 (2026-08-25 — E2-01).
+        //    §166 안분을 우회하는 단순 차감 산식(`runSuccessorMember`)이 이 값을 그대로 쓰는데,
+        //    §166 ⑤ 「인가전 분 종전 부동산 취득가액」 섹션은 승계 모드에서 숨겨진다.
+        //    여기서까지 막으면 화면 어디에도 취득가액 칸이 없어 0이 엔진에 도달한다.
+        (props.asset?.assetKind !== "redevelopment_apt" ||
+          props.asset?.redevIsSuccessorMember === "yes") &&
         props.asset?.assetKind !== "right_to_move_in" && (
       <>
       {/* 별개 취득(토지·건물 취득시기 상이) — 자산 전체 축 A 입력을 숨긴다.

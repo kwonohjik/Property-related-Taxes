@@ -657,6 +657,23 @@ export interface RedevelopmentResult {
   oneRightHighValueApplied?: boolean;
 
   /**
+   * **완공 신축주택(subject="apt") §89①3호가목 전액 비과세 적용 여부** (2026-08-25 신설 — E3-01).
+   *
+   * 종전에는 재개발 분기가 `transfer-tax.ts` STEP 0.65에서 조기 반환하며 `checkExemption`을
+   * 건너뛰어 **§95③ 12억 초과 안분만** 구현돼 있었다. 그 결과 1세대1주택 요건을 갖춘 완공
+   * 신축주택이 양도가액 **12억 이하**면 전액 과세되고, 12억을 1원 넘기면 안분으로 세액이 0에
+   * 수렴하는 **불연속**이 생겼다(실측: 12억 98,241,000원 → 12억+1원 0원).
+   *
+   * true 시: 3분기 모두 gain=0·lthd=0 마스킹 → total.taxableIncome=0 → 산출세액 0.
+   * 판정 자체는 이 모듈이 하지 않는다 — `transfer-tax.ts`가 일반 주택 경로와 **같은**
+   * `checkExemption`을 태워 넘긴 결과를 그대로 쓴다(판정 이중화 금지).
+   *
+   * 법령 근거: 소득세법 §89①3호 가목 + 시행령 §154①(보유·거주 요건)·§160(고가주택)
+   * 대응 관계: subject="right"의 `oneRightExemptionApplied`(§89①**4호**)와 mutually exclusive.
+   */
+  aptOneHouseExemptionApplied?: boolean;
+
+  /**
    * LTHD 분기별 거주월수 귀속 (디버그·결과카드 표시용).
    * 사전법령해석재산 2020-386 + 시행령 §154⑧ 적용 결과 노출.
    * 1세대1주택 redev 케이스에서만 부착.

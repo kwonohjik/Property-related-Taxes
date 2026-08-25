@@ -186,9 +186,37 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     }
   }
 
+  /**
+   * ── 승계조합원 취득가액 필수 (2026-08-25 신설 — E2-01) ──────────────────────
+   *
+   * 🔴 아래 주석은 「취득가액은 자산 카드의 `fixedAcquisitionPrice`에서 도출 (**자산 단계 validate가
+   *    보장**)」이라고 적고 있었지만 **그 보장이 실재하지 않았다.**
+   *    `validateAssetAcquisition`은 재개발 분기에서 이 함수로 위임한 뒤 곧바로 `return null`하고
+   *    (`transfer-tax-validate-asset.ts:210-215`), 이 함수의 실가 취득가액 검증은 `&& !isSuccessor`로
+   *    승계를 **제외**한다. 결과적으로 「승계조합원 + 매매 + 취득가액 공란」이 두 관문을 모두 통과해
+   *    엔진에 `acquisitionPrice = 0`이 도달했다(실측 산출세액 315,000,000원 과대).
+   *
+   * 취득원인별로 취득가액이 나오는 경로가 다르다:
+   *   · **매매(purchase)** — 자산 카드 「취득가액」(`fixedAcquisitionPrice`)이 유일한 경로다.
+   *     같은 배치에서 `CompanionAcqPurchaseBlock`의 게이트를 열어 이 칸을 실제로 렌더한다
+   *     (종전에는 칸 자체가 없어 **차단만 하면 dead-end**가 됐다).
+   *   · **증여(gift)** — `CompanionAcqGiftBlock`이 별도 입력 경로를 갖는다.
+   *   · **상속(inheritance)** — STEP 0.45 `inheritedAcquisition` 자동 평가가 취득가액을 만든다.
+   * ⇒ 지금 뚫려 있던 것은 **매매**뿐이므로 그 경로만 요구한다(과잉 차단 금지).
+   *
+   * 근거: 「소득세법」 §97①1호 가목(실지거래가액) · 시행령 §162①4호(승계조합원 신축주택 취득시기).
+   */
+  if (
+    isSuccessor &&
+    asset.acquisitionCause === "purchase" &&
+    parseAmount(asset.fixedAcquisitionPrice) <= 0
+  ) {
+    return `${label}: 승계조합원 — 입주권을 매매로 승계취득한 취득가액(실지거래가액)을 입력하세요. (소득세법 §97①1호 가목)`;
+  }
+
   // ── 금액 ──
   // 사례 48 — 승계조합원 모드 시 권리가액 필드 자체가 UI에서 숨겨지므로 검증 제외.
-  // 취득가액은 자산 카드의 fixedAcquisitionPrice 또는 inheritance 자동 평가에서 도출 (자산 단계 validate가 보장).
+  // 취득가액은 자산 카드의 fixedAcquisitionPrice 또는 inheritance 자동 평가에서 도출.
   if (!isSuccessor && parseAmount(asset.redevRightsValue) <= 0) {
     return `${label}: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)`;
   }

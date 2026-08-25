@@ -385,6 +385,67 @@ export function applyOneRightExemption(
   }
 }
 
+/**
+ * **완공 신축주택(subject="apt") §89①3호가목 전액 비과세 마스킹** (2026-08-25 — E3-01).
+ *
+ * ## 왜 필요했나
+ * 재개발 분기는 `transfer-tax.ts` STEP 0.65에서 **조기 반환**해 STEP 1(`checkExemption`)을
+ * 건너뛴다. 그런데 `calculateRedevelopmentTax`는 §95③ **12억 초과 안분(`applyHighValueAllocation`)만**
+ * 구현해 두어, 그 전제인 **§89①3호가목 비과세 자체가 없었다**. 결과:
+ *
+ * | 양도가액 | 종전 세액 | 법령상 |
+ * |---|---|---|
+ * | 10억 | 59,785,000 | **0** |
+ * | 12억 | 98,241,000 | **0** |
+ * | 12억+1원 | 0 (안분으로 과세분≈0) | 0 |
+ *
+ * 12억 경계에서 **1원 차이로 9,824만원이 사라지는 불연속**이었다. 입주권(subject="right")
+ * 경로는 `applyOneRightExemption`이 전액 비과세를 이미 구현해 두어 정반대의 비대칭이었다.
+ *
+ * ## 판정은 여기서 하지 않는다
+ * 요건 판정(§154① 보유·거주, §155 각 특례, §91① 미등기 배제 등)은 **일반 주택 경로와 같은
+ * `checkExemption`**이 내리고, 이 함수는 그 결과를 받아 **마스킹만** 한다. 판정을 여기서
+ * 재현하면 같은 질문에 두 개의 답이 생긴다(`feedback_ui_engine_dual_truth_avoidance`).
+ *
+ * ## 12억 초과는 이 함수가 손대지 않는다
+ * 부분 비과세(고가주택)는 기존 `applyHighValueAllocation`(Step A.5)이 그대로 담당한다 —
+ * 호출부가 `exemptionResult.isPartialExempt`로 그 트리거를 건다.
+ *
+ * 법령 근거: 소득세법 §89①3호 가목 · §95③ / 시행령 §154① · §160
+ *
+ * @param redev  3분할 원본 결과
+ * @param redevInfo `subject` 가드용 — "apt"가 아니면 그대로 반환한다
+ * @param isExempt `checkExemption`의 전액 비과세 판정 결과
+ */
+export function applyAptOneHouseExemption(
+  redev: RedevelopmentResult,
+  redevInfo: NonNullable<TransferTaxInput["redevelopment"]>,
+  isExempt: boolean,
+): RedevelopmentResult {
+  // subject 가드 — 입주권(§89①4호) 경로 완전 격리. 두 규정이 겹치면 안 된다.
+  if (redevInfo.subject !== "apt" || !isExempt) return redev;
+
+  // 3분기 trace 보존 후 0 마스킹 — `applyOneRightExemption`의 12억 이하 분기와 동형.
+  // 합계만 0으로 두면 결과 화면이 「공제 0인데 분기엔 값이 있다」로 어긋난다
+  // (memory `feedback_engine_result_display_drift`).
+  const maskBranch = (branch: RedevelopmentResult["preApproval"]) => ({
+    ...branch,
+    gainAfterAllocation: branch.gain,
+    lthdAfterAllocation: branch.lthd,
+    gain: 0,
+    lthd: 0,
+  });
+
+  return {
+    ...redev,
+    preApproval: maskBranch(redev.preApproval),
+    postApprovalExistingHouse: maskBranch(redev.postApprovalExistingHouse),
+    settlement: maskBranch(redev.settlement),
+    total: { gain: 0, lthd: 0, taxableIncome: 0 },
+    aptOneHouseExemptionApplied: true,
+  };
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 내부 헬퍼 — 3분할 양도차익·LTHD steps emit
 // ──────────────────────────────────────────────────────────────────────────────

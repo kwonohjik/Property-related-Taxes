@@ -175,10 +175,30 @@ export function runRedevelopment(
     return runHousingContribReceiveEstimated(input);
   }
 
-  // 사례 37 — 토지 출자 입주권 + 환산취득가 분기.
-  // originalAssetType="land" + useEstimatedAcquisition=true 시 §166③ 공시지가 환산 산식 적용.
-  // (주택 출자 환산과 별개 공식 — managementDisposalHousingPrice 대신 landStdPriceAt* 사용)
+  /**
+   * 사례 37 — 토지 출자 **입주권** + 환산취득가 분기.
+   * originalAssetType="land" + useEstimatedAcquisition=true 시 §166③ 공시지가 환산 산식 적용.
+   * (주택 출자 환산과 별개 공식 — managementDisposalHousingPrice 대신 landStdPriceAt* 사용)
+   *
+   * 🔴 **`subject === "right"` 게이트 추가 (2026-08-25 — E1-01).**
+   *    종전에는 이 조건에 **양도 대상 축이 없어서**, 자산 종류가 「재개발APT」(완공 신축주택 양도,
+   *    subject="apt")여도 환산 모드이기만 하면 여기로 빨려 들어가 §166**①**1호(입주권) 구조로
+   *    계산됐다 — 인가전 분만 LTHD를 받고 **인가후 분 LTHD가 통째로 0**이 됐다
+   *    (실측 산출세액 89,576,716원 과대).
+   *
+   *    바로 위 주석이 처음부터 「토지 출자 **입주권**」이라고 적고 있었다 — 주석과 구현이 갈렸던 것이다.
+   *
+   *    ① / ② 를 가르는 축은 조문상 **양도 대상**이다:
+   *      · §166① 「…취득한 **입주자로 선정된 지위를 양도**하는 경우」
+   *      · §166② 「…관리처분계획등에 따라 취득한 **신축주택 및 그 부수토지를 양도**하는 경우」
+   *    「토지만 제공」은 §166① 괄호가 명시적으로 포함하는 사실일 뿐 항을 가르지 않는다.
+   *
+   *    subject="apt"는 이제 아래 `runOriginalMember` → `computeRedevelopmentSplit`으로 내려가고,
+   *    §166③ 토지 환산취득가는 `computeRedevelopmentValuation`이 산출한다(2026-08-25 신설).
+   *    ⇒ §166②1호 안분 + §166⑤2호 가목·나목 LTHD가 정상 적용된다.
+   */
   if (
+    input.redevelopment.subject === "right" &&
     input.redevelopment.originalAssetType === "land" &&
     input.useEstimatedAcquisition === true
   ) {
