@@ -109,6 +109,14 @@ export interface Unsold988Result {
   /** 인정 임대기간 (개월 — 상속 합산 포함) */
   rentalMonths: number;
   formulaSteps: New993FormulaStep[];
+  /**
+   * [echo] 3단계 상세명세 「소득금액 감면대상」 행의 Frac 분수 산식 표시용.
+   * §99의3(`New993Result`)과 같은 이름·같은 의미 — 공용 빌더가 한 계약을 본다.
+   */
+  transferIncomeApplied?: number;
+  standardPriceAtAcquisition?: number;
+  standardPriceAt5Years?: number;
+  standardPriceAtTransfer?: number;
   /** 농특세 (finalize 2-pass에서 채움) */
   taxReductionForRuralSurtax: number;
   ruralSurtax: number;
@@ -263,6 +271,10 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
   let base: number;
   let fiveYearRatio: number;
   let signCase: New993SignCase;
+  // [echo] 안분 경로에서만 채워지는 3시점 기준시가 (5년 내 전액 경로는 안분이 없어 undefined)
+  let echoStdAcq: number | undefined;
+  let echoStd5Y: number | undefined;
+  let echoStdTransfer: number | undefined;
 
   if (isWithin5Years) {
     base = Math.max(0, input.transferIncome);
@@ -288,6 +300,9 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
       );
     }
     const allocation = calcSignedAllocation(input.transferIncome, stdAt5Y - stdAtAcq, stdAtTransfer - stdAtAcq);
+    echoStdAcq = stdAtAcq;
+    echoStd5Y = stdAt5Y;
+    echoStdTransfer = stdAtTransfer;
     base = allocation.reducibleIncome;
     fiveYearRatio = allocation.ratio;
     signCase = allocation.signCase;
@@ -317,6 +332,11 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     deductionRate: UNSOLD_98_8_DEDUCTION_RATE,
     rentalMonths,
     formulaSteps,
+    // [echo] 3단계 명세 Frac 산식 표시용 — 안분에 쓰인 값 그대로(계산 무관)
+    transferIncomeApplied: input.transferIncome,
+    standardPriceAtAcquisition: echoStdAcq,
+    standardPriceAt5Years: echoStd5Y,
+    standardPriceAtTransfer: echoStdTransfer,
     taxReductionForRuralSurtax: 0,
     ruralSurtax: 0,
     legalBasis,

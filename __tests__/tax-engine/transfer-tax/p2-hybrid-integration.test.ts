@@ -148,3 +148,60 @@ describe("P2 하이브리드 통합 anchor", () => {
     expect(r.surchargeRate).toBe(0.3);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────
+// PR-3 D-3 — 3단계 상세명세 Frac 산식용 3시점 기준시가 echo 배선 anchor
+//
+// ⚠️ 빌더 단위 테스트는 source를 fixture로 주입하므로 **엔진의 echo 주입을 지키지 못한다**
+//    (PR-1에서 같은 사각지대를 mutation으로 확인했다). 엔진 단계에서 별도로 고정한다.
+// ─────────────────────────────────────────────────────────────────
+describe("§99의2 — 3단계 산식용 기준시가 echo (D-3)", () => {
+  it("5년 후 안분 경로에서 3시점 기준시가가 detail에 echo된다", () => {
+    const r = calculateTransferTax(
+      baseTransferInput({
+        transferPrice: 141_750_000,
+        acquisitionPrice: 127_000_000,
+        acquisitionDate: new Date("2013-10-23"),
+        transferDate: new Date("2026-06-01"),
+        householdHousingCount: 2,
+        reductions: [{
+          ...UNSOLD_992_REDUCTION,
+          contractDate992: new Date("2013-10-23"),
+          acquisitionPrice992: 127_000_000,
+          exclusiveAreaSqm992: 74.03,
+          standardPriceAtAcquisition992: 121_191_049,
+          standardPriceAt5Years992: 112_969_780,
+          standardPriceAtTransfer992: 126_887_420,
+        }],
+      }),
+      makeMockRates(),
+    );
+    const d = r.unsold992Detail;
+    expect(d?.isEligible).toBe(true);
+    expect(d?.effectCategory).toBe("income_deduction");
+    // 제보 케이스: 5년시점 < 취득시 → neg_pos → 감면 0
+    expect(d?.signCase).toBe("neg_pos");
+    expect(d?.reducibleTransferIncome).toBe(0);
+    // echo — 감면이 0이어도 산식에 값을 보이려면 반드시 있어야 한다
+    expect(d?.standardPriceAtAcquisition).toBe(121_191_049);
+    expect(d?.standardPriceAt5Years).toBe(112_969_780);
+    expect(d?.standardPriceAtTransfer).toBe(126_887_420);
+    expect(d?.transferIncomeApplied).toBe(11_210_000);
+  });
+
+  it("🔴 5년 내 세액감면 경로는 안분이 없어 기준시가 echo도 없다 (구별력)", () => {
+    const r = calculateTransferTax(
+      baseTransferInput({
+        transferPrice: 800_000_000,
+        acquisitionPrice: 500_000_000,
+        acquisitionDate: new Date("2013-06-15"),
+        transferDate: new Date("2017-06-01"),
+        householdHousingCount: 2,
+        reductions: [UNSOLD_992_REDUCTION],
+      }),
+      makeMockRates(),
+    );
+    expect(r.unsold992Detail?.effectCategory).toBe("tax_amount");
+    expect(r.unsold992Detail?.standardPriceAt5Years).toBeUndefined();
+  });
+});
