@@ -114,6 +114,10 @@ export function mapPresaleRightsToEngine(
     rightValue: r.rightValue,
     isSpouseOwned: r.isSpouseOwned,
     regionCode: r.regionCode,
+    // ⑭ 인가일 — `Date < string` 침묵 false 방지(date-coerce 규약). 미입력은 undefined 유지.
+    managementDisposalApprovalDate: r.managementDisposalApprovalDate
+      ? new Date(r.managementDisposalApprovalDate)
+      : undefined,
     isInherited: r.isInherited,
     isRankingDisqualifiedInheritedRight: r.isRankingDisqualifiedInheritedRight,
     isCoInherited: r.isCoInherited,

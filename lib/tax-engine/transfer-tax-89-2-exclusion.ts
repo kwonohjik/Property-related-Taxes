@@ -69,9 +69,9 @@
  * **같은 값을 재사용**한다(진실을 둘로 만들지 않는다 — `multi-house-surcharge-count.ts` 참조).
  * 조합원입주권은 그 개정 이전부터 조문에 있었으므로 게이트를 걸지 않는다.
  *
- * 🔶 **확인 필요** — §89②의 **조합원입주권 축 자체의 시행일**은 읽지 못했다(법제처 DRF 과거
- *    시행본 조회에 `KOREAN_LAW_OC`가 필요하고 이 저장소 `.env.local`에는 없다).
- *    2006년 이전 양도를 다루게 되면 그 시행일을 먼저 확정할 것.
+ * ✅ **조합원입주권 축 시행일도 확정됐다**(2026-08-27 · R-2) — 법률 제7837호 부칙 §12.
+ *    다만 기준이 **인가일**이라 분양권(취득일)과 축이 다르다. `ARTICLE_89_2_REDEV_RIGHT_START_DATE`
+ *    주석에 부칙 원문을 옮겨 두었다.
  */
 
 import type {
@@ -92,6 +92,20 @@ export const ARTICLE_156_2_3_DEADLINE_YEARS = 3;
  *    공유하면 한쪽이 개정될 때 다른 쪽이 조용히 따라간다.
  */
 export const ARTICLE_156_2_8_MERGE_YEARS = 10;
+
+/**
+ * §89②의 **조합원입주권 축 시행일** — 법률 제7837호(2005-12-31 공포·2006-01-01 시행) 부칙 §12.
+ *
+ * §89②을 **신설한** 개정이며, 그 부칙이 적용 범위를 이렇게 정했다:
+ *   ① 「2006년 1월 1일 이후 최초로 … **관리처분계획이 인가된 분**부터 적용한다」
+ *   ② 2006-01-01 **전** 인가분이라도 그 지위를 **2006-01-01 이후에 승계취득**하면
+ *      2006-01-01 이후 인가로 취득한 조합원입주권으로 **보아서** 적용한다.
+ *
+ * ⚠️ **분양권 축과 기준이 다르다** — 분양권은 §88 10호 정의 시행일 기준 **취득일**
+ *    (`presaleRightStartDate`, DB 2021-01-01)인데 조합원입주권은 **인가일**이다.
+ *    한 상수로 묶으면 조용히 틀린다.
+ */
+export const ARTICLE_89_2_REDEV_RIGHT_START_DATE = new Date("2006-01-01");
 
 export type Article89Clause2Status = "not_applicable" | "exception_met" | "undetermined" | "excluded";
 
@@ -136,10 +150,32 @@ export type Article89Clause2Input = Pick<
   | "sellingHouseId"
 >;
 
-/** §89②의 「분양권」인가 — §88 10호 정의 시행일(2021-01-01) 이후 취득분만. */
-function isClause2Right(right: PresaleRight, presaleRightStartDate: Date): boolean {
-  if (right.type === "redevelopment_right") return true;
+/**
+ * 이 권리가 §89②의 적용 대상인가 — **권리 종류마다 축이 다르다**.
+ *
+ * @param presaleRightStartDate §88 10호 「분양권」 정의 시행일. 미제공 시 분양권 축은
+ *   **판정하지 않는다**(기산일을 모르는 채 불리하게 적용하지 않는다).
+ */
+function isClause2Right(right: PresaleRight, presaleRightStartDate: Date | undefined): boolean {
+  if (right.type === "redevelopment_right") return isClause2RedevelopmentRight(right);
+  if (presaleRightStartDate === undefined) return false;
   return right.acquisitionDate >= presaleRightStartDate;
+}
+
+/**
+ * 조합원입주권 축 — 법률 제7837호 부칙 §12(위 상수 주석에 원문).
+ *
+ * 🔑 **인가일이 2006 이전일 때만 취득일이 갈래를 가른다.**
+ *   · 원조합원 — 종전주택 취득일이든 인가일이든 **둘 다 2006 이전**이라 어느 쪽으로 입력해도
+ *     결과가 같다(⑤의 「취득일」 라벨이 모호해도 이 판정은 흔들리지 않는다).
+ *   · 승계조합원 — 취득일 = 승계취득일. 2006-01-01 이후면 부칙 ②가 대상으로 **의제**한다.
+ */
+function isClause2RedevelopmentRight(right: PresaleRight): boolean {
+  const approval = right.managementDisposalApprovalDate;
+  // 미입력은 **원칙(부칙 ①)** 으로 읽는다 — 상수 주석의 「미입력 = 적용」 근거 참조.
+  if (approval === undefined) return true;
+  if (approval >= ARTICLE_89_2_REDEV_RIGHT_START_DATE) return true;
+  return right.acquisitionDate >= ARTICLE_89_2_REDEV_RIGHT_START_DATE;
 }
 
 /**
@@ -158,11 +194,9 @@ export function resolveArticle89Clause2(
     return { status: "not_applicable" };
   }
 
-  const rights = (input.presaleRights ?? []).filter((r) =>
-    presaleRightStartDate === undefined
-      ? r.type === "redevelopment_right"
-      : isClause2Right(r, presaleRightStartDate),
-  );
+  // 🔴 종전에는 기산일 미제공 시 조합원입주권을 **무조건** 통과시켰다 — 인가일 게이트가
+  //    그 경로를 타지 못했다. 이제 leaf가 종류별 축을 모두 판정한다.
+  const rights = (input.presaleRights ?? []).filter((r) => isClause2Right(r, presaleRightStartDate));
   if (rights.length === 0) return { status: "not_applicable" };
 
   // §156의2⑤ 대체주택 — `checkExemption` E-5가 요건을 판정한다. 선언돼 있으면 그 판정에 맡긴다.

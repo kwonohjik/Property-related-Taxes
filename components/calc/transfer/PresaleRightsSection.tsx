@@ -99,6 +99,29 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
                   onChange={(v) => update(r.id, { acquisitionDate: v })}
                 />
               </div>
+              {/*
+                §89②의 조합원입주권 축 시행일 게이트 — 법률 제7837호(2006-01-01 시행) 부칙 §12①이
+                「2006년 1월 1일 이후 최초로 **관리처분계획이 인가된 분**부터」로 정했다.
+                분양권은 취득일 축(§88 10호 정의 시행일)이라 이 칸을 두지 않는다.
+
+                ⚠️ 미입력은 **원칙(적용)** 이다 — 2026년 현재 보유 중인 입주권의 인가일이
+                   2006-01-01 이전인 경우는 사실상 예외라, 해당 세대만 선언으로 빠져나간다.
+              */}
+              {r.type === "redevelopment_right" && (
+                <div className="space-y-1">
+                  <span className="block text-caption text-muted-foreground font-medium">
+                    관리처분계획 인가일 <span className="font-normal">(선택)</span>
+                  </span>
+                  <DateInput
+                    value={r.managementDisposalApprovalDate ?? ""}
+                    onChange={(v) => update(r.id, { managementDisposalApprovalDate: v })}
+                  />
+                  <span className="block text-caption text-muted-foreground">
+                    2006-01-01 전에 인가된 입주권은 1세대1주택 비과세 배제(§89②) 대상이 아닙니다.
+                    그 후 승계취득한 경우에는 대상입니다.
+                  </span>
+                </div>
+              )}
               <div className="space-y-1">
                 <span className="block text-caption text-muted-foreground font-medium">지역 구분</span>
                 <RadioCardGroup
