@@ -128,7 +128,6 @@ function redevInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     priorHouseResidenceMonths: 60,
     newHouseResidenceMonths: 0,
   };

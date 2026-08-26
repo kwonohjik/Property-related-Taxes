@@ -57,7 +57,6 @@ describe("36-A2-i — 입주권 양도(receive) 실가 일반과세", () => {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
   };
 
   const input: TransferTaxInput = baseTransferInput({
@@ -134,7 +133,6 @@ describe("36-A2-ii — 입주권 양도(receive) 환산취득가", () => {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     acquisitionHousingPrice: 120_000_000,   // P_A
     managementDisposalHousingPrice: 400_000_000, // D
   };

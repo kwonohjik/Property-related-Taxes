@@ -66,7 +66,6 @@ export function case44RedevelopmentInfo(): RedevelopmentInfo {
     // 결과: 환산취득가 = floor(219,218,500 × 85,034,988 / 132,000,000) = 141,221,534 (회귀 보존)
     acquisitionHousingPrice: 85_034_988,
     managementDisposalHousingPrice: 132_000_000,
-    acquisitionRounding: "floor",
   };
 }
 
@@ -116,7 +115,6 @@ export function case45RedevelopmentInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 9_000_000,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     priorHouseResidenceMonths: 66,
     newHouseResidenceMonths: 0,
   };
@@ -167,7 +165,6 @@ export function case46RedevelopmentInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     // 사례 46 신규 — 청산금 수령분 단독 신고 + 인가일 기준 보유 2년 미충족
     receiveOnlyMode: true,
     exemptionEligibleAtApproval: false,
@@ -211,7 +208,6 @@ export function case47RedevelopmentInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     // 사례 47 — 신축APT 양도 + 청산금 수령 동시 신고 (사례 46과 달리 receiveOnlyMode=false)
     receiveOnlyMode: false,
     exemptionEligibleAtApproval: true, // 1세대1주택 비과세 요건 충족 (보유 21년 + 거주 21년)

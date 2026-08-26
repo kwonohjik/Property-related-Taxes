@@ -73,7 +73,6 @@ function redevInfoExemptPay(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     // 비과세 자기선언 (§89①4호 가목 트리거 조건 2)
     exemptionEligibleAtApproval: true,
   };
@@ -361,7 +360,6 @@ describe("회귀 — subject='apt' + exemptionEligibleAtApproval=true → 사례
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing" as const,
-    acquisitionRounding: "floor" as const,
     acquisitionHousingPrice: 85_034_988,
     managementDisposalHousingPrice: 132_000_000,
     // subject="apt"에서 exemptionEligibleAtApproval=true를 설정해도

@@ -70,7 +70,6 @@ const FULL_PAYLOAD = {
   newResidenceEndDate: "2022-06-01",
   priorHouseHoldingMonths: 60,
   otherHouseAcquisitionDate: "2021-01-01",
-  acquisitionRounding: "floor",
 } as const;
 
 describe("T1-02 · ⑫ redevelopmentSchema 필드 집합 보존", () => {

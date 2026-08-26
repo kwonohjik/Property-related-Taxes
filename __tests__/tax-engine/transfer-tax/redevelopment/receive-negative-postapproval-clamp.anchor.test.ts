@@ -49,7 +49,6 @@ function redevInfo(subject: "apt" | "right"): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     receiveOnlyMode: false,
     exemptionEligibleAtApproval: false, // 비과세 마스킹을 배제해 clamp만 관측한다
   } as RedevelopmentInfo;

@@ -94,7 +94,6 @@ function buildInput(opts: {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "land",
-    acquisitionRounding: "floor",
     ...(opts.mode === "estimated"
       ? { landStdPriceAtAcq: 200_000_000, landStdPriceAtApproval: 500_000_000 }
       : {}),

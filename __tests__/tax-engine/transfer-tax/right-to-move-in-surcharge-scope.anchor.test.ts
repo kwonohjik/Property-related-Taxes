@@ -138,7 +138,6 @@ describe("§104⑦ 양도 대상 — §166 3분할 경로 (원조합원 입주�
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
   };
   const r166 = (over: Partial<TransferTaxInput> = {}) =>
     run(

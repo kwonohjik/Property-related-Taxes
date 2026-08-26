@@ -288,7 +288,6 @@ describe.skip("TRP-OVERRIDE-CROSS-1: 재개발 입주권 + acquisitionOverride �
       preApprovalExpenses: 0,
       postApprovalExpenses: 0,
       originalAssetType: "housing",
-      acquisitionRounding: "floor",
     };
 
     const baseInput = baseTransferInput({

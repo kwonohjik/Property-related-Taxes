@@ -80,7 +80,6 @@ function baseRedevInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     // §89①4호 본문 — 인가일 현재 §89①3호가목 기존주택 소유 (자기선언)
     exemptionEligibleAtApproval: true,
     // §89①4호 나목 — 그 1주택 취득일. 2021-06-01 취득 → 2023-03-02 양도 = 1년 9개월 < 3년

@@ -98,7 +98,6 @@ function case39RedevInfo(): RedevelopmentInfo {
     originalAssetType: "housing",
     housingStdPriceAtAcq: 120_000_000,   // §166③ 분자 — 취득당시 개별주택가격
     housingStdPriceAtApproval: 200_000_000, // §166③ 분모 — 인가당시 개별주택가격
-    acquisitionRounding: "floor",
   };
 }
 
@@ -386,7 +385,6 @@ describe("C39 — 조합원입주권 right+receive 단독주택 환산취득가 
         preApprovalExpenses: 0,
         postApprovalExpenses: 0,
         originalAssetType: "housing",
-        acquisitionRounding: "floor",
       },
     });
     const case38Result = calculateTransferTax(case38Input, mockRates);

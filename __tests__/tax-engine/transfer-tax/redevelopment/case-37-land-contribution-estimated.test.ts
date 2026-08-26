@@ -65,7 +65,6 @@ function case37RedevInfo(): RedevelopmentInfo {
     originalAssetType: "land",
     landStdPriceAtAcq: 100_000_000,
     landStdPriceAtApproval: 150_000_000,
-    acquisitionRounding: "floor",
   };
 }
 
@@ -300,7 +299,6 @@ describe("L37-R: 회귀 anchor (housing 분기 비영향)", () => {
         preApprovalExpenses: 0,
         postApprovalExpenses: 0,
         originalAssetType: "housing", // ★ housing 분기 — 사례 37 land 분기와 독립
-        acquisitionRounding: "floor",
       },
     });
 
@@ -351,7 +349,6 @@ describe("L37-R: 회귀 anchor (housing 분기 비영향)", () => {
         originalAssetType: "housing", // ★ housing — land 분기 비활성
         managementDisposalHousingPrice: 150_000_000,
         acquisitionHousingPrice: 100_000_000,
-        acquisitionRounding: "floor",
       },
     });
 

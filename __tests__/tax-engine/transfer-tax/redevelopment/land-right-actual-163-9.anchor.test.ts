@@ -27,7 +27,6 @@ function redevInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "land",
-    acquisitionRounding: "floor",
   };
 }
 function input(): TransferTaxInput {
@@ -78,7 +77,6 @@ function receiveRedevInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "land",
-    acquisitionRounding: "floor",
   };
 }
 function receiveInput(): TransferTaxInput {
