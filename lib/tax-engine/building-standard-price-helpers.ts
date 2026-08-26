@@ -28,6 +28,7 @@ import {
   resolveLocationIndex,
   calcResidualRate,
   calcResidualRateByDurable,
+  remodelYearError,
   residualStepForGroup,
   durableForGroup,
   resolveResidualGroupForYear,
@@ -44,6 +45,7 @@ import {
   COMMERCIAL_WITH_ANCILLARY_RATE,
   REMODEL_COUNT_RATE,
   STRUCTURAL_SAFETY_RATE,
+  normalUseRatioError,
   resolveMaxFloorsRate,
   resolveMaxFloorsNo,
   resolveGrossAreaRate,
@@ -93,10 +95,21 @@ export function calcEffectiveResidualRate(
 ): number {
   const baseResid = calcResidualRate(group, valuationYear - builtYear, valuationYear);
   if (!remodel?.isInheritanceGift || remodel.remodelYear === undefined) return baseResid;
+
+  // ⑧ validation 과 **같은 술어**를 같은 인자로 부른다 — UI 통과↔엔진 차단 모순 방지.
+  const yearError = remodelYearError(remodel.remodelYear, builtYear, valuationYear);
+  if (yearError) throw new BuildingStdPriceError(yearError);
+
   const elapsedToRemodel = Math.max(0, remodel.remodelYear - builtYear);
   // 대수선할증률 = 연상각률(잔가율 step = (1−잔존율)/내용연수, 평가연도별) × 대수선시점 경과연수 × 0.3
   const surcharge = residualStepForGroup(group, valuationYear) * elapsedToRemodel * 0.3;
-  return Math.round((baseResid + surcharge) * 10000) / 10000;
+  // ⚠️ 잔가율은 **신축가격 대비 잔존 가치의 비율**이라 정의상 1을 넘을 수 없다.
+  //    상한이 없으면 유효 입력만으로도 1을 넘는 조합이 925건 생긴다(실측 최대 1.3825 —
+  //    IV그룹·신축1930·대수선2025·평가2025). 그 값은 기준시가에 선형으로 실려 10배 이상 부풀린다.
+  //    🟡 미결: 「잔존율 하한에 도달한 뒤에는 할증을 배제한다」는 명문이 있는지는
+  //       국세청 「건물 기준시가 계산방법」 고시 본문이 있어야 판정된다 — **고시 본문 미확인**.
+  //       여기서는 정의상 상한만 건다(할증 산식 자체는 종전 그대로).
+  return Math.min(Math.round((baseResid + surcharge) * 10000) / 10000, 1);
 }
 
 /**
@@ -108,6 +121,24 @@ export function stdPriceFromPerM2(
   floorArea: number,
 ): { pricePerM2: number; standardPrice: number } {
   const pricePerM2 = truncateToThousand(rawPerM2);
+  return { pricePerM2, standardPrice: Math.floor(pricePerM2 * floorArea) };
+}
+
+/**
+ * `stdPriceFromPerM2`의 **정확 산술** 버전 — ㎡당 금액을 정수 분수(numer/denom)로 받는다.
+ *
+ * 1,000원 절사 직전까지 double 곱을 쓰지 않는다. `perM2Base × residualRate × adjustmentRate`처럼
+ * double 을 이어 곱하면 정확값이 1,000의 배수인 조합에서 결과가 ulp 아래로 떨어져 절사가 한 칸
+ * 내려가고, ㎡당 1,000원이 통째로 사라진다(면적만큼 배가, **항상 과소 한 방향**).
+ * 저장소는 같은 실패모드를 `applyFairMarketRatio`·`applyRateFraction`에서 이미 두 번 정정했다.
+ */
+export function stdPriceFromExactPerM2(
+  numer: bigint,
+  denom: bigint,
+  floorArea: number,
+): { pricePerM2: number; standardPrice: number } {
+  // floor(정확값 ÷ 1,000) × 1,000. BigInt 나눗셈은 0 방향 절사이고 피연산자는 모두 음이 아니다.
+  const pricePerM2 = Number(numer / (denom * 1000n)) * 1000;
   return { pricePerM2, standardPrice: Math.floor(pricePerM2 * floorArea) };
 }
 
@@ -158,9 +189,17 @@ export function calcPointBreakdown(
     safeMultiply(safeMultiply(basePrice, structureIndex), usageIndex),
     locationIndex,
   );
-  const perM2Base = indexProduct / 1_000_000;
-  const raw = perM2Base * residualRate * adjustmentRate;
-  const { pricePerM2, standardPrice } = stdPriceFromPerM2(raw, floorArea);
+  // 잔가율·조정률도 정수 분수로 되돌려 절사 직전까지 정확 산술을 유지한다.
+  //   잔가율   = N / 10^4   (residual-rate.ts:109 `Math.round(x * 10000) / 10000`)
+  //   조정률   = N / 100^k  (calcSpecialAdjustmentRate — k = 적용 구분 수, 최대 7 ⇒ 분모 ≤ 10^14)
+  // double 의 상대오차는 1e-16 수준이라 아래 스케일에서 Math.round 가 원래 정수 분자를 정확히 되살린다.
+  const residualNumer = BigInt(Math.round(residualRate * 1e4));
+  const adjustmentNumer = BigInt(Math.round(adjustmentRate * 1e14));
+  const { pricePerM2, standardPrice } = stdPriceFromExactPerM2(
+    BigInt(indexProduct) * residualNumer * adjustmentNumer,
+    1_000_000n * 10_000n * 100_000_000_000_000n, // 지수 3개(10^6) × 잔가율(10^4) × 조정률(10^14)
+    floorArea,
+  );
 
   const usageLabel = resolveUsageLabel(year, point.usageNo);
 
@@ -188,17 +227,29 @@ export function calcPointBreakdown(
 
 /**
  * 다필지 부속토지 면적가중평균 ㎡당 공시지가(고시 §6⑥). Σ(면적×지가) ÷ Σ면적.
- * 위치지수 구간 판정용 — 정수 절사 없이 사용(구간 경계 영향 없음).
+ *
+ * ⚠️ 종전 주석은 「정수 절사 없이 사용(구간 경계 영향 없음)」이라 단정했으나 **반증됐다.**
+ *   면적은 소수 입력이라 float 합·곱을 그대로 나누면, 정확값이 정수(= 위치지수 구간 경계)인
+ *   조합에서 몫이 경계 **아래**로 떨어져 `resolveLocationIndex`(`>=` 비교)가 구간을 한 칸 강등시킨다.
+ *   지가가 **모든 필지에서 같아도** 발생한다 — 66.67㎡ + 12.34㎡ 둘 다 500,000원/㎡ 이면
+ *   정확 평균이 당연히 500,000 인데 float 는 499999.99999999994 를 내고 지수가 98 → 94 로 떨어졌다
+ *   (실측 2026-08-26: 4,096셀 격자 중 59건, 오차 방향은 강등 한 방향).
+ *
+ * ⇒ 면적을 micro-㎡ 정수로 올려 **정확 분수**를 만든다. 몫이 정수로 떨어지면 그 정수를 그대로 쓴다.
+ *   정수로 떨어지지 않으면 참값이 두 정수 사이에 있어 정수 경계와 같아질 수 없으므로
+ *   부동소수 몫으로 충분하다(참값과 경계의 간격 ≥ 1/Σ면적 ≫ 이 크기에서의 ulp).
  */
 export function weightedAvgLandPrice(parcels: LandParcel[]): number {
-  let areaSum = 0;
-  let valueSum = 0;
+  let areaMicro = 0n;
+  let valueMicro = 0n;
   for (const p of parcels) {
-    areaSum += p.areaM2;
-    valueSum += p.areaM2 * p.pricePerM2;
+    const a = BigInt(Math.round(p.areaM2 * 1_000_000));
+    areaMicro += a;
+    valueMicro += a * BigInt(Math.round(p.pricePerM2));
   }
-  if (areaSum <= 0) throw new BuildingStdPriceError("다필지 부속토지: 면적 합계가 0입니다.");
-  return valueSum / areaSum;
+  if (areaMicro <= 0n) throw new BuildingStdPriceError("다필지 부속토지: 면적 합계가 0입니다.");
+  if (valueMicro % areaMicro === 0n) return Number(valueMicro / areaMicro);
+  return Number(valueMicro) / Number(areaMicro);
 }
 
 /** 부속시설 종류 표시 순서·라벨(계산서 Ⅴ Ci~Hi). "other"="공용"(기존 단일 sharedFacilityArea 라벨 보존) */
@@ -230,6 +281,7 @@ function resolvePartAdjustment(
   structureKey: string,
   buildingTotalArea: number,
   label: string,
+  buildingHasAnyFeatures: boolean,
 ): { adjRate: number; items?: { nos: number[]; rate: number }[] } {
   // (1) 수동 우선(완전 override — 단일 manual과 일관)
   if ((p.adjustmentNos?.length ?? 0) > 0 || p.adjustmentRate != null) {
@@ -237,7 +289,14 @@ function resolvePartAdjustment(
   }
   // (2) 특성 자동 — 건물 전체 ∪ 부분 (키셋 disjoint 가정 — 경계에서 필터됨)
   const merged: SpecialAdjustmentFeatures = { ...(opts.buildingWideFeatures ?? {}), ...(p.specialFeatures ?? {}) };
-  if (Object.keys(merged).length === 0) return { adjRate: 1.0, items: undefined };
+  // ⚠️ 조기반환 조건은 **건물 단위**여야 한다. II 연면적(9~13)은 merged 의 키가 아니라
+  //    buildingTotalArea 에서 자동 도출되는 **건물 전체 항목**이라, 이 부분의 merged 가 비었다는
+  //    이유로 건너뛰면 같은 건물의 부분끼리 II 적용 여부가 갈린다(실측: P1 1.32 / P2 미적용).
+  //    🟡 「건물 어디에도 특성이 없을 때 II 를 적용할 것인가」는 별개 미결(F-09 축, 고시 본문 미확인)
+  //       이므로 그 경우의 종전 동작(1.0)은 그대로 둔다.
+  if (Object.keys(merged).length === 0 && !buildingHasAnyFeatures) {
+    return { adjRate: 1.0, items: undefined };
+  }
   const structureIndex = resolveStructureIndex(year, structureKey) ?? 0;
   const ctx: AdjustmentContext = {
     isResidential: !!opts.adjustmentCtx?.isResidential,
@@ -315,6 +374,10 @@ export function calcCompositeForYear(
   // II 연면적용 건물 전체 연면적 = 부분 주용도 면적 합 + 부속 면적 합(적용요령 4 "지하·옥탑 포함 전체면적")
   const buildingTotalArea =
     totalMainArea + opts.ancillary.reduce((s, a) => s + (a.areaM2 > 0 ? a.areaM2 : 0), 0);
+  // 건물 단위 특성 유무 — II 연면적(건물 전체 항목)을 부분마다 갈리지 않게 하는 게이트(F-10).
+  const buildingHasAnyFeatures =
+    Object.keys(opts.buildingWideFeatures ?? {}).length > 0 ||
+    parts.some((p) => Object.keys(p.specialFeatures ?? {}).length > 0);
 
   // 부속 종류별 총면적 + 층 라벨 집계(층은 종류별 첫 입력값 — 계산서 Ⅳ "층별" 표기 전용)
   const totalByKind: Partial<Record<AncillaryFacilityKind, number>> = {};
@@ -355,7 +418,7 @@ export function calcCompositeForYear(
 
     // 주용도 행 — 상증: 수동 우선, 없으면 건물전체+부분 특성 자동 산정 / 양도: 미적용
     const mainAdj = opts.adjustmentEnabled
-      ? resolvePartAdjustment(p, opts, year, point.structureKey, buildingTotalArea, label)
+      ? resolvePartAdjustment(p, opts, year, point.structureKey, buildingTotalArea, label, buildingHasAnyFeatures)
       : { adjRate: 1.0, items: undefined };
     const main = calcPointBreakdown(year, point, p.floorArea, builtYear, mainAdj.adjRate, label, opts.remodel);
     breakdowns.push({ ...main, label: p.label, floorArea: p.floorArea, adjustmentItems: mainAdj.items });
@@ -634,8 +697,12 @@ export function selectSpecialAdjustment(
   const groupVII: { no: number; rate: number }[] = [];
   if (features.structuralSafety !== undefined)
     groupVII.push({ no: features.structuralSafety, rate: STRUCTURAL_SAFETY_RATE[features.structuralSafety] });
-  if (features.normalUseRatio !== undefined)
+  if (features.normalUseRatio !== undefined) {
+    // ⑧ validation 과 **같은 술어**를 같은 인자로 부른다 — UI 통과↔엔진 차단 모순 방지.
+    const ratioError = normalUseRatioError(features.normalUseRatio);
+    if (ratioError) throw new BuildingStdPriceError(ratioError);
     groupVII.push({ no: 37, rate: Math.round(features.normalUseRatio * 100) });
+  }
   if (groupVII.length > 0) {
     const w = pickMin(groupVII);
     sel.push({ nos: [w.no], rate: w.rate });

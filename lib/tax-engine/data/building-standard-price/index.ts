@@ -46,6 +46,7 @@ export {
   residualStepForGroup,
   calcResidualRate,
   calcResidualRateByDurable,
+  remodelYearError,
 } from "./residual-rate";
 
 // D7 조정율
@@ -69,6 +70,7 @@ export {
   resolveGrossAreaNo,
   resolveWallessRate,
   resolveWallessNo,
+  normalUseRatioError,
   resolveAdjustmentRateByNo,
   BUILDING_WIDE_FEATURE_KEYS,
   PART_FEATURE_KEYS,

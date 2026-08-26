@@ -6,6 +6,7 @@
  * 독립 페이지와 동일 폼 재사용(DRY). 주입 후 사용자 수정 가능(기존 단일 필드 동기화 경로 사용).
  */
 import { useState } from "react";
+import { planApplyButtons } from "@/lib/calc/building-std-apply-buttons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { BuildingStdPriceForm } from "./BuildingStdPriceForm";
@@ -194,7 +195,21 @@ export function BuildingStdPriceModalButton({
   // onApplyBoth 지정 = 통합 모드 — 개별 취득/양도 버튼을 숨겨 오적용을 원천 차단.
   const bothMode = !!onApplyBoth;
   // 통합 버튼은 취득·양도 단일건물 결과가 모두 있을 때만 노출.
-  const showBothButton = bothMode && !!result?.acquisition && !!result?.transfer;
+  // 적용 버튼 가시성은 순수 leaf 로 판정한다 — 단건·복합이 **같은 축**의 가드를 쓰게 하는 것이 요점이다
+  // (종전에는 복합 버튼에만 가드가 없어 bothMode 에서 반대 시점 필드에 쓰이거나 no-op 이 됐다 — F-13).
+  const plan = planApplyButtons({
+    acquisition: result?.acquisition?.standardPrice,
+    transfer: result?.transfer?.standardPrice,
+    acquisitionComposite: result?.acquisitionComposite
+      ? (result.acqBaseConversion?.convertedTotal ?? result.acquisitionComposite.total)
+      : undefined,
+    transferComposite: result?.transferComposite?.total,
+    compositeTotal: result?.compositeTotal ?? undefined,
+    bothMode,
+    applyTimePoint,
+  });
+  const { acqTotal, transferTotal } = plan;
+  const showBothButton = plan.showBoth;
 
   return (
     <>
@@ -279,38 +294,38 @@ export function BuildingStdPriceModalButton({
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() => applyBoth(result.acquisition!.standardPrice, result.transfer!.standardPrice)}
+                    onClick={() => applyBoth(acqTotal!, transferTotal!)}
                   >
-                    취득·{transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도"} 모두 적용 (취득 {fmt(result.acquisition!.standardPrice)} / {transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도"} {fmt(result.transfer!.standardPrice)})
+                    취득·{transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도"} 모두 적용 (취득 {fmt(acqTotal!)} / {transferSectionLabel ? transferSectionLabel.replace(/\s*시점$/, "") : "양도"} {fmt(transferTotal!)})
                   </Button>
                 )}
-                {result.acquisition && !bothMode && applyTimePoint !== "transfer" && (
+                {plan.showAcquisitionOnly && (
                   <Button type="button" size="sm" variant="secondary" onClick={() => apply(result.acquisition!.standardPrice)}>
-                    취득시 적용 ({fmt(result.acquisition.standardPrice)})
+                    취득시 적용 ({fmt(result.acquisition!.standardPrice)})
                   </Button>
                 )}
-                {result.transfer && !bothMode && applyTimePoint !== "acquisition" && (
+                {plan.showTransferOnly && (
                   <Button type="button" size="sm" onClick={() => apply(result.transfer!.standardPrice)}>
-                    양도시 적용 ({fmt(result.transfer.standardPrice)})
+                    양도시 적용 ({fmt(result.transfer!.standardPrice)})
                   </Button>
                 )}
-                {bothMode && result && !showBothButton && (
+                {plan.showBothPending && (
                   <p className="text-xs text-muted-foreground">
                     취득·양도 두 시점 정보를 모두 입력해 계산하면 한 번에 적용됩니다.
                   </p>
                 )}
                 {/* 복합구조(상증 1시점) — compositeTotal 합계 + 부수토지 함께 적용 */}
-                {result.compositeTotal != null && (
+                {plan.showCompositeTotal && (
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() => apply(result.compositeTotal!, landStandardPrice)}
+                    onClick={() => apply(plan.compositeTotalValue!, landStandardPrice)}
                   >
-                    이 금액 적용 ({fmt(result.compositeTotal)})
+                    이 금액 적용 ({fmt(plan.compositeTotalValue!)})
                   </Button>
                 )}
                 {/* 복합구조(양도 2시점) — 취득시 합계 적용. ≤2000은 산정기준율 환산값(convertedTotal) */}
-                {result.acquisitionComposite && (
+                {plan.showAcquisitionCompositeOnly && (
                   <Button
                     type="button"
                     size="sm"
@@ -323,17 +338,14 @@ export function BuildingStdPriceModalButton({
                     }
                   >
                     취득시 적용 (
-                    {fmt(
-                      result.acqBaseConversion?.convertedTotal ??
-                        result.acquisitionComposite.total,
-                    )}
+                    {fmt(acqTotal!)}
                     )
                   </Button>
                 )}
                 {/* 복합구조(양도 2시점) — 양도시 합계 적용 */}
-                {result.transferComposite && (
+                {plan.showTransferCompositeOnly && (
                   <Button type="button" size="sm" onClick={() => apply(result.transferComposite!.total)}>
-                    양도시 적용 ({fmt(result.transferComposite.total)})
+                    양도시 적용 ({fmt(transferTotal!)})
                   </Button>
                 )}
               </div>

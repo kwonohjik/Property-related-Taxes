@@ -16,6 +16,8 @@ import type {
   BuildingCompositePart,
 } from "./types/building-standard-price.types";
 import { resolveStructureIndex } from "./data/building-standard-price";
+import { resolveUsageLabel } from "./data/building-standard-price";
+import { listUsageOptions } from "./data/building-standard-price";
 import {
   BUILDING_STD_PRICE_LEGAL_BASIS_TRANSFER,
   BUILDING_STD_PRICE_LEGAL_BASIS_INHERITANCE,
@@ -36,6 +38,7 @@ import {
 } from "./building-standard-price-helpers";
 import { resolveAcqBaseGroup, resolveAcqBaseRate } from "./data/building-standard-price";
 import { calcSameAdjustmentPeriodStdPrice } from "./same-adjustment-period-std-price";
+import { isSameAdjustmentPeriodConversion } from "./same-adjustment-period-std-price";
 
 export type {
   BuildingStandardPriceInput,
@@ -91,6 +94,42 @@ function acqBaseConversionOf(bd: BuildingStdPriceBreakdown, floorArea: number) {
   };
 }
 
+/**
+ * 취득전기(취득연도−1) 용도번호 해석 — 소득세법 시행규칙 §80②2호 「당해양도자산」의 기준시가.
+ *
+ * 용도번호 체계는 연도군별로 재편된다(항목이 삽입되면 그 뒤 번호가 한 칸씩 밀린다).
+ * 같은 번호를 전년도 표에서 그대로 읽으면 **인접한 다른 용도의 지수**가 적용되므로,
+ * 취득연도 용도의 **동명 항목**을 전년도 표에서 찾아 그 번호를 쓴다
+ * (설계문서 building-standard-price.engine.design.md:203-204).
+ * 실측(2026-08-26): 전수 1,341조합 중 지수까지 달라지는 조용한 오산 208건이 이 매칭으로 해소된다.
+ *
+ * 동명 항목이 없으면 종전대로 같은 번호를 쓰되 **경고를 남긴다**. 검증 오류로 막지 않는 이유는 둘이다.
+ *   ① 무매칭 95건의 상당수는 번호는 그대로이고 표기만 바뀐 것이라 같은-번호 fallback 이 오히려 맞다
+ *      (2010 #3 「다가구주택…」→「다가구…」 — 지수 100 동일).
+ *   ② `prevUsageNo` 입력 위젯이 저장소에 없어 차단하면 사용자가 해소할 수단이 없다(dead-end).
+ * 용도 대응표는 국세청 「건물 기준시가 계산방법」 고시에 있으나 **고시 본문 미확인**이다.
+ */
+function resolvePrevUsageNo(
+  acquisitionYear: number,
+  acqUsageNo: number,
+  warnings: string[],
+): number {
+  const prevYear = acquisitionYear - 1;
+  const label = resolveUsageLabel(acquisitionYear, acqUsageNo);
+  if (label === undefined) return acqUsageNo;
+
+  const match = listUsageOptions(prevYear).find((o) => o.label === label);
+  if (match) return match.no;
+
+  const prevLabel = resolveUsageLabel(prevYear, acqUsageNo);
+  if (prevLabel !== undefined && prevLabel !== label) {
+    warnings.push(
+      `취득전기(${prevYear}년) 용도지수표에 「${label}」과 동명인 항목이 없어 같은 번호 #${acqUsageNo}(「${prevLabel}」)의 지수를 적용했습니다. 용도 대응이 다르면 취득전기 용도번호를 직접 지정하세요.`,
+    );
+  }
+  return acqUsageNo;
+}
+
 /** 복합건물 부분 목록 — compositeParts 우선, 없으면 valuation 단일 point fallback(다필지 전용) */
 function resolveCompositeParts(input: BuildingStandardPriceInput): BuildingCompositePart[] {
   return (input.compositeParts?.length ?? 0) > 0
@@ -101,6 +140,14 @@ function resolveCompositeParts(input: BuildingStandardPriceInput): BuildingCompo
           structureKey: input.valuation?.structureKey ?? "",
           usageNo: input.valuation?.usageNo ?? 0,
           floorArea: input.floorArea,
+          // 다필지만 켠 상증 단일 평가도 hasComposite()가 true라 이 경로로 온다.
+          // 조정률 직접입력은 단일 경로(computeAdjustmentRate)에서만 배율로 바뀌므로,
+          // 여기서 싣지 않으면 사용자가 넣은 조정률이 그대로 버려진다(1.0으로 떨어짐).
+          // ⚠️ compositeParts가 실재하는 복합 입력에서는 **부분별 adjustmentRate가 정본**이므로
+          //    (building-std-price-composite-adjustment.engine.design.md) 이 fallback 분기에만 싣는다.
+          ...(input.manualAdjustmentRate != null && {
+            adjustmentRate: input.manualAdjustmentRate,
+          }),
         },
       ];
 }
@@ -351,9 +398,14 @@ export function calcBuildingStandardPrice(
   // 단일 시점 모드 — 호출부가 한 시점 필드에만 값을 주입할 때 반대 시점 입력을 요구하지 않는다.
   // ⚠️ 취득연도 == 양도연도이면 §164⑧ 환산(양도값이 취득값에서 파생)이 우선하므로 이 분기를 건너뛰고
   //    아래 2시점 경로로 간다. 복합구조·기계식주차는 별도 반환 경로라 미지원(2시점 경로 유지).
-  const sameYearBoth =
-    input.acquisitionYear !== undefined && input.acquisitionYear === input.transferYear;
-  if (input.singleTimePoint && !sameYearBoth && !input.isMechanicalParking && !hasComposite(input)) {
+  // §164⑧ 대상이면 양도값이 취득값에서 파생되므로 단일시점 우회를 타지 않는다.
+  // 판정은 ④변환·⑧검증·UI 와 **같은 leaf**로 한다(종전에는 「연도 동일」만 보아 연도교차를 가로챘다).
+  const isSec164_8 = isSameAdjustmentPeriodConversion(
+    input.acquisitionYear,
+    input.transferYear,
+    input.holdingMonths !== undefined,
+  );
+  if (input.singleTimePoint && !isSec164_8 && !input.isMechanicalParking && !hasComposite(input)) {
     if (input.singleTimePoint === "acquisition") {
       if (input.acquisitionYear === undefined) {
         throw new BuildingStdPriceError("단일 시점(취득): 취득연도 필수");
@@ -463,7 +515,8 @@ export function calcBuildingStandardPrice(
       }
       const prevPoint: BuildingPointInput = {
         structureKey: input.prevStructureKey ?? acqPoint.structureKey,
-        usageNo: input.prevUsageNo ?? acqPoint.usageNo,
+        usageNo:
+          input.prevUsageNo ?? resolvePrevUsageNo(acquisitionYear, acqPoint.usageNo, warnings),
         landPricePerM2: input.prevLandPricePerM2,
       };
       const prevBd = calcPointBreakdown(
