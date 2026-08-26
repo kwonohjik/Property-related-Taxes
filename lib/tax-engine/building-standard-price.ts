@@ -38,6 +38,10 @@ import {
 } from "./building-standard-price-helpers";
 import { resolveAcqBaseGroup, resolveAcqBaseRate } from "./data/building-standard-price";
 import { calcSameAdjustmentPeriodStdPrice } from "./same-adjustment-period-std-price";
+import {
+  calcPriorStdPriceSubstitute,
+  usesPriorStdPriceSubstitute,
+} from "./same-adjustment-period-std-price";
 import { isSameAdjustmentPeriodConversion } from "./same-adjustment-period-std-price";
 
 export type {
@@ -518,6 +522,42 @@ export function calcBuildingStandardPrice(
       // newStd = (1,000원 절사된 ㎡당 금액) × 면적. 제2산식 delta = newStd − acqStd
       const newStd = stdPriceFromPerM2(input.newNoticePricePerM2, input.floorArea).standardPrice;
       delta = newStd - acqStd;
+    } else if (usesPriorStdPriceSubstitute(acquisitionYear)) {
+      /**
+       * 전기가 **최초 고시(2001) 이전**이면 지수표가 아예 없다. 종전에는 여기서
+       * `calcPointBreakdown(2000, …)`이 「2000년 용도지수표에 용도번호 #N 없음」으로 차단해
+       * **취득 2001 사용자가 기본 상태(`sameYearFormula` 기본값 "prev")에서 계산 자체를
+       * 못 했다** — 존재하지 않는 표를 요구하므로 폼에서 고칠 여지도 없었다.
+       *
+       * 근본 원인은 fallback 부재가 아니라 「소득세법 시행규칙」 **제80조 제3항 제2호**
+       * (전기의 기준시가 = 최초로 고시한 기준시가 × 국세청장이 고시한 기준율) 미구현이다.
+       * ⚠️ 2001 표 fallback 추가는 채택하지 않는다 — `resolveUsageIndex(2000,·)===undefined`
+       *    를 고정한 기존 테스트·silent-fallback 금지 정책과 충돌한다.
+       *
+       * 이 경로는 지수표를 쓰지 않으므로 **「취득전기 ㎡당 공시지가」가 불요**하다.
+       */
+      const group = resolveAcqBaseGroup(acqPoint.structureKey);
+      const rate =
+        group === undefined
+          ? undefined
+          : resolveAcqBaseRate(group, input.builtYear, acquisitionYear - 1);
+      const sub = calcPriorStdPriceSubstitute({
+        firstNoticeStdPrice: acqStd,
+        noticeBaseRate: rate,
+      });
+      if (!sub) {
+        throw new BuildingStdPriceError(
+          "동일연도 제1산식: 전기 기준시가 대체산정(소득세법 시행규칙 §80③2호) 불가 — 산정기준율표 미수록 구조",
+        );
+      }
+      delta = acqStd - sub.value;
+      // 근거를 사용자에게 알린다 — 이 경로에서는 전기(2000) 기준시가가 취득당시(2001)보다 커
+      // §80①1호 하한이 사실상 항상 걸리므로(2000년 산정기준율은 전 그룹·전 신축연도에서 1 이상),
+      // 설명이 없으면 「양도당시 = 취득당시」가 오류로 보인다.
+      warnings.push(
+        `취득전기(${acquisitionYear - 1}년) 기준시가는 고시 이전이라 소득세법 시행규칙 §80③2호로 ` +
+          `대체산정했습니다 — 최초고시 기준시가 × 기준율 = ${sub.value.toLocaleString()}`,
+      );
     } else {
       if (input.prevLandPricePerM2 === undefined || !(input.prevLandPricePerM2 > 0)) {
         throw new BuildingStdPriceError("동일연도 제1산식: 취득전기 공시지가 필수 입력");

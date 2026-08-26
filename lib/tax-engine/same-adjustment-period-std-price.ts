@@ -30,6 +30,7 @@
 
 import { applyRateFraction, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER } from "./legal-codes/transfer";
+import { STRUCTURE_INDEX_MIN_YEAR } from "./data/building-standard-price";
 
 /** §80①1호 각 목 — 가목(전기 대비) | 나목(새 고시 대비) */
 export type SameAdjustmentPeriodFormula = "prev" | "new";
@@ -211,6 +212,20 @@ export interface PriorStdPriceSubstituteResult {
  * 3호(비율환산)를 우선 시도하고, 합계액이 없으면(=§80④의 「나목 가액이 없는 경우」)
  * 2호를 준용한다. 둘 다 불가하면 `null` — **추정하지 않는다**.
  */
+/**
+ * §164⑧ 제1산식에서 **전기 기준시가를 대체산정해야 하는가**(소득세법 시행규칙 §80③2호).
+ *
+ * 전기(취득연도 − 1)가 국세청 최초 고시(2001) 이전이면 지수표가 아예 없어 재계산이 불가능하다.
+ * 이때는 「최초로 고시한 기준시가 × 국세청장이 고시한 기준율」로 갈음하므로
+ * **「취득전기 ㎡당 공시지가」 입력이 불요**해진다.
+ *
+ * 🔑 엔진·validate·UI 가 **같은 술어에 같은 인자**로 물어야 한다 — 한쪽만 바뀌면
+ *    「화면엔 있는데 계산은 무시」 또는 「입력했는데 차단」이 된다.
+ */
+export function usesPriorStdPriceSubstitute(acquisitionYear: number | undefined): boolean {
+  return acquisitionYear !== undefined && acquisitionYear - 1 < STRUCTURE_INDEX_MIN_YEAR;
+}
+
 export function calcPriorStdPriceSubstitute(
   args: PriorStdPriceSubstituteArgs,
 ): PriorStdPriceSubstituteResult | null {
