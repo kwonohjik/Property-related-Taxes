@@ -27,6 +27,7 @@ import { SpecialHouseExclusionSection } from "@/components/calc/transfer/Special
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { RightThreeYearExceptionSection } from "@/components/calc/transfer/RightThreeYearExceptionSection";
 import { InheritedRightExceptionSection } from "@/components/calc/transfer/InheritedRightExceptionSection";
+import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHouseholdRightSection";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
@@ -556,6 +557,13 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               권리 목록에서 「상속받은 권리」를 체크한 경우에만 스스로 열린다.
             */}
             <InheritedRightExceptionSection form={form} onChange={onChange} />
+
+            {/*
+              §89② 배제의 합가 예외 — 시행령 §156의2⑧·⑨(§156의3⑥ 준용).
+              🔴 주택 2채 미만이면 ③ 섹션이 렌더되지 않아 합가일 입력 경로가 아예 없다 —
+                 그래서 이 카드가 그 구간에서 합가일 칸을 직접 소유한다(컴포넌트 주석 참조).
+            */}
+            <MergedHouseholdRightSection form={form} onChange={onChange} />
 
             {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
             {form.isOneHousehold && form.householdHousingCount === "1" && (

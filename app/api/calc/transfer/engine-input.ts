@@ -163,6 +163,11 @@ export function buildTransferEngineInput(
               ),
             }
           : data.rightThreeYearException,
+    /**
+     * ⑭ §89② 합가 예외 — 날짜 필드가 없어 그대로 넘긴다(합가일은 `marriageMerge`·
+     * `parentalCareMerge`가 이미 변환한다).
+     */
+    mergedHouseholdFirstHouse: data.mergedHouseholdFirstHouse,
     // 감면 매핑 — route-reductions-mapper.ts로 분리 (800줄 정책, 2026-06-11)
     reductions: mapReductionsToEngine(data.reductions),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,
