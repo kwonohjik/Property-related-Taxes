@@ -68,6 +68,32 @@ describe("④ FLAT → 유니온 조립", () => {
     ).toEqual({});
   });
 
+  it("★ R-3 — `before_completion`은 **완성일 없이** 실린다", () => {
+    expect(
+      throughZod(
+        form({
+          rightThreeYearExceptionKind: "before_completion",
+          rightMovedInWithin3Years: true,
+          rightResidedOneYearOrMore: true,
+        }),
+      ),
+    ).toEqual({
+      kind: "before_completion",
+      movedInWithin3Years: true,
+      residedOneYearOrMore: true,
+    });
+  });
+
+  it("🔑 `before_completion`에 완성일을 넣어도 payload에 실리지 않는다 (2호 전단은 비교가 없다)", () => {
+    const parsed = throughZod(
+      form({
+        rightThreeYearExceptionKind: "before_completion",
+        rightNewHouseCompletionDate: "2026-01-01",
+      }),
+    ) as Record<string, unknown>;
+    expect(Object.keys(parsed)).not.toContain("completionDate");
+  });
+
   it("delay — 사유가 있으면 둘째 요건까지 실린다", () => {
     const parsed = throughZod(
       form({
@@ -108,6 +134,16 @@ describe("⑫ Zod discriminatedUnion", () => {
         reason,
       ).toBe(false);
     }
+  });
+
+  it("R-3 — `before_completion`은 완성일을 **요구하지 않는다**", () => {
+    expect(
+      rightThreeYearExceptionSchema.safeParse({
+        kind: "before_completion",
+        movedInWithin3Years: true,
+        residedOneYearOrMore: false,
+      }).success,
+    ).toBe(true);
   });
 
   it("모르는 kind는 거부한다", () => {

@@ -13,7 +13,10 @@
  *
  * ## ⚠️ 「선택 안 함」과 「해당 없음」은 다르다
  *
- * 미선택은 판정 불가로 남는다. 배제가 확정되려면 「둘 다 해당하지 않는다」를 **명시 선택**해야
+ * 🔴 2026-08-27 정정(R-3) — 갈래가 셋이 되어 문구가 「어느 것에도 해당하지 않는다」로 바뀌었다.
+ *    ④2호가 **전단(완성 전)·후단(완성 후 3년 이내)** 으로 갈리기 때문이다.
+ *
+ * 미선택은 판정 불가로 남는다. 배제가 확정되려면 「어느 것에도 해당하지 않는다」를 **명시 선택**해야
  * 한다 — 그 선택지가 화면에 실제로 있는지 여기서 고정한다.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -84,11 +87,41 @@ describe("§89② 3년 초과 예외 ⑤ — 카드 가시성", () => {
 });
 
 describe("§89② 3년 초과 예외 ⑤ — 선택지", () => {
-  it("★ 세 갈래가 모두 있다 — 「해당 없음」이 없으면 배제를 확정할 수 없다", () => {
+  describe("R-3 — ④2호 전단(완성 전 양도)", () => {
+    it("★ 「완성되기 전」을 고르면 **완성일 칸이 사라진다**", () => {
+      render(
+        <Step4
+          form={{ ...form("2016-10-01"), rightThreeYearExceptionKind: "before_completion" }}
+          onChange={() => {}}
+        />,
+      );
+      expect(shows(/신축주택 완성일/)).toBe(false);
+      // 1호는 장래 요건이라 여전히 묻는다.
+      expect(shows(/완성 후 3년 이내에 세대전원이 이사할 예정이다/)).toBe(true);
+      expect(shows(/그 주택에 1년 이상 계속하여 거주할 예정이다/)).toBe(true);
+    });
+
+    it("🔑 「완성된 뒤」 갈래는 완성일을 그대로 요구한다", () => {
+      render(
+        <Step4
+          form={{ ...form("2016-10-01"), rightThreeYearExceptionKind: "new_house" }}
+          onChange={() => {}}
+        />,
+      );
+      expect(shows(/신축주택 완성일/)).toBe(true);
+      // 완료된 사실이므로 문구가 과거형이다.
+      expect(shows(/완성 후 3년 이내에 세대전원이 이사했다/)).toBe(true);
+      expect(shows(/완성 후 3년 이내에 세대전원이 이사할 예정이다/)).toBe(false);
+    });
+  });
+
+  it("★ **네** 갈래가 모두 있다 — 「해당 없음」이 없으면 배제를 확정할 수 없다", () => {
+    // 🔴 2026-08-27(R-3): ④2호가 전단·후단으로 갈려 신축주택 갈래가 둘이 됐다.
     render(<Step4 form={form("2016-10-01")} onChange={() => {}} />);
-    expect(shows(/신축주택으로 이사해 거주했다/)).toBe(true);
+    expect(shows(/신축주택이 완성된 뒤 양도했다/)).toBe(true);
+    expect(shows(/신축주택이 완성되기 전에 양도했다/)).toBe(true);
     expect(shows(/경매·공매 등으로 3년 내 양도하지 못했다/)).toBe(true);
-    expect(shows(/둘 다 해당하지 않는다/)).toBe(true);
+    expect(shows(/어느 것에도 해당하지 않는다/)).toBe(true);
   });
 
   it("미선택 시 「종전대로 계산」 안내가 뜬다 — 침묵하지 않는다", () => {

@@ -83,6 +83,12 @@ export const rightThreeYearExceptionSchema = z.discriminatedUnion("kind", [
     residedOneYearOrMore: z.boolean(),
   }),
   z.object({
+    /** ④2호 전단 — 완성일 없이 성립한다(R-3). 날짜 필드가 **없는 것이 정상**이다. */
+    kind: z.literal("before_completion"),
+    movedInWithin3Years: z.boolean(),
+    residedOneYearOrMore: z.boolean(),
+  }),
+  z.object({
     kind: z.literal("delay"),
     reason: z.enum(["kamco", "auction", "public_sale"]),
     disposedByThatMethod: z.boolean(),
