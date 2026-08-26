@@ -174,6 +174,31 @@ export async function POST(request: NextRequest) {
         : undefined,
       // ⑭ §155④⑤ 합가 후 첫 양도 — 엔진 게이트가 `=== true`를 요구(transfer-tax-exemption.ts).
       isFirstTransferredInMerge: p.isFirstTransferredInMerge,
+      /**
+       * ⑭ §89② 배제 축 — ⑬(`multi-transfer-tax-api.ts`)이 보내고 ⑫가 통과시키는데
+       * **여기서 통째로 사라지고 있었다**(2026-08-26 Phase 4 실측). 단건 route
+       * (`engine-input.ts`)에는 있고 다건에만 없던 침묵 strip이라 TypeScript가 잡지 못했다.
+       *
+       * 방향은 항목마다 다르다 — `generalHouseGiftedFromDecedentWithin2yr`가 빠지면 §155②
+       * 게이트-오프가 풀려 **비과세가 과다**해지고, 나머지가 빠지면 예외 선언이 닿지 않아
+       * 판정 불가 경고만 남는다.
+       */
+      rightThreeYearException:
+        p.rightThreeYearException === undefined
+          ? undefined
+          : p.rightThreeYearException.kind === "new_house"
+            ? {
+                ...p.rightThreeYearException,
+                completionDate: toDate(
+                  p.rightThreeYearException.completionDate,
+                  "rightThreeYearException.completionDate",
+                ),
+              }
+            : p.rightThreeYearException,
+      mergedHouseholdFirstHouse: p.mergedHouseholdFirstHouse,
+      generalHouseHeldAtInheritance: p.generalHouseHeldAtInheritance,
+      inheritedRightChoiceWhenBothHeld: p.inheritedRightChoiceWhenBothHeld,
+      generalHouseGiftedFromDecedentWithin2yr: p.generalHouseGiftedFromDecedentWithin2yr,
       // ⑭ §156의2⑤ 대체주택 비과세 특례 — string 일자 → Date 변환 (date-coerce)
       replacementHouse: p.replacementHouse
         ? {

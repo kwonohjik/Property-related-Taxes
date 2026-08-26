@@ -90,6 +90,26 @@ export const rightThreeYearExceptionSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("none") }),
 ]);
 
+/**
+ * ⑫ §89② 배제의 **합가 예외** 선언 — 「소득세법 시행령」 §156의2⑧(동거봉양)·⑨(혼인).
+ * 분양권은 §156의3⑥이 그대로 준용하므로 별도 스키마를 두지 않는다.
+ *
+ * ⚠️ 갈래마다 요구 필드가 다르다 — 가목(`initial_right`)은 **둘**(인가일 이후 취득 ·
+ *    1년 이상 거주), 나·다목은 하나, 3·5호는 없다. `discriminatedUnion`이 그 차이를 강제한다.
+ */
+export const mergedHouseholdFirstHouseSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("house_only") }),
+  z.object({
+    kind: z.literal("initial_right"),
+    acquiredAfterApproval: z.boolean(),
+    residedOneYear: z.boolean(),
+  }),
+  z.object({ kind: z.literal("succeeded_right"), ownedBeforeRight: z.boolean() }),
+  z.object({ kind: z.literal("presale_right"), ownedBeforeRight: z.boolean() }),
+  z.object({ kind: z.literal("right_only") }),
+  z.object({ kind: z.literal("none") }),
+]);
+
 // (제거 2026-06-16) 구 nonBusinessLandDetailsSchema 전용 leaf —
 //   businessUsePeriodSchema·gracePeriodSchema·LAND_TYPE_VALUES·ZONE_TYPE_VALUES·
 //   REVENUE_BUSINESS_TYPES·revenueTestSchema 는 raw 스키마(아래) 전환으로 dead → 삭제.

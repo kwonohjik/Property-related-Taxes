@@ -691,3 +691,49 @@ export function buildRightThreeYearExceptionPayload(form: TransferFormData): obj
   }
   return {};
 }
+
+// ─── ④⑬ §89② 합가 예외 FLAT → 판별 유니온 (TS 미감지 영역 — 누락 시 침묵 strip) ───
+/**
+ * 폼 → `mergedHouseholdFirstHouse` payload. 「소득세법 시행령」 §156의2⑧·⑨.
+ *
+ * ⚠️ **미선언(`""`)은 키 자체를 만들지 않는다** — 엔진이 `undefined`를 「판정 불가」로 읽어
+ *    종전 동작을 유지한다. `"none"`(해당 없음)과 반드시 구별해야 한다.
+ * ⚠️ 갈래마다 **요구 필드가 다르다** — 가목은 둘(인가일 이후 취득 · 1년 이상 거주),
+ *    나·다목은 하나(권리 취득 전부터 소유), 3·5호는 없다. 통째로 spread하면 ⑫가 거부한다.
+ */
+export function buildMergedHouseholdFirstHousePayload(form: TransferFormData): object {
+  const kind = form.mergedHouseholdFirstHouseKind;
+  /**
+   * 🔴 **allow-list로 판정한다.** 「빈 문자열만 걸러내고 나머지를 통과」시키면 신규 필드가 없는
+   *    stale sessionStorage 폼에서 `kind: undefined`가 그대로 실려 ⑫가 요청 전체를 400으로
+   *    거부한다(2026-08-26 실측 — 무관한 파이프라인 테스트 2건이 먼저 터졌다).
+   *    memory `feedback_new_asset_field_stale_sessionstorage_guard`.
+   */
+  const DECLARED = [
+    "house_only",
+    "initial_right",
+    "succeeded_right",
+    "presale_right",
+    "right_only",
+    "none",
+  ] as const;
+  if (!(DECLARED as readonly string[]).includes(kind)) return {};
+  if (kind === "initial_right") {
+    return {
+      mergedHouseholdFirstHouse: {
+        kind,
+        acquiredAfterApproval: form.mergedHouseholdAcquiredAfterApproval,
+        residedOneYear: form.mergedHouseholdResidedOneYear,
+      },
+    };
+  }
+  if (kind === "succeeded_right" || kind === "presale_right") {
+    return {
+      mergedHouseholdFirstHouse: {
+        kind,
+        ownedBeforeRight: form.mergedHouseholdOwnedBeforeRight,
+      },
+    };
+  }
+  return { mergedHouseholdFirstHouse: { kind } };
+}

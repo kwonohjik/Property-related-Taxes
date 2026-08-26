@@ -164,6 +164,27 @@ export interface TransferFormData {
   rightResidedOneYearOrMore: boolean;      // ④1호 1년 이상 계속 거주
   rightDisposalDelayReason: "" | "kamco" | "auction" | "public_sale"; // 시행규칙 §75① 1~3호
   rightDisposedByThatMethod: boolean;      // §75① 「그 방법에 따라 양도된 경우」 — 둘째 요건
+
+  /**
+   * §89② 배제의 **합가 예외** FLAT 필드 — 「소득세법 시행령」 §156의2⑧·⑨(§156의3⑥ 준용).
+   * API에서 `mergedHouseholdFirstHouse` 판별 유니온으로 조립한다.
+   *
+   * ⚠️ `""`(미선언)과 `"none"`(해당 없음)은 **다르다** — 미선언은 판정 불가로 남는다.
+   */
+  mergedHouseholdFirstHouseKind:
+    | ""
+    | "house_only"      // ⑧3호(⑨2호)
+    | "initial_right"   // ⑧4호가목(⑨3호가목)
+    | "succeeded_right" // ⑧4호나목(⑨3호나목)
+    | "presale_right"   // ⑧4호다목(⑨3호다목)
+    | "right_only"      // ⑧5호(⑨4호)
+    | "none";
+  /** ⑧4호가목 「사업시행계획 인가일 이후 취득」 — 자기선언 */
+  mergedHouseholdAcquiredAfterApproval: boolean;
+  /** ⑧4호가목 「취득 후 1년 이상 거주」 — 자기선언(가목은 요건이 **둘**이다) */
+  mergedHouseholdResidedOneYear: boolean;
+  /** ⑧4호나목·다목 「최초양도주택이 그 권리를 취득하기 전부터 소유」 — 자기선언 */
+  mergedHouseholdOwnedBeforeRight: boolean;
   marriageDate: string;
   /** §155④⑤ 합가·혼인 세대 내 먼저 양도 주택 여부 (비과세 판정 — 먼저 양도 요건) */
   isFirstTransferredInMerge: boolean;
@@ -355,6 +376,10 @@ const defaultFormData: TransferFormData = {
   rightResidedOneYearOrMore: false,
   rightDisposalDelayReason: "",
   rightDisposedByThatMethod: false,
+  mergedHouseholdFirstHouseKind: "",
+  mergedHouseholdAcquiredAfterApproval: false,
+  mergedHouseholdResidedOneYear: false,
+  mergedHouseholdOwnedBeforeRight: false,
   marriageDate: "",
   isFirstTransferredInMerge: false,
   generalHouseGiftedFromDecedentWithin2yr: false,

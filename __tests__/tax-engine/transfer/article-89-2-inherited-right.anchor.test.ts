@@ -238,7 +238,13 @@ describe("§156의2⑦ — 상속 권리 + 일반주택 + **상속 외** 권리 
     expect(r.isExempt).toBe(false);
   });
 
-  it("🔑 상속 권리가 **인정되지 않으면** ⑦이 아니라 U-2(권리 2개)로 남는다", () => {
+  /**
+   * 🔴 2026-08-26 정정(Phase 4) — 종전에는 이 둘이 「판정 불가(§156의2 ⑦·⑧·⑨ 안내)」였다.
+   *    Phase 4가 합가 축(⑧·⑨)을 닫으면서 전제가 바뀌었다: 상속 권리가 **인정되지 않으면**
+   *    ⑦은 「상속 외 권리 1개」를 벗어나 적용될 수 없고, 합가 사실이 없으면 ⑧·⑨도 적용될 수
+   *    없다 ⇒ 2권리 세대에 남는 예외가 **없으므로 배제 확정**이다.
+   */
+  it("🔑 상속 권리가 **인정되지 않으면** ⑦이 아니라 2권리 세대로 남는다 ⇒ 배제 확정", () => {
     const r = run(
       inheritedCase({
         presaleRights: [
@@ -247,11 +253,10 @@ describe("§156의2⑦ — 상속 권리 + 일반주택 + **상속 외** 권리 
         ],
       }),
     );
-    expect(r.isExempt).toBe(true);
-    expect((r.warnings ?? []).join("\n")).toContain("§156의2 ⑦·⑧·⑨");
+    expect(r.isExempt).toBe(false);
   });
 
-  it("상속 외 권리가 2개면 ⑦의 「각각 1개씩」을 벗어난다 → 판정 불가", () => {
+  it("상속 외 권리가 2개면 ⑦의 「각각 1개씩」을 벗어난다 ⇒ 배제 확정", () => {
     const r = run(
       inheritedCase({
         presaleRights: [
@@ -261,7 +266,22 @@ describe("§156의2⑦ — 상속 권리 + 일반주택 + **상속 외** 권리 
         ],
       }),
     );
-    expect((r.warnings ?? []).join("\n")).toContain("§156의2 ⑦·⑧·⑨");
+    expect(r.isExempt).toBe(false);
+  });
+
+  it("🔑 그 세대도 **합가 사실이 있으면** 판정 불가로 남는다 — ⑧·⑨가 열려 있다", () => {
+    const r = run(
+      inheritedCase({
+        presaleRights: [
+          right({ id: "inh", isInherited: true }),
+          right({ id: "o1", acquisitionDate: new Date("2022-01-01") }),
+          right({ id: "o2", acquisitionDate: new Date("2022-02-01") }),
+        ],
+        parentalCareMerge: { mergeDate: new Date("2020-03-01") },
+      }),
+    );
+    expect(r.isExempt).toBe(true);
+    expect((r.warnings ?? []).join("\n")).toContain("§156의2 ⑧");
   });
 });
 
