@@ -457,7 +457,7 @@ const propertyBaseShape = {
    * 미정의 시 침묵 stripping 방지를 위해 명시 필수.
    */
   redevelopment: redevelopmentSchema,
-  // ⑩ 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가 Zod refine은
+  // ⑩ 사례 38/39 — 단독주택 출자 §166③ 2-point 환산취득가 Zod refine은
   // addPropertyRefines (transfer-tax-schema-refines.ts)에 추가됨 — route.ts superRefine 내부 호출
 };
 

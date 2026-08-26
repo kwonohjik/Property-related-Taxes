@@ -4,8 +4,8 @@
  * 근거:
  * - 소득세법 §166③ : 환산취득가 = 관리처분인가 당시 권리가액 × (취득 당시 공시지가 ÷ 관리처분인가 당시 공시지가)
  * - 소득세법 §163⑥ : 개산공제 = 취득 당시 공시지가 × 3% (토지)
- * - 소득세법 §95② 별표2 : 인가전 분 LTHD — 취득일 ~ 관리처분인가일 보유기간 기준
- * - 소득세법 §95② 별표2 [비고] 1호 : 인가후 분 LTHD = 0
+ * - 소득세법 §95② 표1·표2 : 인가전 분 LTHD — 취득일 ~ 관리처분인가일 보유기간 기준
+ * - 소득세법 §95② 본문 괄호 : 인가후 분 LTHD = 0
  * - 소득세법 §166⑤1호 : 보유기간 기산일 = 토지 취득일, 종기 = 관리처분인가일
  *
  * 지원 범위 (본 PR): 청산금 pay 방향만. receive 방향은 후속 Task.
@@ -33,13 +33,13 @@ export interface RedevLandContribResult {
   /** 총 양도차익 = 인가전 + 인가후 */
   totalGain: number;
   /**
-   * 인가전 LTHD — §95② 별표2(표1) 보유율 적용
-   * 근거: REDEVELOPMENT.LTHD_RIGHT_TABLE1_ANNOTATION
+   * 인가전 LTHD — §95② 표1 보유율 적용
+   * 근거: REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT
    */
   preApprovalLTHD: number;
   /**
    * 인가후 LTHD = 0
-   * 근거: §95② 별표2 [비고] 1호 — 인가전 분에 한정 적용
+   * 근거: §95② 본문 괄호 — 인가전 분에 한정 적용
    */
   postApprovalLTHD: number;
   /** 총 LTHD = 인가전 + 인가후 (= 인가전만) */
@@ -172,16 +172,16 @@ export function calcRedevLandContribEstimated(
   const holdingYears = Math.floor(preApprovalBranch.holdingMonths / 12);
 
   // ── Step 6: LTHD 금액 산출 ──────────────────────────────────────────────
-  // §95② 별표2(표1) 보유율 적용 — holdingRate (residenceRate 미포함)
-  // 법령 근거: REDEVELOPMENT.LTHD_RIGHT_TABLE1_ANNOTATION
-  void REDEVELOPMENT.LTHD_RIGHT_TABLE1_ANNOTATION; // 상수 참조 (dead-code 방어)
+  // §95② 표1 보유율 적용 — holdingRate (residenceRate 미포함)
+  // 법령 근거: REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT
+  void REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT; // 상수 참조 (dead-code 방어)
 
   const preApprovalLTHD = applyLthdToGain(
     preApprovalGain,
     preApprovalBranch.holdingRate,
   );
 
-  // 인가후 LTHD = 0 (§95② 별표2 [비고] 1호 — 인가전 분에 한정)
+  // 인가후 LTHD = 0 (§95② 본문 괄호 — 인가전 분에 한정)
   const postApprovalLTHD = 0 as number; // TS 좁힘 회피를 위해 as number
 
   return {

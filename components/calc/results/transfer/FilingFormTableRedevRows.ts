@@ -264,7 +264,7 @@ export function fillRedevRightReceiveBranchData(
  *   - "preApproval": ① 인가전 분 (취득일~인가일, §166⑤1호)
  *   - "postApprovalExistingHouse": ② 인가후 분 (인가일~양도일, LTHD=0)
  *
- * 인가후 열(postApprovalExistingHouse) LTHD = 0 → §95② 별표2 [비고] 1호 rose 배지.
+ * 인가후 열(postApprovalExistingHouse) LTHD = 0 → §95② 본문 괄호 rose 배지.
  */
 export function fillRedevRightLandPayBranchData(
   r: NonNullable<TransferTaxResult["redevelopmentDetail"]>,
@@ -345,12 +345,12 @@ export function fillRedevRightLandPayBranchData(
   setNum("ltHoldingPart", "preApproval", preHp);
   setNum("ltResidencePart", "preApproval", preRp);
 
-  // ② 인가후: LTHD = 0 (§95② 별표2 [비고] 1호 — 관리처분 인가 전 토지·건물분에 한정)
+  // ② 인가후: LTHD = 0 (§95② 본문 괄호 — 관리처분 인가 전 토지·건물분에 한정)
   setNum("ltDeduction", "postApprovalExistingHouse", 0);
   setNum("ltHoldingPart", "postApprovalExistingHouse", 0);
   setNum("ltResidencePart", "postApprovalExistingHouse", 0);
   setRoseNote?.("ltDeduction", "postApprovalExistingHouse",
-    "§95② 별표2 [비고] 1호 — 관리처분 인가 전 토지·건물분에 한정");
+    "§95② 본문 괄호 — 관리처분 인가 전 토지·건물분에 한정");
 
   setNum("ltHoldingPart", "total", preHp);
   setNum("ltResidencePart", "total", preRp);

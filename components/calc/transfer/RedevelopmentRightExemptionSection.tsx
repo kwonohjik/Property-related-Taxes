@@ -198,7 +198,7 @@ export function RedevelopmentRightExemptionSection({
             {/* 12억 초과 자동 안내 */}
             {isHighValue && (
               <div className="rounded-md border border-violet-300 bg-violet-100/70 p-2.5 text-caption text-violet-900">
-                <p className="font-semibold">양도가액 12억 초과 → §89①4호 가목 단서 안분과세 적용</p>
+                <p className="font-semibold">양도가액 12억 초과 → §89①4호 각 목 외의 부분 단서 안분과세 적용</p>
                 <p className="mt-0.5">
                   비과세 요건 충족 시 전액 비과세가 아닌 12억 초과분에 대해 과세됩니다 (§95③ + 시행령 §160 준용).
                   안분 상세는 결과 화면에서 확인하세요.

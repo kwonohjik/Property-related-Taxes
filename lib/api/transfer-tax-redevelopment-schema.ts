@@ -32,7 +32,7 @@ export const redevelopmentSchema = z
     managementDisposalHousingPrice: z.number().int().nonnegative().optional(),
     acquisitionHousingPrice: z.number().int().nonnegative().optional(),
     acquisitionRounding: z.enum(["floor", "round"]).optional(),
-    // 사례 45 — 거주월수 분리 입력 (§155⑰ 통산 + 사전법령해석재산 2020-386)
+    // 사례 45 — 거주월수 분리 입력 (§154⑧1호 통산 + 사전법령해석재산 2020-386)
     priorHouseResidenceMonths: z.number().int().nonnegative().optional(),
     newHouseResidenceMonths: z.number().int().nonnegative().optional(),
     // 거주기간(입주일·퇴거일, YYYY-MM-DD) — 결과 카드/신고서 양식 표 산정 근거 표시용 pass-through
@@ -59,7 +59,7 @@ export const redevelopmentSchema = z
     // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
     landStdPriceAtAcq: z.number().int().nonnegative().optional(),
     landStdPriceAtApproval: z.number().int().nonnegative().optional(),
-    // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
+    // 사례 38/39 — 단독주택 출자 §166③ 2-point 환산취득가
     // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
     housingStdPriceAtAcq: z.number().int().nonnegative().optional(),
     housingStdPriceAtApproval: z.number().int().nonnegative().optional(),

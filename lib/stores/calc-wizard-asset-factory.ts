@@ -508,9 +508,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevLandStdPriceAtAcq: "",      // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
     redevLandStdPriceAtApproval: "", // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
     redevLandPricePerSqmAtApproval: "", // §166③ 분모 ㎡당 단가 (LandPriceLookupField 신규 입력 경로)
-    // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
-    redevHousingStdPriceAtAcq: "",    // §164⑤ 분자 — 취득당시 개별주택가격
-    redevHousingStdPriceAtApproval: "", // §164⑤ 분모 — 인가당시 개별주택가격
+    // 사례 38/39 — 단독주택 출자 §166③ 2-point 환산취득가
+    redevHousingStdPriceAtAcq: "",    // §166③ 분자 — 취득당시 개별주택가격
+    redevHousingStdPriceAtApproval: "", // §166③ 분모 — 인가당시 개별주택가격
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
     redevCompletionDate: "",

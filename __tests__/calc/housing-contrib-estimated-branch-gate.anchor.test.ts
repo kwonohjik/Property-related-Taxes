@@ -3,7 +3,7 @@
  *
  * ## 결함
  *
- * 사례 39(단독주택 출자 §164⑤ 2-point 환산) 전용 refine의 활성 조건이 **청산금 방향을 보지
+ * 사례 39(단독주택 출자 §166③ 2-point 환산) 전용 refine의 활성 조건이 **청산금 방향을 보지
  * 않았다**. 같은 분기를 판정하는 네 지점 중 ⑫만 축이 하나 적었다:
  *
  * | 지점 | 술어 |
@@ -63,7 +63,7 @@ function issuePaths(r: ReturnType<typeof parseWith>): string[] {
   return r.success ? [] : r.error.issues.map((i) => i.path.join("."));
 }
 
-describe("E1-04 anchor — §164⑤ 2-point refine은 청산금 수령에서만 요구한다", () => {
+describe("E1-04 anchor — §166③ 2-point refine은 청산금 수령에서만 요구한다", () => {
   it("🔑 청산금 **납부** + 환산 → §164⑤ 2필드를 요구하지 않는다 (dead-end 해소)", () => {
     const r = parseWith({ ...baseRedev, settlementDirection: "pay" });
     expect(issuePaths(r)).not.toContain("redevelopment.housingStdPriceAtAcq");
@@ -109,7 +109,7 @@ describe("E1-04 anchor — §164⑤ 2-point refine은 청산금 수령에서만 
     }
   });
 
-  it("토지 출자는 §164⑤ 분기가 아니다 (originalAssetType 축 회귀 가드)", () => {
+  it("토지 출자는 §166③ 분기가 아니다 (originalAssetType 축 회귀 가드)", () => {
     const r = parseWith({
       ...baseRedev,
       originalAssetType: "land",

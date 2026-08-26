@@ -384,13 +384,13 @@ export function resolveOneRightExemptionClause(
  * 동작:
  *   - transferPrice ≤ 12억 → 3분기 모두 gain/lthd 0 마스킹 → 산출세액 0 (전액 비과세)
  *     → oneRightExemptionApplied = true
- *   - transferPrice > 12억 → §89①4호 가목 단서 + §95③ 안분
+ *   - transferPrice > 12억 → §89①4호 각 목 외의 부분 단서 + §95③ 안분
  *     → taxableRatio × 각 분기 gain/lthd 보존, 비과세분 마스킹
  *     → oneRightHighValueApplied = true
  *
  * 법령 근거:
  *   - 소득세법 §89①4호 가목 본문: 1세대1입주권 비과세
- *   - 소득세법 §89①4호 가목 단서: 12억 초과 시 안분과세
+ *   - 소득세법 §89①4호 각 목 외의 부분 단서: 12억 초과 시 안분과세
  *   - 소득세법 §95③ + 시행령 §160: 안분 산식 (taxableRatio = (양도가 − 12억) / 양도가)
  *   - 시행령 §154: 1세대 범위
  *
@@ -443,7 +443,7 @@ export function applyOneRightExemption(
       oneRightExemptionClause: clause,
     };
   } else {
-    // ── 12억 초과 안분과세 (§89①4호 가목 단서 + §95③) ──
+    // ── 12억 초과 안분과세 (§89①4호 각 목 외의 부분 단서 + §95③) ──
     // apt 분기 applyHighValueAllocation 과 동일 taxableRatio 로직 적용
     // 단, isOneHouseSingle 조건(householdHousingCount===1)과 별개로 right 전용 처리
     const taxableRatio = (input.transferPrice - HIGH_VALUE_THRESHOLD) / input.transferPrice;

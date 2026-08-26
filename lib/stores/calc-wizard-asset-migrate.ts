@@ -662,7 +662,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevManagementDisposalHousingPrice === undefined) a.redevManagementDisposalHousingPrice = "";
   if (a.redevAcquisitionHousingPrice === undefined) a.redevAcquisitionHousingPrice = "";
   if (a.redevActualAcquisitionPrice === undefined) a.redevActualAcquisitionPrice = "";
-  // 사례 45 — 거주월수 분리 (§155⑰ + 해석례 2020-386)
+  // 사례 45 — 거주월수 분리 (§154⑧1호 + 해석례 2020-386)
   if (a.redevPriorHouseResidenceMonths === undefined) a.redevPriorHouseResidenceMonths = "";
   if (a.redevNewHouseResidenceMonths === undefined) a.redevNewHouseResidenceMonths = "";
   if (a.redevPriorResidenceStartDate === undefined) a.redevPriorResidenceStartDate = "";
@@ -690,7 +690,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevLandStdPriceAtApproval === undefined) a.redevLandStdPriceAtApproval = ""; // @deprecated legacy
   // 신규 LandPriceLookupField 입력 경로 — §166③ 분모 ㎡당 단가
   if (a.redevLandPricePerSqmAtApproval === undefined) a.redevLandPricePerSqmAtApproval = "";
-  // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
+  // 사례 38/39 — 단독주택 출자 §166③ 2-point 환산취득가
   if (a.redevHousingStdPriceAtAcq === undefined) a.redevHousingStdPriceAtAcq = "";
   if (a.redevHousingStdPriceAtApproval === undefined) a.redevHousingStdPriceAtApproval = "";
   // 사례 48 — 승계조합원 신축APT 양도

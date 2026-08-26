@@ -26,6 +26,7 @@
 import { describe, it, expect } from "vitest";
 import { collectCitedCitations } from "@/lib/legal-verification/coverage-collect";
 import { computeCoverageGap, articleKeys } from "@/lib/legal-verification/coverage";
+import { VERIFICATION_MANIFEST } from "@/lib/legal-verification/verifier-manifest";
 
 describe("법령 검증 커버리지", () => {
   it("legal-codes 인용 조문이 전부 VERIFICATION_MANIFEST에 등록돼 있다", () => {
@@ -78,4 +79,45 @@ describe("법령 검증 커버리지", () => {
     // 흘리면 여기가 먼저 빨개진다.
     expect(decreeKeys.length).toBeGreaterThan(90);
   });
+});
+
+/**
+ * 게이트: **재개발 축 핵심 문언이 감시 대상에 남아 있다** (L1-09 · 2026-08-26)
+ *
+ * 커버리지 게이트는 「법령명 + 조 번호」 단위 비교라(`coverage.ts:8`) §95②·§89①4호가
+ * 등록돼 있기만 하면 100%로 집계된다. 그래서 **항·호 수준의 감시 공백**은 그 게이트로
+ * 잡히지 않는다 — 실제로 §95② 규칙의 키워드는 「장기보유·공제액·보유기간·공제율」 넷뿐이라
+ * 입주권 축이 전적으로 의존하는 **본문 괄호 두 문언**이 개정·삭제돼도 전부 통과했다.
+ *
+ * 아래 문자열은 2026-08-26 법제처 조문 본문(소득세법 MST 280405, 시행 2026-07-01)의
+ * **verbatim**이며, `fetchArticle`이 돌려주는 `fullText`에 실재함을 캐시로 실측했다.
+ * 문언이 실제 법문과 맞는지는 `npm run verify:legal`이 라이브 API로 다시 확인한다 —
+ * 이 테스트는 **키워드가 조용히 빠지는 것**만 막는다.
+ */
+describe("재개발 축 감시 문언 — verify:legal 키워드 유지", () => {
+  const REQUIRED: Record<string, string[]> = {
+    "TRANSFER.LONG_TERM_DEDUCTION": [
+      // 승계조합원 LTHD 배제 (REDEVELOPMENT.LTHD_RIGHT_PROVISO)
+      "조합원으로부터 취득한 것은 제외한다",
+      // 인가전 분 한정 (REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT) — 근거는 본문 괄호이지 부속표가 아니다
+      "토지분 또는 건물분의 양도차익으로 한정한다",
+      // §104⑦ 중과 자산 LTHD 배제 (E2-04가 고친 축)
+      "같은 조 제7항 각 호에 따른 자산은 제외한다",
+    ],
+    "TRANSFER.ONE_HOUSE_EXEMPT": [
+      // §89①4호 가목 — 1세대1입주권 비과세 게이트
+      "다른 주택 또는 분양권을 보유하지 아니할 것",
+      // §89①4호 각 목 외의 부분 **단서** — 12억 초과 안분 (「가목 단서」가 아니다)
+      "12억원을 초과하는 경우에는 양도소득세를 과세한다",
+    ],
+  };
+
+  for (const [id, keywords] of Object.entries(REQUIRED)) {
+    it(`${id} — 재개발 축 문언 ${keywords.length}건이 키워드에 있다`, () => {
+      const rule = VERIFICATION_MANIFEST.find((r) => r.id === id);
+      expect(rule, `규칙 ${id}이 매니페스트에서 사라졌다`).toBeDefined();
+      const missing = keywords.filter((kw) => !rule!.keywords.includes(kw));
+      expect(missing, `빠진 감시 문언: ${missing.join(" · ")}`).toEqual([]);
+    });
+  }
 });

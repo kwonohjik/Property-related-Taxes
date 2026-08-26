@@ -148,7 +148,7 @@ export function runRedevelopment(
   // 구분 조건: housingStdPriceAtAcq + housingStdPriceAtApproval (PHD 직접 입력)를 사용.
   // ※ 사례 36-A2-ii(managementDisposalHousingPrice+acquisitionHousingPrice 사용 §166③ 경로)와 다름.
   // 네 축은 공용 leaf가 판정한다(⑤ UI · ⑧ validate · ⑫ Zod와 동일 — E1-04).
-  // PHD 2필드 > 0은 **엔진 고유 조건**이다 — 값이 있어야 §164⑤ 산식을 돌릴 수 있다.
+  // PHD 2필드 > 0은 **엔진 고유 조건**이다 — 값이 있어야 §166③ 산식을 돌릴 수 있다.
   // 이 조건을 leaf에 넣으면 ⑤·⑧·⑫가 「값이 없으면 분기가 아니다」로 읽혀 요구 자체를 못 한다.
   if (
     isHousingContribEstimatedAxes({
@@ -206,13 +206,13 @@ export function runRedevelopment(
  * calcRedevLandContribEstimated 결과를 RedevelopmentResult 형태로 변환.
  * 3분할 구조 유지 (preApproval / postApproval / settlement):
  *   - preApproval  : 인가전 분 (§166⑤1호 기산일 = 취득일, 종기 = 인가일)
- *   - postApproval : gain=0, lthd=0 (§95② 별표2 [비고] 1호 — 토지 입주권 인가후 LTHD 미적용)
+ *   - postApproval : gain=0, lthd=0 (§95② 본문 괄호 — 토지 입주권 인가후 LTHD 미적용)
  *   - settlement   : 인가후 분 (입주권 양도가 − 권리가액 − 청산금납부, LTHD 없음)
  *
  * 법령 근거:
  *   §166③  : 환산취득가 = floor(권리가액 × 취득당시공시지가 / 인가당시공시지가)
  *   §163⑥  : 개산공제 = floor(취득당시공시지가 × 3%)
- *   §95②   : 별표2 [비고] 1호 — 인가전 분에만 LTHD 표1 적용
+ *   §95②   : 본문 괄호 — 인가전 분에만 LTHD 표1 적용
  *   §166⑤1호: LTHD 보유기간 = 취득일 ~ 인가일
  *
  * landStdPriceAtAcq / landStdPriceAtApproval 미입력 시 —
@@ -264,7 +264,7 @@ function runLandContribEstimated(
     lthdResidencePart: 0,
   };
 
-  // postApprovalExistingHouse: 항상 0 (토지 입주권 — §95② 별표2 [비고] 1호)
+  // postApprovalExistingHouse: 항상 0 (토지 입주권 — §95② 본문 괄호)
   const postApprovalDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: 0,
     apportionedAcquisition: 0,
@@ -359,7 +359,7 @@ function runLandContribEstimated(
  * calcRedevHousingContribReceiveEstimated 결과를 RedevelopmentResult 형태로 변환.
  * 3분할 구조 유지 (preApproval / postApprovalExistingHouse / settlement):
  *   - preApproval  : 인가전 분 (§166①2호 나목 + §166③ 환산, LTHD 표1 적용)
- *   - postApproval : gain=0, lthd=0 (§95② 별표2 [비고] 1호 — 입주권 §94①2호 자산)
+ *   - postApproval : gain=0, lthd=0 (§95② 본문 괄호 — 입주권 §94①2호 자산)
  *   - settlement   : 인가후 분 (§166①2호 가목, LTHD 없음)
  *
  * 법령 근거:
@@ -367,7 +367,7 @@ function runLandContribEstimated(
  *   §163⑥  : 개산공제 = floor(취득당시PHD × 3%)
  *   §166①2호 나목: 인가전 = (권리가액 − 환산 − 개산공제) × (권리가액 − 청산금수령) / 권리가액
  *   §166①2호 가목: 인가후 = 양도가액 − (권리가액 − 청산금수령) − 인가후필요경비
- *   §95②   : 별표2 [비고] 1호 — 인가전 분에만 LTHD 표1 적용
+ *   §95②   : 본문 괄호 — 인가전 분에만 LTHD 표1 적용
  *   §166⑤1호: LTHD 보유기간 = 취득일 ~ 인가일
  *
  * housingStdPriceAtAcq / housingStdPriceAtApproval 미입력 시 —
@@ -433,7 +433,7 @@ function runHousingContribReceiveEstimated(
     lthdResidencePart: 0,
   };
 
-  // postApprovalExistingHouse: 항상 0 (입주권 right — §95② 별표2 [비고] 1호)
+  // postApprovalExistingHouse: 항상 0 (입주권 right — §95② 본문 괄호)
   const postApprovalDetail: RedevelopmentBranchDetail = {
     apportionedTransfer: 0,
     apportionedAcquisition: 0,

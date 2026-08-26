@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * HousingContribEstimatedSection — 단독주택 출자 §164⑤ PHD 2-point 환산취득가 입력 카드
+ * HousingContribEstimatedSection — 단독주택 출자 §166③ 2-point 환산취득가 입력 카드
  *
  * 활성 조건:
  *   originalAssetType="housing" + subject="right" + direction="receive" + useEstimatedAcquisition=true
@@ -9,7 +9,7 @@
  * 사례 39: 취득당시 개별주택가격(분자) + 인가당시 개별주택가격(분모) → 환산취득가 도출
  *
  * 법령 근거:
- *   - §164⑤: 환산취득가 = floor(권리가액 × 취득시PHD / 인가시PHD)
+ *   - §166③: 환산취득가 = floor(권리가액 × 취득시PHD / 인가시PHD)
  *   - §163⑥: 개산공제 = floor(취득시PHD × 3%)
  *   - §166①2호 나목: 인가전 양도차익 = (권리가액 − 환산 − 개산공제) × salePriceTotal / 권리가액
  *
@@ -36,7 +36,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
   const stdAtAcq = parseAmount(asset.redevHousingStdPriceAtAcq);
   const stdAtApproval = parseAmount(asset.redevHousingStdPriceAtApproval);
 
-  // §164⑤ 환산취득가 미리보기 (useMemo 순수 계산 — useEffect 미러링 금지)
+  // §166③ 환산취득가 미리보기 (useMemo 순수 계산 — useEffect 미러링 금지)
   const preview = useMemo(() => {
     if (rights <= 0 || stdAtAcq <= 0 || stdAtApproval <= 0) return null;
     // safeMultiplyThenDivide 패턴 (BigInt overflow 방어)
@@ -55,13 +55,13 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
           5a
         </span>
         <p className="text-xs font-semibold text-fuchsia-700">
-          단독주택 출자 환산취득가 (§164⑤ + §163⑥)
+          단독주택 출자 환산취득가 (§166③ + §163⑥)
         </p>
       </div>
 
       {/* 안내 카드 */}
       <div className="rounded-md bg-fuchsia-100/60 border border-fuchsia-200 p-2 text-caption text-fuchsia-900 leading-relaxed">
-        <p className="font-semibold mb-0.5">§164⑤ 환산취득가 산식</p>
+        <p className="font-semibold mb-0.5">§166③ 환산취득가 산식</p>
         <p>
           환산취득가 = 권리가액 × <Frac top="취득당시 개별주택가격" bottom="인가당시 개별주택가격" />
         </p>
@@ -75,7 +75,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
 
       {/* 취득당시 개별주택가격 (분자) */}
       <FieldCard
-        label="취득당시 개별주택가격 (§164⑤ 분자)"
+        label="취득당시 개별주택가격 (§166③ 분자)"
         hint="취득일 직전 최근 공시된 개별주택가격 총액 (원). 취득일이 최초공시일 이전이면 최초공시 직후 가격 사용."
       >
         <CurrencyInput
@@ -88,7 +88,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
 
       {/* 인가당시 개별주택가격 (분모) */}
       <FieldCard
-        label="인가당시 개별주택가격 (§164⑤ 분모)"
+        label="인가당시 개별주택가격 (§166③ 분모)"
         hint="관리처분 인가일 직전 최근 공시된 개별주택가격 총액 (원). 인가일이 2013-10-23이면 2013-01-01 공시 가격."
       >
         <CurrencyInput
@@ -102,7 +102,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
       {/* 환산취득가 + 개산공제 미리보기 */}
       {preview && (
         <div className="mt-1 rounded-md bg-fuchsia-100/70 border border-fuchsia-200 p-2 text-caption text-fuchsia-900 space-y-0.5">
-          <p className="font-semibold text-fuchsia-800">미리보기 — §164⑤ 환산취득가</p>
+          <p className="font-semibold text-fuchsia-800">미리보기 — §166③ 환산취득가</p>
           <p className="font-mono">
             환산취득가 = {parseAmount(asset.redevRightsValue).toLocaleString("ko-KR")}{" "}
             × <Frac top={stdAtAcq.toLocaleString("ko-KR")} bottom={stdAtApproval.toLocaleString("ko-KR")} />{" "}

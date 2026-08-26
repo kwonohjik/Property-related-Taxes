@@ -15,7 +15,7 @@
  * ## ⚠️ `transfer-tax-validate-redev.ts`는 여기에 합치지 않았다
  *
  * 그쪽 조건에는 `isHousingRightReceiveEstimated`(housing+right+receive+estimated →
- * §164⑤ 별도 산식) **배제가 하나 더** 붙어 있고, 그 플래그는 validate 내부에서 계산된다.
+ * §166③ 별도 산식) **배제가 하나 더** 붙어 있고, 그 플래그는 validate 내부에서 계산된다.
  * 술어를 그 인자까지 받도록 넓히면 UI·게이트 호출부가 쓰지도 않는 인자를 나르게 된다.
  * ⇒ **조건이 진짜로 같은 곳만** 이 함수를 쓴다. 합치려면 그 플래그의 소재부터 정리할 것.
  *
@@ -67,7 +67,7 @@ export function isRedevPhdTriggered(a: RedevPhdTriggerFields): boolean {
  * | 2 | `AssetSectionAcquisition.tsx:324` | 승계조합원 **입주권**이 아님(`isSuccessorRightTransfer`) |
  * | 3 | `RedevelopmentBlock.tsx:373` | `redevIsSuccessorMember !== "yes"` |
  * | 4 | `RedevelopmentBlock.tsx:395` | 환산 모드(`useEstimatedAcquisition`) |
- * | 5 | `RedevelopmentBlock.tsx:407` | 단독주택 출자 §164⑤ 분기가 아님(`isHousingContribEstimatedBranch`) |
+ * | 5 | `RedevelopmentBlock.tsx:407` | 단독주택 출자 §166③ 분기가 아님(`isHousingContribEstimatedBranch`) |
  *
  * ## ⚠️ 미확인 필드는 **차단하지 않는다**
  *

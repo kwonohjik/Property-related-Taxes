@@ -150,7 +150,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
       {isRightSubject && oneRightHighValueApplied && highValueAllocation && (
         <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 space-y-1">
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">§89①4호 가목 단서 + §95③</span>
+            <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">§89①4호 각 목 외의 부분 단서 + §95③</span>
             <span className="font-semibold">1세대1입주권 12억 초과 안분 적용</span>
           </div>
           <p className="text-amber-800">
@@ -165,7 +165,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <FLine>
               산식: 각 분기 양도차익 × <Frac top="양도가액 − 12억" bottom="양도가액" />
             </FLine>
-            <FLine>근거: §89①4호 가목 단서 + §95③ + 시행령 §160 준용.</FLine>
+            <FLine>근거: §89①4호 각 목 외의 부분 단서 + §95③ + 시행령 §160 준용.</FLine>
           </p>
         </div>
       )}
@@ -192,7 +192,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             LTHD 적용 대상입니다.
           </p>
           <p className="text-micro text-rose-700">
-            근거: §94①2호 (조합원입주권은 기타자산) + §166①1호 (인가전·인가후 산식 분리) + §166⑤1호 (인가전분 보유기간 = 취득일~인가일).
+            근거: §95② 본문 괄호 (조합원입주권은 관리처분 인가 전 토지분·건물분의 양도차익으로 한정) + 시행령 §166①1호 (인가전·인가후 산식 분리) + 시행령 §166⑤1호 (인가전분 보유기간 = 취득일~인가일).
             인가후 분·청산금 납부분은 LTHD 기산 대상 자산에 해당하지 않아 공제율 0%.
           </p>
         </div>
@@ -207,7 +207,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </div>
           <p className="leading-relaxed">
             <strong>가목 (청산금 수령분):</strong> 청산금 수령액 − 안분 취득가액(종전취득가 × 청산금 / 권리가액).
-            LTHD 대상 외 — §94①2호(조합원입주권 = 기타자산) + 집행기준 보수적 적용으로 zeroBranch 처리.
+            LTHD 대상 외 — §95② 본문 괄호(인가 전 토지분·건물분의 양도차익으로 한정) + 집행기준 보수적 적용으로 zeroBranch 처리.
           </p>
           <p className="leading-relaxed">
             <strong>나목 (인가전 분 — 축소):</strong> 인가전양도차익 × (권리가액 − 청산금) / 권리가액.
@@ -362,7 +362,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             </p>
             <p className="text-micro text-violet-600">
               §166①2호 나목 · §166⑤1호 (취득일 → 인가일 기산)
-              {detail.housingContribDetail ? " + §164⑤ PHD 환산취득가" : ""}
+              {detail.housingContribDetail ? " + §166③ 환산취득가" : ""}
             </p>
             {/* 의제양도가액 */}
             <Row label="의제양도가액 (권리가액 × 안분비율)" value={preApproval.apportionedTransfer} />
@@ -371,7 +371,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               /* 사례 39 — 환산취득가 + 개산공제 분리 표시 */
               <>
                 <Row
-                  label={`− 환산취득가 (§164⑤: 권리가액 × ${detail.housingContribDetail.housingStdPriceAtAcq.toLocaleString("ko-KR")} / ${detail.housingContribDetail.housingStdPriceAtApproval.toLocaleString("ko-KR")})`}
+                  label={`− 환산취득가 (§166③: 권리가액 × ${detail.housingContribDetail.housingStdPriceAtAcq.toLocaleString("ko-KR")} / ${detail.housingContribDetail.housingStdPriceAtApproval.toLocaleString("ko-KR")})`}
                   value={detail.housingContribDetail.convertedAcquisition}
                 />
                 <Row
@@ -411,11 +411,11 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             {/* §95² LTHD 미적용 안내 — rose 톤 */}
             <div className="pt-1 border-t border-rose-200 rounded bg-rose-50/60 px-1.5 py-1 space-y-0.5">
               <div className="flex items-center gap-1.5">
-                <span className="rounded-full bg-rose-200 px-1.5 py-0.5 text-micro font-bold text-rose-800">§95② 별표2 [비고] 1호</span>
+                <span className="rounded-full bg-rose-200 px-1.5 py-0.5 text-micro font-bold text-rose-800">§95② 본문 괄호</span>
                 <span className="text-micro text-rose-800 font-semibold">LTHD 적용 없음</span>
               </div>
               <p className="text-micro text-rose-700">
-                입주권은 §94①2호 기타자산 — 인가후 분은 부동산 외 자산으로 장기보유특별공제 적용 제외.
+                조합원입주권은 §94①2호 가목(부동산을 취득할 수 있는 권리)이고, §95② 본문 괄호가 공제 대상을 관리처분 인가 전 토지분·건물분의 양도차익으로 한정합니다 — 인가후 분은 적용 제외.
               </p>
             </div>
             <div className="pt-1 border-t border-violet-100">
