@@ -64,8 +64,11 @@ export const STRUCTURE_META: Readonly<Record<string, StructureMeta>> = Object.fr
   stone_earth_wall: { label: "돌담 및 토담조", residual: "III", acqBase: "III" },
   cement_block: { label: "시멘트블록조", residual: "III", acqBase: "III" },
   prefab_panel: { label: "조립식패널조", residual: "III" }, // 산정기준율 헤더 미수록
-  // ☐ 확인 필요: "철골조 중 조립식패널(EPS패널에 한함)"은 구조지수표 별도 항목(2008~2026 출현, 지수 80~85).
-  //   잔가율표 헤더에 명시 없음 → "철골조 중"으로 보아 II(철골조 기반) 잠정. 산정기준율 헤더 미수록(신공법).
+  // ☐ 잠정 유지(2026-08-27 고시 4개 연도 실측 후에도 미해소): "철골조 중 조립식패널(EPS패널에 한함)"은
+  //   구조지수표 별도 항목인데(2010 고시 5.구조지수 5행 80 등 2008~2026 출현) 2010·2011·2013·2014
+  //   고시 **어느 제10조③(그룹별 건물구조)에도 열거가 없다**. 2010 고시 용어의 정의 (15)가
+  //   「조립식 패널 건물(철골조를 제외함)·컨테이너 건물 등은 경량철골조로 분류한다」고 정하므로
+  //   반대해석상 철골조 계열 ⇒ 철골조와 동일 그룹(II, era-B 30년)로 둔다. 산정기준율 헤더 미수록(신공법).
   steel_frame_eps: { label: "철골조 중 조립식패널(EPS패널)", residual: "II" },
   mechanical_parking: { label: "기계식주차전용빌딩", residual: "III", acqBase: "III" },
 
@@ -106,6 +109,14 @@ const ERA_B_DURABLE_FIXED: Readonly<Record<string, number>> = Object.freeze({
   steel_pipe: 20,
   container: 20,
   ocher: 30,
+  // ✅ 신공법 5종 — 국세청고시 제2013-2호·2014년 고시 제10조③ 명시 열거(2026-08-27 원문 실측).
+  //    종전에는 era-C −10 추정으로 같은 값이 나왔으나, 그러면 era-C 그룹을 고치는 순간 era-B 값이
+  //    조용히 따라 움직인다. 고시가 확정한 값이므로 파생이 아니라 사실로 등재한다.
+  //    (2003~2012 에는 구조지수표에 없어 선택 자체가 차단되므로 era-B 전 구간 등재가 무해하다.)
+  alc: 30,
+  reinforced_block: 30,
+  wire_panel: 30,
+  prefab_panel: 20,
 });
 function durableEraB(structureKey: string): number {
   const fixed = ERA_B_DURABLE_FIXED[structureKey];
