@@ -28,7 +28,16 @@ type Props = {
 
 export function InheritedRightExceptionSection({ form, onChange }: Props) {
   const hasInheritedRight = form.presaleRights.some((r) => r.isInherited);
-  if (!hasInheritedRight) return null;
+  /**
+   * ⑦1호·§156의3⑤1호 — 상속받은 것이 **주택**인 갈래(Phase 5).
+   *
+   * 이때도 후단의 「일반주택은 **상속개시 당시 보유한 주택**으로 한정한다」가 그대로 걸리므로
+   * 같은 선언이 필요하다. 열지 않으면 엔진 경고만 뜨고 고칠 칸이 없는 dead-end가 된다
+   * (memory `feedback_api_trigger_without_input_path_is_noop`).
+   */
+  const hasInheritedHouseWithRight =
+    form.presaleRights.length > 0 && form.houses.some((h) => h.isInherited);
+  if (!hasInheritedRight && !hasInheritedHouseWithRight) return null;
 
   /** ⑮ 선택은 피상속인이 **두 종류를 모두** 남긴 경우에만 의미가 있다. */
   const showArticle15 = form.presaleRights.some(
@@ -38,7 +47,7 @@ export function InheritedRightExceptionSection({ form, onChange }: Props) {
   return (
     <ToneCard
       tone="violet"
-      title="상속받은 권리 — 1세대1주택 특례 요건"
+      title="상속 자산 — 1세대1주택 특례 요건"
       titleExtra={
         <>
           <LawArticleModal legalBasis="소득세법 시행령 §156의2 ⑥" label="시행령 §156의2⑥" />

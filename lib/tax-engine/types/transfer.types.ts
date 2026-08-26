@@ -549,6 +549,18 @@ export interface TransferTaxInput {
     /** 3호·⑩5호 — 세대전원 이사·거주 */
     wholeHouseholdMoved?: boolean;
   };
+  /**
+   * §155⑥1호 — 「문화유산의 보존 및 활용에 관한 법률」에 따른 **지정문화유산**,
+   * 「근현대문화유산의 보존 및 활용에 관한 법률」에 따른 **국가등록문화유산** 및
+   * 「자연유산의 보존 및 활용에 관한 법률」에 따른 **천연기념물등**에 해당하는 주택을
+   * 일반주택과 각각 1개씩 보유하는가.
+   *
+   * 🔑 §155⑥의 2·3호는 **삭제**됐다 ⇒ 요건은 boolean 하나다.
+   * 📌 `HouseInfo.isCulturalHeritage`가 이미 있으나 그것은 §167의3 **중과 주택 수** 축이다.
+   *    같은 사실을 가리키지만 비과세(§155⑥) 판정은 별도 경로이고, `houses` 목록이 없는
+   *    입력에서도 성립해야 하므로 세대 단위 선언을 따로 받는다(`ruralHouse` 전례).
+   */
+  culturalHeritageHouse?: boolean;
   /** 혼인합가 정보 */
   marriageMerge?: {
     marriageDate: Date;

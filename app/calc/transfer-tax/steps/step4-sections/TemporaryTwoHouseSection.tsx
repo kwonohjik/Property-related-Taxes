@@ -286,6 +286,20 @@ export function TemporaryTwoHouseSection({
           </div>
         </ToggleCard>
 
+        {/*
+          §155⑥1호 문화유산 주택 — 양도 대상은 **일반주택**이다(문화유산 주택은 보유만).
+          2·3호가 삭제돼 요건은 boolean 하나다. 같은 선언이 §156의2⑩·§156의3⑦(주택 + 권리
+          보유 세대의 §89② 배제 예외)의 특수주택 판정에도 그대로 쓰인다.
+        */}
+        <p className="text-sm font-medium mt-1">문화유산 주택 특례</p>
+        <ToggleCard
+          checked={form.culturalHeritageHouseSpecial}
+          onCheckedChange={(v) => onChange({ culturalHeritageHouseSpecial: v })}
+          title="지정문화유산·국가등록문화유산·천연기념물등 주택 보유 (§155⑥1호)"
+          description="문화유산 주택을 일반주택과 각각 1개씩 보유한 상태에서, 지금 양도하는 일반주택을 1세대1주택으로 봅니다. 조합원입주권·분양권을 함께 보유한 경우에는 시행령 §156의2⑩·§156의3⑦이 이를 그대로 준용합니다."
+          tone="emerald"
+        />
+
         {/* §155⑦ 농어촌주택 — 양도 대상은 **일반주택**이다(농어촌주택은 보유만) */}
         <p className="text-sm font-medium mt-1">농어촌주택 특례</p>
         <ToggleCard
