@@ -182,6 +182,23 @@ function computeAggregateOnce(
       }
       throw e;
     }
+    /**
+     * 🔴 **단건 경고를 집계가 통째로 버리고 있었다** (2026-08-26 · R-5 실측).
+     *
+     * `computeAggregateOnce`는 `warnings` 배열을 만들고 **한 번도 채우지 않았다**
+     * (`warnings.push` 0건). 그래서 §89② 판정 불가 안내·§155⑦3호 귀농 사후관리·
+     * §156의2⑬ 추징 등 **모든 단건 경고**가 다건·일괄양도에서 사라졌다.
+     *
+     * ⚠️ 자산이 여럿이므로 **어느 자산의 경고인지** 라벨을 붙인다 — 안 붙이면 3자산 번들에서
+     *    같은 문구가 세 번 나오고 무엇을 확인해야 하는지 알 수 없다.
+     * ⚠️ 같은 자산에서 중복은 그대로 둔다(단건 엔진이 이미 dedupe한다).
+     */
+    for (const w of result.warnings ?? []) {
+      const label = item.propertyLabel ? `[${item.propertyLabel}] ` : "";
+      const line = `${label}${w}`;
+      if (!warnings.includes(line)) warnings.push(line);
+    }
+
     // 정밀 NBL 판정이 원시 플래그를 override한 경우, 결과가 노출한 판정값으로 item을 교정.
     // (원시 isNonBusinessLand=사용자 체크박스 vs 정밀판정=사업용 불일치 시 그룹·세율 오적용 방지)
     const nblJudgment = result.nonBusinessLandJudgmentDetail;

@@ -25,6 +25,7 @@ import {
   hasBuildingStdReport,
 } from "@/components/calc/results/BuildingStdPriceReportSection";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
+import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
   TRANSFER_PRINT_SECTIONS,
@@ -411,6 +412,10 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
 
   return (
     <div className="space-y-6">
+      {/* 자산별 경고 — 집계 엔진이 단건 warnings를 자산 라벨과 함께 모은다(R-5).
+          종전에는 일괄양도 결과에 경고 카드가 **아예 없었다**. */}
+      <CalculationWarningsCard warnings={aggregated.warnings} />
+
       {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
       <PrintSelectionPanel
         allGroups={TRANSFER_PRINT_SECTIONS}
