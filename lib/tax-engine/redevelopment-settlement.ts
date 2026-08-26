@@ -175,8 +175,19 @@ export function splitReceive(
   }
 
   // ★ §166①2호 가목: 인가후 양도차익 = 양도가액 − (평가액 − 지급받은 청산금) − 인가후 필요경비
-  const salePriceTotal = Math.max(0, rightsValue - settlementAmount);
-  const settlementGain = Math.max(0, transferPrice - salePriceTotal - postApprovalExpenses);
+  const salePriceTotal = Math.max(0, rightsValue - settlementAmount); // 분양가 방어 — 유지
+
+  /**
+   * 🔴 2026-08-27 정정(T1-05 — **세액 변경**): 종전에는 `Math.max(0, …)`으로 음수를 잘랐다.
+   *    §166①2호는 「각 목의 금액을 **합한 가액**」이고 음수를 0으로 본다는 단서가 없다.
+   *    §166②2호가 「제1항제2호에 따른 가액」이라고만 하므로 **완공APT 분기
+   *    (`computeAptReceive`)와 쌍으로 같은 규칙을 쓴다** — 한쪽만 고치면 같은 사실이
+   *    자산 종류에 따라 다른 양도차익을 낸다.
+   *
+   *    음수 처리는 하류 담당(단건 `transfer-tax.ts` 0 바닥 · 집계 `skipLossFloor`로 §102② 통산).
+   *    선례: 1호(납부) `splitAptPay` — E1-03 `96ed87b4`(2026-08-25).
+   */
+  const settlementGain = transferPrice - salePriceTotal - postApprovalExpenses;
 
   // §166①2호 나목: 인가전 양도차익 × (평가액 − 청산금) / 평가액
   const remainingRatio = rightsValue - settlementAmount;
