@@ -29,7 +29,7 @@ import {
   calcResidualRate,
   calcResidualRateByDurable,
   remodelYearError,
-  residualStepForGroup,
+  residualMinByDurable,
   durableForGroup,
   resolveResidualGroupForYear,
   resolveAcqBaseGroup,
@@ -81,11 +81,28 @@ export interface RemodelInfo {
 }
 
 /**
- * 유효 잔가율. 일반 = 신축연도 경과 잔가율.
- * 상증 리모델링(대수선) 시 = 신축연도 잔가율 + 대수선할증률(고시).
- *   대수선할증률 = 연상각률(= 잔가율 step = (1−0.1)/내용연수) × 대수선시점 경과연수(리모델링−신축) × 0.3.
- *   ⚠️ 리모델링연도를 신축연도로 치환하지 않음(국세청 계산사례 p.67 — 신축 잔가율에 할증을 가산).
- *   양도세는 미적용(신축연도 잔가율).
+ * 유효 잔가율. 일반(대수선 없음) = 신축연도 경과 잔가율표 그대로.
+ *
+ * 상증 리모델링(대수선) 시는 국세청 고시가 **명문 산식**을 준다
+ * (국세청 고시 제2025-39호 제10조② 각주 — 2025.12.31. 고시, 2026-01-01 시행):
+ *
+ *     Rn(잔존가치율) = 1 − (1−R) × (n − 0.3ⓝ) / N
+ *       R = 최종잔존가치율   N = 대상건물의 내용연수   n = 대상건물의 경과연수
+ *       ⓝ = 리모델링시점의 경과연수.
+ *       **다만 ⓝ은 항상 N보다 작거나 같고, n − 0.3ⓝ > N 이면 Rn = R**
+ *
+ * 🔴 종전 구현은 `max(1 − n·step, R) + step·ⓝ·0.3` 이었다 — 하한(R)을 **기저에 먼저** 걸고
+ *    거기에 할증을 더해서, 고시가 R 로 잘라야 할 노후 구간이 크게 부풀었다.
+ *    실측(2026 · 전수 19,012셀): 괴리 15,979건, 거의 전부 **과대** 방향, 최대 **10배**
+ *    (IV그룹 신축1930·대수선1997 → 코드 1.0 vs 고시 0.1). 신축 1980년 이후로 좁혀도 42%가 어긋났다.
+ *    잔가율은 기준시가에 선형으로 실리므로 그대로 세액 과대가 된다.
+ *
+ * ⚠️ 리모델링연도를 신축연도로 치환하지 않는다 — 고시 산식이 n(신축 기준 경과연수)을 그대로 쓴다.
+ * ⚠️ 각주는 제10조② **1호(상증법 §61①2호)** 표에만 달려 있고 2호(소득세법 §99①1호나목) 표에는 없다
+ *    ⇒ 양도세는 대수선 할증 미적용(아래 `isInheritanceGift` 게이트).
+ *
+ * 검증: 국세청 공식 계산사례 — 통나무조(I·N=50·R=0.10) 신축1996·대수선2008·상속2026
+ *   → 1 − 0.9 × (30 − 0.3×12)/50 = 0.5248. 저장소 anchor 값과 정확히 일치한다.
  */
 export function calcEffectiveResidualRate(
   group: "I" | "II" | "III" | "IV",
@@ -93,23 +110,37 @@ export function calcEffectiveResidualRate(
   valuationYear: number,
   remodel?: RemodelInfo,
 ): number {
-  const baseResid = calcResidualRate(group, valuationYear - builtYear, valuationYear);
-  if (!remodel?.isInheritanceGift || remodel.remodelYear === undefined) return baseResid;
+  const elapsed = valuationYear - builtYear;
+  if (!remodel?.isInheritanceGift || remodel.remodelYear === undefined) {
+    return calcResidualRate(group, elapsed, valuationYear);
+  }
 
   // ⑧ validation 과 **같은 술어**를 같은 인자로 부른다 — UI 통과↔엔진 차단 모순 방지.
   const yearError = remodelYearError(remodel.remodelYear, builtYear, valuationYear);
   if (yearError) throw new BuildingStdPriceError(yearError);
 
-  const elapsedToRemodel = Math.max(0, remodel.remodelYear - builtYear);
-  // 대수선할증률 = 연상각률(잔가율 step = (1−잔존율)/내용연수, 평가연도별) × 대수선시점 경과연수 × 0.3
-  const surcharge = residualStepForGroup(group, valuationYear) * elapsedToRemodel * 0.3;
-  // ⚠️ 잔가율은 **신축가격 대비 잔존 가치의 비율**이라 정의상 1을 넘을 수 없다.
-  //    상한이 없으면 유효 입력만으로도 1을 넘는 조합이 925건 생긴다(실측 최대 1.3825 —
-  //    IV그룹·신축1930·대수선2025·평가2025). 그 값은 기준시가에 선형으로 실려 10배 이상 부풀린다.
-  //    🟡 미결: 「잔존율 하한에 도달한 뒤에는 할증을 배제한다」는 명문이 있는지는
-  //       국세청 「건물 기준시가 계산방법」 고시 본문이 있어야 판정된다 — **고시 본문 미확인**.
-  //       여기서는 정의상 상한만 건다(할증 산식 자체는 종전 그대로).
-  return Math.min(Math.round((baseResid + surcharge) * 10000) / 10000, 1);
+  // N·R 은 평가연도로 결정된다(내용연수·최종잔존가치율 모두 시대별).
+  const durableYears = durableForGroup(group, valuationYear);
+  const finalResidual = residualMinByDurable(durableYears, valuationYear);
+
+  const remodelElapsed = Math.min(
+    Math.max(0, remodel.remodelYear - builtYear),
+    durableYears, // ⓝ은 항상 N보다 작거나 같고
+  );
+
+  // ⚠️ **정수 산술로 계산한다.** `n − 0.3ⓝ` 는 0.1 단위라 float 로 두면 Rn×10000 이 정확히 `.5` 로
+  //    끝나는 tie 가 자주 나오고(실측: 2026 격자에서 다수), 곱셈 결합 순서에 따라 반올림이 임의로
+  //    갈린다 — 유리수로 검산하니 float 구현 두 가지가 서로 다른 케이스에서 각각 틀렸다.
+  //    ⇒ 10배 스케일 정수로 옮겨 round-half-up 을 명시적으로 적용한다(잔가율표의 4자리 표기 규약).
+  const scaledElapsed = 10 * elapsed - 3 * remodelElapsed; // = (n − 0.3ⓝ) × 10
+  const scaledDurable = 10 * durableYears; // = N × 10
+  // n − 0.3ⓝ > N 이면 Rn = R
+  if (scaledElapsed > scaledDurable) return finalResidual;
+
+  // Rn × 10000 = 10000 − (10000 − R×10000) × (n−0.3ⓝ)×10 ÷ (N×10)
+  const oneMinusR = 10_000 - Math.round(finalResidual * 10_000);
+  const numer = 10_000 * scaledDurable - oneMinusR * scaledElapsed;
+  return Math.floor((2 * numer + scaledDurable) / (2 * scaledDurable)) / 10_000;
 }
 
 /**
@@ -701,7 +732,11 @@ export function selectSpecialAdjustment(
     // ⑧ validation 과 **같은 술어**를 같은 인자로 부른다 — UI 통과↔엔진 차단 모순 방지.
     const ratioError = normalUseRatioError(features.normalUseRatio);
     if (ratioError) throw new BuildingStdPriceError(ratioError);
-    groupVII.push({ no: 37, rate: Math.round(features.normalUseRatio * 100) });
+    // 고시 제11조 구분 VII 번호 37 — 지수 칸이 숫자가 아니라 「정상 사용 비율」이다:
+    // "정상적으로 사용되는 면적비율을 **조정률로 적용**한다" ⇒ 비율 그 자체가 조정률이며
+    // 정수 퍼센트로 양자화할 근거가 없다. 종전 `Math.round(ratio * 100)` 은 0.125 → 0.13(+4%),
+    // 0.3333 → 0.33(−0.99%) 처럼 양방향 오차를 냈고, 0.005 미만은 0이 되어 기준시가가 통째로 0이 됐다.
+    groupVII.push({ no: 37, rate: features.normalUseRatio * 100 });
   }
   if (groupVII.length > 0) {
     const w = pickMin(groupVII);
@@ -719,10 +754,14 @@ export function calcSpecialAdjustmentRate(
 ): number {
   const sel = selectSpecialAdjustment(features, structureIndex, floorArea, ctx);
   if (sel.length === 0) return 1.0;
-  // 분자=정수 지수곱, 분모=100^k (부동소수 누적 회피)
-  const numerator = sel.reduce((acc, s) => acc * s.rate, 1);
-  const denom = 100 ** sel.length;
-  return numerator / denom;
+  // 분자=정수 지수곱, 분모=10,000^k (부동소수 누적 회피).
+  // ⚠️ 지수를 **100배 스케일 정수**로 올려 곱한다 — VII-37(정상사용면적비율)은 고시상 정수 퍼센트가
+  //    아니라 비율 그 자체라 소수 지수(예 85.5·33.33)가 들어온다. 종전처럼 `rate` 를 그대로 곱하면
+  //    0.3333 이 0.33329999999999996 로 새어 나간다. BigInt 로 정확히 곱한 뒤 1e12 스케일로 환원한다.
+  const numerator = sel.reduce((acc, s) => acc * BigInt(Math.round(s.rate * 100)), 1n);
+  const denom = 10_000n ** BigInt(sel.length);
+  const SCALE = 1_000_000_000_000n; // 1e12 — 조정률은 소수 12자리면 충분하다
+  return Number((numerator * SCALE) / denom) / 1e12;
 }
 
 /**

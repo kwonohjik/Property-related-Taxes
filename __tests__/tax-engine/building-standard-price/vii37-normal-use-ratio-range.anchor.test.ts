@@ -116,16 +116,54 @@ describe("F-05 VII-37 정상사용면적비율 — §3 ⑧ validation 과 엔진
   });
 });
 
-describe("F-05 VII-37 정상사용면적비율 — §4 잔여 미결(F-41 축) characterization", () => {
+describe("F-41 VII-37 — §4 비율을 그대로 조정률로 적용한다 (수정 전 실패)", () => {
   /**
-   * 🟡 미결 — `Math.round(ratio * 100)` 양자화 때문에 0 < ratio < 0.005 는 지수 0 이 되어
-   * 범위 검증을 통과하고도 기준시가 0원이 된다. 양자화 자체를 없앨지는 고시 문언
-   * (VII-37 이 정수 퍼센트를 요구하는지)에 달려 있어 이번 범위에서 제외했다 — **고시 본문 미확인**.
-   * 여기서는 현재 동작을 기록만 한다.
+   * ✅ **고시 본문 확보(2026-08-26) — 국세청 고시 제2025-39호 제11조 구분 VII 번호 37**
+   *    적용대상: "화재, 지진 등의 원인에 의하여 건물의 일부가 훼손 또는 사용되지 않는 경우 →
+   *    **정상적으로 사용되는 면적비율을 조정률로 적용한다**"
+   *    지수 칸이 다른 항목처럼 정수(90·80·60·30·0)가 아니라 **「정상 사용 비율」** 로 적혀 있다
+   *    ⇒ 비율 그 자체가 조정률이며, 정수 퍼센트로 양자화할 근거가 없다.
+   *
+   * 🔴 종전 구현은 `Math.round(features.normalUseRatio * 100)` 으로 **정수 퍼센트에 억지로 끼웠다.**
+   *    실측(연면적 2,000㎡ — II 연면적이 100(중립)이라 VII-37 단독으로 관측된다):
+   *      0.855  → 0.86   (+0.585%)
+   *      0.845  → 0.85   (+0.592%)
+   *      0.3333 → 0.33   (−0.990%)
+   *      0.125  → 0.13   (**+4.000%**)
+   *      0.004  → 0      (**−100% · 기준시가 0원**)
+   *    방향이 양쪽으로 갈리고, 0.005 미만은 조정률 0이 되어 기준시가가 통째로 0이 됐다.
    */
-  it("0.004 는 범위 안이지만 양자화로 지수 0 이 되어 기준시가 0원이 된다", () => {
-    const r = calcBuildingStandardPrice(withRatio(0.004));
-    expect(r.valuation?.adjustmentRate).toBe(0);
-    expect(r.valuation?.standardPrice).toBe(0);
+
+  /** 연면적 2,000㎡ ⇒ II 연면적 #10 = 100(중립) ⇒ 조정률 = VII-37 단독 */
+  const isolated = (normalUseRatio: number): BuildingStandardPriceInput => ({
+    ...BASE,
+    floorArea: 2000,
+    specialFeatures: { normalUseRatio },
+  });
+
+  it.each([[0.855], [0.845], [0.3333], [0.125], [0.004], [0.999]])(
+    "비율 %s 가 그대로 조정률이 된다",
+    (r) => {
+      expect(calcBuildingStandardPrice(isolated(r)).valuation?.adjustmentRate).toBe(r);
+    },
+  );
+
+  it("0.005 미만도 기준시가가 0이 되지 않는다 — 종전에는 양자화로 0원이었다", () => {
+    const r = calcBuildingStandardPrice(isolated(0.004));
+    expect(r.valuation?.adjustmentRate).toBe(0.004);
+    expect(r.valuation?.standardPrice).toBeGreaterThan(0);
+  });
+
+  it("정수 퍼센트 비율은 종전과 동일 (역방향 가드)", () => {
+    expect(calcBuildingStandardPrice(isolated(0.85)).valuation?.adjustmentRate).toBe(0.85);
+    expect(calcBuildingStandardPrice(isolated(0.3)).valuation?.adjustmentRate).toBe(0.3);
+  });
+
+  it("다른 구분과 곱해질 때도 정확하다 — 500㎡(II #9 = 90) × VII-37 0.855", () => {
+    // 0.9 × 0.855 = 0.7695
+    expect(
+      calcBuildingStandardPrice({ ...BASE, specialFeatures: { normalUseRatio: 0.855 } }).valuation
+        ?.adjustmentRate,
+    ).toBe(0.7695);
   });
 });

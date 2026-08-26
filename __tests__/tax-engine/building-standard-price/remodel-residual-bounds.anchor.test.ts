@@ -12,9 +12,18 @@
  * 잔가율은 **신축가격 대비 잔존 가치의 비율**이므로 정의상 1을 넘을 수 없다.
  * 이 단언은 고시 문언과 무관하게 성립한다.
  *
- * 🟡 **미결(고시 필요)** — 「잔존율 하한에 도달한 뒤에도 할증을 계속 가산하는가」,
- *    즉 할증 배제 규정이 명문으로 있는지는 국세청 「건물 기준시가 계산방법」 고시 본문이 있어야 판정된다.
- *    **고시 본문 미확인** ⇒ 이번 수정은 ① 정의상 상한(≤1) clamp 와 ② 대수선연도 범위 검증까지만 한다.
+ * ✅ **고시 본문 확보(2026-08-26) — 국세청 고시 제2025-39호(2025.12.31. 고시, 2026-01-01 시행)**
+ *    제10조② 각주가 리모델링 잔가율을 **명문 산식**으로 규정한다:
+ *
+ *      Rn(잔존가치율) = 1 − (1−R) × (n − 0.3ⓝ) / N
+ *        R = 최종잔존가치율   N = 대상건물의 내용연수   n = 대상건물의 경과연수
+ *        ⓝ = 리모델링시점의 경과연수. **다만 ⓝ은 항상 N보다 작거나 같고, n − 0.3ⓝ > N 이면 Rn = R**
+ *
+ *    ⇒ 하한(R)은 **합친 값에** 걸린다. 종전 구현은 `max(1 − n·step, R)` 로 **기저에 먼저** 하한을 건 뒤
+ *      할증을 더해, 노후 건물에서 R 이어야 할 구간이 크게 부풀었다.
+ *    산식 독해는 국세청 공식 계산사례로 검증했다 — 통나무조(I·N=50·R=0.10) 신축1996·대수선2008·상속2026
+ *      → 1 − 0.9 × (30 − 0.3×12)/50 = **0.5248**, 저장소 anchor 값과 정확히 일치.
+ *    리모델링 각주는 제10조②**1호(상증)** 표에만 달려 있고 2호(양도) 표에는 없다 ⇒ `isInheritanceGift` 게이트가 맞다.
  *
  * 법령: 「상속세 및 증여세법」 제61조 제1항 제2호 위임 하의 국세청 고시(잔가율·대수선 할증).
  *
@@ -112,5 +121,73 @@ describe("F-06 — §3 역방향 가드 (수정 후에도 불변)", () => {
     });
     expect(withRemodel).toBe(0.2); // I그룹·평가2015 하한 잔존율
     expect(withRemodel).toBe(calcEffectiveResidualRate("I", 1940, 2015));
+  });
+});
+
+describe("F-06 대수선 잔가율 — §4 고시 명문 산식 (수정 전 실패)", () => {
+  /**
+   * 고시 제10조② 각주를 그대로 옮긴 참조 구현. 코드가 이것과 일치해야 한다.
+   * (테스트 안에 두어 「무엇이 정답인지」가 anchor 자체로 읽히게 한다.)
+   */
+  function gosiRn(N: number, R: number, builtYear: number, remodelYear: number, valuationYear: number) {
+    const n = valuationYear - builtYear;
+    const nTilde = Math.min(remodelYear - builtYear, N); // ⓝ은 항상 N보다 작거나 같고
+    // ⚠️ **정수 산술**. `n − 0.3ⓝ` 는 0.1 단위라 Rn×10000 이 정확히 `.5` tie 인 조합이 많고,
+    //    float 로 쓰면 곱셈 결합 순서에 따라 반올림이 임의로 갈린다(유리수 검산으로 확인).
+    //    참조 구현도 정확 산술이어야 anchor 가 정답을 말할 수 있다.
+    const scaledN = 10 * n - 3 * nTilde; // (n − 0.3ⓝ) × 10
+    const scaledD = 10 * N;
+    if (scaledN > scaledD) return R; // n − 0.3ⓝ > N 이면 Rn = R
+    const oneMinusR = 10000 - Math.round(R * 10000);
+    const numer = 10000 * scaledD - oneMinusR * scaledN;
+    return Math.floor((2 * numer + scaledD) / (2 * scaledD)) / 10000; // round-half-up
+  }
+
+  it("국세청 공식 계산사례 재현 — 통나무조 신축1996·대수선2008·평가2026 → 0.5248 (수정 후에도 불변)", () => {
+    expect(gosiRn(50, 0.1, 1996, 2008, 2026)).toBe(0.5248);
+    expect(calcEffectiveResidualRate("I", 1996, 2026, { isInheritanceGift: true, remodelYear: 2008 })).toBe(
+      0.5248,
+    );
+  });
+
+  it("n − 0.3ⓝ > N 이면 Rn = R — IV그룹 신축1960·대수선2026·평가2026 → 0.1 (현재 0.991)", () => {
+    expect(
+      calcEffectiveResidualRate("IV", 1960, 2026, { isInheritanceGift: true, remodelYear: 2026 }),
+    ).toBe(0.1);
+  });
+
+  it("n − 0.3ⓝ > N 이면 Rn = R — IV그룹 신축1980·대수선2026·평가2026 → 0.1 (현재 0.721)", () => {
+    expect(
+      calcEffectiveResidualRate("IV", 1980, 2026, { isInheritanceGift: true, remodelYear: 2026 }),
+    ).toBe(0.1);
+  });
+
+  it("ⓝ ≤ N clamp — 리모델링 경과연수가 내용연수를 넘어도 N 으로 잘린다", () => {
+    // IV(N=20) 신축1930·대수선1997 → ⓝ=67 이지만 N=20 으로 clamp, n=96, adj=96−6=90 > 20 ⇒ R
+    expect(
+      calcEffectiveResidualRate("IV", 1930, 2026, { isInheritanceGift: true, remodelYear: 1997 }),
+    ).toBe(0.1);
+  });
+
+  it("2026 전수 격자에서 코드 === 고시 산식 (현재 15,979건 괴리 · 최대 10배)", () => {
+    const diverged: string[] = [];
+    let cells = 0;
+    for (const [g, N] of [["I", 50], ["II", 40], ["III", 30], ["IV", 20]] as const) {
+      for (let built = 1930; built <= 2026; built += 1) {
+        for (let remodel = built; remodel <= 2026; remodel += 1) {
+          cells += 1;
+          const got = calcEffectiveResidualRate(g, built, 2026, {
+            isInheritanceGift: true,
+            remodelYear: remodel,
+          });
+          const want = gosiRn(N, 0.1, built, remodel, 2026); // 2026 최종잔존가치율 = 전 그룹 10%
+          if (Math.abs(got - want) > 1e-9 && diverged.length < 5) {
+            diverged.push(`${g} 신축${built}/대수선${remodel}: ${got} ≠ ${want}`);
+          }
+        }
+      }
+    }
+    expect(cells).toBe(19012); // 격자 축소 방지 가드
+    expect(diverged).toEqual([]);
   });
 });
