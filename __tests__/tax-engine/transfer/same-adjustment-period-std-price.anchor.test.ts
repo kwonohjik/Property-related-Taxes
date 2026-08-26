@@ -16,7 +16,10 @@ import {
   calcSameAdjustmentPeriodStdPrice,
 } from "../../../lib/tax-engine/same-adjustment-period-std-price";
 
-const D = (s: string) => new Date(`${s}T00:00:00`);
+// UTC 자정 — 프로덕션(`lib/api/date-coerce.ts`의 `toDate`)이 만드는 형태와 같다.
+// 종전 `T00:00:00`(로컬 자정)은 실행 타임존만큼 어긋난 인스턴트라 프로덕션 경로를 태우지 않았고,
+// 그래서 F-11(§164⑧ 보유월수 TZ 의존)에 대한 회귀 신호가 0이었다.
+const D = (s: string) => new Date(s);
 
 describe("SAP — §80⑤ 월수 (초일산입 + 1월 미만 절상)", () => {
   // A-8: 응당일 도달 후 끝수 4일 → 절상. 현행 monthsBetween은 9를 반환(계획 §3-2 실측).

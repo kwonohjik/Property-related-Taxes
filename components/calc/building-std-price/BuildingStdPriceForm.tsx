@@ -24,6 +24,7 @@ import { AdjustmentRateModal } from "./AdjustmentRateModal";
 import { CompositePartsSection } from "./CompositePartsSection";
 import { ApartmentConversionSection } from "./ApartmentConversionSection";
 import { SectionCard } from "./BuildingStdSectionCard";
+import { isSameAdjustmentPeriodConversion } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { BuildingStdValuationSections } from "./BuildingStdValuationSections";
 import {
   type BuildingStdPriceFormState,
@@ -281,9 +282,19 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
   const apartmentConv = f.taxType === "transfer" && f.apartmentConversionMode;
   const composite = f.compositeMode && !isMech && !apartmentConv;
   // 단일 시점 모드 — 모달 applyTimePoint가 폼 상태로 주입. 그 시점 입력만 노출한다.
-  // ⚠️ 동일연도(§164⑧)는 양도값이 취득값에서 파생되므로 2시점 입력을 모두 되살린다
-  //    (엔진·validate와 동일 게이트 — toEngineInput/validateBuildingStdPriceForm 참조).
-  const singleActive = !!f.singleTimePoint && !sameYear && !isMech && !apartmentConv;
+  // ⚠️ §164⑧ 환산 대상이면 양도값이 취득값에서 파생되므로 2시점 입력을 모두 되살린다.
+  //    엔진·④변환·⑧검증과 **같은 leaf**(`isSameAdjustmentPeriodConversion`)를 같은 인자로 쓴다 —
+  //    종전에는 여기만 「연도 동일」이라 연도교차 opt-in 시 취득당시 입력이 숨겨진 채
+  //    §164⑧ 값이 조용히 버려졌다(엔진만 고치면 「취득시: 구조 미선택」 dead-end가 된다).
+  const singleActive =
+    !!f.singleTimePoint &&
+    !isSameAdjustmentPeriodConversion(
+      f.acquisitionYear ? Number(f.acquisitionYear) : undefined,
+      f.transferYear ? Number(f.transferYear) : undefined,
+      f.crossYearSameAdjust,
+    ) &&
+    !isMech &&
+    !apartmentConv;
   const acqOnly = singleActive && f.singleTimePoint === "acquisition";
   const transferOnly = singleActive && f.singleTimePoint === "transfer";
   // 양도 복합 — 취득시 용도지수표 기준 연도(≤2000=2001)

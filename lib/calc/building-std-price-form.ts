@@ -23,7 +23,10 @@ import {
   pickFeatures,
   BUILDING_WIDE_FEATURE_KEYS,
   PART_FEATURE_KEYS,
+  normalUseRatioError,
+  remodelYearError,
 } from "@/lib/tax-engine/data/building-standard-price";
+import { isSameAdjustmentPeriodConversion } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import type { NtsReportContext, NtsPointContext } from "@/lib/calc/nts-report-adapter";
 import type { AddressValue } from "@/components/ui/address-search";
 
@@ -396,15 +399,6 @@ function applyAncillary(base: BuildingStandardPriceInput, f: BuildingStdPriceFor
 
 /** 폼 → 엔진 입력. 모드별로 필요한 필드만 채움(미입력은 검증에서 차단). */
 /**
- * §164⑧ 동일연도 양도 여부 — 취득연도 == 양도연도.
- * 이 경우 양도당시 기준시가가 취득시 기준시가에서 파생되므로(엔진 §164⑧ 환산) 단일 시점 모드를
- * 적용하지 않는다. 엔진 `calcBuildingStandardPrice`와 **동일 판정식** — 여기서 새 규칙을 세우지 않는다.
- */
-function isSameYearTransfer(acqYear: number | undefined, transferYear: number | undefined): boolean {
-  return acqYear !== undefined && acqYear === transferYear;
-}
-
-/**
  * 복원 스냅샷을 **정정 소스로 쓸 수 있는가** — 모달이 `initialForm`에 얹기 전 판정.
  *
  * 같은 키에 두 생산자가 쓴다(B-6). 세 조건은 **각각 다른 위험**을 막는다:
@@ -503,7 +497,7 @@ export function toEngineInput(f: BuildingStdPriceFormState): BuildingStandardPri
   //    복합구조·공동주택 환산·기계식주차는 별도 반환 경로라 종전 흐름을 유지한다.
   if (
     f.singleTimePoint &&
-    !isSameYearTransfer(base.acquisitionYear, base.transferYear) &&
+    !isSameAdjustmentPeriodConversion(base.acquisitionYear, base.transferYear, f.crossYearSameAdjust) &&
     !f.isMechanicalParking &&
     !f.compositeMode &&
     !f.apartmentConversionMode
@@ -561,10 +555,7 @@ export function toEngineInput(f: BuildingStdPriceFormState): BuildingStandardPri
     // 동일조정기간(§164⑧) 환산 — 양도당시 구조·용도·공시지가 불요(취득 기준시가를 환산).
     // 같은 연도는 자동, 연도 교차(취득연도+1년 이내)는 `crossYearSameAdjust` opt-in.
     if (
-      base.acquisitionYear !== undefined &&
-      base.transferYear !== undefined &&
-      (base.acquisitionYear === base.transferYear ||
-        (f.crossYearSameAdjust && base.transferYear <= base.acquisitionYear + 1))
+      isSameAdjustmentPeriodConversion(base.acquisitionYear, base.transferYear, f.crossYearSameAdjust)
     ) {
       base.holdingMonths = intOrUndef(f.holdingMonths);
       base.adjustMonths = intOrUndef(f.adjustMonths);
@@ -644,6 +635,14 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
     return "신축연도를 입력하세요.";
   }
 
+  // VII-37 정상사용면적비율 — 엔진(`selectSpecialAdjustment`)과 **같은 술어를 같은 인자로** 부른다.
+  // 아래 모드별 early return 들보다 앞에 두어야 전 경로(단일·복합·부분)를 덮는다.
+  // normalUseRatio 는 PART_FEATURE_KEYS 라 폼 전역(adjustmentFeatures)과 부분(specialFeatures) 양쪽에 올 수 있다.
+  for (const feats of [f.adjustmentFeatures, ...f.compositeParts.map((p) => p.specialFeatures)]) {
+    const ratioError = normalUseRatioError(feats?.normalUseRatio);
+    if (ratioError) return ratioError;
+  }
+
   // 복합구조(부분별 면적)·공동주택 환산(자체 연면적)은 건물 연면적 불요
   const skipFloorArea =
     f.compositeMode || (f.taxType === "transfer" && f.apartmentConversionMode);
@@ -658,6 +657,12 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
   if (f.taxType === "inheritance_gift") {
     const y = intOrUndef(f.valuationYear);
     if (y === undefined) return "상속·증여일을 입력하세요.";
+
+    // 대수선(리모델링)연도 — 엔진(`calcEffectiveResidualRate`)과 **같은 술어를 같은 인자로** 부른다.
+    // 잔가율 할증은 상증에만 적용되므로 이 분기에 둔다.
+    const remodelErr = remodelYearError(intOrUndef(f.remodelYear), builtYear, y);
+    if (remodelErr) return remodelErr;
+
     if (f.isMechanicalParking) {
       if (resolveMechParkingFormula(y) === undefined) return `${y}년 기계식주차 단가 자료가 없습니다.`;
       return null;
@@ -726,7 +731,7 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
   // 단일 시점 모드 — 그 시점 필드만 검증한다(반대 시점은 폼에서도 숨겨져 입력 경로가 없다).
   // 동일연도(§164⑧)는 취득값이 양도값의 소스라 예외 없이 아래 2시점 검증을 그대로 적용한다.
   // (복합·공동주택 환산은 위에서 이미 return — 여기 도달하지 않는다.)
-  if (f.singleTimePoint && !isSameYearTransfer(acqY, transY) && !f.isMechanicalParking) {
+  if (f.singleTimePoint && !isSameAdjustmentPeriodConversion(acqY, transY, f.crossYearSameAdjust) && !f.isMechanicalParking) {
     if (f.singleTimePoint === "acquisition") {
       if (acqY === undefined) return "취득연도를 선택하세요.";
       // 취득 ≤2000은 2001년 지수표(산정기준율 환산)라 해당연도 지수 자료를 요구하지 않는다.

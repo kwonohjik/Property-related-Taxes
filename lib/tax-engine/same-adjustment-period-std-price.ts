@@ -44,6 +44,31 @@ export type SameAdjustmentPeriodClass =
   | "not_applicable";
 
 /**
+ * §164⑧ 동일조정기간 환산의 **연도 축** 판정 — 엔진·④변환·⑧검증·UI 의 **단일 술어**.
+ *
+ * 「소득세법 시행규칙」 제80조 제1항 제1호 본문은 "취득일이 속하는 연도의 **다음 연도 말일이전**에
+ * 양도하는 경우"라 연도가 달라도 성립한다. 그런데 종전에는 이 넓은 축이 엔진의 §164⑧ 진입 조건
+ * 한 곳에만 있고, 그보다 위의 단일시점 우회 가드 3곳(엔진·toEngineInput·validate)과 UI 게이트는
+ * 「연도 동일」만 예외로 둬서, 연도교차 opt-in 을 켜고 값을 채워도 그 필드가 조용히 버려졌다.
+ *
+ * ⚠️ 인자는 **사실만** 받는다. `optIn` 은 「연도교차 §164⑧ 환산을 적용하기로 했는가」이며
+ *    폼은 `crossYearSameAdjust`, 엔진은 `holdingMonths !== undefined`(폼이 opt-in 일 때만 싣는다)로
+ *    같은 사실을 전달한다 — 호출부마다 다른 뜻을 넣으면 「술어 공유 ≠ 단일 소스」가 된다.
+ *
+ * 동일연도는 연 1회 고시 전제상 같은 고시분이 사실상 확정되므로 opt-in 없이 자동 적용된다.
+ */
+export function isSameAdjustmentPeriodConversion(
+  acquisitionYear: number | undefined,
+  transferYear: number | undefined,
+  optIn: boolean,
+): boolean {
+  if (acquisitionYear === undefined || transferYear === undefined) return false;
+  if (acquisitionYear === transferYear) return true;
+  // 하한(양도 ≥ 취득)도 함께 본다 — 상한만 보던 종전 축은 역순 연도(양도 < 취득)를 통과시켰다.
+  return optIn && transferYear > acquisitionYear && transferYear <= acquisitionYear + 1;
+}
+
+/**
  * 「기준시가 조정월수·보유기간 월수」 — 시행규칙 §80⑤ + 예규(재산 46014-205, 2002.12.18.).
  *
  * §80⑤ *"1월미만의 일수는 1월로 한다"* → 끝수를 **절상**한다.
@@ -62,25 +87,39 @@ export function calcStdPriceMonths(from: Date, to: Date): number {
   if (!(to instanceof Date) || Number.isNaN(to.getTime())) return 0;
   if (to.getTime() <= from.getTime()) return 0;
 
+  // ⚠️ **UTC 컴포넌트로만 계산한다.** 프로덕션이 넘기는 Date 는 UTC 자정이다
+  //    (`lib/api/date-coerce.ts` → `new Date("2005-07-01")` — date-only ISO 는 UTC 로 파싱된다).
+  //    로컬 컴포넌트로 만료일을 만들면 그 인스턴트가 오프셋만큼 어긋나, 잔여 일수가 0인 만월 구간에도
+  //    §80⑤ 절상이 발동해 N개월이 N+1 로 나온다(TZ=Asia/Seoul 실측: 6→7 · 12→13 · 1→2).
+  //    시행규칙 §80⑤의 절상 대상은 「1월미만의 **일수**」이므로 잔여 0에는 발동할 수 없다.
+  //    선례: `comprehensive-tax-helpers.ts`의 `fullYearsUTC`.
+  const fromDay = from.getUTCDate();
+
   // 만 `m`개월이 되는 날 = 초일산입 기산일의 응당일 **전일**(민법 §160②).
   // 최종 월에 해당일이 없으면 그 월의 **말일**로 만료한다(§160③) — 1/31 + 1월 = 2/28.
-  const expiryOf = (m: number): Date => {
-    const index = from.getMonth() + m;
-    const year = from.getFullYear() + Math.floor(index / 12);
+  const expiryOf = (m: number): number => {
+    const index = from.getUTCMonth() + m;
+    const year = from.getUTCFullYear() + Math.floor(index / 12);
     const month = ((index % 12) + 12) % 12;
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    return from.getDate() > lastDay
-      ? new Date(year, month, lastDay) // §160③ 해당일 없음 → 말일이 만료일
-      : new Date(year, month, from.getDate() - 1); // §160② 응당일 전일
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    return fromDay > lastDay
+      ? Date.UTC(year, month, lastDay) // §160③ 해당일 없음 → 말일이 만료일
+      : Date.UTC(year, month, fromDay - 1); // §160② 응당일 전일
   };
+
+  // 비교 기준도 UTC 달력 날짜로 맞춘다 — 시각이 섞이면 다시 오프셋만큼 어긋난다.
+  const toDay = Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate());
 
   // 완전히 경과한 개월 수 = expiry(m) ≤ 양도일을 만족하는 최대 m.
   // expiry(0) = 취득일 전일이라 항상 성립하므로 루프는 반드시 종료한다.
-  let months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth()) + 1;
-  while (months > 0 && expiryOf(months).getTime() > to.getTime()) months -= 1;
+  let months =
+    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 +
+    (to.getUTCMonth() - from.getUTCMonth()) +
+    1;
+  while (months > 0 && expiryOf(months) > toDay) months -= 1;
 
   // 만료일을 넘겨 남은 일수가 있으면 §80⑤로 1월 절상. 전체가 1월 미만이어도 1월.
-  const hasRemainder = to.getTime() > expiryOf(months).getTime();
+  const hasRemainder = toDay > expiryOf(months);
   return Math.max(months + (hasRemainder ? 1 : 0), 1);
 }
 

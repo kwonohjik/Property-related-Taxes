@@ -94,8 +94,13 @@ function buildPnu(legalDongCode: string, jibun: string): string | null {
   const parts = jibun.trim().split(/\s+/);
   let token = parts[parts.length - 1] ?? "";
   // 대지구분: 1 = 대지(일반토지), 2 = 산(임야)
+  // Vworld `address.parcel`은 산번지를 「… 행현리 산 100」처럼 **공백을 넣어** 주는 표기와
+  // 「산100」 붙임 표기가 모두 온다. 마지막 토큰만 보면 앞의 표기에서 판정이 실패해
+  // 대지구분이 "1"로 남고, 19자리 형식검증을 통과한 채 **같은 본번의 대지 필지**가 조회된다.
+  // 직전 토큰이 정확히 "산"인 경우만 본다 — 「산성동」·「산북면」 같은 지명은 걸리지 않는다.
   let landType = "1";
   if (token.startsWith("산")) { landType = "2"; token = token.slice(1); }
+  else if (parts[parts.length - 2] === "산") { landType = "2"; }
   const [mainStr, subStr] = token.split("-");
   const mainNum = parseInt(mainStr ?? "0", 10);
   const subNum  = parseInt(subStr  ?? "0", 10);

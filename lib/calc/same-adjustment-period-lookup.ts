@@ -46,7 +46,9 @@ export function priorNoticeYearFor(acquisitionDate: string): number {
 /** "YYYYMMDD" → Date. 형식이 아니면 null */
 function parseCompactDate(v: string | undefined): Date | null {
   if (!v || !/^\d{8}$/.test(v)) return null;
-  const d = new Date(`${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)}T00:00:00`);
+  // UTC 자정 — `calcStdPriceMonths`가 UTC 달력 날짜를 읽으므로 로컬 자정(`T00:00:00`)을 쓰면
+  // 실행 타임존만큼 어긋나 조정월수가 1월 절상된다.
+  const d = new Date(`${v.slice(0, 4)}-${v.slice(4, 6)}-${v.slice(6, 8)}`);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
@@ -82,7 +84,9 @@ export function deriveAdjustmentMonths(
 
   // 가목: 전기 결정일 → 취득 결정일 전일 / 나목: 취득 결정일 → 새 결정일 전일
   const [from, toExclusive] = formula === "prev" ? [other, acq] : [acq, other];
-  const to = new Date(toExclusive.getFullYear(), toExclusive.getMonth(), toExclusive.getDate() - 1);
+  const to = new Date(
+    Date.UTC(toExclusive.getUTCFullYear(), toExclusive.getUTCMonth(), toExclusive.getUTCDate() - 1),
+  );
   const months = calcStdPriceMonths(from, to);
   return { months: months > 0 ? months : null, reason: months > 0 ? undefined : "missing_notice_date" };
 }

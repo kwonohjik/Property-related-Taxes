@@ -7,6 +7,7 @@
 export const runtime = "nodejs"; // fs·zlib — 형제 라우트 building-standard-price-etax/route.ts:9 선례
 
 import { NextRequest, NextResponse } from "next/server";
+import { expandSigunguAliases } from "@/lib/geo/sigungu-code-alias";
 import { loadManifest, loadPartition } from "@/lib/stdprice/load-partition";
 import {
   BUILDING_KIND_LABEL,
@@ -86,6 +87,17 @@ export async function GET(
 
   const bjdCode = pnu.slice(0, 10);
   const sigungu = bjdCode.slice(0, 5);
+  // 국세청 원본은 **고시 당시** 법정동코드, 주소검색 PNU 는 **현행** 코드다. 시군구 개편
+  // (전남광주통합·전북특자도 등)이 있으면 원시 5자리 비교로는 조인이 성립하지 않는다.
+  // ⇒ 현행·구 코드 후보를 모두 대조하고, **manifest 가 매칭한 그 코드로** 파티션을 읽는다
+  //    (manifest 만 고치면 partition_missing 으로 바뀔 뿐 조회는 여전히 실패한다).
+  //    형제 모듈 `regulated-areas`·`population-decline-areas` 가 쓰는 것과 같은 헬퍼다.
+  const sigunguCandidates = expandSigunguAliases(bjdCode);
+  const candidates = sigunguCandidates.length > 0 ? sigunguCandidates : [sigungu];
+  const matchSigungu = (n: { sigungus: readonly string[] } | undefined): string | undefined =>
+    n ? candidates.find((c) => n.sigungus.includes(c)) : undefined;
+  /** 법정동 10자리 후보 — 시군구 5자리만 치환하고 읍면동 5자리는 보존한다 */
+  const bjdCandidates = candidates.map((c) => c + bjdCode.slice(5));
   const specialLot = pnuSpecialLotCode(pnu);
   const bonbun = Number.parseInt(pnu.slice(11, 15), 10);
   const bubun = Number.parseInt(pnu.slice(15, 19), 10);
@@ -109,7 +121,7 @@ export async function GET(
 
   const noticeByDate = new Map(manifest.notices.map((n) => [n.date, n]));
   const availableDates = manifest.notices
-    .filter((n) => n.coverage === "full" && n.sigungus.includes(sigungu))
+    .filter((n) => n.coverage === "full" && matchSigungu(n) !== undefined)
     .map((n) => n.date)
     .sort();
 
@@ -121,7 +133,7 @@ export async function GET(
       dateStatus: Object.fromEntries(
         dates.map((d) => [
           d,
-          noticeByDate.get(d)?.sigungus.includes(sigungu) ? "unit_not_found" : "no_notice",
+          matchSigungu(noticeByDate.get(d)) !== undefined ? "unit_not_found" : "no_notice",
         ]),
       ),
       units: [],
@@ -134,14 +146,15 @@ export async function GET(
 
   for (const date of dates) {
     const notice = noticeByDate.get(date);
-    if (!notice || !notice.sigungus.includes(sigungu)) {
+    const matchedSigungu = matchSigungu(notice);
+    if (!notice || matchedSigungu === undefined) {
       dateStatus[date] = "no_notice";
       continue;
     }
 
     let partition: StdPriceUnit[] | null;
     try {
-      partition = await loadPartition(sigungu, date);
+      partition = await loadPartition(matchedSigungu, date);
     } catch (err) {
       console.error("[commercial-stdprice]", err);
       partition = null;
@@ -153,7 +166,11 @@ export async function GET(
 
     // strict-match-or-null — 4요소 전부 일치하는 행만. 부분 일치·임의 fallback 금지(불변식 1)
     const matched = partition.filter(
-      (u) => u.b === bjdCode && u.s === specialLot && u.bn === bonbun && u.jn === bubun,
+      // 필지 단위 조인도 **시군구 5자리만** 별칭 정규화한다. 읍면동 뒤 5자리는 그대로 비교하므로
+      // 과잉 매칭이 생기지 않는다(개편 시 읍면동 코드까지 재부여됐는지는 원본 미확보로 미확인 —
+      // 그 경우 이 조인은 여전히 실패하고 dateStatus 가 unit_not_found 로 남는다).
+      (u) =>
+        bjdCandidates.includes(u.b) && u.s === specialLot && u.bn === bonbun && u.jn === bubun,
     );
     matchedByDate.set(date, matched);
     if (matched.length === 0) dateStatus[date] = "unit_not_found";

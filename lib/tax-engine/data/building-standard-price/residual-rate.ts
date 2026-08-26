@@ -110,6 +110,30 @@ export function calcResidualRateByDurable(
 }
 
 /**
+ * 대수선(리모델링) 연도 범위 검증 — **엔진과 ⑧ validation 의 단일 술어**.
+ *
+ * 같은 도메인의 `builtYear` 는 1900~MAX_YEAR 로 검증되는데 `remodelYear` 는 어디서도 검증되지 않아,
+ * 평가연도보다 뒤인 대수선(미래)이나 신축연도보다 앞선 대수선(모순)이 조용히 통과한다.
+ * 실측(2026-08-26): 대수선 3000 입력이 잔가율 14.41 · 기준시가 146배로 산출됐다.
+ *
+ * @returns 오류 메시지(있으면) 또는 null
+ */
+export function remodelYearError(
+  remodelYear: number | undefined,
+  builtYear: number,
+  valuationYear: number,
+): string | null {
+  if (remodelYear === undefined) return null;
+  if (!Number.isInteger(remodelYear) || remodelYear < builtYear) {
+    return `대수선(리모델링)연도는 신축연도(${builtYear}) 이후여야 합니다.`;
+  }
+  if (remodelYear > valuationYear) {
+    return `대수선(리모델링)연도는 평가연도(${valuationYear})보다 뒤일 수 없습니다.`;
+  }
+  return null;
+}
+
+/**
  * 경과연수별 잔가율 계산(그룹 레터 기준). 평가연도로 내용연수·잔존율 결정.
  * @param group         잔가율 그룹 레터(멤버십 resolver 결과 — 시대별 구조→그룹)
  * @param elapsedYears  경과연수(음수 방어 — 0 클램프)

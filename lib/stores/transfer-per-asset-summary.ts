@@ -303,8 +303,10 @@ function previewStdPriceAtTransfer(a: AssetForm, transferDate: string | undefine
   const sap = buildSameAdjustmentPeriodInput(a);
   if (!sap || !transferDate || !a.acquisitionDate) return raw;
 
-  const acqDate = new Date(`${a.acquisitionDate}T00:00:00`);
-  const tsfDate = new Date(`${transferDate}T00:00:00`);
+  // `T00:00:00`(로컬 자정) 대신 date-only ISO(UTC 자정)로 만든다 — 엔진(`toDate`)과 같은 규약이라야
+  // 사이드바 보유월수와 §164⑧ 엔진 보유월수가 갈리지 않는다(`calcStdPriceMonths`는 UTC 달력 날짜를 읽는다).
+  const acqDate = new Date(a.acquisitionDate);
+  const tsfDate = new Date(transferDate);
   const acq = parseRaw(a.standardPriceAtAcq);
   if (classifySameAdjustmentPeriod({
     standardPriceAtAcquisition: acq,
