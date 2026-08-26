@@ -247,7 +247,7 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   }
 
   // ── 환산 모드 검증 ──
-  // 사례 39 — 단독주택 출자 §164⑤ PHD 2-point: housing + right + receive + useEstimated 조합 시 전용 검증
+  // 사례 39 — 단독주택 출자 §166③ 2-point: housing + right + receive + useEstimated 조합 시 전용 검증
   // 3중 패턴(UI/API/validate) 동기화 (memory `feedback_validation_sync_8th_point`)
   // 네 지점(⑤ UI · ⑧ validate · ⑫ Zod · 엔진 dispatch) 공용 leaf — 복제 금지 (E1-04).
   const isHousingRightReceiveEstimated = isHousingContribEstimatedAxes({
@@ -258,15 +258,15 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   });
 
   if (isHousingRightReceiveEstimated) {
-    // §164⑤ 분자·분모 모두 필수 (미입력 → 자동 안분 fallback 금지)
+    // §166③ 분자·분모 모두 필수 (미입력 → 자동 안분 fallback 금지)
     if (parseAmount(asset.redevHousingStdPriceAtAcq) <= 0) {
-      return `${label}: 단독주택 출자 환산취득가 — 취득당시 개별주택가격을 입력하세요. (§164⑤ 분자)`;
+      return `${label}: 단독주택 출자 환산취득가 — 취득당시 개별주택가격을 입력하세요. (§166③ 분자)`;
     }
     if (parseAmount(asset.redevHousingStdPriceAtApproval) <= 0) {
-      return `${label}: 단독주택 출자 환산취득가 — 인가당시 개별주택가격을 입력하세요. (§164⑤ 분모)`;
+      return `${label}: 단독주택 출자 환산취득가 — 인가당시 개별주택가격을 입력하세요. (§166③ 분모)`;
     }
     // housing+right+receive+estimated 분기는 일반 D(managementDisposalHousingPrice) 검증 skip
-    // (§166③ 분모 구조가 다름 — §164⑤ PHD 산식 별도 적용)
+    // (§166③ 분모 구조가 다름 — §166③ 산식 별도 적용)
   } else if (asset.useEstimatedAcquisition) {
     // 일반 환산 모드 — D(관리처분 라목값) 필수
     if (parseAmount(asset.redevManagementDisposalHousingPrice) <= 0) {
@@ -322,7 +322,7 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     return `${label}: A 또는 PHD 단가를 입력하셨다면 최초공시일도 입력하세요. (§164⑦ 본문 트리거)`;
   }
 
-  // ── 사례 45 — 거주월수 분리 검증 (§155⑰ + 해석례 2020-386) ──
+  // ── 사례 45 — 거주월수 분리 검증 (§154⑧1호 + 해석례 2020-386) ──
   // 가시성: UI 에서 1세대1주택 + householdHousingCount === 1 일 때만 노출.
   // 빈문자열은 허용 (legacy fallback). 음수만 reject.
   // 3중 패턴: UI hide ↔ API undefined ↔ validate undefined-허용 (모순 차단).

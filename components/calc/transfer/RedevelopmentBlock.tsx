@@ -187,7 +187,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
               /**
                * U1-01 — 「수령」에서만 뜨는 ③-c 자기선언을 **같은 배치**로 함께 비운다.
                * 방향만 patch하면 카드가 사라지면서 `"no"`가 남고, 완공APT에는 그 값을
-               * 지울 다른 위젯이 없어 LTHD가 표1로 강등된 채 고정된다(§95② 별표2).
+               * 지울 다른 위젯이 없어 LTHD가 표1로 강등된 채 고정된다(§95② 표1·표2).
                * ⚠️ 두 키를 따로 patch하면 stale spread로 뒤엣것이 앞엣것을 덮는다
                *    (memory `feedback_multikey_patch_stale_spread_overwrite`).
                */
@@ -417,7 +417,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
               />
             </FieldCard>
           ) : isHousingContribEstimatedBranch(asset) ? (
-            /* 단독주택 출자 §164⑤ PHD 2-point 전용 입력 (사례 39) */
+            /* 단독주택 출자 §166③ 2-point 전용 입력 (사례 39) */
             <HousingContribEstimatedSection asset={asset} onChange={onChange} />
           ) : (
             /* 일반 환산 (§166③ + §164⑦ PHD 패턴). 게이트는 `shouldShowRedevValuationSection`

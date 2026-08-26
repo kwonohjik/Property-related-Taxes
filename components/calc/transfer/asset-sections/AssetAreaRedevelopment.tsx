@@ -96,7 +96,7 @@ export function isRedevAreaAsset(asset: AssetForm): boolean {
  *
  * `RedevelopmentBlock`의 ⑥ rose 카드 게이트를 그대로 추출한 것이다:
  *  - 승계조합원(`redevIsSuccessorMember === "yes"`)은 본 경로 미지원 → 숨김
- *  - 단독주택 출자 §164⑤ 분기(housing + right + receive + estimated)는 전용
+ *  - 단독주택 출자 §166③ 분기(housing + right + receive + estimated)는 전용
  *    ⑤-a 카드(`HousingContribEstimatedSection`)를 쓰므로 일반 환산 카드를 숨김
  *
  * ⚠️ 이 술어를 복제하지 말 것 — 면적 입력(①)과 섹션 렌더(③)가 갈리면 사용자가
@@ -108,7 +108,7 @@ export function shouldShowRedevValuationSection(asset: AssetForm): boolean {
 }
 
 /**
- * 단독주택 출자 §164⑤ PHD 2-point 분기 — 일반 환산 카드 대신 전용 카드
+ * 단독주택 출자 §166③ 2-point 분기 — 일반 환산 카드 대신 전용 카드
  * (`HousingContribEstimatedSection`)를 쓰는 조합.
  *
  * `shouldShowRedevValuationSection`과 취득가액 모드 라디오(`RedevelopmentBlock` ⑤)가

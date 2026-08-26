@@ -1,0 +1,167 @@
+/**
+ * 재개발 축 **법령 인용 리터럴 전수 감사** anchor (L1-01·02·04·05·06·07)
+ *
+ * ## 왜 파일을 훑는가 — 인용은 타입이 없다
+ *
+ * 조문 인용은 **문자열**이라 틀려도 컴파일·테스트가 아무것도 말해주지 않는다.
+ * 그래서 하나가 복제되면 30여 곳으로 번지고, 그중 일부는 결과 배지·신고서·상세명세서
+ * **PDF로 인쇄**되어 사용자가 법제처에서 찾을 수 없는 근거를 보게 된다.
+ * 개별 문자열을 고치는 것만으로는 재발을 막지 못하므로 **리터럴 자체를 검사 대상**으로 삼는다
+ * (`sigungu-code-literal-audit.anchor.test.ts`와 같은 형태).
+ *
+ * ## 2026-08-26 법제처 본문 실독으로 확정한 정본
+ *
+ * 소득세법 MST 280405(시행 2026-07-01) · 소득세법 시행령 MST 286211(시행 2026-07-01).
+ *
+ * | 틀린 인용 | 실측 | 정본 |
+ * |---|---|---|
+ * | 「§95② 별표2 [비고] 1호」 | §95②의 표는 **조문 본문 안**의 「다음 표 1」·「다음 표 2」다. 소득세법에 별표2는 없다 | **§95② 본문 괄호** — 「조합원입주권을 양도하는 경우에는 … 인가 전 토지분 또는 건물분의 양도차익으로 한정한다」 |
+ * | 「§95② 별표2」(표1·표2 지칭) | 같은 이유 | **§95② 표1·표2** |
+ * | 「§89①4호 **가목** 단서」 | 가목은 「양도일 현재 다른 주택 또는 분양권을 보유하지 아니할 것」 **한 문장**이고 단서가 없다. §95③이 「같은 항 제4호 **각 목 외의 부분 단서**」라고 지목한다 | **§89①4호 각 목 외의 부분 단서** |
+ * | 「§164⑤」(재개발 단독주택 출자 환산) | §164⑤은 「최초로 고시한 기준시가 × 국세청장이 고시한 **기준율**」이라 2-point 비율 구조가 아니다 | **시행령 §166③** — 「평가액 × 취득일 현재 기준시가 ÷ 관리처분계획등 인가일 현재 기준시가」 |
+ * | 「시행령 §155⑰」 | 현행 §155의 그 항은 **삭제**다(⑯ 수도권 이전 → **삭제** → ⑱ §89①4호나목 사유) | **시행령 §154⑧1호** — 「멸실되어 재건축한 주택 … 거주기간 및 보유기간」 |
+ * | 「§94①2호」 = 기타자산 | §94①2호는 「부동산에 관한 권리」(가·나·다목)이고 **기타자산은 §94①4호**다 | 조합원입주권 = **§94①2호 가목** |
+ * | 「§94①2호의2」 | §94①에는 1~6호뿐이고 2호에는 가·나·다목만 있다 | **§94①2호 가목** |
+ *
+ * ⚠️ **§164⑤ 자체는 정당한 인용이다** — 개별주택가격 미공시 취득 환산(PHD)·상속주택 §163⑨2호
+ *    경로가 진짜 §164⑤이다. 금지하는 것은 **재개발 단독주택 출자 축**의 오인용뿐이라
+ *    아래 규칙이 파일 목록으로 범위를 좁힌다.
+ */
+import { describe, it, expect } from "vitest";
+import * as fs from "node:fs";
+import * as path from "node:path";
+
+const ROOT = process.cwd();
+const SCAN_DIRS = ["lib", "components", "app", "__tests__"];
+const EXTS = new Set([".ts", ".tsx"]);
+/** 이 파일 자신은 금지 리터럴을 표로 담고 있으므로 제외한다. */
+const SELF = "__tests__/tax-engine/transfer/redev-citation-literal-audit.anchor.test.ts";
+
+function walk(dir: string, out: string[] = []): string[] {
+  for (const entry of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+    const rel = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+      walk(rel, out);
+    } else if (EXTS.has(path.extname(entry.name)) && rel !== SELF) {
+      out.push(rel);
+    }
+  }
+  return out;
+}
+
+const FILES = SCAN_DIRS.flatMap((d) => walk(d));
+
+interface Rule {
+  id: string;
+  /** 위반 판정 — 한 줄을 받아 true면 위반 */
+  hit: (line: string) => boolean;
+  /** 검사 대상 파일 한정 (없으면 전체) */
+  files?: (rel: string) => boolean;
+  correct: string;
+}
+
+/**
+ * §164⑤이 **재개발 맥락**에서 쓰였는가 — 같은 줄의 표지어로 판정한다.
+ *
+ * 파일명으로 가르면 `calc-wizard-asset-factory.ts`처럼 축이 섞인 파일을 놓친다.
+ * 반대로 §164⑤ 전체를 금지하면 개별주택가격 미공시(PHD·§164⑦)·상속주택 §163⑨2호 경로의
+ * **정당한 인용**까지 잡는다. 그래서 재개발에서만 쓰이는 낱말을 표지어로 삼는다.
+ *
+ * ⚠️ 「Sum_A 분자」·「Sum_F 분모」는 §164⑤ **본래** 산식의 항이라 표지어가 아니다
+ *    (`분자 —`/`분모 —` 형태만 재개발 2-point 인용이다).
+ */
+// ⚠️ 「인가」 단독은 표지어로 쓸 수 없다 — 「트랙**인가**」 같은 어미가 걸린다(실측 오탐 1건).
+const REDEV_CONTEXT =
+  /권리가액|출자|관리처분|인가일|인가당시|인가전|인가후|2-point|사례 3[6-9]|사례 4[0-8]|분자 —|분모 —/;
+
+const RULES: Rule[] = [
+  {
+    id: "L1-01a 별표2 [비고] 1호",
+    hit: (l) => /별표\s*2\s*\[비고\]/.test(l),
+    correct: "「소득세법 §95② 본문 괄호」 — 소득세법에 별표2는 존재하지 않는다",
+  },
+  {
+    id: "L1-01b §95 + 별표2",
+    hit: (l) => /별표\s*2/.test(l) && /§?\s*95/.test(l),
+    correct: "「소득세법 §95② 표1·표2」 — 표는 조문 본문 안에 있다",
+  },
+  {
+    id: "L1-02 §89①4호 가목 단서",
+    hit: (l) => /4호\s*가목\s*단서/.test(l),
+    correct: "「§89①4호 각 목 외의 부분 단서」 — 가목에는 단서가 없다(§95③이 그렇게 지목한다)",
+  },
+  {
+    id: "L1-04 재개발 환산을 §164⑤로 인용",
+    // §164⑦과 함께 나열된 줄은 「최초공시 전 단서 → §164⑤ 준용」이라 정당하다.
+    hit: (l) => /§?\s*164\s*⑤/.test(l) && REDEV_CONTEXT.test(l) && !/164\s*⑦/.test(l),
+    correct: "「소득세법 시행령 §166③」 — §164⑤은 기준율 산식이라 2-point 비율이 아니다",
+  },
+  {
+    id: "L1-05 삭제된 시행령 §155⑰",
+    hit: (l) => /§?\s*155\s*⑰/.test(l),
+    correct: "「소득세법 시행령 §154⑧1호」 — §155⑰은 삭제됐다",
+  },
+  {
+    id: "L1-06 §94①2호를 기타자산이라 표시",
+    hit: (l) => /94\s*①\s*2호/.test(l) && /기타자산/.test(l),
+    correct: "기타자산은 §94①4호다. 조합원입주권·분양권은 §94①2호 **가목**",
+  },
+  {
+    // ⚠️ 「2호의2」 자체는 금지어가 아니다 — 시행령 §167의3①2호의2(인구감소지역) 등
+    //    다른 조문에는 실재한다. **§94①의** 2호의2만 존재하지 않는다.
+    id: "L1-07 존재하지 않는 §94①2호의2",
+    hit: (l) => /94\s*①?\s*2호의2/.test(l),
+    correct: "「§94①2호 가목」 — §94①에는 1~6호뿐이다",
+  },
+];
+
+interface Violation {
+  rule: string;
+  where: string;
+  line: string;
+  correct: string;
+}
+
+const violations: Violation[] = [];
+for (const rel of FILES) {
+  const src = fs.readFileSync(path.join(ROOT, rel), "utf8").split("\n");
+  for (const rule of RULES) {
+    if (rule.files && !rule.files(rel)) continue;
+    src.forEach((line, i) => {
+      if (rule.hit(line)) {
+        violations.push({
+          rule: rule.id,
+          where: `${rel}:${i + 1}`,
+          line: line.trim().slice(0, 120),
+          correct: rule.correct,
+        });
+      }
+    });
+  }
+}
+
+function report(ruleId: string): string {
+  const hits = violations.filter((v) => v.rule === ruleId);
+  if (hits.length === 0) return "";
+  const correct = hits[0].correct;
+  return (
+    `\n[${ruleId}] ${hits.length}건 — 정본: ${correct}\n` +
+    hits.map((v) => `  ${v.where}\n    ${v.line}`).join("\n")
+  );
+}
+
+describe("재개발 축 법령 인용 리터럴 감사 — 허구·오기 인용 0건", () => {
+  for (const rule of RULES) {
+    it(`AUDIT [${rule.id}] — 위반 0건`, () => {
+      const hits = violations.filter((v) => v.rule === rule.id);
+      expect(hits.length, report(rule.id)).toBe(0);
+    });
+  }
+
+  it("AUDIT-0: 스캔이 실제로 파일을 읽었다 (규칙이 조용히 0건이 되는 것을 막는다)", () => {
+    // 규칙이 전부 통과했을 때 「고쳐서 0」인지 「아무것도 안 읽어서 0」인지 구별한다.
+    expect(FILES.length).toBeGreaterThan(1000);
+    expect(FILES.some((f) => f.includes("legal-codes"))).toBe(true);
+  });
+});

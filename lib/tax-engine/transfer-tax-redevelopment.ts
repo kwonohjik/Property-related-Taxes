@@ -246,7 +246,7 @@ export function calculateRedevelopmentTax(
   // 트리거: subject="right" + exemptionEligibleAtApproval=true + householdHousingCount=0
   //         + householdRightCount=1 + isOneHousehold=true
   // - 12억 이하: 전액 비과세 (3분기 gain/lthd 모두 0 → 산출세액 0)
-  // - 12억 초과: §89①4호 가목 단서 안분 (taxableRatio 적용 후 비과세분 마스킹)
+  // - 12억 초과: §89①4호 각 목 외의 부분 단서 안분 (taxableRatio 적용 후 비과세분 마스킹)
   // subject="right" 가드 — 사례 44~48 (apt) 경로 영향 0 (회귀 안전)
   const redevAfterRightRaw: RedevelopmentResult = applyOneRightExemption(
     redev,
@@ -323,7 +323,7 @@ export function calculateRedevelopmentTax(
     const ha = redevAfterRight.highValueAllocation;
     steps.push({
       label: "1세대1입주권 12억 초과 과세대상 양도차익 안분",
-      formula: `§89①4호 가목 단서 + §95③ — 전체 양도차익 ${redev.total.gain.toLocaleString()} × (양도가액 ${input.transferPrice.toLocaleString()} - 12억) / 양도가액 = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
+      formula: `§89①4호 각 목 외의 부분 단서 + §95③ — 전체 양도차익 ${redev.total.gain.toLocaleString()} × (양도가액 ${input.transferPrice.toLocaleString()} - 12억) / 양도가액 = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
       amount: ha.taxableGain,
       legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
     });

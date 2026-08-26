@@ -8,7 +8,7 @@
  *   - 소득세법 §166①2호 나목: 인가전 양도차익 = (권리가액 − 환산 − 개산공제) × salePriceTotal / 권리가액
  *   - 소득세법 §166①2호 가목: 인가후 양도차익 = 양도가액 − salePriceTotal − 인가후필요경비
  *   - 소득세법 §166⑤1호  : LTHD 보유기간 = 취득일 ~ 관리처분 인가일
- *   - 소득세법 §95② 별표2 [비고] 1호: 인가후 분 LTHD = 0 (입주권 §94①2호 자산)
+ *   - 소득세법 §95② 본문 괄호: 인가후 분 LTHD = 0 (입주권 §94①2호 자산)
  *   - 소득세법 §55 (2023) + 지방세법 §103조의3
  *
  * 입력:
@@ -177,7 +177,7 @@ describe("C39 Pure — calcRedevHousingContribReceiveEstimated 단위 검증", (
     expect(result.preApprovalLTHD).toBe(9_700_000);
   });
 
-  it("[C39-9-pure] postApprovalLTHD = 0 (§95② 별표2 [비고] 1호)", () => {
+  it("[C39-9-pure] postApprovalLTHD = 0 (§95② 본문 괄호)", () => {
     expect(result.postApprovalLTHD).toBe(0);
   });
 

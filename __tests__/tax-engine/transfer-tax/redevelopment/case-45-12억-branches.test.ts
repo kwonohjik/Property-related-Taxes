@@ -66,7 +66,7 @@ describe("C-3 — 12억 초과 + prior=60·new=30 비대칭 거주 (existingRate
     expect(result.redevelopmentDetail?.highValueAllocation).toBeDefined();
   });
 
-  it("기존건물분 거주월수 = 90 (통산, §155⑰)", () => {
+  it("기존건물분 거주월수 = 90 (통산, §154⑧1호)", () => {
     expect(result.redevelopmentDetail?.lthdResidenceAttribution?.existingResidenceMonths).toBe(90);
   });
 

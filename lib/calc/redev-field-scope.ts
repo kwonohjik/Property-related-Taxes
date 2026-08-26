@@ -40,7 +40,7 @@ export function resolveRedevSubject(
  *   `isOneHouseSingle`은 폼-전역이라 자산-수준 술어에 넣지 않는다(엔진이 같은 값을 본다).
  *
  * 엔진은 `=== false`일 때 `isOneHouseSingle`을 강제 false로 내려 장기보유특별공제를
- * 표2(최대 80%)에서 **표1(최대 30%)로 강등**한다 — 「소득세법」 §95② 별표2.
+ * 표2(최대 80%)에서 **표1(최대 30%)로 강등**한다 — 「소득세법」 §95② 표1·표2.
  */
 export function exemptionAtApprovalInScope(
   asset: Pick<

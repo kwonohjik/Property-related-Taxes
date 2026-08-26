@@ -119,7 +119,7 @@ export interface RedevelopmentInfo {
 
   // ─ 주택 출자 환산 케이스 (사례 39 — originalAssetType="housing" + subject="right" + useEstimatedAcquisition=true 시 필수) ─
   //
-  // 산식 (§164⑤ PHD 2-point 비율 환산):
+  // 산식 (§166③ 2-point 비율 환산):
   //   환산취득가 = floor(권리가액 × housingStdPriceAtAcq / housingStdPriceAtApproval)
   //   개산공제   = floor(housingStdPriceAtAcq × 3%)  (§163⑥)
   //
@@ -127,18 +127,18 @@ export interface RedevelopmentInfo {
   // ※ 완공APT 환산(managementDisposalHousingPrice/acquisitionHousingPrice — §166③ 공시주택가격 비율)과도 별개.
 
   /**
-   * §164⑤ PHD 분자 — 취득당시 개별주택가격 (원, 총액).
+   * §166③ 분자 — 취득당시 개별주택가격 (원, 총액).
    * originalAssetType="housing" + subject="right" + useEstimatedAcquisition=true 시 필수.
    * 취득일 직전 최근 공시 기준 (예: 취득일 2008-04-09 → 2007-01-01 공시값).
    */
   housingStdPriceAtAcq?: number;
 
   /**
-   * §164⑤ PHD 분모 — 인가당시 개별주택가격 (원, 총액).
+   * §166③ 분모 — 인가당시 개별주택가격 (원, 총액).
    * originalAssetType="housing" + subject="right" + useEstimatedAcquisition=true 시 필수.
    * 관리처분인가일 직전 최근 공시 기준 (예: 인가일 2013-10-23 → 2013-01-01 공시값).
    *
-   * 법령 의제: §164⑤ "양도 당시 기준시가" = 재개발 맥락에서 의제양도일(인가일) 기준시가.
+   * 법령 의제: §166③ "양도 당시 기준시가" = 재개발 맥락에서 의제양도일(인가일) 기준시가.
    */
   housingStdPriceAtApproval?: number;
 
@@ -669,13 +669,13 @@ export interface RedevelopmentResult {
   oneRightExemptionApplied?: boolean;
 
   /**
-   * 사례 36 — §89①4호 가목 단서 12억 초과 안분 과세 적용 여부.
+   * 사례 36 — §89①4호 각 목 외의 부분 단서 12억 초과 안분 과세 적용 여부.
    *
    * subject="right" + 비과세 요건 충족 + transferPrice > 12억 시 true.
    * applyOneRightExemption 내부에서 안분 후 비과세분을 마스킹하고 과세분만 남김.
    * highValueAllocation (사례 45 apt 분기) 과 별개 — 두 플래그는 mutually exclusive.
    *
-   * 법령 근거: §89①4호 가목 단서 + §95③ + 시행령 §160 (안분 산식)
+   * 법령 근거: §89①4호 각 목 외의 부분 단서 + §95③ + 시행령 §160 (안분 산식)
    */
   oneRightHighValueApplied?: boolean;
 
@@ -738,20 +738,20 @@ export interface RedevelopmentResult {
    * 그 외(토지 출자·실가·승계조합원) 분기에서는 undefined.
    *
    * 법령 근거:
-   *   §164⑤  PHD 환산취득가, §163⑥ 개산공제, §166⑤1호 LTHD 보유기간
+   *   §166③ 환산취득가, §163⑥ 개산공제, §166⑤1호 LTHD 보유기간
    */
   housingContribDetail?: {
-    /** §164⑤ 환산취득가 (원) = floor(권리가액 × 취득당시PHD / 인가당시PHD) */
+    /** §166③ 환산취득가 (원) = floor(권리가액 × 취득당시PHD / 인가당시PHD) */
     convertedAcquisition: number;
     /** §163⑥ 개산공제 (원) = floor(취득당시PHD × 3%) */
     estimatedDeduction: number;
-    /** 취득당시 개별주택가격 (원, §164⑤ 분자) */
+    /** 취득당시 개별주택가격 (원, §166③ 분자) */
     housingStdPriceAtAcq: number;
-    /** 인가당시 개별주택가격 (원, §164⑤ 분모) */
+    /** 인가당시 개별주택가격 (원, §166③ 분모) */
     housingStdPriceAtApproval: number;
     /** 인가전 분 LTHD (원) */
     preApprovalLTHD: number;
-    /** 인가후 분 LTHD = 0 (§95② 별표2 [비고] 1호) */
+    /** 인가후 분 LTHD = 0 (§95② 본문 괄호) */
     postApprovalLTHD: number;
     /** LTHD 보유기간 시작일 = 취득일 (§166⑤1호) */
     lthdHoldingStartDate: Date;
@@ -779,7 +779,7 @@ export interface RedevelopmentResult {
     landStdPriceAtApproval: number;
     /** 인가전 분 LTHD (원) */
     preApprovalLTHD: number;
-    /** 인가후 분 LTHD = 0 (§95② 별표2 [비고] 1호) */
+    /** 인가후 분 LTHD = 0 (§95② 본문 괄호) */
     postApprovalLTHD: number;
     /** LTHD 보유기간 시작일 = 취득일 (§166⑤1호) */
     lthdHoldingStartDate: Date;
@@ -802,7 +802,7 @@ export interface RedevelopmentResult {
  * - 시행령 §166③ — 환산취득가 = floor(권리가액 × 취득당시 토지기준시가 / 관리처분 직전 토지기준시가)
  * - 시행령 §163⑥ — 개산공제 = floor(취득당시 토지기준시가 × 3%)
  * - 시행령 §166⑤ 1호 — LTHD 보유기간 = 취득일 ~ 관리처분 인가일
- * - 본법 §95② + 별표2 [비고] 1호 — 인가전 분만 LTHD 적용, 인가후 0
+ * - 본법 §95② 본문 괄호 — 인가전 분만 LTHD 적용, 인가후 0
  */
 export interface RedevLandContribResult {
   /** §166③ 환산취득가 (원, 정수) = floor(권리가액 × landStdPriceAtAcq / landStdPriceAtApproval) */
@@ -829,13 +829,13 @@ export interface RedevLandContribResult {
 
   /**
    * 인가전 분 LTHD (원, 정수).
-   * §95② + 별표2 [비고] 1호: 인가전 분만 표1 보유분 적용.
+   * §95② 본문 괄호: 인가전 분만 표1 보유분 적용.
    */
   preApprovalLTHD: number;
 
   /**
    * 인가후 분 LTHD — 항상 0.
-   * 별표2 [비고] 1호: "관리처분 인가 전 토지·건물분에 한정"
+   * 본문 괄호: "관리처분 인가 전 토지·건물분에 한정"
    * → 권리 양도이므로 인가후 분은 LTHD 배제.
    */
   postApprovalLTHD: number;

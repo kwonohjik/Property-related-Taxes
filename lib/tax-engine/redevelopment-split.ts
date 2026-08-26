@@ -518,7 +518,7 @@ function computeRightReceive(
       gain: receive.preApprovalGainAdjusted,
     },
     postApprovalExistingHouse: {
-      // §95② 별표2 [비고] 1호 — 입주권은 §94①2호의2 자산, LTHD 미적용. 인가후 기존주택분 0.
+      // §95② 본문 괄호 — 입주권은 §94①2호 가목 자산, LTHD 미적용. 인가후 기존주택분 0.
       apportionedTransfer: 0,
       apportionedAcquisition: 0,
       gain: 0,

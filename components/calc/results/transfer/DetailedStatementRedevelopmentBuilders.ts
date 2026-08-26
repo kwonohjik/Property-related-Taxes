@@ -76,7 +76,7 @@ const BRANCH_LABEL_SETTLEMENT_EXEMPTED: Record<RedevBranch, BranchLabelDef> = {
 // R-5/사례 38/39 — subject="right" + settlementDirection="receive" (§166①2호 가목·나목).
 // 가목: 인가후 분(양도가 − 안분취득가) = §166①2호 가목 — 사례 38·39 라벨 정합화
 // 나목: 인가전 분(축소) = 인가전양도차익 × (평가액 − 청산금) / 평가액 (§166①2호 나목)
-// settlement LTHD = zeroBranch (§94①2호 + §95② 별표2 [비고] 1호)
+// settlement LTHD = zeroBranch (§94①2호 + §95② 본문 괄호)
 // ★ 2026-05-15 사례 38·39: 라벨 "인가전 분(나목)" / "인가후 분(가목)"으로 정합화
 const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
   preApproval: {
@@ -89,7 +89,7 @@ const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
   },
   settlement: {
     prefix: "③ 인가후 분 (§166①2호 가목) — LTHD 미적용",
-    legal: "§166①2호 가목 · §95② 별표2 [비고] 1호 · §94①2호 (zeroBranch)",
+    legal: "§166①2호 가목 · §95② 본문 괄호 · §94①2호 (zeroBranch)",
   },
 };
 
@@ -430,7 +430,7 @@ export function buildRedevPerAssetForIncome(
  * 산식 규칙:
  *  - 인가전: 권리가액 − 환산취득가(§166③) − 개산공제(§163⑥) = 인가전 양도차익
  *  - 인가후: 양도가액 − 권리가액 − 청산금 − 인가후 필요경비 = 인가후 양도차익
- *  - LTHD: 인가전 14% (§166⑤1호) / 인가후 0 (§95② 별표2 [비고] 1호)
+ *  - LTHD: 인가전 14% (§166⑤1호) / 인가후 0 (§95② 본문 괄호)
  */
 export function applyLandContribOverrides(
   items: Map<string, StatementItem>,
@@ -457,7 +457,7 @@ export function applyLandContribOverrides(
         formula: `의제 양도가액 = 권리가액 = ${fmt(pre.apportionedTransfer)} (§166④)`,
       },
       {
-        label: "② 인가후 분 (LTHD 제외 — §95② 별표2 [비고] 1호)",
+        label: "② 인가후 분 (LTHD 제외 — §95② 본문 괄호)",
         value: post.apportionedTransfer,
         formula: `양도가액 ${fmt(totalTransferPrice)} − 권리가액 ${fmt(pre.apportionedTransfer)} − 청산금 ${fmt(redev.settlement.apportionedAcquisition)} = ${fmt(post.apportionedTransfer)}`,
       },
@@ -542,8 +542,8 @@ export function applyLandContribOverrides(
   // 장기보유특별공제
   const ltItem = items.get("ltDeduction");
   if (ltItem) {
-    ltItem.formula = "§95② 단서 + §166⑤1호 — 인가전 분만 LTHD (취득일~인가일 기산). 인가후 LTHD=0 (별표2 [비고] 1호)";
-    ltItem.legalBasis = "소득세법 §95② 별표2 [비고] 1호 · 시행령 §166⑤1호";
+    ltItem.formula = "§95② 단서 + §166⑤1호 — 인가전 분만 LTHD (취득일~인가일 기산). 인가후 LTHD=0 (본문 괄호)";
+    ltItem.legalBasis = "소득세법 §95② 본문 괄호 · 시행령 §166⑤1호";
     const preYears = Math.floor(pre.holdingMonths / 12);
     const preMons = pre.holdingMonths % 12;
     const prePct = (pre.lthdRate * 100).toFixed(0);
@@ -554,9 +554,9 @@ export function applyLandContribOverrides(
         formula: `${fmt(pre.gain)} × ${prePct}% (보유 ${preYears}년 ${preMons}개월) = ${fmt(pre.lthd)}`,
       },
       {
-        label: "② 인가후 분 (LTHD=0 — §95② 별표2 [비고] 1호)",
+        label: "② 인가후 분 (LTHD=0 — §95② 본문 괄호)",
         value: 0,
-        formula: "LTHD 대상 양도차익 부존재 (별표2 [비고] 1호 — 관리처분 인가 전 토지·건물분에 한정)",
+        formula: "LTHD 대상 양도차익 부존재 (본문 괄호 — 관리처분 인가 전 토지·건물분에 한정)",
       },
     ];
   }

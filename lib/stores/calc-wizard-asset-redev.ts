@@ -151,14 +151,14 @@ export interface RedevelopmentFormSlice {
 
   // ── 사례 45 — 거주월수 분리 입력 (1세대1주택 + 12억 초과 분기) ──
   //
-  // 법령 근거: 시행령 §155⑰ (보유·거주 통산) + 사전법령해석재산 2020-386 (청산금분 거주 분리).
+  // 법령 근거: 시행령 §154⑧1호 (재건축 보유·거주 통산) + 사전법령해석재산 2020-386 (청산금분 거주 분리).
   // 가시성: assetKind === "redevelopment_apt" + isOneHousehold + householdHousingCount === 1.
   // 미입력 시 빈문자열. silent 0 채우기 금지.
 
   /**
    * 종전주택 거주개월수 (정수, 개월 단위).
    * 종전주택 취득일~관리처분 또는 그 이후 철거 전까지 실제 거주개월수.
-   * 기존건물분 LTHD 표2 거주분 = prior + new (§155⑰ 통산).
+   * 기존건물분 LTHD 표2 거주분 = prior + new (§154⑧1호 통산).
    */
   redevPriorHouseResidenceMonths: string;
 
@@ -262,17 +262,17 @@ export interface RedevelopmentFormSlice {
    */
   redevLandPricePerSqmAtApproval: string;
 
-  // ── 사례 38/39 — 단독주택 출자 §164⑤ PHD 환산취득가 (subject="right" + originalAssetType="housing" + useEstimatedAcquisition=true 시) ──
+  // ── 사례 38/39 — 단독주택 출자 §166③ 환산취득가 (subject="right" + originalAssetType="housing" + useEstimatedAcquisition=true 시) ──
 
   /**
-   * §164⑤ 분자 — 취득당시 개별주택가격 (원, 총액).
+   * §166③ 분자 — 취득당시 개별주택가격 (원, 총액).
    * 환산취득가 = floor(권리가액 × housingStdPriceAtAcq / housingStdPriceAtApproval)
    * originalAssetType="housing" + subject="right" + direction="receive" + useEstimated=true 시 필수.
    */
   redevHousingStdPriceAtAcq: string;
 
   /**
-   * §164⑤ 분모 — 인가당시 개별주택가격 (원, 총액).
+   * §166③ 분모 — 인가당시 개별주택가격 (원, 총액).
    * originalAssetType="housing" + subject="right" + direction="receive" + useEstimated=true 시 필수.
    */
   redevHousingStdPriceAtApproval: string;

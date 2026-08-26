@@ -61,7 +61,7 @@ function redevInfo(extra: Partial<RedevelopmentInfo> = {}): RedevelopmentInfo {
   };
 }
 
-/** §164⑤ 2-point 환산 — 취득당시 1.2억 / 인가당시 2억 */
+/** §166③ 2-point 환산 — 취득당시 1.2억 / 인가당시 2억 */
 const PHD = { housingStdPriceAtAcq: 120_000_000, housingStdPriceAtApproval: 200_000_000 };
 
 function input(o: Partial<TransferTaxInput>, redev: Partial<RedevelopmentInfo> = {}): TransferTaxInput {

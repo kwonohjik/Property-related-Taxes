@@ -5,7 +5,7 @@
  * 단일 D 패턴)가 PDF 2-point 산식과 동일 — 신규 헬퍼 불필요. 엔진 변경 0.
  *
  * PDF 출처: 양도코리아 책 사례 41
- * 법령 근거: §166②1호 (apt+pay 안분) + §164⑤ PHD 환산 (사례 44 패턴 재사용) + §163⑥ 개산공제 자동
+ * 법령 근거: §166②1호 (apt+pay 안분) + §166③ 환산 (사례 44 패턴 재사용) + §163⑥ 개산공제 자동
  *
  * 입력:
  *   - 양도가액: 525,000,000 (2023-03-02)
@@ -73,7 +73,7 @@ function case41Input(): TransferTaxInput {
   });
 }
 
-describe("C41 — 사례 41: APT+pay+housing 환산 (§166②1호 + §164⑤ 사례 44 인프라 재사용)", () => {
+describe("C41 — 사례 41: APT+pay+housing 환산 (§166②1호 + §166③ 사례 44 인프라 재사용)", () => {
   const input = case41Input();
   const result = calculateTransferTax(input, mockRates);
   const detail = result.redevelopmentDetail!;

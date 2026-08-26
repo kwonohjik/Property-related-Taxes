@@ -12,7 +12,7 @@
  * 법령 근거:
  *   - 소득세법 시행령 §166③ (토지 출자 환산 산식)
  *   - 소득세법 시행령 §163⑥ (개산공제 — 토지 3%)
- *   - 소득세법 §95② + 별표2 [비고] 1호 (인가전 분만 LTHD)
+ *   - 소득세법 §95② 본문 괄호 (인가전 분만 LTHD)
  *   - 소득세법 시행령 §166⑤ 1호 (인가전 보유기간 = 취득일 ~ 관리처분 인가일)
  *   - 소득세법 §55 (2023) + 지방세법 §103의3
  *
@@ -137,15 +137,15 @@ describe("사례 37 — Pre-Do anchor 4건 (calcRedevLandContribEstimated 직접
    * L37-6: 인가전 분 LTHD
    *
    * 보유기간: 2007-04-09 ~ 2014-10-23 = 만 7년 (§166⑤1호 취득일 ~ 관리처분인가일)
-   * §95② 별표2 표1 일반 보유: 7년 × 2% = 14%
+   * §95② 표1 일반 보유: 7년 × 2% = 14%
    * LTHD 금액: floor(97,000,000 × 0.14) = 13,580,000
-   * 인가후 LTHD = 0 (별표2 [비고] 1호 — 인가전 분에 한정)
+   * 인가후 LTHD = 0 (본문 괄호 — 인가전 분에 한정)
    */
-  it("L37-6: preApprovalLTHD = 13,580,000 (별표2 표1 7년 14%, §95②·§166⑤1호)", () => {
+  it("L37-6: preApprovalLTHD = 13,580,000 (표1 7년 14%, §95②·§166⑤1호)", () => {
     expect(result.lthdHoldingYears).toBe(7);
     expect(result.lthdRate).toBe(0.14);
     expect(result.preApprovalLTHD).toBe(13_580_000);
-    expect(result.postApprovalLTHD).toBe(0); // 별표2 [비고] 1호
+    expect(result.postApprovalLTHD).toBe(0); // 본문 괄호
     expect(result.totalLTHD).toBe(13_580_000);
   });
 
@@ -210,13 +210,13 @@ describe("사례 37 — 전체 anchor (Do 단계 완료 후 활성화)", () => {
       expect(unitResult.totalGain).toBe(217_000_000);
     });
 
-    it("L37-6: 인가전 LTHD = 13,580,000 (보유 7년, 표1 14%, §95② + 별표2 [비고] 1호 + §166⑤1호)", () => {
+    it("L37-6: 인가전 LTHD = 13,580,000 (보유 7년, 표1 14%, §95② 본문 괄호 + §166⑤1호)", () => {
       expect(unitResult.lthdHoldingYears).toBe(7);
       expect(unitResult.lthdRate).toBe(0.14);
       expect(unitResult.preApprovalLTHD).toBe(13_580_000);
     });
 
-    it("L37-7: 인가후 LTHD = 0 (별표2 [비고] 1호 — 권리 양도분 LTHD 배제)", () => {
+    it("L37-7: 인가후 LTHD = 0 (본문 괄호 — 권리 양도분 LTHD 배제)", () => {
       expect(unitResult.postApprovalLTHD).toBe(0);
     });
 

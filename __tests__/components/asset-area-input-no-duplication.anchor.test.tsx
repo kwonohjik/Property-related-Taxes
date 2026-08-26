@@ -204,7 +204,7 @@ describe("재개발·입주권 면적 — ① 단일 위치 + 게이트 술어 �
     expect(redevAreaLabelCount()).toBe(0);
   });
 
-  it("단독주택 출자 §164⑤ 분기: 전용 카드를 쓰므로 ①의 면적도 노출되지 않는다", () => {
+  it("단독주택 출자 §166③ 분기: 전용 카드를 쓰므로 ①의 면적도 노출되지 않는다", () => {
     renderRedevBasic({
       assetKind: "right_to_move_in",
       redevOriginalAssetType: "housing",

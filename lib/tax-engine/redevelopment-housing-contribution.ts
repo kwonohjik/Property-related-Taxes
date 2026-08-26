@@ -7,7 +7,7 @@
  * - 소득세법 §166③  : 환산취득가 = 권리가액 × (취득당시 개별주택가격 ÷ 인가당시 개별주택가격)
  *     ※ 재개발 맥락에서 "양도 당시" = 의제양도시점(관리처분인가일) 기준
  * - 소득세법 §163⑥  : 개산공제 = floor(취득당시 개별주택가격 × 3%)
- * - 소득세법 §95②   : 별표2 [비고] 1호 — 인가전 분만 LTHD 적용, 인가후·청산금 0
+ * - 소득세법 §95②   : 본문 괄호 — 인가전 분만 LTHD 적용, 인가후·청산금 0
  * - 소득세법 §166①2호:
  *     나목: 인가전 양도차익 = (권리가액 − 환산취득가 − 개산공제) × (평가액 − 수령청산금) / 평가액
  *     가목: 인가후 양도차익 = 양도가액 − (평가액 − 수령청산금) − 인가후필요경비
@@ -101,9 +101,9 @@ export interface RedevHousingContribReceiveEstimatedResult {
   postApprovalGain: number;
   /** salePriceTotal = 평가액 − 수령청산금 (취득가 안분·가목 산식 공통 기준) */
   salePriceTotal: number;
-  /** 인가전 분 LTHD (표1 보유분, §95② 별표2 [비고] 1호) */
+  /** 인가전 분 LTHD (표1 보유분, §95② 본문 괄호) */
   preApprovalLTHD: number;
-  /** 인가후 분 LTHD = 0 (§95② 별표2 [비고] 1호 — 입주권 §94①2호 자산) */
+  /** 인가후 분 LTHD = 0 (§95② 본문 괄호 — 입주권 §94①2호 자산) */
   postApprovalLTHD: number;
   /** LTHD 합계 = 인가전만 */
   totalLTHD: number;
@@ -241,8 +241,8 @@ export function calcRedevHousingContribReceiveEstimated(
   const holdingYears = Math.floor(preApprovalBranch.holdingMonths / 12);
 
   // ── Step 7: LTHD 금액 산출 ──────────────────────────────────────────────
-  // 법령 근거: REDEVELOPMENT.LTHD_RIGHT_TABLE1_ANNOTATION
-  void REDEVELOPMENT.LTHD_RIGHT_TABLE1_ANNOTATION; // 상수 참조 (dead-code 방어)
+  // 법령 근거: REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT
+  void REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT; // 상수 참조 (dead-code 방어)
   //
   // 🔴 2026-08-25 정정(E2-03): 종전에는 `holdingRate`(보유분)**만** 썼다. 그 전제는 바로 위에서
   //    `isOneHouseSingle: false`를 상수로 넘겨 **표1이 강제**됐다는 것이었다(표1은 거주분이 0).
@@ -251,7 +251,7 @@ export function calcRedevHousingContribReceiveEstimated(
   //    종전 동작이 그대로 유지된다(하위호환).
   const preApprovalLTHD = applyLthdToGain(preApprovalGain, preApprovalBranch.rate);
 
-  // 인가후 LTHD = 0 (§95② 별표2 [비고] 1호 — 입주권은 부동산 외 §94①2호)
+  // 인가후 LTHD = 0 (§95② 본문 괄호 — 입주권은 부동산 외 §94①2호)
   const postApprovalLTHD = 0 as number; // TS 좁힘 회피를 위해 as number
 
   // ── 신고서 양식 안분값 산출 ──────────────────────────────────────────────

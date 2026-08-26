@@ -103,7 +103,7 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     acquisitionHousingPrice: asset.redevAcquisitionHousingPrice
       ? parseAmount(asset.redevAcquisitionHousingPrice)
       : undefined,
-    // 사례 45 — 거주월수 분리 입력 (§155⑰ 통산 + 해석례 2020-386)
+    // 사례 45 — 거주월수 분리 입력 (§154⑧1호 통산 + 해석례 2020-386)
     // 빈문자열 → undefined (legacy fallback 의도 — 엔진에서 residencePeriodMonths 단일값 사용)
     priorHouseResidenceMonths: asset.redevPriorHouseResidenceMonths
       ? parseInt(asset.redevPriorHouseResidenceMonths.replace(/,/g, ""), 10)
@@ -129,7 +129,7 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
           : undefined,
     // U1-01 — ③-c 카드는 「완공APT + 청산금 수령 + 원조합원」에서만 열린다. 방향을 되돌리면
     //         카드가 사라지는데 완공APT에는 이 값을 지울 다른 위젯이 없다(§⑥ 토글은 입주권 전용)
-    //         ⇒ **범위 밖이면 보내지 않는다**. 남으면 엔진이 LTHD를 표1로 강등한다(§95② 별표2).
+    //         ⇒ **범위 밖이면 보내지 않는다**. 남으면 엔진이 LTHD를 표1로 강등한다(§95② 표1·표2).
     exemptionEligibleAtApproval: !exemptionAtApprovalInScope(asset)
       ? undefined
       : asset.redevExemptionEligibleAtApproval === "yes"
@@ -172,7 +172,7 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
       const legacyApproval = asset.redevLandStdPriceAtApproval ? parseAmount(asset.redevLandStdPriceAtApproval) : 0;
       return legacyApproval > 0 ? legacyApproval : undefined;
     })(),
-    // 사례 38/39 — 단독주택 출자 §164⑤ PHD 2-point 환산취득가
+    // 사례 38/39 — 단독주택 출자 §166③ 2-point 환산취득가
     // 3중 패턴(UI/API/validate): 미입력 → undefined (엔진 분기 미발동)
     housingStdPriceAtAcq: asset.redevHousingStdPriceAtAcq
       ? parseAmount(asset.redevHousingStdPriceAtAcq)

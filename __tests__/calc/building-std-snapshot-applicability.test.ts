@@ -92,7 +92,7 @@ describe("섹션 가시성 조건도 반영한다 (트리거만으로는 절반�
     expect(isBuildingStdSnapshotApplicable(KEY, inputWith({ assetKind: "housing" }))).toBe(false);
   });
 
-  it("단독주택 출자 §164⑤ 분기로 전환 → 차단", () => {
+  it("단독주택 출자 §166③ 분기로 전환 → 차단", () => {
     expect(isBuildingStdSnapshotApplicable(KEY, inputWith({
       assetKind: "right_to_move_in",
       redevOriginalAssetType: "housing",
