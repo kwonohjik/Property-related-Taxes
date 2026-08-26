@@ -80,11 +80,9 @@ interface Props {
    * C-1 (a) 거주요건 경고 가드 (§89①3호 가목 단서) — subject="right" 시 전달.
    */
   wasRegulatedAtAcquisition?: boolean;
-  /** 양도가액 — 12억 초과 자동 안내용 (subject="right" §⑥ 카드) */
-  transferPrice?: string;
 }
 
-export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegulatedAtAcquisition, transferPrice }: Props) {
+export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegulatedAtAcquisition }: Props) {
   // subject="right" (입주권 양도) 포함: assetKind="right_to_move_in" 시에도 활성화
   const isActive = asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in";
   const isRightSubject = asset.redevSubject === "right" || asset.assetKind === "right_to_move_in";
@@ -125,7 +123,6 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           asset={asset}
           onChange={onChange}
           wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
-          transferPrice={transferPrice}
         />
       )}
 

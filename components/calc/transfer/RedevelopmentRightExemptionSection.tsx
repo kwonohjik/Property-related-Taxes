@@ -39,11 +39,14 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   /**
    * 폼-전역 wasRegulatedAtAcquisition — 조정대상지역 취득 여부.
-   * C-1 (a) 거주요건 경고 가드에서 사용 (§89①3호 가목 단서).
+   * C-1 (a) 거주요건 경고 가드에서 사용 (「소득세법 시행령」 §154① 괄호).
+   *
+   * ⚠️ **기본값 `false`는 「비조정대상지역」이 아니라 「모름」이다.** 프로덕션 경로가
+   *    이 prop을 넘기지 않던 동안 거주 경고가 **한 번도 뜨지 않았다**(U1-03).
+   *    호출부는 반드시 폼-전역 값을 명시 전달할 것 —
+   *    anchor `redev-right-exemption-prop-wiring.anchor.test.tsx`가 프로덕션 경로에서 지킨다.
    */
   wasRegulatedAtAcquisition?: boolean;
-  /** 양도가액 — 12억 초과 자동 안내용. Step1에서 전달 */
-  transferPrice?: string;
 }
 
 const HIGH_VALUE_THRESHOLD = 1_200_000_000;
@@ -52,7 +55,6 @@ export function RedevelopmentRightExemptionSection({
   asset,
   onChange,
   wasRegulatedAtAcquisition = false,
-  transferPrice,
 }: Props) {
   const isRightSubject =
     asset.assetKind === "right_to_move_in" && (asset.redevSubject === "right" || !asset.redevSubject);
@@ -85,11 +87,25 @@ export function RedevelopmentRightExemptionSection({
     wasRegulatedAtAcquisition,
   ]);
 
-  // ── 12억 초과 안내 ──
-  const isHighValue = useMemo(() => {
-    const tp = parseAmount(transferPrice ?? "");
-    return tp > HIGH_VALUE_THRESHOLD;
-  }, [transferPrice]);
+  /**
+   * ── 12억 초과 안내 ──
+   *
+   * 🔴 2026-08-26 정정(U1-03): 종전에는 `transferPrice` **prop**을 읽었는데
+   *    프로덕션 경로(Step1 → … → `AssetSectionAcquisition:328`)가 그 prop을 넘기지 않아
+   *    `parseAmount(undefined ?? "") = 0`으로 **항상 false**였다. 4계층을 지나는 prop은
+   *    한 곳만 빠뜨려도 조용히 사라진다(memory `feedback_explicit_prop_mapping_strip`).
+   *
+   * ⇒ **자산이 이미 들고 있는 값을 직접 읽어 prop 축을 하나 줄인다.**
+   *   같은 파일군의 `RedevelopmentResidenceSplitSection`·`RedevelopmentValuationSection`도
+   *   `asset.actualSalePrice`를 그렇게 읽는다.
+   *
+   * ⚠️ 안분(bundled) 모드에서는 자산-수준 양도가액이 비어 안내가 뜨지 않는다 —
+   *    안내·경고 전용이라 계산에는 영향이 없다(§89①4호 단서 판정은 엔진이 한다).
+   */
+  const isHighValue = useMemo(
+    () => parseAmount(asset.actualSalePrice) > HIGH_VALUE_THRESHOLD,
+    [asset.actualSalePrice],
+  );
 
   const isToggleOn = asset.redevExemptionEligibleAtApproval === "yes";
 

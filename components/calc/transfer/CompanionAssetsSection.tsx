@@ -32,6 +32,8 @@ interface Props {
    * 사례 45 — RedevelopmentBlock §⑤ 거주월수 분리 입력 카드 가시성 가드.
    */
   isOneHouseSingle?: boolean;
+  /** 폼-전역 조정대상지역 취득 여부 — 입주권 §⑥ 거주요건 경고 게이트 (U1-03) */
+  wasRegulatedAtAcquisition?: boolean;
   /** 검증 실패 자산 인덱스 — 해당 카드에 인라인 에러 배너 표시 */
   errorAssetIndex?: number | null;
   /** 검증 실패 메시지 (errorAssetIndex 카드에 표시) */
@@ -42,7 +44,7 @@ interface Props {
   onFractionalToggle: (yes: boolean) => void;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, errorAssetIndex, errorMessage, splitMode, onFractionalToggle }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, wasRegulatedAtAcquisition, errorAssetIndex, errorMessage, splitMode, onFractionalToggle }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -94,6 +96,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           onAddAsset={(patch) => addAsset(patch)}
           primaryAsset={idx > 0 ? assets[0] : undefined}
           isOneHouseSingle={isOneHouseSingle}
+          wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
           errorMessage={errorAssetIndex === idx ? errorMessage ?? undefined : undefined}
           splitMode={splitMode}
           onFractionalToggle={onFractionalToggle}

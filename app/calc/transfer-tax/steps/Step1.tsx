@@ -231,6 +231,15 @@ export function Step1({
           contractTotalPrice={form.contractTotalPrice}
           totalTransferExpense={form.totalTransferExpense}
           isOneHouseSingle={form.isOneHousehold === true && form.householdHousingCount === "1"}
+          /**
+           * 입주권 §⑥ 카드의 거주요건 경고 게이트 (U1-03).
+           *
+           * ⚠️ 이 값은 **④ 보유 상황 단계**에서 확정된다(자동 판별 또는 수동 토글).
+           *    Step1을 처음 지나는 동안에는 기본값 `false`라 경고가 뜨지 않고,
+           *    ④를 거친 뒤 되돌아오거나 이력에서 복원한 경우에 동작한다.
+           *    그래도 **넘기지 않으면 영영 뜨지 않는다** — 종전이 그 상태였다.
+           */
+          wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
           errorAssetIndex={errorAssetIndex}
           errorMessage={errorMessage}
           splitMode={splitMode}
