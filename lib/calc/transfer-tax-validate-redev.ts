@@ -315,9 +315,21 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   // ── 부분 입력 차단 — 최초공시일 없이 A·PHD 단가 입력 시 모순 안내 ──
   const hasFirstDisclosureDate = !!asset.redevFirstDisclosureDate;
   const hasA = parseAmount(asset.redevFirstDisclosureHousingPrice) > 0;
-  const hasAnyPhd =
-    parseAmount(asset.redevLandPricePerSqmAtAcq) > 0 ||
-    parseAmount(asset.redevLandPricePerSqmAtFirst) > 0;
+  /**
+   * 🔴 2026-08-26 정정(P2-06): 종전에는 `redevLandPricePerSqmAtAcq`도 신호로 봤다. 그 필드는
+   *    **두 조문 축이 공유**한다 — 토지 출자 §166③ 분자 단가(`LandContribValuationContent`)와
+   *    주택 출자 §164⑦ Sum_A. 토지 출자로 채운 뒤 ② 출자 자산을 「주택」으로 되돌리면
+   *    「최초공시일도 입력하세요」로 막히는데, 그 화면에는 최초공시일 칸도 단가를 지울 칸도 없다
+   *    (`RedevelopmentValuationSection`이 환산 모드에서만 렌더된다) — 영구 dead-end였다.
+   *
+   *    판별 기준은 `sec164-required-fields.ts`의 `shared?: boolean`과 같다 —
+   *    「입력 위젯이 §164 섹션 **밖에도** 있는가」. 있으면 opt-in 신호로 보지 않는다.
+   *    `redevLandPricePerSqmAtFirst`(최초공시 당시 단가)는 §164⑦ 전용이라 신호로 남긴다.
+   *
+   *    ⚠️ 필수입력 자체가 약해지는 것은 아니다 — 본문이 발동하면 위 `isPreDisclosureTriggered`
+   *       블록이 이 단가를 여전히 필수로 요구한다.
+   */
+  const hasAnyPhd = parseAmount(asset.redevLandPricePerSqmAtFirst) > 0;
   if ((hasA || hasAnyPhd) && !hasFirstDisclosureDate) {
     return `${label}: A 또는 PHD 단가를 입력하셨다면 최초공시일도 입력하세요. (§164⑦ 본문 트리거)`;
   }

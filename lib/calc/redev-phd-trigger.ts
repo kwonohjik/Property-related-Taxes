@@ -58,7 +58,7 @@ export function isRedevPhdTriggered(a: RedevPhdTriggerFields): boolean {
 /**
  * §164⑦ PHD 환산 **섹션이 지금도 열려 있는가** — 그 섹션이 이 계산의 유일한 생산자다.
  *
- * 트리거(모드+날짜)만 보면 절반만 막는다. `RedevelopmentValuationSection`은 아래 5중 게이트를
+ * 트리거(모드+날짜)만 보면 절반만 막는다. `RedevelopmentValuationSection`은 아래 6중 게이트를
  * 모두 통과해야 렌더되고, 그중 어느 하나가 꺼져도 §164⑦ 계산은 적용되지 않는다:
  *
  * | # | 위치 | 조건 |
@@ -68,6 +68,12 @@ export function isRedevPhdTriggered(a: RedevPhdTriggerFields): boolean {
  * | 3 | `RedevelopmentBlock.tsx:373` | `redevIsSuccessorMember !== "yes"` |
  * | 4 | `RedevelopmentBlock.tsx:395` | 환산 모드(`useEstimatedAcquisition`) |
  * | 5 | `RedevelopmentBlock.tsx:407` | 단독주택 출자 §166③ 분기가 아님(`isHousingContribEstimatedBranch`) |
+ * | 6 | `RedevelopmentValuationSection.tsx:179` | 토지 출자가 아님(`isLand` 삼항) |
+ *
+ * ⚠️ **게이트 6은 섹션 안쪽에 있다** — `shouldShowRedevValuationSection`은 여전히 true다.
+ *    `isLand ?` 삼항이 §164⑦ 블록과 계산서 런처(`snapshotKey=bsp-*-redev-phd`)를 통째로
+ *    §166③ 단가 카드(`LandContribValuationContent`)로 바꾸므로, 그 조건이 이 술어에 없으면
+ *    「화면에는 블록이 없는데 계산서는 결과탭·이력·PDF에 남는」 어긋남이 생긴다(2026-08-26 P2-04).
  *
  * ## ⚠️ 미확인 필드는 **차단하지 않는다**
  *
@@ -75,7 +81,7 @@ export function isRedevPhdTriggered(a: RedevPhdTriggerFields): boolean {
  * 필드가 없으면 판단을 보류(통과)한다 — 과잉 차단은 「계산했는데 계산서가 없다」는 반대 방향
  * 결함이고, 이미 저장된 이력을 지우는 쪽이 더 나쁘다.
  *
- * ## ⚠️ 조건 2·3·5는 다른 파일의 술어와 **같은 판정**이어야 한다
+ * ## ⚠️ 조건 2·3·5·6은 다른 파일의 술어와 **같은 판정**이어야 한다
  *
  * 그 술어들(`isSuccessorRightTransfer`·`shouldShowRedevValuationSection`)은 `AssetForm` 전체를
  * 받도록 되어 있어 `Record<string, unknown>`인 저장 input_data에는 그대로 쓸 수 없다.
@@ -115,5 +121,8 @@ export function isRedevPhdSectionActive(a: RedevPhdSectionFields): boolean {
   ) {
     return false;
   }
+  // 6) 토지 출자 — §166③ 개별공시지가 단가 카드가 §164⑦ 블록을 통째로 대신한다.
+  //    (엔진 토지 분기는 landStdPriceAt*만 읽고 PHD 필드를 쓰지 않는다.)
+  if (a.redevOriginalAssetType === "land") return false;
   return true;
 }

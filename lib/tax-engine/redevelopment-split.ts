@@ -24,6 +24,7 @@
  */
 
 import { estimatedDeductionRate } from "./legal-codes";
+import { TaxRateNotFoundError } from "./tax-errors";
 import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { computeRedevelopmentValuation } from "./redevelopment-valuation";
 import {
@@ -178,18 +179,26 @@ export function computeRedevelopmentSplit(
   if (useEstimatedAcquisition) {
     const valuationResult = computeRedevelopmentValuation(redevelopment, acquisitionDate);
     if (valuationResult == null) {
-      // 환산 입력 불충분 — 0 fallback (validation에서 차단되어야 함)
-      oldAcquisitionPrice = 0;
-      valuationMeta = {
-        method: "actual",
-        numerator: 0,
-        denominator: 0,
-        rationale: "환산 모드이나 managementDisposalHousingPrice(D) 미입력 — validation 차단 필요",
-      };
-    } else {
-      oldAcquisitionPrice = valuationResult.acquisitionPrice;
-      valuationMeta = valuationResult.meta;
+      /**
+       * 🔴 2026-08-26 정정(E1-07): 종전에는 여기서 취득가액을 **0으로 두고 계속 계산**했다
+       *    (「validation에서 차단되어야 함」 주석과 함께). 그 차단은 ⑧ 클라이언트에만 있었고
+       *    ⑫ Zod에는 대응 refine이 없어, 클라이언트를 거치지 않은 요청은 개산공제까지 0이 된 채
+       *    **인가전 양도차익 = 권리가액 전액**으로 오류 없이 결과를 반환했다
+       *    (사례 44 기준 산출세액 55,836,614 → 94,081,180 프로브 실측).
+       *
+       *    같은 상황에서 sibling 환산 서브엔진 둘은 이미 던진다
+       *    (`redevelopment-land-contribution.ts` §166③ 분모 · `redevelopment-housing-contribution.ts`).
+       *    본류만 침묵해 「0으로 성공」이라는 세 번째 진실이 있었다 — 그것을 없앤다.
+       *    ⑫ refine(`transfer-tax-schema-refines.ts`)이 그보다 먼저 400으로 막는다.
+       */
+      throw new TaxRateNotFoundError(
+        redevelopment.originalAssetType === "land"
+          ? "redev-split: landStdPriceAtAcq·landStdPriceAtApproval must be > 0 (§166③ 토지 출자 환산 분자·분모)"
+          : "redev-split: managementDisposalHousingPrice(D) must be > 0 (§166③ 분모)",
+      );
     }
+    oldAcquisitionPrice = valuationResult.acquisitionPrice;
+    valuationMeta = valuationResult.meta;
   } else {
     oldAcquisitionPrice = input.actualAcquisitionPrice ?? 0;
     valuationMeta = {
