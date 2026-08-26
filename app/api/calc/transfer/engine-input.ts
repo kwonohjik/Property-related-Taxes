@@ -145,6 +145,24 @@ export function buildTransferEngineInput(
           willResideNewHouse: data.replacementHouse.willResideNewHouse,
         }
       : undefined,
+    /**
+     * ⑭ §89② 3년 초과 예외 — `completionDate`만 string → Date 변환한다.
+     * ⚠️ `kind`를 보고 갈라야 한다 — `delay`·`none` 갈래에는 날짜가 없다.
+     *    통째로 spread하면 `Date < string` 비교가 조용히 false가 되는 함정에 걸린다
+     *    (memory `feedback_api_zod_schema_sync` · `lib/api/date-coerce.ts` 규약).
+     */
+    rightThreeYearException:
+      data.rightThreeYearException === undefined
+        ? undefined
+        : data.rightThreeYearException.kind === "new_house"
+          ? {
+              ...data.rightThreeYearException,
+              completionDate: toDate(
+                data.rightThreeYearException.completionDate,
+                "rightThreeYearException.completionDate",
+              ),
+            }
+          : data.rightThreeYearException,
     // 감면 매핑 — route-reductions-mapper.ts로 분리 (800줄 정책, 2026-06-11)
     reductions: mapReductionsToEngine(data.reductions),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,

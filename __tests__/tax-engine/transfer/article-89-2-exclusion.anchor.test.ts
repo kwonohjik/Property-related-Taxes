@@ -238,14 +238,25 @@ describe("⭐ §89② — 판정 불가면 켜지 않는다 (법 근거 없는 �
     expect((r.warnings ?? []).join("\n")).toContain("§156의2 ⑦·⑩·⑪");
   });
 
-  it("권리 2개 이상 → ③·②의 「1권리」 전제를 벗어난다", () => {
-    warnedButExempt(
+  /**
+   * 🔴 2026-08-26 정정(P-0): 종전 단언은 「§156의2③·④」였다. **틀렸다** — 그 항들은
+   *    「1주택과 **1**권리」 전제라 2권리 세대에는 애초에 해당하지 않는다.
+   *    1주택 + 2권리에 실제로 적용될 수 있는 예외는 §156의2⑦·⑧·⑨ · §156의3⑤다.
+   *    확인해도 소용없는 조문을 가리키면 「판정 불가 고지」의 목적이 무너진다.
+   */
+  it("권리 2개 이상 → 그 조합에 **실제로 적용될 수 있는** 조문을 가리킨다", () => {
+    const r = run(
       houseInput({
         transferDate: new Date("2019-06-01"),
         presaleRights: [right(), right({ id: "r2" })],
       }),
-      "§156의2 ③·④",
     );
+    expect(r.isExempt).toBe(true);
+    const joined = (r.warnings ?? []).join("\n");
+    expect(joined).toContain("§156의2 ⑦·⑧·⑨");
+    expect(joined).toContain("§156의3 ⑤");
+    // 1권리 전제 조문은 가리키지 않는다
+    expect(joined).not.toContain("§156의2 ③·④");
   });
 });
 

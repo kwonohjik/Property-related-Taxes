@@ -388,6 +388,28 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: "대체주택 특례: 신축주택 1년 이상 거주 예정에 동의해야 비과세를 적용할 수 있습니다." });
     }
 
+    /**
+     * ⑧ §89② 3년 초과 예외 — 갈래를 고르면 그 갈래의 **필수값**이 있어야 한다.
+     *
+     * ④ 변환은 필수값이 비면 payload 키 자체를 만들지 않는다(입력 중인 상태이지 선언이 아니다).
+     * 여기서 막지 않으면 「화면에서는 골랐는데 계산에는 반영되지 않는」 침묵 불일치가 된다.
+     *
+     * ⚠️ 미선택(`""`)은 막지 않는다 — 판정 불가로 남아 종전대로 계산되고 결과에 안내가 붙는다.
+     *    여기서 차단하면 3년 초과 세대 전체가 계산 자체를 못 하게 된다.
+     */
+    if (form.rightThreeYearExceptionKind === "new_house" && !form.rightNewHouseCompletionDate) {
+      issues.push({
+        step,
+        message: "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
+      });
+    }
+    if (form.rightThreeYearExceptionKind === "delay" && !form.rightDisposalDelayReason) {
+      issues.push({
+        step,
+        message: "3년 초과 예외(시행규칙 §75①): 3년이 되는 날 현재의 사유를 선택하세요.",
+      });
+    }
+
     // ⑧ §154① 단서 — 사유별 필수 입력. effectiveProvisoReason로 정규화
     // (카드 숨김·temp-two-house 무효 reason(나·다목·5호)은 검증 skip — Part B/D mirror·데드락 차단)
     const provisoMode = provisoGate({

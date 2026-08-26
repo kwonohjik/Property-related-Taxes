@@ -150,6 +150,20 @@ export interface TransferFormData {
   replCompletionDate: string;         // 신축주택 준공일
   replResidenceMonths: string;        // 대체주택 거주개월수 (숫자 문자열)
   replWillResideNewHouse: boolean;    // 신축주택 1년 이상 거주 자기선언
+
+  /**
+   * §89② 배제의 3년 초과 예외 FLAT 필드 — 「소득세법 시행령」 §156의2④·§156의3③ /
+   * 「소득세법 시행규칙」 §75①. API에서 `rightThreeYearException` 판별 유니온으로 조립.
+   *
+   * ⚠️ `""`(미선언)과 `"none"`(해당 없음)은 **다르다** — 미선언은 판정 불가로 남고,
+   *    `"none"`을 골라야 §89② 배제가 확정된다.
+   */
+  rightThreeYearExceptionKind: "" | "new_house" | "delay" | "none";
+  rightNewHouseCompletionDate: string;     // ④1호·2호 신축주택 완성일
+  rightMovedInWithin3Years: boolean;       // ④1호 완성 후 3년 내 세대전원 이사
+  rightResidedOneYearOrMore: boolean;      // ④1호 1년 이상 계속 거주
+  rightDisposalDelayReason: "" | "kamco" | "auction" | "public_sale"; // 시행규칙 §75① 1~3호
+  rightDisposedByThatMethod: boolean;      // §75① 「그 방법에 따라 양도된 경우」 — 둘째 요건
   marriageDate: string;
   /** §155④⑤ 합가·혼인 세대 내 먼저 양도 주택 여부 (비과세 판정 — 먼저 양도 요건) */
   isFirstTransferredInMerge: boolean;
@@ -325,6 +339,12 @@ const defaultFormData: TransferFormData = {
   replCompletionDate: "",
   replResidenceMonths: "",
   replWillResideNewHouse: false,
+  rightThreeYearExceptionKind: "",
+  rightNewHouseCompletionDate: "",
+  rightMovedInWithin3Years: false,
+  rightResidedOneYearOrMore: false,
+  rightDisposalDelayReason: "",
+  rightDisposedByThatMethod: false,
   marriageDate: "",
   isFirstTransferredInMerge: false,
   generalHouseGiftedFromDecedentWithin2yr: false,

@@ -394,6 +394,32 @@ export function calculateTransferTax(
    * 대신 어느 항을 직접 확인해야 하는지 그대로 알린다(자동 판정 대신 **판정 불가 고지** —
    * §155⑦3호 귀농주택 경고와 같은 층위다).
    */
+  /**
+   * §156의2⑬ · §156의3⑩ **사후관리(추징)** — 자기선언으로 인정한 예외는 요건이 깨지면
+   * 「사유가 발생한 날이 속하는 달의 말일부터 **2개월 이내**에 … 신고·납부」 대상이다.
+   *
+   * 🔴 2026-08-26 신설: `transfer-tax-exemption.ts`의 E-5 주석이 「사후관리(§156의2⑬) 경고는
+   *    결과 warnings에서 별도 처리」라고 적어 두었지만 **그 경고가 없었다**(주석·구현 드리프트).
+   *    ④(Phase 2 신설)와 ⑤(기존 대체주택)를 함께 배선한다.
+   */
+  const clause2Exception = exemptionResult.article89Clause2?.exception;
+  if (
+    exemptionResult.article89Clause2?.status === "exception_met" &&
+    // 🔑 추징 리스크는 **특례가 실제로 적용돼 비과세를 받은 경우**에만 있다.
+    //    ⑤는 선언만으로 `exception_met`이 되고 요건 판정은 E-5가 하므로 그 결과를 함께 본다.
+    (exemptionResult.isExempt || exemptionResult.isPartialExempt) &&
+    (clause2Exception === "소득세법 시행령 §156의2 ④" ||
+      clause2Exception === "소득세법 시행령 §156의3 ③" ||
+      clause2Exception === "소득세법 시행령 §156의2 ⑤")
+  ) {
+    warnings.push(
+      `1세대1주택 비과세를 「${clause2Exception}」의 자기선언 요건(신축주택 완성 후 3년 이내 ` +
+        "세대전원 이사 + 1년 이상 계속 거주)으로 인정했습니다. 그 요건을 갖추지 못하게 되면 " +
+        "「소득세법 시행령」 §156의2⑬(분양권은 §156의3⑩)에 따라 사유 발생일이 속하는 달의 " +
+        "말일부터 2개월 이내에 이 특례를 적용받지 않았을 경우의 세액을 신고·납부해야 합니다(추징).",
+    );
+  }
+
   if (exemptionResult.article89Clause2?.status === "undetermined") {
     warnings.push(
       "세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 그 주택을 양도했습니다. " +
