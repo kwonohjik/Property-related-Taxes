@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
+import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
 import { MultiTransferFilingFormSection } from "@/components/calc/results/transfer/MultiTransferFilingFormSection";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
@@ -353,6 +354,9 @@ export function MultiTransferTaxResultView({
       {result.amendmentDetail && (
         <AmendmentResultCard detail={result.amendmentDetail} fullTotalTax={result.totalTax} />
       )}
+      {/* 자산별 경고 — 집계 엔진이 단건 warnings를 자산 라벨과 함께 모은다(R-5). */}
+      <CalculationWarningsCard warnings={result.warnings} />
+
       {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
       <PrintSelectionPanel
         allGroups={MULTI_TRANSFER_PRINT_SECTIONS}

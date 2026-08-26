@@ -278,6 +278,8 @@ export async function POST(request: NextRequest) {
           primaryAcquisitionCause: data.acquisitionCause,
           primaryEngineInput: {
             householdHousingCount: engineInput.householdHousingCount,
+            // 세대 단위 — 컴패니언 주택도 §89②·§104⑦ 판정을 받아야 한다(R-5).
+            presaleRights: engineInput.presaleRights,
             isRegulatedArea: engineInput.isRegulatedArea,
             wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
             // 부수토지 컴패니언 전용 상속값 (F12) — 세대 단위 3값과 같은 층위.

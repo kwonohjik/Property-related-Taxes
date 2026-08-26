@@ -218,6 +218,15 @@ interface CompanionBuildContext {
     householdHousingCount: number;
     isRegulatedArea: boolean;
     wasRegulatedAtAcquisition: boolean;
+    /**
+     * 세대 보유 조합원입주권·분양권 — 「소득세법」 §89②·§104⑦2호·4호 판정용 (R-5).
+     *
+     * 🔴 「1세대가 … 보유」는 **세대 단위 사실**이라 같은 계약으로 함께 양도하는 주택이
+     *    두 채면 양쪽이 모두 이 값을 봐야 한다. 종전에는 `householdHousingCount`는
+     *    상속시키면서 이 값만 빠뜨려 컴패니언 주택이 §89② 배제를 통째로 면했다
+     *    (실측: 총세액 77,341,000 — 컴패니언분이 조용히 0원이었다).
+     */
+    presaleRights?: TransferTaxItemInput["presaleRights"];
     /** 주택 부수토지 컴패니언이 상속받는 거주기간 (F12) — 세대 단위 3값과 같은 취급. */
     residencePeriodMonths: number;
     propertyType: TransferTaxItemInput["propertyType"];
@@ -354,6 +363,8 @@ export function buildCompanionEngineInputs(
     housingCompensationTotal: c.housingCompensationTotal,
     housingCompensationBasisTotal: c.housingCompensationBasisTotal,
     householdHousingCount: ctx.primaryEngineInput.householdHousingCount,
+    // ⑭ 세대 단위 — 위 타입 주석 참조(R-5). 이 줄이 없으면 컴패니언 주택이 §89②·§104⑦을 면한다.
+    presaleRights: ctx.primaryEngineInput.presaleRights,
     /**
      * ⑬ `buildAssetPayload`가 컴패니언 payload에 `residencePeriodMonths`를 **한 번도 싣지 않아**
      * 컴패니언은 항상 거주 0개월이었다(F12) — 「소득세법 시행령」 §159의4 표2 대상 판정
