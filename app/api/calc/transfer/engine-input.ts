@@ -189,6 +189,8 @@ export function buildTransferEngineInput(
       : undefined,
     isFirstTransferredInMerge: data.isFirstTransferredInMerge,
     generalHouseGiftedFromDecedentWithin2yr: data.generalHouseGiftedFromDecedentWithin2yr,
+    generalHouseHeldAtInheritance: data.generalHouseHeldAtInheritance,
+    inheritedRightChoiceWhenBothHeld: data.inheritedRightChoiceWhenBothHeld,
     // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
     oneHouseExemptionProviso: data.oneHouseExemptionProviso
       ? {

@@ -285,6 +285,53 @@ export interface PresaleRight {
    * ⚠️ 중과(§104⑦) 주택 수 산정은 이 필드를 보지 않는다. 그쪽 상속 배제는 `HouseInfo` 축이다.
    */
   isInherited?: boolean;
+  /**
+   * §156의2⑥1~3호 · §156의3④1~2호 **순위 부적격** 자기선언 — 피상속인이 2 이상의 권리를
+   * 소유했을 때 순위상 「상속받은 1권리」가 아니면 true.
+   *
+   * 🔑 순위를 **계산하지 않는다**. 완전히 같은 문제(§155②1~4호 상속주택 순위)를 이 저장소는
+   *    이미 자기선언 boolean으로 처리한다(`transfer-inheritance-exclusion.ts` `passesRankingGate`).
+   *    ⚠️ 순위 단계 수는 조문마다 다르다 — 입주권 **3단계**(소유기간 → 거주기간 → 상속인 선택),
+   *       분양권 **2단계**(소유기간 → 상속인 선택). 화면 안내에서 구별한다.
+   */
+  isRankingDisqualifiedInheritedRight?: boolean;
+  /** 공동상속 권리인가 — §156의2⑥ 본문 괄호 · §156의3④ 본문 괄호 */
+  isCoInherited?: boolean;
+  /**
+   * 공동상속 **최대지분** 상속인인가 — §156의2⑦3호가목 · §156의3⑤5호가목.
+   * `true`가 아니면 「다른 사람이 소유한 것으로 본다」 ⇒ 이 세대에는 귀속되지 않는다.
+   *
+   * ⚠️ 후순위 단계가 조문마다 다르다 — 입주권 ⑦3호는 **3단계**(최대지분 → 인가일 현재 피상속인
+   *    보유 주택 거주자 → 최연장자), 분양권 ⑤5호는 **2단계**(최대지분 → 최연장자).
+   *    이 필드는 「최대지분 여부」만 받고 후순위는 자기선언에 맡긴다(주택 축과 같은 규약).
+   */
+  isLargestCoInheritedShareholder?: boolean;
+  /**
+   * §156의2⑥ 본문 괄호 「피상속인이 상속개시 당시 **주택** … 을 소유하지 않은 경우」.
+   *
+   * 🔑 **`decedentOwnedOtherRightTypeAtDeath`와 반드시 분리**한다 — §156의2⑮·§156의3⑫이
+   *    면제하는 것은 「**권리** 미소유」 요건**뿐**이고 「주택 미소유」는 ⑮ 본문이 전제로 요구한다
+   *    (「피상속인이 상속개시 당시 **주택은 소유하지 않고** 조합원입주권과 분양권만 소유한 경우」).
+   *    한 필드로 뭉치면 ⑮가 주택 요건까지 면제해 버린다.
+   */
+  decedentOwnedHouseAtDeath?: boolean;
+  /**
+   * 같은 괄호의 나머지 — 입주권이면 「또는 **분양권**을 소유하지 않은 경우」,
+   * 분양권이면 「또는 **조합원입주권**을 소유하지 않은 경우」(§156의3④).
+   * §156의2⑮·§156의3⑫ 선택이 있으면 **이 요건만** 면제된다.
+   */
+  decedentOwnedOtherRightTypeAtDeath?: boolean;
+  /**
+   * §156의2⑥ 단서 — 상속인과 피상속인이 상속개시 당시 **1세대**였는가.
+   * true면 원칙적으로 「상속받은 조합원입주권」으로 보지 않는다
+   * (주택 축 `HouseInfo.decedentSameHouseholdAtInheritance`와 같은 규약).
+   */
+  decedentSameHouseholdAtInheritance?: boolean;
+  /**
+   * 같은 단서의 예외 — 동거봉양 합가로 2주택이 된 경우로서 **합치기 이전부터 보유하던 주택이
+   * 조합원입주권으로 전환**된 경우. `decedentSameHouseholdAtInheritance === true`일 때만 의미.
+   */
+  parentalCareMergeInheritedRight?: boolean;
 }
 
 /** 다주택 중과세 판정 입력 */

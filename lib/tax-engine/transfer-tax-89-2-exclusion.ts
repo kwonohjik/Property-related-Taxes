@@ -87,6 +87,9 @@ export type Article89Clause2Input = Pick<
   | "ruralHouse"
   | "replacementHouse"
   | "rightThreeYearException"
+  | "generalHouseHeldAtInheritance"
+  | "inheritedRightChoiceWhenBothHeld"
+  | "generalHouseGiftedFromDecedentWithin2yr"
 >;
 
 /** §89②의 「분양권」인가 — §88 10호 정의 시행일(2021-01-01) 이후 취득분만. */
@@ -135,6 +138,29 @@ export function resolveArticle89Clause2(
   }
 
   /**
+   * 상속받은 권리 축 — §156의2⑥·⑦ · §156의3④·⑤ (Phase 3).
+   *
+   * ⑥·④ = 「상속 권리 + 일반주택」 각 1개 ⇒ **직접 1세대1주택 의제**.
+   * ⑦·⑤ = 「상속 권리 + 일반주택 + **상속 외** 권리」 각 1개 ⇒ 상속받은 것을 **없는 셈 치고**
+   *        ③~⑤(②·③)를 준용한다.
+   */
+  const inheritedRights = rights.filter((r) => r.isInherited === true);
+  const otherRights = rights.filter((r) => r.isInherited !== true);
+  const inheritedVerdict =
+    inheritedRights.length === 1
+      ? qualifyInheritedRight(inheritedRights[0], input)
+      : inheritedRights.length === 0
+        ? "not_inherited"
+        : "undetermined"; // 상속 권리 2개 이상 — 조문이 「1개」를 전제한다
+  /** ⑦·⑤가 담당하는 조합인가 — 「상속 1 + 상속 외 1」. */
+  const isArticle7Shape =
+    inheritedVerdict === "qualified" && inheritedRights.length === 1 && otherRights.length === 1;
+
+  if (inheritedVerdict === "undetermined") {
+    open.push("소득세법 시행령 §156의2 ⑥·⑦", "소득세법 시행령 §156의3 ④·⑤");
+  }
+
+  /**
    * 권리 2개 이상.
    *
    * 🔴 2026-08-26 정정(P-0): 종전에는 여기서 §156의2③·④ · §156의3②·③을 가리켰다. **틀렸다** —
@@ -144,14 +170,11 @@ export function resolveArticle89Clause2(
    *    1주택 + 2권리에 실제로 적용될 수 있는 예외는 넷이다(16항 전수 대조):
    *      · §156의2⑦ · §156의3⑤ — 상속받은 것이 **권리**면 「상속 권리 + 일반주택 + 상속 외 권리」
    *      · §156의2⑧ · ⑨ — 본문이 「1주택과 **2조합원입주권**」을 **명문으로 열거**한다
+   *
+   * ⑦·⑤가 성립하는 조합(`isArticle7Shape`)은 Phase 3이 담당하므로 여기서 빼지 않는다.
    */
-  if (rights.length >= 2) {
+  if (rights.length >= 2 && !isArticle7Shape) {
     open.push("소득세법 시행령 §156의2 ⑦·⑧·⑨", "소득세법 시행령 §156의3 ⑤");
-  }
-
-  // 상속받은 권리 — §156의2⑥⑦ · §156의3④⑤. 순위 규칙(피상속인 소유·거주기간)은 미구현.
-  if (rights.some((r) => r.isInherited === true)) {
-    open.push("소득세법 시행령 §156의2 ⑥", "소득세법 시행령 §156의3 ④");
   }
 
   // 동거봉양·혼인 합가 — §156의2⑧⑨(§156의3⑥이 그대로 준용). 4호 가·나·다목의 합가 전 귀속 미구현.
@@ -173,7 +196,26 @@ export function resolveArticle89Clause2(
    * ⚠️ 「1년」의 상대는 **가장 먼저 취득한 권리**다(권리가 1개인 경로만 여기 온다 — 위에서
    *    2개 이상은 판정 불가로 빠진다).
    */
-  const right = rights[0];
+  /**
+   * §156의2⑥ · §156의3④ — 상속 권리 + 일반주택 각 1개. 준용이 아니라 **직접 1세대1주택 의제**다
+   * (「국내에 1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용한다」).
+   * ⇒ 타이밍(1년·3년) 요건이 **없다**. ③④를 태우면 조용히 틀린다.
+   */
+  if (inheritedVerdict === "qualified" && otherRights.length === 0) {
+    return {
+      status: "exception_met",
+      exception:
+        inheritedRights[0].type === "redevelopment_right"
+          ? "소득세법 시행령 §156의2 ⑥"
+          : "소득세법 시행령 §156의3 ④",
+    };
+  }
+
+  /**
+   * §156의2⑦ · §156의3⑤ — 상속받은 것을 **없는 셈 치고** 「일반주택 + 상속 외 권리」로 보아
+   * ③~⑤(②·③)를 준용한다. ⇒ 타이밍 판정의 상대는 **상속 외 권리**다.
+   */
+  const right = isArticle7Shape ? otherRights[0] : rights[0];
   const oneYearMet = right.acquisitionDate >= addYears(input.acquisitionDate, 1);
   const deadline = addYears(right.acquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
   const withinDeadline = input.transferDate <= deadline;
@@ -216,6 +258,63 @@ export function resolveArticle89Clause2(
    * 나머지 예외는 위에서 전부 배제됐다. ⇒ §89② 본문이 그대로 적용된다.
    */
   return { status: "excluded" };
+}
+
+/**
+ * 상속받은 권리가 §156의2⑥(입주권)·§156의3④(분양권)의 「상속받은 권리」로 **인정되는가**.
+ *
+ * ## 세 갈래로 답한다
+ *
+ * · `qualified`    — 요건을 모두 충족. ⑥(단독) 또는 ⑦(상속 외 권리 1개 동반)로 간다.
+ * · `disqualified` — 요건 중 하나가 **명시적으로** 깨졌다. 그 권리는 「상속받은 것」이 아니라
+ *                    **일반 권리**로 취급되어 ③④ 타이밍 판정을 탄다.
+ * · `undetermined` — 긍정 선언(`generalHouseHeldAtInheritance`)이 없어 판정할 수 없다.
+ *                    ⇒ 종전 동작 유지 + 경고. **`disqualified`로 떨어뜨리면 안 된다** —
+ *                    미선언을 미해당으로 읽으면 상속 권리 보유 세대가 갑자기 과세로 뒤집힌다.
+ *
+ * ## 부정 선언은 `!== true` 규약을 따른다
+ *
+ * 순위 부적격·공동상속 소수지분·동일세대 등은 **체크박스가 화면에 있으므로** 미체크를 「아님」으로
+ * 읽는다 — 주택 축(`transfer-inheritance-exclusion.ts`)이 §155②③에서 쓰는 것과 같은 규약이다.
+ */
+function qualifyInheritedRight(
+  right: PresaleRight,
+  input: Article89Clause2Input,
+): "qualified" | "disqualified" | "undetermined" {
+  // ── ⑥ 본문 괄호 ①: 피상속인이 상속개시 당시 **주택**을 소유하지 않았을 것 ──
+  //    ⚠️ ⑮·⑫ 선택으로도 **면제되지 않는다**(⑮ 본문이 「주택은 소유하지 않고」를 전제로 건다).
+  if (right.decedentOwnedHouseAtDeath === true) return "disqualified";
+
+  // ── ⑥ 본문 괄호 ②: 피상속인이 **다른 종류의 권리**를 소유하지 않았을 것 ──
+  //    §156의2⑮ · §156의3⑫ 선택이 이 요건**만** 면제한다.
+  const article15Applied = input.inheritedRightChoiceWhenBothHeld === right.type;
+  if (right.decedentOwnedOtherRightTypeAtDeath === true && !article15Applied) {
+    return "disqualified";
+  }
+
+  // ── ⑥1~3호 / §156의3④1~2호 순위 ──
+  if (right.isRankingDisqualifiedInheritedRight === true) return "disqualified";
+
+  // ── 공동상속: ⑦3호가목 / ⑤5호가목 — 최대지분 상속인이 소유한 것으로 본다 ──
+  if (right.isCoInherited === true && right.isLargestCoInheritedShareholder !== true) {
+    return "disqualified";
+  }
+
+  // ── ⑥ 단서: 상속개시 당시 상속인·피상속인이 1세대였으면 원칙 배제 ──
+  if (
+    right.decedentSameHouseholdAtInheritance === true &&
+    right.parentalCareMergeInheritedRight !== true
+  ) {
+    return "disqualified";
+  }
+
+  // ── 일반주택 요건: 상속개시일 소급 2년 내 피상속인 증여분이면 배제 ──
+  if (input.generalHouseGiftedFromDecedentWithin2yr === true) return "disqualified";
+
+  // ── 일반주택 요건: 「상속개시 당시 보유한 주택」 — **긍정 선언 필수** ──
+  if (input.generalHouseHeldAtInheritance !== true) return "undetermined";
+
+  return "qualified";
 }
 
 /**
