@@ -25,7 +25,13 @@ interface NtsCase {
   floorArea: number;
   features?: SpecialAdjustmentFeatures;
   isResidential?: boolean;
-  manualAdj?: number; // 양도 사례(조정률 미적용)는 생략, 조정률 직접 검증은 features
+  /**
+   * 양도 사례는 `manualAdj: 100` 으로 조정률을 명시 고정한다.
+   * ⚠️ 종전에는 `features` 를 **생략**해 1.0 을 얻었는데, 구분 II(최고층수·연면적)는
+   *    특성 선택과 무관하게 자동 적용되므로(F-09, 고시 제11조) 생략만으로는 1.0 이 되지 않는다.
+   *    원본이 양도 사례라 조정률이 애초에 대상이 아니라는 사실을 **명시**로 남긴다.
+   */
+  manualAdj?: number;
   pricePerM2: number;
   standardPrice: number;
 }
@@ -33,17 +39,22 @@ interface NtsCase {
 // 단일 시점 일반 건물 13개 사례 (2026, 상증 모드. 양도 사례도 조정률 미적용 = 동일 산식)
 const CASES: NtsCase[] = [
   { name: "목구조(근생)", structureKey: "wood_frame", usageNo: 41, builtYear: 2009, landPrice: 964_000, floorArea: 95, features: { maxFloors: 1 }, pricePerM2: 598_000, standardPrice: 56_810_000 },
-  { name: "직업훈련소", structureKey: "cement_brick", usageNo: 33, builtYear: 1998, landPrice: 3_500_000, floorArea: 518.82, pricePerM2: 350_000, standardPrice: 181_587_000 },
-  { name: "노인주거복지", structureKey: "rc", usageNo: 35, builtYear: 2004, landPrice: 1_115_000, floorArea: 850.72, pricePerM2: 459_000, standardPrice: 390_480_480 },
+  // 2026 계산사례 1-나: 「양도 개시일 2026.1.1」·조정률 「-(양도세 계산시 미적용)」
+  { name: "직업훈련소", manualAdj: 100, structureKey: "cement_brick", usageNo: 33, builtYear: 1998, landPrice: 3_500_000, floorArea: 518.82, pricePerM2: 350_000, standardPrice: 181_587_000 },
+  // 2026 계산사례 1-다: 「양도 개시일」·조정률 「-(양도세 계산시 미적용)」
+  { name: "노인주거복지", manualAdj: 100, structureKey: "rc", usageNo: 35, builtYear: 2004, landPrice: 1_115_000, floorArea: 850.72, pricePerM2: 459_000, standardPrice: 390_480_480 },
   { name: "경로당", structureKey: "rc", usageNo: 35, builtYear: 2004, landPrice: 1_450_000, floorArea: 75.3, features: { maxFloors: 1 }, pricePerM2: 421_000, standardPrice: 31_701_300 },
   { name: "유흥주점", structureKey: "light_steel_frame", usageNo: 15, builtYear: 2001, landPrice: 1_730_000, floorArea: 1200.34, pricePerM2: 238_000, standardPrice: 285_680_920 },
-  { name: "자원순환", structureKey: "steel_frame", usageNo: 54, builtYear: 2009, landPrice: 47_300, floorArea: 660, pricePerM2: 343_000, standardPrice: 226_380_000 },
+  // 2026 계산사례 2-가: 「양도 개시일 2026.1.1」·조정률 「-(양도세 계산시 미적용)」
+  { name: "자원순환", manualAdj: 100, structureKey: "steel_frame", usageNo: 54, builtYear: 2009, landPrice: 47_300, floorArea: 660, pricePerM2: 343_000, standardPrice: 226_380_000 },
   { name: "창고", structureKey: "steel_frame", usageNo: 52, builtYear: 2005, landPrice: 859_000, floorArea: 432, features: { maxFloors: 1 }, pricePerM2: 296_000, standardPrice: 127_872_000 },
   { name: "단독주택(경량철골)", structureKey: "light_steel_frame", usageNo: 2, builtYear: 2003, landPrice: 960_700, floorArea: 265, features: { roofMaterial: 1, houseTypeTier: 16 }, isResidential: true, pricePerM2: 257_000, standardPrice: 68_105_000 },
   { name: "근생(라멘)", structureKey: "ramen", usageNo: 41, builtYear: 1996, landPrice: 2_177_000, floorArea: 65.42, features: {}, pricePerM2: 385_000, standardPrice: 25_186_700 },
   { name: "운동시설", structureKey: "rc", usageNo: 24, builtYear: 2015, landPrice: 1_123_000, floorArea: 1289.83, features: {}, pricePerM2: 896_000, standardPrice: 1_155_687_680 },
   { name: "동식물(철파이프)", structureKey: "steel_pipe", usageNo: 59, builtYear: 1995, landPrice: 165_000, floorArea: 137.15, features: { roofMaterial: 2, maxFloors: 1 }, pricePerM2: 18_000, standardPrice: 2_468_700 },
-  { name: "판매시설", structureKey: "cement_brick", usageNo: 11, builtYear: 1962, landPrice: 1_922_000, floorArea: 138.15, pricePerM2: 79_000, standardPrice: 10_913_850 },
+  // 2026 계산사례 2-사: 기본사항 라벨은 「상속 개시일」이나 **조정률 칸이 「-(양도세 계산시 미적용)」**이고
+  // 계산값도 조정률 미적용이어야 맞는다(79,000 / 적용 시 71,000) — 사례집 라벨 오기로 보아 양도로 고정한다.
+  { name: "판매시설", manualAdj: 100, structureKey: "cement_brick", usageNo: 11, builtYear: 1962, landPrice: 1_922_000, floorArea: 138.15, pricePerM2: 79_000, standardPrice: 10_913_850 },
   { name: "공장(시멘트블록)", structureKey: "cement_block", usageNo: 48, builtYear: 1987, landPrice: 1_810_900, floorArea: 250, features: { roofMaterial: 2, maxFloors: 1 }, pricePerM2: 46_000, standardPrice: 11_500_000 },
 ];
 
