@@ -411,9 +411,25 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
     redevelopment.rightsValue,
   );
 
-  // 인가후 기존주택분 (postApprovalExistingHouse):
-  // APT 완공 후 가목 전체: 양도가액 − 분양가(평가액-청산금) − 인가후 필요경비
-  const postApprovalGain = Math.max(0, transferPrice - salePriceTotal - postApprovalExpenses);
+  /**
+   * 인가후 기존주택분 (postApprovalExistingHouse):
+   * §166①2호 가목 전체 — 양도가액 − 분양가(평가액 − 지급받은 청산금) − 인가후 필요경비.
+   *
+   * 🔴 2026-08-27 정정(T1-05 — **세액 변경**): 종전에는 `Math.max(0, …)`으로 **음수를 잘랐다**.
+   *    §166①2호는 「다음 각 목의 금액을 **합한 가액**」이라고만 정하고, 「음수인 경우 0으로
+   *    본다」는 단서가 §166 ①~⑧ 어디에도 없다. clamp 때문에 **분양가 아래로는 아무리 싸게
+   *    팔아도 세액이 움직이지 않았다**(양도 3.0억·3.5억이 둘 다 64,801,000원).
+   *
+   *    음수의 최종 처리는 이미 하류가 담당한다 — 단건은 `transfer-tax.ts`의
+   *    `Math.max(0, ownerRawGain)`, 집계는 `skipLossFloor: true`로 §102② 통산에 실어 보낸다.
+   *    **분기 단계에서 자르면 그 통산이 볼 것이 없어진다.**
+   *
+   * ⭐ 같은 조 **1호(납부)** 분기 `splitAptPay`는 2026-08-25 E1-03(`96ed87b4`)에서 같은 이유로
+   *    이미 clamp를 제거했다 — 일관성은 제거 쪽에 있다.
+   *
+   * ⚠️ `salePriceTotal`의 clamp는 **분모/분양가 방어**라 그대로 둔다(:382).
+   */
+  const postApprovalGain = transferPrice - salePriceTotal - postApprovalExpenses;
 
   // settlement 분 (APT 청산금 비율 안분):
   // ★ 사례 42 정정 (2026-05-17, project_case_42_apt_receive_land):
