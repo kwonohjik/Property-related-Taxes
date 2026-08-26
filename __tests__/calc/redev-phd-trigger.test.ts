@@ -90,6 +90,15 @@ describe("isRedevPhdSectionActive — 섹션 가시성 5중 게이트", () => {
     ).toBe(true);
   });
 
+  it("⑥ 토지 출자 → §166③ 단가 카드가 대신 뜬다(§164⑦ 블록 자체가 없다)", () => {
+    // RedevelopmentValuationSection.tsx의 `isLand ?` 삼항이 §164⑦ 블록과 계산서 런처를
+    // 통째로 LandContribValuationContent로 바꾼다 — 화면에 없는 계산서가 결과탭·이력·PDF에
+    // 남는 것을 막는다(P2-04).
+    expect(isRedevPhdSectionActive({ ...open, redevOriginalAssetType: "land" })).toBe(false);
+    // 주택 출자는 §164⑦ 경로 그대로
+    expect(isRedevPhdSectionActive({ ...open, redevOriginalAssetType: "housing" })).toBe(true);
+  });
+
   it("🔑 미확인 필드는 차단하지 않는다 — 구버전·부분 input_data 방어", () => {
     // assetKind 부재 → 판단 보류(트리거만으로 판정)
     expect(isRedevPhdSectionActive(base)).toBe(true);
@@ -134,6 +143,16 @@ describe("가시성 술어 동기화 — 저쪽이 닫으면 게이트도 닫힌
   it("isSuccessorRightTransfer가 true면 게이트는 false", () => {
     const asset = redevAsset({ assetKind: "right_to_move_in", isSuccessorRightToMoveIn: true });
     expect(isSuccessorRightTransfer(asset)).toBe(true);
+    expect(isRedevPhdSectionActive(asset)).toBe(false);
+  });
+
+  it("⑥ 토지 출자는 **섹션 안쪽** 게이트다 — 섹션은 열려 있어도 §164⑦ 블록은 없다", () => {
+    // `shouldShowRedevValuationSection`는 섹션 자체의 렌더만 판정한다. 토지 출자를 가르는 것은
+    // `RedevelopmentValuationSection.tsx`의 `isLand ?` 삼항 — 그 안에서 §164⑦ 블록과
+    // 계산서 런처(`snapshotKey=bsp-*-redev-phd`)가 통째로 §166③ 단가 카드로 바뀐다.
+    // 두 술어가 갈리는 유일한 지점이므로 여기서 명시적으로 고정한다(P2-04).
+    const asset = redevAsset({ redevOriginalAssetType: "land" });
+    expect(shouldShowRedevValuationSection(asset)).toBe(true);
     expect(isRedevPhdSectionActive(asset)).toBe(false);
   });
 

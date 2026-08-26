@@ -285,5 +285,46 @@ export function addPropertyRefines(
         });
       }
     }
+
+    /**
+     * ⑩ §166③ 일반 환산 — **분모 필수** (2026-08-26 신설, E1-07).
+     *
+     * 종전에는 이 요구가 ⑧ 클라이언트에만 있었다. 분모가 없으면 엔진
+     * (`redevelopment-split.ts` Step A)이 취득가액을 0으로 두고 **오류 없이** 계산해
+     * 인가전 양도차익이 권리가액 전액이 됐다(사례 44 기준 산출세액 +38,244,566원 과대).
+     * 엔진은 이제 던지지만, 500이 아니라 **여기서 400**으로 막는 것이 정본이다.
+     *
+     * ⚠️ ⑧보다 **넓게 막지 않는다** — 승계조합원은 `runSuccessorMember`가 §166 안분 자체를
+     *    건너뛰므로 분모를 쓰지 않는다. 요구하면 화면에 없는 칸을 채우라는 dead-end가 된다.
+     * ⚠️ 위 §166③ 2-point 분기(`isHousingEstimated`)는 D가 아니라 전용 2필드를 쓴다 — 배제.
+     */
+    const useEstimated = (data as Record<string, unknown>).useEstimatedAcquisition === true;
+    if (useEstimated && !isHousingEstimated && rd.isSuccessorMember !== true) {
+      if (rd.originalAssetType === "land") {
+        if (!rd.landStdPriceAtAcq || (rd.landStdPriceAtAcq as number) <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["redevelopment", "landStdPriceAtAcq"],
+            message: "토지 출자 환산취득가 — 취득당시 개별공시지가(§166③ 분자) 필수",
+          });
+        }
+        if (!rd.landStdPriceAtApproval || (rd.landStdPriceAtApproval as number) <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["redevelopment", "landStdPriceAtApproval"],
+            message: "토지 출자 환산취득가 — 인가당시 개별공시지가(§166③ 분모) 필수",
+          });
+        }
+      } else if (
+        !rd.managementDisposalHousingPrice ||
+        (rd.managementDisposalHousingPrice as number) <= 0
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["redevelopment", "managementDisposalHousingPrice"],
+          message: "환산 모드 — D(관리처분 인가일 개별주택공시가격, §166③ 분모) 필수",
+        });
+      }
+    }
   }
 }
