@@ -440,7 +440,11 @@
 - **실패 시나리오**: (a) GB 3시점 배치의 최초공시 계산서만 제목이 「상속 건물 기준시가 계산」, Ⅰ.구분이 상속 칸, PDF 부제도 「상속」(3장 중 1장만 어긋남). (b) 최초공시 ≤2000이면 2001 더미 양도 인스턴스가 필터되지 않아 같은 제목 계산서가 두 장 나오고, 그중 한 장의 ⑪(86,411,600)은 폼 어디에도 들어가지 않은 미환산 값이다.
 - **법령**: 소득세법 시행령 제164조 제5항(≤2000 환산 준용). 계산서 Ⅰ.구분 표기 규칙은 국세청 「건물 기준시가 계산방법」 고시 — 고시 본문 미확인.
 - **제안**: ⚠️ `snapshotKeyTimepoint`에 `first → "acquisition"`을 넣으면 최초공시가 취득시로 오표기돼 「같은 제목 두 장」이라는 새 결함이 생긴다. `phdTimepointLabel` 정규식에 `(?:cb|gb)-(first)`를 넣어 배치 전용 라벨 경로로 태우되 `-gb-acq`/`-gb-transfer`는 계속 null이어야 하고(기존 회귀가 그것을 고정한다), 열거 규율상 `gb`는 `gb-ext`보다 뒤에 놓는다.
-- **🟠 보류(배치 7) — 전제가 현재 트리에서 재현되지 않는다**: 스냅샷 키 생성부를 전수 열거하니 실제로 만들어지는 접미는 **`-cb-first`·`-gb-acq`·`-gb-ext-acq`·`-phd-*`·`-mx-commercial`** 뿐이고 **`-gb-first`는 어디서도 생성되지 않는다**(`lib/calc/*.ts` 전수 grep). 유일하게 실재하는 `first` 키인 `-cb-first`는 `phdTimepointLabel`(:159)이 **이미 인식한다**. ⇒ 실패 시나리오 (a)(b)는 「생성되지 않는 키」에 대한 것이라 현행에서 발화하지 않는다. 리뷰 당시 D6 축이 `-gb-first`를 어디서 관측했는지 재측정이 선행 조건이다 — 없는 키에 정규식을 넓히는 것은 검증 불가능한 변경이다.
+- **✅ 종결(2026-08-27) — 결함은 실재하나 대상 키가 달랐다**
+  - **`-gb-first` 는 어디서도 생성되지 않는다**(lib·components·app 전 경로 grep). 실제 생성되는 접미 20종 중 `first` 는 **`-phd-first`·`-cb-first`** 둘뿐이다.
+  - **진짜 결함은 화면↔PDF 비대칭이었다.** 배치 스냅샷은 계산서를 valuation(`taxType: "inheritance_gift"`) 스냅샷으로 **재구성**하므로 그대로 두면 Ⅰ.구분이 상속 칸에 찍힌다. 화면(`BuildingStdPriceReportSection.tsx:138·172`)은 ①`phdTimepointLabel` ②`snapshotKeyTimepoint` **두 경로**로 교정하는데, `building-std-pdf-data.ts` 는 **②만** 썼다(:49) ⇒ ①에만 걸리는 배치 키(`-phd-{acq|first|transfer}`·`-cb-first`)가 그물을 빠져나가 **PDF 에서만 「상속」으로 찍혔다**. 정작 그 파일 상단 주석이 「한쪽만 고치면 화면↔PDF가 어긋난다 — 단일 출처 규약」을 적고 있었다.
+  - ⇒ ① 경로를 PDF 데이터 조립에 이식했다. 리뷰 경고대로 `snapshotKeyTimepoint` 에 `first → "acquisition"` 을 넣는 방식은 **채택하지 않았다** — 취득시와 최초공시일이 같은 칸(취득당시)이라 「같은 부제 두 장」이라는 새 결함이 된다. 구별은 신설 `NtsReportInstance.timepointLabel`(PDF 부제 우선값)이 담당한다.
+  - anchor `building-std-pdf-batch-timepoint.anchor.test.ts` 7건 — §1 3건이 수정 전 실패(`inheritance` 그대로)했고 §2 역방향 4건(상증 키·`-gb-acq` ②경로·연도 경계)은 수정 전후 불변이다.
 
 
 ### F-31 · 🟡 medium · CONFIRMED — ㎡당 금액 × 연면적의 Math.floor가 raw float라 소수 면적의 6.4%에서 기준시가가 1원 적게 나온다

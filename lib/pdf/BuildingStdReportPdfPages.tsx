@@ -85,7 +85,9 @@ function InstancePage({ inst }: { inst: NtsReportInstance }) {
     <Page size="A4" orientation="landscape" style={t.page}>
       <Text style={t.title}>건물 기준시가 계산서</Text>
       <Text style={t.subtitle}>
-        {MARK_LABEL[inst.markCell] ?? inst.markCell} · {inst.dateLabel}
+        {/* 배치 계산서는 취득시·최초공시일이 **같은 칸(취득당시)** 이라 MARK_LABEL 만으로는
+            두 장이 같은 부제가 된다 — 시점 라벨이 있으면 그것을 쓴다(F-30). */}
+        {inst.timepointLabel ?? MARK_LABEL[inst.markCell] ?? inst.markCell} · {inst.dateLabel}
         {inst.acqNoteLabel ? ` (${inst.acqNoteLabel})` : ""}
       </Text>
 
