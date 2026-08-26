@@ -218,6 +218,14 @@ export function buildPropertyPayload(form: TransferFormData) {
     // ⑬ §155④⑤ 합가 후 첫 양도 — 엔진 비과세 게이트가 `=== true`를 요구한다(transfer-tax-exemption.ts).
     //    marriageMerge·parentalCareMerge만 보내고 이 플래그를 빠뜨리면 특례가 조용히 미발동한다.
     ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+    // ⑬ §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 예외 축 — 단건과 같은 키(다건만 빠지면 침묵 소실)
+    ...(form.generalHouseGiftedFromDecedentWithin2yr
+      ? { generalHouseGiftedFromDecedentWithin2yr: true }
+      : {}),
+    ...(form.generalHouseHeldAtInheritance ? { generalHouseHeldAtInheritance: true } : {}),
+    ...(form.inheritedRightChoiceWhenBothHeld
+      ? { inheritedRightChoiceWhenBothHeld: form.inheritedRightChoiceWhenBothHeld }
+      : {}),
     ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
     // ⑬ 1990.8.30. 이전 취득 토지 환산 (route ⑭·엔진 STEP 0.4 지원) — 단건과 공용 헬퍼
     ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),

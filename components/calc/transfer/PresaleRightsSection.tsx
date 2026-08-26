@@ -174,6 +174,87 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
                 onCheckedChange={(v) => update(r.id, { isInherited: v })}
                 title="상속받은 권리"
               />
+              {/*
+                §156의2⑥·⑦ · §156의3④·⑤ — 「상속받은 권리」로 인정되기 위한 요건.
+                🔑 순위는 **계산하지 않고 자기선언**으로 받는다(주택 축 §155②③과 같은 규약).
+                ⚠️ 순위 단계 수가 다르다 — 입주권 3단계 / 분양권 2단계.
+              */}
+              {r.isInherited && (
+                <div className="space-y-1.5 rounded-md border border-violet-200 bg-violet-50/50 p-2">
+                  <p className="text-caption font-semibold text-violet-700">
+                    상속 권리 인정 요건 (시행령 §156의2⑥ · §156의3④)
+                  </p>
+                  <ToggleCard
+                    variant="chip"
+                    tone="violet"
+                    checked={r.decedentOwnedHouseAtDeath ?? false}
+                    onCheckedChange={(v) => update(r.id, { decedentOwnedHouseAtDeath: v })}
+                    title="피상속인이 상속개시 당시 주택을 보유"
+                  />
+                  <ToggleCard
+                    variant="chip"
+                    tone="violet"
+                    checked={r.decedentOwnedOtherRightTypeAtDeath ?? false}
+                    onCheckedChange={(v) => update(r.id, { decedentOwnedOtherRightTypeAtDeath: v })}
+                    title={
+                      r.type === "redevelopment_right"
+                        ? "피상속인이 상속개시 당시 분양권을 보유"
+                        : "피상속인이 상속개시 당시 조합원입주권을 보유"
+                    }
+                  />
+                  <ToggleCard
+                    variant="chip"
+                    tone="violet"
+                    checked={r.isRankingDisqualifiedInheritedRight ?? false}
+                    onCheckedChange={(v) =>
+                      update(r.id, { isRankingDisqualifiedInheritedRight: v })
+                    }
+                    title={
+                      r.type === "redevelopment_right"
+                        ? "순위상 상속받은 1입주권이 아님 (소유기간→거주기간→선택)"
+                        : "순위상 상속받은 1분양권이 아님 (소유기간→선택)"
+                    }
+                  />
+                  <ToggleCard
+                    variant="chip"
+                    tone="violet"
+                    checked={r.isCoInherited ?? false}
+                    onCheckedChange={(v) => update(r.id, { isCoInherited: v })}
+                    title="공동상속 권리"
+                  />
+                  {r.isCoInherited && (
+                    <ToggleCard
+                      variant="chip"
+                      tone="violet"
+                      checked={r.isLargestCoInheritedShareholder ?? false}
+                      onCheckedChange={(v) =>
+                        update(r.id, { isLargestCoInheritedShareholder: v })
+                      }
+                      title="상속지분이 가장 큰 상속인"
+                    />
+                  )}
+                  <ToggleCard
+                    variant="chip"
+                    tone="violet"
+                    checked={r.decedentSameHouseholdAtInheritance ?? false}
+                    onCheckedChange={(v) =>
+                      update(r.id, { decedentSameHouseholdAtInheritance: v })
+                    }
+                    title="상속개시 당시 피상속인과 동일세대"
+                  />
+                  {r.decedentSameHouseholdAtInheritance && (
+                    <ToggleCard
+                      variant="chip"
+                      tone="violet"
+                      checked={r.parentalCareMergeInheritedRight ?? false}
+                      onCheckedChange={(v) =>
+                        update(r.id, { parentalCareMergeInheritedRight: v })
+                      }
+                      title="동거봉양 합가 전부터 보유하던 주택이 전환된 것"
+                    />
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

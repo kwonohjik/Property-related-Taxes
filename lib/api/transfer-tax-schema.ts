@@ -159,6 +159,9 @@ const propertyBaseShape = {
   marriageMerge: z.object({ marriageDate: z.string().date() }).optional(),
   isFirstTransferredInMerge: z.boolean().optional(),
   generalHouseGiftedFromDecedentWithin2yr: z.boolean().optional(),
+  // ⑫ §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 예외 축 — 엔진이 게이트, strip 방지
+  generalHouseHeldAtInheritance: z.boolean().optional(),
+  inheritedRightChoiceWhenBothHeld: z.enum(["redevelopment_right", "presale_right"]).optional(),
   parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
   // ⑨⑩⑫ §154① 단서 — 비과세 보유·거주 요건 면제 사유 (propertyBaseShape 공유 → 단건·다건 동시)
   oneHouseExemptionProviso: z

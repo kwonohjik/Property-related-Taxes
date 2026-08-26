@@ -241,8 +241,15 @@ export const presaleRightSchema = z.object({
   regionCriteria: z.enum(["REGION", "VALUE"]).optional(),
   rightValue: z.number().int().nonnegative().optional(),
   isSpouseOwned: z.boolean().optional(),
-  // §156의2⑥·⑦ · §156의3④·⑤ — §89② 배제의 상속 예외 축(판정 불가 신호)
+  // §156의2⑥·⑦ · §156의3④·⑤ — §89② 배제의 상속 예외 축
   isInherited: z.boolean().optional(),
+  isRankingDisqualifiedInheritedRight: z.boolean().optional(),
+  isCoInherited: z.boolean().optional(),
+  isLargestCoInheritedShareholder: z.boolean().optional(),
+  decedentOwnedHouseAtDeath: z.boolean().optional(),
+  decedentOwnedOtherRightTypeAtDeath: z.boolean().optional(),
+  decedentSameHouseholdAtInheritance: z.boolean().optional(),
+  parentalCareMergeInheritedRight: z.boolean().optional(),
   // 공급주택 소재지 코드 (시·군·구 5자리 또는 법정동 10자리) — 다·라목 2호 동일 시·군·구 비교
   regionCode: z.string().min(5).optional(),
 });

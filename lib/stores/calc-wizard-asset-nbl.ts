@@ -230,6 +230,21 @@ export interface PresaleRightEntry {
    * 순위 규칙은 미구현이라, 엔진은 이 값을 **판정 불가 신호**로만 쓴다(잘못된 배제 방지).
    */
   isInherited?: boolean;
+  /**
+   * §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 인정 요건 — `isInherited === true`일 때만 의미.
+   * 순위는 **계산하지 않고 자기선언**으로 받는다(주택 축 §155②③과 같은 규약).
+   */
+  isRankingDisqualifiedInheritedRight?: boolean;
+  isCoInherited?: boolean;
+  isLargestCoInheritedShareholder?: boolean;
+  /** 피상속인이 상속개시 당시 **주택**을 소유했는가 — ⑮ 선택으로도 면제되지 않는다 */
+  decedentOwnedHouseAtDeath?: boolean;
+  /** 피상속인이 **다른 종류의 권리**를 소유했는가 — ⑮ 선택이 이 요건만 면제한다 */
+  decedentOwnedOtherRightTypeAtDeath?: boolean;
+  /** ⑥ 단서 — 상속개시 당시 상속인·피상속인이 1세대였는가 */
+  decedentSameHouseholdAtInheritance?: boolean;
+  /** ⑥ 단서의 예외 — 동거봉양 합가 전부터 보유하던 주택이 전환된 경우 */
+  parentalCareMergeInheritedRight?: boolean;
 }
 
 /** 비사업용 토지(NBL) 필드 초기값 상수 — makeDefaultAsset에서 spread 사용 (800줄 분리, 2026-06-15) */

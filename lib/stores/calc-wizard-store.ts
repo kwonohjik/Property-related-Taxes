@@ -169,6 +169,16 @@ export interface TransferFormData {
   isFirstTransferredInMerge: boolean;
   /** §155② 양도(일반)주택이 상속개시 2년내 피상속인 증여분 여부 (상속주택 특례 배제 게이트) */
   generalHouseGiftedFromDecedentWithin2yr: boolean;
+  /**
+   * §156의2⑥·⑦ · §156의3④·⑤ — 양도하는 일반주택을 **상속개시 당시 이미 보유**하고 있었는가.
+   * ⚠️ 긍정 선언이 있어야 상속 권리 예외를 인정한다(미선언 = 판정 불가).
+   */
+  generalHouseHeldAtInheritance: boolean;
+  /**
+   * §156의2⑮ · §156의3⑫ — 피상속인이 주택 없이 입주권과 분양권만 남긴 경우 상속인의 선택.
+   * 「다른 종류의 권리 미소유」 요건**만** 면제한다.
+   */
+  inheritedRightChoiceWhenBothHeld: "" | "redevelopment_right" | "presale_right";
   parentalCareMergeDate: string;
   // §154① 단서 — 비과세 보유·거주 요건 면제 사유 (FLAT; API에서 oneHouseExemptionProviso로 조립)
   provisoReason:
@@ -348,6 +358,8 @@ const defaultFormData: TransferFormData = {
   marriageDate: "",
   isFirstTransferredInMerge: false,
   generalHouseGiftedFromDecedentWithin2yr: false,
+  generalHouseHeldAtInheritance: false,
+  inheritedRightChoiceWhenBothHeld: "",
   parentalCareMergeDate: "",
   provisoReason: "",
   provisoDepartureDate: "",

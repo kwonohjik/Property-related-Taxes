@@ -39,6 +39,13 @@ export interface PresaleRightPayloadItem {
   isSpouseOwned?: boolean;
   regionCode?: string;
   isInherited?: boolean;
+  isRankingDisqualifiedInheritedRight?: boolean;
+  isCoInherited?: boolean;
+  isLargestCoInheritedShareholder?: boolean;
+  decedentOwnedHouseAtDeath?: boolean;
+  decedentOwnedOtherRightTypeAtDeath?: boolean;
+  decedentSameHouseholdAtInheritance?: boolean;
+  parentalCareMergeInheritedRight?: boolean;
 }
 
 /**
@@ -64,5 +71,12 @@ export function buildPresaleRightsPayload(
       isSpouseOwned: p.isSpouseOwned,
       regionCode: p.regionCode || undefined,
       isInherited: p.isInherited,
+      isRankingDisqualifiedInheritedRight: p.isRankingDisqualifiedInheritedRight,
+      isCoInherited: p.isCoInherited,
+      isLargestCoInheritedShareholder: p.isLargestCoInheritedShareholder,
+      decedentOwnedHouseAtDeath: p.decedentOwnedHouseAtDeath,
+      decedentOwnedOtherRightTypeAtDeath: p.decedentOwnedOtherRightTypeAtDeath,
+      decedentSameHouseholdAtInheritance: p.decedentSameHouseholdAtInheritance,
+      parentalCareMergeInheritedRight: p.parentalCareMergeInheritedRight,
     }));
 }

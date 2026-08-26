@@ -115,6 +115,13 @@ export function mapPresaleRightsToEngine(
     isSpouseOwned: r.isSpouseOwned,
     regionCode: r.regionCode,
     isInherited: r.isInherited,
+    isRankingDisqualifiedInheritedRight: r.isRankingDisqualifiedInheritedRight,
+    isCoInherited: r.isCoInherited,
+    isLargestCoInheritedShareholder: r.isLargestCoInheritedShareholder,
+    decedentOwnedHouseAtDeath: r.decedentOwnedHouseAtDeath,
+    decedentOwnedOtherRightTypeAtDeath: r.decedentOwnedOtherRightTypeAtDeath,
+    decedentSameHouseholdAtInheritance: r.decedentSameHouseholdAtInheritance,
+    parentalCareMergeInheritedRight: r.parentalCareMergeInheritedRight,
   }));
 }
 

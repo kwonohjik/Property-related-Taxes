@@ -26,6 +26,7 @@ import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionPro
 import { SpecialHouseExclusionSection } from "@/components/calc/transfer/SpecialHouseExclusionSection";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { RightThreeYearExceptionSection } from "@/components/calc/transfer/RightThreeYearExceptionSection";
+import { InheritedRightExceptionSection } from "@/components/calc/transfer/InheritedRightExceptionSection";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
@@ -549,6 +550,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               권리 취득일부터 3년을 넘겨 양도한 경우에만 스스로 열린다(엔진 술어 공용).
             */}
             <RightThreeYearExceptionSection form={form} onChange={onChange} />
+
+            {/*
+              §89② 배제의 상속 권리 예외 — 시행령 §156의2⑥·⑦ · §156의3④·⑤ · ⑮.
+              권리 목록에서 「상속받은 권리」를 체크한 경우에만 스스로 열린다.
+            */}
+            <InheritedRightExceptionSection form={form} onChange={onChange} />
 
             {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
             {form.isOneHousehold && form.householdHousingCount === "1" && (
