@@ -225,6 +225,11 @@ export interface PresaleRightEntry {
   regionCode?: string;
   /** 소재지 주소 요약 — UI 표시 전용(AddressSearch 선택 결과). 엔진/API 미전송. */
   regionName?: string;
+  /**
+   * 상속받은 권리인가 — 「소득세법 시행령」 §156의2⑥·⑦ · §156의3④·⑤ (§89② 배제의 예외).
+   * 순위 규칙은 미구현이라, 엔진은 이 값을 **판정 불가 신호**로만 쓴다(잘못된 배제 방지).
+   */
+  isInherited?: boolean;
 }
 
 /** 비사업용 토지(NBL) 필드 초기값 상수 — makeDefaultAsset에서 spread 사용 (800줄 분리, 2026-06-15) */

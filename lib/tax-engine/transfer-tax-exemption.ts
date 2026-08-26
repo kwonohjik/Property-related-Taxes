@@ -11,6 +11,10 @@
  */
 
 import { addYears, format } from "date-fns";
+import {
+  resolveArticle89Clause2,
+  type Article89Clause2Result,
+} from "./transfer-tax-89-2-exclusion";
 import { calculateHoldingPeriod, CONVERSION_EXEMPTION_CUTOFF } from "./tax-utils";
 import { EXEMPTION_PROVISO_CONST, TEMP_TWO_HOUSE_PROVISO_REASONS } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
@@ -176,6 +180,14 @@ interface ExemptionResult {
    * ⚠️ 거주 2년 요건은 연언(AND)이므로 별개다. 표2 게이트의 `table2ResidenceYears >= 2`는 유지된다.
    */
   deemedOneHouseBy155?: boolean;
+  /**
+   * 「소득세법」 §89② 판정 echo — 세대가 주택과 조합원입주권·분양권을 함께 보유하는가.
+   *
+   * `"excluded"`면 이 함수가 §89①3호를 끄고 과세로 돌린다. `"undetermined"`면 **종전 동작을
+   * 유지**하고 상위(`transfer-tax.ts`)가 경고를 낸다 — 예외 16항 중 입력 경로가 없는 항이
+   * 남아 있어, 배제만 켜면 그 예외에 해당하는 세대가 법 근거 없이 불리해지기 때문이다.
+   */
+  article89Clause2?: Article89Clause2Result;
 }
 
 /** §155⑱ 각 호 라벨 (exemptReason 표시용) — 내부 id 노출 금지 원칙에 따라 한국어로 환원 */
@@ -583,7 +595,31 @@ export function resolveDeemedOneHouseBy155(
     : undefined;
 }
 
+/**
+ * 1세대1주택 비과세 판정 — §89①3호·§155 각 특례의 **단일 진입점**.
+ *
+ * §89②(주택 + 조합원입주권·분양권 보유 세대) 판정을 먼저 태우고, 그 결과를 모든 반환에 echo한다.
+ * 배제가 **확정**된 경우에만 §89①3호를 끄고, 판정 불가면 종전 동작을 유지한다 —
+ * 상위(`transfer-tax.ts`)가 그 사실을 경고로 노출한다.
+ *
+ * @param presaleRightStartDate §88 10호 「분양권」 정의 시행일 — DB
+ *   `houseCountExclusionRules.presaleRightStartDate`. §89② 판정에서 **분양권 축의 취득일
+ *   게이트**로 쓴다. 미제공 시 분양권은 판정하지 않는다(기산일을 모르는 채 불리하게 적용하지
+ *   않는다 — §104⑦ 주택 수와 같은 값을 공유한다).
+ */
 export function checkExemption(
+  input: TransferTaxInput,
+  oneHouseRules: OneHouseSpecialRulesData,
+  presaleRightStartDate?: Date,
+): ExemptionResult {
+  const article89Clause2 = resolveArticle89Clause2(input, presaleRightStartDate);
+  if (article89Clause2.status === "excluded") {
+    return { isExempt: false, isPartialExempt: false, article89Clause2 };
+  }
+  return { ...checkExemptionCore(input, oneHouseRules), article89Clause2 };
+}
+
+function checkExemptionCore(
   input: TransferTaxInput,
   oneHouseRules: OneHouseSpecialRulesData,
 ): ExemptionResult {

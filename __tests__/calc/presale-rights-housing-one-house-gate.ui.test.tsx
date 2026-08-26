@@ -72,14 +72,22 @@ describe("U2-05 ⑤ — 주택 양도 × 1주택 세대의 분양권 입력 경�
     expect(screen.queryAllByText(PRESALE_SECTION).length).toBe(1);
   });
 
-  it("U2-05-03: 중과 한시배제 기간 양도 — 중과 판정 자체가 없으므로 렌더하지 않는다", () => {
+  /**
+   * 🔴 2026-08-26 정정(C1-01): 종전 단언은 **0벌**이었다 — 「중과 판정 자체가 없으므로 렌더하지
+   *    않는다」. 그 전제가 뒤집혔다. 이 목록은 이제 중과(§104⑦) 전용 입력이 아니라
+   *    「소득세법」 §89②(1세대가 주택과 조합원입주권·분양권을 보유하다가 그 주택을 양도 →
+   *    §89①3호 배제)의 **비과세 판정 입력**이기도 하다. 중과 한시배제는 §89②과 무관하므로
+   *    그 기간에도 선언 경로가 있어야 한다 ⇒ 렌더 위치를 ② 비과세 판정으로 옮겼다.
+   *    (`article-89-2-declaration-path.ui.test.tsx`가 그 이동을 별도로 고정한다.)
+   */
+  it("U2-05-03: 중과 한시배제 기간 양도에도 렌더된다 — §89②은 중과가 아니라 비과세 규칙", () => {
     render(
       <Step4
         form={form({ transferDate: "2025-06-01" })}
         onChange={() => {}}
       />,
     );
-    expect(screen.queryAllByText(PRESALE_SECTION).length).toBe(0);
+    expect(screen.queryAllByText(PRESALE_SECTION).length).toBe(1);
   });
 
   it("U2-05-04: 토지 양도에는 이 경로가 열리지 않는다", () => {

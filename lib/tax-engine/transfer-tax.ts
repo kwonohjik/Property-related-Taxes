@@ -50,6 +50,7 @@ import {
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
   applyCommercialBuildingStep,
+  presaleRightStartDate,
 } from "./transfer-tax-helpers";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
@@ -354,6 +355,7 @@ export function calculateTransferTax(
                 acquisitionDate: exemptionAcquisitionDate,
               },
               parsedRates.oneHouseSpecialRules,
+              presaleRightStartDate(parsedRates),
             );
           })()
         : undefined;
@@ -378,7 +380,29 @@ export function calculateTransferTax(
   const { exemptionJudgeInput, new994Detail, unsold989Detail, specialHouseExclusionDetail } =
     runHouseCountExclusionStep(effectiveInput, steps);
 
-  const exemptionResult = checkExemption(exemptionJudgeInput, parsedRates.oneHouseSpecialRules);
+  const exemptionResult = checkExemption(
+    exemptionJudgeInput,
+    parsedRates.oneHouseSpecialRules,
+    presaleRightStartDate(parsedRates),
+  );
+
+  /**
+   * §89② — 세대가 주택과 조합원입주권·분양권을 함께 보유하는데, 단서의 예외(시행령 §156의2③~⑪ ·
+   * §156의3②~⑧) 중 **판정에 필요한 사실을 입력받을 경로가 없는 항**이 남아 있는 경우.
+   *
+   * 배제를 켜면 그 예외에 해당하는 세대가 법 근거 없이 불리해지므로 종전 동작을 유지하고,
+   * 대신 어느 항을 직접 확인해야 하는지 그대로 알린다(자동 판정 대신 **판정 불가 고지** —
+   * §155⑦3호 귀농주택 경고와 같은 층위다).
+   */
+  if (exemptionResult.article89Clause2?.status === "undetermined") {
+    warnings.push(
+      "세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 그 주택을 양도했습니다. " +
+        "「소득세법」 §89②은 이 경우 1세대1주택 비과세(§89①3호)를 적용하지 않되, 시행령이 정하는 " +
+        "예외에 해당하면 그대로 적용합니다. 아래 조문의 요건 충족 여부를 직접 확인하세요 — " +
+        "이 계산에는 §89② 배제를 적용하지 않았습니다: " +
+        (exemptionResult.article89Clause2.openArticles ?? []).join(" · "),
+    );
+  }
 
   // §155⑦3호 귀농주택 — ⑪(귀농 후 최초 1개 일반주택 한정)·⑫(귀농일부터 3년 영농·거주 사후관리)는
   //   과거·미래 양도 이력이 있어야 판정할 수 있어 엔진이 결론 낼 수 없다. 자동 판정 대신 경고로 노출한다

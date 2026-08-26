@@ -114,6 +114,7 @@ export function mapPresaleRightsToEngine(
     rightValue: r.rightValue,
     isSpouseOwned: r.isSpouseOwned,
     regionCode: r.regionCode,
+    isInherited: r.isInherited,
   }));
 }
 
