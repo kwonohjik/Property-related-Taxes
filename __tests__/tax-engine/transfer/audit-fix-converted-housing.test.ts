@@ -50,14 +50,25 @@ describe("audit-fix: §99-164-10 환산주택가격 BigInt 오버플로 절사 �
     expect(calcConvertedHousingPrice(OVERFLOW_INPUT)).toBe(3_004_366_461);
   });
 
-  it("applyConvertedHousingPriceOverride — 자산별 안분도 정수 정확 floor", () => {
+  it("applyConvertedHousingPriceOverride — 자산별 안분도 정수 정확 floor + 잔액 흡수", () => {
     // converted = 3,004,366,461
     // convertedLand = floor(3,004,366,461 × 2,000,000,000 / 3,665,346,385) = 1,639,335,629
     // convertedBuilding = 3,004,366,461 − 1,639,335,629 = 1,365,030,832  (float 경로 = 1,365,030,833)
     // acquisitionLandPricePerSqm = floor(1,639,335,629 / 100) = 16,393,356
+    //
+    // ⚠️ 건물분 기대값을 1,365,030,832 → **1,365,030,861** 로 갱신했다(F-42).
+    //    하류는 토지분을 `floor(perSqm × landArea)` = 16,393,356 × 100 = 1,639,335,600 으로 복원하므로
+    //    원/㎡ 왕복 절사에서 **29원**이 사라졌다. 종전 기대값은 그 누수 상태를 고정하고 있었다.
+    //    이제 잔액을 건물분이 흡수해 `복원 토지분 + 건물분 = converted` 가 성립한다
+    //    (`buildConvertedHousingDetail` 이 이미 쓰던 정책을 override 도 이어받는다).
     const overridden = applyConvertedHousingPriceOverride(OVERFLOW_INPUT);
     expect(overridden.acquisitionLandPricePerSqm).toBe(16_393_356);
-    expect(overridden.acquisitionBuildingStdPrice).toBe(1_365_030_832);
+    expect(overridden.acquisitionBuildingStdPrice).toBe(1_365_030_861);
+    // 합계 보존 불변식 — 이 단언이 있어야 같은 누수가 다시 들어오지 않는다
+    const restoredLand = Math.floor(
+      (overridden.acquisitionLandPricePerSqm ?? 0) * OVERFLOW_INPUT.landArea,
+    );
+    expect(restoredLand + (overridden.acquisitionBuildingStdPrice ?? 0)).toBe(3_004_366_461);
   });
 
   it("소규모 입력(비오버플로) 회귀 0 — 기존 산식과 동일", () => {

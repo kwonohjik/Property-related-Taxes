@@ -45,7 +45,15 @@ function BreakdownCard({ title, tone, bd, floorArea, sameYearBadge }: CardProps)
       <div className="text-right font-mono text-2xl font-bold tabular-nums">{fmt(bd.standardPrice)}</div>
 
       <div className="space-y-1 border-t pt-2 text-xs leading-relaxed text-slate-600">
-        {isMech ? (
+        {bd.sameAdjustmentPeriodDerived ? (
+          /* §164⑧ 파생값 — 취득당시 기준시가에서 산식으로 나온 값이라 고유 ㎡당 금액이 없다.
+             종전에는 취득 breakdown 을 그대로 물려받아 「㎡당 × 연면적 = 양도액」이라는
+             성립하지 않는 산식을 인쇄했다(F-34). */
+          <p>
+            동일조정기간 환산(소득세법 시행령 §164⑧) — 취득당시 기준시가에서 산정한 값이라 별도의 ㎡당
+            금액이 없습니다.
+          </p>
+        ) : isMech ? (
           <>
             <p>
               건물 기준시가 = 단가 <b>{fmt(bd.basePrice)}</b> × 잔가율 <b>{bd.residualRate}</b> × 주차대수{" "}
