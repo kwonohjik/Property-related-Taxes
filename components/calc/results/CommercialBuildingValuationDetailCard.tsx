@@ -72,6 +72,14 @@ function Row({ label, value, sub = false, highlight = false }: {
 
 export function CommercialBuildingValuationDetailCard({ detail, transferPrice, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain, swapApplied }: Props) {
   const isPreDisclosure = detail.estimatedBasisAtAcq !== undefined;
+  /**
+   * 환산취득가·개산공제의 **토지·건물 분리** 가능 여부.
+   * 안분 산식이 `합계 × 취득시토지기준시가 / 취득시기준시가합` 이라 취득당시 토지·건물 기준시가가
+   * **둘 다** 있어야 성립한다. 호별고시 후 취득(C-02)은 취득시 건물 기준시가를 싣지 않아
+   * 분모·분자가 0이 되는데, 종전에는 그 상태로 두 행을 렌더해 「토지분 0 / 건물분 = 합계 전부」라는
+   * 사실과 다른 표가 나왔다(F-23). 합계·개산공제 합계는 정확하므로 **분리 행만** 숨긴다.
+   */
+  const acqSplitAvailable = (detail.landStdAtAcq ?? 0) > 0 && (detail.buildingStdAtAcq ?? 0) > 0;
 
   // 보유기간 텍스트
   const holdingText = holdingYears !== undefined && holdingMonths !== undefined
@@ -136,8 +144,18 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
               value={detail.estimatedAcquisitionTotal}
               highlight
             />
-            <Row label={<>환산취득가 토지분 = INT(합계 × <Frac top="취득시 토지기준시가" bottom="취득시 기준시가합" />)</>} value={detail.estimatedAcquisitionLand} sub />
-            <Row label="환산취득가 건물분 = 합계 − 토지분" value={detail.estimatedAcquisitionBuilding} sub />
+            {acqSplitAvailable ? (
+              <>
+                <Row label={<>환산취득가 토지분 = INT(합계 × <Frac top="취득시 토지기준시가" bottom="취득시 기준시가합" />)</>} value={detail.estimatedAcquisitionLand} sub />
+                <Row label="환산취득가 건물분 = 합계 − 토지분" value={detail.estimatedAcquisitionBuilding} sub />
+              </>
+            ) : (
+              <tr>
+                <td colSpan={2} className="text-caption text-muted-foreground">
+                  취득당시 <b>건물</b> 기준시가가 없어 토지·건물 분리는 산정하지 않습니다(합계만 표시).
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
         {detail.sec164_8ProvisoApplicable && (
@@ -164,8 +182,12 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
         <table className="w-full border-collapse">
           <tbody>
             <Row label={`개산공제 합계 = INT(${formatKRW(detail.lumpDeductionBase ?? detail.estimatedBasisAtAcq ?? 0)} × 3%)`} value={detail.estimatedDeductionTotal} highlight />
-            <Row label="개산공제 토지분" value={detail.estimatedDeductionLand} sub />
-            <Row label="개산공제 건물분" value={detail.estimatedDeductionBuilding} sub />
+            {acqSplitAvailable && (
+              <>
+                <Row label="개산공제 토지분" value={detail.estimatedDeductionLand} sub />
+                <Row label="개산공제 건물분" value={detail.estimatedDeductionBuilding} sub />
+              </>
+            )}
           </tbody>
         </table>
         {swapApplied && (

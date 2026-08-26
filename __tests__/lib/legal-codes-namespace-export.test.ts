@@ -35,6 +35,8 @@
  * > 않는다. 하한을 올릴 때는 실측값으로만 갱신할 것(추정 금지).
  */
 import { describe, it, expect } from "vitest";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as transfer from "@/lib/tax-engine/legal-codes/transfer";
 import * as inheritanceGift from "@/lib/tax-engine/legal-codes/inheritance-gift";
 import * as acquisition from "@/lib/tax-engine/legal-codes/acquisition";
@@ -217,9 +219,26 @@ describe("legal-codes/transfer — 하위 파일별 인용 기여", () => {
 });
 
 describe("가드 자체의 유효성", () => {
-  it("NS-META-1: coverage-collect가 import하는 모듈 수와 일치한다 (8개)", () => {
-    // 모듈이 추가됐는데 이 표에 넣지 않으면 그 모듈은 가드 밖에 남는다.
-    expect(MODULES).toHaveLength(8);
+  it("NS-META-1: coverage-collect가 legal-codes 디렉터리 전건을 덮는다", () => {
+    // ⚠️ 종전에는 `toHaveLength(8)` 이라 **드리프트를 잡는 대신 고정**했다 —
+    //    모듈이 추가돼도 이 단언은 그대로 통과하고, 그 모듈의 조문은 모수에서 사라져
+    //    uncovered 에도 뜨지 않은 채 게이트가 100% 로 초록불이 됐다(F-39).
+    //    ⇒ 디렉터리 열거와 대조해 「새 모듈이 생기면 자동으로 걸리게」 한다.
+    const dir = "lib/tax-engine/legal-codes";
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith(".ts"))
+      .map((f) => path.basename(f, ".ts"));
+    // `transfer.ts` 가 `export *` 로 재수출하는 모듈은 직접 import 하지 않아도 구제된다.
+    const transferSrc = fs.readFileSync(path.join(dir, "transfer.ts"), "utf8");
+    const reExported = new Set(
+      [...transferSrc.matchAll(/export \* from "\.\/([\w-]+)"/g)].map((m) => m[1]),
+    );
+    const collectSrc = fs.readFileSync("lib/legal-verification/coverage-collect.ts", "utf8");
+    const uncovered = files.filter(
+      (m) => !reExported.has(m) && !collectSrc.includes(`legal-codes/${m}"`),
+    );
+    expect(uncovered).toEqual([]);
   });
 
   it("NS-META-2: 각 모듈의 심볼 목록이 실제 export 전량이다 (누락 없이 고정했는가)", () => {

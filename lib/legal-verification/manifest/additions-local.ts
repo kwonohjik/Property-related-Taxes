@@ -212,4 +212,16 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  // ── 개인지방소득세 특별징수 — `legal-codes/local-tax.ts` 가 인용한다(F-39 로 모수 편입).
+  //    키워드는 KoreanLaw 실측 본문(MST 282559, 시행 2026-07-01).
+  {
+    id: "LOCAL_TAX.SPECIAL_COLLECTION",
+    citation: "지방세법 §103의13",
+    keywords: [
+      "특별징수의무",
+      "100분의 10에 해당하는 금액을 소득세 원천징수와 동시에 개인지방소득세로 특별징수",
+      "특별징수의무자",
+    ],
+    keywordMode: "ALL",
+  },
 ];

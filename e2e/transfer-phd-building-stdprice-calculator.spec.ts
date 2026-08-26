@@ -288,7 +288,8 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await modal.getByRole("button", { name: "3시점 계산하기" }).click();
 
     // 3시점 모두 산출 — 최초공시 anchor 값(base2001 328,000/㎡ × 263.45 × 0.927 floor)
-    await expect(modal.getByText("80,103,553 원")).toBeVisible();
+    // 「원」 접미사 제거(F-44 — 기능군 계획서 「숫자 끝 "원" 금지」)로 bare 숫자를 단언한다.
+    await expect(modal.getByText("80,103,553", { exact: true })).toBeVisible();
     // 미산출 경고 부재
     await expect(modal.getByText(/최초공시일 건물 미산출/)).toHaveCount(0);
 

@@ -185,7 +185,13 @@ export function BuildingStdValuationSections({
                       f.adjustmentFeatures,
                       valStructureIndex || 100,
                       parseFloat(f.floorArea.replace(/,/g, "")) || 0,
-                      { isResidential: f.isResidentialUse, isApartment: f.isApartmentUse },
+                      {
+                        isResidential: f.isResidentialUse,
+                        isApartment: f.isApartmentUse,
+                        // II 최고층수의 통나무조 제외 판정에 필요하다 — 종전에는 칩만 빠뜨려
+                        // 같은 화면에서 칩 130% vs 엔진 90% 로 40%p 어긋났다(F-35).
+                        structureKey: f.valStructureKey,
+                      },
                     ) * 100
                   ).toFixed(1)}
                   %

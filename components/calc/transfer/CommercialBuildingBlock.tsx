@@ -424,6 +424,28 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 hideUnit
               />
             </FieldCard>
+            {/* 취득시·양도시 칸에는 계산기 런처가 있는데 최초고시시 칸만 없었다(F-43).
+                배치 모달이 게이트를 통과하면 채워지지만, 배치가 지원하지 않는 경로(기계식주차 —
+                모달을 열기 전 판정 불가)와 상속 취득 상가 섹션에는 폴백이 없었다.
+                PHD 선례대로 `transferSectionLabel` 로 둘째 시점을 「최초고시」로 표기해
+                새 `applyTimePoint` 값 없이 배선한다. */}
+            <div className="flex justify-end">
+              <BuildingStdPriceModalButton
+                lockedTaxType="transfer"
+                initialAddress={stdPriceAddress}
+                snapshotKey={`bsp-${asset.assetId}-cb-first`}
+                applyTimePoint="transfer"
+                transferSectionLabel="최초고시 시점"
+                hideFloorAreaInput
+                prefill={{
+                  floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined,
+                  landAreaM2: asset.cbLandArea,
+                  acquisitionDate: asset.acquisitionDate,
+                  transferDate,
+                }}
+                onApply={(v) => onChange({ cbBuildingStdPriceAtFirst: String(v) })}
+              />
+            </div>
             {/* 양도시 — emerald */}
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
               <FieldCard

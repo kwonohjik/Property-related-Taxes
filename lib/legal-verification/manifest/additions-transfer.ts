@@ -404,4 +404,19 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  // ── 원천징수(예금·적금 이자) — `legal-codes/income-tax.ts` 가 인용한다.
+  //    2026-08-27 커버리지 수집기에 그 모듈을 추가하면서 모수에 들어왔다(F-39).
+  //    키워드는 KoreanLaw 실측 본문(MST 280405, 시행 2026-07-01).
+  {
+    id: "INCOME_TAX.WITHHOLDING_DUTY",
+    citation: "소득세법 §127",
+    keywords: ["원천징수의무", "소득세를 원천징수하여야 한다", "원천징수의무자"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INCOME_TAX.WITHHOLDING_RATE_INTEREST",
+    citation: "소득세법 §129",
+    keywords: ["원천징수세율", "그 밖의 이자소득에 대해서는 100분의 14"],
+    keywordMode: "ALL",
+  },
 ];
