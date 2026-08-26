@@ -52,6 +52,8 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
         },
       }
     : {}),
+  // ④⑬ §155⑥1호 문화유산 주택 — 요건이 boolean 하나(2·3호 삭제). false는 보내지 않는다.
+  ...(form.culturalHeritageHouseSpecial ? { culturalHeritageHouse: true } : {}),
   // ④⑬ §155⑦ 농어촌주택 FLAT → nested. 유형별로 무의미한 필드는 보내지 않는다
   //     (침묵 오판정 방지 — 예: 상속 유형에 귀농 대지면적을 실어 보내면 안 된다).
   ...(form.ruralHouseSpecial

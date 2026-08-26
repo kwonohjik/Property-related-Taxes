@@ -769,6 +769,32 @@ function checkExemptionCore(
     }
   }
 
+  /**
+   * E-3.6: §155⑥1호 문화유산 주택 + 일반주택 → **일반주택 양도**를 1주택 의제.
+   *
+   * > 다음 각 호의 어느 하나에 해당하는 주택과 그밖의 주택(일반주택)을 국내에 **각각 1개씩**
+   * > 소유하고 있는 1세대가 일반주택을 양도하는 경우에는 국내에 1개의 주택을 소유하고 있는
+   * > 것으로 보아 **제154조제1항을 적용**한다.
+   * >   1. 지정문화유산 · 국가등록문화유산 · 천연기념물등   2. **삭제**   3. **삭제**
+   *
+   * 🔑 2·3호가 삭제돼 요건은 **boolean 하나**다. 설계 문서는 「§155⑥ 자체가 미구현이므로 별도
+   *    선행 과제」라 적었으나 **과대평가였다**(계획서 §4.2).
+   * ⇒ ① 2주택일 것 ② 문화유산 주택 선언 ③ §154① 요건 충족(「§154①을 적용」이므로).
+   */
+  if (
+    input.householdHousingCount === 2 &&
+    input.culturalHeritageHouse === true &&
+    meetsOneHouseHoldingResidence(input, rule)
+  ) {
+    const basis = " (§155⑥1호)";
+    const priceCheck =
+      input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
+    if (priceCheck <= rule.maxExemptPrice) {
+      return { isExempt: true, isPartialExempt: false, exemptReason: `문화유산 주택 비과세${basis}`, deemedOneHouseBy155: true };
+    }
+    return { isExempt: false, isPartialExempt: true, exemptReason: `문화유산 주택 고가주택${basis}`, deemedOneHouseBy155: true };
+  }
+
   // E-3.8: §155⑦ 농어촌주택 + 일반주택 → **일반주택 양도**를 1주택 의제.
   if (qualifiesRuralHouse(input) && meetsOneHouseHoldingResidence(input, rule)) {
     const basis = ` (§155⑦${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`;

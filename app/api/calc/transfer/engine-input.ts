@@ -168,6 +168,8 @@ export function buildTransferEngineInput(
      * `parentalCareMerge`가 이미 변환한다).
      */
     mergedHouseholdFirstHouse: data.mergedHouseholdFirstHouse,
+    // ⑭ §155⑥1호 문화유산 주택 — boolean이라 그대로 통과.
+    culturalHeritageHouse: data.culturalHeritageHouse,
     // 감면 매핑 — route-reductions-mapper.ts로 분리 (800줄 정책, 2026-06-11)
     reductions: mapReductionsToEngine(data.reductions),
     annualBasicDeductionUsed: data.annualBasicDeductionUsed,

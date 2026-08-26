@@ -186,6 +186,11 @@ export interface TransferFormData {
   /** ⑧4호나목·다목 「최초양도주택이 그 권리를 취득하기 전부터 소유」 — 자기선언 */
   mergedHouseholdOwnedBeforeRight: boolean;
   marriageDate: string;
+  /**
+   * §155⑥1호 — 지정문화유산·국가등록문화유산·천연기념물등 주택을 일반주택과 각각 1개씩 보유.
+   * 2·3호가 삭제돼 요건은 boolean 하나다. §156의2⑩·§156의3⑦의 특수주택 판정에도 쓰인다.
+   */
+  culturalHeritageHouseSpecial: boolean;
   /** §155④⑤ 합가·혼인 세대 내 먼저 양도 주택 여부 (비과세 판정 — 먼저 양도 요건) */
   isFirstTransferredInMerge: boolean;
   /** §155② 양도(일반)주택이 상속개시 2년내 피상속인 증여분 여부 (상속주택 특례 배제 게이트) */
@@ -381,6 +386,7 @@ const defaultFormData: TransferFormData = {
   mergedHouseholdResidedOneYear: false,
   mergedHouseholdOwnedBeforeRight: false,
   marriageDate: "",
+  culturalHeritageHouseSpecial: false,
   isFirstTransferredInMerge: false,
   generalHouseGiftedFromDecedentWithin2yr: false,
   generalHouseHeldAtInheritance: false,

@@ -32,11 +32,20 @@
  * | §156의2⑤ | 대체주택 | `replacementHouse` (E-5가 이미 판정 — 여기 오기 전에 비과세로 빠진다) |
  * | §156의2⑥·⑦ · §156의3④·⑤ | 상속받은 **권리** 귀속 | 권리의 상속 7필드 + `generalHouseHeldAtInheritance` (Phase 3) |
  * | §156의2⑧·⑨ (§156의3⑥ 준용) | 동거봉양·혼인 합가 — 합가 전 보유 구성 | `mergedHouseholdFirstHouse` (Phase 4) |
+ * | §156의2⑩ · §156의3⑦ | §155⑥1호 문화유산 주택 + 일반주택 + 권리 각 1개 | `culturalHeritageHouse` (Phase 5) |
+ * | §156의2⑪ · §156의3⑧ | §155⑦**2호 이농주택** + 일반주택 + 권리 각 1개 | `ruralHouse.kind === "farm_exit"` (Phase 5) |
+ * | §156의2⑦1호 · §156의3⑤1호 | 상속받은 **주택** — 후단 「상속개시 당시 보유한 주택」 | `houses[].isInherited` + `generalHouseHeldAtInheritance` (Phase 5) |
  *
  * 나머지는 「그 사실을 선언할 입력이 있는가」로 갈린다:
  *   · 있는데 선언하지 않았다 ⇒ **미해당 확정**(`marriageMerge`·`parentalCareMerge`·`ruralHouse`·
  *     `replacementHouse`·권리의 `isInherited`) — 화면에 칸이 있으므로 미선언은 사실의 표시다.
- *   · 아예 없다 ⇒ **판정 불가**(§156의2⑦의 **주택** 갈래·⑩ 문화유산·⑪ 이농 — Phase 5).
+ *   · 아예 없다 ⇒ **판정 불가**(3주택 이상 등 「각각 1개씩」을 벗어난 조합).
+ *
+ * ## ⭐ ⑦1호(상속받은 **주택**)는 2주택 축으로 오지 않는다
+ *
+ * §155②③ 주택수 제외가 `checkExemption` 진입 전에 count를 1로 줄이므로
+ * (`transfer-tax-house-exclusion-step.ts`) 그 세대는 U-1을 타지 않고 ③ 타이밍까지 그대로
+ * 도달한다. 계획서는 이 갈래를 「2주택 + 1권리」로 분류했으나 **실측이 뒤집었다**.
  *
  * ## 🔑 2권리 세대는 두 축이 닫히면 **배제 확정**이다
  *
@@ -90,6 +99,15 @@ export interface Article89Clause2Result {
   status: Article89Clause2Status;
   /** 충족된 예외 조문 표기 (status === "exception_met") */
   exception?: string;
+  /**
+   * **준용 근거** — §156의2⑦·⑩·⑪(§156의3⑤·⑦·⑧)를 거쳐 ③~⑤에 이른 경우 그 항.
+   *
+   * 🔑 `exception`을 「③(⑩ 준용)」처럼 합치지 않는다 — `transfer-tax.ts`의 사후관리(§156의2⑬)
+   *    경고가 `exception`을 **문자열 일치**로 보는데, ⑬은 「제7항·제10항 또는 제11항에 따라
+   *    제4항을 적용받은 1세대를 **포함한다**」라 준용 경로도 추징 대상이다. 합치면 그 경고가
+   *    조용히 사라진다.
+   */
+  viaArticle?: string;
   /** 판정 불가 사유 — 사용자에게 「이 항을 직접 확인하라」고 알릴 조문 표기 */
   openArticles?: string[];
 }
@@ -113,6 +131,9 @@ export type Article89Clause2Input = Pick<
   | "generalHouseGiftedFromDecedentWithin2yr"
   | "mergedHouseholdFirstHouse"
   | "isFirstTransferredInMerge"
+  | "culturalHeritageHouse"
+  | "houses"
+  | "sellingHouseId"
 >;
 
 /** §89②의 「분양권」인가 — §88 10호 정의 시행일(2021-01-01) 이후 취득분만. */
@@ -164,12 +185,14 @@ export function resolveArticle89Clause2(
   }
 
   /**
-   * 2주택 이상 세대 — §156의2⑦⑩⑪ · §156의3⑤⑦⑧은 전부 「(특수)주택 + 일반주택 + 권리를
-   * **각각 1개씩**」이라 2주택을 전제한다. 그 축의 입력(상속 귀속·문화유산·이농)이 없으므로
-   * 여기서는 결론을 내지 않는다.
+   * 2주택 축 — §156의2⑦·⑩·⑪ · §156의3⑤·⑦·⑧ (Phase 5).
+   *
+   * 셋 다 「(특수)주택 + 일반주택 + 권리를 **각각 1개씩**」이고 ③~⑤(②·③)를 **준용**한다.
+   * ⇒ 특수주택이 무엇인지 판정되면 타이밍 판정을 그대로 태우고, 아니면 판정 불가로 남긴다.
    */
-  if (input.householdHousingCount >= 2) {
-    open.push("소득세법 시행령 §156의2 ⑦·⑩·⑪", "소득세법 시행령 §156의3 ⑤·⑦·⑧");
+  const twoHouseVia = resolveTwoHouseSpecialArticle(input, rights.length);
+  if (input.householdHousingCount >= 2 && twoHouseVia === undefined) {
+    open.push(...openArticlesForTwoHouseAxis(input));
   }
 
   /**
@@ -216,9 +239,16 @@ export function resolveArticle89Clause2(
    */
   if (mergeVerdict.status === "not_declared") open.push(...mergeVerdict.openArticles);
 
-  // 농어촌 이농주택 — §156의2⑪ · §156의3⑧ (2주택 축이라 위와 겹치나 선언 자체를 신호로 본다).
-  if (input.ruralHouse) {
-    open.push("소득세법 시행령 §156의2 ⑪", "소득세법 시행령 §156의3 ⑧");
+  /**
+   * §156의2⑦1호 · §156의3⑤1호 — 상속받은 **주택** 갈래의 후단 요건.
+   *
+   * 🔴 이 세대는 §155②③ 주택수 제외가 `checkExemption` 진입 전에 count를 1로 줄여
+   *    (`transfer-tax-house-exclusion-step.ts`) 위 2주택 축을 **타지 않는다**. 그래서 ③ 타이밍
+   *    까지 그대로 도달하는데, ⑦ 후단의 「제3항 및 제4항의 규정을 적용받는 일반주택은
+   *    **상속개시 당시 보유한 주택**으로 한정한다」가 한 번도 검증되지 않고 있었다(실측).
+   */
+  if (hasInheritedHouseOtherThanSelling(input) && input.generalHouseHeldAtInheritance !== true) {
+    open.push("소득세법 시행령 §156의2 ⑦", "소득세법 시행령 §156의3 ⑤");
   }
 
   if (open.length > 0) return { status: "undetermined", openArticles: dedupe(open) };
@@ -273,8 +303,15 @@ export function resolveArticle89Clause2(
   const withinDeadline = input.transferDate <= deadline;
   const clause = right.type === "redevelopment_right" ? "§156의2 ③" : "§156의3 ②";
 
+  /** 준용 근거 — ⑦(상속 축) 또는 ⑩·⑪(2주택 축). 둘 다 아니면 ③이 직접 적용된 것이다. */
+  const viaArticle = isArticle7Shape
+    ? "소득세법 시행령 §156의2 ⑦"
+    : hasInheritedHouseOtherThanSelling(input)
+      ? "소득세법 시행령 §156의2 ⑦"
+      : resolveTwoHouseSpecialArticle(input, rights.length);
+
   if (oneYearMet && withinDeadline) {
-    return { status: "exception_met", exception: `소득세법 시행령 ${clause}` };
+    return { status: "exception_met", exception: `소득세법 시행령 ${clause}`, viaArticle };
   }
   if (oneYearMet) {
     /**
@@ -296,6 +333,7 @@ export function resolveArticle89Clause2(
     if (meetsThreeYearException(declared, input.transferDate)) {
       return {
         status: "exception_met",
+        viaArticle,
         exception:
           declared.kind === "new_house"
             ? fourthClause
@@ -310,6 +348,54 @@ export function resolveArticle89Clause2(
    * 나머지 예외는 위에서 전부 배제됐다. ⇒ §89② 본문이 그대로 적용된다.
    */
   return { status: "excluded" };
+}
+
+/**
+ * 2주택 축 — 「(특수)주택 + 일반주택 + 권리를 **각각 1개씩**」이 성립하는가.
+ * 성립하면 ③~⑤(②·③)를 **준용**하므로 그 준용 근거 항을 돌려준다.
+ *
+ * | 항 | 특수주택 | 근거 입력 |
+ * |---|---|---|
+ * | §156의2⑩ · §156의3⑦ | §155⑥1호 문화유산 주택 | `culturalHeritageHouse` |
+ * | §156의2⑪ · §156의3⑧ | §155⑦**2호 이농주택** | `ruralHouse.kind === "farm_exit"` |
+ *
+ * 🔑 ⑪은 **이농주택만**이다 — `RuralHouseKind` 셋 중 상속(1호)·귀농(3호)은 대상이 아니다.
+ * 🔑 ⑦1호(상속받은 **주택**)는 여기 오지 않는다 — §155②③ 주택수 제외가 진입 전에 count를
+ *    1로 줄이기 때문이다(호출부 주석 참조).
+ */
+function resolveTwoHouseSpecialArticle(
+  input: Article89Clause2Input,
+  rightCount: number,
+): string | undefined {
+  // 「각각 1개씩」 — 특수주택 1 + 일반주택 1 = 2주택, 권리 1개.
+  if (input.householdHousingCount !== 2 || rightCount !== 1) return undefined;
+  if (input.culturalHeritageHouse === true) return "소득세법 시행령 §156의2 ⑩";
+  if (input.ruralHouse?.kind === "farm_exit") return "소득세법 시행령 §156의2 ⑪";
+  return undefined;
+}
+
+/**
+ * 2주택 축이 판정되지 않았을 때 **그 세대에 실제로 적용될 수 있는** 조문만 안내한다.
+ *
+ * 🔑 ⑪·§156의3⑧은 이농주택 전용이므로, 상속 농어촌주택·귀농주택 세대에는 가리키지 않는다
+ *    (확인해도 소용없는 조문 안내 금지 — P-0과 같은 층위).
+ */
+function openArticlesForTwoHouseAxis(input: Article89Clause2Input): string[] {
+  const isRuralOutOfScope = input.ruralHouse !== undefined && input.ruralHouse.kind !== "farm_exit";
+  return isRuralOutOfScope
+    ? ["소득세법 시행령 §156의2 ⑦·⑩", "소득세법 시행령 §156의3 ⑤·⑦"]
+    : ["소득세법 시행령 §156의2 ⑦·⑩·⑪", "소득세법 시행령 §156의3 ⑤·⑦·⑧"];
+}
+
+/**
+ * 세대가 **양도 대상이 아닌 상속받은 주택**을 보유하는가 — §156의2⑦1호·§156의3⑤1호의 전제.
+ * 양도 주택 식별은 `transfer-tax-house-exclusion-step.ts`의 §155②③ 제외와 **같은 규약**이다
+ * (`sellingHouseId` 미지정 시 첫 항목).
+ */
+function hasInheritedHouseOtherThanSelling(input: Article89Clause2Input): boolean {
+  const houses = input.houses ?? [];
+  const sellingId = input.sellingHouseId ?? houses[0]?.id;
+  return houses.some((h) => h.isInherited === true && h.id !== sellingId);
 }
 
 /**

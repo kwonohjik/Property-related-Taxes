@@ -28,7 +28,12 @@ vi.mock("@/components/ui/address-search", () => ({
 
 afterEach(cleanup);
 
-const SECTION = /상속받은 권리 — 1세대1주택 특례 요건/;
+/**
+ * 🔴 2026-08-26 정정(Phase 5) — 제목이 「상속받은 **권리**」에서 「상속 **자산**」으로 바뀌었다.
+ *    §156의2⑦1호·§156의3⑤1호는 상속받은 것이 **주택**인 갈래도 같은 후단 요건을 요구하므로
+ *    이 섹션이 두 갈래를 함께 담는다.
+ */
+const SECTION = /상속 자산 — 1세대1주택 특례 요건/;
 
 function rightEntry(over: Partial<PresaleRightEntry> = {}): PresaleRightEntry {
   return {

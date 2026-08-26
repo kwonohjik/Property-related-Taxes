@@ -148,6 +148,8 @@ const propertyBaseShape = {
   temporaryTwoHouse: temporaryTwoHouseSchema.optional(),
   unavoidableOutsideCapitalHouse: unavoidableOutsideCapitalHouseSchema.optional(),
   ruralHouse: ruralHouseSchema.optional(),
+  /** ⑫ §155⑥1호 문화유산 주택 — §156의2⑩·§156의3⑦의 특수주택 판정에도 쓰인다. */
+  culturalHeritageHouse: z.boolean().optional(),
   // ⑨⑩⑫ §156의2⑤ 대체주택 비과세 특례
   replacementHouse: replacementHouseSchema.optional(),
   // ⑫ §89② 3년 초과 예외 (§156의2④ · §156의3③ · 시행규칙 §75①) — 엔진이 게이트, strip 방지

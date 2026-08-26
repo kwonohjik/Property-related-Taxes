@@ -196,6 +196,7 @@ export async function POST(request: NextRequest) {
               }
             : p.rightThreeYearException,
       mergedHouseholdFirstHouse: p.mergedHouseholdFirstHouse,
+      culturalHeritageHouse: p.culturalHeritageHouse,
       generalHouseHeldAtInheritance: p.generalHouseHeldAtInheritance,
       inheritedRightChoiceWhenBothHeld: p.inheritedRightChoiceWhenBothHeld,
       generalHouseGiftedFromDecedentWithin2yr: p.generalHouseGiftedFromDecedentWithin2yr,
