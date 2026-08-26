@@ -132,7 +132,16 @@ function toRow(b: BuildingStdPriceBreakdown): NtsReportRow {
     adjustmentItems: b.adjustmentItems,
     pricePerM2: b.pricePerM2,
     floorArea: b.floorArea,
-    standardPrice: b.standardPrice,
+    // ⑩ = ⑧ × ⑨ — 표 머리 산식대로 **환산 전** 값을 싣는다.
+    // 취득 ≤2000 단독 경로의 `standardPrice` 는 산정기준율을 이미 곱한 값이라 그대로 쓰면
+    // 같은 행에서 「⑧ × ⑨ ≠ ⑩」이 된다(실측 93,366,000 vs 92,152,242).
+    // 복합 경로는 원래 환산 전 값을 싣고 환산은 ※표에서만 하며, 국세청 작성례(2)가 그 규약을
+    // 정본으로 고정한다(⑪ 154,960,000 환산 전 / ※(3) 157,439,360 환산 후) ⇒ 단독을 복합에 맞춘다.
+    // 세액 경로는 `convertedTotal` 을 쓰므로 **표시 한정**이다(F-27).
+    standardPrice:
+      b.acqBaseRate !== undefined && b.pricePerM2 !== undefined && b.floorArea !== undefined
+        ? Math.floor(b.pricePerM2 * b.floorArea)
+        : b.standardPrice,
   };
 }
 

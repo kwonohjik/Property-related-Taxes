@@ -112,6 +112,26 @@ function buildPnu(legalDongCode: string, jibun: string): string | null {
 }
 
 // ──────────────────────────────────────────────────
+/** 조회 실패 응답 — 형제 라우트 `reverse-geocode` 의 502 규약과 같은 층위 */
+function nedFetchFailed(pnu: string) {
+  return NextResponse.json(
+    {
+      error: {
+        code: "NED_FETCH_FAILED",
+        message: "공시가격 조회 서비스에 연결하지 못했습니다. 잠시 후 다시 시도하거나 직접 입력하세요.",
+      },
+      pnu,
+    },
+    { status: 502 },
+  );
+}
+
+/** NED 수집 결과 — `failed` 는 네트워크·HTTP 실패로 **수집이 중단됐음**을 뜻한다(자료 없음과 구별) */
+interface NedFetchResult {
+  items: NedPriceItem[];
+  failed: boolean;
+}
+
 // NED API 호출 — 전체 페이지 수집
 // ──────────────────────────────────────────────────
 
@@ -121,8 +141,9 @@ async function callNedAllPages(
   year: string,
   apiKey: string,
   responseKey: "apartHousingPrices" | "indvdHousingPrices" | "indvdLandPrices" | "landCharacteristicss",
-): Promise<NedPriceItem[]> {
+): Promise<NedFetchResult> {
   const allItems: NedPriceItem[] = [];
+  let failed = false;
   let pageNo = 1;
 
   while (true) {
@@ -140,6 +161,7 @@ async function callNedAllPages(
       });
       if (!res.ok) {
         console.warn(`[NED] ${endpoint} HTTP ${res.status}`);
+        failed = true;
         break;
       }
       const data = (await res.json()) as NedRawResponse;
@@ -159,10 +181,17 @@ async function callNedAllPages(
       const total = parseInt(container.totalCount ?? "0", 10);
       if (items.length === 0 || (total > 0 && allItems.length >= total)) break;
       pageNo++;
-    } catch { break; }
+    } catch (err) {
+      // ⚠️ 종전에는 빈 catch 였다 — 예외를 로그 없이 삼키고 부분 결과를 정상처럼 반환해서
+      //    호출부가 「자료 없음(404)」과 「조회 실패」를 구별하지 못했다(F-20).
+      //    형제 라우트 `reverse-geocode` 는 같은 실패를 502 로 가른다.
+      console.warn(`[NED] ${endpoint} fetch failed`, err);
+      failed = true;
+      break;
+    }
   }
 
-  return allItems;
+  return { items: allItems, failed };
 }
 
 // ──────────────────────────────────────────────────
@@ -264,9 +293,12 @@ export async function GET(request: NextRequest) {
   try {
     // ── 토지 ──────────────────────────────────────
     if (propertyType === "land") {
-      const items = await callNedAllPages("getIndvdLandPriceAttr", pnu, year, apiKey, "indvdLandPrices");
+      const { items, failed } = await callNedAllPages("getIndvdLandPriceAttr", pnu, year, apiKey, "indvdLandPrices");
       const hit = pickUnit(items, "pblntfPclnd", dong, ho);
       if (!hit) {
+        // 조회 자체가 실패했으면 「없음」이라 단정하지 않는다 — 재시도할지 수기 입력할지
+        // 사용자가 판단할 수 있어야 한다(F-20).
+        if (failed) return nedFetchFailed(pnu);
         return NextResponse.json(
           { error: { code: "PRICE_NOT_FOUND", message: `개별공시지가 없음 (PNU: ${pnu}, ${year}년)` }, pnu },
           { status: 404 },
@@ -276,7 +308,7 @@ export async function GET(request: NextRequest) {
       let zoneName: string | undefined;
       let landArea: number | undefined; // 필지면적(㎡) — getLandCharacteristics.lndpclAr (실측 확정)
       try {
-        const chars = await callNedAllPages("getLandCharacteristics", pnu, year, apiKey, "landCharacteristicss");
+        const { items: chars } = await callNedAllPages("getLandCharacteristics", pnu, year, apiKey, "landCharacteristicss");
         const charHit = [...chars].sort((a, b) => (b.stdrYear ?? "").localeCompare(a.stdrYear ?? ""))[0];
         const z = charHit?.prposArea1Nm;
         if (typeof z === "string" && z && z !== "지정되지않음") zoneName = z;
@@ -299,7 +331,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ── 공동주택 우선 → 개별주택 fallback ─────────
-    const aptItems = await callNedAllPages("getApartHousingPriceAttr", pnu, year, apiKey, "apartHousingPrices");
+    const { items: aptItems, failed: aptFailed } = await callNedAllPages("getApartHousingPriceAttr", pnu, year, apiKey, "apartHousingPrices");
     const aptHit = pickUnit(aptItems, "pblntfPc", dong, ho);
     if (aptHit) {
       return NextResponse.json({
@@ -322,7 +354,7 @@ export async function GET(request: NextRequest) {
 
     // 공동주택 없음 → 개별단독주택 시도
     // ※ getIndvdHousingPriceAttr 응답 가격 필드는 pblntfPc가 아닌 housePc
-    const indvdItems = await callNedAllPages("getIndvdHousingPriceAttr", pnu, year, apiKey, "indvdHousingPrices");
+    const { items: indvdItems, failed: indvdFailed } = await callNedAllPages("getIndvdHousingPriceAttr", pnu, year, apiKey, "indvdHousingPrices");
     const indvdHit = pickUnit(indvdItems, "housePc", dong, ho);
     if (indvdHit) {
       // pblntfDe 없음 → stdrYear + "0429" 로 공시일 추정
@@ -345,6 +377,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    if (aptFailed || indvdFailed) return nedFetchFailed(pnu);
     return NextResponse.json(
       { error: { code: "PRICE_NOT_FOUND", message: `공시가격 없음 (PNU: ${pnu}, ${year}년)` }, pnu },
       { status: 404 },
