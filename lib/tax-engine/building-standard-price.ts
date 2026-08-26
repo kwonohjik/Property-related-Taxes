@@ -542,7 +542,18 @@ export function calcBuildingStandardPrice(
       adjustmentMonths: adjustMonths,
     });
     const transferStd = converted.value;
-    const transfer: BuildingStdPriceBreakdown = { ...acquisition, standardPrice: transferStd };
+    // §164⑧ 양도값은 취득당시 기준시가에서 **파생**된다 — 자기 고유의 ㎡당 금액이 없다.
+    // 전체 spread 로 취득 echo 를 물려주면 결과 카드·계산서가 「㎡당 × 연면적 = 양도액」이라는
+    // 성립하지 않는 산식을 그린다(실측: 좌변 134,800,000 ≠ 우변 135,900,000).
+    // ⇒ 취득 시점 전용 필드(㎡당 금액·산정기준율·공시지가 기준연도)는 싣지 않고 파생 플래그를 준다.
+    const transfer: BuildingStdPriceBreakdown = {
+      ...acquisition,
+      standardPrice: transferStd,
+      pricePerM2: undefined,
+      acqBaseRate: undefined,
+      appliedLandPriceYear: undefined,
+      sameAdjustmentPeriodDerived: true,
+    };
     return {
       acquisition,
       transfer,

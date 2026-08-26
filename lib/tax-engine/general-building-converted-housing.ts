@@ -121,10 +121,16 @@ export function applyConvertedHousingPriceOverride(
 ): GeneralBuildingInput {
   const d = buildConvertedHousingDetail(input);
   if (!d) return input;
+  // 토지분을 원/㎡ 로 되돌리면 하류가 `floor(perSqm × landArea)` 로 복원하므로 그 나눗셈의
+  // 잔액(최대 landArea−1 원)이 사라진다. `buildConvertedHousingDetail` 이 이미 "잔액은 건물분이
+  // 흡수한다"는 정책을 쓰므로, override 도 같은 정책을 이어받아 **합계를 보존**한다
+  // (실측: landArea 100 → 94원, 317 → 300원 소실. 저장소 정책 `feedback_floor_residual_absorption`).
+  const landPerSqm = input.landArea > 0 ? Math.floor(d.convertedLand / input.landArea) : 0;
+  const restoredLand = Math.floor(landPerSqm * input.landArea);
+  const residual = d.convertedLand - restoredLand;
   return {
     ...input,
-    acquisitionLandPricePerSqm:
-      input.landArea > 0 ? Math.floor(d.convertedLand / input.landArea) : 0,
-    acquisitionBuildingStdPrice: d.convertedBuilding,
+    acquisitionLandPricePerSqm: landPerSqm,
+    acquisitionBuildingStdPrice: d.convertedBuilding + residual,
   };
 }

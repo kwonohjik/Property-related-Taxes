@@ -6,7 +6,7 @@
  * 시점별 ㎡당 금액·기계식주차 특수산식·조정율(상증)·산정기준율(2000이전 취득)·§164⑧ 동일연도 환산.
  * 정수곱 후 /1,000,000, 잔가율·조정율 곱, 1,000원 절사(truncateToThousand), 면적 곱 후 원 절사 순서.
  */
-import { safeMultiply, safeMultiplyThenDivide, truncateToThousand } from "./tax-utils";
+import { safeMultiply, safeMultiplyThenDivide, truncateToThousand, applyRateFraction } from "./tax-utils";
 import { round2 } from "./area-utils";
 import type {
   BuildingPointInput,
@@ -152,7 +152,20 @@ export function stdPriceFromPerM2(
   floorArea: number,
 ): { pricePerM2: number; standardPrice: number } {
   const pricePerM2 = truncateToThousand(rawPerM2);
-  return { pricePerM2, standardPrice: Math.floor(pricePerM2 * floorArea) };
+  return { pricePerM2, standardPrice: floorAreaProduct(pricePerM2, floorArea) };
+}
+
+/**
+ * ㎡당 금액 × 연면적 → 원 미만 절사. **정확 정수 곱**.
+ *
+ * `pricePerM2` 는 1,000원 절사를 거쳐 항상 1,000의 배수이므로, 연면적이 소수 6자리 이내면
+ * 정확값은 언제나 정수다 ⇒ `Math.floor` 는 no-op 이어야 한다. 그런데 raw float 곱은
+ * 정확값 바로 아래로 떨어져 1원을 깎았다(실측 격자 347,883셀 중 17,620건 = 5.06%,
+ * 전건 1원 **과소** 한 방향). 면적을 micro-㎡ 정수로 올려 BigInt 로 곱한다.
+ */
+function floorAreaProduct(pricePerM2: number, floorArea: number): number {
+  const areaMicro = BigInt(Math.round(floorArea * 1_000_000));
+  return Number((BigInt(pricePerM2) * areaMicro) / 1_000_000n);
 }
 
 /**
@@ -170,7 +183,7 @@ export function stdPriceFromExactPerM2(
 ): { pricePerM2: number; standardPrice: number } {
   // floor(정확값 ÷ 1,000) × 1,000. BigInt 나눗셈은 0 방향 절사이고 피연산자는 모두 음이 아니다.
   const pricePerM2 = Number(numer / (denom * 1000n)) * 1000;
-  return { pricePerM2, standardPrice: Math.floor(pricePerM2 * floorArea) };
+  return { pricePerM2, standardPrice: floorAreaProduct(pricePerM2, floorArea) };
 }
 
 /**
@@ -535,7 +548,14 @@ export function calcMechBreakdown(
   }
   // 기계식주차 잔가율 = 내용연수 버킷(연도가변 20/30년)·평가연도 잔존율로 직접 계산(그룹 레터 비경유)
   const residualRate = calcResidualRateByDurable(formula.durableYears, year - effBuiltYear, year);
-  const standardPrice = Math.floor(safeMultiply(formula.unitPrice, parkingLotCount) * residualRate);
+  // 잔가율은 `calcResidualRateByDurable` 이 소수 4자리로 양자화하므로 정수 분수로 되돌린다.
+  // 이 경로에는 1,000원 절사가 없어 raw float 곱의 1원 손실이 그대로 최종값에 남았다
+  // (실측 격자 17,790셀 중 377건 = 2.12%, 전건 1원 과소).
+  const standardPrice = applyRateFraction(
+    safeMultiply(formula.unitPrice, parkingLotCount),
+    Math.round(residualRate * 10_000),
+    10_000,
+  );
 
   return {
     standardPrice,
@@ -573,7 +593,14 @@ export function calcAcqBaseBreakdown(
   }
   // 산정기준율은 취득당시 기준시가에 적용 — pricePerM2(2001) × floorArea × acqBaseRate
   const pricePerM2 = base2001.pricePerM2 ?? 0;
-  const standardPrice = Math.floor(pricePerM2 * floorArea * acqBaseRate);
+  // 3항 raw float 곱이었다 — ㎡당(1,000의 배수) × 면적 × 산정기준율(소수 3자리).
+  // 면적·기준율을 정수로 올려 한 번에 곱한다(중간 절사 없이 마지막에 원 미만 절사).
+  const standardPrice = Number(
+    (BigInt(pricePerM2) *
+      BigInt(Math.round(floorArea * 1_000_000)) *
+      BigInt(Math.round(acqBaseRate * 1000))) /
+      (1_000_000n * 1000n),
+  );
 
   return {
     ...base2001,

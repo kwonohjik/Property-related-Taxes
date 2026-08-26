@@ -220,6 +220,12 @@ export interface AncillaryFacility {
 
 /** 시점별 산출근거 echo */
 export interface BuildingStdPriceBreakdown {
+  /**
+   * §164⑧ 동일조정기간 환산으로 **파생된** 값임을 표시한다(양도 breakdown 전용).
+   * 이 값은 취득당시 기준시가에서 산식으로 나오므로 자기 고유의 ㎡당 금액이 없다 —
+   * 표시부는 이 플래그를 보고 「㎡당 × 연면적」 산식 대신 환산 문장을 그려야 한다.
+   */
+  sameAdjustmentPeriodDerived?: boolean;
   /** 건물 기준시가(원) */
   standardPrice: number;
   /** ㎡당 금액(1,000원 절사 후). 기계식주차는 없음(주차대수 기반) */

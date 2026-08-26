@@ -273,6 +273,18 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
     f.transferYear !== "" &&
     Number(f.transferYear) > Number(f.acquisitionYear) &&
     Number(f.transferYear) <= Number(f.acquisitionYear) + 1;
+  /**
+   * §164⑧ 환산이 적용되는 축 — 이때 양도당시 구조·용도·공시지가는 **입력이 불요**하다
+   * (양도값이 취득값에서 파생되므로). 엔진·④변환·⑧검증과 **같은 leaf** 를 같은 인자로 쓴다.
+   * 종전에는 아래 세 게이트가 `sameYear` 만 봐서, 연도교차 opt-in 에서는 입력이 그대로 노출된 채
+   * 폐기되고 안내도 없었다(F-25).
+   */
+  const sec1648Active =
+    isSameAdjustmentPeriodConversion(
+      f.acquisitionYear ? Number(f.acquisitionYear) : undefined,
+      f.transferYear ? Number(f.transferYear) : undefined,
+      f.crossYearSameAdjust,
+    ) && !isMech;
   const valYear = f.valuationYear ? parseInt(f.valuationYear, 10) : undefined;
   // 조정률 모달용 구조지수 — 평가시점 구조 선택값에서 도출(I 지붕재료는 구조지수 100 미만만 활성). 미선택 = 0
   const valStructureIndex = useMemo(() => {
@@ -595,13 +607,16 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 <DateInput value={f.eventDate} onChange={(v) => set("eventDate", v)} />
               </FieldCard>
             </div>
-            {sameYear && !isMech && (
+            {sec1648Active && (
               <p className="rounded-md bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700">
-                취득연도와 같은 해 양도 — 양도당시 기준시가는 아래 §164⑧ 환산으로 산정되므로 양도당시
-                구조·용도·공시지가 입력이 필요 없습니다.
+                {sameYear
+                  ? "취득연도와 같은 해 양도 — "
+                  : "동일조정기간 환산(§164⑧)을 적용하는 연도교차 양도 — "}
+                양도당시 기준시가는 아래 §164⑧ 환산으로 산정되므로 양도당시 구조·용도·공시지가 입력이
+                필요 없습니다.
               </p>
             )}
-            {!isMech && !sameYear && !composite && (
+            {!sec1648Active && !isMech && !composite && (
               <div className="grid grid-cols-2 gap-2">
                 <FieldCard label={`${t2}당시 구조`} stacked>
                   <BuildingStructureSelect
@@ -619,7 +634,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 </FieldCard>
               </div>
             )}
-            {!isMech && !sameYear && (
+            {!sec1648Active && !isMech && (
               <LandPriceLookupField
                 pricePerSqm={f.transLandPrice}
                 onPricePerSqmChange={(v) => set("transLandPrice", v)}
@@ -649,7 +664,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             />
           )}
 
-          {(sameYear || (crossYearWindow && f.crossYearSameAdjust)) && !isMech && (
+          {sec1648Active && (
             <SectionCard num={4} title="동일조정기간 환산 (§164⑧)" tone="rose">
               <RadioCardGroup
                 name="sameYearFormula"
