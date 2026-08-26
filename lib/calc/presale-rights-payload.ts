@@ -38,6 +38,7 @@ export interface PresaleRightPayloadItem {
   rightValue?: number;
   isSpouseOwned?: boolean;
   regionCode?: string;
+  managementDisposalApprovalDate?: string;
   isInherited?: boolean;
   isRankingDisqualifiedInheritedRight?: boolean;
   isCoInherited?: boolean;
@@ -70,6 +71,8 @@ export function buildPresaleRightsPayload(
       rightValue: p.rightValue ? parseAmount(p.rightValue) || undefined : undefined,
       isSpouseOwned: p.isSpouseOwned,
       regionCode: p.regionCode || undefined,
+      // §89② 조합원입주권 축 시행일 게이트(법률 제7837호 부칙 §12①) — 빈 문자열은 미입력이다.
+      managementDisposalApprovalDate: p.managementDisposalApprovalDate || undefined,
       isInherited: p.isInherited,
       isRankingDisqualifiedInheritedRight: p.isRankingDisqualifiedInheritedRight,
       isCoInherited: p.isCoInherited,

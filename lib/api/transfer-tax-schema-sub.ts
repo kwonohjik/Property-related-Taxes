@@ -262,6 +262,8 @@ export const presaleRightSchema = z.object({
   rightValue: z.number().int().nonnegative().optional(),
   isSpouseOwned: z.boolean().optional(),
   // §156의2⑥·⑦ · §156의3④·⑤ — §89② 배제의 상속 예외 축
+  /** ⑫ §89② 조합원입주권 축 시행일 게이트 — 법률 제7837호 부칙 §12①(인가일 기준). */
+  managementDisposalApprovalDate: z.string().date().optional(),
   isInherited: z.boolean().optional(),
   isRankingDisqualifiedInheritedRight: z.boolean().optional(),
   isCoInherited: z.boolean().optional(),
