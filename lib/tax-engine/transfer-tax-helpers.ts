@@ -78,6 +78,18 @@ export interface ParsedRates {
   newHousingMatrix?: NewHousingMatrixData;
 }
 
+/**
+ * §88 10호 「분양권」 정의 시행일 — §89② 판정의 분양권 축 취득일 게이트.
+ *
+ * §104⑦ 주택 수 산정이 쓰는 값과 **같은 DB 값**을 공유한다
+ * (`multi-house-surcharge-count.ts` — 진실을 둘로 만들지 않는다).
+ * 규칙이 로드되지 않았으면 `undefined` — 그때 §89② 판정은 분양권 축을 건드리지 않는다.
+ */
+export function presaleRightStartDate(parsed: ParsedRates): Date | undefined {
+  const raw = parsed.houseCountExclusionRules?.presaleRightStartDate;
+  return raw ? new Date(raw) : undefined;
+}
+
 // ============================================================
 // H-1: parseRatesFromMap — DB 세율 Map 파싱
 // ============================================================

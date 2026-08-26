@@ -162,6 +162,18 @@ export function PresaleRightsSection({ rights, onChange, showSpouseOwned }: Prop
                   title="배우자 단독 보유"
                 />
               )}
+              {/*
+                §89② 배제의 상속 예외 축 — 「소득세법 시행령」 §156의2⑥·⑦ · §156의3④·⑤.
+                순위 규칙(피상속인 소유·거주기간)은 미구현이라, 체크 시 엔진은 배제를 **판정하지 않고**
+                해당 조문을 직접 확인하라는 경고를 낸다(잘못된 배제 방지).
+              */}
+              <ToggleCard
+                variant="chip"
+                tone="violet"
+                checked={r.isInherited ?? false}
+                onCheckedChange={(v) => update(r.id, { isInherited: v })}
+                title="상속받은 권리"
+              />
             </div>
           ))}
         </div>

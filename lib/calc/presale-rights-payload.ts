@@ -38,6 +38,7 @@ export interface PresaleRightPayloadItem {
   rightValue?: number;
   isSpouseOwned?: boolean;
   regionCode?: string;
+  isInherited?: boolean;
 }
 
 /**
@@ -62,5 +63,6 @@ export function buildPresaleRightsPayload(
       rightValue: p.rightValue ? parseAmount(p.rightValue) || undefined : undefined,
       isSpouseOwned: p.isSpouseOwned,
       regionCode: p.regionCode || undefined,
+      isInherited: p.isInherited,
     }));
 }

@@ -527,6 +527,22 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             {/* 조정대상지역 자동 판별 안내 — 취득일 조정 토글의 판정 근거 (토글 직하 배치) */}
             {regulatedAutoTip}
 
+            {/*
+              세대 보유 분양권·조합원입주권 — 「소득세법」 §89②.
+              「1세대가 주택과 조합원입주권 또는 분양권을 보유하다가 **그 주택을 양도**하는 경우에는
+              제1항에도 불구하고 같은 항 제3호를 적용하지 아니한다」 ⇒ 1세대1주택 비과세 판정의
+              **직접 입력**이다. 같은 값이 §104⑦ 중과 주택 수에도 쓰인다(`form.presaleRights` 공용).
+
+              ⚠️ 2채 이상에서는 ④의 `HousesListSection`이 같은 배열을 렌더하므로 여기서는 열지 않는다.
+            */}
+            {parseInt(form.householdHousingCount || "0") < 2 && (
+              <PresaleRightsSection
+                rights={form.presaleRights}
+                onChange={(presaleRights) => onChange({ presaleRights })}
+                showSpouseOwned={!!form.marriageDate}
+              />
+            )}
+
             {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
             {form.isOneHousehold && form.householdHousingCount === "1" && (
               <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-4 py-3 text-sm text-violet-900">
@@ -650,23 +666,15 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           <SectionHeader title="④ 주택수·중과 판정" description="세대 전체 보유 주택·양도일 조정대상지역으로 다주택 중과를 판정합니다" />
           <div className="space-y-3">
             {/*
-              세대 보유 분양권·입주권 — §104⑦2호(1주택 + 1개 → +20%p)·4호(합 3 이상 → +30%p).
-
-              `householdHousingCount`는 「세대 보유 **주택** 수」이고 분양권·입주권은 **별도 집계**다
-              (`house-count-divergence.ts:43`). 그런데 이 목록의 유일한 렌더 지점이 아래
-              `HousesListSection`(2채 이상 게이트) 안이라, 2호가 겨냥한 **바로 그 상태**(주택 1채)에서
-              분양권을 알릴 화면이 없었다 — 엔진은 이미 판정하므로 입력 경로만 끊긴 no-op이었다(U2-05).
-
+              🔴 2026-08-26 이동(C1-01): 주택 1채 미만 세대의 분양권·입주권 목록은 **② 비과세 판정**
+                 섹션으로 옮겼다. 이 자리는 중과 트랙이라 한시배제 기간(2022-05-10~2026-05-09)에는
+                 섹션 전체가 안내 카드로 대체되어 사라지는데, 「소득세법」 §89②(주택 + 권리 보유
+                 세대의 주택 양도 → §89①3호 배제)은 **중과와 무관한 비과세 규칙**이라 그때도
+                 선언 경로가 있어야 한다.
               ⚠️ 2채 이상에서는 아래 `HousesListSection`이 같은 `form.presaleRights`를 렌더한다.
-                 두 벌이 뜨면 같은 배열을 두 컴포넌트가 각각 patch해 마지막 것이 이긴다.
+                 두 벌이 뜨면 같은 배열을 두 컴포넌트가 각각 patch해 마지막 것이 이긴다 —
+                 그래서 ②는 `< 2`에서만 연다.
             */}
-            {parseInt(form.householdHousingCount || "0") < 2 && (
-              <PresaleRightsSection
-                rights={form.presaleRights}
-                onChange={(presaleRights) => onChange({ presaleRights })}
-                showSpouseOwned={!!form.marriageDate}
-              />
-            )}
 
             {/* 세대 보유 주택 목록 + 분양권 + 감면주택 주택수 제외 (시행령 §167의3 주택 수 산정) */}
             {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
