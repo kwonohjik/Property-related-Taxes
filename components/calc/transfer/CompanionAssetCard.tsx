@@ -70,6 +70,8 @@ interface Props {
   primaryAsset?: AssetForm;
   /** 1세대1주택 + householdHousingCount === 1 충족 여부 (form-전역, 사례 45). */
   isOneHouseSingle?: boolean;
+  /** 폼-전역 조정대상지역 취득 여부 — 입주권 §⑥ 거주요건 경고 게이트 (U1-03) */
+  wasRegulatedAtAcquisition?: boolean;
   /** 검증 실패 메시지 — 이 자산 카드에 해당하는 오류. 상단 인라인 배너 + 테두리 강조 + 전체 펼침. */
   errorMessage?: string;
   /** 자산 분할 모드 (Step1 단일 소스) — ③ 토글 B로 전달 */
@@ -106,6 +108,7 @@ export function CompanionAssetCard({
   totalTransferExpense,
   primaryAsset,
   isOneHouseSingle,
+  wasRegulatedAtAcquisition,
   errorMessage,
   splitMode,
   onFractionalToggle,
@@ -370,6 +373,7 @@ export function CompanionAssetCard({
           isNewConstruction={isNewConstruction}
           isPrimary={isPrimary}
           isOneHouseSingle={isOneHouseSingle}
+          wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
           splitMode={splitMode}
           onFractionalToggle={onFractionalToggle}
           isFirst={index === 0}

@@ -61,7 +61,6 @@ function renderBlock(asset: AssetForm) {
       onChange={vi.fn()}
       isOneHouseSingle={false}
       wasRegulatedAtAcquisition={false}
-      transferPrice="420000000"
     />,
   );
 }

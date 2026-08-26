@@ -74,6 +74,9 @@ function bothCardsAsset(over: Partial<AssetForm> = {}): AssetForm {
     ...makeDefaultAsset(1),
     assetKind: "right_to_move_in",
     redevSubject: "right",
+    // 2026-08-26(U1-03): 종전에는 `transferPrice` prop으로 넘겼다. 12억 초과 안내는
+    // 이제 자산이 들고 있는 값을 직접 읽는다 — prop 축이 하나 줄었다.
+    actualSalePrice: "520000000",
     redevSettlementDirection: "receive",
     acquisitionDate: "2002-04-09",
     redevApprovalDate: "2018-10-23",
@@ -88,7 +91,6 @@ function renderBlock(asset: AssetForm, onChange = vi.fn()) {
       onChange={onChange}
       isOneHouseSingle
       wasRegulatedAtAcquisition={false}
-      transferPrice="520000000"
     />,
   );
   return onChange;
