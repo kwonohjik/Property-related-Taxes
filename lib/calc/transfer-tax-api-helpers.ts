@@ -654,3 +654,40 @@ export function buildReplacementHousePayload(form: TransferFormData): object {
     },
   };
 }
+
+// ─── ④⑬ §89② 3년 초과 예외 FLAT → 판별 유니온 (TS 미감지 영역 — 누락 시 침묵 strip) ───
+/**
+ * 폼 → `rightThreeYearException` payload.
+ * 「소득세법 시행령」 §156의2④·§156의3③ / 「소득세법 시행규칙」 §75①.
+ *
+ * ⚠️ **미선언(`""`)은 키 자체를 만들지 않는다** — 엔진이 `undefined`를 「판정 불가」로 읽어
+ *    종전 동작을 유지한다. `"none"`(해당 없음)과 반드시 구별해야 한다.
+ * ⚠️ 필수값이 비면 키를 만들지 않는다 — 완성일 없는 `new_house`, 사유 없는 `delay`는
+ *    입력 중인 상태이지 선언이 아니다.
+ */
+export function buildRightThreeYearExceptionPayload(form: TransferFormData): object {
+  const kind = form.rightThreeYearExceptionKind;
+  if (kind === "none") return { rightThreeYearException: { kind: "none" } };
+  if (kind === "new_house") {
+    if (!form.rightNewHouseCompletionDate) return {};
+    return {
+      rightThreeYearException: {
+        kind: "new_house",
+        completionDate: form.rightNewHouseCompletionDate,
+        movedInWithin3Years: form.rightMovedInWithin3Years,
+        residedOneYearOrMore: form.rightResidedOneYearOrMore,
+      },
+    };
+  }
+  if (kind === "delay") {
+    if (!form.rightDisposalDelayReason) return {};
+    return {
+      rightThreeYearException: {
+        kind: "delay",
+        reason: form.rightDisposalDelayReason,
+        disposedByThatMethod: form.rightDisposedByThatMethod,
+      },
+    };
+  }
+  return {};
+}

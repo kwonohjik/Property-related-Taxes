@@ -8,7 +8,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
-import { toEngineReductions, toRentalHousingExceptionApi, buildPre1990LandPayload } from "@/lib/calc/transfer-tax-api-helpers";
+import { toEngineReductions, toRentalHousingExceptionApi, buildPre1990LandPayload, buildRightThreeYearExceptionPayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
@@ -223,6 +223,12 @@ export function buildPropertyPayload(form: TransferFormData) {
     ...(hasPre1990 && primary ? buildPre1990LandPayload(primary, form.transferDate) : {}),
     ...(housesPayload ? { houses: housesPayload, sellingHouseId: "selling" } : {}),
     ...(presaleRightsPayload ? { presaleRights: presaleRightsPayload } : {}),
+    /**
+     * ⑬ §89② 3년 초과 예외 — 단건과 **같은 leaf**를 쓴다.
+     * 이 키가 다건에만 빠지면 「화면에는 선언했는데 엔진엔 없다」가 된다 —
+     * `presaleRights`가 정확히 그렇게 침묵 소실됐던 전례가 있다(P1-02).
+     */
+    ...buildRightThreeYearExceptionPayload(form),
     // ⑬ 다주택 중과 한시 유예/경과조치 — houses 제공 시에만 엔진이 소비 (단건 callTransferTaxAPI와 동일 게이트).
     // 다건은 자산별 form이라 gracePeriod도 native per-property.
     ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),

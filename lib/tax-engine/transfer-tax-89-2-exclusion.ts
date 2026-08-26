@@ -56,7 +56,7 @@
  *    2006년 이전 양도를 다루게 되면 그 시행일을 먼저 확정할 것.
  */
 
-import type { TransferTaxInput } from "./types/transfer.types";
+import type { TransferTaxInput, RightThreeYearException } from "./types/transfer.types";
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
 import { addYears } from "date-fns";
 
@@ -86,6 +86,7 @@ export type Article89Clause2Input = Pick<
   | "parentalCareMerge"
   | "ruralHouse"
   | "replacementHouse"
+  | "rightThreeYearException"
 >;
 
 /** §89②의 「분양권」인가 — §88 10호 정의 시행일(2021-01-01) 이후 취득분만. */
@@ -133,9 +134,19 @@ export function resolveArticle89Clause2(
     open.push("소득세법 시행령 §156의2 ⑦·⑩·⑪", "소득세법 시행령 §156의3 ⑤·⑦·⑧");
   }
 
-  // 권리 2개 이상 — ③·②는 「1주택과 **1**조합원입주권/분양권」 전제다.
+  /**
+   * 권리 2개 이상.
+   *
+   * 🔴 2026-08-26 정정(P-0): 종전에는 여기서 §156의2③·④ · §156의3②·③을 가리켰다. **틀렸다** —
+   *    그 네 항은 전부 「1주택과 **1**조합원입주권/분양권」을 전제하므로 2권리 세대에는 애초에
+   *    해당하지 않는다. 확인해도 소용없는 조문을 안내하면 「판정 불가 고지」가 무의미해진다.
+   *
+   *    1주택 + 2권리에 실제로 적용될 수 있는 예외는 넷이다(16항 전수 대조):
+   *      · §156의2⑦ · §156의3⑤ — 상속받은 것이 **권리**면 「상속 권리 + 일반주택 + 상속 외 권리」
+   *      · §156의2⑧ · ⑨ — 본문이 「1주택과 **2조합원입주권**」을 **명문으로 열거**한다
+   */
   if (rights.length >= 2) {
-    open.push("소득세법 시행령 §156의2 ③·④", "소득세법 시행령 §156의3 ②·③");
+    open.push("소득세법 시행령 §156의2 ⑦·⑧·⑨", "소득세법 시행령 §156의3 ⑤");
   }
 
   // 상속받은 권리 — §156의2⑥⑦ · §156의3④⑤. 순위 규칙(피상속인 소유·거주기간)은 미구현.
@@ -173,20 +184,31 @@ export function resolveArticle89Clause2(
   }
   if (oneYearMet) {
     /**
-     * 1년은 충족했는데 3년을 넘겼다 — 아직 두 갈래가 열려 있다:
-     *   · §156의2④ · §156의3③ (완성 후 3년 내 세대전원 이사 + 1년 이상 계속 거주)
-     *   · 시행규칙 §75① (권리 취득일부터 3년이 되는 날 현재 매각의뢰·경매·공매 + 그 방법으로 양도)
-     * 둘 다 입력 경로가 없다.
+     * 1년은 충족했는데 3년을 넘겼다 — 남은 갈래는 **둘뿐**이다(16항 전수 대조):
+     *   · §156의2④ · §156의3③ — 신축주택 완성 후 3년 내 세대전원 이사 + 1년 이상 계속 거주
+     *   · 시행규칙 §75① — 3년이 되는 날 현재 매각의뢰·경매·공매 **이고 그 방법으로 양도**
+     *
+     * 🔴 **선언이 없으면 판정하지 않는다**(Phase 2). 신규 필드라 기존 저장분에 값이 없고,
+     *    미입력을 「미해당」으로 읽으면 3년 초과 세대 전체가 갑자기 과세로 뒤집힌다.
      */
-    return {
-      status: "undetermined",
-      openArticles: [
-        right.type === "redevelopment_right"
-          ? "소득세법 시행령 §156의2 ④"
-          : "소득세법 시행령 §156의3 ③",
-        "소득세법 시행규칙 §75 ①",
-      ],
-    };
+    const fourthClause =
+      right.type === "redevelopment_right"
+        ? "소득세법 시행령 §156의2 ④"
+        : "소득세법 시행령 §156의3 ③";
+    const declared = input.rightThreeYearException;
+    if (declared === undefined) {
+      return { status: "undetermined", openArticles: [fourthClause, "소득세법 시행규칙 §75 ①"] };
+    }
+    if (meetsThreeYearException(declared, input.transferDate)) {
+      return {
+        status: "exception_met",
+        exception:
+          declared.kind === "new_house"
+            ? fourthClause
+            : `${right.type === "redevelopment_right" ? "소득세법 시행령 §156의2 ③" : "소득세법 시행령 §156의3 ②"} 후단(소득세법 시행규칙 §75 ①)`,
+      };
+    }
+    return { status: "excluded" };
   }
 
   /**
@@ -194,6 +216,45 @@ export function resolveArticle89Clause2(
    * 나머지 예외는 위에서 전부 배제됐다. ⇒ §89② 본문이 그대로 적용된다.
    */
   return { status: "excluded" };
+}
+
+/**
+ * 3년 초과 예외 선언이 **요건을 충족하는가**.
+ *
+ * · `new_house` — 「소득세법 시행령」 §156의2④1호·2호 / §156의3③1호·2호
+ *   1호: 완성 후 3년 이내 세대전원 이사 + 1년 이상 계속 거주 (둘 다 자기선언)
+ *   2호: **완성되기 전 또는 완성된 후 3년 이내**에 종전주택을 양도
+ * · `delay` — 「소득세법 시행규칙」 §75① : 사유 해당 **그리고** 그 방법에 따라 양도
+ * · `none` — 명시적 미해당 선언
+ */
+function meetsThreeYearException(
+  declared: RightThreeYearException,
+  transferDate: Date,
+): boolean {
+  if (declared.kind === "none") return false;
+  if (declared.kind === "delay") {
+    // ⚠️ 요건이 둘이다 — §155⑱(전자만)을 복사하면 후자가 빠진다.
+    return declared.disposedByThatMethod === true;
+  }
+  const movedAndResided =
+    declared.movedInWithin3Years === true && declared.residedOneYearOrMore === true;
+  if (!movedAndResided) return false;
+  // 2호 — 「완성되기 전」이면 완성일 비교 없이 충족, 아니면 완성일 + 3년 이내.
+  return (
+    transferDate < declared.completionDate ||
+    transferDate <= addYears(declared.completionDate, ARTICLE_156_2_3_DEADLINE_YEARS)
+  );
+}
+
+/**
+ * 권리 취득일부터 **3년을 넘겨** 양도했는가 — ⑤ UI가 「3년 초과 예외」 카드를 열 때 쓰는
+ * 공용 술어. 엔진 판정과 **같은 기준**이어야 화면과 계산이 갈리지 않는다.
+ */
+export function isRightThreeYearExceeded(p: {
+  rightAcquisitionDate: Date;
+  transferDate: Date;
+}): boolean {
+  return p.transferDate > addYears(p.rightAcquisitionDate, ARTICLE_156_2_3_DEADLINE_YEARS);
 }
 
 function dedupe(items: string[]): string[] {

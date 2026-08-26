@@ -67,6 +67,29 @@ export const replacementHouseSchema = z.object({
   willResideNewHouse: z.boolean(),
 });
 
+/**
+ * ⑫ §89② 배제의 **3년 초과 예외** 선언 — 「소득세법 시행령」 §156의2④ · §156의3③ /
+ * 「소득세법 시행규칙」 §75①.
+ *
+ * ⚠️ `kind`를 **discriminator**로 둔다 — 「신축주택 완성·이주」와 「경매·공매」는 요구 필드가
+ *    완전히 다르고, 「해당 없음」은 **명시 선언**이라 세 번째 갈래가 필요하다.
+ * ⚠️ `reason` 열거는 §75① **3호뿐**이다(§155⑱의 5호와 다르다 — 4·5호 없음).
+ */
+export const rightThreeYearExceptionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("new_house"),
+    completionDate: z.string().date(),
+    movedInWithin3Years: z.boolean(),
+    residedOneYearOrMore: z.boolean(),
+  }),
+  z.object({
+    kind: z.literal("delay"),
+    reason: z.enum(["kamco", "auction", "public_sale"]),
+    disposedByThatMethod: z.boolean(),
+  }),
+  z.object({ kind: z.literal("none") }),
+]);
+
 // (제거 2026-06-16) 구 nonBusinessLandDetailsSchema 전용 leaf —
 //   businessUsePeriodSchema·gracePeriodSchema·LAND_TYPE_VALUES·ZONE_TYPE_VALUES·
 //   REVENUE_BUSINESS_TYPES·revenueTestSchema 는 raw 스키마(아래) 전환으로 dead → 삭제.

@@ -652,7 +652,8 @@ function checkExemptionCore(
 
   // E-5: §156의2⑤ 대체주택 특례 — 재개발·재건축 시행기간 중 거주 목적 대체주택.
   // 신축주택+대체주택 2주택이나 대체주택 양도를 1세대1주택으로 의제(§154① 보유·거주 요건 면제).
-  // 요건 미충족 시 fall through(일반 과세). 사후관리(§156의2⑬) 경고는 결과 warnings에서 별도 처리.
+  // 요건 미충족 시 fall through(일반 과세). 사후관리(§156의2⑬) 추징 경고는 `transfer-tax.ts`가
+  // `article89Clause2.exception`을 보고 낸다(2026-08-26 배선 — 종전에는 이 주석만 있고 경고가 없었다).
   if (input.replacementHouse) {
     const rh = input.replacementHouse;
     // ① 사업시행인가일 이후 대체주택 취득 + 1년 이상 거주

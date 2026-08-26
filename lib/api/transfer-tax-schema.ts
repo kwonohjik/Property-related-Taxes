@@ -13,6 +13,7 @@ import {
   unavoidableOutsideCapitalHouseSchema,
   ruralHouseSchema,
   replacementHouseSchema,
+  rightThreeYearExceptionSchema,
   nonBusinessLandRawSchema,
   rentalReductionDetailsSchema,
   newHousingDetailsSchema,
@@ -148,6 +149,8 @@ const propertyBaseShape = {
   ruralHouse: ruralHouseSchema.optional(),
   // ⑨⑩⑫ §156의2⑤ 대체주택 비과세 특례
   replacementHouse: replacementHouseSchema.optional(),
+  // ⑫ §89② 3년 초과 예외 (§156의2④ · §156의3③ · 시행규칙 §75①) — 엔진이 게이트, strip 방지
+  rightThreeYearException: rightThreeYearExceptionSchema.optional(),
   reductions: z.array(reductionSchema).default([]),
   nonBusinessLandRaw: nonBusinessLandRawSchema.optional(),
   houses: z.array(houseSchema).optional(),

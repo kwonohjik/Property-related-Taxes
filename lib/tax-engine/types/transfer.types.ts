@@ -56,6 +56,52 @@ export type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer
 export type RuralHouseKind = "inherited" | "farm_exit" | "return_to_farm";
 
 /**
+ * 「소득세법 시행규칙」 §75① — §156의2③ 전단·§156의3② 전단의 「3년 이내에 양도하지 못하는
+ * 경우로서 재정경제부령으로 정하는 사유」.
+ *
+ * ⚠️ **`TemporaryTwoHouseDelayReason`(§155⑱)과 다르다** — 그쪽은 5호인데 여기는 **3호뿐**이다
+ *    (4호 현금청산금 소송 · 5호 수용재결·매도청구소송이 **없다**). 재사용하면 조용히 넓어진다.
+ */
+export type RightDisposalDelayReason =
+  /** 1호 한국자산관리공사에 매각을 의뢰한 경우 */
+  | "kamco"
+  /** 2호 법원에 경매를 신청한 경우 */
+  | "auction"
+  /** 3호 「국세징수법」에 따른 공매가 진행 중인 경우 */
+  | "public_sale";
+
+/**
+ * §89② 배제의 예외 — 권리 취득 후 **3년이 지나** 종전주택을 양도한 경우의 선언.
+ * 「소득세법 시행령」 §156의2④ · §156의3③ / 「소득세법 시행규칙」 §75①.
+ */
+export type RightThreeYearException =
+  | {
+      /** §156의2④ · §156의3③ — 신축주택 완성·이주·거주 */
+      kind: "new_house";
+      /** ④1호·2호 「관리처분계획등(분양권)에 따라 취득하는 주택이 **완성된**」 날 */
+      completionDate: Date;
+      /** ④1호 「완성된 후 3년 이내에 그 주택으로 **세대전원이 이사**」 — 자기선언 */
+      movedInWithin3Years: boolean;
+      /** ④1호 「**1년 이상 계속하여 거주**할 것」 — 자기선언 */
+      residedOneYearOrMore: boolean;
+    }
+  | {
+      /** 「소득세법 시행규칙」 §75① — 경매·공매 등 */
+      kind: "delay";
+      reason: RightDisposalDelayReason;
+      /**
+       * §75①은 요건이 **둘**이다 — 「3년이 되는 날 **현재** 해당」 **그리고**
+       * 「**해당 각 호의 어느 하나의 방법에 따라 양도된** 경우」. §155⑱은 전자만 요구하므로
+       * 그쪽을 복사하면 후자가 빠진다.
+       */
+      disposedByThatMethod: boolean;
+    }
+  | {
+      /** 둘 다 해당하지 않음을 **명시 선언** — 이때만 §89② 배제가 확정된다 */
+      kind: "none";
+    };
+
+/**
  * §155⑧·§167의10①3호 공통 — 재정경제부령이 정하는 「부득이한 사유」.
  * 법문 예시: 취학, 근무상의 형편, 질병의 요양, 그 밖에 부득이한 사유.
  */
@@ -245,6 +291,22 @@ export interface TransferTaxInput {
     /** 신축주택 1년 이상 거주 자기선언 (§156의2⑬ 사후관리 전제) */
     willResideNewHouse: boolean;
   };
+  /**
+   * §89② 배제의 예외 — **권리 취득일부터 3년이 지나 종전주택을 양도**하는 경우의 선언
+   * (「소득세법 시행령」 §156의2④ · §156의3③ / 「소득세법 시행규칙」 §75①).
+   *
+   * §156의2③·§156의3②(3년 이내)를 못 채운 세대에 남는 예외는 **둘뿐**이다:
+   *   · `new_house`  — 신축주택 완성 후 3년 내 세대전원 이사 + 1년 이상 계속 거주 (④1호·2호)
+   *   · `delay`      — 3년이 되는 날 현재 매각의뢰·경매·공매 **이고 그 방법으로 양도** (시행규칙 §75①)
+   *   · `none`       — 둘 다 해당하지 않음을 **명시 선언** ⇒ 그때 비로소 §89② 배제가 확정된다
+   *
+   * ⚠️ **미제공(undefined)은 「해당 없음」이 아니다.** 선언이 없으면 판정 불가로 남긴다 —
+   *    신규 필드라 기존 저장분에 값이 없고, 미입력을 미해당으로 읽으면 3년 초과 세대 전체가
+   *    갑자기 과세로 뒤집힌다(memory `feedback_no_unfavorable_application_without_legal_basis`).
+   *
+   * 계획서: `docs/00-pm/transfer-89-2-exclusion-phase2-5.plan.md` §1
+   */
+  rightThreeYearException?: RightThreeYearException;
   /**
    * §154① 단서 — 1세대1주택 비과세 보유·거주 요건 면제 사유 (소득세법 시행령 §154 ① 단서).
    * 폼은 FLAT(provisoReason 등), API 변환 시 이 nested 객체로 조립. 미지정 시 본문 요건만 판정.
