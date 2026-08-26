@@ -47,6 +47,12 @@ export interface NtsReportInstance {
   dateLabel: string;
   /** 취득당시 칸 보조 텍스트(작성례 2 양도당시 칸의 "2001.1.1 건물 기준시가") */
   acqNoteLabel?: string;
+  /**
+   * 배치(일괄) 계산서의 시점 라벨 — "최초공시일 · 주택분" 등.
+   * `markCell` 만으로는 취득시와 최초공시일이 **같은 칸(취득당시)** 이라 구별되지 않으므로,
+   * 서버 PDF 부제가 이 값을 우선 쓴다. 화면은 자체 `titleOverride` 를 쓴다(단일 출처는 키 파서).
+   */
+  timepointLabel?: string;
   // Ⅱ 기본현황(건물 공통 — 첫 주용도 행 기준)
   address?: string;
   structureLabel?: string;

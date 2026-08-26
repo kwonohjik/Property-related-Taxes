@@ -11,7 +11,7 @@
  */
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 import { toEngineInput, buildNtsReportContext } from "@/lib/calc/building-std-price-form";
-import { snapshotKeyTimepoint } from "@/lib/calc/building-std-snapshot-keys";
+import { phdTimepointLabel, snapshotKeyTimepoint } from "@/lib/calc/building-std-snapshot-keys";
 import { BUILDING_STD_FIRST_YEAR } from "@/lib/calc/phd-building-std-batch";
 import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
 import { buildNtsReportModel, type NtsReportModel } from "@/lib/calc/nts-report-adapter";
@@ -45,8 +45,31 @@ export function buildBuildingStdReportsFromInput(
        *    — 한쪽만 고치면 화면↔PDF가 어긋난다(이 파일 상단 주석의 단일 출처 규약).
        *    상증 키(`bsp-estate-*`)는 `snapshotKeyTimepoint`가 null이라 상속 맥락 그대로 간다.
        */
+      /**
+       * ① 배치 전용 키(`-phd-{acq|first|transfer}`·`-cb-first`) — `snapshotKeyTimepoint` 는
+       *    이들을 **null 로 돌려주므로**(최초공시일이 취득도 양도도 아니다) ② 만으로는 그물을
+       *    빠져나가 markCell 이 재구성 그대로(`inheritance`) 남는다. 화면
+       *    (`BuildingStdPriceReportSection.tsx:138·172`)과 같은 규칙으로 시점을 부여한다.
+       *    ⚠️ `snapshotKeyTimepoint` 에 `first → "acquisition"` 을 넣는 방식은 금지다 —
+       *       최초공시가 취득시로 오표기돼 「같은 제목 두 장」이라는 새 결함이 된다.
+       *       구별은 `timepointLabel`(부제 우선값)이 담당한다.
+       */
+      const tp = phdTimepointLabel(key);
       const reconstructedTimepoint =
-        snap.taxType !== "transfer" ? snapshotKeyTimepoint(key) : null;
+        !tp && snap.taxType !== "transfer" ? snapshotKeyTimepoint(key) : null;
+      if (tp) {
+        const mark =
+          tp.timepoint === "양도시"
+            ? "transfer"
+            : Number(snap.valuationYear) < BUILDING_STD_FIRST_YEAR
+              ? "acq2000"
+              : "acq2001";
+        const label = `${tp.timepoint} · ${tp.categoryLabel}`;
+        model = {
+          ...model,
+          instances: model.instances.map((i) => ({ ...i, markCell: mark, timepointLabel: label })),
+        };
+      }
       if (reconstructedTimepoint) {
         const mark =
           reconstructedTimepoint === "transfer"
