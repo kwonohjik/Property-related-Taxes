@@ -6,6 +6,7 @@
  * 산식 머리(고시): ⑧ = ⓐ×①×②×⑥×⑦×ⓧⓨⓩ(천원미만 절사), ⑩ = ⑧×⑨.
  */
 import type { NtsReportRow } from "@/lib/calc/nts-report-adapter";
+import { packAdjustmentCells } from "./adjustment-cells";
 import { fmt, idx2, ratio, adjCell, AMOUNT_CELL } from "./format";
 
 const TH = "border border-neutral-400 px-1.5 py-1 text-center font-semibold text-caption";
@@ -67,9 +68,15 @@ export function ReportEvalTable({
               <td className={TD}>{idx2(r.usageIndex)}</td>
               <td className={TD}>{idx2(r.locationIndex)}</td>
               <td className={TD}>{ratio(r.residualRate)}</td>
-              <td className={TD}>{adjCell(r.adjustmentItems?.[0])}</td>
-              <td className={TD}>{adjCell(r.adjustmentItems?.[1])}</td>
-              <td className={TD}>{adjCell(r.adjustmentItems?.[2])}</td>
+              {/* 3칸을 넘는 조정률 항목은 마지막 칸에 병합한다 — 표만 보고 ⑧ 을 재현할 수 있어야 한다(F-28) */}
+              {(() => {
+                const cells = packAdjustmentCells(r.adjustmentItems);
+                return [0, 1, 2].map((n) => (
+                  <td key={`adj${n}`} className={TD}>
+                    {adjCell(cells[n])}
+                  </td>
+                ));
+              })()}
               <td className={`${TD} ${AMOUNT_CELL}`}>{fmt(r.pricePerM2)}</td>
               <td className={`${TD} ${AMOUNT_CELL}`}>{r.floorArea ? `${r.floorArea}㎡` : ""}</td>
               <td className={`${TD} ${AMOUNT_CELL}`}>{fmt(r.standardPrice)}</td>

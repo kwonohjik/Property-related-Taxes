@@ -3,7 +3,7 @@
  *
  * input_data.buildingStdSnapshots에서 재유도한 NtsReportModel[]을 받아 시점별 1페이지로 렌더.
  * 선택 출력 id "building-std-report"가 선택됐을 때만 호출(ResultPdfDocument에서 게이트).
- * 화면용 HTML(NtsBuildingStdPriceReport)과 동일 데이터·산식 — 서식 표(Ⅰ~Ⅵ)를 react-pdf 표로 재현.
+ * 화면용 HTML(NtsBuildingStdPriceReport)과 동일 데이터·산식 — 서식 표(Ⅰ~Ⅵ + ※표)를 react-pdf 표로 재현.
  */
 import { Page, View, Text, StyleSheet } from "@react-pdf/renderer";
 import { BESSHI_FONT_STACK } from "./fonts";
@@ -137,7 +137,7 @@ function InstancePage({ inst }: { inst: NtsReportInstance }) {
         <Text style={[t.cAmt, { width: 84 }]}>{fmt(inst.buildingTotal)}</Text>
       </View>
 
-      <Text style={t.sectionTitle}>Ⅵ. 평가대상 건물 기준시가 및 부수토지 평가액 합계</Text>
+      <Text style={t.sectionTitle}>Ⅵ. 평가대상 건물 기준시가 및 부속토지 평가액 합계</Text>
       <View style={t.row}>
         <Text style={[t.cUse, { flex: 2 }]}>건물 기준시가</Text>
         <Text style={[t.cAmt, { width: 120 }]}>{fmt(inst.buildingTotal)}</Text>
@@ -150,6 +150,28 @@ function InstancePage({ inst }: { inst: NtsReportInstance }) {
         <Text style={[t.cUse, { flex: 2 }]}>총 합계</Text>
         <Text style={[t.cAmt, { width: 120 }]}>{fmt(inst.buildingTotal + inst.landValue)}</Text>
       </View>
+
+      {/* ※ 산정기준율 환산표(소득세법 시행령 §164⑤) — 화면 계산서와 같은 `inst.acqBase` 를 쓴다.
+          종전에는 PDF 가 이 절을 통째로 렌더하지 않아, 취득 ≤2000 계산서를 인쇄하면
+          산정기준율도 환산액도 어디에도 남지 않았다(F-17). Ⅵ 총합계는 환산 **전** 값이므로
+          이 표가 없으면 취득당시 기준시가를 PDF 단독으로 확인할 수 없다. */}
+      {inst.acqBase && (
+        <>
+          <Text style={t.sectionTitle}>※ 2000.12.31 이전 취득 시 취득당시 기준시가 계산</Text>
+          <View style={t.row}>
+            <Text style={[t.cUse, { flex: 2 }]}>2001.1.1 건물 기준시가(1)</Text>
+            <Text style={[t.cAmt, { width: 120 }]}>{fmt(inst.acqBase.total2001)}</Text>
+          </View>
+          <View style={t.row}>
+            <Text style={[t.cUse, { flex: 2 }]}>산정기준율(2)</Text>
+            <Text style={[t.cAmt, { width: 120 }]}>{inst.acqBase.rate ?? "부분별"}</Text>
+          </View>
+          <View style={t.total}>
+            <Text style={[t.cUse, { flex: 2 }]}>취득당시 기준시가(3) = (1) × (2)</Text>
+            <Text style={[t.cAmt, { width: 120 }]}>{fmt(inst.acqBase.converted)}</Text>
+          </View>
+        </>
+      )}
 
       <Text style={t.footer}>
         ※ 국세청 「건물 기준시가 계산방법」 고시 기준. 참고용이며 법적 효력이 없습니다.

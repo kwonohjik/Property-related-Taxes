@@ -87,8 +87,17 @@ async function main() {
   console.log(`📦 원본 파트 ${parts.length}개 발견`);
 
   const probed: ProbedPart[] = [];
+  /**
+   * 스킵된 파트 — 종전에는 `probePart` 가 null 만 돌려주고 아무 데도 기록되지 않아,
+   * 결손이 manifest 어디에도 남지 않고 종료코드도 0 이었다(F-22).
+   * ⚠️ 스킵은 **고시일자를 확정하기 전에** 일어나므로 특정 일자에 귀속시킬 수 없다
+   *    (헤더가 깨져 컬럼·고시일자를 못 읽는 것이 스킵 사유다).
+   *    전 일자를 `coverage:"partial"` 로 바꾸면 조회 계층의 `coverage === "full"` 필터가
+   *    조회를 통째로 죽이므로, **빌드 단위 기록 + 비정상 종료코드**로 드러낸다.
+   */
+  const skippedParts: { label: string; reason: string }[] = [];
   for (const part of parts) {
-    const p = await probePart(part);
+    const p = await probePart(part, skippedParts);
     if (p) probed.push(p);
   }
 
@@ -127,6 +136,8 @@ async function main() {
     const manifest = {
       generatedAt: new Date().toISOString(),
       totalRows: grandTotal,
+      // 결손을 manifest 에 남긴다 — 「그 지역은 애초에 고시가 없었다」와 구별할 근거가 된다.
+      ...(skippedParts.length ? { skippedParts } : {}),
       notices: manifestNotices,
     };
     const manifestPath = path.join(opts.out, "manifest.json");
@@ -136,6 +147,12 @@ async function main() {
   }
 
   console.log(`\n📊 총 ${grandTotal.toLocaleString()}행`);
+  if (skippedParts.length > 0) {
+    // CI 가 성공으로 읽지 않게 한다 — 결손 빌드가 조용히 배포되는 것을 막는 유일한 관문이다.
+    console.error(`\n❌ 변환 결손 ${skippedParts.length}개 파트 — manifest.skippedParts 참조`);
+    for (const sp of skippedParts) console.error(`   · ${sp.label}: ${sp.reason}`);
+    process.exitCode = 1;
+  }
 }
 
 // ────────────────────────────── 열거 (S1) ──────────────────────────────
@@ -237,6 +254,25 @@ async function* csvRows(open: () => Promise<Readable>): AsyncGenerator<string[]>
 }
 
 /** UTF-8 / EUC-KR 자동 감지 — cp949로 UTF-8을 읽으면 조용히 깨진다. */
+/**
+ * 버퍼 끝의 **불완전한 UTF-8 시퀀스**를 잘라낸다 — 스트림을 8KB 에서 끊었을 뿐인데
+ * 마지막 문자가 반토막 나서 `fatal` 디코더가 실패하는 것을 막는다.
+ * 선두 바이트를 뒤에서부터 최대 3바이트 훑어, 그 문자가 버퍼 안에서 끝나지 않으면 거기서 자른다.
+ */
+function trimIncompleteUtf8(buf: Buffer): Buffer {
+  for (let back = 1; back <= 3 && back <= buf.length; back++) {
+    const b = buf[buf.length - back];
+    if (b < 0x80) break; // ASCII — 경계가 깨끗하다
+    if (b >= 0xc0) {
+      // 선두 바이트 — 이 문자의 길이를 재서 버퍼 안에서 끝나는지 본다
+      const len = b >= 0xf0 ? 4 : b >= 0xe0 ? 3 : 2;
+      return back < len ? buf.subarray(0, buf.length - back) : buf;
+    }
+    // 계속 바이트(0x80~0xBF) — 더 앞으로
+  }
+  return buf;
+}
+
 async function detectStreamEncoding(open: () => Promise<Readable>): Promise<string> {
   const stream = await open();
   let head: Buffer = Buffer.alloc(0);
@@ -247,7 +283,12 @@ async function detectStreamEncoding(open: () => Promise<Readable>): Promise<stri
   stream.destroy();
   if (head[0] === 0xef && head[1] === 0xbb && head[2] === 0xbf) return "utf-8";
   try {
-    new TextDecoder("utf-8", { fatal: true }).decode(head.subarray(0, 4096));
+    // ⚠️ 종전에는 선두 4,096바이트만 잘라 판별했다 — 4096번째가 다중바이트
+    //    문자 중간이면 BOM 없는 정상 UTF-8 이 cp949 로 오판되고, 헤더가 깨져 필수 컬럼 14개가
+    //    전부 누락으로 보고되어 그 파트가 통째로 스킵된다(F-21).
+    //    설계문서는 「선두 8KB 로 판별」인데 구현만 4KB 였다.
+    //    ⇒ 절단하지 않되, 스트림 경계에서 잘린 **마지막 불완전 시퀀스만** 떼고 판별한다.
+    new TextDecoder("utf-8", { fatal: true }).decode(trimIncompleteUtf8(head));
     return "utf-8";
   } catch {
     return "cp949";
@@ -260,7 +301,10 @@ async function* xlsxRows(resolvePath: () => Promise<string>): AsyncGenerator<str
 }
 
 /** 헤더 + 첫 데이터 행을 읽어 컬럼 인덱스·세대·고시일자를 확정. */
-async function probePart(part: SourcePart): Promise<ProbedPart | null> {
+async function probePart(
+  part: SourcePart,
+  skipped: { label: string; reason: string }[],
+): Promise<ProbedPart | null> {
   const it = part.rows();
   const header = await it.next();
   if (header.done) {
@@ -270,6 +314,7 @@ async function probePart(part: SourcePart): Promise<ProbedPart | null> {
   const first = await it.next();
   if (first.done) {
     console.warn(`⚠️  데이터 행 없음 — 건너뜀: ${part.label}`);
+    skipped.push({ label: part.label, reason: "데이터 행 없음" });
     return null;
   }
   await it.return?.(undefined);
@@ -278,11 +323,13 @@ async function probePart(part: SourcePart): Promise<ProbedPart | null> {
   const missing = missingColumns(columnIndex);
   if (missing.length > 0) {
     console.warn(`⚠️  필수 컬럼 누락(${missing.join(",")}) — 건너뜀: ${part.label}`);
+    skipped.push({ label: part.label, reason: "필수 컬럼 누락" });
     return null;
   }
   const noticeDate = normalizeNoticeDate(first.value[columnIndex["고시일자"]] ?? "");
   if (!noticeDate) {
     console.warn(`⚠️  고시일자 해석 불가 — 건너뜀: ${part.label}`);
+    skipped.push({ label: part.label, reason: "고시일자 해석 불가" });
     return null;
   }
   const generation = detectGeneration(header.value.join(","), first.value, columnIndex);
