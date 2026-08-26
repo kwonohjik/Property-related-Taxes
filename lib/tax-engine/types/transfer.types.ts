@@ -86,6 +86,22 @@ export type RightThreeYearException =
       residedOneYearOrMore: boolean;
     }
   | {
+      /**
+       * §156의2④**2호 전단** · §156의3③2호 전단 — 신축주택이 **완성되기 전**에 종전주택을 양도.
+       *
+       * 🔑 완성일이 **없어도 성립**한다. 2호는 「완성되기 전 **또는** 완성된 후 3년 이내」라
+       *    전단은 완성일 비교가 필요 없고, 사업이 진행 중이면 준공일 자체가 정해지지 않는다.
+       * 🔑 이때 **1호(이사·거주)는 장래 요건**이다 — 아직 완성되지 않았으니 이행할 수 없고,
+       *    그래서 §156의2⑬(분양권은 §156의3⑩)가 「제4항제1호의 요건을 충족하지 **못하게 된 때**」의
+       *    추징을 따로 규정한다. ⇒ 두 boolean은 **이행 예정**의 선언이다.
+       */
+      kind: "before_completion";
+      /** ④1호 「완성된 후 3년 이내에 세대전원이 이사」할 것 — 자기선언(장래) */
+      movedInWithin3Years: boolean;
+      /** ④1호 「1년 이상 계속하여 거주」할 것 — 자기선언(장래) */
+      residedOneYearOrMore: boolean;
+    }
+  | {
       /** 「소득세법 시행규칙」 §75① — 경매·공매 등 */
       kind: "delay";
       reason: RightDisposalDelayReason;

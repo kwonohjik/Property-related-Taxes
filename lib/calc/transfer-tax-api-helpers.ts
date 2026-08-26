@@ -668,6 +668,19 @@ export function buildReplacementHousePayload(form: TransferFormData): object {
 export function buildRightThreeYearExceptionPayload(form: TransferFormData): object {
   const kind = form.rightThreeYearExceptionKind;
   if (kind === "none") return { rightThreeYearException: { kind: "none" } };
+  /**
+   * ④2호 **전단** — 「완성되기 전」 양도는 **완성일을 요구하지 않는다**(R-3).
+   * 사업이 진행 중이면 준공일 자체가 정해지지 않는다.
+   */
+  if (kind === "before_completion") {
+    return {
+      rightThreeYearException: {
+        kind: "before_completion",
+        movedInWithin3Years: form.rightMovedInWithin3Years,
+        residedOneYearOrMore: form.rightResidedOneYearOrMore,
+      },
+    };
+  }
   if (kind === "new_house") {
     if (!form.rightNewHouseCompletionDate) return {};
     return {

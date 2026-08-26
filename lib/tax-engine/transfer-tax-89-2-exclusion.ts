@@ -369,7 +369,8 @@ export function resolveArticle89Clause2(
         status: "exception_met",
         viaArticle,
         exception:
-          declared.kind === "new_house"
+          // ④2호는 전단·후단이 **같은 항**이다 — 인용을 갈래로 나누면 ⑬ 사후관리 경고가 끊긴다.
+          declared.kind === "new_house" || declared.kind === "before_completion"
             ? fourthClause
             : `${right.type === "redevelopment_right" ? "소득세법 시행령 §156의2 ③" : "소득세법 시행령 §156의3 ②"} 후단(소득세법 시행규칙 §75 ①)`,
       };
@@ -608,7 +609,12 @@ function meetsThreeYearException(
   const movedAndResided =
     declared.movedInWithin3Years === true && declared.residedOneYearOrMore === true;
   if (!movedAndResided) return false;
-  // 2호 — 「완성되기 전」이면 완성일 비교 없이 충족, 아니면 완성일 + 3년 이내.
+  /**
+   * 2호 **전단** — 「완성되기 전」에 양도했다는 **명시 선언**이면 완성일 비교가 없다.
+   * 사업이 진행 중이면 준공일 자체가 정해지지 않으므로 완성일을 요구할 수 없다(R-3).
+   */
+  if (declared.kind === "before_completion") return true;
+  // 2호 후단 — 완성일 + 3년 이내. 완성일이 양도일보다 뒤인 저장분도 전단으로 성립한다.
   return (
     transferDate < declared.completionDate ||
     transferDate <= addYears(declared.completionDate, ARTICLE_156_2_3_DEADLINE_YEARS)

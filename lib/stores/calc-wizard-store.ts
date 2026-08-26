@@ -158,7 +158,7 @@ export interface TransferFormData {
    * ⚠️ `""`(미선언)과 `"none"`(해당 없음)은 **다르다** — 미선언은 판정 불가로 남고,
    *    `"none"`을 골라야 §89② 배제가 확정된다.
    */
-  rightThreeYearExceptionKind: "" | "new_house" | "delay" | "none";
+  rightThreeYearExceptionKind: "" | "new_house" | "before_completion" | "delay" | "none";
   rightNewHouseCompletionDate: string;     // ④1호·2호 신축주택 완성일
   rightMovedInWithin3Years: boolean;       // ④1호 완성 후 3년 내 세대전원 이사
   rightResidedOneYearOrMore: boolean;      // ④1호 1년 이상 계속 거주

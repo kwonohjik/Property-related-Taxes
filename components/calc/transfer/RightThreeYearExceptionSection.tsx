@@ -8,7 +8,13 @@
  *
  * 세대가 조합원입주권·분양권을 보유한 채 그 주택을 양도하면 §89②이 1세대1주택 비과세를
  * 배제한다. 예외인 §156의2③·§156의3②(권리 취득일부터 **3년 이내** 양도)를 못 채운 경우
- * 남는 예외가 이 둘이라, **3년을 넘긴 때만** 연다.
+ * 남는 예외가 §156의2④·시행규칙 §75①뿐이라 **3년을 넘긴 때만** 연다.
+ *
+ * ## 🔑 ④2호는 **전단·후단**이 갈린다 (R-3)
+ *
+ * 「완성되기 전 **또는** 완성된 후 3년 이내」 — **전단은 완성일 비교가 없다**. 사업이 진행 중이면
+ * 준공일 자체가 정해지지 않으므로 완성일을 요구할 수 없다. 그래서 갈래를 나누고, 전단에서는
+ * 1호(이사·거주)를 **장래 요건**으로 묻는다(§156의2⑬ 사후관리 대상).
  *
  * 🔑 「3년 초과」 판정은 엔진 술어 `isRightThreeYearExceeded`를 **그대로 호출**한다 —
  *    화면이 자체 계산하면 「화면엔 칸이 없는데 엔진은 요구하는」 어긋남이 생긴다.
@@ -78,7 +84,7 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
       <p className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
         세대가 조합원입주권·분양권을 보유한 상태로 주택을 양도하면 1세대1주택 비과세가 적용되지
         않습니다(「소득세법」 §89②). 권리를 취득한 날부터 <b>3년 이내</b>에 양도하면 예외이지만,
-        3년을 넘긴 경우에는 아래 둘 중 하나에 해당해야 비과세가 유지됩니다.
+        3년을 넘긴 경우에는 아래 어느 하나에 해당해야 비과세가 유지됩니다.
       </p>
 
       <RadioCardGroup
@@ -91,9 +97,15 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
         options={[
           {
             value: "new_house",
-            label: "신축주택으로 이사해 거주했다",
+            label: "신축주택이 완성된 뒤 양도했다",
             description:
-              "완성 후 3년 이내 세대전원 이사 + 1년 이상 계속 거주 (시행령 §156의2④1호·2호)",
+              "완성 후 3년 이내 세대전원 이사 + 1년 이상 계속 거주 (시행령 §156의2④1호·2호 후단)",
+          },
+          {
+            value: "before_completion",
+            label: "신축주택이 완성되기 전에 양도했다",
+            description:
+              "시행령 §156의2④2호 전단. 아직 준공되지 않았다면 완성일을 입력하지 않아도 됩니다.",
           },
           {
             value: "delay",
@@ -102,14 +114,16 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
           },
           {
             value: "none",
-            label: "둘 다 해당하지 않는다",
+            label: "어느 것에도 해당하지 않는다",
             description: "1세대1주택 비과세가 배제되어 전액 과세됩니다",
           },
         ]}
       />
 
-      {kind === "new_house" && (
+      {(kind === "new_house" || kind === "before_completion") && (
         <div className="space-y-2">
+          {/* ④2호 **전단**은 완성일 비교가 없다 — 준공일이 정해지지 않은 세대에 요구할 수 없다. */}
+          {kind === "new_house" && (
           <FieldCard
             label="신축주택 완성일"
             hint="관리처분계획등(분양권은 그 계약)에 따라 취득하는 주택이 완성된 날. 이 날부터 3년 이내에 이사·양도해야 합니다."
@@ -119,17 +133,26 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
               onChange={(v) => onChange({ rightNewHouseCompletionDate: v })}
             />
           </FieldCard>
+          )}
           <ToggleCard
             checked={form.rightMovedInWithin3Years}
             onCheckedChange={(v: boolean) => onChange({ rightMovedInWithin3Years: v })}
-            title="완성 후 3년 이내에 세대전원이 이사했다"
+            title={
+              kind === "before_completion"
+                ? "완성 후 3년 이내에 세대전원이 이사할 예정이다"
+                : "완성 후 3년 이내에 세대전원이 이사했다"
+            }
             description="취학·근무상 형편·질병 요양·학교폭력 전학으로 세대원 중 일부가 이사하지 못한 경우도 포함합니다(시행규칙 §75의2① → §71③)."
             tone="amber"
           />
           <ToggleCard
             checked={form.rightResidedOneYearOrMore}
             onCheckedChange={(v: boolean) => onChange({ rightResidedOneYearOrMore: v })}
-            title="그 주택에 1년 이상 계속하여 거주했다"
+            title={
+              kind === "before_completion"
+                ? "그 주택에 1년 이상 계속하여 거주할 예정이다"
+                : "그 주택에 1년 이상 계속하여 거주했다"
+            }
             description="요건을 갖추지 못하게 되면 사유 발생일이 속하는 달의 말일부터 2개월 이내에 세액을 신고·납부해야 합니다(시행령 §156의2⑬·§156의3⑩ 추징)."
             tone="amber"
           />
@@ -171,7 +194,7 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
       {kind === "" && (
         <p className="text-caption leading-relaxed text-amber-800 dark:text-amber-300">
           선택하지 않으면 이 요건을 판정할 수 없어 <b>종전대로 계산</b>하고 결과에 확인 안내를
-          남깁니다. 해당 사항이 없다면 「둘 다 해당하지 않는다」를 선택하세요.
+          남깁니다. 해당 사항이 없다면 「어느 것에도 해당하지 않는다」를 선택하세요.
         </p>
       )}
     </ToneCard>
