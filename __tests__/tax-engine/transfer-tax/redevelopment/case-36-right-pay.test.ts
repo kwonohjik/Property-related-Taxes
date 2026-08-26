@@ -53,7 +53,6 @@ function case36RedevInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
   };
 }
 
@@ -160,7 +159,6 @@ describe("36-A1 — 입주권 양도(pay) 환산취득가 (§166③ + §163⑥ �
     ...case36RedevInfo(),
     acquisitionHousingPrice: 120_000_000,   // P_A
     managementDisposalHousingPrice: 400_000_000, // D
-    acquisitionRounding: "floor",
   };
 
   const inputEstimated: TransferTaxInput = baseTransferInput({

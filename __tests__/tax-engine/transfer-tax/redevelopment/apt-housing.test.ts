@@ -208,7 +208,6 @@ describe("§164⑦ 본문 발동 — PHD 패턴 (P_A = floor(A × Sum_A / Sum_F)
       buildingStdPriceAtAcq: 30_000_000,
       landPricePerSqmAtFirst: 500_000,
       buildingStdPriceAtFirst: 30_000_000,
-      acquisitionRounding: "floor",
     },
     acquisitionDate: new Date("2005-04-09"),
     transferDate: new Date("2023-02-16"),

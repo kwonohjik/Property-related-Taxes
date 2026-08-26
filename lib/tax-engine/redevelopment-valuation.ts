@@ -88,9 +88,6 @@ export interface ConvertedAcquisitionInput {
 
   /** 최초공시 당시 건물 기준시가 (원, 총액). 본문 발동 시 필수. */
   buildingStdPriceAtFirst?: number;
-
-  /** rounding 모드 (시행령 미규정) — 기본 "floor" */
-  rounding?: "floor" | "round";
 }
 
 /** 환산취득가 산정 결과 */
@@ -343,6 +340,5 @@ export function computeRedevelopmentValuation(
     buildingStdPriceAtAcq: info.buildingStdPriceAtAcq,
     landPricePerSqmAtFirst: info.landPricePerSqmAtFirst,
     buildingStdPriceAtFirst: info.buildingStdPriceAtFirst,
-    rounding: info.acquisitionRounding,
   });
 }

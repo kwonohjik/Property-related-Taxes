@@ -59,7 +59,6 @@ function run(
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     exemptionEligibleAtApproval: false,
   } as RedevelopmentInfo;
 

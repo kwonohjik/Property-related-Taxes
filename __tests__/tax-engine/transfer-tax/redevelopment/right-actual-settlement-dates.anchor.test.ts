@@ -40,7 +40,6 @@ function buildInput(direction: "pay" | "receive"): TransferTaxInput {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
   };
   return baseTransferInput({
     propertyType: "right_to_move_in",

@@ -39,7 +39,6 @@ function landRedevInfo(preApprovalExpenses: number): RedevelopmentInfo {
     originalAssetType: "land",
     landStdPriceAtAcq: 100_000_000,
     landStdPriceAtApproval: 150_000_000,
-    acquisitionRounding: "floor",
   };
 }
 
@@ -119,7 +118,6 @@ describe("결함328 — 주택 출자 입주권 환산 경로 분기 보유기�
     originalAssetType: "housing",
     housingStdPriceAtAcq: 120_000_000,
     housingStdPriceAtApproval: 200_000_000,
-    acquisitionRounding: "floor",
   };
 
   const pre = runRedevelopment({

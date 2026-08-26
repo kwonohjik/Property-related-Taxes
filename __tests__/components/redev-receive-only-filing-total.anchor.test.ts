@@ -45,7 +45,6 @@ function c1Redev(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     receiveOnlyMode: true,
     exemptionEligibleAtApproval: false,
   };

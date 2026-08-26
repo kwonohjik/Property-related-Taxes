@@ -31,7 +31,6 @@ export const redevelopmentSchema = z
     // 단일 라목값
     managementDisposalHousingPrice: z.number().int().nonnegative().optional(),
     acquisitionHousingPrice: z.number().int().nonnegative().optional(),
-    acquisitionRounding: z.enum(["floor", "round"]).optional(),
     // 사례 45 — 거주월수 분리 입력 (§154⑧1호 통산 + 사전법령해석재산 2020-386)
     priorHouseResidenceMonths: z.number().int().nonnegative().optional(),
     newHouseResidenceMonths: z.number().int().nonnegative().optional(),

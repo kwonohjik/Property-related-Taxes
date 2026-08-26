@@ -48,7 +48,6 @@ function redevInfo(b: Branch, preApprovalExpenses: number): RedevelopmentInfo {
     preApprovalExpenses,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     receiveOnlyMode: false,
     // 비과세 마스킹을 배제해 **필요경비 차감만** 관측한다.
     exemptionEligibleAtApproval: false,

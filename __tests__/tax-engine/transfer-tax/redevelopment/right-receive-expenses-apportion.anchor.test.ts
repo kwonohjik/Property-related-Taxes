@@ -29,7 +29,6 @@ const redevInfo: RedevelopmentInfo = {
   preApprovalExpenses: 5_000_000, // ★ 0이 아니어야 안분 누락이 드러난다
   postApprovalExpenses: 0,
   originalAssetType: "housing",
-  acquisitionRounding: "floor",
 };
 
 const input: TransferTaxInput = baseTransferInput({
@@ -85,7 +84,6 @@ describe("입주권 receive + 환산 — 인가전 분 필요경비 안분 (제�
     originalAssetType: "housing",
     housingStdPriceAtAcq: 120_000_000,
     housingStdPriceAtApproval: 200_000_000,
-    acquisitionRounding: "floor",
   };
 
   const estimatedInput: TransferTaxInput = baseTransferInput({

@@ -47,7 +47,6 @@ function redevInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     // 분양가는 결과 측 파생값이다 — 권리가액 600,000,000 + 납부청산금 100,000,000 = 700,000,000
   };
 }

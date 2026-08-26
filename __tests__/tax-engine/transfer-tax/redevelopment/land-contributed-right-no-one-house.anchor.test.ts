@@ -41,7 +41,6 @@ function buildInput(opts: {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: opts.originalAssetType,
-    acquisitionRounding: "floor",
   };
   return baseTransferInput({
     propertyType: "right_to_move_in",

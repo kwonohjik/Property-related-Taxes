@@ -53,7 +53,6 @@ function case41RedevInfo(): RedevelopmentInfo {
     // 사례 44 인프라 재사용 — PDF 2-point housingStdPriceAt{Acq,Approval}을 단일 D 패턴에 매핑
     acquisitionHousingPrice: 120_000_000, // 분자 (취득당시)
     managementDisposalHousingPrice: 150_000_000, // 분모 (인가일 직전)
-    acquisitionRounding: "floor",
   };
 }
 

@@ -48,7 +48,6 @@ function run(over: Partial<RedevelopmentInfo>, inputOver: Partial<TransferTaxInp
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     exemptionEligibleAtApproval: false,
     ...over,
   } as RedevelopmentInfo;

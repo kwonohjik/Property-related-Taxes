@@ -87,7 +87,6 @@ function redevAptInput(transferPrice: number): TransferTaxInput {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
   };
   return baseTransferInput({
     propertyType: "redevelopment_apt",

@@ -213,11 +213,18 @@ export interface RedevelopmentInfo {
   firstDisclosureStdPrice?: number;
 
   /**
-   * 환산취득가 rounding 모드.
-   * 시행령 §176의2②2호는 산식만 규정하고 rounding 미규정.
-   * 본 엔진 기본값 "floor" (BigInt 정수 연산 일관성).
+   * 🔴 `acquisitionRounding`은 2026-08-26에 **제거됐다**(P1-03).
+   *
+   * ⑫ Zod·이 타입·`ConvertedAcquisitionInput.rounding`에 선언돼 있었지만 산식 본문
+   * (`computeConvertedAcquisitionPrice`)이 값을 **읽지 않았고**, ⑬ `buildRedevelopmentPayload`도
+   * 그 키를 만들지 않아 UI 경로에서는 항상 undefined였다. API로 `"round"`를 보내면 Zod를
+   * 통과하고 엔진까지 도달하지만 결과는 `"floor"`와 완전히 동일 — 설정한 쪽이 반올림이
+   * 적용됐다고 오인한다. 테스트 fixture 50여 곳이 `"floor"`를 넣고 있어 필드가 존중되는
+   * 것처럼 보였지만 값을 바꿔도 반응하는 테스트는 하나도 없었다.
+   *
+   * 「소득세법 시행령」 §166③은 rounding을 규정하지 않는다 — 정수 절사는
+   * `safeMultiplyThenDivide`(BigInt floor) 단일 경로다. **선택지를 다시 만들지 말 것.**
    */
-  acquisitionRounding?: "floor" | "round";
 
   // ─ 사례 45 (1세대1주택 + 12억 초과) 거주월수 분리 입력 ─
   //

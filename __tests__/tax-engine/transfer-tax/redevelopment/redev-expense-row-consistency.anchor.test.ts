@@ -62,7 +62,6 @@ function run(
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     exemptionEligibleAtApproval: false, // 비과세 마스킹을 배제해 표시 열만 관측한다
     ...over,
   } as RedevelopmentInfo;

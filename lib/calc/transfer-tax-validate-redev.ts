@@ -155,7 +155,20 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   // 사례 48 — 승계조합원 모드 분기. 인가일 < 취득일 차단을 명시 토글로 우회.
   const isSuccessor = asset.redevIsSuccessorMember === "yes";
   if (!isSuccessor && asset.acquisitionDate && new Date(asset.redevApprovalDate) < new Date(asset.acquisitionDate)) {
-    return `${label}: 인가일은 취득일 이후여야 합니다. 관리처분 인가 후 입주권을 승계 취득한 경우 "승계조합원 모드"를 ON 하세요. (사전-2019-법령해석재산-0649)`;
+    /**
+     * 🔴 2026-08-26 정정(P2-05): 안내 문구가 **자산 종류에 따라 갈린다**.
+     *    ②-a 「승계조합원 모드」(`redevIsSuccessorMember`) 카드는 `RedevelopmentBlock`이
+     *    `{!isRightSubject && …}`로 **입주권 화면에서 제거**한다(#1245 — 완공APT 전용으로 분리).
+     *    입주권의 승계 여부를 받는 실제 컨트롤은 ① 기본정보의 「조합원 유형」
+     *    (`isSuccessorRightToMoveIn`)으로 **다른 필드**다. 종전 문구는 차단된 사용자에게
+     *    그 화면에 존재하지 않는 이름의 토글을 찾게 했다.
+     *    반대 방향 문구는 `validateSuccessorRightAsset`이 이미 쓰고 있다(짝을 맞춘다).
+     */
+    const remedy =
+      asset.assetKind === "right_to_move_in"
+        ? `① 기본정보의 「조합원 유형」을 "승계조합원"으로 바꾸세요.`
+        : `②-a "승계조합원 모드"를 ON 하세요.`;
+    return `${label}: 인가일은 취득일 이후여야 합니다. 관리처분 인가 후 입주권을 승계 취득한 경우 ${remedy} (사전-2019-법령해석재산-0649)`;
   }
   if (isSuccessor) {
     // 사례 48 — 승계조합원 신축APT 양도 — 본 PR 5건 가드.

@@ -56,7 +56,6 @@ function redevInfo(extra: Partial<RedevelopmentInfo> = {}): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "housing",
-    acquisitionRounding: "floor",
     ...extra,
   };
 }

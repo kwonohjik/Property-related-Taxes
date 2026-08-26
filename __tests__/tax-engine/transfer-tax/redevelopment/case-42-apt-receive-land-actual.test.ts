@@ -52,7 +52,6 @@ function case42RedevInfo(): RedevelopmentInfo {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: "land",
-    acquisitionRounding: "floor",
   };
 }
 
