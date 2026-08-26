@@ -241,6 +241,7 @@ export function BuildingStdPriceModalButton({
           )}
 
           <BuildingStdPriceForm
+            hideApartmentConversion
             lockedTaxType={lockedTaxType}
             transferSectionLabel={transferSectionLabel}
             hideFloorAreaInput={hideFloorAreaInput}

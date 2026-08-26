@@ -14,6 +14,15 @@ import * as comprehensive from "@/lib/tax-engine/legal-codes/comprehensive";
 import * as stock from "@/lib/tax-engine/legal-codes/stock";
 import * as burdenedGift from "@/lib/tax-engine/legal-codes/burdened-gift";
 import * as common from "@/lib/tax-engine/legal-codes/common";
+// ⚠️ legal-codes 에 모듈이 추가되면 **여기에도** 넣어야 한다 — 빠진 조문은 모수에서도 사라져
+//    uncovered 에 뜨지 않고 게이트가 100% 로 통과한다(F-39).
+//    `transfer.ts` 가 `export *` 로 재수출하는 `transfer-nbl`·`transfer-house` 는 구제된다.
+//    열거 누락은 `legal-coverage-module-enumeration.anchor.test.ts` 가 디렉터리와 대조해 잡는다.
+import * as buildingStandardPrice from "@/lib/tax-engine/legal-codes/building-standard-price";
+import * as surchargeTransition from "@/lib/tax-engine/legal-codes/surcharge-transition";
+import * as incomeTax from "@/lib/tax-engine/legal-codes/income-tax";
+import * as localTax from "@/lib/tax-engine/legal-codes/local-tax";
+import * as transferMixedUse from "@/lib/tax-engine/legal-codes/transfer-mixed-use";
 
 import { isLegalCitation } from "./coverage";
 import { parseCitations, LAW_ALIAS } from "./citation-parser";
@@ -27,6 +36,11 @@ const MODULES: unknown[] = [
   stock,
   burdenedGift,
   common,
+  buildingStandardPrice,
+  surchargeTransition,
+  incomeTax,
+  localTax,
+  transferMixedUse,
 ];
 
 /** 객체/배열을 재귀 순회하며 모든 문자열 leaf를 수집한다. */

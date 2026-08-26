@@ -76,6 +76,16 @@ interface Props {
    * 값이 비면 칸 대신 입력 위치 안내를 띄운다 — 숨기기만 하면 연면적 0으로 조용히 오산된다.
    */
   hideFloorAreaInput?: boolean;
+  /**
+   * 「공동주택 고시 전 취득 환산」 토글을 숨긴다 — **모달(필드 적용) 호출부 전용**.
+   *
+   * 이 경로의 산출물은 소득세법 §99①1호**라목**의 토지+건물 통합 주택가격이라,
+   * 나목 **건물** 기준시가 칸에 넣으면 토지가액이 이중 계상된다. 그래서 적용 버튼을 만들 수 없고,
+   * 종전에는 토글만 열려 있고 출력 게이트가 항상 닫힌 dead-end 였다(F-19).
+   * ⇒ 필드로 값을 옮길 수 없는 맥락에서는 토글 자체를 노출하지 않는다.
+   *   독립 도구 페이지(`/tools/building-standard-price`)에서는 그대로 쓸 수 있다.
+   */
+  hideApartmentConversion?: boolean;
 }
 
 /** 연도 Select — 명시 라벨(SelectValue 단독 금지) */
@@ -106,7 +116,7 @@ function YearSelect({
   );
 }
 
-export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, initialForm, transferSectionLabel, hideFloorAreaInput }: Props) {
+export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, initialForm, transferSectionLabel, hideFloorAreaInput, hideApartmentConversion }: Props) {
   const [f, setF] = useState<BuildingStdPriceFormState>(() => {
     const base: BuildingStdPriceFormState = {
       ...initialBuildingStdPriceForm,
@@ -189,11 +199,18 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
 
   const isMech = f.isMechanicalParking;
   const yearOpts = useMemo(() => availableYears(isMech), [isMech]);
-  // 취득연도는 2000이전(산정기준율) 포함
+  // 취득연도는 2000이전(산정기준율) 포함.
+  // ⚠️ 종전에는 `2025 ~ 1986` 하드코딩이라 양도연도 축(`availableYears`)과 어긋났다(F-15):
+  //    상한이 굳어 2026 취득을 못 골라 §164⑧ 동일연도를 시작조차 못 했고,
+  //    하한 1986 은 산정기준율표가 실제로 갖는 **1985(=§8① 1985년 이전 의제)** 열을 잘라냈다
+  //    (실측 신축1980: 취득1985 → 0.738 / 1986 → 0.752).
+  //    ⇒ 상한은 지수표 보유 연도를 그대로 따르고, 하한만 1985 로 내린다.
+  const ACQ_YEAR_MIN = 1985;
   const acqYearOpts = useMemo(() => {
     if (isMech) return yearOpts;
+    const top = yearOpts.length > 0 ? yearOpts[0] : 2026;
     const out: number[] = [];
-    for (let y = 2025; y >= 1986; y--) out.push(y);
+    for (let y = top; y >= ACQ_YEAR_MIN; y--) out.push(y);
     return out;
   }, [isMech, yearOpts]);
 
@@ -306,11 +323,25 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
       f.crossYearSameAdjust,
     ) &&
     !isMech &&
-    !apartmentConv;
+    !apartmentConv &&
+    // ⚠️ 복합구조도 별도 반환 경로라 단일시점을 지원하지 않는다 — `apartmentConv` 와 대칭이어야 한다.
+    //    종전에는 이것이 빠져 있어, compositeMode 가 stale 로 남으면 토글도 입력도 사라진 채
+    //    validate 만 부분 입력을 요구해 세션 내 해소가 불가능했다(F-24).
+    //    계획서 C7·C8 은 두 모드 모두 「켜지면 2시점 섹션 복원」으로 결정했는데 C8 만 이행돼 있었다.
+    !composite;
   const acqOnly = singleActive && f.singleTimePoint === "acquisition";
   const transferOnly = singleActive && f.singleTimePoint === "transfer";
   // 양도 복합 — 취득시 용도지수표 기준 연도(≤2000=2001)
   const acqUsageYear = acqIndexYear;
+  /**
+   * 취득연도가 실제로 2000년 이전인가 — §164⑤ 산정기준율 **안내·라벨** 조건.
+   * `acqIndexYear` 는 ≤2000 을 2001 로 접는 **지수표 조회 연도**라 2001년 취득과 구별하지 못한다.
+   * 엔진 경계는 `year >= 2001` 이므로 2001년 취득에는 산정기준율이 적용되지 않는데 안내만 떴다(F-36).
+   * ⚠️ 2001~2002 취득의 조회연도 고정(fixedYear=2001)은 계획서 처방이므로 그대로 둔다 —
+   *    여기서 바꾸는 것은 표시 조건뿐이다.
+   */
+  const acqYearIsPre2001 =
+    f.acquisitionYear !== "" && Number(f.acquisitionYear) <= 2000;
   // 연면적 입력 불요: 복합구조(부분별)·공동주택 환산(자체 연면적)·상위 폼이 단일 입력 자리인 호출부
   const hideFloorArea = composite || apartmentConv || !!hideFloorAreaInput;
   // 건물 기본 면적 표시 조건 — 둘 다 보일 때만 한 행에 배치
@@ -505,7 +536,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 </FieldCard>
               )}
             </div>
-            {!transferOnly && acqIndexYear === 2001 && !apartmentConv && (
+            {!transferOnly && acqYearIsPre2001 && !apartmentConv && (
               <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-xs text-violet-700">
                 2000년 이전 취득 — 2001.1.1 ㎡당 금액 × 산정기준율로 환산됩니다. 구조·용도는 2001년 지수표 기준입니다.
               </p>
@@ -533,7 +564,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                   hideLandStdPrice
                   label="취득당시 위치지수용 ㎡당 개별공시지가 (2001.1.1 기준)"
                   placeholder="2001.1.1. 현재 공시지가"
-                  hint="§164⑤ — 2001.1.1 현재 개별공시지가로 위치지수 산정"
+                  hint="소령 §164⑤ · 고시 §6① — 2001.1.1 현재 개별공시지가로 위치지수 산정"
                 />
               ) : (
                 <LandPriceLookupField
@@ -573,7 +604,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
           )}
 
           {/* 공동주택 고시 전 취득 환산 토글 — 일반 2시점 흐름 대체. PHD·단일 시점 맥락 미사용 → 숨김 */}
-          {!isMech && !composite && !phd && !singleActive && (
+          {!isMech && !composite && !phd && !singleActive && !hideApartmentConversion && (
             <ToggleCard
               checked={f.apartmentConversionMode}
               onCheckedChange={(v) => set("apartmentConversionMode", v)}

@@ -398,6 +398,11 @@ export interface CompositeYearResult {
   breakdowns: BuildingStdPriceBreakdown[];
   total: number;
   apportionment?: AncillaryApportionment;
+  /**
+   * 부속시설 일부만 귀속 지정된 경우의 면적 echo(상증 전용 — 양도는 전 부분 수령이라 항상 undefined).
+   * 미지정 몫은 잔여 흡수 대상이 아니라 그대로 평가에서 빠지므로 호출부가 경고를 낸다.
+   */
+  unassignedAncillary?: { totalArea: number; assignedArea: number };
 }
 
 /**
@@ -512,7 +517,15 @@ export function calcCompositeForYear(
   const apportionment: AncillaryApportionment | undefined = hasAncillary
     ? { totalArea: activeKinds.reduce((s, k) => s + (totalByKind[k] ?? 0), 0), totalByKind, rows: apportionRows }
     : undefined;
-  return { breakdowns, total, apportionment };
+  // 미귀속 몫 — 수령 부분이 전체보다 적으면 그 차액이 평가에서 빠진다(게이팅은 의도된 설계).
+  const unassignedAncillary =
+    apportionment && receivingIdx.length < parts.length
+      ? {
+          totalArea: apportionment.totalArea,
+          assignedArea: round2(apportionRows.reduce((s, r) => s + r.areaSum, 0)),
+        }
+      : undefined;
+  return { breakdowns, total, apportionment, unassignedAncillary };
 }
 
 /**

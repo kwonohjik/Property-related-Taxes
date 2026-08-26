@@ -663,14 +663,14 @@ export function MultiPointBuildingStdPriceModal({
                     <div className="flex justify-between text-sm">
                       <span>{labelOf(k)} {housingNoun} 기준시가</span>
                       <span className="font-mono tabular-nums font-semibold">
-                        {pr?.housing != null ? `${fmt(pr.housing)} 원` : "—"}
+                        {pr?.housing != null ? `${fmt(pr.housing)}` : "—"}
                       </span>
                     </div>
                     {enableCommercial && (k === "transfer" || commercialAcqFirstMode) && (
                       <div className="flex justify-between text-sm">
                         <span>{labelOf(k)} 상가건물 기준시가</span>
                         <span className="font-mono tabular-nums font-semibold">
-                          {pr?.commercial != null ? `${fmt(pr.commercial)} 원` : "—"}
+                          {pr?.commercial != null ? `${fmt(pr.commercial)}` : "—"}
                         </span>
                       </div>
                     )}

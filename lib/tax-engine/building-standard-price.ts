@@ -169,7 +169,7 @@ function calcCompositeValuation(
     throw new BuildingStdPriceError("복합건물: ㎡당 공시지가(또는 부속토지)가 필요합니다.");
   }
 
-  const { breakdowns, total, apportionment } = calcCompositeForYear(
+  const { breakdowns, total, apportionment, unassignedAncillary } = calcCompositeForYear(
     resolveCompositeParts(input),
     year,
     landPrice,
@@ -184,6 +184,15 @@ function calcCompositeValuation(
       adjustmentCtx: { isResidential: !!input.isResidentialUse, isApartment: !!input.isApartmentUse },
     },
   );
+
+  // 설계문서 `building-std-price-nts-report.engine.design.md:225-227` — 미지정 몫은 잔여 흡수 없이
+  // 평가에서 빠지므로(게이팅 자체는 의도) 그 사실이 사용자에게 도달해야 한다. 금액에는 개입하지 않는다.
+  if (unassignedAncillary) {
+    const { totalArea, assignedArea } = unassignedAncillary;
+    warnings.push(
+      `부속시설 ${totalArea}㎡ 중 ${assignedArea}㎡만 귀속 지정 — 미지정 몫은 평가 제외`,
+    );
+  }
 
   return {
     compositeBreakdowns: breakdowns,
