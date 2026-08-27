@@ -39,17 +39,20 @@ function case44Detail(): RedevelopmentResult {
     postApprovalExistingHouse: {
       apportionedTransfer: 368_877_283, // floor(525,000,000 × 219,218,500 / 312,000,000)
       apportionedAcquisition: 219_218_500, // 권리가액 (의제)
-      gain: 149_658_784, // 안분 분 양도차익
+      gain: 149_658_783, // 안분 분 양도차익 (엔진 실측)
       holdingMonths: 214,
-      lthd: 44_897_634, // floor(149,658,784 × 30%)
+      lthd: 44_897_634, // floor(149,658,783 × 30%)
       lthdRate: 0.3,
     },
     settlement: {
-      apportionedTransfer: 156_122_716, // floor(525,000,000 × 92,781,500 / 312,000,000)
+      // 🔴 잔액 흡수 — floor 안분이 아니다(PR #1322 `2e1dd2f2`).
+      //    종전 픽스처는 손으로 만든 156,122,716이라 열 합계가 524,999,999로
+      //    **엔진이 만들 수 없는 상태**였고, 그래서 산식 드리프트를 못 잡았다.
+      apportionedTransfer: 156_122_717, // 525,000,000 − 368,877,283
       apportionedAcquisition: 92_781_500, // 청산금
-      gain: 63_341_216,
+      gain: 63_341_217, // 156,122,717 − 92,781,500 (엔진 실측)
       holdingMonths: 159, // 13년 3개월 (인가일 기산)
-      lthd: 16_468_716, // floor(63,341,216 × 26%)
+      lthd: 16_468_716, // floor(63,341,217 × 26%)
       lthdRate: 0.26,
     },
     total: {
@@ -89,12 +92,19 @@ describe("buildRedevTransferFormula — 분할별 양도가액 산식", () => {
     expect(f).toContain("368,877,283");
   });
 
-  it("settlement: 청산금 안분 산식에 변수값 inline", () => {
+  it("settlement: 잔액 흡수 산식에 변수값 inline (floor 아님)", () => {
     const f = buildRedevTransferFormula("settlement", detail, 525_000_000);
-    expect(f).toContain("525,000,000");
-    expect(f).toContain("92,781,500");
-    expect(f).toContain("312,000,000");
-    expect(f).toContain("156,122,716");
+    expect(f).toContain("525,000,000"); // 총 양도가액
+    expect(f).toContain("368,877,283"); // 차감하는 기존주택분
+    expect(f).toContain("156,122,717"); // 잔액
+    // 🔑 floor 등식으로 되돌아가면 좌변이 우변과 1원 어긋난다 — 표시가 산술적으로 거짓이 된다.
+    expect(f).not.toContain("floor");
+  });
+
+  it("settlement: 🔑 두 파트 합 = 총 양도가액 (잔액 흡수 불변식)", () => {
+    expect(
+      detail.postApprovalExistingHouse.apportionedTransfer + detail.settlement.apportionedTransfer,
+    ).toBe(525_000_000);
   });
 });
 
@@ -158,14 +168,14 @@ describe("buildRedevGainFormula — 분할별 양도차익 산식", () => {
     const f = buildRedevGainFormula("postApprovalExistingHouse", detail);
     expect(f).toContain("368,877,283");
     expect(f).toContain("219,218,500");
-    expect(f).toContain("149,658,784");
+    expect(f).toContain("149,658,783");
   });
 
   it("settlement: 양도가액 − 청산금 inline", () => {
     const f = buildRedevGainFormula("settlement", detail);
-    expect(f).toContain("156,122,716");
+    expect(f).toContain("156,122,717");
     expect(f).toContain("92,781,500");
-    expect(f).toContain("63,341,216");
+    expect(f).toContain("63,341,217");
   });
 });
 
@@ -182,7 +192,7 @@ describe("buildRedevLthdFormula — 분할별 LTHD 산식", () => {
 
   it("settlement: 양도차익 × 26% (13년 3개월)", () => {
     const f = buildRedevLthdFormula("settlement", detail);
-    expect(f).toContain("63,341,216");
+    expect(f).toContain("63,341,217");
     expect(f).toContain("26%");
     expect(f).toContain("13년 3개월");
     expect(f).toContain("16,468,716");
@@ -218,7 +228,7 @@ describe("buildRedevPerAsset* — 3원소 + 라벨 검증", () => {
     expect(arr[2].label).toContain("청산금");
     expect(arr[0].value).toBe(219_218_500);
     expect(arr[1].value).toBe(368_877_283);
-    expect(arr[2].value).toBe(156_122_716);
+    expect(arr[2].value).toBe(156_122_717);
   });
 
   it("acquisition: 3원소 합 = preApproval+post+settlement", () => {
@@ -237,8 +247,8 @@ describe("buildRedevPerAsset* — 3원소 + 라벨 검증", () => {
   it("gain: 분할별 양도차익", () => {
     const arr = buildRedevPerAssetForGain(detail);
     expect(arr[0].value).toBe(75_445_917);
-    expect(arr[1].value).toBe(149_658_784);
-    expect(arr[2].value).toBe(63_341_216);
+    expect(arr[1].value).toBe(149_658_783);
+    expect(arr[2].value).toBe(63_341_217);
   });
 
   it("lthd: 분할별 LTHD", () => {
@@ -251,8 +261,8 @@ describe("buildRedevPerAsset* — 3원소 + 라벨 검증", () => {
   it("income: 분할별 (gain − lthd)", () => {
     const arr = buildRedevPerAssetForIncome(detail);
     expect(arr[0].value).toBe(52_812_142); // 75,445,917 - 22,633,775
-    expect(arr[1].value).toBe(104_761_150); // 149,658,784 - 44,897,634
-    expect(arr[2].value).toBe(46_872_500); // 63,341,216 - 16,468,716
+    expect(arr[1].value).toBe(104_761_149); // 149,658,783 - 44,897,634
+    expect(arr[2].value).toBe(46_872_501); // 63,341,217 - 16,468,716
   });
 });
 
