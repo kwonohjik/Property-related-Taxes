@@ -320,6 +320,24 @@ function computeAptPay(args: BranchArgs): RedevelopmentSplitResult {
 
   const split = splitAptPay(postApprovalGain, redevelopment.rightsValue, redevelopment.settlementAmount);
 
+  /**
+   * 표시용 양도가액 안분 — **마지막 분기가 잔액을 흡수**한다.
+   *
+   * 🔴 2026-08-27 정정(표시 결함): 종전에는 두 몫을 **각각 floor**해 합이 총 양도가액보다
+   *    1원 적었다 — 평가 13억·청산 6억·양도 15억에서
+   *    `1,026,315,789 + 473,684,210 = 1,499,999,999`. 신고서는 열 합계가 총액과 맞아야 한다
+   *    (memory `feedback_redev_filing_form_acquisition_inverse`).
+   *
+   * 🔑 **같은 함수의 양도차익은 이미 이 규약을 지키고 있었다** — `splitAptPay`가
+   *    `settlementGain = postApprovalGain − existingGain`으로 흡수한다(사례 40·41에서 확립,
+   *    memory `feedback_floor_residual_absorption`). 표시 열만 규약 밖이었다.
+   *
+   * ⚠️ 취득가액 열은 `평가액`·`납부청산금`을 그대로 실어 합이 정의상 분양가와 같다
+   *    (`salePriceTotal = rightsValue + settlementAmount`) — 나눗셈이 없어 손댈 것이 없다.
+   */
+  const existingTransfer = safeRatio(transferPrice, redevelopment.rightsValue, salePriceTotal);
+  const settlementTransfer = salePriceTotal > 0 ? transferPrice - existingTransfer : 0;
+
   return {
     preApproval: {
       apportionedTransfer: redevelopment.rightsValue,
@@ -328,12 +346,12 @@ function computeAptPay(args: BranchArgs): RedevelopmentSplitResult {
     },
     postApprovalExistingHouse: {
       // 인가후 기존주택분 안분: 양도가액·취득가액 모두 권리가액/분양가 비율
-      apportionedTransfer: safeRatio(transferPrice, redevelopment.rightsValue, salePriceTotal),
+      apportionedTransfer: existingTransfer,
       apportionedAcquisition: redevelopment.rightsValue, // 분양가 안분 = 권리가액
       gain: split.postApprovalExistingHouseGain,
     },
     settlement: {
-      apportionedTransfer: safeRatio(transferPrice, redevelopment.settlementAmount, salePriceTotal),
+      apportionedTransfer: settlementTransfer, // 잔액 흡수 (별도 floor 금지)
       apportionedAcquisition: redevelopment.settlementAmount,
       gain: split.settlementGain,
     },
