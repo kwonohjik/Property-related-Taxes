@@ -36,7 +36,12 @@ import {
   calcCompositeForYear,
   normalizeAncillary,
 } from "./building-standard-price-helpers";
-import { resolveAcqBaseGroup, resolveAcqBaseRate } from "./data/building-standard-price";
+import {
+  isApartmentUsage,
+  isResidentialUsage,
+  resolveAcqBaseGroup,
+  resolveAcqBaseRate,
+} from "./data/building-standard-price";
 import { calcSameAdjustmentPeriodStdPrice } from "./same-adjustment-period-std-price";
 import {
   calcPriorStdPriceSubstitute,
@@ -326,11 +331,20 @@ function computeAdjustmentRate(
 ): number {
   if (input.taxType !== "inheritance_gift") return 1.0;
   if (input.manualAdjustmentRate != null) return input.manualAdjustmentRate / 100;
-  if (!input.specialFeatures) return 1.0;
+  // ⚠️ `specialFeatures` 미선택(undefined)으로 **조기반환하지 않는다**. 구분 II(최고층수·연면적)는
+  //    사용자가 고르는 특성이 아니라 층수·연면적으로 자동 판정되는 **건물 전체 항목**이고,
+  //    연면적은 어떤 구간엔 반드시 들어가므로 비주거면 항상 해당한다(고시 제11조 구분 II —
+  //    적용범위 단서에 용도 제한이 없다). 2026년 계산사례 상속 9건이 예외 없이 II 를 받으며,
+  //    근생(라멘)№41 은 「9. 1천㎡ 이하」만, 운동시설№24 는 「10. 1천~5천㎡」만으로 붙는다.
   const structureIndex = resolveStructureIndex(year, point.structureKey) ?? 0;
-  return calcSpecialAdjustmentRate(input.specialFeatures, structureIndex, input.floorArea, {
-    isResidential: !!input.isResidentialUse,
-    isApartment: !!input.isApartmentUse,
+  return calcSpecialAdjustmentRate(input.specialFeatures ?? {}, structureIndex, input.floorArea, {
+    // 🔑 주거 여부는 **용도번호로 판정**한다 — `isResidentialUse` 는 조정률 모달에서만 설정돼
+    //    모달 미개봉 시 false 로 남는다(초기값). 그대로 두면 단독주택에 9번이 잘못 붙는다.
+    isResidential: isResidentialUsage(year, point.usageNo) || !!input.isResidentialUse,
+    // 🔑 주거 판정과 **짝**이다 — 주거인데 아파트가 아니면 구분 II 가 통째로 빠지므로,
+    //    한쪽만 자동화하면 아파트가 「주거·비아파트」로 오판돼 최고층수까지 사라진다.
+    //    2001~2002 는 번호로 가를 수 없어 undefined ⇒ 사용자 플래그가 정본이다.
+    isApartment: isApartmentUsage(year, point.usageNo) ?? !!input.isApartmentUse,
     structureKey: point.structureKey, // II 최고층수 통나무조 제외 판정
   });
 }

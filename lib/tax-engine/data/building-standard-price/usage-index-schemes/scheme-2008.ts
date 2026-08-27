@@ -13,6 +13,8 @@ import { LABELS_2009 } from "./scheme-2009";
 export const SCHEME_2008: UsageScheme = {
   years: new Set([2008]),
   maxGeneralNo: 44,
+  residentialMaxNo: 3,
+  apartmentUsageNo: 1,
   labels: LABELS_2009,
   baseIndex: {
     1: 110, 2: 100, 3: 100, 4: 140, 5: 120, 6: 110, 7: 90, 8: 140, 9: 120, 10: 90,

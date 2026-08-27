@@ -48,6 +48,11 @@ function buildValuationSnapshot(
     valStructureKey: head.structureKey,
     valUsageNo: String(head.usageNo),
     adjustmentMode: "manual",
+    // ⚠️ 맥락은 **양도세**다(PHD 3시점 배치는 양도세 마법사 전용) — 고시 제11조 단서상 조정률
+    //    미적용이다. 1시점 계산 편의로 상증 모드를 쓰므로 **미적용을 명시**해야 한다.
+    //    종전에는 빈 문자열이라 `toEngineInput` 이 undefined 로 넘겼고, 구분 II 가 특성 선택과
+    //    무관하게 자동 적용되면서(F-09) 배치 값과 스냅샷 재계산 값이 갈렸다(라운드트립 등가 붕괴).
+    manualAdjustmentRate: "100",
     compositeMode: composite,
     compositeParts: composite
       ? parts.map((p) => ({
@@ -55,6 +60,8 @@ function buildValuationSnapshot(
           structureKey: p.structureKey,
           usageNo: String(p.usageNo),
           floorArea: String(p.floorArea),
+          // 복합은 **부분별** 조정률이 정본이라 building-level manual 이 무시된다.
+          adjustmentRate: "100",
         }))
       : [emptyCompositePart()],
   };

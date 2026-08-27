@@ -115,6 +115,16 @@ const preGosiReason = (year: number) =>
 const sumArea = (parts: { floorArea: number }[]) => parts.reduce((s, p) => s + p.floorArea, 0);
 
 /** ≥2001 valuation 건물기준시가. 부분 1개=단일 point, 2개↑=compositeParts 합산. */
+/**
+ * 1시점 기준시가 — 엔진의 양도 경로가 2시점을 요구해 **계산 편의로 상증(1시점) 모드**를 쓴다.
+ *
+ * ⚠️ 맥락은 **양도세**다(PHD 3시점 배치는 양도세 마법사 전용). 고시 제11조 단서는
+ *    「소득세법 §99①1호나목에 따라 계산하는 경우에는 조정률을 적용하지 아니한다」이므로
+ *    **조정률 미적용을 명시**해야 한다. 종전에는 `specialFeatures` 가 없으면 조정률이 1.0 이라
+ *    이 편의가 결과에 드러나지 않았는데, 구분 II(최고층수·연면적)가 특성 선택과 무관하게
+ *    자동 적용되면서(F-09) **양도세 계산에 조정률이 붙는** 결함으로 바뀌었다.
+ *    실측: 상가 최초공시(2005·비주거 69.52㎡) 35,663,760 → 32,048,720(−10.1%).
+ */
 function valuationStdPrice(
   parts: ResolvedPart[],
   builtYear: number,
@@ -124,6 +134,7 @@ function valuationStdPrice(
   if (parts.length === 1) {
     const r = calcBuildingStandardPrice({
       taxType: "inheritance_gift",
+      manualAdjustmentRate: 100, // 양도 맥락 — 고시 제11조 단서(조정률 미적용) 명시
       floorArea: head.floorArea,
       builtYear,
       valuationYear: point.year,
@@ -138,7 +149,14 @@ function valuationStdPrice(
     valuationYear: point.year,
     // 복합 위치지수는 valuation.landPricePerM2 단일값 사용(시행령 고시)
     valuation: { structureKey: head.structureKey, usageNo: head.usageNo, landPricePerM2: point.landPricePerM2 },
-    compositeParts: parts.map((p) => ({ structureKey: p.structureKey, usageNo: p.usageNo, floorArea: p.floorArea })),
+    // 복합은 **부분별** adjustmentRate 가 정본이라 building-level manual 이 무시된다
+    // ⇒ 부분마다 100(미적용)을 명시한다. 위 함수 주석의 양도 맥락 사유와 같다.
+    compositeParts: parts.map((p) => ({
+      structureKey: p.structureKey,
+      usageNo: p.usageNo,
+      floorArea: p.floorArea,
+      adjustmentRate: 100,
+    })),
   });
   return r.compositeTotal;
 }

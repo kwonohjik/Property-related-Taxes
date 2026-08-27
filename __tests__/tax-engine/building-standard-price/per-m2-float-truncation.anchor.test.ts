@@ -106,7 +106,7 @@ describe("F-04 ㎡당 금액 float 절사 — §1 재현 사례 (수정 전 실�
   //   기준시가 = 2,091,000 × 300 = 627,300,000
   // 현행: 2,090,000 / 627,000,000 (300,000 과소)
   // 잔가율 0.82: 2025 I그룹 내용연수 50년·잔존율 0.10 → step 0.018, 경과 10년 → 1 − 0.18 = 0.82.
-  it("C-2 상증 2025·철근콘크리트·용도49 (조정률 미적용) → ㎡당 2,091,000 / 기준시가 627,300,000", () => {
+  it("C-2 상증 2025·철근콘크리트·용도49 (비주거 → 구분 II 연면적 자동) → ㎡당 1,881,000", () => {
     const input: BuildingStandardPriceInput = {
       taxType: "inheritance_gift",
       floorArea: 300,
@@ -118,9 +118,13 @@ describe("F-04 ㎡당 금액 float 절사 — §1 재현 사례 (수정 전 실�
     expect([b?.basePrice, b?.structureIndex, b?.usageIndex, b?.locationIndex, b?.residualRate]).toEqual([
       850_000, 100, 300, 100, 0.82,
     ]);
+    // 조정률 전(前) ㎡당 — float 절사 축의 검증 대상은 이 값이다.
     expect(exactPricePerM2(2_550_000_000_000n, 8_200n)).toBe(2_091_000);
-    expect(b?.pricePerM2).toBe(2_091_000);
-    expect(b?.standardPrice).toBe(627_300_000);
+    // ⚠️ 비주거라 **구분 II 연면적(#9 90)이 자동 적용**된다(F-09, 고시 제11조 — 적용범위에
+    //    용도 제한이 없다). 종전에는 `specialFeatures` 미제공을 「조정률 미적용」으로 읽었다.
+    expect(b?.adjustmentRate).toBe(0.9);
+    expect(b?.pricePerM2).toBe(1_881_000);
+    expect(b?.standardPrice).toBe(564_300_000);
   });
 
   // ── C-3 ── 실측 최대 오차(연면적 1,000㎡ → 기준시가 1,000,000원 과소) ─────────
@@ -187,9 +191,10 @@ describe("F-04 ㎡당 금액 float 절사 — §1 재현 사례 (수정 전 실�
       floorArea: 300,
       builtYear: 2015,
       valuationYear: 2015,
-      valuation: { structureKey: "wood_frame", usageNo: 2, landPricePerM2: 650_000 },
+      // ⚠️ 용도번호는 **비주거**여야 한다 — 주거용(#1~2)이면 구분 II 가 통째로 빠져
+      //    「9 × 37」 축 자체가 가려진다(F-09, 고시 제11조 구분 II 단서).
+      valuation: { structureKey: "wood_frame", usageNo: 42, landPricePerM2: 650_000 }, // 근생(2015 체계, 용도지수 100)
       specialFeatures: { normalUseRatio: 0.32 },
-      isResidentialUse: false,
     };
     const b = calcBuildingStandardPrice(input).valuation;
     expect([b?.basePrice, b?.structureIndex, b?.usageIndex, b?.locationIndex, b?.residualRate]).toEqual([
@@ -371,6 +376,10 @@ describe("F-04 ㎡당 금액 float 절사 — §3 역방향 가드(NTS 공식 �
       builtYear: 1998,
       valuationYear: 2026,
       valuation: { structureKey: "cement_brick", usageNo: 33, landPricePerM2: 3_500_000 },
+      // 원본(2026 계산사례 1-나)은 **양도** 사례다 — 「양도 개시일 2026.1.1」·조정률 「-(양도세
+      // 계산시 미적용)」. 종전에는 `specialFeatures` 생략으로 암묵 처리했는데, 구분 II 는 특성
+      // 선택과 무관하게 자동 적용되므로(F-09) 생략만으로는 1.0 이 되지 않는다 — 명시로 남긴다.
+      manualAdjustmentRate: 100,
     };
     const b = calcBuildingStandardPrice(input).valuation;
     expect(exactPricePerM2(947_376_000_000n, 3_700n)).toBe(350_000); // 정확값과 동일 → 수정이 바꾸면 안 된다

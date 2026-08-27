@@ -72,6 +72,8 @@ export const USAGE_LABELS: Readonly<Record<number, string>> = Object.freeze({
 export const SCHEME_60: UsageScheme = {
   years: new Set([2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]),
   maxGeneralNo: 60,
+  residentialMaxNo: 2,
+  apartmentUsageNo: 1,
   labels: USAGE_LABELS,
   baseIndex: {
     1: 110, 2: 100, 3: 140, 4: 130, 5: 120, 6: 112, 7: 105, 8: 100, 9: 135, 10: 125,

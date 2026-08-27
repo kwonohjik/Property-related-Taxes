@@ -9,6 +9,8 @@ import type { UsageScheme } from "./types";
 export const SCHEME_2005: UsageScheme = {
   years: new Set([2005]),
   maxGeneralNo: 43,
+  residentialMaxNo: 3,
+  apartmentUsageNo: 1,
   labels: {
     1: "아파트",
     2: "단독주택",

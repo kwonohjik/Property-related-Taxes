@@ -414,7 +414,7 @@ test("홈 링크 → 건물 기준시가 계산기 진입", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "건물 기준시가 계산기" })).toBeVisible();
 });
 
-test("복합구조 조정률 — 건물 전체+부분 특성 자동계산 합계 943,600,000", async ({ page }) => {
+test("복합구조 조정률 — 건물 전체+부분 특성 자동계산 합계 904,400,000", async ({ page }) => {
   await page.goto(URL);
   await page.getByText("상속·증여(1시점)").click();
 
@@ -443,7 +443,11 @@ test("복합구조 조정률 — 건물 전체+부분 특성 자동계산 합계
   await page.getByRole("button", { name: "적용" }).click();
   await expect(page.getByText(/부분 특성 \d+개 적용/)).toBeVisible();
 
-  // 부분 2: 지상2 단독(#2) 700㎡ — 부분 특성 없음(기본 manual·빈값) → 건물 전체 II만 1.10
+  // 부분 2: 지상2 단독(#2) 700㎡ — 부분 특성 없음.
+  // ⚠️ **주거용이라 구분 II 를 받지 않는다**(조정률 미적용) — 고시 제11조 구분 II 단서
+  //    「주거용건물은 **아파트에 한해** 최고층수기준만 적용」. 국세청 계산사례 마.도 지상2·3
+  //    단독주택의 조정률 칸을 **빈칸**으로 둔다. 주거 판정은 **부분별 용도번호**로 한다(F-09).
+  //    종전 기대값 943,600,000 은 지상2 에도 최고층수 1.10 이 붙던 값이다.
   await page.getByRole("button", { name: "+ 부분 추가" }).click();
   await selectOption(page, "구조 선택", /철근콘크리트조/);
   await selectOption(page, "용도 선택", /^2\./);
@@ -455,7 +459,7 @@ test("복합구조 조정률 — 건물 전체+부분 특성 자동계산 합계
 
   const result = page.getByTestId("bsp-result");
   await expect(result).toBeVisible();
-  await expect(result).toContainText("943,600,000");
+  await expect(result).toContainText("904,400,000");
 });
 
 test("양도 복합 — 건물특성 라디오·건물전체 블록 미노출(조정률 미적용)", async ({ page }) => {

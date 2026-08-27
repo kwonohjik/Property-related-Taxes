@@ -36,22 +36,16 @@
  *   ⇒ 종전에 「공식 사례 4건이 반증한다」고 본 것은 **그 4건이 양도 사례임을 몰랐기 때문**이었다.
  *     `nts-cases.test.ts` 의 그 4건은 이제 `manualAdj: 100` 으로 출처와 함께 명시 고정돼 있다.
  *
- * ── 🟠 **그런데 고칠 수 없다 — 선행 조건 2건**(둘 다 신규 판정 로직 = 별도 배치)
- *   게이트(`computeAdjustmentRate` 의 `if (!input.specialFeatures) return 1.0;` /
- *   `resolvePartAdjustment` 의 `buildingHasAnyFeatures` 조기반환)를 실제로 풀어 실측했더니:
- *
- *   1. **주거 판정이 조정률 모달에 종속돼 있다.** `isResidentialUse` 는 특성 모달의 `onApply`
- *      에서만 설정되고(`BuildingStdPriceForm.tsx:770`) 초기값이 `false` 다
- *      (`building-std-price-form.ts:283`). ⇒ 모달을 열지 않은 **단독주택 상증 평가가 비주거로
- *      취급돼 9번 0.90 이 잘못 붙는다**(홈택스 gold anchor `phd-batch-per-timepoint` 가 이를
- *      즉시 잡았다). 고시상 주거용은 구분 II 제외이므로 **usageNo 기반 자동 판정이 선행**이다.
- *   2. **복합은 부분별 주거 판정이 없다.** 건물 단위 플래그 하나뿐이라 1층 근생 + 2·3층 주택
- *      혼합(계산서 작성례(3))에서 **주택 부분에도 II 가 붙어** 공식 작성례 171,500,000 이
- *      160,300,000 으로 깨진다(지상2·3 이 557,000 → 501,000). 계산사례 마.에서 국세청은
- *      지상2·3 단독주택 조정률 칸을 **빈칸**으로 두었다 — 부분별 판정이 정본이다.
- *
- *   ⇒ 이 둘을 갖추기 전에 게이트를 풀면 **주거용에 −10% 를 잘못 적용하는 새 결함**이 생긴다.
- *     아래 §1 은 그때까지 현행 동작을 고정해 **조용한 변화**를 막는다.
+ * ── ✅ **선행 조건 2건을 없애고 게이트를 풀었다**(같은 PR)
+ *   ① **주거 판정을 용도번호로 자동화**했다(`isResidentialUsage`) — 조정률 모달을 열지 않아도
+ *      단독주택이 주거로 판정된다. 경계는 체계마다 다르다:
+ *      2001~2002 = 1~2 · 2003~2013 = 1~3 · 2014~2026 = 1~2.
+ *   ②-1 **아파트 판정도 짝으로 자동화**했다(`isApartmentUsage`) — 주거인데 아파트가 아니면
+ *      구분 II 가 **통째로** 빠지므로(단서 「아파트에 한해 최고층수기준만」), 한쪽만 자동화하면
+ *      아파트가 「주거·비아파트」로 오판돼 최고층수까지 사라진다(BSP-03 이 그렇게 깨졌다).
+ *      ⚠️ 2001~2002 는 #1 이 「단독주택·아파트」 통합이라 번호로 못 가른다 ⇒ 사용자 플래그 정본.
+ *   ②-2 **복합은 부분별 용도번호로** 판정한다 — 건물 단위 플래그 하나로는 1층 근생 + 2·3층 주택
+ *      혼합이 갈리지 않아 공식 작성례(3) 171,500,000 이 깨졌다.
  *
  * 법령: 「상속세 및 증여세법」 제61조 제1항 제2호 위임 하의 국세청 「건물 기준시가 계산방법」 고시
  *   제11조(개별건물의 특성에 따른 조정률) 구분 II. 양도(소득세법 §99①1호나목)는 미적용.
@@ -92,7 +86,7 @@ describe("F-09 — §0 술어는 고시대로다 (사실 고정 · 수정 후에
   });
 });
 
-describe("F-09 — §1 현행 동작 characterization (🟠 축은 확정·구현은 선행조건 대기 — 헤더 참조)", () => {
+describe("F-09 — §1 구분 II 자동 적용 (수정 후)", () => {
   it("㎡당 금액이 계산사례와 같다 — 544,000 (조정률 1.08 = 9번 × 20번)", () => {
     const r = calcBuildingStandardPrice(
       SUPER_1F({ specialFeatures: { commercialFloor: 20 } }),
@@ -106,14 +100,13 @@ describe("F-09 — §1 현행 동작 characterization (🟠 축은 확정·구�
     expect(r.valuation?.pricePerM2).toBe(453_000);
   });
 
-  it("🟠 미선택(undefined)은 504,000 — {} 와 **11.2% 갈리는데 화면은 두 상태를 구별하지 않는다**", () => {
+  it("미선택(undefined)과 빈 객체 {} 가 **같은 결과**다 — 화면이 둘을 구별하지 않으므로", () => {
     const none = calcBuildingStandardPrice(SUPER_1F({}));
     const empty = calcBuildingStandardPrice(SUPER_1F({ specialFeatures: {} }));
-    expect(none.valuation?.pricePerM2).toBe(504_000); // 조정률 미적용
+    // 종전에는 504,000(미적용) ↔ 453,000 으로 **11.2% 갈렸다** — 그것이 F-09 의 실체였다.
+    expect(none.valuation?.pricePerM2).toBe(453_000);
     expect(empty.valuation?.pricePerM2).toBe(453_000);
-    // 이 불일치가 F-09 의 실체다. 고시·계산사례는 453,000 을 지지하지만(축 확정),
-    // 주거 판정 선행 조건 2건이 갖춰지기 전에는 고칠 수 없다 — 헤더 참조.
-    expect(none.valuation!.standardPrice).not.toBe(empty.valuation!.standardPrice);
+    expect(none.valuation!.standardPrice).toBe(empty.valuation!.standardPrice);
   });
 });
 
