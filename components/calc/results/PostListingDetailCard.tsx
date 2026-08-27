@@ -159,8 +159,17 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           = <strong>{post.conversionRatio.toFixed(5)}</strong>
         </p>
         <p className="font-medium">
-          1주당 취득기준시가 = 종가평균 × 환산비율 (절사) ={" "}
-          <strong>{post.finalPerShareValue.toLocaleString()}</strong>{" "}
+          1주당 취득기준시가 ={" "}
+          {post.listingClosingAvg1Month !== undefined ? (
+            <>
+              상장일 이후 1개월 종가평균{" "}
+              <strong>{post.listingClosingAvg1Month.toLocaleString()}</strong> × 환산비율{" "}
+              <strong>{post.conversionRatio.toFixed(5)}</strong>
+            </>
+          ) : (
+            <>종가평균 × 환산비율</>
+          )}{" "}
+          (절사) = <strong>{post.finalPerShareValue.toLocaleString()}</strong>{" "}
           <span className="text-violet-600">(§163⑨ 분자)</span>
         </p>
         <p className="font-medium text-violet-900">
