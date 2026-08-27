@@ -108,11 +108,20 @@ describe("케이스 3 — 코스피 비대주주 장내거래 비과세", () => 
 // ============================================================
 
 describe("케이스 4 — 코스피 비대주주 장외거래 과세", () => {
-  it("C4-1: taxCategory = listed_otc_non_major, 세율 20%", () => {
+  /**
+   * 2026-08-27 축 교정: 종전 픽스처는 「장외거래」를 `isKOTCTrading: true`로 표현했다(주석까지 그렇게
+   * 적혀 있었다). 그러나 **K-OTC는 비상장 전용 시장**이고(자본시장법 §286①5호 「증권시장에
+   * 상장되지 아니한 주권」), 상장주식의 장외 양도를 나타내는 축은 `isOnMarketTransaction: false`다.
+   * §94①3 가목1) 단서용으로 그 필드가 나중에 추가되며 축이 갈렸는데 이 픽스처가 안 따라왔다.
+   *
+   * 두 카테고리는 세율이 동일하므로(`stock-transfer-rate-calc.ts:114-115` fall-through)
+   * 세액 기대값은 그대로다 — 바뀌는 것은 **분류와 조문뿐**이다.
+   */
+  it("C4-1: taxCategory = listed_off_market_non_major, 세율 20%", () => {
     const input = baseInput({
       marketType: "kospi",
       isMajorShareholder: false,
-      isKOTCTrading: true,  // 장외거래
+      isOnMarketTransaction: false,  // 장외거래 (K-OTC 아님 — 상장주식은 K-OTC 대상이 아니다)
       isSmallMediumEnterprise: false,
       perShareTransferPrice: 50_000,
       perShareAcquisitionPrice: 30_000,
@@ -121,7 +130,7 @@ describe("케이스 4 — 코스피 비대주주 장외거래 과세", () => {
     });
     const result = calculateStockTransferTax(input);
     expect(result.isExempt).toBe(false);
-    expect(result.taxCategory).toBe("listed_otc_non_major");
+    expect(result.taxCategory).toBe("listed_off_market_non_major");
     expect(result.appliedSection94).toBe("①3가2)");
     // 양도소득금액 = 50,000 × 1,000 - 30,000 × 1,000 = 20,000,000
     // 기본공제 2,500,000 → 과세표준 17,500,000
@@ -138,7 +147,7 @@ describe("케이스 4 — 코스피 비대주주 장외거래 과세", () => {
     const input = baseInput({
       marketType: "kospi",
       isMajorShareholder: false,
-      isKOTCTrading: true,
+      isOnMarketTransaction: false,  // 장외거래 (위 축 교정과 동일)
       isSmallMediumEnterprise: true,
       perShareTransferPrice: 50_000,
       perShareAcquisitionPrice: 30_000,

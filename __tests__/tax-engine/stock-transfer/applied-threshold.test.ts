@@ -166,25 +166,28 @@ describe("AT-1 kospi 현행 임계 — 2024-12-31 기준 대주주", () => {
 // AT-2: 코스닥 K-OTC 장외 대주주 (지분율 2.5%·시총 60억)
 // ============================================================
 
-describe("AT-2 kosdaq K-OTC 대주주 (isKOTCTrading=true) — appliedThreshold", () => {
+describe("AT-2 kosdaq 장외 대주주 (isOnMarketTransaction=false) — appliedThreshold", () => {
   /**
    * marketType="kosdaq" / priorYearEndDate=2024-12-31 / selfShareRatio=0.025
    * selfMarketCap=6,000,000,000 / isKOTCTrading=true / isMajorShareholder=true
    * Design v2 AT-2 anchor
    */
-  it("kosdaq K-OTC 대주주 → listed_major + threshold.shareRatio=0.02 + marketCap=50억", () => {
+  it("kosdaq 장외 대주주 → listed_major + threshold.shareRatio=0.02 + marketCap=50억", () => {
     const input = makeInput({
       marketType: "kosdaq",
       selfShareRatio: 0.025,
       selfMarketCap: 6_000_000_000,
       isMajorShareholder: true,
-      isKOTCTrading: true,   // K-OTC 장외이지만 대주주이면 과세
+      // 2026-08-27 축 교정: 상장주식은 K-OTC 대상이 아니다(자본시장법 §286①5호 —
+      // K-OTC는 「증권시장에 상장되지 아니한 주권」 전용). 여기서 재려는 것은
+      // 「**장외**여도 대주주이면 과세」이므로 장외 축인 isOnMarketTransaction을 쓴다.
+      isOnMarketTransaction: false,
       priorYearEndDate: new Date("2024-12-31"),
     });
 
     const result = calculateStockTransferTax(input);
 
-    // 대주주이면 K-OTC 여부 무관하게 listed_major
+    // 대주주이면 장내·장외 무관하게 listed_major
     expect(result.taxCategory).toBe("listed_major");
     expect(result.isExempt).toBe(false);
     expect(result.appliedThreshold?.shareRatio).toBe(0.02);

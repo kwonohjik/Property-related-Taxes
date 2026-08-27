@@ -200,8 +200,18 @@ function judgeExemption(
     return { isExempt: true, reason: "non_major_in_market" };
   }
 
-  // 2. K-OTC + 중소·중견 소액주주 → §94①3 나목 단서 비과세
+  // 2. 비상장 + K-OTC + 중소·중견 소액주주 → §94①3 나목 단서 비과세
+  //
+  // 🔑 **비상장 전용이다.** 단서의 대상은 나목 **본문**의 주식, 즉 「주권**비상장**법인의 주식등」이다.
+  //    게다가 K-OTC 자체가 비상장 전용 시장이다 — 자본시장법 §286①5호는 협회 업무를
+  //    「**증권시장에 상장되지 아니한 주권**의 장외매매거래」로 정의한다.
+  //    ⇒ 상장주식의 K-OTC 거래는 법문상 성립하지 않는다.
+  //
+  // 종전에는 marketType 가드가 없어 상장주식(kospi·kosdaq·konex)에도 이 비과세가 적용됐다
+  // (최종세액 2,997,500 → 0). 상장 비대주주의 장외 양도는 §94①3 **가목 2)** 과세대상이다 —
+  // 가목 2)와 나목 단서는 「장외면 잡는다」 ↔ 「K-OTC면 빼준다」로 **축이 정반대**다.
   if (
+    marketType === "unlisted" &&
     isKOTCTrading &&
     (isSmallMediumEnterprise || isMidsizeEnterprise) &&
     isListedSmallShareholder
@@ -209,7 +219,15 @@ function judgeExemption(
     return { isExempt: true, reason: "kotc_sme_mid" };
   }
 
-  // 3. K-OTC + 벤처기업 + 비대주주 → 조특법 §14①7호 비과세
+  // 3. 장외 거래 + 벤처기업 + 비대주주 → 조특법 §14①7호 비과세
+  //
+  // ⚠️ **여기에는 marketType 가드를 넣지 않는다** — 2번과 요건 축이 다르다.
+  //    조특법 §14①7호는 「**증권거래세법 §3조1호나목**에서 정하는 방법으로 거래되는 벤처기업 주식」이고,
+  //    그 나목은 「**증권시장 밖에서** 대통령령으로 정하는 방법」이다. 위임을 끝까지 따라가면
+  //    증권거래세법 시행령 §1조의2① → 자본시장법 시행령 **§78**(다자간매매체결회사 — **상장주권** 대상)
+  //    **또는 §178①**(협회 K-OTC — 비상장)이다.
+  //    ⇒ 상장·비상장을 가리지 않고 **거래 장소**로만 한정한다. 가드를 넣으면 법 근거 없이
+  //      불리하게 적용하는 것이 된다([[feedback_no_unfavorable_application_without_legal_basis]]).
   if (isKOTCTrading && isVentureCompany && !isMajor) {
     return { isExempt: true, reason: "kotc_venture" };
   }
