@@ -96,6 +96,11 @@ export function buildPenaltyAmendmentPayload(form: TransferFormData): object {
           originalFiledTax: parseAmount(form.originalFiledTax),
           excessRefundAmount: parseAmount(form.excessRefundAmount),
           interestSurcharge: parseAmount(form.interestSurcharge),
+          // 빈 문자열이면 키 자체를 넣지 않는다 — 미입력 = 전액 부정(종전 동작).
+          // 0 은 「부정행위분이 없다」는 유효한 선언이라 0도 보낸다.
+          ...((form.fraudulentPortion ?? "").trim() !== ""
+            ? { fraudulentPortion: parseAmount(form.fraudulentPortion) }
+            : {}),
           filingType: form.filingType,
           penaltyReason: form.penaltyReason,
         },

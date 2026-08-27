@@ -140,3 +140,38 @@ describe("PW-3 납부지연가산세 — Date 두 칸이 coerceDates 를 통과�
     expect(errors.some((e) => e.field === "paymentDeadline")).toBe(false);
   });
 });
+
+// ============================================================
+// PW-4 §47조의3①1호 가목·나목 분해 — 폼 → ④ → ⑫ → ⑭ → 엔진
+//
+// 「부정행위로 인한 과소신고분」은 **빈 문자열이면 body 에 넣지 않는다**(미입력 = 전액 부정).
+// 0 은 「부정행위분이 없다」는 유효한 선언이므로 **0도 보낸다** — 이 둘을 섞으면
+// 「0을 입력했는데 전액 40%가 붙는」 침묵 오류가 된다.
+// ============================================================
+
+describe("PW-4 가목·나목 분해 배선", () => {
+  it("PW-4-1: 미입력 → body 에 키 없음 · 전액 40% (종전 동작)", () => {
+    const { body, result } = runPipeline(form({ fraudulentPortion: "" }));
+    expect(body.fraudulentPortion).toBeUndefined();
+    expect(result.underReportPenalty).toBe(7_800_000); // 19,500,000 × 40%
+  });
+
+  it("PW-4-2: 부정분 5,000,000 → 5,000,000×40% + 14,500,000×10% = 3,450,000", () => {
+    const { body, result } = runPipeline(form({ fraudulentPortion: "5000000" }));
+    expect(body.fraudulentPortion).toBe(5_000_000);
+    expect(result.underReportPenalty).toBe(3_450_000);
+  });
+
+  it("PW-4-3: **0 도 전달된다** — 「부정행위분 없음」 선언이라 전액 10%", () => {
+    const { body, result } = runPipeline(form({ fraudulentPortion: "0" }));
+    expect(body.fraudulentPortion).toBe(0);
+    expect(result.underReportPenalty).toBe(1_950_000); // 19,500,000 × 10%
+  });
+
+  it("PW-4-4: 무신고에는 분해가 없다 — 부정분을 넣어도 전액 40%", () => {
+    const { result } = runPipeline(
+      form({ filingViolation: "non_report", fraudulentPortion: "5000000" }),
+    );
+    expect(result.underReportPenalty).toBe(7_800_000);
+  });
+});

@@ -286,6 +286,11 @@ export interface TransferFormData {
   originalFiledTax: string;
   excessRefundAmount: string;
   interestSurcharge: string;
+  /**
+   * 부정행위로 인한 과소신고납부세액등 — 국세기본법 §47조의3①1호 **가목** base.
+   * 빈 문자열이면 **전액을 부정행위분**으로 본다(종전 동작). 무신고에는 이 분해가 없다.
+   */
+  fraudulentPortion: string;
   unpaidTax: string;
   paymentDeadline: string;
   actualPaymentDate: string;
@@ -409,6 +414,7 @@ const defaultFormData: TransferFormData = {
   originalFiledTax: "0",
   excessRefundAmount: "0",
   interestSurcharge: "0",
+  fraudulentPortion: "",   // 빈값 = 전액 부정(종전 동작)
   unpaidTax: "0",
   paymentDeadline: "",
   actualPaymentDate: "",

@@ -63,6 +63,24 @@ export function PenaltyDetailBlock({
         hint="예정신고 시 이미 납부한 세액"
       />
 
+      {/*
+        §47조의3①1호는 「**가목 + 나목을 합한** 금액」이다 —
+          가. **부정행위로 인한** 과소신고납부세액등 × 40%(역외 60%)
+          나. (과소신고납부세액등 − 부정행위분) × 10%
+        전액이 부정행위분이 아니면 나머지는 10%다. 비워 두면 **전액을 부정행위분**으로 본다.
+
+        ⚠️ 무신고(§47조의2①)에는 이 분해가 없다 — 「비율을 곱한 금액」이라 각 목이 없다.
+           그래서 과소신고일 때만 묻는다.
+      */}
+      {form.filingViolation === "under_report" && form.isFraudulent && (
+        <CurrencyInput
+          label="부정행위로 인한 과소신고분"
+          value={form.fraudulentPortion}
+          onChange={(v) => onChange({ fraudulentPortion: v })}
+          hint="비워 두면 과소신고분 전액을 부정행위로 봅니다. 일부만 부정행위라면 그 금액을 입력하세요 — 나머지는 10%가 적용됩니다 (국세기본법 §47조의3①1호 나목)."
+        />
+      )}
+
       <div>
         <button
           type="button"

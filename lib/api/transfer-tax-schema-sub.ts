@@ -297,6 +297,8 @@ export const filingPenaltyDetailsSchema = z.object({
   originalFiledTax:  z.number().int().nonnegative(),
   excessRefundAmount:z.number().int().nonnegative(),
   interestSurcharge: z.number().int().nonnegative(),
+  // §47조의3①1호 가목 base — optional. 미입력이면 전액 부정(종전 동작)
+  fraudulentPortion: z.number().int().nonnegative().optional(),
   filingType:        z.enum(["none", "under", "excess_refund", "correct"]),
   penaltyReason:     z.enum(["normal", "fraudulent", "offshore_fraud"]),
 });

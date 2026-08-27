@@ -111,6 +111,7 @@ export const foreignStockInputSchema = z.object({
   originalFiledTax: z.number().min(0).optional(),
   priorPaidTax: z.number().min(0).optional(),
   interestSurcharge: z.number().min(0).optional(),
+  fraudulentPortion: z.number().min(0).optional(),
   unpaidTax: z.number().min(0).optional(),
   paymentDeadline: z.union([z.string(), z.date()]).optional(),
   actualPaymentDate: z.union([z.string(), z.date()]).optional(),
