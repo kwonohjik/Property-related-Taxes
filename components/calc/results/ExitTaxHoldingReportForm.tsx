@@ -28,7 +28,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 /** 양식 고정 행 수 — 최신본(2026.3.20.) 기준 20행 */
 const ROWS_FIXED = 20;
 
-const CELL_BASE = "border border-black p-1 align-middle text-[11px]";
+const CELL_BASE = "border border-black p-1 align-middle text-caption";
 const CELL_CENTER = `${CELL_BASE} text-center`;
 const CELL_LEFT = `${CELL_BASE} text-left`;
 const CELL_AMOUNT = `${CELL_BASE} text-right font-mono tabular-nums`;
@@ -58,7 +58,7 @@ export function ExitTaxHoldingReportForm({
 
   return (
     <div className="border-2 border-black bg-white p-3 text-black print:bg-white print:text-black">
-      <div className="mb-1 flex items-start justify-between text-[10px]">
+      <div className="mb-1 flex items-start justify-between text-micro">
         <span>■ 소득세법 시행규칙 [별지 제104호서식] 〈개정 2026. 3. 20.〉</span>
       </div>
 
@@ -78,7 +78,7 @@ export function ExitTaxHoldingReportForm({
       </table>
 
       {/* 1. 신고인 인적사항 — 계산기가 보관하지 않는 값이라 ⑧만 채운다 */}
-      <p className="mt-3 mb-1 text-[11px] font-semibold">1. 신고인 인적사항</p>
+      <p className="mt-3 mb-1 text-caption font-semibold">1. 신고인 인적사항</p>
       <table className="w-full border-collapse">
         <tbody>
           <tr>
@@ -118,8 +118,8 @@ export function ExitTaxHoldingReportForm({
 
       {/* 2. 주식등 보유 현황 */}
       <div className="mt-3 mb-1 flex items-end justify-between">
-        <p className="text-[11px] font-semibold">2. 주식등 보유 현황</p>
-        <p className="text-[10px]">(주, 원, %)</p>
+        <p className="text-caption font-semibold">2. 주식등 보유 현황</p>
+        <p className="text-micro">(주, 원, %)</p>
       </div>
       <div className="overflow-x-auto">
         <table
@@ -181,7 +181,7 @@ export function ExitTaxHoldingReportForm({
       </div>
 
       {/* 최신본에서 신설된 제외 안내 + 근거 조문 */}
-      <div className="mt-2 border border-black p-2 text-[10px] leading-relaxed">
+      <div className="mt-2 border border-black p-2 text-micro leading-relaxed">
         <p>
           ※ 「소득세법 시행령」 제178조의8제2항에 따라 국외전출자 주식등에서 제외되는 국외주식등만
           보유하고 있는 국외전출자는 국외전출자 주식등 보유현황 신고대상에서 제외됩니다.
@@ -192,13 +192,13 @@ export function ExitTaxHoldingReportForm({
         </p>
       </div>
 
-      <div className="mt-3 text-right text-[11px]">
+      <div className="mt-3 text-right text-caption">
         <p>년 월 일</p>
         <p className="mt-2">신고인 <span className="ml-8">(서명 또는 인)</span></p>
       </div>
-      <p className="mt-2 text-[11px] font-semibold">세무서장 <span className="font-normal">귀하</span></p>
+      <p className="mt-2 text-caption font-semibold">세무서장 <span className="font-normal">귀하</span></p>
 
-      <p className="mt-1 text-right text-[9px] text-gray-700">
+      <p className="mt-1 text-right text-micro text-gray-700">
         210mm×297mm[백상지 80g/㎡(재활용품)]
       </p>
     </div>
