@@ -83,13 +83,27 @@ function run(b: Branch, preApprovalExpenses: number) {
  *
  * ⚠️ 이 5/6은 **결함이 아니다** — `right-receive-expenses-apportion.anchor.test.ts`가
  *    「차익 자체는 옳다(실효 차감액이 이미 안분값이다). 어긋나는 것은 표시 열뿐」이라고
- *    이미 판정해 두었다. 여기서는 그 판정을 **세액 축에서** 고정한다.
+ *    판정해 두었다.
+ *
+ * 🔴 **2026-08-27 — 그 판정을 완공APT 수령에 한해 뒤집었다.** 실효 차감액이 안분값이면
+ *    **나머지 몫이 어디에도 안 빠진다**. 완공APT 수령 결과에는 청산금 **분할양도** 분기가
+ *    같은 신고 안에 있으므로 그 몫도 여기서 차감해야 한다. 입주권 수령은 분할양도 분기가
+ *    이 신고에 없어 종전 판정이 유지된다.
  */
 const BRANCHES: { label: string; b: Branch; totalGainDelta: number }[] = [
   { label: "입주권 + 청산금 납부", b: { subject: "right", direction: "pay" }, totalGainDelta: 30_000_000 },
   { label: "입주권 + 청산금 수령", b: { subject: "right", direction: "receive" }, totalGainDelta: 25_000_000 },
   { label: "완공APT + 청산금 납부", b: { subject: "apt", direction: "pay" }, totalGainDelta: 30_000_000 },
-  { label: "완공APT + 청산금 수령", b: { subject: "apt", direction: "receive" }, totalGainDelta: 25_000_000 },
+  // 🔴 2026-08-27 정정 — 25,000,000 → 30,000,000 (**세액 변경**).
+  //    종전에는 나목 안분분(25,000,000)만 반영되고 **나머지 5,000,000이 어디에도 차감되지
+  //    않았다**(과대과세). 완공APT 수령 결과에는 **청산금 분할양도 분기(settlement)** 가
+  //    같은 신고 안에 있으므로 그 몫의 필요경비도 여기서 빼야 한다
+  //    (§88·§95① · 법규재산2012-358 · 명문 부존재 ⇒ 불리 적용 금지).
+  //
+  //    ⚠️ **입주권(right) 수령은 25,000,000 그대로다** — §166①2호는 가목+나목뿐이고
+  //       분할양도 분기가 이 신고에 **없다**(별도 신고 · 사례 46). 잔여 몫은 그쪽에서 쓰인다.
+  //       두 분기의 차이가 이 정정의 경계다.
+  { label: "완공APT + 청산금 수령", b: { subject: "apt", direction: "receive" }, totalGainDelta: 30_000_000 },
 ];
 
 describe("T1-06 · 인가전 필요경비 차감 — 네 분기 전부", () => {
