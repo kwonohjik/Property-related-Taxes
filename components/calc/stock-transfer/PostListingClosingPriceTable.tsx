@@ -15,7 +15,7 @@ import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { calcMonthlyClosingAverage } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
-import { buildOneMonthBeforeSlots } from "@/lib/kiwoom/calendar";
+import { buildOneMonthBeforeSlots, resolveValuationAnchor } from "@/lib/kiwoom/calendar";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface PostListingClosingPriceTableProps {
@@ -43,21 +43,23 @@ export function fmtDate(d: Date): string {
 }
 
 /**
- * 양도일 기산 anchor — 양도일이 주말이면 직전 평일(금요일)까지 시프트.
- * (거래소 휴장일 캘린더는 미반영 — 토·일만 보정)
+ * 양도일 기산 anchor — 양도일이 **매매가 없는 날**이면 직전 거래일까지 시프트.
  *
- * 예: 2023-02-26 (일) → 2023-02-24 (금)
- *     2023-02-25 (토) → 2023-02-24 (금)
- *     2023-02-24 (금) → 2023-02-24 (그대로)
+ * 근거: 상증법 §63①1가목 괄호(「평가기준일이 공휴일 등 매매가 없는 날이면 **그 전일**을 기준」)
+ *       + 상증령 §52의2④(공휴일·대체공휴일·토요일). 소득세법 §99①3이 이 가목을 준용한다.
+ *
+ * ⚠️ 판정은 `lib/kiwoom/calendar.ts`의 `resolveValuationAnchor`가 **단일 소스**다.
+ *    종전에는 이 파일이 「토·일만」 보는 자체 구현을 갖고 있어 삼일절·현충일 같은 평일 공휴일과
+ *    납회기간(12/29~31)에서 시프트가 일어나지 않았다.
+ *
+ * 예: 2023-02-26(일) → 2023-02-24(금)
+ *     2024-03-01(금·삼일절) → 2024-02-29(목)
+ *     2023-12-29(금·납회) → 2023-12-28(목)
+ *     ※ 휴장일 픽스처(2020~2026) 범위 밖 평일은 판정 불가라 그대로 둔다.
  */
 export function resolvePreTransferAnchor(transferDate: string): string {
   if (!transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(transferDate)) return "";
-  const [y, m, d] = transferDate.split("-").map(Number);
-  const anchor = new Date(Date.UTC(y, m - 1, d));
-  while (anchor.getUTCDay() === 0 || anchor.getUTCDay() === 6) {
-    anchor.setUTCDate(anchor.getUTCDate() - 1);
-  }
-  return fmtDate(anchor);
+  return resolveValuationAnchor(transferDate);
 }
 
 /**

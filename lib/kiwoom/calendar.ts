@@ -184,12 +184,18 @@ function monthBeforeClamped(anchor: Date): Date {
 export function buildOneMonthBeforeSlots(transferDateIso: string): string[] {
   if (!transferDateIso || !/^\d{4}-\d{2}-\d{2}$/.test(transferDateIso)) return [];
 
-  // anchor 시프트 — 양도일이 토·일이면 직전 평일까지 이동
-  const [y, m, d] = transferDateIso.split("-").map(Number);
+  // anchor 시프트 — 양도일이 **매매가 없는 날**이면 직전 거래일로 옮긴다.
+  //
+  // 근거: 상증법 §63①1가목 괄호 「평가기준일이 **공휴일 등 대통령령으로 정하는 매매가 없는 날**인
+  //       경우에는 **그 전일을 기준으로 한다**」 + 상증령 §52의2④(공휴일·대체공휴일·토요일).
+  //       소득세법 §99①3이 이 가목을 준용하므로 양도세에도 그대로 적용된다.
+  //
+  // 종전에는 **토·일만** 보아 삼일절·현충일 같은 평일 공휴일과 납회기간(12/29~31)에는
+  // 시프트가 일어나지 않았다. 같은 조문에서 나온 상증세 평가용 `resolveValuationAnchor`는
+  // 이미 공휴일·납회를 처리하고 있어 **두 세목이 갈려 있었다** — 그 헬퍼를 재사용해 합친다.
+  const anchorIso = resolveValuationAnchor(transferDateIso);
+  const [y, m, d] = anchorIso.split("-").map(Number);
   const anchor = new Date(Date.UTC(y, m - 1, d));
-  while (anchor.getUTCDay() === 0 || anchor.getUTCDay() === 6) {
-    anchor.setUTCDate(anchor.getUTCDate() - 1);
-  }
 
   // start = (anchor 소급 1개월)의 다음날.
   //
