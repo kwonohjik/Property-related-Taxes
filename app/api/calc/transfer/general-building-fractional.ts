@@ -224,6 +224,14 @@ export function calculateGeneralBuildingFractional(
   annualBasicDeductionUsed: number | undefined,
   priorReductionUsage: unknown[],
   rates: TaxRatesMap,
+  /**
+   * 신고서 단위 수정신고·경정청구 (국세기본법 §45·§45의2).
+   *
+   * 지분 경로는 `assetLevel` 묶음을 받지 않으므로 **단독 인자**로 받는다.
+   * 다른 두 GB 경로(`-route-helper` 환산 · `-route-actual` 실가)는
+   * `GbAssetLevelInputs.amendment`로 같은 값을 전달한다 — **세 경로가 갈리면 안 된다**.
+   */
+  amendment?: import("@/lib/tax-engine/types/transfer-amendment.types").AmendmentInput,
 ): GeneralBuildingRouteResult {
   const allProperties: TransferTaxItemInput[] = [];
   const allApportioned: BundledLikeApportionmentResult["apportioned"] = [];
@@ -343,6 +351,8 @@ export function calculateGeneralBuildingFractional(
       annualBasicDeductionUsed: annualBasicDeductionUsed ?? 0,
       basicDeductionAllocation: "MAX_BENEFIT",
       priorReductionUsage: (priorReductionUsage ?? []) as never,
+      // 신고서 단위 정정 — aggregate가 1회만 소비한다(자산별 누수는 `:163`이 strip).
+      amendment,
     },
     rates,
   );

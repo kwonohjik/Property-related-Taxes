@@ -59,6 +59,15 @@ export interface GbAssetLevelInputs {
    * (④ `buildGbCarryoverPayload`가 부담부증여에서 `{}`를 반환해 두 줄기가 겹치지 않는다).
    */
   carryoverTaxation?: import("@/lib/tax-engine/types/transfer.types").TransferTaxInput["carryoverTaxation"];
+  /**
+   * 신고서 단위 수정신고·경정청구 (국세기본법 §45·§45의2).
+   *
+   * ⚠️ **카드마다 실으면 안 된다** — 정정은 **신고 1건에 1회**다.
+   * `filingPenaltyDetails`·`delayedPaymentDetails`와 **같은 성격**이며,
+   * 엔진도 top-level에서 1회만 소비한다(`transfer-tax-aggregate.ts:386`).
+   * 자산별로 흘러들지 않도록 aggregate가 `:163`에서 per-asset amendment를 strip한다.
+   */
+  amendment?: import("@/lib/tax-engine/types/transfer-amendment.types").AmendmentInput;
 }
 
 export interface GeneralBuildingRouteResult {

@@ -13,6 +13,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
+import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import {
   BurdenedGiftFilingFormSection,
   hasBurdenedGiftFilingForm,
@@ -693,6 +694,26 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
 
       {/* 자산별 세액 (요약 카드) + 합산 과세 내역 = 출력 항목 「핵심 결과·계산 내역」 */}
       <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
+      {/**
+        수정신고·경정청구 (국세기본법 §45·§45의2).
+
+        📌 **렌더 지점은 여기 한 곳뿐이다.** 종전에는 부모(`TransferTaxCalculator`)가
+           `<BundledAllocationCard>` 바로 위에서 띄웠는데, 그 자리는 `PrintSection` **바깥**이라
+           정정 카드가 **인쇄·PDF에 들어가지 않았다**. 단건 뷰는 `calculation` 그룹 **안**에 두므로
+           (`TransferTaxResultView.tsx:309·321`) 경로 간 비대칭이었다 ⇒ 이리로 옮겼다.
+
+        ⛔ 부모에 다시 추가하지 말 것 — 카드가 **두 번** 뜨고 `data-testid="amendment-result"`가
+           비유일해져 Playwright strict 로케이터가 깨진다(2026-08-27 실제로 겪었다).
+      */}
+      {aggregated.amendmentDetail && (
+        <AmendmentResultCard
+          detail={aggregated.amendmentDetail}
+          fullTotalTax={aggregated.totalTax}
+          /* 부담부증여는 같은 화면에 증여세가 함께 뜬다 — `aggregated.totalTax`는 양도세분뿐이라 한정한다. */
+          {...(transferBurdenedGiftBreakdown ? { totalScopeNote: "양도세분" } : {})}
+        />
+      )}
+
       <div className="space-y-3">
         <h3 className="font-semibold text-base">자산별 계산 결과</h3>
         {aggregated.properties.map((p) => (

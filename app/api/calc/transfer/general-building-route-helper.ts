@@ -250,6 +250,8 @@ export function calculateGeneralBuildingTransfer(
       // 신고서 단위 가산세 — 카드마다 실으면 같은 신고의 가산세가 카드 수만큼 배가된다.
       filingPenaltyDetails: assetLevel?.filingPenaltyDetails,
       delayedPaymentDetails: assetLevel?.delayedPaymentDetails,
+      // 신고서 단위 수정신고·경정청구 — 가산세와 **같은 축**이다(신고 1건 1회).
+      amendment: assetLevel?.amendment,
     },
     rates,
   );

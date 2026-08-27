@@ -157,6 +157,8 @@ export async function POST(request: NextRequest) {
         data.annualBasicDeductionUsed,
         data.priorReductionUsage ?? [],
         rates,
+        // ⑭ 신고서 단위 정정 — 세 GB 경로가 같은 규약이어야 한다(raw `data.amendment` 금지).
+        engineInput.amendment,
       );
       return NextResponse.json(
         { data: { mode: "bundled" as const, apportionment, aggregated } },
@@ -495,6 +497,22 @@ export async function POST(request: NextRequest) {
            *    §97의2③ 기간 비교·§95④ 단서 기산이 침묵 오작동한다.
            */
           carryoverTaxation: engineInput.carryoverTaxation,
+          /**
+           * ⑭ 신고서 단위 수정신고·경정청구 (국세기본법 §45·§45의2).
+           *
+           * 🔴 종전에는 **여기서 버려졌다** — 클라이언트는 자산 종류와 무관하게 `amendment`를
+           *    싣고(④) Zod도 받고(`transfer-tax-schema.ts:516`) ⑧ validate도 통과시키는데
+           *    (`transfer-tax-validate.ts:499`는 `amendmentMode`만 본다), GB 분기가 인자로
+           *    넘기지 않아 **세액이 1원도 안 움직였다**(실측 Δ 0 · `amendmentDetail` undefined).
+           *    같은 payload가 §166⑥(`:305`)·겸용(`:416`)에서는 처음부터 동작한다.
+           *
+           * ⚠️ raw `data.amendment` 금지 — Zod 출력은 일자가 string이라 §45의2① 「5년」·
+           *    §26의2 제척기간 비교가 침묵 오작동한다(`engine-input.ts:346-350`가 Date로 바꾼 값이 정본).
+           *
+           * 법령: §45①·§45의2① 요건은 「과세표준신고서를 법정신고기한까지 제출한 자」 + 기한이며
+           *       자산 종류를 가르는 문언이 본문·각 호 어디에도 없다.
+           */
+          amendment: engineInput.amendment,
         },
       );
       return NextResponse.json(

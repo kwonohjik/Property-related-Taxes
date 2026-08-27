@@ -663,6 +663,8 @@ export function runActualGeneralBuildingOnce(
       // 신고서 단위 가산세 — 카드별 입력이 아니다(같은 신고가 카드 수만큼 배가되는 것을 막는다).
       filingPenaltyDetails: assetLevel?.filingPenaltyDetails,
       delayedPaymentDetails: assetLevel?.delayedPaymentDetails,
+      // 신고서 단위 수정신고·경정청구 — 가산세와 **같은 축**이다(신고 1건 1회).
+      amendment: assetLevel?.amendment,
     },
     rates,
   );
