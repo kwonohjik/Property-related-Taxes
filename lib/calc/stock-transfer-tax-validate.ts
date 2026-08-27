@@ -526,6 +526,45 @@ export function validateAllSteps(form: StockTransferFormData): StockValidationEr
 }
 
 /**
+ * ⑧ 다종목 — **확정한 종목 전부**를 계산 전에 검증한다.
+ *
+ * ## 왜 필요한가 (V-3 실측 2026-08-27)
+ *
+ * 종목 확정 게이트는 **종목명·시장 2개**뿐이다(사용자가 종목을 오가며 채우는 흐름을 막지
+ * 않으려는 의도적 설계). 문제는 그 뒤였다 — 불완전한 종목이 목록에 남은 채 계산하면:
+ *
+ *   1. `buildStockTransferApiBody` 가 나머지를 기본값으로 채워 **Zod 가 통과**하고,
+ *   2. 엔진에서 `transferDate.getTime is not a function` 으로 **터진다**(500).
+ *
+ * 사용자에게는 그냥 「계산 오류」라 **어느 종목이 문제인지 알 길이 없다**. 종목이 5건이면
+ * 하나씩 지워 보는 수밖에 없다.
+ *
+ * ⇒ 계산 전에 **순번과 종목명으로 지목**해 막는다. 종목당 **첫 오류만** 보고한다 —
+ *   한 종목이 오류 10건을 쏟으면 목록이 읽히지 않는다.
+ *
+ * ⚠️ 서버 방어는 별개다 — `stockTransferInputSchema` 의 날짜 칸이 빈 문자열을 거부한다(⑫).
+ *   클라이언트 검증만 두면 API 를 직접 호출하는 경로가 그대로 500 을 만든다.
+ */
+export function validateFilingItems(
+  forms: StockTransferFormData[],
+): StockValidationError[] {
+  const errors: StockValidationError[] = [];
+  forms.forEach((form, i) => {
+    const first = validateAllSteps(form).find((e) => e.severity === "error");
+    if (!first) return;
+    const label = form.securityName?.trim()
+      ? `${i + 1}번째 종목 「${form.securityName.trim()}」`
+      : `${i + 1}번째 종목`;
+    errors.push({
+      field: first.field,
+      message: `${label}: ${first.message}`,
+      severity: "error",
+    });
+  });
+  return errors;
+}
+
+/**
  * 특정 step의 에러 개수 (StepIndicator 배지용)
  */
 export function getStepErrorCount(form: StockTransferFormData, step: number): number {

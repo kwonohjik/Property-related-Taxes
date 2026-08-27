@@ -59,6 +59,7 @@ export function StockItemListCard({
    * 1단계에서 확정하면 **금액이 빈 종목**이 목록에 들어간다. 확정 버튼은 마지막 입력 단계에만 둔다.
    */
   showAddButton = false,
+  incompleteIndexes = [],
 }: {
   savedItems: StockTransferFormData[];
   onAddCurrent: () => void;
@@ -67,6 +68,14 @@ export function StockItemListCard({
   canAddCurrent: boolean;
   addDisabledReason?: string;
   showAddButton?: boolean;
+  /**
+   * 입력이 덜 끝난 확정 종목의 인덱스.
+   *
+   * 확정 게이트는 종목명·시장 2개뿐이라 **금액도 날짜도 빈 종목**이 목록에 남을 수 있다.
+   * 그대로 계산하면 엔진이 터지므로(V-3 실측) 계산 전에 차단하는데, **어느 종목인지**는
+   * 목록에서 바로 보여야 한다.
+   */
+  incompleteIndexes?: number[];
 }) {
   const total = savedItems.length + 1; // 목록 + 편집 중 1건
 
@@ -90,6 +99,11 @@ export function StockItemListCard({
                     {MARKET_LABEL[f.marketType] ?? f.marketType}
                   </span>
                   {f.securityName || "(종목명 미입력)"}
+                  {incompleteIndexes.includes(i) && (
+                    <span className="ml-1.5 rounded bg-rose-100 px-1.5 py-0.5 text-micro font-semibold text-rose-700">
+                      입력 미완료
+                    </span>
+                  )}
                 </p>
                 {itemSummary(f) && (
                   <p className="truncate text-caption text-muted-foreground">{itemSummary(f)}</p>

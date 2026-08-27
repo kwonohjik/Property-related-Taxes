@@ -11,6 +11,20 @@
 import { z } from "zod";
 import { foreignStockInputSchema } from "./stock-transfer-foreign-schema";
 
+
+/**
+ * ⑫ **필수** 날짜 칸 — 빈 문자열을 거부한다.
+ *
+ * 종전에는 `z.union([z.string(), z.date()])` 라 **빈 문자열이 통과**했고, 그 값이 route 의
+ * `coerceDates` 를 지나 엔진에 도달해 `transferDate.getTime is not a function` 으로 터졌다(500).
+ * 다종목 확정 경로가 특히 위험했다 — 확정 게이트가 종목명·시장 2개뿐이라 **금액도 날짜도 빈
+ * 종목**이 목록에 남을 수 있다(V-3 실측 2026-08-27).
+ *
+ * 클라이언트 `validateFilingItems` 가 먼저 막지만, API 를 직접 호출하는 경로에는 이 게이트가
+ * 유일한 방어다.
+ */
+const requiredDateSchema = z.union([z.string().min(1, "날짜를 입력하세요"), z.date()]);
+
 // ============================================================
 // ⑨ Zod enum 정의 (8차 정정 — 7종 enum)
 // ============================================================
@@ -74,7 +88,7 @@ export const capitalAdjustmentTypeSchema = z.enum([
 
 export const capitalAdjustmentSchema = z.object({
   type: capitalAdjustmentTypeSchema,
-  eventDate: z.union([z.string(), z.date()]),
+  eventDate: requiredDateSchema,
   ratio: z.number().positive(),
   notes: z.string().optional(),
 });
@@ -127,7 +141,7 @@ export const postListingDetailSchema = z.object({
 
 export const acquisitionLotSchema = z.object({
   id: z.string().optional(),
-  acquisitionDate: z.union([z.string(), z.date()]),
+  acquisitionDate: requiredDateSchema,
   shareCount: z.number().int().positive(),
   perShareAcquisitionPrice: z.number().int().positive(),
   acquisitionCause: acquisitionCauseSchema,
@@ -150,7 +164,7 @@ export const acquisitionLotSchema = z.object({
 
 export const transferLotSchema = z.object({
   id: z.string().optional(),
-  transferDate: z.union([z.string(), z.date()]),
+  transferDate: requiredDateSchema,
   shareCount: z.number().int().positive(),
   perShareTransferPrice: z.number().int().positive(),
 });
@@ -176,7 +190,7 @@ export const stockTransferInputSchema = z.object({
   isLargestShareholderGroup: z.boolean(),
   combinedShareRatio: z.number().min(0).max(1),
   combinedMarketCap: z.number().min(0),
-  priorYearEndDate: z.union([z.string(), z.date()]),
+  priorYearEndDate: requiredDateSchema,
 
   // §94①4 기타자산
   isQualifyingBlockShareholder: z.boolean(),
@@ -199,8 +213,8 @@ export const stockTransferInputSchema = z.object({
   judgmentBasis: z.enum(["merger", "split", "split_new_entity", "incorporation"]).optional(),
 
   // 거래 일자·수량
-  acquisitionDate: z.union([z.string(), z.date()]),
-  transferDate: z.union([z.string(), z.date()]),
+  acquisitionDate: requiredDateSchema,
+  transferDate: requiredDateSchema,
   shareCount: z.number().int().positive(),
   totalIssuedShares: z.number().int().positive(),
 
@@ -309,7 +323,7 @@ export const stockTransferInputSchema = z.object({
 
   // 신고
   filingType: filingTypeSchema,
-  filingDate: z.union([z.string(), z.date()]),
+  filingDate: requiredDateSchema,
   isElectronicFiling: z.boolean(),
   filingViolation: filingViolationSchema,
   isFraudulent: z.boolean(),
