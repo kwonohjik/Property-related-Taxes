@@ -141,9 +141,23 @@ export function buildRedevTransferFormula(
     const rights = redev.preApproval.apportionedTransfer; // 권리가액
     return `floor(${fmt(totalTransferPrice)} × ${fmt(rights)} / ${fmt(sale)}) = ${fmt(redev.postApprovalExistingHouse.apportionedTransfer)} (분양가 안분 — 권리가액 비율)`;
   }
-  // settlement
-  const settlementAcq = redev.settlement.apportionedAcquisition; // 청산금
-  return `floor(${fmt(totalTransferPrice)} × ${fmt(settlementAcq)} / ${fmt(sale)}) = ${fmt(redev.settlement.apportionedTransfer)} (분양가 안분 — 청산금 비율)`;
+  /**
+   * settlement — **잔액 흡수**다. floor 안분이 아니다.
+   *
+   * 엔진(`redevelopment-split.ts:338-339`)이 기존주택분을 먼저 floor 안분한 뒤
+   * `양도가액 − 기존주택분`을 청산금분으로 준다. 그래야 두 파트 합이 총 양도가액과
+   * 정확히 일치한다(1원 잔차가 소실되지 않는다).
+   *
+   * 🔴 종전에는 여기서 `floor(총양도가액 × 청산금 / 분양가)`로 인쇄했는데, 잔차가 나는
+   *    조합에서 **좌변을 계산하면 우변과 1원 달랐다** — 사례 44에서
+   *    「floor(525,000,000 × 92,781,500 / 312,000,000) = 156,122,717」로 찍혔다(좌변은 …716).
+   *    표시 산식이 산술적으로 거짓이 되는 것이라, 안분비를 함께 적어 근거는 유지하되
+   *    **등식은 실제 산출 방식으로** 바꾼다.
+   *
+   * ⚠️ `postApprovalExistingHouse`(위)는 여전히 floor다 — 잔액을 흡수하는 쪽은 청산금분뿐이다.
+   */
+  const existing = redev.postApprovalExistingHouse.apportionedTransfer;
+  return `${fmt(totalTransferPrice)} − ${fmt(existing)} = ${fmt(redev.settlement.apportionedTransfer)} (분양가 안분 후 잔액 — 청산금 비율, 기존주택분 차감)`;
 }
 
 /** 취득가액 분할별 산식 */
