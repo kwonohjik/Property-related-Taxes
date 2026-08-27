@@ -81,13 +81,23 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
 
   // ── originalAssetType="land" 분기 (사례 37·40) — housing 전용 로직 skip ──
   if (originalAssetType === "land") {
-    // land + apt + receive + 환산: 후속 PR (사례 43)
-    // runLandContribEstimated()가 pay 방향만 가정 — receive 방향 §166②2호·§166①2호 가목 산식 분기 미구현.
-    // 실가 모드(사례 42)는 runOriginalMember 경로로 분기 — computeRedevelopmentSplit 가 originalAssetType 무관하게 §166①2호 정확 적용.
-    // ※ 사례 42 anchor toBe 검증은 보류(snapshot only) — 예제 PDF와 교재 답 상이 (design.md:31 행 #7 HOLD 유지).
-    if (subject === "apt" && settlementDirection === "receive" && asset.useEstimatedAcquisition) {
-      return `${label}: 토지 출자 + 완공 APT 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR (사례 43) 지원 예정입니다. 취득가액을 확인할 수 있으면 ⑤ 「인가전 분 종전 부동산 취득가액」에서 "실지거래가액"을 선택하세요.`;
-    }
+    /**
+     * ✅ 2026-08-27 — land + **apt** + receive + 환산(사례 43) 차단을 해제했다.
+     *
+     * 🔴 종전 주석의 진단이 틀렸다: 「`runLandContribEstimated()`가 pay 방향만 가정」이라 적었으나
+     *    **그 함수는 이 경로에 없다**. 라우팅(`redevelopment.ts:188-194`)이
+     *    `subject === "right"` 전용이라 **완공APT는 `runOriginalMember`로 간다** —
+     *    거기서 §166③ 환산(`redevelopment-valuation.ts:306`)과 방향별 산식이 정상 적용된다.
+     *    인접 함수의 한계를 이 조합의 한계로 옮겨 적은 것이다.
+     *
+     * 실측(anchor `case-43-land-apt-estimated-receive.anchor.test.ts`): 환산취득가·나목·가목·
+     * 청산금분 네 값이 조문과 일치하고 신고서 행 잔차도 0이다.
+     *
+     * ⚠️ **아래 `subject === "right"` 게이트는 판정이 다르다 — 함께 지우지 말 것.**
+     *
+     * ※ 사례 42는 2026-08-27 종결됐다(PR #1321). 종전 주석의 「anchor toBe 검증 보류
+     *   (snapshot only)」는 **stale**이었다 — 실제로는 `toBe`로 값을 고정하고 있었다.
+     */
     // land + right + 환산 + receive: 후속 PR (runLandContribEstimated가 settlementPaid로 pay만 가정 —
     // §166②2호·§166①2호 수령 산식 미구현). 실가 receive는 아래 #1(A)로 개방.
     if (subject === "right" && settlementDirection !== "pay" && asset.useEstimatedAcquisition) {

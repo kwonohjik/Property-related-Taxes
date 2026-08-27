@@ -607,6 +607,20 @@ function runOriginalMember(
       : rawPreApprovalExpenses;
 
   /**
+   * 인가전 필요경비의 **청산금분 몫** (2026-08-27 · 완공APT 수령 전용).
+   *
+   * 나목이 `×(평가액−청산금)÷평가액`만 부담하므로 나머지는 **청산금 분할양도**의 필요경비다
+   * (엔진 차감은 `redevelopment-split.ts` `computeAptReceive`가 이미 한다 — 여기는 **표시**).
+   * **잔액으로 구한다** — 비율을 다시 곱하면 floor 때문에 엔진과 1원 갈릴 수 있다.
+   *
+   * ⚠️ 입주권(`isRight`)의 settlement은 §166①2호 **가목**(인가후 분)이라 이 축이 아니다.
+   */
+  const settlementPreExpenseShare =
+    !isRight && redevelopment.settlementDirection === "receive"
+      ? rawPreApprovalExpenses - preApprovalDisplayExpenses
+      : 0;
+
+  /**
    * 인가후 필요경비 **표시 몫** — 엔진이 한 번만 차감한 금액을 열에 나눠 붙인다.
    *
    * 🔴 2026-08-26 신설(E1-06 — **표시 전용**): 종전에는 인가후 기존주택분과 청산금분에
@@ -721,8 +735,9 @@ function runOriginalMember(
     lthdRate: lthd.settlement.applicable ? lthd.settlement.rate : 0,
     branchAcqDate: settlementAcqDate,
     branchTransferDate: settlementTransferDate,
-    // §166①2호 가목(입주권): 인가후 분 필요경비 전액 · 완공APT는 위 `postApprovalExpenseShare` 참조
-    expenses: postApprovalExpenseShare.settlement,
+    // §166①2호 가목(입주권): 인가후 분 필요경비 전액 · 완공APT는 위 `postApprovalExpenseShare` 참조.
+    // 완공APT 수령은 여기에 **인가전 필요경비의 청산금분 몫**이 더해진다(분할양도의 필요경비).
+    expenses: postApprovalExpenseShare.settlement + settlementPreExpenseShare,
     residenceStartDate: isApt ? newResStart : undefined,
     residenceEndDate: isApt ? newResEnd : undefined,
     residenceMonths: isApt ? newMonths : undefined,

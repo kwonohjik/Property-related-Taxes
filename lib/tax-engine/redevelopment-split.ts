@@ -479,11 +479,48 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
     redevelopment.settlementAmount,
     redevelopment.rightsValue,
   );
-  const aptSettlementGain = calcAptReceiveSettlementGain(
-    oldAcquisitionPrice,
-    redevelopment.rightsValue,
-    redevelopment.settlementAmount,
+
+  /**
+   * 인가전 필요경비의 **청산금분 몫** — 2026-08-27 신설 (**세액 변경**).
+   *
+   * 대상은 §166①2호 나목이 괄호 안에서 빼는 값 그대로다 —
+   * **환산이면 §163⑥ 개산공제 / 실가면 §97①2·3호 실제 필요경비**(택일).
+   * `preApprovalNecessaryExpense`를 **그 함수 그대로** 호출해 상류(`preApprovalGainBeforeAdjust`)와
+   * 같은 값을 쓴다(술어를 손으로 다시 쓰면 갈린다).
+   *
+   * §166①2호 나목은 필요경비를 산식 **안**에서 빼고 `×(평가액−청산금)÷평가액`로 안분하므로,
+   * 그 필요경비 중 해당 비율만 나목이 부담한다. 나머지는 **청산금 분할양도**
+   * (§88·§95① · 법규재산2012-358)의 필요경비인데 **종전에는 어디에도 차감되지 않아**
+   * 그만큼 과대과세였다(실측 410,400).
+   *
+   * §166은 나목에서만 필요경비를 말하고 분할양도분 계산은 §166 밖이라 **명문이 없다**
+   * ⇒ 법 근거 없이 불리하게 적용하지 않는다
+   * (memory `feedback_no_unfavorable_application_without_legal_basis`).
+   *
+   * ⚠️ **잔액 흡수**로 나눈다 — 나목 몫을 floor한 나머지를 그대로 준다(별도 floor 금지 ·
+   *    memory `feedback_floor_residual_absorption`). 그래야
+   *    `나목 + 청산금분 = 평가액 − 취득가액 − 개산공제` 항등식이 정확히 성립한다.
+   *
+   * ⚠️ 인가전 필요경비가 0이면(실가 + 경비 미입력) 차감액도 0이라 종전과 동일하다.
+   */
+  const preExpenseTotal = preApprovalNecessaryExpense(
+    args.estimatedLumpDeduction ?? 0,
+    redevelopment.preApprovalExpenses,
   );
+  const preExpenseNamokShare = safeMultiplyThenDivide(
+    preExpenseTotal,
+    salePriceTotal, // = 평가액 − 청산금 (나목 분자)
+    redevelopment.rightsValue,
+  );
+  /** 잔액 흡수 — 별도 floor 금지 */
+  const preExpenseSettlementShare = preExpenseTotal - preExpenseNamokShare;
+
+  const aptSettlementGain =
+    calcAptReceiveSettlementGain(
+      oldAcquisitionPrice,
+      redevelopment.rightsValue,
+      redevelopment.settlementAmount,
+    ) - preExpenseSettlementShare;
 
   return {
     preApproval: {
