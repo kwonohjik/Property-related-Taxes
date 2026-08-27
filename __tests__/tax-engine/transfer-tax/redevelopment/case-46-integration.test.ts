@@ -2,10 +2,11 @@
  * 사례 46 — APT-실가-수령-주택출자 / 1세대1주택자 청산금 수령분 단독 신고
  *
  * 본 spec 은 transfer-tax.ts 의 calculateTransferTax() 진입점을 통해 redevelopment 분기 라우팅
- * → receiveOnlyMode 분기: 인가전·인가후 양도차익 0 강제, settlement 단독 산정 (§166①2호 가목)
+ * → receiveOnlyMode 분기: 인가전·인가후 양도차익 0 강제, settlement 단독 산정
+ *   (근거는 §166①2호 가목이 **아니라** 종전 부동산의 **분할양도** — 아래 법령 근거 참조)
  * → exemptionEligibleAtApproval=false: LTHD 표1 강등 (서면2016-법령해석재산-2705)
  *
- * ★ Primary anchor (양도코리아 xlsx D 열 원단위):
+ * ★ Primary anchor (예제 D 열 원단위):
  *   양도가액(청산금 수령액): 500,000,000  (D12)
  *   안분 취득가액:           133,333,333  (D13 = INT(4억 × 5억 / 15억))
  *   양도차익:                366,666,667  (D15)
@@ -17,7 +18,8 @@
  *   세액합계:                112,339,332  (C31)
  *
  * 법령 근거:
- *   - 시행령 §166① 본문 + §166①2호 가목 — 청산금 수령분 산식
+ *   - 법 §88·§95①·§100 + 국세청 **법규재산2012-358**(2012.11.09) — 청산금은 종전 부동산의
+ *     **분할양도**에 해당하여 별개의 양도소득세 과세대상. 평가액은 시행령 §166④1호.
  *   - 기획재정부 재산-439 (2014.06.09) — LTHD 보유기간 = 취득일~양도일
  *   - 서면2016-법령해석재산-2705 (2016.09.12) — 비과세 판정 시점 = 관리처분계획인가일
  *   - 소법 시행령 §154① — 1세대1주택 2년 보유 요건
@@ -61,7 +63,7 @@ describe("사례 46 통합 anchor — APT 1세대1주택자 청산금 수령분 
     expect(result.redevelopmentDetail?.postApprovalExistingHouse.gain).toBe(0);
   });
 
-  it("settlement 분기 — 안분 취득가액 + 양도차익 (§166①2호 가목)", () => {
+  it("settlement 분기 — 분할양도의 양도가액(청산금)·안분취득가액·양도차익", () => {
     expect(result.redevelopmentDetail?.settlement.apportionedTransfer).toBe(500_000_000);   // D12
     expect(result.redevelopmentDetail?.settlement.apportionedAcquisition).toBe(133_333_333); // D13
     expect(result.redevelopmentDetail?.settlement.gain).toBe(366_666_667);                  // D15
