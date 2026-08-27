@@ -1,7 +1,7 @@
 /**
- * 사례 48 — 승계조합원 준공 후 양도 (Do anchor — PDF 양도코리아 정합)
+ * 사례 48 — 승계조합원 준공 후 양도 (Do anchor — PDF 예제 정합)
  *
- * PDF: 재개발-승계조합원.pdf (양도코리아 사례집 책 사례 47)
+ * PDF: 재개발-승계조합원.pdf (예제 사례집 사례 47)
  * 법령: 소득세법 §95②·§104①, 시행령 §162①4호, 사전-2019-법령해석재산-0649 (2020.02.11.)
  *
  * 사실관계:
@@ -58,7 +58,7 @@ function case48RedevelopmentInfo(): RedevelopmentInfo {
   };
 }
 
-describe("사례 48-A — 승계조합원 준공 후 양도 (PDF 양도코리아 정합)", () => {
+describe("사례 48-A — 승계조합원 준공 후 양도 (PDF 예제 정합)", () => {
   const input: TransferTaxInput = baseTransferInput({
     propertyType: "redevelopment_apt",
     transferPrice: 920_000_000,

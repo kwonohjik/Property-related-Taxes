@@ -4,7 +4,7 @@
 > **작성일**: 2026-05-18 (v4 — Round 1·2·3·4 검토 반영, 누적 68건 정정)
 > **작성자**: kwonohjik
 > **세목**: stock-transfer (주식 양도소득세)
-> **기반 PDF**: `주식-취득후 상장.pdf` (양도코리아 출처 PDF — 사례 코드명 `EXAMPLE_POST_LISTING`)
+> **기반 PDF**: `주식-취득후 상장.pdf` (예제 출처 PDF — 사례 코드명 `EXAMPLE_POST_LISTING`)
 > **법령 본칙**: 소득세법 시행령 §165⑤ + 시행령 §165④1 본칙 + 시행규칙 §81② → 상증령 §17 (환원율 10%) + 시행규칙 §81④ (월할 가산)
 > **참고 동치**: 상속세및증여세법 §63①1호 나목 · 상증령 §54 · §55 (산식 동치 확인용 — 본칙 아님)
 
@@ -25,7 +25,7 @@
 | 결과 표시 | `StockTransferTaxResultView.tsx` | ✅ |
 | Anchor | `__tests__/.../case-48-acquired-then-listed.test.ts` | ✅ 본칙 자가검증 + alternative PDF 별도 추적 |
 
-### 1.2 양도코리아 PDF 사례 — 3개 입력 화면 구조
+### 1.2 예제 PDF 사례 — 3개 입력 화면 구조
 
 PDF는 환산취득가 산출을 위해 **3개 다이얼로그**를 제공한다.
 
@@ -60,7 +60,7 @@ PDF는 환산취득가 산출을 위해 **3개 다이얼로그**를 제공한다
 | [[feedback_api_zod_schema_sync]] ★★★ | 14지점 동기화 — 신규 필드 + `string[]` 배열 2종에 대해 ⑨⑫⑭ 명세 |
 | [[feedback_pre_anchor_verification]] ★★★ | **Pre-Do anchor 5건** — PDF 종가평균 8,001 자가산출 |
 | [[feedback_engine_comment_vs_impl_drift]] ★★★ | **§1.2 시기 검증 항목 신설** — 엔진 주석·UI·PDF 시기 불일치 KoreanLaw로 확정 |
-| [[feedback_no_yangdo_korea_brand]] ★★★ | 사례명 `EXAMPLE_POST_LISTING`. 코멘트·anchor 변수명에 "양도코리아" 표기 금지 |
+| [[feedback_no_yangdo_korea_brand]] ★★★ | 사례명 `EXAMPLE_POST_LISTING`. 코멘트·anchor 변수명에 "예제" 표기 금지 |
 | [[feedback_ui_engine_dual_truth_avoidance]] ★★★ | UI 미리보기는 **엔진 함수 import 강제** — `calcUnlistedPerShareWeighted` 등 export하여 재사용. 자체 산식 재구현 금지 |
 | [[feedback_store_default_vs_ui_display_fallback]] ★★★ | `unlistedDetailMode` factory default = normalize 빈문자 = sessionStorage 마이그 = UI 직접 사용 (4중 일관성) |
 | [[feedback_useeffect_store_mirror_forbidden]] | 일자별 종가 합계·평균은 useMemo, 4개 기존 input 필드 자동 채움도 **onChange 즉시 반영** (useEffect → store 금지) |

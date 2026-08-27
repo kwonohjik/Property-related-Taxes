@@ -4,7 +4,7 @@
  * 본 spec 은 transfer-tax.ts 의 calculateTransferTax() 진입점을 통해 redevelopment 분기 라우팅
  * → RedevelopmentResult → 기본공제·과세표준·산출세액·지방소득세·세액합계 까지 전체 흐름 검증.
  *
- * ★ Primary anchor (양도코리아 SW 2026 개정판 스크린샷 — 양도일 2026-02-16):
+ * ★ Primary anchor (예제 자료 2026 개정판 스크린샷 — 양도일 2026-02-16):
  *   산출세액   55,836,613 (엔진 55,836,614, BigInt floor ±1원)
  *   지방소득세  5,583,661
  *   세액합계   61,420,274 (엔진 61,420,275, ±1원)

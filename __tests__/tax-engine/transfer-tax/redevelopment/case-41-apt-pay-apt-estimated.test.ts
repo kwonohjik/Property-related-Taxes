@@ -4,7 +4,7 @@
  * Pre-Do 검증 완료 (2026-05-15): 사례 44 환산 인프라(acquisitionHousingPrice/managementDisposalHousingPrice
  * 단일 D 패턴)가 PDF 2-point 산식과 동일 — 신규 헬퍼 불필요. 엔진 변경 0.
  *
- * PDF 출처: 양도코리아 책 사례 41
+ * PDF 출처: 예제 교재 사례 41
  * 법령 근거: §166②1호 (apt+pay 안분) + §166③ 환산 (사례 44 패턴 재사용) + §163⑥ 개산공제 자동
  *
  * 입력:

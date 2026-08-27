@@ -143,7 +143,7 @@ export function SalePriceTotalPreviewCard({ asset }: { asset: AssetForm }) {
       </p>
       <p className="text-sky-700 font-mono">= {preview.salePriceTotal.toLocaleString()}</p>
       <p className="text-caption text-sky-600">
-        ※ 양도코리아 PDF의 &ldquo;분양가액&rdquo; 칸은 본 마법사에서 권리가액·청산금 입력으로 자동 도출되므로 별도 입력하지 않습니다.
+        ※ &ldquo;분양가액&rdquo;은 위와 같이 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다.
       </p>
     </div>
   );

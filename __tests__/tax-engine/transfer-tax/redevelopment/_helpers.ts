@@ -1,7 +1,7 @@
 /**
  * 재개발/재건축 양도소득세 — 테스트 공용 fixture
  *
- * 사례 36~46 입력 데이터 표준화 (양도코리아 xlsx 기반).
+ * 사례 36~46 입력 데이터 표준화 (예제 xlsx 기반).
  * 본 PR primary anchor 는 사례 44 (APT-환산-납부-주택출자).
  *
  * 격리 단위테스트: redevelopment.ts orchestrator (runRedevelopment) 직접 호출.
@@ -19,7 +19,7 @@ import type { RedevelopmentOrchestratorInput } from "@/lib/tax-engine/redevelopm
  * 사례 44: 2005-04-09 개별주택 취득 → 2009-10-23 관리처분 인가 → 2026-02-16 완공 APT 양도.
  * 청산금 92,781,500 납부분. 환산취득가 (주택분 기준시가 비율).
  *
- * 양도코리아 SW anchor (2026 개정판 스크린샷 — 양도일 2026-02-16):
+ * 예제 자료 anchor (2026 개정판 스크린샷 — 양도일 2026-02-16):
  *   환산취득가:   141,221,534  (BigInt floor 결과 141,221,532, ±2 차이)
  *   인가전 양도차익: 75,445,917
  *   분양가:        312,000,000
@@ -78,7 +78,7 @@ export function case44RedevelopmentInfo(): RedevelopmentInfo {
  * 청산금 300,000,000 납부. 실가 취득가 450,000,000. 거주 5년 6월.
  * 1세대1주택 12억 초과 → §95③·시행령 §160 안분.
  *
- * 양도코리아 xlsx anchor:
+ * 예제 xlsx anchor:
  *   인가전 양도차익:    200,000,000  (650M − 450M − 0)
  *   인가후 양도차익:    541,000,000  (1500M − 950M − 9M)
  *   분양가:             950,000,000  (650M + 300M)
@@ -131,7 +131,7 @@ export function case45RedevelopmentInfo(): RedevelopmentInfo {
  * 본 PR 범위: 과세 산출 anchor만 (§166②2호·§166①2호 산식 검증).
  *           시행령 §154 비과세 미달 자동 판정 로직은 후속 PR.
  *
- * 양도코리아 xlsx anchor:
+ * 예제 xlsx anchor:
  *   청산금 수령분 양도가액: 500,000,000
  *   안분 취득가액:          133,333,333
  *   청산금 수령분 양도차익: 366,666,667

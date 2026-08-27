@@ -1,7 +1,7 @@
 # 사례 36 — 조합원입주권 양도 (4분기 + 비과세 + 12억 안분) — 엔진 설계
 
 > 본 문서는 `transfer-tax-redevelopment.engine.design.md` 및 사례 44~48 디자인의 후속 확장.
-> 입력 자료: PDF `조합원입주권_청산금불입_취득실가확인.jpeg` (양도코리아 사례집 사례 36).
+> 입력 자료: PDF `조합원입주권_청산금불입_취득실가확인.jpeg` (예제 사례집 사례 36).
 > 시점: 2026-05-14
 > 본 PR 스코프: subject="right" 4분기 UI 게이트 해제 + 환산 + 청산금 수령 + §89①4호 가목 비과세 + 12억 안분 통합
 > 케이스 번호: **case_36**
@@ -69,7 +69,7 @@
 
 | # | subject | direction | 취득 모드 | 1세대1입주권 | 양도가 | LTHD | 비과세 | 법령 근거 | anchor 출처 | 테스트 파일 | 상태 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **CORE-36** | right | pay | 실가 | X | 5.2억 | 인가전 표1 30% | 일반과세 | §166①1호 + §95② + §166⑤1호 | PDF 양도코리아 7 anchor | `redevelopment-right-case-36.test.ts` | ☐ **본 PR** |
+| **CORE-36** | right | pay | 실가 | X | 5.2억 | 인가전 표1 30% | 일반과세 | §166①1호 + §95② + §166⑤1호 | PDF 예제 7 anchor | `redevelopment-right-case-36.test.ts` | ☐ **본 PR** |
 | **36-A1** | right | pay | 환산 | X | 5.2억 | 인가전 표1 30% | 일반과세 | §166③ + §164⑦ + §163⑥ | 가정값 3 anchor | `redevelopment-right-case-36-estimated.test.ts` | ☐ **본 PR** |
 | **36-A2-i** | right | receive | 실가 | X | 5.2억 | 인가전(축소) 표1 30% / 청산금 0 | 일반과세 | §166①2호 가목·나목 | 가정값 3 anchor | `redevelopment-right-case-36-receive.test.ts` | ☐ **본 PR** |
 | **36-A2-ii** | right | receive | 환산 | X | 5.2억 | 인가전(축소) 표1 30% / 청산금 0 | 일반과세 | §166①2호 + §166③ | 가정값 3 anchor | `redevelopment-right-case-36-receive.test.ts` | ☐ **본 PR** |
@@ -88,7 +88,7 @@
 
 ---
 
-## CORE-36 핵심 anchor (PDF 양도코리아 원단위 toBe)
+## CORE-36 핵심 anchor (PDF 예제 원단위 toBe)
 
 입력 (PDF):
 - 종전부동산 취득가 100,000,000 (2002-04-09)

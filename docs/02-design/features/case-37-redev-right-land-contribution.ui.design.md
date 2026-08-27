@@ -1,6 +1,6 @@
 # 사례 37 — 조합원입주권 양도 + 토지 출자 + 청산금 불입 + 취득실거래가 불명(환산) UI Design
 
-> **범위**: 사례 37 (양도코리아 PDF) — `subject="right"` + `originalAssetType="land"` + `useEstimatedAcquisition=true`
+> **범위**: 사례 37 (예제 PDF) — `subject="right"` + `originalAssetType="land"` + `useEstimatedAcquisition=true`
 > **파생 계획서**: `.claude/plans/case-37-redev-right-land-contribution-estimated.md` (rev3)
 > **UI 시니어 담당**: 14지점 ①~⑭ 동기화 + 컴포넌트 설계
 > **작성일**: 2026-05-15
@@ -157,7 +157,7 @@ interface Props {
 ④ 경고 카드 (violet tone) — §99①1호 시점 모호성
   내용: "취득일이 공시기준일(매년 1.1) 사이에 위치할 경우, 일반적으로 직전 공시
          (예: 취득일 2007.4.9 → 2007.1.1 공시)를 적용합니다.
-         양도코리아 사례 37처럼 그 이전 공시(2006.1.1: 1억원)를 사용하는 경우
+         예제 사례 37처럼 그 이전 공시(2006.1.1: 1억원)를 사용하는 경우
          해당 값을 직접 입력하세요. (소법 §99①1호 — 자동 안분 fallback 없음)"
   tone: violet (거주·자격 tone — 시점 해석 의존)
 

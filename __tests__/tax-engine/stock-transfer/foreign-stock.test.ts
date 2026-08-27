@@ -21,7 +21,7 @@
  *   FS-anchor-06: 지방소득세 10원 미만 절사 확인
  *
  * 법령 정확성 최우선 — 양도연도 세율 우선 (feedback_transfer_year_tax_rate)
- * 양도코리아 브랜드명 금지 (feedback_no_yangdo_korea_brand)
+ * 예제 브랜드명 금지 (feedback_no_yangdo_korea_brand)
  */
 
 import { describe, it, expect } from "vitest";

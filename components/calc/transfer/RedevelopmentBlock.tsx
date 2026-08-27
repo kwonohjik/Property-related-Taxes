@@ -339,7 +339,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         )}
 
         {/* 사례 48 — 승계조합원 모드 전용: 추가분담금(인가후 필요경비) 입력 슬롯.
-            양도코리아 화면 "입주권필요경비" 라벨 매핑. redevPostApprovalExpenses 필드는
+            예제 화면 "입주권필요경비" 라벨 매핑. redevPostApprovalExpenses 필드는
             buildRedevelopmentPayload에서 postApprovalExpenses로 합산되어 단순 차감 산식의 필요경비로 사용. */}
         {asset.redevIsSuccessorMember === "yes" && (
           <FieldCard
