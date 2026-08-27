@@ -66,16 +66,34 @@ export function CompanyTypeBlock({ form, onChange }: CompanyTypeBlockProps) {
         ]}
       />
 
-      {/* K-OTC 거래 토글 (§94①3 나목 단서) */}
+      {/*
+        증권시장 밖 거래 토글 — **시장에 따라 갈래가 다르다**.
+
+        조특법 §14①7호가 가리키는 「방법」은 증권거래세법 시행령 §1조의2① 이 정한
+        「자본시장법 시행령 **§78 또는 §178①** 에 따른 기준」인데, 그 둘은 대상 시장이 갈린다:
+          · **§78 ATS**(다자간매매체결회사) — 자본시장법 §8조의2⑤ 「**증권시장에 상장된 주권**」 ⇒ 상장 전용
+          · **§178① K-OTC**(협회) — 자본시장법 §286①5호 「**상장되지 아니한 주권**의 장외매매거래」 ⇒ 비상장 전용
+
+        ⇒ 시장 축과 1:1 이라 입력은 하나면 된다(「그 방법으로 거래했다」는 자기선언).
+        다만 **라벨이 한 갈래만 말하면** 상장 벤처 사용자가 「K-OTC 거래」를 사실과 다르다고
+        보고 켜지 않아 §14①7호 비과세를 놓친다 — 납세자에게 불리하다.
+      */}
       <div className="mt-4">
         <div className="flex flex-wrap gap-1.5 mb-1">
-          <LawArticleModal legalBasis="소득세법 §94 ① 3호 나목" label="§94①3 나목 단서" />
+          <LawArticleModal
+            legalBasis={isListedMarket ? "조세특례제한법 §14 ① 7호" : "소득세법 §94 ① 3호 나목"}
+            label={isListedMarket ? "조특법§14①7호" : "§94①3 나목 단서"}
+          />
         </div>
         <ToggleCard
           checked={form.isKOTCTrading}
           onCheckedChange={(v) => onChange({ isKOTCTrading: v })}
-          title="K-OTC 거래"
-          description="§94①3 나목 단서 — 비상장 중소·중견 소액주주는 비과세"
+          title={isListedMarket ? "ATS(다자간매매체결회사) 거래" : "K-OTC 거래"}
+          description={
+            isListedMarket
+              ? "증권시장 밖 거래 — 조특법 §14①7호 벤처기업 비과세 요건 (자본시장법 시행령 §78)"
+              : "§94①3 나목 단서 — 비상장 중소·중견 소액주주는 비과세 (자본시장법 시행령 §178①)"
+          }
           tone="emerald"
         />
       </div>
@@ -88,7 +106,7 @@ export function CompanyTypeBlock({ form, onChange }: CompanyTypeBlockProps) {
            ([[feedback_ui_gate_removes_sole_input_path]]).
            나목 단서 오적용은 엔진 가드가 막는다.
       */}
-      {isListedMarket && form.isKOTCTrading && (
+      {isListedMarket && (
         <div className="mt-2">
           <ToneCard tone="amber" noDark>
             <p className="text-xs leading-relaxed">
@@ -102,8 +120,9 @@ export function CompanyTypeBlock({ form, onChange }: CompanyTypeBlockProps) {
               상장 비대주주의 장외 양도는 §94①3 가목 2)로 과세됩니다.
             </p>
             <p className="text-caption mt-2 leading-relaxed text-amber-800/90">
-              다만 <strong>벤처기업</strong>의 증권시장 밖 거래는 조특법 §14①7호 비과세가 상장·비상장을
-              가리지 않으므로, 그 경우에만 이 토글을 켠 채로 두세요.
+              다만 <strong>벤처기업</strong>을 다자간매매체결회사(ATS)에서 양도했다면 조특법 §14①7호
+              비과세 대상이므로 이 토글을 켜세요 — 그 비과세는 상장·비상장을 가리지 않고
+              <strong>거래 장소</strong>로만 판정합니다.
             </p>
           </ToneCard>
         </div>
