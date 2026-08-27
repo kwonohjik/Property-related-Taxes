@@ -6,6 +6,14 @@
  * 케이스 26: 국세기본법 §47조의3 ①1호 가목 괄호 — 과소신고 + 역외거래 부정 60%
  * 추가 분기: 무신고(non_report) + 부정행위 = 국세기본법 §47조의2 ①1호 (CR-25-02·CR-26-02)
  *
+ * ## 2026-08-27 재산정 — 가산세 base 는 「과소신고납부세액등」이다
+ *
+ * 국세기본법 §47조의3① 의 base 는 「과소신고한 **납부세액**」이고, 납부세액은 **세액공제를
+ * 반영한 뒤**의 금액이다. 종전에는 산출세액 전액(19,500,000)에 세율을 곱했으나 이제
+ * 전자신고 세액공제 20,000 을 뺀 **결정세액 19,480,000** 이 base 다.
+ * 이 파일의 공용 픽스처는 `isElectronicFiling: true` 라 전 케이스가 20,000 만큼 움직였다.
+ * (전자신고 OFF 인 C25-E 그룹은 값이 그대로다 — 교차 검증.)
+ *
  * 자가검증 anchor (본칙 직접 계산):
  *   과세표준 100,000,000 → 대주주 누진 20% → 산출세액 20,000,000
  *   케이스 25: 가산세 8,000,000 → finalTax 27,980,000 (전자신고 △20,000 포함)
@@ -99,12 +107,12 @@ function penaltyBase(overrides: Partial<StockTransferInput> = {}): StockTransfer
  *   전자신고 공제: min(20,000, 19,500,000) = 20,000
  *
  * 케이스 25 (isFraudulent=true, isInternationalTransaction=false):
- *   부정 가산세: 19,500,000 × 40% = 7,800,000 → 10원 절사: 7,800,000
+ *   부정 가산세: 19,480,000 × 40% = 7,792,000 → 10원 절사: 7,792,000
  *   finalTax: (19,500,000 + 7,800,000 - 20,000) = 27,280,000 → 10원 절사: 27,280,000
  *   지방소득세: 19,500,000 × 10% = 1,950,000 → 10원 절사: 1,950,000
  *
  * 케이스 26 (isFraudulent=true, isInternationalTransaction=true):
- *   국제 부정 가산세: 19,500,000 × 60% = 11,700,000 → 10원 절사: 11,700,000
+ *   국제 부정 가산세: 19,480,000 × 60% = 11,688,000 → 10원 절사: 11,688,000
  *   finalTax: (19,500,000 + 11,700,000 - 20,000) = 31,180,000 → 10원 절사: 31,180,000
  *   지방소득세: 1,950,000
  */
@@ -151,18 +159,18 @@ describe("케이스 25 — 국세기본법 §47조의3 ①1호 가목 — 과소
     expect(result.calculatedTax).toBe(19_500_000);
   });
 
-  it("C25-10: underReportPenalty = 7,800,000 (국세기본법 §47조의3 ①1호 가목 부정 40%)", () => {
-    // 19,500,000 × 40% = 7,800,000 → 10원 절사 = 7,800,000
-    expect(result.underReportPenalty).toBe(7_800_000);
+  it("C25-10: underReportPenalty = 7,792,000 (국세기본법 §47조의3 ①1호 가목 부정 40%)", () => {
+    // 결정세액 19,480,000 × 40% = 7,792,000 → 10원 절사 = 7,792,000
+    expect(result.underReportPenalty).toBe(7_792_000);
   });
 
   it("C25-11: electronicFilingCredit = 20,000 (§52의2)", () => {
     expect(result.electronicFilingCredit).toBe(20_000);
   });
 
-  it("C25-12: finalTax = 27,280,000", () => {
+  it("C25-12: finalTax = 27,272,000", () => {
     // 19,500,000 + 7,800,000 - 20,000 = 27,280,000
-    expect(result.finalTax).toBe(27_280_000);
+    expect(result.finalTax).toBe(27_272_000);
   });
 
   it("C25-13: localIncomeTax = 1,950,000 (산출세액 × 10%, 10원 절사)", () => {
@@ -193,18 +201,18 @@ describe("케이스 26 — 국세기본법 §47조의3 ①1호 가목 괄호 —
     expect(result.calculatedTax).toBe(19_500_000);
   });
 
-  it("C26-03: underReportPenalty = 11,700,000 (국세기본법 §47조의3 ①1호 가목 괄호 역외 60%)", () => {
-    // 19,500,000 × 60% = 11,700,000 → 10원 절사 = 11,700,000
-    expect(result.underReportPenalty).toBe(11_700_000);
+  it("C26-03: underReportPenalty = 11,688,000 (국세기본법 §47조의3 ①1호 가목 괄호 역외 60%)", () => {
+    // 결정세액 19,480,000 × 60% = 11,688,000 → 10원 절사 = 11,688,000
+    expect(result.underReportPenalty).toBe(11_688_000);
   });
 
   it("C26-04: electronicFilingCredit = 20,000 (§52의2)", () => {
     expect(result.electronicFilingCredit).toBe(20_000);
   });
 
-  it("C26-05: finalTax = 31,180,000", () => {
+  it("C26-05: finalTax = 31,168,000", () => {
     // 19,500,000 + 11,700,000 - 20,000 = 31,180,000
-    expect(result.finalTax).toBe(31_180_000);
+    expect(result.finalTax).toBe(31_168_000);
   });
 
   it("C26-06: localIncomeTax = 1,950,000 (산출세액 × 10%)", () => {
@@ -225,14 +233,14 @@ describe("가산세 비교 — 일반 과소신고 10% (default)", () => {
     penaltyBase({ isFraudulent: false, isInternationalTransaction: false }),
   );
 
-  it("C25-D-01: 일반 과소신고 10% = 1,950,000", () => {
-    // 19,500,000 × 10% = 1,950,000
-    expect(result.underReportPenalty).toBe(1_950_000);
+  it("C25-D-01: 일반 과소신고 10% = 1,948,000", () => {
+    // 결정세액 19,480,000 × 10% = 1,948,000
+    expect(result.underReportPenalty).toBe(1_948_000);
   });
 
-  it("C25-D-02: finalTax = 21,430,000", () => {
+  it("C25-D-02: finalTax = 21,428,000", () => {
     // 19,500,000 + 1,950,000 - 20,000 = 21,430,000
-    expect(result.finalTax).toBe(21_430_000);
+    expect(result.finalTax).toBe(21_428_000);
   });
 
   it("C25-D-03: 가산세 0원 입력 (isFraudulent=false, 기본 10%)", () => {
@@ -309,13 +317,13 @@ describe("filingViolation 게이트 — 무신고 20% (FV-NON-REPORT)", () => {
     }),
   );
 
-  it("FV-NR-01: underReportPenalty = 3,900,000 (국세기본법 §47조의2 ①2호 무신고 20%)", () => {
-    // 19,500,000 × 20% = 3,900,000
-    expect(result.underReportPenalty).toBe(3_900_000);
+  it("FV-NR-01: underReportPenalty = 3,896,000 (국세기본법 §47조의2 ①2호 무신고 20%)", () => {
+    // 결정세액 19,480,000 × 20% = 3,896,000
+    expect(result.underReportPenalty).toBe(3_896_000);
   });
 
-  it("FV-NR-02: finalTax = 23,380,000 (19,500,000 + 3,900,000 − 20,000)", () => {
-    expect(result.finalTax).toBe(23_380_000);
+  it("FV-NR-02: finalTax = 23,376,000 (19,480,000 + 3,896,000)", () => {
+    expect(result.finalTax).toBe(23_376_000);
   });
 });
 
@@ -328,12 +336,12 @@ describe("filingViolation 게이트 — 과소신고 10% (FV-UNDER-REPORT)", () 
     }),
   );
 
-  it("FV-UR-01: underReportPenalty = 1,950,000 (국세기본법 §47조의3 ①2호 과소 10%)", () => {
-    expect(result.underReportPenalty).toBe(1_950_000);
+  it("FV-UR-01: underReportPenalty = 1,948,000 (국세기본법 §47조의3 ①2호 과소 10%)", () => {
+    expect(result.underReportPenalty).toBe(1_948_000);
   });
 
-  it("FV-UR-02: finalTax = 21,430,000", () => {
-    expect(result.finalTax).toBe(21_430_000);
+  it("FV-UR-02: finalTax = 21,428,000", () => {
+    expect(result.finalTax).toBe(21_428_000);
   });
 });
 
@@ -347,8 +355,8 @@ describe("filingViolation 게이트 — 무신고 + 부정행위 (FV-NON-REPORT-
     }),
   );
 
-  it("FV-NR-FRAUD-01: underReportPenalty = 7,800,000 (부정행위 40% 우선)", () => {
-    expect(result.underReportPenalty).toBe(7_800_000);
+  it("FV-NR-FRAUD-01: underReportPenalty = 7,792,000 (부정행위 40% 우선)", () => {
+    expect(result.underReportPenalty).toBe(7_792_000);
   });
 });
 
@@ -366,8 +374,8 @@ describe("CR-25-02 — 무신고 + 부정 40% — appliedRules: 국세기본법 
     }),
   );
 
-  it("CR-25-02-01: underReportPenalty = 7,800,000 (산출 19,500,000 × 40%)", () => {
-    expect(result.underReportPenalty).toBe(7_800_000);
+  it("CR-25-02-01: underReportPenalty = 7,792,000 (결정 19,480,000 × 40%)", () => {
+    expect(result.underReportPenalty).toBe(7_792_000);
   });
 
   it("CR-25-02-02: appliedRules에 국세기본법 §47조의2 ①1호 포함", () => {
@@ -388,8 +396,8 @@ describe("CR-26-02 — 무신고 + 부정 + 역외 60% — 국세기본법 §47�
     }),
   );
 
-  it("CR-26-02-01: underReportPenalty = 11,700,000 (산출 19,500,000 × 60%)", () => {
-    expect(result.underReportPenalty).toBe(11_700_000);
+  it("CR-26-02-01: underReportPenalty = 11,688,000 (결정 19,480,000 × 60%)", () => {
+    expect(result.underReportPenalty).toBe(11_688_000);
   });
 
   it("CR-26-02-02: appliedRules에 국세기본법 §47조의2 ①1호 (괄호) 포함", () => {

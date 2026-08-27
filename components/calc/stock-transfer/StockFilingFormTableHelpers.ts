@@ -701,7 +701,8 @@ export function buildRows(
     label: "27. 납부불성실 가산세 §47의4 (1일 22/100,000)",
     values: val(
       result.latePaymentPenalty || null,
-      () => null,
+      // 신고 단위 1회 산정이라 합계 열에만 값이 있다(종목 열은 전부 0 → null)
+      (agg) => agg.totalLatePaymentPenalty || null,
       (item) => item.latePaymentPenalty || null,
     ),
   });

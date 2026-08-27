@@ -525,6 +525,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
 
     underReportPenalty: finalizeResult.underReportPenalty,
     latePaymentPenalty: finalizeResult.latePaymentPenalty,
+    penaltyBase: finalizeResult.penaltyBase,
     electronicFilingCredit: finalizeResult.electronicFilingCredit,
 
     finalTax: finalizeResult.finalTax,

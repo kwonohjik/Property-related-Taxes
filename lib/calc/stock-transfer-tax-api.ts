@@ -628,6 +628,24 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   body.isFraudulent = form.isFraudulent;                      // default: false
   body.isInternationalTransaction = form.isInternationalTransaction;  // default: false
 
+  // 가산세 상세 — 0·빈값이면 body 에 넣지 않는다(엔진 default 와 같은 뜻이라 payload 를 늘리지 않는다)
+  {
+    // 「당초 신고세액」은 **과소신고에만** 있는 개념이다(무신고는 신고 자체가 없다).
+    // UI 도 그 축에서만 노출하지만, stale 값이 payload 로 새면 base 를 줄여 가산세가
+    // 과소산정되므로 ④ 에서도 막는다(3중 패턴).
+    const originalFiled =
+      form.filingViolation === "under_report" ? parseIntOrZero(form.originalFiledTax) : 0;
+    if (originalFiled > 0) body.originalFiledTax = originalFiled;
+    const priorPaid = parseIntOrZero(form.priorPaidTax);
+    if (priorPaid > 0) body.priorPaidTax = priorPaid;
+    const interest = parseIntOrZero(form.interestSurcharge);
+    if (interest > 0) body.interestSurcharge = interest;
+    const unpaid = parseIntOrZero(form.unpaidTax);
+    if (unpaid > 0) body.unpaidTax = unpaid;
+    if (form.paymentDeadline) body.paymentDeadline = form.paymentDeadline;
+    if (form.actualPaymentDate) body.actualPaymentDate = form.actualPaymentDate;
+  }
+
   // ── §103② 기본공제 그룹 ──
   body.realEstateGroupBasicDeductionUsed = parseIntOrZero(form.realEstateGroupBasicDeductionUsed);  // default: 0
   // §104⑤ 크로스 조정 — 미입력이면 body에 넣지 않는다(= 조정 미적용).

@@ -57,6 +57,12 @@ function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
 }
 
+/** 통화 문자열("1,000,000") → 숫자. 빈값·비수치는 0 */
+function amountOf(s: string | undefined): number {
+  const n = Number((s ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
 // ============================================================
 // Step별 validation (마법사 단계 진입 전 검증)
 // ============================================================
@@ -487,6 +493,20 @@ export function validateStep3(form: StockTransferFormData): StockValidationError
     errors.push({
       field: "filingViolation",
       message: "부정행위·국제거래 가산세는 신고 위반(과소신고 또는 무신고)이 전제됩니다. 신고 위반 여부를 선택하세요.",
+      severity: "error",
+    });
+  }
+
+  /**
+   * 납부지연가산세(국세기본법 §47조의4①1호)는 **미납세액과 법정납부기한이 둘 다** 있어야
+   * 계산된다 — 경과일수를 기한 다음 날부터 세기 때문이다. 기한 없이 미납세액만 넣으면
+   * 엔진이 **조용히 0을 반환**하므로, 「입력했는데 안 잡힌다」가 되지 않게 여기서 막는다
+   * (자동 fallback 금지 — 미입력은 검증 오류로 차단).
+   */
+  if (amountOf(form.unpaidTax) > 0 && isEmpty(form.paymentDeadline)) {
+    errors.push({
+      field: "paymentDeadline",
+      message: "납부지연가산세를 계산하려면 법정납부기한을 입력하세요 (경과일수 기산점입니다).",
       severity: "error",
     });
   }

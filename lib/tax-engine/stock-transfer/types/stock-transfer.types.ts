@@ -389,6 +389,28 @@ export type StockTransferInput = {
   isFraudulent: boolean;
   isInternationalTransaction: boolean;
 
+  // ── 가산세 base 차감 항목 (국세기본법 §47조의3① 「과소신고납부세액등」) ──
+  //
+  // 법문의 base 는 「과소신고한 **납부세액**」이지 산출세액 전액이 아니다. 종전에는 이 셋이
+  // 없어 산출세액 전액에 세율을 곱했고, 그만큼 **납세자에게 불리**했다.
+  // 부동산 정본(`transfer-tax-penalty.ts` `FilingPenaltyInput`)과 같은 축이다.
+
+  /** 당초 신고한 납부세액 — 과소신고 시 base 에서 차감. 무신고는 0 */
+  originalFiledTax?: number;
+  /** 기납부세액(예정신고 납부분 포함) — base 에서 차감 */
+  priorPaidTax?: number;
+  /** 세법에 따른 이자상당가산액 — §47조의3① 괄호로 base 에서 **제외** */
+  interestSurcharge?: number;
+
+  // ── 납부지연가산세 (국세기본법 §47조의4①1호 · 국기령 §27조의4① 1일 10만분의 22) ──
+
+  /** 미납·과소납부세액. 0 이거나 `paymentDeadline` 미입력이면 계산하지 않는다 */
+  unpaidTax?: number;
+  /** 법정납부기한 — 경과일수 기산점(다음 날부터) */
+  paymentDeadline?: Date;
+  /** 실제 납부일 — 미입력 시 계산 기준일(오늘) */
+  actualPaymentDate?: Date;
+
   /** §103② — §94② 발동 시 같은 해 부동산 그룹에서 이미 사용한 기본공제 */
   realEstateGroupBasicDeductionUsed: number;
 
@@ -887,6 +909,12 @@ export type StockTransferResult = {
   // 가산세·공제
   underReportPenalty: number;
   latePaymentPenalty: number;
+  /**
+   * 신고불성실가산세 기준금액 —「과소신고납부세액등」(국세기본법 §47조의3①).
+   * 결정세액에서 당초 신고세액·기납부세액·이자상당가산액을 뺀 값이며, 결과 화면이
+   * 「산출세액 × 세율」로 오해하지 않도록 **산식에 그대로 쓰라고** 싣는 echo 다.
+   */
+  penaltyBase?: number;
   electronicFilingCredit: number;
 
   // 최종
