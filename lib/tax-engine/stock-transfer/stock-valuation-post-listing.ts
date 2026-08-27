@@ -350,6 +350,23 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
   );
   const acquisitionYearPerShareValue = acquisitionEval.value;
 
+  // [표시 전용 echo] 결과 카드가 가중평균 산식을 라벨·변수값으로 펼치기 위한 산출 근거.
+  // 가중치는 실제 적용값(연혁·§94①4다목 반전 반영)이라 화면이 3/5·2/5를 추정하지 않아도 된다.
+  const weightedBasis: PostListingValuationResult["weightedBasis"] = {
+    niWeight: listingEval.niWeight,
+    naWeight: listingEval.naWeight,
+    listing: {
+      netIncomeValue: listingYearNetIncomePerShare,
+      netAssetValue: listingYearNetAssetPerShare,
+      weightedRaw: Math.floor(listingEval.weightedRaw),
+    },
+    acquisition: {
+      netIncomeValue: acquisitionYearNetIncomePerShare,
+      netAssetValue: acquisitionYearNetAssetPerShare,
+      weightedRaw: Math.floor(acquisitionEval.weightedRaw),
+    },
+  };
+
   if (listingEval.floorApplied || acquisitionEval.floorApplied) {
     appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_FLOOR_80);
   }
@@ -371,6 +388,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
       finalPerShareValue: 0,
       totalAcquisitionPrice: 0,
       monthlyAccrualApplied: false,
+      weightedBasis,
       appliedRules,
       warnings,
       capitalEventTruncation,
@@ -444,6 +462,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
         finalPerShareValue: 0,
         totalAcquisitionPrice: 0,
         monthlyAccrualApplied: false,
+        weightedBasis,
         appliedRules,
         warnings,
         capitalEventTruncation,
@@ -482,6 +501,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     totalAcquisitionPrice,
     monthlyAccrualApplied,
     monthlyAccrualDetail,
+    weightedBasis,
     capitalEventTruncation,
     appliedRules,
     warnings,
