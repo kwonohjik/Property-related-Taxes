@@ -136,7 +136,27 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
 
     // ── 기타 ──
     isElectronicFiling: form.isElectronicFiling,     // default: false
+
+    // ── 신고축(가산세) — 국외자산 양도도 같은 신고다(소득세법 §118조의8 준용) ──
+    filingViolation: form.filingViolation || "none",   // 3중 패턴 default
+    isFraudulent: form.isFraudulent,
+    isInternationalTransaction: form.isInternationalTransaction,
   };
+
+  // 가산세 상세 — 0·빈값이면 넣지 않는다(국내 경로와 같은 규칙)
+  {
+    const originalFiled =
+      form.filingViolation === "under_report" ? parseIntOrZero(form.originalFiledTax) : 0;
+    if (originalFiled > 0) body.originalFiledTax = originalFiled;
+    const priorPaid = parseIntOrZero(form.priorPaidTax);
+    if (priorPaid > 0) body.priorPaidTax = priorPaid;
+    const interest = parseIntOrZero(form.interestSurcharge);
+    if (interest > 0) body.interestSurcharge = interest;
+    const unpaid = parseIntOrZero(form.unpaidTax);
+    if (unpaid > 0) body.unpaidTax = unpaid;
+    if (form.paymentDeadline) body.paymentDeadline = form.paymentDeadline;
+    if (form.actualPaymentDate) body.actualPaymentDate = form.actualPaymentDate;
+  }
 
   // 양도가액 — 수령 방식에 따라 분기 (TypeScript 미감지 → 자가 grep 점검 필수)
   if (fsTransferReceiptMode === "installments") {

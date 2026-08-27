@@ -656,3 +656,31 @@ anchor 4건 · 뮤테이션 2종(라벨 분기 제거 · 안내를 켠 뒤에만
 > 히트를 못 봤고, 그대로였으면 **이미 있는 배선을 다시 만들 뻔했다**.
 > (`project_transfer_redev_rights_review_2026_08` 의 「잔여 개수를 믿지 말고 코드를 재측정하라」
 > 와 같은 실패 모드.)
+
+---
+
+## 17. 잔여-1 종결 (2026-08-27) — 국외 신고에도 가산세가 붙는다
+
+PR #1331(Phase A′)은 국내+국외 **혼합** 신고의 국외 소득분을 base 에 넣었지만, **국내 종목이
+하나도 없는 신고**는 여전히 가산세 0이었다. `ForeignStockInput` 에 신고축이 **타입 자체에 없어**
+대표 축을 고를 수 없었고, 국외 **단건** 경로도 가산세를 계산하지 않았다.
+
+근거는 같다 — 소득세법 **§118조의8** 이 §105~§107(예정신고)·§110~§112(확정신고·납부)를 준용하고,
+국세기본법 §47조의2·§47조의3 은 「국세의 과세표준 **신고**」 단위로 걸린다. 해외주식만 거래한
+납세자라고 가산세를 면할 근거는 없다.
+
+| 축 | 조치 |
+|---|---|
+| 타입 | `ForeignStockInput` 에 신고축 9칸(전부 optional — 미선언 = 정상신고) · `ForeignStockResult` 에 가산세 3칸 |
+| 엔진 | `foreign-stock.ts` STEP 11.5 — base 는 **외국납부세액공제 반영 후** 금액(국내 finalize 와 같은 구조) |
+| aggregate | `pickFilingAxisInput` — 국내 우선, 없으면 **신고축을 선언한 국외 종목** |
+| 배선 | ④ foreign body · ⑫ `stock-transfer-foreign-schema.ts` · ⑭ `buildForeignEngineInput` + Date 2칸 |
+| 표시 | `ForeignStockResultCard` 가산세 2행 + 기준금액 echo + 「+ 가산세」 산식 |
+
+> 🔑 **국외 경로는 스키마·매핑이 국내와 별개 파일이다** — 국내만 고치면 국외는 조용히 strip 된다.
+> anchor FP-3 이 폼→④→⑫ 를 통째로 태워 그것을 막는다.
+
+**공용 축 타입**: `FilingAxisFields`(finalize)를 국내·국외가 함께 쓴다. 국내는 Zod 가 3칸을
+필수로 강제하고 국외는 optional 이라, 헬퍼는 `?? "none"`·`?? false` 로 읽는다.
+
+anchor 14건 · **뮤테이션 4종 전부 감지**(단건 가산세 · aggregate 축 선택 · ⑫ zod · 결과 카드).

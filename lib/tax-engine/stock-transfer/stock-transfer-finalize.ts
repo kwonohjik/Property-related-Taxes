@@ -99,6 +99,24 @@ export const STOCK_PENALTY_RULE_REFS: readonly string[] = [
   STOCK.SECTION_47_4_LATE_PAYMENT,
 ];
 
+/**
+ * 가산세 신고축 — 국내(`StockTransferInput`)·국외(`ForeignStockInput`) **공용**.
+ *
+ * 국내는 Zod 가 `filingViolation` 등 3개를 필수로 강제하고, 국외는 전부 optional 이라
+ * 미선언이 **정상신고**(가산세 0)를 뜻한다. 두 타입을 그대로 받을 수 있게 여기서는 느슨하게 둔다.
+ */
+export interface FilingAxisFields {
+  filingViolation?: "none" | "under_report" | "non_report";
+  isFraudulent?: boolean;
+  isInternationalTransaction?: boolean;
+  originalFiledTax?: number;
+  priorPaidTax?: number;
+  interestSurcharge?: number;
+  unpaidTax?: number;
+  paymentDeadline?: Date;
+  actualPaymentDate?: Date;
+}
+
 /** 신고불성실가산세 결과 — 신고 단위 1회 산정용으로 aggregate 도 쓴다 */
 export interface StockFilingPenaltyResult {
   penalty: number;
@@ -113,17 +131,13 @@ export interface StockFilingPenaltyResult {
  */
 export function computeStockFilingPenalty(
   determinedTax: number,
-  input: Pick<
-    StockTransferInput,
-    | "filingViolation"
-    | "isFraudulent"
-    | "isInternationalTransaction"
-    | "originalFiledTax"
-    | "priorPaidTax"
-    | "interestSurcharge"
-  >,
+  input: FilingAxisFields,
 ): StockFilingPenaltyResult {
-  if (input.filingViolation === "none") {
+  // 국외주식은 신고축이 전부 optional 이다(미선언 = 정상신고). 국내는 Zod 가 필수로 강제한다.
+  const filingViolation = input.filingViolation ?? "none";
+  const isFraudulent = input.isFraudulent ?? false;
+  const isOffshore = input.isInternationalTransaction ?? false;
+  if (filingViolation === "none") {
     return { penalty: 0, penaltyBase: 0, ruleRef: "" };
   }
 
@@ -137,8 +151,8 @@ export function computeStockFilingPenalty(
     // 주식 `filingViolation` 에는 초과환급신고 축이 없다(입력 경로 부재) — 0 고정.
     excessRefundAmount: 0,
     interestSurcharge: input.interestSurcharge ?? 0,
-    filingType: toFilingType(input.filingViolation),
-    penaltyReason: toPenaltyReason(input.isFraudulent, input.isInternationalTransaction),
+    filingType: toFilingType(filingViolation),
+    penaltyReason: toPenaltyReason(isFraudulent, isOffshore),
   });
 
   // 가산세 10원 미만 절사 (국고금 관리법 §47①) — 주식 정본 규칙
@@ -146,14 +160,7 @@ export function computeStockFilingPenalty(
   return {
     penalty,
     penaltyBase: result.penaltyBase,
-    ruleRef:
-      penalty > 0
-        ? resolvePenaltyRule(
-            input.filingViolation,
-            input.isFraudulent,
-            input.isInternationalTransaction,
-          )
-        : "",
+    ruleRef: penalty > 0 ? resolvePenaltyRule(filingViolation, isFraudulent, isOffshore) : "",
   };
 }
 
@@ -163,9 +170,7 @@ export function computeStockFilingPenalty(
  * 기한만 있고 미납세액이 0이면 지연이 없는 것이고, 미납세액만 있고 기한이 없으면
  * 경과일수를 셀 수 없다. 어느 쪽이든 **조용히 0을 만들지 않고** 계산 자체를 건너뛴다.
  */
-export function computeStockLatePaymentPenalty(
-  input: Pick<StockTransferInput, "unpaidTax" | "paymentDeadline" | "actualPaymentDate">,
-): number {
+export function computeStockLatePaymentPenalty(input: FilingAxisFields): number {
   const unpaidTax = input.unpaidTax ?? 0;
   if (unpaidTax <= 0 || !input.paymentDeadline) return 0;
 
