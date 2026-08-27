@@ -168,9 +168,23 @@ function InstancePage({ inst }: { inst: NtsReportInstance }) {
             <Text style={[t.cUse, { flex: 2 }]}>산정기준율(2)</Text>
             <Text style={[t.cAmt, { width: 120 }]}>{inst.acqBase.rate ?? "부분별"}</Text>
           </View>
-          <View style={t.total}>
+          <View style={t.row}>
             <Text style={[t.cUse, { flex: 2 }]}>취득당시 기준시가(3) = (1) × (2)</Text>
             <Text style={[t.cAmt, { width: 120 }]}>{fmt(inst.acqBase.converted)}</Text>
+          </View>
+          {/* (4)는 Ⅵ⑤ 와 **다른 시점**의 토지가액이다(작성요령 ※4 「취득당시 토지가액」).
+              미입력이면 0 원으로 단정하지 않고 「—」로 둔다 — 화면과 같은 규칙. */}
+          <View style={t.row}>
+            <Text style={[t.cUse, { flex: 2 }]}>토지가액(4)</Text>
+            <Text style={[t.cAmt, { width: 120 }]}>
+              {inst.acqBase.landValue === undefined ? "—" : fmt(inst.acqBase.landValue)}
+            </Text>
+          </View>
+          <View style={t.total}>
+            <Text style={[t.cUse, { flex: 2 }]}>합계 (3) + (4)</Text>
+            <Text style={[t.cAmt, { width: 120 }]}>
+              {inst.acqBase.total === undefined ? "—" : fmt(inst.acqBase.total)}
+            </Text>
           </View>
         </>
       )}

@@ -82,7 +82,15 @@ export interface NtsReportInstance {
   // Ⅵ
   buildingTotal: number; // ⑪ = Ⅲ합 + Ⅳ합
   // ※ 2000.12.31 이전 취득(양도 취득당시 instance)
-  acqBase?: { total2001: number; rate?: number; converted: number };
+  acqBase?: {
+    total2001: number;
+    rate?: number;
+    converted: number;
+    /** ※(4) 취득당시 토지가액 = floor(③ × 취득당시 ㎡당 공시지가). 미입력 시 undefined */
+    landValue?: number;
+    /** ※합계 = (3) + (4). (4) 가 없으면 undefined */
+    total?: number;
+  };
 }
 
 export interface NtsReportModel {
@@ -97,6 +105,14 @@ export interface NtsPointContext {
   dateLabel: string;
   landPricePerM2: number;
   year: number;
+  /**
+   * ※표 (4) 전용 — **취득당시**(취득일 직전 고시분) ㎡당 개별공시지가.
+   * `landPricePerM2` 와 별개다: 취득 ≤2000 경로의 그 값은 위치지수 산정용 **2001.1.1 기준**이다.
+   * 계산사례 마. 실측 — 취득 2000.2.1 · 대지 130㎡:
+   *   ※(4) 234,000,000 = 130 × 1,800,000(1999.6.30) ↔ Ⅵ⑤ 291,200,000 = 130 × 2,240,000(2001).
+   * 미입력이면 undefined 로 남긴다(0 원으로 단정하지 않는다 — 화면·PDF 는 「—」).
+   */
+  atTimeLandPricePerM2?: number;
 }
 
 /** 어댑터 입력 — 엔진 result 외 표시 전용 컨텍스트(소재지·일자·토지·층수) */
@@ -305,11 +321,20 @@ export function buildNtsReportModel(
       ...aBody,
       totalFloorArea: aBody.mainTotalArea + aBody.ancillaryTotalArea, // 건물 전체 = 주용도 + 부속
       acqBase: result.acqBaseConversion
-        ? {
-            total2001: result.acqBaseConversion.total2001,
-            rate: result.acqBaseConversion.acqBaseRate,
-            converted: result.acqBaseConversion.convertedTotal,
-          }
+        ? (() => {
+            const converted = result.acqBaseConversion.convertedTotal;
+            const atTime = aPoint.atTimeLandPricePerM2;
+            // ※(4) 는 Ⅵ⑤ 와 **다른 시점**의 토지가액이다(작성요령 ※4) — 같은 산식, 다른 공시지가.
+            const landValue =
+              atTime !== undefined && atTime > 0 ? landValueOf(ctx.landAreaM2, atTime) : undefined;
+            return {
+              total2001: result.acqBaseConversion.total2001,
+              rate: result.acqBaseConversion.acqBaseRate,
+              converted,
+              landValue,
+              total: landValue === undefined ? undefined : converted + landValue,
+            };
+          })()
         : undefined,
     });
   }

@@ -159,6 +159,12 @@ export interface BuildingStdPriceFormState {
   acqStructureKey: string;
   acqUsageNo: string;
   acqLandPrice: string;
+  /**
+   * ※표 (4) 전용 — **취득당시**(취득일 직전 고시분) ㎡당 개별공시지가.
+   * `acqLandPrice` 와 별개다: 취득 ≤2000 경로의 그 값은 위치지수 산정용 **2001.1.1 기준**이다.
+   * 표시 전용이라 엔진 input 에 들어가지 않는다(⑨~⑭ 무관) — 미입력이면 ※(4)(5)가 「—」다.
+   */
+  acqAtTimeLandPrice: string;
   transStructureKey: string;
   transUsageNo: string;
   transLandPrice: string;
@@ -262,6 +268,7 @@ export const initialBuildingStdPriceForm: BuildingStdPriceFormState = {
   acqStructureKey: "",
   acqUsageNo: "",
   acqLandPrice: "",
+  acqAtTimeLandPrice: "",
   transStructureKey: "",
   transUsageNo: "",
   transLandPrice: "",
@@ -836,6 +843,7 @@ export function buildNtsReportContext(f: BuildingStdPriceFormState): NtsReportCo
       dateLabel: formatEventDate(f.acquisitionEventDate, aYear),
       landPricePerM2: parseAmount(f.acqLandPrice),
       year: aYear ?? 0,
+      atTimeLandPricePerM2: parseAmount(f.acqAtTimeLandPrice) || undefined,
     };
   }
   return ctx;

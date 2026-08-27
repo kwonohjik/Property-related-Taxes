@@ -4,6 +4,7 @@
  * 계산서 Ⅵ. 합계 + ※ 산정기준율 환산(양도 취득 ≤2000).
  * Ⅵ: 건물 기준시가⑪ | 토지가액⑤ | 총합계(⑪+⑤).
  * ※: 2001현재(1) | 산정기준율(2) | 취득당시(3)=(1)×(2) | 토지가액(4) | 합계(3)+(4).
+ * ⚠️ (4)는 **취득당시**(취득일 직전 고시분) 공시지가 기준이라 Ⅵ⑤(2001 기준)와 다른 값이다.
  */
 import type { NtsReportInstance } from "@/lib/calc/nts-report-adapter";
 import { fmt, AMOUNT_CELL } from "./format";
@@ -47,6 +48,8 @@ export function ReportSection6Total({ inst }: { inst: NtsReportInstance }) {
                 <th className={TH}>2001.1.1 건물 기준시가(1)</th>
                 <th className={TH}>산정기준율(2)</th>
                 <th className={TH}>취득당시 기준시가(3)=(1)×(2)</th>
+                <th className={TH}>토지가액(4)</th>
+                <th className={TH}>합계(3)+(4)</th>
               </tr>
               <tr>
                 <td className={`${TD} ${AMOUNT_CELL}`} data-testid="nts-bsp-x-1">
@@ -57,6 +60,14 @@ export function ReportSection6Total({ inst }: { inst: NtsReportInstance }) {
                 </td>
                 <td className={`${TD} ${AMOUNT_CELL}`} data-testid="nts-bsp-x-3">
                   {fmt(acq.converted)}
+                </td>
+                {/* ⚠️ (4)는 Ⅵ⑤ 와 **다른 시점**의 토지가액이다(작성요령 ※4 「취득당시 토지가액」).
+                    미입력 시 0 원으로 단정하지 않고 「—」로 비워 둔다. */}
+                <td className={`${TD} ${AMOUNT_CELL}`} data-testid="nts-bsp-x-4">
+                  {acq.landValue === undefined ? "—" : fmt(acq.landValue)}
+                </td>
+                <td className={`${TD} ${AMOUNT_CELL}`} data-testid="nts-bsp-x-sum">
+                  {acq.total === undefined ? "—" : fmt(acq.total)}
                 </td>
               </tr>
             </tbody>

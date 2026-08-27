@@ -577,6 +577,21 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                   hint="여러 필지면 면적 가중평균한 ㎡당 가액"
                 />
               ))}
+            {/* 계산서 ※표 (4) 전용 — 위 2001.1.1 값은 **위치지수 산정용**이라 취득당시 토지가액이
+                아니다(작성요령 ※4 「토지가액은 취득당시 토지가액을 계산하여 기재합니다」).
+                계산사례 마. 실측: ※(4) 130㎡ × 1,800,000(1999.6.30) ↔ Ⅵ⑤ 130㎡ × 2,240,000(2001).
+                표시 전용이라 미입력이어도 계산은 진행되고 ※(4)(5)만 「—」로 남는다. */}
+            {!transferOnly && !isMech && !apartmentConv && acqIndexYear === 2001 && (
+              <LandPriceLookupField
+                pricePerSqm={f.acqAtTimeLandPrice}
+                onPricePerSqmChange={(v) => set("acqAtTimeLandPrice", v)}
+                area={landArea}
+                jibun={jibun}
+                referenceDate={landRefFromEvent(f.acquisitionEventDate, f.acquisitionYear)}
+                label="취득당시 ㎡당 개별공시지가 (계산서 ※표 토지가액용)"
+                hint="취득일 직전 고시분 — 계산서 ※(4) 토지가액·(5) 합계에만 쓰인다(선택)"
+              />
+            )}
           </SectionCard>
 
           {/* 양도 복합구조 토글 — 층·구역별 구조·용도 상이(취득/양도 2시점 부분별).
