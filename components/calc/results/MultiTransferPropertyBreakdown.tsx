@@ -67,6 +67,9 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     penaltyBase: b.penaltyBase ?? 0,
     // `penaltyTax` 슬롯에 국기법분이 섞여 있으므로 지방소득세 산식용 §114조의2분을 따로 싣는다.
     localTaxPenalty: b.penaltyTax,
+    // 농특세는 「감면 전 산출세액 − 감면 후 산출세액」의 20%라 **자산별로 나뉘지 않는다**
+    // (집계 엔진도 합산-only로 낸다). 자산 열에 값을 만들어 넣으면 합계와 어긋난다.
+    ruralSurtax: 0,
     localIncomeTax,
     totalTax: determinedTax + totalPenalty + localIncomeTax,
     steps: b.steps,

@@ -86,6 +86,8 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     // 엔진이 실제로 base에 넣은 §114조의2분 echo를 그대로 승계한다.
     localTaxPenalty: a.buildingPenaltyTax ?? 0,
     localIncomeTax: a.localIncomeTax,
+    // 집계 엔진은 농특세를 이미 총액(소득금액차감분 + 세액감면분)으로 노출한다.
+    ruralSurtax: a.ruralSurtax,
     totalTax: a.totalTax,
     steps: a.steps,
     // UI 자산별 산식 인라인 표시용 — 사례 31·33 일반건물 일괄 모드만 채워짐.
@@ -370,6 +372,16 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
             value={formatKRW(aggregated.localIncomeTax)}
             sub
           />
+
+          {/* 농어촌특별세 — 「농어촌특별세법」 §5①1호. `totalTax`에는 이미 들어 있어
+              이 행이 없으면 국세 + 지방세 합과 총납부세액이 농특세만큼 어긋난다. */}
+          {(aggregated.ruralSurtax ?? 0) > 0 && (
+            <Row
+              label="농어촌특별세 (감면세액 × 20%)"
+              value={formatKRW(aggregated.ruralSurtax)}
+              sub
+            />
+          )}
 
           <Divider />
 

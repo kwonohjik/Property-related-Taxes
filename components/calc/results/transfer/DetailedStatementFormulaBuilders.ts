@@ -116,7 +116,7 @@ export function buildPenaltyFormula(p: PerPropertyBreakdown): string {
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { StatementItem } from "./DetailedStatementHelpers";
 import { findStepByLabel } from "./DetailedStatementHelpers";
-import { incomeDeductionRuralSurtax } from "./reduction-eligible-income";
+import { resolveRuralSurtax } from "./reduction-eligible-income";
 import {
   localCalculatedTaxFormula,
   localTaxablePenaltyOf,
@@ -198,7 +198,7 @@ export function buildSurtaxAndLocalTaxItems(
    */
   aggregateRuralSurtax?: number,
 ): void {
-  const ruralSurtaxValue = aggregateRuralSurtax ?? incomeDeductionRuralSurtax(result);
+  const ruralSurtaxValue = resolveRuralSurtax(result, aggregateRuralSurtax);
   items.set("ruralSurtax", {
     label: "농어촌특별세",
     value: ruralSurtaxValue,

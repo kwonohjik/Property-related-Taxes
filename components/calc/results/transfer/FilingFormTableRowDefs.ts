@@ -58,7 +58,7 @@ export function buildRowsFromOrder(
     ["determinedTax", "결정세액", { highlight: true }],
     ["penaltyTax", "가산세액"],
     ["totalDeterminedTax", "총결정세액", { highlight: true, separatorAfter: true }],
-    ["ruralSurtax", "농어촌특별세 (§99의3 등)"],
+    ["ruralSurtax", "농어촌특별세"],
     ["localCalculatedTax", "지방소득세 산출세액"],
     ["localReduction", "지방세 감면세액"],
     ["localDeterminedTax", "지방세 결정세액", { highlight: true }],

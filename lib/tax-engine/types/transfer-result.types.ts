@@ -234,6 +234,19 @@ export interface TransferTaxResult {
   localTaxPenalty?: number;
   /** 지방소득세 = (결정세액 + §114조의2 가산세) × 10%, 원 미만 절사 (지방세법 §103의3) */
   localIncomeTax: number;
+  /**
+   * [echo] 농어촌특별세 **총액** (「농어촌특별세법」 §5①1호 — 조특법 감면세액 × 20%).
+   *
+   * 엔진은 세 갈래로 나눠 산정하고 `totalTax`에 합산한다:
+   *   · 소득금액차감형(§99의3·§99·§98의8)  → `new993Detail.ruralSurtax` 등 detail에도 부착
+   *   · 하이브리드(§98의7·§99의2 등)        → 해당 detail에 부착
+   *   · **세액감면형(§77·§77의2·§77의3·§97 계열)** → 부착할 detail이 없다
+   * 종전에는 총액 필드가 없어 표시부가 detail 11종을 훑어 재구성했고, 그래서 세액감면형은
+   * 구조적으로 0이 됐다(신고서·명세서·요약카드·PDF 전부). 표시부는 이 필드를 정본으로 쓴다
+   * — 해석은 `transfer/reduction-eligible-income.ts`의 `resolveRuralSurtax` 단일 소스.
+   * 미지정(옛 저장 결과)이면 종전 detail 합산으로 폴백한다.
+   */
+  ruralSurtax?: number;
   /** 총 납부세액 */
   totalTax: number;
   /** 계산 과정 steps */

@@ -110,6 +110,9 @@ export function MultiTransferTaxSummaryCard({
   const priorPaidLocalTax = result.priorPaidLocalTax;
   const currentTaxDue = result.settlementAdditionalPayable;
   const totalDue = result.settlementTotalDue;
+  // 농특세는 정산(§111③) 축 밖에 있으므로 최종 합계에 따로 더한다 — 신고서 양식과 같은 축.
+  const ruralSurtax = result.ruralSurtax ?? 0;
+  const finalDue = totalDue + ruralSurtax;
 
   return (
     <Card className="border-primary/20 bg-primary/5">
@@ -175,12 +178,24 @@ export function MultiTransferTaxSummaryCard({
         <ResultRow label="지방세 결정세액" value={result.localIncomeTax} />
         <ResultRow label="지방세 기납부 세액" value={-priorPaidLocalTax} />
 
+        {/**
+         * 농어촌특별세 — 「농어촌특별세법」 §5①1호(조특법 감면세액 × 20%).
+         * 엔진 `settlementTotalDue`는 국세·지방세 정산분(§111③)만이라 농특세를 담지 않는다.
+         * 종전에는 행도 없고 합계에도 안 들어가, 같은 화면 신고서 양식의 농특세 행과 어긋났다.
+         */}
+        {ruralSurtax > 0 && (
+          <>
+            <Separator />
+            <ResultRow label="농어촌특별세" value={ruralSurtax} />
+          </>
+        )}
+
         <Separator />
 
         {/* 17. 최종 납부할 세액 */}
         <div className="flex justify-between items-center pt-1">
           <span className="text-lg font-bold">납부할 세액</span>
-          <span className="text-2xl font-bold text-primary">{formatKRW(totalDue)}</span>
+          <span className="text-2xl font-bold text-primary">{formatKRW(finalDue)}</span>
         </div>
 
         {result.warnings.length > 0 && (
