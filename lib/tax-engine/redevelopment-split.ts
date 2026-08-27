@@ -431,29 +431,41 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
    */
   const postApprovalGain = transferPrice - salePriceTotal - postApprovalExpenses;
 
-  // settlement 분 (APT 청산금 비율 안분):
-  // ★ 사례 42 정정 (2026-05-17, project_case_42_apt_receive_land):
-  //   토지 출자 + 완공 APT 양도 + 청산금 수령(동시신고) 시 §166②2호 표준 해석은
-  //   §166①2호 가목·나목 2분기만 적용 — 청산금 자체는 인가시점에 받은 금액이라
-  //   별도 양도(처분) 사건이 없음. 청산금 효과는 분양가 = 권리가 − 수령으로
-  //   가목·나목 양쪽에 이미 반영됨.
-  //   주택 출자(사례 47 등)는 기존 책 산식(청산금 비율 안분) 유지 — receive 분기에서
-  //   1세대1주택 12억 안분 + 거주월수 귀속 분리 등 housing 전용 처리와 연동되므로 보존.
-  const isLandContribReceive = redevelopment.originalAssetType === "land";
-  const aptSettlementApportionedAcq = isLandContribReceive
-    ? 0
-    : safeMultiplyThenDivide(
-        oldAcquisitionPrice,
-        redevelopment.settlementAmount,
-        redevelopment.rightsValue,
-      );
-  const aptSettlementGain = isLandContribReceive
-    ? 0
-    : calcAptReceiveSettlementGain(
-        oldAcquisitionPrice,
-        redevelopment.rightsValue,
-        redevelopment.settlementAmount,
-      );
+  /**
+   * 청산금 수령분 — **종전 부동산의 분할양도**(`calcAptReceiveSettlementGain` 주석 참조).
+   *
+   * 🔴 2026-08-27 정정(**세액 변경**): 종전에는 `originalAssetType === "land"`이면 이 분기를
+   *    **통째로 0**으로 만들어(양도가·취득가·차익 전부) 청산금 상당분이 **과세에서 이탈**했다.
+   *    근거 주석은 「청산금 자체는 인가시점에 받은 금액이라 **별도 양도 사건이 없음**」이었으나,
+   *    국세청 해석 셋이 **전부 반대 방향**이고 그중 둘은 **토지를 명시**한다:
+   *
+   *      · **재일46014-2870**(1997.12.08) — 재건축조합에게 **토지 등**을 양도하고 청산금을
+   *        교부받는 경우 **양도에 해당**되어 양도소득세 과세대상
+   *      · **재일46014-2104**(1999.12.13) — **토지·건물**의 대가로 권리와 청산금을 교부받은
+   *        경우, 청산금에 상당하는 종전의 **토지·건물은 유상이전**에 해당하여 과세
+   *      · **법규재산2012-358**(2012.11.09) — 청산금은 종전 주택의 **분할양도**
+   *
+   *    조문도 같다 — **§166①은 「건물 또는 토지만을 제공한 경우를 포함한다」** 를 명시하고,
+   *    청산금 상당분을 배제하는 §166①2호 **나목의 안분은 자산 종류를 가리지 않는다**.
+   *
+   *    ⭐ 종전 근거였던 예제 사례 42는 **자기 자료끼리 답이 달라**(설계문서 §3 행 #7
+   *      「xlsx 교재 답 상이 → anchor 보류」) 판정 근거가 될 수 없었다. 같은 문서 :509가
+   *      해소 경로를 **「국세청 해석례」** 로 이미 지목해 뒀다.
+   *
+   * 🔑 항등식이 자산 종류와 무관하게 성립해야 한다:
+   *    `나목 + 청산금분 = 평가액 − 취득가액` (안분비율이 약분된다).
+   *    종전 land 분기는 나목만 남아 이 항등식이 깨져 있었다.
+   */
+  const aptSettlementApportionedAcq = safeMultiplyThenDivide(
+    oldAcquisitionPrice,
+    redevelopment.settlementAmount,
+    redevelopment.rightsValue,
+  );
+  const aptSettlementGain = calcAptReceiveSettlementGain(
+    oldAcquisitionPrice,
+    redevelopment.rightsValue,
+    redevelopment.settlementAmount,
+  );
 
   return {
     preApproval: {
@@ -467,8 +479,7 @@ function computeAptReceive(args: BranchArgs): RedevelopmentSplitResult {
       gain: postApprovalGain,
     },
     settlement: {
-      // ★ 사례 42 정정 — land 분기는 settlement 자체가 없음 (양도가·취득가·차익 모두 0)
-      apportionedTransfer: isLandContribReceive ? 0 : redevelopment.settlementAmount,
+      apportionedTransfer: redevelopment.settlementAmount,
       apportionedAcquisition: aptSettlementApportionedAcq,
       gain: aptSettlementGain,
     },

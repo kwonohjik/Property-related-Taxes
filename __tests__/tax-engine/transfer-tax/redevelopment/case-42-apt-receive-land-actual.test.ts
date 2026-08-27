@@ -12,25 +12,35 @@
  *   - 종전 토지 취득가액(실가): 200,000,000 (2002-04-09)
  *   - originalAssetType: "land" (토지 출자)
  *
- * PDF 산식 (§166②2호 = §166①2호 준용, settlement 별도 분기 없음):
- *   ① 종전부동산양도차익 = (5억 − 2억) × {(5억 − 1.14억) / 5억} = 300M × 0.772 = 231,600,000
- *   ② 청산금수령분(=인가후 분) = 5.25억 − (5억 − 1.14억) = 525M − 386M = 139,000,000
- *   ③ 장기보유공제 = (231.6M + 139M) × 30% (15년+) = 111,180,000
- *   ④ 양도소득금액 = 370,600,000 − 111,180,000 = 259,420,000
+ * 🔴 2026-08-27 — **예제 자료의 답을 조문·국세청 해석으로 뒤집었다 (세액 변경)**
  *
- * 엔진 3분할 매핑:
- *   preApproval                  = 인가전 분 = 231,600,000 (PDF ①)
- *   postApprovalExistingHouse    = 인가후 분 = 139,000,000 (PDF ②)
- *   settlement                   = 0       (★ 사례 42 정정 — land 분기는 별도 분기 없음)
+ * 예제 자료는 청산금 상당분(68,400,000)을 **양도차익에서 누락**했다. 그 자료는 애초에
+ * **자기 자료끼리 답이 달라**(설계문서 `transfer-tax-redevelopment.engine.design.md:31` 행 #7
+ * 「xlsx 교재 답 상이 → anchor 보류」) 판정 근거가 될 수 없었고, 같은 문서 `:509`가 해소 경로를
+ * **「국세청 해석례」** 로 이미 지목해 뒀다. 그 해석례를 확보해 종결한다.
  *
- * LTHD (§166⑤2호나목):
- *   preApproval/postApprovalExistingHouse: 묶음 동일 30% (취득일~양도일 약 20년 10월)
- *   settlement: 0 (gain=0이라 LTHD도 0)
+ * | 해석 | 연도 | 요지 |
+ * |---|---|---|
+ * | **재일46014-2870** | 1997.12.08 | 재건축조합에게 **토지 등**을 양도하고 청산금을 교부받는 경우 **양도에 해당**되어 과세대상 |
+ * | **재일46014-2104** | 1999.12.13 | **토지·건물**의 대가로 권리와 청산금을 교부받은 경우, 청산금 상당 종전 **토지·건물은 유상이전** |
+ * | **법규재산2012-358** | 2012.11.09 | 청산금은 종전 주택의 **분할양도** |
  *
- * 합계: gain=370,600,000 / lthd=111,180,000 / taxableIncome=259,420,000 (PDF 일치)
+ * 조문도 같다 — **§166①은 「건물 또는 토지만을 제공한 경우를 포함한다」** 를 명시하고,
+ * 청산금 상당분을 배제하는 §166①2호 **나목의 안분은 자산 종류를 가리지 않는다**.
  *
- * Pre-Do 검증 (2026-05-17): runOriginalMember + computeAptReceive 의 `originalAssetType="land"`
- * 분기 settlement 산식 정정 (project_case_42_apt_receive_land).
+ * 산식 (§166②2호 = §166①2호 + 분할양도):
+ *   ① 나목(인가전 분)   = (5억 − 2억) × {(5억 − 1.14억) / 5억} = 300M × 0.772 = 231,600,000
+ *   ② 가목(인가후 분)   = 5.25억 − (5억 − 1.14억) = 525M − 386M            = 139,000,000
+ *   ③ 청산금분(분할양도) = 1.14억 − 2억 × (1.14억/5억) = 114M − 45.6M       =  68,400,000
+ *   ─────────────────────────────────────────────────────
+ *   합계 양도차익 = 439,000,000  ( = 양도가 5.25억 + 청산금 1.14억 − 취득가 2억, 경제적 실질과 일치)
+ *
+ * 🔑 **항등식**: 나목 + 청산금분 = 231,600,000 + 68,400,000 = **300,000,000 = 평가액 − 취득가액**.
+ *    종전에는 나목만 남아 이 항등식이 깨져 있었다(예제 자료의 누락이 그대로 고정돼 있었다).
+ *
+ * LTHD (§166⑤2호나목 · 취득일~양도일 약 20년 10월 → 표1 30%):
+ *   나목 69,480,000 + 가목 41,700,000 + 청산금분 20,520,000 = **131,700,000**
+ *   양도소득금액 = 439,000,000 − 131,700,000 = **307,300,000**
  */
 
 import { describe, it, expect } from "vitest";
@@ -104,23 +114,26 @@ describe("C42 — 사례 42: APT+receive+land 실가 (§166②2호·§166①2호
     expect(detail.postApprovalExistingHouse.apportionedAcquisition).toBe(386_000_000);
   });
 
-  // ── settlement (★ 사례 42 정정 — land 분기는 별도 분기 없음) ────────────
-  it("[C42-7] settlement.gain = 0 (★ §166②2호 표준 해석 — 청산금 별도 양도사건 없음)", () => {
-    expect(detail.settlement.gain).toBe(0);
+  // ── settlement = 청산금 분할양도 (재일46014-2870·2104 · 법규재산2012-358) ──
+  it("[C42-7] settlement.gain = 68,400,000 (1.14억 − 45.6억분의 안분취득가)", () => {
+    expect(detail.settlement.gain).toBe(68_400_000);
   });
-  it("[C42-8] settlement.apportionedTransfer = 0 (land 분기 settlement 자체 없음)", () => {
-    expect(detail.settlement.apportionedTransfer).toBe(0);
+  it("[C42-8] settlement.apportionedTransfer = 114,000,000 (청산금 수령액 = 분할양도의 양도가액)", () => {
+    expect(detail.settlement.apportionedTransfer).toBe(114_000_000);
   });
-  it("[C42-9] settlement.apportionedAcquisition = 0", () => {
-    expect(detail.settlement.apportionedAcquisition).toBe(0);
+  it("[C42-9] settlement.apportionedAcquisition = 45,600,000 (2억 × 1.14억 ÷ 5억)", () => {
+    expect(detail.settlement.apportionedAcquisition).toBe(45_600_000);
   });
-  it("[C42-10] settlement.lthd = 0 (gain=0 → LTHD=0)", () => {
-    expect(detail.settlement.lthd).toBe(0);
+  it("[C42-10] settlement.lthd = 20,520,000 (68.4M × 30%)", () => {
+    expect(detail.settlement.lthd).toBe(20_520_000);
+  });
+  it("[C42-7b] 🔑 항등식 — 나목 + 청산금분 = 평가액 − 취득가액", () => {
+    expect(detail.preApproval.gain + detail.settlement.gain).toBe(500_000_000 - 200_000_000);
   });
 
   // ── 합계 (PDF 일치) ──────────────────────────────────────────────────────
-  it("[C42-11] total.gain = 370,600,000 (PDF 합산 양도차익)", () => {
-    expect(detail.total.gain).toBe(370_600_000);
+  it("[C42-11] total.gain = 439,000,000 (= 양도가 + 청산금 − 취득가, 경제적 실질과 일치)", () => {
+    expect(detail.total.gain).toBe(439_000_000);
   });
   it("[C42-12] preApproval.lthdRate = 0.30 (§166⑤2호나목 묶음 동일률, 15년+ 표1 30%)", () => {
     expect(detail.preApproval.lthdRate).toBeCloseTo(0.30, 5);
@@ -134,11 +147,11 @@ describe("C42 — 사례 42: APT+receive+land 실가 (§166②2호·§166①2호
   it("[C42-15] postApprovalExistingHouse.lthd = 41,700,000 (= 139M × 30%)", () => {
     expect(detail.postApprovalExistingHouse.lthd).toBe(41_700_000);
   });
-  it("[C42-16] total.lthd = 111,180,000 (PDF ③ 장기보유공제)", () => {
-    expect(detail.total.lthd).toBe(111_180_000);
+  it("[C42-16] total.lthd = 131,700,000 (69,480,000 + 41,700,000 + 20,520,000)", () => {
+    expect(detail.total.lthd).toBe(131_700_000);
   });
-  it("[C42-17] total.taxableIncome = 259,420,000 (PDF ④ 양도소득금액)", () => {
-    expect(detail.total.taxableIncome).toBe(259_420_000);
+  it("[C42-17] total.taxableIncome = 307,300,000 (439,000,000 − 131,700,000)", () => {
+    expect(detail.total.taxableIncome).toBe(307_300_000);
   });
 
   // ── 자기일관성 ───────────────────────────────────────────────────────────
