@@ -366,6 +366,7 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
     originalFiledTax: input.originalFiledTax,
     priorPaidTax: input.priorPaidTax,
     interestSurcharge: input.interestSurcharge,
+    fraudulentPortion: input.fraudulentPortion,
   });
   const latePaymentPenalty = computeStockLatePaymentPenalty(input);
 

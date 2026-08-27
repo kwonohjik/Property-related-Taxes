@@ -56,6 +56,22 @@ export interface FilingPenaltyInput {
   excessRefundAmount: number;
   /** 세법에 따른 이자상당액 가산액 (납부세액 산정에서 제외 — §47의3 ①) */
   interestSurcharge: number;
+  /**
+   * **부정행위로 인한** 과소신고납부세액등 — §47조의3①1호 **가목**의 base.
+   *
+   * 법문은 1호를 「다음 각 목의 금액을 **합한** 금액」으로 정한다:
+   *   가. **부정행위로 인한** 과소신고납부세액등 × 40%(역외 60%)
+   *   나. (과소신고납부세액등 − 부정행위로 인한 분) × 10%
+   *
+   * 종전 구현은 **전액에 단일 비율**을 곱해, 부정행위분이 일부인 신고에서 나머지에도 40%가
+   * 붙었다 — **납세자에게 불리**한 방향이었다.
+   *
+   * ⚠️ **미입력이면 base 전액을 부정행위분으로 본다**(종전 동작). 이미 계산된 신고서·저장
+   *    이력의 세액이 입력 없이 바뀌지 않게 하기 위한 하위 호환이다.
+   * ⚠️ **무신고(§47조의2①)에는 이 분해가 없다** — 그 조항은 「비율을 곱한 금액」이라
+   *    각 목 구조 자체가 없다. 과소신고·초과환급신고 전용이다.
+   */
+  fraudulentPortion?: number;
   /** 신고 유형 */
   filingType: FilingType;
   /** 부정행위 유형 */
@@ -82,12 +98,29 @@ export interface PenaltyStep {
   legalBasis?: string;
 }
 
+/** §47조의3①1호 가목·나목 분해 내역 — 혼합 적용 시에만 존재 */
+export interface FraudPortionSplit {
+  /** 가목 base — 부정행위로 인한 과소신고납부세액등 */
+  fraudBase: number;
+  /** 가목 세율 — 40% 또는 역외 60% */
+  fraudRate: number;
+  /** 나목 base — 과소신고납부세액등 − 부정행위분 */
+  normalBase: number;
+  /** 나목 세율 — 10% */
+  normalRate: number;
+}
+
 /** 신고불성실가산세 결과 */
 export interface FilingPenaltyResult {
   /** 무신고·과소신고 납부세액 (가산세 산정 기준금액) */
   penaltyBase: number;
-  /** 적용 가산세율 */
+  /**
+   * 적용 가산세율. 가목·나목이 **혼합**되면 단일 세율이 아니므로 **실효세율**
+   * (가산세 ÷ 기준금액)을 싣는다 — 표시 산식은 `fraudSplit` 으로 분해해 쓴다.
+   */
   penaltyRate: number;
+  /** 가목·나목 분해 — 혼합 적용 시에만. 미입력(전액 부정)·무신고·일반은 undefined */
+  fraudSplit?: FraudPortionSplit;
   /** 신고불성실가산세액 */
   filingPenalty: number;
   /** 적용 법령 */
@@ -274,13 +307,71 @@ export function calculateFilingPenalty(
   }
 
   // ② 가산세율 결정
-  const penaltyRate = resolveFilingRate(input.filingType, input.penaltyReason);
-  const rateLabel = (penaltyRate * 100).toFixed(0) + "%";
-
+  const fraudRate = resolveFilingRate(input.filingType, input.penaltyReason);
+  const isFraud =
+    input.penaltyReason === "fraudulent" || input.penaltyReason === "offshore_fraud";
   const legalBasis =
     input.filingType === "none" ? PENALTY.NON_FILING : PENALTY.UNDER_FILING;
 
-  if (input.penaltyReason === "fraudulent" || input.penaltyReason === "offshore_fraud") {
+  /**
+   * §47조의3①1호 — **가목 + 나목 합산**.
+   *
+   *   가. **부정행위로 인한** 과소신고납부세액등 × 40%(역외 60%)
+   *   나. (과소신고납부세액등 − 부정행위로 인한 분) × 10%
+   *
+   * ⚠️ **무신고(§47조의2①)에는 이 구조가 없다** — 그 조항은 「비율을 곱한 금액」이라
+   *    각 목 자체가 없다. 그래서 `filingType === "none"` 은 분해하지 않는다.
+   * ⚠️ `fraudulentPortion` **미입력이면 전액을 부정행위분으로** 본다(종전 동작 유지).
+   */
+  const splitApplies =
+    isFraud && input.filingType !== "none" && input.fraudulentPortion !== undefined;
+
+  if (splitApplies) {
+    const fraudBase = Math.min(Math.max(0, input.fraudulentPortion as number), penaltyBase);
+    const normalBase = penaltyBase - fraudBase;
+    const normalRate = PENALTY_CONST.UNDER_FILING_RATE;
+    const fraudPart = truncateToWon(applyRate(fraudBase, fraudRate));
+    const normalPart = truncateToWon(applyRate(normalBase, normalRate));
+    const filingPenalty = fraudPart + normalPart;
+    const fraudRateLabel = (fraudRate * 100).toFixed(0) + "%";
+    const normalRateLabel = (normalRate * 100).toFixed(0) + "%";
+
+    steps.push({
+      label: "가목 — 부정행위분",
+      formula: `${fraudBase.toLocaleString()} × ${fraudRateLabel}${
+        input.penaltyReason === "offshore_fraud" ? " (역외거래)" : ""
+      }`,
+      amount: fraudPart,
+      legalBasis: PENALTY.FRAUDULENT_DEF,
+    });
+    steps.push({
+      label: "나목 — 그 밖의 과소신고분",
+      formula: `${normalBase.toLocaleString()} × ${normalRateLabel}`,
+      amount: normalPart,
+      legalBasis,
+    });
+    steps.push({
+      label: "신고불성실가산세",
+      formula: `가목 ${fraudPart.toLocaleString()} + 나목 ${normalPart.toLocaleString()}`,
+      amount: filingPenalty,
+      legalBasis,
+    });
+
+    return {
+      penaltyBase,
+      // 혼합이라 단일 세율이 아니다 — 실효세율을 싣는다(표시 산식은 fraudSplit 으로 분해).
+      penaltyRate: penaltyBase > 0 ? filingPenalty / penaltyBase : 0,
+      fraudSplit: { fraudBase, fraudRate, normalBase, normalRate },
+      filingPenalty,
+      legalBasis,
+      steps,
+    };
+  }
+
+  const penaltyRate = fraudRate;
+  const rateLabel = (penaltyRate * 100).toFixed(0) + "%";
+
+  if (isFraud) {
     steps.push({
       label: "부정행위 가산세율",
       formula: input.penaltyReason === "offshore_fraud"

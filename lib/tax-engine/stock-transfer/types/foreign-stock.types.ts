@@ -157,6 +157,8 @@ export type ForeignStockInput = {
   priorPaidTax?: number;
   /** 이자상당가산액 — §47조의3① 괄호로 base 에서 제외 */
   interestSurcharge?: number;
+  /** 부정행위로 인한 과소신고납부세액등 — §47조의3①1호 가목 base (미입력 = 전액 부정) */
+  fraudulentPortion?: number;
   /** 미납·과소납부세액 — 납부지연가산세 base (§47조의4①1호) */
   unpaidTax?: number;
   /** 법정납부기한 */

@@ -244,6 +244,7 @@ function buildForeignEngineInput(rawInput: Record<string, unknown>): ForeignStoc
     originalFiledTax: coerced.originalFiledTax as number | undefined,
     priorPaidTax: coerced.priorPaidTax as number | undefined,
     interestSurcharge: coerced.interestSurcharge as number | undefined,
+    fraudulentPortion: coerced.fraudulentPortion as number | undefined,
     unpaidTax: coerced.unpaidTax as number | undefined,
     paymentDeadline: coerced.paymentDeadline as Date | undefined,
     actualPaymentDate: coerced.actualPaymentDate as Date | undefined,
