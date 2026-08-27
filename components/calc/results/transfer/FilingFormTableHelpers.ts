@@ -746,12 +746,16 @@ export function buildRows(
   // Round 11 (2026-05-06): §99의3 등 감면 적용 시 농어촌특별세 (감면세액 × 20%, 농특세법 §3·§5)
   setNum("ruralSurtax", "total", incomeDeductionRuralSurtax(result));
   /**
-   * ⚠️ 지방소득세 산출세액 base는 **§114조의2분만**이다 — 국기법 가산세는 제외한다.
-   * 엔진(`transfer-tax-finalize.ts` STEP 10)·집계(`transfer-tax-aggregate.ts`)가 같은 축이라
-   * 여기에 `totalPenalty`를 쓰면 「지방세 산출세액 ≠ result.localIncomeTax」 불일치가 생긴다.
+   * 지방소득세 산출세액 — **다시 계산하지 않는다**.
+   *
+   * 지방세 감면세액(아래 `localReduction`)이 0 하드코딩이므로 「산출세액 ≡ 결정세액」이고,
+   * 결정세액은 엔진 `localIncomeTax`가 정본이다. 종전에는 여기서 base를 재현했는데
+   * 그 방식은 **어댑터 경유 result에서 조용히 틀렸다** — `result.penaltyTax` 슬롯이
+   * 겸용(`mixedUseToFilingResult`)에서는 국기법분 그 자체이고, 건별
+   * (`breakdownToFilingResult`)에서는 국기법분이 합산된 총액이기 때문이다.
+   * 축 설명은 `local-income-tax-display.ts` 참조.
    */
-  const localCalc = Math.floor((result.determinedTax + result.penaltyTax) * 0.1);
-  setNum("localCalculatedTax", "total", localCalc);
+  setNum("localCalculatedTax", "total", result.localIncomeTax);
   setNum("localReduction", "total", 0);
   setNum("localDeterminedTax", "total", result.localIncomeTax);
 

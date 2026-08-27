@@ -82,6 +82,9 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     determinedTax: a.determinedTax,
     penaltyTax: a.penaltyTax,
     penaltyBase: 0, // 어댑터: 합계 카드 표시용으로 자산별 penaltyBase는 BundledAllocationCard에서 별도 합산
+    // `a.penaltyTax`는 국기법분까지 합한 **총액**이라 지방소득세 base로 못 쓴다.
+    // 엔진이 실제로 base에 넣은 §114조의2분 echo를 그대로 승계한다.
+    localTaxPenalty: a.buildingPenaltyTax ?? 0,
     localIncomeTax: a.localIncomeTax,
     totalTax: a.totalTax,
     steps: a.steps,

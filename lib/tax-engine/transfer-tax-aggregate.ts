@@ -631,6 +631,9 @@ function computeAggregateOnce(
     penaltyTax,
     // 가산세 상세는 자산별로 properties[i].penaltyDetail 에서 노출.
     ...(filingUnitPenaltyDetail ? { filingUnitPenaltyDetail } : {}),
+    // [echo] 지방소득세 base에 실제로 들어간 가산세분 — 표시부가 base를 재현할 때 쓴다.
+    // `penaltyTax`(총액)를 쓰면 「산출세액 ≠ 결정세액」 모순이 화면에 나온다.
+    buildingPenaltyTax: perAssetBuildingPenalty,
     localIncomeTax,
     ruralSurtax: ruralSurtaxAll,
     totalTax,

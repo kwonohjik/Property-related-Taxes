@@ -403,7 +403,17 @@ export interface AggregateTransferResult {
     giftTaxAmount: number;
   };
 
-  /** 지방소득세 = (결정+가산) × 10%, 천원 절사 */
+  /**
+   * [echo] 지방소득세 과세표준에 산입되는 가산세 = 자산별 **§114조의2분 합계만**.
+   *
+   * 위 `penaltyTax`는 국기법 §47의2~§47의4 신고불성실·납부지연분까지 합한 **총액**이라
+   * 지방소득세 base로 쓸 수 없다. 표시부가 base를 재현해야 할 때는 이 필드를 쓴다.
+   */
+  buildingPenaltyTax?: number;
+  /**
+   * 지방소득세 = (결정세액 + **§114조의2분만**) × 10%, 원 미만 절사 (지방세법 §103의3).
+   * 국기법 신고불성실·납부지연 가산세는 과세표준에서 제외된다 — `transfer-tax-aggregate.ts` STEP M-10.
+   */
   localIncomeTax: number;
   /** 농어촌특별세 = §99의3 등 소득금액차감 감면세액 × 20% (농특세법 §3·§5). 감면 없으면 0. */
   ruralSurtax: number;

@@ -75,9 +75,17 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
      */
     reductionAmount: t.reductionAmount,
     determinedTax: t.determinedTax,
-    // §114조의2 환산가액적용가산세는 겸용 경로에 없다 — 신고불성실·납부지연만 온다.
+    // §114조의2 환산가액적용가산세는 겸용 경로에 없다 — 신고불성실·납부지연만 온다
+    // (`transfer-tax-mixed-use-totals.ts`: `penaltyTax: penalty?.totalPenalty ?? 0`).
     penaltyBase: 0,
     penaltyTax: t.penaltyTax,
+    /**
+     * 지방소득세 과세표준 산입분 = **0**. 위 `penaltyTax` 슬롯이 담고 있는 것은 국기법
+     * §47의2~§47의4 가산세이고, 그것은 지방소득세 과세표준에서 제외된다(지방세법 §103의3).
+     * 겸용 엔진도 `applyRate(determinedTax, 0.10)`으로 가산세를 base에서 빼고 있다.
+     * 이 필드가 없으면 신고서·명세서가 슬롯을 §114조의2로 오인해 base를 부풀린다.
+     */
+    localTaxPenalty: 0,
     localIncomeTax: localTax,
     totalTax: t.totalPayable,
     // b.steps는 MixedUseStep[] (id/title/legalBasis/values 구조)로 CalculationStep[]과

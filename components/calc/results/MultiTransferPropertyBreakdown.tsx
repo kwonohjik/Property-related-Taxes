@@ -34,10 +34,16 @@ import { ValuationDetailCards } from "@/components/calc/results/transfer/Valuati
  * 다건 합산 결과의 자산별 값을 신고서 양식 표 형식으로 표시하기 위함.
  * mixed-use·split detail은 다건 컨텍스트에서 사용되지 않으므로 undefined.
  */
-function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
+export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
   const totalPenalty = b.penaltyTax + b.filingDelayedPenaltyTax;
   const determinedTax = b.refDeterminedTax;
-  const localIncomeTax = Math.floor((determinedTax + totalPenalty) * 0.1);
+  /**
+   * 지방소득세 base는 **§114조의2분(`b.penaltyTax`)만**이다 — 국기법 §47의2~§47의4
+   * 신고불성실·납부지연분(`b.filingDelayedPenaltyTax`)은 과세표준에서 제외된다(지방세법 §103의3).
+   * 종전에는 `totalPenalty`를 넣어 자산별 지방세가 같은 화면의 합계 카드와 어긋났다.
+   * 축 설명: `transfer/local-income-tax-display.ts`.
+   */
+  const localIncomeTax = Math.floor((determinedTax + b.penaltyTax) * 0.1);
   return {
     isExempt: b.isExempt,
     exemptReason: b.exemptReason,
@@ -59,6 +65,8 @@ function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
     determinedTax,
     penaltyTax: totalPenalty,
     penaltyBase: b.penaltyBase ?? 0,
+    // `penaltyTax` 슬롯에 국기법분이 섞여 있으므로 지방소득세 산식용 §114조의2분을 따로 싣는다.
+    localTaxPenalty: b.penaltyTax,
     localIncomeTax,
     totalTax: determinedTax + totalPenalty + localIncomeTax,
     steps: b.steps,
