@@ -315,7 +315,10 @@ describe("lot-allocation Pre-Do anchor", () => {
       expect(r.calculatedTax).toBe(1_000_000); // 10%
     });
 
-    it("AT-SPLIT-SME-3: listed_otc_non_major + 중소기업 → 10% (기존 정상 유지)", () => {
+    // ⚠️ `listed_otc_non_major` 는 2026-08-27 통합으로 **분류가 새로 만들지 않는다**.
+    //    다만 `calcSplitModeTax` 는 저장된 이력의 결과값을 다시 그릴 때도 불릴 수 있으므로
+    //    **legacy 값에 대한 세율 취급**을 여기서 계속 고정한다(union 도 남겨 두었다).
+    it("AT-SPLIT-SME-3: listed_otc_non_major(legacy) + 중소기업 → 10% (기존 정상 유지)", () => {
       const r = calcSplitModeTax(TAX_BASE, detail, "listed_otc_non_major", true);
       expect(r.calculatedTax).toBe(1_000_000); // 10%
     });
