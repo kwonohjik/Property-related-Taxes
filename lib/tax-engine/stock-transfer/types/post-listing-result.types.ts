@@ -45,6 +45,12 @@ export type PostListingValuationResult = {
     listing: { netIncomeValue: number; netAssetValue: number; weightedRaw: number };
     acquisition: { netIncomeValue: number; netAssetValue: number; weightedRaw: number };
   };
+  /**
+   * [표시 전용 echo] §165⑤ 환산식의 곱셈 대상 — 「상장일 이후 1개월간의 최종시세가액
+   * 평균액」. simple 모드는 사용자가 이 평균을 직접 입력하므로 `detail.closing`
+   * (일자별 합계·거래일수)이 없다 ⇒ 그 모드에서는 이 echo가 화면의 유일한 노출 경로다.
+   */
+  listingClosingAvg1Month?: number;
   appliedRules: string[];
   warnings: string[];
 

@@ -134,12 +134,26 @@ describe("WB — 취득 후 상장 환산 가중평균 산출근거 (§165④1)"
     expect(text).toContain("소득세법 시행령 §165④1 단서");
   });
 
+  it("WB-7 — 1주당 취득기준시가 줄이 「언제의」 종가평균인지와 그 값을 보여준다", () => {
+    const r = conv({});
+    // simple 모드는 detail.closing(일자별 합계·거래일수)이 없다 — echo가 유일한 노출 경로
+    expect(r.detail?.closing).toBeUndefined();
+    expect(r.listingClosingAvg1Month).toBe(8_001);
+
+    const { container } = renderCard(r);
+    expect(container.textContent).toContain(
+      "1주당 취득기준시가 = 상장일 이후 1개월 종가평균 8,001 × 환산비율 0.72798 (절사) = 5,824",
+    );
+  });
+
   it("WB-6 — echo 없는 과거 저장 결과는 값만 표시한다 (하위 호환)", () => {
     const legacy = { ...conv({}) };
     delete (legacy as { weightedBasis?: unknown }).weightedBasis;
+    delete (legacy as { listingClosingAvg1Month?: unknown }).listingClosingAvg1Month;
     const { container } = renderCard(legacy);
     const text = container.textContent ?? "";
     expect(text).toContain("상장연도 1주당 가중평균 = 39,082");
     expect(text).not.toContain("순손익가치");
+    expect(text).toContain("1주당 취득기준시가 = 종가평균 × 환산비율 (절사) = 5,824");
   });
 });
