@@ -321,6 +321,10 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     etActualTransferDate: strField("etActualTransferDate"),
     etActualTransferPricePerShare: strField("etActualTransferPricePerShare"),
     etForeignTaxPaid: strField("etForeignTaxPaid"),
+    etForeignTaxPaidForeign: strField("etForeignTaxPaidForeign"),
+    etForeignTaxCurrencyCode:
+      strField("etForeignTaxCurrencyCode") || defaults.etForeignTaxCurrencyCode,
+    etForeignTaxExchangeRate: strField("etForeignTaxExchangeRate"),
     etForeignTaxExclusionReason: enumField("etForeignTaxExclusionReason", ["none", "credit_allowed", "step_up"], defaults.etForeignTaxExclusionReason),
     etDomesticSourceTaxWithheld: strField("etDomesticSourceTaxWithheld"),
     etHasFiledHoldingsReport: boolField("etHasFiledHoldingsReport", defaults.etHasFiledHoldingsReport),
@@ -431,6 +435,10 @@ function normalizeExitTaxHoldings(raw: unknown): ExitTaxHoldingForm[] {
         priorYearEndMonthAvg: typeof o.priorYearEndMonthAvg === "string" ? o.priorYearEndMonthAvg : "",
         unlistedSamplePrice: typeof o.unlistedSamplePrice === "string" ? o.unlistedSamplePrice : "",
         unlistedStdPricePerShare: typeof o.unlistedStdPricePerShare === "string" ? o.unlistedStdPricePerShare : "",
+        // 보유현황 신고서 표시 전용 — 구 세션에는 없던 필드라 빈 문자열로 채운다
+        stockCodeOrBizNumber: typeof o.stockCodeOrBizNumber === "string" ? o.stockCodeOrBizNumber : "",
+        faceValuePerShare: typeof o.faceValuePerShare === "string" ? o.faceValuePerShare : "",
+        ownershipRatio: typeof o.ownershipRatio === "string" ? o.ownershipRatio : "",
       };
     })
     .filter((l): l is ExitTaxHoldingForm => l !== null);

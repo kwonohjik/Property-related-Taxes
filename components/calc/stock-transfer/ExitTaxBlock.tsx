@@ -23,6 +23,7 @@
  */
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { CURRENCY_OPTIONS } from "./currency-options";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { Tone } from "@/components/calc/shared/tones";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -324,6 +325,46 @@ export function ExitTaxBlock({ form, onChange }: ExitTaxBlockProps) {
               hideUnit
               placeholder="외국납부세액 (원화 환산)"
             />
+
+          {/*
+            외화 + 기준환율 — §118의13 외국납부세액은 본래 **외국에서 낸 세금**이라 외화다.
+            종전에는 원화 환산액만 받아 **사용자가 스스로 곱해** 넣어야 했고, 어떤 환율을
+            썼는지 화면에 남지 않아 검산이 불가능했다.
+            소득세법 시행령 §178의5 는 「수령·지출일 현재 외국환거래법 **기준환율 또는
+            재정환율**」을 정한다 — 그 환율을 직접 넣으면 **환산은 엔진이** 한다.
+            ⚠️ 외화·환율이 **둘 다** 있어야 환산한다. 하나만 넣으면 위 원화 입력이 그대로 쓰인다.
+          */}
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <FieldCard label="외국납부세액 (외화)" hint="외국에서 실제 납부한 금액">
+              <DecimalInput
+                value={form.etForeignTaxPaidForeign}
+                onChange={(v) => onChange({ etForeignTaxPaidForeign: v })}
+                placeholder="예: 1000"
+              />
+            </FieldCard>
+            <FieldCard label="통화" hint="표시용 — 계산에는 쓰지 않습니다">
+              <select
+                value={form.etForeignTaxCurrencyCode}
+                onChange={(e) => onChange({ etForeignTaxCurrencyCode: e.target.value })}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+              >
+                {CURRENCY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </FieldCard>
+            <FieldCard
+              label="납세일 기준환율"
+              hint="외국환거래법 기준환율 또는 재정환율 (소득세법 시행령 §178의5)"
+              unit={`KRW/${form.etForeignTaxCurrencyCode || "USD"}`}
+            >
+              <DecimalInput
+                value={form.etForeignTaxExchangeRate}
+                onChange={(v) => onChange({ etForeignTaxExchangeRate: v })}
+                placeholder="예: 1350.00"
+              />
+            </FieldCard>
+          </div>
           </FieldCard>
 
           <FieldCard label="§118의13② 배제 사유" required>

@@ -294,8 +294,17 @@ export interface StockTransferFormData {
   etActualTransferDate: string;
   /** 납부유예 후 실양도 1주당 단가 (원) */
   etActualTransferPricePerShare: string;
-  /** 외국납부세액 (원화 환산, §118의13) */
+  /** 외국납부세액 (원화 직접 입력, §118의13) */
   etForeignTaxPaid: string;
+  /**
+   * 외국납부세액 — **외화 금액**. 해외주식과 같은 축이다.
+   * 외화·환율이 둘 다 있으면 엔진이 `외화 × 환율`(원 미만 절사)로 환산해 우선 적용한다.
+   */
+  etForeignTaxPaidForeign: string;
+  /** 외국납부세액 통화 코드 (표시용). 3중 패턴 default: "USD" */
+  etForeignTaxCurrencyCode: string;
+  /** 납세일 기준환율 (원/외화) — 소득세법 시행령 §178의5 */
+  etForeignTaxExchangeRate: string;
   /**
    * §118의13② 적용 배제 사유 (3중 패턴 default: "none")
    * "none"           → 배제 사유 없음 → 공제 적용
@@ -617,6 +626,9 @@ export function createInitialStockFormData(): StockTransferFormData {
     etActualTransferDate: "",
     etActualTransferPricePerShare: "",
     etForeignTaxPaid: "",
+    etForeignTaxPaidForeign: "",
+    etForeignTaxCurrencyCode: "USD",     // 3중 패턴 default
+    etForeignTaxExchangeRate: "",
     etForeignTaxExclusionReason: "none",  // 3중 패턴 default
     etDomesticSourceTaxWithheld: "",
     etHasFiledHoldingsReport: false,

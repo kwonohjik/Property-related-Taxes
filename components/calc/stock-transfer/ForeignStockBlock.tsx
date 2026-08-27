@@ -21,6 +21,7 @@
  */
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { CURRENCY_OPTIONS } from "./currency-options";
 import { FOREIGN_STOCK_TRACK_START } from "@/lib/tax-engine/data/foreign-stock-track-era";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { Tone } from "@/components/calc/shared/tones";
@@ -47,15 +48,6 @@ const COUNTRY_OPTIONS = [
 ];
 
 // ── 통화 목록 ──
-const CURRENCY_OPTIONS = [
-  { value: "USD", label: "USD — 미국 달러" },
-  { value: "JPY", label: "JPY — 일본 엔" },
-  { value: "EUR", label: "EUR — 유로" },
-  { value: "HKD", label: "HKD — 홍콩 달러" },
-  { value: "CNY", label: "CNY — 중국 위안" },
-  { value: "GBP", label: "GBP — 영국 파운드" },
-  { value: "OTHER", label: "기타 (직접 입력)" },
-];
 
 // ── 양도가액 수령 방식 (FS-09 §178의5②) ──
 const FS_RECEIPT_MODE_OPTIONS = [

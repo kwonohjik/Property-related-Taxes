@@ -330,6 +330,10 @@ async function handleExitTax(body: unknown): Promise<NextResponse> {
     actualTransferPricePerShare: coerced.actualTransferPricePerShare as number | undefined,
 
     foreignTaxPaid: coerced.foreignTaxPaid as number | undefined,
+    // 외화 + 기준환율 (소령 §178의5) — 둘 다 있으면 엔진이 환산해 우선 적용
+    foreignTaxPaidForeign: coerced.foreignTaxPaidForeign as number | undefined,
+    foreignTaxCurrencyCode: coerced.foreignTaxCurrencyCode as string | undefined,
+    foreignTaxExchangeRate: coerced.foreignTaxExchangeRate as number | undefined,
     foreignTaxExclusionReason: coerced.foreignTaxExclusionReason as ExitTaxInput["foreignTaxExclusionReason"],
 
     domesticSourceTaxWithheld: coerced.domesticSourceTaxWithheld as number | undefined,
