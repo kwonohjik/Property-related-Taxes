@@ -162,7 +162,9 @@ describe("OM — 장내·장외 거래 매트릭스 (§94①3 가목 1) 단서)"
   });
 
   // ──────────────────────────────────────────────────────────
-  // OM-7: 비상장 + K-OTC 비대주주 → 기존 listed_otc_non_major 보존 (isOnMarket 무시)
+  // OM-7: 비상장 + K-OTC 비대주주 → unlisted_non_major (isOnMarket 무시)
+  //  ⚠️ 종전 주석은 「listed_otc_non_major 보존」이라 적었으나 **단언은 처음부터 unlisted_non_major**
+  //     였다. 그 카테고리는 상장 분기에서만 나왔고 2026-08-27 통합으로 이제 생성되지 않는다.
   // ──────────────────────────────────────────────────────────
   it("OM-7: K-OTC 비대주주 (unlisted + isKOTCTrading) → unlisted_non_major (isOnMarket 무시)", () => {
     const r = calculateStockTransferTax(

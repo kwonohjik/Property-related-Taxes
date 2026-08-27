@@ -231,11 +231,45 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
           </>
         )}
 
+        {/*
+          가산세 — 국외자산 양도도 **같은 양도소득세 신고**다(소득세법 §118조의8 이 §105~§107·
+          §110~§112 를 준용). 종전에는 국외 경로에 신고축이 아예 없어 가산세가 통째로 빠졌다.
+        */}
+        {(result.underReportPenalty ?? 0) > 0 && (
+          <>
+            <Divider />
+            <Row
+              label="신고불성실 가산세 (국세기본법 §47조의2·§47조의3)"
+              value={result.underReportPenalty!}
+              sub={
+                result.penaltyBase !== undefined
+                  ? `기준금액 ${fmt(result.penaltyBase)} (과소신고납부세액등) × 가산세율`
+                  : undefined
+              }
+              indent
+            />
+          </>
+        )}
+        {(result.latePaymentPenalty ?? 0) > 0 && (
+          <Row
+            label="납부지연 가산세 (국세기본법 §47조의4)"
+            value={result.latePaymentPenalty!}
+            sub="미납세액 × 경과일수 × 1일 10만분의 22 (국기령 §27조의4①)"
+            indent
+          />
+        )}
+
         <Divider />
         <Row
           label="최종 소득세"
           value={result.finalTax}
-          sub={hasForeignTaxCredit ? "산출세액 − 외국납부세액공제" : "산출세액"}
+          sub={
+            (result.underReportPenalty ?? 0) + (result.latePaymentPenalty ?? 0) > 0
+              ? `${hasForeignTaxCredit ? "산출세액 − 외국납부세액공제" : "산출세액"} + 가산세`
+              : hasForeignTaxCredit
+                ? "산출세액 − 외국납부세액공제"
+                : "산출세액"
+          }
           highlight
         />
         <Row

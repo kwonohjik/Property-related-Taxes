@@ -153,6 +153,9 @@ async function handleAggregate(body: unknown): Promise<NextResponse> {
 const FOREIGN_STOCK_DATE_FIELDS = [
   "transferDate",
   "acquisitionDate",
+  // 가산세 §47조의4 — 경과일수 기산에 쓰인다
+  "paymentDeadline",
+  "actualPaymentDate",
 ] as const;
 
 /**
@@ -233,6 +236,17 @@ function buildForeignEngineInput(rawInput: Record<string, unknown>): ForeignStoc
 
     capitalExpenditureForeign: coerced.capitalExpenditureForeign as number,
     transferCostForeign: coerced.transferCostForeign as number,
+
+    // 신고축(가산세) — 국외자산 양도도 같은 양도소득세 신고다(소득세법 §118조의8)
+    filingViolation: coerced.filingViolation as ForeignStockInput["filingViolation"],
+    isFraudulent: coerced.isFraudulent as boolean | undefined,
+    isInternationalTransaction: coerced.isInternationalTransaction as boolean | undefined,
+    originalFiledTax: coerced.originalFiledTax as number | undefined,
+    priorPaidTax: coerced.priorPaidTax as number | undefined,
+    interestSurcharge: coerced.interestSurcharge as number | undefined,
+    unpaidTax: coerced.unpaidTax as number | undefined,
+    paymentDeadline: coerced.paymentDeadline as Date | undefined,
+    actualPaymentDate: coerced.actualPaymentDate as Date | undefined,
 
     hasForeignTax: coerced.hasForeignTax as boolean,
     foreignTaxPaidForeign: coerced.foreignTaxPaidForeign as number | undefined,

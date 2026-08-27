@@ -102,6 +102,18 @@ export const foreignStockInputSchema = z.object({
 
   // ── 기타 ──
   isElectronicFiling: z.boolean(),
+
+  // ── 신고축(가산세) — 국외자산 양도도 같은 신고다(소득세법 §118조의8 준용) ──
+  // 전부 optional: 미선언 = 정상신고(가산세 0).
+  filingViolation: z.enum(["none", "under_report", "non_report"]).optional(),
+  isFraudulent: z.boolean().optional(),
+  isInternationalTransaction: z.boolean().optional(),
+  originalFiledTax: z.number().min(0).optional(),
+  priorPaidTax: z.number().min(0).optional(),
+  interestSurcharge: z.number().min(0).optional(),
+  unpaidTax: z.number().min(0).optional(),
+  paymentDeadline: z.union([z.string(), z.date()]).optional(),
+  actualPaymentDate: z.union([z.string(), z.date()]).optional(),
 }).superRefine((d, ctx) => {
   // 납세의무 요건 — 5년 미만은 not_liable 처리이므로 차단하지 않음 (엔진 내부 처리)
 

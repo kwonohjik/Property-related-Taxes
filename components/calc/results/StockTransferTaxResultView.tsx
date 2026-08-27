@@ -96,8 +96,9 @@ interface StockTransferTaxResultViewProps {
 const TAX_CATEGORY_LABEL: Record<StockTransferResult["taxCategory"], string> = {
   listed_major: "§94①3 가목 — 상장 대주주",
   listed_non_major_in_market: "§94①3 가목1) — 장내 비과세",
-  listed_otc_non_major: "§94①3 가목2) — K-OTC 비대주주",
-  listed_off_market_non_major: "§94①3 가목1) 본문 — 상장 비대주주 장외 과세",
+  // legacy — 2026-08-27 통합 이후 새로 만들지 않는다(저장된 이력 표시용)
+  listed_otc_non_major: "§94①3 가목2) — 상장 비대주주 증권시장 밖 양도 (구 분류)",
+  listed_off_market_non_major: "§94①3 가목2) — 상장 비대주주 증권시장 밖 양도",
   unlisted_major: "§94①3 나목 — 비상장 대주주",
   unlisted_non_major: "§94①3 나목 — 비상장 소액",
   kotc_sme_mid_exempt: "§94①3 나목 단서 — K-OTC 중소·중견 비과세",

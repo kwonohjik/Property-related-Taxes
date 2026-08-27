@@ -169,7 +169,8 @@ function taxCategoryLabel(cat: StockTransferResult["taxCategory"]): string {
   const map: Record<string, string> = {
     listed_major: "상장 대주주",
     listed_non_major_in_market: "상장 비대주주 (장내)",
-    listed_otc_non_major: "K-OTC 비대주주",
+    // legacy — 통합 이후 새로 만들지 않는다(저장된 이력 표시용)
+    listed_otc_non_major: "상장 비대주주 (장외)",
     listed_off_market_non_major: "상장 비대주주 (장외)",
     unlisted_major: "비상장 대주주",
     unlisted_non_major: "비상장 소액",

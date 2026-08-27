@@ -20,6 +20,7 @@ import {
   computeStockFilingPenalty,
   computeStockLatePaymentPenalty,
   STOCK_PENALTY_RULE_REFS,
+  type FilingAxisFields,
 } from "./stock-transfer-finalize";
 
 export /**
@@ -35,8 +36,13 @@ export /**
  */
 function pickFilingAxisInput(
   inputs: AggregateStockItemInput[],
-): StockTransferInput | undefined {
-  return inputs.find((i): i is StockTransferInput => !isForeignStockItem(i));
+): FilingAxisFields | undefined {
+  // 국내 종목이 있으면 그쪽이 대표다 — 신고축이 **필수**라 항상 값이 있다.
+  const domestic = inputs.find((i): i is StockTransferInput => !isForeignStockItem(i));
+  if (domestic) return domestic;
+  // 전부 국외인 신고 — 신고축을 **선언한** 첫 종목을 쓴다(§118조의8 준용으로 같은 신고다).
+  // 선언이 없으면 정상신고이므로 undefined 를 그대로 돌려 가산세 0 이 된다.
+  return inputs.find((i) => i.filingViolation !== undefined && i.filingViolation !== "none");
 }
 
 /**
@@ -68,7 +74,7 @@ export function stripItemPenalties(items: StockTransferResult[]): StockTransferR
 /** 신고 단위 가산세 1회 산정 — 국내 종목이 하나도 없으면 0 */
 export function computeFilingUnitPenalty(
   determinedTotal: number,
-  axis: StockTransferInput | undefined,
+  axis: FilingAxisFields | undefined,
 ): { filing: number; late: number } {
   if (!axis) return { filing: 0, late: 0 };
   return {

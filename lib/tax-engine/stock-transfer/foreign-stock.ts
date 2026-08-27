@@ -41,6 +41,10 @@ import type {
 import { applyRate } from "@/lib/tax-engine/tax-utils";
 import { computeForeignTaxCreditLimits } from "./foreign-tax-credit-limit";
 import {
+  computeStockFilingPenalty,
+  computeStockLatePaymentPenalty,
+} from "./stock-transfer-finalize";
+import {
   STOCK_FOREIGN,
   STOCK_FOREIGN_BASIC_DEDUCTION,
   STOCK_FOREIGN_RATE,
@@ -347,9 +351,28 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   const localIncomeTax = floorTen(taxAfterCredit * 0.1);
 
   // ──────────────────────────────────────────────────────────
+  // STEP 11.5: 가산세 (국세기본법 §47조의2·§47조의3·§47조의4)
+  //
+  // 🔑 국외자산 양도도 **같은 양도소득세 신고**다 — 소득세법 §118조의8 이 §105~§107·§110~§112 를
+  //    준용한다. 종전에는 신고축이 타입에 없어 국외 신고의 가산세가 통째로 빠져 있었다.
+  //
+  // base 는 「과소신고납부세액등」이라 **외국납부세액공제를 반영한 뒤**의 금액이다
+  // (국내 finalize 가 전자신고 세액공제·외국납부세액공제를 뺀 뒤 세율을 곱하는 것과 같은 구조).
+  // ──────────────────────────────────────────────────────────
+  const filing = computeStockFilingPenalty(taxAfterCredit, {
+    filingViolation: input.filingViolation ?? "none",
+    isFraudulent: input.isFraudulent ?? false,
+    isInternationalTransaction: input.isInternationalTransaction ?? false,
+    originalFiledTax: input.originalFiledTax,
+    priorPaidTax: input.priorPaidTax,
+    interestSurcharge: input.interestSurcharge,
+  });
+  const latePaymentPenalty = computeStockLatePaymentPenalty(input);
+
+  // ──────────────────────────────────────────────────────────
   // STEP 12: 최종 납부세액
   // ──────────────────────────────────────────────────────────
-  const finalTax = taxAfterCredit;
+  const finalTax = taxAfterCredit + filing.penalty + latePaymentPenalty;
   const finalLocalTax = localIncomeTax;
   const totalTax = finalTax + finalLocalTax;
 
@@ -374,6 +397,10 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
     foreignTaxCreditApplied,
     foreignTaxPaidKrw: foreignTaxPaidKrw > 0 ? foreignTaxPaidKrw : undefined,
     foreignTaxExpenseApplied,
+
+    underReportPenalty: filing.penalty,
+    latePaymentPenalty,
+    penaltyBase: filing.penaltyBase,
 
     finalTax,
     finalLocalTax,

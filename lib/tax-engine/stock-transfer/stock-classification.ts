@@ -327,21 +327,21 @@ function classifySection94(
         basicDeductionGroup: "stock",
       };
     }
-    // 비대주주 — 장외(K-OTC) vs 장내
-    if (isKOTCTrading) {
-      return {
-        taxCategory: "listed_otc_non_major",
-        appliedSection94: "①3가2)",
-        section94_2Applied: false,
-        basicDeductionGroup: "stock",
-      };
-    }
-    // 장외 비대주주 (KOSPI/KOSDAQ/KONEX 비K-OTC) — 과세
+    // 비대주주 — **증권시장 밖 거래**면 과세, 장내면 비과세.
     //
     // 근거: §94①3 가목 **2)** 「1)에 따른 대주주에 해당하지 아니하는 자가 **증권시장에서의
     // 거래에 의하지 아니하고** 양도하는 주식등」. 이 사실관계를 그대로 담는 목이 2)다.
     // (종전에는 가목 1)을 붙였는데, 1)은 「**대주주가** 양도하는 것」이라 정반대다.)
-    if (input.isOnMarketTransaction === false) {
+    //
+    // 🔑 **`listed_otc_non_major` 는 더 이상 만들지 않는다**(2026-08-27 통합).
+    //    종전에는 `isKOTCTrading` 이면 그 카테고리를, 장외면 `listed_off_market_non_major` 를
+    //    따로 냈는데 **세율·분할모드 취급·조문이 모두 같아** 실질 중복이었다.
+    //    게다가 상장주식의 K-OTC 거래는 **법문상 성립하지 않는다** — 자본시장법 §286①5호가
+    //    협회 업무를 「**상장되지 아니한 주권**의 장외매매거래」로 정의한다. 상장 종목에서 그
+    //    토글이 뜻하는 것은 실제로 **ATS**(§8조의2⑤ — 상장주권 대상)이고, 그것 역시
+    //    「증권시장 밖 거래」의 한 갈래다. ⇒ 사실을 담는 이름은 하나면 된다.
+    //    (union·라벨은 **저장된 이력** 때문에 남겨 둔다 — 새로 만들지 않을 뿐이다.)
+    if (isKOTCTrading || input.isOnMarketTransaction === false) {
       return {
         taxCategory: "listed_off_market_non_major",
         appliedSection94: "①3가2)",

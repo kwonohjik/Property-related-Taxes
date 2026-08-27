@@ -136,6 +136,33 @@ export type ForeignStockInput = {
 
   // ── 기타 ──
   isElectronicFiling: boolean;
+
+  // ── 신고축 (가산세) — 국내와 같은 이름·같은 의미 ──
+  //
+  // 🔑 **국외자산 양도도 같은 양도소득세 신고다.** 소득세법 §118조의8 이 §105~§107(예정신고)·
+  //    §110~§112(확정신고·납부)를 준용하고, 국세기본법 §47조의2·§47조의3 은 「국세의 과세표준
+  //    **신고**」 단위로 걸린다. 해외주식만 거래한 납세자라고 가산세를 면할 근거는 없다.
+  //
+  // 종전에는 이 축이 **타입 자체에 없어** ① 국외 단건은 가산세가 계산되지 않았고
+  // ② 전부 국외인 다종목 신고는 대표 축을 고를 수 없어 가산세가 0이었다.
+  //
+  // ⚠️ 전부 optional 이다 — 미선언은 **정상신고**(가산세 0)로 읽는다. 국내 경로는 Zod 가
+  //    `filingViolation` 을 필수로 강제하므로 그쪽 의미는 달라지지 않는다.
+  filingViolation?: "none" | "under_report" | "non_report";
+  isFraudulent?: boolean;
+  isInternationalTransaction?: boolean;
+  /** 당초 신고한 납부세액 — 「과소신고납부세액등」에서 차감 (국세기본법 §47조의3①) */
+  originalFiledTax?: number;
+  /** 기납부세액(예정신고 납부분) */
+  priorPaidTax?: number;
+  /** 이자상당가산액 — §47조의3① 괄호로 base 에서 제외 */
+  interestSurcharge?: number;
+  /** 미납·과소납부세액 — 납부지연가산세 base (§47조의4①1호) */
+  unpaidTax?: number;
+  /** 법정납부기한 */
+  paymentDeadline?: Date;
+  /** 실제 납부일 */
+  actualPaymentDate?: Date;
 };
 
 // ============================================================
@@ -198,8 +225,16 @@ export type ForeignStockResult = {
   /** 필요경비 산입액 (expense 선택 시) */
   foreignTaxExpenseApplied?: number;
 
+  // ── 가산세 (국세기본법 §47조의2·§47조의3·§47조의4) ──
+  /** 신고불성실가산세 — 신고축 미선언이면 0 */
+  underReportPenalty?: number;
+  /** 납부지연가산세 — 미납세액·법정납부기한이 둘 다 있어야 계산된다 */
+  latePaymentPenalty?: number;
+  /** 가산세 기준금액 「과소신고납부세액등」 — 결과 화면 산식 표시용 echo */
+  penaltyBase?: number;
+
   // ── 최종 ──
-  /** 최종 납부세액 = 산출세액 - 외국납부세액공제 */
+  /** 최종 납부세액 = 산출세액 − 외국납부세액공제 + 가산세 */
   finalTax: number;
   finalLocalTax: number;
   /** 총 납부액 = finalTax + finalLocalTax */
