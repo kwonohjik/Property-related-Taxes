@@ -57,6 +57,12 @@ function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
 }
 
+/** 통화 문자열("1,000,000") → 숫자. 빈값·비수치는 0 */
+function amountOf(s: string | undefined): number {
+  const n = Number((s ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
 // ============================================================
 // Step별 validation (마법사 단계 진입 전 검증)
 // ============================================================
@@ -491,6 +497,20 @@ export function validateStep3(form: StockTransferFormData): StockValidationError
     });
   }
 
+  /**
+   * 납부지연가산세(국세기본법 §47조의4①1호)는 **미납세액과 법정납부기한이 둘 다** 있어야
+   * 계산된다 — 경과일수를 기한 다음 날부터 세기 때문이다. 기한 없이 미납세액만 넣으면
+   * 엔진이 **조용히 0을 반환**하므로, 「입력했는데 안 잡힌다」가 되지 않게 여기서 막는다
+   * (자동 fallback 금지 — 미입력은 검증 오류로 차단).
+   */
+  if (amountOf(form.unpaidTax) > 0 && isEmpty(form.paymentDeadline)) {
+    errors.push({
+      field: "paymentDeadline",
+      message: "납부지연가산세를 계산하려면 법정납부기한을 입력하세요 (경과일수 기산점입니다).",
+      severity: "error",
+    });
+  }
+
   return errors;
 }
 
@@ -503,6 +523,45 @@ export function validateAllSteps(form: StockTransferFormData): StockValidationEr
     ...validateStep2(form),
     ...validateStep3(form),
   ];
+}
+
+/**
+ * ⑧ 다종목 — **확정한 종목 전부**를 계산 전에 검증한다.
+ *
+ * ## 왜 필요한가 (V-3 실측 2026-08-27)
+ *
+ * 종목 확정 게이트는 **종목명·시장 2개**뿐이다(사용자가 종목을 오가며 채우는 흐름을 막지
+ * 않으려는 의도적 설계). 문제는 그 뒤였다 — 불완전한 종목이 목록에 남은 채 계산하면:
+ *
+ *   1. `buildStockTransferApiBody` 가 나머지를 기본값으로 채워 **Zod 가 통과**하고,
+ *   2. 엔진에서 `transferDate.getTime is not a function` 으로 **터진다**(500).
+ *
+ * 사용자에게는 그냥 「계산 오류」라 **어느 종목이 문제인지 알 길이 없다**. 종목이 5건이면
+ * 하나씩 지워 보는 수밖에 없다.
+ *
+ * ⇒ 계산 전에 **순번과 종목명으로 지목**해 막는다. 종목당 **첫 오류만** 보고한다 —
+ *   한 종목이 오류 10건을 쏟으면 목록이 읽히지 않는다.
+ *
+ * ⚠️ 서버 방어는 별개다 — `stockTransferInputSchema` 의 날짜 칸이 빈 문자열을 거부한다(⑫).
+ *   클라이언트 검증만 두면 API 를 직접 호출하는 경로가 그대로 500 을 만든다.
+ */
+export function validateFilingItems(
+  forms: StockTransferFormData[],
+): StockValidationError[] {
+  const errors: StockValidationError[] = [];
+  forms.forEach((form, i) => {
+    const first = validateAllSteps(form).find((e) => e.severity === "error");
+    if (!first) return;
+    const label = form.securityName?.trim()
+      ? `${i + 1}번째 종목 「${form.securityName.trim()}」`
+      : `${i + 1}번째 종목`;
+    errors.push({
+      field: first.field,
+      message: `${label}: ${first.message}`,
+      severity: "error",
+    });
+  });
+  return errors;
 }
 
 /**

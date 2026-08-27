@@ -68,6 +68,19 @@ function base(over: Partial<StockTransferInput> = {}): StockTransferInput {
     expenseMode: "actual",
     actualExpenses: 0,
     filingType: "preliminary",
+    /**
+     * 신고축을 **명시**한다 (2026-08-27).
+     *
+     * 종전에는 이 셋이 빠진 채 `as StockTransferInput` 으로 캐스팅돼 있었고, 엔진의 가산세
+     * 분기가 `undefined` 를 else 로 흘려 **과소신고 10% 가산세를 조용히 매기고 있었다**.
+     * 그래서 이 파일의 세액 anchor 에 근거 없는 272,500 이 섞여 있었다(2,725,000 → 2,997,500).
+     * 실사용 경로는 Zod 가 `filingViolation` 을 **필수**로 받으므로 영향이 없던 픽스처 결함이다.
+     */
+    filingViolation: "none",
+    isFraudulent: false,
+    isInternationalTransaction: false,
+    isElectronicFiling: false,
+    realEstateGroupBasicDeductionUsed: 0,
     ...over,
   } as StockTransferInput;
 }
@@ -85,11 +98,11 @@ describe("K-1 — 상장주식에는 나목 단서 비과세가 적용되지 않
     });
   }
 
-  it("K-1-세액: kosdaq 조합에서 최종세액 2,997,500 (종전 0)", () => {
+  it("K-1-세액: kosdaq 조합에서 최종세액 2,725,000 (비과세 적용 시 0)", () => {
     const r = calculateStockTransferTax(
       base({ isKOTCTrading: true, isOnMarketTransaction: false }),
     );
-    expect(r.finalTax).toBe(2_997_500);
+    expect(r.finalTax).toBe(2_725_000);
   });
 
   it("K-1-조문: 상장 비대주주 장외이므로 §94①3 가목 2)다 (나목 단서 아님)", () => {
@@ -175,10 +188,10 @@ describe("K-3 — 벤처 경로(조특법 §14①7호)는 상장이어도 손대
 });
 
 describe("K-4 — K-OTC 미체크 대조군 (가드가 다른 경로를 건드리지 않는다)", () => {
-  it("K-4-1: 상장 + 장외 + K-OTC OFF → 종전대로 과세 2,997,500", () => {
+  it("K-4-1: 상장 + 장외 + K-OTC OFF → 종전대로 과세 2,725,000", () => {
     const r = calculateStockTransferTax(base({ isOnMarketTransaction: false }));
     expect(r.isExempt).toBe(false);
-    expect(r.finalTax).toBe(2_997_500);
+    expect(r.finalTax).toBe(2_725_000);
     expect(r.taxCategory).toBe("listed_off_market_non_major");
   });
 

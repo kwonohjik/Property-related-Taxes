@@ -18,6 +18,11 @@ import { floorTen } from "./stock-transfer-helpers";
 import { applyStockTaxRate, applyBasicProgressiveRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import {
+  pickFilingAxisInput,
+  stripItemPenalties,
+  computeFilingUnitPenalty,
+} from "./stock-transfer-aggregate-penalty";
+import {
   sumSecuritiesTransactionTax,
   type SecuritiesTransactionTaxTotal,
 } from "./securities-transaction-tax";
@@ -145,8 +150,13 @@ export interface StockTransferAggregateResult {
    * `"aggregate"` 모드에서만 만들어진다(§103①·② 기본공제가 정상 배분되는 실제 신고 경로).
    */
   otherAssetComparativeTax?: OtherAssetComparativeTax;
-  /** 합산 가산세 */
+  /**
+   * 신고불성실가산세 — **신고 1건 단위 1회** 산정 (국세기본법 §47조의2·§47조의3).
+   * 종목별 값의 합이 아니다. 종목 결과의 `underReportPenalty` 는 전부 0 이다.
+   */
   totalUnderReportPenalty: number;
+  /** 납부지연가산세 — 신고 1건 단위 1회 (국세기본법 §47조의4①1호) */
+  totalLatePaymentPenalty: number;
   /** 합산 전자신고 공제 (전체 1회) */
   electronicFilingCredit: number;
   /** 합산 최종세액 */
@@ -359,13 +369,13 @@ function aggregateCore(
     //   · `each_item` — §103① 기본공제 **중복을 허용**하는 진단 모드라 애초에 유효한 신고가
     //     아니다(위 함수 주석). 실제 신고 경로는 `"aggregate"`이며 Zod 기본값도 그쪽이다
     //     (`lib/api/stock-transfer-tax-schema.ts:548`).
-    const items = inputs.map((input) => calcOne(input));
+    // 가산세는 신고 단위 1회라 종목별 값은 버린다(`stripItemPenalties` 주석 참조).
+    const items = stripItemPenalties(inputs.map((input) => calcOne(input)));
     // 합계가 음수면 과세 소득은 0이다 — 양도소득에 결손금 이월이 없다(§102①후단·§102②).
     // 부동산 정본과 대칭(`multi-parcel-transfer.ts:478`). 종전에는 clamp가 없어 신고서식에
     // **음수 양도소득금액**이 그대로 흘렀다.
     const totalTransferIncome = Math.max(0, items.reduce((s, r) => s + r.transferIncome, 0));
     const totalCalculatedTax = items.reduce((s, r) => s + r.calculatedTax, 0);
-    const totalUnderReportPenalty = items.reduce((s, r) => s + r.underReportPenalty, 0);
     const electronicFilingCredit = items.some((r) => r.electronicFilingCredit > 0)
       ? 20_000
       : 0;
@@ -376,16 +386,19 @@ function aggregateCore(
       (s, r) => s + (r.foreignDetail?.foreignTaxCreditApplied ?? 0),
       0,
     );
+    // 신고 단위 결정세액 = 산출세액 − 세액공제. 가산세 base 가 바로 이 금액이다.
+    const determinedTotal = Math.max(
+      0,
+      totalCalculatedTax - totalForeignTaxCreditShort - electronicFilingCredit,
+    );
+    const unitPenalty = computeFilingUnitPenalty(determinedTotal, pickFilingAxisInput(inputs));
+    const totalUnderReportPenalty = unitPenalty.filing;
+    const totalLatePaymentPenalty = unitPenalty.late;
     // 결정세액 10원 미만 절사 — 단건 finalizeStockTax·aggregate 분기와 대칭
     // (구성요소가 모두 10배수라 현재 실수치 불변이나, 향후 변경 대비 정합 유지)
     const totalFinalTax = Math.max(
       0,
-      floorTen(
-        totalCalculatedTax -
-          totalForeignTaxCreditShort +
-          totalUnderReportPenalty -
-          electronicFilingCredit,
-      ),
+      floorTen(determinedTotal + totalUnderReportPenalty + totalLatePaymentPenalty),
     );
     const totalLocalIncomeTax =
       Math.floor(((totalCalculatedTax - totalForeignTaxCreditShort) * 0.10) / 10) * 10;
@@ -404,6 +417,7 @@ function aggregateCore(
       totalTaxBase: items.reduce((s, r) => s + r.taxBase, 0),
       totalCalculatedTax,
       totalUnderReportPenalty,
+      totalLatePaymentPenalty,
       electronicFilingCredit,
       totalFinalTax,
       totalLocalIncomeTax,
@@ -677,27 +691,42 @@ function aggregateCore(
       ? otherAssetComparativeTax.aggregatedTax - otherAssetComparativeTax.itemSumTax
       : 0);
 
-  // 가산세는 **자산별 단건 값의 합**을 유지한다 — 부동산 정본과 같은 방침
-  // (`transfer-tax-aggregate.ts` "자산별 가산세는 단건 엔진이 처리, aggregate는 합산만 수행").
-  const totalUnderReportPenalty = processedItems.reduce((s, r) => s + r.underReportPenalty, 0);
-
   // 전자신고 공제는 합산 1회
   const anyElectronic = inputs.some((inp) => inp.isElectronicFiling);
   const electronicFilingCredit = anyElectronic && totalCalculatedTax > 0 ? 20_000 : 0;
+
+  /**
+   * 가산세는 **신고 1건 단위 1회**다 — 종목별 값의 합이 아니다.
+   *
+   * 종전 주석은 「자산별 가산세는 단건 엔진이 처리, aggregate는 합산만 수행」이라 적으며
+   * 부동산 정본을 인용했는데, **그 인용이 틀렸다**. 부동산이 자산별로 합산하는 것은
+   * §114조의2 **환산가액적용가산세**(자산 고유)이고, 신고불성실·납부지연은
+   * `transfer-tax-aggregate.ts` 의 `filingUnitPenaltyDetail` 이 **신고 단위 결정세액에 1회**
+   * 매긴다. 주식에는 자산 고유 가산세가 없으므로 종목별은 전부 0이다.
+   *
+   * 실측 결함(계획서 P-5): 국내 20,000,000 + 국외 19,500,000 인 혼합 신고에서 종전에는
+   * 국외 종목 가산세가 0으로 고정돼 8,000,000 만 잡혔다 — 신고 단위로는 15,800,000 이라
+   * **7,800,000 과소**였다.
+   */
+  const determinedTotal = Math.max(
+    0,
+    totalCalculatedTax - totalForeignTaxCredit - electronicFilingCredit,
+  );
+  const unitPenalty = computeFilingUnitPenalty(determinedTotal, pickFilingAxisInput(inputs));
+  const totalUnderReportPenalty = unitPenalty.filing;
+  const totalLatePaymentPenalty = unitPenalty.late;
 
   // 🔑 외국납부세액공제는 **산출세액에서 차감**된다(§118의6①1호 본문) — 결정세액·지방소득세
   //    양쪽에 반영해야 한다. 국내 종목만 있으면 `totalForeignTaxCredit`이 0이라 종전과 같다.
   const totalFinalTax = Math.max(
     0,
-    floorTen(
-      totalCalculatedTax - totalForeignTaxCredit + totalUnderReportPenalty - electronicFilingCredit,
-    ),
+    floorTen(determinedTotal + totalUnderReportPenalty + totalLatePaymentPenalty),
   );
   const totalLocalIncomeTax =
     Math.floor(((totalCalculatedTax - totalForeignTaxCredit) * 0.10) / 10) * 10;
 
   return {
-    items: processedItems,
+    items: stripItemPenalties(processedItems),
     totalTransferIncome,
     basicDeductionByGroup: {
       stock: stockBasicDeduction,
@@ -710,6 +739,7 @@ function aggregateCore(
       : {}),
     ...(otherAssetComparativeTax ? { otherAssetComparativeTax } : {}),
     totalUnderReportPenalty,
+    totalLatePaymentPenalty,
     electronicFilingCredit,
     totalFinalTax,
     totalLocalIncomeTax,

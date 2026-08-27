@@ -4,7 +4,7 @@
  * StockTransferTaxResultView — 서브 컴포넌트 모음 (800줄 분할)
  *
  * ResultRow · EstimatedValuationBreakdown · ProgressiveTaxBreakdown
- * RuleBadges · Warnings · PrRoadmapCard
+ * RuleBadges · Warnings · UnsupportedItemsCard
  *
  * 모두 순수 표시 컴포넌트 — hook 없음.
  */
@@ -307,43 +307,56 @@ export function Warnings({ warnings }: { warnings: string[] }) {
   );
 }
 
-// ── PrRoadmapCard ──
+// ── UnsupportedItemsCard ──
 
-export function PrRoadmapCard() {
-  type PrStatus = "completed" | "current" | "pending";
-  const stages: { label: string; desc: string; status: PrStatus }[] = [
-    { label: "PR-1", desc: "상장 대주주·취득 후 상장", status: "completed" },
-    { label: "PR-2", desc: "비상장·평가·시기별 연혁", status: "completed" },
-    { label: "PR-3", desc: "다자산·가산세·신고서", status: "current" },
-    { label: "후속", desc: "§97의2·국외전출세·해외주식", status: "pending" },
+/**
+ * 「현재 미지원 항목」 고지 — 종전 `PrRoadmapCard`(개발용 PR 로드맵) 대체.
+ *
+ * ## 왜 로드맵을 없앴는가
+ *
+ * 종전 카드의 「PR-3 현재 / 후속 대기」는 **구현 현황과 아무 연결이 없는 하드코딩**이었다.
+ * PR-3 본체(다자산·가산세·신고서)와 후속 3축(§97의2·국외전출세·해외주식)이 전부 머지된
+ * 뒤에도 화면은 「PR-3 진행 중」이라고 말하고 있었다. 애초에 **내부 PR 번호는 사용자에게
+ * 의미가 없다** — 사용자가 알아야 할 것은 「이 계산기가 지금 무엇을 못 하는가」다.
+ *
+ * ## 규율
+ *
+ * · 항목은 **실측 근거가 있는 것만** 적는다(「아마 안 될 것」 금지).
+ * · 항목이 해소되면 **같은 PR 에서 이 문구를 지운다** — 안 그러면 이 카드가 다음 stale 표시가 된다.
+ */
+export function UnsupportedItemsCard() {
+  const items: { title: string; detail: string }[] = [
+    {
+      title: "증권거래세 — 2021-01-01 이전 양도",
+      detail:
+        "당시 세율표를 지원하지 않아 현행 세율로 표시합니다. 양도소득세 계산에는 영향이 없습니다(증권거래세는 정보성 표시입니다).",
+    },
+    {
+      title: "국외전출세 — 기준환율",
+      detail: "한국은행 고시 기준환율을 자동으로 가져오지 않습니다. 직접 입력해야 합니다.",
+    },
+    {
+      title: "국외전출자 보유현황 신고서",
+      detail: "세액 계산만 제공하며 신고서 서식은 자동 생성되지 않습니다.",
+    },
+    {
+      title: "가산세 — 국외 종목만으로 이루어진 신고",
+      detail:
+        "국내 종목이 하나도 없는 신고에서는 가산세가 계산되지 않습니다. 국내 종목이 하나라도 있으면 국외 소득분까지 함께 산정됩니다.",
+    },
   ];
 
-  const styleMap: Record<PrStatus, string> = {
-    completed: "border-emerald-300 bg-emerald-50 text-emerald-800",
-    current: "border-sky-400 bg-sky-100 text-sky-800",
-    pending: "border-slate-200 bg-white text-slate-600 opacity-60",
-  };
-
   return (
-    <div className="rounded-xl border border-sky-200 bg-sky-50/60 px-5 py-4">
-      <p className="text-sm font-semibold text-sky-800 mb-3">구현 로드맵</p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {stages.map((s) => (
-          <div
-            key={s.label}
-            className={`rounded-lg border px-3 py-2 text-center ${styleMap[s.status]}`}
-          >
-            <p className="text-xs font-bold">{s.label}</p>
-            <p className="text-xs mt-0.5">{s.desc}</p>
-            {s.status === "completed" && (
-              <span className="mt-1 inline-block text-xs bg-emerald-500 text-white px-1 rounded">✓ 완료</span>
-            )}
-            {s.status === "current" && (
-              <span className="mt-1 inline-block text-xs bg-sky-400 text-white px-1 rounded">현재</span>
-            )}
-          </div>
+    <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-5 py-4">
+      <p className="mb-2 text-sm font-semibold text-slate-800">현재 지원하지 않는 항목</p>
+      <ul className="space-y-2">
+        {items.map((it) => (
+          <li key={it.title} className="text-xs leading-relaxed">
+            <span className="font-semibold text-slate-700">{it.title}</span>
+            <span className="block text-slate-600">{it.detail}</span>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

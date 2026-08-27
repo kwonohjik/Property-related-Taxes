@@ -8,7 +8,7 @@
  * 부동산 양도세 마법사와 완전히 분리된 독립 도메인.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { StockSidebar } from "@/components/calc/stock-transfer/StockSidebar";
@@ -22,6 +22,7 @@ import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { callStockTransferTaxAPI } from "@/lib/calc/stock-transfer-tax-api";
 import { callStockTransferTaxAggregateAPI } from "@/lib/calc/stock-transfer-tax-api";
+import { validateFilingItems } from "@/lib/calc/stock-transfer-tax-validate";
 import { StockItemListCard } from "@/components/calc/stock-transfer/StockItemListCard";
 import { StockAggregateSummaryCard } from "@/components/calc/results/StockAggregateSummaryCard";
 import { validateStep1, validateStep2, validateStep3 } from "@/lib/calc/stock-transfer-tax-validate";
@@ -64,6 +65,18 @@ export default function StockTransferTaxCalculator() {
   const commitDisabledReason = canCommitCurrentItem
     ? undefined
     : "종목명과 시장 분류를 입력해야 종목을 확정할 수 있습니다.";
+
+  /**
+   * 입력이 덜 끝난 확정 종목 — 목록에서 바로 보이게 한다.
+   * 계산 시점 차단(`handleCalculate`)과 **같은 판정**을 쓴다(단일 소스).
+   */
+  const incompleteIndexes = useMemo(
+    () =>
+      savedItems
+        .map((f, i) => (validateFilingItems([f]).length > 0 ? i : -1))
+        .filter((i) => i >= 0),
+    [savedItems],
+  );
   // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
   useResetOnNewParam(reset);
 
@@ -143,6 +156,13 @@ export default function StockTransferTaxCalculator() {
     setError(null);
     try {
       if (savedItems.length > 0) {
+        // ⑧ 확정 종목 전수 검증 — 불완전 종목이 섞이면 엔진이 500 으로 터지고 사용자는
+        //    **어느 종목이 문제인지 알 수 없다**(V-3 실측). 계산 전에 순번으로 지목해 막는다.
+        const itemErrors = validateFilingItems([...savedItems, formData]);
+        if (itemErrors.length > 0) {
+          setError(itemErrors.map((e) => e.message).join("\n"));
+          return;
+        }
         const agg = await callStockTransferTaxAggregateAPI([...savedItems, formData]);
         setAggregateResult(agg);
         // 결과 화면·이력이 단건 `result`를 전제하므로 **마지막(편집 중이던) 종목**을 대표로 둔다.
@@ -199,9 +219,9 @@ export default function StockTransferTaxCalculator() {
           />
         </div>
 
-        {/* 에러 배너 */}
+        {/* 에러 배너 — 종목별 오류는 줄바꿈으로 나열되므로 `whitespace-pre-line` 으로 개행을 살린다 */}
         {error && currentStep < 3 && (
-          <div className="mb-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="mb-4 whitespace-pre-line rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {error}
           </div>
         )}
@@ -226,6 +246,7 @@ export default function StockTransferTaxCalculator() {
                       onRemove={removeSavedItem}
                       canAddCurrent={canCommitCurrentItem}
                       addDisabledReason={commitDisabledReason}
+                      incompleteIndexes={incompleteIndexes}
                     />
                   </div>
                 )}
@@ -258,6 +279,7 @@ export default function StockTransferTaxCalculator() {
                       onRemove={removeSavedItem}
                       canAddCurrent={canCommitCurrentItem}
                       addDisabledReason={commitDisabledReason}
+                      incompleteIndexes={incompleteIndexes}
                       showAddButton
                     />
                   </div>

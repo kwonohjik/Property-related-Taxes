@@ -19,6 +19,7 @@ import {
 } from "@/lib/tax-engine/stock-transfer/stock-transfer-exempt-result";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
+import { PenaltyDetailBlock } from "@/components/calc/stock-transfer/PenaltyDetailBlock";
 
 interface Step3Props {
   form: StockTransferFormData;
@@ -320,7 +321,8 @@ export function Step3({ form, onChange }: Step3Props) {
             <p className="font-semibold mb-1">ⓘ 신고-단위 적용</p>
             <p className="leading-relaxed text-sky-700">
               가산세(국세기본법 §47조의2 무신고 / §47조의3 과소신고)는 <strong>신고서 1매 단위</strong>로 적용됩니다.
-              다종목 신고 시 한 종목이라도 부정행위에 해당하면 합산 산출세액에 동일 가산세율이 적용됩니다.
+              다종목 신고에서는 종목마다 매기지 않고 <strong>합산 결정세액에 한 번</strong> 산정하며,
+              국내·국외 종목이 섞여 있어도 같은 신고이므로 함께 계산됩니다(소득세법 §118의8).
             </p>
           </div>
 
@@ -338,6 +340,9 @@ export function Step3({ form, onChange }: Step3Props) {
                   ...(v === "none"
                     ? { isFraudulent: false, isInternationalTransaction: false }
                     : {}),
+                  // 무신고·정상신고에는 「당초 신고세액」이 없다 — 남겨 두면 가산세 기준금액을
+                  // 줄여 **과소산정**된다(§47조의3① base). 축이 바뀔 때 값을 지운다.
+                  ...(v !== "under_report" ? { originalFiledTax: "0" } : {}),
                 })
               }
               tone="rose"
@@ -386,6 +391,10 @@ export function Step3({ form, onChange }: Step3Props) {
                 disabled={!form.isFraudulent}
                 disabledReason="역외거래 부정 60%는 부정행위 동반(위 항목 ON)이 전제됩니다"
               />
+
+              <div className="pt-2">
+                <PenaltyDetailBlock form={form} onChange={onChange} />
+              </div>
             </>
           )}
         </div>

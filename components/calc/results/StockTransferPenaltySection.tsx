@@ -70,6 +70,16 @@ export function StockTransferPenaltySection({
             <div className="flex justify-between py-2">
               <span className="text-rose-600">
                 {isNonReport ? "무신고" : "과소신고"} 가산세 ({underRate}%)
+                {/*
+                  base 를 함께 보인다 — 「산출세액 × 세율」로 오해하지 않도록.
+                  국세기본법 §47조의3① 의 base 는 「과소신고납부세액등」이라 당초 신고세액·
+                  기납부세액·이자상당가산액을 뺀 금액이다.
+                */}
+                {result.penaltyBase !== undefined && (
+                  <span className="block text-xs text-rose-500 mt-0.5">
+                    기준금액 {fmt(result.penaltyBase)} × {underRate}%
+                  </span>
+                )}
               </span>
               <span className="font-medium text-rose-900">{fmt(result.underReportPenalty)}</span>
             </div>

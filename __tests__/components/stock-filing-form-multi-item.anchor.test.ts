@@ -181,3 +181,26 @@ describe("FF-3 ③ 세율구분 그룹 (작성요령 4번)", () => {
     expect(labels(rows).some((l) => l.includes("세율구분 그룹"))).toBe(false);
   });
 });
+
+// ============================================================
+// RC. 행 수 가드 — 경고가 아니라 **테스트**가 잡는다 (2026-08-27)
+//
+// `StockFilingFormTableHelpers` 의 행 수 가드는 `console.warn` 이라 아무도 안 본다.
+// 실제로 `40d6cc55`(PR #1327)가 무조건 행을 32→33 으로 늘리며 기대값을 안 올려
+// **상시 발화 상태로 방치**돼 있었다(E2E 로그에서 발견). 파일 주석이 경고한
+// 「진짜 행 누락 신호가 죽는」 상태 그 자체다. ⇒ 개수를 여기서 고정한다.
+// ============================================================
+
+describe("RC. 별지84호 행 수", () => {
+  const rows = buildRows(res(), deriveColumns(res()).columns);
+
+  it("RC-1: 단건·국내는 정확히 33행 (조건부 행 3종 전부 미발동)", () => {
+    expect(rows).toHaveLength(33);
+  });
+
+  it("RC-2: 조건부 행은 단건 국내에 없다 — 가드 기대식과 같은 축을 본다", () => {
+    expect(rows.filter((r) => r.label.includes("세율구분"))).toHaveLength(0);
+    expect(rows.filter((r) => r.label.includes("외국납부세액공제"))).toHaveLength(0);
+    expect(rows.filter((r) => r.label.includes("양도차손"))).toHaveLength(0);
+  });
+});

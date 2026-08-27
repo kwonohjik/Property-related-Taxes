@@ -17,6 +17,7 @@ import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } 
 import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
+import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 
 interface StockSidebarProps {
   currentStep: number;
@@ -27,15 +28,91 @@ interface StockSidebarProps {
 
 const STEP_LABELS = ["자산·시장·대주주", "양도·취득가액", "필요경비·신고", "결과"];
 
+/**
+ * 폼 입력만으로 계산 가능한 양도가액 — **결과 도착 전 추정치**.
+ *
+ * 다종목 합산에서 확정 종목(`savedItems`)의 양도가액을 더할 때도 같은 함수를 쓴다.
+ * (종전에는 이 로직이 `useMemo` 안에 인라인이라 편집 중 1건에만 적용됐다.)
+ */
+function computeFormTransferPrice(f: StockTransferFormData): number | null {
+  if (f.lotsMode === "split") {
+    const lotSum = f.transferLots.reduce(
+      (s, l) => s + parseAmount(l.perShareTransferPrice) * parseInt(l.shareCount || "0", 10),
+      0,
+    );
+    return lotSum > 0 ? lotSum : null;
+  }
+  // single 모드 — transferActualInputMode 분기 (per_share / total)
+  const priceMode = f.transferPriceMode || "actual";
+  const actualMode = f.transferActualInputMode || "total"; // 3중 패턴 default
+  let transferPrice: number | null = null;
+  if (priceMode === "actual") {
+    if (actualMode === "total") {
+      const total = parseAmount(f.transferTotalPrice);
+      transferPrice = total > 0 ? total : null;
+    } else {
+      const perShare = parseAmount(f.perShareTransferPrice);
+      const count = parseInt(f.shareCount || "0", 10);
+      transferPrice = perShare > 0 && count > 0 ? perShare * count : null;
+    }
+  }
+  const exchangeTotal =
+    parseAmount(f.exchangePropertyValue) +
+    parseAmount(f.exchangeDebtRelief) +
+    parseAmount(f.exchangeCash);
+  return priceMode === "exchange" ? (exchangeTotal > 0 ? exchangeTotal : null) : transferPrice;
+}
+
 export function StockSidebar({ currentStep, onStepClick, stockName }: StockSidebarProps) {
   // atomic selector (무한 루프 방지)
   const formData = useStockTransferStore(useShallow((s) => s.formData));
   const result = useStockTransferStore((s) => s.result);
+  // ⑥ 다종목 — 확정 종목이 있으면 사이드바는 **신고 전체 합계**를 보여준다.
+  //   편집 중 1건만 보이면 3종목을 확정한 사용자가 그 값을 신고 전체로 읽는다.
+  const savedItems = useStockTransferStore(useShallow((s) => s.savedItems));
+  const aggregateResult = useStockTransferStore((s) => s.aggregateResult);
 
   // 사이드바 합계 — 입력값으로 계산 가능한 항목만 (useMemo — store 미러링 금지)
+  /** 확정 종목 + 편집 중 = 이번 신고의 종목 수 */
+  const filingItemCount = savedItems.length + 1;
+  const isMultiFiling = savedItems.length > 0;
+
   const summary = useMemo((): WizardSidebarSummaryItem[] => {
     const items: WizardSidebarSummaryItem[] = [];
     const isSplitMode = formData.lotsMode === "split";
+
+    // ── ⑥ 다종목 합산신고 ──
+    //
+    // 계산 후에는 **엔진 합계**를 그대로 쓴다(§103①2호 기본공제 1회·§102② 통산·신고 단위
+    // 가산세가 반영된 값이라 종목별 합으로는 재현할 수 없다).
+    // 계산 전에는 **양도가액만** 합산한다 — 단순 덧셈이라 정확하다. 과세표준·산출세액은
+    // 종목마다 세율이 갈려 추정이 틀리므로 **표시하지 않는다**(자동 fallback 금지).
+    if (isMultiFiling) {
+      if (aggregateResult) {
+        const a = aggregateResult;
+        const penalty = a.totalUnderReportPenalty + a.totalLatePaymentPenalty;
+        if (a.totalTransferIncome > 0)
+          items.push({ label: "양도소득금액 합계", value: a.totalTransferIncome, highlight: true });
+        if (a.basicDeductionByGroup.stock > 0)
+          items.push({ label: "기본공제", value: a.basicDeductionByGroup.stock });
+        if (a.totalTaxBase > 0)
+          items.push({ label: "과세표준", value: a.totalTaxBase, highlight: true });
+        if (a.totalCalculatedTax > 0)
+          items.push({ label: "산출세액", value: a.totalCalculatedTax, highlight: true });
+        if (penalty > 0) items.push({ label: "가산세", value: penalty });
+        if (a.totalFinalTax > 0)
+          items.push({ label: "결정세액", value: a.totalFinalTax, highlight: true });
+        if (a.totalLocalIncomeTax > 0)
+          items.push({ label: "지방소득세", value: a.totalLocalIncomeTax });
+        return items;
+      }
+      const priceSum = [...savedItems, formData].reduce(
+        (sum, f) => sum + (computeFormTransferPrice(f) ?? 0),
+        0,
+      );
+      if (priceSum > 0) items.push({ label: "양도가액 합계", value: priceSum });
+      return items;
+    }
 
     // ── PR-4B 국외전출세 (⑥ 동기화 지점) ──
     if (formData.marketType === "exit_tax") {
@@ -103,40 +180,7 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
       return items;
     }
 
-    let effectiveTransferPrice: number | null = null;
-    if (isSplitMode) {
-      const lotSum = formData.transferLots.reduce(
-        (s, l) =>
-          s + parseAmount(l.perShareTransferPrice) * parseInt(l.shareCount || "0", 10),
-        0,
-      );
-      effectiveTransferPrice = lotSum > 0 ? lotSum : null;
-    } else {
-      // single 모드 — transferActualInputMode 분기 추가 (per_share / total)
-      const priceMode = formData.transferPriceMode || "actual";
-      const actualMode = formData.transferActualInputMode || "total"; // 3중 패턴 default
-      let transferPrice: number | null = null;
-      if (priceMode === "actual") {
-        if (actualMode === "total") {
-          const total = parseAmount(formData.transferTotalPrice);
-          transferPrice = total > 0 ? total : null;
-        } else {
-          const perShare = parseAmount(formData.perShareTransferPrice);
-          const count = parseInt(formData.shareCount || "0", 10);
-          transferPrice = perShare > 0 && count > 0 ? perShare * count : null;
-        }
-      }
-      const exchangeTotal =
-        parseAmount(formData.exchangePropertyValue) +
-        parseAmount(formData.exchangeDebtRelief) +
-        parseAmount(formData.exchangeCash);
-      effectiveTransferPrice =
-        priceMode === "exchange"
-          ? exchangeTotal > 0
-            ? exchangeTotal
-            : null
-          : transferPrice;
-    }
+    const effectiveTransferPrice = computeFormTransferPrice(formData);
 
     if (effectiveTransferPrice && effectiveTransferPrice > 0) {
       items.push({ label: "양도가액", value: effectiveTransferPrice });
@@ -213,7 +257,7 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
     }
 
     return items;
-  }, [formData, result]);
+  }, [formData, result, savedItems, aggregateResult, isMultiFiling]);
 
   const steps = useMemo((): WizardSidebarStep[] => {
     return STEP_LABELS.map((label, i) => ({
@@ -227,9 +271,16 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
   return (
     <div className="space-y-3">
       {/* 종목명 배지 (입력된 경우만) */}
-      {stockName && (
+      {(stockName || isMultiFiling) && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 flex items-center gap-2">
-          <span className="text-xs font-semibold text-amber-800 truncate">{stockName}</span>
+          {stockName && (
+            <span className="text-xs font-semibold text-amber-800 truncate">{stockName}</span>
+          )}
+          {isMultiFiling && (
+            <span className="ml-auto shrink-0 rounded bg-sky-100 px-1.5 py-0.5 text-micro font-semibold text-sky-700">
+              {filingItemCount}건 합산
+            </span>
+          )}
         </div>
       )}
       <WizardSidebar

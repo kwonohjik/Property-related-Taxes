@@ -147,5 +147,47 @@ test.describe("주식 다종목 합산신고", () => {
     // 다종목 합산 요약 카드 + 별지 제84호서식 종목별 열
     await expect(page.getByText(/다종목 합산 \(2건\)/)).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/다자산 합산 \(2종목\)/)).toBeVisible();
+
+    // ⑥ 사이드바가 **신고 전체**를 말한다 — 종전에는 편집 중 1건만 보였다(Phase D · A-1)
+    await expect(page.getByText("2건 합산")).toBeVisible();
+    await expect(page.getByText("양도소득금액 합계")).toBeVisible();
+
+    // ⑦ 증권거래세 합계 — 엔진은 계산했는데 화면에 나온 적이 없었다(Phase D · A-2)
+    await expect(page.getByText("증권거래세 합계 (정보성)")).toBeVisible();
+    await expect(page.getByText(/별도로 납부/)).toBeVisible();
+  });
+
+  /**
+   * MI-E2E-5 (Phase E · A-3) — **불완전 종목이 목록에 들어가는 경로가 실재한다.**
+   *
+   * 「다음」 버튼은 단계별 validate 를 거치지만 **사이드바 스텝 클릭은 그냥 점프**한다
+   * (`onStepClick={(i) => setStep(i)}`). 종목명·시장만 넣고 3단계로 점프하면 확정 게이트
+   * (종목명+시장 2개)를 통과해 **금액도 날짜도 빈 종목**이 목록에 쌓인다.
+   *
+   * 종전에는 그대로 계산돼 엔진이 `transferDate.getTime is not a function` 으로 터졌고
+   * (500), 사용자는 어느 종목이 문제인지 알 수 없었다.
+   */
+  test("MI-E2E-5: 불완전 종목을 확정하면 계산이 **종목을 지목해** 막힌다", async ({ page }) => {
+    test.setTimeout(180_000);
+    await gotoStockTransferTax(page);
+
+    // 1) 정상 종목 1건 확정
+    await fillItemThroughStep3(page, "정상종목", { y: "2024", m: "02", d: "01" });
+    await page.getByTestId("stock-item-add").click();
+
+    // 2) 종목명·시장만 넣고 **사이드바로 3단계 점프** — validate 를 우회한다
+    await page.getByPlaceholder("종목명을 입력하세요").fill("빈종목");
+    await page.getByRole("radio", { name: "비상장" }).first().click();
+    await page.getByRole("button", { name: /필요경비·신고/ }).first().click();
+    await expect(page.getByTestId("stock-item-add")).toBeEnabled();
+    await page.getByTestId("stock-item-add").click();
+
+    // 3) 목록에 「입력 미완료」 배지
+    await expect(page.getByText("입력 미완료")).toBeVisible();
+
+    // 4) 계산 시도 → 순번과 종목명으로 지목해 차단 (종전에는 500)
+    await page.getByRole("button", { name: /필요경비·신고/ }).first().click();
+    await page.getByRole("button", { name: "결과 보기" }).click();
+    await expect(page.getByText(/2번째 종목 「빈종목」/)).toBeVisible({ timeout: 15_000 });
   });
 });

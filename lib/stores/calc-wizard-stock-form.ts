@@ -193,6 +193,20 @@ export interface StockTransferFormData {
   isFraudulent: boolean;                 // 3중 패턴 default: false
   isInternationalTransaction: boolean;   // 3중 패턴 default: false
 
+  // ── 가산세 상세 (선택) — 국세기본법 §47조의3①「과소신고납부세액등」·§47조의4 ──
+  /** 당초 신고한 납부세액 — 과소신고 가산세 base 에서 차감. 3중 패턴 default: "0" */
+  originalFiledTax: string;
+  /** 기납부세액(예정신고 납부분) — base 에서 차감. 3중 패턴 default: "0" */
+  priorPaidTax: string;
+  /** 이자상당가산액 — §47조의3① 괄호로 base 에서 제외. 3중 패턴 default: "0" */
+  interestSurcharge: string;
+  /** 미납·과소납부세액 — 납부지연가산세 base. 3중 패턴 default: "0" */
+  unpaidTax: string;
+  /** 법정납부기한 "YYYY-MM-DD" — 미입력이면 납부지연가산세를 계산하지 않는다 */
+  paymentDeadline: string;
+  /** 실제 납부일 "YYYY-MM-DD" — 미입력 시 오늘 기준 */
+  actualPaymentDate: string;
+
   // ── §103② 기본공제 그룹 ──
   realEstateGroupBasicDeductionUsed: string;  // 3중 패턴 default: "0"
   /** §104⑤ 크로스 조정 — 같은 과세기간 부동산 §104①8호(비사업용 토지) 과세표준. 원 단위. 미입력이면 조정 미적용 */
@@ -535,6 +549,12 @@ export function createInitialStockFormData(): StockTransferFormData {
     filingViolation: "none",             // 3중 패턴 default — 가산세 게이트 OFF
     isFraudulent: false,                 // 3중 패턴 default
     isInternationalTransaction: false,   // 3중 패턴 default
+    originalFiledTax: "0",               // 3중 패턴 default
+    priorPaidTax: "0",                   // 3중 패턴 default
+    interestSurcharge: "0",              // 3중 패턴 default
+    unpaidTax: "0",                      // 3중 패턴 default
+    paymentDeadline: "",
+    actualPaymentDate: "",
 
     realEstateGroupBasicDeductionUsed: "0",  // 3중 패턴 default
     crossClause8TaxBase: "",
