@@ -51,7 +51,7 @@ import {
   ProgressiveTaxBreakdown,
   RuleBadges,
   Warnings,
-  PrRoadmapCard,
+  UnsupportedItemsCard,
 } from "@/components/calc/results/StockTransferTaxResultViewHelpers";
 
 interface StockTransferTaxResultViewProps {
@@ -568,8 +568,8 @@ export function StockTransferTaxResultView({
       <StockFilingFormTable result={result} aggregate={aggregate} {...filingHeaderProps} />
       </PrintSection>
 
-      {/* PR 로드맵 카드 (항상 — 개발용 로드맵) */}
-      <PrRoadmapCard />
+      {/* 현재 미지원 항목 고지 — 종전 개발용 PR 로드맵 카드를 대체한다 */}
+      <UnsupportedItemsCard />
 
       {/* §104⑤ 8호·9호 의제 조정액 — 부동산 8호 과세표준이 입력된 9호 종목에서만 (C-2 / 2-3′) */}
       {result.cross1045Adjustment && (
