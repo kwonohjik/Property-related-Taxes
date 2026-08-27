@@ -204,12 +204,38 @@ describe("A-26~29: 구간 경계", () => {
 // A-30 ~ A-33: cutoff·미제공·기타자산
 // ============================================================
 describe("A-30~33: cutoff·미제공·기타자산", () => {
-  it("A-30 2020-12-31 코스피: 현행 세율 fallback + 미지원 경고", () => {
+  /**
+   * 2026-08-27 재산정 — 매트릭스 커버가 **2020-04-01 까지 확대**됐다.
+   * 2020-12-31 은 이제 fallback 이 아니라 **당시 세율**(영 §5 1호 가목 1천분의 1)이 적용된다.
+   * 사용자 제공 국세법령정보시스템 화면 2건(법 §8① 2020.4.1 시행본 · 시행령 §5)으로 확정.
+   */
+  it("A-30 2020-12-31 코스피: 당시 세율 10/10000 적용 + 경고 없음", () => {
     const r = calc(KOSPI, "2020-12-31");
+    expect(r.securitiesTransactionTax).toBe(100_000);   // 1억 × 1천분의 1
+    expect(r.agriculturalTax).toBe(150_000);            // 농특세 15/10000 — 전 구간 불변
+    expect(r.warning).toBeUndefined();
+  });
+  it("A-30b 2020-04-01 경계(포함): 당시 세율 적용", () => {
+    expect(calc(KOSPI, "2020-04-01").securitiesTransactionTax).toBe(100_000);
+  });
+  it("A-30c 2020-03-31: **커버 밖** — 현행 세율 fallback + 미지원 경고", () => {
+    const r = calc(KOSPI, "2020-03-31");
     expect(r.securitiesTransactionTax).toBe(50_000);
-    expect(r.agriculturalTax).toBe(150_000);
     expect(r.warning).toBeDefined();
     expect(r.warning).toContain("미지원");
+  });
+  it("A-30d 2020년 비상장: 법 §8① 1만분의 45", () => {
+    // 1억 × 45/10000 = 450,000 (코스피 외 시장은 농특세 없음)
+    const r = calc(UNLISTED, "2020-07-01");
+    expect(r.securitiesTransactionTax).toBe(450_000);
+    expect(r.agriculturalTax).toBe(0);
+  });
+  it("A-30e 2020년 코스닥·K-OTC: 영 §5 2호 1천분의 2.5", () => {
+    expect(calc(KOSDAQ, "2020-07-01").securitiesTransactionTax).toBe(250_000);
+    expect(calc(KOTC, "2020-07-01").securitiesTransactionTax).toBe(250_000);
+  });
+  it("A-30f 2020년 코넥스: 영 §5 1호 나목 1천분의 1", () => {
+    expect(calc(KONEX, "2020-07-01").securitiesTransactionTax).toBe(100_000);
   });
   it("A-31 양도일 미제공: 현행 세율 + 경고 없음 (inline 미리보기 호환)", () => {
     const r = calc(KOSPI, undefined);
