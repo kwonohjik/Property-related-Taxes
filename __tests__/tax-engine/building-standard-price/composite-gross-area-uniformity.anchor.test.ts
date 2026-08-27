@@ -77,19 +77,22 @@ describe("F-10 복합 II 연면적 — §1 부분 간 동일 적용 (수정 전 
   });
 });
 
-describe("F-10 복합 II 연면적 — §2 F-09 축은 건드리지 않는다 (수정 후에도 불변)", () => {
+describe("F-10 복합 II 연면적 — §2 F-09 축 확정 후 (2026-08-27 갱신)", () => {
   /**
-   * 「특성이 건물 어디에도 없으면 조정률 미적용(1.0)」은 종전 동작이고 F-09 의 미결 축이다.
-   * 이 수정이 그 축을 바꾸면 안 된다.
+   * ⚠️ 종전 이 블록은 「전 부분·건물 전체 모두 특성이 없으면 **종전대로 조정률 미적용**」을
+   *    고정했다 — 당시 F-09 축(「특성이 없어도 구분 II 를 적용하는가」)이 **고시 본문 미확인**
+   *    이라 현행 동작을 보존한 것이다.
+   *    2026-08-27 고시 제11조 + 계산사례 13건 전수 실측으로 **적용이 맞다**고 확정됐다
+   *    (상속 사례 9건이 예외 없이 구분 II 를 받고, 근생(라멘)·운동시설은 구분 II **만**으로 붙는다).
+   *    ⇒ 단언을 뒤집는다. 갈림은 이제 **주거/비주거**다.
    */
-  it("전 부분·건물 전체 모두 특성이 없으면 종전대로 조정률 미적용", () => {
-    const r = calcBuildingStandardPrice(twoParts(null, null));
-    const [b1, b2] = r.compositeBreakdowns ?? [];
-    expect(b1?.adjustmentRate).toBeUndefined();
-    expect(b2?.adjustmentRate).toBeUndefined();
-    expect(b1?.standardPrice).toBe(7_401_000_000);
-    expect(b2?.standardPrice).toBe(7_401_000_000);
-    expect(r.compositeTotal).toBe(14_802_000_000);
+  it("특성이 없어도 비주거 부분은 구분 II 연면적을 받는다 — 두 부분이 같은 값이다", () => {
+    const bds = calcBuildingStandardPrice(twoParts(null, null)).compositeBreakdowns ?? [];
+    expect(bds).toHaveLength(2);
+    // 연면적 합 6,000㎡ → #11(5천~1만) 110 ⇒ 두 부분 모두 1.10
+    expect(grossAreaItems(bds[0].adjustmentItems)).toEqual([{ nos: [11], rate: 110 }]);
+    expect(grossAreaItems(bds[1].adjustmentItems)).toEqual([{ nos: [11], rate: 110 }]);
+    expect(bds[0].adjustmentRate).toBe(bds[1].adjustmentRate);
   });
 });
 

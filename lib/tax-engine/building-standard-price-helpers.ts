@@ -56,6 +56,8 @@ import {
   describeLocationBucket,
   resolveUsageLabel,
   STRUCTURE_META,
+  isApartmentUsage,
+  isResidentialUsage,
 } from "./data/building-standard-price";
 
 /** 엔진 내부 오류(검증 실패) — orchestrator가 warnings로 변환하거나 throw */
@@ -325,7 +327,7 @@ function resolvePartAdjustment(
   structureKey: string,
   buildingTotalArea: number,
   label: string,
-  buildingHasAnyFeatures: boolean,
+  usageNo: number,
 ): { adjRate: number; items?: { nos: number[]; rate: number }[] } {
   // (1) 수동 우선(완전 override — 단일 manual과 일관)
   if ((p.adjustmentNos?.length ?? 0) > 0 || p.adjustmentRate != null) {
@@ -336,15 +338,18 @@ function resolvePartAdjustment(
   // ⚠️ 조기반환 조건은 **건물 단위**여야 한다. II 연면적(9~13)은 merged 의 키가 아니라
   //    buildingTotalArea 에서 자동 도출되는 **건물 전체 항목**이라, 이 부분의 merged 가 비었다는
   //    이유로 건너뛰면 같은 건물의 부분끼리 II 적용 여부가 갈린다(실측: P1 1.32 / P2 미적용).
-  //    🟡 「건물 어디에도 특성이 없을 때 II 를 적용할 것인가」는 별개 미결(F-09 축, 고시 본문 미확인)
-  //       이므로 그 경우의 종전 동작(1.0)은 그대로 둔다.
-  if (Object.keys(merged).length === 0 && !buildingHasAnyFeatures) {
-    return { adjRate: 1.0, items: undefined };
-  }
+  //    ✅ 「건물 어디에도 특성이 없을 때 II 를 적용할 것인가」(F-09 축)는 2026-08-27 고시·계산사례
+  //       전수 실측으로 **적용이 맞다**고 확정됐다 — 상속 사례 9건이 예외 없이 구분 II 를 받는다.
+  //       ⇒ 조기반환을 없애 단일 경로(computeAdjustmentRate)와 **한 술어**로 묶는다.
   const structureIndex = resolveStructureIndex(year, structureKey) ?? 0;
   const ctx: AdjustmentContext = {
-    isResidential: !!opts.adjustmentCtx?.isResidential,
-    isApartment: !!opts.adjustmentCtx?.isApartment,
+    // 🔑 주거 판정은 **부분별**이다 — 건물 단위 플래그 하나만 보면 1층 근생 + 2·3층 주택
+    //    혼합에서 주택 부분에도 구분 II 가 붙는다(공식 작성례(3) 171,500,000 이 깨진다).
+    //    국세청 계산사례 마.는 지상2·3 단독주택의 조정률 칸을 **빈칸**으로 둔다.
+    isResidential:
+      isResidentialUsage(year, usageNo) || !!opts.adjustmentCtx?.isResidential,
+    // 주거 판정과 **짝** — 주거인데 아파트가 아니면 구분 II 가 통째로 빠진다.
+    isApartment: isApartmentUsage(year, usageNo) ?? !!opts.adjustmentCtx?.isApartment,
     structureKey, // II 통나무조 제외·I 지붕 게이트(부분 구조지수<100일 때만)
   };
   const adjRate = calcSpecialAdjustmentRate(merged, structureIndex, buildingTotalArea, ctx);
@@ -423,11 +428,6 @@ export function calcCompositeForYear(
   // II 연면적용 건물 전체 연면적 = 부분 주용도 면적 합 + 부속 면적 합(적용요령 4 "지하·옥탑 포함 전체면적")
   const buildingTotalArea =
     totalMainArea + opts.ancillary.reduce((s, a) => s + (a.areaM2 > 0 ? a.areaM2 : 0), 0);
-  // 건물 단위 특성 유무 — II 연면적(건물 전체 항목)을 부분마다 갈리지 않게 하는 게이트(F-10).
-  const buildingHasAnyFeatures =
-    Object.keys(opts.buildingWideFeatures ?? {}).length > 0 ||
-    parts.some((p) => Object.keys(p.specialFeatures ?? {}).length > 0);
-
   // 부속 종류별 총면적 + 층 라벨 집계(층은 종류별 첫 입력값 — 계산서 Ⅳ "층별" 표기 전용)
   const totalByKind: Partial<Record<AncillaryFacilityKind, number>> = {};
   const floorByKind: Partial<Record<AncillaryFacilityKind, string>> = {};
@@ -467,7 +467,7 @@ export function calcCompositeForYear(
 
     // 주용도 행 — 상증: 수동 우선, 없으면 건물전체+부분 특성 자동 산정 / 양도: 미적용
     const mainAdj = opts.adjustmentEnabled
-      ? resolvePartAdjustment(p, opts, year, point.structureKey, buildingTotalArea, label, buildingHasAnyFeatures)
+      ? resolvePartAdjustment(p, opts, year, point.structureKey, buildingTotalArea, label, point.usageNo)
       : { adjRate: 1.0, items: undefined };
     const main = calcPointBreakdown(year, point, p.floorArea, builtYear, mainAdj.adjRate, label, opts.remodel);
     breakdowns.push({ ...main, label: p.label, floorArea: p.floorArea, adjustmentItems: mainAdj.items });

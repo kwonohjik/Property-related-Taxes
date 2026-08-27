@@ -8,6 +8,8 @@ import type { UsageScheme } from "./types";
 export const SCHEME_2014: UsageScheme = {
   years: new Set([2014]),
   maxGeneralNo: 60,
+  residentialMaxNo: 2,
+  apartmentUsageNo: 1,
   labels: {
     1: "아파트",
     2: "단독주택(다중·다가구·연립·다세대·기숙사·도시형생활주택 등)",

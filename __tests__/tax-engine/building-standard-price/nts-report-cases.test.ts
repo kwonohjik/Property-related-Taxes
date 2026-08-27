@@ -20,14 +20,21 @@ import {
   resolveAdjustmentRateByNo,
 } from "../../../lib/tax-engine/data/building-standard-price";
 
-/** case(1)(3) 2023 공통: rc·종로 공시지가 2,500,000(위치지수 1.16)·2000 신축(잔가율 0.586) */
+/**
+ * case(1)(3) 2023 공통: rc·종로 공시지가 2,500,000(위치지수 1.16)·2000 신축(잔가율 0.586)
+ *
+ * ⚠️ `withAdj: false` 는 **양도** 사례다(조정률 미적용 — 고시 제11조 단서). 종전에는 부분
+ *    `adjustmentRate` 를 비워 암묵적으로 1.0 을 얻었는데, 구분 II 는 특성 선택과 무관하게
+ *    자동 적용되므로(F-09) 지상1(근생·**비주거**)이 9번 0.90 을 받아버린다 ⇒ **100 을 명시**한다.
+ *    지상2·3 은 단독주택(주거)이라 자동으로도 미적용이지만 같은 이유로 함께 명시한다.
+ */
 const parts2023 = (withAdj: boolean, withShared: boolean): BuildingCompositePart[] => [
   {
     label: "지상1",
     structureKey: "rc",
     usageNo: 41, // 근린생활시설(2023)
     floorArea: 100,
-    adjustmentRate: withAdj ? 108 : undefined, // 0.9(9)×1.2(20)=1.08
+    adjustmentRate: withAdj ? 108 : 100, // 0.9(9)×1.2(20)=1.08 / 양도 = 미적용 명시
     sharedAdjustmentRate: withShared ? (withAdj ? 54 : 100) : undefined, // 0.9×0.6=0.54 / 양도 1.0
   },
   {
@@ -35,7 +42,7 @@ const parts2023 = (withAdj: boolean, withShared: boolean): BuildingCompositePart
     structureKey: "rc",
     usageNo: 2, // 단독주택(2023)
     floorArea: 100,
-    adjustmentRate: undefined,
+    adjustmentRate: withAdj ? undefined : 100, // 주거라 자동 미적용 / 양도는 명시
     sharedAdjustmentRate: withShared ? (withAdj ? 60 : 100) : undefined, // 0.6(24) / 양도 1.0
   },
   {
@@ -43,16 +50,17 @@ const parts2023 = (withAdj: boolean, withShared: boolean): BuildingCompositePart
     structureKey: "rc",
     usageNo: 2,
     floorArea: 100,
-    adjustmentRate: undefined,
+    adjustmentRate: withAdj ? undefined : 100,
     sharedAdjustmentRate: withShared ? (withAdj ? 60 : 100) : undefined,
   },
 ];
 
 /** case(2) 2001 취득당시: 근생 #27(용도지수 0.9)·단독 #1·공시지가 2,240,000(1.05)·잔가율 0.98 */
 const parts2001 = (withShared: boolean): BuildingCompositePart[] => [
-  { label: "지상1", structureKey: "rc", usageNo: 27, floorArea: 100, sharedAdjustmentRate: withShared ? 100 : undefined },
-  { label: "지상2", structureKey: "rc", usageNo: 1, floorArea: 100, sharedAdjustmentRate: withShared ? 100 : undefined },
-  { label: "지상3", structureKey: "rc", usageNo: 1, floorArea: 100, sharedAdjustmentRate: withShared ? 100 : undefined },
+  // 취득당시(2001) 계산서도 **양도** 경로다 — 조정률 미적용을 명시한다(위 parts2023 주석 참조).
+  { label: "지상1", structureKey: "rc", usageNo: 27, floorArea: 100, adjustmentRate: 100, sharedAdjustmentRate: withShared ? 100 : undefined },
+  { label: "지상2", structureKey: "rc", usageNo: 1, floorArea: 100, adjustmentRate: 100, sharedAdjustmentRate: withShared ? 100 : undefined },
+  { label: "지상3", structureKey: "rc", usageNo: 1, floorArea: 100, adjustmentRate: 100, sharedAdjustmentRate: withShared ? 100 : undefined },
 ];
 
 const baseInh = (

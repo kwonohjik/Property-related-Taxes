@@ -89,6 +89,35 @@ export function resolveUsageIndex(year: number, usageNo: number): number | undef
   return scheme.baseIndex[usageNo];
 }
 
+/**
+ * 고시 용도지수표 **구분 I(주거용 건물)** 해당 여부 — 조정률 구분 II 의 「주거용건물은 아파트에
+ * 한해 최고층수기준만 적용」 단서를 가르는 유일한 사실이다.
+ *
+ * 🔑 **모달 개봉 여부와 무관하게** 용도번호만으로 결정된다. 종전에는 `isResidentialUse` 가
+ *    조정률 모달의 `onApply` 에서만 설정돼(초기값 false) **모달을 열지 않은 단독주택이
+ *    비주거로 취급**됐다 — 구분 II 를 항상 적용하면 그대로 9번 0.90 이 잘못 붙는다.
+ *
+ * 경계는 체계마다 다르다(전 스킴 실측): 2001~2002 = 1~2 · 2003~2013 = 1~3 · 2014~2026 = 1~2.
+ * ⚠️ 2001~2002 는 #1 이 「단독주택·**아파트**」 통합이라 **아파트 여부는 번호로 가를 수 없다**
+ *    — 그 시대만 사용자 플래그(`isApartmentUse`)가 정본이다.
+ */
+export function isResidentialUsage(year: number, usageNo: number): boolean {
+  const scheme = schemeForYear(year);
+  if (!scheme) return false;
+  return usageNo >= 1 && usageNo <= scheme.residentialMaxNo;
+}
+
+/**
+ * **아파트** 여부 — 조정률 구분 II 단서 「주거용건물은 **아파트에 한해** 최고층수기준만 적용」.
+ * 주거용인데 아파트가 아니면 구분 II 가 통째로 빠지므로 주거 판정과 **짝으로** 자동화해야 한다.
+ * ⚠️ 2001~2002 는 #1 이 통합이라 번호로 가를 수 없다 — `undefined` 를 돌려 사용자 플래그에 맡긴다.
+ */
+export function isApartmentUsage(year: number, usageNo: number): boolean | undefined {
+  const scheme = schemeForYear(year);
+  if (!scheme || scheme.apartmentUsageNo === undefined) return undefined;
+  return usageNo === scheme.apartmentUsageNo;
+}
+
 /** 용도 표시명(인쇄·적용요령용). 예 (2007년 scheme) 6 → "여관". 없으면 undefined. */
 export function resolveUsageLabel(year: number, usageNo: number): string | undefined {
   const scheme = schemeForYear(year);

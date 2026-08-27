@@ -38,10 +38,17 @@ const flat = (p: { floorArea: number; transfer: { structureKey: string; usageNo:
 });
 
 // 엔진 직접호출 — 복합/단일 valuation
+/**
+ * 배치가 쓰는 1시점 경로를 **그대로** 재현한다.
+ * ⚠️ 맥락은 **양도세**라 조정률 미적용이다(고시 제11조 단서) — 배치(`valuationStdPrice`)가
+ *    `manualAdjustmentRate: 100` 을 명시하므로 헬퍼도 같아야 한다. 종전에는 생략해도 조정률이
+ *    1.0 이라 드러나지 않았지만, 구분 II 는 특성 선택과 무관하게 자동 적용된다(F-09).
+ */
 function directComposite(parts: { structureKey: string; usageNo: number; floorArea: number }[], year: number, land: number, builtYear: number) {
   if (parts.length === 1) {
     return calcBuildingStandardPrice({
       taxType: "inheritance_gift",
+      manualAdjustmentRate: 100,
       floorArea: parts[0].floorArea,
       builtYear,
       valuationYear: year,
@@ -54,7 +61,8 @@ function directComposite(parts: { structureKey: string; usageNo: number; floorAr
     builtYear,
     valuationYear: year,
     valuation: { structureKey: parts[0].structureKey, usageNo: parts[0].usageNo, landPricePerM2: land },
-    compositeParts: parts.map((p) => ({ structureKey: p.structureKey, usageNo: p.usageNo, floorArea: p.floorArea })),
+    // 복합은 **부분별** 조정률이 정본이라 building-level manual 이 무시된다
+    compositeParts: parts.map((p) => ({ structureKey: p.structureKey, usageNo: p.usageNo, floorArea: p.floorArea, adjustmentRate: 100 })),
   }).compositeTotal;
 }
 

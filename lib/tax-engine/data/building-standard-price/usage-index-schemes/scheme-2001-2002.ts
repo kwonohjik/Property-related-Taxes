@@ -11,6 +11,8 @@ import type { UsageScheme } from "./types";
 export const SCHEME_2001_2002: UsageScheme = {
   years: new Set([2001, 2002]),
   maxGeneralNo: 38,
+  residentialMaxNo: 2,
+  // apartmentUsageNo 없음 — #1 이 「단독주택·아파트」 통합이라 번호로 가를 수 없다.
   labels: {
     1: "단독주택·아파트",
     2: "다중주택·다가구주택·연립주택·다세대주택·기숙사 등 기타 주거용건물",

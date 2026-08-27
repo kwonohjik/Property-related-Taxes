@@ -86,6 +86,8 @@ export {
   hasUsageIndexYear,
   resolveUsageIndex,
   resolveUsageLabel,
+  isResidentialUsage,
+  isApartmentUsage,
   listUsageOptions,
 } from "./usage-index";
 

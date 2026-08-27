@@ -46,6 +46,8 @@ describe("조정률 보완 anchor", () => {
   // A3: WS-5 — 통나무조(solid_wood)는 최고층수 적용 제외(원본 II 비고).
   // 비주거·면적100(연면적#9 90)·최고층수21(#8 130). 제외 후 II는 연면적90만 → 배율 0.90.
   // (구조지수 solid_wood=135 ≥100 → 지붕 미적용.)
+  // ⚠️ 용도번호는 **비주거**여야 한다 — 주거용(#1~2)이면 「주거용건물은 아파트에 한해
+  //    최고층수기준만」 단서로 구분 II 가 통째로 빠져 **통나무조 축 자체가 가려진다**(F-09).
   it("A3 WS-5: 통나무조 최고층수 제외 → 연면적90만 적용(0.90)", () => {
     const r = calcBuildingStandardPrice({
       taxType: "inheritance_gift",
@@ -53,7 +55,7 @@ describe("조정률 보완 anchor", () => {
       builtYear: 2020,
       valuationYear: 2025,
       isResidentialUse: false,
-      valuation: { structureKey: "solid_wood", usageNo: 2, landPricePerM2: 152_000 },
+      valuation: { structureKey: "solid_wood", usageNo: 41, landPricePerM2: 152_000 },
       specialFeatures: { maxFloors: 21 },
     });
     expect(r.valuation?.adjustmentRate).toBeCloseTo(0.9, 10);
