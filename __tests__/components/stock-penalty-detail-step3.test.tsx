@@ -56,3 +56,35 @@ describe("PS-2 안내 문구가 신고-단위 1회 산정을 말한다", () => {
     expect(screen.getByText(/합산 결정세액에 한 번/)).toBeTruthy();
   });
 });
+
+describe("PS-3 §47조의3①1호 나목 — 「부정행위로 인한 과소신고분」", () => {
+  it("PS-3-1: 과소신고 + 부정행위면 칸이 열린다", () => {
+    render(
+      <Step3
+        form={form({ filingViolation: "under_report", isFraudulent: true })}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByText(/부정행위로 인한 과소신고분/)).toBeTruthy();
+  });
+
+  it("PS-3-2: 부정행위가 아니면 칸이 없다 — 분해가 성립하지 않는다", () => {
+    render(
+      <Step3
+        form={form({ filingViolation: "under_report", isFraudulent: false })}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText(/부정행위로 인한 과소신고분/)).toBeNull();
+  });
+
+  it("PS-3-3: **무신고에는 칸이 없다** — §47조의2① 은 「비율을 곱한 금액」이라 각 목이 없다", () => {
+    render(
+      <Step3
+        form={form({ filingViolation: "non_report", isFraudulent: true })}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText(/부정행위로 인한 과소신고분/)).toBeNull();
+  });
+});

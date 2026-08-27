@@ -180,6 +180,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     originalFiledTax: strField("originalFiledTax") || defaults.originalFiledTax,
     priorPaidTax: strField("priorPaidTax") || defaults.priorPaidTax,
     interestSurcharge: strField("interestSurcharge") || defaults.interestSurcharge,
+    fraudulentPortion: strField("fraudulentPortion"),
     unpaidTax: strField("unpaidTax") || defaults.unpaidTax,
     paymentDeadline: strField("paymentDeadline"),
     actualPaymentDate: strField("actualPaymentDate"),

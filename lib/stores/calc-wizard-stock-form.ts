@@ -200,6 +200,8 @@ export interface StockTransferFormData {
   priorPaidTax: string;
   /** 이자상당가산액 — §47조의3① 괄호로 base 에서 제외. 3중 패턴 default: "0" */
   interestSurcharge: string;
+  /** 부정행위로 인한 과소신고납부세액등 — §47조의3①1호 가목 base. 빈값 = 전액 부정 */
+  fraudulentPortion: string;
   /** 미납·과소납부세액 — 납부지연가산세 base. 3중 패턴 default: "0" */
   unpaidTax: string;
   /** 법정납부기한 "YYYY-MM-DD" — 미입력이면 납부지연가산세를 계산하지 않는다 */
@@ -561,6 +563,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     originalFiledTax: "0",               // 3중 패턴 default
     priorPaidTax: "0",                   // 3중 패턴 default
     interestSurcharge: "0",              // 3중 패턴 default
+    fraudulentPortion: "",               // 빈값 = 전액 부정(종전 동작)
     unpaidTax: "0",                      // 3중 패턴 default
     paymentDeadline: "",
     actualPaymentDate: "",

@@ -116,7 +116,11 @@ export function buildPenaltyFormula(p: PerPropertyBreakdown): string {
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { StatementItem } from "./DetailedStatementHelpers";
 import { findStepByLabel } from "./DetailedStatementHelpers";
-import { incomeDeductionRuralSurtax } from "./reduction-eligible-income";
+import { resolveRuralSurtax } from "./reduction-eligible-income";
+import {
+  localCalculatedTaxFormula,
+  localTaxablePenaltyOf,
+} from "@/components/calc/results/transfer/local-income-tax-display";
 
 /**
  * 다건 합산 절차 3개 항목(차손통산·기본공제 배분·비교과세)을 Map에 추가.
@@ -194,7 +198,7 @@ export function buildSurtaxAndLocalTaxItems(
    */
   aggregateRuralSurtax?: number,
 ): void {
-  const ruralSurtaxValue = aggregateRuralSurtax ?? incomeDeductionRuralSurtax(result);
+  const ruralSurtaxValue = resolveRuralSurtax(result, aggregateRuralSurtax);
   items.set("ruralSurtax", {
     label: "농어촌특별세",
     value: ruralSurtaxValue,
@@ -203,11 +207,17 @@ export function buildSurtaxAndLocalTaxItems(
     summaryOnly: true,
   });
 
-  const localCalc = Math.floor((result.determinedTax + totalPenalty) * 0.1);
+  /**
+   * 지방소득세 산출세액 — 값은 엔진 `localIncomeTax`, 산식은 §114조의2분으로 쓴다.
+   * 종전에는 `totalPenalty`(= §114조의2 + 국기법 §47의2~§47의4)로 값을 다시 계산해
+   * 바로 아래 「산출세액 − 감면 0 = 결정세액」이 산술적으로 거짓이 됐다.
+   * 축 설명·단일 소스: `local-income-tax-display.ts`.
+   */
+  const localCalc = result.localIncomeTax;
   items.set("localCalculatedTax", {
     label: "지방소득세 산출세액",
     value: localCalc,
-    formula: `(결정세액 ${result.determinedTax.toLocaleString()} + 가산세 ${totalPenalty.toLocaleString()}) × 10%`,
+    formula: localCalculatedTaxFormula(result.determinedTax, localTaxablePenaltyOf(result)),
     legalBasis: "지방세법 §103의3",
     summaryOnly: true,
   });

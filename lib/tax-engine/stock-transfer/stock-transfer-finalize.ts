@@ -32,6 +32,7 @@ import {
   calculateDelayedPaymentPenalty,
   type FilingType,
   type PenaltyReason,
+  type FraudPortionSplit,
 } from "@/lib/tax-engine/transfer-tax-penalty";
 import { floorTen, floorLocalTax, calcElectronicFilingCredit } from "./stock-transfer-helpers";
 
@@ -112,6 +113,8 @@ export interface FilingAxisFields {
   originalFiledTax?: number;
   priorPaidTax?: number;
   interestSurcharge?: number;
+  /** 부정행위로 인한 과소신고납부세액등 — §47조의3①1호 가목 base (미입력 = 전액 부정) */
+  fraudulentPortion?: number;
   unpaidTax?: number;
   paymentDeadline?: Date;
   actualPaymentDate?: Date;
@@ -122,6 +125,8 @@ export interface StockFilingPenaltyResult {
   penalty: number;
   penaltyBase: number;
   ruleRef: string;
+  /** §47조의3①1호 가목·나목 분해 — 「부정행위로 인한 과소신고분」을 입력했을 때만 */
+  fraudSplit?: FraudPortionSplit;
 }
 
 /**
@@ -151,6 +156,8 @@ export function computeStockFilingPenalty(
     // 주식 `filingViolation` 에는 초과환급신고 축이 없다(입력 경로 부재) — 0 고정.
     excessRefundAmount: 0,
     interestSurcharge: input.interestSurcharge ?? 0,
+    // §47조의3①1호 가목·나목 분해 — 미입력이면 전액 부정(종전 동작)
+    fraudulentPortion: input.fraudulentPortion,
     filingType: toFilingType(filingViolation),
     penaltyReason: toPenaltyReason(isFraudulent, isOffshore),
   });
@@ -160,6 +167,7 @@ export function computeStockFilingPenalty(
   return {
     penalty,
     penaltyBase: result.penaltyBase,
+    fraudSplit: result.fraudSplit,
     ruleRef: penalty > 0 ? resolvePenaltyRule(filingViolation, isFraudulent, isOffshore) : "",
   };
 }

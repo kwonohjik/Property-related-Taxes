@@ -152,6 +152,11 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
     if (priorPaid > 0) body.priorPaidTax = priorPaid;
     const interest = parseIntOrZero(form.interestSurcharge);
     if (interest > 0) body.interestSurcharge = interest;
+    // §47조의3①1호 가목 base — **빈 문자열이면 보내지 않는다**(미입력 = 전액 부정).
+    // 0 은 「부정행위분이 없다」는 유효한 선언이므로 0도 보낸다.
+    if (form.fraudulentPortion.trim() !== "") {
+      body.fraudulentPortion = parseIntOrZero(form.fraudulentPortion);
+    }
     const unpaid = parseIntOrZero(form.unpaidTax);
     if (unpaid > 0) body.unpaidTax = unpaid;
     if (form.paymentDeadline) body.paymentDeadline = form.paymentDeadline;
@@ -673,6 +678,11 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (priorPaid > 0) body.priorPaidTax = priorPaid;
     const interest = parseIntOrZero(form.interestSurcharge);
     if (interest > 0) body.interestSurcharge = interest;
+    // §47조의3①1호 가목 base — **빈 문자열이면 보내지 않는다**(미입력 = 전액 부정).
+    // 0 은 「부정행위분이 없다」는 유효한 선언이므로 0도 보낸다.
+    if (form.fraudulentPortion.trim() !== "") {
+      body.fraudulentPortion = parseIntOrZero(form.fraudulentPortion);
+    }
     const unpaid = parseIntOrZero(form.unpaidTax);
     if (unpaid > 0) body.unpaidTax = unpaid;
     if (form.paymentDeadline) body.paymentDeadline = form.paymentDeadline;

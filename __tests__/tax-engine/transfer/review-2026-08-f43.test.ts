@@ -69,7 +69,7 @@ function aggregate() {
   );
 }
 
-const RURAL_SURTAX_ROW = "농어촌특별세 (§99의3 등)";
+const RURAL_SURTAX_ROW = "농어촌특별세";
 
 describe("F43 — 합산 신고서 양식·상세명세서의 농어촌특별세", () => {
   it("엔진 관측값 고정 (집계 농특세 7,946,800)", () => {

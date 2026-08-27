@@ -53,6 +53,7 @@ export type { PerAssetValue, StatementItem, GroupDef } from "./DetailedStatement
 export { STATEMENT_GROUPS } from "./DetailedStatementConfig";
 import type { PerAssetValue, StatementItem } from "./DetailedStatementConfig";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
+import { localTaxablePenaltyOf } from "@/components/calc/results/transfer/local-income-tax-display";
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────
 
@@ -609,15 +610,36 @@ export function buildStatementItems(
   // ── 6단계: 가산세·총결정세액 ────────────────────────────────
   const totalPenalty =
     result.penaltyTax + (result.penaltyDetail?.totalPenalty ?? 0);
+  /**
+   * 가산세 귀속은 **슬롯이 아니라 축**으로 가른다.
+   *
+   * 종전에는 `result.penaltyTax > 0`을 「§114조의2가 있다」로 읽었는데, 그 슬롯의 의미는
+   * 생산자마다 다르다(`transfer-result.types.ts`의 `localTaxPenalty` 주석):
+   *   · 단건 엔진        → §114조의2분
+   *   · 집계·건별 어댑터 → §114조의2 + 국기법 **총액**
+   *   · 겸용 어댑터      → 국기법분 **그 자체**(겸용 경로엔 §114조의2가 없다)
+   * 그래서 겸용·집계·건별에서 국기법 가산세가 「§114조의2 환산취득가액 가산세」로 이름이
+   * 바뀌었고, 어댑터가 0을 넣는 `penaltyBase` 때문에 「= 0 × 5%」라는 성립 불가능한 산식이
+   * 함께 나왔다. `localTaxablePenaltyOf`가 §114조의2분의 정본이고 나머지가 국기법분이다.
+   *
+   * `Math.min`은 방어선이다 — 두 항의 합이 언제나 `totalPenalty`와 같아야 한다.
+   * anchor: `__tests__/components/transfer-penalty-attribution.anchor.test.ts`
+   */
+  const section114_2Penalty = Math.min(localTaxablePenaltyOf(result), result.penaltyTax);
+  const statutoryPenalty =
+    result.penaltyTax - section114_2Penalty + (result.penaltyDetail?.totalPenalty ?? 0);
   const penaltyParts: string[] = [];
-  if (result.penaltyTax > 0) {
+  if (section114_2Penalty > 0) {
+    // 산정기준액은 어댑터 경유 result에서 0이다(자산별 값이 합쳐지지 않는다) — 없으면 꼬리를 생략한다.
     penaltyParts.push(
-      `§114조의2 환산취득가액 가산세 ${result.penaltyTax.toLocaleString()} (= ${result.penaltyBase.toLocaleString()} × 5%)`,
+      result.penaltyBase > 0
+        ? `§114조의2 환산취득가액 가산세 ${section114_2Penalty.toLocaleString()} (= ${result.penaltyBase.toLocaleString()} × 5%)`
+        : `§114조의2 환산취득가액 가산세 ${section114_2Penalty.toLocaleString()}`,
     );
   }
-  if (result.penaltyDetail?.totalPenalty) {
+  if (statutoryPenalty > 0) {
     penaltyParts.push(
-      `신고불성실·납부지연 가산세 ${result.penaltyDetail.totalPenalty.toLocaleString()} (국세기본법 §47·§48)`,
+      `신고불성실·납부지연 가산세 ${statutoryPenalty.toLocaleString()} (국세기본법 §47·§48)`,
     );
   }
   items.set("penaltyTax", {
