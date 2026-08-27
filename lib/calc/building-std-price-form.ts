@@ -6,6 +6,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { phdTimepointLabel } from "@/lib/calc/building-std-snapshot-keys";
+import { usesPriorStdPriceSubstitute } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type {
   BuildingStandardPriceInput,
@@ -796,7 +797,13 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
     if (am === undefined || am <= 0) return "기준시가 조정월수를 입력하세요(연 1회 고시=12).";
     if (f.sameYearFormula === "new") {
       if (!(parseAmount(f.newNoticePrice) > 0)) return "새로운 기준시가 ㎡당 금액을 입력하세요.";
-    } else if (!(parseAmount(f.prevLandPrice) > 0)) {
+    } else if (
+      // §80③2호 대체산정 경로에서는 지수표를 쓰지 않으므로 이 입력이 **불요**하다.
+      // 엔진(`usesPriorStdPriceSubstitute`)과 **같은 술어·같은 인자**로 물어야 한다 —
+      // 한쪽만 바뀌면 「입력했는데 무시」 또는 「없어도 되는데 차단」이 된다.
+      !usesPriorStdPriceSubstitute(intOrUndef(f.acquisitionYear)) &&
+      !(parseAmount(f.prevLandPrice) > 0)
+    ) {
       return "취득전기(취득연도-1) ㎡당 공시지가를 입력하세요.";
     }
   }

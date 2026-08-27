@@ -44,6 +44,8 @@ import {
   type BuildingStandardPriceResult,
 } from "@/lib/tax-engine/building-standard-price";
 import { listStructureOptions, listUsageOptions } from "@/lib/tax-engine/data/building-standard-price";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { usesPriorStdPriceSubstitute } from "@/lib/tax-engine/same-adjustment-period-std-price";
 
 interface Props {
   onResult: (
@@ -723,7 +725,15 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                   { value: "new", label: "새로운 기준시가 기준 환산", hint: "예정신고기한까지 새 기준시가가 고시된 경우 선택 가능" },
                 ]}
               />
-              {f.sameYearFormula === "prev" ? (
+              {/* §80③2호 대체산정 경로(취득 ≤2001)에서는 지수표를 쓰지 않아 이 입력이 **불요**하다.
+                  엔진·validate 와 **같은 술어**를 쓴다 — 셋이 어긋나면 「없어도 되는데 차단」이 된다. */}
+              {f.sameYearFormula === "prev" && usesPriorStdPriceSubstitute(Number(f.acquisitionYear) || undefined) ? (
+                <ToneCard tone="sky">
+                  취득전기({(Number(f.acquisitionYear) || 0) - 1}년)는 국세청 건물 기준시가 고시(2001년~) 이전이라
+                  전기 기준시가를 <strong>소득세법 시행규칙 §80③2호</strong>(최초고시 기준시가 × 기준율)로
+                  대체산정합니다 — 취득전기 공시지가 입력이 필요하지 않습니다.
+                </ToneCard>
+              ) : f.sameYearFormula === "prev" ? (
                 <LandPriceLookupField
                   pricePerSqm={f.prevLandPrice}
                   onPricePerSqmChange={(v) => set("prevLandPrice", v)}
