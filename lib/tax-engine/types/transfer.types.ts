@@ -759,7 +759,7 @@ export interface TransferTaxInput {
    * 본 필드 제공 시 엔진은 redevelopment.ts orchestrator로 라우팅하여
    * 인가전·인가후 기존건물분·청산금 분 3분할 양도차익을 산정한다.
    *
-   * 사례 매트릭스 (양도코리아 xlsx 36~46):
+   * 사례 매트릭스 (예제 xlsx 36~46):
    * - 본 PR 핵심: 사례 44 (APT-환산-납부-주택출자, 산출 56,799,400)
    */
   redevelopment?: RedevelopmentInfo;

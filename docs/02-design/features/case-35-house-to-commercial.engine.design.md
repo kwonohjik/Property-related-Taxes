@@ -25,7 +25,7 @@
 
 | # | 시나리오 | 변환 토글 | wasMultiHouse | LTHD 기산일 | 기대 LTHD | anchor 출처 | 상태 |
 |---|---|---|---|---|---|---|---|
-| 35-1 | **PDF 메인** — 다주택 + 중과배제기간 양도 | ON | true | 변경일(2020-08-07) | **0** (만 2년, 3년 미만) | 양도코리아 PDF p.539–544 | ☐ TODO |
+| 35-1 | **PDF 메인** — 다주택 + 중과배제기간 양도 | ON | true | 변경일(2020-08-07) | **0** (만 2년, 3년 미만) | 예제 PDF p.539–544 | ☐ TODO |
 | 35-2 | 1주택 케이스 — 변경일 무시, 당초 취득일 기산 14년 | ON | false | 취득일(2008-05-02) | **28%** (표1 14년×2%) | §95② 별표1 직접 계산 | ☐ TODO |
 | 35-3 | 다주택 케이스 — conversionDate=2015-01-01, transferDate=2020-01-15 → years=5 | ON | true | conversionDate | **10%** (표1 5년×2%) | §95② 별표1 직접 계산 | ☐ TODO |
 | 35-4 | validate 차단 — houseToCommercialConversion=true ∧ conversionDate 누락 | ON | any | — | 오류 반환 | 정책 `feedback_no_silent_apportion_fallback.md` | ☐ TODO |
@@ -494,7 +494,7 @@ npx vitest run __tests__/tax-engine/transfer-tax/general-building-extension-case
 | 3 | `feedback_transfer_year_tax_rate.md` | 산출세액(133,060,000)·지방세(13,306,000)는 §55 직접 계산 검증. 외부 PDF 산출값 추종 금지. |
 | 4 | `feedback_validation_sync_8th_point.md` | validate도 동일 분기 인식: `gbHouseToCommercialConversion=true → gbConversionDate 필수 + gbWasMultiHouseAtConversion 필수`. |
 | 5 | `feedback_api_zod_schema_sync.md` | ⑫ Zod 객체 3 필드 명시 + ⑭ route handler Date 변환. TypeScript 미감지 — grep 자가 점검 의무. |
-| 6 | `feedback_no_yangdo_korea_brand.md` | anchor 시나리오명·변수명에 "양도코리아" 미사용. |
+| 6 | `feedback_no_yangdo_korea_brand.md` | anchor 시나리오명·변수명에 "예제" 미사용. |
 | 7 | `feedback_ui_input_path_enumeration.md` | 케이스 매트릭스 7행 enumerate 완료. 분기별 입력 가능 자가 시뮬 필수 (특히 35-7: 1주택+변경일 입력 조합). |
 
 ---

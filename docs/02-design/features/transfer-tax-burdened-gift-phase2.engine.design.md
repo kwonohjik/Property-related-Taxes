@@ -632,7 +632,7 @@ export const BURDENED_GIFT_PHASE2 = {
 - [x] silent fallback 금지 — 초과부담부 차단·자동 보정 금지
 - [x] useEffect → store 미러링 금지 — UI 명세에서 onChange/useMemo 강제
 - [x] 양도연도 세율 우선 — anchor 자가 §55 검증
-- [x] 외부 자료 추종 금지 — 양도코리아 PDF 사용 시 §55 검증 통과 후만
+- [x] 외부 자료 추종 금지 — 예제 PDF 사용 시 §55 검증 통과 후만
 - [x] 법령 정확성 최우선 — "양도 형태" 중립 라벨, 납세자 유리/불리 표현 금지
 - [x] 자동 안분 fallback 금지 — propertyType별 기준시가는 사용자 명시 입력 (LandPriceLookupField·PHD 등)
 - [x] 회귀 보존 약속 — 사례 1~33·34 anchor 변동 0

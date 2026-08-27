@@ -2,7 +2,7 @@
  * Post-Listing 80필드 입력 객체 빌더 (4 test 파일 공유).
  *
  * 사례 EXAMPLE_POST_LISTING (2009-08-21 상장, 2003 취득) 기반 default 값.
- * 양도코리아 PDF "주식-취득후 상장.pdf" 일부 데이터 — 코멘트는 EXAMPLE_*만 사용
+ * 예제 PDF "주식-취득후 상장.pdf" 일부 데이터 — 코멘트는 EXAMPLE_*만 사용
  * ([[feedback_no_yangdo_korea_brand]]).
  */
 

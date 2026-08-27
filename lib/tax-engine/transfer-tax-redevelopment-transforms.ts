@@ -89,7 +89,7 @@ export function applyLthdExclusion(r: RedevelopmentResult): RedevelopmentResult 
  *   branchTaxableGain = floor(branchGain × taxableRatio)
  *   branchTaxableLthd = floor(branchTaxableGain × branchRate)
  *
- * 분기별로 floor 적용 — 양도코리아 xlsx 결과 일치 (xlsx D17·E17·F17 각각 분기별 산정 후 합산).
+ * 분기별로 floor 적용 — 예제 xlsx 결과 일치 (xlsx D17·E17·F17 각각 분기별 산정 후 합산).
  *
  * @param redevRaw runRedevelopment 결과 (분기별 gain·lthd 가 전체 양도차익 기준)
  * @param transferPrice 양도가액 (양도가액 - 12억 비율 산정용)

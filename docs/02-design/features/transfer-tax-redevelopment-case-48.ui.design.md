@@ -1,7 +1,7 @@
 # 사례 48 — 재개발 승계조합원 준공 후 신축APT 양도 — UI 설계
 
 > 본 문서는 `transfer-tax-redevelopment.ui.design.md` 및 사례 44~47 UI 디자인의 후속 확장.
-> 입력 자료: PDF `재개발-승계조합원.pdf` (양도코리아 화면 4장: p.575·576·577·578)
+> 입력 자료: PDF `재개발-승계조합원.pdf` (예제 화면 4장: p.575·576·577·578)
 > 시점: 2026-05-14
 > 짝궁 엔진 디자인: `transfer-tax-redevelopment-case-48.engine.design.md`
 > 케이스 번호: **case_48** (책 47)
@@ -10,7 +10,7 @@
 
 ## Context
 
-사례 44~47이 모두 원조합원 UI 가정이었던 데 반해, 본 사례는 **승계조합원** UI 분기를 본격 도입한다. PDF 양도코리아 화면(p.575)에는 명시적 토글이 없지만, 사용자 가이드 문장 "갑氏와 같은 승계조합원의 경우 기존부동산 유형 선택시 입주권을 선택해야 한다"는 사실상 **승계조합원 모드 진입 신호**다.
+사례 44~47이 모두 원조합원 UI 가정이었던 데 반해, 본 사례는 **승계조합원** UI 분기를 본격 도입한다. PDF 예제 화면(p.575)에는 명시적 토글이 없지만, 사용자 가이드 문장 "갑氏와 같은 승계조합원의 경우 기존부동산 유형 선택시 입주권을 선택해야 한다"는 사실상 **승계조합원 모드 진입 신호**다.
 
 본 PR UI는 다음 5가지를 도입한다:
 
@@ -38,7 +38,7 @@ Do 진입 전 `wc -l components/calc/transfer/RedevelopmentBlock.tsx` 실측 →
 
 ---
 
-## 사용자 시나리오 (사례 48 입력 흐름 — PDF p.575~578 양도코리아 화면 매핑)
+## 사용자 시나리오 (사례 48 입력 흐름 — PDF p.575~578 예제 화면 매핑)
 
 ```
 [Step 1] 자산종류 선택
@@ -47,18 +47,18 @@ Do 진입 전 `wc -l components/calc/transfer/RedevelopmentBlock.tsx` 실측 →
     · assetKind = "redevelopment_apt"
     · redevSubject = "apt"
     · redevApprovalLawBasis = "urban_renovation_art_74"
-  → ★ 종전부동산 유형 (PDF p.575 양도코리아 화면 "기존부동산 유형"):
-    · 양도코리아 가이드: "갑氏와 같은 승계조합원의 경우 기존부동산 유형 선택시 입주권을 선택"
+  → ★ 종전부동산 유형 (PDF p.575 예제 화면 "기존부동산 유형"):
+    · 예제 가이드: "갑氏와 같은 승계조합원의 경우 기존부동산 유형 선택시 입주권을 선택"
     · 우리 시스템 매핑: 우리는 `redevOriginalAssetType` 을 "housing"(주택 출자) 유지
-      (양도코리아 "입주권" 선택은 자동 분기 시그널 — 우리는 별도 토글 `isSuccessorMember` 로 명시)
+      (예제 "입주권" 선택은 자동 분기 시그널 — 우리는 별도 토글 `isSuccessorMember` 로 명시)
 
 [Step 2] RedevelopmentBlock 입력 (PDF p.575·576)
 
-  ① 종전부동산 정보 (양도코리아 p.576 화면)
+  ① 종전부동산 정보 (예제 p.576 화면)
      - 갑氏 취득일자: 2020-04-15 (상속개시일)
-     - 갑氏 취득원인: "상속_시가평가액" (양도코리아 화면 → 우리 시스템 `acquisitionCause`)
+     - 갑氏 취득원인: "상속_시가평가액" (예제 화면 → 우리 시스템 `acquisitionCause`)
      - 갑氏 취득가액: 450,000,000 (상속세 신고시 평가액)
-     - 입주권필요경비: 150,000,000 (양도코리아 화면 → 우리 시스템 `redevPostApprovalExpenses`)
+     - 입주권필요경비: 150,000,000 (예제 화면 → 우리 시스템 `redevPostApprovalExpenses`)
        ⚠️ **라벨 분기 (사용자 환류 ③)** — `redevPostApprovalExpenses` 필드는 원조합원에서 "인가후 비용 전체"를 의미.
        승계조합원 모드에서는 추가분담금만이 아니라 등기비·중개수수료 등도 포함될 수 있어 UI 라벨을 분리:
        · `redevIsSuccessorMember="no"` (원조합원): "추가분담금 (인가후 비용)"
@@ -68,7 +68,7 @@ Do 진입 전 `wc -l components/calc/transfer/RedevelopmentBlock.tsx` 실측 →
      - 라디오: "원조합원 / 승계조합원"
      - 승계조합원 선택 시:
        a. DateInput "준공일 (사용검사필증 교부일)" — `redevCompletionDate`
-          · 값: 2022-12-02 (PDF p.575 양도코리아 "준공(사용승인)일" 필드)
+          · 값: 2022-12-02 (PDF p.575 예제 "준공(사용승인)일" 필드)
           · hint: "신축아파트 사용검사필증 교부일. 보유기간·세율의 기산일이 됩니다."
        b. 자동 추정 안내 카드 (violet, 조건부):
           · 표시 조건: `acquisitionDate > approvalDate`
@@ -98,7 +98,7 @@ Do 진입 전 `wc -l components/calc/transfer/RedevelopmentBlock.tsx` 실측 →
      - 일반 필드 그대로 사용 (`redevApprovalDate`)
 
   ④ 권리가액
-     - PDF: 입력 없음 (양도코리아 화면 미표시)
+     - PDF: 입력 없음 (예제 화면 미표시)
      - 우리 시스템: `redevRightsValue` = 450,000,000 (= 갑氏 취득가액 동치)
      - 입력 가이드 (조건부): "승계조합원은 취득가액(상속/증여 평가액)이 곧 권리가액으로 사용됩니다."
 

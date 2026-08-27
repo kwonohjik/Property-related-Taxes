@@ -1,7 +1,7 @@
 # 사례 48 — 재개발 승계조합원 준공 후 신축APT 양도 — 엔진 설계
 
 > 본 문서는 `transfer-tax-redevelopment.engine.design.md` 및 사례 44~47 디자인의 후속 확장.
-> 입력 자료: PDF `재개발-승계조합원.pdf` (양도코리아 사례집 책 사례 47, p.574~578)
+> 입력 자료: PDF `재개발-승계조합원.pdf` (예제 사례집 사례 47, p.574~578)
 > 시점: 2026-05-14
 > 본 PR 스코프: `isSuccessorMember` 분기 신설 + `completionDate` 필드 + LTHD/세율 기산일 통합 헬퍼
 > 케이스 번호: **case_48** (책 47 — 코드 case_47은 이미 사례 47 점유)
@@ -35,7 +35,7 @@
 - 소법 §95② 단서: 입주권 LTHD = 0 (지위 양도 시) — 신축APT 양도 시 LTHD는 부동산 보유기간 적용
 
 핵심 Pre-Do 발견 (2026-05-14):
-- 양도코리아 PDF의 자산종류 = "일반주택(3)" — 재개발 인가전/인가후 안분 산식 미표시
+- 예제 PDF의 자산종류 = "일반주택(3)" — 재개발 인가전/인가후 안분 산식 미표시
 - 양도차익 = 단순 차감(920M − 450M − 150M = 320M) — `§166 안분 우회 경로`
 
 ---
@@ -44,7 +44,7 @@
 
 | # | subject | isSuccessor | direction | receiveOnly | 보유기간 | LTHD | 비과세 | 법령 근거 | anchor 출처 | 테스트 파일 | 상태 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **48-A** | apt | true | none | no | < 1년 (양도 2023) | 0 | 미해당 | 사전-2019-0649 + §162①4호 | PDF 양도코리아 6 anchor | `case-48-successor-member.test.ts` | ☐ **본 PR** |
+| **48-A** | apt | true | none | no | < 1년 (양도 2023) | 0 | 미해당 | 사전-2019-0649 + §162①4호 | PDF 예제 6 anchor | `case-48-successor-member.test.ts` | ☐ **본 PR** |
 | 48-B | apt | true | none | no | < 1년 다른 양도가 (양도 2023) | 0 | 미해당 | §104①3호 (주택 70%) | 자가검증 — 산식 회귀 anchor | `case-48-successor-member.test.ts` | ☐ 본 PR |
 | 48-C | apt | true | none | no | 2년 이상 (3년+, 양도 2025+) | 표1 적용 | 가능성 있음 | §95②+사전-2019-0649 | (세율표 연도 정합 검증 필요) | (TODO) | **후속 PR** ★ 이동 |
 | 48-G | apt | false | — | — | 원조합원 회귀 | 표1/2 | 케이스별 | §166 | 사례 44 회귀 보존 | `case-44-integration.test.ts` | ✅ 기존 |
@@ -58,7 +58,7 @@
 | 48-C | apt | true | none | no | 3년+ (양도 2024+) | 표1 6% | 가능성 있음 | §95²+사전-2019-0649 + 양도연도 세율표 정합 | (TODO) | (TODO) | **후속 PR** (Blocker 2 이동) |
 
 **규칙**:
-- 48-A: PDF 양도코리아 anchor 6개 (양도차익·과세표준·산출세액·지방세·세액합계·redevelopmentDetail.postApproval.gain) 원단위 `toBe`
+- 48-A: PDF 예제 anchor 6개 (양도차익·과세표준·산출세액·지방세·세액합계·redevelopmentDetail.postApproval.gain) 원단위 `toBe`
 - 48-B/C: 자가검증 anchor (양도연도 세율표 + LTHD 표1 직접 적용) — 외부 자료 추종 금지 (`feedback_transfer_year_tax_rate`)
 - 48-G: 사례 44 통합 anchor 11개 100% 보존
 - 48-D/E: validation 가드로 차단 + `transfer-tax-validate-redev.ts` 안내 메시지
@@ -228,7 +228,7 @@ function getBranchLabels(redev: RedevelopmentResult): Record<RedevBranch, Branch
 ```ts
 if (input.redevelopment?.isSuccessorMember === true) {
   // §166 인가전·인가후 안분 우회.
-  // 양도코리아 PDF 자산종류 "일반주택(3)" 동치 (안분 비표시).
+  // 예제 PDF 자산종류 "일반주택(3)" 동치 (안분 비표시).
   preApproval = {
     gain: 0,
     lthd: 0,
@@ -246,9 +246,9 @@ if (input.redevelopment?.isSuccessorMember === true) {
 }
 ```
 
-### 추가분담금 입력 매핑 (★ PDF 양도코리아 화면 p.576 1:1)
+### 추가분담금 입력 매핑 (★ PDF 예제 화면 p.576 1:1)
 
-| PDF 양도코리아 화면 라벨 | 우리 시스템 필드 | 값 | 비고 |
+| PDF 예제 화면 라벨 | 우리 시스템 필드 | 값 | 비고 |
 |---|---|---|---|
 | 갑氏 취득일자 | `asset.acquisitionDate` | 2020-04-15 | 상속개시일 (시행령 §162①5호) |
 | 갑氏 취득원인 ("상속_시가평가액") | `asset.acquisitionCause` | `"inheritance"` | ★ 누락 6 보강 — 상속·증여·매매 명시 매핑 |
@@ -655,7 +655,7 @@ export function buildLthdEmitLines(result: RedevelopmentResult): RedevelopmentLt
 ## anchor 구체 시나리오 (테스트 파일 골격)
 
 ```ts
-describe("사례 48 — 승계조합원 준공 후 양도 (PDF 양도코리아 정합)", () => {
+describe("사례 48 — 승계조합원 준공 후 양도 (PDF 예제 정합)", () => {
   // 48-A — 본 PDF 6 anchor
   describe("48-A: 보유 1년 미만 70%", () => {
     // transferGain·preApproval.gain=0·postApproval.gain·taxBase·calculatedTax·localIncomeTax·totalTax·exemption

@@ -1,7 +1,7 @@
 /**
  * 사례 36 — 조합원입주권 양도 (subject="right") — CORE-36 + 36-A1 (환산) anchor
  *
- * PDF 출처: 양도코리아 책 사례 36 (조합원입주권_청산금불입_취득실가확인.jpeg)
+ * PDF 출처: 예제 교재 사례 36 (조합원입주권_청산금불입_취득실가확인.jpeg)
  *
  * CORE-36 입력:
  *   - 종전부동산 취득가 100,000,000 (2002-04-09)
@@ -78,7 +78,7 @@ function core36Input(): TransferTaxInput {
 // CORE-36 — PDF 원본 anchor (7건) — Pre-Do 우선 실행
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe("CORE-36 — 입주권 양도(pay) 실가 일반과세 (PDF 양도코리아 사례 36)", () => {
+describe("CORE-36 — 입주권 양도(pay) 실가 일반과세 (PDF 예제 사례 36)", () => {
   const input = core36Input();
   const result = calculateTransferTax(input, mockRates);
 
