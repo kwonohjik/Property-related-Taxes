@@ -161,8 +161,16 @@ export const useStockTransferStore = create<StockTransferStore>()(
       isLoading: false,
 
       setStep: (step) => set({ currentStep: step }),
+      // 입력이 바뀌면 이전 결과는 무효다 — 남겨두면 화면이 stale 세액을 보인다.
+      // Step4는 `result`가 있으면 자동 재계산을 건너뛰므로(Step4.tsx:41), 여기서 비우지 않으면
+      // 1단계로 돌아가 값을 고친 뒤 결과 탭으로 와도 **직전 계산 결과가 그대로** 표시된다.
+      // (commitCurrentItem·editSavedItem·removeSavedItem은 이미 같은 처리를 하고 있었다.)
       updateFormData: (patch) =>
-        set((state) => ({ formData: { ...state.formData, ...patch } })),
+        set((state) => ({
+          formData: { ...state.formData, ...patch },
+          result: null,
+          aggregateResult: null,
+        })),
       setResult: (result) => set({ result }),
       setAggregateResult: (aggregateResult) => set({ aggregateResult }),
       setError: (error) => set({ error }),

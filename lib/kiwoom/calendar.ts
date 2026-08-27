@@ -160,19 +160,52 @@ export function buildSurroundingSlotsFromAnchor(anchorIso: string): string[] {
  * - 일반: 2024-06-03 (월) → anchor=6/3 → [2024-05-04 ~ 2024-06-03] (31일).
  * - 토요일: 2025-06-21 (토) → anchor=6/20 (금) → [2025-05-21 ~ 2025-06-20] (31일).
  */
+/**
+ * 기준일의 **소급 1개월** 시점 (민법 §160② 역산 — 해당일이 없는 달이면 그 달의 말일).
+ *
+ *   2023-03-31 → 2023-02-28   (2월에 31일이 없다)
+ *   2023-05-31 → 2023-04-30   (4월에 31일이 없다)
+ *   2024-03-29 → 2024-02-29   (윤년 — 해당일이 실재하므로 그대로)
+ *   2023-01-31 → 2022-12-31   (12월은 31일 — 그대로)
+ */
+function monthBeforeClamped(anchor: Date): Date {
+  const y = anchor.getUTCFullYear();
+  const mIdx = anchor.getUTCMonth(); // 0-based
+  const d = anchor.getUTCDate();
+  const prev = new Date(Date.UTC(y, mIdx - 1, d));
+  // 오버플로 감지 — 기대한 달이 아니면 짧은 달을 넘어간 것이다.
+  const expected = ((mIdx - 1) % 12 + 12) % 12;
+  if (prev.getUTCMonth() !== expected) {
+    prev.setUTCDate(0); // 직전 달의 말일로 되돌린다
+  }
+  return prev;
+}
+
 export function buildOneMonthBeforeSlots(transferDateIso: string): string[] {
   if (!transferDateIso || !/^\d{4}-\d{2}-\d{2}$/.test(transferDateIso)) return [];
 
-  // anchor 시프트 — 양도일이 토·일이면 직전 평일까지 이동
-  const [y, m, d] = transferDateIso.split("-").map(Number);
+  // anchor 시프트 — 양도일이 **매매가 없는 날**이면 직전 거래일로 옮긴다.
+  //
+  // 근거: 상증법 §63①1가목 괄호 「평가기준일이 **공휴일 등 대통령령으로 정하는 매매가 없는 날**인
+  //       경우에는 **그 전일을 기준으로 한다**」 + 상증령 §52의2④(공휴일·대체공휴일·토요일).
+  //       소득세법 §99①3이 이 가목을 준용하므로 양도세에도 그대로 적용된다.
+  //
+  // 종전에는 **토·일만** 보아 삼일절·현충일 같은 평일 공휴일과 납회기간(12/29~31)에는
+  // 시프트가 일어나지 않았다. 같은 조문에서 나온 상증세 평가용 `resolveValuationAnchor`는
+  // 이미 공휴일·납회를 처리하고 있어 **두 세목이 갈려 있었다** — 그 헬퍼를 재사용해 합친다.
+  const anchorIso = resolveValuationAnchor(transferDateIso);
+  const [y, m, d] = anchorIso.split("-").map(Number);
   const anchor = new Date(Date.UTC(y, m - 1, d));
-  while (anchor.getUTCDay() === 0 || anchor.getUTCDay() === 6) {
-    anchor.setUTCDate(anchor.getUTCDate() - 1);
-  }
 
-  // start = anchor (month-1, day+1) — JS overflow 자동 보정
-  const start = new Date(anchor);
-  start.setUTCMonth(start.getUTCMonth() - 1);
+  // start = (anchor 소급 1개월)의 다음날.
+  //
+  // ⚠️ `setUTCMonth(-1)` 만으로는 **월말에서 기간이 잘린다** — 짧은 달로 넘어갈 때 JS가
+  //    오버플로를 다음 달로 밀기 때문이다. 2023-03-31이면 (2023,2월,31일) → 2023-03-03이 되어
+  //    윈도우가 [03-04 ~ 03-31] **28일**로 줄었다(정상 31일).
+  //    민법 §160②은 「월로 정한 기간은 역에 의해 계산하고, 최후의 월에 해당일이 없으면
+  //    그 월의 말일로 기간이 만료한다」고 한다 ⇒ 2023-03-31의 소급 1개월은 **2023-02-28**이다.
+  //    그래서 오버플로가 감지되면 `setUTCDate(0)`으로 **직전 달의 말일**까지 되돌린다.
+  const start = monthBeforeClamped(anchor);
   start.setUTCDate(start.getUTCDate() + 1);
 
   // end = anchor (포함)

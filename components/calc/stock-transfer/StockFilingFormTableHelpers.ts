@@ -100,10 +100,24 @@ export function deriveColumns(
 
 // ── 라벨 헬퍼 ─────────────────────────────────────────────────
 
+/**
+ * 조문 라벨.
+ *
+ * ⚠️ `Record<string, string>`이 아니라 **union을 키로** 받는다 — 그래야 `appliedSection94`에
+ *    값이 추가될 때 컴파일러가 누락을 잡는다. 종전에는 `Record<string, string>`이라
+ *    가목 1)·2)의 라벨이 **서로 뒤바뀐 채로** 아무도 모르게 남아 있었다
+ *    (안전망 실측 P-2: 두 라벨을 교환해도 반응하는 테스트 0건).
+ *
+ * 소득세법 §94①3 가목 (KoreanLaw 실측, mst 280405):
+ *   1) … **대주주가 양도하는** 주식등
+ *   2) 1)에 따른 **대주주에 해당하지 아니하는 자가 증권시장에서의 거래에 의하지 아니하고**
+ *      양도하는 주식등
+ */
 function sectionLabel(appliedSection94: StockTransferResult["appliedSection94"]): string {
-  const map: Record<string, string> = {
-    "①3가1)": "§94①3 가목1) — 상장 비대주주 장외",
-    "①3가2)": "§94①3 가목2) — 상장 대주주",
+  const map: Record<StockTransferResult["appliedSection94"], string> = {
+    "①3가1)": "§94①3 가목1) — 상장 대주주",
+    "①3가2)": "§94①3 가목2) — 상장 비대주주 장외",
+    "해당없음": "§94①3 비해당 — 상장 비대주주 장내 (과세대상 아님)",
     "①3나_본문": "§94①3 나목 본문 — 비상장",
     "①3나_단서": "§94①3 나목 단서 — K-OTC",
     "①3다": "§94①3 다목 — 국외주식",
@@ -392,7 +406,8 @@ export function buildRows(
 
   // 11. 취득가액
   rows.push({
-    label: "11. 취득가액 (②)",
+    // 환산 모드에서는 이 값이 곧 §163⑨ 환산취득가액이다 — 12-1·12-2가 그 분자·분모다.
+    label: result.usedEstimatedAcquisition ? "11. 취득가액 (② = 환산취득가액)" : "11. 취득가액 (②)",
     values: val(
       result.acquisitionPrice,
       (agg) => agg.items.reduce((s, r) => s + r.acquisitionPrice, 0),
@@ -400,13 +415,36 @@ export function buildRows(
     ),
   });
 
-  // 12. 환산취득가 base (estimated 모드)
+  // 12~13. §163⑨ 환산취득가액 산식 — 분자·분모 (모두 **1주당**)
+  //
+  // 종전에는 「12. 환산 base (취득기준시가)」 한 줄에 **총액**을 보여줬다. 라벨이 「환산…」으로
+  // 시작하는데 값은 환산의 base라, 정작 환산취득가액(11행)이 어떻게 나왔는지는 화면 어디에도
+  // 드러나지 않았다. 산식을 분자·분모로 펼쳐 11행과 이어지게 한다.
+  //
+  // ⚠️ 12·13은 **1주당**, `estimatedBase`는 **총액**이다. 섞으면 항등식이 깨진다 —
+  //    총액 base는 17행(개산공제 §163⑥4)이 이미 그 역할로 쓰고 있다.
   rows.push({
-    label: "12.   환산 base (취득기준시가, estimated 모드)",
+    label: "12-1.  환산 분자 — 취득 당시 1주당 기준시가",
     values: val(
-      result.estimatedBase ?? null,
+      result.valuationDetail?.conversionAcqStdPerShare ?? null,
       () => null,
-      (item) => item.estimatedBase ?? null,
+      (item) => item.valuationDetail?.conversionAcqStdPerShare ?? null,
+    ),
+    indent: true,
+  });
+
+  /** 분모가 사용자 입력이 아니라 1주당 양도가액 자동 대체인지 — 거짓 표시 방지 */
+  const transferStdLabel = (r: StockTransferResult) =>
+    r.valuationDetail?.conversionUsedFallback
+      ? "12-2.  환산 분모 — 양도 당시 1주당 기준시가 (미입력 · 1주당 양도가액으로 대체)"
+      : "12-2.  환산 분모 — 양도 당시 1주당 기준시가";
+
+  rows.push({
+    label: transferStdLabel(result),
+    values: val(
+      result.valuationDetail?.conversionTransferStd ?? null,
+      () => null,
+      (item) => item.valuationDetail?.conversionTransferStd ?? null,
     ),
     indent: true,
   });

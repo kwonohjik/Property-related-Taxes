@@ -311,19 +311,27 @@ function classifySection94(
         basicDeductionGroup: "stock",
       };
     }
-    // 장외 비대주주 (KOSPI/KOSDAQ/KONEX 비K-OTC) — 가목 1) 단서 미해당 = 본문 적용 = 과세
+    // 장외 비대주주 (KOSPI/KOSDAQ/KONEX 비K-OTC) — 과세
+    //
+    // 근거: §94①3 가목 **2)** 「1)에 따른 대주주에 해당하지 아니하는 자가 **증권시장에서의
+    // 거래에 의하지 아니하고** 양도하는 주식등」. 이 사실관계를 그대로 담는 목이 2)다.
+    // (종전에는 가목 1)을 붙였는데, 1)은 「**대주주가** 양도하는 것」이라 정반대다.)
     if (input.isOnMarketTransaction === false) {
       return {
         taxCategory: "listed_off_market_non_major",
-        appliedSection94: "①3가1)",
+        appliedSection94: "①3가2)",
         section94_2Applied: false,
         basicDeductionGroup: "stock",
       };
     }
     // 장내 비대주주 → 비과세 (exemption에서 처리되지만 분류는 여기서)
+    //
+    // 가목 1)은 대주주, 2)는 비대주주의 **장외** 양도다. 비대주주의 **장내** 양도는
+    // §94①3 어느 목에도 해당하지 않는다 — 과세대상이 아니어서 비과세인 것이다.
+    // 종전에는 `①3가1)`을 붙여 「대주주 조항 적용」이라는 틀린 인용을 화면에 냈다.
     return {
       taxCategory: "listed_non_major_in_market",
-      appliedSection94: "①3가1)",
+      appliedSection94: "해당없음",
       section94_2Applied: false,
       basicDeductionGroup: "stock",
     };

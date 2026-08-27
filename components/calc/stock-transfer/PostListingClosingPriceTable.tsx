@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { calcMonthlyClosingAverage } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
+import { buildOneMonthBeforeSlots, resolveValuationAnchor } from "@/lib/kiwoom/calendar";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface PostListingClosingPriceTableProps {
@@ -42,50 +43,43 @@ export function fmtDate(d: Date): string {
 }
 
 /**
- * 양도일 기산 anchor — 양도일이 주말이면 직전 평일(금요일)까지 시프트.
- * (거래소 휴장일 캘린더는 미반영 — 토·일만 보정)
+ * 양도일 기산 anchor — 양도일이 **매매가 없는 날**이면 직전 거래일까지 시프트.
  *
- * 예: 2023-02-26 (일) → 2023-02-24 (금)
- *     2023-02-25 (토) → 2023-02-24 (금)
- *     2023-02-24 (금) → 2023-02-24 (그대로)
+ * 근거: 상증법 §63①1가목 괄호(「평가기준일이 공휴일 등 매매가 없는 날이면 **그 전일**을 기준」)
+ *       + 상증령 §52의2④(공휴일·대체공휴일·토요일). 소득세법 §99①3이 이 가목을 준용한다.
+ *
+ * ⚠️ 판정은 `lib/kiwoom/calendar.ts`의 `resolveValuationAnchor`가 **단일 소스**다.
+ *    종전에는 이 파일이 「토·일만」 보는 자체 구현을 갖고 있어 삼일절·현충일 같은 평일 공휴일과
+ *    납회기간(12/29~31)에서 시프트가 일어나지 않았다.
+ *
+ * 예: 2023-02-26(일) → 2023-02-24(금)
+ *     2024-03-01(금·삼일절) → 2024-02-29(목)
+ *     2023-12-29(금·납회) → 2023-12-28(목)
+ *     ※ 휴장일 픽스처(2020~2026) 범위 밖 평일은 판정 불가라 그대로 둔다.
  */
 export function resolvePreTransferAnchor(transferDate: string): string {
   if (!transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(transferDate)) return "";
-  const [y, m, d] = transferDate.split("-").map(Number);
-  const anchor = new Date(Date.UTC(y, m - 1, d));
-  while (anchor.getUTCDay() === 0 || anchor.getUTCDay() === 6) {
-    anchor.setUTCDate(anchor.getUTCDate() - 1);
-  }
-  return fmtDate(anchor);
+  return resolveValuationAnchor(transferDate);
 }
 
 /**
- * 양도일 직전 1개월 일자 배열 (UTC, 가변 일수).
+ * 양도일 **이전** 1개월 일자 배열 (UTC, 가변 일수) — 소득세법 §99①3.
  *
- * 기계적 산식 — 일수(30/31) 가정 없이 월·일만 조작:
- *   anchor = resolvePreTransferAnchor(transferDate)
- *   start  = (anchor.year, anchor.month − 1, anchor.day + 1)   ← JS overflow 자동 보정
- *   end    = anchor                                            ← anchor 포함
+ * 「이전」은 양도일을 **포함**한다(「전」이면 미포함). 상증법 §63①1가목을 준용하면서
+ * "평가기준일 이전ㆍ이후 각 2개월"을 "양도일ㆍ취득일 이전 1개월"로 치환한 구조다.
  *
- * 예: anchor 2023-02-24 → [2023-01-25, 2023-02-24] (31일)
- *     anchor 2024-03-01 → [2024-02-02, 2024-03-01] (28일)  ※ 윤년·평년 자동
- *     anchor 2023-03-31 → [2023-03-01, 2023-03-31] (31일)  ※ 2-32 overflow → 3-01
+ * ⚠️ 산식은 `lib/kiwoom/calendar.ts`의 `buildOneMonthBeforeSlots`가 **단일 소스**다.
+ *    종전에는 이 파일이 같은 산식을 복제해 갖고 있었고, 두 벌 모두 월말에서 기간이
+ *    잘리는 같은 결함을 안고 있었다(2023-03-31 → 28일). 키움 자동조회
+ *    (`app/api/kiwoom/transfer-1month/route.ts`)는 calendar 쪽을, 이 표는 복제본을 쓰고 있어
+ *    **같은 화면의 두 입력 경로가 서로 다른 기간을 쓸 수 있었다**.
+ *
+ * 예: 2023-02-24(금) → [2023-01-25 ~ 2023-02-24] (31일)
+ *     2024-03-01(금) → [2024-02-02 ~ 2024-03-01] (29일)
+ *     2023-03-31(금) → [2023-03-01 ~ 2023-03-31] (31일)  ※ 민법 §160② 말일 클램프
  */
 export function preTransferAutoFillDates(transferDate: string): string[] {
-  const anchorStr = resolvePreTransferAnchor(transferDate);
-  if (!anchorStr) return [];
-  const [y, m, d] = anchorStr.split("-").map(Number);
-  // end = anchor (포함)
-  const endInclusive = new Date(Date.UTC(y, m - 1, d));
-  // start = (월 − 1, 일 + 1) — 기계적 산식 (JS overflow 자동 보정)
-  const start = new Date(Date.UTC(y, m - 1, d));
-  start.setUTCMonth(start.getUTCMonth() - 1);
-  start.setUTCDate(start.getUTCDate() + 1);
-  const out: string[] = [];
-  for (let cur = new Date(start); cur <= endInclusive; cur.setUTCDate(cur.getUTCDate() + 1)) {
-    out.push(fmtDate(cur));
-  }
-  return out;
+  return buildOneMonthBeforeSlots(transferDate);
 }
 
 /**

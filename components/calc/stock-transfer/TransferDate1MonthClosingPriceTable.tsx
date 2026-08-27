@@ -1,16 +1,20 @@
 "use client";
 
 /**
- * TransferDate1MonthClosingPriceTable — 양도일 직전 1개월 종가 표
+ * TransferDate1MonthClosingPriceTable — 양도일 이전 1개월 종가 표
  *
- * 소령 §99①3 → 시행령 §165③ 준용 → 상증법 §63①1가목 본문 준용 → 상증령 §52의2
+ * 소득세법 §99①3(법률) → 상증법 §63①1가목 준용 → 상증령 §52의2
+ *   ※ §99는 **법률**이다. 종전 주석·화면 문구의 「소령 §99①3」은 오기였다.
  *   - 분모: 거래일 종가 평균 (상증령 §52의2④ 공휴일·토요일 제외)
  *   - 거래정지·관리종목 제외 (상증령 §52의2③)
  *   - 본 평균은 환산취득가 산식의 분모로 사용 (산식 본칙은 별도 — 시령 §176의2 등).
  *
- * 기간 정의: [transferDate − 1 month, transferDate − 1 day] (양도일 미포함).
- *   예: 2024-06-01 → [2024-05-01, ..., 2024-05-31] (31일)
- *       2024-03-01 → [2024-02-01, ..., 2024-02-29] (윤년 29일)
+ * 기간 정의: [양도일 소급 1개월 + 1일, **양도일**] — 「이전」은 양도일을 **포함**한다.
+ *   (「이전·이후」= 당일 포함 / 「전·후」= 당일 미포함 — 사용자 검증 2026-05-19)
+ *   예: 2023-02-24(금) → [2023-01-25 ~ 2023-02-24] (31일)
+ *       2023-03-31(금) → [2023-03-01 ~ 2023-03-31] (31일 — 민법 §160② 말일 클램프)
+ *   양도일이 토·일이면 직전 거래일로 기준을 옮긴다(상증법 §63①1가목 괄호).
+ *   ⚠️ 종전 주석은 「(양도일 미포함)」이라고 적혀 있었으나 **구현과 반대**였다.
  *
  * UI: PostListingClosingPriceTable 패턴 차용 — 2-col grid + 주말 자동 표시 + Enter 네비.
  * 색조: amber (양도일 영역, 상장일 emerald와 구분).
@@ -104,7 +108,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 text-sm text-amber-800">
         <p className="font-semibold mb-1">양도일을 먼저 입력하세요 (Step 1).</p>
-        <p className="text-xs">양도일부터 직전 1개월 일자가 자동 채워집니다.</p>
+        <p className="text-xs">양도일을 포함한 이전 1개월 일자가 자동 채워집니다.</p>
       </div>
     );
   }
@@ -117,7 +121,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
       noDark
       title={
         <>
-          양도일 직전 1개월 종가 (소령 §99①3 분모 — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일, 휴일·주말은 빈칸으로 두면 자동 제외)
+          양도일 이전 1개월 종가 (소득세법 §99①3 분모 — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일, 휴일·주말은 빈칸으로 두면 자동 제외)
         </>
       }
     >

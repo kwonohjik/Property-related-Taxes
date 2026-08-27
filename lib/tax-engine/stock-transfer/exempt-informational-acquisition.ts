@@ -107,7 +107,7 @@ export function computeInformationalAcquisition(
         const r = calcPostListingConversion(synthesizedInput);
         // §163⑨ 환산 합성 — 양도가 × (취득기준 / 양도기준). transferStd 미입력 시 1주당 양도가 fallback.
         const acqStdPerShare = r.finalPerShareValue;
-        const { transferStd } = resolveTransferStd(transferPrice, shareCount, input.transferDatePriceAvg1Month);
+        const { transferStd, usedFallback } = resolveTransferStd(transferPrice, shareCount, input.transferDatePriceAvg1Month);
         const acquisitionPrice = apply163_9Conversion(
           transferPrice, acqStdPerShare, transferStd, r.totalAcquisitionPrice,
         );
@@ -120,6 +120,11 @@ export function computeInformationalAcquisition(
             method: "post_listing_conversion",
             netAssetFloorApplied: false,
             finalPerShareValue: acqStdPerShare,
+            // 환산 산식 echo — 정상 경로(stock-acquisition-basis.ts:147)와 **같은 필드**를 채운다.
+            // 종전에는 이 분기만 비워 두어, 비과세 화면에서 신고서 환산 산식 행이 통째로 빈칸이 됐다.
+            conversionAcqStdPerShare: acqStdPerShare,
+            conversionTransferStd: transferStd,
+            conversionUsedFallback: usedFallback,
           },
         };
       }
