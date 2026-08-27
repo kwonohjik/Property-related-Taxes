@@ -213,7 +213,8 @@ function TransferSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?:
   //   작성방법 6번이 이를 §90② 적용 시로 한정한다.
   // 종전에는 세액감면분(reducibleIncome)까지 빼서 화면(DetailedStatementHelpers)과 어긋났다.
   const incomeAmountAfter = Math.max(0, incomeAmount - new993Reducible);
-  const ruralSurtax = new993?.ruralSurtax ?? 0;
+  // 농특세 총액 echo가 정본 — `new993.ruralSurtax`만 보면 세액감면형(§77 계열)이 빠진다.
+  const ruralSurtax = (num(r.ruralSurtax) ?? new993?.ruralSurtax ?? 0) as number;
   const penaltyTax = (num(r.penaltyTax) ?? 0) as number;
   const determinedTax = (num(r.determinedTax) ?? 0) as number;
   const totalDeterminedTax = determinedTax + penaltyTax;
@@ -239,7 +240,7 @@ function TransferSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?:
         <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(determinedTax)}</Text></View>
         {penaltyTax > 0 && (<View style={s.row}><Text style={s.lbl}>가산세액</Text><Text style={s.val}>{fmt(penaltyTax)}</Text></View>)}
         <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
-        {ruralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세 (§99의3 등)</Text><Text style={s.val}>{fmt(ruralSurtax)}</Text></View>)}
+        {ruralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(ruralSurtax)}</Text></View>)}
         {num(r.localIncomeTax) !== undefined && (<View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>)}
       </View>
     </>
@@ -362,7 +363,7 @@ function TransferMultiSection({ r, selectedSectionIds }: { r: R; selectedSection
         <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(determinedTax)}</Text></View>
         {penaltyTax > 0 && (<View style={s.row}><Text style={s.lbl}>가산세액</Text><Text style={s.val}>{fmt(penaltyTax)}</Text></View>)}
         <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
-        {aggRuralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세 (§99의3 등)</Text><Text style={s.val}>{fmt(aggRuralSurtax)}</Text></View>)}
+        {aggRuralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(aggRuralSurtax)}</Text></View>)}
         <View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>
       </View>
 
@@ -418,7 +419,7 @@ function TransferMultiSection({ r, selectedSectionIds }: { r: R; selectedSection
                     <View style={s.rowBg}><Text style={s.lbl}>과세표준 기여분</Text><Text style={s.valAccent}>{fmt(p.taxBaseShare)}</Text></View>
                     {num(p.calculatedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>산출세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.calculatedTax)}</Text></View>)}
                     {num(p.determinedTax) !== undefined && (<View style={s.row}><Text style={s.lblSub}>결정세액 기여분 (참고)</Text><Text style={s.val}>{fmt(p.determinedTax)}</Text></View>)}
-                    {(np?.ruralSurtax ?? 0) > 0 && (<View style={s.rowLast}><Text style={s.lbl}>농어촌특별세 (§99의3 등)</Text><Text style={s.val}>{fmt(np?.ruralSurtax)}</Text></View>)}
+                    {(np?.ruralSurtax ?? 0) > 0 && (<View style={s.rowLast}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(np?.ruralSurtax)}</Text></View>)}
                   </View>
                 )}
               </View>

@@ -338,8 +338,13 @@ export function buildAggregateRows(
    * 자산별로 나누어지지 않는다.
    */
   setNum("ruralSurtax", "total", aggregated.ruralSurtax ?? 0);
-  const localCalcTotal = Math.floor((aggregated.determinedTax + aggregated.penaltyTax) * 0.1);
-  setNum("localCalculatedTax", "total", localCalcTotal);
+  /**
+   * 지방소득세 산출세액 — 엔진 값을 그대로 싣는다(재계산 금지).
+   * 종전에는 `aggregated.penaltyTax`로 base를 재현했는데 그 필드는 **국기법 신고불성실·
+   * 납부지연분까지 합한 총액**이라(`transfer-aggregate.types.ts` 주석) 엔진이 실제로 쓴
+   * base(`buildingPenaltyTax`)보다 커졌고, 「산출세액 > 결정세액 · 감면 0」 모순이 나왔다.
+   */
+  setNum("localCalculatedTax", "total", aggregated.localIncomeTax);
   setNum("localReduction", "total", 0);
   setNum("localDeterminedTax", "total", aggregated.localIncomeTax);
   // 기납부·차감납부 (§111③ 예정신고 정산) — 합계 열만. MultiTransferTaxSummaryCard와 동일 엔진 필드(절대값).
@@ -382,7 +387,7 @@ export function buildAggregateRows(
     ["totalDeterminedTax", "총결정세액", { highlight: true }],
     ["priorPaidTax", "기납부세액 (예정신고, §111③)"],
     ["deductedPayable", "차감납부할세액", { highlight: true, separatorAfter: true }],
-    ["ruralSurtax", "농어촌특별세 (§99의3 등)"],
+    ["ruralSurtax", "농어촌특별세"],
     ["localCalculatedTax", "지방소득세 산출세액"],
     ["localReduction", "지방세 감면세액"],
     ["localDeterminedTax", "지방세 결정세액", { highlight: true }],

@@ -156,6 +156,8 @@ export interface FinalizeResult {
   unsold984FinalResult?: UnsoldHybridResult;
   unsold98FinalResult?: UnsoldHybridResult;
   ruralSurtax993: number;
+  /** 농특세 총액 = 993 + 하이브리드 + 세액감면형 (`TransferTaxResult.ruralSurtax` echo) */
+  ruralSurtax: number;
   // 감면 (calcReductions return의 fan-out)
   reductionAmount: number;
   reductionType: ReturnType<typeof calcReductions>["reductionType"];
@@ -518,6 +520,9 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     unsold984FinalResult,
     unsold98FinalResult,
     ruralSurtax993,
+    // [echo] 농특세 **총액**(993 + 하이브리드 + 세액감면형). 종전에는 세액감면형이
+    // 어느 detail에도 실리지 않아 표시부가 재구성할 수 없었다 — `totalTax`에는 이미 들어 있다.
+    ruralSurtax: ruralSurtaxTotal,
     // STEP 8.5 5년 한도 반영값 — 결과 표시(결정세액 산식)와 일관 유지
     reductionAmount: cappedReductionAmount,
     reductionType,

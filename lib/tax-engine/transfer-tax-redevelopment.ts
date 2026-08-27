@@ -733,6 +733,9 @@ export function calculateRedevelopmentTax(
     penaltyBase: 0,
     localIncomeTax,
     penaltyDetail,
+    // [echo] 농특세 총액(§99의3분 + 감면분). 종전에는 이 경로가 `ruralSurtax993`조차 싣지
+    // 않아 재개발·입주권에서는 소득금액차감형 농특세까지 화면에서 0이 됐다 — `totalTax`엔 있다.
+    ruralSurtax: ruralSurtaxTotal,
     totalTax,
     amendmentDetail,
     steps,

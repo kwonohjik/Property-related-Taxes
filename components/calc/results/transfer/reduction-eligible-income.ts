@@ -65,6 +65,25 @@ export function incomeDeductionRuralSurtax(
   return incomeDeductionDetails(result).reduce((s, d) => s + (d?.ruralSurtax ?? 0), 0);
 }
 
+/**
+ * 결과탭 농어촌특별세 **표시 단일 소스**.
+ *
+ * 우선순위: 집계 override → 엔진 총액 echo(`result.ruralSurtax`) → 소득금액차감 detail 합산.
+ *
+ * 마지막 폴백은 **옛 저장 결과 전용**이다. 결과는 IndexedDB에 저장·복원되므로 총액 echo가
+ * 없는 result가 도달할 수 있다. 그 폴백은 세액감면형(§77·§77의2·§77의3·§97 계열)을 담지
+ * 못하지만, 그것이 종전 동작이므로 회귀는 없다.
+ *
+ * anchor: `__tests__/components/transfer-rural-surtax-display.anchor.test.tsx`
+ */
+export function resolveRuralSurtax(
+  result: import("@/lib/tax-engine/transfer-tax").TransferTaxResult,
+  aggregateOverride?: number,
+): number {
+  if (aggregateOverride !== undefined) return aggregateOverride;
+  return result.ruralSurtax ?? incomeDeductionRuralSurtax(result);
+}
+
 /** 조문 표시명 — 3단계 상세명세 산식 꼬리표 */
 const INCOME_DEDUCTION_LABELS = [
   "§99의3", "§99", "§98의8", "§98의7", "§99의2",
