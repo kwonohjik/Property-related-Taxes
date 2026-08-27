@@ -147,6 +147,22 @@ export function StockAggregateSummaryCard({
 
       <ToneCard tone="emerald" title="합계 납부세액">
         <dl className="space-y-1 text-sm">
+          {/*
+            가산세는 **신고 1건 단위 1회**다(국세기본법 §47조의2·§47조의3·§47조의4).
+            결정세액에 이미 포함돼 있지만 내역을 보이지 않으면 「왜 이 금액인가」를 알 수 없다.
+          */}
+          {aggregate.totalUnderReportPenalty > 0 && (
+            <div className="flex justify-between">
+              <dt>신고불성실 가산세</dt>
+              <dd className="font-mono tabular-nums">{won(aggregate.totalUnderReportPenalty)}</dd>
+            </div>
+          )}
+          {aggregate.totalLatePaymentPenalty > 0 && (
+            <div className="flex justify-between">
+              <dt>납부지연 가산세</dt>
+              <dd className="font-mono tabular-nums">{won(aggregate.totalLatePaymentPenalty)}</dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt>양도소득세 결정세액</dt>
             <dd className="font-mono tabular-nums font-semibold">{won(aggregate.totalFinalTax)}</dd>
@@ -162,7 +178,49 @@ export function StockAggregateSummaryCard({
             </dd>
           </div>
         </dl>
+        {(aggregate.totalUnderReportPenalty > 0 || aggregate.totalLatePaymentPenalty > 0) && (
+          <p className="text-caption text-muted-foreground">
+            가산세는 종목마다 매기지 않고 <strong>신고 1건 단위</strong>로 한 번 산정합니다
+            (국세기본법 §47조의2·§47조의3·§47조의4).
+          </p>
+        )}
       </ToneCard>
+
+      {/*
+        증권거래세는 **양도소득세와 별개 세목**이라 위 합계에 더하지 않는다.
+        엔진은 종목별 값을 합산해 `totalSecuritiesTransactionTax` 로 실어 보내는데
+        종전에는 **UI 참조가 0건**이라 화면에 나온 적이 없었다(계산은 맞는데 표시 누락).
+      */}
+      {aggregate.totalSecuritiesTransactionTax.totalTax > 0 && (
+        <ToneCard tone="slate" title="증권거래세 합계 (정보성)">
+          <dl className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <dt>증권거래세분</dt>
+              <dd className="font-mono tabular-nums">
+                {won(aggregate.totalSecuritiesTransactionTax.securitiesTransactionTax)}
+              </dd>
+            </div>
+            {aggregate.totalSecuritiesTransactionTax.agriculturalTax > 0 && (
+              <div className="flex justify-between">
+                <dt>농어촌특별세</dt>
+                <dd className="font-mono tabular-nums">
+                  {won(aggregate.totalSecuritiesTransactionTax.agriculturalTax)}
+                </dd>
+              </div>
+            )}
+            <div className="flex justify-between border-t pt-1 font-semibold">
+              <dt>합계</dt>
+              <dd className="font-mono tabular-nums">
+                {won(aggregate.totalSecuritiesTransactionTax.totalTax)}
+              </dd>
+            </div>
+          </dl>
+          <p className="text-caption text-muted-foreground">
+            증권거래세는 양도소득세와 <strong>별도로 납부</strong>하는 세목입니다 — 위 납부세액
+            합계에 포함되지 않습니다. 종목별 계산 근거는 각 종목 결과 화면에서 볼 수 있습니다.
+          </p>
+        </ToneCard>
+      )}
     </div>
   );
 }

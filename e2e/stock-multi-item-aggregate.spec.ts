@@ -147,5 +147,13 @@ test.describe("주식 다종목 합산신고", () => {
     // 다종목 합산 요약 카드 + 별지 제84호서식 종목별 열
     await expect(page.getByText(/다종목 합산 \(2건\)/)).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/다자산 합산 \(2종목\)/)).toBeVisible();
+
+    // ⑥ 사이드바가 **신고 전체**를 말한다 — 종전에는 편집 중 1건만 보였다(Phase D · A-1)
+    await expect(page.getByText("2건 합산")).toBeVisible();
+    await expect(page.getByText("양도소득금액 합계")).toBeVisible();
+
+    // ⑦ 증권거래세 합계 — 엔진은 계산했는데 화면에 나온 적이 없었다(Phase D · A-2)
+    await expect(page.getByText("증권거래세 합계 (정보성)")).toBeVisible();
+    await expect(page.getByText(/별도로 납부/)).toBeVisible();
   });
 });
