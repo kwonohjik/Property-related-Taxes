@@ -40,6 +40,18 @@ export interface ExitTaxHoldingForm {
   unlistedSamplePrice: string;
   /** §99①4 비상장 기준시가 1주당 (unlisted_std 모드) */
   unlistedStdPricePerShare: string;
+
+  // ── 보유현황 신고서(별지 제104호서식) 표시 전용 — **엔진 미전달** ──
+  //
+  // §118의15 보유현황 신고서는 세액 계산에 쓰이지 않는 칸을 요구한다. `securityName` 이
+  // 「엔진 미전달 — 저장·이력·신고서 표시용」인 것과 같은 층위다.
+
+  /** ⑩ 주식등 종목코드 또는 사업자등록번호 (해외주식은 ISIN코드와 국가명) */
+  stockCodeOrBizNumber?: string;
+  /** ⑫ 액면총액 산정용 — 1주당 액면가 (원) */
+  faceValuePerShare?: string;
+  /** ⑬ 보유 지분율 (%) */
+  ownershipRatio?: string;
 }
 
 /** 신규 국외전출세 보유 종목 빈 행 팩토리 */
@@ -56,6 +68,9 @@ export function createEmptyExitTaxHolding(): ExitTaxHoldingForm {
     priorYearEndMonthAvg: "",
     unlistedSamplePrice: "",
     unlistedStdPricePerShare: "",
+    stockCodeOrBizNumber: "",
+    faceValuePerShare: "",
+    ownershipRatio: "",
   };
 }
 

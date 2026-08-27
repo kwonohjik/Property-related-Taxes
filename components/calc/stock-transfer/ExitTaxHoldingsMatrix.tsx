@@ -150,6 +150,48 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
             />
           </div>
 
+          {/*
+            보유현황 신고서(별지 제104호서식) 전용 칸 — **세액 계산에는 쓰이지 않는다**.
+            서식 ⑩⑫⑬ 을 채우려면 종목마다 필요한데 계산 입력으로는 불필요해 여기서만 받는다.
+            비워 두면 서식의 해당 칸이 **빈칸으로 인쇄**된다(추정하지 않는다).
+          */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">종목코드·사업자등록번호</label>
+              <input
+                type="text"
+                value={holding.stockCodeOrBizNumber ?? ""}
+                onChange={(e) =>
+                  updateHolding(holding.id, { stockCodeOrBizNumber: e.target.value })
+                }
+                onFocus={(e) => e.target.select()}
+                placeholder="신고서 ⑩ (선택)"
+                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">1주당 액면가 (원)</label>
+              <CurrencyInput
+                label=""
+                value={holding.faceValuePerShare ?? ""}
+                onChange={(v) => updateHolding(holding.id, { faceValuePerShare: v })}
+                hideUnit
+                placeholder="신고서 ⑫ (선택)"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">보유 지분율 (%)</label>
+              <input
+                type="text"
+                value={holding.ownershipRatio ?? ""}
+                onChange={(e) => updateHolding(holding.id, { ownershipRatio: e.target.value })}
+                onFocus={(e) => e.target.select()}
+                placeholder="신고서 ⑬ (선택)"
+                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400"
+              />
+            </div>
+          </div>
+
           {/* 시장 선택 */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-gray-700">시장</label>

@@ -11,6 +11,7 @@ import { useEffect, useRef } from "react";
 import { StockTransferTaxResultView } from "@/components/calc/results/StockTransferTaxResultView";
 import { ForeignStockResultCard } from "@/components/calc/results/ForeignStockResultCard";
 import { ExitTaxResultCard } from "@/components/calc/results/ExitTaxResultCard";
+import { ExitTaxHoldingReportSection } from "@/components/calc/results/ExitTaxHoldingReportSection";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { ForeignStockResult } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
@@ -108,7 +109,17 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
             />
           ) : /* PR-4B 국외전출세 — 별도 결과 카드 (ExitTaxResult 타입) */
           form.marketType === "exit_tax" ? (
-            <ExitTaxResultCard result={result as unknown as ExitTaxResult} />
+            <>
+              <ExitTaxResultCard result={result as unknown as ExitTaxResult} />
+              {/*
+                별지 제104호서식 — §118의15 보유현황 신고서.
+                토글은 CSS-only 로 인쇄 시 자동 펼침(useEffect·isPrinting 추적 금지).
+              */}
+              <ExitTaxHoldingReportSection
+                holdings={form.etHoldings}
+                departureDate={form.etDepartureDate}
+              />
+            </>
           ) : /* PR-4A 해외주식 — 별도 결과 카드 (ForeignStockResult 타입) */
           form.marketType === "foreign_stock" ? (
             <ForeignStockResultCard
