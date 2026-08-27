@@ -40,10 +40,23 @@ function Row({
 export function AmendmentResultCard({
   detail,
   fullTotalTax,
+  totalScopeNote,
 }: {
   detail: AmendmentDetail;
   fullTotalTax: number;
+  /**
+   * 「전체 세액」의 **범위 한정 문구** (예: `"양도세분"`).
+   *
+   * 부담부증여는 같은 화면에 **증여세**가 함께 표시되는데 `fullTotalTax`는 양도세 집계
+   * (`aggregated.totalTax`)뿐이라, 한정 없이 「전체 세액」이라고 하면 증여세까지 포함한
+   * 금액으로 읽힌다. 비교 기준(`detail`의 당초 결정세액)은 양도세분이 정본이므로
+   * **금액은 그대로 두고 라벨만 좁힌다**.
+   *
+   * 미지정이면 종전 문구 그대로 — 기존 3개 뷰는 바이트 불변이다.
+   */
+  totalScopeNote?: string;
 }) {
+  const totalScope = totalScopeNote ? ` (${totalScopeNote})` : "";
   const [open, setOpen] = useState(false);
 
   // ── 경정청구(세액 감소·환급) 분기 — hero=환급세액, emerald ──
@@ -88,7 +101,7 @@ export function AmendmentResultCard({
             value={formatKRW(detail.refundLocalIncomeTax ?? 0)}
             muted
           />
-          <Row label="참고 · 경정 후 전체 세액" value={formatKRW(fullTotalTax)} muted />
+          <Row label={`참고 · 경정 후 전체 세액${totalScope}`} value={formatKRW(fullTotalTax)} muted />
         </div>
 
         <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
@@ -159,7 +172,7 @@ export function AmendmentResultCard({
           value={formatKRW(detail.additionalLocalIncomeTax)}
           muted
         />
-        <Row label="참고 · 수정 후 전체 세액" value={formatKRW(fullTotalTax)} muted />
+        <Row label={`참고 · 수정 후 전체 세액${totalScope}`} value={formatKRW(fullTotalTax)} muted />
       </div>
 
       {detail.steps.length > 0 && (

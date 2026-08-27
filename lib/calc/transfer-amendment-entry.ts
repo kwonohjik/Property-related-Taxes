@@ -24,7 +24,7 @@ type AppRouter = ReturnType<typeof useRouter>;
  * 부담부증여·general_building은 제외.
  *   - single    : mode==="single"
  *   - bundled   : mode==="bundled" AND assets.length>1(§166⑥ companionAssets) AND 부담부증여 아님
- *                 (general_building은 단일 물건이라 assets.length===1 → 자연 배제)
+ *                 (general_building은 위 general-building 분기가 **먼저** 잡는다)
  *   - mixed-use : mode==="mixed-use" AND splitMode!=="pre-2022-rejected"
  *   - multi     : mode 래퍼 없음 + AggregateTransferResult(properties[] top-level)
  *
@@ -34,13 +34,14 @@ type AppRouter = ReturnType<typeof useRouter>;
  */
 export function classifyAmendableTransfer(
   record: CalculationRecord,
-): "single" | "bundled" | "mixed-use" | "multi" | null {
+): "single" | "bundled" | "mixed-use" | "general-building" | "multi" | null {
   if (record.taxType !== "transfer") return null;
   const rd = record.resultData as {
     mode?: string;
     transferBurdenedGiftBreakdown?: unknown;
     properties?: unknown;
     result?: { splitMode?: string; total?: { transferTax?: number } };
+    aggregated?: { generalBuildingValuationDetail?: unknown };
   } | null;
   if (!rd) return null;
   if (rd.mode === "single") return "single";
@@ -49,6 +50,25 @@ export function classifyAmendableTransfer(
     return rd.result?.splitMode === "pre-2022-rejected" ? null : "mixed-use";
   }
   if (rd.mode === "bundled") {
+    /**
+     * 일반건물(GB) — 물건이 1개라 아래 `assets.length>1`에서 **자연 배제**되던 경로.
+     *
+     * 🔴 그 배제는 **법적 판단이 아니라 §166⑥ 가드의 부수 효과**였다. 국세기본법 §45①·§45의2①의
+     *    요건은 「과세표준신고서를 법정신고기한까지 제출한 자」 + 기한이며, 본문에도 각 호에도
+     *    **자산 종류·평가 방법·양도 유형을 가르는 문언이 없다**(KoreanLaw 실측 MST 288571).
+     *    부담부증여도 같은 이유로 배제 근거가 없다 — 당초 결정세액은 `aggregated.determinedTax`
+     *    (양도세분 단독, 증여세 미포함)라 축도 이미 올바르다.
+     *
+     * 판별자는 `aggregated.generalBuildingValuationDetail` — GB **3경로 전부**가 세팅한다
+     * (`general-building-fractional.ts:364`·`-route-helper.ts:258`·`-route-actual.ts:679`).
+     * `mode==="bundled"` 단독으로는 §166⑥ 일괄과 구분되지 않는다.
+     *
+     * ⚠️ **전용 값이어야 한다.** `"single"`·`"bundled"`를 재사용하면
+     *    `classifyLoadableTransfer`(`transfer-multi-load-entry.ts:20-24`)가 통과시켜 GB가
+     *    다건 경로로 새고 §160①단서 분리계산이 소실된다. 그쪽은 allow-list라
+     *    **전용 값은 자동 배제**된다.
+     */
+    if (rd.aggregated?.generalBuildingValuationDetail) return "general-building";
     const assets = (record.inputData as { assets?: unknown[] } | null)?.assets;
     if ((assets?.length ?? 0) > 1 && !rd.transferBurdenedGiftBreakdown) return "bundled";
     return null;
@@ -79,7 +99,8 @@ export function enterAmendment(record: CalculationRecord, router: AppRouter): vo
   const kind = classifyAmendableTransfer(record);
   if (kind === "multi") return enterMultiAmendment(record, router);
   // 겸용주택도 동일 store·동일 마법사(/calc/transfer-tax) — 진입 경로 공유
-  if (kind !== "single" && kind !== "bundled" && kind !== "mixed-use") return;
+  if (kind !== "single" && kind !== "bundled" && kind !== "mixed-use" && kind !== "general-building")
+    return;
   Promise.all([
     import("@/lib/stores/calc-wizard-store"),
     import("@/lib/calc/transfer-amendment-helpers"),
@@ -108,7 +129,8 @@ export function enterAmendment(record: CalculationRecord, router: AppRouter): vo
 export function enterRefundClaim(record: CalculationRecord, router: AppRouter): void {
   const kind = classifyAmendableTransfer(record);
   if (kind === "multi") return enterMultiRefundClaim(record, router);
-  if (kind !== "single" && kind !== "bundled" && kind !== "mixed-use") return;
+  if (kind !== "single" && kind !== "bundled" && kind !== "mixed-use" && kind !== "general-building")
+    return;
   Promise.all([
     import("@/lib/stores/calc-wizard-store"),
     import("@/lib/calc/transfer-amendment-helpers"),

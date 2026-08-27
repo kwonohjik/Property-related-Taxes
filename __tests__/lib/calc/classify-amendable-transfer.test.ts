@@ -1,7 +1,8 @@
 /**
  * classifyAmendableTransfer — 이력 카드 수정신고·경정청구 노출 가드 (계획서 §4.5).
  * 일반 다자산만 노출: single / §166⑥ bundled(assets>1·부담부증여 아님) / multi(전체 폼).
- * 제외: mixed-use·부담부증여·general_building 단일물건·구 stub multi·비-transfer.
+ * general-building: bundled + `aggregated.generalBuildingValuationDetail` (2026-08-27 신설 — 부담부증여 포함).
+ * 제외: 구 stub multi·비-transfer·판별 불가 bundled.
  */
 import { describe, it, expect } from "vitest";
 import { classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
@@ -29,13 +30,46 @@ describe("classifyAmendableTransfer 가드 매트릭스", () => {
     ).toBe("bundled");
   });
 
-  it("제외: general_building 등 단일물건 bundled(assets.length===1)", () => {
+  it("general-building = bundled + aggregated.generalBuildingValuationDetail (단일물건이어도 통과)", () => {
+    // 🔴 2026-08-27 의도 전환: 종전에는 `assets.length===1`이라 배제됐다(「자연 배제」).
+    //    그 배제는 §166⑥ 가드의 부수 효과였을 뿐 법적 근거가 없다 — 국세기본법 §45①·§45의2①의
+    //    요건은 「과세표준신고서를 법정신고기한까지 제출한 자」 + 기한이며 자산 종류를 가르지 않는다.
+    expect(
+      classifyAmendableTransfer(
+        rec({
+          resultData: {
+            mode: "bundled",
+            aggregated: { determinedTax: 1, generalBuildingValuationDetail: { assetCards: [] } },
+          },
+          inputData: { assets: [{}] },
+        }),
+      ),
+    ).toBe("general-building");
+  });
+
+  it("제외: GB 판별 키도 없고 assets도 1개인 bundled(정체불명)은 종전대로 배제", () => {
     expect(
       classifyAmendableTransfer(rec({ resultData: { mode: "bundled" }, inputData: { assets: [{}] } })),
     ).toBeNull();
   });
 
-  it("제외: 부담부증여 bundled(transferBurdenedGiftBreakdown)", () => {
+  it("일반건물 부담부증여도 통과한다 — 배제 근거 조문 부존재 (2026-08-27 의도 전환)", () => {
+    // 당초 결정세액은 `aggregated.determinedTax`(양도세분 단독)라 증여세가 섞이지 않는다.
+    expect(
+      classifyAmendableTransfer(
+        rec({
+          resultData: {
+            mode: "bundled",
+            transferBurdenedGiftBreakdown: { giftTax: { finalTax: 1 } },
+            aggregated: { determinedTax: 1, generalBuildingValuationDetail: { assetCards: [] } },
+          },
+          inputData: { assets: [{}] },
+        }),
+      ),
+    ).toBe("general-building");
+  });
+
+  it("제외: GB가 아닌 bundled + 부담부증여(§166⑥ 컴패니언)는 종전대로 배제", () => {
     expect(
       classifyAmendableTransfer(
         rec({ resultData: { mode: "bundled", transferBurdenedGiftBreakdown: {} }, inputData: { assets: [{}, {}] } }),
