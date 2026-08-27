@@ -89,7 +89,11 @@ describe("OM — 장내·장외 거래 매트릭스 (§94①3 가목 1) 단서)"
     );
     expect(r.isExempt).toBe(false);
     expect(r.taxCategory).toBe("listed_off_market_non_major");
-    expect(r.appliedSection94).toBe("①3가1)");
+    // 2026-08-27 정정: 종전 기대값은 `①3가1)`이었으나 가목 1)은 「**대주주가** 양도하는 것」이다.
+    // 비대주주의 장외 양도를 담는 목은 가목 **2)**다 —
+    // 「1)에 따른 대주주에 해당하지 아니하는 자가 증권시장에서의 거래에 의하지 아니하고 양도하는 주식등」
+    // (소득세법 §94①3 가목 2) · KoreanLaw mst 280405 실측). 세액은 불변이다.
+    expect(r.appliedSection94).toBe("①3가2)");
     expect(r.transferPrice).toBe(50_000_000);
     expect(r.acquisitionPrice).toBe(30_000_000);
     expect(r.transferIncome).toBe(20_000_000);

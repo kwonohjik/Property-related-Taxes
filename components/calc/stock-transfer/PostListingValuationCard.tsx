@@ -108,11 +108,11 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           </div>
         </div>
 
-        {/* ★ 양도시 기준시가 분모 — 양도일 직전 1개월 종가 평균 §99①3 (강조) */}
+        {/* ★ 양도시 기준시가 분모 — 양도일 이전 1개월 종가 평균 §99①3 (강조) */}
         {/* §99①3 분모 입력 — direct(단일 숫자) vs daily(일자별 평균) 모드 선택 */}
         <FieldCard
           label="입력 방식"
-          hint="양도일 직전 1개월 종가 평균 (1주당, §99①3 분모) — direct(단일 숫자) vs daily(일자별 자동 평균)"
+          hint="양도일 이전 1개월 종가 평균 (1주당, §99①3 분모) — direct(단일 숫자) vs daily(일자별 자동 평균)"
         >
           <RadioCardGroup
             name="transferStdInputMode"
@@ -129,7 +129,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               {
                 value: "daily",
                 label: "일자별 입력 (자동 평균 산정)",
-                description: "양도일 직전 1개월 거래일 종가 입력 → 자동 평균",
+                description: "양도일 이전 1개월 거래일 종가 입력 → 자동 평균",
               },
             ]}
           />
@@ -140,14 +140,14 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           <FieldCard
             label="1개월 종가 평균"
             required
-            hint="양도일 직전 1개월 종가 평균 (1주당, §99①3 · 시행령 §165③ 준용) — 환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
+            hint="양도일 이전 1개월 종가 평균 (1주당, §99①3 · 시행령 §165③ 준용) — 환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
           >
             <CurrencyInput
               label=""
               hideUnit
               value={form.transferDatePriceAvg1Month}
               onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-              placeholder="양도일 직전 1개월 종가평균 (1주당)"
+              placeholder="양도일 이전 1개월 종가평균 (1주당)"
             />
           </FieldCard>
         )}

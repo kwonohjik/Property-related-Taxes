@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { calcMonthlyClosingAverage } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
+import { buildOneMonthBeforeSlots } from "@/lib/kiwoom/calendar";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface PostListingClosingPriceTableProps {
@@ -60,32 +61,23 @@ export function resolvePreTransferAnchor(transferDate: string): string {
 }
 
 /**
- * 양도일 직전 1개월 일자 배열 (UTC, 가변 일수).
+ * 양도일 **이전** 1개월 일자 배열 (UTC, 가변 일수) — 소득세법 §99①3.
  *
- * 기계적 산식 — 일수(30/31) 가정 없이 월·일만 조작:
- *   anchor = resolvePreTransferAnchor(transferDate)
- *   start  = (anchor.year, anchor.month − 1, anchor.day + 1)   ← JS overflow 자동 보정
- *   end    = anchor                                            ← anchor 포함
+ * 「이전」은 양도일을 **포함**한다(「전」이면 미포함). 상증법 §63①1가목을 준용하면서
+ * "평가기준일 이전ㆍ이후 각 2개월"을 "양도일ㆍ취득일 이전 1개월"로 치환한 구조다.
  *
- * 예: anchor 2023-02-24 → [2023-01-25, 2023-02-24] (31일)
- *     anchor 2024-03-01 → [2024-02-02, 2024-03-01] (28일)  ※ 윤년·평년 자동
- *     anchor 2023-03-31 → [2023-03-01, 2023-03-31] (31일)  ※ 2-32 overflow → 3-01
+ * ⚠️ 산식은 `lib/kiwoom/calendar.ts`의 `buildOneMonthBeforeSlots`가 **단일 소스**다.
+ *    종전에는 이 파일이 같은 산식을 복제해 갖고 있었고, 두 벌 모두 월말에서 기간이
+ *    잘리는 같은 결함을 안고 있었다(2023-03-31 → 28일). 키움 자동조회
+ *    (`app/api/kiwoom/transfer-1month/route.ts`)는 calendar 쪽을, 이 표는 복제본을 쓰고 있어
+ *    **같은 화면의 두 입력 경로가 서로 다른 기간을 쓸 수 있었다**.
+ *
+ * 예: 2023-02-24(금) → [2023-01-25 ~ 2023-02-24] (31일)
+ *     2024-03-01(금) → [2024-02-02 ~ 2024-03-01] (29일)
+ *     2023-03-31(금) → [2023-03-01 ~ 2023-03-31] (31일)  ※ 민법 §160② 말일 클램프
  */
 export function preTransferAutoFillDates(transferDate: string): string[] {
-  const anchorStr = resolvePreTransferAnchor(transferDate);
-  if (!anchorStr) return [];
-  const [y, m, d] = anchorStr.split("-").map(Number);
-  // end = anchor (포함)
-  const endInclusive = new Date(Date.UTC(y, m - 1, d));
-  // start = (월 − 1, 일 + 1) — 기계적 산식 (JS overflow 자동 보정)
-  const start = new Date(Date.UTC(y, m - 1, d));
-  start.setUTCMonth(start.getUTCMonth() - 1);
-  start.setUTCDate(start.getUTCDate() + 1);
-  const out: string[] = [];
-  for (let cur = new Date(start); cur <= endInclusive; cur.setUTCDate(cur.getUTCDate() + 1)) {
-    out.push(fmtDate(cur));
-  }
-  return out;
+  return buildOneMonthBeforeSlots(transferDate);
 }
 
 /**
