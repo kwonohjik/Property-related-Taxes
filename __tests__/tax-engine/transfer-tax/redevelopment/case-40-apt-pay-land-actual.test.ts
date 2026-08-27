@@ -114,8 +114,11 @@ describe("C40 — 사례 40: APT+pay+land 실가 (§166②1호)", () => {
   it("[C40-4] settlement.gain = 48,974,094 (floor 잔액 흡수, PDF 48,974,093 +1원)", () => {
     expect(detail.settlement.gain).toBe(48_974_094);
   });
-  it("[C40-5] settlement.apportionedTransfer = 184,974,093 (엔진 산식)", () => {
-    expect(detail.settlement.apportionedTransfer).toBe(184_974_093);
+  it("[C40-5] settlement.apportionedTransfer = 184,974,094 (floor 잔액 흡수, PDF 184,974,093 +1원)", () => {
+    // 🔴 2026-08-27 정정: 종전 184,974,093은 **양쪽 floor** 값이라 열 합계가
+    //    340,025,906 + 184,974,093 = 524,999,999로 양도가액 525,000,000에 1원 모자랐다.
+    //    양도차익이 이미 쓰던 잔액 흡수 규약(C40-4)을 양도가액 열에도 적용해 맞춘다.
+    expect(detail.settlement.apportionedTransfer).toBe(184_974_094);
   });
   it("[C40-5b] settlement.apportionedAcquisition = 136,000,000 (불입 청산금)", () => {
     expect(detail.settlement.apportionedAcquisition).toBe(136_000_000);
@@ -137,8 +140,23 @@ describe("C40 — 사례 40: APT+pay+land 실가 (§166②1호)", () => {
       detail.postApprovalExistingHouse;
     expect(apportionedTransfer - apportionedAcquisition - expenses).toBe(gain);
   });
-  // C40-26: settlement는 자체 floor 잔액 흡수로 apportionedTransfer 184,974,093 vs gain 48,974,094 1원 drift
-  // 신고서 양식 합계에는 영향 없음 (합계 양도가 525M 정확)
+  /**
+   * 🔴 종전 주석은 「settlement는 1원 drift · **신고서 양식 합계에는 영향 없음(합계 양도가 525M
+   *    정확)**」이라 적고 이 단언을 **비워 뒀다**. 두 진술이 다 틀렸다 —
+   *    실제 합계는 `340,025,906 + 184,974,093 = 524,999,999`로 **1원 모자랐고**,
+   *    그래서 settlement 열의 자기일관성도 깨져 있었다.
+   *    양도가액 열에 잔액 흡수를 적용하니 **둘 다 동시에 해소**됐다 ⇒ 단언을 되살린다.
+   */
+  it("[C40-26] settlement 자기일관성 (184,974,094 − 136,000,000 === 48,974,094)", () => {
+    const { apportionedTransfer, apportionedAcquisition, expenses = 0, gain } = detail.settlement;
+    expect(apportionedTransfer - apportionedAcquisition - expenses).toBe(gain);
+  });
+
+  it("[C40-27] 🔑 양도가액 열 합계 = 총 양도가액 525,000,000", () => {
+    expect(
+      detail.postApprovalExistingHouse.apportionedTransfer + detail.settlement.apportionedTransfer,
+    ).toBe(525_000_000);
+  });
 
   // ── 합계 ────────────────────────────────────────────────────────────────
   it("[C40-6] total.gain = 289,000,000 (150M + 90,025,906 + 48,974,094)", () => {
