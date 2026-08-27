@@ -162,18 +162,29 @@ describe("회귀 — 가목(신축주택분)과 사례 47 대조군은 불변", 
   });
 });
 
-describe("🟠 토지 출자 분기는 이 PR 범위 밖이다 — 현행을 고정만 한다", () => {
+describe("✅ 토지 출자도 같다 — 2026-08-27 종결", () => {
   /**
-   * `originalAssetType: "land"`는 청산금분을 **통째로 0**으로 만든다(2026-05-17 사례 42 정정).
-   * 그 근거 주석은 「청산금 자체는 인가시점에 받은 금액이라 **별도 양도 사건이 없음**」인데,
-   * **법규재산2012-358이 정면으로 반대**한다(유상이전 = 양도).
+   * 이 describe는 종전에 **판정 보류 상태를 고정**하고 있었다(`land`면 청산금분 0).
+   * 보류 사유였던 「법규재산2012-358의 질의는 **주택** 사안」은 **토지를 명시하는 해석 둘**로
+   * 해소됐다 — **재일46014-2870**(1997, 「토지 등」)·**재일46014-2104**(1999, 「토지·건물」).
+   * 조문도 §166①이 「건물 또는 **토지만을 제공한 경우를 포함**한다」를 명시한다.
    *
-   * 다만 그 해석의 질의는 **주택** 사안이고 사례 42 원본을 확인하지 못했다 ⇒ **확인 필요**.
-   * 방향은 **과소**(청산금 2억이 과세에서 이탈). 여기서는 현행을 고정해 조용한 변경만 막는다.
+   * 상세·회귀는 `land-contribution-settlement-parity.anchor.test.ts`가 담당한다.
+   * 여기서는 **이 파일의 손실 축이 토지에서도 성립하는지**만 본다(축 교차 확인).
    */
-  it("현행: land는 청산금분이 0이고 항등식이 깨진다 (판정 보류 상태를 고정)", () => {
-    const { detail } = run(ACQ_CASE_47, "land");
-    expect(detail.settlement.gain).toBe(0);
-    expect(detail.preApproval.gain + detail.settlement.gain).not.toBe(RIGHTS_VALUE - ACQ_CASE_47);
+  it("★ 손실 구간 항등식이 토지에서도 성립한다", () => {
+    const { detail } = run(ACQ_ABOVE_VALUATION, "land");
+    expect(detail.preApproval.gain + detail.settlement.gain).toBe(
+      RIGHTS_VALUE - ACQ_ABOVE_VALUATION,
+    );
+    expect(detail.settlement.gain).toBe(-50_000_000);
+  });
+
+  it("🔑 자산 종류가 이 축을 가르지 않는다", () => {
+    for (const acq of [ACQ_CASE_47, ACQ_ABOVE_VALUATION]) {
+      expect(run(acq, "land").detail.settlement.gain, `취득 ${acq}`).toBe(
+        run(acq, "housing").detail.settlement.gain,
+      );
+    }
   });
 });
