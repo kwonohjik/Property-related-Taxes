@@ -26,13 +26,20 @@ import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redeve
 
 // 사례 44 — APT-환산-납부-주택출자 redevelopmentDetail fixture
 // (실제 runRedevelopment 결과 구조와 동일)
+//
+// 🔴 **손으로 적지 말 것 — 엔진 실측값이다.** 2026-08-27에 이 픽스처가 여러 축에서 stale한
+//    상태로 발견됐다(보유월수 214/159 · 청산금 장특 26% · total.lthd·taxableIncome).
+//    stale 픽스처는 **결함과 같은 방향으로 굳어져** 검증을 조용히 무의미하게 만든다 —
+//    실제로 청산금분 양도가액 잔액 흡수(PR #1322) 드리프트를 이 파일이 놓쳤다.
+//    갱신 시 `case-44-integration.test.ts`에 임시 probe를 넣어 `redevelopmentDetail`을
+//    그대로 찍어 옮길 것. 아래 「불변식」 테스트가 어긋난 값을 잡아준다.
 function case44Detail(): RedevelopmentResult {
   return {
     preApproval: {
       apportionedTransfer: 219_218_500, // 권리가액 (의제)
       apportionedAcquisition: 141_221_534, // 환산취득가 = floor(219,218,500 × 85,034,988 / 132,000,000)
       gain: 75_445_917, // 219,218,500 - 141,221,534 - 2,551,049
-      holdingMonths: 214, // 17년 10개월
+      holdingMonths: 250, // 20년 10개월 (엔진 실측)
       lthd: 22_633_775, // floor(75,445,917 × 30%)
       lthdRate: 0.3,
     },
@@ -40,7 +47,7 @@ function case44Detail(): RedevelopmentResult {
       apportionedTransfer: 368_877_283, // floor(525,000,000 × 219,218,500 / 312,000,000)
       apportionedAcquisition: 219_218_500, // 권리가액 (의제)
       gain: 149_658_783, // 안분 분 양도차익 (엔진 실측)
-      holdingMonths: 214,
+      holdingMonths: 250, // 엔진 실측
       lthd: 44_897_634, // floor(149,658,783 × 30%)
       lthdRate: 0.3,
     },
@@ -51,14 +58,14 @@ function case44Detail(): RedevelopmentResult {
       apportionedTransfer: 156_122_717, // 525,000,000 − 368,877,283
       apportionedAcquisition: 92_781_500, // 청산금
       gain: 63_341_217, // 156,122,717 − 92,781,500 (엔진 실측)
-      holdingMonths: 159, // 13년 3개월 (인가일 기산)
-      lthd: 16_468_716, // floor(63,341,217 × 26%)
-      lthdRate: 0.26,
+      holdingMonths: 195, // 16년 3개월 (인가일 기산 — 엔진 실측)
+      lthd: 19_002_365, // floor(63,341,217 × 30%)
+      lthdRate: 0.3,
     },
     total: {
       gain: 288_445_917,
-      lthd: 84_000_125,
-      taxableIncome: 204_445_792,
+      lthd: 86_533_774, // = 22,633,775 + 44,897,634 + 19,002,365
+      taxableIncome: 201_912_143, // = 288,445,917 − 86,533,774
     },
     salePriceTotal: 312_000_000,
     valuationMeta: {
@@ -74,6 +81,50 @@ function case44Detail(): RedevelopmentResult {
 // ──────────────────────────────────────────────────────────────────────────────
 // 산식 빌더 — 변수값 inline 검증
 // ──────────────────────────────────────────────────────────────────────────────
+
+describe("픽스처 자기일관성 — stale 감시 (2026-08-27 신설)", () => {
+  const d = case44Detail();
+  const TRANSFER_PRICE = 525_000_000;
+
+  /**
+   * 🔑 **이 4개가 stale 픽스처를 잡는 장치다.**
+   *
+   * 종전 픽스처는 청산금분 양도가액이 `floor` 시절 값이라 열 합계가 524,999,999였고
+   * (엔진이 만들 수 없는 상태), 그 탓에 표시 산식 드리프트를 놓쳤다.
+   * 값을 하나 갱신하고 나머지를 안 고치면 여기서 바로 걸린다.
+   */
+  it("FX-01: 양도가액 열 합계 = 총 양도가액 (잔액 흡수)", () => {
+    expect(
+      d.postApprovalExistingHouse.apportionedTransfer + d.settlement.apportionedTransfer,
+    ).toBe(TRANSFER_PRICE);
+  });
+
+  it("FX-02: 파트 양도차익 합 = total.gain", () => {
+    expect(
+      d.preApproval.gain + d.postApprovalExistingHouse.gain + d.settlement.gain,
+    ).toBe(d.total.gain);
+  });
+
+  it("FX-03: 파트 장특공제 합 = total.lthd", () => {
+    expect(
+      d.preApproval.lthd + d.postApprovalExistingHouse.lthd + d.settlement.lthd,
+    ).toBe(d.total.lthd);
+  });
+
+  it("FX-04: 과세대상 소득 = 양도차익 − 장특공제", () => {
+    expect(d.total.taxableIncome).toBe(d.total.gain - d.total.lthd);
+  });
+
+  it("FX-05: 각 파트 장특 = floor(양도차익 × 공제율)", () => {
+    for (const [label, part] of [
+      ["preApproval", d.preApproval],
+      ["postApprovalExistingHouse", d.postApprovalExistingHouse],
+      ["settlement", d.settlement],
+    ] as const) {
+      expect(part.lthd, label).toBe(Math.floor(part.gain * part.lthdRate));
+    }
+  });
+});
 
 describe("buildRedevTransferFormula — 분할별 양도가액 산식", () => {
   const detail = case44Detail();
@@ -182,20 +233,20 @@ describe("buildRedevGainFormula — 분할별 양도차익 산식", () => {
 describe("buildRedevLthdFormula — 분할별 LTHD 산식", () => {
   const detail = case44Detail();
 
-  it("preApproval: 양도차익 × 30% (17년 10개월)", () => {
+  it("preApproval: 양도차익 × 30% (20년 10개월)", () => {
     const f = buildRedevLthdFormula("preApproval", detail);
     expect(f).toContain("75,445,917");
     expect(f).toContain("30%");
-    expect(f).toContain("17년 10개월");
+    expect(f).toContain("20년 10개월");
     expect(f).toContain("22,633,775");
   });
 
-  it("settlement: 양도차익 × 26% (13년 3개월)", () => {
+  it("settlement: 양도차익 × 30% (16년 3개월)", () => {
     const f = buildRedevLthdFormula("settlement", detail);
     expect(f).toContain("63,341,217");
-    expect(f).toContain("26%");
-    expect(f).toContain("13년 3개월");
-    expect(f).toContain("16,468,716");
+    expect(f).toContain("30%");
+    expect(f).toContain("16년 3개월");
+    expect(f).toContain("19,002,365");
   });
 });
 
@@ -255,14 +306,14 @@ describe("buildRedevPerAsset* — 3원소 + 라벨 검증", () => {
     const arr = buildRedevPerAssetForLthd(detail);
     expect(arr[0].value).toBe(22_633_775);
     expect(arr[1].value).toBe(44_897_634);
-    expect(arr[2].value).toBe(16_468_716);
+    expect(arr[2].value).toBe(19_002_365);
   });
 
   it("income: 분할별 (gain − lthd)", () => {
     const arr = buildRedevPerAssetForIncome(detail);
     expect(arr[0].value).toBe(52_812_142); // 75,445,917 - 22,633,775
     expect(arr[1].value).toBe(104_761_149); // 149,658,783 - 44,897,634
-    expect(arr[2].value).toBe(46_872_501); // 63,341,217 - 16,468,716
+    expect(arr[2].value).toBe(44_338_852); // 63,341,217 - 19,002,365
   });
 });
 
@@ -351,7 +402,7 @@ describe("applyRedevelopmentOverrides — StatementItem 갱신", () => {
     const item = items.get("ltDeduction")!;
     expect(item.perAsset).toHaveLength(3);
     // 청산금분 26%·인가전·인가후 30% 다른 율 inline
-    expect(item.perAsset?.[2].formula).toContain("26%");
+    expect(item.perAsset?.[2].formula).toContain("30%");
     expect(item.perAsset?.[0].formula).toContain("30%");
   });
 
