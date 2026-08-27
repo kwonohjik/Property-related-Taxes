@@ -32,6 +32,19 @@ export type PostListingValuationResult = {
     /** 보정 상장일 평가액 = floor((직전×d + (직전−전전)×m) / d) — 환산식 새 분모 */
     adjustedListingYearPerShareValue: number;
   };
+  /**
+   * [표시 전용 echo] 「제4항에 따른 평가액」 산출 근거 — 결과 카드가 가중평균 산식을
+   * 라벨·변수값으로 펼쳐 보이기 위해 필요하다(세액 산정에는 쓰이지 않는다).
+   *
+   * 가중치는 연혁(§165④ 개정)·§94①4다목 반전이 반영된 **실제 적용값**이므로
+   * 화면에서 3/5·2/5를 하드코딩하지 말고 이 값을 쓴다.
+   */
+  weightedBasis?: {
+    niWeight: number;
+    naWeight: number;
+    listing: { netIncomeValue: number; netAssetValue: number; weightedRaw: number };
+    acquisition: { netIncomeValue: number; netAssetValue: number; weightedRaw: number };
+  };
   appliedRules: string[];
   warnings: string[];
 

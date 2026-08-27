@@ -22,6 +22,57 @@ interface PostListingDetailCardProps {
   result: StockTransferResult;
 }
 
+/**
+ * §165④1 「제4항에 따른 평가액」 한 줄 — 라벨 + 변수값 + 분수 가중치.
+ *
+ * `basis`(echo)가 없는 과거 저장 결과는 값만 표시한다(하위 호환).
+ * 단서(80% 하한)가 걸리면 가중평균과 최종 평가액이 달라지므로 한 줄을 더 쓴다
+ * — 산식 한 줄만 두면 화면의 산수가 맞지 않는다.
+ */
+function WeightedAvgRow({
+  label,
+  basis,
+  niWeight,
+  naWeight,
+  floorApplied,
+  value,
+}: {
+  label: string;
+  basis?: { netIncomeValue: number; netAssetValue: number; weightedRaw: number };
+  niWeight?: number;
+  naWeight?: number;
+  floorApplied: boolean;
+  value: number;
+}) {
+  if (!basis || niWeight === undefined || naWeight === undefined) {
+    return (
+      <p>
+        {label} = <strong>{value.toLocaleString()}</strong>
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-0.5">
+      <p>
+        {label} = 순손익가치 {basis.netIncomeValue.toLocaleString()} ×{" "}
+        <Frac top={niWeight} bottom={5} /> + 순자산가치 {basis.netAssetValue.toLocaleString()} ×{" "}
+        <Frac top={naWeight} bottom={5} /> ={" "}
+        <strong>{basis.weightedRaw.toLocaleString()}</strong>
+      </p>
+      {floorApplied && (
+        <p>
+          → 순자산가치 {basis.netAssetValue.toLocaleString()} × <Frac top={80} bottom={100} /> ={" "}
+          <strong>{value.toLocaleString()}</strong>{" "}
+          <span className="text-caption">
+            (가중평균이 순자산가치의 80%에 미달 — 소득세법 시행령 §165④1 단서)
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
   if (!result.acquiredBeforeListing || !result.postListingDetail) return null;
 
@@ -60,14 +111,22 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             <p className="text-amber-700">ⓘ 명문·예규 미확정 해석 적용</p>
           </div>
         )}
-        <p>
-          상장연도 1주당 가중평균 ={" "}
-          <strong>{post.listingYearPerShareValue.toLocaleString()}</strong>
-        </p>
-        <p>
-          취득연도 1주당 가중평균 ={" "}
-          <strong>{post.acquisitionYearPerShareValue.toLocaleString()}</strong>
-        </p>
+        <WeightedAvgRow
+          label="상장연도 1주당 가중평균"
+          basis={post.weightedBasis?.listing}
+          niWeight={post.weightedBasis?.niWeight}
+          naWeight={post.weightedBasis?.naWeight}
+          floorApplied={post.detail?.floor80Applied?.listing === true}
+          value={post.listingYearPerShareValue}
+        />
+        <WeightedAvgRow
+          label="취득연도 1주당 가중평균"
+          basis={post.weightedBasis?.acquisition}
+          niWeight={post.weightedBasis?.niWeight}
+          naWeight={post.weightedBasis?.naWeight}
+          floorApplied={post.detail?.floor80Applied?.acquisition === true}
+          value={post.acquisitionYearPerShareValue}
+        />
         {post.monthlyAccrualDetail && (
           <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 my-1 space-y-0.5 text-rose-800">
             <p className="font-medium">월할 가산 보정 (소칙 §81④ 1호 — 같은 사업연도 취득·상장)</p>

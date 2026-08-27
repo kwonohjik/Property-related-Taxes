@@ -72,6 +72,10 @@ export interface Section165_4Value {
   weightedRaw: number;
   /** 단서(80% 하한)가 실제로 값을 끌어올렸는지 */
   floorApplied: boolean;
+  /** [표시 전용] 실제 적용된 순손익가치 가중치 (합계 5분의) — 연혁·§94①4다목 반영 */
+  niWeight: number;
+  /** [표시 전용] 실제 적용된 순자산가치 가중치 (합계 5분의) */
+  naWeight: number;
 }
 
 /**
@@ -104,8 +108,8 @@ export function calcSection165_4Value(
   if (weights.hasFloor80) {
     const floor80 = netAssetValue * STOCK_FLOOR_80_PCT;
     if (floor80 > weightedRaw) {
-      return { value: Math.floor(floor80), weightedRaw, floorApplied: true };
+      return { value: Math.floor(floor80), weightedRaw, floorApplied: true, niWeight, naWeight };
     }
   }
-  return { value: Math.floor(weightedRaw), weightedRaw, floorApplied: false };
+  return { value: Math.floor(weightedRaw), weightedRaw, floorApplied: false, niWeight, naWeight };
 }
