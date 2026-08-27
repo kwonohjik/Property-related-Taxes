@@ -765,13 +765,22 @@ export function buildRows(
     ),
   });
 
-  // 행 수 검증 — 기본 32행 + **조건부 행**
+  // 행 수 검증 — 무조건 33행 + **조건부 행 3종**
   //
   // 조건부 행을 늘릴 때는 여기 기대값도 함께 올려야 한다. 안 그러면 콘솔이 상시 경고를 뱉어
   // **진짜 행 누락을 알려주는 신호가 죽는다**(경고 피로).
+  //   · §102② 양도차손 통산 — aggregate 에 `lossOffset` 이 있을 때만
   //   · 23-1 ③ 세율구분 그룹 — 다종목일 때만
   //   · 25-1 ⑫ 외국납부세액공제 — 국외주식이 있을 때만
-  const expectedRows = 32 + (isMulti ? 1 : 0) + (hasForeignCredit ? 1 : 0);
+  //
+  // ⚠️ 2026-08-27 정정 — 기대값이 **32에 멈춰 있어 상시 발화**하고 있었다. `40d6cc55`(PR #1327)가
+  //    무조건 행을 하나 늘리며(32→33) 여기를 안 올렸고, 조건부 목록에도 `lossOffset` 이 빠져
+  //    있었다. 파일 자신이 경고한 「신호가 죽는」 상태가 실제로 벌어져 있었다.
+  const expectedRows =
+    33 +
+    (aggregate?.aggregated.lossOffset ? 1 : 0) +
+    (isMulti ? 1 : 0) +
+    (hasForeignCredit ? 1 : 0);
   if (rows.length !== expectedRows) {
     // 개발 중 경고 — 프로덕션에서도 안전하게 통과
     if (typeof console !== "undefined") {

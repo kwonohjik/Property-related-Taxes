@@ -471,3 +471,28 @@ anchor 가 `coerced` 를 엔진에 **바로** 넘겨 route 의 매핑 계층을 
 | **잔여-2** | 무신고(`non_report`)인데 전자신고 세액공제가 붙는다 — 신고를 안 했는데 전자신고 공제는 성립할 수 없다. **별건** |
 | **Track C** | §47조의3①1호 **나목(비부정분 10%)** — 부동산에도 없어 고치면 부동산 세액까지 움직인다 |
 | **별건** | `stock-transfer-aggregate.ts` 의 §104⑤ 기타자산 비교과세 블록 추출(748 → ≤700 착지) |
+
+### 11.7 E2E 검증 — 그리고 **다른 워크트리의 dev 서버를 테스트하고 있었다**
+
+`e2e/stock-penalty-filing-unit.spec.ts` 신설(PE-1~PE-3). PE-3 은 payload(⑬)·API 응답
+(`latePaymentPenalty = 68,200`)·결과 카드·별지84호 표까지 한 번에 확인한다.
+
+> 🔴 **첫 실행은 무의미했다.** DOM 스냅샷에 **옛 안내 문구**가 있어 확인해 보니 3000 포트의
+> dev 서버가 `/Users/mynote/workspace/PRT-stock-transfer-bugfix` 워크트리 것이었고
+> `reuseExistingServer: !CI` 가 그것을 재사용했다. **같은 실행에서 통과한 기존 주식 spec 11건도
+> 내 변경을 검증하지 않았다.** ⇒ `E2E_PORT=3200` 격리 후 재실행
+> (`feedback_worktree_e2e_port_isolation` 이 정확히 이 경우다 — 워크트리가 아니라 **메인 트리**
+> 에서 돌릴 때도 다른 워크트리 서버를 잡을 수 있다).
+
+### 11.8 별건 발견 — 별지84호 행 수 가드가 **상시 발화**하고 있었다
+
+E2E 로그에서 `[StockFilingFormTable] 행 수 이상: 기대 32행, 실제 33행` 이 매 렌더마다 떴다.
+
+- 무조건 행은 **33개**다(`rows.push` 36개 − 조건부 3개). 가드는 32에 멈춰 있었다.
+- 원인은 `40d6cc55`(PR #1327)가 무조건 행을 하나 늘리며 기대값을 안 올린 것.
+- 조건부 목록에 **`lossOffset`(§102② 통산 행)도 빠져** 있었다.
+
+파일 주석이 스스로 「안 그러면 **진짜 행 누락 신호가 죽는다**」고 경고한 상태가 실제로
+벌어져 있었다. ⇒ 기대식을 `33 + lossOffset + isMulti + hasForeignCredit` 로 정정하고,
+**console.warn 이 아니라 anchor 가 잡도록** `stock-filing-form-multi-item.anchor.test.ts` 에
+RC-1·RC-2 를 심었다(경고는 아무도 안 본다).
