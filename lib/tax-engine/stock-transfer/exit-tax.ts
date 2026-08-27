@@ -371,15 +371,25 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   }
 
   // 외국납부세액공제 §118의13
-  const hasForeignTax =
-    input.foreignTaxPaid != null && input.foreignTaxPaid > 0;
+  //
+  // 외화로 넣었으면 **기준환율로 환산**한다(소령 §178의5 — 수령·지출일 현재 외국환거래법
+  // 기준환율 또는 재정환율). 둘 다 있어야 환산한다 — 환율만 있고 외화가 없으면 조용히 0을
+  // 만들지 않고 원화 입력값을 그대로 쓴다.
+  const foreignTaxPaidKrw =
+    input.foreignTaxPaidForeign != null &&
+    input.foreignTaxPaidForeign > 0 &&
+    input.foreignTaxExchangeRate != null &&
+    input.foreignTaxExchangeRate > 0
+      ? Math.floor(input.foreignTaxPaidForeign * input.foreignTaxExchangeRate)
+      : (input.foreignTaxPaid ?? 0);
+  const hasForeignTax = foreignTaxPaidKrw > 0;
   const adjForCredit = adjustmentDeduction ?? 0;
 
   if (hasForeignTax && incomeTax > 0) {
     const credit = calcForeignTaxCredit(
       incomeTax,
       adjForCredit,
-      input.foreignTaxPaid!,
+      foreignTaxPaidKrw,
       input.foreignTaxExclusionReason,
     );
     foreignTaxCreditApplied = credit;
@@ -498,6 +508,8 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
 
     adjustmentDeduction,
     foreignTaxCreditApplied,
+    // 공제에 실제로 쓰인 원화 금액 — 화면이 「외화 × 환율」 산식을 보일 수 있게 echo
+    ...(foreignTaxPaidKrw > 0 ? { foreignTaxPaidKrw } : {}),
     domesticTaxCreditApplied,
     finalTaxAfterAdjustment,
 

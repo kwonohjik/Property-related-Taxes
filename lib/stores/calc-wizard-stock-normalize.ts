@@ -320,6 +320,10 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     etActualTransferDate: strField("etActualTransferDate"),
     etActualTransferPricePerShare: strField("etActualTransferPricePerShare"),
     etForeignTaxPaid: strField("etForeignTaxPaid"),
+    etForeignTaxPaidForeign: strField("etForeignTaxPaidForeign"),
+    etForeignTaxCurrencyCode:
+      strField("etForeignTaxCurrencyCode") || defaults.etForeignTaxCurrencyCode,
+    etForeignTaxExchangeRate: strField("etForeignTaxExchangeRate"),
     etForeignTaxExclusionReason: enumField("etForeignTaxExclusionReason", ["none", "credit_allowed", "step_up"], defaults.etForeignTaxExclusionReason),
     etDomesticSourceTaxWithheld: strField("etDomesticSourceTaxWithheld"),
     etHasFiledHoldingsReport: boolField("etHasFiledHoldingsReport", defaults.etHasFiledHoldingsReport),

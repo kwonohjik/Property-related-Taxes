@@ -306,6 +306,19 @@ export function buildExitTaxApiBody(form: StockTransferFormData): Record<string,
     const v = parseIntOrUndef(form.etForeignTaxPaid);
     if (v !== undefined) body.foreignTaxPaid = v;
   }
+  // 외화 + 기준환율(소령 §178의5) — 둘 다 있어야 엔진이 환산한다.
+  // 한쪽만 보내면 엔진이 원화 입력값으로 되돌아가므로 여기서도 각각 그대로 전달한다.
+  if (form.etForeignTaxPaidForeign) {
+    const v = parseFloatOrUndef(form.etForeignTaxPaidForeign);
+    if (v !== undefined) body.foreignTaxPaidForeign = v;
+  }
+  if (form.etForeignTaxExchangeRate) {
+    const v = parseFloatOrUndef(form.etForeignTaxExchangeRate);
+    if (v !== undefined) body.foreignTaxExchangeRate = v;
+  }
+  if (form.etForeignTaxCurrencyCode) {
+    body.foreignTaxCurrencyCode = form.etForeignTaxCurrencyCode;
+  }
 
   // §118의14 비거주자 원천징수세액
   if (form.etDomesticSourceTaxWithheld) {

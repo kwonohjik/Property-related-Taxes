@@ -112,6 +112,10 @@ export const exitTaxInputSchema = z.object({
 
   // ── 외국납부세액 §118의13 ──
   foreignTaxPaid: z.number().min(0).optional(),
+  // 외화 + 기준환율 (소령 §178의5) — 둘 다 있으면 엔진이 환산해 우선 적용
+  foreignTaxPaidForeign: z.number().min(0).optional(),
+  foreignTaxCurrencyCode: z.string().optional(),
+  foreignTaxExchangeRate: z.number().min(0).optional(),
   foreignTaxExclusionReason: foreignTaxExclusionReasonSchema,
 
   // ── §118의14 비거주자 세액공제 ──

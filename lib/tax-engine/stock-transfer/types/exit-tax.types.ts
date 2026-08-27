@@ -96,8 +96,24 @@ export type ExitTaxInput = {
   actualTransferPricePerShare?: number;
 
   // ── 외국납부세액 §118의13 ──
-  /** 외국 실양도 후 납부한 세액 (원화 환산) */
+  /**
+   * 외국 실양도 후 납부한 세액 (**원화**). 외화로 넣으려면 아래 3필드를 쓴다.
+   * ⚠️ 외화·환율이 **둘 다** 있으면 그쪽이 우선한다.
+   */
   foreignTaxPaid?: number;
+  /**
+   * 외국납부세액 — **외화 금액**. 해외주식(PR-4A)과 **같은 이름·같은 구조**다.
+   *
+   * §118의13 의 외국납부세액은 본래 외국에서 낸 세금이라 외화다. 종전에는 원화 환산액만
+   * 받아 **사용자가 스스로 곱해** 넣어야 했고, 어떤 환율을 썼는지 화면에 남지 않아 검산이
+   * 불가능했다. 소령 §178의5 는 「수령·지출일 현재 외국환거래법 **기준환율 또는 재정환율**」을
+   * 정한다 — 그 환율을 사용자가 직접 넣게 하고, 환산은 엔진이 한다.
+   */
+  foreignTaxPaidForeign?: number;
+  /** 외국납부세액 통화 코드 (표시용 — 계산에는 쓰지 않는다) */
+  foreignTaxCurrencyCode?: string;
+  /** 납세일 기준환율 (원/외화) — 소령 §178의5 */
+  foreignTaxExchangeRate?: number;
   /**
    * §118의13② 적용 배제 사유 (3값 enum — 디자인 R2-02 정정)
    * "none"            → 배제 사유 없음 → §118의13①공제 적용
@@ -216,6 +232,11 @@ export type ExitTaxResult = {
   adjustmentDeduction?: number;
   /** §118의13 외국납부세액공제액 */
   foreignTaxCreditApplied?: number;
+  /**
+   * 외국납부세액 **원화 환산액** — 공제 계산에 실제로 쓰인 금액.
+   * 외화·환율을 넣었으면 `외화 × 환율`(원 미만 절사), 아니면 `foreignTaxPaid` 그대로다.
+   */
+  foreignTaxPaidKrw?: number;
   /** §118의14 비거주자 세액공제액 */
   domesticTaxCreditApplied?: number;
   /** 경정 후 최종 세액 (incomeTax − 조정공제 − 외국납부세액공제 − 비거주자공제) */
