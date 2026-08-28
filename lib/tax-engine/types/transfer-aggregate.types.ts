@@ -175,6 +175,21 @@ export interface PerPropertyBreakdown
    */
   refCalculatedTaxNote?: string;
   /**
+   * [echo] 재개발·재건축 §166 분할 detail (**표시 전용** — 세액 불변).
+   *
+   * 🔴 자산별 신고서 양식의 열 구성은 `deriveColumns`가 `result.redevelopmentDetail` **하나로**
+   *   게이트한다. 이 필드가 없으면 어댑터(`breakdownToFilingResult`)가 채울 소스가 없어
+   *   `hasRedev`가 **항상 false**가 되고, 재개발 자산의 §166 분할 열이 다건 「건별 상세」에서
+   *   통째로 사라진다 — 실측: 같은 입주권이 단건에서는 3열
+   *   (합계 · ① 인가전 분 · ② 인가후 분(청산금 납부), mode=`redev-right-pay`)인데
+   *   다건 자산별에서는 **1열(합계)**, mode=`single`이었다 (결과탭 코드리뷰 #080 ③).
+   *
+   * ⚠️ `TransferValuationDetailSource`가 이 필드를 제외한 것은 **일괄(bundled)** 축이다
+   *   (그 경로는 재개발 자산을 차단한다 — PR #854). **다건(multi)** 은 차단하지 않아
+   *   엔진이 정상으로 detail을 만든다.
+   */
+  redevelopmentDetail?: import("./transfer-redevelopment.types").RedevelopmentResult;
+  /**
    * 자산별 결정세액 (다건 컨텍스트, 참고).
    * = max(0, refCalculatedTax - reductionAmount)
    * 기납부세액 자동 계산(앞 자산들의 결정세액 합) 등에 사용된다.

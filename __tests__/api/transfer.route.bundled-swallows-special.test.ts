@@ -18,11 +18,23 @@
  *
  * | 기능 | 메커니즘 | 결과 |
  * |---|---|---|
- * | 겸용·재개발·일반건물 | route 분기 **미실행** | 다른 계산이 나옴 |
+ * | 겸용·일반건물 | route 분기 **미실행** | 다른 계산이 나옴 |
  * | 부담부증여 | STEP 0.48은 **실행**되나 안분 transferPrice와 **스케일 충돌** | 필요경비 **음수** |
- * | 상가 | 전용 분기 없음 — 엔진 내부 처리 | **계산 정상**, 표시 상세만 누락 |
+ * | 상가·**재개발** | 전용 분기 없음 — 엔진 내부 처리 | **계산 정상**, 표시 상세만 누락 |
  *
  * → marker 부재만으로 결함이라 판정하면 **상가에서 오진**한다. 반드시 산출값까지 본다.
+ *
+ * ## ⚠️ 재개발 행은 2026-08-28에 **상가 부류로 정정**했다 (결과탭 코드리뷰 #080 ③)
+ *
+ * 종전에는 재개발을 「route 분기 미실행 → 다른 계산」으로 분류하고 marker **부재**를 단언했다.
+ * 실측으로 뒤집혔다 — route에 **재개발 전용 분기는 애초에 없고**(위 if-체인에 없다) 집계 엔진이
+ * 자산별로 정상 계산한다. 일괄 응답의 `redevelopmentDetail.preApproval`이 단건과 **완전히
+ * 동일**했다(`apportionedTransfer` 400,000,000 · `apportionedAcquisition` 300,000,000 ·
+ * `gain` 100,000,000). 종전에 marker가 없던 것은 계산이 빠져서가 아니라 **집계 breakdown이
+ * 그 detail을 응답에 싣지 않았기 때문**이고, 그것이 곧 #080 ③(자산별 신고서의 §166 분할 열이
+ * dead branch)의 원인이었다. 그 echo를 배선하면서 marker가 나타난다.
+ *
+ * ⛔ 이 케이스를 다시 「소실」로 되돌리지 말 것 — 그러면 #080 ③이 재발한다.
  *
  * 화면에는 특수 입력이 그대로 보이는데 계산이 어긋나므로 **사용자가 알 수 없다**.
  *
@@ -225,11 +237,31 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     expect(r.inBundled, "일괄에서 겸용 분리계산이 사라진다").toBe(false);
   });
 
-  it("🔴 재개발 — 단건에는 redevelopment 산출물, 함께양도에서 소실", async () => {
-    const r = await compare(REDEV, "redevelopment");
-    expect(r.singleStatus).toBe(200);
-    expect(r.inSingle).toBe(true);
-    expect(r.inBundled).toBe(false);
+  it("재개발 — 일괄에서도 산출물이 실리고 단건과 값이 같다 (상가 부류 · #080 ③)", async () => {
+    const single = await POST(req(REDEV));
+    const bundled = await POST(req({ ...REDEV, ...COMPANION }));
+    const [sBody, bBody] = [await single.json(), await bundled.json()];
+    expect(single.status).toBe(200);
+    expect(bBody.data?.mode).toBe("bundled");
+
+    const sDetail = sBody.data?.result?.redevelopmentDetail;
+    expect(sDetail, "단건 대조군이 녹색이어야 비교가 성립한다").toBeDefined();
+
+    // 🔴 종전에는 여기서 「일괄에는 없다」를 단언했다. 없던 이유는 계산 누락이 아니라
+    //    집계 breakdown의 echo 부재였고, 그것이 자산별 신고서의 §166 분할 열을
+    //    dead branch로 만들었다(#080 ③).
+    const bProp = (bBody.data?.aggregated?.properties ?? []).find(
+      (p: { redevelopmentDetail?: unknown }) => p.redevelopmentDetail,
+    );
+    expect(bProp, "일괄 자산별에 재개발 detail이 없다").toBeDefined();
+
+    // 계산 정합 — marker 존재만으로는 「같은 계산인지」를 알 수 없다.
+    const bDetail = bProp.redevelopmentDetail;
+    expect(bDetail.preApproval.gain).toBe(sDetail.preApproval.gain);
+    expect(bDetail.preApproval.apportionedTransfer).toBe(sDetail.preApproval.apportionedTransfer);
+    expect(bDetail.preApproval.apportionedAcquisition).toBe(
+      sDetail.preApproval.apportionedAcquisition,
+    );
   });
 
   it("🔴 일반건물 — 단건 토지·건물 분리 안분이 함께양도에서 소실", async () => {
