@@ -250,7 +250,18 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
                 <tr><td colSpan={2} className="py-1 text-caption text-muted-foreground">장특공률: MIN(15, 보유연수) × 2% = {lthdRatePct} (상한 30%, 소법 §95② 표1 일반자산)</td></tr>
               )}
               {longTermDeduction !== undefined && (
-                <Row label={`장기보유특별공제 = INT(양도차익 ${formatKRW(acquisitionGain)} × ${lthdRatePct ?? "장특공률"})`} value={longTermDeduction} />
+                /* 🔴 종전에는 율을 못 받으면 `× 장특공률`이라고 **변수명을 그대로** 찍었다
+                     (호출부 어느 곳도 `lthdRate`를 넘기지 않아 사실상 항상 그랬다).
+                     「결과 산식은 한국어 풀어쓰기·값 인라인」 규약 위반이다 — 값이 없으면
+                     그 항을 아예 적지 않는다 (결과탭 코드리뷰 #017). */
+                <Row
+                  label={
+                    lthdRatePct
+                      ? `장기보유특별공제 = INT(양도차익 ${formatKRW(acquisitionGain)} × ${lthdRatePct})`
+                      : `장기보유특별공제 (양도차익 ${formatKRW(acquisitionGain)}에서 차감)`
+                  }
+                  value={longTermDeduction}
+                />
               )}
               {taxableIncome !== undefined && (
                 <Row label={`양도소득금액 = 양도차익 − 장기보유특별공제`} value={taxableIncome} />

@@ -14,6 +14,7 @@ import { DetailedCalculationStatementCard } from "@/components/calc/results/tran
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -165,12 +166,9 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
       {breakdown.expropriationDetail && (
         <MixedUseExpropriationValuationCard detail={breakdown.expropriationDetail} />
       )}
-      {/* 경고 */}
-      {breakdown.warnings.length > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 space-y-1">
-          {breakdown.warnings.map((w, i) => <p key={i}>⚠ {w}</p>)}
-        </div>
-      )}
+      {/* 경고 — 🔴 종전에는 겸용만 자체 마크업이라 공용 카드의 「확인이 필요한 사항」 제목과
+             다크모드 색이 없었다. 나머지 세 결과뷰는 모두 이 leaf를 쓴다 (#086). */}
+      <CalculationWarningsCard warnings={breakdown.warnings} />
 
       {/* 0. 보유 중 일부 용도변경 (있을 때만) — 시행령 §166⑥ + 집행기준 99-164-10 */}
       {breakdown.partialUsageChange && (

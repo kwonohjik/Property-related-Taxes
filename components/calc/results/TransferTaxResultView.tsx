@@ -27,7 +27,6 @@ import { CarryoverScenarioBFilingCard } from "@/components/calc/results/transfer
 import { PreHousingDisclosureDetailSection } from "@/components/calc/results/transfer/PreHousingDisclosureDetailSection";
 import { RentalHousingExceptionDetailCard } from "@/components/calc/results/transfer/RentalHousingExceptionDetailCard";
 import { CommercialBuildingValuationDetailCard } from "@/components/calc/results/CommercialBuildingValuationDetailCard";
-import { GeneralBuildingValuationDetailCard } from "@/components/calc/results/GeneralBuildingValuationDetailCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/RedevelopmentDetailCard";
 import { ExpropriationValuationCard } from "@/components/calc/results/transfer/ExpropriationValuationCard";
@@ -553,12 +552,13 @@ export function TransferTaxResultView({
           transferPrice={formData ? (parseAmount(formData.contractTotalPrice) || 0) : 0}
           acquisitionGain={result.transferGain ?? undefined}
           longTermDeduction={result.longTermHoldingDeduction ?? undefined}
-          taxableIncome={
-            typeof (result as unknown as Record<string, unknown>).taxableIncome === "number"
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              ? (result as any).taxableIncome
-              : undefined
-          }
+          /* 🔴 종전에는 `(result as any).taxableIncome` — `TransferTaxResult`에 **없는 필드**라
+               항상 undefined였고 카드의 「양도소득금액」 행이 영영 렌더되지 않았다. 바로 아래
+               「과세표준 = 양도소득금액 − 기본공제」가 화면에 없는 값을 참조했다. 일괄·다건은
+               `incomeAfterOffset`을 넘겨 그 행이 나오므로 뷰마다 구성이 달랐다 (#017·#086). */
+          taxableIncome={Math.max(0, result.taxableGain - result.longTermHoldingDeduction)}
+          /* 장특공률 미전달 시 카드가 라벨에 변수명을 그대로 노출했다 (#017). */
+          lthdRate={result.longTermHoldingRate}
           taxBase={result.taxBase ?? undefined}
           taxAmount={result.calculatedTax ?? undefined}
           localTax={result.localIncomeTax ?? undefined}
@@ -577,19 +577,25 @@ export function TransferTaxResultView({
         />
       )}
 
-      {/* ⑦ 일반건물(토지+건물 일괄) 환산취득가 산정 근거 상세 (소령 §176의2②, §163⑥, §102②) */}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      {(result as any).generalBuildingValuationDetail && (
-        <GeneralBuildingValuationDetailCard
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          detail={(result as any).generalBuildingValuationDetail}
-          totalTransferPrice={formData ? (parseAmount(formData.contractTotalPrice) || 0) : 0}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          holdingYears={(result as any).holdingYears ?? undefined}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          holdingMonths={(result as any).holdingMonths ?? undefined}
-        />
-      )}
+      {/*
+        ⑦ 일반건물(토지+건물 일괄) 환산취득가 산정 근거 상세 — **블록을 제거했다** (#066).
+
+        🔴 이 블록은 **어떤 입력으로도 렌더되지 않았다**. 게이트 필드
+           `generalBuildingValuationDetail`은 저장소 전체에서 **집계 객체에만** 대입되고
+           (`general-building-{fractional,route-actual,route-helper}.ts` 3곳 — 전부
+           `aggregated.…= `), 단건 응답(`SingleTransferResult`)에는 채워지는 곳이 없다.
+           게다가 일반건물은 route가 `mode:"bundled"`로 분기하므로 이 뷰 자체가 뜨지 않는다.
+           `holdingYears`·`holdingMonths`는 `TransferTaxResult`에 **선언조차 없어** 카드의
+           보유기간 문구도 항상 null이었다 — `as any` 3개가 그 사실을 컴파일 에러로
+           드러나지 않게 가리고 있었다(같은 캐스트가 :556 상가 카드 결함도 함께 숨겼다).
+           일괄 뷰는 이 사실을 알고 §100③·§163⑨·환산주택가격 3블록을 인라인으로 재구현했다
+           (`BundledAllocationCard.tsx` :531 · :574 주석).
+
+        ⚠️ **남은 갭**: 카드의 ④ 「자산별 양도차익·장특공제·양도소득금액」 표와
+           ⑤ 「§102② 결손금 1차 통산」 표는 일괄 뷰에 대응 블록이 없어 여전히 어디에도
+           나오지 않는다. 그 둘을 살리려면 카드를 쪼개 일괄에 배선해야 하는데(①②③ 중복
+           렌더가 되므로 통째로는 못 넣는다) 이 커밋의 범위 밖이다.
+      */}
 
       {/* 재개발/재건축 상세 (시행령 §166) — 사례 44 3분할 양도차익 + LTHD 3줄 */}
       {result.redevelopmentDetail && (
