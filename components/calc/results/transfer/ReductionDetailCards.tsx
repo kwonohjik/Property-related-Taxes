@@ -35,6 +35,7 @@ import {
 import { ReplacementLand77_2DetailCard } from "./ReplacementLand77_2DetailCard";
 import { GbDesignatedLand77_3DetailCard } from "./GbDesignatedLand77_3DetailCard";
 import { UsageConversionDetailCard } from "./UsageConversionDetailCard";
+import { ReductionOverlapExclusionBanner } from "./ReductionOverlapExclusionBanner";
 
 interface Props {
   /**
@@ -63,10 +64,33 @@ interface Props {
    * 다건(multi) 결과뷰 전용 — §77·§77의2·§77의3 카드에서 ⑤ 감면세액·capping을 숨기고
    * ①~④ 구성만 보인다. 최종 감면세액은 조특법 §133 **합산 재계산 카드**가 낸다.
    *
-   * 단건·일괄(bundled)은 기본값 `false` — 자산별 산출세액·과세표준으로 ⑤까지 표시한다.
+   * 단건은 기본값 `false` — 자산별 산출세액·과세표준으로 ⑤까지 표시한다.
+   * (일괄도 §133 합산 재계산 경로라 `true`를 넘긴다 — #044.)
    */
   aggregatedContext?: boolean;
+  /**
+   * **채택된 감면 유형 식별자** — 조특법 §127⑦ 중복배제 표시의 단일 신호.
+   *
+   * 감면 라우터는 후보 중 가장 큰 것 하나만 채택하는데 detail은 **적격 후보 전부**를 돌려준다.
+   * 이 값이 없으면 카드가 승자를 알 수 없어, 배제된 감면이 자기 감면세액을 그대로 인쇄한다
+   * (결과탭 코드리뷰 #045).
+   *
+   * ⚠️ `result`에서 읽지 않고 **명시 prop**으로 받는다 — 단건은 `reductionTypeApplied`,
+   *   집계 자산별은 `PerPropertyBreakdown.reductionType`으로 **필드 이름이 다르다**.
+   */
+  appliedReductionType?: string;
+  /**
+   * **최종 적용 감면세액**(조특법 §133 연간·5년 누적 한도 반영 후).
+   *
+   * §77 계열 detail의 `reductionAmount`는 **연간 한도까지만** 반영된 값이라, 5년 누적 한도가
+   * 걸리면 카드가 실제 적용액보다 큰 금액을 마지막 줄로 인쇄한다 — 실측 카드 65,540,250 vs
+   * 실제 50,000,000, 차액 15,540,250이 아무 설명 없이 남았다(결과탭 코드리뷰 #046).
+   */
+  appliedReductionAmount?: number;
 }
+
+/** 자경농지 감면의 식별자 3종 — 상속인 합산·편입일 부분감면 변형까지 **같은 감면**이다. */
+const SELF_FARMING_TYPES = ["self_farming", "self_farming_inherited", "self_farming_incorp"];
 
 export function ReductionDetailCards({
   result,
@@ -74,7 +98,15 @@ export function ReductionDetailCards({
   taxBase,
   longTermHoldingDeduction,
   aggregatedContext = false,
+  appliedReductionType,
+  appliedReductionAmount,
 }: Props) {
+  /**
+   * 이 카드가 §127⑦로 **배제된 후보인가** — 승자 식별자가 자기 것이 아니면 배제다.
+   * 승자를 모르면(prop 미전달) 판정하지 않는다 — 근거 없이 「적용 불가」를 찍는 쪽이 더 위험하다.
+   */
+  const excludedByOverlap = (...ownTypes: string[]) =>
+    !!appliedReductionType && !ownTypes.includes(appliedReductionType);
   const hasAny =
     !!result.usageConversionDetail ||
     !!result.selfFarmingReductionDetail ||
@@ -116,7 +148,12 @@ export function ReductionDetailCards({
         />
       )}
       {result.selfFarmingReductionDetail && (
-        <SelfFarmingReductionDetailCard detail={result.selfFarmingReductionDetail} />
+        <>
+          {excludedByOverlap(...SELF_FARMING_TYPES) && (
+            <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
+          )}
+          <SelfFarmingReductionDetailCard detail={result.selfFarmingReductionDetail} />
+        </>
       )}
       {result.inheritedAcquisitionDetail && (
         <InheritedAcquisitionDetailCard detail={result.inheritedAcquisitionDetail} />
@@ -192,28 +229,49 @@ export function ReductionDetailCards({
           detail은 §77 감면을 입력했을 때만 생성되므로(transfer-tax-reductions-calc.ts:171)
           미입력 시 카드가 뜨지 않는다. */}
       {result.publicExpropriationDetail && (
-        <PublicExpropriationDetailCard
-          detail={result.publicExpropriationDetail}
-          calculatedTax={calculatedTax}
-          taxBase={taxBase}
-          aggregatedContext={aggregatedContext}
-        />
+        <>
+          {excludedByOverlap("public_expropriation") && (
+            <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
+          )}
+          <PublicExpropriationDetailCard
+            detail={result.publicExpropriationDetail}
+            calculatedTax={calculatedTax}
+            taxBase={taxBase}
+            aggregatedContext={aggregatedContext}
+            excludedByOverlap={excludedByOverlap("public_expropriation")}
+            appliedReductionAmount={appliedReductionAmount}
+          />
+        </>
       )}
       {result.replacementLandDetail && (
-        <ReplacementLand77_2DetailCard
-          detail={result.replacementLandDetail}
-          calculatedTax={calculatedTax}
-          taxBase={taxBase}
-          aggregatedContext={aggregatedContext}
-        />
+        <>
+          {excludedByOverlap("replacement_land_comp") && (
+            <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
+          )}
+          <ReplacementLand77_2DetailCard
+            detail={result.replacementLandDetail}
+            calculatedTax={calculatedTax}
+            taxBase={taxBase}
+            aggregatedContext={aggregatedContext}
+            excludedByOverlap={excludedByOverlap("replacement_land_comp")}
+            appliedReductionAmount={appliedReductionAmount}
+          />
+        </>
       )}
       {result.gbDesignatedLandDetail && (
-        <GbDesignatedLand77_3DetailCard
-          detail={result.gbDesignatedLandDetail}
-          calculatedTax={calculatedTax}
-          taxBase={taxBase}
-          aggregatedContext={aggregatedContext}
-        />
+        <>
+          {excludedByOverlap("gb_designated_land") && (
+            <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
+          )}
+          <GbDesignatedLand77_3DetailCard
+            detail={result.gbDesignatedLandDetail}
+            calculatedTax={calculatedTax}
+            taxBase={taxBase}
+            aggregatedContext={aggregatedContext}
+            excludedByOverlap={excludedByOverlap("gb_designated_land")}
+            appliedReductionAmount={appliedReductionAmount}
+          />
+        </>
       )}
       {/* P5 모드 2 — 보유 감면주택 주택수 제외 (2026-06-12 리뷰 H-2) */}
       {result.specialHouseExclusionDetail &&

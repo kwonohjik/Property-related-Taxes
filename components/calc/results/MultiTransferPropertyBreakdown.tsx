@@ -383,6 +383,7 @@ export function PropertyBreakdownAccordion({
             taxBase={breakdown.taxBaseShare}
             longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
             aggregatedContext
+            appliedReductionType={breakdown.reductionType}
           />
           <ValuationDetailCards
             result={breakdown}

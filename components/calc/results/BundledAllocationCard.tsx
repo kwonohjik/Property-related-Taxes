@@ -204,12 +204,22 @@ function PropertyCard({
         ⚠️ `calculatedTax`·`taxBase`는 자산별 **참고값**(`refCalculatedTax`·`taxBaseShare`)을
            넘긴다 — 일괄은 합산 과세표준으로 세액을 산출하므로 자산별 값과 다르다.
            타입 정의(`PerPropertyBreakdown`)가 두 필드를 "다건 컨텍스트, 참고"로 명시한다.
+
+        🔴 그래서 `aggregatedContext`가 **필수**다(2026-08-28 · 결과탭 코드리뷰 #044).
+           종전에는 이 prop이 빠져 §77 계열 카드가 참고값으로 「⑤ 감면세액 = 산출세액 ×
+           감면대상소득/과세표준」을 단정했다. 그 값은 실제 적용액이 아니다 — 일괄도 다건과
+           같이 §133 합산 재계산 경로를 타므로 최종 감면세액은 「합산 과세 내역」의
+           `reductionBreakdown` 행이 낸다. 실측(2자산 §77): 카드 2장 합 65,388,000 vs
+           실제 적용 71,156,446. 게다가 분자·분모는 집계 참고값인데 결과값은 단건 엔진 값이라
+           **카드가 찍는 등식 자체가 성립하지 않았다**.
       */}
       <ReductionDetailCards
         result={breakdown}
         calculatedTax={breakdown.refCalculatedTax}
         taxBase={breakdown.taxBaseShare}
         longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
+        aggregatedContext
+        appliedReductionType={breakdown.reductionType}
       />
       {/*
         평가·판정 산출근거 (R1-a) — 상가 환산 §164⑥·비사업용토지·다주택 중과·PHD 등.
