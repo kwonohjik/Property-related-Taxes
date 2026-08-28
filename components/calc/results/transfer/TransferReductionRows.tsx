@@ -25,7 +25,7 @@ export function New993DetailCard({
         <p className="font-medium">조특법 §99의3 신축주택 과세특례 — 적용 불가</p>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="조세특례제한법 §99의3" label="§99의3 신축주택" />
-          <LawArticleModal legalBasis="조세특례제한법 시행령 §99" label="조특령 §99" />
+          <LawArticleModal legalBasis="조세특례제한법 시행령 §99의3" label="조특령 §99의3" />
         </div>
         <ul className="list-disc list-inside space-y-0.5">
           {d.ineligibleReasons.map((r, i) => (
@@ -40,7 +40,7 @@ export function New993DetailCard({
       <p className="font-medium text-primary">조특법 §99의3 신축주택 과세특례 (양도소득금액 차감 방식)</p>
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="조세특례제한법 §99의3" label="§99의3 신축주택" />
-        <LawArticleModal legalBasis="조세특례제한법 시행령 §99" label="조특령 §99" />
+        <LawArticleModal legalBasis="조세특례제한법 시행령 §99의3" label="조특령 §99의3" />
         <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
       </div>
       <p className="text-muted-foreground">

@@ -161,7 +161,7 @@ export function fillRedev4SplitBranchData(
  *   - 나목: 입주권 분 양도차익 = floor(인가전raw × (권리가액 − 청산금) / 권리가액) — preApproval 열
  *   - 가목: 청산금 수령분 양도차익 = 청산금 − 안분 취득가 — settlement 열
  *
- * § 95② 단서: 청산금 수령분(가목)은 §94①2호(입주권 = 부동산 취득 권리) 범주 + 집행기준상
+ * § 95② 본문 괄호: 청산금 수령분(가목)은 §94①2호(입주권 = 부동산 취득 권리) 범주 + 집행기준상
  * LTHD 배제. 현행 엔진 zeroBranch 보수적 적용 유지 (별도 법령해석 확보 전).
  *
  * 신고서 양식 표 컬럼:
@@ -169,7 +169,7 @@ export function fillRedev4SplitBranchData(
  *   - "preApproval": ① 입주권 분 (§166①2호 나목)
  *   - "settlement":  ② 청산금 분 (§166①2호 가목)
  *
- * 청산금 분(②) LTHD = 0 → §95② 단서 rose 배지로 시각화.
+ * 청산금 분(②) LTHD = 0 → §95② 본문 괄호 rose 배지로 시각화.
  */
 export function fillRedevRightReceiveBranchData(
   r: NonNullable<TransferTaxResult["redevelopmentDetail"]>,
@@ -240,11 +240,11 @@ export function fillRedevRightReceiveBranchData(
   setNum("ltHoldingPart", "preApproval", nakkokHp);
   setNum("ltResidencePart", "preApproval", nakkokRp);
 
-  // ② 청산금 분 (가목): LTHD = 0 (§95② 단서 — zeroBranch)
+  // ② 청산금 분 (가목): LTHD = 0 (§95② 본문 괄호 — zeroBranch)
   setNum("ltDeduction", "settlement", 0);
   setNum("ltHoldingPart", "settlement", 0);
   setNum("ltResidencePart", "settlement", 0);
-  // rose 배지 — 청산금 분 LTHD 행에 §95② 단서 배제 안내
+  // rose 배지 — 청산금 분 LTHD 행에 §95② 본문 괄호 배제 안내
   setRoseNote?.("ltDeduction", "settlement", "§95② 단서·§94①2호 — LTHD 대상 외");
 
   setNum("ltHoldingPart", "total", nakkokHp);
@@ -377,14 +377,14 @@ export function fillRedevRightLandPayBranchData(
 /**
  * redev-right-pay 모드 — subject="right" + settlementDirection="pay".
  *
- * § 95② 단서: 조합원입주권 양도에서 인가후 양도차익(=청산금납부분)은 LTHD 배제.
+ * § 95② 본문 괄호: 조합원입주권 양도에서 인가후 양도차익(=청산금납부분)은 LTHD 배제.
  * 신고서 양식 표 컬럼:
  *   - "total": 합계
  *   - "preApproval": ① 인가전 분 (취득일 ~ 인가일, §166⑤1호)
  *   - "postApproval": ② 인가후 분 (인가일 ~ 양도일, = 청산금 납부분 settlement)
  *     ※ postApprovalExistingHouse는 subject="right"에서 gain=0이므로 settlement 열에 통합
  *
- * 인가후 열(settlement) 의 LTHD = 0 → §95② 단서 배제 배지로 시각화 (FilingFormTable.tsx 렌더).
+ * 인가후 열(settlement) 의 LTHD = 0 → §95② 본문 괄호 배제 배지로 시각화 (FilingFormTable.tsx 렌더).
  */
 export function fillRedevRightPayBranchData(
   r: NonNullable<TransferTaxResult["redevelopmentDetail"]>,
@@ -458,7 +458,7 @@ export function fillRedevRightPayBranchData(
   setNum("ltHoldingPart", "preApproval", preHp);
   setNum("ltResidencePart", "preApproval", preRp);
 
-  // ② 인가후(청산금납부분): LTHD = 0 (§95② 단서 배제)
+  // ② 인가후(청산금납부분): LTHD = 0 (§95② 본문 괄호 배제)
   setNum("ltDeduction", "postApproval", 0);
   setNum("ltHoldingPart", "postApproval", 0);
   setNum("ltResidencePart", "postApproval", 0);

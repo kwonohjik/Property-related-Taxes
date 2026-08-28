@@ -312,7 +312,7 @@ export function AssetSectionBasic({
             ))}
           </div>
           <p className="text-caption text-muted-foreground">
-            ※ 승계조합원은 장기보유특별공제 미적용 (소득세법 §95② 단서)
+            ※ 승계조합원은 장기보유특별공제 미적용 (소득세법 §95② 본문 괄호)
           </p>
         </div>
       )}

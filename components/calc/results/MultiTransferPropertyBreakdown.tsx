@@ -376,7 +376,9 @@ export function PropertyBreakdownAccordion({
               {breakdown.filingDelayedPenaltyTax > 0 && (
                 <DetailRow
                   label="신고불성실·납부지연 가산세"
-                  legalBasis="국세기본법 §47의2~의5"
+                  /* §47의5는 「원천징수 등 납부지연가산세」라 거주자의 양도소득세 자진신고에
+                     적용되지 않는다. 같은 신고를 단건 신고서 표는 §47의2~§47의4로 설명한다(#030). */
+                  legalBasis="국세기본법 §47의2~§47의4"
                   value={breakdown.filingDelayedPenaltyTax}
                 />
               )}

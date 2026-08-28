@@ -9,7 +9,7 @@
  * 방어선 4층 중 **엔진 정본 가드**를 보는 anchor다. UI·API 게이트를 우회하는
  * 별도 조립 경로(다건 route 등)까지 여기서 덮는다.
  *
- * 근거: 소득세법 §95② 단서 · 시행령 §166⑤1호 (입주권은 인가전 분만 LTHD 대상)
+ * 근거: 소득세법 §95② 본문 괄호 · 시행령 §166⑤1호 (입주권은 인가전 분만 LTHD 대상)
  */
 import { describe, it, expect } from "vitest";
 import { computeRedevelopmentLthd } from "@/lib/tax-engine/redevelopment-lthd";

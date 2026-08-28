@@ -19,7 +19,7 @@
  * 엔진을 조문에 맞춘 뒤 이 fixture는 **요건을 선언해야** 같은 경로를 탄다. 산식·기대값은
  * 1원도 바뀌지 않았다 — 바뀐 것은 「그 안분이 legal하게 성립하는가」의 전제뿐이다.
  *   - 시행령 §166⑤1호 — 인가전 LTHD 보유기간 = 취득일 ~ 관리처분 인가일
- *   - §95② 단서 — 입주권 양도 시 인가전 분만 LTHD (인가후·청산금 분 0)
+ *   - §95② 본문 괄호 — 입주권 양도 시 인가전 분만 LTHD (인가후·청산금 분 0)
  *   - §55 (2023년 누진세율표) — 양도연도 직접 적용 (외부 PDF 추종 금지)
  *
  * 입력:
@@ -44,7 +44,7 @@
  *   settlement.gain  = floor(1,110M × 0.2) = 222,000,000
  *   total 과세대상 = 262,000,000
  *
- *   [LTHD] 인가전 분만 (§95② 단서)
+ *   [LTHD] 인가전 분만 (§95② 본문 괄호)
  *   보유: 2002-04-09 ~ 2018-10-23 = 16년 6개월+ → 16년
  *   표2 (1세대1주택 + 거주 2년): 16년×4%=64%→40% 캡 + 2년×4%=8% = 48%
  *   preApproval.lthd = floor(40,000,000 × 0.48) = 19,200,000
@@ -134,12 +134,12 @@ describe("R-3 — 입주권(right) + 청산금 납부 + 1세대1주택 + 양도�
     expect(result.redevelopmentDetail?.preApproval.lthd).toBe(19_200_000);
   });
 
-  it("[R-3-4a] 인가후 기존주택분 LTHD = 0 (§95② 단서 — 입주권 양도 시 부존재)", () => {
+  it("[R-3-4a] 인가후 기존주택분 LTHD = 0 (§95② 본문 괄호 — 입주권 양도 시 부존재)", () => {
     // right 분기: postApprovalExistingHouse는 항상 gain=0, lthd=0
     expect(result.redevelopmentDetail?.postApprovalExistingHouse.lthd).toBe(0);
   });
 
-  it("[R-3-4b] settlement(=인가후) LTHD = 0 (§95② 단서 — §94①2호 권리 범위 외)", () => {
+  it("[R-3-4b] settlement(=인가후) LTHD = 0 (§95② 본문 괄호 — §94①2호 권리 범위 외)", () => {
     // right 분기 settlement는 zeroBranch → LTHD 0
     expect(result.redevelopmentDetail?.settlement.lthd).toBe(0);
   });

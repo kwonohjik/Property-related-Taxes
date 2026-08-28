@@ -99,7 +99,7 @@ function apportionPreApprovalExpenses(
 
 
 export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput {
-  /** 입주권 양도 시 승계조합원 여부 (§95② 단서 — LTHD 0) */
+  /** 입주권 양도 시 승계조합원 여부 (§95② 본문 괄호 — LTHD 0) */
   isSuccessorRightToMoveIn?: boolean;
   /** 1세대1주택 (LTHD 표2 + 12억 안분 분기) */
   isOneHouseSingle?: boolean;
@@ -709,7 +709,7 @@ function runOriginalMember(
   // 입주권은 종전에 `isApt ? ... : undefined`라 일자가 비어 신고서 인가후 분 열의
   // 취득일자·양도일자가 "-"로 표시됐다(2026-08-13 제보 — 실가 모드에서 노출).
   // 환산 경로는 이미 인가일~양도일을 넣고 있어(`:293·294`, `:457·458`) 같은 값으로 맞춘다.
-  // §166①2호 가목의 인가후 분은 인가일 이후 기간이다(LTHD 미적용은 §95② 단서 — 일자 표시와 별개).
+  // §166①2호 가목의 인가후 분은 인가일 이후 기간이다(LTHD 미적용은 §95② 본문 괄호 — 일자 표시와 별개).
   const settlementAcqDate = isApt
     ? redevelopment.settlementDirection === "pay"
       ? redevelopment.approvalDate

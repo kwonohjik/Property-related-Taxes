@@ -29,7 +29,7 @@
  *
  * ⇒ 이 anchor는 **별개 양도건 2건**(취득일·양도일이 모두 다름)으로 잰다.
  *
- * 법령: 소득세법 §95②·별표 표1·표2(보유·거주 분할) · §98(취득·양도시기)
+ * 법령: 소득세법 §95②·표1·표2(보유·거주 분할) · §98(취득·양도시기)
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";

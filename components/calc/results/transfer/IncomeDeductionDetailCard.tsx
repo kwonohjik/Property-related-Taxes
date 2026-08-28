@@ -57,6 +57,64 @@ const HYBRID_KINDS: ReadonlyArray<string> = [
   "unsold_98_2", "unsold_98_4", "unsold_98",
 ];
 
+/**
+ * 농어촌특별세 비과세 **사유**는 조문마다 다르다 (결과탭 코드리뷰 #032).
+ *
+ * 종전에는 `ruralSurtaxExempt` 플래그 하나만 보고 전부 「농어촌특별세법 시행령 §4⑦1호」라고
+ * 적었다. 그런데 그 호의 열거(실측)는 「… 제95조의2, **제98조의3, 제98조의5**, 제99조의9 …」라
+ * **제98조·제98조의2가 없다**. 엔진은 사유를 나눠 주석에 적고 있었다 —
+ * `unsold-hybrid-p3.ts:246·361` 「농특세령 §4⑦1호」 / `p4.ts:121`·`p5.ts:169` 「감면세액 부재」.
+ *
+ * - §98의3·§98의5 → 그 호에 **열거**돼 비과세
+ * - §98의2 → 효과가 「장특 표2 + 기본세율」 특칙이라 **감면세액 자체가 없다** ⇒ §5①1호 과세표준 0
+ * - §98 → 「세율 20% 단일」은 농어촌특별세법 §2①이 정의한 「감면」(1호 세액감면 등 / 2호 열거된
+ *   특례세율)에 **해당하지 않는다** ⇒ 과세표준이 성립하지 않는다
+ */
+const RURAL_EXEMPT_NOTE: Record<Detail["kind"], string> = {
+  unsold_98_3: "농어촌특별세 비과세 (농어촌특별세법 시행령 §4⑦1호 열거)",
+  unsold_98_5: "농어촌특별세 비과세 (농어촌특별세법 시행령 §4⑦1호 열거)",
+  unsold_98_2:
+    "감면세액이 없어 농어촌특별세 과세표준이 발생하지 않습니다 (농어촌특별세법 §5①1호)",
+  unsold_98:
+    "양도소득세 세율 특례라 농어촌특별세법 §2①의 「감면」에 해당하지 않아 과세표준(§5①1호 감면세액)이 발생하지 않습니다",
+  // 아래 유형은 `ruralSurtaxExempt`가 false라 이 블록이 렌더되지 않는다(도달 불가 — 값만 채운다).
+  new_99: "농어촌특별세 비과세",
+  unsold_98_8: "농어촌특별세 비과세",
+  unsold_98_7: "농어촌특별세 비과세",
+  unsold_99_2: "농어촌특별세 비과세",
+  unsold_98_6: "농어촌특별세 비과세",
+  unsold_98_4: "농어촌특별세 비과세",
+};
+
+/**
+ * 다주택 중과 배제 근거 **호**도 조문마다 다르다 (결과탭 코드리뷰 #033).
+ *
+ * 실측 소득세법 시행령 §167의3①:
+ * - **3호**: 「조특법 제97조ㆍ제97조의2 및 **제98조**에 따라 양도소득세가 감면되는 임대주택으로서
+ *   **5년 이상 임대한 국민주택**」 ← §98은 여기다. 추가 요건이 붙는다.
+ * - **5호**: 「제77조, **제98조의2**, 제98조의3, 제98조의5부터 제98조의8까지, 제99조, 제99조의2
+ *   및 제99조의3」 ← §98은 **없다**.
+ * `unsold-hybrid-p5.ts` 헤더가 이미 「중과 배제 근거 = 소령 §167의3①**3호** … 5호 아님」이라고
+ * 적어 뒀다 — 엔진은 알고 있었고 카드만 5호로 찍었다.
+ *
+ * §98의4(비거주자 10%)는 5호에 열거되지 않아 중과가 **정상 적용**된다.
+ */
+const SURCHARGE_5HO =
+  " · 본 감면 주택 양도 시 다주택 중과세율은 적용되지 않습니다 (소득세법 시행령 §167의3①5호·§167의10①2호)";
+const SURCHARGE_NOTE: Record<Detail["kind"], string> = {
+  unsold_98:
+    " · 5년 이상 임대한 국민주택이면 다주택 중과세율이 적용되지 않습니다 (소득세법 시행령 §167의3①3호·§167의10①2호)",
+  unsold_98_4: " · 다주택 중과 배제 대상이 아닙니다 (소득세법 시행령 §167의3①5호 비열거)",
+  new_99: SURCHARGE_5HO,
+  unsold_98_8: SURCHARGE_5HO,
+  unsold_98_7: SURCHARGE_5HO,
+  unsold_99_2: SURCHARGE_5HO,
+  unsold_98_3: SURCHARGE_5HO,
+  unsold_98_5: SURCHARGE_5HO,
+  unsold_98_6: SURCHARGE_5HO,
+  unsold_98_2: SURCHARGE_5HO,
+};
+
 export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props) {
   const title = TITLES[kind];
   // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
@@ -65,7 +123,6 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
   // §98의2 특칙 전용 (감면세액 없음) / §98의4 중과 배제 비대상 (소령 §167의3①5호 비열거)
   const hybridEffect = isHybrid ? (result as UnsoldHybridResult).effectCategory : undefined;
   const isSpecialOnly = hybridEffect === "lthd_rate_special" || hybridEffect === "flat_rate_20";
-  const showSurchargeNote = kind !== "unsold_98_4";
   const isRuralExempt = isHybrid && (result as UnsoldHybridResult).ruralSurtaxExempt;
   const hybridRatePct = isHybrid
     ? Math.round((result as UnsoldHybridResult).taxReductionRate * 100)
@@ -158,17 +215,13 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
       )}
       {isRuralExempt && (
         <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
-          <p className="text-caption text-sky-900 dark:text-sky-300">
-            농어촌특별세 비과세 (농어촌특별세법 시행령 §4⑦1호)
-          </p>
+          <p className="text-caption text-sky-900 dark:text-sky-300">{RURAL_EXEMPT_NOTE[kind]}</p>
         </div>
       )}
 
       <p className="text-micro text-emerald-700 dark:text-emerald-400">
         근거 조문: {result.legalBasis}
-        {showSurchargeNote
-          ? " · 본 감면 주택 양도 시 다주택 중과세율은 적용되지 않습니다 (소득세법 시행령 §167의3①5호·§167의10①2호)"
-          : " · 다주택 중과 배제 대상이 아닙니다 (소득세법 시행령 §167의3①5호 비열거)"}
+        {SURCHARGE_NOTE[kind]}
       </p>
     </div>
   );

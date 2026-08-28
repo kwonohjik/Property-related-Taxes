@@ -60,7 +60,7 @@ export function deriveColumns(
       };
     }
     // subject="right" + pay → 3열 (합계/인가전/인가후)
-    // §95② 단서: 인가후(청산금납부분) LTHD 배제 — 별도 열로 명시
+    // §95② 본문 괄호: 인가후(청산금납부분) LTHD 배제 — 별도 열로 명시
     if (redevSubject === "right" && redevSettlementDirection === "pay") {
       return {
         mode: "redev-right-pay",

@@ -2,7 +2,7 @@
  * Pre-Do anchor — 조합원 입주권 양도(관리처분 인가 후) LTHD 분할 검증
  *
  * 법령 근거:
- *   - 소득세법 §95② 단서 — 입주권(§94①2호) 양도 시 인가전 분만 LTHD (원조합원 한정)
+ *   - 소득세법 §95② 본문 괄호 — 입주권(§94①2호) 양도 시 인가전 분만 LTHD (원조합원 한정)
  *   - 시행령 §166①1호 — 입주권 + 청산금 납부 시 양도차익 = 인가후 + 인가전 단순 합산
  *   - 시행령 §166⑤1호 — 인가전 LTHD 보유기간 = 취득일 ~ 관리처분 인가일
  *   - 소득세법 §55 (2023년 누진세율표 — 양도연도 세율 적용, memory `transfer_year_tax_rate`)
@@ -27,7 +27,7 @@
  *   인가후 양도차익 = 520M − (300M + 90M) = 130,000,000
  *   LTHD 보유기간 = 2002-04-09 ~ 2018-10-23 = 16년 6개월 → 표1 30% 캡
  *   LTHD = 200,000,000 × 30% = 60,000,000 (인가전 분만)
- *   인가후·청산금 LTHD = 0 (§95② 단서)
+ *   인가후·청산금 LTHD = 0 (§95② 본문 괄호)
  *
  * 산출세액 (2023년 §55 누진세율표 — 양도연도 직접 적용):
  *   양도소득금액 = 200M − 60M + 130M = 270,000,000
@@ -99,11 +99,11 @@ describe("R-PAY — 입주권 양도(pay) 원조합원, 1세대1주택 미충족
 
   it("[R-PAY-2] 인가전 분 LTHD = 60,000,000 (200M × 30% — 보유 16년 6월 표1 30% 캡)", () => {
     // 시행령 §166⑤1호: 취득일(2002-04-09) ~ 인가일(2018-10-23) = 16년 6개월
-    // 표1 적용: 16년 × 2% = 32% → 30% 캡 (§95② 단서: 인가전 분만 LTHD)
+    // 표1 적용: 16년 × 2% = 32% → 30% 캡 (§95② 본문 괄호: 인가전 분만 LTHD)
     expect(result.redevelopmentDetail?.preApproval.lthd).toBe(60_000_000);
   });
 
-  it("[R-PAY-3] 인가후 기존주택분 LTHD = 0 (§95② 단서 — 입주권 양도 시 인가후 부존재)", () => {
+  it("[R-PAY-3] 인가후 기존주택분 LTHD = 0 (§95② 본문 괄호 — 입주권 양도 시 인가후 부존재)", () => {
     expect(result.redevelopmentDetail?.postApprovalExistingHouse.lthd).toBe(0);
   });
 
@@ -275,7 +275,7 @@ describe("R-PAY-11~14 — UI 입력 경로 회귀 차단 (propertyType ↔ subje
     expect(remappedResult.redevelopmentDetail!.preApproval.gain).toBe(200_000_000);
   });
 
-  it("[R-PAY-14] 정상 조합 → settlement.lthd = 0 (§95② 단서 — 인가후·청산금 LTHD 배제)", () => {
+  it("[R-PAY-14] 정상 조합 → settlement.lthd = 0 (§95② 본문 괄호 — 인가후·청산금 LTHD 배제)", () => {
     expect(remappedResult.redevelopmentDetail!.settlement.lthd).toBe(0);
     expect(remappedResult.longTermHoldingDeduction).toBe(60_000_000);
     expect(remappedResult.calculatedTax).toBe(81_710_000);
