@@ -118,7 +118,7 @@ export function RedevelopmentRightExemptionSection({
       <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-caption text-sky-900 leading-relaxed">
         <p className="font-semibold mb-0.5">관리처분 인가 후 조합원입주권 양도 — 과세 구조 안내</p>
         <p>
-          인가전 양도차익만 장기보유특별공제(LTHD) 대상입니다 (§95② 단서 + §94①2호). 인가후 분 및 청산금 분 양도차익에는 LTHD가 적용되지 않습니다.
+          인가전 양도차익만 장기보유특별공제(LTHD) 대상입니다 (§95② 본문 괄호 + §94①2호). 인가후 분 및 청산금 분 양도차익에는 LTHD가 적용되지 않습니다.
         </p>
         <p className="mt-1">
           1세대1입주권 비과세 요건(§89①4호 가목)은 아래 카드에서 확인하세요. 비과세 적용 시 전액 비과세이며, 양도가액이 12억을 초과하면 초과분만 과세됩니다.

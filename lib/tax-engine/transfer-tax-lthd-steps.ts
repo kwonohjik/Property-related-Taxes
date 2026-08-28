@@ -106,7 +106,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
   if ((isOneHouseSpecial || conv) && longTermHoldingDeduction > 0) {
     const totalRate = holdingPct + residencePct;
     if (totalRate > 0) {
-      // 보유·거주 기간분 각각 자기 공제율로 직접 산정(§95② 별표 표2 / §95⑤). floor 잔액(≤1원)은
+      // 보유·거주 기간분 각각 자기 공제율로 직접 산정(§95② 표2 / §95⑤). floor 잔액(≤1원)은
       // 보유분(기저 공제)에 흡수 — 합 = 총 장특공제 불변식 유지. 세액은 총액만 사용(무관).
       const residenceAmt = Math.floor((longTermHoldingDeduction * residencePct) / totalRate);
       const holdingAmt = longTermHoldingDeduction - residenceAmt;

@@ -561,7 +561,7 @@ function computeRightPay(args: BranchArgs): RedevelopmentSplitResult {
       gain: preApprovalGain,
     },
     postApprovalExistingHouse: {
-      // 입주권 양도 시 인가후 기존주택분은 §95② 단서로 LTHD 대상 부존재
+      // 입주권 양도 시 인가후 기존주택분은 §95② 본문 괄호로 LTHD 대상 부존재
       // 본 엔진은 양도차익을 settlement 분에 합쳐서 처리 (§166①1호는 분리 없음)
       apportionedTransfer: 0,
       apportionedAcquisition: 0,

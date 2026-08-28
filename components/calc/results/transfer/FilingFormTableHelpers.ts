@@ -236,7 +236,7 @@ export function splitLtDeduction(
   const residenceRate = Math.min(rY * 0.04, 0.40);
   const totalRate = holdingRate + residenceRate;
   if (totalRate <= 0) return { holdingAmount: totalAmount, residenceAmount: 0 };
-  // §95② 별표 표2: 보유기간분·거주기간분 각각 자기 공제율로 직접 산정(잔액 방식 아님).
+  // §95② 표2: 보유기간분·거주기간분 각각 자기 공제율로 직접 산정(잔액 방식 아님).
   // floor 잔액(최대 1원)은 보유분(기저 공제)에 흡수 — 합 = 총 장특공제 불변식 유지, 세액 무관.
   const residenceAmount = Math.floor(totalAmount * residenceRate / totalRate);
   return { holdingAmount: totalAmount - residenceAmount, residenceAmount };

@@ -120,7 +120,7 @@ describe("C38 — 조합원입주권 right+receive 단독주택 실가 출자 (�
     expect(detail.preApproval.lthd).toBe(14_000_000);
   });
 
-  it("[C38-7] total.lthd = 14,000,000 (인가전 분만 — §95② 단서)", () => {
+  it("[C38-7] total.lthd = 14,000,000 (인가전 분만 — §95② 본문 괄호)", () => {
     expect(detail.total.lthd).toBe(14_000_000);
   });
 

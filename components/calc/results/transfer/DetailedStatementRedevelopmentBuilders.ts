@@ -36,11 +36,11 @@ const BRANCH_LABEL_PAY: Record<RedevBranch, BranchLabelDef> = {
 
 // 사례 36 — subject="right" 입주권 양도 (납부 모드).
 // §166①1호 산식: 인가전·인가후+청산금 2분기. 인가후 기존건물분(=0) 행은 숨김 처리.
-// LTHD: 인가전 분만 적용 (§95② 단서). 인가후·청산금 분 LTHD=0 강제.
+// LTHD: 인가전 분만 적용 (§95② 본문 괄호). 인가후·청산금 분 LTHD=0 강제.
 const BRANCH_LABEL_RIGHT_PAY: Record<RedevBranch, BranchLabelDef> = {
   preApproval: { prefix: "① 인가전 분", legal: "§166①1호 · §166⑤1호 (취득일~인가일 기산)" },
-  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (LTHD 제외)", legal: "§166①1호 · §95② 단서 (인가후분 = 0 fill)" },
-  settlement: { prefix: "② 인가후·청산금 납부분 (LTHD 제외)", legal: "§166①1호 · §95② 단서 (LTHD 공제율 0%)" },
+  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (LTHD 제외)", legal: "§166①1호 · §95② 본문 괄호 (인가후분 = 0 fill)" },
+  settlement: { prefix: "② 인가후·청산금 납부분 (LTHD 제외)", legal: "§166①1호 · §95② 본문 괄호 (LTHD 공제율 0%)" },
 };
 
 // 사례 46 — receiveOnly 모드 전용 라벨 (§166①2호 가목 단독, 인가전·인가후 0 강제).
@@ -85,7 +85,7 @@ const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
   },
   postApprovalExistingHouse: {
     prefix: "② 인가후 기존건물분 (LTHD 제외)",
-    legal: "§166①2호 · §95② 단서 (인가후분 = 0)",
+    legal: "§166①2호 · §95② 본문 괄호 (인가후분 = 0)",
   },
   settlement: {
     prefix: "③ 인가후 분 (§166①2호 가목) — LTHD 미적용",
@@ -551,7 +551,7 @@ export function applyLandContribOverrides(
   // 장기보유특별공제
   const ltItem = items.get("ltDeduction");
   if (ltItem) {
-    ltItem.formula = "§95② 단서 + §166⑤1호 — 인가전 분만 LTHD (취득일~인가일 기산). 인가후 LTHD=0 (본문 괄호)";
+    ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전 분만 LTHD (취득일~인가일 기산). 인가후 LTHD=0 (본문 괄호)";
     ltItem.legalBasis = "소득세법 §95② 본문 괄호 · 시행령 §166⑤1호";
     const preYears = Math.floor(pre.holdingMonths / 12);
     const preMons = pre.holdingMonths % 12;
@@ -712,11 +712,11 @@ export function applyRedevelopmentOverrides(
   const ltItem = items.get("ltDeduction");
   if (ltItem) {
     if (isRightReceive) {
-      ltItem.formula = "§95② 단서 + §166⑤1호 — 인가전(나목) 분만 LTHD 적용. 청산금(가목) 분 LTHD=0 (§94①2호)";
+      ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전(나목) 분만 LTHD 적용. 청산금(가목) 분 LTHD=0 (§94①2호)";
       ltItem.legalBasis = "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목";
     } else {
       ltItem.formula = isRightSubject
-        ? "§95② 단서 + §166⑤1호 — 인가전 분만 LTHD 적용 (취득일~인가일 기산). 인가후·청산금 분 LTHD=0"
+        ? "§95② 본문 괄호 + §166⑤1호 — 인가전 분만 LTHD 적용 (취득일~인가일 기산). 인가후·청산금 분 LTHD=0"
         : "재개발 §166⑤ 분할별 보유기간·율 — 인가전·인가후 기존건물분(취득일 기산) + 청산금분(인가일 기산)";
       ltItem.legalBasis = isRightSubject
         ? "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호"

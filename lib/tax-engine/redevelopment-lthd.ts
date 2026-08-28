@@ -7,7 +7,7 @@
  *     2호가목: APT 청산금납부분양도차익 보유기간 = 관리처분 인가일 ~ 신축양도일
  *     2호나목: APT 기존건물분양도차익 보유기간 = 취득일 ~ 신축양도일 (전체)
  *
- * - 본법 §95② 단서 — 입주권 양도 시 인가전 분만 LTHD (원조합원 한정, 승계 0)
+ * - 본법 §95② 본문 괄호 — 입주권 양도 시 인가전 분만 LTHD (원조합원 한정, 승계 0)
  * - 본법 §95④ — LTHD 보유기간 = 취득일~양도일 (청산금 수령 LTHD 종료일 도출)
  * - NTS 집행기준 — 청산금 수령분 양도시기 = 소유권이전 고시일 다음날
  *
@@ -78,7 +78,7 @@ export interface RedevelopmentLthdInput {
   /** 자산 양도일 (완공 APT 양도일 또는 입주권 양도일) */
   transferDate: Date;
 
-  /** 입주권 양도 시 승계조합원 여부 (true 시 LTHD 0 — §95② 단서) */
+  /** 입주권 양도 시 승계조합원 여부 (true 시 LTHD 0 — §95② 본문 괄호) */
   isSuccessorRightToMoveIn?: boolean;
 
   /** 1세대 1주택 여부 (표2 적용 분기) */
@@ -220,11 +220,11 @@ export function computeRightLthd(args: {
     residencePeriodMonths,
   } = args;
 
-  // §95② 단서: 승계조합원은 LTHD 0
+  // §95② 본문 괄호: 승계조합원은 LTHD 0
   if (isSuccessorRightToMoveIn) {
     return {
-      preApproval: zeroBranch("§95② 단서 — 승계조합원(조합원으로부터 취득)은 LTHD 미적용"),
-      postApprovalExistingHouse: zeroBranch("입주권 양도 시 인가후 기존주택분 양도차익은 LTHD 대상 부존재 (§95② 단서·§166⑤1호)"),
+      preApproval: zeroBranch("§95② 본문 괄호 — 승계조합원(조합원으로부터 취득)은 LTHD 미적용"),
+      postApprovalExistingHouse: zeroBranch("입주권 양도 시 인가후 기존주택분 양도차익은 LTHD 대상 부존재 (§95② 본문 괄호·§166⑤1호)"),
       settlement: zeroBranch("§94①2호 (조합원입주권 = 부동산을 취득할 수 있는 권리) + 시행령 §166①1호·2호 가목 산식 구조상 LTHD 대상 자산 부존재 (§95② 대상자산 토지·건물 범위 외)"),
     };
   }
@@ -248,7 +248,7 @@ export function computeRightLthd(args: {
       residenceRate: preApprovalSplit.residence,
       applicable: true,
     },
-    postApprovalExistingHouse: zeroBranch("입주권 양도 시 인가후 기존주택분 양도차익은 LTHD 대상 부존재 (§95② 단서·§166⑤1호)"),
+    postApprovalExistingHouse: zeroBranch("입주권 양도 시 인가후 기존주택분 양도차익은 LTHD 대상 부존재 (§95② 본문 괄호·§166⑤1호)"),
     settlement: zeroBranch("§94①2호 (조합원입주권 = 부동산을 취득할 수 있는 권리) + 시행령 §166①1호·2호 가목 산식 구조상 LTHD 대상 자산 부존재 (§95② 대상자산 토지·건물 범위 외)"),
   };
 }

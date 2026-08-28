@@ -10,6 +10,7 @@
  */
 
 import type { ReactNode } from "react";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import {
   effectiveGrossGain,
   inverseAcquisitionForDisplay,
@@ -577,7 +578,10 @@ export function buildStatementItems(
     label: "기신고 양도소득금액",
     value: 0,
     formula: "역년 내 이미 신고한 양도소득금액 합계 (예정신고분)",
-    legalBasis: "소득세법 §103·시행령 §103",
+    // 소득세법 시행령 §103은 **삭제**됐다(실측 — 본문이 「삭제」 두 글자다).
+    // 예정신고분 정산의 정본은 §107②·§111③이고, 같은 결과탭의 신고서 양식이 이미
+    // 「기납부세액 (예정신고, §111③)」으로 적고 있다 (결과탭 코드리뷰 #031).
+    legalBasis: "소득세법 §107②·§111③",
     note: "본 계산기는 기신고분을 반영하지 않음 (필요 시 별도 차감)",
     summaryOnly: true,
   });
@@ -654,7 +658,9 @@ export function buildStatementItems(
     label: "결정세액",
     value: result.determinedTax,
     formula: determinedStep?.formula ?? "산출세액 − 감면세액 (원 미만 절사)",
-    legalBasis: determinedStep?.legalBasis ?? "소득세법 §116",
+    // §116은 「양도소득세의 **징수**」다 — 계산 근거가 아니다. 결정세액의 정본은 §92③2호
+    // 「산출세액에서 §90에 따라 감면되는 세액이 있을 때에는 이를 공제하여 계산」(결과탭 코드리뷰 #028).
+    legalBasis: determinedStep?.legalBasis ?? TRANSFER.FINAL_TAX,
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
@@ -696,7 +702,7 @@ export function buildStatementItems(
   }
   if (statutoryPenalty > 0) {
     penaltyParts.push(
-      `신고불성실·납부지연 가산세 ${statutoryPenalty.toLocaleString()} (국세기본법 §47·§48)`,
+      `신고불성실·납부지연 가산세 ${statutoryPenalty.toLocaleString()} (국세기본법 §47의2·§47의3·§47의4)`,
     );
   }
   items.set("penaltyTax", {
@@ -704,7 +710,10 @@ export function buildStatementItems(
     value: totalPenalty,
     formula:
       penaltyParts.length > 0 ? penaltyParts.join(" + ") : "가산세 없음",
-    legalBasis: "소득세법 §114조의2 / 국세기본법 §47·§48",
+    // §47은 「가산세 **부과**」 총칙, §48은 「가산세 **감면** 등」이라 산정 근거가 아니다.
+    // 엔진이 실제로 적용하는 조문은 §47의2(무신고)·§47의3(과소신고)·§47의4(납부지연)이고,
+    // §92③3호도 「§47의2부터 §47의4까지」라고 지목한다 (결과탭 코드리뷰 #029).
+    legalBasis: "소득세법 §114조의2 / 국세기본법 §47의2·§47의3·§47의4",
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
@@ -718,7 +727,9 @@ export function buildStatementItems(
     label: "총결정세액",
     value: result.determinedTax + totalPenalty,
     formula: `결정세액 ${result.determinedTax.toLocaleString()} + 가산세액 ${totalPenalty.toLocaleString()} = ${(result.determinedTax + totalPenalty).toLocaleString()}`,
-    legalBasis: "소득세법 §116",
+    // §92③3호 — 「결정세액에 §114의2, §115 및 「국세기본법」 §47의2부터 §47의4까지에 따른
+    // 가산세를 더하여 계산」. 같은 화면 신고서 양식이 이미 그렇게 설명하고 있다(#028).
+    legalBasis: "소득세법 §92③3호",
   });
 
   // ── 7단계: 부가세·지방세 ───────────────────────────────────
