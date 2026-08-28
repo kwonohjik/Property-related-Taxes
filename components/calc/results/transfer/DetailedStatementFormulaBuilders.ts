@@ -79,17 +79,40 @@ export function buildLthFormula(p: PerPropertyBreakdown): string {
   return `과세대상양도차익 ${fmt(taxable)} × ${ratePct}% = ${fmt(lth)}`;
 }
 
-/** 양도소득금액 = 과세대상양도차익 − 장특공제 (음수 가능 — 차손) */
+/**
+ * 양도소득금액 = 과세대상양도차익 − 장특공제 (음수 가능 — 차손).
+ *
+ * 🔴 이 항목이 **표시하는 값은 `incomeAfterOffset`(§102② 차손 통산 後)** 인데 종전 산식은
+ *   `p.income`(통산 前)에서 끝났다. 차손이 섞인 다건에서 「490,000,000 - 98,000,000 =
+ *   392,000,000」이라 적어놓고 옆에는 342,000,000을 찍어 **좌변이 우변을 만들지 못했다**
+ *   (결과탭 코드리뷰 #072). 통산 단계를 산식에 드러낸다.
+ */
 export function buildIncomeFormula(p: PerPropertyBreakdown): string {
   const tg = p.transferGain;
   const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
   const taxable = tg > 0 ? Math.min(tg, inc + lth) : tg;
-  return `${fmt(taxable)} - ${fmt(lth)} = ${fmt(p.income)}`;
+  const base = `${fmt(taxable)} - ${fmt(lth)} = ${fmt(p.income)}`;
+  if (p.income === p.incomeAfterOffset) return base;
+  const received = p.lossOffsetFromSameGroup + p.lossOffsetFromOtherGroup;
+  // 차손을 **받은** 자산: 통산액이 자기 필드에 실린다.
+  if (received > 0) return `${base} − 결손금 통산 ${fmt(received)} = ${fmt(p.incomeAfterOffset)}`;
+  // 차손을 **낸** 자산: 통산액은 상대 자산 쪽에 실리므로 결과만 밝힌다.
+  return `${base} → 다른 자산의 양도소득금액에 통산되어 ${fmt(p.incomeAfterOffset)}`;
 }
 
-/** 산출세액(참고) = 그룹 과세표준 기여분 × (적용세율 + 중과세율) − 누진공제 */
+/**
+ * 산출세액(참고) = 그룹 과세표준 기여분 × (적용세율 + 중과세율) − 누진공제.
+ *
+ * 🔴 **파트 분할 자산(§104⑤)에서는 이 근사식이 성립하지 않는다.** `appliedRate`가 그 자산의
+ *   **파트 최고세율**이라 자산 과세표준 전체에 곱하면 과대해진다(엔진 주석 실측 +87,140,000).
+ *   그런 자산의 세액은 엔진이 `refCalculatedTaxNote`에 파트 내역을 담아 보내므로 그것을 우선한다 —
+ *   형제 카드(`MultiTransferPropertyBreakdown`의 「산출세액 (참고)」)가 이미 같은 순서를 쓴다.
+ *   종전에는 명세서만 근사식을 고정 출력해 한 화면에서 같은 숫자에 다른 설명이 붙었다
+ *   (결과탭 코드리뷰 #103).
+ */
 export function buildCalculatedTaxFormula(p: PerPropertyBreakdown): string {
+  if (p.refCalculatedTaxNote) return p.refCalculatedTaxNote;
   const ratePct = ((p.appliedRate + (p.surchargeRate ?? 0)) * 100).toFixed(1).replace(/\.0$/, "");
   return `${fmt(p.taxBaseShare)} × ${ratePct}% - ${fmt(p.progressiveDeduction)} = ${fmt(p.refCalculatedTax)}`;
 }

@@ -26,7 +26,7 @@
 
 import { estimatedDeductionRate } from "./legal-codes";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./types/transfer.types";
-import { computeEstimatedDeduction } from "./tax-utils";
+import { computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 
 /**
  * 개별주택가격 미공시 취득 환산취득가 계산
@@ -156,6 +156,16 @@ export function calcPreHousingDisclosureGain(
   //    잔액 흡수를 시도했다가 Excel 정본 anchor(D-7-2 건물 개산공제 4,454,759)와 1원 어긋나
   //    14건이 깨졌다(2026-07-28). 재시도 방지용 기록.
   const dedRate = estimatedDeductionRate(input.isUnregistered);
+  // 표시 산식이 자기 값을 유도하려면 **지분 반영 base**와 **실제 율**을 그대로 echo해야 한다
+  // (결과탭 코드리뷰 #053). 계산은 종전과 동일 — 같은 base·율을 변수로 뽑았을 뿐이다.
+  const landLumpDeductionBase = computeLumpSumDeductionBase(
+    landHousingAtAcquisition,
+    input.ownershipRatio,
+  );
+  const buildingLumpDeductionBase = computeLumpSumDeductionBase(
+    buildingHousingAtAcquisition,
+    input.ownershipRatio,
+  );
   const landLumpDeduction = computeEstimatedDeduction(
     landHousingAtAcquisition,
     dedRate,
@@ -310,6 +320,9 @@ export function calcPreHousingDisclosureGain(
     buildingAcquisitionPrice,
     landLumpDeduction,
     buildingLumpDeduction,
+    landLumpDeductionBase,
+    buildingLumpDeductionBase,
+    estimatedDeductionRate: dedRate,
     inputs: {
       totalTransferPrice,
       landArea,

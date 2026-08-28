@@ -143,10 +143,27 @@ export interface PreHousingDisclosureResult {
   landAcquisitionPrice: number;
   /** 건물 환산취득가 */
   buildingAcquisitionPrice: number;
-  /** 토지 개산공제 = floor(landHousingAtAcquisition × 3%) */
+  /** 토지 개산공제 = floor(landLumpDeductionBase × estimatedDeductionRate) */
   landLumpDeduction: number;
-  /** 건물 개산공제 = floor(buildingHousingAtAcquisition × 3%) */
+  /** 건물 개산공제 = floor(buildingLumpDeductionBase × estimatedDeductionRate) */
   buildingLumpDeduction: number;
+
+  /**
+   * [echo] 개산공제 base — **지분(ownershipRatio)을 반영한** 취득시 성분 (표시 전용).
+   *
+   * 🔴 `landHousingAtAcquisition`은 지분 100% 스케일이다. 그 값으로 산식을 적으면
+   *    공유지분 1/2에서 표시값의 **2배**가 나와 산식이 자기 값을 유도하지 못한다
+   *    (`tax-utils.ts` `computeLumpSumDeductionBase` 주석이 경고한 그 실패).
+   *    형제 서브엔진들이 이미 갖고 있는 `lumpDeductionBase`와 같은 축이다.
+   */
+  landLumpDeductionBase: number;
+  /** [echo] 건물 개산공제 base — 지분 반영 (표시 전용). */
+  buildingLumpDeductionBase: number;
+  /**
+   * [echo] 개산공제율 — 미등기 양도자산이면 **0.003**(소득세법 시행령 §163⑥1호·2호 단서),
+   * 그 외 0.03. 표시 산식이 「× 3%」로 고정 표기하면 미등기에서 10배가 된다.
+   */
+  estimatedDeductionRate: number;
 
   /** 입력값 echo — UI에서 산식 분해 표시용 */
   inputs: {

@@ -121,6 +121,12 @@ export function buildAggregateRows(
   let sumLtResidence = 0;
   // 산출세액 행 주석: 자산별 shortTermNote (부수토지 일체과세 등 특수 세율)
   const taxNotes: Record<string, string> = {};
+  /**
+   * 「감면후 소득금액」 열이 「양도소득금액」보다 작은데 감면이 0인 경우의 근거.
+   * 서식(별지 제84호 부표1)에는 §102② 결손금 통산 행이 없어, 종전에는 그 차액이
+   * **무설명으로 사라졌다** (결과탭 코드리뷰 #072).
+   */
+  const offsetNotes: Record<string, string> = {};
 
   for (const p of properties) {
     const col = p.propertyId;
@@ -206,6 +212,14 @@ export function buildAggregateRows(
     );
     setNum("reductionTargetIncome2", col, p.incomeDeductionReducible ?? 0);
     setNum("incomeAmountAfter", col, Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)));
+    const received = p.lossOffsetFromSameGroup + p.lossOffsetFromOtherGroup;
+    if (received > 0) {
+      offsetNotes[col] =
+        `결손금 통산 ${received.toLocaleString()} 반영 (소득세법 §102②) — 감면과 무관`;
+    } else if (p.income < 0 && p.incomeAfterOffset === 0) {
+      offsetNotes[col] =
+        `결손금 ${Math.abs(p.income).toLocaleString()}이 다른 자산의 양도소득금액에 통산 (소득세법 §102②)`;
+    }
     setNum("priorIncomeAmount", col, null); // 신고서 단위 개념 — 자산별 "-" (합계만 산정)
 
     // 합산-only 행 — 자산 셀 null
@@ -379,7 +393,11 @@ export function buildAggregateRows(
     ["nontaxableIncome", "비과세 양도소득금액 (소령 §161①)", { indent: true }],
     ["reductionTargetIncome", "세액감면대상금액"],
     ["reductionTargetIncome2", "소득금액 감면대상"],
-    ["incomeAmountAfter", "감면후 소득금액"],
+    [
+      "incomeAmountAfter",
+      "감면후 소득금액",
+      Object.keys(offsetNotes).length > 0 ? { notes: offsetNotes } : undefined,
+    ],
     ["priorIncomeAmount", "기신고 양도소득금액"],
     ["basicDeduction", "기본공제", { separatorAfter: true }],
     ["taxBase", "과세표준", { highlight: true }],

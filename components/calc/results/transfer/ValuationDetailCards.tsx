@@ -26,6 +26,7 @@ import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurch
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { ExpropriationValuationCard } from "@/components/calc/results/transfer/ExpropriationValuationCard";
 import { HousingExpropriationValuationCard } from "@/components/calc/results/transfer/HousingExpropriationValuationCard";
+import { SplitLandExpropriationValuationCard } from "@/components/calc/results/transfer/SplitLandExpropriationValuationCard";
 import { AuctionValuationCard } from "@/components/calc/results/transfer/AuctionValuationCard";
 import { CommercialBuildingValuationDetailCard } from "@/components/calc/results/CommercialBuildingValuationDetailCard";
 import { PreHousingDisclosureDetailSection } from "@/components/calc/results/transfer/PreHousingDisclosureDetailSection";
@@ -123,6 +124,24 @@ export function ValuationDetailCards({
       )}
       {result.pre1990LandValuationDetail && (
         <Pre1990LandValuationDetailCard detail={result.pre1990LandValuationDetail} />
+      )}
+      {/*
+        🔴 `splitDetail` **안쪽** 중첩 detail 2종. 종전에는 단건 결과뷰에만 인라인으로 배선돼
+           일괄·다건에서는 환산취득가액의 분모가 왜 낮아졌는지(§164⑨1호) 보여주는 근거가
+           화면에서 통째로 사라졌다. `SplitGainDetailSection`은 이 둘을 읽지 않는다
+           (본문에서 참조 0건 — 토지/건물 2열 표와 매매 분리 판정만 그린다).
+           데이터는 `transfer-tax-aggregate-pickers.ts`가 `splitDetail`을 통째로 복사하므로
+           이미 도달해 있었다 (결과탭 코드리뷰 #063).
+      */}
+      {result.splitDetail?.splitLandExpropriationValuationDetail && (
+        <SplitLandExpropriationValuationCard
+          detail={result.splitDetail.splitLandExpropriationValuationDetail}
+        />
+      )}
+      {result.splitDetail?.housingExpropriationValuationDetail && (
+        <HousingExpropriationValuationCard
+          detail={result.splitDetail.housingExpropriationValuationDetail}
+        />
       )}
       {result.splitDetail && (
         <SplitGainDetailSection
