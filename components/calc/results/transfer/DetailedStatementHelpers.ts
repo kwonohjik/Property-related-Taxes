@@ -268,8 +268,17 @@ export function buildStatementItems(
    *   이미 gross echo로 보정하고 있어 두 카드가 정면으로 어긋났다.
    */
   const singleGrossGain = effectiveGrossGain(result);
+  /**
+   * 환산취득가(§97②2호 **본문**) — 엔진이 자본적지출·양도비를 차감하지 않고 필요경비개산공제
+   * (§163⑥)로 갈음하는 구간. 신고서 양식의 `estimatedDisplay` 게이트와 **같은 조건**이다
+   * (단서 swap은 실가 축으로 내려간다).
+   */
+  const estimatedNoSwap =
+    result.usedEstimatedAcquisition === true && result.swapApplied !== true;
   const singleAcq = result.usedEstimatedAcquisition
-    ? (result.estimatedBase ?? 0) + capEx
+    ? // 🔴 종전에는 여기서도 `+ capEx`를 했다. 엔진이 차감하지 않은 금액이라 그만큼
+      //   「양도가액 − 취득가액 − 필요경비 = 양도차익」이 깨졌다(결과탭 코드리뷰 #069).
+      (result.estimatedBase ?? 0) + (estimatedNoSwap ? 0 : capEx)
     : inverseAcquisitionForDisplay({
         transferPrice: totalTransferPrice,
         grossGain: singleGrossGain,
@@ -307,9 +316,13 @@ export function buildStatementItems(
       )
     : 0;
   // 환산모드 본문에서 result.expenses 는 이미 개산공제(estimatedDeduction)만 담는다
-  // (transfer-tax-helpers calcNecessaryExpense). 개산공제를 별도로 다시 더하면 이중 계산이므로
-  // 신고서 양식 표시는 자본적지출만 분리: 필요경비 = expenses − capitalExpenditureForDisplay.
-  const singleExp = Math.max(0, (result.expenses ?? 0) - capEx);
+  // (transfer-tax-helpers calcNecessaryExpense).
+  // 🔴 그런데도 종전에는 거기서 `capEx`를 **또** 뺐다. 개산공제가 자본적지출보다 작으면 필요경비가
+  //   0으로 눌려(실측 3,000,000 − 20,000,000 → 0) 「양도 − 취득 − 경비 = 차익」이 깨졌다.
+  //   환산 본문은 자본적지출이 애초에 들어 있지 않으므로 뺄 것이 없다(결과탭 코드리뷰 #069).
+  const singleExp = estimatedNoSwap
+    ? (result.expenses ?? 0)
+    : Math.max(0, (result.expenses ?? 0) - capEx);
   const expFormula = buildNecessaryExpenseFormula(result, isAggregate, singleExp);
 
   items.set("expenses", {

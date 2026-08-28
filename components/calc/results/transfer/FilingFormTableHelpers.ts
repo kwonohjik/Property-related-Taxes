@@ -133,141 +133,9 @@ export type ColumnMode =
   | "redev-right-receive"
   | "redev-right-land-pay";
 
-export function deriveColumns(
-  result: TransferTaxResult,
-  aggregate?: AggregateMeta,
-  redevSubject?: "right" | "apt",
-  redevSettlementDirection?: "pay" | "receive",
-): {
-  columns: Column[];
-  mode: ColumnMode;
-} {
-  // 다자산 합산 모드 우선 — 사례 27 등 묶음·합산 신고
-  if (aggregate && aggregate.properties.length > 0) {
-    const aggCols: Column[] = [{ key: "total", label: "합계" }];
-    for (const p of aggregate.properties) {
-      const own = aggregate.ownershipMap?.get(p.propertyId);
-      const nature = aggregate.landNatureMap?.get(p.propertyId);
-      let label = p.propertyLabel;
-      // 지분 배지
-      if (own && own.numerator > 0 && own.denominator > 0 && own.numerator < own.denominator) {
-        const pct = ((own.numerator / own.denominator) * 100)
-          .toFixed(2)
-          .replace(/\.?0+$/, "");
-        label = `${label} (지분 ${pct}%)`;
-      }
-      // 토지 성격 suffix — 부수토지/독립 나대지 (사례 28 landNature 명시 입력 정책)
-      if (nature === "appurtenant") {
-        label = `${label} (부수토지)`;
-      } else if (nature === "standalone") {
-        label = `${label} (독립 나대지)`;
-      }
-      aggCols.push({ key: p.propertyId, label });
-    }
-    return { mode: "aggregate", columns: aggCols };
-  }
-
-  // 재개발/재건축 — aggregate와 mutually exclusive
-  if (result.redevelopmentDetail) {
-    // 사례 37 — 토지 출자 §166③: landContribDetail 존재 시 3열 (합계/인가전/인가후)
-    // land 분기는 right+pay에서만 허용 (validate가 차단). 최우선 분기.
-    if (result.redevelopmentDetail.landContribDetail) {
-      return {
-        mode: "redev-right-land-pay",
-        columns: [
-          { key: "total", label: "합계" },
-          { key: "preApproval", label: "① 인가전 분 (취득일~인가일)" },
-          { key: "postApprovalExistingHouse", label: "② 인가후 분 (LTHD 제외)" },
-        ],
-      };
-    }
-    // subject="right" + pay → 3열 (합계/인가전/인가후)
-    // §95② 단서: 인가후(청산금납부분) LTHD 배제 — 별도 열로 명시
-    if (redevSubject === "right" && redevSettlementDirection === "pay") {
-      return {
-        mode: "redev-right-pay",
-        columns: [
-          { key: "total", label: "합계" },
-          { key: "preApproval", label: "① 인가전 분" },
-          { key: "postApproval", label: "② 인가후 분 (청산금 납부)" },
-        ],
-      };
-    }
-    // subject="right" + receive → 3열 (합계/인가전 분(나목)/인가후 분(가목))
-    // §166①2호 나목(인가전 분)·가목(인가후 분) 분리 표시
-    // 가목(인가후 분) LTHD = 0 (§95② 본문 괄호·zeroBranch)
-    // ★ 사례 38·39 라벨 정합화: "입주권 분/청산금 분" → "인가전 분(나목)/인가후 분(가목)"
-    if (redevSubject === "right" && redevSettlementDirection === "receive") {
-      return {
-        mode: "redev-right-receive",
-        columns: [
-          { key: "total", label: "합계" },
-          { key: "preApproval", label: "① 인가전 분 (나목)" },
-          { key: "settlement", label: "② 인가후 분 (가목)" },
-        ],
-      };
-    }
-    // 그 외(apt): 4열
-    // apt + receive + settlementExemptionApplied=true → 청산금 열 라벨에 비과세 차감 명시
-    const settlementLabel =
-      redevSettlementDirection === "receive" &&
-      result.redevelopmentDetail?.settlementExemptionApplied === true
-        ? "③ 청산금 분 (§89①4호 비과세 차감 후)"
-        : "③ 청산금 분";
-    return {
-      mode: "redev-4split",
-      columns: [
-        { key: "total", label: "합계" },
-        { key: "preApproval", label: "① 인가전 분" },
-        { key: "postApprovalExistingHouse", label: "② 인가후 기존건물분" },
-        { key: "settlement", label: settlementLabel },
-      ],
-    };
-  }
-
-  const mu = result.mixedUseDetail;
-  const sp = result.splitDetail;
-
-  if (mu && mu.partialUsageChange?.phdScopeBranch === "case_a_whole_building") {
-    return {
-      mode: "fourpart",
-      columns: [
-        { key: "total", label: "합계" },
-        { key: "housingLand", label: "토지(주택분)" },
-        { key: "housingBuilding", label: "주택" },
-        { key: "commercialLand", label: "토지(기타분)" },
-        { key: "commercialBuilding", label: "기타건물" },
-      ],
-    };
-  }
-  if (mu) {
-    // 일반 겸용주택 — 주택분·상가분을 각각 토지/건물로 4분할 (토지-우선).
-    // 컬럼 키는 Case A "fourpart"와 동일 재사용 → fourPartFinancials 채움 로직 공유.
-    return {
-      mode: "mixed-4col",
-      columns: [
-        { key: "total", label: "합계" },
-        { key: "housingLand", label: "주택분 토지" },
-        { key: "housingBuilding", label: "주택분 건물" },
-        { key: "commercialLand", label: "상가분 토지" },
-        { key: "commercialBuilding", label: "상가분 건물" },
-      ],
-    };
-  }
-  if (sp) {
-    // 토지·건물 소유자 분리 — 본인이 소유하지 않는 파트 컬럼 제거 (소령 §166⑥, §168②).
-    // building_only → 토지 컬럼 없음 / land_only → 건물 컬럼 없음.
-    const selfOwns = sp.selfOwns ?? "both";
-    const columns: Column[] = [{ key: "total", label: "합계" }];
-    if (selfOwns !== "building_only") columns.push({ key: "land", label: "토지" });
-    if (selfOwns !== "land_only") columns.push({ key: "building", label: "건물" });
-    return { mode: "split-2col", columns };
-  }
-  return {
-    mode: "single",
-    columns: [{ key: "total", label: "합계" }],
-  };
-}
+// 열 구성 판정은 `FilingFormTableColumns.ts`로 분리했다(800줄 정책). 기존 import 경로 유지를
+// 위해 여기서 re-export한다.
+export { deriveColumns } from "./FilingFormTableColumns";
 
 // ── 날짜·기간 포맷 헬퍼 ────────────────────────────────────────
 
@@ -608,13 +476,31 @@ export function buildRows(
       );
     }
   } else if (estimatedDisplay !== null) {
-    // 환산취득가 모드: 자본적지출(있다면)을 취득가액(=환산취득가)에 합산, 필요경비는 개산공제 + 양도비
+    /**
+     * 환산취득가 모드 — 엔진은 자본적지출·양도비를 **차감하지 않는다**. §97②2호 본문에서
+     * 필요경비는 `필요경비개산공제`(§163⑥)로 갈음되기 때문이다.
+     *
+     * 🔴 종전에는 실가 모드와 같은 방식으로 자본적지출을 취득가액에 더하고 양도비를 필요경비에
+     *   더했다. 엔진이 차감하지 않은 금액이라 **그 합만큼 네 행이 어긋났다** — 실측
+     *   (양도 900,000,000 · 환산 300,000,000 · 개산공제 3,000,000 · 자본적지출 20,000,000 ·
+     *   양도비 5,000,000): 900,000,000 − 320,000,000 − 8,000,000 = 572,000,000인데
+     *   전체 양도차익 행은 597,000,000이었다(결과탭 코드리뷰 #069).
+     *
+     * ⇒ 두 칸은 엔진이 실제로 쓴 값만 담고, 입력했으나 차감되지 않은 금액은 **행 고지**로 알린다.
+     *   (§97②2호 **단서** swap 시에는 `estimatedDisplay`가 null이라 여기 오지 않는다 — 실가 분기의
+     *    기존 「미차감」 고지가 담당한다.)
+     */
     const capExp = result.capitalExpenditureForDisplay ?? 0;
-    setNum("acquisitionPrice", "total", estimatedDisplay.base + capExp > 0 ? estimatedDisplay.base + capExp : null);
-    const deduction = estimatedDisplay.deduction;
-    const transferOnlyExpense = Math.max(0, totalExpenses - capExp);
-    const totalNecessaryExpenses = deduction + transferOnlyExpense;
-    setNum("expenses", "total", totalNecessaryExpenses > 0 ? totalNecessaryExpenses : null);
+    setNum("acquisitionPrice", "total", estimatedDisplay.base > 0 ? estimatedDisplay.base : null);
+    setNum("expenses", "total", estimatedDisplay.deduction > 0 ? estimatedDisplay.deduction : null);
+    const notDeducted = Math.max(capExp, totalExpenses);
+    if (notDeducted > 0) {
+      setRoseNote(
+        "expenses",
+        "total",
+        `자본적지출·양도비 ${notDeducted.toLocaleString()}은 필요경비개산공제로 갈음되어 차감되지 않습니다 (소득세법 시행령 §163⑥)`,
+      );
+    }
   } else {
     // 실가 모드: 자본적지출은 취득가액에 합산 (§97① 가목, 신고서 양식 표시 관행)
     // 엔진 result.expenses는 capitalExpenditure + transferExpense 합산값. split 입력 케이스에서는 form의 legacy directExpenses 대신 사용.
