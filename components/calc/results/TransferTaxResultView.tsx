@@ -24,6 +24,7 @@ import { formatRate, Row, downloadSelectedPdf } from "@/components/calc/results/
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { CarryoverComparisonCard } from "@/components/calc/results/transfer/CarryoverComparisonCard";
 import { CarryoverScenarioBFilingCard } from "@/components/calc/results/transfer/CarryoverScenarioBFilingCard";
+import { CarryoverScenarioAFilingCard } from "@/components/calc/results/transfer/CarryoverScenarioAFilingCard";
 import { PreHousingDisclosureDetailSection } from "@/components/calc/results/transfer/PreHousingDisclosureDetailSection";
 import { RentalHousingExceptionDetailCard } from "@/components/calc/results/transfer/RentalHousingExceptionDetailCard";
 import { CommercialBuildingValuationDetailCard } from "@/components/calc/results/CommercialBuildingValuationDetailCard";
@@ -229,34 +230,77 @@ export function TransferTaxResultView({
             신고서 양식 — 이월과세 비교과세 (소득세법 §97조의2)
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FilingFormTable
-              result={result}
-              formData={formData}
-              asset={resolvedAsset}
-              transferPriceOverride={transferPriceOverride}
-              acquisitionDateLabel="(증여자 취득일)"
-              acquisitionDateOverride={resolvedAsset?.carryover?.donorAcquisitionDate ?? ""}
-              title="[A] 이월과세 적용"
-              subtitle={`보유기간 ${carryoverDetail.scenarioA.holdingPeriodYears}년 (증여자 취득일 기산) · 취득가액 ${formatKRW(carryoverDetail.scenarioA.acquisitionPrice)}`}
-              adopted={adoptedA}
-              redevSubject={
-                result.redevelopmentDetail
-                  ? ((resolvedAsset?.redevSubject || (resolvedAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
-                  : undefined
-              }
-              redevSettlementDirection={
-                result.redevelopmentDetail
-                  ? ((resolvedAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
-                  : undefined
-              }
-            />
-            <CarryoverScenarioBFilingCard
-              scenarioB={carryoverDetail.scenarioB}
-              adopted={!adoptedA}
-              transferPrice={receiveOnlyDisplay.transferPrice}
-              transferDate={receiveOnlyDisplay.transferDate}
-              giftRegistryDate={resolvedAsset?.carryover?.giftRegistryDate}
-            />
+            {/*
+              🔴 종전에는 [A] 자리에 **언제나** 완전한 `FilingFormTable`이 `result`를 받았다.
+                 그런데 `result`는 **채택된 시나리오**로 계산된 값이다
+                 (`transfer-tax-carryover.ts`의 `adoptedInput`). B가 채택되면 A의 취득일·
+                 보유기간 머리에 **B의 금액**이 담겨, 부제(A 취득가액)와 본문(B 취득가액)이
+                 서로 모순되고 「보유 26년인데 장특공제율 6%(3년)」 같은 서식이 나왔다
+                 (결과탭 코드리뷰 #023).
+              ⇒ **채택된 쪽**이 전체 서식을 받고, 미채택 쪽은 자기 detail로 그린 요약 카드다.
+            */}
+            {adoptedA ? (
+              <FilingFormTable
+                result={result}
+                formData={formData}
+                asset={resolvedAsset}
+                transferPriceOverride={transferPriceOverride}
+                acquisitionDateLabel="(증여자 취득일)"
+                acquisitionDateOverride={resolvedAsset?.carryover?.donorAcquisitionDate ?? ""}
+                title="[A] 이월과세 적용"
+                subtitle={`보유기간 ${carryoverDetail.scenarioA.holdingPeriodYears}년 (증여자 취득일 기산) · 취득가액 ${formatKRW(carryoverDetail.scenarioA.acquisitionPrice)}`}
+                adopted={adoptedA}
+                redevSubject={
+                  result.redevelopmentDetail
+                    ? ((resolvedAsset?.redevSubject || (resolvedAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
+                    : undefined
+                }
+                redevSettlementDirection={
+                  result.redevelopmentDetail
+                    ? ((resolvedAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
+                    : undefined
+                }
+              />
+            ) : (
+              <CarryoverScenarioAFilingCard
+                scenarioA={carryoverDetail.scenarioA}
+                adopted={false}
+                transferPrice={receiveOnlyDisplay.transferPrice}
+                transferDate={receiveOnlyDisplay.transferDate}
+                donorAcquisitionDate={resolvedAsset?.carryover?.donorAcquisitionDate}
+              />
+            )}
+            {adoptedA ? (
+              <CarryoverScenarioBFilingCard
+                scenarioB={carryoverDetail.scenarioB}
+                adopted={false}
+                transferPrice={receiveOnlyDisplay.transferPrice}
+                transferDate={receiveOnlyDisplay.transferDate}
+                giftRegistryDate={resolvedAsset?.carryover?.giftRegistryDate}
+              />
+            ) : (
+              <FilingFormTable
+                result={result}
+                formData={formData}
+                asset={resolvedAsset}
+                transferPriceOverride={transferPriceOverride}
+                acquisitionDateLabel="(증여 등기접수일)"
+                acquisitionDateOverride={resolvedAsset?.carryover?.giftRegistryDate ?? ""}
+                title="[B] 이월과세 미적용"
+                subtitle={`보유기간 ${carryoverDetail.scenarioB.holdingPeriodYears}년 (증여 등기접수일 기산) · 취득가액 ${formatKRW(carryoverDetail.scenarioB.acquisitionPrice)}`}
+                adopted
+                redevSubject={
+                  result.redevelopmentDetail
+                    ? ((resolvedAsset?.redevSubject || (resolvedAsset?.assetKind === "right_to_move_in" ? "right" : "apt")) as "right" | "apt")
+                    : undefined
+                }
+                redevSettlementDirection={
+                  result.redevelopmentDetail
+                    ? ((resolvedAsset?.redevSettlementDirection || "pay") as "pay" | "receive")
+                    : undefined
+                }
+              />
+            )}
           </div>
         </div>
       ) : (
