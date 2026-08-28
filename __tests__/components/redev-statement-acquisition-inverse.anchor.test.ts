@@ -71,7 +71,14 @@ const SCENARIOS: Scenario[] = [
     //      위 E1-03 주석이 「더 가까워진다」고 적어 둔 방향의 나머지 9,000,000이 이것이었다.
     "apt", "pay", 900_000_000, "2024-01-26", "2002-04-09", 500_000_000, 9_000_000),
   mk("S3 C47 apt+receive", { propertyType: "redevelopment_apt", transferPrice: 2_000_000_000, transferDate: new Date("2022-03-01"), acquisitionDate: new Date("2001-01-01"), acquisitionPrice: 100_000_000, useEstimatedAcquisition: false, isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 252, redevelopment: case47RedevelopmentInfo() },
-    "apt", "receive", 2_000_000_000, "2022-03-01", "2001-01-01", 1_230_000_000, 0),
+    // 🔴 2026-08-28 정정 (결과탭 코드리뷰 #010 #024) — 1,230,000,000 → **100,000,000**.
+    //    사례 47은 **12억 안분 + 청산금 수령 동시신고**가 겹치는 유일한 격자다. 종전 값은 두 결함의 합이었다:
+    //      ① 역산 base가 분기 `gain`(안분 **후** 과세대상 770,000,000)이라 「전체 양도차익」 행
+    //         2,100,000,000과 어긋났다.
+    //      ② 합계 양도가액이 신축APT 분(20억)만 담아 청산금 수령액 2억이 빠져 있었다.
+    //    둘을 고치면 2,200,000,000 − 0 − 2,100,000,000 = **100,000,000**, 즉 납세자가 입력한
+    //    실제 취득가액과 정확히 일치한다(다른 6개 시나리오는 값이 바뀌지 않는다).
+    "apt", "receive", 2_000_000_000, "2022-03-01", "2001-01-01", 100_000_000, 0),
   mk("S4 C38 right+receive", { propertyType: "right_to_move_in", transferPrice: 320_000_000, transferDate: new Date("2023-03-02"), acquisitionDate: new Date("2009-04-09"), acquisitionPrice: 180_000_000, useEstimatedAcquisition: false, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0,
     redevelopment: { subject: "right", approvalLawBasis: "urban_renovation_art_74", approvalDate: new Date("2016-10-23"), rightsValue: 300_000_000, settlementDirection: "receive", settlementAmount: 50_000_000, settlementSaleDate: new Date("2023-03-02"), preApprovalExpenses: 0, postApprovalExpenses: 0, originalAssetType: "housing" } },
     "right", "receive", 320_000_000, "2023-03-02", "2009-04-09", 150_000_000, 0),
@@ -103,7 +110,14 @@ function cards(s: Scenario) {
   const items = buildStatementItems(result, fd(s), undefined, undefined, undefined);
   return {
     result,
-    filing: { transfer: g("양도가액"), acq: g("취득가액"), exp: g("필요경비") },
+    filing: {
+      transfer: g("양도가액"),
+      acq: g("취득가액"),
+      exp: g("필요경비"),
+      // A-8이 대조하는 값 — **화면에 그려진 행**이다. `result.transferGain`은 12억 안분 **후**
+      // 과세대상이라 재개발 안분 케이스에서 이 행과 다르다(S3 실측 770,000,000 vs 2,100,000,000).
+      gain: g("전체 양도차익"),
+    },
     stmt: {
       transfer: Number(items.get("transferPrice")?.value ?? 0),
       acq: Number(items.get("acquisitionPrice")?.value ?? 0),
@@ -149,10 +163,15 @@ describe("재개발 명세서 — 취득가액·필요경비를 신고서와 같
     expect(d.settlement.gain).toBe(0);
   });
 
+  // 🔴 2026-08-28 정정 — 종전에는 `result.transferGain`과 대조했다. 그 값은 12억 안분 **후**
+  //   과세대상이라 재개발+안분 케이스(S3 C47)에서 **화면에 그려진 「전체 양도차익」 행이 아닌 값**과
+  //   비교했고, 그래서 역산 base가 어긋나 있는데도 초록이었다(구별력 0 — 결과탭 코드리뷰 #024).
+  //   대조 대상을 행 값으로 바꾼다. 항등식 자체를 두 항등식으로 넓힌 anchor는
+  //   `redev-filing-identity.anchor.test.ts`가 담당한다.
   it("A-8 신고서 양식은 전 케이스 자기일관 (회귀 가드 — 정본이 흔들리지 않는다)", () => {
     for (const s of SCENARIOS) {
-      const { result, filing } = cards(s);
-      expect(filing.transfer - filing.acq - filing.exp).toBe(result.transferGain);
+      const { filing } = cards(s);
+      expect(filing.transfer - filing.acq - filing.exp, s.id).toBe(filing.gain);
     }
   });
 });

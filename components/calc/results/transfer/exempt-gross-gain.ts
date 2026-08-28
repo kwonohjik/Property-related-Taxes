@@ -14,14 +14,28 @@
  * #084 #094 #102). 같은 화면의 신고서와 상세명세서가 취득가액·양도차익을 **다르게** 표시했다.
  * ⇒ 여기 한 곳에 두고 전부 이것을 부른다(memory `feedback_ui_engine_dual_truth_avoidance`).
  */
+import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import { redevBranchTotals } from "./redev-acquisition-inverse";
 
-/** 표시에 쓰는 「전체 양도차익」 — 비과세면 gross echo, 아니면 과세 차익. */
+type RedevDetailLike = NonNullable<TransferTaxResult["redevelopmentDetail"]>;
+
+/**
+ * 표시에 쓰는 「전체 양도차익」 — 비과세면 gross echo, 아니면 과세 차익.
+ *
+ * 🔴 재개발(§166)은 세 번째 축이다. 12억 안분이 걸리면 `transferGain`이 **안분 후 과세대상**이라
+ *   (`transfer-tax-redevelopment.ts` — 분기별 `gain`을 합산) 「전체 양도차익」 자리에 그것을 쓰면
+ *   신고서 양식(분기별 `gainBeforeAllocation` 합)과 어긋난다. 실측 2,100,000,000 vs 770,000,000.
+ *   ⇒ 분기 합 leaf(`redevBranchTotals`)를 쓴다 — 안분이 없으면 두 값이 같아 무영향이다.
+ */
 export function effectiveGrossGain(r: {
   isExempt?: boolean;
   exemptGrossGain?: number;
   transferGain: number;
+  redevelopmentDetail?: RedevDetailLike;
 }): number {
-  return r.isExempt ? (r.exemptGrossGain ?? 0) : r.transferGain;
+  if (r.isExempt) return r.exemptGrossGain ?? 0;
+  if (r.redevelopmentDetail) return redevBranchTotals(r.redevelopmentDetail).gain;
+  return r.transferGain;
 }
 
 /**

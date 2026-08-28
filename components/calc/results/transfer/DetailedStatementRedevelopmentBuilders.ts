@@ -15,7 +15,7 @@ import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redeve
 import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
 import { redevBranchTotals } from "./redev-acquisition-inverse";
-import { inverseRedevAcquisition } from "./redev-acquisition-inverse";
+import { redevFilingTotals } from "./redev-acquisition-inverse";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 분할 정의
@@ -483,12 +483,7 @@ export function applyLandContribOverrides(
   if (acqItem) {
     // 합계는 **역산**이다 — §166은 파트가 단계별 의제라 파트 합이 실제 취득가액이 아니다.
     // 신고서 양식과 같은 leaf·같은 인자를 쓴다(`redev-acquisition-inverse.ts`).
-    const lcTotals = redevBranchTotals(redev);
-    acqItem.value = inverseRedevAcquisition({
-      totalTransferPrice,
-      totalExpenses: lcTotals.expenses,
-      totalGain: lcTotals.gain,
-    });
+    acqItem.value = redevFilingTotals(redev, totalTransferPrice).acquisition;
     acqItem.formula =
       "토지 출자 §166③ — 합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (단계별 의제 구조상 파트 합과 다름)";
     acqItem.legalBasis = "소득세법 시행령 §166③";
@@ -644,7 +639,14 @@ export function applyRedevelopmentOverrides(
   //    합계가 그 셋의 합인 것처럼 읽혀 값(계약총액)과 어긋났다 — 파트 합은 실제 양도가액이 아니다.
   const transferItem = items.get("transferPrice");
   if (transferItem) {
-    if (isRightReceive) {
+    // 청산금 **수령** 동시신고는 신고 단위가 두 개의 양도다 — 신축APT 양도가액 + 청산금.
+    // 신고서 양식과 같은 leaf를 써서 두 카드가 같은 합계를 말하게 한다.
+    const separate = redev.settlementSeparateConsideration ?? 0;
+    if (separate > 0) {
+      transferItem.value = redevFilingTotals(redev, totalTransferPrice).transferPrice;
+      transferItem.formula = `합계 = 신축주택 양도가액 ${fmt(totalTransferPrice)} + 청산금 수령액 ${fmt(separate)} — 동시신고 단위의 대가 전부(§166①2호 가목은 별개의 양도다)`;
+      transferItem.legalBasis = "소득세법 시행령 §166①2호 가목 · §166②·④";
+    } else if (isRightReceive) {
       transferItem.formula = "합계 = 실지 양도가액. 분할 표시는 §166①2호 — 인가전(권리가액−청산금 의제)·청산금 수령분(청산금 의제)이며 단계별 의제라 합계와 다르다";
       transferItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166④";
     } else {
@@ -661,13 +663,8 @@ export function applyRedevelopmentOverrides(
   if (acqItem) {
     // 합계: 분할별 apportionedAcquisition 합
     // 합계는 **역산**이다 — 파트 합(단계별 의제)이 아니라 자기일관식에서 얻는다.
-    // 신고서 양식과 같은 leaf·같은 인자(`redevBranchTotals`)를 쓴다.
-    const acqTotals = redevBranchTotals(redev);
-    acqItem.value = inverseRedevAcquisition({
-      totalTransferPrice,
-      totalExpenses: acqTotals.expenses,
-      totalGain: acqTotals.gain,
-    });
+    // 신고서 양식과 같은 leaf·같은 인자(`redevFilingTotals`)를 쓴다.
+    acqItem.value = redevFilingTotals(redev, totalTransferPrice).acquisition;
     if (isRightReceive) {
       acqItem.formula = "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166①2호 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(실가 또는 환산 − 안분 취득가)·청산금 분(종전취득가 × 청산금/권리가)";
       acqItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166③";

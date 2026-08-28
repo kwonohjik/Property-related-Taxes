@@ -761,6 +761,15 @@ function runOriginalMember(
     },
     salePriceTotal: split.salePriceTotal,
     receiveOnlyMode: redevelopment.receiveOnlyMode === true ? true : undefined,
+    // 완공APT 양도 + 청산금 **수령** 동시신고에서만 청산금이 폼 양도가액과 **별개의 대가**다.
+    // 표시 계층의 합계 양도가액·역산 취득가액이 이것을 더해야 신고 단위와 일치한다.
+    // (납부는 취득원가 · receiveOnly는 폼 양도가액이 이미 청산금 · 입주권은 settlement가 양도가액)
+    settlementSeparateConsideration:
+      isApt &&
+      redevelopment.settlementDirection === "receive" &&
+      redevelopment.receiveOnlyMode !== true
+        ? settlementDetail.apportionedTransfer
+        : undefined,
     valuationMeta: split.valuationMeta,
     estimatedLumpDeduction: split.estimatedLumpDeduction,
   };

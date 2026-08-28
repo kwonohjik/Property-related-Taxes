@@ -173,7 +173,14 @@ describe("회귀 가드 — receiveOnly가 아닌 분기는 폼 양도가액을 
       assets: [{ ...makeDefaultAsset(1), acquisitionDate: "2001-01-01" }],
     } as unknown as TransferFormData;
     const rows = buildRows(result, mode, fd);
-    expect(num(rows, "양도가액", "total")).toBe(2_000_000_000);
+    // 🔴 2026-08-28 정정 (결과탭 코드리뷰 #024) — 2,000,000,000 → **2,200,000,000**.
+    //    이 가드의 목적은 「receiveOnly 치환이 새어 나오지 않는가」다. 치환이 새면 합계가
+    //    청산금 단독(200,000,000)이 되므로 구별력은 그대로다.
+    //    다만 사례 47은 **동시신고**라 신고 단위가 두 개의 양도(신축APT 20억 + 청산금 2억)이고,
+    //    합계 양도가액이 20억뿐이면 역산 취득가액이 **음수**(−100,000,000)가 된다.
+    //    ⇒ 엔진 echo(`settlementSeparateConsideration`)를 더한 값이 정본이다.
+    expect(num(rows, "양도가액", "total")).toBe(2_200_000_000);
+    expect(num(rows, "양도가액", "total")).not.toBe(200_000_000); // receiveOnly 치환 누수 가드
     expect(str(rows, "양도일자", "total")).toContain("2022-03-01");
   });
 

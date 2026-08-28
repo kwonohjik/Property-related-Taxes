@@ -25,8 +25,7 @@ import {
   successorRightEstimationMode,
 } from "@/lib/calc/transfer-successor-right";
 import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
-import { redevBranchTotals } from "@/components/calc/results/transfer/redev-acquisition-inverse";
-import { inverseRedevAcquisition } from "@/components/calc/results/transfer/redev-acquisition-inverse";
+import { redevFilingTotals } from "@/components/calc/results/transfer/redev-acquisition-inverse";
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateEstimatedAcquisitionPrice, applyRate } from "@/lib/tax-engine/tax-utils";
@@ -474,8 +473,11 @@ export function computeTransferPerAssetSummary(
      */
     const redevResultTotals =
       singleResult?.redevelopmentDetail && i === 0
-        ? redevBranchTotals(singleResult.redevelopmentDetail)
+        ? redevFilingTotals(singleResult.redevelopmentDetail, salePrice)
         : null;
+    // 청산금 **수령** 동시신고는 신고 단위가 두 개의 양도다 — 사이드바 양도가액도 신고서 합계와
+    // 같은 값을 말해야 한다(그러지 않으면 「양도가 = 취득가 + 경비 + 차익」이 사이드바에서 깨진다).
+    if (redevResultTotals) salePrice = redevResultTotals.transferPrice;
 
     // ── 취득가액 ──
     const acqSource = directAcqRaw(a);
@@ -498,11 +500,7 @@ export function computeTransferPerAssetSummary(
       acqPrice = singleResult.parcelDetails.reduce((s, p) => s + p.acquisitionPrice, 0);
       acqPending = false;
     } else if (redevResultTotals) {
-      acqPrice = inverseRedevAcquisition({
-        totalTransferPrice: salePrice,
-        totalExpenses: redevResultTotals.expenses,
-        totalGain: redevResultTotals.gain,
-      });
+      acqPrice = redevResultTotals.acquisition;
       acqPending = false;
     } else if (dedicatedPreview) {
       /**
