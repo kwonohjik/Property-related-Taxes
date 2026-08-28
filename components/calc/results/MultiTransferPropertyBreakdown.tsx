@@ -48,6 +48,16 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     isExempt: b.isExempt,
     exemptReason: b.exemptReason,
     transferGain: b.transferGain,
+    /**
+     * 🔴 종전에는 이 셋을 하나도 싣지 않았다. 자산별 신고서(`buildRows`)는 비과세 자산의
+     *   양도차익·취득가액을 `exemptGrossGain` echo로 역산하는데 그 값이 없으니
+     *   **양도차익이 통째로 0**이 되고 취득가액이 양도가액으로 왜곡됐다 —
+     *   같은 화면의 합계 신고서와 다른 숫자가 나왔다(결과탭 코드리뷰 #012·#020).
+     *   엔진은 이미 실어 보내고 있었다(`transfer-tax-aggregate.ts:559-560·581`).
+     */
+    exemptGrossGain: b.exemptGrossGain,
+    expenses: b.necessaryExpense,
+    capitalExpenditureForDisplay: b.capitalExpenditureForDisplay,
     taxableGain: Math.max(0, b.transferGain),
     usedEstimatedAcquisition: false,
     longTermHoldingDeduction: b.longTermHoldingDeduction,

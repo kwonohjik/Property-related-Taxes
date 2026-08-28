@@ -10,6 +10,10 @@
  */
 
 import type { ReactNode } from "react";
+import {
+  effectiveGrossGain,
+  inverseAcquisitionForDisplay,
+} from "@/components/calc/results/transfer/exempt-gross-gain";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import type { TransferTaxResult, CalculationStep } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -257,9 +261,21 @@ export function buildStatementItems(
       )
     : 0;
   const capEx = result.capitalExpenditureForDisplay ?? 0;
+  /*
+   * 🔴 종전에는 `result.transferGain`을 그대로 뺐다. 전액 비과세 자산은 그 값이 **0**이라
+   *   취득가액이 「양도가액 − 0 − 경비」, 즉 사실상 **양도가액 전액**으로 표시됐다
+   *   (실측: 취득가 400,000,000 입력 → 1,000,000,000 표시). 같은 화면의 신고서 양식은
+   *   이미 gross echo로 보정하고 있어 두 카드가 정면으로 어긋났다.
+   */
+  const singleGrossGain = effectiveGrossGain(result);
   const singleAcq = result.usedEstimatedAcquisition
     ? (result.estimatedBase ?? 0) + capEx
-    : totalTransferPrice - result.transferGain - (result.expenses ?? 0) + capEx;
+    : inverseAcquisitionForDisplay({
+        transferPrice: totalTransferPrice,
+        grossGain: singleGrossGain,
+        expenses: result.expenses ?? 0,
+        capEx,
+      });
   // 단건: 실제 변수값을 풀어쓴 산식 (양도차익 항목과 동일 표기). 다건은 자산별 perAsset이 담당.
   const acqFormula = buildAcquisitionPriceFormula(
     result,
@@ -311,9 +327,10 @@ export function buildStatementItems(
   });
 
   const gainStep = findStepByLabel(result.steps, "양도차익");
+  // 비과세 자산은 `transferGain`이 0이므로 gross echo를 쓴다 — 신고서 양식과 같은 축.
   const totalTransferGainVal = isAggregate
-    ? properties.reduce((s, p) => s + p.transferGain, 0)
-    : result.transferGain;
+    ? properties.reduce((s, p) => s + effectiveGrossGain(p), 0)
+    : singleGrossGain;
   items.set("transferGain", {
     label: "전체 양도차익",
     value: totalTransferGainVal,
@@ -324,23 +341,23 @@ export function buildStatementItems(
       : undefined,
   });
 
-  const exemptGainSingle = Math.max(0, result.transferGain - result.taxableGain);
+  // 비과세 자산은 `transferGain`이 0이라 「비과세 양도차익」까지 0이 됐다 — gross 축으로 맞춘다
+  // (신고서 정본: `FilingFormTableHelpers.ts:644`).
+  const exemptGainSingle = Math.max(0, singleGrossGain - result.taxableGain);
   const exemptGainAgg = isAggregate
-    ? properties.reduce(
-        (s, p) =>
+    ? properties.reduce((s, p) => {
+        const gross = effectiveGrossGain(p);
+        return (
           s +
           Math.max(
             0,
-            p.transferGain -
-              (p.transferGain > 0
-                ? Math.min(
-                    p.transferGain,
-                    Math.max(0, p.income) + p.longTermHoldingDeduction,
-                  )
-                : p.transferGain),
-          ),
-        0,
-      )
+            gross -
+              (gross > 0
+                ? Math.min(gross, Math.max(0, p.income) + p.longTermHoldingDeduction)
+                : gross),
+          )
+        );
+      }, 0)
     : 0;
   const exemptVal = isAggregate ? exemptGainAgg : exemptGainSingle;
   const taxableGainVal = isAggregate

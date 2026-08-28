@@ -11,6 +11,7 @@
  */
 
 import { Badge } from "@/components/ui/badge";
+import { effectiveGrossGain } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -47,9 +48,11 @@ function sumFromBreakdown(properties: AggregateTransferResult["properties"]) {
       transferPrice: acc.transferPrice + p.transferPrice,
       acquisitionPrice: acc.acquisitionPrice + p.acquisitionPrice,
       necessaryExpense: acc.necessaryExpense + p.necessaryExpense,
+      // 비과세 자산은 `transferGain`이 0이라 위 세 행과 검산이 깨진다 — gross echo로 합산한다.
+      grossGain: acc.grossGain + effectiveGrossGain(p),
       determinedTaxAll: acc.determinedTaxAll + p.determinedTax,
     }),
-    { transferPrice: 0, acquisitionPrice: 0, necessaryExpense: 0, determinedTaxAll: 0 },
+    { transferPrice: 0, acquisitionPrice: 0, necessaryExpense: 0, determinedTaxAll: 0, grossGain: 0 },
   );
 }
 
@@ -102,6 +105,8 @@ export function MultiTransferTaxSummaryCard({
 }) {
   // 단순 합산 — 엔진이 이미 단건별 결정세액 등을 포함
   const sums = sumFromBreakdown(result.properties);
+  // 비과세분 = gross 합 − 과세 차익 합. 0이면 행을 숨긴다(전 자산 과세).
+  const exemptGain = Math.max(0, sums.grossGain - result.totalTransferGain);
 
   // 확정신고 기납부세액 정산 (§111③) — 엔진 단일진실(approach A). UI 재계산 금지.
   // 기존 autoPriorPaid(앞 자산 결정세액 단순합)는 §107② 위반이라 제거, 엔진 settlement 필드 read.
@@ -130,7 +135,18 @@ export function MultiTransferTaxSummaryCard({
         <Separator />
 
         {/* 4~8. 소득·과세표준 */}
-        <ResultRow label="양도차익" value={result.totalTransferGain} />
+        {/*
+          🔴 종전에는 `result.totalTransferGain`(= 자산별 **과세** 차익 합)을 그렸다.
+             비과세 자산은 그 값이 0이라 바로 위 세 행(양도가액 − 취득가액 − 필요경비)과
+             검산이 맞지 않았다. 신고서 양식과 같은 3행 구조로 가른다.
+        */}
+        <ResultRow label="양도차익" value={sums.grossGain} />
+        {exemptGain > 0 && (
+          <>
+            <ResultRow label="비과세 양도차익" value={-exemptGain} />
+            <ResultRow label="과세대상 양도차익" value={result.totalTransferGain} />
+          </>
+        )}
         <ResultRow label="장기보유특별공제" value={-result.totalLongTermHoldingDeduction} />
         <ResultRow label="양도소득금액" value={result.totalIncomeAfterOffset} />
         {result.unusedLoss > 0 && (
