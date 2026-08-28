@@ -12,16 +12,30 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { ReductionStatutoryCapRow } from "@/components/calc/results/transfer/ReductionStatutoryCapRow";
+import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 
 export function GbDesignatedLand77_3DetailCard({
   detail: d,
   calculatedTax,
   taxBase,
   aggregatedContext = false,
+  excludedByOverlap = false,
+  appliedReductionAmount,
 }: {
   detail: NonNullable<TransferTaxResult["gbDesignatedLandDetail"]>;
   calculatedTax?: number;
   taxBase?: number;
+  /**
+   * 조특법 §127⑦로 **배제된 후보**인가 — 승자가 아니면 감면세액 단정을 감춘다(#045).
+   * 배제 사실 자체는 `ReductionOverlapExclusionBanner`가 카드 위에 적는다.
+   */
+  excludedByOverlap?: boolean;
+  /**
+   * §133 연간·5년 누적 한도 반영 후 **최종 적용 감면세액**.
+   * detail의 `reductionAmount`(연간 한도까지만)보다 작으면 그 차이를 카드가 밝힌다(#046).
+   */
+  appliedReductionAmount?: number;
   /** 다건뷰: ③ 감면세액·capping을 숨기고 ①~② 구성만 표시. */
   aggregatedContext?: boolean;
 }) {
@@ -64,7 +78,11 @@ export function GbDesignatedLand77_3DetailCard({
           );
         })()}
       </div>
-      {aggregatedContext ? (
+      {excludedByOverlap ? (
+        <p className="text-muted-foreground border-t border-primary/20 pt-1.5">
+          ③ 감면세액 — 조특법 §127⑦ 중복배제로 <b>적용되지 않았습니다</b>
+        </p>
+      ) : aggregatedContext ? (
         <p className="text-muted-foreground border-t border-primary/20 pt-1.5">
           ③ 감면세액은 여러 건 합산 재계산(§133 한도) 후 확정 — 「감면세액 합산 재계산 내역」 참조
         </p>
@@ -83,8 +101,14 @@ export function GbDesignatedLand77_3DetailCard({
               <p className="font-medium">→ 적용 감면세액 (한도 후) = {formatKRW(d.reductionAmount)}</p>
             </div>
           )}
+          <ReductionStatutoryCapRow
+            detailAmount={d.reductionAmount}
+            appliedAmount={appliedReductionAmount}
+          />
         </>
       )}
+      {/* 엔진이 채우는 경고 — 렌더러가 0개였다(결과탭 코드리뷰 #057). */}
+      <ReductionDetailWarnings detail={d} />
     </div>
   );
 }

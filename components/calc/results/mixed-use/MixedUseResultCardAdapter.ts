@@ -74,6 +74,15 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
      * 지금 그대로 두면 **계산과 표시가 갈린다**(memory `feedback_engine_result_display_drift`).
      */
     reductionAmount: t.reductionAmount,
+    /**
+     * ⑲ 세액감면대상금액 라우팅·§127⑦ 표시가 읽는 두 값 — 종전에는 어댑터가 싣지 않아
+     * 신고서 ⑲가 **0**, 명세서 산식이 「감면 대상 없음」이라 같은 화면의 ⑮ 감면세액과
+     * 자기모순이었다(결과탭 코드리뷰 #049).
+     */
+    reductionTypeApplied: t.reductionTypeApplied,
+    reducibleIncome: t.reducibleIncome,
+    // §77의2 ⑲는 `eligibleTransferIncome` echo를 읽으므로 detail도 함께 실어야 한다.
+    ...(t.reductionDetails ?? {}),
     determinedTax: t.determinedTax,
     // §114조의2 환산가액적용가산세는 겸용 경로에 없다 — 신고불성실·납부지연만 온다
     // (`transfer-tax-mixed-use-totals.ts`: `penaltyTax: penalty?.totalPenalty ?? 0`).

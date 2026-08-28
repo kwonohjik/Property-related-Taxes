@@ -606,7 +606,7 @@ describe("T-41: 자경농지 감면 — 피상속인 경작기간 합산 회귀 
     const result = calculateTransferTax(input, mockRates);
     expect(result.reductionAmount).toBeGreaterThan(0);
     // 라벨: 일반 자경농지 (상속 합산 아님)
-    expect(result.reductionType).toBe("자경농지");
+    expect(result.reductionType).toBe("자경농지 (§69)");
   });
 
   it("본인 자경 6년 단독 → 요건 미충족으로 감면 0", () => {
@@ -623,7 +623,7 @@ describe("T-41: 자경농지 감면 — 피상속인 경작기간 합산 회귀 
     ];
     const result = calculateTransferTax(input, mockRates);
     expect(result.reductionAmount).toBeGreaterThan(0);
-    expect(result.reductionType).toBe("자경농지(§69·상속인 경작기간 합산 §66⑪)");
+    expect(result.reductionType).toBe("자경농지 (§69·상속인 경작기간 합산 §66⑪)");
   });
 
   it("본인 자경 8년 충족 + 피상속인 3년 지정 → 합산 불필요, 일반 자경 라벨 유지", () => {
@@ -634,7 +634,7 @@ describe("T-41: 자경농지 감면 — 피상속인 경작기간 합산 회귀 
     const result = calculateTransferTax(input, mockRates);
     expect(result.reductionAmount).toBeGreaterThan(0);
     // 본인 8년 충족 시 합산 로직 타지 않음 → 기존 라벨
-    expect(result.reductionType).toBe("자경농지");
+    expect(result.reductionType).toBe("자경농지 (§69)");
   });
 
   it("본인 5년 + 피상속인 2년 = 7년 → 여전히 미충족, 감면 0", () => {

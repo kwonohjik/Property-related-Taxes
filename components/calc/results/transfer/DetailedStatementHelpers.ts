@@ -10,6 +10,11 @@
  */
 
 import type { ReactNode } from "react";
+import {
+  effectiveGrossGain,
+  inverseAcquisitionForDisplay,
+} from "@/components/calc/results/transfer/exempt-gross-gain";
+import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import type { TransferTaxResult, CalculationStep } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -232,7 +237,7 @@ export function buildStatementItems(
     label: "양도가액",
     value: isAggregate ? sumPropTransfer : totalTransferPrice,
     formula: burdenedGift
-      ? `양도가액 = 인수 채무액 (보증금 ${burdenedGift.assumedDebtAmount.toLocaleString()}원 합계) = ${burdenedGift.assumedDebtAmount.toLocaleString()}원 (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
+      ? `양도가액 = 인수 채무액 (보증금 ${burdenedGift.assumedDebtAmount.toLocaleString()} 합계) = ${burdenedGift.assumedDebtAmount.toLocaleString()} (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
       : isAggregate
         ? "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
         : "사용자 입력 (실제 매매계약서상 거래금액)",
@@ -256,9 +261,30 @@ export function buildStatementItems(
       )
     : 0;
   const capEx = result.capitalExpenditureForDisplay ?? 0;
+  /*
+   * 🔴 종전에는 `result.transferGain`을 그대로 뺐다. 전액 비과세 자산은 그 값이 **0**이라
+   *   취득가액이 「양도가액 − 0 − 경비」, 즉 사실상 **양도가액 전액**으로 표시됐다
+   *   (실측: 취득가 400,000,000 입력 → 1,000,000,000 표시). 같은 화면의 신고서 양식은
+   *   이미 gross echo로 보정하고 있어 두 카드가 정면으로 어긋났다.
+   */
+  const singleGrossGain = effectiveGrossGain(result);
+  /**
+   * 환산취득가(§97②2호 **본문**) — 엔진이 자본적지출·양도비를 차감하지 않고 필요경비개산공제
+   * (§163⑥)로 갈음하는 구간. 신고서 양식의 `estimatedDisplay` 게이트와 **같은 조건**이다
+   * (단서 swap은 실가 축으로 내려간다).
+   */
+  const estimatedNoSwap =
+    result.usedEstimatedAcquisition === true && result.swapApplied !== true;
   const singleAcq = result.usedEstimatedAcquisition
-    ? (result.estimatedBase ?? 0) + capEx
-    : totalTransferPrice - result.transferGain - (result.expenses ?? 0) + capEx;
+    ? // 🔴 종전에는 여기서도 `+ capEx`를 했다. 엔진이 차감하지 않은 금액이라 그만큼
+      //   「양도가액 − 취득가액 − 필요경비 = 양도차익」이 깨졌다(결과탭 코드리뷰 #069).
+      (result.estimatedBase ?? 0) + (estimatedNoSwap ? 0 : capEx)
+    : inverseAcquisitionForDisplay({
+        transferPrice: totalTransferPrice,
+        grossGain: singleGrossGain,
+        expenses: result.expenses ?? 0,
+        capEx,
+      });
   // 단건: 실제 변수값을 풀어쓴 산식 (양도차익 항목과 동일 표기). 다건은 자산별 perAsset이 담당.
   const acqFormula = buildAcquisitionPriceFormula(
     result,
@@ -290,9 +316,13 @@ export function buildStatementItems(
       )
     : 0;
   // 환산모드 본문에서 result.expenses 는 이미 개산공제(estimatedDeduction)만 담는다
-  // (transfer-tax-helpers calcNecessaryExpense). 개산공제를 별도로 다시 더하면 이중 계산이므로
-  // 신고서 양식 표시는 자본적지출만 분리: 필요경비 = expenses − capitalExpenditureForDisplay.
-  const singleExp = Math.max(0, (result.expenses ?? 0) - capEx);
+  // (transfer-tax-helpers calcNecessaryExpense).
+  // 🔴 그런데도 종전에는 거기서 `capEx`를 **또** 뺐다. 개산공제가 자본적지출보다 작으면 필요경비가
+  //   0으로 눌려(실측 3,000,000 − 20,000,000 → 0) 「양도 − 취득 − 경비 = 차익」이 깨졌다.
+  //   환산 본문은 자본적지출이 애초에 들어 있지 않으므로 뺄 것이 없다(결과탭 코드리뷰 #069).
+  const singleExp = estimatedNoSwap
+    ? (result.expenses ?? 0)
+    : Math.max(0, (result.expenses ?? 0) - capEx);
   const expFormula = buildNecessaryExpenseFormula(result, isAggregate, singleExp);
 
   items.set("expenses", {
@@ -310,9 +340,10 @@ export function buildStatementItems(
   });
 
   const gainStep = findStepByLabel(result.steps, "양도차익");
+  // 비과세 자산은 `transferGain`이 0이므로 gross echo를 쓴다 — 신고서 양식과 같은 축.
   const totalTransferGainVal = isAggregate
-    ? properties.reduce((s, p) => s + p.transferGain, 0)
-    : result.transferGain;
+    ? properties.reduce((s, p) => s + effectiveGrossGain(p), 0)
+    : singleGrossGain;
   items.set("transferGain", {
     label: "전체 양도차익",
     value: totalTransferGainVal,
@@ -323,23 +354,23 @@ export function buildStatementItems(
       : undefined,
   });
 
-  const exemptGainSingle = Math.max(0, result.transferGain - result.taxableGain);
+  // 비과세 자산은 `transferGain`이 0이라 「비과세 양도차익」까지 0이 됐다 — gross 축으로 맞춘다
+  // (신고서 정본: `FilingFormTableHelpers.ts:644`).
+  const exemptGainSingle = Math.max(0, singleGrossGain - result.taxableGain);
   const exemptGainAgg = isAggregate
-    ? properties.reduce(
-        (s, p) =>
+    ? properties.reduce((s, p) => {
+        const gross = effectiveGrossGain(p);
+        return (
           s +
           Math.max(
             0,
-            p.transferGain -
-              (p.transferGain > 0
-                ? Math.min(
-                    p.transferGain,
-                    Math.max(0, p.income) + p.longTermHoldingDeduction,
-                  )
-                : p.transferGain),
-          ),
-        0,
-      )
+            gross -
+              (gross > 0
+                ? Math.min(gross, Math.max(0, p.income) + p.longTermHoldingDeduction)
+                : gross),
+          )
+        );
+      }, 0)
     : 0;
   const exemptVal = isAggregate ? exemptGainAgg : exemptGainSingle;
   const taxableGainVal = isAggregate
@@ -561,7 +592,10 @@ export function buildStatementItems(
     value: result.calculatedTax,
     formula:
       calcStep?.formula ??
-      `과세표준 × 세율(${formatRatePct(result.appliedRate, result.surchargeRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`,
+      // 집계에 세율군이 둘 이상이면 단일 세율이 없다 — 「0%」로 찍지 말고 그 사실을 적는다(#071).
+      (isAggregate && result.appliedRate === 0
+        ? "자산별 세율이 서로 달라 단일 세율로 표시할 수 없습니다 — 아래 자산별 값을 참조하세요"
+        : `과세표준 × 세율(${formatRatePct(result.appliedRate, result.surchargeRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`),
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
     note: result.shortTermNote,
     perAsset: isAggregate
@@ -586,7 +620,7 @@ export function buildStatementItems(
           properties,
           (p) => p.reductionAggregated,
           (p) => p.reductionAggregated > 0
-            ? `합산 재계산 후 ${p.reductionType ?? "감면"} 배분 = ${p.reductionAggregated.toLocaleString()}`
+            ? `합산 재계산 후 ${reductionTypeLabelOf(p.reductionType)} 배분 = ${p.reductionAggregated.toLocaleString()}`
             : "감면 없음",
         )
       : undefined,

@@ -31,7 +31,19 @@ type RedevDetail = NonNullable<TransferTaxResult["redevelopmentDetail"]>;
 export interface RedevBranchTotals {
   /** 분기별 필요경비 합 */
   expenses: number;
-  /** 분기별 양도차익 합 */
+  /**
+   * 분기별 **전체 양도차익**(12억 안분 前) 합.
+   *
+   * 🔴 종전에는 `branch.gain`(안분 **後** 과세대상)을 더했다. 그러면 역산 취득가액이
+   *   「양도가액 − 경비 − **과세대상**」이 되어, 신고서가 바로 위에 그린 「전체 양도차익」 행
+   *   (`gainBeforeAllocation` 합)과 **비과세 양도차익만큼** 어긋났다 — 사용자가 표를 위에서
+   *   아래로 검산하면 맞지 않는다(결과탭 코드리뷰 #010 #024).
+   *
+   *   실측(재개발APT·1세대1주택 20억): 취득가액 1,317,112,601 → **292,781,500**.
+   *   후자는 납세자의 실제 취득원가(실가 200,000,000 + 납부청산금 92,781,500)와 정확히 같다.
+   *
+   * 안분이 없는 케이스는 `gainBeforeAllocation === gain`이라 값이 바뀌지 않는다.
+   */
   gain: number;
 }
 
@@ -47,10 +59,13 @@ export interface RedevBranchTotals {
  * 그 계약 자체는 anchor A-9가 고정한다.
  */
 export function redevBranchTotals(detail: RedevDetail): RedevBranchTotals {
+  /** 신고서 「전체 양도차익」 행과 **같은 인자** — 12억 안분 전 값이 있으면 그것. */
+  const grossOf = (b: RedevDetail["preApproval"]) => b.gainBeforeAllocation ?? b.gain;
+
   if (detail.successorMemberApplied === true) {
     return {
       expenses: detail.postApprovalExistingHouse.expenses ?? 0,
-      gain: detail.postApprovalExistingHouse.gain,
+      gain: grossOf(detail.postApprovalExistingHouse),
     };
   }
   return {
@@ -58,7 +73,38 @@ export function redevBranchTotals(detail: RedevDetail): RedevBranchTotals {
       (detail.preApproval.expenses ?? 0) +
       (detail.postApprovalExistingHouse.expenses ?? 0) +
       (detail.settlement.expenses ?? 0),
-    gain: detail.preApproval.gain + detail.postApprovalExistingHouse.gain + detail.settlement.gain,
+    gain:
+      grossOf(detail.preApproval) +
+      grossOf(detail.postApprovalExistingHouse) +
+      grossOf(detail.settlement),
+  };
+}
+
+/**
+ * **신고 단위 합계 3값** — 양도가액·필요경비·전체 양도차익과 그로부터 역산한 취득가액.
+ *
+ * 신고서 양식·계산명세서·사이드바 **세 곳**이 각각 `redevBranchTotals` + `inverseRedevAcquisition`을
+ * 조립하고 있었다. 산식은 같아도 **인자(양도가액)를 각자 정하면** 같은 병이 재발하므로
+ * (memory `feedback_shared_predicate_argument_parity`) 조립까지 여기서 한다.
+ *
+ * @param baseTransferPrice 폼·엔진이 정한 본 자산의 양도가액. 청산금 수령 동시신고면
+ *   엔진 echo(`settlementSeparateConsideration`)를 더해 신고 단위 대가로 만든다.
+ */
+export function redevFilingTotals(
+  detail: RedevDetail,
+  baseTransferPrice: number,
+): { transferPrice: number; expenses: number; gain: number; acquisition: number } {
+  const totals = redevBranchTotals(detail);
+  const transferPrice = baseTransferPrice + (detail.settlementSeparateConsideration ?? 0);
+  return {
+    transferPrice,
+    expenses: totals.expenses,
+    gain: totals.gain,
+    acquisition: inverseRedevAcquisition({
+      totalTransferPrice: transferPrice,
+      totalExpenses: totals.expenses,
+      totalGain: totals.gain,
+    }),
   };
 }
 

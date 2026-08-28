@@ -7,6 +7,11 @@
  */
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import {
+  effectiveGrossGain,
+  assetTaxableGain,
+  assetExemptGain,
+} from "@/components/calc/results/transfer/exempt-gross-gain";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {
@@ -167,17 +172,15 @@ export function buildAggregateRows(
     // 양도차익 / 비과세 / 과세대상 (자산별 역산)
     // 비과세 자산은 엔진 transferGain=0 → exemptGrossGain echo 사용 (전액 비과세 → 과세대상 0).
     // 비-비과세는 assetTaxableGain = max(0, income) + 장특공제 (income = taxableGain - 장특).
-    const transferGain = p.isExempt ? (p.exemptGrossGain ?? 0) : p.transferGain;
+    // 자산별 신고서 어댑터(`MultiTransferPropertyBreakdown`)와 **같은 leaf**를 쓴다 —
+    // 두 표가 같은 자산을 다르게 표시하던 것을 막는다(#019).
+    const transferGain = effectiveGrossGain(p);
     const longTermDed = p.longTermHoldingDeduction;
-    const assetTaxableGain = p.isExempt
-      ? 0
-      : transferGain > 0
-        ? Math.min(transferGain, Math.max(0, p.income) + longTermDed)
-        : transferGain;
-    const assetExemptGain = Math.max(0, transferGain - assetTaxableGain);
+    const taxableGainOfAsset = assetTaxableGain(p);
+    const exemptGainOfAsset = assetExemptGain(p);
     setNum("transferGain", col, transferGain);
-    setNum("exemptGain", col, assetExemptGain);
-    setNum("taxableGain", col, assetTaxableGain);
+    setNum("exemptGain", col, exemptGainOfAsset);
+    setNum("taxableGain", col, taxableGainOfAsset);
 
     // 장기보유공제 (계 + 보유분/거주분 분리)
     const holdingMs = holdingMonthsFromDates(acqDate, colTransferDate);
@@ -261,8 +264,8 @@ export function buildAggregateRows(
     sumAcqPrice += displayAcq;
     sumExpenses += displayExp;
     sumTransferGain += transferGain;
-    sumTaxableGain += assetTaxableGain;
-    sumExemptGain += assetExemptGain;
+    sumTaxableGain += taxableGainOfAsset;
+    sumExemptGain += exemptGainOfAsset;
     sumLtDeduction += longTermDed;
     sumLtHolding += split.holdingAmount;
     sumLtResidence += split.residenceAmount;

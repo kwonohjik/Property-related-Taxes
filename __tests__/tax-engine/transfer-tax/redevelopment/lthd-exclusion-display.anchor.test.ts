@@ -6,7 +6,7 @@
  * ## 종전 결함 — 공제는 0인데 **왜 0인지 화면에 없다**
  *
  * 일반 경로(`transfer-tax-lthd.ts`)는 결과에 `lthdExclusionReason`을 채우고,
- * 상세명세서가 그것을 「0원 — 조정대상지역 다주택 중과 대상 …」으로 표시한다
+ * 상세명세서가 그것을 「0 — 조정대상지역 다주택 중과 대상 …」으로 표시한다
  * (`DetailedStatementLthdFormulas.ts:45`). **재개발 경로만 비어 있었다** — 실측:
  *
  * | 경로 | `lthdExclusionReason` |
@@ -80,14 +80,14 @@ describe("재개발 §95② 배제 — 사유 전달", () => {
 
   it("LX-03: 🔴 상세명세서가 산식 대신 **사유**를 쓴다 (종전 「× 0% (보유 21년 …)」)", () => {
     const lt = statement(apt()).get("ltDeduction")!;
-    expect(lt.formula).toBe(`0원 — ${LTHD_EXCLUSION_LABEL.multi_house_surcharge}`);
+    expect(lt.formula).toBe(`0 — ${LTHD_EXCLUSION_LABEL.multi_house_surcharge}`);
     // 분할별 산식을 남기면 0%가 보유기간 탓으로 읽힌다 — 함께 비운다.
     expect(lt.perAsset).toBeUndefined();
   });
 
   it("LX-04: 대조 — 배제가 없으면 **분할별 산식이 그대로 나온다** (게이트가 통째로 덮지 않는다)", () => {
     const lt = statement(apt({ isRegulatedArea: false, householdHousingCount: 1 })).get("ltDeduction")!;
-    expect(lt.formula).not.toContain("0원 —");
+    expect(lt.formula).not.toContain("0 —");
     expect(lt.formula).toContain("§166⑤"); // 재개발 분할 산식 문구 유지
     expect(lt.perAsset).toBeDefined();
     expect(lt.perAsset!.length).toBeGreaterThan(0);

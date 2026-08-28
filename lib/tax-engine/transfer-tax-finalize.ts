@@ -632,6 +632,22 @@ export function buildExemptEarlyResult(p: {
     warnings: p.warnings,
     transferGain: 0,
     exemptGrossGain: Math.max(0, grossForEcho.gain),
+    /**
+     * [echo] 표시 전용 — 세액 불변.
+     *
+     * 🔴 종전에는 이 둘을 싣지 않아 **신고서가 필요경비를 취득가액에 흡수**했다.
+     *   표시부는 「취득가액 = 양도가액 − gross차익 − 필요경비」로 역산하는데,
+     *   `expenses`가 undefined면 0으로 떨어져 그만큼 취득가액이 부풀었다
+     *   (실측: 경비 20,000,000 · 취득가액 400,000,000 → **420,000,000**으로 표시).
+     *   같은 조기반환 경로가 `exemptGrossGain`을 놓쳐 한 번 겪은 사고와 같은 층위다
+     *   (memory `feedback_early_return_branch_skips_pipeline_stages`).
+     *
+     * 값은 정상 경로(`transfer-tax-normal-return.ts:138·144`)와 같은 축이다 —
+     * `expenses`는 `calcTransferGain`이 실제로 적용한 필요경비, `capitalExpenditureForDisplay`는
+     * 원시 입력의 자본적지출.
+     */
+    expenses: grossForEcho.expenses,
+    capitalExpenditureForDisplay: p.input.capitalExpenditure ?? 0,
     taxableGain: 0,
     usedEstimatedAcquisition: p.effectiveInput.useEstimatedAcquisition,
     ...(grossForEcho.usedEstimated

@@ -189,6 +189,17 @@ export function apportionAcquisitionPrice(
 export interface HousingEstimatedAcqResult {
   /** 주택부분 환산취득가액 */
   estimatedAcq: number;
+  /**
+   * §97 직접 환산 분기에서 실제로 쓴 **취득시 개별주택공시가격**(분수의 분자) — 표시 전용 echo.
+   *
+   * 종전에는 결과 카드가 이 분자를 **라벨만 적고 값 없이** 그렸다. 미공시(0)일 때
+   * 「주택 환산취득가액 0 · 취득시 개별주택공시가격 ÷ 양도시 872,000,000」이 되어 사용자가
+   * 0으로 잡힌 것인지 입력이 누락된 것인지 구별할 수 없었다(결과탭 코드리뷰 #077).
+   * 바로 아래 상가분은 `acqStandardTotal` echo로 분자를 표시해 비대칭이 더 두드러졌다.
+   *
+   * 용도변경(상가→주택) 보정 **후**의 값이다 — 엔진이 분자로 넣은 그 값이라야 산식이 검산된다.
+   */
+  acqHousingStandardPrice?: number;
   /** PHD 모드에서 역산된 취득시 개별주택가격 (P_A_est) */
   phdAcqHousingPrice?: number;
   /** PHD 3-시점 산식 상세 (UI 표시용) */
@@ -377,7 +388,8 @@ export function calcHousingEstimatedAcq(
 
   const rawStdAtTransfer = asset.transferStandardPrice.housingPrice;
   if (rawStdAtTransfer <= 0) {
-    return { estimatedAcq: 0 };
+    // 환산은 성립하지 않지만 분자는 이미 정해졌다 — 카드가 그 값을 보여줄 수 있어야 한다.
+    return { estimatedAcq: 0, acqHousingStandardPrice: stdAtAcq };
   }
   // §164⑨1호 공익수용 특례 — 주택분(라목 개별주택가격 총액) 환산 분모만 낮춘다(안분 원값).
   // PHD 분기는 위에서 조기 반환하므로 여기(일반 §97)만 적용. 미충족 시 null → 현행 분모 유지.
@@ -395,6 +407,8 @@ export function calcHousingEstimatedAcq(
       stdAtAcq,
       stdAtTransfer,
     ),
+    // 분수의 분자를 그대로 echo한다 — 결과 카드가 값 없이 라벨만 그리던 자리다(#077).
+    acqHousingStandardPrice: stdAtAcq,
     expropriationDetail: exprVal?.detail,
   };
 }
@@ -553,6 +567,7 @@ export function buildHousingPart(
 
   return {
     estimatedAcquisitionPrice: housingAcq,
+    acqHousingStandardPrice: housingAcqResult.acqHousingStandardPrice,
     phdEstimatedAcqHousingPrice: housingAcqResult.phdAcqHousingPrice,
     phdResult: housingAcqResult.phdResult,
     inheritedAcquisitionDetail: housingAcqResult.inheritedAcquisitionDetail,

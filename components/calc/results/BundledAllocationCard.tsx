@@ -9,6 +9,7 @@ import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-en
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
@@ -69,13 +70,25 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     taxableGain: a.totalTransferGain,
     usedEstimatedAcquisition: false,
     longTermHoldingDeduction: a.totalLongTermHoldingDeduction,
-    longTermHoldingRate: 0,
+    /*
+     * 🔴 종전에는 0 하드코딩이라 상세명세서가 「과세대상 양도차익 × **0%**」로 표시했다(#071).
+     *   집계는 자산마다 공제율이 달라 단일 rate가 없으므로 **실효 blended rate**를 싣는다 —
+     *   겸용 어댑터가 이미 쓰는 방식이다(`MixedUseResultCardAdapter.ts:61`).
+     */
+    longTermHoldingRate:
+      a.totalTransferGain > 0 ? a.totalLongTermHoldingDeduction / a.totalTransferGain : 0,
     lthdStartDate: new Date(0), // aggregateToFilingResult mock: 단건 결과 합산 표시용, 실값 미사용
 
     basicDeduction: a.basicDeduction,
     taxBase: a.taxBase,
-    appliedRate: 0,
-    progressiveDeduction: 0,
+    /*
+     * 세율군이 **하나뿐이면** 그 군의 세율이 곧 신고단위 세율이다. 여럿이면 단일 세율이
+     * 존재하지 않으므로 0으로 두고, 표시부가 「자산별 세율 상이」로 분기한다
+     * (실효율을 넣으면 「과세표준 × 세율 − 누진공제」 산식이 산술적으로 거짓이 된다).
+     */
+    appliedRate: a.groupTaxes.length === 1 ? a.groupTaxes[0].appliedRate : 0,
+    surchargeRate: a.groupTaxes.length === 1 ? a.groupTaxes[0].surchargeRate : undefined,
+    progressiveDeduction: a.groupTaxes.length === 1 ? a.groupTaxes[0].progressiveDeduction ?? 0 : 0,
     calculatedTax: a.calculatedTax,
     isSurchargeSuspended: false,
     reductionAmount: a.reductionAmount,
@@ -191,12 +204,22 @@ function PropertyCard({
         ⚠️ `calculatedTax`·`taxBase`는 자산별 **참고값**(`refCalculatedTax`·`taxBaseShare`)을
            넘긴다 — 일괄은 합산 과세표준으로 세액을 산출하므로 자산별 값과 다르다.
            타입 정의(`PerPropertyBreakdown`)가 두 필드를 "다건 컨텍스트, 참고"로 명시한다.
+
+        🔴 그래서 `aggregatedContext`가 **필수**다(2026-08-28 · 결과탭 코드리뷰 #044).
+           종전에는 이 prop이 빠져 §77 계열 카드가 참고값으로 「⑤ 감면세액 = 산출세액 ×
+           감면대상소득/과세표준」을 단정했다. 그 값은 실제 적용액이 아니다 — 일괄도 다건과
+           같이 §133 합산 재계산 경로를 타므로 최종 감면세액은 「합산 과세 내역」의
+           `reductionBreakdown` 행이 낸다. 실측(2자산 §77): 카드 2장 합 65,388,000 vs
+           실제 적용 71,156,446. 게다가 분자·분모는 집계 참고값인데 결과값은 단건 엔진 값이라
+           **카드가 찍는 등식 자체가 성립하지 않았다**.
       */}
       <ReductionDetailCards
         result={breakdown}
         calculatedTax={breakdown.refCalculatedTax}
         taxBase={breakdown.taxBaseShare}
         longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
+        aggregatedContext
+        appliedReductionType={breakdown.reductionType}
       />
       {/*
         평가·판정 산출근거 (R1-a) — 상가 환산 §164⑥·비사업용토지·다주택 중과·PHD 등.
@@ -214,17 +237,6 @@ function PropertyCard({
     </div>
   );
 }
-
-// ─── 감면 타입 레이블 ─────────────────────────────────────────
-
-const REDUCTION_TYPE_LABELS: Record<string, string> = {
-  self_farming: "자경농지 (§69)",
-  self_farming_inherited: "자경농지·상속인 경작기간 합산 (§69·§66⑪)",
-  self_farming_incorp: "자경농지·편입일 부분감면 (§69·§66⑤⑥)",
-  livestock: "축산업 (§69의2)",
-  fishing: "어업 (§69의3)",
-  public_expropriation: "공익사업 수용 (§77)",
-};
 
 // ─── 합산 과세 내역 카드 ──────────────────────────────────────
 
@@ -304,7 +316,7 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
                 ? aggregated.reductionBreakdown.map((entry) => (
                     <Row
                       key={entry.type}
-                      label={`· ${REDUCTION_TYPE_LABELS[entry.type] ?? entry.type}${entry.cappedByLimit ? ` (한도 ${formatKRW(entry.annualLimit)})` : ""}`}
+                      label={`· ${reductionTypeLabelOf(entry.type)}${entry.cappedByLimit ? ` (한도 ${formatKRW(entry.annualLimit)})` : ""}`}
                       value={`△${formatKRW(entry.cappedAggregateReduction)}`}
                       sub
                     />

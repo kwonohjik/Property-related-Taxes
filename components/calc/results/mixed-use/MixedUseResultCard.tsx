@@ -13,6 +13,7 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
+import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -280,8 +281,13 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
               return (
                 <FLine>
                   §97: 주택 양도가액 {fmtPlain(a.housingTransferPrice)} ×{" "}
+                  {/* 🔴 종전에는 분자에 **값이 없었다**. 미공시(0)면 「주택 환산취득가액 0」과
+                      라벨뿐인 분자가 함께 나와, 0으로 잡힌 것인지 입력이 누락된 것인지
+                      화면에서 구별할 수 없었다(#077). 바로 아래 상가분은 분자 값을 보여준다. */}
                   <Frac
-                    top="취득시 개별주택공시가격"
+                    top={`취득시 개별주택공시가격 ${fmtPlain(h.acqHousingStandardPrice ?? 0)}${
+                      (h.acqHousingStandardPrice ?? 0) > 0 ? "" : " (미공시)"
+                    }`}
                     bottom={`양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)}`}
                   />
                 </FLine>
@@ -682,11 +688,49 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
               : ""
           }`}
         />
+        {/**
+         * 산출세액 이후 단계 — 감면세액·결정세액·가산세·농어촌특별세.
+         *
+         * 🔴 종전에는 이 네 행이 통째로 없었다. 엔진은
+         *   `totalPayable = 결정세액 + 지방소득세 + 가산세 + 농특세`인데
+         *   (`transfer-tax-mixed-use-totals.ts:249`) 표에는 산출세액·지방소득세·총 납부세액만
+         *   있어 총액과 그 아래 산식이 감면·가산세·농특세만큼 어긋났다. 지방소득세 산식도
+         *   「양도소득세 × 10%」라고 적혀 있었지만 실제 base는 **결정세액**이라
+         *   감면이 붙으면 산식으로 검산이 되지 않았다(결과탭 코드리뷰 #001 · #087).
+         */}
+        {t.reductionAmount > 0 && (
+          <>
+            <Row
+              label="감면세액"
+              value={`△ ${fmt(t.reductionAmount)}`}
+              formula="조세특례제한법상 세액감면 — 산출세액에서 차감 (중복배제 후 채택된 1건, 조특법 §127⑦)"
+            />
+            <Row
+              label="결정세액"
+              value={fmt(t.determinedTax)}
+              formula={`산출세액 ${fmtPlain(t.transferTax)} - 감면세액 ${fmtPlain(t.reductionAmount)}`}
+            />
+          </>
+        )}
         <Row
           label="지방소득세 (10%)"
           value={fmt(t.localTax)}
-          formula={`양도소득세 ${fmtPlain(t.transferTax)} × 10% (지방세법 §103의3)`}
+          formula={`결정세액 ${fmtPlain(t.determinedTax)} × 10% (지방세법 §103의3)`}
         />
+        {t.penaltyTax > 0 && (
+          <Row
+            label="가산세"
+            value={fmt(t.penaltyTax)}
+            formula="신고불성실·납부지연 가산세 (국세기본법 §47의2~§47의4)"
+          />
+        )}
+        {t.ruralSurtax > 0 && (
+          <Row
+            label="농어촌특별세"
+            value={fmt(t.ruralSurtax)}
+            formula={`감면세액 ${fmtPlain(t.reductionAmount)} × 20% (농어촌특별세법 §5①1호)`}
+          />
+        )}
         <DivRow />
         <Row
           // 정정 모드에서는 AmendmentResultCard의 "참고 · 수정/경정 후 전체 세액"과 라벨을 맞춘다
@@ -701,9 +745,36 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           value={fmt(t.totalPayable)}
           highlight
           large
-          formula={`양도소득세 ${fmtPlain(t.transferTax)} + 지방소득세 ${fmtPlain(t.localTax)}`}
+          formula={[
+            `결정세액 ${fmtPlain(t.determinedTax)}`,
+            `지방소득세 ${fmtPlain(t.localTax)}`,
+            ...(t.penaltyTax > 0 ? [`가산세 ${fmtPlain(t.penaltyTax)}`] : []),
+            ...(t.ruralSurtax > 0 ? [`농어촌특별세 ${fmtPlain(t.ruralSurtax)}`] : []),
+          ].join(" + ")}
         />
       </ResultSection>
+
+      {/*
+        감면 산출근거 카드 — 나머지 세 결과뷰(단건·일괄·다건)는 모두 갖는데 겸용만 없었다
+        (결과탭 코드리뷰 #049). §77 요건 미충족으로 감면이 0이 된 경우에도 **사유를 알려주는
+        카드가 없어** 「왜 안 붙었는지」가 화면에서 사라졌다. 엔진은 detail을 만들고도
+        `computeMixedUsePostTax`에서 버리고 있었다 — 이제 echo로 받아 같은 공용 컴포넌트에 넘긴다.
+
+        ⚠️ 겸용은 **세액감면형만** 계산한다(차감형은 어느 파트에서 뺄지 정한 명문이 없어 고지만
+           한다) — 그래서 `calculatedTax`는 감면 차감 전 산출세액 `t.transferTax`다.
+      */}
+      <ReductionDetailCards
+        result={t.reductionDetails ?? {}}
+        calculatedTax={t.transferTax}
+        taxBase={t.taxBase}
+        longTermHoldingDeduction={
+          h.longTermDeductionAmount +
+          c.longTermDeductionAmount +
+          (nb?.longTermDeductionAmount ?? 0)
+        }
+        appliedReductionType={t.reductionTypeApplied}
+        appliedReductionAmount={t.reductionAmount}
+      />
       </PrintSection>
 
       {/* ── 계산결과 상세명세서 (겸용주택 모드) ── */}

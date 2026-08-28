@@ -6,6 +6,7 @@
  */
 
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
+import { reductionTypeLabelOf } from "./transfer-reduction-type-labels";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import {
   type RentalReductionInput,
@@ -368,41 +369,7 @@ export function calcReductions(
     { amount: 0, type: "" },
   );
   const reductionAmount = Math.min(best.amount, calculatedTax);
-  const reductionTypeLabel: Record<string, string> = {
-    // legacy 5개 (Round 8 자동변환 마이그레이션 + 1개월 alias)
-    self_farming: "자경농지",
-    self_farming_inherited: "자경농지(§69·상속인 경작기간 합산 §66⑪)",
-    self_farming_incorp: "자경농지(§69·편입일 부분감면 §66⑤⑥)",
-    long_term_rental: "장기임대주택",
-    new_housing: "신축주택",
-    unsold_housing: "미분양주택",
-    public_expropriation: "공익사업용 토지 수용(§77)",
-    gb_designated_land: "개발제한구역 매수 토지(§77의3)",
-    replacement_land_comp: "대토보상 과세특례(§77의2)",
-    // Round 8 (2026-05-06): 신규 23개 ID 한국어 라벨 (방어 코드)
-    // Phase 2 본격 구현 시 calcReductions candidates 진입 케이스 대응
-    rental_97_main: "장기임대주택 (§97 ① 본문)",
-    rental_97_proviso: "장기임대주택 (§97 ① 단서)",
-    rental_97_2: "신축임대주택 (§97의2)",
-    rental_97_3: "장기일반민간임대 (§97의3)",
-    rental_97_4: "장기보유 임대주택 (§97의4)",
-    rental_97_5: "장기일반민간임대 100% (§97의5)",
-    new_99: "신축주택 (§99 IMF 1차)",
-    new_99_3: "신축주택 과세특례 (§99의3 IMF 2차)",
-    new_99_4_rural: "농어촌주택 (§99의4)",
-    new_99_4_hometown: "고향주택 (§99의4)",
-    unsold_98: "미분양 분리과세 (§98)",
-    unsold_98_2: "지방 미분양 (§98의2)",
-    unsold_98_3: "서울 외 미분양 (§98의3)",
-    unsold_98_4: "비거주자 일반주택 (§98의4)",
-    unsold_98_5: "수도권 외 미분양 (§98의5)",
-    unsold_98_6: "준공후미분양 (§98의6)",
-    unsold_98_7: "9억 이하 미분양 (§98의7)",
-    unsold_98_8: "준공후미분양 6억·135㎡ (§98의8)",
-    unsold_98_9: "수도권 밖 준공후미분양 (§98의9)",
-    unsold_99_2: "신축·미분양·1세대1주택 (§99의2)",
-  };
-  const reductionTypeDisplay = best.type ? (reductionTypeLabel[best.type] ?? best.type) : undefined;
+  const reductionTypeDisplay = best.type ? reductionTypeLabelOf(best.type) : undefined;
 
   return {
     reductionAmount,

@@ -21,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
 import { cn } from "@/lib/utils";
+import { assetTaxableGain } from "@/components/calc/results/transfer/exempt-gross-gain";
 import type { PerPropertyBreakdown, RateGroup } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
@@ -48,7 +49,22 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     isExempt: b.isExempt,
     exemptReason: b.exemptReason,
     transferGain: b.transferGain,
-    taxableGain: Math.max(0, b.transferGain),
+    /**
+     * 🔴 종전에는 이 셋을 하나도 싣지 않았다. 자산별 신고서(`buildRows`)는 비과세 자산의
+     *   양도차익·취득가액을 `exemptGrossGain` echo로 역산하는데 그 값이 없으니
+     *   **양도차익이 통째로 0**이 되고 취득가액이 양도가액으로 왜곡됐다 —
+     *   같은 화면의 합계 신고서와 다른 숫자가 나왔다(결과탭 코드리뷰 #012·#020).
+     *   엔진은 이미 실어 보내고 있었다(`transfer-tax-aggregate.ts:559-560·581`).
+     */
+    exemptGrossGain: b.exemptGrossGain,
+    expenses: b.necessaryExpense,
+    capitalExpenditureForDisplay: b.capitalExpenditureForDisplay,
+    /*
+     * 🔴 종전에는 `Math.max(0, b.transferGain)` — 12억 초과 고가주택에서 **안분 전** 값이라
+     *   과세대상·양도소득금액이 부풀었다(#019). 같은 화면의 합산 서식은 정확히 역산하고
+     *   있었으므로 두 표가 어긋났다. 이제 같은 leaf를 부른다.
+     */
+    taxableGain: assetTaxableGain(b),
     usedEstimatedAcquisition: false,
     longTermHoldingDeduction: b.longTermHoldingDeduction,
     longTermHoldingRate: 0,
@@ -192,8 +208,14 @@ export function PropertyBreakdownAccordion({
         </div>
       </div>
 
-      {open && (
-        <CardContent className="pt-0 border-t">
+      {/*
+        인쇄 펼침은 **CSS-only**가 저장소 표준이다(skill `print-only-css-toggle`).
+        종전에는 조건부 언마운트(접히면 DOM에서 제거)라, 접힌 채로 인쇄하면 이 안의
+        자산별 신고서 양식·감면 상세·평가 상세가 **통째로 빠졌다** — 기본값이 접힘이라
+        아무것도 누르지 않고 인쇄하면 항상 그랬다.
+        토글 버튼은 `expandToggleClass`가 이미 `print:hidden`을 포함한다.
+      */}
+      <CardContent className={cn("pt-0 border-t", open ? "block" : "hidden print:block")}>
           {breakdown.isExempt ? (
             <p className="py-4 text-sm text-muted-foreground text-center">
               {breakdown.exemptReason ?? "비과세 대상"}
@@ -361,6 +383,7 @@ export function PropertyBreakdownAccordion({
             taxBase={breakdown.taxBaseShare}
             longTermHoldingDeduction={breakdown.longTermHoldingDeduction}
             aggregatedContext
+            appliedReductionType={breakdown.reductionType}
           />
           <ValuationDetailCards
             result={breakdown}
@@ -399,8 +422,7 @@ export function PropertyBreakdownAccordion({
               );
             })()}
           </div>
-        </CardContent>
-      )}
+      </CardContent>
     </Card>
   );
 }

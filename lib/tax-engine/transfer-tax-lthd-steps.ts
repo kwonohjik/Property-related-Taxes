@@ -90,7 +90,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
   steps.push({
     label: "장기보유특별공제",
     formula: lthdExcluded
-      ? `0원 — ${LTHD_EXCLUSION_LABEL[lthdExclusionReason!]}`
+      ? `0 — ${LTHD_EXCLUSION_LABEL[lthdExclusionReason!]}`
       : [
           `${taxableGain.toLocaleString()} × ${Math.round(longTermHoldingRate * 100)}%`,
           lthdFormulaRate,

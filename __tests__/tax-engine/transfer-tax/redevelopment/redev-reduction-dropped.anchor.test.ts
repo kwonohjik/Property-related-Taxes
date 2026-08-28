@@ -76,9 +76,9 @@ describe("E3-02 anchor — §166 재개발 분기의 조특법 감면", () => {
     expect(with77.reductionAmount).toBeGreaterThan(0);
   });
 
-  it("감면세액 = 8,375,491 · 유형 = 공익사업용 토지 수용(§77)", () => {
+  it("감면세액 = 8,375,491 · 유형 = 공익사업용 토지 수용 (§77)", () => {
     expect(with77.reductionAmount).toBe(8_375_491);
-    expect(with77.reductionType).toBe("공익사업용 토지 수용(§77)");
+    expect(with77.reductionType).toBe("공익사업용 토지 수용 (§77)");
     expect(with77.reductionTypeApplied).toBe("public_expropriation");
   });
 

@@ -75,6 +75,23 @@ describe("★ 세 소비자가 모두 공용 leaf를 쓴다", () => {
       expect(readFileSync(v, "utf8"), v).not.toContain("확인이 필요한 사항");
     }
   });
+
+  /**
+   * 🔴 **제목 문구만 보면 새는 경로가 있다.** `MultiTransferTaxSummaryCard`가 제목 없이
+   *    `result.warnings`를 직접 map으로 그려, 같은 화면에서 경고가 **두 번** 떴다
+   *    (상단 공용 카드 + 합산 카드 인라인). 위 검사는 그것을 통과시켰다.
+   *    ⇒ 검사 기준을 「제목 문자열」이 아니라 **「warnings 배열을 직접 순회하는가」**로 옮긴다.
+   */
+  const CONSUMERS = [...VIEWS, "components/calc/results/MultiTransferTaxSummaryCard.tsx"];
+
+  it("⛔ 소비자 어느 쪽도 warnings 배열을 직접 순회하지 않는다", () => {
+    for (const v of CONSUMERS) {
+      const src = readFileSync(v, "utf8");
+      expect(src, `${v}: warnings를 직접 map으로 그린다 — 공용 leaf에 넘길 것`).not.toMatch(
+        /warnings\s*\.\s*map\s*\(/,
+      );
+    }
+  });
 });
 
 /** 엔진이 실제로 채우는지는 route anchor가 본다 — 여기서는 그 지점을 가리키기만 한다. */

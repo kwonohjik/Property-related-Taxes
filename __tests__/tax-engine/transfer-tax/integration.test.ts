@@ -284,7 +284,7 @@ describe("T-PRE1990: 1988.12.3. 취득 농지 PDF 사례 통합", () => {
     // 단, 본 mockRates의 세율로 계산된 값이 정확히 PDF와 일치하지 않을 수 있음 → 한도 검증 위주
     expect(result.reductionAmount).toBeGreaterThan(0);
     expect(result.reductionAmount).toBeLessThanOrEqual(100_000_000); // §69 연 1억 한도
-    expect(result.reductionType).toBe("자경농지");
+    expect(result.reductionType).toBe("자경농지 (§69)");
     // 전액 감면 가능한 구간이면 결정세액 = 0
     if (result.calculatedTax <= 100_000_000) {
       expect(result.determinedTax).toBe(0);

@@ -417,6 +417,11 @@ export interface MixedUseApportionment {
 export interface MixedUseHousingPart {
   /** 주택부분 환산취득가액 (§97 또는 §164⑤ PHD) */
   estimatedAcquisitionPrice: number;
+  /**
+   * §97 직접 환산에서 **분자로 쓴 취득시 개별주택공시가격** — 산식 표시 전용 echo.
+   * 상가분의 `acqStandardTotal`과 같은 층위다. 0이면 「미공시」를 함께 표시한다(#077).
+   */
+  acqHousingStandardPrice?: number;
   /** PHD로 역산된 취득시 개별주택가격 (PHD 모드 한정) */
   phdEstimatedAcqHousingPrice?: number;
   /** PHD 3-시점 산식 상세 (UI 표시용) */
@@ -610,6 +615,24 @@ export interface MixedUseTotalTax {
   reductionAmount: number;
   /** 채택된 감면 유형 라벨 (표시용). 감면 없으면 undefined. */
   reductionType?: string;
+  /**
+   * 채택된 감면의 **식별자**(`public_expropriation` 등 — 라벨이 아니다).
+   *
+   * 종전에는 이 값이 어댑터에 실리지 않아 겸용 신고서 ⑲ 세액감면대상금액이 감면과 무관하게
+   * **0**으로 찍혔고, 상세명세서 산식은 「감면 대상 없음」이라 같은 화면의 ⑮ 감면세액과
+   * **자기모순**이었다(결과탭 코드리뷰 #049).
+   */
+  reductionTypeApplied?: string;
+  /** 감면대상 소득금액 — ⑲의 default 경로 값. */
+  reducibleIncome?: number;
+  /**
+   * 감면 산출근거 카드가 읽는 detail 묶음.
+   *
+   * 겸용 결과뷰에는 `ReductionDetailCards`가 아예 없었다 — 나머지 세 결과뷰는 모두 갖는다.
+   * §77 요건 미충족으로 감면이 0이 된 경우에도 **사유를 알려주는 카드가 없어** 「왜 안 붙었는지」가
+   * 화면에서 사라졌다.
+   */
+  reductionDetails?: import("./transfer-result.types").TransferReductionDetailSource;
   /** 결정세액 = 산출세액 − 감면세액 */
   determinedTax: number;
   /**

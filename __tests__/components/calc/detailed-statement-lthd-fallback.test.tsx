@@ -64,7 +64,7 @@ const items = (r: TransferTaxResult, a: AssetForm) =>
   buildStatementItems(r, makeForm(a), a, undefined, undefined);
 
 describe("장특공제 보유/거주 기간분 fallback 산식 (값 인라인 + 표1/표2 분기)", () => {
-  it("표1(거주 미입력): 보유분 = 총액 전액·값 인라인·표1 문구, 거주분 = 0원·표1 문구", () => {
+  it("표1(거주 미입력): 보유분 = 총액 전액·값 인라인·표1 문구, 거주분 = 0·표1 문구", () => {
     const r = makeResult(); // longTermHoldingDeduction 160,000,000
     const it0 = items(r, makeAsset({ residencePeriodMonthsAsset: "0" }));
     const hold = it0.get("ltHoldingPart")!;
@@ -74,7 +74,10 @@ describe("장특공제 보유/거주 기간분 fallback 산식 (값 인라인 + 
     // 표1 문구(모순 제거) — "표2 비율 안분" 아님
     expect(hold.formula).toContain("표1");
     expect(hold.formula).not.toContain("표2 비율 안분");
-    expect(res.formula).toContain("0원");
+    // 「원」 접미사는 표기 규약 위반이라 제거됐다(결과탭 코드리뷰 Lane 0 #065).
+    // `toContain("0")`은 다른 금액의 0에도 걸려 구별력이 없으므로 **선두 0**을 본다.
+    expect(res.formula).toMatch(/^0\s/);
+    expect(res.formula).not.toContain("원");
     expect(res.formula).toContain("표1");
   });
 

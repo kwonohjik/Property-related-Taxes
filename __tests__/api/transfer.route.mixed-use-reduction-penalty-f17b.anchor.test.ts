@@ -150,7 +150,7 @@ describe("F17-B · 겸용주택 감면", () => {
 
     // 현금보상 100% ⇒ 감면대상 소득 전액 · 2024년 양도 현금 10%.
     expect(red.total.reductionAmount).toBe(5_532_128);
-    expect(red.total.reductionType).toBe("공익사업용 토지 수용(§77)");
+    expect(red.total.reductionType).toBe("공익사업용 토지 수용 (§77)");
     expect(red.total.determinedTax).toBe(49_789_152);
     expect(red.total.totalPayable).toBe(55_874_492);
   });

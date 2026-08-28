@@ -98,10 +98,17 @@ export function fillRedev4SplitBranchData(
   setNum("expenses", "total", totalExp);
 
   // 양도차익(안분 전)·비과세·과세대상
+  //
+  // 🔴 §89①4호 청산금 비과세(사례 47)는 `settlement.gain`을 0으로 마스킹하고 그 금액을
+  //   `exemptedGain`으로만 남긴다. 비과세 행이 `nontaxableGain`(12억 안분분)만 읽으면
+  //   청산금 열이 「전체 175,000,000 = 비과세 105,000,000 + 과세대상 0」이 되어
+  //   **70,000,000이 어느 금액 칸에도 나타나지 않는다**(붉은 주석 문장으로만 남았다).
+  //   비과세로 처리된 금액이므로 비과세 행에 합산한다 — 세액 무영향(결과탭 코드리뷰 #025).
+  const settlementExempted = r.settlementExemptionApplied === true ? (r.exemptedGain ?? 0) : 0;
   let tg = 0, eg = 0, xg = 0;
   for (const [key, b] of branches) {
     const tA = b.gainBeforeAllocation ?? b.gain;
-    const eA = b.nontaxableGain ?? 0;
+    const eA = (b.nontaxableGain ?? 0) + (key === "settlement" ? settlementExempted : 0);
     setNum("transferGain", key, tA);
     setNum("exemptGain", key, eA);
     setNum("taxableGain", key, b.gain);
@@ -137,10 +144,10 @@ export function fillRedev4SplitBranchData(
     const exemptedGain = r.exemptedGain ?? 0;
     const exemptedLthd = r.exemptedLthd ?? 0;
     if (exemptedGain > 0) {
-      setRoseNote("transferGain", "settlement", `§89①4호 비과세 차감: ${exemptedGain.toLocaleString()}원`);
+      setRoseNote("transferGain", "settlement", `§89①4호 비과세 차감: ${exemptedGain.toLocaleString()}`);
     }
     if (exemptedLthd > 0) {
-      setRoseNote("ltDeduction", "settlement", `§89①4호 비과세 LTHD 차감: ${exemptedLthd.toLocaleString()}원`);
+      setRoseNote("ltDeduction", "settlement", `§89①4호 비과세 LTHD 차감: ${exemptedLthd.toLocaleString()}`);
     }
   }
 }

@@ -158,7 +158,7 @@ export function PrintSelectionPanel({
                 !pdfReady
                   ? "로그인 후 또는 화면 인쇄(PDF 저장)로 이용하세요"
                   : pdfSelected.length === 0
-                    ? "PDF 출력 가능 항목(과세 요약·상속인별 집계)을 선택하세요"
+                    ? "PDF로 출력할 수 있는 항목을 선택하세요"
                     : undefined
               }
               className="inline-flex items-center gap-1.5 rounded-md border border-sky-600 px-3.5 py-2 text-sm font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

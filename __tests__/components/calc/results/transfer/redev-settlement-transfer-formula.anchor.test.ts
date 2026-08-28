@@ -78,8 +78,15 @@ function rhs(formula: string): number {
 }
 
 /** "floor(A × B / C)" 좌변을 실제로 계산한다. */
-function evalFloorLhs(formula: string): number | null {
-  const m = formula.match(/floor\(([\d,]+)\s*×\s*([\d,]+)\s*\/\s*([\d,]+)\)/);
+/**
+ * 표시 산식의 **좌변을 실제로 계산**한다.
+ *
+ * 표기는 「A × (B ÷ C) = X (… 1원 미만 절사)」다 — 종전 `floor(A × B / C)` 표기는
+ * 결과탭 코드리뷰 Lane 0(#064)에서 한국어 풀어쓰기 규약에 맞춰 바뀌었다.
+ * **계산 방식은 그대로 floor다** — 바뀐 것은 표기뿐이므로 이 파서만 따라간다.
+ */
+function evalApportionLhs(formula: string): number | null {
+  const m = formula.match(/([\d,]+)\s*×\s*\(([\d,]+)\s*÷\s*([\d,]+)\)/);
   if (!m) return null;
   const [a, b, c] = m.slice(1, 4).map((v) => Number(v.replace(/,/g, "")));
   return Math.floor((a * b) / c);
@@ -93,8 +100,8 @@ describe("청산금분 양도가액 산식 표시 ↔ 엔진 정합", () => {
     const formula = buildRedevTransferFormula("settlement", case44(), TRANSFER_PRICE);
     expect(rhs(formula)).toBe(SETTLEMENT_TRANSFER);
 
-    const lhs = evalFloorLhs(formula);
-    // floor 산식을 계속 쓴다면 좌변이 우변과 일치해야 한다. 잔액 흡수는 floor로 표현할 수 없으므로
+    const lhs = evalApportionLhs(formula);
+    // 절사 안분 산식을 계속 쓴다면 좌변이 우변과 일치해야 한다. 잔액 흡수는 그 형태로 표현할 수 없으므로
     // 산식 자체가 「양도가액 − 기존주택분」 형태여야 한다.
     if (lhs !== null) {
       expect(lhs, `표시 산식이 산술적으로 거짓: ${formula}`).toBe(SETTLEMENT_TRANSFER);
@@ -110,7 +117,7 @@ describe("청산금분 양도가액 산식 표시 ↔ 엔진 정합", () => {
 
   it("RSF-03: 대조군 — 기존주택분은 **여전히 floor**다 (손대지 않는다)", () => {
     const formula = buildRedevTransferFormula("postApprovalExistingHouse", case44(), TRANSFER_PRICE);
-    expect(evalFloorLhs(formula)).toBe(EXISTING_TRANSFER);
+    expect(evalApportionLhs(formula)).toBe(EXISTING_TRANSFER);
     expect(rhs(formula)).toBe(EXISTING_TRANSFER);
   });
 });

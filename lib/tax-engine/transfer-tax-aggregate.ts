@@ -69,6 +69,20 @@ import type {
   AggregateTransferResult,
 } from "./types/transfer-aggregate.types";
 
+/**
+ * 기본공제 배분 전략 → 화면 라벨.
+ * 산식 문자열에 내부 enum 값(`MAX_BENEFIT` …)이 그대로 나가던 것을 막는다
+ * (memory `feedback_no_internal_id_in_result`). 표시 전용 — 세액 불변.
+ */
+const BASIC_DEDUCTION_ALLOCATION_LABEL: Record<
+  "MAX_BENEFIT" | "FIRST" | "EARLIEST_TRANSFER",
+  string
+> = {
+  MAX_BENEFIT: "세액이 가장 크게 줄어드는 자산 우선",
+  FIRST: "첫 번째 자산",
+  EARLIEST_TRANSFER: "양도일이 빠른 자산",
+};
+
 export type {
   RateGroup,
   TransferTaxItemInput,
@@ -315,7 +329,7 @@ function computeAggregateOnce(
 
   steps.push({
     label: "기본공제",
-    formula: `연 한도 ${annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()} = ${totalBasicDeduction.toLocaleString()} (${input.basicDeductionAllocation ?? "MAX_BENEFIT"} 배분)`,
+    formula: `연 한도 ${annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()} = ${totalBasicDeduction.toLocaleString()} (${BASIC_DEDUCTION_ALLOCATION_LABEL[input.basicDeductionAllocation ?? "MAX_BENEFIT"]} 배분)`,
     amount: totalBasicDeduction,
     legalBasis: TRANSFER.BASIC_DEDUCTION,
   });
