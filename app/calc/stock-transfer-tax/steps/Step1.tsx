@@ -20,6 +20,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { nanoid } from "nanoid";
 import { MarketTypeBlock } from "@/components/calc/stock-transfer/MarketTypeBlock";
 import { MajorShareholderBlock } from "@/components/calc/stock-transfer/MajorShareholderBlock";
+import { suggestPriorYearEndDate } from "@/lib/tax-engine/stock-transfer/major-shareholder-judgment-date";
 import { CompanyTypeBlock } from "@/components/calc/stock-transfer/CompanyTypeBlock";
 import { OtherAssetBlock } from "@/components/calc/stock-transfer/OtherAssetBlock";
 import { AcquisitionInfoBlock } from "@/components/calc/stock-transfer/AcquisitionInfoBlock";
@@ -214,6 +215,13 @@ export function Step1({ form, onChange }: Step1Props) {
                     <DateInput
                       value={form.transferDate}
                       onChange={(v) => {
+                        // 대주주 판정 기준일 제안 — 미입력일 때만. 사용자 입력은 덮어쓰지 않는다.
+                        // useEffect → store 미러링 금지 정책에 따라 onChange patch에 동승시킨다.
+                        const suggested = form.priorYearEndDate
+                          ? undefined
+                          : suggestPriorYearEndDate(v);
+                        const judgmentDatePatch =
+                          suggested ? { priorYearEndDate: suggested } : {};
                         // 양도일 변경 시 daily 모드 종가표 잔재 자동 리셋 (인덱스 misalign 차단 — R-7·E-8)
                         if (form.transferStdInputMode === "daily" && v !== form.transferDate) {
                           onChange({
@@ -221,9 +229,10 @@ export function Step1({ form, onChange }: Step1Props) {
                             transferPriceDates: [],
                             transferPriceClosing: [],
                             transferDatePriceAvg1Month: "",
+                            ...judgmentDatePatch,
                           });
                         } else {
-                          onChange({ transferDate: v });
+                          onChange({ transferDate: v, ...judgmentDatePatch });
                         }
                       }}
                     />

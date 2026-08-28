@@ -15,6 +15,7 @@
 import { useMemo } from "react";
 import { nanoid } from "nanoid";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { suggestPriorYearEndDateFromLots } from "@/lib/tax-engine/stock-transfer/major-shareholder-judgment-date";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -43,6 +44,8 @@ type SplitFormSlice = Pick<
   | "acquisitionLots"
   | "transferLots"
   | "specificMatchings"
+  // 대주주 판정 기준일 제안 — 이미 채워져 있으면 덮어쓰지 않으려면 현재 값을 읽어야 한다
+  | "priorYearEndDate"
 >;
 
 interface SplitLotsBlockProps {
@@ -124,7 +127,13 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
   };
   const updateTransferLot = (idx: number, patch: Partial<TransferLotForm>) => {
     const next = form.transferLots.map((l, i) => (i === idx ? { ...l, ...patch } : l));
-    onChange({ transferLots: next });
+    // 대주주 판정 기준일 제안 — split 모드는 폼-전역 transferDate가 비고 lot별 양도일만 있다.
+    // 미입력일 때만 제안하고 사용자 입력은 덮어쓰지 않는다(onChange patch 동승 — useEffect 미러링 금지).
+    const suggested = form.priorYearEndDate ? "" : suggestPriorYearEndDateFromLots(next);
+    onChange({
+      transferLots: next,
+      ...(suggested ? { priorYearEndDate: suggested } : {}),
+    });
   };
   const deleteTransferLot = (idx: number) => {
     const deletedLot = form.transferLots[idx];

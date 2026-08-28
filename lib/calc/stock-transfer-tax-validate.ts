@@ -117,6 +117,24 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
     }
   }
 
+  // 대주주 판정 기준일 — 판정 대상 시장에서 필수 (시행령 §157④ "직전 사업연도 종료일 현재")
+  // FieldCard는 이미 required로 표시하고 있었으나 검증이 없어 표시/검증이 어긋나 있었다.
+  // 미입력을 통과시키면 API가 오늘 날짜로 채워 과거 양도 건에 현재 임계를 적용한다.
+  if (
+    form.marketType === "kospi" ||
+    form.marketType === "kosdaq" ||
+    form.marketType === "konex" ||
+    form.marketType === "unlisted"
+  ) {
+    if (isEmpty(form.priorYearEndDate)) {
+      errors.push({
+        field: "priorYearEndDate",
+        message: "대주주 판정 기준일(직전 사업연도 종료일)을 입력하세요 (시행령 §157④)",
+        severity: "error",
+      });
+    }
+  }
+
   // 대주주 판정 — 지분·시총 최소 1개 입력 필요
   if (form.isMajorShareholder) {
     const hasAny =

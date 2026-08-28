@@ -635,42 +635,45 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
       </div>
   );
 
-  // 자동/수동 모드 모두 동일한 ToggleCard 트리로 통일.
-  // 이유: threshold 활성화 순간 외곽 JSX 타입이 div ↔ ToggleCard 로 바뀌면
-  //       DateInput 이 언마운트→재마운트되어 입력 도중 포커스를 잃는다
-  //       (예: "2024-12-3" 까지 입력 시 day 필드 패딩으로 valid 일자가 되어
-  //        threshold 가 null→non-null 로 전환되며 day 입력 커서가 빠짐).
+  /**
+   * 대주주 여부는 **입력값에서 자동 산출**된다 — 사용자가 켜고 끄는 스위치가 아니다.
+   *
+   * 종전에는 ToggleCard였는데, 판정에 필요한 「직전 사업연도 종료일」 입력이 그 카드 **안**에
+   * 있었다(ToggleCard는 `{checked && children}`이라 닫히면 렌더조차 되지 않는다).
+   * 자동 판정을 켜려면 종료일이 필요한데 그 입력에 닿으려면 토글을 켜야 했고, 토글을 켜려면
+   * 대주주 여부를 스스로 판단해야 했다 — 판정 도구가 판정 결과를 먼저 요구하는 구조였다.
+   *
+   * ⚠️ 외곽 JSX 타입을 **조건부로 바꾸지 말 것**. threshold가 null↔non-null로 전환될 때
+   * 트리가 갈리면 DateInput이 언마운트→재마운트되어 입력 도중 포커스를 잃는다
+   * (예: "2024-12-3"까지 입력한 순간 day 패딩으로 valid 일자가 되며 커서가 빠짐).
+   * 항상 ToneCard 하나로 고정해 전환 자체를 없앤다.
+   */
   const judgmentBadge = isAutoJudgmentActive ? (
     <span
       className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
         judgment.isMajor ? "bg-violet-600 text-white" : "bg-slate-200 text-slate-700"
       }`}
     >
-      {judgment.isMajor ? "✓ 대주주" : "✗ 비대주주"}
+      {judgment.isMajor ? "\u2713 대주주" : "\u2717 비대주주"}
     </span>
-  ) : null;
+  ) : (
+    // 기준일이 없으면 판정값을 지어내지 않는다 — 무엇이 필요한지만 알린다
+    <span className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold bg-amber-100 text-amber-800">
+      판정 기준일 입력 필요
+    </span>
+  );
 
   return (
-    <ToggleCard
-      checked={isAutoJudgmentActive ? true : form.isMajorShareholder}
-      onCheckedChange={(v) => {
-        if (isAutoJudgmentActive) return;
-        onChange({ isMajorShareholder: v });
-      }}
-      title={
-        isAutoJudgmentActive
-          ? "대주주 여부 — 자동 판정 (§157 / §167의8①2호)"
-          : "대주주 여부 (사용자 직접 선택)"
-      }
-      description={
-        isAutoJudgmentActive
-          ? "아래 입력값 변경 시 자동으로 동기화됩니다. 기준 조건 충족 여부는 판정 결과 박스에서 확인하세요."
-          : "기타자산은 자동 판정 미적용 — §94①4 별도 트랙. 직접 선택하세요."
-      }
+    <ToneCard
       tone="violet"
-      trailing={judgmentBadge}
+      title="대주주 여부 — 자동 판정 (§157 / §167의8①2호)"
+      titleExtra={judgmentBadge}
+      bodyClassName=""
     >
+      <p className="text-xs text-muted-foreground mb-3">
+        아래 입력값에서 자동으로 판정됩니다. 기준 조건 충족 여부는 판정 결과 박스에서 확인하세요.
+      </p>
       {innerContent}
-    </ToggleCard>
+    </ToneCard>
   );
 }

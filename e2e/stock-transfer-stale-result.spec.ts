@@ -73,16 +73,9 @@ test.describe("A-2 — 입력 변경 시 결과 재계산", () => {
     await gotoStockTransferTax(page);
     await fillStep1(page);
 
-    // 대주주 카드는 ToggleCard children이라 OFF면 내부 입력이 렌더되지 않는다.
-    // (priorYearEndDate가 없으면 자동 판정도 비활성 → 토글을 먼저 켜야 입력에 닿는다 — 코드 주석의 「닭-달걀」)
-    await page
-      .locator('[data-slot="toggle-card"]')
-      .filter({ hasText: "대주주 여부" })
-      .getByRole("switch")
-      .first()
-      .click();
-
-    // 직전 사업연도 종료일 — 이 값이 채워지면 자동 판정이 활성화된다
+    // 대주주 판정 카드는 항상 펼쳐져 있다 — 종전의 ToggleCard 우회(토글을 먼저 켜야
+    // 내부 입력에 닿던 「닭-달걀」)는 토글 폐지로 불필요해졌다.
+    // 직전 사업연도 종료일은 양도일에서 제안값이 채워지므로, 여기서는 사례 값으로 덮어쓴다.
     await fillPriorYearEnd(page, "2025", "12", "31");
 
     // Step2 — 양도·취득가액 (실가)

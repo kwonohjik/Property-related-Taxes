@@ -1,0 +1,322 @@
+# 주식 양도세 「대주주 판정」 — 토글 폐지 + 판정 기준일 fallback 제거 (Plan)
+
+> 작성일 2026-08-28 · 워크트리 `PRT-stock-transfer-bugfix` · 브랜치 `stock-major-shareholder-probe`
+> 상태: ✅ **구현 완료** (2026-08-28) — D-1~D-4 전건 해소 · anchor 19건 · E2E 64 passed
+>
+> - **Q-1 = 차단(error)** — 대상 시장에서 `priorYearEndDate` 미입력은 검증 오류로 막는다
+> - **Q-2 = 자동 제안** — 양도일에서 직전 사업연도 종료일을 제안값으로 채우되 **사용자가 보고 고칠 수 있게** 한다
+
+## 1. 제보
+
+> "대주주 판정 섹션에 데이터를 입력해야 자동판정을 하든지 수동 판정을 하든지 하는 로직이니까 **토글 스위치가 맞지 않지**"
+
+조사 계기는 그 앞의 질문 — 「대주주 여부 토글을 켜지 않아도 자동 판정할 수 있는가」였다. 답은 **이미 자동 판정되고 있고 토글은 세액에 영향이 없다**였으며, 그 과정에서 결함 4건이 드러났다.
+
+## 2. 현행 구조 (실측)
+
+`MajorShareholderBlock.tsx:215`가 렌더 모드를 가른다:
+
+```ts
+const isAutoJudgmentActive = threshold !== null;
+```
+
+`threshold`는 **두 조건을 모두** 만족해야 non-null이다(`:113-127`):
+1. `form.priorYearEndDate`(직전 사업연도 종료일)가 입력돼 있을 것
+2. `marketType`이 `kospi`·`kosdaq`·`konex`·`unlisted` 중 하나일 것
+
+| 상태 | 제목 | UI |
+|---|---|---|
+| 종료일 **입력됨** | "대주주 여부 — 자동 판정 (§157 / §167의8①2호)" | `checked` **강제 true** · `onCheckedChange` no-op · 판정 배지 |
+| 종료일 **미입력** | "대주주 여부 (사용자 직접 선택)" | 수동 토글 ← **이미지가 이 상태** |
+
+## 3. 결함 4건
+
+### D-1 🔴 닭-달걀 — 판정에 필요한 입력이 토글 안에 갇혀 있다 (**제보의 핵심**)
+
+- `priorYearEndDate` **입력 위젯은 `innerContent` 안에 있다** (`:250` — `innerContent`는 `:246`에서 시작)
+- `ToggleCard`는 `{checked && children}`(`ToggleCard.tsx:303`)이라 **닫히면 children이 렌더조차 되지 않는다**
+- 자동 판정을 켜려면 종료일이 필요한데, 종료일 입력에 닿으려면 토글을 켜야 하고, 토글을 켜려면 **대주주 여부를 스스로 판단**해야 한다
+
+⇒ **판정하려고 쓰는 도구가 판정 결과를 먼저 요구한다.** 제보가 지적한 「토글이 맞지 않다」의 코드적 실체다.
+
+> 🔑 **이 저장소는 같은 문제를 이미 한 번 겪었다.** `:213-214` 주석:
+> > 자동 판정 활성 여부 — 자동 모드는 ToggleCard 대신 항상 펼침 카드 + 판정 배지로 렌더.
+> > **(잠긴 토글이 닫혀 입력 자체에 접근 불가하던 닭-달걀 문제 차단)**
+>
+> 즉 **자동 모드만 고치고 수동 모드는 그대로 뒀다.** 남은 절반이 지금 문제다.
+
+### D-2 🔴 판정 기준일이 미입력이면 **오늘 날짜로 조용히 채워진다**
+
+```ts
+// lib/calc/stock-transfer-tax-api.ts:372
+priorYearEndDate: form.priorYearEndDate || new Date().toISOString().split("T")[0],
+```
+
+대주주 임계는 **시기별로 다르다**(`stock-rate-tables.ts:43-79`):
+
+| 시장 | 2024-01-01~ | 2020-04-01~ | 2013~ |
+|---|---|---|---|
+| 코스피 | 1% / **50억** | 1% / **10억** | **2%** / 50억 |
+| 코스닥 | 2% / 50억 | 2% / **10억** | 2% / 40억 |
+
+**실측** — 코스피 시총 15억·2021-06-01 양도:
+
+| 기준일 | 판정 |
+|---|---|
+| `2020-12-31` (정확) | **`listed_major`** |
+| `2026-08-28` (오늘 fallback) | **`listed_non_major_in_market`** |
+
+**분류가 뒤집힌다.** (이 조합에서는 세액 차이가 0이었으나 — `isListedSmallShareholder` 축이 따로 있다 — 분류가 바뀌는 이상 세액이 갈리는 조합은 존재한다. → V-1)
+
+`stock-transfer-tax-validate.ts`에 이 필드 **필수 검증은 없다**(grep 0건). 저장소 정책과 정면 충돌한다 — CLAUDE.md 「자동 안분 fallback 금지(예외: PHD §164⑦). **미입력은 검증 오류로 차단**」.
+
+### D-3 🔴 안내 문구가 **표시될 때마다 항상 거짓**이다
+
+수동 모드 description(`:667`):
+
+> 기타자산은 자동 판정 미적용 — §94①4 별도 트랙. 직접 선택하세요.
+
+그런데 **기타자산이면 이 섹션 자체가 렌더되지 않는다**(`Step1.tsx:271-276`, 주석: "other_asset / foreign_stock / exit_tax 트랙은 대주주 무관 → 섹션 숨김").
+
+**렌더 실측**:
+
+| 조건 | "기타자산은…" 문구 | 자동판정 제목 | 배지 |
+|---|---|---|---|
+| kospi · 종료일 미입력 | **표시** ← 기타자산이 아닌데 | ✗ | ✗ |
+| kospi · 종료일 입력 | ✗ | **표시** | **표시** |
+| unlisted · 종료일 미입력 | **표시** | ✗ | ✗ |
+
+⇒ 문구가 옳은 조건(`other_asset`)에서는 **절대 렌더되지 않으므로**, 이 문구는 나타날 때마다 틀렸다. 첨부 이미지의 화면도 기타자산이 아니라 **상장/비상장 + 종료일 미입력**이다.
+
+### D-4 🟡 토글을 켜면 세액에 무영향인 입력을 **강요당한다**
+
+`stock-transfer-tax-validate.ts:120-133`이 토글 ON일 때 지분율·시총 최소 1개 입력을 요구하며 **차단**한다. 그러나 종료일이 채워지면 자동 판정이 이기므로(§4) 토글값 자체는 결과를 바꾸지 않는다.
+
+## 4. 토글값은 세액에 영향이 없다 (실측)
+
+엔진은 자동 산출을 **우선 적용**하고 토글은 무시한다(`stock-classification.ts:153-158`).
+
+| 입력 | 토글 | 결과 |
+|---|---|---|
+| 코스피 지분 3% | **OFF** | `listed_major` ← 자동이 이김 |
+| 코스피 지분 0% | **ON** | `listed_non_major_in_market` ← 자동이 이김 |
+| 비상장 지분 5% | OFF | `unlisted_major` |
+
+불일치 시 경고도 정상 발생한다:
+
+> 자동 판정과 폼 토글 입력값이 다릅니다 — 자동 산출 우선 적용 (자동: 대주주, 폼: 비대주주)
+
+기타자산(`other_asset`)에서는 토글이 **결과 객체 전체 바이트 동일**이다(장기·단기·다목·라목·중소기업·NBL 5시나리오 `same: true`) — 분류 축이 `isQualifyingBlockShareholder`·`isHeavyRealEstateForRate`·NBL 비율이고 §157이 개입하지 않기 때문(`stock-classification.ts:279-317`).
+
+> ⚠️ **국외전출세는 이 토글과 무관하다.** `exit-tax.ts:248`이 쓰는 값은 **별도 필드 `etIsMajorShareholder`**이며 입력도 별도 블록이다(`ExitTaxBlock.tsx:170`). 토글 폐지가 그 경로를 막지 않는다. (조사 중 한 번 오판했던 지점이므로 명시해 둔다.)
+
+## 5. 방안
+
+### A. 토글 폐지 — 섹션을 **항상 펼친 카드**로
+
+`ToggleCard` → 상시 펼침 카드 + 판정 배지. 자동 모드가 이미 `checked` 강제 true·`onCheckedChange` no-op이므로 **자동 모드의 실질은 이미 「상시 펼침 카드」**다. 수동 분기를 없애면 두 모드가 하나로 합쳐진다.
+
+- 판정 배지는 유지하되, 종료일 미입력 시 **"판정 기준일을 입력하세요"** 상태를 배지에 표시(값을 지어내지 않는다)
+- D-3 문구는 **삭제**한다(대체 문구 아님 — 옳은 조건이 존재하지 않는다)
+
+> ⛔ **`isMajorShareholder` 필드 자체는 삭제하지 않는다.** 엔진 input·Zod·normalize·API에 남아 있고 `other_asset` 패스스루 경로가 이를 읽는다(`stock-classification.ts:85-93`). UI 위젯만 걷고 필드는 **자동 산출값으로 계속 채운다**(`handleAutoSyncChange` 유지). 필드 제거는 범위 밖.
+
+### B. D-2 — 판정 기준일 fallback 제거 + validate 필수화
+
+1. `stock-transfer-tax-api.ts:372`의 `|| new Date()...` **삭제**
+2. `stock-transfer-tax-validate.ts`에 필수 검증 추가 — 대주주 판정 대상 시장(kospi·kosdaq·konex·unlisted)에서 `priorYearEndDate` 미입력이면 **error**
+
+> 🔴 **차단 validation은 E2E 전건 회귀 위험이 크다**(memory `feedback_blocking_validation_full_e2e_regression`). 기존 spec 중 종료일을 채우지 않고 계산까지 가는 것이 있으면 **전부 빨개진다**. 착수 전 반드시 실측한다(V-2).
+
+### C. D-4 — validate 분기 재정리
+
+토글이 사라지면 `if (form.isMajorShareholder)` 게이트가 의미를 잃는다. 지분율·시총 요구는 **자동 판정이 실제로 필요한 조건**(대상 시장 + 종료일 입력됨)으로 옮긴다.
+
+> ⚠️ 다만 **지분율·시총 둘 다 0인 것이 정상인 사례가 있다** — 본인 미보유 시 특수관계 합산으로 판정하는 F-24 강제 합산 분기(`stock-classification.ts:100-105`). 요구를 무조건 걸면 그 경로가 막힌다. → V-3
+
+## 6. 착수 전 검증 (V) — 계획 환류용
+
+| # | 무엇을 | 왜 |
+|---|---|---|
+| **V-1** | D-2가 **세액**까지 바꾸는 조합을 하나 찾는다 | 지금은 「분류가 뒤집힌다」까지만 실측됐다. 세액 무영향이면 우선순위가 내려간다 — **찾지 못하면 그 사실을 그대로 적는다**(추정 금지) |
+| **V-2** | 기존 E2E 중 `priorYearEndDate` 미입력으로 계산까지 가는 spec 수를 센다 | B의 차단 validation이 몇 건을 깨는지. 0건이 아니면 spec 수정이 본 작업의 다수를 차지한다 |
+| **V-3** | F-24 강제 합산(본인 0 + 합산 >0) 경로가 C의 새 요구에 걸리는지 | 정상 사례를 차단하면 안 된다 |
+| **V-4** | 뮤테이션 — 토글을 제거한 상태에서 기존 테스트가 **몇 건 실패**하는지 | 안전망 실측. 0건이면 anchor 선행 필수 (memory `feedback_pre_change_safety_net_probe`) |
+
+## 7. anchor 계획 (V 이후 확정)
+
+| # | anchor | 기대(Pre-Do) |
+|---|---|---|
+| T-1 | 종료일 미입력이어도 **지분율·시총·종료일 입력 위젯이 렌더된다**(닭-달걀 해소) | RED |
+| T-2 | "기타자산은 자동 판정 미적용" 문구가 **어떤 조건에서도 렌더되지 않는다** | RED |
+| T-3 | 대상 시장 + 종료일 미입력 → validate **error** | RED |
+| T-4 | 종료일 미입력 → API 변환이 오늘 날짜를 **채우지 않는다** | RED |
+| T-5 | F-24 경로(본인 0 + 합산 >0) → validate 통과 | GREEN 유지 — 과잉 차단 방지 |
+| T-6 | 종료일 입력 시 판정 배지가 자동 산출값을 표시 | GREEN 유지 |
+
+> 🔑 **T-5·T-6이 구별력을 만든다.** T-1~T-4만으로는 「전부 열고 전부 막는」 구현도 통과한다.
+
+## 8. 사용자 결정 대기 (Q)
+
+| # | 질문 | 왜 막히는가 |
+|---|---|---|
+| ~~Q-1~~ | ✅ **차단(error)**. | V-2가 깨는 spec 수를 알려주며, 그만큼 spec 수정이 본 작업에 포함된다. |
+| ~~Q-2~~ | ✅ **자동 제안**. | 값을 **폼에 실제로 채워** 사용자가 보고 고칠 수 있게 한다 — 화면에 보이지 않는 채 API가 몰래 채우던 D-2와는 다르다. |
+
+### Q-2 설계 — 「제안」과 「조용한 fallback」의 경계
+
+| | D-2 (현행·제거 대상) | Q-2 (신설) |
+|---|---|---|
+| 채우는 위치 | **API 변환**(`stock-transfer-tax-api.ts:372`) | **폼 필드** |
+| 사용자가 보는가 | ✗ 화면에 안 나타남 | ✓ 입력칸에 값이 보이고 **수정 가능** |
+| 값의 근거 | `new Date()` — 사건과 무관한 오늘 | 양도일에서 도출 |
+
+⚠️ **12월 결산을 강제하지 않는다.** §157④의 기준은 「직전 사업연도 종료일」이고 사업연도는 법인마다 다르다. 제안값은 12월 결산 가정으로 만들되 **hint에 그 가정을 명시**하고, 사용자가 고칠 수 있으므로 「자동 안분 fallback 금지」 정책에 걸리지 않는다.
+
+⚠️ **`useEffect → store` 미러링 금지**(memory `feedback_useeffect_store_mirror_forbidden`). 제안값은 **양도일 onChange 시점에 함께 patch**하거나 사용자의 명시적 액션(버튼)으로 채운다. → V-5
+
+## 9. 범위 밖 (명시)
+
+- `isMajorShareholder` 필드 자체 제거 — `other_asset` 패스스루가 읽는다(§5.A ⛔)
+- 국외전출세 `etIsMajorShareholder` — 별도 축
+- `listed_non_major_in_market`인데 세액이 산출된 관측(§3 D-2 실측 중 부수) — `isListedSmallShareholder` 축의 별건. **본 계획에서 다루지 않으며, 결함인지도 미판정**이다
+
+## 10. 실행 순서 (V 완료 후)
+
+```
+0. V-1~V-4 실측 → 계획 환류(특히 Q-1 규모)      verify: 각 V에 수치
+1. T-1~T-6 작성 → RED 확인                       verify: T-5·T-6만 GREEN
+2. A 토글 폐지 + D-3 문구 삭제                    verify: T-1·T-2 GREEN
+3. B fallback 제거 + validate 필수화              verify: T-3·T-4 GREEN
+4. C validate 분기 재정리                         verify: T-5 GREEN 유지
+5. E2E 전건 (E2E_PORT=3000)                       verify: V-2에서 센 건수만큼만 수정
+6. npm run check:pre-pr                           verify: 전건 통과
+```
+
+---
+
+## 11. V-2 실측 결과 — **구현 순서가 뒤집혔다** (2026-08-28)
+
+### 측정
+
+주식 spec 24개 중 **21개가 「직전 사업연도 종료일」을 입력하지 않는다**(정적 grep). `stock-transfer-tax` 페이지를 쓰는 spec 기준으로는 **16개**다.
+
+차단 validation을 임시로 넣고 E2E를 돌리자 **10분 타임아웃**이 났다 — 차단에 막힌 spec들이 결과를 기다리다 각 30초를 소모한 것으로, 깨지는 규모가 크다는 신호다.
+
+> ⚠️ **중간 집계를 한 번 틀렸다.** `grep -rln … | wc -l`을 **e2e 전체 디렉터리**에 걸어 「23개가 입력한다」로 읽었는데, 주식 spec만 세면 **반대로 21개가 미입력**이었다. 측정 범위를 확인하지 않은 오류다.
+
+### 그런데 Q-2가 이 비용을 대부분 상쇄한다
+
+**양도일은 이미 validate 필수**다(`stock-transfer-tax-validate.ts:191` — "양도일을 입력하세요"). 즉 **계산에 성공하는 모든 spec은 양도일을 채운다**. Q-2 자동 제안이 양도일에서 종료일을 도출하므로, 제안이 먼저 들어가 있으면 종료일도 함께 채워져 **차단에 걸리지 않는다**.
+
+⇒ **구현 순서를 바꾼다**:
+
+| 종전 계획 | **정정** |
+|---|---|
+| B(차단) → … → Q-2(제안) | **Q-2(제안) 먼저 → 그다음 B(차단)** |
+
+순서가 반대면 중간 상태에서 E2E 16건이 깨지고, 그 수정이 본 작업을 삼킨다.
+
+### 🔴 남은 구멍 — split(분할 양도) 모드
+
+split 모드는 **폼-전역 `transferDate`가 비고 lot별 양도일만 있다**(`:182` 주석 "폼-전역 acquisitionDate/transferDate는 single 한정", lot 검증은 `:267-268`). 자동 제안이 폼-전역 양도일만 보면 **split에서는 제안이 안 되고 차단만 걸린다**.
+
+⇒ 제안 소스를 **single = `form.transferDate` / split = lot 중 최초(또는 최종) 양도일**로 갈라야 한다. 어느 쪽을 쓸지는 §157④ 문언상 「양도 시점이 속한 사업연도의 직전」이므로 **양도일이 여럿이면 lot마다 기준일이 다를 수 있다** — 단일 폼 필드로는 표현되지 않는 구조적 한계다. → V-6
+
+## 12. V 갱신 — 남은 실측
+
+| # | 상태 | 내용 |
+|---|---|---|
+| V-1 | ⏳ 미실측 | D-2가 **세액**까지 바꾸는 조합. 「분류가 뒤집힌다」는 확인됨(`listed_major` ↔ `listed_non_major_in_market`) — 고칠 이유로는 이미 충분하므로 착수를 막지 않는다 |
+| **V-2** | ✅ **완료** | 위 §11 |
+| V-3 | ⏳ 미실측 | F-24 강제 합산(본인 0 + 합산 >0)이 C의 새 요구에 걸리는지 |
+| V-4 | ⏳ 미실측 | 토글 제거 뮤테이션에 기존 테스트가 몇 건 반응하는지(안전망) — **착수 직전 필수** |
+| V-5 | ⏳ 미실측 | 자동 제안을 `useEffect` 없이 넣을 지점(양도일 onChange patch에 동승) |
+| **V-6** | 🆕 | split 모드 제안 소스 — lot 양도일이 여럿일 때의 기준일 |
+
+## 13. 실행 순서 (V-2 반영 · 정정판)
+
+```
+0. V-4 안전망 뮤테이션 + V-3·V-5·V-6 실측       verify: 각 V에 수치
+1. T-1~T-6 작성 → RED 확인                       verify: T-5·T-6만 GREEN
+2. Q-2 자동 제안 (양도일 → 종료일 · split 포함)   verify: 제안값이 폼에 보이고 수정 가능
+3. A 토글 폐지 + D-3 문구 삭제                    verify: T-1·T-2 GREEN
+4. B fallback 제거 + validate 차단                verify: T-3·T-4 GREEN · E2E 깨짐 최소
+5. C validate 분기 재정리                         verify: T-5 GREEN 유지
+6. E2E 전건 → npm run check:pre-pr                verify: 전건 통과
+```
+
+> 🔑 **2번이 4번보다 먼저인 것이 이 계획의 핵심이다.** 순서를 지키면 4번에서 깨지는 spec이 「양도일조차 없는」 소수로 줄어든다.
+
+## 14. 부수 발견 — 표시와 검증의 드리프트
+
+`MajorShareholderBlock.tsx:248`의 FieldCard가 **이미 `required`**로 표시한다:
+
+```tsx
+<FieldCard label="직전 사업연도 종료일" required hint="통상 전년 12월 31일. 사업연도가 다른 경우 해당 연도 종료일.">
+```
+
+그런데 `stock-transfer-tax-validate.ts`에는 이 필드 검증이 **없다**(grep 0건). **화면은 필수라고 하고 검증은 통과시키는** 드리프트다 — Q-1 차단이 이 드리프트도 함께 해소한다.
+
+hint의 "통상 전년 12월 31일"이 Q-2 제안 로직의 근거이기도 하다(12월 결산 가정을 이미 문구로 밝히고 있다).
+
+---
+
+## 15. 구현 결과 (2026-08-28)
+
+### V 최종
+
+| # | 결과 |
+|---|---|
+| V-1 | ⏳ **미실측 그대로** — D-2가 「분류를 뒤집는다」까지만 확인. 세액까지 바꾸는 조합은 찾지 않았다(고칠 근거로는 충분해 착수를 막지 않았다) |
+| V-2 | ✅ 정적 21/24 미입력 · **실제로 깨진 건 1건**(자동 제안이 상쇄) |
+| V-3 | ✅ **문제 없음** — F-24는 `combinedShareRatio > 0`이라 기존 요구(4개 중 1개)를 그대로 통과. C 재정리 불필요 |
+| V-4 | ✅ **안전망 0건** — 토글 폐지 뮤테이션에 331파일 3130테스트 전부 통과 |
+| V-5 | ✅ 배선 지점 = `Step1.tsx` 양도일 onChange (이미 daily 리셋을 같은 방식으로 patch 동승) |
+| V-6 | ✅ split = lot 양도일 **최솟값**에서 도출 (엔진이 기준일을 하나만 받으므로 같은 과세기간 전제) |
+
+### anchor 19건 (전건 GREEN)
+
+- `__tests__/calc/stock-major-shareholder-judgment-date.anchor.test.ts` — T-3(차단 6) · T-4(fallback 2) · T-5(F-24 과잉차단 1)
+- `__tests__/components/calc/stock-major-shareholder-toggle-removal.test.tsx` — T-1(닭-달걀 2) · T-2(문구 4) · T-6(배지 2) · T-7(자동 제안 2)
+
+### 변경 파일
+
+| 파일 | 내용 |
+|---|---|
+| `lib/tax-engine/stock-transfer/major-shareholder-judgment-date.ts` | **신설** — `suggestPriorYearEndDate` / `suggestPriorYearEndDateFromLots` |
+| `MajorShareholderBlock.tsx` | ToggleCard → **ToneCard 상시 펼침** · 기준일 미입력 시 "판정 기준일 입력 필요" 배지 · D-3 문구 삭제 |
+| `Step1.tsx` | 양도일 onChange patch에 기준일 제안 동승 |
+| `SplitLotsBlock.tsx` | lot 양도일 갱신 시 제안 동승 (+ slice에 `priorYearEndDate` 추가) |
+| `stock-transfer-tax-api.ts` | 오늘-fallback **삭제** |
+| `stock-transfer-tax-validate.ts` | 대상 시장에서 기준일 **필수 차단** |
+| `e2e/stock-transfer-stale-result.spec.ts` | 토글 우회 제거 |
+
+### 🔑 E2E spec이 바로 그 닭-달걀을 우회하고 있었다
+
+유일하게 깨진 `stock-transfer-stale-result.spec.ts`의 코드가 문제를 그대로 증언한다:
+
+```ts
+// 대주주 카드는 ToggleCard children이라 OFF면 내부 입력이 렌더되지 않는다.
+// (priorYearEndDate가 없으면 자동 판정도 비활성 → 토글을 먼저 켜야 입력에 닿는다 — 코드 주석의 「닭-달걀」)
+await page.locator('[data-slot="toggle-card"]').filter({ hasText: "대주주 여부" })
+  .getByRole("switch").first().click();
+```
+
+**테스트가 우회 코드를 유지하고 있었다는 것은 결함이 재현 가능했다는 뜻이다.** 토글 폐지로 이 우회가 불필요해졌고, 제거 후 같은 spec이 **30초대 flaky → 2.2초 안정**으로 바뀌었다.
+
+### 회귀
+
+| 항목 | 결과 |
+|---|---|
+| `tsc --noEmit` | 0건 |
+| `lint` | **0 errors** (311 warnings 전부 기존) |
+| `check:pre-pr` (vitest 전건) | **1648파일 17781 passed** · unhandled error **0** |
+| E2E 주식·상장·상속·증여 | **64 passed** (종전 6.3분 → **24.5초** — 차단 대기가 사라졌다) |
+| 브라우저 | 토글 없이 상시 펼침 · 기준일 2025-12-31 자동 제안 · 지분율 3% → "✓ 대주주" 배지 |
+
+> ⚠️ **jsdom엔 IndexedDB가 없다.** Step1을 렌더하는 anchor가 Dexie unhandled rejection 2건을 냈다(전건은 통과하지만 false positive 위험). 저장소 확립 패턴대로 `import "fake-indexeddb/auto"`를 넣어 해소했다.
+
+### 📌 남는 관찰 (결함 아님)
+
+제안값 `YYYY-12-31`은 **한국 증시 연말 폐장일과 겹쳐** 비거래일 경고를 항상 띄운다. 그러나 §157④의 기준일은 사업연도 종료일이 맞고, 종가가 없으면 직전거래일 종가를 쓴다는 §157① 단서 안내가 그 경고의 내용이다 — **정확한 안내이므로 고치지 않는다**.
