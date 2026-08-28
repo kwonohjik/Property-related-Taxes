@@ -46,6 +46,22 @@ interface MultiTransferTaxResultViewProps {
 }
 
 
+/**
+ * 선택 출력 leaf의 가용성 술어 — **렌더 게이트와 같은 함수를 쓴다**.
+ *
+ * 🔴 종전에는 `availablePrintIds`가 이 셋을 무조건 `add`했고, 정작 컴포넌트는 데이터가
+ *   없으면 `null`을 반환했다. 그래서 「출력 항목 선택」에 **화면에 없는 섹션**이 떠서
+ *   선택·인쇄가 가능했다 — 패널의 계약(「가용 노드만 표시 — 데이터 없는 서식 선택 방지」)과
+ *   정면으로 어긋난다.
+ *
+ * ⚠️ 술어를 공유하는 것만으로는 부족하고 **같은 인자**로 불러야 한다
+ *   (memory `feedback_shared_predicate_argument_parity`). 셋 다 `result` 하나만 받는다.
+ */
+export const hasReductionRecalc = (r: AggregateTransferResult) =>
+  (r.reductionBreakdown?.length ?? 0) > 0;
+export const hasLossOffsetTable = (r: AggregateTransferResult) => r.lossOffsetTable.length > 0;
+export const hasGroupTaxCards = (r: AggregateTransferResult) => r.groupTaxes.length > 1;
+
 // ─── 감면세액 합산 재계산 내역 ─────────────────────────────────
 // 조특법 §69(자경) + §127의2(중복배제) + §133(종합한도) 기반 재계산 결과 표시.
 // 단건 산출세액 × 감면대상소득 / 과세표준 → §133 유형별 한도 적용.
@@ -57,7 +73,7 @@ function ReductionRecalculationSection({
   result: AggregateTransferResult;
   properties: PropertyItem[];
 }) {
-  if (!result.reductionBreakdown || result.reductionBreakdown.length === 0) return null;
+  if (!hasReductionRecalc(result)) return null;
 
   const labelMap = new Map(properties.map((p) => [p.propertyId, p.propertyLabel]));
 
@@ -168,7 +184,7 @@ function ReductionRecalculationSection({
 // ─── 차손 통산 표 ──────────────────────────────────────────────
 
 function LossOffsetTable({ result, properties }: { result: AggregateTransferResult; properties: PropertyItem[] }) {
-  if (result.lossOffsetTable.length === 0) return null;
+  if (!hasLossOffsetTable(result)) return null;
 
   const labelMap = new Map(properties.map((p) => [p.propertyId, p.propertyLabel]));
 
@@ -221,7 +237,7 @@ function LossOffsetTable({ result, properties }: { result: AggregateTransferResu
 // ─── 세율군 집계 카드 ──────────────────────────────────────────
 
 function GroupTaxCards({ result }: { result: AggregateTransferResult }) {
-  if (result.groupTaxes.length <= 1) return null;
+  if (!hasGroupTaxCards(result)) return null;
 
   return (
     <Card>
@@ -318,14 +334,15 @@ export function MultiTransferTaxResultView({
     s.add("form-table");
     s.add("summary");
     s.add("detailed-statement");
-    s.add("reduction-recalc");
-    s.add("group-tax");
-    s.add("loss-offset");
+    // 아래 셋은 렌더 게이트와 **같은 술어**를 탄다 — 화면에 없는 섹션을 선택지에 올리지 않는다.
+    if (hasReductionRecalc(result)) s.add("reduction-recalc");
+    if (hasGroupTaxCards(result)) s.add("group-tax");
+    if (hasLossOffsetTable(result)) s.add("loss-offset");
     s.add("per-property");
     // 계산서는 모달 스냅샷이 있는 자산이 있을 때만 렌더된다 → 그때만 선택 가능.
     if (hasBuildingStdReport({ assets: allAssets })) s.add("building-std-report");
     return s;
-  }, [allAssets]);
+  }, [allAssets, result]);
 
   // 선택 항목 클라이언트 PDF 다운로드 — Helpers downloadSelectedPdf 위임 (로컬 result react-pdf 생성)
   const handlePrintPdf = (pdfSections: string[]) =>
@@ -344,10 +361,6 @@ export function MultiTransferTaxResultView({
 
   return (
     <div className="space-y-4">
-      {/* [B6] 신고서 단위 수정신고·경정청구 정정 카드 (당초 대비 추가납부/환급 hero) */}
-      {result.amendmentDetail && (
-        <AmendmentResultCard detail={result.amendmentDetail} fullTotalTax={result.totalTax} />
-      )}
       {/* 자산별 경고 — 집계 엔진이 단건 warnings를 자산 라벨과 함께 모은다(R-5). */}
       <CalculationWarningsCard warnings={result.warnings} />
 
@@ -369,6 +382,20 @@ export function MultiTransferTaxResultView({
 
       {/* 합산 결과 카드 */}
       <PrintSection id="summary" selectedIds={selectedPrintIds}>
+      {/**
+        [B6] 신고서 단위 수정신고·경정청구 정정 카드 (당초 대비 추가납부/환급).
+
+        📌 **`PrintSection` 안이어야 한다.** 종전에는 이 카드만 첫 `PrintSection`보다 **위**에
+           있어 어느 leaf에도 속하지 않았고, 그래서 **인쇄·PDF에 들어가지 않았다**.
+           일괄 뷰는 2026-08-27에 같은 비대칭을 `calculation` 그룹 안으로 옮겨 고쳤는데
+           (`BundledAllocationCard.tsx`) 다건에만 남아 있었다.
+
+        ⛔ 위로 다시 올리지 말 것 — `data-testid="amendment-result"`가 비유일해지면
+           Playwright strict 로케이터가 깨진다.
+      */}
+      {result.amendmentDetail && (
+        <AmendmentResultCard detail={result.amendmentDetail} fullTotalTax={result.totalTax} />
+      )}
       <MultiTransferTaxSummaryCard
         result={result}
         properties={properties}

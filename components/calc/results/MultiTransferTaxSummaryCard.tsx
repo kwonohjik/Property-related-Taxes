@@ -13,7 +13,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
@@ -198,16 +197,11 @@ export function MultiTransferTaxSummaryCard({
           <span className="text-2xl font-bold text-primary">{formatKRW(finalDue)}</span>
         </div>
 
-        {result.warnings.length > 0 && (
-          <div className="space-y-1 pt-2">
-            {result.warnings.map((w, i) => (
-              <div key={i} className="flex gap-2 text-sm text-amber-700 bg-amber-50 rounded p-2">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>{w}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        {/*
+          ⛔ 엔진 경고를 여기서 다시 그리지 않는다. 상위 `MultiTransferTaxResultView`가
+          같은 배열을 공용 leaf로 이미 그리고 있어(`CalculationWarningsCard`),
+          종전에는 같은 화면에 **두 번** 떴다. 공용 leaf 한 곳이 정본이다.
+        */}
       </CardContent>
     </Card>
   );

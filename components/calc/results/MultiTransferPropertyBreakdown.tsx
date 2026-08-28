@@ -192,8 +192,14 @@ export function PropertyBreakdownAccordion({
         </div>
       </div>
 
-      {open && (
-        <CardContent className="pt-0 border-t">
+      {/*
+        인쇄 펼침은 **CSS-only**가 저장소 표준이다(skill `print-only-css-toggle`).
+        종전에는 조건부 언마운트(접히면 DOM에서 제거)라, 접힌 채로 인쇄하면 이 안의
+        자산별 신고서 양식·감면 상세·평가 상세가 **통째로 빠졌다** — 기본값이 접힘이라
+        아무것도 누르지 않고 인쇄하면 항상 그랬다.
+        토글 버튼은 `expandToggleClass`가 이미 `print:hidden`을 포함한다.
+      */}
+      <CardContent className={cn("pt-0 border-t", open ? "block" : "hidden print:block")}>
           {breakdown.isExempt ? (
             <p className="py-4 text-sm text-muted-foreground text-center">
               {breakdown.exemptReason ?? "비과세 대상"}
@@ -399,8 +405,7 @@ export function PropertyBreakdownAccordion({
               );
             })()}
           </div>
-        </CardContent>
-      )}
+      </CardContent>
     </Card>
   );
 }

@@ -117,14 +117,33 @@ describe("F42 — 다건 건별 아코디언이 공용 상세 카드를 렌더�
     expect(container.textContent).toContain("감면대상 양도소득금액");
   });
 
-  it("접힌 상태에서는 상세 카드가 DOM에 없다 (e2e 다건 NBL spec 전제 보존)", () => {
+  /**
+   * 🔴 **종전에는 「접힌 상태에서는 상세 카드가 DOM에 없다」를 단언했다** — 근거로 「e2e 다건
+   *    NBL spec 전제 보존」을 들었지만, 그 전제는 실측으로 성립하지 않았다.
+   *    `e2e/transfer-multi-nbl-business-recalc.spec.ts:138`의
+   *    `getByText("비사업용 토지").toHaveCount(0)`은 **사업용 판정 자산**을 쓰므로 그 문구가
+   *    애초에 나오지 않는다 — 접힘/펼침과 무관하다(CSS-only 전환 후 실측 통과).
+   *
+   *    그 사이 조건부 언마운트는 **인쇄 결함**이었다: 기본값이 접힘이라 아무것도 누르지 않고
+   *    인쇄하면 자산별 신고서·감면·평가 상세가 통째로 빠졌다(결과탭 코드리뷰 #005·#090).
+   *
+   * ⇒ 단언을 「DOM에 없다」에서 **「화면에서 감춰지되 인쇄에는 남는다」**로 옮긴다.
+   */
+  it("접힌 상태에서는 상세 카드가 감춰지되 인쇄 DOM에는 남는다", () => {
     const agg = aggregate();
     const farm = agg.properties.find((p) => p.propertyId === "farm")!;
     const { container } = render(<PropertyBreakdownAccordion breakdown={farm} />);
-    expect(container.textContent).not.toContain("자경농지 양도소득세 감면");
+
+    const hiddenBody = container.querySelector(".hidden.print\\:block");
+    expect(hiddenBody, "접힘 본문이 CSS-only 컨테이너로 감싸이지 않았다").not.toBeNull();
+    // 카드는 그 안에 있다 — 화면에선 `hidden`, 인쇄에선 `print:block`으로 살아난다.
+    expect(hiddenBody!.textContent).toContain("자경농지 양도소득세 감면");
+
     const nbl = agg.properties.find((p) => p.propertyId === "nbl")!;
     const { container: c2 } = render(<PropertyBreakdownAccordion breakdown={nbl} />);
-    expect(c2.textContent).not.toContain("판정 과정");
+    const hidden2 = c2.querySelector(".hidden.print\\:block");
+    expect(hidden2).not.toBeNull();
+    expect(hidden2!.textContent).toContain("판정 과정");
   });
 
   it("§77 3종은 중복 렌더되지 않는다 (인라인 제거 — 공용 컴포넌트가 유일 소스)", async () => {
