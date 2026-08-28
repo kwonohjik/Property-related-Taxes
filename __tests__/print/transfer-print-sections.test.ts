@@ -18,11 +18,14 @@ import {
   type TransferPrintSectionId,
 } from "@/lib/print/transfer-print-sections";
 
-// 설계 §2.5 기준 leaf 5종 (printScoped scope → leaf)
+// 설계 §2.5 기준 leaf (printScoped scope → leaf) — #062로 allocation·detail-cards 추가
 const ALL_LEAVES: TransferPrintSectionId[] = [
   "form-table",
   "detailed-statement",
   "calculation",
+  // 🆕 #062 — 종전에는 이 자리의 블록들이 PrintSection 밖이라 선택이 걸리지 않았다.
+  "allocation",
+  "detail-cards",
   "phd",
   "split-detail",
   // 부담부증여 무상이전분의 증여세 신고서(별지 제10호). 화면은 기준시가 계산서 바로 위.

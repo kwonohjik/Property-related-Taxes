@@ -92,22 +92,18 @@ interface Props {
 /** 자경농지 감면의 식별자 3종 — 상속인 합산·편입일 부분감면 변형까지 **같은 감면**이다. */
 const SELF_FARMING_TYPES = ["self_farming", "self_farming_inherited", "self_farming_incorp"];
 
-export function ReductionDetailCards({
-  result,
-  calculatedTax,
-  taxBase,
-  longTermHoldingDeduction,
-  aggregatedContext = false,
-  appliedReductionType,
-  appliedReductionAmount,
-}: Props) {
-  /**
-   * 이 카드가 §127⑦로 **배제된 후보인가** — 승자 식별자가 자기 것이 아니면 배제다.
-   * 승자를 모르면(prop 미전달) 판정하지 않는다 — 근거 없이 「적용 불가」를 찍는 쪽이 더 위험하다.
-   */
-  const excludedByOverlap = (...ownTypes: string[]) =>
-    !!appliedReductionType && !ownTypes.includes(appliedReductionType);
-  const hasAny =
+/**
+ * 이 카드 묶음이 **하나라도 렌더되는가** — 렌더 게이트와 「출력 항목 선택」 가용성이
+ * **같은 술어**를 부르게 하려고 export한다.
+ *
+ * 🔴 종전에는 이 판정이 컴포넌트 안의 지역 `const`였고, 결과뷰의 `availablePrintIds`는
+ *   손으로 쓴 Set이었다. 두 곳이 어긋나면 「목록에 있는데 화면에 없다」(또는 그 반대)가
+ *   생기는데, 그 방향을 잡는 테스트가 저장소에 0건이었다 (결과탭 코드리뷰 #089).
+ */
+export function hasReductionDetailCards(
+  result: TransferReductionDetailSource,
+): boolean {
+  return (
     !!result.usageConversionDetail ||
     !!result.selfFarmingReductionDetail ||
     !!result.inheritedAcquisitionDetail ||
@@ -133,8 +129,26 @@ export function ReductionDetailCards({
     !!result.replacementLandDetail ||
     !!result.gbDesignatedLandDetail ||
     !!(result.specialHouseExclusionDetail &&
-      result.specialHouseExclusionDetail.entries.length > 0);
+      result.specialHouseExclusionDetail.entries.length > 0)
+  );
+}
 
+export function ReductionDetailCards({
+  result,
+  calculatedTax,
+  taxBase,
+  longTermHoldingDeduction,
+  aggregatedContext = false,
+  appliedReductionType,
+  appliedReductionAmount,
+}: Props) {
+  /**
+   * 이 카드가 §127⑦로 **배제된 후보인가** — 승자 식별자가 자기 것이 아니면 배제다.
+   * 승자를 모르면(prop 미전달) 판정하지 않는다 — 근거 없이 「적용 불가」를 찍는 쪽이 더 위험하다.
+   */
+  const excludedByOverlap = (...ownTypes: string[]) =>
+    !!appliedReductionType && !ownTypes.includes(appliedReductionType);
+  const hasAny = hasReductionDetailCards(result);
   if (!hasAny) return null;
 
   return (
