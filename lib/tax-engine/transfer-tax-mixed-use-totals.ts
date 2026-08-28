@@ -11,6 +11,7 @@ import { calculateTransferTaxPenalty } from "./transfer-tax-penalty";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
 import type { TransferReduction, TransferTaxInput } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
+import type { TransferReductionDetailSource } from "./types/transfer-result.types";
 import { compareWithClause1 } from "./transfer-tax-rate-calc";
 import { calcLongTermRate, type ExcessLandResult } from "./transfer-tax-mixed-use-helpers";
 import type {
@@ -242,6 +243,9 @@ export function buildTotalTax(
     transferTax,
     reductionAmount: post.reductionAmount,
     ...(post.reductionType ? { reductionType: post.reductionType } : {}),
+    reductionTypeApplied: post.reductionTypeApplied,
+    reducibleIncome: post.reducibleIncome,
+    reductionDetails: post.reductionDetails,
     determinedTax,
     penaltyTax: post.penaltyTax,
     ruralSurtax: post.ruralSurtax,
@@ -290,9 +294,34 @@ export interface MixedUsePostTaxInput {
 interface MixedUsePostTaxResult {
   reductionAmount: number;
   reductionType?: string;
+  /**
+   * 채택된 감면의 **식별자**(표시용 라벨이 아니다) — 별지84호 ⑲ 세액감면대상금액 라우팅과
+   * §127⑦ 중복배제 표시가 이 값을 본다. 종전에는 버려져 겸용 신고서 ⑲가 감면과 무관하게
+   * 0으로 찍혔고 명세서 산식은 「감면 대상 없음」이라 **자기모순**이었다(결과탭 코드리뷰 #049).
+   */
+  reductionTypeApplied?: string;
+  /** 감면대상 소득금액(⑲의 default 경로 값). */
+  reducibleIncome?: number;
+  /** 감면 산출근거 카드가 읽는 detail 묶음 — 종전에는 여기서 통째로 버려졌다. */
+  reductionDetails?: MixedUseReductionDetails;
   ruralSurtax: number;
   penaltyTax: number;
 }
+
+/**
+ * 겸용 결과뷰의 감면 산출근거 카드(`ReductionDetailCards`)가 읽는 detail 부분집합.
+ * 세액감면형만 겸용 경로를 타므로(차감형은 고지 후 미계산) 그 범위만 싣는다.
+ */
+export type MixedUseReductionDetails = Pick<
+  TransferReductionDetailSource,
+  | "publicExpropriationDetail"
+  | "gbDesignatedLandDetail"
+  | "replacementLandDetail"
+  | "selfFarmingReductionDetail"
+  | "rental97TaxDetail"
+  | "newHousingReductionDetail"
+  | "rentalReductionDetail"
+>;
 
 const EMPTY_POST: MixedUsePostTaxResult = { reductionAmount: 0, ruralSurtax: 0, penaltyTax: 0 };
 
@@ -380,6 +409,17 @@ function computeMixedUsePostTax(
   return {
     reductionAmount,
     ...(result.reductionType ? { reductionType: result.reductionType } : {}),
+    reductionTypeApplied: result.reductionTypeApplied,
+    reducibleIncome: result.reducibleIncome,
+    reductionDetails: {
+      publicExpropriationDetail: result.publicExpropriationDetail,
+      gbDesignatedLandDetail: result.gbDesignatedLandDetail,
+      replacementLandDetail: result.replacementLandDetail,
+      selfFarmingReductionDetail: result.selfFarmingReductionDetail,
+      rental97TaxDetail: result.rental97TaxDetail,
+      newHousingReductionDetail: result.newHousingReductionDetail,
+      rentalReductionDetail: result.rentalReductionDetail,
+    },
     ruralSurtax: surtax.surtax,
     penaltyTax: penalty?.totalPenalty ?? 0,
   };

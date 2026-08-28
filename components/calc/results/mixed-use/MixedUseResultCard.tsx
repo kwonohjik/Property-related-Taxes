@@ -13,6 +13,7 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
+import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { useState, useMemo } from "react";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -752,6 +753,28 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           ].join(" + ")}
         />
       </ResultSection>
+
+      {/*
+        감면 산출근거 카드 — 나머지 세 결과뷰(단건·일괄·다건)는 모두 갖는데 겸용만 없었다
+        (결과탭 코드리뷰 #049). §77 요건 미충족으로 감면이 0이 된 경우에도 **사유를 알려주는
+        카드가 없어** 「왜 안 붙었는지」가 화면에서 사라졌다. 엔진은 detail을 만들고도
+        `computeMixedUsePostTax`에서 버리고 있었다 — 이제 echo로 받아 같은 공용 컴포넌트에 넘긴다.
+
+        ⚠️ 겸용은 **세액감면형만** 계산한다(차감형은 어느 파트에서 뺄지 정한 명문이 없어 고지만
+           한다) — 그래서 `calculatedTax`는 감면 차감 전 산출세액 `t.transferTax`다.
+      */}
+      <ReductionDetailCards
+        result={t.reductionDetails ?? {}}
+        calculatedTax={t.transferTax}
+        taxBase={t.taxBase}
+        longTermHoldingDeduction={
+          h.longTermDeductionAmount +
+          c.longTermDeductionAmount +
+          (nb?.longTermDeductionAmount ?? 0)
+        }
+        appliedReductionType={t.reductionTypeApplied}
+        appliedReductionAmount={t.reductionAmount}
+      />
       </PrintSection>
 
       {/* ── 계산결과 상세명세서 (겸용주택 모드) ── */}
