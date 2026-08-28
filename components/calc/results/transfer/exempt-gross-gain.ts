@@ -47,3 +47,31 @@ export function effectiveGrossGainOfProperty(p: {
 }): number {
   return effectiveGrossGain(p);
 }
+
+/**
+ * 자산별 **과세대상 양도차익** — 12억 초과 고가주택 안분 후의 값.
+ *
+ * 엔진 breakdown은 안분 결과를 `income`(양도소득금액)으로만 남기므로 표시부가 역산한다:
+ *   과세대상 = min(gross, max(0, income) + 장특공제)
+ *
+ * 🔴 다건 자산별 신고서 어댑터는 이 역산을 하지 않고 `Math.max(0, b.transferGain)`을 썼다.
+ *   12억 초과 고가주택에서 **과세대상·양도소득금액이 안분 전 값으로 부풀었다**(#019).
+ *   같은 화면의 합산 서식(`FilingFormTableAggregateHelpers.ts:171-176`)은 정확히 역산하고
+ *   있어 두 표가 어긋났다.
+ */
+export function assetTaxableGain(p: {
+  isExempt?: boolean;
+  exemptGrossGain?: number;
+  transferGain: number;
+  income: number;
+  longTermHoldingDeduction: number;
+}): number {
+  const gross = effectiveGrossGain(p);
+  if (p.isExempt) return 0;
+  return gross > 0 ? Math.min(gross, Math.max(0, p.income) + p.longTermHoldingDeduction) : gross;
+}
+
+/** 자산별 비과세 양도차익 = gross − 과세대상. */
+export function assetExemptGain(p: Parameters<typeof assetTaxableGain>[0]): number {
+  return Math.max(0, effectiveGrossGain(p) - assetTaxableGain(p));
+}

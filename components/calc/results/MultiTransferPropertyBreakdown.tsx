@@ -21,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
 import { cn } from "@/lib/utils";
+import { assetTaxableGain } from "@/components/calc/results/transfer/exempt-gross-gain";
 import type { PerPropertyBreakdown, RateGroup } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
@@ -58,7 +59,12 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     exemptGrossGain: b.exemptGrossGain,
     expenses: b.necessaryExpense,
     capitalExpenditureForDisplay: b.capitalExpenditureForDisplay,
-    taxableGain: Math.max(0, b.transferGain),
+    /*
+     * 🔴 종전에는 `Math.max(0, b.transferGain)` — 12억 초과 고가주택에서 **안분 전** 값이라
+     *   과세대상·양도소득금액이 부풀었다(#019). 같은 화면의 합산 서식은 정확히 역산하고
+     *   있었으므로 두 표가 어긋났다. 이제 같은 leaf를 부른다.
+     */
+    taxableGain: assetTaxableGain(b),
     usedEstimatedAcquisition: false,
     longTermHoldingDeduction: b.longTermHoldingDeduction,
     longTermHoldingRate: 0,
