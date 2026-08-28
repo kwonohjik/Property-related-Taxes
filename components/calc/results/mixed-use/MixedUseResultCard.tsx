@@ -280,8 +280,13 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
               return (
                 <FLine>
                   §97: 주택 양도가액 {fmtPlain(a.housingTransferPrice)} ×{" "}
+                  {/* 🔴 종전에는 분자에 **값이 없었다**. 미공시(0)면 「주택 환산취득가액 0」과
+                      라벨뿐인 분자가 함께 나와, 0으로 잡힌 것인지 입력이 누락된 것인지
+                      화면에서 구별할 수 없었다(#077). 바로 아래 상가분은 분자 값을 보여준다. */}
                   <Frac
-                    top="취득시 개별주택공시가격"
+                    top={`취득시 개별주택공시가격 ${fmtPlain(h.acqHousingStandardPrice ?? 0)}${
+                      (h.acqHousingStandardPrice ?? 0) > 0 ? "" : " (미공시)"
+                    }`}
                     bottom={`양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)}`}
                   />
                 </FLine>

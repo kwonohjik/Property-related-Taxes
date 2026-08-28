@@ -417,6 +417,11 @@ export interface MixedUseApportionment {
 export interface MixedUseHousingPart {
   /** 주택부분 환산취득가액 (§97 또는 §164⑤ PHD) */
   estimatedAcquisitionPrice: number;
+  /**
+   * §97 직접 환산에서 **분자로 쓴 취득시 개별주택공시가격** — 산식 표시 전용 echo.
+   * 상가분의 `acqStandardTotal`과 같은 층위다. 0이면 「미공시」를 함께 표시한다(#077).
+   */
+  acqHousingStandardPrice?: number;
   /** PHD로 역산된 취득시 개별주택가격 (PHD 모드 한정) */
   phdEstimatedAcqHousingPrice?: number;
   /** PHD 3-시점 산식 상세 (UI 표시용) */
