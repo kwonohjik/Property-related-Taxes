@@ -682,11 +682,49 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
               : ""
           }`}
         />
+        {/**
+         * 산출세액 이후 단계 — 감면세액·결정세액·가산세·농어촌특별세.
+         *
+         * 🔴 종전에는 이 네 행이 통째로 없었다. 엔진은
+         *   `totalPayable = 결정세액 + 지방소득세 + 가산세 + 농특세`인데
+         *   (`transfer-tax-mixed-use-totals.ts:249`) 표에는 산출세액·지방소득세·총 납부세액만
+         *   있어 총액과 그 아래 산식이 감면·가산세·농특세만큼 어긋났다. 지방소득세 산식도
+         *   「양도소득세 × 10%」라고 적혀 있었지만 실제 base는 **결정세액**이라
+         *   감면이 붙으면 산식으로 검산이 되지 않았다(결과탭 코드리뷰 #001 · #087).
+         */}
+        {t.reductionAmount > 0 && (
+          <>
+            <Row
+              label="감면세액"
+              value={`△ ${fmt(t.reductionAmount)}`}
+              formula="조세특례제한법상 세액감면 — 산출세액에서 차감 (중복배제 후 채택된 1건, 조특법 §127⑦)"
+            />
+            <Row
+              label="결정세액"
+              value={fmt(t.determinedTax)}
+              formula={`산출세액 ${fmtPlain(t.transferTax)} - 감면세액 ${fmtPlain(t.reductionAmount)}`}
+            />
+          </>
+        )}
         <Row
           label="지방소득세 (10%)"
           value={fmt(t.localTax)}
-          formula={`양도소득세 ${fmtPlain(t.transferTax)} × 10% (지방세법 §103의3)`}
+          formula={`결정세액 ${fmtPlain(t.determinedTax)} × 10% (지방세법 §103의3)`}
         />
+        {t.penaltyTax > 0 && (
+          <Row
+            label="가산세"
+            value={fmt(t.penaltyTax)}
+            formula="신고불성실·납부지연 가산세 (국세기본법 §47의2~§47의4)"
+          />
+        )}
+        {t.ruralSurtax > 0 && (
+          <Row
+            label="농어촌특별세"
+            value={fmt(t.ruralSurtax)}
+            formula={`감면세액 ${fmtPlain(t.reductionAmount)} × 20% (농어촌특별세법 §5①1호)`}
+          />
+        )}
         <DivRow />
         <Row
           // 정정 모드에서는 AmendmentResultCard의 "참고 · 수정/경정 후 전체 세액"과 라벨을 맞춘다
@@ -701,7 +739,12 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           value={fmt(t.totalPayable)}
           highlight
           large
-          formula={`양도소득세 ${fmtPlain(t.transferTax)} + 지방소득세 ${fmtPlain(t.localTax)}`}
+          formula={[
+            `결정세액 ${fmtPlain(t.determinedTax)}`,
+            `지방소득세 ${fmtPlain(t.localTax)}`,
+            ...(t.penaltyTax > 0 ? [`가산세 ${fmtPlain(t.penaltyTax)}`] : []),
+            ...(t.ruralSurtax > 0 ? [`농어촌특별세 ${fmtPlain(t.ruralSurtax)}`] : []),
+          ].join(" + ")}
         />
       </ResultSection>
       </PrintSection>
