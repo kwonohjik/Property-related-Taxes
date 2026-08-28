@@ -27,6 +27,7 @@ import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { getRefDeterminedTax } from "@/components/calc/results/MultiTransferTaxSummaryCard";
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
 
 
@@ -37,7 +38,16 @@ import { ValuationDetailCards } from "@/components/calc/results/transfer/Valuati
  */
 export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxResult {
   const totalPenalty = b.penaltyTax + b.filingDelayedPenaltyTax;
-  const determinedTax = b.refDeterminedTax;
+  /**
+   * 🔴 종전에는 `b.refDeterminedTax`를 **가드 없이** 읽었다. 결과는 IndexedDB에 저장·복원되므로
+   *   그 필드가 없던 시절의 이력을 불러오면 `undefined`가 그대로 흘러 자산별 신고서의
+   *   「총결정세액」·「지방소득세 산출세액」·「지방세 결정세액」이 **`NaN`으로 렌더**됐다
+   *   (`fmtCell`은 null·undefined·""·0만 거르고 NaN은 `formatKRW`로 넘긴다).
+   *   같은 파일의 `resolveRefCalculatedTax`(:70-87)와 아코디언 본문(:136-139), 형제
+   *   `MultiTransferTaxSummaryCard.getRefDeterminedTax`는 모두 가드를 갖고 있었다 —
+   *   이 한 곳만 우회하고 있었다. 형제의 leaf를 그대로 재사용한다 (결과탭 코드리뷰 #104).
+   */
+  const determinedTax = getRefDeterminedTax(b);
   /**
    * 지방소득세 base는 **§114조의2분(`b.penaltyTax`)만**이다 — 국기법 §47의2~§47의4
    * 신고불성실·납부지연분(`b.filingDelayedPenaltyTax`)은 과세표준에서 제외된다(지방세법 §103의3).
@@ -78,6 +88,18 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     reductionAmount: b.reductionAggregated,
     reductionType: b.reductionType,
     reducibleIncome: b.reducibleIncome,
+    /**
+     * 🔴 종전에는 이 필드를 싣지 않았다. 신고서 ⑲ 「세액감면대상금액」은
+     *   `reductionEligibleIncome(reductionTypeApplied, …)`으로 갈리는데(§77·§77의3은
+     *   양도소득금액 전액 / §77의2는 대토분 echo / 그 외는 `reducibleIncome`),
+     *   식별자가 없으면 **default 분기**로 떨어져 `reducibleIncome`이 실린다.
+     *   §77 계열의 `reducibleIncome`은 **감면율이 이미 곱해진 값**이라 ⑲에 쓰면 안 된다
+     *   (`reduction-eligible-income.ts` 주석이 명시). 실측(공익수용 9억): ⑲가
+     *   420,000,000이어야 하는데 **63,000,000**이 실렸다 (결과탭 코드리뷰 #080).
+     *   엔진은 이미 실어 보내고 있었다 — `transfer-tax-aggregate.ts:520·598`의
+     *   `reductionType`이 곧 단건의 `reductionTypeApplied`다.
+     */
+    reductionTypeApplied: b.reductionType,
     determinedTax,
     penaltyTax: totalPenalty,
     penaltyBase: b.penaltyBase ?? 0,
