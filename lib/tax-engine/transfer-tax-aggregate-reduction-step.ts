@@ -63,7 +63,11 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
   } = args;
   const input = { taxYear: args.taxYear, priorReductionUsage: args.priorReductionUsage };
   const comparedTaxApplied = comparedByGroups ? "groups" : "total";
-  // M-8: 감면 합산 — 유형별 비율 재계산 (조특법 §69 + §127의2 + §133)
+  // M-8: 감면 합산 — 유형별 비율 재계산 (조특법 §69 + §127⑦ + §133)
+  //      ⚠️ 중복배제는 §127**⑦**이다. 종전에는 「의2」가 붙은 조문을 적었는데 조특법에
+  //         그런 조문은 **존재하지 않는다**(KoreanLaw 실측 NOT_FOUND).
+  //         §127⑦ 본문: 「둘 이상의 양도소득세의 감면규정을 동시에 적용받는 경우에는 그 거주자가
+  //         선택하는 하나의 감면규정만을 적용한다」 (결과탭 코드리뷰 Lane 1 · L2).
   // 1) 각 자산이 노출한 reducibleIncome을 유형별로 집계
   // 2) 합산 과세표준 기준으로 `safeMultiplyThenDivide(calculatedTax, 유형별 reducibleIncome, taxBase)` 재계산
   // 3) §133 유형별 연간 한도 적용 (자경·축산·어업 1억원 그룹 / 공익수용 2억원 단독 등)

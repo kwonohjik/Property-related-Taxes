@@ -50,6 +50,23 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywords: ["과세표준에 대한 세율", "조합법인", "100분의 14", "이자소득"],
     keywordMode: "ALL",
   },
+  {
+    /**
+     * 결과탭이 인용한다 — 조특법 §98(양도소득세 세율 20% 단일)은 이 조가 정의한 「감면」
+     * (1호 비과세·세액면제·세액감면·세액공제·소득공제 / 2호 **열거된** 특례세율)에 해당하지
+     * 않아 §5①1호의 과세표준(감면세액)이 성립하지 않는다
+     * (`IncomeDeductionDetailCard.tsx` — 결과탭 코드리뷰 #032).
+     */
+    id: "SURTAX.DEFINITIONS",
+    citation: "농어촌특별세법 §2",
+    keywords: [
+      "감면",
+      "비과세ㆍ세액면제ㆍ세액감면ㆍ세액공제 또는 소득공제",
+      "특례세율의 적용",
+      "본세",
+    ],
+    keywordMode: "ALL",
+  },
   // ── 🆕 2026-08-03 커버리지 갭 해소 (E2E `legal-coverage-button` 실패가 드러낸 미등록분) ──
   // 신규 조문을 legal-codes에 인용하면 여기에도 등록해야 커버리지 100%가 유지된다.
   {

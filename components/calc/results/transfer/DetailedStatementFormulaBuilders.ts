@@ -248,14 +248,27 @@ export function buildSurtaxAndLocalTaxItems(
     label: "지방세 감면세액",
     value: 0,
     formula: "현재 미구현 (지방세 감면 정책 미반영)",
-    legalBasis: "지방세법 §92~§103",
+    /**
+     * 🔴 종전에는 개인지방소득세 장 전체를 뭉뚱그린 **범위 인용**이었고, 그 시작 조문은
+     *   「세율」 — **종합소득·퇴직소득**의 표준세율표라 양도소득분과 무관했다(실측).
+     *   양도소득분 개인지방소득세의 세액공제·세액감면 조문은 **§103의4**다:
+     *   「양도소득에 대한 개인지방소득세의 세액공제 및 세액감면에 관한 사항은
+     *    「지방세특례제한법」에서 정한다」 — §103의3⑥도 그 조문을 감면 근거로 지목한다.
+     *   (옛 인용 문자열은 여기 적지 않는다 — 감사 스캐너가 그 주석 자신을 위반으로 잡는다.)
+     */
+    legalBasis: "지방세법 §103의4",
     summaryOnly: true,
   });
   items.set("localDeterminedTax", {
     label: "지방세 결정세액",
     value: result.localIncomeTax,
     formula: `지방소득세 산출세액 ${localCalc.toLocaleString()} − 지방세 감면세액 0 = ${result.localIncomeTax.toLocaleString()} (원 미만 절사)`,
-    legalBasis: "지방세법 §103",
+    /**
+     * 🔴 종전에는 **「과세표준」** 조문을 인용해(실측) 「산출세액 − 감면세액」의 근거가
+     *   아니었다. 산출세액은 §103의3(세율), 감면은 §103의4(세액공제 및 세액감면)다.
+     *   (옛 인용 문자열은 여기 적지 않는다 — 감사 스캐너가 이 주석 자신을 위반으로 잡는다.)
+     */
+    legalBasis: "지방세법 §103의3·§103의4",
     summaryOnly: true,
   });
 }

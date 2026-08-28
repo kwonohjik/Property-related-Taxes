@@ -64,7 +64,9 @@ export const hasLossOffsetTable = (r: AggregateTransferResult) => r.lossOffsetTa
 export const hasGroupTaxCards = (r: AggregateTransferResult) => r.groupTaxes.length > 1;
 
 // ─── 감면세액 합산 재계산 내역 ─────────────────────────────────
-// 조특법 §69(자경) + §127의2(중복배제) + §133(종합한도) 기반 재계산 결과 표시.
+// 조특법 §69(자경) + §127⑦(중복배제) + §133(종합한도) 기반 재계산 결과 표시.
+// ⚠️ 종전에는 「의2」가 붙은 조문을 적었으나 조특법에 그런 조문은 **존재하지 않는다**
+//    (KoreanLaw 실측 NOT_FOUND). 중복배제는 §127⑦이다.
 // 단건 산출세액 × 감면대상소득 / 과세표준 → §133 유형별 한도 적용.
 
 function ReductionRecalculationSection({
@@ -83,7 +85,7 @@ function ReductionRecalculationSection({
     <Card>
       <div className="p-4 space-y-3">
         <h3 className="text-sm font-medium">
-          감면세액 합산 재계산 (조특법 §127의2 + §133)
+          감면세액 합산 재계산 (조특법 §127⑦ + §133)
         </h3>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="조세특례제한법 §133" label="§133 종합한도" />

@@ -90,6 +90,22 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /**
+     * 결과탭 「지방세 감면세액」·「지방세 결정세액」 행의 근거
+     * (`DetailedStatementFormulaBuilders.ts` — 결과탭 코드리뷰 Lane 1 · L2).
+     * 조문 전체가 한 문장이라 키워드도 그 문장에서 뽑는다.
+     */
+    id: "TRANSFER.LOCAL_TAX_CREDIT_REDUCTION",
+    citation: "지방세법 §103의4",
+    keywords: [
+      "세액공제 및 세액감면",
+      "양도소득에 대한 개인지방소득세",
+      "지방세특례제한법",
+      "산출세액을 초과하는 경우",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "PROPERTY.TAXABLE_OBJECT",
     citation: "지방세법 §105",
     keywords: ["토지", "건축물", "주택", "항공기", "선박", "과세대상"],
