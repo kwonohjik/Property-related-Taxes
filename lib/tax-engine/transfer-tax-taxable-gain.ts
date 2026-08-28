@@ -100,20 +100,20 @@ export function buildGainFormula(args: {
     // §97② 2호 단서: 필요경비 = 자본적지출+양도비 단독 → 환산취득가액은 차감·표시에서 제외.
     // 상가(CB) swap은 effectiveInput.useEstimatedAcquisition=false라 최상위에서 분기(환산·상가 공통).
     gainFormula = [
-      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
-      `필요경비(자본적지출+양도비 ${appliedExpenses.toLocaleString()}`,
+      `양도가(${effectiveInput.transferPrice.toLocaleString()})`,
+      `필요경비(자본적지출+양도비 ${appliedExpenses.toLocaleString()})`,
     ].join(" - ");
   } else if (effectiveInput.useEstimatedAcquisition) {
     gainFormula = [
-      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
-      `취득가(환산 ${estimatedBase.toLocaleString()}`,
-      `경비(개산공제 ${appliedExpenses.toLocaleString()}`,
+      `양도가(${effectiveInput.transferPrice.toLocaleString()})`,
+      `취득가(환산 ${estimatedBase.toLocaleString()})`,
+      `경비(개산공제 ${appliedExpenses.toLocaleString()})`,
     ].join(" - ");
   } else {
     gainFormula = [
-      `양도가(${effectiveInput.transferPrice.toLocaleString()}`,
-      `취득가(${effectiveInput.acquisitionPrice.toLocaleString()}`,
-      `경비(${appliedExpenses.toLocaleString()}`,
+      `양도가(${effectiveInput.transferPrice.toLocaleString()})`,
+      `취득가(${effectiveInput.acquisitionPrice.toLocaleString()})`,
+      `경비(${appliedExpenses.toLocaleString()})`,
     ].join(" - ");
   }
   return gainFormula;

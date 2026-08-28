@@ -73,17 +73,17 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
       <PhdRow
         label="취득시 기준시가 합계"
         value={phd.sumAtAcquisition}
-        formula={`토지기준시가(${fmt(i.landPricePerSqmAtAcquisition)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtAcquisition)}`}
+        formula={`토지기준시가(${fmt(i.landPricePerSqmAtAcquisition)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtAcquisition)})`}
       />
       <PhdRow
         label="최초공시일 기준시가 합계"
         value={phd.sumAtFirstDisclosure}
-        formula={`토지기준시가(${fmt(i.landPricePerSqmAtFirstDisclosure)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtFirstDisclosure)}`}
+        formula={`토지기준시가(${fmt(i.landPricePerSqmAtFirstDisclosure)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtFirstDisclosure)})`}
       />
       <PhdRow
         label="양도시 기준시가 합계"
         value={phd.sumAtTransfer}
-        formula={`토지기준시가(${fmt(i.landPricePerSqmAtTransfer)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtTransfer)}`}
+        formula={`토지기준시가(${fmt(i.landPricePerSqmAtTransfer)}/㎡ × ${fmt(i.landArea)}㎡) + 건물기준시가(${fmt(i.buildingStdPriceAtTransfer)})`}
       />
 
       {/* 2. 추정 취득시 주택가격 */}
@@ -153,7 +153,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
           label="건물 양도가액"
           value={phd.buildingTransferPrice}
           highlight
-          formula={`양도가액(${fmt(i.totalTransferPrice)} - 토지 양도가액(${fmt(phd.landTransferPrice)}`}
+          formula={`양도가액(${fmt(i.totalTransferPrice)}) - 토지 양도가액(${fmt(phd.landTransferPrice)})`}
         />
       </div>
 
@@ -178,7 +178,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
         <PhdRow
           label="취득시 건물 주택가격 성분"
           value={phd.buildingHousingAtAcquisition}
-          formula={`추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)} - 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)}`}
+          formula={`추정 취득시 주택가격(${fmt(phd.estimatedHousingPriceAtAcquisition)}) - 취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)})`}
         />
         <PhdRow
           label="토지 환산취득가"
@@ -198,7 +198,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
           label="건물 환산취득가"
           value={phd.buildingAcquisitionPrice}
           highlight
-          formula={`총 환산취득가(${fmt(phd.totalEstimatedAcquisitionPrice)} - 토지 환산취득가(${fmt(phd.landAcquisitionPrice)}`}
+          formula={`총 환산취득가(${fmt(phd.totalEstimatedAcquisitionPrice)}) - 토지 환산취득가(${fmt(phd.landAcquisitionPrice)})`}
         />
       </div>
 
@@ -211,13 +211,13 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
           label="토지 개산공제"
           value={phd.landLumpDeduction}
           highlight
-          formula={`취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)} × 3%`}
+          formula={`취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)}) × 3%`}
         />
         <PhdRow
           label="건물 개산공제"
           value={phd.buildingLumpDeduction}
           highlight
-          formula={`취득시 건물 성분(${fmt(phd.buildingHousingAtAcquisition)} × 3%`}
+          formula={`취득시 건물 성분(${fmt(phd.buildingHousingAtAcquisition)}) × 3%`}
         />
       </div>
     </div>

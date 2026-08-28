@@ -139,7 +139,7 @@ export function buildRedevTransferFormula(
   if (branch === "postApprovalExistingHouse") {
     // 안분 = floor(transferPrice × rightsValue / salePriceTotal)
     const rights = redev.preApproval.apportionedTransfer; // 권리가액
-    return `floor(${fmt(totalTransferPrice)} × ${fmt(rights)} / ${fmt(sale)}) = ${fmt(redev.postApprovalExistingHouse.apportionedTransfer)} (분양가 안분 — 권리가액 비율)`;
+    return `${fmt(totalTransferPrice)} × (${fmt(rights)} ÷ ${fmt(sale)}) = ${fmt(redev.postApprovalExistingHouse.apportionedTransfer)} (분양가 안분 — 권리가액 비율, 1원 미만 절사)`;
   }
   /**
    * settlement — **잔액 흡수**다. floor 안분이 아니다.
@@ -174,7 +174,7 @@ export function buildRedevAcquisitionFormula(
       const apportioned = redev.settlement.apportionedAcquisition;
       // 종전 취득가액 = apportioned × rights / settle (역산)
       const oldAcq = settle > 0 ? Math.round((apportioned * rights) / settle) : 0;
-      return `안분 취득가액 = floor(${fmt(oldAcq)} × ${fmt(settle)} / ${fmt(rights)}) = ${fmt(apportioned)} (§166①2호 가목 — 종전 취득가 × 청산금 / 권리가액)`;
+      return `안분 취득가액 = ${fmt(oldAcq)} × (${fmt(settle)} ÷ ${fmt(rights)}) = ${fmt(apportioned)} (§166①2호 가목 — 종전 취득가 × 청산금 ÷ 권리가액, 1원 미만 절사)`;
     }
     return "0 (receiveOnly — 신고 대상 아님)";
   }
@@ -190,7 +190,7 @@ export function buildRedevAcquisitionFormula(
       meta.denominator > 0
     ) {
       const rights = redev.preApproval.apportionedTransfer;
-      return `환산취득가 = floor(${fmt(rights)} × ${fmt(meta.numerator)} / ${fmt(meta.denominator)}) = ${fmt(redev.preApproval.apportionedAcquisition)} (§166③ — 권리가액 × P_A / D)`;
+      return `환산취득가 = ${fmt(rights)} × (${fmt(meta.numerator)} ÷ ${fmt(meta.denominator)}) = ${fmt(redev.preApproval.apportionedAcquisition)} (§166③ — 권리가액 × 취득 당시 기준시가 ÷ 관리처분계획 인가일 직전 기준시가, 1원 미만 절사)`;
     }
     return `실제 취득가액 = ${fmt(redev.preApproval.apportionedAcquisition)} (실가 모드)`;
   }
@@ -218,7 +218,7 @@ export function buildRedevExpenseFormula(
     if (lump > 0 && redev.valuationMeta && redev.valuationMeta.numerator !== undefined) {
       // base는 엔진 echo(지분 기준시가) 우선 — numerator는 물건 전체(100%) 값이다.
       const P_A = redev.valuationMeta.lumpDeductionBase ?? redev.valuationMeta.numerator;
-      return `개산공제 = floor(${fmt(P_A)} × 3%) = ${fmt(lump)} (§163⑥ — 취득당시 라목값 × 3%)`;
+      return `개산공제 = ${fmt(P_A)} × 3% = ${fmt(lump)} (§163⑥ — 취득 당시 개별주택가격(소득세법 시행령 §164④ 라목) × 3%, 1원 미만 절사)`;
     }
     return "필요경비 없음 (실가 모드)";
   }
@@ -498,7 +498,7 @@ export function applyLandContribOverrides(
         label: "① 인가전 분 (§166③ — 권리가액 × 취득기준시가 / 관리처분 직전 기준시가)",
         value: pre.apportionedAcquisition,
         formula:
-          `환산취득가 = floor(${fmt(pre.apportionedTransfer)} × ${fmt(lcd.landStdPriceAtAcq)} / ${fmt(lcd.landStdPriceAtApproval)}) = ${fmt(lcd.convertedAcquisition)}`,
+          `환산취득가 = ${fmt(pre.apportionedTransfer)} × (${fmt(lcd.landStdPriceAtAcq)} ÷ ${fmt(lcd.landStdPriceAtApproval)}) = ${fmt(lcd.convertedAcquisition)} (1원 미만 절사)`,
       },
       {
         label: "② 인가후 분 (§166②1호 — 권리가액 의제)",
@@ -518,7 +518,7 @@ export function applyLandContribOverrides(
       {
         label: "① 인가전 분 (§163⑥)",
         value: lcd.estimatedDeduction,
-        formula: `floor(${fmt(lcd.landStdPriceAtAcq)} × 3%) = ${fmt(lcd.estimatedDeduction)}`,
+        formula: `${fmt(lcd.landStdPriceAtAcq)} × 3% = ${fmt(lcd.estimatedDeduction)} (1원 미만 절사)`,
       },
       {
         label: "② 인가후 분",
@@ -624,7 +624,7 @@ export function applyRedevelopmentOverrides(
    * §95② 장기보유특별공제 **배제 사유** — 있으면 분할별 산식 대신 사유를 쓴다.
    *
    * 재개발은 자체 산식 빌더를 쓰므로 일반 경로의 `buildLthdFallbackFormulas`(배제 시
-   * 「0원 — 사유」로 대체)를 타지 않는다. 그래서 배제돼도 「양도차익 × **0%** (보유 21년 1개월)」로
+   * 「0 — 사유」로 대체)를 타지 않는다. 그래서 배제돼도 「양도차익 × **0%** (보유 21년 1개월)」로
    * 표시돼 **보유기간이 짧아서 0인 것처럼** 읽혔다.
    */
   lthdExclusionReason?: LthdExclusionReason,
@@ -766,7 +766,7 @@ function applyLthdExclusionOverride(
   if (!ltItem) return;
 
   const label = LTHD_EXCLUSION_LABEL[reason];
-  ltItem.formula = `0원 — ${label}`;
+  ltItem.formula = `0 — ${label}`;
   ltItem.legalBasis = "소득세법 §95② 본문 괄호 · §104⑦";
   // 분할별 값도 전부 0이므로 「분할별 산식」을 남기면 0%가 보유기간 탓으로 읽힌다.
   ltItem.perAsset = undefined;

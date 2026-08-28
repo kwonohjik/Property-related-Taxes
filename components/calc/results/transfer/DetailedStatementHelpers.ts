@@ -10,6 +10,7 @@
  */
 
 import type { ReactNode } from "react";
+import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import type { TransferTaxResult, CalculationStep } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -232,7 +233,7 @@ export function buildStatementItems(
     label: "양도가액",
     value: isAggregate ? sumPropTransfer : totalTransferPrice,
     formula: burdenedGift
-      ? `양도가액 = 인수 채무액 (보증금 ${burdenedGift.assumedDebtAmount.toLocaleString()}원 합계) = ${burdenedGift.assumedDebtAmount.toLocaleString()}원 (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
+      ? `양도가액 = 인수 채무액 (보증금 ${burdenedGift.assumedDebtAmount.toLocaleString()} 합계) = ${burdenedGift.assumedDebtAmount.toLocaleString()} (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
       : isAggregate
         ? "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
         : "사용자 입력 (실제 매매계약서상 거래금액)",
@@ -586,7 +587,7 @@ export function buildStatementItems(
           properties,
           (p) => p.reductionAggregated,
           (p) => p.reductionAggregated > 0
-            ? `합산 재계산 후 ${p.reductionType ?? "감면"} 배분 = ${p.reductionAggregated.toLocaleString()}`
+            ? `합산 재계산 후 ${reductionTypeLabelOf(p.reductionType)} 배분 = ${p.reductionAggregated.toLocaleString()}`
             : "감면 없음",
         )
       : undefined,

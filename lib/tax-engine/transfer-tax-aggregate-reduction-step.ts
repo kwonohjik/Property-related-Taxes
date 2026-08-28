@@ -11,6 +11,7 @@
  */
 
 import { TRANSFER } from "./legal-codes";
+import { reductionTypeLabelOf } from "./transfer-reduction-type-labels";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import {
   applyAnnualLimits,
@@ -171,7 +172,7 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     label: "감면세액 (합산 재계산)",
     formula:
       reducibleByType.size > 0
-        ? `유형별 재계산: ${[...reducibleByType.keys()].join(", ")} | 원시 ${totalAggregatedReduction === 0 ? "0" : totalAggregatedReduction.toLocaleString()} + 레거시 ${legacyReductionAmount.toLocaleString()}`
+        ? `유형별 재계산: ${[...reducibleByType.keys()].map(reductionTypeLabelOf).join(", ")} | 원시 ${totalAggregatedReduction === 0 ? "0" : totalAggregatedReduction.toLocaleString()} + 레거시 ${legacyReductionAmount.toLocaleString()}`
         : `건별 단순합 ${legacyReductionAmount.toLocaleString()} (유형 미지정 감면만 존재)`,
     amount: reductionAmount,
     legalBasis: TRANSFER.REDUCTION_ANNUAL_LIMIT,

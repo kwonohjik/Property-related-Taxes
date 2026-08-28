@@ -47,16 +47,16 @@ export function buildLthdFallbackFormulas(args: LthdFallbackArgs): LthdFallbackF
       : undefined;
 
   const holdingFormula = exclusionLabel
-    ? `0원 — ${exclusionLabel}`
+    ? `0 — ${exclusionLabel}`
     : useTable2
-      ? `총 장특공제 ${totalLth.toLocaleString()}원 − 거주 기간분 ${lthSplit.residenceAmount.toLocaleString()}원 = ${lthSplit.holdingAmount.toLocaleString()}원 (§95② 표2 — 거주분 직접 산정 후 잔액을 보유분에 귀속, 보유 ${holdingYears}년 공제율 ${holdingPct}%)`
-      : `총 장특공제 ${totalLth.toLocaleString()}원 = 보유 기간분 전액 ${lthSplit.holdingAmount.toLocaleString()}원 (§95② 표1 — 보유기간별 공제만, 거주기간분 없음)`;
+      ? `총 장특공제 ${totalLth.toLocaleString()} − 거주 기간분 ${lthSplit.residenceAmount.toLocaleString()} = ${lthSplit.holdingAmount.toLocaleString()} (§95② 표2 — 거주분 직접 산정 후 잔액을 보유분에 귀속, 보유 ${holdingYears}년 공제율 ${holdingPct}%)`
+      : `총 장특공제 ${totalLth.toLocaleString()} = 보유 기간분 전액 ${lthSplit.holdingAmount.toLocaleString()} (§95② 표1 — 보유기간별 공제만, 거주기간분 없음)`;
 
   const residenceFormula = exclusionLabel
-    ? `0원 — ${exclusionLabel}`
+    ? `0 — ${exclusionLabel}`
     : useTable2
-      ? `총 장특공제 ${totalLth.toLocaleString()}원 × 거주율 ${residencePct}% ÷ (보유율 ${holdingPct}% + 거주율 ${residencePct}%) = ${lthSplit.residenceAmount.toLocaleString()}원 (§95② 표2 — 거주 ${residenceYears}년 직접 산정)`
-      : `0원 (§95② 표1 적용 — 거주기간 공제 대상 아님)`;
+      ? `총 장특공제 ${totalLth.toLocaleString()} × 거주율 ${residencePct}% ÷ (보유율 ${holdingPct}% + 거주율 ${residencePct}%) = ${lthSplit.residenceAmount.toLocaleString()} (§95② 표2 — 거주 ${residenceYears}년 직접 산정)`
+      : `0 (§95② 표1 적용 — 거주기간 공제 대상 아님)`;
 
   return { exclusionLabel, holdingFormula, residenceFormula };
 }

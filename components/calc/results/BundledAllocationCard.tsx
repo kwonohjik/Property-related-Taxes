@@ -9,6 +9,7 @@ import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-en
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
@@ -215,17 +216,6 @@ function PropertyCard({
   );
 }
 
-// ─── 감면 타입 레이블 ─────────────────────────────────────────
-
-const REDUCTION_TYPE_LABELS: Record<string, string> = {
-  self_farming: "자경농지 (§69)",
-  self_farming_inherited: "자경농지·상속인 경작기간 합산 (§69·§66⑪)",
-  self_farming_incorp: "자경농지·편입일 부분감면 (§69·§66⑤⑥)",
-  livestock: "축산업 (§69의2)",
-  fishing: "어업 (§69의3)",
-  public_expropriation: "공익사업 수용 (§77)",
-};
-
 // ─── 합산 과세 내역 카드 ──────────────────────────────────────
 
 function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferResult }) {
@@ -304,7 +294,7 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
                 ? aggregated.reductionBreakdown.map((entry) => (
                     <Row
                       key={entry.type}
-                      label={`· ${REDUCTION_TYPE_LABELS[entry.type] ?? entry.type}${entry.cappedByLimit ? ` (한도 ${formatKRW(entry.annualLimit)})` : ""}`}
+                      label={`· ${reductionTypeLabelOf(entry.type)}${entry.cappedByLimit ? ` (한도 ${formatKRW(entry.annualLimit)})` : ""}`}
                       value={`△${formatKRW(entry.cappedAggregateReduction)}`}
                       sub
                     />

@@ -137,10 +137,10 @@ export function fillRedev4SplitBranchData(
     const exemptedGain = r.exemptedGain ?? 0;
     const exemptedLthd = r.exemptedLthd ?? 0;
     if (exemptedGain > 0) {
-      setRoseNote("transferGain", "settlement", `§89①4호 비과세 차감: ${exemptedGain.toLocaleString()}원`);
+      setRoseNote("transferGain", "settlement", `§89①4호 비과세 차감: ${exemptedGain.toLocaleString()}`);
     }
     if (exemptedLthd > 0) {
-      setRoseNote("ltDeduction", "settlement", `§89①4호 비과세 LTHD 차감: ${exemptedLthd.toLocaleString()}원`);
+      setRoseNote("ltDeduction", "settlement", `§89①4호 비과세 LTHD 차감: ${exemptedLthd.toLocaleString()}`);
     }
   }
 }

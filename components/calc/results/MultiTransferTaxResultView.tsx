@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowRight } from "lucide-react";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { cn } from "@/lib/utils";
+import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
@@ -60,14 +61,6 @@ function ReductionRecalculationSection({
 
   const labelMap = new Map(properties.map((p) => [p.propertyId, p.propertyLabel]));
 
-  const typeLabel: Record<string, string> = {
-    self_farming: "자경농지 (§69)",
-    self_farming_inherited: "자경농지 (§69·상속인 경작기간 합산 §66⑪)",
-    self_farming_incorp: "자경농지 (§69·편입일 부분감면 §66⑤⑥)",
-    livestock: "축산업 (§69의2)",
-    fishing: "어업 (§69의3)",
-    public_expropriation: "공익사업 수용 (§77)",
-  };
 
   return (
     <Card>
@@ -89,10 +82,11 @@ function ReductionRecalculationSection({
             return (
               <div key={entry.type} className="rounded border border-amber-200/60 bg-amber-50/30 p-3">
                 <p className="text-sm font-medium">
-                  {typeLabel[entry.type] ?? entry.type}
+                  {reductionTypeLabelOf(entry.type)}
                   {entry.cappedByLimit && (
                     <span className="ml-2 text-xs text-amber-700">
-                      ⚠ 한도 적용 ({entry.annualLimit.toLocaleString()}                    </span>
+                      ⚠ 한도 적용 ({entry.annualLimit.toLocaleString()})
+                    </span>
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">{entry.legalBasis}</p>
