@@ -127,7 +127,15 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     reductionBreakdown.push({
       type,
       legalBasis: info?.legalBasis
-        ? `${lookupLimit(type).groupTypes.length > 0 ? resolveTypeLegalBasis(type) : TRANSFER.REDUCTION_OVERLAP_EXCLUSION} + ${info.legalBasis}`
+        /**
+         * 🔴 `lookupLimit`을 **인자 없이** 부르면 `DEFAULT_LIMIT_GROUPS`로 조회한다. 그 기본
+         *   그룹②는 `public_expropriation` 하나뿐이라 `gb_designated_land`·
+         *   `replacement_land_comp`가 `groupTypes.length === 0`으로 떨어져 감면 근거 자리에
+         *   **중복배제 조항(§127⑦)** 이 인쇄됐다. 두 유형은 양도연도 분기본
+         *   `buildLimitGroups()`에만 있다 — 바로 위 :103에서 이미 만들어 둔 `limitGroups`를
+         *   넘긴다 (결과탭 코드리뷰 #048).
+         */
+        ? `${lookupLimit(type, limitGroups).groupTypes.length > 0 ? resolveTypeLegalBasis(type) : TRANSFER.REDUCTION_OVERLAP_EXCLUSION} + ${info.legalBasis}`
         : resolveTypeLegalBasis(type),
       totalReducibleIncome: entry.income,
       aggregateTaxBase,

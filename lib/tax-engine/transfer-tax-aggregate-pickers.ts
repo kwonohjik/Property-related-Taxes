@@ -191,6 +191,17 @@ export function resolveTypeLegalBasis(type: string): string {
       return TRANSFER.REDUCTION_NEW_HOUSING;
     case "unsold_housing":
       return TRANSFER.REDUCTION_UNSOLD_HOUSING;
+    /**
+     * 🔴 종전에는 이 둘이 default로 떨어져 **중복배제 조항(§127⑦)** 이 감면 근거로 인쇄됐다.
+     *   다건 「감면세액 합산 재계산」 카드에서 §77의3 개발제한구역 매수토지 감면의 근거가
+     *   「조특법 §127⑦ + 조특법 §133②」로 나오고, 실제 근거인 §77의3은 그 화면 어디에도
+     *   인용되지 않았다. 대조군인 `public_expropriation`은 정상이라 **같은 표 안에서 규칙이
+     *   갈렸다**. 상수는 이미 있었다 (결과탭 코드리뷰 #048).
+     */
+    case "gb_designated_land":
+      return TRANSFER.REDUCTION_GB_DESIGNATED_LAND;
+    case "replacement_land_comp":
+      return TRANSFER.REDUCTION_REPLACEMENT_LAND;
     default:
       return TRANSFER.REDUCTION_OVERLAP_EXCLUSION;
   }
