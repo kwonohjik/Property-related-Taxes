@@ -33,6 +33,45 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /**
+     * 결과탭 상세명세서 「세액감면대상금액」·「소득금액 감면대상」 행의 근거
+     * (`DetailedStatementHelpers.ts` · `reduction-eligible-income.ts`).
+     * ①이 세액감면방식(감면액 = 산출세액 × (감면대상 양도소득금액 − 기본공제) ÷ 과세표준 × 감면율),
+     * ②가 소득금액 차감방식이다.
+     */
+    id: "TRANSFER.REDUCTION_METHOD",
+    citation: "소득세법 §90",
+    keywords: [
+      "양도소득세액의 감면",
+      "감면대상 양도소득금액",
+      "양도소득 산출세액",
+      "차감하는 방식",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    /** 결과탭 「양도일자」·「취득일자」 행의 근거 (`DetailedStatementHelpers.ts`). */
+    id: "TRANSFER.ACQUISITION_TRANSFER_TIMING",
+    citation: "소득세법 §98",
+    keywords: ["취득시기 및 양도시기", "대금을 청산한 날", "양도소득세의 부가세액"],
+    keywordMode: "ALL",
+  },
+  {
+    /**
+     * 결과탭 「기신고 양도소득금액」 행의 근거 (`DetailedStatementHelpers.ts`).
+     * ②가 「이미 신고한 양도소득금액과 합산하여 신고」를 규정한다.
+     */
+    id: "TRANSFER.PRELIMINARY_RETURN_TAX",
+    citation: "소득세법 §107",
+    keywords: [
+      "예정신고 산출세액",
+      "이미 신고한 자산의 양도소득금액",
+      "장기보유 특별공제",
+      "양도소득 기본공제",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER.NECESSARY_EXPENSES",
     citation: "소득세법 §97",
     keywords: ["필요경비", "실지거래가액", "환산취득가액", "자본적지출액"],
