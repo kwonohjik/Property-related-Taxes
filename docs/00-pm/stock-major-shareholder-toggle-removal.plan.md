@@ -1,7 +1,7 @@
 # 주식 양도세 「대주주 판정」 — 토글 폐지 + 판정 기준일 fallback 제거 (Plan)
 
 > 작성일 2026-08-28 · 워크트리 `PRT-stock-transfer-bugfix` · 브랜치 `stock-major-shareholder-probe`
-> 상태: **Plan 확정 — 착수 대기** · Q 전건 해소 + V-2 실측 완료 (2026-08-28)
+> 상태: ✅ **구현 완료** (2026-08-28) — D-1~D-4 전건 해소 · anchor 19건 · E2E 64 passed
 >
 > - **Q-1 = 차단(error)** — 대상 시장에서 `priorYearEndDate` 미입력은 검증 오류로 막는다
 > - **Q-2 = 자동 제안** — 양도일에서 직전 사업연도 종료일을 제안값으로 채우되 **사용자가 보고 고칠 수 있게** 한다
@@ -259,3 +259,64 @@ split 모드는 **폼-전역 `transferDate`가 비고 lot별 양도일만 있다
 그런데 `stock-transfer-tax-validate.ts`에는 이 필드 검증이 **없다**(grep 0건). **화면은 필수라고 하고 검증은 통과시키는** 드리프트다 — Q-1 차단이 이 드리프트도 함께 해소한다.
 
 hint의 "통상 전년 12월 31일"이 Q-2 제안 로직의 근거이기도 하다(12월 결산 가정을 이미 문구로 밝히고 있다).
+
+---
+
+## 15. 구현 결과 (2026-08-28)
+
+### V 최종
+
+| # | 결과 |
+|---|---|
+| V-1 | ⏳ **미실측 그대로** — D-2가 「분류를 뒤집는다」까지만 확인. 세액까지 바꾸는 조합은 찾지 않았다(고칠 근거로는 충분해 착수를 막지 않았다) |
+| V-2 | ✅ 정적 21/24 미입력 · **실제로 깨진 건 1건**(자동 제안이 상쇄) |
+| V-3 | ✅ **문제 없음** — F-24는 `combinedShareRatio > 0`이라 기존 요구(4개 중 1개)를 그대로 통과. C 재정리 불필요 |
+| V-4 | ✅ **안전망 0건** — 토글 폐지 뮤테이션에 331파일 3130테스트 전부 통과 |
+| V-5 | ✅ 배선 지점 = `Step1.tsx` 양도일 onChange (이미 daily 리셋을 같은 방식으로 patch 동승) |
+| V-6 | ✅ split = lot 양도일 **최솟값**에서 도출 (엔진이 기준일을 하나만 받으므로 같은 과세기간 전제) |
+
+### anchor 19건 (전건 GREEN)
+
+- `__tests__/calc/stock-major-shareholder-judgment-date.anchor.test.ts` — T-3(차단 6) · T-4(fallback 2) · T-5(F-24 과잉차단 1)
+- `__tests__/components/calc/stock-major-shareholder-toggle-removal.test.tsx` — T-1(닭-달걀 2) · T-2(문구 4) · T-6(배지 2) · T-7(자동 제안 2)
+
+### 변경 파일
+
+| 파일 | 내용 |
+|---|---|
+| `lib/tax-engine/stock-transfer/major-shareholder-judgment-date.ts` | **신설** — `suggestPriorYearEndDate` / `suggestPriorYearEndDateFromLots` |
+| `MajorShareholderBlock.tsx` | ToggleCard → **ToneCard 상시 펼침** · 기준일 미입력 시 "판정 기준일 입력 필요" 배지 · D-3 문구 삭제 |
+| `Step1.tsx` | 양도일 onChange patch에 기준일 제안 동승 |
+| `SplitLotsBlock.tsx` | lot 양도일 갱신 시 제안 동승 (+ slice에 `priorYearEndDate` 추가) |
+| `stock-transfer-tax-api.ts` | 오늘-fallback **삭제** |
+| `stock-transfer-tax-validate.ts` | 대상 시장에서 기준일 **필수 차단** |
+| `e2e/stock-transfer-stale-result.spec.ts` | 토글 우회 제거 |
+
+### 🔑 E2E spec이 바로 그 닭-달걀을 우회하고 있었다
+
+유일하게 깨진 `stock-transfer-stale-result.spec.ts`의 코드가 문제를 그대로 증언한다:
+
+```ts
+// 대주주 카드는 ToggleCard children이라 OFF면 내부 입력이 렌더되지 않는다.
+// (priorYearEndDate가 없으면 자동 판정도 비활성 → 토글을 먼저 켜야 입력에 닿는다 — 코드 주석의 「닭-달걀」)
+await page.locator('[data-slot="toggle-card"]').filter({ hasText: "대주주 여부" })
+  .getByRole("switch").first().click();
+```
+
+**테스트가 우회 코드를 유지하고 있었다는 것은 결함이 재현 가능했다는 뜻이다.** 토글 폐지로 이 우회가 불필요해졌고, 제거 후 같은 spec이 **30초대 flaky → 2.2초 안정**으로 바뀌었다.
+
+### 회귀
+
+| 항목 | 결과 |
+|---|---|
+| `tsc --noEmit` | 0건 |
+| `lint` | **0 errors** (311 warnings 전부 기존) |
+| `check:pre-pr` (vitest 전건) | **1648파일 17781 passed** · unhandled error **0** |
+| E2E 주식·상장·상속·증여 | **64 passed** (종전 6.3분 → **24.5초** — 차단 대기가 사라졌다) |
+| 브라우저 | 토글 없이 상시 펼침 · 기준일 2025-12-31 자동 제안 · 지분율 3% → "✓ 대주주" 배지 |
+
+> ⚠️ **jsdom엔 IndexedDB가 없다.** Step1을 렌더하는 anchor가 Dexie unhandled rejection 2건을 냈다(전건은 통과하지만 false positive 위험). 저장소 확립 패턴대로 `import "fake-indexeddb/auto"`를 넣어 해소했다.
+
+### 📌 남는 관찰 (결함 아님)
+
+제안값 `YYYY-12-31`은 **한국 증시 연말 폐장일과 겹쳐** 비거래일 경고를 항상 띄운다. 그러나 §157④의 기준일은 사업연도 종료일이 맞고, 종가가 없으면 직전거래일 종가를 쓴다는 §157① 단서 안내가 그 경고의 내용이다 — **정확한 안내이므로 고치지 않는다**.

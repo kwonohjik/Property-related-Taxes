@@ -369,7 +369,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     isLargestShareholderGroup: form.isLargestShareholderGroup,   // 3중 패턴
     combinedShareRatio: (parseFloatOrUndef(form.combinedShareRatio) ?? 0) * 0.01,
     combinedMarketCap: parseIntOrZero(form.combinedMarketCap),
-    priorYearEndDate: form.priorYearEndDate || new Date().toISOString().split("T")[0],
+    // 미입력 시 오늘 날짜로 채우지 않는다 — 대주주 임계는 시기별로 달라(코스피 시총
+    // 2020-04~ 10억 / 2024-01~ 50억) 사건과 무관한 오늘을 쓰면 판정이 조용히 뒤집힌다.
+    // 미입력은 validate가 차단하고, 양도일에서 도출한 제안값이 폼에 미리 채워진다.
+    priorYearEndDate: form.priorYearEndDate,
 
     // ── §94①4 기타자산 ──
     isQualifyingBlockShareholder: form.isQualifyingBlockShareholder,
