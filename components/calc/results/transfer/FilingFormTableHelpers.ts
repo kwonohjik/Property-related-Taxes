@@ -8,6 +8,10 @@
  */
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import {
+  resolveLthdSplit,
+  isTable2Applied,
+} from "@/components/calc/results/transfer/lthd-split-display";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
@@ -652,9 +656,13 @@ export function buildRows(
   // appliedTable === "mixed"(B2) 또는 "table-2"(A2)는 기존 분할 로직 유지
   const isRHTable1Only = result.rentalHousingExceptionDetail?.applied === true
     && result.rentalHousingExceptionDetail.appliedTable === "table-1";
+  /*
+   * 표2 여부 — **엔진 신호 우선**. 종전 `residenceMs >= 24`는 UI 폼값만 보는 휴리스틱이라,
+   * 표1로 계산된 자산에도 「거주 기간분」을 만들어내고 「표2 적용」이라 적었다(#067).
+   */
   const useTable2 = mu
     ? mu.housingPart.longTermDeductionTable === 2
-    : (isRHTable1Only ? false : residenceMs >= 24);
+    : (isRHTable1Only ? false : isTable2Applied(result.steps, residenceMs >= 24));
 
   if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
     const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2);
@@ -689,7 +697,20 @@ export function buildRows(
     // 분기별 lthdHoldingPart/lthdResidencePart 합으로 이미 정확하게 설정됨.
     // result.longTermHoldingDeduction 기반 재계산은 분기별 분리 정보를 잃으므로 덮어쓰지 않는다.
   } else {
-    const split = splitLtDeduction(result.longTermHoldingDeduction, holdingMs, residenceMs, useTable2);
+    /*
+     * 🔴 종전에는 여기서 `splitLtDeduction`으로 **다시 안분**했다. 엔진은 표2·§95⑤에서 정식
+     *   sub-step(「보유 기간분 장특」·「거주 기간분 장특」)을 emit하는데 그것을 한 번도 읽지
+     *   않아, 같은 화면의 상세명세서와 다른 금액이 나왔다 — 실측 보유분
+     *   **448,000,000(여기) vs 224,000,000(엔진·명세서)**.
+     *   §95⑤ 용도변경은 보유분이 「비주택 표1 + 주택 표2」 혼합이라 균일 4%/년 재안분으로는
+     *   애초에 재현되지 않는다. 축 설명·단일 소스: `transfer/lthd-split-display.ts`.
+     */
+    const split = resolveLthdSplit(result.steps, {
+      total: result.longTermHoldingDeduction,
+      holdingMs,
+      residenceMs,
+      useTable2,
+    });
     setNum("ltHoldingPart", "total", split.holdingAmount);
     setNum("ltResidencePart", "total", split.residenceAmount);
   }

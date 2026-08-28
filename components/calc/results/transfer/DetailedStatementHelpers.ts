@@ -579,7 +579,10 @@ export function buildStatementItems(
     value: result.calculatedTax,
     formula:
       calcStep?.formula ??
-      `과세표준 × 세율(${formatRatePct(result.appliedRate, result.surchargeRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`,
+      // 집계에 세율군이 둘 이상이면 단일 세율이 없다 — 「0%」로 찍지 말고 그 사실을 적는다(#071).
+      (isAggregate && result.appliedRate === 0
+        ? "자산별 세율이 서로 달라 단일 세율로 표시할 수 없습니다 — 아래 자산별 값을 참조하세요"
+        : `과세표준 × 세율(${formatRatePct(result.appliedRate, result.surchargeRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`),
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
     note: result.shortTermNote,
     perAsset: isAggregate

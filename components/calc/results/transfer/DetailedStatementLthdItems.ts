@@ -9,6 +9,7 @@
  */
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
+import { isTable2Applied } from "@/components/calc/results/transfer/lthd-split-display";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-helpers";
@@ -71,7 +72,8 @@ export function setLongTermDeductionItems(
   // useTable2 휴리스틱: 거주 ≥ 24개월 (1세대1주택 고가주택 표2 적용 신호)
   // FilingFormTable·BundledAllocationCard와 동일 정책 (DRY 핵심 로직 재사용)
   const totalHoldingMs = holdingMonthsFromDates(primary?.acquisitionDate, transferDate);
-  const useTable2 = residenceMs >= 24;
+  // 표2 여부는 엔진 신호가 정본이다 — 폼값 휴리스틱은 fallback (#067).
+  const useTable2 = isTable2Applied(result.steps, residenceMs >= 24);
   const totalLth = isAggregate
     ? properties.reduce((s, p) => s + p.longTermHoldingDeduction, 0)
     : result.longTermHoldingDeduction;

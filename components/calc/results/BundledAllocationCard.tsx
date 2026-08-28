@@ -70,13 +70,25 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
     taxableGain: a.totalTransferGain,
     usedEstimatedAcquisition: false,
     longTermHoldingDeduction: a.totalLongTermHoldingDeduction,
-    longTermHoldingRate: 0,
+    /*
+     * 🔴 종전에는 0 하드코딩이라 상세명세서가 「과세대상 양도차익 × **0%**」로 표시했다(#071).
+     *   집계는 자산마다 공제율이 달라 단일 rate가 없으므로 **실효 blended rate**를 싣는다 —
+     *   겸용 어댑터가 이미 쓰는 방식이다(`MixedUseResultCardAdapter.ts:61`).
+     */
+    longTermHoldingRate:
+      a.totalTransferGain > 0 ? a.totalLongTermHoldingDeduction / a.totalTransferGain : 0,
     lthdStartDate: new Date(0), // aggregateToFilingResult mock: 단건 결과 합산 표시용, 실값 미사용
 
     basicDeduction: a.basicDeduction,
     taxBase: a.taxBase,
-    appliedRate: 0,
-    progressiveDeduction: 0,
+    /*
+     * 세율군이 **하나뿐이면** 그 군의 세율이 곧 신고단위 세율이다. 여럿이면 단일 세율이
+     * 존재하지 않으므로 0으로 두고, 표시부가 「자산별 세율 상이」로 분기한다
+     * (실효율을 넣으면 「과세표준 × 세율 − 누진공제」 산식이 산술적으로 거짓이 된다).
+     */
+    appliedRate: a.groupTaxes.length === 1 ? a.groupTaxes[0].appliedRate : 0,
+    surchargeRate: a.groupTaxes.length === 1 ? a.groupTaxes[0].surchargeRate : undefined,
+    progressiveDeduction: a.groupTaxes.length === 1 ? a.groupTaxes[0].progressiveDeduction ?? 0 : 0,
     calculatedTax: a.calculatedTax,
     isSurchargeSuspended: false,
     reductionAmount: a.reductionAmount,
