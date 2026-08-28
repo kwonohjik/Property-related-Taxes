@@ -21,6 +21,12 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { KiwoomStockNameAutocomplete } from "./KiwoomStockNameAutocomplete";
 import { KiwoomFetchSourceBadge } from "@/components/calc/KiwoomFetchSourceBadge";
+import {
+  KiwoomFetchErrorBadge,
+  toKiwoomFetchErrorCode,
+  KIWOOM_ERROR_DETAILS,
+  type KiwoomFetchError,
+} from "@/components/calc/KiwoomFetchErrorBadge";
 
 interface SecurityMetadataBlockProps {
   securityName: string;
@@ -45,7 +51,6 @@ export function SecurityMetadataBlock({
   // 미사용 props는 형식적으로 유지 (Step1에서 주입 — 향후 식별용 메타 확장 대비)
   void brokerage;
   void accountNumberMasked;
-  void marketType;
 
   const { profile, mode, loading } = useUserProfile();
   const { activeClientId } = useProfessionalStore();
@@ -53,6 +58,9 @@ export function SecurityMetadataBlock({
 
   const [displayName, setDisplayName] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  // 키움 조회 실패 — 두 필드가 각자의 trailing 배지로 표시 (침묵 금지)
+  const [nameFetchError, setNameFetchError] = useState<KiwoomFetchError | null>(null);
+  const [codeFetchError, setCodeFetchError] = useState<KiwoomFetchError | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 초기 hydrate — mode별 데이터 소스 분기
@@ -112,6 +120,24 @@ export function SecurityMetadataBlock({
 
   const nameLabel = isProfessional ? "성명 (의뢰인)" : "성명";
 
+  /**
+   * 키움 마스터는 KOSPI·KOSDAQ·KONEX 상장 전종목만 적재한다(lib/kiwoom/stock-master.ts).
+   * 비상장·기타자산·국외주식·국외전출은 마스터에 없으므로 자동완성이 0건인 것이 정상이다.
+   * 위젯은 숨기지 않는다 — 안내로만 가른다(유일 입력 경로 제거 금지).
+   */
+  const isKiwoomCoveredMarket =
+    marketType === "kospi" || marketType === "kosdaq" || marketType === "konex";
+  const showOffMasterNotice = marketType !== "" && !isKiwoomCoveredMarket;
+  const nameHint = nameFetchError
+    ? KIWOOM_ERROR_DETAILS[nameFetchError.code]
+    : showOffMasterNotice
+      ? "비상장 종목은 키움 마스터(상장 전종목)에 없어 자동완성이 표시되지 않습니다. 종목명을 직접 입력하세요."
+      : "입력 시 키움 마스터(4,384종목) 자동완성 dropdown 표시. ↑↓ Enter로 선택";
+
+  const codeHint = codeFetchError
+    ? KIWOOM_ERROR_DETAILS[codeFetchError.code]
+    : "6자리 입력 후 포커스 이동 시 키움 자동조회로 종목명·시장구분·거래정지 자동 확인";
+
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 space-y-4">
       {/* 성명 / 생년월일 — mode별 IndexedDB 직접 read/write */}
@@ -144,12 +170,32 @@ export function SecurityMetadataBlock({
         </FieldCard>
       </div>
 
-      {/* 종목코드(좌) → 종목명(우) — 종목코드 입력 시 종목명 자동 채움 흐름 */}
+      {/* 종목명(좌·필수) → 종목코드(우·선택) — 어느 쪽을 먼저 채워도 나머지가 자동 확정된다 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FieldCard
+          label="종목명"
+          required
+          hint={nameHint}
+          trailing={<KiwoomFetchErrorBadge error={nameFetchError} />}
+        >
+          <KiwoomStockNameAutocomplete
+            value={securityName}
+            onChange={onChange}
+            placeholder="종목명을 입력하세요"
+            className={inputClassName}
+            onFetchError={setNameFetchError}
+          />
+        </FieldCard>
+
+        <FieldCard
           label="종목코드 (선택)"
-          hint="6자리 입력 후 포커스 이동 시 키움 자동조회로 종목명·시장구분·거래정지 자동 확인"
-          trailing={<KiwoomFetchSourceBadge fetchedAt={securityMetaFetchedAt} label="키움 마스터 조회" />}
+          hint={codeHint}
+          trailing={
+            <span className="inline-flex flex-wrap items-center gap-1">
+              <KiwoomFetchErrorBadge error={codeFetchError} />
+              <KiwoomFetchSourceBadge fetchedAt={securityMetaFetchedAt} label="키움 마스터 조회" />
+            </span>
+          }
         >
           <input
             type="text"
@@ -168,34 +214,40 @@ export function SecurityMetadataBlock({
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ stockCode: code }),
                 });
-                if (!res.ok) return;
+                if (!res.ok) {
+                  // 실패를 삼키지 않는다 — 원인을 배지로 드러낸다
+                  let errCode: unknown;
+                  let detail: string | undefined;
+                  try {
+                    const body = (await res.json()) as { error?: string; message?: string };
+                    errCode = body.error;
+                    detail = body.message;
+                  } catch {
+                    // body 파싱 실패 시 status만으로 판정
+                  }
+                  setCodeFetchError({ code: toKiwoomFetchErrorCode(errCode), detail });
+                  return;
+                }
                 const data = (await res.json()) as {
                   stockName: string;
                   marketTypeStore: "kospi" | "kosdaq" | "konex" | "";
                   tradingHalt: boolean;
                 };
+                setCodeFetchError(null);
                 onChange({
                   securityName: data.stockName || securityName,
                   marketType: data.marketTypeStore || marketType,
                   kiwoomTradingHalt: data.tradingHalt,
                   securityMetaFetchedAt: new Date().toISOString(),
                 });
-              } catch {
-                // 네트워크 실패 시 silent — 사용자 수동 입력 그대로 유지
+              } catch (err) {
+                // 자동 채움 fallback은 넣지 않는다 — 수동 입력을 그대로 두고 원인만 표시
+                setCodeFetchError({ code: "network", detail: (err as Error)?.message });
               }
             }}
             maxLength={6}
             inputMode="text"
             placeholder="6자리 숫자"
-            className={inputClassName}
-          />
-        </FieldCard>
-
-        <FieldCard label="종목명" required hint="입력 시 키움 마스터(4,384종목) 자동완성 dropdown 표시. ↑↓ Enter로 선택">
-          <KiwoomStockNameAutocomplete
-            value={securityName}
-            onChange={onChange}
-            placeholder="종목명을 입력하세요"
             className={inputClassName}
           />
         </FieldCard>

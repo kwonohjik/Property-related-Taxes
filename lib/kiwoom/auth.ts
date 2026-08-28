@@ -112,8 +112,11 @@ export async function getAccessToken(opts?: { env?: KiwoomEnv; force?: boolean }
   const json = (await res.json()) as TokenResponse;
   const token = json.token ?? json.access_token;
   if (!token) {
+    // return_msg를 버리지 않는다 — 원인이 여기에만 있다.
+    // 예: return_code=3 · "인증에 실패했습니다[8001:App Key와 Secret Key 검증에 실패했습니다]"
+    const reason = json.return_msg ? ` ${json.return_msg}` : "";
     throw new KiwoomError(
-      `키움 인증 응답 형식이 예상과 다릅니다. (return_code=${json.return_code ?? "?"})`,
+      `키움 인증 응답 형식이 예상과 다릅니다. (return_code=${json.return_code ?? "?"})${reason}`,
       "auth_failed",
     );
   }
