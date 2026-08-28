@@ -6,6 +6,12 @@ name: Supabase Keepalive
 #   → (이중 안전장치) 그래도 pause되면 lib/db/tax-rates.ts loadFallbackTransferRates()가
 #     로컬 세율로 계산을 이어가므로 앱은 멈추지 않는다.
 #
+# ⚠️ pause를 감지하면 이 워크플로는 **실패**한다 (2026-08-28 변경).
+#   종전에는 어떤 응답이든 exit 0이라 pause가 07-25~08-01·08-23~ 두 차례 방치됐다.
+#   계산은 fallback이 보호하지만 로그인·회원가입은 실제로 멈추므로,
+#   스케줄 실패 알림으로 대시보드 Restore를 유도한다.
+#   (secrets 미설정은 여전히 graceful skip — 실패 아님)
+#
 # 사전 설정 (1회 — repo Settings → Secrets and variables → Actions → New repository secret):
 #   - NEXT_PUBLIC_SUPABASE_URL       (예: https://xxxx.supabase.co)
 #   - NEXT_PUBLIC_SUPABASE_ANON_KEY  (anon public key — tax_rates_select RLS로 읽기 허용됨)
@@ -37,16 +43,24 @@ jobs:
           fi
 
           # REST API로 tax_rates 1행만 조회 (가장 가벼운 활동 신호)
+          # `shell: bash -e`이므로 curl 자체 실패(DNS·연결)를 `|| curl_exit=$?`로 받아내야 한다.
+          # 이걸 빼면 pause 시 curl이 exit 6으로 죽어 아래 진단이 한 줄도 남지 않는다
+          # (2026-08-25 run 32799047426이 정확히 그랬다).
+          curl_exit=0
           code=$(curl -s -o /dev/null -w "%{http_code}" \
             "${SUPABASE_URL}/rest/v1/tax_rates?select=tax_type&limit=1" \
             -H "apikey: ${SUPABASE_ANON_KEY}" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}") || curl_exit=$?
 
-          echo "Supabase REST 응답: HTTP $code"
+          echo "Supabase REST 응답: HTTP $code (curl exit $curl_exit)"
           if [ "$code" = "200" ]; then
             echo "::notice::Supabase 활성 유지 OK (HTTP 200)"
+          elif [ "$curl_exit" = "6" ]; then
+            # curl exit 6 = CURLE_COULDNT_RESOLVE_HOST. 프로젝트 서브도메인이 NXDOMAIN이면
+            # pause가 유력하다 — curl 재시도로는 깨어나지 않으므로 사람이 Restore해야 한다.
+            echo "::error::Supabase 서브도메인 DNS 해석 실패(NXDOMAIN) — 프로젝트 pause 유력. 대시보드에서 Restore 필요 (https://supabase.com/dashboard). 계산은 로컬 세율 fallback으로 계속되지만 로그인·회원가입은 멈춘다."
+            exit 1
           else
-            # pause/오류여도 워크플로 자체는 성공 처리 — 다음 실행에서 재시도.
-            # (curl 한 번으로 깨우지 못해도 fallback이 앱을 보호하므로 fail로 알람 띄우지 않음)
-            echo "::warning::Supabase ping 비정상 (HTTP $code) — pause되었을 수 있음. fallback이 앱을 보호하며 다음 cron에서 재시도."
+            echo "::error::Supabase ping 비정상 (HTTP $code, curl exit $curl_exit) — 대시보드에서 프로젝트 상태 확인 필요."
+            exit 1
           fi
