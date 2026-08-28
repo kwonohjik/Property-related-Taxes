@@ -593,6 +593,8 @@ function computeAggregateOnce(
       surchargeRate: r.result.surchargeRate,
       refCalculatedTax,
       refCalculatedTaxNote: partAssetTax?.note,
+      // [echo] §166 분할 열 게이트용 (표시 전용 — 세액 불변). 결과탭 코드리뷰 #080 ③.
+      redevelopmentDetail: r.result.redevelopmentDetail,
       refDeterminedTax,
       reductionAmount: standalone,
       reductionType,

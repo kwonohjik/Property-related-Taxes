@@ -100,6 +100,11 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
      *   `reductionType`이 곧 단건의 `reductionTypeApplied`다.
      */
     reductionTypeApplied: b.reductionType,
+    /**
+     * 🔴 종전에는 이 필드가 없어 `hasRedev`(:하단)가 **항상 false**였다 — 재개발 자산의
+     *   §166 분할 열이 자산별 신고서에서 영영 렌더되지 않는 dead branch였다 (#080 ③).
+     */
+    redevelopmentDetail: b.redevelopmentDetail,
     determinedTax,
     penaltyTax: totalPenalty,
     penaltyBase: b.penaltyBase ?? 0,
