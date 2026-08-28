@@ -178,48 +178,101 @@ function calcAdjustmentDeduction(
 }
 
 /**
- * §118의13 외국납부세액공제
+ * §118의13① 외국납부세액공제
  *
- * 한도 = 산출세액 − 조정공제액
- * §118의13②: 1호(외국정부 산출세액 공제 허용) 또는 2호(취득가액 출국일 시가 조정) 시 배제
+ * 🔴 2026-08-28 정정(리뷰 #9 — **세액 변경**) — 종전에는 **한도만** 구현하고 계산식(안분 비율)이
+ * 통째로 빠져 있었다. 시그니처에 양도가액·필요경비 인자 자체가 없어 비율을 계산할 수 없었다.
+ *
+ * 법문(소득세법 lawId 001565, 시행 2026-07-01 본):
+ *   「… 산출세액에서 조정공제액을 공제한 금액을 **한도로** 다음의 계산식에 따라 계산한
+ *    외국납부세액을 산출세액에서 공제한다.
+ *    해당 자산의 양도소득에 대하여 외국정부에 납부한 세액
+ *      × [제118조의10제1항에 따른 양도가액(제118조의12제1항에 해당하는 경우에는 **실제 양도가액**)
+ *         − 제118조의10제2항에 따른 필요경비]
+ *      ÷ (실제 양도가액 − 제118조의10제2항에 따른 필요경비)」
+ *   ⇒ 「한도」와 「계산식」은 **별개 요건**이다.
+ *
+ * 🔑 조정공제가 발동하는 구간(실양도 < 출국일 시가 = §118의12① 해당)은 분자도 실제 양도가액이
+ *    되어 **분자 = 분모**라 비율이 1이다. 결함이 실제로 세액을 움직이는 구간은
+ *    **「실양도 > 출국일 시가」 단독**이고, 방향은 항상 과대공제(세액 과소)였다.
+ *    실측: 출국일 시가 50억·필요경비 20억·실양도 60억·외국납부 5억
+ *      → 종전 5억 전액 공제 / 정상 floor(5억 × 30억/40억) = 3.75억 ⇒ 1.25억 과소.
+ *
+ * ⚠️ 곱셈이 2^53 을 넘을 수 있다(외국납부세액 × 양도차익) — BigInt 로 계산한다.
+ *
+ * §118의13②: 1호(외국정부 산출세액 공제 허용) 또는 2호(취득가액 출국일 시가 조정) 시 배제.
  *
  * @param incomeTax 산출세액
  * @param adjustmentDeduction 조정공제액
  * @param foreignTaxPaid 외국납부세액 (원화)
  * @param exclusionReason §118의13② 배제 사유
+ * @param apportion 안분 인자 — 실제 양도가액이 없으면 비율을 세울 수 없다(`ratioApplied: false`).
  */
 function calcForeignTaxCredit(
   incomeTax: number,
   adjustmentDeduction: number,
   foreignTaxPaid: number,
   exclusionReason: ExitTaxInput["foreignTaxExclusionReason"],
-): number {
+  apportion: {
+    /** §118의10① 양도가액 — 출국일 현재 시가 합계 */
+    departureDayValue: number;
+    /** §118의10② 필요경비 합계 */
+    necessaryExpense: number;
+    /** 실제 양도가액 합계. 미입력이면 undefined. */
+    actualTransferValue?: number;
+  },
+): { applied: number; ratioApplied: boolean } {
   // §118의13②적용 배제 → 공제 0
-  if (exclusionReason !== "none") return 0;
+  if (exclusionReason !== "none") return { applied: 0, ratioApplied: false };
+
   // 공제한도 = 산출세액 − 조정공제액
   const limit = Math.max(0, incomeTax - adjustmentDeduction);
-  return Math.min(foreignTaxPaid, limit);
+
+  const { departureDayValue, necessaryExpense, actualTransferValue } = apportion;
+
+  // 실제 양도가액이 없으면 분모를 세울 수 없다. 여기서 공제를 **막지는 않는다** —
+  // 근거 없이 불리해지기 때문이다. 대신 호출부가 경고로 표면화한다.
+  if (actualTransferValue == null) {
+    return { applied: Math.min(foreignTaxPaid, limit), ratioApplied: false };
+  }
+
+  const denominator = actualTransferValue - necessaryExpense;
+  if (denominator <= 0) return { applied: 0, ratioApplied: true };
+
+  // §118의12①에 해당하는 경우(실양도 < 출국일 시가)에는 분자도 **실제 양도가액**이다.
+  const numeratorBase =
+    actualTransferValue < departureDayValue ? actualTransferValue : departureDayValue;
+  const numerator = numeratorBase - necessaryExpense;
+  if (numerator <= 0) return { applied: 0, ratioApplied: true };
+
+  const apportioned = Number(
+    (BigInt(Math.trunc(foreignTaxPaid)) * BigInt(Math.trunc(numerator))) /
+      BigInt(Math.trunc(denominator)),
+  );
+
+  return { applied: Math.min(apportioned, limit), ratioApplied: true };
 }
 
 /**
- * §118의14 비거주자 세액공제
+ * §118의14① 비거주자 세액공제
  *
- * 한도 = 산출세액 − 조정공제액
- * (§118의13과 병용 시 순서: 조정공제 → 외국납부세액공제 → 비거주자공제)
+ * 한도 = 「산출세액에서 조정공제액을 공제한 금액」 — **그 둘뿐이다**.
+ *
+ * 🔴 2026-08-28 정정(리뷰 #8) — 종전 주석은 「§118의13과 **병용** 시 순서」라 적고 한도에서
+ * 외국납부세액공제까지 빼고 있었는데, 법문에 그런 항목이 없다. ②가 두 공제의 **병용 자체를
+ * 금지**하므로 「병용 시 순서」라는 전제부터 틀렸다. 한도를 근거 없이 과소 산정하면
+ * 납세자에게 불리해진다([[feedback_no_unfavorable_application_without_legal_basis]]).
  *
  * @param incomeTax 산출세액
  * @param adjustmentDeduction 조정공제액
- * @param foreignTaxCreditApplied §118의13 외국납부세액공제액
- * @param domesticSourceTaxWithheld 원천징수액 (원화)
+ * @param domesticSourceTaxWithheld §156①7호 원천징수액 (원화)
  */
 function calcDomesticTaxCredit(
   incomeTax: number,
   adjustmentDeduction: number,
-  foreignTaxCreditApplied: number,
   domesticSourceTaxWithheld: number,
 ): number {
-  // 한도 = 산출세액 − 조정공제액 − 외국납부세액공제
-  const limit = Math.max(0, incomeTax - adjustmentDeduction - foreignTaxCreditApplied);
+  const limit = Math.max(0, incomeTax - adjustmentDeduction);
   return Math.min(domesticSourceTaxWithheld, limit);
 }
 
@@ -385,28 +438,10 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   const hasForeignTax = foreignTaxPaidKrw > 0;
   const adjForCredit = adjustmentDeduction ?? 0;
 
-  if (hasForeignTax && incomeTax > 0) {
-    const credit = calcForeignTaxCredit(
-      incomeTax,
-      adjForCredit,
-      foreignTaxPaidKrw,
-      input.foreignTaxExclusionReason,
-    );
-    foreignTaxCreditApplied = credit;
-    if (credit > 0) {
-      appliedRules.push(STOCK_EXIT_TAX.SECTION_118_13_FOREIGN_TAX_CREDIT);
-    }
-    if (input.foreignTaxExclusionReason !== "none") {
-      appliedRules.push(STOCK_EXIT_TAX.SECTION_118_13_2_EXCLUSION);
-      warnings.push(
-        input.foreignTaxExclusionReason === "credit_allowed"
-          ? STOCK_EXIT_TAX.EXCLUSION_REASON_1_MESSAGE
-          : STOCK_EXIT_TAX.EXCLUSION_REASON_2_MESSAGE,
-      );
-    }
-  }
-
-  // §118의14 비거주자 세액공제
+  // §118의14① 비거주자 세액공제 — **외국납부세액공제보다 먼저** 판정한다.
+  //   ②가 「제1항에 따른 공제를 **하는 경우**에는 제118조의13제1항에 따른 외국납부세액의
+  //   공제를 적용하지 아니한다」로 §118의13①을 배제하기 때문이다(리뷰 #8).
+  //   한도가 서로를 참조하지 않게 정정됐으므로(위 두 함수) 순서를 바꿔도 한도는 불변이다.
   const hasDomesticWithheld =
     input.domesticSourceTaxWithheld != null && input.domesticSourceTaxWithheld > 0;
 
@@ -414,12 +449,56 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     const domCredit = calcDomesticTaxCredit(
       incomeTax,
       adjForCredit,
-      foreignTaxCreditApplied ?? 0,
       input.domesticSourceTaxWithheld!,
     );
     domesticTaxCreditApplied = domCredit;
     if (domCredit > 0) {
       appliedRules.push(STOCK_EXIT_TAX.SECTION_118_14_DOMESTIC_CREDIT);
+    }
+  }
+
+  // 🔑 「①에 따른 공제를 **하는 경우**」 — 필드가 있는지가 아니라 **실제 공제액이 있는지**로
+  //    본다. 산출세액 0·한도 0 이면 공제를 「하는」 것이 아니므로 배제도 성립하지 않는다.
+  //    「필드가 있으면 무조건 배제」로 짜면 근거 없이 불리해진다.
+  const section118_14_2_excludes = (domesticTaxCreditApplied ?? 0) > 0;
+
+  // §118의13① 외국납부세액공제
+  if (hasForeignTax && incomeTax > 0) {
+    if (section118_14_2_excludes) {
+      foreignTaxCreditApplied = 0;
+      appliedRules.push(STOCK_EXIT_TAX.SECTION_118_14_2_FOREIGN_CREDIT_EXCLUDED);
+      warnings.push(STOCK_EXIT_TAX.SECTION_118_14_2_EXCLUSION_MESSAGE);
+    } else {
+      // §118의10② 필요경비 = 출국일 양도가액 − 출국일 양도차익 (Σ 종목 취득가액과 같다)
+      const necessaryExpense = totalDepartureDayValue - totalTransferGain;
+      const actualTransferValue = hasActualTransfer
+        ? input.actualTransferPricePerShare! *
+          input.holdings.reduce((sum, h) => sum + h.shareCount, 0)
+        : undefined;
+
+      const { applied, ratioApplied } = calcForeignTaxCredit(
+        incomeTax,
+        adjForCredit,
+        foreignTaxPaidKrw,
+        input.foreignTaxExclusionReason,
+        { departureDayValue: totalDepartureDayValue, necessaryExpense, actualTransferValue },
+      );
+      foreignTaxCreditApplied = applied;
+      if (applied > 0) {
+        appliedRules.push(STOCK_EXIT_TAX.SECTION_118_13_FOREIGN_TAX_CREDIT);
+      }
+      // 계산식을 세우지 못했으면 조용히 전액 공제하지 않고 그 사실을 남긴다(리뷰 #9).
+      if (!ratioApplied && input.foreignTaxExclusionReason === "none") {
+        warnings.push(STOCK_EXIT_TAX.FOREIGN_CREDIT_RATIO_UNAVAILABLE_MESSAGE);
+      }
+      if (input.foreignTaxExclusionReason !== "none") {
+        appliedRules.push(STOCK_EXIT_TAX.SECTION_118_13_2_EXCLUSION);
+        warnings.push(
+          input.foreignTaxExclusionReason === "credit_allowed"
+            ? STOCK_EXIT_TAX.EXCLUSION_REASON_1_MESSAGE
+            : STOCK_EXIT_TAX.EXCLUSION_REASON_2_MESSAGE,
+        );
+      }
     }
   }
 
