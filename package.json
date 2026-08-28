@@ -31,7 +31,8 @@
     "build:admin-all": "npm run build:sigungu && npm run build:adjacency && npm run verify:matrix",
     "typecheck": "tsc --noEmit",
     "check:pre-pr": "npm run typecheck && npm run lint && npm run test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "check:kiwoom": "node scripts/check-kiwoom-auth.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
