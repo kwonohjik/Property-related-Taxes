@@ -1,10 +1,17 @@
 /**
  * Phase B — 비상장 벤처기업 시총 40억 임계 anchor (PHB-01~04)
  *
- * 시행령 §167의8①2호 나목 단서 — 비상장 벤처기업 시총 임계 40억 적용.
- * 교재 §3장 이미지 48 ⑤ 별도 컬럼 + 49 상단 주석 (§167의8은 §157의 2017.2.3. 삭제와 무관, 상시 유효).
+ * 시행령 §167의8①2호 나목 **본문 괄호** — 비상장 벤처기업 시총 임계 40억 적용.
  *
- * 법령 검증 정책: KoreanLaw MCP 검증 생략 (사용자 지시 2026-05-19) — 교재 기준 채택.
+ * 🔴 2026-08-28 갱신(리뷰 #14) — 종전 이 파일은 헤더가 「KoreanLaw MCP 검증 생략 — 교재 기준
+ *   채택」이라 적고 **조문을 보지 않은 채** 「벤처면 40억」을 고정하고 있었다. 법문을 실측하니
+ *   40억 예외에는 **거래 방법 요건**이 함께 붙는다(lawId 003956, 시행 2026-07-01):
+ *     「… 시가총액이 10억원(**「자본시장과 금융투자업에 관한 법률 시행령」 제178조제1항에
+ *      따라 거래되는** 「벤처기업육성에 관한 특별법」 제2조제1항에 따른 벤처기업의 주식등의
+ *      경우에는 40억원으로 한다) 이상인 경우」
+ *   ⇒ PHB-01·02 픽스처에 `isKOTCTrading: true` 를 더해 **법문이 40억을 주는 조합**으로 맞췄다.
+ *     「벤처인데 장외면 10억」 대조는 `classification-94-2-venture-kotc.anchor.test.ts` CL-VC-2.
+ *   또한 「단서」가 아니라 **본문 괄호**이므로 인용 표기도 정정했다.
  *
  * Plan v4 §5.4 + Engine Design v2 STEP 2·5 anchor 매트릭스 기준.
  */
@@ -18,11 +25,11 @@ describe("Phase B — 비상장 벤처기업 임계 분기 (시총 40억)", () =
       const t = getMajorShareholderThreshold(
         "unlisted",
         new Date("2024-12-31"),
-        { isVentureCompany: true },
+        { isVentureCompany: true, isKOTCTrading: true },
       );
       // 지분율 임계는 비벤처와 동일 (4%)
       expect(t.shareRatioThreshold).toBe(0.04);
-      // 시총 임계만 40억으로 변경 (§167의8①2호 나목 단서)
+      // 시총 임계만 40억으로 변경 (§167의8①2호 나목 본문 괄호)
       expect(t.marketCapThreshold).toBe(4_000_000_000);
       expect(t.isVentureRule).toBe(true);
       expect(t.ruleSource).toBe("§167의8①2호_벤처");
@@ -34,7 +41,7 @@ describe("Phase B — 비상장 벤처기업 임계 분기 (시총 40억)", () =
       const t = getMajorShareholderThreshold(
         "unlisted",
         new Date("2024-12-31"),
-        { isVentureCompany: true },
+        { isVentureCompany: true, isKOTCTrading: true },
       );
       expect(t.marketCapThreshold).toBe(4_000_000_000);
       expect(t.isVentureRule).toBe(true);
