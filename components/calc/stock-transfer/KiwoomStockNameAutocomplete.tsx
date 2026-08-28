@@ -13,6 +13,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import {
+  toKiwoomFetchErrorCode,
+  type KiwoomFetchError,
+} from "@/components/calc/KiwoomFetchErrorBadge";
+
+const DEBOUNCE_MS = 300;
+const FETCH_TIMEOUT_MS = 5000;
 
 interface Match {
   stockCode: string;
@@ -29,6 +36,11 @@ interface Props {
   onChange: (patch: Partial<StockTransferFormData>) => void;
   placeholder?: string;
   className?: string;
+  /**
+   * 조회 실패를 부모(FieldCard trailing 배지)로 올린다.
+   * 성공·결과0건이면 null을 전달해 배지를 걷는다 — 「결과 없음」과 「호출 실패」의 구별력.
+   */
+  onFetchError?: (error: KiwoomFetchError | null) => void;
 }
 
 export function KiwoomStockNameAutocomplete({
@@ -36,6 +48,7 @@ export function KiwoomStockNameAutocomplete({
   onChange,
   placeholder = "종목명을 입력하세요",
   className,
+  onFetchError,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -43,6 +56,9 @@ export function KiwoomStockNameAutocomplete({
   const [activeIdx, setActiveIdx] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // 선택 직후 value 변경이 같은 질의를 재요청하는 것을 막는다 (sibling InheritanceStockNameAutocomplete C14 정본)
+  const lastFetchedQRef = useRef<string>("");
+  const abortRef = useRef<AbortController | null>(null);
 
   // debounce 검색 (useEffect 사용 OK — store mirror 아닌 로컬 검색 결과 fetching)
   useEffect(() => {
@@ -50,29 +66,56 @@ export function KiwoomStockNameAutocomplete({
     const q = value.trim();
     if (q.length < 1) {
       setMatches([]);
+      onFetchError?.(null);
       return;
     }
+    // 선택으로 채워진 값이 그대로면 재요청하지 않는다
+    if (q === lastFetchedQRef.current) return;
+
     debounceRef.current = setTimeout(async () => {
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       setLoading(true);
       try {
         const res = await fetch("/api/kiwoom/search-by-name", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ query: q, limit: 10 }),
+          signal: controller.signal,
         });
+        clearTimeout(timer);
         if (!res.ok) {
+          // 실패를 삼키지 않는다 — 부모 배지로 원인을 올린다
+          let code: unknown;
+          let detail: string | undefined;
+          try {
+            const body = (await res.json()) as { error?: string; message?: string };
+            code = body.error;
+            detail = body.message;
+          } catch {
+            // body 파싱 실패 시 status만으로 판정
+          }
+          onFetchError?.({ code: toKiwoomFetchErrorCode(code), detail });
           setMatches([]);
           return;
         }
         const data = (await res.json()) as { matches: Match[] };
+        onFetchError?.(null);
         setMatches(data.matches);
         setActiveIdx(-1);
-      } catch {
+        lastFetchedQRef.current = q;
+      } catch (e) {
+        // abort는 사용자가 계속 타이핑 중인 정상 흐름 — 오류로 표시하지 않는다
+        if ((e as Error)?.name !== "AbortError") {
+          onFetchError?.({ code: "network", detail: (e as Error)?.message });
+        }
         setMatches([]);
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }, DEBOUNCE_MS);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
@@ -100,6 +143,8 @@ export function KiwoomStockNameAutocomplete({
     setOpen(false);
     setMatches([]);
     setActiveIdx(-1);
+    lastFetchedQRef.current = m.stockName;
+    onFetchError?.(null);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
