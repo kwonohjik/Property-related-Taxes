@@ -51,6 +51,15 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
   const i = phd.inputs;
   if (!i) return null;
   const fmt = (n: number) => n.toLocaleString();
+  /**
+   * 개산공제 산식의 base·율은 **엔진 echo를 그대로** 쓴다 (결과탭 코드리뷰 #053).
+   * 종전에는 지분 100% 스케일 `landHousingAtAcquisition`에 「× 3%」를 고정 표기해,
+   * 공유지분 1/2이면 표시값의 **2배**, 미등기(§163⑥1호·2호 단서 0.3%)면 **10배**가 나왔다 —
+   * 산식이 자기 값을 유도하지 못했다.
+   */
+  const dedRatePct = `${(phd.estimatedDeductionRate * 100).toFixed(1).replace(/\.0$/, "")}%`;
+  const dedBaseLabel =
+    phd.landLumpDeductionBase < phd.landHousingAtAcquisition ? " (지분 반영)" : "";
 
   return (
     <div data-print-section="phd" className="rounded-lg border border-blue-500/50 bg-blue-50/40 dark:bg-blue-950/20 p-4 space-y-1">
@@ -211,13 +220,13 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
           label="토지 개산공제"
           value={phd.landLumpDeduction}
           highlight
-          formula={`취득시 토지 성분(${fmt(phd.landHousingAtAcquisition)}) × 3%`}
+          formula={`취득시 토지 성분${dedBaseLabel}(${fmt(phd.landLumpDeductionBase)}) × ${dedRatePct}`}
         />
         <PhdRow
           label="건물 개산공제"
           value={phd.buildingLumpDeduction}
           highlight
-          formula={`취득시 건물 성분(${fmt(phd.buildingHousingAtAcquisition)}) × 3%`}
+          formula={`취득시 건물 성분${dedBaseLabel}(${fmt(phd.buildingLumpDeductionBase)}) × ${dedRatePct}`}
         />
       </div>
     </div>
