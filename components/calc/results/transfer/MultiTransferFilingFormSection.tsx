@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
+import { buildAggregateMeta } from "./build-aggregate-meta";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -25,42 +26,15 @@ export function MultiTransferFilingFormSection({
   result: AggregateTransferResult;
   properties: PropertyItem[];
 }) {
-  const { adapted, aggregateMeta } = useMemo(() => {
-    const adapted = aggregateToFilingResult(result);
-    const ownershipMap = new Map<string, { numerator: number; denominator: number }>();
-    const landNatureMap = new Map<string, "appurtenant" | "standalone">();
-    // propertyId → form (자산별 양도일·취득일·거주기간 파생 — buildAggregateRows가 컬럼별로 읽음)
-    const propertyFormMap = new Map<string, TransferFormData>();
-    for (const p of result.properties) {
-      const prop = properties.find((x) => x.propertyId === p.propertyId);
-      if (prop?.form) propertyFormMap.set(p.propertyId, prop.form);
-      const asset = prop?.form?.assets[0];
-      if (!asset) continue;
-      const numerator = parseInt(asset.ownershipNumerator ?? "100", 10);
-      const denominator = parseInt(asset.ownershipDenominator ?? "100", 10);
-      if (
-        Number.isFinite(numerator) &&
-        Number.isFinite(denominator) &&
-        denominator > 0 &&
-        numerator < denominator
-      ) {
-        ownershipMap.set(p.propertyId, { numerator, denominator });
-      }
-      if (asset.assetKind === "land" && asset.landNature) {
-        landNatureMap.set(p.propertyId, asset.landNature);
-      }
-    }
-    return {
-      adapted,
-      aggregateMeta: {
-        properties: result.properties,
-        aggregated: result,
-        ownershipMap: ownershipMap.size > 0 ? ownershipMap : undefined,
-        landNatureMap: landNatureMap.size > 0 ? landNatureMap : undefined,
-        propertyFormMap: propertyFormMap.size > 0 ? propertyFormMap : undefined,
-      },
-    };
-  }, [result, properties]);
+  const { adapted, aggregateMeta } = useMemo(
+    () => ({
+      adapted: aggregateToFilingResult(result),
+      // 상세명세서 카드와 **같은 leaf**로 조립한다 — 두 카드가 자산별 취득일·양도일을
+      // 다르게 보던 결함(결과탭 코드리뷰 #093)의 단일 소스.
+      aggregateMeta: buildAggregateMeta(result, properties),
+    }),
+    [result, properties],
+  );
 
   return (
     <FilingFormTable

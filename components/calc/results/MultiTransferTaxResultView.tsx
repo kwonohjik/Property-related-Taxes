@@ -12,6 +12,7 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
 import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
+import { buildAggregateMeta } from "./transfer/build-aggregate-meta";
 import { MultiTransferFilingFormSection } from "@/components/calc/results/transfer/MultiTransferFilingFormSection";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
@@ -408,10 +409,11 @@ export function MultiTransferTaxResultView({
       <PrintSection id="detailed-statement" selectedIds={selectedPrintIds}>
       {(() => {
         const adapted = aggregateToFilingResult(result);
-        const aggregateMeta = {
-          properties: result.properties,
-          aggregated: result,
-        };
+        // 🔴 종전에는 `{ properties, aggregated }`만 넘겨 **`propertyFormMap`이 없었다**.
+        //    그러면 명세서의 자산별 취득일·보유기간·양도일이 조회할 소스가 없어 1번 양도건의
+        //    자산 하나만 보게 되고, 바로 위 신고서 표와 **같은 항목에 다른 날짜**가 찍혔다
+        //    (결과탭 코드리뷰 #054·#093). 이제 신고서 섹션과 같은 leaf로 조립한다.
+        const aggregateMeta = buildAggregateMeta(result, properties);
         const firstProperty = properties[0];
         return (
           <DetailedCalculationStatementCard

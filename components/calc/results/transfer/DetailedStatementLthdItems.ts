@@ -34,6 +34,17 @@ interface LthdItemsArgs {
   transferDate: string;
   /** 거주 개월 */
   residenceMs: number;
+  /**
+   * 다건 모드에서 **그 양도건 자신의** 취득일·양도일을 돌려주는 해석기.
+   *
+   * 🔴 종전에는 자산별 보유/거주분을 전부 `primary`(1번 양도건)의 취득일과 신고단위 양도일로
+   *   계산했다. 같은 화면 신고서 양식은 `propertyFormMap`으로 자산별 날짜를 쓰므로 **두 카드가
+   *   같은 자산의 장특 분할을 다르게 표시**했다 — 실측(2019년 취득 고가주택 + 2005년 취득 토지):
+   *   토지 보유분 69,230,770(명세서) vs 88,235,295(신고서), 차이 19,004,525
+   *   (결과탭 코드리뷰 #054·#093).
+   */
+  acqDateOf: (propertyId: string) => string;
+  transferDateOf: (propertyId: string) => string;
 }
 
 /** 3단계 항목(`ltDeduction` 외 부분별 행)을 `items`에 set 한다. */
@@ -41,7 +52,8 @@ export function setLongTermDeductionItems(
   items: Map<string, StatementItem>,
   args: LthdItemsArgs,
 ): void {
-  const { result, isAggregate, properties, primary, transferDate, residenceMs } = args;
+  const { result, isAggregate, properties, primary, transferDate, residenceMs, acqDateOf, transferDateOf } =
+    args;
 
   // 겸용주택은 주택분(표2 가능·보유+거주)과 비주택분(상가, 표1·보유만)이 공제율 체계가 달라
   // 단일 blended 율로 뭉뚱그리면 부정확·난해 → mixedUseDetail이 있으면 부분별로 분리 표시.
@@ -80,21 +92,18 @@ export function setLongTermDeductionItems(
   const lthSplit = splitLtDeduction(totalLth, totalHoldingMs, residenceMs, useTable2);
 
   // 다건 모드 자산별 보유/거주분 (자산별 holdingMs 기준)
+  const splitForAsset = (p: PerPropertyBreakdown) =>
+    splitLtDeduction(
+      p.longTermHoldingDeduction,
+      holdingMonthsFromDates(acqDateOf(p.propertyId), transferDateOf(p.propertyId)),
+      residenceMs,
+      useTable2,
+    );
   const ltHoldingPerAsset = isAggregate
-    ? properties.map((p) => {
-        const acqDateForAsset = getAcqDateForCard(primary, p.propertyId);
-        const ms = holdingMonthsFromDates(acqDateForAsset, transferDate);
-        const sp = splitLtDeduction(p.longTermHoldingDeduction, ms, residenceMs, useTable2);
-        return { label: p.propertyLabel, value: sp.holdingAmount };
-      })
+    ? properties.map((p) => ({ label: p.propertyLabel, value: splitForAsset(p).holdingAmount }))
     : undefined;
   const ltResidencePerAsset = isAggregate
-    ? properties.map((p) => {
-        const acqDateForAsset = getAcqDateForCard(primary, p.propertyId);
-        const ms = holdingMonthsFromDates(acqDateForAsset, transferDate);
-        const sp = splitLtDeduction(p.longTermHoldingDeduction, ms, residenceMs, useTable2);
-        return { label: p.propertyLabel, value: sp.residenceAmount };
-      })
+    ? properties.map((p) => ({ label: p.propertyLabel, value: splitForAsset(p).residenceAmount }))
     : undefined;
 
   // 보유분/거주분 — 엔진이 정식 emit한 sub-step의 산식 우선 (정확한 안분율·금액 노출).

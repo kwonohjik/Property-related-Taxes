@@ -131,6 +131,21 @@ export function buildStatementItems(
   const primary = asset ?? formData?.assets[0];
   const isAggregate = !!aggregate && aggregate.properties.length > 0;
   const properties = aggregate?.properties ?? [];
+
+  /**
+   * 다건(multi)에서 **그 양도건 자신의** 자산·양도일을 돌려준다.
+   *
+   * 🔴 종전에는 자산별 날짜를 전부 `primary`(1번 양도건의 자산 하나)로 조회했다.
+   *   `getAcqDateForCard`는 «일반건물 자산 안의 파트 카드»를 가르는 함수라 일반건물이 아니면
+   *   pid를 무시하고 그 자산의 취득일을 그대로 돌려준다 — 그래서 2019년 아파트와 2005년 토지를
+   *   다건으로 신고하면 명세서의 두 자산 취득일이 **둘 다 2019년**이 됐다. 양도일자는 아예
+   *   자산 축이 없어 1번 건의 값 하나뿐이었다. 같은 화면 신고서 양식은 `propertyFormMap`으로
+   *   정확히 표시하고 있었다 (결과탭 코드리뷰 #054·#093).
+   */
+  const assetOf = (pid: string) => aggregate?.propertyFormMap?.get(pid)?.assets[0] ?? primary;
+  const transferDateOf = (pid: string) =>
+    aggregate?.propertyFormMap?.get(pid)?.transferDate ?? transferDate;
+  const acqDateOf = (pid: string) => getAcqDateForCard(assetOf(pid), pid);
   // 일반건물 일괄 모드(사례 31·33) — 자산별 산식 빌더에 전달할 분모/분자 변수.
   // 비-일반건물 모드에서는 undefined → formulaBuilder가 undefined 반환 → 산식 미표시.
   const gbDetail = result.generalBuildingValuationDetail;
@@ -149,6 +164,12 @@ export function buildStatementItems(
     value: fmtDate(transferDate),
     formula: "사용자 입력 (계약상 잔금청산일 또는 등기접수일 중 빠른 날)",
     legalBasis: "소득세법 §98",
+    perAsset: isAggregate
+      ? properties.map((p) => ({
+          label: p.propertyLabel,
+          value: fmtDate(transferDateOf(p.propertyId)),
+        }))
+      : undefined,
   });
 
   // 취득일자 — override 우선 (이월과세 Scenario A: 증여자 취득일)
@@ -166,7 +187,7 @@ export function buildStatementItems(
     perAsset: isAggregate
       ? properties.map((p) => ({
           label: p.propertyLabel,
-          value: fmtDate(getAcqDateForCard(primary, p.propertyId)),
+          value: fmtDate(acqDateOf(p.propertyId)),
         }))
       : undefined,
   });
@@ -180,8 +201,8 @@ export function buildStatementItems(
       ? properties.map((p) => ({
           label: p.propertyLabel,
           value: holdingPeriodFromDates(
-            getAcqDateForCard(primary, p.propertyId),
-            transferDate,
+            acqDateOf(p.propertyId),
+            transferDateOf(p.propertyId),
           ),
         }))
       : undefined,
@@ -437,6 +458,8 @@ export function buildStatementItems(
     primary,
     transferDate,
     residenceMs,
+    acqDateOf,
+    transferDateOf,
   });
 
   // ── 4단계: 양도소득금액·기본공제 ────────────────────────────
