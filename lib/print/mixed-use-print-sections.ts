@@ -34,7 +34,7 @@ export type { PrintChannel, GroupCheckState };
 /** 선택 가능 leaf 3종 (exact 매칭) */
 export type MixedUsePrintSectionId =
   | "calculation"
-  | "filing-form"
+  | "form-table"
   | "detailed-statement"
   | "building-std-report";
 
@@ -57,7 +57,10 @@ export const MIXED_USE_PRINT_SECTIONS: MixedUsePrintSectionGroup[] = [
     id: "group:forms",
     label: "신고서식",
     children: [
-      { id: "filing-form", label: "신고서 양식 표 (32행)", channel: SCREEN },
+      // 🆕 2026-08-28 — 겸용만 `filing-form`이었다. 같은 「신고서 양식 표」 leaf가 뷰마다 다른
+      //    어휘를 쓰면 선택 패널·E2E 셀렉터·인쇄 CSS가 뷰마다 갈린다 ⇒ 다수파 `form-table`로
+      //    통일한다 (결과탭 코드리뷰 #089). 주식양도세는 별개 세목이라 범위 밖이다.
+      { id: "form-table", label: "신고서 양식 표 (32행)", channel: SCREEN },
       { id: "detailed-statement", label: "계산결과 상세명세서", channel: SCREEN },
       { id: "building-std-report", label: "건물 기준시가 계산서", channel: SCREEN },
     ],

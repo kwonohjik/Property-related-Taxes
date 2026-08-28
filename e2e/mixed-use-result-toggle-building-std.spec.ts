@@ -166,7 +166,7 @@ test.describe("겸용주택 결과뷰 — 세션 토글 + 건물 기준시가 �
     test.setTimeout(60_000);
     await seedAndCalc(page);
 
-    const filing = page.locator('[data-print-id="filing-form"]');
+    const filing = page.locator('[data-print-id="form-table"]');
     await expect(filing).toBeVisible();
     // 신고서 양식 섹션 내부에는 접기/펼치기 버튼이 없어야 함
     await expect(filing.getByRole("button", { name: "▲ 접기" })).toHaveCount(0);

@@ -24,7 +24,7 @@ import {
 // 설계 §2.8 기준 leaf + 건물 기준시가 계산서(PHD 스냅샷 소속 시) = 4종
 const ALL_LEAVES: MixedUsePrintSectionId[] = [
   "calculation",
-  "filing-form",
+  "form-table",
   "detailed-statement",
   "building-std-report",
 ];
@@ -66,7 +66,7 @@ describe("겸용주택 양도세 선택 출력 레지스트리 — Pre-Do anchor
     const leafIds = forms!.children.map((c) => c.id);
 
     expect(resolveGroupCheckState(forms!, new Set())).toBe("none");
-    expect(resolveGroupCheckState(forms!, new Set(["filing-form"]))).toBe("partial");
+    expect(resolveGroupCheckState(forms!, new Set(["form-table"]))).toBe("partial");
     expect(resolveGroupCheckState(forms!, new Set(leafIds))).toBe("all");
   });
 
@@ -74,7 +74,7 @@ describe("겸용주택 양도세 선택 출력 레지스트리 — Pre-Do anchor
     const available = new Set<MixedUsePrintSectionId>(ALL_LEAVES);
     expect(selectPdfSections(new Set(ALL_LEAVES), available)).toEqual([]);
     expect(selectPdfSections(new Set(["calculation"]), available)).toEqual([]);
-    expect(selectPdfSections(new Set(["filing-form"]), available)).toEqual([]);
+    expect(selectPdfSections(new Set(["form-table"]), available)).toEqual([]);
     expect(selectPdfSections(new Set(), available)).toEqual([]);
   });
 

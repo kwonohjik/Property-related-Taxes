@@ -116,12 +116,12 @@ test.describe("겸용주택 신고서 양식 — 주택분·상가분 토지/건
     expect(total).toBe(1_500_000_000);
 
     // 결과탭 첫번째 보고서 = 신고서 양식 (분리계산 본문보다 DOM에서 먼저)
-    const filingBox = page.locator('[data-print-id="filing-form"]');
+    const filingBox = page.locator('[data-print-id="form-table"]');
     const calcBox = page.locator('[data-print-id="calculation"]');
     await expect(filingBox).toBeVisible();
     await expect(calcBox).toBeVisible();
     const order = await page.evaluate(() => {
-      const f = document.querySelector('[data-print-id="filing-form"]');
+      const f = document.querySelector('[data-print-id="form-table"]');
       const c = document.querySelector('[data-print-id="calculation"]');
       if (!f || !c) return 0;
       // DOCUMENT_POSITION_FOLLOWING(4) → f가 c보다 앞

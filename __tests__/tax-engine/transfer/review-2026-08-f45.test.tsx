@@ -8,7 +8,8 @@
  *
  * ⚠️ 분기만 추가하면 단건에서 **카드가 2번** 렌더된다 → 인라인 렌더를 함께 제거했다.
  *    카드는 다른 감면 상세 카드와 같은 자리(`ReductionDetailCards`)로 이동한다.
- *    print leaf 집합(`TRANSFER_PRINT_SECTIONS`)은 변하지 않는다 — 새 leaf를 만들지 않았다.
+ *    §95⑤ 전용 print leaf는 만들지 않는다 — 카드는 감면 상세 묶음 안에 있어야 한다
+ *    (아래 단언은 2026-08-28에 「목록 전체 고정」에서 그 불변만 남기도록 완화했다).
  *
  * 세액 불변(표시 갭). 기대값은 엔진(`calculateTransferTax`)을 실제로 호출해 관측한 값이다.
  */
@@ -107,8 +108,20 @@ describe("F45 — §95⑤ 용도변경 카드가 공용 ReductionDetailCards에 
     expect(missing, "계약에 있으나 컴포넌트가 렌더하지 않는 필드").toEqual([]);
   });
 
-  it("print leaf 집합은 변하지 않는다 (새 leaf 없음)", () => {
-    expect(flattenPrintSectionIds()).toEqual([
+  /**
+   * ⚠️ **2026-08-28 완화** — 종전에는 leaf 목록 **전체를 동등 비교**했다. 그 단언이 지키려던
+   *   것은 「F45가 §95⑤ 전용 leaf를 만들지 않고 기존 `ReductionDetailCards` 자리로 옮겼다」는
+   *   **이 PR의 결정**인데, 전체 동등 비교는 이후의 **정당한 leaf 추가까지 막았다** —
+   *   실제로 #062(선택 출력이 안 걸리던 블록을 `allocation`·`detail-cards`로 감싼 작업)에서
+   *   이 단언이 빨개졌다. F45의 불변만 남기고 「목록 고정」은 푼다.
+   *
+   * 📌 leaf 목록의 정본 동기화 지점은 `__tests__/print/transfer-print-sections.test.ts`의
+   *   `ALL_LEAVES`다 — 새 leaf는 거기에 등록한다.
+   */
+  it("F45는 §95⑤ 전용 leaf를 만들지 않았다 (기존 섹션 안으로 이동)", () => {
+    const ids = flattenPrintSectionIds();
+    // F45 시점의 7종이 **제거되지 않았다** (그 축의 회귀 방어).
+    for (const id of [
       "form-table",
       "detailed-statement",
       "calculation",
@@ -116,6 +129,10 @@ describe("F45 — §95⑤ 용도변경 카드가 공용 ReductionDetailCards에 
       "split-detail",
       "gift-filing-form",
       "building-std-report",
-    ]);
+    ]) {
+      expect(ids, `${id} leaf가 사라졌다`).toContain(id);
+    }
+    // §95⑤ 용도변경 전용 leaf는 만들지 않는다 — 카드는 감면 상세 묶음 안에 있어야 한다.
+    expect(ids).not.toContain("usage-conversion");
   });
 });

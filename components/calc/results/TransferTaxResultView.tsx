@@ -37,7 +37,7 @@ import { SplitLandExpropriationValuationCard } from "@/components/calc/results/t
 import { SplitGainDetailSection } from "@/components/calc/results/transfer/SplitGainDetailSection";
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
-import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { ReductionDetailCards, hasReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { resolveRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -143,6 +143,27 @@ interface Props {
 
 // ── 메인 컴포넌트 ──────────────────────────────────────────────
 
+/**
+ * 단건 결과뷰의 ⑦ 「상세 산출근거 카드」 묶음이 **하나라도 렌더되는가**.
+ *
+ * 렌더 게이트(`<PrintSection id="detail-cards">`)와 「출력 항목 선택」 가용성이 **같은 술어**를
+ * 부른다 — 두 곳이 어긋나면 「목록에 있는데 화면에 없다」가 생기고, 그 방향을 잡는 테스트가
+ * 저장소에 0건이었다 (결과탭 코드리뷰 #089). 감면 카드 묶음의 판정은 그 컴포넌트가 export한
+ * 술어를 그대로 재사용한다 — 조건을 여기 복제하면 같은 드리프트가 다시 열린다.
+ */
+function hasSingleDetailCards(result: TransferTaxResult): boolean {
+  return (
+    !!result.familyBusinessDetail ||
+    result.surchargeType === "non_business_land" ||
+    !!result.nonBusinessLandJudgmentDetail?.isNonBusinessLand ||
+    !!result.commercialBuildingValuationDetail ||
+    !!result.transferBurdenedGiftBreakdown ||
+    !!result.redevelopmentDetail ||
+    !!result.rentalHousingExceptionDetail ||
+    hasReductionDetailCards(result)
+  );
+}
+
 export function TransferTaxResultView({
   result,
   onReset,
@@ -201,6 +222,8 @@ export function TransferTaxResultView({
     s.add("form-table");
     s.add("detailed-statement");
     s.add("calculation");
+    // #062 — 이 카드들은 조건부라 하나도 안 뜰 수 있다. 그 판정은 아래 술어가 한다.
+    if (hasSingleDetailCards(result)) s.add("detail-cards");
     if (result.preHousingDisclosureDetail) s.add("phd");
     if (result.splitDetail) s.add("split-detail");
     if (hasBurdenedGiftFilingForm(result.transferBurdenedGiftBreakdown)) s.add("gift-filing-form");
@@ -569,6 +592,19 @@ export function TransferTaxResultView({
 
       {/* 계산 과정 토글은 명세서 카드 내 'EngineStepsSubToggle'로 통합됨 (2026-05-12) */}
 
+      {/*
+        ⑦ 상세 산출근거 카드 묶음.
+
+        🔴 종전에는 이 블록들이 **`PrintSection` 밖**이라 「출력 항목 선택」이 전혀 걸리지 않았다.
+           `PrintSection`은 미선택 시 `print:hidden`만 붙이므로(shared/PrintSection.tsx) 감싸지
+           않은 블록은 선택과 무관하게 **항상 인쇄**된다 — 「신고서 양식 표」만 골라도 재개발
+           §166 3분할·감면 산출근거 카드가 그대로 딸려 나왔다(결과탭 코드리뷰 #062).
+
+        ⚠️ 기존 `calculation` 안으로 **옮기지 않고** 이 자리에서 감쌌다 — 옮기면 화면 순서가
+           바뀐다. 새 leaf라 `data-print-id`도 유일하다(중복이면 Playwright strict 로케이터가 깨진다).
+      */}
+      {hasSingleDetailCards(result) && (
+      <PrintSection id="detail-cards" selectedIds={selectedPrintIds} className="space-y-5">
       {/* ⑦ 가업상속공제 §97의2④ 의제·일반 비교 결과 카드 */}
       {result.familyBusinessDetail && (
         <FamilyBusinessImputedComparisonCard detail={result.familyBusinessDetail} />
@@ -582,9 +618,6 @@ export function TransferTaxResultView({
       {(result.surchargeType === "non_business_land" || result.nonBusinessLandJudgmentDetail?.isNonBusinessLand) && (
         <CrossEngine1045Notice from="real_estate" />
       )}
-
-      {/* 면책 고지 */}
-      <DisclaimerBanner />
 
       {/* ⑦ 상업용건물·오피스텔 환산취득가 산정 근거 상세 (소령 §164⑥, §176조의2②2호) */}
       {/* `as any` 제거(2026-07-28) — `TransferTaxResult.commercialBuildingValuationDetail`이
@@ -672,6 +705,11 @@ export function TransferTaxResultView({
         appliedReductionType={result.reductionTypeApplied}
         appliedReductionAmount={result.reductionAmount}
       />
+      </PrintSection>
+      )}
+
+      {/* 면책 고지 — 선택 출력과 무관하게 **항상** 인쇄되어야 하므로 PrintSection 밖이다. */}
+      <DisclaimerBanner />
 
       {/* 비로그인 안내 */}
       {onLoginPrompt && (

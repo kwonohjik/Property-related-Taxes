@@ -68,7 +68,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   // 현재 결과뷰에 실제 렌더되는 leaf id (본문·신고서·명세서 항상 + 건물 기준시가 계산서는
   // 소속 스냅샷이 있을 때만 — 단건 TransferTaxResultView와 동일 판정).
   const availablePrintIds = useMemo<Set<MixedUsePrintSectionId>>(() => {
-    const ids = new Set<MixedUsePrintSectionId>(["calculation", "filing-form", "detailed-statement"]);
+    const ids = new Set<MixedUsePrintSectionId>(["calculation", "form-table", "detailed-statement"]);
     if (hasBuildingStdReport({ assets: formData?.assets })) ids.add("building-std-report");
     return ids;
   }, [formData?.assets]);
@@ -126,7 +126,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
       />
 
       {/* ── 신고서 양식 표 (결과탭 첫번째 보고서) ── */}
-      <PrintSection id="filing-form" selectedIds={selectedPrintIds}>
+      <PrintSection id="form-table" selectedIds={selectedPrintIds}>
       {(() => {
         // 겸용주택(propertyType="mixed-use-house")은 재개발과 배타적이므로
         // redevelopmentDetail이 항상 undefined → redev props 비활성. 일관성 차원에서 전달.

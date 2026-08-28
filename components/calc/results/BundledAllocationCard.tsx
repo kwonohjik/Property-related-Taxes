@@ -417,7 +417,13 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
   const [pdfBusy, setPdfBusy] = useState(false);
 
   const availablePrintIds = useMemo<Set<TransferPrintSectionId>>(() => {
-    const s = new Set<TransferPrintSectionId>(["form-table", "detailed-statement", "calculation"]);
+    const s = new Set<TransferPrintSectionId>([
+      "form-table",
+      "detailed-statement",
+      "calculation",
+      // #062 — 「양도가액 안분」 표는 일괄에서 **항상** 렌더되므로 조건 없이 등록한다.
+      "allocation",
+    ]);
     if (hasBurdenedGiftFilingForm(transferBurdenedGiftBreakdown)) s.add("gift-filing-form");
     if (hasBuildingStdReport({ assets: formData.assets })) s.add("building-std-report");
     return s;
@@ -454,6 +460,18 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         pdfReady={true}
         pdfBusy={pdfBusy}
       />
+      {/*
+        「양도가액 안분」 표 + 취득가액 산정 근거 묶음.
+
+        🔴 종전에는 이 블록들이 **`PrintSection` 밖**이라 「출력 항목 선택」이 전혀 걸리지 않았다.
+           `PrintSection`은 미선택 시 `print:hidden`만 붙이므로 감싸지 않은 블록은 선택과
+           무관하게 **항상 인쇄**된다 — 「신고서 양식 표」만 골라도 일괄 결과의 핵심 표인
+           「양도가액 안분」·§100③ 판정·환산주택가격 블록이 그대로 딸려 나왔다(#062).
+
+        ⚠️ 아래 `calculation` 안으로 **옮기지 않고** 이 자리에서 감쌌다 — 옮기면 안분 표가
+           신고서 양식 표 **뒤로** 밀려 일괄 결과의 읽는 순서가 뒤집힌다.
+      */}
+      <PrintSection id="allocation" selectedIds={selectedPrintIds} className="space-y-6">
       {/* 부담부증여 §159·증여세 통합 명세 (일반건물 부담부증여 모드 전용) */}
       {transferBurdenedGiftBreakdown && (
         <BurdenedGiftDetailCard
@@ -656,6 +674,8 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         </div>
       )}
 
+      </PrintSection>
+
       {/* 합산 신고서 양식 — 단건과 동일한 32행, 합계 + 자산별 컬럼 */}
       {(() => {
         // landNatureMap: propertyId → "appurtenant" | "standalone" (토지 자산 성격 라벨 suffix용)
@@ -716,11 +736,12 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         );
       })()}
 
-      {/* 일반건물 3-way 요약 표 (사례 33 증축 케이스 — 토지·건물1·건물2) */}
-      <GeneralBuilding3WayTable aggregated={aggregated} />
-
       {/* 자산별 세액 (요약 카드) + 합산 과세 내역 = 출력 항목 「핵심 결과·계산 내역」 */}
       <PrintSection id="calculation" selectedIds={selectedPrintIds} className="space-y-6">
+      {/* 일반건물 3-way 요약 표 (사례 33 증축 케이스 — 토지·건물1·건물2).
+          🔴 종전에는 PrintSection 밖이라 선택과 무관하게 항상 인쇄됐다(#062).
+             신고서 표 **뒤**에 있어 여기로 옮겨도 읽는 순서가 바뀌지 않는다. */}
+      <GeneralBuilding3WayTable aggregated={aggregated} />
       {/**
         수정신고·경정청구 (국세기본법 §45·§45의2).
 

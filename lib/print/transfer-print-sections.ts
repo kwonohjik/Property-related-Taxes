@@ -29,11 +29,26 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 5종 (printScoped scope → leaf, exact 매칭) */
+/**
+ * 선택 가능 leaf (printScoped scope → leaf, exact 매칭)
+ *
+ * 🆕 `allocation`·`detail-cards`는 2026-08-28에 추가했다 — 그 자리에 있던 블록들이
+ *    `PrintSection` **밖**이라 「출력 항목 선택」이 전혀 걸리지 않았다(결과탭 코드리뷰 #062).
+ *    `PrintSection`은 미선택 시 `print:hidden`만 붙이므로 감싸지 않은 블록은 선택과 무관하게
+ *    **항상 인쇄**된다 — 「신고서 양식 표」만 골라도 재개발 3분할·감면 산출근거·양도가액 안분이
+ *    그대로 딸려 나왔다.
+ *
+ *    ⚠️ 기존 섹션으로 **옮기지 않고 새 leaf로 감싼** 이유: 그 블록들은 화면에서 신고서 표
+ *      **앞**(일괄) 또는 맨 뒤(단건)에 있어, 옮기면 일괄의 핵심 표인 「양도가액 안분」이
+ *      뒤로 밀린다. 새 leaf는 **화면 순서를 그대로 두면서** 선택 가능하게 한다
+ *      (중복 `data-print-id`도 만들지 않아 Playwright strict 로케이터가 안전하다).
+ */
 export type TransferPrintSectionId =
   | "form-table"
   | "detailed-statement"
   | "calculation"
+  | "allocation"
+  | "detail-cards"
   | "phd"
   | "split-detail"
   | "gift-filing-form"
@@ -62,6 +77,10 @@ export const TRANSFER_PRINT_SECTIONS: TransferPrintSectionGroup[] = [
     children: [
       // 서버 PDF: ResultPdfDocument 양도세 계산 내역(TransferSection)으로 표현 가능 → pdf 채널
       { id: "calculation", label: "핵심 결과·계산 내역", channel: SCREEN_PDF },
+      // 일괄 전용 — 「양도가액 안분」 표 + 취득가액 산정 근거(§100③ 판정·§163⑨ 상속·환산주택가격·§97② swap).
+      { id: "allocation", label: "양도가액 안분·취득가액 산정 근거", channel: SCREEN },
+      // 단건 전용 — 재개발 §166 3분할·감면 산출근거·부담부증여 명세·상가 환산 등 ⑦ 상세 카드 묶음.
+      { id: "detail-cards", label: "상세 산출근거 카드", channel: SCREEN },
       { id: "phd", label: "개별주택가격 미공시 환산", channel: SCREEN },
       { id: "split-detail", label: "토지/건물 분리 양도차익", channel: SCREEN },
       // 부담부증여 무상이전분의 증여세 신고서. 화면 순서(기준시가 계산서 바로 위)와 트리 순서를 맞춘다.
