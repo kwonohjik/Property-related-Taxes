@@ -142,6 +142,10 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
           if (r.deferredTaxAmount > 0) items.push({ label: `납부유예액(${r.deferralYears}년)`, value: r.deferredTaxAmount });
           if (r.adjustmentDeduction) items.push({ label: "조정공제", value: r.adjustmentDeduction });
           if (r.foreignTaxCreditApplied) items.push({ label: "외국납부세액공제", value: r.foreignTaxCreditApplied });
+          // §118의15④ 가산세는 종전에 여기서 통째로 누락돼, 결과 카드에는 보이는 금액이
+          // 요약에서만 사라졌다. 「산출세액에 더한다」이므로 총 납부세액에도 반영된다.
+          if (r.holdingsReportPenalty) items.push({ label: "보유현황 미신고 가산세", value: r.holdingsReportPenalty });
+          if (r.totalTax > 0) items.push({ label: "총 납부세액", value: r.totalTax, highlight: true });
         }
       }
       return items;
