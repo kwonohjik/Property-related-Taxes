@@ -48,6 +48,7 @@ import {
   STOCK_FOREIGN,
   STOCK_FOREIGN_BASIC_DEDUCTION,
   STOCK_FOREIGN_RATE,
+  STOCK_FOREIGN_SME_RATE,
   STOCK_FOREIGN_RESIDENT_MIN_YEARS,
 } from "@/lib/tax-engine/legal-codes/stock";
 
@@ -298,10 +299,21 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   //    0~20억 5배수 전수 + 1~300만 1단위 전수를 `applyRateFraction(x, 2, 10)`과 대조해 확인했다.
   //    0.70이 `applyFairMarketRatio`를 필요로 했던 것과 방향이 반대다 — 0.7의 double은 실제보다
   //    **작아서** floor가 1원 깎였지만, 0.2의 double은 실제보다 **커서** 깎이지 않는다.
-  const rate = taxBase > 0 ? STOCK_FOREIGN_RATE : 0;
+  //
+  // §104①12호는 **가목(중소기업 10%)·나목(그 밖 20%)** 두 갈래다. 종전에는 나목만 두고
+  // 「외국법인에는 중소기업기본법을 적용하지 않아 가목은 도달 불가」라고 봤는데,
+  // 영 §157의3 **2호**가 「내국법인이 발행한 주식등으로서 해외 증권시장에 상장된 것」을
+  // 국외주식에 포함시키므로 **내국 중소기업의 해외상장 주식**이 가목에 닿는다.
+  const isSme = input.isSmallMediumEnterprise === true;
+  const applicableRate = isSme ? STOCK_FOREIGN_SME_RATE : STOCK_FOREIGN_RATE;
+  const rate = taxBase > 0 ? applicableRate : 0;
   const progressiveDeduction = 0; // §104①12호에 누진공제 없음
-  const incomeTax = applyRate(taxBase, STOCK_FOREIGN_RATE);
-  appliedRules.push(STOCK_FOREIGN.SECTION_104_1_12_TAX_RATE);
+  const incomeTax = applyRate(taxBase, applicableRate);
+  appliedRules.push(
+    isSme
+      ? STOCK_FOREIGN.SECTION_104_1_12_SME_TAX_RATE
+      : STOCK_FOREIGN.SECTION_104_1_12_TAX_RATE,
+  );
 
   // ──────────────────────────────────────────────────────────
   // STEP 10: 외국납부세액공제 §118의6 (credit 선택 시)

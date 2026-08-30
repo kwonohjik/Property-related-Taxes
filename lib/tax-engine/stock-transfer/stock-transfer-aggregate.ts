@@ -43,8 +43,17 @@ import {
  * 국외주식(§94①3호다목)은 §104①12호로 가고 그 분기는 이 플래그를 보지 않으므로 false로 둔다.
  * (서식 각주가 가리키는 「우리나라 중소기업의 해외상장주식 10%」 경로는 아직 입력이 없다 — 별건.)
  */
+/**
+ * 중소기업 플래그 — 국내(§104①11호나목1))·국외(§104①12호가목) 모두 세율을 가른다.
+ *
+ * 🔑 종전에는 국외를 무조건 false로 눌렀다. 영 §157의3 **2호**가 「내국법인이 발행한 주식등으로서
+ *    해외 증권시장에 상장된 것」을 국외주식에 포함시키므로, 내국 중소기업의 해외상장 주식은
+ *    §104①12호**가목 10%**에 닿는다. 미입력이면 나목 20%다(자동 추정 금지).
+ */
 function smeFlag(input: AggregateStockItemInput): boolean {
-  return isForeignStockItem(input) ? false : input.isSmallMediumEnterprise;
+  return isForeignStockItem(input)
+    ? input.isSmallMediumEnterprise === true
+    : input.isSmallMediumEnterprise;
 }
 
 // ============================================================

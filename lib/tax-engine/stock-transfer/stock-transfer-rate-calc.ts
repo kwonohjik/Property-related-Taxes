@@ -17,7 +17,7 @@ import {
   STOCK_NON_MAJOR_NON_SME_RATE,
   STOCK,
 } from "@/lib/tax-engine/legal-codes/stock";
-import { STOCK_FOREIGN_RATE } from "@/lib/tax-engine/legal-codes/stock";
+import { STOCK_FOREIGN_RATE, STOCK_FOREIGN_SME_RATE } from "@/lib/tax-engine/legal-codes/stock";
 import { STOCK_FOREIGN } from "@/lib/tax-engine/legal-codes/stock";
 
 // ============================================================
@@ -293,15 +293,23 @@ export function applyStockTaxRate(
     //
     // ⚠️ 보유기간 구분이 없다 — §104①11호가목1)의 「1년 미만 30%」는 **가·나목 전용**이라
     //   다목에 오지 않는다. `isShortTermHolding`을 보지 않는 것이 맞다.
-    // ⚠️ 가목(중소기업의 주식등 10%)은 현재 도달 경로가 없다 — 서식 각주가 가리키는 10%는
-    //   「**우리나라 중소기업**이 해외 시장에 상장한 주식」인데 그 SME 입력이 아직 없다(별건).
+    // ✅ 가목(중소기업의 주식등 10%)도 도달한다 — 서식 각주가 가리키는 10%는
+    //   「**우리나라 중소기업**이 해외 시장에 상장한 주식」이고, 영 §157의3 **2호**가
+    //   「내국법인이 발행한 주식등으로서 해외 증권시장에 상장된 것」을 국외주식에 포함시킨다.
     case "foreign_stock":
-      return {
-        appliedRate: STOCK_FOREIGN_RATE,
-        calculatedTax: Math.floor(taxBase * STOCK_FOREIGN_RATE),
-        appliedRuleRef: STOCK_FOREIGN.SECTION_104_1_12_TAX_RATE,
-        isShortTermRate: false,
-      };
+      return isSmallMediumEnterprise
+        ? {
+            appliedRate: STOCK_FOREIGN_SME_RATE,
+            calculatedTax: Math.floor(taxBase * STOCK_FOREIGN_SME_RATE),
+            appliedRuleRef: STOCK_FOREIGN.SECTION_104_1_12_SME_TAX_RATE,
+            isShortTermRate: false,
+          }
+        : {
+            appliedRate: STOCK_FOREIGN_RATE,
+            calculatedTax: Math.floor(taxBase * STOCK_FOREIGN_RATE),
+            appliedRuleRef: STOCK_FOREIGN.SECTION_104_1_12_TAX_RATE,
+            isShortTermRate: false,
+          };
 
     // --------------------------------------------------------
     // 스코프 외 (외국법인 등) — validate에서 차단되어야 함

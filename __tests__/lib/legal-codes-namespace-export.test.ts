@@ -113,9 +113,12 @@ const MODULES: ReadonlyArray<{
       "STOCK", "STOCK_STX", "STOCK_FOREIGN", "STOCK_EXIT_TAX", "STOCK_EXIT_TAX_CONSTS",
       "STOCK_BASIC_DEDUCTION", "STOCK_FOREIGN_BASIC_DEDUCTION",
       "STOCK_FOREIGN_RESIDENT_MIN_YEARS",
-      // 2026-08-12 신설 — §104①12호나목 국외주식 20% 단일세율
+      // 2026-08-12 신설 — §104①12호나목 국외주식 20%
       // (§118의5 §55① 누진은 §118②의 준용 목록에 없다)
       "STOCK_FOREIGN_RATE",
+      // 2026-08-31 신설 — §104①12호가목 중소기업 10%.
+      // 영 §157의3 **2호**(내국법인 발행·해외 증권시장 상장)로 도달한다.
+      "STOCK_FOREIGN_SME_RATE",
       "STOCK_ELECTRONIC_FILING_CREDIT",
       "STOCK_ESTIMATED_EXPENSE_RATE", "STOCK_FLOOR_80_PCT",
       "STOCK_LOSS_GAIN_DISCOUNT_RATE", "STOCK_MAJOR_MARKET_CAP_2024",

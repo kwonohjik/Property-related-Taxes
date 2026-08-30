@@ -203,11 +203,32 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
 
         <ToggleCard
           title="외국법인 발행 주식"
-          description="ON = §157의3 1호(외국법인 발행 주식). OFF = §157의3 2호(내국법인 발행 주식·국외 예탁기관 DR §152의2, 해외 증권시장 상장). 두 경우 모두 §94①3다목 국외주식으로 동일 과세 — 분류 표시용."
+          description="ON = §157의3 1호(외국법인 발행 주식). OFF = §157의3 2호(내국법인 발행 주식·국외 예탁기관 DR §152의2, 해외 증권시장 상장). 둘 다 §94①3다목 국외주식이지만, 2호(내국법인)는 중소기업이면 §104①12호가목 10%가 적용됩니다."
           checked={form.isListedForeignCorp}
-          onCheckedChange={(v) => onChange({ isListedForeignCorp: v })}
+          onCheckedChange={(v) =>
+            // 1호(외국법인 발행)로 되돌리면 중소기업 선택을 함께 지운다 —
+            // 「중소기업기본법」 §2는 내국법인 기준이라 stale 값이 남으면 10%가 잘못 붙는다.
+            onChange(v ? { isListedForeignCorp: v, isSmallMediumEnterprise: false } : { isListedForeignCorp: v })
+          }
           tone="sky"
         />
+
+        {/*
+          §104①12호가목 — 중소기업의 주식등 10%.
+          영 §157의3 2호(내국법인 해외상장)일 때만 도달한다. 「중소기업」은 §94①3나목이 이 장
+          전체 용어로 정의하고 영 §157의2①이 「중소기업기본법」 §2로 위임받으므로,
+          외국법인 발행 주식(1호)에는 적용할 근거가 없다.
+        */}
+        {!form.isListedForeignCorp && (
+          <ToggleCard
+            title="중소기업 (§104①12호가목 — 10%)"
+            description="「중소기업기본법」 §2에 따른 중소기업이면 세율이 20% → 10%가 됩니다. 판정 시점은 양도일이 속하는 사업연도의 직전 사업연도 종료일 현재입니다(그 사업연도에 새로 설립된 법인은 양도일 현재 — 소령 §157의2③)."
+            checked={form.isSmallMediumEnterprise}
+            onCheckedChange={(v) => onChange({ isSmallMediumEnterprise: v })}
+            tone="sky"
+            data-testid="fg-sme-toggle"
+          />
+        )}
       </SectionBox>
 
       {/* ── 섹션 3: 양도가액 (§178의5) ── */}
