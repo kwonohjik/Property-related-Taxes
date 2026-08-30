@@ -309,7 +309,11 @@ describe("케이스 7 — 코스닥 시총 50억 임계 (2024.1.1.~)", () => {
       isMajorShareholder: true,
       selfShareRatio: 0.005,
       selfMarketCap: 1_500_000_000,   // 15억 (2020 임계 10억 초과)
-      priorYearEndDate: new Date("2020-12-31"),  // 2020년 말 기준
+      // 🔑 임계 행은 **양도일**이 고른다(부칙 「양도하는 분부터」) — 주석대로 2021년 양도를 명시.
+      acquisitionDate: new Date("2016-01-01"),
+      transferDate: new Date("2021-06-01"),
+      filingDate: new Date("2021-08-31"),
+      priorYearEndDate: new Date("2020-12-31"),  // 측정 시점 = 직전 사업연도 종료일
       isSmallMediumEnterprise: true,
       perShareTransferPrice: 50_000,
       perShareAcquisitionPrice: 30_000,

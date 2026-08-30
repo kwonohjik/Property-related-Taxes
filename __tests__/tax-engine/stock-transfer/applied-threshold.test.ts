@@ -6,6 +6,11 @@
  *
  * Pre-Do anchor (AT-3, AT-7) 우선 실행 → FAIL 메시지 확인 → 구현 후 전체 통과
  * Design v2 §6 Anchor 검증 매트릭스 기준
+ *
+ * 🔑 **축 정정 (리뷰 2026-08-28 #2)** — 임계표 **행 선택은 양도일**이다(부칙 「양도하는
+ *    분부터」). 종전 픽스처는 시기를 `priorYearEndDate`로만 고르고 `transferDate`는 팩토리
+ *    기본값 2024-06-01에 둬서 「양도일 2024년인데 판정기준일 1998년」 같은 **성립 불가 조합**이
+ *    잘못된 축을 고정하고 있었다. 아래 시기별 케이스는 두 날짜를 **함께** 맞춘다.
  */
 
 import { describe, it, expect } from "vitest";
@@ -200,20 +205,22 @@ describe("AT-2 kosdaq 장외 대주주 (isOnMarketTransaction=false) — applied
 // AT-4: 코스피 2018.4.1.~2020.3.31. 임계 (시총 15억)
 // ============================================================
 
-describe("AT-4 kospi 2018-04-01 임계 — 2019-12-31 기준", () => {
+describe("AT-4 kospi 2018-04-01 임계 — 양도일 2020-03-01", () => {
   /**
-   * marketType="kospi" / priorYearEndDate=2019-12-31 / selfMarketCap=1,500,000,000
+   * marketType="kospi" / 양도일 2020-03-01(15억 구간 끝) · 직전 사업연도 종료일 2019-12-31
    * → 2018.4.1.~ 행 적용: marketCapThreshold=1,500,000,000 / fromDate="2018-04-01"
    * Design v2 AT-4 anchor
    */
-  it("kospi / 2019-12-31 / byCap 15억 → threshold.marketCap=15억 + fromDate=2018-04-01", () => {
+  it("양도일 2020-03-01 / byCap 15억 → threshold.marketCap=15억 + fromDate=2018-04-01", () => {
     const input = makeInput({
       marketType: "kospi",
       selfShareRatio: 0,        // 지분율 조건 미충족
       selfMarketCap: 1_500_000_000,  // 시총 조건만 충족 (byCap)
       isMajorShareholder: true,
       isKOTCTrading: false,
+      transferDate: new Date("2020-03-01"),
       priorYearEndDate: new Date("2019-12-31"),
+      filingDate: new Date("2020-08-31"),
     });
 
     const result = calculateStockTransferTax(input);
@@ -229,20 +236,23 @@ describe("AT-4 kospi 2018-04-01 임계 — 2019-12-31 기준", () => {
 // AT-5: 코스닥 2013.8.29.~ 임계 (2013-09-01 기준 / 지분율 2.5%)
 // ============================================================
 
-describe("AT-5 kosdaq 2013-08-29 임계 — 2013-09-01 기준", () => {
+describe("AT-5 kosdaq 2013-08-29 임계 — 양도일 2013-09-01", () => {
   /**
-   * marketType="kosdaq" / priorYearEndDate=2013-09-01 / selfShareRatio=0.025
+   * marketType="kosdaq" / 양도일 2013-09-01 · 직전 사업연도 종료일 2012-12-31 / selfShareRatio=0.025
    * → 2013.8.29.~ 행 적용: shareRatioThreshold=0.02 / fromDate="2013-08-29"
    * Design v2 AT-5 anchor
    */
-  it("kosdaq / 2013-09-01 / selfRatio=2.5% → threshold.fromDate=2013-08-29 + shareRatio=0.02", () => {
+  it("양도일 2013-09-01 / selfRatio=2.5% → threshold.fromDate=2013-08-29 + shareRatio=0.02", () => {
     const input = makeInput({
       marketType: "kosdaq",
       selfShareRatio: 0.025,   // 2.5% > 2% 임계 → 대주주
       selfMarketCap: 0,
       isMajorShareholder: true,
       isKOTCTrading: false,
-      priorYearEndDate: new Date("2013-09-01"),
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2013-09-01"),
+      priorYearEndDate: new Date("2012-12-31"),
+      filingDate: new Date("2014-02-28"),
     });
 
     const result = calculateStockTransferTax(input);
@@ -352,20 +362,23 @@ describe("AT-9 other_asset — appliedThreshold undefined", () => {
 // AT-10: 코스피 1998-12-31 fallback (1900-01-01 행 매칭)
 // ============================================================
 
-describe("AT-10 kospi 1998-12-31 fallback — 1900-01-01 행 매칭", () => {
+describe("AT-10 kospi 1900-01-01 행 — 양도일 1998-06-01", () => {
   /**
-   * marketType="kospi" / priorYearEndDate=1998-12-31 / selfShareRatio=0.06
+   * marketType="kospi" / 양도일 1998-06-01 · 직전 사업연도 종료일 1997-12-31 / selfShareRatio=0.06
    * → 1998년 이전 행 (`from: 1900-01-01`) 매칭
    * Design v2 AT-10 anchor
    */
-  it("kospi / 1998-12-31 / selfRatio=6% → fromDate=1900-01-01 + shareRatio=0.05", () => {
+  it("양도일 1998-06-01 / selfRatio=6% → fromDate=1900-01-01 + shareRatio=0.05", () => {
     const input = makeInput({
       marketType: "kospi",
       selfShareRatio: 0.06,    // 6% > 5% 임계 → 대주주
       selfMarketCap: 0,
       isMajorShareholder: true,
       isKOTCTrading: false,
-      priorYearEndDate: new Date("1998-12-31"),
+      acquisitionDate: new Date("1995-01-01"),
+      transferDate: new Date("1998-06-01"),
+      priorYearEndDate: new Date("1997-12-31"),
+      filingDate: new Date("1998-08-31"),
     });
 
     const result = calculateStockTransferTax(input);
@@ -380,20 +393,23 @@ describe("AT-10 kospi 1998-12-31 fallback — 1900-01-01 행 매칭", () => {
 // AT-11: 코넥스 2013-06-30 fallback (시장 개설 직전 — sorted.length-1 가드)
 // ============================================================
 
-describe("AT-11 konex fallback — 2013-06-30 이전 (최초 개설 전)", () => {
+describe("AT-11 konex fallback — 양도일 2013-06-30 (최초 개설 전)", () => {
   /**
-   * marketType="konex" / priorYearEndDate=2013-06-30
+   * marketType="konex" / 양도일 2013-06-30 · 직전 사업연도 종료일 2012-12-31
    * → 코넥스 최초 임계 2013-07-01 이전이므로 sorted.length-1 fallback
    * Design v2 AT-11 anchor
    */
-  it("konex / 2013-06-30 → sorted.length-1 fallback → fromDate=2013-07-01 + shareRatio=0.04", () => {
+  it("양도일 2013-06-30 → sorted.length-1 fallback → fromDate=2013-07-01 + shareRatio=0.04", () => {
     const input = makeInput({
       marketType: "konex",
       selfShareRatio: 0.05,
       selfMarketCap: 1_500_000_000,
       isMajorShareholder: true,
       isKOTCTrading: false,
-      priorYearEndDate: new Date("2013-06-30"),
+      acquisitionDate: new Date("2010-01-01"),
+      transferDate: new Date("2013-06-30"),
+      priorYearEndDate: new Date("2012-12-31"),
+      filingDate: new Date("2014-02-28"),
     });
 
     const result = calculateStockTransferTax(input);
@@ -449,9 +465,9 @@ describe("AT-12 unlisted — 비대주주 경계 (3%·4억)", () => {
 // AT-13 (F-5 신설): 비상장 2019-12-31 — 2018.4.1.~ 임계 적용 (시총 15억)
 // ============================================================
 
-describe("AT-13 unlisted 2019-12-31 — 2018-04-01 임계 행 검증 (시총 15억)", () => {
+describe("AT-13 unlisted — 양도일 2020-03-01, 2018-04-01 임계 행 (시총 15억)", () => {
   /**
-   * marketType="unlisted" / priorYearEndDate=2019-12-31
+   * marketType="unlisted" / 양도일 2020-03-01 · 직전 사업연도 종료일 2019-12-31
    * selfShareRatio=0 / selfMarketCap=1,500,000,000 (15억)
    * → 2018.4.1.~ 임계 적용: shareRatio=0.04 / marketCap=1,500,000,000
    * → byCap: 15억 ≥ 15억 임계 → 대주주
@@ -459,7 +475,7 @@ describe("AT-13 unlisted 2019-12-31 — 2018-04-01 임계 행 검증 (시총 15�
    * ⚠️ 주의: §167의8 2018~2020 임계는 법제처 연혁 API 미확인 상태.
    * §157 코스닥 개정 패턴 병행 추정값. 실무 재검증 필요 시 확인할 것.
    */
-  it("unlisted / 2019-12-31 / selfCap=15억 → byCap 대주주 + fromDate=2018-04-01", () => {
+  it("양도일 2020-03-01 / selfCap=15억 → byCap 대주주 + fromDate=2018-04-01", () => {
     const input = makeInput({
       marketType: "unlisted",
       selfShareRatio: 0,
@@ -467,7 +483,9 @@ describe("AT-13 unlisted 2019-12-31 — 2018-04-01 임계 행 검증 (시총 15�
       isMajorShareholder: true,
       acquisitionMode: "actual",
       perShareAcquisitionPrice: 20_000,
+      transferDate: new Date("2020-03-01"),
       priorYearEndDate: new Date("2019-12-31"),
+      filingDate: new Date("2020-08-31"),
     });
 
     const result = calculateStockTransferTax(input);
@@ -483,9 +501,9 @@ describe("AT-13 unlisted 2019-12-31 — 2018-04-01 임계 행 검증 (시총 15�
 // AT-14 (F-5 신설): 비상장 1998-12-31 fallback (1900-01-01 행 매칭)
 // ============================================================
 
-describe("AT-14 unlisted 1998-12-31 fallback — 1900-01-01 행 매칭", () => {
+describe("AT-14 unlisted 1900-01-01 행 — 양도일 1998-06-01", () => {
   /**
-   * marketType="unlisted" / priorYearEndDate=1998-12-31
+   * marketType="unlisted" / 양도일 1998-06-01 · 직전 사업연도 종료일 1997-12-31
    * selfShareRatio=0.06 (6%) / selfMarketCap=0
    * → 1900-01-01 fallback 행: shareRatio=0.02 / marketCap=Infinity
    * → byRatio: 6% ≥ 5% → 대주주 (F-6 정정 후)
@@ -493,7 +511,7 @@ describe("AT-14 unlisted 1998-12-31 fallback — 1900-01-01 행 매칭", () => {
    * F-6 정정 (2026-05-17): 1900-01-01 fallback 지분율 2% → 5%
    * §94①3 나목 일반 표준 5% 보수적 fallback. 법제처 부칙 미확인.
    */
-  it("unlisted / 1998-12-31 / selfRatio=6% → fromDate=1900-01-01 + shareRatio=0.05", () => {
+  it("양도일 1998-06-01 / selfRatio=6% → fromDate=1900-01-01 + shareRatio=0.05", () => {
     const input = makeInput({
       marketType: "unlisted",
       selfShareRatio: 0.06,           // 6% ≥ 5% fallback 임계 → 대주주
@@ -501,7 +519,10 @@ describe("AT-14 unlisted 1998-12-31 fallback — 1900-01-01 행 매칭", () => {
       isMajorShareholder: true,
       acquisitionMode: "actual",
       perShareAcquisitionPrice: 20_000,
-      priorYearEndDate: new Date("1998-12-31"),
+      acquisitionDate: new Date("1995-01-01"),
+      transferDate: new Date("1998-06-01"),
+      filingDate: new Date("1998-08-31"),
+      priorYearEndDate: new Date("1997-12-31"),
     });
 
     const result = calculateStockTransferTax(input);
@@ -517,14 +538,14 @@ describe("AT-14 unlisted 1998-12-31 fallback — 1900-01-01 행 매칭", () => {
 // AT-16 (F-6 신설): 2014년 비상장 회귀 차단 — 지분율 4% 정정 (2%→4%)
 // ============================================================
 
-describe("AT-16 unlisted 2014-12-31 — 지분율 4% 임계 (F-6 정정)", () => {
+describe("AT-16 unlisted — 양도일 2015-06-01, 지분율 4% 임계 (F-6 정정)", () => {
   /**
    * F-6 정정 회귀 차단: 2013-01-01 행 지분율 2% → 4%
-   * marketType="unlisted" / priorYearEndDate=2014-12-31 / selfShareRatio=0.03
+   * marketType="unlisted" / 양도일 2015-06-01 · 직전 사업연도 종료일 2014-12-31 / selfShareRatio=0.03
    * → 변경 전: 3% ≥ 2% → 대주주 (오판)
    * → 변경 후: 3% < 4% → 비대주주 (정정)
    */
-  it("unlisted / 2014-12-31 / selfRatio=3% → byRatio=false (비대주주)", () => {
+  it("양도일 2015-06-01 / selfRatio=3% → byRatio=false (비대주주)", () => {
     const input = makeInput({
       marketType: "unlisted",
       selfShareRatio: 0.03,
@@ -532,7 +553,10 @@ describe("AT-16 unlisted 2014-12-31 — 지분율 4% 임계 (F-6 정정)", () =>
       isMajorShareholder: false,
       acquisitionMode: "actual",
       perShareAcquisitionPrice: 20_000,
+      acquisitionDate: new Date("2012-01-01"),
+      transferDate: new Date("2015-06-01"),
       priorYearEndDate: new Date("2014-12-31"),
+      filingDate: new Date("2015-08-31"),
     });
 
     const result = calculateStockTransferTax(input);
@@ -548,14 +572,14 @@ describe("AT-16 unlisted 2014-12-31 — 지분율 4% 임계 (F-6 정정)", () =>
 // AT-17 (F-6 신설): 2010년 비상장 회귀 차단 — 1900 fallback 5% 정정 (2%→5%)
 // ============================================================
 
-describe("AT-17 unlisted 2010-12-31 — fallback 5% 임계 (F-6 정정)", () => {
+describe("AT-17 unlisted — 양도일 2011-06-01, fallback 5% 임계 (F-6 정정)", () => {
   /**
    * F-6 정정 회귀 차단: 1900-01-01 fallback 지분율 2% → 5%
-   * marketType="unlisted" / priorYearEndDate=2010-12-31 / selfShareRatio=0.04
+   * marketType="unlisted" / 양도일 2011-06-01 · 직전 사업연도 종료일 2010-12-31 / selfShareRatio=0.04
    * → 변경 전: 4% ≥ 2% → 대주주 (오판)
    * → 변경 후: 4% < 5% → 비대주주 (정정)
    */
-  it("unlisted / 2010-12-31 / selfRatio=4% → byRatio=false (fallback 5% 기준)", () => {
+  it("양도일 2011-06-01 / selfRatio=4% → byRatio=false (fallback 5% 기준)", () => {
     const input = makeInput({
       marketType: "unlisted",
       selfShareRatio: 0.04,
@@ -563,7 +587,10 @@ describe("AT-17 unlisted 2010-12-31 — fallback 5% 임계 (F-6 정정)", () => 
       isMajorShareholder: false,
       acquisitionMode: "actual",
       perShareAcquisitionPrice: 20_000,
+      acquisitionDate: new Date("2008-01-01"),
+      transferDate: new Date("2011-06-01"),
       priorYearEndDate: new Date("2010-12-31"),
+      filingDate: new Date("2011-08-31"),
     });
 
     const result = calculateStockTransferTax(input);

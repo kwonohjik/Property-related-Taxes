@@ -5,9 +5,11 @@
  * F-8(MajorShareholderBlock 내부) + F-9(부모 컴포넌트 marketType 변경 시) 공용.
  *
  * 정책:
+ * - 임계표 행 선택 인자는 **양도일**이다 (시행령 §157 부칙 — 「양도하는 분부터」).
+ *   지분율·시총 **측정값**은 직전 사업연도 종료일 기준이고 사용자 입력이라 여기선 그대로 쓴다.
  * - useEffect → store 미러링 금지 (feedback_useeffect_store_mirror_forbidden)
  * - onChange 시점에만 동기화 발생 (렌더 사이클 무관)
- * - 자동 판정 미지원(other_asset 또는 priorYearEndDate 미입력) 시 patch만 전달
+ * - 자동 판정 미지원(other_asset 또는 양도일·판정기준일 미입력) 시 patch만 전달
  */
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
@@ -20,6 +22,7 @@ export function computeAutoIsMajor(
   form: Pick<
     StockTransferFormData,
     | "marketType"
+    | "transferDate"
     | "priorYearEndDate"
     | "selfShareRatio"
     | "selfMarketCap"
@@ -40,11 +43,13 @@ export function computeAutoIsMajor(
     return undefined;
   }
 
-  if (!merged.priorYearEndDate) return undefined;
+  // 임계표 **행 선택은 양도일**(부칙 축), 측정값은 직전 사업연도 종료일 기준 입력값이다.
+  // 둘 다 있어야 판정이 성립한다 — 자동 fallback 금지(미입력이면 미리보기를 띄우지 않는다).
+  if (!merged.priorYearEndDate || !merged.transferDate) return undefined;
 
   const t = getMajorShareholderThreshold(
     merged.marketType,
-    new Date(merged.priorYearEndDate),
+    new Date(merged.transferDate),
   );
 
   const selfRatio = parseDecimal(merged.selfShareRatio) * 0.01;

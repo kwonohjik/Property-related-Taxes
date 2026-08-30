@@ -9,8 +9,14 @@
  *
  * 교재 §3장 이미지 50·51 Check Point ②③⑦⑯.
  *
+ * 🔑 **축 정정 (리뷰 2026-08-28 #2)** — `judgmentDateOverride`는 **보유현황 측정 시점**이지
+ *    개정본 적용 시기가 아니다. §157⑤는 「합병등기일 현재 **주식보유 현황**에 따른다」로
+ *    지분율·시총을 **어느 시점의 값으로 볼지**만 옮긴다. 어느 임계 금액이 유효한지는
+ *    **부칙**이 「양도하는 분부터」로 정한다. 그래서 임계표 행은 **양도일**이 고르고,
+ *    override는 `judgmentBasis` echo(결과 카드 라벨·입력 안내)로만 남는다.
+ *
  * 핵심 검증:
- *   - judgmentDateOverride 가 있으면 매트릭스 조회에 사용 (priorYearEndDate 대신)
+ *   - judgmentDateOverride 는 임계표 행 선택을 **바꾸지 않는다**
  *   - judgmentBasis 가 echo 됨
  *   - default(미지정) 시 기존 priorYearEndDate 동작 유지
  */
@@ -73,22 +79,37 @@ describe("F-09/F-10/F-14/F-23 — 판정 기준일 override (합병·분할·신
     });
   });
 
-  describe("PHS-02: F-09 합병등기일 기준 — 시기 경계 (2016-04-01)", () => {
-    it("priorYearEndDate=2024-12-31 (코스피 1%/50억) → judgmentDateOverride=2016-04-01 (1%/25억) 적용", () => {
+  describe("PHS-02: F-09 합병등기일 override는 임계 행을 바꾸지 않는다", () => {
+    it("양도일 2024-06-01 + judgmentDateOverride=2016-04-01 → 여전히 2024 행 (1%/50억)", () => {
       const result = calculateStockTransferTax(makeInput({
         priorYearEndDate: new Date("2024-12-31"),
         judgmentDateOverride: new Date("2016-04-01"),
         judgmentBasis: "merger",
       }));
       expect(result.appliedThreshold?.judgmentBasis).toBe("merger");
-      // 매트릭스 조회는 judgmentDateOverride 기준 → 2016.4.1.~12.31. 행 (1%/25억)
+      // 임계 행은 **양도일**(2024-06-01)이 고른다 — override는 측정 시점 축이다.
+      expect(result.appliedThreshold?.shareRatio).toBe(0.01);
+      expect(result.appliedThreshold?.marketCap).toBe(5_000_000_000);
+      expect(result.appliedThreshold?.fromDate).toBe("2024-01-01");
+    });
+
+    it("시기를 바꾸는 것은 양도일이다 — 양도일 2016-06-01 → 2016.4.1. 행 (1%/25억)", () => {
+      const result = calculateStockTransferTax(makeInput({
+        acquisitionDate: new Date("2013-01-01"),
+        transferDate: new Date("2016-06-01"),
+        filingDate: new Date("2016-08-31"),
+        priorYearEndDate: new Date("2015-12-31"),
+        judgmentDateOverride: new Date("2016-04-01"),
+        judgmentBasis: "merger",
+      }));
       expect(result.appliedThreshold?.shareRatio).toBe(0.01);
       expect(result.appliedThreshold?.marketCap).toBe(2_500_000_000);
+      expect(result.appliedThreshold?.fromDate).toBe("2016-04-01");
     });
   });
 
-  describe("PHS-03: F-10 분할등기일 기준", () => {
-    it("judgmentDateOverride=2019-12-31, kosdaq → 2018.4.1. 행 적용 (2%/15억)", () => {
+  describe("PHS-03: F-10 분할등기일 override도 마찬가지", () => {
+    it("kosdaq / 양도일 2024-06-01 + override=2019-12-31 → 2024 행 (2%/50억)", () => {
       const result = calculateStockTransferTax(makeInput({
         marketType: "kosdaq",
         priorYearEndDate: new Date("2024-12-31"),
@@ -97,12 +118,12 @@ describe("F-09/F-10/F-14/F-23 — 판정 기준일 override (합병·분할·신
       }));
       expect(result.appliedThreshold?.judgmentBasis).toBe("split");
       expect(result.appliedThreshold?.shareRatio).toBe(0.02);
-      expect(result.appliedThreshold?.marketCap).toBe(1_500_000_000);
+      expect(result.appliedThreshold?.marketCap).toBe(5_000_000_000);
     });
   });
 
-  describe("PHS-04: F-14 분할신설법인 — 분할 전 직전사업연도 종료일", () => {
-    it("judgmentDateOverride=2017-12-31, kospi → 2017.1.1. 행 (1%/25억)", () => {
+  describe("PHS-04: F-14 분할신설법인 override도 마찬가지", () => {
+    it("kospi / 양도일 2024-06-01 + override=2017-12-31 → 2024 행 (1%/50억)", () => {
       const result = calculateStockTransferTax(makeInput({
         priorYearEndDate: new Date("2024-12-31"),
         judgmentDateOverride: new Date("2017-12-31"),
@@ -110,7 +131,7 @@ describe("F-09/F-10/F-14/F-23 — 판정 기준일 override (합병·분할·신
       }));
       expect(result.appliedThreshold?.judgmentBasis).toBe("split_new_entity");
       expect(result.appliedThreshold?.shareRatio).toBe(0.01);
-      expect(result.appliedThreshold?.marketCap).toBe(2_500_000_000);
+      expect(result.appliedThreshold?.marketCap).toBe(5_000_000_000);
     });
   });
 
@@ -127,15 +148,19 @@ describe("F-09/F-10/F-14/F-23 — 판정 기준일 override (합병·분할·신
     });
   });
 
-  describe("PHS-06: judgmentBasis는 있지만 override 일자 없음 → priorYearEndDate fallback", () => {
-    it("judgmentDateOverride 미지정 → priorYearEndDate 사용 (Zod optional, fallback)", () => {
+  describe("PHS-06: override 일자가 없어도 임계 행은 양도일이 고른다", () => {
+    it("judgmentBasis만 있고 override 미지정 → 양도일 2021-06-01 → 2020.4.1. 행 (10억)", () => {
       const result = calculateStockTransferTax(makeInput({
-        priorYearEndDate: new Date("2020-04-01"),
+        acquisitionDate: new Date("2018-01-01"),
+        transferDate: new Date("2021-06-01"),
+        filingDate: new Date("2021-08-31"),
+        priorYearEndDate: new Date("2020-12-31"),
         judgmentBasis: "merger",
       }));
-      // judgmentBasis는 echo 되지만 매트릭스는 priorYearEndDate 기준 (2020.4.1.~)
+      // judgmentBasis는 echo만 되고 임계는 양도일 기준
       expect(result.appliedThreshold?.judgmentBasis).toBe("merger");
       expect(result.appliedThreshold?.marketCap).toBe(1_000_000_000);
+      expect(result.appliedThreshold?.fromDate).toBe("2020-04-01");
     });
   });
 
