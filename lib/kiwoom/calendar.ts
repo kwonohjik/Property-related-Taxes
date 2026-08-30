@@ -181,6 +181,30 @@ function monthBeforeClamped(anchor: Date): Date {
   return prev;
 }
 
+/**
+ * `monthBeforeClamped`의 **정방향 짝** — anchor + 1개월, 말일 클램프.
+ *
+ * 민법 §160③ 「최종의 월에 해당일이 없는 때에는 그 월의 말일로 기간이 만료한다」.
+ * 2023-01-31 + 1개월 = 2023-02-28 (JS 기본은 03-03으로 민다).
+ *
+ * ⚠️ 클램프는 **−1일보다 먼저** 건다. 「1개월 후의 전날」이 아니라 「1개월이 만료하는 날」이
+ *    종료일이므로, 클램프한 말일에서 다시 하루를 빼면 02-27이 되어 하루 짧아진다.
+ */
+function monthAfterClamped(anchor: Date): Date {
+  const y = anchor.getUTCFullYear();
+  const mIdx = anchor.getUTCMonth(); // 0-based
+  const d = anchor.getUTCDate();
+  const next = new Date(Date.UTC(y, mIdx + 1, d));
+  const expected = (mIdx + 1) % 12;
+  if (next.getUTCMonth() !== expected) {
+    next.setUTCDate(0); // 넘어간 달의 **직전** 달 말일로 되돌린다
+    return next;
+  }
+  // 해당일이 있으면 그 전날이 「1개월 - 1일」이다 (예: 08-21 → 09-21 → 09-20)
+  next.setUTCDate(next.getUTCDate() - 1);
+  return next;
+}
+
 export function buildOneMonthBeforeSlots(transferDateIso: string): string[] {
   if (!transferDateIso || !/^\d{4}-\d{2}-\d{2}$/.test(transferDateIso)) return [];
 
@@ -237,9 +261,18 @@ export function buildOneMonthAfterListingSlots(listingDateIso: string): string[]
   // start = 상장일
   const start = new Date(Date.UTC(y, m - 1, d));
 
-  // end = 상장일 + 1개월 - 1일 (JS overflow 자동 보정)
-  const end = new Date(Date.UTC(y, m, d));
-  end.setUTCDate(end.getUTCDate() - 1);
+  // end = (상장일 + 1개월)의 전날.
+  //
+  // ⚠️ **JS는 자동 보정하지 않는다** — 종전 주석의 「자동 보정」은 사실이 아니었다.
+  //    `Date.UTC(2023, 1, 31)`은 2월에 31일이 없으니 **3월 3일로 밀린다**. 그대로 −1하면
+  //    윈도우가 [01-31 ~ 03-02] 31일이 되어 **2월 말일을 넘어선 종가**가 §165⑤ 1개월 평균의
+  //    분자·분모에 섞였다.
+  //    민법 §160③ 「최종의 월에 **해당일이 없는 때에는 그 월의 말일로** 기간이 만료한다」
+  //    ⇒ 2023-01-31의 1개월 후는 2023-02-28이고, 그 「전날」이 아니라 **그날**이 종료일이다.
+  //
+  //    같은 파일 역방향(`monthBeforeClamped`)은 이미 이 클램프를 갖고 있었다 —
+  //    한 파일 안에서 두 방향이 갈려 있었다.
+  const end = monthAfterClamped(new Date(Date.UTC(y, m - 1, d)));
 
   const slots: string[] = [];
   const cursor = new Date(start.getTime());

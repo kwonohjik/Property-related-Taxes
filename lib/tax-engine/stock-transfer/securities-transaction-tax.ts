@@ -55,6 +55,21 @@ export interface SecuritiesTaxParams {
    * API JSON 직렬화 후 Date 도달 보장은 호출 측 책임.
    */
   transferDate?: Date;
+  /**
+   * **증권시장 안에서 양도했는가** — 탄력세율의 전제다.
+   *
+   * 증권거래세법 §8②은 「… **증권시장에서 거래되는 주권에 한정하여** … 낮추거나 영으로 할 수
+   * 있다」이고, 그 위임을 받은 시행령 §5는 각 호가 전부 「~시장에서 **양도되는** 주권」이다.
+   * 농어촌특별세법 §5①5호도 「**증권시장에서 거래된** 증권의 양도가액」을 과세표준으로 한다.
+   * ⇒ 증권시장 **밖** 양도면 시장 구분과 무관하게 법 §8① 본칙(1만분의 35)이고 농특세는 0이다.
+   *
+   * 🔑 축은 이미 있었는데 **여기까지 오지 않았다** — `isOnMarketTransaction`이 14계층 배선을
+   *    마쳤고 `calcSecuritiesTransactionTax(input, …)`로 input 전체가 넘어오는데도
+   *    구조분해가 3필드뿐이라, 값을 뒤집어도 결과 JSON이 **바이트 동일**이었다.
+   *
+   * @default true (기존 동작 호환 — 미제공이면 장내로 본다)
+   */
+  isOnMarketTransaction?: boolean;
 }
 
 // ============================================================
@@ -110,6 +125,7 @@ export function calcSecuritiesTransactionTax(
   transferPrice: number,
 ): SecuritiesTransactionTaxResult {
   const { marketType, isKOTCTrading, transferDate } = params;
+  const isOnMarket = params.isOnMarketTransaction ?? true; // 3중 패턴 default
 
   // ── STEP 1: 기타자산 — 단정 금지, 경고 반환 ─────────────────────
   // 증권거래세법 §2 본문: "주권·지분의 양도 전부" 과세 대상.
@@ -138,8 +154,22 @@ export function calcSecuritiesTransactionTax(
 
   if (isKOTCTrading && marketType === "unlisted") {
     // K-OTC(금융투자협회) — 시행령 §5 3호 나목 (코스닥과 동률)
+    //
+    // ⚠️ K-OTC는 증권시장 **밖**이지만 시행령 §5 3호 나목이 **별도로** 세율을 준다 —
+    //    아래 장외 분기를 타지 않는다. 그래서 이 분기가 장외 게이트보다 앞에 있다.
     num = period.kosdaqKotcNum;
     rateReference = `${STOCK_STX.STX_DECREE_5_3_NA_KOTC} ${period.refSuffix}`;
+  } else if (!isOnMarket) {
+    /**
+     * 증권시장 **밖** 양도 — 시장 구분과 무관하게 법 §8① 본칙, 농특세 0.
+     *
+     * 탄력세율(시행령 §5)의 위임 근거인 법 §8②이 「**증권시장에서 거래되는 주권에 한정하여**」로
+     * 스스로 범위를 그었고, 시행령 §5 각 호도 「~시장에서 **양도되는** 주권」이다.
+     * 농특세도 「**증권시장에서 거래된** 증권의 양도가액」이 과세표준이라(농특세법 §5①5호)
+     * 장외에는 붙지 않는다.
+     */
+    num = period.unlistedNum;
+    rateReference = period.unlistedRef;
   } else if (marketType === "kospi") {
     // 유가증권시장 — 시행령 §5 1호 + 농특세법 §5①5호 (15/10000, 전 구간)
     num = period.kospiNum;
