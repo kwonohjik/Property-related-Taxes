@@ -243,7 +243,13 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         const hasCapitalAdj = !!(form.capitalAdjustments && form.capitalAdjustments.length > 0);
         const transferShareCount = parseI(form.shareCount);
         const matchSum = form.specificMatchings.reduce((s, m) => s + parseI(m.shareCount), 0);
-        if (matchSum !== transferShareCount && !hasCapitalAdj) {
+        /**
+         * ⚠️ 여기에는 자본조정 면제를 걸지 않는다 — **양변이 모두 희석 후 단위**다.
+         * 배정 수량도 양도 주식수도 매도 시점의 주식이라 희석과 무관하고,
+         * 부족분은 그대로 양도가액을 깎는다(엔진 합계가 matched에서 나온다 — 소득세법 §96①).
+         * 단위가 갈리는 것은 **매수 lot 보유 수량과 대조하는 아래 검사**뿐이라 면제도 거기만 남긴다.
+         */
+        if (matchSum !== transferShareCount) {
           errors.push({
             field: "specificMatchings",
             message: `개별법: 매수 lot별 배정 합계(${matchSum})가 양도 주식수(${transferShareCount})와 일치해야 합니다`,
