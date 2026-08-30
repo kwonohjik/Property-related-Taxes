@@ -37,6 +37,7 @@ const NBL_HEAVY_CORP_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]>
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import { buildPr2Detail } from "./stock-transfer-pr2-detail";
+import { isMarketSampleAllowedMarket } from "./stock-valuation-market-sample";
 import { applyCapitalAdjustmentsToLots } from "./lot-capital-adjustments";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { allocateLots } from "./lot-allocation";
@@ -185,10 +186,23 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     const actualMode = input.transferActualInputMode ?? "per_share";  // 3중 패턴 default
     if (
       input.transferMarketSamplePrice !== undefined &&
-      input.transferMarketSamplePrice > 0
+      input.transferMarketSamplePrice > 0 &&
+      isMarketSampleAllowedMarket(input.marketType)
     ) {
       // R-1' 매매사례가액 우선 (영§176의2③1호) — perShareTransferPrice 무시
       transferPrice = Math.floor(input.transferMarketSamplePrice) * shareCount;
+    } else if (
+      input.transferMarketSamplePrice !== undefined &&
+      input.transferMarketSamplePrice > 0
+    ) {
+      // 상장주식은 §176의2③1호 본문 괄호가 매매사례가액 자체를 배제한다 — 실지거래가액으로 간다.
+      warnings.push(
+        `${STOCK.ENFORCEMENT_DECREE_176_2_3_1_MARKET_SAMPLE} 본문 괄호 — 주권상장법인 주식등은 매매사례가액 대상이 아닙니다. 양도 매매사례가액을 적용하지 않고 실지거래가액으로 계산했습니다.`,
+      );
+      transferPrice =
+        actualMode === "total"
+          ? (input.transferTotalPrice ?? 0)
+          : (input.perShareTransferPrice ?? 0) * shareCount;
     } else if (actualMode === "total") {
       transferPrice = input.transferTotalPrice ?? 0;                  // 총액 직접 사용
     } else {

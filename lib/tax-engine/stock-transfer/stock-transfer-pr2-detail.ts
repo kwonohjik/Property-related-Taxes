@@ -6,7 +6,7 @@
  */
 
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
-import { evaluateMarketSample } from "./stock-valuation-market-sample";
+import { evaluateMarketSample, isMarketSampleAllowedMarket } from "./stock-valuation-market-sample";
 import { adjustShareCountAndCost } from "./stock-capital-adjustments";
 
 export interface Pr2DetailResult {
@@ -32,9 +32,12 @@ export function buildPr2Detail(
   let capitalAdjustmentsDetail: StockTransferResult["capitalAdjustmentsDetail"];
 
   // STEP 3.5: 매매사례가액 detail
+  // 상장주식은 §176의2③1호 본문 괄호가 매매사례가액 자체를 배제한다 —
+  // 양도가액 분기와 **같은 술어**를 써서 「세액은 안 쓰는데 화면엔 적용됐다고 뜨는」 갈림을 막는다.
   if (
-    acquisitionMode === "sale_case" ||
-    (input.transferMarketSamplePrice !== undefined && input.transferMarketSamplePrice > 0)
+    isMarketSampleAllowedMarket(input.marketType) &&
+    (acquisitionMode === "sale_case" ||
+      (input.transferMarketSamplePrice !== undefined && input.transferMarketSamplePrice > 0))
   ) {
     const msResult = evaluateMarketSample({
       shareCount,
