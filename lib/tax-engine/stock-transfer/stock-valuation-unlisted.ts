@@ -33,7 +33,7 @@ import {
 import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
 // §165④ 가중치·80% 하한 연혁은 §165⑤(취득후상장)·validate·UI 프리뷰와 **공용 정본**이다.
 // 여기에 사본을 두면 같은 조문이 두 곳에서 갈린다. [[feedback_ui_engine_dual_truth_avoidance]]
-import { getValuationWeights } from "./valuation-165-4-basis";
+import { getValuationWeights, calcWeightedAvgPerShare } from "./valuation-165-4-basis";
 
 // ============================================================
 // 평가 결과 타입
@@ -95,26 +95,105 @@ export interface UnlistedValuationResult {
 // 연혁 게이트(`getValuationWeights`)는 `valuation-165-4-basis.ts`로 이관했다 — §165⑤ 경로와
 // 공용이다. 사본을 되살리지 말 것.
 
-// ============================================================
-// 가중평균 1주당 평가액 계산
-// ============================================================
+// 가중평균 산식(`calcWeightedAvgPerShare`)은 `valuation-165-4-basis.ts` 정본을 쓴다 — 사본 금지.
 
 /**
- * 비상장 1주당 가중평균 계산
- *
- * netIncomeValue = 1주당 순손익가치 (= 1주당 순손익액 ÷ 10% 이미 반영)
- * netAssetValue  = 1주당 순자산가치
- *
- * 현행(2007.2.28.~): (ni × 3 + na × 2) ÷ 5
- * 가중치 반전(부동산과다보유): (ni × 2 + na × 3) ÷ 5
+ * **한쪽 시점만** 내는 경로 셋은 `stock-valuation-unlisted-single-side.ts`로 나갔다(800줄 정책).
+ * 기존 import 경로를 깨지 않도록 여기서 재수출한다.
  */
-function calcWeightedAvgPerShare(
-  netIncomeValue: number,
-  netAssetValue: number,
-  niWeight: number,
-  naWeight: number,
-): number {
-  return (netIncomeValue * niWeight + netAssetValue * naWeight) / 5;
+export {
+  calcFaceValueTransferEstimated,
+  calcTransferStdPriceForFaceValue,
+  calcAcquisitionStdPerShareSupplementary,
+} from "./stock-valuation-unlisted-single-side";
+export type { AcquisitionSideSupplementaryResult } from "./stock-valuation-unlisted-single-side";
+
+// ============================================================
+// §165⑨ 월할 보정 — 가중평균·순자산 단독 **공용**
+// ============================================================
+
+interface Section165_9Applied {
+  /** 보정 후 양도기준시가 (분모) — 미발동 시 입력 그대로 */
+  appliedTransferStd: number;
+  section1659Detail?: UnlistedValuationResult["section1659Detail"];
+  appliedRulesDelta: string[];
+  warningsDelta: string[];
+}
+
+/**
+ * [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 시 §81④ 1호 월할 보정.
+ *
+ * 양도 당시 기준시가 == 취득 당시 기준시가(= 동일 사업연도 취득·양도)인 경우,
+ * 양도 당시 기준시가를 §81④ 월할 상승분으로 교체한다(취득 당시 기준시가는 불변).
+ * 보정 대상은 환산 **분모**(transferStd)뿐 — 분자(acqStd)·개산공제 base 불변.
+ *
+ * 🔑 **가중평균 분기와 순자산 단독(§165④3) 분기가 이 함수 하나를 쓴다.**
+ *    종전에는 순자산 단독 분기가 이 블록에 닿기 전에 return 해 보정을 통째로 건너뛰었다.
+ *    §165⑨은 「법 제99조제1항제3호 및 **제4호에 따라 산정한** … 기준시가가 같은 경우」로
+ *    **호를 가르지 않고**, §165④3호도 「제1호나목의 계산식에 따라 평가한 가액」이라
+ *    여전히 §99①4호 기준시가다. 순자산 단독 법인이 동일 사업연도에 취득·양도하면
+ *    직전 사업연도가 같아 양측이 **필연적으로 일치**하므로 오히려 전형적 발동 케이스다.
+ *
+ * @param prePriorValue 전전 사업연도 평가액. **직전연도를 평가한 것과 같은 기준**으로
+ *   호출부가 산정해 넘긴다(가중평균 분기는 가중평균, 순자산 단독 분기는 순자산 단독).
+ *   같은 산식의 양변을 서로 다른 기준으로 재면 안 되기 때문이다. 미입력이면 undefined.
+ */
+function applySection165_9(
+  input: StockTransferInput,
+  transferDate: Date,
+  transferStdPricePerShare: number,
+  acquisitionStdPricePerShare: number,
+  prePriorValue: number | undefined,
+): Section165_9Applied {
+  const appliedRulesDelta: string[] = [];
+  const warningsDelta: string[] = [];
+  const equalStd =
+    transferStdPricePerShare === acquisitionStdPricePerShare && transferStdPricePerShare > 0;
+
+  if (!equalStd) {
+    return { appliedTransferStd: transferStdPricePerShare, appliedRulesDelta, warningsDelta };
+  }
+
+  if (input.unlistedSameBizYearToggle !== true) {
+    // M-3: 동일 기준시가이나 동일 사업연도 아님(§81④ 2호) — 보정 없음
+    warningsDelta.push(
+      "§165⑨ — 양도·취득 기준시가가 동일하나 동일 사업연도 취득·양도가 아닙니다(§81④ 2호). 양도차익이 0 이하일 수 있습니다.",
+    );
+    return { appliedTransferStd: transferStdPricePerShare, appliedRulesDelta, warningsDelta };
+  }
+
+  // 전전연도 미입력은 validate에서 차단 — 엔진 도달 시 보정 미적용(방어)
+  if (prePriorValue === undefined) {
+    return { appliedTransferStd: transferStdPricePerShare, appliedRulesDelta, warningsDelta };
+  }
+
+  const holdingMonths = calcAccrualMonths(input.acquisitionDate, transferDate); // 본체: 양도일 종점
+  const priorBizYearMonths = input.priorBizYearMonths ?? 12;
+  const { adjusted } = apply81_4Accrual(
+    transferStdPricePerShare,
+    prePriorValue,
+    holdingMonths,
+    priorBizYearMonths,
+  );
+  if (adjusted <= 0) {
+    warningsDelta.push("§81④ 보정 평가액이 0 이하입니다. 보정 미적용.");
+    return { appliedTransferStd: transferStdPricePerShare, appliedRulesDelta, warningsDelta };
+  }
+
+  appliedRulesDelta.push(STOCK.ENFORCEMENT_DECREE_165_9_MAIN);
+  appliedRulesDelta.push(STOCK.ENFORCEMENT_RULE_81_4_MONTHLY_ACCRUAL);
+  return {
+    appliedTransferStd: adjusted,
+    section1659Detail: {
+      prior: transferStdPricePerShare,
+      prePrior: prePriorValue,
+      holdingMonths,
+      priorBizYearMonths,
+      adjusted,
+    },
+    appliedRulesDelta,
+    warningsDelta,
+  };
 }
 
 // ============================================================
@@ -332,9 +411,28 @@ export function calcUnlistedValuation(
       };
     }
 
-    // 환산취득가 = 양도가 × 취득기준시가 / 양도기준시가
+    /**
+     * §165⑨ 월할 보정 — 가중평균 분기와 **같은 헬퍼**를 탄다.
+     * 전전연도도 **순자산 단독**으로 평가한다: 직전을 순자산 단독으로 잡아 놓고
+     * 전전만 가중평균으로 재면 같은 산식의 양변이 다른 기준이 된다.
+     */
+    const naOnlyPrePrior =
+      typeof input.prePriorYearNetAssetPerShare === "number"
+        ? Math.floor(input.prePriorYearNetAssetPerShare)
+        : undefined;
+    const naOnly1659 = applySection165_9(
+      input,
+      transferDate,
+      transferStdPricePerShare,
+      acquisitionStdPricePerShare,
+      naOnlyPrePrior,
+    );
+    appliedRules.push(...naOnly1659.appliedRulesDelta);
+    warnings.push(...naOnly1659.warningsDelta);
+
+    // 환산취득가 = 양도가 × 취득기준시가 / 보정 후 양도기준시가
     const totalAcquisitionPrice = Math.floor(
-      (transferPrice * acquisitionStdPricePerShare) / transferStdPricePerShare,
+      (transferPrice * acquisitionStdPricePerShare) / naOnly1659.appliedTransferStd,
     );
 
     return {
@@ -346,6 +444,7 @@ export function calcUnlistedValuation(
       netAssetOnlyReason,
       netIncomeValue: transferNi,
       netAssetValue: transferNa,
+      section1659Detail: naOnly1659.section1659Detail,
       warnings,
       appliedRules,
     };
@@ -483,60 +582,32 @@ export function calcUnlistedValuation(
   const acquisitionStdPriceTotal = acquisitionStdPricePerShare * shareCount;
 
   // ─── [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 시 §81④ 1호 월할 보정 ───
-  // 양도 당시 기준시가 == 취득 당시 기준시가(= 동일 사업연도 취득·양도)인 경우,
-  // 양도 당시 기준시가를 §81④ 월할 상승분으로 교체(취득 당시 기준시가는 불변).
-  // 보정 대상은 환산 분모(transferStd)뿐 — 분자(acqStd)·개산공제 base 불변.
-  let appliedTransferStd = transferStdPricePerShare;
-  let section1659Detail: UnlistedValuationResult["section1659Detail"];
-  const equalStd =
-    transferStdPricePerShare === acquisitionStdPricePerShare && transferStdPricePerShare > 0;
-
-  if (equalStd && input.unlistedSameBizYearToggle === true) {
-    const hasPrePrior =
-      typeof input.prePriorYearNetIncomePerShare === "number" &&
-      typeof input.prePriorYearNetAssetPerShare === "number";
-    if (hasPrePrior) {
-      // 전전 사업연도 평가 — 본 경로의 연혁 가중치(niWeight·naWeight) 그대로 (prior와 일관)
-      const prePrior = Math.floor(
-        niWeight === 0
-          ? input.prePriorYearNetAssetPerShare!
-          : calcWeightedAvgPerShare(
-              input.prePriorYearNetIncomePerShare!,
-              input.prePriorYearNetAssetPerShare!,
-              niWeight,
-              naWeight,
-            ),
-      );
-      const holdingMonths = calcAccrualMonths(input.acquisitionDate, transferDate); // 본체: 양도일 종점
-      const priorBizYearMonths = input.priorBizYearMonths ?? 12;
-      const { adjusted } = apply81_4Accrual(
-        transferStdPricePerShare,
-        prePrior,
-        holdingMonths,
-        priorBizYearMonths,
-      );
-      if (adjusted > 0) {
-        appliedTransferStd = adjusted;
-        appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_9_MAIN);
-        appliedRules.push(STOCK.ENFORCEMENT_RULE_81_4_MONTHLY_ACCRUAL);
-        section1659Detail = {
-          prior: transferStdPricePerShare,
-          prePrior,
-          holdingMonths,
-          priorBizYearMonths,
-          adjusted,
-        };
-      } else {
-        warnings.push("§81④ 보정 평가액이 0 이하입니다. 보정 미적용.");
-      }
-    }
-    // 전전연도 미입력은 validate에서 차단 — 엔진 도달 시 보정 미적용(방어)
-  } else if (equalStd && input.unlistedSameBizYearToggle !== true) {
-    // M-3: 동일 기준시가이나 동일 사업연도 아님(§81④ 2호) — 보정 없음
-    warnings.push(
-      "§165⑨ — 양도·취득 기준시가가 동일하나 동일 사업연도 취득·양도가 아닙니다(§81④ 2호). 양도차익이 0 이하일 수 있습니다.",
-    );
-  }
+  // 전전 사업연도 평가 — 본 경로의 연혁 가중치(niWeight·naWeight) 그대로 (prior와 일관)
+  const weightedPrePrior =
+    typeof input.prePriorYearNetIncomePerShare === "number" &&
+    typeof input.prePriorYearNetAssetPerShare === "number"
+      ? Math.floor(
+          niWeight === 0
+            ? input.prePriorYearNetAssetPerShare
+            : calcWeightedAvgPerShare(
+                input.prePriorYearNetIncomePerShare,
+                input.prePriorYearNetAssetPerShare,
+                niWeight,
+                naWeight,
+              ),
+        )
+      : undefined;
+  const weighted1659 = applySection165_9(
+    input,
+    transferDate,
+    transferStdPricePerShare,
+    acquisitionStdPricePerShare,
+    weightedPrePrior,
+  );
+  const appliedTransferStd = weighted1659.appliedTransferStd;
+  const section1659Detail = weighted1659.section1659Detail;
+  appliedRules.push(...weighted1659.appliedRulesDelta);
+  warnings.push(...weighted1659.warningsDelta);
 
   // ─── 환산취득가 = 양도가 × (취득기준시가 / 보정 후 양도기준시가) ───
   // 정수 정밀도: 곱셈 먼저 (overflow 방지는 BigInt 사용)
@@ -592,164 +663,3 @@ export function calcEstimatedDeductionBase(
   return acquisitionStdPriceTotal;
 }
 
-// ============================================================
-// 비상장 장부분실 액면가 취득가 + 환산취득가 분리 헬퍼
-// ============================================================
-
-/**
- * 비상장 장부분실 액면가 환산취득가
- *
- * §99①4: 장부분실 시 취득기준시가 = 액면가
- * 환산취득가 = 양도가 × (액면가 / 양도기준시가)
- *
- * 양도기준시가 = calcUnlistedValuation()에서 반환된 transferStdPricePerShare
- *
- * 사례 49 anchor:
- *   양도가 = 6,000,000,000
- *   액면가 = 12,500
- *   양도기준시가 = 160,000 (80% 하한 적용 후)
- *   → 환산취득가 = 6,000,000,000 × 12,500 / 160,000 = 468,750,000
- */
-export function calcFaceValueTransferEstimated(
-  transferPrice: number,
-  faceValuePerShare: number,
-  transferStdPricePerShare: number,
-): number {
-  if (transferStdPricePerShare <= 0) return 0;
-  const numerator = BigInt(transferPrice) * BigInt(faceValuePerShare);
-  const denominator = BigInt(transferStdPricePerShare);
-  return Number(numerator / denominator);
-}
-
-/**
- * 비상장 장부분실 시 양도기준시가 계산
- * (액면가는 취득기준시가 — 양도기준시가는 별도 보충 평가 필요)
- *
- * 사례 49: isHeavyRealEstateForValuation=false, niPerShare=30,000, naPerShare=200,000
- * weighted = 30,000×3/5 + 200,000×2/5 = 98,000
- * floor80  = 200,000×0.80 = 160,000
- * → max(98,000, 160,000) = 160,000 (80% 하한 발동)
- */
-export function calcTransferStdPriceForFaceValue(
-  input: StockTransferInput,
-): { perShare: number; netAssetFloorApplied: boolean; netAssetFloorValue?: number } {
-  const { transferDate, isHeavyRealEstateForValuation } = input;
-  const transferNi = input.transferYearNetIncomePerShare ?? 0;
-  const transferNa = input.transferYearNetAssetPerShare ?? 0;
-
-  const weights = getValuationWeights(transferDate);
-  const niWeight = isHeavyRealEstateForValuation ? 2 : weights.niWeight;
-  const naWeight = isHeavyRealEstateForValuation ? 3 : weights.naWeight;
-
-  let weightedRaw: number;
-  if (niWeight === 0) {
-    weightedRaw = transferNa;
-  } else {
-    weightedRaw = calcWeightedAvgPerShare(transferNi, transferNa, niWeight, naWeight);
-  }
-
-  if (weights.hasFloor80) {
-    const floor80 = transferNa * STOCK_FLOOR_80_PCT;
-    if (floor80 > weightedRaw) {
-      return {
-        perShare: Math.floor(floor80),
-        netAssetFloorApplied: true,
-        netAssetFloorValue: Math.floor(floor80),
-      };
-    }
-  }
-
-  return { perShare: Math.floor(weightedRaw), netAssetFloorApplied: false };
-}
-
-// ============================================================
-// [C-1] 취득일 거래정지 — 취득시 1주당 보충평가 단독 산출
-// ============================================================
-
-export interface AcquisitionSideSupplementaryResult {
-  /** 취득시 1주당 보충평가액 (floor) — 80% 하한 미적용 (양측 경로 분자 관행 :422-423 일관) */
-  perShare: number;
-  /** floor 전 가중평균 raw (NA 단독 시 NA 그대로) */
-  weightedRaw: number;
-  /** 비타입 문자열 규칙 (호출부 warnings로 전달 — calcUnlistedValuation 호출부 패턴) */
-  appliedRules: string[];
-  warnings: string[];
-}
-
-/**
- * [C-1] 취득시 1주당 §165④ 보충평가 단독 산출 (취득일 거래정지 전용)
- *
- * 소령 §165③ 후문 "양도일ㆍ취득일 이전 1개월" — 취득일 이전 1개월 거래정지·관리종목 시
- * 취득시 기준시가만 §99①4 → §165④ 보충 평가로 대체 (양도시는 1개월 종가평균 유지).
- * §165⑤ 비적용 판정(계산식이 상장일 기반 취득 후 상장 전제).
- *
- * - 가중치 연혁: getValuationWeights(transferDate) — 양측 경로(calcUnlistedValuation)와 동일 (양도시점 과세)
- * - netAssetOnlyReason 시 취득연도 NA 단독 (§165④3 — 양측 경로와 동일 규율)
- * - isHeavyRealEstateForValuation 시 2:3 반전 (§165④1 괄호)
- * - 80% 하한 미적용 — 분자(취득기준시가) 관행 일관
- */
-export function calcAcquisitionStdPerShareSupplementary(
-  input: StockTransferInput,
-): AcquisitionSideSupplementaryResult {
-  const { transferDate, netAssetOnlyReason, isHeavyRealEstateForValuation } = input;
-  const acquisitionNi = input.acquisitionYearNetIncomePerShare ?? 0;
-  const acquisitionNa = input.acquisitionYearNetAssetPerShare ?? 0;
-
-  const warnings: string[] = [];
-  const appliedRules: string[] = [
-    STOCK.ENFORCEMENT_DECREE_165_3_TRADING_HALT,
-  ];
-
-  // 순자산 단독 평가 4사유 (§165④3 가~라목) — 취득측 NA 단독
-  if (netAssetOnlyReason) {
-    let ruleRef: string;
-    switch (netAssetOnlyReason) {
-      case "liquidation_or_owner_death":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_GA_LIQUIDATION;
-        break;
-      case "no_business_or_short_or_closed":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_NA_PRE_BUSINESS;
-        break;
-      case "stock_holding_company":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_DA_HOLDING_CO;
-        break;
-      case "remaining_term_under_3y":
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_RA_REMAINING_3Y;
-        break;
-      default:
-        ruleRef = STOCK.ENFORCEMENT_DECREE_165_4_3_GA_LIQUIDATION;
-    }
-    appliedRules.push(ruleRef);
-    return {
-      perShare: Math.floor(acquisitionNa),
-      weightedRaw: acquisitionNa,
-      appliedRules,
-      warnings,
-    };
-  }
-
-  // 가중평균 — 양측 경로와 동일 산식 (연혁 분기 + 부동산과다보유 반전)
-  appliedRules.push(STOCK.ENFORCEMENT_DECREE_165_4_1_WEIGHTED_AVG);
-  const weights = getValuationWeights(transferDate);
-  const niWeight = isHeavyRealEstateForValuation ? 2 : weights.niWeight;
-  const naWeight = isHeavyRealEstateForValuation ? 3 : weights.naWeight;
-  if (isHeavyRealEstateForValuation) {
-    appliedRules.push("부동산과다보유가중치반전");
-  }
-
-  const weightedRaw =
-    niWeight === 0
-      ? acquisitionNa
-      : calcWeightedAvgPerShare(acquisitionNi, acquisitionNa, niWeight, naWeight);
-
-  if (weightedRaw <= 0) {
-    warnings.push("취득시 보충평가액이 0 이하 — 취득연도 순손익·순자산가치를 확인하세요");
-  }
-
-  return {
-    perShare: Math.floor(weightedRaw),
-    weightedRaw,
-    appliedRules,
-    warnings,
-  };
-}

@@ -89,6 +89,21 @@ export interface Section165_4Value {
  * @param isHeavyRE      법 §94①4호 다목 법인 — 가중치 2:3 반전
  * @param transferDate   양도일 (연혁 게이팅 기준)
  */
+/**
+ * §165④1호 본칙 가중평균 — `(순손익 × niWeight + 순자산 × naWeight) ÷ 5`.
+ *
+ * 하한·연혁 게이팅 **전**의 raw 값이다(floor 하지 않는다 — 호출부가 하한과 비교한 뒤 floor 한다).
+ * 같은 한 줄이 세 파일에 흩어져 있었다 — 여기가 정본이다.
+ */
+export function calcWeightedAvgPerShare(
+  netIncomeValue: number,
+  netAssetValue: number,
+  niWeight: number,
+  naWeight: number,
+): number {
+  return (netIncomeValue * niWeight + netAssetValue * naWeight) / 5;
+}
+
 export function calcSection165_4Value(
   netIncomeValue: number,
   netAssetValue: number,
@@ -103,7 +118,7 @@ export function calcSection165_4Value(
   const weightedRaw =
     weights.niWeight === 0 && !isHeavyRE
       ? netAssetValue
-      : (netIncomeValue * niWeight + netAssetValue * naWeight) / 5;
+      : calcWeightedAvgPerShare(netIncomeValue, netAssetValue, niWeight, naWeight);
 
   if (weights.hasFloor80) {
     const floor80 = netAssetValue * STOCK_FLOOR_80_PCT;

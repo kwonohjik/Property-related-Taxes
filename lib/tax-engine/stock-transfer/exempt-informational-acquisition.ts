@@ -159,7 +159,7 @@ export function computeInformationalAcquisition(
           postListingDetail: undefined,
           valuationDetail: {
             method: "halt_acquisition_conversion",
-            netAssetFloorApplied: false,
+            netAssetFloorApplied: acqSide.floorApplied, // §165④1 단서 실제 발동 여부
             finalPerShareValue: acqSide.perShare,
             conversionAcqStdPerShare: acqSide.perShare,
             conversionTransferStd: haltTransferStd,
