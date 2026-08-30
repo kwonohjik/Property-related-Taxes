@@ -26,6 +26,7 @@
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import type { BurdenedGiftStockTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
@@ -350,11 +351,15 @@ export async function callGiftBurdenedTransferAPI(
  *   안분취득가 = Math.floor(bgt.actualAcquisitionPrice × debtRatio)
  *   perShareAcquisitionPrice = Math.floor(안분취득가 / shareCount)
  *
- * estimated + 비상장:
- *   burdenedGiftDebtRatio = debtRatio 전달 → 엔진 estimatedBase 후처리
+ * estimated (상장·비상장 공통):
+ *   burdenedGiftDebtRatio = debtRatio 전달 → 엔진이 §163⑥4 개산공제 base에만 적용.
+ *   환산취득가는 transferPrice(=채무액) 기반이라 이미 안분돼 있다(이중안분 아님).
  *
  * estimated + 상장:
- *   burdenedGiftDebtRatio 미전달 — transferPrice(=채무액) 기반 자동 안분
+ *   transferDatePriceAvg1Month·acquisitionDatePriceAvg1Month 전달 (§176의2②1호 환산비율).
+ *
+ * 대주주 판정(§157①·§167의8①2호): 지분율·시총·판정기준일 실입력을 그대로 넘긴다.
+ *   판정기준일은 **양도일(=증여일)**이 속하는 사업연도의 직전 사업연도 종료일이다.
  *
  * isOnMarketTransaction=false 고정: 부담부증여 = 장외 양도 (§94①3가목2)
  */
@@ -374,6 +379,29 @@ function computeStockPreliminaryFilingDueDate(transferDate: string): string {
   const due = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 2, 1));
   due.setUTCDate(due.getUTCDate() - 1);
   return due.toISOString().slice(0, 10);
+}
+
+/**
+ * 대주주 판정 기준일 — 시행령 §157①(상장)·§167의8①2호(비상장).
+ *
+ * 조문은 「주식등의 **양도일**이 속하는 사업연도의 직전 사업연도 종료일」이고,
+ * 부담부증여의 양도일은 증여일이다. 종전 ④는 **취득연도** 전년 12/31을 넘겨
+ * (`acquisitionYear - 1`) 축이 어긋나 있었다 — 취득이 오래됐을수록 임계 매트릭스가
+ * 옛 행(예: KOSPI 2013~ 지분율 2%)으로 잡힌다. 판정 근거가 전부 0으로 하드코딩돼 있던
+ * 동안은 결과가 항상 비대주주라 가려져 있었다.
+ *
+ * 법인의 사업연도가 역년이 아니면 `majorJudgmentDate` 직접 입력이 이 파생값을 이긴다.
+ * ⑤ UI의 자동 판정 미리보기가 ④와 **같은 기준일**을 써야 하므로 여기서 단일 소스로 둔다.
+ */
+export function resolveBurdenedGiftJudgmentDate(
+  bgt: Pick<BurdenedGiftStockTransferTaxInput, "majorJudgmentDate">,
+  transferDate: string,
+): string {
+  if (bgt.majorJudgmentDate) return bgt.majorJudgmentDate;
+  if (!transferDate) return "";
+  const year = parseInt(transferDate.slice(0, 4), 10);
+  if (!Number.isFinite(year)) return "";
+  return `${year - 1}-12-31`;
 }
 
 export function buildGiftStockBurdenedTransferBody(
@@ -403,18 +431,15 @@ export function buildGiftStockBurdenedTransferBody(
     ? shareCount
     : (item.unlistedStockData?.totalShares ?? shareCount);
 
-  // priorYearEndDate: 취득일 이전 연도말 — 취득일 연도 전년 12/31
   const acquisitionDateStr =
     bgt.acquisitionDate instanceof Date
       ? bgt.acquisitionDate.toISOString().slice(0, 10)
       : (bgt.acquisitionDate as string);
-  const acquisitionYear = acquisitionDateStr
-    ? parseInt(acquisitionDateStr.slice(0, 4), 10)
-    : new Date().getFullYear();
-  const priorYearEnd = `${acquisitionYear - 1}-12-31`;
 
   // 양도일 = 증여일 (부담부증여 시점)
   const transferDate = form.giftDate ?? "";
+
+  const priorYearEnd = resolveBurdenedGiftJudgmentDate(bgt, transferDate);
 
   // §105①2호 — 주식등의 예정신고 기한은 「양도일이 속하는 **반기**의 말일부터 2개월」.
   // 민법 §160② 기산일(반기 말일 다음날)에서 2개월이 되는 날의 전일이 만료일이므로
@@ -454,12 +479,19 @@ export function buildGiftStockBurdenedTransferBody(
     tradingHaltAtTransfer: false,
     bookLost: false,
 
-    // 대주주 판정 (부담부에 무관한 필드들 — 기본값 0/false)
-    selfShareRatio: 0,
-    selfMarketCap: 0,
-    isLargestShareholderGroup: false,
-    combinedShareRatio: 0,
-    combinedMarketCap: 0,
+    /**
+     * 대주주 판정 근거 (시행령 §157①·§167의8①2호) — 실입력.
+     *
+     * 종전에는 「부담부에 무관한 필드들」이라며 전부 0/false로 하드코딩했으나,
+     * 엔진의 자동 판정은 `byRatio || byCap`이라 근거가 전부 0이면 **항상 비대주주**가 된다.
+     * 그래서 §104①11호 가목(대주주 20/25% 누진)이 이 경로에서 한 번도 발동하지 못했다.
+     * 지분율은 UI가 % 단위로 받으므로 엔진 decimal(0.01 = 1%)로 환산해 넘긴다.
+     */
+    selfShareRatio: (bgt.selfShareRatioPercent ?? 0) * 0.01,
+    selfMarketCap: bgt.selfMarketCap ?? 0,
+    isLargestShareholderGroup: bgt.isLargestShareholderGroup ?? false,
+    combinedShareRatio: (bgt.combinedShareRatioPercent ?? 0) * 0.01,
+    combinedMarketCap: bgt.combinedMarketCap ?? 0,
     priorYearEndDate: priorYearEnd,
 
     // 분류 플래그
@@ -510,11 +542,31 @@ export function buildGiftStockBurdenedTransferBody(
     body.acquisitionActualInputMode = "per_share" as const;
     body.perShareAcquisitionPrice = perShareAcquisitionPrice;
   } else {
-    // K-5(estimated): 비상장은 debtRatio 전달, 상장은 자동 안분
-    if (bgt.marketType === "unlisted") {
-      body.burdenedGiftDebtRatio = debtRatio; // ⑬ — 엔진이 estimatedBase에 적용
+    /**
+     * K-5(estimated) — §163⑥4 개산공제 base(취득 당시 기준시가 **총액**)에는 전체 주식수가
+     * 들어가므로 §159① B/C를 별도로 넘긴다. 환산취득가 자체는 `transferPrice`(=채무 B)
+     * 기반이라 이미 안분돼 있어 이중안분이 아니다(엔진이 estimatedBase에만 적용한다).
+     *
+     * 종전에는 비상장에만 넘겨 **상장 개산공제가 C/B배 과대**였다. 「상장은 transferPrice=B
+     * 기반 자동 안분」이라는 전제는 취득가액에만 맞고 개산공제 base에는 성립하지 않는다
+     * (`stock-valuation-listed.ts`의 `stdPriceTotalForEstimatedDeduction`에는
+     *  `transferPrice`가 등장하지 않는다).
+     */
+    body.burdenedGiftDebtRatio = debtRatio; // ⑬
+
+    if (isListed) {
+      /**
+       * 상장 환산 분모·분자 — 시행령 §176의2②1호. 미전송이면 `calcListedValuation`의
+       * 0-가드에 걸려 **취득가액·개산공제가 둘 다 0**이 되고 경고도 남지 않았다.
+       * ⑧ validate와 ⑫ Zod가 미입력을 차단한다(자동 fallback 금지).
+       */
+      if (bgt.transferDatePriceAvg1Month !== undefined) {
+        body.transferDatePriceAvg1Month = bgt.transferDatePriceAvg1Month;
+      }
+      if (bgt.acquisitionDatePriceAvg1Month !== undefined) {
+        body.acquisitionDatePriceAvg1Month = bgt.acquisitionDatePriceAvg1Month;
+      }
     }
-    // 상장 estimated는 transferPrice=B 기반 엔진 자동 처리 (별도 필드 불필요)
   }
 
   return body;
