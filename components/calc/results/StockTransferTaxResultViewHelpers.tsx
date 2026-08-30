@@ -190,32 +190,59 @@ export function SwapComparisonBlock({ result }: { result: StockTransferResult })
 
 // ── ProgressiveTaxBreakdown ──
 
+/**
+ * 누진세율 산식 분해 — **실제 적용된 세율·누진공제**로 만든다.
+ *
+ * 🔴 종전에는 대주주 20/25% 표(§104①11 가목2)를 **하드코딩**했다. 렌더 게이트가
+ *    `progressiveDeduction > 0` 하나뿐이라 기타자산 §55 8단계(§104①1호)와
+ *    §104①9호 NBL(기본세율 +10%p)도 그대로 이 카드를 탔고, 그때마다
+ *    ① 「3억 이하 20% + 3억 초과 25%」 구간 합이 실제 세액과 다르고
+ *    ② 「과세표준 × 25% − 누진공제」 좌변이 우변과 맞지 않는 **항등식 2중 파괴**가 났다.
+ *    else 분기는 누진공제 항 자체가 없어 대주주 3억 이하가 게이트에서 걸러지는 구조상
+ *    **렌더되는 전량이 거짓**이었다.
+ *
+ * ⇒ 항상 `taxBase × appliedRate − progressiveDeduction = calculatedTax` 한 줄로 낸다.
+ *   구간 분해는 **대주주 2단 표일 때만** 보여준다(그 표에서만 「3억」이 실재하는 경계다).
+ *   형제 경로(`DetailedStatementHelpers.ts`·`StockFilingFormTableHelpers.ts`)는 이미
+ *   `appliedRate`를 동적으로 읽고 있어, 종전에는 같은 화면 안에서 두 표시가 모순됐다.
+ *
+ * 근거: 소득세법 §55①(기본세율 8단계) · §104①1호(기타자산) · §104①9호(NBL 과다소유법인)
+ *      · §104①11호 가목2)(대주주 20/25%)
+ */
 export function ProgressiveTaxBreakdown({ result }: { result: StockTransferResult }) {
   const taxBase = result.taxBase;
-  const THRESHOLD = 300_000_000; // 3억
+  const deduction = result.progressiveDeduction ?? 0;
+  const ratePct = (result.appliedRate * 100).toFixed(result.appliedRate * 100 % 1 === 0 ? 0 : 1);
 
+  /**
+   * §104①11호 가목2)의 2단 표(3억 이하 20% / 초과 25%)인가.
+   * 이 표에서만 「3억」이 실재하는 구간 경계다 — §55 8단계·NBL 표는 경계가 다르다.
+   */
+  const isMajorTwoTier =
+    result.taxCategory === "listed_major" || result.taxCategory === "unlisted_major";
+  const THRESHOLD = 300_000_000; // §104①11 가목2) — 3억
+  const upperPart = isMajorTwoTier ? Math.max(0, taxBase - THRESHOLD) : 0;
   const lowerPart = Math.min(taxBase, THRESHOLD);
-  const upperPart = Math.max(0, taxBase - THRESHOLD);
+
+  const title = isMajorTwoTier
+    ? "누진세율 산식 분해 (소득세법 §104①11호 가목2))"
+    : "누진세율 산식 분해 (소득세법 §55① 기본세율 8단계)";
 
   return (
     <div className="rounded-xl border border-sky-200 bg-sky-50/60 px-5 py-4 space-y-2">
-      <p className="font-semibold text-sky-800 text-sm">누진세율 산식 분해 (§104①11 가목 2)</p>
+      <p className="font-semibold text-sky-800 text-sm">{title}</p>
       <div className="space-y-1 text-xs text-sky-700">
-        {upperPart > 0 ? (
+        {upperPart > 0 && (
           <>
             <p>3억 이하 분: {fmt(lowerPart)} × 20% = {fmt(Math.floor(lowerPart * 0.2))}</p>
             <p>3억 초과 분: {fmt(upperPart)} × 25% = {fmt(Math.floor(upperPart * 0.25))}</p>
-            <p>
-              산출세액 (누진공제식): 과세표준 {fmt(taxBase)} × 25% − 누진공제 {fmt(result.progressiveDeduction!)} ={" "}
-              <strong>{fmt(result.calculatedTax)}</strong>
-            </p>
           </>
-        ) : (
-          <p>
-            산출세액: 과세표준 {fmt(taxBase)} × {(result.appliedRate * 100).toFixed(0)}% ={" "}
-            <strong>{fmt(result.calculatedTax)}</strong>
-          </p>
         )}
+        <p>
+          산출세액: 과세표준 {fmt(taxBase)} × {ratePct}%
+          {deduction > 0 && <> − 누진공제 {fmt(deduction)}</>} ={" "}
+          <strong>{fmt(result.calculatedTax)}</strong>
+        </p>
       </div>
     </div>
   );
