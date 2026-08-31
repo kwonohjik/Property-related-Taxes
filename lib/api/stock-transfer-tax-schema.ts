@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { foreignStockInputSchema } from "./stock-transfer-foreign-schema";
+import { toOptionalDate } from "./date-coerce";
 
 
 /**
@@ -594,6 +595,43 @@ export function addStockRefines(
           path: ["transferLots"],
           message: `총 매도 수량(${totalTrn})이 총 매수 수량(${totalAcq})을 초과합니다`,
         });
+      }
+      /**
+       * 매도 시점별 누적 검사 — 총수량만 보면 **매도일보다 나중에 취득한 lot**이
+       * 소진돼 보유일수가 음수가 되고 `isShortTerm`으로 세율까지 갈린다.
+       * ⑧ validate(`pushLotTimelineErrors`)와 같은 규칙이며, 누적 수량 쪽만
+       * 자본조정(희석 전 단위) 면제를 위 총수량 검사와 같은 기준으로 공유한다.
+       */
+      if (data.acquisitionLots && data.transferLots) {
+        // JSON 경유 후 string으로 도달할 수 있다 — 직접 비교하면 조용히 false가 된다.
+        const asTime = (v: unknown): number => toOptionalDate(v)?.getTime() ?? NaN;
+        const buys = data.acquisitionLots
+          .map((l) => ({ time: asTime(l.acquisitionDate), shares: l.shareCount }))
+          .filter((b) => Number.isFinite(b.time));
+        const sales = [...data.transferLots]
+          .map((l, i) => ({ index: i, time: asTime(l.transferDate), shares: l.shareCount }))
+          .filter((s) => Number.isFinite(s.time))
+          .sort((a, b) => a.time - b.time);
+        let cumulativeSold = 0;
+        for (const sale of sales) {
+          const availableShares = buys
+            .filter((b) => b.time <= sale.time)
+            .reduce((s, b) => s + b.shares, 0);
+          cumulativeSold += sale.shares;
+          if (availableShares === 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["transferLots", sale.index, "transferDate"],
+              message: "이 양도일 이전에 취득한 매수 lot이 없습니다",
+            });
+          } else if (!hasCapitalAdjustments && cumulativeSold > availableShares) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["transferLots", sale.index, "shareCount"],
+              message: `이 양도일까지 누적 매도(${cumulativeSold})가 그 시점 보유 수량(${availableShares})을 초과합니다`,
+            });
+          }
+        }
       }
     }
   });

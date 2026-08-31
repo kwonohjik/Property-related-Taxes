@@ -863,6 +863,10 @@ export type StockTransferResult = {
     afterShares: number;
     baseTotalCost: number;
     adjustedPerShareCost: number;
+    /** §97의2①1호 증여자 총취득원가 (이월과세 lot만) — 매칭이 실제로 쓰는 단가의 기준 */
+    donorBaseTotalCost?: number;
+    /** 환산 후 증여자 1주당 단가 */
+    adjustedDonorPerShareCost?: number;
     appliedTypes: (
       | "bonus_capital_reserve"
       | "bonus_retained_earnings"
