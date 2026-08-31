@@ -310,6 +310,42 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
                 `${label} 적용: 5호 미만 임대 기간의 시작일·종료일을 모두 입력하세요 (조특령 §97⑤4호). 해당 없으면 구간을 삭제하세요.`,
               );
           }
+          // D1-06 — §97①2호(1985.12.31 이전 신축 공동주택)는 두 사실을 모두 요구한다.
+          if (r.type === "rental_97_main" || r.type === "rental_97_proviso") {
+            const year = parseInt((r as { constructionYear?: string }).constructionYear || "0");
+            if (year > 0 && year <= 1985) {
+              const rr = r as {
+                isMultiUnitHousing?: boolean | null;
+                isUnoccupiedAt1986?: boolean | null;
+              };
+              if (rr.isMultiUnitHousing === null || rr.isMultiUnitHousing === undefined)
+                return fail(`${label} 적용: 공동주택 여부를 선택하세요 (조특법 §97①2호).`);
+              if (rr.isUnoccupiedAt1986 === null || rr.isUnoccupiedAt1986 === undefined)
+                return fail(
+                  `${label} 적용: 1986.1.1 현재 입주 사실 여부를 선택하세요 (조특법 §97①2호).`,
+                );
+            }
+            // D1-07 — §97① 단서 나목(매입임대)은 「취득 당시 입주된 사실이 없는 주택만 해당」
+            if (
+              r.type === "rental_97_proviso" &&
+              (r as { provisoCase?: string }).provisoCase === "b_purchase"
+            ) {
+              const u = (r as { isUnoccupiedAtAcquisition?: boolean | null })
+                .isUnoccupiedAtAcquisition;
+              if (u === null || u === undefined)
+                return fail(
+                  `${label} 적용: 취득 당시 입주 사실 여부를 선택하세요 (조특법 §97① 단서 나목).`,
+                );
+            }
+          }
+          // D1-07 — §97의2①2호(매입임대)도 같은 요건
+          if (r.type === "rental_97_2" && (r as { rental972Type?: string }).rental972Type === "purchase") {
+            const u = (r as { isUnoccupiedAtAcquisition?: boolean | null }).isUnoccupiedAtAcquisition;
+            if (u === null || u === undefined)
+              return fail(
+                `${label} 적용: 취득 당시 입주 사실 여부를 선택하세요 (조특법 §97의2①2호).`,
+              );
+          }
           // D1-02 — 조특령 §97의2① 주체 요건 (§97의 5호와 다른 조문·다른 숫자)
           if (r.type === "rental_97_2") {
             const u2 = (r as { hasNewRentalPlus2Units?: boolean | null }).hasNewRentalPlus2Units;

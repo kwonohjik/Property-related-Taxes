@@ -196,6 +196,18 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   isNationalHousing?: boolean;
   /** §97① 단서 분기: (a) 건설임대 5년+ / (b) 매입임대 5년+ (1995.1.1 이후 취득·미입주) / (c) 10년+ */
   provisoCase?: "a_construction" | "b_purchase" | "c_10years";
+  /**
+   * §97①2호 — 「1985년 12월 31일 이전에 신축된 **공동주택**」 (D1-06).
+   * 2호는 ⓐ공동주택일 것과 ⓑ1986.1.1 현재 미입주일 것 **두 사실**을 모두 요구한다.
+   */
+  isMultiUnitHousing?: boolean;
+  /** §97①2호 — 「1986년 1월 1일 현재 입주된 사실이 없는 주택」 (D1-06) */
+  isUnoccupiedAt1986?: boolean;
+  /**
+   * §97① 단서 **나목** / §97의2①2호 — 「**취득 당시 입주된 사실이 없는 주택만 해당한다**」
+   * (D1-07). 두 조문이 같은 문언을 쓰지만 각 감면 유형의 폼 variant에 따로 둔다.
+   */
+  isUnoccupiedAtAcquisition?: boolean;
   // ── §97의2 ──
   /** 건설임대(1호) vs 매입임대(2호) */
   rental972Type?: "construction" | "purchase";

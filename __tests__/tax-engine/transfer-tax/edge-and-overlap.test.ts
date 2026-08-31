@@ -457,8 +457,11 @@ describe("T-45: 감면 중복배제 — 장기임대 + 신축 동시 해당 (조
       propertyType: "non_apartment",
       region: "capital",
       officialPriceAtStart: 250_000_000,
-      rentalStartDate: new Date("2013-04-01"),
-      transferDate: new Date("2024-06-01"),  // 11년+ → 5년 의무 충족
+      // D1-04 — §97① 본문은 「2000.12.31 이전에 임대를 개시하여」이고 각 호의 신축연도도
+      // 요구한다. 종전 픽스처(2013 임대개시·신축연도 없음)는 시한 외였다.
+      rentalStartDate: new Date("1998-04-01"),
+      constructionYear: 1990, // §97①1호
+      transferDate: new Date("2024-06-01"),  // 26년+ → 5년 의무 충족
       vacancyPeriods: [],
       rentHistory: [],
       calculatedTax: 0,

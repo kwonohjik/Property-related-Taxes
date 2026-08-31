@@ -236,6 +236,12 @@ export type RentalReductionFormVariant =
       isNationalHousing: boolean;
       /** §97① 단서 분기 (proviso만) */
       provisoCase?: "a_construction" | "b_purchase" | "c_10years";
+      /** §97①2호 — 1985.12.31 이전 신축 **공동주택** (3-state, D1-06) */
+      isMultiUnitHousing: boolean | null;
+      /** §97①2호 — 1986.1.1 현재 입주된 사실이 없는 주택 (3-state, D1-06) */
+      isUnoccupiedAt1986: boolean | null;
+      /** §97① 단서 나목 — 취득 당시 입주된 사실이 없는 주택 (3-state, D1-07) */
+      isUnoccupiedAtAcquisition: boolean | null;
       /** 조특령 §97① 주체 요건 — 임대주택 5호 이상 임대 (3-state, null = 미선택) */
       hasMin5RentalUnits: boolean | null;
       /** 조특령 §97⑤4호 — 5호 미만으로 임대한 기간 (임대기간 불산입, 유예 없음) */
@@ -248,6 +254,8 @@ export type RentalReductionFormVariant =
       isNationalHousing: boolean;
       /** 조특령 §97의2① 주체 요건 — 신축임대 1호 포함 2호 이상 임대 (3-state, null = 미선택) */
       hasNewRentalPlus2Units: boolean | null;
+      /** §97의2①2호 — 취득 당시 입주된 사실이 없는 주택 (3-state, D1-07) */
+      isUnoccupiedAtAcquisition: boolean | null;
     } & RentalCommonFormFields)
   // ── §99의4 농어촌·고향주택 — 주택수 제외 (2026-06-11) ──
   | {

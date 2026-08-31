@@ -83,6 +83,35 @@ export function Rental972InputForm({ value, onChange }: Props) {
         />
       </ToneCard>
 
+      {/* §97의2①2호 — 취득 당시 미입주 (D1-07) */}
+      {value.rental972Type === "purchase" && (
+        <ToneCard tone="rose" sectionNum="②" title="2호 요건 — 취득 당시 미입주" noDark>
+          <p className="mb-1.5 text-micro text-rose-800">
+            조특법 §97의2①2호 — 「<strong>취득 당시 입주된 사실이 없는 주택만 해당한다</strong>」.
+          </p>
+          <RadioCardGroup
+            name="isUnoccupiedAtAcquisition_972"
+            layout="inline"
+            tone="rose"
+            value={
+              value.isUnoccupiedAtAcquisition === null
+                ? ""
+                : value.isUnoccupiedAtAcquisition
+                  ? "yes"
+                  : "no"
+            }
+            onChange={(v) => onChange({ isUnoccupiedAtAcquisition: v === "yes" })}
+            options={[
+              { value: "yes", label: "취득 당시 입주 사실 없음" },
+              { value: "no", label: "입주 사실 있음" },
+            ]}
+          />
+          {value.isUnoccupiedAtAcquisition === null && (
+            <p className="mt-1 text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+          )}
+        </ToneCard>
+      )}
+
       {/* 주체 요건 — 조특령 §97의2① (D1-02) */}
       <ToneCard tone="sky" sectionNum="③" title="임대 호수 요건" noDark>
         <div>

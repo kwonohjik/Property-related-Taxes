@@ -103,6 +103,9 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         //    (memory `feedback_explicit_prop_mapping_strip`). 신규 필드는 반드시 추가할 것.
         hasMin5RentalUnits: r.hasMin5RentalUnits,
         belowMin5UnitsPeriods: r.belowMin5UnitsPeriods,
+        isMultiUnitHousing: r.isMultiUnitHousing,
+        isUnoccupiedAt1986: r.isUnoccupiedAt1986,
+        isUnoccupiedAtAcquisition: r.isUnoccupiedAtAcquisition,
       };
     case "rental_97_2":
       return {
@@ -110,6 +113,7 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         rental972Type: r.rental972Type,
         isNationalHousing: r.isNationalHousing,
         hasNewRentalPlus2Units: r.hasNewRentalPlus2Units,
+        isUnoccupiedAtAcquisition: r.isUnoccupiedAtAcquisition,
       };
   }
 }

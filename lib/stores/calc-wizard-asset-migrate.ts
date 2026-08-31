@@ -195,6 +195,18 @@ export function migrateAsset(raw: unknown): AssetForm {
           r.hasMin5RentalUnits === undefined
             ? { hasMin5RentalUnits: null, belowMin5UnitsPeriods: [] }
             : {}),
+          // D1-06·D1-07 — §97 각 호·단서 나목 신규 3-state. 구 세션엔 값이 없다.
+          ...((r.type === "rental_97_main" || r.type === "rental_97_proviso") &&
+          r.isUnoccupiedAt1986 === undefined
+            ? {
+                isMultiUnitHousing: null,
+                isUnoccupiedAt1986: null,
+                isUnoccupiedAtAcquisition: null,
+              }
+            : {}),
+          ...(r.type === "rental_97_2" && r.isUnoccupiedAtAcquisition === undefined
+            ? { isUnoccupiedAtAcquisition: null }
+            : {}),
           ...(r.type === "rental_97_2" && r.hasNewRentalPlus2Units === undefined
             ? { hasNewRentalPlus2Units: null }
             : {}),

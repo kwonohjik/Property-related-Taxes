@@ -292,8 +292,12 @@ describe("LR-01: 공공건설임대 100% 감면", () => {
         rentalHousingType: "public_construction",
         region: "capital",
         officialPriceAtStart: 200_000_000,
-        rentalStartDate: new Date("2015-01-01"),
-        transferDate: new Date("2021-01-01"), // 6년
+        // D1-04 — §97① 본문은 「2000.12.31 이전에 임대를 개시하여」다.
+        // 종전 픽스처(2015 임대개시·신축연도 없음)는 시한 외인데도 100%를 단언해
+        // **결함을 고정**하고 있었다.
+        rentalStartDate: new Date("1998-01-01"),
+        transferDate: new Date("2005-06-01"), // 7년
+        constructionYear: 1990, // §97①1호
         calculatedTax: 5_000_000,
       }),
       RULES,
@@ -739,21 +743,47 @@ describe("LR-18: 감면 한도 적용", () => {
     expect(result.isLimitApplied).toBe(false);
   });
 
-  it("감면액 1억 초과 → 한도 적용 (1억 + 초과분×50%)", () => {
+  it("🔴 §97 시리즈에는 §133 한도가 걸리지 않는다 (D1-05 정정)", () => {
+    /**
+     * 종전 anchor는 「1억 + 초과분×50% = 2억」을 단언하며 **결함을 고정**하고 있었다.
+     * 조특법 §133①은 「제33조, 제43조, 제66조부터 제69조까지, …」, ②는 「제77조,
+     * 제77조의2 또는 제77조의3」을 열거한다 — **§97·§97의3·§97의4·§97의5는 없다**.
+     * 산식도 달랐다: §133①1호는 **하드 캡**이지 「초과분의 50%는 감면」이 아니다.
+     *
+     * 또한 종전 입력(2015 임대개시)은 §97① 본문의 「2000.12.31 이전 임대개시」 요건에
+     * 미달한다 — D1-04로 이제 배제된다. 조문에 맞는 입력으로 바꿔 전액 감면을 고정한다.
+     */
     const result = calculateRentalReduction(
       makeInput({
         calculatedTax: 300_000_000, // 산출세액 3억
         rentalHousingType: "public_construction",
         region: "capital",
         officialPriceAtStart: 200_000_000,
-        rentalStartDate: new Date("2015-01-01"),
-        transferDate: new Date("2021-01-01"),
+        rentalStartDate: new Date("1998-01-01"),
+        transferDate: new Date("2005-06-01"),
+        constructionYear: 1990, // §97①1호
       }),
       RULES,
     );
-    // 100% 감면 = 3억 → 한도: 1억 + (2억 × 50%) = 2억
-    expect(result.isLimitApplied).toBe(true);
-    expect(result.reductionAmount).toBe(200_000_000);
+    expect(result.isLimitApplied).toBe(false);
+    expect(result.reductionAmount).toBe(300_000_000);
+  });
+
+  it("🔴 2015 임대개시는 §97① 본문 시한 외로 배제된다 (D1-04)", () => {
+    const result = calculateRentalReduction(
+      makeInput({
+        calculatedTax: 300_000_000,
+        rentalHousingType: "public_construction",
+        region: "capital",
+        officialPriceAtStart: 200_000_000,
+        rentalStartDate: new Date("2015-01-01"),
+        transferDate: new Date("2021-01-01"),
+        constructionYear: 2015,
+      }),
+      RULES,
+    );
+    expect(result.isEligible, "5년 임대만으로 100% 면제가 되면 안 된다").toBe(false);
+    expect(result.reductionAmount).toBe(0);
   });
 });
 

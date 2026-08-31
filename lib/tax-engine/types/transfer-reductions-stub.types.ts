@@ -45,6 +45,12 @@ interface Rental97UnitCountFields {
   hasMin5RentalUnits?: boolean;
   /** 조특령 §97⑤4호 — 5호 미만으로 임대한 기간 (임대기간 불산입, 유예 없음) */
   belowMin5UnitsPeriods?: { startDate: Date; endDate: Date }[];
+  /** D1-06 — §97①2호 「1985.12.31 이전에 신축된 공동주택」 */
+  isMultiUnitHousing?: boolean;
+  /** D1-06 — §97①2호 「1986.1.1 현재 입주된 사실이 없는 주택」 */
+  isUnoccupiedAt1986?: boolean;
+  /** D1-07 — §97① 단서 나목 「취득 당시 입주된 사실이 없는 주택만 해당」 */
+  isUnoccupiedAtAcquisition?: boolean;
 }
 
 export type TransferReductionStub =
@@ -63,6 +69,8 @@ export type TransferReductionStub =
       isNationalHousing?: boolean;
       /** 조특령 §97의2① — 신축임대 1호 포함 2호 이상 임대 (D1-02) */
       hasNewRentalPlus2Units?: boolean;
+      /** D1-07 — §97의2①2호 「취득 당시 입주된 사실이 없는 주택만 해당」 */
+      isUnoccupiedAtAcquisition?: boolean;
     } & Rental97CommonFields)
   | ({ type: "rental_97_3";
       /** @deprecated Phase 1 stub 호환 (단순 경로 입력) */
