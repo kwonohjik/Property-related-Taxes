@@ -35,6 +35,12 @@ export interface ListedValuationResult {
   method: "monthly_avg_listed";
   appliedRule: string;
   tradingHaltFallback: boolean;
+  /**
+   * 입력 누락 방어 분기의 사유 — 형제 분기(취득일 거래정지·비상장 보충평가)는 전부 경고를
+   * 남기는데 상장 일반 환산만 침묵해서, 취득가액·개산공제가 둘 다 0으로 떨어져도
+   * 응답에 아무 흔적이 없었다. 정상 경로에서는 비어 있다.
+   */
+  warnings: string[];
 }
 
 /**
@@ -61,6 +67,7 @@ export function calcListedValuation(
       method: "monthly_avg_listed",
       appliedRule: STOCK.ENFORCEMENT_DECREE_165_3_TRADING_HALT,
       tradingHaltFallback: true,
+      warnings: [],
     };
   }
 
@@ -79,6 +86,13 @@ export function calcListedValuation(
       method: "monthly_avg_listed",
       appliedRule: STOCK.SECTION_99_1_3_LISTED_AVG,
       tradingHaltFallback: false,
+      warnings: [
+        shareCount <= 0
+          ? "주식수가 0 이하 — 상장 환산취득가 산출 불가 (시행령 §176의2②1호)"
+          : transferStd <= 0
+            ? "양도일 직전 1개월 종가평균이 0 이하 — 상장 환산취득가·개산공제가 0으로 산출됩니다 (시행령 §176의2②1호 환산비율 분모)"
+            : "취득일 직전 1개월 종가평균이 0 이하 — 상장 환산취득가·개산공제가 0으로 산출됩니다 (시행령 §176의2②1호 환산비율 분자)",
+      ],
     };
   }
 
@@ -101,5 +115,6 @@ export function calcListedValuation(
     method: "monthly_avg_listed",
     appliedRule: STOCK.SECTION_99_1_3_LISTED_AVG,
     tradingHaltFallback: false,
+    warnings: [],
   };
 }

@@ -20,6 +20,21 @@
  */
 
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import type { StockTransferInput } from "./types/stock-transfer.types";
+
+/**
+ * **매매사례가액을 쓸 수 있는 시장인가** — 시행령 §176의2③1호 본문 괄호
+ * 「해당 자산(**주권상장법인의 주식등은 제외한다**)과 동일성 또는 유사성이 있는 자산의 매매사례」.
+ *
+ * 종전에는 validate·Zod에만 게이트가 있었고 둘 다 `acquisitionMode === "sale_case"` 축이라,
+ * 취득모드를 실가로 되돌리면 상장주식에도 양도측 치환이 그대로 통했다.
+ * UI 배너는 안내일 뿐 입력을 막지 않으므로 **엔진이 최종 가드**를 든다.
+ */
+export function isMarketSampleAllowedMarket(
+  marketType: StockTransferInput["marketType"],
+): boolean {
+  return marketType !== "kospi" && marketType !== "kosdaq" && marketType !== "konex";
+}
 
 export interface MarketSampleEvaluationResult {
   acquisitionApplied: boolean;
@@ -120,6 +135,17 @@ export function evaluateMarketSample(input: {
     }
     if (input.transferMarketSampleCounterparty && /(대표|이사|친족|배우자|자녀|특수관계)/.test(input.transferMarketSampleCounterparty)) {
       warnings.push(`양도 매매사례 거래상대 "${input.transferMarketSampleCounterparty}" — 특수관계인 의심.`);
+    }
+    /**
+     * 인용은 **양도측에서도** 남긴다 — 종전에는 취득측 분기에만 push가 있어
+     * 양도측 단독 적용(취득은 1주당 취득가액으로 대체) 시 근거가 한 건도 안 남았다.
+     * 중복은 호출부(`buildPr2Detail`)가 이미 걸러낸다.
+     */
+    if (!appliedRules.includes(STOCK.ENFORCEMENT_DECREE_176_2_3_1_MARKET_SAMPLE)) {
+      appliedRules.push(STOCK.ENFORCEMENT_DECREE_176_2_3_1_MARKET_SAMPLE);
+    }
+    if (!appliedRules.includes(STOCK.ENFORCEMENT_DECREE_163_12)) {
+      appliedRules.push(STOCK.ENFORCEMENT_DECREE_163_12);
     }
   }
 

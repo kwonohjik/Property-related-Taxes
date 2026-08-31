@@ -37,6 +37,37 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
 
   // 결과 화면 진입 시 자동 계산 — result/error/loading 모두 비어 있을 때 1회 실행.
   // 사용자 액션(다음·결과 보기·사이드바 4 클릭)으로 step 3 도달 시 즉시 결과 표시.
+  /**
+   * 결과뷰 prop — **단건·다종목이 같은 객체를 쓴다**.
+   *
+   * 종전에는 두 분기가 각자 prop을 나열했고 다종목 쪽에만
+   * `transferActualInputMode`·`perShareTransferPrice`·`unlistedValuationMode`·
+   * `acqFaceValueOnly`·`kiwoomLastFetchedAt` **5개가 빠져 있었다**.
+   * 결과뷰 기본값이 `"per_share"`/`0`이라(스토어 기본값 `"total"`과 **반대**)
+   * 다종목은 입력 방식과 무관하게 per_share 분기를 타고
+   * 「1주당 양도가액 **0** × N주 = 5억」처럼 항등식이 깨진 산식이 인쇄됐다
+   * (`PrintSection id="calculation"`에 포함돼 인쇄물에 나간다).
+   *
+   * `result`·`shareCount`가 이미 양쪽 다 「마지막 종목」 소스라 값 축 불일치 위험은 없다.
+   */
+  const resultViewProps = {
+    result: result!,
+    shareCount,
+    filingViolation: (form.filingViolation || "none") as "none" | "under_report" | "non_report",
+    isFraudulent: form.isFraudulent,
+    isInternationalTransaction: form.isInternationalTransaction,
+    transferActualInputMode: form.transferActualInputMode || "total",
+    unlistedValuationMode: form.unlistedValuationMode || "simple",
+    acqFaceValueOnly: form.acqFaceValueOnly === true,
+    perShareTransferPrice: parseAmount(form.perShareTransferPrice),
+    securityName: form.securityName,
+    securityCode: form.securityCode,
+    brokerage: form.brokerage,
+    transferDate: form.transferDate,
+    accountNumberMasked: form.accountNumberMasked,
+    kiwoomLastFetchedAt: form.kiwoomLastFetchedAt,
+  };
+
   const autoTriggerredRef = useRef(false);
   useEffect(() => {
     if (!result && !isLoading && !error && !autoTriggerredRef.current) {
@@ -94,19 +125,7 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
             **별지 제84호서식과 다른 종목들이 통째로 사라진다**.
           */}
           {aggregate ? (
-            <StockTransferTaxResultView
-              result={result}
-              aggregate={aggregate}
-              shareCount={shareCount}
-              filingViolation={form.filingViolation || "none"}
-              isFraudulent={form.isFraudulent}
-              isInternationalTransaction={form.isInternationalTransaction}
-              securityName={form.securityName}
-              securityCode={form.securityCode}
-              brokerage={form.brokerage}
-              transferDate={form.transferDate}
-              accountNumberMasked={form.accountNumberMasked}
-            />
+            <StockTransferTaxResultView {...resultViewProps} aggregate={aggregate} />
           ) : /* PR-4B 국외전출세 — 별도 결과 카드 (ExitTaxResult 타입) */
           form.marketType === "exit_tax" ? (
             <>
@@ -127,24 +146,7 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
               stockName={form.securityName}
             />
           ) : (
-            <StockTransferTaxResultView
-              result={result}
-              aggregate={aggregate}
-              shareCount={shareCount}
-              filingViolation={form.filingViolation || "none"}
-              isFraudulent={form.isFraudulent}
-              isInternationalTransaction={form.isInternationalTransaction}
-              transferActualInputMode={form.transferActualInputMode || "total"}
-              unlistedValuationMode={form.unlistedValuationMode || "simple"}
-              acqFaceValueOnly={form.acqFaceValueOnly === true}
-              perShareTransferPrice={parseAmount(form.perShareTransferPrice)}
-              securityName={form.securityName}
-              securityCode={form.securityCode}
-              brokerage={form.brokerage}
-              transferDate={form.transferDate}
-              accountNumberMasked={form.accountNumberMasked}
-              kiwoomLastFetchedAt={form.kiwoomLastFetchedAt}
-            />
+            <StockTransferTaxResultView {...resultViewProps} aggregate={aggregate} />
           )}
         </>
       )}

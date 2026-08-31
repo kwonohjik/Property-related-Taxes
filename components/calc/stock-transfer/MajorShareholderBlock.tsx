@@ -123,9 +123,11 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     return getMajorShareholderThreshold(
       form.marketType,
       new Date(form.priorYearEndDate),
-      { isVentureCompany: form.isVentureCompany },
+      // 엔진(`stock-classification.ts`)과 **같은 인자 집합**으로 부른다 — 여기만 안 넘기면
+      // 임계는 10억으로 판정되는데 화면은 계속 40억을 보여준다(리뷰 #14 세팅 지점 2곳).
+      { isVentureCompany: form.isVentureCompany, isKOTCTrading: form.isKOTCTrading },
     );
-  }, [form.marketType, form.priorYearEndDate, form.isVentureCompany]);
+  }, [form.marketType, form.priorYearEndDate, form.isVentureCompany, form.isKOTCTrading]);
 
   const shareRatioThreshold = threshold?.shareRatioThreshold ?? 0;
   const marketCapThreshold = threshold?.marketCapThreshold ?? Infinity;
@@ -614,20 +616,34 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           </div>
         ) : null}
 
-        {/* 장내/장외 거래 구분 (§94①3 가목 1) 단서) — KOSPI/KOSDAQ/KONEX + 비대주주 + 非K-OTC 시만 노출 */}
+        {/*
+          장내/장외 거래 구분 — **축이 둘이다**.
+
+          ① 소득세법 §94①3 가목1) 단서 — 상장 **비대주주**의 장내 양도는 과세대상 밖.
+          ② 증권거래세법 §8②·시행령 §5 — 탄력세율은 「**증권시장에서 거래되는 주권에 한정**」.
+             농특세도 「**증권시장에서 거래된** 증권의 양도가액」이 과세표준이다(농특세법 §5①5호).
+
+          🔑 종전에는 게이트가 `!judgment.isMajor`라 **대주주의 상장 장외 양도**(가장 흔한
+             장외 케이스)에 입력 경로가 없어 값이 default `true`로 고정됐다. ①은 대주주에게
+             의미가 없지만 ②는 **대주주에게도 그대로 걸린다** — 그래서 상장 3종 + 非K-OTC면
+             대주주 여부와 무관하게 연다.
+        */}
         {(form.marketType === "kospi" ||
           form.marketType === "kosdaq" ||
           form.marketType === "konex") &&
-          !judgment.isMajor &&
           !form.isKOTCTrading && (
             <ToggleCard
               checked={form.isOnMarketTransaction}
               onCheckedChange={(v) => onChange({ isOnMarketTransaction: v })}
-              title="거래소 장내 거래 (§94①3 가목 1) 단서)"
+              title="거래소 장내 거래 (§94①3 가목1) 단서 · 증권거래세법 §8②)"
               description={
                 form.isOnMarketTransaction
-                  ? "✓ 장내 거래 — 비대주주 비과세 적용. 산출세액까지 정보용으로 표시되며 최종 납부세액은 0."
-                  : "장외 거래(블록딜·대량매매·시간외·개인 간 양도 등) — 비대주주여도 과세 (§104①11 가목 일반세율)."
+                  ? judgment.isMajor
+                    ? "✓ 장내 거래 — 증권거래세 탄력세율(시행령 §5) + 농어촌특별세 적용. 대주주는 장내여도 양도소득세 과세대상입니다."
+                    : "✓ 장내 거래 — 비대주주 비과세 적용. 산출세액까지 정보용으로 표시되며 최종 납부세액은 0."
+                  : judgment.isMajor
+                    ? "증권시장 밖 양도(블록딜·개인 간 양도 등) — 증권거래세는 법 §8① 본칙 1만분의 35, 농어촌특별세 없음."
+                    : "증권시장 밖 양도(블록딜·개인 간 양도 등) — 비대주주여도 양도소득세 과세(§104①11 가목 일반세율)이고, 증권거래세도 법 §8① 본칙입니다."
               }
               tone="emerald"
             />

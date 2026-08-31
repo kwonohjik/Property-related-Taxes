@@ -19,7 +19,10 @@ import {
 } from "@/lib/tax-engine/stock-transfer/stock-transfer-exempt-result";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { SecuritiesTransactionTaxCard } from "@/components/calc/stock-transfer/SecuritiesTransactionTaxCard";
-import { PenaltyDetailBlock } from "@/components/calc/stock-transfer/PenaltyDetailBlock";
+import {
+  PenaltyDetailBlock,
+  LatePaymentPenaltyBlock,
+} from "@/components/calc/stock-transfer/PenaltyDetailBlock";
 
 interface Step3Props {
   form: StockTransferFormData;
@@ -116,6 +119,8 @@ export function Step3({ form, onChange }: Step3Props) {
       {
         marketType,
         isKOTCTrading: form.isKOTCTrading,
+        // 증권시장 안/밖은 탄력세율의 전제다(증권거래세법 §8② 괄호) — 미리보기도 같은 축을 탄다.
+        isOnMarketTransaction: form.isOnMarketTransaction ?? true,
         transferDate: form.transferDate
           ? new Date(form.transferDate)
           : undefined,
@@ -136,6 +141,7 @@ export function Step3({ form, onChange }: Step3Props) {
     form.exchangeCash,
     form.marketType,
     form.isKOTCTrading,
+    form.isOnMarketTransaction,
     form.transferDate,
   ]);
 
@@ -314,15 +320,17 @@ export function Step3({ form, onChange }: Step3Props) {
 
       {/* ⑤ 가산세 분기 */}
       <section>
-        <SectionTitle n={5} title="가산세 (국세기본법 §47조의2·§47조의3)" />
+        <SectionTitle n={5} title="가산세 (국세기본법 §47조의2·§47조의3·§47조의4)" />
         <div className="space-y-3">
           {/* PR-3-c 신규 — 신고-단위 안내 카드 */}
           <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3 text-xs text-sky-800">
             <p className="font-semibold mb-1">ⓘ 신고-단위 적용</p>
             <p className="leading-relaxed text-sky-700">
-              가산세(국세기본법 §47조의2 무신고 / §47조의3 과소신고)는 <strong>신고서 1매 단위</strong>로 적용됩니다.
+              가산세(국세기본법 §47조의2 무신고 / §47조의3 과소신고 / §47조의4 납부지연)는{" "}
+              <strong>신고서 1매 단위</strong>로 적용됩니다.
               다종목 신고에서는 종목마다 매기지 않고 <strong>합산 결정세액에 한 번</strong> 산정하며,
               국내·국외 종목이 섞여 있어도 같은 신고이므로 함께 계산됩니다(소득세법 §118의8).
+              신고축은 <strong>위반을 선언한 종목</strong>이 대표가 되므로 어느 종목에서 선언해도 같습니다.
             </p>
           </div>
 
@@ -351,7 +359,8 @@ export function Step3({ form, onChange }: Step3Props) {
                 {
                   value: "none",
                   label: "해당 없음 (정상 신고)",
-                  description: "법정 신고기한 내 신고 + 산출세액 정확 — 가산세 0",
+                  // 「가산세 0」은 부정확하다 — 납부지연(§47조의4)은 정상 신고에도 걸린다.
+                  description: "법정 신고기한 내 신고 + 산출세액 정확 — 신고불성실가산세 0 (납부지연은 아래에서 별도 입력)",
                 },
                 {
                   value: "under_report",
@@ -397,6 +406,16 @@ export function Step3({ form, onChange }: Step3Props) {
               </div>
             </>
           )}
+
+          {/*
+            납부지연(§47조의4)은 **게이트 밖**이다 — 「법정납부기한까지 납부하지 아니하거나
+            적게 납부한 경우」라 §47조의2·§47조의3을 요건으로 하지 않는다.
+            정상 신고 + 납부 지연이 가장 흔한 사안인데 종전에는 입력 경로가 아예 없었다.
+            부동산 정본(`transfer-tax/steps/Step6.tsx`)도 같은 배치다.
+          */}
+          <div className="pt-2 border-t border-border/50">
+            <LatePaymentPenaltyBlock form={form} onChange={onChange} />
+          </div>
         </div>
       </section>
 

@@ -18,6 +18,7 @@ import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
+import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-basic-deduction-total";
 
 interface StockSidebarProps {
   currentStep: number;
@@ -93,8 +94,12 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
         const penalty = a.totalUnderReportPenalty + a.totalLatePaymentPenalty;
         if (a.totalTransferIncome > 0)
           items.push({ label: "양도소득금액 합계", value: a.totalTransferIncome, highlight: true });
-        if (a.basicDeductionByGroup.stock > 0)
-          items.push({ label: "기본공제", value: a.basicDeductionByGroup.stock });
+        // 두 그룹을 더한다 — `totalTaxBase`가 양쪽을 모두 차감한 값이라
+        // 주식 그룹만 더하면 「양도소득금액 − 기본공제 = 과세표준」이 어긋난다(§103①).
+        // 기타자산만 있는 신고에서는 `stock`이 0이라 종전에는 행 자체가 사라졌다.
+        const totalBasicDeduction = sumBasicDeductionByGroup(a.basicDeductionByGroup);
+        if (totalBasicDeduction > 0)
+          items.push({ label: "기본공제", value: totalBasicDeduction });
         if (a.totalTaxBase > 0)
           items.push({ label: "과세표준", value: a.totalTaxBase, highlight: true });
         if (a.totalCalculatedTax > 0)
@@ -142,6 +147,10 @@ export function StockSidebar({ currentStep, onStepClick, stockName }: StockSideb
           if (r.deferredTaxAmount > 0) items.push({ label: `납부유예액(${r.deferralYears}년)`, value: r.deferredTaxAmount });
           if (r.adjustmentDeduction) items.push({ label: "조정공제", value: r.adjustmentDeduction });
           if (r.foreignTaxCreditApplied) items.push({ label: "외국납부세액공제", value: r.foreignTaxCreditApplied });
+          // §118의15④ 가산세는 종전에 여기서 통째로 누락돼, 결과 카드에는 보이는 금액이
+          // 요약에서만 사라졌다. 「산출세액에 더한다」이므로 총 납부세액에도 반영된다.
+          if (r.holdingsReportPenalty) items.push({ label: "보유현황 미신고 가산세", value: r.holdingsReportPenalty });
+          if (r.totalTax > 0) items.push({ label: "총 납부세액", value: r.totalTax, highlight: true });
         }
       }
       return items;

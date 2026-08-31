@@ -24,25 +24,37 @@ import {
 } from "./stock-transfer-finalize";
 
 export /**
- * 가산세 신고축을 들고 있는 **국내** 종목 하나 — 없으면 `undefined`.
+ * 가산세 신고축을 들고 있는 종목 하나 — 없으면 `undefined`.
  *
- * 가산세는 「국세의 과세표준 **신고**」 단위로 걸리므로(국세기본법 §47조의2·§47조의3) 대표
- * 1건이면 된다. 신고축 필드(`filingViolation`·`isFraudulent`·당초신고세액 …)는 **신고 단위
- * 공통**이라 어느 국내 종목에서 읽어도 같은 값이다.
+ * 가산세는 「국세의 과세표준 **신고**」 단위로 걸리므로(국세기본법 §47조의2·§47조의3·§47조의4)
+ * 대표 1건이면 된다. 국내·국외를 가르지 않는다 — 소득세법 §118조의8이 §110~§112를 준용해
+ * **같은 신고**이기 때문이다.
  *
- * ⚠️ **전부 국외 종목인 신고는 `undefined` 다** — `ForeignStockInput` 에는 신고축 필드가
- *    타입 자체에 없다. 그 경우 가산세가 0 이 되는 것은 **알려진 잔여 갭**이며 결과 warning 으로
- *    알린다(계획서 `stock-transfer-pr3-followup-closeout.plan.md` Track 잔여).
+ * 🔑 **「무엇을 선언했는가」로 고른다 — 「국내인가」가 아니다.**
+ *    종전에는 국내 종목이 있으면 `filingViolation` 값을 보지 않고 **첫 국내 종목**을 대표로
+ *    삼았다. UI는 `[...savedItems, formData]`로 편집 중 종목을 **항상 마지막**에 붙이므로,
+ *    확정된 국내 종목이 하나라도 있으면 지금 화면에서 선언한 위반이 결코 축이 되지 못했다
+ *    (순서만 뒤집으면 세액이 달라졌다).
+ *
+ * 🔑 **납부지연은 신고불성실과 독립이다.** §47조의4①1호는 「법정납부기한까지 납부하지
+ *    아니하거나 적게 납부한 경우」로 §47조의2·§47조의3을 요건으로 하지 않는다. 그래서
+ *    선언이 없어도 납부지연 축을 든 종목을 찾는다 — 종전에는 전(全)국외 「정상신고 +
+ *    납부지연」이 축을 못 골라 `computeFilingUnitPenalty`가 **납부지연까지 0**으로 돌렸고,
+ *    같은 입력을 단건으로 넣으면 계산돼 **종목 개수만으로 세액이 갈렸다**.
  */
 function pickFilingAxisInput(
   inputs: AggregateStockItemInput[],
 ): FilingAxisFields | undefined {
-  // 국내 종목이 있으면 그쪽이 대표다 — 신고축이 **필수**라 항상 값이 있다.
-  const domestic = inputs.find((i): i is StockTransferInput => !isForeignStockItem(i));
-  if (domestic) return domestic;
-  // 전부 국외인 신고 — 신고축을 **선언한** 첫 종목을 쓴다(§118조의8 준용으로 같은 신고다).
-  // 선언이 없으면 정상신고이므로 undefined 를 그대로 돌려 가산세 0 이 된다.
-  return inputs.find((i) => i.filingViolation !== undefined && i.filingViolation !== "none");
+  // ① 신고 위반을 **선언한** 종목 — 국내·국외를 가르지 않는다
+  const declared = inputs.find(
+    (i) => i.filingViolation !== undefined && i.filingViolation !== "none",
+  );
+  if (declared) return declared;
+  // ② 선언이 없어도 납부지연 축(§47조의4)을 든 종목이 있으면 그것이 대표다
+  const late = inputs.find((i) => (i.unpaidTax ?? 0) > 0 && i.paymentDeadline !== undefined);
+  if (late) return late;
+  // ③ 둘 다 없으면 정상신고 — 국내 종목을 대표로 돌려도 가산세는 0이다(축 필드 echo용).
+  return inputs.find((i): i is StockTransferInput => !isForeignStockItem(i));
 }
 
 /**
