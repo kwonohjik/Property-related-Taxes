@@ -170,6 +170,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("rental_97_5"),
+    /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모) */
+    isNationalHousingScale: z.boolean().optional(),
     ...rental97CommonShape,
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     region: z.enum(["capital", "non_capital"]).optional(),

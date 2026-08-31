@@ -145,6 +145,8 @@ describe("§97의5 — 같은 구조 (령 §97의5③·§97의5①)", () => {
     stdPriceAtAcquisition: 400_000_000,
     stdPriceAtTransfer: 900_000_000,
     rentalContinuesToTransfer: true,
+    isNationalHousingScale: true, // CA-01 — §97의5①3호 준용
+    region: "capital" as const,
     calculatedTax: 100_000_000,
   };
 

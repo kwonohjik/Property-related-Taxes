@@ -228,6 +228,7 @@ export function toEngineReductions(
         return {
           type: "rental_97_5" as const,
           ...common,
+          isNationalHousingScale: r.isNationalHousingScale, // CA-01
           officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
           region: r.region,
         };

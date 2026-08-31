@@ -126,6 +126,12 @@ function base975(overrides?: Partial<Rental97EvaluationInput>): Rental97Evaluati
     stdPriceAtAcquisition: 300_000_000,
     stdPriceAtRentalStart: 300_000_000,
     stdPriceAtTransfer: 600_000_000,
+    // CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호(국민주택규모)·4호(기준시가 6억/3억).
+    // 종전 픽스처는 면적·기준시가·소재지 없이 `isEligible=true`를 단언해
+    // 이 결함에 대한 회귀 테스트가 **0건**이었다(리뷰 지적).
+    isNationalHousingScale: true,
+    officialPriceAtStart: 300_000_000,
+    region: "capital",
     calculatedTax: 50_000_000,
     ...overrides,
   };

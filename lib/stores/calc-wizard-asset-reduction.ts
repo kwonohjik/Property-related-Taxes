@@ -227,6 +227,8 @@ export type RentalReductionFormVariant =
       type: "rental_97_5";
       officialPriceAtStart: string;
       region: "capital" | "non_capital";
+      /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모 이하) */
+      isNationalHousingScale: boolean;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_main" | "rental_97_proviso";

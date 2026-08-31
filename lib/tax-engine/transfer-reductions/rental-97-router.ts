@@ -91,7 +91,14 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         rental974Category: r.rental974Category,
       };
     case "rental_97_5":
-      return { ...base, officialPriceAtStart: r.officialPriceAtStart, region: r.region };
+      return {
+        ...base,
+        officialPriceAtStart: r.officialPriceAtStart,
+        region: r.region,
+        // CA-01 — §97의5①3호가 조특령 §97의3③2호(국민주택규모)를 준용한다.
+        // ⚠️ 이 case도 **명시 매핑**이라 적지 않으면 조용히 사라진다.
+        isNationalHousingScale: r.isNationalHousingScale,
+      };
     case "rental_97_main":
     case "rental_97_proviso":
       return {

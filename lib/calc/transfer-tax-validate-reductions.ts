@@ -250,6 +250,14 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           }
           if (r.hasVacancyOverGrace === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
             return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
+          // CA-01 — §97의5①3호가 조특령 §97의3③2호를 준용한다. §97의3과 같은 규칙.
+          if (
+            (r.type === "rental_97_3" || r.type === "rental_97_5") &&
+            (r as { isNationalHousingScale?: boolean }).isNationalHousingScale !== true
+          )
+            return fail(
+              `${label} 적용: 국민주택규모 이하 요건을 확인하세요 (${r.type === "rental_97_5" ? "§97의5①3호 → " : ""}조특령 §97의3③2호).`,
+            );
           if ((r.type === "rental_97_3" || r.type === "rental_97_5") && parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0") <= 0)
             return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`);
           // D2-04 — §97의4 대상 요건 (조특령 §97의4① → 소령 §167의3①2호 가목·다목)

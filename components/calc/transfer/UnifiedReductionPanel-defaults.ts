@@ -151,6 +151,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       ...RENTAL_COMMON_DEFAULTS,
       officialPriceAtStart: "",
       region: "capital",
+      isNationalHousingScale: false, // CA-01 — 확인 토글(ToggleCard 패턴, §97의3과 동일)
     };
   }
   if (id === "rental_97_main") {

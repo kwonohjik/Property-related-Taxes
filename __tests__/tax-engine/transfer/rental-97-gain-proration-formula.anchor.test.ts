@@ -186,6 +186,8 @@ describe("§97의5 엔진 — 리뷰 실측 시나리오 재현 (D2-03)", () => 
     transferDate: D("2029-07-01"),
     isTaxRegistered: true,
     rentIncreaseViolated: false,
+    isNationalHousingScale: true, // CA-01 — §97의5①3호 준용
+    region: "capital" as const,
     stdPriceAtAcquisition: 300_000_000,
     officialPriceAtStart: 320_000_000,
     stdPriceAtTransfer: 600_000_000,

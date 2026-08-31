@@ -96,6 +96,8 @@ export type TransferReductionStub =
       region?: "capital" | "non_capital";
     } & Rental97CommonFields)
   | ({ type: "rental_97_5";
+      /** CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호 (국민주택규모 이하) */
+      isNationalHousingScale?: boolean;
       officialPriceAtStart?: number;
       region?: "capital" | "non_capital";
     } & Rental97CommonFields)

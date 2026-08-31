@@ -110,6 +110,8 @@ describe("🔴 엔진 — 같은 4개월 공실이 §97에서는 임대기간을
     transferDate: D("2028-05-01"), // 임대 10년 + 61일
     isTaxRegistered: true,
     rentIncreaseViolated: false,
+    isNationalHousingScale: true, // CA-01 — §97의5①3호 준용
+    region: "capital" as const,
     stdPriceAtAcquisition: 300_000_000,
     officialPriceAtStart: 310_000_000,
     stdPriceAtTransfer: 500_000_000,
