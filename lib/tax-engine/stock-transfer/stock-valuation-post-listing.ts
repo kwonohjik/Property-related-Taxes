@@ -445,17 +445,19 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
   } else if (valuesEqual && accrualToggle && hasPrePrior) {
     // C-3·C-5·C-6: §81④ 1호 월할 보정 발동
     //
-    // 🟡 **전전사업연도 평가에는 하한을 걸지 않았다 — 의도적 미판단이다.**
-    //    「소득세법 시행규칙」 §81④의 전전연도 값이 「제4항에 따른 평가액」인지는 **본문 미확인**이다
-    //    (§165⑤ 본문은 분자·분모만 그렇게 부른다). 본체 경로
-    //    `stock-valuation-unlisted.ts`의 §165⑨ 블록도 전전연도를 하한 없이 쓰고 있어
-    //    **두 경로가 대칭**이다. 한쪽만 바꾸면 같은 규칙이 갈린다.
-    //    ⚠️ 시행규칙 §81④ 본문을 확인하면 **양쪽을 함께** 판단할 것.
-    const prePrior = calcUnlistedPerShareWeighted(
+    // ✅ **전전사업연도 평가액에도 80% 하한을 적용한다** (2026-09-01 — 소칙 §81④ 본문 확인 후).
+    //    종전에는 「§81④의 전전연도 값이 「제4항에 따른 평가액」인지 본문 미확인」으로 하한을 뺐다.
+    //    본문을 읽으니 §81④1호는 그 표현 대신 **「기준시가」**를 쓰고, 위임 조문 **영 §165⑨**가
+    //    그것을 「**법 §99①3호·4호에 따라 산정한** 기준시가」라고 못박는다.
+    //    비상장주식의 그 산정 방법이 곧 §165④(**단서 = 80% 하한 「평가액으로 한다」**)이므로
+    //    전전연도 값에도 하한이 따라온다. `stock-valuation-unlisted.ts` §165⑨ 블록도 **함께** 고쳤다.
+    //    anchor: `__tests__/tax-engine/stock-transfer/section81-4-preprior-floor80.anchor.test.ts`
+    const prePrior = calcSection165_4Value(
       input.prePriorYearNetIncomePerShare!,
       input.prePriorYearNetAssetPerShare!,
       isHeavyRE,
-    );
+      input.transferDate,
+    ).value;
     const holdingMonths = calcAccrualMonths(input.acquisitionDate, input.listingDate!);
     const priorBizYearMonths = input.priorBizYearMonths ?? 12;
     const prior = acquisitionYearPerShareValue; // 트리거상 분자·분모 원값 동일

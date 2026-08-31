@@ -33,7 +33,11 @@ import {
 import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
 // §165④ 가중치·80% 하한 연혁은 §165⑤(취득후상장)·validate·UI 프리뷰와 **공용 정본**이다.
 // 여기에 사본을 두면 같은 조문이 두 곳에서 갈린다. [[feedback_ui_engine_dual_truth_avoidance]]
-import { getValuationWeights, calcWeightedAvgPerShare } from "./valuation-165-4-basis";
+import {
+  getValuationWeights,
+  calcWeightedAvgPerShare,
+  calcSection165_4Value,
+} from "./valuation-165-4-basis";
 
 // ============================================================
 // 평가 결과 타입
@@ -582,20 +586,23 @@ export function calcUnlistedValuation(
   const acquisitionStdPriceTotal = acquisitionStdPricePerShare * shareCount;
 
   // ─── [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 시 §81④ 1호 월할 보정 ───
-  // 전전 사업연도 평가 — 본 경로의 연혁 가중치(niWeight·naWeight) 그대로 (prior와 일관)
+  // 전전 사업연도 평가 — **§165④ 정본에 위임**한다(연혁 게이트 + 80% 하한 포함).
+  //
+  // ✅ 2026-09-01 — 소칙 §81④ 본문 확인 후 **하한을 적용**하도록 정정했다.
+  //    §81④1호 산식의 항은 「**기준시가**」이고, 위임 조문 영 §165⑨가 그것을
+  //    「**법 §99①3호·4호에 따라 산정한** 기준시가」라고 못박는다. 비상장주식의 산정 방법이
+  //    곧 §165④(단서 = 80% 하한 「평가액으로 한다」)이므로 전전연도에도 하한이 따라온다.
+  //    §165⑤ 경로(`stock-valuation-post-listing.ts`)도 **함께** 고쳤다 — 두 경로 대칭.
+  //    anchor: `__tests__/tax-engine/stock-transfer/section81-4-preprior-floor80.anchor.test.ts`
   const weightedPrePrior =
     typeof input.prePriorYearNetIncomePerShare === "number" &&
     typeof input.prePriorYearNetAssetPerShare === "number"
-      ? Math.floor(
-          niWeight === 0
-            ? input.prePriorYearNetAssetPerShare
-            : calcWeightedAvgPerShare(
-                input.prePriorYearNetIncomePerShare,
-                input.prePriorYearNetAssetPerShare,
-                niWeight,
-                naWeight,
-              ),
-        )
+      ? calcSection165_4Value(
+          input.prePriorYearNetIncomePerShare,
+          input.prePriorYearNetAssetPerShare,
+          isHeavyRealEstateForValuation,
+          transferDate,
+        ).value
       : undefined;
   const weighted1659 = applySection165_9(
     input,
