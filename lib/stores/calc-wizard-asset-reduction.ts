@@ -560,9 +560,26 @@ export interface SpecialHouseExclusionFormItem {
   requirementsConfirmed: boolean;
 }
 
+/**
+ * 5년 한도 합산 대상 조문 — **당해연도 감면 유형과 다르다**.
+ *
+ * 🔴 종전에는 `ReductionType`(당해연도 감면 폼 유형)을 그대로 썼다. 그래서
+ *   §133 한도군에는 있으나 당해연도 폼에는 없는 조문(축산 §69의2·어업 §69의3·
+ *   자경 변형·§70 농지대토·§69의4 자경산지)의 **이력을 표현할 수 없었다**
+ *   (코드리뷰 D8-03·CA-04). 두 축은 다른 집합이므로 분리한다.
+ */
+export type PriorReductionType =
+  | ReductionType
+  | "self_farming_inherited"
+  | "self_farming_incorp"
+  | "livestock"
+  | "fishing"
+  | "farmland_substitute_70"
+  | "self_cultivated_forest_69_4";
+
 /** 인별 5년 합산 한도 산정용 과거 감면 이력 항목 */
 export interface PriorReductionUsageItem {
   year: number;
-  type: ReductionType;
+  type: PriorReductionType;
   amount: number;
 }

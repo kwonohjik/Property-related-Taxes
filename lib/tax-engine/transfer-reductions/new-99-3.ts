@@ -167,7 +167,33 @@ const HV_2021_12_07 = D("2021-12-07");
 // ============================================================================
 
 /**
- * 분양계약일·사용승인일·취득일 중 가장 빠른 시점을 기준으로 고가주택 여부 판정.
+ * §99·§99의3의 **조항 기준일**을 취득유형으로 가른다 — 기간 게이트와 고가주택 단서가 **같은 축**을 써야 한다.
+ *
+ * §99①·§99의3①은 1호가 **매매계약 체결·계약금 납부일**, 2호가 **사용승인·사용검사일**을
+ * 기준일로 삼는다. 고가주택 단서도 같은 조항의 단서이므로 같은 기준일을 쓴다.
+ *
+ * 🔴 종전에는 기간 게이트만 취득유형으로 분기하고 고가주택 기준일은
+ *   `contractDate ?? usageApprovalDate ?? acquisitionDate`로 **분기하지 않았다**(코드리뷰 D3-09).
+ *   `contractDate993`에 전용 위젯이 없어 자산-수준 `assetContractDate`가 공급되는데
+ *   그 위젯은 취득유형과 무관하게 항상 렌더되므로, 2호(자기건설)에서 계약일이 사용승인일을
+ *   밀어내 고가주택 임계(165/149㎡ · 6억/9억/12억)가 갈렸다 — 감면 전액 ↔ 0.
+ *   같은 식이 `new-99.ts`에도 복제돼 있어 헬퍼로 단일화한다.
+ *
+ * anchor: `__tests__/tax-engine/transfer/new99-high-value-base-date-axis.anchor.test.ts`
+ */
+export function resolveNew99BaseDate(
+  acquisitionType: "from_builder" | "self_built",
+  contractDate: Date | undefined,
+  usageApprovalDate: Date | undefined,
+  acquisitionDate: Date,
+): Date {
+  return acquisitionType === "from_builder"
+    ? contractDate ?? acquisitionDate
+    : usageApprovalDate ?? acquisitionDate;
+}
+
+/**
+ * 고가주택 여부 판정 — 기준일은 `resolveNew99BaseDate`가 정한다(취득유형 축).
  *
  * - ~2002.9.30: 면적 165㎡ 이상 AND 양도가 6억 초과 (고급주택)
  * - 2002.10.1~2002.12.31: 면적 149㎡ 이상 AND 양도가 6억 초과 (고급주택)
@@ -250,10 +276,12 @@ function checkIneligibility(input: New993Input): New993IneligibleReason[] {
   }
 
   // 4. 신축주택취득기간 외
-  const periodTarget =
-    input.acquisitionType === "from_builder"
-      ? input.contractDate ?? input.acquisitionDate
-      : input.usageApprovalDate ?? input.acquisitionDate;
+  const periodTarget = resolveNew99BaseDate(
+    input.acquisitionType,
+    input.contractDate,
+    input.usageApprovalDate,
+    input.acquisitionDate,
+  );
   if (periodTarget < PERIOD_START || periodTarget > PERIOD_END) {
     const targetLabel =
       input.acquisitionType === "from_builder" ? "매매계약일" : "사용승인일";
@@ -276,8 +304,13 @@ function checkIneligibility(input: New993Input): New993IneligibleReason[] {
   }
 
   // 6. 고가주택 (단서)
-  const hvBaseDate =
-    input.contractDate ?? input.usageApprovalDate ?? input.acquisitionDate;
+  // 기간 게이트(:위)와 **같은 축**이어야 한다 — 두 판정이 갈리면 임계가 뒤집힌다 (D3-09).
+  const hvBaseDate = resolveNew99BaseDate(
+    input.acquisitionType,
+    input.contractDate,
+    input.usageApprovalDate,
+    input.acquisitionDate,
+  );
   if (isHighValueHouseUnder993(hvBaseDate, input.wholePropertyTransferPrice, input.exclusiveAreaSqm)) {
     reasons.push({
       code: "HIGH_VALUE_HOUSE",

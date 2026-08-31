@@ -27,6 +27,8 @@ import {
   calculateSelfFarmingReduction,
 } from "./self-farming-reduction";
 import { evaluateRental97TaxAmount } from "./transfer-reductions/rental-97-router";
+import { isIncomeDeductionTrack } from "./transfer-reductions/income-deduction-router";
+import { isWithin5YearsCheck } from "./transfer-reductions/new-99-3";
 import { type UnsoldHybridResult } from "./transfer-reductions/unsold-hybrid";
 import { evaluateAnyHybridTaxAmount } from "./transfer-reductions/unsold-hybrid-p3";
 import type { Rental97Result } from "./transfer-reductions/types";
@@ -217,8 +219,25 @@ export function calcReductions(
     }
   }
 
-  // R-3-V2: 신축/미분양 정밀 엔진
-  if (newHousingDetails) {
+  // R-3-V2: 신축/미분양 정밀 엔진 (legacy 경로)
+  //
+  // 🔴 **§127⑦ 트랙 교차 배제** (코드리뷰 D3-03).
+  //   이 legacy 매처는 §99·§99의3까지 「산출세액 × 일수비율」 **세액감면**으로 계산하는데,
+  //   두 조문의 정본은 소득차감형(§90② — 조특령 §99①·§99의3② 기준시가 안분)이고
+  //   `transfer-reductions/new-99.ts`·`new-99-3.ts`가 이미 구현하고 있다.
+  //   `reductions[]`에 정본 조문이 선택돼 있는데 여기서 또 세액감면 후보를 밀면
+  //   차감형과 세액감면형이 **동시 적용**돼 §127⑦을 우회한다(D10-01과 같은 결함 클래스).
+  //
+  //   ⚠️ `newHousingDetails`는 `reductions[]` 밖의 **별도 파라미터**라 ⑧ validate의
+  //     트랙 교차 차단이 보지 못한다 — 그래서 엔진에서 막는다.
+  //     (⑤ 클라이언트에 `newHousingDetails` 생성처가 0건이라 현재는 direct-API 전용 경로다.)
+  const hasIncomeDeductionSelected =
+    transferDate !== undefined &&
+    acquisitionDate !== undefined &&
+    reductions.some((r) =>
+      isIncomeDeductionTrack(r.type, isWithin5YearsCheck(acquisitionDate, transferDate)),
+    );
+  if (newHousingDetails && !hasIncomeDeductionSelected) {
     const detailsWithTax: NewHousingReductionInput = { ...newHousingDetails, calculatedTax };
     const newHousingResult = determineNewHousingReduction(detailsWithTax, newHousingMatrix);
     newHousingReductionDetail = newHousingResult;

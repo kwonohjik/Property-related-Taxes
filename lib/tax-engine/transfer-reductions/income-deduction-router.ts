@@ -36,6 +36,52 @@ export type IncomeDeductionId =
   | "unsold_98";
 
 /**
+ * **항상** 소득차감형(§90② — 양도소득금액 차감)인 조문.
+ * metadata `effectCategory: "capital_gain"` 과 같은 집합이다.
+ * 하이브리드(§98의2~§98의7·§99의2·§98)와 달리 5년 분기가 없어 언제나 차감형이다.
+ */
+const ALWAYS_INCOME_DEDUCTION_IDS: ReadonlyArray<string> = ["new_99", "new_99_3", "unsold_98_8"];
+
+/**
+ * 이 감면이 **소득차감형 트랙**(STEP 4.6)을 타는가 — §127⑦ 트랙 교차 판정 단일 소스.
+ *
+ * 🔴 §127⑦ 중복배제 max는 `calcReductions`의 **세액감면형 후보 안에서만** 돈다.
+ *   소득차감형은 STEP 4.6에서 별도로 양도소득금액을 깎으므로, 두 트랙을 동시에 선택하면
+ *   §127⑦을 우회해 **이중 혜택**이 된다(코드리뷰 D10-01 — 실측 결정세액 16,035,410 과소).
+ *
+ * 하이브리드 8종은 5년 **이내**면 세액감면형(그래서 §127⑦ max에 합류해 문제가 없고),
+ * 5년 **후**면 차감형이다 — `evaluateAnyHybridFromReduction`이 `effectCategory`로 가르는
+ * 것과 같은 축이다. ⑧ validate가 이 함수를 재사용해 판정을 복제하지 않는다.
+ */
+export function isIncomeDeductionTrack(type: string, isWithin5Years: boolean): boolean {
+  if (ALWAYS_INCOME_DEDUCTION_IDS.includes(type)) return true;
+  if (ALL_HYBRID_IDS.includes(type)) return !isWithin5Years;
+  return false;
+}
+
+/**
+ * 이 감면이 **세액감면형 트랙**(STEP 8 `calcReductions` §127⑦ max)을 타는가.
+ *
+ * 하이브리드는 5년 이내일 때만 이 트랙이다. legacy id(폼 마이그레이션 전 저장분)도 포함한다.
+ */
+export function isTaxAmountTrack(type: string, isWithin5Years: boolean): boolean {
+  if (isIncomeDeductionTrack(type, isWithin5Years)) return false;
+  if (ALL_HYBRID_IDS.includes(type)) return isWithin5Years;
+  return TAX_AMOUNT_TRACK_IDS.includes(type);
+}
+
+/** 세액감면형 조문 (metadata `effectCategory: "tax_amount"` + legacy id) */
+const TAX_AMOUNT_TRACK_IDS: ReadonlyArray<string> = [
+  // §97 시리즈 (§97의3은 장특공제 대체라 세액감면 트랙이 아니다)
+  "rental_97_main", "rental_97_proviso", "rental_97_2", "rental_97_5",
+  // standalone
+  "self_farming", "public_expropriation", "gb_designated_land", "replacement_land_comp",
+  // legacy (폼 마이그레이션 전 저장분)
+  "self_farming_inherited", "self_farming_incorp",
+  "long_term_rental", "new_housing", "unsold_housing",
+];
+
+/**
  * 차감형·세액감면형 라우터가 처리하는 전체 조문 ID (11종).
  * 다건(multi) 합산 경로는 이 체계를 미지원하므로 `validateMultiSupportedMode`에서 명시 차단에 사용.
  */

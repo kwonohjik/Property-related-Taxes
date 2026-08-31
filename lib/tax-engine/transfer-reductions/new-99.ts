@@ -14,7 +14,7 @@
  * - 신축주택취득기간: 1998.5.22~1999.6.30 (국민주택은 ~1999.12.31 — 정의가 1호 괄호에 있으나
  *   "이하 이 조에서 같다"로 1·2호 공통)
  * - 고가주택(소법 §89①3호 비과세 제외 대상) 단서 배제 — 판정 기준일은 §99의3 선례
- *   (isHighValueHouseUnder993 — 계약·승인·취득 중 우선일 기준 4단계 정의. D-9)
+ *   (isHighValueHouseUnder993 — 기준일은 resolveNew99BaseDate가 취득유형으로 가른다. D-9·D3-09)
  *
  * 재개발·재건축 변형 (령 §99①1호 단서·2호 괄호):
  * - 종전주택을 재개발·재건축하여 취득한 신축주택(법 §98의3② 각 호 유형)은
@@ -26,6 +26,7 @@ import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import {
   calcSignedAllocation,
   isHighValueHouseUnder993,
+  resolveNew99BaseDate,
   isWithin5YearsCheck,
   type New993FormulaStep,
   type New993SignCase,
@@ -198,7 +199,13 @@ export function evaluateNew99(input: New99Input): New99Result {
   }
 
   // 4) 고가주택 단서 (D-9: §99의3 선례 — 계약·승인·취득 중 우선일 기준 4단계 정의)
-  const hvBaseDate = input.contractDate ?? input.usageApprovalDate ?? input.acquisitionDate;
+  // 기간 게이트(:167)와 **같은 축**을 쓴다 — 종전에는 여기만 분기하지 않았다 (D3-09).
+  const hvBaseDate = resolveNew99BaseDate(
+    acquisitionType,
+    input.contractDate,
+    input.usageApprovalDate,
+    input.acquisitionDate,
+  );
   if (isHighValueHouseUnder993(hvBaseDate, input.wholePropertyTransferPrice, input.exclusiveAreaSqm ?? 0)) {
     reasons.push({
       code: "HIGH_VALUE_HOUSE",

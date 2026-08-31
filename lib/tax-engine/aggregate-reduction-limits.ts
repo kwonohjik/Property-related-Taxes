@@ -67,6 +67,19 @@ const SELF_FARMING_TYPES = [
   "self_farming_incorp",
   "livestock",
   "fishing",
+  /**
+   * 아래 둘은 **과거 감면 이력 전용** 유형이다 — 당해연도 감면 계산기는 아직 §70·§69의4를
+   * 구현하지 않지만, §133①1호·2호나목이 이들을 자경 계열과 **같은 한도군**으로 열거하므로
+   * 5년 누적 합산에서 빠지면 `priorGroupSum`이 과소 계상돼 한도가 늦게 걸린다
+   * (= 감면 과다 인정 · 코드리뷰 CA-04 실측 50,000,000 과다).
+   *
+   * ⚠️ §133①2호는 「**가목**(5개 과세기간 §70 단독 1억)과 **나목**(§66~§70 합산 2억) 중
+   *    큰 금액」이라는 중첩 서브그룹 구조인데, 현재 `LimitGroup`은 그룹당 `fiveYearLimit`
+   *    단일 값만 지원해 가목을 표현하지 못한다. 나목만 반영한 상태다 — 가목 모델링과
+   *    §70 evaluator 신설은 별도 과제.
+   */
+  "farmland_substitute_70",
+  "self_cultivated_forest_69_4",
 ] as const;
 
 /** §77·§77의2·§77의3 (비자발적 양도) 유형 */
@@ -119,6 +132,19 @@ export function buildLimitGroups(transferYear: number): readonly LimitGroup[] {
     },
   ] as const;
 }
+
+/**
+ * §133 한도군에 등장하는 **모든** 감면 유형 (연도 변형 합집합).
+ *
+ * 과거 감면 이력(⑤ UI 드롭다운·⑫ Zod enum)이 이 집합을 **전부 담아야** 한다 —
+ * 하나라도 빠지면 그 조문 이력을 입력할 경로가 없어 5년 누적 한도가 과소 적용된다
+ * (코드리뷰 D8-03 §77의2·§77의3 · CA-04 §70·§69의4).
+ * anchor가 포함관계를 강제한다:
+ * `__tests__/tax-engine/transfer/prior-reduction-usage-coverage.anchor.test.ts`
+ */
+export const ALL_LIMIT_GROUP_TYPES: readonly string[] = [
+  ...new Set([...buildLimitGroups(2024), ...buildLimitGroups(2025)].flatMap((g) => g.types)),
+];
 
 /** 유형별 한도 조회 결과 */
 export interface LimitLookup {

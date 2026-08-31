@@ -31,6 +31,9 @@ export const REDUCTION_TYPE_LABELS: Record<string, string> = {
   public_expropriation: "공익사업용 토지 수용 (§77)",
   gb_designated_land: "개발제한구역 매수 토지 (§77의3)",
   replacement_land_comp: "대토보상 과세특례 (§77의2)",
+  // 과거 감면 이력 전용 — 당해연도 계산기는 미구현이나 §133 한도 합산 대상이다 (CA-04)
+  farmland_substitute_70: "농지대토 (§70)",
+  self_cultivated_forest_69_4: "자경산지 (§69의4)",
   // Round 8 (2026-05-06): 신규 23개 ID 한국어 라벨
   rental_97_main: "장기임대주택 (§97 ① 본문)",
   rental_97_proviso: "장기임대주택 (§97 ① 단서)",

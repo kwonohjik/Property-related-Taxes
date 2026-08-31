@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { SelfFarmingIncorporationInput } from "@/components/calc/inputs/SelfFarmingIncorporationInput";
 import { UnifiedReductionPanel } from "@/components/calc/transfer/UnifiedReductionPanel";
+import { ALL_LIMIT_GROUP_TYPES } from "@/lib/tax-engine/aggregate-reduction-limits";
+import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-labels";
 
 // ============================================================
 // Step 5 (→ Step 4): 감면·공제 (자산별 체크박스 복수 선택)
@@ -444,15 +446,33 @@ function AssetReductionBlock({
 function PriorReductionUsageInput({
   value,
   onChange,
+  transferDate,
 }: {
   value: PriorReductionUsageItem[];
   onChange: (v: PriorReductionUsageItem[]) => void;
+  /** 폼 양도일 — 합산 대상 과세기간 창 [T-4, T-1]의 기준 (CA-03) */
+  transferDate: string;
 }) {
-  const currentYear = new Date().getFullYear();
-  const yearOptions = [currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4];
+  /**
+   * 🔴 연도 선택지는 **양도연도**에서 파생해야 한다 (코드리뷰 CA-03).
+   *
+   * 종전에는 「오늘」 기준 {C-1..C-4}였는데, 엔진 필터 창은
+   * `aggregate-reduction-limits.ts`가 **양도연도** 기준 [T-4, T-1]로 잡는다.
+   * T ≠ C인 순간부터 두 집합이 어긋난다 — 창의 하단 연도를 고를 수단이 없고,
+   * 고를 수 있는 상단 연도를 넣으면 필터에서 **경고 없이 탈락**한다.
+   * T ≤ C−4면 교집합이 공집합이라 5년 한도가 아예 발동하지 않는다.
+   * 다건 경로는 `AggregateSettingsPanel`이 taxYear를 최근 10년까지 열어 두어 도달 가능하다.
+   *
+   * 양도일 미입력 시에는 목록을 비운다 — 오늘-fallback은 위 결함의 원인이므로 금지.
+   */
+  const transferYear = transferDate ? new Date(transferDate).getFullYear() : null;
+  const yearOptions = transferYear
+    ? [transferYear - 1, transferYear - 2, transferYear - 3, transferYear - 4]
+    : [];
 
   function addRow() {
-    onChange([...value, { year: currentYear - 1, type: "self_farming", amount: 0 }]);
+    if (!transferYear) return;
+    onChange([...value, { year: transferYear - 1, type: "self_farming", amount: 0 }]);
   }
 
   function removeRow(i: number) {
@@ -492,12 +512,17 @@ function PriorReductionUsageInput({
           >
             <SelectTrigger className="w-44">
               <SelectValue>
-                {REDUCTION_LABELS[row.type as ReductionUiType]?.label ?? row.type}
+                {REDUCTION_TYPE_LABELS[row.type] ?? row.type}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {(Object.keys(REDUCTION_LABELS) as ReductionUiType[]).map((t) => (
-                <SelectItem key={t} value={t}>{REDUCTION_LABELS[t].label}</SelectItem>
+              {/*
+                🔴 종전에는 `REDUCTION_LABELS`(당해연도 감면 5종)를 재사용해
+                §77의2·§77의3·축산·어업·§70·§69의4 이력을 **고를 수 없었다**
+                (코드리뷰 D8-03·CA-04). 이력의 정본 집합은 §133 한도군이다.
+              */}
+              {ALL_LIMIT_GROUP_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>{REDUCTION_TYPE_LABELS[t] ?? t}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -518,13 +543,19 @@ function PriorReductionUsageInput({
           </button>
         </div>
       ))}
-      <button
-        type="button"
-        onClick={addRow}
-        className="text-xs text-primary hover:underline"
-      >
-        + 이력 추가
-      </button>
+      {transferYear ? (
+        <button
+          type="button"
+          onClick={addRow}
+          className="text-xs text-primary hover:underline"
+        >
+          + 이력 추가
+        </button>
+      ) : (
+        <p className="text-caption text-muted-foreground">
+          양도일을 먼저 입력하세요 — 합산 대상 과세기간({"\u0054"}−4 ~ {"\u0054"}−1)이 양도연도에서 정해집니다.
+        </p>
+      )}
     </div>
   );
 }
@@ -580,6 +611,7 @@ export function Step5({
       <PriorReductionUsageInput
         value={form.priorReductionUsage ?? []}
         onChange={(v) => onChange({ priorReductionUsage: v })}
+        transferDate={form.transferDate ?? ""}
       />
 
       {/* 연간 기사용 기본공제 */}
