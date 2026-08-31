@@ -33,6 +33,10 @@ interface Rental97CommonFields {
   /** 임대기간 안분용 기준시가 3점 (조특령 §97의3⑤·§97의5② — 임대개시>취득 시 필수) */
   stdPriceAtRentalStart?: number;
   _phase1Stub?: true;
+  /** D2-06 — 임대가 양도일까지 계속되었는가 (조특령 §97의3⑤ B·§97의5②) */
+  rentalContinuesToTransfer?: boolean;
+  /** D2-06 — 실제 임대기간 마지막 날의 기준시가 (원) */
+  stdPriceAtRentalEnd?: number;
 }
 
 /** §97 본문·단서 전용 — 조특령 §97① 5호 요건 + §97⑤4호 5호 미만 기간 (D1-01) */
@@ -76,6 +80,10 @@ export type TransferReductionStub =
       isConvertedFromShortTerm?: boolean;
     } & Rental97CommonFields)
   | ({ type: "rental_97_4";
+      /** D2-04 — 임대개시일 당시 기준시가 합계 (소령 §167의3①2호 가목·다목 한도) */
+      officialPriceAtStart?: number;
+      /** D2-04 — 가목(민간매입 1호↑) / 다목(건설임대 2호↑) */
+      rental974Category?: "purchase_a" | "construction_c";
       rentalHousingType4?: "long_term_private" | "public_support_private" | "public_construction" | "public_purchase";
       region?: "capital" | "non_capital";
     } & Rental97CommonFields)

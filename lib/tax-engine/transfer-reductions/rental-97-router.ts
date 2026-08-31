@@ -62,6 +62,11 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
     stdPriceAtAcquisition: ctx.stdPriceAtAcquisition,
     stdPriceAtRentalStart: r.stdPriceAtRentalStart,
     stdPriceAtTransfer: ctx.stdPriceAtTransfer,
+    // D2-06 — 조특령 §97의3⑤ B·§97의5②의 「실제 임대기간 마지막 날」 축.
+    // ⚠️ 이 base는 **명시 매핑**이라 여기 적지 않은 키는 조용히 사라진다
+    //    (직전 배치 D1-01에서 실제로 발생했다 — memory `feedback_explicit_prop_mapping_strip`).
+    rentalContinuesToTransfer: r.rentalContinuesToTransfer,
+    stdPriceAtRentalEnd: r.stdPriceAtRentalEnd,
     calculatedTax: ctx.calculatedTax,
   };
 
@@ -77,7 +82,14 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         isConvertedFromShortTerm: r.isConvertedFromShortTerm,
       };
     case "rental_97_4":
-      return { ...base, region: r.region };
+      // D2-04 — 종전에는 region만 넘겨 기준시가 한도를 판정할 입력이 없었다.
+      // (그 region조차 evaluator가 읽지 않는 사문 필드였다.)
+      return {
+        ...base,
+        region: r.region,
+        officialPriceAtStart: r.officialPriceAtStart,
+        rental974Category: r.rental974Category,
+      };
     case "rental_97_5":
       return { ...base, officialPriceAtStart: r.officialPriceAtStart, region: r.region };
     case "rental_97_main":
@@ -116,15 +128,48 @@ function dispatch(input: Rental97EvaluationInput): Rental97Result {
 /**
  * STEP 4 (장특공제) 용 — reductions에서 §97의3/§97의4 첫 항목 평가.
  * 본 필드 미입력(stub) 항목은 건너뜀.
+ *
+ * ## §97의5와는 중복 적용하지 않는다 (D2-05)
+ * 조특법 §97의5② — 「제1항에 따른 세액감면은 제97조의3에 따른 장기일반민간임대주택등에 대한
+ * 양도소득세의 과세특례 및 제97조의4에 따른 장기임대주택에 대한 양도소득세의 과세특례와
+ * **중복하여 적용하지 아니한다**」
+ *
+ * 이것은 §127⑦의 「후보 중 택일」이 아니라 **조문이 정한 우선순위**다 —
+ * §97의5가 선택돼 있으면 §97의3·§97의4를 끈다.
+ *
+ * ⚠️ UI 라디오(`toggleGroupRadio`)가 같은 category를 하나만 남겨 앱 경로로는 공존 배열을
+ *    만들 수 없지만, `/api/calc/transfer` 직접 POST로는 도달한다. 엔진 가드가 정본이다.
  */
 export function evaluateRental97Lthd(
   reductions: TransferReduction[] | undefined,
   ctx: Rental97EngineContext,
 ): Rental97Result | undefined {
   if (!reductions) return undefined;
+
+  const has975 = reductions.some(
+    (r) => isRentalVariant(r) && r.type === "rental_97_5" && hasSubstantiveFields(r),
+  );
+
   for (const r of reductions) {
     if (!isRentalVariant(r) || !LTHD_IDS.has(r.type)) continue;
     if (!hasSubstantiveFields(r)) continue;
+    if (has975) {
+      return {
+        id: r.type,
+        isEligible: false,
+        ineligibleReasons: [
+          {
+            code: "OVERLAP_EXCLUDED_BY_97_5",
+            message:
+              `§97의5(장기일반민간임대주택등 양도소득세 세액감면)가 함께 선택되어 ` +
+              `${r.type === "rental_97_4" ? "§97의4" : "§97의3"} 과세특례는 적용하지 않습니다 (조특법 §97의5②).`,
+            legalBasis: "조특법 §97의5②",
+          },
+        ],
+        legalBasis: "조특법 §97의5②",
+        effectCategory: "long_term_holding_special",
+      } as Rental97Result;
+    }
     return dispatch(buildInput(r, ctx));
   }
   return undefined;

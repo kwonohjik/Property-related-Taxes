@@ -152,6 +152,13 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   region?: "capital" | "non_capital";
   propertyType?: "apartment" | "non_apartment";
   rentalHousingType?: "long_term_private" | "public_support_private";
+  /**
+   * §97의4 대상 목 구분 — 조특령 §97의4① → 소령 §167의3①2호 (D2-04).
+   * - `purchase_a` = **가목** 민간매입임대 1호 이상 (한도 6억 / 수도권 밖 3억)
+   * - `construction_c` = **다목** 건설임대 2호 이상·대지 298㎡·연면적 149㎡ 이하 (한도 6억)
+   * 나목은 §97의4 대상이 아니다(조특령 §97의4①이 「가목 및 다목」만 인용).
+   */
+  rental974Category?: "purchase_a" | "construction_c";
   /** 2020.7.11 이후 단기민간임대 → 장기일반 변경 신고분 — 적용 제외 (§97의3① 괄호) */
   isConvertedFromShortTerm?: boolean;
   // ── §97 본문/단서 ──
@@ -195,6 +202,15 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   stdPriceAtAcquisition?: number;
   stdPriceAtRentalStart?: number;
   stdPriceAtTransfer?: number;
+  /**
+   * 임대가 **양도일까지 계속**되었는가 (D2-06).
+   * 조특령 §97의3⑤ B·§97의5②는 「실제 임대기간의 **마지막 날**의 기준시가」를
+   * 양도일 기준시가 D와 **별개 변수로** 정의한다. 계속 임대했으면 B = D다.
+   * 3-state 입력의 「아니오」이면 `stdPriceAtRentalEnd`가 필수다.
+   */
+  rentalContinuesToTransfer?: boolean;
+  /** B — 실제 임대기간 마지막 날의 기준시가 (원). 계속 임대한 경우 불요. */
+  stdPriceAtRentalEnd?: number;
   // ── 세액감면 계열 컨텍스트 ──
   /** 산출세액 (tax_amount 계열 — §97·§97의2·§97의5) */
   calculatedTax?: number;

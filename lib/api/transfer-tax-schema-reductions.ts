@@ -20,6 +20,10 @@ const rental97CommonShape = {
   rentIncreaseViolated: z.boolean().optional(),
   rentHistory: z.array(rentHistorySchema).optional(),
   vacancyPeriods: z.array(vacancyPeriodSchema).optional(),
+  /** D2-06 — 임대가 양도일까지 계속되었는가 (조특령 §97의3⑤ B·§97의5②) */
+  rentalContinuesToTransfer: z.boolean().optional(),
+  /** D2-06 — 실제 임대기간 마지막 날의 기준시가 (원) */
+  stdPriceAtRentalEnd: z.number().int().nonnegative().optional(),
 } as const;
 
 /** §97 본문·단서 전용 — 조특령 §97① 5호 요건 + §97⑤4호 5호 미만 기간 (D1-01) */
@@ -148,6 +152,10 @@ export const reductionSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("rental_97_4"),
+    /** D2-04 — 임대개시일 당시 주택+부수토지 기준시가 합계 (소령 §167의3①2호 가목·다목 한도) */
+    officialPriceAtStart: z.number().int().nonnegative().optional(),
+    /** D2-04 — 가목(민간매입 1호↑) / 다목(건설임대 2호↑) */
+    rental974Category: z.enum(["purchase_a", "construction_c"]).optional(),
     ...rental97CommonShape,
     region: z.enum(["capital", "non_capital"]).optional(),
     _phase1Stub: z.literal(true).optional(),

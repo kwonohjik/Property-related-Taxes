@@ -139,30 +139,101 @@ export function validateRentIncrease(
 }
 
 /**
- * 임대기간 분 양도차익 비율 (조특령 §97의3⑤·§97의5② 기준시가 안분).
+ * 임대기간 분 양도차익(양도소득) 안분 비율 — **조문마다 분자가 다르다** (D2-03 · D2-06).
  *
- * - 취득 즉시 임대(rentalStartDate ≤ acquisitionDate): 전체가 임대기간 → 1
- * - 그 외: (양도시 − 임대개시시) / (양도시 − 취득시) 기준시가 비례, 0~1 클램프
- * - 분모 ≤ 0 또는 3점 미입력: null 반환 — 호출측에서 불적용 사유 처리 (silent 안분 금지)
+ * ## 조특령 §97의3⑤ (LTHD 70% 특례)
+ *   A × (B − C) ÷ (D − E)
+ *   A: 「소득세법」 §92②1호 양도차익
+ *   B: 제2항에 따른 **실제 임대기간의 마지막 날**의 기준시가
+ *   C: 제2항에 따른 실제 임대기간의 **개시일**의 기준시가
+ *   D: **양도일**의 기준시가   E: **취득일**의 기준시가
+ *
+ * ## 조특령 §97의5② (100% 세액감면)
+ *   「소득세법」 §95① 양도소득금액
+ *     × (제1항에 따른 **임대기간의 마지막 날**의 기준시가 − **취득당시** 기준시가)
+ *     ÷ (**양도 당시** 기준시가 − **취득 당시** 기준시가)
+ *
+ * ⇒ 분모는 같고 **분자의 감수(subtrahend)가 다르다** — §97의3은 임대개시일(C),
+ *   §97의5는 취득당시(E). 종전에는 한 함수가 두 조문을 겸했고, 그 산식이
+ *   §97의3의 것도 §97의5의 것도 아닌 (D − C) / (D − E)였다:
+ *   피감수를 **양도일 기준시가 D**로, §97의5의 감수를 **임대개시일 C**로 치환한 형태다.
+ *
+ * ## 피감수 B — 「임대기간의 마지막 날」이지 양도일이 아니다
+ * 두 조문 모두 B를 D와 **별개 변수로 정의**한다. 임대를 종료하고 얼마 뒤에 양도하면
+ * 두 값이 갈린다(§97의5①2호는 「10년 이상 계속하여 임대한 **후 양도**」다).
+ * 임대가 양도일까지 계속된 경우에만 B = D이므로, 그 경우에는 `stdPriceAtRentalEnd`를
+ * 주지 않아도 되고 기존 사안은 회귀하지 않는다.
+ *
+ * ## 반환
+ * - `null` — 필요한 기준시가가 없거나 분모 ≤ 0. 호출측이 불적용 사유를 붙인다(자동 안분 금지).
+ * - 그 외 0~1 클램프.
  */
 export function calcRentalGainRatio(args: {
   rentalStartDate: Date;
   acquisitionDate: Date;
+  /**
+   * 분자의 감수 — 조문을 명시한다. 기본값을 두지 않는다:
+   * 호출부가 조문을 밝히지 않으면 컴파일이 실패해야 한다.
+   * - `"rental_start"` → 조특령 §97의3⑤ (C = 임대개시일 기준시가)
+   * - `"acquisition"`  → 조특령 §97의5② (E = 취득당시 기준시가)
+   */
+  numeratorBase: "rental_start" | "acquisition";
   stdPriceAtAcquisition?: number;
   stdPriceAtRentalStart?: number;
   stdPriceAtTransfer?: number;
+  /**
+   * B — 실제 임대기간의 마지막 날 기준시가.
+   * 임대가 양도일까지 계속된 경우(`rentalContinuesToTransfer`)에는 D를 쓴다.
+   */
+  stdPriceAtRentalEnd?: number;
+  /** 임대가 양도일까지 계속되었는가. false면 `stdPriceAtRentalEnd`가 필수다. */
+  rentalContinuesToTransfer: boolean;
 }): number | null {
-  if (args.rentalStartDate.getTime() <= args.acquisitionDate.getTime()) return 1;
+  const {
+    stdPriceAtAcquisition: acq,
+    stdPriceAtRentalStart: start,
+    stdPriceAtTransfer: transfer,
+  } = args;
 
-  const { stdPriceAtAcquisition: acq, stdPriceAtRentalStart: start, stdPriceAtTransfer: transfer } = args;
+  /**
+   * 취득 즉시 임대 + 양도일까지 계속 임대 → 비율은 항상 1이다.
+   * 그때 B = D이고 (§97의3의) C = E이므로 (D − E) / (D − E) = 1 —
+   * **기준시가 값 자체가 결과를 좌우하지 않으므로** 3점을 요구하지 않는다.
+   *
+   * ⚠️ 「계속 임대」 조건이 빠지면 안 된다(D2-06 정정 3). 취득 즉시 임대라도 임대를
+   *    일찍 끝내고 나중에 양도하면 B < D라 법문상 안분이 필요하다 —
+   *    종전 코드는 기준시가를 보지도 않고 전액 임대분으로 처리했다.
+   */
   if (
-    acq === undefined || start === undefined || transfer === undefined ||
-    acq <= 0 || start <= 0 || transfer <= 0
+    args.rentalContinuesToTransfer &&
+    args.rentalStartDate.getTime() <= args.acquisitionDate.getTime()
   ) {
-    return null;
+    return 1;
   }
+
+  if (acq === undefined || transfer === undefined || acq <= 0 || transfer <= 0) return null;
+
+  // B — 임대 종료 시점 기준시가. 양도일까지 계속 임대했으면 D와 같다.
+  const rentalEnd = args.rentalContinuesToTransfer ? transfer : args.stdPriceAtRentalEnd;
+  if (rentalEnd === undefined || rentalEnd <= 0) return null;
+
+  // 분자의 감수
+  let subtrahend: number;
+  if (args.numeratorBase === "acquisition") {
+    subtrahend = acq;
+  } else {
+    // §97의3⑤ C — 임대개시일 기준시가.
+    // 취득 즉시 임대(임대개시 ≤ 취득일)면 C가 곧 E이므로 취득시 기준시가를 쓴다.
+    if (args.rentalStartDate.getTime() <= args.acquisitionDate.getTime()) {
+      subtrahend = acq;
+    } else {
+      if (start === undefined || start <= 0) return null;
+      subtrahend = start;
+    }
+  }
+
   const denominator = transfer - acq;
   if (denominator <= 0) return null;
-  const ratio = (transfer - start) / denominator;
+  const ratio = (rentalEnd - subtrahend) / denominator;
   return Math.min(1, Math.max(0, ratio));
 }

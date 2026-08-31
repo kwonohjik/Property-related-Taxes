@@ -61,34 +61,51 @@ describe("rental-97-shared-helpers", () => {
     expect(result.isAllValid).toBe(true);
   });
 
-  describe("calcRentalGainRatio (조특령 §97의3⑤ 기준시가 안분)", () => {
-    it("취득 즉시 임대 (rentalStart ≤ acquisition) → 1", () => {
+  describe("calcRentalGainRatio — 조문별 분자 (D2-03 · D2-06)", () => {
+    const BASE = {
+      rentalStartDate: new Date("2018-01-01"),
+      acquisitionDate: new Date("2014-01-01"),
+      stdPriceAtAcquisition: 300_000_000,
+      stdPriceAtRentalStart: 400_000_000,
+      stdPriceAtTransfer: 600_000_000,
+      rentalContinuesToTransfer: true,
+    } as const;
+
+    it("취득 즉시 임대 + 양도일까지 계속 → 1", () => {
       expect(
         calcRentalGainRatio({
           rentalStartDate: new Date("2014-01-01"),
           acquisitionDate: new Date("2014-01-01"),
+          numeratorBase: "rental_start",
+          stdPriceAtAcquisition: 300_000_000,
+          stdPriceAtTransfer: 600_000_000,
+          rentalContinuesToTransfer: true,
         }),
       ).toBe(1);
     });
 
-    it("임대개시 > 취득 + 3점 입력 → 비례 (6억−4억)/(6억−3억) = 2/3", () => {
-      expect(
-        calcRentalGainRatio({
-          rentalStartDate: new Date("2018-01-01"),
-          acquisitionDate: new Date("2014-01-01"),
-          stdPriceAtAcquisition: 300_000_000,
-          stdPriceAtRentalStart: 400_000_000,
-          stdPriceAtTransfer: 600_000_000,
-        }),
-      ).toBeCloseTo(2 / 3, 10);
+    it("§97의3⑤: 분자 감수 = 임대개시일 기준시가 → (6억−4억)/(6억−3억) = 2/3", () => {
+      expect(calcRentalGainRatio({ ...BASE, numeratorBase: "rental_start" })).toBeCloseTo(
+        2 / 3,
+        10,
+      );
     });
 
-    it("임대개시 > 취득 + 3점 미입력 → null (silent 안분 금지)", () => {
+    it("🔴 §97의5②: 분자 감수 = 취득당시 기준시가 → (6억−3억)/(6억−3억) = 1", () => {
+      expect(
+        calcRentalGainRatio({ ...BASE, numeratorBase: "acquisition" }),
+        "§97의3 산식을 재사용하면 2/3가 되어 감면이 과소해진다",
+      ).toBe(1);
+    });
+
+    it("§97의3 3점 미입력 → null (silent 안분 금지)", () => {
       expect(
         calcRentalGainRatio({
           rentalStartDate: new Date("2018-01-01"),
           acquisitionDate: new Date("2014-01-01"),
+          numeratorBase: "rental_start",
           stdPriceAtTransfer: 600_000_000,
+          rentalContinuesToTransfer: true,
         }),
       ).toBeNull();
     });

@@ -34,6 +34,11 @@ interface Props {
    * 기본값을 두지 않는다 — 호출부가 조문을 명시하지 않으면 컴파일이 실패해야 한다.
    */
   vacancyGraceMonths: 3 | 6;
+  /**
+   * 임대기간 분 안분이 있는 조문인가 — §97의3⑤·§97의5②만 true (D2-06).
+   * §97·§97의2·§97의4는 기준시가 안분이 없어 「임대 종료 시점」을 묻지 않는다.
+   */
+  hasGainProration?: boolean;
 }
 
 const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> = {
@@ -42,7 +47,7 @@ const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> 
   semi_jeonse: "반전세",
 };
 
-export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths }: Props) {
+export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false }: Props) {
   const graceLabel = vacancyGraceMonths === 3 ? "3개월" : "6개월";
   const graceBasis =
     vacancyGraceMonths === 3
@@ -251,6 +256,61 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
           </div>
         )}
       </ToneCard>
+
+      {/* 임대 종료 시점 — 조특령 §97의3⑤ B · §97의5② (D2-06) */}
+      {hasGainProration && (
+        <ToneCard
+          tone="violet"
+          sectionNum={sec4 + 1}
+          title="임대 종료 시점"
+          bodyClassName="space-y-2"
+          noDark
+        >
+          <div>
+            <p className="mb-1.5 text-xs text-muted-foreground">임대가 양도일까지 계속되었습니까?</p>
+            <p className="mb-1.5 text-micro text-muted-foreground">
+              조특령 §97의3⑤·§97의5② — 안분 산식의 분자는 「실제 임대기간의 <strong>마지막 날</strong>의
+              기준시가」입니다. 양도일 기준시가와 별개 변수여서, 임대를 끝내고 시간이 지난 뒤 양도했다면
+              그 시점 기준시가가 따로 필요합니다.
+            </p>
+            <RadioCardGroup
+              name="rentalContinuesToTransfer"
+              layout="inline"
+              tone="violet"
+              value={
+                value.rentalContinuesToTransfer === null
+                  ? ""
+                  : value.rentalContinuesToTransfer
+                    ? "yes"
+                    : "no"
+              }
+              onChange={(v) => onChange({ rentalContinuesToTransfer: v === "yes" })}
+              options={[
+                { value: "yes", label: "양도일까지 계속 임대" },
+                { value: "no", label: "양도 전에 임대 종료" },
+              ]}
+            />
+            {value.rentalContinuesToTransfer === null && (
+              <p className="mt-1 text-micro text-rose-600">
+                ※ 반드시 선택하세요 (미선택 시 계산 불가)
+              </p>
+            )}
+          </div>
+
+          {value.rentalContinuesToTransfer === false && (
+            <div className="mt-2 border-t border-violet-200 pt-2">
+              <CurrencyInput
+                label="임대 종료일 당시 기준시가 (주택+부속토지 합계)"
+                value={value.stdPriceAtRentalEnd}
+                onChange={(v) => onChange({ stdPriceAtRentalEnd: v })}
+              />
+              <p className="mt-1 text-micro text-muted-foreground">
+                산식의 B — 실제 임대기간 마지막 날의 기준시가
+              </p>
+            </div>
+          )}
+        </ToneCard>
+      )}
     </>
   );
 }

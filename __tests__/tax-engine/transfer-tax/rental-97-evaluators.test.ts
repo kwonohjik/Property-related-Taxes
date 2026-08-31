@@ -282,6 +282,10 @@ describe("§97의4 evaluateRental974 (⚠️ R-3 — 추가율 표 원문 미확
       rentalStartDate: new Date("2016-03-01"),
       isTaxRegistered: true,
       rentIncreaseViolated: false,
+      // D2-04 — 조특령 §97의4① → 소령 §167의3①2호 가목·다목 대상 요건.
+      // 종전 픽스처엔 없어 기준시가 한도를 넘는 주택도 §97의4를 적용받았다.
+      rental974Category: "purchase_a",
+      officialPriceAtStart: 500_000_000,
     });
     expect(r.isEligible).toBe(true);
     if (r.isEligible && "additionalRate" in r) {

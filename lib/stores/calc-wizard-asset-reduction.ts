@@ -190,6 +190,14 @@ export interface RentalCommonFormFields {
    * 종전 키 `hasVacancyOver6Months`는 6개월을 다섯 조문 전부에 전용하던 시절의 이름이라 폐기했다(D1-03).
    */
   hasVacancyOverGrace: boolean | null;
+  /**
+   * 임대가 **양도일까지 계속**되었는가 (3-state, D2-06).
+   * 조특령 §97의3⑤ B·§97의5②는 「실제 임대기간의 마지막 날의 기준시가」를
+   * 양도일 기준시가 D와 별개 변수로 정의한다. 「아니오」면 종료 시점 기준시가가 필수다.
+   */
+  rentalContinuesToTransfer: boolean | null;
+  /** 실제 임대기간 마지막 날의 기준시가 (원) — 위가 「아니오」일 때만 사용 */
+  stdPriceAtRentalEnd: string;
   /** 공실 구간 (true 시 ≥ 1행) */
   vacancyPeriods?: VacancyPeriodFormItem[];
 }
@@ -210,6 +218,10 @@ export type RentalReductionFormVariant =
   | ({
       type: "rental_97_4";
       region: "capital" | "non_capital";
+      /** D2-04 — 임대개시일 당시 주택+부속토지 기준시가 합계 (원) */
+      officialPriceAtStart: string;
+      /** D2-04 — 가목(민간매입 1호↑) / 다목(건설임대 2호↑). "" = 미선택 */
+      rental974Category: "purchase_a" | "construction_c" | "";
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_5";

@@ -252,6 +252,49 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
           if ((r.type === "rental_97_3" || r.type === "rental_97_5") && parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0") <= 0)
             return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`);
+          // D2-04 — §97의4 대상 요건 (조특령 §97의4① → 소령 §167의3①2호 가목·다목)
+          if (r.type === "rental_97_4") {
+            const cat = (r as { rental974Category?: string }).rental974Category;
+            if (!cat)
+              return fail(
+                `${label} 적용: 장기임대주택 유형(가목 민간매입 1호↑ / 다목 건설임대 2호↑)을 선택하세요 (소령 §167의3①2호).`,
+              );
+            const std = parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0");
+            if (std <= 0)
+              return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부수토지 합계)를 입력하세요.`);
+            // ⑧은 API/UI와 동일한 한도를 써야 한다 — 가목만 수도권 밖 3억 분기가 있다.
+            const cap =
+              cat === "purchase_a" && (r as { region?: string }).region === "non_capital"
+                ? 300_000_000
+                : 600_000_000;
+            if (std > cap)
+              return fail(
+                `${label} 적용: 임대개시일 당시 기준시가 합계가 한도 ${(cap / 100_000_000).toFixed(0)}억원을 초과합니다 — 장기임대주택에 해당하지 않습니다 (소령 §167의3①2호 ${cat === "purchase_a" ? "가목" : "다목"}).`,
+              );
+          }
+          // D2-05 — 조특법 §97의5②: §97의5 세액감면은 §97의3·§97의4 과세특례와 중복 적용 불가.
+          // ⑧에도 같은 상호배타를 둬야 「UI 통과 ↔ 엔진 배제」 모순이 생기지 않는다.
+          if (
+            (r.type === "rental_97_3" || r.type === "rental_97_4") &&
+(asset.reductions ?? []).some((o) => o.type === "rental_97_5")
+          )
+            return fail(
+              `${label} 적용: §97의5 세액감면과 중복하여 적용할 수 없습니다 (조특법 §97의5②). 하나만 선택하세요.`,
+            );
+          // D2-06 — 안분이 있는 두 조문만. 3-state 미선택을 「계속 임대」로 읽지 않는다.
+          if (r.type === "rental_97_3" || r.type === "rental_97_5") {
+            if (r.rentalContinuesToTransfer === null || r.rentalContinuesToTransfer === undefined)
+              return fail(
+                `${label} 적용: 임대가 양도일까지 계속되었는지 선택하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5②" : "§97의3⑤"}).`,
+              );
+            if (
+              r.rentalContinuesToTransfer === false &&
+              parseAmount(r.stdPriceAtRentalEnd || "0") <= 0
+            )
+              return fail(
+                `${label} 적용: 임대 종료일 당시 기준시가를 입력하세요 (안분 산식의 B). 자동 안분은 수행하지 않습니다.`,
+              );
+          }
           if ((r.type === "rental_97_main" || r.type === "rental_97_proviso") && !(parseInt((r as { constructionYear?: string }).constructionYear || "") > 0))
             return fail(`${label} 적용: 신축 연도를 입력하세요.`);
           // D1-01 — 조특령 §97① 주체 요건. 3-state 미선택을 「충족」으로 읽지 않는다.

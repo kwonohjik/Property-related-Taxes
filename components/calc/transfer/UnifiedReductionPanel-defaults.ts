@@ -96,6 +96,9 @@ const RENTAL_COMMON_DEFAULTS = {
   rentIncreaseViolationMode: "" as const,
   rentHistory: [],
   hasVacancyOverGrace: null,
+  // D2-06 — 3-state. 미입력을 「계속 임대」로 읽지 않는다.
+  rentalContinuesToTransfer: null,
+  stdPriceAtRentalEnd: "",
   vacancyPeriods: [],
 };
 
@@ -138,6 +141,8 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       type: "rental_97_4",
       ...RENTAL_COMMON_DEFAULTS,
       region: "capital",
+      officialPriceAtStart: "",
+      rental974Category: "",
     };
   }
   if (id === "rental_97_5") {

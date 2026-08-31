@@ -173,6 +173,9 @@ export function migrateAsset(raw: unknown): AssetForm {
           rentalStartDate: "",
           isTaxRegistered: false,
           rentIncreaseViolationMode: "",
+          // D2-06 — 신규 3-state. 구 세션엔 값이 없다.
+          rentalContinuesToTransfer: null,
+          stdPriceAtRentalEnd: "",
           ...r,
           /**
            * D1-03 — 구 키 `hasVacancyOver6Months`는 「6개월 초과 공실이 있는가」를 물었다.
@@ -194,6 +197,10 @@ export function migrateAsset(raw: unknown): AssetForm {
             : {}),
           ...(r.type === "rental_97_2" && r.hasNewRentalPlus2Units === undefined
             ? { hasNewRentalPlus2Units: null }
+            : {}),
+          // D2-04 — §97의4 대상 요건 신규 필드. 구 세션은 미선택으로 둔다.
+          ...(r.type === "rental_97_4" && r.rental974Category === undefined
+            ? { rental974Category: "", officialPriceAtStart: r.officialPriceAtStart ?? "" }
             : {}),
         };
       }

@@ -193,6 +193,14 @@ export function toEngineReductions(
           r.hasVacancyOverGrace === true && r.vacancyPeriods && r.vacancyPeriods.length > 0
             ? r.vacancyPeriods.map((v) => ({ startDate: v.startDate, endDate: v.endDate }))
             : undefined,
+        // D2-06 — 3-state. null(미선택)은 보내지 않아 엔진이 불적용 사유를 붙이게 한다.
+        ...(r.rentalContinuesToTransfer !== null
+          ? { rentalContinuesToTransfer: r.rentalContinuesToTransfer }
+          : {}),
+        // B는 「양도일까지 계속 임대」가 아닐 때만 의미가 있다.
+        ...(r.rentalContinuesToTransfer === false
+          ? { stdPriceAtRentalEnd: parseAmount(r.stdPriceAtRentalEnd || "0") || undefined }
+          : {}),
       };
       if (r.type === "rental_97_3") {
         return {
@@ -207,7 +215,14 @@ export function toEngineReductions(
         };
       }
       if (r.type === "rental_97_4") {
-        return { type: "rental_97_4" as const, ...common, region: r.region };
+        return {
+          type: "rental_97_4" as const,
+          ...common,
+          region: r.region,
+          // D2-04 — 소령 §167의3①2호 가목·다목 한도 판정용
+          officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
+          ...(r.rental974Category ? { rental974Category: r.rental974Category } : {}),
+        };
       }
       if (r.type === "rental_97_5") {
         return {
