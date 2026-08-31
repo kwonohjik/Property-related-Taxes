@@ -92,7 +92,19 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
   return (
     <ToggleCard
       checked={form.acquiredBeforeListing}
-      onCheckedChange={(v) => onChange({ acquiredBeforeListing: v })}
+      /*
+        F-10: 끄면 아래 입력 방식 라디오가 통째로 사라진다(ToggleCard.tsx:303 `{checked && children}`).
+        모드가 `daily`로 남으면 일반 §163⑨ 경로에서 되돌릴 수단이 없으므로 «끌 때» 함께 정규화한다.
+        ⚠️ 반드시 한 번의 patch로 — 나눠 부르면 뒤 호출이 앞의 spread를 덮어쓴다.
+        anchor: __tests__/components/post-listing-toggle-off-normalizes-mode.anchor.test.tsx
+      */
+      onCheckedChange={(v) =>
+        onChange(
+          v
+            ? { acquiredBeforeListing: true }
+            : { acquiredBeforeListing: false, transferStdInputMode: "direct" },
+        )
+      }
       title="취득 후 상장 — 환산취득가 (소령 §165⑤)"
       description="취득 당시 비상장이었으나 양도 시점에 상장된 주식 — 상장일 이후 1개월 종가평균 기반 환산"
       tone="amber"

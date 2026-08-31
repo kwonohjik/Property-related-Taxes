@@ -137,6 +137,51 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
     await expect(denom).toHaveValue("");
   });
 
+  /**
+   * 🔴 **F-10 dead-end의 사용자 플로우 증명.**
+   *
+   * 「취득 후 상장」을 켜서 «일자별 입력»을 고른 뒤 다시 끄면, 그 라디오도 일자별 표도
+   * 화면에서 사라지는데 모드 값만 `daily`로 남았다. 그 상태에서는 1개월 평균을 제대로
+   * 넣어도 「거래일 종가를 1셀 이상 입력하세요」로 **입력 UI 없이 차단**됐다.
+   *
+   * 계획서: docs/00-pm/stock-transfer-std-input-mode-dead-end.plan.md (KA-5)
+   *
+   * 컴포넌트 anchor(FD-1·FD-5)는 validate 결과와 patch를 각각 보지만,
+   * **두 겹을 지나 실제로 다음 단계로 넘어가는지**는 브라우저에서만 안다
+   * ([[feedback_browser_verify_with_playwright]]).
+   */
+  test("KA-5: 취득후상장 ON→일자별→OFF 해도 다음 단계로 넘어간다 (F-10 dead-end)", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await mockKiwoom1Month(page);
+    await gotoStockTransferTax(page);
+    await fillStep1(page);
+    await gotoStep2Estimated(page);
+
+    const postListingToggle = page.getByRole("switch", { name: /취득 후 상장/ });
+
+    // ① 켠다 → 입력 방식 라디오가 나타난다
+    await postListingToggle.click();
+    await page.getByRole("radio", { name: /일자별 입력/ }).first().click();
+
+    // ② 다시 끈다 → 라디오도 일자별 표도 사라진다 (되돌릴 수단 없음)
+    await postListingToggle.click();
+    await expect(page.getByRole("radio", { name: /일자별 입력/ })).toHaveCount(0);
+
+    // ③ 일반 §163⑨ 경로의 분모·분자를 정상 입력한다
+    await fillByLabel(page, "양도시 1주당 기준시가", "56590");
+    await fillByLabel(page, "취득시 1주당 기준시가", "51000");
+
+    // ④ 넘어간다 — 종전에는 여기서 막혔다
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByText(/일자별 입력 모드/)).toHaveCount(0);
+
+    // 🔑 단계 표시줄의 「필요경비·신고」는 **모든 단계에서 보인다**(STEPS 라벨)이라
+    //    도달 증명이 되지 않는다. Step3 «본문»에만 있는 섹션 제목으로 확인한다.
+    await expect(page.getByText("기본공제 (§103②)")).toBeVisible({ timeout: 10_000 });
+  });
+
   test("KA-3: 라벨이 「이전 1개월」이다 (소득세법 §99①3 문언)", async ({ page }) => {
     test.setTimeout(120_000);
     await mockKiwoom1Month(page);
