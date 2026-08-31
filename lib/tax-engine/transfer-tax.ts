@@ -311,6 +311,10 @@ export function calculateTransferTax(
      * `exemptionJudgeInput`이라야 일반 주택 경로와 **같은 판정**이 나온다. steps에도 그대로
      * 쌓여 근거가 보인다(일반 경로와 동일한 additive 동작).
      */
+    /** STEP 0.9+0.95 산출물 — IIFE 안에서 채워 `calculateRedevelopmentTax`로 넘긴다 (D4-08). */
+    let redevHouseExclusion:
+      | Pick<TransferTaxResult, "new994Detail" | "unsold989Detail" | "specialHouseExclusionDetail">
+      | undefined;
     const redevExemption =
       redevInput.redevelopment?.subject === "apt" &&
       // ⚠️ **청산금 「수령」 축은 제외한다.** 그 경우 양도 대상에 종전 부동산 일부(청산금 상당분)가
@@ -323,7 +327,25 @@ export function calculateTransferTax(
       //     충족이라 전액 비과세가 되어 안내와 계산이 어긋났다).
       redevInput.redevelopment.settlementDirection !== "receive"
         ? (() => {
-            const { exemptionJudgeInput } = runHouseCountExclusionStep(redevInput, steps);
+            const {
+              exemptionJudgeInput,
+              new994Detail: redevNew994,
+              unsold989Detail: redevUnsold989,
+              specialHouseExclusionDetail: redevSpecialHouse,
+            } = runHouseCountExclusionStep(redevInput, steps);
+            // 🔴 종전에는 `exemptionJudgeInput`만 꺼내고 나머지 셋을 버렸다 — 결과에 실리지 않아
+            //   §99의4⑥ 3년 미보유 **추징 경고**(`clawbackWarning`)·농어촌주택 보유기간·
+            //   §98의9 `dualExclusionWarning`이 통째로 사라졌다(코드리뷰 D4-08).
+            //   적격 미달(isEligible=false)이면 step조차 push되지 않아 근거가 아예 안 남는다.
+            //   실측: 같은 사실관계에서 §99의4가 세액을 111,228,857 → 0으로 바꾸는데 카드가 없다.
+            //   ⚠️ 바로 아래 주석이 기록한 `multiHouseSurchargeResult`·`carryoverDetail`에 이은
+            //     **같은 결함의 세 번째 재발**이다 — 조기이탈 분기가 상류 산출물을 버리는 패턴.
+            redevHouseExclusion = {
+              new994Detail: redevNew994,
+              unsold989Detail: redevUnsold989,
+              specialHouseExclusionDetail:
+                redevSpecialHouse.entries.length > 0 ? redevSpecialHouse : undefined,
+            };
             /**
              * `checkExemption`의 유일한 자산 게이트는 `propertyType !== "housing"`이다
              * (`transfer-tax-exemption.ts:613` — 파일 전체에서 `propertyType`을 쓰는 곳은 그 한 줄뿐).
@@ -372,6 +394,7 @@ export function calculateTransferTax(
       exemptionResult: redevExemption,
       carryoverDetail,
       warnings,
+      houseCountExclusion: redevHouseExclusion,
     });
   }
 
@@ -540,6 +563,12 @@ export function calculateTransferTax(
       estimatedBase,
       steps,
       warnings,
+      // D4-08 — 비과세 조기반환(`buildExemptEarlyResult`)은 처음부터 넘기고 있었는데
+      //   차손 경로만 빠져 있었다. 산출세액이 0이어도 §99의4⑥ 추징 경고는 남아야 한다.
+      new994Detail,
+      unsold989Detail,
+      specialHouseExclusionDetail:
+        specialHouseExclusionDetail.entries.length > 0 ? specialHouseExclusionDetail : undefined,
       transferGain,
       usedEstimated,
       exemptionResult,

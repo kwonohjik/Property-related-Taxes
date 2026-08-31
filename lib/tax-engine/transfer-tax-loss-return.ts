@@ -23,6 +23,15 @@ import { TRANSFER } from "./legal-codes/transfer";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
 export interface LossReturnArgs {
+  /**
+   * STEP 0.9+0.95 주택수 제외 상세 (§99의4·§98의9·보유 감면주택) — D4-08.
+   * 산출세액이 0이어도 §99의4⑥ 3년 미보유 **추징 경고**는 남아야 한다
+   * (`clawbackWarning`은 이 detail에만 존재해 다른 경로로 대체 노출되지 않는다).
+   * 형제 경로 `buildExemptEarlyResult`는 처음부터 받고 있었고 이 경로만 빠져 있었다.
+   */
+  new994Detail?: TransferTaxResult["new994Detail"];
+  unsold989Detail?: TransferTaxResult["unsold989Detail"];
+  specialHouseExclusionDetail?: TransferTaxResult["specialHouseExclusionDetail"];
   input: TransferTaxInput;
   effectiveInput: TransferTaxInput;
   estimatedBase: number;
@@ -58,6 +67,9 @@ export function buildLossTransferTaxResult({
   inheritedAcquisitionStep,
   cbStep,
   splitDetail,
+  new994Detail,
+  unsold989Detail,
+  specialHouseExclusionDetail,
 }: LossReturnArgs): TransferTaxResult {
   // ⚠️ acquisitionMethod 판정은 effectiveInput 기준 — finalize.ts penaltyBase와 동일 이유·동일 근거
   // (부담부증여는 §159 스텝이 정규화하나 원본 input에는 UI가 보존한 stale 산정방식이 남는다).
@@ -108,6 +120,10 @@ export function buildLossTransferTaxResult({
     });
   }
   return {
+    // D4-08 — 주택수 제외 상세를 결과에 싣는다(§99의4⑥ 추징 경고 보존).
+    ...(new994Detail ? { new994Detail } : {}),
+    ...(unsold989Detail ? { unsold989Detail } : {}),
+    ...(specialHouseExclusionDetail ? { specialHouseExclusionDetail } : {}),
     isExempt: false,
     /**
      * 🔑 **양도차손 경로에도 §89①3호 해당 여부를 실어야 한다** (2026-08-10 D-8).
