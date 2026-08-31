@@ -58,8 +58,24 @@ describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 
     expect(screen.getByText(/환산취득가 \(시행령 §163⑨\)/)).toBeTruthy();
   });
 
-  it("AG-1: 「취득 후 상장」 OFF면 키움 자동조회 버튼이 없다 (Phase 4에서 뒤집힌다)", () => {
+  /**
+   * ⭐ **Phase 4에서 «대체»된 단언이다.**
+   *
+   * 종전(Phase 0): 「취득 후 상장 OFF면 버튼이 «없다»」 — 결함을 고정하는 트립와이어였다.
+   * 지금: 일반 §163⑨ 환산 사용자에게 버튼이 **보인다**. 이것이 이 트랙의 목적이다.
+   *
+   * ⇒ 이 단언이 `toBeNull()`로 되돌아가면 도달 경로가 다시 사라진 것이다
+   *   ([[feedback_ui_gate_removes_sole_input_path]]).
+   */
+  it("AG-1: 「취득 후 상장」 OFF여도 키움 자동조회 버튼이 보인다 (일반 §163⑨ 경로)", () => {
     render(<Step2 form={listedEstimatedForm()} onChange={() => {}} />);
+    expect(screen.getByRole("button", { name: /키움 자동조회/ })).toBeTruthy();
+  });
+
+  it("AG-1b: 그 버튼은 거래정지 토글 ON이면 사라진다 (환산 블록 자체가 닫힌다)", () => {
+    render(
+      <Step2 form={listedEstimatedForm({ tradingHaltAtTransfer: true })} onChange={() => {}} />,
+    );
     expect(screen.queryByRole("button", { name: /키움 자동조회/ })).toBeNull();
   });
 
