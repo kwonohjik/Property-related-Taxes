@@ -252,6 +252,15 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
           if ((r.type === "rental_97_3" || r.type === "rental_97_5") && parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0") <= 0)
             return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`);
+          // D2-05 — 조특법 §97의5②: §97의5 세액감면은 §97의3·§97의4 과세특례와 중복 적용 불가.
+          // ⑧에도 같은 상호배타를 둬야 「UI 통과 ↔ 엔진 배제」 모순이 생기지 않는다.
+          if (
+            (r.type === "rental_97_3" || r.type === "rental_97_4") &&
+(asset.reductions ?? []).some((o) => o.type === "rental_97_5")
+          )
+            return fail(
+              `${label} 적용: §97의5 세액감면과 중복하여 적용할 수 없습니다 (조특법 §97의5②). 하나만 선택하세요.`,
+            );
           // D2-06 — 안분이 있는 두 조문만. 3-state 미선택을 「계속 임대」로 읽지 않는다.
           if (r.type === "rental_97_3" || r.type === "rental_97_5") {
             if (r.rentalContinuesToTransfer === null || r.rentalContinuesToTransfer === undefined)

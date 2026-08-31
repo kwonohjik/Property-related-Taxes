@@ -221,6 +221,9 @@ describe("§97의5 엔진 — 리뷰 실측 시나리오 재현 (D2-03)", () => 
 describe("⑬ router — 임대 종료 축이 evaluator까지 도달한다", () => {
   const rates = makeMockRates();
 
+  const ratioOf = (r: ReturnType<typeof calculateTransferTax>) =>
+    (r.rental97LthdDetail as unknown as { rentalGainRatio?: number } | undefined)?.rentalGainRatio;
+
   function run(continues: boolean, endPrice?: number) {
     return calculateTransferTax(
       baseTransferInput({
@@ -255,15 +258,15 @@ describe("⑬ router — 임대 종료 축이 evaluator까지 도달한다", () 
   }
 
   it("🔴 임대 조기 종료 선언이 안분 비율을 바꾼다 — router를 통과했다는 뜻", () => {
-    const cont = run(true).rental97LthdDetail?.rentalGainRatio;
-    const early = run(false, 500_000_000).rental97LthdDetail?.rentalGainRatio;
+    const cont = ratioOf(run(true));
+    const early = ratioOf(run(false, 500_000_000));
     expect(cont, "⑬ router 명시매핑이 필드를 stripping했다").not.toBe(early);
     expect(early!).toBeLessThan(cont!);
   });
 
   it("종료 시점 기준시가 미입력이면 불적용 사유가 붙는다 (자동 안분 금지)", () => {
     const r = run(false, undefined);
-    expect(r.rental97LthdDetail?.rentalGainRatio ?? null).not.toBe(1);
+    expect(ratioOf(r) ?? null).not.toBe(1);
   });
 });
 
