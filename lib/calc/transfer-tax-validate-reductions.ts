@@ -346,6 +346,26 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
                 );
             }
           }
+          // D9-01 — §97의2①1호 나목: 1999.8.19 이전 신축 건설임대는 두 사실을 모두 요구한다.
+          //          시한 게이트만 열고 이 검사를 빼면 1999.8.20 현재 입주돼 있던 구축까지
+          //          적격이 되어 **과다포섭**이 된다.
+          if (
+            r.type === "rental_97_2" &&
+            (r as { rental972Type?: string }).rental972Type === "construction" &&
+            asset.acquisitionDate &&
+            new Date(asset.acquisitionDate) < new Date("1999-08-20")
+          ) {
+            const rr = r as {
+              isMultiUnitHousing972?: boolean | null;
+              isUnoccupiedAt19990820?: boolean | null;
+            };
+            if (rr.isMultiUnitHousing972 === null || rr.isMultiUnitHousing972 === undefined)
+              return fail(`${label} 적용: 공동주택 여부를 선택하세요 (조특법 §97의2①1호 나목).`);
+            if (rr.isUnoccupiedAt19990820 === null || rr.isUnoccupiedAt19990820 === undefined)
+              return fail(
+                `${label} 적용: 1999.8.20 현재 입주 사실 여부를 선택하세요 (조특법 §97의2①1호 나목).`,
+              );
+          }
           // D1-07 — §97의2①2호(매입임대)도 같은 요건
           if (r.type === "rental_97_2" && (r as { rental972Type?: string }).rental972Type === "purchase") {
             const u = (r as { isUnoccupiedAtAcquisition?: boolean | null }).isUnoccupiedAtAcquisition;

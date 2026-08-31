@@ -71,6 +71,9 @@ export type TransferReductionStub =
       hasNewRentalPlus2Units?: boolean;
       /** D1-07 — §97의2①2호 「취득 당시 입주된 사실이 없는 주택만 해당」 */
       isUnoccupiedAtAcquisition?: boolean;
+      /** D9-01 — §97의2①1호 나목 (1999.8.19 이전 신축 공동주택 · 1999.8.20 현재 미입주) */
+      isMultiUnitHousing972?: boolean;
+      isUnoccupiedAt19990820?: boolean;
     } & Rental97CommonFields)
   | ({ type: "rental_97_3";
       /** @deprecated Phase 1 stub 호환 (단순 경로 입력) */

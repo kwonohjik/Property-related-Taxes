@@ -23,6 +23,9 @@ import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result 
 
 const MANDATORY_YEARS = 5;
 
+/** §97의2①1호 나목 — 「1999년 8월 19일 이전에 신축된」 */
+const NAMOK_BUILT_BEFORE = new Date("1999-08-20");
+
 export function evaluateRental972(input: Rental97EvaluationInput): Rental97Result {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.RENTAL_97_2;
   const reasons: Rental97IneligibleReason[] = [];
@@ -54,6 +57,41 @@ export function evaluateRental972(input: Rental97EvaluationInput): Rental97Resul
       message: "국민주택 요건이 확인되지 않았습니다 (§97의2① — 부속토지는 건물 연면적 2배 이내 포함).",
       legalBasis,
     });
+  }
+
+  /**
+   * §97의2①1호 **나목** — 「1999년 8월 19일 이전에 신축된 **공동주택**으로서
+   * **1999년 8월 20일 현재 입주된 사실이 없는 주택**」 (D9-01)
+   *
+   * 🔴 시한 게이트(`period-check.ts`)가 1999.8.19 이전 신축을 통과시키는 것은 **나목 때문**이다.
+   *    그 게이트만 열고 여기서 두 사실을 보지 않으면, 1999.8.20 현재 **이미 입주돼 있던**
+   *    구축 건설임대까지 적격이 되어 과다포섭이 된다.
+   *
+   * 가목(1999.8.20~2001.12.31 신축)에는 걸리지 않는다 — 별개 분기다.
+   */
+  if (
+    input.rental972Type === "construction" &&
+    input.acquisitionDate !== undefined &&
+    input.acquisitionDate.getTime() < NAMOK_BUILT_BEFORE.getTime()
+  ) {
+    if (input.isMultiUnitHousing972 !== true) {
+      reasons.push({
+        code: "CLAUSE_1_NA_NOT_MULTI_UNIT",
+        message:
+          "1999.8.19 이전 신축분은 §97의2①1호 **나목**(공동주택)에 한합니다 — " +
+          "공동주택 여부가 확인되지 않았습니다.",
+        legalBasis,
+      });
+    }
+    if (input.isUnoccupiedAt19990820 !== true) {
+      reasons.push({
+        code: "CLAUSE_1_NA_OCCUPIED",
+        message:
+          "1999.8.19 이전 신축분은 「1999년 8월 20일 현재 입주된 사실이 없는 주택」에 한합니다 — " +
+          "미입주 사실이 확인되지 않았습니다 (§97의2①1호 나목).",
+        legalBasis,
+      });
+    }
   }
 
   /**

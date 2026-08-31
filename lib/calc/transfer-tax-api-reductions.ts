@@ -248,6 +248,13 @@ export function toEngineReductions(
           ...(r.isUnoccupiedAtAcquisition !== null
             ? { isUnoccupiedAtAcquisition: r.isUnoccupiedAtAcquisition }
             : {}),
+          // D9-01 — §97의2①1호 나목
+          ...(r.isMultiUnitHousing972 !== null
+            ? { isMultiUnitHousing972: r.isMultiUnitHousing972 }
+            : {}),
+          ...(r.isUnoccupiedAt19990820 !== null
+            ? { isUnoccupiedAt19990820: r.isUnoccupiedAt19990820 }
+            : {}),
         };
       }
       // rental_97_main | rental_97_proviso

@@ -83,6 +83,53 @@ export function Rental972InputForm({ value, onChange }: Props) {
         />
       </ToneCard>
 
+      {/* §97의2①1호 나목 — 1999.8.19 이전 신축 공동주택 (D9-01) */}
+      {value.rental972Type === "construction" && (
+        <ToneCard tone="amber" sectionNum="②" title="1호 나목 요건" bodyClassName="space-y-2" noDark>
+          <p className="text-micro text-amber-800">
+            조특법 §97의2①1호 <strong>나목</strong> — 「<strong>1999년 8월 19일 이전에 신축된
+            공동주택</strong>으로서 <strong>1999년 8월 20일 현재 입주된 사실이 없는 주택</strong>」.
+            가목(1999.8.20~2001.12.31 신축)에 해당하면 아래는 선택하지 않아도 됩니다.
+          </p>
+          <div>
+            <p className="mb-1.5 text-xs text-muted-foreground">공동주택 여부</p>
+            <RadioCardGroup
+              name="isMultiUnitHousing972"
+              layout="inline"
+              tone="amber"
+              value={
+                value.isMultiUnitHousing972 === null ? "" : value.isMultiUnitHousing972 ? "yes" : "no"
+              }
+              onChange={(v) => onChange({ isMultiUnitHousing972: v === "yes" })}
+              options={[
+                { value: "yes", label: "공동주택" },
+                { value: "no", label: "미해당" },
+              ]}
+            />
+          </div>
+          <div>
+            <p className="mb-1.5 text-xs text-muted-foreground">1999.8.20 현재 입주 사실</p>
+            <RadioCardGroup
+              name="isUnoccupiedAt19990820"
+              layout="inline"
+              tone="amber"
+              value={
+                value.isUnoccupiedAt19990820 === null
+                  ? ""
+                  : value.isUnoccupiedAt19990820
+                    ? "yes"
+                    : "no"
+              }
+              onChange={(v) => onChange({ isUnoccupiedAt19990820: v === "yes" })}
+              options={[
+                { value: "yes", label: "입주 사실 없음" },
+                { value: "no", label: "입주 사실 있음" },
+              ]}
+            />
+          </div>
+        </ToneCard>
+      )}
+
       {/* §97의2①2호 — 취득 당시 미입주 (D1-07) */}
       {value.rental972Type === "purchase" && (
         <ToneCard tone="rose" sectionNum="②" title="2호 요건 — 취득 당시 미입주" noDark>
