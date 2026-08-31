@@ -146,8 +146,29 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   let eligibleRentalYears = 0;
   let overrideRate = RENTAL_97_3_OVERRIDE_RATE; // 10년 70% 기본
   if (input.rentalStartDate) {
+    /**
+     * 조특령 §97의3④ — 「…사업자등록과 임대사업자등록을 하고 장기일반민간임대주택등으로
+     * **등록하여 임대하는 날부터** 임대를 개시한 것으로 본다」 (D2-02)
+     *
+     * ⇒ 임대개시일이 등록일보다 앞설 수 없다. 종전에는 입력된 `rentalStartDate`를 그대로 써서
+     *   등록 이전 기간까지 10년 요건에 산입했다(등록 1년차에 70% 통과).
+     *
+     * 같은 조 ②가 「장기일반민간임대주택등으로 **10년 이상 계속하여 등록**되어 있고,
+     * 그 **등록 기간 동안** 통산하여 10년 이상 임대한 경우」로 정하므로 기산점 클램프가 곧
+     * 등록기간 요건이 된다 — 등록 후 10년이 지나지 않았으면 임대기간도 10년이 될 수 없다.
+     *
+     * ⚠️ ②의 「**계속하여** 등록」(중도 말소·재등록 없음)까지는 검증하지 않는다 —
+     *    등록 말소 구간 입력 필드가 없다(`vacancyPeriods`는 공실이지 말소가 아니다).
+     *    없는 입력을 추정해 판정하지 않는다.
+     */
+    const effectiveStart =
+      input.registrationDate !== undefined &&
+      input.registrationDate.getTime() > input.rentalStartDate.getTime()
+        ? input.registrationDate
+        : input.rentalStartDate;
+
     eligibleRentalYears = calculateEffectiveRentalPeriod(
-      input.rentalStartDate,
+      effectiveStart,
       input.transferDate,
       input.vacancyPeriods ?? [],
       RENTAL_VACANCY_GRACE_MONTHS_97,
