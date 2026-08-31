@@ -445,6 +445,83 @@ Phase 4에서 direct/daily 라디오를 게이트 밖으로 함께 빼면 부수
 **Phase 0을 건너뛰지 않는다** — [[feedback_pre_change_safety_net_probe]].
 Phase 1·2·4가 «기존 양도일 경로»를 건드리므로, 바꾸기 **전에** 안전망을 재고 시작한다.
 
+## 4-1. Phase 0 실행 결과 (2026-08-31 — 완료)
+
+### 안전망 실측
+
+| probe | 무력화 대상 | 실패 | 해석 |
+|---|---|---|---|
+| **P-0a** | `buildOneMonthBeforeSlots`의 `resolveValuationAnchor` 호출 제거 | **2건** (`calendar.test.ts` K-LEAP-01 · 토요일 시프트) | 안전망 有. 단 **둘 다 fixture 안**(2024·2025) — 범위 밖은 **0건** |
+| **P-0b** | 평균 분모를 거래일 → 달력일 | **3건** (`averages.test.ts` K-AVG-01·K-AVG-03 · `integration.test.ts` K-INT-04) | §52의2④ 분모 정의에 안전망 有 |
+| **P-0c** | 「직전 1개월」 → 「이전 1개월」 (라벨 정정 예행) | **5 test / 7 단언** | 아래 표 |
+
+> ⚠️ **P-0b는 첫 시도가 무효였다** — `Math.floor(sum / tradingDays)`가 **3곳**(1개월전·상장후·2개월전후)에
+> 있어 치환 assert가 실패했고, 그 상태로 돈 「302 통과」는 **뮤테이션이 적용되지 않은 결과**였다.
+> assert가 없었으면 「안전망 0건」으로 오판했을 것이다.
+
+### P-0c 상세 — 라벨 정정이 깨뜨리는 것
+
+| 파일 | 단언 | 종류 |
+|---|---|---|
+| `__tests__/calc/gift-burdened-stock-major-and-conversion.anchor.test.ts:319·324` | BG-VAL-1·2 | validate 메시지 |
+| `__tests__/calc/gift-burdened-stock-major-and-conversion.anchor.test.ts:380·388` | BG-ENG-1·2 | **엔진 warning** |
+| `e2e/stock-transfer-halt-acquisition.spec.ts:69·74·80` | 1 test (첫 단언에서 멈춤) | 라벨 정확 매칭 |
+
+### 🔴 P-0c가 드러낸 §1-2 열거 누락
+
+`lib/tax-engine/stock-transfer/stock-valuation-listed.ts:93-94`의 **엔진 warning 2건**을
+§1-2가 놓쳤다. 삼항 분기 안의 문자열이라 열거에 쓴 grep 필터
+(`label=|placeholder=|message:|hint=|push("` …)에 걸리지 않았다.
+
+⇒ **rename 대상 파일은 7개가 아니라 8개**다. 재열거 결과(치환 후 잔여 grep으로 검증):
+
+```
+app/calc/stock-transfer-tax/steps/Step2.tsx                      4
+lib/calc/stock-transfer-tax-validate-step2.ts                    3
+lib/api/stock-transfer-tax-schema.ts                             2
+components/calc/gift/StockBurdenedDebtSection.tsx                4
+components/calc/gift-tax-form-validate.ts                        2
+components/calc/stock-transfer/ExitTaxHoldingsMatrix.tsx         2
+lib/tax-engine/stock-transfer/stock-acquisition-basis.ts         2
+lib/tax-engine/stock-transfer/stock-valuation-listed.ts          2   ← 누락분
+                                                              ─────
+                                                                21
+```
+
+> 🔑 **문자열 열거에 「어떻게 쓰였는가」 필터를 걸면 샌다.** 다음부터는 문자열 리터럴 전수를
+> 뽑고 «주석인가»만 걸러낼 것 — 실제로 그렇게 다시 세어 누락을 찾았다.
+
+### 🔴 Phase 순서 결함 — **Phase 2가 Phase 1보다 «먼저»여야 한다**
+
+Phase 1(B′)은 route가 **보정된 슬롯·평균**을 돌려주게 만든다. 그런데 현행 버튼은 그 응답을
+버리고 `preTransferAutoFillDates(transferDate)`로 **자기가 다시** 창을 만들어 평균을 재계산한다
+(`KiwoomAutoFetchButton.tsx:120-139`).
+
+⇒ Phase 2(재계산 제거)를 하기 «전»에는 route를 고쳐도 **화면 값이 그대로다**:
+
+```
+route  : [2015-01-18 ~ 2015-02-17] · 22일 · 1,371,500   (보정됨)
+버튼   : [2015-01-20 ~ 2015-02-19] 로 재구성 → 01-18·19 종가를 «버리고»
+         02-18·19는 «빈 칸» → 평균 1,372,857 (보정 전 값 그대로)
+```
+
+**⇒ 순서를 바꾼다: Phase 2 → Phase 1.** (문서상 번호는 유지하고 실행 순서만 뒤집는다.)
+Phase 1의 verify(2015-02-19 → 1,371,500)는 Phase 2 완료 후에야 «화면에서» 관측 가능하다.
+
+### 심은 anchor 2건
+
+| 파일 | 내용 | 성격 |
+|---|---|---|
+| `__tests__/kiwoom/one-month-before-anchor-fixture-range.anchor.test.ts` | FR-1~4 — fixture 경계에서의 anchor 시프트. **FR-4는 「현재 동작」을 고정**하고 「여기서 고치지 말라(보정은 route가)」를 명시 | 공백 메움 (범위 밖 0건이었다) |
+| `__tests__/components/stock-listed-conversion-autofetch-gate.anchor.test.tsx` | AG-0~5 — **Step2에서 시작**해 이중 게이트를 고정. AG-1·AG-3·AG-5는 **트립와이어**(Phase 4·5에서 울려야 한다) | 대조군 |
+
+**구별력 실증**: `PostListingValuationCard`의 게이트 ②(`transferStdInputMode === "daily"`)를 제거하니
+**AG-3만** 실패했다(6건 중 1건 — 과녁 정확). AG-4가 같은 셀렉터로 버튼을 실제로 찾으므로
+AG-1·AG-3의 부정 단언이 「셀렉터가 틀려서」 통과하는 것이 아님도 증명된다.
+
+> AG-5는 초판에 `/취득일 키움 자동조회/` **이름**으로 없음을 단언해 **구별력이 0**이었다
+> (이름이 달라지면 조용히 통과). 자동조회 버튼 **개수 = 1**로 바꿔 Phase 5에서 반드시 울리게 했다.
+
 ## 5. 인터뷰 결과 (2026-08-31 — 전건 확정, Do 착수 가능)
 
 | Q | 질문 | 결정 | 비고 |
