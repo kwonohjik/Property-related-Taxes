@@ -156,6 +156,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
 
       {/* ③④ 공통 필드 */}
       <RentalCommonFields
+        vacancyGraceMonths={6}
         value={value}
         onChange={patchCommon}
         sectionOffset={3}

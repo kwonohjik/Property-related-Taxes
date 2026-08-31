@@ -29,6 +29,7 @@ import { checkReductionPeriod } from "./period-check";
 import {
   calcRentalGainRatio,
   calculateEffectiveRentalPeriod,
+  RENTAL_VACANCY_GRACE_MONTHS_97,
   validateRentIncrease,
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
@@ -149,6 +150,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
       input.rentalStartDate,
       input.transferDate,
       input.vacancyPeriods ?? [],
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
     const isPre2023Registration =
       input.registrationDate !== undefined &&

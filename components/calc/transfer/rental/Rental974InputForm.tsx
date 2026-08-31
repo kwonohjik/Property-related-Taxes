@@ -10,7 +10,7 @@
  *
  * 정책:
  * - 추가율은 표만 정적 안내 — 미리보기 율을 UI에서 자체 계산하지 않음(엔진 단일 진실, 공실 차감 반영).
- * - rentIncreaseViolationMode 기본 "" / hasVacancyOver6Months 기본 null (3-state). useEffect→store 미러링 금지.
+ * - rentIncreaseViolationMode 기본 "" / hasVacancyOverGrace 기본 null (3-state). useEffect→store 미러링 금지.
  */
 
 import { useMemo } from "react";
@@ -101,7 +101,12 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
       </ToneCard>
 
       {/* ③④ 공통 필드 (임대료 증액·공실) */}
-      <RentalCommonFields value={value} onChange={patchCommon} sectionOffset={3} />
+      <RentalCommonFields
+        value={value}
+        onChange={patchCommon}
+        sectionOffset={3}
+        vacancyGraceMonths={3}
+      />
 
       {/* emerald 자동 표시 박스 */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1">

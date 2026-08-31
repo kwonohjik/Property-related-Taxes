@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
 import {
   calculateRentalReduction,
   calculateEffectiveRentalPeriod,
+  RENTAL_VACANCY_GRACE_MONTHS_97,
+  RENTAL_VACANCY_GRACE_MONTHS_97_5,
   convertToStandardDeposit,
   determineApplicableLaw,
   getLongTermDeductionOverride,
@@ -125,22 +127,42 @@ describe("calculateEffectiveRentalPeriod", () => {
       new Date("2019-01-01"),
       new Date("2027-01-01"),
       [],
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
     expect(years).toBe(8);
   });
 
-  it("5개월 공실(150일) → 6개월 미만 → 차감 없음 (LR-08a)", () => {
-    // 2019-01-01 ~ 2027-12-01 (8년 11개월) — 5개월 공실
+  it("🔴 5개월 공실 → §97 유예 3월 초과 → 구간 전체 차감 (LR-08a, D1-03 정정)", () => {
+    // 2019-01-01 ~ 2027-12-01 (8년 11개월) — 5개월(151일) 공실
+    // 종전 anchor는 「6개월 미만이라 차감 없음」을 단언했다. 조특칙 §44의 유예는 3월이므로
+    // 5개월 공실은 산입 대상이 아니고 구간 전체가 차감된다.
+    // ⚠️ 종전 단언 `toBeGreaterThanOrEqual(8)`은 151일을 깎아도 참이라 구별력이 0이었다
+    //    (180→90 뮤테이션 실측에서 이 테스트는 통과했다). 정확한 값으로 고정한다.
     const vp: VacancyPeriod[] = [
-      { startDate: new Date("2022-01-01"), endDate: new Date("2022-06-01") }, // 151일 → 6개월 미만
+      { startDate: new Date("2022-01-01"), endDate: new Date("2022-06-01") }, // 151일
     ];
     const years = calculateEffectiveRentalPeriod(
       new Date("2019-01-01"),
       new Date("2027-12-01"),
       vp,
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
-    // 공실 차감 없이 8년 이상
-    expect(years).toBeGreaterThanOrEqual(8);
+    // 총 3256일 − 151일 = 3105일 → 8년 6개월 남짓 → 8년
+    expect(years).toBe(8);
+  });
+
+  it("§97의5는 같은 5개월 공실을 차감하지 않는다 — 유예 6개월 (조특령 §97의5①1호)", () => {
+    const vp: VacancyPeriod[] = [
+      { startDate: new Date("2022-01-01"), endDate: new Date("2022-06-01") },
+    ];
+    const years = calculateEffectiveRentalPeriod(
+      new Date("2019-01-01"),
+      new Date("2027-12-01"),
+      vp,
+      RENTAL_VACANCY_GRACE_MONTHS_97_5,
+    );
+    expect(years).toBe(8);
+    // 두 조문이 같은 8년이 되는 구간이므로, 구별력은 아래 경계 테스트가 담당한다.
   });
 
   it("7개월 공실(213일) → 6개월 이상 → 차감 (LR-08b)", () => {
@@ -158,6 +180,7 @@ describe("calculateEffectiveRentalPeriod", () => {
       new Date("2019-01-01"),
       new Date("2027-12-01"),
       vp,
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
     // 차감 후 유효기간 재검증
     const effectiveDays = totalDays - vpDays;
@@ -747,6 +770,7 @@ describe("calculateEffectiveRentalPeriod — 8년 경계 (P1-2 회귀)", () => {
       new Date("2016-01-01"),
       new Date("2024-01-01"),
       [],
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
     expect(years).toBe(8);
   });
@@ -757,6 +781,7 @@ describe("calculateEffectiveRentalPeriod — 8년 경계 (P1-2 회귀)", () => {
       new Date("2016-01-01"),
       new Date("2023-12-31"),
       [],
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
     expect(years).toBe(7);
   });
@@ -767,17 +792,16 @@ describe("calculateEffectiveRentalPeriod — 8년 경계 (P1-2 회귀)", () => {
     const vp: VacancyPeriod[] = [
       {
         startDate: new Date("2020-06-01"),
-        endDate: new Date("2020-06-02"), // 1일 공실 (6개월 미만, 차감 대상)
+        endDate: new Date("2020-06-02"), // 1일 공실 — 유예 이내라 차감 대상 아님
       },
     ];
-    // 공실이 1일이므로 6개월 미만 기준 — 실제 차감 여부는 구현에 따라 다를 수 있으나
-    // 차감 없음 시나리오: 2016-01-01 + (2024-01-02 - 2016-01-01 - 차감)일 = 8년 이상
     const years = calculateEffectiveRentalPeriod(
       new Date("2016-01-01"),
-      new Date("2024-01-02"), // 8년 + 1일 = 여유 있음
+      new Date("2024-01-02"), // 8년 + 1일
       vp,
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
-    // 공실 1일은 6개월 미만이므로 차감 없음 → effectiveDays ≈ 8년 + 1일 → 8년
-    expect(years).toBeGreaterThanOrEqual(8);
+    // 1일 공실은 3월 유예 이내라 차감 없음 → 8년 + 1일 → 8년
+    expect(years).toBe(8);
   });
 });

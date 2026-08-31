@@ -84,7 +84,8 @@ export {
   validateRentIncrease,
   convertToStandardDeposit,
   calcRentalGainRatio,
-  RENTAL_VACANCY_GRACE_DAYS,
+  RENTAL_VACANCY_GRACE_MONTHS_97,
+  RENTAL_VACANCY_GRACE_MONTHS_97_5,
 } from "./rental-97-shared-helpers";
 export type {
   Rental97ArticleId,

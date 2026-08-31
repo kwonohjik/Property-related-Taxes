@@ -15,7 +15,10 @@
 import { applyRate } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { checkReductionPeriod } from "./period-check";
-import { calculateEffectiveRentalPeriod } from "./rental-97-shared-helpers";
+import {
+  calculateEffectiveRentalPeriod,
+  RENTAL_VACANCY_GRACE_MONTHS_97,
+} from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
 
 const MANDATORY_YEARS = 5;
@@ -53,6 +56,20 @@ export function evaluateRental972(input: Rental97EvaluationInput): Rental97Resul
     });
   }
 
+  // 주체 요건 — 조특령 §97의2① 「1호 이상의 신축임대주택을 포함하여 2호 이상의 임대주택을
+  // 5년 이상 임대하는 거주자」 (D1-02).
+  // ⚠️ §97의 5호 요건과 숫자·구성이 다르다 — §97 필드를 재사용하지 않는다.
+  if (input.hasNewRentalPlus2Units !== true) {
+    reasons.push({
+      code: "BELOW_MIN_2_UNITS_WITH_NEW",
+      message:
+        input.hasNewRentalPlus2Units === false
+          ? "신축임대주택 1호 이상을 포함한 2호 이상 임대에 해당하지 않습니다 — §97의2①의 「대통령령으로 정하는 거주자」가 아닙니다 (조특령 §97의2①)."
+          : "신축임대주택 1호 이상을 포함한 2호 이상 임대 여부가 확인되지 않았습니다 (조특령 §97의2①).",
+      legalBasis: "조특령 §97의2①",
+    });
+  }
+
   // 2) 5년 이상 임대
   let eligibleRentalYears = 0;
   if (input.rentalStartDate) {
@@ -60,6 +77,7 @@ export function evaluateRental972(input: Rental97EvaluationInput): Rental97Resul
       input.rentalStartDate,
       input.transferDate,
       input.vacancyPeriods ?? [],
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
     if (eligibleRentalYears < MANDATORY_YEARS) {
       reasons.push({

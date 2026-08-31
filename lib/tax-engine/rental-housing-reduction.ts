@@ -11,8 +11,29 @@
  * DB 직접 호출 금지 — 감면 규칙 데이터를 매개변수로 받아 순수 판단/계산만 수행
  */
 
-import { addDays, addMonths, differenceInDays, differenceInYears } from "date-fns";
+import { addMonths } from "date-fns";
 import { applyRate, truncateToWon } from "./tax-utils";
+import {
+  calculateEffectiveRentalPeriod,
+  convertToStandardDeposit,
+  validateRentIncrease,
+  RENTAL_VACANCY_GRACE_MONTHS_97,
+  RENTAL_VACANCY_GRACE_MONTHS_97_5,
+} from "./transfer-reductions/rental-97-shared-helpers";
+
+/**
+ * D1-08 — 종전에는 아래 세 함수와 180일 상수가 이 파일에 **통째로 복제**돼 있었고,
+ * 같은 §97 조문을 두 사본이 나란히 판정했다(`transfer-tax-reductions-calc.ts`가
+ * 레거시 분기와 신규 §97 분기를 둘 다 평가해 같은 §127⑦ max 후보 배열에 넣는다).
+ * 단일 소스로 통합하고, 기존 import 경로를 위해 여기서 재export한다.
+ */
+export {
+  calculateEffectiveRentalPeriod,
+  convertToStandardDeposit,
+  validateRentIncrease,
+  RENTAL_VACANCY_GRACE_MONTHS_97,
+  RENTAL_VACANCY_GRACE_MONTHS_97_5,
+};
 import { TRANSFER } from "./legal-codes";
 import type { LongTermRentalRuleSet } from "./schemas/rate-table.schema";
 
@@ -128,9 +149,6 @@ const ANNUAL_BASE_LIMIT = 100_000_000;
 /** 조특법 §133 초과분 감면율 */
 const EXCESS_RATE = 0.5;
 
-/** 6개월을 일수로 환산 (180일) — 공실 차감 기준 */
-const SIX_MONTHS_DAYS = 180;
-
 // ============================================================
 // 경과규정 분기
 // ============================================================
@@ -152,86 +170,17 @@ export function determineApplicableLaw(
 // ============================================================
 
 /**
- * 유효 임대기간(년) 계산
- * - 공실 6개월(180일) 이상인 구간은 실제 일수만큼 차감
- * - date-fns differenceInDays 사용 (초일불산입)
+ * 임대주택 유형 → 공실 유예 개월 (D1-03·D2-08).
+ *
+ * §97·§97의3·§97의4 = 조특칙 §44 「3월」 / §97의5 = 조특령 §97의5①1호 「6개월」.
+ * 상세 근거는 `transfer-reductions/rental-97-shared-helpers.ts` 상수 주석 참조.
  */
-export function calculateEffectiveRentalPeriod(
-  rentalStartDate: Date,
-  transferDate: Date,
-  vacancyPeriods: VacancyPeriod[],
-): number {
-  const totalDays = differenceInDays(transferDate, rentalStartDate);
-  if (totalDays <= 0) return 0;
-
-  // 6개월 이상 공실만 차감
-  let deductDays = 0;
-  for (const vp of vacancyPeriods) {
-    const vpDays = differenceInDays(vp.endDate, vp.startDate);
-    if (vpDays >= SIX_MONTHS_DAYS) {
-      deductDays += vpDays;
-    }
-  }
-
-  const effectiveDays = Math.max(0, totalDays - deductDays);
-  // 달력 기반 연수 계산: 공실 차감된 일수를 rentalStartDate에 더해 종료일 추산
-  // Math.floor(days/365) 대신 differenceInYears 사용 → 윤년 경계 오판 방지
-  const effectiveEndDate = addDays(rentalStartDate, effectiveDays);
-  return differenceInYears(effectiveEndDate, rentalStartDate);
+function graceMonthsFor(type: RentalHousingType): number {
+  return type === "public_purchase"
+    ? RENTAL_VACANCY_GRACE_MONTHS_97_5
+    : RENTAL_VACANCY_GRACE_MONTHS_97;
 }
 
-// ============================================================
-// 임대료 증액 제한 검증
-// ============================================================
-
-/**
- * 환산보증금 = 보증금 + (월세 × 12 / 전월세전환율)
- * 원 미만 절사
- */
-export function convertToStandardDeposit(
-  rent: RentHistory,
-  conversionRate: number,
-): number {
-  if (rent.contractType === "jeonse") {
-    return rent.deposit;
-  }
-  // semi_jeonse / monthly: 환산 보증금
-  return rent.deposit + Math.floor((rent.monthlyRent * 12) / conversionRate);
-}
-
-/**
- * 직전 계약 대비 임대료 증액률 검증
- * 기준: 전·월세 환산보증금 5% 이내
- * 위반 시 감면 전액 배제
- */
-export function validateRentIncrease(
-  history: RentHistory[],
-  conversionRate: number,
-  limit: number = 0.05,
-): { isAllValid: boolean; violations: RentViolation[] } {
-  if (history.length < 2) return { isAllValid: true, violations: [] };
-
-  const violations: RentViolation[] = [];
-
-  for (let i = 1; i < history.length; i++) {
-    const prev = convertToStandardDeposit(history[i - 1], conversionRate);
-    const curr = convertToStandardDeposit(history[i], conversionRate);
-
-    if (prev === 0) continue; // 직전 환산보증금이 0이면 비교 불가
-
-    const increaseRate = (curr - prev) / prev;
-    if (increaseRate > limit + 1e-9) {
-      violations.push({
-        contractIndex: i,
-        contractDate: history[i].contractDate,
-        increaseRate,
-        maxAllowed: limit,
-      });
-    }
-  }
-
-  return { isAllValid: violations.length === 0, violations };
-}
 
 // ============================================================
 // 기준시가 요건 확인
@@ -363,6 +312,7 @@ export function getLongTermDeductionOverride(
     input.rentalStartDate,
     input.transferDate,
     input.vacancyPeriods,
+    graceMonthsFor(input.rentalHousingType),
   );
 
   if (effectiveYears < tier.mandatoryYears) {
@@ -464,6 +414,7 @@ export function calculateRentalReduction(
     input.rentalStartDate,
     input.transferDate,
     input.vacancyPeriods,
+    graceMonthsFor(input.rentalHousingType),
   );
 
   if (mandatoryPeriodYears > 0 && effectiveRentalYears < mandatoryPeriodYears) {

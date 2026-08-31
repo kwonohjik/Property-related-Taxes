@@ -21,6 +21,7 @@ import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { checkReductionPeriod } from "./period-check";
 import {
   calculateEffectiveRentalPeriod,
+  RENTAL_VACANCY_GRACE_MONTHS_97,
   validateRentIncrease,
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
@@ -101,6 +102,7 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
       input.rentalStartDate,
       input.transferDate,
       input.vacancyPeriods ?? [],
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
     if (eligibleRentalYears < RENTAL_97_4_MANDATORY_YEARS) {
       reasons.push({

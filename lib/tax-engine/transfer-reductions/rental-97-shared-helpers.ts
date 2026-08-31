@@ -1,20 +1,42 @@
 /**
  * 장기임대 §97 시리즈 — 공유 순수 헬퍼
  *
- * rental-housing-reduction.ts(레거시 정밀 엔진)에서 검증된 순수 함수 3종을 이식.
- * 레거시 파일은 UI 미배선 dead path + 조문 매핑 드리프트(D-1·D-2·D-3)가 있어
- * 전체 재사용 대신 순수 함수만 분리 (plan §3 통합 전략).
+ * 레거시 `rental-housing-reduction.ts`에 복제돼 있던 순수 함수 3종의 **단일 소스**다(D1-08).
+ * 레거시는 이 파일을 import한다 — 같은 조문의 임대기간을 두 곳에서 판정하지 않는다.
  *
  * 법령 근거:
- * - 공실 6개월 간주: 조특령 §97의5①1호 (기존 임차인 퇴거~다음 임차인 전입 6개월 이내는 계속 임대 간주)
+ * - 공실 유예: **조문마다 다르다** — 아래 RENTAL_VACANCY_GRACE_MONTHS_* 주석 참조
  * - 임대료 5% 증액 제한·전월세 전환: 조특령 §97의3③1호 (민특법 §44④ 기준 준용)
  */
 
-import { addDays, differenceInDays, differenceInYears } from "date-fns";
+import { addDays, addMonths, differenceInDays, differenceInYears } from "date-fns";
 import type { Rental97RentHistoryItem, Rental97VacancyPeriod } from "./types";
 
-/** 6개월 환산 일수 — 조특령 §97의5①1호 "6개월 이내" 공실은 계속 임대 간주 (초과분만 차감) */
-export const RENTAL_VACANCY_GRACE_DAYS = 180;
+/**
+ * 공실 유예 3월 — §97·§97의2·§97의3·§97의4 (D1-03·D2-08).
+ *
+ * 조특령 §97⑤5호가 「재정경제부령이 정하는 기간은 이를 주택임대기간에 산입할 것」으로 위임하고,
+ * 그 종점인 **조특칙 §44**가 「기존 임차인의 퇴거일부터 다음 임차인의 **입주일**까지의 기간으로서
+ * **3월이내**의 기간」이라 정한다.
+ *
+ * 이 5호는 다음 경로로 네 조문에 걸린다:
+ * - §97의2 ← 조특령 §97의2② 「제97조제2항 내지 제6항 준용」(⑤ 전체)
+ * - §97의3 ← 조특령 §97의3④ 「제97조제5항제1호ㆍ제3호 및 **제5호** 준용」
+ * - §97의4 ← 조특령 §97의4② 「제97조제5항제1호ㆍ제3호 및 **제5호** 준용」
+ */
+export const RENTAL_VACANCY_GRACE_MONTHS_97 = 3;
+
+/**
+ * 공실 유예 6개월 — **§97의5 전용** (조특령 §97의5①1호).
+ *
+ * 「기존 임차인의 퇴거일부터 다음 임차인의 **주민등록을 이전하는 날**까지의 기간으로서
+ * **6개월 이내**의 기간」 — 기산 종점도 3월 규칙(「입주일」)과 다르다.
+ *
+ * ⚠️ §97의5③은 조특령 §97⑤ 중 **1호·3호만** 준용하고 **5호를 준용하지 않는다** —
+ *    그래서 조특칙 §44의 3월이 §97의5에는 걸리지 않고, 이 6개월이 §97의5 고유 규칙이다.
+ *    반대로 이 6개월을 다른 조문에 전용하면 임대기간이 과대 산정돼 감면이 과다 적용된다.
+ */
+export const RENTAL_VACANCY_GRACE_MONTHS_97_5 = 6;
 
 /** 전월세 전환율 기본값 (DB 미설정 시) */
 export const DEFAULT_JEONSE_CONVERSION_RATE = 0.04;
@@ -28,23 +50,41 @@ export interface RentalRentViolation {
 
 /**
  * 유효 임대기간(년) 계산.
- * - 공실 6개월(180일) 이상인 구간은 실제 일수만큼 차감 (6개월 이내 공실은 계속 임대 간주)
- * - 달력 기반 연수: 공실 차감 일수를 시작일에 더해 differenceInYears — 윤년 경계 안전
+ *
+ * - 유예 **이내**의 공실은 계속 임대한 것으로 보아 차감하지 않는다.
+ * - 유예를 **초과**하면 그 구간 **전체**를 차감한다 — 조문이 산입 대상을 「…까지의 기간으로서
+ *   3월(6개월)이내의 기간」으로 정의하므로, 유예를 넘긴 공실은 구간째로 산입 대상이 아니다.
+ *   (초과분만 차감하는 것이 아니다.)
+ * - 경계는 **「이내」라서 포함**이다 — 정확히 3월/6개월이면 차감하지 않는다.
+ * - 유예는 **달력 월**로 잰다(`addMonths`). 「3월」을 90일로 환산하면 월 길이에 따라
+ *   최대 이틀이 어긋나 납세자에게 불리해질 수 있다.
+ *
+ * @param graceMonths 조문별 유예 개월 — `RENTAL_VACANCY_GRACE_MONTHS_97`(3) 또는
+ *                    `RENTAL_VACANCY_GRACE_MONTHS_97_5`(6). 기본값을 두지 않는다:
+ *                    호출부가 조문을 명시하지 않으면 컴파일이 실패해야 한다.
+ * @param noGracePeriods **유예 없이** 전부 차감할 구간 — 조특령 §97⑤4호의 「5호 미만의 주택을
+ *                    임대한 기간」이 여기 해당한다. 그 기간은 애초에 주택임대기간이 아니므로
+ *                    공실 유예를 적용할 여지가 없다(2개월이어도 차감된다).
  */
 export function calculateEffectiveRentalPeriod(
   rentalStartDate: Date,
   transferDate: Date,
   vacancyPeriods: Rental97VacancyPeriod[],
+  graceMonths: number,
+  noGracePeriods: Rental97VacancyPeriod[] = [],
 ): number {
   const totalDays = differenceInDays(transferDate, rentalStartDate);
   if (totalDays <= 0) return 0;
 
   let deductDays = 0;
   for (const vp of vacancyPeriods) {
-    const vpDays = differenceInDays(vp.endDate, vp.startDate);
-    if (vpDays >= RENTAL_VACANCY_GRACE_DAYS) {
-      deductDays += vpDays;
+    const graceEnd = addMonths(vp.startDate, graceMonths);
+    if (vp.endDate.getTime() > graceEnd.getTime()) {
+      deductDays += differenceInDays(vp.endDate, vp.startDate);
     }
+  }
+  for (const np of noGracePeriods) {
+    deductDays += Math.max(0, differenceInDays(np.endDate, np.startDate));
   }
 
   const effectiveDays = Math.max(0, totalDays - deductDays);

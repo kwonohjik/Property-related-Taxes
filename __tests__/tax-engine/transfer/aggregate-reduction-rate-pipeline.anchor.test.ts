@@ -36,6 +36,9 @@ function rental97MainInput() {
         isNationalHousing: true,
         rentalStartDate: new Date("1996-01-01"),
         isTaxRegistered: true,
+        // D1-01 — 조특령 §97① 주체 요건(5호 이상). 이 필드가 없으면 감면 자체가 배제되어
+        // 이 anchor가 관측하려는 `aggregateReductionRate` 배관에 도달하지 못한다.
+        hasMin5RentalUnits: true,
       },
     ],
   });

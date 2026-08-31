@@ -83,11 +83,47 @@ export function Rental972InputForm({ value, onChange }: Props) {
         />
       </ToneCard>
 
-      {/* ③④ 공통 필드 */}
+      {/* 주체 요건 — 조특령 §97의2① (D1-02) */}
+      <ToneCard tone="sky" sectionNum="③" title="임대 호수 요건" noDark>
+        <div>
+          <p className="mb-1.5 text-xs text-muted-foreground">
+            신축임대주택 1호 이상을 포함한 2호 이상 임대
+          </p>
+          <p className="mb-1.5 text-micro text-muted-foreground">
+            조특령 §97의2① — 「1호 이상의 신축임대주택을 포함하여 2호 이상의 임대주택을 5년 이상
+            임대하는 거주자」. 신축임대 1호만으로는 해당하지 않습니다.
+          </p>
+          <RadioCardGroup
+            name="hasNewRentalPlus2Units"
+            layout="inline"
+            tone="sky"
+            value={
+              value.hasNewRentalPlus2Units === null
+                ? ""
+                : value.hasNewRentalPlus2Units
+                  ? "yes"
+                  : "no"
+            }
+            onChange={(v) => onChange({ hasNewRentalPlus2Units: v === "yes" })}
+            options={[
+              { value: "yes", label: "해당 (신축 1호 + 총 2호 이상)" },
+              { value: "no", label: "미해당" },
+            ]}
+          />
+          {value.hasNewRentalPlus2Units === null && (
+            <p className="mt-1 text-micro text-rose-600">
+              ※ 반드시 선택하세요 (미선택 시 계산 불가)
+            </p>
+          )}
+        </div>
+      </ToneCard>
+
+      {/* 공통 필드 */}
       <RentalCommonFields
+        vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}
-        sectionOffset={3}
+        sectionOffset={4}
       />
     </div>
   );

@@ -59,6 +59,18 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
           startDate: new Date(v.startDate),
           endDate: new Date(v.endDate),
         })),
+        // 조특령 §97⑤4호 — 5호 미만 기간 (D1-01). §97 본문·단서에만 있는 필드지만
+        // 이 분기가 §97 시리즈 6종 공용이라 optional chaining으로 함께 변환한다.
+        // ⚠️ `...r` spread만 믿으면 string이 그대로 엔진에 도달해
+        //    `differenceInDays`가 조용히 NaN을 낸다(⑭ 침묵 stripping과 같은 층위).
+        ...("belowMin5UnitsPeriods" in r && r.belowMin5UnitsPeriods
+          ? {
+              belowMin5UnitsPeriods: r.belowMin5UnitsPeriods.map((v) => ({
+                startDate: new Date(v.startDate),
+                endDate: new Date(v.endDate),
+              })),
+            }
+          : {}),
       } as TransferReduction;
     }
     // §99의4 농어촌·고향주택 (2026-06-11): string 일자 → Date 변환 (⑭ — 단건+다건 공용)

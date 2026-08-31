@@ -181,6 +181,9 @@ describe("§97 본문/단서 evaluateRental97Main", () => {
     rentalStartDate: new Date("1996-01-01"),
     constructionYear: 1993,
     isNationalHousing: true,
+    // D1-01 — 조특령 §97① 주체 요건(5호 이상). 종전 픽스처엔 이 필드가 없어
+    // 「1호만 임대」도 50%·100% 감면을 받았고 이 anchor가 그 결함을 고정하고 있었다.
+    hasMin5RentalUnits: true,
     calculatedTax: 10_000_000,
     ...overrides,
   });
@@ -234,6 +237,9 @@ describe("§97의2 evaluateRental972", () => {
     rentalStartDate: new Date("2000-04-01"),
     rental972Type: "purchase",
     isNationalHousing: true,
+    // D1-02 — 조특령 §97의2① 주체 요건. 종전 픽스처엔 이 필드가 없어 「신축 1호만 임대」도
+    // 100% 면제를 받았고, 이 anchor가 그 결함을 고정(characterize)하고 있었다.
+    hasNewRentalPlus2Units: true,
     calculatedTax: 20_000_000,
     ...overrides,
   });

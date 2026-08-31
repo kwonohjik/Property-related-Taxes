@@ -190,7 +190,7 @@ export function toEngineReductions(
               }))
             : undefined,
         vacancyPeriods:
-          r.hasVacancyOver6Months === true && r.vacancyPeriods && r.vacancyPeriods.length > 0
+          r.hasVacancyOverGrace === true && r.vacancyPeriods && r.vacancyPeriods.length > 0
             ? r.vacancyPeriods.map((v) => ({ startDate: v.startDate, endDate: v.endDate }))
             : undefined,
       };
@@ -223,6 +223,11 @@ export function toEngineReductions(
           ...common,
           rental972Type: r.rental972Type || undefined,
           isNationalHousing: r.isNationalHousing,
+          // 3-state — null(미선택)은 보내지 않는다. 엔진이 미입력을 충족으로 읽지 않으므로
+          // 결과는 「확인되지 않았습니다」 불적용 사유가 된다.
+          ...(r.hasNewRentalPlus2Units !== null
+            ? { hasNewRentalPlus2Units: r.hasNewRentalPlus2Units }
+            : {}),
         };
       }
       // rental_97_main | rental_97_proviso
@@ -232,6 +237,16 @@ export function toEngineReductions(
         constructionYear: parseInt(r.constructionYear) || undefined,
         isNationalHousing: r.isNationalHousing,
         ...(r.type === "rental_97_proviso" && r.provisoCase ? { provisoCase: r.provisoCase } : {}),
+        ...(r.hasMin5RentalUnits !== null ? { hasMin5RentalUnits: r.hasMin5RentalUnits } : {}),
+        // 조특령 §97⑤4호 — 5호 미만 기간. 「5호 이상」이 확정된 경우에만 의미가 있다.
+        ...(r.belowMin5UnitsPeriods && r.belowMin5UnitsPeriods.length > 0
+          ? {
+              belowMin5UnitsPeriods: r.belowMin5UnitsPeriods.map((v) => ({
+                startDate: v.startDate,
+                endDate: v.endDate,
+              })),
+            }
+          : {}),
       };
     }
     // ── §99의4 농어촌·고향주택 (2026-06-11): 주택수 제외 본 변환 (④) ──

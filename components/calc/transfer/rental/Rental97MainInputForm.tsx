@@ -10,6 +10,7 @@
  *   c_10years      = 10년 이상 → 100%
  */
 
+import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -18,6 +19,7 @@ import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Rental97MainForm = Extract<RentalReductionFormVariant, { type: "rental_97_main" | "rental_97_proviso" }>;
+type BelowPeriod = NonNullable<Rental97MainForm["belowMin5UnitsPeriods"]>[number];
 
 interface Props {
   value: Rental97MainForm;
@@ -30,6 +32,14 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
   };
 
   const isProviso = value.type === "rental_97_proviso";
+
+  // ── 조특령 §97⑤4호 — 5호 미만으로 임대한 기간 ──
+  const belowPeriods = value.belowMin5UnitsPeriods ?? [];
+  const patchBelow = (next: BelowPeriod[]) => onChange({ belowMin5UnitsPeriods: next });
+  const addBelow = () => patchBelow([...belowPeriods, { startDate: "", endDate: "" }]);
+  const removeBelow = (i: number) => patchBelow(belowPeriods.filter((_, x) => x !== i));
+  const updateBelow = (i: number, patch: Partial<BelowPeriod>) =>
+    patchBelow(belowPeriods.map((p, x) => (x === i ? { ...p, ...patch } : p)));
 
   return (
     <div className="mt-2 ml-4 space-y-3">
@@ -100,11 +110,84 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
         </ToneCard>
       )}
 
-      {/* ③④ 공통 필드 */}
+      {/* 주체 요건 — 조특령 §97① 5호 이상 (D1-01) */}
+      <ToneCard
+        tone="sky"
+        sectionNum={isProviso ? "③" : "②"}
+        title="임대 호수 요건"
+        bodyClassName="space-y-2"
+        noDark
+      >
+        <div>
+          <p className="mb-1.5 text-xs text-muted-foreground">임대주택 5호 이상 임대</p>
+          <p className="mb-1.5 text-micro text-muted-foreground">
+            조특령 §97① — §97①의 「대통령령으로 정하는 거주자」란 임대주택을 5호 이상 임대하는
+            거주자를 말한다. 공동소유는 호수에 지분비율을 곱해 산정한다.
+          </p>
+          <RadioCardGroup
+            name="hasMin5RentalUnits"
+            layout="inline"
+            tone="sky"
+            value={
+              value.hasMin5RentalUnits === null ? "" : value.hasMin5RentalUnits ? "yes" : "no"
+            }
+            onChange={(v) => onChange({ hasMin5RentalUnits: v === "yes" })}
+            options={[
+              { value: "yes", label: "5호 이상" },
+              { value: "no", label: "미해당 (5호 미만)" },
+            ]}
+          />
+          {value.hasMin5RentalUnits === null && (
+            <p className="mt-1 text-micro text-rose-600">
+              ※ 반드시 선택하세요 (미선택 시 계산 불가)
+            </p>
+          )}
+        </div>
+
+        {value.hasMin5RentalUnits === true && (
+          <div className="mt-2 space-y-2 border-t border-sky-200 pt-2">
+            <p className="text-xs font-medium text-sky-800">5호 미만으로 임대한 기간</p>
+            <p className="text-micro text-muted-foreground">
+              조특령 §97⑤4호 — 5호 미만의 주택을 임대한 기간은 주택임대기간으로 보지 않는다.
+              공실과 달리 유예가 없어 구간 전체가 차감된다. 없으면 비워 두세요.
+            </p>
+            {belowPeriods.map((period, idx) => (
+              <div key={idx} className="flex flex-wrap items-center gap-2">
+                <DateInput
+                  value={period.startDate}
+                  onChange={(v) => updateBelow(idx, { startDate: v })}
+                />
+                <span className="text-xs text-muted-foreground">~</span>
+                <DateInput
+                  value={period.endDate}
+                  onChange={(v) => updateBelow(idx, { endDate: v })}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeBelow(idx)}
+                  className="text-micro text-rose-600 hover:underline"
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={addBelow}
+              className="text-xs font-medium text-sky-700 hover:underline"
+            >
+              + 구간 추가
+            </button>
+          </div>
+        )}
+      </ToneCard>
+
+      {/* 공통 필드 */}
       <RentalCommonFields
+        vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}
-        sectionOffset={isProviso ? 3 : 2}
+        sectionOffset={isProviso ? 4 : 3}
       />
     </div>
   );
