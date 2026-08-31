@@ -239,6 +239,27 @@ export function validateStep(step: number, form: FormState): string | null {
           return `${sbLabel}: 실지취득가액(증여자 당초 취득가 합계)을 입력하세요.`;
         }
       }
+      // C-S6: 상장 환산 — §176의2②1호 환산비율 분모·분자 필수 (자동 fallback 금지).
+      // 미입력이면 엔진의 0-가드에 걸려 취득가액·개산공제가 둘 다 0으로 산출된다.
+      // ⑫ Zod superRefine과 3중 패턴(같은 축·같은 면제 조건).
+      if (
+        sbgt.acquisitionMode === "estimated" &&
+        (sbgt.marketType === "kospi" ||
+          sbgt.marketType === "kosdaq" ||
+          sbgt.marketType === "konex")
+      ) {
+        if (!sbgt.transferDatePriceAvg1Month || sbgt.transferDatePriceAvg1Month <= 0) {
+          return `${sbLabel}: 양도일(증여일) 직전 1개월 종가평균을 입력하세요. (소령 §176의2②1호 환산비율 분모)`;
+        }
+        if (!sbgt.acquisitionDatePriceAvg1Month || sbgt.acquisitionDatePriceAvg1Month <= 0) {
+          return `${sbLabel}: 증여자 취득일 직전 1개월 종가평균을 입력하세요. (소령 §176의2②1호 환산비율 분자)`;
+        }
+      }
+      // C-S7: 대주주 판정 기준일 — §157①은 「양도일이 속하는 사업연도의 직전 사업연도 종료일」이다.
+      // 미입력이면 ④가 증여일에서 파생하므로 증여일이 있어야 판정이 성립한다.
+      if (!sbgt.majorJudgmentDate && !form.giftDate) {
+        return `${sbLabel}: 대주주 판정 기준일(직전 사업연도 종료일)을 입력하거나 증여일을 먼저 입력하세요. (소령 §157①)`;
+      }
     }
     // ─── end 주식 부담부증여 양도소득세 ───
 

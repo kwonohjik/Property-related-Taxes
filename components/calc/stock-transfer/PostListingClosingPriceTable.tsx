@@ -15,7 +15,11 @@ import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { calcMonthlyClosingAverage } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
-import { buildOneMonthBeforeSlots, resolveValuationAnchor } from "@/lib/kiwoom/calendar";
+import {
+  buildOneMonthBeforeSlots,
+  buildOneMonthAfterListingSlots,
+  resolveValuationAnchor,
+} from "@/lib/kiwoom/calendar";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 interface PostListingClosingPriceTableProps {
@@ -83,22 +87,21 @@ export function preTransferAutoFillDates(transferDate: string): string[] {
 }
 
 /**
- * 상장일부터 "다음달 같은 날 전일"까지 (1개월간) 일자 배열.
+ * 상장일 이후 1개월 일자 배열 — **엔진 정본에 위임**한다.
+ *
  * 예: 2009-08-21 → 2009-08-21 ~ 2009-09-20 (31일)
  *     2009-02-01 → 2009-02-01 ~ 2009-02-28 (28일)
+ *     2023-01-31 → 2023-01-31 ~ 2023-02-28 (민법 §160③ 말일 클램프)
+ *
+ * 🔑 종전에는 같은 산식이 **여기에도 복제**돼 있었고, 그 주석이 오버플로를
+ *    「JS가 자동 보정 (예: 1-31 + 1mo → 3-3)」이라며 **결함을 정상 동작으로 문서화**했다.
+ *    형제 `preTransferAutoFillDates`(양도일 직전 1개월)는 이미 위임으로 통합됐는데
+ *    상장일 축만 남아 있었다 — 한쪽만 고치면 자동조회는 옳은 기간을 쓰는데
+ *    **수동 입력 표는 계속 31칸을 렌더**해 법정 기간 밖 종가가 §165⑤ 분자에 섞인다.
+ *    export 이름은 그대로 둔다(소비처 무변경).
  */
 export function autoFillDates(listingDate: string): string[] {
-  if (!listingDate || !/^\d{4}-\d{2}-\d{2}$/.test(listingDate)) return [];
-  const [y, m, d] = listingDate.split("-").map(Number);
-  // 다음달 같은 일자(UTC) — 일 overflow 시 JS가 자동 보정 (예: 1-31 + 1mo → 3-3)
-  const endExclusive = new Date(Date.UTC(y, m, d)); // m은 0-based의 다음달
-  endExclusive.setUTCDate(endExclusive.getUTCDate() - 1);
-  const start = new Date(Date.UTC(y, m - 1, d));
-  const out: string[] = [];
-  for (let cur = new Date(start); cur <= endExclusive; cur.setUTCDate(cur.getUTCDate() + 1)) {
-    out.push(fmtDate(cur));
-  }
-  return out;
+  return buildOneMonthAfterListingSlots(listingDate);
 }
 
 export function PostListingClosingPriceTable({ form, onChange }: PostListingClosingPriceTableProps) {

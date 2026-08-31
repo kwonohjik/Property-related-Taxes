@@ -271,13 +271,22 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     floor80Applied: { listing: false, acquisition: false },
   };
 
-  // 입력값 검증 (validate에서 차단해야 하지만 방어 처리)
+  /**
+   * 입력값 검증 (validate에서 차단해야 하지만 방어 처리)
+   *
+   * ⚠️ **falsy가 아니라 `undefined`로 본다.** 종전에는 `!x`라 **1주당 순손익가치 0**을
+   * 미입력으로 읽고 전 필드 0을 반환했는데, 결손·무수익 법인의 NI=0이야말로
+   * §165④1 **단서**(순자산×80%)가 작동해야 할 전형이다. 그 단서를 계산하는
+   * `calcSection165_4Value` 호출 **앞에서** 이탈해 환산이 통째로 0으로 무너졌다.
+   * 음수는 `!(-100) === false`라 종전에도 흘렀으므로 **발현 조건은 정확히 0**이었다.
+   * 분모 방어는 아래 `listingYearPerShareValue <= 0`이 이미 맡는다.
+   */
   if (
-    !listingDatePriceAvg1Month ||
-    !listingYearNetIncomePerShare ||
-    !listingYearNetAssetPerShare ||
-    !acquisitionYearNetIncomePerShare ||
-    !acquisitionYearNetAssetPerShare
+    listingDatePriceAvg1Month === undefined ||
+    listingYearNetIncomePerShare === undefined ||
+    listingYearNetAssetPerShare === undefined ||
+    acquisitionYearNetIncomePerShare === undefined ||
+    acquisitionYearNetAssetPerShare === undefined
   ) {
     warnings.push("취득 후 상장 환산에 필요한 입력값이 없습니다. validate에서 차단되어야 합니다.");
     return {

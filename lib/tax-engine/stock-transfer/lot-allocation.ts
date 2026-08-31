@@ -266,6 +266,8 @@ function matchSpecific(
   const matched: MatchedSubLot[] = [];
   const acqById = new Map(acqLots.map((l) => [l.id ?? "", l]));
   const trnById = new Map(trnLots.map((l) => [l.id ?? "", l]));
+  /** 매도 lot별 실제 배정 수량 — 루프 종료 후 매도 수량과 대조한다 */
+  const allocatedByTrn = new Map<string, number>();
 
   for (const m of matchings) {
     const acq = acqById.get(m.acquisitionLotId);
@@ -279,7 +281,12 @@ function matchSpecific(
       warnings.push(`매칭 수량(${m.shareCount}) > 매수 lot 잔여(${acq.remaining})`);
       continue;
     }
+    if (acq.acquisitionDate.getTime() > trn.transferDate.getTime()) {
+      warnings.push(futureLotWarning(acq.id, trn.transferDate));
+      continue;
+    }
     acq.remaining -= m.shareCount;
+    allocatedByTrn.set(trn.id ?? "", (allocatedByTrn.get(trn.id ?? "") ?? 0) + m.shareCount);
     const holdingDays = differenceInDays(trn.transferDate, acq.startDate);
     const isShortTerm = holdingDays < 365;
     // §97의2①1호 — 이월과세 lot이면 증여자 취득단가로 승계한다(1년 요건은 **매도 시점** 기준).
@@ -301,12 +308,44 @@ function matchSpecific(
       subLotTax,
     });
   }
+
+  /**
+   * 매도 lot별 배정 합계 = 매도 수량 대조 — `matchFifo`·`matchMovingAvg`에는 있고
+   * 여기만 없었다. 부족분은 그만큼 **양도가액이 조용히 깎이므로**(총계가 matched에서
+   * 나온다) 반드시 드러나야 한다. 소득세법 §96①(양도가액 = 실지거래가액)·§100①.
+   */
+  for (const trn of trnLots) {
+    const allocated = allocatedByTrn.get(trn.id ?? "") ?? 0;
+    if (allocated < trn.shareCount) {
+      warnings.push(shortfallWarning(trn.shareCount - allocated));
+    }
+  }
   return matched;
 }
 
 // ============================================================
 // fifo / moving_avg 매칭
 // ============================================================
+
+/** 매도 수량을 다 배정하지 못했을 때의 경고 — 매칭 3종이 같은 문구를 쓴다. */
+function shortfallWarning(remainingSaleShares: number): string {
+  return `매도 lot 수량 매칭 부족: 잔여 ${remainingSaleShares}주`;
+}
+
+/**
+ * 매도일 이후 취득한 lot을 그 매도의 원가로 쓰려 할 때의 경고 — 매칭 3종 공통.
+ *
+ * 「매도일 현재 보유하지 않은 주식」을 취득원가로 삼는 산정방법은 없다(명문은 부재하나
+ * 형제 경로가 이미 같은 규칙을 갖고 있다 — 부동산 `transfer-tax-validate-asset.ts`,
+ * 주식 단건 `stock-transfer-tax-validate.ts`). 방치하면 보유일수가 음수가 되고
+ * `isShortTerm`이 참이 되어 세율까지 갈린다.
+ *
+ * ⚠️ 엔진은 **차단하지 않는다** — 자본조정(무상증자)의 정당한 수량 불일치와 충돌한다.
+ *    차단은 ⑧ validate·⑫ Zod의 「매도 시점별 누적 보유수량」 검사가 맡는다.
+ */
+function futureLotWarning(lotId: string | undefined, saleDate: Date): string {
+  return `매도일(${saleDate.toISOString().slice(0, 10)}) 이후 취득한 매수 lot(${lotId ?? "?"})은 그 매도의 취득원가가 될 수 없습니다 — 매칭에서 제외했습니다.`;
+}
 
 /** ①2호·①3호를 누적기에 더한다 — sub-lot 생성 지점마다 호출한다. */
 function accrue(
@@ -345,6 +384,11 @@ function matchFifo(
         acqIdx += 1;
         continue;
       }
+      // sortedAcq는 취득일 ASC — 여기서 걸리면 이후 lot도 전부 이 매도보다 나중이다.
+      if (acq.acquisitionDate.getTime() > trn.transferDate.getTime()) {
+        warnings.push(futureLotWarning(acq.id, trn.transferDate));
+        break;
+      }
       const matchedShares = Math.min(remainingSaleShares, acq.remaining);
       acq.remaining -= matchedShares;
       remainingSaleShares -= matchedShares;
@@ -377,7 +421,7 @@ function matchFifo(
       if (acq.remaining === 0) acqIdx += 1;
     }
     if (remainingSaleShares > 0) {
-      warnings.push(`매도 lot 수량 매칭 부족: 잔여 ${remainingSaleShares}주`);
+      warnings.push(shortfallWarning(remainingSaleShares));
     }
   }
   return matched;
@@ -411,9 +455,21 @@ function matchMovingAvg(
   const sortedTrn = [...trnLots].sort((a, b) => a.transferDate.getTime() - b.transferDate.getTime());
 
   const matched: MatchedSubLot[] = [];
-  // 이동평균 단가 트랙
+  /**
+   * 이동평균 단가 트랙 — 잔고를 **lot별 잔여 지분**으로 들고 간다.
+   *
+   * 단순 누적(`balanceCost += …`)으로는 lot을 잔고에 넣는 **그 한 번**의 단가가 확정돼
+   * 이후 모든 매도에 끌려간다. `resolveLotAcquisitionPrice`는 §97의2①의 **1년 요건을
+   * 매도 시점으로 판정**하므로(같은 함수의 `accrue`도 그렇다), 1년 경계를 사이에 둔 두
+   * 매도에서 승계 여부가 갈려야 하는데 첫 매도의 답이 굳어버린다.
+   *
+   * 그래서 lot을 지우지 않고 잔여 지분(`qty`)만 들고, 매도마다 그 시점 단가로 재도출한다.
+   * 매도 후 잔여는 **모든 lot을 같은 비율로** 줄인다 — 평균 보존(이동평균의 정의)이며,
+   * FIFO로 지우면 오래된 lot부터 사라져 잔고 평균이 튄다.
+   * 단가가 상수인 일반 lot에서는 종전 누적과 같은 값이 나온다.
+   */
+  const priceTrack: { lot: RemainingAcqLot; qty: number }[] = [];
   let balanceQty = 0;
-  let balanceCost = 0;
   let nextAcqToAbsorb = 0; // 잔고에 아직 반영 안 된 매수 lot 포인터
   // 보유기간 FIFO 트랙 (lot 잔여 차감)
   let fifoIdx = 0;
@@ -426,10 +482,15 @@ function matchMovingAvg(
       sortedAcq[nextAcqToAbsorb].acquisitionDate.getTime() <= trn.transferDate.getTime()
     ) {
       const lot = sortedAcq[nextAcqToAbsorb];
+      priceTrack.push({ lot, qty: lot.shareCount });
       balanceQty += lot.shareCount;
-      balanceCost += lot.shareCount * resolveLotAcquisitionPrice(lot, trn.transferDate);
       nextAcqToAbsorb += 1;
     }
+    // 이 매도 시점 기준으로 잔고 원가를 재도출 (①1호 승계 판정이 매도일에 달려 있다)
+    const balanceCost = priceTrack.reduce(
+      (s, e) => s + e.qty * resolveLotAcquisitionPrice(e.lot, trn.transferDate),
+      0,
+    );
     const movingAvgPrice = balanceQty > 0 ? Math.floor(balanceCost / balanceQty) : 0;
     lastMovingAvgPrice = movingAvgPrice;
 
@@ -440,6 +501,11 @@ function matchMovingAvg(
       if (acq.remaining <= 0) {
         fifoIdx += 1;
         continue;
+      }
+      // 단가 트랙(`<= trn.transferDate`)과 같은 기준을 물량 트랙에도 건다.
+      if (acq.acquisitionDate.getTime() > trn.transferDate.getTime()) {
+        warnings.push(futureLotWarning(acq.id, trn.transferDate));
+        break;
       }
       const matchedShares = Math.min(remainingSaleShares, acq.remaining);
       acq.remaining -= matchedShares;
@@ -470,12 +536,14 @@ function matchMovingAvg(
       if (acq.remaining === 0) fifoIdx += 1;
     }
     if (remainingSaleShares > 0) {
-      warnings.push(`매도 lot 수량 매칭 부족: 잔여 ${remainingSaleShares}주`);
+      warnings.push(shortfallWarning(remainingSaleShares));
     }
-    // 잔고 차감 (매도수량 × 이동평균단가 — 평균 보존, max(0) 가드)
+    // 잔고 차감 — 모든 lot의 잔여 지분을 같은 비율로 줄인다(평균 보존)
     const soldQty = trn.shareCount - remainingSaleShares;
+    const qtyBeforeSale = balanceQty;
     balanceQty = Math.max(0, balanceQty - soldQty);
-    balanceCost = Math.max(0, balanceCost - soldQty * movingAvgPrice);
+    const remainRatio = qtyBeforeSale > 0 ? balanceQty / qtyBeforeSale : 0;
+    for (const e of priceTrack) e.qty *= remainRatio;
   }
 
   // echo: 마지막 매도에 적용된 이동평균단가 (매도에 실제 적용된 단가 대표 —

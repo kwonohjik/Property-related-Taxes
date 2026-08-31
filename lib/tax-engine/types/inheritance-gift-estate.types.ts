@@ -940,8 +940,10 @@ export interface DebtItem {
  *
  * §159①1호 주석: 주식 평가는 §63, 취득가액은 §97①1호(실지/환산). 기준시가 안분 경로(K-1~K-3) 미적용.
  * → actual: 클라이언트가 취득가 × B/C 안분 → perShareAcquisitionPrice 주입.
- * → estimated + 비상장: 엔진 burdenedGiftDebtRatio 후처리(estimatedBase만).
- * → estimated + 상장: transferPrice=B 기반 자동 안분.
+ * → estimated: 환산취득가는 transferPrice(=채무 B) 기반이라 **자동 안분**되지만,
+ *   §163⑥4 개산공제 base(취득 당시 기준시가 총액)에는 전체 주식수가 들어가므로
+ *   `burdenedGiftDebtRatio`를 별도로 넘겨 B/C를 적용한다 — **상장·비상장 공통**이다.
+ *   (종전에는 비상장에만 넘겨 상장 개산공제가 C/B배 과대였다.)
  *
  * - undefined: 토글 OFF (§47① 채무 차감만, 기존 동작)
  * - 객체: 토글 ON
@@ -963,9 +965,43 @@ export interface BurdenedGiftStockTransferTaxInput {
    */
   actualAcquisitionPrice?: number;
   /**
-   * 상장 대주주 여부 (§104①11 세율 분기).
-   * - true: §104①11가목 (대주주 세율)
-   * - false/undefined: §104①11나목 (소액주주 세율, 단 isOnMarketTransaction=false로 과세)
+   * 환산 모드(estimated) × 상장 전용: 양도일(=증여일) 직전 1개월 종가평균 (1주당, 원).
+   * 시행령 §176의2②1호 환산비율의 **분모** — 미입력이면 환산취득가·개산공제가 둘 다 0이 된다.
+   */
+  transferDatePriceAvg1Month?: number;
+  /**
+   * 환산 모드(estimated) × 상장 전용: 증여자 취득일 직전 1개월 종가평균 (1주당, 원).
+   * 시행령 §176의2②1호 환산비율의 **분자**.
+   */
+  acquisitionDatePriceAvg1Month?: number;
+
+  /**
+   * 대주주 판정 기준일 — 시행령 §157①(상장)·§167의8①2호(비상장).
+   *
+   * 조문은 「주식등의 **양도일**이 속하는 사업연도의 직전 사업연도 종료일」이고,
+   * 부담부증여의 양도일은 증여일이다. 미입력이면 ④가 **증여일 전년 12/31**을 파생한다.
+   * 법인의 사업연도가 역년이 아니면 여기에 직접 입력한다.
+   */
+  majorJudgmentDate?: string;
+  /**
+   * 본인 단독 소유주식의 비율 — **% 단위**(예: 1.5 = 1.5%). §157①1호·§167의8①2호 가목.
+   * ④가 0.01을 곱해 엔진 decimal(0.015)로 변환한다.
+   */
+  selfShareRatioPercent?: number;
+  /** 본인 단독 시가총액 (원) — §157①2호·§157④1호(직전 사업연도 종료일 최종시세가액). */
+  selfMarketCap?: number;
+  /** 본인+특수관계인 소유주식 비율 합계가 최대인 경우 (§157①1호 단서) */
+  isLargestShareholderGroup?: boolean;
+  /** 합산 소유주식의 비율 — **% 단위**. `isLargestShareholderGroup`이 true일 때만 판정에 들어간다. */
+  combinedShareRatioPercent?: number;
+  /** 합산 시가총액 (원) — `isLargestShareholderGroup`이 true일 때만 판정에 들어간다. */
+  combinedMarketCap?: number;
+  /**
+   * 대주주 여부 — 위 실입력에서 ⑤가 자동 산출해 넣는 **echo 필드**다(직접 토글 없음).
+   *
+   * 세액을 실제로 가르는 것은 엔진의 §157 자동 판정이고, 이 값은 결과 카드 표시와
+   * 자동 판정 불일치 경고에만 쓰인다. 종전에는 이것이 **유일한 대주주 입력**이었으나
+   * 판정 근거가 전부 0으로 하드코딩돼 있어 세액에 닿지 못하는 dead input이었다.
    */
   isMajorShareholder?: boolean;
   /**

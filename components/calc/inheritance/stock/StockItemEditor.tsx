@@ -298,7 +298,7 @@ function ListedStockEditor({
       <ListedStockValuationPreviewCard item={item} />
 
       {/* §47① 부담부증여 채무인수 (증여 모드 전용) — 평가 입력 뒤 = 계산 로직 순서 */}
-      {!valuationOnly && <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} />}
+      {!valuationOnly && <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} transferDate={valuationDate} />}
 
       {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 상장·비상장 공용. 평가 전용 도구는 미렌더 */}
       {!valuationOnly && (
@@ -468,7 +468,7 @@ function UnlistedStockCard({
       )}
 
       {/* §47① 부담부증여 채무인수 (증여 모드 전용) — 평가 입력 뒤 = 계산 로직 순서 */}
-      {!valuationOnly && <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} />}
+      {!valuationOnly && <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} transferDate={valuationDate} />}
 
       {/* 공통속성 4블록 (EstateCommonAttributesSection) — PR-4: 모드 밖, 카드 하단 배치. 평가 전용 도구는 미렌더 */}
       {!valuationOnly && (

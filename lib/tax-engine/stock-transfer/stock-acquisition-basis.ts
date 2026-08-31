@@ -210,15 +210,6 @@ export function resolveAcquisitionBasis(
       acquisitionPrice = unlistedResult.totalAcquisitionPrice;
       // ★ PR-2 정정: estimatedBase = 취득기준시가 총액 (환산취득가 아님)
       estimatedBase = unlistedResult.acquisitionStdPriceTotal;
-      // [부담부증여 §159] estimatedBase(개산공제 §163⑥4 base)에만 채무비율 안분.
-      // acquisitionPrice는 transferPrice(=채무B) 기반 환산이라 자동 안분됨 — 이중안분 금지.
-      if (
-        input.burdenedGiftDebtRatio !== undefined &&
-        input.burdenedGiftDebtRatio > 0 &&
-        input.burdenedGiftDebtRatio < 1
-      ) {
-        estimatedBase = Math.floor(estimatedBase * input.burdenedGiftDebtRatio);
-      }
       valuationDetail = {
         // [사례 49] acq_face_value_only는 그대로 passthrough (UI 결과 카드 분기용)
         method:
@@ -315,6 +306,8 @@ export function resolveAcquisitionBasis(
         // ★ Bug-A 정정: 환산 후 1주당 취득가 (기존: 양도시 기준시가 그대로 = 잘못된 값)
         finalPerShareValue: listedResult.perShareAcquisitionPrice,
       };
+      // 입력 누락 방어 분기의 사유를 응답에 남긴다 — 형제 분기(취득일 거래정지·비상장 보충평가)와 대칭.
+      warningsDelta.push(...listedResult.warnings);
       // [B-4 M-8 §165⑨] 상장 종가평균 양도·취득 동일 — §81④ 2호(보정 없음) 정보성 안내.
       // §81④ 1호 산식은 사업연도 기준시가 모수라 상장(§99①3 종가평균) 미적용.
       if (
@@ -346,6 +339,24 @@ export function resolveAcquisitionBasis(
       netAssetFloorApplied: false,
       finalPerShareValue: 0,
     };
+  }
+
+  /**
+   * [부담부증여 §159①] 개산공제 base에만 채무비율(B/C)을 안분한다.
+   *
+   * `acquisitionPrice`는 어느 환산 분기에서든 `transferPrice`(=채무 B) 기반이라 이미
+   * 안분돼 있지만, `estimatedBase`는 **취득 당시 기준시가 × 전체 주식수**라 안분이 없다.
+   * 종전에는 이 보정이 비상장 분기 **안쪽**에만 있어 상장 환산의 개산공제가 C/B배 과대였다
+   * (부담부증여 상장 경로가 종가평균을 못 보내 취득가액이 0인 동안 가려져 있었다).
+   * 분기별로 두면 새 환산 분기가 생길 때마다 같은 누락이 재발하므로 **합류 지점 1곳**에 둔다.
+   */
+  if (
+    estimatedBase !== undefined &&
+    input.burdenedGiftDebtRatio !== undefined &&
+    input.burdenedGiftDebtRatio > 0 &&
+    input.burdenedGiftDebtRatio < 1
+  ) {
+    estimatedBase = Math.floor(estimatedBase * input.burdenedGiftDebtRatio);
   }
 
   // 개산공제 계산 (취득기준시가 총액 × 1%) — §163⑥4

@@ -243,7 +243,13 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         const hasCapitalAdj = !!(form.capitalAdjustments && form.capitalAdjustments.length > 0);
         const transferShareCount = parseI(form.shareCount);
         const matchSum = form.specificMatchings.reduce((s, m) => s + parseI(m.shareCount), 0);
-        if (matchSum !== transferShareCount && !hasCapitalAdj) {
+        /**
+         * ⚠️ 여기에는 자본조정 면제를 걸지 않는다 — **양변이 모두 희석 후 단위**다.
+         * 배정 수량도 양도 주식수도 매도 시점의 주식이라 희석과 무관하고,
+         * 부족분은 그대로 양도가액을 깎는다(엔진 합계가 matched에서 나온다 — 소득세법 §96①).
+         * 단위가 갈리는 것은 **매수 lot 보유 수량과 대조하는 아래 검사**뿐이라 면제도 거기만 남긴다.
+         */
+        if (matchSum !== transferShareCount) {
           errors.push({
             field: "specificMatchings",
             message: `개별법: 매수 lot별 배정 합계(${matchSum})가 양도 주식수(${transferShareCount})와 일치해야 합니다`,
@@ -417,6 +423,21 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     }
     if (isEmpty(form.faceValuePerShare) || parseI(form.faceValuePerShare) <= 0) {
       errors.push({ field: "faceValuePerShare", message: "1주당 액면가를 입력하세요", severity: "error" });
+    }
+    /**
+     * §99①4호 후단 환산의 **분모**(양도기준시가)도 필수다 — 없으면 취득가액이 0이 된다.
+     * 종전에는 `bookLost`·`faceValuePerShare`만 요구해 UI(`FaceValueBlock`)가 렌더하는
+     * 두 칸을 비운 채 통과했다.
+     *
+     * 순손익가치는 **0을 허용**한다 — 결손 법인이 정상 입력이고, §165④1 단서(순자산×80%)가
+     * 바로 그 경우에 작동한다. 순자산가치만 필수다(UI도 그 칸만 `required`).
+     */
+    if (isEmpty(form.transferYearNetAssetPerShare) || parseI(form.transferYearNetAssetPerShare) <= 0) {
+      errors.push({
+        field: "transferYearNetAssetPerShare",
+        message: "양도기준시가 산출을 위한 1주당 순자산가치를 입력하세요 (소령 §165④1호 — 액면가 환산의 분모)",
+        severity: "error",
+      });
     }
   } else if (acquisitionMode === "sale_case") {
     const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
