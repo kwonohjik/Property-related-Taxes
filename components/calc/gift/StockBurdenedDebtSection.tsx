@@ -25,22 +25,30 @@ import { useState } from "react";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftStockTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync";
+import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
+import { resolveBurdenedGiftJudgmentDate } from "@/lib/calc/gift-burdened-transfer-api";
 
 interface StockBurdenedDebtSectionProps {
   item: EstateItem;
   onUpdate: (updated: EstateItem) => void;
   mode: "inheritance" | "gift";
+  /** 증여일 = 부담부증여의 양도일. §157① 대주주 판정 기준일 파생에 쓴다. */
+  transferDate?: string;
 }
 
 export function StockBurdenedDebtSection({
   item,
   onUpdate,
   mode,
+  transferDate,
 }: StockBurdenedDebtSectionProps) {
   const set = (patch: Partial<EstateItem>) => onUpdate({ ...item, ...patch });
   const setBgt = (patch: Partial<BurdenedGiftStockTransferTaxInput>) =>
@@ -63,6 +71,74 @@ export function StockBurdenedDebtSection({
     bgt?.marketType === "kosdaq" ||
     bgt?.marketType === "konex";
   const isActualMode = bgt?.acquisitionMode === "actual";
+  /** §157①(상장 3시장)·§167의8①2호(비상장) — 둘 다 지분율·시총 자동 판정 대상이다. */
+  const isJudgeable = isListed || bgt?.marketType === "unlisted";
+
+  /** ④와 **같은 단일 소스**로 판정 기준일을 파생한다 (미리보기 ↔ 실제 계산 불일치 차단). */
+  const derivedJudgmentDate = resolveBurdenedGiftJudgmentDate(
+    { majorJudgmentDate: bgt?.majorJudgmentDate },
+    transferDate ?? "",
+  );
+
+  // 임계 조회는 7행 테이블 탐색이라 memo 이득이 없다 (React Compiler가 알아서 처리한다).
+  /**
+   * 🔑 **임계표 행 선택은 양도일**이다 — 부칙이 한결같이 「양도하는 분부터」이기 때문이다
+   *    (제34061호 §2·제30395호 §2②·제24356호 §22②). 판정기준일은 지분율·시총을 **어느
+   *    시점의 값으로 볼지**만 정한다(측정 축). 두 축을 섞으면 화면이 자기모순에 빠진다 —
+   *    실제로 머지 직후 임계는 2%(판정기준일 행)로 표시하면서 판정은 1%(양도일 행)로 내
+   *    「지분율 2% … → 대주주」를 출력했다.
+   *    인자 집합도 `computeAutoIsMajor`와 동일해야 한다([[feedback_shared_predicate_argument_parity]]).
+   */
+  const threshold =
+    isJudgeable && derivedJudgmentDate && transferDate && bgt?.marketType
+      ? getMajorShareholderThreshold(bgt.marketType, new Date(transferDate), {
+          isVentureCompany: false,
+          isKOTCTrading: false,
+        })
+      : null;
+
+  /**
+   * 자동 판정 미리보기 — 주식 마법사와 **같은 술어**(`computeAutoIsMajor`)를 쓴다.
+   * 세액을 실제로 가르는 것은 엔진의 §157 판정이고, 이 값은 표시와 `isMajorShareholder`
+   * echo에만 쓴다. 폼 필드가 % 문자열 기반이라 숫자 입력을 문자열로 넘긴다.
+   */
+  const autoIsMajorOf = (next: BurdenedGiftStockTransferTaxInput | undefined) => {
+    if (!next?.marketType) return undefined;
+    return computeAutoIsMajor(
+      {
+        marketType: next.marketType,
+        priorYearEndDate: resolveBurdenedGiftJudgmentDate(next, transferDate ?? ""),
+        // 임계표 **행 선택은 양도일**(부칙 「양도하는 분부터」) — 측정 시점과 축이 다르다.
+        // 미입력이면 `computeAutoIsMajor`가 undefined를 반환해 미리보기를 띄우지 않는다.
+        transferDate: transferDate ?? "",
+        selfShareRatio: String(next.selfShareRatioPercent ?? ""),
+        selfMarketCap: String(next.selfMarketCap ?? ""),
+        isLargestShareholderGroup: next.isLargestShareholderGroup ?? false,
+        combinedShareRatio: String(next.combinedShareRatioPercent ?? ""),
+        combinedMarketCap: String(next.combinedMarketCap ?? ""),
+        // 40억 임계(§167의8①2호 단서) 축 — 부담부증여 경로에는 입력 UI가 없어
+        // ④가 엔진에 `false`를 보낸다(`gift-burdened-transfer-api.ts:507-508`).
+        // 미리보기도 **같은 인자**를 써야 저장값과 화면이 갈리지 않는다
+        // ([[feedback_shared_predicate_argument_parity]] — 리뷰 #14가 고친 결함).
+        isVentureCompany: false,
+        isKOTCTrading: false,
+      },
+      {},
+    );
+  };
+  const autoIsMajor = autoIsMajorOf(bgt) ?? false;
+
+  /**
+   * 판정 근거를 바꿀 때 `isMajorShareholder` echo를 같은 patch에 실어 보낸다.
+   * useEffect → store 미러링 금지 규칙에 따라 onChange 시점에만 동기화한다
+   * (주식 마법사 `withAutoSyncMajor`와 같은 패턴).
+   */
+  const setBgtWithMajorSync = (patch: Partial<BurdenedGiftStockTransferTaxInput>) => {
+    if (!bgt) return;
+    const next = { ...bgt, ...patch };
+    const auto = autoIsMajorOf(next);
+    setBgt(auto === undefined ? patch : { ...patch, isMajorShareholder: auto });
+  };
 
   if (mode !== "gift") return null;
 
@@ -170,7 +246,7 @@ export function StockBurdenedDebtSection({
                   tone="amber"
                   columns={2}
                   value={bgt?.marketType ?? ""}
-                  onChange={(v) => setBgt({ marketType: v })}
+                  onChange={(v) => setBgtWithMajorSync({ marketType: v })}
                   options={[
                     {
                       value: "kospi",
@@ -271,19 +347,197 @@ export function StockBurdenedDebtSection({
                 </FieldCard>
               )}
 
-              {/* ⑤ 상장 대주주 여부 */}
-              {isListed && (
-                <ToggleCard
+              {/* ⑤ 상장 환산 — 1개월 종가평균 (§176의2②1호 환산비율) */}
+              {isListed && bgt?.acquisitionMode === "estimated" && (
+                <ToneCard
                   tone="amber"
-                  size="sm"
-                  title="대주주 (§157 시가총액 50억 이상 또는 지분율)"
-                  description="§104①11가목 누진세율 적용. 소액주주도 부담부증여(장외양도)는 §94①3가목2로 과세됩니다."
-                  checked={bgt?.isMajorShareholder ?? false}
-                  onCheckedChange={(v) =>
-                    setBgt({ isMajorShareholder: v || undefined })
+                  sectionNum="A"
+                  bodyClassName="space-y-3"
+                  title={<>환산취득가 산정용 1개월 종가평균 <span className="text-rose-500">*</span></>}
+                >
+                  <p className="text-caption text-amber-700 dark:text-amber-400">
+                    환산취득가 = 양도가액(채무인수액) × (취득시 기준시가 ÷ 양도시 기준시가).
+                    두 값이 없으면 취득가액과 개산공제가 모두 0으로 산출됩니다 (소령 §176의2②1호).
+                  </p>
+                  <FieldCard
+                    label="양도일(증여일) 직전 1개월 종가평균"
+                    unit="원"
+                    hint="1주당 금액. 환산비율의 분모입니다."
+                  >
+                    <CurrencyInput
+                      label="양도일(증여일) 직전 1개월 종가평균"
+                      value={
+                        bgt?.transferDatePriceAvg1Month != null
+                          ? String(bgt.transferDatePriceAvg1Month)
+                          : ""
+                      }
+                      onChange={(v) =>
+                        setBgt({ transferDatePriceAvg1Month: parseAmount(v) || undefined })
+                      }
+                      hideLabel
+                      hideUnit
+                      data-testid={`stock-bg-transfer-avg-${item.id}`}
+                    />
+                  </FieldCard>
+                  <FieldCard
+                    label="증여자 취득일 직전 1개월 종가평균"
+                    unit="원"
+                    hint="1주당 금액. 환산비율의 분자입니다."
+                  >
+                    <CurrencyInput
+                      label="증여자 취득일 직전 1개월 종가평균"
+                      value={
+                        bgt?.acquisitionDatePriceAvg1Month != null
+                          ? String(bgt.acquisitionDatePriceAvg1Month)
+                          : ""
+                      }
+                      onChange={(v) =>
+                        setBgt({ acquisitionDatePriceAvg1Month: parseAmount(v) || undefined })
+                      }
+                      hideLabel
+                      hideUnit
+                      data-testid={`stock-bg-acq-avg-${item.id}`}
+                    />
+                  </FieldCard>
+                </ToneCard>
+              )}
+
+              {/* ⑥ 대주주 판정 실입력 (§157①·§167의8①2호) */}
+              {isJudgeable && (
+                <ToneCard
+                  tone="amber"
+                  sectionNum="B"
+                  bodyClassName="space-y-3"
+                  title="대주주 판정"
+                  titleExtra={
+                    <LawArticleModal
+                      legalBasis={isListed ? "소득세법 시행령 §157" : "소득세법 시행령 §167의8"}
+                      label={isListed ? "§157" : "§167의8"}
+                    />
                   }
-                  data-testid={`stock-bg-major-shareholder-${item.id}`}
-                />
+                >
+                  <p className="text-caption text-amber-700 dark:text-amber-400">
+                    소유주식의 비율 또는 시가총액 중 <strong>하나라도</strong> 임계를 넘으면
+                    대주주입니다. 판정 시점은 <strong>양도일(증여일)이 속하는 사업연도의 직전
+                    사업연도 종료일</strong>입니다 (증여자 취득일이 아닙니다).
+                  </p>
+
+                  <FieldCard
+                    label="판정 기준일 (직전 사업연도 종료일)"
+                    hint={
+                      derivedJudgmentDate
+                        ? `미입력 시 증여일 기준 ${derivedJudgmentDate}이 적용됩니다. 법인의 사업연도가 역년이 아니면 직접 입력하세요.`
+                        : "증여일을 먼저 입력하면 기본값이 채워집니다. 법인의 사업연도가 역년이 아니면 직접 입력하세요."
+                    }
+                  >
+                    <DateInput
+                      data-testid={`stock-bg-judgment-date-${item.id}`}
+                      value={bgt?.majorJudgmentDate ?? ""}
+                      onChange={(v) => setBgtWithMajorSync({ majorJudgmentDate: v || undefined })}
+                    />
+                  </FieldCard>
+
+                  <FieldCard
+                    label="본인 소유주식의 비율"
+                    unit="%"
+                    hint="판정 기준일 현재 본인 단독 지분율. 예: 1.5 (= 1.5%)"
+                  >
+                    <DecimalInput
+                      data-testid={`stock-bg-self-ratio-${item.id}`}
+                      value={
+                        bgt?.selfShareRatioPercent != null
+                          ? String(bgt.selfShareRatioPercent)
+                          : ""
+                      }
+                      onChange={(v) =>
+                        setBgtWithMajorSync({
+                          selfShareRatioPercent: v === "" ? undefined : Number(v),
+                        })
+                      }
+                      unit="%"
+                    />
+                  </FieldCard>
+
+                  <FieldCard
+                    label="본인 시가총액"
+                    unit="원"
+                    hint="판정 기준일 현재 최종시세가액 × 보유 주식수 (소령 §157④1호). 비상장은 §165④ 평가액."
+                  >
+                    <CurrencyInput
+                      label="본인 시가총액"
+                      value={bgt?.selfMarketCap != null ? String(bgt.selfMarketCap) : ""}
+                      onChange={(v) =>
+                        setBgtWithMajorSync({ selfMarketCap: parseAmount(v) || undefined })
+                      }
+                      hideLabel
+                      hideUnit
+                      data-testid={`stock-bg-self-cap-${item.id}`}
+                    />
+                  </FieldCard>
+
+                  <ToggleCard
+                    tone="amber"
+                    size="sm"
+                    title="본인+특수관계인 지분 합계가 최대주주 (§157①1호 단서)"
+                    description="ON이면 합산 지분율·시가총액도 판정에 들어갑니다."
+                    checked={bgt?.isLargestShareholderGroup ?? false}
+                    onCheckedChange={(v) =>
+                      setBgtWithMajorSync({ isLargestShareholderGroup: v || undefined })
+                    }
+                  >
+                    <div className="space-y-3">
+                      <FieldCard label="합산 소유주식의 비율" unit="%" hint="본인+기타주주 합계 지분율.">
+                        <DecimalInput
+                          data-testid={`stock-bg-combined-ratio-${item.id}`}
+                          value={
+                            bgt?.combinedShareRatioPercent != null
+                              ? String(bgt.combinedShareRatioPercent)
+                              : ""
+                          }
+                          onChange={(v) =>
+                            setBgtWithMajorSync({
+                              combinedShareRatioPercent: v === "" ? undefined : Number(v),
+                            })
+                          }
+                          unit="%"
+                        />
+                      </FieldCard>
+                      <FieldCard label="합산 시가총액" unit="원" hint="본인+기타주주 합계 시가총액.">
+                        <CurrencyInput
+                          label="합산 시가총액"
+                          value={
+                            bgt?.combinedMarketCap != null ? String(bgt.combinedMarketCap) : ""
+                          }
+                          onChange={(v) =>
+                            setBgtWithMajorSync({ combinedMarketCap: parseAmount(v) || undefined })
+                          }
+                          hideLabel
+                          hideUnit
+                          data-testid={`stock-bg-combined-cap-${item.id}`}
+                        />
+                      </FieldCard>
+                    </div>
+                  </ToggleCard>
+
+                  {threshold && (
+                    <div
+                      className="rounded border border-amber-300 bg-amber-100/60 dark:border-amber-600 dark:bg-amber-900/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
+                      data-testid={`stock-bg-major-preview-${item.id}`}
+                    >
+                      양도일 {transferDate} 기준 임계 (측정: {derivedJudgmentDate} 현재
+                      보유현황) —{" "}
+                      <strong>지분율 {(threshold.shareRatioThreshold * 100).toFixed(0)}%</strong> 또는{" "}
+                      <strong>
+                        시가총액{" "}
+                        {threshold.marketCapThreshold === Infinity
+                          ? "해당 없음"
+                          : `${(threshold.marketCapThreshold / 100_000_000).toLocaleString()}억원`}
+                      </strong>{" "}
+                      ({threshold.ruleSource}) → 현재 입력은{" "}
+                      <strong>{autoIsMajor ? "대주주" : "대주주 아님"}</strong>
+                    </div>
+                  )}
+                </ToneCard>
               )}
             </div>
           </ToggleCard>

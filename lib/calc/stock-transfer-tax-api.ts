@@ -21,35 +21,27 @@ import {
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-aggregate";
 
-// ============================================================
-// ③ normalize helper (빈 문자열 → undefined / 숫자 파싱)
-// ============================================================
+import {
+  parseIntOrUndef,
+  parseFloatOrUndef,
+  parseIntOrZero,
+} from "./stock-transfer-tax-api-parse";
+/**
+ * 해외주식·국외전출세 빌더는 **도메인이 갈라져** 형제 파일로 나갔다(800줄 정책).
+ * 진입점은 그대로 아래 `buildStockTransferApiBody`의 `marketType` 분기이며,
+ * 기존 import 경로를 깨지 않도록 여기서 재수출한다.
+ */
+import {
+  buildForeignStockApiBody,
+  buildExitTaxApiBody,
+} from "./stock-transfer-tax-api-foreign-exit";
 
-function parseIntOrUndef(s: string): number | undefined {
-  const n = parseInt(s.replace(/,/g, ""), 10);
-  return isNaN(n) ? undefined : n;
-}
-
-function parseFloatOrUndef(s: string): number | undefined {
-  const n = parseFloat(s.replace(/,/g, ""));
-  return isNaN(n) ? undefined : n;
-}
-
-function parseIntOrZero(s: string): number {
-  const n = parseInt(s.replace(/,/g, ""), 10);
-  return isNaN(n) ? 0 : n;
-}
+export { buildForeignStockApiBody, buildExitTaxApiBody };
 
 // ============================================================
 // ④ API 변환 — 폼 → fetch body (⑬ body spread 포함)
 // ============================================================
 
-// ============================================================
-// ④⑬ PR-4A 해외주식 전용 API 변환 (buildForeignStockApiBody)
-// 3중 패턴: API fallback = validate fallback = store factory default
-// 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback):
-//   환율·외화 단가 빈값 → undefined → Zod/validate에서 차단
-// ============================================================
 /**
  * 매수 lot 폼 → API body (⑬ body spread).
  *
@@ -88,256 +80,6 @@ function mapAcquisitionLotToBody(lot: AcquisitionLotForm): Record<string, unknow
     o.preMergerAcquisitionDate = lot.preMergerAcquisitionDate;
   }
   return o;
-}
-
-export function buildForeignStockApiBody(form: StockTransferFormData): Record<string, unknown> {
-  const fgTransferPriceMode = form.fgTransferPriceMode || "per_share";       // 3중 패턴 default
-  const acquisitionModeFS = form.acquisitionModeFS || "actual";               // 3중 패턴 default
-  const foreignTaxMethod = form.foreignTaxMethod || "credit";                 // 3중 패턴 default
-  const fsTransferReceiptMode = form.fsTransferReceiptMode || "single";       // 3중 패턴 default (FS-09)
-
-  const body: Record<string, unknown> = {
-    // ── 도메인 식별자 ──
-    marketType: "foreign_stock",
-
-    // ── 납세의무 요건 §118의2 ──
-    yearsResidentInKorea: parseIntOrUndef(form.yearsResidentInKorea) ?? 0,
-
-    // ── 자산 분류 §157의3 ──
-    isListedForeignCorp: form.isListedForeignCorp,   // 3중 패턴 default: true
-    stockName: form.securityName || "",
-    countryCode: form.fgCountryCode || "US",         // 3중 패턴 default
-
-    // ── 양도 정보 ──
-    shareCount: parseIntOrUndef(form.shareCount) ?? 1,
-    transferDate: form.transferDate,
-    transferPriceMode: fgTransferPriceMode,
-    transferCurrencyCode: form.transferCurrencyCode || "USD",  // 3중 패턴 default
-
-    // 환율 — 자동 안분 fallback 금지. 빈값 → validate 차단
-    transferExchangeRate: parseFloatOrUndef(form.transferExchangeRate),
-
-    // ── FS-09 §178의5② 수령 방식 ──
-    transferReceiptMode: fsTransferReceiptMode,       // 3중 패턴 default: "single"
-
-    // ── 취득 정보 ──
-    acquisitionDate: form.acquisitionDate,
-    acquisitionMode: acquisitionModeFS,
-    acquisitionCurrencyCode: form.acquisitionCurrencyCode || "USD",  // 3중 패턴 default
-    acquisitionExchangeRate: parseFloatOrUndef(form.acquisitionExchangeRate),
-
-    // ── 필요경비 (외화) §118의4 ──
-    capitalExpenditureForeign: parseFloatOrUndef(form.capitalExpenditureForeign) ?? 0,
-    transferCostForeign: parseFloatOrUndef(form.transferCostForeign) ?? 0,
-
-    // ── 외국납부세액 §118의6 ──
-    hasForeignTax: form.hasForeignTax,               // 3중 패턴 default: false
-    foreignTaxMethod,                                 // 3중 패턴 default: "credit"
-
-    // ── 기타 ──
-    isElectronicFiling: form.isElectronicFiling,     // default: false
-
-    // ── 신고축(가산세) — 국외자산 양도도 같은 신고다(소득세법 §118조의8 준용) ──
-    filingViolation: form.filingViolation || "none",   // 3중 패턴 default
-    isFraudulent: form.isFraudulent,
-    isInternationalTransaction: form.isInternationalTransaction,
-  };
-
-  // 가산세 상세 — 0·빈값이면 넣지 않는다(국내 경로와 같은 규칙)
-  {
-    const originalFiled =
-      form.filingViolation === "under_report" ? parseIntOrZero(form.originalFiledTax) : 0;
-    if (originalFiled > 0) body.originalFiledTax = originalFiled;
-    const priorPaid = parseIntOrZero(form.priorPaidTax);
-    if (priorPaid > 0) body.priorPaidTax = priorPaid;
-    const interest = parseIntOrZero(form.interestSurcharge);
-    if (interest > 0) body.interestSurcharge = interest;
-    // §47조의3①1호 가목 base — **빈 문자열이면 보내지 않는다**(미입력 = 전액 부정).
-    // 0 은 「부정행위분이 없다」는 유효한 선언이므로 0도 보낸다.
-    if (form.fraudulentPortion.trim() !== "") {
-      body.fraudulentPortion = parseIntOrZero(form.fraudulentPortion);
-    }
-    const unpaid = parseIntOrZero(form.unpaidTax);
-    if (unpaid > 0) body.unpaidTax = unpaid;
-    if (form.paymentDeadline) body.paymentDeadline = form.paymentDeadline;
-    if (form.actualPaymentDate) body.actualPaymentDate = form.actualPaymentDate;
-  }
-
-  // 양도가액 — 수령 방식에 따라 분기 (TypeScript 미감지 → 자가 grep 점검 필수)
-  if (fsTransferReceiptMode === "installments") {
-    // FS-09: §178의5② 장기할부 분할 수령 배열 — ⑬ body spread
-    const receipts = (form.fsTransferInstallmentReceipts || [])
-      .map((r) => {
-        const amountForeign = parseFloatOrUndef(r.amountForeign);
-        const exchangeRate = parseFloatOrUndef(r.exchangeRate);
-        if (amountForeign === undefined || exchangeRate === undefined) return null;
-        return {
-          receiptDate: r.receiptDate,      // ISO string — route handler에서 toDate() 변환
-          amountForeign,
-          exchangeRate,
-        };
-      })
-      .filter((r): r is NonNullable<typeof r> => r !== null);
-    body.transferInstallmentReceipts = receipts;
-    // 분할 수령 모드에서는 단일 양도가액 필드를 포함하지 않음
-  } else {
-    // single 모드 — 기존 양도가액 필드 분기
-    if (fgTransferPriceMode === "per_share") {
-      const perShare = parseFloatOrUndef(form.perShareTransferPriceForeign);
-      if (perShare !== undefined) body.perShareTransferPriceForeign = perShare;
-    } else {
-      const total = parseFloatOrUndef(form.totalTransferPriceForeign);
-      if (total !== undefined) body.totalTransferPriceForeign = total;
-    }
-  }
-
-  // 취득가액 — actual 모드만 입력 필요
-  if (acquisitionModeFS === "actual") {
-    const perAcq = parseFloatOrUndef(form.perShareAcquisitionPriceForeign);
-    if (perAcq !== undefined) body.perShareAcquisitionPriceForeign = perAcq;
-  }
-
-  // 외국납부세액 — hasForeignTax=true 시 필수
-  if (form.hasForeignTax) {
-    const paid = parseFloatOrUndef(form.foreignTaxPaidForeign);
-    if (paid !== undefined) body.foreignTaxPaidForeign = paid;
-    const fxCode = form.foreignTaxCurrencyCode || "USD";
-    body.foreignTaxCurrencyCode = fxCode;
-    const fxRate = parseFloatOrUndef(form.foreignTaxExchangeRate);
-    if (fxRate !== undefined) body.foreignTaxExchangeRate = fxRate;
-  }
-
-  return body;
-}
-
-// ⑬ grep 자가점검 목록 (callStockTransferTaxAPI body spread — TypeScript 미감지):
-//   transferCurrencyCode / acquisitionExchangeRate / transferExchangeRate /
-//   perShareTransferPriceForeign / totalTransferPriceForeign /
-//   perShareAcquisitionPriceForeign / capitalExpenditureForeign / transferCostForeign /
-//   foreignTaxPaidForeign / foreignTaxCurrencyCode / foreignTaxExchangeRate /
-//   hasForeignTax / foreignTaxMethod / fgCountryCode(→countryCode) /
-//   fsTransferReceiptMode(→transferReceiptMode) / fsTransferInstallmentReceipts(→transferInstallmentReceipts) [FS-09]
-
-// ============================================================
-// ④⑬ PR-4B 국외전출세 전용 API 변환 (buildExitTaxApiBody)
-// 3중 패턴: API fallback = validate fallback = store factory default
-// 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback):
-//   시가 모드별 필수 입력 빈값 → undefined → Zod/validate에서 차단
-// ⑬ grep 자가점검 목록:
-//   etYearsResidentLast10 / etDepartureDate / etIsMajorShareholder /
-//   etHoldings[] / etDeferralRequested / etDeferralReason /
-//   etActualTransferDate / etActualTransferPricePerShare /
-//   etForeignTaxPaid / etForeignTaxExclusionReason /
-//   etDomesticSourceTaxWithheld / etHasFiledHoldingsReport / etTotalFaceValue
-// ============================================================
-export function buildExitTaxApiBody(form: StockTransferFormData): Record<string, unknown> {
-  const deferralReason = form.etDeferralReason || "none";      // 3중 패턴 default
-  const exclusionReason = form.etForeignTaxExclusionReason || "none";  // 3중 패턴 default
-
-  // ⑬ holdings[] 배열 변환 — acquisitionDate 포함 전수 spread
-  const holdings = (form.etHoldings || []).map((h) => {
-    const holdingBody: Record<string, unknown> = {
-      id: h.id,
-      stockName: h.stockName,
-      marketType: h.marketType || "kospi",     // 3중 패턴 default
-      shareCount: parseIntOrUndef(h.shareCount) ?? 0,
-      acquisitionDate: h.acquisitionDate,      // ⑭ route에서 toDate() 변환 (holdings[] map)
-      perShareAcquisitionPrice: parseIntOrUndef(h.perShareAcquisitionPrice) ?? 0,
-      departureDayValuationMode: h.departureDayValuationMode || "market_price",  // 3중 패턴
-    };
-    // 모드별 시가 — 자동 안분 fallback 금지, 미입력 시 undefined
-    const mode = h.departureDayValuationMode || "market_price";
-    if (mode === "market_price") {
-      const v = parseIntOrUndef(h.departureDayMarketPrice);
-      if (v !== undefined) holdingBody.departureDayMarketPrice = v;
-    } else if (mode === "prior_year_std") {
-      const v = parseIntOrUndef(h.priorYearEndMonthAvg);
-      if (v !== undefined) holdingBody.priorYearEndMonthAvg = v;
-    } else if (mode === "unlisted_sample") {
-      const v = parseIntOrUndef(h.unlistedSamplePrice);
-      if (v !== undefined) holdingBody.unlistedSamplePrice = v;
-    } else if (mode === "unlisted_std") {
-      const v = parseIntOrUndef(h.unlistedStdPricePerShare);
-      if (v !== undefined) holdingBody.unlistedStdPricePerShare = v;
-    }
-    return holdingBody;
-  });
-
-  const body: Record<string, unknown> = {
-    // 도메인 식별자
-    marketType: "exit_tax",
-
-    // ── 거주자 요건 §118의9①1호 ──
-    yearsResidentLast10: parseFloatOrUndef(form.etYearsResidentLast10) ?? 0,
-
-    // ── 출국일 ──
-    departureDate: form.etDepartureDate,        // ⑭ route에서 toDate() 변환
-
-    // ── 대주주 요건 §178의8 ──
-    isMajorShareholder: form.etIsMajorShareholder,
-
-    // ── 보유 종목 배열 ⑬ ──
-    holdings,
-
-    // ── 납부유예 §118의16 ──
-    deferralRequested: form.etDeferralRequested,
-    deferralReason,                             // 3중 패턴 default: "none"
-
-    // ── 외국납부세액·배제 사유 §118의13 ──
-    foreignTaxExclusionReason: exclusionReason, // 3중 패턴 default: "none"
-
-    // ── 보유현황 신고 §118의15 ──
-    hasFiledHoldingsReport: form.etHasFiledHoldingsReport,
-
-    // ── 재전입 환급 §118의17①1호 ──
-    reenteredWithin5Years: form.etReenteredWithin5Years,
-
-    // ── 납부유예 이자상당액 §118의16④·§178의12③ (빈값 undefined → 안내만) ──
-    deferralInterestDays: parseIntOrUndef(form.etDeferralInterestDays),
-    deferralInterestDailyRate: parseFloatOrUndef(form.etDeferralInterestDailyRate),
-  };
-
-  // 경정청구용 실양도 — 입력값 있을 때만 포함 (자동 안분 fallback 금지)
-  if (form.etActualTransferDate) {
-    body.actualTransferDate = form.etActualTransferDate;
-  }
-  if (form.etActualTransferPricePerShare) {
-    const v = parseIntOrUndef(form.etActualTransferPricePerShare);
-    if (v !== undefined) body.actualTransferPricePerShare = v;
-  }
-
-  // 외국납부세액 — 입력값 있을 때만 포함
-  if (form.etForeignTaxPaid) {
-    const v = parseIntOrUndef(form.etForeignTaxPaid);
-    if (v !== undefined) body.foreignTaxPaid = v;
-  }
-  // 외화 + 기준환율(소령 §178의5) — 둘 다 있어야 엔진이 환산한다.
-  // 한쪽만 보내면 엔진이 원화 입력값으로 되돌아가므로 여기서도 각각 그대로 전달한다.
-  if (form.etForeignTaxPaidForeign) {
-    const v = parseFloatOrUndef(form.etForeignTaxPaidForeign);
-    if (v !== undefined) body.foreignTaxPaidForeign = v;
-  }
-  if (form.etForeignTaxExchangeRate) {
-    const v = parseFloatOrUndef(form.etForeignTaxExchangeRate);
-    if (v !== undefined) body.foreignTaxExchangeRate = v;
-  }
-  if (form.etForeignTaxCurrencyCode) {
-    body.foreignTaxCurrencyCode = form.etForeignTaxCurrencyCode;
-  }
-
-  // §118의14 비거주자 원천징수세액
-  if (form.etDomesticSourceTaxWithheld) {
-    const v = parseIntOrUndef(form.etDomesticSourceTaxWithheld);
-    if (v !== undefined) body.domesticSourceTaxWithheld = v;
-  }
-
-  // 보유현황 미신고 가산세용 액면금액
-  if (!form.etHasFiledHoldingsReport && form.etTotalFaceValue) {
-    const v = parseIntOrUndef(form.etTotalFaceValue);
-    if (v !== undefined) body.totalFaceValue = v;
-  }
-
-  return body;
 }
 
 export function buildStockTransferApiBody(form: StockTransferFormData): Record<string, unknown> {
@@ -556,6 +298,18 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   } else if (acquisitionMode === "face_value") {
     const faceVal = parseIntOrUndef(form.faceValuePerShare);
     if (faceVal !== undefined) body.faceValuePerShare = faceVal;
+    /**
+     * §99①4호 후단 환산의 **분모**(양도기준시가)도 함께 보낸다.
+     *
+     * `calcTransferStdPriceForFaceValue`가 이 두 필드로 분모를 만들고, 분모가 0이면
+     * `calcFaceValueTransferEstimated`가 **취득가액 0**을 반환한다. 종전에는 액면가만
+     * 실어 보내 화면(`FaceValueBlock`의 환산 미리보기)과 엔진이 갈려 있었다.
+     * 근거: 소득세법 시행령 §165④1호(순손익×3 + 순자산×2 ÷ 5, 단서 80% 하한).
+     */
+    const fvTyNI = parseFloatOrUndef(form.transferYearNetIncomePerShare);
+    const fvTyNA = parseFloatOrUndef(form.transferYearNetAssetPerShare);
+    if (fvTyNI !== undefined) body.transferYearNetIncomePerShare = fvTyNI;
+    if (fvTyNA !== undefined) body.transferYearNetAssetPerShare = fvTyNA;
   } else if (acquisitionMode === "sale_case") {
     const perAcq = parseIntOrUndef(form.perShareAcquisitionPrice);
     if (perAcq !== undefined) body.perShareAcquisitionPrice = perAcq;
@@ -566,8 +320,20 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (form.acquisitionMarketSampleCounterparty) body.acquisitionMarketSampleCounterparty = form.acquisitionMarketSampleCounterparty;
   }
 
-  // R-1' 양도 매매사례가액 — acquisitionMode 무관, transferPriceMode === "actual" + 입력값 있을 때
-  if ((form.transferPriceMode || "actual") === "actual") {
+  /**
+   * R-1' 양도 매매사례가액 — **취득측과 같은 게이트**를 탄다.
+   *
+   * 종전에는 `transferPriceMode === "actual"`만 보고 실었다. 그런데 입력 위젯은
+   * `acquisitionMode === "sale_case"`에서만 렌더되고 모드 전환 시 값을 정리하지 않아,
+   * 사용자가 취득모드를 실가로 되돌리면 **화면에 없는 stale 값**이 그대로 전송됐다.
+   * 엔진은 이 값에 절대 우선순위를 주므로(`perShareTransferPrice`를 앞지른다)
+   * 양도가액이 조용히 치환된다(소득세법 §96①).
+   * 형제 필드 `acquisitionMarketSamplePrice`는 처음부터 `sale_case` 블록 안에 있었다.
+   */
+  if (
+    (form.transferPriceMode || "actual") === "actual" &&
+    acquisitionMode === "sale_case"
+  ) {
     const trnMS = parseIntOrUndef(form.transferMarketSamplePrice);
     if (trnMS !== undefined) body.transferMarketSamplePrice = trnMS;
     if (form.transferMarketSampleDate) body.transferMarketSampleDate = form.transferMarketSampleDate;
@@ -628,12 +394,19 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   if (form.acquiredBeforeListing && (form.unlistedDetailMode === "listing_only" || form.unlistedDetailMode === "full")) {
     const adapted = adaptFlatToApiBody(form, true);
     body.postListingDetail = adapted.postListingDetail;
-    // 합성된 4 필드로 덮어쓰기 (UI 미리보기와 결과 일치 보장)
-    if (adapted.listingDatePriceAvg1Month) body.listingDatePriceAvg1Month = adapted.listingDatePriceAvg1Month;
-    if (adapted.listingYearNetIncomePerShare) body.listingYearNetIncomePerShare = adapted.listingYearNetIncomePerShare;
-    if (adapted.listingYearNetAssetPerShare) body.listingYearNetAssetPerShare = adapted.listingYearNetAssetPerShare;
-    if (adapted.acquisitionYearNetIncomePerShare) body.acquisitionYearNetIncomePerShare = adapted.acquisitionYearNetIncomePerShare;
-    if (adapted.acquisitionYearNetAssetPerShare) body.acquisitionYearNetAssetPerShare = adapted.acquisitionYearNetAssetPerShare;
+    /**
+     * 합성된 4 필드로 덮어쓰기 (UI 미리보기와 결과 일치 보장).
+     *
+     * ⚠️ **falsy가 아니라 `undefined`로 가른다.** 결손 법인은 결산서 순손익액이 0이라
+     * `calcNetIncomePerShare`가 **0을 합성**하는데, `if (adapted.x)`로 거르면 그 0이
+     * body에 실리지 않아 엔진이 `undefined`를 받고 환산 전체가 0으로 무너진다.
+     * 사용자가 "0"을 타이핑하지 않아도 도달하는 경로다(§165④1 단서가 작동할 자리).
+     */
+    if (adapted.listingDatePriceAvg1Month !== undefined) body.listingDatePriceAvg1Month = adapted.listingDatePriceAvg1Month;
+    if (adapted.listingYearNetIncomePerShare !== undefined) body.listingYearNetIncomePerShare = adapted.listingYearNetIncomePerShare;
+    if (adapted.listingYearNetAssetPerShare !== undefined) body.listingYearNetAssetPerShare = adapted.listingYearNetAssetPerShare;
+    if (adapted.acquisitionYearNetIncomePerShare !== undefined) body.acquisitionYearNetIncomePerShare = adapted.acquisitionYearNetIncomePerShare;
+    if (adapted.acquisitionYearNetAssetPerShare !== undefined) body.acquisitionYearNetAssetPerShare = adapted.acquisitionYearNetAssetPerShare;
   }
 
   // ── 장부분실 ──

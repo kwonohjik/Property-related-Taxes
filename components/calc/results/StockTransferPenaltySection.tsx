@@ -48,17 +48,23 @@ export function StockTransferPenaltySection({
 
   const underRate = isFraud && isIntl ? 60 : isFraud ? 40 : isNonReport ? 20 : 10;
   // v3: 무신고/과소 별 분기 + 역외 괄호 분리
-  const underBasis = isFraud && isIntl
-    ? isNonReport
-      ? "국세기본법 §47조의2 ①1호 (괄호) — 무신고 + 역외거래 부정 60%"
-      : "국세기본법 §47조의3 ①1호 가목 (괄호) — 과소신고 + 역외거래 부정 60%"
-    : isFraud
+  //
+  // ⚠️ `violation === "none"`을 **먼저** 가른다. 이 카드는 신고불성실가산세 행과 달리
+  //    무조건 렌더되므로, 삼항 사슬이 none 을 「일반 과소신고 10%」로 떨어뜨리면
+  //    「정상 신고 + 납부지연만」인 결과에 **없는 위반이 인쇄된다**(§47조의4 사안이 흔하다).
+  const underBasis = !isNonReport && !isUnderReport
+    ? "정상 신고 — 신고불성실가산세 해당 없음 (납부지연은 국세기본법 §47조의4)"
+    : isFraud && isIntl
       ? isNonReport
-        ? "국세기본법 §47조의2 ①1호 — 무신고 부정 40%"
-        : "국세기본법 §47조의3 ①1호 가목 — 과소신고 부정 40%"
-      : isNonReport
-        ? "국세기본법 §47조의2 ①2호 — 일반 무신고 20%"
-        : "국세기본법 §47조의3 ①2호 — 일반 과소신고 10%";
+        ? "국세기본법 §47조의2 ①1호 (괄호) — 무신고 + 역외거래 부정 60%"
+        : "국세기본법 §47조의3 ①1호 가목 (괄호) — 과소신고 + 역외거래 부정 60%"
+      : isFraud
+        ? isNonReport
+          ? "국세기본법 §47조의2 ①1호 — 무신고 부정 40%"
+          : "국세기본법 §47조의3 ①1호 가목 — 과소신고 부정 40%"
+        : isNonReport
+          ? "국세기본법 §47조의2 ①2호 — 일반 무신고 20%"
+          : "국세기본법 §47조의3 ①2호 — 일반 과소신고 10%";
 
   return (
     <div className="space-y-3">

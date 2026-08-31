@@ -291,6 +291,23 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
             />
           </>
         )}
+
+        {/* ── 총계 ── */}
+        <Divider />
+        <Row
+          label={
+            hasPenalty
+              ? "결정세액 = 산출세액 + 보유현황 미신고 가산세 (§118의15④)"
+              : "결정세액"
+          }
+          value={result.finalTax}
+          highlight
+        />
+        <Row
+          label="총 납부세액 = 결정세액 + 지방소득세"
+          value={result.totalTax}
+          highlight
+        />
       </div>
 
       {/* ── 경고·적용 규칙 ── */}

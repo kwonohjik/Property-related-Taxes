@@ -15,6 +15,7 @@
 
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-aggregate";
+import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-basic-deduction-total";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const won = (n: number) => `${n.toLocaleString()}원`;
@@ -82,7 +83,7 @@ export function StockAggregateSummaryCard({
                   {won(aggregate.totalTransferIncome)}
                 </td>
                 <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-                  {won(aggregate.basicDeductionByGroup.stock)}
+                  {won(sumBasicDeductionByGroup(aggregate.basicDeductionByGroup))}
                 </td>
                 <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {won(aggregate.totalTaxBase)}
@@ -97,7 +98,9 @@ export function StockAggregateSummaryCard({
         </div>
 
         <p className="text-caption text-muted-foreground">
-          기본공제 250만원은 <strong>주식 그룹 연 1회</strong>이며(소득세법 §103①2호), 해당 과세기간에{" "}
+          기본공제 250만원은 <strong>그룹마다 연 1회</strong>씩 따로 붙습니다 — 주식 그룹(소득세법 §103①2호)과
+          부동산·기타자산 그룹(§103①1호)이 별개이므로, 기타자산(§94①4)이 섞이면 합계가 500만원이 될 수 있습니다.
+          각 그룹 안에서는 해당 과세기간에{" "}
           <strong>먼저 양도한 자산의 양도소득금액에서부터</strong> 순서대로 공제됩니다(§103②).
         </p>
       </ToneCard>

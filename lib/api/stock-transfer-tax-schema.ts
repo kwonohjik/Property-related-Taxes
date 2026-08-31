@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { foreignStockInputSchema } from "./stock-transfer-foreign-schema";
+import { toOptionalDate } from "./date-coerce";
 
 
 /**
@@ -399,9 +400,21 @@ export function addStockRefines(
       });
     }
 
-    // [C-3] 양도일 거래정지 + 취득 후 상장 — 법령상 양립 불가(서버 방어, validate G-5 미러)
-    // §165⑤은 양도일에 §3항 주식(상장+정상거래) 전제. 거래정지는 상증령 §52의2③로 §3항 제외 → §165⑤ 불성립.
-    if (data.tradingHaltAtTransfer && data.acquiredBeforeListing) {
+    /**
+     * [C-3] 양도일 거래정지 + 취득 후 상장 — 법령상 양립 불가(서버 방어, validate G-5 미러)
+     * §165⑤은 양도일에 §3항 주식(상장+정상거래) 전제. 거래정지는 상증령 §52의2③로 §3항 제외 → §165⑤ 불성립.
+     *
+     * 🔑 **취득모드 게이트를 추가한다** — 종전에는 무조건이라, 두 토글이 stale로 남은 채
+     *    취득모드를 실가로 되돌리면 **아무 영향도 없는 조합에 400**이 났다(과다 차단).
+     *    두 플래그는 엔진에서 `acquisitionMode === "estimated"` 분기 **안에서만** 읽히므로
+     *    그 밖에서는 애초에 판단 대상이 아니다(⑧ validate도 같은 게이트 안에 있다).
+     *
+     * ⚠️ validate는 여기에 더해 **상장 3종** 게이트도 갖고 있지만 이쪽은 걸지 않는다 —
+     *    서버 가드를 시장까지 좁히면 비상장 stale 조합(UI로는 도달 불가·API 직접 호출로는 가능)의
+     *    차단이 사라진다. 좁히는 방향은 그 자체로 위험이므로 필요한 축만 맞춘다.
+     */
+    const haltGateApplies = data.acquisitionMode === "estimated";
+    if (haltGateApplies && data.tradingHaltAtTransfer && data.acquiredBeforeListing) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["tradingHaltAtTransfer"],
@@ -411,12 +424,57 @@ export function addStockRefines(
 
     // [C-1 M-4] 취득일 거래정지 + 취득 후 상장 — 취득 당시 비상장이면 취득일 거래정지 개념 불성립
     // (validate G-5 패턴과 동일 문구 — 기존 G-5는 validate만 차단·Zod 부재 = 기존 갭, 신규 필드만 완전 방어)
-    if (data.tradingHaltAtAcquisition && data.acquiredBeforeListing) {
+    if (haltGateApplies && data.tradingHaltAtAcquisition && data.acquiredBeforeListing) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["tradingHaltAtAcquisition"],
         message: "취득 당시 비상장 주식은 취득일 거래정지 대상이 아닙니다. 취득일 거래정지 토글 또는 취득 후 상장 토글을 해제하세요.",
       });
+    }
+
+    /**
+     * 상장 환산 1개월 종가평균 필수 — 시행령 §176의2②1호 (⑧ validate step2와 3중 패턴).
+     *
+     * 미입력이면 `calcListedValuation`의 0-가드에 걸려 **취득가액·개산공제가 둘 다 0**으로
+     * 떨어진다. 종전에는 ⑧에만 게이트가 있어 API를 직접 호출하거나 ⑤ 입력 UI가 없는
+     * 경로(주식 부담부증여 §159)가 그대로 통과했다.
+     *
+     * 면제 축: 분자(취득측)는 취득일 거래정지 또는 취득 후 상장(§165⑤) 시 법령상 무효라
+     * 엔진이 쓰지 않고, 분모(양도측)는 양도일 거래정지 시 무효다.
+     *
+     * ⚠️ 분모는 **취득 후 상장(§165⑤)도 면제**한다 — ⑧보다 한 칸 느슨한 유일한 지점이다.
+     * 그 분기는 `resolveTransferStd`가 1주당 양도가로 fallback하고 경고까지 남기는
+     * **설계된 동작**이라, 여기서 막으면 엔진이 정상 처리하는 payload를 400으로 돌린다
+     * (좁히는 방향은 그 자체로 위험 — 필요한 축만 막는다). ⑧은 fallback에 기대지 않도록
+     * UI에서 더 강하게 요구하고, ⑫는 **소리 없이 0이 되는** 일반 상장 환산만 차단한다.
+     */
+    if (
+      data.acquisitionMode === "estimated" &&
+      ["kospi", "kosdaq", "konex"].includes(data.marketType as string)
+    ) {
+      if (
+        !data.tradingHaltAtTransfer &&
+        !data.acquiredBeforeListing &&
+        !(data.transferDatePriceAvg1Month ?? 0)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["transferDatePriceAvg1Month"],
+          message: "상장 환산: 양도일 직전 1개월 종가 평균을 입력하세요 (시행령 §176의2②1호 환산비율 분모)",
+        });
+      }
+      if (
+        !data.acquiredBeforeListing &&
+        !data.tradingHaltAtTransfer &&
+        !data.tradingHaltAtAcquisition &&
+        !(data.acquisitionDatePriceAvg1Month ?? 0)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["acquisitionDatePriceAvg1Month"],
+          message: "상장 환산: 취득일 직전 1개월 종가 평균을 입력하세요 (시행령 §176의2②1호 환산비율 분자)",
+        });
+      }
     }
 
     // R-1' 매매사례가액 — 시장 유형 게이트 (영§176의2③1호 단서)
@@ -595,6 +653,43 @@ export function addStockRefines(
           message: `총 매도 수량(${totalTrn})이 총 매수 수량(${totalAcq})을 초과합니다`,
         });
       }
+      /**
+       * 매도 시점별 누적 검사 — 총수량만 보면 **매도일보다 나중에 취득한 lot**이
+       * 소진돼 보유일수가 음수가 되고 `isShortTerm`으로 세율까지 갈린다.
+       * ⑧ validate(`pushLotTimelineErrors`)와 같은 규칙이며, 누적 수량 쪽만
+       * 자본조정(희석 전 단위) 면제를 위 총수량 검사와 같은 기준으로 공유한다.
+       */
+      if (data.acquisitionLots && data.transferLots) {
+        // JSON 경유 후 string으로 도달할 수 있다 — 직접 비교하면 조용히 false가 된다.
+        const asTime = (v: unknown): number => toOptionalDate(v)?.getTime() ?? NaN;
+        const buys = data.acquisitionLots
+          .map((l) => ({ time: asTime(l.acquisitionDate), shares: l.shareCount }))
+          .filter((b) => Number.isFinite(b.time));
+        const sales = [...data.transferLots]
+          .map((l, i) => ({ index: i, time: asTime(l.transferDate), shares: l.shareCount }))
+          .filter((s) => Number.isFinite(s.time))
+          .sort((a, b) => a.time - b.time);
+        let cumulativeSold = 0;
+        for (const sale of sales) {
+          const availableShares = buys
+            .filter((b) => b.time <= sale.time)
+            .reduce((s, b) => s + b.shares, 0);
+          cumulativeSold += sale.shares;
+          if (availableShares === 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["transferLots", sale.index, "transferDate"],
+              message: "이 양도일 이전에 취득한 매수 lot이 없습니다",
+            });
+          } else if (!hasCapitalAdjustments && cumulativeSold > availableShares) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["transferLots", sale.index, "shareCount"],
+              message: `이 양도일까지 누적 매도(${cumulativeSold})가 그 시점 보유 수량(${availableShares})을 초과합니다`,
+            });
+          }
+        }
+      }
     }
   });
 }
@@ -631,10 +726,23 @@ export {
 //      `marketType`을 보면 알 수 있다.
 // ============================================================
 
-/** 합산 대상 종목 1건 — 국내주식 또는 국외주식 */
+/**
+ * 합산 대상 종목 1건 — 국내주식 또는 국외주식
+ *
+ * 🔑 국내 갈래는 **단건과 같은 refine**을 탄다. 종전에는 맨 `stockTransferInputSchema`라
+ *    **단건이면 400인 payload가 items[]에 넣으면 통과**했다 —
+ *    국외 갈래는 자체 `.superRefine`이 인라인이라 살아남고 국내만 빠지는 비대칭이었다.
+ *    이 파일 상단 주석이 「API를 직접 호출하는 경로에는 이 게이트가 유일한 방어다」라고
+ *    적어 둔 그 게이트다(마법사 UI는 `validateFilingItems`가 먼저 막으므로 발현은
+ *    API 직접 호출·외부 연동에 한정된다).
+ *
+ * ⚠️ `addStockRefines`는 `ZodEffects`를 돌려주므로 union 요소 타입이 바뀐다 —
+ *    `route.ts`의 `rawItems.map`·`marketType === "foreign_stock"` 분기는 **파싱 출력**을
+ *    보므로 영향이 없다(출력 타입은 그대로다).
+ */
 export const aggregateStockItemSchema = z.union([
   foreignStockInputSchema,
-  stockTransferInputSchema,
+  addStockRefines(stockTransferInputSchema),
 ]);
 
 export const stockTransferAggregateInputSchema = z.object({

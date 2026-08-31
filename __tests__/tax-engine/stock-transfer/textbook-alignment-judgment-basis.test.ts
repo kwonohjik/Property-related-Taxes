@@ -173,6 +173,10 @@ describe("F-09/F-10/F-14/F-23 — 판정 기준일 override (합병·분할·신
         judgmentDateOverride: new Date("2023-06-15"),
         judgmentBasis: "incorporation",
         isVentureCompany: true,
+        // 🔴 2026-08-28(리뷰 #14) — 40억 예외는 「§178①에 따라 **거래되는**」 벤처기업 주식이다.
+        //   이 anchor 의 쟁점은 **판정 기준일 override × 벤처 분기의 동시 적용**이므로,
+        //   법문이 40억을 주는 조합으로 픽스처를 맞춘다.
+        isKOTCTrading: true,
       }));
       expect(result.appliedThreshold?.judgmentBasis).toBe("incorporation");
       expect(result.appliedThreshold?.isVentureRule).toBe(true);

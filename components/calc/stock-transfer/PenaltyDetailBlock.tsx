@@ -1,7 +1,10 @@
 "use client";
 
 /**
- * 가산세 상세 입력 — 「과소신고납부세액등」 차감 항목 + 납부지연가산세
+ * 가산세 상세 입력 — 두 블록으로 갈라져 있다
+ *
+ * · `PenaltyDetailBlock`        — §47조의3① **기준금액 차감 항목** (신고 위반 게이트 **안**)
+ * · `LatePaymentPenaltyBlock`   — §47조의4 **납부지연 3필드**   (게이트 **밖**)
  *
  * ## 왜 이 칸들이 필요한가 (국세기본법)
  *
@@ -10,6 +13,7 @@
  *   전액에 세율을 곱해 **납세자에게 불리**했다.
  * · **§47조의4①1호** — 납부지연가산세 = 미납세액 × 경과일수 × 1일 10만분의 22
  *   (국기령 §27조의4①). 경과일수는 **법정납부기한 다음 날**부터 센다.
+ *   이쪽은 §47조의2·§47조의3을 **요건으로 하지 않아** 게이트를 함께 쓰면 안 된다.
  *
  * 계산 엔진은 부동산 양도세와 **같은 모듈**을 쓴다(`lib/tax-engine/transfer-tax-penalty.ts`) —
  * 가산세는 국세기본법 규정이라 세목을 가리지 않는다.
@@ -102,36 +106,60 @@ export function PenaltyDetailBlock({
         )}
       </div>
 
-      <div className="space-y-3 border-t border-border/50 pt-4">
-        <SectionHeader
-          title="납부지연가산세"
-          description="국세기본법 §47조의4①1호 · 국기령 §27조의4① 1일 10만분의 22"
+    </div>
+  );
+}
+
+/**
+ * 납부지연가산세 입력 — **신고 위반 게이트 밖**에 둔다.
+ *
+ * 🔑 국세기본법 §47조의4①1호는 「법정납부기한까지 납부하지 아니하거나 적게 납부한 경우」로
+ *    §47조의2(무신고)·§47조의3(과소신고)을 **요건으로 하지 않는다**. 기한 내에 정확히
+ *    신고하고 납부만 늦은 사안이 가장 흔한데, 종전에는 이 세 칸이 신고 위반 게이트 안에만
+ *    있어 **입력할 방법이 아예 없었다**. 반대로 축을 되돌리면 화면에서 칸은 사라지는데
+ *    ④는 게이트 없이 전송하고 엔진도 `filingViolation`을 읽지 않으므로 **세액만 남아**
+ *    정정할 화면이 없었다.
+ *
+ * 부동산 정본도 같은 배치다 — `app/calc/transfer-tax/steps/Step6.tsx`가 이 블록을
+ * 신고 위반 분기 **밖 형제**로 둔다.
+ */
+export function LatePaymentPenaltyBlock({
+  form,
+  onChange,
+}: {
+  form: StockTransferFormData;
+  onChange: (d: Partial<StockTransferFormData>) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <SectionHeader
+        title="납부지연가산세"
+        description="국세기본법 §47조의4①1호 · 국기령 §27조의4① 1일 10만분의 22 — 신고 위반과 무관하게 적용됩니다"
+      />
+
+      <CurrencyInput
+        label="미납·과소납부세액"
+        value={form.unpaidTax}
+        onChange={(v) => onChange({ unpaidTax: v })}
+        hint="납부하지 않았거나 모자라게 납부한 세액. 0이면 납부지연가산세를 계산하지 않습니다"
+      />
+
+      <FieldCard
+        label="법정납부기한"
+        hint="예정신고: 양도일이 속한 달의 말일부터 2개월 / 확정신고: 다음 해 5월 31일"
+      >
+        <DateInput
+          value={form.paymentDeadline}
+          onChange={(v) => onChange({ paymentDeadline: v })}
         />
+      </FieldCard>
 
-        <CurrencyInput
-          label="미납·과소납부세액"
-          value={form.unpaidTax}
-          onChange={(v) => onChange({ unpaidTax: v })}
-          hint="납부하지 않았거나 모자라게 납부한 세액. 0이면 납부지연가산세를 계산하지 않습니다"
+      <FieldCard label="실제 납부일" hint="미입력 시 오늘 기준으로 계산합니다">
+        <DateInput
+          value={form.actualPaymentDate}
+          onChange={(v) => onChange({ actualPaymentDate: v })}
         />
-
-        <FieldCard
-          label="법정납부기한"
-          hint="예정신고: 양도일이 속한 달의 말일부터 2개월 / 확정신고: 다음 해 5월 31일"
-        >
-          <DateInput
-            value={form.paymentDeadline}
-            onChange={(v) => onChange({ paymentDeadline: v })}
-          />
-        </FieldCard>
-
-        <FieldCard label="실제 납부일" hint="미입력 시 오늘 기준으로 계산합니다">
-          <DateInput
-            value={form.actualPaymentDate}
-            onChange={(v) => onChange({ actualPaymentDate: v })}
-          />
-        </FieldCard>
-      </div>
+      </FieldCard>
     </div>
   );
 }

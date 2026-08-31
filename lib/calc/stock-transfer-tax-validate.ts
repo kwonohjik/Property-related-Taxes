@@ -63,6 +63,66 @@ function amountOf(s: string | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * 분할 모드 시계열 검증 — **매도일 현재 보유하지 않은 주식은 그 매도의 원가가 될 수 없다**.
+ *
+ * 종전에는 총수량만 봤다(`totalTrn > totalAcq`). 그래서 매도일보다 **나중에** 취득한 lot이
+ * 소진돼 보유일수가 음수가 되고, `isShortTerm`이 참이 되어 세율까지 갈리는데 경고조차 없었다.
+ * 단건 모드는 이미 「양도일이 취득일보다 이전」을 막고 있어 두 모드가 갈려 있었다.
+ * 형제 경로(부동산 `transfer-tax-validate-asset.ts`)도 같은 규칙을 갖고 있다.
+ *
+ * 두 검사로 나눈 이유 — **자본조정(무상증자) 때문이다**:
+ *  · 존재 검사는 희석과 무관하므로 **항상** 건다(그 매도 이전에 취득한 lot이 아예 없다).
+ *  · 누적 수량 검사는 매수 수량이 희석 **전** 단위라 무상증자 시 정당하게 초과할 수 있어
+ *    기존 총수량 검사와 같은 기준으로 면제한다(엔진 `allocateLots`의 경고가 백스톱).
+ */
+function pushLotTimelineErrors(
+  form: StockTransferFormData,
+  errors: StockValidationError[],
+): void {
+  const buys = (form.acquisitionLots || [])
+    .filter((l) => !isEmpty(l.acquisitionDate) && parseI(l.shareCount) > 0)
+    .map((l) => ({ time: new Date(l.acquisitionDate).getTime(), shares: parseI(l.shareCount) }));
+  // lots-only 모드(매수 다건 · 매도 단건)는 `transferLots`가 비어 있고 폼-전역 양도일 1건뿐이다.
+  const saleForms = (form.transferLots || []).length > 0
+    ? (form.transferLots || []).map((l) => ({ date: l.transferDate, shareCount: l.shareCount }))
+    : [{ date: form.transferDate, shareCount: form.shareCount }];
+  const sales = saleForms
+    .map((l, i) => ({
+      index: i,
+      time: isEmpty(l.date) ? NaN : new Date(l.date).getTime(),
+      shares: parseI(l.shareCount),
+    }))
+    .filter((s) => Number.isFinite(s.time) && s.shares > 0);
+  if (buys.length === 0 || sales.length === 0) return;
+  const isSynthSingleSale = (form.transferLots || []).length === 0;
+
+  const hasCapitalAdj = !!(form.capitalAdjustments && form.capitalAdjustments.length > 0);
+  let cumulativeSold = 0;
+  for (const sale of [...sales].sort((a, b) => a.time - b.time)) {
+    const availableShares = buys
+      .filter((b) => b.time <= sale.time)
+      .reduce((s, b) => s + b.shares, 0);
+    cumulativeSold += sale.shares;
+    const label = isSynthSingleSale ? "양도일" : `매도 lot #${sale.index + 1}`;
+    if (availableShares === 0) {
+      errors.push({
+        field: isSynthSingleSale ? "transferDate" : `transferLots[${sale.index}].transferDate`,
+        message: `${label}: 이 양도일 이전에 취득한 매수 lot이 없습니다. 일자를 확인하세요`,
+        severity: "error",
+      });
+      continue;
+    }
+    if (!hasCapitalAdj && cumulativeSold > availableShares) {
+      errors.push({
+        field: isSynthSingleSale ? "shareCount" : `transferLots[${sale.index}].shareCount`,
+        message: `${label}: 이 양도일까지 누적 매도(${cumulativeSold})가 그 시점 보유 수량(${availableShares})을 초과합니다. 매도일 이후 취득한 주식은 그 매도의 취득원가가 될 수 없습니다`,
+        severity: "error",
+      });
+    }
+  }
+}
+
 // ============================================================
 // Step별 validation (마법사 단계 진입 전 검증)
 // ============================================================
@@ -327,6 +387,9 @@ export function validateStep1(form: StockTransferFormData): StockValidationError
       });
     }
   }
+
+  // 매수 lot 시계열 — 분할 모드·lots-only 모드 양쪽에 건다(매도 축의 형태만 다르다)
+  pushLotTimelineErrors(form, errors);
 
   // 발행주식총수 필수
   if (isEmpty(form.totalIssuedShares) || parseI(form.totalIssuedShares) <= 0) {

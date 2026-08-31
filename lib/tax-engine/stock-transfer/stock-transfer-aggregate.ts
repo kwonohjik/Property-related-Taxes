@@ -29,6 +29,12 @@ import {
 import { resolveStockCarryover } from "./stock-carryover";
 import { offsetLossesCore } from "@/lib/tax-engine/loss-offset-core";
 import { resolveStockRateKey } from "./stock-transfer-rate-calc";
+import { resolveSplitRateResult } from "./lot-allocation-tax";
+import {
+  BASIC_DEDUCTION_LIMIT,
+  taxableField,
+  resolveRealEstateGroupUsedSeed,
+} from "./stock-transfer-aggregate-deduction";
 import { calculateForeignStockTax } from "./foreign-stock";
 import { computeForeignTaxCreditLimits } from "./foreign-tax-credit-limit";
 import {
@@ -131,6 +137,7 @@ export interface StockTransferAggregateResult {
   };
   /** 합산 과세표준 (그룹별 기본공제 1회 적용 후) */
   totalTaxBase: number;
+
   /**
    * 합산 산출세액.
    * 기타자산 2건 이상이면 §104⑤ 비교과세가 반영되어 **`Σ items.calculatedTax`와 다르다**
@@ -350,7 +357,8 @@ function aggregateCore(
   inputs: AggregateStockItemInput[],
   deductionMode: "each_item" | "aggregate",
 ): StockTransferAggregateResult {
-  const BASIC_DEDUCTION_LIMIT = 2_500_000;
+  /** §103①1호 기소진액 — 신고 단위 선언값(leaf 주석 참조, 리뷰 #16). */
+  const realEstateGroupUsedSeed = resolveRealEstateGroupUsedSeed(inputs);
 
   /** 종목 1건 단건 계산 — 국내·국외 엔진을 갈라 부르고 결과 타입을 하나로 맞춘다. */
   const calcOne = (
@@ -374,8 +382,12 @@ function aggregateCore(
     // 합계가 음수면 과세 소득은 0이다 — 양도소득에 결손금 이월이 없다(§102①후단·§102②).
     // 부동산 정본과 대칭(`multi-parcel-transfer.ts:478`). 종전에는 clamp가 없어 신고서식에
     // **음수 양도소득금액**이 그대로 흘렀다.
-    const totalTransferIncome = Math.max(0, items.reduce((s, r) => s + r.transferIncome, 0));
-    const totalCalculatedTax = items.reduce((s, r) => s + r.calculatedTax, 0);
+    // 비과세 종목의 echo 는 총계에 산입하지 않는다(리뷰 #1 — `taxableField` 주석 참조).
+    const totalTransferIncome = Math.max(
+      0,
+      items.reduce((s, r) => s + taxableField(r, "transferIncome"), 0),
+    );
+    const totalCalculatedTax = items.reduce((s, r) => s + taxableField(r, "calculatedTax"), 0);
     const electronicFilingCredit = items.some((r) => r.electronicFilingCredit > 0)
       ? 20_000
       : 0;
@@ -409,12 +421,12 @@ function aggregateCore(
       basicDeductionByGroup: {
         stock: items
           .filter((r) => r.basicDeductionGroup === "stock")
-          .reduce((s, r) => s + r.basicDeduction, 0),
+          .reduce((s, r) => s + taxableField(r, "basicDeduction"), 0),
         real_estate_and_other_asset: items
           .filter((r) => r.basicDeductionGroup === "real_estate_and_other_asset")
-          .reduce((s, r) => s + r.basicDeduction, 0),
+          .reduce((s, r) => s + taxableField(r, "basicDeduction"), 0),
       },
-      totalTaxBase: items.reduce((s, r) => s + r.taxBase, 0),
+      totalTaxBase: items.reduce((s, r) => s + taxableField(r, "taxBase"), 0),
       totalCalculatedTax,
       totalUnderReportPenalty,
       totalLatePaymentPenalty,
@@ -471,15 +483,19 @@ function aggregateCore(
   // STEP 2: 그룹별 소득금액 합산 — **통산 후** 기준(§92② 순서)
   const stockGroupIncome = stockIdx.reduce((s, i) => s + offsetIncome[i], 0);
 
+  // 주식 그룹은 `offsetLossesCore`가 비과세 행의 소득을 0으로 돌려주지만(`incomeAfterOffset`),
+  // 기타자산 그룹은 통산을 타지 않아 원값이 그대로 온다 → 여기서 명시 배제한다(리뷰 #1).
   const otherAssetGroupIncome = rawItems
     .map((r, i) => ({ r, i }))
-    .filter((x) => x.r.basicDeductionGroup === "real_estate_and_other_asset")
+    .filter((x) => x.r.basicDeductionGroup === "real_estate_and_other_asset" && !x.r.isExempt)
     .reduce((s, x) => s + offsetIncome[x.i], 0);
 
   const stockBasicDeduction = Math.min(Math.max(0, stockGroupIncome), BASIC_DEDUCTION_LIMIT);
+  // §103①1호 잔여 한도 = 250만 − 기소진액(리뷰 #16). 표시값과 배분 결과가 같은 한도를 봐야
+  // `Σ 종목 기본공제 = basicDeductionByGroup` 항등식이 유지된다.
   const otherAssetBasicDeduction = Math.min(
     Math.max(0, otherAssetGroupIncome),
-    BASIC_DEDUCTION_LIMIT,
+    Math.max(0, BASIC_DEDUCTION_LIMIT - realEstateGroupUsedSeed),
   );
 
   // STEP 3: 종목별 기본공제 순차 배분 후 재계산
@@ -504,8 +520,8 @@ function aggregateCore(
   // 기타자산 그룹(§103①1호):
   //   - realEstateGroupBasicDeductionUsed로 직접 제어 가능
 
-  let stockUsed = 0;        // 주식 그룹 기본공제 누적 사용량
-  let otherAssetUsed = 0;   // 기타자산 그룹 누적 사용량
+  let stockUsed = 0;                                // 주식 그룹 기본공제 누적 사용량
+  let otherAssetUsed = realEstateGroupUsedSeed;     // 기타자산 그룹 — **기소진액에서 시작**(리뷰 #16)
 
   /**
    * §103② 배분 순회 순서 — **양도일 오름차순**, 동일자는 입력 순서(안정 정렬).
@@ -542,13 +558,35 @@ function aggregateCore(
       // 0/전액 두 갈래를 없애고 **항상 정확한 잔여액(deductThis)으로 패치**한다.
       // (전액 케이스는 deductThis == min(income, 250만)이라 종전 엔진 경로와 결과가 같다.)
       const taxBaseAfterDeduction = Math.floor(Math.max(0, income - deductThis));
-      const rateResult = applyStockTaxRate(
-        taxBaseAfterDeduction,
-        r.taxCategory,
-        smeFlag(input),
-        r.isShortTermHolding,
-        r.isExempt, // 비과세 분기 산식 echo
-      );
+      //
+      // 🔴 2026-08-28 정정(리뷰 #5 — **세액 변경**) — 종전에는 무조건 `applyStockTaxRate`를 불러
+      //   **split(lot) 축을 통째로 버렸다**. `calcSplitModeTax`의 호출부가 단건 엔진 한 곳뿐이라
+      //   (전수 grep) lot 단기·장기가 섞인 종목이 다종목 신고에서는 폼 전역 취득일 하나로
+      //   판정됐다 — `r.isShortTermHolding`은 lot 이 아니라 `input.acquisitionDate` 기반이다.
+      //   ⇒ **종목을 하나 더 신고했다는 이유만으로 세액이 달라졌다**
+      //     (실측: 단건 204,312,500 vs 다종목 184,375,000 = 19,937,500 과소.
+      //      역방향은 lot 전량 장기 + 폼 전역 단기에서 52,881,250 과대).
+      //   `lotMatchingDetail`과 「단기·장기 세율 상이」 warning 은 그대로 남아 있어
+      //   화면은 혼합인데 세액만 단일이었다.
+      //
+      // 법령: 소득세법 §104①11호 가목 1)(중소기업 외 대주주 1년 미만 30%)·가목 2)(20/25% 누진).
+      //   §103②은 기본공제 배분 규정일 뿐 세율 구조를 바꿀 근거가 아니다.
+      //
+      // ⚠️ 비과세 종목은 위에서 조기 반환하므로 여기 `r.isExempt`는 항상 false 다.
+      const rateResult = r.lotMatchingDetail
+        ? resolveSplitRateResult(
+            taxBaseAfterDeduction,
+            r.lotMatchingDetail,
+            r.taxCategory,
+            smeFlag(input),
+          ).rate
+        : applyStockTaxRate(
+            taxBaseAfterDeduction,
+            r.taxCategory,
+            smeFlag(input),
+            r.isShortTermHolding,
+            r.isExempt, // 비과세 분기 산식 echo
+          );
       const newCalculatedTax = floorTen(rateResult.calculatedTax);
 
       // 🔑 **국외주식은 `finalizeStockTax`를 타지 않는다.** 그 함수는 국내 신고 축
@@ -679,14 +717,14 @@ function aggregateCore(
   // (주식 그룹은 `incomeAfterOffset`이 이미 0 이상이다).
   const totalTransferIncome = Math.max(
     0,
-    processedItems.reduce((s, r) => s + r.transferIncome, 0),
+    processedItems.reduce((s, r) => s + taxableField(r, "transferIncome"), 0),
   );
 
   // §104⑤ 비교과세 — 기타자산 그룹만 호별 합산으로 다시 낸다(위 함수 주석 참조).
   // 주식 그룹은 §104⑤ 대상이 아니라 종전대로 단건 합계다.
   const otherAssetComparativeTax = computeOtherAssetComparativeTax(processedItems, inputs);
   const totalCalculatedTax =
-    processedItems.reduce((s, r) => s + r.calculatedTax, 0) +
+    processedItems.reduce((s, r) => s + taxableField(r, "calculatedTax"), 0) +
     (otherAssetComparativeTax
       ? otherAssetComparativeTax.aggregatedTax - otherAssetComparativeTax.itemSumTax
       : 0);
@@ -732,7 +770,7 @@ function aggregateCore(
       stock: stockBasicDeduction,
       real_estate_and_other_asset: otherAssetBasicDeduction,
     },
-    totalTaxBase: processedItems.reduce((s, r) => s + r.taxBase, 0),
+    totalTaxBase: processedItems.reduce((s, r) => s + taxableField(r, "taxBase"), 0),
     totalCalculatedTax,
     ...(totalLossOffset > 0 || stockOffset.unusedLoss > 0
       ? { lossOffset: { totalOffset: totalLossOffset, unusedLoss: stockOffset.unusedLoss } }

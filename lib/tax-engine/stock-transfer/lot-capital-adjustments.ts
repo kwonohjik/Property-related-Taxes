@@ -26,6 +26,14 @@ export interface LotCapitalAdjustmentDetail {
   baseTotalCost: number;
   /** 환산 후 1주당 단가 = floor(baseTotalCost / afterShares) */
   adjustedPerShareCost: number;
+  /**
+   * §97의2①1호 이월과세 lot의 **증여자** 총취득원가 (불변).
+   * `donorAcquisitionPrice`가 있는 lot에서만 채워진다 — 매칭이 실제로 쓰는 단가가 이쪽이라
+   * 위 `baseTotalCost`(수증 당시 평가액 기준)만 표시하면 화면과 계산이 갈린다.
+   */
+  donorBaseTotalCost?: number;
+  /** 환산 후 증여자 1주당 단가 = floor(donorBaseTotalCost / afterShares) */
+  adjustedDonorPerShareCost?: number;
   /** 적용된(skip 아닌) 조정 유형 */
   appliedTypes: CapitalAdjustment["type"][];
   /** skip 사유 (의제배당·발생일≤취득일) */
@@ -114,12 +122,36 @@ export function applyCapitalAdjustmentsToLots(
 
     const adjustedPerShareCost = shares > 0 ? Math.floor(baseTotalCost / shares) : 0;
 
+    /**
+     * §97의2①1호 승계 단가도 **같은 희석**을 받는다.
+     *
+     * 매칭 3종은 이월과세 lot의 1주당 단가로 `resolveLotAcquisitionPrice`(= `donorAcquisitionPrice`)를
+     * 쓴다. 주식수만 늘리고 이 값을 그대로 두면 「희석 후 주식수 × 희석 전 증여자 단가」가 되어
+     * 증여자 총취득원가가 배율만큼 어긋난다 — 무상증자는 과소, 형식감자는 과대(불리)로 갈린다.
+     * 집행기준 97-163-12의 「총취득원가 불변」은 승계 원가에도 그대로 적용된다.
+     *
+     * `donorGiftTaxableValue`·`donorCapitalExpenditure`는 **총액** 필드라 대상이 아니다
+     * (`accrueLotCarryoverExpense`가 `matchedShares / lot.shareCount`로 안분하므로 불변).
+     */
+    const donorBaseTotalCost =
+      lot.donorAcquisitionPrice !== undefined
+        ? lot.shareCount * lot.donorAcquisitionPrice
+        : undefined;
+    const adjustedDonorPerShareCost =
+      donorBaseTotalCost !== undefined
+        ? shares > 0
+          ? Math.floor(donorBaseTotalCost / shares)
+          : 0
+        : undefined;
+
     perLotApplied.push({
       lotId: lot.id,
       beforeShares: lot.shareCount,
       afterShares: shares,
       baseTotalCost,
       adjustedPerShareCost,
+      donorBaseTotalCost,
+      adjustedDonorPerShareCost,
       appliedTypes,
       skippedReasons,
     });
@@ -132,6 +164,9 @@ export function applyCapitalAdjustmentsToLots(
       ...lot,
       shareCount: shares,
       perShareAcquisitionPrice: adjustedPerShareCost,
+      ...(adjustedDonorPerShareCost !== undefined
+        ? { donorAcquisitionPrice: adjustedDonorPerShareCost }
+        : {}),
     };
   });
 

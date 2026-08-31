@@ -9,16 +9,62 @@
 
 import type { LotMatchingDetail, StockTransferResult } from "./types/stock-transfer.types";
 import {
+  STOCK,
   STOCK_SHORT_TERM_RATE,
   STOCK_NON_MAJOR_SME_RATE,
   STOCK_NON_MAJOR_NON_SME_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
-import { applyStockTaxRate } from "./stock-transfer-rate-calc";
+import { applyStockTaxRate, type RateCalcResult } from "./stock-transfer-rate-calc";
 
 export interface SplitModeTaxResult {
   calculatedTax: number;
   isMixedRate: boolean;
   mixedNote?: string;
+  /**
+   * 세율이 하나로 확정되는 경로에서 **실제로 적용된** 세율·누진공제 echo.
+   *
+   * 🔴 2026-08-28 신설(리뷰 #28) — 종전에는 호출부가 `lotMatchingDetail.matched[]`의
+   * 첫 sub-lot 세율을 echo 로 썼는데, 그 값은 sub-lot 안분 단계(`applySubLotRate`)에서
+   * 나온 것이라 **실제 세액을 낸 세율과 다를 수 있었다**. 특히 기타자산(§55 8단계 누진)에서
+   * 실측 0.2 vs 실제 0.4 로 갈렸고 누진공제는 아예 `undefined` 였다 —
+   * 결과뷰 산식 카드의 「과세표준 × 세율 − 누진공제 = 산출세액」 항등식이 깨졌다.
+   * 세액 자체는 정확했으므로 표시 전용 결함이다.
+   *
+   * 혼합 세율이면 하나로 말할 수 없으므로 `undefined`(호출부가 0 = "혼합" 라벨로 표기).
+   */
+  appliedRate?: number;
+  progressiveDeduction?: number;
+}
+
+/**
+ * split(lot) 모드의 세율 적용 결과를 **정상 경로와 같은 모양**(`RateCalcResult`)으로 돌려준다.
+ *
+ * 단건 엔진(`stock-transfer-tax.ts`)과 다종목 집계 엔진(`stock-transfer-aggregate.ts`)이
+ * **같은 코드**를 쓰게 하는 것이 이 함수의 목적이다.
+ *
+ * 🔴 2026-08-28 신설(리뷰 #5) — 종전에는 집계 엔진이 `applyStockTaxRate`를 직접 불러
+ * split 축을 통째로 버렸다. lot 단기·장기가 섞인 종목이 폼 전역 취득일 하나로 판정돼,
+ * **종목을 하나 더 신고했다는 이유만으로 세액이 달라졌다**
+ * (실측: 단건 204,312,500 vs 다종목 184,375,000 — 19,937,500 과소).
+ */
+export function resolveSplitRateResult(
+  taxBase: number,
+  lotDetail: LotMatchingDetail,
+  taxCategory: StockTransferResult["taxCategory"],
+  isSME: boolean,
+): { rate: RateCalcResult; mixedNote?: string } {
+  const splitTax = calcSplitModeTax(taxBase, lotDetail, taxCategory, isSME);
+  return {
+    rate: {
+      // 혼합이면 0 — UI 가 "혼합" 라벨로 읽는 기존 규약을 유지한다.
+      appliedRate: splitTax.isMixedRate ? 0 : (splitTax.appliedRate ?? 0),
+      calculatedTax: splitTax.calculatedTax,
+      progressiveDeduction: splitTax.progressiveDeduction,
+      appliedRuleRef: STOCK.SECTION_104_1_11_GA_2_PROGRESSIVE,
+      isShortTermRate: lotDetail.matched.some((m) => m.isShortTerm),
+    },
+    mixedNote: splitTax.mixedNote,
+  };
 }
 
 /**
@@ -63,9 +109,13 @@ export function calcSplitModeTax(
     //     과세표준 5천만: 10,000,000 → 6,240,000 (과대), 10억: 384,060,000 (과소).
     // 재구현 대신 정본 `applyStockTaxRate`에 위임해 드리프트 자체를 없앤다
     // (memory `feedback_ui_engine_dual_truth_avoidance`).
+    const single = applyStockTaxRate(taxBase, taxCategory, isSME, false);
     return {
-      calculatedTax: applyStockTaxRate(taxBase, taxCategory, isSME, false).calculatedTax,
+      calculatedTax: single.calculatedTax,
       isMixedRate: false,
+      // 위임한 그 계산의 세율·누진공제를 그대로 echo 한다 — 표시 산식이 세액과 어긋나면 안 된다.
+      appliedRate: single.appliedRate,
+      progressiveDeduction: single.progressiveDeduction,
     };
   }
 
@@ -89,9 +139,22 @@ export function calcSplitModeTax(
     longBase > 0 ? applyStockTaxRate(longBase, taxCategory, isSME, false).calculatedTax : 0;
 
   const isMixedRate = shortBase > 0 && longBase > 0;
+
+  // 한쪽 그룹만 남은 경우는 세율이 하나로 확정된다 → 그 계산의 세율·누진공제를 echo 한다.
+  // (혼합이면 하나로 말할 수 없으므로 undefined 를 남긴다.)
+  const soleGroup = isMixedRate
+    ? undefined
+    : shortBase > 0
+      ? applyStockTaxRate(shortBase, taxCategory, isSME, true)
+      : longBase > 0
+        ? applyStockTaxRate(longBase, taxCategory, isSME, false)
+        : undefined;
+
   return {
     calculatedTax: shortTax + longTax,
     isMixedRate,
     mixedNote: isMixedRate ? "단기(가목 1)·장기(가목 2) 세율 상이 (lotMatchingDetail 참조)" : undefined,
+    appliedRate: soleGroup?.appliedRate,
+    progressiveDeduction: soleGroup?.progressiveDeduction,
   };
 }

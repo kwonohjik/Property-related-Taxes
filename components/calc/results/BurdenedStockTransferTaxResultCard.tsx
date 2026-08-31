@@ -11,9 +11,8 @@
  * 결과 산식 한국어 풀어쓰기 (feedback_result_view_korean_formula):
  *   양도가액 = 채무인수액 (소령 §159①: 부담부증여 단일 자산 → 양도가액=채무액)
  *   취득가액 = 당초취득가 × (채무액/평가액)  [실지 모드]
- *            = 환산취득가 × (채무액/평가액)  [환산 비상장 모드]
- *            = 기준시가 환산 자동 안분          [환산 상장 모드]
- *   필요경비 = 개산공제 1% (소법 §163⑥)  [환산 모드]
+ *            = 환산취득가 (양도가액=채무액 기반이라 이미 안분됨)  [환산 모드]
+ *   필요경비 = 개산공제 1% × (채무액/평가액) (소령 §163⑥4호 · §159①)  [환산 모드]
  *   양도소득금액 = 양도가액 − 취득가액 − 필요경비
  *   양도소득 기본공제 = 2,500,000원 (§103①2호 — 주식 그룹 **과세기간당 1회**.
  *     종목이 둘 이상이면 aggregate 경로가 먼저 양도한 종목부터 소진시키므로,
@@ -34,6 +33,7 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
 
 // ─── 행 컴포넌트 ─────────────────────────────────────────────────────────────
 
@@ -149,6 +149,13 @@ function SingleStockTransferResultCard({
         <Row label="지방소득세 (10%)" value={formatKRW(result.localIncomeTax)} sub />
         <Row label="총 납부세액" value={formatKRW(totalTax)} highlight />
       </div>
+
+      {/*
+        엔진 경고 — 종전에는 이 카드가 `warnings`를 한 번도 참조하지 않아
+        대주주 자동 판정 불일치(§157)·상장 환산 종가평균 미입력 같은 안내가
+        화면에 전혀 뜨지 않았다. 문구·색은 다른 결과뷰와 같은 공용 leaf를 쓴다.
+      */}
+      <CalculationWarningsCard warnings={result.warnings} className="m-4 mb-0" />
 
       {/* 상세 펼침 */}
       {detailOpen && (
