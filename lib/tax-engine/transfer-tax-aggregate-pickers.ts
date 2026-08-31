@@ -10,6 +10,8 @@
  */
 import type { calculateTransferTax } from "./transfer-tax";
 import { TRANSFER } from "./legal-codes";
+import { REDUCTION_METADATA } from "./transfer-reductions/metadata";
+import type { TransferReductionId } from "./transfer-reductions/types";
 import { aggregateByGroup, applyGeneralProgressive } from "./transfer-tax-aggregate-helpers";
 import type { AssetRecord } from "./transfer-tax-aggregate-helpers";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -202,7 +204,20 @@ export function resolveTypeLegalBasis(type: string): string {
       return TRANSFER.REDUCTION_GB_DESIGNATED_LAND;
     case "replacement_land_comp":
       return TRANSFER.REDUCTION_REPLACEMENT_LAND;
-    default:
-      return TRANSFER.REDUCTION_OVERLAP_EXCLUSION;
+    default: {
+      /**
+       * 🔴 위 switch는 **legacy id만** 열거해 신규 조문 id가 전부 여기로 떨어졌다 —
+       *   §97 시리즈(`rental_97_main` 등 6종)·§99 시리즈·§98 하이브리드 10종이
+       *   감면 근거 자리에 **중복배제 조항(§127⑦)** 을 인쇄했다(코드리뷰 D8-02).
+       *   #048이 §77의2·§77의3 두 개만 case로 덮은 것이 원인이다 — 열거 방식이라
+       *   조문이 늘 때마다 같은 결함이 재발한다.
+       *
+       * ⇒ `REDUCTION_METADATA`(24 조문 단일 소스)를 조회한다. 새 조문을 추가해도
+       *   metadata에 등록하는 것만으로 근거가 따라온다.
+       *   anchor가 `ALL_REDUCTION_IDS` 전수를 돌아 누락을 막는다.
+       */
+      const meta = REDUCTION_METADATA[type as TransferReductionId];
+      return meta?.article ?? TRANSFER.REDUCTION_OVERLAP_EXCLUSION;
+    }
   }
 }
