@@ -69,11 +69,19 @@ async function fillThroughStep3(page: Page) {
 }
 
 test.describe("가산세 신고-단위 산정", () => {
-  test("PE-1: 정상 신고에는 가산세 상세 칸이 없다", async ({ page }) => {
+  test("PE-1: 정상 신고에는 신고위반 상세 칸만 없다 (납부지연 칸은 남는다)", async ({ page }) => {
     test.setTimeout(120_000);
     await gotoStockTransferTax(page);
     await fillThroughStep3(page);
-    await expect(page.getByText("법정납부기한")).toHaveCount(0);
+
+    // §47조의3① 기준금액 차감 항목은 신고 위반 게이트 **안** — 정상 신고에는 없다.
+    await expect(page.getByText("가산세 기준금액 (과소신고납부세액등)")).toHaveCount(0);
+    await expect(page.getByText("당초 신고세액")).toHaveCount(0);
+
+    // §47조의4 납부지연은 게이트 **밖**이라 정상 신고에도 남는다 — 「기한 내 정확히 신고하고
+    // 납부만 늦은」 사안이 이 축의 핵심이고, 종전에는 입력 경로가 아예 없었다.
+    // 이 단언을 `toHaveCount(0)` 으로 되돌리면 그 입력 경로가 다시 사라진다.
+    await expect(page.getByText("법정납부기한")).toBeVisible();
   });
 
   test("PE-2: 과소신고를 고르면 기준금액 차감 칸과 납부지연 칸이 열린다", async ({ page }) => {
