@@ -212,6 +212,7 @@ export function toEngineReductions(
           propertyType: r.propertyType,
           rentalHousingType: r.rentalHousingType,
           isConvertedFromShortTerm: r.isConvertedFromShortTerm,
+          isPrivateConstructionRental: r.isPrivateConstructionRental, // D2-07
         };
       }
       if (r.type === "rental_97_4") {

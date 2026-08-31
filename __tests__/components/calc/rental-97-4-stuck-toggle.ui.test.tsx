@@ -29,7 +29,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** 취득일 2010 — §97의4의 「등록일 2014.1.1 이후」 게이트를 시한 밖으로 만든다 */
+/**
+ * **양도일 2013** — §97의4를 시한 밖으로 만든다.
+ *
+ * ⚠️ 이 픽스처는 CB-01(§97의4 시한 축을 **등록일 → 양도일**로 이동) 때문에 한 번 바뀌었다.
+ *    종전에는 「취득일 2010 + 등록일 미입력」으로 게이트를 실패시켰는데, CB-01 이후에는
+ *    등록일이 시한을 가르지 않으므로 그 전제가 사라졌다.
+ *    **게이트가 움직이면 그 게이트를 쓰는 anchor의 픽스처도 함께 움직여야 한다.**
+ *
+ * D9-03이 막는 stuck 자체는 §97의4 전용이 아니다 — 시한 외·미구현·자산종류 게이트 어디서든
+ * 「선택된 채 disabled」가 되면 해제도 계산도 못 한다.
+ */
 function panel(reductions: AssetReductionForm[]) {
   const asset = {
     ...makeDefaultAsset(1),
@@ -37,7 +47,7 @@ function panel(reductions: AssetReductionForm[]) {
     acquisitionDate: "2010-01-01",
     reductions,
   } as AssetForm;
-  render(<UnifiedReductionPanel asset={asset} transferDate="2026-03-01" onChange={vi.fn()} />);
+  render(<UnifiedReductionPanel asset={asset} transferDate="2013-06-01" onChange={vi.fn()} />);
   // §97 시리즈 그룹은 기본 접힘 — 펼쳐야 라디오가 렌더된다.
   fireEvent.click(screen.getByRole("button", { name: /장기임대주택/ }));
 }

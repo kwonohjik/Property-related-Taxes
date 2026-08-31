@@ -35,6 +35,9 @@ describe("§97의3 R-1 등록일별 공제율", () => {
           propertyType: "non_apartment",
           rentalHousingType: "long_term_private",
           isConvertedFromShortTerm: false,
+          // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
+          // (법률 제19199호 부칙 §38에 따라 그 전 등록분은 종전 규정 — 아래 C-1·C-4는 무영향)
+          isPrivateConstructionRental: true,
         },
       ],
     });

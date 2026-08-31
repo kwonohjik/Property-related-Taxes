@@ -38,6 +38,11 @@ import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result 
 
 /** §97의3 장특공제율 특례 — 10년 이상 임대 (①항 본문 — 100분의 70) */
 export const RENTAL_97_3_OVERRIDE_RATE = 0.7;
+/**
+ * §97의3① 「민간건설임대주택」 한정이 발효한 등록일 경계 (D2-07).
+ * 법률 제19199호(2022.12.31 공포) 시행일 = 2023-01-01. 부칙 §38이 그 **전 등록분**을 종전 규정으로 남긴다.
+ */
+const RENTAL_97_3_CONSTRUCTION_ONLY_FROM = new Date("2023-01-01");
 
 /** R-1: 2022.12.31 이전 등록분 8년 이상 임대 경과규정 특례율 (100분의 50) */
 export const RENTAL_97_3_OVERRIDE_RATE_8YEAR = 0.5;
@@ -85,6 +90,35 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     reasons.push({
       code: "CONVERTED_FROM_SHORT_TERM",
       message: "2020.7.11 이후 단기민간임대주택을 장기일반민간임대주택으로 변경 신고한 주택은 적용이 제외됩니다 (§97의3① 괄호).",
+      legalBasis,
+    });
+  }
+
+  /**
+   * 2-1) §97의3① 본문 — 「「민간임대주택에 관한 특별법」 제2조제2호에 따른 **민간건설임대주택**
+   *      으로서 같은 조 제4호 또는 제5호에 따른 공공지원민간임대주택 또는 장기일반민간임대주택」
+   *      (D2-07)
+   *
+   * 🔑 **경과조치로 시점이 갈린다** — 법률 제19199호(2023.1.1 시행) 부칙 §38:
+   *    「이 법 시행 **전에 등록을 한** … 과세특례에 관하여는 …**종전의 규정에 따른다**」
+   *    ⇒ **2023-01-01 전 등록분은 매입임대라도 적용**된다(종전 문언에는 건설한정이 없었다).
+   *
+   * 문언 이력(법제처 `target=eflaw` 실측 2026-08-31):
+   *   ~2022: 「2020.12.31(**민간건설임대주택의 경우에는 2022.12.31**)까지」 — 등록 **시한 연장
+   *          괄호**이지 범위 한정이 아니다.
+   *   2023.1.1~: 「민간건설임대주택**으로서**…」 — 여기서 비로소 **범위 한정**이 된다.
+   *   (2023-12-21 등 이후 버전은 타법개정으로 문언만 이어받았고 §97의3 적용례가 없다.)
+   */
+  if (
+    input.registrationDate !== undefined &&
+    input.registrationDate.getTime() >= RENTAL_97_3_CONSTRUCTION_ONLY_FROM.getTime() &&
+    input.isPrivateConstructionRental !== true
+  ) {
+    reasons.push({
+      code: "NOT_PRIVATE_CONSTRUCTION_RENTAL",
+      message:
+        "2023.1.1 이후 등록분은 「민간임대주택에 관한 특별법」 §2 2호의 **민간건설임대주택**에 " +
+        "한합니다 (조특법 §97의3① — 법률 제19199호 부칙 §38에 따라 2023.1.1 전 등록분은 종전 규정).",
       legalBasis,
     });
   }

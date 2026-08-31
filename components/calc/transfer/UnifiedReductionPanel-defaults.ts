@@ -134,6 +134,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       officialPriceAtStart: "",
       isNationalHousingScale: false,
       isConvertedFromShortTerm: false,
+      isPrivateConstructionRental: false, // D2-07 — 확인 토글
     };
   }
   if (id === "rental_97_4") {

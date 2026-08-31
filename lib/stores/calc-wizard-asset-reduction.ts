@@ -214,6 +214,8 @@ export type RentalReductionFormVariant =
       isNationalHousingScale: boolean;
       /** 2020.7.11 이후 단기→장기 변경 신고분 (§97의3① 괄호 — 적용 제외) */
       isConvertedFromShortTerm: boolean;
+      /** D2-07 — §97의3① 「민간건설임대주택」 한정 (2023.1.1 이후 등록분에만 요구) */
+      isPrivateConstructionRental: boolean;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_4";

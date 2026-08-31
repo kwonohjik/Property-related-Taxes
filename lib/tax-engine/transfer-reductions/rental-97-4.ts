@@ -60,6 +60,10 @@ export function getRental974AdditionalRate(rentalYears: number): number {
 const STD_PRICE_CAP_DEFAULT = 600_000_000;
 /** 가목 괄호 — 수도권 밖의 지역. 다목에는 이 분기가 없다. */
 const STD_PRICE_CAP_NON_CAPITAL = 300_000_000;
+/** 소령 §167의3①2호 가·다목 단서 — 「2018년 3월 31일까지 사업자등록등을 한 주택으로 한정」 */
+const REGISTRATION_SUNSET = new Date("2018-03-31");
+/** 그 단서의 시행일 (대통령령 제28637호). 이전 양도분에는 소급하지 않는다. */
+const CLAUSE_SUNSET_EFFECTIVE_FROM = new Date("2018-04-01");
 
 export function evaluateRental974(input: Rental97EvaluationInput): Rental97Result {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.RENTAL_97_4;
@@ -99,9 +103,13 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
   //       거주자가 5년 이상 임대하거나 분양전환하는 주택으로서, 같은 합계액이 임대개시일 당시
   //       **6억원**을 초과하지 않을 것 — ⚠️ 다목에는 「수도권 밖 3억」 괄호가 **없다**.
   //
-  // ⚠️ 두 목의 단서 「2018년 3월 31일까지 사업자등록등을 한 주택으로 한정한다」는 여기서
-  //    구현하지 않는다 — 그 단서의 **신설 시기**를 확인하지 못했다. 현행 소령을 과거 양도분에
-  //    소급하면 법 근거 없는 불리 적용이 된다(행위시법). 확인 후 별건으로 붙일 것.
+  // ✅ 두 목의 단서 「2018년 3월 31일까지 사업자등록등을 한 주택으로 한정한다」 — D2-04 잔여 해소.
+  //    신설 시기를 법제처 `target=eflaw` 연혁 조회로 특정했다(2026-08-31 실측):
+  //    **대통령령 제28637호, 2018-04-01 시행**(부칙 §1 1호가 §167의3을 2018.4.1로 지정).
+  //    같은 부칙에 §167의3 **적용례·경과조치는 없다** — 단서 자체가 시행일 전날까지를
+  //    grandfathering하는 구조다.
+  //    ⇒ **2018-04-01 이후 양도분**에만 적용한다. 그 전 양도는 단서가 없던 구 소령이 적용된다
+  //      (행위시법 — 현행 소령을 과거 양도분에 소급하면 법 근거 없는 불리 적용).
   if (!input.rental974Category) {
     reasons.push({
       code: "MISSING_974_CATEGORY",
@@ -124,6 +132,19 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
         message:
           "임대개시일 당시 주택+부수토지 기준시가 합계액이 입력되지 않았습니다 " +
           `(소령 §167의3①2호 ${isPurchase ? "가목" : "다목"} — 한도 판정에 필요합니다).`,
+        legalBasis: "소득세법 시행령 §167의3①2호",
+      });
+    } else if (
+      input.transferDate.getTime() >= CLAUSE_SUNSET_EFFECTIVE_FROM.getTime() &&
+      input.registrationDate !== undefined &&
+      input.registrationDate.getTime() > REGISTRATION_SUNSET.getTime()
+    ) {
+      reasons.push({
+        code: "REGISTRATION_AFTER_2018_03_31",
+        message:
+          "사업자등록등이 2018.3.31 이후입니다 — 소령 §167의3①2호 " +
+          `${isPurchase ? "가목" : "다목"} 단서는 「2018년 3월 31일까지 사업자등록등을 한 주택」에 ` +
+          "한정합니다 (대통령령 제28637호, 2018.4.1 시행).",
         legalBasis: "소득세법 시행령 §167의3①2호",
       });
     } else if (std > cap) {

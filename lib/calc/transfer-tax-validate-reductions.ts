@@ -250,6 +250,17 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           }
           if (r.hasVacancyOverGrace === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
             return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
+          // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
+          //          그 전 등록분은 법률 제19199호 부칙 §38 경과조치로 종전 규정을 따른다.
+          if (
+            r.type === "rental_97_3" &&
+            (r as { registrationDate?: string }).registrationDate &&
+            (r as { registrationDate: string }).registrationDate >= "2023-01-01" &&
+            (r as { isPrivateConstructionRental?: boolean }).isPrivateConstructionRental !== true
+          )
+            return fail(
+              `${label} 적용: 2023.1.1 이후 등록분은 민간건설임대주택(민특법 §2 2호)에 한정합니다 — 해당 여부를 확인하세요 (조특법 §97의3①).`,
+            );
           // CA-01 — §97의5①3호가 조특령 §97의3③2호를 준용한다. §97의3과 같은 규칙.
           if (
             (r.type === "rental_97_3" || r.type === "rental_97_5") &&

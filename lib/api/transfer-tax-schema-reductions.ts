@@ -149,6 +149,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("rental_97_3"),
+    /** D2-07 — §97의3① 「민간건설임대주택」 한정 (2023.1.1 이후 등록분) */
+    isPrivateConstructionRental: z.boolean().optional(),
     /** @deprecated Phase 1 stub 호환 */
     rentalYears: z.number().int().nonnegative().optional(),
     /** @deprecated Phase 1 stub 호환 */
