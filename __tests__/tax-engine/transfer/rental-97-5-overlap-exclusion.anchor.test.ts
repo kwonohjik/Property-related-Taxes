@@ -59,6 +59,8 @@ const R973 = {
 
 const R975 = {
   type: "rental_97_5",
+  // CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호(국민주택규모)·4호(기준시가 한도)
+  isNationalHousingScale: true,
   registrationDate: D("2018-08-01"),
   rentalStartDate: D("2018-09-01"),
   isTaxRegistered: true,

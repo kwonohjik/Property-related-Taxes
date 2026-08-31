@@ -141,6 +141,10 @@ export const reductionSchema = z.discriminatedUnion("type", [
     hasNewRentalPlus2Units: z.boolean().optional(),
     /** D1-07 — §97의2①2호 「취득 당시 입주된 사실이 없는 주택만 해당」 */
     isUnoccupiedAtAcquisition: z.boolean().optional(),
+    /** D9-01 — §97의2①1호 나목 「1999.8.19 이전 신축 공동주택」 */
+    isMultiUnitHousing972: z.boolean().optional(),
+    /** D9-01 — §97의2①1호 나목 「1999.8.20 현재 입주된 사실이 없는 주택」 */
+    isUnoccupiedAt19990820: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
@@ -170,6 +174,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("rental_97_5"),
+    /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모) */
+    isNationalHousingScale: z.boolean().optional(),
     ...rental97CommonShape,
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     region: z.enum(["capital", "non_capital"]).optional(),

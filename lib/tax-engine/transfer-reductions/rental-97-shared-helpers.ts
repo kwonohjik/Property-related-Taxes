@@ -10,7 +10,11 @@
  */
 
 import { addDays, addMonths, differenceInDays, differenceInYears } from "date-fns";
-import type { Rental97RentHistoryItem, Rental97VacancyPeriod } from "./types";
+import type {
+  Rental97IneligibleReason,
+  Rental97RentHistoryItem,
+  Rental97VacancyPeriod,
+} from "./types";
 
 /**
  * 공실 유예 3월 — §97·§97의2·§97의3·§97의4 (D1-03·D2-08).
@@ -236,4 +240,75 @@ export function calcRentalGainRatio(args: {
   if (denominator <= 0) return null;
   const ratio = (rentalEnd - subtrahend) / denominator;
   return Math.min(1, Math.max(0, ratio));
+}
+
+/** 조특령 §97의3③4호 — 임대개시일 당시 기준시가 한도 */
+export const OFFICIAL_PRICE_LIMIT_CAPITAL = 600_000_000;
+export const OFFICIAL_PRICE_LIMIT_NON_CAPITAL = 300_000_000;
+
+/**
+ * 조특령 §97의3③ **2호·4호** 요건 검사 — §97의3과 §97의5가 **공유**한다 (CA-01).
+ *
+ * 조특법 §97의5①3호 — 「임대기간 중 **제97조의3제1항제2호의 요건**을 준수할 것」
+ * 그 §97의3①2호가 위임한 「대통령령으로 정하는 임대보증금 또는 임대료 증액 제한 요건 등」이
+ * 곧 조특령 §97의3③ **1~4호 전부**다:
+ *   1. 임대료등 증가율 5% 이내 (각 evaluator가 `validateRentIncrease`로 처리)
+ *   2. **「주택법」 §2 6호에 따른 국민주택규모 이하의 주택일 것**
+ *   3. 임대개시일부터 10년 이상 임대할 것 (§97의5①2호가 자체 검사)
+ *   4. **기준시가 합계액이 임대개시일 당시 6억원(수도권 밖의 지역인 경우에는 3억원)을
+ *      초과하지 아니할 것**
+ *
+ * 🔴 §97의5는 1호만 검증했다 — 2호는 입력 필드조차 없었고, 4호는 UI·validate·Zod·router가
+ *    값을 끝까지 날랐는데 **엔진이 한도 비교를 하지 않는 dead pass-through**였다.
+ *    (`rental-97-5.ts`의 「전용면적 요건: 본조·시행령 모두 없음」 주석은 §97의5①3호의
+ *     준용 사슬을 끝까지 읽지 않은 결론이다.)
+ *
+ * ⚠️ 4호의 **시기 적용례**(신설 시점·부칙)는 확인하지 못했다 — §97의3도 무조건 적용 중이므로
+ *    같은 전제를 따른다. 별건으로 확인할 것.
+ */
+export function checkRental973Clause24(
+  input: {
+    isNationalHousingScale?: boolean;
+    officialPriceAtStart?: number;
+    region?: "capital" | "non_capital";
+  },
+  legalBasisPrefix: string,
+): Rental97IneligibleReason[] {
+  const reasons: Rental97IneligibleReason[] = [];
+
+  // 2호 — 국민주택규모
+  if (input.isNationalHousingScale !== true) {
+    reasons.push({
+      code: "NOT_NATIONAL_HOUSING_SCALE",
+      message:
+        "국민주택규모(전용 85㎡, 수도권 외 읍·면 100㎡) 이하 요건이 확인되지 않았습니다 " +
+        `(${legalBasisPrefix}조특령 §97의3③2호).`,
+      legalBasis: "조특령 §97의3③2호",
+    });
+  }
+
+  // 4호 — 임대개시일 당시 기준시가 6억(수도권 밖 3억) 한도
+  if (input.officialPriceAtStart === undefined || input.officialPriceAtStart <= 0) {
+    reasons.push({
+      code: "MISSING_OFFICIAL_PRICE",
+      message:
+        "임대개시일 당시 주택과 부수토지의 기준시가 합계가 입력되지 않았습니다 " +
+        `(${legalBasisPrefix}조특령 §97의3③4호 한도 검증).`,
+      legalBasis: "조특령 §97의3③4호",
+    });
+  } else {
+    const limit =
+      input.region === "non_capital" ? OFFICIAL_PRICE_LIMIT_NON_CAPITAL : OFFICIAL_PRICE_LIMIT_CAPITAL;
+    if (input.officialPriceAtStart > limit) {
+      reasons.push({
+        code: "OFFICIAL_PRICE_EXCEEDED",
+        message:
+          `임대개시일 당시 기준시가 합계가 한도(${limit === OFFICIAL_PRICE_LIMIT_CAPITAL ? "6억" : "3억"}원)를 ` +
+          `초과합니다 (${legalBasisPrefix}조특령 §97의3③4호).`,
+        legalBasis: "조특령 §97의3③4호",
+      });
+    }
+  }
+
+  return reasons;
 }

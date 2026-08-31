@@ -134,9 +134,19 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             onChange={(v) => onChange({ officialPriceAtStart: v })}
           />
           <p className="mt-1 text-micro text-muted-foreground">
-            주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 확인용
+            주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 (§97의5①3호 → 령 §97의3③4호)
           </p>
         </div>
+
+        {/* CA-01 — §97의5①3호가 준용하는 조특령 §97의3③2호 */}
+        <ToggleCard
+          variant="chip"
+          checked={value.isNationalHousingScale}
+          onCheckedChange={(v) => onChange({ isNationalHousingScale: v })}
+          title="국민주택규모 이하"
+          description="전용 85㎡(수도권 외 읍면 100㎡) 이하 — §97의5①3호 → 령 §97의3③2호"
+          tone="sky"
+        />
 
         <div>
           <p className="mb-1 text-xs font-medium">소재지</p>

@@ -17,6 +17,7 @@
 import { format } from "date-fns";
 import {
   applyRate,
+  applyFairMarketRatio,
   applyRateFraction,
   calculateHoldingPeriod,
   LTHD_CONVERSION_95_5_CUTOFF,
@@ -55,6 +56,27 @@ interface LongTermHoldingResult {
    */
   fbLthdFormula?: string;
 }
+
+/**
+ * 공제율 → 공제액 (D10-06).
+ *
+ * `applyRate`(= `Math.floor(amount × rate)`)에 **double로 합산한 공제율**을 넘기면
+ * 합이 의도값보다 1 ulp 작아지는 조합에서 **1원 과소**공제가 난다(납세자 불리).
+ *
+ * 실측 하향 드리프트 조합:
+ * - 표1 × §97의4 추가율 — 6년+2% · **9년+2%** · 12년+4% · 12년+10% · 15년+↑+4%
+ * - 표2 일반 경로 — 보유 9년+거주 1년 · 보유 8년+거주 9년 · 보유 9년+거주 8년
+ *   (`calcLongTermRate`가 보유분·거주분을 double로 더한다. **표2가 §97의4보다 훨씬 흔하다**.)
+ *
+ * 단방향이다 — 상향 드리프트(0.20+0.10 = 0.30000000000000004)는 곱한 결과가 정수의 위쪽으로만
+ * 밀려 `Math.floor`가 변하지 않는다(리뷰 전수 스캔 1,600만 케이스에서 과다공제 0건).
+ *
+ * ⇒ 국소 패치가 아니라 이 파일의 「공제율 → 공제액」 적용 지점 **공통**으로 정수 분수연산을 쓴다.
+ *   `applyFairMarketRatio`는 같은 이유(공정시장가액비율 0.70의 double 표현)로 이미 존재하는
+ *   정본 헬퍼다 — `Math.round`는 **비율 상수를 정수 분자로** 바꾸는 데만 쓰므로
+ *   「세법은 floor」 원칙 위반이 아니다.
+ */
+const applyLthdRate = applyFairMarketRatio;
 
 export function calcLongTermHoldingDeduction(
   taxableGain: number,
@@ -140,7 +162,7 @@ export function calcLongTermHoldingDeduction(
       residenceYears,
       useTable2ForCompanion,
     );
-    const deduction = companionRate > 0 ? applyRate(taxableGain, companionRate) : 0;
+    const deduction = companionRate > 0 ? applyLthdRate(taxableGain, companionRate) : 0;
     // 표시용 보유기간은 **공제율을 만든 축**과 맞춘다 — 어긋나면 산식이 자기모순으로 출력된다
     // (실측 종전: "보유 2년×2% = 28% | 보유기간 2년 11개월").
     const displayHolding = useTable2ForCompanion
@@ -161,7 +183,7 @@ export function calcLongTermHoldingDeduction(
     );
     if (override.hasOverride) {
       const holding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
-      const deduction = applyRate(taxableGain, override.overrideRate);
+      const deduction = applyLthdRate(taxableGain, override.overrideRate);
       return {
         deduction,
         rate: override.overrideRate,
@@ -451,7 +473,7 @@ export function calcLongTermHoldingDeduction(
     //    통째로 사라지면 「왜 반영이 안 됐는지」를 알 길이 없다.
     if (useTable2) {
       return {
-        deduction: applyRate(taxableGain, rate),
+        deduction: applyLthdRate(taxableGain, rate),
         rate,
         holdingPeriod,
         rental97LthdDetail: {
@@ -468,7 +490,7 @@ export function calcLongTermHoldingDeduction(
           ],
           baseLthdRate: rate,
           gainApplied: taxableGain,
-          deductionApplied: applyRate(taxableGain, rate),
+          deductionApplied: applyLthdRate(taxableGain, rate),
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any,
       };
@@ -477,7 +499,7 @@ export function calcLongTermHoldingDeduction(
     // §97의4: 보유기간별 공제율(§95② 표1)에 추가율 가산 — 기본 공제율이 0(보유 3년 미만)이면 가산 불가
     if (rate > 0) {
       const combined = rate + rental97Eval.additionalRate;
-      const combinedDeduction = applyRate(taxableGain, combined);
+      const combinedDeduction = applyLthdRate(taxableGain, combined);
       return {
         deduction: combinedDeduction,
         rate: combined,
@@ -495,7 +517,7 @@ export function calcLongTermHoldingDeduction(
   }
 
   if (rate > 0) {
-    const deduction = applyRate(taxableGain, rate);
+    const deduction = applyLthdRate(taxableGain, rate);
     return { deduction, rate, holdingPeriod, rental97LthdDetail: rental97Eval };
   }
 

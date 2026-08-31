@@ -207,6 +207,10 @@ export function migrateAsset(raw: unknown): AssetForm {
           ...(r.type === "rental_97_2" && r.isUnoccupiedAtAcquisition === undefined
             ? { isUnoccupiedAtAcquisition: null }
             : {}),
+          // D9-01 — §97의2①1호 나목 신규 3-state
+          ...(r.type === "rental_97_2" && r.isMultiUnitHousing972 === undefined
+            ? { isMultiUnitHousing972: null, isUnoccupiedAt19990820: null }
+            : {}),
           ...(r.type === "rental_97_2" && r.hasNewRentalPlus2Units === undefined
             ? { hasNewRentalPlus2Units: null }
             : {}),

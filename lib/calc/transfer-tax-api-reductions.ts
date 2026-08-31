@@ -228,6 +228,7 @@ export function toEngineReductions(
         return {
           type: "rental_97_5" as const,
           ...common,
+          isNationalHousingScale: r.isNationalHousingScale, // CA-01
           officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
           region: r.region,
         };
@@ -246,6 +247,13 @@ export function toEngineReductions(
           // D1-07 — §97의2①2호. null(미선택)은 보내지 않는다.
           ...(r.isUnoccupiedAtAcquisition !== null
             ? { isUnoccupiedAtAcquisition: r.isUnoccupiedAtAcquisition }
+            : {}),
+          // D9-01 — §97의2①1호 나목
+          ...(r.isMultiUnitHousing972 !== null
+            ? { isMultiUnitHousing972: r.isMultiUnitHousing972 }
+            : {}),
+          ...(r.isUnoccupiedAt19990820 !== null
+            ? { isUnoccupiedAt19990820: r.isUnoccupiedAt19990820 }
             : {}),
         };
       }

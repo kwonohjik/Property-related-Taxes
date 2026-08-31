@@ -227,6 +227,8 @@ export type RentalReductionFormVariant =
       type: "rental_97_5";
       officialPriceAtStart: string;
       region: "capital" | "non_capital";
+      /** CA-01 — §97의5①3호 준용 (조특령 §97의3③2호 국민주택규모 이하) */
+      isNationalHousingScale: boolean;
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_main" | "rental_97_proviso";
@@ -256,6 +258,10 @@ export type RentalReductionFormVariant =
       hasNewRentalPlus2Units: boolean | null;
       /** §97의2①2호 — 취득 당시 입주된 사실이 없는 주택 (3-state, D1-07) */
       isUnoccupiedAtAcquisition: boolean | null;
+      /** §97의2①1호 나목 — 1999.8.19 이전 신축 **공동주택** (3-state, D9-01) */
+      isMultiUnitHousing972: boolean | null;
+      /** §97의2①1호 나목 — 1999.8.20 현재 입주 사실 없음 (3-state, D9-01) */
+      isUnoccupiedAt19990820: boolean | null;
     } & RentalCommonFormFields)
   // ── §99의4 농어촌·고향주택 — 주택수 제외 (2026-06-11) ──
   | {

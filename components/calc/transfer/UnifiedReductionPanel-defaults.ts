@@ -151,6 +151,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       ...RENTAL_COMMON_DEFAULTS,
       officialPriceAtStart: "",
       region: "capital",
+      isNationalHousingScale: false, // CA-01 — 확인 토글(ToggleCard 패턴, §97의3과 동일)
     };
   }
   if (id === "rental_97_main") {
@@ -192,6 +193,9 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       // §97의2는 「신축 1호 포함 2호 이상」 — §97의 5호와 다른 요건이라 필드를 나눈다
       hasNewRentalPlus2Units: null,
       isUnoccupiedAtAcquisition: null, // D1-07 — §97의2①2호
+      // D9-01 — §97의2①1호 나목 (1999.8.19 이전 신축 공동주택 · 1999.8.20 현재 미입주)
+      isMultiUnitHousing972: null,
+      isUnoccupiedAt19990820: null,
     };
   }
   // §99의4 농어촌·고향주택 (2026-06-11)

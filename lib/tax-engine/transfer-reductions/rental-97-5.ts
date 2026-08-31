@@ -23,6 +23,7 @@ import {
   calcRentalGainRatio,
   calculateEffectiveRentalPeriod,
   RENTAL_VACANCY_GRACE_MONTHS_97_5,
+  checkRental973Clause24,
   validateRentIncrease,
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
@@ -96,6 +97,18 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
       legalBasis,
     });
   }
+
+  /**
+   * 3-1) ①3호 — 「임대기간 중 **제97조의3제1항제2호의 요건**을 준수할 것」 (CA-01)
+   *
+   * 그 위임 종점이 조특령 §97의3③ **1~4호 전부**다. 위 3)이 1호(임대료 5%)를 보고,
+   * 2호(국민주택규모)·4호(기준시가 6억/3억)를 여기서 본다.
+   * 3호(10년 이상 임대)는 아래 4)의 §97의5①2호 검사가 담당한다.
+   *
+   * 🔴 종전에는 1호만 검증했다 — `officialPriceAtStart`·`region`을 router가 넘겨주는데도
+   *    평가기가 한도 비교를 하지 않는 dead pass-through였다.
+   */
+  reasons.push(...checkRental973Clause24(input, "§97의5①3호 준용 — "));
 
   // 4) ①2호 — 10년 이상 계속 임대
   let eligibleRentalYears = 0;

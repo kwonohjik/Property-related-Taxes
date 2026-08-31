@@ -91,7 +91,14 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         rental974Category: r.rental974Category,
       };
     case "rental_97_5":
-      return { ...base, officialPriceAtStart: r.officialPriceAtStart, region: r.region };
+      return {
+        ...base,
+        officialPriceAtStart: r.officialPriceAtStart,
+        region: r.region,
+        // CA-01 — §97의5①3호가 조특령 §97의3③2호(국민주택규모)를 준용한다.
+        // ⚠️ 이 case도 **명시 매핑**이라 적지 않으면 조용히 사라진다.
+        isNationalHousingScale: r.isNationalHousingScale,
+      };
     case "rental_97_main":
     case "rental_97_proviso":
       return {
@@ -114,6 +121,9 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         isNationalHousing: r.isNationalHousing,
         hasNewRentalPlus2Units: r.hasNewRentalPlus2Units,
         isUnoccupiedAtAcquisition: r.isUnoccupiedAtAcquisition,
+        // D9-01 — §97의2①1호 나목. ⚠️ 명시 매핑이라 적지 않으면 조용히 사라진다.
+        isMultiUnitHousing972: r.isMultiUnitHousing972,
+        isUnoccupiedAt19990820: r.isUnoccupiedAt19990820,
       };
   }
 }

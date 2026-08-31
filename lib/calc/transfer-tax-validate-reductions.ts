@@ -250,6 +250,14 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           }
           if (r.hasVacancyOverGrace === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
             return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
+          // CA-01 — §97의5①3호가 조특령 §97의3③2호를 준용한다. §97의3과 같은 규칙.
+          if (
+            (r.type === "rental_97_3" || r.type === "rental_97_5") &&
+            (r as { isNationalHousingScale?: boolean }).isNationalHousingScale !== true
+          )
+            return fail(
+              `${label} 적용: 국민주택규모 이하 요건을 확인하세요 (${r.type === "rental_97_5" ? "§97의5①3호 → " : ""}조특령 §97의3③2호).`,
+            );
           if ((r.type === "rental_97_3" || r.type === "rental_97_5") && parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0") <= 0)
             return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`);
           // D2-04 — §97의4 대상 요건 (조특령 §97의4① → 소령 §167의3①2호 가목·다목)
@@ -337,6 +345,26 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
                   `${label} 적용: 취득 당시 입주 사실 여부를 선택하세요 (조특법 §97① 단서 나목).`,
                 );
             }
+          }
+          // D9-01 — §97의2①1호 나목: 1999.8.19 이전 신축 건설임대는 두 사실을 모두 요구한다.
+          //          시한 게이트만 열고 이 검사를 빼면 1999.8.20 현재 입주돼 있던 구축까지
+          //          적격이 되어 **과다포섭**이 된다.
+          if (
+            r.type === "rental_97_2" &&
+            (r as { rental972Type?: string }).rental972Type === "construction" &&
+            asset.acquisitionDate &&
+            new Date(asset.acquisitionDate) < new Date("1999-08-20")
+          ) {
+            const rr = r as {
+              isMultiUnitHousing972?: boolean | null;
+              isUnoccupiedAt19990820?: boolean | null;
+            };
+            if (rr.isMultiUnitHousing972 === null || rr.isMultiUnitHousing972 === undefined)
+              return fail(`${label} 적용: 공동주택 여부를 선택하세요 (조특법 §97의2①1호 나목).`);
+            if (rr.isUnoccupiedAt19990820 === null || rr.isUnoccupiedAt19990820 === undefined)
+              return fail(
+                `${label} 적용: 1999.8.20 현재 입주 사실 여부를 선택하세요 (조특법 §97의2①1호 나목).`,
+              );
           }
           // D1-07 — §97의2①2호(매입임대)도 같은 요건
           if (r.type === "rental_97_2" && (r as { rental972Type?: string }).rental972Type === "purchase") {

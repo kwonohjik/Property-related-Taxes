@@ -636,8 +636,24 @@ function GroupCategorySection({
             const itemMeta = REDUCTION_METADATA[id];
             const period = periodResults[id];
             const isFullyImplemented = itemMeta.isFullyImplemented === true;
-            const isDisabled = !housingAllowed || !period.inPeriod || !isFullyImplemented;
             const isSelected = reductions.some((r) => r.type === id);
+            /**
+             * ⚠ **이미 선택된 것은 항상 해제할 수 있어야 한다** (D9-03).
+             *
+             * 같은 파일 `:467`(standalone 카드)에 이미 확립된 패턴인데 이 그룹에만 빠져 있었다.
+             *
+             * 증상: §97의4를 고르는 순간 `toggleGroupRadio`가 기존 항목을 제거하고
+             * `registrationDate: ""`인 기본값을 넣는다. 그러면 period ctx의 등록일이
+             * 취득일로 되돌아가고(`:139` fallback), 취득일이 2014-01-01 이전이면 시한 밖이
+             * 되어 **선택된 채로 disabled**가 된다. children은 계속 렌더되므로 등록일을
+             * 다시 넣으면 복구되지만, 그 전까지는 `onCheckedChange`가 막혀 **해제도 불가능한
+             * stuck 상태**이고 ⑧이 등록일 미입력을 차단해 계산도 막힌다.
+             *
+             * ⚠️ 근본 원인은 별개다 — §97의4의 「등록일 2014.1.1 이후」 시한은 법·령 어디에도
+             *    없다(CB-01). 그 규칙이 살아 있는 동안의 UI 증상을 여기서 막는다.
+             */
+            const isDisabled =
+              !isSelected && (!housingAllowed || !period.inPeriod || !isFullyImplemented);
 
             // 비활성 사유 (주택 게이트 > 시한 외 > 미구현 — 가장 근본 차단 사유 우선)
             const disabledReason = !housingAllowed

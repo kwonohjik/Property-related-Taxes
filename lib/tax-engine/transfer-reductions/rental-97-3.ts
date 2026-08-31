@@ -30,14 +30,11 @@ import {
   calcRentalGainRatio,
   calculateEffectiveRentalPeriod,
   RENTAL_VACANCY_GRACE_MONTHS_97,
+  checkRental973Clause24,
   validateRentIncrease,
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
-
-/** 령 §97의3③4호 — 임대개시일 당시 기준시가 한도 */
-const OFFICIAL_PRICE_LIMIT_CAPITAL = 600_000_000;
-const OFFICIAL_PRICE_LIMIT_NON_CAPITAL = 300_000_000;
 
 /** §97의3 장특공제율 특례 — 10년 이상 임대 (①항 본문 — 100분의 70) */
 export const RENTAL_97_3_OVERRIDE_RATE = 0.7;
@@ -92,32 +89,8 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     });
   }
 
-  // 3) 령 §97의3③2호 — 국민주택규모
-  if (input.isNationalHousingScale !== true) {
-    reasons.push({
-      code: "NOT_NATIONAL_HOUSING_SCALE",
-      message: "국민주택규모(전용 85㎡, 수도권 외 읍·면 100㎡) 이하 요건이 확인되지 않았습니다 (조특령 §97의3③2호).",
-      legalBasis: "조특령 §97의3③2호",
-    });
-  }
-
-  // 4) 령 §97의3③4호 — 임대개시일 당시 기준시가 6억/3억 한도
-  if (input.officialPriceAtStart === undefined || input.officialPriceAtStart <= 0) {
-    reasons.push({
-      code: "MISSING_OFFICIAL_PRICE",
-      message: "임대개시일 당시 주택과 부수토지의 기준시가 합계가 입력되지 않았습니다 (조특령 §97의3③4호 한도 검증).",
-      legalBasis: "조특령 §97의3③4호",
-    });
-  } else {
-    const limit = input.region === "non_capital" ? OFFICIAL_PRICE_LIMIT_NON_CAPITAL : OFFICIAL_PRICE_LIMIT_CAPITAL;
-    if (input.officialPriceAtStart > limit) {
-      reasons.push({
-        code: "OFFICIAL_PRICE_EXCEEDED",
-        message: `임대개시일 당시 기준시가 합계가 한도(${limit === OFFICIAL_PRICE_LIMIT_CAPITAL ? "6억" : "3억"}원)를 초과합니다 (조특령 §97의3③4호).`,
-        legalBasis: "조특령 §97의3③4호",
-      });
-    }
-  }
+  // 3·4) 령 §97의3③2호(국민주택규모)·4호(기준시가 6억/3억) — §97의5와 공용 (CA-01)
+  reasons.push(...checkRental973Clause24(input, ""));
 
   // 5) 임대료 증액 제한 (령 §97의3③1호)
   if (input.rentHistory && input.rentHistory.length >= 2) {
