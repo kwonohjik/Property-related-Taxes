@@ -46,6 +46,7 @@ import { applyExemptZeroing } from "./apply-exempt-zeroing";
 import { calcSecuritiesTransactionTax } from "./securities-transaction-tax";
 import { resolveStockCarryover } from "./stock-carryover";
 import { resolveAcquisitionBasis } from "./stock-acquisition-basis";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 
 // ============================================================
 // split 모드 판정 헬퍼
