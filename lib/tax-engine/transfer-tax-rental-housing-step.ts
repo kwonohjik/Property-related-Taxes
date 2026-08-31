@@ -601,6 +601,7 @@ export function runRentalHousingExceptionStep(
     reductionType: reductionResult.reductionType,
     reductionTypeApplied: reductionResult.reductionTypeApplied,
     reducibleIncome: reductionResult.reducibleIncome,
+    aggregateReductionRate: reductionResult.aggregateReductionRate,
     rentalReductionDetail: reductionResult.rentalReductionDetail,
     publicExpropriationDetail: reductionResult.publicExpropriationDetail,
     gbDesignatedLandDetail: reductionResult.gbDesignatedLandDetail,

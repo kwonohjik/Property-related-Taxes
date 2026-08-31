@@ -245,6 +245,7 @@ export function buildTotalTax(
     ...(post.reductionType ? { reductionType: post.reductionType } : {}),
     reductionTypeApplied: post.reductionTypeApplied,
     reducibleIncome: post.reducibleIncome,
+    aggregateReductionRate: post.aggregateReductionRate,
     reductionDetails: post.reductionDetails,
     determinedTax,
     penaltyTax: post.penaltyTax,
@@ -302,6 +303,8 @@ interface MixedUsePostTaxResult {
   reductionTypeApplied?: string;
   /** 감면대상 소득금액(⑲의 default 경로 값). */
   reducibleIncome?: number;
+  /** D8-01: M-8이 곱할 잔여 감면율(미설정=1). 여기서 빠뜨리면 다건 합산이 감면율을 잃는다. */
+  aggregateReductionRate?: number;
   /** 감면 산출근거 카드가 읽는 detail 묶음 — 종전에는 여기서 통째로 버려졌다. */
   reductionDetails?: MixedUseReductionDetails;
   ruralSurtax: number;
@@ -411,6 +414,7 @@ function computeMixedUsePostTax(
     ...(result.reductionType ? { reductionType: result.reductionType } : {}),
     reductionTypeApplied: result.reductionTypeApplied,
     reducibleIncome: result.reducibleIncome,
+    aggregateReductionRate: result.aggregateReductionRate,
     reductionDetails: {
       publicExpropriationDetail: result.publicExpropriationDetail,
       gbDesignatedLandDetail: result.gbDesignatedLandDetail,

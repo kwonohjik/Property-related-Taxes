@@ -418,6 +418,42 @@ export function evaluateNew993(input: New993Input): New993Result {
     });
   } else {
     // 5년 후 양도 — 안분 산식
+    //
+    // 🔴 안분에 쓰는 기준시가 3종이 하나라도 미입력(0 이하)이면 차단한다.
+    //    분모(양도시 − 취득시)가 미입력 때문에 음수가 되면 `pos_neg`로 떨어져
+    //    **양도소득금액 전액 감면**으로 오분류되고, 결과 화면이 그것을
+    //    「부동산-525(2010.4.7.) 해석」으로 제시한다(코드리뷰 D3-01).
+    //    형제 조문은 모두 같은 가드를 갖고 있다 — `new-99.ts:257` · `unsold-98-8.ts` ·
+    //    `unsold-hybrid.ts` · `new-99-4.ts`. §99의3만 예외였다.
+    //    ⚠️ 기준시가가 **실제로 하락**한 경우(양도시 > 0 이면서 취득시보다 작음)는
+    //       조특령 §99의3②2호에 대한 부동산-525 해석이 전액 감면을 인정하므로 차단하지 않는다.
+    //    anchor: `__tests__/tax-engine/transfer/new-99-3-missing-std-price.anchor.test.ts`
+    if (
+      input.standardPriceAtAcquisition <= 0 ||
+      input.standardPriceAt5Years <= 0 ||
+      input.standardPriceAtTransfer <= 0
+    ) {
+      return {
+        isEligible: false,
+        ineligibleReasons: [
+          {
+            code: "MISSING_STD_PRICE",
+            message:
+              "5년 후 양도 안분 계산에 필요한 기준시가(취득시·5년시점·양도시)가 입력되지 않았습니다 (조특령 §99의3②2호).",
+            legalBasis: "조특령 §99의3 ② 2호",
+          },
+        ],
+        isWithin5Years: false,
+        reducibleTransferIncome: 0,
+        fiveYearRatio: 0,
+        signCase: "ineligible",
+        formulaSteps: [],
+        taxReductionForRuralSurtax: 0,
+        ruralSurtax: 0,
+        isExcludedFromHouseCountFor1H1H: false,
+        legalBasis,
+      };
+    }
     const allocation = calc5YearAllocation(
       input.transferIncome,
       input.standardPriceAtAcquisition,

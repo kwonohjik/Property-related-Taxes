@@ -302,7 +302,7 @@ export function New993InputForm({
             dong={dong}
             ho={ho}
             referenceDate={transferDate}
-            hint="미입력 시 자산의 양도시 기준시가 사용"
+            hint="5년 후 양도 시 안분 계산에 필수 — 환산취득가액 모드가 아니면 자산값이 전달되지 않으므로 직접 입력하세요"
             onExclusiveArea={(area) => onUpdate("exclusiveAreaSqm993", String(area))}
             testidPrefix="new993-stdprice-transfer"
           />

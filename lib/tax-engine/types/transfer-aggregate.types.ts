@@ -244,6 +244,12 @@ export interface ReductionBreakdownEntry {
   legalBasis: string;
   /** 유형별 총 감면대상 양도소득금액 */
   totalReducibleIncome: number;
+  /**
+   * M-8이 `totalReducibleIncome` 지분세액에 **추가로 곱한** 감면율 (1 = 이미 반영됨).
+   * §97 계열·legacy 장기임대·legacy 신축·하이브리드는 별지84호 부표1 ⑲ 표시 계약 때문에
+   * `reducibleIncome`이 「감면율 前」 금액이라 여기서 곱한다 (코드리뷰 D8-01).
+   */
+  appliedReductionRate: number;
   /** 재계산 분모 (합산 과세표준) */
   aggregateTaxBase: number;
   /** 재계산 기준 세액 (비교과세 MAX 결과) */

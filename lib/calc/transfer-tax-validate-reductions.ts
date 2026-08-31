@@ -149,6 +149,32 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (parseAmount(r.standardPriceAt5Years || "0") <= 0) {
             return fail("§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)");
           }
+          // 양도시 기준시가 — 5년 **후** 양도만 필수 (조특령 §99의3②2호 안분의 분모).
+          //
+          // 🔴 자산-수준 fallback을 믿을 수 없다: ④ 변환(`transfer-tax-api.ts:416-425`)이
+          //    자산의 `standardPriceAtTransfer`를 **환산취득가액 모드에서만** 전송한다.
+          //    실지거래가·감정·매매사례 모드에서는 undefined가 되어 분모가 음수로 떨어지고,
+          //    엔진이 `pos_neg`(부동산-525 해석)로 오분류해 **양도소득금액 전액 감면**이 됐다.
+          //    엔진 가드(`new-99-3.ts` MISSING_STD_PRICE)와 **같은 조건**으로 앞단에서 막는다.
+          //    (5년 이내 양도는 기준시가를 보지 않으므로 차단하지 않는다 — UI↔validate 모순 방지)
+          //    자산-수준 fallback은 `self_farming`(:107-109)과 **같은 방식**으로 인정한다 —
+          //    엔진이 `?? ctx.standardPriceAtTransfer`로 폴백하므로(income-deduction-router.ts:204)
+          //    여기서 무시하면 환산 모드 사용자를 부당하게 차단한다(UI↔validate 모순).
+          //    비-환산 모드에서 자산값이 채워져 있으면 여기서는 통과하고 엔진 가드가
+          //    `MISSING_STD_PRICE`로 명시 차단한다 — 조용한 오계산이 아니라 분명한 오류다.
+          const hasStdPriceAtTransfer993 =
+            parseAmount(r.standardPriceAtTransfer993 || "0") > 0 ||
+            parseAmount(asset.standardPriceAtTransfer || "0") > 0;
+          if (
+            asset.acquisitionDate &&
+            form.transferDate &&
+            !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate)) &&
+            !hasStdPriceAtTransfer993
+          ) {
+            return fail(
+              "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니면 자산값이 전달되지 않습니다).",
+            );
+          }
         }
         // Phase 2 (2026-06-11): 장기임대 §97 시리즈 — 3-state 미선택 차단 (자동 안분 fallback 금지)
         if (

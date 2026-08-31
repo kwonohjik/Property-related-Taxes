@@ -12,7 +12,7 @@
 
 import { TRANSFER } from "./legal-codes";
 import { reductionTypeLabelOf } from "./transfer-reduction-type-labels";
-import { safeMultiplyThenDivide } from "./tax-utils";
+import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import {
   applyAnnualLimits,
   applyFiveYearLimits,
@@ -80,15 +80,28 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     0,
     taxableAfterReduction.reduce((s, v) => s + v, 0) - totalBasicDeduction,
   );
-  const reducibleByType = new Map<string, { income: number; assetIds: string[] }>();
+  const reducibleByType = new Map<
+    string,
+    { income: number; ratedIncome: number; assetIds: string[]; rates: Set<number> }
+  >();
   for (const r of assetRecords) {
     if (r.result.isExempt) continue;
     const type = r.result.reductionTypeApplied;
     const income = r.result.reducibleIncome ?? 0;
     if (!type || income <= 0) continue;
-    const existing = reducibleByType.get(type) ?? { income: 0, assetIds: [] };
+    const existing =
+      reducibleByType.get(type) ??
+      { income: 0, ratedIncome: 0, assetIds: [], rates: new Set<number>() };
+    // ⚠️ **감면율은 유형 단위로 균일하지 않다.** `long_term_rental`(0.7·0.5 tier)·
+    //    `new_housing`(가격·시기 matrix)은 같은 type 문자열 아래 자산마다 감면율이 다를 수 있다.
+    //    그래서 그룹의 rate 하나를 last-write-wins로 덮으면 한쪽 자산에 틀린 율이 곱해진다.
+    //    ⇒ **자산별로 먼저 감면율을 곱해 누적**한다(`ratedIncome`).
+    //    `income`은 별지84호 부표1 ⑲ 표시용(감면율 前)이라 그대로 둔다.
+    const rate = r.result.aggregateReductionRate ?? 1;
     existing.income += income;
+    existing.ratedIncome += rate === 1 ? income : applyRate(income, rate);
     existing.assetIds.push(r.item.propertyId);
+    existing.rates.add(rate);
     reducibleByType.set(type, existing);
   }
 
@@ -96,9 +109,14 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
   // 유형별 원시 감면세액을 계산한 뒤 그룹 단위로 capping.
   const rawByType = new Map<string, number>();
   for (const [type, entry] of reducibleByType.entries()) {
+    // 🔴 분자는 **감면율 반영 후**(`ratedIncome`)를 쓴다. `reducibleIncome`에 감면율이
+    //    반영돼 있지 않은 유형(§97 계열·legacy 장기임대·legacy 신축·하이브리드) 때문이다 —
+    //    별지84호 부표1 ⑲가 「감면율 前」 금액을 요구해 표시용으로 남아 있다
+    //    (코드리뷰 D8-01 — §97① 본문이 다건에서 정확히 2배 감면됐다).
+    //    §77·§77의2·§77의3·§69는 rate가 1이라 `ratedIncome === income`이므로 종전과 동일하다.
     const raw =
       aggregateTaxBase > 0
-        ? safeMultiplyThenDivide(calculatedTax, entry.income, aggregateTaxBase)
+        ? safeMultiplyThenDivide(calculatedTax, entry.ratedIncome, aggregateTaxBase)
         : 0;
     rawByType.set(type, raw);
   }
@@ -130,6 +148,17 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
       fiveInfo && Number.isFinite(fiveInfo.fiveYearLimit) ? fiveInfo.fiveYearLimit : 0;
     reductionBreakdown.push({
       type,
+      /**
+       * M-8이 실제로 곱한 잔여 감면율 (1 = 이미 reducibleIncome에 반영됨).
+       * 그룹 내 감면율이 균일하면 그 값, 자산마다 다르면 소득 가중평균 —
+       * 어느 쪽이든 「감면대상소득 × 이 값 = 감면율 반영 소득」 항등식이 성립한다.
+       */
+      appliedReductionRate:
+        entry.rates.size === 1
+          ? [...entry.rates][0]
+          : entry.income > 0
+            ? entry.ratedIncome / entry.income
+            : 1,
       legalBasis: info?.legalBasis
         /**
          * 🔴 `lookupLimit`을 **인자 없이** 부르면 `DEFAULT_LIMIT_GROUPS`로 조회한다. 그 기본

@@ -625,6 +625,8 @@ export interface MixedUseTotalTax {
   reductionTypeApplied?: string;
   /** 감면대상 소득금액 — ⑲의 default 경로 값. */
   reducibleIncome?: number;
+  /** D8-01: M-8이 곱할 잔여 감면율(미설정=1). 빠뜨리면 겸용주택 다건 합산이 감면율을 잃는다. */
+  aggregateReductionRate?: number;
   /**
    * 감면 산출근거 카드가 읽는 detail 묶음.
    *

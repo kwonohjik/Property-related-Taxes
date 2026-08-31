@@ -51,6 +51,23 @@ export interface ReductionsResult {
    * 편입일 부분감면 시 편입일 비율로 안분된 소득, 편입 없으면 전체 소득.
    */
   reducibleIncome?: number;
+  /**
+   * 다건 합산 M-8이 `reducibleIncome`에 **추가로 곱해야 할** 감면율.
+   *
+   * M-8(`transfer-tax-aggregate-reduction-step.ts`)은 `reducibleIncome`을 「감면율이 이미
+   * 반영된 감면대상소득」으로 전제하고 `calculatedTax × reducibleIncome / taxBase`를 그대로
+   * 감면세액으로 쓴다. §77·§77의2·§77의3·§69는 그 전제를 지키지만, §97 계열·legacy 장기임대·
+   * legacy 신축·하이브리드는 **별지84호 부표1 ⑲가 「감면율 前」 금액을 요구**하기 때문에
+   * (부표1 작성방법 16번 — 감면율은 서식의 별도 칸) 감면율을 곱하지 않은 값을 넣는다.
+   * 그래서 §97① 본문(50%)이 다건 경로에서 **정확히 2배** 감면됐다(코드리뷰 D8-01).
+   *
+   * 표시 계약(⑲·PDF·상세명세 — `components/calc/results/transfer/reduction-eligible-income.ts`)을
+   * 깨지 않기 위해 `reducibleIncome`은 그대로 두고, 잔여 감면율만 여기로 운반한다.
+   * 이미 감면율이 반영된 유형은 이 값을 설정하지 않는다(= 1로 취급).
+   *
+   * anchor: `__tests__/tax-engine/transfer/aggregate-reduction-rate-parity.anchor.test.ts`
+   */
+  aggregateReductionRate?: number;
 }
 
 export function calcReductions(
@@ -91,6 +108,23 @@ export function calcReductions(
     type: string;
     /** 감면대상 양도소득금액 (합산 재계산용 분자, 편입 부분감면 시 비율 적용 후) */
     reducibleIncome?: number;
+  /**
+   * 다건 합산 M-8이 `reducibleIncome`에 **추가로 곱해야 할** 감면율.
+   *
+   * M-8(`transfer-tax-aggregate-reduction-step.ts`)은 `reducibleIncome`을 「감면율이 이미
+   * 반영된 감면대상소득」으로 전제하고 `calculatedTax × reducibleIncome / taxBase`를 그대로
+   * 감면세액으로 쓴다. §77·§77의2·§77의3·§69는 그 전제를 지키지만, §97 계열·legacy 장기임대·
+   * legacy 신축·하이브리드는 **별지84호 부표1 ⑲가 「감면율 前」 금액을 요구**하기 때문에
+   * (부표1 작성방법 16번 — 감면율은 서식의 별도 칸) 감면율을 곱하지 않은 값을 넣는다.
+   * 그래서 §97① 본문(50%)이 다건 경로에서 **정확히 2배** 감면됐다(코드리뷰 D8-01).
+   *
+   * 표시 계약(⑲·PDF·상세명세 — `components/calc/results/transfer/reduction-eligible-income.ts`)을
+   * 깨지 않기 위해 `reducibleIncome`은 그대로 두고, 잔여 감면율만 여기로 운반한다.
+   * 이미 감면율이 반영된 유형은 이 값을 설정하지 않는다(= 1로 취급).
+   *
+   * anchor: `__tests__/tax-engine/transfer/aggregate-reduction-rate-parity.anchor.test.ts`
+   */
+  aggregateReductionRate?: number;
   }
   const candidates: ReductionCandidate[] = [];
   let rentalReductionDetail: RentalReductionResult | undefined;
@@ -112,6 +146,7 @@ export function calcReductions(
         amount: rentalResult.reductionAmount,
         type: "long_term_rental",
         reducibleIncome: transferIncome,
+        aggregateReductionRate: rentalResult.reductionRate,
       });
     }
   }
@@ -146,6 +181,7 @@ export function calcReductions(
             transferIncome === undefined
               ? undefined
               : applyRate(transferIncome, rental97Result.rentalGainRatio),
+          aggregateReductionRate: rental97Result.reductionRate,
         });
       }
     }
@@ -175,6 +211,7 @@ export function calcReductions(
           amount: hybridResult.reductionAmount,
           type: hybridResult.id,
           reducibleIncome: transferIncome,
+          aggregateReductionRate: hybridResult.taxReductionRate,
         });
       }
     }
@@ -192,6 +229,7 @@ export function calcReductions(
         amount: newHousingResult.reductionAmount,
         type: "new_housing",
         reducibleIncome: transferIncome,
+        aggregateReductionRate: newHousingResult.reductionRate,
       });
     }
   }
@@ -376,6 +414,7 @@ export function calcReductions(
     reductionType: reductionTypeDisplay,
     reductionTypeApplied: best.type || undefined,
     reducibleIncome: best.amount > 0 ? best.reducibleIncome : undefined,
+    aggregateReductionRate: best.amount > 0 ? best.aggregateReductionRate : undefined,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
