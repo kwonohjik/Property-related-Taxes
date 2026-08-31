@@ -151,6 +151,10 @@ export const rentalReductionDetailsSchema = z.object({
   vacancyPeriods: z.array(vacancyPeriodSchema).default([]),
   rentHistory: z.array(rentHistorySchema).default([]),
   calculatedTax: z.number().int().nonnegative().default(0),
+  /** D1-04 — 조특법 §97① 각 호 신축연도 (public_construction 전용) */
+  constructionYear: z.number().int().optional(),
+  /** D1-04 — §97①2호 「1986.1.1 현재 입주된 사실이 없는」 자기확인 */
+  isUnoccupiedAt1986: z.boolean().optional(),
 });
 
 export const newHousingDetailsSchema = z.object({

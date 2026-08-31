@@ -162,6 +162,7 @@ export interface FinalizeResult {
   reductionAmount: number;
   reductionType: ReturnType<typeof calcReductions>["reductionType"];
   reductionTypeApplied: ReturnType<typeof calcReductions>["reductionTypeApplied"];
+  reductionLegalBasisOverride: ReturnType<typeof calcReductions>["reductionLegalBasisOverride"];
   reducibleIncome?: number;
   aggregateReductionRate?: number;
   rentalReductionDetail: TransferTaxResult["rentalReductionDetail"];
@@ -291,6 +292,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionAmount,
     reductionType,
     reductionTypeApplied,
+    reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
     rentalReductionDetail,
@@ -324,7 +326,12 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     label: "감면세액",
     formula: reductionType ? `${reductionType} 감면 ${reductionAmount.toLocaleString()}` : "감면 없음",
     amount: reductionAmount,
-    legalBasis: getReductionLegalBasis(reductionType, publicExpropriationDetail?.useLegacyRates),
+    // D1-12 — **id**를 넘긴다. `reductionType`은 화면 라벨이라 조회 키가 될 수 없다.
+    legalBasis: getReductionLegalBasis(
+      reductionTypeApplied,
+      publicExpropriationDetail?.useLegacyRates,
+      reductionLegalBasisOverride,
+    ),
   });
 
   // ── STEP 8.5: §133② 5년 누적 한도 — 과거 4개 과세연도 감면 이력 차감 ──
@@ -529,6 +536,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionAmount: cappedReductionAmount,
     reductionType,
     reductionTypeApplied,
+    reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
     rentalReductionDetail,

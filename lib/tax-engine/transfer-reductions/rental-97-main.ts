@@ -25,6 +25,8 @@ import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result 
 
 const CONSTRUCTION_YEAR_FROM = 1986;
 const CONSTRUCTION_YEAR_TO = 2000;
+/** §97①2호 — 1985.12.31 이전 신축 (공동주택 + 1986.1.1 현재 미입주) */
+const CONSTRUCTION_YEAR_TO_CLAUSE_2 = 1985;
 const MANDATORY_YEARS_BASE = 5;
 const MANDATORY_YEARS_PROVISO_C = 10;
 /** 단서 (b) — 매입임대 1995.1.1 이후 취득 요건 */
@@ -55,10 +57,41 @@ export function evaluateRental97Main(input: Rental97EvaluationInput): Rental97Re
   // 2) ①1호 — 1986~2000 신축 국민주택
   if (input.constructionYear === undefined) {
     reasons.push({ code: "MISSING_CONSTRUCTION_YEAR", message: "신축 연도가 입력되지 않았습니다 (§97①1호 — 1986.1.1~2000.12.31 신축).", legalBasis });
-  } else if (input.constructionYear < CONSTRUCTION_YEAR_FROM || input.constructionYear > CONSTRUCTION_YEAR_TO) {
+  } else if (
+    input.constructionYear >= CONSTRUCTION_YEAR_FROM &&
+    input.constructionYear <= CONSTRUCTION_YEAR_TO
+  ) {
+    // §97①1호 — 1986.1.1~2000.12.31 신축. 충족.
+  } else if (input.constructionYear <= CONSTRUCTION_YEAR_TO_CLAUSE_2) {
+    /**
+     * §97①2호 — 「**1985년 12월 31일 이전에 신축된 공동주택**으로서 **1986년 1월 1일 현재
+     * 입주된 사실이 없는 주택**」 (D1-06)
+     *
+     * 각 호는 「어느 하나에 해당하는」이므로 1호와 **대등한 선택지**다.
+     * 종전에는 2호가 미구현이라 1985년 이전 신축이 `CONSTRUCTION_YEAR_OUT`으로
+     * **일괄 차단**돼 해당자가 감면을 전혀 받지 못했다(납세자 불리).
+     *
+     * 🔑 두 사실을 **모두** 요구한다 — ⓐ공동주택 · ⓑ1986.1.1 현재 미입주.
+     *    한쪽만 보면 조문의 절반만 검증하는 것이다.
+     */
+    if (input.isMultiUnitHousing !== true) {
+      reasons.push({
+        code: "CLAUSE_2_NOT_MULTI_UNIT",
+        message: `신축 ${input.constructionYear}년 — §97①2호는 「1985.12.31 이전에 신축된 **공동주택**」에 한합니다. 공동주택 여부가 확인되지 않았습니다.`,
+        legalBasis,
+      });
+    }
+    if (input.isUnoccupiedAt1986 !== true) {
+      reasons.push({
+        code: "CLAUSE_2_OCCUPIED_AT_1986",
+        message: `신축 ${input.constructionYear}년 — §97①2호는 「1986년 1월 1일 현재 입주된 사실이 없는 주택」에 한합니다. 미입주 사실이 확인되지 않았습니다.`,
+        legalBasis,
+      });
+    }
+  } else {
     reasons.push({
       code: "CONSTRUCTION_YEAR_OUT",
-      message: `신축 연도 ${input.constructionYear}년 — 1986.1.1~2000.12.31 신축 요건 외 (§97①1호. 1985.12.31 이전 신축 미입주 공동주택(2호)은 세무사 확인 필요).`,
+      message: `신축 연도 ${input.constructionYear}년 — §97① 각 호(1호 1986.1.1~2000.12.31 신축 / 2호 1985.12.31 이전 신축 공동주택) 어느 쪽에도 해당하지 않습니다.`,
       legalBasis,
     });
   }
@@ -137,6 +170,22 @@ export function evaluateRental97Main(input: Rental97EvaluationInput): Rental97Re
           reasons.push({
             code: "PURCHASE_BEFORE_1995",
             message: "매입임대주택 단서 적용은 1995.1.1 이후 취득분에 한합니다 (§97① 단서 나목).",
+            legalBasis,
+          });
+        }
+        /**
+         * §97① 단서 나목 — 「…5년 이상 임대한 임대주택(**취득 당시 입주된 사실이 없는
+         * 주택만 해당한다**)」 (D1-07)
+         *
+         * 명문 요건인데 입력·검사 어디에도 없어, 취득 당시 임차인이 입주해 있던
+         * 매입임대주택도 100% 면제를 받았다.
+         */
+        if (input.isUnoccupiedAtAcquisition !== true) {
+          reasons.push({
+            code: "OCCUPIED_AT_ACQUISITION",
+            message:
+              "매입임대주택 단서(나목)는 「취득 당시 입주된 사실이 없는 주택」에 한합니다 — " +
+              "미입주 사실이 확인되지 않았습니다 (§97① 단서 나목).",
             legalBasis,
           });
         }

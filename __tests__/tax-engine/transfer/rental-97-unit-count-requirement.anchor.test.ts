@@ -126,6 +126,7 @@ describe("§97의2① — 신축 1호 포함 2호 이상", () => {
     rentalStartDate: D("2000-04-01"),
     rental972Type: "purchase" as const,
     isNationalHousing: true,
+    isUnoccupiedAtAcquisition: true, // D1-07 — §97의2①2호
     calculatedTax: 20_000_000,
   };
 

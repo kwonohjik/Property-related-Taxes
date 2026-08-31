@@ -11,8 +11,7 @@
  * DB 직접 호출 금지 — 감면 규칙 데이터를 매개변수로 받아 순수 판단/계산만 수행
  */
 
-import { addMonths } from "date-fns";
-import { applyRate, truncateToWon } from "./tax-utils";
+import { applyRate } from "./tax-utils";
 import {
   calculateEffectiveRentalPeriod,
   convertToStandardDeposit,
@@ -47,6 +46,9 @@ export type RentalHousingType =
   | "public_support_private" // 공공지원민간임대 §97의4
   | "public_purchase";       // 공공매입임대 §97의5
 
+/** 조특법 §97① 본문 — 「2000년 12월 31일 이전에 임대를 개시하여」 */
+const RENTAL_97_START_DEADLINE = new Date("2000-12-31");
+
 /** 경과규정 적용 버전 */
 export type ReductionLawVersion =
   | "pre_2018_09_14"   // 구법 (2018.9.14 이전 등록)
@@ -76,6 +78,23 @@ export interface RentalReductionInput {
 
   /** 임대주택 유형 */
   rentalHousingType: RentalHousingType;
+  /**
+   * 신축 연도 — **§97(`public_construction`) 전용** (D1-04).
+   *
+   * 조특법 §97① 각 호:
+   *   1호 **1986년 1월 1일부터 2000년 12월 31일까지의 기간 중 신축된 주택**
+   *   2호 **1985년 12월 31일 이전에 신축된 공동주택**으로서 1986년 1월 1일 현재 입주된
+   *       사실이 없는 주택
+   *
+   * ⚠️ 미입력을 **충족으로 읽지 않는다** — 종전에는 이 요건을 아예 보지 않아
+   *    2015년 신축·2015년 임대개시 주택도 100% 면제를 받았다.
+   */
+  constructionYear?: number;
+  /**
+   * §97①2호 — 1986.1.1 현재 입주된 사실이 없는 공동주택 자기확인 (D1-04).
+   * 1985.12.31 이전 신축분은 이 확인이 있어야 2호에 해당한다.
+   */
+  isUnoccupiedAt1986?: boolean;
   /** 주택 유형 (아파트 여부) */
   propertyType: "apartment" | "non_apartment";
   /** 수도권/비수도권 */
@@ -143,11 +162,6 @@ export interface RentalReductionResult {
 const DATE_2018_09_14 = new Date("2018-09-14");
 const DATE_2020_07_11 = new Date("2020-07-11");
 const DATE_2020_08_18 = new Date("2020-08-18");
-
-/** 조특법 §133 연간 기본 감면 한도 (1억원) */
-const ANNUAL_BASE_LIMIT = 100_000_000;
-/** 조특법 §133 초과분 감면율 */
-const EXCESS_RATE = 0.5;
 
 // ============================================================
 // 경과규정 분기
@@ -253,21 +267,6 @@ function determineMandatoryPeriod(
 // 감면 한도 적용 (조특법 §133)
 // ============================================================
 
-/**
- * 조특법 §133 종합한도 적용
- * 감면액이 한도 초과 시: 1억 + (초과분 × 50%)
- */
-function applyAnnualLimit(reductionAmount: number): {
-  amount: number;
-  isLimitApplied: boolean;
-} {
-  if (reductionAmount <= ANNUAL_BASE_LIMIT) {
-    return { amount: reductionAmount, isLimitApplied: false };
-  }
-  const excess = reductionAmount - ANNUAL_BASE_LIMIT;
-  const limited = truncateToWon(ANNUAL_BASE_LIMIT + applyRate(excess, EXCESS_RATE));
-  return { amount: limited, isLimitApplied: true };
-}
 
 // ============================================================
 // 1단계 연동 함수: 장기보유공제 특례율 조회
@@ -425,6 +424,60 @@ export function calculateRentalReduction(
     });
   }
 
+  // ── Step 4-1: §97 본문 시한 + 각 호 신축연도 (D1-04) ──
+  //
+  // 조특법 §97① — 「…국민주택…을 **2000년 12월 31일 이전에 임대를 개시하여** 5년 이상
+  // 임대한 후 양도하는 경우…양도소득세의 100분의 50에 상당하는 세액을 감면한다.」
+  // 단서의 면제(건설임대 5년↑ 등)는 **본문 요건과 각 호를 면제하지 않는다** —
+  // 종전에는 5년 임대만으로 감면율 1.0을 부여해 시한·신축연도를 한 번도 보지 않았다.
+  //
+  // ⚠️ 이 게이트는 **§97(`public_construction`)에만** 건다. §97의3·§97의4·§97의5는
+  //    각자 다른 시한을 갖는다(같은 스위치에 있다고 요건을 공유하지 않는다).
+  //
+  // 📌 같은 요건을 신세대 경로(`transfer-reductions/rental-97-main.ts`)가 이미 정확히
+  //    검사한다. 두 경로가 같은 조문을 판정하는 dual truth 자체는 남아 있고,
+  //    정본 해소는 이 분기의 폐지 또는 위임이다(API 표면 결정이 필요해 별건).
+  if (input.rentalHousingType === "public_construction") {
+    if (input.rentalStartDate.getTime() > RENTAL_97_START_DEADLINE.getTime()) {
+      ineligibleReasons.push({
+        code: "RENTAL_START_AFTER_DEADLINE",
+        message:
+          `임대개시일이 2000.12.31 이후 — 조특법 §97① 본문의 「2000년 12월 31일 이전에 ` +
+          `임대를 개시하여」 요건 미충족`,
+        field: "rentalStartDate",
+      });
+    }
+    const year = input.constructionYear;
+    if (year === undefined) {
+      ineligibleReasons.push({
+        code: "MISSING_CONSTRUCTION_YEAR",
+        message:
+          "신축 연도가 입력되지 않았습니다 — 조특법 §97① 각 호(1호 1986~2000 신축 / " +
+          "2호 1985.12.31 이전 신축 공동주택) 판정에 필요합니다.",
+        field: "constructionYear",
+      });
+    } else if (year >= 1986 && year <= 2000) {
+      // 1호 — 충족
+    } else if (year <= 1985) {
+      // 2호 — 1986.1.1 현재 미입주 공동주택만 해당
+      if (input.isUnoccupiedAt1986 !== true) {
+        ineligibleReasons.push({
+          code: "NOT_UNOCCUPIED_AT_1986",
+          message:
+            `신축 ${year}년 — 조특법 §97①2호는 「1985년 12월 31일 이전에 신축된 공동주택으로서 ` +
+            `1986년 1월 1일 현재 입주된 사실이 없는 주택」에 한합니다. 미입주 사실이 확인되지 않았습니다.`,
+          field: "constructionYear",
+        });
+      }
+    } else {
+      ineligibleReasons.push({
+        code: "CONSTRUCTION_YEAR_OUT",
+        message: `신축 ${year}년 — 조특법 §97① 각 호(1호 1986~2000 / 2호 1985 이전) 요건 외`,
+        field: "constructionYear",
+      });
+    }
+  }
+
   // ── Step 5: 임대료 증액 제한 위반 ──
   if (!rentIncreaseValidation.isAllValid) {
     ineligibleReasons.push({
@@ -441,15 +494,28 @@ export function calculateRentalReduction(
   const specialLongTermDeductionRate = tier?.longTermDeductionRate ?? 0;
 
   let reductionAmount = 0;
-  let annualLimit = 0;
-  let isLimitApplied = false;
+  /**
+   * D1-05 — §97 시리즈는 §133 한도 대상이 아니므로 항상 0/false다.
+   * 결과 shape는 소비자(`RentalReductionDetailCard`)를 위해 유지하되,
+   * `isLimitApplied`가 false이므로 「§133 한도로 제한됨」 안내는 렌더되지 않는다.
+   */
+  const annualLimit = 0;
+  const isLimitApplied = false;
 
   if (isEligible && reductionRate > 0) {
-    const rawAmount = applyRate(input.calculatedTax, reductionRate);
-    const limited = applyAnnualLimit(rawAmount);
-    reductionAmount = limited.amount;
-    annualLimit = ANNUAL_BASE_LIMIT;
-    isLimitApplied = limited.isLimitApplied;
+    /**
+     * D1-05 — **§133 한도를 적용하지 않는다.**
+     *
+     * 조특법 §133①은 「제33조, 제43조, 제66조부터 제69조까지, 제69조의2부터 제69조의4까지,
+     * 제70조, 제85조의10 또는 법률 제6538호 부칙 제29조」, ②는 「제77조, 제77조의2 또는
+     * 제77조의3」을 열거한다 — **§97·§97의3·§97의4·§97의5는 어느 항에도 없다.**
+     * 이 모듈이 다루는 네 조문 전부가 §133 대상이 아닌데 유형 분기 없이 한도가 걸려 있었다.
+     *
+     * 산식도 조문과 달랐다 — §133①1호는 「1억원을 초과하는 경우에는 그 **초과하는 부분에
+     * 상당하는 금액**」을 감면하지 아니한다(하드 캡)이지 「초과분의 50%는 감면」이 아니다.
+     * 저장소의 정본 한도 모듈 `aggregate-reduction-limits.ts`도 §97을 그룹에 넣지 않는다.
+     */
+    reductionAmount = applyRate(input.calculatedTax, reductionRate);
   }
 
   // 공공매입임대: 공공기관 매각 조건부 — 경고

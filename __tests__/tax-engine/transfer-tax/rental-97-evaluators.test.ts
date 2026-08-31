@@ -237,6 +237,9 @@ describe("§97의2 evaluateRental972", () => {
     rentalStartDate: new Date("2000-04-01"),
     rental972Type: "purchase",
     isNationalHousing: true,
+    // D1-07 — §97의2①2호 「취득 당시 입주된 사실이 없는 주택만 해당한다」.
+    // 종전 픽스처엔 없어 취득 당시 임차인이 있던 주택도 100% 면제를 받았다.
+    isUnoccupiedAtAcquisition: true,
     // D1-02 — 조특령 §97의2① 주체 요건. 종전 픽스처엔 이 필드가 없어 「신축 1호만 임대」도
     // 100% 면제를 받았고, 이 anchor가 그 결함을 고정(characterize)하고 있었다.
     hasNewRentalPlus2Units: true,

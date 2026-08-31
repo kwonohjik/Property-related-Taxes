@@ -243,6 +243,10 @@ export function toEngineReductions(
           ...(r.hasNewRentalPlus2Units !== null
             ? { hasNewRentalPlus2Units: r.hasNewRentalPlus2Units }
             : {}),
+          // D1-07 — §97의2①2호. null(미선택)은 보내지 않는다.
+          ...(r.isUnoccupiedAtAcquisition !== null
+            ? { isUnoccupiedAtAcquisition: r.isUnoccupiedAtAcquisition }
+            : {}),
         };
       }
       // rental_97_main | rental_97_proviso
@@ -253,6 +257,12 @@ export function toEngineReductions(
         isNationalHousing: r.isNationalHousing,
         ...(r.type === "rental_97_proviso" && r.provisoCase ? { provisoCase: r.provisoCase } : {}),
         ...(r.hasMin5RentalUnits !== null ? { hasMin5RentalUnits: r.hasMin5RentalUnits } : {}),
+        // D1-06 — §97①2호 두 사실 / D1-07 — 단서 나목. null은 보내지 않는다.
+        ...(r.isMultiUnitHousing !== null ? { isMultiUnitHousing: r.isMultiUnitHousing } : {}),
+        ...(r.isUnoccupiedAt1986 !== null ? { isUnoccupiedAt1986: r.isUnoccupiedAt1986 } : {}),
+        ...(r.isUnoccupiedAtAcquisition !== null
+          ? { isUnoccupiedAtAcquisition: r.isUnoccupiedAtAcquisition }
+          : {}),
         // 조특령 §97⑤4호 — 5호 미만 기간. 「5호 이상」이 확정된 경우에만 의미가 있다.
         ...(r.belowMin5UnitsPeriods && r.belowMin5UnitsPeriods.length > 0
           ? {

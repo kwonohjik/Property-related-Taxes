@@ -157,6 +157,10 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
     return {
       type: "rental_97_main",
       ...RENTAL_COMMON_DEFAULTS,
+      // D1-06·D1-07 — 3-state. 미입력을 충족으로 읽지 않는다.
+      isMultiUnitHousing: null,
+      isUnoccupiedAt1986: null,
+      isUnoccupiedAtAcquisition: null,
       constructionYear: "",
       isNationalHousing: false,
       // 3-state — 미입력을 「충족」으로 읽지 않는다 (조특령 §97①)
@@ -168,6 +172,10 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
     return {
       type: "rental_97_proviso",
       ...RENTAL_COMMON_DEFAULTS,
+      // D1-06·D1-07 — 3-state. 미입력을 충족으로 읽지 않는다.
+      isMultiUnitHousing: null,
+      isUnoccupiedAt1986: null,
+      isUnoccupiedAtAcquisition: null,
       constructionYear: "",
       isNationalHousing: false,
       provisoCase: undefined,
@@ -183,6 +191,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       isNationalHousing: false,
       // §97의2는 「신축 1호 포함 2호 이상」 — §97의 5호와 다른 요건이라 필드를 나눈다
       hasNewRentalPlus2Units: null,
+      isUnoccupiedAtAcquisition: null, // D1-07 — §97의2①2호
     };
   }
   // §99의4 농어촌·고향주택 (2026-06-11)

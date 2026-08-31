@@ -56,6 +56,20 @@ export function evaluateRental972(input: Rental97EvaluationInput): Rental97Resul
     });
   }
 
+  /**
+   * §97의2①2호 — 「…및 임대를 개시한 임대주택(**취득 당시 입주된 사실이 없는 주택만
+   * 해당한다**)」 (D1-07). 매입임대(2호)에만 걸린다.
+   */
+  if (input.rental972Type === "purchase" && input.isUnoccupiedAtAcquisition !== true) {
+    reasons.push({
+      code: "OCCUPIED_AT_ACQUISITION",
+      message:
+        "매입임대주택(2호)은 「취득 당시 입주된 사실이 없는 주택」에 한합니다 — " +
+        "미입주 사실이 확인되지 않았습니다 (조특법 §97의2①2호).",
+      legalBasis,
+    });
+  }
+
   // 주체 요건 — 조특령 §97의2① 「1호 이상의 신축임대주택을 포함하여 2호 이상의 임대주택을
   // 5년 이상 임대하는 거주자」 (D1-02).
   // ⚠️ §97의 5호 요건과 숫자·구성이 다르다 — §97 필드를 재사용하지 않는다.

@@ -110,6 +110,83 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
         </ToneCard>
       )}
 
+      {/* §97①2호 — 1985.12.31 이전 신축 공동주택 (D1-06) */}
+      {parseInt(value.constructionYear || "0") > 0 &&
+        parseInt(value.constructionYear) <= 1985 && (
+          <ToneCard tone="amber" sectionNum="②" title="§97①2호 요건" bodyClassName="space-y-2" noDark>
+            <p className="text-micro text-amber-800">
+              조특법 §97①2호 — 「<strong>1985년 12월 31일 이전에 신축된 공동주택</strong>으로서
+              <strong>1986년 1월 1일 현재 입주된 사실이 없는 주택</strong>」. 두 가지를 모두
+              충족해야 합니다.
+            </p>
+            <div>
+              <p className="mb-1.5 text-xs text-muted-foreground">공동주택 여부</p>
+              <RadioCardGroup
+                name="isMultiUnitHousing"
+                layout="inline"
+                tone="amber"
+                value={
+                  value.isMultiUnitHousing === null ? "" : value.isMultiUnitHousing ? "yes" : "no"
+                }
+                onChange={(v) => onChange({ isMultiUnitHousing: v === "yes" })}
+                options={[
+                  { value: "yes", label: "공동주택" },
+                  { value: "no", label: "미해당" },
+                ]}
+              />
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs text-muted-foreground">1986.1.1 현재 입주 사실</p>
+              <RadioCardGroup
+                name="isUnoccupiedAt1986"
+                layout="inline"
+                tone="amber"
+                value={
+                  value.isUnoccupiedAt1986 === null ? "" : value.isUnoccupiedAt1986 ? "yes" : "no"
+                }
+                onChange={(v) => onChange({ isUnoccupiedAt1986: v === "yes" })}
+                options={[
+                  { value: "yes", label: "입주 사실 없음" },
+                  { value: "no", label: "입주 사실 있음" },
+                ]}
+              />
+            </div>
+            {(value.isMultiUnitHousing === null || value.isUnoccupiedAt1986 === null) && (
+              <p className="text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            )}
+          </ToneCard>
+        )}
+
+      {/* §97① 단서 나목 — 취득 당시 미입주 (D1-07) */}
+      {isProviso && value.provisoCase === "b_purchase" && (
+        <ToneCard tone="rose" sectionNum="②" title="단서 나목 요건" bodyClassName="space-y-2" noDark>
+          <p className="text-micro text-rose-800">
+            조특법 §97① 단서 — 매입임대주택은 「<strong>취득 당시 입주된 사실이 없는 주택만
+            해당한다</strong>」.
+          </p>
+          <RadioCardGroup
+            name="isUnoccupiedAtAcquisition_97"
+            layout="inline"
+            tone="rose"
+            value={
+              value.isUnoccupiedAtAcquisition === null
+                ? ""
+                : value.isUnoccupiedAtAcquisition
+                  ? "yes"
+                  : "no"
+            }
+            onChange={(v) => onChange({ isUnoccupiedAtAcquisition: v === "yes" })}
+            options={[
+              { value: "yes", label: "취득 당시 입주 사실 없음" },
+              { value: "no", label: "입주 사실 있음" },
+            ]}
+          />
+          {value.isUnoccupiedAtAcquisition === null && (
+            <p className="text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+          )}
+        </ToneCard>
+      )}
+
       {/* 주체 요건 — 조특령 §97① 5호 이상 (D1-01) */}
       <ToneCard
         tone="sky"
