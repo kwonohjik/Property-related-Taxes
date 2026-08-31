@@ -102,6 +102,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
 
       {/* ③④ 공통 필드 */}
       <RentalCommonFields
+        vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}
         sectionOffset={isProviso ? 3 : 2}

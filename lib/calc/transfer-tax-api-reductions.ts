@@ -190,7 +190,7 @@ export function toEngineReductions(
               }))
             : undefined,
         vacancyPeriods:
-          r.hasVacancyOver6Months === true && r.vacancyPeriods && r.vacancyPeriods.length > 0
+          r.hasVacancyOverGrace === true && r.vacancyPeriods && r.vacancyPeriods.length > 0
             ? r.vacancyPeriods.map((v) => ({ startDate: v.startDate, endDate: v.endDate }))
             : undefined,
       };

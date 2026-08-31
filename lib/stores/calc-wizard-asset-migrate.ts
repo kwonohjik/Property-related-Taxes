@@ -173,8 +173,16 @@ export function migrateAsset(raw: unknown): AssetForm {
           rentalStartDate: "",
           isTaxRegistered: false,
           rentIncreaseViolationMode: "",
-          hasVacancyOver6Months: null,
           ...r,
+          /**
+           * D1-03 — 구 키 `hasVacancyOver6Months`는 「6개월 초과 공실이 있는가」를 물었다.
+           * §97·§97의2·§97의3·§97의4의 유예는 3월(조특칙 §44)이므로, 구 세션의 "없음"은
+           * 새 질문("3개월 초과 공실이 있는가")의 답이 될 수 없다 —
+           * 4개월 공실 보유자가 구 UI에서 "없음"을 골랐을 수 있기 때문이다.
+           * ⇒ 값을 그대로 승계하지 않고 **미선택(null)로 되돌려 다시 묻는다**.
+           *    (§97의5는 임계가 그대로지만, 조문별 분기 없이 한 번 다시 묻는 편이 안전하다.)
+           */
+          hasVacancyOverGrace: null,
         };
       }
       // §99의4 (2026-06-11): 구 stub 데이터(_phase1Stub) 본 필드 누락 보정 (③)

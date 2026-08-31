@@ -15,7 +15,10 @@
 import { applyRate } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { checkReductionPeriod } from "./period-check";
-import { calculateEffectiveRentalPeriod } from "./rental-97-shared-helpers";
+import {
+  calculateEffectiveRentalPeriod,
+  RENTAL_VACANCY_GRACE_MONTHS_97,
+} from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
 
 const MANDATORY_YEARS = 5;
@@ -60,6 +63,7 @@ export function evaluateRental972(input: Rental97EvaluationInput): Rental97Resul
       input.rentalStartDate,
       input.transferDate,
       input.vacancyPeriods ?? [],
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
     if (eligibleRentalYears < MANDATORY_YEARS) {
       reasons.push({

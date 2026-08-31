@@ -5,8 +5,9 @@
  * - 등록일(DateInput)·세무서 등록(ToggleCard)·임대개시일(DateInput)
  * - 임대료 5% 증액 위반(RadioCardGroup, 3-state: "" 미선택)
  *   → "있음" 시 계약 이력 표 (최소 2행 안내)
- * - 6개월+ 공실(RadioCardGroup, 3-state: null 미선택)
+ * - 유예 초과 공실(RadioCardGroup, 3-state: null 미선택)
  *   → "있음" 시 구간 [시작~종료] [+ 추가]
+ *   ⚠️ 임계는 조문마다 다르다 — `vacancyGraceMonths` prop으로 받는다(D1-03).
  */
 
 import { DateInput } from "@/components/ui/date-input";
@@ -26,6 +27,13 @@ interface Props {
   onChange: (patch: Partial<RentalCommonFormFields>) => void;
   /** 섹션 번호 오프셋 — RentalCommonFields가 렌더하는 ③④ 섹션의 시작 번호 */
   sectionOffset?: number;
+  /**
+   * 공실 유예 개월 — 질문 문구와 안내를 가른다 (D1-03).
+   * §97·§97의2·§97의3·§97의4 = 3 (조특칙 §44 「3월이내」)
+   * §97의5 = 6 (조특령 §97의5①1호 「6개월 이내」)
+   * 기본값을 두지 않는다 — 호출부가 조문을 명시하지 않으면 컴파일이 실패해야 한다.
+   */
+  vacancyGraceMonths: 3 | 6;
 }
 
 const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> = {
@@ -34,7 +42,12 @@ const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> 
   semi_jeonse: "반전세",
 };
 
-export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props) {
+export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths }: Props) {
+  const graceLabel = vacancyGraceMonths === 3 ? "3개월" : "6개월";
+  const graceBasis =
+    vacancyGraceMonths === 3
+      ? "조특칙 §44 — 기존 임차인 퇴거일부터 다음 임차인 입주일까지 3월 이내는 임대기간에 산입"
+      : "조특령 §97의5①1호 — 기존 임차인 퇴거일부터 다음 임차인 주민등록 이전일까지 6개월 이내는 계속 임대 간주";
   // ── 임대료 계약 이력 ──
   function addRentHistory() {
     const next: RentHistoryFormItem = {
@@ -182,24 +195,27 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3 }: Props
       {/* ④ 공실 기간 */}
       <ToneCard tone="sky" sectionNum={sec4} title="공실 기간" bodyClassName="space-y-2" noDark>
         <div>
-          <p className="text-xs text-muted-foreground mb-1.5">6개월 이상 공실 구간</p>
+          <p className="text-xs text-muted-foreground mb-1.5">
+            {graceLabel}을 초과하는 공실 구간
+          </p>
+          <p className="mb-1.5 text-micro text-muted-foreground">{graceBasis}</p>
           <RadioCardGroup
-            name="hasVacancyOver6Months"
+            name="hasVacancyOverGrace"
             layout="inline"
             tone="sky"
-            value={value.hasVacancyOver6Months === null ? "" : value.hasVacancyOver6Months ? "yes" : "no"}
-            onChange={(v) => onChange({ hasVacancyOver6Months: v === "yes" ? true : false })}
+            value={value.hasVacancyOverGrace === null ? "" : value.hasVacancyOverGrace ? "yes" : "no"}
+            onChange={(v) => onChange({ hasVacancyOverGrace: v === "yes" ? true : false })}
             options={[
               { value: "no", label: "없음" },
               { value: "yes", label: "있음" },
             ]}
           />
-          {value.hasVacancyOver6Months === null && (
+          {value.hasVacancyOverGrace === null && (
             <p className="mt-1 text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </div>
 
-        {value.hasVacancyOver6Months === true && (
+        {value.hasVacancyOverGrace === true && (
           <div className="mt-2 space-y-2">
             <p className="text-xs font-medium text-sky-800">공실 구간 입력</p>
             {(value.vacancyPeriods ?? []).map((period, idx) => (

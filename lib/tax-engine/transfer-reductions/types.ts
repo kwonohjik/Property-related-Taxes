@@ -132,7 +132,11 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   id: Rental97ArticleId;
   /** 세무서 사업자 등록 (소법 §168) — §97의3·§97의5 임대개시 인정 요건 (조특령 §97의3④·§97의5③) */
   isTaxRegistered?: boolean;
-  /** 6개월(180일) 이상 공실 구간 — 유효임대기간에서 차감 */
+  /**
+   * 유예를 **초과하는** 공실 구간 — 구간 전체를 유효임대기간에서 차감.
+   * 유예는 조문마다 다르다(D1-03) — §97·§97의2·§97의3·§97의4 = 3월(조특칙 §44) /
+   * §97의5 = 6개월(조특령 §97의5①1호). 상수는 `rental-97-shared-helpers.ts` 참조.
+   */
   vacancyPeriods?: Rental97VacancyPeriod[];
   /** 간소화 모드 — 사용자 명시 신고 (true = 임대료 5% 증액 위반 있음 → 불적용) */
   rentIncreaseViolated?: boolean;

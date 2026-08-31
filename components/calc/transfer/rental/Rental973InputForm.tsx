@@ -12,7 +12,7 @@
  *
  * 정책:
  * - rentIncreaseViolationMode 기본 "" (3-state 미선택)
- * - hasVacancyOver6Months 기본 null (3-state 미선택)
+ * - hasVacancyOverGrace 기본 null (3-state 미선택)
  * - useEffect → store 미러링 금지
  */
 
@@ -163,6 +163,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
 
       {/* ③④ 공통 필드 (임대료 증액·공실) */}
       <RentalCommonFields
+        vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}
         sectionOffset={3}

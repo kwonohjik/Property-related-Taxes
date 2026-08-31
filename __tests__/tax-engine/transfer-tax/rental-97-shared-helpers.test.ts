@@ -2,26 +2,30 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateEffectiveRentalPeriod,
+  RENTAL_VACANCY_GRACE_MONTHS_97,
+  RENTAL_VACANCY_GRACE_MONTHS_97_5,
   validateRentIncrease,
   convertToStandardDeposit,
   calcRentalGainRatio,
 } from "@/lib/tax-engine/transfer-reductions/rental-97-shared-helpers";
 
 describe("rental-97-shared-helpers", () => {
-  it("A-1: 공실 151일(<180) → 차감 없이 10년", () => {
+  it("A-1: 공실 2개월(§97 유예 3월 이내) → 차감 없이 10년", () => {
     const years = calculateEffectiveRentalPeriod(
       new Date("2014-01-01"),
       new Date("2024-01-01"),
-      [{ startDate: new Date("2016-01-01"), endDate: new Date("2016-06-01") }], // 152일
+      [{ startDate: new Date("2016-01-01"), endDate: new Date("2016-03-01") }],
+      RENTAL_VACANCY_GRACE_MONTHS_97,
     );
     expect(years).toBe(10);
   });
 
-  it("A-2: 공실 213일(≥180) → 차감되어 9년", () => {
+  it("A-2: 공실 7개월(§97의5 유예 6개월 초과) → 구간 전체 차감되어 9년", () => {
     const years = calculateEffectiveRentalPeriod(
       new Date("2014-01-01"),
       new Date("2024-01-01"),
       [{ startDate: new Date("2016-01-01"), endDate: new Date("2016-08-01") }], // 213일
+      RENTAL_VACANCY_GRACE_MONTHS_97_5,
     );
     expect(years).toBe(9);
   });

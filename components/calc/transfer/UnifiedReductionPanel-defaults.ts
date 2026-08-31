@@ -88,14 +88,14 @@ export function toggleGroupRadio(
   return [...others, getReductionDefault(newId)];
 }
 
-/** §97 시리즈 공통 기본값 (3-state 초기값 준수: rentIncreaseViolationMode="" / hasVacancyOver6Months=null) */
+/** §97 시리즈 공통 기본값 (3-state 초기값 준수: rentIncreaseViolationMode="" / hasVacancyOverGrace=null) */
 const RENTAL_COMMON_DEFAULTS = {
   registrationDate: "",
   isTaxRegistered: false,
   rentalStartDate: "",
   rentIncreaseViolationMode: "" as const,
   rentHistory: [],
-  hasVacancyOver6Months: null,
+  hasVacancyOverGrace: null,
   vacancyPeriods: [],
 };
 

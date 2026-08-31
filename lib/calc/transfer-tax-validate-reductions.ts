@@ -242,9 +242,13 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(`${label} 적용: 임대료 5% 증액 위반 이력 여부(없음/있음)를 선택하세요.`);
           if (r.rentIncreaseViolationMode === "has_violation" && (!r.rentHistory || r.rentHistory.length < 2))
             return fail(`${label} 적용: 위반 이력 "있음" 선택 시 계약별 임대료 이력을 2건 이상 입력하세요.`);
-          if (r.hasVacancyOver6Months === null)
-            return fail(`${label} 적용: 6개월 이상 공실 여부(없음/있음)를 선택하세요.`);
-          if (r.hasVacancyOver6Months === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
+          if (r.hasVacancyOverGrace === null) {
+            // D1-03 — 유예는 조문마다 다르다: §97의5만 6개월(조특령 §97의5①1호),
+            // 나머지 넷은 3월(조특령 §97⑤5호 → 조특칙 §44). ⑤UI 질문 문구와 같은 값이어야 한다.
+            const grace = r.type === "rental_97_5" ? "6개월" : "3개월";
+            return fail(`${label} 적용: ${grace}을 초과하는 공실 여부(없음/있음)를 선택하세요.`);
+          }
+          if (r.hasVacancyOverGrace === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
             return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
           if ((r.type === "rental_97_3" || r.type === "rental_97_5") && parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0") <= 0)
             return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`);

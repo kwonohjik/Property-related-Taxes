@@ -184,7 +184,12 @@ export interface RentalCommonFormFields {
   /** 정밀 모드 계약 이력 (has_violation 시 ≥ 2행) */
   rentHistory?: RentHistoryFormItem[];
   /** 6개월+ 공실 — 3-state: null 미선택(차단) */
-  hasVacancyOver6Months: boolean | null;
+  /**
+   * 유예를 **초과하는** 공실 구간이 있는가 (3-state).
+   * 임계는 조문마다 다르다 — §97·§97의2·§97의3·§97의4 = 3월(조특칙 §44) / §97의5 = 6개월(조특령 §97의5①1호).
+   * 종전 키 `hasVacancyOver6Months`는 6개월을 다섯 조문 전부에 전용하던 시절의 이름이라 폐기했다(D1-03).
+   */
+  hasVacancyOverGrace: boolean | null;
   /** 공실 구간 (true 시 ≥ 1행) */
   vacancyPeriods?: VacancyPeriodFormItem[];
 }
