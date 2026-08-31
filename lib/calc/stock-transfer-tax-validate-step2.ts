@@ -293,7 +293,13 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
       // G-6: 거래정지 시 §163⑨ 분모(1개월 종가평균)는 법령상 무효·엔진 미사용 → 검증 면제
       if (!form.tradingHaltAtTransfer) {
         const transferAvg = parseI(form.transferDatePriceAvg1Month);
-        const mode = form.transferStdInputMode || "direct";
+        // F-10: `transferStdInputMode`는 «취득 후 상장(§165⑤)» 축 전용 필드다.
+        //   모드 라디오도 일자별 종가표도 그 ToggleCard children 안에만 있고
+        //   (PostListingValuationCard.tsx:117·156), 일반 §163⑨ 블록과는
+        //   상호배타로 렌더된다(Step2.tsx:393 vs :465).
+        //   ⇒ 축 밖에서 daily를 검사하면 «입력 UI 없이 차단되는 dead-end»가 된다.
+        //   anchor: __tests__/calc/stock-std-input-mode-axis.anchor.test.ts
+        const mode = form.acquiredBeforeListing ? form.transferStdInputMode || "direct" : "direct";
         if (mode === "direct") {
           if (isEmpty(form.transferDatePriceAvg1Month) || transferAvg <= 0) {
             errors.push({

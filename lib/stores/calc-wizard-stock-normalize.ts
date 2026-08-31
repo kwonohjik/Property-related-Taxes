@@ -50,6 +50,16 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     return def;
   };
 
+  // F-10: `transferStdInputMode`는 «취득 후 상장(§165⑤)» 축 전용 필드다.
+  //   입력 라디오가 그 ToggleCard children 안에만 있어(PostListingValuationCard.tsx:117),
+  //   축 밖에서 `daily`가 남으면 되돌릴 UI가 없다. 토글을 끄는 순간의 정규화는 ⑤가
+  //   담당하고, 여기서는 «이미 저장된» 폼(세션 복원·이력 재진입)을 정규화한다.
+  //   anchor: __tests__/calc/stock-std-input-mode-axis.anchor.test.ts (FD-4·4b)
+  const acquiredBeforeListing = boolField("acquiredBeforeListing", defaults.acquiredBeforeListing);
+  const transferStdInputMode = acquiredBeforeListing
+    ? enumField("transferStdInputMode", ["direct", "daily"], defaults.transferStdInputMode)
+    : "direct";
+
   return {
     ...defaults, // foreign-stock 등 신규 필드 누락 시 default fallback (typecheck 가드)
     securityName: strField("securityName"),
@@ -147,12 +157,12 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
       : [],
     transferDatePriceAvg1Month: strField("transferDatePriceAvg1Month"),
     acquisitionDatePriceAvg1Month: strField("acquisitionDatePriceAvg1Month"),
-    transferStdInputMode: enumField("transferStdInputMode", ["direct", "daily"], defaults.transferStdInputMode),
+    transferStdInputMode,
     transferPriceDates: Array.isArray(d.transferPriceDates) ? (d.transferPriceDates as string[]) : [],
     transferPriceClosing: Array.isArray(d.transferPriceClosing) ? (d.transferPriceClosing as string[]) : [],
     listingDate: strField("listingDate"),
     listingDatePriceAvg1Month: strField("listingDatePriceAvg1Month"),
-    acquiredBeforeListing: boolField("acquiredBeforeListing", defaults.acquiredBeforeListing),
+    acquiredBeforeListing,
     tradingHaltAtTransfer: boolField("tradingHaltAtTransfer", defaults.tradingHaltAtTransfer),
     tradingHaltAtAcquisition: boolField("tradingHaltAtAcquisition", defaults.tradingHaltAtAcquisition),
     transferYearNetIncomePerShare: strField("transferYearNetIncomePerShare"),
