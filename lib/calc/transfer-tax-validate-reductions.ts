@@ -482,8 +482,15 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         if (r.type === "unsold_98_5") {
           if (!r.contractDate985)
             return fail("§98의5 적용: 최초 매매계약일을 입력하세요 (~2011.4.30).");
-          if (!(parseDecimal(r.priceReductionRatePct985 || "") > 0))
-            return fail("§98의5 적용: 분양가격 인하율(%)을 입력하세요 — (최초 공시 분양가 − 매매가) ÷ 최초 분양가 × 100.");
+          // D5-02 — **0%도 유효한 값**이다. 조특법 §98의5①1호는 「인하율이 100분의 10 **이하**」로
+          //          하한 문언이 없다. 종전의 `> 0`은 정가 매입 사안을 부당 차단했다.
+          //          ⑧과 엔진이 같은 게이트를 복제하고 있으므로 **함께** 고쳐야 no-op가 아니다.
+          if ((r.priceReductionRatePct985 ?? "").trim() === "")
+            return fail(
+              "§98의5 적용: 분양가격 인하율(%)을 입력하세요 — (최초 공시 분양가 − 매매가) ÷ 최초 분양가 × 100. 인하가 없으면 0을 입력하세요.",
+            );
+          if (parseDecimal(r.priceReductionRatePct985 || "") < 0)
+            return fail("§98의5 적용: 분양가격 인하율은 음수일 수 없습니다.");
           // 취득시 기준시가 — PHD 환산 ON이면 환산 입력 충분성으로 검증(⑧ 3중 미러).
           let phdOk985 = false;
           if (r.phdMode985) {
