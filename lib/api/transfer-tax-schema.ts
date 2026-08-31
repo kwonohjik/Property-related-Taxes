@@ -486,13 +486,21 @@ const specialHouseExclusionSchema = z.array(
   }),
 ).default([]);
 
-const priorReductionUsageSchema = z.array(
-  z.object({
-    year: z.number().int().min(1990).max(new Date().getFullYear()),
-    // Phase 1 (2026-05-06): 23개 조문 ID + legacy 5개 (long_term_rental/new_housing/unsold_housing은 마이그레이션 후 deprecated 예정)
-    type: z.enum([
+/**
+ * 과거 감면 이력에 입력 가능한 조문 — **§133 한도군 전체를 담아야 한다**.
+ *
+ * 하나라도 빠지면 그 조문 이력을 넣을 경로가 없어 `priorGroupSum`이 과소 계상되고
+ * 5년 누적 한도가 늦게 걸린다(= 감면 과다 인정 — 코드리뷰 D8-03·CA-04).
+ * 포함관계는 anchor가 강제한다:
+ * `__tests__/tax-engine/transfer/prior-reduction-usage-coverage.anchor.test.ts`
+ */
+export const PRIOR_REDUCTION_USAGE_TYPES = [
       // legacy (마이그레이션 후 deprecated)
       "self_farming", "long_term_rental", "new_housing", "unsold_housing", "public_expropriation",
+      // §133 한도군에 있으나 종전 enum에서 빠져 있던 것들 — 이력 입력 경로가 없었다 (D8-03·CA-04)
+      "gb_designated_land", "replacement_land_comp",
+      "self_farming_inherited", "self_farming_incorp", "livestock", "fishing",
+      "farmland_substitute_70", "self_cultivated_forest_69_4",
       // 장기임대 §97 시리즈 신규
       "rental_97_main", "rental_97_proviso", "rental_97_2", "rental_97_3", "rental_97_4", "rental_97_5",
       // 신축 §99 시리즈 신규
@@ -500,7 +508,13 @@ const priorReductionUsageSchema = z.array(
       // 미분양 §98 시리즈 + §99의2 신규
       "unsold_98", "unsold_98_2", "unsold_98_3", "unsold_98_4", "unsold_98_5",
       "unsold_98_6", "unsold_98_7", "unsold_98_8", "unsold_98_9", "unsold_99_2",
-    ]),
+] as const;
+
+const priorReductionUsageSchema = z.array(
+  z.object({
+    year: z.number().int().min(1990).max(new Date().getFullYear()),
+    // Phase 1 (2026-05-06): 23개 조문 ID + legacy 5개 (long_term_rental/new_housing/unsold_housing은 마이그레이션 후 deprecated 예정)
+    type: z.enum(PRIOR_REDUCTION_USAGE_TYPES),
     amount: z.number().int().nonnegative(),
   }),
 ).default([]);

@@ -25,6 +25,10 @@ import { describe, it, expect } from "vitest";
 import { resolveTypeLegalBasis } from "@/lib/tax-engine/transfer-tax-aggregate-pickers";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import {
+  REDUCTION_METADATA,
+  ALL_REDUCTION_IDS,
+} from "@/lib/tax-engine/transfer-reductions/metadata";
+import {
   lookupLimit,
   buildLimitGroups,
   DEFAULT_LIMIT_GROUPS,
@@ -80,6 +84,19 @@ describe("E-1 감면 유형이 자기 조문을 돌려준다 (#048)", () => {
       expect(resolveTypeLegalBasis(type), `${type}이 §127⑦을 자기 근거로 낸다`).not.toBe(
         TRANSFER.REDUCTION_OVERLAP_EXCLUSION,
       );
+    }
+  });
+
+  it("🔴 REDUCTION_METADATA 24 조문 **전수**가 자기 조문을 낸다 (D8-02)", () => {
+    // 종전에는 이 검사가 legacy 7종을 **하드코딩**해 신규 §97 시리즈·§99 시리즈·
+    // §98 하이브리드가 그대로 빠져나갔다. 전수로 돌려 조문 추가 시 자동 검출한다.
+    expect(ALL_REDUCTION_IDS.length).toBeGreaterThanOrEqual(24);
+    for (const id of ALL_REDUCTION_IDS) {
+      const basis = resolveTypeLegalBasis(id);
+      expect(basis, `${id}이 §127⑦을 자기 근거로 낸다`).not.toBe(
+        TRANSFER.REDUCTION_OVERLAP_EXCLUSION,
+      );
+      expect(basis, `${id}의 근거가 metadata와 어긋난다`).toBe(REDUCTION_METADATA[id].article);
     }
   });
 

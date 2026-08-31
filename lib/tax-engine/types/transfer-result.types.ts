@@ -209,6 +209,13 @@ export interface TransferTaxResult {
    * 편입 없으면 전체 양도소득금액과 동일.
    */
   reducibleIncome?: number;
+  /**
+   * 다건 합산 M-8이 `reducibleIncome`에 **추가로** 곱해야 할 감면율 (미설정 = 1).
+   * §97 계열·legacy 장기임대·legacy 신축·하이브리드는 별지84호 부표1 ⑲ 표시 계약 때문에
+   * `reducibleIncome`에 감면율을 곱하지 않으므로, 그 잔여 감면율을 여기로 운반한다.
+   * 근거·anchor: `transfer-tax-reductions-calc.ts` ReductionCandidate 주석 (코드리뷰 D8-01).
+   */
+  aggregateReductionRate?: number;
   /** 결정세액 (원 미만 절사) */
   determinedTax: number;
   /** §114조의2 신축·증축 가산세 (환산취득가액 or 감정가액 × 5%) */

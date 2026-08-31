@@ -10,6 +10,7 @@ import { useMemo, useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
@@ -302,7 +303,7 @@ export function New993InputForm({
             dong={dong}
             ho={ho}
             referenceDate={transferDate}
-            hint="미입력 시 자산의 양도시 기준시가 사용"
+            hint="5년 후 양도 시 안분 계산에 필수 — 환산취득가액 모드가 아니면 자산값이 전달되지 않으므로 직접 입력하세요"
             onExclusiveArea={(area) => onUpdate("exclusiveAreaSqm993", String(area))}
             testidPrefix="new993-stdprice-transfer"
           />
@@ -332,6 +333,51 @@ export function New993InputForm({
           <p className="mt-1 text-micro text-muted-foreground">공동주택 조회 시 자동 채움 · 2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
+
+      <ToggleCard
+        tone="rose"
+        title="2001.5.23 전 분양계약 해제 후 재계약·대체취득"
+        description="해제한 본인·배우자(직계존비속·형제자매 포함)가 당초 주택을 다시 분양받거나 대체하여 다른 주택을 분양받아 취득한 주택은 배제됩니다 (조특령 §99의3④)"
+        checked={value.isRecontractExcluded993}
+        onCheckedChange={(v) => onUpdate("isRecontractExcluded993", v)}
+      >
+        {/* 조특칙 §44의4 카브백 — 없으면 부득이한 사유 대체취득자를 법 근거 없이 배제한다. */}
+        <ToggleCard
+          variant="chip"
+          tone="emerald"
+          title="부득이한 사유로 «다른 주택»을 분양받아 취득"
+          description={"취학·근무상 형편·1년 이상 치료를 요하는 질병·학교폭력 전학 사유로 «당해 주택건설업자로부터 다른 주택»을 분양받은 경우에는 배제하지 않습니다 (조특칙 §44의4 → 소칙 §71③)"}
+          checked={value.recontractUnavoidableCause993}
+          onCheckedChange={(v) => onUpdate("recontractUnavoidableCause993", v)}
+        />
+      </ToggleCard>
+
+      {/*
+        조특령 §99의3② 1호 단서·2호 괄호 — 재개발·재건축 신축주택 안분 변형.
+        §99(`New99InputForm.tsx` ③ 섹션)와 동일 패턴. 대상은 「법 §98의3② 각 호」:
+          1호 정비사업조합 조합원이 관리처분계획에 따라 취득하는 주택
+          2호 거주·보유 중 소실·붕괴·노후 등으로 멸실되어 재건축한 주택
+      */}
+      <ToggleCard
+        tone="violet"
+        title="종전주택을 재개발·재건축하여 취득한 신축주택"
+        description="5년 이내 양도도 안분 적용 — 분모가 종전주택 취득 당시 기준시가로 바뀝니다 (조특령 §99의3② 1호 단서·2호 괄호)"
+        checked={value.isRedevelopedNewHouse993}
+        onCheckedChange={(v) => onUpdate("isRedevelopedNewHouse993", v)}
+      >
+        <div>
+          <label className="mb-1 block text-xs font-medium">종전주택 취득 당시 기준시가</label>
+          <CurrencyInput
+            value={value.previousHouseStdPrice993}
+            onChange={(v) => onUpdate("previousHouseStdPrice993", v)}
+            label=""
+          />
+          <p className="mt-1 text-micro text-muted-foreground">
+            정비사업조합 조합원이 관리처분계획에 따라 취득했거나, 거주·보유 중 소실·붕괴·노후로
+            멸실되어 재건축한 경우에 해당합니다 (법 §98의3② 각 호)
+          </p>
+        </div>
+      </ToggleCard>
 
       {value.acquisitionType993 === "from_builder" && (
         <ToggleCard

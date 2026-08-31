@@ -108,6 +108,10 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       standardPriceAt5Years: "",
       standardPriceAtAcquisition993: "",
       standardPriceAtTransfer993: "",
+      isRecontractExcluded993: false,
+      recontractUnavoidableCause993: false,
+      isRedevelopedNewHouse993: false,
+      previousHouseStdPrice993: "",
       exclusiveAreaSqm993: "",
       region993: "outside_speculation",
       acquisitionType993: "from_builder",
@@ -205,6 +209,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       exclusiveAreaSqm99: "",
       hasOccupancyAtContract99: false,
       isRecontractExcluded99: false,
+      recontractUnavoidableCause99: false,
       isRedevelopedNewHouse99: false,
       previousHouseStdPrice99: "",
     };

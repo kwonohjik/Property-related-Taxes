@@ -106,6 +106,15 @@ export function calculateRedevelopmentTax(
      * 정상 경로는 `transfer-tax-finalize.ts`가 결과에 그대로 싣는데 이 분기만 버리고 있었다.
      */
     warnings?: string[];
+    /**
+     * STEP 0.9+0.95 주택수 제외 상세 (§99의4·§98의9·보유 감면주택).
+     * 이 분기가 조기이탈이라 넘겨받지 않으면 결과에 실리지 않는다 — §99의4⑥ 추징 경고가
+     * `clawbackWarning` 한 필드에만 존재해 다른 경로로 대체 노출되지 않는다 (D4-08).
+     */
+    houseCountExclusion?: Pick<
+      TransferTaxResult,
+      "new994Detail" | "unsold989Detail" | "specialHouseExclusionDetail"
+    >;
   },
 ): TransferTaxResult {
   const steps: CalculationStep[] = [...baseSteps];
@@ -489,6 +498,7 @@ export function calculateRedevelopmentTax(
     reductionType,
     reductionTypeApplied,
     reducibleIncome,
+    aggregateReductionRate,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
@@ -668,6 +678,8 @@ export function calculateRedevelopmentTax(
      *      수증자 취득가액으로 되돌아간다(`transfer-tax-aggregate.ts:508`)
      */
     ...(opts?.carryoverDetail ? { carryoverTaxationDetail: opts.carryoverDetail } : {}),
+    // D4-08 — STEP 0.9+0.95 주택수 제외 상세. 이 분기가 조기이탈이라 상류에서 받아 실어야 한다.
+    ...(opts?.houseCountExclusion ?? {}),
     /** 비차단 안내 — 정상 경로와 동형으로 항상 키를 싣는다(종전에는 키 자체가 없었다). */
     warnings: opts?.warnings ?? [],
     transferGain: redevAfterRight.total.gain,
@@ -721,6 +733,7 @@ export function calculateRedevelopmentTax(
     reductionType,
     reductionTypeApplied,
     reducibleIncome,
+    aggregateReductionRate,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,

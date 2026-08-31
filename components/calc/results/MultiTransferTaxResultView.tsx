@@ -123,6 +123,21 @@ function ReductionRecalculationSection({
                   <span className="text-right tabular-nums">
                     {entry.aggregateTaxBase.toLocaleString()}
                   </span>
+                  {/*
+                    적용 감면율 — §97 계열·장기임대·신축·미분양은 「합산 감면대상소득」이
+                    별지84호 부표1 ⑲ 표시 계약상 **감면율 前** 금액이라, 감면율을 함께 보여야
+                    「산출세액 × 감면대상소득 / 과세표준 × 감면율 = 원시 감면」 항등식이 성립한다.
+                    §77·§69처럼 소득에 이미 반영된 유형은 1이므로 행을 숨긴다 (코드리뷰 D8-01).
+                  */}
+                  {/* 옛 저장 결과(IndexedDB)에는 이 필드가 없다 — null 가드가 없으면 「NaN%」가 찍힌다. */}
+                  {entry.appliedReductionRate != null && entry.appliedReductionRate !== 1 && (
+                    <>
+                      <span className="text-muted-foreground">적용 감면율</span>
+                      <span className="text-right tabular-nums">
+                        {(entry.appliedReductionRate * 100).toFixed(entry.appliedReductionRate * 100 % 1 === 0 ? 0 : 2)}%
+                      </span>
+                    </>
+                  )}
                   <span className="text-muted-foreground">재계산 원시 감면</span>
                   <span className="text-right tabular-nums">
                     {entry.rawAggregateReduction.toLocaleString()}

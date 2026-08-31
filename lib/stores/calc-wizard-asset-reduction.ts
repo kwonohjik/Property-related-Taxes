@@ -108,6 +108,16 @@ export type AssetReductionForm =
       standardPriceAtAcquisition993: string;
       /** 양도시 기준시가 (원) — 자산의 standardPriceAtTransfer와 별개로 §99의3 전용 입력 (필요 시) */
       standardPriceAtTransfer993?: string;
+      /**
+       * 조특령 §99의3② 1호 단서·2호 괄호 — 종전주택을 재개발·재건축하여 취득한
+       * 「법 §98의3② 각 호에 따른 신축주택」이면 안분 분모의 차감항이 **종전주택 취득 당시
+       * 기준시가**로 바뀌고, 5년 이내 양도도 전액이 아니라 안분한다. §99 선례와 동일 배선 (D3-02).
+       */
+      isRecontractExcluded993: boolean;
+      /** 조특칙 §44의4 카브백 — 소칙 §71③ 부득이한 사유로 «다른 주택» 분양 시 배제하지 않음 */
+      recontractUnavoidableCause993: boolean;
+      isRedevelopedNewHouse993: boolean;
+      previousHouseStdPrice993: string;
       /** 전용면적(㎡) — 고가주택 판정용 (2002.12.31 이전 취득: 165/149㎡ AND 6억 초과). */
       exclusiveAreaSqm993: string;
       /** 지역 — 가격 급등 지역 내/외 (서울·과천·5대 신도시) */
@@ -269,6 +279,8 @@ export type RentalReductionFormVariant =
       hasOccupancyAtContract99: boolean;
       /** 령 §99② — 1998.5.21 이전 계약 해제 후 재계약·대체취득 — ON이면 배제 */
       isRecontractExcluded99: boolean;
+      /** 조특칙 §44의4 카브백 — 소칙 §71③ 부득이한 사유로 «다른 주택» 분양 시 배제하지 않음 */
+      recontractUnavoidableCause99: boolean;
       /** 재개발·재건축 신축주택 (령 §99①1호 단서 — 5년 내도 안분) */
       isRedevelopedNewHouse99: boolean;
       /** 종전주택 취득 당시 기준시가 (원) — 변형 ON 시 필수. 별개 물건 → 조회형/PHD 대상 아님 */
@@ -560,9 +572,26 @@ export interface SpecialHouseExclusionFormItem {
   requirementsConfirmed: boolean;
 }
 
+/**
+ * 5년 한도 합산 대상 조문 — **당해연도 감면 유형과 다르다**.
+ *
+ * 🔴 종전에는 `ReductionType`(당해연도 감면 폼 유형)을 그대로 썼다. 그래서
+ *   §133 한도군에는 있으나 당해연도 폼에는 없는 조문(축산 §69의2·어업 §69의3·
+ *   자경 변형·§70 농지대토·§69의4 자경산지)의 **이력을 표현할 수 없었다**
+ *   (코드리뷰 D8-03·CA-04). 두 축은 다른 집합이므로 분리한다.
+ */
+export type PriorReductionType =
+  | ReductionType
+  | "self_farming_inherited"
+  | "self_farming_incorp"
+  | "livestock"
+  | "fishing"
+  | "farmland_substitute_70"
+  | "self_cultivated_forest_69_4";
+
 /** 인별 5년 합산 한도 산정용 과거 감면 이력 항목 */
 export interface PriorReductionUsageItem {
   year: number;
-  type: ReductionType;
+  type: PriorReductionType;
   amount: number;
 }

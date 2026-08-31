@@ -21,6 +21,12 @@ import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-sto
 import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-reduction";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
+import {
+  isIncomeDeductionTrack,
+  isTaxAmountTrack,
+} from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import {
   expandToggleClass,
@@ -326,8 +332,43 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
 
   const new993 = reductions.find((r) => r.type === "new_99_3");
 
+  /**
+   * §127⑦ 트랙 교차 안내 — ⑧ validate가 차단하는 것과 **같은 판정**을 미리 보여준다.
+   *
+   * 소득차감형(§90② 양도소득금액 차감)과 세액감면형(산출세액 감면)은 §127⑦상 택일인데,
+   * 엔진의 §127⑦ max는 세액감면형 후보 안에서만 돌아 두 트랙을 동시에 켜면 이중 혜택이
+   * 된다(코드리뷰 D10-01). 조문이 「그 거주자가 **선택하는** 하나」라고 정하므로 자동으로
+   * 고르지 않고 사용자가 택하게 한다 — 여기서 사유와 비교 방법을 안내한다.
+   *
+   * 판정은 엔진 단일 소스(`isIncomeDeductionTrack`/`isTaxAmountTrack`)를 재사용한다.
+   */
+  const trackConflict = useMemo(() => {
+    if (!asset.acquisitionDate || !transferDate) return null;
+    const within5 = isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(transferDate));
+    const types = reductions.map((r) => r.type);
+    const ded = types.find((t) => isIncomeDeductionTrack(t, within5));
+    const tax = types.find((t) => isTaxAmountTrack(t, within5));
+    if (!ded || !tax) return null;
+    const label = (t: string) =>
+      REDUCTION_METADATA[t as keyof typeof REDUCTION_METADATA]?.uiLabel ?? t;
+    return { ded: label(ded), tax: label(tax) };
+  }, [asset.acquisitionDate, transferDate, reductions]);
+
   return (
     <div className="space-y-3">
+      {trackConflict && (
+        <ToneCard tone="rose" title="조특법 §127⑦ — 두 감면은 택일입니다">
+          <p className="text-xs">
+            「{trackConflict.ded}」는 <b>양도소득금액을 차감</b>하고,{" "}
+            「{trackConflict.tax}」는 <b>산출세액을 감면</b>합니다. 조특법 §127⑦은 둘 이상의
+            감면규정을 동시에 적용받는 경우 <b>거주자가 선택하는 하나만</b> 적용하도록 정하므로,
+            둘 중 하나를 해제해야 계산을 진행할 수 있습니다.
+          </p>
+          <p className="text-caption text-muted-foreground mt-1">
+            어느 쪽이 유리한지는 각각 선택해 계산한 뒤 <b>총 납부세액</b>을 비교하면 됩니다.
+          </p>
+        </ToneCard>
+      )}
       {/* ── 자경농지 (standalone) ── */}
       <StandaloneCheckbox
         type="self_farming"

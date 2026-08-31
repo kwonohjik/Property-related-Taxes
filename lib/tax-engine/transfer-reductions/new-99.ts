@@ -14,7 +14,7 @@
  * - 신축주택취득기간: 1998.5.22~1999.6.30 (국민주택은 ~1999.12.31 — 정의가 1호 괄호에 있으나
  *   "이하 이 조에서 같다"로 1·2호 공통)
  * - 고가주택(소법 §89①3호 비과세 제외 대상) 단서 배제 — 판정 기준일은 §99의3 선례
- *   (isHighValueHouseUnder993 — 계약·승인·취득 중 우선일 기준 4단계 정의. D-9)
+ *   (isHighValueHouseUnder993 — 기준일은 resolveNew99BaseDate가 취득유형으로 가른다. D-9·D3-09)
  *
  * 재개발·재건축 변형 (령 §99①1호 단서·2호 괄호):
  * - 종전주택을 재개발·재건축하여 취득한 신축주택(법 §98의3② 각 호 유형)은
@@ -26,6 +26,7 @@ import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import {
   calcSignedAllocation,
   isHighValueHouseUnder993,
+  resolveNew99BaseDate,
   isWithin5YearsCheck,
   type New993FormulaStep,
   type New993SignCase,
@@ -71,6 +72,20 @@ export interface New99Input {
   hasOccupancyAtContract?: boolean;
   /** 령 §99② — 1998.5.21 이전 분양계약 해제 후 본인·배우자 등 재계약·대체취득 (true = 배제) */
   isRecontractExcluded?: boolean;
+  /**
+   * 조특칙 §44의4 **카브백** — 배제 사유에 해당해도 감면을 유지하는 예외.
+   *
+   * 「영 제99조제2항 단서 **및** 영 제99조의3제4항 단서에서 "재정경제부령이 정하는 사유에
+   *  해당하는 주택"이라 함은 「소득세법 시행규칙」 **제71조제3항**의 규정에 의한 사유로
+   *  **당해주택건설업자로부터 다른 주택을 분양받아 취득하는 경우**의 주택을 말한다.」
+   *
+   * 소칙 §71③ 사유 = 취학 · 근무상 형편(전근 등) · 1년 이상 치료·요양을 요하는 질병 ·
+   * 학교폭력으로 인한 전학. **대체취득(다른 주택 분양) 갈래에만** 대응한다
+   * (당초 주택을 다시 분양받은 경우는 카브백 대상이 아니다).
+   *
+   * 🔴 이 카브백이 없으면 부득이한 사유로 대체취득한 정상 대상자를 **법 근거 없이 배제**한다.
+   */
+  recontractUnavoidableCause?: boolean;
   /** 재개발·재건축 변형 (령 §99①1호 단서) */
   isRedevelopedNewHouse?: boolean;
   /** 종전주택 취득 당시 기준시가 — 변형 분모 (변형 ON 시 필수) */
@@ -188,7 +203,9 @@ export function evaluateNew99(input: New99Input): New99Result {
     });
     return ineligible(reasons);
   }
-  if (input.isRecontractExcluded === true) {
+  // 조특칙 §44의4 카브백 — 소칙 §71③ 부득이한 사유로 «다른 주택»을 분양받은 경우는 배제하지 않는다.
+  // 🔴 종전에는 카브백 없이 무조건 배제해 법 근거 없는 불리 적용이었다(조문 실측 2026-08-31).
+  if (input.isRecontractExcluded === true && input.recontractUnavoidableCause !== true) {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
       message: "1998.5.21 이전 분양계약을 해제하고 본인·배우자(직계존비속·형제자매 포함)가 다시 분양받거나 대체 취득한 주택은 적용 배제됩니다 (조특령 §99②).",
@@ -198,7 +215,13 @@ export function evaluateNew99(input: New99Input): New99Result {
   }
 
   // 4) 고가주택 단서 (D-9: §99의3 선례 — 계약·승인·취득 중 우선일 기준 4단계 정의)
-  const hvBaseDate = input.contractDate ?? input.usageApprovalDate ?? input.acquisitionDate;
+  // 기간 게이트(:167)와 **같은 축**을 쓴다 — 종전에는 여기만 분기하지 않았다 (D3-09).
+  const hvBaseDate = resolveNew99BaseDate(
+    acquisitionType,
+    input.contractDate,
+    input.usageApprovalDate,
+    input.acquisitionDate,
+  );
   if (isHighValueHouseUnder993(hvBaseDate, input.wholePropertyTransferPrice, input.exclusiveAreaSqm ?? 0)) {
     reasons.push({
       code: "HIGH_VALUE_HOUSE",

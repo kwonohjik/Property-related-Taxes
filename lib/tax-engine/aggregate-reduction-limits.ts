@@ -14,6 +14,8 @@
  *   - 조특법 §127⑦ — 감면 중복배제 (자산 내, 본 모듈과 별개)
  */
 
+import { safeMultiplyThenDivide } from "./tax-utils";
+
 /** 감면 유형별 한도 그룹 정의 */
 export interface LimitGroup {
   /** 같은 한도를 공유하는 감면 유형 식별자 집합 */
@@ -22,6 +24,14 @@ export interface LimitGroup {
   annualLimit: number;
   /** 5년 누적 한도 (원). 미설정 시 무한 */
   fiveYearLimit?: number;
+  /**
+   * 5년 누적 한도를 **실제로 받는** 유형 (미설정 시 `types` 전체).
+   *
+   * 연간 한도군과 5년 한도군의 열거가 조문에서 다르기 때문에 필요하다 — 개정 전
+   * §133①1호(연간)는 §77의3을 포함하지만 ①2호나목(5년)은 **§77의3을 열거하지 않는다**.
+   * 한 그룹에 뭉뚱그리면 §77의3에 법 근거 없는 5년 한도를 씌우게 된다(D7-03).
+   */
+  fiveYearTypes?: readonly string[];
   /** 법적 근거 (표시용) */
   legalBasis: string;
 }
@@ -50,26 +60,91 @@ export const DEFAULT_LIMIT_GROUPS: readonly LimitGroup[] = [
   },
 ] as const;
 
+/** 개정 전·후 공통 — 자경농지·축산·어업 유형 */
+const SELF_FARMING_TYPES = [
+  "self_farming",
+  "self_farming_inherited",
+  "self_farming_incorp",
+  "livestock",
+  "fishing",
+  /**
+   * 아래 둘은 **과거 감면 이력 전용** 유형이다 — 당해연도 감면 계산기는 아직 §70·§69의4를
+   * 구현하지 않지만, §133①1호·2호나목이 이들을 자경 계열과 **같은 한도군**으로 열거하므로
+   * 5년 누적 합산에서 빠지면 `priorGroupSum`이 과소 계상돼 한도가 늦게 걸린다
+   * (= 감면 과다 인정 · 코드리뷰 CA-04 실측 50,000,000 과다).
+   *
+   * ⚠️ §133①2호는 「**가목**(5개 과세기간 §70 단독 1억)과 **나목**(§66~§70 합산 2억) 중
+   *    큰 금액」이라는 중첩 서브그룹 구조인데, 현재 `LimitGroup`은 그룹당 `fiveYearLimit`
+   *    단일 값만 지원해 가목을 표현하지 못한다. 나목만 반영한 상태다 — 가목 모델링과
+   *    §70 evaluator 신설은 별도 과제.
+   */
+  "farmland_substitute_70",
+  "self_cultivated_forest_69_4",
+] as const;
+
+/** §77·§77의2·§77의3 (비자발적 양도) 유형 */
+const INVOLUNTARY_TYPES = [
+  "public_expropriation",
+  "gb_designated_land",
+  "replacement_land_comp",
+] as const;
+
 /**
- * 양도연도별 §133 한도 그룹 — 2025.1.1. 이후 양도분부터 §133② 상향(연 2억/5년 3억).
- * group①(자경 등 §133①)은 미개정 → 연도 불변(1억/2억).
- * group②(§77·§77의2·§77의3 §133②)만 양도연도 분기.
+ * 양도연도별 §133 한도 그룹.
+ *
+ * 🔴 **그룹 «구성» 자체가 연도로 갈린다** — 금액만 갈리는 게 아니다(코드리뷰 D7-03).
+ *
+ * | 시점 | 조문 구조 | 그룹 |
+ * |---|---|---|
+ * | 개정 전 | §133①1호가 자경(§66~§69 등)과 **§77·§77의2·§77의3을 같은 열거·같은 합계액**으로 묶어 과세기간별 1억원. §133②는 **토지분할 의제**(한도 아님). | **1개 그룹** 연 1억 / 5년 2억 |
+ * | 2025 개정 | §133①에서 §77 계열이 **삭제**되고 §133②가 신설(연 2억·5년 3억), 종전 ②는 ③으로 밀림. | **2개 그룹** |
+ *
+ * 개정 전 5년(①2호나목)의 열거는 「제66조부터 제69조까지, 제69조의2부터 제69조의4까지,
+ * 제70조, **제77조 또는 제77조의2**」로 **§77의3이 빠져 있다** → `fiveYearTypes`로 제외한다.
+ *
+ * 경계는 감면율(§77①)·한도와 **같은 개정 패키지**라 `>= 2025`를 공유한다
+ * (부칙 「시행일이 속하는 과세연도부터」 — `docs/00-pm/transfer-expropriation-77-133-2025-amendment.plan.md:7`).
+ * 조문 실측: KoreanLaw MST 267555 `efYd=20250101`(개정 전) vs `efYd=20250401`(개정 후).
+ *
+ * anchor: `__tests__/tax-engine/transfer/aggregate-limit-groups-by-year.anchor.test.ts`
  */
 export function buildLimitGroups(transferYear: number): readonly LimitGroup[] {
-  const involuntary =
-    transferYear >= 2025
-      ? { annual: 200_000_000, fiveYear: 300_000_000 }
-      : { annual: 100_000_000, fiveYear: 200_000_000 };
+  if (transferYear >= 2025) {
+    return [
+      DEFAULT_LIMIT_GROUPS[0], // 자경농지·축산·어업 (§133① — 연도 불변 1억/2억)
+      {
+        types: INVOLUNTARY_TYPES,
+        annualLimit: 200_000_000,
+        fiveYearLimit: 300_000_000,
+        legalBasis: "조특법 §133②",
+      },
+    ] as const;
+  }
+  // 개정 전 — 자경과 §77 계열이 §133①의 **하나의 1억원**을 공유한다.
   return [
-    DEFAULT_LIMIT_GROUPS[0], // 자경농지·축산·어업 (연도 불변)
     {
-      types: ["public_expropriation", "gb_designated_land", "replacement_land_comp"],
-      annualLimit: involuntary.annual,
-      fiveYearLimit: involuntary.fiveYear,
-      legalBasis: "조특법 §133②",
+      types: [...SELF_FARMING_TYPES, ...INVOLUNTARY_TYPES],
+      annualLimit: 100_000_000,
+      fiveYearLimit: 200_000_000,
+      // ①2호나목에 §77의3(gb_designated_land)이 없다 — 5년 한도 대상에서 제외.
+      fiveYearTypes: [...SELF_FARMING_TYPES, "public_expropriation", "replacement_land_comp"],
+      legalBasis: "조특법 §133 ①",
     },
   ] as const;
 }
+
+/**
+ * §133 한도군에 등장하는 **모든** 감면 유형 (연도 변형 합집합).
+ *
+ * 과거 감면 이력(⑤ UI 드롭다운·⑫ Zod enum)이 이 집합을 **전부 담아야** 한다 —
+ * 하나라도 빠지면 그 조문 이력을 입력할 경로가 없어 5년 누적 한도가 과소 적용된다
+ * (코드리뷰 D8-03 §77의2·§77의3 · CA-04 §70·§69의4).
+ * anchor가 포함관계를 강제한다:
+ * `__tests__/tax-engine/transfer/prior-reduction-usage-coverage.anchor.test.ts`
+ */
+export const ALL_LIMIT_GROUP_TYPES: readonly string[] = [
+  ...new Set([...buildLimitGroups(2024), ...buildLimitGroups(2025)].flatMap((g) => g.types)),
+];
 
 /** 유형별 한도 조회 결과 */
 export interface LimitLookup {
@@ -150,7 +225,9 @@ export function applyAnnualLimits(
       if (i === typesInGroup.length - 1) {
         capped = totalCapped - accumulated;
       } else {
-        capped = Math.floor((totalCapped * raw) / totalRaw);
+        // 한도 3억 × 원시감면 10억 = 3e17 > 2^53 → 부동소수 정밀도 손실.
+        // `safeMultiplyThenDivide`가 초과 시 BigInt로 우회한다 (D8-09).
+        capped = safeMultiplyThenDivide(totalCapped, raw, totalRaw);
         accumulated += capped;
       }
       cappedByType.set(t, capped);
@@ -247,12 +324,14 @@ export function applyFiveYearLimits(
     if (!group.fiveYearLimit) continue;
 
     // 이 그룹에 속하는 유형 중 annuallyCappedByType에 존재하는 것
-    const typesInGroup = group.types.filter((t) => annuallyCappedByType.has(t));
+    // 5년 한도군은 연간 한도군과 열거가 다를 수 있다(개정 전 §77의3 — D7-03).
+    const fiveYearScope = group.fiveYearTypes ?? group.types;
+    const typesInGroup = fiveYearScope.filter((t) => annuallyCappedByType.has(t));
     if (typesInGroup.length === 0) continue;
 
     // 과거 4년 그룹 누적액 (이 그룹에 속하는 모든 유형의 합)
     const priorGroupSum = priorFiltered
-      .filter((r) => group.types.includes(r.type))
+      .filter((r) => fiveYearScope.includes(r.type))
       .reduce((s, r) => s + r.amount, 0);
 
     const remaining = Math.max(0, group.fiveYearLimit - priorGroupSum);
@@ -291,7 +370,8 @@ export function applyFiveYearLimits(
       if (i === typesInGroup.length - 1) {
         capped = fiveYearGroupCapped - accumulated;
       } else {
-        capped = Math.floor((fiveYearGroupCapped * annual) / currentGroupTotal);
+        // 동상 — 5년 한도 안분도 같은 자릿수 위험이 있다 (D8-09).
+        capped = safeMultiplyThenDivide(fiveYearGroupCapped, annual, currentGroupTotal);
         accumulated += capped;
       }
       fiveYearCappedByType.set(t, capped);

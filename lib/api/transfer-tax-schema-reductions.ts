@@ -163,6 +163,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
     exclusiveAreaSqm99: z.number().nonnegative().optional(),
     hasOccupancyAtContract99: z.boolean().optional(),
     isRecontractExcluded99: z.boolean().optional(),
+    recontractUnavoidableCause99: z.boolean().optional(),
     isRedevelopedNewHouse99: z.boolean().optional(),
     previousHouseStdPrice99: z.number().int().nonnegative().optional(),
     _phase1Stub: z.literal(true).optional(),
@@ -184,6 +185,10 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtAcquisition993: z.number().int().nonnegative().optional(),
     /** 양도시 기준시가 (원) */
     standardPriceAtTransfer993: z.number().int().nonnegative().optional(),
+    isRecontractExcluded993: z.boolean().optional(),
+    recontractUnavoidableCause993: z.boolean().optional(),
+    isRedevelopedNewHouse993: z.boolean().optional(),
+    previousHouseStdPrice993: z.number().int().nonnegative().optional(),
     /** 전용면적(㎡) — 고가주택 판정(2002.12.31 이전 취득) */
     exclusiveAreaSqm993: z.number().nonnegative().optional(),
     /** 지역 — 가격 급등 지역 내/외 */

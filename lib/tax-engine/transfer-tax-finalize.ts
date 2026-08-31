@@ -163,6 +163,7 @@ export interface FinalizeResult {
   reductionType: ReturnType<typeof calcReductions>["reductionType"];
   reductionTypeApplied: ReturnType<typeof calcReductions>["reductionTypeApplied"];
   reducibleIncome?: number;
+  aggregateReductionRate?: number;
   rentalReductionDetail: TransferTaxResult["rentalReductionDetail"];
   newHousingReductionDetail: TransferTaxResult["newHousingReductionDetail"];
   publicExpropriationDetail: TransferTaxResult["publicExpropriationDetail"];
@@ -291,6 +292,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionType,
     reductionTypeApplied,
     reducibleIncome,
+    aggregateReductionRate,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
@@ -528,6 +530,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionType,
     reductionTypeApplied,
     reducibleIncome,
+    aggregateReductionRate,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,

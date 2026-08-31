@@ -9,6 +9,10 @@ import { addYears } from "date-fns";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
+import {
+  isIncomeDeductionTrack,
+  isTaxAmountTrack,
+} from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { isReductionAllowedForAssetKind, REDUCTION_METADATA, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -50,6 +54,41 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
     for (let ai = 0; ai < assets.length; ai++) {
       const asset = assets[ai];
       const fail = (message: string): ValidationIssue => ({ step, assetIndex: ai, message });
+
+      /**
+       * §127⑦ **트랙 교차** 차단 (코드리뷰 D10-01).
+       *
+       * §127⑦ 중복배제 max는 `calcReductions`의 **세액감면형 후보 안에서만** 돈다.
+       * 소득차감형(§90② — 양도소득금액 차감)은 STEP 4.6에서 별도로 소득을 깎으므로
+       * 두 트랙을 동시에 선택하면 §127⑦을 우회해 **이중 혜택**이 된다.
+       * 실측(§99 차감형 + §77 세액감면형, 양도 9억): 결정세액 16,035,410 과소.
+       *
+       * §127⑦은 「…**그 거주자가 선택하는** 하나의 감면규정만을 적용한다」로 납세자에게
+       * 선택권을 준다 ⇒ 엔진이 임의로 고르지 않고 여기서 차단해 사용자가 택하게 한다.
+       *
+       * 트랙 판정은 엔진 단일 소스(`isIncomeDeductionTrack`/`isTaxAmountTrack`)를 **재사용**한다.
+       * 하이브리드 8종은 5년 이내면 세액감면형이라 §127⑦ max에 합류하므로 차단 대상이 아니다.
+       * anchor: `__tests__/tax-engine/transfer/reduction-track-crossing-127-7.anchor.test.ts`
+       */
+      if (asset.acquisitionDate && form.transferDate) {
+        const within5 = isWithin5YearsCheck(
+          new Date(asset.acquisitionDate),
+          new Date(form.transferDate),
+        );
+        const selected = (asset.reductions ?? []).map((x) => x.type);
+        const deduction = selected.filter((t) => isIncomeDeductionTrack(t, within5));
+        const taxAmount = selected.filter((t) => isTaxAmountTrack(t, within5));
+        if (deduction.length > 0 && taxAmount.length > 0) {
+          const label = (t: string) =>
+            REDUCTION_METADATA[t as keyof typeof REDUCTION_METADATA]?.uiLabel ?? t;
+          return fail(
+            `조특법 §127⑦ 중복배제: 「${label(deduction[0])}」(양도소득금액 차감)과 ` +
+              `「${label(taxAmount[0])}」(산출세액 감면)은 동시에 적용받을 수 없습니다. ` +
+              "둘 중 하나만 선택하세요 — 어느 쪽이 유리한지는 각각 선택해 계산한 뒤 총 납부세액을 비교하면 됩니다.",
+          );
+        }
+      }
+
       for (const r of asset.reductions ?? []) {
         // 주택 게이트 (2026-06-29): 비주택 자산에 stale 선택된 주택 감면(§97·§99·§98 시리즈) 차단.
         // UI disabled와 동일 판정 (단일 소스 isReductionAllowedForAssetKind). field별 검증보다 먼저.
@@ -148,6 +187,37 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // 5년 시점 기준시가 필수 (5년 후 양도인 경우 안분 산식에 사용)
           if (parseAmount(r.standardPriceAt5Years || "0") <= 0) {
             return fail("§99의3 적용: 5년 시점 기준시가를 입력하세요. (취득일+5년 인접 고시일 가격)");
+          }
+          // 양도시 기준시가 — 5년 **후** 양도만 필수 (조특령 §99의3②2호 안분의 분모).
+          //
+          // 🔴 자산-수준 fallback을 믿을 수 없다: ④ 변환(`transfer-tax-api.ts:416-425`)이
+          //    자산의 `standardPriceAtTransfer`를 **환산취득가액 모드에서만** 전송한다.
+          //    실지거래가·감정·매매사례 모드에서는 undefined가 되어 분모가 음수로 떨어지고,
+          //    엔진이 `pos_neg`(부동산-525 해석)로 오분류해 **양도소득금액 전액 감면**이 됐다.
+          //    엔진 가드(`new-99-3.ts` MISSING_STD_PRICE)와 **같은 조건**으로 앞단에서 막는다.
+          //    (5년 이내 양도는 기준시가를 보지 않으므로 차단하지 않는다 — UI↔validate 모순 방지)
+          //    자산-수준 fallback은 `self_farming`(:107-109)과 **같은 방식**으로 인정한다 —
+          //    엔진이 `?? ctx.standardPriceAtTransfer`로 폴백하므로(income-deduction-router.ts:204)
+          //    여기서 무시하면 환산 모드 사용자를 부당하게 차단한다(UI↔validate 모순).
+          //    비-환산 모드에서 자산값이 채워져 있으면 여기서는 통과하고 엔진 가드가
+          //    `MISSING_STD_PRICE`로 명시 차단한다 — 조용한 오계산이 아니라 분명한 오류다.
+          // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (§99 선례 — 자동 안분 fallback 금지)
+          if (r.isRedevelopedNewHouse993 && parseAmount(r.previousHouseStdPrice993 || "0") <= 0)
+            return fail(
+              "§99의3 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요 (조특령 §99의3② 1호 단서·2호 괄호).",
+            );
+          const hasStdPriceAtTransfer993 =
+            parseAmount(r.standardPriceAtTransfer993 || "0") > 0 ||
+            parseAmount(asset.standardPriceAtTransfer || "0") > 0;
+          if (
+            asset.acquisitionDate &&
+            form.transferDate &&
+            !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate)) &&
+            !hasStdPriceAtTransfer993
+          ) {
+            return fail(
+              "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니면 자산값이 전달되지 않습니다).",
+            );
           }
         }
         // Phase 2 (2026-06-11): 장기임대 §97 시리즈 — 3-state 미선택 차단 (자동 안분 fallback 금지)
