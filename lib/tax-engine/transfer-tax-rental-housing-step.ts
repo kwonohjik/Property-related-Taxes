@@ -495,9 +495,11 @@ export function runRentalHousingExceptionStep(
         ? `${reductionResult.reductionType} 감면 ${rheReductionAmount.toLocaleString()}`
         : "감면 없음",
       amount: rheReductionAmount,
+      // D1-12 — **id**를 넘긴다(라벨 아님).
       legalBasis: getReductionLegalBasis(
-        reductionResult.reductionType,
+        reductionResult.reductionTypeApplied,
         reductionResult.publicExpropriationDetail?.useLegacyRates,
+        reductionResult.reductionLegalBasisOverride,
       ),
     });
   }

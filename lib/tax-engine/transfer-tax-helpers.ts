@@ -474,28 +474,42 @@ export {
   applyCommercialBuildingStep,
   type CommercialBuildingStepResult,
 } from "./transfer-tax-commercial-step";
+import { resolveTypeLegalBasis } from "./transfer-tax-aggregate-pickers";
 
 /**
- * 감면 유형별 법령 조문 매핑 (감면세액 step legalBasis용).
- * transfer-tax.ts의 인라인 상수를 분리하여 800줄 정책 준수.
+ * 감면 유형별 법령 조문 (감면세액 step legalBasis용).
+ *
+ * ## 🔴 종전에는 **화면 라벨 문자열**을 키로 조회했다 (D1-12)
+ * 라벨 단일 소스(`transfer-reduction-type-labels.ts`)가 조문 병기·괄호 표기로 표준화되면서
+ * 이 맵의 키와 어긋났고, 실측 결과 **31개 라벨 중 28개가 undefined**로 떨어졌다.
+ * 살아 있던 3개(`장기임대주택`·`신축주택`·`미분양주택`)조차 레거시 type 경로에 대응했고,
+ * 주 경로인 §69 자경농지(`"자경농지 (§69)"` vs 키 `"자경농지"`)·§77 공익수용
+ * (괄호 앞 **공백 1칸** 차이)도 MISS였다. `useLegacyRates` 분기는 도달 불가 dead branch였다.
+ *
+ * ⇒ 조회 키를 **내부 id**(`reductionTypeApplied`)로 바꾸고, 이미 존재하는 id 기반 resolver
+ *   `resolveTypeLegalBasis`(집계 경로에서 쓰던 것)를 **단일 소스**로 위임한다.
+ *   그 resolver의 default가 `REDUCTION_METADATA[type].article`이라 신규 조문도 자동으로 잡힌다
+ *   (B3 D8-02에서 심어 둔 경로).
+ *
+ * ⚠️ 표시 라벨을 키로 쓰면 라벨을 다듬을 때마다 조용히 끊긴다 — 이 결함이 그 실례다.
  */
 export function getReductionLegalBasis(
-  reductionType: string | undefined,
+  /** 내부 id (`reductionTypeApplied`). **표시 라벨이 아니다.** */
+  reductionTypeId: string | undefined,
   useLegacyRates: boolean | undefined,
+  /**
+   * D1-11 — id만으로 조문을 특정할 수 없는 경우의 확정값(레거시 임대 4유형).
+   * `calcReductions`가 후보 선택 시점에 계산해 내보낸다.
+   */
+  legalBasisOverride?: string,
 ): string | undefined {
-  if (!reductionType) return undefined;
-  const map: Record<string, string> = {
-    "자경농지":                TRANSFER.REDUCTION_SELF_FARMING,
-    "자경농지(§69·상속인 경작기간 합산 §66⑪)": `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INHERITED}`,
-    "자경농지(§69·편입일 부분감면 §66⑤⑥)":  `${TRANSFER.REDUCTION_SELF_FARMING} + ${TRANSFER.REDUCTION_SELF_FARMING_INCORP}`,
-    "장기임대주택":            TRANSFER.REDUCTION_LONG_RENTAL,
-    "신축주택":                TRANSFER.REDUCTION_NEW_HOUSING,
-    "미분양주택":              TRANSFER.REDUCTION_UNSOLD_HOUSING,
-    "공익사업용 토지 수용(§77)": useLegacyRates
-      ? `${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION} + ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL}`
-      : TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,
-  };
-  return map[reductionType];
+  if (legalBasisOverride) return legalBasisOverride;
+  if (!reductionTypeId) return undefined;
+  // §77 공익수용만 경과규정 병기가 있다 — 그 분기는 여기서 유지한다.
+  if (reductionTypeId === "public_expropriation" && useLegacyRates) {
+    return `${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION} + ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL}`;
+  }
+  return resolveTypeLegalBasis(reductionTypeId);
 }
 
 /**

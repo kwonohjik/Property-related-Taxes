@@ -497,6 +497,7 @@ export function calculateRedevelopmentTax(
     reductionAmount,
     reductionType,
     reductionTypeApplied,
+    reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
     rentalReductionDetail,
@@ -528,7 +529,12 @@ export function calculateRedevelopmentTax(
     label: "감면세액",
     formula: reductionType ? `${reductionType} 감면 ${reductionAmount.toLocaleString()}` : "감면 없음",
     amount: reductionAmount,
-    legalBasis: getReductionLegalBasis(reductionType, publicExpropriationDetail?.useLegacyRates),
+    // D1-12 — **id**를 넘긴다(라벨 아님).
+    legalBasis: getReductionLegalBasis(
+      reductionTypeApplied,
+      publicExpropriationDetail?.useLegacyRates,
+      reductionLegalBasisOverride,
+    ),
   });
 
   // ─ Step F.6: 조특법 §133② 5년 누적 한도 ─

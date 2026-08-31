@@ -62,6 +62,12 @@ export interface PeriodCheckContext {
   rentalStartDate?: Date;
   /** 사용승인·사용검사일 — §99 ①항 1호, §99의3 ①항 2호 (자기건설) */
   usageApprovalDate?: Date;
+  /**
+   * §97의2 시한 판정의 **축**을 가른다 (D1-10).
+   * 1호(건설임대) = 신축일(`usageApprovalDate`) / 2호(매입임대) = 매매계약일(`contractDate`).
+   * 조특법 §97의2①이 호마다 다른 시점을 지정하므로 한 fallback 체인으로 합칠 수 없다.
+   */
+  rental972Type?: "construction" | "purchase";
 }
 
 /** 시한 검증 결과 */
