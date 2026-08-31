@@ -252,6 +252,20 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
           if ((r.type === "rental_97_3" || r.type === "rental_97_5") && parseAmount((r as { officialPriceAtStart?: string }).officialPriceAtStart || "0") <= 0)
             return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`);
+          // D2-06 — 안분이 있는 두 조문만. 3-state 미선택을 「계속 임대」로 읽지 않는다.
+          if (r.type === "rental_97_3" || r.type === "rental_97_5") {
+            if (r.rentalContinuesToTransfer === null || r.rentalContinuesToTransfer === undefined)
+              return fail(
+                `${label} 적용: 임대가 양도일까지 계속되었는지 선택하세요 (조특령 ${r.type === "rental_97_5" ? "§97의5②" : "§97의3⑤"}).`,
+              );
+            if (
+              r.rentalContinuesToTransfer === false &&
+              parseAmount(r.stdPriceAtRentalEnd || "0") <= 0
+            )
+              return fail(
+                `${label} 적용: 임대 종료일 당시 기준시가를 입력하세요 (안분 산식의 B). 자동 안분은 수행하지 않습니다.`,
+              );
+          }
           if ((r.type === "rental_97_main" || r.type === "rental_97_proviso") && !(parseInt((r as { constructionYear?: string }).constructionYear || "") > 0))
             return fail(`${label} 적용: 신축 연도를 입력하세요.`);
           // D1-01 — 조특령 §97① 주체 요건. 3-state 미선택을 「충족」으로 읽지 않는다.

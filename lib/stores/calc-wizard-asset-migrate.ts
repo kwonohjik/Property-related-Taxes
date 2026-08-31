@@ -173,6 +173,9 @@ export function migrateAsset(raw: unknown): AssetForm {
           rentalStartDate: "",
           isTaxRegistered: false,
           rentIncreaseViolationMode: "",
+          // D2-06 — 신규 3-state. 구 세션엔 값이 없다.
+          rentalContinuesToTransfer: null,
+          stdPriceAtRentalEnd: "",
           ...r,
           /**
            * D1-03 — 구 키 `hasVacancyOver6Months`는 「6개월 초과 공실이 있는가」를 물었다.

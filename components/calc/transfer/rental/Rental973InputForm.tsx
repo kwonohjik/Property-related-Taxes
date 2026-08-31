@@ -163,6 +163,7 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
 
       {/* ③④ 공통 필드 (임대료 증액·공실) */}
       <RentalCommonFields
+        hasGainProration
         vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}

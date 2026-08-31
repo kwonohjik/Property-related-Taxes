@@ -62,6 +62,11 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
     stdPriceAtAcquisition: ctx.stdPriceAtAcquisition,
     stdPriceAtRentalStart: r.stdPriceAtRentalStart,
     stdPriceAtTransfer: ctx.stdPriceAtTransfer,
+    // D2-06 — 조특령 §97의3⑤ B·§97의5②의 「실제 임대기간 마지막 날」 축.
+    // ⚠️ 이 base는 **명시 매핑**이라 여기 적지 않은 키는 조용히 사라진다
+    //    (직전 배치 D1-01에서 실제로 발생했다 — memory `feedback_explicit_prop_mapping_strip`).
+    rentalContinuesToTransfer: r.rentalContinuesToTransfer,
+    stdPriceAtRentalEnd: r.stdPriceAtRentalEnd,
     calculatedTax: ctx.calculatedTax,
   };
 

@@ -177,6 +177,10 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     const ratio = calcRentalGainRatio({
       rentalStartDate: input.rentalStartDate,
       acquisitionDate: input.acquisitionDate,
+      // 조특령 §97의3⑤ — 분자의 감수 C = 실제 임대기간 **개시일**의 기준시가
+      numeratorBase: "rental_start",
+      rentalContinuesToTransfer: input.rentalContinuesToTransfer !== false,
+      stdPriceAtRentalEnd: input.stdPriceAtRentalEnd,
       stdPriceAtAcquisition: input.stdPriceAtAcquisition,
       stdPriceAtRentalStart: input.stdPriceAtRentalStart ?? input.officialPriceAtStart,
       stdPriceAtTransfer: input.stdPriceAtTransfer,

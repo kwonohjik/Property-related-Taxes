@@ -193,6 +193,14 @@ export function toEngineReductions(
           r.hasVacancyOverGrace === true && r.vacancyPeriods && r.vacancyPeriods.length > 0
             ? r.vacancyPeriods.map((v) => ({ startDate: v.startDate, endDate: v.endDate }))
             : undefined,
+        // D2-06 — 3-state. null(미선택)은 보내지 않아 엔진이 불적용 사유를 붙이게 한다.
+        ...(r.rentalContinuesToTransfer !== null
+          ? { rentalContinuesToTransfer: r.rentalContinuesToTransfer }
+          : {}),
+        // B는 「양도일까지 계속 임대」가 아닐 때만 의미가 있다.
+        ...(r.rentalContinuesToTransfer === false
+          ? { stdPriceAtRentalEnd: parseAmount(r.stdPriceAtRentalEnd || "0") || undefined }
+          : {}),
       };
       if (r.type === "rental_97_3") {
         return {

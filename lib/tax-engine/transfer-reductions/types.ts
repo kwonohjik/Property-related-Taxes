@@ -195,6 +195,15 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   stdPriceAtAcquisition?: number;
   stdPriceAtRentalStart?: number;
   stdPriceAtTransfer?: number;
+  /**
+   * 임대가 **양도일까지 계속**되었는가 (D2-06).
+   * 조특령 §97의3⑤ B·§97의5②는 「실제 임대기간의 **마지막 날**의 기준시가」를
+   * 양도일 기준시가 D와 **별개 변수로** 정의한다. 계속 임대했으면 B = D다.
+   * 3-state 입력의 「아니오」이면 `stdPriceAtRentalEnd`가 필수다.
+   */
+  rentalContinuesToTransfer?: boolean;
+  /** B — 실제 임대기간 마지막 날의 기준시가 (원). 계속 임대한 경우 불요. */
+  stdPriceAtRentalEnd?: number;
   // ── 세액감면 계열 컨텍스트 ──
   /** 산출세액 (tax_amount 계열 — §97·§97의2·§97의5) */
   calculatedTax?: number;
