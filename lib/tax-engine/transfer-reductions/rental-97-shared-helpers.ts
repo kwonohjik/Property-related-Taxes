@@ -62,12 +62,16 @@ export interface RentalRentViolation {
  * @param graceMonths 조문별 유예 개월 — `RENTAL_VACANCY_GRACE_MONTHS_97`(3) 또는
  *                    `RENTAL_VACANCY_GRACE_MONTHS_97_5`(6). 기본값을 두지 않는다:
  *                    호출부가 조문을 명시하지 않으면 컴파일이 실패해야 한다.
+ * @param noGracePeriods **유예 없이** 전부 차감할 구간 — 조특령 §97⑤4호의 「5호 미만의 주택을
+ *                    임대한 기간」이 여기 해당한다. 그 기간은 애초에 주택임대기간이 아니므로
+ *                    공실 유예를 적용할 여지가 없다(2개월이어도 차감된다).
  */
 export function calculateEffectiveRentalPeriod(
   rentalStartDate: Date,
   transferDate: Date,
   vacancyPeriods: Rental97VacancyPeriod[],
   graceMonths: number,
+  noGracePeriods: Rental97VacancyPeriod[] = [],
 ): number {
   const totalDays = differenceInDays(transferDate, rentalStartDate);
   if (totalDays <= 0) return 0;
@@ -78,6 +82,9 @@ export function calculateEffectiveRentalPeriod(
     if (vp.endDate.getTime() > graceEnd.getTime()) {
       deductDays += differenceInDays(vp.endDate, vp.startDate);
     }
+  }
+  for (const np of noGracePeriods) {
+    deductDays += Math.max(0, differenceInDays(np.endDate, np.startDate));
   }
 
   const effectiveDays = Math.max(0, totalDays - deductDays);

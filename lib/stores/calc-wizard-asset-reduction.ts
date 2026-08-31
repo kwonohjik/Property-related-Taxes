@@ -224,12 +224,18 @@ export type RentalReductionFormVariant =
       isNationalHousing: boolean;
       /** §97① 단서 분기 (proviso만) */
       provisoCase?: "a_construction" | "b_purchase" | "c_10years";
+      /** 조특령 §97① 주체 요건 — 임대주택 5호 이상 임대 (3-state, null = 미선택) */
+      hasMin5RentalUnits: boolean | null;
+      /** 조특령 §97⑤4호 — 5호 미만으로 임대한 기간 (임대기간 불산입, 유예 없음) */
+      belowMin5UnitsPeriods?: VacancyPeriodFormItem[];
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_2";
       /** 건설임대(1호) / 매입임대(2호) */
       rental972Type: "construction" | "purchase" | "";
       isNationalHousing: boolean;
+      /** 조특령 §97의2① 주체 요건 — 신축임대 1호 포함 2호 이상 임대 (3-state, null = 미선택) */
+      hasNewRentalPlus2Units: boolean | null;
     } & RentalCommonFormFields)
   // ── §99의4 농어촌·고향주택 — 주택수 제외 (2026-06-11) ──
   | {

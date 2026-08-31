@@ -37,6 +37,8 @@ describe("④ API 변환 — 유예 초과 공실이 엔진 payload에 실린다
           vacancyPeriods: [VACANCY_4M],
           constructionYear: "1998",
           isNationalHousing: true,
+          hasMin5RentalUnits: true,
+          belowMin5UnitsPeriods: [],
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any,
       ],
@@ -69,6 +71,7 @@ describe("🔴 엔진 — 같은 4개월 공실이 §97에서는 임대기간을
       id: "rental_97_main",
       constructionYear: 1998,
       isNationalHousing: true,
+      hasMin5RentalUnits: true, // 조특령 §97① 주체 요건 (D1-01)
       vacancyPeriods: [{ startDate: D(VACANCY_4M.startDate), endDate: D(VACANCY_4M.endDate) }],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
@@ -83,6 +86,7 @@ describe("🔴 엔진 — 같은 4개월 공실이 §97에서는 임대기간을
       id: "rental_97_main",
       constructionYear: 1998,
       isNationalHousing: true,
+      hasMin5RentalUnits: true, // 조특령 §97① 주체 요건 (D1-01)
       vacancyPeriods: [],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);

@@ -22,6 +22,12 @@ const rental97CommonShape = {
   vacancyPeriods: z.array(vacancyPeriodSchema).optional(),
 } as const;
 
+/** §97 본문·단서 전용 — 조특령 §97① 5호 요건 + §97⑤4호 5호 미만 기간 (D1-01) */
+const rental97UnitCountShape = {
+  hasMin5RentalUnits: z.boolean().optional(),
+  belowMin5UnitsPeriods: z.array(vacancyPeriodSchema).optional(),
+} as const;
+
 export const reductionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("self_farming"),
@@ -104,6 +110,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ...rental97CommonShape,
     constructionYear: z.number().int().optional(),
     isNationalHousing: z.boolean().optional(),
+    ...rental97UnitCountShape,
     _phase1Stub: z.literal(true).optional(),
   }),
   z.object({
@@ -111,6 +118,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ...rental97CommonShape,
     constructionYear: z.number().int().optional(),
     isNationalHousing: z.boolean().optional(),
+    ...rental97UnitCountShape,
     provisoCase: z.enum(["a_construction", "b_purchase", "c_10years"]).optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
@@ -119,6 +127,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     ...rental97CommonShape,
     rental972Type: z.enum(["construction", "purchase"]).optional(),
     isNationalHousing: z.boolean().optional(),
+    /** 조특령 §97의2① — 신축임대 1호 포함 2호 이상 임대 (D1-02) */
+    hasNewRentalPlus2Units: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),
   }),
   z.object({

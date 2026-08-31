@@ -70,7 +70,19 @@ export function evaluateRental97Main(input: Rental97EvaluationInput): Rental97Re
     });
   }
 
-  // 3) 임대기간
+  // 2-1) 주체 요건 — 조특령 §97① 「임대주택을 5호 이상 임대하는 거주자」 (D1-01)
+  if (input.hasMin5RentalUnits !== true) {
+    reasons.push({
+      code: "BELOW_MIN_5_UNITS",
+      message:
+        input.hasMin5RentalUnits === false
+          ? "임대주택 5호 이상 임대에 해당하지 않습니다 — §97①의 「대통령령으로 정하는 거주자」가 아닙니다 (조특령 §97①)."
+          : "임대주택 5호 이상 임대 여부가 확인되지 않았습니다 (조특령 §97①).",
+      legalBasis: "조특령 §97①",
+    });
+  }
+
+  // 3) 임대기간 — 공실(유예 3월) + 5호 미만 기간(유예 없음, 조특령 §97⑤4호)을 차감
   let eligibleRentalYears = 0;
   if (input.rentalStartDate) {
     eligibleRentalYears = calculateEffectiveRentalPeriod(
@@ -78,6 +90,9 @@ export function evaluateRental97Main(input: Rental97EvaluationInput): Rental97Re
       input.transferDate,
       input.vacancyPeriods ?? [],
       RENTAL_VACANCY_GRACE_MONTHS_97,
+      // 조특령 §97⑤4호 — 「5호 미만의 주택을 임대한 기간은 주택임대기간으로 보지 아니할 것」.
+      // 공실과 달리 유예가 없으므로 별도 인자로 넘긴다(2개월이어도 차감된다).
+      input.belowMin5UnitsPeriods ?? [],
     );
   }
 

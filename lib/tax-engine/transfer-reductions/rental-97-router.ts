@@ -87,9 +87,18 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         constructionYear: r.constructionYear,
         isNationalHousing: r.isNationalHousing,
         provisoCase: r.type === "rental_97_proviso" ? r.provisoCase : undefined,
+        // ⚠️ 이 case는 **명시 매핑**이라 여기 적지 않은 키는 조용히 사라진다
+        //    (memory `feedback_explicit_prop_mapping_strip`). 신규 필드는 반드시 추가할 것.
+        hasMin5RentalUnits: r.hasMin5RentalUnits,
+        belowMin5UnitsPeriods: r.belowMin5UnitsPeriods,
       };
     case "rental_97_2":
-      return { ...base, rental972Type: r.rental972Type, isNationalHousing: r.isNationalHousing };
+      return {
+        ...base,
+        rental972Type: r.rental972Type,
+        isNationalHousing: r.isNationalHousing,
+        hasNewRentalPlus2Units: r.hasNewRentalPlus2Units,
+      };
   }
 }
 

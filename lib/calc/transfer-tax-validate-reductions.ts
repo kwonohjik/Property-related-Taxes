@@ -254,6 +254,27 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail(`${label} 적용: 임대개시일 당시 기준시가(주택+부속토지 합계)를 입력하세요.`);
           if ((r.type === "rental_97_main" || r.type === "rental_97_proviso") && !(parseInt((r as { constructionYear?: string }).constructionYear || "") > 0))
             return fail(`${label} 적용: 신축 연도를 입력하세요.`);
+          // D1-01 — 조특령 §97① 주체 요건. 3-state 미선택을 「충족」으로 읽지 않는다.
+          if (r.type === "rental_97_main" || r.type === "rental_97_proviso") {
+            const m5 = (r as { hasMin5RentalUnits?: boolean | null }).hasMin5RentalUnits;
+            if (m5 === null || m5 === undefined)
+              return fail(`${label} 적용: 임대주택 5호 이상 임대 여부를 선택하세요 (조특령 §97①).`);
+            // 구간을 열어 놓고 비워 두면 엔진에 NaN이 흘러가므로 여기서 차단한다.
+            const below = (r as { belowMin5UnitsPeriods?: { startDate: string; endDate: string }[] })
+              .belowMin5UnitsPeriods;
+            if (below?.some((p) => !p.startDate || !p.endDate))
+              return fail(
+                `${label} 적용: 5호 미만 임대 기간의 시작일·종료일을 모두 입력하세요 (조특령 §97⑤4호). 해당 없으면 구간을 삭제하세요.`,
+              );
+          }
+          // D1-02 — 조특령 §97의2① 주체 요건 (§97의 5호와 다른 조문·다른 숫자)
+          if (r.type === "rental_97_2") {
+            const u2 = (r as { hasNewRentalPlus2Units?: boolean | null }).hasNewRentalPlus2Units;
+            if (u2 === null || u2 === undefined)
+              return fail(
+                `${label} 적용: 신축임대주택 1호 이상을 포함한 2호 이상 임대 여부를 선택하세요 (조특령 §97의2①).`,
+              );
+          }
           if (r.type === "rental_97_proviso" && !(r as { provisoCase?: string }).provisoCase)
             return fail(`${label} 적용: 단서 유형(건설임대/매입임대/10년 이상)을 선택하세요.`);
           if (r.type === "rental_97_2" && !(r as { rental972Type?: string }).rental972Type)

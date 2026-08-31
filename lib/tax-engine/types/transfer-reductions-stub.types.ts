@@ -35,20 +35,30 @@ interface Rental97CommonFields {
   _phase1Stub?: true;
 }
 
+/** §97 본문·단서 전용 — 조특령 §97① 5호 요건 + §97⑤4호 5호 미만 기간 (D1-01) */
+interface Rental97UnitCountFields {
+  /** 조특령 §97① — 임대주택 5호 이상 임대하는 거주자 (주체 요건) */
+  hasMin5RentalUnits?: boolean;
+  /** 조특령 §97⑤4호 — 5호 미만으로 임대한 기간 (임대기간 불산입, 유예 없음) */
+  belowMin5UnitsPeriods?: { startDate: Date; endDate: Date }[];
+}
+
 export type TransferReductionStub =
   // 장기임대 §97 시리즈 (rental_97_3 = 기존 long_term_rental 후속 — 정정된 ID)
   | ({ type: "rental_97_main";
       constructionYear?: number;
       isNationalHousing?: boolean;
-    } & Rental97CommonFields)
+    } & Rental97UnitCountFields & Rental97CommonFields)
   | ({ type: "rental_97_proviso";
       constructionYear?: number;
       isNationalHousing?: boolean;
       provisoCase?: "a_construction" | "b_purchase" | "c_10years";
-    } & Rental97CommonFields)
+    } & Rental97UnitCountFields & Rental97CommonFields)
   | ({ type: "rental_97_2";
       rental972Type?: "construction" | "purchase";
       isNationalHousing?: boolean;
+      /** 조특령 §97의2① — 신축임대 1호 포함 2호 이상 임대 (D1-02) */
+      hasNewRentalPlus2Units?: boolean;
     } & Rental97CommonFields)
   | ({ type: "rental_97_3";
       /** @deprecated Phase 1 stub 호환 (단순 경로 입력) */

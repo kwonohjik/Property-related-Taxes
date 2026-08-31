@@ -183,6 +183,18 @@ export function migrateAsset(raw: unknown): AssetForm {
            *    (§97의5는 임계가 그대로지만, 조문별 분기 없이 한 번 다시 묻는 편이 안전하다.)
            */
           hasVacancyOverGrace: null,
+          /**
+           * D1-01·D1-02 — 주체 요건(§97 5호 / §97의2 2호) 신규 필드.
+           * 구 세션에는 값이 없으므로 **미선택**으로 둔다. 미입력을 충족으로 읽으면
+           * 1호만 임대한 사용자가 그대로 감면을 받는다.
+           */
+          ...((r.type === "rental_97_main" || r.type === "rental_97_proviso") &&
+          r.hasMin5RentalUnits === undefined
+            ? { hasMin5RentalUnits: null, belowMin5UnitsPeriods: [] }
+            : {}),
+          ...(r.type === "rental_97_2" && r.hasNewRentalPlus2Units === undefined
+            ? { hasNewRentalPlus2Units: null }
+            : {}),
         };
       }
       // §99의4 (2026-06-11): 구 stub 데이터(_phase1Stub) 본 필드 누락 보정 (③)
