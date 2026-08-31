@@ -1,16 +1,22 @@
 /**
  * POST /api/kiwoom/transfer-1month
  *
- * 양도일 직전 1개월 종가 자동조회.
+ * 양도일 이전 1개월 종가 자동조회.
  *
  * 법령: 소득세법 §99①3 → 시행령 §165③ 준용 → 상증법 §63①1가목 → 상증령 §52의2.
+ *   §99①3 문언: 「"평가기준일 이전ㆍ이후 각 2개월"은 "양도일ㆍ취득일 **이전 1개월**"로 본다」
+ *   ⚠️ 「이전」은 **그 날을 포함**한다(「전」이 미포함). `calendar.ts:147-162` 참조.
  *
  * 흐름:
  *   1. Zod 검증 { stockCode, transferDate }
  *   2. ka10001 → 거래정지·관리종목 확인
  *   3. ka10081 → base_dt=transferDate, ~ 200거래일 응답
- *   4. 클라이언트 필터 [transferDate − 1 month, transferDate − 1 day]
+ *   4. `buildOneMonthBeforeSlots(transferDate)` 로 슬롯 생성 — **기준일 포함**
  *   5. oneMonthBeforeTransferAvg() → 슬롯·평균
+ *
+ * 🔑 종전 주석은 4단계를 「필터 [transferDate − 1 month, transferDate **− 1 day**]」라 적어
+ *    **기준일 제외**로 읽히게 했다. 사실이 아니다(`:88`이 그 builder를 그대로 쓴다).
+ *    그 오독 때문에 UI 버튼이 「API는 양도일 미포함」이라는 전제로 창을 다시 만들고 있었다.
  *
  * 거래정지 시 자동조회 차단 (상증령 §52의2③):
  *   - 평균 산정 자체는 수행하되 tradingHalt 플래그 동봉.

@@ -23,7 +23,6 @@ import {
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
-import { preTransferAutoFillDates } from "./PostListingClosingPriceTable";
 
 interface Props {
   securityCode: string;
@@ -110,34 +109,24 @@ export function KiwoomAutoFetchButton({
         tradingHalt: boolean;
       };
 
-      // ★ API slotDates(양도일 미포함)와 UI displayDates(양도일 포함, anchor 시프트) 차이 보정.
-      // 종가를 일자 키로 Map 매핑한 후 UI displayDates에 align해서 슬롯 시프트 차단.
-      const apiCloseByDate = new Map<string, number>();
-      data.slotDates.forEach((d, i) => {
-        const c = data.closingPrices[i];
-        if (typeof c === "number") apiCloseByDate.set(d, c);
-      });
-
-      const displayDates = preTransferAutoFillDates(transferDate);
-      const dates = displayDates;
-      const closings = displayDates.map((d) => {
-        const c = apiCloseByDate.get(d);
-        return typeof c === "number" ? String(c) : "";
-      });
-
-      // displayDates 기준 평균 재산정 (양도일 포함 알고리즘 — API 기간과 1일 차이 가능)
-      let sum = 0;
-      let n = 0;
-      for (const v of closings) {
-        if (v) {
-          const num = Number(v);
-          if (num > 0) {
-            sum += num;
-            n += 1;
-          }
-        }
-      }
-      const avg = n > 0 ? Math.floor(sum / n) : 0;
+      /**
+       * route 응답을 **그대로** 쓴다 — 창도 평균도 여기서 다시 만들지 않는다.
+       *
+       * 🔑 종전에는 응답을 버리고 `preTransferAutoFillDates(transferDate)`로 창을 재구성해
+       *    평균을 재산정했고, 그 근거로 「API slotDates는 양도일 미포함」이라 적혀 있었다.
+       *    **사실이 아니었다** — route도 같은 `buildOneMonthBeforeSlots`를 쓴다
+       *    (`app/api/kiwoom/transfer-1month/route.ts:88`). 두 창은 원래 같았고 재계산은
+       *    같은 값을 다시 구하는 일이었다.
+       *
+       * 🔴 그리고 무해하지도 않다 — route가 anchor를 보정하면(휴장일 fixture 범위 밖)
+       *    여기서 창을 다시 만드는 순간 **그 보정이 화면에 도달하지 못한다**.
+       *    anchor: `__tests__/components/kiwoom-autofetch-consumes-route-window.anchor.test.tsx`
+       */
+      const dates = data.slotDates;
+      const closings = data.closingPrices.map((c) =>
+        typeof c === "number" && c > 0 ? String(c) : "",
+      );
+      const avg = data.average;
 
       onFill({
         transferPriceDates: dates,
@@ -147,14 +136,14 @@ export function KiwoomAutoFetchButton({
         kiwoomLastFetchedAt: new Date().toISOString(),
       });
 
-      // 검증용 결과 요약
+      // 검증용 결과 요약 — 표시값도 route 응답에서 곧장 온다(화면과 폼이 갈리지 않게)
       setInfo({
         average: avg,
-        tradingDays: n,
-        sum,
-        slotDates: displayDates,
-        closingPrices: closings.map((c) => (c ? Number(c) : null)),
-        weekendLabels: data.weekendLabels ?? displayDates.map(() => ""),
+        tradingDays: data.tradingDays,
+        sum: data.sum,
+        slotDates: dates,
+        closingPrices: data.closingPrices,
+        weekendLabels: data.weekendLabels ?? dates.map(() => ""),
       });
     } catch (e) {
       setError((e as Error).message ?? "네트워크 오류");
