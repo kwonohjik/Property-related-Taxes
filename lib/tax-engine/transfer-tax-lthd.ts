@@ -438,7 +438,43 @@ export function calcLongTermHoldingDeduction(
     rental97Eval.effectCategory === "long_term_holding_additional" &&
     rental97Eval.additionalRate !== undefined
   ) {
-    // §97의4: 보유기간별 공제율(§95② 표)에 추가율 가산 — 기본 공제율이 0(보유 3년 미만)이면 가산 불가
+    // §97의4① **단서** — 「다만, 같은 항 단서에 해당하는 경우에는 그러하지 아니하다」 (D2-01)
+    //
+    // 직전 지시어가 「같은 조 **제2항**」이므로 「같은 항」 = 소득세법 §95②이고,
+    // §95② 단서는 「다만, 대통령령으로 정하는 **1세대 1주택**…의 경우에는 … **표 2**…」다.
+    // ⇒ 표2가 적용되는 1세대1주택 고가주택에는 추가공제율을 **가산하지 않는다**.
+    //
+    // 🔑 판정 술어를 새로 만들지 않는다 — 위 :269의 `useTable2`가 이미 §95② 단서 해당 여부다.
+    //    (같은 사실을 두 술어로 판정하면 드리프트한다 — memory `feedback_shared_predicate_argument_parity`)
+    //
+    // ⚠️ 배제해도 `rental97LthdDetail`은 남긴다. 사용자가 §97의4를 선택했는데 결과 화면에서
+    //    통째로 사라지면 「왜 반영이 안 됐는지」를 알 길이 없다.
+    if (useTable2) {
+      return {
+        deduction: applyRate(taxableGain, rate),
+        rate,
+        holdingPeriod,
+        rental97LthdDetail: {
+          ...rental97Eval,
+          isEligible: false,
+          ineligibleReasons: [
+            {
+              code: "TABLE2_PROVISO_EXCLUDED",
+              message:
+                "1세대1주택 장기보유특별공제 표2(소득세법 §95② 단서) 적용 대상이므로 " +
+                "§97의4 추가공제율을 가산하지 않습니다 (조특법 §97의4① 단서).",
+              legalBasis: "조특법 §97의4① 단서 · 소득세법 §95② 단서",
+            },
+          ],
+          baseLthdRate: rate,
+          gainApplied: taxableGain,
+          deductionApplied: applyRate(taxableGain, rate),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      };
+    }
+
+    // §97의4: 보유기간별 공제율(§95② 표1)에 추가율 가산 — 기본 공제율이 0(보유 3년 미만)이면 가산 불가
     if (rate > 0) {
       const combined = rate + rental97Eval.additionalRate;
       const combinedDeduction = applyRate(taxableGain, combined);

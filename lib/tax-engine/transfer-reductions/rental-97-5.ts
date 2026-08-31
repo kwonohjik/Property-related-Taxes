@@ -100,8 +100,23 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
   // 4) ①2호 — 10년 이상 계속 임대
   let eligibleRentalYears = 0;
   if (input.rentalStartDate) {
+    /**
+     * 조특령 §97의5③ — 「…사업자등록과 임대사업자등록을 하고 장기일반민간임대주택등으로
+     * **등록하여 임대하는 날부터** 임대를 개시한 것으로 본다」 (D2-02 — §97의3과 같은 구조)
+     *
+     * 법 §97의5①2호는 「장기일반민간임대주택등으로 **등록 후** 10년 이상 계속하여 …
+     * 임대한 후 양도할 것」이고, 조특령 §97의5①은 「10년 이상 계속하여 등록하고,
+     * 그 **등록한 기간 동안** 계속하여 10년 이상 임대한 경우로 한다」이다.
+     * ⇒ 등록 이전 임대기간은 산입하지 않는다.
+     */
+    const effectiveStart =
+      input.registrationDate !== undefined &&
+      input.registrationDate.getTime() > input.rentalStartDate.getTime()
+        ? input.registrationDate
+        : input.rentalStartDate;
+
     eligibleRentalYears = calculateEffectiveRentalPeriod(
-      input.rentalStartDate,
+      effectiveStart,
       input.transferDate,
       input.vacancyPeriods ?? [],
       RENTAL_VACANCY_GRACE_MONTHS_97_5,
