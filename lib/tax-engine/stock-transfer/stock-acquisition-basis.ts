@@ -278,7 +278,8 @@ export function resolveAcquisitionBasis(
       }
       valuationDetail = {
         method: "halt_acquisition_conversion",
-        netAssetFloorApplied: false, // 분자(취득기준시가) 80% 하한 미적용 관행
+        // §165④1 단서 실제 발동 여부 — 하드코딩 false 였다(하한이 걸려도 결과뷰·신고서가 계속 false).
+        netAssetFloorApplied: acqSide.floorApplied,
         finalPerShareValue: acqSide.perShare,
         conversionAcqStdPerShare: acqSide.perShare,
         conversionTransferStd: haltTransferStd,

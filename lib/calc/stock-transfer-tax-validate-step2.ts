@@ -103,7 +103,12 @@ function validateUnlistedValuationFields(
 
   // [B-4 §165⑨ 본체] 양도·취득 기준시가 동일 동일사업연도 토글 ON 시 (M-4 차단 / M-7 경고)
   if (form.unlistedSameBizYearToggle) {
-    if (isEmpty(form.prePriorYearNetIncomePerShare)) {
+    /**
+     * 순자산 단독 평가(§165④3)면 순손익가치를 **아예 쓰지 않는다** — UI도 그 칸을 숨긴다.
+     * 종전에는 전전연도 NI를 error로 필수화해 「화면엔 칸이 없는데 검증은 요구하는」 상태였다.
+     * 엔진도 순자산 단독 경로에서는 전전연도를 순자산 단독으로 평가한다(양변 기준 일치).
+     */
+    if (!niSkip && isEmpty(form.prePriorYearNetIncomePerShare)) {
       errors.push({ field: "prePriorYearNetIncomePerShare", message: "전전사업연도 1주당 순손익가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
     }
     if (isEmpty(form.prePriorYearNetAssetPerShare)) {
@@ -112,8 +117,14 @@ function validateUnlistedValuationFields(
     const td = parseTransferDate(form.transferDate);
     if (valuationMode === "simple" && td) {
       const heavyRE = form.isHeavyRealEstateForValuation;
-      const transferEval = calcSection165_4Value(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE, td).value;
-      const acqEval = calcSection165_4Value(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td).value;
+      // 엔진 단일 진실 — 순자산 단독이면 엔진도 순자산 단독으로 양측을 비교한다.
+      // 여기만 가중평균으로 재면 엔진은 「같다」, validate는 「다르다」가 되어 거짓 경고가 뜬다.
+      const transferEval = niSkip
+        ? Math.floor(parseF(form.transferYearNetAssetPerShare))
+        : calcSection165_4Value(parseF(form.transferYearNetIncomePerShare), parseF(form.transferYearNetAssetPerShare), heavyRE, td).value;
+      const acqEval = niSkip
+        ? Math.floor(parseF(form.acquisitionYearNetAssetPerShare))
+        : calcSection165_4Value(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td).value;
       if (transferEval > 0 && transferEval !== acqEval) {
         errors.push({ field: "unlistedSameBizYearToggle", message: "양도연도·취득연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다. 토글을 해제하세요.", severity: "warning" });
       }

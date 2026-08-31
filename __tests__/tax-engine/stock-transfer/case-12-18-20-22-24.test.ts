@@ -211,6 +211,10 @@ describe("케이스 18 — 거래정지·관리종목 비상장 보충 평가 �
 
 describe("케이스 20 — 대주주 임계 시기별 (코스피·코스닥 × 4 시기)", () => {
   /**
+   * 🔑 시기는 **양도일**이 고른다(리뷰 2026-08-28 #2 — 부칙 「양도하는 분부터」).
+   *    종전 픽스처는 `priorYearEndDate`로만 시기를 고르고 양도일은 2024-06-01에 둬서
+   *    「양도일 2024년인데 판정기준일 2024-12-31(양도 후)」 같은 성립 불가 조합이었다.
+   *
    * 코스피 임계 이력:
    * 2024.1.1.~ : 1%·50억
    * 2020.4.1.~ : 1%·10억
@@ -223,7 +227,10 @@ describe("케이스 20 — 대주주 임계 시기별 (코스피·코스닥 × 4
       marketType: "kospi",
       selfShareRatio: 0.005,            // 0.5% (1% 미만)
       selfMarketCap: 4_900_000_000,    // 49억 (50억 미만)
-      priorYearEndDate: new Date("2024-12-31"),
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-06-01"),
+      filingDate: new Date("2024-08-31"),
+      priorYearEndDate: new Date("2023-12-31"),
       isKOTCTrading: false,
     });
     const result = calculateStockTransferTax(input);
@@ -236,7 +243,10 @@ describe("케이스 20 — 대주주 임계 시기별 (코스피·코스닥 × 4
       marketType: "kospi",
       selfShareRatio: 0.005,
       selfMarketCap: 1_200_000_000,    // 12억 (2020 임계 10억 초과)
-      priorYearEndDate: new Date("2020-12-31"),  // 2020.4.1.~ 임계 적용
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2020-06-01"),
+      filingDate: new Date("2020-08-31"),
+      priorYearEndDate: new Date("2019-12-31"),  // 2020.4.1.~ 임계 적용
       isSmallMediumEnterprise: true,
       perShareTransferPrice: 50_000,
       perShareAcquisitionPrice: 30_000,
@@ -252,7 +262,10 @@ describe("케이스 20 — 대주주 임계 시기별 (코스피·코스닥 × 4
       marketType: "kospi",
       selfShareRatio: 0.005,
       selfMarketCap: 1_000_000_000,    // 10억 (2018 임계 15억 미만)
-      priorYearEndDate: new Date("2018-12-31"),  // 2018.4.1.~ 임계
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2018-06-01"),
+      filingDate: new Date("2018-08-31"),
+      priorYearEndDate: new Date("2017-12-31"),  // 2018.4.1.~ 임계
       isKOTCTrading: false,
     });
     const result = calculateStockTransferTax(input);
@@ -264,7 +277,10 @@ describe("케이스 20 — 대주주 임계 시기별 (코스피·코스닥 × 4
       marketType: "kospi",
       selfShareRatio: 0.005,
       selfMarketCap: 2_000_000_000,   // 20억 (2017 임계 25억 미만)
-      priorYearEndDate: new Date("2017-06-30"),  // 2017년 기준
+      acquisitionDate: new Date("2014-01-01"),
+      transferDate: new Date("2017-06-30"),
+      filingDate: new Date("2017-08-31"),
+      priorYearEndDate: new Date("2016-12-31"),  // 2017년 기준
       isKOTCTrading: false,
     });
     const result = calculateStockTransferTax(input);
@@ -276,7 +292,10 @@ describe("케이스 20 — 대주주 임계 시기별 (코스피·코스닥 × 4
       marketType: "kosdaq",
       selfShareRatio: 0.02,            // 정확히 2% (코스닥 임계)
       selfMarketCap: 0,
-      priorYearEndDate: new Date("2024-12-31"),
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2024-06-01"),
+      filingDate: new Date("2024-08-31"),
+      priorYearEndDate: new Date("2023-12-31"),
       isSmallMediumEnterprise: true,
       perShareTransferPrice: 50_000,
       perShareAcquisitionPrice: 30_000,
@@ -292,7 +311,10 @@ describe("케이스 20 — 대주주 임계 시기별 (코스피·코스닥 × 4
       marketType: "kosdaq",
       selfShareRatio: 0.01,
       selfMarketCap: 1_000_000_000,   // 정확히 10억 (2020 임계)
-      priorYearEndDate: new Date("2020-12-31"),
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2020-06-01"),
+      filingDate: new Date("2020-08-31"),
+      priorYearEndDate: new Date("2019-12-31"),
       isSmallMediumEnterprise: true,
       perShareTransferPrice: 50_000,
       perShareAcquisitionPrice: 30_000,
@@ -308,7 +330,10 @@ describe("케이스 20 — 대주주 임계 시기별 (코스피·코스닥 × 4
       marketType: "kosdaq",
       selfShareRatio: 0.01,
       selfMarketCap: 1_500_000_000,   // 15억 (2018 임계)
-      priorYearEndDate: new Date("2018-12-31"),
+      acquisitionDate: new Date("2015-01-01"),
+      transferDate: new Date("2018-06-01"),
+      filingDate: new Date("2018-08-31"),
+      priorYearEndDate: new Date("2017-12-31"),
       isSmallMediumEnterprise: true,
       perShareTransferPrice: 50_000,
       perShareAcquisitionPrice: 30_000,
@@ -323,7 +348,10 @@ describe("케이스 20 — 대주주 임계 시기별 (코스피·코스닥 × 4
       marketType: "kosdaq",
       selfShareRatio: 0.01,
       selfMarketCap: 1_500_000_000,   // 15억 (2017 임계 20억 미만)
-      priorYearEndDate: new Date("2017-06-30"),
+      acquisitionDate: new Date("2014-01-01"),
+      transferDate: new Date("2017-06-30"),
+      filingDate: new Date("2017-08-31"),
+      priorYearEndDate: new Date("2016-12-31"),
       isKOTCTrading: false,
     });
     const result = calculateStockTransferTax(input);

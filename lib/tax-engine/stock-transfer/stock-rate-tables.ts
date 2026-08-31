@@ -49,15 +49,29 @@ export const KOSPI_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   { from: new Date("2017-01-01"), shareRatioThreshold: 0.01, marketCapThreshold: 2_500_000_000 },
   // 2016.4.1.~ 2016.12.31. (F-01 — 교재 §3장 이미지 48 ⑤, KoreanLaw 미검증)
   { from: new Date("2016-04-01"), shareRatioThreshold: 0.01, marketCapThreshold: 2_500_000_000 },
-  // 2013.~ 2016.3.31. (구간 단축)
-  { from: new Date("2013-01-01"), shareRatioThreshold: 0.02, marketCapThreshold: 5_000_000_000 },
-  // 1999.~ 2012.12.31.
+  /**
+   * 2014.1.1.~ 2016.3.31. — 지분율 3%→2% · 시총 100억→50억 확대.
+   *
+   * 🔑 `from`이 공포일(2013.2.15.)도 시행일(2013.7.1.)도 아닌 **2014-01-01**이다.
+   *    대통령령 제24356호 부칙 §22②: 「제157조제4항제1호 및 제2호의 개정규정(주식양도차익
+   *    과세대상인 대주주 범위를 **확대하는 부분만** 해당한다)은 **2013년 7월 1일이 속하는
+   *    사업연도 종료일 후 양도하는 분부터** 적용한다.」
+   *    ⇒ 역년 사업연도면 종료일 2013-12-31, 그 **후** 양도분 = 2014-01-01 이후.
+   *    (부칙 §22①의 「이 영 시행 후 양도하는 분」은 **특수관계인 범위** 축이라 임계표와 무관.)
+   */
+  { from: new Date("2014-01-01"), shareRatioThreshold: 0.02, marketCapThreshold: 5_000_000_000 },
+  // 1999.~ 2013.12.31.
   { from: new Date("1999-01-01"), shareRatioThreshold: 0.05, marketCapThreshold: Infinity },
   // ~1998 (임의 시작일)
   { from: new Date("1900-01-01"), shareRatioThreshold: 0.05, marketCapThreshold: Infinity },
 ];
 
-/** 코스닥 대주주 임계 이력 */
+/**
+ * 코스닥 대주주 임계 이력
+ *
+ * ⚠️ 2013-08-29 행은 제24356호가 아닌 **다른 개정** 축이라 위 부칙 §22② 정정 대상이 아니다.
+ *    (KOSPI만 2013-01-01 → 2014-01-01로 옮겼다.)
+ */
 export const KOSDAQ_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   // 2024.1.1.~ (현행)
   { from: new Date("2024-01-01"), shareRatioThreshold: 0.02, marketCapThreshold: 5_000_000_000 },
@@ -132,8 +146,17 @@ export const UNLISTED_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
 ];
 
 /**
- * 시장 타입 + 판정 기준일로 대주주 임계 조회
- * 시기별 가장 최근 적용 임계를 반환
+ * 시장 타입 + **양도일**로 대주주 임계 조회 — 시기별 가장 최근 적용 임계를 반환.
+ *
+ * 🔑 **인자는 「양도일」이지 「직전 사업연도 종료일」이 아니다** (리뷰 2026-08-28 #2 정정).
+ *
+ * §157에는 성격이 다른 두 날짜가 섞여 있다:
+ *   ① **보유현황 측정 시점** = 직전 사업연도 종료일 — 지분율·시총을 **얼마로 볼지**(§157①·④)
+ *   ② **개정본 적용 시기** = 어느 임계 금액이 유효한지 — 조문이 아니라 **부칙**이 정하고,
+ *      부칙은 한결같이 「**양도하는 분부터**」다(제34061호 §2·제30395호 §2②·제24356호 §22②).
+ *
+ * 이 함수가 고르는 것은 ②다. 종전에는 ①을 넘겨받아, 표의 `from`이 시행일(4-1 등)인데
+ * 역년 사업연도의 직전 종료일은 12-31뿐이라 **4-1 행이 다음 해 12-31에서야 매칭**됐다.
  *
  * Phase B 확장 (2026-05-19):
  * - 비상장 벤처기업 시총 임계 40억 적용
@@ -161,7 +184,7 @@ export const UNLISTED_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
  */
 export function getMajorShareholderThreshold(
   marketType: "kospi" | "kosdaq" | "konex" | "unlisted",
-  priorYearEndDate: Date,
+  transferDate: Date,
   options?: { isVentureCompany?: boolean; isKOTCTrading?: boolean },
 ): MajorShareholderThreshold {
   let thresholds: MajorShareholderThreshold[];
@@ -176,9 +199,9 @@ export function getMajorShareholderThreshold(
     thresholds = UNLISTED_MAJOR_THRESHOLDS;
   }
 
-  // 최신 from 순 정렬 후 priorYearEndDate >= from인 첫 번째
+  // 최신 from 순 정렬 후 transferDate >= from인 첫 번째 (그 날을 **포함**한 이후 양도분)
   const sorted = [...thresholds].sort((a, b) => b.from.getTime() - a.from.getTime());
-  const match = sorted.find((t) => priorYearEndDate >= t.from) ?? sorted[sorted.length - 1];
+  const match = sorted.find((t) => transferDate >= t.from) ?? sorted[sorted.length - 1];
 
   // 비상장 벤처기업 분기 (§167의8①2호 나목 **본문 괄호**)
   //   요건 3개의 곱: 비상장 × 자본시장법령 §178①에 따라 거래 × 벤처기업
@@ -200,12 +223,16 @@ export function getMajorShareholderThreshold(
 }
 
 /**
- * 시장 타입 + 직전 사업연도 종료일로 해당 임계의 적용 시작일(from)을 ISO 문자열로 반환
- * buildAppliedThreshold 헬퍼에서 fromDate 산출에 사용
+ * 시장 타입 + **양도일**로 해당 임계의 적용 시작일(from)을 ISO 문자열로 반환.
+ * `buildAppliedThreshold`가 화면 표시용 `fromDate` 산출에 쓴다.
+ *
+ * ⚠️ `getMajorShareholderThreshold`와 **반드시 같은 날짜**를 받아야 한다 — 다른 날짜로
+ *    조회하면 「임계 50억인데 fromDate는 2020-04-01(그 행의 시총은 10억)」 같은 모순이
+ *    화면에 그대로 나간다(종전 실측).
  */
 export function resolveThresholdFromDate(
   marketType: "kospi" | "kosdaq" | "konex" | "unlisted",
-  priorYearEndDate: Date,
+  transferDate: Date,
 ): string {
   const table =
     marketType === "kospi" ? KOSPI_MAJOR_THRESHOLDS :
@@ -213,7 +240,7 @@ export function resolveThresholdFromDate(
     marketType === "konex" ? KONEX_MAJOR_THRESHOLDS :
     UNLISTED_MAJOR_THRESHOLDS;
   const sorted = [...table].sort((a, b) => b.from.getTime() - a.from.getTime());
-  const match = sorted.find((t) => priorYearEndDate >= t.from) ?? sorted[sorted.length - 1];
+  const match = sorted.find((t) => transferDate >= t.from) ?? sorted[sorted.length - 1];
   return match.from.toISOString().slice(0, 10);
 }
 

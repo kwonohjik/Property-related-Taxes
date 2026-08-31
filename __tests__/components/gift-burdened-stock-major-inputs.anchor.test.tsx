@@ -125,12 +125,25 @@ describe("BG-UI-MJ — §157·§167의8 대주주 판정 실입력", () => {
     expect(preview.textContent).not.toContain("대주주 아님");
   });
 
-  it("BG-UI-MJ-6: 판정기준일 직접 입력이 미리보기를 바꾼다", () => {
+  it("BG-UI-MJ-6: 판정기준일 직접 입력은 **측정 축만** 옮긴다 (임계 행은 양도일)", () => {
     renderSection({ selfShareRatioPercent: 1.5, majorJudgmentDate: "2015-03-31" });
     const preview = screen.getByTestId(`stock-bg-major-preview-${ID}`);
+
+    // 측정 축 — override 가 파생값(2024-12-31)을 이긴다
     expect(preview.textContent).toContain("2015-03-31");
-    // 2013-01-01 행(지분율 2%)이 걸려 1.5%는 임계 미달
-    expect(preview.textContent).toContain("대주주 아님");
+    expect(preview.textContent).not.toContain("2024-12-31");
+
+    /**
+     * 임계 축 — 행 선택은 **양도일**이다(부칙 「양도하는 분부터」 · PR #1357 정정).
+     * 2025-06-02 행은 지분율 1% 이므로 1.5% 는 대주주다.
+     *
+     * ⚠️ 종전 기대값은 「대주주 아님」이었다 — 2015-03-31 로 표를 뒤지던 **옛 축**의
+     *    산물이다. 두 축을 섞으면 화면이 「지분율 2% … → 대주주」처럼 자기모순에 빠진다.
+     */
+    expect(preview.textContent).toContain("양도일 2025-06-02 기준 임계");
+    expect(preview.textContent).toContain("지분율 1%");
+    expect(preview.textContent).toContain("대주주");
+    expect(preview.textContent).not.toContain("대주주 아님");
   });
 
   it("BG-UI-MJ-7: 합산 축은 최대주주그룹 토글 ON일 때만 열린다 (§157①1호 단서)", () => {
