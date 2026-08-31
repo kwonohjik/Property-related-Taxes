@@ -62,9 +62,11 @@ function makeBaseInput(overrides?: Partial<ExitTaxInput>): ExitTaxInput {
 // ET-anchor-07(exit-tax.test.ts)이 1호(credit_allowed) — 본 anchor는 2호(step_up)
 //
 // 자가검증 (ET-anchor-04 기반):
-//   조정공제 = floor(734,375,000 × 1,000,000,000 / 3,000,000,000) = 244,791,666
+//   조정공제 = 734,375,000 − 484,375,000 = 250,000,000
+//     (§118의12① 「차액 × §118의11 세율」 = 두 산출세액의 차 — 리뷰 2026-08-28 #15 정정.
+//      종전 244,791,666은 법문에 없는 실효세율 안분값이었다.)
 //   외국납부세액공제: step_up 배제 → 0
-//   finalTaxAfterAdjustment = 734,375,000 − 244,791,666 − 0 = 489,583,334
+//   finalTaxAfterAdjustment = 734,375,000 − 250,000,000 − 0 = 484,375,000
 // ============================================================
 describe("ET-anchor-GS-08b: §118의13②2호 step_up → 외국납부세액공제 배제", () => {
   const result = calculateExitTax(
@@ -80,11 +82,11 @@ describe("ET-anchor-GS-08b: §118의13②2호 step_up → 외국납부세액공�
   });
 
   it("조정공제는 정상 발동 (실양도가 < 출국일 시가)", () => {
-    expect(result.adjustmentDeduction).toBe(244_791_666);
+    expect(result.adjustmentDeduction).toBe(250_000_000);
   });
 
-  it("경정 후 세액 = 734,375,000 − 244,791,666 = 489,583,334", () => {
-    expect(result.finalTaxAfterAdjustment).toBe(489_583_334);
+  it("경정 후 세액 = 734,375,000 − 250,000,000 = 484,375,000", () => {
+    expect(result.finalTaxAfterAdjustment).toBe(484_375_000);
   });
 
   it("warnings에 §118의13②2호 배제 메시지 포함", () => {

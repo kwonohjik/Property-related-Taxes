@@ -143,38 +143,51 @@ function calcHoldingResult(holding: ExitTaxHolding): ExitTaxHoldingResult {
  * §118의12 조정공제 계산
  *
  * 실양도가액 < 출국일 시가 시:
- *   조정공제 = 산출세액 × (출국일 양도가 − 실양도가) / 출국일 양도차익
+ *   조정공제 = [출국일 양도가 − 실양도가] × §118의11에 따른 세율
+ *            = 출국일 기준 산출세액 − 실양도가 기준 산출세액   (아래 본문 주석 참조)
  *
+ * @param taxBase 출국일 기준 양도소득과세표준 (§118의10④ 기본공제 차감 후)
  * @param incomeTax 산출세액
  * @param totalDepartureDayValue 출국일 총 간주양도가액 (전 종목 합산)
  * @param actualTransferPricePerShare 실제 양도 1주당 단가 (원화)
  * @param holdings 보유 종목 (실양도 후 전체 종목 단일 주가 적용 — v1 단순화)
- * @param totalGain 출국일 기준 양도차익 합산 (기본공제 차감 전)
  */
 function calcAdjustmentDeduction(
+  taxBase: number,
   incomeTax: number,
   totalDepartureDayValue: number,
   actualTransferPricePerShare: number,
   holdings: ExitTaxHolding[],
-  totalGain: number,
 ): number {
   // 실제 양도가액 합계 = actualTransferPricePerShare × 총 주수
   // (v1: 전 종목 동일 단가 적용 단순화)
   const totalShareCount = holdings.reduce((sum, h) => sum + h.shareCount, 0);
   const actualTransferValue = actualTransferPricePerShare * totalShareCount;
 
-  // 실양도가 >= 출국일 시가 → 조정공제 없음
+  // 실양도가 >= 출국일 시가 → 조정공제 없음 (§118의12① 「낮은 때」 요건)
   if (actualTransferValue >= totalDepartureDayValue) return 0;
-  // 양도차익 0 이하 → 조정공제 없음 (분모 방어)
-  if (totalGain <= 0) return 0;
+  if (taxBase <= 0) return 0;
 
-  // §118의12: 산출세액 × 실양도차손 / 출국일 양도차익
-  const realTransferLoss = totalDepartureDayValue - actualTransferValue;
-  // Math.floor 정수 연산 (§47② 준용)
-  const deduction = Math.floor((incomeTax * realTransferLoss) / totalGain);
+  /**
+   * §118의12①: [출국일 양도가액 − 실제 양도가액] × **§118의11에 따른 세율**
+   *
+   * §118의11의 세율은 스칼라가 아니라 **누진표**다(3억 이하 20% / 초과 6천만원 + 초과액 25%).
+   * 그러므로 차액이 실제로 얹혀 있는 위치에, 걸친 구간마다 그 구간의 세율로 적용해야 한다.
+   * 그것이 곧 **「출국일 기준 산출세액 − 실제 양도가액 기준 산출세액」**이다 —
+   * 취득가액과 §118의10④ 기본공제가 두 계산에 똑같이 들어 있어 상쇄되므로,
+   * 과세표준의 차이는 곧 양도가액의 차이(= 조문의 대괄호 항)와 같다.
+   *
+   * ⚠️ **「차액 × 단일 한계세율」로 축약하면 안 된다.** 두 과세표준이 같은 구간에 있을 때만
+   *    같은 값이 되고, 구간을 걸치면 차액의 아랫부분에 20%가 적용되므로 25%를 통으로 곱한
+   *    값이 과다해진다(취득 5억·출국 10억·실제 7억 → 정답 69,875,000 vs 통곱 75,000,000).
+   *    아래 한 줄이 두 경우를 모두 처리한다.
+   */
+  const priceDrop = totalDepartureDayValue - actualTransferValue;
+  const reducedTaxBase = Math.max(0, taxBase - priceDrop);
+  const deduction = incomeTax - applyExitTaxRate(reducedTaxBase).tax;
 
-  // 조정공제는 산출세액을 초과할 수 없음
-  return Math.min(deduction, incomeTax);
+  // 조정공제는 산출세액을 초과할 수 없다 (실양도가가 취득가 아래로 내려간 경우)
+  return Math.min(Math.max(0, deduction), incomeTax);
 }
 
 /**
@@ -317,6 +330,8 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
       taxBase: 0,
       incomeTax: 0,
       localIncomeTax: 0,
+      finalTax: 0,
+      totalTax: 0,
       deferralYears: 0,
       deferredTaxAmount: 0,
       deferralInterestNote: "",
@@ -408,11 +423,11 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
 
   if (hasActualTransfer && incomeTax > 0 && totalTransferGain > 0) {
     const adj = calcAdjustmentDeduction(
+      taxBase,
       incomeTax,
       totalDepartureDayValue,
       input.actualTransferPricePerShare!,
       input.holdings,
-      totalTransferGain,
     );
     adjustmentDeduction = adj;
     if (adj > 0) {
@@ -545,6 +560,20 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   const localIncomeTax = floorTen(taxForLocal * 0.1);
   appliedRules.push(STOCK_EXIT_TAX.LOCAL_TAX_103_3);
 
+  /**
+   * 결정세액·총 납부세액 — §118의15④가 「산출세액에 **더한다**」고 한 가산세를 여기서 합류시킨다.
+   *
+   * 종전에는 `holdingsReportPenalty`를 계산만 하고 **어느 총계에도 넣지 않았다**. 결과 카드는
+   * 단독 행으로 보여줬지만 사이드바 요약에서는 금액이 통째로 사라졌다(형제 국외주식 트랙에는
+   * `totalTax`가 있는데 국외전출세만 총액 개념 자체가 없었다).
+   *
+   * 🔑 지방소득세는 **가산세 이전 금액**(`taxForLocal`) 기준을 유지한다 — 지방세법상 부가되는
+   *    대상은 소득세 산출세액이지 국세기본법·소득세법상 가산세가 아니다. 국외주식
+   *    (`foreign-stock.ts`)도 같은 구조다.
+   */
+  const finalTax = taxForLocal + (holdingsReportPenalty ?? 0);
+  const totalTax = finalTax + localIncomeTax;
+
   // ──────────────────────────────────────────────────────────
   // STEP 8.5: 재전입 환급 §118의17①1호 (5년 이내 미양도 재입국 거주자)
   //   납부유예 중 → 유예 세액 취소 / 납부 완료 → 환급(미신고 가산세는 환급 제외 ③)
@@ -593,6 +622,9 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     finalTaxAfterAdjustment,
 
     holdingsReportPenalty,
+
+    finalTax,
+    totalTax,
 
     reentryRefund,
 

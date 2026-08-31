@@ -246,6 +246,19 @@ export type ExitTaxResult = {
   /** §118의15 보유현황 미신고 가산세 */
   holdingsReportPenalty?: number;
 
+  // ── 총계 ──
+  /**
+   * 결정세액 = (경정 후 세액 ?? 산출세액) + §118의15④ 보유현황 미신고 가산세.
+   *
+   * §118의15④가 「… 100분의 2에 상당하는 금액을 **산출세액에 더한다**」이므로 여기서 더한다.
+   * ⚠️ `incomeTax`에 직접 더하면 안 된다 — 조정공제·§118의13·§118의14 한도·`deferredTaxAmount`·
+   *    지방소득세·§118의17③ 환급 제외가 전부 `incomeTax`에 종속되고, 특히 마지막은 가산세가
+   *    산출세액과 **분리돼 있어야** 성립한다(형제 `foreign-stock.ts`와 같은 구조).
+   */
+  finalTax: number;
+  /** 총 납부세액 = finalTax + 지방소득세. 사이드바·결과 요약의 단일 소스. */
+  totalTax: number;
+
   // ── 재전입 환급 §118의17①1호 ──
   /**
    * 재입국(5년 이내 미양도 거주자) 시 환급/취소 정보성 산출 (reenteredWithin5Years=true 시).
