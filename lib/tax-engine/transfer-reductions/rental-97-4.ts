@@ -49,6 +49,11 @@ export function getRental974AdditionalRate(rentalYears: number): number {
   return 0;
 }
 
+/** 소령 §167의3①2호 가목·다목 — 임대개시일 당시 기준시가 합계 한도 */
+const STD_PRICE_CAP_DEFAULT = 600_000_000;
+/** 가목 괄호 — 수도권 밖의 지역. 다목에는 이 분기가 없다. */
+const STD_PRICE_CAP_NON_CAPITAL = 300_000_000;
+
 export function evaluateRental974(input: Rental97EvaluationInput): Rental97Result {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.RENTAL_97_4;
   const reasons: Rental97IneligibleReason[] = [];
@@ -76,6 +81,54 @@ export function evaluateRental974(input: Rental97EvaluationInput): Rental97Resul
       message: "세무서 사업자등록(소득세법 §168)이 확인되지 않았습니다 (조특령 §97의4②).",
       legalBasis: "조특령 §97의4②",
     });
+  }
+
+  // 1-1) 대상 요건 — 조특령 §97의4① → 소령 §167의3①2호 **가목·다목** (D2-04)
+  //
+  // 가목: 「민간임대주택법」 §2 3호 민간**매입**임대주택을 **1호 이상** 임대하고 있는 거주자가
+  //       5년 이상 임대한 주택으로서, 주택+부수토지 기준시가 합계액이 **임대개시일 당시**
+  //       **6억원(수도권 밖의 지역인 경우에는 3억원)** 을 초과하지 않을 것
+  // 다목: 대지 298㎡ 이하·주택 연면적 149㎡ 이하 **건설**임대주택을 **2호 이상** 임대하는
+  //       거주자가 5년 이상 임대하거나 분양전환하는 주택으로서, 같은 합계액이 임대개시일 당시
+  //       **6억원**을 초과하지 않을 것 — ⚠️ 다목에는 「수도권 밖 3억」 괄호가 **없다**.
+  //
+  // ⚠️ 두 목의 단서 「2018년 3월 31일까지 사업자등록등을 한 주택으로 한정한다」는 여기서
+  //    구현하지 않는다 — 그 단서의 **신설 시기**를 확인하지 못했다. 현행 소령을 과거 양도분에
+  //    소급하면 법 근거 없는 불리 적용이 된다(행위시법). 확인 후 별건으로 붙일 것.
+  if (!input.rental974Category) {
+    reasons.push({
+      code: "MISSING_974_CATEGORY",
+      message:
+        "장기임대주택 유형(민간매입 1호 이상 / 건설임대 2호 이상)이 선택되지 않았습니다 " +
+        "(조특령 §97의4① → 소령 §167의3①2호 가목·다목).",
+      legalBasis: "소득세법 시행령 §167의3①2호",
+    });
+  } else {
+    const isPurchase = input.rental974Category === "purchase_a";
+    // 가목만 수도권 밖 3억 분기가 있다.
+    const cap =
+      isPurchase && input.region === "non_capital"
+        ? STD_PRICE_CAP_NON_CAPITAL
+        : STD_PRICE_CAP_DEFAULT;
+    const std = input.officialPriceAtStart;
+    if (std === undefined || std <= 0) {
+      reasons.push({
+        code: "MISSING_OFFICIAL_PRICE",
+        message:
+          "임대개시일 당시 주택+부수토지 기준시가 합계액이 입력되지 않았습니다 " +
+          `(소령 §167의3①2호 ${isPurchase ? "가목" : "다목"} — 한도 판정에 필요합니다).`,
+        legalBasis: "소득세법 시행령 §167의3①2호",
+      });
+    } else if (std > cap) {
+      reasons.push({
+        code: "OFFICIAL_PRICE_OVER_CAP",
+        message:
+          `임대개시일 당시 기준시가 합계 ${std.toLocaleString()}원 — ` +
+          `한도 ${cap.toLocaleString()}원 초과 (소령 §167의3①2호 ${isPurchase ? "가목" : "다목"}). ` +
+          "장기임대주택에 해당하지 않아 §97의4를 적용할 수 없습니다.",
+        legalBasis: "소득세법 시행령 §167의3①2호",
+      });
+    }
   }
 
   // 2) 임대료 증액 제한 (소령 §167의3①2호 장기임대주택 요건)

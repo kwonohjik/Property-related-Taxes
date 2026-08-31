@@ -152,6 +152,10 @@ export const reductionSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("rental_97_4"),
+    /** D2-04 — 임대개시일 당시 주택+부수토지 기준시가 합계 (소령 §167의3①2호 가목·다목 한도) */
+    officialPriceAtStart: z.number().int().nonnegative().optional(),
+    /** D2-04 — 가목(민간매입 1호↑) / 다목(건설임대 2호↑) */
+    rental974Category: z.enum(["purchase_a", "construction_c"]).optional(),
     ...rental97CommonShape,
     region: z.enum(["capital", "non_capital"]).optional(),
     _phase1Stub: z.literal(true).optional(),

@@ -198,6 +198,10 @@ export function migrateAsset(raw: unknown): AssetForm {
           ...(r.type === "rental_97_2" && r.hasNewRentalPlus2Units === undefined
             ? { hasNewRentalPlus2Units: null }
             : {}),
+          // D2-04 — §97의4 대상 요건 신규 필드. 구 세션은 미선택으로 둔다.
+          ...(r.type === "rental_97_4" && r.rental974Category === undefined
+            ? { rental974Category: "", officialPriceAtStart: r.officialPriceAtStart ?? "" }
+            : {}),
         };
       }
       // §99의4 (2026-06-11): 구 stub 데이터(_phase1Stub) 본 필드 누락 보정 (③)

@@ -28,6 +28,10 @@ describe("§97의4 통합 anchor (R-3 활성)", () => {
           isTaxRegistered: true,
           rentIncreaseViolated: false,
           region: "capital",
+          // D2-04 — 조특령 §97의4① → 소령 §167의3①2호 가목·다목 대상 요건.
+          // 종전 픽스처엔 이 두 필드가 없어 기준시가 12억 주택도 §97의4를 적용받았다.
+          rental974Category: "purchase_a",
+          officialPriceAtStart: 500_000_000,
         },
       ],
     });

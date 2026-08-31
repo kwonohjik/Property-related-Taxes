@@ -152,6 +152,13 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   region?: "capital" | "non_capital";
   propertyType?: "apartment" | "non_apartment";
   rentalHousingType?: "long_term_private" | "public_support_private";
+  /**
+   * §97의4 대상 목 구분 — 조특령 §97의4① → 소령 §167의3①2호 (D2-04).
+   * - `purchase_a` = **가목** 민간매입임대 1호 이상 (한도 6억 / 수도권 밖 3억)
+   * - `construction_c` = **다목** 건설임대 2호 이상·대지 298㎡·연면적 149㎡ 이하 (한도 6억)
+   * 나목은 §97의4 대상이 아니다(조특령 §97의4①이 「가목 및 다목」만 인용).
+   */
+  rental974Category?: "purchase_a" | "construction_c";
   /** 2020.7.11 이후 단기민간임대 → 장기일반 변경 신고분 — 적용 제외 (§97의3① 괄호) */
   isConvertedFromShortTerm?: boolean;
   // ── §97 본문/단서 ──

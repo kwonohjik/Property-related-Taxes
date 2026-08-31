@@ -215,7 +215,14 @@ export function toEngineReductions(
         };
       }
       if (r.type === "rental_97_4") {
-        return { type: "rental_97_4" as const, ...common, region: r.region };
+        return {
+          type: "rental_97_4" as const,
+          ...common,
+          region: r.region,
+          // D2-04 — 소령 §167의3①2호 가목·다목 한도 판정용
+          officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
+          ...(r.rental974Category ? { rental974Category: r.rental974Category } : {}),
+        };
       }
       if (r.type === "rental_97_5") {
         return {

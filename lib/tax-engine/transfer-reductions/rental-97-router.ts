@@ -82,7 +82,14 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         isConvertedFromShortTerm: r.isConvertedFromShortTerm,
       };
     case "rental_97_4":
-      return { ...base, region: r.region };
+      // D2-04 — 종전에는 region만 넘겨 기준시가 한도를 판정할 입력이 없었다.
+      // (그 region조차 evaluator가 읽지 않는 사문 필드였다.)
+      return {
+        ...base,
+        region: r.region,
+        officialPriceAtStart: r.officialPriceAtStart,
+        rental974Category: r.rental974Category,
+      };
     case "rental_97_5":
       return { ...base, officialPriceAtStart: r.officialPriceAtStart, region: r.region };
     case "rental_97_main":

@@ -80,6 +80,10 @@ export type TransferReductionStub =
       isConvertedFromShortTerm?: boolean;
     } & Rental97CommonFields)
   | ({ type: "rental_97_4";
+      /** D2-04 — 임대개시일 당시 기준시가 합계 (소령 §167의3①2호 가목·다목 한도) */
+      officialPriceAtStart?: number;
+      /** D2-04 — 가목(민간매입 1호↑) / 다목(건설임대 2호↑) */
+      rental974Category?: "purchase_a" | "construction_c";
       rentalHousingType4?: "long_term_private" | "public_support_private" | "public_construction" | "public_purchase";
       region?: "capital" | "non_capital";
     } & Rental97CommonFields)

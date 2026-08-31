@@ -218,6 +218,10 @@ export type RentalReductionFormVariant =
   | ({
       type: "rental_97_4";
       region: "capital" | "non_capital";
+      /** D2-04 — 임대개시일 당시 주택+부속토지 기준시가 합계 (원) */
+      officialPriceAtStart: string;
+      /** D2-04 — 가목(민간매입 1호↑) / 다목(건설임대 2호↑). "" = 미선택 */
+      rental974Category: "purchase_a" | "construction_c" | "";
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_5";

@@ -141,6 +141,8 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       type: "rental_97_4",
       ...RENTAL_COMMON_DEFAULTS,
       region: "capital",
+      officialPriceAtStart: "",
+      rental974Category: "",
     };
   }
   if (id === "rental_97_5") {

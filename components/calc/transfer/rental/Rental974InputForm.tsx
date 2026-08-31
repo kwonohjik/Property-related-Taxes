@@ -15,6 +15,8 @@
 
 import { useMemo } from "react";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { RentalCommonFields, RegistrationFields } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
@@ -100,11 +102,64 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
         </p>
       </ToneCard>
 
-      {/* ③④ 공통 필드 (임대료 증액·공실) */}
+      {/* ③ 대상 요건 — 조특령 §97의4① → 소령 §167의3①2호 가목·다목 (D2-04) */}
+      <ToneCard tone="sky" sectionNum="③" title="장기임대주택 요건" bodyClassName="space-y-2" noDark>
+        <div>
+          <p className="mb-1.5 text-xs text-muted-foreground">장기임대주택 유형</p>
+          <p className="mb-1.5 text-micro text-muted-foreground">
+            조특령 §97의4①은 「소득세법 시행령」 §167조의3①2호 <strong>가목 및 다목</strong>의
+            장기임대주택만 대상으로 합니다 (나목은 §97의4 대상이 아닙니다).
+          </p>
+          <RadioCardGroup
+            name="rental974Category"
+            tone="sky"
+            value={value.rental974Category}
+            onChange={(v) =>
+              onChange({ rental974Category: v as "purchase_a" | "construction_c" })
+            }
+            options={[
+              {
+                value: "purchase_a",
+                label: "가목 — 민간매입임대 1호 이상",
+                description:
+                  "민간매입임대주택을 1호 이상 임대 + 5년 이상 임대. 기준시가 한도 6억원(수도권 밖 3억원)",
+              },
+              {
+                value: "construction_c",
+                label: "다목 — 건설임대 2호 이상",
+                description:
+                  "대지 298㎡ 이하·주택 연면적 149㎡ 이하 건설임대주택을 2호 이상 임대 + 5년 이상 임대 또는 분양전환. 기준시가 한도 6억원",
+              },
+            ]}
+          />
+          {value.rental974Category === "" && (
+            <p className="mt-1 text-micro text-rose-600">
+              ※ 반드시 선택하세요 (미선택 시 계산 불가)
+            </p>
+          )}
+        </div>
+
+        <div className="border-t border-sky-200 pt-2">
+          <CurrencyInput
+            label="임대개시일 당시 기준시가 (주택+부수토지 합계)"
+            value={value.officialPriceAtStart}
+            onChange={(v) => onChange({ officialPriceAtStart: v })}
+          />
+          <p className="mt-1 text-micro text-muted-foreground">
+            한도{" "}
+            {value.rental974Category === "purchase_a" && value.region === "non_capital"
+              ? "3억원 (가목 — 수도권 밖)"
+              : "6억원"}
+            를 초과하면 장기임대주택에 해당하지 않아 §97의4를 적용할 수 없습니다.
+          </p>
+        </div>
+      </ToneCard>
+
+      {/* ④⑤ 공통 필드 (임대료 증액·공실) */}
       <RentalCommonFields
         value={value}
         onChange={patchCommon}
-        sectionOffset={3}
+        sectionOffset={4}
         vacancyGraceMonths={3}
       />
 
