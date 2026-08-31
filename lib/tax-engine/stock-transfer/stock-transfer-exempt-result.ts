@@ -12,7 +12,11 @@ import type {
   LotMatchingDetail,
 } from "./types/stock-transfer.types";
 import { classifyStockTransfer } from "./stock-classification";
-import { buildAppliedThreshold } from "./stock-transfer-helpers";
+import {
+  buildAppliedThreshold,
+  calcHoldingPeriod,
+  applyDeemedAcquisitionDate,
+} from "./stock-transfer-helpers";
 import { allocateLots } from "./lot-allocation";
 import { computeInformationalAcquisition } from "./exempt-informational-acquisition";
 import { calcSecuritiesTransactionTax } from "./securities-transaction-tax";
@@ -70,6 +74,20 @@ export function buildExemptResult(
   const transferPrice = calcTransferPriceSimple(input);
   const info = computeInformationalAcquisition(input, transferPrice, lotMatchingDetail);
 
+  /**
+   * 보유기간도 정보용으로 산정한다 — 세액에는 쓰이지 않지만 **별지 제84호서식 「05. 보유기간」**이
+   * 비과세 뷰에서도 렌더된다. 종전에는 `0` 하드코딩이라 신고서에 「0개월」이 인쇄됐다.
+   * 형제 비과세 경로(`applyExemptZeroing`)는 spread라 전부 보존한다 — 같은 비과세인데
+   * 두 경로가 비대칭이었다. 정상 경로와 **같은 헬퍼**를 쓴다(의제취득일 §162의2 포함).
+   */
+  const rawHolding = calcHoldingPeriod(input);
+  const { effectiveDate: holdingStartDate, isDeemedApplied } = applyDeemedAcquisitionDate(
+    rawHolding.startDate,
+  );
+  const holding = isDeemedApplied
+    ? calcHoldingPeriod({ ...input, acquisitionDate: holdingStartDate })
+    : rawHolding;
+
   return {
     taxCategory: classification.taxCategory,
     appliedSection94: classification.appliedSection94,
@@ -93,6 +111,10 @@ export function buildExemptResult(
     estimatedDeduction: undefined,
 
     valuationDetail: info.valuationDetail,
+    // §165⑤ 환산 상세 — `:71`에서 실제로 계산해 취득가액에 쓰고도 버려지고 있었다.
+    // 결과뷰 `PostListingDetailCard` 게이트가 `acquiredBeforeListing`만 채워진 채
+    // 절반만 충족해 환산 산식 카드가 통째로 사라졌다.
+    postListingDetail: info.postListingDetail,
 
     basicDeductionGroup: classification.basicDeductionGroup,
 
@@ -114,8 +136,9 @@ export function buildExemptResult(
     finalTax: 0,
     localIncomeTax: 0,
 
-    holdingPeriodMonths: 0,
-    holdingPeriodDays: 0,
+    holdingPeriodMonths: holding.months,
+    holdingPeriodDays: holding.days,
+    // 단기 30%는 세율 축이라 비과세에서는 항상 false다 — 표시용 보유기간과는 별개.
     isShortTermHolding: false,
 
     lthdStartDate: null,

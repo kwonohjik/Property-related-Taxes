@@ -137,6 +137,7 @@ export interface StockTransferAggregateResult {
   };
   /** 합산 과세표준 (그룹별 기본공제 1회 적용 후) */
   totalTaxBase: number;
+
   /**
    * 합산 산출세액.
    * 기타자산 2건 이상이면 §104⑤ 비교과세가 반영되어 **`Σ items.calculatedTax`와 다르다**
