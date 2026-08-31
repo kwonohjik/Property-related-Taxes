@@ -116,6 +116,8 @@ export function Step3({ form, onChange }: Step3Props) {
       {
         marketType,
         isKOTCTrading: form.isKOTCTrading,
+        // 증권시장 안/밖은 탄력세율의 전제다(증권거래세법 §8② 괄호) — 미리보기도 같은 축을 탄다.
+        isOnMarketTransaction: form.isOnMarketTransaction ?? true,
         transferDate: form.transferDate
           ? new Date(form.transferDate)
           : undefined,
@@ -136,6 +138,7 @@ export function Step3({ form, onChange }: Step3Props) {
     form.exchangeCash,
     form.marketType,
     form.isKOTCTrading,
+    form.isOnMarketTransaction,
     form.transferDate,
   ]);
 
