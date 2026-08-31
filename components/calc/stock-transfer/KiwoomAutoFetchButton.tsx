@@ -24,12 +24,23 @@ import {
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
 
+/**
+ * 축 — 양도일(§163⑨ 분모) / 취득일(분자).
+ *
+ * 🔑 취득일 축은 **거래정지로 막지 않는다**. 상증령 §52의2③이 문제 삼는 것은
+ *    「취득일 이전 1개월 «구간»」의 정지이지 조회 시점의 현재 상태가 아니다.
+ *    현재 정지 사실은 route가 `currentTradingHalt`로 실어 보내고 여기서 «안내»만 한다.
+ */
+export type KiwoomFetchAxis = "transfer" | "acquisition";
+
 interface Props {
   securityCode: string;
   transferDate: string;
   marketType: StockTransferFormData["marketType"];
   tradingHalt: boolean;
   onFill: (patch: Partial<StockTransferFormData>) => void;
+  /** 기본은 양도일 축 (기존 호출부 무변경) */
+  axis?: KiwoomFetchAxis;
 }
 
 export function KiwoomAutoFetchButton({
@@ -38,7 +49,10 @@ export function KiwoomAutoFetchButton({
   marketType,
   tradingHalt,
   onFill,
+  axis = "transfer",
 }: Props) {
+  const isAcquisition = axis === "acquisition";
+  const dateLabel = isAcquisition ? "취득일" : "양도일";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<{
@@ -48,6 +62,11 @@ export function KiwoomAutoFetchButton({
     slotDates: string[];
     closingPrices: (number | null)[];
     weekendLabels: string[];
+    anchorShifted: boolean;
+    anchorDate: string;
+    marketCalendarUnavailable: boolean;
+    stockSpecificGapAtAnchor: boolean;
+    currentTradingHalt: boolean;
   } | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
@@ -55,14 +74,15 @@ export function KiwoomAutoFetchButton({
   const dateValid = /^\d{4}-\d{2}-\d{2}$/.test(transferDate);
   // foreign_stock 등 키움 미지원 시장은 본 함수 외부에서 차단
   const marketValid = isKiwoomFetchable(marketType as StoreMarketType);
-  const haltBlocked = tradingHalt;
+  // 취득일 축은 «현재» 정지로 막지 않는다 (F-4·F-5 — route도 같은 축으로 분기한다)
+  const haltBlocked = tradingHalt && !isAcquisition;
 
   const canFetch = codeValid && dateValid && marketValid && !haltBlocked && !loading;
 
   const disabledReason = !codeValid
     ? "종목코드 6자리 입력 필요"
     : !dateValid
-      ? "양도일 입력 필요"
+      ? `${dateLabel} 입력 필요`
       : !marketValid
         ? marketType === "unlisted"
           ? "비상장 — 키움 자동조회 미지원 (수동 입력)"
@@ -79,7 +99,7 @@ export function KiwoomAutoFetchButton({
       const res = await fetch("/api/kiwoom/transfer-1month", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stockCode: securityCode, transferDate }),
+        body: JSON.stringify({ stockCode: securityCode, baseDate: transferDate, axis }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
@@ -87,7 +107,7 @@ export function KiwoomAutoFetchButton({
           res.status === 503
             ? "키움 API 미설정 — 관리자에게 환경변수 등록 요청 필요 (수동 입력 가능)"
             : res.status === 404
-              ? `종목을 찾을 수 없습니다 (코드: ${securityCode})`
+              ? `종목을 찾을 수 없습니다 (코드: ${securityCode}) — 상장폐지 종목일 수 있습니다. 수동 입력하세요.`
               : res.status === 409
                 ? body.message ?? "거래정지·관리종목 — 수동 입력 필요"
                 : res.status === 429
@@ -107,6 +127,11 @@ export function KiwoomAutoFetchButton({
         tradingDays: number;
         sum: number;
         tradingHalt: boolean;
+        currentTradingHalt?: boolean;
+        anchorDate?: string;
+        anchorShifted?: boolean;
+        marketCalendarUnavailable?: boolean;
+        stockSpecificGapAtAnchor?: boolean;
       };
 
       /**
@@ -128,13 +153,29 @@ export function KiwoomAutoFetchButton({
       );
       const avg = data.average;
 
-      onFill({
-        transferPriceDates: dates,
-        transferPriceClosing: closings,
-        transferDatePriceAvg1Month: avg > 0 ? String(avg) : "",
-        kiwoomTradingHalt: data.tradingHalt,
-        kiwoomLastFetchedAt: new Date().toISOString(),
-      });
+      /**
+       * 축마다 «쓰는 필드»가 다르다.
+       *
+       * · 취득일 축에는 일자별 입력 표가 없다 ⇒ `transferPriceDates/Closing`을 건드리지 않는다.
+       * · 🔴 취득일 축은 `kiwoomTradingHalt`도 쓰지 않는다 — 그 값은 폼 전역이라
+       *   `Step2.tsx`의 배너가 그것을 보고 「**양도일** 거래정지 토글을 켜라」고 안내한다.
+       *   취득일 조회가 그 플래그를 세우면 축이 뒤섞인다(자가검토 F-5).
+       *   현재 정지 사실은 아래 결과 카드에서 «안내»한다.
+       */
+      onFill(
+        isAcquisition
+          ? {
+              acquisitionDatePriceAvg1Month: avg > 0 ? String(avg) : "",
+              kiwoomLastFetchedAt: new Date().toISOString(),
+            }
+          : {
+              transferPriceDates: dates,
+              transferPriceClosing: closings,
+              transferDatePriceAvg1Month: avg > 0 ? String(avg) : "",
+              kiwoomTradingHalt: data.tradingHalt,
+              kiwoomLastFetchedAt: new Date().toISOString(),
+            },
+      );
 
       // 검증용 결과 요약 — 표시값도 route 응답에서 곧장 온다(화면과 폼이 갈리지 않게)
       setInfo({
@@ -144,6 +185,11 @@ export function KiwoomAutoFetchButton({
         slotDates: dates,
         closingPrices: data.closingPrices,
         weekendLabels: data.weekendLabels ?? dates.map(() => ""),
+        anchorShifted: data.anchorShifted ?? false,
+        anchorDate: data.anchorDate ?? transferDate,
+        marketCalendarUnavailable: data.marketCalendarUnavailable ?? false,
+        stockSpecificGapAtAnchor: data.stockSpecificGapAtAnchor ?? false,
+        currentTradingHalt: data.currentTradingHalt ?? false,
       });
     } catch (e) {
       setError((e as Error).message ?? "네트워크 오류");
@@ -156,9 +202,9 @@ export function KiwoomAutoFetchButton({
     <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2">
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm text-sky-900">
-          <p className="font-semibold">키움증권 자동조회</p>
+          <p className="font-semibold">키움증권 자동조회 — {dateLabel} 이전 1개월</p>
           <p className="text-xs text-sky-700 mt-0.5">
-            종목코드 + 양도일 입력 후 클릭하면 1개월 종가가 자동으로 채워집니다.
+            종목코드 + {dateLabel} 입력 후 클릭하면 1개월 종가평균이 자동으로 채워집니다.
           </p>
         </div>
         <button
@@ -168,7 +214,7 @@ export function KiwoomAutoFetchButton({
           className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed"
           title={disabledReason ?? "키움 자동조회 실행"}
         >
-          {loading ? "🔄 조회 중..." : "🔍 키움 자동조회"}
+          {loading ? "🔄 조회 중..." : `🔍 ${dateLabel} 키움 자동조회`}
         </button>
       </div>
       {disabledReason && !loading && (
@@ -195,7 +241,57 @@ export function KiwoomAutoFetchButton({
               <strong>{info.tradingDays}</strong> ={" "}
               <strong className="text-emerald-900 text-sm">{info.average.toLocaleString()}</strong>원 (원미만 절사)
             </p>
-            <p className="text-emerald-700">→ §99①3 환산 분모로 자동 mirror됨</p>
+            <p className="text-emerald-700">
+              → §99①3 환산 {isAcquisition ? "분자" : "분모"}로 자동 mirror됨
+            </p>
+
+            {/* V-1 — 「거래일 0」은 에러가 아니라 200 응답이다. 원인을 그대로 알린다. */}
+            {info.tradingDays === 0 && (
+              <p className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">
+                ⚠️ 해당 기간에 거래일이 없습니다 — {dateLabel}이 상장일 이전이거나 조회 범위
+                밖입니다. 값을 채우지 않았습니다. 수동으로 입력하세요.
+              </p>
+            )}
+
+            {/* B′ — anchor 보정이 일어났으면 숨기지 않고 보여준다 */}
+            {info.anchorShifted && (
+              <p className="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-sky-800">
+                ℹ️ {dateLabel}이 매매 없는 날이라 직전 거래일 <strong>{info.anchorDate}</strong>{" "}
+                기준으로 계산했습니다 (상증법 §63①1가목 단서 · 소득세법 §99①3 준용).
+              </p>
+            )}
+
+            {info.marketCalendarUnavailable && (
+              <p className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">
+                ⚠️ 시장 거래일 달력을 확인하지 못해 기준일을 <strong>보정하지 않았습니다</strong>.
+                {dateLabel}이 휴장일이라면 직전 거래일로 다시 조회하세요.
+              </p>
+            )}
+
+            {/* V-3 — 시장은 열렸는데 이 종목만 종가가 없다 (§52의2③ 영역) */}
+            {info.stockSpecificGapAtAnchor && (
+              <p className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-rose-800">
+                ⚠️ {info.anchorDate}에 시장은 열렸으나 이 종목의 종가가 없습니다 — 거래정지·관리종목
+                또는 상장 이전일 수 있습니다. 해당하면 §165③ 보충 평가 토글을 사용하세요
+                (상증령 §52의2③).
+              </p>
+            )}
+
+            {/* A-6 — 취득일 축은 «현재» 정지로 막지 않고 안내만 한다 */}
+            {isAcquisition && info.currentTradingHalt && (
+              <p className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">
+                ⚠️ 이 종목은 <strong>현재</strong> 거래정지·관리종목입니다. 위 평균은 취득일
+                기준이라 그대로 쓸 수 있으나, <strong>취득일 이전 1개월 구간</strong>에 정지가
+                있었다면 §165③ 보충 평가로 가야 합니다 (상증령 §52의2③).
+              </p>
+            )}
+
+            {/* A-8 — 키움은 수정주가가 아닌 «당시 실제 종가»를 준다 */}
+            <p className="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-slate-700">
+              ℹ️ 조회값은 <strong>당시 실제 종가</strong>입니다(수정주가 아님). 이후 액면분할·병합이
+              있었다면 분자·분모의 1주 단위가 달라지므로 <strong>자본조정</strong> 입력으로
+              반영하세요 — 자동 보정하지 않습니다.
+            </p>
           </div>
           <button
             type="button"

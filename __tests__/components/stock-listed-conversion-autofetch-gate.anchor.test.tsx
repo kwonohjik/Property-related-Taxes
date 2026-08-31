@@ -67,16 +67,34 @@ describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 
    * ⇒ 이 단언이 `toBeNull()`로 되돌아가면 도달 경로가 다시 사라진 것이다
    *   ([[feedback_ui_gate_removes_sole_input_path]]).
    */
-  it("AG-1: 「취득 후 상장」 OFF여도 키움 자동조회 버튼이 보인다 (일반 §163⑨ 경로)", () => {
+  it("AG-1: 「취득 후 상장」 OFF여도 «양도일» 자동조회 버튼이 보인다 (일반 §163⑨ 경로)", () => {
     render(<Step2 form={listedEstimatedForm()} onChange={() => {}} />);
-    expect(screen.getByRole("button", { name: /키움 자동조회/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /양도일 키움 자동조회/ })).toBeTruthy();
   });
 
-  it("AG-1b: 그 버튼은 거래정지 토글 ON이면 사라진다 (환산 블록 자체가 닫힌다)", () => {
+  /**
+   * ⭐ **Phase 5에서 신설된 축.** 분자(§99①3 취득시 기준시가)도 같은 산식이라
+   *    같은 버튼을 `axis="acquisition"`으로 재사용한다.
+   */
+  it("AG-1c: «취득일» 자동조회 버튼도 같은 블록에 있다 (분자 축)", () => {
+    render(<Step2 form={listedEstimatedForm()} onChange={() => {}} />);
+    expect(screen.getByRole("button", { name: /취득일 키움 자동조회/ })).toBeTruthy();
+  });
+
+  it("AG-1d: 취득일 거래정지 토글 ON이면 분자 입력과 함께 취득일 버튼도 사라진다", () => {
+    render(
+      <Step2 form={listedEstimatedForm({ tradingHaltAtAcquisition: true })} onChange={() => {}} />,
+    );
+    expect(screen.queryByRole("button", { name: /취득일 키움 자동조회/ })).toBeNull();
+    // 분모 축은 남는다 (비대칭 — §165③은 취득측 기준시가만 대체한다)
+    expect(screen.getByRole("button", { name: /양도일 키움 자동조회/ })).toBeTruthy();
+  });
+
+  it("AG-1b: 양도일 거래정지 토글 ON이면 환산 블록 자체가 닫혀 두 버튼 모두 사라진다", () => {
     render(
       <Step2 form={listedEstimatedForm({ tradingHaltAtTransfer: true })} onChange={() => {}} />,
     );
-    expect(screen.queryByRole("button", { name: /키움 자동조회/ })).toBeNull();
+    expect(screen.queryAllByRole("button", { name: /키움 자동조회/ })).toHaveLength(0);
   });
 
   it("AG-2: 「취득 후 상장」 OFF면 입력 방식(direct/daily) 라디오도 없다", () => {
@@ -117,12 +135,15 @@ describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 
   });
 
   /**
-   * 취득일 축은 아직 «존재하지 않는다». Phase 5가 신설하면 이 단언이 실패한다.
-   *
-   * 🔑 이름(`/취득일 키움 자동조회/`)으로 없음을 단언하면 «이름이 달라도 통과»해 구별력이 0이다.
-   *    자동조회 버튼의 **개수**로 센다 — Phase 5 이후에는 2개가 되므로 반드시 울린다.
+   * ⭐ **Phase 5에서 «대체»된 단언이다.** 종전에는 「버튼이 1개뿐 = 취득일 축 부재」를
+   *    고정하는 트립와이어였고, 예정대로 울렸다. 지금은 두 축이 모두 있음을 고정한다.
    */
-  it("AG-5: 자동조회 버튼은 현재 1개뿐이다 — 취득일 축 부재 (Phase 5에서 뒤집힌다)", () => {
+  it("AG-5: 일반 §163⑨ 경로에는 자동조회 버튼이 «2개»다 — 분모·분자 두 축 (Phase 5)", () => {
+    render(<Step2 form={listedEstimatedForm()} onChange={() => {}} />);
+    expect(screen.getAllByRole("button", { name: /키움 자동조회/ })).toHaveLength(2);
+  });
+
+  it("AG-5b: 「취득 후 상장」 경로(§165⑤)는 종전 그대로 1개다 (축이 다르다)", () => {
     render(
       <Step2
         form={listedEstimatedForm({ acquiredBeforeListing: true, transferStdInputMode: "daily" })}

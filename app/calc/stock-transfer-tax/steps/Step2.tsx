@@ -425,14 +425,30 @@ export function Step2({ form, onChange }: Step2Props) {
                   />
                   {/* [C-1] 취득정지 ON 시 분자(취득일 종가평균)는 법령상 무효 — 입력 숨김 (잔존값 엔진 미참조) */}
                   {!form.tradingHaltAtAcquisition ? (
-                    <CurrencyInput
-                      label="취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)"
-                      required
-                      hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
-                      value={form.acquisitionDatePriceAvg1Month}
-                      onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
-                      placeholder="취득일 이전 1개월 종가평균 (1주당)"
-                    />
+                    <>
+                      {/*
+                        취득일 축 자동조회 — 분자(§99①3)도 같은 산식이다.
+                        🔑 현재 거래정지로 «막지 않는다» — §52의2③이 문제 삼는 것은
+                           「취득일 이전 1개월 구간」의 정지이지 조회 시점의 상태가 아니다.
+                           그래서 `tradingHalt`에 false를 넘기고 route도 axis로 분기한다.
+                      */}
+                      <KiwoomAutoFetchButton
+                        axis="acquisition"
+                        securityCode={form.securityCode}
+                        transferDate={form.acquisitionDate}
+                        marketType={form.marketType}
+                        tradingHalt={false}
+                        onFill={onChange}
+                      />
+                      <CurrencyInput
+                        label="취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)"
+                        required
+                        hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
+                        value={form.acquisitionDatePriceAvg1Month}
+                        onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
+                        placeholder="취득일 이전 1개월 종가평균 (1주당)"
+                      />
+                    </>
                   ) : (
                     <p className="text-xs text-rose-700">
                       취득시 기준시가는 위 토글의 비상장 보충 평가로 산정됩니다 (소령 §165③).

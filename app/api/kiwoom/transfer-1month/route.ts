@@ -48,7 +48,25 @@ import { KiwoomError, type KiwoomDailyQuote } from "@/lib/kiwoom/types";
 
 const RequestSchema = z.object({
   stockCode: z.string().regex(/^[0-9A-Z]{6}$/, "종목코드는 6자리 숫자 또는 대문자입니다 (KONEX 영문 포함)."),
-  transferDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "양도일은 YYYY-MM-DD 형식이어야 합니다."),
+  /** 기준일. 취득일 축에서는 취득일이 온다 — `baseDate` 별칭을 권장한다. */
+  transferDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "기준일은 YYYY-MM-DD 형식이어야 합니다.")
+    .optional(),
+  baseDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "기준일은 YYYY-MM-DD 형식이어야 합니다.")
+    .optional(),
+  /**
+   * 어느 축의 기준시가인가 — 거래정지 게이트가 갈린다.
+   *
+   * · `transfer`    (기본·하위호환) — 현재 거래정지·관리종목이면 409로 막는다
+   * · `acquisition` — **막지 않는다**. 상증령 §52의2③이 문제 삼는 것은
+   *   「취득일 이전 1개월 «구간»의 정지」이지 조회 시점의 현재 상태가 아니다.
+   *   지금 정지된 종목이라고 10년 전 취득일 평균을 못 낼 이유가 없다.
+   *   대신 `currentTradingHalt`를 실어 보내 화면이 안내한다(자동 보정 없음).
+   */
+  axis: z.enum(["transfer", "acquisition"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -67,7 +85,15 @@ export async function POST(req: Request) {
     );
   }
 
-  const { stockCode, transferDate } = parsed.data;
+  const { stockCode, axis: rawAxis } = parsed.data;
+  const axis = rawAxis ?? "transfer";
+  const transferDate = parsed.data.baseDate ?? parsed.data.transferDate;
+  if (!transferDate) {
+    return NextResponse.json(
+      { error: "invalid_request", message: "기준일(baseDate 또는 transferDate)이 필요합니다." },
+      { status: 400 },
+    );
+  }
 
   try {
     // 1. 종목 메타 (캐시 hit 우선)
@@ -80,8 +106,15 @@ export async function POST(req: Request) {
       meta = fetched;
     }
 
-    // 2. 거래정지 시 자동조회 차단 (상증령 §52의2③)
-    if (meta.tradingHalt || meta.adminIssue) {
+    /**
+     * 2. 거래정지 시 자동조회 차단 (상증령 §52의2③) — **양도일 축만**
+     *
+     * ka10001이 주는 `tradingHalt`·`adminIssue`는 **현재 상태**다(V-3 실측 — 과거 정지 이력
+     * 필드가 없다). 취득일 축에서 법적으로 문제되는 것은 「취득일 이전 1개월 구간」의
+     * 정지이므로, 조회 시점의 현재 상태로 막으면 **과잉 차단**이다.
+     * 취득일 축은 통과시키고 `currentTradingHalt`로 알린다.
+     */
+    if (axis === "transfer" && (meta.tradingHalt || meta.adminIssue)) {
       return NextResponse.json(
         {
           error: "trading_halted",
@@ -182,6 +215,9 @@ export async function POST(req: Request) {
       stockName: meta.stockName,
       marketType: meta.marketType,
       transferDate,
+      axis,
+      /** 조회 «시점»의 거래정지·관리종목 — 취득일 축에서 차단 대신 안내로 쓴다 */
+      currentTradingHalt: meta.tradingHalt || meta.adminIssue,
       ...result,
       /** B′ — 실제로 쓰인 anchor. `transferDate`와 다르면 휴장 보정이 일어난 것이다. */
       anchorDate,

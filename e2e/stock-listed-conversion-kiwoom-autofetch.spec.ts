@@ -21,7 +21,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { mockKiwoom1Month } from "./_helpers/kiwoom-1month-mock";
+import { mockKiwoom1Month, FIXTURE_2025_06_10 } from "./_helpers/kiwoom-1month-mock";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -84,7 +84,9 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
     await gotoStep2Estimated(page);
 
     await expect(page.getByText(/환산취득가 \(시행령 §163⑨\)/)).toBeVisible();
-    await expect(page.getByRole("button", { name: /키움 자동조회/ })).toBeVisible();
+    // Phase 5 이후 두 축이 모두 있다 — 분모(양도일)·분자(취득일)
+    await expect(page.getByRole("button", { name: /양도일 키움 자동조회/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /취득일 키움 자동조회/ })).toBeVisible();
   });
 
   test("KA-2: 클릭 → 양도시 1주당 기준시가가 56,590으로 채워진다", async ({ page }) => {
@@ -94,7 +96,7 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
     await fillStep1(page);
     await gotoStep2Estimated(page);
 
-    await page.getByRole("button", { name: /키움 자동조회/ }).click();
+    await page.getByRole("button", { name: /양도일 키움 자동조회/ }).click();
 
     // 결과 카드 — 산식이 그대로 보인다 (검증 UX 표준)
     await expect(page.getByText(/2025-05-11 ~ 2025-06-10/)).toBeVisible({ timeout: 15_000 });
@@ -106,6 +108,33 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
       .locator('input[type="text"]')
       .first();
     await expect(denom).toHaveValue("56,590");
+  });
+
+  test("KA-4: 취득일 축 — 클릭 → 분자 칸이 채워지고 «분모는 그대로»다", async ({ page }) => {
+    test.setTimeout(120_000);
+    // 취득일(2018-01-01) fixture 를 추가로 등록한다 — 없으면 mock 이 404 로 알려준다
+    await mockKiwoom1Month(page, [
+      FIXTURE_2025_06_10,
+      { ...FIXTURE_2025_06_10, transferDate: "2018-01-01", anchorDate: "2018-01-01", average: 51_000 },
+    ]);
+    await gotoStockTransferTax(page);
+    await fillStep1(page);
+    await gotoStep2Estimated(page);
+
+    await page.getByRole("button", { name: /취득일 키움 자동조회/ }).click();
+
+    const numer = page
+      .locator(`div:has(> label:has-text('취득시 1주당 기준시가'))`)
+      .locator('input[type="text"]')
+      .first();
+    await expect(numer).toHaveValue("51,000", { timeout: 15_000 });
+
+    // 🔑 분모는 건드리지 않는다 — 두 축이 서로를 덮어쓰면 환산비율이 무너진다
+    const denom = page
+      .locator(`div:has(> label:has-text('양도시 1주당 기준시가'))`)
+      .locator('input[type="text"]')
+      .first();
+    await expect(denom).toHaveValue("");
   });
 
   test("KA-3: 라벨이 「이전 1개월」이다 (소득세법 §99①3 문언)", async ({ page }) => {
