@@ -633,9 +633,19 @@ export function calcFaceValueTransferEstimated(
 export function calcTransferStdPriceForFaceValue(
   input: StockTransferInput,
 ): { perShare: number; netAssetFloorApplied: boolean; netAssetFloorValue?: number } {
-  const { transferDate, isHeavyRealEstateForValuation } = input;
+  const { transferDate, netAssetOnlyReason, isHeavyRealEstateForValuation } = input;
   const transferNi = input.transferYearNetIncomePerShare ?? 0;
   const transferNa = input.transferYearNetAssetPerShare ?? 0;
+
+  /**
+   * 순자산 단독 평가 4사유(§165④3 가~라목) — MAIN 경로(`calcUnlistedValuation`)와
+   * C-1 경로(`calcAcquisitionSideSupplementary`)는 모두 처리하는데 여기만 빠져 있었다.
+   * 같은 조문의 같은 규율이므로 경로에 따라 갈릴 이유가 없다.
+   * 단독 평가에서는 가중평균도 80% 하한도 개입하지 않는다(순자산 그 자체가 평가액이다).
+   */
+  if (netAssetOnlyReason) {
+    return { perShare: Math.floor(transferNa), netAssetFloorApplied: false };
+  }
 
   const weights = getValuationWeights(transferDate);
   const niWeight = isHeavyRealEstateForValuation ? 2 : weights.niWeight;

@@ -424,6 +424,21 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
     if (isEmpty(form.faceValuePerShare) || parseI(form.faceValuePerShare) <= 0) {
       errors.push({ field: "faceValuePerShare", message: "1주당 액면가를 입력하세요", severity: "error" });
     }
+    /**
+     * §99①4호 후단 환산의 **분모**(양도기준시가)도 필수다 — 없으면 취득가액이 0이 된다.
+     * 종전에는 `bookLost`·`faceValuePerShare`만 요구해 UI(`FaceValueBlock`)가 렌더하는
+     * 두 칸을 비운 채 통과했다.
+     *
+     * 순손익가치는 **0을 허용**한다 — 결손 법인이 정상 입력이고, §165④1 단서(순자산×80%)가
+     * 바로 그 경우에 작동한다. 순자산가치만 필수다(UI도 그 칸만 `required`).
+     */
+    if (isEmpty(form.transferYearNetAssetPerShare) || parseI(form.transferYearNetAssetPerShare) <= 0) {
+      errors.push({
+        field: "transferYearNetAssetPerShare",
+        message: "양도기준시가 산출을 위한 1주당 순자산가치를 입력하세요 (소령 §165④1호 — 액면가 환산의 분모)",
+        severity: "error",
+      });
+    }
   } else if (acquisitionMode === "sale_case") {
     const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
     if (isListed) {
