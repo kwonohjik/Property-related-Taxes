@@ -298,7 +298,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           if (isEmpty(form.transferDatePriceAvg1Month) || transferAvg <= 0) {
             errors.push({
               field: "transferDatePriceAvg1Month",
-              message: "양도일 직전 1개월 종가 평균을 직접 입력하세요 (§163⑨ 환산 분모 — '일자별 입력' 모드 사용 가능)",
+              message: "양도일 이전 1개월 종가 평균을 직접 입력하세요 (§163⑨ 환산 분모 — '일자별 입력' 모드 사용 가능)",
               severity: "error",
             });
           }
@@ -307,7 +307,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           if (!hasAnyClose) {
             errors.push({
               field: "transferPriceClosing",
-              message: "일자별 입력 모드: 양도일 직전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분모 자동 산정용)",
+              message: "일자별 입력 모드: 양도일 이전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분모 자동 산정용)",
               severity: "error",
             });
           }
@@ -335,7 +335,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         if (!form.tradingHaltAtAcquisition && isEmpty(form.acquisitionDatePriceAvg1Month)) {
           errors.push({
             field: "acquisitionDatePriceAvg1Month",
-            message: "취득일 직전 1개월 종가 평균을 입력하세요 (시행령 §163⑨ 환산비율 분자)",
+            message: "취득일 이전 1개월 종가 평균을 입력하세요 (시행령 §163⑨ 환산비율 분자)",
             severity: "error",
           });
         }

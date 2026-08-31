@@ -13,6 +13,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { PostListingValuationCard } from "@/components/calc/stock-transfer/PostListingValuationCard";
+import { KiwoomAutoFetchButton } from "@/components/calc/stock-transfer/KiwoomAutoFetchButton";
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
 import { FaceValueBlock } from "@/components/calc/stock-transfer/FaceValueBlock";
 import { MarketSampleBlock } from "@/components/calc/stock-transfer/MarketSampleBlock";
@@ -394,24 +395,60 @@ export function Step2({ form, onChange }: Step2Props) {
                   <p className="text-sm font-semibold text-emerald-800">
                     환산취득가 (시행령 §163⑨) — 양도가 × (취득시 기준시가 / 양도시 기준시가)
                   </p>
+
+                  {/*
+                    키움 자동조회 — **게이트 밖**이다.
+
+                    🔑 종전에는 이 버튼이 `PostListingValuationCard` 안,
+                       즉 「취득 후 상장」 ToggleCard의 children(`ToggleCard.tsx:303`이
+                       `{checked && children}`) + `transferStdInputMode === "daily"` 라는
+                       **이중 게이트** 뒤에 있었다. 일반 §163⑨ 환산 사용자에게는 도달 경로가
+                       아예 없었고, 「취득 후 상장」을 켜는 것은 우회가 아니다 —
+                       그 토글은 계산 경로를 §165⑤로 바꾼다.
+                    anchor: `__tests__/components/stock-listed-conversion-autofetch-gate.anchor.test.tsx`
+                  */}
+                  <KiwoomAutoFetchButton
+                    securityCode={form.securityCode}
+                    transferDate={form.transferDate}
+                    marketType={form.marketType}
+                    tradingHalt={form.kiwoomTradingHalt}
+                    onFill={onChange}
+                  />
+
                   <CurrencyInput
-                    label="양도시 1주당 기준시가 (양도일 직전 1개월 종가평균)"
+                    label="양도시 1주당 기준시가 (양도일 이전 1개월 종가평균)"
                     required
                     hint="모법 §99①3 — 환산비율의 분모"
                     value={form.transferDatePriceAvg1Month}
                     onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-                    placeholder="양도일 직전 1개월 종가평균 (1주당)"
+                    placeholder="양도일 이전 1개월 종가평균 (1주당)"
                   />
                   {/* [C-1] 취득정지 ON 시 분자(취득일 종가평균)는 법령상 무효 — 입력 숨김 (잔존값 엔진 미참조) */}
                   {!form.tradingHaltAtAcquisition ? (
-                    <CurrencyInput
-                      label="취득시 1주당 기준시가 (취득일 직전 1개월 종가평균)"
-                      required
-                      hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
-                      value={form.acquisitionDatePriceAvg1Month}
-                      onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
-                      placeholder="취득일 직전 1개월 종가평균 (1주당)"
-                    />
+                    <>
+                      {/*
+                        취득일 축 자동조회 — 분자(§99①3)도 같은 산식이다.
+                        🔑 현재 거래정지로 «막지 않는다» — §52의2③이 문제 삼는 것은
+                           「취득일 이전 1개월 구간」의 정지이지 조회 시점의 상태가 아니다.
+                           그래서 `tradingHalt`에 false를 넘기고 route도 axis로 분기한다.
+                      */}
+                      <KiwoomAutoFetchButton
+                        axis="acquisition"
+                        securityCode={form.securityCode}
+                        transferDate={form.acquisitionDate}
+                        marketType={form.marketType}
+                        tradingHalt={false}
+                        onFill={onChange}
+                      />
+                      <CurrencyInput
+                        label="취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)"
+                        required
+                        hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
+                        value={form.acquisitionDatePriceAvg1Month}
+                        onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
+                        placeholder="취득일 이전 1개월 종가평균 (1주당)"
+                      />
+                    </>
                   ) : (
                     <p className="text-xs text-rose-700">
                       취득시 기준시가는 위 토글의 비상장 보충 평가로 산정됩니다 (소령 §165③).

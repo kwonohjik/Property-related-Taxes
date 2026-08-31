@@ -316,12 +316,12 @@ describe("BG-VAL — 주식 부담부증여 ⑧ validate", () => {
 
   it("BG-VAL-1: 상장 환산 + 종가평균 미입력 → 차단 (분모)", () => {
     const err = validateStep(1, formWith({}));
-    expect(err).toContain("양도일(증여일) 직전 1개월 종가평균");
+    expect(err).toContain("양도일(증여일) 이전 1개월 종가평균");
   });
 
   it("BG-VAL-2: 분모만 입력해도 분자 미입력이면 차단", () => {
     const err = validateStep(1, formWith({ transferDatePriceAvg1Month: 100_000 }));
-    expect(err).toContain("증여자 취득일 직전 1개월 종가평균");
+    expect(err).toContain("증여자 취득일 이전 1개월 종가평균");
   });
 
   it("BG-VAL-3: 둘 다 입력하면 통과한다 (과다 차단 금지)", () => {
@@ -377,7 +377,7 @@ describe("BG-ENG — 상장 환산 0-가드가 경고를 남긴다", () => {
       engineInput({ transferDatePriceAvg1Month: undefined }),
     );
     expect(r.acquisitionPrice).toBe(0);
-    expect(r.warnings.join(" ")).toContain("양도일 직전 1개월 종가평균이 0 이하");
+    expect(r.warnings.join(" ")).toContain("양도일 이전 1개월 종가평균이 0 이하");
   });
 
   it("BG-ENG-2: 분자 누락 → 취득가액 0 + 사유 경고", () => {
@@ -385,7 +385,7 @@ describe("BG-ENG — 상장 환산 0-가드가 경고를 남긴다", () => {
       engineInput({ acquisitionDatePriceAvg1Month: undefined }),
     );
     expect(r.acquisitionPrice).toBe(0);
-    expect(r.warnings.join(" ")).toContain("취득일 직전 1개월 종가평균이 0 이하");
+    expect(r.warnings.join(" ")).toContain("취득일 이전 1개월 종가평균이 0 이하");
   });
 
   it("BG-ENG-3: 정상 입력에는 그 경고가 붙지 않는다 (오탐 금지)", () => {

@@ -360,12 +360,12 @@ export function StockBurdenedDebtSection({
                     두 값이 없으면 취득가액과 개산공제가 모두 0으로 산출됩니다 (소령 §176의2②1호).
                   </p>
                   <FieldCard
-                    label="양도일(증여일) 직전 1개월 종가평균"
+                    label="양도일(증여일) 이전 1개월 종가평균"
                     unit="원"
                     hint="1주당 금액. 환산비율의 분모입니다."
                   >
                     <CurrencyInput
-                      label="양도일(증여일) 직전 1개월 종가평균"
+                      label="양도일(증여일) 이전 1개월 종가평균"
                       value={
                         bgt?.transferDatePriceAvg1Month != null
                           ? String(bgt.transferDatePriceAvg1Month)
@@ -380,12 +380,12 @@ export function StockBurdenedDebtSection({
                     />
                   </FieldCard>
                   <FieldCard
-                    label="증여자 취득일 직전 1개월 종가평균"
+                    label="증여자 취득일 이전 1개월 종가평균"
                     unit="원"
                     hint="1주당 금액. 환산비율의 분자입니다."
                   >
                     <CurrencyInput
-                      label="증여자 취득일 직전 1개월 종가평균"
+                      label="증여자 취득일 이전 1개월 종가평균"
                       value={
                         bgt?.acquisitionDatePriceAvg1Month != null
                           ? String(bgt.acquisitionDatePriceAvg1Month)

@@ -460,7 +460,7 @@ export function addStockRefines(
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["transferDatePriceAvg1Month"],
-          message: "상장 환산: 양도일 직전 1개월 종가 평균을 입력하세요 (시행령 §176의2②1호 환산비율 분모)",
+          message: "상장 환산: 양도일 이전 1개월 종가 평균을 입력하세요 (시행령 §176의2②1호 환산비율 분모)",
         });
       }
       if (
@@ -472,7 +472,7 @@ export function addStockRefines(
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["acquisitionDatePriceAvg1Month"],
-          message: "상장 환산: 취득일 직전 1개월 종가 평균을 입력하세요 (시행령 §176의2②1호 환산비율 분자)",
+          message: "상장 환산: 취득일 이전 1개월 종가 평균을 입력하세요 (시행령 §176의2②1호 환산비율 분자)",
         });
       }
     }

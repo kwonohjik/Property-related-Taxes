@@ -1,16 +1,22 @@
 /**
  * POST /api/kiwoom/transfer-1month
  *
- * 양도일 직전 1개월 종가 자동조회.
+ * 양도일 이전 1개월 종가 자동조회.
  *
  * 법령: 소득세법 §99①3 → 시행령 §165③ 준용 → 상증법 §63①1가목 → 상증령 §52의2.
+ *   §99①3 문언: 「"평가기준일 이전ㆍ이후 각 2개월"은 "양도일ㆍ취득일 **이전 1개월**"로 본다」
+ *   ⚠️ 「이전」은 **그 날을 포함**한다(「전」이 미포함). `calendar.ts:147-162` 참조.
  *
  * 흐름:
  *   1. Zod 검증 { stockCode, transferDate }
  *   2. ka10001 → 거래정지·관리종목 확인
  *   3. ka10081 → base_dt=transferDate, ~ 200거래일 응답
- *   4. 클라이언트 필터 [transferDate − 1 month, transferDate − 1 day]
+ *   4. `buildOneMonthBeforeSlots(transferDate)` 로 슬롯 생성 — **기준일 포함**
  *   5. oneMonthBeforeTransferAvg() → 슬롯·평균
+ *
+ * 🔑 종전 주석은 4단계를 「필터 [transferDate − 1 month, transferDate **− 1 day**]」라 적어
+ *    **기준일 제외**로 읽히게 했다. 사실이 아니다(`:88`이 그 builder를 그대로 쓴다).
+ *    그 오독 때문에 UI 버튼이 「API는 양도일 미포함」이라는 전제로 창을 다시 만들고 있었다.
  *
  * 거래정지 시 자동조회 차단 (상증령 §52의2③):
  *   - 평균 산정 자체는 수행하되 tradingHalt 플래그 동봉.
@@ -30,12 +36,37 @@ import {
 } from "@/lib/kiwoom/cache";
 import { deduplicate } from "@/lib/kiwoom/dedup";
 import { buildOneMonthBeforeSlots } from "@/lib/kiwoom/calendar";
+import {
+  needsMarketCalendar,
+  buildMarketDaySet,
+  resolveAnchorFromMarketDays,
+  isStockSpecificGap,
+  MARKET_REFERENCE_STOCK_CODE,
+} from "@/lib/kiwoom/market-calendar";
 import { handleKiwoomError } from "../search/route";
 import { KiwoomError, type KiwoomDailyQuote } from "@/lib/kiwoom/types";
 
 const RequestSchema = z.object({
   stockCode: z.string().regex(/^[0-9A-Z]{6}$/, "종목코드는 6자리 숫자 또는 대문자입니다 (KONEX 영문 포함)."),
-  transferDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "양도일은 YYYY-MM-DD 형식이어야 합니다."),
+  /** 기준일. 취득일 축에서는 취득일이 온다 — `baseDate` 별칭을 권장한다. */
+  transferDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "기준일은 YYYY-MM-DD 형식이어야 합니다.")
+    .optional(),
+  baseDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "기준일은 YYYY-MM-DD 형식이어야 합니다.")
+    .optional(),
+  /**
+   * 어느 축의 기준시가인가 — 거래정지 게이트가 갈린다.
+   *
+   * · `transfer`    (기본·하위호환) — 현재 거래정지·관리종목이면 409로 막는다
+   * · `acquisition` — **막지 않는다**. 상증령 §52의2③이 문제 삼는 것은
+   *   「취득일 이전 1개월 «구간»의 정지」이지 조회 시점의 현재 상태가 아니다.
+   *   지금 정지된 종목이라고 10년 전 취득일 평균을 못 낼 이유가 없다.
+   *   대신 `currentTradingHalt`를 실어 보내 화면이 안내한다(자동 보정 없음).
+   */
+  axis: z.enum(["transfer", "acquisition"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -54,7 +85,15 @@ export async function POST(req: Request) {
     );
   }
 
-  const { stockCode, transferDate } = parsed.data;
+  const { stockCode, axis: rawAxis } = parsed.data;
+  const axis = rawAxis ?? "transfer";
+  const transferDate = parsed.data.baseDate ?? parsed.data.transferDate;
+  if (!transferDate) {
+    return NextResponse.json(
+      { error: "invalid_request", message: "기준일(baseDate 또는 transferDate)이 필요합니다." },
+      { status: 400 },
+    );
+  }
 
   try {
     // 1. 종목 메타 (캐시 hit 우선)
@@ -67,8 +106,15 @@ export async function POST(req: Request) {
       meta = fetched;
     }
 
-    // 2. 거래정지 시 자동조회 차단 (상증령 §52의2③)
-    if (meta.tradingHalt || meta.adminIssue) {
+    /**
+     * 2. 거래정지 시 자동조회 차단 (상증령 §52의2③) — **양도일 축만**
+     *
+     * ka10001이 주는 `tradingHalt`·`adminIssue`는 **현재 상태**다(V-3 실측 — 과거 정지 이력
+     * 필드가 없다). 취득일 축에서 법적으로 문제되는 것은 「취득일 이전 1개월 구간」의
+     * 정지이므로, 조회 시점의 현재 상태로 막으면 **과잉 차단**이다.
+     * 취득일 축은 통과시키고 `currentTradingHalt`로 알린다.
+     */
+    if (axis === "transfer" && (meta.tradingHalt || meta.adminIssue)) {
       return NextResponse.json(
         {
           error: "trading_halted",
@@ -84,8 +130,48 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. 1개월 슬롯 생성 (클라이언트 필터 범위)
-    const slotDates = buildOneMonthBeforeSlots(transferDate);
+    /**
+     * 3. anchor 확정 → 1개월 슬롯 생성 (**기준일 포함**)
+     *
+     * 휴장일 fixture는 2020~2026뿐이라 그 밖의 평일 공휴일에서는
+     * `buildOneMonthBeforeSlots`의 anchor 시프트가 죽는다. 취득일은 대개 수년 전이라
+     * 상시 발화하므로, 범위 밖이면 **참조 종목의 일봉으로 시장 거래일**을 얻어 보정한다
+     * (계획서 B′안 · `lib/kiwoom/market-calendar.ts`).
+     *
+     * 🔑 「종가 없음」을 휴장과 «그 종목의 정지»로 가르는 것이 요점이다 —
+     *    정지면 옮기면 안 된다(상증령 §52의2③은 그 평가를 아예 배제한다).
+     */
+    let anchorDate = transferDate;
+    let anchorShifted = false;
+    let marketDays: Set<string> = new Set();
+    let marketCalendarUnavailable = false;
+
+    if (needsMarketCalendar(transferDate)) {
+      const refFrom = buildOneMonthBeforeSlots(transferDate)[0];
+      let refQuotes: KiwoomDailyQuote[] = [];
+      try {
+        refQuotes = await deduplicate(
+          `ka10081|${MARKET_REFERENCE_STOCK_CODE}|${transferDate}`,
+          () =>
+            fetchDailyChart({
+              stockCode: MARKET_REFERENCE_STOCK_CODE,
+              baseDateIso: transferDate,
+              fromDateIso: refFrom,
+            }),
+        );
+        setCachedDailyCloses(MARKET_REFERENCE_STOCK_CODE, refQuotes);
+      } catch {
+        // 참조 종목 조회 실패 — 판단 근거가 없으므로 **옮기지 않는다**(추정 금지).
+        refQuotes = [];
+      }
+      marketDays = buildMarketDaySet(refQuotes);
+      const resolved = resolveAnchorFromMarketDays(transferDate, marketDays);
+      anchorDate = resolved.anchor;
+      anchorShifted = resolved.shifted;
+      marketCalendarUnavailable = resolved.exhausted;
+    }
+
+    const slotDates = buildOneMonthBeforeSlots(anchorDate);
     const fromDate = slotDates[0];
 
     // 4. 캐시에서 슬롯별 종가 hit 시도. miss 발생 시 ka10081 일괄 호출.
@@ -99,10 +185,10 @@ export async function POST(req: Request) {
 
     let quotes: KiwoomDailyQuote[];
     if (cacheMiss) {
-      quotes = await deduplicate(`ka10081|${stockCode}|${transferDate}`, () =>
+      quotes = await deduplicate(`ka10081|${stockCode}|${anchorDate}`, () =>
         fetchDailyChart({
           stockCode,
-          baseDateIso: transferDate,
+          baseDateIso: anchorDate,
           fromDateIso: fromDate,
         }),
       );
@@ -119,7 +205,7 @@ export async function POST(req: Request) {
     // 5. 평균 산정
     const result = oneMonthBeforeTransferAvg({
       quotes,
-      transferDateIso: transferDate,
+      transferDateIso: anchorDate,
       tradingHalt: meta.tradingHalt,
       adminIssue: meta.adminIssue,
     });
@@ -129,7 +215,21 @@ export async function POST(req: Request) {
       stockName: meta.stockName,
       marketType: meta.marketType,
       transferDate,
+      axis,
+      /** 조회 «시점»의 거래정지·관리종목 — 취득일 축에서 차단 대신 안내로 쓴다 */
+      currentTradingHalt: meta.tradingHalt || meta.adminIssue,
       ...result,
+      /** B′ — 실제로 쓰인 anchor. `transferDate`와 다르면 휴장 보정이 일어난 것이다. */
+      anchorDate,
+      anchorShifted,
+      /** 참조 달력을 못 얻어 보정을 «시도만 하고 포기»했다 — 화면이 그대로 알린다. */
+      marketCalendarUnavailable,
+      /** anchor에 시장은 열렸는데 이 종목만 종가가 없다 — 거래정지·미상장 신호(§52의2③). */
+      stockSpecificGapAtAnchor: isStockSpecificGap(
+        anchorDate,
+        marketDays,
+        buildMarketDaySet(quotes),
+      ),
       cached: !cacheMiss,
     });
   } catch (e) {
