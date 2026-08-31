@@ -432,6 +432,51 @@ export function addStockRefines(
       });
     }
 
+    /**
+     * 상장 환산 1개월 종가평균 필수 — 시행령 §176의2②1호 (⑧ validate step2와 3중 패턴).
+     *
+     * 미입력이면 `calcListedValuation`의 0-가드에 걸려 **취득가액·개산공제가 둘 다 0**으로
+     * 떨어진다. 종전에는 ⑧에만 게이트가 있어 API를 직접 호출하거나 ⑤ 입력 UI가 없는
+     * 경로(주식 부담부증여 §159)가 그대로 통과했다.
+     *
+     * 면제 축: 분자(취득측)는 취득일 거래정지 또는 취득 후 상장(§165⑤) 시 법령상 무효라
+     * 엔진이 쓰지 않고, 분모(양도측)는 양도일 거래정지 시 무효다.
+     *
+     * ⚠️ 분모는 **취득 후 상장(§165⑤)도 면제**한다 — ⑧보다 한 칸 느슨한 유일한 지점이다.
+     * 그 분기는 `resolveTransferStd`가 1주당 양도가로 fallback하고 경고까지 남기는
+     * **설계된 동작**이라, 여기서 막으면 엔진이 정상 처리하는 payload를 400으로 돌린다
+     * (좁히는 방향은 그 자체로 위험 — 필요한 축만 막는다). ⑧은 fallback에 기대지 않도록
+     * UI에서 더 강하게 요구하고, ⑫는 **소리 없이 0이 되는** 일반 상장 환산만 차단한다.
+     */
+    if (
+      data.acquisitionMode === "estimated" &&
+      ["kospi", "kosdaq", "konex"].includes(data.marketType as string)
+    ) {
+      if (
+        !data.tradingHaltAtTransfer &&
+        !data.acquiredBeforeListing &&
+        !(data.transferDatePriceAvg1Month ?? 0)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["transferDatePriceAvg1Month"],
+          message: "상장 환산: 양도일 직전 1개월 종가 평균을 입력하세요 (시행령 §176의2②1호 환산비율 분모)",
+        });
+      }
+      if (
+        !data.acquiredBeforeListing &&
+        !data.tradingHaltAtTransfer &&
+        !data.tradingHaltAtAcquisition &&
+        !(data.acquisitionDatePriceAvg1Month ?? 0)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["acquisitionDatePriceAvg1Month"],
+          message: "상장 환산: 취득일 직전 1개월 종가 평균을 입력하세요 (시행령 §176의2②1호 환산비율 분자)",
+        });
+      }
+    }
+
     // R-1' 매매사례가액 — 시장 유형 게이트 (영§176의2③1호 단서)
     if (data.acquisitionMode === "sale_case") {
       const isListed = ["kospi", "kosdaq", "konex"].includes(data.marketType as string);
