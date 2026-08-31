@@ -52,7 +52,7 @@ const VALUATION_MODE_OPTIONS: {
   {
     value: "prior_year_std",
     label: "기준시가 (1개월 평균)",
-    description: "§99①3 — 출국일 직전 1개월 종가 평균 (상장주식)",
+    description: "§99①3 — 출국일 이전 1개월 종가 평균 (상장주식)",
   },
   {
     value: "unlisted_sample",
@@ -293,7 +293,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 value={holding.priorYearEndMonthAvg}
                 onChange={(v) => updateHolding(holding.id, { priorYearEndMonthAvg: v })}
                 hideUnit
-                placeholder="출국일 직전 1개월 종가 평균"
+                placeholder="출국일 이전 1개월 종가 평균"
               />
               <p className="text-caption text-gray-500">
                 출국일 이전 1개월간 종가 산술 평균. 상장주식에 적용.

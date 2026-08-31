@@ -249,10 +249,10 @@ export function validateStep(step: number, form: FormState): string | null {
           sbgt.marketType === "konex")
       ) {
         if (!sbgt.transferDatePriceAvg1Month || sbgt.transferDatePriceAvg1Month <= 0) {
-          return `${sbLabel}: 양도일(증여일) 직전 1개월 종가평균을 입력하세요. (소령 §176의2②1호 환산비율 분모)`;
+          return `${sbLabel}: 양도일(증여일) 이전 1개월 종가평균을 입력하세요. (소령 §176의2②1호 환산비율 분모)`;
         }
         if (!sbgt.acquisitionDatePriceAvg1Month || sbgt.acquisitionDatePriceAvg1Month <= 0) {
-          return `${sbLabel}: 증여자 취득일 직전 1개월 종가평균을 입력하세요. (소령 §176의2②1호 환산비율 분자)`;
+          return `${sbLabel}: 증여자 취득일 이전 1개월 종가평균을 입력하세요. (소령 §176의2②1호 환산비율 분자)`;
         }
       }
       // C-S7: 대주주 판정 기준일 — §157①은 「양도일이 속하는 사업연도의 직전 사업연도 종료일」이다.

@@ -67,7 +67,7 @@ async function fillStep2(
     .first()
     .click();
 
-  // ⚠️ `div:has(> label:has-text(...))`는 「양도일 직전 1개월 종가평균」을 잘못 잡는다
+  // ⚠️ `div:has(> label:has-text(...))`는 「양도일 이전 1개월 종가평균」을 잘못 잡는다
   //    (부분일치라 인접 안내 문구까지 걸린다). 접근성 이름 exact로 고정한다.
   const box = (name: string) => page.getByRole("textbox", { name, exact: true });
   await box("상장일 이후 1개월 종가평균").fill("10000");

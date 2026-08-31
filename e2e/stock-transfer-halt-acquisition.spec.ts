@@ -66,18 +66,18 @@ test.describe("C-1 취득일 거래정지 §165③ UI", () => {
     // 토글 노출 (양도일 토글과 별개 — exact 제목)
     await expect(page.getByText(ACQ_HALT_TOGGLE_TITLE, { exact: true })).toBeVisible({ timeout: 10_000 });
     // OFF 상태: 분자 입력 노출
-    await expect(page.getByText("취득시 1주당 기준시가 (취득일 직전 1개월 종가평균)")).toBeVisible();
+    await expect(page.getByText("취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)")).toBeVisible();
 
     await page.getByText(ACQ_HALT_TOGGLE_TITLE, { exact: true }).click();
 
     // ON: 분자 입력 숨김 + 대체 안내 + 취득연도 NI/NA 노출 (acquisitionSideOnly — 양도연도 섹션 비노출)
-    await expect(page.getByText("취득시 1주당 기준시가 (취득일 직전 1개월 종가평균)")).toHaveCount(0);
+    await expect(page.getByText("취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)")).toHaveCount(0);
     await expect(page.getByText("취득시 기준시가는 위 토글의 비상장 보충 평가로 산정됩니다", { exact: false })).toBeVisible();
     await expect(page.getByText("1주당 순손익가치 (취득시점)")).toBeVisible();
     await expect(page.getByText("1주당 순자산가치 (취득시점)")).toBeVisible();
     await expect(page.getByText("양도일 직전 사업연도 평가 (양도기준시가 산출용)")).toHaveCount(0);
     // 분모(양도시 종가평균) 입력은 유지
-    await expect(page.getByText("양도시 1주당 기준시가 (양도일 직전 1개월 종가평균)")).toBeVisible();
+    await expect(page.getByText("양도시 1주당 기준시가 (양도일 이전 1개월 종가평균)")).toBeVisible();
   });
 
   test("E-2: 토글 ON + 입력 + 계산 → acquisitionPrice 5,600,000 (C1-ENGINE-1)", async ({ page }) => {

@@ -137,7 +137,7 @@ export function resolveAcquisitionBasis(
         input.acquisitionStdPriceOverridePerShare ?? postListingResult.finalPerShareValue;
       // §176의2②1호 환산 — transferStd 미입력 시 1주당 양도가 자동 fallback
       const { transferStd, usedFallback } = resolveTransferStd(transferPrice, shareCount, input.transferDatePriceAvg1Month);
-      if (usedFallback) warningsDelta.push("양도일 직전 1개월 종가평균 미입력 — 1주당 양도가를 §176의2②1호 환산 분모로 자동 사용");
+      if (usedFallback) warningsDelta.push("양도일 이전 1개월 종가평균 미입력 — 1주당 양도가를 §176의2②1호 환산 분모로 자동 사용");
       acquisitionPrice = apply163_9Conversion(transferPrice, acqStdPerShare, transferStd, postListingResult.totalAcquisitionPrice);
       estimatedBase = acqStdPerShare * shareCount;       // §163⑥4 base
       postListingDetail = postListingResult;
@@ -266,7 +266,7 @@ export function resolveAcquisitionBasis(
         estimatedBase = 0;
         warningsDelta.push(
           haltTransferStd <= 0
-            ? "양도일 직전 1개월 종가평균이 0 이하 — 환산취득가 산출 불가"
+            ? "양도일 이전 1개월 종가평균이 0 이하 — 환산취득가 산출 불가"
             : "취득시 보충평가액이 0 이하 — 취득연도 순손익·순자산가치를 확인하세요",
         );
       } else {

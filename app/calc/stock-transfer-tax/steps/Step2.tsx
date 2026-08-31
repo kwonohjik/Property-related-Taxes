@@ -395,22 +395,22 @@ export function Step2({ form, onChange }: Step2Props) {
                     환산취득가 (시행령 §163⑨) — 양도가 × (취득시 기준시가 / 양도시 기준시가)
                   </p>
                   <CurrencyInput
-                    label="양도시 1주당 기준시가 (양도일 직전 1개월 종가평균)"
+                    label="양도시 1주당 기준시가 (양도일 이전 1개월 종가평균)"
                     required
                     hint="모법 §99①3 — 환산비율의 분모"
                     value={form.transferDatePriceAvg1Month}
                     onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-                    placeholder="양도일 직전 1개월 종가평균 (1주당)"
+                    placeholder="양도일 이전 1개월 종가평균 (1주당)"
                   />
                   {/* [C-1] 취득정지 ON 시 분자(취득일 종가평균)는 법령상 무효 — 입력 숨김 (잔존값 엔진 미참조) */}
                   {!form.tradingHaltAtAcquisition ? (
                     <CurrencyInput
-                      label="취득시 1주당 기준시가 (취득일 직전 1개월 종가평균)"
+                      label="취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)"
                       required
                       hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
                       value={form.acquisitionDatePriceAvg1Month}
                       onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
-                      placeholder="취득일 직전 1개월 종가평균 (1주당)"
+                      placeholder="취득일 이전 1개월 종가평균 (1주당)"
                     />
                   ) : (
                     <p className="text-xs text-rose-700">
