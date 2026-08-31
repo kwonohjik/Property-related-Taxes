@@ -13,10 +13,23 @@ export function useUserProfile() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    /**
+     * 언마운트 후 setState 차단.
+     *
+     * 🔴 종전에는 가드가 없어 테스트가 끝나고 jsdom이 내려간 뒤 promise가 resolve되면
+     *    `ReferenceError: window is not defined`가 **unhandled rejection**으로 떴다.
+     *    테스트는 전건 통과인데 vitest job이 실패한다(CI run 33371294165 · test 1/4).
+     *    파일 배치·타이밍에 따라 발화해 「flaky」로 보이지만 원인은 이 누수다.
+     */
+    let alive = true;
     userRepository.getProfile().then((p) => {
+      if (!alive) return;
       setProfile(p);
       setLoading(false);
     });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   const mode = profile?.mode ?? "taxpayer";
