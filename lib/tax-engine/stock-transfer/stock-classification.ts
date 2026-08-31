@@ -113,7 +113,8 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
   const threshold = getMajorShareholderThreshold(
     marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
     judgmentDate,
-    { isVentureCompany: input.isVentureCompany },
+    // 40억 임계는 「§178①에 따라 **거래되는** 벤처기업 주식」 — 거래 방법까지 넘긴다(리뷰 #14).
+    { isVentureCompany: input.isVentureCompany, isKOTCTrading: input.isKOTCTrading },
   );
 
   // F-15·F-16 (2026-05-19) — 대차주식·사모펀드 간접소유 자동 가산 (시행령 §157 2013.2.15. 이후)
@@ -182,12 +183,55 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
  * 1. 상장 비대주주 장내거래 (§94①3 가목 1) — 주된 비과세)
  * 2. K-OTC 중소·중견 소액주주 (§94①3 나목 단서)
  * 3. K-OTC 벤처기업 비대주주 (조특법 §14①7호)
+ *
+ * 셋 다 **§94①3호 축**이다 — 4호(기타자산)로 분류된 소득에는 적용되지 않는다(아래 인자 주석).
  */
+/**
+ * §94①4호(기타자산) taxCategory 집합.
+ *
+ * exact 매칭 — substring/`.includes` 금지([[feedback_enum_substring_match_forbidden]]).
+ * `classifySection94` 의 `otherAssetCategory()` 가 만드는 네 값과 **같은 집합**이다.
+ */
+const SECTION_94_4_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]> = new Set([
+  "other_asset_block_shareholder",
+  "other_asset_heavy_re",
+  "other_asset_block_shareholder_nbl",
+  "other_asset_heavy_re_nbl",
+]);
+
 function judgeExemption(
   input: StockTransferInput,
   isMajor: boolean,
+  /**
+   * §94① 분류 결과의 taxCategory — **기타자산(4호)으로 분류됐는지**를 본다.
+   *
+   * 🔴 2026-08-28 신설(리뷰 #7 — **세액 변경**) — 종전에는 이 인자가 없어서, §94②로 4호가
+   * 적용된 소득에도 아래 세 갈래가 그대로 발동했다. 실측(코스피 소액주주 장내 + 부동산과다보유):
+   *   taxCategory "other_asset_heavy_re" · appliedSection94 "①4라" · calculatedTax 1,365,000
+   *   인데 isExempt true · finalTax 0. 같은 입력의 장외 대조군은 1,365,000 과세.
+   *   더 큰 케이스(비상장 §94①4 라목 + K-OTC + 중소 + 소액주주, 양도 5억/취득 1억):
+   *   현재 0 vs 정상 133,060,000 + 지방 13,306,000 — **세액이 전액 사라졌다**.
+   * 다건 집계에서도 `!r.isExempt` 로 §104⑤ 비교과세 대상에서 통째로 빠진다.
+   *
+   * 법령 근거(둘 다 본문 실측):
+   *   · 소득세법 §94②(lawId 001565) 「제1항제3호 및 제4호에 모두 해당되는 경우에는
+   *     **제4호를 적용한다**」
+   *   · 조특법 §14① 각 호 외의 부분(lawId 001584) 「… 양도로 발생하는 소득은 「소득세법」
+   *     **제94조제1항제3호**에 따른 양도소득에 포함하지 아니한다」
+   *   ⇒ 아래 세 갈래는 전부 **3호 축**이다. 4호가 적용된 소득에는 닿을 수 없다.
+   *
+   * 🔑 게이트를 「§94②가 발동했는가(`section94_2Applied`)」로 잡으면 안 된다 —
+   *    `marketType: "other_asset"` **직접 선택**은 3호 비해당이라 ②가 발동하지 않는데
+   *    (`section94_2Applied: false`) 여전히 4호 소득이다. 판별 기준은 **분류 결과**여야 한다.
+   */
+  taxCategory: StockTransferResult["taxCategory"],
 ): { isExempt: boolean; reason?: StockTransferResult["exemptReason"] } {
   const { marketType, isKOTCTrading, isVentureCompany, isSmallMediumEnterprise, isMidsizeEnterprise, isListedSmallShareholder } = input;
+
+  // §94①4호(기타자산)로 분류된 소득 — 3호 축의 비과세는 **진입 전에 일괄 차단**한다.
+  if (SECTION_94_4_CATEGORIES.has(taxCategory)) {
+    return { isExempt: false };
+  }
 
   // 1. 상장 비대주주 장내거래 → 비과세 (§94①3 가목 1) 단서)
   //    isOnMarketTransaction이 명시적으로 false면 장외 거래 → 본문 적용 (과세)
@@ -465,8 +509,8 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
     }
   }
 
-  // 비과세 분기
-  const exemptionResult = judgeExemption(input, isMajor);
+  // 비과세 분기 — **분류 결과를 넘긴다**. 4호(기타자산) 소득에는 3호 축 비과세가 닿지 않는다.
+  const exemptionResult = judgeExemption(input, isMajor, classResult.taxCategory);
 
   let taxCategory = classResult.taxCategory;
   let appliedSection94 = classResult.appliedSection94;

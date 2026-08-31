@@ -113,7 +113,8 @@ export const KONEX_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
  */
 export const UNLISTED_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
   // 2020.4.1.~ 현재 (현행 §167의8①2호 KoreanLaw MCP 직접 확인 — 2026-05-17 F-6)
-  // 가목: 지분율 4% / 나목: 시총 10억원 (벤처기업 40억원 — 단순화: 비벤처 기준 10억 적용)
+  // 가목: 지분율 4% / 나목: 시총 10억원
+  //   (§178①에 따라 거래되는 벤처기업 주식은 40억원 — `getMajorShareholderThreshold` 분기)
   { from: new Date("2020-04-01"), shareRatioThreshold: 0.04, marketCapThreshold: 1_000_000_000 },
   // 2018.4.1.~ 2020.3.31. (시총 25억→15억 완화 — WebSearch 검증 2026-05-17 F-6)
   { from: new Date("2018-04-01"), shareRatioThreshold: 0.04, marketCapThreshold: 1_500_000_000 },
@@ -135,14 +136,33 @@ export const UNLISTED_MAJOR_THRESHOLDS: MajorShareholderThreshold[] = [
  * 시기별 가장 최근 적용 임계를 반환
  *
  * Phase B 확장 (2026-05-19):
- * - `options.isVentureCompany === true && marketType === "unlisted"` 시 시총 임계 40억 적용
- *   (시행령 §167의8①2호 나목 단서 — 비상장 벤처기업 별도 임계, 교재 §3장 이미지 48 ⑤)
+ * - 비상장 벤처기업 시총 임계 40억 적용
  * - 반환 객체에 `ruleSource`·`isVentureRule` 동적 부착
+ *
+ * 🔴 2026-08-28 정정(리뷰 #14 — **세액 변경**) — 40억 예외에 「**거래 방법**」 요건이 빠져 있었다.
+ *   options 타입이 `{ isVentureCompany?: boolean }` 하나뿐이라 `isKOTCTrading` 을 **받을 통로
+ *   자체가 없었다**(그 필드는 같은 input 에 있고 `stock-classification.ts` 가 이미 쓴다).
+ *
+ *   법문(소득세법 시행령 lawId 003956 §167의8①2호 **나목 본문 괄호** — 「단서」가 아니다):
+ *     「… 시가총액이 10억원(**「자본시장과 금융투자업에 관한 법률 시행령」 제178조제1항에
+ *      따라 거래되는** 「벤처기업육성에 관한 특별법」 제2조제1항에 따른 벤처기업의 주식등의
+ *      경우에는 40억원으로 한다) 이상인 경우」
+ *   ⇒ 40억은 **거래 방법 × 벤처기업**의 곱이다.
+ *
+ *   실측: 비상장·지분율 0.1%·시총 15억·비중소·벤처 ON·K-OTC OFF(장외 개인간)
+ *     현재 임계 40억 → unlisted_non_major 20% → finalTax 79,500,000
+ *     정상 임계 10억 → unlisted_major     25% → finalTax 84,375,000  ⇒ 4,875,000 과소
+ *     (중소기업이면 10% → 39,750,000 vs 84,375,000 = 44,625,000 과소)
+ *
+ * 🔑 **대칭 확인** — `isKOTCTrading: true` 이면 조특법 §14①7호로 비과세(0)라, 40억 분기가
+ *    세액을 실제로 가르는 구간은 정확히 「K-OTC 가 **아닌** 경우」 — 즉 법문이 40억을 주지
+ *    않기로 한 구간뿐이다. 감경 예외를 법문대로 좁히는 것이므로 「근거 없는 불리 적용」이
+ *    아니다.
  */
 export function getMajorShareholderThreshold(
   marketType: "kospi" | "kosdaq" | "konex" | "unlisted",
   priorYearEndDate: Date,
-  options?: { isVentureCompany?: boolean },
+  options?: { isVentureCompany?: boolean; isKOTCTrading?: boolean },
 ): MajorShareholderThreshold {
   let thresholds: MajorShareholderThreshold[];
   if (marketType === "kospi") {
@@ -160,8 +180,9 @@ export function getMajorShareholderThreshold(
   const sorted = [...thresholds].sort((a, b) => b.from.getTime() - a.from.getTime());
   const match = sorted.find((t) => priorYearEndDate >= t.from) ?? sorted[sorted.length - 1];
 
-  // Phase B — 비상장 벤처기업 분기 (§167의8①2호 나목 단서)
-  if (marketType === "unlisted" && options?.isVentureCompany) {
+  // 비상장 벤처기업 분기 (§167의8①2호 나목 **본문 괄호**)
+  //   요건 3개의 곱: 비상장 × 자본시장법령 §178①에 따라 거래 × 벤처기업
+  if (marketType === "unlisted" && options?.isVentureCompany && options?.isKOTCTrading) {
     return {
       ...match,
       marketCapThreshold: 4_000_000_000, // 시총 40억

@@ -115,6 +115,13 @@ describe("주식 §104① 호별 버킷 echo — 단건 (2b-3)", () => {
         marketType: "kospi",
         isMajorShareholder: false,
         isListedSmallShareholder: true,
+        // 🔴 2026-08-28 갱신(리뷰 #7) — 헬퍼 기본값이 `isQualifyingBlockShareholder: true` 라
+        //   이 픽스처는 **과점주주 기타자산**(§94①4호 다목)이었다. 종전 엔진은 4호 소득에도
+        //   §94①3호 축 비과세를 발동시켜 `isExempt: true` 를 냈고, 이 anchor 가 그 결함을
+        //   고정하고 있었다. S-3 이 같은 함정을 주석으로 남겨 둔 그 자리다.
+        //   이 테스트의 의도(「비과세면 버킷 echo 가 전부 0」)는 그대로 두고, 실제로 비과세인
+        //   조합(상장 소액주주 장내 — 주식 그룹)으로 픽스처를 바로잡는다.
+        isQualifyingBlockShareholder: false,
       }),
     );
     expect(r.isExempt).toBe(true);

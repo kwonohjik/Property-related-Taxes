@@ -123,9 +123,11 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     return getMajorShareholderThreshold(
       form.marketType,
       new Date(form.priorYearEndDate),
-      { isVentureCompany: form.isVentureCompany },
+      // 엔진(`stock-classification.ts`)과 **같은 인자 집합**으로 부른다 — 여기만 안 넘기면
+      // 임계는 10억으로 판정되는데 화면은 계속 40억을 보여준다(리뷰 #14 세팅 지점 2곳).
+      { isVentureCompany: form.isVentureCompany, isKOTCTrading: form.isKOTCTrading },
     );
-  }, [form.marketType, form.priorYearEndDate, form.isVentureCompany]);
+  }, [form.marketType, form.priorYearEndDate, form.isVentureCompany, form.isKOTCTrading]);
 
   const shareRatioThreshold = threshold?.shareRatioThreshold ?? 0;
   const marketCapThreshold = threshold?.marketCapThreshold ?? Infinity;
