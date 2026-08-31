@@ -102,6 +102,12 @@ export function StockBurdenedDebtSection({
         isLargestShareholderGroup: next.isLargestShareholderGroup ?? false,
         combinedShareRatio: String(next.combinedShareRatioPercent ?? ""),
         combinedMarketCap: String(next.combinedMarketCap ?? ""),
+        // 40억 임계(§167의8①2호 단서) 축 — 부담부증여 경로에는 입력 UI가 없어
+        // ④가 엔진에 `false`를 보낸다(`gift-burdened-transfer-api.ts:507-508`).
+        // 미리보기도 **같은 인자**를 써야 저장값과 화면이 갈리지 않는다
+        // ([[feedback_shared_predicate_argument_parity]] — 리뷰 #14가 고친 결함).
+        isVentureCompany: false,
+        isKOTCTrading: false,
       },
       {},
     );
