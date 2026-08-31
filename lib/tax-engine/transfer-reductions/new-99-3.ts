@@ -75,6 +75,41 @@ export interface New993Input {
   acquisitionType: "from_builder" | "self_built";
   /** (1호만) 매매계약일 입주사실 있는 주택 — 적용 배제 */
   hasOccupancyAtContract?: boolean;
+  /**
+   * 조특령 §99의3④ — 2001년 5월 23일 **전에** 주택건설사업자와 분양계약을 체결한 분양계약자가
+   * 그 계약을 해제하고, 분양계약자 또는 그 배우자(직계존비속·형제자매 포함)가
+   * ⓐ 당초 주택을 **다시 분양**받아 취득했거나 ⓑ 당해 주택건설사업자로부터 **대체하여 다른 주택**을
+   * 분양받아 취득한 주택 → 법 §99의3①1호 적용 배제. 자기선언.
+   */
+  isRecontractExcluded?: boolean;
+  /**
+   * 조특칙 §44의4 **카브백** — 배제 사유에 해당해도 감면을 유지하는 예외.
+   *
+   * 「영 제99조제2항 단서 **및** 영 제99조의3제4항 단서에서 "재정경제부령이 정하는 사유에
+   *  해당하는 주택"이라 함은 「소득세법 시행규칙」 **제71조제3항**의 규정에 의한 사유로
+   *  **당해주택건설업자로부터 다른 주택을 분양받아 취득하는 경우**의 주택을 말한다.」
+   *
+   * 소칙 §71③ 사유 = 취학 · 근무상 형편(전근 등) · 1년 이상 치료·요양을 요하는 질병 ·
+   * 학교폭력으로 인한 전학. **대체취득(다른 주택 분양) 갈래에만** 대응한다
+   * (당초 주택을 다시 분양받은 경우는 카브백 대상이 아니다).
+   *
+   * 🔴 이 카브백이 없으면 부득이한 사유로 대체취득한 정상 대상자를 **법 근거 없이 배제**한다.
+   */
+  recontractUnavoidableCause?: boolean;
+  /**
+   * 종전주택을 **재개발·재건축하여 취득한** 신축주택인가 (조특령 §99의3② 1호 단서·2호 괄호).
+   *
+   * 대상 범위는 「법 §98의3② **각 호**에 따른 신축주택」 —
+   *   1호 정비사업조합(재개발·재건축·소규모재건축)의 조합원이 **관리처분계획에 따라 취득**하는 주택
+   *   2호 거주·보유 중 **소실·붕괴·노후 등으로 멸실되어 재건축**한 주택
+   * 자기선언(§99 선례 `isRedevelopedNewHouse99`와 동일 패턴).
+   */
+  isRedevelopedNewHouse?: boolean;
+  /**
+   * 종전주택 취득 당시 기준시가 — 위 변형의 **분모 차감항**.
+   * 미입력이면 안분이 불가하므로 차단한다(자동 안분 fallback 금지).
+   */
+  previousHouseStdPriceAtAcquisition?: number;
   /** 감면 전 산출세액 (농특세 산정용) — STEP 7에서 양도소득금액 차감 전 산출세액 */
   calculatedTaxBeforeReduction: number;
   /** 감면 후 산출세액 (농특세 산정용) — 양도소득금액 차감 후 산출세액 */
@@ -303,6 +338,32 @@ function checkIneligibility(input: New993Input): New993IneligibleReason[] {
     return reasons;
   }
 
+  // 5-a. 재계약·대체취득 배제 (조특령 §99의3④) — 단, 조특칙 §44의4 카브백이 있으면 유지.
+  if (input.isRecontractExcluded === true && input.recontractUnavoidableCause !== true) {
+    reasons.push({
+      code: "RECONTRACT_EXCLUDED",
+      message:
+        "2001.5.23 전 분양계약을 해제하고 본인·배우자(직계존비속·형제자매 포함)가 당초 주택을 다시 분양받거나 대체하여 다른 주택을 분양받아 취득한 주택은 적용 배제됩니다 (조특령 §99의3④).",
+      legalBasis: "조특령 §99의3 ④",
+    });
+    return reasons;
+  }
+
+  // 5-b. 재개발·재건축 변형 — 종전주택 기준시가 필수 (자동 안분 fallback 금지). §99 선례와 동일.
+  if (
+    input.isRedevelopedNewHouse === true &&
+    (input.previousHouseStdPriceAtAcquisition === undefined ||
+      input.previousHouseStdPriceAtAcquisition <= 0)
+  ) {
+    reasons.push({
+      code: "MISSING_PREVIOUS_STD_PRICE",
+      message:
+        "재개발·재건축 신축주택의 안분에는 종전주택 취득 당시 기준시가가 필요합니다 (조특령 §99의3② 1호 단서·2호 괄호).",
+      legalBasis: "조특령 §99의3 ②",
+    });
+    return reasons;
+  }
+
   // 6. 고가주택 (단서)
   // 기간 게이트(:위)와 **같은 축**이어야 한다 — 두 판정이 갈리면 임계가 뒤집힌다 (D3-09).
   const hvBaseDate = resolveNew99BaseDate(
@@ -380,15 +441,6 @@ export function calcSignedAllocation(
   return { ratio: 0, signCase: "all_negative", reducibleIncome: 0 };
 }
 
-/** §99의3 5년 안분 — 기존 시그니처 보존 (anchor 호환) */
-function calc5YearAllocation(
-  transferIncome: number,
-  stdAtAcq: number,
-  stdAt5Y: number,
-  stdAtTransfer: number,
-): FiveYearAllocation {
-  return calcSignedAllocation(transferIncome, stdAt5Y - stdAtAcq, stdAtTransfer - stdAtAcq);
-}
 
 // ============================================================================
 // 헬퍼: §99의3 ②항 판정 — 1세대1주택 신축 주택수 제외
@@ -439,8 +491,11 @@ export function evaluateNew993(input: New993Input): New993Result {
   let fiveYearRatio: number;
   let signCase: New993SignCase;
 
-  if (isWithin5Years) {
-    // 5년 내 양도 — 양도소득금액 전액 차감
+  const variant = input.isRedevelopedNewHouse === true;
+  const stdAtPrev = input.previousHouseStdPriceAtAcquisition ?? 0;
+
+  if (isWithin5Years && !variant) {
+    // 5년 내 양도 — 양도소득금액 전액 차감 (조특령 §99의3②1호 **본문**)
     reducibleTransferIncome = Math.max(0, input.transferIncome);
     fiveYearRatio = 1;
     signCase = "within_5_years";
@@ -450,7 +505,11 @@ export function evaluateNew993(input: New993Input): New993Result {
       formula: `양도소득금액 ${input.transferIncome.toLocaleString()} 전체를 양도소득세 과세대상소득금액에서 차감`,
     });
   } else {
-    // 5년 후 양도 — 안분 산식
+    // 안분 산식 — 조특령 §99의3② (KoreanLaw 원문 실측)
+    //   1호 단서(5년 이내 + 재개발변형): 분자 = 양도시 − 신축취득시 / 분모 = 양도시 − **종전주택**취득시
+    //   2호(5년 후):                     분자 = 5년시점 − 신축취득시 / 분모 = 양도시 − 신축취득시
+    //                                    (재개발변형이면 분모 차감항만 **종전주택**취득시로 치환)
+    //   ⇒ §99(`new-99.ts:264-265`)와 **완전히 같은 구조**다 — 그 구현을 그대로 옮긴다.
     //
     // 🔴 안분에 쓰는 기준시가 3종이 하나라도 미입력(0 이하)이면 차단한다.
     //    분모(양도시 − 취득시)가 미입력 때문에 음수가 되면 `pos_neg`로 떨어져
@@ -461,9 +520,11 @@ export function evaluateNew993(input: New993Input): New993Result {
     //    ⚠️ 기준시가가 **실제로 하락**한 경우(양도시 > 0 이면서 취득시보다 작음)는
     //       조특령 §99의3②2호에 대한 부동산-525 해석이 전액 감면을 인정하므로 차단하지 않는다.
     //    anchor: `__tests__/tax-engine/transfer/new-99-3-missing-std-price.anchor.test.ts`
+    // 5년 **이내** 변형은 분자에 양도시 기준시가를 쓰므로 5년시점 기준시가가 불요하다.
+    const needs5Y = !isWithin5Years;
     if (
       input.standardPriceAtAcquisition <= 0 ||
-      input.standardPriceAt5Years <= 0 ||
+      (needs5Y && input.standardPriceAt5Years <= 0) ||
       input.standardPriceAtTransfer <= 0
     ) {
       return {
@@ -487,28 +548,45 @@ export function evaluateNew993(input: New993Input): New993Result {
         legalBasis,
       };
     }
-    const allocation = calc5YearAllocation(
-      input.transferIncome,
-      input.standardPriceAtAcquisition,
-      input.standardPriceAt5Years,
-      input.standardPriceAtTransfer,
-    );
+    const numerator = isWithin5Years
+      ? input.standardPriceAtTransfer - input.standardPriceAtAcquisition
+      : input.standardPriceAt5Years - input.standardPriceAtAcquisition;
+    const denominator = variant
+      ? input.standardPriceAtTransfer - stdAtPrev
+      : input.standardPriceAtTransfer - input.standardPriceAtAcquisition;
+    const allocation = calcSignedAllocation(input.transferIncome, numerator, denominator);
     reducibleTransferIncome = allocation.reducibleIncome;
     fiveYearRatio = allocation.ratio;
     signCase = allocation.signCase;
 
-    const numerator = input.standardPriceAt5Years - input.standardPriceAtAcquisition;
-    const denominator = input.standardPriceAtTransfer - input.standardPriceAtAcquisition;
+    // ⚠️ 표시용으로 분자·분모를 **다시 계산하지 않는다** — 위에서 실제 쓴 값을 그대로 쓴다
+    //   (dual truth 회피. 종전에는 여기서 5년시점·취득시로 재계산해 재개발 변형과 어긋났다).
+    const numerLabel = isWithin5Years
+      ? "분자 (양도시 기준시가 − 신축주택 취득시 기준시가)"
+      : "분자 (5년시점 기준시가 − 신축주택 취득시 기준시가)";
+    const numerLhs = isWithin5Years ? input.standardPriceAtTransfer : input.standardPriceAt5Years;
+    const denomLabel = variant
+      ? "분모 (양도시 기준시가 − 종전주택 취득시 기준시가)"
+      : "분모 (양도시 기준시가 − 신축주택 취득시 기준시가)";
+    const denomRhs = variant ? stdAtPrev : input.standardPriceAtAcquisition;
     formulaSteps.push({
-      label: "분자 (5년시점 기준시가 − 취득시 기준시가)",
+      label: numerLabel,
       value: numerator,
-      formula: `${input.standardPriceAt5Years.toLocaleString()} − ${input.standardPriceAtAcquisition.toLocaleString()} = ${numerator.toLocaleString()}`,
+      formula: `${numerLhs.toLocaleString()} − ${input.standardPriceAtAcquisition.toLocaleString()} = ${numerator.toLocaleString()}`,
     });
     formulaSteps.push({
-      label: "분모 (양도시 기준시가 − 취득시 기준시가)",
+      label: denomLabel,
       value: denominator,
-      formula: `${input.standardPriceAtTransfer.toLocaleString()} − ${input.standardPriceAtAcquisition.toLocaleString()} = ${denominator.toLocaleString()}`,
+      formula: `${input.standardPriceAtTransfer.toLocaleString()} − ${denomRhs.toLocaleString()} = ${denominator.toLocaleString()}`,
     });
+    if (variant) {
+      formulaSteps.push({
+        label: "재개발·재건축 신축주택 변형 적용",
+        value: stdAtPrev,
+        formula:
+          "종전주택을 재개발·재건축하여 취득한 신축주택(법 §98의3② 각 호)이므로 분모의 차감항에 종전주택 취득 당시 기준시가를 적용 (조특령 §99의3② 1호 단서·2호 괄호)",
+      });
+    }
     if (signCase === "all_positive") {
       formulaSteps.push({
         label: "5년 안분 비율",

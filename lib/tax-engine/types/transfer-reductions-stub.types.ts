@@ -89,6 +89,7 @@ export type TransferReductionStub =
       isNationalHousing99?: boolean;
       hasOccupancyAtContract99?: boolean;
       isRecontractExcluded99?: boolean;
+      recontractUnavoidableCause99?: boolean;
       isRedevelopedNewHouse99?: boolean;
       previousHouseStdPrice99?: number;
       _phase1Stub?: true }
@@ -104,6 +105,10 @@ export type TransferReductionStub =
       standardPriceAt5Years?: number;
       standardPriceAtAcquisition993?: number;
       standardPriceAtTransfer993?: number;
+      isRecontractExcluded993?: boolean;
+      recontractUnavoidableCause993?: boolean;
+      isRedevelopedNewHouse993?: boolean;
+      previousHouseStdPrice993?: number;
       exclusiveAreaSqm993?: number;
       region993?: "outside_speculation" | "speculation";
       acquisitionType993?: "from_builder" | "self_built";

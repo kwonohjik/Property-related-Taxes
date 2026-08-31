@@ -194,7 +194,17 @@ export function New99InputForm({
           description="해제한 본인·배우자(직계존비속·형제자매 포함)가 다시 분양받은 주택은 배제됩니다 (조특령 §99②)"
           checked={value.isRecontractExcluded99}
           onCheckedChange={(v) => onChange({ isRecontractExcluded99: v })}
-        />
+        >
+          {/* 조특칙 §44의4 카브백 — 없으면 부득이한 사유 대체취득자를 법 근거 없이 배제한다. */}
+          <ToggleCard
+            variant="chip"
+            tone="emerald"
+            title="부득이한 사유로 «다른 주택»을 분양받아 취득"
+            description={"취학·근무상 형편·1년 이상 치료를 요하는 질병·학교폭력 전학 사유로 «당해 주택건설업자로부터 다른 주택»을 분양받은 경우에는 배제하지 않습니다 (조특칙 §44의4 → 소칙 §71③)"}
+            checked={value.recontractUnavoidableCause99}
+            onCheckedChange={(v) => onChange({ recontractUnavoidableCause99: v })}
+          />
+        </ToggleCard>
       </SectionShell>
 
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">

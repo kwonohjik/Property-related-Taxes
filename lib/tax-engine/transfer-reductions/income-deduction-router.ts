@@ -248,6 +248,10 @@ function evalNew993(
       standardPriceAt5Years: (r993.standardPriceAt5Years as number | undefined) ?? 0,
       standardPriceAtTransfer:
         (r993.standardPriceAtTransfer993 as number | undefined) ?? ctx.standardPriceAtTransfer ?? 0,
+      isRecontractExcluded: r993.isRecontractExcluded993 as boolean | undefined,
+      recontractUnavoidableCause: r993.recontractUnavoidableCause993 as boolean | undefined,
+      isRedevelopedNewHouse: r993.isRedevelopedNewHouse993 as boolean | undefined,
+      previousHouseStdPriceAtAcquisition: r993.previousHouseStdPrice993 as number | undefined,
       wholePropertyTransferPrice: ctx.totalPropertyTransferPrice ?? ctx.transferPrice,
       exclusiveAreaSqm: (r993.exclusiveAreaSqm993 as number | undefined) ?? 0, // 고가주택 면적기준(2002.12.31 이전 취득) 판정용
       region: (r993.region993 as "outside_speculation" | "speculation" | undefined) ?? "outside_speculation",
@@ -291,6 +295,7 @@ function evalNew99(
       isNationalHousing: (r99.isNationalHousing99 as boolean | undefined) ?? false,
       hasOccupancyAtContract: r99.hasOccupancyAtContract99 as boolean | undefined,
       isRecontractExcluded: r99.isRecontractExcluded99 as boolean | undefined,
+      recontractUnavoidableCause: r99.recontractUnavoidableCause99 as boolean | undefined,
       isRedevelopedNewHouse: r99.isRedevelopedNewHouse99 as boolean | undefined,
       previousHouseStdPriceAtAcquisition: r99.previousHouseStdPrice99 as number | undefined,
     });

@@ -72,6 +72,20 @@ export interface New99Input {
   hasOccupancyAtContract?: boolean;
   /** 령 §99② — 1998.5.21 이전 분양계약 해제 후 본인·배우자 등 재계약·대체취득 (true = 배제) */
   isRecontractExcluded?: boolean;
+  /**
+   * 조특칙 §44의4 **카브백** — 배제 사유에 해당해도 감면을 유지하는 예외.
+   *
+   * 「영 제99조제2항 단서 **및** 영 제99조의3제4항 단서에서 "재정경제부령이 정하는 사유에
+   *  해당하는 주택"이라 함은 「소득세법 시행규칙」 **제71조제3항**의 규정에 의한 사유로
+   *  **당해주택건설업자로부터 다른 주택을 분양받아 취득하는 경우**의 주택을 말한다.」
+   *
+   * 소칙 §71③ 사유 = 취학 · 근무상 형편(전근 등) · 1년 이상 치료·요양을 요하는 질병 ·
+   * 학교폭력으로 인한 전학. **대체취득(다른 주택 분양) 갈래에만** 대응한다
+   * (당초 주택을 다시 분양받은 경우는 카브백 대상이 아니다).
+   *
+   * 🔴 이 카브백이 없으면 부득이한 사유로 대체취득한 정상 대상자를 **법 근거 없이 배제**한다.
+   */
+  recontractUnavoidableCause?: boolean;
   /** 재개발·재건축 변형 (령 §99①1호 단서) */
   isRedevelopedNewHouse?: boolean;
   /** 종전주택 취득 당시 기준시가 — 변형 분모 (변형 ON 시 필수) */
@@ -189,7 +203,9 @@ export function evaluateNew99(input: New99Input): New99Result {
     });
     return ineligible(reasons);
   }
-  if (input.isRecontractExcluded === true) {
+  // 조특칙 §44의4 카브백 — 소칙 §71③ 부득이한 사유로 «다른 주택»을 분양받은 경우는 배제하지 않는다.
+  // 🔴 종전에는 카브백 없이 무조건 배제해 법 근거 없는 불리 적용이었다(조문 실측 2026-08-31).
+  if (input.isRecontractExcluded === true && input.recontractUnavoidableCause !== true) {
     reasons.push({
       code: "RECONTRACT_EXCLUDED",
       message: "1998.5.21 이전 분양계약을 해제하고 본인·배우자(직계존비속·형제자매 포함)가 다시 분양받거나 대체 취득한 주택은 적용 배제됩니다 (조특령 §99②).",

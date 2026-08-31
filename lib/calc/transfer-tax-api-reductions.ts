@@ -132,6 +132,10 @@ export function toEngineReductions(
         standardPriceAtTransfer993: r.standardPriceAtTransfer993
           ? parseAmount(r.standardPriceAtTransfer993)
           : undefined,
+        isRecontractExcluded993: r.isRecontractExcluded993,
+        recontractUnavoidableCause993: r.recontractUnavoidableCause993,
+        isRedevelopedNewHouse993: r.isRedevelopedNewHouse993,
+        previousHouseStdPrice993: parseAmount(r.previousHouseStdPrice993 || "0") || undefined,
         exclusiveAreaSqm993: parseDecimal(r.exclusiveAreaSqm993 || "") || undefined,
         region993: r.region993,
         acquisitionType993: r.acquisitionType993,
@@ -278,6 +282,7 @@ export function toEngineReductions(
         exclusiveAreaSqm99: parseDecimal(r.exclusiveAreaSqm99 || "") || undefined,
         hasOccupancyAtContract99: r.hasOccupancyAtContract99,
         isRecontractExcluded99: r.isRecontractExcluded99,
+        recontractUnavoidableCause99: r.recontractUnavoidableCause99,
         isRedevelopedNewHouse99: r.isRedevelopedNewHouse99,
         previousHouseStdPrice99: parseAmount(r.previousHouseStdPrice99 || "0") || undefined,
       };

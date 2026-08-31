@@ -108,6 +108,16 @@ export type AssetReductionForm =
       standardPriceAtAcquisition993: string;
       /** 양도시 기준시가 (원) — 자산의 standardPriceAtTransfer와 별개로 §99의3 전용 입력 (필요 시) */
       standardPriceAtTransfer993?: string;
+      /**
+       * 조특령 §99의3② 1호 단서·2호 괄호 — 종전주택을 재개발·재건축하여 취득한
+       * 「법 §98의3② 각 호에 따른 신축주택」이면 안분 분모의 차감항이 **종전주택 취득 당시
+       * 기준시가**로 바뀌고, 5년 이내 양도도 전액이 아니라 안분한다. §99 선례와 동일 배선 (D3-02).
+       */
+      isRecontractExcluded993: boolean;
+      /** 조특칙 §44의4 카브백 — 소칙 §71③ 부득이한 사유로 «다른 주택» 분양 시 배제하지 않음 */
+      recontractUnavoidableCause993: boolean;
+      isRedevelopedNewHouse993: boolean;
+      previousHouseStdPrice993: string;
       /** 전용면적(㎡) — 고가주택 판정용 (2002.12.31 이전 취득: 165/149㎡ AND 6억 초과). */
       exclusiveAreaSqm993: string;
       /** 지역 — 가격 급등 지역 내/외 (서울·과천·5대 신도시) */
@@ -269,6 +279,8 @@ export type RentalReductionFormVariant =
       hasOccupancyAtContract99: boolean;
       /** 령 §99② — 1998.5.21 이전 계약 해제 후 재계약·대체취득 — ON이면 배제 */
       isRecontractExcluded99: boolean;
+      /** 조특칙 §44의4 카브백 — 소칙 §71③ 부득이한 사유로 «다른 주택» 분양 시 배제하지 않음 */
+      recontractUnavoidableCause99: boolean;
       /** 재개발·재건축 신축주택 (령 §99①1호 단서 — 5년 내도 안분) */
       isRedevelopedNewHouse99: boolean;
       /** 종전주택 취득 당시 기준시가 (원) — 변형 ON 시 필수. 별개 물건 → 조회형/PHD 대상 아님 */

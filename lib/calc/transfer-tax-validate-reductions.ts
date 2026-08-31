@@ -201,6 +201,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           //    여기서 무시하면 환산 모드 사용자를 부당하게 차단한다(UI↔validate 모순).
           //    비-환산 모드에서 자산값이 채워져 있으면 여기서는 통과하고 엔진 가드가
           //    `MISSING_STD_PRICE`로 명시 차단한다 — 조용한 오계산이 아니라 분명한 오류다.
+          // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (§99 선례 — 자동 안분 fallback 금지)
+          if (r.isRedevelopedNewHouse993 && parseAmount(r.previousHouseStdPrice993 || "0") <= 0)
+            return fail(
+              "§99의3 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요 (조특령 §99의3② 1호 단서·2호 괄호).",
+            );
           const hasStdPriceAtTransfer993 =
             parseAmount(r.standardPriceAtTransfer993 || "0") > 0 ||
             parseAmount(asset.standardPriceAtTransfer || "0") > 0;
