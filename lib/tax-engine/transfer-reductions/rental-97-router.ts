@@ -78,6 +78,8 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         isNationalHousingScale: r.isNationalHousingScale,
         region: r.region,
         propertyType: r.propertyType,
+        // D2-07 — ⚠️ 명시 매핑이라 적지 않으면 조용히 사라진다.
+        isPrivateConstructionRental: r.isPrivateConstructionRental,
         rentalHousingType: r.rentalHousingType,
         isConvertedFromShortTerm: r.isConvertedFromShortTerm,
       };

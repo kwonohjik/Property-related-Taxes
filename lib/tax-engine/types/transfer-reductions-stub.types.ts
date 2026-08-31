@@ -76,6 +76,8 @@ export type TransferReductionStub =
       isUnoccupiedAt19990820?: boolean;
     } & Rental97CommonFields)
   | ({ type: "rental_97_3";
+      /** D2-07 — §97의3① 「민간건설임대주택」 한정 (2023.1.1 이후 등록분) */
+      isPrivateConstructionRental?: boolean;
       /** @deprecated Phase 1 stub 호환 (단순 경로 입력) */
       rentalYears?: number;
       /** @deprecated Phase 1 stub 호환 */

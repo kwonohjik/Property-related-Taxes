@@ -120,6 +120,19 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
           tone="amber"
         />
 
+        {/* D2-07 — §97의3① 「민간건설임대주택」 한정. 2023.1.1 이후 등록분에만 요구된다
+            (법률 제19199호 부칙 §38 경과조치 — 그 전 등록분은 종전 규정). */}
+        {value.registrationDate >= "2023-01-01" && (
+          <ToggleCard
+            variant="chip"
+            checked={value.isPrivateConstructionRental}
+            onCheckedChange={(v) => onChange({ isPrivateConstructionRental: v })}
+            title="민간건설임대주택"
+            description="민특법 §2 2호 — 2023.1.1 이후 등록분은 건설임대에 한정 (§97의3①)"
+            tone="amber"
+          />
+        )}
+
         <ToggleCard
           variant="chip"
           checked={value.isNationalHousingScale}

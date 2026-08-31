@@ -159,6 +159,17 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   propertyType?: "apartment" | "non_apartment";
   rentalHousingType?: "long_term_private" | "public_support_private";
   /**
+   * §97의3① 「「민간임대주택에 관한 특별법」 제2조제2호에 따른 **민간건설임대주택**으로서…」 (D2-07)
+   *
+   * ⚠️ **경과조치가 있다** — 법률 제19199호(2022.12.31 공포, 2023.1.1 시행) 부칙 **제38조**:
+   *   「이 법 시행 전에 **등록을 한** 공공지원민간임대주택 또는 장기일반민간임대주택에 대한
+   *    양도소득세 과세특례에 관하여는 제97조의3제1항의 개정규정에도 불구하고
+   *    **종전의 규정에 따른다**.」
+   *   ⇒ **2023-01-01 전 등록분은 매입임대라도 그대로 적용**된다. 건설한정을 무조건 걸면
+   *     법 근거 없는 불리 적용이 된다.
+   */
+  isPrivateConstructionRental?: boolean;
+  /**
    * §97의4 대상 목 구분 — 조특령 §97의4① → 소령 §167의3①2호 (D2-04).
    * - `purchase_a` = **가목** 민간매입임대 1호 이상 (한도 6억 / 수도권 밖 3억)
    * - `construction_c` = **다목** 건설임대 2호 이상·대지 298㎡·연면적 149㎡ 이하 (한도 6억)

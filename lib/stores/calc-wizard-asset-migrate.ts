@@ -207,6 +207,11 @@ export function migrateAsset(raw: unknown): AssetForm {
           ...(r.type === "rental_97_2" && r.isUnoccupiedAtAcquisition === undefined
             ? { isUnoccupiedAtAcquisition: null }
             : {}),
+          // D2-07 — §97의3 건설임대 확인. 구 세션은 미확인(false)으로 둔다 —
+          // 2023.1.1 전 등록분은 경과조치로 이 값과 무관하다.
+          ...(r.type === "rental_97_3" && r.isPrivateConstructionRental === undefined
+            ? { isPrivateConstructionRental: false }
+            : {}),
           // D9-01 — §97의2①1호 나목 신규 3-state
           ...(r.type === "rental_97_2" && r.isMultiUnitHousing972 === undefined
             ? { isMultiUnitHousing972: null, isUnoccupiedAt19990820: null }
