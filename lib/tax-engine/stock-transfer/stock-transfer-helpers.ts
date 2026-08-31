@@ -195,7 +195,9 @@ export function buildAppliedThreshold(
     marketCap: t.marketCap,
     marketType,
     priorYearEndDate: input.priorYearEndDate.toISOString().slice(0, 10),
-    fromDate: resolveThresholdFromDate(marketType, input.priorYearEndDate),
+    // 🔑 임계 수치와 **같은 날짜**(양도일)로 조회한다 — 두 값이 다른 날짜에서 나오면
+    //    「임계 50억인데 fromDate 2020-04-01(그 행의 시총은 10억)」 모순이 화면에 나간다.
+    fromDate: resolveThresholdFromDate(marketType, input.transferDate),
     // Phase B (2026-05-19) — 비상장 벤처기업 임계 분기 전파
     isVentureRule: t.isVentureRule,
     ruleSource: t.ruleSource,

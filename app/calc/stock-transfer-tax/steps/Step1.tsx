@@ -223,8 +223,10 @@ export function Step1({ form, onChange }: Step1Props) {
                         const judgmentDatePatch =
                           suggested ? { priorYearEndDate: suggested } : {};
                         // 양도일 변경 시 daily 모드 종가표 잔재 자동 리셋 (인덱스 misalign 차단 — R-7·E-8)
+                        // 양도일은 §157 **임계표 행 선택** 인자다(부칙 「양도하는 분부터」).
+                        // 바뀌면 대주주 자동 판정이 달라지므로 syncedChange로 echo를 함께 갱신한다.
                         if (form.transferStdInputMode === "daily" && v !== form.transferDate) {
-                          onChange({
+                          syncedChange({
                             transferDate: v,
                             transferPriceDates: [],
                             transferPriceClosing: [],
@@ -232,7 +234,7 @@ export function Step1({ form, onChange }: Step1Props) {
                             ...judgmentDatePatch,
                           });
                         } else {
-                          onChange({ transferDate: v, ...judgmentDatePatch });
+                          syncedChange({ transferDate: v, ...judgmentDatePatch });
                         }
                       }}
                     />

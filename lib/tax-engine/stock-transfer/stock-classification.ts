@@ -103,16 +103,33 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
     (input.combinedShareRatio > 0 || input.combinedMarketCap > 0);
   const effectiveLargestGroup = input.isLargestShareholderGroup || forcedCombinedJudgment;
 
-  // F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 override (합병·분할·신설법인 특수분기)
-  // judgmentDateOverride 가 있으면 매트릭스 조회에 사용. 미지정 시 priorYearEndDate 사용.
-  // 교재 §3장 이미지 50·51 Check Point ②③⑦⑯ (2010 소령 157⑧·소령 157④ 등).
-  const judgmentDate = input.judgmentDateOverride ?? priorYearEndDate;
+  /**
+   * F-09/F-10/F-14/F-23 (2026-05-19) — **보유현황 측정 시점** override
+   * (합병등기일·분할등기일·설립등기일 — 소령 §157⑤⑥, 신설법인은 §157①1호 괄호).
+   *
+   * 🔑 이 값은 **임계표 행 선택에 쓰지 않는다**(리뷰 2026-08-28 #2 정정).
+   *    §157⑤는 「합병등기일 현재 **주식보유 현황**에 따른다」로 지분율·시총을 **어느 시점의
+   *    값으로 볼지**만 옮긴다. 어느 개정본 임계가 유효한지는 **부칙**이 양도일로 정한다.
+   *    엔진은 측정값(`selfShareRatio`·`selfMarketCap`)을 사용자 입력 그대로 받으므로,
+   *    이 override의 역할은 **그 값을 어느 날 기준으로 넣어야 하는지 안내·echo**하는 것이다.
+   *    교재 §3장 이미지 50·51 Check Point ②③⑦⑯.
+   */
+  const measurementDate = input.judgmentDateOverride ?? priorYearEndDate;
+  void measurementDate; // echo는 judgmentBasis가 담당 — 계산 인자가 아님을 명시
 
-  // 상장 3시장(§157) + 비상장(§167의8①2호) 모두 자동 산출
-  // Phase B (2026-05-19): isVentureCompany 옵션 전달 — 비상장 벤처 시총 40억 분기
+  /**
+   * 상장 3시장(§157) + 비상장(§167의8①2호) 모두 자동 산출.
+   *
+   * 🔑 **행 선택 인자는 「양도일」이다.** 부칙이 한결같이 「양도하는 분부터」이기 때문이다
+   *    (제34061호 §2·제30395호 §2②·제26982호 §1·제24356호 §22②).
+   *    종전에는 측정 시점(직전 사업연도 종료일)으로 표를 뒤져, 시행일이 4-1인 행이
+   *    **다음 해 12-31에서야** 매칭됐다.
+   *
+   * Phase B (2026-05-19): isVentureCompany 옵션 전달 — 비상장 벤처 시총 40억 분기
+   */
   const threshold = getMajorShareholderThreshold(
     marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
-    judgmentDate,
+    input.transferDate,
     // 40억 임계는 「§178①에 따라 **거래되는** 벤처기업 주식」 — 거래 방법까지 넘긴다(리뷰 #14).
     { isVentureCompany: input.isVentureCompany, isKOTCTrading: input.isKOTCTrading },
   );

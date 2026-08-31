@@ -81,9 +81,20 @@ export function StockBurdenedDebtSection({
   );
 
   // 임계 조회는 7행 테이블 탐색이라 memo 이득이 없다 (React Compiler가 알아서 처리한다).
+  /**
+   * 🔑 **임계표 행 선택은 양도일**이다 — 부칙이 한결같이 「양도하는 분부터」이기 때문이다
+   *    (제34061호 §2·제30395호 §2②·제24356호 §22②). 판정기준일은 지분율·시총을 **어느
+   *    시점의 값으로 볼지**만 정한다(측정 축). 두 축을 섞으면 화면이 자기모순에 빠진다 —
+   *    실제로 머지 직후 임계는 2%(판정기준일 행)로 표시하면서 판정은 1%(양도일 행)로 내
+   *    「지분율 2% … → 대주주」를 출력했다.
+   *    인자 집합도 `computeAutoIsMajor`와 동일해야 한다([[feedback_shared_predicate_argument_parity]]).
+   */
   const threshold =
-    isJudgeable && derivedJudgmentDate && bgt?.marketType
-      ? getMajorShareholderThreshold(bgt.marketType, new Date(derivedJudgmentDate))
+    isJudgeable && derivedJudgmentDate && transferDate && bgt?.marketType
+      ? getMajorShareholderThreshold(bgt.marketType, new Date(transferDate), {
+          isVentureCompany: false,
+          isKOTCTrading: false,
+        })
       : null;
 
   /**
@@ -97,6 +108,9 @@ export function StockBurdenedDebtSection({
       {
         marketType: next.marketType,
         priorYearEndDate: resolveBurdenedGiftJudgmentDate(next, transferDate ?? ""),
+        // 임계표 **행 선택은 양도일**(부칙 「양도하는 분부터」) — 측정 시점과 축이 다르다.
+        // 미입력이면 `computeAutoIsMajor`가 undefined를 반환해 미리보기를 띄우지 않는다.
+        transferDate: transferDate ?? "",
         selfShareRatio: String(next.selfShareRatioPercent ?? ""),
         selfMarketCap: String(next.selfMarketCap ?? ""),
         isLargestShareholderGroup: next.isLargestShareholderGroup ?? false,
@@ -510,7 +524,8 @@ export function StockBurdenedDebtSection({
                       className="rounded border border-amber-300 bg-amber-100/60 dark:border-amber-600 dark:bg-amber-900/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
                       data-testid={`stock-bg-major-preview-${item.id}`}
                     >
-                      {derivedJudgmentDate} 기준 임계 —{" "}
+                      양도일 {transferDate} 기준 임계 (측정: {derivedJudgmentDate} 현재
+                      보유현황) —{" "}
                       <strong>지분율 {(threshold.shareRatioThreshold * 100).toFixed(0)}%</strong> 또는{" "}
                       <strong>
                         시가총액{" "}

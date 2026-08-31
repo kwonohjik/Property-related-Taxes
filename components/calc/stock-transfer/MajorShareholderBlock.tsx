@@ -110,8 +110,10 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
   // 엔진 함수로 시기별 임계 산출
   // 상장(kospi/kosdaq/konex) + 비상장(unlisted) 모두 자동 판정 지원
   // 기타자산(other_asset)은 §94①4 별도 트랙 — null 반환
+  // 🔑 임계표 **행 선택은 양도일**(부칙 「양도하는 분부터」), 측정값은 판정기준일 기준 입력.
+  //    둘 다 있어야 미리보기를 띄운다 — 한쪽만으로 추정하지 않는다.
   const threshold = useMemo(() => {
-    if (!form.priorYearEndDate) return null;
+    if (!form.priorYearEndDate || !form.transferDate) return null;
     if (
       form.marketType !== "kospi" &&
       form.marketType !== "kosdaq" &&
@@ -122,12 +124,19 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     }
     return getMajorShareholderThreshold(
       form.marketType,
-      new Date(form.priorYearEndDate),
+      new Date(form.transferDate),
       // 엔진(`stock-classification.ts`)과 **같은 인자 집합**으로 부른다 — 여기만 안 넘기면
       // 임계는 10억으로 판정되는데 화면은 계속 40억을 보여준다(리뷰 #14 세팅 지점 2곳).
       { isVentureCompany: form.isVentureCompany, isKOTCTrading: form.isKOTCTrading },
     );
-  }, [form.marketType, form.priorYearEndDate, form.isVentureCompany, form.isKOTCTrading]);
+    // `priorYearEndDate`는 위 가드가 읽으므로 deps에 남긴다(행 선택 인자는 양도일이다).
+  }, [
+    form.marketType,
+    form.transferDate,
+    form.priorYearEndDate,
+    form.isVentureCompany,
+    form.isKOTCTrading,
+  ]);
 
   const shareRatioThreshold = threshold?.shareRatioThreshold ?? 0;
   const marketCapThreshold = threshold?.marketCapThreshold ?? Infinity;
@@ -332,7 +341,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               {MARKET_LABEL[form.marketType as keyof typeof MARKET_LABEL]} ·{" "}
               {resolveThresholdFromDate(
                 form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
-                new Date(form.priorYearEndDate),
+                new Date(form.transferDate),
               )}~ 적용
             </p>
             {form.marketType === "unlisted" && threshold.isVentureRule && (

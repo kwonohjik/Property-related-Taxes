@@ -181,8 +181,17 @@ describe("BG-MJ — §157 대주주 판정 실입력 축", () => {
     expect(out.blocked).toBe(false);
     if (out.blocked) return;
     expect(out.body.priorYearEndDate).toBe("2015-03-31");
-    // 2013-01-01 행(2%)이 걸려 1.5%는 임계 미달 → 비대주주
-    expect(out.result.taxCategory).toBe("listed_off_market_non_major");
+    /**
+     * 판정기준일 override 는 **측정 축**만 옮긴다 — 임계표 **행 선택은 양도일**이다
+     * (부칙 「양도하는 분부터」 · PR #1357 정정).
+     * 양도일 2025-06-02 행은 지분율 1% 이므로 1.5% 는 임계 충족 → 대주주.
+     *
+     * ⚠️ 종전 기대값은 `listed_off_market_non_major` 였다. 그것은 2015-03-31 로 표를
+     *    뒤지던 **옛 축**의 산물이고, #1357 이 고친 결함을 그대로 고정하고 있었다.
+     *    되돌리지 말 것 — 이 줄이 `listed_off_market_non_major` 로 돌아가면 축이 다시
+     *    섞인 것이다([[feedback_anchor_correction_legal_priority]]).
+     */
+    expect(out.result.taxCategory).toBe("listed_major");
   });
 
   it("BG-MJ-5: 비상장도 자동 판정 대상이다 (§167의8①2호 — 4% / 10억)", () => {

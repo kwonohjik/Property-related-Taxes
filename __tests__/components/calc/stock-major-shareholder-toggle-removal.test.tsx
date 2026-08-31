@@ -55,15 +55,23 @@ describe("T-2 — 항상 거짓인 안내 문구는 어떤 조건에서도 렌�
   });
 });
 
-describe("T-6 — 기준일이 있으면 판정 배지가 자동 산출값을 표시한다", () => {
+describe("T-6 — 양도일·기준일이 모두 있으면 판정 배지가 자동 산출값을 표시한다", () => {
+  // 🔑 임계표 행 선택은 **양도일**이다(부칙 「양도하는 분부터」 — 리뷰 2026-08-28 #2).
+  //    측정값(지분율·시총)은 판정기준일 현재 값이라 **둘 다** 있어야 판정이 성립한다.
   it("코스피 지분 3% → 대주주 배지", () => {
-    block({ priorYearEndDate: "2025-12-31", selfShareRatio: "3" });
+    block({ transferDate: "2026-06-01", priorYearEndDate: "2025-12-31", selfShareRatio: "3" });
     expect(screen.getByText(/✓ 대주주/)).toBeTruthy();
   });
 
   it("코스피 지분 0.1% → 비대주주 배지", () => {
-    block({ priorYearEndDate: "2025-12-31", selfShareRatio: "0.1" });
+    block({ transferDate: "2026-06-01", priorYearEndDate: "2025-12-31", selfShareRatio: "0.1" });
     expect(screen.getByText(/✗ 비대주주/)).toBeTruthy();
+  });
+
+  it("양도일이 없으면 임계 박스를 띄우지 않는다 (자동 추정 금지)", () => {
+    block({ transferDate: "", priorYearEndDate: "2025-12-31", selfShareRatio: "3" });
+    expect(screen.queryByText(/✓ 대주주/)).toBeNull();
+    expect(screen.queryByText(/✗ 비대주주/)).toBeNull();
   });
 });
 
