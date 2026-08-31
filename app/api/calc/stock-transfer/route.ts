@@ -213,6 +213,8 @@ function buildForeignEngineInput(rawInput: Record<string, unknown>): ForeignStoc
     yearsResidentInKorea: coerced.yearsResidentInKorea as number,
 
     isListedForeignCorp: coerced.isListedForeignCorp as boolean,
+    // ⑭ §104①12호가목 중소기업 10% (영 §157의3 2호 — 내국법인 해외상장 전용)
+    isSmallMediumEnterprise: coerced.isSmallMediumEnterprise as boolean | undefined,
     stockName: coerced.stockName as string,
     countryCode: coerced.countryCode as string,
 

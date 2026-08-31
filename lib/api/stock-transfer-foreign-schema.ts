@@ -64,6 +64,8 @@ export const foreignStockInputSchema = z.object({
 
   // ── 자산 분류 §157의3 ──
   isListedForeignCorp: z.boolean(),
+  /** §104①12호가목 중소기업 10% — 영 §157의3 2호(내국법인 해외상장) 전용. 미입력=나목 20%. */
+  isSmallMediumEnterprise: z.boolean().optional(),
   stockName: z.string().min(1),
   countryCode: z.string().min(2).max(3),
 

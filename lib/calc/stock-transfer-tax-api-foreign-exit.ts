@@ -38,6 +38,9 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
 
     // ── 자산 분류 §157의3 ──
     isListedForeignCorp: form.isListedForeignCorp,   // 3중 패턴 default: true
+    // §104①12호가목 — 영 §157의3 2호(내국법인 해외상장)일 때만 10%. 1호에는 근거가 없어
+    // UI가 토글을 숨기고 값을 지우지만, ④에서도 같은 게이트를 걸어 stale 값을 막는다(3중 패턴).
+    isSmallMediumEnterprise: form.isListedForeignCorp ? false : form.isSmallMediumEnterprise,
     stockName: form.securityName || "",
     countryCode: form.fgCountryCode || "US",         // 3중 패턴 default
 
