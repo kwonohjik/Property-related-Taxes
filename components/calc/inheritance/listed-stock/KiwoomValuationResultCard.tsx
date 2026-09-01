@@ -82,7 +82,7 @@ export function KiwoomValuationResultCard({
           </strong>
           원 (원미만 절사)
         </p>
-        <p className="text-emerald-700">→ 아래 &quot;전후 2개월 종가 단순평균&quot;에 자동 mirror됨</p>
+        <p className="text-emerald-700">→ 아래 &quot;전후 2개월 종가 단순평균&quot;에 자동 입력됩니다</p>
       </div>
 
       {/* 검증용 일자별 종가 상세 토글 */}

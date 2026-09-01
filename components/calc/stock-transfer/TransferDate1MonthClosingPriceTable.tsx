@@ -9,18 +9,29 @@
  *   - 거래정지·관리종목 제외 (상증령 §52의2③)
  *   - 본 평균은 환산취득가 산식의 분모로 사용 (산식 본칙은 별도 — 시령 §176의2 등).
  *
- * 기간 정의: [양도일 소급 1개월 + 1일, **양도일**] — 「이전」은 양도일을 **포함**한다.
+ * 기간 정의: [양도일 소급 1개월, **양도일**] — **양쪽 경계일 모두 포함**.
  *   (「이전·이후」= 당일 포함 / 「전·후」= 당일 미포함 — 사용자 검증 2026-05-19)
- *   예: 2023-02-24(금) → [2023-01-25 ~ 2023-02-24] (31일)
- *       2023-03-31(금) → [2023-03-01 ~ 2023-03-31] (31일 — 민법 §160② 말일 클램프)
- *   양도일이 토·일이면 직전 거래일로 기준을 옮긴다(상증법 §63①1가목 괄호).
- *   ⚠️ 종전 주석은 「(양도일 미포함)」이라고 적혀 있었으나 **구현과 반대**였다.
+ *   예: 2023-02-24(금) → [2023-01-24 ~ 2023-02-24]
+ *       2023-03-31(금) → [2023-02-28 ~ 2023-03-31] (민법 §160② 말일 클램프)
+ *   양도일이 비거래일이면 직전 거래일로 기준을 옮긴다(상증법 §63①1가목 괄호).
+ *
+ *   ⚠️ **2026-09-01 정정** — 종전에는 시작을 `소급 1개월 + 1일`로 잡아 경계일을 뺐다.
+ *      상증령 §52의2②2호 「평가기준일 **이전 2월이 되는 날부터**」(같은 항 1·3호는 뺄 때
+ *      「다음날부터」라고 명시)에 따라 포함으로 정정했다. 산식은 `lib/kiwoom/calendar.ts`의
+ *      `buildOneMonthBeforeSlots`가 **단일 소스**다 — 여기서 다시 구현하지 말 것.
+ *   ⚠️ 「1개월 = 31일」이 아니다 — 말일 클램프 때문에 달마다 29~32일이다.
  *
  * UI: PostListingClosingPriceTable 패턴 차용 — 2-col grid + 주말 자동 표시 + Enter 네비.
  * 색조: amber (양도일 영역, 상장일 emerald와 구분).
  *
- * Mirror 패턴: 거래일별 입력 시마다 자동 평균 산정 → transferDatePriceAvg1Month에 mirror.
+ * Mirror 패턴: 거래일별 입력 시마다 자동 평균 산정 → `transferDatePriceAvg1Month`에 mirror.
  * (onChange 단일 호출 — useEffect 미러링 금지 정책 준수)
+ *
+ * 🔴 **저장값은 셀 편집·키움 자동조회 때만 갱신된다.** 아래 미리보기(`preview`)는 매 렌더
+ *    재계산되므로, 셀 편집 없이 `displayDates`만 바뀌면 둘이 갈린다(제보 2026-09-01 —
+ *    16,560 vs 16,559). 그 잔재는 **Step1의 양도일 변경 리셋**이 막는다. 리셋 조건을 좁히면
+ *    이 결함이 되살아난다 — anchor `one-month-avg-stale-mirror.anchor.test.tsx` 참조.
+ *    화면 요약줄은 **여기 하나만** 둔다(실시간 재계산 쪽 — stale이 구조적으로 불가능).
  */
 
 import { useMemo } from "react";
@@ -183,7 +194,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
           거래일 <strong>{preview.tradingDays}</strong>일 · 종가합계{" "}
           <strong>{preview.sum.toLocaleString()}</strong> · 1개월 종가평균{" "}
           <strong className="text-amber-900">{preview.avg.toLocaleString()}</strong>
-          {" "}→ transferDatePriceAvg1Month에 자동 mirror됨 (§99①3 환산 분모)
+          {" "}→ 「양도시 1주당 기준시가」로 자동 입력됩니다 (§99①3 환산 분모)
         </div>
       )}
     </ToneCard>

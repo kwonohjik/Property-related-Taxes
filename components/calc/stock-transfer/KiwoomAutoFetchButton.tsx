@@ -243,7 +243,7 @@ export function KiwoomAutoFetchButton({
               <strong className="text-emerald-900 text-sm">{info.average.toLocaleString()}</strong>원 (원미만 절사)
             </p>
             <p className="text-emerald-700">
-              → §99①3 환산 {isAcquisition ? "분자" : "분모"}로 자동 mirror됨
+              → §99①3 환산 {isAcquisition ? "분자" : "분모"}에 자동 입력됩니다
             </p>
 
             {/* V-1 — 「거래일 0」은 에러가 아니라 200 응답이다. 원인을 그대로 알린다. */}
