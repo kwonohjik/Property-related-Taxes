@@ -183,7 +183,10 @@ export function buildPropertyPayload(form: TransferFormData) {
     isRegulatedArea: form.isRegulatedArea,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     isUnregistered: form.isUnregistered,
-    isNonBusinessLand: primary?.isNonBusinessLand ?? false,
+    // assetKind 게이트는 단건(`transfer-tax-api.ts:501`)과 **같은 조건**이어야 한다 —
+    // 다건에만 없어 토지가 아닌 자산의 잔존 플래그가 그대로 중과로 흘렀다 (E6-05).
+    isNonBusinessLand:
+      primary?.assetKind === "land" ? (primary.isNonBusinessLand ?? false) : false,
     isSuccessorRightToMoveIn:
       primaryKind === "right_to_move_in" ? (primary?.isSuccessorRightToMoveIn ?? false) : undefined,
     acquisitionCause,

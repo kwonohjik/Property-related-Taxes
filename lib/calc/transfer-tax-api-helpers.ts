@@ -197,6 +197,10 @@ export function isFullFractionalBundle(assets: AssetForm[]): boolean {
  *    (buildAssetPayload emit + validate basic 검사의 합집합. 소재지·좌표는 미emit·미검사 → 제외)
  *  - 양도정보(②): transferType·transferCause (양도 형태 드라이버 — companion ② UI 숨김 대응.
  *    지분 분할은 일반 양도만 지원하므로 부담부/수용 하위필드는 불요 — 비양립 조합은 validate 차단)
+ *  - 비사업용 토지 여부: **필지 자체의 성질**이라 전 지분 공통 (V10-f, 2026-09-02 코드리뷰).
+ *    빠져 있던 동안에는 사용자가 Step4 토글을 **명시적으로 켠** 상태에서 지분1만 중과되고
+ *    지분2 이상은 빠졌다(실측 341,517,000 → 416,178,400, 74,661,400원 과소).
+ *    승계 근거가 「⑬ emit + ⑧ 검사의 합집합」이므로 ⑬가 이 키를 싣게 된 이상 여기에도 있어야 한다.
  * 취득측(취득원인·취득일·취득가액·지분율·필요경비)은 지분별 상이 → 병합 안 함.
  */
 export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
@@ -209,6 +213,7 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
     landNature: primary.landNature,
     transferType: primary.transferType,
     transferCause: primary.transferCause,
+    isNonBusinessLand: primary.isNonBusinessLand,
   };
 }
 
@@ -514,6 +519,17 @@ export function buildAssetPayload(
      * 이미 있었고 **여기서만 빠져 있었다** — 그래서 컴패니언 미등기가 항상 false였다.
      */
     isUnregistered: asset.isUnregistered,
+    /**
+     * §104①8호 비사업용 토지 중과 — **자산 단위**다(위 `isUnregistered`와 같은 층위).
+     *
+     * ⑫Zod(`transfer-tax-schema-sub.ts:463`)·⑭엔진 매핑(`bundled-split-helpers.ts:388`)은
+     * 이미 있었고 **여기서만 빠져 있었다** — 그래서 서버가 `?? false`로 받아 컴패니언 토지의
+     * 중과가 **항상 누락**됐다(V10-a, 2026-09-02 코드리뷰. 실측 328,541,400 → 332,805,000).
+     * `isUnregistered`가 같은 모양으로 빠져 있던 것과 동일한 결함이다.
+     *
+     * assetKind 게이트는 단건(`transfer-tax-api.ts`)과 같은 조건 — 토지가 아니면 싣지 않는다(3중 패턴).
+     */
+    isNonBusinessLand: asset.assetKind === "land" ? (asset.isNonBusinessLand ?? false) : undefined,
     fixedSalePrice,
     /** 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정) */
     totalPropertyTransferPrice: fractional ? totalContractPrice : undefined,
