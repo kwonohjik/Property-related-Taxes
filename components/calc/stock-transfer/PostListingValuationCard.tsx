@@ -175,15 +175,15 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               tradingHalt={form.kiwoomTradingHalt}
               onFill={onChange}
             />
+            {/*
+              요약줄은 표(`TransferDate1MonthClosingPriceTable`) 안의 것 **하나만** 둔다.
+
+              종전에는 여기에 같은 값을 한 줄 더 그렸는데, 그 줄은 **저장 필드**를 읽고
+              표의 줄은 **매 렌더 재계산**한 값을 읽어서 둘이 갈렸다(제보 2026-09-01 —
+              16,560 vs 16,559). 값이 갈리는 원인 자체는 Step1의 양도일 리셋으로 막았고,
+              표시는 실시간 재계산 쪽 한 곳으로 모은다 — stale이 구조적으로 불가능한 쪽이다.
+            */}
             <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} />
-            {form.transferDatePriceAvg1Month && parseAmount(form.transferDatePriceAvg1Month) > 0 && (
-              <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-4 py-3 text-sm">
-                <p className="text-emerald-800">
-                  자동 산정 평균 = <strong>{parseAmount(form.transferDatePriceAvg1Month).toLocaleString()}</strong>
-                  {" "}원 → transferDatePriceAvg1Month에 자동 mirror됨 (§99①3 · 시행령 §165③ 준용 환산 분모)
-                </p>
-              </div>
-            )}
           </>
         )}
 

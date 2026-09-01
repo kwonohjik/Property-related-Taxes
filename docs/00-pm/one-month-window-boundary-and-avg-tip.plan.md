@@ -1,13 +1,13 @@
 # 「이전 N개월」 경계일 + 1개월 평균 팁 표시 — 수정 계획
 
 - 제보 2026-09-01 (3건)
-- 상태: **B-1 ✅ 완료 · B-4 ✅ 완료 · B-2 🟠 미착수 · B-3 🟠 미착수**
+- 상태: **B-1·B-2·B-3·B-4 전건 ✅ 완료**
 
 | ID | 제보 | 상태 |
 |---|---|---|
 | **B-1** | 양도일 2026-02-26의 1개월 창이 `01-27~02-26` — `01-26`부터여야 함 | ✅ 완료 |
-| **B-2** | 같은 팁이 **중복 표시** (이미지 13) | 🟠 미착수 |
-| **B-3** | 사용자가 알 수 없는 팁(`transferDatePriceAvg1Month`·`mirror`) 표시 (이미지 14) | 🟠 미착수 |
+| **B-2** | 같은 팁이 **중복 표시** (이미지 13) | ✅ 완료 |
+| **B-3** | 사용자가 알 수 없는 팁(`transferDatePriceAvg1Month`·`mirror`) 표시 (이미지 14) | ✅ 완료 |
 | **B-4** | §165⑤ 상장일 이후 1개월도 같은 off-by-one | ✅ 완료 |
 
 ---
@@ -79,75 +79,70 @@
 
 ---
 
-## B-2 🟠 같은 팁이 두 번 뜬다 — 그리고 **두 값이 다르다**
+## B-2 ✅ 같은 팁이 두 번 뜨고 **두 값이 갈렸다**
 
 ### 실측 위치
 
-`PostListingValuationCard.tsx:180-188`이 `<TransferDate1MonthClosingPriceTable>`을 렌더하는데,
-**그 표가 이미 자기 요약줄을 갖고 있다**. 카드가 같은 필드의 요약을 하나 더 붙인다.
+`PostListingValuationCard.tsx`가 `<TransferDate1MonthClosingPriceTable>`을 렌더하는데,
+**그 표가 이미 자기 요약줄을 갖고 있었다.** 카드가 같은 필드의 요약을 하나 더 붙였다.
 
-| | 위치 | 값 출처 |
-|---|---|---|
-| amber | `TransferDate1MonthClosingPriceTable.tsx:180-187` | `preview.avg` — **렌더 시점에 입력칸에서 실시간 재계산** |
-| green | `PostListingValuationCard.tsx:181-188` | `form.transferDatePriceAvg1Month` — **저장된 값** |
+| | 값 출처 |
+|---|---|
+| amber (표 안) | `preview.avg` — **매 렌더 재계산** |
+| green (카드) | `form.transferDatePriceAvg1Month` — **저장 값** |
 
-### 🔴 중복보다 심각한 것 — 값이 갈린다 (dual-truth)
-
-제보 이미지 13에서 두 줄의 값이 **다르다**:
+### 🔴 중복보다 심각했던 것 — 저장값이 낡는다
 
 ```
-amber : 거래일 16일 · 종가합계 264,970 · 1개월 종가평균 16,560
-green : 자동 산정 평균 = 16,559 원
+amber : 거래일 16일 · 종가합계 264,970 · 1개월 종가평균 16,560   (현재 입력 상태)
+green : 자동 산정 평균 = 16,559 원                                (직전 자동조회 20거래일 — stale)
 ```
 
-264,970 ÷ 16 = 16,560.6 → **16,560**(amber, 현재 입력 상태)
-331,180 ÷ 20 = **16,559**(green, 직전 키움 자동조회 20거래일 결과 — **stale**)
+저장 필드는 **셀 편집(`handleChange`)·키움 자동조회(`onFill`)** 때만 쓰인다.
+표시만의 문제가 아니다 — **저장값이 곧 §99①3 환산 분모로 엔진에 간다.**
 
-원인: 저장 필드는 **셀 편집 시(`handleChange`)** 와 **키움 자동조회 시(`onFill`)** 에만 쓰인다
-(`TransferDate1MonthClosingPriceTable.tsx:92-105`). 반면 amber의 `preview`는 **매 렌더 재계산**된다.
-⇒ 셀 편집 없이 `displayDates`가 바뀌는 경로(양도일 변경 등)에서 저장값만 낡는다.
+### 근본 원인 — 리셋 조건이 모드로 한정돼 있었다
 
-> 🔴 **B-1이 이 위험을 키운다.** 창이 31→32슬롯으로 바뀌므로, 기존 입력이 남은 상태에서
-> 일자 집합이 재생성되는 경로에서 divergence가 더 잘 드러난다. B-2를 B-1 직후에 처리할 것.
+`Step1.tsx`는 양도일 변경 시 `transferPriceDates`·`transferPriceClosing`·
+`transferDatePriceAvg1Month`를 리셋하는데, 그 조건이 **`transferStdInputMode === "daily"`** 였다.
+⇒ **direct 모드에서 양도일을 바꾼 뒤 daily로 전환**하면 배열이 낡은 채 살아남아,
+`displayDates`(양도일 파생)와 인덱스가 어긋나고 저장 평균만 옛 값으로 남는다.
 
-### 수정 방향 (착수 전 확인 필요)
+### 수정
 
-- **표시는 한 곳만** — 표 안의 amber 요약줄을 정본으로 두고 카드의 green 줄을 제거하는 쪽이
-  자연스럽다(값의 출처가 실시간 재계산이라 stale이 없다).
-- 다만 **저장 필드가 낡는 문제 자체는 표시를 지워도 남는다.** 저장값이 곧 §99①3 환산 분모로
-  엔진에 가므로, `displayDates`가 바뀌는 모든 경로에서 평균이 다시 쓰이는지 **입력 경로 전수
-  열거**가 선행돼야 한다(memory `feedback_enumerate_all_write_sites_before_fixing`).
-- ❌ `useEffect → store` 미러링으로 해결 금지(프로젝트 정책 · 무한 루프).
+1. **`Step1.tsx` 리셋에서 모드 조건 제거** — 잔재는 어느 모드에서 생겼든 양도일이 바뀌면 무효다.
+2. **카드의 green 요약줄 삭제** — 표시는 **실시간 재계산 쪽 한 곳**으로 모은다
+   (stale이 구조적으로 불가능한 쪽).
 
-### anchor 필수
+> ⛔ `useEffect → store` 미러링으로 해결하지 않았다(프로젝트 정책 · 무한 루프).
+> ⛔ 리셋 조건을 다시 좁히지 말 것 — 이 결함이 되살아난다.
 
-착수 전 안전망 실측 결과를 적을 것. 최소 2건:
-1. 표와 카드가 **같은 값**을 보인다(또는 요약이 1개만 렌더된다)
-2. `displayDates`가 바뀐 뒤 저장 평균이 **재계산된 값과 일치**한다 ← 진짜 결함을 잡는 쪽
+### 검증
+
+- anchor `one-month-avg-stale-mirror.anchor.test.tsx` **3건** — SM-1(daily 회귀 가드) ·
+  **SM-2(제보 경로 · direct)** · SM-3(같은 일자 재입력 시 불필요한 삭제 없음)
+- **수정 전 SM-2가 적색**임을 먼저 확인했다(결함 재현 → 그 다음 수정)
+- 뮤테이션 P-F(리셋 조건을 daily로 되돌림) → **2,167건 중 SM-2 하나만** 적색
 
 ---
 
-## B-3 🟠 사용자가 알 수 없는 문구 — 내부 식별자·전문용어 노출
+## B-3 ✅ 내부 식별자·전문용어 노출 — 화면 문구 0건
 
-`transferDatePriceAvg1Month`는 **폼 내부 필드명**이고 `mirror`는 **개발 용어**다. 화면에 그대로
-나가면 안 된다(memory `feedback_no_internal_id_in_result`).
+`transferDatePriceAvg1Month`는 **폼 내부 필드명**, `mirror`는 **개발 용어**다
+(memory `feedback_no_internal_id_in_result`).
 
-### 전수 열거 (5곳)
+| # | 위치 | 변경 |
+|---|---|---|
+| 1 | `TransferDate1MonthClosingPriceTable.tsx` | `→ transferDatePriceAvg1Month에 자동 mirror됨` → **`→ 「양도시 1주당 기준시가」로 자동 입력됩니다`** |
+| 2 | `PostListingValuationCard.tsx` | **줄 자체 삭제** (B-2) |
+| 3 | `KiwoomAutoFetchButton.tsx` | `…로 자동 mirror됨` → **`…에 자동 입력됩니다`** |
+| 4 | `KiwoomPostListingAutoFetchButton.tsx` | 동상 |
+| 5 | `KiwoomValuationResultCard.tsx` | 동상 |
 
-| # | 위치 | 현재 문구 | 문제 |
-|---|---|---|---|
-| 1 | `TransferDate1MonthClosingPriceTable.tsx:186` | `→ transferDatePriceAvg1Month에 자동 mirror됨 (§99①3 환산 분모)` | **변수명 + mirror** |
-| 2 | `PostListingValuationCard.tsx:183` | `원 → transferDatePriceAvg1Month에 자동 mirror됨 (§99①3 · 시행령 §165③ 준용 환산 분모)` | **변수명 + mirror** |
-| 3 | `KiwoomAutoFetchButton.tsx:246` | `→ §99①3 환산 {분자\|분모}로 자동 mirror됨` | mirror |
-| 4 | `KiwoomPostListingAutoFetchButton.tsx:203` | `→ §165⑤ 상장 후 1개월 평균 자동 mirror됨` | mirror |
-| 5 | `KiwoomValuationResultCard.tsx:85` | `→ 아래 "전후 2개월 종가 단순평균"에 자동 mirror됨` | mirror만 (**참조 대상은 화면 라벨이라 식별 가능**) |
-
-### 수정 방향
-
-- 변수명 → **화면에 실제로 보이는 라벨**로 대체. 예: 「양도일 이전 1개월 종가평균」 칸.
-- `mirror` → 「자동으로 채워집니다」·「자동 입력됩니다」 같은 평이한 한국어.
-- 법조문 인용(§99①3 등)은 **유지**한다 — 이 앱의 사용자는 세무 실무자이고 근거 표시는 자산이다.
-- 1·2번은 B-2에서 줄 자체가 통합·삭제될 수 있으므로 **B-2 결론 후** 문구를 확정한다.
+- 변수명은 **화면에 실제로 보이는 라벨**(「양도시 1주당 기준시가」)로 대체했다.
+- 법조문 인용(§99①3 등)은 **유지**한다 — 사용자가 세무 실무자이고 근거 표시는 자산이다.
+- **검증**: 화면 문구에서 `mirror됨` **0건**, 내부 필드명 노출 **0건**
+  (남은 1건은 코드 doc 주석이라 대상 아님).
 
 ---
 

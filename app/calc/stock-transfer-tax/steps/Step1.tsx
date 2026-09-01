@@ -222,10 +222,18 @@ export function Step1({ form, onChange }: Step1Props) {
                           : suggestPriorYearEndDate(v);
                         const judgmentDatePatch =
                           suggested ? { priorYearEndDate: suggested } : {};
-                        // 양도일 변경 시 daily 모드 종가표 잔재 자동 리셋 (인덱스 misalign 차단 — R-7·E-8)
+                        // 양도일 변경 시 1개월 종가표 잔재 자동 리셋 (인덱스 misalign 차단 — R-7·E-8)
                         // 양도일은 §157 **임계표 행 선택** 인자다(부칙 「양도하는 분부터」).
                         // 바뀌면 대주주 자동 판정이 달라지므로 syncedChange로 echo를 함께 갱신한다.
-                        if (form.transferStdInputMode === "daily" && v !== form.transferDate) {
+                        //
+                        // ⚠️ **모드 조건 제거 (2026-09-01)** — 종전에는 `transferStdInputMode === "daily"`
+                        //    일 때만 지웠다. direct 모드에서 양도일을 바꾼 뒤 daily로 전환하면 배열이
+                        //    낡은 채 살아남아, 표의 실시간 재계산과 저장된 평균이 갈렸다
+                        //    (제보 2026-09-01 — 화면 두 줄이 16,560 vs 16,559).
+                        //    저장 평균은 §99①3 환산 **분모로 엔진에 가므로** 표시만의 문제가 아니다.
+                        //    잔재는 어느 모드에서 생겼든 양도일이 바뀌면 무효다.
+                        //    anchor: `__tests__/components/calc/stock-transfer/one-month-avg-stale-mirror.anchor.test.tsx`
+                        if (v !== form.transferDate) {
                           syncedChange({
                             transferDate: v,
                             transferPriceDates: [],

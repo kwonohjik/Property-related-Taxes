@@ -200,7 +200,7 @@ export function KiwoomPostListingAutoFetchButton({
               <strong>{info.tradingDays}</strong> ={" "}
               <strong className="text-emerald-900 text-sm">{info.average.toLocaleString()}</strong>원 (원미만 절사)
             </p>
-            <p className="text-emerald-700">→ §165⑤ 상장 후 1개월 평균 자동 mirror됨</p>
+            <p className="text-emerald-700">→ §165⑤ 상장 후 1개월 평균에 자동 입력됩니다</p>
           </div>
           <button
             type="button"
