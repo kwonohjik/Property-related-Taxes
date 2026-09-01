@@ -69,9 +69,14 @@ export function runHouseCountExclusionStep(
     hceCursor = after;
   }
   if (specialHouseExclusionDetail.excludedCount > 0) {
+    // 표시는 **증분 체이닝**이다 (D4-07) — 형제 step 둘이 지키는 규약을 감면주택 행만
+    // 이탈해 `exemptionJudgeInput.householdHousingCount`(= 원본 − hce − 감면주택 − 상속)를
+    // 자기 몫으로 찍고 있었다. 진입 주택수 = 원본 − hce, 나가는 값 = 그 값 − 감면주택수.
+    const specialBefore = Math.max(effectiveInput.householdHousingCount - hceApplied.length, 0);
+    const specialAfter = Math.max(specialBefore - specialHouseExclusionDetail.excludedCount, 0);
     steps.push({
       label: "보유 감면주택 주택수 제외 (§89①3호 의제)",
-      formula: `${specialHouseExclusionDetail.entries.filter((e) => e.eligible).map((e) => e.articleLabel).join(" · ")} — 주택수 ${effectiveInput.householdHousingCount} → ${exemptionJudgeInput.householdHousingCount} (비과세 판정 한정 — 중과 주택수 불변)`,
+      formula: `${specialHouseExclusionDetail.entries.filter((e) => e.eligible).map((e) => e.articleLabel).join(" · ")} — 주택수 ${specialBefore} → ${specialAfter} (비과세 판정 한정 — 중과 주택수 불변)`,
       amount: 0,
       legalBasis: specialHouseExclusionDetail.entries.filter((e) => e.eligible).map((e) => e.legalBasis).join(" · "),
     });

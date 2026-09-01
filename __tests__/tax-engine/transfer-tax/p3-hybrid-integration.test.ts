@@ -125,7 +125,6 @@ describe("P3 하이브리드 통합 anchor", () => {
         reductions: [{
           type: "unsold_98_6" as const,
           hoType986: "seller_rented" as const,
-          contractDate986: new Date("2011-08-01"),
           stdPriceSumAtBase986: 550_000_000,
           floorAreaSqm986: 84.5,
           isUnsoldAfterCompletion986: true,

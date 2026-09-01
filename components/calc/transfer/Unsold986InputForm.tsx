@@ -97,11 +97,7 @@ export function Unsold986InputForm({
         />
       </SectionShell>
 
-      <SectionShell num="②" title="최초 매매계약·기준시가 합계·면적" tone="sky">
-        <div>
-          <label className="mb-1 block text-xs font-medium">최초 매매계약일</label>
-          <DateInput value={value.contractDate986} onChange={(v) => onChange({ contractDate986: v })} />
-        </div>
+      <SectionShell num="②" title="기준시가 합계·면적" tone="sky">
         <div>
           <label className="mb-1 block text-xs font-medium">
             주택+부속토지 기준시가 합계 ({isBuyerRented ? "취득 당시" : "최초 임대개시 당시"})

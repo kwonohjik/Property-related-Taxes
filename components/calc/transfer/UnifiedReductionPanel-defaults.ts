@@ -330,7 +330,6 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
     return {
       type: "unsold_98_6",
       hoType986: "seller_rented",
-      contractDate986: "",
       stdPriceSumAtBase986: "",
       floorAreaSqm986: "",
       isUnsoldAfterCompletion986: false,

@@ -222,12 +222,11 @@ const DATE_BEARING_VARIANTS: Array<[string, Record<string, unknown>, string[]]> 
     "unsold_98_6",
     {
       type: "unsold_98_6",
-      contractDate986: "2011-03-01",
       rentalContractDate986: "2011-04-01",
       rentalStartDate986: "2011-05-01",
       rentalEndDate986: "2013-05-01",
     },
-    ["contractDate986", "rentalContractDate986", "rentalStartDate986", "rentalEndDate986"],
+    ["rentalContractDate986", "rentalStartDate986", "rentalEndDate986"],
   ],
   [
     "unsold_98_7",

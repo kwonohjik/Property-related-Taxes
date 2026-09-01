@@ -489,7 +489,6 @@ export function toEngineReductions(
       return {
         type: "unsold_98_6" as const,
         hoType986: r.hoType986,
-        contractDate986: r.contractDate986 || undefined,
         stdPriceSumAtBase986: parseAmount(r.stdPriceSumAtBase986 || "0") || undefined,
         floorAreaSqm986: parseDecimal(r.floorAreaSqm986 || "") || undefined,
         isUnsoldAfterCompletion986: r.isUnsoldAfterCompletion986,

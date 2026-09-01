@@ -139,7 +139,6 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
     if (r.type === "unsold_98_6") {
       return {
         ...r,
-        contractDate986: r.contractDate986 ? new Date(r.contractDate986) : undefined,
         rentalContractDate986: r.rentalContractDate986 ? new Date(r.rentalContractDate986) : undefined,
         rentalStartDate986: r.rentalStartDate986 ? new Date(r.rentalStartDate986) : undefined,
         rentalEndDate986: r.rentalEndDate986 ? new Date(r.rentalEndDate986) : undefined,

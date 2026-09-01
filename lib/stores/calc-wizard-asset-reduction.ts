@@ -477,7 +477,6 @@ export type RentalReductionFormVariant =
       /** 1호 사업주체등 2년 임대 후 취득 / 2호 취득 후 5년 임대 */
       hoType986: "seller_rented" | "buyer_rented";
       /** 최초 매매계약일 (YYYY-MM-DD) */
-      contractDate986: string;
       /** 주택+부수토지 기준시가 합계 (원) — 6억 한도 (1호는 최초 임대개시 당시) */
       stdPriceSumAtBase986: string;
       /** 연면적 (공동주택 전용, ㎡) — 149 한도 */

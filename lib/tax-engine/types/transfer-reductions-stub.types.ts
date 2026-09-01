@@ -236,7 +236,6 @@ export type TransferReductionStub =
   // §98의6 — P3 본격 구현 (2026-06-12)
   | { type: "unsold_98_6";
       hoType986?: "seller_rented" | "buyer_rented";
-      contractDate986?: Date;
       stdPriceSumAtBase986?: number;
       floorAreaSqm986?: number;
       isUnsoldAfterCompletion986?: boolean;

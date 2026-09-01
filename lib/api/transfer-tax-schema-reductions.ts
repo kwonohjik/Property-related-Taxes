@@ -335,7 +335,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("unsold_98_6"),
     hoType986: z.enum(["seller_rented", "buyer_rented"]).optional(),
-    contractDate986: z.string().date().optional(),
     stdPriceSumAtBase986: z.number().int().nonnegative().optional(),
     floorAreaSqm986: z.number().nonnegative().optional(),
     isUnsoldAfterCompletion986: z.boolean().optional(),

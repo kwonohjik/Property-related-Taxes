@@ -589,6 +589,13 @@ export const ALL_HYBRID_IDS: ReadonlyArray<string> = [
  * calcReductions 진입점 (P2+P3 통합) — 5년 내 세액감면 후보 (§127⑦ max 패턴).
  * eligible && tax_amount일 때만 reductionAmount = 산출세액 × rate 채움.
  */
+/**
+ * ⚠️ `calcReductions`의 **유일한** 하이브리드 세액감면 진입점이다 (D5-07).
+ * 종전에는 `unsold-hybrid.ts`에 §98의7·§99의2 2조문만 찾는 동명이형 래퍼
+ * `evaluateHybridTaxAmountFromReductions`가 남아 자신도 「calcReductions 진입점」이라고
+ * 주석으로 단언했다 — 배럴에서 그쪽을 import하면 나머지 6조문이 조용히 감면 0이 됐다.
+ * 그 래퍼는 삭제했다. 새 계산 경로를 배선할 때는 반드시 이 함수를 쓸 것.
+ */
 export function evaluateAnyHybridTaxAmount(
   reductions: ReadonlyArray<{ type: string }> | undefined,
   ctx: {
@@ -665,7 +672,6 @@ export function evaluateAnyHybridFromReduction(
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
       hoType: r.hoType986 as Unsold986Input["hoType"],
-      contractDate: toHybridDate(r.contractDate986) ?? ctx.assetContractDate,
       stdPriceSumAtBase: r.stdPriceSumAtBase986 as number | undefined,
       floorAreaSqm: r.floorAreaSqm986 as number | undefined,
       isUnsoldAfterCompletion: r.isUnsoldAfterCompletion986 as boolean | undefined,

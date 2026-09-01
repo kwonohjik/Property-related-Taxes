@@ -515,8 +515,6 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         }
         // P3 §98의6 (2026-06-12): 계약일·기준시가 합계·면적 + 2호 임대 일자 필수 (⑧).
         if (r.type === "unsold_98_6") {
-          if (!r.contractDate986)
-            return fail("§98의6 적용: 최초 매매계약일을 입력하세요.");
           if (parseAmount(r.stdPriceSumAtBase986 || "0") <= 0)
             return fail("§98의6 적용: 주택과 부수토지의 기준시가 합계를 입력하세요 (6억 한도).");
           if (!(parseDecimal(r.floorAreaSqm986 || "") > 0))

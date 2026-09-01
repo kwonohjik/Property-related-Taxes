@@ -368,7 +368,6 @@ export function migrateAsset(raw: unknown): AssetForm {
       if (r && r.type === "unsold_98_6") {
         return {
           hoType986: "seller_rented",
-          contractDate986: "",
           stdPriceSumAtBase986: "",
           floorAreaSqm986: "",
           isUnsoldAfterCompletion986: false,
