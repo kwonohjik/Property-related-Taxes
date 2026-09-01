@@ -71,10 +71,10 @@ async function fillStep2(
   //    (부분일치라 인접 안내 문구까지 걸린다). 접근성 이름 exact로 고정한다.
   const box = (name: string) => page.getByRole("textbox", { name, exact: true });
   await box("상장일 이후 1개월 종가평균").fill("10000");
-  await box("상장연도 1주당 순손익가치").fill(v.listingNI);
-  await box("상장연도 1주당 순자산가치").fill(v.listingNA);
-  await box("취득연도 1주당 순손익가치").fill(v.acqNI);
-  await box("취득연도 1주당 순자산가치").fill(v.acqNA);
+  await box("상장일 직전 사업연도 1주당 순손익가치").fill(v.listingNI);
+  await box("상장일 직전 사업연도 1주당 순자산가치").fill(v.listingNA);
+  await box("취득일 직전 사업연도 1주당 순손익가치").fill(v.acqNI);
+  await box("취득일 직전 사업연도 1주당 순자산가치").fill(v.acqNA);
 }
 
 test.describe("§165⑤ 환산 분자·분모 80% 하한 — 프리뷰", () => {
