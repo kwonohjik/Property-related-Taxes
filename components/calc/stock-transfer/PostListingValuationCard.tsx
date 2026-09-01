@@ -248,12 +248,10 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               <p className="text-sm font-medium text-amber-800 mb-3">상장연도 비상장 보충적 평가</p>
               <div className="space-y-3">
                 <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required
-                  hint="상장일이 «속하는» 사업연도가 아니라 그 «직전» 사업연도 기준 (§165④1 가목)"
                   value={form.listingYearNetIncomePerShare}
                   onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
                   placeholder="상장일 직전 사업연도 1주당 순손익가치" />
                 <CurrencyInput label="상장일 직전 사업연도 1주당 순자산가치" required
-                  hint="상장일이 속하는 사업연도의 «직전» 사업연도 종료일 현재 기준 (§165④1 나목)"
                   value={form.listingYearNetAssetPerShare}
                   onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
                   placeholder="상장일 직전 사업연도 1주당 순자산가치" />
@@ -263,12 +261,10 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               <p className="text-sm font-medium text-amber-800 mb-3">취득연도 비상장 보충적 평가</p>
               <div className="space-y-3">
                 <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required
-                  hint="취득일이 «속하는» 사업연도가 아니라 그 «직전» 사업연도 기준 (§165④1 가목)"
                   value={form.acquisitionYearNetIncomePerShare}
                   onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
                   placeholder="취득일 직전 사업연도 1주당 순손익가치" />
                 <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required
-                  hint="취득일이 속하는 사업연도의 «직전» 사업연도 종료일 현재 기준 (§165④1 나목)"
                   value={form.acquisitionYearNetAssetPerShare}
                   onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
                   placeholder="취득일 직전 사업연도 1주당 순자산가치" />
@@ -299,12 +295,10 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                 <p className="text-sm font-medium text-amber-800 mb-3">취득일 직전 사업연도 1주당 가치 (직접 입력)</p>
                 <div className="space-y-3">
                   <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required
-                    hint="취득일이 «속하는» 사업연도가 아니라 그 «직전» 사업연도 기준 (§165④1 가목)"
                     value={form.acquisitionYearNetIncomePerShare}
                     onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
                     placeholder="취득일 직전 사업연도 1주당 순손익가치" />
                   <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required
-                    hint="취득일이 속하는 사업연도의 «직전» 사업연도 종료일 현재 기준 (§165④1 나목)"
                     value={form.acquisitionYearNetAssetPerShare}
                     onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
                     placeholder="취득일 직전 사업연도 1주당 순자산가치" />
