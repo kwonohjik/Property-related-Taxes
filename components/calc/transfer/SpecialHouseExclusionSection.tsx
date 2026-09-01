@@ -19,11 +19,18 @@ const ARTICLE_OPTIONS: Array<{ value: SpecialHouseExclusionFormItem["article"]; 
   { value: "unsold_98_2", label: "§98의2 지방 미분양주택 (취득 2008.11.3~2010.12.31)" },
   { value: "unsold_98_3", label: "§98의3 미분양주택 (취득 2009.2.12~2010.2.11)" },
   { value: "unsold_98_5", label: "§98의5 수도권 밖 미분양주택 (계약 ~2011.4.30)" },
-  { value: "unsold_98_6", label: "§98의6 준공후미분양주택 (~2011.12.31)" },
+  { value: "unsold_98_6", label: "§98의6 준공후미분양주택 (취득기간 제한 없음)" },
   { value: "unsold_98_7", label: "§98의7 미분양주택 9억 이하 (계약 2012.9.24~12.31)" },
   { value: "unsold_98_8", label: "§98의8 준공후미분양주택 (계약 2015.1.1~12.31)" },
   { value: "unsold_99_2", label: "§99의2 신축주택등 (계약 2013.4.1~12.31)" },
-  { value: "new_99", label: "§99 신축주택 IMF 1차 (~2007.12.31 양도분 한정)" },
+  { value: "new_99", label: "§99 신축주택 IMF 1차 (1998.5.22~1999.6.30 · 국민주택 ~1999.12.31)" },
+  { value: "new_99_3", label: "§99의3 신축주택 IMF 2차 (2001.5.23~2003.6.30)" },
+];
+
+/** 취득기간을 매매계약일만으로 판정하는 조문 (엔진 `basis: "contract_only"`와 단일 축) */
+const CONTRACT_ONLY_ARTICLES: ReadonlyArray<SpecialHouseExclusionFormItem["article"]> = [
+  "unsold_98_8",
+  "unsold_99_2",
 ];
 
 interface Props {
@@ -48,7 +55,13 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
       onCheckedChange={(on) =>
         onChange(
           on
-            ? [{ article: "", houseAcquisitionDate: "", houseContractDate: "", requirementsConfirmed: false }]
+            ? [{
+              article: "",
+              houseAcquisitionDate: "",
+              houseContractDate: "",
+              isNationalHousing: false,
+              requirementsConfirmed: false,
+            }]
             : [],
         )
       }
@@ -83,10 +96,23 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-              {it.article === "new_99" && (
+              {(it.article === "new_99" || it.article === "new_99_3") && (
                 <p className="mt-1 text-micro text-rose-600">
-                  §99②는 다른 주택을 2007.12.31까지 양도하는 경우에만 적용됩니다 — 그 이후 양도분은
-                  주택 수 제외가 적용되지 않습니다.
+                  {it.article === "new_99" ? "§99②" : "§99의3②"}는 다른 주택을 2007.12.31까지
+                  양도하는 경우에만 적용됩니다 — 그 이후 양도분은 주택 수 제외가 적용되지 않습니다.
+                </p>
+              )}
+              {it.article === "unsold_98_6" && (
+                <p className="mt-1 text-micro text-emerald-700">
+                  §98의6①의 기한은 <b>임대계약 체결일</b>(1호는 사업주체등이 2011.12.31까지, 2호는
+                  본인이 2011.12.31 이전)이고 매수자의 취득일·매매계약일에는 기한이 없습니다 — 아래
+                  일자는 참고용으로만 기록됩니다.
+                </p>
+              )}
+              {CONTRACT_ONLY_ARTICLES.includes(it.article) && (
+                <p className="mt-1 text-micro text-amber-700">
+                  이 조문은 <b>최초 매매계약일</b>만을 기준으로 취득기간을 판정합니다 — 취득일이
+                  기간 안이어도 계약일이 밖이면 적용되지 않습니다.
                 </p>
               )}
               {it.article === "unsold_98_3" && (
@@ -97,6 +123,15 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
                 </p>
               )}
             </div>
+            {it.article === "new_99" && (
+              <ToggleCard
+                tone="violet"
+                title="국민주택 (전용 85㎡ 이하 · 수도권 밖 읍·면 100㎡ 이하)"
+                description="국민주택이면 신축주택취득기간의 종기가 1999.6.30에서 1999.12.31로 연장됩니다 (조특법 §99①1호 괄호)"
+                checked={it.isNationalHousing}
+                onCheckedChange={(v) => updateRow(idx, { isNationalHousing: v })}
+              />
+            )}
             <div>
               <label className="mb-1 block text-xs font-medium">감면주택 취득일</label>
               <DateInput
@@ -111,7 +146,9 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
                 onChange={(v) => updateRow(idx, { houseContractDate: v })}
               />
               <p className="mt-1 text-micro text-muted-foreground">
-                취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다
+                {CONTRACT_ONLY_ARTICLES.includes(it.article)
+                  ? "이 조문은 매매계약일이 판정 기준입니다 — 반드시 입력하세요"
+                  : "취득일이 취득기간 외라도 시한 내 매매계약 + 계약금 납부분은 포함됩니다"}
               </p>
             </div>
             <ToggleCard
@@ -129,7 +166,13 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
           onClick={() =>
             onChange([
               ...items,
-              { article: "", houseAcquisitionDate: "", houseContractDate: "", requirementsConfirmed: false },
+              {
+              article: "",
+              houseAcquisitionDate: "",
+              houseContractDate: "",
+              isNationalHousing: false,
+              requirementsConfirmed: false,
+            },
             ])
           }
         >

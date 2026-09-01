@@ -15,10 +15,10 @@ import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 
 // 감면주택 2채 (§98의8) — 각 excludedCount 1 → totalExcluded 2.
-// unsold_98_8 취득기간 window 내 취득일 + 요건 확인 → eligible.
+// §98의8①의 취득기간은 **최초 매매계약일**만을 지배한다 (D4-09) — 계약일이 판정 기준이다.
 const TWO_EXCLUSIONS = [
-  { article: "unsold_98_8" as const, houseAcquisitionDate: new Date("2015-06-01"), requirementsConfirmed: true },
-  { article: "unsold_98_8" as const, houseAcquisitionDate: new Date("2015-06-10"), requirementsConfirmed: true },
+  { article: "unsold_98_8" as const, houseContractDate: new Date("2015-06-01"), requirementsConfirmed: true },
+  { article: "unsold_98_8" as const, houseContractDate: new Date("2015-06-10"), requirementsConfirmed: true },
 ];
 
 // 공통: 800M(<12억) 주택, 장기보유·거주 요건 충족, 1세대, 감면주택 2채 제외.

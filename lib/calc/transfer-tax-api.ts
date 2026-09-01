@@ -572,6 +572,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         article: e.article,
         houseAcquisitionDate: e.houseAcquisitionDate || undefined,
         houseContractDate: e.houseContractDate || undefined,
+        isNationalHousing: e.isNationalHousing,
         requirementsConfirmed: e.requirementsConfirmed,
       })),
     // ④⑬ §155⑤ 일시적 2주택 · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 (body-blocks로 분리)

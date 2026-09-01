@@ -606,11 +606,13 @@ export type ReductionType = AssetReductionForm["type"];
 export interface SpecialHouseExclusionFormItem {
   article:
     | "unsold_98" | "unsold_98_2" | "unsold_98_3" | "unsold_98_5" | "unsold_98_6"
-    | "unsold_98_7" | "unsold_98_8" | "unsold_99_2" | "new_99" | "";
+    | "unsold_98_7" | "unsold_98_8" | "unsold_99_2" | "new_99" | "new_99_3" | "";
   /** 감면주택 취득일 (YYYY-MM-DD) */
   houseAcquisitionDate: string;
   /** 감면주택 매매계약일 (YYYY-MM-DD, 선택) */
   houseContractDate: string;
+  /** §99 전용 — 국민주택 여부 (신축주택취득기간 종기 1999.6.30 ↔ 1999.12.31) */
+  isNationalHousing: boolean;
   /** 해당 조문 본 요건 충족 확인 */
   requirementsConfirmed: boolean;
 }

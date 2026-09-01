@@ -297,7 +297,13 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
   it("[리뷰 H-1] 모드 2 — 보유 감면주택 주택수 제외(specialHouseExclusions) 차단", () => {
     const form = baseForm();
     form.specialHouseExclusions = [
-      { article: "unsold_98_8", houseAcquisitionDate: "2015-06-01", houseContractDate: "", requirementsConfirmed: true },
+      {
+        article: "unsold_98_8",
+        houseAcquisitionDate: "2015-06-01",
+        houseContractDate: "",
+        isNationalHousing: false,
+        requirementsConfirmed: true,
+      },
     ];
     const msg = validateMultiSupportedMode(form);
     expect(msg).not.toBeNull();

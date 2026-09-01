@@ -478,10 +478,11 @@ const specialHouseExclusionSchema = z.array(
   z.object({
     article: z.enum([
       "unsold_98", "unsold_98_2", "unsold_98_3", "unsold_98_5", "unsold_98_6",
-      "unsold_98_7", "unsold_98_8", "unsold_99_2", "new_99",
+      "unsold_98_7", "unsold_98_8", "unsold_99_2", "new_99", "new_99_3",
     ]),
     houseAcquisitionDate: z.string().date().optional(),
     houseContractDate: z.string().date().optional(),
+    isNationalHousing: z.boolean().optional(),
     requirementsConfirmed: z.boolean().default(false),
   }),
 ).default([]);
