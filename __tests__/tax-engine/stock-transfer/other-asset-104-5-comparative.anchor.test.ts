@@ -199,3 +199,52 @@ describe("§104⑤ — 기타자산 다건 비교과세", () => {
     expect(r.totalCalculatedTax).not.toBe(r.items.reduce((s, x) => s + x.calculatedTax, 0));
   });
 });
+
+// ============================================================
+// SS — §104①9호 카테고리 집합은 **한 벌**이다 (2026-09-01 단일화)
+//
+// 종전에는 `NBL_HEAVY_CORP_CATEGORIES`가 `stock-transfer-tax.ts`(단건 세율)와
+// §104⑤ 계산 파일에 **두 벌** 있었다. 9호 카테고리를 늘릴 때 한쪽만 고치면
+// **단건은 +10%p인데 §104⑤ 버킷은 1호로 묶이는** 어긋남이 조용히 난다.
+// ⇒ `stock-rate-tables.ts`가 `NBL_HEAVY_CORP_BRACKETS`와 **한 쌍**으로 소유한다.
+// ============================================================
+
+import {
+  NBL_HEAVY_CORP_CATEGORIES,
+  NBL_HEAVY_CORP_BRACKETS,
+  BASIC_PROGRESSIVE_BRACKETS,
+} from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
+import { applyStockTaxRate } from "@/lib/tax-engine/stock-transfer/stock-transfer-rate-calc";
+
+describe("SS §104①9호 집합 단일 소스", () => {
+  it("SS-1: 집합은 다목·라목 두 카테고리다", () => {
+    expect([...NBL_HEAVY_CORP_CATEGORIES].sort()).toEqual([
+      "other_asset_block_shareholder_nbl",
+      "other_asset_heavy_re_nbl",
+    ]);
+  });
+
+  it("SS-2: 표와 짝이 맞는다 — 9호 표 = 기본표 + 10%p (구간 수·경계 동일)", () => {
+    expect(NBL_HEAVY_CORP_BRACKETS).toHaveLength(BASIC_PROGRESSIVE_BRACKETS.length);
+    NBL_HEAVY_CORP_BRACKETS.forEach((b, i) => {
+      expect(b.max).toBe(BASIC_PROGRESSIVE_BRACKETS[i].max);
+      // 부동소수 오염 없이 정확히 +0.1 (`0.06 + 0.1 !== 0.16`)
+      expect(Math.round((b.rate - BASIC_PROGRESSIVE_BRACKETS[i].rate) * 100)).toBe(10);
+    });
+  });
+
+  it("SS-3: 🔑 집합의 원소는 실제로 9호 세율을 탄다 — 같은 과세표준에서 비-9호보다 정확히 10%p 높다", () => {
+    const BASE = 300_000_000;
+    const plain = applyStockTaxRate(BASE, "other_asset_block_shareholder", false, false);
+    for (const cat of NBL_HEAVY_CORP_CATEGORIES) {
+      const nbl = applyStockTaxRate(BASE, cat, false, false);
+      expect(Math.round((nbl.appliedRate - plain.appliedRate) * 100)).toBe(10);
+      expect(nbl.calculatedTax).toBeGreaterThan(plain.calculatedTax);
+    }
+  });
+
+  it("SS-4: 🔑 양성 대조군 — 집합에 없는 기타자산은 기본세율 그대로", () => {
+    expect(NBL_HEAVY_CORP_CATEGORIES.has("other_asset_block_shareholder")).toBe(false);
+    expect(NBL_HEAVY_CORP_CATEGORIES.has("other_asset_heavy_re")).toBe(false);
+  });
+});

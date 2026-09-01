@@ -28,12 +28,7 @@ import { calculateExitTax } from "./exit-tax";
 import { classifyStockTransfer } from "./stock-classification";
 import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate, buildAppliedThreshold } from "./stock-transfer-helpers";
 import { computeCross89Adjustment } from "../comparative-104-5-cross";
-import { NBL_HEAVY_CORP_BRACKETS } from "./stock-rate-tables";
-/** §104①9호 카테고리 — `stock-transfer-aggregate.ts`와 같은 집합(둘 다 다목·라목에 얹힌다) */
-const NBL_HEAVY_CORP_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]> = new Set([
-  "other_asset_block_shareholder_nbl",
-  "other_asset_heavy_re_nbl",
-]);
+import { NBL_HEAVY_CORP_BRACKETS, NBL_HEAVY_CORP_CATEGORIES } from "./stock-rate-tables";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
 import { buildPr2Detail } from "./stock-transfer-pr2-detail";
