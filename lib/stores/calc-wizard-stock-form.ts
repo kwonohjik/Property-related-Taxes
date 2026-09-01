@@ -167,6 +167,20 @@ export interface StockTransferFormData {
   listingYearNetAssetPerShare: string;
   acquisitionYearNetIncomePerShare: string;
   acquisitionYearNetAssetPerShare: string;
+  // ── 간이 모드 «순액 입력» (§165④1 원천값에서 1주당 가치 자동 산정) ──
+  // 위 4필드는 «결과값»이다. 아래는 그 결과값을 만들어내는 원천값으로,
+  // simpleValueInputMode === "amounts" 일 때만 입력받아 위 4필드로 mirror한다.
+  // ⚠️ 주식수는 «한 연도에 1개»다 — 순손익·순자산이 공유한다(§165④4호).
+  //    완전재현 모드(NIYear·NAYear)는 각자 shareCount를 갖는다 — 두 모드가 이 점에서 다르다.
+  simpleValueInputMode: "direct" | "amounts";   // 3중 패턴 default: "direct"
+  listingYearNetIncomeAmount: string;
+  listingYearShareCount: string;
+  listingYearNetAssetAmount: string;            // 영업권 «포함 전»
+  listingYearGoodwill: string;                  // 해당 시 (빈칸 = 0)
+  acquisitionYearNetIncomeAmount: string;
+  acquisitionYearShareCount: string;
+  acquisitionYearNetAssetAmount: string;        // 영업권 «포함 전»
+  acquisitionYearGoodwill: string;              // 해당 시 (빈칸 = 0)
   // 소칙 §81④ 1호 월할 가산 (전전사업연도 평가 + 직전사업연도 월수) — 본체·준용 공용
   prePriorYearNetIncomePerShare: string;
   prePriorYearNetAssetPerShare: string;
@@ -541,6 +555,15 @@ export function createInitialStockFormData(): StockTransferFormData {
     listingYearNetAssetPerShare: "",
     acquisitionYearNetIncomePerShare: "",
     acquisitionYearNetAssetPerShare: "",
+    simpleValueInputMode: "direct", // 3중 패턴 default — 기존 「결과값 직접 입력」 보존
+    listingYearNetIncomeAmount: "",
+    listingYearShareCount: "",
+    listingYearNetAssetAmount: "",
+    listingYearGoodwill: "",
+    acquisitionYearNetIncomeAmount: "",
+    acquisitionYearShareCount: "",
+    acquisitionYearNetAssetAmount: "",
+    acquisitionYearGoodwill: "",
     prePriorYearNetIncomePerShare: "",
     prePriorYearNetAssetPerShare: "",
     priorBizYearMonths: "12", // §81④ 직전사업연도 월수 default

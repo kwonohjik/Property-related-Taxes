@@ -370,10 +370,52 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         }
         if (detailMode === "simple") {
           if (isEmpty(form.listingDatePriceAvg1Month)) errors.push({ field: "listingDatePriceAvg1Month", message: "상장일 이후 1개월 종가평균을 입력하세요", severity: "error" });
-          if (isEmpty(form.listingYearNetIncomePerShare)) errors.push({ field: "listingYearNetIncomePerShare", message: "상장연도 1주당 순손익가치를 입력하세요", severity: "error" });
-          if (isEmpty(form.listingYearNetAssetPerShare)) errors.push({ field: "listingYearNetAssetPerShare", message: "상장연도 1주당 순자산가치를 입력하세요", severity: "error" });
-          if (isEmpty(form.acquisitionYearNetIncomePerShare)) errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요", severity: "error" });
-          if (isEmpty(form.acquisitionYearNetAssetPerShare)) errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 입력하세요", severity: "error" });
+
+          // 간이 모드 «안»의 하위 축 — 결과값 직접 입력 ↔ 순액에서 계산.
+          //
+          // 🔴 모드를 갈라야 한다. amounts 모드에서 파생 4필드만 검사하면
+          //    「원천값은 다 넣었는데 주식수 오타로 파생이 0 → 입력칸은 찼는데 차단」이 되고,
+          //    원천값을 아예 안 보면 「빈 값으로 통과」한다.
+          //    (같은 형태의 direct/daily 분기가 위 transferStdInputMode에 이미 있다 — :302)
+          const valueMode = form.simpleValueInputMode || "direct";
+          if (valueMode === "amounts") {
+            // 원천 3필드는 필수. **영업권은 선택**이다 — 해당 없는 법인이 다수다.
+            const axes = [
+              {
+                label: "상장연도",
+                ni: { field: "listingYearNetIncomeAmount", value: form.listingYearNetIncomeAmount },
+                sc: { field: "listingYearShareCount", value: form.listingYearShareCount },
+                na: { field: "listingYearNetAssetAmount", value: form.listingYearNetAssetAmount },
+                derivedNi: form.listingYearNetIncomePerShare,
+                derivedNa: form.listingYearNetAssetPerShare,
+              },
+              {
+                label: "취득연도",
+                ni: { field: "acquisitionYearNetIncomeAmount", value: form.acquisitionYearNetIncomeAmount },
+                sc: { field: "acquisitionYearShareCount", value: form.acquisitionYearShareCount },
+                na: { field: "acquisitionYearNetAssetAmount", value: form.acquisitionYearNetAssetAmount },
+                derivedNi: form.acquisitionYearNetIncomePerShare,
+                derivedNa: form.acquisitionYearNetAssetPerShare,
+              },
+            ] as const;
+            for (const ax of axes) {
+              if (isEmpty(ax.ni.value)) errors.push({ field: ax.ni.field, message: `${ax.label} 순손익액을 입력하세요 (§165④1 가목)`, severity: "error" });
+              if (isEmpty(ax.sc.value) || parseI(ax.sc.value) <= 0) errors.push({ field: ax.sc.field, message: `${ax.label} 발행주식총수를 입력하세요 (1주당 가치의 분모)`, severity: "error" });
+              if (isEmpty(ax.na.value)) errors.push({ field: ax.na.field, message: `${ax.label} 순자산가액(영업권 포함 전)을 입력하세요 (§165④1 나목)`, severity: "error" });
+              // 원천값이 다 찼는데 파생이 비어 있으면 산정이 실패한 것이다 — 조용히 넘기지 않는다.
+              if (!isEmpty(ax.ni.value) && !isEmpty(ax.sc.value) && isEmpty(ax.derivedNi)) {
+                errors.push({ field: ax.ni.field, message: `${ax.label} 1주당 순손익가치 자동 산정 실패 — 순손익액·발행주식총수를 확인하세요`, severity: "error" });
+              }
+              if (!isEmpty(ax.na.value) && !isEmpty(ax.sc.value) && isEmpty(ax.derivedNa)) {
+                errors.push({ field: ax.na.field, message: `${ax.label} 1주당 순자산가치 자동 산정 실패 — 순자산가액·발행주식총수를 확인하세요`, severity: "error" });
+              }
+            }
+          } else {
+            if (isEmpty(form.listingYearNetIncomePerShare)) errors.push({ field: "listingYearNetIncomePerShare", message: "상장연도 1주당 순손익가치를 입력하세요", severity: "error" });
+            if (isEmpty(form.listingYearNetAssetPerShare)) errors.push({ field: "listingYearNetAssetPerShare", message: "상장연도 1주당 순자산가치를 입력하세요", severity: "error" });
+            if (isEmpty(form.acquisitionYearNetIncomePerShare)) errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요", severity: "error" });
+            if (isEmpty(form.acquisitionYearNetAssetPerShare)) errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 입력하세요", severity: "error" });
+          }
         } else {
           const hasClosingData = form.listingPriceClosing.some((s) => !isEmpty(s));
           if (!hasClosingData) {
