@@ -61,7 +61,7 @@ import type {
 } from "./types/stock-transfer.types";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
-import { calcSection165_4Value } from "./valuation-165-4-basis";
+import { calcSection165_4Value, hasNetAssetZeroFloor } from "./valuation-165-4-basis";
 
 // §81④ 월할 헬퍼는 apply-81-4-accrual.ts로 추출(본체·준용 공용). import 경로 보존 위해 re-export.
 export { calcAccrualMonths } from "./apply-81-4-accrual";
@@ -229,6 +229,11 @@ export function calcNetIncomePerShare(
  *    체인은 H-02 주석과 같다(「소득세법」 제99조 제1항 제4호 전단 →
  *    「상속세 및 증여세법」 제63조 제1항 제1호 나목 → 같은 법 시행령 제54조 → 제55조 제1항).
  *    상수: `STOCK.INH_DECREE_55_1_NET_ASSET_ZERO_FLOOR`
+ *
+ * 🔴 **이 하한은 2009.2.4. 신설이다** — 제56조 제1항 후단(순손익)이 처음부터 있던 것과 다르다.
+ *    ⇒ `evaluationDate`를 **넘겨야** 게이팅된다. **미전달 시 하한을 적용하지 않는다**
+ *      (사실 그대로). 날짜를 모르면서 하한을 거는 쪽이 더 위험하기 때문이다 —
+ *      그런 호출부의 값은 결국 `calcSection165_4Value`를 거치며 거기서 게이팅된다.
  *    형제 경로: `property-valuation/net-asset-calc.ts:83`이 같은 하한을 같은 자리에 쓴다.
  *
  * ⚠️ **하한은 「영업권 포함 «전»」에 건다** — 서식 순서가 행 18(영업권 포함 전) → 행 19(영업권)
@@ -238,6 +243,11 @@ export function calcNetIncomePerShare(
  */
 export function calcNetAssetPerShare(
   year: NAYear,
+  /**
+   * 평가기준일 — 제55조 제1항 후단(0원 하한) 연혁 게이팅 기준.
+   * 미전달 시 하한 미적용(원값 그대로).
+   */
+  evaluationDate?: Date,
 ): {
   netAssetAmount: number;
   perShareAsset: number;
@@ -251,9 +261,10 @@ export function calcNetAssetPerShare(
   const assetSubtotal = (year.assetTotalRow1 || 0) + assetAdd - assetSub;
   const liabSubtotal = (year.liabTotalRow8 || 0) + liabAdd - liabSub;
   const netAssetBeforeGoodwillRaw = assetSubtotal - liabSubtotal; // 행 18 (사실)
-  const zeroFloorApplied = netAssetBeforeGoodwillRaw < 0;
-  // 「상속세 및 증여세법 시행령」 제55조 제1항 후단
-  const beforeGoodwill = Math.max(0, netAssetBeforeGoodwillRaw);
+  // 「상속세 및 증여세법 시행령」 제55조 제1항 후단 — 2009.2.4. 신설이라 연혁 게이팅한다
+  const floorInForce = evaluationDate ? hasNetAssetZeroFloor(evaluationDate) : false;
+  const zeroFloorApplied = floorInForce && netAssetBeforeGoodwillRaw < 0;
+  const beforeGoodwill = zeroFloorApplied ? 0 : netAssetBeforeGoodwillRaw;
   const netAssetAmount = beforeGoodwill + (year.goodwillRow19 || 0); // 행 20
   const shareCount = year.shareCount || 0;
   const base = { netAssetAmount, netAssetBeforeGoodwillRaw, zeroFloorApplied };

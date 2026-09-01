@@ -26,7 +26,10 @@ import {
   calcNetIncomePerShare,
   calcNetAssetPerShare,
 } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
-import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import {
+  calcSection165_4Value,
+  hasNetAssetZeroFloor,
+} from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 
 describe("ZF: §165④ 평가액 0원 하한 (상증령 §55①·§56① 준용)", () => {
@@ -54,7 +57,7 @@ describe("ZF: §165④ 평가액 0원 하한 (상증령 §55①·§56① 준용)
       liabSub: [],
       goodwillRow19: 0,
       shareCount: 100_000,
-    });
+    }, new Date("2026-01-01")); // 평가기준일 — 제55조 제1항 후단은 2009.2.4. 신설
     expect(r.netAssetBeforeGoodwillRaw).toBe(-2_000_000_000); // 행 18 사실
     expect(r.zeroFloorApplied).toBe(true);
     expect(r.netAssetAmount).toBe(0); // §55① 후단
@@ -71,7 +74,7 @@ describe("ZF: §165④ 평가액 0원 하한 (상증령 §55①·§56① 준용)
       liabSub: [],
       goodwillRow19: 300_000_000,
       shareCount: 100_000,
-    });
+    }, new Date("2026-01-01"));
     // max(0, −20억) + 3억 = 3억  ← 순서를 뒤집으면 max(0, −20억 + 3억) = 0이 되어 달라진다
     expect(r.netAssetAmount).toBe(300_000_000);
     expect(r.perShareAsset).toBe(3_000);
@@ -89,12 +92,42 @@ describe("ZF: §165④ 평가액 0원 하한 (상증령 §55①·§56① 준용)
     expect(v.floorApplied).toBe(false);
   });
 
-  it("ZF-6: 결손+자본잠식 → 평가액 0 — «음수 기준시가는 나오지 않는다»", () => {
-    for (const d of ["2026-01-01", "2005-06-01", "1997-06-01"]) {
-      const v = calcSection165_4Value(-50_000, -20_000, false, new Date(d));
-      expect(v.value, d).toBe(0);
-      expect(v.value, `${d}: 기준시가는 음수가 될 수 없다`).toBeGreaterThanOrEqual(0);
-    }
+  it("ZF-6: 2009.2.4. 이후 결손+자본잠식 → 평가액 0", () => {
+    const v = calcSection165_4Value(-50_000, -20_000, false, new Date("2026-01-01"));
+    expect(v.value).toBe(0);
+  });
+
+  it("ZF-9: 순자산 0원 하한은 «2009.2.4. 신설» — 그 전 평가에는 걸지 않는다", () => {
+    // 🔴 두 하한의 연혁이 다르다:
+    //   「상속세 및 증여세법 시행령」 제56조 제1항 후단(순손익 음수 → 영) = **처음부터**
+    //   「상속세 및 증여세법 시행령」 제55조 제1항 후단(순자산 0원 이하 → 0원) = **2009.2.4. 신설**
+    // 한 덩어리로 걸면 2009 이전 평가에 없던 하한을 소급 적용하게 된다.
+    expect(hasNetAssetZeroFloor(new Date("2009-02-04"))).toBe(true);
+    expect(hasNetAssetZeroFloor(new Date("2009-02-03"))).toBe(false);
+
+    // 2009.2.3. 양도 — 순손익은 0으로, 순자산은 «음수 그대로»
+    //   ni max(0,−50,000)=0 / na −20,000 → (0×3 + −20,000×2)/5 = −8,000
+    //   80% 하한 = −16,000 < −8,000 이므로 미발동
+    const before = calcSection165_4Value(-50_000, -20_000, false, new Date("2009-02-03"));
+    expect(before.value).toBe(-8_000);
+
+    // 하루 뒤 — 순자산도 0이 되어 평가액 0
+    const after = calcSection165_4Value(-50_000, -20_000, false, new Date("2009-02-04"));
+    expect(after.value).toBe(0);
+  });
+
+  it("ZF-10: 순손익 하한은 «처음부터» 있으므로 연혁과 무관하게 항상 적용된다", () => {
+    const r = calcNetIncomePerShare({
+      addA: [-500_000_000], subB: [], shareCount: 100_000, discountRate: 0.1,
+    });
+    expect(r.perShareValue).toBe(0);
+
+    // ⚠️ 구별력 있는 연도를 골라야 한다 — 1997은 순손익 가중치가 «0»(순자산 단독 연혁)이라
+    //    순손익 하한을 켜든 끄든 결과가 같아 이 anchor가 아무것도 지키지 못한다.
+    //    2005 양도: 가중치 3:2 · 80% 하한 없음 ⇒ 순손익 하한 유무가 그대로 드러난다.
+    //      하한 O → (0×3 + 20,000×2)/5 =  8,000
+    //      하한 X → (−50,000×3 + 20,000×2)/5 = −22,000
+    expect(calcSection165_4Value(-50_000, 20_000, false, new Date("2005-06-01")).value).toBe(8_000);
   });
 
   it("ZF-7: 결손이어도 순자산이 있으면 80% 하한이 지배한다 (기존 결과 불변)", () => {

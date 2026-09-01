@@ -120,9 +120,13 @@ export function YearColumn({
     const liabSub = liabSubKeys.map((k) => parseAmount(getField(form, k as keyof StockTransferFormData)));
     const goodwillRow19 = parseAmount(getField(form, goodwillKey));
     const shareCount = parseInt(getField(form, shareKey) || "0", 10);
+    // 평가기준일 — 제55조 제1항 후단(0원 하한)이 2009.2.4. 신설이라 게이팅 기준이 필요하다.
+    // 미입력이면 하한 미적용(원값 표시) — 임의 기준일 fallback 금지.
+    const parsed = form.transferDate ? new Date(form.transferDate) : undefined;
+    const evalDate = parsed && !isNaN(parsed.getTime()) ? parsed : undefined;
     return calcNetAssetPerShare({
       assetTotalRow1, assetAdd, assetSub, liabTotalRow8, liabAdd, liabSub, goodwillRow19, shareCount,
-    });
+    }, evalDate);
   }, [form, totalKey, assetAddKeys, assetSubKeys, liabTotalKey, liabAddKeys, liabSubKeys, goodwillKey, shareKey]);
 
   // Enter 키 → 다음 입력 셀로 포커스 이동 (컬럼 내 순회)
