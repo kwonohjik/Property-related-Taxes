@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS='--max-old-space-size=8192' next dev --turbopack",
+    "dev": "bash scripts/check-next-cache-size.sh; NODE_OPTIONS='--max-old-space-size=8192' next dev --turbopack",
+    "dev:clean": "rm -rf .next && npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

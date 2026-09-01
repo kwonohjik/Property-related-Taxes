@@ -22,6 +22,7 @@ import {
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
 import { autoFillDates } from "./PostListingClosingPriceTable";
+import { fetchKiwoomWithTimeout } from "@/lib/kiwoom/fetch-with-timeout";
 
 interface Props {
   securityCode: string;
@@ -73,7 +74,7 @@ export function KiwoomPostListingAutoFetchButton({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/kiwoom/post-listing-1month", {
+      const res = await fetchKiwoomWithTimeout("/api/kiwoom/post-listing-1month", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stockCode: securityCode, listingDate }),
