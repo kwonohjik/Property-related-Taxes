@@ -247,31 +247,27 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
               <p className="text-sm font-medium text-amber-800 mb-3">상장연도 비상장 보충적 평가</p>
               <div className="space-y-3">
-                <CurrencyInput label="상장연도 1주당 순손익가치" required
-                  hint="상장일 직전 사업연도 1주당 순손익가치 (원, §165④1 가목)"
+                <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required
                   value={form.listingYearNetIncomePerShare}
                   onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
-                  placeholder="상장연도 1주당 순손익가치" />
-                <CurrencyInput label="상장연도 1주당 순자산가치" required
-                  hint="상장일 직전 사업연도 1주당 순자산가치 (원, §165④1 나목)"
+                  placeholder="상장일 직전 사업연도 1주당 순손익가치" />
+                <CurrencyInput label="상장일 직전 사업연도 1주당 순자산가치" required
                   value={form.listingYearNetAssetPerShare}
                   onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
-                  placeholder="상장연도 1주당 순자산가치" />
+                  placeholder="상장일 직전 사업연도 1주당 순자산가치" />
               </div>
             </div>
             <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
               <p className="text-sm font-medium text-amber-800 mb-3">취득연도 비상장 보충적 평가</p>
               <div className="space-y-3">
-                <CurrencyInput label="취득연도 1주당 순손익가치" required
-                  hint="취득일 직전 사업연도 1주당 순손익가치 (원, §165④1 가목)"
+                <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required
                   value={form.acquisitionYearNetIncomePerShare}
                   onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
-                  placeholder="취득연도 1주당 순손익가치" />
-                <CurrencyInput label="취득연도 1주당 순자산가치" required
-                  hint="취득일 직전 사업연도 1주당 순자산가치 (원, §165④1 나목)"
+                  placeholder="취득일 직전 사업연도 1주당 순손익가치" />
+                <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required
                   value={form.acquisitionYearNetAssetPerShare}
                   onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
-                  placeholder="취득연도 1주당 순자산가치" />
+                  placeholder="취득일 직전 사업연도 1주당 순자산가치" />
               </div>
             </div>
           </>
@@ -296,16 +292,16 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             {/* listing_only — 취득연도 4 필드 직접 입력 */}
             {mode === "listing_only" && (
               <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-                <p className="text-sm font-medium text-amber-800 mb-3">취득연도 1주당 가치 (직접 입력)</p>
+                <p className="text-sm font-medium text-amber-800 mb-3">취득일 직전 사업연도 1주당 가치 (직접 입력)</p>
                 <div className="space-y-3">
-                  <CurrencyInput label="취득연도 1주당 순손익가치" required
+                  <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required
                     value={form.acquisitionYearNetIncomePerShare}
                     onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
-                    placeholder="취득연도 1주당 순손익가치" />
-                  <CurrencyInput label="취득연도 1주당 순자산가치" required
+                    placeholder="취득일 직전 사업연도 1주당 순손익가치" />
+                  <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required
                     value={form.acquisitionYearNetAssetPerShare}
                     onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
-                    placeholder="취득연도 1주당 순자산가치" />
+                    placeholder="취득일 직전 사업연도 1주당 순자산가치" />
                 </div>
               </div>
             )}

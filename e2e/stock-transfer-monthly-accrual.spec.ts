@@ -89,10 +89,10 @@ async function fillStep2PostListing(page: Page, acqEqual: boolean) {
 
   // simple 모드(기본) — 상장일 이후 1개월 종가평균 + 4 평가
   await fillByLabel(page, "상장일 이후 1개월 종가평균", "8001");
-  await fillByLabel(page, "상장연도 1주당 순손익가치", "50000");
-  await fillByLabel(page, "상장연도 1주당 순자산가치", "5000");
-  await fillByLabel(page, "취득연도 1주당 순손익가치", acqEqual ? "50000" : "44520");
-  await fillByLabel(page, "취득연도 1주당 순자산가치", acqEqual ? "5000" : "4348");
+  await fillByLabel(page, "상장일 직전 사업연도 1주당 순손익가치", "50000");
+  await fillByLabel(page, "상장일 직전 사업연도 1주당 순자산가치", "5000");
+  await fillByLabel(page, "취득일 직전 사업연도 1주당 순손익가치", acqEqual ? "50000" : "44520");
+  await fillByLabel(page, "취득일 직전 사업연도 1주당 순자산가치", acqEqual ? "5000" : "4348");
 }
 
 test.describe("§81④ 월할 가산 UI", () => {
