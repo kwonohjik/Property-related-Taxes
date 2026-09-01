@@ -129,6 +129,7 @@ export function FaceValueBlock({ form, onChange }: FaceValueBlockProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <CurrencyInput
             label="1주당 순손익가치"
+            allowNegative
             hint="= 1주당 순손익액 ÷ 10% (없으면 0)"
             value={form.transferYearNetIncomePerShare}
             onChange={(v) => onChange({ transferYearNetIncomePerShare: v })}
@@ -136,6 +137,7 @@ export function FaceValueBlock({ form, onChange }: FaceValueBlockProps) {
           <CurrencyInput
             label="1주당 순자산가치"
             required
+            allowNegative
             hint="직전 사업연도 말 기준 (원)"
             value={form.transferYearNetAssetPerShare}
             onChange={(v) => onChange({ transferYearNetAssetPerShare: v })}

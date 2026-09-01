@@ -65,12 +65,14 @@ export function MonthlyAccrual81Section({
         </div>
         <CurrencyInput
           label="전전사업연도 1주당 순손익가치"
+          allowNegative
           hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순손익가치 (원, §81④ 1호)"
           value={prePriorNI}
           onChange={onChangePrePriorNI}
         />
         <CurrencyInput
           label="전전사업연도 1주당 순자산가치"
+          allowNegative
           hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순자산가치 (원, §81④ 1호)"
           value={prePriorNA}
           onChange={onChangePrePriorNA}
