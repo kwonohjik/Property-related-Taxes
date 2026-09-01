@@ -238,6 +238,9 @@ export function Step2({ form, onChange }: Step2Props) {
             }
             tone="amber"
             layout="stack"
+            // 4개를 세로로 쌓으면 4행을 먹는다 — 2열 2행으로 접는다(모바일은 항상 1열).
+            // description이 조문·적용 범위를 담고 있어 inline(설명 미렌더) 대신 columns를 쓴다.
+            columns={2}
             options={[
               {
                 value: "actual",
