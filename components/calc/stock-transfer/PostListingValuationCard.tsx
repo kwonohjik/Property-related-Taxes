@@ -219,30 +219,24 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           />
         </FieldCard>
 
-        {/* unlistedDetailMode RadioCardGroup */}
+        {/* unlistedDetailMode RadioCardGroup
+            라벨은 «가진 자료» 기준이다. 종전 「완전 재현 (PDF 3개 화면)」·「간이 (결과값 4개
+            직접 입력)」은 **개발 과정의 내부 용어**였다 — 처음 쓰는 납세자는 그 PDF가 무엇인지,
+            「결과값」이 무엇의 결과인지 알 수 없다. 사용자가 실제로 판단할 수 있는 것은
+            「내 손에 재무제표가 있나」뿐이므로 그 축으로 바꾼다.
+            layout="inline"은 한 행 나열 + description 미렌더를 동시에 준다 —
+            보조 설명이 오히려 선택을 방해한다는 판단이라 description 자체를 두지 않는다. */}
         <FieldCard label="환산 입력 방식">
           <RadioCardGroup
             name="unlistedDetailMode"
             value={mode}
             onChange={(v) => onChange({ unlistedDetailMode: v as "simple" | "listing_only" | "full" })}
             tone="amber"
-            layout="stack"
+            layout="inline"
             options={[
-              {
-                value: "simple",
-                label: "간이 (결과값 4개 직접 입력)",
-                description: "외부에서 보충적 평가를 마친 사용자용 — 현행 방식 (회귀 호환)",
-              },
-              {
-                value: "listing_only",
-                label: "부분 재현 (상장연도만 상세)",
-                description: "상장연도 결산서만 보유한 경우 — 취득연도는 결과값 직접 입력",
-              },
-              {
-                value: "full",
-                label: "완전 재현 (PDF 3개 화면)",
-                description: "PDF 사례 그대로 — 종가 표 + 순손익 + 순자산 결산서 원천 입력",
-              },
+              { value: "full", label: "재무제표로 계산" },
+              { value: "simple", label: "평가액 직접 입력" },
+              { value: "listing_only", label: "상장연도만 재무제표" },
             ]}
           />
         </FieldCard>

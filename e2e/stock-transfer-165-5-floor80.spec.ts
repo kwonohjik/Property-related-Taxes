@@ -67,6 +67,10 @@ async function fillStep2(
     .first()
     .click();
 
+  // 2026-09-02: 「환산 입력 방식」 기본 선택이 «재무제표로 계산»(full)로 바뀌었다.
+  // 이 spec은 1주당 가액을 직접 넣는 흐름이므로 «평가액 직접 입력»(simple)을 명시한다.
+  await page.getByText("평가액 직접 입력", { exact: true }).click();
+
   // ⚠️ `div:has(> label:has-text(...))`는 「양도일 이전 1개월 종가평균」을 잘못 잡는다
   //    (부분일치라 인접 안내 문구까지 걸린다). 접근성 이름 exact로 고정한다.
   const box = (name: string) => page.getByRole("textbox", { name, exact: true });

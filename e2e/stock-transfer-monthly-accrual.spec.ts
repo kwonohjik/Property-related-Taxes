@@ -79,6 +79,10 @@ async function fillStep2PostListing(page: Page, acqEqual: boolean) {
     .first();
   await postListingSwitch.click();
 
+  // 2026-09-02: 「환산 입력 방식」 기본 선택이 «재무제표로 계산»(full)로 바뀌었다.
+  // 이 spec은 1주당 가액을 직접 넣는 흐름이므로 «평가액 직접 입력»(simple)을 명시한다.
+  await page.getByText("평가액 직접 입력", { exact: true }).click();
+
   // §163⑨ 분모 — 1개월 종가 평균 (양도일 직전)
   await fillByLabel(page, "1개월 종가 평균", "9000");
 
@@ -87,7 +91,7 @@ async function fillStep2PostListing(page: Page, acqEqual: boolean) {
   await page.locator('input[type="text"][aria-label="월"]').nth(0).fill("10");
   await page.locator('input[type="text"][aria-label="일"]').nth(0).fill("20");
 
-  // simple 모드(기본) — 상장일 이후 1개월 종가평균 + 4 평가
+  // simple 모드 — 상장일 이후 1개월 종가평균 + 4 평가
   await fillByLabel(page, "상장일 이후 1개월 종가평균", "8001");
   await fillByLabel(page, "상장일 직전 사업연도 1주당 순손익가치", "50000");
   await fillByLabel(page, "상장일 직전 사업연도 1주당 순자산가치", "5000");
