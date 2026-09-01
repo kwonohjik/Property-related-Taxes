@@ -68,25 +68,25 @@ describe("KRX calendar — anchor", () => {
   });
 
   // F-02 §165⑤ 상장일 이후 1개월 슬롯 anchor
-  it("F-02 §165⑤ 상장일 이후 1개월 — 2009-08-21 → [2009-08-21 ~ 2009-09-20] 31일", () => {
+  it("F-02 §165⑤ 상장일 이후 1개월 — 2009-08-21 → [2009-08-21 ~ 2009-09-21] 32일 (사례 48 PDF)", () => {
     const slots = buildOneMonthAfterListingSlots("2009-08-21");
     expect(slots[0]).toBe("2009-08-21");
-    expect(slots[slots.length - 1]).toBe("2009-09-20");
-    expect(slots.length).toBe(31);
+    expect(slots[slots.length - 1]).toBe("2009-09-21");
+    expect(slots.length).toBe(32);
   });
 
-  it("F-02 §165⑤ 평년 2월 — 2009-02-01 → [2009-02-01 ~ 2009-02-28] 28일", () => {
+  it("F-02 §165⑤ 평년 2월 — 2009-02-01 → [2009-02-01 ~ 2009-03-01] 29일", () => {
     const slots = buildOneMonthAfterListingSlots("2009-02-01");
     expect(slots[0]).toBe("2009-02-01");
-    expect(slots[slots.length - 1]).toBe("2009-02-28");
-    expect(slots.length).toBe(28);
+    expect(slots[slots.length - 1]).toBe("2009-03-01");
+    expect(slots.length).toBe(29);
   });
 
-  it("F-02 §165⑤ 윤년 2월 — 2024-02-01 → [2024-02-01 ~ 2024-02-29] 29일", () => {
+  it("F-02 §165⑤ 윤년 2월 — 2024-02-01 → [2024-02-01 ~ 2024-03-01] 30일", () => {
     const slots = buildOneMonthAfterListingSlots("2024-02-01");
     expect(slots[0]).toBe("2024-02-01");
-    expect(slots[slots.length - 1]).toBe("2024-02-29");
-    expect(slots.length).toBe(29);
+    expect(slots[slots.length - 1]).toBe("2024-03-01");
+    expect(slots.length).toBe(30);
   });
 
   // F-01 §63①1가목 전후 2개월 슬롯

@@ -30,7 +30,7 @@ describe("F-09 자동조회 4종 통합 anchor", () => {
   it("K-INT-02: 상장 후 1개월 slot은 상장일 포함", () => {
     const slots = buildOneMonthAfterListingSlots("2024-06-03");
     expect(slots[0]).toBe("2024-06-03"); // 상장일 포함
-    expect(slots[slots.length - 1]).toBe("2024-07-02");
+    expect(slots[slots.length - 1]).toBe("2024-07-03"); // 1개월이 되는 날도 포함
   });
 
   // K-INT-03: 전후 2개월 (§63①1가) — 평가기준일 포함
