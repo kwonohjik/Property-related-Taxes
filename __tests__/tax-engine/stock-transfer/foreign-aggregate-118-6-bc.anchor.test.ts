@@ -252,3 +252,80 @@ describe("FA-4 국내주식 혼합 — C는 **국외자산만**, 기본공제는
     expect(r.items[0].foreignDetail).toBeUndefined();
   });
 });
+
+// ============================================================
+// FA-5 — 🟡 **혼합 method** (일부 credit · 일부 expense) 특성화
+//
+// 계획서 §4.2. **미확정 논점을 고정하는 characterization anchor**다 —
+// 「이것이 옳다」가 아니라 **「지금 이렇게 동작한다」**를 눈에 보이게 두어, 나중에 판단이
+// 서면 이 anchor가 **반드시 빨개지도록** 하는 것이 목적이다.
+//
+// 쟁점: §118의6①의 「다음 각 호의 방법 중 하나를 선택하여 적용할 수 있다」가
+//   **자산별** 선택인가 **과세기간별** 선택인가. 명문·서식·예규가 모두 없다.
+//   현행 구현은 **자산별**이고, 폼도 `foreignTaxMethod`를 신고 단위로 승계하지 않아
+//   사용자가 종목마다 다르게 고를 수 있다(도달 가능).
+//
+// 실측 (2026-09-01 · 환율 1):
+//   A 양도차익 50,000,000 외국세 12,000,000 **expense** (3월 양도)
+//   B 양도차익 50,000,000 외국세  6,000,000 **credit**  (9월 양도)
+//
+//   | | A(expense) | B(credit) |
+//   |---|---:|---:|
+//   | 양도소득금액 | 38,000,000 (외국세 12,000,000 필요경비 산입) | 50,000,000 |
+//   | 산출세액 | 7,100,000 | 10,000,000 |
+//   | 한도 | — (공제 대상 아님) | **9,715,910** |
+//
+//   A항(국외 산출세액 합) = 17,100,000 · C = 88,000,000
+//   B의 한도 = 17,100,000 − floor(17,100,000 × 38,000,000/88,000,000) = 17,100,000 − 7,384,090
+//
+// 🔑 **여기가 쟁점이 드러나는 지점이다.** expense를 고른 A도 「해당 과세기간의 국외자산」이라
+//    C에 들어가고, 그래서 **A 몫 7,384,090이 배분되지만 아무도 쓰지 못한다**. 과세기간별
+//    선택이라면 이 상황 자체가 성립하지 않는다.
+// ============================================================
+
+describe("FA-5 🟡 혼합 method — 미확정 논점의 현행 동작 고정", () => {
+  const A = withForeignTax(50_000_000, 12_000_000, {
+    stockName: "A",
+    transferDate: new Date("2025-03-01"),
+    foreignTaxMethod: "expense",
+  });
+  const B = withForeignTax(50_000_000, 6_000_000, {
+    stockName: "B",
+    transferDate: new Date("2025-09-01"),
+    foreignTaxMethod: "credit",
+  });
+  const r = calculateStockTransferTaxAggregate([A, B] as never, "aggregate");
+
+  it("FA-5-1 혼합이 **차단되지 않는다** — 엔진이 그대로 계산한다", () => {
+    expect(r.items).toHaveLength(2);
+    expect(r.items[0].foreignDetail?.foreignTaxExpenseApplied).toBe(12_000_000);
+    expect(r.items[1].foreignDetail?.foreignTaxCreditApplied).toBe(6_000_000);
+  });
+
+  it("FA-5-2 expense 종목은 공제 대상이 아니다 — 한도가 undefined", () => {
+    expect(r.items[0].foreignDetail?.foreignTaxCreditLimit).toBeUndefined();
+  });
+
+  it("FA-5-3 필요경비 산입이 그 종목 양도소득금액을 줄인다 (50,000,000 → 38,000,000)", () => {
+    expect(r.items[0].transferIncome).toBe(38_000_000);
+    expect(r.items[0].calculatedTax).toBe(7_100_000);
+  });
+
+  it("FA-5-4 🟡 **쟁점** — expense 종목의 B가 C에 들어가 credit 종목 한도를 깎는다", () => {
+    // 과세기간별 선택이라면 이 값은 A항 전액 17,100,000 이어야 한다.
+    expect(r.items[1].foreignDetail?.foreignTaxCreditLimit).toBe(9_715_910);
+    expect(r.items[1].calculatedTax).toBe(10_000_000);
+  });
+
+  it("FA-5-5 🔑 양성 대조군 — 둘 다 credit이면 한도가 달라진다 (FA-5-4가 상수가 아니다)", () => {
+    const bothCredit = calculateStockTransferTaxAggregate(
+      [
+        withForeignTax(50_000_000, 12_000_000, { stockName: "A", transferDate: new Date("2025-03-01") }),
+        withForeignTax(50_000_000, 6_000_000, { stockName: "B", transferDate: new Date("2025-09-01") }),
+      ] as never,
+      "aggregate",
+    );
+    expect(bothCredit.items[1].foreignDetail?.foreignTaxCreditLimit).toBe(9_750_000);
+    expect(bothCredit.items[0].foreignDetail?.foreignTaxCreditLimit).toBe(9_750_000);
+  });
+});

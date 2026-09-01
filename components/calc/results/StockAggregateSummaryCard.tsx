@@ -32,6 +32,17 @@ export function StockAggregateSummaryCard({
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => r.foreignDetail?.foreignTaxCreditLimit !== undefined);
 
+  /**
+   * 한도를 넘겨 공제받지 못한 외국납부세액이 있는가.
+   *
+   * §118의6에는 §57②(종합소득·퇴직소득)과 같은 **이월공제 규정이 없다** — 초과분은 그대로
+   * 소멸한다. 금액만 보이면 「내년에 쓰겠지」로 읽히므로 초과가 실제로 있을 때 말해 준다.
+   */
+  const hasUnclaimedForeignTax = foreignItems.some(
+    ({ r }) =>
+      (r.foreignDetail!.foreignTaxPaidKrw ?? 0) > (r.foreignDetail!.foreignTaxCreditApplied ?? 0),
+  );
+
   return (
     <div className="space-y-4">
       <ToneCard tone="sky" title={`다종목 합산 (${aggregate.items.length}건)`}>
@@ -135,16 +146,35 @@ export function StockAggregateSummaryCard({
           </p>
           <ul className="space-y-1.5">
             {foreignItems.map(({ r, i }) => (
-              <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
-                <span>{names[i] || `종목 ${i + 1}`}</span>
-                <span className="font-mono tabular-nums">
-                  한도 {won(r.foreignDetail!.foreignTaxCreditLimit ?? 0)}
-                  {" · "}공제 {won(r.foreignDetail!.foreignTaxCreditApplied ?? 0)}
-                  {" / "}납부 {won(r.foreignDetail!.foreignTaxPaidKrw ?? 0)}
-                </span>
+              <li key={i} className="space-y-0.5">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+                  <span>{names[i] || `종목 ${i + 1}`}</span>
+                  <span className="font-mono tabular-nums">
+                    한도 {won(r.foreignDetail!.foreignTaxCreditLimit ?? 0)}
+                    {" · "}공제 {won(r.foreignDetail!.foreignTaxCreditApplied ?? 0)}
+                    {" / "}납부 {won(r.foreignDetail!.foreignTaxPaidKrw ?? 0)}
+                  </span>
+                </div>
+                {/*
+                  통산 후 양도소득금액이 0이면 산식의 분자 B가 0이라 한도도 0이 된다.
+                  금액만 0으로 보이면 계산 오류로 읽히므로 **사유를 적는다**.
+                */}
+                {r.transferIncome <= 0 && (
+                  <p className="text-caption text-muted-foreground">
+                    이 종목은 양도차손 통산 후 양도소득금액이 0이므로 산식의 분자가 0이 되어{" "}
+                    <strong>공제한도가 0</strong>입니다.
+                  </p>
+                )}
               </li>
             ))}
           </ul>
+          {hasUnclaimedForeignTax && (
+            <p className="text-caption text-muted-foreground">
+              공제한도를 넘는 외국납부세액은 <strong>다음 과세기간으로 이월되지 않습니다</strong> —
+              소득세법 §118의6에는 §57②(종합소득·퇴직소득)과 같은 이월공제 규정이 없습니다.
+              §118의6①은 세액공제(1호) 대신 필요경비 산입(2호)을 선택할 수 있도록 정하고 있습니다.
+            </p>
+          )}
         </ToneCard>
       )}
 
