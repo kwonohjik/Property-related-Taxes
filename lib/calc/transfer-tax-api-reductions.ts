@@ -451,7 +451,15 @@ export function toEngineReductions(
       return {
         type: "unsold_98_5" as const,
         contractDate985: r.contractDate985 || undefined,
-        priceReductionRatePct985: parseDecimal(r.priceReductionRatePct985 || "") || undefined,
+        /**
+         * D5-02 — ⚠️ `|| undefined`는 **0을 undefined로 바꾼다**. 조특법 §98의5①1호가
+         * 「인하율 100분의 10 **이하**」라 0%도 60% 감면 대상인데, 그 값이 여기서 사라지면
+         * 엔진이 「미입력」으로 판정해 감면이 통째로 날아간다(엔진·⑧을 고쳐도 no-op).
+         */
+        priceReductionRatePct985:
+          (r.priceReductionRatePct985 ?? "").trim() === ""
+            ? undefined
+            : parseDecimal(r.priceReductionRatePct985),
         isNonCapitalUnsoldAtCutoff985: r.isNonCapitalUnsoldAtCutoff985,
         isFirstContract985: r.isFirstContract985,
         isNotOccupiedAtContract985: r.isNotOccupiedAtContract985,

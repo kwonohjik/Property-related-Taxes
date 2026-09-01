@@ -282,7 +282,24 @@ export function resolve985Rate(priceReductionRatePct: number): number {
 export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
   const legalBasis = TRANSFER_REDUCTION_ARTICLE.UNSOLD_98_5;
   const reasons: UnsoldHybridIneligibleReason[] = [];
-  const hasRate = input.priceReductionRatePct !== undefined && input.priceReductionRatePct > 0;
+  /**
+   * D5-02 — 인하율 **0%도 감면 대상**이다.
+   *
+   * 조특법 §98의5① 각 호(법제처 `target=eflaw` 실측 2026-08-31):
+   *   1. 분양가격 인하율이 100분의 10 **이하**인 경우: 100분의 60
+   *   2. 100분의 10을 초과하고 100분의 20 이하: 100분의 80
+   *   3. 100분의 20을 초과: 100분의 100
+   *
+   * 🔴 1호에 **하한 문언이 없다**. 종전에는 `> 0`을 요구해 0%를 「미입력」으로 차단했고,
+   *    정가 매입(인하 없음) 사안이 감면을 전혀 못 받았다 — **납세자 불리**.
+   *    조특령 §98의4④의 산정식
+   *    「(입주자 모집공고안에 공시된 분양가격 − 매매계약서상의 매매가격) ÷ 공시 분양가격 × 100」도
+   *    정가 매입 시 값이 정확히 0이 된다.
+   *
+   * ⇒ 판정 기준을 「값이 있는가」로 바꾼다(0은 유효한 값). 음수는 조문에 없는 구간이라
+   *   별도 사유로 막는다.
+   */
+  const hasRate = input.priceReductionRatePct !== undefined;
   const rate = hasRate ? resolve985Rate(input.priceReductionRatePct!) : 0.6;
 
   if (!input.contractDate) {
@@ -304,7 +321,15 @@ export function evaluateUnsold985(input: Unsold985Input): UnsoldHybridResult {
   if (!hasRate) {
     reasons.push({
       code: "MISSING_PRICE_REDUCTION_RATE",
-      message: "분양가격 인하율(%)이 입력되지 않았습니다 — (최초 입주자 모집공고 분양가 − 실제 매매가) ÷ 최초 분양가 × 100 (법 §98의5①각호 감면율 산정).",
+      message: "분양가격 인하율(%)이 입력되지 않았습니다 — (최초 입주자 모집공고 분양가 − 실제 매매가) ÷ 최초 분양가 × 100 (법 §98의5①각호 감면율 산정). 인하가 없으면 0을 입력하세요.",
+      legalBasis: "조특령 §98의4④",
+    });
+  } else if (input.priceReductionRatePct! < 0) {
+    // 조문의 구간은 「10 이하 / 10 초과 20 이하 / 20 초과」로 음수 구간이 없다.
+    // 매매가가 공시 분양가를 넘은 경우이므로 인하율이 아니라 입력 오류로 본다.
+    reasons.push({
+      code: "NEGATIVE_PRICE_REDUCTION_RATE",
+      message: "분양가격 인하율은 음수일 수 없습니다 (조특령 §98의4④ 산정식).",
       legalBasis: "조특령 §98의4④",
     });
   }
