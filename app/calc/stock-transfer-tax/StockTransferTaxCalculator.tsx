@@ -258,7 +258,7 @@ export default function StockTransferTaxCalculator() {
             )}
             {currentStep === 2 && (
               <>
-                <Step3 form={formData} onChange={updateFormData} />
+                <Step3 form={formData} onChange={updateFormData} savedItems={savedItems} />
                 {/*
                   🔑 확정 버튼은 **마지막 입력 단계**에 둔다 — 양도가액은 2단계, 필요경비·신고는
                   3단계라 1단계에서 확정하면 금액이 빈 종목이 목록에 들어간다.

@@ -12,6 +12,12 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DateInput } from "@/components/ui/date-input";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import {
+  isForeignOnlyFiling,
+  resolveStockFilingType,
+  resolvePreliminaryClause,
+  calcPreliminaryDeadline,
+} from "@/lib/calc/stock-filing-type";
+import {
   calcSecuritiesTransactionTax,
 } from "@/lib/tax-engine/stock-transfer/securities-transaction-tax";
 import {
@@ -27,6 +33,11 @@ import {
 interface Step3Props {
   form: StockTransferFormData;
   onChange: (patch: Partial<StockTransferFormData>) => void;
+  /**
+   * 확정한 다른 종목들 — **신고 단위** 판정에 필요하다.
+   * 예정신고 가능 여부는 「이 종목」이 아니라 「이 신고에 국내 종목이 하나라도 있는가」로 갈린다.
+   */
+  savedItems?: StockTransferFormData[];
 }
 
 function SectionTitle({ n, title }: { n: number; title: string }) {
@@ -38,23 +49,6 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
       {title}
     </h2>
   );
-}
-
-// §105①2호 — 반기 말일 + 2개월
-function calcFilingDeadline(transferDate: string): string {
-  if (!transferDate || !/^\d{4}-\d{2}-\d{2}$/.test(transferDate)) return "";
-  const d = new Date(transferDate);
-  const month = d.getMonth() + 1;
-  const year = d.getFullYear();
-  const endMonth = month <= 6 ? 6 : 12;
-  let deadlineMonth = endMonth + 2;
-  let endYear = year;
-  if (deadlineMonth > 12) {
-    deadlineMonth -= 12;
-    endYear += 1;
-  }
-  const lastDay = new Date(endYear, deadlineMonth, 0).getDate();
-  return `${endYear}-${String(deadlineMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 }
 
 // 취득가액 방식 → 필요경비 방식 자동 결정 (소령 §163⑥4)
@@ -71,19 +65,29 @@ const ACQUISITION_MODE_LABEL: Record<string, string> = {
   face_value: "액면가 (장부분실)",
 };
 
-export function Step3({ form, onChange }: Step3Props) {
+export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
   const acquisitionMode = form.acquisitionMode || "actual";
   // 필요경비 방식은 acquisitionMode에서 자동 도출 (소령 §163⑥4) — 사용자 선택 없음.
   // 실가 → 실제 경비 입력 / 비실가(환산·매매사례·액면가) → 개산공제 1% 자동.
   const expenseLocked = isEstimatedAcquisition(acquisitionMode);
   // [B-2] §97②2호 단서 — 환산·액면가 모드는 실비를 비교용으로 선택 입력 (sale_case 제외 — 구조적 배제)
   const swapEligibleMode = acquisitionMode === "estimated" || acquisitionMode === "face_value";
-  const filingType = form.filingType || "preliminary";
-
-  const filingDeadline = useMemo(
-    () => calcFilingDeadline(form.transferDate),
-    [form.transferDate]
+  /**
+   * §105① 본문 괄호가 **§94①3호다목(국외주식)을 예정신고 대상에서 제외**한다.
+   * 신고 1건에 국내 종목이 하나라도 있으면 그 종목은 대상이므로 예정신고가 성립한다.
+   */
+  const foreignOnlyFiling = useMemo(
+    () => isForeignOnlyFiling([...savedItems.map((i) => i.marketType), form.marketType]),
+    [savedItems, form.marketType],
   );
+  const filingType = resolveStockFilingType(form.filingType, foreignOnlyFiling, "preliminary");
+
+  /** 이 종목의 예정신고 기한 — 국외주식이면 `undefined`(대상 아님) */
+  const filingDeadline = useMemo(
+    () => calcPreliminaryDeadline(form.transferDate, form.marketType),
+    [form.transferDate, form.marketType],
+  );
+  const preliminaryClause = resolvePreliminaryClause(form.marketType);
 
   // 증권거래세 미리보기 — 엔진 단일 진실 (dual-truth 해소 — feedback_ui_engine_dual_truth_avoidance)
   // total/per_share/exchange 모드 모두 지원 (폼 default "total"에서 미리보기 안 뜨던 기존 갭 해소)
@@ -258,8 +262,12 @@ export function Step3({ form, onChange }: Step3Props) {
 
       {/* ④ 신고 유형 + 기한 helper */}
       <section>
-        <SectionTitle n={4} title="신고 유형 (§105①2호)" />
+        <SectionTitle n={4} title="신고 유형 (§105① · §110①)" />
         <div className="space-y-4">
+          {/*
+            §105① 본문 괄호가 §94①3호다목(국외주식)을 예정신고 대상에서 **제외**한다.
+            그래서 국외주식만인 신고에는 예정신고 선택지를 **만들지 않는다**.
+          */}
           <RadioCardGroup
             name="filingType"
             value={filingType}
@@ -269,15 +277,22 @@ export function Step3({ form, onChange }: Step3Props) {
             tone="violet"
             layout="inline"
             options={[
-              {
-                value: "preliminary",
-                label: "예정신고",
-                description: "양도일 속하는 반기 말일 + 2개월 (§105①2호)",
-              },
+              ...(foreignOnlyFiling
+                ? []
+                : [
+                    {
+                      value: "preliminary",
+                      label: "예정신고",
+                      description:
+                        preliminaryClause === "105-1-1"
+                          ? "양도일 속하는 달의 말일 + 2개월 (§105①1호)"
+                          : "양도일 속하는 반기 말일 + 2개월 (§105①2호)",
+                    },
+                  ]),
               {
                 value: "final",
                 label: "확정신고",
-                description: "다음 해 5월 1~31일 (§110)",
+                description: "다음 해 5월 1~31일 (§110①)",
               },
               {
                 value: "revised",
@@ -287,7 +302,18 @@ export function Step3({ form, onChange }: Step3Props) {
             ]}
           />
 
-          {filingType === "preliminary" && filingDeadline && (
+          {foreignOnlyFiling && (
+            <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-700">
+              <p className="font-medium">국외주식은 예정신고 대상이 아닙니다 (소득세법 §105①)</p>
+              <p className="mt-1 leading-relaxed">
+                §105① 본문이 예정신고 대상에서 <strong>제94조제1항제3호다목</strong>(국외주식)을
+                괄호로 제외합니다. 확정신고(§110①, 다음 해 5월 1~31일)만 하면 됩니다.
+                국내 종목을 함께 신고하면 그 종목은 예정신고 대상이므로 선택지가 다시 나타납니다.
+              </p>
+            </div>
+          )}
+
+          {!foreignOnlyFiling && filingType === "preliminary" && filingDeadline && (
             <div
               className={`rounded-lg border px-4 py-3 text-sm ${
                 isDeadlineNear
@@ -295,18 +321,33 @@ export function Step3({ form, onChange }: Step3Props) {
                   : "border-violet-200 bg-violet-50/60 text-violet-700"
               }`}
             >
-              <p className="font-medium">예정신고 기한 자동 계산 (§105①2호)</p>
+              <p className="font-medium">
+                예정신고 기한 자동 계산 (
+                {preliminaryClause === "105-1-1" ? "§105①1호" : "§105①2호"})
+              </p>
               <p className="text-xs mt-1">
                 양도일 {form.transferDate} →{" "}
-                {new Date(form.transferDate).getMonth() + 1 <= 6
-                  ? "상반기(1~6월)"
-                  : "하반기(7~12월)"}{" "}
-                → 반기 말일 +2개월 = <strong>{filingDeadline}</strong>
+                {preliminaryClause === "105-1-1"
+                  ? "그 달의 말일 +2개월"
+                  : `${
+                      new Date(form.transferDate).getMonth() + 1 <= 6
+                        ? "상반기(1~6월)"
+                        : "하반기(7~12월)"
+                    } 말일 +2개월`}{" "}
+                = <strong>{filingDeadline}</strong>
               </p>
               {isDeadlineNear && (
                 <p className="text-xs mt-1 font-medium">신고 기한이 10일 이내입니다!</p>
               )}
             </div>
+          )}
+
+          {/* 혼합 신고에서 지금 편집 중인 종목이 국외일 때 — 기한 상자가 사라지는 이유를 말한다 */}
+          {!foreignOnlyFiling && filingType === "preliminary" && !filingDeadline && (
+            <p className="text-caption text-muted-foreground">
+              지금 편집 중인 종목은 국외주식이라 예정신고 기한이 없습니다(§105① 본문 괄호).
+              예정신고 기한은 국내 종목에만 적용됩니다.
+            </p>
           )}
 
           <FieldCard label="신고일" required>
