@@ -105,3 +105,75 @@ describe("AS-2 신고 단위 가산세 내역이 보인다 (Phase A′ 산물)",
     expect(screen.queryByText(/신고불성실/)).toBeNull();
   });
 });
+
+// ============================================================
+// AS-3 — §118의6①1호 한도 0의 **사유**와 이월 부존재
+//
+// 계획서: docs/02-design/features/foreign-stock-118-6-limit-bc-apportionment.plan.md §6.4
+//
+// 통산으로 B = 0이 된 종목은 한도도 0이 된다(Q-5). 금액만 0으로 보이면 계산 오류로
+// 읽히므로 사유를 적어야 한다. 또 §118의6에는 §57②과 같은 **이월공제 규정이 없어**
+// 한도 초과분이 그대로 소멸하는데, 그것도 말하지 않으면 「내년에 쓴다」로 오해된다.
+// ============================================================
+
+function foreignRes(
+  transferIncome: number,
+  limit: number,
+  applied: number,
+  paid: number,
+): StockTransferResult {
+  return itemRes({
+    transferIncome,
+    foreignDetail: {
+      stockName: "FS",
+      countryCode: "US",
+      shareCount: 10,
+      transferExchangeRate: 1_300,
+      acquisitionExchangeRate: 1_200,
+      foreignTaxPaidKrw: paid,
+      foreignTaxCreditLimit: limit,
+      foreignTaxCreditApplied: applied,
+      appliedRules: [],
+    },
+  } as unknown as Partial<StockTransferResult>);
+}
+
+describe("AS-3 국외 종목 공제한도 — 0의 사유와 이월 부존재", () => {
+  it("AS-3-1: 통산 후 양도소득금액이 0인 종목은 **한도 0의 사유**를 적는다", () => {
+    const a = agg({
+      items: [foreignRes(0, 0, 0, 4_000_000), foreignRes(30_000_000, 6_000_000, 1_000_000, 1_000_000)],
+    } as Partial<StockTransferAggregateResult>);
+    render(<StockAggregateSummaryCard aggregate={a} names={["가", "나"]} />);
+    expect(screen.getByText(/통산 후 양도소득금액이 0이므로/)).toBeTruthy();
+  });
+
+  it("AS-3-2: 🔑 양성 대조군 — 소득이 남은 종목에는 그 사유가 **붙지 않는다**", () => {
+    const a = agg({
+      items: [foreignRes(30_000_000, 6_000_000, 1_000_000, 1_000_000)],
+    } as Partial<StockTransferAggregateResult>);
+    render(<StockAggregateSummaryCard aggregate={a} names={["가"]} />);
+    expect(screen.queryByText(/통산 후 양도소득금액이 0이므로/)).toBeNull();
+  });
+
+  it("AS-3-3: 한도 초과분이 있으면 **이월되지 않는다**고 말한다", () => {
+    const a = agg({
+      items: [foreignRes(30_000_000, 6_000_000, 6_000_000, 9_000_000)],
+    } as Partial<StockTransferAggregateResult>);
+    render(<StockAggregateSummaryCard aggregate={a} names={["가"]} />);
+    expect(screen.getByText(/이월되지 않습니다/)).toBeTruthy();
+    expect(screen.getByText(/필요경비 산입\(2호\)/)).toBeTruthy();
+  });
+
+  it("AS-3-4: 초과분이 없으면 이월 안내를 띄우지 않는다 — 없는 문제를 말하지 않는다", () => {
+    const a = agg({
+      items: [foreignRes(30_000_000, 6_000_000, 1_000_000, 1_000_000)],
+    } as Partial<StockTransferAggregateResult>);
+    render(<StockAggregateSummaryCard aggregate={a} names={["가"]} />);
+    expect(screen.queryByText(/이월되지 않습니다/)).toBeNull();
+  });
+
+  it("AS-3-5: 국외 종목이 없으면 §118의6 카드 자체가 없다", () => {
+    render(<StockAggregateSummaryCard aggregate={agg()} names={["가", "나"]} />);
+    expect(screen.queryByText(/외국납부세액 공제한도/)).toBeNull();
+  });
+});
