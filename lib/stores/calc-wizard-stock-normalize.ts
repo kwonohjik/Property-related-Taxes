@@ -171,6 +171,20 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     listingYearNetAssetPerShare: strField("listingYearNetAssetPerShare"),
     acquisitionYearNetIncomePerShare: strField("acquisitionYearNetIncomePerShare"),
     acquisitionYearNetAssetPerShare: strField("acquisitionYearNetAssetPerShare"),
+    // 간이 «순액 입력» 원천값 — 결과 4필드로 mirror되므로 여기서는 보존만 한다
+    simpleValueInputMode: enumField(
+      "simpleValueInputMode",
+      ["direct", "amounts"],
+      defaults.simpleValueInputMode,
+    ),
+    listingYearNetIncomeAmount: strField("listingYearNetIncomeAmount"),
+    listingYearShareCount: strField("listingYearShareCount"),
+    listingYearNetAssetAmount: strField("listingYearNetAssetAmount"),
+    listingYearGoodwill: strField("listingYearGoodwill"),
+    acquisitionYearNetIncomeAmount: strField("acquisitionYearNetIncomeAmount"),
+    acquisitionYearShareCount: strField("acquisitionYearShareCount"),
+    acquisitionYearNetAssetAmount: strField("acquisitionYearNetAssetAmount"),
+    acquisitionYearGoodwill: strField("acquisitionYearGoodwill"),
     // §81④ 1호 — 전전연도 평가는 "" 정상(optional), 월수는 default "12" 보존 (legacy 폼 fallback)
     prePriorYearNetIncomePerShare: strField("prePriorYearNetIncomePerShare"),
     prePriorYearNetAssetPerShare: strField("prePriorYearNetAssetPerShare"),
