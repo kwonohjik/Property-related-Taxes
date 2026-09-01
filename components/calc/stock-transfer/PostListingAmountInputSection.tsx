@@ -129,26 +129,34 @@ export function PostListingAmountInputSection({ title, axisLabel, form, onChange
 
   return (
     <ToneCard tone="amber" title={title} bodyClassName="space-y-3">
-      <FieldCard label={`${axisLabel} 직전 사업연도 순손익액`} required>
-        <CurrencyInput
-          label=""
-          hideUnit
-          allowNegative
-          value={raw.netIncomeAmount}
-          onChange={(v) => patchWithDerived({ netIncomeAmount: v })}
-          placeholder={`${axisLabel} 직전 사업연도 순손익액`}
-        />
-      </FieldCard>
+      {/* 순손익 2필드 1행 (2열, 라벨 상단 stacked) — 모바일은 1열 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <FieldCard label={`${axisLabel} 직전 사업연도 순손익액`} required stacked>
+          <CurrencyInput
+            label=""
+            hideUnit
+            allowNegative
+            value={raw.netIncomeAmount}
+            onChange={(v) => patchWithDerived({ netIncomeAmount: v })}
+            placeholder={`${axisLabel} 직전 사업연도 순손익액`}
+          />
+        </FieldCard>
 
-      <FieldCard label={`${axisLabel} 직전 사업연도 종료일 현재 발행주식총수`} required unit="주">
-        <CurrencyInput
-          label=""
-          hideUnit
-          value={raw.shareCount}
-          onChange={(v) => patchWithDerived({ shareCount: v })}
-          placeholder="발행주식총수"
-        />
-      </FieldCard>
+        <FieldCard
+          label={`${axisLabel} 직전 사업연도 종료일 현재 발행주식총수`}
+          required
+          unit="주"
+          stacked
+        >
+          <CurrencyInput
+            label=""
+            hideUnit
+            value={raw.shareCount}
+            onChange={(v) => patchWithDerived({ shareCount: v })}
+            placeholder="발행주식총수"
+          />
+        </FieldCard>
+      </div>
 
       {showIncome && (
         <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-900 space-y-0.5">
@@ -169,26 +177,33 @@ export function PostListingAmountInputSection({ title, axisLabel, form, onChange
         </div>
       )}
 
-      <FieldCard label={`${axisLabel} 직전 사업연도 순자산가액 (영업권 포함 전)`} required>
-        <CurrencyInput
-          label=""
-          hideUnit
-          allowNegative
-          value={raw.netAssetAmount}
-          onChange={(v) => patchWithDerived({ netAssetAmount: v })}
-          placeholder="영업권 포함 전 순자산가액"
-        />
-      </FieldCard>
+      {/* 순자산 2필드 1행 (2열, 라벨 상단 stacked) — 모바일은 1열 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <FieldCard
+          label={`${axisLabel} 직전 사업연도 순자산가액 (영업권 포함 전)`}
+          required
+          stacked
+        >
+          <CurrencyInput
+            label=""
+            hideUnit
+            allowNegative
+            value={raw.netAssetAmount}
+            onChange={(v) => patchWithDerived({ netAssetAmount: v })}
+            placeholder="영업권 포함 전 순자산가액"
+          />
+        </FieldCard>
 
-      <FieldCard label="영업권 (해당 시)">
-        <CurrencyInput
-          label=""
-          hideUnit
-          value={raw.goodwill}
-          onChange={(v) => patchWithDerived({ goodwill: v })}
-          placeholder="없으면 비워두세요"
-        />
-      </FieldCard>
+        <FieldCard label="영업권 (해당 시)" stacked>
+          <CurrencyInput
+            label=""
+            hideUnit
+            value={raw.goodwill}
+            onChange={(v) => patchWithDerived({ goodwill: v })}
+            placeholder="없으면 비워두세요"
+          />
+        </FieldCard>
+      </div>
 
       {showAsset && (
         <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-900 space-y-0.5">
