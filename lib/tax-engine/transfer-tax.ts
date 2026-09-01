@@ -199,6 +199,26 @@ export function calculateTransferTax(
   const transferBurdenedGiftBreakdown = bgStep.breakdown;
   workingInput = bgStep.workingInput;
 
+  /**
+   * §99의4①·§98의9①의 「그 주택 취득 **전에 보유하던** 다른 주택」 판정용 일반주택 취득일 (D4-05).
+   *
+   * 두 조문의 보유 주체는 **1세대**다. 이월과세(소득세법 §97의2①)는 취득가액만 의제하고
+   * 취득시기를 의제하지 않으므로, 시나리오 A의 `workingInput.acquisitionDate`(증여자 취득일)로
+   * 판정하면 안 된다 — STEP 0.45가 같은 이유로 이미 원본 `input`을 쓴다.
+   *
+   * 다만 **배우자 증여는 예외**다. 소득세법 §88 6호는 1세대를 「거주자 및 그 배우자가 그들과
+   * 같은 주소 또는 거소에서 생계를 같이 하는 자와 함께 구성하는 가족단위」로 정의해 배우자를
+   * 세대 구성의 축으로 둔다 ⇒ 배우자로부터의 증여는 세대가 바뀌지 않아 세대의 보유 개시일이
+   * 증여자 취득일이다. 직계존비속은 동일세대일 수도 별도세대일 수도 있고 엔진에 그 사실이
+   * 들어오지 않으므로, 양도자 본인의 취득일을 기준으로 둔다(동일세대였다는 예외 사실은
+   * 납세자가 입증할 영역).
+   */
+  const hceGeneralHouseAcquisitionDate =
+    input.houseCountExclusionAcquisitionDate ??
+    (input.carryoverTaxation && input.carryoverTaxation.donorRelation === "spouse"
+      ? input.carryoverTaxation.donorAcquisitionDate
+      : input.acquisitionDate);
+
   // STEP 0.45: 차감형 감면주택(§99의3·§99·§98의8) 중과 배제 선판정 — 소령 §167의3①5호·§167의10①2호.
   // 적격 시 양도 주택에 isTaxSpecialExemption 주입 → 기존 중과 엔진 경로로 배제 (D-11 자동화).
   //
@@ -332,7 +352,7 @@ export function calculateTransferTax(
               new994Detail: redevNew994,
               unsold989Detail: redevUnsold989,
               specialHouseExclusionDetail: redevSpecialHouse,
-            } = runHouseCountExclusionStep(redevInput, steps);
+            } = runHouseCountExclusionStep(redevInput, steps, hceGeneralHouseAcquisitionDate);
             // 🔴 종전에는 `exemptionJudgeInput`만 꺼내고 나머지 셋을 버렸다 — 결과에 실리지 않아
             //   §99의4⑥ 3년 미보유 **추징 경고**(`clawbackWarning`)·농어촌주택 보유기간·
             //   §98의9 `dualExclusionWarning`이 통째로 사라졌다(코드리뷰 D4-08).
@@ -401,7 +421,7 @@ export function calculateTransferTax(
   // STEP 0.9 + 0.95: 주택수 제외(§99의4·§98의9·보유 감면주택·상속주택) → 비과세 판정용 유효 주택수 산정.
   // 800줄 정책 분리 — runHouseCountExclusionStep (transfer-tax-house-exclusion-step.ts).
   const { exemptionJudgeInput, new994Detail, unsold989Detail, specialHouseExclusionDetail } =
-    runHouseCountExclusionStep(effectiveInput, steps);
+    runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
 
   const exemptionResult = checkExemption(
     exemptionJudgeInput,

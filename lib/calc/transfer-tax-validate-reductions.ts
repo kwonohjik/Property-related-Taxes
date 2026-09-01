@@ -442,6 +442,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("§98의8 적용: 취득가액을 입력하세요.");
           if (!(parseDecimal(r.exclusiveAreaSqm988 || "") > 0))
             return fail("§98의8 적용: 연면적(공동주택은 전용면적, ㎡)을 입력하세요.");
+          if (!r.rentalContractDate988)
+            return fail("§98의8 적용: 임대계약 체결일을 입력하세요 (2015.12.31 이전 체결에 한정 — 법 §98의8① 괄호).");
           if (!r.rentalStartDate988)
             return fail("§98의8 적용: 임대개시일을 입력하세요 (사업자등록과 임대사업자등록 후 임대를 개시한 날).");
         }
@@ -453,7 +455,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           } else if (!r.contractDate983) {
             return fail("§98의3 적용: 최초 매매계약일을 입력하세요 (거주자 2009.2.12~ / 비거주자 2009.3.16~2010.2.11).");
           }
-          if (r.isOverconcentration983) {
+          // 면적 한정(령 §98의3① 단서)은 각 호 주택 = 사업주체 취득분에만 적용된다 (D5-03).
+          if (r.isOverconcentration983 && r.houseType983 !== "self_built") {
             if (!(parseDecimal(r.landAreaSqm983 || "") > 0))
               return fail("§98의3 적용: 수도권과밀억제권역 주택은 대지면적(㎡)을 입력하세요 (660㎡ 이내 한정).");
             if (!(parseDecimal(r.floorAreaSqm983 || "") > 0))
@@ -512,8 +515,6 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         }
         // P3 §98의6 (2026-06-12): 계약일·기준시가 합계·면적 + 2호 임대 일자 필수 (⑧).
         if (r.type === "unsold_98_6") {
-          if (!r.contractDate986)
-            return fail("§98의6 적용: 최초 매매계약일을 입력하세요.");
           if (parseAmount(r.stdPriceSumAtBase986 || "0") <= 0)
             return fail("§98의6 적용: 주택과 부수토지의 기준시가 합계를 입력하세요 (6억 한도).");
           if (!(parseDecimal(r.floorAreaSqm986 || "") > 0))

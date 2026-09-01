@@ -182,6 +182,7 @@ export type TransferReductionStub =
       isNationalScale98?: boolean;
       isOutsideSeoul98?: boolean;
       isUnsoldConfirmed98?: boolean;
+      isNotRentalHousing98?: boolean;
       isFirstBuyerNoOccupancy98?: boolean;
       rentedFor5Years98?: boolean;
       _phase1Stub?: true }
@@ -235,7 +236,6 @@ export type TransferReductionStub =
   // §98의6 — P3 본격 구현 (2026-06-12)
   | { type: "unsold_98_6";
       hoType986?: "seller_rented" | "buyer_rented";
-      contractDate986?: Date;
       stdPriceSumAtBase986?: number;
       floorAreaSqm986?: number;
       isUnsoldAfterCompletion986?: boolean;
@@ -269,6 +269,7 @@ export type TransferReductionStub =
       contractDate988?: Date;
       acquisitionPrice988?: number;
       exclusiveAreaSqm988?: number;
+      rentalContractDate988?: Date;
       rentalStartDate988?: Date;
       rentalEndDate988?: Date;
       inheritedRentalMonths988?: number;

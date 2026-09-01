@@ -31,7 +31,7 @@ describe("§98의9 evaluateUnsold989", () => {
       expect(r.houseCountExclusion).toBe(1);
       expect(r.comprehensiveTaxNote).toBe(true);
       expect(r.surchargeNotAffected).toBe(true);
-      expect(r.dualExclusionWarning).toBeUndefined();
+      expect(r.dualExclusionApplied).toBeUndefined();
     }
   });
 
@@ -116,14 +116,16 @@ describe("§98의9 evaluateUnsold989", () => {
   });
 });
 
-describe("resolveHouseCountExclusion (F-4 — §99의4 우선)", () => {
+describe("resolveHouseCountExclusion (D4-01 — 둘 다 적격이면 각각 1채)", () => {
   const ctx = {
     generalHouseAcquisitionDate: new Date("2014-01-01"),
     transferDate: new Date("2024-06-01"),
   };
   const RURAL = {
     type: "new_99_4_rural",
-    ruralHouseAcquisitionDate: new Date("2015-03-01"),
+    // 취득 순서 「일반(2014) → 준공후미분양(2024-02) → 농어촌(2024-04)」 — 이 순서라야
+    // §98의9①의 「1주택을 보유한 1세대」(미분양 취득 시점)가 성립한다 (D4-01).
+    ruralHouseAcquisitionDate: new Date("2024-04-01"),
     ruralHouseStdPrice: 200_000_000,
     isRegisteredHanok: false,
     isAdjacentArea: false,
@@ -139,23 +141,23 @@ describe("resolveHouseCountExclusion (F-4 — §99의4 우선)", () => {
     meetsSellerAndContractRequirement: true,
   };
 
-  it("§98의9 단독 → applied = unsold989", () => {
+  it("§98의9 단독 → appliedList = [unsold989]", () => {
     const r = resolveHouseCountExclusion([UNSOLD], ctx);
-    expect(r.applied?.id).toBe("unsold_98_9");
+    expect(r.appliedList.map((x) => x.id)).toEqual(["unsold_98_9"]);
     expect(r.new994Detail).toBeUndefined();
   });
 
-  it("둘 다 적격 → §99의4 우선 + §98의9 dualExclusionWarning", () => {
+  it("둘 다 적격 → appliedList 2건(§99의4 → §98의9) + dualExclusionApplied", () => {
     const r = resolveHouseCountExclusion([RURAL, UNSOLD], ctx);
-    expect(r.applied?.id).toBe("new_99_4_rural");
+    expect(r.appliedList.map((x) => x.id)).toEqual(["new_99_4_rural", "unsold_98_9"]);
     expect(r.unsold989Detail?.isEligible).toBe(true);
     if (r.unsold989Detail?.isEligible) {
-      expect(r.unsold989Detail.dualExclusionWarning).toBe(true);
+      expect(r.unsold989Detail.dualExclusionApplied).toBe(true);
     }
   });
 
-  it("둘 다 미포함 → applied undefined", () => {
+  it("둘 다 미포함 → appliedList 빈 배열", () => {
     const r = resolveHouseCountExclusion([], ctx);
-    expect(r.applied).toBeUndefined();
+    expect(r.appliedList).toEqual([]);
   });
 });

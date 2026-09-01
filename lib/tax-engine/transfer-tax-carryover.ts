@@ -220,6 +220,8 @@ export function calcCarryoverScenarios(
       : {}),
     // §154① 거주요건 경과규정 판정은 수증자 실제 취득일 기준 (이월과세 의제는 필요경비 한정 §97의2①)
     residenceTransitionAcquisitionDate: ct.giftRegistryDate,
+    // §99의4·§98의9 취득순서 판정도 같은 이유로 세대 기준 보유 개시일을 따로 싣는다 (D4-05)
+    houseCountExclusionAcquisitionDate: resolveHouseCountExclusionAcqDate(rawInput, ct),
     capitalExpenditure: effectiveCapex,           // 합산된 capex (directSide swap용)
     carryoverTaxation: undefined,                // 재귀 방지
     acquisitionCause: "gift",                    // 하위 호환 (단순 증여)
@@ -581,9 +583,31 @@ function buildInputB(
      * ⚠️ 이 줄을 `"carryover_gift"`로 바꾸면 배제 자산에 통산이 들어가 과소과세가 된다.
      */
     acquisitionCause: "purchase",
+    // §99의4·§98의9 취득순서 판정 축 — A/B 어느 쪽이 채택되든 세대 기준은 같다 (D4-05)
+    houseCountExclusionAcquisitionDate: resolveHouseCountExclusionAcqDate(rawInput, ct),
     // preHousingDisclosure: B에서는 환산 사용 안 함 — 명시적으로 제거
     preHousingDisclosure: undefined,
   };
+}
+
+/**
+ * §99의4①·§98의9①의 「그 주택 취득 **전에 보유하던** 다른 주택」 판정용 일반주택 취득일 (D4-05).
+ *
+ * 원칙은 **양도자 본인의 취득일**이다 — 이월과세는 취득가액만 의제하고 취득시기를 의제하지
+ * 않는다(§97의2①; 보유기간 승계는 §95④·§104②의 별도 명문). 시나리오 A는 `acquisitionDate`를
+ * 증여자 취득일로 교체하므로 그대로 두면 취득순서 요건이 부당하게 통과한다.
+ *
+ * **배우자 증여는 예외**다. 소득세법 §88 6호가 1세대를 「거주자 및 **그 배우자**가 그들과
+ * 같은 주소 또는 거소에서 생계를 같이 하는 자와 함께 구성하는 가족단위」로 정의해 배우자를
+ * 세대 구성의 축으로 두므로, 배우자로부터의 증여는 세대가 바뀌지 않아 세대의 보유 개시일이
+ * 증여자 취득일이다. 직계존비속은 동일세대일 수도 별도세대일 수도 있고 그 사실이 엔진에
+ * 들어오지 않으므로 원칙(양도자 취득일)을 따른다.
+ */
+function resolveHouseCountExclusionAcqDate(
+  rawInput: TransferTaxInput,
+  ct: NonNullable<TransferTaxInput["carryoverTaxation"]>,
+): Date {
+  return ct.donorRelation === "spouse" ? ct.donorAcquisitionDate : rawInput.acquisitionDate;
 }
 
 /** 적용배제 시 Scenario A 빈 객체 (결과 카드 표시 불필요) */

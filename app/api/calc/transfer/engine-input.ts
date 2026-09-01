@@ -179,6 +179,7 @@ export function buildTransferEngineInput(
       article: e.article,
       houseAcquisitionDate: e.houseAcquisitionDate ? new Date(e.houseAcquisitionDate) : undefined,
       houseContractDate: e.houseContractDate ? new Date(e.houseContractDate) : undefined,
+      isNationalHousing: e.isNationalHousing,
       requirementsConfirmed: e.requirementsConfirmed,
     })),
     // ⑭ NBL 정밀판정: raw 평면 → mapAssetToNblInput(nested + Date 일괄) 공용 헬퍼 (origin/master #223·#224)

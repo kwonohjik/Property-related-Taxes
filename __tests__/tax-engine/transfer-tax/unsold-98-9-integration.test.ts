@@ -18,7 +18,10 @@ const UNSOLD_REDUCTION = {
 
 const RURAL_REDUCTION = {
   type: "new_99_4_rural" as const,
-  ruralHouseAcquisitionDate: new Date("2015-03-01"),
+  // 취득 순서 「일반(2014) → 준공후미분양(2024-02) → 농어촌(2024-04)」 (D4-01).
+  // 농어촌을 미분양보다 먼저 취득하면 미분양 취득 시점에 2주택이 되어 §98의9①의
+  // 「1주택을 보유한 1세대」가 성립하지 않는다 — 종전 픽스처는 이 점에서 모순이었다.
+  ruralHouseAcquisitionDate: new Date("2024-04-01"),
   ruralHouseStdPrice: 200_000_000,
   isRegisteredHanok: false,
   isAdjacentArea: false,
@@ -70,22 +73,24 @@ describe("§98의9 통합 anchor", () => {
     expect(r.longTermHoldingRate).toBeCloseTo(0.2, 10);
   });
 
-  it("B-4: §99의4 + §98의9 동시 적격 → §99의4 우선 step + §98의9 경고 echo (F-4)", () => {
+  it("B-4: §99의4 + §98의9 동시 적격 → 각각 1채씩 제외 · 3 → 1채 → 비과세 (D4-01)", () => {
     const r = calculateTransferTax(
       input989({
-        householdHousingCount: 3, // 종전 + 농어촌 + 미분양 (제외는 1채만 — F-4)
+        householdHousingCount: 3, // 종전 + 농어촌 + 미분양 — 제외 2채
         reductions: [RURAL_REDUCTION, UNSOLD_REDUCTION],
       }),
       rates,
     );
-    // §99의4 우선 — count 3 − 1 = 2 → 비과세 아님 (일시적 2주택 미해당)
-    expect(r.isExempt).toBe(false);
-    expect(r.steps.some((s) => s.label.includes("§99의4"))).toBe(true);
-    expect(r.steps.some((s) => s.label.includes("§98의9"))).toBe(false);
     expect(r.new994Detail?.isEligible).toBe(true);
     expect(r.unsold989Detail?.isEligible).toBe(true);
     if (r.unsold989Detail?.isEligible) {
-      expect(r.unsold989Detail.dualExclusionWarning).toBe(true);
+      expect(r.unsold989Detail.dualExclusionApplied).toBe(true);
     }
+    // 두 조문 step이 모두 남는다 (근거 표시)
+    expect(r.steps.some((s) => s.label.includes("§99의4"))).toBe(true);
+    expect(r.steps.some((s) => s.label.includes("§98의9"))).toBe(true);
+    // 유효 주택수 3 − 2 = 1 → 1세대1주택 · 양도가 10억 ≤ 12억 → 전액 비과세
+    expect(r.isExempt).toBe(true);
+    expect(r.totalTax).toBe(0);
   });
 });

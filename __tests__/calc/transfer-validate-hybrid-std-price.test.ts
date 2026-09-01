@@ -49,7 +49,6 @@ function make986(hoType986: "seller_rented" | "buyer_rented", std: Std): AssetRe
   return {
     type: "unsold_98_6",
     hoType986,
-    contractDate986: "2011-06-01",
     stdPriceSumAtBase986: "500,000,000",
     floorAreaSqm986: "100",
     rentalContractDate986: hoType986 === "buyer_rented" ? "2011-08-01" : "",

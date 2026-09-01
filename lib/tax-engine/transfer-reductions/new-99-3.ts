@@ -451,6 +451,13 @@ const OTHER_HOUSE_DEADLINE = D("2007-12-31");
 /**
  * §99의3 ②항: 신축주택 외 다른 주택을 2007.12.31까지 양도하는 경우에만
  * 신축주택을 거주자의 소유주택으로 보지 아니한다 (1세대1주택 §89①3호 비과세 판정).
+ *
+ * ⚠️ **여기는 §99의3②의 실사용 경로가 아니다.** `evalNew993`은 「양도 자산이 신축주택 자신인
+ *   계산」에서만 돌지만, ②항이 적용되는 국면은 「그 **외의 주택**을 양도하는 계산」이다.
+ *   호출부(`income-deduction-router.ts`)도 `otherHouseTransferDate`를 넘기지 않아 프로덕션에서
+ *   항상 false이고, 출력 `isExcludedFromHouseCountFor1H1H`를 읽는 코드도 없다.
+ *   실사용 경로는 모드 2 `resolveSpecialHouseExclusions`의 `new_99_3` 항목이다
+ *   (`unsold-hybrid-p5.ts` — D4-06에서 신설). 판정을 고칠 일이 있으면 **그쪽을** 고칠 것.
  */
 function checkHouseCountExclusion993(otherHouseTransferDate?: Date): boolean {
   if (!otherHouseTransferDate) return false;

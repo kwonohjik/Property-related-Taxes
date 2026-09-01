@@ -52,11 +52,12 @@ export function Unsold989DetailCard({ detail }: Props) {
         제89조제1항제3호(비과세·고가주택 12억 안분·장기보유특별공제 표2)를 적용합니다.
       </p>
 
-      {detail.dualExclusionWarning && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-950/30 px-3 py-2">
-          <p className="text-caption text-amber-800 dark:text-amber-300">
-            ⚠ §99의4 농어촌·고향주택 특례와 동시 적격 — §99의4를 우선 적용하여 본 특례의
-            주택수 제외는 반영되지 않았습니다 (동시 적용 여부는 세무사 확인 권장)
+      {detail.dualExclusionApplied && (
+        <div className="rounded-md border border-violet-300 bg-violet-50 dark:border-violet-700/50 dark:bg-violet-950/30 px-3 py-2">
+          <p className="text-caption text-violet-800 dark:text-violet-300">
+            §99의4 농어촌·고향주택 특례와 동시 적격 — 두 조문이 각각 1채씩 소유주택에서
+            제외되어 주택 수가 2채 줄었습니다 (두 특례 모두 감면세액이 없는 주택수 의제라
+            조특법 §127⑦ 감면 중복배제 대상이 아닙니다)
           </p>
         </div>
       )}

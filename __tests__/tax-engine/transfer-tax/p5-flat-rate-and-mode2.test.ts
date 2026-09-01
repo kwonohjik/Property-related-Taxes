@@ -19,6 +19,7 @@ const R98 = {
   isNationalScale98: true,
   isOutsideSeoul98: true,
   isUnsoldConfirmed98: true,
+  isNotRentalHousing98: true, // 령 §98①1호 괄호 (CA-06)
   isFirstBuyerNoOccupancy98: true,
   rentedFor5Years98: true,
 };
@@ -31,6 +32,7 @@ describe("P5 단위 anchor", () => {
       isNationalScale: true,
       isOutsideSeoul: true,
       isUnsoldConfirmed: true,
+      isNotRentalHousing: true, // 령 §98①1호 괄호 (CA-06)
       isFirstBuyerNoOccupancy: true,
       rentedFor5Years: true,
     };
@@ -54,9 +56,9 @@ describe("P5 단위 anchor", () => {
 
   it("모드 2 — 시한 표·§99 양도시한·미확인 배제", () => {
     const transferDate = D("2024-06-01");
-    // §98의8 적격 (취득 2015.6)
+    // §98의8 적격 — 최초 매매계약일 기준 (법 §98의8① — 취득일 기준 창 없음, D4-09)
     const ok = resolveSpecialHouseExclusions(
-      [{ article: "unsold_98_8", houseAcquisitionDate: D("2015-06-01"), requirementsConfirmed: true }],
+      [{ article: "unsold_98_8", houseContractDate: D("2015-06-01"), requirementsConfirmed: true }],
       transferDate,
     );
     expect(ok.excludedCount).toBe(1);
@@ -70,14 +72,14 @@ describe("P5 단위 anchor", () => {
     // 요건 미확인 → 부적격
     expect(
       resolveSpecialHouseExclusions(
-        [{ article: "unsold_98_8", houseAcquisitionDate: D("2015-06-01"), requirementsConfirmed: false }],
+        [{ article: "unsold_98_8", houseContractDate: D("2015-06-01"), requirementsConfirmed: false }],
         transferDate,
       ).excludedCount,
     ).toBe(0);
     // 기간 외 취득 → 부적격
     expect(
       resolveSpecialHouseExclusions(
-        [{ article: "unsold_98_8", houseAcquisitionDate: D("2016-06-01"), requirementsConfirmed: true }],
+        [{ article: "unsold_98_8", houseContractDate: D("2016-06-01"), requirementsConfirmed: true }],
         transferDate,
       ).excludedCount,
     ).toBe(0);
@@ -85,7 +87,7 @@ describe("P5 단위 anchor", () => {
     expect(
       resolveSpecialHouseExclusions(
         [
-          { article: "unsold_98_8", houseAcquisitionDate: D("2015-06-01"), requirementsConfirmed: true },
+          { article: "unsold_98_8", houseContractDate: D("2015-06-01"), requirementsConfirmed: true },
           { article: "unsold_98_7", houseContractDate: D("2012-10-15"), requirementsConfirmed: true },
         ],
         transferDate,
@@ -155,7 +157,9 @@ describe("P5 통합 anchor", () => {
         ...base,
         specialHouseExclusions: [{
           article: "unsold_98_8" as const,
-          houseAcquisitionDate: new Date("2015-06-01"),
+          houseAcquisitionDate: new Date("2015-08-01"),
+          // §98의8①은 최초 매매계약일만을 기준으로 취득기간을 판정한다 (D4-09)
+          houseContractDate: new Date("2015-06-01"),
           requirementsConfirmed: true,
         }],
       }),
@@ -169,7 +173,8 @@ describe("P5 통합 anchor", () => {
         ...base,
         specialHouseExclusions: [{
           article: "unsold_98_8" as const,
-          houseAcquisitionDate: new Date("2015-06-01"),
+          houseAcquisitionDate: new Date("2015-08-01"),
+          houseContractDate: new Date("2015-06-01"),
           requirementsConfirmed: false,
         }],
       }),

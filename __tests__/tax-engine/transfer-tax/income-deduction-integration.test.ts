@@ -18,6 +18,7 @@ const UNSOLD_988_REDUCTION = {
   contractDate988: new Date("2015-06-01"),
   acquisitionPrice988: 550_000_000,
   exclusiveAreaSqm988: 84.5,
+  rentalContractDate988: new Date("2015-12-20"), // 법 §98의8① 괄호 — 2015.12.31 이전 (D6-01)
   rentalStartDate988: new Date("2016-01-01"),
   isUnsoldAfterCompletion988: true,
   isFirstContract988: true,

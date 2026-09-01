@@ -285,6 +285,7 @@ export function migrateAsset(raw: unknown): AssetForm {
           contractDate988: "",
           acquisitionPrice988: "",
           exclusiveAreaSqm988: "",
+          rentalContractDate988: "",
           rentalStartDate988: "",
           rentalEndDate988: "",
           inheritedRentalMonths988: "",
@@ -304,6 +305,7 @@ export function migrateAsset(raw: unknown): AssetForm {
           isNationalScale98: false,
           isOutsideSeoul98: false,
           isUnsoldConfirmed98: false,
+          isNotRentalHousing98: false,
           isFirstBuyerNoOccupancy98: false,
           rentedFor5Years98: false,
           ...r,
@@ -366,7 +368,6 @@ export function migrateAsset(raw: unknown): AssetForm {
       if (r && r.type === "unsold_98_6") {
         return {
           hoType986: "seller_rented",
-          contractDate986: "",
           stdPriceSumAtBase986: "",
           floorAreaSqm986: "",
           isUnsoldAfterCompletion986: false,

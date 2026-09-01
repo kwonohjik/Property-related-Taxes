@@ -356,6 +356,7 @@ export function toEngineReductions(
         contractDate988: r.contractDate988 || undefined,
         acquisitionPrice988: parseAmount(r.acquisitionPrice988 || "0") || undefined,
         exclusiveAreaSqm988: parseDecimal(r.exclusiveAreaSqm988 || "") || undefined,
+        rentalContractDate988: r.rentalContractDate988 || undefined,
         rentalStartDate988: r.rentalStartDate988 || undefined,
         rentalEndDate988: r.rentalEndDate988 || undefined,
         inheritedRentalMonths988: parseInt(r.inheritedRentalMonths988 || "") || undefined,
@@ -375,6 +376,7 @@ export function toEngineReductions(
         isNationalScale98: r.isNationalScale98,
         isOutsideSeoul98: r.isOutsideSeoul98,
         isUnsoldConfirmed98: r.isUnsoldConfirmed98,
+        isNotRentalHousing98: r.isNotRentalHousing98,
         isFirstBuyerNoOccupancy98: r.isFirstBuyerNoOccupancy98,
         rentedFor5Years98: r.rentedFor5Years98,
       };
@@ -487,7 +489,6 @@ export function toEngineReductions(
       return {
         type: "unsold_98_6" as const,
         hoType986: r.hoType986,
-        contractDate986: r.contractDate986 || undefined,
         stdPriceSumAtBase986: parseAmount(r.stdPriceSumAtBase986 || "0") || undefined,
         floorAreaSqm986: parseDecimal(r.floorAreaSqm986 || "") || undefined,
         isUnsoldAfterCompletion986: r.isUnsoldAfterCompletion986,

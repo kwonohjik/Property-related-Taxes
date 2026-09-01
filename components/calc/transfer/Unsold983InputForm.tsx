@@ -129,33 +129,39 @@ export function Unsold983InputForm({
         <ToggleCard
           tone="rose"
           title="수도권과밀억제권역 소재"
-          description="과밀억제권역이면 감면율이 60%로 낮아지고, 대지면적 660㎡ 이내 + 연면적(전용) 149㎡ 이내인 주택에 한정됩니다 (령 §98의3①단서 — 매매계약일 현재 기준 령④)"
+          description={
+            isSelfBuilt
+              ? "과밀억제권역이면 감면율이 60%로 낮아집니다 (법 §98의3① — 자기건설 신축주택에는 령 §98의3①단서의 면적 한정이 적용되지 않습니다)"
+              : "과밀억제권역이면 감면율이 60%로 낮아지고, 대지면적 660㎡ 이내 + 연면적(전용) 149㎡ 이내인 주택에 한정됩니다 (령 §98의3①단서 — 매매계약일 현재 기준 령④)"
+          }
           checked={value.isOverconcentration983}
           onCheckedChange={(v) => onChange({ isOverconcentration983: v })}
         >
-          <div className="space-y-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium">대지면적 (㎡)</label>
-              <DecimalInput value={value.landAreaSqm983} onChange={(v) => onChange({ landAreaSqm983: v })} />
+          {!isSelfBuilt && (
+            <div className="space-y-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium">대지면적 (㎡)</label>
+                <DecimalInput value={value.landAreaSqm983} onChange={(v) => onChange({ landAreaSqm983: v })} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium">연면적 (공동주택은 전용면적, ㎡)</label>
+                <DecimalInput value={value.floorAreaSqm983} onChange={(v) => onChange({ floorAreaSqm983: v })} />
+              </div>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium">연면적 (공동주택은 전용면적, ㎡)</label>
-              <DecimalInput value={value.floorAreaSqm983} onChange={(v) => onChange({ floorAreaSqm983: v })} />
-            </div>
-          </div>
+          )}
         </ToggleCard>
       </SectionShell>
 
       <SectionShell num="③" title="자격 요건 확인" tone="rose">
-        <ToggleCard
-          tone="rose"
-          title="미분양주택 확인"
-          description="2009.2.11까지 분양계약이 체결되지 않아 2009.2.12 이후 선착순으로 공급된 주택 등 (조특령 §98의3①)"
-          checked={value.isUnsoldConfirmed983}
-          onCheckedChange={(v) => onChange({ isUnsoldConfirmed983: v })}
-        />
         {!isSelfBuilt && (
           <>
+            <ToggleCard
+              tone="rose"
+              title="미분양주택 확인"
+              description="2009.2.11까지 분양계약이 체결되지 않아 2009.2.12 이후 선착순으로 공급된 주택 등 (조특령 §98의3①)"
+              checked={value.isUnsoldConfirmed983}
+              onCheckedChange={(v) => onChange({ isUnsoldConfirmed983: v })}
+            />
             <ToggleCard
               tone="rose"
               title="사업주체와 최초 매매계약"

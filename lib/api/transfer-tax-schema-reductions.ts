@@ -272,6 +272,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
     isNationalScale98: z.boolean().optional(),
     isOutsideSeoul98: z.boolean().optional(),
     isUnsoldConfirmed98: z.boolean().optional(),
+    isNotRentalHousing98: z.boolean().optional(),
     isFirstBuyerNoOccupancy98: z.boolean().optional(),
     rentedFor5Years98: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),
@@ -334,7 +335,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("unsold_98_6"),
     hoType986: z.enum(["seller_rented", "buyer_rented"]).optional(),
-    contractDate986: z.string().date().optional(),
     stdPriceSumAtBase986: z.number().int().nonnegative().optional(),
     floorAreaSqm986: z.number().nonnegative().optional(),
     isUnsoldAfterCompletion986: z.boolean().optional(),
@@ -371,6 +371,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
     contractDate988: z.string().date().optional(),
     acquisitionPrice988: z.number().int().nonnegative().optional(),
     exclusiveAreaSqm988: z.number().nonnegative().optional(),
+    rentalContractDate988: z.string().date().optional(),
     rentalStartDate988: z.string().date().optional(),
     rentalEndDate988: z.string().date().optional(),
     inheritedRentalMonths988: z.number().int().nonnegative().optional(),

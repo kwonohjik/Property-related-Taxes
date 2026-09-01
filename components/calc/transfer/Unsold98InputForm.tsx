@@ -43,7 +43,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         <ToggleCard
           tone="rose"
           title="국민주택규모 이하"
-          description="국민주택규모 이하의 주택 (조특령 §98①·⑤ — 민간·공공임대주택 제외)"
+          description="국민주택규모 이하의 주택 (조특령 §98①·⑤)"
           checked={value.isNationalScale98}
           onCheckedChange={(v) => onChange({ isNationalScale98: v })}
         />
@@ -60,6 +60,13 @@ export function Unsold98InputForm({ value, onChange }: Props) {
           description="1995.10.31(1998.3.1 이후 취득분은 1998.2.28) 현재 미분양주택임을 확인받은 주택 — 미분양주택확인서 (조특령 §98①1호·⑤1호)"
           checked={value.isUnsoldConfirmed98}
           onCheckedChange={(v) => onChange({ isUnsoldConfirmed98: v })}
+        />
+        <ToggleCard
+          tone="rose"
+          title="민간임대주택·공공임대주택이 아님"
+          description="사업계획승인을 얻어 건설하는 주택에서 민간임대주택(민간임대주택에 관한 특별법 §2)과 공공임대주택(공공주택 특별법 §2 1호 가목)은 제외됩니다 (조특령 §98①1호 괄호 — 1998.3.1 이후 취득분에도 동일)"
+          checked={value.isNotRentalHousing98}
+          onCheckedChange={(v) => onChange({ isNotRentalHousing98: v })}
         />
         <ToggleCard
           tone="rose"

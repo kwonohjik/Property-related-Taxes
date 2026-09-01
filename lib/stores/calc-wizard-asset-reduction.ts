@@ -345,6 +345,8 @@ export type RentalReductionFormVariant =
       /** 연면적(공동주택 전용, ㎡) — 135 이하 (DecimalInput) */
       exclusiveAreaSqm988: string;
       /** 임대개시일 (YYYY-MM-DD) — 사업자등록+임대사업자등록 후 개시일 기산 (령 §98의5⑤1호 준용) */
+      /** 임대계약 체결일 (YYYY-MM-DD) — 2015.12.31 이전 한정 (법 §98의8① 괄호) */
+      rentalContractDate988: string;
       rentalStartDate988: string;
       /** 임대종료일 (YYYY-MM-DD) — 빈값 = 양도일까지 계속 */
       rentalEndDate988: string;
@@ -380,6 +382,8 @@ export type RentalReductionFormVariant =
       isNationalScale98: boolean;
       isOutsideSeoul98: boolean;
       isUnsoldConfirmed98: boolean;
+      /** 민간임대주택·공공임대주택이 아님 (령 §98①1호 괄호 — 이하 이 조에서 같다) */
+      isNotRentalHousing98: boolean;
       isFirstBuyerNoOccupancy98: boolean;
       rentedFor5Years98: boolean;
     }
@@ -473,7 +477,6 @@ export type RentalReductionFormVariant =
       /** 1호 사업주체등 2년 임대 후 취득 / 2호 취득 후 5년 임대 */
       hoType986: "seller_rented" | "buyer_rented";
       /** 최초 매매계약일 (YYYY-MM-DD) */
-      contractDate986: string;
       /** 주택+부수토지 기준시가 합계 (원) — 6억 한도 (1호는 최초 임대개시 당시) */
       stdPriceSumAtBase986: string;
       /** 연면적 (공동주택 전용, ㎡) — 149 한도 */
@@ -602,11 +605,13 @@ export type ReductionType = AssetReductionForm["type"];
 export interface SpecialHouseExclusionFormItem {
   article:
     | "unsold_98" | "unsold_98_2" | "unsold_98_3" | "unsold_98_5" | "unsold_98_6"
-    | "unsold_98_7" | "unsold_98_8" | "unsold_99_2" | "new_99" | "";
+    | "unsold_98_7" | "unsold_98_8" | "unsold_99_2" | "new_99" | "new_99_3" | "";
   /** 감면주택 취득일 (YYYY-MM-DD) */
   houseAcquisitionDate: string;
   /** 감면주택 매매계약일 (YYYY-MM-DD, 선택) */
   houseContractDate: string;
+  /** §99 전용 — 국민주택 여부 (신축주택취득기간 종기 1999.6.30 ↔ 1999.12.31) */
+  isNationalHousing: boolean;
   /** 해당 조문 본 요건 충족 확인 */
   requirementsConfirmed: boolean;
 }

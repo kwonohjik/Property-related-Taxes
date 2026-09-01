@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
         article: e.article,
         houseAcquisitionDate: toOptionalDate(e.houseAcquisitionDate),
         houseContractDate: toOptionalDate(e.houseContractDate),
+        isNationalHousing: e.isNationalHousing,
         requirementsConfirmed: e.requirementsConfirmed,
       })),
       expenses: p.expenses,

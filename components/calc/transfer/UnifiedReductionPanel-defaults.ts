@@ -247,6 +247,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       contractDate988: "",
       acquisitionPrice988: "",
       exclusiveAreaSqm988: "",
+      rentalContractDate988: "",
       rentalStartDate988: "",
       rentalEndDate988: "",
       inheritedRentalMonths988: "",
@@ -266,6 +267,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       isNationalScale98: false,
       isOutsideSeoul98: false,
       isUnsoldConfirmed98: false,
+      isNotRentalHousing98: false,
       isFirstBuyerNoOccupancy98: false,
       rentedFor5Years98: false,
     };
@@ -328,7 +330,6 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
     return {
       type: "unsold_98_6",
       hoType986: "seller_rented",
-      contractDate986: "",
       stdPriceSumAtBase986: "",
       floorAreaSqm986: "",
       isUnsoldAfterCompletion986: false,

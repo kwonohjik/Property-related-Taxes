@@ -636,34 +636,3 @@ export function evaluateHybridFromReduction(
   }
   return undefined;
 }
-
-/**
- * calcReductions 진입점 — 5년 내 세액감면 후보 (§127⑦ max 패턴).
- * eligible && tax_amount일 때만 reductionAmount = 산출세액 × 100% 채움.
- */
-export function evaluateHybridTaxAmountFromReductions(
-  reductions: ReadonlyArray<{ type: string }> | undefined,
-  ctx: {
-    transferDate: Date;
-    acquisitionDate?: Date;
-    assetContractDate?: Date;
-    calculatedTax: number;
-  },
-): UnsoldHybridResult | undefined {
-  if (!reductions || !ctx.acquisitionDate) return undefined;
-  const r = reductions.find((x) => x.type === "unsold_98_7" || x.type === "unsold_99_2") as
-    | ReductionLike
-    | undefined;
-  if (!r) return undefined;
-  const detail = evaluateHybridFromReduction(r, {
-    transferDate: ctx.transferDate,
-    acquisitionDate: ctx.acquisitionDate,
-    assetContractDate: ctx.assetContractDate,
-    transferIncome: 0, // tax_amount 판정에는 소득금액 불요 (5년 후 경로는 router가 담당)
-  });
-  if (!detail) return undefined;
-  if (detail.isEligible && detail.effectCategory === "tax_amount") {
-    return { ...detail, reductionAmount: applyRate(ctx.calculatedTax, detail.taxReductionRate) };
-  }
-  return detail;
-}
