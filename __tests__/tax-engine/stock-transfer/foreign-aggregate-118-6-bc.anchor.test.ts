@@ -254,7 +254,14 @@ describe("FA-4 국내주식 혼합 — C는 **국외자산만**, 기본공제는
 });
 
 // ============================================================
-// FA-5 — 🟡 **혼합 method** (일부 credit · 일부 expense) 특성화
+// FA-5 — **혼합 method** (일부 credit · 일부 expense) 특성화
+//
+// 🔒 **2026-09-01 — 이 입력은 더 이상 도달할 수 없다.** §118의6①의 택일이 **과세기간 단위**로
+//    확정돼(계획서 §4.2), 폼은 `carryFilingFields`(8필드)가 값을 승계하고
+//    `validateFilingItems`가 혼합을 차단한다. 엔진 자체는 종전대로 계산하므로 아래 값들은
+//    **그대로 유효한 특성화**다 — 「엔진이 무엇을 하는가」를 고정해 둔다.
+//    ⚠️ 종전 계획서는 「뒤집으면 FA-5-4가 9,715,910 → 17,100,000으로 바뀐다」고 적었는데
+//    **틀렸다**. 폼·validate 층에서 막았으므로 엔진 값은 움직이지 않는다.
 //
 // 계획서 §4.2. **미확정 논점을 고정하는 characterization anchor**다 —
 // 「이것이 옳다」가 아니라 **「지금 이렇게 동작한다」**를 눈에 보이게 두어, 나중에 판단이
@@ -383,5 +390,54 @@ describe("FA-6 unusedForeignTaxCreditLimit — 표시 전용 echo", () => {
     );
     expect(mixed.totalCalculatedTax).toBe(17_100_000);
     expect(mixed.totalFinalTax).toBe(11_100_000);
+  });
+});
+
+// ============================================================
+// FA-7 — 택일이 **과세기간 단위**로 확정된 뒤 (2026-09-01 · 계획서 §4.2)
+//
+// 1호·2호를 종목마다 다르게 고르는 입력은 **폼(carryFilingFields 8필드)과
+// validate(`validateFilingItems`)에서 차단**된다. 엔진은 종전대로 계산할 수 있지만
+// 그 경로로 값이 들어오지 않는다 — FA-5는 그 「엔진이 할 수 있는 일」의 특성화로 남는다.
+//
+// 반면 **외국납부세액이 없는 국외 종목**은 여전히 정상 입력이고, 그 종목도
+// 「해당 과세기간의 국외자산」이라 C(분모)에 들어가 A의 일부를 가져간다.
+// ⇒ `unusedForeignTaxCreditLimit`이 걸리는 실제 경로는 이쪽이다.
+// ============================================================
+
+describe("FA-7 외국세를 내지 않은 국외 종목도 C에 들어간다", () => {
+  const r = calculateStockTransferTaxAggregate(
+    [
+      withForeignTax(50_000_000, 12_000_000, { stockName: "A", transferDate: new Date("2025-03-01") }),
+      fx(50_000_000, { stockName: "B", transferDate: new Date("2025-09-01") }), // 외국세 없음
+    ] as never,
+    "aggregate",
+  );
+
+  it("FA-7-1 외국세가 없는 종목은 공제 대상이 아니다 — 한도 undefined", () => {
+    expect(r.items[1].foreignDetail?.foreignTaxCreditLimit).toBeUndefined();
+    expect(r.items[1].foreignDetail?.foreignTaxCreditApplied).toBeUndefined();
+  });
+
+  it("FA-7-2 🔑 그래도 C에 들어가 A의 일부를 가져간다 — 그 몫이 echo된다", () => {
+    const unused = r.items[1].foreignDetail?.unusedForeignTaxCreditLimit ?? 0;
+    expect(unused).toBeGreaterThan(0);
+    // 배분은 온전하다 — 쓰이지 않을 뿐이다
+    expect(unused + (r.items[0].foreignDetail?.foreignTaxCreditLimit ?? 0)).toBe(
+      r.items[0].calculatedTax + r.items[1].calculatedTax,
+    );
+  });
+
+  it("FA-7-3 🔑 양성 대조군 — 국외 종목이 그 하나뿐이면 B = C라 한도가 A 전액이다", () => {
+    const solo = calculateStockTransferTaxAggregate(
+      [
+        withForeignTax(50_000_000, 12_000_000, { stockName: "A", transferDate: new Date("2025-03-01") }),
+        withForeignTax(50_000_000, 6_000_000, { stockName: "B", transferDate: new Date("2025-09-01") }),
+      ] as never,
+      "aggregate",
+    );
+    // 둘 다 공제 대상이면 아무도 몫을 버리지 않는다
+    expect(solo.items[0].foreignDetail?.unusedForeignTaxCreditLimit).toBeUndefined();
+    expect(solo.items[1].foreignDetail?.unusedForeignTaxCreditLimit).toBeUndefined();
   });
 });

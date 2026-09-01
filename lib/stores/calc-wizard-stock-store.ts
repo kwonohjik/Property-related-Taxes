@@ -74,6 +74,10 @@ export { normalizeStockFormData };
  * · `isElectronicFiling` — 조특법 §104의8 전자신고 세액공제(합산 1회)
  * · `filingViolation`·`isFraudulent`·`isInternationalTransaction` — 국세기본법 §47의2~4 가산세 게이트
  * · `realEstateGroupBasicDeductionUsed` — §103①1호(부동산 그룹) 기소진액
+ * · `foreignTaxMethod` — §118의6① 세액공제(1호)/필요경비 산입(2호) **택일**. 2026-09-01 추가:
+ *   법문이 「다음 각 호의 방법 중 **하나를 선택**하여 적용할 수 있다」이고 1호 산식의 A·C가
+ *   **과세기간 총량**이라, 종목마다 다르게 고르면 C의 구성이 명문 없이 정해진다
+ *   (계획서 §4.2). ⇒ **과세기간 단위 택일**로 확정했다.
  */
 function carryFilingFields(prev: StockTransferFormData): StockTransferFormData {
   const fresh = createInitialStockFormData();
@@ -86,6 +90,7 @@ function carryFilingFields(prev: StockTransferFormData): StockTransferFormData {
     isFraudulent: prev.isFraudulent,
     isInternationalTransaction: prev.isInternationalTransaction,
     realEstateGroupBasicDeductionUsed: prev.realEstateGroupBasicDeductionUsed,
+    foreignTaxMethod: prev.foreignTaxMethod,
   };
 }
 

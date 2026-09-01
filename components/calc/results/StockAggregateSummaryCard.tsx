@@ -44,19 +44,20 @@ export function StockAggregateSummaryCard({
   );
 
   /**
-   * §118의6①2호(필요경비 산입)를 고른 국외 종목.
+   * 세액공제 대상이 아닌데 **C(분모)에는 들어간** 국외 종목 — 배분된 한도를 아무도 쓰지 못한다.
    *
-   * 세액공제 대상은 아니지만 그 자산도 「해당 과세기간의 국외자산」이라 **C(분모)에는 들어가고**,
-   * 그래서 A의 일부가 배분됐다가 아무도 쓰지 못한다. 그 손해는 **1호를 고른 종목과 섞였을 때만**
-   * 나타나므로(전부 2호면 애초에 쓸 사람이 없다) 혼합 여부를 함께 본다.
+   * 「해당 과세기간의 국외자산」이면 외국납부세액 유무와 무관하게 C에 들어간다(§118의6①1호).
+   * 그래서 외국세를 내지 않은 종목도 A의 일부를 가져가고, 그 몫은 그대로 사라진다.
    *
-   * 🟡 택일이 자산별인지 과세기간별인지는 미확정이다(계획서 §4.2) — 세액은 바꾸지 않고 사실만 알린다.
+   * ⚠️ 2026-09-01 **택일이 과세기간 단위로 확정**되어(계획서 §4.2) 1호·2호가 한 신고에 섞이는
+   *    일은 더 이상 없다. 전부 2호면 `foreignItems`가 비어 카드 자체가 안 나오므로, 이 안내가
+   *    걸리는 경우는 **외국납부세액이 없는 국외 종목**뿐이다.
    */
-  const foreignExpenseItems = aggregate.items
+  const foreignUnusedItems = aggregate.items
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => (r.foreignDetail?.foreignTaxExpenseApplied ?? 0) > 0);
+    .filter(({ r }) => (r.foreignDetail?.unusedForeignTaxCreditLimit ?? 0) > 0);
 
-  const isMixedForeignMethod = foreignItems.length > 0 && foreignExpenseItems.length > 0;
+  const hasUnusedForeignLimit = foreignItems.length > 0 && foreignUnusedItems.length > 0;
 
   return (
     <div className="space-y-4">
@@ -183,14 +184,14 @@ export function StockAggregateSummaryCard({
               </li>
             ))}
           </ul>
-          {isMixedForeignMethod && (
+          {hasUnusedForeignLimit && (
             <div className="space-y-1 border-t pt-2">
-              {foreignExpenseItems.map(({ r, i }) => (
+              {foreignUnusedItems.map(({ r, i }) => (
                 <p key={i} className="text-caption text-muted-foreground">
-                  <strong>{names[i] || `종목 ${i + 1}`}</strong>은 필요경비 산입(§118의6①2호)을
-                  선택해 세액공제 대상이 아닙니다. 다만 그 종목의 양도소득금액도 산식의 분모에
-                  들어가므로, 배분된 한도{" "}
-                  {won(r.foreignDetail!.unusedForeignTaxCreditLimit ?? 0)}은 공제에 쓰이지 않습니다.
+                  <strong>{names[i] || `종목 ${i + 1}`}</strong>은 외국납부세액이 없어 세액공제
+                  대상이 아닙니다. 다만 그 종목의 양도소득금액도 산식의 분모에 들어가므로, 배분된
+                  한도 {won(r.foreignDetail!.unusedForeignTaxCreditLimit ?? 0)}은 공제에 쓰이지
+                  않습니다.
                 </p>
               ))}
             </div>
