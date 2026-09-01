@@ -329,3 +329,59 @@ describe("FA-5 🟡 혼합 method — 미확정 논점의 현행 동작 고정",
     expect(bothCredit.items[0].foreignDetail?.foreignTaxCreditLimit).toBe(9_750_000);
   });
 });
+
+// ============================================================
+// FA-6 — 혼합 method에서 **버려지는 한도**를 echo로 노출한다
+//
+// 계획서 §4.2 결정: 세액은 바꾸지 않고 **사실만 알린다**(2026-09-01 사용자 확정).
+// 화면이 「배분됐지만 아무도 못 쓴다」를 말하려면 그 값이 있어야 하는데, UI에서 재계산하면
+// 잔액 흡수 규칙까지 복제해야 해 이중 진실이 된다 ⇒ 엔진이 echo 필드로 돌려준다.
+// 산식은 건드리지 않는다 — FA-5-4가 그 불변을 지킨다.
+// ============================================================
+
+describe("FA-6 unusedForeignTaxCreditLimit — 표시 전용 echo", () => {
+  it("FA-6-1 expense 종목에 배분된 한도가 노출된다 (A항 17,100,000 − credit 몫 9,715,910)", () => {
+    const r = calculateStockTransferTaxAggregate(
+      [
+        withForeignTax(50_000_000, 12_000_000, {
+          stockName: "A",
+          transferDate: new Date("2025-03-01"),
+          foreignTaxMethod: "expense",
+        }),
+        withForeignTax(50_000_000, 6_000_000, { stockName: "B", transferDate: new Date("2025-09-01") }),
+      ] as never,
+      "aggregate",
+    );
+    expect(r.items[0].foreignDetail?.unusedForeignTaxCreditLimit).toBe(7_384_090);
+    // 합이 A항 — 즉 배분 자체는 온전하고, 쓰이지 않을 뿐이다
+    expect(7_384_090 + (r.items[1].foreignDetail?.foreignTaxCreditLimit ?? 0)).toBe(17_100_000);
+  });
+
+  it("FA-6-2 🔑 credit 종목에는 붙지 않는다 — 「미사용」이 아니기 때문", () => {
+    const r = calculateStockTransferTaxAggregate(
+      [
+        withForeignTax(50_000_000, 12_000_000, { stockName: "A", transferDate: new Date("2025-03-01") }),
+        withForeignTax(50_000_000, 6_000_000, { stockName: "B", transferDate: new Date("2025-09-01") }),
+      ] as never,
+      "aggregate",
+    );
+    expect(r.items[0].foreignDetail?.unusedForeignTaxCreditLimit).toBeUndefined();
+    expect(r.items[1].foreignDetail?.unusedForeignTaxCreditLimit).toBeUndefined();
+  });
+
+  it("FA-6-3 echo는 세액에 영향이 없다 — FA-5와 같은 결정세액", () => {
+    const mixed = calculateStockTransferTaxAggregate(
+      [
+        withForeignTax(50_000_000, 12_000_000, {
+          stockName: "A",
+          transferDate: new Date("2025-03-01"),
+          foreignTaxMethod: "expense",
+        }),
+        withForeignTax(50_000_000, 6_000_000, { stockName: "B", transferDate: new Date("2025-09-01") }),
+      ] as never,
+      "aggregate",
+    );
+    expect(mixed.totalCalculatedTax).toBe(17_100_000);
+    expect(mixed.totalFinalTax).toBe(11_100_000);
+  });
+});

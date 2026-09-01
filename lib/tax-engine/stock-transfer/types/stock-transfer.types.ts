@@ -1114,6 +1114,17 @@ export type StockTransferResult = {
     foreignTaxCreditApplied?: number;
     /** 필요경비 산입 선택 시 산입액 */
     foreignTaxExpenseApplied?: number;
+    /**
+     * §118의6①1호 안분에서 이 종목에 **배분됐으나 공제에 쓰이지 않은** 한도 (echo — 산식 무영향).
+     *
+     * 2호(필요경비 산입)를 고른 종목과 외국세를 내지 않은 종목은 공제 대상이 아니지만,
+     * 그 자산도 「해당 과세기간의 국외자산」이라 **C(분모)에는 들어간다**. 그 결과 A의 일부가
+     * 그 종목에 배분되고 **아무도 쓰지 못한다**. 화면이 그 사실을 말하려면 값이 필요하다 —
+     * UI에서 재계산하면 잔액 흡수 규칙까지 복제해야 해 이중 진실이 된다.
+     *
+     * 🟡 이 값이 0보다 크다는 것 자체가 계획서 §4.2의 **미확정 논점**(택일 단위)이 드러난 것이다.
+     */
+    unusedForeignTaxCreditLimit?: number;
     transferReceiptDetail?: import("./foreign-stock.types").InstallmentReceiptDetail;
     /** §118의2 5년 요건 미충족 사유 */
     ineligibleReason?: string;

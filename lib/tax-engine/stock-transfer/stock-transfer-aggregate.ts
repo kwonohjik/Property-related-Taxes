@@ -717,6 +717,8 @@ function aggregateCore(
           ...item.foreignDetail!,
           foreignTaxCreditLimit: usesCredit ? limit : undefined,
           foreignTaxCreditApplied: usesCredit ? applied : undefined,
+          // echo — 공제 대상이 아닌 종목에 배분된 한도. 산식에는 쓰이지 않는다(표시 전용).
+          unusedForeignTaxCreditLimit: !usesCredit && limit > 0 ? limit : undefined,
         },
       };
     });
