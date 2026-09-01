@@ -17,6 +17,7 @@
  *   상장연도 39,082 / 취득연도 28,451 / 환산비율 0.728 → 1주당 5,824 → 총 29,120,000
  */
 
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -134,72 +135,70 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           </div>
         </div>
 
-        {/* ★ 양도시 기준시가 분모 — 양도일 이전 1개월 종가 평균 §99①3 (강조) */}
-        {/* §99①3 분모 입력 — direct(단일 숫자) vs daily(일자별 평균) 모드 선택 */}
-        <FieldCard
-          label="입력 방식"
-          hint="양도일 이전 1개월 종가 평균 (1주당, §99①3 분모) — direct(단일 숫자) vs daily(일자별 자동 평균)"
-        >
-          <RadioCardGroup
-            name="transferStdInputMode"
-            value={form.transferStdInputMode || "direct"}
-            onChange={(v) => onChange({ transferStdInputMode: v as "direct" | "daily" })}
-            tone="amber"
-            layout="stack"
-            options={[
-              {
-                value: "direct",
-                label: "직접 입력 (1개월 평균 단일 숫자)",
-                description: "외부에서 평균 산정 후 입력 (현행 방식 · 회귀 호환)",
-              },
-              {
-                value: "daily",
-                label: "일자별 입력 (자동 평균 산정)",
-                description: "양도일 이전 1개월 거래일 종가 입력 → 자동 평균",
-              },
-            ]}
-          />
-        </FieldCard>
-
-        {/* direct 모드 — 기존 단일 숫자 입력 */}
-        {(form.transferStdInputMode || "direct") === "direct" && (
-          <FieldCard
-            label="1개월 종가 평균"
-            required
-            hint="양도일 이전 1개월 종가 평균 (1주당, §99①3 · 시행령 §165③ 준용) — 환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
-          >
-            <CurrencyInput
-              label=""
-              hideUnit
-              value={form.transferDatePriceAvg1Month}
-              onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-              placeholder="양도일 이전 1개월 종가평균 (1주당)"
+        {/* ★ 양도 당시 기준시가 — 「입력 방식」과 「1개월 종가 평균」을 한 섹션으로 묶는다.
+            제보(2026-09-02): 두 필드가 각각 떨어져 있어 **무엇을 넣는 칸인지 라벨만으로는
+            알 수 없었다** — 아래 hint를 읽어야 비로소 「양도 당시 기준시가구나」 하고 알았다.
+            섹션 제목이 그 답을 먼저 말하게 한다.
+            근거: 「소득세법」 제99조 제1항 제3호 → 같은 법 시행령 제165조 제3항
+                  (상장주식의 기준시가 = 양도일 이전 1개월간 최종시세가액의 평균액).
+                  이 값이 「소득세법 시행령」 제176조의2 제2항 제1호 환산취득가액의 **분모**다. */}
+        <ToneCard tone="amber" title="양도 당시 기준시가" bodyClassName="space-y-3">
+          {/* hint를 두지 않는다 — 섹션 제목이 이미 같은 말을 하고, 종전 hint의
+              「direct vs daily」는 내부 용어였다. 선택지 라벨만으로 판단이 선다. */}
+          <FieldCard label="입력 방식">
+            <RadioCardGroup
+              name="transferStdInputMode"
+              value={form.transferStdInputMode || "direct"}
+              onChange={(v) => onChange({ transferStdInputMode: v as "direct" | "daily" })}
+              tone="amber"
+              layout="inline"
+              options={[
+                { value: "direct", label: "직접 입력 (1개월 평균 단일 숫자)" },
+                { value: "daily", label: "일자별 입력 (자동 평균 산정)" },
+              ]}
             />
           </FieldCard>
-        )}
 
-        {/* daily 모드 — 일자별 종가표 + 자동 평균 mirror */}
-        {form.transferStdInputMode === "daily" && (
-          <>
-            {/* 키움 자동조회 버튼 — 종목코드 + 양도일 + 상장 종목 충족 시 활성화 */}
-            <KiwoomAutoFetchButton
-              securityCode={form.securityCode}
-              transferDate={form.transferDate}
-              marketType={form.marketType}
-              tradingHalt={form.kiwoomTradingHalt}
-              onFill={onChange}
-            />
-            {/*
-              요약줄은 표(`TransferDate1MonthClosingPriceTable`) 안의 것 **하나만** 둔다.
+          {/* direct 모드 — 기존 단일 숫자 입력 */}
+          {(form.transferStdInputMode || "direct") === "direct" && (
+            <FieldCard
+              label="1개월 종가 평균"
+              required
+              hint="양도일 이전 1개월 종가 평균 (1주당, 「소득세법」 제99조 제1항 제3호 · 같은 법 시행령 제165조 제3항) — 환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                value={form.transferDatePriceAvg1Month}
+                onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
+                placeholder="양도일 이전 1개월 종가평균 (1주당)"
+              />
+            </FieldCard>
+          )}
 
-              종전에는 여기에 같은 값을 한 줄 더 그렸는데, 그 줄은 **저장 필드**를 읽고
-              표의 줄은 **매 렌더 재계산**한 값을 읽어서 둘이 갈렸다(제보 2026-09-01 —
-              16,560 vs 16,559). 값이 갈리는 원인 자체는 Step1의 양도일 리셋으로 막았고,
-              표시는 실시간 재계산 쪽 한 곳으로 모은다 — stale이 구조적으로 불가능한 쪽이다.
-            */}
-            <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} />
-          </>
-        )}
+          {/* daily 모드 — 일자별 종가표 + 자동 평균 mirror */}
+          {form.transferStdInputMode === "daily" && (
+            <>
+              {/* 키움 자동조회 버튼 — 종목코드 + 양도일 + 상장 종목 충족 시 활성화 */}
+              <KiwoomAutoFetchButton
+                securityCode={form.securityCode}
+                transferDate={form.transferDate}
+                marketType={form.marketType}
+                tradingHalt={form.kiwoomTradingHalt}
+                onFill={onChange}
+              />
+              {/*
+                요약줄은 표(`TransferDate1MonthClosingPriceTable`) 안의 것 **하나만** 둔다.
+
+                종전에는 여기에 같은 값을 한 줄 더 그렸는데, 그 줄은 **저장 필드**를 읽고
+                표의 줄은 **매 렌더 재계산**한 값을 읽어서 둘이 갈렸다(제보 2026-09-01 —
+                16,560 vs 16,559). 값이 갈리는 원인 자체는 Step1의 양도일 리셋으로 막았고,
+                표시는 실시간 재계산 쪽 한 곳으로 모은다 — stale이 구조적으로 불가능한 쪽이다.
+              */}
+              <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} />
+            </>
+          )}
+        </ToneCard>
 
         {/* 상장일 (기존 — 종가 표 자동 채움 trigger) */}
         <FieldCard label="상장일" required hint="최초 상장 기준일. 입력 시 종가 표 32셀 일자가 자동 채워집니다.">
