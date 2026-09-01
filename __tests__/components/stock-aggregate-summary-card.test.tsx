@@ -177,3 +177,73 @@ describe("AS-3 국외 종목 공제한도 — 0의 사유와 이월 부존재", 
     expect(screen.queryByText(/외국납부세액 공제한도/)).toBeNull();
   });
 });
+
+// ============================================================
+// AS-4 — 🟡 혼합 method 안내 (계획서 §4.2 · 2026-09-01 결정: 세액 불변·사실만 알림)
+//
+// §118의6①2호(필요경비 산입)를 고른 종목도 「해당 과세기간의 국외자산」이라 C(분모)에
+// 들어가고, 그래서 배분된 한도가 **아무에게도 쓰이지 않는다**. 금액이 어디에도 안 보이면
+// 사용자는 그 손해를 모른 채 신고한다.
+//
+// ⚠️ 손해는 **1호 종목과 섞였을 때만** 성립한다 — 전부 2호면 애초에 쓸 사람이 없다.
+// ============================================================
+
+function foreignExpenseRes(
+  transferIncome: number,
+  expenseApplied: number,
+  unusedLimit: number,
+): StockTransferResult {
+  return itemRes({
+    transferIncome,
+    foreignDetail: {
+      stockName: "FX",
+      countryCode: "US",
+      shareCount: 10,
+      transferExchangeRate: 1_300,
+      acquisitionExchangeRate: 1_200,
+      foreignTaxExpenseApplied: expenseApplied,
+      unusedForeignTaxCreditLimit: unusedLimit,
+      appliedRules: [],
+    },
+  } as unknown as Partial<StockTransferResult>);
+}
+
+describe("AS-4 혼합 method — 쓰이지 않는 한도를 알린다", () => {
+  const mixed = () =>
+    agg({
+      items: [
+        foreignExpenseRes(38_000_000, 12_000_000, 7_384_090),
+        foreignRes(50_000_000, 9_715_910, 6_000_000, 6_000_000),
+      ],
+    } as Partial<StockTransferAggregateResult>);
+
+  it("AS-4-1: 배분됐지만 공제에 쓰이지 않는 한도 금액이 보인다", () => {
+    render(<StockAggregateSummaryCard aggregate={mixed()} names={["가", "나"]} />);
+    expect(screen.getByText(/7,384,090원은 공제에 쓰이지 않습니다/)).toBeTruthy();
+  });
+
+  it("AS-4-2: 사유(필요경비 산입 선택 · 분모에 포함)를 함께 말한다", () => {
+    render(<StockAggregateSummaryCard aggregate={mixed()} names={["가", "나"]} />);
+    expect(screen.getByText(/필요경비 산입\(§118의6①2호\)/)).toBeTruthy();
+    expect(screen.getByText(/산식의 분모에/)).toBeTruthy();
+  });
+
+  it("AS-4-3: 🔑 양성 대조군 — 전부 credit이면 안내가 없다", () => {
+    const allCredit = agg({
+      items: [
+        foreignRes(50_000_000, 9_750_000, 9_750_000, 12_000_000),
+        foreignRes(50_000_000, 9_750_000, 6_000_000, 6_000_000),
+      ],
+    } as Partial<StockTransferAggregateResult>);
+    render(<StockAggregateSummaryCard aggregate={allCredit} names={["가", "나"]} />);
+    expect(screen.queryByText(/공제에 쓰이지 않습니다/)).toBeNull();
+  });
+
+  it("AS-4-4: 🔑 전부 expense면 안내하지 않는다 — 쓸 사람이 없어 손해가 아니다", () => {
+    const allExpense = agg({
+      items: [foreignExpenseRes(38_000_000, 12_000_000, 8_550_000), foreignExpenseRes(44_000_000, 6_000_000, 8_550_000)],
+    } as Partial<StockTransferAggregateResult>);
+    render(<StockAggregateSummaryCard aggregate={allExpense} names={["가", "나"]} />);
+    expect(screen.queryByText(/공제에 쓰이지 않습니다/)).toBeNull();
+  });
+});
