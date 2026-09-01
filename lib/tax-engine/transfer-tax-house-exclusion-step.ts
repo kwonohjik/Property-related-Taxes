@@ -17,12 +17,30 @@ import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
  * STEP 0.9 + 0.95 실행 — 비과세 판정용 유효 주택수(exemptionJudgeInput) 산정 + step push.
  * @param steps 계산 step 배열 (in-place push)
  */
-export function runHouseCountExclusionStep(effectiveInput: TransferTaxInput, steps: CalculationStep[]) {
-  // STEP 0.9: §99의4·§98의9 주택수 제외 (소법 §89①3호 의제) — §99의4 우선 1건(F-4) 적용,
-  // 비과세·12억 안분·LTHD 표2에 유효 주택수(count−1) 반영. 중과는 §167의3 별개 — 원본(R-D).
+export function runHouseCountExclusionStep(
+  effectiveInput: TransferTaxInput,
+  steps: CalculationStep[],
+  /**
+   * §99의4①·§98의9①의 「취득 전에 보유하던 다른 주택」 판정용 일반주택 취득일 (D4-05).
+   *
+   * `effectiveInput.acquisitionDate`를 쓰면 **이월과세 시나리오 A** 재귀 계산에서
+   * 증여자 취득일(`carryover.ts` `donorAcquisitionDate`)로 판정된다. 두 조문의 「보유」
+   * 주체는 **1세대**이고, 소득세법 §97의2①은 취득가액만 의제할 뿐 취득시기를 의제하지
+   * 않는다(보유기간 승계는 §95④·§104②의 별도 명문이며 이 요건에는 미적용).
+   * STEP 0.45(중과 배제 선판정)가 이미 같은 이유로 원본 `input`을 쓴다.
+   *
+   * 미제공 시 `effectiveInput.acquisitionDate`로 폴백한다(비-이월과세 경로는 동일값).
+   */
+  generalHouseAcquisitionDate?: Date,
+) {
+  // STEP 0.9: §99의4·§98의9 주택수 제외 (소법 §89①3호 의제) — 각 1채씩(D4-01),
+  // 비과세·12억 안분·LTHD 표2에 유효 주택수 반영. 중과는 §167의3 별개 — 원본(R-D).
   const { appliedList: hceApplied, new994Detail, unsold989Detail } = resolveHouseCountExclusion(
     effectiveInput.reductions,
-    { generalHouseAcquisitionDate: effectiveInput.acquisitionDate, transferDate: effectiveInput.transferDate },
+    {
+      generalHouseAcquisitionDate: generalHouseAcquisitionDate ?? effectiveInput.acquisitionDate,
+      transferDate: effectiveInput.transferDate,
+    },
   );
   // STEP 0.95 (P5 모드 2): 보유 감면주택 N-way 주택수 제외 — 7개 조문 ② + §98 령②·⑥ + §99②.
   // 비과세(§89①3호) 판정 주택수만 차감 — 중과 주택수는 원본 유지 (R-D).

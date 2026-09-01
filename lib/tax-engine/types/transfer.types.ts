@@ -495,6 +495,16 @@ export interface TransferTaxInput {
   donorAcquisitionDate?: Date;
   /** §154① 거주요건 경과규정(2017.8.3) 판정용 실제 취득일 — 이월과세 시 수증자 취득일(보유기산일과 별개). 미지정 시 acquisitionDate */
   residenceTransitionAcquisitionDate?: Date;
+  /**
+   * §99의4①·§98의9①의 「그 주택 취득 **전에 보유하던** 다른 주택」 판정용 일반주택 취득일 (D4-05).
+   *
+   * 두 조문의 보유 주체는 **1세대**다. 이월과세(§97의2①)는 취득가액만 의제하고 취득시기를
+   * 의제하지 않으므로(보유기간 승계는 §95④·§104②의 별도 명문), 시나리오 A 재귀 계산의
+   * `acquisitionDate`(=증여자 취득일)로 이 요건을 판정하면 안 된다.
+   * `residenceTransitionAcquisitionDate`(§154① 경과규정)와 같은 층위의 분리 축이다.
+   * 미지정 시 `acquisitionDate`로 폴백한다(비-이월과세 경로는 동일값).
+   */
+  houseCountExclusionAcquisitionDate?: Date;
   /** 조세특례 감면 목록 */
   reductions: TransferReduction[];
   /**
