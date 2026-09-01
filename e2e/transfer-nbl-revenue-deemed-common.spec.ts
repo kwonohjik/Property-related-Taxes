@@ -72,6 +72,14 @@ test.describe("§168의11③1·2호 간주임대료·공통수입 안분 — 풀
     await page.getByRole("combobox").nth(1).click();
     await page.getByRole("option", { name: "일반주거지역" }).click();
 
+    // 재산세 과세 분류 (기타토지 필수 — PR-1/A1-01. 미선택 시 매퍼가 「종합합산」으로 접어
+    // 조용히 비사업용 중과가 붙던 것을 ⑧에서 차단하도록 바꿨다)
+    const propertyTaxSection = page
+      .locator("div.rounded-lg")
+      .filter({ hasText: "재산세 과세 분류" });
+    await propertyTaxSection.getByRole("combobox").first().click();
+    await page.getByRole("option", { name: "종합합산" }).click();
+
     // §168의11② 업종 → 주차장운영업(3%)
     const revenueSection = page
       .locator("div.rounded-lg")

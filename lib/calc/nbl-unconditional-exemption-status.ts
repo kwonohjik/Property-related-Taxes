@@ -128,6 +128,38 @@ const TOGGLE_DEFS: readonly ToggleDef[] = [
 /** Invalid Date — 미입력 날짜의 비교는 항상 false가 되어 조기 확정을 막는다 */
 const INVALID_DATE = new Date(NaN);
 
+/**
+ * 무조건 의제 판정의 **입력 레코드 단일 소스** (E5-02·A3-02, 2026-09-02 코드리뷰).
+ *
+ * `buildUnconditionalExemption`은 평면 `Record`를 읽는데 `AssetForm`의 이월과세 증여자 취득일은
+ * `carryover.donorAcquisitionDate`로 **중첩**되어 있다(평면 `donorAcquisitionDate`는 일반증여 축의
+ * 별개 필드다). 종전에는 ④ raw 빌더만 그 중첩을 평면으로 풀어 넘기고 이 어댑터는 `asset`을 그대로
+ * 넘겨, 같은 자산에서 **클라이언트와 서버의 의제 판정이 갈렸다**.
+ *
+ * ④ `buildNonBusinessLandRaw`도 이 함수를 쓴다 — 매핑 규칙을 한 곳에만 둔다.
+ */
+export function buildUncondSourceRecord(asset: AssetForm): Record<string, unknown> {
+  return {
+    ...(asset as unknown as Record<string, unknown>),
+    // §168의14③3호나목 취득일 소급 — 상속=피상속인 취득일(평면) / 이월과세=증여자 취득일(중첩)
+    donorAcquisitionDate: asset.carryover?.donorAcquisitionDate ?? "",
+  };
+}
+
+/**
+ * 서버 매퍼(`buildUnconditionalExemption`)의 `has` 게이트와 **동일 조건**.
+ *
+ * 종전 `anyToggleOn`은 `nblExempt*` 8토글만 봤는데, 서버는 「양도원인 = 공익수용」 단독으로도
+ * §168의14③3호 판정을 트리거한다. 그래서 섹션 토글 없이 양도원인만 수용인 자산에서
+ * 클라이언트는 의제 미성립, 서버는 성립으로 갈렸다 (A1-03·A2-03·A3-03).
+ */
+function hasAnyExemptionTrigger(asset: AssetForm): boolean {
+  return (
+    TOGGLE_DEFS.some((d) => asset[d.flagField] === true) ||
+    asset.transferCause === "public_expropriation"
+  );
+}
+
 function buildMinimalInput(
   uncond: UnconditionalExemptionInput,
   transferDate: Date,
@@ -169,8 +201,8 @@ export function evaluateUnconditionalExemption(
   asset: AssetForm,
   transferDate: string,
 ): NblExemptionEval {
-  const record = asset as unknown as Record<string, unknown>;
-  const anyToggleOn = TOGGLE_DEFS.some((d) => asset[d.flagField] === true);
+  const record = buildUncondSourceRecord(asset);
+  const anyToggleOn = hasAnyExemptionTrigger(asset);
 
   if (!anyToggleOn) {
     return { anyToggleOn: false, isExempt: false, perToggle: {} };

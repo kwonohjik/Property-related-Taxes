@@ -88,9 +88,23 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
         transferCause: "public_expropriation",
         // §164⑨ N3 배타 — 수용(1호) 전환 시 공매·경락(2호) 정리
         isAuctionTransfer: false,
-        // #1 NBL 프리필 — 토지만 (NBL = 비사업용 '토지'; 자동 판정 활성 + 수용 의제, Step4서 override 가능)
+        /**
+         * #1 NBL 프리필 — 토지만 (NBL = 비사업용 '토지'; 자동 판정 활성 + 수용 의제, Step4서 override 가능)
+         *
+         * 🔴 `isNonBusinessLand`도 **함께** 켠다 (A2-01·U3-01·V10-e, 2026-09-02 코드리뷰).
+         *    NBL 입력 섹션의 렌더 게이트(`AssetSectionExtras`)는 `isNonBusinessLand && nblUseDetailedJudgment`
+         *    **둘 다**를 요구하는데 프리필은 뒤쪽만 켰다. 반면 ④ raw 빌더와 ⑧ validate는
+         *    `nblUseDetailedJudgment` 하나만 보고 지목·용도지역을 요구한다 —
+         *    그래서 「지목을 선택하세요」로 계산이 막히는데 **입력 칸이 화면에 없는** 상태가 됐다.
+         *    자산1은 Step4 토글로 탈출할 수 있으나 컴패니언에는 그 토글이 없어 자산을 지우는 것 외에
+         *    복구 수단이 없었다. 세 게이트가 같은 조건을 보게 맞춘다(3중 패턴).
+         */
         ...(asset.assetKind === "land"
-          ? { nblUseDetailedJudgment: true, nblExemptPublicExpropriation: true }
+          ? {
+              isNonBusinessLand: true,
+              nblUseDetailedJudgment: true,
+              nblExemptPublicExpropriation: true,
+            }
           : {}),
         // #2 §77 프리필 — 전 자산(토지등). 기본 shape 재사용(dual-truth 회피), 없을 때만 추가
         ...(has
@@ -101,7 +115,11 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
       onChange({
         transferType: "burdened_gift",
         transferCause: "general",
-        // 공익수용 → 부담부증여 전환 시 수용 프리필 정리
+        // 공익수용 → 부담부증여 전환 시 수용 프리필 정리 (프리필로 켠 3개를 대칭으로 되돌린다 —
+        // 남겨 두면 ⑧이 계속 지목을 요구하는데 사용자는 왜 막히는지 알 수 없다)
+        ...(asset.assetKind === "land"
+          ? { isNonBusinessLand: false, nblUseDetailedJudgment: false }
+          : {}),
         nblExemptPublicExpropriation: false,
         reductions: (asset.reductions ?? []).filter((r) => r.type !== "public_expropriation"),
         // 일반 양도 → 부담부증여 변경 시 bgValuationMode 기본 설정 (bg* 필드는 보존)
@@ -112,6 +130,10 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
       onChange({
         transferType: "regular",
         transferCause: "general",
+        // 수용 프리필로 켠 NBL 3개를 대칭으로 되돌린다 (위 부담부증여 분기와 동일 규칙)
+        ...(asset.assetKind === "land"
+          ? { isNonBusinessLand: false, nblUseDetailedJudgment: false }
+          : {}),
         nblExemptPublicExpropriation: false,
         reductions: (asset.reductions ?? []).filter((r) => r.type !== "public_expropriation"),
       });

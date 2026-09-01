@@ -215,6 +215,21 @@ export function validateAssetAcquisition(
     return null;
   }
 
+  /**
+   * ⑧ 비사업용 토지 정밀판정 토글 ON — 필수 입력 차단 (UI 통과↔판정 누락 침묵 모순 방지).
+   *
+   * 🔴 **취득원인 분기보다 앞이어야 한다** (A3-01·V9-a·V9-c, 2026-09-02 코드리뷰).
+   *    종전에는 `:352`(일반 취득 검증 직전)에 있었는데, 그 위치는 `carryover_gift`(아래)와
+   *    `newConstruction`(:317)의 `return null`보다 **뒤**라 두 취득원인에서는 통째로
+   *    도달하지 않았다. 그러면 지목·용도지역 미입력이 조용히 통과하고, ④
+   *    `buildNonBusinessLandRaw`가 raw를 버려 정밀판정이 사라진 채 사용자 플래그로
+   *    §104①8호 +10%p만 붙는다(「조용한 모드 강등」 — 실측 과표 6.555억에서 +65,550,000원).
+   *    NBL 판정은 취득원인·취득모드와 **직교**하므로 여기서 한 번만 검사한다.
+   *    (본체는 800줄 정책으로 transfer-tax-validate-nbl.ts에 분리)
+   */
+  const nblErr = validateNblDetailedJudgment(asset, label, formTransferDate);
+  if (nblErr) return nblErr;
+
   // ── 이월과세(증여) 전용 검증 — carryover_gift 시 일반 취득 검증 스킵 ──
   if (asset.acquisitionCause === "carryover_gift") {
     const c = asset.carryover;
@@ -346,11 +361,6 @@ export function validateAssetAcquisition(
   }
 
   if (!asset.acquisitionDate) return `${label}: 취득일을 입력하세요.`;
-
-  // ⑧ 비사업용 토지 정밀판정 토글 ON — 필수 입력 차단 (UI 통과↔판정 누락 침묵 모순 방지).
-  // 취득 모드(환산·감정·실거래)와 직교하므로 모드 분기 이전에 검사. (본체는 800줄 정책으로 분리)
-  const nblErr = validateNblDetailedJudgment(asset, label, formTransferDate);
-  if (nblErr) return nblErr;
 
   const isSalesCase = asset.isSalesCaseAcquisition === true;
   const isAppraisal = !isSalesCase && asset.isAppraisalAcquisition === true;

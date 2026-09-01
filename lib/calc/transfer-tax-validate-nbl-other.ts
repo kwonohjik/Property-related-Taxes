@@ -14,6 +14,19 @@ import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplie
 export function validateNblOtherLand(asset: AssetForm, label: string): string | null {
   if (asset.nblLandType !== "other_land") return null;
 
+  /**
+   * §168의11 재산세 과세 분류 — 미선택 차단 (A1-01, 2026-09-02 코드리뷰).
+   *
+   * 서버 매퍼(`form-mapper-helpers.ts`의 `buildOtherLand`)는 미선택을 `|| "comprehensive"`로
+   * 접는다. 그 폴백 자체는 필요하지만(제거하면 `""`가 `!== "comprehensive"`로 흘러 반대 방향
+   * 오류가 난다), ⑧에 검증이 없어 **「미선택」이 「종합합산 선언」과 동일하게 취급**됐다.
+   * 종합합산은 §104의3①4호 비사업용 판정을 그대로 트리거하므로 조용히 +10%p가 붙는다
+   * (실측 총부담세액 282,711,000 → 359,436,000, 76,725,000원 과다).
+   * 자동 fallback 금지 원칙에 따라 계산 전에 명시 선택을 요구한다.
+   */
+  if (!asset.nblOtherPropertyTaxType)
+    return `${label}: 기타토지 — 재산세 과세 분류(종합합산·별도합산·분리과세·비과세)를 선택하세요. 미선택 시 종합합산으로 간주되어 비사업용 중과가 적용됩니다.`;
+
   // §168의11① 호별 면적기준 — 면적인자 요구 호 선택 시 해당 면적인자 필수 (자동 안분 fallback 금지)
   const bt = asset.nblOtherRelatedBusinessType;
   const needsStandardArea = bt === "parking_attached";
