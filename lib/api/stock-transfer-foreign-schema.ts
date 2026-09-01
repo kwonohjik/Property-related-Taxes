@@ -105,7 +105,7 @@ export const foreignStockInputSchema = z.object({
   // ── 기타 ──
   isElectronicFiling: z.boolean(),
 
-  // ── 신고축(가산세) — 국외자산 양도도 같은 신고다(소득세법 §118조의8 준용) ──
+  // ── 신고축(가산세) — 국외주식도 같은 양도소득세 신고다(§110① **직접** 적용 · §118의8 아님) ──
   // 전부 optional: 미선언 = 정상신고(가산세 0).
   filingViolation: z.enum(["none", "under_report", "non_report"]).optional(),
   isFraudulent: z.boolean().optional(),

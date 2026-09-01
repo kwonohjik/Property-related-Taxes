@@ -159,7 +159,7 @@ const FOREIGN_STOCK_DATE_FIELDS = [
 ] as const;
 
 /**
- * handleForeignStock — PR-4A §118의2~§118의8 해외주식 핸들러
+ * handleForeignStock — 해외주식 핸들러 (§94①3호다목 · §118②이 준용하는 §118의2~§118의4·§118의6)
  *
  * ⑭ Route handler 엔진 input 매핑 + coerceDates
  * 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback):
@@ -239,7 +239,7 @@ function buildForeignEngineInput(rawInput: Record<string, unknown>): ForeignStoc
     capitalExpenditureForeign: coerced.capitalExpenditureForeign as number,
     transferCostForeign: coerced.transferCostForeign as number,
 
-    // 신고축(가산세) — 국외자산 양도도 같은 양도소득세 신고다(소득세법 §118조의8)
+    // 신고축(가산세) — 국외주식도 같은 양도소득세 신고다(§110① **직접** 적용 · §118의8 아님)
     filingViolation: coerced.filingViolation as ForeignStockInput["filingViolation"],
     isFraudulent: coerced.isFraudulent as boolean | undefined,
     isInternationalTransaction: coerced.isInternationalTransaction as boolean | undefined,

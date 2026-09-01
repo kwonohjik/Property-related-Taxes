@@ -73,7 +73,7 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
     // ── 기타 ──
     isElectronicFiling: form.isElectronicFiling,     // default: false
 
-    // ── 신고축(가산세) — 국외자산 양도도 같은 신고다(소득세법 §118조의8 준용) ──
+    // ── 신고축(가산세) — 국외주식도 같은 양도소득세 신고다(§110① **직접** 적용 · §118의8 아님) ──
     filingViolation: form.filingViolation || "none",   // 3중 패턴 default
     isFraudulent: form.isFraudulent,
     isInternationalTransaction: form.isInternationalTransaction,
