@@ -39,8 +39,14 @@ function renderCard(patch: Partial<StockTransferFormData> = {}) {
 }
 
 function modeGroup() {
-  const el = document.querySelector('[data-slot="radio-card-group"][data-layout="inline"]');
+  // ⚠️ `[data-layout="inline"]`만으로 잡지 말 것 — 같은 카드의 「양도 당시 기준시가 › 입력 방식」
+  //    라디오도 inline이라 **DOM 순서상 그쪽이 먼저 걸린다**(2026-09-02 실측).
+  //    이 그룹의 정체는 `name`이다.
+  const input = document.querySelector('input[name="unlistedDetailMode"]');
+  expect(input).toBeTruthy();
+  const el = input!.closest('[data-slot="radio-card-group"]');
   expect(el).toBeTruthy();
+  expect(el!.getAttribute("data-layout")).toBe("inline");
   return el as HTMLElement;
 }
 
