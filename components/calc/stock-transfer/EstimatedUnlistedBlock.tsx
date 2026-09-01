@@ -331,6 +331,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
             <CurrencyInput
               label="1주당 순손익가치"
               required
+              allowNegative
               hint="= 1주당 순손익액 ÷ 10% (할인율 적용 후 값)"
               value={form.transferYearNetIncomePerShare}
               onChange={(v) => onChange({ transferYearNetIncomePerShare: v })}
@@ -339,6 +340,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           <CurrencyInput
             label="1주당 순자산가치"
             required
+            allowNegative
             hint="직전 사업연도 말 기준 순자산 ÷ 발행주식수"
             value={form.transferYearNetAssetPerShare}
             onChange={(v) => onChange({ transferYearNetAssetPerShare: v })}
@@ -385,6 +387,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
             <CurrencyInput
               label="1주당 순손익가치 (취득시점)"
               required
+              allowNegative
               hint="취득일 직전 사업연도 기준 (원)"
               value={form.acquisitionYearNetIncomePerShare}
               onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
@@ -393,6 +396,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           <CurrencyInput
             label="1주당 순자산가치 (취득시점)"
             required
+            allowNegative
             hint="취득일 직전 사업연도 기준 (원)"
             value={form.acquisitionYearNetAssetPerShare}
             onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}

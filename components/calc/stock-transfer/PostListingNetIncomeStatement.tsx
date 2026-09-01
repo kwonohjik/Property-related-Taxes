@@ -32,6 +32,23 @@ const ADD_LABELS = [
   "4. 기부금 손금산입한도액 초과액 이월손금 산입액",
 ];
 
+/**
+ * 음수(결손)가 정상값인 가산 행 — 행 1 「각 사업연도 소득금액」뿐이다.
+ *
+ * 「법인세법」 §14 각 사업연도 소득은 **결손이면 음수**다. 나머지 가산 행(2~4)과 차감 행(5~16)은
+ * 각각 이름이 붙은 세무조정 항목이라 성질상 비음수이고, 결손금을 담을 자리가 없다
+ * ⇒ **행 1 signed는 대체 불가**다.
+ *
+ * 형제 경로가 같은 규칙을 이미 쓴다 — 상속·증여 비상장주식 v2
+ * `FiscalYearAdjustmentTable.tsx`의 `taxableIncome: signed: true`.
+ * [[feedback_sibling_path_already_implements_rule]]
+ *
+ * ⚠️ `allowNegative` 없이 두면 `CurrencyInput`이 선행 `-`를 **차단이 아니라 조용히 제거**해
+ *    결손이 같은 크기의 이익으로 뒤집힌다(CurrencyInput.tsx:97).
+ *    anchor: __tests__/components/calc/stock-transfer/unlisted-deficit-negative.anchor.test.tsx DN-1~5
+ */
+const ADD_SIGNED = [true, false, false, false] as const;
+
 // PDF 행 라벨 (차감 12행)
 const SUB_LABELS = [
   "5. 벌금·과료·과태료·가산금·체납처분비",
@@ -121,7 +138,7 @@ export function YearColumn({
       {addKeys.map((k, i) => (
         <FieldCard key={k} label={ADD_LABELS[i]}>
           <CurrencyInput
-            label="" hideUnit
+            label="" hideUnit allowNegative={ADD_SIGNED[i]}
             value={getField(form, k as keyof StockTransferFormData)}
             onChange={(v) => onChange({ [k]: v } as Partial<StockTransferFormData>)}
             placeholder="원"
