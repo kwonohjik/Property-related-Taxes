@@ -102,9 +102,19 @@ export function PostListingAmountInputSection({ title, axisLabel, form, onChange
       netAssetAmount: parseAmount(next.netAssetAmount ?? ""),
       goodwill: parseAmount(next.goodwill ?? ""),
     });
+    // 🔑 **파생값 0은 «산정 실패»가 아니라 정상 결과다.**
+    //    결손·자본잠식이면 「상속세 및 증여세법 시행령」 제56조 제1항·제55조 제1항 후단 준용으로
+    //    1주당 가치가 0이 된다(「소득세법」 제99조 제1항 제4호 전단 →
+    //    「상속세 및 증여세법」 제63조 제1항 제1호 나목 → 같은 법 시행령 제54조 → 제55조·제56조).
+    //    `> 0`으로 걸러 빈 문자열을 쓰면 validate의 「자동 산정 실패」가 발동해
+    //    **결손 법인이 계산 자체를 못 한다.** ⇒ 「원천값이 입력됐는가」로 가른다.
+    //    anchor: post-listing-amount-input.anchor.test.tsx AM-8
+    const shareCountNext = parseAmount(next.shareCount ?? "");
+    const niEntered = shareCountNext > 0 && (next.netIncomeAmount ?? "") !== "";
+    const naEntered = shareCountNext > 0 && (next.netAssetAmount ?? "") !== "";
     const patch: Partial<StockTransferFormData> = {
-      [keys.netIncomePerShare]: d.netIncomePerShare > 0 ? String(d.netIncomePerShare) : "",
-      [keys.netAssetPerShare]: d.netAssetPerShare > 0 ? String(d.netAssetPerShare) : "",
+      [keys.netIncomePerShare]: niEntered ? String(d.netIncomePerShare) : "",
+      [keys.netAssetPerShare]: naEntered ? String(d.netAssetPerShare) : "",
     } as Partial<StockTransferFormData>;
     for (const [k, v] of Object.entries(changed)) {
       (patch as Record<string, string>)[keys[k as RawKey] as string] = v ?? "";

@@ -92,15 +92,19 @@ describe("AD — 순액 입력에서 1주당 가치 파생", () => {
     expect(SIMPLE_DISCOUNT_RATE).toBe(0.10);
   });
 
-  it("AD-7 순손익액이 음수(결손)여도 산식은 그대로 흐른다 — 임의 0 치환 금지", () => {
+  it("AD-7 결손이면 1주당 순손익가치가 0이 된다 (상증령 §56① 후단 준용)", () => {
+    // 🔴 **판정 정정 (2026-09-01).** 종전 이름은 「임의 0 치환 금지」였고 음수 보존을 단언했다.
+    //    **0 치환은 「임의」가 아니었다** — 소법 §99①4 전단이 「상증법 §63①1나목을 준용하여
+    //    평가한 가액」이라 하고, 그 체인 끝의 상증령 §56① 후단이 「음수인 경우에는 영으로 한다」.
+    //    계획서: docs/00-pm/section-165-4-zero-floor-sangjeung-junyong.plan.md
     const d = derivePerShareFromAmounts({
       netIncomeAmount: -100_000_000,
       shareCount: 10_000,
       netAssetAmount: 48_000_000,
       goodwill: 0,
     });
-    expect(d.perShareIncomeBeforeRate).toBe(Math.floor(-100_000_000 / 10_000));
-    expect(d.netIncomePerShare).toBeLessThan(0);
+    expect(d.perShareIncomeBeforeRate).toBe(0); // §56① 후단
+    expect(d.netIncomePerShare).toBe(0);
     // 순자산은 영향 없다
     expect(d.netAssetPerShare).toBe(4_800);
   });

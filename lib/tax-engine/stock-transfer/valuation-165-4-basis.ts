@@ -65,6 +65,27 @@ export function getValuationWeights(transferDate: Date): ValuationWeights {
   return { niWeight: 3, naWeight: 2, hasFloor80: false };
 }
 
+/**
+ * 「상속세 및 증여세법 시행령」 제55조 제1항 후단(순자산가액 0원 이하 → 0원) **시행일**.
+ *
+ * ⚠️ **이 하한은 처음부터 있던 규정이 아니다** — 2009.2.4. 개정으로 신설됐다.
+ *    그 전 평가에는 하한이 없으므로 자본잠식 법인의 1주당 순자산가치가 **음수로 남는다.**
+ *
+ * 대비: 같은 법 시행령 **제56조 제1항 후단**(순손익액 음수 → 영)은 **처음부터 있던 규정**이라
+ *      연혁 게이팅 대상이 아니다. 두 하한을 한 덩어리로 취급하면 조용히 틀린다.
+ *
+ * 📌 **근거의 성격**: 사용자(도메인 전문가) 확인 + 현행 조문 말미의 개정 이력
+ *    `<개정 1998.12.31, 2000.12.29, 2003.12.30, 2009.2.4>`.
+ *    **과거 시행본 본문 대조는 실패했다**(법제처 연혁 API가 해당 조문 구본을 반환하지 않음)
+ *    — [[feedback_korean_law_historical_efyd_unavailable]]. 본문으로 재확인되면 이 주석을 갱신할 것.
+ */
+export const INH_DECREE_55_1_ZERO_FLOOR_EFFECTIVE = new Date("2009-02-04");
+
+/** 평가기준일에 「상속세 및 증여세법 시행령」 제55조 제1항 후단(0원 하한)이 시행 중이었는가 */
+export function hasNetAssetZeroFloor(evaluationDate: Date): boolean {
+  return evaluationDate.getTime() >= INH_DECREE_55_1_ZERO_FLOOR_EFFECTIVE.getTime();
+}
+
 export interface Section165_4Value {
   /** 「제4항에 따른 평가액」 — 단서(80% 하한)까지 적용한 최종값 (원 미만 절사) */
   value: number;
@@ -105,11 +126,26 @@ export function calcWeightedAvgPerShare(
 }
 
 export function calcSection165_4Value(
-  netIncomeValue: number,
-  netAssetValue: number,
+  netIncomeValueRaw: number,
+  netAssetValueRaw: number,
   isHeavyRE: boolean,
   transferDate: Date,
 ): Section165_4Value {
+  // 🔑 **0 하한 — 「상속세 및 증여세법 시행령」 제55조 제1항·제56조 제1항 후단 준용.**
+  //    「소득세법」 제99조 제1항 제4호 **전단**이 「…「상속세 및 증여세법」 제63조제1항제1호나목을
+  //    **준용**하여 평가한 가액」이라 하고, 「소득세법 시행령」 제165조 제4항은 그 **후단**이 위임한
+  //    「평가기준시기 및 평가액」을 정할 뿐 준용을 배제하지 않는다.
+  //    ⚠️ **여기가 없으면 반쪽이다** — 간이 direct 모드는 사용자가 1주당 가치를 직접 입력해
+  //       `calcNetIncomePerShare`·`calcNetAssetPerShare`를 **거치지 않는다**. 이 함수가 유일한
+  //       공통 깔때기다. anchor ZF-4
+  //
+  //    🔴 **두 하한은 연혁이 다르다** — 제56조 제1항 후단은 **처음부터** 있었고,
+  //       제55조 제1항 후단은 **2009.2.4. 신설**이다. 한 덩어리로 걸면 2009 이전 평가에
+  //       없던 하한을 소급 적용하게 된다. anchor ZF-9
+  const netIncomeValue = Math.max(0, netIncomeValueRaw);
+  const netAssetValue = hasNetAssetZeroFloor(transferDate)
+    ? Math.max(0, netAssetValueRaw)
+    : netAssetValueRaw;
   const weights = getValuationWeights(transferDate);
   const niWeight = isHeavyRE ? 2 : weights.niWeight;
   const naWeight = isHeavyRE ? 3 : weights.naWeight;

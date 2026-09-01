@@ -127,7 +127,7 @@ describe("AM — 순액 입력에서 1주당 가치가 자동 산정·mirror된�
 
   it("AM-7 결손 법인 — 순손익액 음수를 입력할 수 있고 산식이 그대로 흐른다", () => {
     // 커밋 전 품질 검토에서 잡은 것: allowNegative가 없으면 결손 법인이 이 모드를 못 쓴다.
-    // 엔진은 음수를 임의로 0으로 바꾸지 않는다(AD-7).
+    // 입력 위젯은 부호를 «보존»한다 — 0으로 보는 것은 평가액 단계다(상증령 §56① 후단, AD-7).
     const onPatch = vi.fn();
     render(<Harness initial={{ listingYearShareCount: "10000" }} onPatch={onPatch} />);
     fireEvent.change(byPh(NI), { target: { value: "-100000000" } });
@@ -137,8 +137,31 @@ describe("AM — 순액 입력에서 1주당 가치가 자동 산정·mirror된�
     expect(byPh(NI).value.startsWith("-")).toBe(true);
     const patch = onPatch.mock.calls.map((c) => c[0]).at(-1)!;
     expect(patch.listingYearNetIncomeAmount).toBe("-100000000");
-    // 파생값은 «양수일 때만» mirror한다 — 음수 순손익가치는 빈칸으로 둔다
+    // 파생 1주당 순손익가치는 «0»이다 (상증령 §56① 후단 준용) — AM-8이 그 의미를 지킨다
+    expect(patch.listingYearNetIncomePerShare).toBe("0");
+  });
+
+  it("AM-8 결손 파생값 0은 «산정 실패»가 아니다 — 빈칸으로 두면 validate가 차단한다", () => {
+    // 🔑 종전에는 `d.netIncomePerShare > 0`일 때만 파생값을 mirror했다. §56① 하한이 들어오면서
+    //    결손 법인의 파생값이 0이 되는데, 그때 빈칸을 쓰면
+    //    validate의 「1주당 순손익가치 자동 산정 실패」가 발동해 **계산 자체가 막힌다.**
+    //    ⇒ 「원천값이 입력됐는가」로 갈라 0을 그대로 기록한다.
+    const onPatch = vi.fn();
+    render(<Harness initial={{ listingYearShareCount: "10000" }} onPatch={onPatch} />);
+    fireEvent.change(byPh(NI), { target: { value: "-100000000" } });
+    const patch = onPatch.mock.calls.map((c) => c[0]).at(-1)!;
+    // 빈칸이 «아니어야» validate를 통과한다
+    expect(patch.listingYearNetIncomePerShare).not.toBe("");
+    expect(patch.listingYearNetIncomePerShare).toBe("0");
+  });
+
+  it("AM-9 원천값 미입력이면 파생값은 여전히 빈칸 (0을 잘못 채우지 않는다)", () => {
+    const onPatch = vi.fn();
+    render(<Harness initial={{}} onPatch={onPatch} />);
+    fireEvent.change(byPh(SC), { target: { value: "10000" } }); // 주식수만 입력
+    const patch = onPatch.mock.calls.map((c) => c[0]).at(-1)!;
     expect(patch.listingYearNetIncomePerShare).toBe("");
+    expect(patch.listingYearNetAssetPerShare).toBe("");
   });
 
   it("AM-6 산출 근거가 화면에 드러난다 — 환원율 10%와 법조문", () => {

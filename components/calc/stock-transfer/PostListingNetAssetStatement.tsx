@@ -21,6 +21,8 @@ import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { calcNetAssetPerShare } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 const ASSET_ADD_LABELS = [
@@ -118,9 +120,13 @@ export function YearColumn({
     const liabSub = liabSubKeys.map((k) => parseAmount(getField(form, k as keyof StockTransferFormData)));
     const goodwillRow19 = parseAmount(getField(form, goodwillKey));
     const shareCount = parseInt(getField(form, shareKey) || "0", 10);
+    // 평가기준일 — 제55조 제1항 후단(0원 하한)이 2009.2.4. 신설이라 게이팅 기준이 필요하다.
+    // 미입력이면 하한 미적용(원값 표시) — 임의 기준일 fallback 금지.
+    const parsed = form.transferDate ? new Date(form.transferDate) : undefined;
+    const evalDate = parsed && !isNaN(parsed.getTime()) ? parsed : undefined;
     return calcNetAssetPerShare({
       assetTotalRow1, assetAdd, assetSub, liabTotalRow8, liabAdd, liabSub, goodwillRow19, shareCount,
-    });
+    }, evalDate);
   }, [form, totalKey, assetAddKeys, assetSubKeys, liabTotalKey, liabAddKeys, liabSubKeys, goodwillKey, shareKey]);
 
   // Enter 키 → 다음 입력 셀로 포커스 이동 (컬럼 내 순회)
@@ -195,10 +201,23 @@ export function YearColumn({
           placeholder="주" />
       </FieldCard>
 
-      {preview.perShareAsset !== 0 && (
+      {(preview.perShareAsset !== 0 || preview.netAssetBeforeGoodwillRaw !== 0) && (
         <div className="rounded border border-sky-300 bg-sky-100/60 px-3 py-2 text-xs text-sky-800 space-y-0.5">
+          <p>18. 영업권 포함 전 순자산가액 = <strong>{preview.netAssetBeforeGoodwillRaw.toLocaleString()}</strong></p>
           <p>20. 순자산가액 = <strong>{preview.netAssetAmount.toLocaleString()}</strong></p>
           <p>1주당 순자산가치 = 순자산 ÷ 주식수 = <strong className="text-sky-900">{preview.perShareAsset.toLocaleString()}</strong></p>
+          {preview.zeroFloorApplied && (
+            <p className="text-sky-700 pt-0.5 border-t border-sky-200">
+              자본잠식 — 영업권 포함 전 순자산가액이 0원 이하이므로 <strong>0원으로 보아</strong> 평가합니다.
+              영업권이 있으면 영업권만 가산됩니다.
+              「상속세 및 증여세법 시행령」 제55조 제1항 후단(「소득세법」 제99조 제1항 제4호 전단이 준용)
+              <LawArticleModal
+                legalBasis={STOCK.INH_DECREE_55_1_NET_ASSET_ZERO_FLOOR}
+                label="상증령 §55①"
+                className="ml-1"
+              />
+            </p>
+          )}
         </div>
       )}
     </div>

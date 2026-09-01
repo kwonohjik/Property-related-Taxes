@@ -52,17 +52,24 @@ describe("PL-NI — 순손익 1주당 가치 (H-02)", () => {
     expect(result.perShareValue).toBe(0);
   });
 
-  it("PL-NI-5 — 음수 순손익 케이스 (적자 회사) — perShareValue 그대로", () => {
+  it("PL-NI-5 — 결손(적자) 회사 — 행 17은 음수 그대로, 1주당 순손익액은 0 (상증령 §56① 후단 준용)", () => {
+    // 🔴 **판정 정정 (2026-09-01).** 종전 단언은 「perShareValue 그대로(음수)」였다. 틀렸다 —
+    //    소법 §99①4 **전단**이 「상증법 §63①1나목을 **준용**하여 평가한 가액」이라 하고,
+    //    그 체인 끝의 상증령 §56① 후단이 「그 가액이 음수인 경우에는 영으로 한다」고 정한다.
+    //    소령 §165④은 §99①4 **후단**의 「평가기준시기 및 평가액」 위임을 받은 조항이지
+    //    준용을 배제하지 않는다.
+    //    계획서: docs/00-pm/section-165-4-zero-floor-sangjeung-junyong.plan.md
     const result = calcNetIncomePerShare({
       addA: [500_000],
       subB: [1_000_000],
       shareCount: 100,
       discountRate: 0.10,
     });
-    // (500,000 − 1,000,000) / 100 / 0.10 = -50,000
-    // Math.floor(-5,000 / 0.10) = -50,000
+    // 행 17 = 500,000 − 1,000,000 = −500,000 (서식의 «사실» — 하한 대상 아님)
     expect(result.netIncomeAmount).toBe(-500_000);
-    expect(result.perShareValue).toBeLessThan(0);
+    // 행 21·24 — §56① 후단으로 0
+    expect(result.perShareIncome).toBe(0);
+    expect(result.perShareValue).toBe(0);
   });
 });
 

@@ -107,7 +107,11 @@ describe("PL-NA — 순자산 1주당 가치 (H-03)", () => {
     expect(result.perShareAsset).toBe(1_000);
   });
 
-  it("PL-NA-8 — 음수 순자산 (자본잠식) — 값 그대로", () => {
+  it("PL-NA-8 — 자본잠식 — 행 18 원값은 음수, 순자산가액은 0 (「상속세 및 증여세법 시행령」 제55조 제1항 후단 준용)", () => {
+    // 🔴 **판정 정정 (2026-09-01).** 종전 단언은 「값 그대로(음수)」였다. 틀렸다 —
+    //    소법 §99①4 전단의 상증법 §63①1나목 준용 → 상증령 §54 → §55① 후단
+    //    「순자산가액이 0원 이하인 경우에는 0원으로 한다」.
+    //    계획서: docs/00-pm/section-165-4-zero-floor-sangjeung-junyong.plan.md
     const result = calcNetAssetPerShare({
       assetTotalRow1: 500_000,
       assetAdd: [],
@@ -117,8 +121,10 @@ describe("PL-NA — 순자산 1주당 가치 (H-03)", () => {
       liabSub: [],
       goodwillRow19: 0,
       shareCount: 100,
-    });
-    expect(result.netAssetAmount).toBe(-500_000);
-    expect(result.perShareAsset).toBeLessThan(0);
+    }, new Date("2026-01-01")); // 평가기준일 — 제55조 제1항 후단은 2009.2.4. 신설이라 게이팅된다
+    expect(result.netAssetBeforeGoodwillRaw).toBe(-500_000); // 행 18 «사실»
+    expect(result.zeroFloorApplied).toBe(true);
+    expect(result.netAssetAmount).toBe(0);
+    expect(result.perShareAsset).toBe(0);
   });
 });

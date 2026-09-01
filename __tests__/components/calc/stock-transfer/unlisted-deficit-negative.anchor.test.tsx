@@ -219,3 +219,19 @@ describe("DN-10~12: 1주당 순자산가치 직접입력 (자본잠식 — 소�
     expect(patches.at(-1)).toEqual({ transferYearNetAssetPerShare: "-20000" });
   });
 });
+
+describe("LB-2: 하한 안내 문구가 «어느 법령인지» 말한다", () => {
+  it("순손익 계산서 — 「상속세 및 증여세법 시행령」 제56조 제1항을 명시한다", () => {
+    const { Harness } = useFormHarness({
+      niAddRow1Listing: "-500000000",
+      niShareCountListing: "100000",
+    });
+    render(<Harness>{(form, onChange) => <NIYearColumn form={form} onChange={onChange} col="Listing" />}</Harness>);
+    // 「§56①」만 쓰면 어느 법령의 제56조인지 알 수 없다
+    // [[feedback_law_citation_must_name_statute_and_tier]]
+    const notice = screen.getByText(/1주당 순손익액이 음수이므로/);
+    expect(notice.textContent).toContain("「상속세 및 증여세법 시행령」 제56조 제1항");
+    expect(notice.textContent).toContain("「소득세법」 제99조 제1항 제4호");
+  });
+});
+
