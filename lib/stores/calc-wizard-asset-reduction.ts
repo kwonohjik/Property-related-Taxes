@@ -380,6 +380,8 @@ export type RentalReductionFormVariant =
       isNationalScale98: boolean;
       isOutsideSeoul98: boolean;
       isUnsoldConfirmed98: boolean;
+      /** 민간임대주택·공공임대주택이 아님 (령 §98①1호 괄호 — 이하 이 조에서 같다) */
+      isNotRentalHousing98: boolean;
       isFirstBuyerNoOccupancy98: boolean;
       rentedFor5Years98: boolean;
     }

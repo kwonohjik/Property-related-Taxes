@@ -266,6 +266,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       isNationalScale98: false,
       isOutsideSeoul98: false,
       isUnsoldConfirmed98: false,
+      isNotRentalHousing98: false,
       isFirstBuyerNoOccupancy98: false,
       rentedFor5Years98: false,
     };

@@ -272,6 +272,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
     isNationalScale98: z.boolean().optional(),
     isOutsideSeoul98: z.boolean().optional(),
     isUnsoldConfirmed98: z.boolean().optional(),
+    isNotRentalHousing98: z.boolean().optional(),
     isFirstBuyerNoOccupancy98: z.boolean().optional(),
     rentedFor5Years98: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),

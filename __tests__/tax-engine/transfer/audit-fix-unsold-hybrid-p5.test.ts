@@ -23,6 +23,7 @@ const baseInput = (transferDate: Date): Unsold98Input => ({
   isNationalScale: true,
   isOutsideSeoul: true,
   isUnsoldConfirmed: true,
+  isNotRentalHousing: true, // 령 §98①1호 괄호 — 민간·공공임대주택 제외 (CA-06)
   isFirstBuyerNoOccupancy: true,
   rentedFor5Years: true,
 });

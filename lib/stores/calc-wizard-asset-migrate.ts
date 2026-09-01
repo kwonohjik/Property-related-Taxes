@@ -304,6 +304,7 @@ export function migrateAsset(raw: unknown): AssetForm {
           isNationalScale98: false,
           isOutsideSeoul98: false,
           isUnsoldConfirmed98: false,
+          isNotRentalHousing98: false,
           isFirstBuyerNoOccupancy98: false,
           rentedFor5Years98: false,
           ...r,

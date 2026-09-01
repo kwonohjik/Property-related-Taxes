@@ -182,6 +182,7 @@ export type TransferReductionStub =
       isNationalScale98?: boolean;
       isOutsideSeoul98?: boolean;
       isUnsoldConfirmed98?: boolean;
+      isNotRentalHousing98?: boolean;
       isFirstBuyerNoOccupancy98?: boolean;
       rentedFor5Years98?: boolean;
       _phase1Stub?: true }

@@ -375,6 +375,7 @@ export function toEngineReductions(
         isNationalScale98: r.isNationalScale98,
         isOutsideSeoul98: r.isOutsideSeoul98,
         isUnsoldConfirmed98: r.isUnsoldConfirmed98,
+        isNotRentalHousing98: r.isNotRentalHousing98,
         isFirstBuyerNoOccupancy98: r.isFirstBuyerNoOccupancy98,
         rentedFor5Years98: r.rentedFor5Years98,
       };

@@ -51,6 +51,15 @@ export interface Unsold98Input {
   isOutsideSeoul?: boolean;
   /** 시장·군수·구청장 미분양 확인 (1995.10.31 / 1998.2.28 현재 — 령①1호·⑤1호) */
   isUnsoldConfirmed?: boolean;
+  /**
+   * 민간임대주택·공공임대주택이 아님 (령 §98①1호 괄호).
+   *
+   * 「사업계획승인을 얻어 건설하는 주택(「민간임대주택에 관한 특별법」 제2조에 따른
+   * 민간임대주택과 「공공주택 특별법」 제2조제1호가목에 따른 공공임대주택을 제외한다.
+   * **이하 이 조에서 같다**)」 — 괄호의 「이하 이 조에서 같다」가 조 전체에 미치므로
+   * ⑤1호(1998.3.1~12.31 트랙)에도 동일하게 적용된다.
+   */
+  isNotRentalHousing?: boolean;
   /** 주택건설사업자로부터 최초 분양 + 완공 후 타인 입주사실 없음 (령①2호·⑤2호) */
   isFirstBuyerNoOccupancy?: boolean;
   /** 5년 이상 보유하면서 임대한 사실 확인 (법① — 임대 사실은 확인 토글, 보유는 일자 검증) */
@@ -129,6 +138,14 @@ export function evaluateUnsold98(input: Unsold98Input): UnsoldHybridResult {
       legalBasis: "조특령 §98①1호",
     });
   }
+  if (input.isNotRentalHousing !== true) {
+    reasons.push({
+      code: "RENTAL_HOUSING_EXCLUDED",
+      message:
+        "민간임대주택(민간임대주택에 관한 특별법 §2)·공공임대주택(공공주택 특별법 §2 1호 가목)이 아님이 확인되지 않았습니다 (조특령 §98①1호 괄호 — 이하 이 조에서 같다).",
+      legalBasis: "조특령 §98①1호",
+    });
+  }
   if (input.isFirstBuyerNoOccupancy !== true) {
     reasons.push({
       code: "NOT_FIRST_BUYER",
@@ -184,6 +201,7 @@ export function evaluateP5FromReduction(
       isNationalScale: r.isNationalScale98 as boolean | undefined,
       isOutsideSeoul: r.isOutsideSeoul98 as boolean | undefined,
       isUnsoldConfirmed: r.isUnsoldConfirmed98 as boolean | undefined,
+      isNotRentalHousing: r.isNotRentalHousing98 as boolean | undefined,
       isFirstBuyerNoOccupancy: r.isFirstBuyerNoOccupancy98 as boolean | undefined,
       rentedFor5Years: r.rentedFor5Years98 as boolean | undefined,
     });

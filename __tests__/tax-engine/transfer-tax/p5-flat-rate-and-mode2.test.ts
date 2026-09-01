@@ -19,6 +19,7 @@ const R98 = {
   isNationalScale98: true,
   isOutsideSeoul98: true,
   isUnsoldConfirmed98: true,
+  isNotRentalHousing98: true, // 령 §98①1호 괄호 (CA-06)
   isFirstBuyerNoOccupancy98: true,
   rentedFor5Years98: true,
 };
@@ -31,6 +32,7 @@ describe("P5 단위 anchor", () => {
       isNationalScale: true,
       isOutsideSeoul: true,
       isUnsoldConfirmed: true,
+      isNotRentalHousing: true, // 령 §98①1호 괄호 (CA-06)
       isFirstBuyerNoOccupancy: true,
       rentedFor5Years: true,
     };
