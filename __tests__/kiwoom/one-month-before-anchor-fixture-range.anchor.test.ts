@@ -56,7 +56,7 @@ describe("FR — 이전 1개월 anchor 시프트의 fixture 경계", () => {
   it("FR-4: fixture 밖 평일 공휴일은 시프트하지 않는다 — 2015-02-19(설날)이 anchor로 남는다", () => {
     const slots = buildOneMonthBeforeSlots("2015-02-19");
     expect(slots[slots.length - 1]).toBe("2015-02-19");
-    expect(slots[0]).toBe("2015-01-20");
-    expect(slots.length).toBe(31);
+    expect(slots[0]).toBe("2015-01-19");
+    expect(slots.length).toBe(32);
   });
 });

@@ -69,46 +69,46 @@ describe("resolveValuationAnchor — 이미지 13 사례", () => {
   });
 });
 
-describe("buildSurroundingSlotsFromAnchor — 시작·종료 ±1일 보정", () => {
-  it("AS-01: anchor 2022-12-02 → 시작 10-03, 종료 2023-02-01", () => {
+describe("buildSurroundingSlotsFromAnchor — 시작·종료 경계일 포함", () => {
+  it("AS-01: anchor 2022-12-02 → 시작 10-02, 종료 2023-02-02", () => {
     const slots = buildSurroundingSlotsFromAnchor("2022-12-02");
-    expect(slots[0]).toBe("2022-10-03");
-    expect(slots[slots.length - 1]).toBe("2023-02-01");
+    expect(slots[0]).toBe("2022-10-02");
+    expect(slots[slots.length - 1]).toBe("2023-02-02");
   });
 
-  it("AS-02: anchor 2022-12-15 → 시작 10-16, 종료 2023-02-14", () => {
+  it("AS-02: anchor 2022-12-15 → 시작 10-15, 종료 2023-02-15", () => {
     const slots = buildSurroundingSlotsFromAnchor("2022-12-15");
-    expect(slots[0]).toBe("2022-10-16");
-    expect(slots[slots.length - 1]).toBe("2023-02-14");
+    expect(slots[0]).toBe("2022-10-15");
+    expect(slots[slots.length - 1]).toBe("2023-02-15");
   });
 
-  it("AS-03: anchor 2001-12-28 → 시작 10-29, 종료 2002-02-27", () => {
+  it("AS-03: anchor 2001-12-28 → 시작 10-28, 종료 2002-02-28", () => {
     const slots = buildSurroundingSlotsFromAnchor("2001-12-28");
-    expect(slots[0]).toBe("2001-10-29");
-    expect(slots[slots.length - 1]).toBe("2002-02-27");
+    expect(slots[0]).toBe("2001-10-28");
+    expect(slots[slots.length - 1]).toBe("2002-02-28");
   });
 
-  it("AS-05: anchor 2023-12-28 → 시작 2023-10-29, 종료 2024-02-27", () => {
+  it("AS-05: anchor 2023-12-28 → 시작 2023-10-28, 종료 2024-02-28", () => {
     const slots = buildSurroundingSlotsFromAnchor("2023-12-28");
-    expect(slots[0]).toBe("2023-10-29");
-    expect(slots[slots.length - 1]).toBe("2024-02-27");
+    expect(slots[0]).toBe("2023-10-28");
+    expect(slots[slots.length - 1]).toBe("2024-02-28");
   });
 
-  it("AS-07: anchor 2024-12-27 → 시작 2024-10-28, 종료 2025-02-26", () => {
+  it("AS-07: anchor 2024-12-27 → 시작 2024-10-27, 종료 2025-02-27", () => {
     const slots = buildSurroundingSlotsFromAnchor("2024-12-27");
-    expect(slots[0]).toBe("2024-10-28");
-    expect(slots[slots.length - 1]).toBe("2025-02-26");
+    expect(slots[0]).toBe("2024-10-27");
+    expect(slots[slots.length - 1]).toBe("2025-02-27");
   });
 
-  it("AS-08: anchor 2025-12-26 → 시작 2025-10-27, 종료 2026-02-25", () => {
+  it("AS-08: anchor 2025-12-26 → 시작 2025-10-26, 종료 2026-02-26", () => {
     const slots = buildSurroundingSlotsFromAnchor("2025-12-26");
-    expect(slots[0]).toBe("2025-10-27");
-    expect(slots[slots.length - 1]).toBe("2026-02-25");
+    expect(slots[0]).toBe("2025-10-26");
+    expect(slots[slots.length - 1]).toBe("2026-02-26");
   });
 
-  it("LS-01 H사 (회귀): anchor 2022-07-06 → 시작 2022-05-07, 종료 2022-09-05", () => {
+  it("LS-01 H사 (회귀): anchor 2022-07-06 → 시작 2022-05-06, 종료 2022-09-06", () => {
     const slots = buildSurroundingSlotsFromAnchor("2022-07-06");
-    expect(slots[0]).toBe("2022-05-07");
-    expect(slots[slots.length - 1]).toBe("2022-09-05");
+    expect(slots[0]).toBe("2022-05-06");
+    expect(slots[slots.length - 1]).toBe("2022-09-06");
   });
 });

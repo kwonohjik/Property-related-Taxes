@@ -36,35 +36,35 @@ describe("KRX calendar — anchor", () => {
   // 상증령 §52의2④가 그 「매매가 없는 날」을 공휴일·대체공휴일·토요일로 정한다.
   // 소득세법 §99①3이 이 가목을 준용하므로 삼일절 양도는 **직전 거래일 2024-02-29**가 기준이다.
   // (같은 조문에서 나온 상증세 평가용 resolveValuationAnchor는 이미 그렇게 동작하고 있었다.)
-  it("K-LEAP-01: 2024-03-01(삼일절) 양도일 → anchor 2024-02-29 → [2024-01-30 ~ 2024-02-29] 31일", () => {
+  it("K-LEAP-01: 2024-03-01(삼일절) 양도일 → anchor 2024-02-29 → [2024-01-29 ~ 2024-02-29] 32일", () => {
     const slots = buildOneMonthBeforeSlots("2024-03-01");
-    expect(slots[0]).toBe("2024-01-30");
+    expect(slots[0]).toBe("2024-01-29");
     expect(slots[slots.length - 1]).toBe("2024-02-29");
-    expect(slots.length).toBe(31);
+    expect(slots.length).toBe(32);
   });
 
   // K-LEAP-02: 윤년 2월 자체가 anchor인 경우 — 시프트 없이 양도일 포함
-  it("K-LEAP-02: 2024-02-29(목·거래일) → [2024-01-30 ~ 2024-02-29] 31일", () => {
+  it("K-LEAP-02: 2024-02-29(목·거래일) → [2024-01-29 ~ 2024-02-29] 32일", () => {
     const slots = buildOneMonthBeforeSlots("2024-02-29");
-    expect(slots[0]).toBe("2024-01-30");
+    expect(slots[0]).toBe("2024-01-29");
     expect(slots[slots.length - 1]).toBe("2024-02-29");
-    expect(slots.length).toBe(31);
+    expect(slots.length).toBe(32);
   });
 
   // 일반 케이스: 2024-06-03 (월) → [2024-05-04 ~ 2024-06-03] 31일
-  it("일반: 2024-06-03 → [2024-05-04 ~ 2024-06-03] 31일", () => {
+  it("일반: 2024-06-03 → [2024-05-03 ~ 2024-06-03] 32일", () => {
     const slots = buildOneMonthBeforeSlots("2024-06-03");
-    expect(slots[0]).toBe("2024-05-04");
+    expect(slots[0]).toBe("2024-05-03");
     expect(slots[slots.length - 1]).toBe("2024-06-03");
-    expect(slots.length).toBe(31);
+    expect(slots.length).toBe(32);
   });
 
   // anchor 시프트: 2025-06-21 (토) → anchor=6/20 (금) → [2025-05-21 ~ 2025-06-20] 31일
-  it("anchor 시프트: 2025-06-21 (토) 양도일 → anchor 6/20 (금) → [2025-05-21 ~ 2025-06-20] 31일", () => {
+  it("anchor 시프트: 2025-06-21 (토) 양도일 → anchor 6/20 (금) → [2025-05-20 ~ 2025-06-20] 32일", () => {
     const slots = buildOneMonthBeforeSlots("2025-06-21");
-    expect(slots[0]).toBe("2025-05-21");
+    expect(slots[0]).toBe("2025-05-20");
     expect(slots[slots.length - 1]).toBe("2025-06-20");
-    expect(slots.length).toBe(31);
+    expect(slots.length).toBe(32);
   });
 
   // F-02 §165⑤ 상장일 이후 1개월 슬롯 anchor
