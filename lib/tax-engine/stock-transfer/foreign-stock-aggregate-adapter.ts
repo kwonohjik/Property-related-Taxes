@@ -55,6 +55,19 @@ export function isForeignStockItem(
 }
 
 /**
+ * 중소기업 플래그 — 국내(§104①11호나목1))·국외(§104①12호가목) 모두 세율을 가른다.
+ *
+ * 🔑 종전에는 국외를 무조건 false로 눌렀다. 영 §157의3 **2호**가 「내국법인이 발행한 주식등으로서
+ *    해외 증권시장에 상장된 것」을 국외주식에 포함시키므로, 내국 중소기업의 해외상장 주식은
+ *    §104①12호**가목 10%**에 닿는다. 미입력이면 나목 20%다(자동 추정 금지).
+ */
+export function smeFlag(input: AggregateStockItemInput): boolean {
+  return isForeignStockItem(input)
+    ? input.isSmallMediumEnterprise === true
+    : input.isSmallMediumEnterprise;
+}
+
+/**
  * `ForeignStockResult` → `StockTransferResult`.
  *
  * 세액 관련 값은 **그대로 옮긴다**. 단건 경로와 값이 갈리면 안 된다.
