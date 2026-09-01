@@ -18,6 +18,10 @@ function nblAsset(overrides: Partial<AssetForm> = {}): AssetForm {
     nblLandType: "housing_site",
     nblZoneType: "general_residential",
     nblIsMetropolitanArea: "",
+    // PR-1(2026-09-02)에서 정착면적(E1-03)·도시지역 편입일(V5-b) 차단이 추가됐다.
+    // 이 파일의 축은 **수도권 여부**뿐이므로, 다른 축의 필수 입력은 채워 두어 축을 격리한다.
+    nblHousingFootprint: "100",
+    nblUrbanIncorporationDate: "2010-01-01",
     ...overrides,
   } as AssetForm;
 }
