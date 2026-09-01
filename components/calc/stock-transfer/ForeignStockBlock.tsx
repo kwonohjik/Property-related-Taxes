@@ -75,16 +75,21 @@ const FG_ACQ_MODE_OPTIONS = [
   { value: "market_price", label: "시가 산정 (§178의3)", description: "양도·취득일 이전 1개월 평균가격" },
 ];
 
-// ── 외국납부세액 처리 방법 ──
+// ── 외국납부세액 처리 방법 (§118의6①) ──
+//
+// 🔑 **과세기간(신고) 단위 택일이다** — 종목마다 다르게 고를 수 없다.
+//    §118의6①이 「다음 각 호의 방법 중 **하나를 선택**하여 적용할 수 있다」이고,
+//    1호 산식의 A(국외 산출세액 합)·C(국외 양도소득금액 합)가 **과세기간 총량**이라
+//    종목마다 갈리면 C의 구성이 명문 없이 정해진다(계획서 §4.2 · 2026-09-01 확정).
 const FOREIGN_TAX_METHOD_OPTIONS = [
   {
     value: "credit",
-    label: "세액공제 (§118의6)",
-    description: "한도 내 산출세액에서 차감 (단일 자산 시 전액 공제)",
+    label: "세액공제 (§118의6①1호)",
+    description: "한도 = 국외 산출세액 합 × 해당 종목 양도소득금액 / 국외 양도소득금액 합",
   },
   {
     value: "expense",
-    label: "필요경비 산입",
+    label: "필요경비 산입 (§118의6①2호)",
     description: "양도차익 계산 시 필요경비로 처리",
   },
 ];
@@ -531,7 +536,11 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
             />
           </FieldCard>
 
-          <FieldCard label="처리 방법 선택" required>
+          <FieldCard
+            label="처리 방법 선택"
+            hint="이 신고 전체에 적용됩니다 — §118의6①은 과세기간 단위 택일이라 종목마다 다르게 고를 수 없습니다."
+            required
+          >
             <RadioCardGroup
               name="foreignTaxMethod"
               value={foreignTaxMethod}
@@ -549,7 +558,7 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
         <p className="text-xs font-semibold text-slate-600">신고 정보</p>
         <FieldCard
           label="신고일"
-          hint="예정신고: 양도일이 속하는 반기의 말일 다음 달 말일까지 (§118의9)"
+          hint="국외주식은 예정신고 대상이 아닙니다(§105① 본문 괄호가 §94①3호다목을 제외) — 확정신고(§110①, 다음 해 5월 1~31일) 기준으로 적으세요."
           required
         >
           <DateInput

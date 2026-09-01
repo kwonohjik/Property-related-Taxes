@@ -642,7 +642,41 @@ export function validateFilingItems(
       severity: "error",
     });
   });
+
+  errors.push(...validateForeignTaxMethodUnity(forms));
   return errors;
+}
+
+/**
+ * §118의6① — 세액공제(1호)/필요경비 산입(2호)은 **과세기간(신고) 단위 택일**이다.
+ *
+ * 법문이 「다음 각 호의 방법 중 **하나를 선택**하여 적용할 수 있다」이고, 1호 산식의
+ * A(국외 산출세액 합)·C(국외 양도소득금액 합)가 **과세기간 총량**이라 종목마다 갈리면
+ * C의 구성이 명문 없이 정해진다(계획서 §4.2 · 2026-09-01 확정).
+ *
+ * ⚠️ 판정 대상은 **외국납부세액이 있는 국외 종목**뿐이다 — 세금을 내지 않은 종목의
+ *    `foreignTaxMethod`는 아무 의미가 없어(폼 기본값 "credit") 섞였다고 막으면 오탐이다.
+ *
+ * 🔑 폼은 `carryFilingFields`로 이 값을 승계하므로 정상 흐름에서는 어긋나지 않는다.
+ *    이 검증은 **stale sessionStorage·직접 API 호출** 같은 우회 경로를 막는 방어선이다
+ *    (`feedback_new_asset_field_stale_sessionstorage_guard`).
+ */
+function validateForeignTaxMethodUnity(
+  forms: StockTransferFormData[],
+): StockValidationError[] {
+  const methods = forms
+    .filter((f) => f.marketType === "foreign_stock" && f.hasForeignTax)
+    .map((f) => f.foreignTaxMethod || "credit");   // 3중 패턴 default
+  if (new Set(methods).size <= 1) return [];
+  return [
+    {
+      field: "foreignTaxMethod",
+      message:
+        "외국납부세액 처리 방법(세액공제 / 필요경비 산입)은 신고 전체에 하나만 고를 수 있습니다 " +
+        "(소득세법 §118의6①). 종목마다 다르게 선택된 상태입니다 — 하나로 통일하세요.",
+      severity: "error",
+    },
+  ];
 }
 
 /**

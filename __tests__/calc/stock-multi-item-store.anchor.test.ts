@@ -51,7 +51,7 @@ describe("MI-1 commitCurrentItem — 종목 확정", () => {
     expect(after.formData.securityName).toBe("");
   });
 
-  it("MI-1-2 🔑 신고 단위 7필드는 **승계**된다 — 종목마다 다른 신고일은 성립하지 않는다", () => {
+  it("MI-1-2 🔑 신고 단위 8필드는 **승계**된다 — 종목마다 다른 신고일은 성립하지 않는다", () => {
     useStockTransferStore.getState().updateFormData({
       securityName: "A",
       filingType: "final",
@@ -61,6 +61,7 @@ describe("MI-1 commitCurrentItem — 종목 확정", () => {
       isFraudulent: true,
       isInternationalTransaction: true,
       realEstateGroupBasicDeductionUsed: "2500000",
+      foreignTaxMethod: "expense",
     });
     useStockTransferStore.getState().commitCurrentItem();
 
@@ -72,6 +73,8 @@ describe("MI-1 commitCurrentItem — 종목 확정", () => {
     expect(f.isFraudulent).toBe(true);
     expect(f.isInternationalTransaction).toBe(true);
     expect(f.realEstateGroupBasicDeductionUsed).toBe("2500000");
+    // 🆕 2026-09-01 — §118의6①은 **과세기간 단위 택일**이라 종목마다 다르게 고를 수 없다(계획서 §4.2).
+    expect(f.foreignTaxMethod).toBe("expense");
   });
 
   it("MI-1-3 [음성 대조군] 종목 축 필드는 승계되지 **않는다**", () => {

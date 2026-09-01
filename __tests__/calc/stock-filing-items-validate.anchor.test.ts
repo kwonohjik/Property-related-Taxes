@@ -111,3 +111,58 @@ describe("FI-3 단건 경로는 종전대로 validateAllSteps 가 막는다", ()
     expect(validateAllSteps(barelyCommitted("A")).length).toBeGreaterThan(0);
   });
 });
+
+// ============================================================
+// FI-M — §118의6① 택일은 **과세기간(신고) 단위** (2026-09-01 확정 · 계획서 §4.2)
+//
+// 법문이 「다음 각 호의 방법 중 **하나를 선택**하여 적용할 수 있다」이고 1호 산식의 A·C가
+// 과세기간 총량이라, 종목마다 갈리면 C의 구성이 명문 없이 정해진다.
+// 폼은 `carryFilingFields`가 승계해 정상 흐름에서는 어긋나지 않는다 — 이 검증은
+// **stale sessionStorage·직접 API 호출** 우회 경로를 막는 방어선이다.
+// ============================================================
+
+const UNITY_MSG = /신고 전체에 하나만 고를 수 있습니다/;
+
+function foreignItem(
+  name: string,
+  method: "credit" | "expense",
+  hasForeignTax = true,
+): StockTransferFormData {
+  return {
+    ...complete(name),
+    marketType: "foreign_stock",
+    hasForeignTax,
+    foreignTaxMethod: method,
+  };
+}
+
+describe("FI-M 외국납부세액 처리 방법은 신고 단위로 하나다", () => {
+  it("FI-M-1: 종목마다 다르게 선택되면 차단한다", () => {
+    const errors = validateFilingItems([
+      foreignItem("가", "credit"),
+      foreignItem("나", "expense"),
+    ]);
+    expect(errors.some((e) => UNITY_MSG.test(e.message))).toBe(true);
+  });
+
+  it("FI-M-2: 🔑 양성 대조군 — 통일돼 있으면 이 오류는 없다", () => {
+    for (const m of ["credit", "expense"] as const) {
+      const errors = validateFilingItems([foreignItem("가", m), foreignItem("나", m)]);
+      expect(errors.some((e) => UNITY_MSG.test(e.message))).toBe(false);
+    }
+  });
+
+  it("FI-M-3: 🔑 외국세를 내지 않은 종목의 값은 보지 않는다 — 오탐 방지", () => {
+    // 폼 기본값이 "credit"이라, 외국세 없는 종목까지 세면 정상 신고가 막힌다.
+    const errors = validateFilingItems([
+      foreignItem("가", "expense"),
+      foreignItem("나", "credit", false), // 외국세 없음 — 택일이 의미 없다
+    ]);
+    expect(errors.some((e) => UNITY_MSG.test(e.message))).toBe(false);
+  });
+
+  it("FI-M-4: 국내 종목은 이 판정과 무관하다", () => {
+    const errors = validateFilingItems([complete("국내"), foreignItem("국외", "expense")]);
+    expect(errors.some((e) => UNITY_MSG.test(e.message))).toBe(false);
+  });
+});
