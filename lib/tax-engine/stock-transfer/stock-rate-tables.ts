@@ -9,6 +9,7 @@
 import {
   STOCK_MAJOR_MARKET_CAP_2024,
 } from "@/lib/tax-engine/legal-codes/stock";
+import type { StockTransferResult } from "./types/stock-transfer.types";
 
 // ============================================================
 // 대주주 임계 이력 (시기별 — 코스피·코스닥·코넥스 분리)
@@ -285,6 +286,23 @@ export const BASIC_PROGRESSIVE_BRACKETS = [
  *   세율은 소수 2자리이므로 **정수(퍼센트포인트) 경유**로 오염을 없앤다
  *   (루트 정책 「부동소수 누적 금지」).
  */
+/**
+ * §104①9호(비사업용 토지 과다소유법인 주식)에 해당하는 `taxCategory` 집합.
+ *
+ * `NBL_HEAVY_CORP_BRACKETS`와 **한 쌍**이다 — 「어느 카테고리가 9호인가」와 「9호는 어떤 표를
+ * 쓰는가」가 갈라져 있으면 한쪽만 고쳐도 조용히 통과한다. 그래서 같은 파일에 둔다.
+ *
+ * 🔴 종전에는 이 집합이 `stock-transfer-tax.ts`와 §104⑤ 계산 파일에 **두 벌** 있었다
+ *    (2026-09-01 단일화). 9호 카테고리를 늘릴 때 한쪽만 고치면
+ *    **단건 세율은 +10%p인데 §104⑤ 버킷은 1호로 묶이는** 어긋남이 난다.
+ *
+ * exact 매칭 — substring/`.includes` 금지([[feedback_enum_substring_match_forbidden]]).
+ */
+export const NBL_HEAVY_CORP_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]> = new Set([
+  "other_asset_block_shareholder_nbl",
+  "other_asset_heavy_re_nbl",
+]);
+
 export const NBL_HEAVY_CORP_BRACKETS = BASIC_PROGRESSIVE_BRACKETS.map((b) => ({
   max: b.max,
   rate: Math.round(b.rate * 100 + 10) / 100,

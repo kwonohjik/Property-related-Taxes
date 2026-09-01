@@ -12,6 +12,7 @@
 import type { StockTransferResult } from "./types/stock-transfer.types";
 import { floorTen } from "./stock-transfer-helpers";
 import { applyStockTaxRate, applyBasicProgressiveRate } from "./stock-transfer-rate-calc";
+import { NBL_HEAVY_CORP_CATEGORIES } from "./stock-rate-tables";
 import { smeFlag, type AggregateStockItemInput } from "./foreign-stock-aggregate-adapter";
 
 /**
@@ -73,12 +74,6 @@ export interface OtherAssetComparativeTax {
 
 /** §103①1호 그룹 키 — 기타자산(§94①4호)은 부동산과 같은 기본공제 그룹이다. */
 const OTHER_ASSET_GROUP = "real_estate_and_other_asset" as const;
-
-/** §104①9호(비사업용 토지 과다소유법인 주식) 카테고리 — 다목·라목 **둘 다**에 얹힌다. */
-const NBL_HEAVY_CORP_CATEGORIES: ReadonlySet<StockTransferResult["taxCategory"]> = new Set([
-  "other_asset_block_shareholder_nbl",
-  "other_asset_heavy_re_nbl",
-]);
 
 /**
  * §104⑤ 비교과세 — **기타자산(§94①4호) 그룹**의 산출세액을 호별 합산으로 다시 낸다.
