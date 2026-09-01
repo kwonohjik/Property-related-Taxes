@@ -27,6 +27,7 @@ import {
   KIWOOM_ERROR_DETAILS,
   type KiwoomFetchError,
 } from "@/components/calc/KiwoomFetchErrorBadge";
+import { fetchKiwoomWithTimeout } from "@/lib/kiwoom/fetch-with-timeout";
 
 interface SecurityMetadataBlockProps {
   securityName: string;
@@ -209,7 +210,7 @@ export function SecurityMetadataBlock({
               const code = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, "").slice(0, 6);
               if (!/^[0-9A-Z]{6}$/.test(code)) return;
               try {
-                const res = await fetch("/api/kiwoom/search", {
+                const res = await fetchKiwoomWithTimeout("/api/kiwoom/search", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ stockCode: code }),

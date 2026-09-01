@@ -18,6 +18,7 @@
 
 import { useCallback, useState } from "react";
 import type { KiwoomValuation2MonthResponse } from "@/lib/calc/listed-stock-besshi";
+import { fetchKiwoomWithTimeout } from "@/lib/kiwoom/fetch-with-timeout";
 
 export interface KiwoomValuationInfo {
   average: number;
@@ -84,7 +85,7 @@ export function useKiwoomValuationFetch({
     setLoading(true);
     setError(null);
     try {
-      const res = await window.fetch("/api/kiwoom/valuation-2month", {
+      const res = await fetchKiwoomWithTimeout("/api/kiwoom/valuation-2month", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

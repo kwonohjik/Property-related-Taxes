@@ -19,6 +19,7 @@ import { useState } from "react";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { fetchKiwoomWithTimeout } from "@/lib/kiwoom/fetch-with-timeout";
 
 interface Props {
   securityCode: string;
@@ -80,7 +81,7 @@ export function KiwoomMarketCapHelper({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/kiwoom/daily-close", {
+      const res = await fetchKiwoomWithTimeout("/api/kiwoom/daily-close", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stockCode: securityCode, date: priorYearEndDate }),

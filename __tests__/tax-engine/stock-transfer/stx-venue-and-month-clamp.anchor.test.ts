@@ -126,10 +126,22 @@ describe("PL-CLAMP (#30): 「상장일 이후 1개월」은 말일로 만료한�
     expect(slots[slots.length - 1]).toBe("2023-04-30");
   });
 
-  it("PL-CLAMP-4: 오버플로가 없는 달은 종전 그대로 (회귀 가드)", () => {
-    expect(buildOneMonthAfterListingSlots("2009-08-21").at(-1)).toBe("2009-09-20");
-    expect(buildOneMonthAfterListingSlots("2009-02-01").at(-1)).toBe("2009-02-28");
-    expect(buildOneMonthAfterListingSlots("2024-02-01").at(-1)).toBe("2024-02-29");
+  // ⚠️ 2026-09-01 경계일 판정으로 **오버플로가 없는 달만** 하루 늘었다.
+  //    PL-CLAMP-1~3(오버플로)은 값이 그대로다 — 종전 구현이 그 분기에서는 이미 말일을
+  //    **포함**해 돌려주고 있었기 때문이다. 즉 종전 코드는 자기 자신과 모순이었고,
+  //    이번 변경이 두 분기를 「1개월이 만료하는 날 = 종료일」로 통일했다.
+  it("PL-CLAMP-4: 오버플로가 없는 달은 「1개월이 되는 날」을 포함한다", () => {
+    expect(buildOneMonthAfterListingSlots("2009-08-21").at(-1)).toBe("2009-09-21"); // 사례 48 PDF
+    expect(buildOneMonthAfterListingSlots("2009-02-01").at(-1)).toBe("2009-03-01");
+    expect(buildOneMonthAfterListingSlots("2024-02-01").at(-1)).toBe("2024-03-01");
+  });
+
+  // PL-CLAMP-5 — 사례 48 PDF 평가기간 전체를 고정한다 (2009-08-21 ~ 2009-09-21).
+  it("PL-CLAMP-5: 사례 48 — 상장일 2009-08-21의 §165⑤ 평가기간은 PDF와 일치한다", () => {
+    const slots = buildOneMonthAfterListingSlots("2009-08-21");
+    expect(slots[0]).toBe("2009-08-21");
+    expect(slots.at(-1)).toBe("2009-09-21");
+    expect(slots).toContain("2009-09-21"); // 종전 결함은 이 날을 빠뜨렸다
   });
 });
 

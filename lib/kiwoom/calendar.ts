@@ -127,13 +127,13 @@ export function buildSurroundingSlotsFromAnchor(anchorIso: string): string[] {
   const [y, m, d] = anchorIso.split("-").map(Number);
   const anchor = new Date(Date.UTC(y, m - 1, d));
 
-  const start = new Date(anchor);
-  start.setUTCMonth(start.getUTCMonth() - 2);
-  start.setUTCDate(start.getUTCDate() + 1);
-
-  const end = new Date(anchor);
-  end.setUTCMonth(end.getUTCMonth() + 2);
-  end.setUTCDate(end.getUTCDate() - 1);
+  // 경계일 **포함** — 「평가기준일 이전 2월이 되는 날」과 「이후 2월이 되는 날」이 모두 구간에 든다.
+  // (근거·종전 판정 정정은 아래 buildOneMonthBeforeSlots 주석에 한 곳으로 정리)
+  //
+  // ⚠️ `setUTCMonth(±2)` 단독은 **월말에서 달을 넘긴다** — 2023-04-30의 −2개월은
+  //    (2023, 1월, 30일) = 2월 30일이라 3월 2일로 밀린다. 민법 §160②에 따라 말일로 클램프한다.
+  const start = addMonthsClamped(anchor, -2);
+  const end = addMonthsClamped(anchor, 2);
 
   const slots: string[] = [];
   const cursor = new Date(start.getTime());
@@ -145,20 +145,36 @@ export function buildSurroundingSlotsFromAnchor(anchorIso: string): string[] {
 }
 
 /**
- * §99①3·§165③ "양도일 이전 1개월" 슬롯 기간 — 양도일 포함.
+ * §99①3·§165③ "양도일 이전 1개월" 슬롯 기간 — **양쪽 경계일 모두 포함**.
  *
  * 법률 용어 정의 (사용자 검증, 2026-05-19):
  *   - "이전·이후" = 양도일 포함
  *   - "전·후" = 양도일 미포함
  *
- * 따라서 본 평균 분모 = [transferDate − 1 month + 1 day, transferDate] (양도일 포함).
+ * ⚠️ **종전 판정 정정 (2026-09-01)**
  *
- * anchor 시프트: 양도일이 토·일이면 직전 평일(금요일)로 anchor 이동 후 동일 산식.
+ * 종전에는 분모를 `[transferDate − 1개월 + 1일, transferDate]`로 잡았다. 위 「이전 = 양도일
+ * 포함」에서 **끝점 포함**만 읽고, 시작점은 1개월 어치 일수를 맞추려고 하루 밀었던 것이다.
+ * 그 둘은 별개 문제였다 — 끝을 포함한다고 시작을 빼야 할 이유가 없다.
+ *
+ * 정본은 상증령 §52의2②2호다:
+ *   「평가기준일 **이전 2월이 되는 날부터** 동 사유가 발생한 날의 전일까지의 기간」
+ * 같은 항 1호·3호는 경계를 뺄 때 「사유가 발생한 날의 **다음날**부터」라고 **명시**한다.
+ * ⇒ 조문이 뺄 때는 그렇게 적는데 정상 구간의 시작은 「~되는 날**부터**」이므로 **포함**이다.
+ * §165③이 「"평가기준일 전후 2개월"은 "양도일·취득일 이전 1개월"로 한다」로 치환하므로
+ * 1개월 창에도 그대로 적용된다(`buildSurroundingSlotsFromAnchor`와 같은 규칙).
+ *
+ * 따라서 본 평균 분모 = **[transferDate − 1개월, transferDate]** (양쪽 포함).
+ *
+ * anchor 시프트: 양도일이 비거래일이면 직전 거래일로 anchor 이동 후 동일 산식.
  *   (양도일이 거래일 아니면 종가 부재 → 직전 거래일을 분모 마지막 일자로)
  *
- * - 윤년 처리: 2024-03-01 (금) → anchor=3/1 → [2024-02-02 ~ 2024-03-01] (29일).
- * - 일반: 2024-06-03 (월) → anchor=6/3 → [2024-05-04 ~ 2024-06-03] (31일).
- * - 토요일: 2025-06-21 (토) → anchor=6/20 (금) → [2025-05-21 ~ 2025-06-20] (31일).
+ * - 제보 케이스: 2026-02-26 (목) → [2026-01-26 ~ 2026-02-26] (32일).
+ * - 윤년 처리: 2024-03-01 (삼일절) → anchor=2024-02-29 → [2024-01-29 ~ 2024-02-29] (32일).
+ * - 일반: 2024-06-03 (월) → anchor=6/3 → [2024-05-03 ~ 2024-06-03] (32일).
+ * - 토요일: 2025-06-21 (토) → anchor=6/20 (금) → [2025-05-20 ~ 2025-06-20] (32일).
+ *
+ * ⚠️ 「1개월 = 31일」이 아니다. 말일 클램프 때문에 달마다 29~32일로 달라진다.
  */
 /**
  * 기준일의 **소급 1개월** 시점 (민법 §160② 역산 — 해당일이 없는 달이면 그 달의 말일).
@@ -169,40 +185,30 @@ export function buildSurroundingSlotsFromAnchor(anchorIso: string): string[] {
  *   2023-01-31 → 2022-12-31   (12월은 31일 — 그대로)
  */
 function monthBeforeClamped(anchor: Date): Date {
-  const y = anchor.getUTCFullYear();
-  const mIdx = anchor.getUTCMonth(); // 0-based
-  const d = anchor.getUTCDate();
-  const prev = new Date(Date.UTC(y, mIdx - 1, d));
-  // 오버플로 감지 — 기대한 달이 아니면 짧은 달을 넘어간 것이다.
-  const expected = ((mIdx - 1) % 12 + 12) % 12;
-  if (prev.getUTCMonth() !== expected) {
-    prev.setUTCDate(0); // 직전 달의 말일로 되돌린다
-  }
-  return prev;
+  return addMonthsClamped(anchor, -1);
 }
 
 /**
- * `monthBeforeClamped`의 **정방향 짝** — anchor + 1개월, 말일 클램프.
+ * `monthBeforeClamped`의 일반형 — 임의 개월 수 가감 + 민법 §160② 말일 클램프.
  *
- * 민법 §160③ 「최종의 월에 해당일이 없는 때에는 그 월의 말일로 기간이 만료한다」.
- * 2023-01-31 + 1개월 = 2023-02-28 (JS 기본은 03-03으로 민다).
+ * 2개월 창(상증법 §63①1가목)과 1개월 창(소득세법 §99①3)이 **같은 클램프 규칙**을 써야
+ * 하는데 종전에는 2개월 쪽만 맨 `setUTCMonth`를 써서 월말에 달을 넘겼다.
  *
- * ⚠️ 클램프는 **−1일보다 먼저** 건다. 「1개월 후의 전날」이 아니라 「1개월이 만료하는 날」이
- *    종료일이므로, 클램프한 말일에서 다시 하루를 빼면 02-27이 되어 하루 짧아진다.
+ *   addMonthsClamped(2023-04-30, -2) → 2023-02-28  (2월에 30일이 없다)
+ *   addMonthsClamped(2023-03-31, -1) → 2023-02-28
+ *   addMonthsClamped(2024-01-29, +1) → 2024-02-29  (윤년 — 해당일이 실재하므로 그대로)
  */
-function monthAfterClamped(anchor: Date): Date {
+function addMonthsClamped(anchor: Date, deltaMonths: number): Date {
   const y = anchor.getUTCFullYear();
   const mIdx = anchor.getUTCMonth(); // 0-based
   const d = anchor.getUTCDate();
-  const next = new Date(Date.UTC(y, mIdx + 1, d));
-  const expected = (mIdx + 1) % 12;
-  if (next.getUTCMonth() !== expected) {
-    next.setUTCDate(0); // 넘어간 달의 **직전** 달 말일로 되돌린다
-    return next;
+  const moved = new Date(Date.UTC(y, mIdx + deltaMonths, d));
+  // 오버플로 감지 — 기대한 달이 아니면 짧은 달을 넘어간 것이다.
+  const expected = ((mIdx + deltaMonths) % 12 + 12) % 12;
+  if (moved.getUTCMonth() !== expected) {
+    moved.setUTCDate(0); // 넘어간 달의 **직전** 달 말일로 되돌린다
   }
-  // 해당일이 있으면 그 전날이 「1개월 - 1일」이다 (예: 08-21 → 09-21 → 09-20)
-  next.setUTCDate(next.getUTCDate() - 1);
-  return next;
+  return moved;
 }
 
 export function buildOneMonthBeforeSlots(transferDateIso: string): string[] {
@@ -230,7 +236,6 @@ export function buildOneMonthBeforeSlots(transferDateIso: string): string[] {
   //    그 월의 말일로 기간이 만료한다」고 한다 ⇒ 2023-03-31의 소급 1개월은 **2023-02-28**이다.
   //    그래서 오버플로가 감지되면 `setUTCDate(0)`으로 **직전 달의 말일**까지 되돌린다.
   const start = monthBeforeClamped(anchor);
-  start.setUTCDate(start.getUTCDate() + 1);
 
   // end = anchor (포함)
   const slots: string[] = [];
@@ -243,14 +248,25 @@ export function buildOneMonthBeforeSlots(transferDateIso: string): string[] {
 }
 
 /**
- * §165⑤ 상장일 이후 1개월 슬롯 (사례 48 취득 후 상장 환산).
+ * §165⑤ 상장일 이후 1개월 슬롯 (사례 48 취득 후 상장 환산) — **양쪽 경계일 포함**.
  *
  * - 시작: 상장일 (포함)
- * - 종료: 상장일 + 1개월 - 1일
+ * - 종료: **상장일 + 1개월이 되는 날 (포함)**
  *
- * 예: 2009-08-21 → [2009-08-21 ~ 2009-09-20] 31일
- *     2009-02-01 → [2009-02-01 ~ 2009-02-28] 28일 (평년)
- *     2024-02-01 → [2024-02-01 ~ 2024-02-29] 29일 (윤년)
+ * ⚠️ **종전 판정 정정 (2026-09-01)** — 종료를 `+1개월 − 1일`로 잡고 있었다.
+ *
+ * 사례 48 PDF의 평가기간은 **2009-08-21 ~ 2009-09-21**이다(사용자 확인 2026-09-01).
+ * 코드는 09-20으로 하루 짧게 잡고 있었고, 같은 날 고친 「이전 1개월·전후 2개월」의
+ * 경계일 처리와도 방향이 어긋나 있었다.
+ *
+ * 🔑 종전 구현은 **자기 자신과도 모순**이었다: 오버플로 분기(2023-01-31 → 2023-02-28)는
+ *    말일을 **포함**해 돌려주면서 정상 분기만 하루를 뺐다. 「1개월이 만료하는 날」이
+ *    종료일이라는 같은 규칙을 두 분기가 다르게 구현한 것이다. 이제 둘 다 포함이다
+ *    ⇒ 그래서 오버플로 케이스(PL-CLAMP-1~3)는 이 변경으로 **값이 바뀌지 않는다**.
+ *
+ * 예: 2009-08-21 → [2009-08-21 ~ 2009-09-21] 32일  (사례 48 PDF)
+ *     2009-02-01 → [2009-02-01 ~ 2009-03-01] 29일
+ *     2023-01-31 → [2023-01-31 ~ 2023-02-28] 29일  (말일 클램프 — 종전과 동일)
  *
  * 양도일 직전 1개월과 달리 anchor 시프트 없음 (상장일은 거래소 정상 거래일 가정).
  */
@@ -261,18 +277,14 @@ export function buildOneMonthAfterListingSlots(listingDateIso: string): string[]
   // start = 상장일
   const start = new Date(Date.UTC(y, m - 1, d));
 
-  // end = (상장일 + 1개월)의 전날.
+  // end = 상장일 + 1개월이 **되는 날** (포함).
   //
-  // ⚠️ **JS는 자동 보정하지 않는다** — 종전 주석의 「자동 보정」은 사실이 아니었다.
-  //    `Date.UTC(2023, 1, 31)`은 2월에 31일이 없으니 **3월 3일로 밀린다**. 그대로 −1하면
-  //    윈도우가 [01-31 ~ 03-02] 31일이 되어 **2월 말일을 넘어선 종가**가 §165⑤ 1개월 평균의
-  //    분자·분모에 섞였다.
-  //    민법 §160③ 「최종의 월에 **해당일이 없는 때에는 그 월의 말일로** 기간이 만료한다」
-  //    ⇒ 2023-01-31의 1개월 후는 2023-02-28이고, 그 「전날」이 아니라 **그날**이 종료일이다.
-  //
-  //    같은 파일 역방향(`monthBeforeClamped`)은 이미 이 클램프를 갖고 있었다 —
-  //    한 파일 안에서 두 방향이 갈려 있었다.
-  const end = monthAfterClamped(new Date(Date.UTC(y, m - 1, d)));
+  // ⚠️ **JS는 자동 보정하지 않는다** — `Date.UTC(2023, 1, 31)`은 2월에 31일이 없으니
+  //    **3월 3일로 밀린다**. 그대로 두면 **2월 말일을 넘어선 종가**가 §165⑤ 1개월 평균의
+  //    분자·분모에 섞인다. 민법 §160③ 「최종의 월에 **해당일이 없는 때에는 그 월의 말일로**
+  //    기간이 만료한다」 ⇒ 2023-01-31의 1개월 후는 2023-02-28이고 **그날이 종료일**이다.
+  //    `addMonthsClamped`가 이 클램프를 담당한다(1개월·2개월 창과 같은 소스).
+  const end = addMonthsClamped(new Date(Date.UTC(y, m - 1, d)), 1);
 
   const slots: string[] = [];
   const cursor = new Date(start.getTime());

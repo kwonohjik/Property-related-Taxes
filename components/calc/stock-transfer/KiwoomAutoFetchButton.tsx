@@ -23,6 +23,7 @@ import {
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
+import { fetchKiwoomWithTimeout } from "@/lib/kiwoom/fetch-with-timeout";
 
 /**
  * 축 — 양도일(§163⑨ 분모) / 취득일(분자).
@@ -96,7 +97,7 @@ export function KiwoomAutoFetchButton({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/kiwoom/transfer-1month", {
+      const res = await fetchKiwoomWithTimeout("/api/kiwoom/transfer-1month", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stockCode: securityCode, baseDate: transferDate, axis }),
