@@ -20,7 +20,7 @@ import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 export function runHouseCountExclusionStep(effectiveInput: TransferTaxInput, steps: CalculationStep[]) {
   // STEP 0.9: §99의4·§98의9 주택수 제외 (소법 §89①3호 의제) — §99의4 우선 1건(F-4) 적용,
   // 비과세·12억 안분·LTHD 표2에 유효 주택수(count−1) 반영. 중과는 §167의3 별개 — 원본(R-D).
-  const { applied: hceApplied, new994Detail, unsold989Detail } = resolveHouseCountExclusion(
+  const { appliedList: hceApplied, new994Detail, unsold989Detail } = resolveHouseCountExclusion(
     effectiveInput.reductions,
     { generalHouseAcquisitionDate: effectiveInput.acquisitionDate, transferDate: effectiveInput.transferDate },
   );
@@ -39,12 +39,16 @@ export function runHouseCountExclusionStep(effectiveInput: TransferTaxInput, ste
     effectiveInput.generalHouseGiftedFromDecedentWithin2yr,
   );
   const totalExcluded =
-    (hceApplied ? 1 : 0) + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount;
+    hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount;
   const exemptionJudgeInput = totalExcluded > 0
     ? { ...effectiveInput, householdHousingCount: Math.max(effectiveInput.householdHousingCount - totalExcluded, 0) }
     : effectiveInput;
-  if (hceApplied) {
-    steps.push(buildHouseCountExclusionStep(hceApplied, effectiveInput.householdHousingCount, Math.max(effectiveInput.householdHousingCount - 1, 0)));
+  // 둘 다 적격이면 §99의4 → §98의9 순으로 각각 1채씩 (D4-01) — 주택 수는 순차 체이닝
+  let hceCursor = effectiveInput.householdHousingCount;
+  for (const applied of hceApplied) {
+    const after = Math.max(hceCursor - 1, 0);
+    steps.push(buildHouseCountExclusionStep(applied, hceCursor, after));
+    hceCursor = after;
   }
   if (specialHouseExclusionDetail.excludedCount > 0) {
     steps.push({
@@ -59,7 +63,7 @@ export function runHouseCountExclusionStep(effectiveInput: TransferTaxInput, ste
       inheritedExclusion,
       // 상속 제외 진입 시점 주택수 = 원본 − hce − 감면주택 (단독→공동 순 체이닝은 헬퍼가 처리)
       effectiveInput.householdHousingCount -
-        (hceApplied ? 1 : 0) -
+        hceApplied.length -
         specialHouseExclusionDetail.excludedCount,
     ),
   );

@@ -201,15 +201,21 @@ export function buildHouseCountExclusionStep(
 }
 
 export interface HouseCountExclusionResolution {
-  /** 적용되는 1건 (F-4: §99의4 우선) — eligible인 것만. 없으면 undefined */
-  applied?: New994Result | Unsold989Result;
+  /** 적용되는 조문 — 각 1채씩 제외. 둘 다 적격이면 2건(§99의4 → §98의9 순) */
+  appliedList: (New994Result | Unsold989Result)[];
   new994Detail?: New994Result;
   unsold989Detail?: Unsold989Result;
 }
 
 /**
  * house_count_exclusion 계열(§99의4·§98의9) 통합 평가 — transfer-tax.ts STEP 0.9 진입점.
- * F-4: 둘 다 eligible이면 §99의4 우선 적용, §98의9에는 dualExclusionWarning echo.
+ *
+ * 둘 다 적격이면 **각각 1채씩** 제외한다 (D4-01 — 종전에는 §99의4 하나로 잘렸다).
+ * 두 조문 모두 효과가 「소유주택이 아닌 것으로 보아 소득세법 §89①3호를 적용한다」는
+ * 주택수 의제뿐이라 감면세액이 없고, §127⑦은 「토지등을 양도하여 둘 이상의 양도소득세의
+ * **감면규정**을 동시에 적용받는 경우」로 한정되며 §127⑨도 §98의2·§98의3만 열거한다.
+ * 각 조문의 요건이 서로를 인용하지 않으므로 취득 순서가 「일반주택 → 준공후미분양 →
+ * 농어촌주택」이면 §98의9①의 「1주택을 보유한 1세대」와 §99의4①이 함께 성립한다.
  * (의존 방향: unsold-98-9 → new-99-4 단방향 — 순환 없음)
  */
 export function resolveHouseCountExclusion(
@@ -219,14 +225,12 @@ export function resolveHouseCountExclusion(
   const new994Detail = evaluateNew994FromReductions(reductions, ctx);
   let unsold989Detail = evaluateUnsold989FromReductions(reductions, ctx);
 
-  if (new994Detail?.isEligible && unsold989Detail?.isEligible) {
-    unsold989Detail = { ...unsold989Detail, dualExclusionWarning: true };
-    return { applied: new994Detail, new994Detail, unsold989Detail };
+  const bothEligible = new994Detail?.isEligible === true && unsold989Detail?.isEligible === true;
+  if (bothEligible && unsold989Detail?.isEligible) {
+    unsold989Detail = { ...unsold989Detail, dualExclusionApplied: true };
   }
-  const applied = new994Detail?.isEligible
-    ? new994Detail
-    : unsold989Detail?.isEligible
-      ? unsold989Detail
-      : undefined;
-  return { applied, new994Detail, unsold989Detail };
+  const appliedList: (New994Result | Unsold989Result)[] = [];
+  if (new994Detail?.isEligible) appliedList.push(new994Detail);
+  if (unsold989Detail?.isEligible) appliedList.push(unsold989Detail);
+  return { appliedList, new994Detail, unsold989Detail };
 }
