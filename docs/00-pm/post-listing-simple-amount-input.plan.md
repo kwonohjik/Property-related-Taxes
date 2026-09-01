@@ -2,7 +2,7 @@
 
 - 제보 2026-09-01 (이미지 17·18)
 - 검증 깊이: **L2** — 신규 필드 9개 · UI 신설. **세액 산식 무변경**(계산 결과를 기존 4필드에 mirror)
-- 상태: **계획 확정(V-n 전건 해소) · 구현 미착수**
+- 상태: **✅ 구현 완료 (2026-09-01)**
 
 ---
 
@@ -245,3 +245,45 @@ onChange({
 - 환원율 입력이 필요하면 완전재현 모드를 쓴다.
 - 자산·부채를 **행 단위로** 나눠 넣어야 하면 완전재현 모드를 쓴다 — 간이 모드는 소계 2개(영업권 포함 전 순자산가액·영업권)까지만 받는다.
 - 80% 하한·가중평균 비율은 엔진 소관 — 이 작업의 대상이 아니다.
+
+
+---
+
+## 10. ✅ 구현 결과 (2026-09-01)
+
+### 산출물
+
+| 파일 | 내용 |
+|---|---|
+| `lib/calc/post-listing-amount-derive.ts` (신규) | 엔진 헬퍼 위임 — 산식 재구현 0 |
+| `components/calc/stock-transfer/PostListingAmountInputSection.tsx` (신규) | 한 축 블록. **두 축이 같은 컴포넌트를 두 번 쓴다** — 복사하면 다중키 patch 로직이 두 벌이 되어 한쪽만 어긋난다 |
+| `PostListingValuationCard.tsx` | 하위 토글 + 분기 배선 (334 → 395줄, 정책 800 이내) |
+| `calc-wizard-stock-form.ts` · `-normalize.ts` | 신규 9필드 (①②③) |
+| `stock-transfer-tax-validate-step2.ts` | 모드 분기 (⑧) |
+
+**④ API·⑫ Zod·⑭ Route·엔진은 예정대로 무변경** — 계산 결과를 기존 4필드로 mirror하기 때문.
+
+### 커밋 전 품질 검토에서 잡은 것 2건
+
+1. **`patchWithDerived`의 타입이 너무 넓었다.** `Partial<Record<keyof AmountAxisKeys, string>>`은
+   파생키(`netIncomePerShare` 등)도 받아들여, 호출부가 실수로 넘기면 **방금 계산한 값을 덮어쓴다**.
+   ⇒ 원천 4키만 받는 `RawKey`로 좁혀 **타입으로 막았다**.
+2. **결손 법인이 이 모드를 쓸 수 없었다.** 순손익액에 `allowNegative`가 없어 `-`가 제거됐다.
+   엔진 `calcNetIncomePerShare`는 음수를 임의로 0으로 바꾸지 않는데(AD-7) UI가 막고 있었다.
+   ⇒ 순손익액·순자산가액(자본잠식)에 `allowNegative` 추가. 영업권은 상증령 §59② 상 음수가
+   될 수 없어 제외, 주식수도 제외.
+   📌 **완전재현 모드도 같은 제약이 있다**(`PostListingNetIncomeStatement`에 `allowNegative` 없음).
+      기존 결함이고 범위 밖이라 **손대지 않고 기록만** 한다.
+
+### anchor 19건 · 뮤테이션 4건 전부 과녁만 적색
+
+| probe | 무력화 | 적색 |
+|---|---|---|
+| P-H | 다중키 patch에서 순자산 키 제거 | 2,182건 중 **AM-3·4·5** 3건 |
+| P-I | validate 모드 분기 제거 | 2,070건 중 **AV-2·5·6** 3건 |
+| P-J | `allowNegative` 제거 | 59건 중 **AM-7** 1건 |
+| (AD-5) | — | 완전재현 헬퍼와 값이 같은지 대조(뮤테이션 아님, 등가 고정) |
+
+### 검증
+
+`tsc` 0건 · `lint` 0 errors · `npm test` **1,718파일 18,423건 전건 통과** · E2E **12/12**.

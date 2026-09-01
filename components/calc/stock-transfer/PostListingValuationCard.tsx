@@ -36,6 +36,7 @@ import { PostListingNetIncomeStatement } from "./PostListingNetIncomeStatement";
 import { PostListingNetAssetStatement } from "./PostListingNetAssetStatement";
 import { PostListingFormulaPreview } from "./PostListingFormulaPreview";
 import { MonthlyAccrual81Section } from "./MonthlyAccrual81Section";
+import { PostListingAmountInputSection } from "./PostListingAmountInputSection";
 
 interface PostListingValuationCardProps {
   form: StockTransferFormData;
@@ -44,6 +45,8 @@ interface PostListingValuationCardProps {
 
 export function PostListingValuationCard({ form, onChange }: PostListingValuationCardProps) {
   const mode = form.unlistedDetailMode || "simple";
+  // 간이 모드 «안»의 하위 축 — 3중 패턴 default "direct"(기존 결과값 직접 입력 보존)
+  const valueMode = form.simpleValueInputMode || "direct";
 
   // §81④ 토글 노출 조건 — simple 모드는 4필드 가중평균이 동일할 때만 노출(활성 우선),
   // full/listing_only는 합성 산출이라 무조건 노출(엔진 C-7이 평가 상이 시 무시 처리).
@@ -244,32 +247,90 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               onChange={(v) => onChange({ listingDatePriceAvg1Month: v })}
               placeholder="상장일 이후 1개월 종가평균"
             />
-            <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-              <p className="text-sm font-medium text-amber-800 mb-3">상장연도 비상장 보충적 평가</p>
-              <div className="space-y-3">
-                <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required
-                  value={form.listingYearNetIncomePerShare}
-                  onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
-                  placeholder="상장일 직전 사업연도 1주당 순손익가치" />
-                <CurrencyInput label="상장일 직전 사업연도 1주당 순자산가치" required
-                  value={form.listingYearNetAssetPerShare}
-                  onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
-                  placeholder="상장일 직전 사업연도 1주당 순자산가치" />
-              </div>
-            </div>
-            <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-              <p className="text-sm font-medium text-amber-800 mb-3">취득연도 비상장 보충적 평가</p>
-              <div className="space-y-3">
-                <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required
-                  value={form.acquisitionYearNetIncomePerShare}
-                  onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
-                  placeholder="취득일 직전 사업연도 1주당 순손익가치" />
-                <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required
-                  value={form.acquisitionYearNetAssetPerShare}
-                  onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
-                  placeholder="취득일 직전 사업연도 1주당 순자산가치" />
-              </div>
-            </div>
+            {/* 값 입력 방식 — 결과값 직접 ↔ 순액에서 계산 (계획서 Q-1: 간이 모드 «안»의 하위 토글) */}
+            <FieldCard label="값 입력 방식">
+              <RadioCardGroup
+                name="simpleValueInputMode"
+                value={valueMode}
+                onChange={(v) => onChange({ simpleValueInputMode: v as "direct" | "amounts" })}
+                tone="amber"
+                layout="inline"
+                options={[
+                  {
+                    value: "direct",
+                    label: "결과값 직접 입력",
+                    description: "외부에서 보충적 평가를 마친 경우",
+                  },
+                  {
+                    value: "amounts",
+                    label: "순손익액·순자산가액에서 계산",
+                    description: "결산 수치에서 1주당 가치를 자동 산정",
+                  },
+                ]}
+              />
+            </FieldCard>
+
+            {valueMode === "direct" ? (
+              <>
+                <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
+                  <p className="text-sm font-medium text-amber-800 mb-3">상장연도 비상장 보충적 평가</p>
+                  <div className="space-y-3">
+                    <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required
+                      value={form.listingYearNetIncomePerShare}
+                      onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
+                      placeholder="상장일 직전 사업연도 1주당 순손익가치" />
+                    <CurrencyInput label="상장일 직전 사업연도 1주당 순자산가치" required
+                      value={form.listingYearNetAssetPerShare}
+                      onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
+                      placeholder="상장일 직전 사업연도 1주당 순자산가치" />
+                  </div>
+                </div>
+                <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
+                  <p className="text-sm font-medium text-amber-800 mb-3">취득연도 비상장 보충적 평가</p>
+                  <div className="space-y-3">
+                    <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required
+                      value={form.acquisitionYearNetIncomePerShare}
+                      onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
+                      placeholder="취득일 직전 사업연도 1주당 순손익가치" />
+                    <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required
+                      value={form.acquisitionYearNetAssetPerShare}
+                      onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
+                      placeholder="취득일 직전 사업연도 1주당 순자산가치" />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <PostListingAmountInputSection
+                  title="상장연도 비상장 보충적 평가"
+                  axisLabel="상장일"
+                  form={form}
+                  onChange={onChange}
+                  keys={{
+                    netIncomeAmount: "listingYearNetIncomeAmount",
+                    shareCount: "listingYearShareCount",
+                    netAssetAmount: "listingYearNetAssetAmount",
+                    goodwill: "listingYearGoodwill",
+                    netIncomePerShare: "listingYearNetIncomePerShare",
+                    netAssetPerShare: "listingYearNetAssetPerShare",
+                  }}
+                />
+                <PostListingAmountInputSection
+                  title="취득연도 비상장 보충적 평가"
+                  axisLabel="취득일"
+                  form={form}
+                  onChange={onChange}
+                  keys={{
+                    netIncomeAmount: "acquisitionYearNetIncomeAmount",
+                    shareCount: "acquisitionYearShareCount",
+                    netAssetAmount: "acquisitionYearNetAssetAmount",
+                    goodwill: "acquisitionYearGoodwill",
+                    netIncomePerShare: "acquisitionYearNetIncomePerShare",
+                    netAssetPerShare: "acquisitionYearNetAssetPerShare",
+                  }}
+                />
+              </>
+            )}
           </>
         )}
 
