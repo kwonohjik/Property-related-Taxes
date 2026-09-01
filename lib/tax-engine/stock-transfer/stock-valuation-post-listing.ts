@@ -183,9 +183,15 @@ export function calcClosingAvgWithEvent(closing: {
  * perShareIncome = max(0, floor(netIncomeAmount / shareCount))   ← 행 21 (§56① 후단)
  * perShareValue  = floor(perShareIncome / discountRate)   ※ 환원율 default 0.10
  *
- * 🔑 **0 하한은 상증령 §56① 후단의 준용이다** — 「그 가액이 음수인 경우에는 영으로 한다」.
- *    체인: 소법 §99①4 전단(「상증법 §63①1나목을 **준용**하여 평가한 가액」)
- *         → 상증법 §63①1나목 → 상증령 §54 → §56①.
+ * 🔑 **0 하한은 「상속세 및 증여세법 시행령」 제56조 제1항 후단의 준용이다**
+ *    — 「그 가액이 음수(陰數)인 경우에는 영으로 한다」.
+ *
+ *    체인 (법령명·법/령/규칙을 모두 적는다 — 「§56①」만 쓰면 어느 법령인지 알 수 없다):
+ *      「소득세법」 제99조 제1항 제4호 **전단**
+ *        「…「상속세 및 증여세법」 제63조제1항제1호나목을 **준용**하여 평가한 가액…」
+ *      → 「상속세 및 증여세법」 제63조 제1항 제1호 나목
+ *      → 「상속세 및 증여세법 시행령」 제54조 → 제56조 제1항
+ *    상수: `STOCK.INH_DECREE_56_1_NET_INCOME_ZERO_FLOOR`
  *    소령 §165④은 §99①4 **후단**이 위임한 「평가기준시기 및 평가액」을 정하는 조항이지
  *    준용을 **배제**하는 조항이 아니다.
  *    ⚠️ 종전에는 「§165④은 §56을 준용하지 않는다」고 보아 하한을 두지 않았다. **틀렸다** —
@@ -203,7 +209,7 @@ export function calcNetIncomePerShare(
   const netIncomeAmount = addA - subB;
   const shareCount = year.shareCount || 0;
   if (shareCount <= 0) return { netIncomeAmount, perShareIncome: 0, perShareValue: 0 };
-  // §56① 후단 준용 — 음수면 영으로 한다 (행 21)
+  // 「상속세 및 증여세법 시행령」 제56조 제1항 후단 준용 — 음수면 영으로 한다 (행 21)
   const perShareIncome = Math.max(0, Math.floor(netIncomeAmount / shareCount));
   const discountRate = year.discountRate > 0 ? year.discountRate : 0.10; // 시행규칙 §81② → 상증령 §17
   const perShareValue = Math.floor(perShareIncome / discountRate);
@@ -218,8 +224,11 @@ export function calcNetIncomePerShare(
  * netAssetAmount = beforeGoodwill + goodwillRow19                     ← 행 20
  * perShareAsset  = floor(netAssetAmount / shareCount)
  *
- * 🔑 **0 하한은 상증령 §55① 후단의 준용이다** — 「순자산가액이 0원 이하인 경우에는 0원으로 한다」.
- *    체인은 H-02 주석과 같다(소법 §99①4 전단 → 상증법 §63①1나목 → 상증령 §54 → §55①).
+ * 🔑 **0 하한은 「상속세 및 증여세법 시행령」 제55조 제1항 후단의 준용이다**
+ *    — 「순자산가액이 0원 이하인 경우에는 0원으로 한다」.
+ *    체인은 H-02 주석과 같다(「소득세법」 제99조 제1항 제4호 전단 →
+ *    「상속세 및 증여세법」 제63조 제1항 제1호 나목 → 같은 법 시행령 제54조 → 제55조 제1항).
+ *    상수: `STOCK.INH_DECREE_55_1_NET_ASSET_ZERO_FLOOR`
  *    형제 경로: `property-valuation/net-asset-calc.ts:83`이 같은 하한을 같은 자리에 쓴다.
  *
  * ⚠️ **하한은 「영업권 포함 «전»」에 건다** — 서식 순서가 행 18(영업권 포함 전) → 행 19(영업권)
@@ -243,7 +252,8 @@ export function calcNetAssetPerShare(
   const liabSubtotal = (year.liabTotalRow8 || 0) + liabAdd - liabSub;
   const netAssetBeforeGoodwillRaw = assetSubtotal - liabSubtotal; // 행 18 (사실)
   const zeroFloorApplied = netAssetBeforeGoodwillRaw < 0;
-  const beforeGoodwill = Math.max(0, netAssetBeforeGoodwillRaw); // §55① 후단
+  // 「상속세 및 증여세법 시행령」 제55조 제1항 후단
+  const beforeGoodwill = Math.max(0, netAssetBeforeGoodwillRaw);
   const netAssetAmount = beforeGoodwill + (year.goodwillRow19 || 0); // 행 20
   const shareCount = year.shareCount || 0;
   const base = { netAssetAmount, netAssetBeforeGoodwillRaw, zeroFloorApplied };

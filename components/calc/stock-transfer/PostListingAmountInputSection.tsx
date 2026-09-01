@@ -103,8 +103,9 @@ export function PostListingAmountInputSection({ title, axisLabel, form, onChange
       goodwill: parseAmount(next.goodwill ?? ""),
     });
     // 🔑 **파생값 0은 «산정 실패»가 아니라 정상 결과다.**
-    //    결손·자본잠식이면 상증령 §56①·§55① 후단 준용으로 1주당 가치가 0이 된다
-    //    (소법 §99①4 전단 → 상증법 §63①1나목 → 상증령 §54 → §55·§56).
+    //    결손·자본잠식이면 「상속세 및 증여세법 시행령」 제56조 제1항·제55조 제1항 후단 준용으로
+    //    1주당 가치가 0이 된다(「소득세법」 제99조 제1항 제4호 전단 →
+    //    「상속세 및 증여세법」 제63조 제1항 제1호 나목 → 같은 법 시행령 제54조 → 제55조·제56조).
     //    `> 0`으로 걸러 빈 문자열을 쓰면 validate의 「자동 산정 실패」가 발동해
     //    **결손 법인이 계산 자체를 못 한다.** ⇒ 「원천값이 입력됐는가」로 가른다.
     //    anchor: post-listing-amount-input.anchor.test.tsx AM-8

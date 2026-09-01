@@ -22,6 +22,8 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { calcNetIncomePerShare } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 // PDF 행 라벨 (가산 4행)
@@ -190,8 +192,13 @@ export function YearColumn({
           <p>24. 1주당 가액 = 21 ÷ 환원율 = <strong className="text-amber-900">{preview.perShareValue.toLocaleString()}</strong></p>
           {preview.netIncomeAmount < 0 && (
             <p className="text-amber-700 pt-0.5 border-t border-amber-200">
-              결손 입력 — 1주당 순손익액이 음수이므로 <strong>0으로 보아</strong> 평가합니다
-              (상증령 §56① 후단 준용, 소법 §99①4 전단).
+              결손 입력 — 1주당 순손익액이 음수이므로 <strong>0으로 보아</strong> 평가합니다.
+              「상속세 및 증여세법 시행령」 제56조 제1항 후단(「소득세법」 제99조 제1항 제4호 전단이 준용)
+              <LawArticleModal
+                legalBasis={STOCK.INH_DECREE_56_1_NET_INCOME_ZERO_FLOOR}
+                label="상증령 §56①"
+                className="ml-1"
+              />
             </p>
           )}
         </div>

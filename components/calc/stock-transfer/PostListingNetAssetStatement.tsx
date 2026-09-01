@@ -21,6 +21,8 @@ import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { calcNetAssetPerShare } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 const ASSET_ADD_LABELS = [
@@ -202,8 +204,14 @@ export function YearColumn({
           <p>1주당 순자산가치 = 순자산 ÷ 주식수 = <strong className="text-sky-900">{preview.perShareAsset.toLocaleString()}</strong></p>
           {preview.zeroFloorApplied && (
             <p className="text-sky-700 pt-0.5 border-t border-sky-200">
-              자본잠식 — 영업권 포함 전 순자산가액이 0원 이하이므로 <strong>0원으로 보아</strong> 평가합니다
-              (상증령 §55① 후단 준용, 소법 §99①4 전단). 영업권이 있으면 영업권만 가산됩니다.
+              자본잠식 — 영업권 포함 전 순자산가액이 0원 이하이므로 <strong>0원으로 보아</strong> 평가합니다.
+              영업권이 있으면 영업권만 가산됩니다.
+              「상속세 및 증여세법 시행령」 제55조 제1항 후단(「소득세법」 제99조 제1항 제4호 전단이 준용)
+              <LawArticleModal
+                legalBasis={STOCK.INH_DECREE_55_1_NET_ASSET_ZERO_FLOOR}
+                label="상증령 §55①"
+                className="ml-1"
+              />
             </p>
           )}
         </div>

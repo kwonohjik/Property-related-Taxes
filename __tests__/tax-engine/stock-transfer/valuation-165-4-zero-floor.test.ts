@@ -27,6 +27,7 @@ import {
   calcNetAssetPerShare,
 } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 
 describe("ZF: §165④ 평가액 0원 하한 (상증령 §55①·§56① 준용)", () => {
   it("ZF-1: 결손 → 1주당 순손익액 0. 단 «행 17 순손익액은 음수 그대로»", () => {
@@ -102,4 +103,19 @@ describe("ZF: §165④ 평가액 0원 하한 (상증령 §55①·§56① 준용)
     expect(v.value).toBe(16_000);
     expect(v.floorApplied).toBe(true);
   });
+
+  it("ZF-8: 하한 상수가 «법령명 + 령 + 조·항»을 다 적는다 — 「§55①」만으로는 어느 법인지 알 수 없다", () => {
+    // [[feedback_law_citation_must_name_statute_and_tier]]
+    for (const c of [
+      STOCK.INH_DECREE_55_1_NET_ASSET_ZERO_FLOOR,
+      STOCK.INH_DECREE_56_1_NET_INCOME_ZERO_FLOOR,
+    ]) {
+      expect(c).toContain("상속세 및 증여세법"); // 법령명
+      expect(c).toContain("시행령"); // 법/령/규칙 구분
+      expect(c).toMatch(/§\d+\s*[①-⑮]/); // 조·항
+    }
+    // 준용의 출발점도 법령명을 적는다
+    expect(STOCK.INCOME_TAX_99_1_4_JUNYONG).toContain("소득세법");
+  });
+
 });
