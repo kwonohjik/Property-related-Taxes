@@ -73,8 +73,19 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         evalDate,
       ).value
     : 0;
+  // 🔑 **소령 §165⑤ 후단은 「평가액이 «같은 경우»」라고만 한다 — 양수 요건이 없다.**
+  //    종전의 `simpleListingEval > 0`은 「4필드 미입력이면 0 == 0이 되어 헛노출」을 막으려던
+  //    **대용품**이었고, 그 탓에 결손·자본잠식으로 **음수가 같은 경우**를 함께 막았다.
+  //    ⇒ 술어를 의도대로 바꾼다: 「값이 양수인가」 → 「**4필드가 입력되었는가**」. anchor AT-1·AT-2
+  const simpleFourFieldsEntered =
+    !!form.listingYearNetIncomePerShare &&
+    !!form.listingYearNetAssetPerShare &&
+    !!form.acquisitionYearNetIncomePerShare &&
+    !!form.acquisitionYearNetAssetPerShare;
   const showAccrualToggle =
-    mode !== "simple" || !evalDate || (simpleListingEval > 0 && simpleListingEval === simpleAcqEval);
+    mode !== "simple" ||
+    !evalDate ||
+    (simpleFourFieldsEntered && simpleListingEval === simpleAcqEval);
 
   // Enter 키 → 다음 입력 셀로 포커스 이동 (카드 내 순회).
   // 하위 컴포넌트(NetIncome/NetAsset/ClosingPriceTable)가 이미 자체 handler에서 preventDefault한 경우 패스.

@@ -28,7 +28,7 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store
 const ADD_LABELS = [
   "1. 각 사업연도 소득금액",
   "2. 국세·지방세 과오납 환급금 이자",
-  "3. 수익배당금 중 입금불산입한 금액",
+  "3. 수입배당금 중 익금불산입한 금액",
   "4. 기부금 손금산입한도액 초과액 이월손금 산입액",
 ];
 

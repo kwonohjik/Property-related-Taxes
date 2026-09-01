@@ -23,6 +23,7 @@ import { EstimatedUnlistedNetAssetStatement } from "./EstimatedUnlistedNetAssetS
 import { MonthlyAccrual81Section } from "./MonthlyAccrual81Section";
 import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
+import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 interface EstimatedUnlistedBlockProps {
@@ -84,32 +85,48 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
   const niWeight = isHeavyRE ? "2/5" : "3/5";
   const naWeight = isHeavyRE ? "3/5" : "2/5";
 
+  /** 「미입력」 판정 — 음수 입력(결손·자본잠식)을 미입력으로 오인하지 않기 위해 문자열로 본다 */
+  const isBlank = (s: string | undefined) => !s || s.trim() === "";
+
+  // 양도일 = §165④1의 연혁 게이팅 기준(가중치·80% 하한이 시기별로 다르다).
+  const evalDate = useMemo(() => {
+    if (!form.transferDate) return undefined;
+    const d = new Date(form.transferDate);
+    return isNaN(d.getTime()) ? undefined : d;
+  }, [form.transferDate]);
+
   // 양도기준시가 미리보기 (useMemo — useEffect→store 미러링 금지)
   // [DM-1] full 모드에서도 동일 미리보기 노출 — adapter 결과를 NI/NA로 사용
+  //
+  // 🔑 **산식을 여기서 다시 쓰지 않는다.** 「제4항에 따른 평가액」의 정본은
+  //    `calcSection165_4Value`이고, 가중치·80% 하한·**양도일 연혁 게이팅**이 전부 그 안에 있다.
+  //    재구현하던 종전 코드는 연혁을 무시하고(1997 양도 38,000 vs 정본 20,000) `weighted > 0`
+  //    가드 탓에 결손에서 하한을 빠뜨렸다(−22,000 vs 정본 16,000).
+  //    [[feedback_ui_engine_dual_truth_avoidance]] · anchor PV-1·PV-2·PV-6
   const transferStdPricePreview = useMemo(() => {
+    // 연혁 게이팅 기준일이 없으면 «판정 불가» — 임의 기준일 fallback 금지
+    if (!evalDate) return null;
     const ni = mode === "full" && fullReduced
       ? fullReduced.transferNi
       : parseAmount(form.transferYearNetIncomePerShare);
     const na = mode === "full" && fullReduced
       ? fullReduced.transferNa
       : parseAmount(form.transferYearNetAssetPerShare);
-    if (ni <= 0 && na <= 0) return null;
+    // 「미입력」과 「음수 입력」을 가른다 — 종전 `ni <= 0 && na <= 0`은 결손을 미입력 취급했다
+    const entered = mode === "full" && fullReduced
+      ? true
+      : !(isBlank(form.transferYearNetIncomePerShare) && isBlank(form.transferYearNetAssetPerShare));
+    if (!entered) return null;
 
     if (isNetAssetOnly) {
-      // 순자산 단독 → 80% 하한 없음
+      // 순자산 단독(§165④3) → 80% 하한 없음. 정본 밖 분기이므로 여기서 처리한다.
       return { perShare: Math.floor(na), floor80Applied: false, method: "net_asset_only" as const };
     }
 
-    const niW = isHeavyRE ? 2 : 3;
-    const naW = isHeavyRE ? 3 : 2;
-    const weighted = (ni * niW + na * naW) / 5;
-    const floor80 = na * 0.8;
-
-    if (weighted > 0 && floor80 > weighted) {
-      return { perShare: Math.floor(floor80), floor80Applied: true, method: "weighted_avg" as const };
-    }
-    return { perShare: Math.floor(weighted), floor80Applied: false, method: "weighted_avg" as const };
+    const v = calcSection165_4Value(ni, na, isHeavyRE, evalDate);
+    return { perShare: v.value, floor80Applied: v.floorApplied, method: "weighted_avg" as const };
   }, [
+    evalDate,
     mode,
     fullReduced,
     form.transferYearNetIncomePerShare,
@@ -129,29 +146,28 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
     if (!acquisitionSideOnly && acqFaceValueOnly && acqFaceValuePerShareNum > 0 && shareCountNum > 0) {
       return acqFaceValuePerShareNum;  // 1주당 액면가 직접 표시
     }
+    if (!evalDate) return null;
     const ni = mode === "full" && fullReduced
       ? fullReduced.acqNi
       : parseAmount(form.acquisitionYearNetIncomePerShare);
     const na = mode === "full" && fullReduced
       ? fullReduced.acqNa
       : parseAmount(form.acquisitionYearNetAssetPerShare);
-    if (ni <= 0 && na <= 0) return null;
+    const entered = mode === "full" && fullReduced
+      ? true
+      : !(isBlank(form.acquisitionYearNetIncomePerShare) && isBlank(form.acquisitionYearNetAssetPerShare));
+    if (!entered) return null;
 
     if (isNetAssetOnly) {
       // 순자산 단독(§165④3) → 80% 하한 없음 (양도측과 동일)
       return Math.floor(na);
     }
 
-    const niW = isHeavyRE ? 2 : 3;
-    const naW = isHeavyRE ? 3 : 2;
-    const weighted = (ni * niW + na * naW) / 5;
     // 🔴 **80% 하한은 취득기준시가에도 적용된다** (2026-08-09) — §165④1 단서는 양도·취득을
-    //    가르지 않는다. 위 `transferStdPricePreview`와 **같은 규칙**을 써야 엔진과 어긋나지 않는다
-    //    (`stock-valuation-unlisted.ts` 취득기준시가 블록). dual-truth 방지.
-    const floor80 = na * 0.8;
-    if (weighted > 0 && floor80 > weighted) return Math.floor(floor80);
-    return Math.floor(weighted);
+    //    가르지 않는다. 양도측과 **같은 정본 함수**를 부르므로 규칙이 갈릴 여지가 없다.
+    return calcSection165_4Value(ni, na, isHeavyRE, evalDate).value;
   }, [
+    evalDate,
     acquisitionSideOnly,
     acqFaceValueOnly,
     acqFaceValuePerShareNum,
@@ -434,9 +450,10 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       {!acquisitionSideOnly && !acqFaceValueOnly && (
         <MonthlyAccrual81Section
           visible={
+            // §165⑤ 후단·§165⑨는 「평가액이 «같은 경우»」라고만 한다 — 양수 요건이 없다.
+            // null 검사가 이미 「미입력」을 거르므로 `perShare > 0`은 음수 동일 케이스만 막던 잔재였다.
             transferStdPricePreview !== null &&
             acquisitionStdPricePreview !== null &&
-            transferStdPricePreview.perShare > 0 &&
             transferStdPricePreview.perShare === acquisitionStdPricePreview
           }
           checked={form.unlistedSameBizYearToggle}
