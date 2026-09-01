@@ -165,7 +165,11 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
     });
   }
   // 3) 과밀억제권역 — 면적 한정 (대지 660 이내 AND 연면적 149 이내)
-  if (isOvercon) {
+  //    령 §98의3① 단서는 「다음 각 호의 어느 하나에 해당하는 주택」을 한정하는 문언이고,
+  //    각 호는 전부 사업주체 등이 「공급하는」 주택이다. 자기건설 신축주택은 법 §98의3②가
+  //    직접 포함시키는 주택이라 각 호를 거치지 않으므로 이 단서의 적용 대상이 없다
+  //    (령 §98의3⑤ 단서도 ②주택의 증빙을 착공신고서·사용승인서류로 따로 정한다).
+  if (isOvercon && houseType === "purchased") {
     if (!(input.landAreaSqm !== undefined && input.landAreaSqm > 0) ||
         !(input.floorAreaSqm !== undefined && input.floorAreaSqm > 0)) {
       reasons.push({
@@ -192,8 +196,10 @@ export function evaluateUnsold983(input: Unsold983Input): UnsoldHybridResult {
       legalBasis,
     });
   }
-  // 5) 자격 토글
-  if (input.isUnsoldConfirmed !== true) {
+  // 5) 자격 토글 — 미분양 확인은 령 §98의3① 각 호 주택(=사업주체 취득)에만 해당한다.
+  //    법 §98의3② 자기건설 신축주택은 령 §98의3⑤ 단서가 착공신고서 사본·사용승인 확인서류로
+  //    증빙을 갈음하므로 미분양 확인 요건 자체가 적용되지 않는다.
+  if (houseType === "purchased" && input.isUnsoldConfirmed !== true) {
     reasons.push({
       code: "NOT_UNSOLD_CONFIRMED",
       message: "미분양주택 요건(2009.2.11까지 분양계약 미체결 + 2009.2.12 이후 선착순 공급 등)이 확인되지 않았습니다 (조특령 §98의3①).",

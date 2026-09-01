@@ -453,7 +453,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           } else if (!r.contractDate983) {
             return fail("§98의3 적용: 최초 매매계약일을 입력하세요 (거주자 2009.2.12~ / 비거주자 2009.3.16~2010.2.11).");
           }
-          if (r.isOverconcentration983) {
+          // 면적 한정(령 §98의3① 단서)은 각 호 주택 = 사업주체 취득분에만 적용된다 (D5-03).
+          if (r.isOverconcentration983 && r.houseType983 !== "self_built") {
             if (!(parseDecimal(r.landAreaSqm983 || "") > 0))
               return fail("§98의3 적용: 수도권과밀억제권역 주택은 대지면적(㎡)을 입력하세요 (660㎡ 이내 한정).");
             if (!(parseDecimal(r.floorAreaSqm983 || "") > 0))
