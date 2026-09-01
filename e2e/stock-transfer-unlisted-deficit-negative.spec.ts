@@ -86,8 +86,12 @@ test.describe("비상장 보충적 평가 — 결손·자본잠식 음수 입력
 
     // 프리뷰 17행이 음수로 표시된다 (수정 전에는 "500,000,000" — 부호 반전)
     await expect(page.getByText(/17\. 순손익액/).first()).toContainText("-500,000,000");
-    // 24. 1주당 가액 = -5,000 ÷ 10% = -50,000
-    await expect(page.getByText(/24\. 1주당 가액/).first()).toContainText("-50,000");
+    // 🔑 행 21·24는 «0»이다 — 상증령 §56① 후단 준용(「음수인 경우에는 영으로 한다」).
+    //    체인: 소법 §99①4 전단 → 상증법 §63①1나목 → 상증령 §54 → §56①.
+    //    행 17(사실)은 음수 그대로, 「평가액」 단계에서만 0으로 본다.
+    await expect(page.getByText(/24\. 1주당 가액/).first()).toContainText("0");
+    // 하한이 발동했음을 사용자에게 알린다
+    await expect(page.getByText(/1주당 순손익액이 음수이므로/)).toBeVisible();
   });
 
   test("E-2: 간이 direct 모드 — 순손익가치·순자산가치 음수 보존", async ({ page }) => {

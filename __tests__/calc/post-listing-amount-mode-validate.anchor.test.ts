@@ -113,4 +113,27 @@ describe("AV — 간이 «순액 입력» 모드의 validate 분기", () => {
     ).find((e) => e.field === "listingYearNetIncomeAmount")?.message;
     expect(msg).toMatch(/자동 산정 실패/);
   });
+
+  it("AV-7 결손 법인 — 파생 1주당 가치가 0이어도 «자동 산정 실패»로 차단하지 않는다", () => {
+    // 🔑 상증령 §56① 후단 준용으로 결손이면 1주당 순손익가치가 **0**이 된다.
+    //    0을 「산정 실패」로 오인해 차단하면 결손 법인은 이 모드로 계산 자체를 못 한다.
+    //    (UI 쪽 대응 anchor: post-listing-amount-input.anchor.test.tsx AM-8)
+    const form = postListingForm({
+      simpleValueInputMode: "amounts",
+      listingYearNetIncomeAmount: "-100000000", // 결손
+      listingYearShareCount: "10000",
+      listingYearNetAssetAmount: "48000000",
+      listingYearNetIncomePerShare: "0", // 파생 — §56① 후단
+      listingYearNetAssetPerShare: "4800",
+      acquisitionYearNetIncomeAmount: "-50000000",
+      acquisitionYearShareCount: "10000",
+      acquisitionYearNetAssetAmount: "30000000",
+      acquisitionYearNetIncomePerShare: "0",
+      acquisitionYearNetAssetPerShare: "3000",
+    });
+    const fields = fieldsOf(form);
+    expect(fields.filter((f) => f.includes("NetIncomePerShare"))).toEqual([]);
+    expect(fields.filter((f) => f.includes("NetIncomeAmount"))).toEqual([]);
+  });
+
 });

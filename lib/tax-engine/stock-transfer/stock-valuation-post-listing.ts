@@ -179,9 +179,21 @@ export function calcClosingAvgWithEvent(closing: {
 
 /**
  * H-02 — 1주당 순손익가치 (상증령 §54 동치)
- * netIncomeAmount = sum(addA) − sum(subB)
- * perShareIncome = floor(netIncomeAmount / shareCount)
+ * netIncomeAmount = sum(addA) − sum(subB)            ← 행 17 (사실 그대로, 하한 없음)
+ * perShareIncome = max(0, floor(netIncomeAmount / shareCount))   ← 행 21 (§56① 후단)
  * perShareValue  = floor(perShareIncome / discountRate)   ※ 환원율 default 0.10
+ *
+ * 🔑 **0 하한은 상증령 §56① 후단의 준용이다** — 「그 가액이 음수인 경우에는 영으로 한다」.
+ *    체인: 소법 §99①4 전단(「상증법 §63①1나목을 **준용**하여 평가한 가액」)
+ *         → 상증법 §63①1나목 → 상증령 §54 → §56①.
+ *    소령 §165④은 §99①4 **후단**이 위임한 「평가기준시기 및 평가액」을 정하는 조항이지
+ *    준용을 **배제**하는 조항이 아니다.
+ *    ⚠️ 종전에는 「§165④은 §56을 준용하지 않는다」고 보아 하한을 두지 않았다. **틀렸다** —
+ *       시행령만 보고 법률 준용을 건너뛴 판정이었다([[feedback_no_statute_claim_needs_requirement_article]]).
+ *    형제 경로: `property-valuation/unlisted-orchestrator.ts:247`이 같은 하한을 쓴다.
+ *    anchor: __tests__/tax-engine/stock-transfer/valuation-165-4-zero-floor.test.ts ZF-1
+ *
+ * ⚠️ **행 17은 clamp하지 않는다** — 하한은 「평가액」 단계 규정이지 서식 행의 사실을 지우지 않는다.
  */
 export function calcNetIncomePerShare(
   year: NIYear,
@@ -191,7 +203,8 @@ export function calcNetIncomePerShare(
   const netIncomeAmount = addA - subB;
   const shareCount = year.shareCount || 0;
   if (shareCount <= 0) return { netIncomeAmount, perShareIncome: 0, perShareValue: 0 };
-  const perShareIncome = Math.floor(netIncomeAmount / shareCount);
+  // §56① 후단 준용 — 음수면 영으로 한다 (행 21)
+  const perShareIncome = Math.max(0, Math.floor(netIncomeAmount / shareCount));
   const discountRate = year.discountRate > 0 ? year.discountRate : 0.10; // 시행규칙 §81② → 상증령 §17
   const perShareValue = Math.floor(perShareIncome / discountRate);
   return { netIncomeAmount, perShareIncome, perShareValue };
@@ -199,24 +212,43 @@ export function calcNetIncomePerShare(
 
 /**
  * H-03 — 1주당 순자산가치 (상증령 §55 동치)
- * assetSubtotal = assetTotalRow1 + sum(assetAdd) − sum(assetSub)
- * liabSubtotal  = liabTotalRow8 + sum(liabAdd) − sum(liabSub)
- * netAssetAmount = assetSubtotal − liabSubtotal + goodwillRow19
+ * assetSubtotal = assetTotalRow1 + sum(assetAdd) − sum(assetSub)     ← 행 가
+ * liabSubtotal  = liabTotalRow8 + sum(liabAdd) − sum(liabSub)        ← 행 나
+ * beforeGoodwill = max(0, 가 − 나)                                    ← 행 18 (§55① 후단)
+ * netAssetAmount = beforeGoodwill + goodwillRow19                     ← 행 20
  * perShareAsset  = floor(netAssetAmount / shareCount)
+ *
+ * 🔑 **0 하한은 상증령 §55① 후단의 준용이다** — 「순자산가액이 0원 이하인 경우에는 0원으로 한다」.
+ *    체인은 H-02 주석과 같다(소법 §99①4 전단 → 상증법 §63①1나목 → 상증령 §54 → §55①).
+ *    형제 경로: `property-valuation/net-asset-calc.ts:83`이 같은 하한을 같은 자리에 쓴다.
+ *
+ * ⚠️ **하한은 「영업권 포함 «전»」에 건다** — 서식 순서가 행 18(영업권 포함 전) → 행 19(영업권)
+ *    → 행 20이다. 순서를 뒤집으면 **영업권이 있는 자본잠식 법인에서 결과가 달라진다**(anchor ZF-3).
+ *
+ * @returns `netAssetBeforeGoodwillRaw`는 하한 «전» 원값 — 서식 표시·안내 문구용(사실 보존).
  */
 export function calcNetAssetPerShare(
   year: NAYear,
-): { netAssetAmount: number; perShareAsset: number } {
+): {
+  netAssetAmount: number;
+  perShareAsset: number;
+  netAssetBeforeGoodwillRaw: number;
+  zeroFloorApplied: boolean;
+} {
   const assetAdd = (year.assetAdd ?? []).reduce((s, v) => s + (v || 0), 0);
   const assetSub = (year.assetSub ?? []).reduce((s, v) => s + (v || 0), 0);
   const liabAdd = (year.liabAdd ?? []).reduce((s, v) => s + (v || 0), 0);
   const liabSub = (year.liabSub ?? []).reduce((s, v) => s + (v || 0), 0);
   const assetSubtotal = (year.assetTotalRow1 || 0) + assetAdd - assetSub;
   const liabSubtotal = (year.liabTotalRow8 || 0) + liabAdd - liabSub;
-  const netAssetAmount = assetSubtotal - liabSubtotal + (year.goodwillRow19 || 0);
+  const netAssetBeforeGoodwillRaw = assetSubtotal - liabSubtotal; // 행 18 (사실)
+  const zeroFloorApplied = netAssetBeforeGoodwillRaw < 0;
+  const beforeGoodwill = Math.max(0, netAssetBeforeGoodwillRaw); // §55① 후단
+  const netAssetAmount = beforeGoodwill + (year.goodwillRow19 || 0); // 행 20
   const shareCount = year.shareCount || 0;
-  if (shareCount <= 0) return { netAssetAmount, perShareAsset: 0 };
-  return { netAssetAmount, perShareAsset: Math.floor(netAssetAmount / shareCount) };
+  const base = { netAssetAmount, netAssetBeforeGoodwillRaw, zeroFloorApplied };
+  if (shareCount <= 0) return { ...base, perShareAsset: 0 };
+  return { ...base, perShareAsset: Math.floor(netAssetAmount / shareCount) };
 }
 
 /**

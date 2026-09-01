@@ -105,11 +105,19 @@ export function calcWeightedAvgPerShare(
 }
 
 export function calcSection165_4Value(
-  netIncomeValue: number,
-  netAssetValue: number,
+  netIncomeValueRaw: number,
+  netAssetValueRaw: number,
   isHeavyRE: boolean,
   transferDate: Date,
 ): Section165_4Value {
+  // 🔑 **상증령 §55①·§56① 후단 준용 — 0 하한.**
+  //    소법 §99①4 전단이 「상증법 §63①1나목을 **준용**하여 평가한 가액」이라 하고,
+  //    §165④은 후단이 위임한 「평가기준시기 및 평가액」을 정할 뿐 준용을 배제하지 않는다.
+  //    ⚠️ **여기가 없으면 반쪽이다** — 간이 direct 모드는 사용자가 1주당 가치를 직접 입력해
+  //       `calcNetIncomePerShare`·`calcNetAssetPerShare`를 **거치지 않는다**. 이 함수가 유일한
+  //       공통 깔때기다. anchor ZF-4
+  const netIncomeValue = Math.max(0, netIncomeValueRaw);
+  const netAssetValue = Math.max(0, netAssetValueRaw);
   const weights = getValuationWeights(transferDate);
   const niWeight = isHeavyRE ? 2 : weights.niWeight;
   const naWeight = isHeavyRE ? 3 : weights.naWeight;

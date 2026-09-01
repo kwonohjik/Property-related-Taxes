@@ -181,12 +181,19 @@ export function YearColumn({
         />
       </FieldCard>
 
-      {/* 미리보기 */}
-      {preview.perShareValue !== 0 && (
+      {/* 미리보기 — 결손(행 17 음수)이어도 서식은 사실대로 보여준다.
+          ⚠️ `perShareValue !== 0`만 걸면 §56① 하한이 발동한 결손 법인에서 프리뷰가 통째로 사라진다. */}
+      {(preview.perShareValue !== 0 || preview.netIncomeAmount !== 0) && (
         <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-800 space-y-0.5">
           <p>17. 순손익액 = A − B = <strong>{preview.netIncomeAmount.toLocaleString()}</strong></p>
           <p>21. 1주당 순손익액 = 17 ÷ 20 = <strong>{preview.perShareIncome.toLocaleString()}</strong></p>
           <p>24. 1주당 가액 = 21 ÷ 환원율 = <strong className="text-amber-900">{preview.perShareValue.toLocaleString()}</strong></p>
+          {preview.netIncomeAmount < 0 && (
+            <p className="text-amber-700 pt-0.5 border-t border-amber-200">
+              결손 입력 — 1주당 순손익액이 음수이므로 <strong>0으로 보아</strong> 평가합니다
+              (상증령 §56① 후단 준용, 소법 §99①4 전단).
+            </p>
+          )}
         </div>
       )}
     </div>
