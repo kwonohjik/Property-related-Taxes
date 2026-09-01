@@ -243,6 +243,9 @@ describe("AP-PL (#20): 취득 후 상장 환산은 「순손익가치 0」을 �
   /** 사례48 축약 — 코스닥 대주주, 취득 후 상장 환산 simple 모드 */
   const postListingForm = (o: Partial<StockTransferFormData> = {}) =>
     baseForm({
+      // 2026-09-02: 스토어 기본값이 "full"이 됐다. 이 해네스의 시나리오는 주석대로 simple
+      // 모드이므로 **기본값에 기대지 않고 명시**한다(AP-PL-3b만 full로 덮어쓴다).
+      unlistedDetailMode: "simple",
       marketType: "kosdaq",
       shareCount: "5000",
       transferActualInputMode: "per_share",

@@ -74,8 +74,8 @@ test.describe("비상장 보충적 평가 — 결손·자본잠식 음수 입력
     await fillStep1(page);
     await openPostListingCard(page);
 
-    // 완전 재현 모드 진입
-    await page.getByText("완전 재현 (PDF 3개 화면)", { exact: false }).click();
+    // 「재무제표로 계산」 모드 진입 (2026-09-02 기본 선택이 됐지만 의도를 남겨 명시 클릭)
+    await page.getByText("재무제표로 계산", { exact: true }).click();
 
     // 상장연도 열 — 행 1 각 사업연도 소득금액 = 결손 5억
     const row1 = cardInput(page, "1. 각 사업연도 소득금액");
@@ -100,7 +100,10 @@ test.describe("비상장 보충적 평가 — 결손·자본잠식 음수 입력
     await fillStep1(page);
     await openPostListingCard(page);
 
-    // 간이(simple)가 기본 모드 — 결과값 직접 입력
+    // 2026-09-02: 기본 선택이 «재무제표로 계산»(full)이 됐다 — 이 케이스는 1주당 가액을
+    // 직접 넣는 흐름이므로 «평가액 직접 입력»(simple)을 명시한다.
+    await page.getByText("평가액 직접 입력", { exact: true }).click();
+
     const ni = page
       .locator('div:has(> label:has-text("상장일 직전 사업연도 1주당 순손익가치"))')
       .locator("input")

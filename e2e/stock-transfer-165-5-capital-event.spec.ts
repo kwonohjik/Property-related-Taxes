@@ -68,7 +68,7 @@ test.describe("B-5 §165⑤ 증자·합병 기간 조정 UI", () => {
       .click();
 
     // full 모드 — 종가 표 + 증자·합병 섹션 노출
-    await page.getByText("완전 재현 (PDF 3개 화면)", { exact: false }).click();
+    await page.getByText("재무제표로 계산", { exact: true }).click();
 
     // 증자·합병 토글 노출
     await expect(page.getByText(CAPITAL_EVENT_TOGGLE_TITLE, { exact: true })).toBeVisible({ timeout: 10_000 });

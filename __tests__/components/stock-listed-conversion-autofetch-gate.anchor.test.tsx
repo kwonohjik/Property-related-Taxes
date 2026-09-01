@@ -47,6 +47,10 @@ function listedEstimatedForm(o: Partial<StockTransferFormData> = {}): StockTrans
     tradingHaltAtTransfer: false,
     tradingHaltAtAcquisition: false,
     acquiredBeforeListing: false,
+    // 2026-09-02: 스토어 기본값이 "full"이 됐다. full은 종가 표(PostListingClosingPriceTable)를
+    // 그려 **자체 자동조회 버튼**을 갖는다 — 여기서 증명하려는 것은 게이트 ②
+    // (`transferStdInputMode` daily/direct)이므로 축이 섞이지 않게 simple로 고정한다.
+    unlistedDetailMode: "simple",
     ...o,
   };
 }

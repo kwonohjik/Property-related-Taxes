@@ -237,7 +237,7 @@ export interface StockTransferFormData {
 
   // ── 취득 후 상장 환산 PDF 사례 재현 (Phase D~G — 80 신규 필드) ──
   // [[feedback_ui_input_path_enumeration]] — simple/listing_only/full 3 분기 enumerate
-  unlistedDetailMode: "simple" | "listing_only" | "full"; // 3중 패턴 default: "simple"
+  unlistedDetailMode: "simple" | "listing_only" | "full"; // 3중 패턴 default: "full" (부재값 해석은 "simple")
   monthlyAccrualToggle: boolean;                          // §81④ — 3중 패턴 default: false
 
   // 상장일 이후 1개월 종가 (4필드, 단일 array 32 슬롯)
@@ -601,7 +601,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     specificMatchings: [],
 
     // ── 취득 후 상장 환산 PDF 사례 재현 (Phase D~G — 80 신규 필드) ──
-    unlistedDetailMode: "simple",            // 3중 패턴 default
+    unlistedDetailMode: "full",              // 3중 패턴 default (신규 폼 초기 선택)
     monthlyAccrualToggle: false,             // 3중 패턴 default
     listingPriceDates: [],
     listingPriceClosing: [],

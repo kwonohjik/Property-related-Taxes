@@ -223,7 +223,12 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     specificMatchings: normalizeSpecificMatchings(d.specificMatchings),
 
     // ── 취득 후 상장 환산 PDF 사례 재현 (80 신규 필드 — Phase D~G) ──
-    unlistedDetailMode: enumField("unlistedDetailMode", ["simple", "listing_only", "full"], defaults.unlistedDetailMode),
+    // ⚠️ 여기만 `defaults`를 따르지 않는다. 신규 폼의 초기 선택은 "full"이지만,
+    //    **값이 없다 = 이 필드가 생기기 전에 저장된 폼**이고 그때의 흐름은 simple(결과값 4필드)였다.
+    //    defaults를 따르면 옛 이력을 복원할 때 결산서가 빈 채로 "full"이 되어 validate가 차단한다.
+    //    「신규 폼의 기본 선택」과 「값 부재의 해석」은 다른 문제다.
+    //    anchor: post-listing-detail-mode-default.anchor.test.ts DM-3
+    unlistedDetailMode: enumField("unlistedDetailMode", ["simple", "listing_only", "full"], "simple"),
     monthlyAccrualToggle: boolField("monthlyAccrualToggle", defaults.monthlyAccrualToggle),
     unlistedSameBizYearToggle: boolField("unlistedSameBizYearToggle", defaults.unlistedSameBizYearToggle),
     listingPriceDates: Array.isArray(d.listingPriceDates) ? (d.listingPriceDates as string[]) : [],
