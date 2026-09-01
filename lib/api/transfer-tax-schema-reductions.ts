@@ -372,6 +372,7 @@ export const reductionSchema = z.discriminatedUnion("type", [
     contractDate988: z.string().date().optional(),
     acquisitionPrice988: z.number().int().nonnegative().optional(),
     exclusiveAreaSqm988: z.number().nonnegative().optional(),
+    rentalContractDate988: z.string().date().optional(),
     rentalStartDate988: z.string().date().optional(),
     rentalEndDate988: z.string().date().optional(),
     inheritedRentalMonths988: z.number().int().nonnegative().optional(),

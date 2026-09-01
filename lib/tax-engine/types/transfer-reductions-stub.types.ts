@@ -270,6 +270,7 @@ export type TransferReductionStub =
       contractDate988?: Date;
       acquisitionPrice988?: number;
       exclusiveAreaSqm988?: number;
+      rentalContractDate988?: Date;
       rentalStartDate988?: Date;
       rentalEndDate988?: Date;
       inheritedRentalMonths988?: number;

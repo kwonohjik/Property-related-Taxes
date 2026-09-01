@@ -111,6 +111,17 @@ export function Unsold988InputForm({
 
       <SectionShell num="③" title="임대 정보 — 5년 이상 임대" tone="violet">
         <div>
+          <label className="mb-1 block text-xs font-medium">임대계약 체결일</label>
+          <DateInput
+            value={value.rentalContractDate988}
+            onChange={(v) => onChange({ rentalContractDate988: v })}
+          />
+          <p className="mt-1 text-micro text-muted-foreground">
+            사업자등록(소법 §168)과 임대사업자등록(민특법 §5)을 하고 2015.12.31 이전에 임대계약을
+            체결한 경우로 한정합니다 (법 §98의8① 괄호)
+          </p>
+        </div>
+        <div>
           <label className="mb-1 block text-xs font-medium">임대개시일</label>
           <DateInput value={value.rentalStartDate988} onChange={(v) => onChange({ rentalStartDate988: v })} />
           <p className="mt-1 text-micro text-muted-foreground">

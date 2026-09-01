@@ -356,6 +356,7 @@ export function toEngineReductions(
         contractDate988: r.contractDate988 || undefined,
         acquisitionPrice988: parseAmount(r.acquisitionPrice988 || "0") || undefined,
         exclusiveAreaSqm988: parseDecimal(r.exclusiveAreaSqm988 || "") || undefined,
+        rentalContractDate988: r.rentalContractDate988 || undefined,
         rentalStartDate988: r.rentalStartDate988 || undefined,
         rentalEndDate988: r.rentalEndDate988 || undefined,
         inheritedRentalMonths988: parseInt(r.inheritedRentalMonths988 || "") || undefined,

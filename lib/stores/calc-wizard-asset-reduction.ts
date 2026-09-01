@@ -345,6 +345,8 @@ export type RentalReductionFormVariant =
       /** 연면적(공동주택 전용, ㎡) — 135 이하 (DecimalInput) */
       exclusiveAreaSqm988: string;
       /** 임대개시일 (YYYY-MM-DD) — 사업자등록+임대사업자등록 후 개시일 기산 (령 §98의5⑤1호 준용) */
+      /** 임대계약 체결일 (YYYY-MM-DD) — 2015.12.31 이전 한정 (법 §98의8① 괄호) */
+      rentalContractDate988: string;
       rentalStartDate988: string;
       /** 임대종료일 (YYYY-MM-DD) — 빈값 = 양도일까지 계속 */
       rentalEndDate988: string;

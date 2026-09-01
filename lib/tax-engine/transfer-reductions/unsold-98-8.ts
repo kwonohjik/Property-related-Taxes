@@ -38,6 +38,16 @@ export const UNSOLD_98_8_AREA_LIMIT_SQM = 135;
 export const UNSOLD_98_8_DEDUCTION_RATE = 0.5;
 /** 임대 의무기간 (5년 = 60개월) */
 export const UNSOLD_98_8_RENTAL_MONTHS = 60;
+/**
+ * 법 §98의8① 괄호 — 임대계약 체결 시한.
+ *
+ * 「…5년 이상 임대한 주택(거주자가 「소득세법」 제168조에 따른 사업자등록과 「민간임대주택에
+ * 관한 특별법」 제5조에 따른 임대사업자등록을 하고 **2015년 12월 31일 이전에 임대계약을
+ * 체결한 경우로 한정한다**)을 양도하는 경우」 — 「…한 경우로 한정한다」는 요건이다.
+ * 위임 시행령(령 §98의7⑤ → 령 §98의5⑤)은 임대기간 **계산**만 정하고 이 시한을 대체하지 않는다.
+ * §98의6①2호의 `UNSOLD_98_6_RENTAL_CONTRACT_TO`(2011.12.31)와 같은 층위.
+ */
+export const UNSOLD_98_8_RENTAL_CONTRACT_TO = new Date("2015-12-31");
 
 export interface Unsold988Input {
   transferDate: Date;
@@ -49,6 +59,8 @@ export interface Unsold988Input {
   acquisitionPrice?: number;
   /** 연면적(공동주택은 전용면적, ㎡) — 135 한도 */
   exclusiveAreaSqm?: number;
+  /** 임대계약 체결일 — 2015.12.31 이전 체결에 한정 (법 §98의8① 괄호) */
+  rentalContractDate?: Date;
   /** 임대개시일 — 사업자등록+임대사업자등록 후 개시한 날 (령 §98의5⑤1호 기산) */
   rentalStartDate?: Date;
   /** 임대종료일 — 미입력 시 양도일까지 임대 계속으로 봄 */
@@ -83,6 +95,8 @@ export type Unsold988IneligibleCode =
   | "NOT_UNSOLD_AFTER_COMPLETION"
   | "NOT_FIRST_CONTRACT"
   | "RECONTRACT_EXCLUDED"
+  | "MISSING_RENTAL_CONTRACT_DATE"
+  | "RENTAL_CONTRACT_TOO_LATE"
   | "MISSING_RENTAL_START"
   | "RENTAL_PERIOD_SHORT"
   | "MISSING_STD_PRICE"
@@ -242,7 +256,22 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
     });
   }
 
-  // 6) 임대 5년 — 등록 후 임대개시일 기산 + 상속 합산 (령 §98의5⑤ 준용)
+  // 6) 임대계약 체결 시한 — 2015.12.31 이전 (법 §98의8① 괄호)
+  if (!input.rentalContractDate) {
+    reasons.push({
+      code: "MISSING_RENTAL_CONTRACT_DATE",
+      message: "임대계약 체결일이 입력되지 않았습니다 (2015.12.31 이전 체결에 한정 — 법 §98의8① 괄호).",
+      legalBasis,
+    });
+  } else if (input.rentalContractDate.getTime() > UNSOLD_98_8_RENTAL_CONTRACT_TO.getTime()) {
+    reasons.push({
+      code: "RENTAL_CONTRACT_TOO_LATE",
+      message: "임대계약 체결일이 2015.12.31 이후입니다 (법 §98의8① — 사업자등록·임대사업자등록을 하고 2015.12.31 이전에 임대계약을 체결한 경우로 한정).",
+      legalBasis,
+    });
+  }
+
+  // 7) 임대 5년 — 등록 후 임대개시일 기산 + 상속 합산 (령 §98의5⑤ 준용)
   let rentalMonths = 0;
   if (!input.rentalStartDate) {
     reasons.push({
@@ -265,7 +294,7 @@ export function evaluateUnsold988(input: Unsold988Input): Unsold988Result {
 
   if (reasons.length > 0) return ineligible(reasons, rentalMonths);
 
-  // 7) 공제액 산출 — 5년 내 = §95① 전액 기준 / 5년 후 = 기준시가 안분 (령 §40① 준용)
+  // 8) 공제액 산출 — 5년 내 = §95① 전액 기준 / 5년 후 = 기준시가 안분 (령 §40① 준용)
   const isWithin5Years = isWithin5YearsCheck(input.acquisitionDate, input.transferDate);
   const formulaSteps: New993FormulaStep[] = [];
   let base: number;

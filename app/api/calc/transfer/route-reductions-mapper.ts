@@ -96,6 +96,7 @@ export function mapReductionsToEngine(reductions: ReductionPayload[]): TransferR
       return {
         ...r,
         contractDate988: r.contractDate988 ? new Date(r.contractDate988) : undefined,
+        rentalContractDate988: r.rentalContractDate988 ? new Date(r.rentalContractDate988) : undefined,
         rentalStartDate988: r.rentalStartDate988 ? new Date(r.rentalStartDate988) : undefined,
         rentalEndDate988: r.rentalEndDate988 ? new Date(r.rentalEndDate988) : undefined,
       } as TransferReduction;
