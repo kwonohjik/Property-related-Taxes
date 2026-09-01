@@ -62,6 +62,11 @@ describe("EstimatedUnlistedBlock — 사례 49 acqFaceValueOnly UI 분기 (UI-C4
 
   it("UI-C49-14: 액면가 입력 + 양도 NI/NA 입력 → 환산취득가 미리보기 노출", () => {
     const form = makeForm({
+      // 양도일 — §165④1은 시기별로 가중치·80% 하한이 다르므로 «연혁 게이팅 기준일»이 없으면
+      // 미리보기가 판정 불가로 숨는다(임의 기준일 fallback 금지).
+      // 실제 마법사에서는 Step1 필수 입력이라 이 시점에 항상 채워져 있다.
+      // 단언값은 그대로다 — 2026 양도도 3:2 + 하한이라 양도기준시가 64,000이 유지된다.
+      transferDate: "2026-01-01",
       unlistedValuationMode: "simple",
       acqFaceValueOnly: true,
       acqFaceValuePerShare: "5000",

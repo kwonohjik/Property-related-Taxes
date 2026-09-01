@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 
 interface FaceValueBlockProps {
   form: StockTransferFormData;
@@ -24,26 +25,33 @@ interface FaceValueBlockProps {
 export function FaceValueBlock({ form, onChange }: FaceValueBlockProps) {
   const isHeavyRE = form.isHeavyRealEstateForValuation;
 
-  // 양도기준시가 미리보기 (80% 하한 포함)
+  // 양도기준시가 미리보기 — 「제4항에 따른 평가액」의 정본에 위임한다.
+  //
+  // 🔑 종전에는 산식을 여기서 다시 썼고 두 군데가 정본과 갈렸다:
+  //    ① 연혁 게이팅 없음 — 1997 양도에 3:2 + 80% 하한을 적용(정본은 순자산 단독)
+  //    ② `ni > 0 ? 가중평균 : na` — 순손익 «미입력»이라는 가장 흔한 상태에서 25% 과대
+  //       (20,000 vs 정본 16,000). 정본은 ni=0도 가중평균에 넣고 하한을 건다.
+  //    [[feedback_ui_engine_dual_truth_avoidance]] · anchor PV-3
   const transferStdPreview = useMemo(() => {
+    // 연혁 게이팅 기준일이 없으면 판정 불가 — 임의 기준일 fallback 금지
+    const parsed = form.transferDate ? new Date(form.transferDate) : undefined;
+    const evalDate = parsed && !isNaN(parsed.getTime()) ? parsed : undefined;
+    if (!evalDate) return null;
+    // 「미입력」과 「음수 입력」을 가른다 (종전 `na <= 0`은 자본잠식을 미입력 취급했다)
+    const isBlank = (s: string | undefined) => !s || s.trim() === "";
+    if (isBlank(form.transferYearNetIncomePerShare) && isBlank(form.transferYearNetAssetPerShare)) {
+      return null;
+    }
     const ni = parseAmount(form.transferYearNetIncomePerShare);
     const na = parseAmount(form.transferYearNetAssetPerShare);
-    if (na <= 0) return null;
-
-    const niW = isHeavyRE ? 2 : 3;
-    const naW = isHeavyRE ? 3 : 2;
-    const weighted = ni > 0 ? (ni * niW + na * naW) / 5 : na; // ni=0이면 순자산만
-    const floor80 = na * 0.8;
-
-    if (floor80 > weighted) {
-      return {
-        perShare: Math.floor(floor80),
-        floor80Applied: true,
-        weighted: Math.floor(weighted),
-      };
-    }
-    return { perShare: Math.floor(weighted), floor80Applied: false };
+    const v = calcSection165_4Value(ni, na, isHeavyRE, evalDate);
+    return {
+      perShare: v.value,
+      floor80Applied: v.floorApplied,
+      weighted: Math.floor(v.weightedRaw),
+    };
   }, [
+    form.transferDate,
     form.transferYearNetIncomePerShare,
     form.transferYearNetAssetPerShare,
     isHeavyRE,

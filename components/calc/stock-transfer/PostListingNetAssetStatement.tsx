@@ -29,6 +29,23 @@ const ASSET_ADD_LABELS = [
   "4. 유상증자 등",
   "5. 기타",
 ];
+/**
+ * 음수(△)가 정상값인 자산 «가산» 행 — 평가차액(행 2)·법인세법상 유보금액(행 3)뿐이다.
+ *
+ *  · 행 2 평가차액 = 평가가액 − 장부가액 ⇒ **평가차손이면 음수**
+ *  · 행 3 법인세법상 유보금액 ⇒ **△유보**가 정상값
+ *  · 행 4 유상증자 등 · 행 5 기타는 성질상 비음수
+ *
+ * 형제 경로가 같은 규칙을 이미 쓴다 — 상속·증여 비상장주식 v2
+ * `NetAssetCalculationTable.tsx`의 `SIGNED_NET_ASSET_KEYS`.
+ * [[feedback_sibling_path_already_implements_rule]]
+ *
+ * ⚠️ **자본잠식은 이 배열과 무관하다** — 자산총계(행 1)·부채총계(행 8)를 각각 양수로 넣으면
+ *    순자산가액이 자동으로 음수가 된다.
+ * anchor: __tests__/components/calc/stock-transfer/unlisted-valuation-preview-single-source.anchor.test.tsx NA-1~3
+ */
+const ASSET_ADD_SIGNED = [true, true, false, false] as const;
+
 const ASSET_SUB_LABELS = [
   "6. 선급비용·이연자산 등",
   "7. 증자일전잉여금의 유보액",
@@ -133,7 +150,7 @@ export function YearColumn({
       </FieldCard>
       {assetAddKeys.map((k, i) => (
         <FieldCard key={k} label={ASSET_ADD_LABELS[i]}>
-          <CurrencyInput label="" hideUnit value={getField(form, k as keyof StockTransferFormData)}
+          <CurrencyInput label="" hideUnit allowNegative={ASSET_ADD_SIGNED[i]} value={getField(form, k as keyof StockTransferFormData)}
             onChange={(v) => onChange({ [k]: v } as Partial<StockTransferFormData>)}
             placeholder="원" />
         </FieldCard>
