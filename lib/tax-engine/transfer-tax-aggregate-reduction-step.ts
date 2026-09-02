@@ -80,10 +80,48 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     0,
     taxableAfterReduction.reduce((s, v) => s + v, 0) - totalBasicDeduction,
   );
+  /**
+   * 🔴 **「소득세법」 §90①의 `− C`** (2026-09-02 · **세액 변경**).
+   *
+   * §90①: 감면액 = **A × (B − C) / D × E**
+   *   A 산출세액 · B 감면대상 양도소득금액 · **C 「§103②에 따른 양도소득 기본공제」**
+   *   · D 과세표준 · E 감면율 (법제처 본문 실측)
+   *
+   * 종전 M-8은 `A × B / D`로 **C를 빼지 않았다**. 그래서 감면소득이 전체 소득의 대부분일 때
+   * `B > D`가 되어 **감면이 과대**해졌다 — 실측(§97① 본문 50% · 자산 1건):
+   *   단건 82,530,000 ↔ 다건 **82,962,094**(총부담 −388,886). 단건은 §90①과 일치한다.
+   *
+   * **C의 크기는 §103②이 정한다** — 「감면소득금액이 있는 경우에는 그 **감면소득금액 외의**
+   * 양도소득금액에서 **먼저** 공제하고 …」. 즉 기본공제는 비감면소득이 먼저 흡수하고,
+   * 흡수하지 못한 잔여만 감면소득에 닿는다:
+   *   `C = max(0, 총 기본공제 − 비감면소득)`
+   * ⇒ 비감면소득이 250만원 이상이면 C = 0이라 **종전 동작과 같다**. 감면 자산만 있는
+   *   사안에서만 발현한다(그때 `(B − C)/D = 1`이 되어 단건과 원 단위까지 맞는다).
+   *
+   * ⚠️ **§77·§85의10·대토는 제외한다** — 그 세 조문은 자체 산식에서 자산별 기본공제를 이미
+   *    빼고 감면율까지 곱해 둔다(`reducibleIncomeNetOfBasicDeduction`). 또 빼면 이중 차감이다.
+   *    🔬 다만 그 제외는 **오늘은 no-op**이다 — 세 조문의 감면율이 모두 ≤ 40%라 비감면소득이
+   *       항상 기본공제를 흡수해 C = 0이 된다(뮤테이션 0/11,914로 실측). 감면율이 높은 net
+   *       유형이 새로 들어올 때를 위한 **방어선**이므로 지우지 말 것.
+   * ⚠️ 그 판별을 `aggregateReductionRate` 유무로 하지 말 것 — **다른 축**이다.
+   *    §69는 감면율 100%라 rate 축에서는 「반영됨」이지만 기본공제 축에서는 **gross**다.
+   */
   const reducibleByType = new Map<
     string,
-    { income: number; ratedIncome: number; assetIds: string[]; rates: Set<number> }
+    { income: number; ratedIncome: number; assetIds: string[]; rates: Set<number>; grossIncome: number }
   >();
+  /** §103② — 비감면소득(기본공제를 먼저 흡수하는 쪽) 총액. net 유형은 B가 이미 축소돼 있어 제외한다. */
+  let nonReducibleIncome = 0;
+  assetRecords.forEach((r, idx) => {
+    if (r.result.isExempt) return;
+    const gross = r.result.reducibleIncomeNetOfBasicDeduction
+      ? taxableAfterReduction[idx] // net 유형은 이 축의 대상이 아니다 — 전액을 비감면 쪽으로 본다
+      : r.result.reducibleIncome ?? 0;
+    nonReducibleIncome += Math.max(0, taxableAfterReduction[idx] - gross);
+  });
+  /** §90①의 C — 비감면소득이 흡수하지 못한 기본공제 잔여. */
+  const basicDeductionOnReducible = Math.max(0, totalBasicDeduction - nonReducibleIncome);
+
   for (const r of assetRecords) {
     if (r.result.isExempt) continue;
     const type = r.result.reductionTypeApplied;
@@ -91,7 +129,7 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     if (!type || income <= 0) continue;
     const existing =
       reducibleByType.get(type) ??
-      { income: 0, ratedIncome: 0, assetIds: [], rates: new Set<number>() };
+      { income: 0, ratedIncome: 0, assetIds: [], rates: new Set<number>(), grossIncome: 0 };
     // ⚠️ **감면율은 유형 단위로 균일하지 않다.** `long_term_rental`(0.7·0.5 tier)·
     //    `new_housing`(가격·시기 matrix)은 같은 type 문자열 아래 자산마다 감면율이 다를 수 있다.
     //    그래서 그룹의 rate 하나를 last-write-wins로 덮으면 한쪽 자산에 틀린 율이 곱해진다.
@@ -99,11 +137,15 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     //    `income`은 별지84호 부표1 ⑲ 표시용(감면율 前)이라 그대로 둔다.
     const rate = r.result.aggregateReductionRate ?? 1;
     existing.income += income;
+    existing.grossIncome += r.result.reducibleIncomeNetOfBasicDeduction ? 0 : income;
     existing.ratedIncome += rate === 1 ? income : applyRate(income, rate);
     existing.assetIds.push(r.item.propertyId);
     existing.rates.add(rate);
     reducibleByType.set(type, existing);
   }
+
+  /** gross 유형 전체의 감면대상소득 합 — C 안분 분모. */
+  const totalGrossReducible = [...reducibleByType.values()].reduce((s2, e) => s2 + e.grossIncome, 0);
 
   // 조특법 §133 유형별 연간 한도 — `aggregate-reduction-limits.ts` 모듈 사용.
   // 유형별 원시 감면세액을 계산한 뒤 그룹 단위로 capping.
@@ -114,9 +156,21 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     //    별지84호 부표1 ⑲가 「감면율 前」 금액을 요구해 표시용으로 남아 있다
     //    (코드리뷰 D8-01 — §97① 본문이 다건에서 정확히 2배 감면됐다).
     //    §77·§77의2·§77의3·§69는 rate가 1이라 `ratedIncome === income`이므로 종전과 동일하다.
+    /**
+     * §90①의 `− C`. gross 유형이 여럿이면 C를 **gross 소득 비중으로 안분**한다 —
+     * 조문은 유형별 배분을 정하지 않지만 감면 유형이 하나뿐인 통상 사안에서는 전액이 실려
+     * 단건과 정확히 일치한다. net 유형(`grossIncome === 0`)에는 실리지 않는다.
+     */
+    const cShare =
+      totalGrossReducible > 0 && entry.grossIncome > 0
+        ? safeMultiplyThenDivide(basicDeductionOnReducible, entry.grossIncome, totalGrossReducible)
+        : 0;
+    // C는 감면율 前 소득에서 빼는 값이므로 `ratedIncome`에는 유형의 평균 감면율을 실어 반영한다.
+    const effectiveRate = entry.income > 0 ? entry.ratedIncome / entry.income : 1;
+    const numerator = Math.max(0, entry.ratedIncome - Math.floor(cShare * effectiveRate));
     const raw =
       aggregateTaxBase > 0
-        ? safeMultiplyThenDivide(calculatedTax, entry.ratedIncome, aggregateTaxBase)
+        ? safeMultiplyThenDivide(calculatedTax, numerator, aggregateTaxBase)
         : 0;
     rawByType.set(type, raw);
   }

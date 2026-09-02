@@ -165,6 +165,8 @@ export interface FinalizeResult {
   reductionLegalBasisOverride: ReturnType<typeof calcReductions>["reductionLegalBasisOverride"];
   reducibleIncome?: number;
   aggregateReductionRate?: number;
+  /** `reducibleIncome`이 이미 기본공제를 뺀 값인가 (§90①의 `B − C`) — 다건 M-8이 이중 차감을 피하는 축. */
+  reducibleIncomeNetOfBasicDeduction?: boolean;
   rentalReductionDetail: TransferTaxResult["rentalReductionDetail"];
   newHousingReductionDetail: TransferTaxResult["newHousingReductionDetail"];
   publicExpropriationDetail: TransferTaxResult["publicExpropriationDetail"];
@@ -295,6 +297,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
+    reducibleIncomeNetOfBasicDeduction,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
@@ -539,6 +542,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
+    reducibleIncomeNetOfBasicDeduction,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,

@@ -70,6 +70,11 @@ export interface ReductionsResult {
    */
   reducibleIncome?: number;
   /**
+   * `reducibleIncome`이 이미 **기본공제를 뺀 값**인가 (§90①의 `B − C`).
+   * 상세: `TransferTaxResult.reducibleIncomeNetOfBasicDeduction`.
+   */
+  reducibleIncomeNetOfBasicDeduction?: boolean;
+  /**
    * 다건 합산 M-8이 `reducibleIncome`에 **추가로 곱해야 할** 감면율.
    *
    * M-8(`transfer-tax-aggregate-reduction-step.ts`)은 `reducibleIncome`을 「감면율이 이미
@@ -138,6 +143,12 @@ export function calcReductions(
     legalBasisOverride?: string;
     /** 감면대상 양도소득금액 (합산 재계산용 분자, 편입 부분감면 시 비율 적용 후) */
     reducibleIncome?: number;
+    /**
+     * `reducibleIncome`이 이미 **기본공제를 뺀 값**인가 (§90①의 `B − C`).
+     * 자체 산식에서 기본공제를 배정·차감하는 §77·§85의10·대토만 true.
+     * 상세: `TransferTaxResult.reducibleIncomeNetOfBasicDeduction`.
+     */
+    reducibleIncomeNetOfBasicDeduction?: boolean;
   /**
    * 다건 합산 M-8이 `reducibleIncome`에 **추가로 곱해야 할** 감면율.
    *
@@ -301,7 +312,7 @@ export function calcReductions(
     });
     publicExpropriationDetail = result;
     if (result.isEligible && result.reductionAmount > 0) {
-      candidates.push({ amount: result.reductionAmount, type: "public_expropriation", reducibleIncome: result.breakdown.reducibleIncome });
+      candidates.push({ amount: result.reductionAmount, type: "public_expropriation", reducibleIncome: result.breakdown.reducibleIncome, reducibleIncomeNetOfBasicDeduction: true });
     }
   }
 
@@ -326,7 +337,7 @@ export function calcReductions(
     });
     gbDesignatedLandDetail = result;
     if (result.isEligible && result.reductionAmount > 0) {
-      candidates.push({ amount: result.reductionAmount, type: "gb_designated_land", reducibleIncome: result.reducibleIncome });
+      candidates.push({ amount: result.reductionAmount, type: "gb_designated_land", reducibleIncome: result.reducibleIncome, reducibleIncomeNetOfBasicDeduction: true });
     }
   }
 
@@ -347,7 +358,7 @@ export function calcReductions(
     });
     replacementLandDetail = result;
     if (result.isEligible && result.reductionAmount > 0) {
-      candidates.push({ amount: result.reductionAmount, type: "replacement_land_comp", reducibleIncome: result.reducibleIncome });
+      candidates.push({ amount: result.reductionAmount, type: "replacement_land_comp", reducibleIncome: result.reducibleIncome, reducibleIncomeNetOfBasicDeduction: true });
     }
   }
 
@@ -482,6 +493,8 @@ export function calcReductions(
     reductionLegalBasisOverride: best.amount > 0 ? best.legalBasisOverride : undefined,
     reducibleIncome: best.amount > 0 ? best.reducibleIncome : undefined,
     aggregateReductionRate: best.amount > 0 ? best.aggregateReductionRate : undefined,
+    reducibleIncomeNetOfBasicDeduction:
+      best.amount > 0 ? best.reducibleIncomeNetOfBasicDeduction : undefined,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
