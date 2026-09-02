@@ -38,8 +38,26 @@ function hasPositiveAmount(v: unknown): boolean {
  * 구형 AssetForm (landAreaM2, pre1990AreaSqm 있음) → 현재 타입으로 마이그레이션.
  * sessionStorage 또는 이력 데이터 rehydrate 시 호출.
  */
+/**
+ * 복원 자산 id 시퀀스 — `Date.now()`만으로는 같은 밀리초에 만들어진 자산이 충돌한다.
+ * 복원은 hydration 시 1회라 렌더마다 값이 바뀌지 않는다.
+ */
+let restoredAssetSeq = 0;
+
 export function migrateAsset(raw: unknown): AssetForm {
   const a = raw as Record<string, unknown>;
+  /**
+   * `assetId`는 표시용이 아니라 **자산 식별자**다 — 이것이 비면 조용히 깨지는 곳이 여럿이다:
+   *   · `transfer-tax-validate-asset.ts`의 중복 판정은 `other.assetId !== a.assetId`인데
+   *     둘 다 undefined면 `undefined !== undefined`가 false라 **서로 같은 자산으로 취급**된다.
+   *   · `transfer-per-asset-summary.ts`·`bundled-sale-apportionment.ts`는 i>0 자산의
+   *     propertyId로 `assetId`를 그대로 쓴다 — 비면 일괄 안분 매칭이 어긋난다.
+   *   · 사이드바 요약이 `key={row.assetId}`라 React가 「unique key」 경고를 낸다.
+   * factory는 채우지만 migrate는 채우지 않아, 이력·세션 복원 자산에서만 비어 있었다.
+   */
+  if (typeof a.assetId !== "string" || a.assetId === "") {
+    a.assetId = `asset-restored-${Date.now()}-${++restoredAssetSeq}`;
+  }
   if (a.landAreaM2 && !a.acquisitionArea) {
     a.acquisitionArea = a.landAreaM2;
     a.transferArea = a.landAreaM2;

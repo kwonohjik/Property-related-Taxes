@@ -254,6 +254,12 @@ gh pr merge <n> --merge --delete-branch                            # 확인 후 
 - `--fail-fast`가 있어야 한 job 실패 시 즉시 멈춘다.
 - **파이프를 걸지 말 것** — `gh pr checks --watch | tail`은 실패해도 exit 0이다
   (memory `feedback_gh_watch_pipe_exit0_false_green`).
+- 🔴 **`--watch`가 체크 등록 전에 exit 0으로 빠질 수 있다** (2026-09-02 PR #1407 실측).
+  PR 생성 직후 곧바로 부르면 워크플로가 아직 큐에 들어가기 전이라 감시할 대상이 없고,
+  그대로 성공 종료한다. 그 시점 `statusCheckRollup`은 12건 중 11건만 잡히고 **conclusion이
+  전부 빈 문자열**이었다. master에 브랜치 보호가 없어 CI가 머지를 막지 않으므로 이 판정이
+  유일한 관문이다. ⇒ **exit code가 아니라 롤업의 conclusion으로 판정할 것** —
+  「전건 SUCCESS」 + `headRefOid` 일치를 확인하고, pending이면 확정될 때까지 폴링한다.
 - `gh pr merge --auto`를 **확인 목적으로도 부르지 말 것** — 그 호출 자체가 머지다.
 - 브랜치 보호를 켜면 `--auto`가 본래 의미대로 동작한다. 켜기 전까지 위 2단계가 정본이다.
 - **lint 갭 해소(2026-07-31)**: pre-push가 이제 전체 `npm run lint`도 돌린다(26초). 종전의 "lint는 CI에서만" 갭은 없다.
