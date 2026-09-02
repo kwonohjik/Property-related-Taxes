@@ -115,16 +115,35 @@ export function judgeNonBusinessLand(
     case "villa": {
       const villaResult = judgeVillaLand(engineInput, rules);
       if (villaResult.action === "REDIRECT_TO_CATEGORY") {
-        // 별장 비사용기간이 기간기준 충족 → 주택부수토지로 자동 재분류
+        /**
+         * 별장 비사용기간이 기간기준 충족 → 주택부수토지로 자동 재분류.
+         *
+         * ⚠️ 재분류 후에는 **주택 정착면적**이 판정을 좌우한다(§168의12 배율 × 정착면적).
+         *    종전에는 별장 UI에 정착면적 입력란이 없어 이 경로가 **구조적으로 항상**
+         *    `housing-land.ts`의 「정착면적 미입력」 분기에 떨어져 전량 비사업용으로 확정됐다
+         *    (E1-02, 2026-09-02 코드리뷰). ⑤에 입력란을 추가하고 ⑧이 요구하도록 바꿨으며,
+         *    여기서는 그래도 값이 비면 **무엇 때문에 그렇게 판정됐는지**를 결과에 남긴다.
+         */
         catResult = judgeHousingLand(
           { ...engineInput, landType: "housing_site" },
           rules,
         );
+        const redirectWarnings =
+          !engineInput.housingFootprint || engineInput.housingFootprint <= 0
+            ? [
+                "별장 요건 미해당으로 주택부수토지로 재분류했으나 주택 정착면적이 입력되지 않았습니다 — " +
+                  "인정면적이 0이 되어 전량 비사업용으로 판정됩니다. 정착면적을 입력하세요.",
+              ]
+            : [];
         catResult = {
           ...catResult,
           steps: [...villaResult.steps, ...catResult.steps],
           appliedLaws: [...villaResult.appliedLaws, ...catResult.appliedLaws],
-          warnings: [...(villaResult.warnings ?? []), ...(catResult.warnings ?? [])],
+          warnings: [
+            ...(villaResult.warnings ?? []),
+            ...(catResult.warnings ?? []),
+            ...redirectWarnings,
+          ],
         };
       } else {
         catResult = villaResult;
@@ -246,7 +265,7 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
   const redirectHint = categoryResult?.redirectHint;
 
   // 재촌 인정 근거 (echo — 표시 전용, 판정 로직 무영향). 재촌 판정 대상인 농지·임야만.
-  const residenceMatch =
+  const residenceMatchRaw =
     input.landType === "farmland" || input.landType === "forest"
       ? computeResidenceMatchSummary(input.ownerProfile?.residenceHistories, input.landLocation, {
           adjacentSigunguCodes: input.adjacentSigunguCodes,
@@ -254,6 +273,10 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
           requireResidentRegistration: input.landType === "forest",
         })
       : undefined;
+  // 근거 조문이 지목마다 다르므로 지목을 함께 싣는다 (U3-02 — 농지 §153③ / 임야 §168조의9②)
+  const residenceMatch = residenceMatchRaw
+    ? { ...residenceMatchRaw, landCategory: input.landType as "farmland" | "forest" }
+    : undefined;
 
   return {
     isNonBusinessLand,

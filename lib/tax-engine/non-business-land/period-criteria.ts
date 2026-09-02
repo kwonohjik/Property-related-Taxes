@@ -202,9 +202,16 @@ export function meetsPeriodCriteria(
   const nonBizInWindow3 = Math.max(0, win3len - bizInLast3);
   const nonBizTotal = Math.max(0, totalOwnershipDays - effectiveBusinessDays);
 
-  // 다목/3호 나목: "100분의 40(레거시 농임목 20)에 상당하는 기간을 초과" — 비사업용 임계.
-  const nonBizRatioThreshold = 1 - thresholdRatio; // 0.4 (레거시 0.2)
-  const overRatio = nonBizTotal > Math.floor(totalOwnershipDays * nonBizRatioThreshold);
+  /**
+   * 다목/3호 나목: 「100분의 40(레거시 농·임·목 20)에 상당하는 기간을 **초과**」 — 비사업용 임계.
+   *
+   * 🔴 `1 - thresholdRatio`를 쓰지 않는다 (E1-01, 2026-09-02 코드리뷰).
+   *    레거시 임계 `1 - 0.8`은 IEEE754에서 `0.19999999999999996`이 되어 임계 일수가 1일 낮게
+   *    잡혔고, 사업용이 **정확히 80%**인 2015.2.2. 이전 양도 농·임·목이 비사업용으로 뒤집혔다.
+   *    법문이 정하는 것은 「100분의 N」이라는 **정수 분수**이므로 정수로 계산한다.
+   */
+  const nonBizPercent = Math.round((1 - thresholdRatio) * 100); // 40 (레거시 20)
+  const overRatio = nonBizTotal > Math.floor((totalOwnershipDays * nonBizPercent) / 100);
 
   // 소유기간 버킷 ("이상"=`>=`, "미만"=`<`).
   const ownershipBucket: 1 | 2 | 3 =

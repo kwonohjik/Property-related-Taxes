@@ -182,8 +182,89 @@ describe("[B5] §168-14 ③3호나목 취득일 소급", () => {
   });
 });
 
+/**
+ * §168-14 ③4호 — 「법 제104조의3제1항제1호 **나목**에 해당하는 농지」 중
+ *   가목 종중 소유(2005.12.31. 이전 취득) / 나목 상속개시일부터 5년 이내 양도
+ *
+ * 🔴 종전에는 플래그 boolean 하나만 보고 의제를 확정했다 (E5-01·V4-b, 2026-09-02 코드리뷰).
+ *    본문(도시지역)·가목(취득일)·나목(5년) **세 요건 모두** 미검사였고, 형제 분기(이농·레거시 종중)는
+ *    같은 파일에서 날짜를 검증하고 있었으므로 이 분기만 예외였다.
+ */
 describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내", () => {
-  it("플래그 true + 농지 → 의제", () => {
+  it("가목: 도시지역 + 종중 2005.12.31 이전 취득 → 의제", () => {
+    const r = checkUnconditionalExemption(
+      baseInput({
+        zoneType: "commercial",
+        unconditionalExemption: {
+          isUrbanFarmlandJongjoongOrInherited: true,
+          jongjoongAcquisitionDate: d("2004-06-01"),
+        },
+      }),
+      "farmland",
+    );
+    expect(r.isExempt).toBe(true);
+    expect(r.reason).toBe("jongjoong_or_inherit_urban_farmland");
+  });
+
+  it("나목: 도시지역 + 상속개시일부터 5년 이내 양도 → 의제", () => {
+    const r = checkUnconditionalExemption(
+      baseInput({
+        zoneType: "commercial",
+        transferDate: d("2024-01-01"),
+        unconditionalExemption: {
+          isUrbanFarmlandJongjoongOrInherited: true,
+          inheritanceDate: d("2020-06-01"),
+        },
+      }),
+      "farmland",
+    );
+    expect(r.isExempt).toBe(true);
+  });
+
+  it("🔴 날짜 요건 미달(종중 2006년 취득) → 의제 안 함", () => {
+    const r = checkUnconditionalExemption(
+      baseInput({
+        zoneType: "commercial",
+        unconditionalExemption: {
+          isUrbanFarmlandJongjoongOrInherited: true,
+          jongjoongAcquisitionDate: d("2006-06-01"),
+        },
+      }),
+      "farmland",
+    );
+    expect(r.isExempt).toBe(false);
+  });
+
+  it("🔴 상속 5년 경과 → 의제 안 함", () => {
+    const r = checkUnconditionalExemption(
+      baseInput({
+        zoneType: "commercial",
+        transferDate: d("2024-01-01"),
+        unconditionalExemption: {
+          isUrbanFarmlandJongjoongOrInherited: true,
+          inheritanceDate: d("2018-06-01"),
+        },
+      }),
+      "farmland",
+    );
+    expect(r.isExempt).toBe(false);
+  });
+
+  it("🔴 본문 요건: 도시지역 밖 농지는 대상이 아니다 (법 §104의3①1호 나목 한정)", () => {
+    const r = checkUnconditionalExemption(
+      baseInput({
+        zoneType: "agriculture_forest",
+        unconditionalExemption: {
+          isUrbanFarmlandJongjoongOrInherited: true,
+          jongjoongAcquisitionDate: d("2004-06-01"),
+        },
+      }),
+      "farmland",
+    );
+    expect(r.isExempt).toBe(false);
+  });
+
+  it("🔴 날짜 미입력 → 의제 안 함 (자동 fallback 금지)", () => {
     const r = checkUnconditionalExemption(
       baseInput({
         zoneType: "commercial",
@@ -191,8 +272,7 @@ describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내
       }),
       "farmland",
     );
-    expect(r.isExempt).toBe(true);
-    expect(r.reason).toBe("jongjoong_or_inherit_urban_farmland");
+    expect(r.isExempt).toBe(false);
   });
 });
 

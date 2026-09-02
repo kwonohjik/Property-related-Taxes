@@ -22,18 +22,28 @@ function formatDeemedDate(d: Date | string): string {
   return typeof d === "string" ? d.slice(0, 10) : d.toISOString().slice(0, 10);
 }
 
-/** 재촌 인정 방법 라벨 (소득세법 시행령 §153③ — 동일/연접/직선거리 30km). */
+/**
+ * 재촌 인정 방법 라벨 — **근거 조문이 지목마다 다르다** (U3-02, 2026-09-02 코드리뷰).
+ *
+ * 농지는 「소득세법 시행령」 §153③(동일 시·군·구 / 연접 / 직선거리 30km)이 재촌을 정의하고,
+ * 임야는 같은 영 §168조의9②이 **별도로** 정의한다(주민등록 + 사실상 거주 요건 포함).
+ * 종전에는 임야 판정에도 농지 조문과 「농지」라는 낱말을 그대로 표시했다.
+ */
 function residenceMatchLabel(m: {
   matchType: "same" | "adjacent" | "within_30km";
   distanceKm?: number;
+  landCategory?: "farmland" | "forest";
 }): string {
+  const isForest = m.landCategory === "forest";
+  const subject = isForest ? "임야" : "농지";
+  const article = isForest ? "「소득세법 시행령」 §168조의9②" : "「소득세법 시행령」 §153③";
   switch (m.matchType) {
     case "same":
-      return "농지 소재 시·군·구 내 거주 (§153③1호)";
+      return `${subject} 소재 시·군·구 내 거주 (${article}${isForest ? "" : "1호"})`;
     case "adjacent":
-      return "농지와 연접한 시·군·구 거주 (§153③2호)";
+      return `${subject}와 연접한 시·군·구 거주 (${article}${isForest ? "" : "2호"})`;
     case "within_30km":
-      return `직선거리 30km 이내 거주 (§153③3호${
+      return `직선거리 30km 이내 거주 (${article}${isForest ? "" : "3호"}${
         m.distanceKm !== undefined ? ` — 실측 ${m.distanceKm.toFixed(1)}km` : ""
       })`;
   }
@@ -104,8 +114,8 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
                     <span className="font-mono text-right">{judgment.revenueTestDetail.currentBusinessDays}일</span>
                   </>
                 )}
-                <span>당해 연간환산 수입</span>
-                <span className="font-mono text-right">{judgment.revenueTestDetail.annualizedCurrentRevenue.toLocaleString()}원</span>
+                <span>당해 연간환산 수입 (원)</span>
+                <span className="font-mono text-right">{judgment.revenueTestDetail.annualizedCurrentRevenue.toLocaleString()}</span>
                 {judgment.revenueTestDetail.priorBusinessDays !== undefined && (
                   <>
                     <span>직전 영위일수</span>
@@ -114,8 +124,8 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
                 )}
                 {judgment.revenueTestDetail.annualizedPriorRevenue !== undefined && (
                   <>
-                    <span>직전 연간환산 수입</span>
-                    <span className="font-mono text-right">{judgment.revenueTestDetail.annualizedPriorRevenue.toLocaleString()}원</span>
+                    <span>직전 연간환산 수입 (원)</span>
+                    <span className="font-mono text-right">{judgment.revenueTestDetail.annualizedPriorRevenue.toLocaleString()}</span>
                   </>
                 )}
               </div>
@@ -125,12 +135,12 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
             <div className="mt-1.5 rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 text-caption text-violet-800 dark:text-violet-200 space-y-0.5">
               <p className="font-medium">§168의11③1호 간주임대료 합산</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
-                <span>당해 간주임대료</span>
-                <span className="font-mono text-right">{judgment.revenueTestDetail.deemedRentCurrent.toLocaleString()}원</span>
+                <span>당해 간주임대료 (원)</span>
+                <span className="font-mono text-right">{judgment.revenueTestDetail.deemedRentCurrent.toLocaleString()}</span>
                 {judgment.revenueTestDetail.deemedRentPrior > 0 && (
                   <>
-                    <span>직전 간주임대료</span>
-                    <span className="font-mono text-right">{judgment.revenueTestDetail.deemedRentPrior.toLocaleString()}원</span>
+                    <span>직전 간주임대료 (원)</span>
+                    <span className="font-mono text-right">{judgment.revenueTestDetail.deemedRentPrior.toLocaleString()}</span>
                   </>
                 )}
               </div>
@@ -140,12 +150,12 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
             <div className="mt-1.5 rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 text-caption text-violet-800 dark:text-violet-200 space-y-0.5">
               <p className="font-medium">§168의11③2호 공통수입 안분</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
-                <span>당해 안분액</span>
-                <span className="font-mono text-right">{judgment.revenueTestDetail.commonApportionedCurrent.toLocaleString()}원</span>
+                <span>당해 안분액 (원)</span>
+                <span className="font-mono text-right">{judgment.revenueTestDetail.commonApportionedCurrent.toLocaleString()}</span>
                 {judgment.revenueTestDetail.commonApportionedPrior > 0 && (
                   <>
-                    <span>직전 안분액</span>
-                    <span className="font-mono text-right">{judgment.revenueTestDetail.commonApportionedPrior.toLocaleString()}원</span>
+                    <span>직전 안분액 (원)</span>
+                    <span className="font-mono text-right">{judgment.revenueTestDetail.commonApportionedPrior.toLocaleString()}</span>
                   </>
                 )}
               </div>

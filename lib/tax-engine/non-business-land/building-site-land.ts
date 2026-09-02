@@ -152,7 +152,7 @@ export function judgeBuildingSiteLand(
     totalOwnershipDays,
     effectiveBusinessDays: totalOwnershipDays,
     gracePeriodDays: 0,
-    businessUseRatio: area.nonBusinessRatio,
+    businessUseRatio: 1 - area.nonBusinessRatio,
     criteria: { rule2of3Years: false, rule5Years: false, rule80Percent: false },
     warnings,
   };

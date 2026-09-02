@@ -15,31 +15,23 @@ import type {
   CategoryJudgeResult,
   DateInterval,
   JudgmentStep,
-  NblRelatedBusinessType,
   NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
-  OtherLandUsage,
   PropertyTaxType,
   RevenueTestResult,
-  ZoneType,
 } from "./types";
 import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
-import { computeAreaProportioning, computeMixedUseProportioning } from "./utils/area-proportioning";
+import { computeAreaProportioning } from "./utils/area-proportioning";
 import { computeContiguousParcelNblAttribution } from "./utils/contiguous-parcel-proportioning";
-import {
-  NBL_AREA_MULTIPLIER,
-  SPORTS_OUTDOOR_STD,
-  SPORTS_INDOOR_STD,
-  SPORTS_BUSINESS_OUTDOOR_STD,
-  SPORTS_BUSINESS_INDOOR_STD,
-  RESERVE_FORCES_STD,
-  employeeSportsArea,
-} from "./data/area-standards";
 import { computeRevenueTest } from "./revenue-test";
-import { LOCAL_TAX_ZONE_AREA_MULTIPLIER } from "./urban-area";
 import { judgeFactoryLandExcess } from "./factory-land-standard-area";
 import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
+import {
+  resolveAreaLimit,
+  resolveAreaLegalBasis,
+  resolveMixedUseProportioning,
+} from "./other-land-area-limit";
 
 /**
  * 나대지 간주 (소득세법 §104의3①4호나목 + 지방세법 시행령 §101①2호나목·단서 — 재산세 별도합산 제외 → 비사업용):
@@ -55,175 +47,6 @@ export function isBareLand(input: NonBusinessLandInput): boolean {
     if (o.buildingStandardValue < o.landStandardValue * 0.02) return true;
   }
   return false;
-}
-
-/**
- * §168의11① 호별 기준면적(㎡) 해석. undefined = 면적기준 없는 호(14호·none) → boolean 유지.
- *
- * 자동산출(KoreanLaw 본문 검증): 7호 최대면적×1.2 · 4호 수용정원×200㎡ · 2호나 최저차고×1.5 · 13호 660㎡.
- * 직접입력(별표 의존): 1호(별표3/4/5) · 2호가목(설치기준면적) · 5호다(별표6) · 6호(휴양 합산면적).
- */
-/**
- * 「지방세법 시행령」 제101조 제2항 용도지역별 적용배율.
- * 정본은 `urban-area.ts`의 `LOCAL_TAX_ZONE_AREA_MULTIPLIER` — 여기서 재선언 금지.
- * residential(세분 전 주거지역)·미정의는 자동 제외(직접입력 fallback) — 추정 금지.
- */
-const ZONE_AREA_MULTIPLIER = LOCAL_TAX_ZONE_AREA_MULTIPLIER;
-
-/** 별표3·4 비고2 5종목군(축구·야구·럭비·필드하키·미식축구) — 운동장 공유로 그 중 max1만 인정, 그 외 종목은 합산. */
-const SPORTS_BIG_FIELD_GROUP = new Set(["soccer", "baseball", "rugby", "field_hockey", "american_football"]);
-
-/**
- * 보유 종목 기준면적 합산 (별표3·4 비고2). 5종목군은 그 중 max1·그 외 종목은 합산.
- * 합산이 원칙(default)이고 비고2는 5종목군에만 두는 예외 제한 — 법 근거 없이 불리(단일 종목만) 적용 금지.
- */
-function sumSportsEvents(events: string[], lookup: (e: string) => number | undefined): number {
-  let bigMax = 0;
-  let othersSum = 0;
-  for (const e of events) {
-    const std = lookup(e);
-    if (std === undefined) continue;
-    if (SPORTS_BIG_FIELD_GROUP.has(e)) bigMax = Math.max(bigMax, std);
-    else othersSum += std;
-  }
-  return bigMax + othersSum;
-}
-
-/**
- * 별표3·4 비고 가산·조정 (F2 Phase B B-2).
- * - 선수가산(테니스·연식정구): 2인 초과 2인마다 별표3 483㎡·별표4 725㎡(비고5/4).
- * - 실내 미설치(별표3 비고4·workplace 전용): 실내 운동경기부가 실내체육시설 미설치 시 800㎡.
- * 용도지역별 배율(비고1·3·지방세법 §101②)·종목합산(비고2 일반 다종목)은 cross-statute/명문부재 → 미구현(직접입력 유지).
- */
-function applySportsNotes(
-  base: number | undefined,
-  o: OtherLandUsage,
-  cat: "workplace" | "business",
-): number | undefined {
-  if (base === undefined) return undefined;
-  let result = base;
-  // 선수가산(테니스·연식정구) — "2인마다" = floor((선수수−2)/2)
-  if (
-    (o.sportsFacilityType === "tennis" || o.sportsFacilityType === "soft_tennis") &&
-    o.sportsPlayerCount !== undefined &&
-    o.sportsPlayerCount > 2
-  ) {
-    result += Math.floor((o.sportsPlayerCount - 2) / 2) * (cat === "business" ? 725 : 483);
-  }
-  // 실내 미설치(별표3 비고4 — workplace 전용) → 800
-  if (cat === "workplace" && o.indoorNotInstalled) {
-    result = 800;
-  }
-  return result;
-}
-
-export function resolveAreaLimit(o: OtherLandUsage, zoneType?: ZoneType): number | undefined {
-  const zoneMul = zoneType ? ZONE_AREA_MULTIPLIER[zoneType] : undefined;
-  switch (o.relatedBusinessType) {
-    case "hatchang":
-      return o.maxAnnualArea !== undefined ? o.maxAnnualArea * NBL_AREA_MULTIPLIER.HATCHANG_RATIO : undefined;
-    case "youth_training":
-      return o.youthCapacity !== undefined ? o.youthCapacity * NBL_AREA_MULTIPLIER.YOUTH_PER_CAPITA : undefined;
-    case "parking_garage":
-      return o.minGarageArea !== undefined ? o.minGarageArea * NBL_AREA_MULTIPLIER.GARAGE_MULTIPLIER : undefined;
-    case "vacant_lot_1household":
-      return NBL_AREA_MULTIPLIER.VACANT_LOT_1HOUSEHOLD;
-    case "sports": {
-      // F2 Phase B — 체육시설 유형 분기: workplace(별표3)·business(별표4)·employee(별표5). 기본 workplace.
-      const cat = o.sportsCategory ?? "workplace";
-      if (cat === "employee") {
-        // 별표5 종업원 체육시설 — 보유 시설별 기준면적 합산 (비고2: 50인↓ 코트만)
-        const kinds = o.employeeFacilityKinds;
-        const n = o.employeeCount;
-        if (kinds && kinds.length > 0 && n !== undefined && n > 0) {
-          if (n <= 50) return employeeSportsArea("court", n);
-          return kinds.reduce((sum, k) => sum + employeeSportsArea(k, n), 0);
-        }
-        return o.standardAreaLimit; // 시설 미선택·n≤0 → 직접입력 fallback
-      }
-      // workplace(별표3) | business(별표4) — 종목 합산(비고2: 5종목군 max1·그 외 합산) + 비고 가산
-      const outdoor = cat === "business" ? SPORTS_BUSINESS_OUTDOOR_STD : SPORTS_OUTDOOR_STD;
-      const indoor = cat === "business" ? SPORTS_BUSINESS_INDOOR_STD : SPORTS_INDOOR_STD;
-      const lookupStd = (e: string): number | undefined => {
-        const out = (outdoor as Record<string, number>)[e];
-        if (out !== undefined) return out; // 실외 종목 — 표값(토지 면적)
-        const ind = (indoor as Record<string, number>)[e];
-        if (ind === undefined) return undefined;
-        // 실내 종목 부속토지(별표3·4·5 비고1·3): min(바닥, 표값) × §101② 용도지역 배율. 바닥·배율 미확보 시 표값 fallback
-        if (o.indoorFloorArea !== undefined && o.indoorFloorArea > 0 && zoneMul !== undefined) {
-          return Math.min(o.indoorFloorArea, ind) * zoneMul;
-        }
-        return ind;
-      };
-      const events = [o.sportsFacilityType, ...(o.sportsExtraEvents ?? [])].filter(Boolean) as string[];
-      if (events.length === 0) return o.standardAreaLimit; // 종목 미선택 → 직접입력 fallback
-      return applySportsNotes(sumSportsEvents(events, lookupStd), o, cat === "business" ? "business" : "workplace");
-    }
-    case "reserve_forces": {
-      // F2 Phase A — 별표6 부대편성인원×시설 합산, 미선택 시 standardAreaLimit fallback
-      const size = o.reserveForcesUnitSize;
-      const facilities = o.reserveForcesFacilities;
-      if (size && facilities && facilities.length > 0) {
-        const tier = RESERVE_FORCES_STD[size];
-        return facilities.reduce((sum, f) => sum + (tier[f] ?? 0), 0);
-      }
-      return o.standardAreaLimit;
-    }
-    case "parking_attached":
-      return o.standardAreaLimit; // 2호가목 설치기준면적 직접입력 (미입력 시 undefined → 면적기준 미적용)
-    case "resort": {
-      // F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소 합산: 옥외 방목장·식물원 + 부설주차장×2 + 건축물 부속토지
-      // 건축물 부속토지: 바닥면적 × §101②(지방세법 시행령) 용도지역별 배율(자동). 매핑 불가(residential 등) 시 부속토지 직접입력 fallback
-      const building =
-        o.resortBuildingFloorArea !== undefined && zoneMul !== undefined
-          ? o.resortBuildingFloorArea * zoneMul
-          : (o.resortBuildingAttachedArea ?? 0);
-      const sum = (o.resortOutdoorArea ?? 0) + (o.resortParkingStdArea ?? 0) * 2 + building;
-      return sum > 0 ? sum : o.standardAreaLimit; // 3요소 미입력 시 직접입력 fallback
-    }
-    default:
-      return undefined; // etc_14호 · none · 미설정 → 면적기준 없음 (boolean 유지)
-  }
-}
-
-/**
- * §168의11⑥ 복합용도 건축물 부속토지 안분 산출 (mode·면적 유효 시).
- * ⑥1호(single_building)=연면적비 · ⑥2호(multiple_buildings)=바닥면적비.
- * 분자·분모 미입력/0 이하면 undefined(⑥ 미적용 → ① 호별 경로). 분자>분모 클램프 없음(validate 차단).
- */
-function resolveMixedUseProportioning(
-  o: OtherLandUsage,
-  landArea: number,
-): { ap: AreaProportioning; legalBasis: string } | undefined {
-  const mode = o.mixedUseBuildingMode;
-  if (mode === "single_building") {
-    const num = o.specificUseFloorArea;
-    const den = o.totalFloorArea;
-    if (num === undefined || num <= 0 || den === undefined || den <= 0) return undefined;
-    return { ap: computeMixedUseProportioning(landArea, num, den), legalBasis: NBL.OTHER_LAND_MIXED_USE_FLOOR };
-  }
-  if (mode === "multiple_buildings") {
-    const num = o.specificUseFootprint;
-    const den = o.totalFootprint;
-    if (num === undefined || num <= 0 || den === undefined || den <= 0) return undefined;
-    return { ap: computeMixedUseProportioning(landArea, num, den), legalBasis: NBL.OTHER_LAND_MIXED_USE_FOOTPRINT };
-  }
-  return undefined;
-}
-
-/** §168의11① 호별 면적기준 legalBasis. 미해당(14호·legacy)은 OTHER_LAND_BUSINESS. */
-function resolveAreaLegalBasis(t: NblRelatedBusinessType | undefined): string {
-  switch (t) {
-    case "sports":                return NBL.OTHER_LAND_AREA_SPORTS;
-    case "parking_attached":      return NBL.OTHER_LAND_AREA_PARKING;
-    case "parking_garage":        return NBL.OTHER_LAND_AREA_GARAGE;
-    case "youth_training":        return NBL.OTHER_LAND_AREA_YOUTH;
-    case "reserve_forces":        return NBL.OTHER_LAND_AREA_RESERVE;
-    case "resort":                return NBL.OTHER_LAND_AREA_RESORT;
-    case "hatchang":              return NBL.OTHER_LAND_AREA_HATCHANG;
-    case "vacant_lot_1household": return NBL.OTHER_LAND_AREA_VACANT_LOT;
-    default:                      return NBL.OTHER_LAND_BUSINESS;
-  }
 }
 
 export function judgeOtherLand(
@@ -546,7 +369,7 @@ export function judgeOtherLand(
         totalOwnershipDays,
         effectiveBusinessDays: r.effectiveBusinessDays,
         gracePeriodDays: r.gracePeriodDays,
-        businessUseRatio: areaProportioning.nonBusinessRatio,
+        businessUseRatio: 1 - areaProportioning.nonBusinessRatio,
         criteria: r.criteria,
         revenueTestDetail,
         warnings,
@@ -572,7 +395,7 @@ export function judgeOtherLand(
         totalOwnershipDays,
         effectiveBusinessDays: r.effectiveBusinessDays,
         gracePeriodDays: r.gracePeriodDays,
-        businessUseRatio: areaProportioning.nonBusinessRatio,
+        businessUseRatio: 1 - areaProportioning.nonBusinessRatio,
         criteria: r.criteria,
         revenueTestDetail,
         warnings,
@@ -622,7 +445,7 @@ export function judgeOtherLand(
       totalOwnershipDays,
       effectiveBusinessDays: r.effectiveBusinessDays,
       gracePeriodDays: r.gracePeriodDays,
-      businessUseRatio: areaProportioning.nonBusinessRatio,
+      businessUseRatio: 1 - areaProportioning.nonBusinessRatio,
       criteria: r.criteria,
       revenueTestDetail,
       warnings,
@@ -673,7 +496,7 @@ export function judgeOtherLand(
       totalOwnershipDays,
       effectiveBusinessDays: r.effectiveBusinessDays,
       gracePeriodDays: r.gracePeriodDays,
-      businessUseRatio: areaProportioning.nonBusinessRatio,
+      businessUseRatio: 1 - areaProportioning.nonBusinessRatio,
       criteria: r.criteria,
       revenueTestDetail,
       warnings,
@@ -719,7 +542,7 @@ export function judgeOtherLand(
       totalOwnershipDays,
       effectiveBusinessDays: r.effectiveBusinessDays,
       gracePeriodDays: r.gracePeriodDays,
-      businessUseRatio: areaProportioning.nonBusinessRatio,
+      businessUseRatio: 1 - areaProportioning.nonBusinessRatio,
       criteria: r.criteria,
       revenueTestDetail,
       warnings,

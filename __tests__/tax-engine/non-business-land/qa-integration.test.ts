@@ -149,6 +149,9 @@ describe("§168-14 ③ 무조건 사업용 의제", () => {
         gracePeriods: [],
         unconditionalExemption: {
           isUrbanFarmlandJongjoongOrInherited: true,
+          // 나목 — 상속개시일부터 5년 이내 양도(2020-06-01 → 2024-01-01).
+          // 플래그만으로 의제하던 것을 요건 검사로 바꿨다 (E5-01·V4-b, 2026-09-02 코드리뷰).
+          inheritanceDate: d("2020-06-01"),
         },
       },
       "farmland",

@@ -73,11 +73,15 @@ describe("[NBL-CARD] ⑦ 판정 상세 렌더 (raw→engine→judgment→card)",
       nblUseDetailedJudgment: true,
       nblLandType: "pasture",
       nblZoneType: "residential",
-      acquisitionArea: "1500", // 한우 100두 × 10㎡ = 기준 1,000㎡ 초과
+      // 🔴 축종 코드를 정본 키(`hanwoo_breeding`)로 정정 (E2-03, 2026-09-02 코드리뷰).
+      //    종전 `"hanwoo"`는 별표 1의3에 없는 코드라 자동산출이 **0**을 냈고, 그 0이 기준면적으로
+      //    채택되어 토지 전량이 초과분이 되는 **버그에 의존해** 이 케이스가 성립하고 있었다.
+      //    이제 미등재 축종은 면적기준을 적용하지 않으므로 유효 축종으로 초과를 만든다.
+      acquisitionArea: "100000", // 한우 번식우 100두 기준면적 초과
       acquisitionDate: "2020-01-01",
       transferDate: "2025-01-01",
       nblPastureIsLivestockOperator: true,
-      nblPastureLivestockType: "hanwoo",
+      nblPastureLivestockType: "hanwoo_breeding",
       nblPastureLivestockCount: "100",
     } as never);
     const judgment = judgeNonBusinessLand(input!, DEFAULT_NON_BUSINESS_LAND_RULES);

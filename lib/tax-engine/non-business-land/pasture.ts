@@ -9,7 +9,7 @@
  *   Step 3-3-1 도시지역 內 편입유예 → 사업용/비사업용
  */
 
-import { differenceInDays } from "date-fns";
+import { addYears, differenceInDays } from "date-fns";
 import { NBL } from "../legal-codes";
 import type {
   AreaProportioning,
@@ -51,8 +51,14 @@ function isRelatedPasture(input: NonBusinessLandInput): { applies: boolean; reas
   if (!p) return { applies: false, reason: "" };
 
   if (p.inheritanceDate) {
-    const years = differenceInDays(input.transferDate, p.inheritanceDate) / 365;
-    if (years < 3) return { applies: true, reason: `상속 3년 이내 목장 (${years.toFixed(1)}년 경과)` };
+    // 「소득세법 시행령」 §168의10②1호 「상속개시일부터 3년이 **지나지 아니한**」 — 달력 기준으로 판정한다.
+    // `differenceInDays / 365`는 윤일이 낀 창에서 하루 일찍 3년으로 올라가 요건이 끊긴다
+    // (E2-04. forest.ts:57이 같은 이유로 이미 addYears를 쓴다 — 그 sibling과 맞춘다).
+    const threeYearMark = addYears(p.inheritanceDate, 3);
+    if (input.transferDate < threeYearMark) {
+      const years = differenceInDays(input.transferDate, p.inheritanceDate) / 365;
+      return { applies: true, reason: `상속 3년 이내 목장 (${years.toFixed(1)}년 경과)` };
+    }
   }
   if (p.isSpecialOrgUse) {
     return { applies: true, reason: "사회복지/학교/종교/정당 직접 사용" };
@@ -92,37 +98,53 @@ export function judgePasture(
     legalBasis: NBL.PASTURE,
   });
 
-  if (!r1.meets) {
-    // ── Step 3-1-1: 거주·사업관련 목장 (지역·면적 면제) ──────
-    const related = isRelatedPasture(input);
-    if (related.applies) {
-      const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
-      const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "pasture", rules, input.gracePeriods);
-      if (r2.meets) {
-        appliedLaws.push(NBL.PASTURE_RELATED);
-        steps.push({
-          id: "pasture_related",
-          label: "Step 3-1-1 거주·사업관련 목장용지",
-          status: "PASS",
-          detail: `${related.reason} + 기간기준 충족 (지역·면적 면제)`,
-          legalBasis: NBL.PASTURE_RELATED,
-        });
-        return buildPass("거주·사업관련 목장용지 (지역·면적 면제)", steps, appliedLaws, warnings, {
-          r: r2, totalOwnershipDays,
-        });
-      }
+  /**
+   * ── Step 3-1-1: 거주·사업관련 목장 (지역·면적 면제) ──────
+   *
+   * 🔴 **축산업 영위 기간기준 충족 여부와 무관하게** 판정한다 (V7-b, 2026-09-02 코드리뷰).
+   *
+   * 「소득세법」 §104의3①3호 각 목 외 부분 **단서**는 「다만, … 거주 또는 사업과 직접 관련이
+   * 있다고 인정할 만한 상당한 이유가 있는 목장용지로서 대통령령으로 정하는 것은 제외한다」로
+   * **가목(기준면적 초과·도시지역)을 포함한 3호 전체**에서 제외한다. 그런데 종전에는 이 판정이
+   * `if (!r1.meets)` 블록 **안에만** 있어서, 축산업을 영위하는 목장은 단서를 통째로 건너뛰고
+   * 기준면적·도시지역 판정으로 직행했다 — 「축산업을 영위하면 오히려 비사업용, 영위하지 않으면
+   * 사업용」이라는 역전이다(실측 총부담세액 +76,548,532원 / +53,507,025원, 납세자 불리).
+   *
+   * 종중(시행령 §168의10②2호)은 Step 2 무조건 의제가 선점해 가려져 있었으나
+   * 1호(상속 3년 이내)·3호(사회복지법인등)는 대응 분기가 없어 그대로 노출됐다.
+   */
+  const related = isRelatedPasture(input);
+  if (related.applies) {
+    const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
+    const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "pasture", rules, input.gracePeriods);
+    if (r2.meets) {
+      appliedLaws.push(NBL.PASTURE_RELATED);
       steps.push({
         id: "pasture_related",
         label: "Step 3-1-1 거주·사업관련 목장용지",
-        status: "FAIL",
-        detail: `${related.reason}이나 기간기준 미충족`,
+        status: "PASS",
+        detail: `${related.reason} + 기간기준 충족 (지역·면적 면제)`,
         legalBasis: NBL.PASTURE_RELATED,
       });
+      return buildPass("거주·사업관련 목장용지 (지역·면적 면제)", steps, appliedLaws, warnings, {
+        r: r2, totalOwnershipDays,
+      });
+    }
+    steps.push({
+      id: "pasture_related",
+      label: "Step 3-1-1 거주·사업관련 목장용지",
+      status: "FAIL",
+      detail: `${related.reason}이나 기간기준 미충족`,
+      legalBasis: NBL.PASTURE_RELATED,
+    });
+    // 단서 사유는 있으나 전 보유기간 기간기준조차 미충족 — 축산 영위도 미충족이면 여기서 종료.
+    // (r1을 충족했다면 아래 기준면적·지역 판정으로 계속 진행한다 — 종전 동작 보존)
+    if (!r1.meets) {
       return buildFail("거주·사업관련 목장이나 기간기준 미충족", steps, appliedLaws, warnings, {
         r: r2, totalOwnershipDays,
       });
     }
-
+  } else if (!r1.meets) {
     steps.push({
       id: "pasture_related",
       label: "Step 3-1-1 거주·사업관련 목장용지",
@@ -156,6 +178,14 @@ export function judgePasture(
         `보유시설(${includedFacilityLabels(facilities).join("·")}) = ${resolvedStandardArea}㎡ ` +
         "자동 산출 (소득세법 시행령 별표 1의3 §168조의10③)",
       );
+    } else {
+      // 별표 1의3에 없는 축종·두수 0 등으로 자동산출이 0을 낸 경우 — 그 0을 기준면적으로 채택하면
+      // 토지 전량이 초과분이 되어 조용히 비사업용으로 붕괴한다. 채택하지 않고 사유를 드러낸다 (E2-03).
+      resolvedStandardArea = undefined;
+      warnings.push(
+        `축산용 토지 기준면적을 산출하지 못했습니다(축종 ${p.livestockType} · 사육두수 ${p.livestockCount}두) — ` +
+          "면적기준을 적용하지 않았습니다. 기준면적을 직접 입력하거나 축종·두수를 확인하세요 (소득세법 시행령 별표 1의3).",
+      );
     }
   }
 
@@ -178,7 +208,7 @@ export function judgePasture(
       totalOwnershipDays,
       effectiveBusinessDays: r1.effectiveBusinessDays,
       gracePeriodDays: r1.gracePeriodDays,
-      businessUseRatio: areaProportioning.nonBusinessRatio,
+      businessUseRatio: 1 - areaProportioning.nonBusinessRatio,
       criteria: r1.criteria,
       warnings,
     };

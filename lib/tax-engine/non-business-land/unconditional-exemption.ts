@@ -110,15 +110,44 @@ export function checkUnconditionalExemption(
     }
   }
 
-  // ③4호: 도시지역 內 농지 중 종중(2005.12.31 이전) 또는 상속 5년 이내 양도
-  // (농지 나목 도시지역 예외 경로)
+  /**
+   * ③4호: 「법 제104조의3제1항제1호 **나목**에 해당하는 농지」 중
+   *        가목 종중 소유(2005.12.31. 이전 취득) 또는 나목 상속(상속개시일부터 5년 이내 양도)
+   *
+   * 🔴 종전에는 `isUrbanFarmlandJongjoongOrInherited` **boolean 하나만** 보고 의제를 확정했다
+   *    (E5-01·V4-b, 2026-09-02 코드리뷰). detail 문자열은 요건을 말하면서 **아무것도 검사하지
+   *    않아** 요건 미달 토지까지 사업용으로 확정됐고(중과 전액 소실), 형제 분기(이농·레거시 종중)는
+   *    같은 파일에서 날짜를 검증하고 있었으므로 이 분기만 예외였다.
+   *
+   *    누락 요건은 셋이다:
+   *      1. 본문 — 법 §104의3①1호**나목** 대상, 즉 **도시지역 안의** 농지일 것
+   *      2. 가목 — 종중 취득일 ≤ 2005.12.31.
+   *      3. 나목 — 상속개시일부터 5년 이내 양도
+   *    날짜 미입력은 의제 미성립으로 둔다(자동 fallback 금지 — ⑧이 토글 ON 시 날짜를 요구한다).
+   */
   if (u.isUrbanFarmlandJongjoongOrInherited && categoryGroup === "farmland") {
-    return {
-      isExempt: true,
-      reason: "jongjoong_or_inherit_urban_farmland",
-      detail: "도시지역 內 농지 중 종중(2005.12.31 이전 취득) 또는 상속 5년 이내 양도",
-      legalBasis: "시행령 §168조의14 ③ 4호",
-    };
+    // 본문 요건 — 1호 나목은 도시지역(주·상·공) 안의 농지에만 적용된다.
+    if (isUrbanForFarmland(input.zoneType)) {
+      // 가목 — 종중 소유 (2005.12.31. 이전 취득)
+      if (u.jongjoongAcquisitionDate && u.jongjoongAcquisitionDate <= JONGJOONG_CUTOFF) {
+        return {
+          isExempt: true,
+          reason: "jongjoong_or_inherit_urban_farmland",
+          detail: `도시지역 內 농지 — 종중 소유 2005.12.31 이전 취득(${u.jongjoongAcquisitionDate.toISOString().slice(0, 10)})`,
+          legalBasis: "「소득세법 시행령」 §168조의14 ③ 4호 가목",
+        };
+      }
+      // 나목 — 상속개시일부터 5년 이내 양도
+      if (u.inheritanceDate && transferDate <= addYears(u.inheritanceDate, 5)) {
+        return {
+          isExempt: true,
+          reason: "jongjoong_or_inherit_urban_farmland",
+          detail: `도시지역 內 농지 — 상속개시일(${u.inheritanceDate.toISOString().slice(0, 10)})부터 5년 이내 양도`,
+          legalBasis: "「소득세법 시행령」 §168조의14 ③ 4호 나목",
+        };
+      }
+    }
+    // 요건 미충족 — 의제하지 않고 지목별 판정으로 진행한다.
   }
 
   // 공장 오염피해 인접토지 (§168-14③5호 → 시행규칙 §83의5④1호):

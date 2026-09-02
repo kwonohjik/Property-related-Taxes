@@ -245,12 +245,24 @@ export function buildOtherLand(
     propertyTaxType:                (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"],
     hasBuilding:                    asBool(a.nblOtherHasBuilding),
     buildingFloorArea:              parseNumber(asString(a.nblOtherBuildingFloorArea)),
-    // §168의11⑥ 복합용도 건축물 부속토지 안분 (B)
-    mixedUseBuildingMode:           (asString(a.nblOtherMixedUseMode) || undefined) as OtherLandUsage["mixedUseBuildingMode"],
-    specificUseFloorArea:           parseNumber(asString(a.nblOtherMixedUseSpecificFloorArea)),
-    totalFloorArea:                 parseNumber(asString(a.nblOtherMixedUseTotalFloorArea)),
-    specificUseFootprint:           parseNumber(asString(a.nblOtherMixedUseSpecificFootprint)),
-    totalFootprint:                 parseNumber(asString(a.nblOtherMixedUseTotalFootprint)),
+    /**
+     * §168의11⑥ 복합용도 건축물 부속토지 안분 (B) — **「건축물 있음」 토글로 gate한다** (U2-01).
+     *
+     * 이 파일의 다른 선택 블록은 전부 자기 토글로 gate된다(⑤ 연접 다필지 `nblOtherUseParcels`,
+     * 공장 `nblFactoryEnabled`, ③2호 공통수입 `nblRevenueCommonApportion`). **⑥ 복합용도만**
+     * 무조건 매핑이라, 사용자가 「건축물 있음」을 껐다 켠 뒤 잔존한 안분 입력이 **화면에 보이지
+     * 않는 채로** 판정을 뒤집었다(실측 비사업용 0㎡ → 750㎡). §168의11⑥ 본문도 건축물의 존재를
+     * 전제하므로 요건상으로도 gate가 맞다.
+     */
+    ...(asBool(a.nblOtherHasBuilding)
+      ? {
+          mixedUseBuildingMode:     (asString(a.nblOtherMixedUseMode) || undefined) as OtherLandUsage["mixedUseBuildingMode"],
+          specificUseFloorArea:     parseNumber(asString(a.nblOtherMixedUseSpecificFloorArea)),
+          totalFloorArea:           parseNumber(asString(a.nblOtherMixedUseTotalFloorArea)),
+          specificUseFootprint:     parseNumber(asString(a.nblOtherMixedUseSpecificFootprint)),
+          totalFootprint:           parseNumber(asString(a.nblOtherMixedUseTotalFootprint)),
+        }
+      : {}),
     buildingStandardValue:          parseNumber(asString(a.nblOtherBuildingValue)),
     landStandardValue:              parseNumber(asString(a.nblOtherLandValue)),
     isRelatedToResidenceOrBusiness: asBool(a.nblOtherIsRelatedToResidence),
