@@ -296,7 +296,6 @@ export const NBL_DEFAULTS = {
   nblFarmerResidenceDistance: "",
   nblFarmlandIsWeekendFarm: false,
   nblFarmlandIsConversionApproved: false,
-  nblFarmlandConversionDate: "",
   nblFarmlandIsFarmDevZone: false,
   nblFarmlandIsMarginalFarm: false,
   nblFarmlandIsReclaimedLand: false,

@@ -15,6 +15,7 @@ import type {
   UnconditionalExemptionReason,
 } from "./types";
 import { isUrbanForFarmland } from "./urban-area";
+import { NBL } from "../legal-codes/transfer-nbl";
 
 export interface UnconditionalExemptionResult {
   isExempt: boolean;
@@ -52,7 +53,7 @@ export function checkUnconditionalExemption(
         isExempt: true,
         reason: "inheritance_before_2007",
         detail: `2006.12.31 이전 상속(${u.inheritanceDate.toISOString().slice(0, 10)}) + 2009.12.31까지 양도`,
-        legalBasis: "시행령 §168조의14 ③ 1호",
+        legalBasis: NBL.UNCONDITIONAL_INHERIT_BEFORE_2007,
       };
     }
   }
@@ -63,7 +64,7 @@ export function checkUnconditionalExemption(
       isExempt: true,
       reason: "long_owned_20years",
       detail: "2006.12.31 이전 20년 이상 소유 + 2009.12.31까지 양도",
-      legalBasis: "시행령 §168조의14 ③ 2호",
+      legalBasis: NBL.UNCONDITIONAL_LONG_OWNED_20Y,
     };
   }
 
@@ -76,7 +77,7 @@ export function checkUnconditionalExemption(
         isExempt: true,
         reason: "ancestor_8year_farming",
         detail: "직계존속·배우자 8년 이상 재촌·자경(축산) 상속·증여",
-        legalBasis: "시행령 §168조의14 ③ 1의2호",
+        legalBasis: NBL.UNCONDITIONAL_ANCESTOR,
       };
     }
     // 도시지역이면 의제 제외 (주의: 여기서는 다음 판정으로 진행)
@@ -92,7 +93,7 @@ export function checkUnconditionalExemption(
         isExempt: true,
         reason: "public_expropriation",
         detail: `공익사업 협의매수·수용 — 사업인정고시일 ${u.publicNoticeDate.toISOString().slice(0, 10)} (2006.12.31 이전)`,
-        legalBasis: "시행령 §168조의14 ③ 3호 가목",
+        legalBasis: NBL.UNCONDITIONAL_PUBLIC_NOTICE_2006,
       };
     }
     // 5년 전 취득 기준 (2021 개정 현행 단일 기준)
@@ -105,7 +106,7 @@ export function checkUnconditionalExemption(
         isExempt: true,
         reason: "public_expropriation",
         detail: `공익사업 협의매수·수용 — 고시일 ${u.publicNoticeDate.toISOString().slice(0, 10)} 5년 이전 취득 (취득일 ${acqDateForExpropriation.toISOString().slice(0, 10)})`,
-        legalBasis: "시행령 §168조의14 ③ 3호 나목",
+        legalBasis: NBL.UNCONDITIONAL_PUBLIC_ACQ_5Y,
       };
     }
   }
@@ -134,7 +135,7 @@ export function checkUnconditionalExemption(
           isExempt: true,
           reason: "jongjoong_or_inherit_urban_farmland",
           detail: `도시지역 內 농지 — 종중 소유 2005.12.31 이전 취득(${u.jongjoongAcquisitionDate.toISOString().slice(0, 10)})`,
-          legalBasis: "「소득세법 시행령」 §168조의14 ③ 4호 가목",
+          legalBasis: NBL.UNCONDITIONAL_URBAN_FARMLAND_JONGJOONG,
         };
       }
       // 나목 — 상속개시일부터 5년 이내 양도
@@ -143,7 +144,7 @@ export function checkUnconditionalExemption(
           isExempt: true,
           reason: "jongjoong_or_inherit_urban_farmland",
           detail: `도시지역 內 농지 — 상속개시일(${u.inheritanceDate.toISOString().slice(0, 10)})부터 5년 이내 양도`,
-          legalBasis: "「소득세법 시행령」 §168조의14 ③ 4호 나목",
+          legalBasis: NBL.UNCONDITIONAL_URBAN_FARMLAND_INHERIT,
         };
       }
     }
@@ -157,7 +158,7 @@ export function checkUnconditionalExemption(
       isExempt: true,
       reason: "factory_adjacent",
       detail: "공장 오염피해 인접토지 — 소유자 요구로 취득한 공장 부속토지의 인접토지",
-      legalBasis: "소득세법 시행규칙 §83의5④ 1호",
+      legalBasis: NBL.UNCONDITIONAL_FACTORY_ADJACENT,
     };
   }
 
@@ -174,18 +175,31 @@ export function checkUnconditionalExemption(
       isExempt: true,
       reason: "inong",
       detail: `2006.12.31 이전 이농(${u.inongDate.toISOString().slice(0, 10)}) + 2009.12.31까지 양도`,
-      legalBasis: "소득세법 시행규칙 §83의5④ 2호",
+      legalBasis: NBL.UNCONDITIONAL_INONG,
     };
   }
 
-  // 레거시: 종중 소유 2005.12.31 이전 취득 (농·임·목)
+  /**
+   * 레거시: 종중 소유 2005.12.31 이전 취득 (농·임·목)
+   *
+   * 🔴 근거 조문은 **지목마다 다르다**(E5-05, 2026-09-02 코드리뷰). 종전에는 셋 다
+   *    「§168조의14 ③ 4호 가목 · §168-8 ③ 6호 등」을 달았는데 둘 다 **농지 전용 조문**이라
+   *    임야·목장 판정의 근거가 될 수 없었다 — 신고서·산출근거를 그대로 신뢰한 이용자가
+   *    잘못된 근거를 제시하게 된다.
+   */
   if (u.isJongjoongOwned && u.jongjoongAcquisitionDate && isAgriLike) {
     if (u.jongjoongAcquisitionDate <= JONGJOONG_CUTOFF) {
+      const jongjoongBasis =
+        categoryGroup === "forest"
+          ? NBL.JONGJOONG_FOREST
+          : categoryGroup === "pasture"
+            ? NBL.JONGJOONG_PASTURE
+            : NBL.JONGJOONG_FARMLAND;
       return {
         isExempt: true,
         reason: "jongjoong_owned",
         detail: `종중 소유 — 2005.12.31 이전 취득(${u.jongjoongAcquisitionDate.toISOString().slice(0, 10)})`,
-        legalBasis: "시행령 §168조의14 ③ 4호 가목 · §168-8 ③ 6호 등",
+        legalBasis: jongjoongBasis,
       };
     }
   }

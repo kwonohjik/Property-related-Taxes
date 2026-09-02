@@ -103,7 +103,6 @@ export const nonBusinessLandRawSchema = z.object({
   nblFarmingSelf: z.boolean().optional(),
   nblFarmlandIsWeekendFarm: z.boolean().optional(),
   nblFarmlandIsConversionApproved: z.boolean().optional(),
-  nblFarmlandConversionDate: z.string().optional(),
   nblFarmlandIsFarmDevZone: z.boolean().optional(),
   nblFarmlandIsMarginalFarm: z.boolean().optional(),
   nblFarmlandIsReclaimedLand: z.boolean().optional(),

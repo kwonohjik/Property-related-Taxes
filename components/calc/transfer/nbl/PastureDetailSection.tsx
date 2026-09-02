@@ -71,7 +71,17 @@ export function PastureDetailSection({
         </Select>
       </FieldCard>
 
-      <FieldCard label="사육 두수" unit="두">
+      {/*
+        E2-08 (2026-09-02 코드리뷰) — 별표 1의3 제2호는 가축두수 산정방법 3가지 중
+        **납세자가 선택**하도록 정하는데 그것이 안내되지 않았다. 두수는 기준면적에 선형으로
+        곱해지므로(§168의10③) 입력 오류가 곧바로 비사업용 면적비에 반영된다 — 한우 30두를
+        10두로 넣으면 기준면적 한도가 3분의 1로 줄어 초과분이 통째로 중과 대상이 된다.
+      */}
+      <FieldCard
+        label="사육 두수"
+        unit="두"
+        hint="「소득세법 시행령」 [별표 1의3] 제2호 — 다음 3가지 중 납세자가 선택하는 방법으로 산정합니다. ① 양도일 이전 최근 6과세기간(양도일이 속하는 과세기간 포함) 중 납세자가 선택하는, 축산업을 영위한 3과세기간의 최고사육두수를 평균 ② 최근 4과세기간 중 축산업을 영위한 2과세기간의 최고사육두수를 평균 ③ 축산업을 영위한 기간이 2년 이하이면 축산업을 영위한 과세기간의 최고사육두수를 평균"
+      >
         <DecimalInput
           value={asset.nblPastureLivestockCount}
           onChange={(v) => onAssetChange({ nblPastureLivestockCount: v })}
@@ -80,10 +90,18 @@ export function PastureDetailSection({
 
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <p className="text-xs font-semibold text-sky-700">보유 시설 (해당하는 것을 모두 선택)</p>
+        {/*
+          E2-06 · U1-05 (2026-09-02 코드리뷰) — 종전 마지막 문장은 「위 「기준면적」을 직접
+          입력하면 이 선택은 쓰이지 않습니다」였다. **그 입력 필드는 화면에도 AssetForm에도
+          없다**(엔진의 `pasture.standardArea` 최우선 경로는 `buildPasture`가 매핑하지 않아
+          프로덕션에서 항상 undefined). 사용자가 찾을 수 없는 필드를 안내하던 문장이라 제거하고,
+          실제 산출 경로를 밝힌다. 직접입력 필드 신설은 `docs/00-pm/nbl-gaps/gap-3c.plan.md`의
+          (E-3)로 이미 deferred 기록돼 있다.
+        */}
         <p className="text-caption text-sky-800">
           별표1의3의 4개 열은 <b>항목별 인정 한도</b>입니다 — 없는 시설의 몫은 기준면적에 더하지
-          않습니다. 축사는 축산업의 전제이므로 항상 포함됩니다. 위 「기준면적」을 직접 입력하면
-          이 선택은 쓰이지 않습니다.
+          않습니다. 축사는 축산업의 전제이므로 항상 포함됩니다. 기준면적은 축종·두수·보유시설로
+          자동 산출됩니다.
         </p>
         <ToggleCard
           variant="chip"
