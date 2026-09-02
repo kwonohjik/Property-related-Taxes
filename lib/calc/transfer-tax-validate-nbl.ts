@@ -89,6 +89,29 @@ export function validateNblDetailedJudgment(
   if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
     return `${label}: 비사업용 토지 판정을 위해 토지 면적(㎡)을 입력하세요.`;
 
+  /**
+   * 공동소유 지분 범위 강제 — 0 < ratio ≤ 1 (E5-03, 2026-09-02 코드리뷰).
+   *
+   * 🔴 종전에는 ⑧ validate·⑫ Zod 어디에도 범위 검증이 없어 **한 화면 안에서 두 소비자가
+   *    같은 값을 다르게 해석**했다. 힌트는 `0.5 (50%)`를 예시하나 차단이 없어 사용자가 `50`을
+   *    넣을 수 있고, 그때:
+   *      · UI 자동조회(`NblLandAutoFetch`)는 `공시지가 × 면적 × 50`을 **verbatim** 곱해
+   *        토지가액을 50배로 채운다 → §168의11② 수입금액비율이 50분의 1로 붕괴
+   *        → 주차장운영업 기준 3% 미달 → **사업용이던 토지가 비사업용으로 뒤집혀 +10%p 중과**.
+   *      · 엔진(`parseOwnershipRatio`)은 `raw >= 1`을 **조용히 1로 정규화**해 면적 축소도 하지 않는다.
+   *
+   *    엔진의 정규화 자체는 방어로서 옳지만, 그것이 UI의 verbatim 곱셈을 가려준다는 보장이 없다.
+   *    자동 fallback 금지 원칙에 따라 **계산 전에 차단**해 두 해석이 갈릴 여지를 없앤다.
+   *
+   * ⚠️ 상한을 `< 1`이 아니라 `≤ 1`로 둔다 — 「단독소유 = 1」은 정상 입력이고, 엔진도 1을
+   *    받으면 안분하지 않는다(같은 귀결). `< 1`로 막으면 정당한 입력을 차단하게 된다.
+   */
+  if (asset.nblOwnershipRatio) {
+    const ratio = parseFloat(asset.nblOwnershipRatio);
+    if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 1)
+      return `${label}: 공동소유 지분은 0 초과 1 이하의 비율로 입력하세요 (예: 50%는 0.5). 백분율(50)을 입력하면 토지가액 자동조회가 50배로 계산되어 수입금액비율 판정이 뒤집힙니다.`;
+  }
+
   // 무조건 의제 성립 시 아래 기간기준 상세 입력은 엔진이 무시 + UI 비활성 → 검증 스킵
   if (nblExempt) return null;
 

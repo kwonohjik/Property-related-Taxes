@@ -301,8 +301,20 @@ export function OtherLandDetailSection({
             <FieldCard label="(또는) 건축물 부속토지 직접입력 (㎡)" unit="㎡" hint="용도지역별 배율 미매핑 시 배율 적용 후 부속토지 면적을 직접 입력">
               <DecimalInput value={asset.nblOtherResortBuildingArea} onChange={(v) => onAssetChange({ nblOtherResortBuildingArea: v })} />
             </FieldCard>
-            {!(asset.nblOtherResortOutdoorArea || asset.nblOtherResortParkingStdArea || asset.nblOtherResortBuildingArea) && (
-              <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡" hint="3요소 미입력 시 합산 기준면적 직접입력">
+            {/*
+              U2-02 (2026-09-02 코드리뷰) — 종전 조건은 `nblOtherResortBuildingFloorArea`를
+              빠뜨린 3요소였다. 그래서 **바닥면적만 입력한 사용자**에게 직접입력 칸이 계속
+              보였고, 거기 넣은 값은 엔진이 무시했다(3요소가 우선). ⑧ validate(:28)는 처음부터
+              바닥면적을 포함한 4요소로 판정하고 있었으므로 **UI↔validate가 서로 반대**였다.
+              ⇒ 게이트를 validate와 동일한 4요소로 맞춘다.
+            */}
+            {!(
+              asset.nblOtherResortOutdoorArea ||
+              asset.nblOtherResortParkingStdArea ||
+              asset.nblOtherResortBuildingArea ||
+              asset.nblOtherResortBuildingFloorArea
+            ) && (
+              <FieldCard label="기준면적 직접입력 (㎡)" unit="㎡" hint="위 3요소(옥외방목장·부설주차장·건축물)를 하나도 입력하지 않은 경우에만 사용합니다. 3요소 중 하나라도 입력하면 그 값이 우선하며 이 칸은 쓰이지 않습니다.">
                 <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
               </FieldCard>
             )}

@@ -246,7 +246,7 @@ export function NblSectionContainer({
             )}
             <NblUrbanZoneCheckButton jibun={asset.addressJibun} transferDate={transferDate ?? ""} />
           </FieldCard>
-          <FieldCard label="공동소유 지분" hint="예: 0.5 (50%), 기본 1">
+          <FieldCard label="공동소유 지분" hint="0 초과 1 이하의 비율로 입력합니다 — 50%는 0.5, 단독소유는 1(또는 미입력). 백분율(50)을 넣으면 계산 전에 차단됩니다.">
             <DecimalInput
               value={asset.nblOwnershipRatio}
               onChange={(v) => onAssetChange({ nblOwnershipRatio: v })}
