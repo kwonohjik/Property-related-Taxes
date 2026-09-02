@@ -21,7 +21,11 @@ export const PUBLIC_EXPROPRIATION_RATES = Object.freeze({
   CURRENT_2018: Object.freeze({ cash: 0.10, bond: 0.15, bond3y: 0.30, bond5y: 0.40 }),
   // 2025-01-01 이후 양도분 (법률 제20778호, 부칙 §10 — 과세연도 단위 소급)
   AMENDED_2025: Object.freeze({ cash: 0.15, bond: 0.20, bond3y: 0.35, bond5y: 0.45 }),
-  // 부칙 §53 — 2015-12-31 이전 고시 + 2017-12-31 이전 양도
+  // 부칙 §53 — 2015-12-31 이전 고시 + 2017-12-31 이전 양도.
+  // 이 4개 값은 **efYd 2009-01-01 ~ 2013-12-31 시행본 §77① 원문과 정확히 일치**한다
+  // (법제처 DRF 실측 — 2014-01-01본은 15/20/30/40, 2016-01-01본은 10/15/30/40).
+  // 부칙의 법률 번호·공포일과 위 두 경계일의 근거는 미확인 —
+  // `legal-codes/transfer.ts`의 REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL 주석 참조 (D7-12).
   LEGACY:  Object.freeze({ cash: 0.20, bond: 0.25, bond3y: 0.40, bond5y: 0.50 }),
 });
 

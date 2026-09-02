@@ -36,7 +36,9 @@ import {
   calculatePublicExpropriationReduction,
   getInvoluntaryTransferLimits,
   AMENDED_2025_TRANSFER_CUTOFF,
+  PUBLIC_EXPROPRIATION_RATES,
 } from "@/lib/tax-engine/public-expropriation-reduction";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { buildLimitGroups } from "@/lib/tax-engine/aggregate-reduction-limits";
 
 const base = {
@@ -136,5 +138,37 @@ describe("D7-02 §133 종합한도 경계 — 2025 과세연도", () => {
     expect(g.fiveYearTypes).toContain("public_expropriation");
     expect(g.fiveYearTypes).toContain("replacement_land_comp");
     expect(g.fiveYearTypes).not.toContain("gb_designated_land");
+  });
+});
+
+describe("D7-12 §77 LEGACY 요율의 출처 (부칙 번호는 미확인)", () => {
+  it("D7-12-1: LEGACY 4개 값 = efYd 2009-01-01~2013-12-31 시행본 §77① 원문", () => {
+    // 법제처 DRF 실측: 2009-01-01본 「양도소득세의 100분의 20[… 100분의 25로 하되, …
+    //   100분의 40(만기가 5년 이상인 경우에는 100분의 50)]」
+    expect(PUBLIC_EXPROPRIATION_RATES.LEGACY).toEqual({
+      cash: 0.2,
+      bond: 0.25,
+      bond3y: 0.4,
+      bond5y: 0.5,
+    });
+  });
+
+  it("D7-12-2: 세 요율 세트가 서로 구별된다 (2009 / 2014~2015 / 2016~2024)", () => {
+    expect(PUBLIC_EXPROPRIATION_RATES.CURRENT_2018).toEqual({
+      cash: 0.1,
+      bond: 0.15,
+      bond3y: 0.3,
+      bond5y: 0.4,
+    });
+    expect(PUBLIC_EXPROPRIATION_RATES.AMENDED_2025).toEqual({
+      cash: 0.15,
+      bond: 0.2,
+      bond3y: 0.35,
+      bond5y: 0.45,
+    });
+  });
+
+  it("D7-12-3: 경과조치 상수는 부칙 제53조를 가리킨다 (법률 번호 미확인 — 주석에 명시)", () => {
+    expect(TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL).toBe("조특법 부칙 제53조");
   });
 });
