@@ -308,6 +308,25 @@ e2e/stock-transfer-monthly-accrual.spec.ts
 `post-listing-flat-adapter.ts:372` · `stock-transfer-tax-validate-step2.ts:395` ·
 `PostListingFormulaPreview.tsx:92`.
 
+### ✅ D-4 (해소) 검증 계획에 E2E가 없었고, 실제로 돌리지 않았다 → **추가 완료**
+
+`e2e/stock-post-listing-daily-closing.spec.ts` — PLD-1(표만 채우고 Step3 도달) ·
+PLD-2(표가 비면 차단, 음성 대조군). 뮤테이션으로 구별력 확인:
+validate의 축 판정을 `"direct"` 고정으로 변이하니 **둘 다 실패**했다
+(PLD-1은 dead-end 재현, PLD-2는 차단 문구가 달라져 실패 — 정확히 옳은 감지).
+
+> ⚠️ 실행 중 두 함정을 밟았다.
+> 1. **`getByRole("textbox", { name })`은 이 저장소에서 placeholder로만 이름이 잡힌다** —
+>    `FieldCard`의 `<label>`에 `htmlFor`가 없고(`FieldCard.tsx:61`) `CurrencyInput`은
+>    `hideLabel`일 때만 `aria-label`을 단다(`CurrencyInput.tsx:125`).
+>    「양도가액 합계」·「1개월 종가 평균」은 placeholder가 라벨과 달라 `fill()`이 **무한 대기**했다.
+> 2. **`pkill`로 중단하면 dev 서버가 포트에 고아로 남는다.** 로컬은 `reuseExistingServer: true`라
+>    재실행이 **죽은 서버를 재사용**해 1시간 54분을 대기했다(응답 HTTP 000).
+>    ⇒ 중단 시 `lsof -ti :PORT | xargs kill -9`로 함께 정리하고,
+>      디버그 실행에는 **`--global-timeout`을 반드시 건다**(설정에 없어 무한정 기다린다).
+
+<details><summary>원 기록</summary>
+
 ### 🟠 D-4 검증 계획에 E2E가 없었고, 실제로 돌리지 않았다
 
 §7은 vitest anchor만 세웠다. 신규 UI 분기(**simple + daily**)는 **브라우저에서 확인하지 않았다.**
@@ -317,6 +336,8 @@ e2e/stock-transfer-monthly-accrual.spec.ts
   「컴포넌트 anchor는 patch와 validate를 각각 보지만 **두 겹을 지나 다음 단계로 넘어가는지**는
   브라우저에서만 안다」). ②에는 그 대응물이 없다.
 - ⇒ **잔여 작업**: simple+daily로 종가를 넣고 Step3까지 넘어가는 spec 1건.
+
+</details>
 
 ### 🟡 D-5 Q2 제외의 결과로 ①·② 결과 표시가 비대칭인데 잔여로 적지 않았다
 
