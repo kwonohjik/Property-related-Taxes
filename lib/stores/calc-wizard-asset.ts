@@ -295,7 +295,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   addressPnu?: string;
 
   // ── 취득시기 상이 필지 분리 (assetKind === "land" 전용) ──
-  /** 토지 내 취득시기 상이 필지 분리 계산 여부 (소득세법 시행령 §162①6호) */
+  /** 토지 내 취득시기 상이 필지 분리 계산 여부 (소득세법 시행령 §162①9호 단서) */
   parcelMode: boolean;
   /** 취득시기 상이 필지 목록 */
   parcels: ParcelFormItem[];

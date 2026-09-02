@@ -571,7 +571,6 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (!a.phdCommercialBuildingStdPriceAtAcq) a.phdCommercialBuildingStdPriceAtAcq = "";
   if (!a.phdCommercialBuildingStdPriceAtFirst) a.phdCommercialBuildingStdPriceAtFirst = "";
   if (!a.phdResidentialLandArea) a.phdResidentialLandArea = "";
-  if (a.inheritanceMode === undefined) a.inheritanceMode = null;
   if (!a.inheritanceStartDate) a.inheritanceStartDate = "";
   if (a.hasDecedentActualPrice === undefined) a.hasDecedentActualPrice = false;
   if (!a.decedentAcquisitionPrice) a.decedentAcquisitionPrice = "";

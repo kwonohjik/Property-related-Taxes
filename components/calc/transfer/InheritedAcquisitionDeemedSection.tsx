@@ -23,6 +23,15 @@ const DEEMED_DATE_STR = "1985-01-01";
 
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 
+/**
+ * 의제취득일(1985.1.1.) 기준 분기 — **이 저장소의 유일한 산출 지점**.
+ * - "pre-deemed": 상속개시일 < 1985-01-01 → max(환산가액, 실가×물가상승률)
+ * - "post-deemed": 상속개시일 ≥ 1985-01-01 → 상속세 신고가액
+ * - null: 상속개시일 미입력 또는 미적용
+ *
+ * 종전에는 `AssetForm.inheritanceMode`가 이 값을 캐시하는 것처럼 선언돼 있었으나
+ * 쓰기 지점이 0건이라 항상 null이었다(A18). 2026-09-03에 그 필드를 제거했다.
+ */
 function computeMode(
   dateStr: string,
 ): "pre-deemed" | "post-deemed" | null {
@@ -41,7 +50,7 @@ export function InheritedAcquisitionDeemedSection({ asset, onChange, transferDat
   // inheritanceStartDate가 없으면 acquisitionDate로 fallback
   // (CompanionAssetCard에서 동기화하지만 기존 세션 데이터 호환)
   const effectiveDate = asset.inheritanceStartDate || asset.acquisitionDate;
-  const mode = asset.inheritanceMode ?? computeMode(effectiveDate);
+  const mode = computeMode(effectiveDate);
 
   // 모드가 없으면(날짜 미입력) 섹션 전체를 숨김
   if (!mode) return null;

@@ -121,7 +121,6 @@ export function migrateLegacyForm(
   }
 
   // 상속 취득가액 의제 신규 필드 기본값 주입 (신규 필드 미존재 시 안전 초기화)
-  if (primaryAsset.inheritanceMode === undefined) primaryAsset.inheritanceMode = null;
   if (!primaryAsset.inheritanceStartDate) primaryAsset.inheritanceStartDate = "";
   if (primaryAsset.hasDecedentActualPrice === undefined) primaryAsset.hasDecedentActualPrice = false;
   if (!primaryAsset.decedentAcquisitionPrice) primaryAsset.decedentAcquisitionPrice = "";

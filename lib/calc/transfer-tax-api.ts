@@ -183,6 +183,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 고쳐도 사라지지 않는다 — ④가 그 값을 쓰지 않기 때문). 엔진·필지 payload와 같은 규약을 쓴다.
   // fallback을 두지 않는다 — 확정 불가 조합은 ⑧이 이미 전부 차단한다
   // (`validateParcelMode`: `!환지 && !취득일` · `환지 && !확정일`).
+  //
+  // ⏸ A10(2026-09-02 리뷰, 미해소) — **필지 나열 순서가 세율 기산일을 바꾼다.**
+  //    `parcels[0]`을 자산 대표 취득일로 쓰므로, 같은 필지 집합이라도 카드 순서를 바꾸면
+  //    보유기간(→ 단기/일반 세율군)이 달라진다. 실측 84,722,000원 편차.
+  //    「소득세법」 §104②·§104⑤ 본문은 verbatim 확인했으나 **「한 자산 내 여러 필지」에
+  //    관한 명문이 없어** 정본을 정하지 못했다 — 현행은 §104⑤ 1호도 2호도 아닌 제3의 값이다.
+  //    ⛔ 「필지를 세율군으로 갈라 합산」 방향은 금지 목록에 인접하다(리뷰 §7).
+  //    상세: `docs/reviews/transfer-acq-valuation-review-2026-09.md` §3.5 · §9-1.
   const firstParcelAcqDate = parcelModeActive
     ? parcelEffectiveAcquisitionDate(primary.parcels[0] ?? {})
     : primary.acquisitionDate;

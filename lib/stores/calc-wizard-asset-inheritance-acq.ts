@@ -6,13 +6,9 @@
 
 export interface InheritanceAcquisitionFormSlice {
   // ── 상속 부동산 취득가액 의제 (소령 §176조의2④·§163⑨) ──
-  /**
-   * 의제취득일(1985.1.1.) 기준 자동 분기 결과 (UI read-only).
-   * - "pre-deemed": 상속개시일 < 1985-01-01 → max(환산가액, 실가×물가상승률)
-   * - "post-deemed": 상속개시일 ≥ 1985-01-01 → 상속세 신고가액
-   * - null: 상속개시일 미입력 또는 미적용
-   */
-  inheritanceMode: "pre-deemed" | "post-deemed" | null;
+  // ⚠️ 종전의 `inheritanceMode` 캐시 필드는 2026-09-03에 제거했다 — 쓰기 지점이 전
+  // 저장소에 0건이라 항상 null이었고, 실제 분기는 상속개시일에서 그때그때 파생된다
+  // (`InheritedAcquisitionDeemedSection.computeMode`가 유일한 산출 지점).
   /** 상속개시일 (YYYY-MM-DD, 피상속인 사망일) */
   inheritanceStartDate: string;
   /** 피상속인 실지취득가액 입증 가능 여부 (case A 전용) */

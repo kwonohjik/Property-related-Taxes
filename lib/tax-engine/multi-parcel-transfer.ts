@@ -10,7 +10,8 @@
  * 근거 조문:
  *   - 소득세법 §97 — 양도소득 필요경비 (환산취득가액 포함)
  *   - 소득세법 §95 ② — 장기보유특별공제
- *   - 소득세법 시행령 §162 ① 6호 — 환지처분확정일 익일 취득일 의제 (TRANSFER.REPLOTTING_ACQ_DATE)
+ *   - 소득세법 시행령 §162 ① 9호 단서 — 환지 증감면적분 취득시기 = 환지처분의 공고가 있은 날의
+ *     다음날 (TRANSFER.REPLOTTING_ACQ_DATE)
  */
 
 import { addDays } from "date-fns";
@@ -44,7 +45,7 @@ export interface ParcelInput {
   /**
    * 환지처분확정일 익일을 취득일로 의제할지 여부.
    * true + replottingConfirmDate 지정 시 effectiveAcquisitionDate = replottingConfirmDate + 1일.
-   * 소득세법 시행령 §162 ① 6호.
+   * 소득세법 시행령 §162 ① 9호 단서 (증감 면적분 취득시기 = 환지처분의 공고가 있은 날의 다음날).
    */
   useDayAfterReplotting?: boolean;
   /** 환지처분확정일 */
