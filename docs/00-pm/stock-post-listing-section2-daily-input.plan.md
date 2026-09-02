@@ -175,13 +175,37 @@ export function resolveListingClosingAvg(form): number
 
 ---
 
-## 6. 미결 — 사용자 확인 필요
+## 6. 결정 (2026-09-02 확정) — ✅ 구현 완료
 
-| # | 질문 | 권장 |
+| # | 질문 | 결정 |
 |---|---|---|
-| Q1 | ② 제목 | **A안 「상장일 이후 1개월 종가」** (§1.2). C안(원안) 유지 시 ③ 제목도 함께 변경 |
-| Q2 | 결과 화면에 「일자별 입력 모드 — 자동 산정 평균 N」 배너를 ②에도 넣을지 (①은 `PostListingDetailCard.tsx:190~196`에 있음) | 넣는다면 Zod·엔진 result에 필드 추가가 따라온다 — **이번엔 제외**, 필요 시 별건 |
-| Q3 | `full`·`listing_only`에서도 direct 허용(안 2) | 제외 (§3.2 — 엔진 변경 필요) |
+| Q1 | ② 제목 | ✅ **A안 「상장일 이후 1개월 종가」** |
+| Q2 | 결과 화면 「일자별 입력 모드」 배너를 ②에도 | ✅ **이번엔 제외** (Zod·엔진 result 확장 동반) |
+| Q3 | `full`·`listing_only`에서도 direct 허용 | ✅ **제외** (§3.2 — 엔진 변경 필요) |
+
+### 계획서와 달라진 점 2가지
+
+1. **함정 3(키움 자동조회의 평균 write)은 «그대로 두었다».** 계획서는 「셀만 채우도록 정리」라
+   했으나, (b) 파생 방식을 택한 순간 그 write는 **정본이 될 수 없다** — daily에서는 아무도
+   그 필드를 읽지 않는다. 오히려 daily→direct로 되돌릴 때의 선입력값으로 쓸모가 있고
+   ①의 동작과도 같다. 요청 밖 동작 변경 + 회귀면(listing_only의 `||` fallback)을 감수할
+   이유가 없다.
+2. **②에 한 줄 안내를 넣지 않았다.** 「A안 보강」으로 제안했으나 확정된 것은 제목뿐이고,
+   제목 자체가 이미 칸의 내용을 말한다. (`full`·`listing_only`에서 라디오가 없는 이유만
+   한 줄로 남겼다 — 그건 «없는 것»에 대한 설명이라 대체 수단이 없다.)
+
+### 구현 결과
+
+- `listingStdInputMode` 신설 — 폼 타입·initial·normalize(축 게이트)·토글 OFF 정규화
+- `resolveListingClosingAvg` 신설(`post-listing-flat-adapter.ts`) — 읽기 3곳이 호출
+- 엔진·Zod·route **무변경** (계획대로)
+- 함께 정리: 표 미리보기 절단 통일 · 종가 표 배지 제거
+- anchor **19건** — LS-1~7 · RLA-1~5 · LSV-1~4 · SEC(갱신) · FD(갱신)
+- 뮤테이션 **5/5 감지** — M-A(adapter) · M-B(미리보기) · M-C(validate 축) · M-D(절단) · M-E(라디오)
+
+> 🔴 **작업 중 사고**: 뮤테이션 복원을 `git checkout -- <file>`로 해서 커밋 안 된 3파일이
+> 날아갔다([[feedback_mutation_probe_git_checkout_destroys_wip]]의 재발). 재작성 후
+> **커밋을 먼저 하고** `git checkout HEAD -- <file>`로 복원하도록 바꿔 5건을 완주했다.
 
 ---
 
