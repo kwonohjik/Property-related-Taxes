@@ -102,6 +102,10 @@ export function validateAuctionAsset(
     return `${label}: 공익수용(1호)과 공매·경락(2호) 특례는 동시에 적용할 수 없습니다(§164⑨ "어느 하나").`;
   if (!isAuctionEligibleAssetKind(asset.assetKind)) return null;
   if (!asset.useEstimatedAcquisition) return null;
+  // A08: ⑤ 노출 게이트와 **같은 술어**. 다필지·분리취득은 §164⑨2호가 엔진에 도달하지 않으므로
+  // 값을 요구하지 않는다 — 요구해 놓고 무시하면 「차단됐다」가 아니라 「필수 입력을 버린다」가 된다.
+  // 1호가 이미 같은 층위에서 `if (asset.parcelMode) return null;`을 쓴다.
+  if (asset.parcelMode || asset.hasSeperateLandAcquisitionDate) return null;
   if (!formTransferDate || formTransferDate < MIN_TRANSFER_DATE) return null;
 
   if (!parseAmount(asset.auctionPrice))
