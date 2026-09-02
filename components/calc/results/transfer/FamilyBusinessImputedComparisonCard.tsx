@@ -4,7 +4,10 @@
  * 가업상속공제 §97의2④ 의제·일반 비교 결과 카드
  *
  * Plan v3 §4-2 레이아웃: 4행 비교 표
- *   ① 일반 §97 결정세액 (피상속인 원취득가액 기준)
+ *   ① 일반 §97 결정세액 (상속개시일 평가액 기준 · 「소득세법 시행령」 §163⑨)
+ *     ⚠️ A21(2026-09-02) 정정: 「피상속인 원취득가액 기준」이 아니다. 엔진은 §163⑨에 따라
+ *        **상속개시일 현재 평가액**을 취득가액으로 보고 계산한다. 피상속인의 원취득가액이
+ *        쓰이는 곳은 §97의2④1호(의제) 쪽이다 — 두 행의 설명이 서로 뒤바뀌어 있었다.
  *   ② 의제 §97의2④ 결정세액 (의제 취득가액 기준)
  *   ③ §18의2⑩ 상속세 상당액 공제액 = max(0, 의제세액 − 일반세액)
  *   ④ 적용 분기 (의제 세액이 더 낮으면 의제 적용, 높으면 의제 + §18의2⑩ 공제)
@@ -63,6 +66,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
     appliedRate,
     decedentAcquisitionPrice,
     inheritanceMarketValue,
+    decedentCapitalExpenditure,
   } = detail;
 
   // 의제 산식이 일반보다 유리한 경우 (차액 공제 불필요)
@@ -96,13 +100,26 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
               value={formatKRW(decedentAcquisitionPrice)}
               sub
             />
+            {/* A22(2026-09-02): 자본적지출이 있으면 base 구성요소로 함께 보여준다.
+                종전에는 이 행이 없어 표 안의 세 숫자가 서로 맞지 않았다(실측 괴리 80,000,000원). */}
+            {!!decedentCapitalExpenditure && (
+              <Row
+                label="피상속인 자본적 지출액"
+                value={formatKRW(decedentCapitalExpenditure)}
+                sub
+              />
+            )}
             <Row
               label="상속개시일 자산 평가액"
               value={formatKRW(inheritanceMarketValue)}
               sub
             />
             <Row
-              label={`의제 취득가액 (원취득가 × ${(appliedRate * 100).toFixed(2)}% + 평가액 × ${((1 - appliedRate) * 100).toFixed(2)}%)`}
+              label={
+                decedentCapitalExpenditure
+                  ? `의제 취득가액 ((원취득가 + 자본적지출) × ${(appliedRate * 100).toFixed(2)}% + 평가액 × ${((1 - appliedRate) * 100).toFixed(2)}%)`
+                  : `의제 취득가액 (원취득가 × ${(appliedRate * 100).toFixed(2)}% + 평가액 × ${((1 - appliedRate) * 100).toFixed(2)}%)`
+              }
               value={formatKRW(imputedAcquisitionPrice)}
               highlight
             />
@@ -116,7 +133,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
 
             {/* 일반 §97 결정세액 */}
             <Row
-              label="일반 §97 결정세액 (피상속인 원취득가액 기준)"
+              label="일반 §97 결정세액 (상속개시일 평가액 기준 · 소득세법 시행령 §163⑨)"
               value={formatKRW(cgtUnderSection97)}
             />
 
