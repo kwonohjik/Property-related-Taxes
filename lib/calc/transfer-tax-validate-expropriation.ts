@@ -152,6 +152,7 @@ export function validateSplitLandExprAsset(
   asset: AssetForm,
   label: string,
   formTransferDate: string | undefined,
+  isNonPrimaryAsset = false,
 ): string | null {
   // 겸용주택은 `validateMixedUseExprAsset` 전담 — 여기서 처리하면 안 된다. 겸용은 항상
   // hasSeperateLandAcquisitionDate=true(MixedUseSection 강제)라 아래 C-06b 분기가 오발동해
@@ -170,6 +171,25 @@ export function validateSplitLandExprAsset(
 
   // 건물(나목) split — 토지분 보상 총액 2필드 필수
   if (!isSplitLandExprEligibleAssetKind(asset.assetKind)) return null;
+
+  /**
+   * A05(2026-09-02): **컴패니언(함께양도 2번째 이후) 자산은 이 조합을 지원하지 않는다.**
+   *
+   * 종전에는 ⑧이 「토지분 보상액 총액을 입력하세요」로 **입력을 강제해 놓고** 그 값을 버렸다 —
+   * 2필드가 ④⑫⑭ 어디에도 없어 엔진에 도달하지 않는다. 게다가 그 조합 전체가 원인 불명의
+   * **HTTP 500**으로 죽는다(컴패니언 `standardPricePerSqmAtAcquisition` 채널 부재 —
+   * 배선 지점 3곳이 전부 단건 전용이라 `calcSplitGain`이 `TaxCalculationError`를 던진다).
+   *
+   * 사용자 결정(2026-09-02)에 따라 **명시 차단**으로 확정한다. 2필드만 배선하는 것은
+   * 금지다 — perSqm 채널을 먼저 열지 않으면 no-op이고(실측: 주입 전후 THROW 동일),
+   * 채널을 여는 것은 신규 기능 규모다.
+   *
+   * 차단은 부수적으로 그 500 경로를 **도달 불가**로 만든다.
+   */
+  if (isNonPrimaryAsset) {
+    return `${label}: 함께양도 자산은 토지·건물 분리취득 + 공익수용 환산(§164⑨1호) 조합을 지원하지 않습니다. 해당 자산을 첫 번째로 옮기거나 취득일 분리를 해제하세요.`;
+  }
+
   if (!parseAmount(asset.splitLandCompensationTotal))
     return `${label}: 건물 분리 양도 공익수용 환산 특례 — 토지분 보상액 총액을 입력하세요.`;
   if (!parseAmount(asset.splitLandCompensationBasisTotal))

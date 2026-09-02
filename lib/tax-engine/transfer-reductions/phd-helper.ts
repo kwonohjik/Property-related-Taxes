@@ -94,13 +94,22 @@ export function calcReductionAcquisitionStdPrice(
   const landStdAtAcquisition = Math.floor(landPricePerSqmAtAcquisition * landAreaSqm);
   const landStdAtFirstDisclosure = Math.floor(landPricePerSqmAtFirstDisclosure * landAreaSqm);
 
-  // 건물 fallback: 최초공시 미입력 시 취득시와 동일 가정 (간이)
-  const buildingAtFirst = buildingStdPriceAtFirstDisclosure > 0
-    ? buildingStdPriceAtFirstDisclosure
-    : buildingStdPriceAtAcquisition;
-
+  /**
+   * A13(2026-09-02): **「최초공시 미입력 시 취득시와 동일」 fallback을 제거했다.**
+   *
+   * 「최초공시 당시」 나목 가액 자리에 「취득당시」 값을 대입하는 것은 §164⑦ 산식이 아니다.
+   * §164⑦ 후단(§164⑤ 준용)의 발동요건은 「나목의 가액이 **없는 경우**」(국세청장 고시 부존재)이지
+   * **사용자 미입력**이 아니다 — 미입력의 올바른 처리는 ⑧ 차단이다(저장소 「자동 fallback 금지」).
+   *
+   * 실측: 최초공시 건물이 취득시보다 **낮으면 fallback이 과소**(P_A_est −37,959,717),
+   * **높으면 과대**(+33,203,206)로 **양방향**이다. 하류 §99의3 5년 안분까지 따라가면
+   * 감면대상 양도소득금액이 ±3천만원대로 갈린다.
+   *
+   * 입력 완결 판정(`canCalcReductionPhd`)이 이 필드를 요구하도록 함께 고쳤다 —
+   * ⑧·④ 7곳이 그 술어를 공유하므로 자동 추종한다.
+   */
   const sumAtAcquisition = landStdAtAcquisition + buildingStdPriceAtAcquisition;
-  const sumAtFirstDisclosure = landStdAtFirstDisclosure + buildingAtFirst;
+  const sumAtFirstDisclosure = landStdAtFirstDisclosure + buildingStdPriceAtFirstDisclosure;
 
   // P_A_est 산출 (§164⑤)
   const ratio = sumAtFirstDisclosure > 0 ? sumAtAcquisition / sumAtFirstDisclosure : 0;
@@ -127,7 +136,7 @@ export function calcReductionAcquisitionStdPrice(
     {
       label: "최초공시 합계 (Sum_F)",
       value: sumAtFirstDisclosure,
-      formula: `토지 ${landStdAtFirstDisclosure.toLocaleString()} + 건물 ${buildingAtFirst.toLocaleString()}`,
+      formula: `토지 ${landStdAtFirstDisclosure.toLocaleString()} + 건물 ${buildingStdPriceAtFirstDisclosure.toLocaleString()}`,
     },
     {
       label: "환산 비율 (Sum_A / Sum_F)",
@@ -159,6 +168,17 @@ export function canCalcReductionPhd(input: Partial<ReductionPhdInput>): boolean 
     input.firstDisclosurePrice && input.firstDisclosurePrice > 0 &&
     input.landAreaSqm && input.landAreaSqm > 0 &&
     input.landPricePerSqmAtAcquisition && input.landPricePerSqmAtAcquisition > 0 &&
-    input.landPricePerSqmAtFirstDisclosure && input.landPricePerSqmAtFirstDisclosure > 0
+    input.landPricePerSqmAtFirstDisclosure && input.landPricePerSqmAtFirstDisclosure > 0 &&
+    /**
+     * A13: 건물분이 있는 자산이면 **최초공시 시점 건물 기준시가도 필수**다.
+     * 종전에는 미입력 시 취득시 값을 대입하는 fallback이 있었고 이 판정이 그 필드를
+     * 요구하지 않아 정상 UI 경로로 발동했다.
+     *
+     * ⚠️ 건물분이 없는 자산(순수 토지)까지 요구하면 **과차단**이 된다 — 취득시 건물
+     *    기준시가가 0인 경우는 최초공시 시점도 0인 것이 정상이므로 조건부로 요구한다.
+     */
+    (!input.buildingStdPriceAtAcquisition ||
+      (input.buildingStdPriceAtFirstDisclosure !== undefined &&
+        input.buildingStdPriceAtFirstDisclosure > 0))
   );
 }

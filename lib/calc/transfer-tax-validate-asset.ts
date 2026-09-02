@@ -47,6 +47,7 @@ import { validateMixedUseAsset } from "./transfer-tax-validate-mixed-use-asset";
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
+import { classifySameAdjustmentPeriod } from "@/lib/tax-engine/same-adjustment-period-std-price";
 
 /**
  * 오늘 날짜 — 로컬(KST) 기준 `YYYY-MM-DD` 문자열.
@@ -61,7 +62,7 @@ export function todayLocalISO(): string {
   return `${d.getFullYear()}-${m}-${day}`;
 }
 
-/** 다필지 자산 검증 — primary 자산이 다필지 모드일 때 */
+/** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
 function validateParcelMode(primary: AssetForm, formTransferDate?: string): string | null {
   const parcels = primary.parcels ?? [];
   if (parcels.length === 0) return "필지를 최소 1개 추가하세요.";
@@ -385,7 +386,27 @@ export function validateAssetAcquisition(
   }
 
   // 1) 다필지 모드는 별도 검증
-  if (isParcelMode) return validateParcelMode(asset, formTransferDate);
+  if (isParcelMode) {
+    /**
+     * A12(2026-09-02): **컴패니언(함께양도 2번째 이후) 자산의 다필지는 미지원**이다.
+     *
+     * ⑤는 토글을 렌더하고 ⑧은 필지별 입력을 **필수로 요구**하는데, ④ `buildAssetPayload`는
+     * `parcels`를 만들지 않고 ⑫ `companionAssetSchema`에도 그 키가 없어 **입력이 통째로
+     * 사라진다**(실측 2,173,600 ~ 15,488,000원, 필지 간 취득시기 격차에 비례).
+     *
+     * 사용자 결정(2026-09-02)에 따라 **명시 차단**으로 확정한다. 정식 지원은 ⑫⑬⑭ 3계층
+     * 신설이 필요한 신규 기능 규모이고, 채택 시 컴패니언에도 `firstParcelAcqDate` 규약(A15)을
+     * 맞춰야 같은 입력이 primary/companion 위치에 따라 다른 세액을 내지 않는다.
+     *
+     * ⚠️ **⑤ 토글을 숨기는 것만으로는 부족하다** — 이미 `parcelMode: true`가 저장된 stale
+     *    세션 폼은 토글이 사라진 채 `validateParcelMode`만 계속 돌아 「화면에 없는 칸을
+     *    입력하라」가 된다(`feedback_new_asset_field_stale_sessionstorage_guard`).
+     *    그래서 ⑤ 게이트와 ⑧ 차단을 **함께** 넣는다.
+     */
+    if (isNonPrimaryAsset)
+      return `${label}: 함께양도 자산은 다필지(환지·합병) 입력을 지원하지 않습니다. 다필지 토지는 첫 번째 자산으로 옮기거나 「여러 필지를 각각 다른 시기에 취득」을 해제하세요.`;
+    return validateParcelMode(asset, formTransferDate);
+  }
 
   // 2) 면적 시나리오
   // partial 불변식은 면적 섹션이 노출되는 전 자산유형 공통(land·housing) —
@@ -534,6 +555,58 @@ export function validateAssetAcquisition(
       return `${label}: 양도시 토지 단위 공시지가를 입력하세요.`;
     if (!asset.phdBuildingStdPriceAtTransfer || parseAmount(asset.phdBuildingStdPriceAtTransfer) <= 0)
       return `${label}: 양도시 건물 기준시가를 입력하세요.`;
+
+    /**
+     * A11(2026-09-02) — §164⑦ 산식 **괄호 단서**(§164⑧ 준용) 미구현 구간 차단.
+     *
+     * 조문(법제처 `lsInfoR.do` 산식 이미지 `<img alt="@@LATEX@@…">` 디코드 — **조문 본문
+     * 텍스트에는 없다**): 「… / …최초로 공시한 주택가격공시당시의 …합계액**(취득당시의 가액과
+     * 최초로 공시한 주택가격 공시당시의 가액이 동일한 경우에는 제8항의 규정을 준용한다)**」
+     *
+     * 두 합계가 같으면 비율이 1이 되어 `P_A_est = P_F`가 되고 환산이 무의미해진다
+     * (실측 10,288,162원 과소). 트리거는 우연이 아니다 — §164③이 「새로운 기준시가가 고시되기
+     * 전에 취득…하는 경우에는 **직전의 기준시가**에 의한다」이므로 취득일이 최초공시일 직전
+     * 고시주기 안이면 두 시점이 같은 고시분으로 귀착해 **필연적으로 일치**한다.
+     *
+     * ⚠️ **「같으면 항상 틀린다」가 아니다.** 「소득세법 시행규칙」 §80①2호(취득연도의 다음 연도
+     *    말일 **후**)면 대체분모 = 취득당시 가액이라 **비율 1이 곧 법령이 요구하는 값**이다.
+     *    ⇒ **1호 구간에서만** 차단한다. 그 연도 축은 저장소에 이미 있는 도메인 무관 leaf를 쓴다.
+     *
+     * ⚠️ 인자 의미 주의(`feedback_shared_predicate_argument_parity`) — 그 leaf의 「양도」 자리에
+     *    §164⑦ 준용에서는 **「최초공시」**가 들어간다. 축이 다르므로 이름이 아니라 의미로 맞춘다.
+     *
+     * ⚠️ 합계 산식은 **엔진과 floor 위치를 맞춘다** — `transfer-tax-pre-housing-disclosure.ts`는
+     *    `landPricePerSqm * area`를 floor 없이 곱한 뒤 건물분을 더한다(§164⑥의 `INT()`와 다르다).
+     *    어긋나면 ⑧이 보는 조건과 엔진 판정이 갈린다.
+     *
+     * 형제 §164⑥은 이 규칙을 이미 구현·차단했다(`commercial-164-6-proviso.ts` ·
+     * `transfer-tax-validate-commercial-asset.ts:163-166`). §164⑦만 그 밖에 있었다 —
+     * 저장소 전체에서 `164⑦` × `제8항` 교집합 grep 0건으로, 의도적 유보가 아니라 미인지다.
+     *
+     * 1차 조치는 **탐지 + 차단**이다(사용자 결정 2026-09-02). 산정하려면 B(전기 기준시가합)·
+     * D(조정월수) 입력을 ①②③⑤⑧⑫에 신설해야 하고, 현재 폼에 그 칸이 없다
+     * (실측 `calcSec164_8AdjustedDenominator(A, undefined, 24, 12) = null`).
+     */
+    const phdArea = parseFloat(asset.acquisitionArea) || 0;
+    const phdSumAtAcq =
+      parseAmount(asset.phdLandPricePerSqmAtAcq) * phdArea +
+      parseAmount(asset.phdBuildingStdPriceAtAcq);
+    const phdSumAtFirst =
+      parseAmount(asset.phdLandPricePerSqmAtFirst) * phdArea +
+      parseAmount(asset.phdBuildingStdPriceAtFirst);
+    if (
+      asset.acquisitionDate &&
+      asset.phdFirstDisclosureDate &&
+      classifySameAdjustmentPeriod({
+        standardPriceAtAcquisition: phdSumAtAcq,
+        // §164⑦ 준용에서 「양도」 자리 = 「최초공시」
+        standardPriceAtTransfer: phdSumAtFirst,
+        acquisitionDate: new Date(asset.acquisitionDate),
+        transferDate: new Date(asset.phdFirstDisclosureDate),
+      }) === "clause_1"
+    ) {
+      return `${label}: 취득당시 기준시가합과 최초공시당시 기준시가합이 같습니다 — §164⑦ 산식 괄호 단서에 따라 §164⑧을 준용해야 하는데, 준용 산정에 필요한 전기(취득 직전 고시분) 기준시가합 입력 칸이 아직 없습니다. 3-시점 환산(§164⑦)을 끄고 취득시 기준시가를 직접 입력하세요.`;
+    }
   }
 
   // 5) 취득가액 — 실거래가·감정가액 모두 fixedAcquisitionPrice 입력 루틴.
@@ -700,7 +773,7 @@ export function validateAssetEntry(
   if (housingExprError) return housingExprError;
 
   // ⑧ §164⑨ 1호 건물 split 토지분 트랙 — 토지분 보상 2필드 필수 + 주택 regular split 차단 (P6/D6)
-  const splitLandExprError = validateSplitLandExprAsset(a, label, form.transferDate);
+  const splitLandExprError = validateSplitLandExprAsset(a, label, form.transferDate, index > 0);
   if (splitLandExprError) return splitLandExprError;
 
   // ⑧ landNature 필수 차단 — 토지 자산이 포함된 일괄양도 시 명시 선택 강제
