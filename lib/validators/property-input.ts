@@ -176,8 +176,17 @@ export const propertyTaxInputSchema = z
         factoryAreaRatePercent: z.number().nonnegative().optional(),
         factoryIsRestrictedZone: z.boolean().optional(),
         factoryAdditionalRecognizedArea: z.number().nonnegative().optional(),
-        // 별표6 3호바 — 엔진이 기준면적의 10% 이내로 clamp한다 (E4-06)
-        factoryEmployeeSportsArea: z.number().nonnegative().optional(),
+        // 별표6 3호바 종업원용 체육시설 — 표(비고 2-나·다·라)와 10% 상한을 엔진이 산출한다 (E4-06)
+        factoryEmployeeSportsFacility: z
+          .object({
+            employeeCount: z.number().nonnegative().optional(),
+            entityType: z.enum(["corporation", "individual"]).optional(),
+            playgroundArea: z.number().nonnegative().optional(),
+            tennisCourtArea: z.number().nonnegative().optional(),
+            indoorFloorArea: z.number().nonnegative().optional(),
+            indoorZoneMultiplier: z.number().positive().optional(),
+          })
+          .optional(),
         factoryIsUnpermitted: z.boolean().optional(),
         isSaltField: z.boolean().optional(),
         isTerminalOrParking: z.boolean().optional(),

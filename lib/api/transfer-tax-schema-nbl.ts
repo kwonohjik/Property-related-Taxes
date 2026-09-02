@@ -197,8 +197,12 @@ export const nonBusinessLandRawSchema = z.object({
   nblFactoryIsRestrictedZone: z.boolean().optional(),
   /** 별표6 3호나~바 추가 인정면적 합계(㎡) */
   nblFactoryAdditionalRecognizedArea: z.string().optional(),
-  // 별표6 3호바 — 엔진이 기준면적의 10% 이내로 clamp한다 (E4-06)
-  nblFactoryEmployeeSportsArea: z.string().optional(),
+  // 별표6 3호바 종업원용 체육시설 — 표(비고 2-나·다·라)와 10% 상한을 엔진이 산출한다 (E4-06)
+  nblFactorySportsEmployeeCount: z.string().optional(),
+  nblFactorySportsEntityType: z.enum(["corporation", "individual"]).or(z.literal("")).optional(),
+  nblFactorySportsPlaygroundArea: z.string().optional(),
+  nblFactorySportsCourtArea: z.string().optional(),
+  nblFactorySportsIndoorFloorArea: z.string().optional(),
   /** §101①1호 경로 — 공장용 건축물 **바닥면적**(㎡). 연면적과 다른 값이다 */
   nblFactoryFootprintArea: z.string().optional(),
   /** §102①1호 단서·§101① 단서 — 허가·사용승인 미이행 */

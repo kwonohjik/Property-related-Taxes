@@ -37,13 +37,23 @@ import { judgeFactoryLandExcess } from "@/lib/tax-engine/non-business-land/facto
 const SEGMENTS = [{ floorArea: 2000, ratePercent: 20 }];
 const LAND = 30000;
 
+/**
+ * 표 상한이 10% 상한을 가리지 않도록 **종업원 500명**을 쓴다 — 운동장 표값 4,600㎡라
+ * 5,000㎡ 입력이 표에서 4,600으로만 깎이고, 실제로 판정을 가르는 것은 10% 상한(1,200㎡)이다.
+ * 표 자체의 anchor는 `factory-employee-sports-table.anchor.test.ts`에 있다.
+ */
+const SPORTS = (playgroundArea: number, employeeCount = 500) => ({
+  employeeCount,
+  playgroundArea,
+});
+
 describe("[E4-06] 별표6 3호바 — 종업원용 체육시설용지 10% 상한", () => {
   it("상한 비율은 10%다 (별표6 3호바 괄호)", () => {
     expect(EMPLOYEE_SPORTS_FACILITY_CAP_RATE).toBe(0.1);
   });
 
   it("리뷰 재현: 체육시설 5,000㎡ 입력 → 1,200㎡로 제한, 기준면적 13,200㎡", () => {
-    const r = computeFactoryStandardArea(SEGMENTS, LAND, { employeeSportsFacilityArea: 5000 });
+    const r = computeFactoryStandardArea(SEGMENTS, LAND, { employeeSportsFacility: SPORTS(5000) });
     expect(r.baseArea).toBe(10000);
     // 제한지역 아님 → 3호가2) 20% = 2,000㎡ (초과분 20,000㎡ 이내라 전액 인정)
     expect(r.additionalAllowanceApplied).toBe(2000);
@@ -57,19 +67,19 @@ describe("[E4-06] 별표6 3호바 — 종업원용 체육시설용지 10% 상한
     // 나·다·라 칸에 바목분을 그대로 넣던 종전 경로를 재현한다(입력 채널이 하나였다).
     const old = computeFactoryStandardArea(SEGMENTS, LAND, { additionalRecognizedArea: 5000 });
     expect(old.standardArea).toBe(17000);
-    const fixed = computeFactoryStandardArea(SEGMENTS, LAND, { employeeSportsFacilityArea: 5000 });
+    const fixed = computeFactoryStandardArea(SEGMENTS, LAND, { employeeSportsFacility: SPORTS(5000) });
     expect(old.standardArea - fixed.standardArea).toBe(3800);
   });
 
   it("한도 이내 입력은 전액 인정된다 (과차단 방지)", () => {
-    const r = computeFactoryStandardArea(SEGMENTS, LAND, { employeeSportsFacilityArea: 800 });
+    const r = computeFactoryStandardArea(SEGMENTS, LAND, { employeeSportsFacility: SPORTS(800) });
     expect(r.employeeSportsFacilityApplied).toBe(800);
     expect(r.standardArea).toBe(12800);
   });
 
   it("미입력이면 0 — 기준면적이 달라지지 않는다", () => {
     const none = computeFactoryStandardArea(SEGMENTS, LAND);
-    const zero = computeFactoryStandardArea(SEGMENTS, LAND, { employeeSportsFacilityArea: 0 });
+    const zero = computeFactoryStandardArea(SEGMENTS, LAND, { employeeSportsFacility: SPORTS(0) });
     expect(none.standardArea).toBe(12000);
     expect(zero.standardArea).toBe(12000);
     expect(none.employeeSportsFacilityCap).toBe(1200);
@@ -78,7 +88,7 @@ describe("[E4-06] 별표6 3호바 — 종업원용 체육시설용지 10% 상한
   it("나·다·라 인정분은 분모에 들어가 한도를 키운다 (바목 자신은 들어가지 않는다)", () => {
     const r = computeFactoryStandardArea(SEGMENTS, LAND, {
       additionalRecognizedArea: 3000,
-      employeeSportsFacilityArea: 5000,
+      employeeSportsFacility: SPORTS(5000),
     });
     // 분모 = 10,000 + 2,000 + 3,000 = 15,000 → 10% = 1,500
     expect(r.employeeSportsFacilityCap).toBe(1500);
@@ -91,7 +101,7 @@ describe("[E4-06] 별표6 3호바 — 종업원용 체육시설용지 10% 상한
   it("제한지역(3호가1 · 10%·3,000㎡ 한도)에서도 분모는 가목 인정분까지만이다", () => {
     const r = computeFactoryStandardArea(SEGMENTS, LAND, {
       isRestrictedZone: true,
-      employeeSportsFacilityArea: 5000,
+      employeeSportsFacility: SPORTS(5000),
     });
     // 가목 한도 = min(10,000 × 10%, 3,000) = 1,000 → 분모 11,000 → 10% = 1,100
     expect(r.additionalAllowanceApplied).toBe(1000);
@@ -107,7 +117,7 @@ describe("[E4-06] 양도세 NBL 판정에 상한이 실제로 반영된다", () 
         locationCategory: "eup_myeon_or_complex",
         segments: SEGMENTS,
         totalAppurtenantLandArea: LAND,
-        employeeSportsFacilityArea: 5000,
+        employeeSportsFacility: SPORTS(5000),
       },
       "test",
     );
@@ -122,12 +132,13 @@ describe("[E4-06] 양도세 NBL 판정에 상한이 실제로 반영된다", () 
         locationCategory: "eup_myeon_or_complex",
         segments: SEGMENTS,
         totalAppurtenantLandArea: LAND,
-        employeeSportsFacilityArea: 5000,
+        employeeSportsFacility: SPORTS(5000),
       },
       "test",
     );
     expect(r.detail).toContain("종업원 체육시설");
-    expect(r.detail).toContain("별표6 3호바 10% 한도");
+    expect(r.detail).toContain("별표6 3호바 표 기준 4600.00㎡");
+    expect(r.detail).toContain("10% 한도 1200.00㎡로 제한");
   });
 
   it("한도 이내면 「제한」 문구 없이 그대로 표시된다", () => {
@@ -136,7 +147,7 @@ describe("[E4-06] 양도세 NBL 판정에 상한이 실제로 반영된다", () 
         locationCategory: "eup_myeon_or_complex",
         segments: SEGMENTS,
         totalAppurtenantLandArea: LAND,
-        employeeSportsFacilityArea: 800,
+        employeeSportsFacility: SPORTS(800),
       },
       "test",
     );

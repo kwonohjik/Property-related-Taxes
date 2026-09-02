@@ -176,7 +176,7 @@ export function judgeFactoryLandExcess(
   const std = computeFactoryStandardArea(segments, landArea, {
     isRestrictedZone: usage.isRestrictedZone,
     additionalRecognizedArea: usage.additionalRecognizedArea,
-    employeeSportsFacilityArea: usage.employeeSportsFacilityArea,
+    employeeSportsFacility: usage.employeeSportsFacility,
   });
   const nonBusinessArea = Math.max(0, landArea - std.standardArea);
   const rateLabel = std.segments.map((s) => `${s.ratePercent}%`).join("·");
@@ -198,8 +198,11 @@ export function judgeFactoryLandExcess(
       (std.employeeSportsFacilityArea > 0
         ? ` + 종업원 체육시설 ${std.employeeSportsFacilityApplied.toFixed(2)}㎡` +
           (std.employeeSportsFacilityApplied < std.employeeSportsFacilityArea
-            ? ` (입력 ${std.employeeSportsFacilityArea}㎡ → 별표6 3호바 10% 한도 ${std.employeeSportsFacilityCap.toFixed(2)}㎡로 제한)`
+            ? ` (별표6 3호바 표 기준 ${std.employeeSportsFacilityArea.toFixed(2)}㎡ → 10% 한도 ${std.employeeSportsFacilityCap.toFixed(2)}㎡로 제한)`
             : "")
+        : "") +
+      (std.employeeSportsFacilityStandard?.indoorZoneMultiplierMissing
+        ? " (실내체육시설은 용도지역별 적용배율을 알 수 없어 산입하지 않았습니다 — 「지방세법 시행령」 §101②)"
         : "") +
       ` = 공장입지기준면적 ${std.standardArea.toFixed(2)}㎡ ` +
       `(「지방세법 시행규칙」 별표6·제50조)`,

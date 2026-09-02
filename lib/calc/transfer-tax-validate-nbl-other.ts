@@ -137,6 +137,28 @@ export function validateNblFactory(asset: AssetForm, label: string): string | nu
       if (!s.ratePercent || parseDecimal(s.ratePercent) <= 0)
         return `${label}: 공장 부수토지 — 업종${no}의 기준공장면적률(%)을 입력하세요. (「공장입지 기준고시」 별표1 · 지식산업센터는 같은 고시 §4로 40%)`;
     }
+
+    /**
+     * 별표6 3호바 종업원용 체육시설 — 표를 적용하려면 종업원수가 필수다 (비고 2-가).
+     *
+     * 없으면 엔진이 표 기준면적을 산출할 수 없어 **인정면적이 통째로 0**이 된다
+     * (기준면적 과소 → 비사업용 면적 과대 = 납세자 불리). 자동 fallback 금지 원칙상
+     * 계산 전에 차단한다.
+     */
+    const sportsAreas =
+      (parseDecimal(asset.nblFactorySportsPlaygroundArea) ?? 0) +
+      (parseDecimal(asset.nblFactorySportsCourtArea) ?? 0) +
+      (parseDecimal(asset.nblFactorySportsIndoorFloorArea) ?? 0);
+    if (sportsAreas > 0) {
+      const emp = parseDecimal(asset.nblFactorySportsEmployeeCount) ?? 0;
+      if (emp <= 0)
+        return `${label}: 공장 부수토지 — 종업원용 체육시설용지를 입력했습니다. 종업원수를 입력하세요. (「지방세법 시행규칙」 [별표 6] 3호바 비고 2-가)`;
+      // 비고 2-나는 「50명 이하인 **법인**」에만 적용된다 — 「소득세법 시행규칙」 별표5 비고2의
+      // 「50인 이하인 **자**」와 다르다. 개인사업자에 적용하면 코트면적만 인정돼 기준면적이 줄어
+      // 법 근거 없이 불리해지므로 명시 선택을 요구한다.
+      if (emp <= 50 && !asset.nblFactorySportsEntityType)
+        return `${label}: 공장 부수토지 — 종업원 ${emp}명(50명 이하)입니다. 사업주체(법인/개인)를 선택하세요. 법인이면 코트면적만 기준면적으로 인정됩니다. ([별표 6] 3호바 비고 2-나)`;
+    }
   } else {
     // (4) §101①1호 — 바닥면적(연면적과 다른 값)
     if (!asset.nblFactoryFootprintArea || parseDecimal(asset.nblFactoryFootprintArea) <= 0)

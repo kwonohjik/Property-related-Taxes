@@ -146,6 +146,9 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
    * 미리보기 — 계산 전에 초과 여부를 보여준다. **엔진과 같은 순수 함수**(`computeFactoryStandardArea`)
    * 를 쓰므로 UI와 엔진이 갈릴 수 없다(단일 진실).
    */
+  // 비고 2-나 게이트 — 종업원 50명 이하일 때만 사업주체(법인/개인)를 묻는다.
+  const sportsEmployeeCount = parseDecimal(asset.nblFactorySportsEmployeeCount) ?? 0;
+
   const preview = useMemo(() => {
     if (!enabled) return undefined;
     const total = parseDecimal(asset.nblFactoryTotalLandArea) ?? 0;
@@ -159,7 +162,14 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
       const std = computeFactoryStandardArea(segs, total, {
         isRestrictedZone: asset.nblFactoryIsRestrictedZone,
         additionalRecognizedArea: parseDecimal(asset.nblFactoryAdditionalRecognizedArea),
-        employeeSportsFacilityArea: parseDecimal(asset.nblFactoryEmployeeSportsArea),
+        employeeSportsFacility: {
+          employeeCount: parseDecimal(asset.nblFactorySportsEmployeeCount),
+          entityType: asset.nblFactorySportsEntityType || undefined,
+          playgroundArea: parseDecimal(asset.nblFactorySportsPlaygroundArea),
+          tennisCourtArea: parseDecimal(asset.nblFactorySportsCourtArea),
+          indoorFloorArea: parseDecimal(asset.nblFactorySportsIndoorFloorArea),
+          indoorZoneMultiplier: getZoneAreaMultiplier(asset.nblZoneType)?.multiplier,
+        },
       });
       const excess = Math.max(0, total - std.standardArea);
       return { standardArea: std.standardArea, total, excess, ratio: excess / total, detail: std };
@@ -181,7 +191,11 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
     asset.nblFactoryTotalLandArea,
     asset.nblFactoryIsRestrictedZone,
     asset.nblFactoryAdditionalRecognizedArea,
-    asset.nblFactoryEmployeeSportsArea,
+    asset.nblFactorySportsEmployeeCount,
+    asset.nblFactorySportsEntityType,
+    asset.nblFactorySportsPlaygroundArea,
+    asset.nblFactorySportsCourtArea,
+    asset.nblFactorySportsIndoorFloorArea,
     asset.nblFactoryFootprintArea,
     asset.nblZoneType,
   ]);
@@ -350,21 +364,100 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
               </FieldCard>
 
               {/*
-                E4-06 (2026-09-02 코드리뷰) — 바목만 「공장입지기준면적의 100분의 10 이내」
-                상한이 있다(나·다·라에는 없다). 한 칸으로 받으면 상한을 강제할 수 없어
-                기준면적이 부풀고 비사업용 면적이 과소 산출됐다.
+                별표6 3호**바** 종업원용 체육시설용지 (E4-06 → 표 자동화 2026-09-03).
+
+                · 바목만 「공장입지기준면적의 100분의 10 이내」 상한이 있다(나·다·라에는 없다).
+                · 표(종업원수 × 운동장·코트·실내)도 엔진이 산출한다 — 종전에는 사용자가 직접
+                  계산해 넣게 했고, 잘못 읽어도 그대로 통과했다.
+                · 비고 1(운동경기 가능 시설·영구 시설물·탁구대 2면 이상)은 **사실 판단**이라
+                  엔진이 검증하지 않는다. 면적 입력이 곧 요건 충족 선언이다.
               */}
-              <FieldCard
-                label="종업원용 체육시설용지 (별표6 3호 바)"
-                unit="㎡"
-                hint="「지방세법 시행규칙」 [별표 6] 3호바 — 종업원용 체육시설용지. 별표6 표(종업원수 × 실외 운동장·코트 / 실내체육시설)의 기준면적에 해당하는 면적을 입력하세요. 엔진이 「공장입지기준면적의 100분의 10 이내」 상한을 자동 적용하며, 초과분은 기준면적에 산입되지 않습니다."
-              >
-                <DecimalInput
-                  value={asset.nblFactoryEmployeeSportsArea}
-                  onChange={(v) => onAssetChange({ nblFactoryEmployeeSportsArea: v })}
-                  data-testid="nbl-factory-employee-sports-area"
-                />
-              </FieldCard>
+              <div className="rounded-lg border border-dashed border-amber-300 dark:border-amber-800 p-3 space-y-3">
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  종업원용 체육시설용지 (별표6 3호 바)
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  「지방세법 시행규칙」 [별표 6] 3호바 — 표(종업원수 × 실외 운동장·코트 / 실내체육시설)의
+                  기준면적과 「공장입지기준면적의 100분의 10 이내」 상한을 엔진이 자동 적용합니다.
+                  운동장·코트는 운동경기가 가능한 시설이, 실내체육시설은 영구 시설물이면서 탁구대
+                  2면 이상을 둘 수 있어야 합니다(별표6 3호바 비고 1). 해당분이 없으면 비워 두세요.
+                </p>
+
+                <FieldCard
+                  label="종업원수"
+                  unit="명"
+                  hint="그 사업장에 근무하는 종업원을 기준으로 합니다 (별표6 3호바 비고 2-가). 시설 면적을 입력하면 필수입니다."
+                >
+                  <DecimalInput
+                    value={asset.nblFactorySportsEmployeeCount}
+                    onChange={(v) => onAssetChange({ nblFactorySportsEmployeeCount: v })}
+                    data-testid="nbl-factory-sports-employee-count"
+                  />
+                </FieldCard>
+
+                {/*
+                  비고 2-나는 「50명 이하인 **법인**」에만 적용된다 — 「소득세법 시행규칙」 별표5
+                  비고2의 「50인 이하인 **자**」와 다르다. 개인사업자에 적용하면 코트만 인정돼
+                  기준면적이 줄어 **법 근거 없이 불리**해지므로 명시 선택을 요구한다.
+                */}
+                {sportsEmployeeCount > 0 && sportsEmployeeCount <= 50 && (
+                  <FieldCard
+                    label="사업주체"
+                    hint="종업원 50명 이하인 「법인」은 코트면적만 기준면적으로 인정됩니다 (별표6 3호바 비고 2-나). 개인사업자는 이 제한을 받지 않습니다."
+                  >
+                    <RadioCardGroup
+                      name="nblFactorySportsEntityType"
+                      tone="amber"
+                      options={[
+                        { value: "corporation", label: "법인", description: "코트면적만 인정 (비고 2-나)" },
+                        { value: "individual", label: "개인", description: "운동장·코트·실내 모두 인정" },
+                      ]}
+                      value={asset.nblFactorySportsEntityType}
+                      onChange={(v) =>
+                        onAssetChange({
+                          nblFactorySportsEntityType: v as "" | "corporation" | "individual",
+                        })
+                      }
+                    />
+                  </FieldCard>
+                )}
+
+                <FieldCard
+                  label="실외체육시설 — 운동장 용지 면적"
+                  unit="㎡"
+                  hint="표 기준면적(종업원 100명 이하 1,000㎡ / 이후 구간별 가산)과 비교해 작은 쪽이 인정됩니다."
+                >
+                  <DecimalInput
+                    value={asset.nblFactorySportsPlaygroundArea}
+                    onChange={(v) => onAssetChange({ nblFactorySportsPlaygroundArea: v })}
+                    data-testid="nbl-factory-sports-playground-area"
+                  />
+                </FieldCard>
+
+                <FieldCard
+                  label="실외체육시설 — 테니스·정구코트 용지 면적"
+                  unit="㎡"
+                  hint="표 기준면적(500명 이하 970㎡ · 2,000명 이하 1,940㎡ · 초과 2,910㎡)과 비교해 작은 쪽이 인정됩니다."
+                >
+                  <DecimalInput
+                    value={asset.nblFactorySportsCourtArea}
+                    onChange={(v) => onAssetChange({ nblFactorySportsCourtArea: v })}
+                    data-testid="nbl-factory-sports-court-area"
+                  />
+                </FieldCard>
+
+                <FieldCard
+                  label="실내체육시설 건축물 바닥면적"
+                  unit="㎡"
+                  hint="바닥면적이 표 기준면적 이하이면 바닥면적이 기준면적이 되고(비고 2-다), 거기에 「지방세법 시행령」 §101② 용도지역별 적용배율을 곱한 면적이 산입됩니다(비고 2-라). 용지 면적이 아니라 **건축물 바닥면적**입니다."
+                >
+                  <DecimalInput
+                    value={asset.nblFactorySportsIndoorFloorArea}
+                    onChange={(v) => onAssetChange({ nblFactorySportsIndoorFloorArea: v })}
+                    data-testid="nbl-factory-sports-indoor-floor-area"
+                  />
+                </FieldCard>
+              </div>
             </div>
           )}
 

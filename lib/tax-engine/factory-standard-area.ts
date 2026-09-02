@@ -21,6 +21,12 @@
  * 업종별 기준공장면적률 자체는 「공장입지 기준고시」 [별표1] — `data/factory-area-rates.ts`.
  */
 
+import {
+  computeEmployeeSportsFacilityStandard,
+  type EmployeeSportsFacilityStandard,
+  type EmployeeSportsFacilityUsage,
+} from "./factory-employee-sports-standard";
+
 /** 별표6 3호가1) — 「산집법」 §20① 본문 공장 신설 제한지역: 산출면적의 10% 이내. */
 export const RESTRICTED_ZONE_ALLOWANCE_RATE = 0.1;
 /** 별표6 3호가1) 단서 — 그 인정면적이 3,000㎡를 초과하지 않는 부분에 한정. */
@@ -62,8 +68,10 @@ export interface FactoryStandardAreaResult {
   additionalAllowanceApplied: number;
   /** 별표6 3호나·다·라 직접입력 인정면적 (㎡). **바목·마목은 대상이 아니다** — 아래 주석 참조. */
   additionalRecognizedArea: number;
-  /** 별표6 3호바 종업원용 체육시설용지 — 입력값 원본 (㎡) */
+  /** 별표6 3호바 표 기준 인정면적 (㎡) — 10% 상한 적용 **전**. 표 산출 내역은 아래 필드 */
   employeeSportsFacilityArea: number;
+  /** 별표6 3호바 표 산출 상세 (종업원수 미입력 등으로 산출 불가면 undefined) */
+  employeeSportsFacilityStandard?: EmployeeSportsFacilityStandard;
   /** 별표6 3호바 한도 = (1호·2호 + 가 + 나·다·라) × 10% (㎡) */
   employeeSportsFacilityCap: number;
   /** 별표6 3호바 실제 인정분 = min(입력, 한도) (㎡) */
@@ -87,7 +95,8 @@ export function computeFactoryStandardArea(
   options?: {
     isRestrictedZone?: boolean;
     additionalRecognizedArea?: number;
-    employeeSportsFacilityArea?: number;
+    /** 별표6 3호바 — 종업원수·시설별 면적. 표 기준면적은 엔진이 산출한다 */
+    employeeSportsFacility?: EmployeeSportsFacilityUsage;
   },
 ): FactoryStandardAreaResult {
   // 별표6 1호 (다업종이면 2호다에 따라 업종별 산출 후 합산)
@@ -141,10 +150,14 @@ export function computeFactoryStandardArea(
    * **납세자에게 불리**하고, 조문이 굳이 다른 표현을 쓴 것을 설명하지 못한다
    * (법 근거 없이 불리 적용 금지).
    *
-   * ⚠️ 표(종업원수 × 실외/실내 체육시설) 기준면적 자체는 **입력자가 판단**한다 — 종업원수·시설
-   *    종류 입력은 별건이다. 여기서 강제하는 것은 10% 상한뿐이며, 그 사실을 UI hint에 적었다.
+   * ## 표 기준면적도 엔진이 산출한다 (2026-09-03)
+   *
+   * 종전에는 10% 상한만 강제하고 **표는 입력자가 계산**하게 했다. 표를 잘못 읽으면 그대로
+   * 통과했으므로 `computeEmployeeSportsFacilityStandard`로 자동화했다 — 비고 2-나(50명 이하
+   * 법인 코트만)·2-다(실내 바닥면적 하한)·2-라(§101② 배율)까지 반영한다.
    */
-  const employeeSportsFacilityArea = options?.employeeSportsFacilityArea ?? 0;
+  const sportsStandard = computeEmployeeSportsFacilityStandard(options?.employeeSportsFacility);
+  const employeeSportsFacilityArea = sportsStandard.recognizedArea;
   const employeeSportsFacilityCap =
     (baseArea + additionalAllowanceApplied + additionalRecognizedArea) *
     EMPLOYEE_SPORTS_FACILITY_CAP_RATE;
@@ -160,6 +173,7 @@ export function computeFactoryStandardArea(
     additionalAllowanceApplied,
     additionalRecognizedArea,
     employeeSportsFacilityArea,
+    employeeSportsFacilityStandard: options?.employeeSportsFacility ? sportsStandard : undefined,
     employeeSportsFacilityCap,
     employeeSportsFacilityApplied,
     standardArea:
