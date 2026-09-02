@@ -96,11 +96,14 @@ export function validateNblDetailedJudgment(
 
   // §168의12 주택 정착면적 — 미입력 시 엔진(housing-land.ts:39)이 「정착면적 미입력」으로
   // 인정면적 0을 산정해 **전량 비사업용**으로 확정한다. 자동 fallback 금지 (E1-03).
+  // 별장도 포함한다 — 별장 요건 미해당 시 엔진이 주택부수토지로 자동 재분류하므로 같은 값을 쓴다(E1-02).
   if (
-    asset.nblLandType === "housing_site" &&
+    (asset.nblLandType === "housing_site" || asset.nblLandType === "villa_land") &&
     (!asset.nblHousingFootprint || parseFloat(asset.nblHousingFootprint) <= 0)
   ) {
-    return `${label}: 주택부수토지 — 주택 정착면적(㎡)을 입력하세요. 미입력 시 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`;
+    return asset.nblLandType === "villa_land"
+      ? `${label}: 별장 부속토지 — 주택 정착면적(㎡)을 입력하세요. 별장 요건에 해당하지 않으면 주택부수토지로 재분류되며, 정착면적이 없으면 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`
+      : `${label}: 주택부수토지 — 주택 정착면적(㎡)을 입력하세요. 미입력 시 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`;
   }
 
   // §168의8⑤⑥(농지)·§168의10⑤(목장)·§168의9①2호 단서(임야) 도시지역 편입 유예 —

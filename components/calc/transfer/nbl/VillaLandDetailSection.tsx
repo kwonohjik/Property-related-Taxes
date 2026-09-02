@@ -35,6 +35,24 @@ export function VillaLandDetailSection({
         />
       </FieldCard>
 
+      {/*
+        🔴 정착면적 입력 (E1-02, 2026-09-02 코드리뷰).
+        별장 비사용기간이 기간기준을 충족하면 엔진이 **주택부수토지로 자동 재분류**하는데
+        (`engine.ts`의 REDIRECT), 그 뒤 판정은 §168의12 배율 × 주택 정착면적으로 이뤄진다.
+        종전에는 이 화면에 정착면적 입력란이 없어 재분류 경로가 구조적으로 항상
+        「정착면적 미입력 → 인정면적 0 → 전량 비사업용」으로 끝났다.
+      */}
+      <FieldCard
+        label="주택 정착면적"
+        unit="㎡"
+        hint="별장 요건에 해당하지 않아 주택부수토지로 재분류될 때 인정면적(정착면적 × 용도지역별 배율) 산정에 쓰입니다."
+      >
+        <DecimalInput
+          value={asset.nblHousingFootprint}
+          onChange={(v) => onAssetChange({ nblHousingFootprint: v })}
+        />
+      </FieldCard>
+
       <ToggleCard
         tone="sky"
         title="읍·면 지역 소재"

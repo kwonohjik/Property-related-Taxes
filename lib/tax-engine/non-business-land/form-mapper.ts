@@ -163,7 +163,14 @@ export function mapAssetToNblInput(
     businessUsePeriods,
     gracePeriods,
     isRealEstateDealerMatter,
-    housingFootprint: parseNumber(asString(asset.nblHousingFootprint)),
+    // 🔴 지목 gate — 주택부수토지·별장(REDIRECT 시 주택부수토지로 재분류)에서만 소비한다 (V1-a).
+    //    종전에는 `nblLandType`과 무관하게 무조건 매핑했고 지목 전환 시 이 값을 리셋하는 코드도
+    //    없어, 「주택부수토지로 정착면적 입력 → 지목을 별장으로 변경」한 사용자가 **화면 어디에도
+    //    보이지 않는 stale 값**으로 §168의12 배율 판정을 받았다.
+    housingFootprint:
+      landType === "housing_site" || landType === "villa_land"
+        ? parseNumber(asString(asset.nblHousingFootprint))
+        : undefined,
   };
 }
 
