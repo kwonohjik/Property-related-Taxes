@@ -29,6 +29,10 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { toEngineReductions } from "@/lib/calc/transfer-tax-api-reductions";
 import { reductionSchema } from "@/lib/api/transfer-tax-schema-reductions";
 import { getReductionDefault } from "@/components/calc/transfer/UnifiedReductionPanel-defaults";
+import { Unsold98InputForm } from "@/components/calc/transfer/Unsold98InputForm";
+import { Unsold982InputForm } from "@/components/calc/transfer/Unsold982InputForm";
+import { Unsold987InputForm } from "@/components/calc/transfer/Unsold987InputForm";
+import { Unsold988InputForm } from "@/components/calc/transfer/Unsold988InputForm";
 import { migrateAsset } from "@/lib/stores/calc-wizard-asset-migrate";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { baseTransferInput, makeMockRates } from "../tax-engine/_helpers/mock-rates";
@@ -93,23 +97,17 @@ describe("D11-05 거주자·내국인 요건 배선", () => {
     }
   });
 
-  it("D11-05-5: ⑤ 각 폼에 요건 위젯이 그려진다", async () => {
-    const cases: Array<[string, RegExp]> = [
-      ["Unsold98InputForm", /^거주자$/],
-      ["Unsold982InputForm", /^거주자$/],
-      ["Unsold987InputForm", /^내국인$/],
-      ["Unsold988InputForm", /^거주자$/],
-    ];
-    for (const [name, label] of cases) {
+  it("D11-05-5: ⑤ 각 폼에 요건 위젯이 그려진다", () => {
+    const cases = [
+      ["§98", Unsold98InputForm, "unsold_98", /^거주자$/],
+      ["§98의2", Unsold982InputForm, "unsold_98_2", /^거주자$/],
+      ["§98의7", Unsold987InputForm, "unsold_98_7", /^내국인$/],
+      ["§98의8", Unsold988InputForm, "unsold_98_8", /^거주자$/],
+    ] as const;
+    for (const [label, Form, id, text] of cases) {
       cleanup();
-      const mod = await import(`@/components/calc/transfer/${name}`);
-      const Form = mod[name] as React.ComponentType<{ value: unknown; onChange: () => void }>;
-      const id = name === "Unsold98InputForm" ? "unsold_98"
-        : name === "Unsold982InputForm" ? "unsold_98_2"
-        : name === "Unsold987InputForm" ? "unsold_98_7"
-        : "unsold_98_8";
       render(<Form value={getReductionDefault(id) as never} onChange={vi.fn()} />);
-      expect(screen.getAllByText(label).length, name).toBeGreaterThan(0);
+      expect(screen.getAllByText(text).length, label).toBeGreaterThan(0);
     }
   });
 
@@ -131,8 +129,7 @@ describe("D11-05 거주자·내국인 요건 배선", () => {
     }
   });
 
-  it("D11-05-7: §98의7 안내가 「거주자 한정 아님」이라고 말하지 않는다 (조특법 §2①1호)", async () => {
-    const { Unsold987InputForm } = await import("@/components/calc/transfer/Unsold987InputForm");
+  it("D11-05-7: §98의7 안내가 「거주자 한정 아님」이라고 말하지 않는다 (조특법 §2①1호)", () => {
     render(
       <Unsold987InputForm value={getReductionDefault("unsold_98_7") as never} onChange={vi.fn()} />,
     );
