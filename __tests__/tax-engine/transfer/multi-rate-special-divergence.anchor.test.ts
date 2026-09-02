@@ -113,15 +113,15 @@ describe("§98의5(60% 감면) — 단기 구간에서 총부담이 갈린다", 
     expect(single.totalTax).toBe(94_604_400);
     // 집계는 플래그가 실리지 않아 단기 70%가 되살아난다.
     expect(multi.calculatedTax).toBe(298_750_000);
-    expect(multi.totalTax).toBe(130_625_000);
-    expect((multi.totalTax ?? 0) - (single.totalTax ?? 0)).toBe(36_020_600);
+    expect(multi.totalTax).toBe(131_450_000);
+    expect((multi.totalTax ?? 0) - (single.totalTax ?? 0)).toBe(36_845_600);
   });
 
   it("R2: 🔴 보유 18개월(단기 60%) — 다건이 9,895,600원 과대", () => {
     const { single, multi } = bothWays({ ...BASE_985, transferDate: D("2012-01-01") });
     expect(single.totalTax).toBe(94_604_400);
-    expect(multi.totalTax).toBe(104_500_000);
-    expect((multi.totalTax ?? 0) - (single.totalTax ?? 0)).toBe(9_895_600);
+    expect(multi.totalTax).toBe(105_160_000);
+    expect((multi.totalTax ?? 0) - (single.totalTax ?? 0)).toBe(10_555_600);
   });
 
   it("R3: 장기(보유 4년)는 **산출세액이 같다** — 세율 특칙 축이 아니다", () => {
@@ -129,14 +129,15 @@ describe("§98의5(60% 감면) — 단기 구간에서 총부담이 갈린다", 
     expect(single.calculatedTax).toBe(199_890_000);
     expect(multi.calculatedTax).toBe(199_890_000);
     /**
-     * 📌 그럼에도 총부담이 587,388원 갈린다 — **감면액 산정 축**의 별개 divergence다.
-     * 다건은 `산출세액 × k`(`k = 감면대상소득 / 과세표준`)로 내는데 기본공제 때문에
-     * 자산 1건에서도 `k > 1`이 된다(2,500,000 / 560,000,000 ≈ 0.446%).
-     * 차단 덕에 도달 불가라 여기서는 **관측만 고정**한다 — 차단을 푸는 작업이 함께 풀 것.
+     * 🔁 **2026-09-02 갱신** — 종전에는 총부담이 587,388원 갈렸고(다건 감면 120,467,989),
+     * 그것을 「**감면액 산정 축**의 별개 divergence · 차단 덕에 도달 불가 · 관측만 고정」으로
+     * 남겨 뒀다. 그 축이 **「소득세법」 §90①의 `− C` 누락**으로 확정돼 수정됐다
+     * (`transfer-tax-aggregate-reduction-step.ts` · anchor `aggregate-reduction-90-1-basic-deduction`).
+     * ⇒ 이제 **감면액도 단건과 일치**하고, 남는 divergence는 **세율 축뿐**이다.
      */
     expect(single.reductionAmount).toBe(119_934_000); // = 199,890,000 × 60%
-    expect(multi.reductionAmount).toBe(120_467_989);
-    expect((multi.totalTax ?? 0) - (single.totalTax ?? 0)).toBe(-587_388);
+    expect(multi.reductionAmount).toBe(119_934_000);
+    expect((multi.totalTax ?? 0) - (single.totalTax ?? 0)).toBe(0);
   });
 });
 

@@ -222,6 +222,22 @@ export interface TransferTaxResult {
    * 근거·anchor: `transfer-tax-reductions-calc.ts` ReductionCandidate 주석 (코드리뷰 D8-01).
    */
   aggregateReductionRate?: number;
+  /**
+   * `reducibleIncome`이 **이미 기본공제를 뺀 값**인가 (「소득세법」 §90①의 `B − C`).
+   *
+   * §90①: 감면액 = A × (B − C) / D × E
+   *   A 산출세액 · B 감면대상 양도소득금액 · **C 「§103②에 따른 양도소득 기본공제」**
+   *   · D 과세표준 · E 감면율
+   *
+   * §77(공익수용)·§85의10(개발제한구역 지정토지)·대토보상은 자체 산식에서 자산별 기본공제를
+   * 뺀 뒤 감면율까지 곱해 두므로 **true**다. §69·§97 계열·legacy 장기임대·legacy 신축·
+   * 하이브리드는 `transferIncome`(기본공제 前·감면율 前)을 그대로 실으므로 **false/미설정**이고,
+   * 다건 합산 M-8이 `− C`를 직접 수행해야 한다.
+   *
+   * ⚠️ `aggregateReductionRate`(감면율 반영 여부)와 **다른 축**이다 — §69는 감면율이 100%라
+   *    rate 축에서는 「반영됨」이지만 기본공제 축에서는 **gross**다. 둘을 한 판별자로 묶지 말 것.
+   */
+  reducibleIncomeNetOfBasicDeduction?: boolean;
   /** 결정세액 (원 미만 절사) */
   determinedTax: number;
   /** §114조의2 신축·증축 가산세 (환산취득가액 or 감정가액 × 5%) */
