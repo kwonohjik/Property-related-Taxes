@@ -16,6 +16,7 @@
 
 import { applyRate, truncateToThousand } from "./tax-utils";
 import { computeFactoryStandardArea } from "./factory-standard-area";
+import type { EmployeeSportsFacilityUsage } from "./factory-employee-sports-standard";
 import { computeLivestockStandardArea, includedFacilityLabels } from "./livestock-standard-area";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { PROPERTY } from "./legal-codes";
@@ -105,8 +106,11 @@ export interface SeparateTaxationInput {
    * **마목 제외** — 부속토지 면적 쪽에 넣는다. **바목 제외** — 10% 상한이 있어 아래 별도 필드.
    */
   factoryAdditionalRecognizedArea?: number;
-  /** 별표6 3호**바** 종업원용 체육시설용지 (㎡) — 기준면적의 10% 이내로 clamp (E4-06) */
-  factoryEmployeeSportsArea?: number;
+  /**
+   * 별표6 3호**바** 종업원용 체육시설용지 — 종업원수·시설별 면적.
+   * 표 기준면적(비고 2-나·다·라)과 10% 상한을 엔진이 산출한다 (E4-06).
+   */
+  factoryEmployeeSportsFacility?: EmployeeSportsFacilityUsage;
   /** §102①1호 **단서** — 허가 미이행·사용승인 미이행 공장용 건축물 → 분리과세 전량 제외 */
   factoryIsUnpermitted?: boolean;
   /** 염전 (염화나트륨 생산에 직접 사용) */
@@ -451,7 +455,7 @@ function judgeFactoryAreaLimit(input: SeparateTaxationInput) {
     {
       isRestrictedZone: input.factoryIsRestrictedZone,
       additionalRecognizedArea: input.factoryAdditionalRecognizedArea,
-      employeeSportsFacilityArea: input.factoryEmployeeSportsArea,
+      employeeSportsFacility: input.factoryEmployeeSportsFacility,
     },
   );
 

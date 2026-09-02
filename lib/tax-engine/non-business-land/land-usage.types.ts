@@ -8,6 +8,7 @@
 
 import type { BusinessUsePeriod, ZoneType } from "./types";
 import type { SPORTS_OUTDOOR_STD, SPORTS_INDOOR_STD, RESERVE_FORCES_STD } from "./data/area-standards";
+import type { EmployeeSportsFacilityUsage } from "../factory-employee-sports-standard";
 
 export interface PastureUsage {
   isLivestockOperator: boolean;
@@ -145,16 +146,19 @@ export interface FactoryLandUsage {
    * 해당 근거 판단은 사용자가 한다.
    *
    * 🔴 **바목(종업원용 체육시설)과 마목(오염피해 인접토지)은 여기 넣지 않는다** — 바목은
-   *    10% 상한이 있어 별도 필드(`employeeSportsFacilityArea`)로 받고(E4-06), 마목은
+   *    10% 상한이 있어 별도 필드(`employeeSportsFacility`)로 받고(E4-06), 마목은
    *    기준면적이 아니라 **부속토지 범위**를 넓히는 규정이라 `totalAppurtenantLandArea` 쪽이다.
    */
   additionalRecognizedArea?: number;
   /**
-   * `eup_myeon_or_complex` 전용 — 별표6 3호**바** 종업원용 체육시설용지(㎡).
+   * `eup_myeon_or_complex` 전용 — 별표6 3호**바** 종업원용 체육시설용지.
+   *
    * 「공장입지기준면적의 100분의 10 이내」 상한이 붙어 있어 나·다·라와 분리해 받는다(E4-06).
-   * 표(종업원수 × 실외/실내) 기준면적 판단은 입력자가 하고, 엔진은 10% 상한만 강제한다.
+   * **표(종업원수 × 운동장·코트·실내) 기준면적도 엔진이 산출**한다 —
+   * 비고 2-나(50명 이하 법인 코트만)·2-다(실내 바닥면적 하한)·2-라(§101② 배율) 포함.
+   * 상세: `lib/tax-engine/factory-employee-sports-standard.ts`
    */
-  employeeSportsFacilityArea?: number;
+  employeeSportsFacility?: EmployeeSportsFacilityUsage;
   /**
    * `urban_other` 전용 — 공장용 건축물 **바닥면적**(㎡, 건축물 외 시설은 수평투영면적).
    * 연면적(`segments[].floorArea`)과 **다른 값**이다.

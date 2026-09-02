@@ -1,5 +1,6 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
 
 // ============================================================
@@ -183,8 +184,18 @@ export interface FormState {
   stFactoryAreaRatePercent: string;
   stFactoryIsRestrictedZone: boolean;
   stFactoryAdditionalRecognizedArea: string;
-  /** 별표6 3호바 — 종업원용 체육시설용지 (㎡). 나·다·라와 달리 10% 상한이 있어 분리 (E4-06) */
-  stFactoryEmployeeSportsArea: string;
+  /** 별표6 3호바 비고 2-가 — 그 사업장에 근무하는 종업원 수 */
+  stFactorySportsEmployeeCount: string;
+  /** 별표6 3호바 비고 2-나 — 「50명 이하인 **법인**」만 코트면적만 인정 */
+  stFactorySportsEntityType: string;
+  /** 실외체육시설 — 운동장 용지 면적 (㎡) */
+  stFactorySportsPlaygroundArea: string;
+  /** 실외체육시설 — 테니스·정구코트 용지 면적 (㎡) */
+  stFactorySportsCourtArea: string;
+  /** 실내체육시설 **건축물 바닥면적** (㎡) — 비고 2-다·라 */
+  stFactorySportsIndoorFloorArea: string;
+  /** 비고 2-라 — 실내체육시설 부속토지에 곱할 「지방세법 시행령」 §101② 용도지역 */
+  stFactorySportsZoningDistrict: string;
   stFactoryIsUnpermitted: boolean;
 
   // ── 납세의무자(§107) 입력 — 선택 섹션 ──
@@ -268,7 +279,12 @@ export const INITIAL_FORM: FormState = {
   stFactoryAreaRatePercent: "",
   stFactoryIsRestrictedZone: false,
   stFactoryAdditionalRecognizedArea: "",
-  stFactoryEmployeeSportsArea: "",
+  stFactorySportsEmployeeCount: "",
+  stFactorySportsEntityType: "",
+  stFactorySportsPlaygroundArea: "",
+  stFactorySportsCourtArea: "",
+  stFactorySportsIndoorFloorArea: "",
+  stFactorySportsZoningDistrict: "",
   stFactoryIsUnpermitted: false,
   // 납세의무자(§107) 초기값 — 섹션 접힘(미입력)
   ownershipType: undefined,
@@ -425,6 +441,25 @@ export function validateStep(step: number, form: FormState): string | null {
         if (!floor || floor <= 0) return "공장건축물 연면적(㎡)을 입력하세요. 바닥면적이 아닙니다.";
         const rate = parseDecimal(form.stFactoryAreaRatePercent);
         if (!rate || rate <= 0) return "업종별 기준공장면적률(%)을 입력하세요.";
+
+        /**
+         * 별표6 3호바 종업원용 체육시설 — 표를 적용하려면 종업원수가 필수다 (비고 2-가).
+         * 없으면 엔진이 표 기준면적을 산출할 수 없어 **인정면적이 통째로 0**이 된다
+         * (기준면적 과소 → 종합합산 전환 과대). 자동 fallback 금지 원칙상 계산 전에 차단한다.
+         */
+        const sportsAreas =
+          (parseDecimal(form.stFactorySportsPlaygroundArea) ?? 0) +
+          (parseDecimal(form.stFactorySportsCourtArea) ?? 0) +
+          (parseDecimal(form.stFactorySportsIndoorFloorArea) ?? 0);
+        if (sportsAreas > 0) {
+          const emp = parseDecimal(form.stFactorySportsEmployeeCount);
+          if (!emp || emp <= 0)
+            return "종업원용 체육시설용지를 입력했습니다 — 종업원수를 입력하세요 (「지방세법 시행규칙」 [별표 6] 3호바 비고 2-가).";
+          // 비고 2-나는 「50명 이하인 **법인**」에만 적용된다. 개인사업자에 적용하면 코트면적만
+          // 인정돼 법 근거 없이 불리해지므로 명시 선택을 요구한다.
+          if (emp <= 50 && !form.stFactorySportsEntityType)
+            return "종업원 50명 이하입니다 — 사업주체(법인/개인)를 선택하세요. 법인이면 코트면적만 기준면적으로 인정됩니다 ([별표 6] 3호바 비고 2-나).";
+        }
       }
     }
   }
@@ -555,8 +590,21 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
           st.factoryIsRestrictedZone = form.stFactoryIsRestrictedZone;
           st.factoryAdditionalRecognizedArea =
             parseDecimal(form.stFactoryAdditionalRecognizedArea) ?? undefined;
-          st.factoryEmployeeSportsArea =
-            parseDecimal(form.stFactoryEmployeeSportsArea) ?? undefined;
+          // 별표6 3호바 — 표(비고 2-나·다·라)와 10% 상한은 엔진이 산출한다 (E4-06).
+          st.factoryEmployeeSportsFacility = {
+            employeeCount: parseDecimal(form.stFactorySportsEmployeeCount) ?? undefined,
+            entityType:
+              form.stFactorySportsEntityType === "corporation" ||
+              form.stFactorySportsEntityType === "individual"
+                ? form.stFactorySportsEntityType
+                : undefined,
+            playgroundArea: parseDecimal(form.stFactorySportsPlaygroundArea) ?? undefined,
+            tennisCourtArea: parseDecimal(form.stFactorySportsCourtArea) ?? undefined,
+            indoorFloorArea: parseDecimal(form.stFactorySportsIndoorFloorArea) ?? undefined,
+            indoorZoneMultiplier: form.stFactorySportsZoningDistrict
+              ? getZoneAreaMultiplier(form.stFactorySportsZoningDistrict)?.multiplier
+              : undefined,
+          };
           st.factoryIsUnpermitted = form.stFactoryIsUnpermitted;
           break;
         }

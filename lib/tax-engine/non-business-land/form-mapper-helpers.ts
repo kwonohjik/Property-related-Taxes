@@ -23,6 +23,8 @@ import type {
 import type { NblRevenueBusinessType } from "../legal-codes";
 import { deriveCurrentBusinessDays } from "./revenue-test";
 import { resolveDeemedRentRate } from "../data/nbl-deemed-rent-rate";
+import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
+import type { FactoryEntityType } from "../factory-employee-sports-standard";
 
 // ============================================================
 // Raw 입력 타입 (store 필드 그대로)
@@ -328,7 +330,21 @@ export function buildFactory(
     segments,
     isRestrictedZone:          asBool(a.nblFactoryIsRestrictedZone),
     additionalRecognizedArea:  parseNumber(asString(a.nblFactoryAdditionalRecognizedArea)),
-    employeeSportsFacilityArea: parseNumber(asString(a.nblFactoryEmployeeSportsArea)),
+    /**
+     * 별표6 3호바 — 종업원용 체육시설. 표(비고 2-나·다·라)는 엔진이 산출한다.
+     * `indoorZoneMultiplier`는 **자산의 용도지역**에서 도출한다(단일 소스) —
+     * 비고 2-라가 지목하는 것이 「지방세법 시행령」 §101②의 용도지역별 적용배율이다.
+     * 배율 미상(세분 전 주거지역 등)이면 undefined로 두어 엔진이 실내분을 산입하지 않는다.
+     */
+    employeeSportsFacility: {
+      employeeCount:      parseNumber(asString(a.nblFactorySportsEmployeeCount)),
+      entityType:         (asString(a.nblFactorySportsEntityType) || undefined) as
+                            FactoryEntityType | undefined,
+      playgroundArea:     parseNumber(asString(a.nblFactorySportsPlaygroundArea)),
+      tennisCourtArea:    parseNumber(asString(a.nblFactorySportsCourtArea)),
+      indoorFloorArea:    parseNumber(asString(a.nblFactorySportsIndoorFloorArea)),
+      indoorZoneMultiplier: zoneType ? getZoneAreaMultiplier(zoneType)?.multiplier : undefined,
+    },
     totalFootprintArea:        parseNumber(asString(a.nblFactoryFootprintArea)),
     zoneType,
     isUnregistered:            asBool(a.nblFactoryIsUnregistered),

@@ -6,7 +6,7 @@ import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCar
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { KNOWLEDGE_INDUSTRY_CENTER_RATE_PERCENT } from "@/lib/tax-engine/data/factory-area-rates";
 import { LIVESTOCK_LABELS } from "@/lib/tax-engine/livestock-standard-area";
 import {
@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SEPARATED_TYPE_OPTIONS, type FormState } from "./shared";
+import { SEPARATED_TYPE_OPTIONS, ZONING_DISTRICT_LABELS, type FormState } from "./shared";
 
 interface Props {
   form: FormState;
@@ -284,21 +284,102 @@ export function Step2Separated({ form, onChange }: Props) {
                   </FieldCard>
 
                   {/*
-                    E4-06 (2026-09-02 코드리뷰) — 바목만 「공장입지기준면적의 100분의 10 이내」
-                    상한이 있다(나·다·라에는 없다). 한 칸으로 받으면 상한을 강제할 수 없어
-                    기준면적이 부풀고 비사업용·종합합산 면적이 과소 산출됐다.
+                    별표6 3호**바** 종업원용 체육시설용지 (E4-06 → 표 자동화 2026-09-03).
+                    바목만 10% 상한이 있고(나·다·라에는 없다), 표(종업원수 × 운동장·코트·실내)도
+                    엔진이 산출한다 — 종전에는 사용자가 직접 계산해 넣게 했다.
+                    비고 1(운동경기 가능 시설·영구 시설물·탁구대 2면 이상)은 사실 판단이라
+                    엔진이 검증하지 않는다.
                   */}
-                  <FieldCard
-                    label="종업원용 체육시설용지 (별표6 3호 바)"
-                    unit="㎡"
-                    hint="「지방세법 시행규칙」 [별표 6] 3호바 — 종업원용 체육시설용지. 별표6 표(종업원수 × 실외 운동장·코트 / 실내체육시설)의 기준면적에 해당하는 면적을 입력하세요. 엔진이 「공장입지기준면적의 100분의 10 이내」 상한을 자동 적용하며, 초과분은 기준면적에 산입되지 않습니다."
-                  >
-                    <DecimalInput
-                      value={form.stFactoryEmployeeSportsArea}
-                      onChange={(v) => onChange({ stFactoryEmployeeSportsArea: v })}
-                      data-testid="pt-factory-employee-sports-area"
-                    />
-                  </FieldCard>
+                  <div className="rounded-lg border border-dashed border-amber-300 dark:border-amber-800 p-3 space-y-3">
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                      종업원용 체육시설용지 (별표6 3호 바)
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      표(종업원수 × 실외 운동장·코트 / 실내체육시설)의 기준면적과 「공장입지기준면적의
+                      100분의 10 이내」 상한을 엔진이 자동 적용합니다. 운동장·코트는 운동경기가 가능한
+                      시설이, 실내체육시설은 영구 시설물이면서 탁구대 2면 이상을 둘 수 있어야 합니다
+                      (별표6 3호바 비고 1). 해당분이 없으면 비워 두세요.
+                    </p>
+
+                    <FieldCard
+                      label="종업원수"
+                      unit="명"
+                      hint="그 사업장에 근무하는 종업원을 기준으로 합니다 (비고 2-가). 시설 면적을 입력하면 필수입니다."
+                    >
+                      <DecimalInput
+                        value={form.stFactorySportsEmployeeCount}
+                        onChange={(v) => onChange({ stFactorySportsEmployeeCount: v })}
+                        data-testid="pt-factory-sports-employee-count"
+                      />
+                    </FieldCard>
+
+                    {/*
+                      비고 2-나는 「50명 이하인 **법인**」에만 적용된다 — 개인사업자에 적용하면
+                      코트만 인정돼 기준면적이 줄어 법 근거 없이 불리해진다.
+                    */}
+                    {(parseDecimal(form.stFactorySportsEmployeeCount) ?? 0) > 0 &&
+                      (parseDecimal(form.stFactorySportsEmployeeCount) ?? 0) <= 50 && (
+                        <FieldCard
+                          label="사업주체"
+                          hint="종업원 50명 이하인 「법인」은 코트면적만 기준면적으로 인정됩니다 (비고 2-나). 개인사업자는 이 제한을 받지 않습니다."
+                        >
+                          <RadioCardGroup
+                            name="stFactorySportsEntityType"
+                            tone="amber"
+                            options={[
+                              { value: "corporation", label: "법인", description: "코트면적만 인정 (비고 2-나)" },
+                              { value: "individual", label: "개인", description: "운동장·코트·실내 모두 인정" },
+                            ]}
+                            value={form.stFactorySportsEntityType}
+                            onChange={(v) => onChange({ stFactorySportsEntityType: v })}
+                          />
+                        </FieldCard>
+                      )}
+
+                    <FieldCard label="실외체육시설 — 운동장 용지 면적" unit="㎡">
+                      <DecimalInput
+                        value={form.stFactorySportsPlaygroundArea}
+                        onChange={(v) => onChange({ stFactorySportsPlaygroundArea: v })}
+                        data-testid="pt-factory-sports-playground-area"
+                      />
+                    </FieldCard>
+
+                    <FieldCard label="실외체육시설 — 테니스·정구코트 용지 면적" unit="㎡">
+                      <DecimalInput
+                        value={form.stFactorySportsCourtArea}
+                        onChange={(v) => onChange({ stFactorySportsCourtArea: v })}
+                        data-testid="pt-factory-sports-court-area"
+                      />
+                    </FieldCard>
+
+                    <FieldCard
+                      label="실내체육시설 건축물 바닥면적"
+                      unit="㎡"
+                      hint="바닥면적이 표 기준면적 이하이면 바닥면적이 기준면적이 되고(비고 2-다), 거기에 §101② 용도지역별 적용배율을 곱한 면적이 산입됩니다(비고 2-라). 용지 면적이 아니라 **건축물 바닥면적**입니다."
+                    >
+                      <DecimalInput
+                        value={form.stFactorySportsIndoorFloorArea}
+                        onChange={(v) => onChange({ stFactorySportsIndoorFloorArea: v })}
+                        data-testid="pt-factory-sports-indoor-floor-area"
+                      />
+                    </FieldCard>
+
+                    {(parseDecimal(form.stFactorySportsIndoorFloorArea) ?? 0) > 0 && (
+                      <FieldCard
+                        label="실내체육시설 부속토지 용도지역 (§101②)"
+                        hint="비고 2-라의 용도지역별 적용배율을 결정합니다. 미선택 시 실내체육시설분은 기준면적에 산입되지 않습니다(추정 배율 적용 금지)."
+                      >
+                        <RadioCardGroup
+                          name="stFactorySportsZoningDistrict"
+                          tone="amber"
+                          layout="inline"
+                          options={ZONING_DISTRICT_LABELS.map(([value, label]) => ({ value, label }))}
+                          value={form.stFactorySportsZoningDistrict}
+                          onChange={(v) => onChange({ stFactorySportsZoningDistrict: v })}
+                        />
+                      </FieldCard>
+                    )}
+                  </div>
                 </>
               )}
             </ToneCard>

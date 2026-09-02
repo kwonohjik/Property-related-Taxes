@@ -80,21 +80,14 @@ export const SPORTS_BUSINESS_INDOOR_STD = {
 } as const;
 
 /**
- * 별표5 종업원 체육시설 기준면적(㎡) — 시행규칙 §83의4④(별표5). 종업원수 5구간.
- * 운동장(field)은 구간내 선형보간, 코트(court)·실내(indoor)는 계단식 고정.
- * 비고2(종업원 50인↓ 코트면적만)·비고3(실내 바닥≤기준 시 바닥면적)은 호출부에서 처리.
- * KoreanLaw 본문 실측(mst=286379 별표5, 2026-06-17).
+ * 별표5 종업원 체육시설 기준면적(㎡) — 「소득세법 시행규칙」 §83의4④ [별표 5]. 종업원수 5구간.
+ *
+ * ⚠️ **수치 정본은 `lib/tax-engine/data/employee-sports-standard-area.ts`로 옮겼다**
+ *    (2026-09-03). 「지방세법 시행규칙」 [별표 6] 3호바가 **같은 표**를 싣고 재산세 공장입지
+ *    기준면적·양도세 공장용지 NBL이 그것을 쓰기 때문이다 — 세목 중립 위치라야 사본이 안 생긴다.
+ *    여기서는 기존 호출부(`other-land-area-limit.ts`)를 위해 이름만 재수출한다.
+ *
+ * 비고2(종업원 50인↓ 코트면적만)·비고3(실내 바닥≤기준 시 바닥면적)·비고4(§101② 배율)는
+ * **호출부에서** 처리한다 — 두 법령의 비고가 서로 다르다(정본 파일 헤더의 대조표 참조).
  */
-export function employeeSportsArea(
-  kind: "field" | "court" | "indoor",
-  n: number,
-): number {
-  if (kind === "court") return n <= 500 ? 970 : n <= 2000 ? 1940 : 2910;
-  if (kind === "indoor") return n <= 100 ? 150 : n <= 500 ? 300 : n <= 2000 ? 450 : 900;
-  // field(운동장) — 구간내 선형보간
-  if (n <= 100) return 1000;
-  if (n <= 500) return 1000 + (n - 100) * 9;
-  if (n <= 2000) return 4600 + (n - 500) * 3;
-  if (n <= 10000) return 9100 + (n - 2000) * 1;
-  return 17100;
-}
+export { employeeSportsStandardArea as employeeSportsArea } from "@/lib/tax-engine/data/employee-sports-standard-area";
