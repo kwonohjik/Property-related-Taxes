@@ -38,6 +38,41 @@ export function parcelEffectiveAcquisitionDate(p: {
   );
 }
 
+/**
+ * 다필지 자산의 **대표 취득일** — 세율 기산일(§104②)로 쓰인다.
+ *
+ * 🔴 **A10(2026-09-03) — 종전에는 `parcels[0]`이었다.** 같은 필지 집합이라도 카드 나열
+ * 순서를 바꾸면 보유기간이 달라져 단기/일반 세율군이 뒤집혔다(실측 84,722,000원 편차).
+ * 입력 순서는 과세요건이 아니므로 그 의존을 제거한다.
+ *
+ * **가장 이른 실효 취득일**을 쓴다:
+ * - 「소득세법」 §104②은 보유기간을 「**해당 자산의** 취득일부터 양도일까지」로 정한다.
+ *   여러 필지를 한 자산으로 신고하는 경우 그 자산을 **처음 취득한 날**이 자연스러운 독법이다.
+ * - 늦은 날을 쓰면 보유기간이 짧아져 납세자에게 불리해지는데, 그렇게 볼 **명문이 없다**
+ *   (저장소 원칙: 법 근거 없이 불리 적용 금지).
+ *
+ * ⚠️ **필지별로 세율군을 나누는 것은 이 함수의 범위가 아니다.** 「한 자산 내 여러 필지」에
+ * 관한 명문은 없고(§104⑤ 후단은 「한 필지가 비사업용/그 외로 구분되는 경우」만 별개 자산으로
+ * 본다), 예규는 방향만 시사한다(재일46014-2353 · 법인46012-2439 — 둘 다 구법·타법 유추).
+ * 장기보유특별공제는 이미 엔진이 **필지별로** 계산한다(`multi-parcel-transfer.ts`) —
+ * 이 값이 좌우하는 것은 **세율군(단기/일반)뿐**이다.
+ *
+ * fallback을 두지 않는다 — 확정 불가 조합은 ⑧이 차단한다(`validateParcelMode`).
+ */
+export function representativeParcelAcquisitionDate(
+  parcels: readonly {
+    useDayAfterReplotting?: boolean;
+    replottingConfirmDate?: string;
+    acquisitionDate?: string;
+  }[] | undefined,
+): string {
+  const dates = (parcels ?? [])
+    .map(parcelEffectiveAcquisitionDate)
+    .filter((d) => d !== "");
+  // YYYY-MM-DD는 사전순 = 시간순이라 문자열 비교로 충분하다.
+  return dates.length > 0 ? dates.reduce((a, b) => (a <= b ? a : b)) : "";
+}
+
 export function buildParcelsPayload(
   parcels: AssetForm["parcels"],
   primaryFractional: boolean,

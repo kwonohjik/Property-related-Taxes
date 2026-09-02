@@ -714,8 +714,36 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   // 추가 필요경비(자본적지출) 안분 — preHousingDisclosure 경로에서도 적용
   const totalExpenses = input.expenses ?? 0;
   const landExpRatio = phd.transferApportionRatio.land;
-  const landDirectExp = input.landDirectExpenses ?? Math.floor(totalExpenses * landExpRatio);
-  const buildingDirectExp = input.buildingDirectExpenses ?? (totalExpenses - landDirectExp);
+  const landCapex = input.landDirectExpenses ?? Math.floor(totalExpenses * landExpRatio);
+  const buildingCapex = input.buildingDirectExpenses ?? (totalExpenses - landCapex);
+
+  /**
+   * **자산 단위 양도비(§97①3호)를 파트에 안분한다** — A06(2026-09-03).
+   *
+   * 🔴 종전에는 PHD 경로가 `input.transferExpense`를 **읽지 않아 통째로 유실**됐다.
+   * 비-PHD split 경로(`calcSplitGain` ③-b)는 이미 같은 안분을 하고 있어 두 경로가 어긋나 있었다.
+   *
+   * 근거는 「소득세법」 §100② **후문의 명문**이다 — 「이 경우 **공통되는 취득가액과 양도비용**은
+   * 해당 자산의 가액에 비례하여 안분계산한다」. 양도비는 그 열거에 **있다**.
+   *
+   * ⚠️ **자본적지출은 이 열거에 없다** — 그래서 자산 단위 자본적지출은 여기서 안분하지 않고
+   *    `transfer-tax-validate-split.ts`가 파트 칸으로 안내한다(비-PHD·일반건물 경로와 동형).
+   *    예규 법인46012-2439도 같은 순서다 — 「자본적지출액이 어느 하나의 개별필지에 귀속되는
+   *    것이 분명한 경우에는 해당필지에 가산하고, 그 귀속이 불분명한 경우에는 … 안분」.
+   *
+   * 산식·잔액 규약은 비-PHD 경로와 **같다** — 양도가액 비례로 토지분을 floor하고
+   * 건물분이 잔액을 흡수해 `Σ = transferExpense`를 지킨다.
+   */
+  const totalTransferExpense = input.transferExpense ?? 0;
+  const phdTransferPriceTotal = phd.landTransferPrice + phd.buildingTransferPrice;
+  const landTransferExpense =
+    totalTransferExpense > 0 && phdTransferPriceTotal > 0
+      ? applyRate(totalTransferExpense, phd.landTransferPrice / phdTransferPriceTotal)
+      : 0;
+  const buildingTransferExpense = totalTransferExpense - landTransferExpense;
+
+  const landDirectExp = landCapex + landTransferExpense;
+  const buildingDirectExp = buildingCapex + buildingTransferExpense;
 
   // §97②2호 택일(MAX) 적용 — 2026-07-29 정정(#591 감사 R7 — **세액 변경**).
   //   PHD(§164⑤) 경로는 항상 환산취득가 모드인데, 종전에는
@@ -727,7 +755,8 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     phd.landAcquisitionPrice,
     landDirectExp,
     phd.landLumpDeduction,
-    input.landDirectExpenses !== undefined,
+    // 비-PHD 경로(:574)와 동일 규약 — 양도비만 입력한 사용자도 §97②2호 단서 비교 대상이다.
+    input.landDirectExpenses !== undefined || landTransferExpense > 0,
     true,  // PHD는 항상 추계(환산) 모드
     true,  // 환산취득가 모드 — §97②2호 단서 대상
   );
@@ -735,7 +764,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     phd.buildingAcquisitionPrice,
     buildingDirectExp,
     phd.buildingLumpDeduction,
-    input.buildingDirectExpenses !== undefined,
+    input.buildingDirectExpenses !== undefined || buildingTransferExpense > 0,
     true,
     true,
   );

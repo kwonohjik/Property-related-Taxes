@@ -79,7 +79,7 @@ type AreaScenario = NonNullable<AssetForm["areaScenario"]>;
  *   redevelopment_apt · right_to_move_in → redevLandArea
  * 이들을 등재하면 같은 면적을 두 곳에서 입력받게 된다.
  *
- * 환지(reduction·increase)는 소득령 §162의2 토지 제도이므로 land 전용.
+ * 환지(reduction·increase)는 소득령 §162①9호 단서 토지 제도이므로 land 전용.
  */
 const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
   Record<AssetForm["assetKind"], AreaScenario[]>

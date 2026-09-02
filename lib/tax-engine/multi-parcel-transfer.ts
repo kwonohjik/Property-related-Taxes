@@ -87,7 +87,7 @@ export interface ParcelInput {
   /** 보상액 산정의 기초가 되는 기준시가 (원/㎡) */
   compensationBasisStdPrice?: number;
 
-  // ─── 환지 감환지/증환지 (소득세법 시행령 §162의2) ─────────────
+  // ─── 환지 감환지/증환지 (소득세법 시행령 §162①9호 단서) ─────────────
   // 3필드가 모두 제공되고 entitlementArea > allocatedArea 이면 감환지로 판정하여
   // 환산취득가액 계산 시 취득면적을 다음과 같이 자동 산정한다:
   //   effectiveAcquisitionArea = priorLandArea × (allocatedArea / entitlementArea)
@@ -150,7 +150,7 @@ export interface ParcelResult {
    * 아니면 parcel.acquisitionArea 그대로.
    */
   effectiveAcquisitionArea?: number;
-  /** 감환지 자동 산정 적용 여부 (소득세법 시행령 §162의2) */
+  /** 감환지 자동 산정 적용 여부 (소득세법 시행령 §162①9호 단서) */
   exchangeLandReductionApplied?: boolean;
   /** 취득일 의제 적용 여부 */
   didUseReplotting: boolean;
@@ -314,7 +314,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       // standardAtAcq = 취득 면적 × 취득 당시 단가
       // standardAtTransfer = 양도 면적 × 양도 당시 단가
       //
-      // 감환지 판정 (소득세법 시행령 §162의2):
+      // 감환지 판정 (소득세법 시행령 §162①9호 단서 · 국세청 예규 재일46014-1813):
       // 3필드 모두 제공 + 권리면적 > 교부면적일 때 취득면적을 자동 산정한다.
       // 입력 parcel.acquisitionArea가 있어도 감환지 계산 결과로 덮어쓴다.
       let acqArea: number;
@@ -340,7 +340,7 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
         parcel.entitlementArea < parcel.allocatedArea
       ) {
         warnings.push(
-          `필지 ${parcel.id}: 증환지(권리면적 ${parcel.entitlementArea}㎡ < 교부면적 ${parcel.allocatedArea}㎡) — 증가면적은 별도 취득으로 분리 계산해야 합니다 (시행령 §162의2, 본 엔진 범위 외)`,
+          `필지 ${parcel.id}: 증환지(권리면적 ${parcel.entitlementArea}㎡ < 교부면적 ${parcel.allocatedArea}㎡) — 증가면적은 별도 취득으로 분리 계산해야 합니다 (시행령 §162①9호 단서, 본 엔진 범위 외)`,
         );
       }
 

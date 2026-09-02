@@ -331,7 +331,7 @@ describe("MP-8 (EX-1): PDF 파주시 교하동 581번지 전체 앵커", () => {
   });
 });
 
-describe("MP-9: 환지 감환지 자동 취득면적 산정 (소득세법 시행령 §162의2)", () => {
+describe("MP-9: 환지 감환지 자동 취득면적 산정 (소득세법 시행령 §162①9호 단서)", () => {
   // PDF 사례 토지2 (구리 토평동 환지토지)
   // 권리면적 651.7㎡ > 교부면적 595㎡ → 감환지 56.7㎡
   // 종전토지면적 773.25㎡ × (595 / 651.7) = 705.9748...㎡
@@ -363,7 +363,7 @@ describe("MP-9: 환지 감환지 자동 취득면적 산정 (소득세법 시행
     const parcel = result.parcelResults[0];
     expect(parcel.exchangeLandReductionApplied).toBe(true);
     expect(parcel.effectiveAcquisitionArea).toBeCloseTo(705.9748, 3);
-    expect(parcel.legalBasis).toBe("소득세법 시행령 §162의2");
+    expect(parcel.legalBasis).toBe("소득세법 시행령 §162 ① 9호 단서");
   });
 
   it("감환지 없을 때는 parcel.acquisitionArea 그대로 사용, exchangeLandReductionApplied=false", () => {

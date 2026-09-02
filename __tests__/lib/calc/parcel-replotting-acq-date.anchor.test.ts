@@ -19,6 +19,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { parcelEffectiveAcquisitionDate } from "@/lib/calc/transfer-tax-api-parcels";
+import { representativeParcelAcquisitionDate } from "@/lib/calc/transfer-tax-api-parcels";
 import { validateStep } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 
@@ -115,10 +116,41 @@ describe("[A15] ④ 자산-수준 취득일 — 첫 필지가 환지의제여도
     expect(body.acquisitionDate).toBe("2003-01-01");
   });
 
-  it("A15-6(회귀): 시나리오 B(필지1=일반) → 첫 필지 취득일 그대로", async () => {
-    const { run, get } = captureBody(parcelForm([parcel(), replotted({ id: "p2" })]));
-    await run();
-    expect((get() as { acquisitionDate?: string }).acquisitionDate).toBe("2005-04-10");
+  /**
+   * 🔴 **A10(2026-09-03) 계약 정정 — 종전 A15-6은 순서 의존 자체를 고정하고 있었다.**
+   *
+   * 종전 단언은 「시나리오 B(필지1=일반) → **첫 필지** 취득일 그대로」(2005-04-10)였다.
+   * 그런데 A15-4는 같은 필지 집합을 순서만 바꿔(환지 먼저) 2003-01-01을 단언한다 —
+   * 두 anchor가 **함께 「나열 순서가 세율 기산일을 바꾼다」를 봉인**하고 있었던 것이다
+   * (실측 84,722,000원 편차). 입력 순서는 과세요건이 아니다.
+   *
+   * ⇒ 이제 순서 무관하게 **가장 이른 실효 취득일**을 쓴다(근거는
+   *   `representativeParcelAcquisitionDate` JSDoc — 「소득세법」 §104②).
+   */
+  it("A10-1: 필지 나열 순서를 바꿔도 자산 대표 취득일이 같다 (순서 의존 제거)", async () => {
+    const a = captureBody(parcelForm([parcel(), replotted({ id: "p2" })]));
+    await a.run();
+    const b = captureBody(parcelForm([replotted(), parcel({ id: "p2" })]));
+    await b.run();
+
+    const dateA = (a.get() as { acquisitionDate?: string }).acquisitionDate;
+    const dateB = (b.get() as { acquisitionDate?: string }).acquisitionDate;
+
+    expect(dateA).toBe(dateB);
+    // 가장 이른 실효 취득일 — 환지 확정일 2003-01-01 < 일반 필지 2005-04-10
+    expect(dateA).toBe("2003-01-01");
+  });
+
+  it("A10-2: 대표 취득일 헬퍼는 순서·환지 조합과 무관하게 최소값을 고른다", () => {
+    const later = { acquisitionDate: "2005-04-10" };
+    const earlier = { useDayAfterReplotting: true, replottingConfirmDate: "2003-01-01" };
+    expect(representativeParcelAcquisitionDate([later, earlier])).toBe("2003-01-01");
+    expect(representativeParcelAcquisitionDate([earlier, later])).toBe("2003-01-01");
+    // 확정 불가 필지는 후보에서 빠질 뿐 전체를 무효화하지 않는다
+    expect(representativeParcelAcquisitionDate([{}, later])).toBe("2005-04-10");
+    // 전부 확정 불가 → 빈 문자열(⑧이 차단한다 — 양도일 fallback 금지)
+    expect(representativeParcelAcquisitionDate([{}, { useDayAfterReplotting: true }])).toBe("");
+    expect(representativeParcelAcquisitionDate(undefined)).toBe("");
   });
 
   it("A15-7: 취득일이 양도일 이전이라는 서버 refine 전제를 ④가 스스로 지킨다", async () => {

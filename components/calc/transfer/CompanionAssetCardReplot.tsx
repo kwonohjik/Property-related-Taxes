@@ -38,7 +38,7 @@ export function ReplotReductionFields({
     <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/40 p-3">
       <p className="text-xs text-amber-800">
         권리면적·교부면적·종전면적을 입력하면 의제 취득면적이 자동 계산됩니다.
-        <span className="ml-1 text-muted-foreground">(소득령 §162의2)</span>
+        <span className="ml-1 text-muted-foreground">(소득령 §162①9호 단서)</span>
       </p>
 
       <div className="space-y-1.5">
