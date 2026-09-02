@@ -10,10 +10,35 @@ import { validateStep } from "./transfer-tax-validate";
 /**
  * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
  *
- * 차감형(income_deduction)·세액감면형(tax_amount)·세율특칙(§98 flat 20%·§98의3계 단기 배제)은
- * 단건 엔진의 STEP 4.6·7·8 내부에서 적용되는데, aggregate가 `income = taxableGain − lthd`로
- * 양도소득금액을 재산정하고 세율군을 재계산하면서 차감·감면·농특세·세율특칙이 전부 소실된다
- * (probe 실측: 단건 17,254,000 vs 다건 94,897,000). 침묵 오산보다 명시 차단이 안전.
+ * 🔴 **미지원 사유가 바뀌었다 — 지금 소실되는 것은 「세율 특칙」뿐이다** (D11-07, 2026-09-02).
+ *
+ * 도입 당시(`92e8feee`, 2026-06-12)에는 차감·세액감면이 실제로 소실됐다. 그러나 이후
+ * 집계 차감 지원(`62821310`, 2026-07-27)이 들어와 지금은:
+ *   - 차감형   → `transfer-tax-aggregate.ts`가 반영한다(+ 농특세 2-pass). §99의3의
+ *                「단건 == 다건」 완전 일치를 `aggregate-income-deduction-993.anchor.test.ts`가 고정.
+ *   - 세액감면형 → `transfer-tax-aggregate-reduction-step.ts`가 반영한다.
+ *   - **세율 특칙 → 소실된다.** `forceFlatRate20`(§98①1호)·`suppressShortTermRate`
+ *     (§98의3④·§98의5③·§98의6③)는 단건 `transfer-tax.ts:790-794`가 **세율 입력에만**
+ *     주입한다. 집계에서는 **두 겹으로** 사라진다(`calcTax` 진입 로그로 추적):
+ *       ① `transfer-tax-aggregate-helpers.ts:354`(`assetTaxOf`)가 원본
+ *          `correctedSingleInput`을 세율 입력으로 써 플래그가 실리지 않는다.
+ *       ② 그 자리에 플래그를 **심어 봐도** 결정세액은 그대로다 —
+ *          `transfer-tax-aggregate-pickers.ts:139`의 `calculatedTaxByGeneral`(전체 누진)과의
+ *          **MAX**(§104⑤ 비교과세)가 20% 결과를 덮는다. 실측: 플래그 주입 시 `calcTax`가
+ *          20%로 계산(83,500,000)했지만 최종값은 누진값 141,060,000 그대로였다.
+ *     ⇒ 「배선만 이으면 된다」가 아니다. 살리려면 §104⑤ 비교 대상에서 이 특칙을 어떻게
+ *        다룰지부터 정해야 한다.
+ *
+ * **실측으로 출처를 갈랐다** (§98 · 양도 9억·취득 3억·1996-06-01 취득·2024-08-01 양도):
+ *   단건 결정세액 **83,500,000** ↔ 다건 **141,060,000**, 그런데 **과세표준은 417,500,000으로
+ *   양쪽 동일**하다. 즉 차이는 100% 세율에서 나오고, 다건 값은 감면을 아예 선택하지 않은
+ *   경우(141,060,000)와 **원 단위까지 같다**.
+ *
+ * ⚠️ §98의3계(단기세율 배제)는 이 격자에서 divergence를 재현하지 못했다(감면 미적격으로
+ *    양쪽 다 단기 50%). **재현 실패는 부존재의 근거가 아니다** — 구조상 같은 경로다.
+ *
+ * 차단은 유지한다(침묵 오산보다 명시 차단이 안전). 다만 **사유 문구는 세율 특칙으로**
+ * 적어야 한다 — 종전 문구 「차감·세액감면이 반영되지 않습니다」는 사실과 다르다.
  */
 const MULTI_UNSUPPORTED_REDUCTION_TYPES: ReadonlySet<string> = new Set(ALL_INCOME_DEDUCTION_IDS);
 
@@ -104,7 +129,10 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
     MULTI_UNSUPPORTED_REDUCTION_TYPES.has(r.type),
   );
   if (blockedReduction) {
-    return "미분양·신축주택 감면(조특법 §98~§99의2 시리즈)은 단건 계산기에서만 지원됩니다. 합산 계산에서는 차감·세액감면이 반영되지 않습니다.";
+    return (
+      "미분양·신축주택 감면(조특법 §98·§98의2~§98의8·§99·§99의2·§99의3)은 단건 계산기에서만 지원됩니다. " +
+      "합산 계산은 세율군을 다시 계산하는 과정에서 세율 특칙(§98① 20% 단일세율·§98의3계 단기세율 배제)을 반영하지 못합니다."
+    );
   }
   // 모드 2 — 보유 감면주택 주택수 제외(§89①3호 의제)도 단건 전용
   if ((form.specialHouseExclusions?.length ?? 0) > 0) {

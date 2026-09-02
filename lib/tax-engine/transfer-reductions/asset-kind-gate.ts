@@ -9,7 +9,7 @@
  *   - rental(§97): { housing, redevelopment_apt } — 입주권·분양권은 물리적 임대 불가로 배제.
  *   - new_housing(§99)·unsold(§98·§99의2): + 입주권·분양권 — 분양권 취득→완공 후 양도 흐름 포함.
  *
- * ⚠ redevelopment_apt + §97 — **「시한 게이트가 이미 차단한다」는 서술은 사실이 아니었다** (CB-02).
+ * ⚠ redevelopment_apt + §97 — **「시한 게이트가 이미 차단한다」는 서술은 사실이 아니었다** (CB-09).
  *   §97의3의 등록 시한은 `period-check.ts`가 `before(registrationDate, 2027-12-31)`로 판정해
  *   **열려 있고**, 조특령 §97의3② 후단은 「재개발사업·재건축사업 … 의 시행으로 임대할 수 없는
  *   경우에는 관리처분계획 인가일 전 6개월부터 준공일 후 6개월까지 계속하여 임대한 것으로 본다」로
@@ -85,6 +85,13 @@ const GB_CLAIM_ROUTE_KINDS = new Set<ReductionAssetKind>([
 /**
  * §77의3 **§17 매수청구** 경로를 이 자산 종류에 걸 수 있는가.
  * `gbPurchaseRoute === "claim"` 일 때만 의미가 있다 — ⑧ validate와 ⑤ UI가 공유한다.
+ *
+ * 호출부(단일 소스 유지 — 새 호출부를 늘릴 때 여기 추가할 것):
+ *   - ⑧ `lib/calc/transfer-tax-validate-reductions.ts:120` (최종 차단)
+ *   - ⑤ `app/calc/transfer-tax/steps/Step5.tsx` 매수 경로 라디오 (입력 시점 disabled)
+ *
+ * ⚠ 2026-09-02(D9-06) 전까지 ⑤ 호출부가 **없었다** — 주석만 「⑤ UI가 공유한다」였고
+ *   실제로는 라디오가 무조건 선택 가능해 계산 실행 시점에야 막혔다.
  */
 export function isGbClaimRouteAllowedForAssetKind(assetKind: ReductionAssetKind): boolean {
   return GB_CLAIM_ROUTE_KINDS.has(assetKind);

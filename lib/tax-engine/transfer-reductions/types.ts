@@ -1,5 +1,5 @@
 /**
- * 양도세 감면 23개 조문 골격 — 공통 타입
+ * 양도세 감면 24개 조문 — 공통 타입
  *
  * Phase 1 (골격) 단계: 모든 조문 stub은 동일 시그니처를 따른다.
  * 각 stub은 `evaluate()` 단일 함수를 export — 시한 검증만 수행하고 후속 단계는 미구현.
@@ -10,7 +10,7 @@
 
 import type { ReductionEffectCategory } from "../legal-codes/transfer";
 
-/** 23개 조문 식별자 — Phase 1 인벤토리 확정본 */
+/** 24개 조문 식별자 (rental 6 + new_housing 4 + unsold_housing 10 + standalone 4) */
 export type TransferReductionId =
   // 장기임대 §97 시리즈 (6)
   | "rental_97_main"
@@ -41,7 +41,7 @@ export type TransferReductionId =
   | "gb_designated_land"
   | "replacement_land_comp";
 
-/** 23개 조문 카테고리 분류 — UI 펼침 그룹 매핑 */
+/** 24개 조문 카테고리 분류 — UI 펼침 그룹 매핑 */
 export type ReductionCategory =
   | "rental"           // 장기임대 §97 시리즈
   | "new_housing"      // 신축 §99·§99의3·§99의4
@@ -77,34 +77,6 @@ export interface PeriodCheckResult {
   failReason?: string;
   /** UI에 표시할 시한 라벨 (예: "2001.5.23~2003.6.30") */
   periodLabel?: string;
-}
-
-/** 골격 단계 stub 의 표준 결과 — 시한 검증만 통과 시 isEligible:false + "구현 예정" 사유 */
-export interface ReductionStubResult {
-  id: TransferReductionId;
-  isEligible: false;
-  inPeriod: boolean;
-  failReason: string;
-  legalBasis: string;
-  category: ReductionCategory;
-  effectCategory: ReductionEffectCategory;
-  /** UI 활성/전체 카운터·라벨용 메타 */
-  meta: {
-    article: string;
-    periodLabel: string;
-    effectLabel: string;
-  };
-}
-
-/** 23개 stub 라우터의 통합 입력 — 향후 Phase 2~ 본격 구현 시 확장 */
-export interface ReductionEvaluationInput extends PeriodCheckContext {
-  id: TransferReductionId;
-  /** 자산 정보 (전용면적·취득가액·지역 등 — Phase 2~ 사용) */
-  asset?: {
-    exclusiveAreaSqm?: number;
-    acquisitionPrice?: number;
-    region?: "metropolitan" | "non_metropolitan" | "outside_overconcentration" | "nationwide";
-  };
 }
 
 // ============================================================
@@ -156,8 +128,6 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   /** 국민주택규모 이하 여부 — 사용자 확인 입력 (령 §97의3③2호. 다가구는 가구당 전용면적 기준) */
   isNationalHousingScale?: boolean;
   region?: "capital" | "non_capital";
-  propertyType?: "apartment" | "non_apartment";
-  rentalHousingType?: "long_term_private" | "public_support_private";
   /**
    * §97의3① 「「민간임대주택에 관한 특별법」 제2조제2호에 따른 **민간건설임대주택**으로서…」 (D2-07)
    *

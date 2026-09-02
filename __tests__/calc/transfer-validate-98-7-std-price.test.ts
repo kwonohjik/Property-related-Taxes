@@ -17,6 +17,8 @@ function make987(stdPrices: { acq?: string; y5?: string; transfer?: string }): A
     isFirstContract987: true,
     isNotOccupiedAtContract987: true,
     isNotRecontract987: true,
+    // D11-05 — 법 §98의7① 「내국인이 …」 적용 주체 요건 (조특법 §2①1호)
+    isDomestic987: true,
     standardPriceAtAcquisition987: stdPrices.acq ?? "",
     standardPriceAt5Years987: stdPrices.y5 ?? "",
     standardPriceAtTransfer987: stdPrices.transfer ?? "",

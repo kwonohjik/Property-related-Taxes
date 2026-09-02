@@ -295,8 +295,16 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       form.assets?.[0]?.acquisitionDate,
     );
 
-    // P5 모드 2 (⑧): 보유 감면주택 행 — 조문·취득일 필수 (확인 토글은 낙관 — 엔진 불적용 사유)
-    const she = surchargeSuppressed ? [] : (form.specialHouseExclusions ?? []);
+    /**
+     * P5 모드 2 (⑧): 보유 감면주택 행 — 조문·취득일 필수 (확인 토글은 낙관 — 엔진 불적용 사유)
+     *
+     * 🔴 D4-03 — 종전에는 `surchargeSuppressed`면 이 검증을 **건너뛰었다**. 그런데
+     * `transfer-tax-api.ts`는 값을 그대로 전송하므로, 창 밖에서 입력한 뒤 양도일을 창
+     * 안으로 옮기면 **무검증 통과**가 됐다(비대칭). 지금은 한시배제 기간에도 ⑤ 입력
+     * 경로가 열려 있으므로(§89①3호 비과세는 §104⑦ 중과와 무관) skip을 제거한다.
+     * 「보이지 않는 필드 차단 방지」라는 원래 취지도 더는 성립하지 않는다.
+     */
+    const she = form.specialHouseExclusions ?? [];
     for (let i = 0; i < she.length; i++) {
       if (!she[i].article) {
         issues.push({ step, message: `보유 감면주택 ${i + 1}: 적용 조문을 선택하세요.` });

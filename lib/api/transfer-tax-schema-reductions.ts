@@ -1,5 +1,5 @@
 /**
- * 양도소득세 감면(reductions) Zod 스키마 (⑫) — 23개 조문 discriminatedUnion
+ * 양도소득세 감면(reductions) Zod 스키마 (⑫) — 24개 조문 discriminatedUnion
  *
  * transfer-tax-schema-sub.ts 800줄 정책 분리 (P2, 2026-06-11).
  * 외부 import 호환은 transfer-tax-schema-sub.ts re-export 유지.
@@ -171,7 +171,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     isNationalHousingScale: z.boolean().optional(),
     region: z.enum(["capital", "non_capital"]).optional(),
-    propertyType: z.enum(["apartment", "non_apartment"]).optional(),
     rentalHousingType: z.enum(["long_term_private", "public_support_private"]).optional(),
     isConvertedFromShortTerm: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),
@@ -198,6 +197,9 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §99 — P1 본격 구현 (2026-06-11): 차감형 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
     type: z.literal("new_99"),
+    /** D11-05 — 법 §99① 「거주자(주택건설사업자는 제외한다)가 …」 */
+    isResident99: z.boolean().optional(),
+    isHousingConstructionBusiness99: z.boolean().optional(),
     region: z.enum(["metropolitan", "non_metropolitan"]).optional(),
     contractDate99: z.string().date().optional(),
     usageApprovalDate99: z.string().date().optional(),
@@ -280,6 +282,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §98 — P5 본격 구현 (2026-06-12, ⑫)
   z.object({
     type: z.literal("unsold_98"),
+    /** D11-05 — 법 §98① 「거주자가 …」 */
+    isResident98: z.boolean().optional(),
     contractDate98: z.string().date().optional(),
     isNationalScale98: z.boolean().optional(),
     isOutsideSeoul98: z.boolean().optional(),
@@ -292,6 +296,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §98의2 — P4 본격 구현 (2026-06-12, ⑫)
   z.object({
     type: z.literal("unsold_98_2"),
+    /** D11-05 — 법 §98의2① 「거주자가 …」 */
+    isResident982: z.boolean().optional(),
     contractDate982: z.string().date().optional(),
     isNonCapitalUnsold982: z.boolean().optional(),
     isFirstOrFcfsContract982: z.boolean().optional(),
@@ -366,6 +372,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §98의7 — P2 본격 구현 (2026-06-11): 하이브리드 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
     type: z.literal("unsold_98_7"),
+    /** D11-05 — 법 §98의7① 「내국인이 …」 (조특법 §2①1호) */
+    isDomestic987: z.boolean().optional(),
     contractDate987: z.string().date().optional(),
     acquisitionPrice987: z.number().int().nonnegative().optional(),
     isUnsoldAtCutoff987: z.boolean().optional(),
@@ -380,6 +388,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
   // §98의8 — P1 본격 구현 (2026-06-11): 차감형 50% 본 필드 (⑫ — 누락 시 침묵 strip)
   z.object({
     type: z.literal("unsold_98_8"),
+    /** D11-05 — 법 §98의8① 「거주자가 …」 */
+    isResident988: z.boolean().optional(),
     contractDate988: z.string().date().optional(),
     acquisitionPrice988: z.number().int().nonnegative().optional(),
     exclusiveAreaSqm988: z.number().nonnegative().optional(),

@@ -11,6 +11,7 @@ import { SelfFarmingIncorporationInput } from "@/components/calc/inputs/SelfFarm
 import { UnifiedReductionPanel } from "@/components/calc/transfer/UnifiedReductionPanel";
 import { ALL_LIMIT_GROUP_TYPES } from "@/lib/tax-engine/aggregate-reduction-limits";
 import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-labels";
+import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 
 // ============================================================
 // Step 5 (→ Step 4): 감면·공제 (자산별 체크박스 복수 선택)
@@ -382,14 +383,34 @@ function AssetReductionBlock({
           {gbDesignated.gbBranch === "in_zone" && (
             <div>
               <p className="block text-xs font-medium mb-1">매수 경로</p>
+              {/* D9-06 — `layout="inline"`은 RadioCardGroup이 description을 **렌더하지 않는다**
+                  (RadioCardGroup.tsx:203 — inline 분기는 label만 그린다). 이 두 옵션은 대상
+                  범위 차이(§17 매수대상토지 ↔ §20 토지등)를 description으로 설명해야 하므로
+                  stack 2열로 둔다. 종전에는 안내가 코드에만 있고 화면에는 없었다. */}
               <RadioCardGroup
                 name={`gbPurchaseRoute-${assetIndex}`}
-                layout="inline"
+                layout="stack"
+                columns={2}
                 tone="sky"
                 value={gbDesignated.gbPurchaseRoute ?? ""}
                 onChange={(v) => updateReduction("gb_designated_land", { gbPurchaseRoute: v })}
                 options={[
-                  { value: "claim", label: "토지매수 청구 (§17)", description: "매수대상토지 — 토지분만 감면 대상" },
+                  {
+                    value: "claim",
+                    label: "토지매수 청구 (§17)",
+                    /**
+                     * D9-06 — ⑧ validate와 **같은 술어**로 disabled를 건다.
+                     * 개발제한구역법 §17①의 대상은 「매수대상토지」(토지만)이고 §20①은
+                     * 「토지와 그 토지의 정착물」이라 대상 범위가 다르다. 토지 파트가 독립
+                     * 계산되지 않는 자산(주택·건물·입주권·분양권·재개발APT)은 안분 없이
+                     * 토지분을 뽑을 수 없어 차단 대상이다(자동 안분 fallback 금지).
+                     * 종전에는 이 옵션이 무조건 선택 가능해 계산 실행 시점에야 막혔다.
+                     */
+                    disabled: !isGbClaimRouteAllowedForAssetKind(asset.assetKind),
+                    description: isGbClaimRouteAllowedForAssetKind(asset.assetKind)
+                      ? "매수대상토지 — 토지분만 감면 대상"
+                      : "이 자산 종류는 토지분이 독립 계산되지 않아 선택할 수 없습니다 — 협의매수(§20)를 선택하거나 토지 자산으로 입력하세요",
+                  },
                   { value: "negotiated", label: "협의매수 (§20)", description: "토지와 그 토지의 정착물" },
                 ]}
               />
@@ -644,16 +665,15 @@ export function Step5({
         자산별로 해당 감면을 선택하세요. 조특법 §127⑦ 규정에 따라 유리한 감면이 자동 선택됩니다.
       </p>
 
-      {/* Phase 1 확장 안내 — 23개 조문 골격 추가 완료, 본격 구현은 Phase 2~ */}
+      {/* 감면 조문 인벤토리 안내 — 개수는 ALL_REDUCTION_IDS(24)와 일치시킬 것 (D9-08) */}
       <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-900 dark:bg-sky-950/30 px-4 py-3 text-xs text-sky-900 dark:text-sky-200 space-y-1">
-        <p className="font-semibold">📋 감면 조문 확장 진행 중 (Phase 1 골격 완료)</p>
+        <p className="font-semibold">📋 적용 가능한 감면·과세특례 조문</p>
         <p>
-          조특법 §97 시리즈 (장기임대 6개), §99 시리즈 (신축 4개), §98 시리즈 + §99의2 (미분양 10개) 등
-          <strong> 총 23개 조문</strong>의 식별·시한 검증 인프라가 추가되었습니다. 본격 계산 로직은 §99의3(신축주택 과세특례)부터
-          순차적으로 Phase 2~에서 구현 예정입니다.
+          자경농지 §69 · 공익수용 §77 시리즈 (4개), 장기임대 §97 시리즈 (6개), 신축 §99 시리즈 (4개),
+          미분양 §98 시리즈 + §99의2 (10개) — <strong>총 24개 조문</strong>을 지원합니다.
         </p>
         <p className="text-sky-700 dark:text-sky-400">
-          현재 화면은 기존 5개 항목만 노출됩니다. 매핑 감사: <code className="text-micro">docs/02-design/features/transfer-reduction-mapping-audit.md</code>
+          조문별 시한·요건이 충족되지 않으면 해당 항목은 사유와 함께 선택이 제한됩니다.
         </p>
       </div>
 

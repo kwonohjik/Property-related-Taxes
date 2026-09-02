@@ -220,8 +220,11 @@ export interface RentalCommonFormFields {
 export type RentalReductionFormVariant =
   | ({
       type: "rental_97_3";
+      /**
+       * 민특법 §2 4호(공공지원)/5호(장기일반) — §97의3① 본문이 둘을 동등하게 대상으로
+       * 삼으므로 **판정을 가르지 않는다**. 사용자 신고 사실로만 보관한다 (D9-07).
+       */
       rentalHousingType: "long_term_private" | "public_support_private";
-      propertyType: "apartment" | "non_apartment";
       region: "capital" | "non_capital";
       /** 임대개시일 당시 주택+부속토지 기준시가 합계 (원) — 령 §97의3③4호 6억/3억 한도 */
       officialPriceAtStart: string;
@@ -321,6 +324,10 @@ export type RentalReductionFormVariant =
       acquisitionType99: "from_builder" | "self_built";
       /** 국민주택 — 신축주택취득기간 ~1999.12.31 연장 */
       isNationalHousing99: boolean;
+      /** 법 §99① 「**거주자**(주택건설사업자는 제외한다)**가** …」 (D11-05) */
+      isResident99: boolean;
+      /** 법 §99① 괄호 「(**주택건설사업자는 제외한다**)」 — ON이면 적용 배제 (D11-05) */
+      isHousingConstructionBusiness99: boolean;
       /** 취득시 기준시가 (원) */
       standardPriceAtAcquisition99: string;
       /** 취득일+5년 시점 기준시가 (원) — 5년 후 양도 시 필수 */
@@ -373,6 +380,8 @@ export type RentalReductionFormVariant =
       isFirstContract988: boolean;
       /** 계약 해제 후 본인·배우자 등 재계약 아님 (령 §98의7②2·3호) */
       isNotRecontract988: boolean;
+      /** 법 §98의8① 「**거주자가** 대통령령으로 정하는 준공후미분양주택으로서 …」 (D11-05) */
+      isResident988: boolean;
       /** 취득시 기준시가 (원) — 5년 후 양도 안분 */
       standardPriceAtAcquisition988: string;
       /** 취득일+5년 시점 기준시가 (원) */
@@ -401,6 +410,8 @@ export type RentalReductionFormVariant =
       isNotRentalHousing98: boolean;
       isFirstBuyerNoOccupancy98: boolean;
       rentedFor5Years98: boolean;
+      /** 법 §98① 「**거주자가** …」 — 비거주자는 적용 배제 (D11-05) */
+      isResident98: boolean;
     }
   // ── P4 (2026-06-12): §98의2 지방 미분양 — 특칙 전용 (장특 표2·기본세율) ──
   | {
@@ -411,6 +422,8 @@ export type RentalReductionFormVariant =
       isNonCapitalUnsold982: boolean;
       /** 선착순 공급 취득 또는 사업주체 최초 매매계약 (령①1·2호) */
       isFirstOrFcfsContract982: boolean;
+      /** 법 §98의2① 「**거주자가** 2008년 11월 3일부터 …」 — 비거주자는 적용 배제 (D11-05) */
+      isResident982: boolean;
     }
   // ── P4 (2026-06-12): §98의4 비거주자 10% 세액감면 ──
   | {
@@ -538,6 +551,12 @@ export type RentalReductionFormVariant =
       isNotOccupiedAtContract987: boolean;
       /** 계약 해제 후 본인·배우자 등 재계약 아님 (령 §98의6②3·4호) */
       isNotRecontract987: boolean;
+      /**
+       * 법 §98의7① 「**내국인이** 2012년 9월 24일 현재 …」 (D11-05).
+       * 조특법 §2①1호: 「"내국인"이란 「소득세법」에 따른 **거주자** 및 「법인세법」에 따른
+       * 내국법인을 말한다」 ⇒ 개인 양도소득세 국면에서는 사실상 거주자와 같다.
+       */
+      isDomestic987: boolean;
       /** 취득시 기준시가 (원) — 5년 후 양도 안분 */
       standardPriceAtAcquisition987: string;
       /** 취득일+5년 시점 기준시가 (원) */

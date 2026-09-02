@@ -218,6 +218,23 @@ export function Unsold988InputForm({
         </p>
       </SectionShell>
 
+      {/*
+        D11-05 — 적용 주체 요건. 엔진에는 게이트가 있었으나(`unsold-98-8.ts:157`) ①④⑤⑫ 어디에도
+        입력 경로가 없어 상수 `?? true` fallback으로 **영구 사문**이었다. §99의3 sibling
+        (`isResident993`)과 같은 형태로 배선한다 — 기본값은 법문이 상정하는 통상의 경우이되
+        **화면에 보이고 끌 수 있어야** 비거주자가 사실대로 신고할 수 있다.
+      */}
+      <div className="flex flex-wrap gap-2 text-xs">
+        <ToggleCard
+          variant="chip"
+          tone="violet"
+          title="거주자"
+          description="법 §98의8① 「거주자가 …」 — 체크 해제 시 적용 배제"
+          checked={value.isResident988}
+          onCheckedChange={(v) => onChange({ isResident988: v })}
+        />
+      </div>
+
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과: 취득일부터 5년간 발생한 양도소득금액의 100분의 50에 상당하는 금액을

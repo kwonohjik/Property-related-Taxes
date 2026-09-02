@@ -676,8 +676,40 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             양도일이 다주택 중과 한시 배제기간(2022-05-10~2026-05-09)에 해당하고 보유기간이 2년 이상이어서
             조정대상지역 다주택이라도 <b>일반세율</b>이 적용됩니다. 다주택 중과 관련 입력(세대 보유 주택 목록·
             양도일 조정대상지역 등)은 계산에 영향이 없어 생략됩니다.
+            다만 <b>비과세 판정</b>에 쓰이는 입력은 이 기간에도 아래에 그대로 제공됩니다.
           </p>
         </ToneCard>
+      )}
+
+      {/*
+        🔴 D4-03 — 한시배제 기간에도 **감면주택 주택수 제외**는 선언할 수 있어야 한다.
+
+        조특법 §98의2④·§98의3③·§98의5②·§98의6②·§98의7②·§98의8②·§99②·§99의2②는 모두
+        「**소득세법 제89조제1항제3호를 적용할 때** … 소유주택으로 보지 아니한다」로,
+        §104⑦ 중과가 아니라 **1세대1주택 비과세** 판정을 바꾼다. 그런데 이 섹션의 유일한
+        입력 위젯이 아래 ④(중과 트랙) 게이트 안에 있어, 한시배제 창(2022-05-10~2026-05-09)
+        안의 양도에서는 **선언할 경로 자체가 사라졌다** → 유효 주택수가 2로 남아 12억 비과세를
+        통째로 잃었다(실측: 양도 10억·취득 5억·2014-01-01 취득·2025-06-01 양도·§98의3
+        감면주택 1채 기준 선언 시 세액 0 ↔ 미선언 시 141,966,000원).
+
+        바로 위 §89②(분양권 축) 주석이 같은 문제를 이미 인정하고 그 축만 ②로 옮겼는데,
+        형제인 감면주택 제외는 남아 있었다. 여기서는 ④의 조건(`isHousingLike && ≥2채`)을
+        **그대로 유지**한 채 한시배제 분기에만 같은 위젯을 연다 — ④와 동시에 뜨지 않으므로
+        같은 배열을 두 컴포넌트가 각각 patch하는 last-write-wins 위험이 없다.
+      */}
+      {surchargeSuspended &&
+        isHousingLike(primaryKind) &&
+        parseInt(form.householdHousingCount) >= 2 && (
+        <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
+          <SectionHeader
+            title="④ 주택수 제외 (비과세 판정)"
+            description="조특법 감면주택은 1세대1주택 비과세 판정 시 소유주택에서 제외됩니다 — 중과 한시배제와 무관합니다"
+          />
+          <SpecialHouseExclusionSection
+            items={form.specialHouseExclusions ?? []}
+            onChange={(items) => onChange({ specialHouseExclusions: items })}
+          />
+        </section>
       )}
 
       {/* ④ 주택수·중과 판정 — 세대 주택 목록·감면주택 제외·양도일 조정대상지역 (중과 트랙) */}

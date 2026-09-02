@@ -84,6 +84,23 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         />
       </ToneCard>
 
+      {/*
+        D11-05 — 적용 주체 요건. 엔진에는 게이트가 있었으나(`unsold-hybrid-p5.ts:159`) ①④⑤⑫ 어디에도
+        입력 경로가 없어 상수 `?? true` fallback으로 **영구 사문**이었다. §99의3 sibling
+        (`isResident993`)과 같은 형태로 배선한다 — 기본값은 법문이 상정하는 통상의 경우이되
+        **화면에 보이고 끌 수 있어야** 비거주자가 사실대로 신고할 수 있다.
+      */}
+      <div className="flex flex-wrap gap-2 text-xs">
+        <ToggleCard
+          variant="chip"
+          tone="violet"
+          title="거주자"
+          description="법 §98① 「거주자가 …」 — 체크 해제 시 적용 배제"
+          checked={value.isResident98}
+          onCheckedChange={(v) => onChange({ isResident98: v })}
+        />
+      </div>
+
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
         <p>
           · 적용 효과 (①1호 양도소득세 방식): 세율을 §104①에도 불구하고 100분의 20 단일세율로
