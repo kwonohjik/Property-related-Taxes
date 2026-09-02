@@ -42,6 +42,9 @@
  *   나타난다. `reportedValue`를 조건부로 만들거나 생략하는 변경은 여기서 멈춘다.
  *
  * ⛔ **R-14 재제안 금지** — 「자동 산정이 없다」는 실측으로 반증됐다.
+ *
+ * ⚠️ 이 금지는 **R-14(자동 산정 부재 주장)**에 한정된다. 「① 미입력이면 payload 미전송」이라는
+ *    게이트 자체는 2026-09-02 A03에서 **「① 미입력 그리고 ② 미완성」으로 좁혀졌다**(아래 L-04 참조).
  */
 import { describe, it, expect } from "vitest";
 import { buildInheritedAcquisitionPayload } from "@/lib/calc/transfer-tax-api-inheritance";
@@ -94,8 +97,25 @@ describe("R-14 — §163⑨ payload는 항상 reportedValue를 싣는다 (legacy
   /**
    * 값이 없으면 payload를 **보내지 않는 것**이 정답이다 — 빈 payload를 보내면
    * `legacyFallback`이 돌아 assetKind가 세액을 가른다(위 597,000,000).
+   *
+   * ## ⚠️ 계약 개정 (2026-09-02 · 코드리뷰 A03)
+   *
+   * **이 계약은 「①도 ②도 없을 때」로 한정된다.** 종전 문구는 「① 미입력이면 무조건 미전송」으로
+   * 읽혔고, 그 때문에 **② (§164④~⑦ 기준시가)를 완비한 상속 자산까지 payload를 잃었다** —
+   * `runInheritedAcquisitionStep`이 `!rawInput.inheritedAcquisition`에서 먼저 반환해 §163⑨의
+   * 「평가한 가액**과** §164④(⑤~⑦)의 가액 **중 많은 금액**」 비교가 아예 일어나지 않았다
+   * (실측 상가 최대 124,740,000원 과대 · 주택 68,992,000원 · 토지 양방향).
+   *
+   * ⇒ 이제 게이트는 「① 미입력 **그리고** ② 미완성」이다. ②가 완비된 **상속** 자산은
+   *   `reportedValue: 0 + reportedMethod`를 실어 보내고, 엔진이 §164 분기에서 먼저 반환하므로
+   *   `legacyFallback` 면적곱에는 닿지 않는다 — 위 597,000,000 위험은 그대로 막힌다.
+   *   판정 술어는 ⑧과 공유한다(`isFullyFilled` + `sec164{House,Commercial,Land}Status`).
+   *
+   * 아래 L-04 픽스처는 `right_to_move_in` + §164 필드 전무라 세 status가 모두 false다 —
+   * **그래서 이 단언은 개정 후에도 그대로 성립한다.** 새 경계는
+   * `__tests__/lib/calc/sec163-9-clause-b-only.anchor.test.ts`가 고정한다.
    */
-  it("[L-04] post-deemed + 평가액 미입력 → payload 자체를 보내지 않는다", () => {
+  it("[L-04] post-deemed + 평가액 미입력 + §164 경로도 미완성 → payload 자체를 보내지 않는다", () => {
     expect(reportedValueOf(asset({ publishedValueAtInheritance: "" }))).toBe("payload 없음");
   });
 
