@@ -140,11 +140,21 @@ export interface FactoryLandUsage {
    */
   isRestrictedZone?: boolean;
   /**
-   * `eup_myeon_or_complex` 전용 — 별표6 3호나~바 추가 인정면적 합계(㎡).
-   * 녹지지역·활주로·철로·6m 이상 도로·접도구역 / 대규모 저수지·침전지 / 경사도 30도 이상 사면용지 /
-   * 오염피해 인접토지 / 종업원용 체육시설(기준면적의 10% 이내). 해당 근거 판단은 사용자가 한다.
+   * `eup_myeon_or_complex` 전용 — 별표6 3호**나·다·라** 추가 인정면적 합계(㎡).
+   * 녹지지역·활주로·철로·6m 이상 도로·접도구역 / 대규모 저수지·침전지 / 경사도 30도 이상 사면용지.
+   * 해당 근거 판단은 사용자가 한다.
+   *
+   * 🔴 **바목(종업원용 체육시설)과 마목(오염피해 인접토지)은 여기 넣지 않는다** — 바목은
+   *    10% 상한이 있어 별도 필드(`employeeSportsFacilityArea`)로 받고(E4-06), 마목은
+   *    기준면적이 아니라 **부속토지 범위**를 넓히는 규정이라 `totalAppurtenantLandArea` 쪽이다.
    */
   additionalRecognizedArea?: number;
+  /**
+   * `eup_myeon_or_complex` 전용 — 별표6 3호**바** 종업원용 체육시설용지(㎡).
+   * 「공장입지기준면적의 100분의 10 이내」 상한이 붙어 있어 나·다·라와 분리해 받는다(E4-06).
+   * 표(종업원수 × 실외/실내) 기준면적 판단은 입력자가 하고, 엔진은 10% 상한만 강제한다.
+   */
+  employeeSportsFacilityArea?: number;
   /**
    * `urban_other` 전용 — 공장용 건축물 **바닥면적**(㎡, 건축물 외 시설은 수평투영면적).
    * 연면적(`segments[].floorArea`)과 **다른 값**이다.

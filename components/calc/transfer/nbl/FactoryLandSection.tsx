@@ -159,6 +159,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
       const std = computeFactoryStandardArea(segs, total, {
         isRestrictedZone: asset.nblFactoryIsRestrictedZone,
         additionalRecognizedArea: parseDecimal(asset.nblFactoryAdditionalRecognizedArea),
+        employeeSportsFacilityArea: parseDecimal(asset.nblFactoryEmployeeSportsArea),
       });
       const excess = Math.max(0, total - std.standardArea);
       return { standardArea: std.standardArea, total, excess, ratio: excess / total, detail: std };
@@ -180,6 +181,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
     asset.nblFactoryTotalLandArea,
     asset.nblFactoryIsRestrictedZone,
     asset.nblFactoryAdditionalRecognizedArea,
+    asset.nblFactoryEmployeeSportsArea,
     asset.nblFactoryFootprintArea,
     asset.nblZoneType,
   ]);
@@ -336,14 +338,31 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
               />
 
               <FieldCard
-                label="추가 인정면적 (별표6 3호 나·다·라·바)"
+                label="추가 인정면적 (별표6 3호 나·다·라)"
                 unit="㎡"
-                hint="녹지지역·활주로·철로·6m 이상 도로·접도구역 / 대규모 저수지·침전지 / 경사도 30도 이상 사면용지 / 종업원용 체육시설(기준면적의 10% 이내)의 합계입니다. 오염피해 인접토지(마목)는 여기가 아니라 위 「공장 전체 부속토지 면적」에 포함시키세요. 해당분이 없으면 비워 두세요."
+                hint="녹지지역·활주로·철로·6m 이상 도로·접도구역 / 대규모 저수지·침전지 / 경사도 30도 이상 사면용지의 합계입니다. 종업원용 체육시설(바목)은 아래 칸에, 오염피해 인접토지(마목)는 위 「공장 전체 부속토지 면적」에 넣으세요. 해당분이 없으면 비워 두세요."
               >
                 <DecimalInput
                   value={asset.nblFactoryAdditionalRecognizedArea}
                   onChange={(v) => onAssetChange({ nblFactoryAdditionalRecognizedArea: v })}
                   data-testid="nbl-factory-additional-area"
+                />
+              </FieldCard>
+
+              {/*
+                E4-06 (2026-09-02 코드리뷰) — 바목만 「공장입지기준면적의 100분의 10 이내」
+                상한이 있다(나·다·라에는 없다). 한 칸으로 받으면 상한을 강제할 수 없어
+                기준면적이 부풀고 비사업용 면적이 과소 산출됐다.
+              */}
+              <FieldCard
+                label="종업원용 체육시설용지 (별표6 3호 바)"
+                unit="㎡"
+                hint="「지방세법 시행규칙」 [별표 6] 3호바 — 종업원용 체육시설용지. 별표6 표(종업원수 × 실외 운동장·코트 / 실내체육시설)의 기준면적에 해당하는 면적을 입력하세요. 엔진이 「공장입지기준면적의 100분의 10 이내」 상한을 자동 적용하며, 초과분은 기준면적에 산입되지 않습니다."
+              >
+                <DecimalInput
+                  value={asset.nblFactoryEmployeeSportsArea}
+                  onChange={(v) => onAssetChange({ nblFactoryEmployeeSportsArea: v })}
+                  data-testid="nbl-factory-employee-sports-area"
                 />
               </FieldCard>
             </div>

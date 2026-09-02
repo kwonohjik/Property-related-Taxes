@@ -176,6 +176,7 @@ export function judgeFactoryLandExcess(
   const std = computeFactoryStandardArea(segments, landArea, {
     isRestrictedZone: usage.isRestrictedZone,
     additionalRecognizedArea: usage.additionalRecognizedArea,
+    employeeSportsFacilityArea: usage.employeeSportsFacilityArea,
   });
   const nonBusinessArea = Math.max(0, landArea - std.standardArea);
   const rateLabel = std.segments.map((s) => `${s.ratePercent}%`).join("·");
@@ -194,6 +195,12 @@ export function judgeFactoryLandExcess(
         ? ` + 추가인정 ${std.additionalAllowanceApplied.toFixed(2)}㎡`
         : "") +
       (std.additionalRecognizedArea > 0 ? ` + 별도인정 ${std.additionalRecognizedArea}㎡` : "") +
+      (std.employeeSportsFacilityArea > 0
+        ? ` + 종업원 체육시설 ${std.employeeSportsFacilityApplied.toFixed(2)}㎡` +
+          (std.employeeSportsFacilityApplied < std.employeeSportsFacilityArea
+            ? ` (입력 ${std.employeeSportsFacilityArea}㎡ → 별표6 3호바 10% 한도 ${std.employeeSportsFacilityCap.toFixed(2)}㎡로 제한)`
+            : "")
+        : "") +
       ` = 공장입지기준면적 ${std.standardArea.toFixed(2)}㎡ ` +
       `(「지방세법 시행규칙」 별표6·제50조)`,
     standardAreaDetail: std,

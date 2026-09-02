@@ -110,12 +110,34 @@ describe("§102①1호 — 공장입지기준면적 범위만 분리과세다", 
     expect(r.factoryAreaCheck?.excessArea).toBe(4000);
   });
 
-  it("LIM-8: 별표6 3호나·다·라·바 추가 인정면적이 한도를 늘린다", () => {
+  it("LIM-8: 별표6 3호나·다·라 추가 인정면적이 한도를 늘린다", () => {
     const r = calculateSeparateTax(
       factory({ factoryTotalLandArea: 15000, factoryAdditionalRecognizedArea: 1500 }),
     );
     expect(r.factoryAreaCheck?.standardArea).toBe(13500); // 10,000 + 가산 2,000 + 별도 1,500
     expect(r.factoryAreaCheck?.excessArea).toBe(1500);
+  });
+
+  /**
+   * E4-06 (2026-09-02 코드리뷰) — **바목만** 「공장입지기준면적의 100분의 10 이내」 상한이 있다.
+   * 종전에는 바목 몫이 나·다·라와 한 입력에 섞여 상한을 강제할 수 없었고, 그 결함이
+   * 공용 leaf(`computeFactoryStandardArea`)에 있어 재산세 분리과세에도 그대로 있었다.
+   * 상한이 없으면 기준면적이 부풀어 **초과분(종합합산으로 넘어갈 면적)이 과소** 산출된다.
+   */
+  it("LIM-8b: 별표6 3호바 종업원용 체육시설은 기준면적의 10%로 잘린다 (E4-06)", () => {
+    const r = calculateSeparateTax(
+      factory({ factoryTotalLandArea: 15000, factoryEmployeeSportsArea: 5000 }),
+    );
+    // 분모 = 산출 10,000 + 가목 2,000 = 12,000 → 10% = 1,200 (입력 5,000이 아니다)
+    expect(r.factoryAreaCheck?.standardArea).toBe(13200);
+    expect(r.factoryAreaCheck?.excessArea).toBe(1800);
+  });
+
+  it("LIM-8c: 한도 이내(1,000㎡)면 전액 인정된다 (과차단 방지)", () => {
+    const r = calculateSeparateTax(
+      factory({ factoryTotalLandArea: 15000, factoryEmployeeSportsArea: 1000 }),
+    );
+    expect(r.factoryAreaCheck?.standardArea).toBe(13000);
   });
 });
 
@@ -137,7 +159,7 @@ describe("§102①1호 단서 — 허가·사용승인 미이행은 분리과세
  * 그 결과가 여기서는 "한도 판정이 사라져 전량 분리과세" — 눈에 띄지 않는 유리한 오류다.
  */
 describe("⑫ Zod — 공장 면적 필드가 strip되지 않는다", () => {
-  it("LIM-13: 6개 신규 필드가 모두 파싱 결과에 남는다", async () => {
+  it("LIM-13: 7개 신규 필드가 모두 파싱 결과에 남는다", async () => {
     const { propertyTaxInputSchema } = await import("@/lib/validators/property-input");
     const parsed = propertyTaxInputSchema.parse({
       objectType: "land",
@@ -151,6 +173,9 @@ describe("⑫ Zod — 공장 면적 필드가 strip되지 않는다", () => {
         factoryAreaRatePercent: 12,
         factoryIsRestrictedZone: true,
         factoryAdditionalRecognizedArea: 500,
+        // E4-06 — 바목 전용 채널. ⑫에 등록하지 않으면 z.object가 조용히 strip해
+        // 10% 상한 판정 자체가 엔진에 도달하지 않는다.
+        factoryEmployeeSportsArea: 700,
         factoryIsUnpermitted: false,
       },
     });
@@ -160,6 +185,7 @@ describe("⑫ Zod — 공장 면적 필드가 strip되지 않는다", () => {
     expect(st.factoryAreaRatePercent).toBe(12);
     expect(st.factoryIsRestrictedZone).toBe(true);
     expect(st.factoryAdditionalRecognizedArea).toBe(500);
+    expect(st.factoryEmployeeSportsArea).toBe(700);
     expect(st.factoryIsUnpermitted).toBe(false);
   });
 });

@@ -96,9 +96,11 @@ describe("문구 — 오입력을 부르는 표현을 쓰지 않는다", () => {
 
   it("PTF-10: 추가 인정면적 안내에서 마목을 제외하고 귀속처를 지목한다", () => {
     view({ stFactoryLocation: "industrial_zone" });
+    // E4-06(2026-09-02) — 바목이 별도 칸으로 분리되면서 이 칸은 나·다·라만 받는다.
     const label = screen.getByText(/추가 인정면적/);
-    expect(label.textContent).toContain("나·다·라·바");
-    expect(screen.getByText(/오염피해 인접토지\(마목\)는 위 부속토지 면적에 넣으세요/)).toBeTruthy();
+    expect(label.textContent).toContain("나·다·라");
+    expect(screen.getByText(/오염피해 인접토지\(마목\)는 부속토지 면적에 넣으세요/)).toBeTruthy();
+    expect(screen.getByText(/종업원용 체육시설용지 \(별표6 3호 바\)/)).toBeTruthy();
   });
 
   it("PTF-11: 부속토지 칸은 마목 합산을 안내한다 (별표6 3호마 = 부속토지 편입)", () => {

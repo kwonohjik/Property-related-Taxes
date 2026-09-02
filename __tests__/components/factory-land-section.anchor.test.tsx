@@ -166,16 +166,19 @@ describe("문구 — 오입력을 부르는 표현을 쓰지 않는다", () => {
    */
   it("COPY-4: 「추가 인정면적」 안내에서 마목(오염피해 인접토지)을 제외한다", () => {
     view();
+    // E4-06(2026-09-02) — 바목이 별도 칸으로 분리되면서 이 칸은 나·다·라만 받는다.
     const label = screen.getByText(/추가 인정면적/);
-    expect(label.textContent).toContain("나·다·라·바");
+    expect(label.textContent).toContain("나·다·라");
     expect(label.textContent).not.toContain("나~바");
+    // 바목은 별도 칸 — 10% 상한을 강제할 수 있는 유일한 형태다
+    expect(screen.getByText(/종업원용 체육시설용지 \(별표6 3호 바\)/)).toBeTruthy();
   });
 
   it("COPY-5: 마목분의 귀속처를 「공장 전체 부속토지 면적」으로 지목한다", () => {
     view();
     // 추가 인정면적 칸: 여기가 아니라고 안내
     expect(
-      screen.getByText(/오염피해 인접토지\(마목\)는 여기가 아니라/),
+      screen.getByText(/오염피해 인접토지\(마목\)는 위 「공장 전체 부속토지 면적」에 넣으세요/),
     ).toBeTruthy();
     // 전체 부속토지 칸: 여기에 합산하라고 안내
     expect(screen.getByText(/인접토지가 있으면 그 면적도 여기에 합산합니다/)).toBeTruthy();

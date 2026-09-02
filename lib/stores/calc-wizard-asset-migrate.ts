@@ -176,6 +176,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.nblFactorySegments === undefined) a.nblFactorySegments = [];
   if (a.nblFactoryIsRestrictedZone === undefined) a.nblFactoryIsRestrictedZone = false;
   if (a.nblFactoryAdditionalRecognizedArea === undefined) a.nblFactoryAdditionalRecognizedArea = "";
+  if (a.nblFactoryEmployeeSportsArea === undefined) a.nblFactoryEmployeeSportsArea = "";
   if (a.nblFactoryFootprintArea === undefined) a.nblFactoryFootprintArea = "";
   if (a.nblFactoryIsUnregistered === undefined) a.nblFactoryIsUnregistered = false;
   // §168의11②·③ 수입금액비율 클러스터 — 이력 복원 시 신규 필드 채움 (COV-6).

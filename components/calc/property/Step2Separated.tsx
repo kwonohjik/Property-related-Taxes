@@ -272,14 +272,31 @@ export function Step2Separated({ form, onChange }: Props) {
                   />
 
                   <FieldCard
-                    label="추가 인정면적 (별표6 3호 나·다·라·바)"
+                    label="추가 인정면적 (별표6 3호 나·다·라)"
                     unit="㎡"
-                    hint="녹지지역·활주로·철로·6m 이상 도로·접도구역 / 대규모 저수지·침전지 / 경사도 30도 이상 사면용지 / 종업원용 체육시설(기준면적의 10% 이내)의 합계입니다. 오염피해 인접토지(마목)는 위 부속토지 면적에 넣으세요. 해당분이 없으면 비워 두세요."
+                    hint="녹지지역·활주로·철로·6m 이상 도로·접도구역 / 대규모 저수지·침전지 / 경사도 30도 이상 사면용지의 합계입니다. 종업원용 체육시설(바목)은 아래 칸에, 오염피해 인접토지(마목)는 부속토지 면적에 넣으세요. 해당분이 없으면 비워 두세요."
                   >
                     <DecimalInput
                       value={form.stFactoryAdditionalRecognizedArea}
                       onChange={(v) => onChange({ stFactoryAdditionalRecognizedArea: v })}
                       data-testid="pt-factory-additional-area"
+                    />
+                  </FieldCard>
+
+                  {/*
+                    E4-06 (2026-09-02 코드리뷰) — 바목만 「공장입지기준면적의 100분의 10 이내」
+                    상한이 있다(나·다·라에는 없다). 한 칸으로 받으면 상한을 강제할 수 없어
+                    기준면적이 부풀고 비사업용·종합합산 면적이 과소 산출됐다.
+                  */}
+                  <FieldCard
+                    label="종업원용 체육시설용지 (별표6 3호 바)"
+                    unit="㎡"
+                    hint="「지방세법 시행규칙」 [별표 6] 3호바 — 종업원용 체육시설용지. 별표6 표(종업원수 × 실외 운동장·코트 / 실내체육시설)의 기준면적에 해당하는 면적을 입력하세요. 엔진이 「공장입지기준면적의 100분의 10 이내」 상한을 자동 적용하며, 초과분은 기준면적에 산입되지 않습니다."
+                  >
+                    <DecimalInput
+                      value={form.stFactoryEmployeeSportsArea}
+                      onChange={(v) => onChange({ stFactoryEmployeeSportsArea: v })}
+                      data-testid="pt-factory-employee-sports-area"
                     />
                   </FieldCard>
                 </>

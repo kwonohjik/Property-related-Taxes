@@ -38,6 +38,7 @@ const RAW_FORM = {
   nblFactorySegments: [{ id: "s1", floorArea: "1200", ratePercent: "12", industryLabel: "합성섬유 제조업" }],
   nblFactoryIsRestrictedZone: false,
   nblFactoryAdditionalRecognizedArea: "0",
+  nblFactoryEmployeeSportsArea: "",
   nblFactoryFootprintArea: "",
   nblFactoryIsUnregistered: false,
 };
@@ -48,7 +49,7 @@ const parseNumber = (v: string) => {
 };
 
 describe("⑫ Zod — 공장 필드가 strip되지 않는다", () => {
-  it("STRIP-1: 8개 공장 필드가 모두 파싱 결과에 남는다", () => {
+  it("STRIP-1: 9개 공장 필드가 모두 파싱 결과에 남는다", () => {
     const parsed = nonBusinessLandRawSchema.parse(RAW_FORM);
     // 필드 하나라도 스키마에서 빠지면 여기서 undefined가 되어 실패한다
     expect(parsed.nblFactoryEnabled).toBe(true);
@@ -59,6 +60,7 @@ describe("⑫ Zod — 공장 필드가 strip되지 않는다", () => {
     ]);
     expect(parsed.nblFactoryIsRestrictedZone).toBe(false);
     expect(parsed.nblFactoryAdditionalRecognizedArea).toBe("0");
+    expect(parsed.nblFactoryEmployeeSportsArea).toBe("");
     expect(parsed.nblFactoryFootprintArea).toBe("");
     expect(parsed.nblFactoryIsUnregistered).toBe(false);
   });
@@ -67,6 +69,9 @@ describe("⑫ Zod — 공장 필드가 strip되지 않는다", () => {
     const keys = Object.keys(nonBusinessLandRawSchema.shape).filter((k) => k.startsWith("nblFactory"));
     expect(keys.sort()).toEqual([
       "nblFactoryAdditionalRecognizedArea",
+      // E4-06(2026-09-02) — 별표6 3호바(종업원용 체육시설)만 「기준면적의 10% 이내」 상한이 있어
+      // 상한 없는 나·다·라와 분리했다. 한 칸이면 상한을 강제할 수 없다.
+      "nblFactoryEmployeeSportsArea",
       "nblFactoryEnabled",
       "nblFactoryFootprintArea",
       "nblFactoryIsRestrictedZone",
@@ -93,6 +98,7 @@ describe("⑭ form-mapper — Zod 통과값이 엔진 input으로 변환된다",
       segments: [{ floorArea: 1200, ratePercent: 12, industryLabel: "합성섬유 제조업" }],
       isRestrictedZone: false,
       additionalRecognizedArea: 0,
+      employeeSportsFacilityArea: undefined,
       totalFootprintArea: undefined,
       zoneType: "general_residential",
       isUnregistered: false,
@@ -145,5 +151,39 @@ describe("전체 경로 — raw 폼이 엔진 판정까지 도달한다", () => 
     const parsed = nonBusinessLandRawSchema.parse(noLoc);
     const f = buildFactory(parsed as Record<string, unknown>, parseNumber, "general_residential")!;
     expect(() => judgeFactoryLandExcess(f, "기타토지(공장)")).toThrow(/공장 소재 지역/);
+  });
+});
+
+/**
+ * E4-06 (2026-09-02 코드리뷰) — 별표6 3호**바** 종업원용 체육시설용지 전용 채널.
+ *
+ * ⑫에 등록하지 않으면 `z.object`가 조용히 strip해 **10% 상한 판정 자체가 엔진에 도달하지 않는다**.
+ * 그 결과는 「기준면적이 커져 비사업용 면적이 줄어드는」 유리한 방향의 오류라 눈에 띄지 않는다.
+ * ⇒ 폼 → Zod → mapper → 엔진까지 실제로 흘려보고 **판정 수치**로 확인한다.
+ */
+describe("[E4-06] 종업원용 체육시설(3호바) 전용 채널의 라운드트립", () => {
+  const withSports = (v: string) => ({ ...RAW_FORM, nblFactoryEmployeeSportsArea: v });
+
+  it("SPORTS-1: Zod → mapper → FactoryLandUsage까지 값이 살아 있다", () => {
+    const parsed = nonBusinessLandRawSchema.parse(withSports("5000"));
+    expect(parsed.nblFactoryEmployeeSportsArea).toBe("5000");
+    const f = buildFactory(parsed as Record<string, unknown>, parseNumber, "general_residential");
+    expect(f?.employeeSportsFacilityArea).toBe(5000);
+  });
+
+  it("SPORTS-2: 엔진 판정에서 10% 상한이 적용된다 (입력 5,000 → 인정 1,200)", () => {
+    const parsed = nonBusinessLandRawSchema.parse(withSports("5000"));
+    const f = buildFactory(parsed as Record<string, unknown>, parseNumber, "general_residential");
+    const r = judgeFactoryLandExcess(f!, "test");
+    // 산출 10,000(=1,200 ÷ 12%) + 가목 20% 2,000 = 12,000 → 바목 한도 1,200
+    expect(r.standardAreaDetail?.employeeSportsFacilityCap).toBe(1200);
+    expect(r.standardAreaDetail?.employeeSportsFacilityApplied).toBe(1200);
+    expect(r.standardArea).toBe(13200);
+  });
+
+  it("SPORTS-3: 미입력이면 기준면적이 달라지지 않는다 (전용 채널이 부작용을 내지 않는다)", () => {
+    const parsedEmpty = nonBusinessLandRawSchema.parse(withSports(""));
+    const fEmpty = buildFactory(parsedEmpty as Record<string, unknown>, parseNumber, "general_residential");
+    expect(judgeFactoryLandExcess(fEmpty!, "test").standardArea).toBe(12000);
   });
 });

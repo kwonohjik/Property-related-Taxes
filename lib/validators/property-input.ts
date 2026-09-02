@@ -176,6 +176,8 @@ export const propertyTaxInputSchema = z
         factoryAreaRatePercent: z.number().nonnegative().optional(),
         factoryIsRestrictedZone: z.boolean().optional(),
         factoryAdditionalRecognizedArea: z.number().nonnegative().optional(),
+        // 별표6 3호바 — 엔진이 기준면적의 10% 이내로 clamp한다 (E4-06)
+        factoryEmployeeSportsArea: z.number().nonnegative().optional(),
         factoryIsUnpermitted: z.boolean().optional(),
         isSaltField: z.boolean().optional(),
         isTerminalOrParking: z.boolean().optional(),

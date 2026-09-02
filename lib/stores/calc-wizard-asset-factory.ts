@@ -321,6 +321,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblFactorySegments: [],
     nblFactoryIsRestrictedZone: false,
     nblFactoryAdditionalRecognizedArea: "",
+    nblFactoryEmployeeSportsArea: "",
     nblFactoryFootprintArea: "",
     nblFactoryIsUnregistered: false,
     nblOtherRelatedBusinessType: "",
