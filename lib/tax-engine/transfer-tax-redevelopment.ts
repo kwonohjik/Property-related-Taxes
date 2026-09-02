@@ -25,6 +25,7 @@
  */
 
 import { runRedevelopment, isRedevelopmentActive } from "./redevelopment";
+import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
 import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
@@ -118,6 +119,8 @@ export function calculateRedevelopmentTax(
   },
 ): TransferTaxResult {
   const steps: CalculationStep[] = [...baseSteps];
+  /** CB-02·D5-05 — LTHD 계열 특례 미반영 고지(결과 warnings로도 노출) */
+  let lthdSpecialNotice: string | undefined;
   // 토지만 출자한 조합원입주권은 1세대1주택 특례(비과세·LTHD 표2) 대상이 아니다.
   //
   //   §89①4호 본문 — 「조합원입주권을 1개 보유한 1세대[…관리처분계획의 인가일… 현재
@@ -426,6 +429,39 @@ export function calculateRedevelopmentTax(
     incomeDeduction.eligibleId !== undefined &&
     RATE_SPECIAL_REDUCTION_IDS.includes(incomeDeduction.eligibleId);
   const flatRate20Active = incomeDeduction.eligibleId === "unsold_98";
+  /**
+   * **장기보유특별공제 계열 특례는 이 경로에서 계산되지 않는다** (CB-02·D5-05).
+   *
+   * §97의3①(임대기간분 70%)·§97의4①(표1 가산)·§98의2①1호(양도차익 × 소득세법 §95② **표2**)는
+   * 감면세액이 아니라 **LTHD 공제율 자체**를 바꾸는 조문인데, 이 분기는 소령 §166⑤에 따라
+   * 인가전·인가후 기존건물·청산금 3분기별로 LTHD를 따로 산정하고 `calcLongTermHoldingDeduction`
+   * (§98의2 표2 강제가 들어 있는 유일한 지점)을 아예 부르지 않는다.
+   *
+   * ⚠️ 자산종류 게이트는 이 조합을 **허용한다** — `RENTAL_HOUSING_KINDS`에 `redevelopment_apt`가
+   *   있고, 조특령 §97의3② 후단은 「재개발사업·재건축사업 … 의 시행으로 임대할 수 없는 경우에는
+   *   관리처분계획 인가일 전 6개월부터 준공일 후 6개월까지 계속하여 임대한 것으로 본다」로
+   *   재개발 아파트가 §97의3 대상임을 **전제**한다. 즉 도달 가능한 조합이다.
+   *
+   * 세액 반영은 §166⑤ 3분기 구조와의 결합 판단(전체 양도차익 기준인지 파트별인지)이 남아
+   * **아직 하지 않는다**. 그때까지 「선택은 되는데 계산엔 없다」는 침묵만은 없앤다.
+   */
+  const lthdSpecialSelected = (input.reductions ?? []).filter((r) =>
+    LTHD_SPECIAL_REDUCTION_IDS.includes(r.type),
+  );
+  if (lthdSpecialSelected.length > 0) {
+    const notice =
+      `선택한 감면 중 ${lthdSpecialSelected.length}건(장기보유특별공제 특례 — 조세특례제한법 ` +
+      "§97의3①·§97의4①·§98의2①1호)은 이 계산에 반영되지 않았습니다. 재개발·재건축 양도는 " +
+      "소득세법 시행령 §166⑤에 따라 인가전·인가후 기존건물·청산금 3분기별로 장기보유특별공제를 " +
+      "따로 산정하는데, 특례 공제율을 그 구조에 어떻게 결합할지 정한 명문 규정이 없습니다.";
+    steps.push({
+      label: "조특법 감면 — 미반영 (장기보유특별공제 특례)",
+      formula: notice,
+      amount: 0,
+      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+    });
+    lthdSpecialNotice = notice;
+  }
   const taxRateInput = flatRate20Active
     ? { ...input, forceFlatRate20: true }
     : rateSpecialActive
@@ -687,7 +723,7 @@ export function calculateRedevelopmentTax(
     // D4-08 — STEP 0.9+0.95 주택수 제외 상세. 이 분기가 조기이탈이라 상류에서 받아 실어야 한다.
     ...(opts?.houseCountExclusion ?? {}),
     /** 비차단 안내 — 정상 경로와 동형으로 항상 키를 싣는다(종전에는 키 자체가 없었다). */
-    warnings: opts?.warnings ?? [],
+    warnings: lthdSpecialNotice ? [...(opts?.warnings ?? []), lthdSpecialNotice] : (opts?.warnings ?? []),
     transferGain: redevAfterRight.total.gain,
     taxableGain: redevAfterRight.total.gain,
     usedEstimatedAcquisition: input.useEstimatedAcquisition ?? false,

@@ -352,6 +352,8 @@ export async function POST(request: NextRequest) {
         // ⑭ §89①3호 주택수 제외 축 (D4-02) — 둘 다 폼-전역이라 `data.mixedUse`에 없다.
         //    엔진이 §99의4·§98의9·보유 감면주택·§155②③ 제외를 정본 함수로 판정한다.
         householdHousingCountForExclusion: data.householdHousingCount,
+        // ⑭ §97 시리즈 시한 기준일 (CB-05) — 폼-전역이라 `data.mixedUse`에 없다.
+        assetContractDate: engineInput.assetContractDate,
         specialHouseExclusions: engineInput.specialHouseExclusions,
         // ⑭ 법 §104⑦ 다주택 중과 판정 입력 — 전부 폼-전역 값이라 `data.mixedUse`에 없다.
         //    `houses` 미전송(단독 주택)이면 undefined → 엔진이 중과 판정을 건너뛴다.

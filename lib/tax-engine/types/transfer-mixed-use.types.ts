@@ -147,6 +147,16 @@ export interface MixedUseAssetInput {
   householdHousingCountForExclusion?: number;
   /** P5 모드 2 — 보유 감면주택 주택수 제외 (⑭가 폼-전역 값을 전달) */
   specialHouseExclusions?: import("./transfer.types").TransferTaxInput["specialHouseExclusions"];
+  /**
+   * 자산-수준 매매계약일 — §97 시리즈 시한 판정 기준일 (CB-05).
+   *
+   * 겸용 여부와 무관하게 폼이 전송·Date 변환하는 값인데 겸용 분기가 전달하지 않아,
+   * `period-check.ts`가 `contractDate ?? acquisitionDate`로 **취득일에 후퇴**했다.
+   * 조특법 §97의2①2호(1999.8.20~2001.12.31 매매계약+계약금)·§97의5①1호(2018.12.31까지
+   * 매매계약 체결+계약금 납부 포함)처럼 **계약일이 기준**인 조문에서 계약일은 시한 내인데
+   * 취득일이 시한 외인 사안이 침묵 차단됐다(납세자 불리).
+   */
+  assetContractDate?: Date;
 
   /**
    * §155① 일시적 2주택 — 종전·신규주택 취득일. **폼-전역** 값이라 route가 주입한다.

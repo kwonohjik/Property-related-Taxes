@@ -25,6 +25,7 @@ import { calcTax, computeBracketBreakdown, calcReductions } from "./transfer-tax
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
+import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
 import { getReductionLegalBasis } from "./transfer-tax-helpers";
 import type { RateGroup } from "./types/transfer-aggregate.types";
 import {
@@ -459,6 +460,17 @@ export function runRentalHousingExceptionStep(
   const deferredReductions = allReductions.filter((r) => incomeDeductionIds.has(r.type));
   /** 세액감면형 — 일반 경로와 동일하게 계산한다. */
   const taxCreditReductions = allReductions.filter((r) => !incomeDeductionIds.has(r.type));
+  /**
+   * **LTHD 계열 특례 고지** (CB-02·D5-05) — 감면 효과는 3종인데 위 이분법은 2종만 가른다.
+   *
+   * §97의3①(임대기간분 70%)·§97의4①(표1 가산)·§98의2①1호(표2)는 **감면세액이 아니라
+   * 장기보유특별공제율 자체**를 바꾸는 조문이라 `calcReductions`에서 계산되지 않는다.
+   * 세액 반영은 §166⑤ 3분기 구조와의 결합 판단이 남아 있어 **아직 하지 않는다** —
+   * 그때까지 「선택은 되는데 계산엔 없다」는 침묵만은 없앤다.
+   */
+  const lthdSpecialReductions = allReductions.filter((r) =>
+    LTHD_SPECIAL_REDUCTION_IDS.includes(r.type),
+  );
 
   const reductionResult = calcReductions(
     rheTaxResult.calculatedTax,
@@ -517,6 +529,18 @@ export function runRentalHousingExceptionStep(
       legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
     });
   }
+  const lthdNotice =
+    lthdSpecialReductions.length > 0
+      ? `선택한 감면 중 ${lthdSpecialReductions.length}건(장기보유특별공제 특례 — 조세특례제한법 §97의3①·§97의4①·§98의2①1호)은 이 계산에 반영되지 않았습니다. 이 경로가 양도하는 자산은 «거주주택»이고 §97의3·§97의4는 «임대주택»에 붙는 특례이므로 선택 자체를 재확인하시기 바랍니다.`
+      : undefined;
+  if (lthdNotice) {
+    steps.push({
+      label: "조특법 감면 — 미반영 (장기보유특별공제 특례)",
+      formula: lthdNotice,
+      amount: 0,
+      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+    });
+  }
 
   // L-2 (2026-06-03): 특례 경로는 finalizeTransferTax를 거치지 않으므로
   // 신고불성실·납부지연 가산세를 emitPenaltySteps로 직접 반영 (미입력 시 no-op).
@@ -565,7 +589,9 @@ export function runRentalHousingExceptionStep(
   return {
     amendmentDetail,
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice ? { warnings: [reductionNotice] } : {}),
+    ...(reductionNotice || lthdNotice
+      ? { warnings: [reductionNotice, lthdNotice].filter((x): x is string => x !== undefined) }
+      : {}),
     // 배율 초과분이 남아 있으면 자산 전체가 비과세된 것이 아니다(그 부분은 전액 과세된다).
     isExempt: totalTaxableIncome === 0,
     exemptReason: totalTaxableIncome === 0 ? "장기임대주택 보유자 거주주택 비과세 (§155⑳)" : undefined,

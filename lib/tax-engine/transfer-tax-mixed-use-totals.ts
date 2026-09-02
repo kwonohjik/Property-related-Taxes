@@ -9,6 +9,7 @@ import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { calculateTransferTaxPenalty } from "./transfer-tax-penalty";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
+import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
 import type { TransferReduction, TransferTaxInput } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { TransferReductionDetailSource } from "./types/transfer-result.types";
@@ -282,6 +283,8 @@ export interface MixedUsePostTaxInput {
   selfFarmingRules?: ParsedRates["selfFarmingRules"];
   transferDate: Date;
   acquisitionDate?: Date;
+  /** §97 시리즈 시한 판정 기준일 — 미전달 시 `period-check`가 취득일로 후퇴한다 (CB-05) */
+  assetContractDate?: Date;
   /** 조특법 §133 5년 누적 한도 판정용 과거 이력 */
   priorReductionUsage?: { year: number; type: string; amount: number }[];
   filingPenaltyDetails?: TransferTaxInput["filingPenaltyDetails"];
@@ -347,6 +350,22 @@ function computeMixedUsePostTax(
    */
   const deferred = all.filter((r) => incomeDeductionIds.has(r.type));
   const taxCredit = all.filter((r) => !incomeDeductionIds.has(r.type));
+  /**
+   * **LTHD 계열 특례 고지** (CB-02·D5-05) — 감면 효과는 3종인데 위 이분법은 2종만 가른다.
+   *
+   * §97의3①(임대기간분 70%)·§97의4①(표1 가산)·§98의2①1호(표2)는 **감면세액이 아니라
+   * 장기보유특별공제율 자체**를 바꾸는 조문이라 `calcReductions`에서 계산되지 않는다.
+   * 세액 반영은 §166⑤ 3분기 구조와의 결합 판단이 남아 있어 **아직 하지 않는다** —
+   * 그때까지 「선택은 되는데 계산엔 없다」는 침묵만은 없앤다.
+   */
+  const lthdSpecial = all.filter((r) => LTHD_SPECIAL_REDUCTION_IDS.includes(r.type));
+  if (lthdSpecial.length > 0 && input.warnings) {
+    input.warnings.push(
+      `선택하신 감면 ${lthdSpecial.length}건(장기보유특별공제 특례 — 조특법 §97의3①·§97의4①·§98의2①1호)은 ` +
+        "이 계산에 반영되지 않았습니다. 겸용주택은 장기보유특별공제를 주택분·상가분·비사업용토지분으로 " +
+        "나누어 산정하는데, 특례 공제율을 어느 부분에 어떻게 적용할지 정한 명문 규정이 없습니다.",
+    );
+  }
   if (deferred.length > 0 && input.warnings) {
     input.warnings.push(
       `선택하신 감면 ${deferred.length}건(소득금액 차감형)은 이 계산에 반영되지 않았습니다 — ` +
@@ -370,6 +389,16 @@ function computeMixedUsePostTax(
           basicDeduction,
           taxBase,
           input.acquisitionDate,
+          /**
+           * 13·14번(취득시·양도시 기준시가)은 **겸용에 입력 경로 자체가 없다** —
+           * `CompanionAcqPurchaseBlock`이 겸용에서는 그 위젯을 숨기고 3분할 구조로 대체한다.
+           * 인자만 채워도 undefined라 no-op이므로 의도적으로 비운다(조특령 §97의5② 안분
+           * 차단은 호출부 문제가 아니라 겸용 입력 축 부재 — 별건).
+           */
+          undefined,
+          undefined,
+          // 15번 — 시한 기준일. 이것 하나가 실제로 세액을 가른다 (CB-05).
+          input.assetContractDate,
         )
       : { reductionAmount: 0, reductionType: undefined, reductionTypeApplied: undefined };
 

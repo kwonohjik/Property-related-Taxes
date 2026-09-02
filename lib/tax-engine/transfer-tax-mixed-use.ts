@@ -556,6 +556,8 @@ export function calcMixedUseTransferTax(
       selfFarmingRules,
       transferDate,
       acquisitionDate: asset.landAcquisitionDate,
+      // CB-05 — §97의2①2호·§97의5①1호처럼 **계약일이 기준**인 조문의 시한 판정용.
+      assetContractDate: asset.assetContractDate,
       priorReductionUsage: asset.priorReductionUsage,
       filingPenaltyDetails: asset.filingPenaltyDetails,
       delayedPaymentDetails: asset.delayedPaymentDetails,
