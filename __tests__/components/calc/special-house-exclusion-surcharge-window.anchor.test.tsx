@@ -94,8 +94,11 @@ describe("D4-03 한시배제 창 × 감면주택 주택수 제외", () => {
   it("D4-03-5: 창 안에서도 안내 카드는 그대로 뜬다 (중과 입력 생략은 여전히 사실)", () => {
     renderStep4(IN_WINDOW);
     const notice = screen.getByTestId("surcharge-suspended-notice");
-    // <b> 태그로 쪼개져 있어 getByText가 아니라 textContent로 본다
-    expect(notice.textContent).toMatch(/비과세 판정.*입력은 이 기간에도 아래에 그대로 제공됩니다/);
+    // <b> 태그로 쪼개져 있어 getByText가 아니라 textContent로 본다.
+    // 2026-09-02 문구 정정 — 「생략되는 것」이 중과 전용 입력 하나로 좁혀졌다(§155②③ 트랙 참조).
+    expect(notice.textContent).toMatch(/중과 전용 입력.*계산에 영향이 없어 생략됩니다/);
+    expect(notice.textContent).toMatch(/비과세 판정.*이 기간에도 아래에 그대로 제공됩니다/);
+    expect(notice.textContent).toMatch(/감면주택 주택수 제외/);
   });
 
   it("D4-03-6: 🔴 ⑧ — 창 **안**에서도 미완성 행이 차단된다 (종전에는 무검증 통과)", () => {

@@ -8,22 +8,18 @@ import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-ju
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { classifyEupMyeon, judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
-import {
-  ONE_HOUSE_RESIDENCE,
-  SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW,
-  isWithinSurchargeSuspensionWindow,
-} from "@/lib/tax-engine/legal-codes/transfer";
+import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
-import { HousesListSection } from "./step4-sections/HousesListSection";
+import { HouseCountExemptionInputs } from "./step4-sections/HouseCountExemptionInputs";
+import { SurchargeJudgmentSection } from "./step4-sections/SurchargeJudgmentSection";
 import { TemporaryTwoHouseSection } from "./step4-sections/TemporaryTwoHouseSection";
 import { SpecialSituationSection } from "./step4-sections/SpecialSituationSection";
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
-import { SpecialHouseExclusionSection } from "@/components/calc/transfer/SpecialHouseExclusionSection";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { RightThreeYearExceptionSection } from "@/components/calc/transfer/RightThreeYearExceptionSection";
 import { InheritedRightExceptionSection } from "@/components/calc/transfer/InheritedRightExceptionSection";
@@ -32,12 +28,6 @@ import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHo
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
-// 한시배제 종료일 표시 문자열 — 상수 단일 출처에서 파생(재연장 개정 시 문구 자동 추종, 하드코딩 금지)
-const SUSPENSION_END_KO = (() => {
-  const [y, m, d] = SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end.split("-");
-  return `${y}.${Number(m)}.${Number(d)}.`;
-})();
-
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
 
 /**
@@ -674,9 +664,10 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             className="text-xs leading-relaxed text-sky-800 dark:text-sky-300"
           >
             양도일이 다주택 중과 한시 배제기간(2022-05-10~2026-05-09)에 해당하고 보유기간이 2년 이상이어서
-            조정대상지역 다주택이라도 <b>일반세율</b>이 적용됩니다. 다주택 중과 관련 입력(세대 보유 주택 목록·
-            양도일 조정대상지역 등)은 계산에 영향이 없어 생략됩니다.
-            다만 <b>비과세 판정</b>에 쓰이는 입력은 이 기간에도 아래에 그대로 제공됩니다.
+            조정대상지역 다주택이라도 <b>일반세율</b>이 적용됩니다. 중과 전용 입력(<b>양도일 기준 조정대상지역</b>·중과 경과조치 조건)은
+            계산에 영향이 없어 생략됩니다.
+            다만 <b>비과세 판정</b>에 쓰이는 입력(세대 보유 주택 목록·분양권·상속주택·감면주택 주택수 제외)은
+            이 기간에도 아래에 그대로 제공됩니다.
           </p>
         </ToneCard>
       )}
@@ -702,98 +693,53 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         parseInt(form.householdHousingCount) >= 2 && (
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <SectionHeader
-            title="④ 주택수 제외 (비과세 판정)"
-            description="조특법 감면주택은 1세대1주택 비과세 판정 시 소유주택에서 제외됩니다 — 중과 한시배제와 무관합니다"
+            title="④ 주택수 판정 (비과세)"
+            description="세대 보유 주택·분양권·상속주택·감면주택은 1세대1주택 비과세 판정의 주택수를 바꿉니다 — 중과 한시배제와 무관합니다"
           />
-          <SpecialHouseExclusionSection
-            items={form.specialHouseExclusions ?? []}
-            onChange={(items) => onChange({ specialHouseExclusions: items })}
-          />
+          <div className="space-y-3">
+            {/*
+              🔴 §155②③ — 한시배제 창에서 상속주택 선언 경로가 사라져 있었다.
+
+              「소득세법 시행령」 §155②·③은 「제154조제1항을 적용할 때 … 국내에 1개의 주택을
+              소유하고 있는 것으로 본다」로 **§89①3호 비과세** 판정을 바꾼다. §104⑦ 중과와는
+              층위가 다르다. 그런데 `houses[]`의 유일한 입력 위젯인 `HousesListSection`이
+              ④(중과 트랙) 게이트 안에 있어, 한시배제 창(2022-05-10~2026-05-09) 안의
+              양도에서는 `isInherited`를 켤 칸 자체가 없었다 → 유효 주택수가 2로 남아
+              12억 비과세를 통째로 잃었다(실측: 양도 10억·취득 5억·2014-01-01 취득·
+              2025-06-01 양도·상속주택 1채 → 선언 시 총부담 0 ↔ 미선언 시 141,966,000원).
+
+              같은 게이트가 `presaleRights`도 가둔다 — 「소득세법」 §89②(주택 + 권리 보유 세대의
+              주택 양도 → §89①3호 배제) 역시 비과세 축이다. ② 섹션은 `< 2`에서만 열므로
+              2채 이상 + 한시배제에서는 선언 경로가 없었다.
+
+              ④와 이 분기는 `surchargeSuspended`로 **배타**라 같은 배열을 두 컴포넌트가
+              각각 patch하는 last-write-wins 위험이 없다(D4-03과 동일 논거). 두 분기가 같은 JSX를
+              복제해 한쪽만 고쳐 갈라지는 것이 이 결함의 원인이었으므로 3종은
+              `HouseCountExemptionInputs` 한 곳에 모았다.
+
+              여기서 열지 않는 것은 **중과 전용** 둘뿐이다 —
+                · 양도일 기준 조정대상지역 (이 분기에 없음)
+                · 중과 경과조치 나·다목 (`hideGracePeriod`) — 창 안에서는
+                  `checkGracePeriodExemption`의 가목 우선 게이트가 내용과 무관하게
+                  `suspended: true`를 내므로 **증명 가능한 no-op**이다.
+                  ⑧ validate도 같은 조건으로 건너뛴다(보이지 않는 필드 차단 방지).
+            */}
+            <HouseCountExemptionInputs form={form} onChange={onChange} hideGracePeriod />
+          </div>
         </section>
       )}
 
-      {/* ④ 주택수·중과 판정 — 세대 주택 목록·감면주택 제외·양도일 조정대상지역 (중과 트랙) */}
+      {/* ④ 주택수·중과 판정 — 세대 주택 목록·감면주택 제외·양도일 조정대상지역 (중과 트랙).
+          800줄 정책으로 `step4-sections/SurchargeJudgmentSection.tsx`로 분리(2026-09-02). */}
       {!surchargeSuspended &&
         (primaryKind === "housing" ||
           (isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2)) && (
-        <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
-          <SectionHeader title="④ 주택수·중과 판정" description="세대 전체 보유 주택·양도일 조정대상지역으로 다주택 중과를 판정합니다" />
-          <div className="space-y-3">
-            {/*
-              🔴 2026-08-26 이동(C1-01): 주택 1채 미만 세대의 분양권·입주권 목록은 **② 비과세 판정**
-                 섹션으로 옮겼다. 이 자리는 중과 트랙이라 한시배제 기간(2022-05-10~2026-05-09)에는
-                 섹션 전체가 안내 카드로 대체되어 사라지는데, 「소득세법」 §89②(주택 + 권리 보유
-                 세대의 주택 양도 → §89①3호 배제)은 **중과와 무관한 비과세 규칙**이라 그때도
-                 선언 경로가 있어야 한다.
-              ⚠️ 2채 이상에서는 아래 `HousesListSection`이 같은 `form.presaleRights`를 렌더한다.
-                 두 벌이 뜨면 같은 배열을 두 컴포넌트가 각각 patch해 마지막 것이 이긴다 —
-                 그래서 ②는 `< 2`에서만 연다.
-            */}
-
-            {/* 세대 보유 주택 목록 + 분양권 + 감면주택 주택수 제외 (시행령 §167의3 주택 수 산정) */}
-            {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
-              <>
-                <HousesListSection form={form} onChange={onChange} />
-                {/* 조특법 감면주택 주택수 제외 (§89③3호 의제) */}
-                <SpecialHouseExclusionSection
-                  items={form.specialHouseExclusions ?? []}
-                  onChange={(items) => onChange({ specialHouseExclusions: items })}
-                />
-                {/* §155② 상속주택 특례 — 상속주택 존재 시 일반주택 양도 비과세(주택수 자동 제외). 2년내 증여분 게이트 */}
-                {form.houses?.some((h) => h.isInherited) && (
-                  <ToggleCard
-                    variant="card"
-                    tone="rose"
-                    title="양도주택이 상속개시 2년내 피상속인 증여분"
-                    description="§155② 상속주택 특례에서 일반주택(양도 대상)이 상속개시일부터 2년 내 피상속인으로부터 증여받은 주택이면 특례가 배제됩니다. 해당 시 체크하세요."
-                    checked={form.generalHouseGiftedFromDecedentWithin2yr}
-                    onCheckedChange={(v) => onChange({ generalHouseGiftedFromDecedentWithin2yr: v })}
-                  />
-                )}
-              </>
-            )}
-
-            {/* 양도일 기준 조정대상지역 — 중과세 판단 기준 (주택 전용) */}
-            {primaryKind === "housing" && (
-              <ToggleCard
-                checked={form.isRegulatedArea}
-                onCheckedChange={(v) => onChange({ isRegulatedArea: v, isRegulatedAreaTouched: true })}
-                title="양도일 기준 조정대상지역"
-                description="중과세 판단 기준"
-                tone="rose"
-              />
-            )}
-
-            {/* 메시지 ① 중과 검토 안내 — 주택 + 양도시 조정대상이면 항상(1주택 포함, 단순 주의환기).
-                한시배제 충족(B1: surchargeSuspended)이면 ④ 섹션 자체가 sky 안내 카드로 대체되어 이 팁은
-                미도달 — 여기서는 B2(윈도우 내·보유 2년 미만)·B3(종료일 이후)의 혼선만 보강.
-                (plan: step4-regulated-tip-surcharge-suspension) */}
-            {primaryKind === "housing" && form.isRegulatedArea && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900">
-                <p className="font-medium">⚠️ 양도일 현재 조정대상지역</p>
-                <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
-                  조정대상지역 주택 양도는 중과세 적용 여부를 검토하세요.
-                </p>
-                {/* B2: 양도일은 한시배제 윈도우 내이나 보유 2년 미만 (충족 시 섹션 대체로 미도달) */}
-                {isWithinSurchargeSuspensionWindow(form.transferDate) && !!primaryAcquisitionDate && (
-                  <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
-                    보유 2년 미만은 다주택 중과 한시배제(§167의3①12의2) 대상이 아닙니다(단기양도세율과
-                    비교 적용).
-                  </p>
-                )}
-                {/* B3: 양도일이 한시배제 종료일 이후 — 계약·허가 기반 경과조치 가능성 안내(자동판정 미지원) */}
-                {!!form.transferDate &&
-                  form.transferDate > SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end && (
-                    <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
-                      {SUSPENSION_END_KO}까지 매매계약 체결(계약금 수령)·토지거래허가 신청분은
-                      경과조치로 중과가 배제될 수 있습니다(§167의3①12의2 나·다, §167의10①12의2 나·다).
-                      아래 ④ 중과 판정 &gt; 중과 경과조치 조건 입력에서 나·다목을 판정합니다.
-                    </p>
-                  )}
-              </div>
-            )}
-          </div>
-        </section>
+        <SurchargeJudgmentSection
+          form={form}
+          onChange={onChange}
+          primaryKind={primaryKind}
+          primaryAcquisitionDate={primaryAcquisitionDate}
+        />
       )}
 
       {/* ⑤ 특수 상황 — 중과·배제 트리거 (비과세 특례 이후 위치).

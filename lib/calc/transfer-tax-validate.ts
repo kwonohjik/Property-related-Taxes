@@ -289,12 +289,6 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     if (!form.householdHousingCount)
       issues.push({ step, message: "세대 보유 주택 수를 선택하세요." });
 
-    // 다주택 중과 한시배제(양도일 윈도우+보유2년) → ④ 섹션 숨김 ↔ 검증도 skip(보이지 않는 필드 차단 방지, mirror)
-    const surchargeSuppressed = isMultiHouseSurchargeSuppressed(
-      form.transferDate,
-      form.assets?.[0]?.acquisitionDate,
-    );
-
     /**
      * P5 모드 2 (⑧): 보유 감면주택 행 — 조문·취득일 필수 (확인 토글은 낙관 — 엔진 불적용 사유)
      *
@@ -314,8 +308,19 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: `보유 감면주택 ${i + 1}: 감면주택의 취득일(또는 매매계약일)을 입력하세요.` });
     }
 
-    // ⑧ 세대 보유 주택 목록 — 행별 첫 오류 1건씩 (자동 안분 fallback 금지: 미입력=차단)
-    const houses = surchargeSuppressed ? [] : (form.houses ?? []);
+    /**
+     * ⑧ 세대 보유 주택 목록 — 행별 첫 오류 1건씩 (자동 안분 fallback 금지: 미입력=차단)
+     *
+     * 🔴 종전에는 `surchargeSuppressed`면 이 검증을 **건너뛰었다**. `specialHouseExclusions`가
+     * D4-03에서 같은 이유로 skip을 걷어낸 것과 동일한 비대칭이 남아 있었다 —
+     * `transfer-tax-api.ts:582`는 `housesPayload`를 억제 없이 전송하므로, 창 밖에서 입력한 뒤
+     * 양도일을 창 안으로 옮기면 **무검증 통과**가 된다.
+     *
+     * 「보이지 않는 필드 차단 방지」라는 원래 취지도 더는 성립하지 않는다 — 한시배제 기간에도
+     * ⑤ `HousesListSection` 입력 경로가 열려 있다(§155②③ 상속주택·§89② 분양권은 §89①3호
+     * **비과세** 축이라 §104⑦ 중과 한시배제와 무관하다).
+     */
+    const houses = form.houses ?? [];
     for (let i = 0; i < houses.length; i++) {
       const h = houses[i];
       const label = `보유 주택 ${i + 1}`;
@@ -377,17 +382,29 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       issues.push({ step, message: "양도 주택 어린이집: 운영 기간(년)을 입력하세요." });
 
     // ⑧ 세대 보유 분양권·입주권 — 각 행 취득일 필수 (자동 안분 fallback 금지)
-    const presaleRights = surchargeSuppressed ? [] : (form.presaleRights ?? []);
+    // 위 houses와 같은 이유로 한시배제 skip을 두지 않는다 — §89②는 비과세 축이고 ⑤도 열려 있다.
+    const presaleRights = form.presaleRights ?? [];
     for (let i = 0; i < presaleRights.length; i++) {
       if (!presaleRights[i].acquisitionDate)
         issues.push({ step, message: `분양권·입주권 ${i + 1}: 취득일을 입력하세요.` });
     }
 
-    // ⑧ 다주택 중과 한시 유예(§167의3①12의2 나·다목) — 입력(ON) 시 목별 필수 입력.
-    // houses 0건이면 엔진이 gracePeriod를 소비하지 않고 위젯도 숨김 → 검증도 houses>0 게이트(보이지 않는 필드 차단 방지).
-    // 허가·계약금 증빙 미확인은 silent 차단이 아닌 "경과조치 부적용으로 계산 진행"(원문 "모두 갖춘" 요건 —
-    // 엔진 checkGracePeriodExemption이 미충족 시 자동으로 suspended:false 처리·차단 대상 아님).
-    if (houses.length > 0 && form.gracePeriod) {
+    /**
+     * ⑧ 다주택 중과 한시 유예(§167의3①12의2 나·다목) — 입력(ON) 시 목별 필수 입력.
+     * houses 0건이면 엔진이 gracePeriod를 소비하지 않고 위젯도 숨김 → 검증도 houses>0 게이트(보이지 않는 필드 차단 방지).
+     * 허가·계약금 증빙 미확인은 silent 차단이 아닌 "경과조치 부적용으로 계산 진행"(원문 "모두 갖춘" 요건 —
+     * 엔진 checkGracePeriodExemption이 미충족 시 자동으로 suspended:false 처리·차단 대상 아님).
+     *
+     * ⚠️ **한시배제 창 안에서는 건너뛴다** — 위 houses·presaleRights와 달리 이 축만은 여전히
+     * 중과 전용이고 창 안에서 **증명 가능한 no-op**이다(`checkGracePeriodExemption`의 가목 우선
+     * 게이트가 `gracePeriod` 내용과 무관하게 `suspended: true`를 낸다). ⑤도 같은 조건으로
+     * `HousesListSection hideGracePeriod`가 위젯을 닫으므로 짝이 맞는다.
+     */
+    const graceHidden = isMultiHouseSurchargeSuppressed(
+      form.transferDate,
+      form.assets?.[0]?.acquisitionDate,
+    );
+    if (!graceHidden && houses.length > 0 && form.gracePeriod) {
       if (!form.gracePeriod.contractDate)
         issues.push({ step, message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
       if (form.gracePeriod.isLandPermitTarget === true && !form.gracePeriod.permitApplicationDate)
