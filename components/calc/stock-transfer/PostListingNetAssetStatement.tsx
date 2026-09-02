@@ -227,10 +227,10 @@ export function YearColumn({
 export function PostListingNetAssetStatement({ form, onChange, mode }: PostListingNetAssetStatementProps) {
   return (
     <div className="space-y-3">
+      {/* 번호 배지 제거(2026-09-02) — 부모 카드가 ①②③ 섹션 번호를 쓰게 되면서
+          여기 «2»·«3»과 충돌했다. 이 번호는 폐기된 「PDF 3개 화면」 계열의 잔재로,
+          «1»에 해당하는 종가 표는 애초에 배지가 없어 계열이 이미 깨져 있었다. */}
       <div className="flex items-center gap-2">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
-          3
-        </span>
         <p className="text-xs font-semibold text-sky-700">
           순자산가액 계산서 (PDF 20행 — 소령 §165④1 나목)
         </p>

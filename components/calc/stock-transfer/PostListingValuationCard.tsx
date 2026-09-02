@@ -125,15 +125,42 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
       tone="amber"
     >
       <div className="mt-4 space-y-4" onKeyDown={handleEnterNext} data-enter-nav="off">
-        {/* 환산 산식 안내 (violet) — §165⑤ + §176의2②1호 합성 */}
+        {/* 환산 산식 안내 (violet) — §165⑤ + §176의2②1호 합성.
+            ★ 산식의 각 항에 ①②③을 달아 **아래 섹션 번호와 1:1로 잇는다**.
+            제보(2026-09-02): 「환산 입력 방식 이후로는 그 옵션 버튼이 뭐하는 것인지 헷갈린다」 —
+            사용자가 넣어야 할 값은 셋뿐인데 화면이 평평해서 «이 칸이 산식의 어디에 들어가는가»가
+            보이지 않았다. 번호가 그 답이다. */}
         <div className="rounded-lg border border-violet-200 bg-violet-50/70 px-4 py-3 text-sm">
           <p className="font-semibold text-violet-800 mb-2">환산 산식 (소령 §165⑤ + §176의2②1호 합성)</p>
           <div className="text-violet-700 space-y-1 text-xs font-mono">
-            <p>[§165⑤] 1주당 취득기준시가 = 상장일 이후 1개월 종가평균 × (취득연도 평가 ÷ 상장연도 평가)</p>
-            <p>[§176의2②1호] 환산취득가 = 양도가 × (1주당 취득기준시가 ÷ 1주당 양도기준시가)</p>
-            <p>1주당 평가 = 순손익가치×3/5 + 순자산가치×2/5 {form.isHeavyRealEstateForValuation && "(부동산과다 시 2:3 반전)"}</p>
+            <p>[§165⑤] 1주당 취득기준시가 = ②상장일 이후 1개월 종가평균 × (③취득연도 평가 ÷ ③상장연도 평가)</p>
+            <p>[§176의2②1호] 환산취득가 = 양도가 × (1주당 취득기준시가 ÷ ①양도 당시 기준시가)</p>
+            <p>③1주당 평가 = 순손익가치×3/5 + 순자산가치×2/5 {form.isHeavyRealEstateForValuation && "(부동산과다 시 2:3 반전)"}</p>
           </div>
         </div>
+
+        {/* 환산 입력 방식 — **카드 전체의 스위치**다. 산식 바로 아래 최상단으로 올린다.
+            종전에는 「상장일」과 같은 높이에 있어 지배 범위가 보이지 않았다. 실제로는
+            ②(종가 표 ↔ 단일 숫자)와 ③(결산서 ↔ 평가액)을 **동시에** 바꾼다.
+            ①은 이 선택과 무관하다 — 그래서 hint로 범위를 명시한다.
+            라벨이 «가진 자료» 기준인 이유는 PR #1389 참조. */}
+        <FieldCard
+          label="환산 입력 방식"
+          hint="아래 ②·③을 어떤 자료로 채울지 한 번에 정합니다. ①은 이 선택과 무관합니다."
+        >
+          <RadioCardGroup
+            name="unlistedDetailMode"
+            value={mode}
+            onChange={(v) => onChange({ unlistedDetailMode: v as "simple" | "listing_only" | "full" })}
+            tone="amber"
+            layout="inline"
+            options={[
+              { value: "full", label: "재무제표로 계산" },
+              { value: "simple", label: "평가액 직접 입력" },
+              { value: "listing_only", label: "상장연도만 재무제표" },
+            ]}
+          />
+        </FieldCard>
 
         {/* ★ 양도 당시 기준시가 — 「입력 방식」과 「1개월 종가 평균」을 한 섹션으로 묶는다.
             제보(2026-09-02): 두 필드가 각각 떨어져 있어 **무엇을 넣는 칸인지 라벨만으로는
@@ -142,7 +169,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             근거: 「소득세법」 제99조 제1항 제3호 → 같은 법 시행령 제165조 제3항
                   (상장주식의 기준시가 = 양도일 이전 1개월간 최종시세가액의 평균액).
                   이 값이 「소득세법 시행령」 제176조의2 제2항 제1호 환산취득가액의 **분모**다. */}
-        <ToneCard tone="amber" title="양도 당시 기준시가" bodyClassName="space-y-3">
+        <ToneCard tone="amber" sectionNum={1} title="양도 당시 기준시가" bodyClassName="space-y-3">
           {/* hint를 두지 않는다 — 섹션 제목이 이미 같은 말을 하고, 종전 hint의
               「direct vs daily」는 내부 용어였다. 선택지 라벨만으로 판단이 선다. */}
           <FieldCard label="입력 방식">
@@ -200,97 +227,162 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           )}
         </ToneCard>
 
-        {/* 상장일 (기존 — 종가 표 자동 채움 trigger) */}
-        <FieldCard label="상장일" required hint="최초 상장 기준일. 입력 시 종가 표 32셀 일자가 자동 채워집니다.">
-          <DateInput
-            value={form.listingDate}
-            onChange={(v) => {
-              const dates = autoFillDates(v);
-              const closes = (form.listingPriceClosing ?? []).slice(0, dates.length);
-              while (closes.length < dates.length) closes.push("");
-              // 주말 슬롯 잔재 제거 — 슬롯↔요일 재매핑 시 거래일 카운트 보호
-              for (let i = 0; i < dates.length; i++) {
-                const dow = dayOfWeek(dates[i]);
-                if (dow === 0 || dow === 6) closes[i] = "";
-              }
-              onChange({ listingDate: v, listingPriceDates: dates, listingPriceClosing: closes });
-            }}
-          />
-        </FieldCard>
+        {/* ② 상장 당시 시세 — 산식의 기초가액(상장일 이후 1개월 종가평균).
+            · 상장일이 여기 속한다 — 「이후 1개월」의 **기산일**이자 종가 표 32셀 자동 채움 trigger다.
+            · 자본조정(증자·합병)도 ②다 — 평가기간을 절단해 **종가평균**을 바꾼다(③이 아니다).
+              상증령 §52의2②2호 준용 해석(PostListingCapitalEventSection 주석 참조). */}
+        <ToneCard tone="amber" sectionNum={2} title="상장 당시 시세" bodyClassName="space-y-3">
+          {/* 상장일 (기존 — 종가 표 자동 채움 trigger) */}
+          <FieldCard label="상장일" required hint="최초 상장 기준일. 입력 시 종가 표 32셀 일자가 자동 채워집니다.">
+            <DateInput
+              value={form.listingDate}
+              onChange={(v) => {
+                const dates = autoFillDates(v);
+                const closes = (form.listingPriceClosing ?? []).slice(0, dates.length);
+                while (closes.length < dates.length) closes.push("");
+                // 주말 슬롯 잔재 제거 — 슬롯↔요일 재매핑 시 거래일 카운트 보호
+                for (let i = 0; i < dates.length; i++) {
+                  const dow = dayOfWeek(dates[i]);
+                  if (dow === 0 || dow === 6) closes[i] = "";
+                }
+                onChange({ listingDate: v, listingPriceDates: dates, listingPriceClosing: closes });
+              }}
+            />
+          </FieldCard>
 
-        {/* unlistedDetailMode RadioCardGroup
-            라벨은 «가진 자료» 기준이다. 종전 「완전 재현 (PDF 3개 화면)」·「간이 (결과값 4개
-            직접 입력)」은 **개발 과정의 내부 용어**였다 — 처음 쓰는 납세자는 그 PDF가 무엇인지,
-            「결과값」이 무엇의 결과인지 알 수 없다. 사용자가 실제로 판단할 수 있는 것은
-            「내 손에 재무제표가 있나」뿐이므로 그 축으로 바꾼다.
-            layout="inline"은 한 행 나열 + description 미렌더를 동시에 준다 —
-            보조 설명이 오히려 선택을 방해한다는 판단이라 description 자체를 두지 않는다. */}
-        <FieldCard label="환산 입력 방식">
-          <RadioCardGroup
-            name="unlistedDetailMode"
-            value={mode}
-            onChange={(v) => onChange({ unlistedDetailMode: v as "simple" | "listing_only" | "full" })}
-            tone="amber"
-            layout="inline"
-            options={[
-              { value: "full", label: "재무제표로 계산" },
-              { value: "simple", label: "평가액 직접 입력" },
-              { value: "listing_only", label: "상장연도만 재무제표" },
-            ]}
-          />
-        </FieldCard>
-
-        {/* simple 모드 — 기존 4 필드 그대로 */}
-        {mode === "simple" && (
-          <>
-            <CurrencyInput
+          {/* ② 안에서 「상장일」과 모양을 맞춘다 — 종전에는 이 칸만 라벨-상단이라
+              같은 섹션 안에서 정렬이 어긋났다. FieldCard는 ①과 동일 패턴이다.
+              ⚠️ 주석은 삼항 «밖»에 둔다 — 분기 안 첫 요소로 두면 JSX 주석이 객체 리터럴로
+                 파싱돼 TS1005로 깨진다(2026-09-02 실측). 주석 본문에 중괄호도 쓰지 말 것 —
+                 닫는 중괄호가 주석을 먼저 닫아 TS1381이 난다. */}
+          {mode === "simple" ? (
+            <FieldCard
               label="상장일 이후 1개월 종가평균"
               required
               hint="상장일부터 1개월간 거래일 종가의 평균값 (원, 소령 §165⑤)"
-              value={form.listingDatePriceAvg1Month}
-              onChange={(v) => onChange({ listingDatePriceAvg1Month: v })}
-              placeholder="상장일 이후 1개월 종가평균"
-            />
-            {/* 값 입력 방식 — 결과값 직접 ↔ 순액에서 계산 (계획서 Q-1: 간이 모드 «안»의 하위 토글) */}
-            <FieldCard label="값 입력 방식">
-              <RadioCardGroup
-                name="simpleValueInputMode"
-                value={valueMode}
-                onChange={(v) => onChange({ simpleValueInputMode: v as "direct" | "amounts" })}
-                tone="amber"
-                layout="inline"
-                options={[
-                  {
-                    value: "direct",
-                    label: "결과값 직접 입력",
-                    description: "외부에서 보충적 평가를 마친 경우",
-                  },
-                  {
-                    value: "amounts",
-                    label: "순손익액·순자산가액에서 계산",
-                    description: "결산 수치에서 1주당 가치를 자동 산정",
-                  },
-                ]}
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                value={form.listingDatePriceAvg1Month}
+                onChange={(v) => onChange({ listingDatePriceAvg1Month: v })}
+                placeholder="상장일 이후 1개월 종가평균"
               />
             </FieldCard>
+          ) : (
+            <>
+              {/* F-02 키움 자동조회 — 종목코드 + 상장일 + 상장 종목 충족 시 활성화 */}
+              <KiwoomPostListingAutoFetchButton
+                securityCode={form.securityCode}
+                listingDate={form.listingDate}
+                marketType={form.marketType}
+                tradingHalt={form.kiwoomTradingHalt}
+                onFill={onChange}
+              />
+              <PostListingClosingPriceTable form={form} onChange={onChange} />
+              <PostListingCapitalEventSection form={form} onChange={onChange} />
+            </>
+          )}
+        </ToneCard>
 
-            {valueMode === "direct" ? (
-              <>
-                <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-                  <p className="text-sm font-medium text-amber-800 mb-3">상장연도 비상장 보충적 평가</p>
-                  <div className="space-y-3">
-                    <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required allowNegative
-                      value={form.listingYearNetIncomePerShare}
-                      onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
-                      placeholder="상장일 직전 사업연도 1주당 순손익가치" />
-                    <CurrencyInput label="상장일 직전 사업연도 1주당 순자산가치" required allowNegative
-                      value={form.listingYearNetAssetPerShare}
-                      onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
-                      placeholder="상장일 직전 사업연도 1주당 순자산가치" />
+        {/* ③ 상장연도·취득연도 평가액 — 산식의 **비율**(취득연도 평가 ÷ 상장연도 평가).
+            「값 입력 방식」은 ③ 안의 하위 토글이다(simple 모드 전용) — 종전에는 카드
+            최상위에 있어 ②의 종가평균까지 지배하는 것처럼 보였다. */}
+        <ToneCard tone="amber" sectionNum={3} title="상장연도·취득연도 평가액" bodyClassName="space-y-3">
+          {mode === "simple" ? (
+            <>
+              {/* 값 입력 방식 — 결과값 직접 ↔ 순액에서 계산 (계획서 Q-1: 간이 모드 «안»의 하위 토글) */}
+              <FieldCard label="값 입력 방식">
+                <RadioCardGroup
+                  name="simpleValueInputMode"
+                  value={valueMode}
+                  onChange={(v) => onChange({ simpleValueInputMode: v as "direct" | "amounts" })}
+                  tone="amber"
+                  layout="inline"
+                  options={[
+                    {
+                      value: "direct",
+                      label: "결과값 직접 입력",
+                      description: "외부에서 보충적 평가를 마친 경우",
+                    },
+                    {
+                      value: "amounts",
+                      label: "순손익액·순자산가액에서 계산",
+                      description: "결산 수치에서 1주당 가치를 자동 산정",
+                    },
+                  ]}
+                />
+              </FieldCard>
+              {valueMode === "direct" ? (
+                <>
+                  <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
+                    <p className="text-sm font-medium text-amber-800 mb-3">상장연도 비상장 보충적 평가</p>
+                    <div className="space-y-3">
+                      <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required allowNegative
+                        value={form.listingYearNetIncomePerShare}
+                        onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
+                        placeholder="상장일 직전 사업연도 1주당 순손익가치" />
+                      <CurrencyInput label="상장일 직전 사업연도 1주당 순자산가치" required allowNegative
+                        value={form.listingYearNetAssetPerShare}
+                        onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
+                        placeholder="상장일 직전 사업연도 1주당 순자산가치" />
+                    </div>
                   </div>
-                </div>
+                  <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
+                    <p className="text-sm font-medium text-amber-800 mb-3">취득연도 비상장 보충적 평가</p>
+                    <div className="space-y-3">
+                      <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
+                        value={form.acquisitionYearNetIncomePerShare}
+                        onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
+                        placeholder="취득일 직전 사업연도 1주당 순손익가치" />
+                      <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required allowNegative
+                        value={form.acquisitionYearNetAssetPerShare}
+                        onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
+                        placeholder="취득일 직전 사업연도 1주당 순자산가치" />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <PostListingAmountInputSection
+                    title="상장연도 비상장 보충적 평가"
+                    axisLabel="상장일"
+                    form={form}
+                    onChange={onChange}
+                    keys={{
+                      netIncomeAmount: "listingYearNetIncomeAmount",
+                      shareCount: "listingYearShareCount",
+                      netAssetAmount: "listingYearNetAssetAmount",
+                      goodwill: "listingYearGoodwill",
+                      netIncomePerShare: "listingYearNetIncomePerShare",
+                      netAssetPerShare: "listingYearNetAssetPerShare",
+                    }}
+                  />
+                  <PostListingAmountInputSection
+                    title="취득연도 비상장 보충적 평가"
+                    axisLabel="취득일"
+                    form={form}
+                    onChange={onChange}
+                    keys={{
+                      netIncomeAmount: "acquisitionYearNetIncomeAmount",
+                      shareCount: "acquisitionYearShareCount",
+                      netAssetAmount: "acquisitionYearNetAssetAmount",
+                      goodwill: "acquisitionYearGoodwill",
+                      netIncomePerShare: "acquisitionYearNetIncomePerShare",
+                      netAssetPerShare: "acquisitionYearNetAssetPerShare",
+                    }}
+                  />
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <PostListingNetIncomeStatement form={form} onChange={onChange} mode={mode} />
+              <PostListingNetAssetStatement form={form} onChange={onChange} mode={mode} />
+              {/* listing_only — 취득연도 4 필드 직접 입력 */}
+              {mode === "listing_only" && (
                 <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-                  <p className="text-sm font-medium text-amber-800 mb-3">취득연도 비상장 보충적 평가</p>
+                  <p className="text-sm font-medium text-amber-800 mb-3">취득일 직전 사업연도 1주당 가치 (직접 입력)</p>
                   <div className="space-y-3">
                     <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
                       value={form.acquisitionYearNetIncomePerShare}
@@ -302,76 +394,11 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                       placeholder="취득일 직전 사업연도 1주당 순자산가치" />
                   </div>
                 </div>
-              </>
-            ) : (
-              <>
-                <PostListingAmountInputSection
-                  title="상장연도 비상장 보충적 평가"
-                  axisLabel="상장일"
-                  form={form}
-                  onChange={onChange}
-                  keys={{
-                    netIncomeAmount: "listingYearNetIncomeAmount",
-                    shareCount: "listingYearShareCount",
-                    netAssetAmount: "listingYearNetAssetAmount",
-                    goodwill: "listingYearGoodwill",
-                    netIncomePerShare: "listingYearNetIncomePerShare",
-                    netAssetPerShare: "listingYearNetAssetPerShare",
-                  }}
-                />
-                <PostListingAmountInputSection
-                  title="취득연도 비상장 보충적 평가"
-                  axisLabel="취득일"
-                  form={form}
-                  onChange={onChange}
-                  keys={{
-                    netIncomeAmount: "acquisitionYearNetIncomeAmount",
-                    shareCount: "acquisitionYearShareCount",
-                    netAssetAmount: "acquisitionYearNetAssetAmount",
-                    goodwill: "acquisitionYearGoodwill",
-                    netIncomePerShare: "acquisitionYearNetIncomePerShare",
-                    netAssetPerShare: "acquisitionYearNetAssetPerShare",
-                  }}
-                />
-              </>
-            )}
-          </>
-        )}
+              )}
+            </>
+          )}
+        </ToneCard>
 
-        {/* listing_only / full — sub-components */}
-        {mode !== "simple" && (
-          <>
-            {/* F-02 키움 자동조회 — 종목코드 + 상장일 + 상장 종목 충족 시 활성화 */}
-            <KiwoomPostListingAutoFetchButton
-              securityCode={form.securityCode}
-              listingDate={form.listingDate}
-              marketType={form.marketType}
-              tradingHalt={form.kiwoomTradingHalt}
-              onFill={onChange}
-            />
-            <PostListingClosingPriceTable form={form} onChange={onChange} />
-            <PostListingCapitalEventSection form={form} onChange={onChange} />
-            <PostListingNetIncomeStatement form={form} onChange={onChange} mode={mode} />
-            <PostListingNetAssetStatement form={form} onChange={onChange} mode={mode} />
-
-            {/* listing_only — 취득연도 4 필드 직접 입력 */}
-            {mode === "listing_only" && (
-              <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-                <p className="text-sm font-medium text-amber-800 mb-3">취득일 직전 사업연도 1주당 가치 (직접 입력)</p>
-                <div className="space-y-3">
-                  <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
-                    value={form.acquisitionYearNetIncomePerShare}
-                    onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
-                    placeholder="취득일 직전 사업연도 1주당 순손익가치" />
-                  <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required allowNegative
-                    value={form.acquisitionYearNetAssetPerShare}
-                    onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
-                    placeholder="취득일 직전 사업연도 1주당 순자산가치" />
-                </div>
-              </div>
-            )}
-          </>
-        )}
 
         {/* 환산 미리보기 — Preview 컴포넌트 (P2 G-02·G-05 분리) */}
         <PostListingFormulaPreview form={form} />
