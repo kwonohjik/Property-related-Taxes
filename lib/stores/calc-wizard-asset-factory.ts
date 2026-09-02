@@ -269,6 +269,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblLandDivision: "",
     nblOwnershipRatio: "",
     nblFarmingSelf: false,
+    nblDisqualifiedTaxPeriods: "",
     nblFarmerResidenceDistance: "",
     nblFarmlandIsWeekendFarm: false,
     nblFarmlandIsConversionApproved: false,

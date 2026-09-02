@@ -343,6 +343,15 @@ export interface NonBusinessLandInput {
 
   // 농지
   farmingSelf?: boolean;
+  /**
+   * 조특령 §66⑭ 결격 과세기간(달력연도 목록) — 자경기간에서 제외 (E2-09).
+   *
+   * 「소득세법 시행령」 §168의8② 후단이 자경기간 판정에 「조세특례제한법 시행령」 §66⑭를 준용한다.
+   * 연수(count)가 아니라 **연도**를 받는 이유는 `disqualified-tax-periods.ts` 헤더 참조 —
+   * §168의6 기간기준이 「직전 5년 중 3년」·「직전 3년 중 2년」이라 **어느 해가 빠지는지**가
+   * 판정을 가른다.
+   */
+  disqualifiedTaxPeriods?: number[];
   /** @deprecated v2에서는 `ownerProfile` 사용을 권장 */
   farmerResidenceDistance?: number;
   landLocation?: LocationInfo;

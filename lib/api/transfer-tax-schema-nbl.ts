@@ -101,6 +101,8 @@ export const nonBusinessLandRawSchema = z.object({
   nblLandLng: z.string().optional(),
   // 농지
   nblFarmingSelf: z.boolean().optional(),
+  // 조특령 §66⑭ 결격 과세기간 — 쉼표·공백 구분 연도 목록 (E2-09)
+  nblDisqualifiedTaxPeriods: z.string().optional(),
   nblFarmlandIsWeekendFarm: z.boolean().optional(),
   nblFarmlandIsConversionApproved: z.boolean().optional(),
   nblFarmlandIsFarmDevZone: z.boolean().optional(),

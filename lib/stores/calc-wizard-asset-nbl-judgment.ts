@@ -53,6 +53,11 @@ export interface NblJudgmentFormSlice {
 
   // ── NBL 농지 세부 ──
   nblFarmingSelf: boolean;
+  /**
+   * 조특령 §66⑭ 결격 과세기간 — 쉼표·공백 구분 연도 목록 (예: "2019, 2020").
+   * 「소득세법 시행령」 §168의8② 후단이 자경기간 판정에 준용한다 (E2-09).
+   */
+  nblDisqualifiedTaxPeriods: string;
   nblFarmerResidenceDistance: string;
   nblFarmlandIsWeekendFarm: boolean;
   nblFarmlandIsConversionApproved: boolean;

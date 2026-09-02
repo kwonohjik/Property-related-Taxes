@@ -103,3 +103,31 @@ export function getOwnershipStart(acquisitionDate: Date): Date {
   d.setDate(d.getDate() + 1);
   return d;
 }
+
+/**
+ * `base`에서 `remove` 구간을 뺀 나머지를 반환한다 (반열린 구간 차집합).
+ *
+ * 「조특령 §66⑭ 결격 과세기간을 자경기간에서 제외」처럼 **특정 달력 구간을 통째로 빼야 하는**
+ * 판정에 쓴다. `invertPeriods`(경계 지정 반전)와 달리 경계를 밖에서 정할 필요가 없다 —
+ * `base` 자신이 경계다.
+ */
+export function subtractPeriods(base: DateInterval[], remove: DateInterval[]): DateInterval[] {
+  const mergedBase = mergeOverlappingPeriods(base);
+  if (mergedBase.length === 0) return [];
+  const mergedRemove = mergeOverlappingPeriods(remove);
+  if (mergedRemove.length === 0) return mergedBase;
+
+  const out: DateInterval[] = [];
+  for (const b of mergedBase) {
+    let cursor = new Date(b.start);
+    for (const r of mergedRemove) {
+      if (r.end <= cursor) continue;      // 이미 지난 구간
+      if (r.start >= b.end) break;        // 이 base 구간보다 뒤 — 정렬돼 있으므로 종료
+      if (r.start > cursor) out.push({ start: new Date(cursor), end: new Date(r.start) });
+      if (r.end > cursor) cursor = new Date(r.end);
+      if (cursor >= b.end) break;
+    }
+    if (cursor < b.end) out.push({ start: cursor, end: new Date(b.end) });
+  }
+  return mergeOverlappingPeriods(out);
+}

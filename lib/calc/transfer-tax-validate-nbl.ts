@@ -22,6 +22,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { resolveNblUrbanIncorporationDate } from "./non-business-land-request";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
+import { parseTaxPeriodYears } from "@/lib/tax-engine/non-business-land/disqualified-tax-periods";
 
 /** 폼의 3-state 값을 엔진 `LandDivision`으로 — ④ form-mapper와 **같은 접기 규칙**(3중 패턴). */
 function nblLandDivisionOf(asset: AssetForm): LandDivision | undefined {
@@ -74,6 +75,12 @@ function isUrbanForIncorporationGrace(
 }
 
 /** 비사업용 토지 정밀판정(nblUseDetailedJudgment) 필수 입력 검증. 첫 오류 메시지 또는 null. */
+/** "YYYY-MM-DD" → 연도. 비었거나 형식이 다르면 undefined. */
+function yearOf(iso: string | undefined): number | undefined {
+  const m = /^(\d{4})-\d{2}-\d{2}$/.exec(iso ?? "");
+  return m ? Number(m[1]) : undefined;
+}
+
 export function validateNblDetailedJudgment(
   asset: AssetForm,
   label: string,
@@ -110,6 +117,26 @@ export function validateNblDetailedJudgment(
     const ratio = parseFloat(asset.nblOwnershipRatio);
     if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 1)
       return `${label}: 공동소유 지분은 0 초과 1 이하의 비율로 입력하세요 (예: 50%는 0.5). 백분율(50)을 입력하면 토지가액 자동조회가 50배로 계산되어 수입금액비율 판정이 뒤집힙니다.`;
+  }
+
+  /**
+   * 조특령 §66⑭ 결격 과세기간 — 형식·범위 차단 (E2-09, 2026-09-03).
+   *
+   * 파서(`parseTaxPeriodYears`)는 4자리 정수가 아닌 토큰을 **버리지 않고 `invalid`로 돌려준다**.
+   * 조용히 버리면 「입력했는데 반영이 안 된 것」이 사용자에게 보이지 않는다(자동 fallback 금지).
+   * 범위는 취득연도~양도연도 — 그 밖의 연도는 자경 기간과 겹칠 수 없어 아무것도 차감하지 못한다.
+   */
+  if (asset.nblDisqualifiedTaxPeriods) {
+    const { years, invalid } = parseTaxPeriodYears(asset.nblDisqualifiedTaxPeriods);
+    if (invalid.length > 0)
+      return `${label}: 결격 과세기간(조특령 §66⑭)은 4자리 연도를 쉼표로 구분해 입력하세요 (예: 2019, 2020). 인식할 수 없는 값: ${invalid.join(", ")}`;
+    const acqYear = yearOf(asset.acquisitionDate);
+    const trfYear = yearOf(formTransferDate);
+    if (acqYear !== undefined && trfYear !== undefined) {
+      const outOfRange = years.filter((y) => y < acqYear || y > trfYear);
+      if (outOfRange.length > 0)
+        return `${label}: 결격 과세기간(조특령 §66⑭)은 취득연도(${acqYear})부터 양도연도(${trfYear}) 사이여야 합니다. 범위 밖: ${outOfRange.join(", ")}`;
+    }
   }
 
   // 무조건 의제 성립 시 아래 기간기준 상세 입력은 엔진이 무시 + UI 비활성 → 검증 스킵

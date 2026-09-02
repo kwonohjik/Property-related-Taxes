@@ -23,6 +23,7 @@ import {
   type PeriodCriteriaResult,
 } from "./period-criteria";
 import { computeResidencePeriods, fallbackResidenceFromDistance } from "./residence";
+import { excludeDisqualifiedTaxPeriods } from "./disqualified-tax-periods";
 import { isUrbanForFarmland } from "./urban-area";
 import { isUrbanCriteriaRegion } from "./urban-region-scope";
 import {
@@ -159,9 +160,42 @@ export function judgeFarmland(
   const residencePeriods =
     residenceFromHistory.length > 0 ? residenceFromHistory : fallbackResidence;
 
-  const selfFarmingPeriods: DateInterval[] = input.farmingSelf === false
+  const rawSelfFarmingPeriods: DateInterval[] = input.farmingSelf === false
     ? []
     : input.businessUsePeriods.map((p) => ({ start: p.startDate, end: p.endDate }));
+
+  /**
+   * 조특령 §66⑭ 결격 과세기간 제외 (E2-09, 2026-09-03).
+   *
+   * 「소득세법 시행령」 §168의8② 후단이 자경기간 판정에 §66⑭를 **준용**한다 —
+   * 사업소득금액+총급여 3,700만원 이상(1호)이거나 사업소득 총수입금액이 「소득세법 시행령」
+   * §208⑤2호 각 목 이상(2호)인 과세기간은 「경작한 기간에서 제외」된다.
+   *
+   * 🔴 종전에는 이 제외가 **반영도 안내도 되지 않아** 결격 과세기간을 포함한 자경기간이 그대로
+   *    인정됐다 — §168의6 기간기준을 잘못 통과해 비사업용이어야 할 농지가 사업용으로 판정되는
+   *    **과소과세** 방향이다.
+   *
+   * ⚠️ 제외 대상은 「**경작한** 기간」이므로 재촌 교집합 **전**에 뺀다. 교집합 후에 빼도 수치는
+   *    같지만(교집합은 결합적), 조문이 지목하는 대상을 그대로 두는 편이 읽기에 정확하다.
+   */
+  const disqualified = excludeDisqualifiedTaxPeriods(rawSelfFarmingPeriods, input.disqualifiedTaxPeriods);
+  const selfFarmingPeriods = disqualified.periods;
+
+  if (disqualified.appliedYears.length > 0) {
+    warnings.push(
+      `조특령 §66⑭ 결격 과세기간 ${disqualified.appliedYears.join("·")}년을 자경기간에서 제외했습니다 ` +
+        `(${Math.round(disqualified.removedDays)}일 차감 — 「소득세법 시행령」 §168의8② 후단 준용).`,
+    );
+  }
+  const unusedDisqualifiedYears = [...new Set(input.disqualifiedTaxPeriods ?? [])]
+    .filter((y) => !disqualified.appliedYears.includes(y))
+    .sort((a, b) => a - b);
+  if (unusedDisqualifiedYears.length > 0) {
+    warnings.push(
+      `결격 과세기간으로 입력한 ${unusedDisqualifiedYears.join("·")}년은 자경 기간과 겹치지 않아 ` +
+        "차감된 것이 없습니다 — 자경 기간 입력을 확인하세요.",
+    );
+  }
 
   const realFarming = getOverlappingPeriods(residencePeriods, selfFarmingPeriods);
   const r1 = meetsPeriodCriteria(realFarming, input.acquisitionDate, pjDate, "farmland", rules, input.gracePeriods);
