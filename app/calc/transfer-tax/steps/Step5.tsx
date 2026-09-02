@@ -132,6 +132,26 @@ function AssetReductionBlock({
             />
             <span className="text-sm text-muted-foreground">년 (8년 이상이어야 감면 적용)</span>
           </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-muted-foreground whitespace-nowrap">
+              결격 과세기간 (조특령 §66⑭):
+            </label>
+            <DecimalInput
+              className="w-20"
+              value={selfFarming.disqualifiedTaxPeriodsSelf ?? "0"}
+              onChange={(v) =>
+                updateReduction("self_farming", {
+                  disqualifiedTaxPeriodsSelf: v,
+                } as Partial<AssetReductionForm>)
+              }
+            />
+            <span className="text-sm text-muted-foreground">년</span>
+          </div>
+          <p className="text-micro text-muted-foreground">
+            사업소득금액(농업·임업·부동산임대·농가부업소득 제외) + 총급여액이 <b>3,700만원 이상</b>인
+            과세기간, 또는 사업소득 총수입금액이 소득세법 시행령 §208⑤2호 각 목 금액 이상인 과세기간은
+            자경기간에서 <b>제외</b>합니다 (조특령 §66⑭1호·2호). 해당 과세기간 수를 입력하세요.
+          </p>
 
           {/* 피상속인 자경기간 합산 */}
           {asset.acquisitionCause === "inheritance" && (
@@ -156,12 +176,50 @@ function AssetReductionBlock({
                     />
                     <span className="text-sm text-muted-foreground">년</span>
                   </div>
-                  {parseInt(selfFarming.farmingYears) + parseInt(selfFarming.decedentFarmingYears ?? "0") >= 8 && (
-                    <p className="text-xs text-green-700">
-                      ✓ 합산 자경기간{" "}
-                      {parseInt(selfFarming.farmingYears) + parseInt(selfFarming.decedentFarmingYears ?? "0")}년 — 감면 요건 충족
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-muted-foreground whitespace-nowrap">
+                      피상속인 결격 과세기간 (§66⑭):
+                    </label>
+                    <DecimalInput
+                      className="w-20"
+                      value={selfFarming.disqualifiedTaxPeriodsDecedent ?? "0"}
+                      onChange={(v) =>
+                        updateReduction("self_farming", {
+                          disqualifiedTaxPeriodsDecedent: v,
+                        } as Partial<AssetReductionForm>)
+                      }
+                    />
+                    <span className="text-sm text-muted-foreground">년</span>
+                  </div>
+                  <ToggleCard
+                    tone="emerald"
+                    title="상속받은 농지를 1년 이상 계속 경작 (조특령 §66⑪ 본문)"
+                    description="제1항 각 호의 지역에 거주하면서 경작한 경우에 한정합니다. 이 요건 또는 아래 §66⑫ 대체요건 중 하나가 충족되어야 피상속인 경작기간을 합산할 수 있습니다."
+                    checked={selfFarming.heirContinuedFarming1Year ?? false}
+                    onCheckedChange={(v) =>
+                      updateReduction("self_farming", {
+                        heirContinuedFarming1Year: v,
+                      } as Partial<AssetReductionForm>)
+                    }
+                  />
+                  <ToggleCard
+                    tone="emerald"
+                    title="§66⑫ 대체요건 — 상속일부터 3년 내 양도·수용 + 지구 지정"
+                    description="1년 이상 계속 경작하지 않았더라도, 상속받은 날부터 3년이 되는 날까지 양도하거나 협의매수·수용되면서 그 기간 내에 택지개발지구·산업단지 등으로 지정(상속받은 날 전 지정 포함)된 경우 합산할 수 있습니다."
+                    checked={selfFarming.meetsDecedentAggregationAlt ?? false}
+                    onCheckedChange={(v) =>
+                      updateReduction("self_farming", {
+                        meetsDecedentAggregationAlt: v,
+                      } as Partial<AssetReductionForm>)
+                    }
+                  />
+                  {(selfFarming.heirContinuedFarming1Year || selfFarming.meetsDecedentAggregationAlt) &&
+                    parseInt(selfFarming.farmingYears) + parseInt(selfFarming.decedentFarmingYears ?? "0") >= 8 && (
+                      <p className="text-xs text-green-700">
+                        ✓ 합산 자경기간{" "}
+                        {parseInt(selfFarming.farmingYears) + parseInt(selfFarming.decedentFarmingYears ?? "0")}년 — 감면 요건 충족
+                      </p>
+                    )}
                 </>
               )}
             </div>
@@ -172,6 +230,10 @@ function AssetReductionBlock({
             useSelfFarmingIncorporation={selfFarming.useSelfFarmingIncorporation ?? false}
             selfFarmingIncorporationDate={selfFarming.selfFarmingIncorporationDate ?? ""}
             selfFarmingIncorporationZone={selfFarming.selfFarmingIncorporationZone ?? ""}
+            selfFarmingIncorporationLocation={selfFarming.selfFarmingIncorporationLocation ?? ""}
+            selfFarmingIncorporationProvisoException={
+              selfFarming.selfFarmingIncorporationProvisoException ?? false
+            }
             selfFarmingStandardPriceAtIncorporation={selfFarming.selfFarmingStandardPriceAtIncorporation ?? ""}
             selfFarmingStandardPriceAtAcquisition={selfFarming.selfFarmingStandardPriceAtAcquisition ?? ""}
             selfFarmingStandardPriceAtTransfer={selfFarming.selfFarmingStandardPriceAtTransfer ?? ""}

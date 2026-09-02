@@ -365,7 +365,7 @@ export function calcReductions(
 
     if (reduction.type === "self_farming" && selfFarmingRules) {
       // 조특법 §69 자경농지 감면 + 조특령 §66 ⑪ 1호 피상속인 경작기간 합산
-      // + 조특령 §66 ⑤⑥ 주거·상업·공업지역 편입 시 부분감면
+      // + 조특령 §66④1호(3년 배제)·§66⑦(부분감면) 주거·상업·공업지역 편입
       const minYears = selfFarmingRules.conditions.minFarmingYears;
       const own = reduction.farmingYears;
       const needsDecedent = own < minYears;
@@ -384,11 +384,17 @@ export function calcReductions(
           transferIncome: transferIncome!,
           farmingYears: own,
           decedentFarmingYears: decedent > 0 ? decedent : undefined,
+          heirContinuedFarming1Year: reduction.heirContinuedFarming1Year,
+          meetsDecedentAggregationAlt: reduction.meetsDecedentAggregationAlt,
+          disqualifiedTaxPeriodsSelf: reduction.disqualifiedTaxPeriodsSelf,
+          disqualifiedTaxPeriodsDecedent: reduction.disqualifiedTaxPeriodsDecedent,
           minFarmingYears: minYears,
           acquisitionDate: acquisitionDate!,
           transferDate: transferDate!,
           incorporationDate: reduction.incorporationDate,
           incorporationZoneType: reduction.incorporationZoneType,
+          incorporationLocationType: reduction.incorporationLocationType,
+          hasIncorporationProvisoException: reduction.hasIncorporationProvisoException,
           // 편입 부분감면 기준시가: reduction 전용 입력 우선(실지 모드), 없으면 자산-수준(환산 모드) fallback
           standardPriceAtAcquisition: reduction.standardPriceAtAcquisition ?? standardPriceAtAcquisition,
           standardPriceAtIncorporation: reduction.standardPriceAtIncorporation,
@@ -413,8 +419,16 @@ export function calcReductions(
           }
         }
       } else {
-        // 레거시 경로 — 파라미터 부족 시 기존 단순 계산 유지 (하위 호환)
-        const effective = needsDecedent ? own + decedent : own;
+        // 레거시 경로 — 파라미터 부족 시 기존 단순 계산 유지 (하위 호환).
+        // §66⑪·⑫ 합산 요건과 §66⑭ 결격 차감은 신규 엔진과 동일 규약으로 맞춘다 (D7-09·D7-10).
+        const canAggregate =
+          reduction.heirContinuedFarming1Year === true ||
+          reduction.meetsDecedentAggregationAlt === true;
+        const ownEff = Math.max(0, own - (reduction.disqualifiedTaxPeriodsSelf ?? 0));
+        const decedentEff = canAggregate
+          ? Math.max(0, decedent - (reduction.disqualifiedTaxPeriodsDecedent ?? 0))
+          : 0;
+        const effective = needsDecedent ? ownEff + decedentEff : ownEff;
         if (effective >= minYears) {
           amount = Math.min(
             applyRate(calculatedTax, selfFarmingRules.maxRate),

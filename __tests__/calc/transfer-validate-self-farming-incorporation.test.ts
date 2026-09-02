@@ -1,4 +1,4 @@
-// #20 validate — 자경 편입 부분감면(조특령 §66⑤⑥) 기준시가 3점 필수.
+// #20 validate — 자경 편입 부분감면(영 §66⑦) 기준시가 3점 필수 + §66④1호 소재지 필수(D7-07).
 // 엔진 silent-0 도달 조건(편입 ON + 2002후 + 유예 내 + 3점 결손)을 정밀 미러하여
 // 계산 전 차단. 2002 전 편입·3년 경과는 엔진이 별도 처리하므로 차단 금지(UI↔validate 모순 방지).
 import { describe, it, expect } from "vitest";
@@ -13,6 +13,8 @@ function makeSF(overrides: Partial<Extract<AssetReductionForm, { type: "self_far
     useSelfFarmingIncorporation: true,
     selfFarmingIncorporationDate: "2020-02-14",
     selfFarmingIncorporationZone: "residential",
+    // §66④1호 3년 배제 판정에 필요 — 3년 경과 케이스에서만 요구된다 (D7-07)
+    selfFarmingIncorporationLocation: "metro_or_city",
     selfFarmingStandardPriceAtIncorporation: "",
     selfFarmingStandardPriceAtAcquisition: "",
     selfFarmingStandardPriceAtTransfer: "",
@@ -51,8 +53,31 @@ describe("[#20] 자경 편입 부분감면 기준시가 3점 validate", () => {
     expect(issue).toBeNull();
   });
 
-  it("SF-V3: 2002 전 편입 → 통과(엔진 전액감면, 차단 금지)", () => {
+  it("SF-V3: 2002 전 편입 → 통과(부분감면 산식 미적용, 차단 금지)", () => {
     const issue = validateStep(2, makeForm(makeSF({ selfFarmingIncorporationDate: "2001-06-01" })));
+    expect(issue).toBeNull();
+  });
+
+  it("SF-V3b (D7-07): 3년 경과 + 소재지 미선택 → 차단 (엔진 «판정 불가»와 대칭)", () => {
+    const issue = validateStep(
+      2,
+      makeForm(makeSF({ selfFarmingIncorporationLocation: "" }), { transferDate: "2024-01-01" }),
+    );
+    expect(issue).toContain("소재지 구분");
+  });
+
+  it("SF-V3c (D7-07): 3년 «이내»면 소재지 미선택이어도 차단하지 않는다", () => {
+    const issue = validateStep(
+      2,
+      makeForm(
+        makeSF({
+          selfFarmingIncorporationLocation: "",
+          selfFarmingStandardPriceAtIncorporation: "3,000",
+          selfFarmingStandardPriceAtAcquisition: "1,000",
+          selfFarmingStandardPriceAtTransfer: "4,000",
+        }),
+      ),
+    );
     expect(issue).toBeNull();
   });
 

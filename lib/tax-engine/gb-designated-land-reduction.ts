@@ -97,7 +97,25 @@ function resolveRate(input: GbDesignatedLandInput): {
     }
     const allowedYears = input.freeEconZone ? 5 : 1;
     const cutoff = subYears(input.triggerDate, allowedYears);
-    // 해제일 >= (사업인정고시일 − 허용연수) 여야 게이트 통과
+    /**
+     * §77의3② 단서는 **양방향 창**이다 (CA-05).
+     *
+     * 「다만, 개발제한구역 **해제일부터** 1년(… 경제자유구역의 지정 등 … 5년) **이내에**
+     *  … 사업인정고시가 된 경우에 한정한다」
+     *   ⇒ `해제일 ≤ 사업인정고시일 ≤ 해제일 + N년`
+     *
+     * 종전에는 뒤쪽 경계(`releasedDate < cutoff` = 고시일 ≤ 해제일 + N년)만 봤다.
+     * 앞쪽 경계가 없어 **고시가 해제보다 앞선** 입력(`releasedDate > triggerDate`)이 그대로
+     * 통과했다 — 실측: 해제 2026-06-01 · 고시 2025-01-01 → 40% 감면(산출세액 1억 기준
+     * 40,000,000원)이 부당하게 적용됐다.
+     * 조특령 §74②는 5년 창이 열리는 **지역 목록만** 정할 뿐 창의 기산점·방향을 바꾸지 않는다.
+     */
+    if (input.releasedDate > input.triggerDate) {
+      return {
+        rate: 0,
+        reason: `사업인정고시일이 해제일보다 앞섭니다 — §77의3② 단서는 해제일부터 ${allowedYears}년 이내 고시된 경우에 한정합니다`,
+      };
+    }
     if (input.releasedDate < cutoff) {
       return {
         rate: 0,

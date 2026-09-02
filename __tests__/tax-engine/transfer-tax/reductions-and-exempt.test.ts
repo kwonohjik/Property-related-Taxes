@@ -619,11 +619,25 @@ describe("T-41: 자경농지 감면 — 피상속인 경작기간 합산 회귀 
   it("본인 자경 6년 + 피상속인 3년 = effective 9년 → 감면 적용 (합산)", () => {
     const input = farmlandBase();
     input.reductions = [
-      { type: "self_farming", farmingYears: 6, decedentFarmingYears: 3 },
+      {
+        type: "self_farming",
+        farmingYears: 6,
+        decedentFarmingYears: 3,
+        // §66⑪ 본문 — 합산에는 「상속받은 농지를 1년 이상 계속 경작」이 필요하다 (D7-09)
+        heirContinuedFarming1Year: true,
+      },
     ];
     const result = calculateTransferTax(input, mockRates);
     expect(result.reductionAmount).toBeGreaterThan(0);
     expect(result.reductionType).toBe("자경농지 (§69·상속인 경작기간 합산 §66⑪)");
+  });
+
+  it("T-41b (D7-09): 같은 입력에서 §66⑪·⑫ 요건이 미선언이면 합산되지 않아 감면 0", () => {
+    const input = farmlandBase();
+    input.reductions = [
+      { type: "self_farming", farmingYears: 6, decedentFarmingYears: 3 },
+    ];
+    expect(calculateTransferTax(input, mockRates).reductionAmount).toBe(0);
   });
 
   it("본인 자경 8년 충족 + 피상속인 3년 지정 → 합산 불필요, 일반 자경 라벨 유지", () => {

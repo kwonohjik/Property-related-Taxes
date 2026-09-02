@@ -19,6 +19,8 @@ const baseProps = {
   useSelfFarmingIncorporation: true, // 토글 ON — children 렌더
   selfFarmingIncorporationDate: "2023-02-14",
   selfFarmingIncorporationZone: "" as const,
+  selfFarmingIncorporationLocation: "metro_or_city" as const,
+  selfFarmingIncorporationProvisoException: false,
   selfFarmingStandardPriceAtIncorporation: "",
   selfFarmingStandardPriceAtAcquisition: "",
   selfFarmingStandardPriceAtTransfer: "",

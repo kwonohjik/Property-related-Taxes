@@ -22,7 +22,7 @@ export const REDUCTION_TYPE_LABELS: Record<string, string> = {
   // legacy 5개 (Round 8 자동변환 마이그레이션 + 1개월 alias)
   self_farming: "자경농지 (§69)",
   self_farming_inherited: "자경농지 (§69·상속인 경작기간 합산 §66⑪)",
-  self_farming_incorp: "자경농지 (§69·편입일 부분감면 §66⑤⑥)",
+  self_farming_incorp: "자경농지 (§69·편입 §66④1호·§66⑦)",
   livestock: "축산업 (§69의2)",
   fishing: "어업 (§69의3)",
   long_term_rental: "장기임대주택",

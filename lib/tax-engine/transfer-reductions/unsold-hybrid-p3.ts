@@ -54,6 +54,26 @@ export const UNSOLD_98_6_STD_SUM_LIMIT = 600_000_000;
 export const UNSOLD_98_6_FLOOR_LIMIT = 149;
 export const UNSOLD_98_6_RENTAL_MONTHS = 60;
 
+/**
+ * **장기보유특별공제 계열 특례** — 감면세액이 아니라 **LTHD 공제율 자체**를 바꾸는 조문 (CB-02·D5-05).
+ *
+ * 감면 효과는 실제로 3종이다 — 차감형(소득금액 차감) · 세액감면형(산출세액 차감) · **LTHD 계열**.
+ * 그런데 겸용주택·§155⑳ 경로는 `!ALL_INCOME_DEDUCTION_IDS.has(type)`라는 **이분법**으로만
+ * 갈라서, 세 번째가 자리를 못 찾고 세액감면형 버킷으로 흘러 `calcReductions`에서 **조용히
+ * 사라진다**. 재개발 경로는 아예 `calcLongTermHoldingDeduction`을 부르지 않는다
+ * (`transfer-tax.ts`의 유일한 호출부에 도달하지 못함 — 조기반환).
+ *
+ * ⚠️ **세액 반영은 아직 하지 않는다.** §97의3⑤(임대기간분 안분)·§98의2①1호(표2)를 소령 §166⑤의
+ *   3분기 LTHD 구조(인가전·인가후 기존건물·청산금)와 어떻게 결합할지는 **별도 법적 판단**이
+ *   필요하다 — 전체 양도차익 기준인지 파트별인지가 조문에서 곧바로 나오지 않는다.
+ *   그때까지는 **침묵을 없애는 것**이 최소 조치다: 세 경로가 이 집합을 보고 경고를 남긴다.
+ */
+export const LTHD_SPECIAL_REDUCTION_IDS: ReadonlyArray<string> = [
+  "rental_97_3", // 조특법 §97의3① — 임대기간분 70%(8년) / 조특령 §97의3② 후단이 재개발 임대의제를 명문화
+  "rental_97_4", // 조특법 §97의4① — 6년 이상 임대 시 표1에 2~10%p 가산
+  "unsold_98_2", // 조특법 §98의2①1호 — 양도차익 × 소득세법 §95② **표2** 공제율
+];
+
 /** 특칙 — 단기세율(§104①2·3호) 배제 대상 (법 §98의2①·§98의3④·§98의5③·§98의6③ 각 2호) */
 export const RATE_SPECIAL_REDUCTION_IDS: ReadonlyArray<string> = [
   "unsold_98_3",

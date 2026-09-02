@@ -10,6 +10,27 @@ import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
+/**
+ * §77 감면 자산이 「직접 경작한 토지」인지 — **자산 수준** 플래그로 승격한다.
+ *
+ * 농특세령 §4①1호 괄호: 「제77조[「조세특례제한법」 제69조제1항 본문에 따른 거주자가 **직접
+ * 경작한 토지**(8년 이상 경작할 것의 요건은 적용하지 아니한다)로 한정한다]」 ⇒ 직접 경작
+ * 토지여야 농특세 비과세다.
+ *
+ * 🔑 **판정식을 복제하지 말 것** (D11-01·D11-02). 단건 ④·다건 ⑬·일괄양도 컴패니언 ④가
+ * 모두 이 leaf를 쓴다 — 한 곳만 빠뜨리면 그 경로에서만 감면세액 × 20%가 조용히 부과된다.
+ * 체크하지 않았으면 `undefined`(엔진이 「입증되지 않음 = 과세」로 처리).
+ */
+export function toSelfCultivatedExpropriatedLand(
+  reductions: ReadonlyArray<{ type: string; expropriationSelfCultivated?: boolean }> | undefined,
+): true | undefined {
+  return (
+    (reductions ?? []).some(
+      (r) => r.type === "public_expropriation" && r.expropriationSelfCultivated === true,
+    ) || undefined
+  );
+}
+
 export function toEngineReductions(
   formReductions: AssetReductionForm[],
   acquisitionCause: AssetForm["acquisitionCause"],
@@ -21,6 +42,11 @@ export function toEngineReductions(
       const decedentYears = parseInt(r.decedentFarmingYears ?? "0") || 0;
       const incorpDate = r.useSelfFarmingIncorporation ? (r.selfFarmingIncorporationDate ?? "") : "";
       const incorpZone = r.useSelfFarmingIncorporation ? (r.selfFarmingIncorporationZone ?? "") : "";
+      const incorpLocation = r.useSelfFarmingIncorporation
+        ? (r.selfFarmingIncorporationLocation ?? "")
+        : "";
+      const incorpProviso =
+        r.useSelfFarmingIncorporation && r.selfFarmingIncorporationProvisoException === true;
       const incorpStdPrice = r.useSelfFarmingIncorporation
         ? parseAmount(r.selfFarmingStandardPriceAtIncorporation ?? "")
         : 0;
@@ -35,10 +61,24 @@ export function toEngineReductions(
         type: "self_farming" as const,
         farmingYears: parseInt(r.farmingYears) || 0,
         ...(acquisitionCause === "inheritance" && decedentYears > 0
-          ? { decedentFarmingYears: decedentYears }
+          ? {
+              decedentFarmingYears: decedentYears,
+              // §66⑪ 본문 / §66⑫ 대체요건 — 둘 다 미선언이면 엔진이 합산하지 않는다
+              heirContinuedFarming1Year: r.heirContinuedFarming1Year === true,
+              meetsDecedentAggregationAlt: r.meetsDecedentAggregationAlt === true,
+              ...(parseInt(r.disqualifiedTaxPeriodsDecedent ?? "0") > 0
+                ? { disqualifiedTaxPeriodsDecedent: parseInt(r.disqualifiedTaxPeriodsDecedent ?? "0") }
+                : {}),
+            }
+          : {}),
+        // §66⑭ 결격 과세기간(본인) — 상속 여부와 무관
+        ...(parseInt(r.disqualifiedTaxPeriodsSelf ?? "0") > 0
+          ? { disqualifiedTaxPeriodsSelf: parseInt(r.disqualifiedTaxPeriodsSelf ?? "0") }
           : {}),
         ...(incorpDate ? { incorporationDate: incorpDate } : {}),
         ...(incorpZone ? { incorporationZoneType: incorpZone } : {}),
+        ...(incorpLocation ? { incorporationLocationType: incorpLocation } : {}),
+        ...(incorpProviso ? { hasIncorporationProvisoException: true } : {}),
         ...(incorpStdPrice > 0 ? { standardPriceAtIncorporation: incorpStdPrice } : {}),
         ...(incorpStdAcq > 0 ? { standardPriceAtAcquisition: incorpStdAcq } : {}),
         ...(incorpStdTransfer > 0 ? { standardPriceAtTransfer: incorpStdTransfer } : {}),

@@ -2,7 +2,7 @@
  * 자경농지 편입일 부분감면 엔진 단위 테스트
  *
  * `lib/tax-engine/self-farming-reduction.ts`의 공식·경계값 검증.
- * 조특법 §69 + 시행령 §66 ⑤⑥.
+ * 조특법 §69① 본문·단서 + 시행령 §66④1호(3년 배제)·§66⑦(부분감면).
  */
 
 import { describe, it, expect } from "vitest";
@@ -36,6 +36,7 @@ describe("A2: 2002.1.1 이후 편입 + 3년 내 양도 — 부분감면", () => 
       ...baseInput,
       incorporationDate: new Date("2020-02-14"),
       incorporationZoneType: "residential",
+      incorporationLocationType: "metro_or_city", // §66④1호 소재지 요건 (D7-07)
       standardPriceAtAcquisition: 1000,
       standardPriceAtIncorporation: 3000,
       standardPriceAtTransfer: 4000,
@@ -55,6 +56,7 @@ describe("A3: 2002.1.1 이후 편입 + 3년 경과 — 감면 상실", () => {
     const result = calculateSelfFarmingReduction({
       ...baseInput,
       incorporationDate: new Date("2015-01-01"),
+      incorporationLocationType: "metro_or_city", // 시 소재라야 3년 배제가 걸린다 (D7-07)
       standardPriceAtAcquisition: 1000,
       standardPriceAtIncorporation: 3000,
       standardPriceAtTransfer: 4000,
@@ -66,11 +68,13 @@ describe("A3: 2002.1.1 이후 편입 + 3년 경과 — 감면 상실", () => {
   });
 });
 
-describe("A4: 2002.1.1 이전 편입 — 편입일 조항 미적용(전액)", () => {
-  it("1999년 편입은 전액 감면 경로 유지", () => {
+describe("A4: 2002.1.1 이전 편입 — 법 §69①단서(부분감면) 미적용", () => {
+  it("1999년 편입 + 군·읍·면 소재 → 전액 감면 (법률 제6538호 부칙 §28①)", () => {
     const result = calculateSelfFarmingReduction({
       ...baseInput,
       incorporationDate: new Date("1999-06-30"),
+      // §66④1호 3년 배제는 시 소재 농지에만 걸린다 — 여기서는 미해당
+      incorporationLocationType: "gun_or_eup_myeon",
       standardPriceAtAcquisition: 1000,
       standardPriceAtIncorporation: 2000,
       standardPriceAtTransfer: 4000,
@@ -79,6 +83,22 @@ describe("A4: 2002.1.1 이전 편입 — 편입일 조항 미적용(전액)", ()
     expect(result.reducibleIncome).toBe(547_901_140);
     expect(result.reducibleRatio).toBe(1);
     expect(result.partialReductionApplied).toBe(false);
+  });
+
+  it("A4-2 (D7-08): 1999년 편입이어도 «시 소재 + 3년 경과»면 §66④1호로 제외된다", () => {
+    // 부칙 §28①은 「제69조제1항 **단서**의 개정규정에 불구하고」로 부분감면만 배제한다.
+    // 영 §66④1호는 법 §69① **본문**의 위임이라 그 경과조치의 대상이 아니다.
+    const result = calculateSelfFarmingReduction({
+      ...baseInput,
+      incorporationDate: new Date("1999-06-30"),
+      incorporationLocationType: "metro_or_city",
+      standardPriceAtAcquisition: 1000,
+      standardPriceAtIncorporation: 2000,
+      standardPriceAtTransfer: 4000,
+    });
+    expect(result.qualifies).toBe(false);
+    expect(result.reducibleIncome).toBe(0);
+    expect(result.incorporationGraceExpired).toBe(true);
   });
 });
 
@@ -95,6 +115,7 @@ describe("A5: PDF 사례 토지1 역산 — 감면대상소득 318,216,369", () 
       ...baseInput,
       incorporationDate: new Date("2020-02-14"),
       incorporationZoneType: "residential",
+      incorporationLocationType: "metro_or_city", // §66④1호 소재지 요건 (D7-07)
       standardPriceAtAcquisition: 1000,
       standardPriceAtIncorporation: 19_006,
       standardPriceAtTransfer: 32_000,
@@ -123,6 +144,8 @@ describe("자경기간 미달 — 감면 불가", () => {
       ...baseInput,
       farmingYears: 3,
       decedentFarmingYears: 6,
+      // §66⑪ 본문 — 합산에는 「상속받은 농지를 1년 이상 계속 경작」이 필요하다 (D7-09)
+      heirContinuedFarming1Year: true,
     });
     expect(result.qualifies).toBe(true);
     expect(result.reducibleIncome).toBe(547_901_140);

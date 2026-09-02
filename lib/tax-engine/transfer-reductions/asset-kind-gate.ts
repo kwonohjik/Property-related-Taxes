@@ -9,9 +9,16 @@
  *   - rental(§97): { housing, redevelopment_apt } — 입주권·분양권은 물리적 임대 불가로 배제.
  *   - new_housing(§99)·unsold(§98·§99의2): + 입주권·분양권 — 분양권 취득→완공 후 양도 흐름 포함.
  *
- * ⚠ redevelopment_apt + §97: redevSubject==="right"(입주권)이면 임대 불가지만, §97 시리즈는
- *   임대개시·등록 시한(~2000.12.31 / ~2018 / ~2027)이 재개발·재건축 시나리오를 시한 게이트에서
- *   이미 차단하므로 redevSubject 수준 분기는 도입하지 않는다 (실효 없는 복잡도).
+ * ⚠ redevelopment_apt + §97 — **「시한 게이트가 이미 차단한다」는 서술은 사실이 아니었다** (CB-02).
+ *   §97의3의 등록 시한은 `period-check.ts`가 `before(registrationDate, 2027-12-31)`로 판정해
+ *   **열려 있고**, 조특령 §97의3② 후단은 「재개발사업·재건축사업 … 의 시행으로 임대할 수 없는
+ *   경우에는 관리처분계획 인가일 전 6개월부터 준공일 후 6개월까지 계속하여 임대한 것으로 본다」로
+ *   재개발 아파트가 §97의3 대상임을 **전제**한다. 즉 도달 가능한 조합이다.
+ *   (축 일원화 #1245 이후 입주권은 `right_to_move_in`이라 `RENTAL_HOUSING_KINDS`에서 이미 빠진다.)
+ *
+ *   게이트는 그대로 두되(조문상 허용되는 조합이므로), 재개발 경로가 §97의3·§97의4의 **장기보유
+ *   특별공제 특례를 계산하지 않는다**는 사실은 그 경로가 경고로 고지한다
+ *   (`transfer-tax-redevelopment.ts` — `LTHD_SPECIAL_REDUCTION_IDS`).
  */
 
 import { REDUCTION_METADATA } from "./metadata";

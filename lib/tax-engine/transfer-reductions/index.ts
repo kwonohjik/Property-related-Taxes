@@ -190,6 +190,7 @@ export {
   evaluateAnyHybridTaxAmount,
   resolve985Rate,
   RATE_SPECIAL_REDUCTION_IDS,
+  LTHD_SPECIAL_REDUCTION_IDS,
   type Unsold983Input,
   type Unsold985Input,
   type Unsold986Input,

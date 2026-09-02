@@ -47,11 +47,23 @@ export const reductionSchema = z.discriminatedUnion("type", [
      * 본인 자경기간이 §69 요건(8년)에 미달할 때 합산한다.
      */
     decedentFarmingYears: z.number().int().nonnegative().optional(),
-    // ── 조특령 §66 ⑤⑥ 편입일 부분감면 ──
+    /** 조특령 §66⑪ 본문 — 상속받은 농지 1년 이상 계속 경작 */
+    heirContinuedFarming1Year: z.boolean().optional(),
+    /** 조특령 §66⑫ 대체요건 — 3년 내 양도·수용 + 택지개발지구·산업단지 등 지정 */
+    meetsDecedentAggregationAlt: z.boolean().optional(),
+    /** 조특령 §66⑭ — 거주자 본인 결격 과세기간 수(년) */
+    disqualifiedTaxPeriodsSelf: z.number().int().nonnegative().optional(),
+    /** 조특령 §66⑭ — 피상속인(배우자 포함) 결격 과세기간 수(년) */
+    disqualifiedTaxPeriodsDecedent: z.number().int().nonnegative().optional(),
+    // ── 조특령 §66④1호(3년 배제)·§66⑦(부분감면) 편입 ──
     /** 주거·상업·공업지역 편입일 (YYYY-MM-DD). 2002.1.1 이후 편입 시 부분감면 적용. */
     incorporationDate: z.string().date().optional(),
     /** 편입 지역 유형 */
     incorporationZoneType: z.enum(["residential", "commercial", "industrial"]).optional(),
+    /** 양도일 현재 소재지 구분 — §66④1호 3년 배제의 소재지 요건 */
+    incorporationLocationType: z.enum(["metro_or_city", "gun_or_eup_myeon"]).optional(),
+    /** §66④1호 단서 가·나·다목 해당 — 3년 배제 제외 */
+    hasIncorporationProvisoException: z.boolean().optional(),
     /** 편입일 당시 기준시가 (원 총액 또는 ㎡당, 취득·양도시 기준시가와 동일 단위) */
     standardPriceAtIncorporation: z.number().int().nonnegative().optional(),
     /** 취득시 기준시가 (원) — 편입 부분감면 비율 산정. 미제공 시 자산-수준 fallback */

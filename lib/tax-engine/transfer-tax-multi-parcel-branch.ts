@@ -22,6 +22,8 @@ import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-o
 import { calcTax } from "./transfer-tax-rate-calc";
 import { calcReductions } from "./transfer-tax-reductions-calc";
 import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
+import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
+import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
 
 // ============================================================
 // H-MP: handleMultiParcelBranch — 다필지 분리 계산 (소령 §166)
@@ -106,6 +108,13 @@ export function handleMultiParcelBranch(
     newHousingReductionDetail: mpNewHousingDetail,
     publicExpropriationDetail: mpExproDetail,
     selfFarmingReductionDetail: mpSelfFarmingDetail,
+    // CB-07 — 종전에는 이 넷을 꺼내지 않아 결과에 근거가 남지 않았다.
+    //   §77의2(대토보상)·§77의3(개발제한구역)·§97 시리즈·하이브리드를 다필지로 신청하면
+    //   세액은 반영되는데 상세 카드·조문 근거가 통째로 사라졌다.
+    gbDesignatedLandDetail: mpGbDetail,
+    replacementLandDetail: mpReplacementDetail,
+    rental97TaxDetail: mpRental97TaxDetail,
+    hybridTaxDetail: mpHybridTaxDetail,
   } = calcReductions(
     mpTaxResult.calculatedTax,
     input.reductions,
@@ -125,7 +134,94 @@ export function handleMultiParcelBranch(
     // (마지막 positional 인자 — 순서 어긋남 없음. 다필지=토지라 numeric 영향은 사실상 없으나 일관성 확보)
     input.assetContractDate,
   );
-  const mpDeterminedTax = truncateToWon(Math.max(0, mpTaxResult.calculatedTax - mpReduction));
+  /**
+   * §133 5년 누적 한도 — 형제 4경로(finalize·redevelopment·rental-housing-step·mixed-use)와
+   * **같은 단일 소스**를 부른다 (CB-04).
+   *
+   * evaluator 내부 캡은 **연간 한도뿐**이므로(§77 2억 · §69 1억), 이 호출이 없으면
+   * 사용자가 입력한 `priorReductionUsage`가 이 경로에서 **구별력 0**이 된다 — 같은 입력을
+   * 단필지로 넣으면 5년 한도가 깎는데 다필지면 안 깎이는 dual-truth였다.
+   */
+  const mpCap = applyReductionStatutoryCap({
+    reductionAmount: mpReduction,
+    reductionTypeApplied: mpReductionTypeApplied,
+    transferYear: input.transferDate.getFullYear(),
+    priorUsage: input.priorReductionUsage ?? [],
+  });
+  const mpCappedReduction = mpCap.cappedAmount;
+  if (mpCap.step) steps.push(mpCap.step);
+
+  const mpDeterminedTax = truncateToWon(Math.max(0, mpTaxResult.calculatedTax - mpCappedReduction));
+
+  /**
+   * 농어촌특별세 (감면세액 × 20%) — 「농어촌특별세법」 §5①1호 (D10-02).
+   *
+   * 종전에는 이 분기가 감면을 결정세액에서 차감하면서도 농특세를 **아예 계산하지 않았다**.
+   * 판정은 `transfer-tax-rural-surtax.ts` 단일 소스 — 비과세는 열거주의이고(농특세령 §4①1호)
+   * §69는 무조건 비과세, §77은 「직접 경작한 토지」 조건부, 그 밖(§77의2·§77의3·§97 시리즈)은 과세다.
+   * 하이브리드는 자체 경로가 계산하므로 여기서 제외한다(이중 부과 방지 — finalize와 동일 규약).
+   */
+  let mpRuralSurtax = 0;
+  /** CB-07 — 하이브리드 상세 echo (자체 농특세 포함). 결과 카드가 근거를 잃지 않게 한다. */
+  const mpHybridEcho: Partial<TransferTaxResult> = {};
+  if (
+    mpReductionTypeApplied !== undefined &&
+    HYBRID_ARTICLE[mpReductionTypeApplied] !== undefined &&
+    mpCappedReduction > 0
+  ) {
+    // 농특세 비과세(농특세령 §4⑦1호): §98의3·§98의5 — evaluator의 exempt 플래그 단일 진실.
+    const isExemptTax = mpHybridTaxDetail?.ruralSurtaxExempt === true;
+    mpRuralSurtax = isExemptTax ? 0 : applyRate(mpCappedReduction, 0.2);
+    if (mpRuralSurtax > 0) {
+      steps.push({
+        label: `${HYBRID_ARTICLE[mpReductionTypeApplied]} 농어촌특별세 (감면세액 × 20%)`,
+        formula: `감면세액 ${mpCappedReduction.toLocaleString()} × 20% = ${mpRuralSurtax.toLocaleString()}`,
+        amount: mpRuralSurtax,
+        legalBasis: TRANSFER.RURAL_SURTAX_993,
+      });
+    }
+    if (mpHybridTaxDetail && mpHybridTaxDetail.id === mpReductionTypeApplied) {
+      const merged = {
+        ...mpHybridTaxDetail,
+        reductionAmount: mpCappedReduction,
+        taxReductionForRuralSurtax: isExemptTax ? 0 : mpCappedReduction,
+        ruralSurtax: mpRuralSurtax,
+      };
+      if (merged.id === "unsold_98_7") mpHybridEcho.unsold987Detail = merged;
+      else if (merged.id === "unsold_99_2") mpHybridEcho.unsold992Detail = merged;
+      else if (merged.id === "unsold_98_3") mpHybridEcho.unsold983Detail = merged;
+      else if (merged.id === "unsold_98_5") mpHybridEcho.unsold985Detail = merged;
+      else if (merged.id === "unsold_98_4") mpHybridEcho.unsold984Detail = merged;
+      else mpHybridEcho.unsold986Detail = merged;
+    }
+  }
+  if (
+    mpReductionTypeApplied !== undefined &&
+    HYBRID_ARTICLE[mpReductionTypeApplied] === undefined &&
+    mpCappedReduction > 0
+  ) {
+    const verdict = resolveTaxCreditRuralSurtax({
+      reductionTypeApplied: mpReductionTypeApplied,
+      reductionAmount: mpCappedReduction,
+      isSelfCultivatedExpropriatedLand: input.isSelfCultivatedExpropriatedLand,
+    });
+    mpRuralSurtax = verdict.surtax;
+    if (verdict.surtax > 0) {
+      steps.push({
+        label: "농어촌특별세 (감면세액 × 20%)",
+        formula: `감면세액 ${mpCappedReduction.toLocaleString()} × 20% = ${verdict.surtax.toLocaleString()} — ${verdict.reason}`,
+        amount: verdict.surtax,
+        legalBasis: verdict.legalBasis,
+      });
+    } else if (verdict.verdict === "unknown") {
+      steps.push({
+        label: "농어촌특별세 — 미판정",
+        formula: verdict.reason,
+        amount: 0,
+        legalBasis: verdict.legalBasis,
+      });
+    }
+  }
   const mpPenaltyBase = effectiveInput.acquisitionMethod === "appraisal"
     ? (effectiveInput.appraisalValue ?? 0)
     : 0;
@@ -161,7 +257,7 @@ export function handleMultiParcelBranch(
     surchargeType: mpTaxResult.surchargeType,
     surchargeRate: mpTaxResult.surchargeRate,
     isSurchargeSuspended: mpTaxResult.surchargeSuspended,
-    reductionAmount: mpReduction,
+    reductionAmount: mpCappedReduction,
     reductionType: mpReductionType,
     reductionTypeApplied: mpReductionTypeApplied,
     reducibleIncome: mpReducibleIncome,
@@ -169,12 +265,17 @@ export function handleMultiParcelBranch(
     determinedTax: mpDeterminedTax,
     penaltyTax: mpPenaltyTax,
     localIncomeTax: mpLocalIncomeTax,
-    totalTax: mpDeterminedTaxWithPenalty + mpLocalIncomeTax + mpFilingDelayedPenalty,
+    ruralSurtax: mpRuralSurtax,
+    totalTax: mpDeterminedTaxWithPenalty + mpLocalIncomeTax + mpFilingDelayedPenalty + mpRuralSurtax,
     steps,
     rentalReductionDetail: mpRentalDetail,
     newHousingReductionDetail: mpNewHousingDetail,
     publicExpropriationDetail: mpExproDetail,
     selfFarmingReductionDetail: mpSelfFarmingDetail,
+    gbDesignatedLandDetail: mpGbDetail,
+    replacementLandDetail: mpReplacementDetail,
+    rental97TaxDetail: mpRental97TaxDetail,
+    ...mpHybridEcho,
     penaltyDetail: mpPenaltyDetail,
     parcelDetails: mpResult.parcelResults,
   };

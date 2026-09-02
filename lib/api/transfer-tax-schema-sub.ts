@@ -453,6 +453,11 @@ export const companionAssetSchema = z.object({
   inheritanceValuation: inheritanceValuationSchema.optional(),
   /** 자산별 감면 (예: 농지 자경 감면) */
   reductions: z.array(reductionSchema).default([]),
+  /**
+   * §77 감면 자산이 「직접 경작한 토지」인지 — 농특세령 §4①1호 괄호 (D11-02).
+   * ④가 자산의 reductions에서 승격해 싣는다(자산 축 — 엔진은 감면 유형 확정 후에 본다).
+   */
+  isSelfCultivatedExpropriatedLand: z.boolean().optional(),
   /** 자산별 1세대 1주택 여부 (주택 자산에 적용) */
   isOneHousehold: z.boolean().optional(),
   /** 자산별 거주기간(월) — 주택의 1세대1주택 판정용 */

@@ -110,9 +110,9 @@ export function effectiveProvisoReason(mode: ProvisoMode, reason: string | undef
   return reason;
 }
 // 800줄 분리 (P1, 2026-06-11) — 외부 import 호환을 위해 re-export 보존
-import { toEngineReductions } from "./transfer-tax-api-reductions";
+import { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer-tax-api-reductions";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
-export { toEngineReductions } from "./transfer-tax-api-reductions";
+export { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer-tax-api-reductions";
 
 // ─── ④ 상업용건물·오피스텔 환산취득가 (소령 §164⑥) — transfer-tax-api-commercial.ts로 분리 (800줄 정책, 재export 호환) ───
 export { buildCommercialAppurtenantLand } from "./transfer-tax-api-commercial";
@@ -504,6 +504,10 @@ export function buildAssetPayload(
     })(),
     transferExpense: effectiveTransferExpenseFor(asset, ratio, fractional, totalTransferExpense) || undefined,
     reductions,
+    // ④ §77 직접 경작 토지 — 농특세령 §4①1호 괄호. 단건 ④와 **같은 leaf** (D11-02).
+    //    종전에는 단건이 `primary.reductions`만 봐서 컴패니언 자산은 항상 undefined였고,
+    //    같은 농지를 주 자산에 두면 0원 / 컴패니언에 두면 감면세액 × 20%가 부과됐다.
+    isSelfCultivatedExpropriatedLand: toSelfCultivatedExpropriatedLand(asset.reductions),
     inheritanceValuation,
     fixedAcquisitionPrice,
     // 세대 단위 — form.isOneHousehold(토글) 사용. asset.isOneHousehold는 UI 미동기화(기본 false)라
