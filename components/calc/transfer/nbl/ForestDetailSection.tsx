@@ -32,14 +32,23 @@ export function ForestDetailSection({
 
       <ToggleCard
         tone="sky"
-        title="공익림 (보안림·산림유전자원·시험림 등)"
+        title="공익림 (산림보호구역·채종림·시험림·문화유산 보호구역 등)"
+        description="「소득세법 시행령」 §168조의9①1호·3~14호. 문화유산·자연유산 보호구역 안의 임야(§168조의9①6호)도 여기에 해당합니다."
         checked={asset.nblForestIsPublicInterest}
         onCheckedChange={(v) => onAssetChange({ nblForestIsPublicInterest: v })}
       />
 
+      {/*
+        🔴 라벨 정정 (E3-02·U1-01, 2026-09-02 코드리뷰).
+        이 토글은 엔진의 `isSpecialForestZone`(「소득세법 시행령」 §168조의9①2호 나목 특수산림사업지구)에
+        매핑된다. 종전 라벨 「문화재 보호림」은 실제로는 같은 항 **6호**(문화유산·자연유산 보호구역)라
+        위 공익림 토글이 담당하는 사유인데, 2호에 배선되어 있어 도시지역 편입 3년 지역기준을
+        잘못 태웠다(사업용 → 비사업용 반전).
+      */}
       <ToggleCard
         tone="sky"
-        title="문화재 보호림"
+        title="특수산림사업지구 안의 임야"
+        description="「소득세법 시행령」 §168조의9①2호 나목. 이 사유(및 산림경영계획 인가 시업중)만 도시지역 편입 3년 지역기준의 적용을 받습니다."
         checked={asset.nblForestIsProtected}
         onCheckedChange={(v) => onAssetChange({ nblForestIsProtected: v })}
       />

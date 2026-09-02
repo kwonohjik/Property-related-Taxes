@@ -24,7 +24,7 @@ import {
   meetsPeriodCriteria,
   type PeriodCriteriaResult,
 } from "./period-criteria";
-import { computeResidencePeriods, fallbackResidenceFromDistance } from "./residence";
+import { computeResidencePeriods } from "./residence";
 import { isUrbanForForest } from "./urban-area";
 import { getOwnershipStart } from "./utils/period-math";
 
@@ -95,21 +95,26 @@ export function judgeForest(
     },
   );
 
-  // 임야는 주민등록 필수 — legacy fallback은 주민등록 여부가 명시된 경우만
-  const fallbackResidence: DateInterval[] =
-    residenceFromHistory.length === 0 && input.ownerLocation?.hasResidentRegistration === true
-      ? fallbackResidenceFromDistance(
-          ownershipStart,
-          input.transferDate,
-          input.farmerResidenceDistance,
-          rules.farmlandDistanceKm,
-        )
-      : [];
-  if (fallbackResidence.length > 0) {
-    warnings.push("임야 주거 이력 미입력 — legacy 거리 + 주민등록 스냅샷 fallback");
+  /**
+   * 임야 재촌은 **거주 이력 입력이 유일한 정본**이다 (E1-04, 2026-09-02 코드리뷰).
+   *
+   * 종전에는 `input.ownerLocation?.hasResidentRegistration === true`를 게이트로 한 거리 fallback이
+   * 있었으나 `ownerLocation`을 채우는 프로덕션 코드가 없어(저장소 전수 grep — form-mapper는
+   * `landLocation`만 만든다) **도달 불가 경로**였다. 그래서 UI가 「직선거리(km)」를 받아도 임야에서는
+   * 재촌이 0일로 계산됐다 — 같은 입력이 농지에서는 인정되므로 지목 간 비대칭이기도 했다.
+   *
+   * 「소득세법 시행령」 §168의9②은 「… 지역에 **주민등록이 되어 있고 사실상 거주**하는 자」를
+   * 요건으로 하므로, 주민등록 여부를 알 수 없는 거리 스냅샷만으로는 요건을 세울 수 없다.
+   * ⇒ 죽은 경로를 걷어내고, 이력이 없으면 그 사실을 결과에 드러낸다.
+   */
+  if (residenceFromHistory.length === 0) {
+    warnings.push(
+      "임야 재촌 판정 — 거주 이력이 입력되지 않아 재촌 기간을 0일로 봅니다. " +
+        "「소득세법 시행령」 §168조의9②은 주민등록과 사실상 거주를 요건으로 하므로 거주 이력을 입력해야 판정됩니다.",
+    );
   }
 
-  const residencePeriods = residenceFromHistory.length > 0 ? residenceFromHistory : fallbackResidence;
+  const residencePeriods = residenceFromHistory;
   const r1 = meetsPeriodCriteria(residencePeriods, input.acquisitionDate, pjDate, "forest", rules, input.gracePeriods);
 
   steps.push({
@@ -182,13 +187,28 @@ export function judgeForest(
     });
   }
 
-  // ── Step 3-2: 산림법 시업중 · 특수산림사업지구? (inSiupOrSpecialZone은 Step 3-1-1에서 산정) ──
-  if (!inSiupOrSpecialZone) {
+  /**
+   * ── Step 3-2: 산림법 시업중 · 특수산림사업지구? (inSiupOrSpecialZone은 Step 3-1-1에서 산정) ──
+   *
+   * 🔴 지역기준(도시지역 편입 3년)은 **①2호에만 붙은 단서**다 (E3-03, 2026-09-02 코드리뷰).
+   *    「소득세법 시행령」 §168의9①2호 본문 확인:
+   *      「2. 「산지관리법」에 따른 산지 안의 임야로서 다음 각 목의 어느 하나에 해당하는 임야.
+   *        **다만**, … 도시지역 … 안의 임야로서 도시지역으로 편입된 날부터 3년이 경과한 임야를 제외한다.」
+   *    단서 안의 「이하 **이 호에서** 같다」가 적용 범위를 2호로 못 박는다. 따라서 같은 임야가
+   *    ①1호(산림보호구역·채종림·시험림)·①6호(문화유산·자연유산 보호구역) 등 **다른 호**나
+   *    ③(거주·사업관련)에도 해당하면 그 사유로 이미 사업용이므로 2호 단서로 뒤집을 수 없다.
+   *
+   *    종전 게이트는 `inSiupOrSpecialZone`만 보아 공익림·거주관련 임야까지 지역기준에 태웠다.
+   */
+  const onlySiup = inSiupOrSpecialZone && !publicProtected && !related.applies;
+  if (!onlySiup) {
     steps.push({
       id: "forest_siup_zone",
       label: "Step 3-2 산림법 시업중·특수산림사업지구",
       status: "NOT_APPLICABLE",
-      detail: "시업중/특수지구 아님 — 임야 지역기준 미적용 → 사업용",
+      detail: inSiupOrSpecialZone
+        ? "시업중/특수지구이나 ①1호(공익림) 또는 ③(거주·사업관련)에도 해당 — ①2호 단서 미적용 → 사업용"
+        : "시업중/특수지구 아님 — 임야 지역기준 미적용 → 사업용",
       legalBasis: NBL.FOREST,
     });
     return buildPass("공익/사업관련 임야 + 기간기준 충족 (지역기준 미적용)", steps, appliedLaws, warnings, {
@@ -198,6 +218,15 @@ export function judgeForest(
 
   // ── Step 3-2-1/2: 시업중/특수지구 — 도시지역 밖 + 편입유예 ────────
   const urban = isUrbanForForest(input.zoneType);
+  // §168의9①2호 단서의 「도시지역」은 **보전녹지지역을 제외**한다(본문 명문 — 국토계획법 시행령 §30).
+  // 현재 ZoneType은 녹지지역을 세분하지 않아 보전녹지를 가려낼 수 없다 → 녹지는 도시지역으로 보고
+  // 그 한계를 결과에 드러낸다(추정으로 유리·불리 어느 쪽으로도 확정하지 않는다). E3-04.
+  if (urban && input.zoneType === "green") {
+    warnings.push(
+      "녹지지역으로 판정했습니다 — 「소득세법 시행령」 §168조의9①2호 단서는 보전녹지지역을 도시지역에서 제외하나, " +
+        "현재 용도지역 입력은 녹지지역을 세분하지 않습니다. 보전녹지지역이면 지역기준이 적용되지 않습니다.",
+    );
+  }
   steps.push({
     id: "forest_siup_zone",
     label: "Step 3-2 산림법 시업중·특수산림사업지구",
@@ -219,23 +248,24 @@ export function judgeForest(
       label: "Step 3-2-1 도시지역 內 편입유예",
       status: "PASS",
       detail: grace.detail,
-      legalBasis: NBL.URBAN_GRACE,
+      legalBasis: NBL.FOREST_URBAN_GRACE,
     });
     return buildPass("시업중 임야 + 도시지역 內 편입유예 내", steps, appliedLaws, warnings, {
       r: r2, totalOwnershipDays, residencePeriodsUsed: residencePeriods,
     });
   }
 
-  // 임야 편입유예 산정 — addYears(urbanIncorporationDate, 3) 경과 시 ①2호 단서 제외
-  const addOneY = input.urbanIncorporationDate ? addYears(input.urbanIncorporationDate, 3) : null;
+  // 편입유예 미적용 — 「모른다(미제공)」와 「지났다(경과)」를 구분해 적는다.
+  // 종전에는 두 사실을 한 문장으로 합치고 유예연수도 3년으로 고정 표기해, 2015.2.2. 이전 양도분의
+  // 2년 유예가 결과 화면에 3년으로 나왔다 (V5-a·V5-g, 2026-09-02 코드리뷰).
   steps.push({
     id: "forest_urban_grace",
     label: "Step 3-2-1 도시지역 內 편입유예",
     status: "FAIL",
-    detail: addOneY
-      ? `편입일 ${input.urbanIncorporationDate?.toISOString().slice(0, 10)}부터 3년 경과`
-      : "편입일 미제공 또는 유예 경과",
-    legalBasis: NBL.URBAN_GRACE,
+    detail: input.urbanIncorporationDate
+      ? `편입일 ${input.urbanIncorporationDate.toISOString().slice(0, 10)}부터 ${grace.graceYears}년 경과`
+      : "도시지역 편입일 미제공 — 편입유예를 적용할 수 없습니다(편입일을 입력하면 유예 여부가 판정됩니다)",
+    legalBasis: NBL.FOREST_URBAN_GRACE,
   });
   return buildFail("시업중 임야 + 도시지역 內 유예 외 → 비사업용", steps, appliedLaws, warnings, {
     r: r2, totalOwnershipDays, residencePeriodsUsed: residencePeriods,

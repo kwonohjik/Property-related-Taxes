@@ -113,7 +113,24 @@ describe("C-2 임야 PDF p.1700 흐름도", () => {
     expect(r.isBusiness).toBe(true);
   });
 
-  it("시업중 임야 + 도시지역 內 + 편입 5년 경과 → 비사업용 (지역기준 적용)", () => {
+  it("시업중 임야(2호 단독) + 도시지역 內 + 편입 5년 경과 → 비사업용 (지역기준 적용)", () => {
+    const r = judgeForest(
+      base({
+        zoneType: "general_residential",
+        // 🔴 `isPublicInterest`를 뺐다 (E3-03, 2026-09-02 코드리뷰).
+        //    「소득세법 시행령」 §168조의9①2호 단서는 「이하 **이 호에서** 같다」로 적용 범위가
+        //    2호로 한정된다. 종전 픽스처는 ①1호(공익림)를 함께 켠 채 비사업용을 단언해
+        //    **단서가 다른 호까지 뒤집는 결함을 고정**하고 있었다. 2호 단독 경로는 그대로 덮는다.
+        forestDetail: { hasForestPlan: true },
+        urbanIncorporationDate: d("2018-01-01"),
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(false);
+    expect(r.reason).toContain("유예 외");
+  });
+
+  it("🔴 시업중 + ①1호 공익림 병존 → 사업용 (§168조의9①2호 단서는 2호에만 적용)", () => {
     const r = judgeForest(
       base({
         zoneType: "general_residential",
@@ -122,8 +139,19 @@ describe("C-2 임야 PDF p.1700 흐름도", () => {
       }),
       DEFAULT_NON_BUSINESS_LAND_RULES,
     );
-    // 공익(PASS) + 시업중(지역기준 적용) + 도시지역(일반주거) + 유예 외(6년 경과)
-    expect(r.isBusiness).toBe(false);
-    expect(r.reason).toContain("유예 외");
+    expect(r.isBusiness).toBe(true);
+    expect(r.steps.some((s) => s.id === "forest_siup_zone" && s.status === "NOT_APPLICABLE")).toBe(true);
+  });
+
+  it("🔴 시업중 + ③ 거주·사업관련(임업후계자) 병존 → 사업용", () => {
+    const r = judgeForest(
+      base({
+        zoneType: "general_residential",
+        forestDetail: { isForestSuccessor: true, hasForestPlan: true },
+        urbanIncorporationDate: d("2018-01-01"),
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(r.isBusiness).toBe(true);
   });
 });
