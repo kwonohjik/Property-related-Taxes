@@ -52,8 +52,6 @@ const R973 = {
   stdPriceAtRentalStart: 600_000_000,
   isNationalHousingScale: true,
   region: "capital",
-  propertyType: "apartment",
-  rentalHousingType: "long_term_private",
   rentalContinuesToTransfer: true,
 };
 

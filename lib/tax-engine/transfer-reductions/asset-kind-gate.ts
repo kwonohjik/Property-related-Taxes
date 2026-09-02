@@ -85,6 +85,13 @@ const GB_CLAIM_ROUTE_KINDS = new Set<ReductionAssetKind>([
 /**
  * §77의3 **§17 매수청구** 경로를 이 자산 종류에 걸 수 있는가.
  * `gbPurchaseRoute === "claim"` 일 때만 의미가 있다 — ⑧ validate와 ⑤ UI가 공유한다.
+ *
+ * 호출부(단일 소스 유지 — 새 호출부를 늘릴 때 여기 추가할 것):
+ *   - ⑧ `lib/calc/transfer-tax-validate-reductions.ts:120` (최종 차단)
+ *   - ⑤ `app/calc/transfer-tax/steps/Step5.tsx` 매수 경로 라디오 (입력 시점 disabled)
+ *
+ * ⚠ 2026-09-02(D9-06) 전까지 ⑤ 호출부가 **없었다** — 주석만 「⑤ UI가 공유한다」였고
+ *   실제로는 라디오가 무조건 선택 가능해 계산 실행 시점에야 막혔다.
  */
 export function isGbClaimRouteAllowedForAssetKind(assetKind: ReductionAssetKind): boolean {
   return GB_CLAIM_ROUTE_KINDS.has(assetKind);

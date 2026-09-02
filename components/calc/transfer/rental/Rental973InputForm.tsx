@@ -83,33 +83,32 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
 
         <div>
           <p className="mb-1 text-xs font-medium">임대주택 유형</p>
+          {/* D9-07 — §97의3①은 4호·5호를 동등하게 대상으로 삼아 이 선택이 공제율을 가르지 않는다.
+              종전에는 옆에 「아파트 여부」 라디오까지 있어 두 입력 모두 세액을 바꾸는 것처럼 보였다. */}
           <RadioCardGroup
             name="rentalHousingType_973"
-            layout="inline"
+            // D9-07 — inline 분기는 description을 렌더하지 않는다(RadioCardGroup.tsx:203).
+            // 4호/5호 조문 표기를 실제로 보이게 하려면 stack이어야 한다.
+            layout="stack"
+            columns={2}
             tone="violet"
             value={value.rentalHousingType}
             onChange={(v) => onChange({ rentalHousingType: v as Rental973Form["rentalHousingType"] })}
             options={[
-              { value: "long_term_private", label: "장기일반민간임대" },
-              { value: "public_support_private", label: "공공지원민간임대" },
+              {
+                value: "long_term_private",
+                label: "장기일반민간임대",
+                description: "민특법 §2 5호",
+              },
+              {
+                value: "public_support_private",
+                label: "공공지원민간임대",
+                description: "민특법 §2 4호",
+              },
             ]}
           />
         </div>
 
-        <div>
-          <p className="mb-1 text-xs font-medium">아파트 여부</p>
-          <RadioCardGroup
-            name="propertyType_973"
-            layout="inline"
-            tone="sky"
-            value={value.propertyType}
-            onChange={(v) => onChange({ propertyType: v as Rental973Form["propertyType"] })}
-            options={[
-              { value: "apartment", label: "아파트" },
-              { value: "non_apartment", label: "비아파트" },
-            ]}
-          />
-        </div>
 
         <ToggleCard
           variant="chip"

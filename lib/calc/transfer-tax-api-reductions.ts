@@ -249,7 +249,6 @@ export function toEngineReductions(
           officialPriceAtStart: parseAmount(r.officialPriceAtStart || "0") || undefined,
           isNationalHousingScale: r.isNationalHousingScale,
           region: r.region,
-          propertyType: r.propertyType,
           rentalHousingType: r.rentalHousingType,
           isConvertedFromShortTerm: r.isConvertedFromShortTerm,
           isPrivateConstructionRental: r.isPrivateConstructionRental, // D2-07

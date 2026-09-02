@@ -128,8 +128,6 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
   /** 국민주택규모 이하 여부 — 사용자 확인 입력 (령 §97의3③2호. 다가구는 가구당 전용면적 기준) */
   isNationalHousingScale?: boolean;
   region?: "capital" | "non_capital";
-  propertyType?: "apartment" | "non_apartment";
-  rentalHousingType?: "long_term_private" | "public_support_private";
   /**
    * §97의3① 「「민간임대주택에 관한 특별법」 제2조제2호에 따른 **민간건설임대주택**으로서…」 (D2-07)
    *

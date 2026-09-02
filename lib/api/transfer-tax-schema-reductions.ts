@@ -171,7 +171,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     officialPriceAtStart: z.number().int().nonnegative().optional(),
     isNationalHousingScale: z.boolean().optional(),
     region: z.enum(["capital", "non_capital"]).optional(),
-    propertyType: z.enum(["apartment", "non_apartment"]).optional(),
     rentalHousingType: z.enum(["long_term_private", "public_support_private"]).optional(),
     isConvertedFromShortTerm: z.boolean().optional(),
     _phase1Stub: z.literal(true).optional(),

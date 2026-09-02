@@ -22,8 +22,8 @@ function base973(overrides?: Partial<Rental97EvaluationInput>): Rental97Evaluati
     officialPriceAtStart: 400_000_000,
     isNationalHousingScale: true,
     region: "capital",
-    propertyType: "non_apartment",
-    rentalHousingType: "long_term_private",
+    // D9-07 — propertyType(아파트 여부)·rentalHousingType은 evaluateRental973이 읽지
+    // 않는 사문 필드였다(구별력 0 실측). 엔진 입력 타입에서 제거했다.
     isConvertedFromShortTerm: false,
     ...overrides,
   };

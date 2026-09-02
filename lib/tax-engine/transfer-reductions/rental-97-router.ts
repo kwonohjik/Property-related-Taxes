@@ -77,10 +77,10 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         officialPriceAtStart: r.officialPriceAtStart,
         isNationalHousingScale: r.isNationalHousingScale,
         region: r.region,
-        propertyType: r.propertyType,
         // D2-07 — ⚠️ 명시 매핑이라 적지 않으면 조용히 사라진다.
         isPrivateConstructionRental: r.isPrivateConstructionRental,
-        rentalHousingType: r.rentalHousingType,
+        // D9-07 — propertyType(아파트 여부)·rentalHousingType은 evaluateRental973이
+        // 읽지 않으므로 엔진 입력에 싣지 않는다. 「엔진 입력은 엔진이 읽는 것만 담는다」.
         isConvertedFromShortTerm: r.isConvertedFromShortTerm,
       };
     case "rental_97_4":

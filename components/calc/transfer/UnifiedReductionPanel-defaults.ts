@@ -129,7 +129,6 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       type: "rental_97_3",
       ...RENTAL_COMMON_DEFAULTS,
       rentalHousingType: "long_term_private",
-      propertyType: "non_apartment",
       region: "capital",
       officialPriceAtStart: "",
       isNationalHousingScale: false,

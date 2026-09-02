@@ -11,6 +11,7 @@ import { SelfFarmingIncorporationInput } from "@/components/calc/inputs/SelfFarm
 import { UnifiedReductionPanel } from "@/components/calc/transfer/UnifiedReductionPanel";
 import { ALL_LIMIT_GROUP_TYPES } from "@/lib/tax-engine/aggregate-reduction-limits";
 import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-labels";
+import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 
 // ============================================================
 // Step 5 (→ Step 4): 감면·공제 (자산별 체크박스 복수 선택)
@@ -382,14 +383,34 @@ function AssetReductionBlock({
           {gbDesignated.gbBranch === "in_zone" && (
             <div>
               <p className="block text-xs font-medium mb-1">매수 경로</p>
+              {/* D9-06 — `layout="inline"`은 RadioCardGroup이 description을 **렌더하지 않는다**
+                  (RadioCardGroup.tsx:203 — inline 분기는 label만 그린다). 이 두 옵션은 대상
+                  범위 차이(§17 매수대상토지 ↔ §20 토지등)를 description으로 설명해야 하므로
+                  stack 2열로 둔다. 종전에는 안내가 코드에만 있고 화면에는 없었다. */}
               <RadioCardGroup
                 name={`gbPurchaseRoute-${assetIndex}`}
-                layout="inline"
+                layout="stack"
+                columns={2}
                 tone="sky"
                 value={gbDesignated.gbPurchaseRoute ?? ""}
                 onChange={(v) => updateReduction("gb_designated_land", { gbPurchaseRoute: v })}
                 options={[
-                  { value: "claim", label: "토지매수 청구 (§17)", description: "매수대상토지 — 토지분만 감면 대상" },
+                  {
+                    value: "claim",
+                    label: "토지매수 청구 (§17)",
+                    /**
+                     * D9-06 — ⑧ validate와 **같은 술어**로 disabled를 건다.
+                     * 개발제한구역법 §17①의 대상은 「매수대상토지」(토지만)이고 §20①은
+                     * 「토지와 그 토지의 정착물」이라 대상 범위가 다르다. 토지 파트가 독립
+                     * 계산되지 않는 자산(주택·건물·입주권·분양권·재개발APT)은 안분 없이
+                     * 토지분을 뽑을 수 없어 차단 대상이다(자동 안분 fallback 금지).
+                     * 종전에는 이 옵션이 무조건 선택 가능해 계산 실행 시점에야 막혔다.
+                     */
+                    disabled: !isGbClaimRouteAllowedForAssetKind(asset.assetKind),
+                    description: isGbClaimRouteAllowedForAssetKind(asset.assetKind)
+                      ? "매수대상토지 — 토지분만 감면 대상"
+                      : "이 자산 종류는 토지분이 독립 계산되지 않아 선택할 수 없습니다 — 협의매수(§20)를 선택하거나 토지 자산으로 입력하세요",
+                  },
                   { value: "negotiated", label: "협의매수 (§20)", description: "토지와 그 토지의 정착물" },
                 ]}
               />

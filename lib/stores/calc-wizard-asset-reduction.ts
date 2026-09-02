@@ -220,8 +220,11 @@ export interface RentalCommonFormFields {
 export type RentalReductionFormVariant =
   | ({
       type: "rental_97_3";
+      /**
+       * 민특법 §2 4호(공공지원)/5호(장기일반) — §97의3① 본문이 둘을 동등하게 대상으로
+       * 삼으므로 **판정을 가르지 않는다**. 사용자 신고 사실로만 보관한다 (D9-07).
+       */
       rentalHousingType: "long_term_private" | "public_support_private";
-      propertyType: "apartment" | "non_apartment";
       region: "capital" | "non_capital";
       /** 임대개시일 당시 주택+부속토지 기준시가 합계 (원) — 령 §97의3③4호 6억/3억 한도 */
       officialPriceAtStart: string;
