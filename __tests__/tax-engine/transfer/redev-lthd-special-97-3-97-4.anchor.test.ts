@@ -125,11 +125,110 @@ describe("재개발 × §97의3 — 임대분 70% 대체", () => {
 });
 
 describe("재개발 × §97의4 — 추가율 가산", () => {
+  /**
+   * 적격 조합 — 등록 2013-05-01(소령 §167의3①2호 가목 단서의 2018-03-31 상한 내) ·
+   * 임대개시 2013-06-01 · 양도 2026-02-16(조특법 §97의4 시행 2014-01-01 이후) →
+   * 임대 12년 → §97의4① 표의 「10년 이상 = 100분의 10」.
+   *
+   * ⚠️ 이 조합은 **CB-01이 해소된 뒤에야 만들 수 있다**. 종전에는 시한 게이트가
+   *   `registrationDate >= 2014-01-01`이라 2013년 등록이 부당 배제됐다(축이 틀렸다 —
+   *   법률 제12173호 부칙 §2③은 「양도하는 분부터」이므로 **양도일** 축이다).
+   */
+  const R974 = {
+    type: "rental_97_4" as const,
+    registrationDate: D("2013-05-01"),
+    rentalStartDate: D("2013-06-01"),
+    isTaxRegistered: true,
+    rental974Category: "purchase_a" as const,
+    officialPriceAtStart: 500_000_000,
+    region: "capital" as const,
+  };
+
+  const base = redev();
+  const with974 = redev({ reductions: [R974] as unknown as TransferTaxInput["reductions"] });
+
   it("R974-1: 표2 대상이면 가산하지 않는다 (§97의4① 단서 · §95② 단서)", () => {
     // 표2 판정은 단일 소스 `usesTable2`를 쓴다 — 술어를 복제하지 않는다
     expect(usesTable2(true, 2)).toBe(true);
     expect(usesTable2(true, 1)).toBe(false);
     expect(usesTable2(false, 10)).toBe(false);
+  });
+
+  it("R974-2: 🔴 추가율이 분기별 공제율에 가산된다 (종전에는 고지만 하고 세액 무변동)", () => {
+    expect(with974.longTermHoldingDeduction).toBe(115_378_365);
+    expect(with974.determinedTax).toBe(44_875_669);
+    expect(base.determinedTax - with974.determinedTax).toBe(10_960_945);
+  });
+
+  it("R974-3: 🔑 **분기별 가산 = 전체 가산** — Σ 차익ᵢ × 추가율 = 총차익 × 추가율", () => {
+    const added = with974.longTermHoldingDeduction - base.longTermHoldingDeduction;
+    const whole = Math.floor(with974.transferGain * 0.1);
+    // 분기별 floor 때문에 최대 분기 수(3)만큼의 원 단위 오차만 허용된다
+    expect(Math.abs(added - whole)).toBeLessThanOrEqual(3);
+  });
+
+  it("R974-4: 근거 echo — 추가율 10%·임대 12년이 결과에 실린다", () => {
+    const d = with974.rental97LthdDetail as {
+      additionalRate?: number;
+      eligibleRentalYears?: number;
+      rentalGainRatio?: number;
+    };
+    expect(d?.additionalRate).toBe(0.1);
+    expect(d?.eligibleRentalYears).toBe(12);
+    // §97의4는 임대기간 안분 규정이 없다 — 전체 차익의 공제율에 가산한다
+    expect(d?.rentalGainRatio).toBe(1);
+  });
+
+  it("R974-5: 계산 근거 step이 남는다", () => {
+    expect(
+      with974.steps.some(
+        (s) => s.label === "장기보유특별공제 특례 — 장기임대주택 추가공제율 (조특법 §97의4①)",
+      ),
+    ).toBe(true);
+  });
+
+  /**
+   * 🔑 보유 3년 미만 분기는 가산하지 않는다 — 정상 경로(`transfer-tax-lthd.ts`의 `if (rate > 0)`)와
+   *   **같은 규약**이다. §95②은 보유 3년 이상부터 공제하므로 기본 공제율이 0인 분기에 추가율만
+   *   얹으면 공제가 없던 자리에 공제가 생긴다.
+   *
+   * 인가일을 양도일 가까이 옮겨 **청산금 분기(인가일~양도일)를 3년 미만**으로 만든 격자다.
+   * case44 원본은 세 분기가 전부 율 > 0이라 이 가드가 한 번도 발동하지 않는다 —
+   * 뮤테이션(가드 제거)이 잡히지 않아 드러났다.
+   */
+  describe("R974-7 보유 3년 미만 분기 — 가산 억제", () => {
+    const shortSettlement = (reductions?: unknown[]) =>
+      redev({
+        redevelopment: { ...case44RedevelopmentInfo(), approvalDate: D("2024-06-01") },
+        ...(reductions ? { reductions: reductions as unknown as TransferTaxInput["reductions"] } : {}),
+      });
+    const b = shortSettlement();
+    const w = shortSettlement([R974]);
+
+    it("전제 — 청산금 분기의 공제율이 0이다 (인가 2024-06-01 → 양도 2026-02-16)", () => {
+      const detail = b.redevelopmentDetail as unknown as Record<string, { lthdRate: number; gain: number }>;
+      expect(detail.preApproval.lthdRate).toBeGreaterThan(0);
+      expect(detail.postApprovalExistingHouse.lthdRate).toBeGreaterThan(0);
+      expect(detail.settlement.lthdRate).toBe(0);
+      expect(detail.settlement.gain).toBe(63_341_217);
+    });
+
+    it("🔴 그 분기만큼 가산이 빠진다 — 전체 10% 가산과 다르다", () => {
+      const added = w.longTermHoldingDeduction - b.longTermHoldingDeduction;
+      expect(added).toBe(22_510_470);
+      // 전체에 10%를 얹었다면 28,844,591이었을 것 — 차이는 청산금 분기 63,341,217 × 10%
+      expect(Math.floor(w.transferGain * 0.1) - added).toBe(6_334_121);
+    });
+  });
+
+  it("R974-6: 🔑 구별력 — 등록이 2018.3.31 이후면 소령 단서로 배제된다 (세액 불변)", () => {
+    const late = redev({
+      reductions: [
+        { ...R974, registrationDate: D("2018-06-01") },
+      ] as unknown as TransferTaxInput["reductions"],
+    });
+    expect(late.longTermHoldingDeduction).toBe(base.longTermHoldingDeduction);
+    expect(late.determinedTax).toBe(base.determinedTax);
   });
 });
 
