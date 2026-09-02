@@ -131,7 +131,20 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             return fail("대토(토지) 보상액을 입력하세요 (대토보상분만 감면 대상).");
         }
         if (r.type === "self_farming") {
-          // 편입 부분감면(조특령 §66⑤⑥) 기준시가 3점 필수 — 엔진 silent-0 정확 미러.
+          // 조특령 §66④1호 3년 배제의 **소재지 요건** — 편입 후 3년이 지난 경우에만 필요하다 (D7-07).
+          // 3년 이내면 소재지와 무관하게 배제가 성립하지 않으므로 묻지 않는다(엔진 게이트와 동일 조건).
+          if (
+            r.useSelfFarmingIncorporation &&
+            r.selfFarmingIncorporationDate &&
+            form.transferDate &&
+            new Date(form.transferDate) > addYears(new Date(r.selfFarmingIncorporationDate), 3) &&
+            !r.selfFarmingIncorporationLocation
+          ) {
+            return fail(
+              "자경농지 편입: 양도일 현재 농지 소재지 구분(특별시·광역시(군 제외)·시 / 그 밖의 지역)을 선택하세요 (조특령 §66④1호).",
+            );
+          }
+          // 편입 부분감면(영 §66⑦) 기준시가 3점 필수 — 엔진 silent-0 정확 미러.
           // 발동 조건: 편입 ON + 편입일≥2002-01-01 + 양도일≤편입일+3년(유예 내). 그 외는 엔진이
           // 전액감면/graceExpired로 별도 처리하므로 차단 금지(UI↔validate 모순 방지).
           if (r.useSelfFarmingIncorporation && r.selfFarmingIncorporationDate && form.transferDate) {
@@ -148,7 +161,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
                 parseAmount(asset.standardPriceAtTransfer || "") > 0;
               if (!hasAcq || !hasIncorp || !hasTransfer)
                 return fail(
-                  "편입일 부분감면(조특령 §66⑤⑥): 취득·편입·양도 시점 기준시가를 모두 입력하세요.",
+                  "편입일 부분감면(조특령 §66⑦): 취득·편입·양도 시점 기준시가를 모두 입력하세요.",
                 );
             }
           }

@@ -20,13 +20,17 @@ export type TransferReduction =
       decedentFarmingYears?: number;
       /**
        * 주거·상업·공업지역 편입일 — 선택.
-       * 2002.1.1 이후 편입인 경우 조특령 §66 ⑤⑥에 따라 부분감면 적용:
+       * 2002.1.1 이후 편입인 경우 법 §69①단서 + 영 §66⑦에 따라 부분감면 적용:
        *   - 편입일까지의 양도소득(기준시가 증가분 비율)만 감면 대상
        *   - 편입일부터 3년 내 양도해야 감면 적용 (경과 시 감면 상실)
        */
       incorporationDate?: Date;
       /** 편입 지역 유형 (표시·판정용) */
       incorporationZoneType?: "residential" | "commercial" | "industrial";
+      /** 양도일 현재 소재지 구분 — 조특령 §66④1호 3년 배제의 소재지 요건 */
+      incorporationLocationType?: "metro_or_city" | "gun_or_eup_myeon";
+      /** 조특령 §66④1호 단서 가·나·다목 해당 */
+      hasIncorporationProvisoException?: boolean;
       /**
        * 편입일 당시 기준시가 (원, 총액 또는 ㎡당 단가).
        * `standardPriceAtAcquisition`·`standardPriceAtTransfer`(TransferTaxInput 기본)와 같은 단위여야 한다.

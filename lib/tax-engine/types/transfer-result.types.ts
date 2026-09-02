@@ -362,7 +362,7 @@ export interface TransferTaxResult {
    */
   replacementLandDetail?: ReplacementLandResult;
   /**
-   * 자경농지 감면 상세 결과 (조특법 §69 + 시행령 §66 ⑤⑥)
+   * 자경농지 감면 상세 결과 (조특법 §69 + 시행령 §66④1호·§66⑦)
    * reductions에 self_farming 유형 포함 시만 세팅.
    * 편입일 부분감면·3년 유예 경과 여부·감면대상 양도소득금액 포함.
    */

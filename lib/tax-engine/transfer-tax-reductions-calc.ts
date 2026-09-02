@@ -365,7 +365,7 @@ export function calcReductions(
 
     if (reduction.type === "self_farming" && selfFarmingRules) {
       // 조특법 §69 자경농지 감면 + 조특령 §66 ⑪ 1호 피상속인 경작기간 합산
-      // + 조특령 §66 ⑤⑥ 주거·상업·공업지역 편입 시 부분감면
+      // + 조특령 §66④1호(3년 배제)·§66⑦(부분감면) 주거·상업·공업지역 편입
       const minYears = selfFarmingRules.conditions.minFarmingYears;
       const own = reduction.farmingYears;
       const needsDecedent = own < minYears;
@@ -389,6 +389,8 @@ export function calcReductions(
           transferDate: transferDate!,
           incorporationDate: reduction.incorporationDate,
           incorporationZoneType: reduction.incorporationZoneType,
+          incorporationLocationType: reduction.incorporationLocationType,
+          hasIncorporationProvisoException: reduction.hasIncorporationProvisoException,
           // 편입 부분감면 기준시가: reduction 전용 입력 우선(실지 모드), 없으면 자산-수준(환산 모드) fallback
           standardPriceAtAcquisition: reduction.standardPriceAtAcquisition ?? standardPriceAtAcquisition,
           standardPriceAtIncorporation: reduction.standardPriceAtIncorporation,

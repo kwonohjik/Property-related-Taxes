@@ -21,6 +21,11 @@ export function toEngineReductions(
       const decedentYears = parseInt(r.decedentFarmingYears ?? "0") || 0;
       const incorpDate = r.useSelfFarmingIncorporation ? (r.selfFarmingIncorporationDate ?? "") : "";
       const incorpZone = r.useSelfFarmingIncorporation ? (r.selfFarmingIncorporationZone ?? "") : "";
+      const incorpLocation = r.useSelfFarmingIncorporation
+        ? (r.selfFarmingIncorporationLocation ?? "")
+        : "";
+      const incorpProviso =
+        r.useSelfFarmingIncorporation && r.selfFarmingIncorporationProvisoException === true;
       const incorpStdPrice = r.useSelfFarmingIncorporation
         ? parseAmount(r.selfFarmingStandardPriceAtIncorporation ?? "")
         : 0;
@@ -39,6 +44,8 @@ export function toEngineReductions(
           : {}),
         ...(incorpDate ? { incorporationDate: incorpDate } : {}),
         ...(incorpZone ? { incorporationZoneType: incorpZone } : {}),
+        ...(incorpLocation ? { incorporationLocationType: incorpLocation } : {}),
+        ...(incorpProviso ? { hasIncorporationProvisoException: true } : {}),
         ...(incorpStdPrice > 0 ? { standardPriceAtIncorporation: incorpStdPrice } : {}),
         ...(incorpStdAcq > 0 ? { standardPriceAtAcquisition: incorpStdAcq } : {}),
         ...(incorpStdTransfer > 0 ? { standardPriceAtTransfer: incorpStdTransfer } : {}),

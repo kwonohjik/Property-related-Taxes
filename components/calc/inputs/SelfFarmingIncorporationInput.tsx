@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 자경농지 편입일 부분감면 입력 (조특령 §66 ⑤⑥)
+ * 자경농지 편입 입력 (조특령 §66④1호 배제 · 법 §69①단서 + 영 §66⑦ 부분감면)
  *
  * Step5에서 reductionType === "self_farming" 선택 시 노출된다.
  * 토글이 켜진 경우에만 편입일·지역·기준시가 3필드를 수집해 API로 전송.
@@ -16,6 +16,15 @@ import { DateInput } from "@/components/ui/date-input";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+
+/** 조특령 §66④1호 본문 — 3년 배제가 걸리는 소재지 범위 */
+const LOCATION_OPTIONS = [
+  {
+    value: "metro_or_city",
+    label: "특별시·광역시·시 (광역시의 군, 도농복합시·행정시의 읍·면 제외)",
+  },
+  { value: "gun_or_eup_myeon", label: "그 밖의 지역 (군·읍·면 등)" },
+] as const;
 
 const ZONE_OPTIONS = [
   { value: "residential", label: "주거지역" },
@@ -35,6 +44,8 @@ interface SelfFarmingIncorporationInputProps {
   useSelfFarmingIncorporation: boolean;
   selfFarmingIncorporationDate: string;
   selfFarmingIncorporationZone: "residential" | "commercial" | "industrial" | "";
+  selfFarmingIncorporationLocation: "metro_or_city" | "gun_or_eup_myeon" | "";
+  selfFarmingIncorporationProvisoException: boolean;
   selfFarmingStandardPriceAtIncorporation: string;
   selfFarmingStandardPriceAtAcquisition: string;
   selfFarmingStandardPriceAtTransfer: string;
@@ -42,6 +53,8 @@ interface SelfFarmingIncorporationInputProps {
     useSelfFarmingIncorporation: boolean;
     selfFarmingIncorporationDate: string;
     selfFarmingIncorporationZone: "residential" | "commercial" | "industrial" | "";
+    selfFarmingIncorporationLocation: "metro_or_city" | "gun_or_eup_myeon" | "";
+    selfFarmingIncorporationProvisoException: boolean;
     selfFarmingStandardPriceAtIncorporation: string;
     selfFarmingStandardPriceAtAcquisition: string;
     selfFarmingStandardPriceAtTransfer: string;
@@ -62,6 +75,8 @@ export function SelfFarmingIncorporationInput({
   useSelfFarmingIncorporation,
   selfFarmingIncorporationDate,
   selfFarmingIncorporationZone,
+  selfFarmingIncorporationLocation,
+  selfFarmingIncorporationProvisoException,
   selfFarmingStandardPriceAtIncorporation,
   selfFarmingStandardPriceAtAcquisition,
   selfFarmingStandardPriceAtTransfer,
@@ -84,7 +99,7 @@ export function SelfFarmingIncorporationInput({
     <ToggleCard
       tone="amber"
       title="주거·상업·공업지역 편입"
-      description="조특령 §66 ⑤⑥ 편입일 부분감면 — 2002.1.1 이후 편입 시 편입일까지의 양도소득만 감면 대상. 편입일부터 3년이 지난 후 양도하면 감면이 전부 상실됩니다."
+      description="법 §69①단서 + 영 §66⑦ 부분감면 — 2002.1.1 이후 편입 시 편입일까지의 양도소득만 감면 대상. 별도로 영 §66④1호는 «특별시·광역시(군 제외)·시» 소재 농지가 편입 후 3년이 지나면 감면대상 토지에서 제외합니다(단서 예외 있음)."
       checked={useSelfFarmingIncorporation}
       onCheckedChange={(v) =>
         onChange({
@@ -98,6 +113,8 @@ export function SelfFarmingIncorporationInput({
             : {
                 selfFarmingIncorporationDate: "",
                 selfFarmingIncorporationZone: "",
+                selfFarmingIncorporationLocation: "",
+                selfFarmingIncorporationProvisoException: false,
                 selfFarmingStandardPriceAtIncorporation: "",
                 selfFarmingStandardPriceAtAcquisition: "",
                 selfFarmingStandardPriceAtTransfer: "",
@@ -133,6 +150,39 @@ export function SelfFarmingIncorporationInput({
               </select>
             </div>
           </div>
+
+          {/* 조특령 §66④1호 — 소재지 요건 + 단서 예외 */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">양도일 현재 농지 소재지 (조특령 §66④1호)</Label>
+            <select
+              value={selfFarmingIncorporationLocation}
+              onChange={(e) =>
+                onChange({
+                  selfFarmingIncorporationLocation: e.target.value as
+                    | "metro_or_city"
+                    | "gun_or_eup_myeon"
+                    | "",
+                })
+              }
+              className="w-full h-9 rounded-md border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">소재지 구분 선택</option>
+              {LOCATION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <p className="text-micro text-muted-foreground">
+              3년 경과 배제는 이 범위의 농지에만 적용됩니다 — 군·읍·면 소재 농지는 3년이 지나도
+              배제되지 않습니다(부분감면은 별개로 적용).
+            </p>
+          </div>
+          <ToggleCard
+            tone="amber"
+            title="§66④1호 단서(가·나·다목) 해당"
+            description="대규모개발사업지역 안에서 사업시행자의 단계적 사업시행·보상지연으로 3년이 지난 경우, 국가·지방자치단체·공공기관이 시행하는 개발사업지역 안에서 부득이한 사유에 해당하는 경우 등 — 해당하면 3년 배제에서 제외됩니다."
+            checked={selfFarmingIncorporationProvisoException}
+            onCheckedChange={(v) => onChange({ selfFarmingIncorporationProvisoException: v })}
+          />
 
           {/* 편입당시 기준시가 (개별공시지가 × 면적) */}
           <div className="space-y-1.5">

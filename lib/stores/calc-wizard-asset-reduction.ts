@@ -12,12 +12,19 @@ export type AssetReductionForm =
       farmingYears: string;
       /** 피상속인 자경기간(년) — 상속 취득 + 본인 미달 시 합산 (조특령 §66⑪) */
       decedentFarmingYears?: string;
-      /** 주거·상업·공업지역 편입 부분감면 적용 여부 (조특령 §66⑤⑥) */
+      /** 주거·상업·공업지역 편입 여부 (조특령 §66④1호 배제 · 법 §69①단서+영 §66⑦ 부분감면) */
       useSelfFarmingIncorporation?: boolean;
       /** 편입일 (YYYY-MM-DD) */
       selfFarmingIncorporationDate?: string;
       /** 편입 지역 유형 */
       selfFarmingIncorporationZone?: "residential" | "commercial" | "industrial" | "";
+      /**
+       * **양도일 현재** 농지 소재지 구분 — 조특령 §66④1호 3년 배제의 소재지 요건.
+       * `""`(미선택)은 판정 불가 — ⑧이 차단한다(자동 fallback 금지).
+       */
+      selfFarmingIncorporationLocation?: "metro_or_city" | "gun_or_eup_myeon" | "";
+      /** 조특령 §66④1호 단서 가·나·다목 해당 — true면 3년 배제 제외 */
+      selfFarmingIncorporationProvisoException?: boolean;
       /** 편입일 당시 기준시가 (원) */
       selfFarmingStandardPriceAtIncorporation?: string;
       /** 취득시 기준시가 (원) — 편입 부분감면 비율 산정용(실지 모드 전용 입력, 환산 모드는 자산-수준 fallback) */

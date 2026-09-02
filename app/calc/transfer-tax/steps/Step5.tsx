@@ -172,6 +172,10 @@ function AssetReductionBlock({
             useSelfFarmingIncorporation={selfFarming.useSelfFarmingIncorporation ?? false}
             selfFarmingIncorporationDate={selfFarming.selfFarmingIncorporationDate ?? ""}
             selfFarmingIncorporationZone={selfFarming.selfFarmingIncorporationZone ?? ""}
+            selfFarmingIncorporationLocation={selfFarming.selfFarmingIncorporationLocation ?? ""}
+            selfFarmingIncorporationProvisoException={
+              selfFarming.selfFarmingIncorporationProvisoException ?? false
+            }
             selfFarmingStandardPriceAtIncorporation={selfFarming.selfFarmingStandardPriceAtIncorporation ?? ""}
             selfFarmingStandardPriceAtAcquisition={selfFarming.selfFarmingStandardPriceAtAcquisition ?? ""}
             selfFarmingStandardPriceAtTransfer={selfFarming.selfFarmingStandardPriceAtTransfer ?? ""}
