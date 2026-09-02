@@ -241,6 +241,10 @@ export function migrateAsset(raw: unknown): AssetForm {
       // P1 §99 (2026-06-11): 구 stub 데이터 본 필드 누락 보정 (③)
       if (r && r.type === "new_99") {
         return {
+          // D11-05 — 기존 저장 폼에는 없는 신규 필드. 법문 기본값(거주자)으로 보정하지 않으면
+          //          undefined가 「비거주자」로 읽혀 감면이 조용히 배제된다.
+          isResident99: true,
+          isHousingConstructionBusiness99: false,
           contractDate99: "",
           usageApprovalDate99: "",
           acquisitionType99: "from_builder",
@@ -282,6 +286,9 @@ export function migrateAsset(raw: unknown): AssetForm {
       // P1 §98의8 (2026-06-11): 구 stub 데이터 본 필드 누락 보정 (③)
       if (r && r.type === "unsold_98_8") {
         return {
+          // D11-05 — 기존 저장 폼에는 없는 신규 필드. 법문 기본값(거주자)으로 보정하지 않으면
+          //          undefined가 「비거주자」로 읽혀 감면이 조용히 배제된다.
+          isResident988: true,
           contractDate988: "",
           acquisitionPrice988: "",
           exclusiveAreaSqm988: "",
@@ -301,6 +308,9 @@ export function migrateAsset(raw: unknown): AssetForm {
       // P5 §98 (2026-06-12): 구 stub 데이터 본 필드 누락 보정 (③)
       if (r && r.type === "unsold_98") {
         return {
+          // D11-05 — 기존 저장 폼에는 없는 신규 필드. 법문 기본값(거주자)으로 보정하지 않으면
+          //          undefined가 「비거주자」로 읽혀 감면이 조용히 배제된다.
+          isResident98: true,
           contractDate98: "",
           isNationalScale98: false,
           isOutsideSeoul98: false,
@@ -314,6 +324,9 @@ export function migrateAsset(raw: unknown): AssetForm {
       // P4 §98의2·§98의4 (2026-06-12): 구 stub 데이터 본 필드 누락 보정 (③)
       if (r && r.type === "unsold_98_2") {
         return {
+          // D11-05 — 기존 저장 폼에는 없는 신규 필드. 법문 기본값(거주자)으로 보정하지 않으면
+          //          undefined가 「비거주자」로 읽혀 감면이 조용히 배제된다.
+          isResident982: true,
           contractDate982: "",
           isNonCapitalUnsold982: false,
           isFirstOrFcfsContract982: false,
@@ -388,6 +401,9 @@ export function migrateAsset(raw: unknown): AssetForm {
       // P2 §98의7 (2026-06-11): 구 stub 데이터 본 필드 누락 보정 (③)
       if (r && r.type === "unsold_98_7") {
         return {
+          // D11-05 — 기존 저장 폼에는 없는 신규 필드. 법문 기본값(거주자)으로 보정하지 않으면
+          //          undefined가 「비거주자」로 읽혀 감면이 조용히 배제된다.
+          isDomestic987: true,
           contractDate987: "",
           acquisitionPrice987: "",
           isUnsoldAtCutoff987: false,

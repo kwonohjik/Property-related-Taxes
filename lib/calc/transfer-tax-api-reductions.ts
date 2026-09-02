@@ -360,6 +360,9 @@ export function toEngineReductions(
           : parseAmount(r.standardPriceAtAcquisition99 || "0");
       return {
         type: "new_99" as const,
+        // D11-05 — 법 §99① 「거주자(주택건설사업자는 제외한다)가 …」
+        isResident99: r.isResident99,
+        isHousingConstructionBusiness99: r.isHousingConstructionBusiness99,
         contractDate99: r.contractDate99 || undefined,
         usageApprovalDate99: r.usageApprovalDate99 || undefined,
         acquisitionType99: r.acquisitionType99,
@@ -392,6 +395,8 @@ export function toEngineReductions(
           : parseAmount(r.standardPriceAtAcquisition988 || "0");
       return {
         type: "unsold_98_8" as const,
+        // D11-05 — 법 §98의8① 「거주자가 …」
+        isResident988: r.isResident988,
         contractDate988: r.contractDate988 || undefined,
         acquisitionPrice988: parseAmount(r.acquisitionPrice988 || "0") || undefined,
         exclusiveAreaSqm988: parseDecimal(r.exclusiveAreaSqm988 || "") || undefined,
@@ -411,6 +416,8 @@ export function toEngineReductions(
     if (r.type === "unsold_98") {
       return {
         type: "unsold_98" as const,
+        // D11-05 — 법 §98① 「거주자가 …」. 적지 않으면 명시 매핑이라 조용히 사라진다.
+        isResident98: r.isResident98,
         contractDate98: r.contractDate98 || undefined,
         isNationalScale98: r.isNationalScale98,
         isOutsideSeoul98: r.isOutsideSeoul98,
@@ -424,6 +431,8 @@ export function toEngineReductions(
     if (r.type === "unsold_98_2") {
       return {
         type: "unsold_98_2" as const,
+        // D11-05 — 법 §98의2① 「거주자가 …」
+        isResident982: r.isResident982,
         contractDate982: r.contractDate982 || undefined,
         isNonCapitalUnsold982: r.isNonCapitalUnsold982,
         isFirstOrFcfsContract982: r.isFirstOrFcfsContract982,
@@ -560,6 +569,8 @@ export function toEngineReductions(
           : parseAmount(r.standardPriceAtAcquisition987 || "0");
       return {
         type: "unsold_98_7" as const,
+        // D11-05 — 법 §98의7① 「내국인이 …」 (조특법 §2①1호: 내국인 ⊃ 거주자)
+        isDomestic987: r.isDomestic987,
         contractDate987: r.contractDate987 || undefined,
         acquisitionPrice987: parseAmount(r.acquisitionPrice987 || "0") || undefined,
         isUnsoldAtCutoff987: r.isUnsoldAtCutoff987,

@@ -224,6 +224,8 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
   if (id === "new_99") {
     return {
       type: "new_99",
+      isResident99: true,
+      isHousingConstructionBusiness99: false,
       contractDate99: "",
       usageApprovalDate99: "",
       acquisitionType99: "from_builder",
@@ -243,6 +245,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
   if (id === "unsold_98_8") {
     return {
       type: "unsold_98_8",
+      isResident988: true,
       contractDate988: "",
       acquisitionPrice988: "",
       exclusiveAreaSqm988: "",
@@ -262,6 +265,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
   if (id === "unsold_98") {
     return {
       type: "unsold_98",
+      isResident98: true,
       contractDate98: "",
       isNationalScale98: false,
       isOutsideSeoul98: false,
@@ -275,6 +279,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
   if (id === "unsold_98_2") {
     return {
       type: "unsold_98_2",
+      isResident982: true,
       contractDate982: "",
       isNonCapitalUnsold982: false,
       isFirstOrFcfsContract982: false,
@@ -349,6 +354,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
   if (id === "unsold_98_7") {
     return {
       type: "unsold_98_7",
+      isDomestic987: true,
       contractDate987: "",
       acquisitionPrice987: "",
       isUnsoldAtCutoff987: false,
