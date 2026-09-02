@@ -18,6 +18,7 @@ import type {
 } from "./types";
 import { resolveGraceIntervals } from "./grace-reason-period";
 import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
+import { resolveAdjacentUnitCodes } from "@/lib/geo/sigungu-unit";
 import {
   asString, asBool, asArray,
   mapBusinessUsePeriods,
@@ -71,6 +72,8 @@ export function mapAssetToNblInput(
 
   // 토지 소재지 시·군·구 → 재촌 매칭(§168의8②·§168의9②). 빈값=undefined(자동 fallback 금지).
   // 연접 시·군·구는 SIGUNGU_CODES(5자리 충전)에서 해석 — 동일/연접 시군구 재촌 인정.
+  // 매트릭스는 구 단위라 일반구가 있는 시는 형제 구 인접을 union해야 한다(§153③2호는
+  // 「제1호의 지역과 연접한」이고 1호의 단위가 자치구뿐이므로 일반구는 상위 시가 단위다).
   const landSigunguCode = asString(asset.nblLandSigunguCode);
   const landLat = parseNumber(asString(asset.nblLandLat));
   const landLng = parseNumber(asString(asset.nblLandLng));
@@ -83,7 +86,10 @@ export function mapAssetToNblInput(
         }
       : undefined;
   const adjacentSigunguCodes: string[] | undefined = landSigunguCode
-    ? lookupSigungu(landSigunguCode)?.adjacentCodes
+    ? resolveAdjacentUnitCodes(
+        landSigunguCode,
+        (code) => lookupSigungu(code)?.adjacentCodes ?? [],
+      )
     : undefined;
 
   // 사업용 사용기간

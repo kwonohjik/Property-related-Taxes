@@ -15,6 +15,7 @@ import type {
 } from "./types";
 import { mergeOverlappingPeriods } from "./utils/period-math";
 import { haversineKm } from "@/lib/geo/haversine";
+import { resolveSigunguUnitCode } from "@/lib/geo/sigungu-unit";
 
 export interface ComputeResidenceOptions {
   /** 임야 재촌 판정 시 true — 주민등록 있는 이력만 인정 */
@@ -46,17 +47,19 @@ function matchHistoryResidence(
 ): ResidenceMatchSummary | null {
   if (!landLocation) return null;
 
+  // 코드 비교는 **자치단체 단위**로 한다 — §153③1호의 「구」는 「자치구인 구를 말한다」이므로
+  // 일반구(행정구)는 「구」가 아니고 상위 시가 판정 단위다(창원시 진해구 ↔ 의창구 = 같은 창원시).
+  const historyUnit = resolveSigunguUnitCode(history.sigunguCode);
+  const landUnit = resolveSigunguUnitCode(landLocation.sigunguCode);
+
   // 1. 시·군·구 코드 일치 (§153③1호)
-  if (
-    history.sigunguCode &&
-    landLocation.sigunguCode &&
-    history.sigunguCode === landLocation.sigunguCode
-  ) {
+  if (historyUnit && landUnit && historyUnit === landUnit) {
     return { matchType: "same" };
   }
 
-  // 2. 연접 시·군·구 (§153③2호)
-  if (history.sigunguCode && adjacent.includes(history.sigunguCode)) {
+  // 2. 연접 시·군·구 (§153③2호) — 주입 목록도 단위 코드로 접어 비교한다.
+  //    호출부는 `resolveAdjacentUnitCodes`로 형제 구 인접을 union해 넘긴다(매트릭스가 구 단위라서).
+  if (historyUnit && adjacent.some((c) => resolveSigunguUnitCode(c) === historyUnit)) {
     return { matchType: "adjacent" };
   }
 
