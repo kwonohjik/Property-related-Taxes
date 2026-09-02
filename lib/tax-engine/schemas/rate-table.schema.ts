@@ -354,6 +354,34 @@ export const nonBusinessLandJudgmentSchema = z.object({
     preparation: z.number().int().positive(),    // 2년
     sale_contract: z.number().int().positive(),  // 2년
   }),
+  // ── 아래 3그룹은 optional (COV-1) ──────────────────────────────
+  // 엔진 타입 `NonBusinessLandJudgmentRules`가 갖는 그룹인데 종전 스키마가 정의하지 않아
+  // DB/시드 경로에서 **통째로 stripped** 됐다. 값이 undefined가 아니라 「그룹이 없는 객체」라
+  // 엔진의 기본 인자가 발동하지 않았고, 2015.2.3. 전 양도분의 레거시 임계 0.8이 도달 불가였다.
+  // 여기서 받아들이되, 없으면 `parseRatesFromMap`이 코드 기본값으로 메운다(단방향 병합).
+  urbanIncorporationGrace: z
+    .object({
+      changeDate: z.string(),
+      graceYearsOld: z.number().int().positive(),
+      graceYearsNew: z.number().int().positive(),
+    })
+    .optional(),
+  unconditionalExemptionDates: z
+    .object({
+      inheritanceCutoff: z.string(),
+      transferCutoffForLegacy: z.string(),
+      jongjoongCutoff: z.string(),
+      publicExpropriation5YearsDate: z.string(),
+      publicExpropriation2YearsDate: z.string(),
+    })
+    .optional(),
+  periodCriteriaThresholds: z
+    .object({
+      oldThresholdDate: z.string(),
+      oldThresholdRatio: z.number().positive(),
+      currentThresholdRatio: z.number().positive(),
+    })
+    .optional(),
 });
 
 export type NonBusinessLandJudgmentSchemaData = z.infer<typeof nonBusinessLandJudgmentSchema>;

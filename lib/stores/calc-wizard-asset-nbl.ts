@@ -254,7 +254,17 @@ export interface PresaleRightEntry {
   parentalCareMergeInheritedRight?: boolean;
 }
 
-/** 비사업용 토지(NBL) 필드 초기값 상수 — makeDefaultAsset에서 spread 사용 (800줄 분리, 2026-06-15) */
+/**
+ * 비사업용 토지(NBL) 필드 초기값 **명세** (800줄 분리, 2026-06-15).
+ *
+ * ⚠️ `makeDefaultAsset`은 이 상수를 **spread하지 않는다** — 모듈 상수라
+ * `nblOtherParcels: []`·`nblFactorySegments: []` 같은 배열 필드를 spread하면
+ * 모든 자산이 **같은 배열 인스턴스를 공유**한다. factory는 호출마다 새 값을 만든다.
+ *
+ * 그래서 두 목록이 벌어질 수 있고 실제로 15필드(공장·복합용도 클러스터)가 벌어져 있었다(COV-5).
+ * 일치는 `__tests__/lib/stores/nbl-defaults-and-migrate-guards.anchor.test.ts`가 강제한다 —
+ * **신규 NBL 필드는 이 상수와 factory 양쪽에 넣어야 하고, 빠뜨리면 그 테스트가 실패한다.**
+ */
 export const NBL_DEFAULTS = {
   isNonBusinessLand: false,
   nblUseDetailedJudgment: false,
@@ -357,5 +367,20 @@ export const NBL_DEFAULTS = {
   nblRevenuePriorOtherLandValue: "",
   nblGracePeriods: [] as NblGracePeriodInput[],
   // §83의5① 단서 — 부동산매매업 매매용부동산(1·2호 배제) 게이트
+nblOtherMixedUseMode: "",
+  nblOtherMixedUseSpecificFloorArea: "",
+  nblOtherMixedUseTotalFloorArea: "",
+  nblOtherMixedUseSpecificFootprint: "",
+  nblOtherMixedUseTotalFootprint: "",
+  nblOtherUseParcels: false,
+  nblOtherParcels: [],
+  nblFactoryEnabled: false,
+  nblFactoryLocationCategory: "",
+  nblFactoryTotalLandArea: "",
+  nblFactorySegments: [],
+  nblFactoryIsRestrictedZone: false,
+  nblFactoryAdditionalRecognizedArea: "",
+  nblFactoryFootprintArea: "",
+  nblFactoryIsUnregistered: false,
   nblBusinessIsRealEstateDealer: false,
 } as const satisfies Record<string, unknown>;

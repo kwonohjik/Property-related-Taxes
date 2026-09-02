@@ -567,8 +567,12 @@ export interface NonBusinessLandJudgmentRules {
     publicExpropriation2YearsDate: string;
   };
   /**
-   * 기간 기준 비율. 2015.2.2 이전 양도분에 대해 농·임·목만 80% 적용.
+   * 기간 기준 비율. 2015.2.3. **전** 양도분에 80% 적용 (구법 §168의6 「100분의 20」).
    * 현행법은 0.6 (사업용 60% = 비사업용 40% 초과의 부정).
+   *
+   * ⚠️ 구현은 이 레거시 임계를 **농·임·목으로 한정**하는데(`getThresholdRatio`),
+   *    두 시행본 본문 어디에도 지목 구분이 없다. 제26067호 부칙 경과조치를 확인하기 전까지
+   *    현행 유지한다(기타토지는 0.6 = 납세자에게 유리한 쪽). 미확인 사항.
    */
   periodCriteriaThresholds?: {
     oldThresholdDate: string;
@@ -602,7 +606,10 @@ export const DEFAULT_NON_BUSINESS_LAND_RULES: NonBusinessLandJudgmentRules = {
     sale_contract: 2,
   },
   urbanIncorporationGrace: {
-    changeDate: "2015-02-02",
+    // 「소득세법 시행령」 제26067호 [**시행 2015.02.03**] — §168의8⑥이 「2년」에서 「3년」으로.
+    // 2014.03.11. 시행본 실측: 「대통령령이 정하는 기간이라 함은 **2년**을 말한다」.
+    // 신법은 시행일부터이므로 경계는 2015-02-03이다(종전 상수 2015-02-02은 하루를 놓쳤다).
+    changeDate: "2015-02-03",
     graceYearsOld: 2,
     graceYearsNew: 3,
   },
@@ -614,7 +621,10 @@ export const DEFAULT_NON_BUSINESS_LAND_RULES: NonBusinessLandJudgmentRules = {
     publicExpropriation2YearsDate: "",
   },
   periodCriteriaThresholds: {
-    oldThresholdDate: "2015-02-02",
+    // 「소득세법 시행령」 제26067호 [**시행 2015.02.03**] — §168의6 각 호 다목(3호는 나목)이
+    // 「소유기간의 100분의 **20**」에서 「100분의 **40**」으로. 2014.03.11. 시행본 실측 확인.
+    // ⇒ 구법 = 비사업용 20% 초과 → **사업용 80% 필요**(0.8). 신법은 시행일부터 적용된다.
+    oldThresholdDate: "2015-02-03",
     oldThresholdRatio: 0.8,
     // v2: 현행법 §168-6 "100분의 40 초과 비사업용" = "60% 이상 사업용"
     currentThresholdRatio: 0.6,

@@ -105,7 +105,9 @@ export function getPeriodJudgmentDate(
 
 /**
  * 기준 ③ 임계비율 결정.
- * 현행법은 0.6. 단, 2015.2.2 이전 양도분의 농·임·목은 0.8 레거시.
+ * 현행법은 0.6. 단, 2015.2.3. **전** 양도분의 농·임·목은 0.8 레거시(구법 「100분의 20」).
+ *
+ * ⚠️ 지목 한정(농·임·목만)은 두 시행본 본문에 근거가 없다 — `types.ts`의 주석 참조.
  */
 export function getThresholdRatio(
   transferDate: Date,
@@ -336,7 +338,7 @@ export function checkIncorporationGrace(
     };
   }
   const graceConf = rules.urbanIncorporationGrace;
-  const changeDate = graceConf ? new Date(graceConf.changeDate) : new Date("2015-02-02");
+  const changeDate = graceConf ? new Date(graceConf.changeDate) : new Date("2015-02-03");
   const graceYears: 2 | 3 =
     transferDate < changeDate
       ? ((graceConf?.graceYearsOld ?? 2) as 2)

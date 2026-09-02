@@ -189,6 +189,11 @@ describe("§168-6 법령 정합성 — 기간기준 3기준 OR 경계값", () =>
   /**
    * QA-005b: 레거시 80% 임계값 — 70% 사업용은 비사업용임을 직접 확인
    */
+  it("QA-006b: 시행일 직전일(2015-02-02) 양도는 구법 0.8 → 70% 사업용은 비사업용", () => {
+    const threshold = getThresholdRatio(d("2015-02-02"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(threshold).toBe(0.8);
+  });
+
   it("QA-005b: 레거시 80% 적용 시 70% 사업용은 비사업용 (threshold 함수 단위 검증)", () => {
     const threshold = getThresholdRatio(d("2015-02-01"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
     const ratio = 0.70;
@@ -197,16 +202,19 @@ describe("§168-6 법령 정합성 — 기간기준 3기준 OR 경계값", () =>
   });
 
   /**
-   * QA-006: 2015.2.2. 양도 농지 + 사업용 70% → 사업용 (현행 60% 기준 충족)
+   * QA-006: 2015.2.3. 양도 농지 + 사업용 70% → 사업용 (현행 60% 기준 충족)
+   *
+   * 경계는 개정 시행일 **2015.02.03**이다(대통령령 제26067호 — 「100분의 20」→「100분의 40」).
+   * 종전 케이스는 2015-02-02를 신법 쪽으로 잡아 **구법이 적용될 하루**를 신법으로 고정했다.
    */
-  it("QA-006: 2015.2.2. 양도 농지 + 사업용 70% → 사업용 (현행 60% 기준)", () => {
-    const threshold = getThresholdRatio(d("2015-02-02"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
+  it("QA-006: 2015.2.3. 양도 농지 + 사업용 70% → 사업용 (현행 60% 기준)", () => {
+    const threshold = getThresholdRatio(d("2015-02-03"), "farmland", DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(threshold).toBe(0.6);
 
     const r = meetsPeriodCriteria(
       [{ start: d("2005-01-02"), end: d("2012-02-01") }], // ≈ 70% 사업용
       d("2005-01-01"),
-      d("2015-02-02"),
+      d("2015-02-03"),
       "farmland",
       DEFAULT_NON_BUSINESS_LAND_RULES,
     );
