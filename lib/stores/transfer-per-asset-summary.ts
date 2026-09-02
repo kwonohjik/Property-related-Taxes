@@ -514,17 +514,27 @@ export function computeTransferPerAssetSummary(
       acqPending = false;
     } else if (acqPrice === 0 && isSingle) {
       // 단건 fallback 체인 (상속의제 → 계산 결과 환산 → 환산 프리뷰)
-      if (a.inheritanceMode === "post-deemed" && a.inheritanceStartDate) {
-        // 계산 결과(§163⑨2호 max(상증법 평가액, §164⑦)) 우선, 미계산 시 상증법 평가액(엔진 실경로) 프리뷰
+      /**
+       * A18(2026-09-02): 종전 게이트는 `a.inheritanceMode === "post-deemed" | "pre-deemed"`였는데
+       * **`inheritanceMode`는 쓰기 지점이 전 저장소에 0건인 죽은 필드다** — factory가 null로
+       * 만들고 마이그레이션 둘이 undefined를 null로 강제하며, 유일한 읽기 지점도 로컬 파생
+       * fallback을 탄다. 도입 시 계획된 「onChange → 자동 결정」이 구현되지 않았다.
+       *
+       * 그 결과 상속 자산의 사이드바 취득가액이 계산 전후 모두 0이 되어 **「취득가액 -」**로
+       * 표시됐다. 결과 화면·신고서에는 값이 나오므로 같은 화면 안에서 어긋났다.
+       * 세액은 불변(표시 전용).
+       *
+       * ⚠️ 취득원인을 **`inheritance`로 좁힌다.** `isSec163_9Cause`는 `inheritance || gift`인데,
+       *    증여는 신고가액을 `fixedAcquisitionPrice`(required)에 쓰므로 상위 ⑤ 분기가 이미 값을
+       *    돌려 여기 도달조차 하지 않는다 — 그대로 쓰면 항상 0을 읽는 무의미 분기가 된다.
+       *
+       * ⚠️ 다건 축은 이 체인 자체가 `isSingle` 게이트 안이라 도달하지 않는다(별건).
+       */
+      if (a.acquisitionCause === "inheritance" && a.inheritanceStartDate) {
+        // 계산 결과(§163⑨ max(상증법 평가액, §164④~⑦)) 우선, 미계산 시 상증법 평가액 프리뷰
         acqPrice =
           singleResult?.inheritedAcquisitionDetail?.acquisitionPrice ||
           parseRaw(a.publishedValueAtInheritance);
-      } else if (
-        a.inheritanceMode === "pre-deemed" &&
-        a.inheritanceStartDate &&
-        singleResult?.inheritedAcquisitionDetail
-      ) {
-        acqPrice = singleResult.inheritedAcquisitionDetail.acquisitionPrice || 0;
       } else if (singleResult?.usedEstimatedAcquisition) {
         acqPrice = singleResult.estimatedBase ?? 0;
       } else if (

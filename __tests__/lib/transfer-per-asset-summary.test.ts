@@ -244,7 +244,6 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
             assetKind: "housing",
             acquisitionCause: "inheritance",
             actualSalePrice: "600000000",
-            inheritanceMode: "post-deemed",
             inheritanceStartDate: "2020-01-01",
             publishedValueAtInheritance: "400000000",
           },
@@ -254,6 +253,46 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
 
     const s = compute();
     expect(s.rows[0].acqPrice).toBe(400_000_000);
+  });
+
+  /**
+   * A-8b (A18 · 2026-09-02): **취득원인 경계** — 게이트를 증여까지 넓히면 안 된다.
+   *
+   * `isSec163_9Cause`는 `inheritance || gift`인데, 증여는 신고가액을
+   * `fixedAcquisitionPrice`(required)에 쓰므로 상위 ⑤ 분기가 이미 값을 돌려 이 체인에
+   * 도달조차 하지 않는다. 그대로 쓰면 **항상 0을 읽는 무의미 분기**가 된다.
+   *
+   * ⚠️ **이 anchor의 한계** — 게이트를 증여까지 넓히는 뮤테이션은 이 테스트로 **잡히지
+   *    않는다**(실측: 넓혀도 26건 전부 green). 증여가 애초에 이 체인에 도달하지 않기
+   *    때문이며, 그래서 확장은 무의미할 뿐 해롭지는 않다. 이 테스트가 고정하는 것은
+   *    **증여 경로가 `fixedAcquisitionPrice`에서 값을 얻는다**는 사실이지
+   *    게이트 술어의 폭이 아니다. 술어를 좁게 유지하는 이유는 위 주석이 근거다.
+   *
+   * A-8의 죽은 필드(`inheritanceMode`)는 제거했다 — 그 필드는 쓰기 지점이 전 저장소에
+   * 0건이라 **제품이 만들 수 없는 상태**를 고정하고 있었다(회귀 감지력 0).
+   */
+  it("A-8b 증여는 fixedAcquisitionPrice에서 온다 — 상속 분기로 새지 않는다", () => {
+    useCalcWizardStore.setState((st) => ({
+      formData: {
+        ...st.formData,
+        bundledSaleMode: "actual",
+        assets: [
+          {
+            ...makeDefaultAsset(1),
+            assetKind: "housing",
+            acquisitionCause: "gift",
+            actualSalePrice: "600000000",
+            // 증여인데 상속 필드가 남아 있어도(stale) 상속 분기를 타면 안 된다.
+            inheritanceStartDate: "2020-01-01",
+            publishedValueAtInheritance: "400000000",
+            fixedAcquisitionPrice: "300000000",
+          },
+        ],
+      },
+    }));
+
+    const s = compute();
+    expect(s.rows[0].acqPrice).toBe(300_000_000);
   });
 
   // A-10 (Pre-Do): 겸용주택 계산 후 — result.mode "mixed-use" 처리.

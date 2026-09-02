@@ -103,7 +103,10 @@ export interface FamilyBusinessCgtDetail {
   cgtUnderSection97_2_4: number;
   /**
    * §97 일반 산식 적용 결정세액 (원)
-   * 피상속인 원취득가액을 기준으로 계산한 양도세 결정세액
+   *
+   * **상속개시일 현재 평가액**을 취득가액으로 보고 계산한 양도세 결정세액이다
+   * (「소득세법 시행령」 §163⑨ — 상속받은 자산의 취득가액). A21(2026-09-02) 정정:
+   * 종전 주석의 「피상속인 원취득가액 기준」은 §97의2④1호(의제) 쪽 설명이었다.
    */
   cgtUnderSection97: number;
   /**
@@ -125,6 +128,15 @@ export interface FamilyBusinessCgtDetail {
    * 상속개시일 현재 자산 평가액 echo (UI 산식 표시용)
    */
   inheritanceMarketValue: number;
+  /**
+   * 피상속인 자본적지출액 (원) — §97의2④1호 base에 가산되어 적용률이 곱해진다.
+   *
+   * A22(2026-09-02): 이 echo가 없어서 결과 카드가 「피상속인 원취득가액」·「상속개시일 자산
+   * 평가액」 두 행만 찍으면서 **값은 자본적지출이 반영된 금액**을 표시했다 — 표 안의 세 숫자가
+   * 서로 맞지 않았다(실측 괴리 80,000,000원 · capex 3억·r=0.6에서 180,000,000원).
+   * 세액은 불변이고 표시 정합만의 문제다.
+   */
+  decedentCapitalExpenditure?: number;
   /**
    * §18의2⑩ 공제 산식 breakdown (single-source: credits/calcFamilyBusinessCgtCredit).
    * 의제세액·일반세액·공제액 3행. UI 결과 카드 표시용.
@@ -193,7 +205,7 @@ export function calcFamilyBusinessImputedAcquisitionPrice(
  *
  * @param fb 가업상속공제 입력
  * @param imputedCgt 의제 취득가액 기준 calculateTransferTax 결과의 결정세액
- * @param regularCgt 피상속인 원취득가액 기준 calculateTransferTax 결과의 결정세액
+ * @param regularCgt 상속개시일 평가액(§163⑨) 기준 calculateTransferTax 결과의 결정세액
  * @param imputedAcquisitionPrice 산출된 의제 취득가액
  * @returns FamilyBusinessCgtDetail
  */
@@ -218,6 +230,10 @@ export function buildFamilyBusinessCgtDetail(
     appliedRate: fb.fbDeductionAppliedRate,
     decedentAcquisitionPrice: fb.decedentAcquisitionPrice,
     inheritanceMarketValue: fb.inheritanceMarketValue,
+    // A22: 카드가 산식과 금액을 일치시키려면 base 구성요소가 전부 있어야 한다.
+    ...(fb.decedentCapitalExpenditure
+      ? { decedentCapitalExpenditure: fb.decedentCapitalExpenditure }
+      : {}),
     creditBreakdown: cgtCredit.breakdown,
   };
 }
@@ -242,6 +258,7 @@ export function buildFamilyBusinessCgtDetail(
  * @param processedInput STEP 0.45 이후 전처리 완료된 입력 (의제 취득가 override 기준점)
  * @param rates TaxRatesMap (세율 그대로 전달)
  * @param calcFn calculateTransferTax 주입 (순환 import 차단)
+ * @param warnings 비차단 안내 수집 배열 — G-1 게이트 탈락 사유를 남긴다(A17)
  * @returns 의제 산식 TransferTaxResult + familyBusinessDetail, 또는 null(미제공 시)
  */
 export function applyFamilyBusinessCgtStep(
@@ -249,6 +266,7 @@ export function applyFamilyBusinessCgtStep(
   processedInput: TransferTaxInput,
   rates: TaxRatesMap,
   calcFn: CalcFn,
+  warnings?: string[],
 ): TransferTaxResult | null {
   const fb = rawInput.familyBusinessInheritance;
   if (!fb) return null;
@@ -256,7 +274,19 @@ export function applyFamilyBusinessCgtStep(
   // 0. G-1 시점 게이트 — 부칙 법률 제12169호 §12 "이 법 시행 후 **상속받아** 양도하는 분".
   //    기준일은 **상속개시일**이지 양도일이 아니다. 미충족 시 특례 전부 미적용(일반 §97 경로)
   //    — §95④ 후단도 함께 꺼진다(후단이 §97의2④1호의 적용률을 참조하므로).
-  if (!isFamilyBusinessCgtEra(new Date(fb.inheritanceDate))) return null;
+  if (!isFamilyBusinessCgtEra(new Date(fb.inheritanceDate))) {
+    /**
+     * A17(2026-09-02): 게이트 결론(특례 미적용)은 법령상 옳지만 **사유가 어디에도 남지 않았다**.
+     * `familyBusinessInheritance`는 이후 파이프라인에서 소비되지 않아 완전한 dead 입력이 되고,
+     * ⑧도 시기를 보지 않으며 ⑤에도 G-1 안내가 없었다. 사용자는 5필드를 채우고 미리보기까지
+     * 본 뒤 결과에서 그 특례가 왜 사라졌는지 알 수 없었다.
+     * 같은 파일이 §95④ 후단을 `fbLthdLatter`로 따로 실어 보내는 것과 같은 층위로 처리한다.
+     */
+    warnings?.push(
+      "가업상속공제 §97의2④ 의제 취득가액 특례 미적용 — 상속개시일이 2014.1.1. 전이라 「소득세법」 부칙(법률 제12169호) §12의 적용 대상이 아닙니다. 일반 §97 산식으로 계산되었습니다.",
+    );
+    return null;
+  }
 
   // 1. 의제 취득가액 산출 (소법 §97의2④)
   const imputedAcquisitionPrice = calcFamilyBusinessImputedAcquisitionPrice(

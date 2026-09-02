@@ -126,7 +126,7 @@ export function runPreCalculationSteps(
     steps.push(inheritedStep.step);
   }
   // STEP 0.42: 가업상속공제 §97의2④ 의제 취득가액 — 조기 반환 (familyBusinessInheritance 없으면 no-op)
-  const fbResult = applyFamilyBusinessCgtStep(rawInput, input, rates, calculateTransferTax);
+  const fbResult = applyFamilyBusinessCgtStep(rawInput, input, rates, calculateTransferTax, warnings);
   // 여기서는 함수 반환값이 다르므로 그대로 return할 수 없다 — 호출부가 return 하도록 싣는다.
   if (fbResult)
     return {

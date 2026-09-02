@@ -33,7 +33,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { FamilyBusinessInheritanceHistoryModal } from "./FamilyBusinessInheritanceHistoryModal";
 import type { FamilyBusinessInheritancePrefill } from "@/lib/calc/family-business-inheritance-lookup";
 // 시점 판정은 엔진 leaf 단일 소스 재사용 (skill single-source-engine-helper)
-import { isFamilyBusinessAssetScopeDecreeEra } from "@/lib/tax-engine/data/family-business-cgt-era";
+import { isFamilyBusinessAssetScopeDecreeEra, isFamilyBusinessCgtEra } from "@/lib/tax-engine/data/family-business-cgt-era";
+import { calcFamilyBusinessImputedAcquisitionPrice } from "@/lib/tax-engine/transfer-tax-family-business";
 
 // ── 타입 ──────────────────────────────────────────────────────
 
@@ -54,12 +55,24 @@ interface Props {
 
 // ── 헬퍼 ──────────────────────────────────────────────────────
 
-/** 의제 취득가액 미리보기 산출 (UI 표시 전용, 정수 연산) */
+/**
+ * 의제 취득가액 미리보기 — **엔진 leaf를 직접 호출한다**(dual truth 회피).
+ *
+ * A22(2026-09-02): 종전에는 산식을 복제했고 두 가지가 어긋나 있었다.
+ *   ① `decedentCapitalExpenditure`를 **인자로 받지도 않아** 사용자가 hint를 읽고
+ *      자본적지출을 입력해도 **화면 숫자가 1원도 움직이지 않았다**.
+ *   ② 엔진이 명시적으로 금지한 부동소수 `1 - r`을 그대로 써서 1원 오차가 났다
+ *      (`1 - 0.8 = 0.19999999999999996` — 엔진 `:166` 주석이 지목한 바로 그 패턴).
+ *
+ * 같은 파일이 이미 `isFamilyBusinessAssetScopeDecreeEra`를 엔진에서 재사용하고 있다.
+ */
 function calcImputedPreview(fb: FamilyBusinessSlice): number {
-  const r = fb.fbDeductionAppliedRate;
-  const term1 = Math.floor(fb.decedentAcquisitionPrice * r);
-  const term2 = Math.floor(fb.inheritanceMarketValue * (1 - r));
-  return term1 + term2;
+  return calcFamilyBusinessImputedAcquisitionPrice(
+    fb.decedentAcquisitionPrice,
+    fb.inheritanceMarketValue,
+    fb.fbDeductionAppliedRate,
+    fb.decedentCapitalExpenditure ?? 0,
+  );
 }
 
 /** 적용률 문자열(%) → 0~1 소수 변환 (100% → 1.0) */
@@ -128,6 +141,15 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
     fb.inheritanceMarketValue > 0 &&
     fb.fbDeductionAppliedRate >= 0;
   const previewValue = canPreview ? calcImputedPreview(fb!) : null;
+  /**
+   * G-1 시점 게이트 — 「소득세법」 부칙(법률 제12169호) §12. 기준일은 **상속개시일**이다.
+   *
+   * A17(2026-09-02): 종전에는 이 축의 안내가 ⑤에 전혀 없었고, 미충족이어도 미리보기와
+   * rose 카드(「반드시 적용됩니다」)가 그대로 렌더됐다 — 단순 누락이 아니라 **적극적 허위
+   * 서술**이었다. 엔진은 특례를 통째로 미적용하는데 화면은 반드시 적용된다고 말했다.
+   * 엔진 게이트와 **같은 술어**를 쓴다(dual truth 회피).
+   */
+  const cgtEraOk = fb?.inheritanceDate ? isFamilyBusinessCgtEra(new Date(fb.inheritanceDate)) : true;
 
   // 겸용주택은 §163⑨ 상속개시일 평가액 직접 산정 경로(CompanionAcqInheritanceBlock 안내 참조)를 쓰고
   // 가업상속공제 의제취득가액(§97의2④)은 겸용 엔진(buildMixedUsePayload)이 미소비 — dead 입력 예방.
@@ -260,12 +282,26 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
             {" "}공제받지 않은 자산이 섞여 있으면 자산을 나누어 입력하세요.
           </p>
 
+          {/* G-1 미충족 안내 — 이때는 미리보기·강제적용 카드를 함께 끈다(A17). */}
+          {!cgtEraOk && (
+            <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
+              <p className="font-semibold">§97의2④ 의제 취득가액 특례 미적용</p>
+              <p className="mt-0.5">
+                상속개시일이 2014.1.1. 전이라 「소득세법」 부칙(법률 제12169호) §12의 적용 대상이
+                아닙니다. 일반 §97 산식으로 계산됩니다.
+              </p>
+            </div>
+          )}
+
           {/* 의제 취득가액 미리보기 */}
-          {previewValue !== null && (
+          {cgtEraOk && previewValue !== null && (
             <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs space-y-1">
               <p className="font-semibold text-emerald-800">의제 취득가액 미리보기 (소법 §97의2④)</p>
               <p className="text-emerald-700">
                 피상속인 원취득가액 {fb!.decedentAcquisitionPrice.toLocaleString()}
+                {fb!.decedentCapitalExpenditure
+                  ? ` + 자본적지출 ${fb!.decedentCapitalExpenditure.toLocaleString()}`
+                  : ""}
                 {" × "}{(fb!.fbDeductionAppliedRate * 100).toFixed(2)}%
                 {" + "}상속개시일 평가액 {fb!.inheritanceMarketValue.toLocaleString()}
                 {" × "}{((1 - fb!.fbDeductionAppliedRate) * 100).toFixed(2)}%
@@ -278,7 +314,8 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
             </div>
           )}
 
-          {/* §97의2④ 강제 적용 안내 */}
+          {/* §97의2④ 강제 적용 안내 — G-1 충족 시에만(A17: 미충족 시 허위 서술이 된다) */}
+          {cgtEraOk && (
           <div className="rounded-md border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-800">
             <p className="font-semibold">소법 §97의2④ 본문 강제 적용</p>
             <p className="mt-0.5">
@@ -286,6 +323,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
               의제 산식 결정세액이 일반 산식보다 높은 경우 §18의2⑩에 따라 차액을 공제합니다.
             </p>
           </div>
+          )}
 
         </div>
       )}
