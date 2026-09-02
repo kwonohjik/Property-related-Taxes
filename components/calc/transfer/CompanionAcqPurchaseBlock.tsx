@@ -29,6 +29,7 @@ import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import { type BlockProps, toPropertyKind } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { usesTransferAreaForAcqStdPrice } from "@/lib/calc/transfer-tax-api-helpers";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 
@@ -157,6 +158,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         ];
 
   const acqPricePerSqm = props.standardPricePerSqmAtAcq ?? internalPricePerSqmAtAcq;
+  /**
+   * 취득시 기준시가 위젯이 곱할 면적이 「양도분」인가 — ④와 **같은 술어**를 쓴다(§9-7).
+   * 갈리면 화면이 파생한 총액과 엔진이 쓰는 면적이 어긋난다.
+   */
+  const acqStdUsesTransferArea = usesTransferAreaForAcqStdPrice(props.asset?.areaScenario);
   const onAcqPricePerSqmChange = props.onStandardPricePerSqmAtAcqChange ?? setInternalPricePerSqmAtAcq;
   const transferPricePerSqm = props.standardPricePerSqmAtTransfer ?? internalPricePerSqmAtTransfer;
   const onTransferPricePerSqmChange = props.onStandardPricePerSqmAtTransferChange ?? setInternalPricePerSqmAtTransfer;
@@ -594,15 +600,33 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
                 1990년 이전 취득은 개별공시지가가 없어 아래 토지등급 환산 기능으로 자동 산정됩니다.
               </p>
             )}
+            {/**
+              * 🔴 **§9-7(2026-09-03) — 일부양도에서 곱할 면적은 「양도분」이다.**
+              *
+              * 종전에는 `area={props.acquisitionArea}`(취득 **전체** 면적)를 곱해 총액을 파생했다.
+              * 양도시 칸은 `transferArea`(양도분)를 곱하므로 **분자만 부풀어** 환산비율이 왜곡됐다
+              * (실측: 총세액 27,827,432 vs 79,199,706 = **51,372,274원 과소과세**).
+              *
+              * ⚠️ **B4-1이 이미 고쳤다고 기록돼 있었으나 이 경로는 닿지 않았다.**
+              * B4-1은 엔진 `acquisitionArea`를 양도분으로 배선했는데(`resolveAcqAreaForStdPrice`),
+              * 그 값을 소비하는 것은 **split 경로뿐**이다(`transfer-tax-split-gain.ts:54`).
+              * 비-split 일괄 경로의 환산 분자는 **총액**(`standardPriceAtAcquisition`)이고,
+              * 그 총액을 만드는 것이 바로 이 위젯이다. ⇒ 계획서
+              * `transfer-partial-area-apportionment.plan.md` §1.1의 「`land` 일괄 ✅ B4-1 정정」은 **틀렸다**.
+              *
+              * 근거는 ④와 동일하다 — 「소득세법 시행령」 §176의2②2호의 「취득당시의 기준시가」는
+              * **양도자산의** 것이고, 일부양도에서는 양도한 부분이 그 자산이다(조심 2018부0572).
+              * 술어를 `usesTransferAreaForAcqStdPrice`로 **④와 공유**해 두 층이 갈리지 않게 했다.
+              */}
             <StandardPriceInput
               propertyKind={propertyKind}
               totalPrice={props.standardPriceAtAcq}
               onTotalPriceChange={props.onStandardPriceAtAcqChange}
               pricePerSqm={acqPricePerSqm}
               onPricePerSqmChange={handleAcqPricePerSqmChange}
-              area={props.acquisitionArea}
-              onAreaChange={props.onAcquisitionAreaChange}
-              areaLabel={props.acqAreaLabel}
+              area={acqStdUsesTransferArea ? props.transferArea : props.acquisitionArea}
+              onAreaChange={acqStdUsesTransferArea ? props.onTransferAreaChange : props.onAcquisitionAreaChange}
+              areaLabel={acqStdUsesTransferArea ? "양도분 면적 (㎡)" : props.acqAreaLabel}
               jibun={props.jibun}
               dong={props.dong}
               ho={props.ho}

@@ -289,13 +289,28 @@ export { applyRatio };
  *
  * 계획: docs/01-plan/features/transfer-partial-area-apportionment.plan.md §0 C-6 · §3.3 L-4
  */
+/**
+ * 취득 당시 기준시가 산정에 **양도분 면적**을 써야 하는 시나리오인가.
+ *
+ * `partial`(일부 양도)에서만 참이다. `reduction`(감환지)은 UI가 이미 `acquisitionArea`에
+ * 의제취득면적을 넣으므로 그대로 통과시키고, `increase`(증환지)는 증가분이 별개 자산으로
+ * 분리되므로 당초분은 전체 면적이 맞다(계획서 BR4).
+ *
+ * ⑤UI(`CompanionAcqPurchaseBlock`의 취득시 `StandardPriceInput`)와 ④변환이 **같은 술어**를
+ * 공유하게 하려고 분리했다 — 갈리면 화면이 파생한 총액과 엔진이 쓰는 면적이 어긋난다
+ * (§9-7 실측: 총세액 27,827,432 vs 79,199,706 = **51,372,274원 과소과세**).
+ */
+export function usesTransferAreaForAcqStdPrice(areaScenario?: string): boolean {
+  return (areaScenario ?? "same") === "partial";
+}
+
 export function resolveAcqAreaForStdPrice(asset: {
   areaScenario?: string;
   acquisitionArea?: string;
   transferArea?: string;
 }): number | undefined {
   const acq = asset.acquisitionArea ? parseFloat(asset.acquisitionArea) || undefined : undefined;
-  if ((asset.areaScenario ?? "same") !== "partial") return acq;
+  if (!usesTransferAreaForAcqStdPrice(asset.areaScenario)) return acq;
   const tr = asset.transferArea ? parseFloat(asset.transferArea) || undefined : undefined;
   // 양도면적 미입력(입력 중) 시 전체 면적 fallback — 차단은 validate 소관이며
   // 여기서 undefined로 떨구면 기준시가 경로가 조용히 비활성된다.
