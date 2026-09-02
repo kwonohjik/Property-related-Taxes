@@ -34,6 +34,23 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       break;
     case "bargain_transfer":
       if (parseAmount(form.bargMarketValue) <= 0) return "시가를 입력하세요";
+      /**
+       * A16(2026-09-02): 거래대가가 검증되지 않아 **미입력이 0원으로 통과**하고 시가 전액이
+       * 차액이 됐다(시가 10억·대가 공란 → 증여재산가액 700,000,000원 산출. 정상 대가 6억
+       * 대비 +600,000,000원 과다산정). 결과 화면의 「증여세 마법사로」 버튼까지 렌더돼
+       * 그 값이 다음 계산으로 연계된다.
+       *
+       * 같은 파일의 다른 유형은 이미 금액 필드를 차단한다 —
+       * `insurance`(납부보험료 총액 > 0) · `debt_forgiveness`(채무액 > 0).
+       * **유형 간 일관성**과 저장소의 「미입력은 검증 오류로 차단」 정책이 이 차단의 논거다.
+       *
+       * ⚠️ **명시 「0」은 막지 않는다**(사용자 결정 2026-09-02). 미입력과 명시 0은 ④ 이후
+       *    완전히 동일한 wire(`transactionPrice: 0`)를 만들어 ⑫⑭·엔진 어디서도 구분되지
+       *    않으므로, 구분이 가능한 유일한 지점인 여기서 **원문자열**로 가른다.
+       *    무상이전(대가 0)은 「상속세 및 증여세법」 §4①1호 영역이라는 별개 논점이며,
+       *    그것을 막으려면 §35 대상 범위 자체를 다루어야 한다(별건).
+       */
+      if (!form.bargPrice?.trim()) return "거래대가를 입력하세요";
       break;
     case "debt_forgiveness":
       if (parseAmount(form.debtForgiven) <= 0) return "면제·인수·변제 채무액을 입력하세요";

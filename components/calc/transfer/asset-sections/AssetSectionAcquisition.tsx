@@ -206,8 +206,9 @@ export function AssetSectionAcquisition({
         />
       )}
 
-      {/* 다필지 토글 (토지 전용) */}
-      {asset.assetKind === "land" && (
+      {/* 다필지 토글 (토지 전용) — A12: 첫 자산 한정.
+          컴패니언은 ④⑫에 parcels 채널이 없어 입력이 통째로 사라진다(⑧도 함께 차단한다). */}
+      {asset.assetKind === "land" && isFirst && (
         <ToggleCard
           tone="sky"
           title="여러 필지를 각각 다른 시기에 취득했나요? (환지·합병)"

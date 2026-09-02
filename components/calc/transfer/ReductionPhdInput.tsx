@@ -250,7 +250,7 @@ export function ReductionPhdInput({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium">최초공시시 건물 기준시가 (원, 선택)</label>
+              <label className="mb-1 block text-xs font-medium">최초공시시 건물 기준시가 (원)</label>
               <CurrencyInput
                 label=""
                 value={value.buildingStdAtFirst ?? ""}
@@ -283,7 +283,7 @@ export function ReductionPhdInput({
                   }
                 />
               </div>
-              <p className="mt-1 text-micro text-muted-foreground">미입력 시 취득시와 동일 가정</p>
+              <p className="mt-1 text-micro text-muted-foreground">취득시 건물 기준시가를 입력했다면 필수입니다 — 취득시 값을 대신 쓰면 §164⑦ 산식이 아닙니다.</p>
             </div>
           </div>
 
