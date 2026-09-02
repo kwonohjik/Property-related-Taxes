@@ -49,7 +49,7 @@
 | **#1416** | A01 · A02 · A03 · A04 · A09 · A15 · A19 · A20 | 조기반환·배관. **8건 중 8건의 뿌리가 술어 중복**이었다 |
 | **#1419** | A07 · A08 · A17 · A18 · A21 · A22 | 평가 산식 지분 안분 · 가업상속 · 결과 카드 표시 |
 | **#1423** | A05 · A11 · A12 · A13 · A16 | ⏸ 미결 — 사용자 결정에 따라 전부 **명시 차단**으로 확정 |
-| **#1429**(이 PR) | (신규) A23 · 인용 정정 · `inheritanceMode` 제거 | 인용 드리프트 · 죽은 필드 · 미해소 마커 |
+| **#1431**(이 PR) | (신규) A23 · 인용 정정 · `inheritanceMode` 제거 | 인용 드리프트 · 죽은 필드 · 미해소 마커 |
 
 **PR-1의 8건은 개별 가드가 아니라 단일 소스 술어 추출로 고쳤다** —
 `transfer-pre1990-land-gate.ts` · `transfer-fb-gate.ts` 신설, `parcelEffectiveAcquisitionDate` 공용화.
@@ -90,9 +90,11 @@ swap 자격 게이트(`|| landTransferExpense > 0`)는 비-PHD와 **공유**되�
 리뷰가 「별건」으로 미뤄둔 §162 인용을 정정하다가 **같은 조문 축에서 두 번째 오류**를 찾았다.
 memory `feedback_citation_drift_replicates_across_repo`(인용은 전역 복제된다)의 실례가 하나 더 늘었다.
 
-### 5-1. ✅ 정정 — §162①6호 → §162①9호 단서 (5곳)
+### 5-1. ✅ 정정 — §162①6호 → §162①9호 단서 (6곳)
 
-리뷰는 4곳으로 기록했으나 **`multi-parcel-transfer.ts:13`이 5번째**였다.
+리뷰는 4곳으로 기록했으나 실제로는 **6곳**이었다 — `multi-parcel-transfer.ts`의
+**:13(파일 헤더)과 :48(`ParcelInput.useDayAfterReplotting` JSDoc) 둘 다** 누락돼 있었다.
+:48은 1차 정정에서도 놓쳤고 **역방향 grep으로 뒤늦게 잡혔다**.
 
 조문 본문(KoreanLaw, 시행 2026-07-01) 확인 결과 **두 겹으로 틀렸다**:
 
@@ -181,9 +183,11 @@ memory `feedback_citation_drift_replicates_across_repo`(인용은 전역 복제�
 
 ⇒ A11의 근거는 이제 **조문 API 단독으로 재현 가능**하다. 오프라인 아카이브·img alt 우회는 불필요.
 
-### 7-2. 「§162①6호 오인용 4곳」 → **5곳**
+### 7-2. 「§162①6호 오인용 4곳」 → **6곳**
 
-`multi-parcel-transfer.ts:13`이 누락돼 있었다.
+`multi-parcel-transfer.ts` :13·:48이 누락돼 있었다.
+⇒ 지금 `§162①6호`가 남은 곳은 `legal-codes/transfer.ts:224` 하나뿐이며,
+그것은 「종전 표기가 왜 틀렸는지」를 설명하는 **의도된 참조**다.
 
 ### 7-3. A05의 44,586,668원
 
@@ -195,7 +199,7 @@ memory `feedback_citation_drift_replicates_across_repo`(인용은 전역 복제�
 
 | 항목 | 처리 |
 |---|---|
-| §162①6호 오인용 5곳 | ✅ §162①9호 단서로 정정 |
+| §162①6호 오인용 6곳 | ✅ §162①9호 단서로 정정 |
 | `phd-helper.ts` §164⑤ 자기인용 | ✅ §164⑦로 정정 |
 | 죽은 필드 `inheritanceMode` | ✅ 제거 (타입·factory·마이그레이션 2곳·읽기 1곳). 분기는 `computeMode`가 유일 산출 지점 |
 | `transfer-tax-validate-asset.ts:62` 주석 어긋남 | ✅ PR-3에서 해소 |
