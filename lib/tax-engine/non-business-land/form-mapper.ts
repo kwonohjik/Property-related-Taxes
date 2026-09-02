@@ -18,6 +18,7 @@ import type {
   LandDivision,
 } from "./types";
 import { resolveGraceIntervals } from "./grace-reason-period";
+import { parseTaxPeriodYears } from "./disqualified-tax-periods";
 import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
 import { resolveAdjacentUnitCodes } from "@/lib/geo/sigungu-unit";
 import {
@@ -160,6 +161,9 @@ export function mapAssetToNblInput(
     deemedTransferReason: (asString(asset.nblDeemedTransferReason) || "none") as DeemedTransferReason,
     deemedTransferDate:   parseDate(asString(asset.nblDeemedTransferDate)),
     farmingSelf:             asBool(asset.nblFarmingSelf),
+    // 조특령 §66⑭ 결격 과세기간 — 「소득세법 시행령」 §168의8② 후단 준용 (E2-09).
+    // 형식 오류 토큰은 ⑧ validate가 이미 차단했으므로 여기서는 유효 연도만 실어 보낸다.
+    disqualifiedTaxPeriods:  parseTaxPeriodYears(asString(asset.nblDisqualifiedTaxPeriods)).years,
     farmerResidenceDistance: parseNumber(asString(asset.nblFarmerResidenceDistance)),
     farmlandDeeming:         buildFarmlandDeeming(asset),
     forestDetail:            buildForestDetail(asset, landType, parseDate),

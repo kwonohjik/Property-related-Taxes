@@ -293,6 +293,7 @@ export const NBL_DEFAULTS = {
   nblLandDivision: "" as "" | "dong" | "eup_myeon",
   nblOwnershipRatio: "",
   nblFarmingSelf: false,
+  nblDisqualifiedTaxPeriods: "",
   nblFarmerResidenceDistance: "",
   nblFarmlandIsWeekendFarm: false,
   nblFarmlandIsConversionApproved: false,

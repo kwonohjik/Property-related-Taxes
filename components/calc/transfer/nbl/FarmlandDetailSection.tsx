@@ -44,23 +44,46 @@ export function FarmlandDetailSection({
           거주 이력(재촌)과의 교집합으로 재촌·자경 기간을 산정합니다. (「소득세법 시행령」
           §168의8②)
         </p>
-        {/*
-          E2-09 (2026-09-02 코드리뷰) — §168의8② 후단이 자경기간 판정에
-          「조세특례제한법 시행령」 §66⑭를 준용한다(본문 실측 mst=286211). 그 결격 과세기간
-          제외가 엔진에도 안내에도 없어, 결격 과세기간을 포함한 기간을 그대로 입력하면
-          자경기간이 과대 인정돼 §168의6 기간기준을 잘못 통과할 수 있다(과소과세 방향).
-          과세기간별 소득 결격 플래그 입력은 14지점 동기화가 필요해 별건으로 두고,
-          우선 사용자가 **제외 후 기간**을 입력하도록 안내한다.
-        */}
+      </FieldCard>
+
+      {/*
+        E2-09 (2026-09-03) — §168의8② 후단이 자경기간 판정에 「조세특례제한법 시행령」 §66⑭를
+        준용한다(본문 실측 mst=286211). 종전에는 「제외하고 입력하세요」라는 **안내만** 있었다.
+        사용자가 자경 기간 행을 손으로 쪼개야 했고, 쪼개지 않으면 자경기간이 과대 인정돼
+        §168의6 기간기준을 잘못 통과했다(과소과세 방향).
+
+        ⇒ 결격 **과세기간(연도)** 을 직접 받고 엔진이 자경 기간에서 뺀다.
+           연수(count)가 아니라 연도인 이유: §168의6은 「직전 5년 중 3년」·「직전 3년 중 2년」이라
+           **어느 해가 빠지는지**가 판정을 가른다(`disqualified-tax-periods.ts` 헤더).
+      */}
+      <FieldCard
+        label="결격 과세기간 (조특령 §66⑭)"
+        hint="자경기간에서 제외할 과세기간의 연도를 쉼표로 구분해 입력합니다 (예: 2019, 2020). 해당 없으면 비워 두세요."
+      >
+        {/* 전역 SelectOnFocusProvider가 포커스 시 전체 선택을 처리한다 (app/layout.tsx) */}
+        <input
+          type="text"
+          inputMode="numeric"
+          aria-label="결격 과세기간 연도"
+          value={asset.nblDisqualifiedTaxPeriods}
+          onChange={(e) => onAssetChange({ nblDisqualifiedTaxPeriods: e.target.value })}
+          data-testid="nbl-disqualified-tax-periods"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
         <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-          다음 과세기간은 <b>자경한 기간에서 제외</b>하고 입력하세요 (「소득세법 시행령」
-          §168의8② 후단 → 「조세특례제한법 시행령」 §66⑭).
+          다음 과세기간은 <b>자경한 기간에서 제외</b>됩니다 (「소득세법 시행령」 §168의8② 후단 →
+          「조세특례제한법 시행령」 §66⑭).
           <br />
           <b>1호</b> 사업소득금액과 총급여액의 합계가 3,700만원 이상인 과세기간
           <br />
           <b>2호</b> 사업소득 총수입금액이 「소득세법 시행령」 §208⑤2호 각 목의 금액 이상인 과세기간
           <br />
           두 호 모두 농업·임업 소득, 부동산임대업 소득, 농가부업소득은 사업소득에서 제외합니다.
+          과세기간은 1월 1일부터 12월 31일까지입니다 (「소득세법」 §5①).
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          조특법 §69 자경농지 감면(4단계)의 「결격 과세기간」 칸과 <b>같은 사실</b>을 묻지만 단위가
+          다릅니다 — 그쪽은 <b>연수</b>, 여기는 <b>연도</b>입니다. 둘 다 해당하면 양쪽에 입력하세요.
         </p>
       </FieldCard>
 
