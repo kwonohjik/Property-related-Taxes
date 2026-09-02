@@ -30,6 +30,7 @@ import {
 } from "@/lib/tax-engine/non-business-land/factory-land-standard-area";
 import { judgeOtherLand } from "@/lib/tax-engine/non-business-land/other-land";
 import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
+import { NBL } from "@/lib/tax-engine/legal-codes/transfer-nbl";
 import type { NonBusinessLandInput, FactoryLandUsage } from "@/lib/tax-engine/non-business-land/types";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
 
@@ -538,7 +539,10 @@ describe("별표6 3호마 — 오염피해 인접토지는 「추가 인정면�
     const exempt = checkUnconditionalExemption(input, "other_land");
     expect(exempt.isExempt).toBe(true);
     expect(exempt.reason).toBe("factory_adjacent");
-    expect(exempt.legalBasis).toContain("§83의5④");
+    // U3-05(2026-09-02) — legalBasis가 `NBL.UNCONDITIONAL_FACTORY_ADJACENT` 상수로 이관되면서
+    // 표기가 「§83의5④」 → 「소득세법 시행규칙 §83조의5 ④ 1호」로 바뀌었다(법령명·법/령/규칙 명시).
+    // 조문 자체는 동일하다. 문자열 리터럴 대신 상수를 단언해 표기 변경에 다시 깨지지 않게 한다.
+    expect(exempt.legalBasis).toBe(NBL.UNCONDITIONAL_FACTORY_ADJACENT);
   });
 
   it("MOK-4: 나·다·라·바는 종전대로 기준면적에 가산된다 (마목만 빠진 것이지 규정 자체가 아니다)", () => {

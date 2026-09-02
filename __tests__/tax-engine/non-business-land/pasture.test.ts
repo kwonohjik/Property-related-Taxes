@@ -129,3 +129,97 @@ describe("갭 3c — 목장 자동산출 warning 인용 정정 (별표 1의3)", 
     expect(getLivestockStandardArea("hanwoo_breeding", 1, { ...ALL, hasGrassland: false })).toBe(2512.5);
   });
 });
+
+/**
+ * E2-06 (2026-09-02 코드리뷰) — **프로덕션에서 실제로 도는 경로**로 안전망을 옮긴다.
+ *
+ * 위 「C-3 흐름도」 케이스 4건은 전부 `pasture.standardArea` **직접입력**을 쓴다. 그런데
+ * 그 필드를 채우는 입력 경로가 없다 — UI에 위젯이 없고 `buildPasture`도 매핑하지 않아
+ * 프로덕션에서는 항상 `undefined`다. 즉 주요 회귀 케이스가 **도달 불가능한 분기**만 고정하고
+ * 있었고, 실제 경로(축종 × 두수 × 보유시설 자동산출)의 안전망은 warning 인용 1건뿐이었다.
+ *
+ * ⚠️ 축종키는 **영문**이어야 한다(`hanwoo_breeding`). 한글 「한우」는 별표 1의3 lookup에서
+ *    0을 반환해 자동산출이 성립하지 않는다 — 그 함정이 과거에 다른 테스트를 무의미하게 만든 적이 있다.
+ */
+describe("[E2-06] 자동산출 경로(축종×두수×보유시설) — UI가 실제로 태우는 분기", () => {
+  const ALL_FACILITIES = { hasFacility: true, hasGrassland: true, hasFodder: true };
+
+  /** standardArea를 **주지 않고** 자동산출만으로 판정시킨다. */
+  function autoBase(partial: Partial<NonBusinessLandInput> = {}): NonBusinessLandInput {
+    return base({
+      pasture: {
+        isLivestockOperator: true,
+        livestockType: "hanwoo_breeding",
+        livestockCount: 1,
+        ...ALL_FACILITIES,
+      },
+      ...partial,
+    });
+  }
+
+  it("기준면적 이내 → 사업용 (한우 사육 1두 전 시설 = 7,512.5㎡ ≥ 토지 5,000㎡)", () => {
+    const r = judgePasture(autoBase({ landArea: 5000 }), DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(getLivestockStandardArea("hanwoo_breeding", 1, ALL_FACILITIES)).toBe(7512.5);
+    expect(r.isBusiness).toBe(true);
+    expect(r.areaProportioning).toBeUndefined();
+  });
+
+  it("기준면적 초과 → 초과분만 비사업용으로 안분 (10,000 − 7,512.5 = 2,487.5㎡)", () => {
+    const r = judgePasture(autoBase({ landArea: 10000 }), DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning?.nonBusinessArea).toBe(2487.5);
+    // E2-07 회귀 — businessUseRatio는 **사업용** 비율이지 비사업용 비율이 아니다.
+    // (nonBusinessRatio는 엔진에서 소수 넷째자리로 반올림되므로 그 값과의 관계로 단언한다)
+    const nonBizRatio = r.areaProportioning!.nonBusinessRatio;
+    expect(nonBizRatio).toBeGreaterThan(0.24);
+    expect(r.businessUseRatio).toBe(1 - nonBizRatio);
+  });
+
+  it("보유시설을 빼면 한도가 줄어 같은 토지가 비사업용으로 기운다 (초지 미보유 = 2,512.5㎡)", () => {
+    const r = judgePasture(
+      autoBase({
+        landArea: 5000,
+        pasture: {
+          isLivestockOperator: true,
+          livestockType: "hanwoo_breeding",
+          livestockCount: 1,
+          ...ALL_FACILITIES,
+          hasGrassland: false,
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(getLivestockStandardArea("hanwoo_breeding", 1, { ...ALL_FACILITIES, hasGrassland: false }))
+      .toBe(2512.5);
+    expect(r.isBusiness).toBe(false);
+    expect(r.areaProportioning?.nonBusinessArea).toBe(2487.5);
+  });
+
+  it("두수가 늘면 한도가 선형으로 늘어난다 (3두 = 22,537.5㎡ → 10,000㎡ 토지 전량 사업용)", () => {
+    const r = judgePasture(
+      autoBase({
+        landArea: 10000,
+        pasture: {
+          isLivestockOperator: true,
+          livestockType: "hanwoo_breeding",
+          livestockCount: 3,
+          ...ALL_FACILITIES,
+        },
+      }),
+      DEFAULT_NON_BUSINESS_LAND_RULES,
+    );
+    expect(getLivestockStandardArea("hanwoo_breeding", 3, ALL_FACILITIES)).toBe(22537.5);
+    expect(r.isBusiness).toBe(true);
+  });
+
+  // E2-08 — 두수가 기준면적에 선형으로 곱해지므로 **어떤 산정방법으로 뽑은 두수인지**가 한도를 가른다.
+  // 별표 1의3 제2호는 3가지 중 납세자가 선택하도록 정하는데 엔진은 입력값을 그대로 쓴다.
+  // 그 전제를 warning이 드러내야 사용자가 대조할 수 있다.
+  it("[E2-08] 자동산출 warning이 별표 1의3 제2호 산정방법 전제를 드러낸다", () => {
+    const r = judgePasture(autoBase({ landArea: 10000 }), DEFAULT_NON_BUSINESS_LAND_RULES);
+    const w = r.warnings?.find((x) => x.includes("자동 산출"));
+    expect(w).toBeDefined();
+    expect(w).toContain("별표 1의3 제2호");
+    expect(w).toContain("입력값을 그대로 사용");
+  });
+});

@@ -174,10 +174,15 @@ export function judgePasture(
     };
     resolvedStandardArea = getLivestockStandardArea(p.livestockType, p.livestockCount, facilities);
     if (resolvedStandardArea > 0) {
+      // E2-08 — 두수는 기준면적에 **선형으로** 곱해지므로 산정방법이 곧 한도를 가른다.
+      // 별표 1의3 제2호는 3가지 중 납세자가 선택하도록 정하는데 엔진은 입력값을 그대로 쓴다.
+      // 어떤 전제로 산출됐는지 warning에 드러내 사용자가 대조할 수 있게 한다.
       warnings.push(
         `기준면적 미입력 — 축종(${p.livestockType}) × 사육두수(${p.livestockCount}두) × ` +
         `보유시설(${includedFacilityLabels(facilities).join("·")}) = ${resolvedStandardArea}㎡ ` +
-        "자동 산출 (소득세법 시행령 별표 1의3 §168조의10③)",
+        "자동 산출 (소득세법 시행령 별표 1의3 §168조의10③). " +
+        "사육두수는 입력값을 그대로 사용했습니다 — 별표 1의3 제2호의 3가지 산정방법(6과세기간 중 3 · " +
+        "4과세기간 중 2 · 영위기간 2년 이하) 중 납세자가 선택한 방법으로 산정한 값인지 확인하세요.",
       );
     } else {
       // 별표 1의3에 없는 축종·두수 0 등으로 자동산출이 0을 낸 경우 — 그 0을 기준면적으로 채택하면

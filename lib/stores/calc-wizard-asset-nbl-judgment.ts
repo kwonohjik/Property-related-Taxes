@@ -56,7 +56,6 @@ export interface NblJudgmentFormSlice {
   nblFarmerResidenceDistance: string;
   nblFarmlandIsWeekendFarm: boolean;
   nblFarmlandIsConversionApproved: boolean;
-  nblFarmlandConversionDate: string;
   nblFarmlandIsFarmDevZone: boolean;
   nblFarmlandIsMarginalFarm: boolean;
   nblFarmlandIsReclaimedLand: boolean;
