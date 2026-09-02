@@ -61,6 +61,14 @@ function isBusinessRelatedForest(input: NonBusinessLandInput): {
     }
   }
 
+  /**
+   * §168의9③8호 「종중이 소유한 임야(2005년 12월 31일 이전에 취득한 것에 한한다)」.
+   *
+   * ⚠️ **E5-04** — 실제 실행에서는 Step 2 무조건 의제(`unconditional-exemption.ts`의 레거시
+   *    종중 분기)가 먼저 성립해 이 분기까지 오지 않는 경우가 많다. 같은 요건이 두 곳에
+   *    중복 정의돼 있다는 뜻이므로 **개정 시 양쪽을 함께** 고쳐야 한다. 한쪽만 고치면 그 수정이
+   *    조용히 무시된다. 선점하는 무조건 의제 쪽이 법령상 옳으므로 순서는 바꾸지 않는다.
+   */
   const u = input.unconditionalExemption;
   if (u?.isJongjoongOwned && u.jongjoongAcquisitionDate) {
     const cutoff = new Date("2005-12-31");
