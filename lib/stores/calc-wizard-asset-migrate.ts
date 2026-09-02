@@ -14,7 +14,7 @@ import {
   migrateGeneralBuildingFields,
 } from "./calc-wizard-asset-migrate-phase3";
 import { migratePartialAreaApportionFields } from "./calc-wizard-asset-partial-area";
-import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "./calc-wizard-asset-factory";
+import { RENTAL_HOUSING_EXCEPTION_DEFAULTS, makeDefaultAsset } from "./calc-wizard-asset-factory";
 import type { AssetForm } from "./calc-wizard-asset";
 import {
   exemptionAtApprovalInScope,
@@ -948,5 +948,53 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.addressPnu !== undefined && typeof a.addressPnu !== "string") a.addressPnu = undefined;
   // ③ §114조의2 Phase2: 증축부분 취득시 기준시가 총액 — 구 세션 복원 방어
   if (a.extensionStdPriceAtAcquisition === undefined) a.extensionStdPriceAtAcquisition = "";
+
+  fillMissingFromFactory(a);
   return a as unknown as AssetForm;
+}
+
+/**
+ * factory 기본값으로 **빈 칸만** 채운다 — 신규 필드마다 가드를 손으로 다는 규약을 없앤다.
+ *
+ * ## 왜 필요한가
+ *
+ * `migrateAsset`은 이력·sessionStorage 복원의 **유일한 정규화 지점**인데(persist merge ·
+ * 레거시 이관 · 이력 상세 드로어) `makeDefaultAsset`과 병합하지 않는다. 그래서 위에서
+ * 명시적으로 세우지 않은 필드는 복원 자산에서 `undefined`로 남았고, 실제로 두 번 물렸다:
+ *   · NBL 리뷰 COV-6 — §168의11②·③ 수입금액비율 16필드가 통째로 비었다.
+ *   · `assetId` — 중복 판정(`other.assetId !== a.assetId`)이 `undefined !== undefined`로
+ *     false가 되어 **서로 다른 자산을 같은 자산으로** 취급했다.
+ *
+ * ## 안전성 — 실측으로 확인한 것
+ *
+ * **덮어쓰지 않는다.** 값이 `undefined`인 칸만 채우므로 위의 모든 개별 가드가 그대로 우선한다
+ * (그 가드들은 factory와 다른 값을 쓸 수도 있으므로 남겨 둔다).
+ *
+ * 채워지는 139필드에 대해 소비처를 전수 확인했다:
+ *   · `?? ` fallback은 전부 `?? ""`·`?? 0`·`?? false`·`?? []`로 **factory 기본값과 같다**
+ *     — 채워도 같은 값이 나온다.
+ *   · `=== undefined` / `!== undefined` 판정은 전부 **엔진 입력**(숫자·Date)이거나
+ *     AssetForm이 아닌 객체(주식 lot · 부담부증여 bgt · 다필지 parcel)다.
+ *     AssetForm을 읽으면서 undefined를 구별하는 곳은 이 파일 자신뿐이고, 그것들은
+ *     이 함수보다 **먼저** 돈다.
+ *
+ * ## 제외 — index에 의존하는 3필드
+ *
+ * factory는 `index`로 `assetId`·`assetLabel`·`isPrimaryForHouseholdFlags`를 만든다.
+ * 복원 시점에는 그 index가 없으므로 여기서 채우면 **전 자산이 같은 값**을 갖는다
+ * (`자산 0` 라벨 · id 충돌 · 대표자산 플래그 소실). `assetId`는 위에 전용 시퀀스 가드가 있고,
+ * 나머지 둘은 소비처에 표시용 fallback이 있어 종전대로 비워 둔다.
+ */
+const FACTORY_FILL_EXCLUDE: ReadonlySet<string> = new Set([
+  "assetId",
+  "assetLabel",
+  "isPrimaryForHouseholdFlags",
+]);
+
+function fillMissingFromFactory(a: Record<string, unknown>): void {
+  const defaults = makeDefaultAsset(0) as unknown as Record<string, unknown>;
+  for (const key of Object.keys(defaults)) {
+    if (FACTORY_FILL_EXCLUDE.has(key)) continue;
+    if (a[key] === undefined) a[key] = defaults[key];
+  }
 }
