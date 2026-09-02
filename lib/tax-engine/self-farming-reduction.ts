@@ -44,6 +44,8 @@
  *   - 조특법 §69① 본문 — 자경농지 100% 감면 / 단서 — 편입일까지 발생한 소득만 감면
  *   - 조특령 §66④1호 — 감면대상 토지 제외 (소재지 + 편입 후 3년 + 단서 가·나·다 예외)
  *   - 조특령 §66⑦ — 부분감면 산식
+ *   - 조특령 §66⑪·⑫ — 피상속인 경작기간 합산 (1년 이상 계속 경작 / 3년 내 양도·지정 대체요건)
+ *   - 조특령 §66⑭ — 사업소득+총급여 3,700만원 이상 등 결격 과세기간을 경작기간에서 제외
  *   - 조특법 §133 — 감면 종합한도 (1년 1억원)
  */
 
@@ -59,8 +61,29 @@ export interface SelfFarmingReductionInput {
   transferIncome: number;
   /** 본인 자경기간 (년). 조특법 §69 요건(기본 8년) 미충족 시 상속 합산 경로 고려. */
   farmingYears: number;
-  /** 피상속인 경작기간 (년) — 조특령 §66 ⑪ 1호 합산용. 선택. */
+  /** 피상속인 경작기간 (년) — 조특령 §66⑪1호·2호 합산용. 선택. */
   decedentFarmingYears?: number;
+  /**
+   * 조특령 §66⑪ 본문 — 「상속인이 상속받은 농지를 **1년 이상 계속하여 경작**하는 경우」
+   * (제1항 각 호의 지역에 거주하면서 경작하는 경우로 한정).
+   * 이 요건 또는 §66⑫ 대체요건 중 하나가 성립해야 피상속인 경작기간을 합산할 수 있다.
+   */
+  heirContinuedFarming1Year?: boolean;
+  /**
+   * 조특령 §66⑫ 대체요건 — 「1년 이상 계속하여 경작하지 아니하더라도 **상속받은 날부터
+   * 3년이 되는 날까지 양도**하거나 협의매수·수용되는 경우로서 상속받은 날부터 3년이 되는
+   * 날까지 **택지개발지구·산업단지 등으로 지정**되는 경우(상속받은 날 전 지정 포함)」.
+   */
+  meetsDecedentAggregationAlt?: boolean;
+  /**
+   * 조특령 §66⑭ — **거주자 본인**의 결격 과세기간 수(년).
+   * 「사업소득금액 + 총급여액 ≥ 3,700만원인 과세기간」(1호) 또는 「사업소득 총수입금액이
+   * 소령 §208⑤2호 각 목 금액 이상인 과세기간」(2호)은 **경작한 기간에서 제외한다**.
+   * ⚠️ 상증령 §16⑭(영농상속공제)의 boolean 결격과 달리 조특령 §66⑭은 **기간 차감**이다.
+   */
+  disqualifiedTaxPeriodsSelf?: number;
+  /** 조특령 §66⑭ — **피상속인(그 배우자 포함)**의 결격 과세기간 수(년). 본인분과 «각각» 차감한다. */
+  disqualifiedTaxPeriodsDecedent?: number;
   /** 요건 충족 최소 자경기간 (보통 8년) — rate-table의 selfFarmingRules.conditions.minFarmingYears */
   minFarmingYears: number;
   /** 취득일 */
@@ -141,8 +164,15 @@ export function calculateSelfFarmingReduction(
 ): SelfFarmingReductionResult {
   const breakdown: string[] = [];
 
-  const effectiveFarmingYears =
-    input.farmingYears + (input.decedentFarmingYears ?? 0);
+  // 조특령 §66⑭ — 결격 과세기간은 「해당 피상속인 또는 거주자 **각각에 대하여**」 차감한다 (D7-10).
+  const ownYears = Math.max(0, input.farmingYears - (input.disqualifiedTaxPeriodsSelf ?? 0));
+  // 조특령 §66⑪ 본문(1년 이상 계속 경작) 또는 §66⑫ 대체요건이 성립해야 합산한다 (D7-09).
+  const canAggregateDecedent =
+    input.heirContinuedFarming1Year === true || input.meetsDecedentAggregationAlt === true;
+  const decedentYears = canAggregateDecedent
+    ? Math.max(0, (input.decedentFarmingYears ?? 0) - (input.disqualifiedTaxPeriodsDecedent ?? 0))
+    : 0;
+  const effectiveFarmingYears = ownYears + decedentYears;
   const meetsFarmingRequirement = effectiveFarmingYears >= input.minFarmingYears;
 
   if (!meetsFarmingRequirement) {
@@ -156,8 +186,13 @@ export function calculateSelfFarmingReduction(
       legalBasis: TRANSFER.REDUCTION_SELF_FARMING,
       breakdown: [
         `자경기간 ${input.farmingYears}년` +
+          ((input.disqualifiedTaxPeriodsSelf ?? 0) > 0
+            ? ` − 결격 ${input.disqualifiedTaxPeriodsSelf}개 과세기간(조특령 §66⑭) = ${ownYears}년`
+            : "") +
           (input.decedentFarmingYears
-            ? ` + 피상속인 ${input.decedentFarmingYears}년 = 합계 ${effectiveFarmingYears}년`
+            ? canAggregateDecedent
+              ? ` + 피상속인 ${decedentYears}년 = 합계 ${effectiveFarmingYears}년`
+              : ` (피상속인 ${input.decedentFarmingYears}년은 §66⑪ 1년 이상 계속 경작 요건도 §66⑫ 대체요건도 확인되지 않아 합산 제외)`
             : "") +
           ` < 요건 ${input.minFarmingYears}년 → 감면 불가`,
       ],

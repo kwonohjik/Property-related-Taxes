@@ -47,6 +47,14 @@ export const reductionSchema = z.discriminatedUnion("type", [
      * 본인 자경기간이 §69 요건(8년)에 미달할 때 합산한다.
      */
     decedentFarmingYears: z.number().int().nonnegative().optional(),
+    /** 조특령 §66⑪ 본문 — 상속받은 농지 1년 이상 계속 경작 */
+    heirContinuedFarming1Year: z.boolean().optional(),
+    /** 조특령 §66⑫ 대체요건 — 3년 내 양도·수용 + 택지개발지구·산업단지 등 지정 */
+    meetsDecedentAggregationAlt: z.boolean().optional(),
+    /** 조특령 §66⑭ — 거주자 본인 결격 과세기간 수(년) */
+    disqualifiedTaxPeriodsSelf: z.number().int().nonnegative().optional(),
+    /** 조특령 §66⑭ — 피상속인(배우자 포함) 결격 과세기간 수(년) */
+    disqualifiedTaxPeriodsDecedent: z.number().int().nonnegative().optional(),
     // ── 조특령 §66④1호(3년 배제)·§66⑦(부분감면) 편입 ──
     /** 주거·상업·공업지역 편입일 (YYYY-MM-DD). 2002.1.1 이후 편입 시 부분감면 적용. */
     incorporationDate: z.string().date().optional(),

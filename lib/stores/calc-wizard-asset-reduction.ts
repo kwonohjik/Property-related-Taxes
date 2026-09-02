@@ -12,6 +12,14 @@ export type AssetReductionForm =
       farmingYears: string;
       /** 피상속인 자경기간(년) — 상속 취득 + 본인 미달 시 합산 (조특령 §66⑪) */
       decedentFarmingYears?: string;
+      /** 조특령 §66⑪ 본문 — 상속받은 농지를 1년 이상 계속 경작 */
+      heirContinuedFarming1Year?: boolean;
+      /** 조특령 §66⑫ 대체요건 — 상속일부터 3년 내 양도·수용 + 택지개발지구·산업단지 등 지정 */
+      meetsDecedentAggregationAlt?: boolean;
+      /** 조특령 §66⑭ — 거주자 본인 결격 과세기간 수(년) */
+      disqualifiedTaxPeriodsSelf?: string;
+      /** 조특령 §66⑭ — 피상속인(배우자 포함) 결격 과세기간 수(년) */
+      disqualifiedTaxPeriodsDecedent?: string;
       /** 주거·상업·공업지역 편입 여부 (조특령 §66④1호 배제 · 법 §69①단서+영 §66⑦ 부분감면) */
       useSelfFarmingIncorporation?: boolean;
       /** 편입일 (YYYY-MM-DD) */

@@ -40,7 +40,19 @@ export function toEngineReductions(
         type: "self_farming" as const,
         farmingYears: parseInt(r.farmingYears) || 0,
         ...(acquisitionCause === "inheritance" && decedentYears > 0
-          ? { decedentFarmingYears: decedentYears }
+          ? {
+              decedentFarmingYears: decedentYears,
+              // §66⑪ 본문 / §66⑫ 대체요건 — 둘 다 미선언이면 엔진이 합산하지 않는다
+              heirContinuedFarming1Year: r.heirContinuedFarming1Year === true,
+              meetsDecedentAggregationAlt: r.meetsDecedentAggregationAlt === true,
+              ...(parseInt(r.disqualifiedTaxPeriodsDecedent ?? "0") > 0
+                ? { disqualifiedTaxPeriodsDecedent: parseInt(r.disqualifiedTaxPeriodsDecedent ?? "0") }
+                : {}),
+            }
+          : {}),
+        // §66⑭ 결격 과세기간(본인) — 상속 여부와 무관
+        ...(parseInt(r.disqualifiedTaxPeriodsSelf ?? "0") > 0
+          ? { disqualifiedTaxPeriodsSelf: parseInt(r.disqualifiedTaxPeriodsSelf ?? "0") }
           : {}),
         ...(incorpDate ? { incorporationDate: incorpDate } : {}),
         ...(incorpZone ? { incorporationZoneType: incorpZone } : {}),

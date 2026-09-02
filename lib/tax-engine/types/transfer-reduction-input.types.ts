@@ -28,6 +28,14 @@ export type TransferReduction =
       /** 편입 지역 유형 (표시·판정용) */
       incorporationZoneType?: "residential" | "commercial" | "industrial";
       /** 양도일 현재 소재지 구분 — 조특령 §66④1호 3년 배제의 소재지 요건 */
+      /** 조특령 §66⑪ 본문 — 상속받은 농지를 1년 이상 계속 경작 */
+      heirContinuedFarming1Year?: boolean;
+      /** 조특령 §66⑫ 대체요건 — 상속일부터 3년 내 양도·수용 + 택지개발지구·산업단지 등 지정 */
+      meetsDecedentAggregationAlt?: boolean;
+      /** 조특령 §66⑭ — 거주자 본인의 결격 과세기간 수(년) */
+      disqualifiedTaxPeriodsSelf?: number;
+      /** 조특령 §66⑭ — 피상속인(배우자 포함)의 결격 과세기간 수(년) */
+      disqualifiedTaxPeriodsDecedent?: number;
       incorporationLocationType?: "metro_or_city" | "gun_or_eup_myeon";
       /** 조특령 §66④1호 단서 가·나·다목 해당 */
       hasIncorporationProvisoException?: boolean;

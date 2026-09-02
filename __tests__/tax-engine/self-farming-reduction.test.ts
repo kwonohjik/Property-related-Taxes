@@ -144,6 +144,8 @@ describe("자경기간 미달 — 감면 불가", () => {
       ...baseInput,
       farmingYears: 3,
       decedentFarmingYears: 6,
+      // §66⑪ 본문 — 합산에는 「상속받은 농지를 1년 이상 계속 경작」이 필요하다 (D7-09)
+      heirContinuedFarming1Year: true,
     });
     expect(result.qualifies).toBe(true);
     expect(result.reducibleIncome).toBe(547_901_140);

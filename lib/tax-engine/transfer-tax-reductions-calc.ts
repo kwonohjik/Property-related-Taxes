@@ -384,6 +384,10 @@ export function calcReductions(
           transferIncome: transferIncome!,
           farmingYears: own,
           decedentFarmingYears: decedent > 0 ? decedent : undefined,
+          heirContinuedFarming1Year: reduction.heirContinuedFarming1Year,
+          meetsDecedentAggregationAlt: reduction.meetsDecedentAggregationAlt,
+          disqualifiedTaxPeriodsSelf: reduction.disqualifiedTaxPeriodsSelf,
+          disqualifiedTaxPeriodsDecedent: reduction.disqualifiedTaxPeriodsDecedent,
           minFarmingYears: minYears,
           acquisitionDate: acquisitionDate!,
           transferDate: transferDate!,
@@ -415,8 +419,16 @@ export function calcReductions(
           }
         }
       } else {
-        // 레거시 경로 — 파라미터 부족 시 기존 단순 계산 유지 (하위 호환)
-        const effective = needsDecedent ? own + decedent : own;
+        // 레거시 경로 — 파라미터 부족 시 기존 단순 계산 유지 (하위 호환).
+        // §66⑪·⑫ 합산 요건과 §66⑭ 결격 차감은 신규 엔진과 동일 규약으로 맞춘다 (D7-09·D7-10).
+        const canAggregate =
+          reduction.heirContinuedFarming1Year === true ||
+          reduction.meetsDecedentAggregationAlt === true;
+        const ownEff = Math.max(0, own - (reduction.disqualifiedTaxPeriodsSelf ?? 0));
+        const decedentEff = canAggregate
+          ? Math.max(0, decedent - (reduction.disqualifiedTaxPeriodsDecedent ?? 0))
+          : 0;
+        const effective = needsDecedent ? ownEff + decedentEff : ownEff;
         if (effective >= minYears) {
           amount = Math.min(
             applyRate(calculatedTax, selfFarmingRules.maxRate),
