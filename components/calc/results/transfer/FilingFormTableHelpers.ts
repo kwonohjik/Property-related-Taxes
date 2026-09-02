@@ -247,7 +247,8 @@ export function splitLtDeduction(
 import { fourPartFinancials, splitTwoColFinancials } from "./FilingFormTableFinancials";
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
-import { buildRowsFromOrder } from "./FilingFormTableRowDefs";
+import { buildRowsFromOrder, fmtRatePct } from "./FilingFormTableRowDefs";
+import { resolveFilingRateCode } from "./filing-rate-code";
 import {
   reductionEligibleIncome,
   incomeDeductionReducible,
@@ -630,6 +631,16 @@ export function buildRows(
   setNum("priorIncomeAmount", "total", 0);
   setNum("basicDeduction", "total", result.basicDeduction);
   setNum("taxBase", "total", result.taxBase);
+  // ③ 세율구분 코드 · ⑨ 세율 — 실효세율(중과 포함). 단정 불가·0이면 「-」.
+  const rateCode = resolveFilingRateCode({
+    rateClause: result.rateClause,
+    assetKind: primary?.assetKind,
+    transferDate,
+    nblSurchargeExcluded: result.nblSurchargeExcluded,
+  });
+  if (rateCode) setStr("rateCode", "total", rateCode);
+  const ratePct = fmtRatePct(result.appliedRate);
+  if (ratePct) setStr("taxRate", "total", ratePct);
   setNum("calculatedTax", "total", result.calculatedTax);
   setNum("reductionTax", "total", result.reductionAmount);
   setNum("determinedTax", "total", result.determinedTax);

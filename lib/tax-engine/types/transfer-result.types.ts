@@ -6,6 +6,7 @@
  */
 
 import type { CalculationStep } from "./transfer.types";
+import type { RateClause } from "../transfer-tax-rate-clause";
 import type { ExcludedHouse, ExclusionReason, MultiHouseSurchargeResult } from "../multi-house-surcharge";
 import type { NonBusinessLandJudgment } from "../non-business-land";
 import type { RentalReductionResult } from "../rental-housing-reduction";
@@ -194,6 +195,11 @@ export interface TransferTaxResult {
    * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 비사업용 토지 +10%p 중과배제(기본세율). 장특 표1 유지. echo.
    */
   nblSurchargeExcluded?: boolean;
+  /**
+   * 엔진이 적용한 §104① 호 — 신고서 ③ 세율구분 코드 산정의 단일 소스.
+   * §104① 후단·§104⑦ 후단 비교의 **승자**이므로 「해당 호 집합」은 표현하지 않는다.
+   */
+  rateClause?: RateClause;
   /** 총 감면세액 */
   reductionAmount: number;
   /** 감면 유형 (표시용 한글 라벨 — "자경농지", "장기임대주택" 등) */

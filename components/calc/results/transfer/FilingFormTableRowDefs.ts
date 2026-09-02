@@ -17,6 +17,22 @@ export function fmtCell(v: number | string | null | undefined): string {
   return formatKRW(v);
 }
 
+/**
+ * 세율 표시 (신고서 ⑨ 세율).
+ *
+ * ⚠️ `appliedRate`는 **이미 중과를 포함한 실효세율**이다 —
+ * `transfer-tax-rate-calc.ts`가 `baseRate + additionalRate × ratio`로 만든다.
+ * 여기에 `surchargeRate`를 더하면 중과분이 **두 번** 계상된다
+ * (실측: 비사업용 토지 기본 45% + 10%p → 실효 55%인데 합산 표시는 65%).
+ *
+ * 세율이 0이면(집계에서 자산별 세율군이 둘 이상이라 단일 세율이 없는 경우 등)
+ * 「0%」로 찍지 않고 `null`을 돌려 「-」로 비운다.
+ */
+export function fmtRatePct(appliedRate: number | null | undefined): string | null {
+  if (appliedRate === null || appliedRate === undefined || appliedRate <= 0) return null;
+  return `${(appliedRate * 100).toFixed(1).replace(/\.0$/, "")}%`;
+}
+
 // ── rowOrder 빌더 ────────────────────────────────────────────
 
 /**
@@ -53,6 +69,11 @@ export function buildRowsFromOrder(
     ["priorIncomeAmount", "기신고 양도소득금액"],
     ["basicDeduction", "기본공제", { separatorAfter: true }],
     ["taxBase", "과세표준", { highlight: true }],
+    // 신고서 정본(별지 제84호서식) ⑧과세표준 → ⑨세율 → ⑩산출세액 순서를 따른다.
+    // ③세율구분 코드는 정본에서 표 머리에 있으나, 이 표는 자산별 열 구조라
+    // 세율과 붙여 두는 편이 읽기 쉽다(값의 출처는 같은 판정이다).
+    ["rateCode", "세율구분 코드"],
+    ["taxRate", "세율"],
     ["calculatedTax", "산출세액", singleTaxNotes ? { notes: singleTaxNotes } : undefined],
     ["reductionTax", "감면세액"],
     ["determinedTax", "결정세액", { highlight: true }],

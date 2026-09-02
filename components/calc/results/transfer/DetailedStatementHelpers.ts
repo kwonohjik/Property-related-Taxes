@@ -622,7 +622,7 @@ export function buildStatementItems(
       // 집계에 세율군이 둘 이상이면 단일 세율이 없다 — 「0%」로 찍지 말고 그 사실을 적는다(#071).
       (isAggregate && result.appliedRate === 0
         ? "자산별 세율이 서로 달라 단일 세율로 표시할 수 없습니다 — 아래 자산별 값을 참조하세요"
-        : `과세표준 × 세율(${formatRatePct(result.appliedRate, result.surchargeRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`),
+        : `과세표준 × 세율(${formatRatePct(result.appliedRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`),
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
     note: result.shortTermNote,
     perAsset: isAggregate
@@ -759,8 +759,16 @@ export function buildStatementItems(
 
 // ── 포맷 헬퍼 ──────────────────────────────────────────────────
 
-function formatRatePct(rate: number, surcharge?: number): string {
-  const total = rate + (surcharge ?? 0);
-  if (total === 0) return "0%";
-  return `${(total * 100).toFixed(1).replace(/\.0$/, "")}%`;
+/**
+ * 세율 표시.
+ *
+ * ⚠️ 인자는 **`appliedRate` 하나**다 — 이미 중과를 포함한 실효세율이기 때문이다
+ * (`transfer-tax-rate-calc.ts`: `baseRate + additionalRate × ratio`).
+ * 종전에는 `surchargeRate`를 함께 받아 더했고, 그 결과 중과분이 **두 번** 계상됐다
+ * (실측: 비사업용 토지 기본 45% + 10%p → 실효 55%인데 화면에는 65%).
+ * `transfer-tax-aggregate.ts`의 `refCalculatedTax`가 같은 이유로 정정된 것과 같은 축이다.
+ */
+function formatRatePct(rate: number): string {
+  if (rate === 0) return "0%";
+  return `${(rate * 100).toFixed(1).replace(/\.0$/, "")}%`;
 }
