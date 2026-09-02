@@ -24,6 +24,7 @@ import {
 import { applyExpropriationValuation } from "./transfer-tax-expropriation-valuation";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { ExpropriationValuationDetail } from "./transfer-tax-expropriation-valuation";
+import { estimatedDeductionRate } from "./legal-codes/transfer-nbl";
 
 // ============================================================
 // 타입 정의
@@ -375,7 +376,9 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       // 단, §104③ 미등기양도자산은 3/1000(0.3%).
       estimatedDeduction = computeEstimatedDeduction(
         standardAtAcq,
-        parcel.isUnregistered ? 0.003 : 0.03,
+        // §163⑥ 개산공제율은 `estimatedDeductionRate`가 단일 판정점이다(리터럴 금지 규약).
+        // 토지에서는 값이 같지만 미등기 분기가 조용히 누락되는 것을 막는다(A02).
+        estimatedDeductionRate(parcel.isUnregistered),
         input.ownershipRatio,
       );
 

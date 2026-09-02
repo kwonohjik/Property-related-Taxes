@@ -47,7 +47,19 @@ export function handleMultiParcelBranch(
   ctx: MultiParcelBranchContext,
   steps: CalculationStep[],
 ): TransferTaxResult | null {
-  const { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, options } = ctx;
+  // A20(2026-09-02): `pre1990LandResult`·`carryoverDetail`은 컨텍스트 타입에 선언돼 있고
+  // 호출부(`transfer-tax.ts`)가 실제로 넘기는데 **구조분해에 없어 쓰이지 않았다**.
+  // TypeScript는 이를 잡지 못한다(구조분해에서 빼면 unused 경고조차 없다).
+  const {
+    rawInput,
+    effectiveInput,
+    input,
+    parsedRates,
+    multiHouseSurchargeResult,
+    pre1990LandResult,
+    carryoverDetail,
+    options,
+  } = ctx;
 
   if (!rawInput.parcels || rawInput.parcels.length === 0) return null;
 
@@ -67,7 +79,25 @@ export function handleMultiParcelBranch(
     // 공익수용 §164⑨ 1호 특례 게이트 — 필지별 판정에 필요(자산-수준 값).
     transferCause: effectiveInput.transferCause,
     propertyType: effectiveInput.propertyType,
-    parcels: parcelsWithOverride,
+    /**
+     * A02(2026-09-02): 자산-수준 `isUnregistered`를 필지에 전파한다.
+     *
+     * 서브엔진은 미등기를 **이미 정확히 구현했다** — `calcLandLongTermRate`가
+     * `if (isUnregistered) return 0`(§95② 본문 괄호: 미등기양도자산은 장특공제 대상에서 제외),
+     * 개산공제는 `parcel.isUnregistered ? 0.003 : 0.03`(「소득세법 시행령」 §163⑥1호 괄호).
+     * 그런데 `ParcelInput.isUnregistered`를 채우는 경로가 ①⑤⑫⑬ 어디에도 없어 항상 undefined였다.
+     *
+     * 같은 분기가 미등기를 **이미 알고 있다**는 점에서 내부 모순이었다 — 세율 70%와
+     * 기본공제 0은 `effectiveInput.isUnregistered`로 이미 적용하면서 장특공제·개산공제만
+     * 빠졌다(실측 129,360,000원 과소 + 개산공제 5,400,000원 필요경비 과대).
+     *
+     * ⚠️ `??` 필수 — `TransferTaxInput.isUnregistered`가 required boolean이라 그냥 덮으면
+     *    자산 플래그가 false일 때 **필지별 축**(`ParcelInput.isUnregistered`)을 조용히 죽인다.
+     */
+    parcels: parcelsWithOverride.map((p) => ({
+      ...p,
+      isUnregistered: p.isUnregistered ?? effectiveInput.isUnregistered,
+    })),
     ownershipRatio: effectiveInput.ownershipRatio,
   });
   for (let pi = 0; pi < mpResult.parcelResults.length; pi++) {
@@ -278,5 +308,17 @@ export function handleMultiParcelBranch(
     ...mpHybridEcho,
     penaltyDetail: mpPenaltyDetail,
     parcelDetails: mpResult.parcelResults,
+    /**
+     * A20(2026-09-02): 다필지 조기반환이 정상경로의 결과 조립을 건너뛰면서 상류 STEP의
+     * 산출물을 하나도 싣지 않았다. 세율에는 STEP 0.6 재판정이 `effectiveInput`을 통해
+     * 반영되는데 **판정 근거 카드는 화면에 뜨지 않는** 상태였다(세액은 움직였는데 근거가 없다).
+     * 세액 불변 · 표시 전용.
+     */
+    ...(pre1990LandResult ? { pre1990LandValuationDetail: pre1990LandResult } : {}),
+    ...(carryoverDetail ? { carryoverTaxationDetail: carryoverDetail } : {}),
+    ...(multiHouseSurchargeResult
+      ? { multiHouseSurchargeDetail: multiHouseSurchargeResult }
+      : {}),
+    ...(mpTaxResult.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
   };
 }
