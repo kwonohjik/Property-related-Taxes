@@ -160,6 +160,27 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.nblFactoryAdditionalRecognizedArea === undefined) a.nblFactoryAdditionalRecognizedArea = "";
   if (a.nblFactoryFootprintArea === undefined) a.nblFactoryFootprintArea = "";
   if (a.nblFactoryIsUnregistered === undefined) a.nblFactoryIsUnregistered = false;
+  // §168의11②·③ 수입금액비율 클러스터 — 이력 복원 시 신규 필드 채움 (COV-6).
+  // 종전에는 이 18필드만 가드가 없어 옛 이력을 되살리면 controlled→uncontrolled로 뒤집히고
+  // 재계산 시 수입금액비율 입력이 조용히 빈 값으로 재전송됐다.
+  if (a.nblRevenueBusinessType === undefined) a.nblRevenueBusinessType = "";
+  if (a.nblRevenueCurrentRevenue === undefined) a.nblRevenueCurrentRevenue = "";
+  if (a.nblRevenueCurrentLandValue === undefined) a.nblRevenueCurrentLandValue = "";
+  if (a.nblRevenuePriorRevenue === undefined) a.nblRevenuePriorRevenue = "";
+  if (a.nblRevenuePriorLandValue === undefined) a.nblRevenuePriorLandValue = "";
+  if (a.nblRevenueCurrentBusinessStartDate === undefined) a.nblRevenueCurrentBusinessStartDate = "";
+  if (a.nblRevenuePriorBusinessDays === undefined) a.nblRevenuePriorBusinessDays = "";
+  if (a.nblRevenueCurrentDeposit === undefined) a.nblRevenueCurrentDeposit = "";
+  if (a.nblRevenueCurrentRentDays === undefined) a.nblRevenueCurrentRentDays = "";
+  if (a.nblRevenuePriorDeposit === undefined) a.nblRevenuePriorDeposit = "";
+  if (a.nblRevenuePriorRentDays === undefined) a.nblRevenuePriorRentDays = "";
+  if (a.nblRevenueCommonApportion === undefined) a.nblRevenueCommonApportion = false;
+  if (a.nblRevenueCommonRevenue === undefined) a.nblRevenueCommonRevenue = "";
+  if (a.nblRevenueOtherLandValue === undefined) a.nblRevenueOtherLandValue = "";
+  if (a.nblRevenuePriorCommonRevenue === undefined) a.nblRevenuePriorCommonRevenue = "";
+  if (a.nblRevenuePriorOtherLandValue === undefined) a.nblRevenuePriorOtherLandValue = "";
+  // 유예기간 배열 — 자산마다 **새 인스턴스**여야 한다(공유 참조 금지).
+  if (a.nblGracePeriods === undefined) a.nblGracePeriods = [];
   if (a.nblVillaBuildingFloorArea === undefined) a.nblVillaBuildingFloorArea = "";
   if (a.nblVillaAttachedLandArea === undefined) a.nblVillaAttachedLandArea = "";
   if (a.nblVillaCombinedStdValue === undefined) a.nblVillaCombinedStdValue = "";
