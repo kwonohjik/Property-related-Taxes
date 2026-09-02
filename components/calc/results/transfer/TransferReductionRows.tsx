@@ -12,6 +12,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 import { ReductionStatutoryCapRow } from "@/components/calc/results/transfer/ReductionStatutoryCapRow";
+import { RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { ELIGIBLE_INCOME_VS_FORM_NOTE } from "@/components/calc/results/transfer/reduction-eligible-income";
 
 /** §99의3 신축주택 과세특례 상세 (적용/불가 양쪽) */
 export function New993DetailCard({
@@ -150,9 +152,10 @@ export function PublicExpropriationDetailCard({
           {" = "}{formatKRW(bd.bondReduction)}
         </p>
         <p className="font-medium">
-          감면대상소득금액 = 현금 {formatKRW(bd.cashReduction)} + 채권 {formatKRW(bd.bondReduction)}
+          {RATED_REDUCIBLE_INCOME_LABEL} = 현금 {formatKRW(bd.cashReduction)} + 채권 {formatKRW(bd.bondReduction)}
           {" = "}{formatKRW(bd.reducibleIncome)}
         </p>
+        <p className="text-muted-foreground">{ELIGIBLE_INCOME_VS_FORM_NOTE}</p>
       </div>
       {excludedByOverlap ? (
         <p className="text-muted-foreground border-t border-primary/20 pt-1.5">
@@ -165,7 +168,7 @@ export function PublicExpropriationDetailCard({
       ) : (
         <>
           <div className="space-y-0.5 border-t border-primary/20 pt-1.5">
-            <p className="text-muted-foreground">⑤ 감면세액 = 산출세액 × <Frac top="감면대상소득금액" bottom="과세표준" /></p>
+            <p className="text-muted-foreground">⑤ 감면세액 = 산출세액 × <Frac top={RATED_REDUCIBLE_INCOME_LABEL} bottom="과세표준" /></p>
             <p className="font-medium">
               {formatKRW(calculatedTax ?? 0)} × <Frac top={formatKRW(bd.reducibleIncome)} bottom={formatKRW(taxBase ?? 0)} />
               {" = "}{formatKRW(d.rawReductionAmount)}
