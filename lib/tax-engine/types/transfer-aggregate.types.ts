@@ -163,7 +163,8 @@ export interface PerPropertyBreakdown
   surchargeRate?: number;
   /**
    * 자산별 산출세액 (다건 컨텍스트, 참고).
-   * = max(0, floor(taxBaseShare × (appliedRate + surchargeRate)) - progressiveDeduction)
+   * = max(0, floor(taxBaseShare × appliedRate) - progressiveDeduction)
+   *   (`appliedRate`가 이미 중과 포함 실효세율이다 — `surchargeRate`를 더하면 이중 계상. 2026-09-02 정정)
    * 자산이 1건일 때 합산 산출세액과 일치. 비교과세 적용 시 합산값과 차이 가능.
    */
   refCalculatedTax: number;
