@@ -76,6 +76,28 @@ const SELF_FARMING_KINDS = new Set<ReductionAssetKind>(["land"]);
  *
  * ②(해제 후 협의매수·수용)는 공익사업법 경로라 「토지등」 그대로이므로 이 게이트 대상이 아니다.
  */
+/**
+ * §98의2(지방 미분양주택) **조합원 경로 배제** — 결합이 구조적으로 성립하지 않는다.
+ *
+ * 조특법 §98의2①의 대상은 조특령이 정하는 「미분양주택」, 즉 **사업주체등이 공급했으나
+ * 분양되지 않은 주택**이다. 그런데 재개발·재건축의 조합원 물량은 관리처분계획에 따라
+ * **배정**되는 것이지 분양 대상이 아니므로, 조합원이 취득한 신축주택·입주권은 어떤
+ * 경우에도 미분양주택에 해당할 수 없다.
+ *
+ * 반대 방향으로도 막힌다 — 미분양 일반분양분을 산 사람은 조합원이 아니라 취득일이
+ * 잔금청산일 하나뿐이라, 소령 §166⑤의 인가전·인가후·청산금 3분기 구조 자체가 없다.
+ * (승계조합원도 §166①의 「조합에 기존건물을 제공하고 취득한 조합원」이 아니라서
+ *  `redevelopment-dispatch.ts`가 일반 분기로 내려보낸다.)
+ *
+ * ⚠️ 카테고리 게이트(`NEW_UNSOLD_HOUSING_KINDS`)는 이 두 자산종류를 허용한다 — §99 계열은
+ *   조특령 §99①1호 단서가 **재개발 신축주택 변형을 명문으로 두고** 있어 정당하다.
+ *   §98의2만 조문 단위로 뺀다.
+ */
+const UNSOLD_98_2_EXCLUDED_KINDS = new Set<ReductionAssetKind>([
+  "redevelopment_apt",
+  "right_to_move_in",
+]);
+
 const GB_CLAIM_ROUTE_KINDS = new Set<ReductionAssetKind>([
   "land",
   "general_building",
@@ -134,6 +156,8 @@ export function isReductionAllowedForAssetKind(
 ): boolean {
   // 조문 단위 예외가 카테고리 판정보다 먼저다 — standalone은 카테고리로 묶이지만 §69만 토지 전용이다.
   if (id === "self_farming") return SELF_FARMING_KINDS.has(assetKind);
+  // §98의2 × 조합원 경로 — 미분양주택 정의상 성립 불가 (위 UNSOLD_98_2_EXCLUDED_KINDS 주석)
+  if (id === "unsold_98_2") return !UNSOLD_98_2_EXCLUDED_KINDS.has(assetKind);
   const cat = REDUCTION_METADATA[id as TransferReductionId]?.category ?? LEGACY_REDUCTION_CATEGORY[id];
   if (!cat) return true; // 매핑 미존재 시 차단하지 않음 (방어적 — standalone·미지 타입)
   return isReductionCategoryAllowedForAssetKind(cat, assetKind);

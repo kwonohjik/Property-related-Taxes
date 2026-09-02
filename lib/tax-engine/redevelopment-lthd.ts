@@ -370,6 +370,21 @@ function computeLthdRate(
  * 표1: holding=rate(≤0.30), residence=0
  * 표2: holding=min(years×0.04,0.40), residence=min(resYears×0.04,0.40) (거주 2년+ 가드)
  */
+/**
+ * §95② **단서**(1세대1주택 표2) 진입 여부 — **단일 소스**.
+ *
+ * 「대통령령으로 정하는 1세대 1주택」 + 보유기간 중 **거주기간 2년 이상**. 조특법 §97의4①
+ * 단서(「같은 항 단서에 해당하는 경우에는 그러하지 아니하다」)가 가리키는 것이 이 조건이라,
+ * 추가공제율 가산 배제 판정도 같은 술어를 써야 한다 — 두 술어로 판정하면 드리프트한다
+ * (memory `feedback_shared_predicate_argument_parity`).
+ *
+ * ⚠️ 보유기간(3년) 게이트는 여기 넣지 않는다. 표2 **대상**인지와 공제율이 0인지는 다른 축이고,
+ *   §97의4 단서는 「표2 대상이면 가산하지 않는다」이지 「공제율이 있으면」이 아니다.
+ */
+export function usesTable2(isOneHouseSingle: boolean, residenceYears: number): boolean {
+  return isOneHouseSingle && residenceYears >= 2;
+}
+
 export function computeLthdRateSplit(
   years: number,
   isOneHouseSingle: boolean,
@@ -377,7 +392,7 @@ export function computeLthdRateSplit(
 ): { holding: number; residence: number; total: number } {
   if (years < 3) return { holding: 0, residence: 0, total: 0 };
 
-  if (isOneHouseSingle && residenceYears >= 2) {
+  if (usesTable2(isOneHouseSingle, residenceYears)) {
     const holding = Math.min(years * 0.04, 0.40);
     const residence = Math.min(residenceYears * 0.04, 0.40);
     return { holding, residence, total: holding + residence };

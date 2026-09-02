@@ -25,7 +25,6 @@
  */
 
 import { runRedevelopment, isRedevelopmentActive } from "./redevelopment";
-import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
 import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
@@ -42,8 +41,11 @@ import {
   applySettlementExemption,
   applyOneRightExemption,
   applyAptOneHouseExemption,
+  applyRental97LthdSpecial,
   emitRedevelopmentSteps,
 } from "./transfer-tax-redevelopment-transforms";
+import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
+import { usesTable2 } from "./redevelopment-lthd";
 import type { MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
 import { calcBasicDeduction, getReductionLegalBasis } from "./transfer-tax-helpers";
 import { applyRate, truncateToWon } from "./tax-utils";
@@ -304,9 +306,92 @@ export function calculateRedevelopmentTax(
       : lthdExcludedBySurcharge
         ? "multi_house_surcharge"
         : undefined;
-  const redevAfterRight: RedevelopmentResult = lthdExclusionReason
+  const redevAfterLthdExclusion: RedevelopmentResult = lthdExclusionReason
     ? applyLthdExclusion(redevAfterRightRaw)
     : redevAfterRightRaw;
+
+  /**
+   * ─ Step A.8b: 조특법 §97의3①·§97의4① **장기보유특별공제 특례** ─
+   *
+   * 두 조문은 감면세액이 아니라 **LTHD 공제율 자체**를 바꾼다. 종전에는 이 분기가
+   * `calcLongTermHoldingDeduction`(정상 경로의 특례 반영 지점)을 부르지 않아 선택해도
+   * 계산에 반영되지 않았다(CB-02·D5-05는 고지만 했다).
+   *
+   * 결합 규칙이 따로 필요하지 않다는 근거는 `applyRental97LthdSpecial` 헤더에 적었다 —
+   * §97의3은 임대분에 **고정 70%**라 보유기간이 개입하지 않고, §97의4는 **가산**이라
+   * 분기별 합과 전체 적용이 같은 값이다.
+   *
+   * ⚠️ LTHD가 배제된 경우(미등기 §95② 괄호·다주택 중과)에는 적용하지 않는다 — 배제를
+   *   특례가 되살리면 §95②의 배제 문언이 무력화된다.
+   */
+  const rental97Special = lthdExclusionReason
+    ? undefined
+    : evaluateRental97Lthd(input.reductions, {
+        transferDate: input.transferDate,
+        acquisitionDate: input.acquisitionDate,
+        stdPriceAtAcquisition: input.standardPriceAtAcquisition,
+        stdPriceAtTransfer: input.standardPriceAtTransfer,
+      });
+  const table2ActiveForRedev = usesTable2(
+    isOneHouseSingle,
+    Math.floor((input.residencePeriodMonths ?? 0) / 12),
+  );
+  let redevAfterRight: RedevelopmentResult = redevAfterLthdExclusion;
+  if (
+    rental97Special?.isEligible &&
+    rental97Special.effectCategory === "long_term_holding_special" &&
+    rental97Special.overrideRate !== undefined
+  ) {
+    // §97의3 — 임대분 70% 대체
+    redevAfterRight = applyRental97LthdSpecial(redevAfterLthdExclusion, {
+      overrideRate: rental97Special.overrideRate,
+      rentalGainRatio: rental97Special.rentalGainRatio,
+    });
+    steps.push({
+      label: "장기보유특별공제 특례 — 장기일반민간임대주택 (조특법 §97의3①)",
+      formula:
+        `임대기간분 양도차익 × 70% + 비임대분 × 분기별 공제율. 임대분 비율 ` +
+        `${(rental97Special.rentalGainRatio * 100).toFixed(2)}% (조특령 §97의3⑤) · ` +
+        `인가전·인가후 기존건물·청산금 3분기에 각각 적용 (소득세법 시행령 §166⑤). ` +
+        `공제액 ${redevAfterLthdExclusion.total.lthd.toLocaleString()} → ` +
+        `${redevAfterRight.total.lthd.toLocaleString()}`,
+      amount: redevAfterRight.total.lthd,
+      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+    });
+  } else if (
+    rental97Special?.isEligible &&
+    rental97Special.effectCategory === "long_term_holding_additional" &&
+    rental97Special.additionalRate !== undefined
+  ) {
+    if (table2ActiveForRedev) {
+      // §97의4① **단서** — 표2(§95② 단서) 대상이면 가산하지 않는다.
+      const notice =
+        "1세대1주택 장기보유특별공제 표2(소득세법 §95② 단서) 적용 대상이므로 " +
+        "§97의4 추가공제율을 가산하지 않습니다 (조특법 §97의4① 단서).";
+      steps.push({
+        label: "장기보유특별공제 특례 — 미가산 (조특법 §97의4① 단서)",
+        formula: notice,
+        amount: 0,
+        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      });
+      lthdSpecialNotice = notice;
+    } else {
+      redevAfterRight = applyRental97LthdSpecial(redevAfterLthdExclusion, {
+        additionalRate: rental97Special.additionalRate,
+        rentalGainRatio: 1,
+      });
+      steps.push({
+        label: "장기보유특별공제 특례 — 장기임대주택 추가공제율 (조특법 §97의4①)",
+        formula:
+          `분기별 §95② 공제율 + 추가율 ${(rental97Special.additionalRate * 100).toFixed(0)}%p. ` +
+          `보유 3년 미만으로 기본 공제율이 0인 분기는 가산하지 않는다. ` +
+          `공제액 ${redevAfterLthdExclusion.total.lthd.toLocaleString()} → ` +
+          `${redevAfterRight.total.lthd.toLocaleString()}`,
+        amount: redevAfterRight.total.lthd,
+        legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      });
+    }
+  }
 
   if (lthdExclusionReason === "unregistered") {
     steps.push({
@@ -430,32 +515,29 @@ export function calculateRedevelopmentTax(
     RATE_SPECIAL_REDUCTION_IDS.includes(incomeDeduction.eligibleId);
   const flatRate20Active = incomeDeduction.eligibleId === "unsold_98";
   /**
-   * **장기보유특별공제 계열 특례는 이 경로에서 계산되지 않는다** (CB-02·D5-05).
+   * §98의2 × 조합원 경로 — **결합이 구조적으로 성립하지 않는다** (CB-02·D5-05 후속).
    *
-   * §97의3①(임대기간분 70%)·§97의4①(표1 가산)·§98의2①1호(양도차익 × 소득세법 §95② **표2**)는
-   * 감면세액이 아니라 **LTHD 공제율 자체**를 바꾸는 조문인데, 이 분기는 소령 §166⑤에 따라
-   * 인가전·인가후 기존건물·청산금 3분기별로 LTHD를 따로 산정하고 `calcLongTermHoldingDeduction`
-   * (§98의2 표2 강제가 들어 있는 유일한 지점)을 아예 부르지 않는다.
+   * §97의3·§97의4는 위 Step A.8b가 계산에 반영한다. 남은 것은 §98의2뿐인데, 이 조합은
+   * 애초에 존재할 수 없다:
    *
-   * ⚠️ 자산종류 게이트는 이 조합을 **허용한다** — `RENTAL_HOUSING_KINDS`에 `redevelopment_apt`가
-   *   있고, 조특령 §97의3② 후단은 「재개발사업·재건축사업 … 의 시행으로 임대할 수 없는 경우에는
-   *   관리처분계획 인가일 전 6개월부터 준공일 후 6개월까지 계속하여 임대한 것으로 본다」로
-   *   재개발 아파트가 §97의3 대상임을 **전제**한다. 즉 도달 가능한 조합이다.
+   * - 조특법 §98의2①의 대상은 조특령이 정하는 **미분양주택**(사업주체등이 공급했으나 분양되지
+   *   않은 주택)이다. 재개발·재건축 **조합원 물량은 관리처분계획에 따라 배정**되는 것이라
+   *   분양 대상이 아니므로 미분양주택에 해당할 수 없다.
+   * - 반대로 미분양 일반분양분을 취득한 자는 조합원이 아니라 취득일이 잔금청산일 하나뿐이라
+   *   소령 §166⑤의 3분기 구조 자체가 없다.
    *
-   * 세액 반영은 §166⑤ 3분기 구조와의 결합 판단(전체 양도차익 기준인지 파트별인지)이 남아
-   * **아직 하지 않는다**. 그때까지 「선택은 되는데 계산엔 없다」는 침묵만은 없앤다.
+   * ⇒ 정상 경로는 `asset-kind-gate.ts`가 ⑤·⑧에서 차단한다. 여기 남긴 것은 그 게이트를 거치지
+   *   않는 **API 직접 호출**용 방어다 — 「아직 반영하지 않았다」가 아니라 「적용 대상이 아니다」로
+   *   적어야 한다. 종전 문구는 사용자가 받을 수 있는 특례를 놓치고 있다고 오해하게 만들었다.
    */
-  const lthdSpecialSelected = (input.reductions ?? []).filter((r) =>
-    LTHD_SPECIAL_REDUCTION_IDS.includes(r.type),
-  );
-  if (lthdSpecialSelected.length > 0) {
+  const unsold982Selected = (input.reductions ?? []).filter((r) => r.type === "unsold_98_2");
+  if (unsold982Selected.length > 0) {
     const notice =
-      `선택한 감면 중 ${lthdSpecialSelected.length}건(장기보유특별공제 특례 — 조세특례제한법 ` +
-      "§97의3①·§97의4①·§98의2①1호)은 이 계산에 반영되지 않았습니다. 재개발·재건축 양도는 " +
-      "소득세법 시행령 §166⑤에 따라 인가전·인가후 기존건물·청산금 3분기별로 장기보유특별공제를 " +
-      "따로 산정하는데, 특례 공제율을 그 구조에 어떻게 결합할지 정한 명문 규정이 없습니다.";
+      "지방 미분양주택 과세특례(조세특례제한법 §98의2①1호)는 재개발·재건축 조합원이 취득한 " +
+      "자산에는 적용되지 않습니다 — 조합원 배정분은 사업주체가 공급하고 남은 미분양주택에 " +
+      "해당할 수 없습니다. 이 계산에 반영하지 않았습니다.";
     steps.push({
-      label: "조특법 감면 — 미반영 (장기보유특별공제 특례)",
+      label: "조특법 §98의2 — 적용 대상 아님 (조합원 취득 자산)",
       formula: notice,
       amount: 0,
       legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
@@ -729,6 +811,12 @@ export function calculateRedevelopmentTax(
     usedEstimatedAcquisition: input.useEstimatedAcquisition ?? false,
     longTermHoldingDeduction: redevAfterRight.total.lthd,
     longTermHoldingRate: 0, // 분기별 율 (3종) — redevelopmentDetail.preApproval/postApproval/settlement.lthdRate 참조
+    /**
+     * §97의3·§97의4 특례 근거 echo — 결과 카드가 「왜 공제율이 달라졌는지」를 보여준다.
+     * 정상 경로(`transfer-tax-lthd.ts`)는 항상 싣는데 이 분기만 비어 있었다 (CB-07과 같은 성질).
+     * 적격이 아니어도 싣는다 — 선택했는데 화면에서 통째로 사라지면 사유를 알 길이 없다.
+     */
+    ...(rental97Special ? { rental97LthdDetail: rental97Special } : {}),
     lthdStartDate: resolveLTHDStartDate(input),
     basicDeduction,
     taxBase,

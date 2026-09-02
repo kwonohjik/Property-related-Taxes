@@ -155,3 +155,61 @@ describe("D9-07 §97의3 사문 입력란", () => {
     expect("rentalHousingType" in def).toBe(true);
   });
 });
+
+/**
+ * §98의2 × 조합원 경로 — ⑤ **조문 단위** 게이트.
+ *
+ * 🔴 패널은 `isReductionCategoryAllowedForAssetKind`(**카테고리** 단위)만 보고 있었다.
+ *   §98의2는 조특령상 미분양주택(사업주체등이 공급했으나 분양되지 않은 주택) 취득이 전제라
+ *   재개발·재건축 **조합원 배정분**에는 성립할 수 없는데, 카테고리(`unsold_housing`)는
+ *   `redevelopment_apt`·`right_to_move_in`을 허용한다. ⑧에만 게이트를 넣으면 D9-06과 같은
+ *   「⑧은 막는데 ⑤는 안 막는」 상태가 된다.
+ */
+describe("§98의2 자산종류 게이트 — ⑤ UI", () => {
+  async function renderPanelFor(assetKind: string) {
+    const { UnifiedReductionPanel } = await import(
+      "@/components/calc/transfer/UnifiedReductionPanel"
+    );
+    const { makeDefaultAsset } = await import("@/lib/stores/calc-wizard-store");
+    const asset = {
+      ...makeDefaultAsset(1),
+      assetKind,
+      acquisitionDate: "2009-06-01",
+      reductions: [],
+    } as never;
+    const { fireEvent } = await import("@testing-library/react");
+    render(<UnifiedReductionPanel asset={asset} transferDate="2026-02-16" onChange={vi.fn()} />);
+    // 미분양 카테고리 펼치기 — 접혀 있으면 항목 토글이 DOM에 없다
+    const header = screen.getAllByText(/미분양/)[0];
+    fireEvent.click(header.closest("button") as HTMLElement);
+  }
+
+  function unsold982Toggle(): HTMLElement {
+    return screen.getByRole("switch", { name: /§98의2/ });
+  }
+
+  it("G982-UI-1: 주택에서는 §98의2를 고를 수 있다", async () => {
+    await renderPanelFor("housing");
+    expect(unsold982Toggle().getAttribute("disabled")).toBeNull();
+  });
+
+  it("G982-UI-2: 🔴 재개발APT에서는 잠긴다 (종전에는 계산 실행 시점에야 차단)", async () => {
+    await renderPanelFor("redevelopment_apt");
+    const t = unsold982Toggle();
+    const locked =
+      t.hasAttribute("disabled") ||
+      t.getAttribute("aria-disabled") === "true" ||
+      t.getAttribute("data-disabled") !== null;
+    expect(locked).toBe(true);
+  });
+
+  it("G982-UI-3: 입주권에서도 잠긴다", async () => {
+    await renderPanelFor("right_to_move_in");
+    const t = unsold982Toggle();
+    const locked =
+      t.hasAttribute("disabled") ||
+      t.getAttribute("aria-disabled") === "true" ||
+      t.getAttribute("data-disabled") !== null;
+    expect(locked).toBe(true);
+  });
+});

@@ -82,6 +82,98 @@ export function applyLthdExclusion(r: RedevelopmentResult): RedevelopmentResult 
 }
 
 /**
+ * A.8b — 조특법 §97의3①(임대분 70% **대체**) · §97의4①(추가율 **가산**)을 분기별 LTHD에 반영.
+ *
+ * ## 왜 §166⑤ 3분기와 충돌하지 않는가
+ *
+ * 소령 §166⑤은 **장기보유특별공제의 「보유기간」을 정하는** 규정이다(1호 인가전 / 2호가목
+ * 청산금납부분 / 2호나목 기존건물분). 그런데:
+ *
+ * - **§97의3**은 임대분에 **100분의 70 고정**을 준다. 율이 고정이면 보유기간이 개입할 여지가
+ *   없으므로 3분기 구조는 **비임대분에만** 걸린다 — 지금 각 분기가 이미 하는 일 그대로다.
+ *   두 축은 충돌하지 않고 곱해진다.
+ * - **§97의4**는 통상 율에 추가율을 **더한다**. `Σ 차익ᵢ × 추가율 = 총차익 × 추가율`이라
+ *   분기별로 더하든 전체에 더하든 값이 같다.
+ *
+ * ⇒ 두 조문 모두 분기별 결합에 별도 규칙이 필요 없다. 정상 경로(`transfer-tax-lthd.ts`)가
+ *   쓰는 산식을 분기마다 그 분기의 율로 돌리면 된다.
+ *
+ * ## 임대분 안분비율을 분기별로 다시 뽑지 않는 이유
+ *
+ * 조특령 §97의3② 후단: 「재개발사업ㆍ재건축사업 … 의 시행으로 임대할 수 없는 경우에는 해당
+ * 주택의 관리처분계획 인가일 **전 6개월부터 준공일 후 6개월까지의 기간 동안 계속하여 임대한
+ * 것으로 보되**, 임대기간 계산 시에는 실제 임대기간만 포함한다」 — 임대가 인가 전부터 준공
+ * 후까지 **이어진 것으로 본다**. 그러면 령 §97의3⑤의 비율(임대개시일~임대 마지막 날 기준시가
+ * 상승분 ÷ 전체)이 세 구간에 걸쳐 산정되는 것이 자연스럽고, 분기별로 따로 뽑을 근거가 없다.
+ *
+ * @param special `evaluateRental97Lthd` 결과에서 뽑은 값. `overrideRate`(§97의3) 또는
+ *   `additionalRate`(§97의4) 중 하나만 온다.
+ */
+export function applyRental97LthdSpecial(
+  r: RedevelopmentResult,
+  special: {
+    /** §97의3 — 임대분 대체 공제율 (0.7) */
+    overrideRate?: number;
+    /** §97의3 — 임대기간분 양도차익 비율 (조특령 §97의3⑤). §97의4는 1 */
+    rentalGainRatio: number;
+    /** §97의4 — 임대기간별 추가 공제율 */
+    additionalRate?: number;
+  },
+): RedevelopmentResult {
+  const applyBranch = (b: RedevelopmentBranchDetail): RedevelopmentBranchDetail => {
+    const gain = Math.max(b.gain, 0);
+    if (gain <= 0) return b;
+
+    if (special.overrideRate !== undefined) {
+      // §97의3 — 임대분 × 70% + 비임대분 × 그 분기의 §166⑤ 율
+      const rentalGain = Math.floor(gain * special.rentalGainRatio);
+      const nonRentalGain = gain - rentalGain;
+      const lthd =
+        Math.floor(rentalGain * special.overrideRate) + Math.floor(nonRentalGain * b.lthdRate);
+      const blendedRate =
+        special.overrideRate * special.rentalGainRatio + b.lthdRate * (1 - special.rentalGainRatio);
+      return { ...b, lthd, lthdRate: blendedRate, ...clearLthdParts(b) };
+    }
+
+    if (special.additionalRate !== undefined) {
+      // §97의4 — 기본 공제율이 0(보유 3년 미만)이면 가산하지 않는다. 정상 경로와 같은 규약.
+      if (b.lthdRate <= 0) return b;
+      const combined = b.lthdRate + special.additionalRate;
+      return { ...b, lthd: Math.floor(gain * combined), lthdRate: combined, ...clearLthdParts(b) };
+    }
+    return b;
+  };
+
+  const preApproval = applyBranch(r.preApproval);
+  const postApprovalExistingHouse = applyBranch(r.postApprovalExistingHouse);
+  const settlement = applyBranch(r.settlement);
+  const lthd = preApproval.lthd + postApprovalExistingHouse.lthd + settlement.lthd;
+
+  return {
+    ...r,
+    preApproval,
+    postApprovalExistingHouse,
+    settlement,
+    total: { ...r.total, lthd, taxableIncome: r.total.gain - lthd },
+  };
+}
+
+/**
+ * 특례 적용 후에는 **보유분/거주분 분해가 성립하지 않는다**.
+ *
+ * §95② 표2의 보유분·거주분은 「보유기간 × 4% + 거주기간 × 4%」라는 분해인데, 특례는 그 위에
+ * 임대분 70%를 덮거나(§97의3) 임대기간별 추가율을 더한다(§97의4). 분해값을 그대로 두면
+ * 「보유분 + 거주분 ≠ 공제액」이 되어 결과 화면·신고서에서 합이 안 맞는다.
+ * 분해가 **있었던** 분기만 undefined로 되돌린다(0으로 덮으면 「분해했는데 0」이 된다).
+ */
+function clearLthdParts(
+  b: RedevelopmentBranchDetail,
+): Partial<Pick<RedevelopmentBranchDetail, "lthdHoldingPart" | "lthdResidencePart">> {
+  if (b.lthdHoldingPart === undefined && b.lthdResidencePart === undefined) return {};
+  return { lthdHoldingPart: undefined, lthdResidencePart: undefined };
+}
+
+/**
  * 1세대1주택 + 양도가액 > 12억 시 분기별 양도차익·LTHD 를 과세대상으로 축소.
  *
  * 산식 (시행령 §160):

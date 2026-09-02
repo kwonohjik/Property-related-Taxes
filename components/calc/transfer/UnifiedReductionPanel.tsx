@@ -61,6 +61,7 @@ import {
   isReductionAllowedForAssetKind,
   type TransferReductionId,
   type ReductionCategory,
+  type ReductionAssetKind,
   type PeriodCheckContext,
 } from "@/lib/tax-engine/transfer-reductions";
 import {
@@ -387,6 +388,7 @@ export function UnifiedReductionPanel({ asset, transferDate, onChange }: Unified
           onToggleOpen={() => setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }))}
           counter={counters[cat]}
           housingAllowed={isReductionCategoryAllowedForAssetKind(cat, asset.assetKind)}
+          assetKind={asset.assetKind}
           assetKindLabel={ASSET_KIND_LABEL[asset.assetKind]}
           periodResults={periodResults}
           reductions={reductions}
@@ -488,6 +490,7 @@ function GroupCategorySection({
   onToggleOpen,
   counter,
   housingAllowed,
+  assetKind,
   assetKindLabel,
   periodResults,
   reductions,
@@ -524,6 +527,12 @@ function GroupCategorySection({
   counter: { active: number; total: number };
   /** 자산 종류 게이트 — 주택 감면이 이 자산에 적용 가능한지 (false면 카테고리 전체 비활성) */
   housingAllowed: boolean;
+  /**
+   * 조문 단위 게이트용 자산 종류. 카테고리 게이트(`housingAllowed`)만으로는 부족하다 —
+   * 같은 카테고리 안에서도 조문마다 대상이 다를 수 있다(예: §98의2는 조합원 취득 자산 제외).
+   * ⑧ validate가 쓰는 `isReductionAllowedForAssetKind`와 **같은 술어**를 여기서도 쓴다.
+   */
+  assetKind: ReductionAssetKind;
   /** 비활성 사유 표시용 현재 자산 종류 한글 라벨 */
   assetKindLabel: string;
   periodResults: Record<TransferReductionId, { inPeriod: boolean; failReason?: string; periodLabel?: string }>;
@@ -652,12 +661,22 @@ function GroupCategorySection({
              * ⚠️ 근본 원인은 별개다 — §97의4의 「등록일 2014.1.1 이후」 시한은 법·령 어디에도
              *    없다(CB-01). 그 규칙이 살아 있는 동안의 UI 증상을 여기서 막는다.
              */
+            /**
+             * 🔴 조문 단위 게이트 — 카테고리 게이트만 보면 ⑧이 막는 것을 ⑤가 못 막는다.
+             *   §98의2는 미분양주택 정의상 조합원 취득 자산(재개발APT·입주권)에 적용될 수
+             *   없는데, 카테고리(`unsold_housing`)는 그 자산종류를 허용한다.
+             *   ⑧ `transfer-tax-validate-reductions.ts:95`와 **같은 술어**를 쓴다.
+             */
+            const articleAllowed = isReductionAllowedForAssetKind(id, assetKind);
             const isDisabled =
-              !isSelected && (!housingAllowed || !period.inPeriod || !isFullyImplemented);
+              !isSelected &&
+              (!housingAllowed || !articleAllowed || !period.inPeriod || !isFullyImplemented);
 
-            // 비활성 사유 (주택 게이트 > 시한 외 > 미구현 — 가장 근본 차단 사유 우선)
+            // 비활성 사유 (주택 게이트 > 조문 게이트 > 시한 외 > 미구현 — 가장 근본 차단 사유 우선)
             const disabledReason = !housingAllowed
               ? `🏠 주택 양도에만 적용되는 감면입니다 (현재 자산: ${assetKindLabel})`
+              : !articleAllowed
+              ? `🏠 이 조문은 현재 자산 종류(${assetKindLabel})에 적용되지 않습니다`
               : !period.inPeriod
                 ? `⚠ ${period.failReason ?? "시한 외"}`
                 : !isFullyImplemented
