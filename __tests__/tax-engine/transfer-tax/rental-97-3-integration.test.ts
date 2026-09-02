@@ -65,13 +65,23 @@ describe("§97의3 통합 anchor (B-1)", () => {
   });
 
   it("불적격 (기준시가 6억 초과) → 특례 미적용·일반율 + 사유 echo", () => {
+    /**
+     * 🔁 **2026-09-02 픽스처 정정** — `acquisitionDate`를 공통 픽스처(2014-01-01)에서
+     * **2019-01-01**로 옮겼다. 4호(기준시가 한도)는 대통령령 **제29241호**(2018.10.23 시행)에서
+     * 신설됐고 부칙 §2②1호가 「**2018년 9월 13일 이전에 주택을 취득**한 경우 종전의 규정에
+     * 따른다」고 정하므로, 2014년 취득 사안은 애초에 **4호 적용 대상이 아니다**.
+     * 이 케이스의 의도(한도 초과 → 특례 탈락 → 일반율)는 그대로다. 보유기간이 10년 → 5년으로
+     * 줄어 표1이 20% → 10%가 되므로 공제 기대값도 함께 갱신했다(5억 × 10%).
+     * 부칙 축은 `rental-973-clause4-addenda-gate.anchor.test.ts`가 잠근다.
+     */
     const base = input973();
     const ineligible = {
       ...base,
+      acquisitionDate: new Date("2019-01-01"),
       reductions: [{ ...base.reductions[0], officialPriceAtStart: 700_000_000 } as (typeof base.reductions)[0]],
     };
     const result = calculateTransferTax(ineligible, rates);
-    expect(result.longTermHoldingDeduction).toBe(100_000_000); // 일반율 20%
+    expect(result.longTermHoldingDeduction).toBe(50_000_000); // 일반율 10% (보유 5년)
     expect(result.rental97LthdDetail?.isEligible).toBe(false);
   });
 });

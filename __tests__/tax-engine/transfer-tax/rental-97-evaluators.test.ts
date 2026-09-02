@@ -83,8 +83,18 @@ describe("§97의3 evaluateRental973", () => {
     }
   });
 
+  /**
+   * 🔁 **2026-09-02 픽스처 정정** — 두 케이스의 `acquisitionDate`를 공통 픽스처(2014-01-01)에서
+   * **2019-01-01**로 옮겼다. 4호(기준시가 한도)는 **대통령령 제29241호**(2018.10.23 시행)에서
+   * 신설됐고 그 부칙 §2②1호가 「**2018년 9월 13일 이전에 주택을 취득**한 경우 종전의 규정에
+   * 따른다」고 정한다 ⇒ 2014년 취득 사안은 애초에 4호 적용 대상이 **아니다**.
+   * 기대값이 아니라 **픽스처가 조문과 어긋나 있었다** — 두 케이스의 의도(한도 초과 → 불적용)는
+   * 그대로 유지된다. 부칙 축은 `rental-973-clause4-addenda-gate.anchor.test.ts`가 잠근다.
+   */
+  const AFTER_ADDENDA = { acquisitionDate: new Date("2019-01-01") };
+
   it("케이스 #14: 기준시가 한도 초과 (수도권 6억 초과) → 불적용 (령 §97의3③4호)", () => {
-    const r = evaluateRental973(base973({ officialPriceAtStart: 650_000_000 }));
+    const r = evaluateRental973(base973({ ...AFTER_ADDENDA, officialPriceAtStart: 650_000_000 }));
     expect(r.isEligible).toBe(false);
     if (!r.isEligible) {
       expect(r.ineligibleReasons.some((x) => x.code === "OFFICIAL_PRICE_EXCEEDED")).toBe(true);
@@ -92,7 +102,9 @@ describe("§97의3 evaluateRental973", () => {
   });
 
   it("수도권 밖 한도 3억 — 4억 입력 → 불적용", () => {
-    const r = evaluateRental973(base973({ region: "non_capital", officialPriceAtStart: 400_000_000 }));
+    const r = evaluateRental973(
+      base973({ ...AFTER_ADDENDA, region: "non_capital", officialPriceAtStart: 400_000_000 }),
+    );
     expect(r.isEligible).toBe(false);
   });
 

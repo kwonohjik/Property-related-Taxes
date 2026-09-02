@@ -245,6 +245,30 @@ export function calcRentalGainRatio(args: {
 /** 조특령 §97의3③4호 — 임대개시일 당시 기준시가 한도 */
 export const OFFICIAL_PRICE_LIMIT_CAPITAL = 600_000_000;
 export const OFFICIAL_PRICE_LIMIT_NON_CAPITAL = 300_000_000;
+/** 4호 신설 시행일 (대통령령 제29241호 부칙 §2① — 「이 영 시행 이후 양도하는 분」) */
+const CLAUSE4_EFFECTIVE_FROM = new Date("2018-10-23");
+/** 4호 부칙 §2②1호 — 이 날 **이전**에 주택을 취득했으면 종전 규정 */
+const CLAUSE4_GRANDFATHER_ACQUISITION = new Date("2018-09-13");
+
+/**
+ * 조특령 §97의3③**4호**(기준시가 한도)를 적용할 사안인가 — 대통령령 제29241호 부칙 §2.
+ *
+ * 취득일이 없으면 부칙②1호를 성립시킬 수 없어 원칙(①)대로 적용한다. 실제 계산 경로에서는
+ * 자산-수준 `acquisitionDate`가 항상 주입되므로 이 분기는 단위 호출에서만 도달한다.
+ */
+export function isClause4Applicable(args: {
+  transferDate: Date;
+  acquisitionDate?: Date;
+}): boolean {
+  if (args.transferDate.getTime() < CLAUSE4_EFFECTIVE_FROM.getTime()) return false; // 부칙 §2①
+  if (
+    args.acquisitionDate !== undefined &&
+    args.acquisitionDate.getTime() <= CLAUSE4_GRANDFATHER_ACQUISITION.getTime()
+  ) {
+    return false; // 부칙 §2②1호
+  }
+  return true;
+}
 
 /**
  * 조특령 §97의3③ **2호·4호** 요건 검사 — §97의3과 §97의5가 **공유**한다 (CA-01).
@@ -263,14 +287,37 @@ export const OFFICIAL_PRICE_LIMIT_NON_CAPITAL = 300_000_000;
  *    (`rental-97-5.ts`의 「전용면적 요건: 본조·시행령 모두 없음」 주석은 §97의5①3호의
  *     준용 사슬을 끝까지 읽지 않은 결론이다.)
  *
- * ⚠️ 4호의 **시기 적용례**(신설 시점·부칙)는 확인하지 못했다 — §97의3도 무조건 적용 중이므로
- *    같은 전제를 따른다. 별건으로 확인할 것.
+ * ✅ **4호의 시기 적용례를 확인했다 (2026-09-02).** 종전에는 「신설 시점·부칙을 확인하지
+ *    못했다 … 별건으로 확인할 것」으로 남긴 채 **무조건 적용**하고 있었다. 실측 결과:
+ *
+ *    · **연혁** — 6억(수도권 밖 3억) 한도는 **대통령령 제29241호**(2018.10.23 공포·시행)에서
+ *      신설됐다. 직전 시행본(2014.2.21 계열)에는 그 문언이 없다(법제처 `target=eflaw` 전수 대조).
+ *    · **부칙 §2** —
+ *      ① 「제97조의3제3항제4호의 개정규정은 **이 영 시행 이후 양도하는 분**부터 적용한다.」
+ *      ② 「다음 각 호의 어느 하나에 해당하는 경우에는 … **종전의 규정에 따른다**.
+ *         1. **2018년 9월 13일 이전에 주택**(주택을 취득할 수 있는 권리를 포함한다)**을 취득한 경우**
+ *         2. 2018년 9월 13일 이전에 주택을 취득하기 위하여 **매매계약을 체결하고 계약금을 지급**한
+ *            사실이 증빙서류에 의하여 확인되는 경우」
+ *
+ *    ⇒ 무조건 적용은 **납세자 불리 소급**이었다. 실측: 기준시가 7억·임대 10년 사안에서
+ *      `OFFICIAL_PRICE_EXCEEDED`가 **단독 배제 사유**로 걸려 §97의3의 70% 공제율 대체를
+ *      통째로 잃었다(양도 2018-10-01 · 취득 2010-01-01 등 부칙 예외 구간 전부).
+ *      [[feedback_no_unfavorable_application_without_legal_basis]]
+ *
+ * ⚠️ **부칙②2호(계약금 지급 증빙)는 판정하지 않는다** — 그 사실을 담는 입력 필드가 없다.
+ *    `contractDate`는 §99·§99의3·§98 시리즈의 **시한 판정용 분양/매매계약일**이라 의미가 다르므로
+ *    전용하지 않는다([[feedback_ui_mode_flag_not_domain_semantics]]). 대신 그 구간
+ *    (취득일 > 2018-09-13 · 양도일 ≥ 2018-10-23)에서는 배제 메시지에 2호 안내를 덧붙여
+ *    **침묵하지 않는다**.
  */
 export function checkRental973Clause24(
   input: {
     isNationalHousingScale?: boolean;
     officialPriceAtStart?: number;
     region?: "capital" | "non_capital";
+    /** 부칙 §2 게이트 축 — 4호 적용 여부만 가른다(2호는 부칙 대상이 아니다). */
+    transferDate: Date;
+    acquisitionDate?: Date;
   },
   legalBasisPrefix: string,
 ): Rental97IneligibleReason[] {
@@ -287,7 +334,23 @@ export function checkRental973Clause24(
     });
   }
 
-  // 4호 — 임대개시일 당시 기준시가 6억(수도권 밖 3억) 한도
+  // 4호 — 임대개시일 당시 기준시가 6억(수도권 밖 3억) 한도.
+  // 부칙 §2로 적용 대상이 아니면 **검증 자체를 하지 않는다** — 값 미입력도 문제 삼지 않는다
+  // (종전 규정에는 그 요건이 없었으므로 입력을 요구할 근거도 없다).
+  if (!isClause4Applicable(input)) return reasons;
+
+  /**
+   * 부칙②**2호**(2018-09-13 이전 매매계약 + 계약금 지급) 해당 가능 구간 — 판정 불가라 고지한다.
+   * 취득일이 2018-09-13을 넘는데 양도가 시행일 이후인 사안만 해당한다.
+   */
+  const mayQualifyByContract =
+    input.acquisitionDate !== undefined &&
+    input.acquisitionDate.getTime() > CLAUSE4_GRANDFATHER_ACQUISITION.getTime();
+  const contractNote = mayQualifyByContract
+    ? " 다만 2018.9.13. 이전에 매매계약을 체결하고 계약금을 지급한 사실이 증빙서류로 확인되면 " +
+      "종전 규정에 따라 이 한도가 적용되지 않습니다 (대통령령 제29241호 부칙 §2②2호 — 본 계산기는 이 사실을 판정하지 않습니다)."
+    : "";
+
   if (input.officialPriceAtStart === undefined || input.officialPriceAtStart <= 0) {
     reasons.push({
       code: "MISSING_OFFICIAL_PRICE",
@@ -304,7 +367,7 @@ export function checkRental973Clause24(
         code: "OFFICIAL_PRICE_EXCEEDED",
         message:
           `임대개시일 당시 기준시가 합계가 한도(${limit === OFFICIAL_PRICE_LIMIT_CAPITAL ? "6억" : "3억"}원)를 ` +
-          `초과합니다 (${legalBasisPrefix}조특령 §97의3③4호).`,
+          `초과합니다 (${legalBasisPrefix}조특령 §97의3③4호).${contractNote}`,
         legalBasis: "조특령 §97의3③4호",
       });
     }

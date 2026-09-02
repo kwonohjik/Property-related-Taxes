@@ -1,8 +1,14 @@
 /**
  * 양도세 감면 24개 조문 — 공통 타입
  *
- * Phase 1 (골격) 단계: 모든 조문 stub은 동일 시그니처를 따른다.
- * 각 stub은 `evaluate()` 단일 함수를 export — 시한 검증만 수행하고 후속 단계는 미구현.
+ * 🔴 **2026-09-02 정정** — 종전 헤더는 「Phase 1 (골격) 단계: 모든 조문 stub은 동일 시그니처를
+ * 따른다. 각 stub은 `evaluate()` 단일 함수를 export — 시한 검증만 수행하고 후속 단계는 미구현」
+ * 이었다. **셋 다 더 이상 사실이 아니다**:
+ *   · 통합 stub `evaluateReduction`은 호출부 0건 dead code여서 **삭제**했다(D9-04 · `index.ts:13`).
+ *   · 조문별 evaluator는 시그니처가 서로 다르다(`evaluateRental973` · `resolveHouseCountExclusion`
+ *     · `resolveSpecialHouseExclusions` 등 — 진입점 목록은 `index.ts` 헤더가 정본).
+ *   · `metadata.ts` 기준 **24개 조문 전부 `isFullyImplemented: true`**다.
+ * 같은 「Phase 1 골격」 허위 서술이 Step5 배너에도 복제돼 있었다(D9-08에서 제거).
  *
  * 매핑 감사: docs/02-design/features/transfer-reduction-mapping-audit.md
  * 인벤토리 표: docs/00-pm/transfer-reduction-expansion.plan.md §3
@@ -82,7 +88,9 @@ export interface PeriodCheckResult {
 // ============================================================
 // 장기임대 §97 시리즈 — Phase 2 본격 구현 (2026-06-11)
 // 법령 검증: 조특법 §97·§97의2·§97의3·§97의4·§97의5 + 조특령 §97의3·§97의4·§97의5
-// (law.go.kr 2026-06-11 현행 조회. §97의4 추가율 표 수치는 API 응답 누락 — R-3 미확정)
+// (law.go.kr 2026-06-11 현행 조회. §97의4 추가율 표 수치는 당시 API 응답에서 누락됐으나
+//  ✅ **R-3 확정** — 법제처 `target=eflaw` 본문 실측으로 6년 2% / 7년 4% / 8년 6% / 9년 8% /
+//  10년 10%를 확인했고 `rental-97-4.ts`의 `RENTAL_97_4_ADDITIONAL_RATE_TABLE`과 일치한다.)
 // ============================================================
 
 export type Rental97ArticleId =
@@ -237,7 +245,7 @@ export interface RentalLthdEffect {
   effectCategory: "long_term_holding_special" | "long_term_holding_additional";
   /** §97의3: 0.70 — 일반 공제율 대체 (임대기간 분 양도차익 한정) */
   overrideRate?: number;
-  /** §97의4: 0.02~0.10 — 보유기간 공제율에 가산 (⚠️ R-3 표 수치 원문 미확정) */
+  /** §97의4: 0.02~0.10 — 보유기간 공제율에 가산 (R-3 ✅원문 확정 — `RENTAL_97_4_ADDITIONAL_RATE_TABLE`) */
   additionalRate?: number;
   /**
    * 임대기간 분 양도차익 비율 (0~1) — 조특령 §97의3⑤ 기준시가 안분.
