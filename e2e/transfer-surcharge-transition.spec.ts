@@ -107,12 +107,22 @@ test.describe("다주택 중과 경과조치(나·다목) Step4 UI", () => {
     await expect(page.getByText("계약금 수령 증빙 확인", { exact: false })).toBeVisible();
   });
 
-  test("가목 윈도우 내(2026-05-01) → ④ 중과 판정 섹션 자체가 한시배제 안내로 대체(경과조치 입력 미도달)", async ({
+  test("가목 윈도우 내(2026-05-01) → 경과조치 입력 미도달 (가목 우선 게이트로 no-op)", async ({
     page,
   }) => {
     await gotoHolding(page, "2026-05-01");
-    // 가목 전면배제 안내 카드 노출 + 경과조치 토글 미노출
+    /**
+     * 🔴 2026-09-02 정정 — 종전 제목은 「④ 섹션 **자체가** 안내로 대체」였다. 지금은 ④에서
+     * **중과 전용 입력만** 빠진다. 세대 보유 주택 목록은 §155②③ 상속주택·§89② 분양권이라는
+     * **비과세(§89①3호) 축**의 유일한 입력 경로여서 창 안에서도 남는다.
+     *
+     * 경과조치(나·다목) 입력이 계속 닫히는 근거는 「중과라서」가 아니라 **증명 가능한 no-op**이다 —
+     * `checkGracePeriodExemption`의 가목 우선 게이트가 `gracePeriod` 내용과 무관하게
+     * `suspended: true`를 낸다(`multi-house-surcharge-exclusion.ts:156`).
+     */
     await expect(page.getByTestId("surcharge-suspended-notice")).toBeVisible();
     await expect(page.getByText(/중과 경과조치 조건 입력/)).toHaveCount(0);
+    // 비과세 축 입력은 남는다
+    await expect(page.getByText("다른 보유 주택 목록", { exact: false }).first()).toBeVisible();
   });
 });

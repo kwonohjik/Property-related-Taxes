@@ -377,9 +377,23 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
 export function HousesListSection({
   form,
   onChange,
+  hideGracePeriod = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
+  /**
+   * 중과 경과조치(§167의3①12의2 나·다목) 하위 섹션을 숨긴다 — **중과 한시배제 창 전용**.
+   *
+   * 창 안(양도일 ≤ 2026-05-09)에서는 `checkGracePeriodExemption`의 **가목 우선 게이트**가
+   * `gracePeriod` 내용과 무관하게 `suspended: true`를 반환하므로(`multi-house-surcharge-exclusion.ts:156`
+   * — `GRACE_PERIOD_A_DEADLINE`은 `SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end` 단일 출처)
+   * 나·다목 입력은 **증명 가능한 no-op**이다. 목록 자체는 §155②③·§89② 비과세 축 때문에 열지만,
+   * 이 섹션만 계속 닫아 둔다.
+   *
+   * ⚠️ ⑧ `transfer-tax-validate.ts`의 gracePeriod 검증도 같은 조건으로 건너뛴다 —
+   *    안 그러면 「보이지 않는 필드 차단」이 된다.
+   */
+  hideGracePeriod?: boolean;
 }) {
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -431,7 +445,8 @@ export function HousesListSection({
   // 위젯·API 전송(housesPayload && gracePeriod)·엔진 사용을 일치시켜 침묵 무시(silent omission) 차단.
   const householdCount = parseInt(form.householdHousingCount || "1", 10);
   const hasMultiHouseEntries = houses.length > 0 || form.presaleRights.length > 0;
-  const showGracePeriod = form.isOneHousehold && householdCount >= 2 && hasMultiHouseEntries;
+  const showGracePeriod =
+    !hideGracePeriod && form.isOneHousehold && householdCount >= 2 && hasMultiHouseEntries;
 
   // ①(세대 보유 주택 수) ↔ ④(다른 보유 주택 목록) 정합성 안내 (표시 전용 — 계획서 §2·§3).
   // 배제규칙은 엔진 전용이라 UI 재계산 금지 → 구조적 개수만 대조(useMemo 파생, store 미기록).
