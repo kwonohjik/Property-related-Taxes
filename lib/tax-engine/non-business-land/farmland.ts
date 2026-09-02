@@ -126,7 +126,24 @@ export function judgeFarmland(
     },
   );
 
-  const fallbackResidence = residenceFromHistory.length === 0
+  /**
+   * 거리 스냅샷 fallback은 **거주 이력이 아예 없을 때만** 쓴다 (U1-02, 2026-09-02 코드리뷰).
+   *
+   * 종전 게이트는 `residenceFromHistory.length === 0`, 즉 **매칭된 재촌 기간**이 없을 때였다.
+   * 그런데 UI는 이력이 1건이라도 생기면 「직선거리(km)」 입력을 화면에서 감추면서
+   * store 값(`nblFarmerResidenceDistance`)은 그대로 전송한다. 그 결과 **이력이 있으나 하나도
+   * 매칭되지 않는 경우**(다른 시·군·구 + 좌표 결측)에 화면에 없는 stale 거리로 전 보유기간이
+   * 재촌으로 인정돼, 비사업용이어야 할 농지가 사업용으로 뒤집혔다(과소과세).
+   *
+   * 「소득세법 시행령」 §168의8②은 재촌을 「§153③에 따른 농지소재지에 **사실상 거주**」로 정하고
+   * §153③은 동일·연접 시·군·구 또는 직선거리 30km를 요건으로 한다 — 재촌은 실제 거주지↔토지
+   * 관계로 판정되어야 하며, 입력되지 않은 과거 스냅샷으로 대체할 근거가 없다
+   * (「자동 안분 fallback 금지」 정책과도 충돌).
+   *
+   * ⇒ 「이력 자체가 없을 때」로 좁힌다. 아래 경고 문구(「주거 이력 미입력」)와도 이제 일치한다.
+   */
+  const hasResidenceHistory = (input.ownerProfile?.residenceHistories?.length ?? 0) > 0;
+  const fallbackResidence = !hasResidenceHistory
     ? fallbackResidenceFromDistance(
         ownershipStart,
         input.transferDate,

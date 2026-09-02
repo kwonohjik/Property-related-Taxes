@@ -19,7 +19,7 @@ import type {
   NonBusinessLandJudgmentRules,
 } from "./types";
 import {
-  checkIncorporationGrace,
+  checkForestIncorporationGrace,
   getPeriodJudgmentDate,
   meetsPeriodCriteria,
   type PeriodCriteriaResult,
@@ -107,10 +107,16 @@ export function judgeForest(
    * 요건으로 하므로, 주민등록 여부를 알 수 없는 거리 스냅샷만으로는 요건을 세울 수 없다.
    * ⇒ 죽은 경로를 걷어내고, 이력이 없으면 그 사실을 결과에 드러낸다.
    */
+  // ⚠️ 조건은 **매칭된 재촌 기간이 0**이라는 뜻이다 — 이력이 아예 없을 때와, 이력은 있으나
+  //    동일·연접 시·군·구도 30km도 아닌 경우가 모두 여기 들어온다. 문구가 앞쪽만 말하면
+  //    사용자가 「입력했는데 왜」로 읽는다(U1-02에서 농지 게이트가 같은 혼동으로 틀어졌다).
   if (residenceFromHistory.length === 0) {
     warnings.push(
-      "임야 재촌 판정 — 거주 이력이 입력되지 않아 재촌 기간을 0일로 봅니다. " +
-        "「소득세법 시행령」 §168조의9②은 주민등록과 사실상 거주를 요건으로 하므로 거주 이력을 입력해야 판정됩니다.",
+      (input.ownerProfile?.residenceHistories?.length ?? 0) > 0
+        ? "임야 재촌 판정 — 입력한 거주 이력이 임야 소재지와 동일·연접 시·군·구도 아니고 " +
+            "직선거리 30km 이내도 아니어서 재촌 기간을 0일로 봅니다(주민등록 없는 이력도 제외됩니다)."
+        : "임야 재촌 판정 — 거주 이력이 입력되지 않아 재촌 기간을 0일로 봅니다. " +
+            "「소득세법 시행령」 §168조의9②은 주민등록과 사실상 거주를 요건으로 하므로 거주 이력을 입력해야 판정됩니다.",
     );
   }
 
@@ -234,7 +240,8 @@ export function judgeForest(
   }
 
   // 도시지역 內 시업중 임야 — 편입 3년 경과시 §168-9 ①2호 단서로 제외
-  const grace = checkIncorporationGrace(input.urbanIncorporationDate, input.transferDate, rules);
+  // 임야 전용 래퍼 — 기간 계산은 공용이나 **미상일 때의 기본값이 의도된 선택**임을 명시한다(V5-d).
+  const grace = checkForestIncorporationGrace(input.urbanIncorporationDate, input.transferDate, rules);
   if (grace.isApplied) {
     steps.push({
       id: "forest_urban_grace",
