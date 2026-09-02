@@ -248,8 +248,33 @@ export interface ReductionBreakdownEntry {
   type: string;
   /** 법령 근거 (표시용) */
   legalBasis: string;
-  /** 유형별 총 감면대상 양도소득금액 */
+  /**
+   * 유형별 총 `reducibleIncome` 합 — **자산별 감면 배분의 분모**다(`allocateAggregateReductions`).
+   *
+   * ⚠️ 표시에는 쓰지 말 것. 이 값은 유형마다 단위가 갈린다 — §97 계열은 감면율 前 소득,
+   *    §77·§77의2·§77의3은 **감면율이 곱해진** 값이다. 화면 「합산 감면대상소득」에 쓰면
+   *    같은 결과의 신고서 ⑲(감면율 前)와 어긋난다 ⇒ 표시는 `eligibleIncomeBeforeRate`.
+   *    배분 분모로는 그대로 둔다 — 배분은 **감면율 반영 소득**에 비례하는 것이 옳다.
+   */
   totalReducibleIncome: number;
+  /**
+   * 「소득세법」 §90①의 **B** — 감면대상 양도소득금액(감면율 前·기본공제 前).
+   * 별지84호 부표 1 **⑲ 세액감면대상금액**과 같은 값이다
+   * (`components/calc/results/transfer/reduction-eligible-income.ts`의 유형별 분기와 일치).
+   */
+  eligibleIncomeBeforeRate: number;
+  /**
+   * §90①의 **C** — 이 유형의 감면대상소득에 실린 양도소득 기본공제(§103②).
+   * 비감면소득이 먼저 흡수하고 남은 잔여만 실린다 ⇒ 통상 0이다.
+   */
+  basicDeductionApplied: number;
+  /**
+   * §90①의 **(B − C) × E** — M-8이 실제로 쓴 분자.
+   * `rawAggregateReduction = 합산 산출세액 × 이 값 / 합산 과세표준` 항등식이 **정확히** 성립한다.
+   * §77의 현금분·채권분처럼 감면율이 섞이면 단일 `appliedReductionRate`로는 복원되지 않으므로
+   * 화면은 이 값을 함께 보여야 자기일관성이 유지된다.
+   */
+  reducibleIncomeAfterBasicDeduction: number;
   /**
    * M-8이 `totalReducibleIncome` 지분세액에 **추가로 곱한** 감면율 (1 = 이미 반영됨).
    * §97 계열·legacy 장기임대·legacy 신축·하이브리드는 별지84호 부표1 ⑲ 표시 계약 때문에

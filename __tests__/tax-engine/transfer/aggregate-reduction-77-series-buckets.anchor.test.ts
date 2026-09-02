@@ -36,6 +36,7 @@ import {
   type AggregateTransferInput,
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
+import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 
 const rates = makeMockRates();
@@ -189,5 +190,47 @@ describe("§77 계열 다건 감면 = 단건 (§90①의 C 버킷 흡수)", () =
     // 비감면 자산 B의 양도소득금액이 기본공제 250만원을 넘으므로 §103②대로 전액 흡수 → C = 0.
     expect(multi.reductionAmount).toBe(9_430_288);
     expect(multi.totalTax).toBe(120_278_740);
+  });
+});
+
+/**
+ * 버킷 합(§90①의 B)이 **신고서 ⑲의 단일 소스와 같은 값**임을 고정한다.
+ *
+ * `reduction-eligible-income.ts`는 ⑲를 유형별로 갈라 둔다 — §77·§77의3은 양도소득금액 전액,
+ * §77의2는 대토분 echo, 그 외는 `reducibleIncome`. 버킷은 그 분기를 **엔진 쪽에서 독립적으로**
+ * 만든 것이라 두 값이 어긋날 수 있다. 어긋나면 같은 결과의 화면과 신고서가 다른 숫자를
+ * 같은 이름으로 부른다 ⇒ 네 분기 전부를 대조한다.
+ */
+describe("버킷 합 = 별지84호 부표1 ⑲ (감면대상 양도소득금액)", () => {
+  const cases: Array<[string, Record<string, unknown>, number]> = [
+    ["§77 현금 6억", { reductions: [{ type: "public_expropriation", cashCompensation: 600_000_000, bondCompensation: 0, businessApprovalDate: D("2013-01-01") }] }, 2024],
+    ["§77 현금3억+채권3억", { reductions: [{ type: "public_expropriation", cashCompensation: 300_000_000, bondCompensation: 300_000_000, bondHoldingYears: 3, businessApprovalDate: D("2013-01-01") }] }, 2024],
+    ["§77의2 현금2억+대토4억", { reductions: [{ type: "replacement_land_comp", cashCompensation: 200_000_000, replacementLandComp: 400_000_000, businessApprovalDate: D("2013-01-01") }] }, 2024],
+    ["§77의2 대토 6억", { reductions: [{ type: "replacement_land_comp", cashCompensation: 0, replacementLandComp: 600_000_000, businessApprovalDate: D("2013-01-01") }] }, 2024],
+    ["§77의3 1호 40%", { acquisitionDate: D("2000-01-01"), reductions: [{ type: "gb_designated_land", branch: "purchase", designationDate: D("2005-01-01"), triggerDate: D("2024-01-01"), residedFromAcqToTrigger: true }] }, 2024],
+  ];
+
+  it.each(cases)("%s", (_label, over) => {
+    const { multi } = bothWays(over);
+    const entry = (multi.reductionBreakdown as { eligibleIncomeBeforeRate: number }[])[0];
+    const props = multi.properties as Array<{
+      reductionType?: string;
+      income: number;
+      reducibleIncome?: number;
+      replacementLandDetail?: { eligibleTransferIncome?: number };
+    }>;
+    const nineteen = props.reduce(
+      (s2, p) =>
+        s2 +
+        reductionEligibleIncome(
+          p.reductionType,
+          p.income,
+          p.reducibleIncome ?? 0,
+          p.replacementLandDetail?.eligibleTransferIncome,
+        ),
+      0,
+    );
+    expect(nineteen, "⑲가 0이면 대조가 무의미하다").toBeGreaterThan(0);
+    expect(entry.eligibleIncomeBeforeRate).toBe(nineteen);
   });
 });

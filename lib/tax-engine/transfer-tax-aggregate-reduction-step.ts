@@ -203,6 +203,11 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
   // 조특법 §133 유형별 연간 한도 — `aggregate-reduction-limits.ts` 모듈 사용.
   // 유형별 원시 감면세액을 계산한 뒤 그룹 단위로 capping.
   const rawByType = new Map<string, number>();
+  /** 유형별 §90① 표시 항 — B · C · (B − C) × E. 화면 자기일관성 전용(세액 무관). */
+  const displayByType = new Map<
+    string,
+    { eligibleIncomeBeforeRate: number; basicDeductionApplied: number; numerator: number }
+  >();
   for (const [type, entry] of reducibleByType.entries()) {
     // 🔴 분자는 **감면율 반영 후**(`ratedIncome`)를 쓴다. `reducibleIncome`에 감면율이
     //    반영돼 있지 않은 유형(§97 계열·legacy 장기임대·legacy 신축·하이브리드) 때문이다 —
@@ -221,6 +226,11 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
         : 0;
     // §90①은 `(B − C) × E` — **C를 뺀 뒤** 율을 곱한다. 그래서 버킷 안에서 절사한다.
     const numerator = absorbBasicDeduction(entry.buckets, cShare);
+    displayByType.set(type, {
+      eligibleIncomeBeforeRate: entryGross,
+      basicDeductionApplied: Math.min(cShare, entryGross),
+      numerator,
+    });
     const raw =
       aggregateTaxBase > 0
         ? safeMultiplyThenDivide(calculatedTax, numerator, aggregateTaxBase)
@@ -278,6 +288,9 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
         ? `${lookupLimit(type, limitGroups).groupTypes.length > 0 ? resolveTypeLegalBasis(type) : TRANSFER.REDUCTION_OVERLAP_EXCLUSION} + ${info.legalBasis}`
         : resolveTypeLegalBasis(type),
       totalReducibleIncome: entry.income,
+      eligibleIncomeBeforeRate: displayByType.get(type)?.eligibleIncomeBeforeRate ?? 0,
+      basicDeductionApplied: displayByType.get(type)?.basicDeductionApplied ?? 0,
+      reducibleIncomeAfterBasicDeduction: displayByType.get(type)?.numerator ?? 0,
       aggregateTaxBase,
       aggregateCalculatedTax: calculatedTax,
       rawAggregateReduction: raw,
