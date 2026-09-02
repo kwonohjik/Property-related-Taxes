@@ -132,6 +132,21 @@ export interface MixedUseAssetInput {
    * 미주입 시 true (기존 겸용주택 사례14 등 backward compat).
    */
   isOneHouseExempt?: boolean;
+  /**
+   * §89①3호 **주택수 제외** 판정용 세대 보유 주택 수 (양도하는 겸용주택 자신을 포함) — D4-02.
+   *
+   * 겸용 경로는 `calculateTransferTax`를 타지 않아 `runHouseCountExclusionStep`이 한 번도
+   * 실행되지 않았다. 그래서 §99의4(농어촌·고향주택)·§98의9(준공후미분양)·보유 감면주택
+   * (§98의2④ 등)·§155②③ 상속주택 제외가 **통째로 건너뛰어졌고**, 경고조차 없었다
+   * (겸용 경로의 미반영 고지는 소득차감형 11 ID 전용이라 이 셋을 포섭하지 못한다).
+   *
+   * ⑭가 폼-전역 값을 전달하고, 엔진이 `resolveHouseCountExclusion`·
+   * `resolveSpecialHouseExclusions` **정본 함수**로 제외 수를 구해 `isOneHouseExempt`에 반영한다.
+   * 미전달이면 종전 동작(호출부의 `isOneHouseExempt`를 그대로 신뢰)을 유지한다.
+   */
+  householdHousingCountForExclusion?: number;
+  /** P5 모드 2 — 보유 감면주택 주택수 제외 (⑭가 폼-전역 값을 전달) */
+  specialHouseExclusions?: import("./transfer.types").TransferTaxInput["specialHouseExclusions"];
 
   /**
    * §155① 일시적 2주택 — 종전·신규주택 취득일. **폼-전역** 값이라 route가 주입한다.
@@ -692,6 +707,12 @@ export interface MixedUseCalculationRoute {
 
 /** 겸용주택 분리계산 최종 결과 */
 export interface MixedUseGainBreakdown {
+  /** §99의4 농어촌·고향주택 주택수 제외 상세 (D4-02) */
+  new994Detail?: import("../transfer-reductions").New994Result;
+  /** §98의9 준공후미분양 주택수 제외 상세 (D4-02) */
+  unsold989Detail?: import("../transfer-reductions").Unsold989Result;
+  /** 보유 감면주택 주택수 제외 상세 (모드 2 — D4-02) */
+  specialHouseExclusionDetail?: import("../transfer-reductions").SpecialHouseExclusionResolution;
   /**
    * - "post-2022": 2022.1.1 이후 양도분, 강제 분리계산 완료
    * - "pre-2022-rejected": 2022.1.1 이전 양도분, 처리 불가

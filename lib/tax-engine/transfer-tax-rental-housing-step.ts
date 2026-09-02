@@ -614,6 +614,17 @@ export function runRentalHousingExceptionStep(
     penaltyTax: 0,
     penaltyBase: 0,
     localIncomeTax: rheLocalIncomeTax,
+    /**
+     * [echo] 농특세 — 종전에는 `totalTax`에만 넣고 이 키를 빠뜨렸다 (D10-03).
+     *
+     * 이 경로는 `transfer-tax.ts`에서 조기반환해 echo를 채우는 `finalizeTransferTax`를
+     * 건너뛴다. 그래서 소비층(`reduction-eligible-income.ts`의 `resolveRuralSurtax` ·
+     * `ResultPdfDocument.tsx`)이 `undefined`를 보고 **차감형 detail 합(=0)** 으로 떨어졌고,
+     * 이 경로는 차감형을 애초에 계산하지 않으므로 항상 0이었다 —
+     * 결과 카드·신고서·PDF의 농특세 칸이 0인데 총 납부세액에는 포함돼 「항목 합 ≠ 총액」이 됐다.
+     * 형제 경로 `transfer-tax-redevelopment.ts`가 같은 결함을 이미 고쳤다.
+     */
+    ruralSurtax: rheSurtaxVerdict.surtax,
     totalTax: rheDeterminedTax + rheLocalIncomeTax + filingDelayedPenalty + rheSurtaxVerdict.surtax,
     steps,
     rentalHousingExceptionDetail: rhe,

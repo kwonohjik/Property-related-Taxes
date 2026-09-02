@@ -137,8 +137,48 @@ export function calcMixedUseTransferTax(
   );
   // §91① — 미등기양도자산에는 **비과세 규정을 적용하지 아니한다**. 주택분 12억 비과세도 배제.
   const isUnregistered = asset.isUnregistered === true;
-  const isOneHouseExempt =
-    (asset.isOneHouseExempt ?? true) && meetsOneHouseRequirements && !isUnregistered;
+  /**
+   * §89①3호 **주택수 제외** — 겸용 경로만 이 축을 건너뛰고 있었다 (D4-02).
+   *
+   * §99의4①·§98의9①은 「그 주택을 해당 1세대의 소유주택이 **아닌 것으로 보아** 소득세법
+   * §89①3호를 적용한다」로 **양도자산의 종류를 제한하지 않는다** — 겸용주택 양도에도 적용된다.
+   * 보유 감면주택(§98의2④ 등)·상속주택(§155②③)도 같은 층위다.
+   *
+   * 판정은 일반 경로와 **같은 정본 함수**를 쓴다. 「판정을 쪼개지 않는다」 — 위 §154① 요건과
+   * 같은 규약이다. 주택 수가 미전달이면 종전 동작(호출부 판정을 그대로 신뢰)을 유지한다.
+   */
+  let houseCountExclusionApplied = 0;
+  let mixedNew994Detail: New994Result | undefined;
+  let mixedUnsold989Detail: Unsold989Result | undefined;
+  let mixedSpecialHouseExclusionDetail: SpecialHouseExclusionResolution | undefined;
+  if (asset.householdHousingCountForExclusion !== undefined) {
+    const hce = resolveHouseCountExclusion(asset.reductions ?? [], {
+      generalHouseAcquisitionDate: asset.buildingAcquisitionDate,
+      transferDate,
+    });
+    const special = resolveSpecialHouseExclusions(asset.specialHouseExclusions, transferDate);
+    mixedNew994Detail = hce.new994Detail;
+    mixedUnsold989Detail = hce.unsold989Detail;
+    mixedSpecialHouseExclusionDetail = special.entries.length > 0 ? special : undefined;
+    houseCountExclusionApplied = hce.appliedList.length + special.excludedCount;
+  }
+  const effectiveHouseCount =
+    asset.householdHousingCountForExclusion !== undefined
+      ? Math.max(asset.householdHousingCountForExclusion - houseCountExclusionApplied, 0)
+      : undefined;
+  // 제외 후 1채 이하면 주택 수 축이 충족된다(§89①3호 가목). 제외가 0이면 호출부 판정 그대로.
+  const houseCountOk =
+    effectiveHouseCount !== undefined && houseCountExclusionApplied > 0
+      ? effectiveHouseCount <= 1
+      : (asset.isOneHouseExempt ?? true);
+  if (houseCountExclusionApplied > 0) {
+    warnings.push(
+      `주택 수 제외 ${houseCountExclusionApplied}채 적용 — 세대 보유 ${asset.householdHousingCountForExclusion}채에서 ` +
+        `${effectiveHouseCount}채로 보아 1세대1주택 비과세를 판정했습니다 ` +
+        `(조특법 §99의4①·§98의9① 등 · 소득세법 §89①3호 의제 — 다주택 중과 주택 수는 불변).`,
+    );
+  }
+  const isOneHouseExempt = houseCountOk && meetsOneHouseRequirements && !isUnregistered;
   if ((asset.isOneHouseExempt ?? true) && !meetsOneHouseRequirements) {
     // 어느 요건이 걸렸는지 사용자가 판별할 수 있도록 세 축을 모두 싣는다(침묵 과세 방지).
     const r = oneHouseSpecialRules.one_house_exemption;
@@ -580,6 +620,10 @@ export function calcMixedUseTransferTax(
     warnings,
     // §104⑦ 판정 echo — 세율·장특 배제와 결과 카드 표시가 **같은 값**을 보게 한다.
     multiHouseSurcharge,
+    // §89①3호 주택수 제외 echo (D4-02) — 근거 카드가 조문을 표시할 수 있게 한다.
+    new994Detail: mixedNew994Detail,
+    unsold989Detail: mixedUnsold989Detail,
+    specialHouseExclusionDetail: mixedSpecialHouseExclusionDetail,
     /**
      * §95② 배제 echo — 카드가 `multiHouseSurcharge`로 **재도출하던 것**을 대체한다.
      * fallback 경로에는 그 객체가 없어 카드가 배제를 못 알아봤다(실측: 「표1, 0.0%」로 표시).
@@ -621,3 +665,12 @@ import {
   buildNonBusinessStep,
   buildTotalStep,
 } from "./transfer-tax-mixed-use-steps";
+import {
+  resolveHouseCountExclusion,
+  resolveSpecialHouseExclusions,
+} from "./transfer-reductions";
+import type {
+  New994Result,
+  Unsold989Result,
+  SpecialHouseExclusionResolution,
+} from "./transfer-reductions";

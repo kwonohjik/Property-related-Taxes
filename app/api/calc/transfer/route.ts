@@ -349,6 +349,10 @@ export async function POST(request: NextRequest) {
         //    이것으로 §155① 의제 성립을 선판정해 중과 배제(§167의10①15호)에 넘긴다.
         //    ⚠️ raw `data.temporaryTwoHouse` 금지 — Zod 출력은 날짜가 string이다(:163 변환본 사용).
         temporaryTwoHouse: engineInput.temporaryTwoHouse,
+        // ⑭ §89①3호 주택수 제외 축 (D4-02) — 둘 다 폼-전역이라 `data.mixedUse`에 없다.
+        //    엔진이 §99의4·§98의9·보유 감면주택·§155②③ 제외를 정본 함수로 판정한다.
+        householdHousingCountForExclusion: data.householdHousingCount,
+        specialHouseExclusions: engineInput.specialHouseExclusions,
         // ⑭ 법 §104⑦ 다주택 중과 판정 입력 — 전부 폼-전역 값이라 `data.mixedUse`에 없다.
         //    `houses` 미전송(단독 주택)이면 undefined → 엔진이 중과 판정을 건너뛴다.
         //    ⚠️ 날짜를 갖는 3종은 `engineInput` 변환본을 쓴다 — 특히 `gracePeriod`는
