@@ -6,6 +6,10 @@
 >
 > 대상 `components/calc/stock-transfer/PostListingValuationCard.tsx` + sibling + validate + adapter
 > 작성일 2026-09-02 · 기준 커밋 `eb1597e6`
+>
+> 🔴 **§1~§5의 file:line은 «구현 전»(eb1597e6) 좌표다.** 구현으로 6곳이 이동했고 그중
+> `PostListingClosingPriceTable.tsx:171` · `TransferDate1MonthClosingPriceTable.tsx:130`
+> (섹션 배지)은 **삭제되어 이제 존재하지 않는다**. 현재 좌표는 §9 자가검토 표를 볼 것.
 
 ---
 
@@ -171,7 +175,14 @@ export function resolveListingClosingAvg(form): number
 1. **`{mode === "simple" ? ... : ...}` 삼항 분기 안의 JSX 주석** — 분기 첫 요소로 두면 객체 리터럴로 파싱돼 TS1005, 주석 본문의 중괄호는 TS1381 (`:255~257` 실측 기록). 주석은 삼항 밖에.
 2. **표 미리보기 ≠ 엔진값(기존 드리프트)** — `PostListingClosingPriceTable.tsx:115~122`는 `calcMonthlyClosingAverage`(절단 없음), adapter는 `calcClosingAvgWithEvent`(절단 있음). 자본조정이 켜진 full 모드에서 지금도 두 값이 갈린다. **③에서 도입하는 헬퍼로 표 미리보기도 통일**할 것을 권장(별건이 아니라 같은 자리다).
 3. **키움 자동조회의 평균도 절단 미반영** (`KiwoomPostListingAutoFetchButton.tsx:117~137`). simple+daily에서 그 값이 정본이 되면 안 된다 — (b) 채택 시 자동조회는 **셀만 채우고** 평균 필드는 건드리지 않도록 정리한다.
-4. **섹션 배지 충돌** — 표 컴포넌트가 자체 `sectionNum={1}` 배지를 단다(`PostListingClosingPriceTable.tsx:171`, `TransferDate1MonthClosingPriceTable.tsx:130`). 바깥 ①②③과 겹친다(현행에서도 이미 그렇다 — full 모드 ② 안의 "1"). 이번에 ②에 표가 하나 더 생기므로 **배지 제거** 권장.
+4. 🔴 **같은 라벨의 컨트롤이 둘이 된다 — 셀렉터 충돌.** ②의 라디오는 ①과 **문구가 같다**
+   (「직접 입력 (1개월 평균 단일 숫자)」·「일자별 입력 (자동 평균 산정)」). 라벨 문자열로
+   집는 기존 셀렉터는 그 순간 다중 매칭으로 던진다.
+   ⇒ 라벨을 복제하는 변경에서는 **그 문자열을 쓰는 테스트를 먼저 grep**할 것
+     (필드명 grep으로는 안 잡힌다 — §8·§9-D1). 소속은 `input[name="..."]`로 못박는다.
+   ※ 이 세션 앞부분에서 `layout="inline"` 셀렉터 충돌을 이미 겪고도 이 함정을 세우지 못했다.
+
+5. **섹션 배지 충돌** — 표 컴포넌트가 자체 `sectionNum={1}` 배지를 단다(`PostListingClosingPriceTable.tsx:171`, `TransferDate1MonthClosingPriceTable.tsx:130`). 바깥 ①②③과 겹친다(현행에서도 이미 그렇다 — full 모드 ② 안의 "1"). 이번에 ②에 표가 하나 더 생기므로 **배지 제거** 권장.
 
 ---
 
@@ -241,3 +252,84 @@ __tests__/tax-engine/stock-transfer/{case-48-acquired-then-listed,post-listing-1
 e2e/stock-transfer-165-5-floor80.spec.ts
 e2e/stock-transfer-monthly-accrual.spec.ts
 ```
+
+
+---
+
+## 9. 자가검토 (2026-09-02, 구현 후 실측 대조)
+
+계획서의 모든 주장을 현재 파일과 대조했다. **결함 5건 · 검증 통과 5건.**
+
+### 🔴 D-1 영향 테스트 목록이 사실상 틀렸다 — 1 적중 / 19 오탐 / 2 누락
+
+실제로 수정이 필요했던 기존 테스트는 **3건**이었다:
+
+| 파일 | §8 기재 |
+|---|---|
+| `post-listing-three-sections.anchor.test.tsx` (T2 라벨) | ✅ 있음 |
+| `post-listing-toggle-off-normalizes-mode.anchor.test.tsx` (patch `toEqual` 전량 비교) | ❌ **없음** |
+| `stock-listed-conversion-autofetch-gate.anchor.test.tsx` (AG-4 라벨 다중 매칭) | ❌ **없음** |
+
+§8이 적은 나머지 19개는 **한 건도 손댈 필요가 없었다.**
+
+**원인** — grep 어휘를 「내가 바꾸는 필드」(`listingDatePriceAvg1Month`·`listingPriceClosing`)에서
+뽑았다. 그런데 실제 파손 원인은 필드가 아니라 (a) **복제되는 라벨 문자열**, (b) **patch 객체의
+형태 변화**였다. 둘 다 그 어휘로는 잡히지 않는다.
+
+**더 나쁜 것은 자기모순이다** — §2.2는 「엔진·Zod·route **무변경**」이라 결론내고서, §8은
+그 무변경 계약만 소비하는 **엔진 테스트 12개**를 영향으로 적었다. 두 절이 서로를 부정한다.
+§2.2가 맞았다(엔진 테스트는 전부 무변경 통과).
+
+⇒ **영향 목록은 「무엇을 바꾸는가」가 아니라 「무엇이 깨지는가」로 뽑을 것.**
+  - 라벨·제목을 **복제**하면 → 그 문자열을 쓰는 셀렉터
+  - patch·객체를 **확장**하면 → `toEqual`로 전량 비교하는 단언
+  - 필드 grep은 **계약이 바뀔 때만** 유효하다
+
+### 🔴 D-2 「함정」에 셀렉터 충돌이 없었다
+
+같은 라벨의 컨트롤을 하나 더 그리는 변경인데 그 위험을 세우지 않았다. AG-4가 실제로 깨졌다.
+⇒ §5에 함정 4로 추가했다.
+
+### 🟠 D-3 인용 6곳이 현재 파일과 어긋난다
+
+| 계획서 인용 | 현재 |
+|---|---|
+| `PostListingValuationCard.tsx:258` (simple 삼항) | 이동 |
+| `post-listing-flat-adapter.ts:334` (simple 조기반환) | 이동 (헬퍼 삽입) |
+| `post-listing-flat-adapter.ts:477` (full 덮어쓰기) | 이동 |
+| `stock-transfer-tax-validate-step2.ts:372` | 이동 (:378~) |
+| `PostListingFormulaPreview.tsx:90` | :92 |
+| `PostListingClosingPriceTable.tsx:171` · `TransferDate1MonthClosingPriceTable.tsx:130` | **삭제됨** |
+
+헤더에 「기준 커밋 eb1597e6」이 있어 좌표 자체는 방어되지만, §6에 「✅ 구현 완료」를 덧붙이면서
+**한 문서 안에 두 시점이 섞였다**. 헤더에 경고를 명시했다.
+
+**현재 좌표** — 헬퍼 `post-listing-flat-adapter.ts:175` · 읽기 3곳
+`post-listing-flat-adapter.ts:372` · `stock-transfer-tax-validate-step2.ts:395` ·
+`PostListingFormulaPreview.tsx:92`.
+
+### 🟠 D-4 검증 계획에 E2E가 없었고, 실제로 돌리지 않았다
+
+§7은 vitest anchor만 세웠다. 신규 UI 분기(**simple + daily**)는 **브라우저에서 확인하지 않았다.**
+- 저장소 DoD는 「브라우저 수동 확인 또는 미수행 명시」다 → **미수행을 명시한다.**
+- 기존 E2E는 simple+**direct**만 지난다(`stock-transfer-165-5-floor80.spec.ts:77`).
+- ①은 이 갭을 E2E로 메운 선례가 있다(`stock-listed-conversion-kiwoom-autofetch.spec.ts` KA-5 —
+  「컴포넌트 anchor는 patch와 validate를 각각 보지만 **두 겹을 지나 다음 단계로 넘어가는지**는
+  브라우저에서만 안다」). ②에는 그 대응물이 없다.
+- ⇒ **잔여 작업**: simple+daily로 종가를 넣고 Step3까지 넘어가는 spec 1건.
+
+### 🟡 D-5 Q2 제외의 결과로 ①·② 결과 표시가 비대칭인데 잔여로 적지 않았다
+
+①은 엔진 result에 `transferDailyModeUsed`가 있어 결과 화면에 「✓ 일자별 입력 모드 — 자동 산정
+평균 N」 배너가 뜬다(`PostListingDetailCard.tsx:189`). ②에는 그 echo가 없다.
+사용자는 결과만 보고 **②를 일자별로 넣었는지 알 수 없다.** 의도한 제외이나 잔여로 남는다.
+
+### ✅ 검증 통과 (실측)
+
+| 주장 | 결과 |
+|---|---|
+| §1 §165⑤ 원문 인용 | KoreanLaw MST 286211 대조 일치 |
+| §3.3 「읽기 3곳」 | validate·adapter·preview **정확히 3곳** (grep) |
+| §4 ⑥ 사이드바 참조처 0건 | 0건 |
+| §3.2 full 분기가 직접입력값을 0으로 덮는다 | 코드 확인 — 제외 판단 타당 |
+| §2.2 엔진·Zod·route 무변경 | 실제 무변경, 엔진 테스트 전건 통과 |
