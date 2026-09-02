@@ -13,6 +13,10 @@
  */
 
 import {
+  DEFAULT_NON_BUSINESS_LAND_RULES,
+  type NonBusinessLandJudgmentRules,
+} from "./non-business-land/types";
+import {
   computeEstimatedDeduction,
   calculateEstimatedAcquisitionPrice,
   calculateProration,
@@ -73,7 +77,7 @@ export interface ParsedRates {
   selfFarmingRules?: Extract<DeductionRulesData, { type: "self_farming" }>;
   houseCountExclusionRules?: HouseCountExclusionData;
   regulatedAreaHistory?: RegulatedAreaHistoryData;
-  nonBusinessLandJudgmentRules?: NonBusinessLandJudgmentSchemaData;
+  nonBusinessLandJudgmentRules?: NonBusinessLandJudgmentRules;
   longTermRentalRules?: LongTermRentalRuleSet;
   newHousingMatrix?: NewHousingMatrixData;
 }
@@ -145,9 +149,16 @@ export function parseRatesFromMap(rates: TaxRatesMap): ParsedRates {
   const regulatedAreaHistory: RegulatedAreaHistoryData = toRegulatedAreaHistory();
 
   const nonBizLandRecord = getRate(rates, "transfer", "special", "non_business_land_judgment");
-  let nonBusinessLandJudgmentRules: NonBusinessLandJudgmentSchemaData | undefined;
+  let nonBusinessLandJudgmentRules: NonBusinessLandJudgmentRules | undefined;
   if (nonBizLandRecord?.specialRules) {
-    nonBusinessLandJudgmentRules = parseNonBusinessLandJudgment(nonBizLandRecord.specialRules);
+    // ⚠️ **단방향 병합** — DB/시드가 싣지 않은 그룹은 코드 기본값이 살아남아야 한다 (COV-1).
+    // 종전에는 파싱 결과를 그대로 넘겨, 값이 `undefined`가 아니라 「그룹이 없는 객체」가 됐고
+    // 그래서 엔진(engine.ts)의 기본 인자가 발동하지 않았다. 그 결과 2015.2.3. 전 양도분의
+    // 레거시 기간기준 임계(0.8)가 프로덕션 경로에서 **도달 불가**였다.
+    nonBusinessLandJudgmentRules = {
+      ...DEFAULT_NON_BUSINESS_LAND_RULES,
+      ...parseNonBusinessLandJudgment(nonBizLandRecord.specialRules),
+    };
   }
 
   const longTermRentalRecord = getRate(rates, "transfer", "deduction", "long_term_rental_v2");
