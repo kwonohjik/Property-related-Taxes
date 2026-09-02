@@ -39,6 +39,8 @@ export interface PostListingFlatForm {
   monthlyAccrualToggle?: boolean;
 
   // 상장일 이후 1개월 종가 (4필드)
+  /** simple 모드 «안»의 ② 입력 축 — direct(단일 숫자) | daily(종가 표). @default "direct" */
+  listingStdInputMode?: "direct" | "daily";
   listingPriceDates?: string[];           // YYYY-MM-DD 최대 32 슬롯
   listingPriceClosing?: string[];         // 원 (CurrencyInput parse 결과 또는 string)
   listingPriceBasisDate?: string;         // YYYY-MM-DD
@@ -149,6 +151,38 @@ function toNumber(v: string | number | undefined): number {
   // CurrencyInput parse — 콤마 제거 후 숫자
   const n = Number(v.replace(/,/g, ""));
   return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * ② 상장일 이후 1개월 종가평균 — **파생 단일 진실** (소령 §165⑤ 계산식 첫 항).
+ *
+ * 「어느 필드가 정본인가」를 이 함수 하나가 정한다:
+ *   - `direct` → 사용자가 입력한 `listingDatePriceAvg1Month`
+ *   - `daily`  → 종가 표에서 산정 (증자·합병 기간 절단 포함 — 상증령 §52의2②2호 준용)
+ *
+ * 🔑 **저장 mirror를 두지 않는 이유.** 평균을 폼 필드에 «기록»하면 쓰기 지점이 4곳
+ *    (셀 편집·자본조정 토글·상장일 변경·키움 자동조회)이 되고, 그중 상장일 변경은
+ *    표를 재구성하면서 평균은 옛 값으로 남긴다. simple 모드에서 그 필드는 곧 엔진
+ *    입력이라 **조용한 오답**이 된다. 형제 축(양도일 ①)이 정확히 그 사고를 냈다
+ *    (2026-09-01 — 16,560 vs 16,559). 여기서는 읽는 쪽이 매번 파생한다.
+ *
+ * 🔑 **절단을 여기서 해야 하는 이유.** simple 모드는 `postListingDetail`을 보내지 않아
+ *    (`adaptFlatToApiBody` 조기 반환) 엔진이 절단을 대신 해줄 수 없다. 이 함수가
+ *    `calcClosingAvgWithEvent`를 쓰지 않으면 증자·합병 사례에서 과대평가가 된다.
+ *
+ * 호출처는 읽기 3곳뿐이다 — 미리보기 · validate · API 변환.
+ */
+export function resolveListingClosingAvg(form: PostListingFlatForm): number {
+  if ((form.listingStdInputMode ?? "direct") !== "daily") {
+    return toNumber(form.listingDatePriceAvg1Month);
+  }
+  return calcClosingAvgWithEvent({
+    dates: form.listingPriceDates ?? [],
+    closes: (form.listingPriceClosing ?? []).map(toNumber),
+    basisDate: form.listingPriceBasisDate ?? "",
+    hasIncrease: form.listingPriceHasIncrease === true,
+    increaseDate: form.listingPriceIncreaseDate,
+  }).avg;
 }
 
 /** 환원율 "10" (%) → 0.10 (decimal). 미입력 또는 0 이하면 default 10%. */
@@ -335,7 +369,7 @@ export function adaptFlatToApiBody(
     return {
       acquiredBeforeListing,
       postListingDetail: undefined,
-      listingDatePriceAvg1Month: toNumber(form.listingDatePriceAvg1Month),
+      listingDatePriceAvg1Month: resolveListingClosingAvg(form),
       listingYearNetIncomePerShare: toNumber(form.listingYearNetIncomePerShare),
       listingYearNetAssetPerShare: toNumber(form.listingYearNetAssetPerShare),
       acquisitionYearNetIncomePerShare: toNumber(form.acquisitionYearNetIncomePerShare),

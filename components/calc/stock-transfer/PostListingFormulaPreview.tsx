@@ -24,6 +24,7 @@ import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation
 import {
   adaptFlatToPostListingDetail,
   buildPostListingFromDetail,
+  resolveListingClosingAvg,
 } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
@@ -87,7 +88,8 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
     let acqNA: number;
 
     if (mode === "simple") {
-      listingAvg = parseAmount(form.listingDatePriceAvg1Month);
+      // ② 종가평균은 direct/daily 어느 쪽이든 파생 헬퍼가 정본이다 (adapter·validate와 동일 함수).
+      listingAvg = resolveListingClosingAvg(form);
       listingNI = parseAmount(form.listingYearNetIncomePerShare);
       listingNA = parseAmount(form.listingYearNetAssetPerShare);
       acqNI = parseAmount(form.acquisitionYearNetIncomePerShare);

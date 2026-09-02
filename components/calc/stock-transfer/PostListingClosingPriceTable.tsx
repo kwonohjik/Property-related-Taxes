@@ -14,7 +14,7 @@
 import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { calcMonthlyClosingAverage } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
+import { calcClosingAvgWithEvent } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import {
   buildOneMonthBeforeSlots,
   buildOneMonthAfterListingSlots,
@@ -30,6 +30,7 @@ interface PostListingClosingPriceTableProps {
     | "listingPriceClosing"
     | "listingPriceBasisDate"
     | "listingPriceHasIncrease"
+    | "listingPriceIncreaseDate"
   >;
   onChange: (patch: Partial<StockTransferFormData>) => void;
 }
@@ -112,14 +113,30 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
 
   // 미리보기 — H-01 import (이중 진실 차단)
   // 거래일 = (주말 제외) AND (실제 종가 입력 > 0) 인 셀
+  //
+  // 🔑 **`calcClosingAvgWithEvent`를 쓴다** — 종전에는 절단 없는 `calcMonthlyClosingAverage`라
+  //    증자·합병이 켜진 사례에서 **화면 평균 ≠ 엔진 평균**이었다(엔진·adapter는 절단본을 쓴다).
+  //    simple+daily에서는 이 값이 곧 §165⑤ 계산식 첫 항이므로 갈리면 그대로 오답으로 읽힌다.
   const preview = useMemo(() => {
     const closes = displayDates.map((d, i) => {
       const dow = dayOfWeek(d);
       if (dow === 0 || dow === 6) return 0;
       return parseAmount(form.listingPriceClosing[i] || "0");
     });
-    return calcMonthlyClosingAverage(displayDates, closes);
-  }, [displayDates, form.listingPriceClosing]);
+    return calcClosingAvgWithEvent({
+      dates: displayDates,
+      closes,
+      basisDate: form.listingPriceBasisDate ?? "",
+      hasIncrease: form.listingPriceHasIncrease === true,
+      increaseDate: form.listingPriceIncreaseDate,
+    });
+  }, [
+    displayDates,
+    form.listingPriceClosing,
+    form.listingPriceBasisDate,
+    form.listingPriceHasIncrease,
+    form.listingPriceIncreaseDate,
+  ]);
 
   // Enter 키 → 다음 거래일(주말 제외) 슬롯으로 포커스 이동
   const handleGridKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -168,7 +185,6 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
   return (
     <ToneCard
       tone="emerald"
-      sectionNum={1}
       bodyClassName="space-y-3"
       noDark
       title={

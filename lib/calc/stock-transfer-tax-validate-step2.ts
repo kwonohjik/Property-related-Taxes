@@ -14,6 +14,9 @@ import type { StockValidationError } from "./stock-transfer-tax-validate";
 //    하한이 발동하는 입력에서 **엔진은 「같다」, validate는 「다르다」**가 되어 사용자에게
 //    "토글을 해제하세요"라는 거짓 경고가 뜬다.
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+// ② 종가평균 파생 단일 진실 — 미리보기·API 변환과 **같은 함수**를 쓴다.
+// 여기서 다시 구현하면 「화면은 통과, 서버는 0」 같은 갈림이 생긴다.
+import { resolveListingClosingAvg } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 
 function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
@@ -369,7 +372,34 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           });
         }
         if (detailMode === "simple") {
-          if (isEmpty(form.listingDatePriceAvg1Month)) errors.push({ field: "listingDatePriceAvg1Month", message: "상장일 이후 1개월 종가평균을 입력하세요", severity: "error" });
+          // ② 입력 축 — direct(단일 숫자) | daily(종가 표). ①(`transferStdInputMode`, :302)과 같은 형태.
+          // ⚠️ daily에서 단일 숫자를 요구하면 **입력 UI 없이 차단되는 dead-end**가 된다
+          //    (그 모드에서는 그 칸이 화면에 없다).
+          const listingStdMode = form.listingStdInputMode || "direct";
+          if (listingStdMode === "direct") {
+            if (isEmpty(form.listingDatePriceAvg1Month)) {
+              errors.push({
+                field: "listingDatePriceAvg1Month",
+                message: "상장일 이후 1개월 종가평균을 입력하세요 (소령 §165⑤ 계산식 첫 항 — '일자별 입력' 모드 사용 가능)",
+                severity: "error",
+              });
+            }
+          } else {
+            const hasAnyClose = form.listingPriceClosing?.some((s) => !isEmpty(s) && parseI(s) > 0);
+            if (!hasAnyClose) {
+              errors.push({
+                field: "listingPriceClosing",
+                message: "일자별 입력 모드: 상장일 이후 1개월 거래일 종가를 1셀 이상 입력하세요 (소령 §165⑤ 계산식 첫 항 자동 산정용)",
+                severity: "error",
+              });
+            } else if (resolveListingClosingAvg(form) <= 0) {
+              errors.push({
+                field: "listingPriceClosing",
+                message: "일자별 입력에서 자동 평균 산정 실패 — 종가 값을 확인하세요",
+                severity: "error",
+              });
+            }
+          }
 
           // 간이 모드 «안»의 하위 축 — 결과값 직접 입력 ↔ 순액에서 계산.
           //

@@ -127,7 +127,6 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
   return (
     <ToneCard
       tone="amber"
-      sectionNum={1}
       bodyClassName="space-y-3"
       noDark
       title={

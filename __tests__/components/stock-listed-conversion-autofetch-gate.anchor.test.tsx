@@ -134,8 +134,16 @@ describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 
       />,
     );
     expect(screen.getByRole("button", { name: /키움 자동조회/ })).toBeTruthy();
-    // AG-2 셀렉터의 대조군 — 게이트 ①이 열리면 이 라디오 라벨이 실재한다
-    expect(screen.getByText("일자별 입력 (자동 평균 산정)")).toBeTruthy();
+    // AG-2 셀렉터의 대조군 — 게이트 ①이 열리면 이 라디오 라벨이 실재한다.
+    //
+    // ⚠️ **라벨 문자열만으로는 집을 수 없다.** 2026-09-02에 ②(상장일 이후 1개월 종가)도
+    //    같은 문구의 direct/daily 축을 갖게 되어 같은 라벨이 화면에 **둘** 있다.
+    //    여기서 증명할 것은 ①(양도 당시 기준시가)의 축이므로 `name`으로 소속을 못박는다.
+    const dailyRadio = document.querySelector(
+      'input[name="transferStdInputMode"][value="daily"]',
+    );
+    expect(dailyRadio).toBeTruthy();
+    expect(dailyRadio!.closest("label")?.textContent).toContain("일자별 입력 (자동 평균 산정)");
   });
 
   /**
