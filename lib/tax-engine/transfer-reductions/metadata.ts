@@ -1,5 +1,5 @@
 /**
- * 양도세 감면 23개 조문 메타데이터 (Phase 1 골격)
+ * 양도세 감면 24개 조문 메타데이터
  *
  * 단일 source of truth — UI 펼침 패널 라벨/카운터, 라우터 분기, 효과 카테고리 분류에 사용.
  * Phase 2 본격 구현 시 각 항목에 대응하는 개별 모듈(`new-99-3.ts` 등)로 분기 로직 이관.
@@ -336,5 +336,5 @@ export function getReductionsByCategory(): Record<ReductionCategory, ReductionMe
   return groups;
 }
 
-/** 23개 ID 전체 — 라우터 순회용 */
+/** 24개 ID 전체 — 라우터 순회용 */
 export const ALL_REDUCTION_IDS: TransferReductionId[] = Object.keys(REDUCTION_METADATA) as TransferReductionId[];

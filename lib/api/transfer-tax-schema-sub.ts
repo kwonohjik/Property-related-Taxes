@@ -287,7 +287,7 @@ export const presaleRightSchema = z.object({
 });
 
 
-// reductionSchema(23개 조문 discriminatedUnion)는 transfer-tax-schema-reductions.ts로 분리 (800줄 정책, P2)
+// reductionSchema(24개 조문 discriminatedUnion)는 transfer-tax-schema-reductions.ts로 분리 (800줄 정책, P2)
 // 순환 import 방지: 본 파일의 rentHistorySchema·vacancyPeriodSchema를 그쪽에서 import.
 import { reductionSchema } from "./transfer-tax-schema-reductions";
 export { reductionSchema };

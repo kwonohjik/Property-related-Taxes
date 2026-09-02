@@ -22,9 +22,9 @@ lib/tax-engine/
 │   ├── engine.ts              # judgeNonBusinessLand() 진입점
 │   ├── farmland.ts / forest.ts / pasture.ts / villa-land.ts / ...
 │   └── types.ts               # NonBusinessLandInput, 판정 결과 타입
-├── transfer-reductions/       # 감면 23개 조문 라우터 (대부분 구현 완료 — metadata.isFullyImplemented 기준)
-│   ├── index.ts               # evaluateReduction(input) 단일 진입점 + re-export
-│   ├── metadata.ts            # REDUCTION_METADATA (23개 조문 UI라벨·효과·isFullyImplemented)
+├── transfer-reductions/       # 감면 24개 조문 공용 메타·시한·게이트 (전건 구현 — metadata.isFullyImplemented)
+│   ├── index.ts               # 공용 배럴 + 평가기 re-export (진입점은 효과 유형별 4계열 — 헤더 참조)
+│   ├── metadata.ts            # REDUCTION_METADATA (24개 조문 UI라벨·효과·isFullyImplemented)
 │   ├── period-check.ts        # checkReductionPeriod(id, ctx) — 일몰 시한 검증 (매매계약일 우선)
 │   ├── phd-helper.ts          # §164⑤ 환산 보조 — 신축주택 감면 조문의 "취득시 기준시가" 자동 도출
 │   ├── new-99-3.ts            # §99의3 신축주택 과세특례 (완전구현 조문 예시)

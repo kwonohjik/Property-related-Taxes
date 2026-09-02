@@ -1,25 +1,24 @@
 /**
- * 양도세 감면 23개 조문 라우터 (Phase 1 골격)
+ * 양도세 감면 24개 조문 — 공용 메타·시한·게이트 배럴 + 평가기 re-export
  *
- * 단일 진입점 `evaluateReduction(input)`:
- *   1. 메타데이터 조회 (id → article·category·effect)
- *   2. checkReductionPeriod(id, ctx) 시한 검증
- *   3. 시한 외면 isEligible:false + failReason 반환
- *   4. 시한 내면 isEligible:false + "구현 예정 (Phase 2~)" 반환
+ * **진입점은 하나가 아니다.** 효과 유형별로 4계열이 각각 진입점이다:
+ *   - 세액감면형   → `calcReductions` (transfer-tax-reductions-calc.ts)
+ *   - 소득차감형   → `resolveIncomeDeduction` (income-deduction-router.ts)
+ *   - 장특공 대체형 → `evaluateRental97Lthd` (rental-97-router.ts)
+ *   - 주택수 제외형 → `resolveHouseCountExclusion` (unsold-98-9.ts)
  *
- * Phase 2~ 본격 구현 시:
- *   - 각 ID별 분기 모듈(`new-99-3.ts`, `unsold-98-3.ts` 등)을 import
- *   - 본 라우터의 switch에 분기 추가
- *   - 시한 통과 케이스만 본 모듈로 라우팅
+ * 본 파일은 그 4계열이 공유하는 메타데이터(`REDUCTION_METADATA`)·시한 판정
+ * (`checkReductionPeriod`)·자산종류 게이트(`asset-kind-gate`)를 모아 re-export한다.
+ *
+ * (Phase 1의 통합 stub `evaluateReduction`은 호출부 0건 dead code여서 제거했다 — D9-04.
+ *  「단일 진입점」 서술이 신규 조문을 죽은 분기에 배선하도록 오유도하고 있었다.)
  */
 
-import { checkReductionPeriod, getReductionPeriodLabel } from "./period-check";
-import { REDUCTION_METADATA, ALL_REDUCTION_IDS, getReductionsByCategory } from "./metadata";
+import { checkReductionPeriod } from "./period-check";
+import { ALL_REDUCTION_IDS, getReductionsByCategory } from "./metadata";
 import type {
   TransferReductionId,
   ReductionCategory,
-  ReductionEvaluationInput,
-  ReductionStubResult,
   PeriodCheckContext,
 } from "./types";
 
@@ -36,8 +35,6 @@ export type { ReductionMetadata, CategoryUiSchema } from "./metadata";
 export type {
   TransferReductionId,
   ReductionCategory,
-  ReductionEvaluationInput,
-  ReductionStubResult,
   PeriodCheckContext,
   PeriodCheckResult,
 } from "./types";
@@ -219,36 +216,6 @@ export {
 } from "./unsold-hybrid-p5";
 
 /**
- * 23개 조문 통합 stub evaluator. Phase 1 단계는 모두 isEligible:false 반환.
- * 시한 외 케이스는 명시적 사유, 시한 내 케이스는 "구현 예정" 사유.
- */
-export function evaluateReduction(input: ReductionEvaluationInput): ReductionStubResult {
-  const meta = REDUCTION_METADATA[input.id];
-  const period = checkReductionPeriod(input.id, input);
-
-  const failReason = !period.inPeriod
-    ? (period.failReason ?? `${meta.article} 시한 외`)
-    : `${meta.article} — Phase 2 본격 구현 예정 (현재는 시한 검증만 수행)`;
-
-  return {
-    id: input.id,
-    isEligible: false,
-    inPeriod: period.inPeriod,
-    failReason,
-    legalBasis: meta.article,
-    category: meta.category,
-    effectCategory: meta.effectCategory,
-    meta: {
-      article: meta.article,
-      periodLabel: meta.id === "self_farming" || meta.id === "public_expropriation"
-        ? "시한 없음"
-        : getReductionPeriodLabel(meta.id),
-      effectLabel: meta.effectLabel,
-    },
-  };
-}
-
-/**
  * UI 펼침 헤더용 활성/전체 카운터 (사용자 결정사항 #3-4).
  *
  * 시한 검증 결과 `inPeriod === true` 인 항목 수를 카테고리별로 반환.
@@ -285,7 +252,7 @@ export function countActiveReductionsByCategory(
 }
 
 /**
- * UI 항목별 활성 여부 일괄 조회. 펼침 패널 안의 23개 항목 disabled/enabled 결정.
+ * UI 항목별 활성 여부 일괄 조회. 펼침 패널 안의 24개 항목 disabled/enabled 결정.
  *
  * @returns `{ [id]: { inPeriod, failReason, periodLabel } }` map
  */

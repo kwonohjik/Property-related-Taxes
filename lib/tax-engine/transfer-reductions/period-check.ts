@@ -1,7 +1,7 @@
 /**
  * 양도세 감면 시한 검증 공통 헬퍼 (Phase 1 §1-D-1)
  *
- * 23개 조문의 시한 요건을 단일 함수로 통합 검증. UI에서는 `inPeriod === false` 항목을
+ * 24개 조문의 시한 요건을 단일 함수로 통합 검증. UI에서는 `inPeriod === false` 항목을
  * disabled 처리하고 `failReason` 을 tooltip으로 노출 (사용자 결정사항 #6 — A안).
  *
  * 시한 일자 출처: docs/02-design/features/transfer-reduction-mapping-audit.md §4
@@ -310,7 +310,7 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
 };
 
 /**
- * 시한 검증 — 23개 조문 ID와 컨텍스트를 받아 시한 내 여부 판정.
+ * 시한 검증 — 24개 조문 ID와 컨텍스트를 받아 시한 내 여부 판정.
  *
  * @example
  * const r = checkReductionPeriod("new_99_3", {

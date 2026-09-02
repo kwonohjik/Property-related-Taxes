@@ -1,5 +1,5 @@
 /**
- * 양도소득세 감면(reductions) Zod 스키마 (⑫) — 23개 조문 discriminatedUnion
+ * 양도소득세 감면(reductions) Zod 스키마 (⑫) — 24개 조문 discriminatedUnion
  *
  * transfer-tax-schema-sub.ts 800줄 정책 분리 (P2, 2026-06-11).
  * 외부 import 호환은 transfer-tax-schema-sub.ts re-export 유지.
