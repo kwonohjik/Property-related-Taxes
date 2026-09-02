@@ -71,7 +71,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
       {/* 도움말 카드 */}
       <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 space-y-1">
         <p>
-          <strong>의제배당 분기 (배당소득 — 본 엔진 skip)</strong>:
+          <strong>의제배당 분기 (배당소득 — 이 계산기에서 계산하지 않음)</strong>:
           이익잉여금 자본전입 무상증자 (§17②2호 가목 본문) /
           자본환급 무상감자 (§17②1호)
         </p>
@@ -114,12 +114,18 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
                     삭제
                   </button>
                 </div>
+                {/* 4개를 세로로 쌓으면 자본조정 행 하나가 4행을 먹는다 — 2열 2행으로 접는다.
+                    ⚠️ inline(한 행·설명 미렌더)이 아니라 columns다 — 이 그룹의 description은
+                       **조문과 과세 구분**(§17②2호 가목 단서 (1) / 본문, §17②1호)이라
+                       지우면 무상증자 두 종류를 가를 근거가 사라진다.
+                    anchor: capital-adjustment-radio-columns.anchor.test.tsx CA-1 */}
                 <RadioCardGroup
                   name={`capitalAdjustment-${idx}-type`}
                   value={r.type}
                   onChange={(v) => update(idx, { type: v as CapitalAdjustmentForm["type"] })}
                   tone="violet"
                   layout="stack"
+                  columns={2}
                   options={[
                     {
                       value: "bonus_capital_reserve",
@@ -129,7 +135,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
                     {
                       value: "bonus_retained_earnings",
                       label: "무상증자 — 이익잉여금 (배당소득 — 별도 처리)",
-                      description: "§17②2호 가목 본문 — 의제배당, 본 엔진 skip",
+                      description: "§17②2호 가목 본문 — 의제배당(배당소득). 주식수·단가를 조정하지 않습니다",
                     },
                     {
                       value: "reduction_proportional",
@@ -139,7 +145,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
                     {
                       value: "reduction_capital_return",
                       label: "무상감자 — 자본환급 (배당소득 — 별도 처리)",
-                      description: "§17②1호 — 의제배당, 본 엔진 skip",
+                      description: "§17②1호 — 의제배당(배당소득). 주식수·단가를 조정하지 않습니다",
                     },
                   ]}
                 />
