@@ -13,6 +13,7 @@ import type { InheritanceAcquisitionInput, InheritanceAcquisitionResult, Commerc
 import type { InheritanceHouseValuationResult } from "./types/inheritance-house-valuation.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { Pre1990LandValuationResult } from "./pre-1990-land-valuation";
+import { applyRatio } from "./tax-utils";
 
 /** STEP 0.45 실행 결과 */
 export interface InheritedAcquisitionStepResult {
@@ -227,14 +228,36 @@ function resolveInheritedAcquisitionInput(
     ...base,
     standardPriceAtDeemedDate,
     standardPriceAtTransfer,
+    /**
+     * A07(2026-09-02): ②(§164④~⑦ 기준시가)를 **①과 같은 축**으로 맞춘다.
+     *
+     * §163⑨ 1호·2호는 「평가한 가액**과** §164④(⑤~⑦)의 가액 **중 많은 금액**」이라 둘을
+     * 직접 비교한다. 그런데 ①(`reportedValue`)은 ④에서 이미 지분 안분돼 오는데
+     * (`transfer-tax-api-inheritance.ts` — 「미적용 시 100% 송신으로 엔진에서 안분 잔여가
+     * 필요경비로 잘못 적재됨(사례 27)」) ②는 **100% 물건 값 그대로**여서 비교 축이 어긋났다.
+     * 저지분일수록 ②가 부당하게 이겨 상대오차가 커진다(실측 10,078,073 / 11,138,923원 과소).
+     *
+     * ⚠️ **주입 지점에서만 안분한다.** `pre1990Land.areaSqm`이나
+     *    `standardPriceAtAcquisition` 자체를 축소하면 안 된다 — 그 값들은 §164④ 산식의
+     *    입력이자 다른 소비처(표시·환산 역산)를 가지므로 이중 축소가 된다.
+     */
     ...(shouldInjectHouseMax && {
-      houseValuationStdPrice: houseValuationResult!.housePriceAtInheritanceUsed,
+      houseValuationStdPrice: applyRatio(
+        houseValuationResult!.housePriceAtInheritanceUsed,
+        currentInput.ownershipRatio ?? 1,
+      ),
     }),
     ...(shouldInjectCommercialMax && {
-      commercialValuationStdPrice: computeCommercial164_6StdPrice(rawInput.commercialInheritanceValuation!),
+      commercialValuationStdPrice: applyRatio(
+        computeCommercial164_6StdPrice(rawInput.commercialInheritanceValuation!),
+        currentInput.ownershipRatio ?? 1,
+      ),
     }),
     ...(shouldInjectLandMax && {
-      landValuationStdPrice: pre1990LandResult!.standardPriceAtAcquisition,
+      landValuationStdPrice: applyRatio(
+        pre1990LandResult!.standardPriceAtAcquisition,
+        currentInput.ownershipRatio ?? 1,
+      ),
     }),
     transferDate: base.transferDate ?? rawInput.transferDate,
     transferPrice: base.transferPrice ?? rawInput.transferPrice,
