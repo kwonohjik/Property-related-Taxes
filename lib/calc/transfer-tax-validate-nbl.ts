@@ -16,10 +16,18 @@ import { isUrbanResidentialCommercialIndustrial } from "@/lib/tax-engine/non-bus
 import { isUrbanForFarmland } from "@/lib/tax-engine/non-business-land/urban-area";
 import { isUrbanForPasture } from "@/lib/tax-engine/non-business-land/urban-area";
 import { isUrbanForForest } from "@/lib/tax-engine/non-business-land/urban-area";
+import { isUrbanCriteriaRegion } from "@/lib/tax-engine/non-business-land/urban-region-scope";
+import type { LandDivision } from "@/lib/tax-engine/non-business-land/types";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { resolveNblUrbanIncorporationDate } from "./non-business-land-request";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
+
+/** 폼의 3-state 값을 엔진 `LandDivision`으로 — ④ form-mapper와 **같은 접기 규칙**(3중 패턴). */
+function nblLandDivisionOf(asset: AssetForm): LandDivision | undefined {
+  const v = asset.nblLandDivision;
+  return v === "dong" || v === "eup_myeon" ? v : undefined;
+}
 
 /** 편입일을 요구하는 지목의 표시명 (오류 메시지용) */
 const LAND_TYPE_LABEL: Record<string, string> = {
@@ -44,6 +52,14 @@ function isUrbanForIncorporationGrace(
   transferDate: Date | undefined,
   asset: AssetForm,
 ): boolean {
+  // 법 §104의3①1호나목·3호가목의 지역 열거 밖(광역시의 군·도의 군·읍·면지역)이면 농지·목장에
+  // 지역기준 자체가 적용되지 않으므로 편입일도 요구하지 않는다 — 과차단 방지 (E2-01).
+  if (
+    (landType === "farmland" || landType === "pasture") &&
+    isUrbanCriteriaRegion(asset.nblLandSigunguCode, nblLandDivisionOf(asset)) === false
+  ) {
+    return false;
+  }
   if (landType === "farmland") return isUrbanForFarmland(zoneType);
   if (landType === "pasture")
     return transferDate
@@ -104,6 +120,18 @@ export function validateNblDetailedJudgment(
     return asset.nblLandType === "villa_land"
       ? `${label}: 별장 부속토지 — 주택 정착면적(㎡)을 입력하세요. 별장 요건에 해당하지 않으면 주택부수토지로 재분류되며, 정착면적이 없으면 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`
       : `${label}: 주택부수토지 — 주택 정착면적(㎡)을 입력하세요. 미입력 시 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`;
+  }
+
+  // 법 §104의3①1호나목·3호가목 지역 열거 — 시(市)·특별자치시는 읍·면 여부가 판정을 가른다.
+  // 미입력 시 엔진이 판정 불가로 두고 **도시지역 판정을 그대로 적용**하므로(불리) 계산 전 차단한다.
+  // 자치구·일반구·군은 읍·면이 없거나 이미 대상 밖이라 요구하지 않는다(과차단 방지).
+  if (
+    (asset.nblLandType === "farmland" || asset.nblLandType === "pasture") &&
+    isUrbanResidentialCommercialIndustrial(asset.nblZoneType as ZoneType) &&
+    isUrbanCriteriaRegion(asset.nblLandSigunguCode, nblLandDivisionOf(asset)) === undefined &&
+    asset.nblLandSigunguCode
+  ) {
+    return `${label}: 도시지역 ${LAND_TYPE_LABEL[asset.nblLandType] ?? "토지"} — 소재지 행정구역 단위(동 / 읍·면)를 선택하세요. 법 §104조의3①1호나목·3호가목은 읍·면지역을 도시지역 판정에서 제외합니다.`;
   }
 
   // §168의8⑤⑥(농지)·§168의10⑤(목장)·§168의9①2호 단서(임야) 도시지역 편입 유예 —

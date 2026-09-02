@@ -280,6 +280,7 @@ export const NBL_DEFAULTS = {
   nblDeemedTransferDate: "",
   nblUrbanIncorporationDate: "",
   nblIsMetropolitanArea: "" as "" | "yes" | "no" | "unknown",
+  nblLandDivision: "" as "" | "dong" | "eup_myeon",
   nblOwnershipRatio: "",
   nblFarmingSelf: false,
   nblFarmerResidenceDistance: "",

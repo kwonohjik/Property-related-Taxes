@@ -47,6 +47,8 @@ export interface NblJudgmentFormSlice {
   // ── NBL 도시편입·수도권·공동상속 ──
   nblUrbanIncorporationDate: string;
   nblIsMetropolitanArea: "" | "yes" | "no" | "unknown";
+  /** 소재지 행정구역 단위 — 법 §104의3①1호나목·3호가목 지역 열거(읍·면 제외) 판정용 */
+  nblLandDivision: "" | "dong" | "eup_myeon";
   nblOwnershipRatio: string;
 
   // ── NBL 농지 세부 ──

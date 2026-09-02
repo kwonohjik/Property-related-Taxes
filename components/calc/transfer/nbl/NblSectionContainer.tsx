@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SigunguSelect } from "./shared/SigunguSelect";
 import { extractSidoSigunguName } from "@/lib/calc/address-sigungu-name";
 import { UnconditionalExemptionSection } from "./UnconditionalExemptionSection";
@@ -37,6 +38,15 @@ const LAND_TYPE_OPTIONS = [
   { value: "villa_land",   label: "별장 부수 토지" },
   { value: "other_land",   label: "기타 토지 (나대지·잡종지)" },
 ] as const;
+
+/**
+ * 법 §104조의3①1호나목 괄호의 「읍ㆍ면지역」 판별 — 자치단체 종류(군/시/구)는 시·군·구 코드에서
+ * 도출되지만 읍·면 여부는 코드에 없다. 자동 추정 금지 정책상 사용자에게 받는다.
+ */
+const LAND_DIVISION_OPTIONS = [
+  { value: "dong" as const, label: "동 지역" },
+  { value: "eup_myeon" as const, label: "읍·면 지역" },
+];
 
 const ZONE_TYPE_OPTIONS = [
   { value: "exclusive_residential", label: "전용주거지역" },
@@ -188,6 +198,24 @@ export function NblSectionContainer({
                 )}
               </FieldCard>
             </div>
+            {(asset.nblLandType === "farmland" || asset.nblLandType === "pasture") && (
+              <div data-testid="nbl-land-division">
+                <FieldCard
+                  label="소재지 행정구역 단위"
+                  hint="법 §104조의3①1호나목·3호가목의 도시지역 판정은 특별시·광역시(군 제외)·특별자치시·특별자치도·시지역 안에서만 합니다. 읍·면지역은 제외되므로 도시지역이어도 지역기준이 적용되지 않습니다."
+                  trailing={<LawArticleModal legalBasis="소득세법 §104조의3" label="§104의3①1호나" />}
+                >
+                  <RadioCardGroup
+                    name={`nblLandDivision-${asset.assetId}`}
+                    tone="rose"
+                    layout="inline"
+                    options={LAND_DIVISION_OPTIONS}
+                    value={asset.nblLandDivision ?? ""}
+                    onChange={(v) => onAssetChange({ nblLandDivision: v })}
+                  />
+                </FieldCard>
+              </div>
+            )}
             <ResidenceHistorySection asset={asset} onAssetChange={onAssetChange} />
           </div>
         )}

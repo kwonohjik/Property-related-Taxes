@@ -15,6 +15,7 @@ import type {
   LandType,
   LocationInfo,
   ZoneType,
+  LandDivision,
 } from "./types";
 import { resolveGraceIntervals } from "./grace-reason-period";
 import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
@@ -139,6 +140,12 @@ export function mapAssetToNblInput(
   const isMetropolitanArea: boolean | undefined =
     metroRaw === "yes" ? true : metroRaw === "no" ? false : undefined;
 
+  // 소재지 행정구역 단위 — 법 §104의3①1호나목·3호가목 지역 열거(읍·면 제외) 판정용.
+  // 빈값·미지원 값은 undefined로 접는다(자동 추정 금지 — 엔진이 판정 불가로 경고).
+  const divisionRaw = asString(asset.nblLandDivision);
+  const landDivision: LandDivision | undefined =
+    divisionRaw === "dong" || divisionRaw === "eup_myeon" ? divisionRaw : undefined;
+
   // 공동소유 지분 (대법원 2015두39439) — engine.ts applyCoOwnershipRatio가 소비.
   // residenceHistories만 있어도, ratio≠1만 있어도 ownerProfile 생성.
   const ownershipRatio = parseOwnershipRatio(asset, parseNumber);
@@ -162,6 +169,7 @@ export function mapAssetToNblInput(
     revenueTest:             buildRevenueTest(asset, landType, parseNumber, parseDate, transferDate, acquisitionDate),
     unconditionalExemption:  buildUnconditionalExemption(asset, parseDate),
     urbanIncorporationDate,
+    landDivision,
     isMetropolitanArea,
     ...(landLocation ? { landLocation } : {}),
     ...(adjacentSigunguCodes && adjacentSigunguCodes.length > 0 ? { adjacentSigunguCodes } : {}),
