@@ -68,6 +68,17 @@ export interface UsageConversionDetail {
   residenceMonthsTrimmed: number;
 }
 
+/**
+ * §90①의 `B`를 감면율별로 쪼갠 조각 — `TransferTaxResult.reducibleIncomeBuckets` 참조.
+ * `income`은 **기본공제 前** 감면대상 양도소득금액, `rate`는 그 조각에 곱할 감면율이다.
+ */
+export interface ReducibleIncomeBucket {
+  /** 감면대상 양도소득금액 (기본공제 前·감면율 前) */
+  income: number;
+  /** 이 조각에 곱할 감면율 (§90①의 E) */
+  rate: number;
+}
+
 export interface TransferTaxResult {
   /** 전액 비과세 여부 */
   isExempt: boolean;
@@ -223,21 +234,27 @@ export interface TransferTaxResult {
    */
   aggregateReductionRate?: number;
   /**
-   * `reducibleIncome`이 **이미 기본공제를 뺀 값**인가 (「소득세법」 §90①의 `B − C`).
+   * 「소득세법」 §90①의 **C(기본공제)를 흡수시킬 감면대상소득 버킷** — 감면율 오름차순.
    *
-   * §90①: 감면액 = A × (B − C) / D × E
-   *   A 산출세액 · B 감면대상 양도소득금액 · **C 「§103②에 따른 양도소득 기본공제」**
-   *   · D 과세표준 · E 감면율
+   * §90①: 감면액 = A × (B − C) / D × E. 다건 합산 M-8은 자산별 결과만 보고 `B`와 `E`를
+   * 되살려야 하는데, `reducibleIncome` 한 필드로는 **유형마다 의미가 갈려** 되살릴 수 없다:
+   *   · §97 계열 — `reducibleIncome` = B(감면율 前), 율은 `aggregateReductionRate`
+   *   · §77·§77의2·§77의3 — `reducibleIncome` = **B × E**(율이 박혀 있고 율 필드는 미설정)
+   * 게다가 §77은 현금분·채권분이 **서로 다른 율**을 갖고, §77의2는 현금분이 **감면대상 자체가
+   * 아니다**. 단일 평균율로는 어느 쪽도 정확히 복원되지 않는다.
    *
-   * §77(공익수용)·§85의10(개발제한구역 지정토지)·대토보상은 자체 산식에서 자산별 기본공제를
-   * 뺀 뒤 감면율까지 곱해 두므로 **true**다. §69·§97 계열·legacy 장기임대·legacy 신축·
-   * 하이브리드는 `transferIncome`(기본공제 前·감면율 前)을 그대로 실으므로 **false/미설정**이고,
-   * 다건 합산 M-8이 `− C`를 직접 수행해야 한다.
+   * ⇒ 「(감면율 前 소득, 그 율)」 쌍의 목록을 그대로 싣는다. `Σ income` = B이고,
+   *   `Σ applyRate(income − 흡수분, rate)` = §90①의 `(B − C) × E`다.
+   *   버킷에 실리지 않은 소득은 **비감면소득**이므로 §103②에 따라 C를 먼저 흡수한다.
    *
-   * ⚠️ `aggregateReductionRate`(감면율 반영 여부)와 **다른 축**이다 — §69는 감면율이 100%라
-   *    rate 축에서는 「반영됨」이지만 기본공제 축에서는 **gross**다. 둘을 한 판별자로 묶지 말 것.
+   * 미설정이면 M-8이 `[{ income: reducibleIncome, rate: aggregateReductionRate ?? 1 }]`로
+   * 합성한다 — §97 계열·legacy·하이브리드는 그 합성이 정확하므로 설정하지 않는다.
+   *
+   * ⚠️ **기본공제 前 금액이어야 한다.** 단건 경로는 자산별 기본공제를 이미 뺀 뒤 율을 곱하지만,
+   *    이 버킷은 그 차감 **前** 소득을 담는다 — 다건은 C를 신고 단위로 다시 배분하기 때문이다
+   *    (집계는 `skipBasicDeduction: true`로 단건 엔진을 부른다).
    */
-  reducibleIncomeNetOfBasicDeduction?: boolean;
+  reducibleIncomeBuckets?: ReducibleIncomeBucket[];
   /** 결정세액 (원 미만 절사) */
   determinedTax: number;
   /** §114조의2 신축·증축 가산세 (환산취득가액 or 감정가액 × 5%) */
