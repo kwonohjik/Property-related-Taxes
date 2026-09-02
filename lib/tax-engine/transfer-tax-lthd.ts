@@ -30,6 +30,7 @@ import { calcConversionHoldingPct } from "./conversion-holding-pct";
 import { calcLongTermRate } from "./transfer-tax-mixed-use-inheritance";
 import { TRANSFER } from "./legal-codes";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
+import { isNblLthdExclusionEra } from "./data/lthd-non-business-land-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
 import { getLongTermDeductionOverride } from "./rental-housing-reduction";
@@ -105,6 +106,33 @@ export function calcLongTermHoldingDeduction(
   }
   if (input.propertyType === "right_to_move_in" && input.isSuccessorRightToMoveIn === true) {
     return { deduction: 0, rate: 0, holdingPeriod: { years: 0, months: 0 }, exclusionReason: "successor_right_to_move_in" };
+  }
+
+  /**
+   * L-0b: 비사업용 토지 — **2016.1.1. 전 양도분은 구 §95② 괄호로 배제**.
+   *
+   * 「소득세법」 §95②의 괄호는 시기마다 달랐고 비사업용 토지는 2016.1.1.에 빠졌다
+   * (KoreanLaw 시행일별 본문 실측 — 근거·구간표는 `data/lthd-non-business-land-era.ts`).
+   *   · 2007.1.1~2011.12.31 「§104①4~10호 세율 적용 자산 및 §104⑥ 적용 자산」 → 비사토(§104①8호) 배제
+   *   · 2012.1.1~2015.12.31 「미등기양도자산 **및 §104의3에 따른 비사업용 토지**」 → 직접 명시 배제
+   *   · 2016.1.1~ 괄호에서 삭제 → 표1 공제 적용(현행)
+   *
+   * 종전에는 배제 분기가 미등기·분양권·승계입주권·다주택 넷뿐이고 **비사업용 축이 없어**,
+   * 양도일이 2015.12.31. 이전이어도 표1 공제가 그대로 붙었다(과소과세 — 실측 44,000,000원).
+   * 엔진은 과거 양도일을 설계상 지원한다(`transfer-rate-seed-historical.ts`가 1990-01-01 행부터,
+   * route가 양도일로 세율 행을 고른다) — 경정청구·기한후신고 목적의 과거분 계산에서 실제로 터진다.
+   *
+   * ⚠️ L-1(다주택)보다 **앞**에 둔다 — 토지는 다주택 중과 술어(`SURCHARGE_SUBJECT_PROPERTY_TYPES`)
+   *    대상이 아니라 L-1에 걸리지 않으므로 순서가 결과를 바꾸지는 않지만, 두 배제가 같은 §95② 괄호
+   *    축이라는 것을 코드 순서로 드러낸다.
+   */
+  if (input.isNonBusinessLand && isNblLthdExclusionEra(input.transferDate)) {
+    return {
+      deduction: 0,
+      rate: 0,
+      holdingPeriod: { years: 0, months: 0 },
+      exclusionReason: "non_business_land_pre_2016",
+    };
   }
 
   // L-1: 중과세 적용 중(유예 해제)이면 배제
