@@ -46,6 +46,7 @@ import {
   buildCommercialInheritanceValuationPayload,
 } from "./transfer-tax-api-inheritance";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
+import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
 export { toEngineReductions } from "./transfer-tax-api-helpers";
@@ -644,7 +645,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // ⑬ 재개발/재건축 spread (시행령 §166) — 누락 시 silent stripping
     ...(redevPayload !== undefined ? { redevelopment: redevPayload } : {}),
     // ⑬ 가업상속공제 §97의2④ 의제 취득가액 spread (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
-    ...(primary.familyBusinessInheritance !== undefined
+    // A04(2026-09-02): 취득원인·자산종류 게이트 — ⑤ 렌더 조건과 **같은 술어**여야
+    // 취득원인 변경 경로와 GB 전환 경로가 함께 닫힌다(실측 83,281,000 / 71,242,600원 과대).
+    ...(primary.familyBusinessInheritance !== undefined &&
+    allowsFamilyBusinessInheritance(primary)
       ? { familyBusinessInheritance: primary.familyBusinessInheritance }
       : {}),
     /**

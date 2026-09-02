@@ -23,6 +23,7 @@ import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
 import { FamilyBusinessInheritanceTransferSection } from "./FamilyBusinessInheritanceTransferSection";
 import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
 
 const ACQUISITION_CAUSE_OPTIONS = [
   { value: "purchase", label: "매매" },
@@ -82,6 +83,10 @@ export function CompanionAcquisitionCauseSection({
                 // 남겨두면 토지 취득일이 채워진 채 상속으로 넘어갔을 때 `isSeparateAcquisition`이
                 // true가 되어 파트별 취득가액 필수 → 입력 칸 없는 차단이 된다.
                 ...(opt.value !== "purchase" ? { hasSeperateLandAcquisitionDate: false } : {}),
+                // 상속 → 비-상속 전환 시 가업상속공제 §97의2④ stale 정리(A04 · 2026-09-02).
+                // 카드가 화면에서 사라져 **사용자가 끌 방법이 없으므로** 여기서 지운다.
+                // `migrateCarryoverFields`가 carryover에 대해 쓰는 것과 같은 규약이다.
+                ...(opt.value !== "inheritance" ? { familyBusinessInheritance: undefined } : {}),
               })
             }
             className={cn(
@@ -300,7 +305,7 @@ export function CompanionAcquisitionCauseSection({
 
       {/* 가업상속공제 §97의2④ 의제 취득가액 — 상속 취득원인 시만 표시.
           §163⑨의 ①②③ 결정이 끝난 **뒤에 얹히는 특례**라 순서상으로도 여기가 맞다. */}
-      {asset.acquisitionCause === "inheritance" && (
+      {allowsFamilyBusinessInheritance(asset) && (
         <FamilyBusinessInheritanceTransferSection
           asset={asset}
           onChange={onChange}

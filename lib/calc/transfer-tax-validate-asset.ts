@@ -46,6 +46,7 @@ import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateMixedUseAsset } from "./transfer-tax-validate-mixed-use-asset";
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
+import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 
 /**
  * 오늘 날짜 — 로컬(KST) 기준 `YYYY-MM-DD` 문자열.
@@ -759,6 +760,11 @@ export function validateAssetEntry(
 
   // ⑧ 가업상속공제 §97의2④ 의제 취득가액 — 토글 ON 시 4필드 전수 입력 강제
   // 자동 안분 fallback 금지 원칙 준수 (feedback_no_silent_apportion_fallback)
+  if (a.familyBusinessInheritance && !allowsFamilyBusinessInheritance(a)) {
+    // ④가 이미 payload에서 떼어내지만, stale 저장소에서 복원된 입력이 화면에 보이지 않는 채
+    // 남아 있을 수 있다. 「침묵 오산보다 명시 차단」 규약(A04).
+    return `${label}: 가업상속공제 §97의2④는 상속으로 취득한 자산에만 적용됩니다. 취득원인을 상속으로 되돌리거나 가업상속공제 입력을 해제하세요.`;
+  }
   if (a.familyBusinessInheritance) {
     const fb = a.familyBusinessInheritance;
     if (fb.decedentAcquisitionPrice == null || parseAmount(String(fb.decedentAcquisitionPrice)) < 0)
