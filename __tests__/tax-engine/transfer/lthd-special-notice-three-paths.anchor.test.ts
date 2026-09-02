@@ -124,21 +124,36 @@ describe("D5-05 · CB-02 재개발 경로 — LTHD 특례 미반영 고지", () 
     );
   }
 
-  it("D5-05-1: §98의2 선택 시 경고 + step이 남는다 (종전 침묵)", () => {
+  /**
+   * 🔄 2026-09-02 — D5-05-1·CB-02-R1은 **의도적으로 뒤집혔다**.
+   *
+   * 도입 당시에는 §97의3·§97의4·§98의2 셋 다 「미반영 고지」였다. 그 뒤 결합 규칙을 다시
+   * 읽어 보니 §97의3·§97의4는 결합 규칙이 필요 없고(전자는 임대분 고정 70%라 보유기간이
+   * 개입하지 않고, 후자는 가산이라 분기별 합 = 전체 적용), §98의2는 조합원 경로와 **결합
+   * 자체가 성립하지 않는다**(조합원 배정분은 미분양주택이 될 수 없다).
+   * ⇒ 앞 둘은 계산에 반영하고, §98의2는 「적용 대상 아님」으로 문구를 바꿨다.
+   */
+  it("D5-05-1: 🔴 §98의2는 「미반영」이 아니라 「적용 대상 아님」이다", () => {
     const r = redev({
       reductions: [
         { type: "unsold_98_2", contractDate982: new Date("2009-06-01") },
       ] as unknown as TransferTaxInput["reductions"],
     });
-    expect(r.warnings?.some((w) => w.includes("장기보유특별공제 특례"))).toBe(true);
     expect(
-      r.steps.some((st) => st.label === "조특법 감면 — 미반영 (장기보유특별공제 특례)"),
+      r.steps.some((st) => st.label === "조특법 §98의2 — 적용 대상 아님 (조합원 취득 자산)"),
     ).toBe(true);
+    expect(r.warnings?.some((w) => w.includes("적용되지 않습니다"))).toBe(true);
+    // 종전 문구는 「아직 반영하지 않았다」로 읽혀 받을 수 있는 특례를 놓쳤다고 오해시켰다
+    expect(r.warnings?.some((w) => w.includes("미반영"))).toBe(false);
   });
 
-  it("CB-02-R1: §97의3도 같은 고지를 받는다 (조특령 §97의3② 후단이 재개발을 전제한다)", () => {
+  it("CB-02-R1: 🔴 §97의3은 이제 **고지가 아니라 계산에 반영**된다", () => {
     const r = redev({ reductions: [RENTAL_97_3] as unknown as TransferTaxInput["reductions"] });
-    expect(r.warnings?.some((w) => w.includes("§97의3"))).toBe(true);
+    // 요건(10년 계속 임대) 미충족 fixture라 적격은 아니지만, 「미반영 고지」는 더는 붙지 않는다
+    expect(r.warnings?.some((w) => w.includes("장기보유특별공제 특례"))).toBe(false);
+    expect(
+      r.steps.some((st) => st.label === "조특법 감면 — 미반영 (장기보유특별공제 특례)"),
+    ).toBe(false);
   });
 
   it("CB-02-R2 대조군: 미선택이면 경고가 없다 (구별력)", () => {
