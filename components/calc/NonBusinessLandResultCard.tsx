@@ -133,6 +133,10 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
           )}
           {(judgment.revenueTestDetail.deemedRentCurrent > 0 || judgment.revenueTestDetail.deemedRentPrior > 0) && (
             <div className="mt-1.5 rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-2.5 py-1.5 text-caption text-violet-800 dark:text-violet-200 space-y-0.5">
+              {/*
+                U3-06 — 금액 표시에 「원」 접미사를 붙이지 않는다(결과 화면 표기 정책).
+                단위는 좌측 라벨의 「(원)」으로만 밝힌다 — 같은 화면의 다른 결과 카드와 동일.
+              */}
               <p className="font-medium">§168의11③1호 간주임대료 합산</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
                 <span>당해 간주임대료 (원)</span>
