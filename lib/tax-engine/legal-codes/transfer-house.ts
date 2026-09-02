@@ -338,7 +338,8 @@ export type LthdExclusionReason =
   | "unregistered"
   | "presale_right"
   | "successor_right_to_move_in"
-  | "multi_house_surcharge";
+  | "multi_house_surcharge"
+  | "non_business_land_pre_2016";
 
 /**
  * 배제 사유별 산식 문구 — "보유 0년×2%" 오도 표시 방지. 엔진 step 산식·클라이언트 UI 공용 단일 소스.
@@ -350,4 +351,6 @@ export const LTHD_EXCLUSION_LABEL: Record<LthdExclusionReason, string> = {
   successor_right_to_move_in: "승계취득 조합원입주권 — 장기보유특별공제 배제 (§95②)",
   multi_house_surcharge:
     "조정대상지역 다주택 중과 대상 — 장기보유특별공제 배제 (§95② 본문 괄호·§104⑦)",
+  non_business_land_pre_2016:
+    "비사업용 토지 — 2016.1.1. 전 양도분은 장기보유특별공제 배제 (구 「소득세법」 §95② 본문 괄호)",
 };

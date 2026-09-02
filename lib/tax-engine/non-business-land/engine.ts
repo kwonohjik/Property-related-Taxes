@@ -31,6 +31,7 @@ import { judgeOtherLand } from "./other-land";
 import { checkIncorporationGrace } from "./period-criteria";
 import { computeResidenceMatchSummary } from "./residence";
 import { applyCoOwnershipRatio } from "./co-ownership";
+import { isNblLthdExclusionEra } from "../data/lthd-non-business-land-era";
 
 /**
  * 메인 진입점 — 기존 v1 시그니처 호환.
@@ -301,7 +302,16 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
       additionalRate: isNonBusinessLand ? 0.10 : 0,
       // 부분 면적안분(목장 §168의10③·기타토지 §168의11①·복합용도 §168의11⑥·연접 다필지 §168의11⑤·바닥면적 외 §101①2호나목) — 면적안분 산출 시 그 비율, 없으면 전량(1)
       nonBusinessAreaRatio: isNonBusinessLand ? (categoryResult?.areaProportioning?.nonBusinessRatio ?? 1) : 0,
-      longTermDeductionExcluded: isNonBusinessLand,
+      /**
+       * 「소득세법」 §95② 장기보유특별공제 배제 여부 — **양도일 축이 필요하다** (E6-04·U3-03).
+       *
+       * 현행 §95② 괄호의 제외 열거는 「미등기양도자산(§104③)과 같은 조 **제7항** 각 호에 따른
+       * 자산」뿐이고 비사업용 토지는 §104**①8호**라 열거에 없다 — 즉 **표1 공제가 적용된다**.
+       * 종전에는 이 echo가 `isNonBusinessLand`를 그대로 실어 현행법과 어긋났다(소비처가 0이라
+       * 세액에는 영향이 없었고, 결과 카드의 「표1 적용」 표시가 맞았다).
+       * 2016.1.1. 전 양도분에는 실제로 배제였으므로 연혁 leaf로 판정한다.
+       */
+      longTermDeductionExcluded: isNonBusinessLand && isNblLthdExclusionEra(input.transferDate),
       basicDeductionApplied: true,
     },
     unconditionalExemption: unconditionalResult,
@@ -334,7 +344,10 @@ function makeSurchargeResult(
       additionalRate: isNonBusinessLand ? 0.10 : 0,
       // 레거시 팩토리(면적안분 정보 없음) — 비사업용이면 전량(1)
       nonBusinessAreaRatio: isNonBusinessLand ? 1 : 0,
-      longTermDeductionExcluded: isNonBusinessLand,
+      // 레거시 팩토리에는 양도일 축이 없다 — **현행법 기준(false)** 으로 둔다 (E6-04).
+      // 현행 §95② 괄호의 제외 열거에 비사업용 토지가 없으므로 표1 공제가 적용된다.
+      // 2016.1.1. 전 양도분 판정이 필요하면 `judgeNonBusinessLand`(양도일을 받는 정본)를 쓸 것.
+      longTermDeductionExcluded: false,
       basicDeductionApplied: true,
     },
   };

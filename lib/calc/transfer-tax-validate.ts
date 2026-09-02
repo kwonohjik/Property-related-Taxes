@@ -114,10 +114,20 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     // `some()`인 이유: 라우트는 primary만 보지만 companion의 특수 입력도 `buildAssetPayload`가
     // 담지 않아 함께 소실된다. 토글·자산추가 순서에 따라 어느 쪽에든 남을 수 있다.
     //
-    // ⚠️ `commercial_building`은 **차단하지 않는다** — 전용 분기가 없어 엔진 내부에서 처리되며,
-    //    실측 결과 **양도차익이 단건과 동일**하고 필요경비도 음수가 아니다(계산 정상).
-    //    일괄 집계 결과에 자산별 상세 카드가 안 실리는 **표시 갭**일 뿐이라 막을 근거가 없다.
-    //    회귀 방어: `__tests__/api/transfer.route.bundled-swallows-special.test.ts`
+    // ⚠️ `commercial_building`은 **차단하지 않는다** — 전용 분기가 없어 엔진 내부에서 처리된다.
+    //
+    // 🔴 **종전 근거는 무효였다** (V8-b, 2026-09-02 코드리뷰). 「실측 결과 양도차익이 단건과
+    //    동일하니 표시 갭일 뿐」이라고 적혀 있었는데, 그 실측은 `commercialAppurtenantLand`가
+    //    **없는** 상가로 한 것이다. 부수토지 초과분(STEP 0.62)이 붙는 순간 갈리는 것은
+    //    양도차익이 아니라 **세율**이라 gain 대조로는 구조적으로 잡히지 않는다 —
+    //    지목된 회귀 방어 테스트(`transfer.route.bundled-swallows-special.test.ts`)도 같은 축을 본다.
+    //    실제로 그 경로에서 §104①8호 +10%p가 통째로 사라지고 있었다(E6-01, 실측 11,683,750원 과소).
+    //
+    //    ⇒ 결함은 `transfer-tax-aggregate.ts`의 `nblOverride`가 STEP 0.62 파생 판정을 소스로
+    //      삼지 않은 것이었고 거기서 고쳤다(엔진과 같은 leaf로 재판정).
+    //      차단하지 않는다는 결론 자체는 유지되나, **근거는 「세액이 같다」가 아니라
+    //      「집계가 같은 판정을 복원한다」**이다. 세율 축 anchor:
+    //      `__tests__/tax-engine/transfer/aggregate-commercial-appurtenant-nbl.anchor.test.ts`
     //
     // 🔴 **이 가드는 「함께 양도」(서로 다른 물건) 전용이다** — 2026-08-10 E2E 실측으로 정정.
     //    「같은 물건의 지분 분할」은 route 5-0(`general-building-fractional.ts`)이 5-a보다

@@ -51,6 +51,7 @@ import {
 export { classifyRateGroup };
 
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
+import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 // transfer-tax-penalty 직접 호출 없음 — 자산별 가산세는 단건 엔진이 처리, aggregate는 합산만 수행.
 
 // ============================================================
@@ -216,12 +217,41 @@ function computeAggregateOnce(
     // 정밀 NBL 판정이 원시 플래그를 override한 경우, 결과가 노출한 판정값으로 item을 교정.
     // (원시 isNonBusinessLand=사용자 체크박스 vs 정밀판정=사업용 불일치 시 그룹·세율 오적용 방지)
     const nblJudgment = result.nonBusinessLandJudgmentDetail;
+    /**
+     * 🔴 STEP 0.62(상업용건물 부수토지 초과분)도 `nblOverride`의 소스여야 한다 (E6-01, 2026-09-02 코드리뷰).
+     *
+     * 단건 엔진은 `runCommercialAppurtenantLandStep`이 `effectiveInput`에
+     * `isNonBusinessLand: true` + `nonBusinessLandAreaRatio`를 **파생 주입**하고 그 값으로 세율을 정한다.
+     * 그런데 그 파생 입력은 result에 echo되지 않아 여기 `correctedSingleInput`에 복원되지 않았고,
+     * 그룹 세액 재계산에서 「소득세법」 §104①8호 +10%p가 통째로 사라졌다
+     * (실측 그룹세액 −14,403,750원 → §104⑤ 1호 바닥 완충 후 최종 **11,683,750원 과소**).
+     * clause8 echo도 0이 되어 §104⑤ 8호 크로스 조정이 함께 소실됐다.
+     *
+     * ⇒ 단건 엔진과 **같은 leaf**(`judgeAppurtenantLandExcess`)로 재판정한다. 값을 새로 배관하는
+     *    대신 같은 함수를 부르므로 dual truth가 생기지 않는다(구분소유 지분율은 판정식에서 약분된다).
+     */
+    const cal = item.commercialAppurtenantLand;
+    const calExcess =
+      !nblJudgment && item.propertyType === "commercial_building" && cal
+        ? judgeAppurtenantLandExcess({
+            landArea: cal.totalLandArea,
+            buildingFootprintArea: cal.totalBuildingFootprintArea,
+            zoneType: cal.zoneType,
+            unapprovedBuilding: cal.unapprovedBuilding,
+            context: "상업용건물",
+          })
+        : undefined;
     const nblOverride = nblJudgment
       ? {
           isNonBusinessLand: nblJudgment.isNonBusinessLand,
           nonBusinessLandAreaRatio: nblJudgment.surcharge.nonBusinessAreaRatio,
         }
-      : undefined;
+      : calExcess && calExcess.nonBusinessArea > 0
+        ? {
+            isNonBusinessLand: true,
+            nonBusinessLandAreaRatio: calExcess.nonBusinessRatio,
+          }
+        : undefined;
     /**
      * 배우자등 이월과세(§97의2) — **채택된 시나리오의 §104② 기산 사실**로 item을 교정.
      *
@@ -553,7 +583,13 @@ function computeAggregateOnce(
     // 단건 엔진은 skipBasicDeduction=true로 호출되어 r.result.determinedTax는 양도소득금액 기준 부정확.
     // taxBaseShare(= incomeAfterOffset - allocatedBasic) 기준으로 다건 컨텍스트에서 재계산해 노출한다.
     const taxBaseShare = Math.max(0, taxableAfterReduction[idx] - allocatedBasic[idx]);
-    const effectiveRate = r.result.appliedRate + (r.result.surchargeRate ?? 0);
+    /**
+     * 🔴 `appliedRate`는 **이미 중과 포함 실효세율**이다 — `surchargeRate`를 더하면 이중 계상이다.
+     *    `transfer-tax-rate-calc.ts:410` `appliedRate: roundRate(baseRate + additionalRate * ratio)`
+     *    (다주택 경로 :566도 `baseRate + additionalRate`). `surchargeRate`는 별도 echo다.
+     *    2026-09-02 코드리뷰 — 참고값 `refCalculatedTax`와 상세명세서 산식이 과대 표시됐다.
+     */
+    const effectiveRate = r.result.appliedRate;
     // 파트가 있는 자산(토지·건물 분리취득 · 한 필지 중 일부만 비사업용)은 **자산 단독 세액**을
     // 그대로 쓴다. 아래 근사식은 `appliedRate`가 그 자산에서 **파트 최고세율**이라
     // 자산 과세표준 전체에 곱해지면 과대해진다(계획서 §4.12 — 실측 +87,140,000).

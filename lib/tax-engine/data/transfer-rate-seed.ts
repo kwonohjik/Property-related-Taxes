@@ -53,7 +53,18 @@ export const transferTaxSeeds = [
         combinedMaxRate: 0.80,
         minHoldingYears: 3,
       },
-      exclusions: ["multi_house_surcharge", "non_business_land", "unregistered"],
+      /**
+       * ⚠️ **엔진이 읽지 않는 데이터다** (D-1·COV-7, 2026-09-02 코드리뷰).
+       * `rate-table.schema.ts`가 `z.array(z.string())`으로 파싱만 하고 `calcLongTermHoldingDeduction`은
+       * 이 배열을 참조하지 않는다 — 배제 판정은 전부 코드 분기(L-0·L-0a·L-0b·L-1)가 한다.
+       *
+       * 게다가 `"non_business_land"`는 **현행 §95②과 어긋난다** — 현행 괄호의 제외 열거는
+       * 「미등기양도자산(§104③)과 같은 조 제7항 각 호에 따른 자산」뿐이고 비사업용 토지는
+       * §104①8호라 열거에 없다(2016.1.1. 이후 표1 공제 적용). 죽어 있어 세액 영향은 없었으나,
+       * 이 값을 근거로 삼는 후속 작업을 막기 위해 현행법에 맞춰 두고 dead임을 명시한다.
+       * 연혁(2016.1.1. 전 배제)은 `data/lthd-non-business-land-era.ts`가 담당한다.
+       */
+      exclusions: ["multi_house_surcharge", "unregistered"],
     },
     special_rules: null,
     is_active: true,

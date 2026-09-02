@@ -85,7 +85,11 @@ describe("D-1 총괄 엔진 통합", () => {
     const r = judgeNonBusinessLand(input, DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(r.isNonBusinessLand).toBe(true);
     expect(r.surcharge.additionalRate).toBe(0.10);
-    expect(r.surcharge.longTermDeductionExcluded).toBe(true);
+    // 🔴 현행 「소득세법」 §95② 괄호의 제외 열거는 「미등기양도자산(§104③)과 같은 조 **제7항**
+    //    각 호에 따른 자산」뿐이고 비사업용 토지는 §104**①8호**라 열거에 없다 — 표1 공제가 적용된다.
+    //    종전 단언(true)은 현행법과 어긋난 echo를 고정하고 있었다 (E6-04, 2026-09-02 코드리뷰).
+    //    2016.1.1. 전 양도분은 실제로 배제였고 그 축은 `nbl-lthd-era.anchor.test.ts`가 덮는다.
+    expect(r.surcharge.longTermDeductionExcluded).toBe(false);
     expect(r.judgmentReason).toContain("편입유예");
   });
 
