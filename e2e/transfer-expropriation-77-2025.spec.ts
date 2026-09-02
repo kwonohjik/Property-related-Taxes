@@ -166,8 +166,22 @@ test.describe("비자발적 양도 감면 UI (§77 2025 개정 · §77의2 · §
      */
     const reductionFormula = page.getByText("⑤ 감면세액 = 산출세액 ×");
     await expect(reductionFormula).toBeVisible();
-    await expect(reductionFormula.getByText("감면대상소득금액", { exact: true })).toBeVisible();
+    /**
+     * 🔄 2026-09-03 정정 — 분자 이름이 「감면대상소득금액」에서 바뀌었다.
+     * §90①의 **B**가 「감면대상 양도소득금액」이고 부표1 ⑲도 그 B라, 같은 낱말이 한 화면에서
+     * 두 뜻으로 쓰이고 있었다(카드 28,550,000 ↔ ⑲ 288,000,000). 기본공제·감면율이 이미
+     * 반영됐음을 이름에 박아 충돌을 없앴다 — `RATED_REDUCIBLE_INCOME_LABEL` 단일 소스.
+     */
+    await expect(
+      reductionFormula.getByText("감면대상소득 (기본공제 차감·감면율 반영)", { exact: true }),
+    ).toBeVisible();
     await expect(reductionFormula.getByText("과세표준", { exact: true })).toBeVisible();
+    // ⑲와 다른 수임을 화면이 스스로 밝힌다 — 침묵하면 사용자가 어느 쪽이 틀렸는지 알 수 없다.
+    await expect(
+      page.getByText("신고서 ⑲ 「세액감면대상금액」은 기본공제·감면율을 반영하기 前 금액", {
+        exact: false,
+      }),
+    ).toBeVisible();
 
     // 별지84호 부표2 — ⑲ 세액감면대상금액 = 양도소득금액 전액(§90①·감면율 前),
     // 감면후 소득금액 = 양도소득금액(§90① 소득 미차감). rate-곱값(53,425,403) 금지.

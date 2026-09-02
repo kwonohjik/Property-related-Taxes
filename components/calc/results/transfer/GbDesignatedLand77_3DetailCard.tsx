@@ -12,6 +12,8 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { ELIGIBLE_INCOME_VS_FORM_NOTE } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { ReductionStatutoryCapRow } from "@/components/calc/results/transfer/ReductionStatutoryCapRow";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 
@@ -64,7 +66,7 @@ export function GbDesignatedLand77_3DetailCard({
         <p>{(d.reductionRate * 100).toFixed(0)}%</p>
       </div>
       <div className="space-y-0.5">
-        <p className="text-muted-foreground">② 감면대상소득금액 = (양도소득금액 − 기본공제) × 감면율</p>
+        <p className="text-muted-foreground">② {RATED_REDUCIBLE_INCOME_LABEL} = (양도소득금액 − 기본공제) × 감면율</p>
         {(() => {
           // base = 양도소득금액 − 기본공제. 엔진 echo(taxableIncome) 우선, 없으면 단건 taxBase(= 과세표준) fallback.
           const base = d.taxableIncome ?? taxBase;
@@ -77,6 +79,7 @@ export function GbDesignatedLand77_3DetailCard({
             <p className="font-medium">{formatKRW(d.reducibleIncome)}</p>
           );
         })()}
+        <p className="text-muted-foreground">{ELIGIBLE_INCOME_VS_FORM_NOTE}</p>
       </div>
       {excludedByOverlap ? (
         <p className="text-muted-foreground border-t border-primary/20 pt-1.5">
@@ -89,7 +92,7 @@ export function GbDesignatedLand77_3DetailCard({
       ) : (
         <>
           <div className="space-y-0.5 border-t border-primary/20 pt-1.5">
-            <p className="text-muted-foreground">③ 감면세액 = 산출세액 × <Frac top="감면대상소득금액" bottom="과세표준" /></p>
+            <p className="text-muted-foreground">③ 감면세액 = 산출세액 × <Frac top={RATED_REDUCIBLE_INCOME_LABEL} bottom="과세표준" /></p>
             <p className="font-medium">
               {formatKRW(calculatedTax ?? 0)} × <Frac top={formatKRW(d.reducibleIncome)} bottom={formatKRW(taxBase ?? 0)} />
               {" = "}{formatKRW(d.rawReductionAmount)}

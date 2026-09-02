@@ -10,6 +10,26 @@
  * ⚠️ §77·§77의2·§77의3의 result.reducibleIncome은 감면율(15/20/40/25%)을 곱한 값이므로 ⑲에 직접 쓰면 안 됨.
  *    exact-match 라우팅(부분일치 .includes 금지).
  */
+/**
+ * §90①의 **`(B − C) × E`** 표시명 — 결과뷰·상세카드 **단일 소스**.
+ *
+ * 🔴 종전에는 이 값을 「감면대상소득금액」이라 불렀다. 그런데 §90①의 **B**가
+ * 「감면대상 양도소득금액」이고 별지84호 부표1 **⑲ 세액감면대상금액**도 그 B다 —
+ * 즉 **같은 낱말이 한 화면에서 두 뜻**으로 쓰였다(§77 공익수용 6억: 카드 28,550,000 ↔
+ * ⑲ 288,000,000). 기본공제·감면율이 이미 반영됐음을 이름에 박아 충돌을 없앤다.
+ *
+ * 다건 감면 재계산 카드(`MultiTransferTaxResultView`)와 **같은 문구**여야 한다 —
+ * 두 화면이 같은 값을 다르게 부르면 이 정정이 무의미해진다.
+ */
+export const RATED_REDUCIBLE_INCOME_LABEL = "감면대상소득 (기본공제 차감·감면율 반영)";
+
+/**
+ * 위 값과 신고서 ⑲가 **다른 수**임을 밝히는 안내 문구 — §77·§77의2·§77의3 상세카드 공용.
+ * 침묵하면 사용자가 같은 화면의 두 숫자를 두고 어느 쪽이 틀렸는지 알 수 없다.
+ */
+export const ELIGIBLE_INCOME_VS_FORM_NOTE =
+  "※ 신고서 ⑲ 「세액감면대상금액」은 기본공제·감면율을 반영하기 前 금액(「소득세법」 §90①의 B)이라 위 값과 다릅니다.";
+
 export function reductionEligibleIncome(
   reductionTypeApplied: string | undefined,
   fullTransferIncome: number,

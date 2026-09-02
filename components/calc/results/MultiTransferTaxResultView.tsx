@@ -9,6 +9,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { cn } from "@/lib/utils";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import { reductionEligibleIncome } from "./transfer/reduction-eligible-income";
+import { RATED_REDUCIBLE_INCOME_LABEL } from "./transfer/reduction-eligible-income";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
@@ -169,7 +170,7 @@ function ReductionRecalculationSection({
                       (entry.eligibleIncomeBeforeRate ?? entry.totalReducibleIncome) && (
                       <>
                         <span className="text-muted-foreground">
-                          감면대상소득 (기본공제 차감·감면율 반영)
+                          {RATED_REDUCIBLE_INCOME_LABEL}
                         </span>
                         <span className="text-right tabular-nums">
                           {entry.reducibleIncomeAfterBasicDeduction.toLocaleString()}
