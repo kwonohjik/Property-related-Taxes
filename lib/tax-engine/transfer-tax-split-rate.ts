@@ -33,7 +33,7 @@
  * 12억 안분 대상에서 그 토지분을 빼는 방식으로 처리한다
  * (`transfer-tax-mixed-use-helpers.ts` `buildHousingPart` ①→②).
  */
-import { applyRate, calculateProgressiveTax } from "./tax-utils";
+import { applyRate, applyFairMarketRatio, calculateProgressiveTax } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { calcTax, computeBracketBreakdown, clauseBucketKey } from "./transfer-tax-rate-calc";
@@ -437,7 +437,10 @@ function computePartialNblTax(
 
   // 안분 기준은 **면적비율**로 종전(`calcTax` T-2)과 동일하게 둔다. split이 쓰는
   // 「기본공제를 최고세율 파트에 전액 귀속」으로 바꾸는 것은 P8 범위 밖이다(Surgical).
-  const nblBase = applyRate(ctx.taxBase, ratio);
+  // 정수 분수연산 — `applyRate`(double 곱)는 ratio 0.7 등에서 1~2원 과소 안분한다 (E6-02).
+  // `applyFairMarketRatio`는 비율을 정수 분자(×10000)로 바꿔 곱하므로 같은 계열의 드리프트가 없다
+  // (`transfer-tax-lthd.ts`가 같은 이유로 이미 이 헬퍼를 쓴다 — 「세법은 floor」 원칙 유지).
+  const nblBase = applyFairMarketRatio(ctx.taxBase, ratio);
   const otherBase = ctx.taxBase - nblBase;
   if (nblBase <= 0 || otherBase <= 0) return null;
 
