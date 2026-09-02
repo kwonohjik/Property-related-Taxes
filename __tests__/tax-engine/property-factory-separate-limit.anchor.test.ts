@@ -192,13 +192,16 @@ describe("미입력은 통과시키지 않는다 — 모르는 채 유리하게 
 /**
  * 목장용지 면적 한도 — 「지방세법 시행령」 §102①3호 [표]
  *
- * 기준면적 = (축사 + 부대시설 + **max(초지, 사료밭)**) × 마릿수 ÷ 가축두수 단위
+ * 기준면적 = (축사 + 부대시설 + 초지 + 사료밭 중 **보유 시설분 합산**) × 마릿수 ÷ 가축두수 단위
  *
  * ⚠️ 마릿수는 **직전 연도 연중 최고**다(§102①3호 본문) — 양도세 별표1의3 2호의
  *   「과세기간 평균」과 다른 기준이므로 두 세목이 같은 값을 쓰면 안 된다.
  *
- * 「초지 또는 사료밭」을 max로 읽는 근거·미확정 사유는
- * `docs/02-design/features/livestock-standard-area-limit.plan.md` 참조.
+ * ⚠️ 종전 헤더는 「max(초지, 사료밭)」이라고 적었으나 **바로 아래 자기 자신의 테스트가 합산을
+ *   단언**하고 있었다(PAS-1 75,125 = 7,512.5×10 · PAS-3 dairy 7,518 = 11+7+5,000+2,500).
+ *   max 안은 검토 후 폐기됐다 — 그 서술만 믿고 되돌리면 한도가 줄어 회귀가 난다
+ *   (V4-a, 2026-09-02 코드리뷰. 같은 드리프트가 `data/livestock-standards.ts` 헤더에도 있었다).
+ *   경위: `docs/02-design/features/livestock-standard-area-limit.plan.md`
  */
 describe("§102①3호 — 목장용지 가축별 기준면적", () => {
   const pasture = (over: Partial<SeparateTaxationInput> = {}): SeparateTaxationInput => ({
