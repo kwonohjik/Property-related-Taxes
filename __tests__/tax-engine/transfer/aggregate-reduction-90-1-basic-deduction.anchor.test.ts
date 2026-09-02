@@ -26,12 +26,18 @@
  * | 감면 | 82,530,000 | 82,962,094 | **82,530,000** |
  * | 총부담 | 107,289,000 | 106,900,114 | **107,289,000** |
  *
- * ── ⚠️ 두 축을 한 판별자로 묶지 말 것 ─────────────────────────────
- * `reducibleIncome`의 의미는 **두 축**으로 갈린다:
- *   · 감면율 반영 여부 → `aggregateReductionRate`
- *   · 기본공제 차감 여부 → **`reducibleIncomeNetOfBasicDeduction`** (이번에 신설)
- * §69(자경농지)는 감면율이 100%라 rate 축에서는 「반영됨」이지만 기본공제 축에서는 **gross**다.
- * rate 유무로 판별하면 §69를 net으로 오분류한다.
+ * ── 🔴 정정 (2026-09-03) — 「net 유형」 분류는 틀렸었다 ────────────
+ * 최초 구현은 §77·§77의2·§77의3을 「자체 산식에서 이미 기본공제를 뺐다」고 보아 C에서
+ * **제외**했다(`reducibleIncomeNetOfBasicDeduction`). 그 전제가 틀렸다 — 집계는 단건 엔진을
+ * `skipBasicDeduction: true`로 부르므로 세 조문이 받은 기본공제는 **0**이고, 따라서 그 값은
+ * net이 아니라 **gross**다. 제외 때문에 기본공제가 감면 분자에 **한 번도** 닿지 않았다.
+ * ⇒ 플래그를 폐기하고 `reducibleIncomeBuckets`(감면율 前 소득, 그 율)로 대체했다.
+ *   상세·실측: `aggregate-reduction-77-series-buckets.anchor.test.ts`.
+ *
+ * ⚠️ 그때 「제외는 오늘 no-op이고 미래를 위한 방어선」이라고 적었는데 그것도 틀렸다 —
+ *    뮤테이션이 0/11,914였던 이유는 no-op이어서가 아니라, `reducibleIncome`이 이미
+ *    **B × E**라 gross로 분류해도 나머지 `B × (1 − E)`가 비감면소득처럼 보여 C를 삼켰기
+ *    때문이다. **「값이 안 변한다」는 「영향이 없다」가 아니다.**
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
@@ -133,12 +139,13 @@ describe("§103② — 비감면소득이 기본공제를 먼저 흡수하면 C 
   });
 });
 
-describe("net 유형은 이중 차감하지 않는다", () => {
+describe("§77 계열도 §90①의 C를 뺀다", () => {
   /**
    * ⚠️ 이 구획을 지우지 말 것 — 도입 시점에 **다건 × §77 조합 테스트가 하나도 없었다**.
-   * net 유형을 gross로 오분류하는 뮤테이션이 엔진 전건(11,914건) 중 **0건**에 걸렸다.
+   * 그래서 §77 계열을 C에서 제외한 오분류가 엔진 전건 중 **0건**에 걸렸고, 그 「0건」을
+   * 「영향이 없다」로 읽어 결함을 한 번 놓쳤다(2026-09-03 정정).
    */
-  it("K5b: 🔴 §77(공익수용) 다건 — 단건과 감면·총부담이 일치한다 (이중 차감 금지)", () => {
+  it("K5b: §77(공익수용) 다건 — 단건과 감면·총부담이 일치한다", () => {
     const s0 = baseTransferInput({
       propertyType: "land",
       isOneHousehold: false,
@@ -166,33 +173,25 @@ describe("net 유형은 이중 차감하지 않는다", () => {
       rates,
     );
     expect(single.reductionAmount, "§77이 적격이어야 이 anchor가 의미를 갖는다").toBeGreaterThan(0);
-    // net 플래그가 결과까지 실려야 M-8이 이중 차감을 피한다(명시 prop 매핑 strip 방지).
-    expect(single.reducibleIncomeNetOfBasicDeduction).toBe(true);
     /**
-     * ⚠️ 다건 §77은 단건과 **원래 일치하지 않는다**(감면 8,855,000 ↔ 8,932,539 · 총부담 −69,786).
-     * 이 값은 §90① `− C` 정정 **前후가 같다**(실측) — 즉 **별개의 선행 결함**이고 이 PR 범위 밖이다.
-     * 여기서는 「이 정정이 그 값을 건드리지 않는다」를 고정한다.
+     * 최초 구현에서는 여기가 8,855,000 ↔ **8,932,539**로 갈렸고(총부담 −69,786), 그것을
+     * 「별개의 선행 결함」으로 남겼다. 실제로는 이 정정과 **같은 뿌리**였다 — §77 계열을
+     * C에서 제외한 것이 원인이다(2026-09-03 해소).
      */
     expect(single.reductionAmount).toBe(8_855_000);
-    expect(multi.reductionAmount).toBe(8_932_539);
-    expect((multi.totalTax ?? 0) - ((single.totalTax as number) ?? 0)).toBe(-69_786);
+    expect(multi.reductionAmount).toBe(8_855_000);
+    expect((multi.totalTax ?? 0) - ((single.totalTax as number) ?? 0)).toBe(0);
   });
 
-  it("K5: §97은 gross — `reducibleIncomeNetOfBasicDeduction` 미설정", () => {
+  it("K5: §97은 버킷을 싣지 않는다 — M-8 합성 경로가 정확하기 때문", () => {
     /**
-     * 세 net 조문(§77·§85의10·대토)은 자체 산식에서 자산별 기본공제를 이미 빼고 감면율까지
-     * 곱해 둔다(`public-expropriation-reduction.ts` `cashTaxable = cashIncome − basicDeductionOnCash` 등).
-     * M-8이 또 빼면 이중 차감이다.
-     * ⚠️ §69는 감면율 100%라 rate 축에서는 「반영됨」이지만 기본공제 축에서는 **gross**다 —
-     *    두 축을 한 판별자로 묶으면 §69가 net으로 오분류된다.
-     *
-     * 🔬 **정직한 한계** — net 유형을 gross로 오분류하는 뮤테이션은 **현행 조문에서는 잡히지 않는다**.
-     *    세 조문의 감면율이 모두 **≤ 40%**라 `비감면소득 = 소득 − 감면대상소득`이 항상
-     *    기본공제(250만원)를 넘어 **C = 0**이 되기 때문이다(K5b의 §77도 그래서 값이 안 변한다).
-     *    ⇒ `reducibleIncomeNetOfBasicDeduction` 분기는 **오늘은 no-op이고, 감면율이 높은 net
-     *    유형이 새로 들어올 때를 위한 방어선**이다. 지우면 그때 조용히 이중 차감된다.
+     * `reducibleIncome`이 **감면율 前 B**인 유형(§97 계열·legacy 장기임대·legacy 신축·
+     * 하이브리드)은 M-8이 `[{ income: reducibleIncome, rate: aggregateReductionRate ?? 1 }]`로
+     * 합성해도 §90①의 `(B − C) × E`가 정확히 복원된다. 버킷은 그 합성이 불가능한
+     * §77 계열만 싣는다 — 필요 없는 곳에 실으면 두 경로가 갈릴 자리만 늘어난다.
      */
     const { single } = bothWays({ reductions: [R97] });
-    expect(single.reducibleIncomeNetOfBasicDeduction).toBeUndefined(); // §97 = gross
+    expect(single.aggregateReductionRate).toBe(0.5);
+    expect(single.reducibleIncomeBuckets).toBeUndefined();
   });
 });

@@ -23,6 +23,22 @@ const LEGACY_RENTAL_ARTICLE: Record<RentalHousingType, string> = {
   public_support_private: TRANSFER_REDUCTION_ARTICLE.RENTAL_97_4,
   public_purchase: TRANSFER_REDUCTION_ARTICLE.RENTAL_97_5,
 };
+/**
+ * §90①의 `B`를 감면율별 조각으로 싣는다 — 소득 0인 조각은 버리고 **감면율 오름차순**으로 정렬.
+ *
+ * 정렬 순서가 곧 「소득세법」 §103②의 기본공제 흡수 순서다. §103②은 감면소득 **내부의**
+ * 순서를 정하지 않지만, §77(현금·채권)·§77의2(현금·대토)의 단건 산식이 이미 **낮은 율부터**
+ * 배정하고 있어 그 해석을 그대로 따른다 — 다건이 다른 순서를 쓰면 같은 사안의 세액이
+ * 경로마다 갈린다.
+ */
+function reducibleBuckets(
+  buckets: ReducibleIncomeBucket[],
+): ReducibleIncomeBucket[] | undefined {
+  const kept = buckets.filter((b) => b.income > 0);
+  if (kept.length === 0) return undefined;
+  return [...kept].sort((a, b) => a.rate - b.rate);
+}
+
 import type { ParsedRates } from "./transfer-tax-helpers";
 import {
   type RentalReductionInput,
@@ -50,6 +66,7 @@ import { evaluateAnyHybridTaxAmount } from "./transfer-reductions/unsold-hybrid-
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { LongTermRentalRuleSet, NewHousingMatrixData } from "./schemas/rate-table.schema";
 import type { TransferReduction } from "./types/transfer.types";
+import type { ReducibleIncomeBucket } from "./types/transfer-result.types";
 import {
   calculateGbDesignatedLandReduction,
   type GbDesignatedLandResult,
@@ -70,10 +87,10 @@ export interface ReductionsResult {
    */
   reducibleIncome?: number;
   /**
-   * `reducibleIncome`이 이미 **기본공제를 뺀 값**인가 (§90①의 `B − C`).
-   * 상세: `TransferTaxResult.reducibleIncomeNetOfBasicDeduction`.
+   * §90①의 C를 흡수시킬 감면대상소득 버킷 (감면율 오름차순).
+   * 상세: `TransferTaxResult.reducibleIncomeBuckets`.
    */
-  reducibleIncomeNetOfBasicDeduction?: boolean;
+  reducibleIncomeBuckets?: ReducibleIncomeBucket[];
   /**
    * 다건 합산 M-8이 `reducibleIncome`에 **추가로 곱해야 할** 감면율.
    *
@@ -144,11 +161,12 @@ export function calcReductions(
     /** 감면대상 양도소득금액 (합산 재계산용 분자, 편입 부분감면 시 비율 적용 후) */
     reducibleIncome?: number;
     /**
-     * `reducibleIncome`이 이미 **기본공제를 뺀 값**인가 (§90①의 `B − C`).
-     * 자체 산식에서 기본공제를 배정·차감하는 §77·§85의10·대토만 true.
-     * 상세: `TransferTaxResult.reducibleIncomeNetOfBasicDeduction`.
+     * §90①의 C를 흡수시킬 감면대상소득 버킷 (감면율 오름차순).
+     * 자체 산식에서 기본공제를 배정·차감하는 §77·§77의2·§77의3만 싣는다 —
+     * 그 세 유형은 `reducibleIncome`에 감면율까지 박아 두어 M-8이 B·E를 복원할 수 없다.
+     * 상세: `TransferTaxResult.reducibleIncomeBuckets`.
      */
-    reducibleIncomeNetOfBasicDeduction?: boolean;
+    reducibleIncomeBuckets?: ReducibleIncomeBucket[];
   /**
    * 다건 합산 M-8이 `reducibleIncome`에 **추가로 곱해야 할** 감면율.
    *
@@ -312,7 +330,16 @@ export function calcReductions(
     });
     publicExpropriationDetail = result;
     if (result.isEligible && result.reductionAmount > 0) {
-      candidates.push({ amount: result.reductionAmount, type: "public_expropriation", reducibleIncome: result.breakdown.reducibleIncome, reducibleIncomeNetOfBasicDeduction: true });
+      candidates.push({
+        amount: result.reductionAmount,
+        type: "public_expropriation",
+        reducibleIncome: result.breakdown.reducibleIncome,
+        // 현금분·채권분은 **서로 다른 율**이다 — 평균율로는 §90①의 `(B − C) × E`가 복원되지 않는다.
+        reducibleIncomeBuckets: reducibleBuckets([
+          { income: result.breakdown.cashIncome, rate: result.breakdown.cashRate },
+          { income: result.breakdown.bondIncome, rate: result.breakdown.bondRate },
+        ]),
+      });
     }
   }
 
@@ -337,7 +364,15 @@ export function calcReductions(
     });
     gbDesignatedLandDetail = result;
     if (result.isEligible && result.reductionAmount > 0) {
-      candidates.push({ amount: result.reductionAmount, type: "gb_designated_land", reducibleIncome: result.reducibleIncome, reducibleIncomeNetOfBasicDeduction: true });
+      candidates.push({
+        amount: result.reductionAmount,
+        type: "gb_designated_land",
+        reducibleIncome: result.reducibleIncome,
+        // 양도소득금액 전액이 단일 율의 감면대상이다(§77의3 — 1호 40% / 2호 25%).
+        reducibleIncomeBuckets: reducibleBuckets([
+          { income: transferIncome, rate: result.reductionRate },
+        ]),
+      });
     }
   }
 
@@ -358,7 +393,16 @@ export function calcReductions(
     });
     replacementLandDetail = result;
     if (result.isEligible && result.reductionAmount > 0) {
-      candidates.push({ amount: result.reductionAmount, type: "replacement_land_comp", reducibleIncome: result.reducibleIncome, reducibleIncomeNetOfBasicDeduction: true });
+      candidates.push({
+        amount: result.reductionAmount,
+        type: "replacement_land_comp",
+        reducibleIncome: result.reducibleIncome,
+        // 현금보상분은 **감면대상 자체가 아니다** — 버킷에 싣지 않으면 M-8이 비감면소득으로 보아
+        // §103②대로 기본공제를 그쪽에서 먼저 흡수한다(단건 산식의 `basicDeductionOnCash`와 동형).
+        reducibleIncomeBuckets: reducibleBuckets([
+          { income: result.eligibleTransferIncome ?? 0, rate: result.reductionRate },
+        ]),
+      });
     }
   }
 
@@ -493,8 +537,7 @@ export function calcReductions(
     reductionLegalBasisOverride: best.amount > 0 ? best.legalBasisOverride : undefined,
     reducibleIncome: best.amount > 0 ? best.reducibleIncome : undefined,
     aggregateReductionRate: best.amount > 0 ? best.aggregateReductionRate : undefined,
-    reducibleIncomeNetOfBasicDeduction:
-      best.amount > 0 ? best.reducibleIncomeNetOfBasicDeduction : undefined,
+    reducibleIncomeBuckets: best.amount > 0 ? best.reducibleIncomeBuckets : undefined,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,

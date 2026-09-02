@@ -174,8 +174,14 @@ describe("F17-A · 일반건물 감면 배관", () => {
     expect(base.determinedTax).toBe(204_930_000);
     expect(base.reductionAmount).toBe(0);
 
-    expect(red.reductionAmount).toBe(20_582_333);
-    expect(red.determinedTax).toBe(184_347_667);
+    /**
+     * 🔴 값 갱신 (2026-09-03) — 20,582,333 → **20,493,000**. 다건 M-8이 「소득세법」 §90①의
+     * `− C`(양도소득 기본공제)를 §77 계열에도 적용하도록 정정했다. 토지·건물 두 파트가 **모두**
+     * 감면대상이라 §103②의 비감면소득이 없고, 그래서 C 250만원이 감면 분자에 그대로 실린다.
+     * 상세: `__tests__/tax-engine/transfer/aggregate-reduction-77-series-buckets.anchor.test.ts`.
+     */
+    expect(red.reductionAmount).toBe(20_493_000);
+    expect(red.determinedTax).toBe(184_437_000);
     expect(red.determinedTax).not.toBe(base.determinedTax);
   });
 
@@ -195,8 +201,9 @@ describe("F17-A · 일반건물 감면 배관", () => {
     const red = await post(gbAsset(ESTIMATED), { reductions: RED_77 }, { useEstimatedAcquisition: true });
 
     expect(base.determinedTax).toBe(115_332_000);
-    expect(red.reductionAmount).toBe(11_614_838);
-    expect(red.determinedTax).toBe(103_717_162);
+    // 값 갱신 (2026-09-03) — §90①의 `− C` 적용. GBR-01과 같은 뿌리다.
+    expect(red.reductionAmount).toBe(11_533_200);
+    expect(red.determinedTax).toBe(103_798_800);
   });
 
   it("GBR-04: 대조군 — 감면을 안 고르면 종전 값 그대로다 (회귀 0)", async () => {
@@ -247,8 +254,15 @@ describe("§77의3 매수 경로 × 일반건물 파트", () => {
     const claim = await post(gbAsset(), { reductions: RED_77_3("claim") });
     const negotiated = await post(gbAsset(), { reductions: RED_77_3("negotiated") });
 
+    /**
+     * ⭐ 두 값의 **갱신 여부가 갈리는 것 자체가 §103②이다** (2026-09-03).
+     * · `claim`(§17 매수청구) — 건물 파트가 감면대상이 아니라 **비감면소득**이 되어 기본공제를
+     *   먼저 흡수한다 ⇒ C = 0 ⇒ **41,164,666 그대로**.
+     * · `negotiated`(§20 협의매수) — 두 파트 모두 감면대상이라 비감면소득이 없다 ⇒ C 250만원이
+     *   감면 분자에 실린다 ⇒ 82,329,332 → **81,972,000**.
+     */
     expect(claim.reductionAmount).toBe(41_164_666);
-    expect(negotiated.reductionAmount).toBe(82_329_332);
+    expect(negotiated.reductionAmount).toBe(81_972_000);
     expect(negotiated.determinedTax).toBeLessThan(claim.determinedTax);
   });
 });

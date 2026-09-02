@@ -39,6 +39,7 @@ import type { New99Result } from "./transfer-reductions/new-99";
 import type { Unsold988Result } from "./transfer-reductions/unsold-98-8";
 import type { UnsoldHybridResult } from "./transfer-reductions/unsold-hybrid";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
+import type { ReducibleIncomeBucket } from "./types/transfer-result.types";
 import type { TransferTaxPenaltyResult } from "./transfer-tax-penalty";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start"; // 로컬 사용(buildExemptEarlyResult) — 421행 re-export와 별개
@@ -166,7 +167,7 @@ export interface FinalizeResult {
   reducibleIncome?: number;
   aggregateReductionRate?: number;
   /** `reducibleIncome`이 이미 기본공제를 뺀 값인가 (§90①의 `B − C`) — 다건 M-8이 이중 차감을 피하는 축. */
-  reducibleIncomeNetOfBasicDeduction?: boolean;
+  reducibleIncomeBuckets?: ReducibleIncomeBucket[];
   rentalReductionDetail: TransferTaxResult["rentalReductionDetail"];
   newHousingReductionDetail: TransferTaxResult["newHousingReductionDetail"];
   publicExpropriationDetail: TransferTaxResult["publicExpropriationDetail"];
@@ -297,7 +298,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
-    reducibleIncomeNetOfBasicDeduction,
+    reducibleIncomeBuckets,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
@@ -542,7 +543,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     reductionLegalBasisOverride,
     reducibleIncome,
     aggregateReductionRate,
-    reducibleIncomeNetOfBasicDeduction,
+    reducibleIncomeBuckets,
     rentalReductionDetail,
     newHousingReductionDetail,
     publicExpropriationDetail,
