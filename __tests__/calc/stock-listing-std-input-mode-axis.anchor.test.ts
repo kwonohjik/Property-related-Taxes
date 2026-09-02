@@ -18,10 +18,8 @@
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  adaptFlatToApiBody,
-  resolveListingClosingAvg,
-} from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
+import { resolveListingClosingAvg } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
+import { buildStockTransferApiBody } from "@/lib/calc/stock-transfer-tax-api";
 import { validateStep2Domestic } from "@/lib/calc/stock-transfer-tax-validate-step2";
 import { createInitialStockFormData } from "@/lib/stores/calc-wizard-stock-form";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
@@ -69,20 +67,29 @@ describe("RLA — resolveListingClosingAvg (파생 단일 진실)", () => {
   });
 
   /**
-   * 🔑 **읽기 지점을 직접 건다.** RLA-1~4는 헬퍼만 본다 — adapter가 헬퍼를 «부르지 않고»
-   *    옛 필드를 그대로 읽어도 그 넷은 전부 통과한다. 배관은 여기서만 관측된다.
-   *    simple 모드는 postListingDetail을 보내지 않으므로 이 숫자가 곧 엔진 입력이다.
+   * 🔴 **여기서 «진입점»을 잘못 골라 실제 결함을 놓쳤다** (2026-09-02 정정).
+   *
+   * 종전 RLA-5는 `adaptFlatToApiBody`를 **직접** 호출했다. 그런데 그 함수는
+   * `buildStockTransferApiBody`에서 **`listing_only`·`full`에만 게이트**돼 호출된다
+   * (`stock-transfer-tax-api.ts:400`). simple 모드는 그 줄을 아예 타지 않으므로,
+   * adapter의 simple 분기는 **API 경로에서 죽은 코드**였다. 그래서
+   *   · 이 anchor는 통과하고
+   *   · 뮤테이션(M-A)도 빨개지고
+   *   · 화면 미리보기는 파생값을 보여주는데
+   *   · **엔진만 `undefined`를 받아 취득가액이 0**이 됐다(실측: direct 40,000,000 vs daily 0).
+   *
+   * ⇒ 배관 anchor의 진입점은 **UI가 실제로 부르는 함수**여야 한다
+   *   ([[feedback_leaf_anchor_skips_zod_layer]]). leaf를 겨눈 뮤테이션은
+   *   「구별력」은 증명해도 「도달성」은 증명하지 못한다.
    */
-  it("RLA-5 API 변환 — simple+daily는 표에서 산정한 값을 body에 싣는다", () => {
-    const body = adaptFlatToApiBody(
-      {
-        unlistedDetailMode: "simple",
+  it("RLA-5 API 변환 — simple+daily는 표에서 산정한 값을 body에 싣는다 (진입점 = UI가 부르는 함수)", () => {
+    const body = buildStockTransferApiBody(
+      postListingForm({
         listingStdInputMode: "daily",
         listingDatePriceAvg1Month: "8001", // ← 옛 필드를 읽으면 8001이 나온다
         listingPriceDates: DATES,
         listingPriceClosing: CLOSES,
-      },
-      true,
+      }),
     );
     expect(body.listingDatePriceAvg1Month).toBe(14000);
     expect(body.postListingDetail).toBeUndefined(); // simple 경로 유지 (엔진 무변경)

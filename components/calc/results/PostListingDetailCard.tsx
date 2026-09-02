@@ -193,6 +193,17 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             {" "}을 §163⑨ 환산 분모로 사용
           </p>
         )}
+        {/* ② 축의 짝 — 종전에는 ①만 배너가 있어, 결과만 보고는 «상장일 이후 1개월 종가»를
+            일자별로 넣었는지 알 수 없었다(계획서 자가검토 D-5).
+            ⚠️ 평균값은 `post.listingClosingAvg1Month`를 쓴다 — 엔진이 실제로 §165⑤ 첫 항으로
+               삼은 값 그 자체다. 배너용 사본을 따로 두면 갈릴 자리가 생긴다. */}
+        {result.valuationDetail?.listingDailyModeUsed && (
+          <p className="text-caption text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+            ✓ 상장일 이후 1개월 종가 일자별 입력 모드 — 자동 산정 평균{" "}
+            <strong>{(post.listingClosingAvg1Month ?? 0).toLocaleString()}</strong>
+            {" "}을 §165⑤ 계산식 첫 항으로 사용
+          </p>
+        )}
         {result.valuationDetail?.conversionUsedFallback && (
           <p className="text-caption text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 mt-1">
             ⚠ 양도일 이전 1개월 종가평균 미입력 — 1주당 양도가({(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()})를 §163⑨ 환산 분모로 자동 사용.

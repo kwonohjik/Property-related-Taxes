@@ -14,6 +14,7 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store
 import type { AcquisitionLotForm } from "@/lib/stores/calc-wizard-stock-types";
 import { SYNTH_SINGLE_TRANSFER_ID } from "@/lib/stores/calc-wizard-stock-store";
 import { adaptFlatToApiBody } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
+import { resolveListingClosingAvg } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 import {
   adaptUnlistedFlatToApiBody,
   shouldSkipNetIncome,
@@ -268,8 +269,31 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (acquisitionAvg !== undefined) body.acquisitionDatePriceAvg1Month = acquisitionAvg;
     // §163⑨ 분모 입력 방식 메타 (산식 영향 없음, UI mirror 패턴 식별용)
     if (form.transferStdInputMode) body.transferStdInputMode = form.transferStdInputMode;
+    // ② §165⑤ 첫 항 입력 방식 메타 (산식 영향 없음 — 결과 배너 표시용).
+    // 값 자체는 `listingDatePriceAvg1Month`가 이미 파생돼 실려 간다(resolveListingClosingAvg).
+    if (form.listingStdInputMode) body.listingStdInputMode = form.listingStdInputMode;
     if (form.listingDate) body.listingDate = form.listingDate;
-    const listingAvg = parseIntOrUndef(form.listingDatePriceAvg1Month);
+    /**
+     * 🔴 **simple 모드에서는 여기가 §165⑤ 첫 항의 «유일한» 세팅 지점이다.**
+     *
+     * 아래 adapter 호출(:400)은 `listing_only`·`full`에만 게이트돼 있어 simple은 타지 않는다.
+     * 종전에는 이 줄이 폼 필드를 그대로 읽었는데, ②의 daily 모드는 그 칸을 **비워 두는 것이
+     * 정상**이라(값은 종가 표에서 파생) body에 아무것도 안 실렸고 엔진이 `undefined`를 받아
+     * **취득가액이 조용히 0**이 됐다 — 화면 미리보기는 파생값을 보여주므로 갈렸다.
+     * (실측: 같은 10,000에 direct 40,000,000 vs daily 0)
+     *
+     * ⇒ 읽는 쪽 «전부»가 `resolveListingClosingAvg`를 거쳐야 한다. 이 줄이 네 번째 호출처다.
+     * anchor: `__tests__/calc/stock-listing-daily-banner.anchor.test.ts` LDB-5
+     */
+    let listingAvg: number | undefined;
+    if (form.acquiredBeforeListing) {
+      const derived = resolveListingClosingAvg(form);
+      // 0은 「자료 없음」이다(1개월 종가평균이 0일 수는 없다). 그때는 종전대로 undefined를
+      // 흘려 엔진의 「입력값 없음」 경고를 살린다 — 0을 실으면 그 진단이 사라진다.
+      listingAvg = derived > 0 ? derived : parseIntOrUndef(form.listingDatePriceAvg1Month);
+    } else {
+      listingAvg = parseIntOrUndef(form.listingDatePriceAvg1Month);
+    }
     if (listingAvg !== undefined) body.listingDatePriceAvg1Month = listingAvg;
 
     // 환산 — 비상장 보충적 평가 (3시점)
