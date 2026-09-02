@@ -101,6 +101,16 @@ export interface RentalHousingStepArgs {
   splitDetail?: SplitGainResult;
   /** 계산 단계 배열 (push 부수효과) */
   steps: CalculationStep[];
+  /**
+   * §163⑨ 상속·증여 취득가액 의제 판정 결과 (STEP 0.45) — A19(2026-09-02).
+   * 이 step은 조기반환이라 `finalizeTransferTax:604-605`를 타지 않는다. 넘겨받지 않으면
+   * `inheritedAcquisitionDetail`·`inheritedHouseValuationDetail` 두 필드가 함께 사라져
+   * `ReductionDetailCards`가 통째로 렌더되지 않는다. 세액 불변(표시 전용).
+   */
+  inheritedAcquisitionStep?: {
+    result?: TransferTaxResult["inheritedAcquisitionDetail"];
+    houseValuationResult?: TransferTaxResult["inheritedHouseValuationDetail"];
+  };
 }
 
 /**
@@ -309,6 +319,7 @@ export function runRentalHousingExceptionStep(
   const {
     effectiveInput, input, transferGain, usedEstimated,
     estimatedBase, estimatedDeduction, parsedRates, multiHouseSurchargeResult, splitDetail, steps,
+    inheritedAcquisitionStep,
   } = args;
 
   const holdPeriod = calculateHoldingPeriod(effectiveInput.acquisitionDate, effectiveInput.transferDate);
@@ -588,6 +599,13 @@ export function runRentalHousingExceptionStep(
 
   return {
     amendmentDetail,
+    // A19: §163⑨ 근거 2장 — 정상 경로 `transfer-tax-finalize.ts:604-605`와 동형.
+    ...(inheritedAcquisitionStep?.result
+      ? { inheritedAcquisitionDetail: inheritedAcquisitionStep.result }
+      : {}),
+    ...(inheritedAcquisitionStep?.houseValuationResult
+      ? { inheritedHouseValuationDetail: inheritedAcquisitionStep.houseValuationResult }
+      : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
     ...(reductionNotice || lthdNotice
       ? { warnings: [reductionNotice, lthdNotice].filter((x): x is string => x !== undefined) }

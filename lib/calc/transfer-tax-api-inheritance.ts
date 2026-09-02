@@ -12,6 +12,7 @@ import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-d
 import {
   sec164HouseStatus,
   sec164CommercialStatus,
+  sec164LandStatus,
   isFullyFilled,
 } from "./sec164-required-fields";
 
@@ -79,7 +80,28 @@ export function buildInheritedAcquisitionPayload(
 
   // case B post-deemed — ① 신고가액(상속=공시가격 / 증여=증여 신고가액)
   const reportedRaw = parseAmount(reportedSource);
-  if (reportedRaw <= 0) return {};
+  /**
+   * A03(2026-09-02): 종전에는 ①이 비면 payload를 **통째로 버렸다**. 그러면 ②(§164④~⑦)를
+   * 다 채워도 `runInheritedAcquisitionStep`이 `!rawInput.inheritedAcquisition`에서 먼저
+   * 반환해 **비교 자체가 일어나지 않는다** — 취득가액이 0이 되어 양도가 전액이 차익이 됐다
+   * (실측 상가 최대 124,740,000원 과대 · 주택 68,992,000원 · 토지는 양방향).
+   *
+   * 「소득세법 시행령」 §163⑨ 1호·2호는 「평가한 가액**과** §164④(⑤~⑦)의 가액 **중 많은 금액**」
+   * 이라 ②만 있어도 비교 대상이다. 엔진도 `reportedValue: 0`에서 `max(0, ②) = ②`를 채택한다.
+   *
+   * ⑧도 이 조합을 **의도적으로 통과**시킨다(`transfer-tax-validate-clause-a.ts:116` ·
+   * `transfer-tax-validate-commercial-asset.ts:53` 「①만 요구하면 ②를 다 채운 사용자가 막힌다」).
+   * ⇒ 같은 술어(`isFullyFilled` + `sec164*Status`)를 ④도 쓰게 해 validate↔API를 묶는다.
+   *
+   * ⚠️ **상속 전용이다.** 증여도 같은 줄을 타지만 ⑧이 step 0에서 「증여 신고가액을 입력하세요」로
+   *    차단하므로(실측), 게이트를 증여까지 넓히면 불필요한 회귀가 난다.
+   */
+  const sec164Ready =
+    isFullyFilled(sec164HouseStatus(primary)) ||
+    isFullyFilled(sec164CommercialStatus(primary)) ||
+    isFullyFilled(sec164LandStatus(primary));
+  const isInheritanceCause = primary.acquisitionCause === "inheritance";
+  if (reportedRaw <= 0 && !(isInheritanceCause && sec164Ready)) return {};
   // 지분 모드: 100% 기준 입력값에 × ratio 적용 (primaryInheritanceValuation과 일관)
   // 미적용 시 100% 송신으로 엔진에서 안분 잔여가 필요경비로 잘못 적재됨 (사례 27)
   const reportedValue = primaryFractional

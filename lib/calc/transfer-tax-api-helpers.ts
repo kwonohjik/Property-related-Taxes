@@ -238,7 +238,20 @@ export function buildPre1990LandPayload(
   const gCur = buildGrade(primary.pre1990Grade_current ?? "");
   const gPrev = buildGrade(primary.pre1990Grade_prev ?? "");
   const gAcq = buildGrade(primary.pre1990Grade_atAcq ?? "");
-  const areaSqm = parseFloat((primary.acquisitionArea ?? "").replace(/,/g, "")) || 0;
+  // A01(2026-09-02): 일부양도(partial)에서 **양도분 면적**을 써야 한다.
+  // 종전에는 여기만 raw `acquisitionArea`(취득 전체면적)를 썼고, 최상위 `acquisitionArea`
+  // (`transfer-tax-api.ts:483`)와 다필지 payload(`transfer-tax-api-parcels.ts:68`)는 이미
+  // `resolveAcqAreaForStdPrice`를 경유했다 — **세 경로 중 pre1990만 어긋나 있었다**.
+  // 양도시 기준시가는 `StandardPriceInput`이 양도면적 기준으로 산출하므로 분자만
+  // (취득면적/양도면적)배 부풀려져 환산비율이 1.0이 되고 양도차익이 통째로 0이 됐다
+  // (실측 154,704,000원 과소 — 전액 소멸).
+  // 콤마 제거는 stale 저장소 방어로 유지한다(현행 DecimalInput 저장값에는 콤마가 없다).
+  const areaSqm =
+    resolveAcqAreaForStdPrice({
+      areaScenario: primary.areaScenario,
+      acquisitionArea: (primary.acquisitionArea ?? "").replace(/,/g, ""),
+      transferArea: (primary.transferArea ?? "").replace(/,/g, ""),
+    }) ?? 0;
   const p1990 = parseAmount(primary.pre1990PricePerSqm_1990 ?? "");
   if (!gCur || !gPrev || !gAcq || areaSqm <= 0 || p1990 <= 0) return {};
   return {

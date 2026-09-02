@@ -20,6 +20,7 @@ import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-perio
 
 import { isHousingLike } from "./housing-like-asset";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
+import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 
 /** TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용) */
 export function buildPropertyPayload(form: TransferFormData) {
@@ -30,7 +31,9 @@ export function buildPropertyPayload(form: TransferFormData) {
   // ⑬ 1990.8.30. 이전 취득 토지 기준시가 환산 — 단건과 동일 게이트·공용 헬퍼.
   // pre1990은 useEstimatedAcquisition=true를 선행 조건으로 하므로 위 isEstimated 경로가
   // acquisitionPrice·expenses=0·standardPriceAt{Acq,Transfer} 전송을 이미 담당한다(무변경).
-  const hasPre1990 = (primary?.pre1990Enabled ?? false) && primaryKind === "land";
+  // A09(2026-09-02): 종전엔 기간 요건도 post-1985 증여 가드도 없었다 — 단건보다 더 약했다.
+  // `:30` 주석의 「단건과 동일 게이트」가 실제와 어긋났으므로 단일 술어로 통일한다.
+  const hasPre1990 = primary ? hasPre1990LandEstimation(primary) : false;
 
   // ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (단건 API와 동일 공용 빌더 — drift 차단)
   const nblRaw = primary ? buildNonBusinessLandRaw(primary, form.transferDate) : undefined;

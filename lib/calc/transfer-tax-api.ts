@@ -45,6 +45,9 @@ import {
   buildInheritedHouseValuationPayload,
   buildCommercialInheritanceValuationPayload,
 } from "./transfer-tax-api-inheritance";
+import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
+import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
+import { parcelEffectiveAcquisitionDate } from "./transfer-tax-api-parcels";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
 export { toEngineReductions } from "./transfer-tax-api-helpers";
@@ -138,10 +141,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 취득당시 실지거래가액으로 확인 가능 → 토지등급 환산 배제. pre1990Enabled은 환산 클릭 시 set되는
   // uncleaable 래치(CompanionAcqPurchaseBlock:92)라 gift 실거래가 전환 후 stale true로 남을 수 있으므로
   // 정의 자체에서 게이트(validate-asset.ts:462 동일 소스식). pre-1985 gift·비-gift는 기존 동작 유지.
-  const hasPre1990 =
-    (primary.pre1990Enabled ?? false) &&
-    primary.assetKind === "land" &&
-    !(primary.acquisitionCause === "gift" && (primary.acquisitionDate ?? "") >= "1985-01-01");
+  // A09(2026-09-02): 기간 요건(취득일 < 1990-08-30)이 **④에만 빠져** 있었다 —
+  // 래치가 stale true로 남으면 실거래가 토지가 환산으로 강제됐다(실측 최대 178,196,271원 과대).
+  // 술어를 `transfer-pre1990-land-gate.ts` 단일 소스로 모았다(⑧·다건과 3중 패턴).
+  const hasPre1990 = hasPre1990LandEstimation(primary);
   /**
    * §164④ **②(가목) 산출 전용** 게이트 — 「환산 모드 전환」과 분리한다 (G-1 · 2026-08-06).
    *
@@ -175,8 +178,13 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     primary.carryover?.estimationMode === "general";
   const parcelModeActive =
     primary.parcelMode && primary.assetKind === "land" && (primary.parcels?.length ?? 0) > 0;
+  // A15(2026-09-02): 환지 의제 필지는 `acquisitionDate`가 빈 문자열이라 종전 `|| form.transferDate`
+  // fallback이 **취득일 = 양도일**을 만들어 서버 Zod refine에서 400을 냈다(화면의 취득일 칸을
+  // 고쳐도 사라지지 않는다 — ④가 그 값을 쓰지 않기 때문). 엔진·필지 payload와 같은 규약을 쓴다.
+  // fallback을 두지 않는다 — 확정 불가 조합은 ⑧이 이미 전부 차단한다
+  // (`validateParcelMode`: `!환지 && !취득일` · `환지 && !확정일`).
   const firstParcelAcqDate = parcelModeActive
-    ? (primary.parcels[0]?.acquisitionDate || form.transferDate)
+    ? parcelEffectiveAcquisitionDate(primary.parcels[0] ?? {})
     : primary.acquisitionDate;
 
   // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
@@ -643,7 +651,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // ⑬ 재개발/재건축 spread (시행령 §166) — 누락 시 silent stripping
     ...(redevPayload !== undefined ? { redevelopment: redevPayload } : {}),
     // ⑬ 가업상속공제 §97의2④ 의제 취득가액 spread (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
-    ...(primary.familyBusinessInheritance !== undefined
+    // A04(2026-09-02): 취득원인·자산종류 게이트 — ⑤ 렌더 조건과 **같은 술어**여야
+    // 취득원인 변경 경로와 GB 전환 경로가 함께 닫힌다(실측 83,281,000 / 71,242,600원 과대).
+    ...(primary.familyBusinessInheritance !== undefined &&
+    allowsFamilyBusinessInheritance(primary)
       ? { familyBusinessInheritance: primary.familyBusinessInheritance }
       : {}),
     /**

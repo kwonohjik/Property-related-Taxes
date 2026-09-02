@@ -242,6 +242,7 @@ export function calculateTransferTax(
       carryoverDetail,
       warnings,
       houseCountExclusion: redevHouseExclusion,
+      inheritedAcquisitionStep,
     });
   }
 
@@ -445,6 +446,7 @@ export function calculateTransferTax(
       multiHouseSurchargeResult,
       splitDetail,
       steps,
+      inheritedAcquisitionStep,
     });
     if (rheResult) return rheResult;
     // B + applied=false: 특례 부존재면 임대주택 주택수 산입으로 "1채" 전제 무효 가능 — 침묵 비과세 소급 금지.

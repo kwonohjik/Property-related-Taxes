@@ -45,6 +45,8 @@ import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateMixedUseAsset } from "./transfer-tax-validate-mixed-use-asset";
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
+import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
+import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 
 /**
  * 오늘 날짜 — 로컬(KST) 기준 `YYYY-MM-DD` 문자열.
@@ -365,11 +367,8 @@ export function validateAssetAcquisition(
   const isSalesCase = asset.isSalesCaseAcquisition === true;
   const isAppraisal = !isSalesCase && asset.isAppraisalAcquisition === true;
   const isEstimated = !isSalesCase && !isAppraisal && asset.useEstimatedAcquisition === true;
-  // hasPre1990: post-1985 증여는 §163⑨ 신고가액 확인 가능 → pre1990 토지등급 배제(api:86 동일 게이트·3중 패턴).
-  const hasPre1990 =
-    (asset.pre1990Enabled ?? false) &&
-    asset.assetKind === "land" &&
-    !(asset.acquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01");
+  // hasPre1990: ④ `transfer-tax-api.ts`와 **같은 술어**(3중 패턴) — `transfer-pre1990-land-gate.ts` 단일 소스.
+  const hasPre1990 = hasPre1990LandEstimation(asset);
   const isParcelMode = asset.parcelMode === true && asset.assetKind === "land";
 
   // §163⑨ 표준(generic) 증여 추계모드 차단 — salesCase(:아래)·isAppraisal generic보다 먼저 배치.
@@ -761,6 +760,11 @@ export function validateAssetEntry(
 
   // ⑧ 가업상속공제 §97의2④ 의제 취득가액 — 토글 ON 시 4필드 전수 입력 강제
   // 자동 안분 fallback 금지 원칙 준수 (feedback_no_silent_apportion_fallback)
+  if (a.familyBusinessInheritance && !allowsFamilyBusinessInheritance(a)) {
+    // ④가 이미 payload에서 떼어내지만, stale 저장소에서 복원된 입력이 화면에 보이지 않는 채
+    // 남아 있을 수 있다. 「침묵 오산보다 명시 차단」 규약(A04).
+    return `${label}: 가업상속공제 §97의2④는 상속으로 취득한 자산에만 적용됩니다. 취득원인을 상속으로 되돌리거나 가업상속공제 입력을 해제하세요.`;
+  }
   if (a.familyBusinessInheritance) {
     const fb = a.familyBusinessInheritance;
     if (fb.decedentAcquisitionPrice == null || parseAmount(String(fb.decedentAcquisitionPrice)) < 0)

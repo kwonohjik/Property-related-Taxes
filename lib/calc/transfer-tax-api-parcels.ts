@@ -14,6 +14,30 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
  * @param primaryFractional 대표 자산이 지분 양도인가 — 금액 필드에만 지분율을 곱한다
  * @param primaryRatio 대표 자산 지분율
  */
+/**
+ * 필지의 **실효 취득일**(문자열) — 환지처분 의제(「소득세법 시행령」 §162①9호)면 확정일.
+ *
+ * 익일 가산은 엔진이 한다(`multi-parcel-transfer.ts:222` `addDays(replottingConfirmDate, 1)`).
+ * 이 함수는 「어느 날짜를 취득일로 볼 것인가」만 정한다.
+ *
+ * A15(2026-09-02): 종전에는 이 규약이 필지 payload에만 있고 자산-수준 취득일을 정하는
+ * `transfer-tax-api.ts`의 `firstParcelAcqDate`에는 없어서, 환지 토글을 켠 첫 필지가
+ * `acquisitionDate: ""` → `|| form.transferDate` fallback을 타 **취득일 = 양도일**이 되고
+ * 서버 Zod refine에 걸려 400이 났다. 화면의 취득일 칸을 올바르게 채워도 ④가 그 값을 버렸다.
+ * ⇒ 두 지점이 같은 함수를 경유한다.
+ */
+export function parcelEffectiveAcquisitionDate(p: {
+  useDayAfterReplotting?: boolean;
+  replottingConfirmDate?: string;
+  acquisitionDate?: string;
+}): string {
+  return (
+    (p.useDayAfterReplotting && p.replottingConfirmDate
+      ? p.replottingConfirmDate
+      : p.acquisitionDate) || ""
+  );
+}
+
 export function buildParcelsPayload(
   parcels: AssetForm["parcels"],
   primaryFractional: boolean,
@@ -74,10 +98,7 @@ export function buildParcelsPayload(
 
         return {
           id: p.id,
-          acquisitionDate:
-            p.useDayAfterReplotting && p.replottingConfirmDate
-              ? p.replottingConfirmDate
-              : p.acquisitionDate,
+          acquisitionDate: parcelEffectiveAcquisitionDate(p),
           acquisitionMethod: p.acquisitionMethod,
           acquisitionPrice:
             p.acquisitionMethod === "actual" ? scaleAmt(parseAmount(p.acquisitionPrice)) : undefined,

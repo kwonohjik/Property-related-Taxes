@@ -118,6 +118,22 @@ export function calculateRedevelopmentTax(
       TransferTaxResult,
       "new994Detail" | "unsold989Detail" | "specialHouseExclusionDetail"
     >;
+    /**
+     * §163⑨ 상속·증여 취득가액 의제 판정 결과 (STEP 0.45 산출) — A19(2026-09-02).
+     *
+     * `transfer-tax-finalize.ts:604-605`가 **같은 step에서 두 필드**를 싣는다
+     * (`inheritedAcquisitionDetail` = `.result` · `inheritedHouseValuationDetail` =
+     * `.houseValuationResult`). 이 분기는 `finalizeTransferTax`를 호출하지 않으므로
+     * 넘겨받지 않으면 둘 다 사라지고, `ReductionDetailCards`의 `hasAny`가 false가 되어
+     * **카드 묶음 전체가 렌더되지 않는다**.
+     *
+     * 이 분기는 바로 앞에서 `resolveInheritedRedevelopmentAcqPrice`로 그 값을 **소비까지
+     * 하면서** 근거만 버리고 있었다. 세액은 불변(소비처가 표시 계층뿐 — 전수 확인).
+     */
+    inheritedAcquisitionStep?: {
+      result?: TransferTaxResult["inheritedAcquisitionDetail"];
+      houseValuationResult?: TransferTaxResult["inheritedHouseValuationDetail"];
+    };
   },
 ): TransferTaxResult {
   const steps: CalculationStep[] = [...baseSteps];
@@ -802,6 +818,13 @@ export function calculateRedevelopmentTax(
      *      수증자 취득가액으로 되돌아간다(`transfer-tax-aggregate.ts:508`)
      */
     ...(opts?.carryoverDetail ? { carryoverTaxationDetail: opts.carryoverDetail } : {}),
+    // A19: §163⑨ 근거 2장 — 정상 경로의 `transfer-tax-finalize.ts:604-605`와 동형.
+    ...(opts?.inheritedAcquisitionStep?.result
+      ? { inheritedAcquisitionDetail: opts.inheritedAcquisitionStep.result }
+      : {}),
+    ...(opts?.inheritedAcquisitionStep?.houseValuationResult
+      ? { inheritedHouseValuationDetail: opts.inheritedAcquisitionStep.houseValuationResult }
+      : {}),
     // D4-08 — STEP 0.9+0.95 주택수 제외 상세. 이 분기가 조기이탈이라 상류에서 받아 실어야 한다.
     ...(opts?.houseCountExclusion ?? {}),
     /** 비차단 안내 — 정상 경로와 동형으로 항상 키를 싣는다(종전에는 키 자체가 없었다). */
