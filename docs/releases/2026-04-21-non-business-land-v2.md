@@ -60,8 +60,13 @@ UI 입력 폼(`OwnerResidenceForm.tsx`)은 **후속 PR**에서 추가 예정. �
 
 ## 사용자 영향
 
-⚠️ 기존에 "사업용"으로 판정되던 **일부 경계 케이스**가 "비사업용 +10%p 중과세·장기보유특별공제 배제"로
+⚠️ 기존에 "사업용"으로 판정되던 **일부 경계 케이스**가 "비사업용 +10%p 중과세"로
 전환될 수 있습니다. 특히:
+
+> 🔴 **정정 (2026-09-02 코드리뷰 D-2)** — 위 문장은 원래 「+10%p 중과세·**장기보유특별공제 배제**」였다.
+> 현행 「소득세법」 §95② 괄호의 제외 열거는 「미등기양도자산(§104③)과 같은 조 **제7항** 각 호에 따른
+> 자산」뿐이고 비사업용 토지는 §104**①8호**라 열거에 없다 — **표1 공제가 적용된다**.
+> 장특공 배제는 2015.12.31. 이전 양도분에만 있었던 구법 규정이다(`data/lthd-non-business-land-era.ts`).
 - 전체 보유 60~80% 구간 사업용
 - 사용의제 해당이나 기간기준(60%) 미충족
 - 도시지역 內 농지 + 편입유예 외
@@ -119,7 +124,10 @@ npx vitest run                                           # 1,358 PASS
 - `lib/tax-engine/legal-codes.ts` NBL.* 상수 17종 신규
 - `lib/api/transfer-tax-schema.ts` `ownerProfile` 선택 필드
 - `app/api/calc/transfer/route.ts` + `multi/route.ts` ownerProfile Date 변환
-- `components/calc/NonBusinessLandResultCard.tsx` REDIRECT 배너
+- `components/calc/NonBusinessLandResultCard.tsx` 판정 결과 카드
+  - 🔴 **정정 (2026-09-02 코드리뷰 M-2)** — 원래 「REDIRECT 배너」로 적혀 있었으나 그 배너는 구현되지 않았다.
+    `needsRedirect`·`redirectHint`를 소비하는 UI는 저장소 전체에 0건이다. 별장 REDIRECT는 엔진이
+    주택부수토지로 자동 재분류하고, 정착면적 미입력 시 결과 warning으로 알린다.
 
 ## 후속 작업 (별도 PR)
 
