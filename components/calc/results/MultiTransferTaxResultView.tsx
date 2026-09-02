@@ -8,6 +8,7 @@ import { ArrowRight } from "lucide-react";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { cn } from "@/lib/utils";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
+import { reductionEligibleIncome } from "./transfer/reduction-eligible-income";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
@@ -115,14 +116,32 @@ function ReductionRecalculationSection({
                   <span className="text-right tabular-nums">
                     {entry.aggregateCalculatedTax.toLocaleString()}
                   </span>
-                  <span className="text-muted-foreground">합산 감면대상소득</span>
+                  {/*
+                    🔴 「합산 감면대상소득」은 `totalReducibleIncome`이 **아니다** (2026-09-03).
+                    그 필드는 유형마다 단위가 갈린다 — §97 계열은 감면율 前 소득이지만
+                    §77·§77의2·§77의3은 **감면율이 곱해진** 값이라, 같은 결과의 신고서 ⑲
+                    (감면율 前)와 화면이 어긋났다(§77 공익수용 6억: 화면 28,800,000 ↔ ⑲ 288,000,000).
+                    ⇒ 엔진이 §90①의 B를 `eligibleIncomeBeforeRate`로 따로 싣는다.
+                    `totalReducibleIncome`은 자산별 배분 분모로만 남는다.
+                  */}
+                  {/* 옛 저장 결과(IndexedDB)에는 신규 필드가 없다 — 종전 값으로 폴백한다. */}
+                  <span className="text-muted-foreground">합산 감면대상소득 (감면율 前)</span>
                   <span className="text-right tabular-nums">
-                    {entry.totalReducibleIncome.toLocaleString()}
+                    {(entry.eligibleIncomeBeforeRate ?? entry.totalReducibleIncome).toLocaleString()}
                   </span>
-                  <span className="text-muted-foreground">합산 과세표준</span>
-                  <span className="text-right tabular-nums">
-                    {entry.aggregateTaxBase.toLocaleString()}
-                  </span>
+                  {/*
+                    양도소득 기본공제 — 「소득세법」 §90①의 C. §103②이 「감면소득금액 외의
+                    양도소득금액에서 먼저 공제」하라 정하므로 비감면소득이 있으면 0이 된다.
+                    그래서 통상 사안에서는 이 행이 뜨지 않는다.
+                  */}
+                  {(entry.basicDeductionApplied ?? 0) > 0 && (
+                    <>
+                      <span className="text-muted-foreground">양도소득 기본공제</span>
+                      <span className="text-right tabular-nums">
+                        −{entry.basicDeductionApplied.toLocaleString()}
+                      </span>
+                    </>
+                  )}
                   {/*
                     적용 감면율 — §97 계열·장기임대·신축·미분양은 「합산 감면대상소득」이
                     별지84호 부표1 ⑲ 표시 계약상 **감면율 前** 금액이라, 감면율을 함께 보여야
@@ -138,6 +157,29 @@ function ReductionRecalculationSection({
                       </span>
                     </>
                   )}
+                  {/*
+                    §90①의 `(B − C) × E` — 재계산이 실제로 쓴 분자다.
+                    「산출세액 × 이 값 / 과세표준 = 원시 감면」이 **정확히** 성립한다.
+                    §77처럼 현금분·채권분의 감면율이 섞이면 위의 단일 「적용 감면율」로는
+                    복원되지 않으므로 이 행이 자기일관성을 지킨다.
+                    감면율이 1이고 기본공제도 0이면 위 행과 같은 값이라 숨긴다.
+                  */}
+                  {entry.reducibleIncomeAfterBasicDeduction != null &&
+                    entry.reducibleIncomeAfterBasicDeduction !==
+                      (entry.eligibleIncomeBeforeRate ?? entry.totalReducibleIncome) && (
+                      <>
+                        <span className="text-muted-foreground">
+                          감면대상소득 (기본공제 차감·감면율 반영)
+                        </span>
+                        <span className="text-right tabular-nums">
+                          {entry.reducibleIncomeAfterBasicDeduction.toLocaleString()}
+                        </span>
+                      </>
+                    )}
+                  <span className="text-muted-foreground">합산 과세표준</span>
+                  <span className="text-right tabular-nums">
+                    {entry.aggregateTaxBase.toLocaleString()}
+                  </span>
                   <span className="text-muted-foreground">재계산 원시 감면</span>
                   <span className="text-right tabular-nums">
                     {entry.rawAggregateReduction.toLocaleString()}
@@ -178,8 +220,18 @@ function ReductionRecalculationSection({
                             <td className="text-right tabular-nums">
                               {p.reductionAmount.toLocaleString()}
                             </td>
+                            {/*
+                              🔴 `p.reducibleIncome`을 직접 그리면 §77 계열에서 **감면율이 곱해진**
+                                 값이 「감면대상소득」으로 뜬다 — 위 합계 행·신고서 ⑲와 어긋난다.
+                                 ⑲의 단일 소스(`reductionEligibleIncome`)를 그대로 쓴다.
+                            */}
                             <td className="text-right tabular-nums">
-                              {p.reducibleIncome.toLocaleString()}
+                              {reductionEligibleIncome(
+                                p.reductionType,
+                                p.income,
+                                p.reducibleIncome ?? 0,
+                                p.replacementLandDetail?.eligibleTransferIncome,
+                              ).toLocaleString()}
                             </td>
                             <td className="text-right tabular-nums font-medium">
                               {p.reductionAggregated.toLocaleString()}
