@@ -155,7 +155,19 @@ export interface StockTransferFormData {
   /** daily 모드 — 거래일별 종가 입력 (주말·공휴일은 빈 문자) */
   transferPriceClosing: string[];
   listingDate: string;                    // 상장일 "YYYY-MM-DD"
-  listingDatePriceAvg1Month: string;     // 상장일 직전 1개월 평균 (원)
+  /**
+   * 상장일 **이후** 1개월 종가평균 (원) — 소령 §165⑤ 계산식 첫 항.
+   * `listingStdInputMode === "direct"`일 때만 정본이다. daily에서는 종가 표에서 파생한다
+   * (`resolveListingClosingAvg` — 저장 mirror 금지. 상장일만 바꿔도 stale이 되기 때문).
+   */
+  listingDatePriceAvg1Month: string;
+  /**
+   * 상장일 이후 1개월 종가 입력 방식 — direct(단일 숫자) | daily(일자별 종가 표).
+   * 3중 패턴 default: "direct" (기존 동작 보존).
+   * ⚠️ `unlistedDetailMode !== "simple"`(재무제표 모드)에서는 종가도 항상 일자별이라
+   *    이 축이 의미를 갖지 않는다 — 라디오도 그때는 노출하지 않는다.
+   */
+  listingStdInputMode: "direct" | "daily";
   acquiredBeforeListing: boolean;        // 3중 패턴 default: false
   tradingHaltAtTransfer: boolean;        // 3중 패턴 default: false
   tradingHaltAtAcquisition: boolean;     // [C-1] 3중 패턴 default: false
@@ -545,6 +557,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     transferPriceClosing: [],
     listingDate: "",
     listingDatePriceAvg1Month: "",
+    listingStdInputMode: "direct",   // 3중 패턴 default — 기존 동작 보존
     acquiredBeforeListing: false,        // 3중 패턴 default
     tradingHaltAtTransfer: false,        // 3중 패턴 default
     tradingHaltAtAcquisition: false,     // [C-1] 3중 패턴 default

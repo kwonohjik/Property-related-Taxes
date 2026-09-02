@@ -51,7 +51,12 @@ describe("FD — 취득후상장 토글 OFF 시 입력 방식 정규화", () => 
     const onChange = vi.fn();
     render(
       <Step2
-        form={listedEstimatedForm({ acquiredBeforeListing: true, transferStdInputMode: "daily" })}
+        form={listedEstimatedForm({
+          acquiredBeforeListing: true,
+          transferStdInputMode: "daily",
+          // ② 축도 같은 자리에 있다 — 라디오가 같은 ToggleCard children 안이라 되돌릴 UI가 없다
+          listingStdInputMode: "daily",
+        })}
         onChange={onChange}
       />,
     );
@@ -63,6 +68,7 @@ describe("FD — 취득후상장 토글 OFF 시 입력 방식 정규화", () => 
     expect(onChange.mock.calls[0][0]).toEqual({
       acquiredBeforeListing: false,
       transferStdInputMode: "direct",
+      listingStdInputMode: "direct",
     });
   });
 

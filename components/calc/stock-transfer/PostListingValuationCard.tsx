@@ -48,6 +48,14 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
   const mode = form.unlistedDetailMode || "simple";
   // 간이 모드 «안»의 하위 축 — 3중 패턴 default "direct"(기존 결과값 직접 입력 보존)
   const valueMode = form.simpleValueInputMode || "direct";
+  /*
+    ② 상장일 이후 1개월 종가의 입력 축.
+    「재무제표로 계산」·「상장연도만 재무제표」는 **자료 자체가 결산서와 종가표**라
+    종가도 항상 일자별이다 — 그 두 모드에서는 이 축이 의미를 갖지 않으므로 라디오를
+    노출하지 않고 표로 고정한다(선택지를 6조합으로 늘리지 않는다).
+  */
+  const listingStdMode = form.listingStdInputMode || "direct";
+  const listingDaily = mode !== "simple" || listingStdMode === "daily";
 
   // §81④ 토글 노출 조건 — simple 모드는 4필드 가중평균이 동일할 때만 노출(활성 우선),
   // full/listing_only는 합성 산출이라 무조건 노출(엔진 C-7이 평가 상이 시 무시 처리).
@@ -117,7 +125,11 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         onChange(
           v
             ? { acquiredBeforeListing: true }
-            : { acquiredBeforeListing: false, transferStdInputMode: "direct" },
+            : {
+                acquiredBeforeListing: false,
+                transferStdInputMode: "direct",
+                listingStdInputMode: "direct",
+              },
         )
       }
       title="취득 후 상장 — 환산취득가 (소령 §165⑤)"
@@ -146,7 +158,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             라벨이 «가진 자료» 기준인 이유는 PR #1389 참조. */}
         <FieldCard
           label="환산 입력 방식"
-          hint="아래 ②·③을 어떤 자료로 채울지 한 번에 정합니다. ①은 이 선택과 무관합니다."
+          hint="아래 ③을 어떤 자료로 채울지 정합니다. 재무제표를 고르면 ②의 종가도 일자별 입력이 됩니다. ①은 이 선택과 무관합니다."
         >
           <RadioCardGroup
             name="unlistedDetailMode"
@@ -227,11 +239,17 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           )}
         </ToneCard>
 
-        {/* ② 상장 당시 시세 — 산식의 기초가액(상장일 이후 1개월 종가평균).
+        {/* ② 상장일 이후 1개월 종가 — 산식의 기초가액.
             · 상장일이 여기 속한다 — 「이후 1개월」의 **기산일**이자 종가 표 32셀 자동 채움 trigger다.
             · 자본조정(증자·합병)도 ②다 — 평가기간을 절단해 **종가평균**을 바꾼다(③이 아니다).
-              상증령 §52의2②2호 준용 해석(PostListingCapitalEventSection 주석 참조). */}
-        <ToneCard tone="amber" sectionNum={2} title="상장 당시 시세" bodyClassName="space-y-3">
+              상증령 §52의2②2호 준용 해석(PostListingCapitalEventSection 주석 참조).
+
+            🔑 제목은 조문 표현을 따른다(제보 2026-09-02의 「상장 당시 기준시가」는 채택하지 않았다).
+               §165⑤이 「기준시가」라 부르는 것은 **계산식의 결과**(취득 당시의 기준시가)이고,
+               상장 시점의 가액을 법이 부르는 이름은 「상장일 현재의 **제4항에 따른 평가액**」 —
+               그것은 이 화면의 ③이다. ②에 「상장 당시 기준시가」를 붙이면 ③과 이름이 겹친다.
+               이 칸의 법문상 이름은 「상장일 이후 1개월간 … 최종시세가액의 평균액」이다. */}
+        <ToneCard tone="amber" sectionNum={2} title="상장일 이후 1개월 종가" bodyClassName="space-y-3">
           {/* 상장일 (기존 — 종가 표 자동 채움 trigger) */}
           <FieldCard label="상장일" required hint="최초 상장 기준일. 입력 시 종가 표 32셀 일자가 자동 채워집니다.">
             <DateInput
@@ -250,12 +268,44 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             />
           </FieldCard>
 
-          {/* ② 안에서 「상장일」과 모양을 맞춘다 — 종전에는 이 칸만 라벨-상단이라
-              같은 섹션 안에서 정렬이 어긋났다. FieldCard는 ①과 동일 패턴이다.
-              ⚠️ 주석은 삼항 «밖»에 둔다 — 분기 안 첫 요소로 두면 JSX 주석이 객체 리터럴로
+          {/* 입력 방식 — ①과 같은 축, 같은 문구. 「재무제표」 모드에서는 노출하지 않는다. */}
+          {mode === "simple" ? (
+            <FieldCard label="입력 방식">
+              <RadioCardGroup
+                name="listingStdInputMode"
+                value={listingStdMode}
+                onChange={(v) => onChange({ listingStdInputMode: v as "direct" | "daily" })}
+                tone="amber"
+                layout="inline"
+                options={[
+                  { value: "direct", label: "직접 입력 (1개월 평균 단일 숫자)" },
+                  { value: "daily", label: "일자별 입력 (자동 평균 산정)" },
+                ]}
+              />
+            </FieldCard>
+          ) : (
+            <p className="text-caption text-amber-700/90 leading-relaxed">
+              재무제표 모드에서는 종가도 일자별로 입력합니다 (위 「환산 입력 방식」 선택에 따름).
+            </p>
+          )}
+
+          {/* ⚠️ 주석은 삼항 «밖»에 둔다 — 분기 안 첫 요소로 두면 JSX 주석이 객체 리터럴로
                  파싱돼 TS1005로 깨진다(2026-09-02 실측). 주석 본문에 중괄호도 쓰지 말 것 —
                  닫는 중괄호가 주석을 먼저 닫아 TS1381이 난다. */}
-          {mode === "simple" ? (
+          {listingDaily ? (
+            <>
+              {/* F-02 키움 자동조회 — 종목코드 + 상장일 + 상장 종목 충족 시 활성화 */}
+              <KiwoomPostListingAutoFetchButton
+                securityCode={form.securityCode}
+                listingDate={form.listingDate}
+                marketType={form.marketType}
+                tradingHalt={form.kiwoomTradingHalt}
+                onFill={onChange}
+              />
+              <PostListingClosingPriceTable form={form} onChange={onChange} />
+              <PostListingCapitalEventSection form={form} onChange={onChange} />
+            </>
+          ) : (
             <FieldCard
               label="상장일 이후 1개월 종가평균"
               required
@@ -269,19 +319,6 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                 placeholder="상장일 이후 1개월 종가평균"
               />
             </FieldCard>
-          ) : (
-            <>
-              {/* F-02 키움 자동조회 — 종목코드 + 상장일 + 상장 종목 충족 시 활성화 */}
-              <KiwoomPostListingAutoFetchButton
-                securityCode={form.securityCode}
-                listingDate={form.listingDate}
-                marketType={form.marketType}
-                tradingHalt={form.kiwoomTradingHalt}
-                onFill={onChange}
-              />
-              <PostListingClosingPriceTable form={form} onChange={onChange} />
-              <PostListingCapitalEventSection form={form} onChange={onChange} />
-            </>
           )}
         </ToneCard>
 

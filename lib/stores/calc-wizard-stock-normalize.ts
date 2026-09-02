@@ -59,6 +59,11 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
   const transferStdInputMode = acquiredBeforeListing
     ? enumField("transferStdInputMode", ["direct", "daily"], defaults.transferStdInputMode)
     : "direct";
+  // 같은 축 위의 형제 — `listingStdInputMode`도 「취득 후 상장」 ToggleCard children 안에만
+  // 라디오가 있다(PostListingValuationCard.tsx). 축 밖에서 daily가 남으면 되돌릴 UI가 없다.
+  const listingStdInputMode = acquiredBeforeListing
+    ? enumField("listingStdInputMode", ["direct", "daily"], defaults.listingStdInputMode)
+    : "direct";
 
   return {
     ...defaults, // foreign-stock 등 신규 필드 누락 시 default fallback (typecheck 가드)
@@ -162,6 +167,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     transferPriceClosing: Array.isArray(d.transferPriceClosing) ? (d.transferPriceClosing as string[]) : [],
     listingDate: strField("listingDate"),
     listingDatePriceAvg1Month: strField("listingDatePriceAvg1Month"),
+    listingStdInputMode,
     acquiredBeforeListing,
     tradingHaltAtTransfer: boolField("tradingHaltAtTransfer", defaults.tradingHaltAtTransfer),
     tradingHaltAtAcquisition: boolField("tradingHaltAtAcquisition", defaults.tradingHaltAtAcquisition),
