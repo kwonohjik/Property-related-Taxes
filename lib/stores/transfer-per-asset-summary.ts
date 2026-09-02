@@ -516,9 +516,11 @@ export function computeTransferPerAssetSummary(
       // 단건 fallback 체인 (상속의제 → 계산 결과 환산 → 환산 프리뷰)
       /**
        * A18(2026-09-02): 종전 게이트는 `a.inheritanceMode === "post-deemed" | "pre-deemed"`였는데
-       * **`inheritanceMode`는 쓰기 지점이 전 저장소에 0건인 죽은 필드다** — factory가 null로
+       * **`inheritanceMode`는 쓰기 지점이 전 저장소에 0건인 죽은 필드였다** — factory가 null로
        * 만들고 마이그레이션 둘이 undefined를 null로 강제하며, 유일한 읽기 지점도 로컬 파생
-       * fallback을 탄다. 도입 시 계획된 「onChange → 자동 결정」이 구현되지 않았다.
+       * fallback을 탔다. 도입 시 계획된 「onChange → 자동 결정」이 구현되지 않았다.
+       * ⇒ **2026-09-03에 그 필드 자체를 제거했다.** 분기는 이제 상속개시일에서 그때그때
+       *   파생된다(`InheritedAcquisitionDeemedSection.computeMode`가 유일한 산출 지점).
        *
        * 그 결과 상속 자산의 사이드바 취득가액이 계산 전후 모두 0이 되어 **「취득가액 -」**로
        * 표시됐다. 결과 화면·신고서에는 값이 나오므로 같은 화면 안에서 어긋났다.

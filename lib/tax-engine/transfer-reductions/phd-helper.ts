@@ -4,7 +4,14 @@
  * 신축주택은 본질적으로 준공 후 1~2년 후 공시가격이 공시되므로,
  * 모든 신축주택 취득 당시에는 공시가격이 없음.
  * 5년간 발생분 차감 안분 산식을 적용하는 8개 조문에서 "취득시 기준시가"가 필수이므로
- * 소득세법 시행령 §164⑤(개별주택가격 미공시 취득 환산) 산식으로 환산.
+ * 소득세법 시행령 §164⑦(주택가격 공시 전 취득 주택의 취득당시 기준시가) 산식으로 환산.
+ *
+ * ⚠️ 종전 표기 「§164⑤」는 오인용이었다(2026-09-03 조문 본문 확인 후 정정).
+ * §164⑤는 **건물**에 관한 규정이고 산식이 다르다 —
+ *   §164⑤: 국세청장이 최초로 고시한 기준시가 × 국세청장이 고시한 **기준율**
+ *   §164⑦: 국토교통부장관이 최초로 공시한 주택가격 × (취득당시 합계 / 최초공시당시 합계)
+ * 아래 구현은 후자다. §164⑤가 등장하는 지점은 §164⑦ **후단의 준용**뿐이고,
+ * 그 발동요건은 「나목의 가액이 **없는 경우**」다(:101 A13 주석 참조).
  *
  * 대상 조문 (5년 안분 산식):
  *   §99·§99의3·§98의3·§98의5·§98의6·§98의7·§98의8·§99의2 (8개)
@@ -13,7 +20,7 @@
  * 풀 엔진은 양도가액 안분·개산공제 등 종합 산출이 필요한 반면, 감면 조문용은
  * "취득시 추정 공동주택가격" (P_A_est)만 필요.
  *
- * 산식 (§164⑤):
+ * 산식 (§164⑦ 본문):
  *   P_A_est = floor(P_F × Sum_A / Sum_F)
  *   Sum_A = 취득시 토지(공시지가/㎡ × 면적) + 취득시 건물 기준시가
  *   Sum_F = 최초공시 토지(공시지가/㎡ × 면적) + 최초공시 건물 기준시가
@@ -111,7 +118,7 @@ export function calcReductionAcquisitionStdPrice(
   const sumAtAcquisition = landStdAtAcquisition + buildingStdPriceAtAcquisition;
   const sumAtFirstDisclosure = landStdAtFirstDisclosure + buildingStdPriceAtFirstDisclosure;
 
-  // P_A_est 산출 (§164⑤)
+  // P_A_est 산출 (§164⑦ 본문)
   const ratio = sumAtFirstDisclosure > 0 ? sumAtAcquisition / sumAtFirstDisclosure : 0;
   const estimatedAcquisitionStdPrice = sumAtFirstDisclosure > 0
     ? Math.floor(firstDisclosurePrice * sumAtAcquisition / sumAtFirstDisclosure)

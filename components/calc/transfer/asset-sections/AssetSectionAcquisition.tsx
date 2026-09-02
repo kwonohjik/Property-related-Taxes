@@ -212,7 +212,7 @@ export function AssetSectionAcquisition({
         <ToggleCard
           tone="sky"
           title="여러 필지를 각각 다른 시기에 취득했나요? (환지·합병)"
-          description="물리적으로 다른 2필지 이상을 취득원인·취득일 다르게 취득한 경우 (소득세법 시행령 §162①6호). ※ 한 필지의 지분(%)을 나눈 경우는 위 ‘지분(%)별 취득’ 토글을 사용하세요."
+          description="물리적으로 다른 2필지 이상을 취득원인·취득일 다르게 취득한 경우 (소득세법 시행령 §162①9호 단서). ※ 한 필지의 지분(%)을 나눈 경우는 위 ‘지분(%)별 취득’ 토글을 사용하세요."
           checked={asset.parcelMode ?? false}
           onCheckedChange={(checked) => {
             const defaultParcel: ParcelFormItem = {

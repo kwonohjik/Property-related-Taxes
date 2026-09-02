@@ -194,7 +194,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                   variant="chip"
                   tone="amber"
                   title="환지처분확정일 익일을 취득일로 적용"
-                  description="소득령 §162①6호"
+                  description="소득령 §162①9호 단서"
                   checked={p.useDayAfterReplotting}
                   onCheckedChange={(v) =>
                     update(i, {

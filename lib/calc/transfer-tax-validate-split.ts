@@ -431,6 +431,14 @@ export function validateSplitDirectInputs(asset: AssetForm, label: string): stri
    *
    * ⚠️ **양도비(§97①3호)는 대상이 아니다.** 그쪽은 §100② 후문의 명문 열거라 엔진이 파트에
    *    안분한다(`transfer-tax-split-gain.ts` ③-b). 자산 전체 칸을 그대로 쓰면 된다.
+   *
+   * ⏸ **A06(2026-09-02 리뷰, 미해소) — 저장소가 두 규약으로 갈려 있다.**
+   *    위 「자본적지출은 안분하지 않는다」와 달리 **겸용 PHD 엔진(`calcMixedUseTransferTax`)은
+   *    실제로 안분한다** — `review-2026-08-f18.test.ts` P7-1·P7-2가 자본적지출 9억을
+   *    588,432,521 / 311,567,479로 나누는 것을 anchor로 동결하고 있다.
+   *    어느 쪽이 정본인지 확정돼야 A06-2(PHD 경로가 자산 단위 자본적지출·양도비를 읽지 않는
+   *    문제)의 수정 범위가 정해진다. 확정 전에는 **한쪽만 고치면 자산 종류별로 다른 규약이 된다**.
+   *    상세: `docs/reviews/transfer-acq-valuation-review-2026-09.md` §3.1 · §9-4.
    */
   if (asset.assetKind !== "general_building" && parseAmount(asset.capitalExpenditure ?? "") > 0) {
     const hasPartCapex =
