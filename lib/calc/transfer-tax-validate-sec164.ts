@@ -23,6 +23,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { resolveSapPriorStdPrice } from "./transfer-same-adjustment-period-input";
 import { calcStdPriceMonths } from "@/lib/tax-engine/same-adjustment-period-std-price";
+import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 
 function message(label: string, s: Sec164FieldStatus): string {
   return (
@@ -46,10 +47,7 @@ export function sec164PartialInputError(asset: AssetForm, label: string): string
   if (isPartiallyFilled(commercial)) return message(label, commercial);
 
   // 환산 모드는 기존 검증이 담당한다(중복 방지).
-  const hasPre1990 =
-    (asset.pre1990Enabled ?? false) &&
-    asset.assetKind === "land" &&
-    !(asset.acquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01");
+  const hasPre1990 = hasPre1990LandEstimation(asset);
   if (!hasPre1990) {
     const land = sec164LandStatus(asset);
     if (isPartiallyFilled(land)) return message(label, land);

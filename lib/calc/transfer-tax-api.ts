@@ -45,6 +45,7 @@ import {
   buildInheritedHouseValuationPayload,
   buildCommercialInheritanceValuationPayload,
 } from "./transfer-tax-api-inheritance";
+import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
 export { toEngineReductions } from "./transfer-tax-api-helpers";
@@ -138,10 +139,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 취득당시 실지거래가액으로 확인 가능 → 토지등급 환산 배제. pre1990Enabled은 환산 클릭 시 set되는
   // uncleaable 래치(CompanionAcqPurchaseBlock:92)라 gift 실거래가 전환 후 stale true로 남을 수 있으므로
   // 정의 자체에서 게이트(validate-asset.ts:462 동일 소스식). pre-1985 gift·비-gift는 기존 동작 유지.
-  const hasPre1990 =
-    (primary.pre1990Enabled ?? false) &&
-    primary.assetKind === "land" &&
-    !(primary.acquisitionCause === "gift" && (primary.acquisitionDate ?? "") >= "1985-01-01");
+  // A09(2026-09-02): 기간 요건(취득일 < 1990-08-30)이 **④에만 빠져** 있었다 —
+  // 래치가 stale true로 남으면 실거래가 토지가 환산으로 강제됐다(실측 최대 178,196,271원 과대).
+  // 술어를 `transfer-pre1990-land-gate.ts` 단일 소스로 모았다(⑧·다건과 3중 패턴).
+  const hasPre1990 = hasPre1990LandEstimation(primary);
   /**
    * §164④ **②(가목) 산출 전용** 게이트 — 「환산 모드 전환」과 분리한다 (G-1 · 2026-08-06).
    *

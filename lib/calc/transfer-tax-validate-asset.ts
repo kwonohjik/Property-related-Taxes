@@ -45,6 +45,7 @@ import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateMixedUseAsset } from "./transfer-tax-validate-mixed-use-asset";
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
+import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 
 /**
  * 오늘 날짜 — 로컬(KST) 기준 `YYYY-MM-DD` 문자열.
@@ -365,11 +366,8 @@ export function validateAssetAcquisition(
   const isSalesCase = asset.isSalesCaseAcquisition === true;
   const isAppraisal = !isSalesCase && asset.isAppraisalAcquisition === true;
   const isEstimated = !isSalesCase && !isAppraisal && asset.useEstimatedAcquisition === true;
-  // hasPre1990: post-1985 증여는 §163⑨ 신고가액 확인 가능 → pre1990 토지등급 배제(api:86 동일 게이트·3중 패턴).
-  const hasPre1990 =
-    (asset.pre1990Enabled ?? false) &&
-    asset.assetKind === "land" &&
-    !(asset.acquisitionCause === "gift" && (asset.acquisitionDate ?? "") >= "1985-01-01");
+  // hasPre1990: ④ `transfer-tax-api.ts`와 **같은 술어**(3중 패턴) — `transfer-pre1990-land-gate.ts` 단일 소스.
+  const hasPre1990 = hasPre1990LandEstimation(asset);
   const isParcelMode = asset.parcelMode === true && asset.assetKind === "land";
 
   // §163⑨ 표준(generic) 증여 추계모드 차단 — salesCase(:아래)·isAppraisal generic보다 먼저 배치.
