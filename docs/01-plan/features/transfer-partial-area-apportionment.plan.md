@@ -4,6 +4,11 @@
 > 발견 경위: [`basic-info-building-area-phase-f.plan.md`](basic-info-building-area-phase-f.plan.md) §3.2 A-6 실측의 파생
 > anchor: `__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.ts` — `describe("B-4 …")` · `describe("U-9 …")` · `describe("U-10 …")` (12건, **현행 동작 고정만**)
 > 상태: ✅ **전건 종결**(§5.5~§5.9) — B4-1 · B4-1b · B4-2 · B4-2b · **B4-2c** · B4-3 완료. 리스크 BR1~BR5 · 미검증 U-8~U-11 전건 해소.
+>
+> 🔴 **2026-09-03 정정 — 「전건 종결」이 이르렀다.** §1.1 표의 「`land` 일괄 ✅ B4-1 정정」은
+> 사실이 아니었다. B4-1은 **엔진 `acquisitionArea`**를 고쳤는데 비-split 일괄 경로는 그 값을
+> 소비하지 않는다(분자가 **총액**이다). ⇒ ⑤ 위젯이 여전히 전체면적을 곱해 **51,372,274원
+> 과소과세**가 남아 있었고, 리뷰 §9-7로 잡혀 정정됐다. 상세는 §1.1 하단 주석.
 
 ---
 
@@ -36,11 +41,36 @@
 | 경로 | 취득측 면적 | 양도측 면적 | 근거 | 왜곡 |
 |---|---|---|---|---|
 | `building` 일괄 (축 B 연면적) | `acquisitionArea` | `transferArea` | `CompanionAcqPurchaseBlock.tsx:621,645` | 🔴 → **F1 β-2가 소멸시킴** |
-| `land` 일괄 (축 A 토지) | `acquisitionArea` | `transferArea` | `StandardPriceInput` `isAreaMode`(`toPropertyKind("land")→"land"`) | ✅ **B4-1 정정** |
+| `land` 일괄 (축 A 토지) | `acquisitionArea` | `transferArea` | `StandardPriceInput` `isAreaMode`(`toPropertyKind("land")→"land"`) | 🔴 **B4-1이 닿지 않았다 → §9-7에서 정정**(아래) |
 | `housing` 토지·건물 분리 (축 A) | `acquisitionArea` | `transferArea` | `LandBuildingSplitSection.tsx:141` ↔ `TransferStdPriceCards.tsx:56~57,67` | ✅ **B4-1 정정** |
 | 다필지 (환지 아님) | `parcel.acquisitionArea` | `parcel.transferArea` | `multi-parcel-transfer.ts:349~350` | ✅ **B4-1b 정정** |
 | **다필지 감환지** | **의제취득면적 안분** | `parcel.transferArea` | `multi-parcel-transfer.ts:326` | ✅ **대조군** |
 | `housing` 일괄 | — | — | `toPropertyKind("housing")→"house_individual"` → `isAreaMode=false`(총액 직접) | ✅ 해당 없음 |
+
+> 🔴 **2026-09-03 정정 — 위 표의 「`land` 일괄 ✅ B4-1 정정」은 틀렸다.**
+>
+> B4-1이 고친 것은 **엔진 `acquisitionArea`**(`resolveAcqAreaForStdPrice`)인데,
+> 그 값을 소비하는 곳은 **split 경로뿐**이다(`transfer-tax-split-gain.ts:54`
+> `standardPricePerSqmAtAcquisition × acquisitionArea`).
+> **비-split 일괄 경로의 환산 분자는 총액** `standardPriceAtAcquisition`이고,
+> 그 총액은 ⑤ `CompanionAcqPurchaseBlock`의 취득시 `StandardPriceInput`이
+> `단가 × 면적`으로 파생한다 — 그 면적이 **전체 취득면적**으로 남아 있었다.
+>
+> ④ body 실측(정정 전): `standardPriceAtAcquisition=200,000,000`(전체 200㎡) ·
+> `standardPriceAtTransfer=300,000,000`(양도분 100㎡) · `acquisitionArea=100`(B4-1 ✅)
+> ⇒ **면적은 고쳐졌는데 총액은 안 고쳐진** 상태. 엔진 실측 총세액 **27,827,432 vs 79,199,706
+> = 51,372,274원 과소과세**.
+>
+> ⚠️ §165의 「**채택하지 않은 안**: UI 파생(표시·계산 이원화를 만든다)」은 **④가 이 경로를
+> 덮는다는 전제** 위에서 내린 결정이었다. 전제가 틀렸으므로 그 기각도 성립하지 않는다 —
+> ⑤가 곱하는 면적을 ④와 **같은 술어**(`usesTransferAreaForAcqStdPrice`)로 맞추면
+> 표시와 계산이 오히려 **일치**한다(이원화가 아니라 해소다).
+>
+> anchor: `__tests__/lib/calc/partial-acq-std-price-ui-binding.anchor.test.ts`(6) ·
+> `__tests__/components/partial-acq-std-price-area-binding.anchor.test.tsx`(3 — **JSX 바인딩 자체**).
+>
+> 🔑 **교훈**: 「어느 층을 고쳤다」가 「그 층이 소비된다」를 뜻하지 않는다.
+> 정정 후에는 **그 값을 실제로 읽는 지점**까지 따라가 확인할 것.
 
 **대조군이 결정적이다** — 다필지 **감환지**는 이미 안분한다:
 ```ts
