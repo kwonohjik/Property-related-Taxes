@@ -35,7 +35,7 @@ export interface ParcelFormItem {
   /**
    * 면적 입력 시나리오 (UI 전용, API 전송 시 제외)
    * - "same"      : 취득면적 = 양도면적 (일반)
-   * - "reduction" : 감환지 — 교부면적 < 권리면적 (소득령 §162의2)
+   * - "reduction" : 감환지 — 교부면적 < 권리면적 (소득령 §162①9호 단서)
    * - "partial"   : 일부 양도 — 취득 토지 중 일부만 양도
    */
   areaScenario: "same" | "reduction" | "partial";

@@ -208,7 +208,7 @@ describe("R-6 — 전용 면적 섹션 보유 자산유형은 기본정보에 �
   });
 });
 
-describe("R-2 — 환지 시나리오는 land 전용 (소득령 §162의2)", () => {
+describe("R-2 — 환지 시나리오는 land 전용 (소득령 §162①9호 단서)", () => {
   it("land: 감환지·증환지 옵션이 존재한다", () => {
     renderBasic("land", { areaScenario: "reduction" });
     // 트리거 라벨로 확인 — 현재 선택값이 reduction으로 표시되면 옵션이 유효하다.

@@ -223,7 +223,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * 면적 입력 시나리오 (UI 전용, API 전송 시 제외)
    * - "same"      : 취득면적 = 양도면적 (일반, 기본값)
    * - "partial"   : 일부 양도 — 취득 토지 중 일부만 양도
-   * - "reduction" : 환지처분 (감환지) — 교부면적 < 권리면적 (소득령 §162의2)
+   * - "reduction" : 환지처분 (감환지) — 교부면적 < 권리면적 (소득령 §162①9호 단서)
    * - "increase"  : 환지처분 (증환지) — 교부면적 > 권리면적 (증가분은 별도 취득 분리)
    * UI에서 의제취득면적을 acquisitionArea에, 환지확정일 익일을 acquisitionDate에 사전 반영.
    */

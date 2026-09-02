@@ -47,7 +47,7 @@ import {
 } from "./transfer-tax-api-inheritance";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
-import { parcelEffectiveAcquisitionDate } from "./transfer-tax-api-parcels";
+import { representativeParcelAcquisitionDate } from "./transfer-tax-api-parcels";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
 export { toEngineReductions } from "./transfer-tax-api-helpers";
@@ -184,15 +184,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // fallback을 두지 않는다 — 확정 불가 조합은 ⑧이 이미 전부 차단한다
   // (`validateParcelMode`: `!환지 && !취득일` · `환지 && !확정일`).
   //
-  // ⏸ A10(2026-09-02 리뷰, 미해소) — **필지 나열 순서가 세율 기산일을 바꾼다.**
-  //    `parcels[0]`을 자산 대표 취득일로 쓰므로, 같은 필지 집합이라도 카드 순서를 바꾸면
-  //    보유기간(→ 단기/일반 세율군)이 달라진다. 실측 84,722,000원 편차.
-  //    「소득세법」 §104②·§104⑤ 본문은 verbatim 확인했으나 **「한 자산 내 여러 필지」에
-  //    관한 명문이 없어** 정본을 정하지 못했다 — 현행은 §104⑤ 1호도 2호도 아닌 제3의 값이다.
-  //    ⛔ 「필지를 세율군으로 갈라 합산」 방향은 금지 목록에 인접하다(리뷰 §7).
-  //    상세: `docs/reviews/transfer-acq-valuation-review-2026-09.md` §3.5 · §9-1.
+  // ✅ A10(2026-09-03) — **필지 나열 순서 의존을 제거했다.** 종전 `parcels[0]`은 같은 필지
+  //    집합이라도 카드 순서를 바꾸면 세율 기산일이 달라졌다(실측 84,722,000원 편차).
+  //    이제 순서 무관하게 **가장 이른 실효 취득일**을 쓴다 — 근거·한계는 헬퍼 JSDoc 참조.
+  //    ⚠️ 필지별 세율군 분할은 여전히 **미구현**이다(「한 자산 내 여러 필지」 명문 부재).
   const firstParcelAcqDate = parcelModeActive
-    ? parcelEffectiveAcquisitionDate(primary.parcels[0] ?? {})
+    ? representativeParcelAcquisitionDate(primary.parcels)
     : primary.acquisitionDate;
 
   // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)

@@ -410,7 +410,7 @@ export function validateAssetAcquisition(
 
   // 2) 면적 시나리오
   // partial 불변식은 면적 섹션이 노출되는 전 자산유형 공통(land·housing) —
-  //   AREA_SCENARIOS_BY_ASSET_KIND(AssetSectionBasic)와 대응. 환지는 토지 제도(소득령 §162의2)라 land 한정.
+  //   AREA_SCENARIOS_BY_ASSET_KIND(AssetSectionBasic)와 대응. 환지는 토지 제도(소득령 §162①9호 단서)라 land 한정.
   // 미입력 자체는 요구하지 않는다 — 면적을 소비하지 않는 경로(실지거래가·NBL 미사용)에서
   //   필수화하면 과도 차단이 된다. 소비 경로별 요구는 아래 3)·4-2)·NBL·분리 검증이 담당.
   {

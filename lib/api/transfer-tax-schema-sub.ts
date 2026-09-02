@@ -576,7 +576,7 @@ export const parcelSchema = z.object({
   expenses: z.number().int().nonnegative().optional(),
   useDayAfterReplotting: z.boolean().optional(),
   replottingConfirmDate: z.string().date().optional(),
-  // 환지 감환지/증환지 (소득세법 시행령 §162의2)
+  // 환지 감환지/증환지 (소득세법 시행령 §162①9호 단서)
   entitlementArea: z.number().positive().optional(),
   allocatedArea: z.number().positive().optional(),
   priorLandArea: z.number().positive().optional(),
