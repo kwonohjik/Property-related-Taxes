@@ -178,6 +178,8 @@ export interface PropertyTaxInput {
     factoryIsRestrictedZone?: boolean;
     /** 별표6 3호나·다·라·바 추가 인정면적 (㎡). 마목 제외 — 부속토지 면적 쪽에 넣는다. */
     factoryAdditionalRecognizedArea?: number;
+    /** 별표6 3호바 종업원용 체육시설용지 (㎡) — 기준면적의 10% 이내로 clamp (E4-06) */
+    factoryEmployeeSportsArea?: number;
     /** §102①1호 단서 — 허가·사용승인 미이행 → 분리과세 전량 제외 */
     factoryIsUnpermitted?: boolean;
     isSaltField?: boolean;

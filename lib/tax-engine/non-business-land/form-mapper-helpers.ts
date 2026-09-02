@@ -328,6 +328,7 @@ export function buildFactory(
     segments,
     isRestrictedZone:          asBool(a.nblFactoryIsRestrictedZone),
     additionalRecognizedArea:  parseNumber(asString(a.nblFactoryAdditionalRecognizedArea)),
+    employeeSportsFacilityArea: parseNumber(asString(a.nblFactoryEmployeeSportsArea)),
     totalFootprintArea:        parseNumber(asString(a.nblFactoryFootprintArea)),
     zoneType,
     isUnregistered:            asBool(a.nblFactoryIsUnregistered),

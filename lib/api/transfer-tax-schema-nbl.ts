@@ -195,6 +195,8 @@ export const nonBusinessLandRawSchema = z.object({
   nblFactoryIsRestrictedZone: z.boolean().optional(),
   /** 별표6 3호나~바 추가 인정면적 합계(㎡) */
   nblFactoryAdditionalRecognizedArea: z.string().optional(),
+  // 별표6 3호바 — 엔진이 기준면적의 10% 이내로 clamp한다 (E4-06)
+  nblFactoryEmployeeSportsArea: z.string().optional(),
   /** §101①1호 경로 — 공장용 건축물 **바닥면적**(㎡). 연면적과 다른 값이다 */
   nblFactoryFootprintArea: z.string().optional(),
   /** §102①1호 단서·§101① 단서 — 허가·사용승인 미이행 */

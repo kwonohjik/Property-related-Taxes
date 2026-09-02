@@ -100,8 +100,13 @@ export interface SeparateTaxationInput {
   factoryAreaRatePercent?: number;
   /** 별표6 3호가1) 「산집법」 §20① 제한지역 — 추가 인정한도 10%(3,000㎡) / 그 밖 20% */
   factoryIsRestrictedZone?: boolean;
-  /** 별표6 3호나·다·라·바 추가 인정면적 (㎡). **마목 제외** — 부속토지 면적 쪽에 넣는다. */
+  /**
+   * 별표6 3호**나·다·라** 추가 인정면적 (㎡).
+   * **마목 제외** — 부속토지 면적 쪽에 넣는다. **바목 제외** — 10% 상한이 있어 아래 별도 필드.
+   */
   factoryAdditionalRecognizedArea?: number;
+  /** 별표6 3호**바** 종업원용 체육시설용지 (㎡) — 기준면적의 10% 이내로 clamp (E4-06) */
+  factoryEmployeeSportsArea?: number;
   /** §102①1호 **단서** — 허가 미이행·사용승인 미이행 공장용 건축물 → 분리과세 전량 제외 */
   factoryIsUnpermitted?: boolean;
   /** 염전 (염화나트륨 생산에 직접 사용) */
@@ -446,6 +451,7 @@ function judgeFactoryAreaLimit(input: SeparateTaxationInput) {
     {
       isRestrictedZone: input.factoryIsRestrictedZone,
       additionalRecognizedArea: input.factoryAdditionalRecognizedArea,
+      employeeSportsFacilityArea: input.factoryEmployeeSportsArea,
     },
   );
 

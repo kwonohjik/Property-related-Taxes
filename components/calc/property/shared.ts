@@ -183,6 +183,8 @@ export interface FormState {
   stFactoryAreaRatePercent: string;
   stFactoryIsRestrictedZone: boolean;
   stFactoryAdditionalRecognizedArea: string;
+  /** 별표6 3호바 — 종업원용 체육시설용지 (㎡). 나·다·라와 달리 10% 상한이 있어 분리 (E4-06) */
+  stFactoryEmployeeSportsArea: string;
   stFactoryIsUnpermitted: boolean;
 
   // ── 납세의무자(§107) 입력 — 선택 섹션 ──
@@ -266,6 +268,7 @@ export const INITIAL_FORM: FormState = {
   stFactoryAreaRatePercent: "",
   stFactoryIsRestrictedZone: false,
   stFactoryAdditionalRecognizedArea: "",
+  stFactoryEmployeeSportsArea: "",
   stFactoryIsUnpermitted: false,
   // 납세의무자(§107) 초기값 — 섹션 접힘(미입력)
   ownershipType: undefined,
@@ -552,6 +555,8 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
           st.factoryIsRestrictedZone = form.stFactoryIsRestrictedZone;
           st.factoryAdditionalRecognizedArea =
             parseDecimal(form.stFactoryAdditionalRecognizedArea) ?? undefined;
+          st.factoryEmployeeSportsArea =
+            parseDecimal(form.stFactoryEmployeeSportsArea) ?? undefined;
           st.factoryIsUnpermitted = form.stFactoryIsUnpermitted;
           break;
         }

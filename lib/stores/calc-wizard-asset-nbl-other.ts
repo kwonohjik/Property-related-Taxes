@@ -43,6 +43,8 @@ export interface NblOtherFormSlice {
   nblFactoryIsRestrictedZone: boolean;
   /** 별표6 3호나~바 추가 인정면적 합계(㎡) — 녹지·활주로·철로·6m 도로·접도구역·저수지·30도 사면 등 */
   nblFactoryAdditionalRecognizedArea: string;
+  /** 별표6 3호바 종업원용 체육시설용지 (㎡) — 나·다·라와 달리 기준면적의 10% 상한 (E4-06) */
+  nblFactoryEmployeeSportsArea: string;
   /** §101①1호 경로 — 공장용 건축물 **바닥면적**(㎡). 연면적과 다른 값이다 */
   nblFactoryFootprintArea: string;
   /** §102①1호 단서·§101① 단서 — 허가·사용승인 미이행(용도변경 허가 미이행 포함) */
