@@ -236,12 +236,15 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
             required
             hint="배우자·직계존비속이 아니면 이월과세 대상이 아닙니다"
           >
+            {/* 선택지가 3~7자이고 description이 없다 — 세로로 쌓을 이유가 없다.
+                anchor: donor-relation-radio-inline.anchor.test.tsx DR-1 */}
             <RadioCardGroup
               name="donorRelation"
               value={form.donorRelation || ""}
               onChange={(v) =>
                 onChange({ donorRelation: v as StockTransferFormData["donorRelation"] })
               }
+              layout="inline"
               options={[
                 { value: "spouse", label: "배우자" },
                 { value: "lineal", label: "직계존비속" },

@@ -204,7 +204,14 @@ describe("[H-18·H-19·H-20] UnlistedStockV2Card 통합 — sourceCalculationId 
     rerender(<UnlistedStockV2Card input={currentInput} onChange={handleChange} />);
     // sourceCalculationId 배지 표시
     expect(await screen.findByTestId("source-calculation-id-badge")).toBeInTheDocument();
-  });
+    // ⚠️ 이 it은 describe의 **첫 테스트라 `UnlistedStockV2Card`의 동적 import 비용을 혼자
+    //    부담**한다. 실측(2026-09-02): H-18 5.4s / H-19 2.0s / H-20 0.6s — 뒤 둘은 모듈
+    //    캐시를 재사용한다. 병렬 부하가 얹히면 기본 5s를 넘겨 **순수 master에서도 3/3 실패**해
+    //    pre-push 전체를 막았다(18,761 통과 / 이 1건 실패).
+    //    e9a58680이 findBy*로 async 대기는 이미 붙였으나 «렌더 자체가 5s를 넘는» 축은 남아
+    //    있었다 — 같은 커밋이 mixed-use 중부하 anchor에 쓴 처방(timeout 15000)을 그대로 적용한다.
+    //    단언은 그대로이므로 검증력은 줄지 않는다.
+  }, 15000);
 
   it("H-19: corpName 수정 시 sourceCalculationId 배지 제거 (mirror-pattern)", async () => {
     const { UnlistedStockV2Card, createDefaultUnlistedStockV2 } = await import(
