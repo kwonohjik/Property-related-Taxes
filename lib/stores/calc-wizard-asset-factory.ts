@@ -266,6 +266,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblDeemedTransferDate: "",
     nblUrbanIncorporationDate: "",
     nblIsMetropolitanArea: "",
+    nblLandDivision: "",
     nblOwnershipRatio: "",
     nblFarmingSelf: false,
     nblFarmerResidenceDistance: "",

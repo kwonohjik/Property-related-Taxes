@@ -24,6 +24,7 @@ import {
 } from "./period-criteria";
 import { computeResidencePeriods, fallbackResidenceFromDistance } from "./residence";
 import { isUrbanForFarmland } from "./urban-area";
+import { isUrbanCriteriaRegion } from "./urban-region-scope";
 import {
   getOwnershipStart,
   getOverlappingPeriods,
@@ -210,6 +211,31 @@ export function judgeFarmland(
       appliedLaws,
       warnings,
       { r, totalOwnershipDays, residencePeriodsUsed: residencePeriods },
+    );
+  }
+
+  // ── Step 3-2: 지역 열거 안인가? (법 §104의3①1호나목) ────────────
+  // 나목의 「도시지역」은 특별시·광역시(군 제외)·특별자치시(읍면 제외)·특별자치도(제주 행정시
+  // 읍면 제외)·시지역(도농복합시 읍면 제외) **안에서만** 따진다. 도의 군은 열거 자체에 없다.
+  // 열거 밖이면 용도지역과 무관하게 지역기준을 적용하지 않는다. E2-01.
+  const regionScope = isUrbanCriteriaRegion(input.landLocation?.sigunguCode, input.landDivision);
+  if (regionScope === false) {
+    appliedLaws.push(NBL.CRITERIA);
+    steps.push({
+      id: "region_scope_outside",
+      label: "Step 3-2 지역기준 (법 §104의3①1호나목 지역 열거 밖)",
+      status: "PASS",
+      detail: "광역시의 군·도의 군 또는 읍·면지역 — 지역기준 미적용 → 사업용",
+      legalBasis: NBL.MAIN,
+    });
+    return buildPass("지역 열거 밖 농지 + 사용기준 충족", steps, appliedLaws, warnings, {
+      r, totalOwnershipDays, residencePeriodsUsed: residencePeriods,
+    });
+  }
+  if (regionScope === undefined) {
+    warnings.push(
+      "토지 소재지의 시·군·구 또는 읍·면 구분이 없어 「소득세법」 §104조의3①1호나목의 지역 열거" +
+        "(광역시의 군·읍·면지역 제외)를 판정하지 못했습니다 — 도시지역 판정을 그대로 적용했습니다.",
     );
   }
 

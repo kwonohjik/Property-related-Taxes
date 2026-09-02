@@ -217,16 +217,9 @@ export function judgeForest(
   }
 
   // ── Step 3-2-1/2: 시업중/특수지구 — 도시지역 밖 + 편입유예 ────────
-  const urban = isUrbanForForest(input.zoneType);
   // §168의9①2호 단서의 「도시지역」은 **보전녹지지역을 제외**한다(본문 명문 — 국토계획법 시행령 §30).
-  // 현재 ZoneType은 녹지지역을 세분하지 않아 보전녹지를 가려낼 수 없다 → 녹지는 도시지역으로 보고
-  // 그 한계를 결과에 드러낸다(추정으로 유리·불리 어느 쪽으로도 확정하지 않는다). E3-04.
-  if (urban && input.zoneType === "green") {
-    warnings.push(
-      "녹지지역으로 판정했습니다 — 「소득세법 시행령」 §168조의9①2호 단서는 보전녹지지역을 도시지역에서 제외하나, " +
-        "현재 용도지역 입력은 녹지지역을 세분하지 않습니다. 보전녹지지역이면 지역기준이 적용되지 않습니다.",
-    );
-  }
+  // `conservation_green`(보전녹지)은 `isUrbanForForest`가 false를 반환하므로 아래 도시지역 분기를 타지 않는다. E3-04.
+  const urban = isUrbanForForest(input.zoneType);
   steps.push({
     id: "forest_siup_zone",
     label: "Step 3-2 산림법 시업중·특수산림사업지구",

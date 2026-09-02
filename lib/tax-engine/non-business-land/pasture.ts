@@ -26,6 +26,7 @@ import {
   type PeriodCriteriaResult,
 } from "./period-criteria";
 import { isUrbanForPasture } from "./urban-area";
+import { isUrbanCriteriaRegion } from "./urban-region-scope";
 import { getOwnershipStart } from "./utils/period-math";
 import { computeAreaProportioning } from "./utils/area-proportioning";
 import { getLivestockStandardArea } from "./data/livestock-standards";
@@ -222,6 +223,30 @@ export function judgePasture(
       : "기준면적 미제공 (검증 생략)",
     legalBasis: NBL.PASTURE_AREA,
   });
+
+  // ── Step 3-3: 지역 열거 안인가? (법 §104의3①3호가목) ────────────
+  // 3호가목의 「특별시ㆍ광역시ㆍ특별자치시ㆍ특별자치도 및 시지역의 도시지역」에는 1호나목 괄호의
+  // 제외(광역시의 군·읍·면지역)가 「이하 이 항에서 같다」로 그대로 미친다. E2-01.
+  const regionScope = isUrbanCriteriaRegion(input.landLocation?.sigunguCode, input.landDivision);
+  if (regionScope === false) {
+    appliedLaws.push(NBL.PASTURE_URBAN);
+    steps.push({
+      id: "pasture_region_scope",
+      label: "Step 3-3 지역기준 (법 §104의3①3호가목 지역 열거 밖)",
+      status: "PASS",
+      detail: "광역시의 군·도의 군 또는 읍·면지역 — 지역기준 미적용 → 사업용",
+      legalBasis: NBL.PASTURE_URBAN,
+    });
+    return buildPass("지역 열거 밖 + 축산업 영위 + 기준면적 이내", steps, appliedLaws, warnings, {
+      r: r1, totalOwnershipDays,
+    });
+  }
+  if (regionScope === undefined) {
+    warnings.push(
+      "토지 소재지의 시·군·구 또는 읍·면 구분이 없어 「소득세법」 §104조의3①3호가목의 지역 열거" +
+        "(광역시의 군·읍·면지역 제외)를 판정하지 못했습니다 — 도시지역 판정을 그대로 적용했습니다.",
+    );
+  }
 
   // ── Step 3-3: 도시지역 밖 목장? ─────────────────────────────────
   const urban = isUrbanForPasture(input.zoneType, input.transferDate);
