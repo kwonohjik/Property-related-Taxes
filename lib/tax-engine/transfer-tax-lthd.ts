@@ -56,6 +56,16 @@ interface LongTermHoldingResult {
    * 세액에 영향 없음(공제액은 `deduction`이 정본).
    */
   fbLthdFormula?: string;
+  /**
+   * 부수토지 L-1b에서 **표1 축이 이긴** 경우(기본통칙 95-0…1의 max). **표시 전용** —
+   * 세액에 영향 없다(`deduction`이 정본).
+   *
+   * step 산식은 `isOneHousehold && householdHousingCount === 1 && 거주 2년↑`이면 표2 형식
+   * (「보유 N년×4% + 거주 M년×4%」)으로 나가는데, 표1이 이긴 경우 그 분해가 실제 공제율과
+   * 맞지 않아 **자기모순으로 출력된다**(실측: 「보유 20년×4%=40% + 거주 3년×4%=12% = 30%」).
+   * 이 플래그가 켜지면 표시 계층이 표1 형식으로 내려간다.
+   */
+  appurtenantTable1Applied?: boolean;
 }
 
 /**
@@ -172,12 +182,30 @@ export function calcLongTermHoldingDeduction(
      *   → 종전 표1 28%(112,000,000 공제)·총세액 97,405,000
      *   → 토지 축 0%·총세액 146,366,000 (48,961,000 과소과세였다).
      *
-     * ⚠️ **표2(1세대1주택) 축은 그대로 둔다.** 기획재정부 재산세제과-1183(2010.12.10)은
-     *    「토지 전체보유기간에 따른 **표1**의 공제율과 주택 부수토지로서의 보유기간에 따른
-     *    **표2**의 공제율 중 **큰** 공제율」을 적용하라고 하나, 그 예규들은 전부 표2가 보유
-     *    **단일축**이던 시기(~2018) 것이라 현행 2축 표2(보유분+거주분)에 max를 어떻게 대입할지가
-     *    **미확정**이다(nts 48건·6건, 조세심판원 5건 전수 조회 결과 부존재). 여기서는 §95④ 문리만으로
-     *    확정되는 **표1 축·3년 게이트**만 고친다.
+     * ✅ **2026-09-02 — 표2 축도 해소했다(F11 잔여).** 종전에는 「예규가 표2 **단일축** 시기(~2018)
+     *    것이라 현행 2축 표2(보유분+거주분)에 max를 어떻게 대입할지 미확정」으로 미뤄 뒀는데,
+     *    **현행 기본통칙이 그 둘을 동시에 무너뜨린다**:
+     *
+     *    > 「소득세법 기본통칙 **95-0…1** 【주택부수토지가 주택보다 보유기간이 긴 경우】
+     *    >  (조문번호 이동 **2024.03.15.**)
+     *    >  「소득세법」제95조제2항을 적용할 때 1세대1주택에 딸린 토지를 양도하는 경우로서
+     *    >  주택보다 보유기간이 오래된 주택 부수토지에 대한 장기보유특별공제는 **그 토지의
+     *    >  전체보유기간**에 따른 같은 항 **표1의 공제율**과 **주택 부수토지로서의 보유기간**에
+     *    >  따른 같은 항 **표2의 공제율** 중 **큰 공제율**을 적용한다.」
+     *
+     *    ⓐ 통칙은 **2024.03.15 현행**이다 — 2축 표2 시행(2020) **이후에도 살아 있다**.
+     *    ⓑ 「표2의 **공제율**」을 통째로 지목하므로 **보유분/거주분 분해가 필요 없다** —
+     *       미확정이라던 「대입 방법」이 문언으로 정해진다.
+     *    (같은 취지 예규: 기획재정부 재산세제과-1183, 2010.12.10.)
+     *
+     *    종전의 either/or는 §95② **단서**(1세대1주택 혜택 규정) 때문에 본문 표1보다 **못 받는**
+     *    결과를 냈다 — 실측: 토지 2014-06-01 취득(양도 2024-06-01 기준 **9년 11개월**) · 주택
+     *    2년 6개월 · 거주 2년 → 표2가 3년 게이트에 걸려 **0%**인데 표1은 토지 축으로 **18%**다.
+     *    즉 1세대1주택이라는 이유로 공제를 통째로 잃었다(총세액 328,911,000 → 262,383,000).
+     *
+     * ⚠️ **max를 「토지가 더 긴 경우」로 게이트하지 않는다.** 표2 보유분은 4%/년, 표1은 2%/년이라
+     *    `landYears <= houseYears`면 표2 보유분만으로도 표1 이상이 되어 max가 **구조적 no-op**이다
+     *    ⇒ 무조건 max = 통칙 게이트와 **동치**이고 축이 하나 줄어든다.
      */
     const landHolding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
     // 부수토지는 1세대1주택 여부·거주기간을 주택과 공유. 표2 대상 판정은 본 게이트(:아래 L-3)와
@@ -187,26 +215,31 @@ export function calcLongTermHoldingDeduction(
     const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(거주분 공제율)
     const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12); // 통산(대상 판정)
     const useTable2ForCompanion = isOneHouseSingleForCompanion && table2ResidenceYears >= 2;
-    // 표2(1세대1주택 — 보유분 4% + 실거주분 4%, 각 40% 캡)는 주택 보유연수,
-    // 표1(일반 보유 × 2%, 30% 캡)은 **토지 자신의** 보유연수.
-    const companionHoldingYears = useTable2ForCompanion ? primaryHoldingYears : landHolding.years;
+    // 표1(일반 보유 × 2%, 30% 캡)은 **토지 자신의** 보유연수 — 통칙의 「그 토지의 전체보유기간」.
     // 3년 진입요건도 같은 축이다 — `calcLongTermRate` 정본에 3년 가드가 내장돼 있어
     // 외곽 게이트를 따로 두지 않는다(종전 `ctx.holdingMonths < 36` 외곽 return은 축이 어긋나 있었다).
-    const companionRate = calcLongTermRate(
-      companionHoldingYears,
-      residenceYears,
-      useTable2ForCompanion,
-    );
+    const table1Rate = calcLongTermRate(landHolding.years, residenceYears, false);
+    // 표2(1세대1주택 — 보유분 4% + 실거주분 4%, 각 40% 캡)는 **주택 부수토지로서의** 보유연수
+    // = primary 주택의 보유연수. 거주분은 주택에서 하는 것이라 그대로 `residenceYears`다.
+    const table2Rate = useTable2ForCompanion
+      ? calcLongTermRate(primaryHoldingYears, residenceYears, true)
+      : 0;
+    // 통칙 95-0…1 — 「표1의 공제율과 표2의 공제율 중 **큰 공제율**」.
+    const useTable1Axis = table1Rate >= table2Rate;
+    const companionRate = Math.max(table1Rate, table2Rate);
     const deduction = companionRate > 0 ? applyLthdRate(taxableGain, companionRate) : 0;
     // 표시용 보유기간은 **공제율을 만든 축**과 맞춘다 — 어긋나면 산식이 자기모순으로 출력된다
     // (실측 종전: "보유 2년×2% = 28% | 보유기간 2년 11개월").
-    const displayHolding = useTable2ForCompanion
-      ? { years: primaryHoldingYears, months: ctx.holdingMonths % 12 }
-      : { years: landHolding.years, months: landHolding.months };
+    // 동률이면 표1(토지 축)로 표시한다 — 그쪽이 「그 자산의 보유기간」(§95④)이라 오해가 적다.
+    const displayHolding = useTable1Axis
+      ? { years: landHolding.years, months: landHolding.months }
+      : { years: primaryHoldingYears, months: ctx.holdingMonths % 12 };
     return {
       deduction,
       rate: companionRate,
       holdingPeriod: displayHolding,
+      // 표2 대상인데 표1이 이긴 경우에만 표시 축을 뒤집는다(표2 미대상은 원래 표1 형식이다).
+      ...(useTable2ForCompanion && useTable1Axis ? { appurtenantTable1Applied: true } : {}),
     };
   }
 

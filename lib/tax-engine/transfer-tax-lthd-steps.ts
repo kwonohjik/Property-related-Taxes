@@ -38,6 +38,11 @@ export interface LthdStepArgs {
    * 있으면 표1/표2 문구 대신 이것을 쓴다 — 두 기산일이 섞여 있어 단일 "보유 N년×2%" 표기가 성립하지 않는다.
    */
   fbLthdFormula?: string;
+  /**
+   * 부수토지 L-1b에서 표1 축이 이긴 경우(기본통칙 95-0…1 max) — 표2 형식 산식을 쓰면
+   * 분해가 실제 공제율과 어긋나 자기모순이 된다. 켜지면 표1 형식으로 내려간다.
+   */
+  appurtenantTable1Applied?: boolean;
 }
 
 /** STEP 4 + 4.1 + 4.2 — 장특공제 본 step과 보유분/거주분 sub-step을 push한다. */
@@ -56,6 +61,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     lthdExclusionReason,
     usageConversionDetail: conv,
     fbLthdFormula,
+    appurtenantTable1Applied,
   } = args;
   const holdingPeriodStr = holdingPeriod.years > 0 || holdingPeriod.months > 0
     ? `보유기간 ${holdingPeriod.years}년 ${holdingPeriod.months}개월`
@@ -65,7 +71,10 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     isOneHousehold &&
     householdHousingCount === 1 &&
     table2ResidenceYearsForStep >= 2 &&
-    longTermHoldingDeduction > 0;
+    longTermHoldingDeduction > 0 &&
+    // 부수토지에서 표1이 이겼으면 공제율의 출처가 표2가 아니다 — 표2 형식으로 쓰면
+    // 「보유 20년×4%=40% + 거주 3년×4%=12% = 30%」처럼 분해가 합과 어긋난다.
+    !appurtenantTable1Applied;
   // 보유분 공제율 — §95⑤이면 표1(비주택 기간) + 표2(주택 기간)의 합(40% 한도)이고,
   // 그 외 표2 경로는 총 보유기간 × 4%다. sub-step 안분도 이 값을 기준으로 한다.
   const holdingPct = conv
