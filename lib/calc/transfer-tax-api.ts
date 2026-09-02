@@ -47,6 +47,7 @@ import {
 } from "./transfer-tax-api-inheritance";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
+import { parcelEffectiveAcquisitionDate } from "./transfer-tax-api-parcels";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
 export { toEngineReductions } from "./transfer-tax-api-helpers";
@@ -177,8 +178,13 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     primary.carryover?.estimationMode === "general";
   const parcelModeActive =
     primary.parcelMode && primary.assetKind === "land" && (primary.parcels?.length ?? 0) > 0;
+  // A15(2026-09-02): 환지 의제 필지는 `acquisitionDate`가 빈 문자열이라 종전 `|| form.transferDate`
+  // fallback이 **취득일 = 양도일**을 만들어 서버 Zod refine에서 400을 냈다(화면의 취득일 칸을
+  // 고쳐도 사라지지 않는다 — ④가 그 값을 쓰지 않기 때문). 엔진·필지 payload와 같은 규약을 쓴다.
+  // fallback을 두지 않는다 — 확정 불가 조합은 ⑧이 이미 전부 차단한다
+  // (`validateParcelMode`: `!환지 && !취득일` · `환지 && !확정일`).
   const firstParcelAcqDate = parcelModeActive
-    ? (primary.parcels[0]?.acquisitionDate || form.transferDate)
+    ? parcelEffectiveAcquisitionDate(primary.parcels[0] ?? {})
     : primary.acquisitionDate;
 
   // ⑬ 상업용건물·오피스텔 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
