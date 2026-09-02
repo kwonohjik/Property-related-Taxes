@@ -144,6 +144,50 @@ test.describe("§165⑤ ② 상장일 이후 1개월 종가 — 일자별 입력
     await expect(page.getByText("기본공제 (§103②)")).toBeVisible({ timeout: 15_000 });
   });
 
+  /**
+   * 🔴 **「도달」만 단언하면 이 층을 못 본다** (2026-09-02 실측으로 배운 것).
+   *
+   * ④ `buildStockTransferApiBody`가 simple 모드에서 파생 헬퍼를 안 거쳐
+   * body에 종가평균을 싣지 않던 시기에도 **PLD-1은 통과했다** — validate는 통과하고
+   * 화면 미리보기도 파생값을 보여주지만 **엔진만 `undefined`를 받아 취득가액이 0**이었다.
+   * ⇒ 결과 화면의 «숫자»까지 봐야 그 갈림이 드러난다.
+   */
+  test("PLD-3: 결과 화면의 취득가액이 0이 아니고, 배너가 산정 평균을 보인다", async ({ page }) => {
+    test.setTimeout(180_000);
+    await gotoStockTransferTax(page);
+    await fillStep1(page);
+    await openStep2Daily(page);
+
+    const cells = page.locator('[data-slot-idx] input[type="text"]');
+    await expect(cells.first()).toBeVisible({ timeout: 10_000 });
+    for (const i of [0, 1, 2]) await cells.nth(i).fill("10000");
+
+    await page.getByRole("button", { name: /^다음/ }).click();
+    await expect(page.getByText("기본공제 (§103②)")).toBeVisible({ timeout: 15_000 });
+    // Step3 필수 — 신고일(§105①). 안 채우면 「신고일을 입력하세요」로 막힌다.
+    const filingCard = page
+      .locator('[data-slot="field-card"]')
+      .filter({ has: page.locator('input[aria-label="연도"]') })
+      .first();
+    await filingCard.locator('input[aria-label="연도"]').fill("2025");
+    await filingCard.locator('input[aria-label="월"]').fill("08");
+    await filingCard.locator('input[aria-label="일"]').fill("31");
+
+    // 마법사 4단계 — 「필요경비·신고」의 마지막 버튼이 결과로 넘긴다 (STEPS[3] = "결과")
+    await page.getByRole("button", { name: "결과 보기" }).click();
+
+    // ② 배너 — 일자별로 넣었다는 사실이 결과에 남는다 (자가검토 D-5)
+    await expect(
+      page.getByText(/상장일 이후 1개월 종가 일자별 입력 모드/),
+    ).toBeVisible({ timeout: 60_000 });
+    // 🔑 취득가액이 0으로 무너지지 않는다 — **숫자로** 못박는다.
+    //   1주당 취득기준시가 = 10,000 × (28,451 ÷ 39,082) = 7,279 (절사, §165⑤)
+    //   환산취득가        = 44,750,000 × (7,279 ÷ 20,000) = 16,286,762 (§163⑨)
+    //   배관이 끊기면 이 값이 **0**이 된다 — 「보인다」만 봐서는 안 잡힌다.
+    await expect(page.getByText(/1주당 취득기준시가/)).toBeVisible();
+    await expect(page.getByText("16,286,762").first()).toBeVisible();
+  });
+
   test("PLD-2: 표가 비면 차단된다 (PLD-1의 음성 대조군)", async ({ page }) => {
     test.setTimeout(180_000);
     await gotoStockTransferTax(page);

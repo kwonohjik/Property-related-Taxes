@@ -146,6 +146,7 @@ export function resolveAcquisitionBasis(
         method: "post_listing_conversion", netAssetFloorApplied: false, finalPerShareValue: acqStdPerShare,
         conversionAcqStdPerShare: acqStdPerShare, conversionTransferStd: transferStd, conversionUsedFallback: usedFallback,
         transferDailyModeUsed: dailyMode, transferDailyAverage: dailyMode ? (input.transferDatePriceAvg1Month ?? 0) : undefined,
+        listingDailyModeUsed: input.listingStdInputMode === "daily",
       };
 
       for (const rule of postListingResult.appliedRules) {

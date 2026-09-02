@@ -311,6 +311,14 @@ export type StockTransferInput = {
    * @default "direct"
    */
   transferStdInputMode?: "direct" | "daily";
+  /**
+   * 상장일 이후 1개월 종가(§165⑤ 계산식 첫 항) 입력 방식 (UI 메타 — 산식 영향 없음).
+   * "direct": 1개월 평균을 단일 숫자로 직접 입력.
+   * "daily":  거래일별 종가 표에서 파생(`resolveListingClosingAvg` — 증자·합병 절단 포함).
+   * 어느 쪽이든 값은 `listingDatePriceAvg1Month`로 도달한다 — 이 필드는 **표시용**이다.
+   * @default "direct"
+   */
+  listingStdInputMode?: "direct" | "daily";
   listingDate?: Date;
   listingDatePriceAvg1Month?: number;
   /** 취득 후 상장 §165⑤ 단서 분기 */
@@ -791,6 +799,12 @@ export type StockTransferResult = {
     transferDailyModeUsed?: boolean;
     /** daily 모드 자동 산정 평균 (= input.transferDatePriceAvg1Month, UI mirror된 값) */
     transferDailyAverage?: number;
+    /**
+     * §165⑤ 첫 항을 일자별 종가 표에서 산정했는지 (input.listingStdInputMode echo).
+     * ⚠️ 평균값은 여기 두지 않는다 — `postListingDetail.listingClosingAvg1Month`가 이미
+     *    같은 값을 echo한다. 두 벌로 두면 갈릴 자리가 생긴다.
+     */
+    listingDailyModeUsed?: boolean;
 
     // ── [사례 49 GAP-D] FormulaCard 입력값 직접 노출 (역산 회피) ──
     /** [사례 49] 1주당 액면가 (input.acqFaceValuePerShare echo) */
