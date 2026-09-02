@@ -143,6 +143,8 @@ interface CompanionRawAsset extends CompanionSplitFields {
   // 공익수용 §164⑨ 1호 환산 min[] 특례 (계획 Q5 — 컴패니언 지원).
   // ⑫ `transfer-tax-schema-sub.ts` 컴패니언 스키마와 1:1이어야 한다(누락 시 침묵 strip).
   transferCause?: "general" | "public_expropriation";
+  /** §77 직접 경작 토지 — 농특세령 §4①1호 괄호 (D11-02). ⑫와 1:1. */
+  isSelfCultivatedExpropriatedLand?: boolean;
   standardPricePerSqmAtTransfer?: number;
   transferArea?: number;
   compensationPerSqm?: number;
@@ -426,6 +428,8 @@ export function buildCompanionEngineInputs(
     //    세액이 다르다」가 된다(F14 실측: §77의3 감면율 40%↔25%, §97 임대 전액 소실,
     //    §99의4·§98의9는 `.getTime is not a function` 500).
     reductions: mapReductionsToEngine(c.reductions ?? []),
+    // ⑭ §77 직접 경작 토지 — 농특세령 §4①1호 괄호 (D11-02).
+    isSelfCultivatedExpropriatedLand: c.isSelfCultivatedExpropriatedLand,
     propertyId: c.assetId,
     propertyLabel: c.assetLabel ?? "",
     manualHoldingPeriodOverride: effectiveOverride,

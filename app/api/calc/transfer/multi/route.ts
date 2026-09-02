@@ -110,6 +110,10 @@ export async function POST(request: NextRequest) {
       transferDate: toDate(p.transferDate, "transferDate"),
       acquisitionPrice: p.acquisitionPrice,
       acquisitionDate: toDate(p.acquisitionDate, "acquisitionDate"),
+      // ⑭ §77 직접 경작 토지 — 농특세령 §4①1호 괄호 (D11-01).
+      //    이 route의 base 객체는 단건 `buildTransferEngineInput`을 재사용하지 않고 키를
+      //    자체 열거하므로, ⑬만 고치면 값이 여기서 조용히 사라진다.
+      isSelfCultivatedExpropriatedLand: p.isSelfCultivatedExpropriatedLand,
       // ⑭ 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용 (per-asset 단건 엔진 honor)
       assetContractDate: toOptionalDate(p.assetContractDate),
       // P5 모드 2 (⑭): 보유 감면주택 주택수 제외 — 세대 단위 공통이라 전 자산 주입

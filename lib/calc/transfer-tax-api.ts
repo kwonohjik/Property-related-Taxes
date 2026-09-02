@@ -20,7 +20,7 @@ import {
   buildPreHousingDisclosurePayload,
   buildNewConstructionPayload,
 } from "./transfer-tax-api-body-blocks";
-import { toEngineReductions, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildCommercialAppurtenantLand, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { toEngineReductions, toSelfCultivatedExpropriatedLand, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildCommercialBuildingValuation, buildCommercialAppurtenantLand, buildGeneralBuildingValuation, buildRedevelopmentPayload, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, provisoGate, effectiveProvisoReason, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
@@ -505,10 +505,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
      * 뒤(STEP 8.8·집계 M-8 후)에 이 값을 보므로 감면 payload 안이 아니라 자산 축이 맞다.
      * 체크하지 않았으면 `undefined`로 둔다(엔진이 「입증되지 않음 = 과세」로 처리한다).
      */
-    isSelfCultivatedExpropriatedLand:
-      (primary.reductions ?? []).some(
-        (r) => r.type === "public_expropriation" && r.expropriationSelfCultivated === true,
-      ) || undefined,
+    isSelfCultivatedExpropriatedLand: toSelfCultivatedExpropriatedLand(primary.reductions),
     isSuccessorRightToMoveIn:
       primary.assetKind === "right_to_move_in"
         ? primary.isSuccessorRightToMoveIn

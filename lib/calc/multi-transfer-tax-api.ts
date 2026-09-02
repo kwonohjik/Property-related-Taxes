@@ -8,7 +8,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { sumResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
-import { toEngineReductions, toRentalHousingExceptionApi, buildPre1990LandPayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload } from "@/lib/calc/transfer-tax-api-helpers";
+import { toEngineReductions, toSelfCultivatedExpropriatedLand, toRentalHousingExceptionApi, buildPre1990LandPayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
@@ -121,6 +121,9 @@ export function buildPropertyPayload(form: TransferFormData) {
   // (1990 환산은 route ⑭·엔진이 지원 — 아래 pre1990Land spread로 전송.)
   return {
     propertyType: primaryKind,
+    // ⑬ §77 직접 경작 토지 — 농특세령 §4①1호 괄호. 단건 ④와 **같은 leaf**를 쓴다 (D11-01).
+    //    ⑭(multi/route.ts)도 함께 실어야 도달한다 — 한쪽만 고치면 세액이 1원도 안 움직인다.
+    isSelfCultivatedExpropriatedLand: toSelfCultivatedExpropriatedLand(primary?.reductions),
     transferPrice: primaryFractional
       ? applyRatio(parseAmount(form.contractTotalPrice), primaryRatio)
       : parseAmount(form.contractTotalPrice),

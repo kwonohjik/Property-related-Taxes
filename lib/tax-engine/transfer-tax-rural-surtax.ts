@@ -78,9 +78,17 @@ export interface RuralSurtaxResolution {
  * - `"self_cultivated_only"`: §77 — 직접 경작 토지만 비과세
  * - **하이브리드·차감형은 여기 넣지 않는다** — 각자의 경로가 이미 계산한다(이중 부과 방지).
  */
-const TABLE: Record<string, "exempt" | "taxable" | "self_cultivated_only"> = {
-  // 비과세 — 농특세령 §4①1호 「조특법 §66부터 §70까지」
+export const RURAL_SURTAX_TABLE: Record<string, "exempt" | "taxable" | "self_cultivated_only"> = {
+  // 비과세 — 농특세령 §4①1호 「조특법 §66부터 §70까지」.
+  // §69 감면은 계산 경로에서 세 개의 id로 갈라져 발행된다(`calcReductions`) — 근거 조문은
+  // 모두 §69 하나이고(영 §66④1호·§66⑦·§66⑪은 §69의 위임 규정), 농특세령 §4①1호는
+  // §66~§70을 **조건 없이** 열거하므로 셋 다 exempt다. 하나라도 빠지면 판정표 미등재로
+  // `unknown` verdict가 되어 결과 화면에 「농어촌특별세 — 미판정」 + 내부 enum id가 노출된다
+  // (D7-04). 새 변종 id를 만들면 여기에도 반드시 추가할 것 —
+  // anchor `rural-surtax-table-covers-reduction-ids.anchor.test.ts`가 강제한다.
   self_farming: "exempt",
+  self_farming_incorp: "exempt", // §69 + 영 §66④1호·§66⑦ 편입
+  self_farming_inherited: "exempt", // §69 + 영 §66⑪ 피상속인 경작기간 합산
   // 조건부 비과세 — 같은 호 「§77[…직접 경작한 토지로 한정]」
   public_expropriation: "self_cultivated_only",
   // 과세 — 비과세 열거에 없다
@@ -125,7 +133,7 @@ export function resolveTaxCreditRuralSurtax(args: RuralSurtaxArgs): RuralSurtaxR
     return none("exempt", "감면세액 없음");
   }
 
-  const rule = TABLE[reductionTypeApplied];
+  const rule = RURAL_SURTAX_TABLE[reductionTypeApplied];
   if (rule === undefined) {
     return none(
       "unknown",

@@ -10,6 +10,27 @@ import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
+/**
+ * §77 감면 자산이 「직접 경작한 토지」인지 — **자산 수준** 플래그로 승격한다.
+ *
+ * 농특세령 §4①1호 괄호: 「제77조[「조세특례제한법」 제69조제1항 본문에 따른 거주자가 **직접
+ * 경작한 토지**(8년 이상 경작할 것의 요건은 적용하지 아니한다)로 한정한다]」 ⇒ 직접 경작
+ * 토지여야 농특세 비과세다.
+ *
+ * 🔑 **판정식을 복제하지 말 것** (D11-01·D11-02). 단건 ④·다건 ⑬·일괄양도 컴패니언 ④가
+ * 모두 이 leaf를 쓴다 — 한 곳만 빠뜨리면 그 경로에서만 감면세액 × 20%가 조용히 부과된다.
+ * 체크하지 않았으면 `undefined`(엔진이 「입증되지 않음 = 과세」로 처리).
+ */
+export function toSelfCultivatedExpropriatedLand(
+  reductions: ReadonlyArray<{ type: string; expropriationSelfCultivated?: boolean }> | undefined,
+): true | undefined {
+  return (
+    (reductions ?? []).some(
+      (r) => r.type === "public_expropriation" && r.expropriationSelfCultivated === true,
+    ) || undefined
+  );
+}
+
 export function toEngineReductions(
   formReductions: AssetReductionForm[],
   acquisitionCause: AssetForm["acquisitionCause"],
