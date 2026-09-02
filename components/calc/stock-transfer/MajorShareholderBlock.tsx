@@ -291,10 +291,13 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             })
           }
           title="특수 판정 기준일 (합병·분할·신설법인)"
-          description="합병등기일·분할등기일·설립등기일 등 특수분기 시 priorYearEndDate 대신 별도 기준일 사용 (시행령 §157④·소령 157⑧)"
+          description="합병등기일·분할등기일·설립등기일 등 특수분기 시 위 「직전 사업연도 종료일」 대신 별도 기준일 사용 (시행령 §157④·소령 157⑧)"
           tone="rose"
         >
           <div className="mt-3 space-y-3">
+            {/* 4개를 세로로 쌓으면 4행을 먹는다 — 2열 2행으로 접는다(모바일은 1열).
+                라벨이 최장 24자라 inline(한 행) 한 줄에는 들어가지 않는다.
+                anchor: major-judgment-basis-radio.anchor.test.tsx MJ-1 */}
             <RadioCardGroup
               name="judgmentBasis"
               value={form.judgmentBasis === "default" ? "merger" : form.judgmentBasis}
@@ -305,6 +308,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 { value: "incorporation", label: "신설법인 — 설립등기일 기준" },
               ]}
               layout="stack"
+              columns={2}
               tone="rose"
               onChange={(v) => onChange({ judgmentBasis: v as "merger" | "split" | "split_new_entity" | "incorporation" })}
             />
@@ -315,7 +319,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               />
             </FieldCard>
             <p className="text-micro text-rose-700 bg-rose-100/70 px-2 py-1 rounded">
-              ✓ 입력된 기준일로 대주주 기준 매트릭스가 조회됩니다 (시기별 1%/2%/4% 등). priorYearEndDate는 표시용으로만 사용.
+              ✓ 입력된 기준일로 대주주 기준 매트릭스가 조회됩니다 (시기별 1%/2%/4% 등). 위 「직전 사업연도 종료일」은 표시용으로만 쓰입니다.
             </p>
           </div>
         </ToggleCard>
