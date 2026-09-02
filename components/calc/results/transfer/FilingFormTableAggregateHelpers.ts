@@ -25,6 +25,8 @@ import {
   fmtPeriod,
   getAcqDateForCard,
 } from "./FilingFormTableHelpers";
+import { fmtRatePct } from "./FilingFormTableRowDefs";
+import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
 import { baseCardId, shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
@@ -241,6 +243,17 @@ export function buildAggregateRows(
      * ⇒ 산출세액부터는 합계만 표시한다.
      */
     const assetPenalty = (p.penaltyTax ?? 0) + (p.filingDelayedPenaltyTax ?? 0);
+    // ⑨ 세율 — 자산별 실효세율(중과 포함). GB 파트 열은 산출세액과 같은 규칙으로 비운다.
+    const assetRate = fmtRatePct(p.appliedRate);
+    if (!isGbPartColumn && assetRate) setStr("taxRate", col, assetRate);
+    // ③ 세율구분 코드 — 자산별. 집계 breakdown에는 `rateClause`가 없어 그룹 분류를 쓴다.
+    const assetCode = resolveFilingRateCode({
+      rateClause: p.rateClause,
+      assetKind: a?.assetKind,
+      transferDate: colTransferDate,
+      nblSurchargeExcluded: p.nblSurchargeExcluded,
+    });
+    if (!isGbPartColumn && assetCode) setStr("rateCode", col, assetCode);
     if (isGbPartColumn) {
       setNum("calculatedTax", col, null);
       setNum("reductionTax", col, null);
@@ -338,6 +351,18 @@ export function buildAggregateRows(
   setNum("priorIncomeAmount", "total", priorReportedIncome);
   setNum("basicDeduction", "total", aggregated.basicDeduction);
   setNum("taxBase", "total", aggregated.taxBase);
+  /**
+   * ⑨ 세율 (합계 열) — 집계 결과에는 단일 세율 필드가 없다(`AggregateTransferResult`).
+   * 자산별 실효세율이 **전부 같을 때만** 합계 세율로 적고, 세율군이 둘 이상이면 비운다
+   * (「0%」·평균값으로 찍지 않는다 — 상세명세서도 같은 정책이다).
+   */
+  const assetRates = properties.map((p) => p.appliedRate).filter((r) => r > 0);
+  const uniformRate =
+    assetRates.length === properties.length && new Set(assetRates).size === 1
+      ? assetRates[0]
+      : undefined;
+  const totalRate = fmtRatePct(uniformRate);
+  if (totalRate) setStr("taxRate", "total", totalRate);
   setNum("calculatedTax", "total", aggregated.calculatedTax);
   setNum("reductionTax", "total", aggregated.reductionAmount);
   setNum("determinedTax", "total", aggregated.determinedTax);
@@ -401,6 +426,11 @@ export function buildAggregateRows(
     ["priorIncomeAmount", "기신고 양도소득금액"],
     ["basicDeduction", "기본공제", { separatorAfter: true }],
     ["taxBase", "과세표준", { highlight: true }],
+    // ⚠️ 이 rowOrder는 `FilingFormTableRowDefs.ts`의 단건 rowOrder와 **별도 정의**다 —
+    //    행을 추가할 때 양쪽을 함께 고쳐야 한다. 신고서 정본(별지 제84호서식)의
+    //    ⑧과세표준 → ⑨세율 → ⑩산출세액 순서를 따른다.
+    ["rateCode", "세율구분 코드"],
+    ["taxRate", "세율"],
     ["calculatedTax", "산출세액", Object.keys(taxNotes).length > 0 ? { notes: taxNotes } : undefined],
     ["reductionTax", "감면세액"],
     ["determinedTax", "결정세액", { highlight: true }],

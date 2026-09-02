@@ -14,6 +14,7 @@
  *   - 조특법 §133 — 감면 종합한도 (자경 1억 / 수용 2억)
  */
 
+import type { RateClause } from "../transfer-tax-rate-clause";
 import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
 import type {
   TransferTaxInput,
@@ -161,6 +162,10 @@ export interface PerPropertyBreakdown
   progressiveDeduction: number;
   /** 자산별 중과세율 (해당 시) */
   surchargeRate?: number;
+  /** 엔진이 적용한 §104① 호 — 신고서 ③ 세율구분 코드의 단일 소스. */
+  rateClause?: RateClause;
+  /** 부칙 <제9270호> §14① 비사업용 +10%p 배제 — 정본 ⑮가 일반세율 코드로 분류한다. */
+  nblSurchargeExcluded?: boolean;
   /**
    * 자산별 산출세액 (다건 컨텍스트, 참고).
    * = max(0, floor(taxBaseShare × appliedRate) - progressiveDeduction)

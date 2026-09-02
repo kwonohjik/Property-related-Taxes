@@ -625,6 +625,9 @@ function computeAggregateOnce(
       allocatedBasicDeduction: allocatedBasic[idx],
       taxBaseShare,
       appliedRate: r.result.appliedRate,
+      // 신고서 ③ 세율구분 코드의 단일 소스 — 자산 열도 엔진이 정한 호를 그대로 쓴다.
+      rateClause: r.result.rateClause,
+      nblSurchargeExcluded: r.result.nblSurchargeExcluded,
       progressiveDeduction: r.result.progressiveDeduction,
       surchargeRate: r.result.surchargeRate,
       refCalculatedTax,

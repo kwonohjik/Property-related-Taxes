@@ -160,6 +160,13 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     // surchargeType·isSurchargeSuspended가 없어 재사용할 수 없다). 세액 로직 불변 — F01.
     multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
     nblSurchargeExcluded: taxResult.nblSurchargeExcluded,
+    /**
+     * 엔진이 실제로 적용한 §104① 호(「승자」) — 신고서 ③ 세율구분 코드의 단일 소스.
+     *
+     * 표시 쪽에서 자산종류·보유기간·중과유형으로 호를 **다시 유도하면 이중 진실**이 된다.
+     * §104① 후단·§104⑦ 후단 비교의 승자는 엔진만 알기 때문이다.
+     */
+    rateClause: taxResult.rateClause,
     shortTermNote: taxResult.shortTermNote,
     reductionAmount,
     reductionType,
