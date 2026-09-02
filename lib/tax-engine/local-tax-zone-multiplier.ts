@@ -90,6 +90,9 @@ export const LOCAL_TAX_ZONE_AREA_MULTIPLIER: Record<LocalTaxZoneKey, number> = {
 const ZONE_KEY_ALIAS: Record<string, LocalTaxZoneKey> = {
   agricultural: "agriculture_forest",
   nature_preserve: "natural_env",
+  // 「지방세법 시행령」 §101② 배율표는 녹지지역을 세분하지 않는다(7배 단일).
+  // 보전녹지 구분은 「소득세법 시행령」 §168의9①2호 단서에만 필요하므로 여기선 흡수한다.
+  conservation_green: "green",
 };
 
 /** 배율 산정 근거를 화면·경고문에 표시할 때 쓰는 용도지역 한국어 명칭. */

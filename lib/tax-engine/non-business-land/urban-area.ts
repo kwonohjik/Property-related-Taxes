@@ -39,14 +39,23 @@ export function isUrbanForFarmland(zoneType: ZoneType): boolean {
 export function isUrbanForPasture(zoneType: ZoneType, transferDate: Date): boolean {
   const cutoff = new Date("2008-02-21");
   if (transferDate < cutoff) {
-    // 2008.2.21 이전: 녹지까지 포함
-    return isUrbanResidentialCommercialIndustrial(zoneType) || zoneType === "green";
+    // 2008.2.21 이전: 녹지까지 포함 — 이 조문에는 보전녹지 세분이 없다.
+    return isUrbanResidentialCommercialIndustrial(zoneType) || isGreenZone(zoneType);
   }
   return isUrbanResidentialCommercialIndustrial(zoneType);
 }
 
+/** 녹지지역 계열(보전·생산·자연) — 녹지 세분이 없는 조문에서 함께 취급. */
+export function isGreenZone(zoneType: ZoneType): boolean {
+  return zoneType === "green" || zoneType === "conservation_green";
+}
+
 /**
- * §168-9 ①2호 임야 "도시지역" = 주·상·공 + 녹지 (보전녹지 제외, 자연녹지·생산녹지 포함).
+ * §168-9 ①2호 임야 "도시지역" = 주·상·공 + 녹지.
+ *
+ * 단서 본문이 「도시지역(같은 법 시행령 제30조의 규정에 따른 **보전녹지지역을 제외한다**.
+ * 이하 이 호에서 같다)」이므로 보전녹지는 제외하고 생산·자연녹지(`green`)만 포함한다.
+ *
  * ※ 임야는 원칙 지역기준 미적용이며, 시업중 임야·특수산림사업지구만 이 판정을 적용.
  */
 export function isUrbanForForest(zoneType: ZoneType): boolean {
@@ -58,9 +67,10 @@ export function isUrbanForForest(zoneType: ZoneType): boolean {
  * 배율 판정은 getHousingMultiplier에서 수도권 여부까지 고려.
  */
 export function isUrbanForHousing(zoneType: ZoneType): boolean {
+  // §168의12에는 녹지 세분이 없다 — 보전녹지도 녹지로 본다.
   return (
     isUrbanResidentialCommercialIndustrial(zoneType) ||
-    zoneType === "green" ||
+    isGreenZone(zoneType) ||
     zoneType === "unplanned"
   );
 }
@@ -110,7 +120,7 @@ export function getHousingMultiplier(
   if (!urban) return { multiplier: 10, detail: "도시지역 外 10배" };
 
   if (isMetropolitan) {
-    if (zoneType === "green") return { multiplier: 5, detail: "수도권 녹지 5배" };
+    if (isGreenZone(zoneType)) return { multiplier: 5, detail: "수도권 녹지 5배" };
     if (isUrbanResidentialCommercialIndustrial(zoneType)) {
       return { multiplier: 3, detail: "수도권 주·상·공 3배" };
     }

@@ -58,6 +58,13 @@ export type ZoneType =
   | "commercial"
   | "industrial"
   | "green"
+  /**
+   * 보전녹지지역 — 「국토의 계획 및 이용에 관한 법률 시행령」 §30.
+   * §168의9①2호 단서가 임야 「도시지역」에서 **명문으로 제외**하므로 녹지에서 갈라 둔다.
+   * 다른 조문(§168의12 주택부수토지 배율 · 「지방세법 시행령」 §101②)에는 녹지 세분이 없어
+   * 그쪽에서는 `green`과 같이 취급한다.
+   */
+  | "conservation_green"
   | "management"
   | "agriculture_forest"
   | "natural_env"
