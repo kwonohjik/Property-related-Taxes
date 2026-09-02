@@ -50,6 +50,10 @@ export type LandCategoryGroup =
   | "unknown";
 
 /** 용도지역 */
+import type { LandDivision } from "./urban-region-scope";
+
+export type { LandDivision };
+
 export type ZoneType =
   | "residential"
   | "exclusive_residential"
@@ -363,6 +367,15 @@ export interface NonBusinessLandInput {
 
   // 도시지역 편입
   urbanIncorporationDate?: Date;
+
+  /**
+   * 토지 소재지의 행정구역 단위(동 / 읍·면) — 법 §104의3①1호나목·3호가목의 지역 열거 판정용.
+   *
+   * 자치단체 종류(군/시/구)는 `landLocation.sigunguCode`에서 도출되지만 읍·면 여부는
+   * 코드에서 나오지 않는다. 미입력이면 추정하지 않고 판정 불가로 둔다(⑧ validation이 차단).
+   * 읍·면이 없는 자치구·일반구에서는 불요.
+   */
+  landDivision?: LandDivision;
 
   // 사업용 사용기간
   businessUsePeriods: BusinessUsePeriod[];
