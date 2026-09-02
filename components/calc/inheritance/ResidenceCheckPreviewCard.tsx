@@ -103,7 +103,7 @@ export function ResidenceCheckPreviewCard({
           {heirMinDistanceKm !== null && ` (${formatKm(heirMinDistanceKm)})`}
         </p>
         <p className="text-micro mt-0.5 opacity-80">
-          ※ 연접 시·군·구 매트릭스는 Phase 1 데이터 주입 후 활성 (옵션 A — 사용자 명시 우선)
+          ※ 최종 충족 여부는 사용자 명시값을 따릅니다 (자동 검증은 안내용)
         </p>
       </div>
 

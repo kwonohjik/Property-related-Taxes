@@ -20,6 +20,7 @@
  */
 
 import { haversineKm } from "@/lib/geo/haversine";
+import { resolveSigunguUnitCode, resolveAdjacentUnitCodes } from "@/lib/geo/sigungu-unit";
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { SigunguMatchKind } from "@/lib/tax-engine/types/inheritance-asset-location.types";
@@ -125,9 +126,13 @@ function classifyMatch(args: {
   forestManageable: boolean;
 }): SigunguMatchKind {
   const { residenceCode, assetCode, distanceKm, adjacent, limitKm, isForestLand, forestManageable } = args;
-  if (residenceCode && assetCode) {
-    if (residenceCode === assetCode) return "same_district";
-    if (adjacent.includes(residenceCode)) return "adjacent_district";
+  // 코드 비교는 **자치단체 단위**로 한다 — §16②1호나의 「구」는 「자치구를 말한다」이므로
+  // 일반구(행정구)는 「구」가 아니고 상위 시가 판정 단위다. 양도세 미러와 같은 leaf를 쓴다.
+  const residenceUnit = resolveSigunguUnitCode(residenceCode);
+  const assetUnit = resolveSigunguUnitCode(assetCode);
+  if (residenceUnit && assetUnit) {
+    if (residenceUnit === assetUnit) return "same_district";
+    if (adjacent.includes(residenceUnit)) return "adjacent_district";
   }
   if (distanceKm !== null && distanceKm <= limitKm) return "within_30km";
   // §16②1호나 산림지 단서 — "통상적으로 직접 경영할 수 있는 지역" 사용자 명시
@@ -180,7 +185,9 @@ function evaluateParty(
     if (!hasCodePair && !hasCoordPair && !(isForestLand && forestManageable)) continue;
     evaluated = true;
 
-    const adjacent = assetCode ? resolveAdjacent(assetCode) : [];
+    // 연접 매트릭스는 구 단위라 일반구가 있는 시는 형제 구 인접을 union해야 한다
+    // (§16②1호나 「그와 연접한 시ㆍ군ㆍ구」의 「그」가 자치단체 단위이므로).
+    const adjacent = assetCode ? resolveAdjacentUnitCodes(assetCode, resolveAdjacent) : [];
     const kind = classifyMatch({
       residenceCode: residenceSigunguCode,
       assetCode,
