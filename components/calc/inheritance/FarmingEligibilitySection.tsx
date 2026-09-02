@@ -31,6 +31,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { evaluateFarmingEligibility } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import { checkFarmingResidenceCompliance } from "@/lib/calc/farming-residence-check";
+import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import { ResidenceCheckPreviewCard } from "./ResidenceCheckPreviewCard";
 import { HeirAssessmentCard } from "./HeirAssessmentCard";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
@@ -166,8 +167,16 @@ export function FarmingEligibilitySection({
   );
 
   // F-10 거주지 자동 검증 미리보기 (옵션 A 정책 — autoMet 안내용)
+  // ⚠️ 연접 매트릭스를 **엔진과 같이** 주입해야 한다(V3-d) — 옵션을 빼면 기본값이 `() => []`라
+  //    adjacent_district 분기가 통째로 죽어, 같은 입력에 대해 입력 화면은 「fail」을,
+  //    결과 화면은 「연접 시·군·구」 충족을 표시한다(inheritance-farming-deduction.ts와 동일 주입).
   const residenceCheck = useMemo(
-    () => (farming?.type === "personal" ? checkFarmingResidenceCompliance(estateItems, farming) : null),
+    () =>
+      farming?.type === "personal"
+        ? checkFarmingResidenceCompliance(estateItems, farming, {
+            adjacentSigunguCodes: getAdjacentSigunguCodes,
+          })
+        : null,
     [farming, estateItems],
   );
 
