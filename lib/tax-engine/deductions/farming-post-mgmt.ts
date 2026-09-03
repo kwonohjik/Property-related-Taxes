@@ -266,14 +266,15 @@ export function calcFarmingPostMgmt(
       note: `${input.filingDeadline} + 1일 ~ ${input.violationDate}`,
     },
     {
-      label: `이자율 (국세기본법 §43의3②)`,
+      // 🔴 G-19: 국세기본법 제43조는 「과세표준신고의 관할」이고 제43조의3은 없다.
+      label: `이자율 (국세기본법 시행령 §43의3② 본문 → 시행규칙 §19의3)`,
       amount: 0,
       note: `${(input.interestRate * 100).toFixed(3)}% (사용자 입력)`,
     },
     {
       label: "이자상당액 = 추징세액 × 일수 × 이자율 / 365",
       amount: interestAmount,
-      lawRef: "시행령 §16⑧",
+      lawRef: "상증령 §16⑧",
     },
     {
       label: "총 추징액 (세액 + 이자)",

@@ -231,7 +231,8 @@ export interface FarmingPostMgmtInput {
    */
   baseTaxableAmount: number;
   /**
-   * 국세기본법 시행령 §43의3② 이자율 (소수, 예: 0.029 = 연 2.9%).
+   * 국세기본법 시행령 §43의3② 본문 이자율 (소수). 실제 율은 같은 법 시행규칙 §19의3 —
+   * 현행 0.031(연 1천분의 31). 상증령 §16⑧3호는 **부과 당시**의 율을 적용한다.
    * 시점별 개정 — 사용자 직접 입력 권장.
    */
   interestRate: number;
