@@ -92,7 +92,7 @@ export function StockTransferPenaltySection({
           )}
           {result.latePaymentPenalty > 0 && (
             <div className="flex justify-between py-2">
-              <span className="text-rose-600">납부불성실 가산세 (1일 22/100,000)</span>
+              <span className="text-rose-600">납부지연 가산세 (국세기본법 §47조의4)</span>
               <span className="font-medium text-rose-900">{fmt(result.latePaymentPenalty)}</span>
             </div>
           )}

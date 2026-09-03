@@ -23,6 +23,7 @@ import { useState, useMemo } from "react";
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
 import { formatIsoStamp } from "@/lib/utils/file-download";
+import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -705,6 +706,9 @@ export function PropertyTaxResultView({ result }: Props) {
         </section>
         </PrintSection>
       )}
+
+      {/* 🔴 G-20: 면책 고지 — 선택 출력과 무관하게 항상 인쇄되어야 하므로 PrintSection 밖이다. */}
+      <DisclaimerBanner />
     </div>
   );
 }

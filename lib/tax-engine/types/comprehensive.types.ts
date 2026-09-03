@@ -734,8 +734,8 @@ export interface PostManagementViolationInput {
  * 사후관리 위반 추징 결과
  */
 export interface PostManagementPenaltyResult {
-  totalRecoveryTax: number;          // 추징 세액 합계
-  interestAmount: number;            // 납부불성실 가산세
-  totalPayable: number;              // 총 납부액 (추징세 + 이자)
+  totalRecoveryTax: number;          // 추징 세액 합계 (종합부동산세법 §17⑤ 「경감받은 세액」)
+  interestAmount: number;            // 이자상당가산액 (같은 법 시행령 §10②2호 — 1일 10만분의 22)
+  totalPayable: number;              // 총 납부액 (추징세 + 이자상당가산액)
   recoveryPeriodYears: number;       // 추징 대상 연수
 }

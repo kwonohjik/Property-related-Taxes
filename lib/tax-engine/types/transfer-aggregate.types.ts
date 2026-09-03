@@ -438,7 +438,8 @@ export interface AggregateTransferResult {
    */
   buildingPenaltyTax?: number;
   /**
-   * 지방소득세 = (결정세액 + **§114조의2분만**) × 10%, 원 미만 절사 (지방세법 §103의3).
+   * 지방소득세 = (결정세액 + **§114조의2분만**) × 10%, 원 미만 절사
+   * (지방세법 §103② 과세표준 · §103의3 세율 · §103의9② 환산·감정취득가액 가산).
    * 국기법 신고불성실·납부지연 가산세는 과세표준에서 제외된다 — `transfer-tax-aggregate.ts` STEP M-10.
    */
   localIncomeTax: number;

@@ -245,7 +245,13 @@ export interface TransferTaxResult {
    * (`local-income-tax-display.ts` 단일 소스). 미지정이면 `penaltyTax`로 폴백한다.
    */
   localTaxPenalty?: number;
-  /** 지방소득세 = (결정세액 + §114조의2 가산세) × 10%, 원 미만 절사 (지방세법 §103의3) */
+  /**
+   * 지방소득세 = (결정세액 + §114조의2 가산세) × 10%, 원 미만 절사.
+   *
+   * 근거: 과세표준 「지방세법」 §103②(=「소득세법」 §92 과세표준) × 세율 §103의3 − 감면 §103의4,
+   * 여기에 §114조의2분을 §103의9②(환산·감정취득가액 × 0.5%)로 가산한 것과 같은 값이다.
+   * 축 설명: `components/calc/results/transfer/local-income-tax-display.ts`.
+   */
   localIncomeTax: number;
   /**
    * [echo] 농어촌특별세 **총액** (「농어촌특별세법」 §5①1호 — 조특법 감면세액 × 20%).

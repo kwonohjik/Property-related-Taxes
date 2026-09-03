@@ -97,15 +97,38 @@ describe("FG-2 🔑 양성 대조군 — 국내 종목이 있으면 예정신고
 });
 
 describe("FG-3 §105① 호가 갈린다 — 기타자산은 1호(달), 국내주식은 2호(반기)", () => {
+  /**
+   * 🔴 G-25 이후 기한 날짜는 **한 화면에 두 곳**에 나온다 — §4 「예정신고 기한 자동 계산」
+   * 상자와 §5 「법정납부기한」 hint. 둘은 같은 leaf(`calcPreliminaryDeadline`)를 쓰므로
+   * **반드시 같은 날짜**여야 한다. 종전에는 hint가 규칙을 따로 서술해 주식에도
+   * §105①1호(달의 말일)를 제시했고, 그래서 같은 화면이 서로 다른 기한을 말했다.
+   *
+   * ⇒ 「1개만 있다」가 아니라 **「전부 같은 날짜다」**를 단언한다.
+   */
+  function expectDeadlineEverywhere(date: RegExp) {
+    const hits = screen.getAllByText(date);
+    expect(hits.length).toBeGreaterThanOrEqual(2);
+    return hits;
+  }
+
   it("FG-3-1: 국내주식 2025-03-15 → 반기 말일 +2개월 = 2025-08-31 (§105①2호)", () => {
     render(<Step3 form={form({ marketType: "kospi" })} onChange={() => {}} />);
     expect(screen.getByText(/§105①2호/)).toBeTruthy();
-    expect(screen.getByText(/2025-08-31/)).toBeTruthy();
+    expectDeadlineEverywhere(/2025-08-31/);
+    // §5 hint가 1호(달의 말일 = 2025-05-31)를 제시하던 종전 결함의 직접 반증
+    expect(screen.queryByText(/2025-05-31/)).toBeNull();
   });
 
   it("FG-3-2: ⭐ 기타자산 같은 날짜 → 달의 말일 +2개월 = 2025-05-31 (§105①1호)", () => {
     render(<Step3 form={form({ marketType: "other_asset" })} onChange={() => {}} />);
     expect(screen.getByText(/§105①1호/)).toBeTruthy();
-    expect(screen.getByText(/2025-05-31/)).toBeTruthy();
+    expectDeadlineEverywhere(/2025-05-31/);
+    expect(screen.queryByText(/2025-08-31/)).toBeNull();
+  });
+
+  it("FG-3-3: 🔴 G-25 — 국외주식은 §5 hint도 예정신고 기한을 제시하지 않는다", () => {
+    render(<Step3 form={form({ marketType: "foreign_stock" })} onChange={() => {}} />);
+    expect(screen.queryByText(/예정신고 기한 2025-/)).toBeNull();
+    expect(screen.getByText(/확정신고 기한은 다음 해 5월 31일/)).toBeTruthy();
   });
 });

@@ -230,7 +230,9 @@ export function buildTotalTax(
   // ── 산출세액 이후 — 감면 · 농특세 · 가산세 (F17-B) ────────────────────────
   const post = computeMixedUsePostTax(transferTax, aggregateIncome, BASIC_DEDUCTION, taxBase, postTax);
   const determinedTax = Math.max(0, transferTax - post.reductionAmount);
-  // 지방소득세 base는 **결정세액**이다(지방세법 §103의3) — 신고불성실·납부지연 가산세는 제외.
+  // 지방소득세 base는 **결정세액**이다(지방세법 §103② 과세표준 × §103의3 세율 − §103의4 감면).
+  // 국세기본법 §47의2~§47의4 가산세는 §103의2 3호 열거에 없어 대상이 아니다.
+  // (겸용에는 §114조의2가 없으므로 §103의9② 가산분도 없다.)
   const localTax = applyRate(determinedTax, 0.10);
 
   return {

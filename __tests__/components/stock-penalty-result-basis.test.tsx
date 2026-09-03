@@ -47,7 +47,8 @@ describe("PR-BASIS 정상 신고 + 납부지연", () => {
         isInternationalTransaction={false}
       />,
     );
-    expect(screen.getByText(/납부불성실 가산세/)).toBeTruthy();
+    // 🔴 G-17: 「납부불성실」은 폐지된 조문 제목이다 — 현행 §47조의4의 제목은 「납부지연가산세」.
+    expect(screen.getByText(/납부지연 가산세 \(국세기본법 §47조의4\)/)).toBeTruthy();
   });
 
   it("PR-BASIS-3: 실제 과소신고면 종전 문구 그대로 (회귀 가드)", () => {

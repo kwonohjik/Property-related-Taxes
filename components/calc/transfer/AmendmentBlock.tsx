@@ -63,11 +63,15 @@ export function AmendmentBlock({
                 onChange({ claimReasonType: v as TransferFormData["claimReasonType"] })
               }
               options={[
-                { value: "ordinary", label: "일반", description: "법정신고기한 후 5년 이내 (§45의2①)" },
+                {
+                  value: "ordinary",
+                  label: "일반",
+                  description: "법정신고기한 후 5년 이내 (국세기본법 §45의2①)",
+                },
                 {
                   value: "posterior",
                   label: "후발적 사유",
-                  description: "판결·수용재결 등 안 날부터 3개월 (§45의2②)",
+                  description: "판결·수용재결 등 안 날부터 3개월 (국세기본법 §45의2②)",
                 },
               ]}
             />
@@ -93,7 +97,7 @@ export function AmendmentBlock({
                 onChange={(v) => onChange({ posteriorEventDate: v })}
               />
               <p className="text-xs text-muted-foreground">
-                판결·수용재결 확정 등 후발적 사유를 안 날부터 3개월 이내 (§45의2②).
+                판결·수용재결 확정 등 후발적 사유를 안 날부터 3개월 이내 (국세기본법 §45의2②).
               </p>
             </div>
           )}
@@ -186,7 +190,7 @@ export function AmendmentBlock({
           checked={form.applyUnderReportingPenalty}
           onCheckedChange={(v) => onChange({ applyUnderReportingPenalty: v })}
           title="신고불성실가산세 적용"
-          description="판결·재결 확정 증액보상금은 통상 정당한 사유 면제(§48①2호) — 해당 시 OFF"
+          description="판결·재결 확정 증액보상금은 통상 정당한 사유 면제(국세기본법 §48①2호) — 해당 시 OFF"
           tone="rose"
         >
           <div className="space-y-3">
@@ -216,8 +220,16 @@ export function AmendmentBlock({
                   onChange({ underReductionMode: v as TransferFormData["underReductionMode"] })
                 }
                 options={[
-                  { value: "exempt", label: "정당한 사유 면제 (§48①2호)", description: "증액보상금 등 — 가산세 0" },
-                  { value: "auto_48_2", label: "§48② 자진수정 감면", description: "경과기간별 10~90% 감면" },
+                  {
+                    value: "exempt",
+                    label: "정당한 사유 면제 (국세기본법 §48①2호)",
+                    description: "증액보상금 등 — 가산세 0",
+                  },
+                  {
+                    value: "auto_48_2",
+                    label: "국세기본법 §48② 자진수정 감면",
+                    description: "경과기간별 10~90% 감면",
+                  },
                 ]}
               />
             </div>
@@ -241,7 +253,7 @@ export function AmendmentBlock({
                   checked={form.priorAssessmentNotified}
                   onCheckedChange={(v) => onChange({ priorAssessmentNotified: v })}
                   title="세무서 경정 예고 후 수정신고"
-                  description="경정을 미리 알고 신고한 경우 §48② 감면 배제"
+                  description="경정을 미리 알고 신고한 경우 국세기본법 §48② 감면 배제"
                   tone="rose"
                 />
               </div>
@@ -254,7 +266,7 @@ export function AmendmentBlock({
           checked={form.applyLatePaymentPenalty}
           onCheckedChange={(v) => onChange({ applyLatePaymentPenalty: v })}
           title="납부지연가산세 적용"
-          description="추가 납부세액 × 경과일수 × 일 0.022% (§47의4) — §48② 감면 대상 아님"
+          description="추가 납부세액 × 산정일수(법정납부기한 다음 날 ~ 납부일 전날) × 일 0.022% (국세기본법 §47의4①1호) — 같은 법 §48② 감면 대상 아님"
           tone="rose"
         >
           <div className="space-y-1.5">

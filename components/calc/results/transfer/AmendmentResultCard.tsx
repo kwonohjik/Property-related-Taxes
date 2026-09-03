@@ -152,7 +152,7 @@ export function AmendmentResultCard({
           <Row
             label={`신고불성실가산세${
               detail.underReportingReductionRate > 0
-                ? ` (§48② ${(detail.underReportingReductionRate * 100).toFixed(0)}% 감면)`
+                ? ` (국세기본법 §48② ${(detail.underReportingReductionRate * 100).toFixed(0)}% 감면)`
                 : ""
             }`}
             value={formatKRW(detail.underReportingPenalty)}

@@ -49,8 +49,9 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
    */
   const determinedTax = getRefDeterminedTax(b);
   /**
-   * 지방소득세 base는 **§114조의2분(`b.penaltyTax`)만**이다 — 국기법 §47의2~§47의4
-   * 신고불성실·납부지연분(`b.filingDelayedPenaltyTax`)은 과세표준에서 제외된다(지방세법 §103의3).
+   * 지방소득세에 더해지는 가산세는 **§114조의2분(`b.penaltyTax`)만**이다 — 그 근거는
+   * 지방세법 §103의9②(환산·감정취득가액 × 0.5%)이고, 국기법 §47의2~§47의4
+   * 신고불성실·납부지연분(`b.filingDelayedPenaltyTax`)은 §103의2 3호 열거에 없어 대상이 아니다.
    * 종전에는 `totalPenalty`를 넣어 자산별 지방세가 같은 화면의 합계 카드와 어긋났다.
    * 축 설명: `transfer/local-income-tax-display.ts`.
    */
