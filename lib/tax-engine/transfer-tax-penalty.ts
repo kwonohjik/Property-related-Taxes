@@ -12,6 +12,10 @@
 import { differenceInCalendarDays, addDays, startOfDay } from "date-fns";
 import { PENALTY, PENALTY_CONST } from "./legal-codes";
 import { applyRate, applyRateFraction, safeMultiply, truncateToWon } from "./tax-utils";
+import {
+  resolveLateFilingReduction,
+  type LateFilingReductionInput,
+} from "./late-filing-reduction";
 
 // ============================================================
 // 타입 정의
@@ -76,6 +80,16 @@ export interface FilingPenaltyInput {
   filingType: FilingType;
   /** 부정행위 유형 */
   penaltyReason: PenaltyReason;
+  /**
+   * 기한 후 신고 감면 축 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05).
+   *
+   * ⚠️ **`filingType === "none"` 일 때만 적용된다** — 두 조문 모두 「제47조의2에 따른
+   *    가산세만 해당」이다. 과소신고(§47의3)는 §48②**1호**(수정신고) 경로가 담당하고,
+   *    납부지연(§47의4)은 어느 쪽 감면 대상도 아니다.
+   *
+   * 미제공이면 감면 0 — 종전 동작(전액)이 그대로 유지된다.
+   */
+  lateFiling?: LateFilingReductionInput;
 }
 
 /** 지연납부가산세 입력 */
@@ -121,8 +135,17 @@ export interface FilingPenaltyResult {
   penaltyRate: number;
   /** 가목·나목 분해 — 혼합 적용 시에만. 미입력(전액 부정)·무신고·일반은 undefined */
   fraudSplit?: FraudPortionSplit;
-  /** 신고불성실가산세액 */
+  /** 신고불성실가산세액 — **§48② 감면 반영 후** */
   filingPenalty: number;
+  /**
+   * 감면 전 가산세액. 감면이 없으면 `filingPenalty` 와 같다.
+   * 결과 화면이 「감면 전 − 감면액 = 최종」 산식을 재현할 수 있게 싣는다.
+   */
+  grossFilingPenalty: number;
+  /** §48②2호·3호라목 감면율 (0 · 0.2 · 0.3 · 0.5) */
+  lateFilingReductionRate: number;
+  /** §48②2호·3호라목 감면액 */
+  lateFilingReductionAmount: number;
   /** 적용 법령 */
   legalBasis: string;
   steps: PenaltyStep[];
@@ -299,6 +322,9 @@ export function calculateFilingPenalty(
       penaltyBase: 0,
       penaltyRate: 0,
       filingPenalty: 0,
+      grossFilingPenalty: 0,
+      lateFilingReductionRate: 0,
+      lateFilingReductionAmount: 0,
       legalBasis: PENALTY.NON_FILING,
       steps: [{ label: "정상신고", formula: "가산세 없음", amount: 0 }],
     };
@@ -334,6 +360,9 @@ export function calculateFilingPenalty(
       penaltyBase: 0,
       penaltyRate: 0,
       filingPenalty: 0,
+      grossFilingPenalty: 0,
+      lateFilingReductionRate: 0,
+      lateFilingReductionAmount: 0,
       legalBasis: PENALTY.NON_FILING,
       steps: [...steps, { label: "가산세", formula: "납부세액 없음 — 가산세 0", amount: 0 }],
     };
@@ -396,6 +425,11 @@ export function calculateFilingPenalty(
       penaltyRate: penaltyBase > 0 ? filingPenalty / penaltyBase : 0,
       fraudSplit: { fraudBase, fraudRate, normalBase, normalRate },
       filingPenalty,
+      // 이 분기는 `filingType !== "none"`(과소·초과환급)에서만 도달한다 —
+      // §48②2호·3호라목은 §47의2 무신고 전용이라 감면이 붙지 않는다.
+      grossFilingPenalty: filingPenalty,
+      lateFilingReductionRate: 0,
+      lateFilingReductionAmount: 0,
       legalBasis,
       steps,
     };
@@ -416,16 +450,60 @@ export function calculateFilingPenalty(
   }
 
   // ③ 가산세 계산
-  const filingPenalty = truncateToWon(applyRate(penaltyBase, penaltyRate));
+  const grossFilingPenalty = truncateToWon(applyRate(penaltyBase, penaltyRate));
 
   steps.push({
     label: "신고불성실가산세",
     formula: `납부세액 ${penaltyBase.toLocaleString()} × ${rateLabel}`,
-    amount: filingPenalty,
+    amount: grossFilingPenalty,
     legalBasis,
   });
 
-  return { penaltyBase, penaltyRate, filingPenalty, legalBasis, steps };
+  // ④ 기한 후 신고 감면 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05)
+  //
+  //   🔑 **무신고(§47의2)에만 붙는다.** 두 조문 모두 「제47조의2에 따른 가산세만 해당」이라
+  //      과소신고·초과환급신고 경로에서는 이 게이트가 열리지 않는다.
+  const reduction =
+    input.filingType === "none" && input.lateFiling
+      ? resolveLateFilingReduction(input.lateFiling)
+      : { rate: 0, ruleRef: "" };
+
+  // §48② 「해당 가산세액에서 … 금액을 **감면**한다」 — 감면액을 먼저 내고 본액에서 뺀다.
+  // ⚠️ `gross * (1 - rate)` 금지: 부동소수 오차로 1원이 어긋난다(G-18과 같은 금지 패턴).
+  const lateFilingReductionAmount = applyRateFraction(
+    grossFilingPenalty,
+    Math.round(reduction.rate * 100),
+    100,
+  );
+  const filingPenalty = Math.max(0, grossFilingPenalty - lateFilingReductionAmount);
+
+  if (reduction.rate > 0) {
+    steps.push({
+      label: `기한 후 신고 감면 (${Math.round(reduction.rate * 100)}%)`,
+      formula:
+        `${grossFilingPenalty.toLocaleString()} × ${Math.round(reduction.rate * 100)}%`,
+      amount: -lateFilingReductionAmount,
+      legalBasis: reduction.ruleRef,
+    });
+    steps.push({
+      label: "신고불성실가산세 (감면 후)",
+      formula:
+        `${grossFilingPenalty.toLocaleString()} − ${lateFilingReductionAmount.toLocaleString()}`,
+      amount: filingPenalty,
+      legalBasis,
+    });
+  }
+
+  return {
+    penaltyBase,
+    penaltyRate,
+    filingPenalty,
+    grossFilingPenalty,
+    lateFilingReductionRate: reduction.rate,
+    lateFilingReductionAmount,
+    legalBasis,
+    steps,
+  };
 }
 
 // ============================================================
@@ -526,6 +604,13 @@ export function calculateDelayedPaymentPenalty(
  */
 export function formatFilingPenaltyLabel(f: FilingPenaltyResult): string {
   if (f.fraudSplit) return "신고불성실가산세 (가목·나목 혼합)";
+  // 🔴 G-05 — §48② 감면이 붙으면 「20%」만 적는 라벨이 금액을 설명하지 못한다.
+  if (f.lateFilingReductionRate > 0) {
+    return (
+      `신고불성실가산세 (${(f.penaltyRate * 100).toFixed(0)}%` +
+      ` · 기한 후 신고 감면 ${Math.round(f.lateFilingReductionRate * 100)}%)`
+    );
+  }
   return `신고불성실가산세 (${(f.penaltyRate * 100).toFixed(0)}%)`;
 }
 
@@ -548,7 +633,18 @@ export function formatFilingPenaltyFormula(
       ` + 나목 ${s.normalBase.toLocaleString()} × ${(s.normalRate * 100).toFixed(0)}% = ${normalPart.toLocaleString()}`
     );
   }
-  return `${baseLabel ? baseLabel + " " : ""}${f.penaltyBase.toLocaleString()} × ${(f.penaltyRate * 100).toFixed(0)}%`;
+  const gross =
+    `${baseLabel ? baseLabel + " " : ""}${f.penaltyBase.toLocaleString()}` +
+    ` × ${(f.penaltyRate * 100).toFixed(0)}%`;
+  // 🔴 G-05 — 감면이 있으면 「감면 전 − 감면액」까지 적어야 산식이 금액을 재현한다.
+  if (f.lateFilingReductionRate > 0) {
+    return (
+      `${gross} = ${f.grossFilingPenalty.toLocaleString()}` +
+      ` − 감면 ${Math.round(f.lateFilingReductionRate * 100)}%` +
+      ` ${f.lateFilingReductionAmount.toLocaleString()}`
+    );
+  }
+  return gross;
 }
 
 /**
