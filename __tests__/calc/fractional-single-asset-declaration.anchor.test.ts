@@ -119,36 +119,45 @@ describe("R4 D — 단건 공유지분 선언 게이트", () => {
     expect(m).toContain("타인 소유");
   });
 
-  it("D8 🔴 재개발APT — 선언을 켜도 차단된다 (지분 스케일 미검증)", () => {
-    // `buildRedevelopmentPayload`가 지분율을 모른다 — 권리가액·청산금이 100%로 남아
-    // 양도차익 138,000,000원 과소(세액 68,026,797원 과소). 근거는
-    // `isFractionalUnsupportedAssetKind` 주석(단일 소스).
-    const m = msgs([
-      asset({
-        assetKind: "redevelopment_apt",
-        ownershipNumerator: "40",
-        ownershipDenominator: "100",
-        ownershipRemainderThirdParty: "yes",
-      }),
-    ]);
-    expect(m.some((x) => /재개발·재건축·입주권은 지분 모드 계산을 아직 지원하지 않습니다/.test(x))).toBe(true);
+  it("D8 재개발APT — 선언 ON이면 통과한다 (지분 스케일 구현 완료)", () => {
+    // 종전에는 차단했다 — `buildRedevelopmentPayload`가 지분율을 몰라 차익이 138,000,000원
+    // 과소했기 때문이다. §166④1호(평가액=계획상 정해진 가격)·①1호(「납부한」 청산금) 근거로
+    // 필드별 스케일을 구현해 해소했다 — `redev-fractional-ownership.anchor.test.ts` RV.
+    expect(
+      blocked([
+        asset({
+          assetKind: "redevelopment_apt",
+          ownershipNumerator: "40",
+          ownershipDenominator: "100",
+          ownershipRemainderThirdParty: "yes",
+        }),
+      ]),
+    ).toBe(false);
   });
 
-  it("D9 🔴 입주권 — 선언을 켜도 차단된다", () => {
-    const m = msgs([
-      asset({
-        assetKind: "right_to_move_in",
-        ownershipNumerator: "40",
-        ownershipDenominator: "100",
-        ownershipRemainderThirdParty: "yes",
-      }),
-    ]);
-    expect(m.some((x) => /지분 모드 계산을 아직 지원하지 않습니다/.test(x))).toBe(true);
+  it("D9 입주권 — 선언 ON이면 통과한다", () => {
+    expect(
+      blocked([
+        asset({
+          assetKind: "right_to_move_in",
+          ownershipNumerator: "40",
+          ownershipDenominator: "100",
+          ownershipRemainderThirdParty: "yes",
+        }),
+      ]),
+    ).toBe(false);
   });
 
-  it("D10 재개발 차단은 **지분 모드에서만** — 100%면 통과 (과잉차단 방지)", () => {
-    const m = msgs([asset({ assetKind: "redevelopment_apt" })]);
-    expect(m.some((x) => /지분 모드 계산을 아직 지원하지 않습니다/.test(x))).toBe(false);
+  it("D10 재개발 — 선언 OFF면 여전히 차단 (선언 게이트는 자산 종류와 무관하게 산다)", () => {
+    expect(
+      blocked([
+        asset({
+          assetKind: "redevelopment_apt",
+          ownershipNumerator: "40",
+          ownershipDenominator: "100",
+        }),
+      ]),
+    ).toBe(true);
   });
 
   it("D7 부담부증여 × 축 B는 여전히 차단된다 (Gate-B 무간섭 — D5와 짝)", () => {

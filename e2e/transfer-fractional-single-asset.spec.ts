@@ -129,3 +129,108 @@ test.describe("단건 공유지분 — 선언 토글 (R4)", () => {
     });
   });
 });
+
+/**
+ * 재개발 × 공유지분 — **청산금만 지분 해당분**이라는 규약이 화면에 드러나는가 (R4 후속).
+ *
+ * §166①1호가 「**납부한** 청산금」이라고 사실을 지목하고, 「도시 및 주거환경정비법」 §39①1호가
+ * 공유를 대표 1명의 조합원으로 보아 조합이 그 1인에게 부과하므로 공유자 간 분담은 내부 약정이다.
+ * ⇒ 청산금만 사용자가 지분 해당분을 넣고, 권리가액·필요경비는 100% 기준이다.
+ *
+ * 화면이 이를 말하지 않으면 사용자가 청산금도 100%로 넣어 **세액이 조용히 틀린다**.
+ */
+test.describe("재개발 × 공유지분 — 청산금 입력 규약 (R4 후속)", () => {
+  function redevSeed() {
+    return {
+      state: {
+        formData: {
+          assets: [
+            {
+              ...makeDefaultAsset(1),
+              assetKind: "redevelopment_apt",
+              acquisitionCause: "purchase",
+              acquisitionDate: "2010-01-01",
+              ownershipNumerator: "40",
+              ownershipDenominator: "100",
+              ownershipRemainderThirdParty: "yes",
+              redevSubject: "apt",
+              redevOriginalAssetType: "housing",
+              redevApprovalLawBasis: "urban_renovation_art_74",
+              redevApprovalDate: "2018-05-01",
+              redevSettlementDirection: "pay",
+              redevRightsValue: "500000000",
+              redevSettlementAmount: "80000000",
+              redevPreApprovalExpenses: "30000000",
+              redevActualAcquisitionPrice: "400000000",
+              fixedAcquisitionPrice: "400000000",
+              standardPriceAtTransfer: "800000000",
+              standardPriceAtAcq: "300000000",
+              useEstimatedAcquisition: false,
+              residencePeriodMonths: "0",
+            },
+          ],
+          transferDate: "2024-06-01",
+          filingDate: "2024-08-31",
+          contractTotalPrice: "1000000000",
+          householdHousingCount: "2",
+          isOneHousehold: false,
+          isRegulatedArea: false,
+          wasRegulatedAtAcquisition: false,
+          isUnregistered: false,
+        },
+        pendingMigration: false,
+      },
+      version: 0,
+    };
+  }
+
+  test("청산금 라벨이 「(지분 해당분)」으로 바뀌고 안내가 뜬다", async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await page.evaluate(
+      (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
+      redevSeed(),
+    );
+    await page.reload();
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await expandAssetSection(page, 3);
+
+    const asset1 = page.locator('[data-asset-card-index="0"]');
+    await expect(asset1.getByText(/청산금 납부액 \(지분 해당분\)/).first()).toBeVisible();
+    await expect(
+      asset1.getByText(/이 칸만 본인 지분에 해당하는 실제 납부·수령액을 입력하세요/).first(),
+    ).toBeVisible();
+    // 권리가액은 반대로 100% 기준임을 밝힌다 — 두 안내가 짝이어야 사용자가 구별한다.
+    await expect(asset1.getByText(/물건 전체\(100%\) 기준으로 입력하세요/).first()).toBeVisible();
+  });
+
+  test("계산이 끝까지 가고 권리가액만 지분분으로 실린다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await page.evaluate(
+      (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
+      redevSeed(),
+    );
+    await page.reload();
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    for (const step of ["보유 상황", "감면·공제", "가산세"]) {
+      await page.getByRole("button", { name: step }).first().click();
+    }
+    const calcResponse = page.waitForResponse(
+      (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    const resp = await calcResponse;
+    expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()}`).toBe(true);
+
+    const sent = resp.request().postDataJSON() as { redevelopment?: Record<string, number> };
+    expect(sent.redevelopment?.rightsValue).toBe(200_000_000); // 5억 × 0.4
+    expect(sent.redevelopment?.preApprovalExpenses).toBe(12_000_000); // 3천만 × 0.4
+    // 🔴 청산금은 입력값 그대로 — 엔진이 쪼개면 자동 안분 fallback이 된다
+    expect(sent.redevelopment?.settlementAmount).toBe(80_000_000);
+  });
+});

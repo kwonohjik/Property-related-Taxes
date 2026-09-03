@@ -33,7 +33,6 @@ import {
 import { redevSubjectPatchForAssetKind } from "./AssetAreaRedevelopment";
 import { successorRightTogglePatch } from "@/lib/calc/transfer-successor-right";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
-import { isFractionalUnsupportedAssetKind } from "@/lib/calc/transfer-tax-api-helpers";
 import { OwnershipRatioBlock, type AssetSplitMode } from "../OwnershipRatioInput";
 
 const ASSET_KIND_OPTIONS = [
@@ -378,12 +377,6 @@ export function AssetSectionBasic({
           }
           remainderThirdParty={asset.ownershipRemainderThirdParty}
           onRemainderChange={(v) => onChange({ ownershipRemainderThirdParty: v })}
-          // ⑧과 **같은 술어** — 켜도 막히는 토글을 두면 또 다른 dead-end다.
-          remainderDisabledReason={
-            isFractionalUnsupportedAssetKind(asset.assetKind)
-              ? "재개발·재건축·입주권은 지분 모드 계산을 아직 지원하지 않습니다. 지분율을 100%로 입력하고 본인 지분에 해당하는 금액을 직접 입력하세요."
-              : undefined
-          }
         />
       )}
 
