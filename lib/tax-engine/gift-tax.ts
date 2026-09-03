@@ -28,6 +28,7 @@ import { evaluateExemptions } from "./exemption-evaluator";
 import { calcGiftDeductions } from "./deductions/gift-deductions";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
 import { calcInstallmentSplit } from "./credits/installment-split";
+import { calcInheritanceGiftFilingPenalty } from "./inheritance-gift-penalty";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
   calcInheritanceGiftTax,
@@ -416,6 +417,18 @@ export function calcGiftTax(
     applyLongTermInstallment: false, // 증여 연부연납 미구현 → 배타 대상 없음
   });
 
+  /**
+   * 🔴 G-07 B1: 신고불성실가산세 — **신고 단위 1회** (국세기본법 §47의2·§47의3).
+   *
+   * base 는 결정세액(`combinedFinalTax`)이다 — §47의2①·§47의3①의 「납부하여야 할 세액」은
+   * 세액공제를 반영한 뒤의 금액이다(주식 정본 `stock-transfer-finalize.ts`와 같은 근거).
+   * 무신고면 §69 신고세액공제가 애초에 0이라 이중차감 우려가 없다.
+   */
+  const filingPenaltyResult = calcInheritanceGiftFilingPenalty(
+    combinedFinalTax,
+    input.filingPenalty ?? { filingStatus: "on_time" },
+  );
+
   const partialResult = {
     grossGiftValue: grossGiftValue + (aggExcl?.grossValue ?? 0),
     exemptAmount,
@@ -455,7 +468,18 @@ export function calcGiftTax(
     appraisalFeeDetail: appraisalFee,
     interestEquivalent: 0,
     museumDeferredTax: 0,
-    underreportPenalty: 0,
+    /**
+     * 🔴 G-07 B1: 신고불성실가산세 — 「국세기본법」 §47의2·§47의3.
+     * 입력(`input.filingPenalty`)이 없으면 0이다(종전 동작 보존).
+     */
+    underreportPenalty: filingPenaltyResult.filingPenalty,
+    ...(filingPenaltyResult.filingPenalty > 0 || filingPenaltyResult.exclusionApplied
+      ? { filingPenaltyDetail: filingPenaltyResult }
+      : {}),
+    ...(filingPenaltyResult.filingPenalty > 0
+      ? { totalPayableWithPenalty: combinedFinalTax + filingPenaltyResult.filingPenalty }
+      : {}),
+    // 납부지연(§47의4)은 B3 · 공익법인 가산세(상증법 §78③~⑮)는 이 계획의 범위 밖이다.
     latePaymentPenalty: 0,
     publicInterestPenalty: 0,
     installmentPayment: 0,

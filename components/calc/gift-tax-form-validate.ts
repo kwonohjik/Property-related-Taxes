@@ -330,6 +330,24 @@ export function validateStep(step: number, form: FormState): string | null {
     }
   }
   if (step === 3) {
+    /**
+     * 🔴 G-07 B1 (⑧ 동기화 지점) — 가산세 축 필수 입력.
+     *
+     * 미입력이면 엔진이 **조용히 0**을 내거나(감면율 0 → 가산세 과대) 계산 자체가 어긋난다.
+     * 「자동 안분 fallback 금지 — 미입력은 검증 오류로 차단」 정책과 같은 층위다.
+     */
+    if (form.filingStatus === "late" && !form.lateFilingDate) {
+      return "기한후신고일을 입력하세요. (국세기본법 §48②2호 감면 구간 판정에 필요)";
+    }
+    if (form.filingStatus === "on_time" && form.isUnderReported) {
+      if (!form.originalFiledTax.trim()) {
+        return "당초 신고세액을 입력하세요. (국세기본법 §47의3① 「과소신고한 납부세액」 산정에 필요)";
+      }
+      if (parseAmount(form.originalFiledTax) < 0) {
+        return "당초 신고세액은 0원 이상이어야 합니다.";
+      }
+    }
+
     // §53의2③ 기공제액 — 엔진이 min(입력값, 1억) 가드를 처리하므로 UI 단계에서는 차단하지 않음.
     // 단, 음수 입력은 의미 없으므로 차단.
     const cumUsed = parseAmount(form.priorUsedMarriageBirthDeduction);

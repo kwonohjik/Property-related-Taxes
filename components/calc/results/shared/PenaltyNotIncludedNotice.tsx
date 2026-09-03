@@ -21,7 +21,31 @@
  *
  * @see docs/00-pm/inheritance-gift-penalty-g07.plan.md
  */
-export function PenaltyNotIncludedNotice({ taxLabel }: { taxLabel: "상속세" | "증여세" }) {
+export function PenaltyNotIncludedNotice({
+  taxLabel,
+  scope = "all",
+}: {
+  taxLabel: "상속세" | "증여세";
+  /**
+   * 어디까지 산출됐는가 —
+   * · `"all"`: 신고불성실·납부지연 **전부 미산출** (상속세 — B1 미적용)
+   * · `"filing-only"`: §47의2·§47의3은 **산출됨**, 부정행위율·납부지연만 미산출 (증여세 B1)
+   */
+  scope?: "all" | "filing-only";
+}) {
+  if (scope === "filing-only") {
+    return (
+      <div className="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
+        <p className="font-semibold mb-0.5">아직 포함되지 않은 가산세가 있습니다</p>
+        <p className="leading-relaxed">
+          이 {taxLabel} 금액에는 신고불성실가산세(국세기본법 §47의2·§47의3) <strong>일반율</strong>만
+          반영돼 있습니다. <strong>부정행위 40%·역외거래 60%</strong>(§47의2①1호·§47의3①1호가목)와{" "}
+          <strong>납부지연가산세</strong>(§47의4)는 아직 계산하지 않습니다. 해당하면 실제 고지세액은
+          이 금액보다 큽니다.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
       <p className="font-semibold mb-0.5">법정신고기한 내 신고가 아닌 경우 — 가산세 미포함</p>

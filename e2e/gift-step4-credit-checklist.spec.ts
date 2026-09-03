@@ -30,10 +30,14 @@ test.describe("증여세 Step4 공제·세액공제 칩 체크리스트", () => 
     await expect(page.getByText("공제·세액공제 항목 선택")).toBeVisible();
     await expect(page.getByText(/상증법 §53의2·§55/)).toBeVisible();
     await expect(page.getByText(/§59·§30의5·6·§70/)).toBeVisible();
-    // 신고세액공제 상시 노출
+    // 신고 상태 3-state 상시 노출 (G-07 B1 — 종전 2-state 토글에서 승격)
+    // 이 하나에서 ④가 §69 신고세액공제 축과 §47의2·§47의3 가산세 축을 둘 다 파생한다.
     await expect(
-      page.getByText("법정신고기한 내 신고 (§69 신고세액공제 3%)"),
+      page.getByText("신고 상태 (상증법 §68① · §69 / 국세기본법 §47의2·§47의3)"),
     ).toBeVisible();
+    await expect(page.getByText("법정기한 내 신고 (정기신고)")).toBeVisible();
+    await expect(page.getByText("기한후신고 (국세기본법 §45의3)")).toBeVisible();
+    await expect(page.getByText("무신고", { exact: true })).toBeVisible();
 
     // 입력 블록 기본 접힘 — 외국납부 hint 미노출
     await expect(

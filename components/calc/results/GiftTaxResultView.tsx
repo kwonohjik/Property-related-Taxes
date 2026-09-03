@@ -18,6 +18,7 @@ import { GIFT_DONOR_LABELS } from "@/components/calc/prior-gift/meta";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { PenaltyNotIncludedNotice } from "@/components/calc/results/shared/PenaltyNotIncludedNotice";
+import { UNDER_REPORT_EXCLUSION_LABELS } from "@/lib/tax-engine/inheritance-gift-penalty";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { GenerationSkipSurchargeBreakdownCard } from "@/components/calc/results/GenerationSkipSurchargeBreakdownCard";
@@ -277,7 +278,13 @@ export function GiftTaxResultView({
         <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-1">
           증여세 결정세액
         </p>
-        <p className="text-4xl font-bold tracking-tight">{formatKRW(result.finalTax)}</p>
+        {/**
+         * 🔴 G-07 B1: 가산세가 있으면 **총 납부세액**을 보여준다.
+         * `finalTax`는 결정세액(가산세 전)이라 그대로 두면 큰 숫자가 실제 부담을 밑돈다.
+         */}
+        <p className="text-4xl font-bold tracking-tight">
+          {formatKRW(result.totalPayableWithPenalty ?? result.finalTax)}
+        </p>
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
           <div>
             <span>산출세액</span>
@@ -304,11 +311,60 @@ export function GiftTaxResultView({
         </div>
       </div>
 
-      {/* 🔴 G-07: 법정기한 내 신고가 아니면 가산세 미포함을 고지한다. 선택 출력과 무관하게
-          항상 인쇄되어야 하므로 총액 카드 블록 안(PrintSection 내부)에 둔다. */}
+      {/**
+       * 🔴 G-07 B1: 신고불성실가산세 산출근거 — 국세기본법 §47의2·§47의3.
+       * 「기준금액 × 세율」을 함께 보인다 — 「결정세액 × 세율」로 오해하지 않도록.
+       */}
+      {result.filingPenaltyDetail && (
+        <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50/60 px-4 py-3 text-sm">
+          <p className="font-semibold text-rose-800 mb-1.5">신고불성실가산세</p>
+          {result.filingPenaltyDetail.exclusionApplied ? (
+            <p className="text-xs text-rose-700">
+              과소신고가산세 적용제외 —{" "}
+              {UNDER_REPORT_EXCLUSION_LABELS[result.filingPenaltyDetail.exclusionApplied]} (국세기본법
+              §47의3④1호)
+            </p>
+          ) : (
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span className="text-rose-600">
+                  기준금액 {formatKRW(result.filingPenaltyDetail.penaltyBase)} ×{" "}
+                  {Math.round(result.filingPenaltyDetail.penaltyRate * 100)}%
+                  <span className="block text-caption text-rose-500">
+                    {result.filingPenaltyDetail.ruleRef}
+                  </span>
+                </span>
+                <span className="font-mono tabular-nums text-rose-900">
+                  {formatKRW(result.filingPenaltyDetail.grossPenalty)}
+                </span>
+              </div>
+              {result.filingPenaltyDetail.reductionRate > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-emerald-600">
+                    기한후신고 감면 ({Math.round(result.filingPenaltyDetail.reductionRate * 100)}%)
+                    <span className="block text-caption text-emerald-500">국세기본법 §48②2호</span>
+                  </span>
+                  <span className="font-mono tabular-nums text-emerald-700">
+                    − {formatKRW(result.filingPenaltyDetail.reductionAmount)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-rose-200 pt-1 font-semibold">
+                <span className="text-rose-800">가산세 합계</span>
+                <span className="font-mono tabular-nums text-rose-900">
+                  {formatKRW(result.filingPenaltyDetail.filingPenalty)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 🔴 G-07: 법정기한 내 신고가 아니면 아직 산출하지 않는 가산세를 고지한다.
+          B1으로 §47의2·§47의3은 산출되므로, 남은 축(부정행위 40·60% · 납부지연 §47의4)만 알린다. */}
       {result.creditDetail.isFiledOnTime === false && (
         <div className="mt-4">
-          <PenaltyNotIncludedNotice taxLabel="증여세" />
+          <PenaltyNotIncludedNotice taxLabel="증여세" scope="filing-only" />
         </div>
       )}
       </PrintSection>

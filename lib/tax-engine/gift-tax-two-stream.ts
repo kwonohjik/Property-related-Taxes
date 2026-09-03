@@ -21,6 +21,7 @@ import { evaluateExemptions } from "./exemption-evaluator";
 import { calcGiftDeductions } from "./deductions/gift-deductions";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
 import { calcInstallmentSplit } from "./credits/installment-split";
+import { calcInheritanceGiftFilingPenalty } from "./inheritance-gift-penalty";
 import {
   calcInheritanceGiftTax,
   calcGiftGenerationSkipSurchargeWithLimit,
@@ -408,6 +409,15 @@ export function calcGiftTaxTwoStream(
     applyLongTermInstallment: false,
   });
 
+  /**
+   * 🔴 G-07 B1: 신고불성실가산세 — **신고 단위 1회** (국세기본법 §47의2·§47의3).
+   * base 는 두 스트림 합산 결정세액이다 — 신고서 1매가 곧 신고 단위다.
+   */
+  const filingPenaltyResult = calcInheritanceGiftFilingPenalty(
+    finalTax,
+    input.filingPenalty ?? { filingStatus: "on_time" },
+  );
+
   const partialResult = {
     // 일반 스트림 기준 필드 (filingFormRows와 신고서 표시용)
     grossGiftValue: effectiveOrdinaryGrossValue,
@@ -444,7 +454,18 @@ export function calcGiftTaxTwoStream(
     appraisalFeeDetail: appraisalFee,
     interestEquivalent: 0,
     museumDeferredTax: 0,
-    underreportPenalty: 0,
+    /**
+     * 🔴 G-07 B1: 신고불성실가산세 — 「국세기본법」 §47의2·§47의3.
+     * 입력(`input.filingPenalty`)이 없으면 0이다(종전 동작 보존).
+     */
+    underreportPenalty: filingPenaltyResult.filingPenalty,
+    ...(filingPenaltyResult.filingPenalty > 0 || filingPenaltyResult.exclusionApplied
+      ? { filingPenaltyDetail: filingPenaltyResult }
+      : {}),
+    ...(filingPenaltyResult.filingPenalty > 0
+      ? { totalPayableWithPenalty: finalTax + filingPenaltyResult.filingPenalty }
+      : {}),
+    // 납부지연(§47의4)은 B3 · 공익법인 가산세(상증법 §78③~⑮)는 이 계획의 범위 밖이다.
     latePaymentPenalty: 0,
     publicInterestPenalty: 0,
     installmentPayment: 0,

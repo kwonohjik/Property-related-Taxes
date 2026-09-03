@@ -92,13 +92,31 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
-    // common.ts AMENDMENT_48_2(②1호 수정신고 감면율)·AMENDMENT_48_1_2(①2호 정당한 사유)
+    // common.ts LATE_FILING_45_3 — 기한 후 신고 (🔴 G-07 B1)
+    id: "NTBL.LATE_FILING",
+    citation: "국세기본법 §45의3",
+    keywords: [
+      "법정신고기한까지 과세표준신고서를 제출하지 아니한 자",
+      "기한후과세표준신고서를 제출할 수 있다",
+      "결정하여 통지하기 전까지",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    /**
+     * common.ts AMENDMENT_48_2(②1호 수정신고 감면율)·AMENDMENT_48_1_2(①2호 정당한 사유)
+     * + 🔴 G-07 B1 LATE_FILING_REDUCTION_48_2_2(②2호 기한후신고 감면 50/30/20%).
+     *
+     * ⚠️ 두 감면 표가 **같은 조문**에 있으나 계단이 다르다 — ②1호는 90~10%(수정신고,
+     *    §47의3 대상), ②2호는 50/30/20%(기한후신고, §47의2 대상). 혼용 금지.
+     */
     id: "NTBL.PENALTY_REDUCTION",
     citation: "국세기본법 §48",
     keywords: [
       "납세자가 의무를 이행하지 아니한 데에 정당한 사유가 있는 경우",
       "1개월 이내에 수정신고한 경우: 해당 가산세액의 100분의 90에 상당하는 금액",
       "1년 6개월 초과 2년 이내에 수정신고한 경우: 해당 가산세액의 100분의 10에 상당하는 금액",
+      "1개월 이내에 기한 후 신고를 한 경우: 해당 가산세액의 100분의 50에 상당하는 금액",
     ],
     keywordMode: "ALL",
   },

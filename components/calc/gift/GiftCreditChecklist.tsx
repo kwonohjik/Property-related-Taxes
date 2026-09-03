@@ -24,6 +24,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DateInput } from "@/components/ui/date-input";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
 import { SpecialTreatmentAssetSelector } from "@/components/calc/gift/SpecialTreatmentAssetSelector";
 import { resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
@@ -160,14 +161,134 @@ export function GiftCreditChecklist({
         </div>
       </div>
 
-      {/* 신고세액공제 (§69 기본 ON) — 칩 밖 상시 노출 (결정 A) */}
-      <ToggleCard
-        tone="violet"
-        title="법정신고기한 내 신고 (§69 신고세액공제 3%)"
-        description="증여받은 날이 속하는 달의 말일부터 3개월 이내 신고 시 산출세액의 3% 공제 (상증법 §68①·§69). OFF로 두면 신고세액공제만 빠지며, 국세기본법 §47의2~§47의4 신고불성실·납부지연 가산세는 이 계산에 포함되지 않습니다."
-        checked={form.isFiledOnTime}
-        onCheckedChange={(v) => set({ isFiledOnTime: v })}
-      />
+      {/**
+       * 신고 상태 — 칩 밖 상시 노출 (결정 A: 기본공제 누락 방지).
+       *
+       * 🔴 G-07 B1: 종전 2-state 토글(`isFiledOnTime`)을 **3-state**로 승격했다. 이 하나에서
+       * ④가 §69 신고세액공제 축과 §47의2·§47의3 가산세 축을 **둘 다 파생**한다.
+       * 상속세 `Step4Deductions.tsx`의 3-state와 같은 축이다.
+       */}
+      <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
+        <p className="text-xs font-semibold text-violet-700">
+          신고 상태 (상증법 §68① · §69 / 국세기본법 §47의2·§47의3)
+        </p>
+        <RadioCardGroup
+          name="gift-filing-status"
+          tone="violet"
+          value={form.filingStatus}
+          onChange={(v) => {
+            const status = v as FormState["filingStatus"];
+            set({
+              filingStatus: status,
+              // 🔑 대상 밖이 되는 칸을 함께 비운다 — 화면에서 사라진 값이 payload 로 새면
+              //    가산세 base·감면율이 조용히 움직인다(부동산 G-10과 같은 stale 누출).
+              ...(status !== "late"
+                ? { lateFilingDate: "", priorAssessmentNotified: false }
+                : {}),
+              ...(status !== "on_time"
+                ? { isUnderReported: false, originalFiledTax: "", underReportExclusion: "" as const }
+                : {}),
+            });
+          }}
+          options={[
+            {
+              value: "on_time",
+              label: "법정기한 내 신고 (정기신고)",
+              description:
+                "증여받은 날이 속하는 달의 말일부터 3개월 이내 신고 — 산출세액의 3% 신고세액공제 (상증법 §68①·§69)",
+            },
+            {
+              value: "late",
+              label: "기한후신고 (국세기본법 §45의3)",
+              description:
+                "법정기한 경과 후 신고 — 신고세액공제 미적용 · 무신고가산세 20% (국세기본법 §47의2①2호), 신고 시기에 따라 §48②2호 감면(1개월 50% · 3개월 30% · 6개월 20%)",
+            },
+            {
+              value: "none",
+              label: "무신고",
+              description:
+                "정기·기한후신고 모두 없음 — 신고세액공제 미적용 · 무신고가산세 20% (국세기본법 §47의2①2호). 기한후신고가 아니므로 §48②2호 감면 대상이 아닙니다.",
+            },
+          ]}
+        />
+
+        {/* ── 기한후신고 — §48②2호 감면 구간 판정 입력 ─────────────── */}
+        {form.filingStatus === "late" && (
+          <div className="space-y-2">
+            <FieldCard
+              label="기한후신고일"
+              hint="법정신고기한(증여일이 속한 달의 말일 + 3개월)이 지난 후 언제 신고했는지 — 감면율이 갈립니다"
+            >
+              <DateInput
+                value={form.lateFilingDate}
+                onChange={(v) => set({ lateFilingDate: v })}
+              />
+            </FieldCard>
+            <ToggleCard
+              tone="rose"
+              variant="chip"
+              title="결정할 것을 미리 알고 신고"
+              description="관할 세무서가 결정할 것을 미리 알고 기한후신고서를 제출한 경우 §48②2호 감면이 배제됩니다"
+              checked={form.priorAssessmentNotified}
+              onCheckedChange={(v) => set({ priorAssessmentNotified: v })}
+            />
+          </div>
+        )}
+
+        {/* ── 정기신고 — 과소신고(§47의3) 축 ──────────────────────── */}
+        {form.filingStatus === "on_time" && (
+          <ToggleCard
+            tone="rose"
+            title="과소신고 (국세기본법 §47의3)"
+            description="신고는 했으나 납부할 세액을 적게 신고한 경우 — 과소신고납부세액의 10%"
+            checked={form.isUnderReported}
+            onCheckedChange={(v) =>
+              set({
+                isUnderReported: v,
+                ...(!v ? { originalFiledTax: "", underReportExclusion: "" as const } : {}),
+              })
+            }
+          >
+            <div className="space-y-2">
+              <CurrencyInput
+                label="당초 신고세액"
+                value={form.originalFiledTax}
+                onChange={(v) => set({ originalFiledTax: v })}
+                hint="최초 신고한 납부세액 — 「과소신고한 납부세액」은 결정세액에서 이 금액을 뺀 값입니다 (국세기본법 §47의3①)"
+              />
+              <FieldCard
+                label="적용제외 사유 (국세기본법 §47의3④1호)"
+                hint="상속·증여에만 있는 제외 사유입니다. 해당하면 과소신고가산세를 적용하지 않습니다."
+              >
+                <select
+                  value={form.underReportExclusion}
+                  onChange={(e) =>
+                    set({
+                      underReportExclusion: e.target
+                        .value as FormState["underReportExclusion"],
+                    })
+                  }
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">해당 없음</option>
+                  <option value="ownership_dispute">
+                    가. 소유권 소송 등으로 증여재산이 확정되지 않았던 경우
+                  </option>
+                  <option value="deduction_error">
+                    나. 상증법 §18~§24·§53·§53의2·§54 공제 적용 착오
+                  </option>
+                  <option value="supplementary_valuation">
+                    다. 상증법 §60②③·§66 보충적 평가액으로 과세표준 결정
+                  </option>
+                  <option value="corporate_adjustment">
+                    라. 법인세 경정에 따른 §45의3~§45의5 증여의제이익 변경
+                  </option>
+                </select>
+              </FieldCard>
+            </div>
+          </ToggleCard>
+        )}
+      </div>
 
       {/* 증여자 대납(代納) — §36 채무면제이익 gross-up 순환계산 */}
       <ToggleCard
