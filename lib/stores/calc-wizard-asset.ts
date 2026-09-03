@@ -318,6 +318,26 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * 공유 지분율 분모 (기본 100). 100/100 = 단독 소유.
    */
   ownershipDenominator: string;
+  /**
+   * 「나머지 지분은 타인 소유」 선언 — **표시·검증 전용. API로 보내지 않는다.**
+   *
+   * 지분율 < 100%인 **단건** 자산은 폼 데이터만으로 두 사용자가 구별되지 않는다:
+   *  - 축 A(공유 소유): 물건의 60%만 내 것 → 이 1건으로 계산하는 것이 **정확**
+   *  - 축 B 오입력: 100% 내 것인데 60%+40% 2회 취득 → 나머지 40%가 **통째로 누락**
+   *
+   * 그래서 종전에는 둘 다 막았다(`transfer-tax-validate-asset.ts` Gate-A). 그런데 ① 기본정보에는
+   * 「공유 지분율」 입력칸과 「100% 기준으로 입력하세요」 안내가 **그대로 렌더**되어(`AssetSectionBasic`),
+   * 값을 넣으면 통과 경로가 없는 dead-end였다(memory `feedback_ui_gate_removes_sole_input_path`).
+   *
+   * ⇒ 사용자가 **스스로 축 A임을 선언**하면 통과시킨다. 판정은 사용자, 계산은 엔진.
+   *   자동판정은 금지다 — 폼 데이터로 판별 불가라 추정하면 조용히 틀린다.
+   *
+   * 계산에는 영향이 없다. 세액은 `ownershipNumerator/Denominator`가 결정하고 그 배선
+   * (④⑫⑬⑭ + 엔진)은 이미 완비돼 있다. 이 필드는 게이트 통과 신호일 뿐이다.
+   *
+   * 계획서: `docs/02-design/features/transfer-fractional-single-asset-declaration.plan.md`
+   */
+  ownershipRemainderThirdParty: "" | "yes";
   /** 취득 원인 — purchase=매매, inheritance=상속, gift=증여, carryover_gift=이월과세(증여), newConstruction=신축(자가건축)
    * @deprecated `"burdened_gift"`는 D-1(2026-05-12) 이후 deprecation. 양도 시점의 거래 형태이지 취득 사건이 아님.
    * 신규 데이터는 `transferType: "burdened_gift"` 사용. 레거시 데이터는 normalize에서 자동 변환.

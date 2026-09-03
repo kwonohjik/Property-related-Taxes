@@ -367,8 +367,16 @@ export function AssetSectionBasic({
               ...(patch.denominator !== undefined
                 ? { ownershipDenominator: patch.denominator }
                 : {}),
+              // 지분율이 100%로 되돌아오면 선언은 뜻을 잃는다 — ⑤가 토글을 숨기므로
+              // 값만 남으면 화면에 없는 상태가 게이트를 통과시킨다(③ normalize와 같은 규율).
+              ...((patch.numerator ?? asset.ownershipNumerator) ===
+              (patch.denominator ?? asset.ownershipDenominator)
+                ? { ownershipRemainderThirdParty: "" as const }
+                : {}),
             })
           }
+          remainderThirdParty={asset.ownershipRemainderThirdParty}
+          onRemainderChange={(v) => onChange({ ownershipRemainderThirdParty: v })}
         />
       )}
 

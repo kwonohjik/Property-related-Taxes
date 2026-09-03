@@ -134,6 +134,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     actualSalePrice: "",
     ownershipNumerator: "100",
     ownershipDenominator: "100",
+    // 「나머지 지분은 타인 소유」 선언 — 미선언("")이 기본. 지분율 100%에서는 뜻이 없다.
+    ownershipRemainderThirdParty: "",
     acquisitionCause: "purchase",
     carryover: { ...CARRYOVER_DEFAULTS },
     acquisitionDate: "",

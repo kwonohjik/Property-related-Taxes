@@ -17,6 +17,7 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { isFractionalRatioStr } from "@/lib/calc/transfer-tax-api-helpers";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,19 @@ export interface OwnershipRatioInputProps {
   onChange: (patch: { numerator?: string; denominator?: string }) => void;
   /** 라벨 — 문맥별 결정(호출부). 기본 "공유 지분율", 지분 분할 모드는 "취득 지분율". */
   label?: string;
+}
+
+/**
+ * `OwnershipRatioBlock` 전용 추가 props — 「나머지 지분은 타인 소유」 선언 (R4).
+ *
+ * **두 값이 모두 주어질 때만** 토글을 렌더한다. 지분 분할 모드(③ 취득정보)의 호출부는
+ * 넘기지 않으므로 그쪽에는 뜨지 않는다 — 축 B에는 이 선언이 뜻이 없다(게이트가 다르다).
+ */
+export interface OwnershipRemainderProps {
+  /** 선언값 — `"yes"`면 축 A(공유 소유)임을 사용자가 선언한 것. */
+  remainderThirdParty?: "" | "yes";
+  /** 선언 변경 핸들러. */
+  onRemainderChange?: (v: "" | "yes") => void;
 }
 
 /**
@@ -106,7 +120,10 @@ export function OwnershipRatioBlock({
   denominator,
   onChange,
   label,
-}: OwnershipRatioInputProps) {
+  remainderThirdParty,
+  onRemainderChange,
+}: OwnershipRatioInputProps & OwnershipRemainderProps) {
+  const fractional = isFractionalRatioStr(numerator, denominator);
   return (
     <>
       <OwnershipRatioInput
@@ -115,7 +132,20 @@ export function OwnershipRatioBlock({
         onChange={onChange}
         label={label}
       />
-      {isFractionalRatioStr(numerator, denominator) && (
+      {/* 「나머지 지분은 타인 소유」 선언 (R4) — 지분율 < 100%일 때만.
+          100%면 축 A/B 구별이 무의미해 뜻 없는 선택을 강요하게 된다.
+          자동판정 금지: 폼 데이터로는 「공유 소유」와 「다회 분할취득 오입력」이 구별되지 않는다.
+          계획서: docs/02-design/features/transfer-fractional-single-asset-declaration.plan.md */}
+      {fractional && onRemainderChange && (
+        <ToggleCard
+          checked={remainderThirdParty === "yes"}
+          onCheckedChange={(v) => onRemainderChange(v ? "yes" : "")}
+          tone="violet"
+          title="이 물건의 나머지 지분은 타인 소유입니다"
+          description="켜면 이 자산 1건만으로 계산합니다. 나머지 지분도 내 것(같은 물건을 여러 번에 나눠 취득)이라면 끄고 그 지분을 별도 자산으로 추가하세요 — 켜면 그 지분이 계산에서 빠집니다."
+        />
+      )}
+      {fractional && (
         <div className="rounded-lg border-2 border-amber-300 bg-amber-50/70 px-4 py-3 text-sm">
           <div className="flex items-start gap-2">
             <span

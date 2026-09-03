@@ -548,6 +548,12 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 공유 지분율 — 단독 소유 100/100 fallback (지분 단계취득 자산은 명시 입력)
   if (!a.ownershipNumerator || a.ownershipNumerator === "") a.ownershipNumerator = "100";
   if (!a.ownershipDenominator || a.ownershipDenominator === "") a.ownershipDenominator = "100";
+  // 「나머지 지분은 타인 소유」 선언 — 구 sessionStorage에는 없는 신규 필드.
+  // undefined 그대로 두면 ⑤ 토글이 uncontrolled로 뜬다(신규 자산 필드 stale 가드).
+  if (a.ownershipRemainderThirdParty === undefined) a.ownershipRemainderThirdParty = "";
+  // 지분율이 100%로 되돌아오면 선언은 뜻을 잃는다 — ⑤가 토글을 숨기므로 값만 남으면
+  // 화면에 없는 상태가 게이트를 통과시키는 유령이 된다. 여기서 함께 지운다.
+  if (a.ownershipNumerator === a.ownershipDenominator) a.ownershipRemainderThirdParty = "";
   if (!a.landStandardPriceAtTransfer) a.landStandardPriceAtTransfer = "";
   if (!a.buildingStandardPriceAtTransfer) a.buildingStandardPriceAtTransfer = "";
   if (a.usePreHousingDisclosure === undefined) a.usePreHousingDisclosure = false;
