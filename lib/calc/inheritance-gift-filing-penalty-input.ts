@@ -28,6 +28,7 @@ import type {
   InheritanceGiftPenaltyInput,
   UnderReportExclusion,
 } from "@/lib/tax-engine/inheritance-gift-penalty";
+import type { PenaltyReason } from "@/lib/tax-engine/transfer-tax-penalty";
 
 /** 3-state 아래에 달리는 하위 입력 4칸 — 상속·증여 폼이 같은 이름으로 갖는다 */
 export interface FilingPenaltyFormFields {
@@ -41,6 +42,12 @@ export interface FilingPenaltyFormFields {
   originalFiledTax: string;
   /** §47의3④1호 적용제외 사유 — 있으면 과소신고가산세 0 */
   underReportExclusion: UnderReportExclusion | "";
+  /** 부정행위 유형 — §47의2①1호 40%(역외 60%) · §47의3①1호 가목 (🔴 B2) */
+  penaltyReason: PenaltyReason;
+  /** 부정행위로 인한 과소신고분 — §47의3①1호 가목 base. 빈 칸이면 전액 부정 (🔴 B2) */
+  fraudulentPortion: string;
+  /** 라목 단서 — 법인세 경정이 부정행위에 기인했는가 (🔴 B2) */
+  corporateAdjustmentByFraud: boolean;
 }
 
 /**
@@ -70,6 +77,22 @@ export function buildFilingPenaltyInput(
         ...(fields.underReportExclusion
           ? { underReportExclusion: fields.underReportExclusion }
           : {}),
+        // 🔴 B2 — 부정행위 축. `normal` 은 엔진 기본값이라 키를 넣지 않는다.
+        ...(fields.penaltyReason !== "normal"
+          ? { penaltyReason: fields.penaltyReason }
+          : {}),
+        // 🔑 「미입력」과 「0원」은 다른 사실이다 — 빈 칸이면 키를 넣지 않아야
+        //    엔진의 「미입력 = 전액 부정」 하위 호환이 살고, 0 은 「부정행위분 없음」이
+        //    되어 나목 10%가 전액에 붙는다. 일반(`normal`)이면 분해 자체가 없다.
+        ...(fields.penaltyReason !== "normal" && fields.fraudulentPortion.trim()
+          ? { fraudulentPortion: parseAmount(fields.fraudulentPortion) }
+          : {}),
+        // 라목 단서는 **라목을 골랐을 때만** 의미가 있다 — 다른 목에서 새면
+        // 화면에 없는 값이 판정을 움직인다(G-10 형태의 stale 누출).
+        ...(fields.underReportExclusion === "corporate_adjustment" &&
+        fields.corporateAdjustmentByFraud
+          ? { corporateAdjustmentByFraud: true }
+          : {}),
       },
     };
   }
@@ -81,10 +104,22 @@ export function buildFilingPenaltyInput(
         ...(statutoryDeadline ? { statutoryDeadline } : {}),
         ...(fields.lateFilingDate ? { actualFilingDate: fields.lateFilingDate } : {}),
         ...(fields.priorAssessmentNotified ? { priorAssessmentNotified: true } : {}),
+        // 🔴 B2 — 기한후신고여도 「법정신고기한까지 신고하지 아니한」 사실은 그대로라
+        // §47의2①**1호**(부정 40%·역외 60%)가 적용된다. §48②2호 감면도 §47의2 가산세
+        // 전체가 대상이므로 40%·60%에 그대로 걸린다.
+        ...(fields.penaltyReason !== "normal"
+          ? { penaltyReason: fields.penaltyReason }
+          : {}),
       },
     };
   }
 
   // 무신고 — §48②2호는 「기한후신고서를 제출한 경우」가 요건이라 감면 대상이 아니다.
-  return { filingPenalty: { filingStatus: "none" } };
+  return {
+    filingPenalty: {
+      filingStatus: "none",
+      // 🔴 B2 — §47의2①1호 부정 40%·역외 60%. 무신고에는 가목·나목 분해가 없다.
+      ...(fields.penaltyReason !== "normal" ? { penaltyReason: fields.penaltyReason } : {}),
+    },
+  };
 }

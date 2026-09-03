@@ -37,6 +37,10 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     isUnderReported: false,
     originalFiledTax: "",
     underReportExclusion: "",
+    // 🔴 B2 신설 — 기본 일반(`normal`)이라 종전 수치가 그대로 유지된다.
+    penaltyReason: "normal",
+    fraudulentPortion: "",
+    corporateAdjustmentByFraud: false,
     foreignTaxPaid: "",
     foreignGiftTaxBase: "",
     specialTreatment: "",

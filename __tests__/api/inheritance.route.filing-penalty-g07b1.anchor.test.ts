@@ -140,6 +140,10 @@ describe("G-07 B1 ⑫⑭ — filingPenalty 가 Zod strip·⑭ 누락 없이 엔�
 // ────────────────────────────────────────────────────────────────────────────
 
 const FIELDS = {
+  // 🔴 B2 신설 — 부정행위 축은 기본 일반(`normal`)이라 B1 수치가 그대로 유지된다.
+  penaltyReason: "normal" as const,
+  fraudulentPortion: "",
+  corporateAdjustmentByFraud: false,
   lateFilingDate: "",
   priorAssessmentNotified: false,
   isUnderReported: false,
@@ -183,11 +187,16 @@ describe("G-07 B1 ④ — isFiledOnTime + isUnfiled → 3-state", () => {
       buildFilingPenaltyInput(
         "none",
         {
+          ...FIELDS,
           lateFilingDate: "2023-10-20",
           priorAssessmentNotified: true,
           isUnderReported: true,
           originalFiledTax: "100000000",
           underReportExclusion: "deduction_error",
+          // 🔴 B2 신설 축도 함께 막히는지 본다 — 무신고에는 가목·나목 분해가 없고
+          //    라목 단서는 라목을 골랐을 때만 의미가 있다.
+          fraudulentPortion: "30000000",
+          corporateAdjustmentByFraud: true,
         },
         "2023-09-30",
       ),
@@ -199,6 +208,7 @@ describe("G-07 B1 ④ — isFiledOnTime + isUnfiled → 3-state", () => {
       buildFilingPenaltyInput(
         "on_time",
         {
+          ...FIELDS,
           lateFilingDate: "2023-10-20",
           priorAssessmentNotified: true,
           isUnderReported: true,
