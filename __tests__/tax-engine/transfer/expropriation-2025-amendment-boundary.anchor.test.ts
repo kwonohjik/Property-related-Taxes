@@ -36,6 +36,8 @@ import {
   calculatePublicExpropriationReduction,
   getInvoluntaryTransferLimits,
   AMENDED_2025_TRANSFER_CUTOFF,
+  LEGACY_APPROVAL_CUTOFF,
+  LEGACY_TRANSFER_CUTOFF,
   PUBLIC_EXPROPRIATION_RATES,
 } from "@/lib/tax-engine/public-expropriation-reduction";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
@@ -141,11 +143,35 @@ describe("D7-02 §133 종합한도 경계 — 2025 과세연도", () => {
   });
 });
 
-describe("D7-12 §77 LEGACY 요율의 출처 (부칙 번호는 미확인)", () => {
-  it("D7-12-1: LEGACY 4개 값 = efYd 2009-01-01~2013-12-31 시행본 §77① 원문", () => {
-    // 법제처 DRF 실측: 2009-01-01본 「양도소득세의 100분의 20[… 100분의 25로 하되, …
-    //   100분의 40(만기가 5년 이상인 경우에는 100분의 50)]」
+/**
+ * D7-12 — ✅ **부칙 원문 확보로 종결** (2026-09-03).
+ *
+ * 근거: **법률 제13560호**(2015-12-15 공포, 2016-01-01 시행) **부칙 제53조**
+ *   「이 법 시행 전에 사업인정 고시가 된 사업지역의 사업시행자에게 **2017년 12월 31일까지**
+ *    사업지역 내 토지등을 양도한 경우는 제77조제1항 각 호 외의 부분의 개정규정에도 불구하고
+ *    **종전의 규정에 따른다**.」 (법제처 DRF `fetchAddendaUnits("177204")` 실측)
+ *
+ * 🔑 막혀 있던 것은 API가 아니라 **조회 대상 MST**였다 — 부칙은 **그 개정본의 MST**로
+ *   조회해야 한다. 「현행 MST로 조회 → 2009년까지만 나온다」던 종전 기록은 틀렸다.
+ *
+ * 🔴 그 원문이 **요율을 뒤집었다**(세액 변경). 「종전의 규정」은 제13560호 시행 **직전**
+ *   (2014-01-01 ~ 2015-12-31) 시행본이므로 **15/20/30/40**이다. 종전 코드의
+ *   20/25/40/50은 **2010~2013 세트**로, 두 시대를 건너뛴 값이었다(감면 과다 = 세액 과소).
+ *   2014년 인하(법률 제12173호)의 부칙에는 §77 적용례·경과조치가 **0건**이라
+ *   (「공익사업」 언급 자체가 없다 — 부칙 전문 실측) 옛 요율이 이어질 경로가 없다.
+ */
+describe("D7-12 §77 종전 감면율 — 법률 제13560호 부칙 제53조", () => {
+  it("D7-12-1: LEGACY = 제13560호 시행 직전(2014~2015) 시행본 §77① 원문 15/20/30/40", () => {
+    // 2015-01-01본(mst 165311) 원문: 「양도소득세의 100분의 15[… 100분의 20으로 하되, …
+    //   100분의 30(만기가 5년 이상인 경우에는 100분의 40)]」
     expect(PUBLIC_EXPROPRIATION_RATES.LEGACY).toEqual({
+      cash: 0.15,
+      bond: 0.2,
+      bond3y: 0.3,
+      bond5y: 0.4,
+    });
+    // 종전 값(2010~2013 세트)으로 되돌아가면 안 된다 — 그것이 이 anchor의 존재 이유다.
+    expect(PUBLIC_EXPROPRIATION_RATES.LEGACY).not.toEqual({
       cash: 0.2,
       bond: 0.25,
       bond3y: 0.4,
@@ -153,7 +179,7 @@ describe("D7-12 §77 LEGACY 요율의 출처 (부칙 번호는 미확인)", () =
     });
   });
 
-  it("D7-12-2: 세 요율 세트가 서로 구별된다 (2009 / 2014~2015 / 2016~2024)", () => {
+  it("D7-12-2: 세 요율 세트가 서로 구별된다 (2014~2015 / 2016~2024 / 2025~)", () => {
     expect(PUBLIC_EXPROPRIATION_RATES.CURRENT_2018).toEqual({
       cash: 0.1,
       bond: 0.15,
@@ -166,9 +192,32 @@ describe("D7-12 §77 LEGACY 요율의 출처 (부칙 번호는 미확인)", () =
       bond3y: 0.35,
       bond5y: 0.45,
     });
+    // 2016년 인하는 현금·채권만 내렸다 — 3년·5년 특약분(30·40)은 그대로다(원문 대조).
+    expect(PUBLIC_EXPROPRIATION_RATES.LEGACY.bond3y).toBe(
+      PUBLIC_EXPROPRIATION_RATES.CURRENT_2018.bond3y,
+    );
+    expect(PUBLIC_EXPROPRIATION_RATES.LEGACY.bond5y).toBe(
+      PUBLIC_EXPROPRIATION_RATES.CURRENT_2018.bond5y,
+    );
   });
 
-  it("D7-12-3: 경과조치 상수는 부칙 제53조를 가리킨다 (법률 번호 미확인 — 주석에 명시)", () => {
-    expect(TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL).toBe("조특법 부칙 제53조");
+  it("D7-12-3: 경과조치 상수가 개정 법률 번호를 담는다", () => {
+    expect(TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL).toBe(
+      "조특법 법률 제13560호 부칙 제53조",
+    );
+    /**
+     * ⚠️ 괄호 표기(「조특법(법률 제13560호 …) 부칙 제53조」)로 바꾸지 말 것 —
+     * `citation-parser.ts`가 `(…)`를 제거하면 공백이 두 칸 남아 lawAbbr가 「조특법␣␣부칙」이
+     * 되고, 괄호 안 「법률 제13560호」가 **별도 인용**으로 잡혀 lawAbbr 「법률」까지 생긴다.
+     * 둘 다 `UNVERIFIABLE_LAW_NAMES`에 없어 `legal-verification-unverifiable.test.ts`가 깨진다.
+     */
+    expect(TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL).not.toContain("(");
+  });
+
+  it("D7-12-4: 게이트 두 경계일이 부칙 문언과 맞는다", () => {
+    // 「이 법 시행(2016-01-01) 전에 사업인정 고시가 된」 ⇒ 고시일 ≤ 2015-12-31
+    expect(LEGACY_APPROVAL_CUTOFF.toISOString().slice(0, 10)).toBe("2015-12-31");
+    // 「2017년 12월 31일까지 … 양도한 경우」 ⇒ 양도일 ≤ 2017-12-31
+    expect(LEGACY_TRANSFER_CUTOFF.toISOString().slice(0, 10)).toBe("2017-12-31");
   });
 });

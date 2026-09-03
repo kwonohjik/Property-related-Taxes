@@ -71,7 +71,7 @@ export function New993DetailCard({
 const RATE_SET_LABEL: Record<string, string> = {
   amended_2025: "2025 개정율 (현금 15% / 채권 20~45%)",
   current_2018: "현행 감면율 (2018)",
-  legacy: "종전 감면율 (부칙 §53)",
+  legacy: "종전 감면율 (법률 제13560호 부칙 제53조)",
 };
 
 /** 공익사업 수용 감면 상세 (조특법 §77) */
@@ -187,7 +187,7 @@ export function PublicExpropriationDetailCard({
         </>
       )}
       {d.useLegacyRates && (
-        <p className="text-amber-700">※ 조특법 부칙 §53 종전 감면율 적용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도)</p>
+        <p className="text-amber-700">※ 조특법 법률 제13560호(2015-12-15 일부개정) 부칙 제53조 종전 감면율 적용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도)</p>
       )}
       {/* 엔진이 채우는 나머지 경고 — 렌더러가 0개였다(결과탭 코드리뷰 #057).
           위 두 줄이 이미 말한 사실(연간 한도·종전 감면율)은 leaf가 걸러낸다. */}

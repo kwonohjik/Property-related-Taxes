@@ -21,12 +21,28 @@ export const PUBLIC_EXPROPRIATION_RATES = Object.freeze({
   CURRENT_2018: Object.freeze({ cash: 0.10, bond: 0.15, bond3y: 0.30, bond5y: 0.40 }),
   // 2025-01-01 이후 양도분 (법률 제20778호, 부칙 §10 — 과세연도 단위 소급)
   AMENDED_2025: Object.freeze({ cash: 0.15, bond: 0.20, bond3y: 0.35, bond5y: 0.45 }),
-  // 부칙 §53 — 2015-12-31 이전 고시 + 2017-12-31 이전 양도.
-  // 이 4개 값은 **efYd 2009-01-01 ~ 2013-12-31 시행본 §77① 원문과 정확히 일치**한다
-  // (법제처 DRF 실측 — 2014-01-01본은 15/20/30/40, 2016-01-01본은 10/15/30/40).
-  // 부칙의 법률 번호·공포일과 위 두 경계일의 근거는 미확인 —
-  // `legal-codes/transfer.ts`의 REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL 주석 참조 (D7-12).
-  LEGACY:  Object.freeze({ cash: 0.20, bond: 0.25, bond3y: 0.40, bond5y: 0.50 }),
+  /**
+   * 종전 감면율 — **법률 제13560호(2015-12-15 공포, 2016-01-01 시행) 부칙 제53조**.
+   *
+   * 부칙 원문(법제처 DRF `fetchAddendaUnits("177204")` 실측):
+   *   「제53조(공익사업용 토지 등에 대한 양도소득세의 감면에 관한 경과조치) 이 법 시행 전에
+   *    사업인정 고시가 된 사업지역의 사업시행자에게 **2017년 12월 31일까지** 사업지역 내
+   *    토지등을 양도한 경우는 제77조제1항 각 호 외의 부분의 개정규정에도 불구하고
+   *    **종전의 규정에 따른다**.」
+   *
+   * ⇒ 「종전의 규정」 = 제13560호 시행 **직전**(2014-01-01 ~ 2015-12-31) 시행본의 §77①
+   *   = **15 / 20 / 30 / 40**. 세 시대의 요율(DRF 시행본 실측):
+   *     · 2010-01-01 ~ 2013-12-31 — 20 / 25 / 40 / 50
+   *     · **2014-01-01 ~ 2015-12-31 — 15 / 20 / 30 / 40**  ← 보존 대상
+   *     · 2016-01-01 ~ (제13560호)  — 10 / 15 / 30 / 40
+   *
+   * 🔴 **2026-09-03 정정 (세액 변경)** — 종전에는 `20 / 25 / 40 / 50`(2010~2013 세트)이었다.
+   *   부칙을 못 읽어 「미확인」으로 두는 사이 **두 시대를 건너뛴 값**이 들어가 있었다.
+   *   2014년 인하(법률 제12173호)의 부칙에는 §77 적용례·경과조치가 **0건**이라
+   *   (「공익사업」 언급 자체가 없다 — 부칙 전문 실측) 2010~2013 요율이 2016년 이후로
+   *   이어질 경로가 없다. ⇒ 종전 값은 감면 과다(= 세액 과소)였다.
+   */
+  LEGACY:  Object.freeze({ cash: 0.15, bond: 0.20, bond3y: 0.30, bond5y: 0.40 }),
 });
 
 /**
@@ -53,7 +69,9 @@ export function getInvoluntaryTransferLimits(
 }
 
 export const AMENDED_2025_TRANSFER_CUTOFF = new Date("2025-01-01T00:00:00");
+/** 부칙 §53 「이 법 시행(2016-01-01) 전에 사업인정 고시가 된」 ⇒ 고시일 ≤ 2015-12-31 (원문 대조 ✅) */
 export const LEGACY_APPROVAL_CUTOFF = new Date("2015-12-31T23:59:59");
+/** 부칙 §53 「2017년 12월 31일까지 … 양도한 경우」 ⇒ 양도일 ≤ 2017-12-31 (원문 대조 ✅) */
 export const LEGACY_TRANSFER_CUTOFF = new Date("2017-12-31T23:59:59");
 /** 조특법 §77① 일몰 — 2026.12.31 이전 양도분에 한정(양도일 기준). */
 export const PUBLIC_EXPROPRIATION_SUNSET = new Date("2026-12-31T23:59:59");
@@ -191,8 +209,8 @@ export function calculatePublicExpropriationReduction(
     };
   }
 
-  // ── 감면율 결정 (양도일 우선: 2025 개정 → 부칙 §53 → 현행) ──
-  // 2025.1.1. 이후 양도분은 무조건 AMENDED_2025 (부칙 §53 legacy는 양도≤2017만 → 중첩 없음).
+  // ── 감면율 결정 (양도일 우선: 2025 개정 → 부칙 제53조 → 현행) ──
+  // 2025.1.1. 이후 양도분은 무조건 AMENDED_2025 (제13560호 부칙 §53은 양도≤2017만 → 중첩 없음).
   const isAmended2025 = input.transferDate >= AMENDED_2025_TRANSFER_CUTOFF;
   const useLegacyRates =
     !isAmended2025 &&
@@ -292,7 +310,7 @@ export function calculatePublicExpropriationReduction(
   }
   if (useLegacyRates) {
     warnings.push(
-      `사업인정고시일(${input.businessApprovalDate.toISOString().slice(0, 10)})이 2015-12-31 이전이고 양도일(${input.transferDate.toISOString().slice(0, 10)})이 2017-12-31 이전이므로 종전 감면율 적용 (조특법 부칙 §53)`,
+      `사업인정고시일(${input.businessApprovalDate.toISOString().slice(0, 10)})이 2015-12-31 이전이고 양도일(${input.transferDate.toISOString().slice(0, 10)})이 2017-12-31 이전이므로 종전 감면율 적용 (조특법 법률 제13560호 부칙 제53조)`,
     );
   }
   if (input.bondHoldingYears && input.bondCompensation <= 0) {
