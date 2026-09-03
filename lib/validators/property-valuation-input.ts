@@ -477,6 +477,14 @@ export const inheritanceGiftFilingPenaltySchema = z.object({
       "corporate_adjustment",
     ])
     .optional(),
+  /**
+   * 🔴 G-07 B2 — 부정행위 축. **이 층은 TypeScript 가 못 잡는다**: 키가 없으면 ④가
+   * 실어 보내도 Zod 가 조용히 stripping 하고 엔진은 일반율(20%/10%)로 계산한다.
+   */
+  penaltyReason: z.enum(["normal", "fraudulent", "offshore_fraud"]).optional(),
+  fraudulentPortion: z.number().int().nonnegative().optional(),
+  /** §47의3④1호 **라목 단서** — 법인세 경정이 부정행위에 기인했는가 */
+  corporateAdjustmentByFraud: z.boolean().optional(),
 });
 
 export const inheritanceTaxInputSchema = z.object({

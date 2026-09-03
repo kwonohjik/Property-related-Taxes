@@ -19,6 +19,7 @@ import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { INITIAL_FORM } from "@/components/calc/gift-tax-form-shared";
 import type { GiftSubFormState } from "@/components/calc/gift-tax-form-shared";
 import { SimultaneousGiftCard } from "@/components/calc/gift/SimultaneousGiftCard";
+import { FilingPenaltyFraudFields } from "@/components/calc/shared/FilingPenaltyFraudFields";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -186,7 +187,14 @@ export function GiftCreditChecklist({
                 ? { lateFilingDate: "", priorAssessmentNotified: false }
                 : {}),
               ...(status !== "on_time"
-                ? { isUnderReported: false, originalFiledTax: "", underReportExclusion: "" as const }
+                ? {
+                    isUnderReported: false,
+                    originalFiledTax: "",
+                    underReportExclusion: "" as const,
+                    // 🔴 B2 — 과소신고 전용 두 칸도 함께 비운다(화면에서 사라진 값 = 대상 밖)
+                    fraudulentPortion: "",
+                    corporateAdjustmentByFraud: false,
+                  }
                 : {}),
             });
           }}
@@ -245,7 +253,14 @@ export function GiftCreditChecklist({
             onCheckedChange={(v) =>
               set({
                 isUnderReported: v,
-                ...(!v ? { originalFiledTax: "", underReportExclusion: "" as const } : {}),
+                ...(!v
+                  ? {
+                      originalFiledTax: "",
+                      underReportExclusion: "" as const,
+                      fraudulentPortion: "",
+                      corporateAdjustmentByFraud: false,
+                    }
+                  : {}),
               })
             }
           >
@@ -287,6 +302,22 @@ export function GiftCreditChecklist({
               </FieldCard>
             </div>
           </ToggleCard>
+        )}
+
+        {/*
+          🔴 B2 — 부정행위 축(§47의2①1호 · §47의3①1호 가목·나목).
+          정기신고는 **과소신고를 켰을 때만** 가산세가 산출되므로 그때만 묻는다.
+          기한후신고·무신고는 축이 항상 열려 있다.
+        */}
+        {(form.filingStatus !== "on_time" || form.isUnderReported) && (
+          <FilingPenaltyFraudFields
+            filingStatus={form.filingStatus}
+            penaltyReason={form.penaltyReason}
+            fraudulentPortion={form.fraudulentPortion}
+            underReportExclusion={form.underReportExclusion}
+            corporateAdjustmentByFraud={form.corporateAdjustmentByFraud}
+            onChange={set}
+          />
         )}
       </div>
 

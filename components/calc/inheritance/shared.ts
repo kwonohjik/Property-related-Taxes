@@ -136,6 +136,18 @@ export interface FormState extends AppraisalFeeFormFields {
   originalFiledTax: string;
   /** §47의3④1호 적용제외 사유 — 있으면 과소신고가산세 0 */
   underReportExclusion: UnderReportExclusion | "";
+  /**
+   * 부정행위 유형 — 「국세기본법」 §47의2①1호(무신고 **40%**·역외거래 **60%**) ·
+   * §47의3①1호 가목(과소신고 부정분). 🔴 G-07 B2.
+   */
+  penaltyReason: "normal" | "fraudulent" | "offshore_fraud";
+  /** 부정행위로 인한 과소신고분 — §47의3①1호 **가목** base. 빈 칸이면 전액 부정 (B2) */
+  fraudulentPortion: string;
+  /**
+   * §47의3④1호 **라목 단서** — 법인세 경정이 부정행위에 기인했는가 (B2).
+   * ⚠️ `penaltyReason`(이 신고의 부정행위)과 **다른 축**이다 — 라목 단서는 법인세 쪽 사실이다.
+   */
+  corporateAdjustmentByFraud: boolean;
   foreignTaxPaid: string;
   /** 국외 상속재산 과세표준 (§29/상증령 §21① 한도식 분자) */
   foreignInheritanceTaxBase: string;
@@ -266,6 +278,9 @@ export const INITIAL_FORM: FormState = {
   isUnderReported: false,
   originalFiledTax: "",
   underReportExclusion: "",
+  penaltyReason: "normal",
+  fraudulentPortion: "",
+  corporateAdjustmentByFraud: false,
   foreignTaxPaid: "",
   foreignInheritanceTaxBase: "",
   shortTermReinheritPriorDeathDate: "",
