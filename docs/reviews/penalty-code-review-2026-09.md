@@ -3,8 +3,8 @@
 > 2026-09-03 · 대상 `master` **35e6e622** · 워크트리 `.claude/worktrees/penalty-review`
 > 범위: 「국세기본법」 §47의2·§47의3·§47의4·§48 / 「지방세기본법」 §53~§55 / 「상속세 및 증여세법」 §78 ·
 > 「소득세법」 §114의2 도메인의 **6대 세목 + 주식양도세** 전 계층 (엔진 · API/변환 · Zod · store · UI · 신고서 · PDF)
-> 방법: 10축 병렬 정독 → 발견 건마다 3렌즈(법령원문·코드실증·영향재현) 적대적 반증 → 메인 루프 critical 재확인
-> 규모: 185 에이전트 · 1,720만 토큰 · 4,429 tool call · 84분
+> 방법: 10축 병렬 감사 → 3렌즈 적대적 반증 → **미검증분 재검증(뮤테이션 직렬화)** → 메인 루프 직접 실증
+> 규모: 271 에이전트 · 2,810만 토큰 · 7,646 tool call (3개 워크플로 합계)
 
 ---
 
@@ -12,17 +12,19 @@
 
 | | 건수 |
 |---|---|
-| 10축이 제기 | **58** |
-| 3렌즈 적대적 검증 통과 | **42** |
-| 중복 병합 후 **고유 확정 결함** | **35** |
-| 반증 기각 (3/3 반증) | 1 |
-| ⚠️ **미검증** (세션 한도로 검증 에이전트 전멸) | **15** |
+| 10축이 제기 | 58 |
+| 1차 3렌즈 검증 통과 | 42 |
+| 중복 병합 후 | 35 |
+| 미검증분 재검증에서 추가 확정 | +13 |
+| **고유 확정 결함 (최종)** | **47** |
+| 반증 기각 | 2 |
 
-고유 확정 결함의 심각도 분포: **critical** 2건 · **high** 11건 · **medium** 15건 · **low** 7건
+심각도: **critical** 2건 · **high** 12건 · **medium** 22건 · **low** 11건
 
-### 고유 확정 결함 전체 (심각도순)
+### 전체 목록 (심각도순)
 
 > 「방향」(과대/과소)은 각 항목의 **재현** 절에 실측으로 적혀 있다. 여기서는 추정하지 않는다.
+> `재검증` 표시는 1차에서 미판정으로 남았다가 뮤테이션 직렬화 재실행으로 확정된 항목이다.
 
 | ID | 심각도 | 분류 | 결함 | 위치 |
 |---|---|---|---|---|
@@ -39,64 +41,84 @@
 | **G-11** | high | 배관누락 | 다자산 마법사의 ④ API 변환이 fraudulentPortion을 payload에 싣지 않아 가목·나목 분해가 사라지고 전액에 40%가 붙는다 | `calc/multi-transfer-tax-api.ts:270` |
 | **G-12** | high | 표시드리프트 | 주식 결과카드가 가산세율을 토글에서만 파생해, 부정행위분 일부 입력 시 표시 산식이 표시 금액을 재현하지 못한다 | `results/StockTransferPenaltySection.tsx:47` |
 | **G-13** | high | 배관누락 | 일반건물 지분분할 경로는 가산세 입력을 인자로 아예 받지 않아 §47의2~§47의4 가산세가 통째로 소실된다 | `transfer/general-building-fractional.ts:347` |
-| **G-14** | medium | 산식오류 | 0.03% 구간 가산세가 부동소수 오차로 1원 과소 — 저장소가 이미 금지한 `floor(amount × rate)` 패턴 | `tax-engine/transfer-tax-penalty.ts:222` |
-| **G-15** | medium | 표시드리프트 | 일괄양도 결과 카드의 지방소득세 라벨이 국세기본법 가산세까지 과세표준에 든다고 설명 — 단일 소스(local-income-tax-display) 미사용 | `results/BundledAllocationCard.tsx:383` |
-| **G-16** | medium | 인용오류 | 주식 신고서 양식 가산세 행 인용 오류 — 10%는 §47조의3인데 §47조의2로만 적혔고, 「납부불성실」은 폐지된 조문 제목 | `stock-transfer/StockFilingFormTableHelpers.ts:604` |
-| **G-17** | medium | 산식오류 | §48②1호 90% 감면 구간이 부동소수 `1 - 0.9`로 계산돼 가산세가 상시 1원 부족 | `tax-engine/transfer-tax-amendment.ts:196` |
-| **G-18** | medium | 인용오류 | 이자상당액 이자율 조문을 「국세기본법 §43의3②」로 인용 — 국세기본법 제43조는 「과세표준신고의 관할」이고 제43조의3은 없다 | `family-business-postmgmt/page.tsx:261` |
-| **G-19** | medium | 배관누락 | DisclaimerBanner가 취득세·재산세·종부세 결과 화면 3곳에 배선되지 않았다 — 컴포넌트 주석은 「모든 계산 결과 화면에 표시」 | `comprehensive-tax/page.tsx:601` |
-| **G-20** | medium | 인용오류 | 종부세 합산배제 사후관리 추징 근거를 「종합부동산세법 §8③」·「국세기본법 §47의4 납부지연가산세」로 잘못 상수화 (실제는 법 제17조 제5항 + 시행령 제10조 제2항의 이자상당가산액) | `legal-codes/comprehensive.ts:263` |
-| **G-21** | medium | 산식오류 | calculatePostManagementPenalty의 이자상당가산액이 연도별 기산을 무시하고 전체 추징세액에 단일 일수를 곱한다 (표본 계산에서 약 2배 과대) | `tax-engine/comprehensive-tax-helpers.ts:329` |
-| **G-22** | medium | 법령정합 | 취득세 도움말 가산세 안내가 지방세법 §21② 미신고 매각 80% 중가산세를 누락하고, 수정신고 감면 요건을 「신고기한 내」로 잘못 서술 | `sections/FilingDeadlineSection.tsx:44` |
-| **G-23** | medium | 배관누락 | 국외전출세 마법사에 가산세 입력 UI가 렌더되지만 ④⑫⑭ 어디에도 없어 입력값이 조용히 버려진다 | `calc/stock-transfer-tax-api-foreign-exit.ts:202` |
-| **G-24** | medium | 표시드리프트 | 납부지연 입력의 「법정납부기한」 hint가 주식에 §105①1호(달의 말일+2개월)를 제시 — 같은 화면 §4 섹션·결과뷰와 정면 모순 | `stock-transfer/PenaltyDetailBlock.tsx:149` |
-| **G-25** | medium | 인용오류 | 전자신고 세액공제를 「§52의2」로 인용 — 정본은 조특법 §104의8이고, 저장소는 이미 상수만 정정하고 UI는 방치했다 | `results/StockTransferPenaltySection.tsx:101` |
-| **G-26** | medium | 산식오류 | 단건·each_item aggregate 분기에서 국외 종목의 finalTax에 가산세가 남는다 — stripItemPenalties 조기반환이 국외 결과를 그냥 통과시킨다 | `stock-transfer/stock-transfer-aggregate-penalty.ts:72` |
-| **G-27** | medium | 배관누락 | 다건(/multi) 경로에는 「수정신고 ↔ 무신고·과소신고 가산세」 상호배타 게이트가 클라이언트·Zod 양쪽 모두 없다 | `api/transfer-tax-schema.ts:724` |
-| **G-28** | medium | 인용오류 | 「지방세법 §103의3의 과세표준은 결정세액 + §114조의2 가산세」라는 근거 서술이 조문과 다르고, 저장소 5곳에 복제돼 있다 | `transfer/local-income-tax-display.ts:4` |
-| **G-29** | low | 표시드리프트 | 주식 legal-codes 주석이 「§47조의4 본 엔진 미구현」이라고 적혀 있으나 실제로는 구현·배선돼 있다 | `legal-codes/stock.ts:97` |
-| **G-30** | low | 인용오류 | 결과 화면 가산세 인용에 법령명 누락 — 「§114의2」·「§48②」 | `transfer/DetailedStatementFormulaBuilders.ts:131` |
-| **G-31** | low | 표시드리프트 | `calculateFilingPenalty` 함수 주석이 아직 「− 세액공제·감면」을 차감한다고 적혀 있다 — 구현과 정반대 | `tax-engine/transfer-tax-penalty.ts:253` |
-| **G-32** | low | 인용오류 | 이자상당액 제외 근거를 「국세기본법 §47의2③」으로 인용 — 그 항은 부가가치세법 납부의무 면제 조항이다 | `steps/Step6.tsx:153` |
-| **G-33** | low | 표시드리프트 | 「이자상당액」을 「이자상당액 가산세」로 표기 — 상증법 §18의2⑤ 후단은 「상속세에 가산」이지 가산세가 아니고, 별지9호에서도 칸이 다르다 | `family-business-postmgmt/page.tsx:477` |
-| **G-34** | low | 인용오류 | 합산배제 신고의무 근거를 「종합부동산세법 §8②, §16②」로 인용 — 9/16~9/30 신고의무는 §8③이고 §16②는 납부고지서 발급기한이다 | `legal-codes/comprehensive.ts:269` |
-| **G-35** | low | 표시드리프트 | 겸용주택 경로가 가산세 상세(penaltyDetail)를 버려 신고불성실·납부지연 산출근거가 화면에서 사라진다 | `tax-engine/transfer-tax-mixed-use-totals.ts:457` |
+| **G-14** | high | 테스트공백 | 부동산 fraudulentPortion이 ⑫ Zod 층을 태우는 테스트가 없다 — 주석의 「route 계열이 덮는다」가 사실과 다르다 ⟨재검증 U-11⟩ | `calc/transfer-penalty-fraud-portion-wiring.anchor.test.ts:16` |
+| **G-15** | medium | 산식오류 | 0.03% 구간 가산세가 부동소수 오차로 1원 과소 — 저장소가 이미 금지한 `floor(amount × rate)` 패턴 | `tax-engine/transfer-tax-penalty.ts:222` |
+| **G-16** | medium | 표시드리프트 | 일괄양도 결과 카드의 지방소득세 라벨이 국세기본법 가산세까지 과세표준에 든다고 설명 — 단일 소스(local-income-tax-display) 미사용 | `results/BundledAllocationCard.tsx:383` |
+| **G-17** | medium | 인용오류 | 주식 신고서 양식 가산세 행 인용 오류 — 10%는 §47조의3인데 §47조의2로만 적혔고, 「납부불성실」은 폐지된 조문 제목 | `stock-transfer/StockFilingFormTableHelpers.ts:604` |
+| **G-18** | medium | 산식오류 | §48②1호 90% 감면 구간이 부동소수 `1 - 0.9`로 계산돼 가산세가 상시 1원 부족 | `tax-engine/transfer-tax-amendment.ts:196` |
+| **G-19** | medium | 인용오류 | 이자상당액 이자율 조문을 「국세기본법 §43의3②」로 인용 — 국세기본법 제43조는 「과세표준신고의 관할」이고 제43조의3은 없다 | `family-business-postmgmt/page.tsx:261` |
+| **G-20** | medium | 배관누락 | DisclaimerBanner가 취득세·재산세·종부세 결과 화면 3곳에 배선되지 않았다 — 컴포넌트 주석은 「모든 계산 결과 화면에 표시」 | `comprehensive-tax/page.tsx:601` |
+| **G-21** | medium | 인용오류 | 종부세 합산배제 사후관리 추징 근거를 「종합부동산세법 §8③」·「국세기본법 §47의4 납부지연가산세」로 잘못 상수화 (실제는 법 제17조 제5항 + 시행령 제10조 제2항의 이자상당가산액) | `legal-codes/comprehensive.ts:263` |
+| **G-22** | medium | 산식오류 | calculatePostManagementPenalty의 이자상당가산액이 연도별 기산을 무시하고 전체 추징세액에 단일 일수를 곱한다 (표본 계산에서 약 2배 과대) | `tax-engine/comprehensive-tax-helpers.ts:329` |
+| **G-23** | medium | 법령정합 | 취득세 도움말 가산세 안내가 지방세법 §21② 미신고 매각 80% 중가산세를 누락하고, 수정신고 감면 요건을 「신고기한 내」로 잘못 서술 | `sections/FilingDeadlineSection.tsx:44` |
+| **G-24** | medium | 배관누락 | 국외전출세 마법사에 가산세 입력 UI가 렌더되지만 ④⑫⑭ 어디에도 없어 입력값이 조용히 버려진다 | `calc/stock-transfer-tax-api-foreign-exit.ts:202` |
+| **G-25** | medium | 표시드리프트 | 납부지연 입력의 「법정납부기한」 hint가 주식에 §105①1호(달의 말일+2개월)를 제시 — 같은 화면 §4 섹션·결과뷰와 정면 모순 | `stock-transfer/PenaltyDetailBlock.tsx:149` |
+| **G-26** | medium | 인용오류 | 전자신고 세액공제를 「§52의2」로 인용 — 정본은 조특법 §104의8이고, 저장소는 이미 상수만 정정하고 UI는 방치했다 | `results/StockTransferPenaltySection.tsx:101` |
+| **G-27** | medium | 산식오류 | 단건·each_item aggregate 분기에서 국외 종목의 finalTax에 가산세가 남는다 — stripItemPenalties 조기반환이 국외 결과를 그냥 통과시킨다 | `stock-transfer/stock-transfer-aggregate-penalty.ts:72` |
+| **G-28** | medium | 배관누락 | 다건(/multi) 경로에는 「수정신고 ↔ 무신고·과소신고 가산세」 상호배타 게이트가 클라이언트·Zod 양쪽 모두 없다 | `api/transfer-tax-schema.ts:724` |
+| **G-29** | medium | 인용오류 | 「지방세법 §103의3의 과세표준은 결정세액 + §114조의2 가산세」라는 근거 서술이 조문과 다르고, 저장소 5곳에 복제돼 있다 | `transfer/local-income-tax-display.ts:4` |
+| **G-30** | medium ↓ | 인용오류 | PENALTY.FRAUDULENT_DEF가 존재하지 않는 항(국세기본법 §26의2 ⑪)을 인용 — 저장소 3곳에 복제 ⟨재검증 U-05⟩ | `legal-codes/common.ts:20` |
+| **G-31** | medium | 표시드리프트 | 가산세·수정신고 화면 인용에 법령명이 없어 상증법 §48②1호·§45의2①와 문자열이 완전히 겹친다 ⟨재검증 U-06⟩ | `transfer/AmendmentBlock.tsx:220` |
+| **G-32** | medium | 테스트공백 | 국세기본법 시행규칙 §19의3이 검증 매니페스트에 미등록 — 커버리지 모수에서도 빠진다 ⟨재검증 U-07⟩ | `legal-codes/common.ts:89` |
+| **G-33** | medium ↓ | 테스트공백 | 납부지연 2019-02-11 이전 이자율(0.03%)과 2019-02-12 경계가 전 저장소 무커버리지 ⟨재검증 U-09⟩ | `legal-codes/common.ts:48` |
+| **G-34** | medium ↓ | 테스트공백 | 국세기본법 §48②1호 감면 6개 목 중 4개(가·라·마·바)와 「2년 초과 무감면」이 무커버리지 ⟨재검증 U-10⟩ | `legal-codes/common.ts:69` |
+| **G-35** | medium | 테스트공백 | 주식 가산세 10원 미만 절사를 구별하는 테스트가 없다 — 전 픽스처가 이미 10의 배수 ⟨재검증 U-12⟩ | `stock-transfer/stock-transfer-finalize.ts:166` |
+| **G-36** | medium | 테스트공백 | 국외주식 결과 카드 ⑦ 가산세 행 테스트가 금액을 단언하지 않는다 — 0원으로 인쇄해도 통과 ⟨재검증 U-13⟩ | `components/foreign-stock-penalty-card.test.tsx:51` |
+| **G-37** | low | 표시드리프트 | 주식 legal-codes 주석이 「§47조의4 본 엔진 미구현」이라고 적혀 있으나 실제로는 구현·배선돼 있다 | `legal-codes/stock.ts:97` |
+| **G-38** | low | 인용오류 | 결과 화면 가산세 인용에 법령명 누락 — 「§114의2」·「§48②」 | `transfer/DetailedStatementFormulaBuilders.ts:131` |
+| **G-39** | low | 표시드리프트 | `calculateFilingPenalty` 함수 주석이 아직 「− 세액공제·감면」을 차감한다고 적혀 있다 — 구현과 정반대 | `tax-engine/transfer-tax-penalty.ts:253` |
+| **G-40** | low | 인용오류 | 이자상당액 제외 근거를 「국세기본법 §47의2③」으로 인용 — 그 항은 부가가치세법 납부의무 면제 조항이다 | `steps/Step6.tsx:153` |
+| **G-41** | low | 표시드리프트 | 「이자상당액」을 「이자상당액 가산세」로 표기 — 상증법 §18의2⑤ 후단은 「상속세에 가산」이지 가산세가 아니고, 별지9호에서도 칸이 다르다 | `family-business-postmgmt/page.tsx:477` |
+| **G-42** | low | 인용오류 | 합산배제 신고의무 근거를 「종합부동산세법 §8②, §16②」로 인용 — 9/16~9/30 신고의무는 §8③이고 §16②는 납부고지서 발급기한이다 | `legal-codes/comprehensive.ts:269` |
+| **G-43** | low | 표시드리프트 | 겸용주택 경로가 가산세 상세(penaltyDetail)를 버려 신고불성실·납부지연 산출근거가 화면에서 사라진다 | `tax-engine/transfer-tax-mixed-use-totals.ts:457` |
+| **G-44** | low | 테스트공백 | 단건 aggregate 분기의 종목별 결과를 단언하는 anchor가 없어 국외 가산세 잔존이 안전망을 통과한다 ⟨재검증 U-01⟩ | `stock-transfer/penalty-axis-pick-and-late-gate.anchor.test.ts:182` |
+| **G-45** | low | 배관누락 | 전자신고 세액공제에 입력 위젯이 없고, 단건 분기와 합산 분기가 서로 다른 소스로 판정한다 ⟨재검증 U-02⟩ | `stock-transfer/stock-transfer-aggregate.ts:214` |
+| **G-46** | low | 표시드리프트 | 다종목 합산 결과에 penaltyBase echo가 없어 「기준금액 × 세율」 산식이 화면에서 사라진다 ⟨재검증 U-04⟩ | `stock-transfer/stock-transfer-aggregate.ts:106` |
+| **G-47** | low | 표시드리프트 | `resolveDailyRate` 주석이 「이 배열을 참조한다」고 적혀 있으나 구현은 참조하지 않는다 (죽은 코드 아님 — 삭제 금지) ⟨재검증 U-14⟩ | `tax-engine/transfer-tax-penalty.ts:188` |
 
 ---
 
-## 1. ⚠️ 이 리뷰의 한계 — 반드시 먼저 읽을 것
+## 1. 방법론 — 무엇을 어떻게 확인했는가, 그리고 한 번 실패했는가
 
-### 1.1 15건이 검증되지 않았다 (기각이 아니라 미판정)
+### 1.1 1차 실행의 오분류와 정정 (해소됨)
 
-워크플로 후반부에 **세션 사용 한도**에 걸려 검증 에이전트 49개와 완결성 비평이 실패했다.
-스크립트의 생존 판정이 `유효렌즈 > 0 && 반증 < 2`였던 탓에, **3렌즈가 모두 죽은 15건이
-「반증 기각」으로 분류**됐다. 실제로 반증된 것은 **1건**뿐이다(§7).
+1차 워크플로는 후반부에 세션 사용 한도로 검증 에이전트 49개와 완결성 비평이 실패했다.
+생존 판정이 `유효렌즈 > 0 && 반증 < 2`였던 탓에 **3렌즈가 모두 죽은 15건이 「반증 기각」으로 분류**됐다.
+실제 반증은 1건뿐이었다. 이를 재분류해 **미검증 15건**으로 다시 세운 뒤 전건 재검증했다.
 
-⇒ **§6의 15건은 「없는 결함」이 아니라 「확인하지 않은 지적」이다.** 착수 전에 개별 검증이 필요하다.
+⇒ 결과: **13건 확정 · 1건 기각(U-08) · 1건은 G-03과 동일 대상**(별도 검증 불요).
 
-영향을 받은 축은 셋이고, 그중 둘은 **전건이 미검증**이다:
+### 1.2 🔴 뮤테이션 프로브 병렬 실행 사고 (재실행으로 해소)
 
-| 축 | 제기 | 검증 통과 | 미검증 |
-|---|---|---|---|
-| 양도세 신고불성실가산세 산식 | 7 | 6 | 0 |
-| 납부지연가산세 이자율 구간 | 4 | 4 | 0 |
-| 양도세 가산세 배관 (신고단위·중복계상) | 6 | 6 | 0 |
-| 주식양도·국외주식·출국세 가산세 ⚠️ | 9 | 5 | 4 |
-| 상속·증여 가산세 (공익법인·사후관리) | 4 | 4 | 0 |
-| 취득세·재산세·종부세 가산세 (부존재 판정) | 6 | 6 | 0 |
-| 가산세 필드의 14 동기화 지점 배관 | 4 | 4 | 0 |
-| 가산세 결과 표시·신고서 서식·PDF | 7 | 7 | 0 |
-| 가산세 법령 인용 정확성·verify:legal 등록 🔴 | 5 | 0 | 5 |
-| 가산세 테스트 안전망의 구별력 🔴 | 6 | 0 | 6 |
+미검증분 1차 검증에서 **여러 에이전트가 하나의 워크트리에서 동시에 뮤테이션 프로브를 돌려 서로를 밟았다.**
 
-### 1.2 완결성 비평이 실행되지 않았다
+| 시각(UTC) | 사건 |
+|---|---|
+| 21:28:38 · 21:31:28 | U-01이 주식 엔진 2파일 뮤테이션 |
+| 21:38:21 | U-07이 `legal-codes/common.ts` 뮤테이션 |
+| 21:40:46 | **U-07의 다른 렌즈**가 `git checkout`으로 복원 (형제 렌즈가 남의 것을 치움) |
+| 21:42:50 | U-09가 `common.ts:48` 뮤테이션 → **복원 없이 종료** |
+| 22:03:24 | U-10이 **그 위에** 또 뮤테이션 |
 
-「무엇이 빠졌는가」를 묻는 최종 단계가 세션 한도로 실패했다. 따라서 **이 문서는 커버리지를 주장하지 않는다** —
-축들이 스스로 보고한 범위(§8)를 넘어선 영역은 확인되지 않았다.
+결과로 두 가지가 일어났다:
 
-### 1.3 메인 루프가 직접 재확인한 것 (3건)
+1. **측정 오염** — U-01 렌즈가 06:30:57에 `finalTax 27,300,000`을 측정했다가 clean 확인 후 06:33
+   재측정에서 `19,500,000`으로 뒤집혔다(스스로 기록). 42개 렌즈 중 **26개가 「시작 시 트리가 더러웠다」**고 보고했고,
+   **최소 7개가 안전규칙에 따라 뮤테이션 프로브 자체를 포기**했다 — 판정의 핵심 방법이 봉쇄된 것이다.
+2. **교착** — U-09의 미복원 뮤테이션이 살아 있는 동안, 「트리가 더러우면 프로브 금지」 규칙을 지킨
+   U-11 에이전트가 트리가 깨끗해지기를 무한 대기했다. 치워 줄 주체가 이미 종료해 스스로는 풀리지 않았다.
+   메인 루프가 뮤테이션을 복원해 해소했다.
 
-상위 3건은 서브에이전트 보고를 그대로 싣지 않고 메인 루프가 파일·법문을 직접 열어 재확인했다. **셋 다 성립한다.**
+⇒ **미검증 14건 전건을 재실행**했다. 이번에는 소스를 건드리는 렌즈 11개를 **직렬**로,
+읽기 전용 렌즈 31개를 그 뒤 병렬로 돌렸다. 프롬프트에도 두 가지를 바꿨다 —
+「트리가 더러우면 기다리지 말고 **직접 복원**하라」(교착 제거), 「RED를 봤으면 **되돌린 뒤 GREEN 복귀를 재확인**하라」
+(남의 뮤테이션 탓 RED를 자기 것으로 오인하는 것 차단).
+
+**재실행 판정은 1차와 완전히 일치했다**(확정 13 / 기각 1). 격리 조건에서의 독립 재현이다.
+재실행에서도 API 오류로 2개 렌즈가 실패했고(U-05/복제범위, U-09/뮤테이션실증),
+그중 U-09의 것은 **두 번 연속 실패**해 메인 루프가 직접 대체 수행했다(§1.3).
+
+### 1.3 메인 루프가 직접 실증한 것 (4건)
 
 **G-02 (일괄양도 가산세 소실)** — `app/api/calc/transfer/route.ts` 실물 확인:
 일괄양도 분기는 `:312` `return NextResponse.json({ data: { mode: "bundled", ... } })`로 반환하고,
@@ -116,23 +138,47 @@
 `penaltyTax = num(r.penaltyTax)` / `totalDeterminedTax = determinedTax + penaltyTax`만 쓴다.
 ⇒ 같은 PDF의 총 납부세액과 신고서 양식 총결정세액이 `filingDelayedPenalty`만큼 어긋난다.
 
-**G-03 (납부지연 1일 과다)** — 법문을 KoreanLaw로 직접 조회(MST 288571, 시행 2026-08-11):
+**G-03 (납부지연 1일 과다)** — 법문 직독 + **금액 수준 실측**:
 
-> 「국세기본법」 제47조의4 제1항 제1호: 납부하지 아니한 세액 또는 과소납부분 세액 … ×
-> **법정납부기한의 다음 날부터 납부고지일(납부고지일 전에 납부한 경우에는 그 납부일)의 _전날_까지의 기간**
-> × … 대통령령으로 정하는 이자율
+> 「국세기본법」 제47조의4 제1항 제1호(MST 288571, 시행 2026-08-11): 납부하지 아니한 세액 또는
+> 과소납부분 세액 … × **법정납부기한의 다음 날부터 납부고지일(납부고지일 전에 납부한 경우에는 그 납부일)의**
+> **_전날_까지의 기간** × … 대통령령으로 정하는 이자율
 
-코드는 `transfer-tax-penalty.ts:415-418`에서
-`differenceInCalendarDays(calcDate, input.paymentDeadline)` — 즉 **납부일 당일까지** 센다.
-법문의 기간은 `납부일의 전날 − 법정납부기한`이므로 현행 계산은 상시 **1일 과다**다.
-(주석 `:414` 「납부기한 다음날부터 기산 (납부기한 당일 납부 → 0일)」은 기산점만 맞고 종기가 틀렸다.)
+금액은 `elapsedDays`가 아니라 `splitByRatePeriods`(`:201-226`)의 구간 합으로 나온다
+(`:437` `breakdown = splitByRatePeriods(unpaidTax, addDays(paymentDeadline, 1), calcDate)`,
+`:451` `delayedPaymentPenalty = breakdown.reduce(...)`). 그 구간이 `[기한+1일, 납부일]` **양끝 포함**
+(`:216` `days = differenceInCalendarDays(segEnd, segStart) + 1`)이라 법문보다 항상 하루 길다.
+
+미납세액 1억 기준 실측:
+
+| 기한 → 납부 | 코드 산정일수 | 법문상 기간 | 코드 가산세 | 법정 가산세 |
+|---|---|---|---|---|
+| 2026-03-31 → 04-01 (1일) | 1일 | 04-01 ~ 03-31 = **0일** | 22,000 | **0** |
+| 2026-03-31 → 04-02 (2일) | 2일 | 04-01 ~ 04-01 = 1일 | 44,000 | 22,000 |
+| 2026-03-31 → 04-30 (30일) | 30일 | 04-01 ~ 04-29 = 29일 | 660,000 | 638,000 |
+
+1일 지연은 법문상 기간이 0일이라 가산세가 없어야 하는데 하루치를 부과한다.
 
 > 부수 확인: 같은 조 **제7항의 5년 한도는 「지정납부기한의 다음 날부터 납부일까지의 기간」**에 걸리는 것으로,
 > 제1항 제1호(법정납부기한 기준 일할)가 아니라 제1호의2·제2호의2(지정납부기한 기준 월할)의 축이다.
 > 따라서 「5년 한도 미구현」은 이 엔진의 결함이 아니다 — 이 문서는 그것을 결함으로 싣지 않는다.
 
-뮤테이션 프로브가 남긴 throwaway 테스트 5건은 정리했고, **추적 파일 변경은 0건**이다
-(`git diff --stat` 공백 — 뮤테이션은 정상 복원됨).
+**U-09 뮤테이션 프로브** — 담당 렌즈가 1차·2차 모두 실패해 메인 루프가 직접 수행:
+
+| 단계 | 결과 |
+|---|---|
+| baseline (가산세 관련 22파일) | **217건 GREEN** |
+| `DAILY_PENALTY_RATE_2016` 0.0003 → 0.0004 | **217건 그대로 GREEN — RED 0건** |
+| 도달성 확인 (2018-06-30 기한 → 12-31 납부, 미납 1천만) | 세액 **552,000 → 736,000** |
+| 복원 후 | 552,000 복귀 |
+
+상수가 도달 가능하고 세액을 184,000원 바꾸는데도 가산세 테스트 217건 중 **하나도 잡지 못한다.**
+「도달 불가능한 코드를 건드려 RED가 안 난 것」이라는 반론은 도달성 실측으로 배제된다.
+
+### 1.4 작업트리 상태
+
+모든 프로브 종료 후 `git status --porcelain`·`git diff --stat`·`git stash list` **전부 빈 출력**.
+뮤테이션은 전건 파일 단위 `git checkout HEAD -- <경로>`로 복원됐고 throwaway 테스트도 남지 않았다.
 
 ---
 
@@ -978,9 +1024,47 @@ The claim stands; three refinements make it more precise.
 
 ---
 
+### G-14 — 부동산 fraudulentPortion이 ⑫ Zod 층을 태우는 테스트가 없다 — 주석의 「route 계열이 덮는다」가 사실과 다르다
+
+`__tests__/calc/transfer-penalty-fraud-portion-wiring.anchor.test.ts:16` · 테스트공백 · 축 `test-coverage` · **재검증 U-11** (반증 0/3)
+
+**조문**: 국세기본법 제47조의3 제1항 제1호 가목·나목
+
+**무엇이 잘못됐나** — §47조의3①1호 가목·나목 분해의 유일한 입력 필드 `fraudulentPortion`이 Zod 스키마에서 사라져도 부동산 양도세 경로의 테스트가 한 건도 실패하지 않는다. 그 층을 덮는다고 주석에 적힌 route 테스트에는 이 필드가 아예 등장하지 않는다.
+
+**근거**
+
+> 주석의 주장: __tests__/calc/transfer-penalty-fraud-portion-wiring.anchor.test.ts:13-17 `⚠️ ⑫ Zod 는 여기서 직접 검증하지 않는다 … ⑭ 는 \`engine-input.ts\` 가 \`{...data.filingPenaltyDetails}\` **스프레드**라 새 키가 자동 / 전달되고, 그 경로는 route 를 태우는 \`__tests__/api/transfer.route.*\` 계열이 덮는다.`
+>
+> 실측 반증: `grep -rn "fraudulentPortion" __tests__/api/` → **0건**. 이 필드를 언급하는 테스트는 (a) 같은 wiring anchor(④ payload + 엔진 leaf 직접호출), (b) __tests__/tax-engine/transfer-tax/penalty-fraud-portion-split.anchor.test.ts(엔진 leaf 직접호출), (c) 주식 계열뿐이다 — 어느 것도 부동산 Zod를 태우지 않는다.
+>
+> 뮤테이션 프로브(실행): lib/api/transfer-tax-schema-sub.ts:305 `  fraudulentPortion: z.number().int().nonnegative().optional(),` 를 삭제(→ z.object 기본 동작으로 키가 조용히 strip) 후 `npx vitest run __tests__/api/ __tests__/calc/ __tests__/lib/ __tests__/tax-engine/transfer/ __tests__/tax-engine/transfer-tax/ __tests__/tax-engine/transfer-tax-penalty*.test.ts __tests__/tax-engine/transfer-tax-aggregate.test.ts __tests__/components/` → **Test Files 1172 passed (1172), Tests 11293 passed** — RED 0건.
+>
+> 대조(주식은 덮는다): __tests__/calc/stock-penalty-detail-wiring.anchor.test.ts:64-71 `runPipeline` 이 `buildStockTransferApiBody` → `stockTransferInputSchema.safeParse` → `coerceDates(…, STOCK_DATE_FIELDS)` → `buildEngineInput` → 엔진까지 태우고 세액을 단언한다. 부동산에는 같은 층위의 테스트가 없다.
+>
+> 엔진 하위호환 동작: lib/tax-engine/transfer-tax-penalty.ts:326-327 `const splitApplies = isFraud && input.filingType !== "none" && input.fraudulentPortion !== undefined;` — 미입력이면 전액을 부정행위분으로 본다.
+
+**재현**
+
+> 결정세액 100,000,000원 · 과소신고 · 부정행위 · 「부정행위로 인한 과소신고분」 30,000,000원 입력. 법문대로면 가목 30,000,000×40% + 나목 70,000,000×10% = 19,000,000원. Zod에서 키가 strip되면 엔진이 `fraudulentPortion === undefined` 로 보아 100,000,000×40% = 40,000,000원 — **+21,000,000원(2.1배) 납세자에게 불리**한 세액이 나오고, 화면 산식도 「전액 × 40%」로 바뀐다. 그런데도 1,172파일 11,293테스트가 전건 통과한다.
+
+**수정 방향** — __tests__/api/ 에 부동산 route(POST /api/calc/transfer)로 `filingPenaltyDetails.fraudulentPortion`을 실어 보내 최종 `penaltyDetail.filingPenalty === 19,000,000`·`fraudSplit`을 단언하는 anchor를 추가하거나, wiring anchor 안에서 `filingPenaltyDetailsSchema`를 직접 import하지 않고 상위 `transferTaxInputSchema.safeParse` → `buildEngineInput` 경로로 태워 순환 import를 피한 채 ⑫⑭를 덮을 것. 동시에 anchor 주석 :16-17의 사실과 다른 문장을 정정.
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+부동산 양도세의 `fraudulentPortion`은 ⑫ Zod 층(`lib/api/transfer-tax-schema-sub.ts:305`, `filingPenaltyDetailsSchema`)을 실제로 태우는 테스트가 저장소 전체에 한 건도 없다. `__tests__/api/`·`e2e/` 어디에도 이 필드가 등장하지 않고(각 0건), 어떤 테스트도 `filingPenaltyDetailsSchema`를 import하지 않는다. 이 필드를 다루는 테스트는 ④ payload(`buildPenaltyAmendmentPayload`)와 엔진 leaf(`calculateFilingPenalty`) 직접호출뿐이라 ⑫를 건너뛴다 — 정책 메모리 `feedback_leaf_anchor_skips_zod_layer`가 지목한 그 형태다.
+
+다만 anchor 주석(:16-17)에 대한 원 지적의 서술은 과장이 있어 정정한다. 「route 계열이 덮는다」는 *스프레드 경로 자체*에 대해서는 사실이다 — `__tests__/api/transfer.route.gb-reduction-penalty-f17.anchor.test.ts:259`, `transfer.route.mixed-use-reduction-penalty-f17b.anchor.test.ts:203`, `transfer.route.multi-penalty-preliminary-base-f03.anchor.test.ts:113`이 `filingPenaltyDetails`를 POST body에 실어 Zod → `app/api/calc/transfer/engine-input.ts:328-329`의 `{...data.filingPenaltyDetails}`를 실제로 태운다. 틀린 것은 그 문장이 함의하는 「그러니 새 키도 덮인다」 쪽이다: 세 파일 모두 `penaltyReason: "normal"`(:81 / :68 / :58)이고 f17은 `filingType: "none"`(:80)이라 `transfer-tax-penalty.ts:325-326`의 `splitApplies = isFraud && filingType !== "none" && fraudulentPortion !== undefined` 게이트에 애초에 진입하지 못한다.
+
+추가로 주석 :13-15의 「`filingPenaltyDetailsSchema`를 import하면 순환 import(TDZ)로 터진다」는 회피 불가 사유가 아니다. barrel을 먼저 로드하는 확립된 우회 패턴이 저장소에 있고(`__tests__/calc/presale-right-inherited-plumbing.anchor.test.ts:14-17` 등 5개 plumbing anchor), 실측으로 동작한다(프로브 P1 통과). 즉 suggestedFix의 두 번째 방안은 즉시 실행 가능하다.
+
+</details>
+
+---
+
 ## 4. Medium
 
-### G-14 — 0.03% 구간 가산세가 부동소수 오차로 1원 과소 — 저장소가 이미 금지한 `floor(amount × rate)` 패턴
+### G-15 — 0.03% 구간 가산세가 부동소수 오차로 1원 과소 — 저장소가 이미 금지한 `floor(amount × rate)` 패턴
 
 `lib/tax-engine/transfer-tax-penalty.ts:222` · 산식오류 · 축 `delayed-payment`
 
@@ -1059,7 +1143,7 @@ The claim stands; three refinements make it more precise.
 
 ---
 
-### G-15 — 일괄양도 결과 카드의 지방소득세 라벨이 국세기본법 가산세까지 과세표준에 든다고 설명 — 단일 소스(local-income-tax-display) 미사용
+### G-16 — 일괄양도 결과 카드의 지방소득세 라벨이 국세기본법 가산세까지 과세표준에 든다고 설명 — 단일 소스(local-income-tax-display) 미사용
 
 `components/calc/results/BundledAllocationCard.tsx:383` · 표시드리프트 · 축 `display-filing-form`
 
@@ -1132,11 +1216,13 @@ The claim stands; three refinements make it more precise.
 
 ---
 
-### G-16 — 주식 신고서 양식 가산세 행 인용 오류 — 10%는 §47조의3인데 §47조의2로만 적혔고, 「납부불성실」은 폐지된 조문 제목
+### G-17 — 주식 신고서 양식 가산세 행 인용 오류 — 10%는 §47조의3인데 §47조의2로만 적혔고, 「납부불성실」은 폐지된 조문 제목
 
 `components/calc/stock-transfer/StockFilingFormTableHelpers.ts:604` · 인용오류 · 축 `display-filing-form`
 
 **조문**: 국세기본법 제47조의2(무신고가산세)·제47조의3(과소신고·초과환급신고가산세)·제47조의4(납부지연가산세)
+
+> 재검증 **U-03**(`:603`, 축 `stock-penalty`)이 같은 결함을 독립 발견해 3렌즈 만장일치로 확정했다 — 두 축이 별개로 도달한 항목이다.
 
 **무엇이 잘못됐나** — 26번 행이 10%·20%·40%·60% 네 세율을 모두 담으면서 근거를 「§47의2」 하나로만 적는다 — 10%(일반 과소신고)와 40%/60% 중 과소신고분은 §47조의3이다. 27번 행의 「납부불성실 가산세」는 현행 조문 제목이 아니다(국세기본법 제47조의4의 제목은 「납부지연가산세」). 두 행 모두 법령명이 없다.
 
@@ -1196,7 +1282,7 @@ The claim stands; three refinements make it more precise.
 
 ---
 
-### G-17 — §48②1호 90% 감면 구간이 부동소수 `1 - 0.9`로 계산돼 가산세가 상시 1원 부족
+### G-18 — §48②1호 90% 감면 구간이 부동소수 `1 - 0.9`로 계산돼 가산세가 상시 1원 부족
 
 `lib/tax-engine/transfer-tax-amendment.ts:196` · 산식오류 · 축 `filing-penalty`
 
@@ -1272,7 +1358,7 @@ The claim stands; three refinements make it more precise.
 
 ---
 
-### G-18 — 이자상당액 이자율 조문을 「국세기본법 §43의3②」로 인용 — 국세기본법 제43조는 「과세표준신고의 관할」이고 제43조의3은 없다
+### G-19 — 이자상당액 이자율 조문을 「국세기본법 §43의3②」로 인용 — 국세기본법 제43조는 「과세표준신고의 관할」이고 제43조의3은 없다
 
 `app/calc/family-business-postmgmt/page.tsx:261` · 인용오류 · 축 `inheritance-gift-penalty`
 
@@ -1318,7 +1404,7 @@ The claim stands; three refinements make it more precise.
 
 ---
 
-### G-19 — DisclaimerBanner가 취득세·재산세·종부세 결과 화면 3곳에 배선되지 않았다 — 컴포넌트 주석은 「모든 계산 결과 화면에 표시」
+### G-20 — DisclaimerBanner가 취득세·재산세·종부세 결과 화면 3곳에 배선되지 않았다 — 컴포넌트 주석은 「모든 계산 결과 화면에 표시」
 
 `app/calc/comprehensive-tax/page.tsx:601` · 배관누락 · 축 `local-taxes-penalty`
 
@@ -1376,7 +1462,7 @@ DisclaimerBanner 공용 컴포넌트가 실질적으로 미배선된 결과 화�
 
 ---
 
-### G-20 — 종부세 합산배제 사후관리 추징 근거를 「종합부동산세법 §8③」·「국세기본법 §47의4 납부지연가산세」로 잘못 상수화 (실제는 법 제17조 제5항 + 시행령 제10조 제2항의 이자상당가산액)
+### G-21 — 종부세 합산배제 사후관리 추징 근거를 「종합부동산세법 §8③」·「국세기본법 §47의4 납부지연가산세」로 잘못 상수화 (실제는 법 제17조 제5항 + 시행령 제10조 제2항의 이자상당가산액)
 
 `lib/tax-engine/legal-codes/comprehensive.ts:263` · 인용오류 · 축 `local-taxes-penalty`
 
@@ -1431,7 +1517,7 @@ DisclaimerBanner 공용 컴포넌트가 실질적으로 미배선된 결과 화�
 
 ---
 
-### G-21 — calculatePostManagementPenalty의 이자상당가산액이 연도별 기산을 무시하고 전체 추징세액에 단일 일수를 곱한다 (표본 계산에서 약 2배 과대)
+### G-22 — calculatePostManagementPenalty의 이자상당가산액이 연도별 기산을 무시하고 전체 추징세액에 단일 일수를 곱한다 (표본 계산에서 약 2배 과대)
 
 `lib/tax-engine/comprehensive-tax-helpers.ts:329` · 산식오류 · 축 `local-taxes-penalty`
 
@@ -1503,7 +1589,7 @@ DisclaimerBanner 공용 컴포넌트가 실질적으로 미배선된 결과 화�
 
 ---
 
-### G-22 — 취득세 도움말 가산세 안내가 지방세법 §21② 미신고 매각 80% 중가산세를 누락하고, 수정신고 감면 요건을 「신고기한 내」로 잘못 서술
+### G-23 — 취득세 도움말 가산세 안내가 지방세법 §21② 미신고 매각 80% 중가산세를 누락하고, 수정신고 감면 요건을 「신고기한 내」로 잘못 서술
 
 `app/help/acquisition-tax/sections/FilingDeadlineSection.tsx:44` · 법령정합 · 축 `local-taxes-penalty`
 
@@ -1583,7 +1669,7 @@ FilingDeadlineSection.tsx:42-47 의 「무신고·지연 가산세」 박스는 
 
 ---
 
-### G-23 — 국외전출세 마법사에 가산세 입력 UI가 렌더되지만 ④⑫⑭ 어디에도 없어 입력값이 조용히 버려진다
+### G-24 — 국외전출세 마법사에 가산세 입력 UI가 렌더되지만 ④⑫⑭ 어디에도 없어 입력값이 조용히 버려진다
 
 `lib/calc/stock-transfer-tax-api-foreign-exit.ts:202` · 배관누락 · 축 `stock-penalty`
 
@@ -1642,7 +1728,7 @@ FilingDeadlineSection.tsx:42-47 의 「무신고·지연 가산세」 박스는 
 
 ---
 
-### G-24 — 납부지연 입력의 「법정납부기한」 hint가 주식에 §105①1호(달의 말일+2개월)를 제시 — 같은 화면 §4 섹션·결과뷰와 정면 모순
+### G-25 — 납부지연 입력의 「법정납부기한」 hint가 주식에 §105①1호(달의 말일+2개월)를 제시 — 같은 화면 §4 섹션·결과뷰와 정면 모순
 
 `components/calc/stock-transfer/PenaltyDetailBlock.tsx:149` · 표시드리프트 · 축 `stock-penalty`
 
@@ -1720,7 +1806,7 @@ FilingDeadlineSection.tsx:42-47 의 「무신고·지연 가산세」 박스는 
 
 ---
 
-### G-25 — 전자신고 세액공제를 「§52의2」로 인용 — 정본은 조특법 §104의8이고, 저장소는 이미 상수만 정정하고 UI는 방치했다
+### G-26 — 전자신고 세액공제를 「§52의2」로 인용 — 정본은 조특법 §104의8이고, 저장소는 이미 상수만 정정하고 UI는 방치했다
 
 `components/calc/results/StockTransferPenaltySection.tsx:101` · 인용오류 · 축 `stock-penalty` · **2개 축이 독립 발견**(display-filing-form, stock-penalty)
 
@@ -1792,7 +1878,7 @@ lib/tax-engine/legal-codes/stock.ts:331 `/** 전자신고 세액공제 — §52�
 
 ---
 
-### G-26 — 단건·each_item aggregate 분기에서 국외 종목의 finalTax에 가산세가 남는다 — stripItemPenalties 조기반환이 국외 결과를 그냥 통과시킨다
+### G-27 — 단건·each_item aggregate 분기에서 국외 종목의 finalTax에 가산세가 남는다 — stripItemPenalties 조기반환이 국외 결과를 그냥 통과시킨다
 
 `lib/tax-engine/stock-transfer/stock-transfer-aggregate-penalty.ts:72` · 산식오류 · 축 `stock-penalty`
 
@@ -1847,7 +1933,7 @@ lib/tax-engine/legal-codes/stock.ts:331 `/** 전자신고 세액공제 — §52�
 
 ---
 
-### G-27 — 다건(/multi) 경로에는 「수정신고 ↔ 무신고·과소신고 가산세」 상호배타 게이트가 클라이언트·Zod 양쪽 모두 없다
+### G-28 — 다건(/multi) 경로에는 「수정신고 ↔ 무신고·과소신고 가산세」 상호배타 게이트가 클라이언트·Zod 양쪽 모두 없다
 
 `lib/api/transfer-tax-schema.ts:724` · 배관누락 · 축 `transfer-plumbing`
 
@@ -1912,7 +1998,7 @@ lib/tax-engine/legal-codes/stock.ts:331 `/** 전자신고 세액공제 — §52�
 
 ---
 
-### G-28 — 「지방세법 §103의3의 과세표준은 결정세액 + §114조의2 가산세」라는 근거 서술이 조문과 다르고, 저장소 5곳에 복제돼 있다
+### G-29 — 「지방세법 §103의3의 과세표준은 결정세액 + §114조의2 가산세」라는 근거 서술이 조문과 다르고, 저장소 5곳에 복제돼 있다
 
 `components/calc/results/transfer/local-income-tax-display.ts:4` · 인용오류 · 축 `transfer-plumbing`
 
@@ -1984,9 +2070,343 @@ anchor 주석까지 같은 축이라 **틀린 서술이 회귀 테스트의 근�
 
 ---
 
+### G-30 — PENALTY.FRAUDULENT_DEF가 존재하지 않는 항(국세기본법 §26의2 ⑪)을 인용 — 저장소 3곳에 복제
+
+`lib/tax-engine/legal-codes/common.ts:20` · 인용오류 · 축 `legal-citation` · **재검증 U-05** (반증 0/2) · 심각도 high → **medium**
+
+**조문**: 국세기본법 제26조의2 제2항 제2호 · 국세기본법 시행령 제12조의2 제1항 · 조세범 처벌법 제3조 제6항
+
+**무엇이 잘못됐나** — 부정행위 정의의 근거로 상수화된 「국세기본법 §26의2 ⑪」은 현행 국세기본법 제26조의2에 존재하지 않는 항이며, 실제 정의 경로는 §26의2②2호 → 국기령 §12의2① → 조세범 처벌법 §3⑥이다.
+
+**근거**
+
+> 코드 원문 — `lib/tax-engine/legal-codes/common.ts:19-20`
+> ```
+>   /** 국세기본법 §26의2 ⑪ — 부정행위의 정의 (이중장부·허위증빙·재산은닉 등) */
+>   FRAUDULENT_DEF:       "국세기본법 §26의2 ⑪",
+> ```
+> 조문 본문(KoreanLaw MCP 실측, 국세기본법 mst=288571, 공포 20260811·시행 20260811): 제26조의2는 ①~⑨로 끝난다. 마지막 항은 「⑨ 제1항부터 제4항까지의 규정에 따른 국세를 부과할 수 있는 날은 대통령령으로 정한다.」이며 ⑩·⑪은 없다.
+> 부정행위 정의의 실제 계보(전부 실측):
+> · 국세기본법 제26조의2 제2항 제2호 — 「납세자가 대통령령으로 정하는 사기나 그 밖의 부정한 행위(이하 "부정행위"라 한다)로 국세를 포탈…」
+> · 국세기본법 시행령 제12조의2 제1항(mst=283623) — 「법 제26조의2제2항제2호 전단에서 "대통령령으로 정하는 사기나 그 밖의 부정한 행위"란 「조세범 처벌법」 제3조제6항에 해당하는 행위를 말한다.」
+> · 조세범 처벌법 제3조 제6항(mst=224875) 1~7호 — 「1. 이중장부의 작성 등 장부의 거짓 기장 / 2. 거짓 증빙 또는 거짓 문서의 작성 및 수취 / 3. 장부와 기록의 파기 / 4. 재산의 은닉, 소득ㆍ수익ㆍ행위ㆍ거래의 조작 또는 은폐 …」 — 이 목록이 곧 JSDoc·설계문서가 열거한 「이중장부·허위증빙·재산은닉」이다.
+> 전역 복제본(grep 전수):
+> · `lib/tax-engine/transfer-tax-penalty.ts:30` — `| "fraudulent"     // 부정행위 (이중장부·허위증빙·재산은닉 등 — 국세기본법 §26의2 ⑪)`
+> · `docs/02-design/features/transfer-tax-penalty.design.md:62` — `### 2.4 부정행위 해당 여부 판단 기준 (국세기본법 §26의2 ⑪)`
+> · 같은 문서 `:244` 상수 정의, `:395` 참고법령 표 「국세기본법 | §26의2 ⑪ | 부정행위 정의」
+
+**재현**
+
+> 부정행위 과소신고(예: 결정세액 70,000,000 · penaltyReason="fraudulent")로 계산하면 `transfer-tax-penalty.ts:345`·`:381`이 `legalBasis: PENALTY.FRAUDULENT_DEF`를 붙여 결과 `steps[]`에 「국세기본법 §26의2 ⑪」를 싣고, 그 결과 객체가 IndexedDB 이력에 그대로 저장된다. 이용자가 그 근거로 국가법령정보센터에서 제26조의2를 열면 ⑨까지밖에 없어 도달 불가능하다. 나아가 검증 게이트가 이를 구조적으로 못 잡는다 — `lib/legal-verification/coverage.ts:81`의 `articleKey()`가 「법령명 + 조 번호」로만 정규화(주석 :20 「항·호·목 차이는 무시한다」)하므로 §26의2가 `additions-common.ts:12`에 등록돼 있는 한 항 번호가 무엇이든 100%로 통과한다(실행 결과: 5 passed).
+
+**수정 방향** — `FRAUDULENT_DEF`를 위임 체인이 드러나는 문자열로 정정한다 — 예: `"국세기본법 §26의2②2호 · 국세기본법 시행령 §12의2① · 조세범 처벌법 §3⑥"`. 정정 시 `transfer-tax-penalty.ts:30` 주석과 `transfer-tax-penalty.design.md:62·244·395`를 함께 고치고, 새로 인용되는 국세기본법 시행령 §12의2·조세범 처벌법 §3을 `lib/legal-verification/manifest/additions-common.ts`에 등록한다(현재 둘 다 미등록).
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+「국세기본법 §26의2 ⑪」은 **어느 시점에도 존재한 적 없는 항**이다(현행 부존재가 아니라 전 연혁 부존재 — 시기 드리프트가 아니다). 부정행위 정의의 실제 계보는 「국세기본법」 제26조의2 제2항 제2호(정의 약칭 부여) → 「국세기본법 시행령」 제12조의2 제1항(조문 제목 자체가 "부정행위의 유형 등") → 「조세범 처벌법」 제3조 제6항 제1호~제7호이며, JSDoc이 열거한 「이중장부·허위증빙·재산은닉」은 조세범 처벌법 §3⑥ 1호·2호·4호의 축자 표현이다.
+
+원 지적에서 **정정할 두 가지**:
+
+① **복제 건수**: "저장소 4곳"이 아니라 리뷰 문서를 제외하고 **3파일 7회**다 — `lib/tax-engine/legal-codes/common.ts:19`(JSDoc)·`:20`(상수값), `lib/tax-engine/transfer-tax-penalty.ts:30`(주석), `docs/02-design/features/transfer-tax-penalty.design.md:62·243·244·395`.
+
+② **failureScenario는 현재 재현되지 않는다**(severity를 high로 유지할 근거가 아니다). 「이용자가 결과 화면의 근거를 보고 국가법령정보센터에서 제26조의2를 연다」는 경로가 **존재하지 않는다**:
+- `PENALTY.FRAUDULENT_DEF`는 `transfer-tax-penalty.ts:345`·`:381`에서 **내부 `FilingPenaltyResult.steps[].legalBasis`에만** 실린다.
+- `grep -rn "PenaltyStep" --include="*.tsx"` = **0건** — 이 steps를 렌더하는 컴포넌트가 없다.
+- 결과 화면에 실제로 나가는 값은 `transfer-tax-penalty-steps.ts:69`의 `penaltyDetail.filingPenalty.legalBasis`, 즉 **최상위** `legalBasis`(`PENALTY.NON_FILING`/`UNDER_FILING`)이지 `FRAUDULENT_DEF`가 아니다.
+- `TransferTaxCalculator.tsx:604-620`은 penaltyBase·penaltyRate·filingPenalty **금액만** 렌더한다. `AmendmentResultCard.tsx:122·189`도 `s.label`·`s.amount`·`s.formula`만 렌더하고 `legalBasis`는 렌더하지 않는다.
+
+⇒ 현 시점 실피해는 **IndexedDB 이력에 잘못된 인용 문자열이 직렬화되어 남는 것 + `legal-codes` 정본 오염**에 그친다. 다만 결함 자체는 실재하며, 누군가 `PenaltyStep.legalBasis`를 `LawArticleModal`에 배선하는 순간(취득세 결과뷰 `AcquisitionTaxResultView.tsx:674`가 이미 그 패턴이다) 즉시 사용자 노출된다 — 그때 `law-article-modal.tsx:118`의 `extractClauseMarkers`가 존재하지 않는 ⑪을 하이라이트하려다 실패한다.
+
+**검증 게이트가 못 잡는다는 지적은 확인됨**: `lib/legal-verification/coverage.ts:78-84`의 `articleKey()`가 `${p.lawFullName} ${p.articleNo}`로만 정규화해 항을 버리므로, `additions-common.ts:12`에 「국세기본법 §26의2」가 등록돼 있는 한 항 번호가 무엇이든 커버리지 100%로 통과한다.
+
+</details>
+
+---
+
+### G-31 — 가산세·수정신고 화면 인용에 법령명이 없어 상증법 §48②1호·§45의2①와 문자열이 완전히 겹친다
+
+`components/calc/transfer/AmendmentBlock.tsx:220` · 표시드리프트 · 축 `legal-citation` · **재검증 U-06** (반증 0/3)
+
+**조문**: 국세기본법 제48조 제2항 제1호 · 제45조의2 / 상속세 및 증여세법 제48조 제2항 제1호 · 제45조의2
+
+**무엇이 잘못됐나** — 양도세 수정신고 UI가 국세기본법 조문을 「§48②」·「§48①2호」·「§45의2①」처럼 법령명 없이 렌더하는데, 같은 제품의 상속·증여 화면이 상증법 조문을 **글자 그대로 같은 문자열**로 렌더하고 있어 이용자가 어느 법인지 분간할 수 없다.
+
+**근거**
+
+> 국세기본법 축(렌더되는 문자열) — `components/calc/transfer/AmendmentBlock.tsx`
+> ```
+> :219  { value: "exempt", label: "정당한 사유 면제 (§48①2호)", description: "증액보상금 등 — 가산세 0" },
+> :220  { value: "auto_48_2", label: "§48② 자진수정 감면", description: "경과기간별 10~90% 감면" },
+> :244  description="경정을 미리 알고 신고한 경우 §48② 감면 배제"
+> :257  description="추가 납부세액 × 경과일수 × 일 0.022% (§47의4) — §48② 감면 대상 아님"
+> :66   { value: "ordinary", label: "일반", description: "법정신고기한 후 5년 이내 (§45의2①)" },
+> ```
+> `components/calc/results/transfer/AmendmentResultCard.tsx:155` — `` ? ` (§48② ${(detail.underReportingReductionRate * 100).toFixed(0)}% 감면)` ``
+> 상증법 축(같은 제품·같은 문자열) —
+> ```
+> app/calc/public-interest-postmgmt/page.tsx:49       label: "출연받은 재산 (§48②1호)",
+> components/calc/results/InheritanceTaxResultView.tsx:453   공익법인 출연재산 사후관리 안내 (§48②1호)
+> components/calc/deemed-gift/presumption-forms.tsx:150      title="배제사유 해당 (§45의2①)"
+> ```
+> 두 조문이 실재하며 내용이 전혀 다름을 실측 확인: 국세기본법 제48조 제2항 제1호 = 「…수정신고한 경우(제47조의3에 따른 가산세만 해당…) 가. …100분의 90에 상당하는 금액」(가산세 감면). 상속세 및 증여세법 제48조 제2항 제1호(mst=276123) = 「출연받은 재산을 직접 공익목적사업 등의 용도 외에 사용하거나 출연받은 날부터 3년 이내에…」(증여세 추징). 국세기본법 제45조의2 = 경정청구, 상증법 제45조의2 = 명의신탁재산 증여의제.
+> **파일 내 자기모순** — 같은 `AmendmentBlock.tsx`가 다른 줄에서는 법령명을 쓴다: `:46` `"…환급세액을 계산합니다 (국세기본법 §45의2)"`, `:164` `"…추가 납부세액을 계산합니다 (국세기본법 §45)"`, `:180` `"확정신고기한 = 양도 다음 해 5월 31일 (소득세법 §110①)."`
+> 부수 영향 — `lib/utils/law-url.ts:64-67`의 `parseLawRefsForModal`은 「법령명 없는 단독 § → 본법 불명 → skip」이라 이 인용들은 조문 링크·모달 대상에서도 조용히 빠진다.
+
+**재현**
+
+> 양도세 수정신고 화면에서 「§48② 자진수정 감면」(=국세기본법 제48조 제2항, 가산세 90~10% 감면)을 본 이용자가 같은 제품의 공익법인 사후관리 화면 「출연받은 재산 (§48②1호)」(=상증법 제48조 제2항 제1호, 출연재산 3년 미사용 시 증여세 추징)를 보면 두 화면이 같은 조문을 가리킨다고 읽게 된다. 「§45의2①」도 마찬가지로 경정청구 기한(국기법)과 명의신탁 증여의제 배제사유(상증법)에 동일 문자열이 쓰인다. 저장소 규약(커밋 7f44d95a 「조문 인용에 법령명·법/령/규칙을 명시 — 「§55①」로는 어느 법인지 알 수 없다」)의 정면 위반이며, 이 축에서 실제 충돌이 발생한 첫 사례다.
+
+**수정 방향** — 양도세 수정신고·경정청구 UI의 렌더 문자열에 법령명을 붙인다(`국세기본법 §48②`, `국세기본법 §48①2호`, `국세기본법 §47의4`, `국세기본법 §45의2①·②`). 상증법 축도 같은 원칙으로 「상증법 §48②1호」 등으로 정리하면 `extractInlineLawRefs`가 법령 토큰을 인식해 조문 배지·모달까지 살아난다.
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+지적은 성립한다. 다만 evidence의 세 곳을 정정하고, 최악 지점이 :220이 아님을 밝힌다.
+
+【성립하는 핵심】 렌더되는 문자열이 두 법에 걸쳐 실제로 충돌한다.
+- 국기법 축(양도세): AmendmentBlock.tsx:66 `(§45의2①)` · :189·:219 `(§48①2호)` · :220 `§48② 자진수정 감면` · :244 `§48② 감면 배제` · :257 `(§47의4) — §48② 감면 대상 아님` / AmendmentResultCard.tsx:155 `(§48② N% 감면)`.
+- 상증법 축: InheritanceTaxResultView.tsx:453 `공익법인 출연재산 사후관리 안내 (§48②1호)` · presumption-forms.tsx:150 `배제사유 해당 (§45의2①)` · postmgmt/page.tsx:49 `출연받은 재산 (§48②1호)`.
+- `§45의2①`은 AmendmentBlock:66과 presumption-forms:150에서 **바이트 단위로 동일**하다.
+- 두 조문 내용은 정반대다(KoreanLaw 실측): 「국세기본법」 제48조 제2항 제1호 = 수정신고 시 가산세 90~10% **감면** / 「상속세 및 증여세법」 제48조 제2항 제1호 = 출연재산 3년 내 미사용 시 **즉시 증여세 부과**. 「국세기본법」 제45조의2 = 경정 등의 청구 / 「상속세 및 증여세법」 제45조의2 = 명의신탁재산의 증여 의제.
+
+【정정 ①: 최악 지점은 :220이 아니라 AmendmentResultCard.tsx:155이다】
+AmendmentResultCard.tsx(202줄)에는 「법」이라는 **글자가 0회** 등장하고, 이 카드를 띄우는 TransferTaxResultView.tsx·MultiTransferTaxResultView.tsx에도 「국세기본법」이 **0회**다. 즉 결과 화면 전체에 법령명이 단 한 글자도 없는 상태로 `(§48② 90% 감면)`이 렌더된다. 반면 AmendmentBlock은 같은 섹션 헤더(:46 「국세기본법 §45의2」, :164 「국세기본법 §45」)가 법령명을 대므로 **부분적으로는 맥락이 있다**.
+
+【정정 ②: 도달성 — 법령명은 「다른 데 있는」 게 아니라 같은 삼항으로 배제된다】
+Step6.tsx:40 `form.amendmentMode ? <AmendmentBlock/> : (<>…</>)`. else 가지에만 「국세기본법 §47의2·§47의3」(:59)·「국세기본법 §47의4」(:164)가 있다. ⇒ `§48②`·`§47의4`가 맨몸으로 뜨는 amendmentMode에서는 그 두 헤더가 **구조적으로 렌더되지 않는다**. e2e/transfer-amendment.spec.ts:96이 `§48② 자진수정 감면` 가시성을, :99가 구 패널 미노출(count 0)을 이미 단언한다 — 가설이 아니라 검증된 렌더다.
+
+【정정 ③: 부수 영향의 기전이 잘못 지목됐다】
+`parseLawRefsForModal`(law-url.ts:62-65)의 skip 때문이 아니다. AmendmentBlock은 `lawLinks`·`lawRefs`를 **아예 넘기지 않으며**(grep 0건), ToggleCard.tsx:185-194와 RadioCardGroup.tsx:137-139가 `if (!lawLinks) return []`로 조기 반환해 `extractInlineLawRefs`가 호출조차 되지 않는다. 결론(배지·모달 부재)은 맞고 원인만 틀렸다.
+
+【정정 ④: 상증법 축은 evidence보다 덜 노출돼 있다】
+presumption-forms.tsx:149는 `lawLinks="상증법"`을 넘겨 배지→모달이 「상속세및증여세법」으로 해석된다. 단 law-ref-badges.tsx:39가 표시하는 것은 `r.label`(=`§45의2①`)뿐이고 법령명은 `legalBasis`에만 들어가므로 **화면 문자열 충돌 자체는 그대로 남는다**. postmgmt/page.tsx:110도 「상증법 §48②」로 페이지 맥락을 준다. 양축 모두 맨몸인 진짜 사례는 InheritanceTaxResultView.tsx:453(파일 내 「상증법」 0회)이다.
+
+【규약 위반 여부】 커밋 7f44d95a(2026-09-01)가 「화면 노출 문구에 축약을 썼다」를 명시적 결함으로 규정했고, 이를 강제하는 lint·pre-push 게이트는 없다(.husky/pre-push는 폰트·톤·러너·typecheck·lint·test뿐). ⇒ 「차단된 상태」가 아니라 열린 갭이다.
+
+</details>
+
+---
+
+### G-32 — 국세기본법 시행규칙 §19의3이 검증 매니페스트에 미등록 — 커버리지 모수에서도 빠진다
+
+`lib/tax-engine/legal-codes/common.ts:89` · 테스트공백 · 축 `legal-citation` · **재검증 U-07** (반증 0/3)
+
+**조문**: 국세기본법 시행규칙 제19조의3
+
+**무엇이 잘못됐나** — 연 3.1% 이율의 근거 조문인 국세기본법 시행규칙 제19조의3이 `lib/legal-verification/manifest/` 어디에도 등록돼 있지 않고, 인용이 exported 상수가 아니라 JSDoc에만 있어 커버리지 게이트의 모수에서도 빠진다 — 개정돼도 아무도 알려주지 않는다.
+
+**근거**
+
+> 코드 원문 — `lib/tax-engine/legal-codes/common.ts:89-90`
+> ```
+> /** 국세환급가산금 이율(연) — 시행규칙 §19의3(연 1000분의 31). 안내 표기 전용(display-only) */
+> export const REFUND_GAIN_RATE_ANNUAL = 0.031;
+> ```
+> 같은 조문이 세액 계산에도 쓰인다 — `lib/tax-engine/data/installment-surcharge-rates.ts:2·9`
+> ```
+>  * 연부연납 가산금 가산율 고시 연혁 (상증령 §69 → 국기령 §43의3② → 국기칙 §19의3)
+>  * 출처: 국기칙 §19의3 개정 연혁(국가법령정보센터 제·개정이유). …
+> ```
+> 조문 본문(KoreanLaw MCP 실측, 국세기본법 시행규칙 mst=284607, 시행 20260320): 「제19조의3(국세환급가산금의 이율) 영 제43조의3제2항 본문에서 "재정경제부령으로 정하는 이자율"이란 **연 1천분의 31**을 말한다.」 ⇒ 현재 값 0.031은 맞다.
+> 미등록 실측 — `grep -rn "국세기본법 시행규칙|국기칙" lib/legal-verification/` → **0건**. 매니페스트에 등록된 시행규칙은 부가가치세법 §47(`additions-common.ts:247`), 지방세법 §50, 소득세법 §80·§83의4·§83의5·§81뿐이다.
+> 모수 이탈 이유 — `lib/legal-verification/coverage-collect.ts`는 legal-codes 모듈의 **export 값**에서 문자열 leaf만 수집한다(`collectStrings`). 「국세기본법 시행규칙 §19의3」은 JSDoc 주석에만 있어 수집되지 않고, 따라서 `uncovered`에 뜨지 않는다.
+
+**재현**
+
+> 이 이율은 거의 매년 바뀐다 — 저장소 자체 연혁 표(`installment-surcharge-rates.ts:28-43`)가 2011~2025년 사이 **14회 변경**을 기록한다(3.7→4.0→3.4→2.9→2.5→1.8→1.6→1.8→2.1→1.8→1.2→2.9→3.5→3.1%). 다음 개정으로 시행규칙 §19의3이 예컨대 연 1천분의 35로 바뀌면, `REFUND_GAIN_RATE_ANNUAL`(경정청구 안내 표기)과 `CURRENT_SURCHARGE_RATE = 0.031`(연부연납 미래 회차 기본값, `installment-surcharge-rates.ts:47`)이 모두 낡은 값을 계속 쓰는데 `npm run verify:legal`도 커버리지 vitest 게이트도 침묵한다. 이는 이 저장소에서 이미 두 번 재발한 갭(2026-06-08 상증법 4건 · 2026-08-03 국기법 §45·§45의2·§48·§52 등 9건, `__tests__/lib/legal-verification-coverage-complete.test.ts:11-13`)과 같은 형태다.
+
+**수정 방향** — `additions-common.ts`에 `{ id: "NTBL_RULE.REFUND_INTEREST_RATE", citation: "국세기본법 시행규칙 §19의3", keywords: ["국세환급가산금의 이율", "연 1천분의 31"], keywordMode: "ALL" }`를 등록한다. 다만 커버리지 모수에 들어가려면 인용이 **export된 문자열**이어야 하므로 `common.ts`에 `export const REFUND_GAIN_RATE_BASIS = "국세기본법 시행규칙 §19의3";`처럼 상수를 세워 주석 인용을 승격시켜야 게이트가 실제로 감시한다.
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+국세기본법 시행규칙 제19조의3(국세환급가산금의 이율 = 연 1천분의 31)은 `lib/legal-verification/` 어디에도 등록돼 있지 않다(실측 0건). 이 조문이 코드에 남아 있는 인용은 전부 **JSDoc 주석**뿐이라(`lib/tax-engine/legal-codes/common.ts:89`, `lib/tax-engine/data/installment-surcharge-rates.ts:2·9`) 커버리지 모수에도 들어가지 않는다 — `lib/legal-verification/coverage-collect.ts:47-63`의 `collectStrings`는 legal-codes 모듈 네임스페이스의 **export 값**만 재귀 순회하므로 주석은 구조적으로 수집 불가이고, `REFUND_GAIN_RATE_ANNUAL`은 number라 문자열 leaf도 아니다. 실제로 `__tests__/lib/legal-verification-coverage-complete.test.ts`는 현재 5/5 GREEN이고 `scripts/verify-legal-codes.ts:64-65`는 `VERIFICATION_MANIFEST`만 순회하므로, 이 조문이 개정돼도 두 게이트 모두 침묵한다. 세액 영향도 실재한다 — 상속세 및 증여세법 시행령 제69조 제1항이 「국세기본법 시행령」 제43조의3제2항의 이자율을 지목하고 그 위임 종점이 이 시행규칙 제19조의3이며(KoreanLaw MCP 실측), 그 값을 담은 `CURRENT_SURCHARGE_RATE`가 `lib/tax-engine/credits/installment-payment.ts:460`에서 미래 회차 연부연납 가산금의 기본 가산율로 쓰인다.
+
+다만 원 지적의 서술에 정정할 점이 4개 있다:
+
+1) **줄 번호 오기** — `CURRENT_SURCHARGE_RATE = 0.031`은 `lib/tax-engine/data/installment-surcharge-rates.ts:45`다(:47은 `EARLIEST` 주석). 연혁 표도 `:28-41`(:42가 `] as const;`)이고, 재발 이력 주석은 `__tests__/lib/legal-verification-coverage-complete.test.ts:9-12`다(evidence의 :11-13은 두 번째 항목 중간부터 걸친다).
+
+2) **수량 주장 오류(과소 열거)** — 「매니페스트에 등록된 시행규칙은 부가가치세법 §47·지방세법 §50·소득세법 §80·§83의4·§83의5·§81뿐」은 **틀렸다**. `lib/legal-verification/manifest/additions-inheritance-decree.ts:261~394`에 상속세 및 증여세법 시행규칙이 **12건**(§10의2·§10의3·§15·§16·§17·§17의2·§17의3·§18·§18의2·§18의3·§19·§19의2) 더 등록돼 있어 시행규칙 등록은 총 **18건**이다. 「국세기본법 시행규칙만 0건」이라는 대비는 유효하지만 「뿐이다」는 성립하지 않는다.
+
+3) **「14회 변경」은 13회** — `INSTALLMENT_SURCHARGE_RATE_HISTORY`는 항목 **14개**(2011-04-11~2025-03-21)이고 나열된 율 14개는 표와 정확히 일치하나, 최초 항목을 제외한 실제 변경은 **13회**다.
+
+4) **실패 시나리오의 귀속 오류** — 「`REFUND_GAIN_RATE_ANNUAL`(경정청구 안내 표기)이 낡은 값을 계속 쓴다」는 부정확하다. 이 상수는 저장소 전체에서 **어느 UI도 참조하지 않는다**(정의 + `__tests__/lib/legal-codes-namespace-export.test.ts:149` + docs뿐 — 사실상 미사용 export). 실제 사용자 노출은 `components/calc/transfer/AmendmentBlock.tsx:142`와 `components/calc/results/transfer/AmendmentResultCard.tsx:108`이 「연 3.1%」를 **문자열 리터럴로 하드코딩**한 것이다. 즉 개정 시 낡은 표기가 남는 결과는 맞지만 경로는 상수가 아니라 하드코딩이며, 이는 상수화 미배선이라는 별개 결함을 함께 시사한다.
+
+또한 suggestedFix는 그대로 적용하면 **작동하지 않는다**. `lib/legal-verification/citation-parser.ts:35-82`의 `LAW_ALIAS`에 "국세기본법 시행규칙"·"국기칙" 키가 없고, `lib/legal-verification/coverage.ts:19`의 `KNOWN_ABBRS`가 그 키 집합이며 `:66-68` `isLegalCitation`이 이를 화이트리스트로 쓰므로, 문자열 상수를 export해도 여전히 모수에서 조용히 빠진다. ⇒ 매니페스트 등록 + 상수 승격에 더해 **`LAW_ALIAS` 등재**가 함께 필요하다.
+
+</details>
+
+---
+
+### G-33 — 납부지연 2019-02-11 이전 이자율(0.03%)과 2019-02-12 경계가 전 저장소 무커버리지
+
+`lib/tax-engine/legal-codes/common.ts:48` · 테스트공백 · 축 `test-coverage` · **재검증 U-09** (반증 0/2) · 심각도 high → **medium**
+
+**조문**: 국세기본법 제47조의4 제1항 제1호 · 국세기본법 시행령 제27조의4 제1항
+
+**무엇이 잘못됐나** — 국세기본법 시행령 제27조의4 이자율 3단계 중 「2019-02-11 이전 0.03%」 구간과 「2019-02-12」 시행 경계를 실행하는 테스트가 저장소 전체(1,786파일 19,055테스트)에 한 건도 없어, 이 두 지점의 회귀가 조용히 통과한다.
+
+**근거**
+
+> 상수: lib/tax-engine/legal-codes/common.ts:48 `  DAILY_PENALTY_RATE_2016:   0.0003,`
+> 구간 배열: lib/tax-engine/transfer-tax-penalty.ts:192 `  { from: null, label: "~2019-02-11", rate: PENALTY_CONST.DAILY_PENALTY_RATE_2016 },` / :193 `  { from: new Date("2019-02-12"), label: "2019-02-12", rate: PENALTY_CONST.DAILY_PENALTY_RATE_2019 },`
+>
+> 뮤테이션 프로브(실행):
+> (a) `0.0003` → `0.0004` 단독 → `npx vitest run` 전건 **Test Files 1786 passed | 1 skipped (1787), Tests 19055 passed** — RED 0건.
+> (b) `new Date("2019-02-12")` → `new Date("2019-05-12")` (경계 3개월 이동) → 가산세 테스트 28파일 277건 전건 통과. (a)가 2019-02-12 이전 기간을 밟는 테스트가 0건임을 증명하므로 이 경계를 straddle하는 테스트도 존재할 수 없다.
+> (c) (a)+(b)를 포함한 9개 생존 뮤테이션 동시 적용 → 전건 19,055 green(재확인).
+>
+> 대조: 경계 테스트 파일 헤더 __tests__/tax-engine/transfer-tax-penalty-rate-boundary.test.ts:4-7 이 3단계를 모두 문서화해 놓고 실제 케이스는 2022-02-15 경계 1건 + 비경계 1건뿐이다(같은 파일 :19, :64).
+>
+> 조문 본문(KoreanLaw MST 288571 실측): 국세기본법 §47의4①1호 「납부하지 아니한 세액 또는 과소납부분 세액 … × 법정납부기한의 다음 날부터 … 기간 × … 대통령령으로 정하는 이자율」.
+
+**재현**
+
+> 미납세액 10,000,000원 · 법정납부기한 2018-06-30 · 납부일 2018-12-31(184일, 전 기간이 0.03% 구간). 정확값 10,000,000 × 184 × 0.0003 = 552,000원. 상수를 0.0004로 잘못 고치면 736,000원(+184,000원, +33.3%)이 산출되는데 저장소 19,055개 테스트 중 단 하나도 실패하지 않는다. 경계를 2019-05-12로 잘못 옮기면 2019-02-12~05-11 납부분이 0.025% 대신 0.03%로 계산되어 미납 10,000,000·30일 기준 75,000원이 90,000원(+20%)이 되는데 역시 전건 통과한다.
+
+**수정 방향** — transfer-tax-penalty-rate-boundary.test.ts에 (1) 전 기간이 2019-02-11 이전인 케이스(예: 기한 2018-06-30 → 납부 2018-12-31, 184일 × 0.0003 = 552,000), (2) 2019-02-12 경계를 straddle하는 케이스(예: 기한 2019-01-31 → 납부 2019-03-31, 11일 × 0.0003 + 48일 × 0.00025 = 33,000 + 120,000 = 153,000)를 breakdown[].days·dailyRate·amount까지 고정해 추가.
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+주장은 인용·수량·산식 전부 정확하다. 다만 **심각도만 high→medium으로 낮춰야 한다**.
+
+정확한 서술:
+「국세기본법 시행령 제27조의4 제1항의 이자율 이력 3단계 중, `lib/tax-engine/transfer-tax-penalty.ts:191-195` `DELAYED_RATE_PERIODS`가 담는 5개 load-bearing 값(3개 rate + 2개 시행일 경계) 가운데 **2개**(`PENALTY_CONST.DAILY_PENALTY_RATE_2016` = 0.0003 · `new Date("2019-02-12")` 경계)를 실행하는 vitest 테스트가 저장소(git-tracked 테스트 파일 **1,787개**)에 한 건도 없다. 나머지 3개(0.00025·0.00022·2022-02-15)는 `__tests__/tax-engine/transfer-tax-penalty-rate-boundary.test.ts:19`가 고정하고 있다. **현재 산출값은 정확하므로 지금 잘못된 세액이 나오는 것은 아니고**, 향후 오편집이 무음 통과하는 회귀 안전망 공백이다.」
+
+수정할 부분 2가지(경미):
+1. 본문의 「1,786파일」은 실행 요약의 *passed* 수치다. 전체 테스트 파일은 **1,787개**(`git ls-files` 실측 = 1786 passed + 1 skipped). 표기는 「1,787파일」이 정확하다.
+2. evidence (b)의 「(a)가 … 증명하므로 이 경계를 straddle하는 테스트도 존재할 수 없다」는 straddle 케이스에 한해서만 성립하는 추론이다(2019-02-12~05-11 **구간 내부**에 완전히 들어가는 케이스는 (a)로 배제되지 않는다). 다만 (b) 자체가 직접 실행이고, 실측상 저장소 최소 `paymentDeadline`은 2021-05-31이라 결론은 그대로 유지된다 — 근거를 (b)에만 걸면 된다.
+
+심각도 lower 근거: 카테고리가 `test-coverage`이고, 현행 코드는 법령대로 계산한다(프로브 실측 552,000·153,000 일치). failureScenario의 오차(+33.3%)는 「누군가 상수를 잘못 고쳤을 때」의 가정값이지 현재 산출값이 아니다. 세액 오류가 실재하는 다른 high 지적과 같은 등급에 두면 등급이 변별력을 잃는다. medium이 타당하다.
+
+</details>
+
+---
+
+### G-34 — 국세기본법 §48②1호 감면 6개 목 중 4개(가·라·마·바)와 「2년 초과 무감면」이 무커버리지
+
+`lib/tax-engine/legal-codes/common.ts:69` · 테스트공백 · 축 `test-coverage` · **재검증 U-10** (반증 0/3) · 심각도 high → **medium**
+
+**조문**: 국세기본법 제48조 제2항 제1호 가목·라목·마목·바목
+
+**무엇이 잘못됐나** — 수정신고 신고불성실가산세 감면율 6단계 중 나목(75%)·다목(50%)만 테스트가 있고, 가목(90%)·라목(30%)·마목(20%)·바목(10%) 및 2년 초과 감면 0의 fall-through는 값을 바꿔도 전 저장소가 초록이다.
+
+**근거**
+
+> 상수: lib/tax-engine/legal-codes/common.ts:68-75 `export const AMENDMENT_REDUCTION_48_2 = [ { maxMonths: 1,  rate: 0.90 }, // 가 … { maxMonths: 24, rate: 0.10 }, // 바 ] as const;`
+> 적용: lib/tax-engine/transfer-tax-amendment.ts:48-52 `for (const { maxMonths, rate } of AMENDMENT_REDUCTION_48_2) { if (!isAfter(filingDate, addMonths(deadline, maxMonths))) return rate; } return 0; // 2년 초과`
+>
+> 기존 커버리지(실측): __tests__/tax-engine/transfer/amendment.test.ts 의 §48② 케이스는 A6(6개월 50%), A6-b(정확히 +3개월 75% / +3개월 1일 50%), A7(50%), A8(경정 예고 0)뿐. 가·라·마·바 목과 24개월 초과는 없다.
+>
+> 뮤테이션 프로브(실행):
+> (a) 다목 0.50→0.55 + 마목 0.20→0.25 + 바목 0.10→0.15 → 28파일 277건 중 **2건만 실패**(둘 다 다목=6개월 케이스인 A6·A6-b).
+> (b) 마목 0.20→0.25 단독 → 277건 전건 통과.
+> (c) 가목 0.90→0.95 + 라목 0.30→0.35 + 마목 0.20→0.25 + 바목 0.10→0.15 → 277건 전건 통과.
+> (d) transfer-tax-amendment.ts:52 `return 0;` → `return 0.05;` → 277건 전건 통과.
+> (e) (c)+(d)를 포함한 9개 동시 뮤테이션 → `npx vitest run` 전건 **19,055 passed**.
+>
+> 조문 본문(KoreanLaw MST 288571 실측): 국세기본법 §48②1호 「가. 법정신고기한이 지난 후 1개월 이내에 수정신고한 경우: 해당 가산세액의 100분의 90 … 라. 6개월 초과 1년 이내: 100분의 30 … 마. 1년 초과 1년 6개월 이내: 100분의 20 … 바. 1년 6개월 초과 2년 이내: 100분의 10」 — 코드 값 자체는 법문과 일치한다(틀린 것은 안전망).
+
+**재현**
+
+> 법정신고기한 2024-05-31, 수정신고 2024-06-20(1개월 이내 → 가목 90% 감면), 추가납부 본세 20,000,000원. 정확값: 신고불성실 2,000,000 × (1 − 0.90) = 200,000원. 감면율 상수를 0.95로 오기하면 100,000원(−100,000원, −50%)이 되는데 저장소 19,055개 테스트가 전부 통과한다. 2년 초과 케이스(수정신고 2026-07-01)도 `return 0`을 0.05로 바꾸면 200,000원 → 190,000원이 되는데 역시 실패 0건.
+
+**수정 방향** — __tests__/tax-engine/transfer/amendment.test.ts 에 6개 목 전부 + 각 목의 상·하한 경계일(기한+1개월 당일/+1일, +6개월 당일/+1일, +12개월, +18개월, +24개월 당일/+1일)과 24개월 초과=0 케이스를 `underReportingReductionRate`·`underReportingPenalty` 두 값 모두로 고정.
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+주장은 사실이며, 재검증에서 독립적으로 재현됐다. 다만 세 가지를 정정·보강한다.
+
+(1) **죽은 코드가 아니다** — 뮤테이션 전에 도달성을 먼저 실증했다. 6개 목과 24개월 초과 fall-through 전부가 `computeAmendment`를 통해 서로 다른 감면율을 실제로 반환한다(기한 2024-05-31 기준 rate = 0.9 / 0.75 / 0.5 / 0.3 / 0.2 / 0.1 / 0). 따라서 「RED 0건」은 도달 불가 때문이 아니라 **안전망 부재** 때문이다.
+
+(2) **E2E 게이트에도 망이 없다** — 원 evidence는 vitest만 봤다. `e2e/transfer-amendment.spec.ts:138`이 유일하게 감면율을 단언하는데 그 값이 `50% 감면`(다목)이라, 이미 vitest가 덮는 목과 겹친다. 저장소 전체 e2e에서 가·라·마·바목과 24개월 초과를 단언하는 spec은 0건이다. 즉 갭은 두 게이트에 동시에 존재한다.
+
+(3) **failureScenario의 「정확값 200,000원」은 틀렸다 — 엔진 실측은 199,999원이다.** `lib/tax-engine/transfer-tax-amendment.ts:196` `truncateToWon(grossUnder * (1 - underReportingReductionRate))`에서 `truncateToWon`은 `Math.floor`(`lib/tax-engine/tax-utils.ts:136-138`)이고, 부동소수점 `1 - 0.9 = 0.09999999999999998`이라 `2,000,000 × (1−0.9) = 199999.99999999997` → floor → **199,999원**. 라목(`1−0.3 = 0.7000000000000001`)은 1,400,000원으로 정상이라 **가목에서만** 1원이 부족하다. 이 1원 결함이 바로 「무커버리지」라고 지목된 가목 분기 안에 이미 살아 있다 — 안전망 부재가 실제 결함을 방치하고 있다는 직접 증거이므로 지적을 약화시키는 것이 아니라 강화한다.
+
+법령 값 자체는 정확하다: 「국세기본법」 제48조 제2항 제1호 가목 100분의 90 · 나목 75 · 다목 50 · 라목 30 · 마목 20 · 바목 10 (MST 288571, 시행 2026-08-11 본문 직접 확인). 따라서 이 지적은 계산 오류가 아니라 **순수 커버리지 결함**이며, suggestedFix(6개 목 전부 + 경계일 + 24개월 초과 = 0을 `underReportingReductionRate`·`underReportingPenalty` 두 값으로 고정)는 타당하다. 다만 가목 anchor를 쓸 때 기대값은 200,000이 아니라 **현행 엔진 실측 199,999**이거나, 1원 결함을 함께 고칠지 별도 판단이 필요하다.
+
+</details>
+
+---
+
+### G-35 — 주식 가산세 10원 미만 절사를 구별하는 테스트가 없다 — 전 픽스처가 이미 10의 배수
+
+`lib/tax-engine/stock-transfer/stock-transfer-finalize.ts:166` · 테스트공백 · 축 `test-coverage` · **재검증 U-12** (반증 0/3)
+
+**조문**: 국고금 관리법 제47조 제1항
+
+**무엇이 잘못됐나** — 주식 신고불성실·납부지연 가산세의 10원 미만 절사를 통째로 제거해도 전 저장소가 초록이다 — 기존 가산세 픽스처가 전부 우연히 10의 배수라 절사 함수가 항상 항등원으로 동작한다.
+
+**근거**
+
+> lib/tax-engine/stock-transfer/stock-transfer-finalize.ts:166 `  const penalty = floorTen(result.filingPenalty);` (주석 :165 `// 가산세 10원 미만 절사 (국고금 관리법 §47①) — 주식 정본 규칙`)
+> 동 파일 :190 `  return floorTen(result.delayedPaymentPenalty);`
+>
+> 뮤테이션 프로브(실행): 두 줄을 각각 `= result.filingPenalty;` · `return result.delayedPaymentPenalty;` 로 바꿔 절사 제거 → 가산세 28파일 277건 전건 통과. 9개 동시 뮤테이션에 포함해 `npx vitest run` 전건 → **19,055 passed**.
+>
+> 원인(픽스처 실측): __tests__/tax-engine/stock-transfer/penalty-filing-unit.anchor.test.ts:148 `19,500,000 × 40% = 7,800,000`, :167 `3,800,000`, :179 `7,200,000`, :200 `10,000,000 × 31 × 0.022% = 68,200` — 전부 raw 값이 이미 10의 배수라 floorTen이 아무것도 깎지 않는다. penalty-axis-pick-and-late-gate.anchor.test.ts:128은 `Math.floor(agg.totalCalculatedTax * 0.4 / 10) * 10` 로 절사를 재구현해 비교하지만, 이 케이스 역시 raw가 10의 배수라 절사 유무를 가르지 못한다.
+
+**재현**
+
+> 결정세액 12,345,678원 · 과소신고 일반(§47의3①2호 10%). 정본: truncateToWon(12,345,678 × 0.1) = 1,234,567 → floorTen → **1,234,560원**. 절사가 사라지면 1,234,567원이 그대로 나가 신고서 금액이 국고금 관리법 §47① 단수 규칙을 위반하는데, 저장소 19,055개 테스트 중 실패 0건이다.
+
+**수정 방향** — penalty-filing-unit.anchor.test.ts에 raw 가산세가 10의 배수가 아닌 케이스(예: 결정세액이 10의 배수가 아니도록 주당 단가를 조정)를 1건 추가해 `underReportPenalty % 10 === 0` 이 아니라 **정확한 절사 후 금액**을 단언할 것. 납부지연도 동일(예: 미납 12,345,678 × 31일 × 0.00022).
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+주식 신고불성실·납부지연 가산세의 10원 미만 절사(`floorTen`)를 제거해도 이를 잡아내는 테스트가 **한 건도 없다**. 기존 가산세 픽스처의 raw 값이 전부 10의 배수여서 `floorTen`이 항상 항등원으로 동작하기 때문이다.
+
+【실측 정정 1 — 뮤테이션 규모】 원 evidence의 「9개 동시 뮤테이션 · 19,055 passed」는 공유 워크트리 오염 구간의 산물이라 **인용하지 말 것**. 격리 사본에서 이 2줄만 단독 뮤테이션한 결과가 정본이다: `__tests__/tax-engine/stock-transfer/` 93파일 1,233건 baseline GREEN → 뮤테이션 후에도 93파일 1,233건 GREEN. 범위를 `tax-engine/stock-transfer`를 참조하는 전 테스트로 넓혀도 159파일 1,755건 GREEN. 이 범위가 곧 「전 저장소」다 — `stock-transfer-finalize.ts`의 import처는 같은 디렉터리 4개 모듈뿐이고(`stock-transfer-tax.ts`·`stock-transfer-aggregate.ts`·`stock-transfer-aggregate-penalty.ts`·`foreign-stock.ts`), 간접 소비자(`lib/calc/stock-transfer-*`·`app/api/calc/stock-transfer/route.ts`·`components/calc/stock-transfer/**`)도 전부 경로에 "stock-transfer"를 포함해 115개 직접 import 테스트가 모두 이 목록 안에 있다. evidence의 「가산세 28파일 277건」은 스코핑이 제시되지 않아 재현 불가 — 위 수치로 대체할 것.
+
+【실측 정정 2 — 최종세액 영향 범위】 원 지적은 최종세액을 주장하지 않았으나, 심각도 판단에 필요하므로 명시한다. `finalTax = floorTen(determinedTax + filing.penalty + latePaymentPenalty)`(`stock-transfer-finalize.ts:229-232`)가 대부분을 흡수한다 — `determinedTax ≡ 0 (mod 10)`이면 `floorTen(d+p) = d + floorTen(p)`라 **가산세가 하나뿐이면 finalTax는 변하지 않는다**(실측 A/B/C 전건 동일). 최종세액이 갈리는 것은 **두 가산세의 끝수 합이 10 이상일 때**뿐이다 — 실측 D: 정본 26,890,360원 vs 절사 제거 26,890,370원(10원 차). 즉 상시 노출되는 오류는 **신고서의 가산세 란 금액 자체**(최대 9원)이고, 최종세액 영향은 조건부 10원이다.
+
+【실측 정정 3 — 재현 경로】 failureScenario의 「결정세액 12,345,678원」은 도달은 가능하나 국내 단건 경로로는 어렵다. `determinedTax = max(0, calculatedTax − foreignTaxCredit − electronicFilingCredit)`(:217)이고 `calculatedTax`는 이미 `floorTen`(`stock-transfer-tax.ts:439`)이라, 결정세액을 10의 배수가 아니게 하려면 외국납부세액공제가 필요하다. **더 쉬운 경로는 base 차감**이다 — `priorPaidTax`·`originalFiledTax`·`interestSurcharge`가 자유 원 단위 입력이라 `penaltyBase`가 바로 10의 배수를 벗어난다. suggestedFix의 픽스처는 이 경로로 잡을 것(실측 예: `dom({ originalFiledTax: 1_234_567 })` → base 18,265,433 → 부정 40% raw 7,306,173 → 정본 7,306,170 / 일반 10% raw 1,826,543 → 정본 1,826,540; 납부지연 `unpaidTax 12,345,678 · 31일` raw 84,197 → 정본 84,190).
+
+【정확한 부분 — 그대로 유지】 인용 file:line은 전건 정확하다: `stock-transfer-finalize.ts:165` 주석·`:166`·`:190` 문언 일치, `penalty-filing-unit.anchor.test.ts:148·167·179·200`(전부 해당 문구를 담은 `it()` 제목 줄)·`penalty-axis-pick-and-late-gate.anchor.test.ts:128` 정확. 산식도 정확하다 — `applyRate`는 `Math.floor(amount*rate)`(`tax-utils.ts:49-51`), `filingPenalty = truncateToWon(applyRate(penaltyBase, penaltyRate))`(`transfer-tax-penalty.ts:386`)이므로 12,345,678 × 10% → 1,234,567 → floorTen 1,234,560이 맞다. 조문도 KoreanLaw 본문으로 확인했다 — 국고금 관리법(법률) 제47조 제1항 「국고금의 수입 또는 지출에서 10원 미만의 끝수가 있을 때에는 그 끝수는 계산하지 아니하고…」, 국세기본법(법률) 제47조의3 제1항 제2호 「제1호 외의 경우: 과소신고납부세액등의 100분의 10」. 지목된 5개 픽스처 값(7,800,000 / 3,800,000 / 5,800,000 / 7,200,000 / 68,200)도 전부 10의 배수로 확인된다.
+
+⚠️ 현행 프로덕션 코드는 **정상**이다 — 이것은 활성 버그가 아니라 회귀 안전망 부재(test-coverage) 지적이다.
+
+</details>
+
+---
+
+### G-36 — 국외주식 결과 카드 ⑦ 가산세 행 테스트가 금액을 단언하지 않는다 — 0원으로 인쇄해도 통과
+
+`__tests__/components/foreign-stock-penalty-card.test.tsx:51` · 테스트공백 · 축 `test-coverage` · **재검증 U-13** (반증 0/3)
+
+**무엇이 잘못됐나** — 국외주식 결과 카드의 가산세 행 테스트 4건이 전부 라벨·문구 존재만 보고 금액을 보지 않아, 카드가 가산세를 0원으로 그려도 통과한다 — 파일 헤더가 스스로 막겠다고 선언한 실패 모드(「계산은 맞는데 표시 누락」)를 잡지 못한다.
+
+**근거**
+
+> __tests__/components/foreign-stock-penalty-card.test.tsx:51-63
+> ```
+>   it("FC-1-2: 신고불성실 가산세와 **기준금액**이 보인다", () => {
+>     render(<ForeignStockResultCard result={res({ underReportPenalty: 7_800_000, penaltyBase: 19_500_000, finalTax: 27_300_000 })} />);
+>     expect(screen.getByText(/신고불성실 가산세/)).toBeTruthy();
+>     expect(screen.getByText(/과소신고납부세액등/)).toBeTruthy();
+>   });
+> ```
+> 7,800,000·19,500,000 어느 숫자도 화면에서 확인하지 않는다. FC-1-3(:65-73)·FC-1-4(:75-82)도 동일하게 `/납부지연 가산세/`·`/1일 10만분의 22/`·`/\+ 가산세/` 정규식만 본다.
+>
+> 파일 헤더의 선언(:8-9): `엔진이 가산세를 계산해도 카드가 그리지 않으면 사용자는 최종세액이 왜 그 금액인지 알 수 없다 (Phase D 의 증권거래세와 같은 실패 모드 — 계산은 맞는데 **표시 누락**).`
+>
+> 뮤테이션 프로브(실행): components/calc/results/ForeignStockResultCard.tsx:245 `              value={result.underReportPenalty!}` → `value={0}`, :258 `            value={result.latePaymentPenalty!}` → `value={0}` 으로 표시 금액을 0으로 만든 뒤 `npx vitest run __tests__/components/ __tests__/calc/` → **Test Files 498 passed (498), Tests 4424 passed** — RED 0건.
+
+**재현**
+
+> 신고불성실 가산세 7,800,000원·납부지연 68,200원이 계산되었는데 카드가 두 행을 「0원」으로 인쇄한다(라벨·산식 문구는 그대로 남아 최종세액 27,368,200원과 행 합계가 어긋난다). 사용자는 세액 근거를 검증할 수 없고, 498파일 4,424테스트 중 한 건도 실패하지 않는다.
+
+**수정 방향** — FC-1-2·FC-1-3에 `expect(screen.getByText("7,800,000")).toBeTruthy()` 류의 금액 단언과 `기준금액 19,500,000` 문자열 단언을 추가하고, FC-1-4는 「+ 가산세」 문구가 아니라 최종세액 값(27,300,000)이 화면에 있는지를 확인할 것. (다른 결과뷰 anchor가 쓰는 `sumAmounts(formula) === value` 식 자기검산 패턴 — __tests__/components/transfer-penalty-attribution.anchor.test.ts:52-55 — 을 차용하면 더 강하다.)
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+국외주식 결과 카드(components/calc/results/ForeignStockResultCard.tsx)의 가산세·최종세액 표시 금액에는 vitest·E2E 어느 쪽에도 안전망이 없다. 유일한 렌더 테스트인 __tests__/components/foreign-stock-penalty-card.test.tsx(FC-1-1~FC-1-4)는 라벨·sub 문구 정규식만 단언하고 숫자를 보지 않는다. 지적된 2건(:245 underReportPenalty, :258 latePaymentPenalty)뿐 아니라 :248 `기준금액 ${fmt(result.penaltyBase)}`의 기준금액과 :267 「최종 소득세」 value={result.finalTax}까지 총 4개 표시 금액을 각각 0으로 만들어도 RED가 0건이다. 카드를 렌더하는 테스트는 저장소 전체에서 이 파일 1개뿐이고(임포트처는 app/calc/stock-transfer-tax/steps/Step4.tsx:12 + 이 테스트), E2E도 백업이 되지 않는다 — e2e/stock-penalty-filing-unit.spec.ts PE-3의 「68,200」 단언은 국내주식용 components/calc/results/StockTransferPenaltySection.tsx:95(「납부불성실 가산세 (1일 22/100,000)」)를 보는 것으로 국외 카드의 라벨(「납부지연 가산세 (국세기본법 §47조의4)」)과 다르며, e2e/foreign-stock-94-1-3-da-track.spec.ts에는 '가산세' 문자열이 0건이다. 다만 현행 코드는 정상 동작한다 — 실재 버그가 아니라 잠재 안전망 부재(테스트공백)다.
+
+</details>
+
+---
+
 ## 5. Low
 
-### G-29 — 주식 legal-codes 주석이 「§47조의4 본 엔진 미구현」이라고 적혀 있으나 실제로는 구현·배선돼 있다
+### G-37 — 주식 legal-codes 주석이 「§47조의4 본 엔진 미구현」이라고 적혀 있으나 실제로는 구현·배선돼 있다
 
 `lib/tax-engine/legal-codes/stock.ts:97` · 표시드리프트 · 축 `delayed-payment`
 
@@ -2036,7 +2456,7 @@ anchor 주석까지 같은 축이라 **틀린 서술이 회귀 테스트의 근�
 
 ---
 
-### G-30 — 결과 화면 가산세 인용에 법령명 누락 — 「§114의2」·「§48②」
+### G-38 — 결과 화면 가산세 인용에 법령명 누락 — 「§114의2」·「§48②」
 
 `components/calc/results/transfer/DetailedStatementFormulaBuilders.ts:131` · 인용오류 · 축 `display-filing-form`
 
@@ -2099,7 +2519,7 @@ anchor 주석까지 같은 축이라 **틀린 서술이 회귀 테스트의 근�
 
 ---
 
-### G-31 — `calculateFilingPenalty` 함수 주석이 아직 「− 세액공제·감면」을 차감한다고 적혀 있다 — 구현과 정반대
+### G-39 — `calculateFilingPenalty` 함수 주석이 아직 「− 세액공제·감면」을 차감한다고 적혀 있다 — 구현과 정반대
 
 `lib/tax-engine/transfer-tax-penalty.ts:253` · 표시드리프트 · 축 `filing-penalty`
 
@@ -2155,7 +2575,7 @@ anchor 주석까지 같은 축이라 **틀린 서술이 회귀 테스트의 근�
 
 ---
 
-### G-32 — 이자상당액 제외 근거를 「국세기본법 §47의2③」으로 인용 — 그 항은 부가가치세법 납부의무 면제 조항이다
+### G-40 — 이자상당액 제외 근거를 「국세기본법 §47의2③」으로 인용 — 그 항은 부가가치세법 납부의무 면제 조항이다
 
 `app/calc/transfer-tax/steps/Step6.tsx:153` · 인용오류 · 축 `filing-penalty`
 
@@ -2218,7 +2638,7 @@ anchor 주석까지 같은 축이라 **틀린 서술이 회귀 테스트의 근�
 
 ---
 
-### G-33 — 「이자상당액」을 「이자상당액 가산세」로 표기 — 상증법 §18의2⑤ 후단은 「상속세에 가산」이지 가산세가 아니고, 별지9호에서도 칸이 다르다
+### G-41 — 「이자상당액」을 「이자상당액 가산세」로 표기 — 상증법 §18의2⑤ 후단은 「상속세에 가산」이지 가산세가 아니고, 별지9호에서도 칸이 다르다
 
 `app/calc/family-business-postmgmt/page.tsx:477` · 표시드리프트 · 축 `inheritance-gift-penalty`
 
@@ -2277,7 +2697,7 @@ anchor 주석까지 같은 축이라 **틀린 서술이 회귀 테스트의 근�
 
 ---
 
-### G-34 — 합산배제 신고의무 근거를 「종합부동산세법 §8②, §16②」로 인용 — 9/16~9/30 신고의무는 §8③이고 §16②는 납부고지서 발급기한이다
+### G-42 — 합산배제 신고의무 근거를 「종합부동산세법 §8②, §16②」로 인용 — 9/16~9/30 신고의무는 §8③이고 §16②는 납부고지서 발급기한이다
 
 `lib/tax-engine/legal-codes/comprehensive.ts:269` · 인용오류 · 축 `local-taxes-penalty`
 
@@ -2340,7 +2760,7 @@ lib/tax-engine/legal-codes/comprehensive.ts:269 `DECLARATION_OBLIGATION` 라벨�
 
 ---
 
-### G-35 — 겸용주택 경로가 가산세 상세(penaltyDetail)를 버려 신고불성실·납부지연 산출근거가 화면에서 사라진다
+### G-43 — 겸용주택 경로가 가산세 상세(penaltyDetail)를 버려 신고불성실·납부지연 산출근거가 화면에서 사라진다
 
 `lib/tax-engine/transfer-tax-mixed-use-totals.ts:457` · 표시드리프트 · 축 `transfer-plumbing`
 
@@ -2398,38 +2818,254 @@ lib/tax-engine/legal-codes/comprehensive.ts:269 `DECLARATION_OBLIGATION` 라벨�
 
 ---
 
-## 6. ⚠️ 미검증 15건 — 제기됐으나 확인되지 않았다
+### G-44 — 단건 aggregate 분기의 종목별 결과를 단언하는 anchor가 없어 국외 가산세 잔존이 안전망을 통과한다
 
-아래는 감사 축이 제기했으나 **3렌즈가 전부 세션 한도로 죽어** 검증되지 않은 지적이다.
-참·거짓 어느 쪽으로도 판정되지 않았다. 착수 전에 개별 확인이 필요하다.
+`__tests__/tax-engine/stock-transfer/penalty-axis-pick-and-late-gate.anchor.test.ts:182` · 테스트공백 · 축 `stock-penalty` · **재검증 U-01** (반증 0/3)
 
-둘은 §2~§5의 확정 결함과 동일 대상이라 사실상 재확인된다(표에 표시).
+**무엇이 잘못됐나** — 국외 단건을 aggregate로 넣는 유일한 anchor(PA-LATE-3)가 `totalLatePaymentPenalty`만 비교하고 `items[]`의 `finalTax`·`underReportPenalty` 정합은 전혀 단언하지 않아, 가산세가 섞인 종목 finalTax(P-05)를 잡지 못한다.
 
-| # | 축 | 위치 | 지적 | 비고 |
-|---|---|---|---|---|
-| U-01 | `stock-penalty` | `__tests__/tax-engine/stock-transfer/penalty-axis-pick-and-late-gate.anchor.test.ts:182` | 단건 aggregate 분기의 종목별 결과를 단언하는 anchor가 없어 P-05가 회귀 안전망을 통과한다 |  |
-| U-02 | `stock-penalty` | `lib/tax-engine/stock-transfer/stock-transfer-aggregate.ts:214` | 전자신고 세액공제(가산세 base를 바꾸는 값)에 입력 위젯이 없고, 단건 분기와 합산 분기가 서로 다른 소스로 판정한다 |  |
-| U-03 | `stock-penalty` | `components/calc/stock-transfer/StockFilingFormTableHelpers.ts:603` | 신고서 재현 26번 행이 과소신고(10%)까지 「§47의2」로 귀속 — 과소신고는 §47조의3이다 | 확정 결함과 동일 (신고서 인용) |
-| U-04 | `stock-penalty` | `lib/tax-engine/stock-transfer/stock-transfer-aggregate.ts:106` | 다종목 합산 결과에 가산세 기준금액(penaltyBase) echo가 없어 「기준금액 × 세율」 산식이 화면에서 사라진다 |  |
-| U-05 | `legal-citation` | `lib/tax-engine/legal-codes/common.ts:20` | PENALTY.FRAUDULENT_DEF가 존재하지 않는 항(국세기본법 §26의2 ⑪)을 인용 — 저장소 4곳에 복제 |  |
-| U-06 | `legal-citation` | `lib/tax-engine/transfer-tax-penalty.ts:417` | 납부지연가산세 경과일수가 법문보다 1일 많다 — 자사 stock.ts JSDoc(「납부일 전날」)과도 모순 | 확정 결함과 동일 (납부지연 1일) |
-| U-07 | `legal-citation` | `components/calc/transfer/AmendmentBlock.tsx:220` | 가산세·수정신고 화면 인용에 법령명이 없어 상증법 §48②1호·§45의2①와 문자열이 완전히 겹친다 |  |
-| U-08 | `legal-citation` | `lib/tax-engine/legal-codes/common.ts:89` | 국세기본법 시행규칙 §19의3(환급가산금·연부연납 가산율)이 검증 매니페스트에 미등록 — 인용이 주석뿐이라 커버리지 모수에서도 빠진다 |  |
-| U-09 | `legal-citation` | `lib/tax-engine/legal-codes/common.ts:18` | PENALTY.ADDENDUM_2015가 법령명 없이 「부칙 §12848호 제10조②」로 인용돼 어느 법의 부칙인지 알 수 없다 | §7에서 3/3 반증된 건과 동일 대상 |
-| U-10 | `test-coverage` | `lib/tax-engine/legal-codes/common.ts:48` | 납부지연가산세 2019-02-11 이전 이자율(0.03%)과 2019-02-12 경계가 전 저장소 무커버리지 — 뮤테이션 통과 |  |
-| U-11 | `test-coverage` | `lib/tax-engine/legal-codes/common.ts:69` | 국세기본법 §48②1호 감면 6개 목 중 4개(가·라·마·바)와 「2년 초과 무감면」이 무커버리지 |  |
-| U-12 | `test-coverage` | `__tests__/calc/transfer-penalty-fraud-portion-wiring.anchor.test.ts:16` | 부동산 양도세 fraudulentPortion이 ⑫ Zod 층을 태우는 테스트가 없다 — anchor 주석의 「route 계열이 덮는다」가 사실과 다르다 |  |
-| U-13 | `test-coverage` | `lib/tax-engine/stock-transfer/stock-transfer-finalize.ts:166` | 주식 가산세 10원 미만 절사(국고금 관리법 §47①)를 구별하는 테스트가 없다 — 전 픽스처가 이미 10의 배수 |  |
-| U-14 | `test-coverage` | `__tests__/components/foreign-stock-penalty-card.test.tsx:51` | 국외주식 결과 카드 ⑦ 가산세 행 테스트가 금액을 단언하지 않는다 — 0원으로 인쇄해도 통과 |  |
-| U-15 | `test-coverage` | `lib/tax-engine/transfer-tax-penalty.ts:188` | resolveDailyRate는 도달 불가능한 죽은 코드인데 주석은 「이 배열을 참조한다」고 적혀 있다 — 두 컷오프가 갈려도 잡히지 않는다 |  |
+**근거**
+
+> __tests__/tax-engine/stock-transfer/penalty-axis-pick-and-late-gate.anchor.test.ts:182-190
+> ```
+>   it("PA-LATE-3: 같은 입력이면 단건과 다종목이 같다 (종목 개수로 세액이 갈리지 않는다)", () => {
+>     const single = calculateStockTransferTax(
+>       fx(100_000_000, { ...LATE, filingViolation: "none" }),
+>     );
+>     const agg = calculateStockTransferTaxAggregate([
+>       fx(100_000_000, { ...LATE, filingViolation: "none" }),
+>     ]);
+>     expect(agg.totalLatePaymentPenalty).toBe(single.latePaymentPenalty);
+>   });
+> ```
+> 짝을 이루는 penalty-filing-unit.anchor.test.ts:121-123의 `PU-1-3`은 종목별 가산세 0을 단언하지만 **국내+국외 2건 경로**에만 적용되고, 종목 `finalTax`는 어느 anchor도 보지 않는다(`grep -n "items\[0\].finalTax\|items.map((r) => r.finalTax)" __tests__/tax-engine/stock-transfer/` 0건).
+
+**재현**
+
+> P-05의 실측값 `items[0] = {underReportPenalty: 0, finalTax: 27,300,000, calculatedTax: 19,500,000}`은 명백히 자기모순인데도 `npx vitest run __tests__/tax-engine/stock-transfer/` 전건이 통과한다(실행 확인: penalty 3파일 34건 전부 pass).
+
+**수정 방향** — PA-LATE-3·PU-1에 「모든 종목에서 `finalTax === floorTen(calculatedTax − 외국납부세액공제 − 전자신고공제)`」라는 항등식 단언을 추가한다. 가산세가 신고 단위 1회라는 규약을 종목 결과에도 그대로 고정하는 단언이라 P-05 같은 회귀를 구조적으로 막는다.
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+지적의 실질 — 「단건(및 each_item) aggregate 분기에서 종목 결과의 가산세 정합을 단언하는 anchor가 저장소 어디에도 없고, 그래서 국외 종목 `items[].finalTax`에 가산세가 섞인 상태가 전건 GREEN으로 통과한다」 — 는 실측으로 성립한다. 다만 세 군데를 정정한다.
+
+(1) **「유일한 anchor」가 아니다.** 국외 종목 1건을 aggregate에 넣는 호출은 최소 3곳이다 — `penalty-axis-pick-and-late-gate.anchor.test.ts:176`(PA-LATE-2)·`:186`(PA-LATE-3)·`foreign-aggregate-118-6-bc.anchor.test.ts:141`(FA-2). 셋 다 `items[]`의 가산세·finalTax 정합을 단언하지 않는다는 점은 같다(FA-2는 신고축 자체를 선언하지 않아 격자가 아예 가산세를 안 태운다).
+
+(2) **「종목 finalTax는 어느 anchor도 보지 않는다」는 과장이다.** `foreign-aggregate-118-6-bc.anchor.test.ts:128`(FA-1-7)이 `r.items.reduce((s, x) => s + x.finalTax, 0)`으로 **종목 finalTax 합**을 단언한다. 지적의 grep 패턴(`items[0].finalTax` / `items.map((r) => r.finalTax)`)이 이 형태를 놓쳤다(두 패턴 자체가 `__tests__`·`e2e` 전역 0건인 것은 맞다 — 재실행 확인). 다만 FA-1-7의 격자는 **국외 2종목·신고위반 미선언**이라 다종목 분기를 타고, 다종목 분기는 `stock-transfer-aggregate.ts:434`가 `finalTax: newCalculatedTax`로 덮어써 애초에 정합하다 ⇒ 결론(무커버리지)은 그대로다.
+
+(3) **원인이 「anchor 부재」만은 아니고, 결함 범위는 「국외 종목 × 단건/each_item 분기」다.** `stock-transfer-aggregate-penalty.ts:72`의 조기반환 `if (r.underReportPenalty === 0 && r.latePaymentPenalty === 0) return r;`와, 국외 어댑터(`foreign-stock-aggregate-adapter.ts:113-118`)가 `underReportPenalty: 0`·`latePaymentPenalty: 0`을 박아 넣은 채 `finalTax: r.finalTax`(가산세가 이미 포함된 국외 엔진 값)를 그대로 복사하는 것이 맞물려 `stripItemPenalties`가 국외 종목에서 **한 번도 실행되지 않는다**. 국내 종목은 가산세가 0이 아니라 strip을 타므로 같은 분기에서도 정합하다.
+
+(4) **실사용 노출은 지적보다 좁다(심각도가 low인 근거).** `StockFilingFormTableHelpers.ts:96`이 `aggregate.items.length <= 1`이면 종목 열을 만들지 않아 단건 aggregate의 잘못된 `items[0].finalTax`는 화면에 찍히지 않고, `StockAggregateSummaryCard.tsx:78-104`도 산출세액까지만 표시한다. UI 경로는 `StockTransferTaxCalculator.tsx:166`이 `[...savedItems, formData]`(항상 2건 이상)를 보내고 `stock-transfer-tax-api.ts:589`가 `deductionMode: "aggregate"`로 고정하므로 **단건 aggregate·each_item은 UI에서 도달하지 않는다** — 직접 API POST(`app/api/calc/stock-transfer/route.ts:57`)로만 닿는다. 즉 지금 깨져 있는 것은 「내부 항등식」이고, 지적이 요구하는 것은 그 항등식을 고정하는 안전망이다.
+
+제안된 수정식은 `Math.max(0, …)` clamp를 함께 써야 한다 — `stripItemPenalties`의 정본이 `Math.max(0, floorTen(calculatedTax − 외국납부세액공제 − 전자신고공제))`이고, FA-1-7처럼 외국납부세액공제가 그 종목 산출세액을 넘으면 0으로 잘린다.
+
+</details>
 
 ---
 
-## 7. 반증 기각 1건
+### G-45 — 전자신고 세액공제에 입력 위젯이 없고, 단건 분기와 합산 분기가 서로 다른 소스로 판정한다
 
-### P-06 — 가산세 기준금액 step의 근거가 「부칙 §12848호 제10조②」 — 법령명이 없고, 코드에는 그 부칙이 요구하는 시기 게이팅도 없다
+`lib/tax-engine/stock-transfer/stock-transfer-aggregate.ts:214` · 배관누락 · 축 `stock-penalty` · **재검증 U-02** (반증 0/3)
 
-`lib/tax-engine/legal-codes/common.ts:18` · 축 `filing-penalty` · **3/3 반증**
+**조문**: 조세특례제한법 제104조의8 제1항 / 국세기본법 제47조의3 제1항 (base = 과소신고납부세액등)
+
+**무엇이 잘못됐나** — `isElectronicFiling`은 폼·normalize·④·⑨⑫·⑭·결과카드까지 배선돼 있는데 ⑤ 입력 위젯이 저장소 전체에 0건이라 UI에서 항상 false이고, 게다가 짧은 분기는 결과값으로·합산 분기는 입력값으로 판정해 같은 신고가 종목 수에 따라 가산세 base가 갈린다.
+
+**근거**
+
+> ⑤ 위젯 부재 — `grep -rn --include='*.tsx' "isElectronicFiling" app/ components/` 결과 **0건**(app/api/calc/stock-transfer/route.ts:260만 매핑). 그런데 폼 축은 존재한다 — lib/stores/calc-wizard-stock-form.ts:217 `isElectronicFiling: boolean;   // 3중 패턴 default: false`, :595 초기값 false, lib/calc/stock-transfer-tax-api.ts:464 `body.isElectronicFiling = form.isElectronicFiling;`.
+>
+> 두 분기가 다른 소스를 본다 —
+> · lib/tax-engine/stock-transfer/stock-transfer-aggregate.ts:214 `const electronicFilingCredit = items.some((r) => r.electronicFilingCredit > 0) ? 20_000 : 0;` (**결과값** 기준. 국외 종목은 어댑터가 항상 0을 넣으므로 영영 잡히지 않는다)
+> · 같은 파일 :558-559 `const anyElectronic = inputs.some((inp) => inp.isElectronicFiling);` / `const electronicFilingCredit = anyElectronic && totalCalculatedTax > 0 ? 20_000 : 0;` (**입력값** 기준)
+>
+> 이 값은 곧바로 가산세 base가 된다 — :225-230 및 :554-556 `const determinedTotal = Math.max(0, totalCalculatedTax - totalForeignTaxCredit - electronicFilingCredit);` → `computeFilingUnitPenalty(determinedTotal, …)`.
+
+**재현**
+
+> API 직접 호출 실측(vitest probe, 모두 `isElectronicFiling: true`):
+> · 국외 1건(과소신고+부정) → `electronicFilingCredit 0`, base 19,500,000, 가산세 **7,800,000**
+> · 국외 2건 → `electronicFilingCredit 20,000`, base = 19,700,000 − 20,000, 가산세 **7,872,000**
+> 같은 「전자신고」 선언인데 종목 수만으로 공제 적용 여부가 갈리고 가산세 base가 20,000원 움직인다. 한편 마법사에서는 위젯이 없어 이 공제를 아예 켤 수 없으므로, 결과 화면의 「전자신고 시 △20,000원 세액공제」 안내와 신고서 28번 행은 도달 불가능한 표시로 남는다.
+
+**수정 방향** — 짧은 분기(:214)도 `inputs.some((inp) => inp.isElectronicFiling)`로 바꿔 단일 소스로 만든다(국외 단건 경로 `foreign-stock.ts`도 조특법 §104의8 공제를 반영해야 두 경로가 일치한다). 그리고 Step3 ④ 신고 유형 섹션에 `isElectronicFiling` 토글을 추가해 ⑤를 채우거나, 채우지 않을 것이면 결과·신고서의 전자신고 행을 함께 걷어낸다.
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+두 주장 모두 사실이나, **도달 범위를 구별해야 한다**.
+
+**(a) ⑤ 위젯 부재 — 사실, 그리고 「의도된 범위 제한」이 아니다.**
+`grep -rn --include='*.tsx' "isElectronicFiling" app/ components/` = **0건**(exit 1). `grep -rn "전자신고" app/ components/` = 4건뿐이고 전부 **결과·신고서 표시**(`components/calc/results/StockTransferPenaltySection.tsx:101,195`, `components/calc/stock-transfer/StockFilingFormTableHelpers.ts:623,625`) — 입력 위젯이 아니다. 반면 같은 「신고 단위」 형제 필드는 전부 Step3 ④에 위젯이 있다: `app/calc/stock-transfer-tax/steps/Step3.tsx:265` `SectionTitle n={4} title="신고 유형 (§105① · §110①)"` 아래 `filingType`(:272), `filingViolation`(:383), `isFraudulent`(:423), `isInternationalTransaction`(:436). `isElectronicFiling`만 빠졌다. 범위 제한이라는 근거는 **어디에도 없고 오히려 반대다** — `lib/stores/calc-wizard-stock-store.ts:74`가 이 필드를 「신고 단위 7개 필드」의 하나로 명시하고 :88에서 종목 확정 시 승계까지 한다. ⑧(`lib/calc/stock-transfer-tax-validate.ts:18`)·③(`calc-wizard-stock-normalize.ts:205`)·④(`stock-transfer-tax-api.ts:464`)·⑫(`lib/api/stock-transfer-tax-schema.ts:330`)·⑭(`app/api/calc/stock-transfer/route.ts:260`)가 전부 배선돼 있고 **⑤ 하나만 비어 있다.** 전형적 배관누락이다.
+
+**(b) 두 분기의 소스 불일치 — 사실. 단 국외 종목 한정이고, 위젯이 없어 UI로는 도달 불가·API POST로만 도달한다.**
+`:214` `items.some((r) => r.electronicFilingCredit > 0)`는 **결과값**을, `:558` `inputs.some((inp) => inp.isElectronicFiling)`는 **입력값**을 본다. 국내 종목은 `stock-transfer-finalize.ts:206`이 결과에 credit을 실어 보내 두 분기가 일치하고, **국외 종목만** `foreign-stock-aggregate-adapter.ts:117` `electronicFilingCredit: 0`(항상 0) 때문에 갈린다.
+
+프로브 실측(2종목 동일 입력, 소스 차이만 격리): `each_item`(단축분기) credit **0** vs `aggregate` credit **20,000**. 국외 단건은 `isElectronicFiling` true/false가 **완전히 동일**(credit 0 · 가산세 7,800,000) — 선언이 조용히 무시된다.
+
+**단축분기 자체도 UI에서는 도달 불가다.** `StockTransferTaxCalculator.tsx:158-172`가 `savedItems.length > 0`일 때만 aggregate를 부르므로 `items[]`는 항상 **2건 이상**이고, `deductionMode`는 `stock-transfer-tax-api.ts:589`에서 `"aggregate"`로 하드코딩된다. ⇒ `:195` `deductionMode === "each_item" || inputs.length === 1` 조건은 **공개 POST `/api/calc/stock-transfer` 직접 호출로만** 성립한다.
+
+**과대 서술 1건 정정**: 「결과 화면의 안내가 도달 불가능한 표시로 남는다」는 부정확하다. `StockTransferPenaltySection.tsx:195`의 "전자신고 시 §52의2에 따라 △20,000원 세액공제"는 **조건 없이 항상 렌더되는 정적 법령 안내문**이다(도달 불가가 아니라, 켤 수 없는 공제를 안내한다는 점이 문제). 실제로 죽은 UI 분기는 `:99-104`의 `result.electronicFilingCredit > 0 &&` 블록이고, 신고서 28번 행(`StockFilingFormTableHelpers.ts:623-632`)은 별지 서식 재현이라 값이 null인 빈 행으로 렌더된다(빈 행 정책상 그 자체가 결함은 아님).
+
+**부수 관찰(이 지적의 claim 밖)**: 근거 조문은 「조세특례제한법」 **제104조의8 제1항**이 맞다(MCP 실조회 — mst 280409, 시행 2026-01-01: "납세자가 직접 「국세기본법」 제5조의2에 따른 전자신고의 방법으로 … 양도소득세 … 신고를 하는 경우에는 해당 납부세액에서 대통령령으로 정하는 금액을 공제한다"). `lib/tax-engine/legal-codes/stock.ts:123` `ELECTRONIC_FILING_CREDIT: "조특법 §104의8"`도 맞다. 그런데 **사용자에게 보이는 4곳은 전부 「§52의2」**로 다르게 적혀 있다(`stock.ts:331` 주석, `StockTransferPenaltySection.tsx:101,195`, `StockFilingFormTableHelpers.ts:625`) — 법령명도 조번호도 어긋난 별건 인용 드리프트.
+
+</details>
+
+---
+
+### G-46 — 다종목 합산 결과에 penaltyBase echo가 없어 「기준금액 × 세율」 산식이 화면에서 사라진다
+
+`lib/tax-engine/stock-transfer/stock-transfer-aggregate.ts:106` · 표시드리프트 · 축 `stock-penalty` · **재검증 U-04** (반증 0/3)
+
+**조문**: 국세기본법 제47조의3 제1항 (과소신고납부세액등)
+
+**무엇이 잘못됐나** — `StockTransferAggregateResult`에 `penaltyBase`가 없고 종목별 결과는 `stripItemPenalties`가 가산세를 0으로 만들어 결과 카드가 통째로 렌더되지 않으므로, 다종목 신고에서는 가산세 금액만 보이고 기준금액·적용 세율·적용 조문이 모두 사라진다.
+
+**근거**
+
+> 합산 결과 타입에 base가 없다 — lib/tax-engine/stock-transfer/stock-transfer-aggregate.ts:106-108은 `totalUnderReportPenalty: number;` / `totalLatePaymentPenalty: number;`만 두고 `penaltyBase`가 없다(`grep -n "penaltyBase" lib/tax-engine/stock-transfer/stock-transfer-aggregate.ts` 0건). 엔진 내부에는 값이 있다 — stock-transfer-finalize.ts:127-133 `StockFilingPenaltyResult.penaltyBase`를 `computeFilingUnitPenalty`가 버린다(stock-transfer-aggregate-penalty.ts:88-97이 `{filing, late}`만 돌려준다).
+>
+> 상세 카드는 종목 결과를 보고 조기반환한다 — components/calc/results/StockTransferPenaltySection.tsx:35-41
+> ```
+>   if (
+>     result.underReportPenalty <= 0 &&
+>     result.latePaymentPenalty <= 0 &&
+>     result.electronicFilingCredit <= 0
+>   ) {
+>     return null;
+>   }
+> ```
+> 그런데 다종목에서 결과 화면에 넘기는 `result`는 마지막 종목이고 그 값은 전부 0이다 — app/calc/stock-transfer-tax/StockTransferTaxCalculator.tsx:168 `setResult(agg.items[agg.items.length - 1] ?? null);` + stock-transfer-aggregate-penalty.ts:76-77이 종목별 가산세를 0으로 만든다.
+> 남는 표시는 금액뿐이다 — components/calc/results/StockAggregateSummaryCard.tsx:215-226(신고불성실·납부지연 금액 2행).
+>
+> 이 카드가 base를 보이는 이유는 파일 자신이 적어 두었다 — StockTransferPenaltySection.tsx:80-87 「base 를 함께 보인다 — 「산출세액 × 세율」로 오해하지 않도록. 국세기본법 §47조의3① 의 base 는 「과소신고납부세액등」이라 …」
+
+**재현**
+
+> 국내 1종목 + 국외 1종목(과소신고·부정 40%, 당초 신고세액 10,000,000 입력) 신고에서 합산 카드는 「신고불성실 가산세 11,800,000」만 보여 준다. 단건 신고였다면 「기준금액 29,500,000 × 40%」와 「국세기본법 §47조의3 ①1호 가목」이 함께 나오는데, 다종목에서는 당초 신고세액 10,000,000이 base에서 빠졌다는 사실도, 40%가 적용됐다는 사실도 화면에서 확인할 수 없다.
+
+**수정 방향** — `computeFilingUnitPenalty`가 `penaltyBase`·`ruleRef`(·`fraudSplit`)도 함께 반환하고 `StockTransferAggregateResult`에 echo 필드로 실은 뒤, `StockAggregateSummaryCard`가 「기준금액 X × 세율 Y (조문)」 한 줄을 덧붙인다. 엔진 산식 변경 없이 echo만 추가하는 범위다.
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+지적은 성립한다 — 다만 「적용 조문이 **모두** 사라진다」는 과장이라 두 곳을 정정한다.
+
+**성립하는 핵심**: `StockTransferAggregateResult`(stock-transfer-aggregate.ts:106-108)에 `penaltyBase` echo가 없고, `computeFilingUnitPenalty`(stock-transfer-aggregate-penalty.ts:88-97)가 `computeStockFilingPenalty`의 `penaltyBase`·`ruleRef`·`fraudSplit`를 버린다. 합산 경로에서는 Step4.tsx:127-128이 종목 타입과 무관하게 `StockTransferTaxResultView`를 쓰고, 그 안의 `StockTransferPenaltySection`이 받는 `result`(= `agg.items[last]`, `stripItemPenalties`로 가산세 0)가 `:35-41` 조기반환에 걸려 **카드가 통째로 미렌더**된다(probe 실측: innerHTML 길이 0, 전자신고 ON에서도 동일). 결과적으로 **가산세 기준금액(과소신고납부세액등)과 실제 적용된 율·목이 화면에서 확인 불가능**하다. 실패시나리오 수치는 정확히 재현된다 — 산출 39,500,000 · base 29,500,000 · 40% → 11,800,000, 화면에는 11,800,000만.
+
+**정정 1 — 「조문이 모두 사라진다」는 부정확**: 합산 경로에도 일반 인용 두 곳이 남는다. ① `StockAggregateSummaryCard.tsx:242-247` 각주 「(국세기본법 §47조의2·§47조의3·§47조의4)」, ② 별지 제84호서식 26행 라벨 「26. 신고불성실 가산세 §47의2 (10%·20%·40%·60%)」(`StockFilingFormTableHelpers.ts:604`). 사라지는 것은 **base와 「어느 호·목의 어느 율이 적용됐는가」**다 — 단건이면 「기준금액 29,500,000 × 40%」 + 「국세기본법 §47조의3 ①1호 가목 — 과소신고 부정 40%」로 특정되는데, 합산에서는 조문 목록과 율 메뉴만 남아 특정이 불가능하다. (부수 관찰 — 26행 라벨은 과소신고인데 §47의2만 인용한다. 별건.)
+
+**정정 2 — 수정 시 함정**: `stripItemPenalties`는 `penaltyBase`를 걷지 않아 종목 결과에 **stale한 종목별 base가 살아 있다**(probe: `items penaltyBase = [9,500,000, undefined]`). 지금은 카드가 미렌더라 노출되지 않지만, 「`items[last].penaltyBase`를 그대로 echo」로 고치면 정본 신고단위 base 29,500,000 대신 **9,500,000이 인쇄된다**. 반드시 `computeFilingUnitPenalty`가 신고단위 base를 함께 반환해 합산 결과에 싣는 방향이어야 한다(suggestedFix가 맞다).
+
+**부수 확정** — 리뷰 문서 `docs/reviews/penalty-code-review-2026-09.md:2600`이 스스로 미확인으로 남긴 「컴포넌트 테스트가 P-09를 이미 고정하는가」는 **아니다**로 결판: `__tests__/components/stock-penalty-result-basis.test.tsx` 3케이스 전부 `latePaymentPenalty: 68,200`이라 조기반환을 타지 않아 다종목 형상을 커버하지 않는다.
+
+세액은 정확하고(anchor 17건 통과) 표시만의 문제이므로 severity low 유지.
+
+</details>
+
+---
+
+### G-47 — `resolveDailyRate` 주석이 「이 배열을 참조한다」고 적혀 있으나 구현은 참조하지 않는다 (죽은 코드 아님 — 삭제 금지)
+
+`lib/tax-engine/transfer-tax-penalty.ts:188` · 표시드리프트 · 축 `test-coverage` · **재검증 U-14** (반증 0/3)
+
+**조문**: 국세기본법 시행령 제27조의4 제1항
+
+**무엇이 잘못됐나** — `transfer-tax-penalty.ts:188`의 주석은 `resolveDailyRate`가 `DELAYED_RATE_PERIODS`를 참조한다고 적었으나 구현(`:228-232`)은 상수 3개를 직접 하드코딩한다. 두 컷오프가 갈려도 아무도 알아채지 못한다.
+
+**근거**
+
+> 주석의 선언: lib/tax-engine/transfer-tax-penalty.ts:186-189
+> ```
+>  * 납부지연가산세 이자율 시행 구간 (국세기본법 시행령 §27의4).
+>  * `resolveDailyRate`가 쓰던 컷오프와 **동일 값**을 구간 형태로 재표현한 것이다 —
+>  * 두 곳이 갈리지 않도록 `resolveDailyRate`도 이 배열을 참조한다.
+> ```
+> 실제 구현: 동 파일 :228-233 은 배열을 참조하지 않는다 —
+> ```
+> function resolveDailyRate(referenceDate: Date): number {
+>   const d = referenceDate;
+>   if (d >= new Date("2022-02-15")) return PENALTY_CONST.DAILY_PENALTY_RATE;
+>   if (d >= new Date("2019-02-12")) return PENALTY_CONST.DAILY_PENALTY_RATE_2019;
+>   return PENALTY_CONST.DAILY_PENALTY_RATE_2016;
+> }
+> ```
+> 유일한 호출 지점: :439 `  const dailyRate = breakdown.length > 0 ? breakdown[breakdown.length - 1].dailyRate : resolveDailyRate(calcDate);` — 이 줄은 `elapsedDays > 0`인 경로에서만 실행되므로 `start <= end`가 보장되고, `splitByRatePeriods`(:201-226)의 마지막 구간은 `pEnd = end`·`pStart = 2022-02-15`라 항상 1개 이상 push된다 ⇒ `breakdown.length === 0`은 성립할 수 없다.
+>
+> 뮤테이션 프로브(실행): :230·:231의 두 return을 `0.99`·`0.98`(현행율의 4,500배)로 바꿔도 가산세 28파일 277건 전건 통과, 9개 동시 뮤테이션에 포함한 `npx vitest run` 전건 **19,055 passed**.
+
+**재현**
+
+> 국세기본법 시행령 §27의4 이자율이 다시 개정돼 `DELAYED_RATE_PERIODS`에 새 구간(예: 2027-01-01 시행)을 추가할 때 `resolveDailyRate`를 갱신하지 않아도 어떤 테스트도 실패하지 않는다. 이후 `splitByRatePeriods`에 조기 반환 조건이 하나라도 생기면(예: 일수 0 구간 필터 강화) fallback이 살아나 `dailyRate`가 구 리터럴 기준 값을 돌려주고, 결과 화면 산식(:463 `미납세액 … × N일 × ${rateLabel}`)이 실제 합산액과 어긋난 이자율을 인쇄한다.
+
+**수정 방향** — 🔴 **원 지적의 「도달 불가능하므로 삭제해도 안전」은 채택 금지.** 재검증이 도달성을 실증했다 — 기한 다음 달력일이지만 timestamp로는 구간에 못 드는 격자에서 `breakdown`이 공집합이 되어 `:439`의 fallback `resolveDailyRate(calcDate)`가 실행된다(2018년 격자에서 `0.0003`, 2021년 격자에서 `0.00025` 관측 — 각각 세 번째·두 번째 return에서만 나오는 값). 삭제하면 `breakdown[-1].dailyRate`가 `undefined.dailyRate` TypeError가 된다. ⇒ 고칠 것은 **주석 1줄**이고, 근본 해결은 R-4(날짜 축 통일)에서 함께 다뤄야 한다.
+
+<details><summary>⚠️ 검증자 정정 — 원 지적을 이렇게 고쳐 읽어야 한다</summary>
+
+U-14는 **절반만 맞다 — 살아남는 것은 `:188` 주석 드리프트와 테스트 부재뿐이고, 「도달 불가능한 죽은 코드」라는 중심 전제는 실측으로 반증된다.**
+
+【맞는 부분 ①·재현됨】 `lib/tax-engine/transfer-tax-penalty.ts:188`의 「두 곳이 갈리지 않도록 `resolveDailyRate`도 이 배열을 참조한다」는 사실이 아니다. `:228-232`는 `DELAYED_RATE_PERIODS`를 참조하지 않고 `new Date("2022-02-15")`·`new Date("2019-02-12")` 자체 리터럴을 쓴다. (현재 컷오프 **값 자체는 일치** — 갈린 것은 「단일 소스」 선언뿐이다. 인접한 `:189` 「1일 10만분의 22」는 「국세기본법 시행령」 제27조의4 제1항 원문과 일치함을 KoreanLaw로 확인했다.)
+
+【맞는 부분 ②·재현됨】 `resolveDailyRate` 반환값을 `0.99`/`0.98`/`0.97`로 바꿔도 가산세 5개 스펙 37건이 전건 통과한다 ⇒ **이 함수를 덮는 테스트가 없다**는 커버리지 갭은 실재한다.
+
+【틀린 부분 — 반증됨】 「유일한 호출 지점(`:439`)이 도달 불가능」·「`breakdown.length === 0`은 성립할 수 없다」는 **거짓**이다. `:417` `elapsedDays`는 `differenceInCalendarDays`(달력일)인데 `:215` 구간 필터는 `segEnd < segStart`(timestamp)라 두 축이 다르다. `start = addDays(paymentDeadline, 1)`이 `end = calcDate`보다 **시각(time-of-day)만큼 늦으면** 마지막 구간까지 전부 `continue`되어 `breakdown = []`이 된다.
+
+【프로덕션 경로에서 상시 발생】 `calculationDate`는 **호출자가 전무**하다(`:412` 외 grep 0건). `actualPaymentDate` 미입력 시 `calcDate = new Date()` = 시각 포함 현재시각인 반면, `paymentDeadline`은 `app/api/calc/transfer/engine-input.ts:334` `new Date("YYYY-MM-DD")` → KST 09:00이다. ⇒ **기한 다음날 09:00 KST 이전에 계산하면** fallback이 실행된다. 실측(TZ=Asia/Seoul, 미납세액 1억, 기한 2026-03-31):
+- now 01·07·08시 → `elapsedDays=1, breakdown=[], dailyRate=0.00022, penalty=**0원**`
+- now 09·10·15·23시 → `breakdown=[1], penalty=22,000원`
+2018 격자(기한 2018-05-31, now 2018-06-01 07:00)는 `dailyRate=**0.0003**` = `DAILY_PENALTY_RATE_2016` — `resolveDailyRate` `:232` 세 번째 return에서만 나오는 값이다(`:419-428` 조기반환은 `DAILY_PENALTY_RATE` 0.00022 하드코딩 + `elapsedDays: 0`이라 좌변 불가).
+
+【suggestedFix는 위험 — 채택 금지】 「`resolveDailyRate`를 삭제하고 `:439`를 `breakdown[breakdown.length-1].dailyRate`로 단순화(도달 불가능하므로 안전)」를 실제로 적용한 뒤 위 격자를 돌리면 **`TypeError: Cannot read properties of undefined (reading 'dailyRate')`** 4건이 난다. 게다가 그 뮤테이션 상태에서도 저장소 가산세 스펙 28건은 전건 통과했다 ⇒ **안전망이 이 크래시를 못 잡는다.** 남은 선택지는 suggestedFix의 두 번째 갈래(`DELAYED_RATE_PERIODS` 역순 순회로 도출)뿐이며, 어느 쪽이든 `:188` 주석 정정이 동반돼야 한다.
+
+【failureScenario 보정】 「이후 `splitByRatePeriods`에 조기 반환 조건이 **하나라도 생기면** fallback이 살아나 산식이 어긋난다」는 조건부 서술은 **과소평가**다. 미래 변경이 필요 없다 — 오늘 이미 `HOUR=1/7/8`에서 산식이 「미납세액 100,000,000 × 1일 × 0.0220%」(=22,000)라고 인쇄되면서 실제 금액은 **0원**으로 나간다.
+
+【별건 분리 권고】 위 `penalty=0` 증상은 U-14(표시드리프트)의 범위를 넘는 **세액 결함**이고, 확정된 G-03(구간 양끝 포함으로 하루 과다)과도 방향이 반대(과소)인 별개 축이다. 근본원인은 공통 — `elapsedDays`(달력일 축)와 구간 필터(timestamp 축)의 불일치.
+
+</details>
+
+---
+
+## 6. 뿌리 묶음 — 따로 고치면 서로를 깨뜨린다
+
+재검증 집계 감사관이 확정 항목을 4개 뿌리로 묶었다. 아래는 그 보고를 그대로 싣는다.
+
+확정 항목은 **4개 뿌리**로 묶인다. 따로 고치면 서로를 깨뜨리는 조합이 있다.
+
+**R-1 「`PenaltyStep.legalBasis`는 화면에 렌더되지 않는다」 — U-05 + U-08.**
+`grep -rn "PenaltyStep" --include="*.tsx" components app` = 0건이라는 **단 하나의 사실**이 (a) U-05의 등급을 high→medium으로 내리고 (b) U-08을 반증한다. 두 상수(`FRAUDULENT_DEF` @ `transfer-tax-penalty.ts:345·381`, `ADDENDUM_2015` @ `:296`)가 같은 죽은 출구를 공유한다. ⇒ 이 채널에 렌더러가 생기는 순간 **두 건의 심각도가 동시에 올라간다**. 한쪽을 손대면 다른 쪽을 반드시 재점검할 것.
+
+**R-2 「인용 문자열이 손으로 쓰이고, 검증이 항·호를 보지 않는다」 — U-03 + U-05 + U-06 + U-07.**
+U-03(`StockFilingFormTableHelpers.ts:603` — §47의2가 과소신고 10%까지 흡수), U-05(존재하지 않는 §26의2⑪), U-06(법령명 부재로 상증법 문자열과 충돌)은 **같은 결함의 세 사례**다. U-07(국세기본법 시행규칙 §19의3 매니페스트 미등록)은 그 뿌리의 **안전망 쪽 얼굴**이다 — 매니페스트야말로 U-03·U-05를 잡았어야 할 기구다. ⚠️ **다만 U-07만 고쳐도 U-03·U-05는 안 잡힌다**: 매니페스트 검증은 조문 **본문** 대조라 「존재하지 않는 항(⑪)」·「호 단위 오귀속」은 모수에 들어와도 통과한다. 두 층을 함께 설계해야 한다.
+여기에 U-08의 잔여 사실(법령명 없는 부칙 인용의 **실제 사용자 노출**: `NonBusinessLandResultCard.tsx:71`, `MultiHouseSurchargeDetailCard.tsx:93`, `MultiTransferPropertyBreakdown.tsx:212·221`)도 U-08이 아니라 **이 뿌리에 귀속**시켜야 한다.
+
+**R-3 「합산 분기가 단건 분기의 계약을 보존하지 않고, 그 차이를 보는 anchor가 없다」 — U-01 + U-02 + U-04.**
+U-02(`stock-transfer-aggregate.ts:214`)와 U-04(`:106`)는 **문자 그대로 같은 파일**이고, 둘 다 「합산 결과가 단건이 갖는 것을 잃는다」(전자신고 판정 소스 갈림 / `penaltyBase` echo 소실)는 한 가지 사실의 두 면이다. U-01은 바로 그 갈림을 잡았어야 할 **없는 anchor**다. ⇒ 3건은 별개 3개 수정이 아니라 **한 변경**으로 다뤄야 한다(어댑터 계약 + 그 계약을 고정하는 anchor).
+
+**R-4 「`calculateDelayedPaymentPenalty`의 날짜 축이 둘로 갈려 있다」 — G-03(확정) + U-14 + U-09.**
+`elapsedDays`는 `differenceInCalendarDays`(달력일, `:415-418`)인데 구간 채택은 timestamp 비교(`segEnd < segStart`, `:215`)다. **G-03**(구간 `[기한+1일, 납부일]` 양끝 포함 → 항상 하루 과다)와 **U-14**(elapsedDays≥1인데 breakdown 공집합)는 이 불일치의 **양면**이고, **U-09**가 비어 있다고 지적한 안전망이 바로 이 함수의 것이다. ⇒ 셋을 따로 고치면 서로를 깨뜨린다. 특히 🔴 **U-14의 제안대로 `resolveDailyRate`를 삭제하면 G-03 격자에서 `undefined.dailyRate` TypeError가 된다** — R-4는 반드시 한 묶음으로 설계할 것.
+
+**부수 관측(새 지적을 세우는 것이 내 임무가 아니므로 보고만 한다).** 위 프로브 CASE-A/B에서 `elapsedDays=1`인데 `delayedPaymentPenalty=0`이 나온다. 이때 `:463`의 단일구간 산식은 「미납세액 10,000,000 × **1일** × 0.0300%」로 인쇄되는데 `amount`는 0이다 — U-14의 failureScenario가 「미래에 일어날 수 있다」고 적은 산식·금액 괴리가 **이미 살아 있는 상태**다. R-4 수정 시 함께 다뤄야 한다.
+
+---
+
+## 7. 반증 기각 2건
+
+### 7.1 `PENALTY.ADDENDUM_2015` 법령명 부재 (재검증 U-08 · 2/3 반증)
+
+**경계 항목은 U-08 단 1건(2/3 반증). 다수결이 옳다 — REFUTED 유지.** 세 근거를 각각 직접 확인했다.
+
+① **evidence의 「저장소 내 부칙 인용 4건」이 사실이 아니다.** `grep -rEn "부칙\s*§|부칙\s*제[0-9]+조" lib components app` → **59파일** 히트. 법령명 없는 형식이 예외가 아니라 **다수 패턴**이다 — 「부칙 §9270호 §14①」 하나만도 `transfer-tax-rate-calc.ts:67·353·370`, `multi-house-surcharge.ts:319`, `transfer-tax-mixed-use.ts:236·289·487`, `legal-codes/surcharge-transition.ts:42`, `types/transfer-result.types.ts:190·195·279` 등에 퍼져 있다. (프롬프트가 준 「28회·14파일」보다도 넓다 — 패턴을 `부칙 제N조`까지 넓히면 59파일.)
+
+② **「이 한 줄만 규약에서 벗어나 있다」는 저장소 자신의 문서와 충돌한다.** `lib/tax-engine/legal-codes/transfer.ts:123-131`이 명시적으로 「저장소의 다른 부칙 인용은 모두 **번호**를 담는다(`property.ts` 「지방세법 법률 제19230호 부칙 제15조」 · `common.ts` 「부칙 §12848호 제10조②」 등) — **이 상수만**(=`조특법 부칙 제53조`) 규약에서 벗어나 있으나」라고 적는다. 즉 저장소가 세는 축은 **법률 번호**이고, 그 축에서 `ADDENDUM_2015`는 **준수 사례로 인용된 쪽**이다.
+
+③ **failureScenario가 재현되지 않는다.** `PENALTY.ADDENDUM_2015`의 소비처는 정확히 1곳 — `transfer-tax-penalty.ts:296`, `FilingPenaltyResult.steps` 안 `PenaltyStep.legalBasis`. `grep -rn "PenaltyStep" --include="*.tsx" components app` = **0건**. `AmendmentResultCard.tsx:122·189`의 `detail.steps`는 `AmendmentDetail.steps` = `CalculationStep[]`(`types/transfer-amendment.types.ts:74`)로 **다른 타입**이다. 사용자가 이 문자열을 볼 경로가 없다.
+
+**남겨야 할 잔여 사실**(refuted라도 버리지 말 것): 문자열이 법령명을 빠뜨린 것 자체는 참이고, 법령명 없는 부칙 인용이 **실제 렌더되는 곳은 따로 있다** — `components/calc/NonBusinessLandResultCard.tsx:71`, `components/calc/MultiHouseSurchargeDetailCard.tsx:93`, `components/calc/results/MultiTransferPropertyBreakdown.tsx:212·221`. 다만 이 4곳은 전부 「부칙 §9270호 §14①」로 **U-08과 다른 상수**다. ⇒ 이 노출은 U-08이 아니라 **U-06의 뿌리**로 귀속시켜야 한다(아래 R-2).
+
+그 외 1/3·2/3로 갈린 항목은 없다(나머지 13건은 전원 일치).
+
+### 7.2 가산세 기준금액 step의 부칙 인용 (1차 감사축 `filing-penalty` P-06 · 3/3 반증)
+
+`lib/tax-engine/legal-codes/common.ts:18` — 가산세 기준금액 step의 근거가 「부칙 §12848호 제10조②」 — 법령명이 없고, 코드에는 그 부칙이 요구하는 시기 게이팅도 없다
 
 세 렌즈가 모두 독립적으로 반증했다. 요지:
 
@@ -2480,10 +3116,51 @@ lib/tax-engine/legal-codes/comprehensive.ts:269 `DECLARATION_OBLIGATION` 라벨�
 
 ---
 
-## 8. 축별 커버리지 (각 축의 자기 보고)
+## 8. 렌즈 간 모순 해소 기록
 
-아래는 각 감사 축이 **스스로 무엇을 읽었고 무엇을 못 읽었는지** 보고한 내용이다.
-완결성 비평이 실패했으므로 이 자기 보고가 커버리지에 대한 유일한 근거다.
+**1건의 실질 모순 — U-14. 집계 헤드라인이 틀렸다.**
+
+집계문("resolveDailyRate는 도달 불가능한 죽은 코드")과 3개 렌즈 전원의 refuted=false/keep은 프롬프트가 전제로 준 1차 감사관 결론과 정면 충돌한다. 직접 프로브로 결판냈다(파일 삭제 완료).
+
+`__tests__/__u14agg_probe.test.ts` (throwaway, 삭제됨) 실행 결과:
+- CASE-A 기한 `2018-06-30T23:59` / 납부 `2018-07-01T00:00` → **elapsedDays=1, breakdown.length=0, dailyRate=0.0003, penalty=0**
+- CASE-B 기한 `2021-03-31T23:59` / 납부 `2021-04-01T00:00` → **elapsedDays=1, breakdown.length=0, dailyRate=0.00025**
+- CASE-C(대조군) 기한 `2018-06-30` / 납부 `2018-12-31` → elapsedDays=184, breakdown.length=1, penalty=552,000
+
+`lib/tax-engine/transfer-tax-penalty.ts:439`가 `breakdown.length > 0 ? breakdown[last].dailyRate : resolveDailyRate(calcDate)`이므로 **breakdown.length===0은 fallback이 실행됐다는 직접 증거**다. CASE-B의 0.00025는 `resolveDailyRate`의 **두 번째** return(`:231`)에서만 나온다 ⇒ 세 번째뿐 아니라 두 번째 return도 도달 가능.
+
+기전은 날짜 축 불일치다 — `:415-418` elapsedDays는 `differenceInCalendarDays`(달력일), `:215` 구간 채택은 `segEnd < segStart`(timestamp).
+
+**프로덕션 도달성도 코드로 확인**: 라우트는 `calculationDate`를 아예 넘기지 않고(`app/api/calc/transfer/engine-input.ts:331-339`가 unpaidTax·paymentDeadline·actualPaymentDate?만 전달), `lib/calc/transfer-tax-api-body-blocks.ts:114`가 `actualPaymentDate: form.actualPaymentDate || undefined`라 미입력이 가능하다 ⇒ calcDate = `new Date()`(로컬 현재시각), paymentDeadline = `new Date("YYYY-MM-DD")`(UTC 자정 = 09:00 KST). 기한 다음 달력일의 09:00 KST 이전 요청은 프로브와 동일한 형태가 된다.
+
+⇒ U-14는 **CONFIRMED 유지하되 claim을 다시 써야 한다**. 살아남는 것은 `:188` 주석 드리프트(구현 `:228-232`가 실제로 `DELAYED_RATE_PERIODS`를 참조하지 않음 — 파일에서 확인)와 뮤테이션 무감지뿐이다. **suggestedFix의 「도달 불가능하므로 삭제 안전」은 위험하다** — 삭제하면 그 격자에서 `undefined.dailyRate` TypeError가 된다.
+
+**부수 경고**: 스크래치패드의 `verdicts.json`(42행, 07:37)은 **1차(무효) 실행 기록**이고 재검증 요약과 최소 4곳에서 어긋난다(U-05·U-09 렌즈 수, U-06 severity keep↔lower, U-08 법령원문 verdict false↔true). 이 파일을 재검증 기록으로 읽으면 안 된다.
+
+U-08의 렌즈 간 갈림(복제범위 keep vs 나머지 2 refuted)은 아래 borderline에서 처리했다.
+
+### 심각도 최종 조정
+
+severityAdjust가 갈린 것은 **U-08(lower/lower/keep) · U-09(keep/lower) · U-10(keep/keep/lower)** 3건, 만장일치 lower가 **U-05** 1건이다.
+
+**U-05 (원 high → 최종 medium).** 만장일치 lower의 근거를 직접 확인했다 — `FRAUDULENT_DEF`의 소비처는 `transfer-tax-penalty.ts:345`·`:381` 둘뿐이고 **U-08과 똑같이 렌더되지 않는 `PenaltyStep.legalBasis` 채널**이다. 사용자가 존재하지 않는 「§26의2 ⑪」을 볼 경로가 없다 ⇒ high는 과대. 다만 법령 정확성 최우선 제품에서 **존재하지 않는 항**을 3곳(`common.ts:19`·`:20`, `transfer-tax-penalty.ts:30`)에 복제해 둔 것이므로 low로 더 내리지는 않는다. **medium**.
+
+**U-08 → REFUTED(등급 부여 없음).** 잔여 메모로만 남긴다면 `low/info`.
+
+**U-09 (원 high → 최종 medium).** 공백은 실재한다 — `__tests__/tax-engine/transfer-tax-penalty-rate-boundary.test.ts`는 헤더 `:5-7`에서 3단계를 전부 문서화해 놓고 실제 케이스는 `:19`(2022-02-15 straddle)와 `:64`(전 구간 0.022%) **2건뿐**이다. 2019-02-12 이전 구간도, 그 경계 straddle도 없다. 또 내 프로브 CASE-C가 지적이 예언한 수치를 그대로 재현했다(184일 × 0.0003 × 10,000,000 = **552,000**) ⇒ 산식 주장은 건전하다. 그럼에도 **현재 값은 법문과 일치하고 지금 틀리게 계산되는 사용자는 없다** — 피해는 미래의 잘못된 편집을 전제한다. 순수 커버리지 공백을 「지금 숫자가 틀린」 항목과 같은 등급에 두면 안 된다. **medium**.
+
+**U-10 (원 high → 최종 medium).** U-09와 형태가 동일하다(값은 법문 일치, 안전망만 공백). 일관성상 같은 등급이어야 한다. 두 건을 medium으로 두면 **동일 형태의 U-12·U-13(이미 medium)과도 정렬**된다 — 원 등급표가 같은 종류를 high/medium으로 흩어 놓은 것이 문제였다.
+
+**참고 — 갈리지 않았지만 정렬을 밝혀 둔다.** U-11(원 high, 만장일치 keep)은 **high 유지**. U-09·U-10과 같은 「커버리지 공백」 계열로 보이지만 성질이 다르다 — ⑫ Zod 층은 TypeScript가 못 잡아 필드가 **조용히 stripping**되는 배선 위험이고, 상수 오편집 위험과 달리 지금 당장 잠재 결함이 될 수 있다.
+
+최종: U-01 low · U-02 low · U-03 low · U-04 low · **U-05 medium(↓)** · U-06 medium · U-07 medium · **U-08 REFUTED** · **U-09 medium(↓)** · **U-10 medium(↓)** · U-11 high · U-12 medium · U-13 medium · U-14 low(claim 재작성 조건부).
+
+---
+
+## 9. 축별 커버리지 (각 축의 자기 보고)
+
+완결성 비평 단계는 1차에서 세션 한도로 실패했다. 따라서 **이 문서는 커버리지를 주장하지 않는다** —
+아래는 각 감사 축이 스스로 무엇을 읽었고 무엇을 못 읽었는지 보고한 내용이며, 이것이 유일한 근거다.
 
 ### 양도세 신고불성실가산세 산식 (`filing-penalty`)
 
