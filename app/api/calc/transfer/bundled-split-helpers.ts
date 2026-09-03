@@ -146,6 +146,35 @@ export function resolveHousingContextFromCompanion(
  * 분리취득 축은 필드가 24개라 손으로 유지할 수 없으므로 타입을 스키마에 **묶어 둔다**:
  * ⑫에 필드가 늘면 여기서 컴파일 에러가 나거나 자동으로 따라온다.
  */
+/**
+ * ⑫ 스키마와 엔진 input에 **둘 다 있는 키** — 컴패니언 경로가 반드시 전달해야 하는 축.
+ *
+ * 사용자가 입력할 수 있고(⑫) 엔진이 읽는다면(input), 그 사이를 잇는 것이 ⑭의 책임이다.
+ * ⑫에 그런 필드가 늘면 아래 키 커버리지 가드가 즉시 빨간불이 된다 —
+ * 「손으로 옮기는 것을 잊었다」가 컴파일 에러가 된다.
+ *
+ * 🔑 **이 선언이 「컴패니언은 무엇을 책임지는가」의 단일 문서**다.
+ */
+type CompanionOwnedKeys = Exclude<
+  Extract<keyof z.infer<typeof companionAssetSchema>, keyof TransferTaxItemInput>,
+  CompanionContextOnlyKeys
+>;
+
+/**
+ * ⑫∩엔진 키이지만 **컴패니언 자기 item에는 싣지 않는** 축 — 가드에서 명시 제외한다.
+ *
+ * 세 키는 `resolveHousingContextFromCompanion`(`:99`)이 읽어 **다른 컴패니언(토지)** 에게
+ * 줄 「주택 컨텍스트」(정착면적·도시지역·배율 구역)를 만드는 데 쓰인다. 즉 이 값들의 소비처는
+ * **자기 자신이 아니라 형제 자산**이고, 그래서 자기 item에는 실리지 않는다.
+ *
+ * 🟡 **미검증** — 컴패니언 주택이 **자기 부수토지 축**(영 §167의5)을 가질 수 있는 국면에서도
+ *    싣지 않는 것이 옳은지는 확인하지 않았다. 싣는 쪽으로 바꾸면 세액이 움직일 수 있으므로
+ *    anchor 없이 건드리지 않는다. 착수하려면 그 국면을 먼저 실측할 것.
+ *
+ * ⚠️ **이 목록은 늘리기 전에 근거를 적을 것.** 근거 없이 추가하면 가드가 그만큼 눈을 감는다.
+ */
+type CompanionContextOnlyKeys = "buildingFootprintArea" | "isUrbanArea" | "appurtenantLandZone";
+
 type CompanionSplitFields = Pick<
   z.infer<typeof companionAssetSchema>,
   keyof typeof splitAcquisitionShape
@@ -390,7 +419,16 @@ export function buildCompanionEngineInputs(
     buildingStandardPriceAtAcquisition: c.buildingStandardPriceAtAcquisition,
   };
 
-  const companionEngine: TransferTaxItemInput = {
+  /**
+   * ⑭ 컴패니언 엔진 input 조립.
+   *
+   * 🔑 **`satisfies`를 쓴다 — `: TransferTaxItemInput` 주석이 아니다.** 주석을 달면 추론
+   *    타입이 엔진 타입으로 **넓어져** `keyof`가 항상 전체 키가 되고, 아래 키 커버리지
+   *    가드가 **무엇도 잡지 못하는 상수 참**이 된다(실측 확인).
+   *    `satisfies`는 좁은 리터럴 키 집합을 보존하면서 대입 가능성·초과 키 검사는 그대로 한다.
+   *    계획서: `docs/02-design/features/companion-derived-type-guard.plan.md` §1.4
+   */
+  const companionEngine = {
     /**
      * ⑭ 토지·건물 **분리취득** 축 (N-6(A), 2026-08-23) — **키를 열거하지 않는다**.
      *
@@ -527,7 +565,38 @@ export function buildCompanionEngineInputs(
     landNature: c.landNature,
     primaryContextForCompanionRate: ctx.primaryCtxForSplit,
     acquisitionArea: c.areaM2,
-  };
+  } satisfies TransferTaxItemInput;
+
+  /**
+   * ⑭ **컴파일 타임 키 커버리지 가드** — 런타임 영향 없음(`void`로 소비).
+   *
+   * ## 무엇을 막는가
+   *
+   * ⑫가 파싱한 값이 여기서 **열거되지 않으면 조용히 사라진다.** 이 파일 헤더가 스스로
+   * 경고하는 실패 모드이고, F13·F15가 실제로 터진 지점이다 — 필드는 타입에 **있었고**
+   * 조립부가 안 실었다. 타입 파생(`CompanionSplitFields`)은 그 갭을 못 막는다.
+   *
+   * ## 어떻게 막는가
+   *
+   * `CompanionOwnedKeys` = **⑫ 스키마와 엔진 input에 둘 다 있는 키**. 그런 키는 사용자가
+   * 입력할 수 있고 엔진이 읽으므로, 컴패니언 경로가 **반드시 전달해야 한다**.
+   * ⑫에 그런 필드가 늘면 이 가드가 **즉시 빨간불**이 된다.
+   *
+   * ⚠️ `keyof TransferTaxItemInput` 전체로 잡지 않는 이유: 컴패니언이 의도적으로 싣지 않는
+   *    **primary 전용 축**(폼-전역 세대 정보 등)까지 요구해 거짓 실패가 된다 — ⑧ 통과 ↔ ⑩ 400
+   *    모순을 타입 층에 만드는 셈이다.
+   *
+   * ⚠️ 이 가드가 보는 것은 **키의 존재뿐**이다. 값이 옳은지·Date 변환을 했는지는 못 본다.
+   *    anchor·뮤테이션을 대체하지 않는다.
+   */
+  type _Assembled = typeof companionEngine;
+  const _companionKeyCoverageGuards: [
+    // ① 타입 드리프트 — `satisfies`가 이미 보지만, 리팩터로 그것이 빠져도 여기서 잡힌다.
+    _Assembled extends TransferTaxItemInput ? true : never,
+    // ② 키 누락 — ⑫∩엔진 키를 하나라도 안 실으면 컴파일 실패.
+    Exclude<CompanionOwnedKeys, keyof _Assembled> extends never ? true : never,
+  ] = [true, true];
+  void _companionKeyCoverageGuards;
 
   /**
    * ⑭ **일반건물 컴패니언 — 1건이 토지·건물(+증축) 파트 카드로 펼쳐진다.**
