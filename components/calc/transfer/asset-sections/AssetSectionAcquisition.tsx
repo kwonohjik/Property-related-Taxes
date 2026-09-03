@@ -90,10 +90,9 @@ export function AssetSectionAcquisition({
           : asset.assetKind === "commercial_building" ||
               asset.assetKind === "redevelopment_apt"
             ? "이 자산 종류는 지분 분할 취득을 지원하지 않습니다."
-            : asset.transferCause === "public_expropriation"
-              ? // ✅ 부담부증여는 2026-09-03 해제 — ⑧ `transfer-tax-validate.ts`와 같은 조건이다.
-                "공익수용은 지분 분할 취득과 함께 사용할 수 없습니다."
-              : undefined;
+            : // ✅ 부담부증여·공익수용 차단은 2026-09-03에 모두 해제됐다
+              //    — ⑧ `transfer-tax-validate.ts`와 같은 조건이다.
+              undefined;
 
   /**
    * 지분율 — **지분 분할 모드 전용**으로 여기 남는다 (2026-08-11 사용자 확정).

@@ -169,19 +169,14 @@ describe("축 B × 부담부증여 — 배관", () => {
     expect(bg?.giftTax?.finalTax).toBe(58_200_000);
   });
 
-  it("P-5 ⑧ Gate-B: 부담부증여는 통과, **공익수용은 여전히 차단**", async () => {
-    const msgs = (assets: AssetForm[]) =>
-      collectStepIssues(0, form(assets) as never).map((i) => i.message);
-
-    expect(msgs([asset(1, "60"), asset(2, "40")])).toEqual([]);
-
-    const expr = msgs([
-      asset(1, "60", { transferType: "regular", transferCause: "public_expropriation" }),
-      asset(2, "40", { transferType: "regular", transferCause: "public_expropriation" }),
-    ]);
-    expect(expr.some((m) => /공익수용은 지분 분할 취득과 함께 계산할 수 없습니다/.test(m))).toBe(
-      true,
+  it("P-5 ⑧ Gate-B: 부담부증여 × 축 B가 통과한다", () => {
+    // 🔄 종전에는 이 자리에서 「공익수용은 여전히 차단」도 함께 단언했다.
+    //    공익수용도 같은 날 해제됐다(사유가 똑같이 틀렸다) — 그 축은
+    //    `axis-b-expropriation.anchor.test.ts`가 6케이스 정합으로 지킨다.
+    const msgs = collectStepIssues(0, form([asset(1, "60"), asset(2, "40")]) as never).map(
+      (i) => i.message,
     );
+    expect(msgs).toEqual([]);
   });
 
   it("P-6 ⑧ 컴패니언(다른 물건) 함께양도에서는 **여전히 차단**된다", () => {
