@@ -56,7 +56,12 @@ export function AssetSectionTransfer({
        * 양도 정보 카드 — 부담부증여(소령 §159)는 "양도" 사건이므로 취득원인과 분리하여 별도 노출.
        * 양도가액 입력 위로 이동 — 사용자가 양도 형태를 먼저 결정한 뒤 그 결과에 따라 분기.
        */}
-      <TransferModeBlock asset={asset} onChange={onChange} transferDate={transferDate ?? ""} />
+      <TransferModeBlock
+        asset={asset}
+        onChange={onChange}
+        transferDate={transferDate ?? ""}
+        isFractionalSplit={isFractionalSplit}
+      />
 
       {/* 양도가액 — 부담부증여 시 엔진 자동 도출 (소령 §159) 안내 + 기준시가는 별도 유지 */}
       {asset.transferType === "burdened_gift" && (

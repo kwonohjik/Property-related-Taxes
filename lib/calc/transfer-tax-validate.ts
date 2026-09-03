@@ -84,12 +84,19 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         primaryAsset.assetKind === "redevelopment_apt"
       ) {
         issues.push({ step, assetIndex: 0, message: "해당 자산 종류는 지분 분할 취득 계산을 지원하지 않습니다. 지분 분할 토글을 끄고 계산하세요." });
-      } else if (
-        primaryAsset.transferType === "burdened_gift" ||
-        primaryAsset.transferCause === "public_expropriation"
-      ) {
-        // 지분 분할 양도가액 = 총양도가 × 지분율. 부담부증여(§159 채무액 기반)·공익수용(보상가액)과 비양립.
-        issues.push({ step, assetIndex: 0, message: "부담부증여·공익수용은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
+      } else if (primaryAsset.transferCause === "public_expropriation") {
+        /**
+         * 지분 분할 양도가액 = 총양도가 × 지분율이라 **공익수용(보상가액 기반)** 과 비양립이다.
+         *
+         * ✅ **부담부증여는 2026-09-03에 해제**했다 — §159는 총양도가를 쓰지 않고
+         *   `양도가액 = A × B/C`로 자체 산정하므로 비양립이 애초에 없었다.
+         *   축 B는 **채무도 지분 안분**해 B/C를 보존한다(`buildBurdenedGiftInfo`의 `debtScaleRatio`).
+         *   실측: 60%+40% 합계가 단건 100%와 결정세액까지 일치(64,600,360).
+         *
+         * ⚠️ **공익수용은 함께 열지 않는다** — 보상가액 축의 지분 안분 정합을 재지 않았다.
+         *    같은 줄에 있었다는 이유로 묶어서 해제하지 말 것.
+         */
+        issues.push({ step, assetIndex: 0, message: "공익수용은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
       }
     }
 
@@ -136,7 +143,6 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     //    (vitest anchor는 payload를 손으로 만들어 route만 봤기 때문에 못 잡았다).
     if (form.assets.length > 1) {
       const SINGLE_ONLY: Array<[(a: AssetForm) => boolean, string]> = [
-        [(a) => a.transferType === "burdened_gift", "부담부증여(소령 §159)"],
         [(a) => a.assetKind === "housing" && !!a.isMixedUseHouse, "겸용주택 분리계산"],
         [(a) => a.assetKind === "redevelopment_apt", "재개발·재건축(시행령 §166)"],
         /**
@@ -167,12 +173,22 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
          */
         [(a) => a.assetKind === "right_to_move_in", "조합원입주권(시행령 §166①)"],
         [(a) => a.assetKind === "presale_right", "분양권(소득세법 §104①1호)"],
-        // 지분 분할(전 자산 fractional)은 전용 경로가 있으므로 제외한다.
+        /**
+         * 지분 분할(전 자산 fractional)은 전용 경로가 있으므로 제외한다.
+         *
+         * - **일반건물**: route 5-0(`general-building-fractional.ts`)이 5-a보다 앞에서 가로챈다.
+         * - **부담부증여**: ✅ 2026-09-03 축 B 지원. 집계가 카드마다 STEP 0.48을 돌린다
+         *   (`transfer-tax-aggregate.ts` M-1이 카드를 통째로 spread한다). 채무는 ④가
+         *   지분 안분해 §159의 B/C를 보존한다. 실측: 60%+40% 합계 = 단건 100% (64,600,360).
+         *   ⚠️ **컴패니언(다른 물건) 함께양도에서는 여전히 차단**된다 — 그 경로는 §159 안분을
+         *      타지 않는다(Playwright 실측). 두 경우를 가르는 것이 `fullFractional`이다.
+         */
         ...(fullFractional
           ? []
-          : ([[(a) => a.assetKind === "general_building", "일반건물(토지·건물 일괄)"]] as Array<
-              [(a: AssetForm) => boolean, string]
-            >)),
+          : ([
+              [(a) => a.assetKind === "general_building", "일반건물(토지·건물 일괄)"],
+              [(a) => a.transferType === "burdened_gift", "부담부증여(소령 §159)"],
+            ] as Array<[(a: AssetForm) => boolean, string]>)),
       ];
       for (const [match, label] of SINGLE_ONLY) {
         if (form.assets.some(match)) {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
 
 // ─── ⑩ 장기임대주택 거주주택 비과세 특례 enum 재export (컴패니언) ─
@@ -441,6 +442,22 @@ export const companionAssetSchema = z.object({
    * 기준시가는 물건 전체 값을 유지하고 개산공제만 「지분 기준시가 × 3%」가 된다.
    */
   ownershipRatio: z.number().positive().max(1).optional(),
+  /**
+   * ⑫ 부담부증여(소령 §159) — 축 B(지분 분할 취득) 컴패니언. **누락 시 침묵 stripping**이라
+   * 그 지분만 §159를 타지 않아 세액이 조용히 틀린다.
+   *
+   * 채무 4필드는 ④(`buildBurdenedGiftInfo`)가 **이 자산의 지분율로 안분해** 보낸다 —
+   * 축 A(공유 소유)와 **반대** 규약이다. 평가액·기준시가는 물건 전체 raw이고
+   * 엔진이 `ownershipRatio`로 줄인다.
+   */
+  burdenedGiftInfo: burdenedGiftInfoSchema.optional(),
+  /**
+   * ⑫ 양도 형태 — 엔진의 §159 게이트(`transfer-tax-burdened-gift-step.ts`
+   * `isBurdenedGiftEngine`)가 **이 값**을 본다. `burdenedGiftInfo`만 실어도
+   * 이것이 없으면 STEP 0.48이 **발동하지 않는다**(실측: 컴패니언 차익이
+   * 「총계약가 × 지분율」로 남아 400,000,000 — 정답 116,400,000).
+   */
+  transferType: z.enum(["regular", "burdened_gift"]).optional(),
   /** 자산 직접 귀속 필요경비 (원, 선택) */
   directExpenses: z.number().int().nonnegative().optional(),
   /** 자본적 지출액 (소득세법 §97① 가목) — §97② 단서 swap 비교에 사용. 지분 모드는 × ratio 적용된 값 */

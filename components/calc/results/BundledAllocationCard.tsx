@@ -486,7 +486,12 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
       {transferBurdenedGiftBreakdown && (
         <BurdenedGiftDetailCard
           breakdown={transferBurdenedGiftBreakdown}
-          propertyType="general_building"
+          /**
+           * 종전에는 `"general_building"` 하드코딩이었다 — 이 슬롯을 일반건물 부담부증여
+           * 경로만 쓰던 시절의 값이다. 축 B(지분 분할 취득 × 부담부증여, 2026-09-03)가
+           * 같은 슬롯을 쓰면서 **주택·토지도 도달**하므로 자산 종류에서 파생한다.
+           */
+          propertyType={formData.assets[0]?.assetKind}
         />
       )}
 

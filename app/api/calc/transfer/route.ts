@@ -326,6 +326,12 @@ export async function POST(request: NextRequest) {
            */
           filingPenaltyDetails: engineInput.filingPenaltyDetails,
           delayedPaymentDetails: engineInput.delayedPaymentDetails,
+          /**
+           * ⑭ 축 B × 부담부증여 — 물건 전체 §159를 **1회** 계산해 표시용으로 담는다.
+           * 카드별 breakdown을 합치면 증여세가 쪼개진다(집계 M-0.5 주석의 표 참조).
+           */
+          burdenedGiftWholeInfo: data.burdenedGiftWholeInfo,
+          burdenedGiftDate: data.burdenedGiftWholeInfo ? transferDate : undefined,
         },
         rates,
       );
@@ -336,6 +342,17 @@ export async function POST(request: NextRequest) {
             mode: "bundled" as const,
             apportionment,
             aggregated,
+            /**
+             * 축 B(지분 분할 취득) × 부담부증여 — **물건 전체 기준 §159 1건**.
+             *
+             * 결과뷰(`BundledAllocationCard`)에 이미 §159 명세 카드와 증여세 신고서 양식이
+             * 배선돼 있다(일반건물 부담부증여 경로가 쓰던 슬롯) — **같은 슬롯을 재사용**한다.
+             * 양도세는 카드별 결과의 합이고, 이 값은 채무비율·증여세처럼 **물건 단위로 하나**인
+             * 항목만 담는다(집계 M-0.5).
+             */
+            ...(aggregated.burdenedGift
+              ? { transferBurdenedGiftBreakdown: aggregated.burdenedGift }
+              : {}),
           },
         },
         { status: 200 },

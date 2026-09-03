@@ -14,6 +14,7 @@
  *   - 조특법 §133 — 감면 종합한도 (자경 1억 / 수용 2억)
  */
 
+import type { BurdenedGiftInfo, TransferBurdenedGiftBreakdown } from "./transfer-burdened-gift.types";
 import type { RateClause } from "../transfer-tax-rate-clause";
 import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
 import type {
@@ -78,6 +79,24 @@ export interface AggregateTransferInput {
   priorPaidTax?: number;
   /** 예정신고 기납부 지방소득세 (원). 미지정 0. */
   priorPaidLocalTax?: number;
+  /**
+   * 🔴 축 B(지분 분할 취득) × 부담부증여 — **물건 전체(100%) §159 정보**. 표시 전용.
+   *
+   * 각 카드는 채무가 **지분 안분된** info를 갖는다(§159의 B/C 보존 — `buildBurdenedGiftInfo`).
+   * 그래서 카드로는 **물건 단위 값을 복원할 수 없고**, 특히 **증여세를 카드별로 계산하면
+   * 증여재산공제(상증법 §53)가 N번 차감되고 누진세율이 쪼개진다**:
+   *
+   * | | 증여세 과표 | 증여세 결정 |
+   * |---|---|---|
+   * | 물건 단위 1회 (정답) | 350,000,001 | **58,200,000** |
+   * | 카드 합계(60%+40%) | 300,000,000 | **38,800,000** 🔴 −19,400,000 |
+   *
+   * ⇒ 이 필드를 주면 집계가 **물건 전체 기준으로 §159를 1회만** 계산해
+   *   `burdenedGift`에 담는다. **세액에는 영향이 없다** — 양도세는 카드별 결과의 합이다.
+   */
+  burdenedGiftWholeInfo?: BurdenedGiftInfo;
+  /** 위 필드의 증여일(= 양도일). 미지정 시 증여세 계산 생략. */
+  burdenedGiftDate?: Date;
   /**
    * **신고서 단위** 신고불성실·납부지연 가산세 (국세기본법 §47의2·§47의3·§47의4).
    *
@@ -471,6 +490,12 @@ export interface AggregateTransferResult {
   /** 농어촌특별세 = §99의3 등 소득금액차감 감면세액 × 20% (농특세법 §3·§5). 감면 없으면 0. */
   ruralSurtax: number;
   totalTax: number;
+  /**
+   * 🔴 축 B × 부담부증여 — **물건 전체 기준 §159 breakdown 1건**. 표시 전용.
+   * `burdenedGiftWholeInfo`가 주어졌을 때만 존재한다. 카드별 breakdown을 합치면 안 된다
+   * (증여세가 쪼개진다 — 위 입력 필드 주석의 표 참조).
+   */
+  burdenedGift?: TransferBurdenedGiftBreakdown;
 
   steps: CalculationStep[];
   warnings: string[];

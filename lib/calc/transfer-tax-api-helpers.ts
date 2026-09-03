@@ -3,6 +3,7 @@
  * transfer-tax-api.ts 800줄 정책에 따라 분리.
  */
 
+import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -196,7 +197,8 @@ export function isFullFractionalBundle(assets: AssetForm[]): boolean {
  *  - 기본정보(①): assetKind·acquisitionArea·transferArea·areaScenario·landNature
  *    (buildAssetPayload emit + validate basic 검사의 합집합. 소재지·좌표는 미emit·미검사 → 제외)
  *  - 양도정보(②): transferType·transferCause (양도 형태 드라이버 — companion ② UI 숨김 대응.
- *    지분 분할은 일반 양도만 지원하므로 부담부/수용 하위필드는 불요 — 비양립 조합은 validate 차단)
+ *    ✅ **2026-09-03 정정**: 지분 분할도 **부담부증여를 지원**한다 — 아래 bg* 필드를 함께
+ *    병합한다. **공익수용만** 여전히 validate가 차단한다)
  *  - 비사업용 토지 여부: **필지 자체의 성질**이라 전 지분 공통 (V10-f, 2026-09-02 코드리뷰).
  *    빠져 있던 동안에는 사용자가 Step4 토글을 **명시적으로 켠** 상태에서 지분1만 중과되고
  *    지분2 이상은 빠졌다(실측 341,517,000 → 416,178,400, 74,661,400원 과소).
@@ -213,6 +215,27 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
     landNature: primary.landNature,
     transferType: primary.transferType,
     transferCause: primary.transferCause,
+    /**
+     * 부담부증여(소령 §159) 하위필드 — **물건 단위 값**이라 전 지분 공통이다 (축 B, 2026-09-03).
+     *
+     * 컴패니언 카드는 ② 양도정보를 숨기므로 이 값들이 primary에만 있다. 병합하지 않으면
+     * ④가 컴패니언의 `burdenedGiftInfo`를 만들지 못해 **그 지분만 §159를 타지 않는다**.
+     *
+     * 채무 4필드는 여기서 **원본(물건 전체)** 을 그대로 옮긴다 — 지분 안분은 ④
+     * (`buildBurdenedGiftInfo`의 `debtScaleRatio`)가 자산별 지분율로 한 번만 적용한다.
+     */
+    bgValuationMode: primary.bgValuationMode,
+    bgDonorRelation: primary.bgDonorRelation,
+    bgLendingDepositTotal: primary.bgLendingDepositTotal,
+    bgMortgageDebtAmount: primary.bgMortgageDebtAmount,
+    bgAnnualRentTotal: primary.bgAnnualRentTotal,
+    bgMortgageSetAmount: primary.bgMortgageSetAmount,
+    bgMarketValueAtTransfer: primary.bgMarketValueAtTransfer,
+    bgMarketValueAtAcquisition: primary.bgMarketValueAtAcquisition,
+    bgAcquisitionMethod: primary.bgAcquisitionMethod,
+    bgActualAcquisitionLand: primary.bgActualAcquisitionLand,
+    bgActualAcquisitionBuilding: primary.bgActualAcquisitionBuilding,
+    bgActualAcquisitionTotal: primary.bgActualAcquisitionTotal,
     isNonBusinessLand: primary.isNonBusinessLand,
   };
 }
@@ -516,6 +539,20 @@ export function buildAssetPayload(
         : undefined,
     // 개산공제 base 축소용 — 기준시가(위)는 물건 전체 raw, 지분 적용은 엔진이 개산공제에서만.
     ownershipRatio: fractional ? ratio : undefined,
+    /**
+     * ⑬ 부담부증여(소령 §159) — 축 B(지분 분할 취득) 컴패니언. 누락 시 **침묵 stripping**이라
+     * 그 지분만 §159를 타지 않아 세액이 조용히 틀린다.
+     *
+     * 채무는 **이 자산의 지분율로 안분**해 보낸다(축 A와 반대 — 근거는 `buildBurdenedGiftInfo`).
+     * 평가액·기준시가는 물건 전체 raw로 두고 엔진이 `ownershipRatio`로 줄인다.
+     */
+    ...(asset.transferType === "burdened_gift"
+      ? {
+          // ⑬ 엔진 §159 게이트가 보는 값 — `burdenedGiftInfo`만으로는 발동하지 않는다.
+          transferType: "burdened_gift" as const,
+          burdenedGiftInfo: buildBurdenedGiftInfo(asset, fractional ? ratio : undefined),
+        }
+      : {}),
     directExpenses: fractional
       ? applyRatio(parseAmount(asset.directExpenses), ratio)
       : parseAmount(asset.directExpenses),

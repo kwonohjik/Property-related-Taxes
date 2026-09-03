@@ -240,7 +240,17 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const isBurdenedGift =
     primary.transferType === "burdened_gift" ||
     primary.acquisitionCause === "burdened_gift";
-  const bgInfo = isBurdenedGift ? buildBurdenedGiftInfo(primary) : undefined;
+  /**
+   * 축 B(지분 분할 취득)면 **채무도 지분 안분**한다 — 축 A와 반대 규약이다.
+   * 근거·수치는 `buildBurdenedGiftInfo`의 `debtScaleRatio` 주석 참조(단일 소스).
+   * `fractionalBundleMerge`(:73)가 축 판정이다 — 전 자산이 fractional일 때만 참.
+   */
+  const bgInfo = isBurdenedGift
+    ? buildBurdenedGiftInfo(
+        primary,
+        fractionalBundleMerge ? getOwnershipRatio(primary) : undefined,
+      )
+    : undefined;
 
   // 겸용주택 분리계산 payload 빌드
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
@@ -657,6 +667,14 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(gbValuation !== undefined ? { generalBuildingValuation: gbValuation } : {}),
     // ⑬ 부담부증여 body spread (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
     ...(bgInfo !== undefined ? { burdenedGiftInfo: bgInfo } : {}),
+    /**
+     * ⑬ 축 B × 부담부증여 — **물건 전체 §159 정보**(채무 미안분). 표시 전용.
+     * 위 `bgInfo`는 축 B에서 채무가 지분 안분돼 있어 물건 단위 증여세를 낼 수 없다.
+     * 축 B가 아니면 보내지 않는다(단건은 `bgInfo` 자체가 물건 전체다).
+     */
+    ...(isBurdenedGift && fractionalBundleMerge
+      ? { burdenedGiftWholeInfo: buildBurdenedGiftInfo(primary) }
+      : {}),
     // ⑬ 재개발/재건축 spread (시행령 §166) — 누락 시 silent stripping
     ...(redevPayload !== undefined ? { redevelopment: redevPayload } : {}),
     // ⑬ 가업상속공제 §97의2④ 의제 취득가액 spread (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
