@@ -111,27 +111,33 @@ describe("G-07 A-2·A-3 결과 화면 고지 — 법정기한 내 신고가 아�
    * 배너가 「전부 미포함」이라고 계속 말하면 그 자체가 새 거짓말이 된다.
    */
   it.each([
-    ["components/calc/results/GiftTaxResultView.tsx", "증여세", ' scope="filing-only"'],
-    ["components/calc/results/InheritanceTaxResultView.tsx", "상속세", ""],
-  ])("A2-3: %s 가 고지 배너를 배선한다", (rel, label, scope) => {
+    ["components/calc/results/GiftTaxResultView.tsx", "증여세"],
+    ["components/calc/results/InheritanceTaxResultView.tsx", "상속세"],
+  ])("A2-3: %s 가 고지 배너를 배선한다", (rel, label) => {
     const src = read(rel);
     expect(src).toContain(
       'import { PenaltyNotIncludedNotice } from "@/components/calc/results/shared/PenaltyNotIncludedNotice"',
     );
     expect(src).toContain("result.creditDetail.isFiledOnTime === false");
-    expect(src).toContain(`<PenaltyNotIncludedNotice taxLabel="${label}"${scope} />`);
+    expect(src).toContain(`<PenaltyNotIncludedNotice taxLabel="${label}" />`);
   });
 
-  it("A2-4: 배너 **렌더 문구**가 세 조문을 모두 가리킨다 (scope=\"all\" — 상속세)", () => {
+  /**
+   * 🔴 B1(상속) 이후 — 상속·증여 **양쪽이** §47의2·§47의3 일반율을 산출한다. 「전부 미포함」
+   * 분기(`scope="all"`)는 소비자가 사라져 **제거**했다. 배너는 남은 축만 말해야 한다.
+   */
+  it("A2-4: 배너 **렌더 문구**가 남은 축만 가리킨다 (부정행위율 · 납부지연)", () => {
     const src = read("components/calc/results/shared/PenaltyNotIncludedNotice.tsx");
-    expect(src).toContain("가산세가 포함되어 있지 않습니다");
     /**
      * 🔑 파일 전체를 `toContain`으로 훑으면 **JSDoc 헤더의 조문 인용에 걸려** 렌더 문구에서
      * 조문을 지워도 통과한다(뮤테이션 실측 M-A2d GREEN). 렌더되는 문장 그대로 단언한다.
      */
-    expect(src).toContain(
-      "(국세기본법 §47의2 무신고 · §47의3 과소신고 · §47의4 납부지연)",
-    );
+    expect(src).toContain("아직 포함되지 않은 가산세가 있습니다");
+    expect(src).toContain("(§47의2①1호·§47의3①1호가목)와");
+    expect(src).toContain("<strong>납부지연가산세</strong>(§47의4)는 아직 계산하지 않습니다");
+    // ⛔ 「전부 미포함」으로 되돌아가면 이제 거짓이다
+    expect(src).not.toContain("신고불성실·납부지연 가산세가 포함되어 있지 않습니다");
+    expect(src).not.toContain('scope === "filing-only"');
   });
 });
 
@@ -147,11 +153,16 @@ describe("G-07 A-4·A-5 입력 위젯 — 고르는 자리에서 밝힌다", () 
     expect(src).toContain("기한후신고가 아니므로 §48②2호 감면 대상이 아닙니다");
   });
 
-  it("A5-1: 상속 3-state 중 late·none 두 옵션 모두", () => {
+  /**
+   * 🔴 B1(상속) 이후 — 증여와 **대칭**이다. 상속도 §47의2·§47의3을 실제로 산출하므로
+   * 라디오 설명은 「미포함」이 아니라 **적용 세율·감면**을 밝힌다.
+   */
+  it("A5-1: 상속 3-state late·none 이 적용 세율·감면을 밝힌다", () => {
     const src = read("components/calc/inheritance/Step4Deductions.tsx");
-    // 기한후신고는 §48②2호 감면 대상이라는 사실까지 함께 밝힌다
-    expect(src).toContain("§48②2호 감면 대상");
-    const hits = src.match(/이 계산에 포함되지 않습니다/g) ?? [];
-    expect(hits.length, "late·none 두 옵션 모두에 있어야 한다").toBe(2);
+    expect(src).toContain("무신고가산세 20% (국세기본법 §47의2①2호)");
+    expect(src).toContain("§48②2호 감면(1개월 50% · 3개월 30% · 6개월 20%)");
+    expect(src).toContain("기한후신고가 아니므로 §48②2호 감면 대상이 아닙니다");
+    // ⛔ 산출해 놓고 「안 했다」고 말하면 안 된다
+    expect(src.match(/이 계산에 포함되지 않습니다/g) ?? []).toHaveLength(0);
   });
 });

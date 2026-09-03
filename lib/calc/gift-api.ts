@@ -16,6 +16,7 @@ import { deriveDonorRelation } from "@/components/calc/gift-tax-form-shared";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { getGiftFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import type { InheritanceGiftPenaltyInput } from "@/lib/tax-engine/inheritance-gift-penalty";
+import { buildFilingPenaltyInput } from "@/lib/calc/inheritance-gift-filing-penalty-input";
 import type {
   GiftTaxInput,
   GiftDeductionInput,
@@ -145,47 +146,15 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
 /**
  * 🔴 G-07 B1: 폼 3-state → 엔진 가산세 입력 (④ 지점).
  *
- * · `on_time` + 과소신고 아님 → 키 없음(종전 payload 보존)
- * · `on_time` + 과소신고 → §47의3 축 (당초 신고세액 · 적용제외)
- * · `late` → §47의2 + §48②2호 감면 (법정신고기한은 §68① 본문으로 파생)
- * · `none` → §47의2 (감면 없음 — 기한후신고가 아니다)
- *
- * ⚠️ **대상 밖 값은 보내지 않는다.** 3-state를 바꿔도 앞서 입력한 「당초 신고세액」·
- *    「기한후신고일」이 payload 로 새면 가산세 base·감면율이 조용히 움직인다
- *    (부동산 G-10과 같은 stale 누출).
+ * 게이팅 규칙 자체는 **상속과 공용**이다(`buildFilingPenaltyInput`). 이 함수가 하는 일은
+ * **증여 고유의 법정신고기한 파생**뿐 — §68① 「증여받은 날이 속하는 달의 말일부터 3개월」.
  */
 function buildFilingPenalty(form: FormState): { filingPenalty?: InheritanceGiftPenaltyInput } {
-  const status = form.filingStatus;
-
-  if (status === "on_time") {
-    if (!form.isUnderReported) return {};
-    return {
-      filingPenalty: {
-        filingStatus: "on_time",
-        isUnderReported: true,
-        originalFiledTax: parseAmount(form.originalFiledTax) || 0,
-        ...(form.underReportExclusion
-          ? { underReportExclusion: form.underReportExclusion }
-          : {}),
-      },
-    };
-  }
-
-  if (status === "late") {
-    return {
-      filingPenalty: {
-        filingStatus: "late",
-        // §68① 본문 — 증여받은 날이 속하는 달의 말일부터 3개월
-        ...(getGiftFilingDueDates(form.giftDate)?.filing
-          ? { statutoryDeadline: getGiftFilingDueDates(form.giftDate)!.filing }
-          : {}),
-        ...(form.lateFilingDate ? { actualFilingDate: form.lateFilingDate } : {}),
-        ...(form.priorAssessmentNotified ? { priorAssessmentNotified: true } : {}),
-      },
-    };
-  }
-
-  return { filingPenalty: { filingStatus: "none" } };
+  return buildFilingPenaltyInput(
+    form.filingStatus,
+    form,
+    getGiftFilingDueDates(form.giftDate)?.filing,
+  );
 }
 
 /**

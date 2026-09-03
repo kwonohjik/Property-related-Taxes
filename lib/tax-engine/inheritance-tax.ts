@@ -43,6 +43,7 @@ import {
 import { calcRelationDeduction } from "./deductions/gift-deductions";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
+import { calcInheritanceGiftFilingPenalty } from "./inheritance-gift-penalty";
 import { calcCulturalHeritageDeferral } from "./inheritance-cultural-heritage-deferral";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
@@ -789,6 +790,19 @@ export function calcInheritanceTax(
     allLaws.add(INH.CULTURAL_HERITAGE_DEFERRAL);
   }
 
+  // STEP 12.6: 🔴 G-07 B1 — 신고불성실가산세 (「국세기본법」 §47의2·§47의3).
+  //
+  //   ⭐ **신고 단위 1회**다 — 상속인별로 안분하지 않는다. §47의2①의 base 는 「그 신고로
+  //      납부하여야 할 세액」이고 상속세는 **1건의 신고**이므로, 가산세도 그 신고에 1회 붙는다.
+  //      ⇒ `inheritance-allocation.ts`(상속인별 배부표)는 건드리지 않는다.
+  //
+  //   🔑 `finalTax`(결정세액)는 **불변**이다 — 별지9호 ㉔ 축이고 연부연납·분납 base 다.
+  //      가산세는 별지9호 ㊱ 과 `totalPayableWithPenalty`(㊳)로만 나간다.
+  const filingPenaltyResult = calcInheritanceGiftFilingPenalty(
+    finalTax,
+    input.filingPenalty ?? { filingStatus: "on_time" },
+  );
+
   return {
     decedentType: input.decedentType, // M-17: 신고기한 §67④ 비거주자 9개월 표시용 echo
     grossEstateValue,
@@ -827,5 +841,13 @@ export function calcInheritanceTax(
     // §74 징수유예 (echo — finalTax 불변, 별지9호 ㉖·㊳)
     culturalHeritageDeferredTax: culturalHeritageDeferral.deferredTax,
     culturalHeritageDeferralDetail: culturalHeritageDeferral.detail ?? undefined,
+    // 🔴 G-07 B1 — 신고불성실가산세 (별지9호 ㊱). 입력이 없으면 0(종전 동작 보존).
+    underreportPenalty: filingPenaltyResult.filingPenalty,
+    ...(filingPenaltyResult.filingPenalty > 0 || filingPenaltyResult.exclusionApplied
+      ? { filingPenaltyDetail: filingPenaltyResult }
+      : {}),
+    ...(filingPenaltyResult.filingPenalty > 0
+      ? { totalPayableWithPenalty: finalTax + filingPenaltyResult.filingPenalty }
+      : {}),
   };
 }

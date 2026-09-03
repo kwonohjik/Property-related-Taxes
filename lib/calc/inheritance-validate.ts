@@ -645,6 +645,29 @@ export function validateInheritanceTaxInput(
     }
   }
 
+  /**
+   * ⑧ 🔴 G-07 B1 — 신고불성실가산세 축 필수 입력 (「국세기본법」 §47의2·§47의3).
+   *
+   * 미입력을 통과시키면 엔진이 **조용히 납세자에게 불리한 값**을 낸다 —
+   * 기한후신고일이 없으면 §48②2호 감면 구간을 가를 수 없어 감면율 0(가산세 전액)이 되고,
+   * 당초 신고세액이 없으면 §47의3① base 가 결정세액 전액이 되어 과대 산출된다.
+   * 「자동 안분 fallback 금지 — 미입력은 검증 오류로 차단」과 같은 층위다.
+   */
+  {
+    const fp = input.filingPenalty;
+    if (fp?.filingStatus === "late" && !fp.actualFilingDate) {
+      return "기한후신고일을 입력하세요. (국세기본법 §48②2호 감면 구간 판정에 필요)";
+    }
+    if (fp?.filingStatus === "on_time" && fp.isUnderReported) {
+      if (fp.originalFiledTax === undefined) {
+        return "당초 신고세액을 입력하세요. (국세기본법 §47의3① 「과소신고한 납부세액」 산정에 필요)";
+      }
+      if (fp.originalFiledTax < 0) {
+        return "당초 신고세액은 0원 이상이어야 합니다.";
+      }
+    }
+  }
+
   return null;
 }
 

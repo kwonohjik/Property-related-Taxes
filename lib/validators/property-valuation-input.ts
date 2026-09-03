@@ -455,6 +455,30 @@ export const inheritanceTaxCreditInputSchema = z.object({
 // 상속세 전체 입력 스키마
 // ============================================================
 
+/**
+ * 🔴 G-07 B1: 상속·증여 신고불성실가산세 입력 스키마 (국세기본법 §47의2·§47의3).
+ *
+ * · `on_time` — 과소신고 축(§47의3). `originalFiledTax`가 base 산정에 필요하다.
+ * · `late` — 무신고(§47의2) + §48②2호 감면. 기한·신고일로 구간을 가른다.
+ * · `none` — 무신고. 기한후신고가 아니므로 감면 없음.
+ */
+export const inheritanceGiftFilingPenaltySchema = z.object({
+  filingStatus: z.enum(["on_time", "late", "none"]),
+  statutoryDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
+  actualFilingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
+  priorAssessmentNotified: z.boolean().optional(),
+  isUnderReported: z.boolean().optional(),
+  originalFiledTax: z.number().int().nonnegative().optional(),
+  underReportExclusion: z
+    .enum([
+      "ownership_dispute",
+      "deduction_error",
+      "supplementary_valuation",
+      "corporate_adjustment",
+    ])
+    .optional(),
+});
+
 export const inheritanceTaxInputSchema = z.object({
   decedentType: z.enum(["resident", "non_resident"]),
   deathDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
@@ -487,6 +511,11 @@ export const inheritanceTaxInputSchema = z.object({
   isMinorHeir: z.boolean().optional(),
   generationSkipAssetAmount: z.number().nonnegative().optional(),
   appraisalFee: appraisalFeeSchema.optional(),
+  /**
+   * 🔴 G-07 B1: 신고불성실가산세 (국세기본법 §47의2·§47의3) — **신고 단위 1회**.
+   * 상속인별 안분 입력이 아니다(상속세는 1건의 신고).
+   */
+  filingPenalty: inheritanceGiftFilingPenaltySchema.optional(),
 });
 
 export type InheritanceTaxInputSchema = z.infer<typeof inheritanceTaxInputSchema>;
@@ -496,29 +525,6 @@ export type InheritanceTaxInputSchema = z.infer<typeof inheritanceTaxInputSchema
 // ============================================================
 
 
-/**
- * 🔴 G-07 B1: 상속·증여 신고불성실가산세 입력 스키마 (국세기본법 §47의2·§47의3).
- *
- * · `on_time` — 과소신고 축(§47의3). `originalFiledTax`가 base 산정에 필요하다.
- * · `late` — 무신고(§47의2) + §48②2호 감면. 기한·신고일로 구간을 가른다.
- * · `none` — 무신고. 기한후신고가 아니므로 감면 없음.
- */
-export const giftFilingPenaltySchema = z.object({
-  filingStatus: z.enum(["on_time", "late", "none"]),
-  statutoryDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
-  actualFilingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
-  priorAssessmentNotified: z.boolean().optional(),
-  isUnderReported: z.boolean().optional(),
-  originalFiledTax: z.number().int().nonnegative().optional(),
-  underReportExclusion: z
-    .enum([
-      "ownership_dispute",
-      "deduction_error",
-      "supplementary_valuation",
-      "corporate_adjustment",
-    ])
-    .optional(),
-});
 
 export const giftTaxInputSchema = z
   .object({
@@ -565,7 +571,7 @@ export const giftTaxInputSchema = z
      * ⚠️ 여기 없으면 Zod 가 조용히 strip 해 엔진에 도달하지 않는다(TypeScript 미감지).
      *    부동산 G-14가 정확히 이 층의 테스트 부재였다 — route 를 관통하는 anchor 필수.
      */
-    filingPenalty: giftFilingPenaltySchema.optional(),
+    filingPenalty: inheritanceGiftFilingPenaltySchema.optional(),
     valuationBaseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     appraisalFee: appraisalFeeSchema.optional(),
     // 분납 (§70②) — 별지10호 ㊼ 연동
