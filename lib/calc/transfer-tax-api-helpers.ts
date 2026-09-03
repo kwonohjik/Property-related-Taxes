@@ -118,6 +118,9 @@ export { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer
 // ─── ④ 상업용건물·오피스텔 환산취득가 (소령 §164⑥) — transfer-tax-api-commercial.ts로 분리 (800줄 정책, 재export 호환) ───
 export { buildCommercialAppurtenantLand } from "./transfer-tax-api-commercial";
 export { buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
+// ⑬ 컴패니언 payload에서 직접 호출한다 — 위 재수출은 호출부 호환용이라 이 파일 스코프엔 없다.
+import { buildCommercialAppurtenantLand } from "./transfer-tax-api-commercial";
+import { buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
 
 // ─── ④ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — transfer-tax-api-rental-housing.ts로 분리 (800줄 정책, 재export 호환) ───
 export { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
@@ -224,6 +227,27 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
      * 채무 4필드는 여기서 **원본(물건 전체)** 을 그대로 옮긴다 — 지분 안분은 ④
      * (`buildBurdenedGiftInfo`의 `debtScaleRatio`)가 자산별 지분율로 한 번만 적용한다.
      */
+    /**
+     * 상가(§101①·환산) 하위필드 — **물건 단위 값**이라 전 지분 공통이다 (축 B, 2026-09-03).
+     * 컴패니언 카드는 ① 기본정보를 숨기므로 병합하지 않으면 ④가 서브객체를 만들지 못해
+     * **그 지분만** 부수토지 초과 세율·환산을 잃는다(부담부증여 bg*와 같은 축).
+     */
+    cbTotalLandArea: primary.cbTotalLandArea,
+    cbTotalBuildingFootprintArea: primary.cbTotalBuildingFootprintArea,
+    cbZoneType: primary.cbZoneType,
+    cbUnapprovedBuilding: primary.cbUnapprovedBuilding,
+    cbLandArea: primary.cbLandArea,
+    cbExclusiveArea: primary.cbExclusiveArea,
+    cbSharedArea: primary.cbSharedArea,
+    cbUnitPriceAtTransfer: primary.cbUnitPriceAtTransfer,
+    cbUnitPriceAtFirstOrAcq: primary.cbUnitPriceAtFirstOrAcq,
+    cbLandPricePerSqmAtTransfer: primary.cbLandPricePerSqmAtTransfer,
+    cbLandPricePerSqmAtFirst: primary.cbLandPricePerSqmAtFirst,
+    cbBuildingStdPriceAtTransfer: primary.cbBuildingStdPriceAtTransfer,
+    cbBuildingStdPriceAtFirst: primary.cbBuildingStdPriceAtFirst,
+    cbBuildingStdPriceAtAcq: primary.cbBuildingStdPriceAtAcq,
+    cbPrevStdPriceSum: primary.cbPrevStdPriceSum,
+    cbStdPriceAdjustMonths: primary.cbStdPriceAdjustMonths,
     bgValuationMode: primary.bgValuationMode,
     bgDonorRelation: primary.bgDonorRelation,
     bgLendingDepositTotal: primary.bgLendingDepositTotal,
@@ -411,6 +435,18 @@ export function buildAssetPayload(
       ? parseAmount(asset.standardPriceAtTransfer)
       : replotIncStdAtTransfer;
 
+  /**
+   * ⑬ 상가 자산-수준 서브객체 — 컴패니언(다른 물건)·축 B 공통.
+   *
+   * 🔑 **둘 다 지분 스케일을 하지 않는다.**
+   * - `commercialAppurtenantLand`: 대지·바닥 **면적**(§101① 배율 판정)이라 물건 단위 사실이다.
+   *   지분으로 줄이면 초과분 판정 자체가 달라져 §104①8호 +10%p가 틀린다.
+   * - `commercialBuildingValuation`: 환산 기준시가는 분자·분모로 함께 나타나 **약분**된다
+   *   (재개발 권리가액 같은 절대금액 성분과 구별 — 판별 규칙은 계획서 참조).
+   */
+  const cbAppurtenantLand = buildCommercialAppurtenantLand(asset);
+  const cbValuation = buildCommercialBuildingValuation(asset, transferDate);
+
   // 감환지: acquisitionArea에 의제취득면적이 UI에서 이미 계산됨
   const effectiveLandArea = asset.acquisitionArea ? parseFloat(asset.acquisitionArea) : undefined;
 
@@ -552,6 +588,9 @@ export function buildAssetPayload(
      * 채무는 **이 자산의 지분율로 안분**해 보낸다(축 A와 반대 — 근거는 `buildBurdenedGiftInfo`).
      * 평가액·기준시가는 물건 전체 raw로 두고 엔진이 `ownershipRatio`로 줄인다.
      */
+    /** ⑬ 상가 서브객체 — 열거 누락 시 침묵 stripping이라 그 자산만 환산·부수토지 축을 잃는다. */
+    ...(cbAppurtenantLand !== undefined ? { commercialAppurtenantLand: cbAppurtenantLand } : {}),
+    ...(cbValuation !== undefined ? { commercialBuildingValuation: cbValuation } : {}),
     ...(asset.transferType === "burdened_gift"
       ? {
           // ⑬ 엔진 §159 게이트가 보는 값 — `burdenedGiftInfo`만으로는 발동하지 않는다.

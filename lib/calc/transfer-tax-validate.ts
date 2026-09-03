@@ -82,8 +82,16 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       } else if (
         // ✅ `general_building` 제외 (2026-08-10) — 지분별 토지·건물 카드를 만들어 aggregate 1회로
         //    계산하는 전용 경로가 생겼다(`app/api/calc/transfer/general-building-fractional.ts`).
-        //    상가·재개발은 그 경로가 없어 **계속 차단**한다.
-        primaryAsset.assetKind === "commercial_building" ||
+        //
+        // ✅ **`commercial_building` 제외 (2026-09-03)** — 전용 경로 없이 컴패니언 축으로 열렸다.
+        //    막고 있던 것은 「경로 부재」가 아니라 **⑩ enum 3종**(`housing|land|building`)이었다.
+        //    상가 서브객체 둘 다 **지분 스케일이 불요**해서(§101① 면적은 물건 단위 사실,
+        //    환산 기준시가는 분자·분모 약분) enum·⑫⑬⑭ 배관만으로 정합이 성립한다.
+        //    실측: 축 B 60/40 합계 세액 187,665,500 = 단건 100%와 완전 일치, 부수토지 초과
+        //    판정도 **양쪽 카드에서 발동**(부수토지 미입력 대조군과 819,500원 차 — 판별력 있음).
+        //
+        //    ⚠️ 재개발은 **계속 차단**한다 — §166 서브객체가 컴패니언에 없고, 청산금·권리가액이
+        //       **절대금액 성분**이라 지분 스케일이 필요하다(상가와 반대).
         primaryAsset.assetKind === "redevelopment_apt"
       ) {
         issues.push({ step, assetIndex: 0, message: "해당 자산 종류는 지분 분할 취득 계산을 지원하지 않습니다. 지분 분할 토글을 끄고 계산하세요." });

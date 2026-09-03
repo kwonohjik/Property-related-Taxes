@@ -97,16 +97,21 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
     /**
      * 🔑 **부정 단언에는 양성 대조군이 필요하다**
      * (메모리 `feedback_negative_assertion_needs_mutation_probe`).
-     * 상가·재개발은 계속 차단되어야 한다 — 「해제」가 전 자산종류로 번지지 않았음을 고정한다.
+     * 재개발은 계속 차단되어야 한다 — 「해제」가 전 자산종류로 번지지 않았음을 고정한다.
+     *
+     * 🔄 **상가는 2026-09-03에 해제됐다.** 막고 있던 것은 「전용 경로 부재」가 아니라
+     *    ⑩ 컴패니언 enum 3종이었고, 상가 서브객체 둘 다 지분 스케일이 불요라
+     *    배관만으로 정합이 성립했다(축 B 합계 = 단건 100%, 부수토지 판정 양쪽 발동).
+     *    정합은 `__tests__/calc/axis-b-commercial.anchor.test.ts`가 지킨다.
      */
-    it("상가(commercial_building)는 계속 차단된다", () => {
+    it("상가(commercial_building)는 **차단되지 않는다** (2026-09-03 개방)", () => {
       const msgs = messages(
         fractionalForm([
           { ...SHARE_A, assetKind: "commercial_building" } as AssetForm,
           { ...SHARE_B, assetKind: "commercial_building" } as AssetForm,
         ]),
       );
-      expect(msgs.some((m) => m.includes("해당 자산 종류는 지분 분할 취득"))).toBe(true);
+      expect(msgs.some((m) => m.includes("해당 자산 종류는 지분 분할 취득"))).toBe(false);
     });
 
     it("재개발(redevelopment_apt)은 계속 차단된다", () => {

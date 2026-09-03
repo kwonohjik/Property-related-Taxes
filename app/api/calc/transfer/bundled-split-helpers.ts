@@ -117,7 +117,7 @@ type CompanionSplitFields = Pick<
 interface CompanionRawAsset extends CompanionSplitFields {
   assetId: string;
   assetLabel?: string;
-  assetKind: "housing" | "land" | "building";
+  assetKind: "housing" | "land" | "building" | "commercial_building";
   acquisitionDate?: string;
   acquisitionCause: TransferTaxItemInput["acquisitionCause"];
   decedentAcquisitionDate?: string;
@@ -191,6 +191,8 @@ interface CompanionRawAsset extends CompanionSplitFields {
    *
    * ⑫(`companionAssetSchema`)의 파싱 결과를 **그대로** 받는다 — 인라인 타입으로 다시 적지 않는다.
    */
+  commercialAppurtenantLand?: z.infer<typeof companionAssetSchema>["commercialAppurtenantLand"];
+  commercialBuildingValuation?: z.infer<typeof companionAssetSchema>["commercialBuildingValuation"];
   burdenedGiftInfo?: z.infer<typeof companionAssetSchema>["burdenedGiftInfo"];
   /** ⑭ 양도 형태 — 엔진 §159 게이트가 보는 값. `burdenedGiftInfo`와 **짝**이다. */
   transferType?: z.infer<typeof companionAssetSchema>["transferType"];
@@ -285,8 +287,21 @@ export function buildCompanionEngineInputs(
   // companion 자체 수동 override 사용 (폼-수준 userModeOverride 제거됨).
   const effectiveOverride = c.manualHoldingPeriodOverride;
 
+  /**
+   * ⑭ 자산종류 → 엔진 `propertyType`.
+   *
+   * 🔴 **`commercial_building` 추가 (2026-09-03).** 종전 3항 삼항식은 상가를 **`land`로 접었다** —
+   *    ⑩ enum이 상가를 400으로 막고 있어 도달 자체가 없었지만, enum을 넓히는 순간
+   *    그 fold가 침묵 오산이 된다(상가 환산·§101① 부수토지 축이 통째로 land 취급).
+   */
   const propertyType: TransferTaxItemInput["propertyType"] =
-    c.assetKind === "housing" ? "housing" : c.assetKind === "building" ? "building" : "land";
+    c.assetKind === "housing"
+      ? "housing"
+      : c.assetKind === "building"
+        ? "building"
+        : c.assetKind === "commercial_building"
+          ? "commercial_building"
+          : "land";
 
   /**
    * ⑭ 분리취득 축 — ⑫가 통과시킨 필드를 **그대로** 엔진 모양으로 옮긴다.
@@ -363,6 +378,9 @@ export function buildCompanionEngineInputs(
     ownershipRatio: c.ownershipRatio,
     // ⑭ 부담부증여(소령 §159) — 축 B 컴패니언. 없으면 그 지분만 §159를 타지 않아
     //    양도차익이 「총계약가 × 지분율」로 남는다(실측 400,000,000 vs 정답 116,400,000).
+    // ⑭ 상가 서브객체 — 열거 누락 시 침묵 strip이라 그 자산만 §101①·환산을 잃는다.
+    commercialAppurtenantLand: c.commercialAppurtenantLand,
+    commercialBuildingValuation: c.commercialBuildingValuation,
     burdenedGiftInfo: c.burdenedGiftInfo,
     transferType: c.transferType,
     // 공익수용 §164⑨ 1호 환산 min[] 특례 — 컴패니언 자산 지원(계획 Q5).
@@ -459,7 +477,9 @@ export function buildCompanionEngineInputs(
       {
         assetId: c.assetId,
         assetLabel: c.assetLabel ?? "",
-        assetKind: c.assetKind,
+        // G-2 split은 **토지 컴패니언 전용**(진입조건 2 — 파일 헤더)이라 상가는 대상이 아니다.
+        // 접어 넘겨도 `assetKind === "land"` 게이트에서 그대로 빠진다.
+        assetKind: c.assetKind === "commercial_building" ? "building" : c.assetKind,
         areaM2: c.areaM2,
         manualHoldingPeriodOverride: effectiveOverride,
         landNature: c.landNature,
@@ -527,7 +547,7 @@ interface BundledPrimaryInput {
 interface BundledCompanionForApportion {
   assetId: string;
   assetLabel: string;
-  assetKind: "housing" | "land" | "building";
+  assetKind: "housing" | "land" | "building" | "commercial_building";
   acquisitionCause: TransferTaxItemInput["acquisitionCause"];
   useEstimatedAcquisition?: boolean;
   /** §97①1호나목 환산 분모(4.5 매매 estimated). 이월과세 general에서는 증여자 축 값이다. */
@@ -621,7 +641,13 @@ export function prepareBundledApportionment(
       (c, i): BundledAssetInput => ({
         assetId: c.assetId,
         assetLabel: c.assetLabel,
-        assetKind: c.assetKind,
+        /**
+         * §166⑥ **안분 축**은 3종뿐이다. 상가는 `building`으로 접는다 — 이 축에서
+         * `assetKind`는 라벨·표시용이고 안분 키는 **기준시가**라 결과가 달라지지 않는다.
+         * (primary도 위 `primaryAssetKind`에서 같은 fold를 한다.)
+         * ⚠️ 세율·환산이 걸리는 `propertyType` 축과 혼동 금지 — 그쪽은 접으면 오산이다.
+         */
+        assetKind: c.assetKind === "commercial_building" ? "building" : c.assetKind,
         // §166⑥ 안분 키 — 전용 필드 우선. 구필드 fallback은 전용 키를 모르는 직접 호출자 하위호환
         // (⑩ superRefine의 `apportionKey` 선택식과 **같은 식**이어야 한다 — 단일 기준).
         standardPriceAtTransfer:

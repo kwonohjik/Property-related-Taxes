@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
+import { commercialAppurtenantLandSchema } from "./transfer-tax-building-schemas";
+import { commercialBuildingValuationSchema } from "./transfer-tax-building-schemas";
 
 // ─── ⑩ 장기임대주택 거주주택 비과세 특례 enum 재export (컴패니언) ─
 
@@ -385,7 +387,25 @@ export const companionAssetSchema = z.object({
   ...splitAcquisitionShape,
   assetId: z.string().min(1),
   assetLabel: z.string().min(1),
-  assetKind: z.enum(["housing", "land", "building"]),
+  /**
+   * 🔄 **`commercial_building` 추가 (2026-09-03).** 종전 3종 enum은 컴패니언 상가를
+   * **400으로 죽였다** — ⑧ `SINGLE_ONLY`에는 상가가 없어 화면은 통과시키는데
+   * route가 「Invalid option」을 내는 **안내 없는 dead-end**였다(실측).
+   * 「상가는 차단하지 않는다」는 종전 주석은 **primary가 상가일 때만** 맞았다.
+   *
+   * ⚠️ 나머지 4종(`general_building`·`redevelopment_apt`·`right_to_move_in`·`presale_right`)은
+   *    여전히 빠져 있고 ⑧이 막는다. 열려면 각자의 서브객체(§166 등)를 함께 배관해야 한다 —
+   *    enum만 넓히면 침묵 오산이 된다(입주권·분양권은 `toEngineAssetKind`가 housing으로
+   *    접어 **200이 나오면서 틀린 값**이 되는 것이 그 실례다).
+   */
+  assetKind: z.enum(["housing", "land", "building", "commercial_building"]),
+  /**
+   * ⑫ 상가 부수토지 초과분(§101① 배율) — **물건 전체 면적**이라 지분·안분과 무관하다.
+   * 누락 시 §104①8호 +10%p 세율이 통째로 사라진다(primary 축에서 실측 이력).
+   */
+  commercialAppurtenantLand: commercialAppurtenantLandSchema.optional(),
+  /** ⑫ 상가 환산취득가(cb 기준시가) — 분자·분모로 약분되므로 지분 스케일 불요. */
+  commercialBuildingValuation: commercialBuildingValuationSchema.optional(),
   /**
    * 양도시점 기준시가 — **§97①1호나목 환산 분모**(매매 estimated·이월과세 general 환산).
    *
