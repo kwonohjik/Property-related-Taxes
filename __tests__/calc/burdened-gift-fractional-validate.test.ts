@@ -162,9 +162,14 @@ describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
       expect(blockMsg([mixed, other]).join()).toMatch(/겸용주택/);
     });
 
-    it("🔴 재개발 + 함께양도 → 차단", () => {
+    /**
+     * 🔄 **반전 (2026-09-03)** — 재개발APT 컴패니언이 열렸다. 장벽은 ⑩ enum(400)이었고,
+     * ⑫ `redevelopment` 서브객체를 함께 등록해 해소했다. 겸용주택·일반건물은 그대로 차단이다
+     * (각각 route 전용 분기 미실행 / 토지·건물 2파트 축 미배관).
+     */
+    it("✅ 재개발 + 함께양도 → 더는 차단되지 않는다", () => {
       const redev = { ...bg, transferType: "regular", assetKind: "redevelopment_apt" };
-      expect(blockMsg([redev, other]).join()).toMatch(/재개발/);
+      expect(blockMsg([redev, other]).join()).not.toMatch(/재개발/);
     });
 
     it("🔴 일반건물 + 함께양도 → 차단", () => {

@@ -212,33 +212,22 @@ describe("[A5] 함께양도 × 조합원입주권·분양권 — ⑧ 명시 차�
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("🔴 AC-1 (P2-01): 컴패니언 조합원입주권은 차단되어야 한다 — 현행은 통과", () => {
+  /**
+   * 🔄 **AC-1 반전 (2026-09-03) — 입주권도 개방으로 끝났다.**
+   *
+   * 이 anchor가 든 차단 사유는 「§166①·③·④·⑤가 한 필드도 도달하지 않는다」였다. 그것은
+   * **사실이었지만 원인이 두 층**이었다 — ④ `toEngineAssetKind`의 fold와 ⑫ 서브객체 부재.
+   * 두 층을 함께 열자 §166이 자산별로 도달한다(`buildRedevelopmentPayload`를 자산마다 호출).
+   *
+   * ⇒ 개방 후 계산 정합은 `__tests__/api/transfer.route.companion-redev-166.anchor.test.ts`가 본다.
+   */
+  it("✅ AC-1 (반전): 컴패니언 조합원입주권은 더는 차단되지 않는다", () => {
     const form = bundledForm({ assetKind: "right_to_move_in", ...REDEV_166_REQUIRED });
     const issues = collectStepIssues(0, form);
-
-    // 현행 실측: [] (통과) → 아래에서 실패한다.
-    expect(
-      issues.filter((i) => i.message.includes(BLOCK_TEMPLATE)),
-      "조합원입주권 컴패니언은 §166①·③·④·⑤가 한 필드도 도달하지 않으므로 차단해야 한다",
-    ).toHaveLength(1);
-    expect(issues).toHaveLength(1);
-    expect(issues[0].step).toBe(0);
+    expect(issues.filter((i) => i.message.includes(BLOCK_TEMPLATE))).toHaveLength(0);
+    expect(issues).toHaveLength(0);
   });
 
-  /**
-   * 🔄 **AC-2 반전 (2026-09-03) — 분양권은 차단이 아니라 개방으로 끝났다.**
-   *
-   * 이 anchor가 세운 「차단해야 한다」는 **fold를 전제**로 한 결론이었다. AC-5가 실증한 삼킴
-   * (§104①1호 60% · §95② 배제 · §163⑥4호 1%)은 **fold가 원인**이고, 그 fold를
-   * `toEngineAssetKind`에서 걷어내면 엔진이 `propertyType`만으로 셋을 전부 되살린다.
-   * 분양권에는 §166 같은 서브객체가 없어 **배관만으로 정합이 성립**한다.
-   *
-   * ⇒ 차단 대신 개방했다(⑩⑭ 확장 + fold 제거). 개방 후 계산 정합은
-   *   `__tests__/api/transfer.route.companion-presale-right.anchor.test.ts`가 본다.
-   *
-   * ⚠️ **AC-1(입주권)은 그대로 차단이다** — §166 서브객체가 컴패니언에 없어 fold만 걷어내면
-   *    §166 없이 계산돼 또 다른 오산이 된다. 두 자산의 차이가 여기서 갈린다.
-   */
   it("✅ AC-2 (반전): 컴패니언 분양권은 더는 차단되지 않는다", () => {
     const form = bundledForm({
       assetKind: "presale_right",
@@ -254,14 +243,16 @@ describe("[A5] 함께양도 × 조합원입주권·분양권 — ⑧ 명시 차�
     expect(issues).toHaveLength(0);
   });
 
-  it("✅ AC-3 (판별력): 형제 `redevelopment_apt`는 같은 픽스처에서 이미 차단된다", () => {
-    // AC-1과 **assetKind만 다른** 픽스처다. 여기가 녹색이어야 AC-1·AC-2의 빨간불이
-    // 「픽스처가 부실해서」가 아니라 **자산 종류 축의 비대칭** 때문임이 입증된다.
+  /**
+   * 🔄 **AC-3 반전 (2026-09-03).** 「형제 `redevelopment_apt`는 이미 차단된다」는 판별력이었으나,
+   * 재개발APT도 같은 날 함께 열렸다(장벽은 ⑩ enum 400 — 입주권의 fold와 **다른 층**이었다).
+   * 판별력은 아래 AC-3b(over-block 금지)와 AC-5(세율 차)가 계속 맡는다.
+   */
+  it("✅ AC-3 (반전): 형제 `redevelopment_apt`도 더는 차단되지 않는다", () => {
     const form = bundledForm({ assetKind: "redevelopment_apt", ...REDEV_166_REQUIRED });
     const issues = collectStepIssues(0, form);
-
-    expect(issues.filter((i) => i.message.includes(BLOCK_TEMPLATE))).toHaveLength(1);
-    expect(issues).toHaveLength(1);
+    expect(issues.filter((i) => i.message.includes(BLOCK_TEMPLATE))).toHaveLength(0);
+    expect(issues).toHaveLength(0);
   });
 
   it("✅ AC-3b (over-block 금지): 순수 주택 컴패니언은 계속 통과한다", () => {
@@ -271,7 +262,14 @@ describe("[A5] 함께양도 × 조합원입주권·분양권 — ⑧ 명시 차�
     expect(collectStepIssues(0, form)).toEqual([]);
   });
 
-  it("✅ AC-4 (왜 막는가 · route): 입주권 컴패니언 응답이 순수 주택 응답과 **바이트 동일**", async () => {
+  /**
+   * 🔄 **AC-4 반전 (2026-09-03) — 「바이트 동일」의 반대가 이제 판별력이다.**
+   *
+   * 종전에는 §166 입력을 다 채운 입주권 컴패니언과 **하나도 안 넣은 순수 주택**의 응답이
+   * `JSON.stringify` 바이트 단위로 같았다. 그것이 fold + ⑫ 부재의 실증이었다.
+   * 개방 후에는 **달라져야 한다** — 같으면 배관 어딘가가 다시 침묵 strip하고 있다는 뜻이다.
+   */
+  it("✅ AC-4 (반전): 입주권 컴패니언 응답이 순수 주택과 **더는 같지 않다**", async () => {
     const rightForm = bundledForm({ assetKind: "right_to_move_in", ...REDEV_166_REQUIRED });
     const plainForm = bundledForm({ assetKind: "housing", useEstimatedAcquisition: false });
 
@@ -279,19 +277,10 @@ describe("[A5] 함께양도 × 조합원입주권·분양권 — ⑧ 명시 차�
     const plainBody = await captureBody(plainForm);
 
     const companion = (rightBody.companionAssets as Array<Record<string, unknown>>)[0];
-    // ④가 자산 종류를 접는다 — ⑫ `companionAssetSchema`의 enum이 housing|land|building뿐이다.
-    expect(companion.assetKind).toBe("housing");
-    // §166 입력은 화면에 그대로 있는데 payload에는 흔적이 없다.
-    expect(
-      Object.keys(companion).filter((k) => /redev|rightsValue|settlement|approval/i.test(k)),
-      "컴패니언 payload에 §166 계열 키가 하나도 없다",
-    ).toEqual([]);
-    expect(rightBody.redevelopment, "top-level §166 서브객체도 생성되지 않는다").toBeUndefined();
-
-    // 유일한 차이는 no-op인 `transferCause:"general"`(공익수용 §164⑨ 게이트) 한 키뿐이다.
-    delete companion.transferCause;
-    delete (plainBody.companionAssets as Array<Record<string, unknown>>)[0].transferCause;
-    expect(JSON.stringify(rightBody)).toBe(JSON.stringify(plainBody));
+    // ④는 더는 접지 않는다.
+    expect(companion.assetKind).toBe("right_to_move_in");
+    // ⑫ 서브객체가 실려 나간다 — 종전에는 §166 계열 키가 하나도 없었다.
+    expect(companion.redevelopment, "⑬ emit 또는 ⑫ 등록 누락 — 침묵 strip 재발").toBeDefined();
 
     const rightRes = await POST(req(rightBody));
     const plainRes = await POST(req(plainBody));
@@ -299,21 +288,14 @@ describe("[A5] 함께양도 × 조합원입주권·분양권 — ⑧ 명시 차�
     const [rightJson, plainJson] = [await rightRes.json(), await plainRes.json()];
     expect(
       JSON.stringify(rightJson),
-      "🔴 §166 입력을 다 채운 입주권 컴패니언과 하나도 안 넣은 순수 주택의 응답이 동일하다",
-    ).toBe(JSON.stringify(plainJson));
+      "🔴 §166 입력이 응답을 전혀 바꾸지 못한다 — 배관 어딘가가 다시 strip하고 있다",
+    ).not.toBe(JSON.stringify(plainJson));
 
-    // 산출근거도 §166이 아니라 순수 주택 산식이다 — 「소득세법 시행령」 제166조 제5항 제1호는
-    // 인가전양도차익의 LTHD 보유기간을 취득일~인가일(2010-05-05 ~ 2018-06-20)로 한정하는데,
-    // 현행은 전체 양도차익에 양도일까지의 14년치(28%)를 적용한다.
+    // 산출근거에 §166이 실린다 — 종전에는 결과 어디에도 「166」이 없었다.
     const companionResult = rightJson.data.aggregated.properties.find(
       (p: { propertyId: string }) => p.propertyId === "companion-fixed",
     );
-    expect(companionResult.transferGain).toBe(500_000_000);
-    expect(companionResult.longTermHoldingDeduction).toBe(140_000_000);
-    expect(
-      JSON.stringify(companionResult).includes("166"),
-      "결과 어디에도 §166 근거가 없다",
-    ).toBe(false);
+    expect(companionResult.redevelopmentDetail, "§166 산출물 부재").toBeDefined();
   });
 
   it("✅ AC-5 (왜 막는가 · 세율): 단건 route에서 분양권과 주택은 세액이 다르다", async () => {

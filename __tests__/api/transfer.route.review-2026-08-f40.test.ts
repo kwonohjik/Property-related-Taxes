@@ -342,8 +342,10 @@ describe("F40 — 컴패니언 §164⑨ 특례 배관 (④ transferCause emit + 
   it("F40-6: 조합원입주권은 §164⑨ **미대상** — 게이트를 넓혀도 새지 않는다", () => {
     // 조합원입주권은 법 §99①**2호**(부동산을 취득할 수 있는 권리)이고 §164⑨은 1호 가~라목 전용이다
     // (`lib/tax-engine/expropriation-scope.ts` — 「여기에 추가하면 §164⑨ 오적용, 절대 금지」).
-    // ⚠️ payload의 `assetKind`는 `toEngineAssetKind`가 "housing"으로 접어 보내므로 **엔진 축만 보면
-    //    구분이 사라진다** — 차단은 ④에서 `AssetForm.assetKind` 축으로 해야 한다.
+    // 🔄 **2026-09-03**: 종전에는 `toEngineAssetKind`가 입주권을 "housing"으로 접어 보내
+    //    「엔진 축에서는 구분이 사라진다」가 이 테스트의 전제였다. 컴패니언 §166 개방으로
+    //    fold를 걷어내 자산 종류가 그대로 나간다 — **그래도 §164⑨은 새면 안 된다**는 것이
+    //    이 테스트의 본론이고, 그 단언(아래 8키)은 그대로다.
     const rightToMoveIn = {
       ...makeDefaultAsset(2),
       assetKind: "right_to_move_in" as const,
@@ -362,7 +364,7 @@ describe("F40 — 컴패니언 §164⑨ 특례 배관 (④ transferCause emit + 
       unknown
     >;
 
-    expect(payload.assetKind).toBe("housing"); // 엔진 축에서는 구분이 사라진다는 사실 자체를 고정
+    expect(payload.assetKind).toBe("right_to_move_in"); // fold 제거 후 자산 종류가 보존된다
     for (const key of [
       "transferCause",
       "standardPricePerSqmAtTransfer",

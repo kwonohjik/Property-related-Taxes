@@ -64,7 +64,7 @@ primary=분양권으로 축 B(지분 분할)를 돌리면 ⑧은 막지만 route
 | 배치 | 대상 | 장벽 | 상태 |
 |---|---|---|---|
 | **1** | 분양권 | ④ fold (+⑩⑭) · **서브객체 0** | ✅ 완료 |
-| 2 | 입주권 + 재개발APT | fold/enum + **§166 서브객체** | 착수 예정 |
+| **2** | 입주권 + 재개발APT | fold/enum + **§166 서브객체** | ✅ 완료 |
 | 3 | 일반건물 | ⑩ enum + 토지·건물 2파트 | 착수 예정 |
 | 4 | 겸용주택 | route 5-a-2 분기 미실행 | 착수 예정 |
 
@@ -129,3 +129,73 @@ primary=분양권으로 축 B(지분 분할)를 돌리면 ⑧은 막지만 route
 `companion-redev-rights-single-only.anchor.test.ts`의 **AC-2**가 「분양권은 차단되어야 한다」를
 단언하고 있었다. 그 anchor가 근거로 든 삼킴(AC-5 — 60%·§95②·§163⑥4호)은 **fold가 원인**이고,
 fold를 걷어내면 셋 다 되살아난다 ⇒ 차단이 아니라 개방으로 종결했다. **AC-1(입주권)은 유지**한다.
+
+---
+
+## 3. 배치 2 — 입주권 + 재개발APT ✅
+
+### 3.1 같은 §166 자산인데 장벽이 서로 달랐다
+
+| 컴패니언 | ④ payload | route |
+|---|---|---|
+| **입주권** | `toEngineAssetKind`가 **housing으로 fold** | 200 · §166 없이 주택으로 계산 |
+| **재개발APT** | `redevelopment_apt` 유지 | **400** — ⑩ enum 부재 |
+
+한쪽은 접혀서 통과하고 한쪽은 튕겼다. 그래서 **한 배치로 묶었다** — 어느 한쪽만 열면
+나머지가 같은 서브객체를 기다리며 남는다.
+
+### 3.2 왜 배관만으로 되는가
+
+`buildRedevelopmentPayload(asset, ownershipRatio)`가 **이미 존재**하고 절대금액 성분
+(권리가액·필요경비)의 지분 스케일까지 처리한다(축 A에서 구현). 컴패니언은 **각 자산이 자기
+물건의 100%**라 스케일 자체가 불요하다 ⇒ 자산별로 같은 빌더를 부르면 된다.
+
+> ⚠️ 종전 기록은 재개발 차단 사유를 「청산금·권리가액이 절대금액 성분이라 지분 스케일이
+> 필요하다(상가와 반대)」로 적었다. 그것은 **축 B(지분 분할)의 사유**이고 이미 빌더가 풀어
+> 두었다. 컴패니언 축에는 애초에 해당하지 않는다.
+
+### 3.3 변경 (14 동기화 지점)
+
+| 지점 | 파일 | 변경 |
+|---|---|---|
+| ⑩ | `transfer-tax-schema-sub.ts` | enum에 `right_to_move_in`·`redevelopment_apt` |
+| ⑫ | 〃 | `redevelopment: redevelopmentSchema` — **primary와 같은 스키마 재사용**(refine 4종 포함) |
+| ④ | `transfer-tax-api-helpers.ts` | `toEngineAssetKind` **삭제** — fold가 항등이 되어 고아가 됐다 |
+| ⑬ | 〃 | 자산별 `buildRedevelopmentPayload(asset)` emit |
+| ⑭ | `bundled-split-helpers.ts` | union·`propertyType` 매핑·서브객체 전달·안분 fold |
+| ⑭ | `engine-input.ts` | **Date 변환 단일 leaf `toEngineRedevelopment` 추출** |
+| ⑧ | `transfer-tax-validate.ts` | `SINGLE_ONLY`에서 2종 제거 |
+
+### 3.4 Date 변환은 복제하지 않고 leaf로 뽑았다
+
+`RedevelopmentInfo`의 `Date` 필드는 **정확히 5개**다(타입 전수 확인 — `approvalDate` ·
+`settlementSaleDate` · `firstDisclosureDate` · `completionDate` · `otherHouseAcquisitionDate`).
+단건 경로에 인라인돼 있던 변환을 `toEngineRedevelopment`로 뽑아 컴패니언이 **같은 leaf**를
+쓴다. 복제하면 한쪽만 필드가 늘어 그 경로에서만 `Date < string` silent false가 난다.
+
+### 3.5 뮤테이션 5축 전부 RED
+
+| 되돌린 층 | 결과 |
+|---|---|
+| ⑩ enum에서 2종 제거 | 4 failed |
+| ⑫ `redevelopment` 서브객체 제거 | 2 failed |
+| ⑬ emit 제거 | 4 failed |
+| ⑭ `propertyType` 매핑 제거 | 2 failed |
+| ⑭ 서브객체 전달 제거 | 2 failed |
+
+### 3.6 stale 단언 4건 반전 — 「바이트 동일」이 판별력으로 뒤집혔다
+
+| 파일 | 종전 단언 | 반전 |
+|---|---|---|
+| `companion-redev-rights-single-only` AC-1·AC-3 | 입주권·재개발 차단 | 개방 |
+| 〃 **AC-4** | 입주권 컴패니언 응답이 순수 주택과 **바이트 동일** | **더는 같지 않다** |
+| `transfer.route.review-2026-08-f40` F40-6 | payload `assetKind === "housing"`(fold) | `right_to_move_in` 보존 |
+| `burdened-gift-fractional-validate` | 재개발 + 함께양도 차단 | 개방 |
+| `gb-fractional-validate.predo` GBF-21 | 「겸용주택·재개발 차단 그대로」 | 재개발 개방 + **겸용주택 전용 항목 신설** |
+
+> 🔑 AC-4의 반전이 이 배치에서 가장 센 안전망이다. 종전에는 §166 입력을 **다 채운** 입주권과
+> **하나도 안 넣은** 순수 주택의 응답이 `JSON.stringify` 바이트 단위로 같았다. 개방 후에는
+> 달라야 하고, 같아지면 배관 어딘가가 다시 침묵 strip한다는 뜻이다.
+
+> ⚠️ GBF-21은 재개발을 반전하면서 **겸용주택 차단을 보는 항목을 새로 뒀다** — 원래 그 항목이
+> 두 자산을 함께 보고 있어, 반전만 하면 겸용주택 축의 안전망이 조용히 사라진다.

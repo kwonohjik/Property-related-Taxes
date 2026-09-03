@@ -375,7 +375,7 @@ export function buildTransferEngineInput(
     // ⑭ 일반건물 환산취득가 (TypeScript 미감지). ⑭ 부담부증여 §159 — Date 변환 없음.
     ...(data.burdenedGiftInfo ? { burdenedGiftInfo: data.burdenedGiftInfo } : {}),
     // ⑭ 재개발/재건축 (시행령 §166) — Date 4개 변환 (approvalDate/settlementSaleDate/firstDisclosureDate/completionDate)
-    ...(data.redevelopment ? { redevelopment: { ...data.redevelopment, approvalDate: new Date(data.redevelopment.approvalDate), settlementSaleDate: toOptionalDate(data.redevelopment.settlementSaleDate), firstDisclosureDate: toOptionalDate(data.redevelopment.firstDisclosureDate), completionDate: toOptionalDate(data.redevelopment.completionDate), otherHouseAcquisitionDate: toOptionalDate(data.redevelopment.otherHouseAcquisitionDate) } } : {}),
+    ...(data.redevelopment ? { redevelopment: toEngineRedevelopment(data.redevelopment) } : {}),
     // ⑭ Phase 2 (2026-05-12): transferType 패스스루 — 양도 형태 (양도자 관점)
     // "burdened_gift" 시 엔진 §159 분기 활성. 미지정 시 "regular" 자동 보정.
     ...(data.transferType !== undefined ? { transferType: data.transferType } : {}),
@@ -399,5 +399,29 @@ export function buildTransferEngineInput(
         },
       };
     })() : {}),
+  };
+}
+
+/**
+ * ⑭ 시행령 §166 서브객체의 **Date 변환 단일 소스** — 단건·컴패니언이 함께 쓴다.
+ *
+ * `RedevelopmentInfo`에서 `Date` 타입인 필드는 **정확히 5개**다(타입 전수 확인:
+ * `approvalDate` · `settlementSaleDate` · `firstDisclosureDate` · `completionDate` ·
+ * `otherHouseAcquisitionDate`). 거주기간 4필드는 표시용 pass-through라 문자열 그대로 둔다.
+ *
+ * 🔑 컴패니언 경로(`bundled-split-helpers.ts`)가 이 함수를 부른다. 변환을 복제하면
+ *    한쪽만 필드가 늘어 **그 경로에서만 `Date < string` silent false**가 난다 —
+ *    이 저장소가 `lib/api/date-coerce.ts`를 둔 이유와 같은 실패 모드다.
+ */
+export function toEngineRedevelopment(
+  redev: NonNullable<z.infer<typeof propertySchema>["redevelopment"]>,
+) {
+  return {
+    ...redev,
+    approvalDate: toDate(redev.approvalDate, "redevelopment.approvalDate"),
+    settlementSaleDate: toOptionalDate(redev.settlementSaleDate),
+    firstDisclosureDate: toOptionalDate(redev.firstDisclosureDate),
+    completionDate: toOptionalDate(redev.completionDate),
+    otherHouseAcquisitionDate: toOptionalDate(redev.otherHouseAcquisitionDate),
   };
 }
