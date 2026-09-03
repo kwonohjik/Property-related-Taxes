@@ -291,6 +291,16 @@ export interface TransferFormData {
    * 빈 문자열이면 **전액을 부정행위분**으로 본다(종전 동작). 무신고에는 이 분해가 없다.
    */
   fraudulentPortion: string;
+  /**
+   * 「결정할 것을 미리 알고」 기한 후 신고 — 「국세기본법」 §48②2호·§48②3호라목 **배제 단서**.
+   *
+   * 🔴 G-05. 무신고(`filingType === "none"`)에서만 노출된다. 기본 false(=감면 적용) —
+   * 기한 후 신고는 법이 감면을 예정한 상태이고, 배제는 예외이기 때문이다.
+   * 수정신고 축의 `priorAssessmentNotified`(§48②**1호**)와 **다른 필드**다 — 두 축은
+   * `amendmentMode` 로 배타이고, 한 필드를 공유하면 모드를 오갈 때 stale 값이 새 축의
+   * 감면을 조용히 꺼 버린다.
+   */
+  lateFilingNotified: boolean;
   unpaidTax: string;
   paymentDeadline: string;
   actualPaymentDate: string;
@@ -415,6 +425,7 @@ const defaultFormData: TransferFormData = {
   excessRefundAmount: "0",
   interestSurcharge: "0",
   fraudulentPortion: "",   // 빈값 = 전액 부정(종전 동작)
+  lateFilingNotified: false, // 기본 = 감면 적용(§48②2호·3호라목). 배제는 예외다.
   unpaidTax: "0",
   paymentDeadline: "",
   actualPaymentDate: "",

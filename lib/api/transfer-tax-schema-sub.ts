@@ -308,6 +308,21 @@ export const filingPenaltyDetailsSchema = z.object({
   fraudulentPortion: z.number().int().nonnegative().optional(),
   filingType:        z.enum(["none", "under", "excess_refund", "correct"]),
   penaltyReason:     z.enum(["normal", "fraudulent", "offshore_fraud"]),
+  /**
+   * 🔴 G-05 ⑫ — 기한 후 신고 감면 축(「국세기본법」 §48②2호·§48②3호라목).
+   *
+   * ⚠️ **이 층은 TypeScript 가 못 잡는다.** 여기에 키가 없으면 ④가 실어 보내도 Zod 가
+   *    조용히 stripping 하고 엔진에 닿지 않는다(리뷰 G-14 가 정확히 이 층의 공백이었다).
+   *
+   * 날짜는 **ISO 문자열**로 받는다 — 공용 leaf `late-filing-reduction.ts` 가
+   * `parseISO` 로 파싱하는 계약이라 `new Date(문자열)` 금지 규약과 충돌하지 않는다.
+   */
+  lateFiling: z.object({
+    statutoryDeadline:       z.string().date(),
+    actualFilingDate:        z.string().date(),
+    finalReturnDeadline:     z.string().date().optional(),
+    priorAssessmentNotified: z.boolean().optional(),
+  }).optional(),
 });
 
 export const delayedPaymentDetailsSchema = z.object({

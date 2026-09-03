@@ -151,6 +151,8 @@ const MODULES: ReadonlyArray<{
       // 🔴 G-07 B1 — 기한후신고 무신고가산세 감면 (국세기본법 §48②2호·§48②3호라목)
       "LATE_FILING_45_3", "LATE_FILING_REDUCTION_48_2_2",
       "LATE_FILING_REDUCTION_48_2_2_TABLE",
+      // 🔴 G-05 — §48②3호라목(예정신고 무신고 → 확정신고기한 이내 기한후신고 일률 50%)
+      "LATE_FILING_REDUCTION_48_2_3_RA", "LATE_FILING_REDUCTION_48_2_3_RA_RATE",
     ],
   },
 ];

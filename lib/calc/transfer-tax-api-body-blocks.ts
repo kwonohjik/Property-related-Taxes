@@ -9,6 +9,38 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
+import { getFilingDeadline, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
+import { deriveStatutoryDeadline } from "@/lib/calc/transfer-amendment-helpers";
+
+/**
+ * ④⑬ 기한 후 신고 감면 축 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05)
+ *
+ * **무신고(§47의2)에만 싣는다.** 두 조문 모두 「제47조의2에 따른 가산세만 해당」이고,
+ * 과소신고는 §48②**1호**(수정신고 — `amendment` 블록)가 담당한다.
+ *
+ * 세 날짜는 모두 **이미 있는 폼 값에서 파생**한다(신규 입력은 배제 토글 하나뿐):
+ *   · 법정신고기한 = 예정신고기한 `getFilingDeadline` (소득세법 §105①1호·3호)
+ *   · 실제 신고일  = `form.filingDate`
+ *   · 확정신고기한 = `deriveStatutoryDeadline` (소득세법 §110① — 다음 해 5월 31일)
+ *
+ * 🔑 파생을 새로 짜지 않고 **기존 두 헬퍼를 그대로 재사용**한다 — `derivePenaltyFields`
+ *    (양도일·신고일 자동 전이)·수정신고 경로와 같은 단일 소스라야 화면이 말하는 기한과
+ *    payload 의 기한이 갈리지 않는다.
+ *
+ * 🔑 **단건과 다건이 같은 함수를 부른다.** 리뷰 G-11 이 정확히 「단건 빌더는 싣는데 다건
+ *    빌더만 빠뜨린」 결함이었다 — 같은 규칙을 두 번 쓰지 않는다.
+ */
+export function buildLateFilingPayload(form: TransferFormData): object {
+  if (form.filingType !== "none" || !form.transferDate || !form.filingDate) return {};
+  return {
+    lateFiling: {
+      statutoryDeadline: getFilingDeadline(form.transferDate, isAllBurdenedGift(form.assets)),
+      actualFilingDate: form.filingDate,
+      finalReturnDeadline: deriveStatutoryDeadline(form.transferDate),
+      priorAssessmentNotified: form.lateFilingNotified ?? false,
+    },
+  };
+}
 
 /** ④⑬ §155⑤ 일시적 2주택 · §155⑧ 수도권 밖 부득이 · §155⑦ 농어촌주택 (FLAT → nested) */
 export function buildHouseholdSpecialPayload(form: TransferFormData, primary: AssetForm): object {
@@ -122,6 +154,7 @@ export function buildPenaltyAmendmentPayload(form: TransferFormData): object {
             : {}),
           filingType: form.filingType,
           penaltyReason: form.penaltyReason,
+          ...buildLateFilingPayload(form),
         },
       }
     : {}),

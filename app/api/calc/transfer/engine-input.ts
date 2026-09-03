@@ -325,6 +325,11 @@ export function buildTransferEngineInput(
       replottingConfirmDate: p.replottingConfirmDate ? new Date(p.replottingConfirmDate) : undefined,
     })),
     // 신고불성실·지연납부 가산세 (선택)
+    //
+    // 🔴 G-05 ⑭ — `lateFiling` 은 이 spread 를 타고 그대로 엔진에 닿는다. 날짜를 여기서
+    //    `new Date()` 로 바꾸지 않는 것이 **의도**다: 공용 leaf `late-filing-reduction.ts`
+    //    가 `parseISO` 로 받는 계약이고, 저장소는 `new Date(문자열)` 직접 호출을 금지한다
+    //    (`lib/api/date-coerce.ts` 정책 — JSON 경유 후 `Date < string` silent false 함정).
     filingPenaltyDetails: data.filingPenaltyDetails
       ? { ...data.filingPenaltyDetails }
       : undefined,

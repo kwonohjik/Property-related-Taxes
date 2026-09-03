@@ -12,7 +12,7 @@ import { toEngineReductions, toSelfCultivatedExpropriatedLand, toRentalHousingEx
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
-import { buildHouseholdSpecialPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
+import { buildHouseholdSpecialPayload, buildLateFilingPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
@@ -300,6 +300,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
               : {}),
             filingType: form.filingType,
             penaltyReason: form.penaltyReason,
+            // 🔴 G-05 — 단건과 **같은 빌더**를 쓴다(G-11 재발 방지).
+            ...buildLateFilingPayload(form),
           },
         }
       : {}),

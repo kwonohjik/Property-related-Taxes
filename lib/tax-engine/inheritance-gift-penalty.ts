@@ -28,14 +28,8 @@
  * @see docs/00-pm/inheritance-gift-penalty-g07.plan.md §8
  */
 
-import { addMonths, isAfter, parseISO } from "date-fns";
-import {
-  LATE_FILING_REDUCTION_48_2_2_TABLE,
-  LATE_FILING_REDUCTION_48_2_2,
-  LATE_FILING_45_3,
-} from "./legal-codes/common";
 import { calculateFilingPenalty, type PenaltyStep } from "./transfer-tax-penalty";
-import { applyRateFraction } from "./tax-utils";
+import { resolveLateFilingReduction } from "./late-filing-reduction";
 
 /** 신고 상태 — 「기한까지 신고했는가·언제」 축 */
 export type InheritanceGiftFilingStatus =
@@ -124,21 +118,21 @@ const ZERO: InheritanceGiftPenaltyResult = {
  *
  * ⚠️ §48②**1호**(수정신고 90/75/50/30/20/10%)와 **표가 다르다**. 혼용하면 기한후신고에
  *    90%가 붙는다. 기한·신고일이 없으면 0(방어적 — ⑧ validate가 사전 차단한다).
+ *
+ * 🔑 산식은 세목 중립 leaf `late-filing-reduction.ts` **단일 소스**다(G-05에서 양도세와
+ *    공용으로 뽑았다). 상속·증여는 예정신고 제도가 없으므로 §48②3호라목 축인
+ *    `finalReturnDeadline` 을 **넘기지 않는다** — 넘기면 일률 50%가 잘못 붙는다.
  */
 export function resolveLateFilingReductionRate(
   deadline: string | undefined,
   filingDate: string | undefined,
   notified: boolean | undefined,
 ): number {
-  if (notified) return 0;
-  if (!deadline || !filingDate) return 0;
-  const dl = parseISO(deadline);
-  const fd = parseISO(filingDate);
-  if (isNaN(dl.getTime()) || isNaN(fd.getTime())) return 0;
-  for (const { maxMonths, rate } of LATE_FILING_REDUCTION_48_2_2_TABLE) {
-    if (!isAfter(fd, addMonths(dl, maxMonths))) return rate;
-  }
-  return 0; // 6개월 초과
+  return resolveLateFilingReduction({
+    statutoryDeadline: deadline,
+    actualFilingDate: filingDate,
+    priorAssessmentNotified: notified,
+  }).rate;
 }
 
 /**
@@ -212,43 +206,28 @@ export function calcInheritanceGiftFilingPenalty(
     interestSurcharge: 0,
     filingType: "none",
     penaltyReason: "normal",
+    // 🔑 §48②2호 감면은 **기한후신고(§45의3)** 에만 붙는다 — 순수 무신고(`"none"`)는
+    //    기한 후 신고를 한 것이 아니므로 축 자체를 넘기지 않는다.
+    //    `finalReturnDeadline` 도 넘기지 않는다 — 상속·증여에는 예정신고가 없어
+    //    §48②3호라목이 성립하지 않는다(공용 leaf 계약).
+    lateFiling:
+      input.filingStatus === "late"
+        ? {
+            statutoryDeadline: input.statutoryDeadline,
+            actualFilingDate: input.actualFilingDate,
+            priorAssessmentNotified: input.priorAssessmentNotified,
+          }
+        : undefined,
   });
 
-  const reductionRate =
-    input.filingStatus === "late"
-      ? resolveLateFilingReductionRate(
-          input.statutoryDeadline,
-          input.actualFilingDate,
-          input.priorAssessmentNotified,
-        )
-      : 0; // 무신고는 기한후신고가 아니므로 §48②2호 대상이 아니다
-
-  // 정수 분수 연산 — 0.5·0.3·0.2 를 그대로 곱하면 부동소수 오차로 1원이 어긋난다.
-  const reductionAmount = applyRateFraction(
-    r.filingPenalty,
-    Math.round(reductionRate * 100),
-    100,
-  );
-  const filingPenalty = Math.max(0, r.filingPenalty - reductionAmount);
-
-  const steps: PenaltyStep[] = [...r.steps];
-  if (reductionRate > 0) {
-    steps.push({
-      label: `기한후신고 감면 (${Math.round(reductionRate * 100)}%)`,
-      formula: `${r.filingPenalty.toLocaleString()} × ${Math.round(reductionRate * 100)}%`,
-      amount: -reductionAmount,
-      legalBasis: `${LATE_FILING_REDUCTION_48_2_2} (${LATE_FILING_45_3})`,
-    });
-  }
-
   return {
-    filingPenalty,
+    filingPenalty: r.filingPenalty,
     penaltyBase: r.penaltyBase,
     penaltyRate: r.penaltyRate,
-    grossPenalty: r.filingPenalty,
-    reductionRate,
-    reductionAmount,
-    ruleRef: filingPenalty > 0 ? r.legalBasis : "",
-    steps,
+    grossPenalty: r.grossFilingPenalty,
+    reductionRate: r.lateFilingReductionRate,
+    reductionAmount: r.lateFilingReductionAmount,
+    ruleRef: r.filingPenalty > 0 ? r.legalBasis : "",
+    steps: r.steps,
   };
 }

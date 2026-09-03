@@ -110,6 +110,26 @@ export function Step6({
                   hint="예정신고 시 기납부한 세액"
                 />
 
+                {/*
+                  🔴 G-05 — 기한 후 신고 감면(「국세기본법」 §48②2호·§48②3호라목).
+
+                  감면율 자체는 **날짜에서 파생**한다(예정신고기한 §105① · 신고일 ·
+                  확정신고기한 §110①) — 사용자가 고르는 것이 아니다. 여기서 받는 것은
+                  두 조문 공통의 **배제 단서** 하나뿐이다.
+
+                  ⚠️ 무신고(§47조의2)에만 노출한다 — 두 조문 모두 「제47조의2에 따른
+                     가산세만 해당」이고, 과소신고는 §48②1호(수정신고)가 담당한다.
+                */}
+                {form.filingType === "none" && (
+                  <ToggleCard
+                    checked={form.lateFilingNotified ?? false}
+                    onCheckedChange={(v) => onChange({ lateFilingNotified: v })}
+                    title="세무서 결정 예고 후 기한 후 신고"
+                    description="결정할 것을 미리 알고 신고한 경우 국세기본법 §48②2호·3호라목 감면 배제"
+                    tone="rose"
+                  />
+                )}
+
                 {(form.filingType === "under" || form.filingType === "excess_refund") && (
                   <CurrencyInput
                     label="당초 신고세액"
