@@ -379,6 +379,8 @@ export function calcInheritanceTaxCredits(
     filingCreditBase: filingCreditBaseAmount,
     filingCreditRate: filingResult.appliedRate,
     totalComputedTaxWithSurcharge: totalComputedTax,
+    // 🔴 G-07: 결과 화면 「가산세 미포함」 고지 게이트 (표시 전용 echo)
+    isFiledOnTime: creditInput.isFiledOnTime,
     foreignCreditDetail,
     // §30 재산별 표 echo (결과뷰 TaxCreditBreakdownCard)
     shortTermReinheritDetail,
@@ -598,5 +600,7 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
     filingCreditBase: Math.max(0, remainingTax),
     filingCreditRate: filingResult.appliedRate,
     totalComputedTaxWithSurcharge: totalComputedTax,
+    // 🔴 G-07: 결과 화면 「가산세 미포함」 고지 게이트 (표시 전용 echo)
+    isFiledOnTime: creditInput.isFiledOnTime,
   };
 }

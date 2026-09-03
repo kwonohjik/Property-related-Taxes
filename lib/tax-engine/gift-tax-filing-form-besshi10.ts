@@ -118,6 +118,29 @@ function resolveBracketLabel(
 // 메인 빌더
 // ============================================================
 
+/**
+ * 🔴 G-07: 가산세 3칸(㊷㊸㊹) 공용 빌더 — **0이면 「—」**.
+ *
+ * 별지9호의 `amtRow`(`lib/calc/filing-form-9-data.ts:79`)와 같은 규칙이다:
+ * `display: amount > 0 ? "amount" : "dash"`. 계산하지 않은 칸에 0을 적으면
+ * 「0원으로 확정됐다」는 뜻이 되어 같은 제품의 두 서식이 같은 상태를 다르게 인쇄한다.
+ */
+function penaltyRow(
+  number: string,
+  label: string,
+  amount: number,
+  lawRef: string,
+): FilingFormRow {
+  return {
+    number,
+    column: "right",
+    label,
+    amount,
+    display: amount > 0 ? "amount" : "dash",
+    lawRef,
+  };
+}
+
 export function buildBesshi10Rows(
   input: GiftTaxInput,
   partialResult: Omit<GiftTaxResult, "besshi10Rows">,
@@ -170,9 +193,14 @@ export function buildBesshi10Rows(
     { number: "㊴", column: "right", label: "외국납부세액공제",               amount: r.creditDetail.foreignTaxCredit,           display: "amount", lawRef: "§59" },
     { number: "㊵", column: "right", label: "신고세액공제",                   amount: r.creditDetail.filingCredit,               display: "amount", lawRef: "§69" },
     { number: "㊶", column: "right", label: "그 밖의 공제·감면세액",          amount: r.creditDetail.specialTreatmentCredit + farmlandReduction, display: "amount", lawRef: "조특법 §30의5·§30의6·§71" },
-    { number: "㊷", column: "right", label: "신고불성실가산세",               amount: r.underreportPenalty ?? 0,                 display: "amount", lawRef: "국기법 §47의2·§47의3" },
-    { number: "㊸", column: "right", label: "납부지연가산세",                 amount: r.latePaymentPenalty ?? 0,                 display: "amount", lawRef: "국기법 §47의4" },
-    { number: "㊹", column: "right", label: "공익법인 등 관련 가산세",        amount: r.publicInterestPenalty ?? 0,              display: "amount", lawRef: "§78" },
+    // 🔴 G-07: 이 세 칸은 **현 엔진이 산출하지 않는다**(placeholder 0). `display: "amount"`로
+    //   고정돼 있어 「—」가 아니라 **「0」**을 인쇄했다 — 계산 결과처럼 읽힌다.
+    //   별지9호는 같은 상태를 dash로 인쇄한다(`filing-form-9-data.ts:79` `amtRow`) — 그쪽이 옳다.
+    //   ⇒ 같은 규칙으로 통일한다. 값이 실리면(B안) 자동으로 금액 표시로 돌아간다.
+    //   ㊹는 §78③~⑮ 공익법인 축이라 별개지만, 「산출하지 않는 칸」이라는 점은 같다.
+    penaltyRow("㊷", "신고불성실가산세", r.underreportPenalty ?? 0, "국기법 §47의2·§47의3"),
+    penaltyRow("㊸", "납부지연가산세", r.latePaymentPenalty ?? 0, "국기법 §47의4"),
+    penaltyRow("㊹", "공익법인 등 관련 가산세", r.publicInterestPenalty ?? 0, "상증법 §78"),
     { number: "㊺", column: "right", label: "자진납부할 세액(합계액)",        amount: r.finalTax,                                display: "amount", formula: "㉞+㉟−㊱−㊲+㊷+㊸+㊹" },
     { number: "",   column: "right", label: "납부방법",                       amount: 0,                                         display: "header" },
     { number: "㊻", column: "right", label: "연부연납",                       amount: installment,                               display: "amount", lawRef: "§71" },

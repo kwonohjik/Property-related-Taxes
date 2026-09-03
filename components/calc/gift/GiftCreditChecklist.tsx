@@ -164,7 +164,7 @@ export function GiftCreditChecklist({
       <ToggleCard
         tone="violet"
         title="법정신고기한 내 신고 (§69 신고세액공제 3%)"
-        description="증여일로부터 3개월 이내 신고 시 산출세액의 3% 공제"
+        description="증여받은 날이 속하는 달의 말일부터 3개월 이내 신고 시 산출세액의 3% 공제 (상증법 §68①·§69). OFF로 두면 신고세액공제만 빠지며, 국세기본법 §47의2~§47의4 신고불성실·납부지연 가산세는 이 계산에 포함되지 않습니다."
         checked={form.isFiledOnTime}
         onCheckedChange={(v) => set({ isFiledOnTime: v })}
       />
