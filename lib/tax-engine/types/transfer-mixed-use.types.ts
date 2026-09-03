@@ -667,6 +667,13 @@ export interface MixedUseTotalTax {
    * 국세기본법 §47의3④의 부적용 사유는 한정 열거이고 **자산 종류에 따른 예외가 없다**.
    */
   penaltyTax: number;
+  /**
+   * 🔴 G-43: 위 `penaltyTax`의 **산출근거** echo (표시 전용 — 세액은 penaltyTax가 정본).
+   *
+   * 종전에는 합계만 싣고 상세를 버려, 겸용 결과 화면에 가산세 금액만 뜨고
+   * 세율·산정일수·기준금액 행이 하나도 생성되지 않았다. 다른 자산 종류는 모두 표시된다.
+   */
+  penaltyDetail?: import("../transfer-tax-penalty").TransferTaxPenaltyResult;
   /** 농어촌특별세 = 감면세액 × 20% (농특세법 §5①1호 · 비과세는 시행령 §4 열거) */
   ruralSurtax: number;
   /** 지방소득세 (결정세액 × 10%) */

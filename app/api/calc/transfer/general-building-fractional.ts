@@ -232,6 +232,16 @@ export function calculateGeneralBuildingFractional(
    * `GbAssetLevelInputs.amendment`로 같은 값을 전달한다 — **세 경로가 갈리면 안 된다**.
    */
   amendment?: import("@/lib/tax-engine/types/transfer-amendment.types").AmendmentInput,
+  /**
+   * 🔴 G-02/G-13: 신고서 단위 신고불성실·납부지연 가산세 (국세기본법 §47의2~§47의4).
+   *
+   * `amendment`와 같은 이유로 단독 인자다. 종전에는 이 경로만 두 필드를 받지 않아
+   * **지분 칸을 1개에서 2개로 늘린 것만으로 가산세가 0원**이 됐다 —
+   * 형제 두 경로는 `GbAssetLevelInputs`로 이미 전달하고 있었다
+   * (`-route-helper.ts:251-252` · `-route-actual.ts:664-665`).
+   */
+  filingPenaltyDetails?: TransferTaxItemInput["filingPenaltyDetails"],
+  delayedPaymentDetails?: TransferTaxItemInput["delayedPaymentDetails"],
 ): GeneralBuildingRouteResult {
   const allProperties: TransferTaxItemInput[] = [];
   const allApportioned: BundledLikeApportionmentResult["apportioned"] = [];
@@ -353,6 +363,9 @@ export function calculateGeneralBuildingFractional(
       priorReductionUsage: (priorReductionUsage ?? []) as never,
       // 신고서 단위 정정 — aggregate가 1회만 소비한다(자산별 누수는 `:163`이 strip).
       amendment,
+      // 🔴 G-13: 신고서 단위 가산세도 같은 층위에서 1회만 소비한다.
+      filingPenaltyDetails,
+      delayedPaymentDetails,
     },
     rates,
   );

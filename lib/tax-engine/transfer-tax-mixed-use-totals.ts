@@ -7,7 +7,10 @@ import { applyRate, calculateProgressiveTax } from "./tax-utils";
 import { calcReductions } from "./transfer-tax-reductions-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
-import { calculateTransferTaxPenalty } from "./transfer-tax-penalty";
+import {
+  calculateTransferTaxPenalty,
+  type TransferTaxPenaltyResult,
+} from "./transfer-tax-penalty";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
 import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
 import type { TransferReduction, TransferTaxInput } from "./types/transfer.types";
@@ -250,6 +253,8 @@ export function buildTotalTax(
     reductionDetails: post.reductionDetails,
     determinedTax,
     penaltyTax: post.penaltyTax,
+    // 🔴 G-43: 산출근거 echo — 어댑터가 결과뷰의 `penaltyDetail` 슬롯으로 승계한다.
+    ...(post.penaltyDetail ? { penaltyDetail: post.penaltyDetail } : {}),
     ruralSurtax: post.ruralSurtax,
     localTax,
     totalPayable: determinedTax + localTax + post.penaltyTax + post.ruralSurtax,
@@ -312,6 +317,16 @@ interface MixedUsePostTaxResult {
   reductionDetails?: MixedUseReductionDetails;
   ruralSurtax: number;
   penaltyTax: number;
+  /**
+   * 🔴 G-43: 신고불성실·납부지연 가산세 **산출근거**.
+   *
+   * 종전에는 `calculateTransferTaxPenalty`의 결과에서 합계(`totalPenalty`)만 꺼내고
+   * 상세를 버려, 결과 화면에 금액만 남고 세율·산정일수·기준금액 행이 사라졌다.
+   * 세액은 이미 `penaltyTax`에 들어 있으므로 이것은 **표시 전용 echo**다 — 산식은 바뀌지 않는다.
+   * 형제 경로는 모두 싣는다(`transfer-tax-loss-return.ts:158` · `-normal-return.ts:120·204` ·
+   * `-multi-parcel-branch.ts:309` · `-redevelopment.ts:901`).
+   */
+  penaltyDetail?: TransferTaxPenaltyResult;
 }
 
 /**
@@ -455,5 +470,7 @@ function computeMixedUsePostTax(
     },
     ruralSurtax: surtax.surtax,
     penaltyTax: penalty?.totalPenalty ?? 0,
+    // 🔴 G-43: 산출근거 echo — 세액은 penaltyTax가 정본이고 여기서 다시 더하지 않는다.
+    ...(penalty ? { penaltyDetail: penalty } : {}),
   };
 }
