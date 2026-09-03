@@ -1,6 +1,6 @@
 # ⑫→⑭ 파생 타입 · 컴파일 타임 키 커버리지 가드 — 구현 계획
 
-**상태**: 📐 계획 · 구현 미착수
+**상태**: ✅ **장치 2 구현 완료** (2026-09-04) · 장치 1·3 미착수
 **계기**: 겸용주택 × 함께양도 착수 선행 조건
 (`transfer-bundled-subengine-hosting.design.md` §9.3)
 **적용 범위**: 컴패니언(함께양도) 경로의 ⑫→⑭ 배관 전체. 겸용은 그 위에 얹는다.
@@ -184,10 +184,62 @@ const _mixedUseGuards: [
 
 ## 5. 순서
 
-1. 장치 2를 **컴패니언 일반 경로**에 먼저 건다(겸용과 무관하게 가치가 있다) → V-1 뮤테이션
+1. ✅ **완료** — 장치 2를 컴패니언 일반 경로에 걸었다(§6 참조)
 2. 장치 1(전면 파생)로 손 유지 면적을 줄인다 → V-3
 3. 장치 3(겸용 leaf + 가드)을 얹고, 그 위에서 겸용 컴패니언 축을 연다
    (`transfer-bundled-subengine-hosting.design.md` §9.2 파트 카드 구성 · §9.1 12억 카드 단위 함정)
 
 > 1·2는 **겸용 착수 없이도 독립적으로 머지 가능**하다 — 먼저 넣어 두면 그 뒤 축 개방이
 > 전부 이 안전망 위에서 진행된다.
+
+---
+
+## 6. 장치 2 구현 결과 ✅ (2026-09-04)
+
+### 6.1 `satisfies`가 장치의 전부였다
+
+```ts
+// 종전 — 가드를 무의미하게 만든다
+const companionEngine: TransferTaxItemInput = { … };
+// 현행
+const companionEngine = { … } satisfies TransferTaxItemInput;
+```
+
+**실측**(throwaway probe, 삭제함):
+
+| | `keyof` | 가드 | 초과 키 검사 |
+|---|---|---|---|
+| `: EngineInput` 주석 | **전체 키로 넓어짐** | 상수 참 — 무의미 | ○ |
+| `satisfies EngineInput` | **리터럴 키만** | 작동 | ○ |
+
+⇒ `satisfies`는 좁은 키 집합을 보존하면서 대입 가능성·초과 키 검사는 그대로 한다.
+
+### 6.2 `CompanionOwnedKeys` = ⑫ ∩ 엔진 − 컨텍스트 전용
+
+```ts
+type CompanionOwnedKeys = Exclude<
+  Extract<keyof z.infer<typeof companionAssetSchema>, keyof TransferTaxItemInput>,
+  CompanionContextOnlyKeys
+>;
+```
+
+가드를 걸자 **3개 키가 즉시 짚혔다**: `buildingFootprintArea` · `isUrbanArea` ·
+`appurtenantLandZone`. 추적 결과 이 셋은 `resolveHousingContextFromCompanion`이 읽어
+**다른 컴패니언(토지)** 에게 줄 주택 컨텍스트를 만드는 값이고, 소비처가 **자기 자신이 아니라
+형제 자산**이라 자기 item에는 실리지 않는다 ⇒ 근거를 붙여 명시 제외했다.
+
+> 🟡 **미검증으로 남긴 것** — 컴패니언 주택이 **자기 부수토지 축**(영 §167의5)을 가질 수 있는
+> 국면에서도 싣지 않는 것이 옳은지는 확인하지 않았다. 싣는 쪽으로 바꾸면 세액이 움직이므로
+> anchor 없이 건드리지 않는다.
+
+### 6.3 검증 — V-1·V-3 실측
+
+| # | 뮤테이션 | 결과 |
+|---|---|---|
+| **V-1** | 조립부에서 `landNature` 제거 | **가드 줄에서 TS2322** ✅ |
+| **V-3** | ⑫에 엔진 공유 키(`appraisalValue`) 추가 | **가드 줄에서 TS2322** ✅ — ⑫가 늘면 자동으로 요구한다 |
+| **V-2** | 거짓 실패 없음 | tsc 0건 · lint 0건 · 회귀 0건(4,684 테스트) |
+| **V-4** | 런타임 무영향 | 가드는 `void` 소비 · 타입 주석만 `satisfies`로 교체 |
+
+> 🔑 **V-1이 없었다면 「아무것도 안 잡는 가드」와 구별되지 않았다.** 실제로 가드를 처음 걸었을 때
+> 3개 키가 짚혔고, 그것이 가드가 살아 있다는 첫 증거였다.
