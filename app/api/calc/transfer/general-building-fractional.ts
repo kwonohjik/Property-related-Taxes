@@ -39,15 +39,9 @@ import {
   type BundledLikeApportionmentResult,
   type GeneralBuildingRouteResult,
 } from "./general-building-route-cards";
-import {
-  buildEstimatedGeneralBuildingCards,
-  coerceGeneralBuildingPayload,
-  type GeneralBuildingValuationPayload,
-} from "./general-building-route-helper";
-import {
-  buildActualGeneralBuildingCards,
-  type GeneralBuildingActualPricePayload,
-} from "./general-building-route-actual";
+import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
+import { buildGbPartCards, tagGbCards, remapGbSwap } from "./general-building-part-cards";
+import type { GbPartCards } from "./general-building-part-cards";
 
 /** 라우트가 받는 지분 1건 (Zod 통과 후). `valuation`은 물건-수준 병합이 끝난 완결 payload. */
 export interface GeneralBuildingSharePayload {
@@ -64,41 +58,6 @@ export interface GeneralBuildingSharePayload {
   valuation: Record<string, unknown>;
 }
 
-/**
- * 지분 인덱스 접미사 — 지분이 2건 이상일 때만 붙인다(단건 회귀 0).
- *
- * 구분자는 `general-building-route-cards.ts`가 정본이다(`baseCardId`가 같은 문자로 벗긴다).
- * 여기서 `"#"`를 다시 쓰면 한쪽만 바뀌었을 때 소비자가 조용히 매칭에 실패한다.
- */
-const tagId = (propertyId: string, shareIdx: number) =>
-  `${propertyId}${SHARE_ID_SEPARATOR}${shareIdx}`;
-
-/**
- * swap 결정의 `Map` 키를 접미사 붙은 propertyId로 다시 맵핑한다.
- *
- * 🔴 **카드 태깅과 반드시 같은 시점에** 해야 한다. `buildProperties`/`buildApportionment`가
- *    `swap.allocation.get(card.propertyId)`로 조회하므로, 한쪽만 접미사가 붙으면 swap이
- *    **조용히 미적용**된다(`general-building-route-cards.ts:56,62`).
- */
-function remapSwap(swap: GeneralBuildingSwapDecision, shareIdx: number): GeneralBuildingSwapDecision {
-  const remap = (m: Map<string, number>) =>
-    new Map([...m.entries()].map(([k, v]) => [tagId(k, shareIdx), v] as const));
-  return { ...swap, allocation: remap(swap.allocation), addition: remap(swap.addition) };
-}
-
-/** 카드에 지분 접미사·라벨을 입힌다. */
-function tagCards(
-  cards: AssetCardForAggregate[],
-  shareIdx: number,
-  shareLabel: string,
-): AssetCardForAggregate[] {
-  return cards.map((c) => ({
-    ...c,
-    propertyId: tagId(c.propertyId, shareIdx),
-    propertyLabel: `${shareLabel} ${c.propertyLabel}`,
-  }));
-}
-
 /** 그 지분의 **건물** 취득일 — 물건 사건 前/後 판정의 기준일. */
 function buildingAcqDateOf(share: GeneralBuildingSharePayload): Date {
   const v = share.valuation;
@@ -107,108 +66,6 @@ function buildingAcqDateOf(share: GeneralBuildingSharePayload): Date {
     toOptionalDate(v.acquisitionDate) ??
     toDate(share.acquisitionDate, "generalBuildingShares[].acquisitionDate")
   );
-}
-
-interface ShareCards {
-  cards: AssetCardForAggregate[];
-  nonBusinessRatio: number;
-  /**
-   * 결과 카드용 명세 — **물건-수준**이라 전 지분 동일하다.
-   * `GeneralBuildingValuationDetailCard`가 `buildingFootprintArea`·`allowedLandArea`를
-   * **가드 없이** 읽으므로(`.toFixed(2)`) 반드시 채워야 한다.
-   */
-  detailBase: Record<string, unknown>;
-  swap?: GeneralBuildingSwapDecision;
-  totalStd: number;
-  landStdAtTransfer: number;
-  landStdAtAcq: number | null;
-  buildingStdAtTransfer: number;
-  buildingStdAtAcq: number | null;
-  /**
-   * 증축분(건물2) 기준시가 — 증축이 없으면 0.
-   * 표시용 안분 표에서 건물2 행이 건물1 값을 쓰지 않게 한다(2026-08-12 · 단건 경로와 같은 축).
-   */
-  extensionStdAtTransfer: number;
-  extensionStdAtAcq: number;
-  usedEstimated: boolean;
-  legalBasis: string;
-}
-
-/**
- * 지분 하나의 카드를 만든다 — 경로 A(환산) / 경로 B(실가) 분기는 `actualPriceMode`가 정한다.
- * `dispatchGeneralBuilding`(단건 진입점)과 **같은 축**이다.
- */
-function buildShareCards(
-  gbv: Record<string, unknown>,
-  sharePrice: number,
-  transferDate: Date,
-  acquisitionDate: Date,
-  landAcquisitionDate: Date,
-  share: GeneralBuildingSharePayload,
-): ShareCards {
-  const landArea = (gbv.landArea as number) ?? 0;
-  const landStdAtTransfer = ((gbv.transferLandPricePerSqm as number) ?? 0) * landArea;
-  const buildingStdAtTransfer = (gbv.transferBuildingStdPrice as number) ?? 0;
-  /* 증축분(건물2) — 두 분기 공통. 엔진 §166⑥ 분모와 같은 구성으로 표시 분모를 맞춘다. */
-  const ext = gbv.extensionInfo as
-    | { transferExtensionBuildingStdPrice?: number; acquisitionExtensionBuildingStdPrice?: number }
-    | undefined;
-  const extensionStdAtTransfer = ext?.transferExtensionBuildingStdPrice ?? 0;
-  const extensionStdAtAcq = ext?.acquisitionExtensionBuildingStdPrice ?? 0;
-
-  if (gbv.actualPriceMode === true) {
-    const built = buildActualGeneralBuildingCards({
-      ...(gbv as unknown as GeneralBuildingActualPricePayload),
-      totalTransferPrice: sharePrice,
-      transferDate,
-      acquisitionDate,
-      landAcquisitionDate,
-      buildingAcquisitionDate: acquisitionDate,
-    });
-    return {
-      cards: built.cards,
-      nonBusinessRatio: built.nonBusinessRatio,
-      detailBase: { ...built.nblDetail, nonBusinessRatio: built.nonBusinessRatio },
-      totalStd: built.totalStd + extensionStdAtTransfer,
-      landStdAtTransfer: built.landStdAtTransfer,
-      landStdAtAcq: null,
-      buildingStdAtTransfer: built.transferBuildingStdPrice,
-      buildingStdAtAcq: null,
-      extensionStdAtTransfer,
-      extensionStdAtAcq,
-      usedEstimated: false,
-      legalBasis: "소득세법 시행령 §166⑥ · §104의3",
-    };
-  }
-
-  const payload: GeneralBuildingValuationPayload = {
-    ...(gbv as unknown as GeneralBuildingValuationPayload),
-    totalTransferPrice: sharePrice,
-    transferDate,
-    // M-1a — `acquisitionDate`는 **건물** 취득일, 토지는 별도 필드다.
-    acquisitionDate,
-    landAcquisitionDate,
-    // 개산공제(영 §163⑥) base 축소 전용 — 기준시가·면적은 100% 유지가 정확성의 근거다.
-    ownershipRatio: share.ownershipRatio,
-  };
-  const { gbOut, swap } = buildEstimatedGeneralBuildingCards(payload);
-  const acqLandPerSqm = (gbv.acquisitionLandPricePerSqm as number) ?? 0;
-  return {
-    cards: gbOut.assetCards,
-    nonBusinessRatio: gbOut.nonBusinessRatio,
-    // 환산 경로는 `gbOut` 자체가 완전한 `GeneralBuildingOutput`이다.
-    detailBase: gbOut as unknown as Record<string, unknown>,
-    swap,
-    totalStd: landStdAtTransfer + buildingStdAtTransfer + extensionStdAtTransfer,
-    landStdAtTransfer,
-    landStdAtAcq: acqLandPerSqm * landArea,
-    buildingStdAtTransfer,
-    buildingStdAtAcq: (gbv.acquisitionBuildingStdPrice as number) ?? 0,
-    extensionStdAtTransfer,
-    extensionStdAtAcq,
-    usedEstimated: true,
-    legalBasis: "소득세법 시행령 §166⑥ · §176의2② · §163⑥",
-  };
 }
 
 /**
@@ -295,18 +152,19 @@ export function calculateGeneralBuildingFractional(
     const landAcqDate =
       toOptionalDate(gated.landAcquisitionDate) ??
       toDate(share.acquisitionDate, "generalBuildingShares[].acquisitionDate");
-    const built = buildShareCards(
+    const built = buildGbPartCards(
       gated,
       sharePrice,
       transferDate,
       buildingAcqDate,
       landAcqDate,
-      share,
+      share.ownershipRatio,
     );
 
     // (4) 접미사 — 카드와 swap Map을 **같은 시점에** 태깅한다
-    const tagged = tagCards(built.cards, idx, share.shareLabel);
-    const swap = built.swap ? remapSwap(built.swap, idx) : undefined;
+    // 접미사는 문자열이다 — 컴패니언 축이 `assetId`를 쓰므로 leaf가 일반화됐다.
+    const tagged = tagGbCards(built.cards, String(idx), share.shareLabel);
+    const swap = built.swap ? remapGbSwap(built.swap, String(idx)) : undefined;
 
     // §104③ 미등기 — 지분 경로도 토지·건물 축을 싣는다. 여기서 빠뜨리면 **지분 모드에서만**
     // 미등기가 조용히 무시된다(단독 모드는 정상이라 발견이 늦다).

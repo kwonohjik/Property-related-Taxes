@@ -36,7 +36,27 @@ export function addCompanionAcquisitionCauseRefines(
      * 판정을 `burdenedGiftInfo` 존재로 하는 이유: 컴패니언 스키마에는 `transferType`이 없고,
      * 이 서브객체가 실렸다는 것 자체가 「§159가 취득가액을 산정한다」는 신호이기 때문이다.
      */
-    if (c.acquisitionCause === "purchase" && c.burdenedGiftInfo === undefined) {
+    /**
+     * 🔴 **일반건물 제외** (컴패니언 함께양도, 2026-09-03).
+     *
+     * 일반건물은 환산 기준시가를 **자기 서브객체가 갖는다**(`generalBuildingValuation`의
+     * `acquisitionLandPricePerSqm`·`acquisitionBuildingStdPrice`). 컴패니언-수준
+     * `standardPriceAtAcquisition`은 GB 경로 계산에 **쓰이지 않는다** — ⑭가
+     * `buildGbPartCards`로 파트 카드를 만들 때 GB 엔진이 서브객체의 값만 읽는다.
+     *
+     * ⑧도 같은 기준이다 — `validateAssetEntry`가 `assetKind === "general_building"`을
+     * `validateGeneralBuildingAsset`에 **통째로 위임**하고 일반 기준시가는 요구하지 않는다
+     * (`transfer-tax-validate-asset.ts:193`). 요구하면 「⑧ 통과 ↔ ⑩ 400」 모순이 되어
+     * 사용자가 **안내 없는 dead-end**를 만난다 — 실제로 E2E가 이 상태를 잡았다.
+     *
+     * 판정을 서브객체 존재로 하는 이유는 부담부증여와 같다: 컴패니언 스키마에는 `assetKind`가
+     * 있지만, **「누가 취득가액을 산정하는가」를 말해 주는 것은 그 서브객체**다.
+     */
+    if (
+      c.acquisitionCause === "purchase" &&
+      c.burdenedGiftInfo === undefined &&
+      c.generalBuildingValuation === undefined
+    ) {
       if (c.useEstimatedAcquisition) {
         if (!c.standardPriceAtAcquisition || c.standardPriceAtAcquisition <= 0) {
           ctx.addIssue({
