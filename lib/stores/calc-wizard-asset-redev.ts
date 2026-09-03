@@ -204,6 +204,24 @@ export interface RedevelopmentFormSlice {
    */
   redevExemptionEligibleAtApproval: "" | "yes" | "no";
 
+  /**
+   * 관리처분계획인가일 **이후에도 기존주택이 철거되지 않고 사실상 주거용으로 사용**되었는가
+   * (사전-2019-법령해석재산-0739 · 2021.07.23). `"yes"`면 아래 종료일까지를 보유기간에 합산한다.
+   *
+   * ⚠️ **표시 전용 — API로 보내지 않는다.** 엔진은 `exemptionEligibleAtApproval` 불리언만 보고,
+   *    그 판정은 국세청이 「**사실판단할 사항**」이라 못박은 영역이라 사용자 선언이 정본이다.
+   *    이 두 필드는 ③-c 카드의 **자동 제안 기간**을 정확하게 만드는 데만 쓴다.
+   */
+  redevPostApprovalHousingUse: "" | "yes";
+
+  /**
+   * 위 사실상 주거용 사용의 **종료일**(철거일 또는 주거용 사용 종료일) — `yyyy-MM-dd`.
+   *
+   * 「양도일까지」가 아니다 — 예규는 **철거되지 않고 사실상 주거용으로 사용된 기간**만 합산한다.
+   * 철거 후 양도일까지의 기간을 포함하면 과대 산정이다.
+   */
+  redevPostApprovalHousingUseEndDate: string;
+
   // ── 사례 36 — 1세대1입주권 비과세 C-1 안전장치 ──
 
   /**

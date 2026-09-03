@@ -156,19 +156,39 @@ export function ExemptionAtApprovalCard({
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
 }) {
-  // 자동 산정 — 취득일 ~ 관리처분계획인가일 ≥ 24개월
+  /**
+   * 자동 산정 — 취득일 ~ **기간 종료일** ≥ 24개월.
+   *
+   * 종료일은 원칙적으로 관리처분계획인가일이다(주택 → 입주권 권리변환). 다만 인가일 이후에도
+   * 철거되지 않고 **사실상 주거용으로 사용**된 기간은 보유·거주기간에 **합산**하므로
+   * (사전-2019-법령해석재산-0739), 사용자가 그 사용 종료일을 선언하면 거기까지 센다.
+   *
+   * ⚠️ 「양도일까지」가 아니다 — 철거 후 기간은 합산 대상이 아니다.
+   */
   const auto = useMemo(() => {
     if (!asset.acquisitionDate || !asset.redevApprovalDate) return null;
     const acq = new Date(asset.acquisitionDate);
     const app = new Date(asset.redevApprovalDate);
     if (Number.isNaN(acq.getTime()) || Number.isNaN(app.getTime())) return null;
     if (acq.getTime() > app.getTime()) return null;
-    const y = app.getFullYear() - acq.getFullYear();
-    const m = app.getMonth() - acq.getMonth();
-    const d = app.getDate() - acq.getDate();
+    const declaredEnd =
+      asset.redevPostApprovalHousingUse === "yes" && asset.redevPostApprovalHousingUseEndDate
+        ? new Date(asset.redevPostApprovalHousingUseEndDate)
+        : null;
+    const extended =
+      declaredEnd && !Number.isNaN(declaredEnd.getTime()) && declaredEnd.getTime() > app.getTime();
+    const end = extended ? declaredEnd! : app;
+    const y = end.getFullYear() - acq.getFullYear();
+    const m = end.getMonth() - acq.getMonth();
+    const d = end.getDate() - acq.getDate();
     const months = y * 12 + m - (d < 0 ? 1 : 0);
-    return { months, eligible: months >= 24 };
-  }, [asset.acquisitionDate, asset.redevApprovalDate]);
+    return { months, eligible: months >= 24, extended };
+  }, [
+    asset.acquisitionDate,
+    asset.redevApprovalDate,
+    asset.redevPostApprovalHousingUse,
+    asset.redevPostApprovalHousingUseEndDate,
+  ]);
 
   // 사용자 override 우선, 빈문자열 시 자동
   const effective: "yes" | "no" | null =
@@ -185,7 +205,7 @@ export function ExemptionAtApprovalCard({
   const labelText =
     auto === null
       ? "취득일 + 관리처분계획인가일을 모두 입력하면 자동 판정"
-      : `자동 판정: ${auto.eligible ? "충족" : "미충족"} (${Math.floor(auto.months / 12)}년 ${auto.months % 12}개월)`;
+      : `자동 판정: ${auto.eligible ? "충족" : "미충족"} (${Math.floor(auto.months / 12)}년 ${auto.months % 12}개월${auto.extended ? " — 인가일 이후 사실상 주거용 사용 기간 합산" : ""})`;
 
   return (
     <ToneCard
@@ -201,8 +221,11 @@ export function ExemptionAtApprovalCard({
       </p>
       <p className="text-caption text-violet-700 leading-relaxed">
         ※ 자동 판정은 <span className="font-semibold">관리처분계획인가일 기준</span>(원칙)입니다.
-        인가일 이후에도 주택인 상태가 유지되어 <span className="font-semibold">양도일 기준</span>으로
-        판단해야 하는 경우에는 아래에서 직접 선택하세요.
+        인가일 이후에도 철거되지 않고 <span className="font-semibold">사실상 주거용으로 사용</span>한
+        기간이 있으면 그 기간을 보유·거주기간에 <span className="font-semibold">합산</span>합니다 —
+        아래 토글을 켜고 사용 종료일을 입력하면 자동 판정이 그 기간까지 셉니다.
+        사실상 주거용이었는지 여부는 <span className="font-semibold">사실판단할 사항</span>이므로,
+        최종 충족 여부는 아래에서 직접 선택할 수 있습니다.
       </p>
       <div className="flex flex-wrap gap-2">
         <LawArticleModal legalBasis="소득세법 시행령 §154 ①" label="시행령 §154①" />
@@ -212,7 +235,42 @@ export function ExemptionAtApprovalCard({
           kind="ruling"
           summary="청산금 수령분의 1세대1주택 비과세 판정 시 보유주택수 여부는 양도일 현재 기준으로 판정하고, 보유 및 거주요건은 종전주택을 조합에 제공한 시점(관리처분계획인가일 현재)에 충족해야 한다."
         />
+        <PrecedentArticleModal
+          citation="사전-2019-법령해석재산-0739 (2021.07.23)"
+          label="사전2019-0739 (기간 합산)"
+          kind="ruling"
+          summary="관리처분계획의 인가일 이후에도 기존주택이 철거되지 않고 사실상 주거용으로 사용되고 있는 경우에는 해당기간을 1세대1주택 비과세 특례 적용을 위한 보유기간 및 거주기간에 합산하는 것이며, 사실상 주거용으로 사용되고 있는지 여부는 사실판단할 사항이다."
+        />
       </div>
+
+      {/*
+        인가일 이후 철거 전 사실상 주거용 사용 — 자동 제안 기간만 늘린다(표시 전용).
+        엔진은 아래 라디오의 자기선언(`redevExemptionEligibleAtApproval`)만 읽는다.
+      */}
+      <ToggleCard
+        variant="card"
+        tone="violet"
+        title="인가일 이후에도 철거되지 않고 사실상 주거용으로 사용"
+        description="사전-2019-법령해석재산-0739 — 그 기간을 보유·거주기간에 합산합니다."
+        checked={asset.redevPostApprovalHousingUse === "yes"}
+        onCheckedChange={(v: boolean) =>
+          onChange(
+            v
+              ? { redevPostApprovalHousingUse: "yes" }
+              : { redevPostApprovalHousingUse: "", redevPostApprovalHousingUseEndDate: "" },
+          )
+        }
+      >
+        <FieldCard
+          label="사실상 주거용 사용 종료일"
+          hint="철거일 또는 주거용 사용을 그만둔 날. 양도일이 아닙니다 — 철거 후 기간은 합산되지 않습니다."
+        >
+          <DateInput
+            value={asset.redevPostApprovalHousingUseEndDate}
+            onChange={(v) => onChange({ redevPostApprovalHousingUseEndDate: v })}
+          />
+        </FieldCard>
+      </ToggleCard>
 
       <div className="rounded-md border border-violet-200 bg-white/70 p-2 text-caption text-violet-900">
         {labelText}

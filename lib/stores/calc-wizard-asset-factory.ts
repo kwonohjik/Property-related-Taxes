@@ -506,6 +506,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 사례 46 — 청산금 수령분 단독 신고
     redevReceiveOnlyMode: "",
     redevExemptionEligibleAtApproval: "",
+    // 인가일 이후 철거 전 사실상 주거용 사용 (사전-2019-법령해석재산-0739) — 표시 전용
+    redevPostApprovalHousingUse: "",
+    redevPostApprovalHousingUseEndDate: "",
     // 사례 36 — 1세대1입주권 비과세 C-1 안전장치
     redevPriorHouseHoldingMonths: "",
     redevOtherHouseAcquisitionDate: "", // §89①4호 나목 — 그 1주택 취득일

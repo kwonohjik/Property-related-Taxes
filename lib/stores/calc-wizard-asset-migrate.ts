@@ -781,13 +781,21 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 사례 46 — 청산금 수령분 단독 신고
   if (a.redevReceiveOnlyMode === undefined) a.redevReceiveOnlyMode = "";
   if (a.redevExemptionEligibleAtApproval === undefined) a.redevExemptionEligibleAtApproval = "";
+  // 인가일 이후 철거 전 사실상 주거용 사용 (사전-2019-법령해석재산-0739) — 구 저장값에는 없다.
+  if (a.redevPostApprovalHousingUse === undefined) a.redevPostApprovalHousingUse = "";
+  if (a.redevPostApprovalHousingUseEndDate === undefined) a.redevPostApprovalHousingUseEndDate = "";
 
   // 축을 벗어난 재개발 저장값 정규화 (U1-01 · U1-02) — 근거·범위는 `lib/calc/redev-field-scope.ts`.
   // 재개발 자산에만 적용한다 — 다른 종류의 잔재는 종류를 되돌리면 복귀해야 한다.
   if (a.assetKind === "redevelopment_apt" || a.assetKind === "right_to_move_in") {
     // 술어가 읽는 4필드는 위에서 모두 기본값이 채워졌다(`a`는 아직 raw 레코드다).
     const redevAxes = a as unknown as AssetForm;
-    if (!exemptionAtApprovalInScope(redevAxes)) a.redevExemptionEligibleAtApproval = "";
+    if (!exemptionAtApprovalInScope(redevAxes)) {
+      a.redevExemptionEligibleAtApproval = "";
+      // 같은 축의 부속 입력이다 — 축을 벗어나면 함께 지운다(카드가 사라지면 지울 위젯도 없다).
+      a.redevPostApprovalHousingUse = "";
+      a.redevPostApprovalHousingUseEndDate = "";
+    }
     if (!postApprovalExpensesInScope(redevAxes)) a.redevPostApprovalExpenses = "";
   }
   // 사례 36 — 1세대1입주권 비과세 C-1 안전장치
