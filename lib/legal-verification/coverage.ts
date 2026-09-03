@@ -52,8 +52,8 @@ export const KNOWN_ABSENT_ARTICLES = new Set<string>([
  *    불가능한지 확인할 것 — 약칭이 `LAW_ALIAS`에 없을 뿐이면 그쪽에 등재하면 된다.
  */
 export const UNVERIFIABLE_LAW_NAMES: Record<string, string> = {
-  "조특법 부칙":
-    "부칙 경과조치(공익사업 수용 감면 종전 감면율) — 조문 API는 본칙만 조회 가능",
+  "조특법 법률":
+    "법률 제13560호 부칙 §53(공익사업 수용 감면 종전 감면율) — 조문 API(lawService.do target=eflaw)는 본칙만 내려준다. 부칙 원문은 target=law + 그 개정본 MST(177204)로 별도 조회해야 하므로 조문 단위 키워드 대조 대상이 아니다",
   "지방세법 법률":
     "법률 제19230호 부칙 §15(주택 세부담상한 경과조치) — 부칙이라 조회 불가",
   "부칙":

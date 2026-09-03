@@ -465,7 +465,14 @@ describe("T-IMG-1: 공익사업 수용 감면 — 부재지주 임야 쌍방실�
   });
 });
 
-describe("T-IMG-2: 부칙 §53 경계 판정", () => {
+/**
+ * 🔴 값 갱신 (2026-09-03) — 현금 **20% → 15%**.
+ * 법률 제13560호 부칙 제53조의 「종전의 규정」은 그 시행(2016-01-01) 직전
+ * (2014-01-01 ~ 2015-12-31) 시행본이라 15/20/30/40이다. **경계일 두 개는 그대로**다
+ * (고시일 ≤2015-12-31 · 양도일 ≤2017-12-31 — 부칙 문언과 일치).
+ * 상세: `transfer/expropriation-2025-amendment-boundary.anchor.test.ts` D7-12.
+ */
+describe("T-IMG-2: 부칙 제53조 경계 판정", () => {
   function legacyInput(approval: Date, transfer: Date): TransferTaxInput {
     return {
       propertyType: "land",
@@ -495,13 +502,13 @@ describe("T-IMG-2: 부칙 §53 경계 판정", () => {
     };
   }
 
-  it("고시 2015-06-30 + 양도 2017-06-30 → LEGACY (현금 20%)", () => {
+  it("고시 2015-06-30 + 양도 2017-06-30 → LEGACY (현금 15%)", () => {
     const result = calculateTransferTax(
       legacyInput(new Date("2015-06-30"), new Date("2017-06-30")),
       mockRates,
     );
     expect(result.publicExpropriationDetail!.useLegacyRates).toBe(true);
-    expect(result.publicExpropriationDetail!.breakdown.cashRate).toBe(0.20);
+    expect(result.publicExpropriationDetail!.breakdown.cashRate).toBe(0.15);
   });
 
   it("고시 2015-06-30 + 양도 2018-01-01 → CURRENT (양도 경계 초과)", () => {

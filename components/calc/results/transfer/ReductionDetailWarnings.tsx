@@ -28,7 +28,7 @@ export interface ReductionWarningSource {
   warnings?: string[];
   /** 카드가 「※ 연간 한도 … 초과 → 한도 적용」으로 이미 그리는 사실 */
   cappedByAnnualLimit?: boolean;
-  /** 카드가 「※ 조특법 부칙 §53 종전 감면율 적용」으로 이미 그리는 사실 (§77 전용) */
+  /** 카드가 「※ 조특법 법률 제13560호 … 부칙 제53조 종전 감면율 적용」으로 이미 그리는 사실 (§77 전용) */
   useLegacyRates?: boolean;
 }
 

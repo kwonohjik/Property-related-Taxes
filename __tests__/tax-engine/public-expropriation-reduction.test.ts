@@ -213,7 +213,14 @@ describe("R77-5: 이미지 사례 — 현금 168.3M + 채권 392M (원단위 정
   });
 });
 
-describe("R77-6: 부칙 §53 종전 감면율 (현금 20%)", () => {
+/**
+ * 🔴 값 갱신 (2026-09-03) — 현금 **20% → 15%**.
+ * 법률 제13560호 부칙 제53조의 「종전의 규정」은 그 시행(2016-01-01) **직전**
+ * (2014-01-01 ~ 2015-12-31) 시행본이므로 15/20/30/40이다. 종전 코드의 20/25/40/50은
+ * 2010~2013 세트로 두 시대를 건너뛴 값이었다(감면 과다 = 세액 과소).
+ * 상세: `expropriation-2025-amendment-boundary.anchor.test.ts` D7-12.
+ */
+describe("R77-6: 부칙 제53조 종전 감면율 (현금 15%)", () => {
   it("고시 2015-06-30 + 양도 2017-06-30 → LEGACY", () => {
     const result = calculatePublicExpropriationReduction({
       cashCompensation: 100_000_000,
@@ -227,9 +234,9 @@ describe("R77-6: 부칙 §53 종전 감면율 (현금 20%)", () => {
     });
     expect(result.useLegacyRates).toBe(true);
     expect(result.breakdown.cashRate).toBe(PUBLIC_EXPROPRIATION_RATES.LEGACY.cash);
-    expect(result.breakdown.cashReduction).toBe(19_500_000); // (100M − 2.5M) × 20%
-    // 감면세액 = 10,000,000 × 19,500,000 / 97,500,000 = 2,000,000
-    expect(result.rawReductionAmount).toBe(2_000_000);
+    expect(result.breakdown.cashReduction).toBe(14_625_000); // (100M − 2.5M) × 15%
+    // 감면세액 = 10,000,000 × 14,625,000 / 97,500,000 = 1,500,000
+    expect(result.rawReductionAmount).toBe(1_500_000);
   });
 
   it("고시 2015-06-30이지만 양도 2018-01-01이면 CURRENT", () => {
