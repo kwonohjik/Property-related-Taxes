@@ -134,8 +134,16 @@ test.describe("가산세 신고-단위 산정", () => {
     const json = await resp.json();
     expect(json.result.latePaymentPenalty).toBe(66_000);
 
-    // 결과 화면에 실제로 렌더된다 — 종전에는 placeholder 0 이라 이 행이 나온 적이 없다
-    await expect(page.getByText("납부지연 가산세 (국세기본법 §47조의4)")).toBeVisible({ timeout: 30_000 });
+    // 결과 화면에 실제로 렌더된다 — 종전에는 placeholder 0 이라 이 행이 나온 적이 없다.
+    // 🔴 G-17: 결과 카드 행과 별지84호 표 27번 행이 **둘 다** 현행 조문 제목(§47조의4
+    //          「납부지연가산세」)을 쓴다. 종전에는 「납부불성실」이었다. 같은 문자열이 두 곳에
+    //          나오므로 각각의 역할로 좁힌다(느슨한 getByText는 strict mode 위반).
+    await expect(
+      page.getByText("납부지연 가산세 (국세기본법 §47조의4)", { exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.getByRole("cell", { name: "27. 납부지연 가산세 (국세기본법 §47조의4)" }),
+    ).toBeVisible();
     // 결과 카드 · 별지84호 표 · 총액 등 여러 곳에 나오므로 정확일치 첫 요소로 좁힌다
     await expect(page.getByText("66,000", { exact: true }).first()).toBeVisible();
     // 기준금액 echo — 「산출세액 × 세율」이 아니라는 것을 화면이 말한다
