@@ -485,6 +485,15 @@ export const inheritanceGiftFilingPenaltySchema = z.object({
   fraudulentPortion: z.number().int().nonnegative().optional(),
   /** §47의3④1호 **라목 단서** — 법인세 경정이 부정행위에 기인했는가 */
   corporateAdjustmentByFraud: z.boolean().optional(),
+  /**
+   * 🔴 G-07 B3 — 납부지연가산세 축(「국세기본법」 §47의4). ⑫에 키가 없으면 ④가 실어 보내도
+   * Zod 가 조용히 strip 하고 가산세가 0이 된다(TypeScript 미감지).
+   */
+  unpaidTax: z.number().int().nonnegative().optional(),
+  paymentDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
+  actualPaymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식").optional(),
+  /** §47의4③6호 — 기한 내 신고·납부 후 평가 경정 */
+  paidOnTimeThenRevalued: z.boolean().optional(),
 });
 
 export const inheritanceTaxInputSchema = z.object({

@@ -39,6 +39,12 @@ const FIELDS: FilingPenaltyFormFields = {
   penaltyReason: "normal",
   fraudulentPortion: "",
   corporateAdjustmentByFraud: false,
+  // 🔴 B3 신설 — 납부지연 축은 기본 OFF 라 종전 수치가 그대로 유지된다.
+  applyLatePaymentPenalty: false,
+  unpaidTax: "",
+  paymentDeadline: "",
+  actualPaymentDate: "",
+  paidOnTimeThenRevalued: false,
 };
 
 describe("B2-P1 ④ 게이팅 — 대상 밖 축은 싣지 않는다", () => {

@@ -43,7 +43,10 @@ import {
 import { calcRelationDeduction } from "./deductions/gift-deductions";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
-import { calcInheritanceGiftFilingPenalty } from "./inheritance-gift-penalty";
+import {
+  calcInheritanceGiftFilingPenalty,
+  calcInheritanceGiftLatePayment,
+} from "./inheritance-gift-penalty";
 import { calcCulturalHeritageDeferral } from "./inheritance-cultural-heritage-deferral";
 import {
   DEFAULT_INHERITANCE_GIFT_BRACKETS,
@@ -803,6 +806,14 @@ export function calcInheritanceTax(
     input.filingPenalty ?? { filingStatus: "on_time" },
   );
 
+  // 🔴 G-07 B3 — 납부지연가산세(「국세기본법」 §47의4). 신고불성실과 **독립**이다:
+  //    §47의4①1호는 「법정납부기한까지 납부하지 아니한」 사실만 요건으로 하므로,
+  //    정기·정확 신고를 했어도 납부가 늦으면 붙는다.
+  const latePaymentResult = calcInheritanceGiftLatePayment(
+    input.filingPenalty ?? { filingStatus: "on_time" },
+  );
+  const totalPenalty = filingPenaltyResult.filingPenalty + latePaymentResult.penalty;
+
   return {
     decedentType: input.decedentType, // M-17: 신고기한 §67④ 비거주자 9개월 표시용 echo
     grossEstateValue,
@@ -846,8 +857,11 @@ export function calcInheritanceTax(
     ...(filingPenaltyResult.filingPenalty > 0 || filingPenaltyResult.exclusionApplied
       ? { filingPenaltyDetail: filingPenaltyResult }
       : {}),
-    ...(filingPenaltyResult.filingPenalty > 0
-      ? { totalPayableWithPenalty: finalTax + filingPenaltyResult.filingPenalty }
+    // 🔴 G-07 B3 — 납부지연가산세 (별지9호 ㊲)
+    latePaymentPenalty: latePaymentResult.penalty,
+    ...(latePaymentResult.penalty > 0 || latePaymentResult.exclusionApplied
+      ? { latePaymentPenaltyDetail: latePaymentResult }
       : {}),
+    ...(totalPenalty > 0 ? { totalPayableWithPenalty: finalTax + totalPenalty } : {}),
   };
 }

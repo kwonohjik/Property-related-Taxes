@@ -61,6 +61,12 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     penaltyReason: "normal",
     fraudulentPortion: "",
     corporateAdjustmentByFraud: false,
+    // 🔴 B3 신설 — 납부지연 축은 기본 OFF 라 종전 수치가 그대로 유지된다.
+    applyLatePaymentPenalty: false,
+    unpaidTax: "",
+    paymentDeadline: "",
+    actualPaymentDate: "",
+    paidOnTimeThenRevalued: false,
     foreignTaxPaid: "",
     foreignGiftTaxBase: "",
     specialTreatment: "",

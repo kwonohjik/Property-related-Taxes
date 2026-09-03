@@ -48,6 +48,37 @@ export interface FilingPenaltyFormFields {
   fraudulentPortion: string;
   /** 라목 단서 — 법인세 경정이 부정행위에 기인했는가 (🔴 B2) */
   corporateAdjustmentByFraud: boolean;
+  /** 납부지연가산세를 계산할 것인가 (🔴 B3) — OFF 면 세 칸을 보내지 않는다 */
+  applyLatePaymentPenalty: boolean;
+  /** 미납·과소납부세액 — §47의4①1호 base (🔴 B3) */
+  unpaidTax: string;
+  /** 법정납부기한 `YYYY-MM-DD` — 상증법 §70① (🔴 B3) */
+  paymentDeadline: string;
+  /** 실제 납부일 `YYYY-MM-DD` (🔴 B3) */
+  actualPaymentDate: string;
+  /** §47의4③6호 — 기한 내 신고·납부 후 평가 경정 (🔴 B3) */
+  paidOnTimeThenRevalued: boolean;
+}
+
+/**
+ * ④ 납부지연 축(🔴 B3) — 「국세기본법」 §47의4.
+ *
+ * 🔑 **신고 상태와 독립이다.** §47의4①1호는 「법정납부기한까지 납부하지 아니한」 사실만
+ *    요건으로 하므로 정기·정확 신고를 했어도 납부가 늦으면 붙는다 ⇒ 3-state 세 분기 모두에서
+ *    같은 블록을 붙인다(부동산 Step6 도 납부지연을 신고 유형 게이트 **밖 형제**로 둔다).
+ *
+ * ⚠️ 금액·기한을 **파생하지 않는다** — 상증법 §70①은 연부연납·납부유예·물납 신청분을
+ *    자진납부 대상에서 빼고 §70② 분납은 기한이 2개월 뒤다. 결정세액에서 유도하면 과대가 된다.
+ */
+function latePaymentPart(fields: FilingPenaltyFormFields): Partial<InheritanceGiftPenaltyInput> {
+  if (!fields.applyLatePaymentPenalty) return {};
+  return {
+    ...(fields.unpaidTax.trim() ? { unpaidTax: parseAmount(fields.unpaidTax) } : {}),
+    ...(fields.paymentDeadline ? { paymentDeadline: fields.paymentDeadline } : {}),
+    ...(fields.actualPaymentDate ? { actualPaymentDate: fields.actualPaymentDate } : {}),
+    // §47의4③6호는 「법정신고기한까지 **납부**한 자」가 요건이라 정기신고에서만 성립한다.
+    ...(fields.paidOnTimeThenRevalued ? { paidOnTimeThenRevalued: true } : {}),
+  };
 }
 
 /**
@@ -62,8 +93,14 @@ export function buildFilingPenaltyInput(
   statutoryDeadline?: string,
 ): { filingPenalty?: InheritanceGiftPenaltyInput } {
   if (status === "on_time") {
-    // 과소신고가 아니면 **키 자체를 넣지 않는다** — 종전 payload 를 그대로 보존한다.
-    if (!fields.isUnderReported) return {};
+    // 과소신고가 아니면 §47의3 축은 없다. 다만 **납부지연(§47의4)은 독립**이라
+    // 정기·정확 신고여도 납부가 늦으면 붙는다 — 그 축만 있으면 그것만 보낸다.
+    if (!fields.isUnderReported) {
+      const late = latePaymentPart(fields);
+      return Object.keys(late).length > 0
+        ? { filingPenalty: { filingStatus: "on_time", ...late } }
+        : {};
+    }
     return {
       filingPenalty: {
         filingStatus: "on_time",
@@ -93,6 +130,7 @@ export function buildFilingPenaltyInput(
         fields.corporateAdjustmentByFraud
           ? { corporateAdjustmentByFraud: true }
           : {}),
+        ...latePaymentPart(fields),
       },
     };
   }
@@ -110,6 +148,7 @@ export function buildFilingPenaltyInput(
         ...(fields.penaltyReason !== "normal"
           ? { penaltyReason: fields.penaltyReason }
           : {}),
+        ...latePaymentPart(fields),
       },
     };
   }
@@ -120,6 +159,7 @@ export function buildFilingPenaltyInput(
       filingStatus: "none",
       // 🔴 B2 — §47의2①1호 부정 40%·역외 60%. 무신고에는 가목·나목 분해가 없다.
       ...(fields.penaltyReason !== "normal" ? { penaltyReason: fields.penaltyReason } : {}),
+      ...latePaymentPart(fields),
     },
   };
 }

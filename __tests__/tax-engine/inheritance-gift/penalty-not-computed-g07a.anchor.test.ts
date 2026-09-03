@@ -24,7 +24,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildBesshi10Rows } from "@/lib/tax-engine/gift-tax-filing-form-besshi10";
 import { calcGiftTax } from "@/lib/tax-engine/gift-tax";
@@ -106,43 +106,40 @@ describe("G-07 A-2·A-3 결과 화면 고지 — 법정기한 내 신고가 아�
   });
 
   /**
-   * 🔴 B1 이후 **scope 가 갈린다** — 증여세는 §47의2·§47의3을 실제로 산출하므로 남은 축
-   * (부정행위율 B2 · 납부지연 B3)만 고지하고, 상속세는 아직 전부 미산출이다.
-   * 배너가 「전부 미포함」이라고 계속 말하면 그 자체가 새 거짓말이 된다.
+   * 🔴 **B3 에서 배너를 제거했다.** B1(일반율) → B2(부정행위 40·60%) → B3(납부지연 §47의4)로
+   * 남은 축이 사라졌다. 「아직 포함되지 않은 가산세가 있습니다」를 남겨두면 **계산해 놓고
+   * 안 했다고 말하는** 반대 방향의 거짓이 된다.
+   *
+   * ⇒ 삭제만 하면 누군가 다시 붙일 수 있으므로, **없어야 한다는 사실 자체를 고정**한다.
    */
   it.each([
-    ["components/calc/results/GiftTaxResultView.tsx", "증여세"],
-    ["components/calc/results/InheritanceTaxResultView.tsx", "상속세"],
-  ])("A2-3: %s 가 고지 배너를 배선한다", (rel, label) => {
+    ["components/calc/results/GiftTaxResultView.tsx"],
+    ["components/calc/results/InheritanceTaxResultView.tsx"],
+  ])("A2-3: ⛔ %s 에 「미포함」 배너가 없다 (B3 이후)", (rel) => {
     const src = read(rel);
-    expect(src).toContain(
-      'import { PenaltyNotIncludedNotice } from "@/components/calc/results/shared/PenaltyNotIncludedNotice"',
-    );
-    expect(src).toContain("result.creditDetail.isFiledOnTime === false");
-    expect(src).toContain(`<PenaltyNotIncludedNotice taxLabel="${label}" />`);
+    expect(src).not.toContain("PenaltyNotIncludedNotice");
+    expect(src).not.toContain("아직 포함되지 않은 가산세가 있습니다");
+  });
+
+  it("A2-3b: ⛔ 배너 컴포넌트 파일 자체가 없다", () => {
+    expect(
+      existsSync(join(ROOT, "components/calc/results/shared/PenaltyNotIncludedNotice.tsx")),
+    ).toBe(false);
   });
 
   /**
-   * 🔴 B1(상속) 이후 — 상속·증여 **양쪽이** §47의2·§47의3 일반율을 산출한다. 「전부 미포함」
-   * 분기(`scope="all"`)는 소비자가 사라져 **제거**했다. 배너는 남은 축만 말해야 한다.
+   * 배너 자리를 **산출근거 카드 두 장**이 대신한다 — 「왜 이 금액인가」를 말하는 쪽이
+   * 「아직 없다」보다 강한 고지다.
    */
-  it("A2-4: 배너 **렌더 문구**가 남은 축만 가리킨다 (B2 이후 — 납부지연 §47의4 하나)", () => {
-    const src = read("components/calc/results/shared/PenaltyNotIncludedNotice.tsx");
-    /**
-     * 🔑 파일 전체를 `toContain`으로 훑으면 **JSDoc 헤더의 조문 인용에 걸려** 렌더 문구에서
-     * 조문을 지워도 통과한다(뮤테이션 실측 M-A2d GREEN). 렌더되는 문장 그대로 단언한다.
-     *
-     * 🔴 **B2 에서 범위가 또 좁아졌다** — 부정행위 40%·역외 60%(§47의2①1호·§47의3①1호
-     *    가목)를 이제 산출하므로, 그 축을 「미포함」이라 적으면 계산해 놓고 안 했다고
-     *    말하는 셈이 된다. 남은 축은 납부지연(§47의4) 하나다.
-     */
-    expect(src).toContain("아직 포함되지 않은 가산세가 있습니다");
-    expect(src).toContain("<strong>납부지연가산세</strong>(§47의4)는 아직 계산하지 않습니다");
-    // ⛔ 「전부 미포함」으로 되돌아가면 이제 거짓이다
-    expect(src).not.toContain("신고불성실·납부지연 가산세가 포함되어 있지 않습니다");
-    expect(src).not.toContain('scope === "filing-only"');
-    // ⛔ B2 이후 부정행위 축을 「미포함」이라 말하면 거짓이다
-    expect(src).not.toContain("(§47의2①1호·§47의3①1호가목)와");
+  it.each([
+    ["components/calc/results/GiftTaxResultView.tsx"],
+    ["components/calc/results/InheritanceTaxResultView.tsx"],
+  ])("A2-4: 🔴 %s 가 신고불성실·납부지연 산출근거 카드를 모두 배선한다", (rel) => {
+    const src = read(rel);
+    expect(src).toContain("<FilingPenaltyDetailCard detail={result.filingPenaltyDetail} />");
+    expect(src).toContain(
+      "<LatePaymentPenaltyDetailCard detail={result.latePaymentPenaltyDetail} />",
+    );
   });
 });
 

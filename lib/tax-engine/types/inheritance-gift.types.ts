@@ -402,8 +402,15 @@ export interface InheritanceTaxResult extends TaxResultMeta {
    * 적용제외를 담는다. 미입력이면 undefined.
    */
   filingPenaltyDetail?: import("../inheritance-gift-penalty").InheritanceGiftPenaltyResult;
+  /** 🔴 G-07 B3: 납부지연가산세 (별지9호 ㊲) — 「국세기본법」 §47의4. 신고 단위 1회. */
+  latePaymentPenalty?: number;
   /**
-   * 🔴 G-07 B1: **총 납부세액** = `finalTax`(결정세액) + 가산세. 가산세가 0이면 undefined.
+   * 🔴 G-07 B3: 납부지연가산세 **산출근거** — 미납세액·산정일수·이자율 구간·§47의4③ 적용제외.
+   */
+  latePaymentPenaltyDetail?: import("../inheritance-gift-penalty").InheritanceGiftLatePaymentResult;
+  /**
+   * 🔴 G-07 B1·B3: **총 납부세액** = `finalTax`(결정세액) + 가산세(신고불성실 + 납부지연).
+   * 가산세가 0이면 undefined.
    *
    * 🔑 `finalTax`는 **결정세액 그대로 둔다** — 별지9호 ㉔ 축이고 연부연납(§71)·분납(§70②)
    *    산정 base 다. 별지9호 ㊳「납부할세액(합계액)」이 `㉔+㉕−㉖−㉗+㉟+㊱+㊲`이므로
@@ -614,7 +621,9 @@ export interface GiftTaxResult extends TaxResultMeta {
   interestEquivalent?: number;       // ㉟ 이자상당액
   museumDeferredTax?: number;        // ㊱ §75 박물관자료 등 징수유예세액
   underreportPenalty?: number;       // ㊷ 국기법 §47의2·§47의3
-  latePaymentPenalty?: number;       // ㊸ 국기법 §47의4 (B3 — 현재 미산출)
+  latePaymentPenalty?: number;       // ㊸ 국기법 §47의4 (🔴 B3 — 산출)
+  /** 🔴 G-07 B3: 납부지연가산세 산출근거 — 미납세액·산정일수·이자율 구간·§47의4③ 적용제외 */
+  latePaymentPenaltyDetail?: import("../inheritance-gift-penalty").InheritanceGiftLatePaymentResult;
   publicInterestPenalty?: number;    // ㊹ 상증법 §78③~⑮ 공익법인 등 관련 가산세 (범위 밖)
   /**
    * 🔴 G-07 B1: 신고불성실가산세 **산출근거** — 「국세기본법」 §47의2·§47의3.

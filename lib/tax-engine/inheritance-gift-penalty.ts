@@ -29,12 +29,15 @@
  */
 
 import {
+  calculateDelayedPaymentPenalty,
   calculateFilingPenalty,
+  type DelayedPaymentRateSegment,
   type FraudPortionSplit,
   type PenaltyReason,
   type PenaltyStep,
 } from "./transfer-tax-penalty";
 import { resolveLateFilingReduction } from "./late-filing-reduction";
+import { parseISO } from "date-fns";
 
 /** 신고 상태 — 「기한까지 신고했는가·언제」 축 */
 export type InheritanceGiftFilingStatus =
@@ -115,6 +118,57 @@ export interface InheritanceGiftPenaltyInput {
    * `penaltyReason` 축 그대로다(별도 입력이 필요 없다).
    */
   corporateAdjustmentByFraud?: boolean;
+  /**
+   * 미납·과소납부세액 — 「국세기본법」 §47의4①1호의 base. 🔴 G-07 B3.
+   *
+   * ⚠️ **파생하지 않고 받는다.** 상증법 §70①은 연부연납(§71)·납부유예(§72의2)·물납(§73)
+   *    **신청분을 자진납부 대상에서 뺀다**. 결정세액에서 자동으로 유도하면 그 금액까지
+   *    미납으로 보아 과대 산출된다. §70② 분납(2개월)도 기한이 다르다.
+   */
+  unpaidTax?: number;
+  /**
+   * 법정납부기한 `YYYY-MM-DD` — 상증법 §70①에 따라 **신고기한과 같다**(§67·§68).
+   * 분납·연부연납이 있으면 다르므로 ④가 파생하지 않고 사용자가 입력한다.
+   */
+  paymentDeadline?: string;
+  /** 실제 납부일 `YYYY-MM-DD` — 미입력이면 계산 기준일(오늘)까지로 본다 */
+  actualPaymentDate?: string;
+  /**
+   * 🔴 §47의4③**6호** — 「§67·§68에 따라 신고한 자가 §70에 따라 **법정신고기한까지 납부**한
+   * 경우로서, 법정신고기한 이후 대통령령으로 정하는 방법에 따라 상속재산·증여재산을
+   * **평가하여** 과세표준과 세액을 결정·경정한 경우」.
+   *
+   * ⚠️ §47의3④1호 **다목**(과소신고 적용제외)과 짝을 이루지만 **요건이 다르다** —
+   *    6호는 「법정신고기한까지 **납부**」를 추가로 요구한다. 다목 입력으로 대체할 수 없다.
+   */
+  paidOnTimeThenRevalued?: boolean;
+}
+
+/** §47의4③ 납부지연가산세 적용제외 사유 — 상속·증여에 걸리는 두 호 */
+export type LatePaymentExclusion =
+  /** 4호. 법인세 경정으로 §45의3~§45의5 증여의제이익 변경 (부정행위로 인한 경정은 제외) */
+  | "corporate_adjustment"
+  /** 6호. 기한 내 신고·납부 후 평가로 과세표준·세액이 결정·경정된 경우 */
+  | "revalued_after_timely_filing";
+
+export const LATE_PAYMENT_EXCLUSION_LABELS: Record<LatePaymentExclusion, string> = {
+  corporate_adjustment: "법인세 경정에 따른 증여의제이익 변경 (§47의4③4호)",
+  revalued_after_timely_filing: "기한 내 신고·납부 후 평가 경정 (§47의4③6호)",
+};
+
+/** 상속·증여 납부지연가산세 결과 (🔴 G-07 B3) */
+export interface InheritanceGiftLatePaymentResult {
+  /** 납부지연가산세액 */
+  penalty: number;
+  /** 미납세액 */
+  unpaidTax: number;
+  /** 산정일수 — 「법정납부기한의 다음 날부터 납부일의 **전날**까지」(§47의4①1호) */
+  elapsedDays: number;
+  /** 이자율 구간별 내역 — 개정 시행일을 걸치면 2개 이상이 된다 */
+  breakdown: DelayedPaymentRateSegment[];
+  /** §47의4③으로 0이 된 경우 그 호 */
+  exclusionApplied?: LatePaymentExclusion;
+  steps: PenaltyStep[];
 }
 
 /** 상속·증여 신고불성실가산세 결과 */
@@ -312,6 +366,93 @@ export function calcInheritanceGiftFilingPenalty(
     reductionRate: r.lateFilingReductionRate,
     reductionAmount: r.lateFilingReductionAmount,
     ruleRef: r.filingPenalty > 0 ? r.legalBasis : "",
+    steps: r.steps,
+  };
+}
+
+// ============================================================
+// 납부지연가산세 — 「국세기본법」 §47의4 (🔴 G-07 B3)
+// ============================================================
+
+const LATE_PAYMENT_ZERO: InheritanceGiftLatePaymentResult = {
+  penalty: 0,
+  unpaidTax: 0,
+  elapsedDays: 0,
+  breakdown: [],
+  steps: [],
+};
+
+/**
+ * 상속·증여 납부지연가산세 — **신고 단위 1회** 산정.
+ *
+ * ## 산식은 부동산 정본을 그대로 쓴다
+ *
+ * §47의4①1호는 세목 중립이다 — 「납부하지 아니한 세액 × **법정납부기한의 다음 날부터
+ * 납부일의 전날까지**의 기간 × 대통령령으로 정하는 이자율」. `calculateDelayedPaymentPenalty`
+ * 가 그 산식의 정본이고(G-03 에서 「납부일의 전날까지」로 정정됐다), 이자율 개정 시행일을
+ * 걸치는 구간 분해도 거기에 있다.
+ *
+ * ## 상속·증여에만 있는 것 — §47의4③의 두 호
+ *
+ * · **4호** 법인세 경정으로 §45의3~§45의5 증여의제이익이 변경된 경우
+ *   (**부정행위로 인한 경정은 제외**) — §47의3④1호 **라목과 같은 사실**이라 입력을 공유한다.
+ * · **6호** 기한 내 신고·납부한 자가 그 뒤 **평가**로 결정·경정된 경우 — 라목·다목과 달리
+ *   「법정신고기한까지 **납부**」를 추가 요건으로 하므로 **별도 입력**이다.
+ *
+ * 🔑 ③은 「제1항제1호 및 제2호의 가산세를 적용하지 **아니한다**」 — 감면(§48②)이 아니라
+ *    **적용 자체가 배제**된다. 그래서 감면율이 아니라 0을 돌려준다.
+ */
+export function calcInheritanceGiftLatePayment(
+  input: InheritanceGiftPenaltyInput,
+  calculationDate?: Date,
+): InheritanceGiftLatePaymentResult {
+  const unpaidTax = Math.max(0, input.unpaidTax ?? 0);
+  if (unpaidTax <= 0 || !input.paymentDeadline) return LATE_PAYMENT_ZERO;
+
+  const deadline = parseISO(input.paymentDeadline);
+  if (isNaN(deadline.getTime())) return LATE_PAYMENT_ZERO;
+
+  // ── §47의4③ 적용제외 ────────────────────────────────────────────────
+  //
+  // ⚠️ 4호는 §47의3④1호 라목과 **같은 사실**을 가리킨다(문언이 같다) — 폼이 그 사실을
+  //    한 번만 받으므로 여기서도 같은 필드를 읽는다. 부정행위로 인한 법인세 경정이면
+  //    두 조문 모두 단서에 걸려 적용제외가 성립하지 않는다.
+  const exclusion: LatePaymentExclusion | undefined = input.paidOnTimeThenRevalued
+    ? "revalued_after_timely_filing"
+    : input.underReportExclusion === "corporate_adjustment" &&
+        !input.corporateAdjustmentByFraud
+      ? "corporate_adjustment"
+      : undefined;
+
+  if (exclusion) {
+    return {
+      ...LATE_PAYMENT_ZERO,
+      unpaidTax,
+      exclusionApplied: exclusion,
+      steps: [
+        {
+          label: "납부지연가산세 적용제외",
+          formula: LATE_PAYMENT_EXCLUSION_LABELS[exclusion],
+          amount: 0,
+          legalBasis: "국세기본법 §47의4③",
+        },
+      ],
+    };
+  }
+
+  const actual = input.actualPaymentDate ? parseISO(input.actualPaymentDate) : undefined;
+  const r = calculateDelayedPaymentPenalty({
+    unpaidTax,
+    paymentDeadline: deadline,
+    actualPaymentDate: actual && !isNaN(actual.getTime()) ? actual : undefined,
+    calculationDate,
+  });
+
+  return {
+    penalty: r.delayedPaymentPenalty,
+    unpaidTax: r.unpaidTax,
+    elapsedDays: r.elapsedDays,
+    breakdown: r.breakdown,
     steps: r.steps,
   };
 }

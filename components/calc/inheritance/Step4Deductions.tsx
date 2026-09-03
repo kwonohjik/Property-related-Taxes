@@ -30,6 +30,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FilingPenaltyFraudFields } from "@/components/calc/shared/FilingPenaltyFraudFields";
+import { LatePaymentPenaltyFields } from "@/components/calc/shared/LatePaymentPenaltyFields";
 import { AutoSuggestBadge } from "./AutoSuggestBadge";
 import { FamilyBusinessEligibilitySection } from "./FamilyBusinessEligibilitySection";
 import { InstallmentInputSection } from "./InstallmentInputSection";
@@ -635,6 +636,20 @@ export function Step4({
             정기신고는 **과소신고를 켰을 때만** 가산세가 산출되므로 그때만 묻는다.
             기한후신고·무신고는 축이 항상 열려 있다.
           */}
+          {/*
+            🔴 B3 — 납부지연가산세(§47의4). **신고 유형 게이트 밖 형제**다 — §47의4①1호는
+            「법정납부기한까지 납부하지 아니한」 사실만 요건으로 해서, 정기·정확 신고에도 붙는다.
+          */}
+          <LatePaymentPenaltyFields
+            filingStatus={resolveInheritanceFilingStatus(form)}
+            applyLatePaymentPenalty={form.applyLatePaymentPenalty}
+            unpaidTax={form.unpaidTax}
+            paymentDeadline={form.paymentDeadline}
+            actualPaymentDate={form.actualPaymentDate}
+            paidOnTimeThenRevalued={form.paidOnTimeThenRevalued}
+            onChange={set}
+          />
+
           {(resolveInheritanceFilingStatus(form) !== "on_time" || form.isUnderReported) && (
             <FilingPenaltyFraudFields
               filingStatus={resolveInheritanceFilingStatus(form)}
