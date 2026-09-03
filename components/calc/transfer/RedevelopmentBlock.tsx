@@ -33,6 +33,7 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -83,6 +84,11 @@ interface Props {
 }
 
 export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegulatedAtAcquisition }: Props) {
+  /**
+   * 공유지분 모드 여부 — ④ API 변환(`buildRedevelopmentPayload`)과 **같은 술어**를 쓴다.
+   * 갈라지면 화면이 「지분 해당분」이라 하는데 엔진은 100%로 취급하는 사고가 난다.
+   */
+  const isRedevFractional = isFractionalOwnership(asset);
   // subject="right" (입주권 양도) 포함: assetKind="right_to_move_in" 시에도 활성화
   const isActive = asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in";
   const isRightSubject = asset.redevSubject === "right" || asset.assetKind === "right_to_move_in";
@@ -264,7 +270,10 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           </FieldCard>
 
           {asset.redevIsSuccessorMember !== "yes" && (
-            <FieldCard label="권리가액">
+            <FieldCard
+              label="권리가액"
+              hint={isRedevFractional ? "물건 전체(100%) 기준으로 입력하세요 — 시스템이 지분율을 적용합니다." : undefined}
+            >
               <CurrencyInput label=""
                 value={asset.redevRightsValue}
                 onChange={(v) => onChange({ redevRightsValue: v })}
@@ -301,7 +310,23 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
         <div className="grid gap-2 sm:grid-cols-2">
           {asset.redevIsSuccessorMember !== "yes" && (
             <FieldCard
-              label={asset.redevSettlementDirection === "receive" ? "청산금 수령액" : "청산금 납부액"}
+              /**
+               * 🔴 지분 모드에서 **이 칸만 지분분을 직접 입력**받는다 — 나머지 금액은 100% 기준이다.
+               *
+               * §166①1호가 「**납부한** 청산금」이라고 사실을 지목하고, 「도시 및 주거환경정비법」
+               * §39①1호가 공유를 **대표 1명의 조합원**으로 보아 조합이 그 1인에게 부과하므로,
+               * 공유자 사이의 실제 분담은 내부 약정이다 — 지분율로 파생되지 않는다.
+               * 엔진이 ×지분율로 쪼개면 자동 안분 fallback이 된다(정책 위반).
+               *
+               * 부담부증여 인수채무와 같은 처리다(`BurdenedGiftBlock` 「(지분 인수분)」).
+               * 판정 술어는 API 변환·validate와 **같은 소스**(`isFractionalOwnership`)여야 한다.
+               */
+              label={`${asset.redevSettlementDirection === "receive" ? "청산금 수령액" : "청산금 납부액"}${isRedevFractional ? " (지분 해당분)" : ""}`}
+              hint={
+                isRedevFractional
+                  ? "이 칸만 본인 지분에 해당하는 실제 납부·수령액을 입력하세요. 권리가액·필요경비는 물건 전체(100%) 기준입니다."
+                  : undefined
+              }
             >
               <CurrencyInput label=""
                 value={asset.redevSettlementAmount}

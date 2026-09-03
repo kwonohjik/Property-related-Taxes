@@ -40,7 +40,22 @@ export function Step1({
   // 자산 분할 모드 — 단일 소스(명시 state). length·ratio derive는 초기화(세션 복원) 1회만 —
   // 렌더마다 재계산하면 토글 ON 직후 자기소멸. (memory feedback_three_state_optional_mode_toggle)
   const [splitMode, setSplitMode] = useState<AssetSplitMode>(() => {
+    /**
+     * 🔑 **지분 분할(축 B)은 정의상 다자산**이다 — `form.assets.length > 1` 조건 필수 (R4, 2026-09-03).
+     *
+     * 종전에는 length 조건 없이 `some(fractional)`만 봐서 **단건 공유지분(축 A)까지** 축 B로
+     * 분류했다. 그러면 같은 데이터가 두 상태로 갈린다:
+     *  - 사용자가 방금 60%를 입력한 순간: state는 "none" → ① 기본정보에 「공유 지분율」
+     *  - 세션 복원 후 재진입: derive가 "fractional" → ③ 취득정보에 「취득 지분율」
+     * 라벨이 바뀔 뿐 아니라 ①에만 있는 「나머지 지분은 타인 소유」 선언이 **사라져**
+     * 게이트를 통과할 방법이 없어진다(dead-end 부활).
+     *
+     * 축 B의 단일 진실 공급원인 `isFullFractionalBundle`도 `assets.length > 1`을 요구한다 —
+     * 여기만 빠져 있었다. (`every`가 아니라 `some`인 것은 유지한다: 토글 B 진입 직후
+     * 지분율이 빈칸이라 `every`는 거짓이 된다.)
+     */
     if (
+      form.assets.length > 1 &&
       form.assets.some((a) =>
         isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator),
       )

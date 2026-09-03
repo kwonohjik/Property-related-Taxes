@@ -13,6 +13,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { applyRatio } from "./transfer-tax-api-helpers";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import {
@@ -28,7 +29,43 @@ import {
  *   LandPriceLookupField(단가×면적) 우선 > legacy 총액 직접 입력 fallback.
  *   UI·validate와 동일 우선순위 — API layer 단독 변환 금지(silent stripping 차단).
  */
-export function buildRedevelopmentPayload(asset: AssetForm) {
+/**
+ * 공유지분 스케일 — **§166 필드별로 갈린다**(2026-09-03, 근거 실측).
+ *
+ * ## 스케일 O — 「관리처분계획등에 따라 **정하여진 가격**」(§166④1호)
+ *
+ * `rightsValue`(평가액)는 관리처분계획이 **물건 단위**로 정한 가격이다.
+ * 「도시 및 주거환경정비법」 §39①1호가 **공유는 그 여러 명을 대표하는 1명을 조합원으로 본다**고
+ * 하므로, 계획은 공유자별로 가격을 따로 정하지 않는다 ⇒ 각자의 몫은 **지분율로 귀속**된다.
+ * 필요경비(§97①2·3호)도 화면 규약(「필요경비는 100% 기준 입력」)과 상위
+ * `transfer-tax-api.ts`의 `transferExpense` 처리에 맞춘다.
+ *
+ * ## 🔴 스케일 X — 「**납부한** 청산금」(§166①1호)
+ *
+ * 법문이 **사실**(실제 납부·수령액)을 지목한다. 조합은 청산금을 **대표조합원 1인에게** 부과하고
+ * (같은 §39①1호), 공유자 사이의 실제 분담은 **내부 약정**이라 지분율로 파생된다고 단정할 수 없다.
+ * 엔진이 ×지분율로 쪼개면 **자동 안분 fallback**이 된다(정책 위반 —
+ * `feedback_no_silent_apportion_fallback`).
+ *
+ * ⇒ 사용자가 **자기 지분 납부·수령분을 직접 입력**한다. 부담부증여 인수채무와 **같은 구조**이며
+ *   (`burdened-gift-valuation.ts` 「스케일하지 않는 것」), UI도 같은 방식으로 라벨을 바꾼다.
+ *
+ * ## 스케일 X — 기준시가·면적 (비율 성분)
+ *
+ * §166③ 환산은 `평가액 × (취득일 기준시가 ÷ 인가일 기준시가)`라 기준시가가 **분자·분모로 함께**
+ * 나타나 약분된다. 평가액이 이미 지분분이면 결과도 지분분이다. 기준시가까지 줄이면 **이중 축소**다
+ * (이월과세 R-3·`transfer-tax-api-gb-shares.ts` `applyShareScale`과 같은 규율).
+ *
+ * ⚠️ 이 규율은 **§166⑦(기준시가 과세)이 미구현**이라는 전제 위에 선다. ⑦은 기준시가를 **절대값으로
+ *    차감**해 약분되지 않으므로, 구현하게 되면 이 판단을 **다시 해야 한다**.
+ *
+ * @param ownershipRatio 공유지분율(0<r<1). 미전달·1.0이면 완전 무변경(단독 소유).
+ */
+export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: number) {
+  const fractional =
+    ownershipRatio !== undefined && ownershipRatio > 0 && ownershipRatio < 1;
+  /** 절대금액 성분 전용 스케일러. 비율 성분·사실 금액(청산금)에는 쓰지 않는다. */
+  const share = (v: number): number => (fractional ? applyRatio(v, ownershipRatio!) : v);
   // UI display fallback과 동일(RedevelopmentBlock.tsx). 3중 패턴(UI/API/validate).
   // assetKind="right_to_move_in" 시 redevSubject 미입력이면 "right" fallback
   // (경로 A 버그 수정: assetKind="right_to_move_in" + redevSubject="" → "apt" 오변환 차단)
@@ -48,13 +85,21 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
     approvalDate: asset.redevApprovalDate,
     // 사례 48 — 승계조합원 모드: redev 권리가액 필드 숨김 → 자산 카드 fixedAcquisitionPrice 자동 미러 (UI 무결성용).
     // 엔진 runSuccessorMember는 input.actualAcquisitionPrice 우선 사용하므로 본 값은 fallback.
-    rightsValue: asset.redevIsSuccessorMember === "yes"
-      ? parseAmount(asset.fixedAcquisitionPrice)
-      : parseAmount(asset.redevRightsValue),
+    // 스케일 O — §166④1호 평가액(관리처분계획상 물건 단위 가격).
+    // 승계조합원 갈래도 함께 감싼다: 엔진은 `input.actualAcquisitionPrice`(상위에서 이미 지분
+    // 스케일됨)를 우선하고 이 값은 fallback이라, 스케일하지 않으면 fallback만 100%로 남는다.
+    rightsValue: share(
+      asset.redevIsSuccessorMember === "yes"
+        ? parseAmount(asset.fixedAcquisitionPrice)
+        : parseAmount(asset.redevRightsValue),
+    ),
     settlementDirection: (asset.redevSettlementDirection || "pay") as "pay" | "receive",
+    // 🔴 스케일 X — §166①1호 「**납부한** 청산금」은 사실이다. 사용자가 지분 납부·수령분을
+    //    직접 입력한다(UI 라벨이 지분 모드에서 「(지분 납부분)」으로 바뀐다).
     settlementAmount: parseAmount(asset.redevSettlementAmount),
     settlementSaleDate: asset.redevSettlementSaleDate || undefined,
-    preApprovalExpenses: parseAmount(asset.redevPreApprovalExpenses),
+    // 스케일 O — 필요경비(§97①2·3호). 화면 규약 「필요경비는 100% 기준 입력」.
+    preApprovalExpenses: share(parseAmount(asset.redevPreApprovalExpenses)),
     // 인가후 분 필요경비 = redev 전용 입력 + 자본적지출(§97① 가목) + 양도비(§97① 나목)
     // 신축APT 양도 시점에 발생한 자본적지출·양도비는 인가후 분에 귀속.
     postApprovalExpenses: (() => {
@@ -66,7 +111,9 @@ export function buildRedevelopmentPayload(asset: AssetForm) {
           : 0;
       const capex = parseAmount(asset.capitalExpenditure);
       const transferExp = parseAmount(asset.transferExpense);
-      const total = redevPost + capex + transferExp;
+      // 스케일 O — 세 성분 모두 100% 기준 입력이다. 합친 뒤 한 번만 적용한다
+      // (성분별로 나눠 적용하면 floor가 세 번 걸려 잔액이 새 나간다).
+      const total = share(redevPost + capex + transferExp);
       return total > 0 ? total : undefined;
     })(),
     originalAssetType: (asset.redevOriginalAssetType || "housing") as "land" | "housing" | undefined,
