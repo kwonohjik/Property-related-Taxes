@@ -29,6 +29,7 @@ interface Props {
   primaryAsset?: AssetForm;
   /** 지분 분할 모드(splitMode==="fractional") — 양도가액 자동계산·기준시가 안분 입력 숨김 게이트 */
   isFractionalSplit?: boolean;
+  isCompanionBundle?: boolean;
 }
 
 export function AssetSectionTransfer({
@@ -40,6 +41,7 @@ export function AssetSectionTransfer({
   contractTotalPrice,
   primaryAsset,
   isFractionalSplit,
+  isCompanionBundle,
 }: Props) {
   // 증환지 증가분: 당초분(assets[0]) 양도시 기준시가에서 live fallback (증가분 추가 순서와 무관하게 자동).
   // 사용자가 증가분 카드에서 직접 입력하면 자기 값이 우선(override). API·validate도 동일 fallback.
@@ -61,6 +63,7 @@ export function AssetSectionTransfer({
         onChange={onChange}
         transferDate={transferDate ?? ""}
         isFractionalSplit={isFractionalSplit}
+        isCompanionBundle={isCompanionBundle}
       />
 
       {/* 양도가액 — 부담부증여 시 엔진 자동 도출 (소령 §159) 안내 + 기준시가는 별도 유지 */}

@@ -179,10 +179,13 @@ describe("축 B × 부담부증여 — 배관", () => {
     expect(msgs).toEqual([]);
   });
 
-  it("P-6 ⑧ 컴패니언(다른 물건) 함께양도에서는 **여전히 차단**된다", () => {
-    // 축 B(전 자산 fractional)만 열렸다. 그 경로는 §159 안분을 타지 않는다.
+  it("P-6 🔄 컴패니언(다른 물건) 함께양도도 **열렸다** (2026-09-03)", () => {
+    // 종전에는 이 자리에서 「여전히 차단」을 단언하며 「그 경로는 §159 안분을 타지 않는다」고
+    // 적었다. 그 진단이 틀렸다 — 안분을 **타지 않은** 게 아니라 ④가 카드마다 채무 전액을
+    // 실어 자산 수만큼 곱해지고 있었다(실측 2배). 신고 단위 채무 재배분으로 해소했고
+    // 그 축은 `companion-burdened-gift-plumbing.anchor.test.ts`(C)가 지킨다.
     const mixed = [asset(1, "100"), asset(2, "100", { assetId: 2 })];
     const msgs = collectStepIssues(0, form(mixed) as never).map((i) => i.message);
-    expect(msgs.some((m) => /부담부증여\(소령 §159\)은\(는\) 함께 양도와 같이 계산할 수 없습니다/.test(m))).toBe(true);
+    expect(msgs.some((m) => /부담부증여\(소령 §159\)은\(는\) 함께 양도와 같이 계산할 수 없습니다/.test(m))).toBe(false);
   });
 });

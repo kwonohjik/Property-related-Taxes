@@ -39,6 +39,8 @@ import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { apportionCompanionBurdenedGiftDebt } from "./transfer-tax-api-burdened-gift";
+import { buildCompanionBurdenedGiftWholeInfo } from "./transfer-tax-api-burdened-gift";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import {
   buildInheritedAcquisitionPayload,
@@ -245,12 +247,32 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
    * 근거·수치는 `buildBurdenedGiftInfo`의 `debtScaleRatio` 주석 참조(단일 소스).
    * `fractionalBundleMerge`(:73)가 축 판정이다 — 전 자산이 fractional일 때만 참.
    */
-  const bgInfo = isBurdenedGift
+  const bgInfoBase = isBurdenedGift
     ? buildBurdenedGiftInfo(
         primary,
         fractionalBundleMerge ? getOwnershipRatio(primary) : undefined,
       )
     : undefined;
+  /**
+   * ⑬ 컴패니언(다른 물건) 함께 부담부증여 — **신고 단위 채무 B를 자산가액 비율로 재배분**.
+   *
+   * 축 B(지분 분할)와 **배타적**이다: 축 B는 같은 물건이라 지분율 스케일이 §159의 B/C를
+   * 보존하지만, 다른 물건끼리는 지분율이 배분 근거가 못 된다. 근거·실측은
+   * `apportionCompanionBurdenedGiftDebt` 주석(단일 소스).
+   *
+   * `gbShares !== undefined`(일반건물 지분 분할)는 companion 경로를 아예 쓰지 않으므로 제외.
+   */
+  const companionBgDebtOverrides =
+    isBurdenedGift && !fractionalBundleMerge && form.assets.length > 1
+      ? apportionCompanionBurdenedGiftDebt(
+          form.assets.map((a) => buildBurdenedGiftInfo(a)),
+          form.assets.map((a) => getOwnershipRatio(a)),
+        )
+      : undefined;
+  const bgInfo =
+    bgInfoBase !== undefined && companionBgDebtOverrides !== undefined
+      ? { ...bgInfoBase, assumedDebtOverride: companionBgDebtOverrides[0] }
+      : bgInfoBase;
 
   // 겸용주택 분리계산 payload 빌드
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
@@ -675,6 +697,18 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(isBurdenedGift && fractionalBundleMerge
       ? { burdenedGiftWholeInfo: buildBurdenedGiftInfo(primary) }
       : {}),
+    /**
+     * ⑬ 컴패니언(다른 물건) 함께 부담부증여 — **증여계약 전체 §159 정보**(합산).
+     * 카드별 info는 채무가 재배분돼 있어 물건 단위 증여세를 낼 수 없다(누진·공제가 갈라진다).
+     */
+    ...(companionBgDebtOverrides !== undefined
+      ? {
+          burdenedGiftWholeInfo: buildCompanionBurdenedGiftWholeInfo(
+            form.assets.map((a) => buildBurdenedGiftInfo(a)),
+            form.assets.map((a) => getOwnershipRatio(a)),
+          ),
+        }
+      : {}),
     // ⑬ 재개발/재건축 spread (시행령 §166) — 누락 시 silent stripping
     ...(redevPayload !== undefined ? { redevelopment: redevPayload } : {}),
     // ⑬ 가업상속공제 §97의2④ 의제 취득가액 spread (TypeScript 미감지 영역 — 누락 시 침묵 stripping)
@@ -720,7 +754,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             .slice(1)
             // 지분 모드(같은 물건 분할취득): companion ① 기본정보를 UI에서 숨기므로
             // primary basic(자산종류·면적·토지성격)을 병합해 엔진에 전달 (mergePrimaryBasic).
-            .map((a) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0], form.isOneHousehold)),
+            .map((a, ci) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1])),
           bundledSaleMode: form.bundledSaleMode,
           // primary 확정 양도가액.
           //  - 지분 모드: 총계약가 × ratio 자동 결정 (bundledSaleMode 무관, actualSalePrice 무시 —

@@ -42,6 +42,7 @@ import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateSuccessorRightAsset } from "./transfer-tax-validate-successor-right";
 import { isSuccessorRightTransfer } from "./transfer-successor-right";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
+import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateMixedUseAsset } from "./transfer-tax-validate-mixed-use-asset";
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
@@ -129,6 +130,8 @@ export function validateAssetAcquisition(
    *    두 층이 **같은 사실**(첫 자산 여부)을 보게 해서 UI 통과↔validate 차단 모순을 막는다.
    */
   isNonPrimaryAsset = false,
+  /** 컴패니언 함께 부담부증여 — 증여계약 전체 인수 채무 합계. 근거는 `validateBurdenedGiftAsset`. */
+  contractAssumedDebtTotal?: number,
 ): string | null {
   // ── 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) ──
   // ⚠️ **모든 조기 return보다 앞**이다 — 부담부증여(C-24)·겸용주택(C-14)·이월과세(C-21)는
@@ -137,7 +140,7 @@ export function validateAssetAcquisition(
   if (conversionError) return conversionError;
 
   // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§47②) — 별도 모듈로 분리 (800줄 정책, 2026-05-12) ──
-  const bgError = validateBurdenedGiftAsset(asset, label);
+  const bgError = validateBurdenedGiftAsset(asset, label, contractAssumedDebtTotal);
   if (bgError) return bgError;
 
   // ── §164④·⑥·⑤~⑦ 부분 입력 차단 (소령 §163⑨1호·2호) ──
@@ -850,7 +853,24 @@ export function validateAssetEntry(
 
   // 자산별 취득 정보 검증 (취득일 + 취득가 + 환산 + 1990 + 신축)
   // `index > 0` = 첫 자산 아님 ⇒ §164⑤ PHD 요구 해제 (⑤ `isNonPrimaryAsset`와 같은 술어).
-  const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0);
+  /**
+   * 컴패니언(다른 물건) 함께 부담부증여에서만 「채무 > 0」 판정을 **신고 단위**로 옮긴다.
+   * 축 B(전 자산 지분 분할)는 물건이 하나이고 카드마다 물건 전체 채무를 입력하는 규약이라
+   * 자산별 판정이 그대로 맞다 — `isFullFractionalBundle`이 두 축을 가른다.
+   */
+  const contractAssumedDebtTotal =
+    form.assets.length > 1 &&
+    !isFullFractionalBundle(form.assets) &&
+    form.assets.some((x) => x.transferType === "burdened_gift")
+      ? form.assets.reduce(
+          (sum, x) =>
+            sum +
+            (parseAmount(x.bgLendingDepositTotal) || 0) +
+            (parseAmount(x.bgMortgageDebtAmount) || 0),
+          0,
+        )
+      : undefined;
+  const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal);
   if (acqError) return acqError;
 
   // ⑧ 가업상속공제 §97의2④ 의제 취득가액 — 토글 ON 시 4필드 전수 입력 강제

@@ -177,7 +177,11 @@ export function computeDebtRatio(
   info: BurdenedGiftInfo,
   sangjeungbeopMax: number,
 ): { assumedDebtAmount: number; debtRatio: number } {
-  const assumedDebtAmount = info.lendingDepositTotal + info.mortgageDebtAmount;
+  // 컴패니언(다른 물건) 함께 부담부증여 — §159①의 B는 **신고 단위**이므로 ④가
+  // Bᵢ = B × Aᵢ/ΣA로 재배분한 값을 싣는다. 평가(A)는 원 입력 채무로 이미 확정됐고
+  // 여기서만 B를 갈아끼우므로 자기참조가 없다. 상세: 타입 주석 `assumedDebtOverride`.
+  const assumedDebtAmount =
+    info.assumedDebtOverride ?? info.lendingDepositTotal + info.mortgageDebtAmount;
   if (sangjeungbeopMax === 0) {
     return { assumedDebtAmount, debtRatio: 0 };
   }

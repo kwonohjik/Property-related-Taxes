@@ -49,6 +49,18 @@ interface Props {
    * 이 prop이 없으면 축 B에서 「(지분 인수분)」이라는 **정반대 안내**가 뜬다.
    */
   isFractionalSplit?: boolean;
+  /**
+   * 컴패니언(다른 물건) 함께 부담부증여 여부 — **채무 입력 규약이 제3의 것**이다.
+   *
+   * - 축 A(공유지분): 그 지분의 **인수분**을 입력.
+   * - 축 B(지분 분할): **물건 전체**를 입력하고 ④가 지분 안분.
+   * - **컴패니언(이 축)**: **각 물건에 붙은 채무**를 입력. 상증법 §66(담보)·§61⑤(임대) 평가가
+   *   재산별이라 자산별 채무가 평가액 Aᵢ 산정에 필요하다. 소령 §159①의 B/C는 증여계약
+   *   단위이므로 ④가 총채무를 자산가액 비율로 **재배분**한다(§159②와 같은 안분식).
+   *
+   * 침묵하면 사용자가 총액을 각 카드에 넣어 **자산 수만큼 곱해진다**(실측 2배).
+   */
+  isCompanionBundle?: boolean;
 }
 
 const VALUATION_MODE_OPTIONS = [
@@ -144,7 +156,7 @@ const DONOR_RELATION_OPTIONS = [
   },
 ] as const;
 
-export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalSplit }: Props) {
+export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle }: Props) {
   /**
    * ④ 상속·증여 계산기 런처 사양 — null이면 미노출.
    * ⚠️ 주입 규칙(건물분 단독 vs 부수토지 합산)이 자산마다 반대다. 판단은 전부 이 함수에 있다.
@@ -250,6 +262,15 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             공유지분({shareLabel}) 부담부증여 — 아래 채무·보증금·임대료는 <b>이 지분에 대응하는
             인수분</b>을 입력하세요. 기준시가·시가 등 <b>평가액은 물건 전체로 입력</b>하면
             엔진이 지분분으로 환산합니다(소령 §159 — 평가액 A·C만 지분분, 채무 B는 실제 인수액).
+          </p>
+        )}
+        {/* 컴패니언 — 축 A·축 B와 또 다른 제3의 규약. 상세는 `isCompanionBundle` 주석. */}
+        {isCompanionBundle && (
+          <p className="text-caption text-rose-700">
+            여러 물건 함께 부담부증여 — 아래 채무·보증금·임대료는 <b>이 물건에 설정된 금액</b>을
+            입력하세요. 채무가 없는 물건은 비워 둡니다. 하나의 증여계약이므로 시스템이 채무
+            합계를 <b>자산별 평가액 비율로 재배분</b>합니다(소령 §159 — 채무비율 B/C는 증여계약
+            단위이고, §159②가 같은 안분식을 정하고 있습니다).
           </p>
         )}
         {/* 축 B — 축 A와 **반대** 규약이라 침묵하면 사용자가 지분분을 넣어 세액이 조용히 틀린다. */}

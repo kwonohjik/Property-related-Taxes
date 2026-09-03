@@ -14,6 +14,14 @@ export const burdenedGiftInfoSchema = z.object({
   lendingDepositTotal: z.number().int().nonnegative(),
   /** 담보차입금 (채무로 인수, 실제 채무잔액). */
   mortgageDebtAmount: z.number().int().nonnegative(),
+  /**
+   * 컴패니언(다른 물건) 함께 부담부증여 — 신고 단위 채무 B를 자산가액 비율로 재배분한
+   * 이 카드의 채무액(소령 §159①②). 있으면 엔진 `computeDebtRatio`가 B로 쓴다.
+   *
+   * ⚠️ 이 필드가 여기서 빠지면 Zod가 **침묵 stripping**해 카드마다 자기 채무 전액을
+   *    양도가액으로 잡는다 — 자산 수만큼 곱해진다(실측 2배).
+   */
+  assumedDebtOverride: z.number().int().nonnegative().optional(),
   /** 연간 임대료 (환산평가용 — 채무 아님). */
   annualRentTotal: z.number().int().nonnegative(),
   /** (근)저당 설정액 — 미입력 시 mortgageDebtAmount fallback. */

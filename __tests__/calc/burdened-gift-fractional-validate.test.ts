@@ -123,8 +123,14 @@ describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
       /함께 양도와 같이 계산할 수 없습니다/.test(i.message),
     );
 
-  it("🔴 부담부증여 + 다른 자산 → 차단된다", () => {
-    expect(hasBlock([bg, other])).toBe(true);
+  /**
+   * 🔄 **2026-09-03 반전.** 종전에는 「차단된다」를 단언했다. 컴패니언(다른 물건) 축이
+   * 열리면서 그 차단이 사라졌다 — ④가 신고 단위 채무를 자산가액 비율로 재배분해
+   * 소령 §159①의 단일 B/C를 보존한다(`apportionCompanionBurdenedGiftDebt`).
+   * 정합·증여세 1회는 `companion-burdened-gift-plumbing.anchor.test.ts`가 지킨다.
+   */
+  it("부담부증여 + 다른 자산 → **차단되지 않는다** (2026-09-03 개방)", () => {
+    expect(hasBlock([bg, other])).toBe(false);
   });
 
   it("부담부증여 단건은 차단되지 않는다 (회귀 가드)", () => {
@@ -135,9 +141,9 @@ describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
     expect(hasBlock([{ ...bg, transferType: "regular" }, other])).toBe(false);
   });
 
-  it("companion 쪽에만 부담부증여가 남아 있어도 차단된다", () => {
-    // 토글·자산추가 순서에 따라 primary가 아닌 자산에 남을 수 있다 — some() 판정 근거.
-    expect(hasBlock([{ ...bg, transferType: "regular" }, { ...other, transferType: "burdened_gift" }])).toBe(true);
+  it("companion 쪽에만 부담부증여가 남아 있어도 **차단되지 않는다**", () => {
+    // 토글·자산추가 순서에 따라 primary가 아닌 자산에 남을 수 있다 — 위와 같은 축이다.
+    expect(hasBlock([{ ...bg, transferType: "regular" }, { ...other, transferType: "burdened_gift" }])).toBe(false);
   });
 
   /**
