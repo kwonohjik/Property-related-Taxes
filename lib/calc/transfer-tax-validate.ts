@@ -20,6 +20,9 @@ import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
 import { isMultiHouseSurchargeSuppressed, provisoGate, effectiveProvisoReason, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 import { mergeGbPropertyLevel } from "./transfer-tax-api-gb-shares";
+import { getOwnershipRatio } from "./transfer-tax-api-helpers";
+import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -117,8 +120,17 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     //   재개발 : redevelopment 산출물 有 → **분기 미실행**
     //   일반건물: 토지·건물 분리 안분 有 → **분기 미실행**. 단건이면 500으로 막히는 필수 검증
     //            (zoneType)조차 일괄에서는 타지 않고 200이 나온다 — 미실행의 결정적 증거
-    //   부담부증여: STEP 0.48은 엔진 내부라 **실행되지만**, route가 transferPrice를 안분값으로
-    //            덮어써 §159 기준 gain과 **스케일 충돌** → 표시 필요경비가 **음수(-91,000,000)**
+    //   부담부증여: ✅ **2026-09-03 해제**. 종전 기재(「route가 transferPrice를 안분값으로
+    //            덮어써 §159 기준 gain과 스케일 충돌 → 표시 필요경비 음수」)는 **틀렸다** —
+    //            엔진 STEP 0.48(`transfer-tax-burdened-gift-step.ts`)이 transferPrice·
+    //            acquisitionPrice·expenses를 **모두 §159 산정값으로 다시 덮어써서** route의
+    //            안분값은 그대로 버려진다. 충돌 자체가 없다.
+    //            진짜 결함은 ④가 카드마다 그 물건 채무 전액을 실어 **자산 수만큼 곱해진** 것이고
+    //            (실측 2배), 신고 단위 채무 재배분으로 해소했다
+    //            (`apportionCompanionBurdenedGiftDebt`). 계획서:
+    //            `docs/02-design/features/transfer-companion-burdened-gift.plan.md`
+    //            ⚠️ 표시 축(`properties[].transferPrice`가 §159값이 아니라 route 안분값)은
+    //               **축 B에도 이미 있는 별건**이다(실측). 차익·세액은 정확하다.
     //
     // 화면에는 특수 입력이 그대로 보이는데 계산이 어긋나므로 사용자가 알 수 없다.
     // 다물건 계산기는 이미 같은 이유로 전부 차단한다(`multi-transfer-tax-validate.ts:54~65`
@@ -180,20 +192,18 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         [(a) => a.assetKind === "right_to_move_in", "조합원입주권(시행령 §166①)"],
         [(a) => a.assetKind === "presale_right", "분양권(소득세법 §104①1호)"],
         /**
-         * 지분 분할(전 자산 fractional)은 전용 경로가 있으므로 제외한다.
+         * 지분 분할(전 자산 fractional)은 전용 경로가 있으므로 제외한다 — **일반건물 전용**.
+         * route 5-0(`general-building-fractional.ts`)이 5-a보다 앞에서 가로챈다.
          *
-         * - **일반건물**: route 5-0(`general-building-fractional.ts`)이 5-a보다 앞에서 가로챈다.
-         * - **부담부증여**: ✅ 2026-09-03 축 B 지원. 집계가 카드마다 STEP 0.48을 돌린다
-         *   (`transfer-tax-aggregate.ts` M-1이 카드를 통째로 spread한다). 채무는 ④가
-         *   지분 안분해 §159의 B/C를 보존한다. 실측: 60%+40% 합계 = 단건 100% (64,600,360).
-         *   ⚠️ **컴패니언(다른 물건) 함께양도에서는 여전히 차단**된다 — 그 경로는 §159 안분을
-         *      타지 않는다(Playwright 실측). 두 경우를 가르는 것이 `fullFractional`이다.
+         * 🔄 **부담부증여는 이 목록에서 나갔다**(2026-09-03). 축 B(지분 분할)는 2026-09-03에,
+         *    컴패니언(다른 물건)은 신고 단위 채무 재배분으로 함께 열렸다 — 두 축을 가르던
+         *    `fullFractional` 조건이 더는 필요 없다. 대신 아래 「상증법 평가 승자」 게이트가
+         *    합산 증여세를 낼 수 없는 조합만 좁게 막는다.
          */
         ...(fullFractional
           ? []
           : ([
               [(a) => a.assetKind === "general_building", "일반건물(토지·건물 일괄)"],
-              [(a) => a.transferType === "burdened_gift", "부담부증여(소령 §159)"],
             ] as Array<[(a: AssetForm) => boolean, string]>)),
       ];
       for (const [match, label] of SINGLE_ONLY) {
@@ -204,6 +214,41 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
             message: `${label}은(는) 함께 양도와 같이 계산할 수 없습니다. 함께 양도 토글을 끄고 단건으로 계산하세요.`,
           });
         }
+      }
+
+      /**
+       * 컴패니언(다른 물건) 함께 부담부증여 — **상증법 평가 승자 게이트**.
+       *
+       * 증여세는 증여계약 전체로 **1회** 계산해야 한다(카드별로 쪼개면 증여재산공제가 N번
+       * 차감되고 누진이 갈라진다 — 축 B에서 −19,400,000원 실측). ④는 그것을 자산별 info의
+       * **성분 단순 합**(`buildCompanionBurdenedGiftWholeInfo`)으로 만든다.
+       *
+       * 🔑 그 합이 ΣAᵢ와 일치하는 것은 **모든 자산의 Max 승자가 보충적평가일 때뿐**이다 —
+       *    Σmax ≠ max(Σ성분)이기 때문이다. 담보평가(상증법 §66)·임대평가(§61⑤)가 max인
+       *    자산이 섞이면 합산 증여가액이 ΣAᵢ와 어긋나 **증여세가 조용히 틀린다**.
+       *
+       * ⇒ 「침묵 오산보다 명시 차단」(`multi-transfer-tax-validate.ts:57-71`)과 같은 층위로
+       *   그 조합만 좁게 막는다. 양도세 자체는 카드별 Aᵢ로 정확하므로, 이 게이트를 넓히면
+       *   지원되는 조합까지 막힌다.
+       *
+       * 축 B(지분 분할)는 대상이 아니다 — 물건이 하나라 `burdenedGiftWholeInfo`가 primary의
+       * 미안분 info 그대로이고 합산이 없다.
+       */
+      if (!fullFractional && form.assets.some((a) => a.transferType === "burdened_gift")) {
+        const ratios = form.assets.map((a) => getOwnershipRatio(a));
+        const valuations = companionBurdenedGiftValuations(
+          form.assets.map((a) => buildBurdenedGiftInfo(a)),
+          ratios,
+        );
+        valuations.forEach((v, i) => {
+          if (v.selectedMode === "supplementary") return;
+          const kind = v.selectedMode === "mortgage" ? "담보평가(상증법 §66)" : "임대평가(상증법 §61⑤)";
+          issues.push({
+            step,
+            assetIndex: i,
+            message: `자산 ${i + 1}: 증여재산 평가액이 ${kind}으로 결정되는 자산은 함께 양도와 같이 계산할 수 없습니다. 여러 물건을 함께 부담부증여하면 증여세를 증여계약 전체로 1회 계산해야 하는데, 이 경우 합산 증여가액이 자산별 평가액 합계와 어긋납니다. 함께 양도 토글을 끄고 단건으로 계산하세요.`,
+          });
+        });
       }
 
       /**

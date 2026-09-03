@@ -1,5 +1,5 @@
 /**
- * E2E: 부담부증여(소령 §159) — 지분 라벨(A2/PR #851) + 함께양도 침묵 오산 차단.
+ * E2E: 부담부증여(소령 §159) — 지분 라벨(A2/PR #851) + 함께양도 토글 전이.
  *
  * ## 배경 — 도달성을 실측으로 확정했다 (추정 아님)
  *
@@ -8,21 +8,24 @@
  * | 조합 | 현행 동작 |
  * |---|---|
  * | 단건 + 지분<100% | `transfer-tax-validate-asset.ts` 차단 |
- * | 같은 물건 지분분할(fullFractional) + 부담부증여 | `transfer-tax-validate.ts` 차단 |
+ * | 같은 물건 지분분할(fullFractional) + 부담부증여 | ✅ **2026-09-03 개방**(축 B) |
  * | 2자산 상태로 **처음부터** 진입 | 양도 형태 라디오 미노출 → 부담부증여 선택 불가 |
  *
  * → **A2의 계산 결함은 현재 UI로 도달할 수 없다.** 엔진 정정은 방어선이지 라이브 버그 수정이 아니다.
  *
- * ## 그 조사에서 드러난 실제 결함 (본 spec의 주 대상)
+ * ## 함께양도 토글 전이 (본 spec의 주 대상)
  *
- * 단건에서 부담부증여를 고른 뒤 **"같은 날 다른 부동산도 함께" 토글을 켜면**:
- *   - `transferType`은 `burdened_gift`로 **남고**
- *   - 채무 입력 UI도 화면에 **그대로 보이는데**
- *   - 계산은 `mode: bundled`로 가서 **§159가 조용히 빠진다**(응답에 `debtRatio` 0건)
+ * 단건에서 부담부증여를 고른 뒤 **"같은 날 다른 부동산도 함께" 토글을 켜면** `transferType`이
+ * `burdened_gift`로 남고 채무 입력 UI도 그대로 보인다. 종전에는 계산만 `mode: bundled`로 가서
+ * §159가 조용히 빠졌고(응답에 `debtRatio` 0건), 그래서 **명시 차단**했다.
  *
- * 즉 화면은 부담부증여인데 계산은 일반 양도다. 사용자는 채무를 입력해 두고 그것이 반영된
- * 줄 안다. 명시 차단으로 정정했다
- * (다물건 계산기가 이미 같은 이유로 차단 — `multi-transfer-tax-validate.ts:54`).
+ * 🔄 **2026-09-03 개방**. 차단 사유가 틀렸다 — 엔진 STEP 0.48이 §159 산정값으로 다시 덮어쓰므로
+ * 스케일 충돌이 없다. 진짜 결함은 ④가 카드마다 그 물건 채무 **전액**을 실어 자산 수만큼
+ * 곱해진 것이고(실측 2배), 신고 단위 채무 재배분으로 해소했다. 계획서:
+ * `docs/02-design/features/transfer-companion-burdened-gift.plan.md`
+ *
+ * ⇒ 여기서는 **토글 전이**만 본다(단건 → 2자산). 계산·표시 실검증은
+ *   `e2e/transfer-companion-burdened-gift.spec.ts`가 2자산을 직접 seed해서 담당한다.
  *
  * 실행: npx playwright test e2e/transfer-burdened-gift-fractional.spec.ts
  */
@@ -131,34 +134,39 @@ test.describe("부담부증여 §159 (A2 / PR #851)", () => {
     expect(per.land.transferPrice + per.building.transferPrice).toBe(600_000_000);
   });
 
-  test("🔴 부담부증여 + 함께양도 → 침묵 오산 대신 명시 차단된다", async ({ page }) => {
+  test("✅ 부담부증여 + 함께양도 → 차단이 아니라 컴패니언 규약으로 열린다", async ({ page }) => {
     test.setTimeout(90_000);
     await seedAndOpen(page, [burdenedGift]);
 
     const card0 = page.locator('[data-asset-card-index="0"]');
     // ② 양도정보 펼침 — 자산 카드는 진입 시 전부 접힘(점진적 노출)
     await expandAssetSection(page, 2);
-    // 단건 상태: 부담부증여 채무 입력 UI가 보인다
+    // 단건 상태: 채무 입력 UI는 보이고, 컴패니언 규약 안내는 아직 없다
     await expect(card0.getByText("인수 채무 + 임대 평가 보조").first()).toBeVisible();
+    await expect(card0.getByText(/이 물건에 설정된 금액/)).toHaveCount(0);
 
     // 함께양도 토글 ON → 자산 2건으로 전환
     await page.getByRole("switch", { name: /같은 날 다른 부동산도 함께/ }).setChecked(true);
     await expect(page.locator("[data-asset-card-index]")).toHaveCount(2);
     await expandAssetSection(page, 2);
 
-    // 결함의 형태를 고정한다: 토글 후에도 부담부증여 선택과 채무 입력 UI가 **그대로 유지**된다.
-    // 화면은 부담부증여인데 계산은 일반 양도로 가므로, 사용자는 반영된 줄 안다. → 차단이 필요.
+    // 토글 후에도 부담부증여 선택과 채무 입력 UI가 유지된다
     await expect(card0.getByText("인수 채무 + 임대 평가 보조").first()).toBeVisible();
     await expect(card0.getByRole("radio", { name: /부담부증여/ })).toBeChecked();
 
-    // 차단 메시지 — 계산으로 넘어가지 못한다
+    // ⑤ **제3의 규약** 안내가 뜬다 — 축 A(지분 인수분)·축 B(물건 전체)와 다르게
+    // 「이 물건에 설정된 금액」이다. 침묵하면 사용자가 총액을 각 카드에 넣어
+    // 자산 수만큼 곱해진다(개방 전 실측 2배).
+    await expect(card0.getByText(/이 물건에 설정된 금액/).first()).toBeVisible();
+
+    // 차단 메시지가 더는 뜨지 않는다.
+    // 토글로 추가된 자산 2는 빈 상태라 step 0 검증 목록 **자체는** 뜬다 — 그 목록이
+    // 렌더된 상태에서 부담부증여 차단만 없다는 것이 요지다(공백 통과 방지).
     await gotoLastStep(page);
     await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(
-      page.getByText(/부담부증여.*함께 양도와 같이 계산할 수 없습니다/).first(),
-    ).toBeVisible({ timeout: 10_000 });
-    // 결과 화면으로 넘어가지 않는다 (침묵 계산 방지)
-    await expect(page.getByText(/결정세액/)).toHaveCount(0);
+    const issues = page.getByTestId("validation-issues");
+    await expect(issues).toBeVisible({ timeout: 10_000 });
+    await expect(issues.getByText(/부담부증여.*함께 양도와 같이 계산할 수 없습니다/)).toHaveCount(0);
   });
 
   test("⑤ 지분 자산은 채무 라벨이 '지분 인수분'으로 바뀐다 (A2 UI)", async ({ page }) => {

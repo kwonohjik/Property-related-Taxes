@@ -11,6 +11,10 @@
 // ⚠️ `transfer-tax-api-helpers`가 이 파일을 import하므로 **원 위치에서 직접** 가져온다
 //    (helpers 경유 re-export를 쓰면 순환 import가 된다).
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
+import { scaleBurdenedGiftInfo } from "@/lib/tax-engine/burdened-gift-valuation";
+import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -18,6 +22,11 @@ export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
   lendingDepositTotal: number;
   mortgageDebtAmount: number;
+  /**
+   * 신고(증여계약) 단위 B를 자산가액 비율로 재배분한 이 카드의 채무액 —
+   * 컴패니언(다른 물건) 함께 부담부증여 전용. 산정은 `apportionCompanionBurdenedGiftDebt`.
+   */
+  assumedDebtOverride?: number;
   annualRentTotal: number;
   mortgageSetAmount?: number;
   marketValueAtTransfer?: number;
@@ -249,5 +258,152 @@ export function buildBurdenedGiftInfo(
     buildingStdPriceAtTransfer: parseAmount(primary.standardPriceAtTransfer) || 0,
     landStdPriceAtAcquisition: 0,
     buildingStdPriceAtAcquisition: parseAmount(primary.standardPriceAtAcq) || 0,
+  };
+}
+
+// ============================================================
+// 컴패니언(다른 물건) 함께 부담부증여 — 신고 단위 채무 재배분 (소령 §159①②)
+// ============================================================
+
+/** 자산별 상증법 평가액 Aᵢ와 그 승자. ⑧ 게이트와 ④가 **같은 leaf**를 쓴다. */
+export interface CompanionBurdenedGiftValuation {
+  /** Aᵢ — 상증법 §60~§66 Max 평가액 (지분 축소 후). */
+  value: number;
+  /** Max의 승자. `supplementary`가 아니면 ⑧이 차단한다 (아래 주석). */
+  selectedMode: "supplementary" | "mortgage" | "rental";
+}
+
+/**
+ * 자산별 Aᵢ 산정 — **엔진과 같은 함수**로 계산한다.
+ *
+ * `scaleBurdenedGiftInfo`(지분 축소) → `computeSangjeungbeopValuation`(Max)은 엔진
+ * STEP 0.48이 타는 경로 그대로다. ④가 규칙을 다시 쓰면 두 소스가 갈라진다.
+ *
+ * 채무는 축소하지 않는다 — 축 A 규약상 사용자가 **지분 인수분**을 입력한다.
+ */
+export function companionBurdenedGiftValuations(
+  infos: BurdenedGiftInfoPayload[],
+  ratios: number[],
+): CompanionBurdenedGiftValuation[] {
+  return infos.map((info, i) => {
+    const r = ratios[i];
+    const scaled = scaleBurdenedGiftInfo(
+      info as unknown as BurdenedGiftInfo,
+      r !== undefined && r < 1 ? r : undefined,
+    );
+    const v = computeSangjeungbeopValuation(
+      scaled.landStdPriceAtTransfer,
+      scaled.buildingStdPriceAtTransfer,
+      scaled,
+    );
+    return { value: v.max, selectedMode: v.selectedMode };
+  });
+}
+
+/**
+ * 컴패니언(다른 물건) 함께 부담부증여 — **신고 단위 채무 B를 자산가액 비율로 재배분**.
+ *
+ * ## 왜 재배분인가 (소령 §159 — KoreanLaw 실측 mst=286211)
+ *
+ * §159①은 `양도가액 = A × B/C`·`취득가액 = A × B/C`인데 **A만 자산별이고 B·C는
+ * 증여계약 단위**다. 자산 간 배분은 A가 이미 수행한다. 그런데 엔진은 카드마다 §159를
+ * 독립 계산하고 카드 안에서는 A = C이므로, 카드에 그 물건의 채무를 그대로 실으면
+ *
+ *     양도가액ᵢ = Aᵢ × Bᵢ/Cᵢ = Bᵢ
+ *
+ * 가 되어 **각 카드가 자기 채무 전액을 양도가액으로 잡는다**. 실측: 물건 2건에 총채무
+ * 4억을 각각 전액 실었더니 차익 합계가 388,000,000 — 정본 194,000,000의 **정확히 2배**.
+ *
+ * ⇒ Bᵢ = B × Aᵢ/ΣA 를 실으면 `debtRatioᵢ = Bᵢ/Cᵢ = B/ΣA = B/C`로 **신고 단위 단일 비율이
+ * 보존**된다. 실측 121,250,000 + 72,750,000 = 194,000,000 (단건 참조와 자산별로도 일치).
+ *
+ * §159②(과세대상·비과세 자산 동시 증여 시 `채무액 = 총채무 × 자산가액/총자산가액`)가
+ * **자산가액 비율 안분**이 입법자가 채택한 규범임을 직접 확인해 준다.
+ *
+ * ⛔ **기각된 설계 재제안 금지** — 「담보채권액이 max인 자산은 안분에서 빼고 그 물건에
+ *    귀속시킨다」. 그 자산만 Bⱼ/Cⱼ ≠ B/C가 되어 §159①의 단일 비율을 깬다. 근저당이
+ *    물건별로 설정된다는 사실은 맞지만, §159②는 담보가 어디 붙었든 자산가액 비율로
+ *    나눈다는 태도를 이미 취하고 있다.
+ *
+ * ## 절사
+ *
+ * `safeMultiplyThenDivide`로 정수 보존하고 **마지막 자산이 잔액을 흡수**한다
+ * (`ΣBᵢ = B` 불변식 — 흡수하지 않으면 총채무가 몇 원 사라진다).
+ *
+ * @param infos  자산별 `buildBurdenedGiftInfo` 결과 (채무 미안분).
+ * @param ratios 자산별 지분율 (`getOwnershipRatio` — 순환 import 회피로 호출측이 넘긴다).
+ * @returns overrides[i] = Bᵢ. ΣA가 0이면 undefined(계산 불가 — 배분 근거가 없다).
+ */
+export function apportionCompanionBurdenedGiftDebt(
+  infos: BurdenedGiftInfoPayload[],
+  ratios: number[],
+): number[] | undefined {
+  const valuations = companionBurdenedGiftValuations(infos, ratios);
+  const totalValuation = valuations.reduce((s, v) => s + v.value, 0);
+  if (totalValuation <= 0) return undefined;
+  const totalDebt = infos.reduce(
+    (s, i) => s + i.lendingDepositTotal + i.mortgageDebtAmount,
+    0,
+  );
+  const overrides = valuations.map((v) =>
+    safeMultiplyThenDivide(totalDebt, v.value, totalValuation),
+  );
+  // 잔액 흡수 — 마지막 자산 전용.
+  const allocated = overrides.slice(0, -1).reduce((s, v) => s + v, 0);
+  overrides[overrides.length - 1] = totalDebt - allocated;
+  return overrides;
+}
+
+/**
+ * 컴패니언 함께 부담부증여 — **증여세 1회 산정용 합산 info**.
+ *
+ * 카드별 breakdown을 합치면 증여재산공제가 N번 차감되고 누진이 갈라진다
+ * (축 B에서 −19,400,000원 실측). ⇒ M-0.5가 이 info로 §159를 **1회** 계산한다.
+ *
+ * 🔑 **성분 단순 합이 ΣAᵢ와 일치하려면 모든 자산의 승자가 `supplementary`여야 한다**
+ *    (Σmax ≠ max(Σ성분)). 그 조건은 ⑧ `collectStepIssues`가 강제한다 —
+ *    담보평가·임대평가가 max인 자산이 섞이면 **명시 차단**한다.
+ *
+ * 계약 단위 값(관계·미성년·세대생략·기한내신고·사전증여)은 **primary 것을 쓴다** —
+ * 하나의 증여계약이므로 자산별로 다를 수 없다.
+ */
+export function buildCompanionBurdenedGiftWholeInfo(
+  infos: BurdenedGiftInfoPayload[],
+  ratios: number[],
+): BurdenedGiftInfoPayload {
+  const scaled = infos.map((info, i) => {
+    const r = ratios[i];
+    return scaleBurdenedGiftInfo(
+      info as unknown as BurdenedGiftInfo,
+      r !== undefined && r < 1 ? r : undefined,
+    ) as unknown as BurdenedGiftInfoPayload;
+  });
+  const sum = (pick: (p: BurdenedGiftInfoPayload) => number): number =>
+    scaled.reduce((s, p) => s + pick(p), 0);
+  /** 일부 자산만 값이 있으면 그 합, 전부 미입력이면 undefined(0과 미입력은 다르다). */
+  const sumOptional = (
+    pick: (p: BurdenedGiftInfoPayload) => number | undefined,
+  ): number | undefined =>
+    scaled.some((p) => pick(p) !== undefined)
+      ? scaled.reduce((s, p) => s + (pick(p) ?? 0), 0)
+      : undefined;
+  const primary = infos[0];
+  return {
+    ...primary,
+    // 자산별 합산 — 평가·기준시가
+    landStdPriceAtTransfer: sum((p) => p.landStdPriceAtTransfer),
+    buildingStdPriceAtTransfer: sum((p) => p.buildingStdPriceAtTransfer),
+    landStdPriceAtAcquisition: sum((p) => p.landStdPriceAtAcquisition),
+    buildingStdPriceAtAcquisition: sum((p) => p.buildingStdPriceAtAcquisition),
+    giftBuildingStdPriceAtTransfer: sumOptional((p) => p.giftBuildingStdPriceAtTransfer),
+    marketValueAtTransfer: sumOptional((p) => p.marketValueAtTransfer),
+    marketValueAtAcquisition: sumOptional((p) => p.marketValueAtAcquisition),
+    // 자산별 합산 — 채무·임대
+    lendingDepositTotal: sum((p) => p.lendingDepositTotal),
+    mortgageDebtAmount: sum((p) => p.mortgageDebtAmount),
+    annualRentTotal: sum((p) => p.annualRentTotal),
+    mortgageSetAmount: sumOptional((p) => p.mortgageSetAmount),
+    // 신고 단위 B 그대로 — override는 카드용이라 여기서는 쓰지 않는다.
+    assumedDebtOverride: undefined,
   };
 }

@@ -383,6 +383,12 @@ export function buildAssetPayload(
   // 1세대1주택 여부는 세대 단위 — asset.isOneHousehold(기본 false·동기화 부재)가 아닌
   // form.isOneHousehold(Step4 "1세대 해당" 토글)를 세대 단위 단일 소스로 전달받는다.
   formIsOneHousehold?: boolean,
+  /**
+   * 컴패니언(다른 물건) 함께 부담부증여 — 신고 단위 B를 자산가액 비율로 재배분한 이 카드의
+   * 채무액(소령 §159①②). 산정은 `apportionCompanionBurdenedGiftDebt` 단일 지점.
+   * 축 B(지분 분할)에서는 넘기지 않는다 — 그쪽은 지분율 스케일이 §159의 B/C를 보존한다.
+   */
+  burdenedGiftDebtOverride?: number,
 ) {
   const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause, asset.expropriationNoticeDate);
 
@@ -550,7 +556,13 @@ export function buildAssetPayload(
       ? {
           // ⑬ 엔진 §159 게이트가 보는 값 — `burdenedGiftInfo`만으로는 발동하지 않는다.
           transferType: "burdened_gift" as const,
-          burdenedGiftInfo: buildBurdenedGiftInfo(asset, fractional ? ratio : undefined),
+          burdenedGiftInfo: {
+            ...buildBurdenedGiftInfo(asset, fractional ? ratio : undefined),
+            // 컴패니언(다른 물건) 축에서만 실린다. 축 B는 undefined라 스프레드가 무해하다.
+            ...(burdenedGiftDebtOverride !== undefined
+              ? { assumedDebtOverride: burdenedGiftDebtOverride }
+              : {}),
+          },
         }
       : {}),
     directExpenses: fractional

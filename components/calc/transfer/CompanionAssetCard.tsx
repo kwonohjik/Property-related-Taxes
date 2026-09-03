@@ -351,6 +351,7 @@ export function CompanionAssetCard({
             contractTotalPrice={contractTotalPrice}
             primaryAsset={primaryAsset}
             isFractionalSplit={splitMode === "fractional"}
+            isCompanionBundle={splitMode === "companion"}
           />
         </AssetSection>
       )}

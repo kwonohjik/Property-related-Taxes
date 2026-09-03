@@ -35,6 +35,18 @@ const SUPPORTED_KINDS = [
 export function validateBurdenedGiftAsset(
   asset: AssetForm,
   label: string,
+  /**
+   * 컴패니언(다른 물건) 함께 부담부증여 — **증여계약 전체의 인수 채무 합계**.
+   *
+   * 🔑 이 축에서는 **채무가 0인 자산이 정상**이다. 근저당이 물건 하나에만 설정된 채로
+   *    두 물건을 함께 부담부증여하면 다른 물건의 입력 채무는 0이지만, 소령 §159①의 B/C는
+   *    **증여계약 단위**라 그 물건도 양도가액을 갖는다(④가 자산가액 비율로 재배분한다).
+   *    자산별로 「채무 > 0」을 요구하면 그 조합이 통째로 막힌다.
+   *
+   * ⇒ 이 값이 주어지면 (3) 필수 검사를 **신고 단위 합계**로 판정한다. 단건·축 B에서는
+   *   undefined이므로 종전 자산별 판정이 그대로다.
+   */
+  contractAssumedDebtTotal?: number,
 ): string | null {
   const isBurdenedGift =
     asset.transferType === "burdened_gift" ||
@@ -111,7 +123,11 @@ export function validateBurdenedGiftAsset(
   const lending = parseAmount(asset.bgLendingDepositTotal) || 0;
   const mortgage = parseAmount(asset.bgMortgageDebtAmount) || 0;
   const assumedDebt = lending + mortgage;
-  if (assumedDebt <= 0) {
+  if (contractAssumedDebtTotal !== undefined) {
+    if (contractAssumedDebtTotal <= 0) {
+      return `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요. 여러 물건을 함께 부담부증여하는 경우 채무가 설정된 물건에만 입력하면 됩니다.`;
+    }
+  } else if (assumedDebt <= 0) {
     return `${label}: 부담부증여 인수 채무액(임대보증금 + 담보차입금)을 입력하세요.`;
   }
 
