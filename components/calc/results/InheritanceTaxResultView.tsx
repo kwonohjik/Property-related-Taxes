@@ -15,6 +15,7 @@ import { netTaxAfterCulturalDeferral } from "@/lib/tax-engine/inheritance-cultur
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { SummaryRow } from "./SummaryRow";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
+import { PenaltyNotIncludedNotice } from "@/components/calc/results/shared/PenaltyNotIncludedNotice";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { HeirAllocationSummaryTable } from "@/components/calc/results/HeirAllocationSummaryTable";
 import { FilingForm9CoverSection } from "@/components/calc/inheritance/filing-form-9/FilingForm9CoverSection";
@@ -253,6 +254,13 @@ export function InheritanceTaxResultView({
             </>
           )}
         </div>
+
+        {/* 🔴 G-07: 법정기한 내 신고가 아니면(기한후신고·무신고) 가산세 미포함을 고지한다. */}
+        {result.creditDetail.isFiledOnTime === false && (
+          <div className="mt-4">
+            <PenaltyNotIncludedNotice taxLabel="상속세" />
+          </div>
+        )}
       </div>
       </PrintSection>
 

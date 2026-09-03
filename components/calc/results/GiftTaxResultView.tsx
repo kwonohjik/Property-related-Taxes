@@ -17,6 +17,7 @@ import { BurdenedGiftComparisonCard } from "@/components/calc/results/BurdenedGi
 import { GIFT_DONOR_LABELS } from "@/components/calc/prior-gift/meta";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
+import { PenaltyNotIncludedNotice } from "@/components/calc/results/shared/PenaltyNotIncludedNotice";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { GenerationSkipSurchargeBreakdownCard } from "@/components/calc/results/GenerationSkipSurchargeBreakdownCard";
@@ -302,6 +303,14 @@ export function GiftTaxResultView({
           )}
         </div>
       </div>
+
+      {/* 🔴 G-07: 법정기한 내 신고가 아니면 가산세 미포함을 고지한다. 선택 출력과 무관하게
+          항상 인쇄되어야 하므로 총액 카드 블록 안(PrintSection 내부)에 둔다. */}
+      {result.creditDetail.isFiledOnTime === false && (
+        <div className="mt-4">
+          <PenaltyNotIncludedNotice taxLabel="증여세" />
+        </div>
+      )}
       </PrintSection>
 
       {/* Phase B: 신고서 양식 표 (12행 / 18행) */}

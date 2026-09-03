@@ -140,6 +140,14 @@ export interface TaxCreditResult {
    */
   totalComputedTaxWithSurcharge?: number;
   /**
+   * 🔴 G-07: **법정신고기한 내 신고 여부** echo — 결과 화면의 「가산세 미포함」 고지 게이트.
+   *
+   * 세액에 영향이 없다(§69 신고세액공제는 이미 `filingCredit`에 반영돼 있다). 표시 축 전용이다.
+   * `false`면 기한후신고·무신고 어느 쪽이든 「국세기본법」 §47의2 무신고가산세 대상이므로
+   * 두 국면을 가르지 않는다 — 이 앱은 그 가산세를 **아직 산출하지 않는다**(G-07 A안).
+   */
+  isFiledOnTime?: boolean;
+  /**
    * §29 외국납부세액공제 산식 표시용 echo (상증령 §21① 점유비 한도 적용 시 — inheritance).
    * `creditLimit` = 한도① = floor(computedTax × 국외과표 ÷ 전체과표),
    * `creditAmount` = 잔액 클램핑 후 최종 공제액. gift(§59)·미적용 시 undefined.
