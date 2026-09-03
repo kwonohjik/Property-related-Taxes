@@ -21,7 +21,10 @@ import { evaluateExemptions } from "./exemption-evaluator";
 import { calcGiftDeductions } from "./deductions/gift-deductions";
 import { calcAppraisalFeeDeduction } from "./deductions/appraisal-fee-deduction";
 import { calcInstallmentSplit } from "./credits/installment-split";
-import { calcInheritanceGiftFilingPenalty } from "./inheritance-gift-penalty";
+import {
+  calcInheritanceGiftFilingPenalty,
+  calcInheritanceGiftLatePayment,
+} from "./inheritance-gift-penalty";
 import {
   calcInheritanceGiftTax,
   calcGiftGenerationSkipSurchargeWithLimit,
@@ -418,6 +421,14 @@ export function calcGiftTaxTwoStream(
     input.filingPenalty ?? { filingStatus: "on_time" },
   );
 
+  // 🔴 G-07 B3 — 납부지연가산세(「국세기본법」 §47의4). 신고불성실과 **독립**이다:
+  //    §47의4①1호는 「법정납부기한까지 납부하지 아니한」 사실만 요건으로 하므로,
+  //    정기·정확 신고를 했어도 납부가 늦으면 붙는다.
+  const latePaymentResult = calcInheritanceGiftLatePayment(
+    input.filingPenalty ?? { filingStatus: "on_time" },
+  );
+  const totalPenalty = filingPenaltyResult.filingPenalty + latePaymentResult.penalty;
+
   const partialResult = {
     // 일반 스트림 기준 필드 (filingFormRows와 신고서 표시용)
     grossGiftValue: effectiveOrdinaryGrossValue,
@@ -462,11 +473,14 @@ export function calcGiftTaxTwoStream(
     ...(filingPenaltyResult.filingPenalty > 0 || filingPenaltyResult.exclusionApplied
       ? { filingPenaltyDetail: filingPenaltyResult }
       : {}),
-    ...(filingPenaltyResult.filingPenalty > 0
-      ? { totalPayableWithPenalty: finalTax + filingPenaltyResult.filingPenalty }
+    ...(totalPenalty > 0
+      ? { totalPayableWithPenalty: finalTax + totalPenalty }
       : {}),
-    // 납부지연(§47의4)은 B3 · 공익법인 가산세(상증법 §78③~⑮)는 이 계획의 범위 밖이다.
-    latePaymentPenalty: 0,
+    // 🔴 G-07 B3 — 납부지연가산세 (별지10호 ㊸). 공익법인 가산세(상증법 §78③~⑮)는 범위 밖이다.
+    latePaymentPenalty: latePaymentResult.penalty,
+    ...(latePaymentResult.penalty > 0 || latePaymentResult.exclusionApplied
+      ? { latePaymentPenaltyDetail: latePaymentResult }
+      : {}),
     publicInterestPenalty: 0,
     installmentPayment: 0,
     cashDeferred: installmentSplit.splitAmount,

@@ -17,8 +17,8 @@ import { BurdenedGiftComparisonCard } from "@/components/calc/results/BurdenedGi
 import { GIFT_DONOR_LABELS } from "@/components/calc/prior-gift/meta";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
-import { PenaltyNotIncludedNotice } from "@/components/calc/results/shared/PenaltyNotIncludedNotice";
 import { FilingPenaltyDetailCard } from "@/components/calc/results/shared/FilingPenaltyDetailCard";
+import { LatePaymentPenaltyDetailCard } from "@/components/calc/results/shared/LatePaymentPenaltyDetailCard";
 import { UNDER_REPORT_EXCLUSION_LABELS } from "@/lib/tax-engine/inheritance-gift-penalty";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
@@ -320,13 +320,16 @@ export function GiftTaxResultView({
         <FilingPenaltyDetailCard detail={result.filingPenaltyDetail} />
       )}
 
-      {/* 🔴 G-07: 법정기한 내 신고가 아니면 아직 산출하지 않는 가산세를 고지한다.
-          B1으로 §47의2·§47의3은 산출되므로, 남은 축(부정행위 40·60% · 납부지연 §47의4)만 알린다. */}
-      {result.creditDetail.isFiledOnTime === false && (
-        <div className="mt-4">
-          <PenaltyNotIncludedNotice taxLabel="증여세" />
-        </div>
+      {/* 🔴 G-07 B3: 납부지연가산세 산출근거 — 「국세기본법」 §47의4 */}
+      {result.latePaymentPenaltyDetail && (
+        <LatePaymentPenaltyDetailCard detail={result.latePaymentPenaltyDetail} />
       )}
+
+      {/*
+        🔴 G-07 B3 — 「미포함」 배너를 **제거**했다.
+        B1(일반율) → B2(부정행위 40·60%) → B3(납부지연 §47의4)로 남은 축이 사라졌다.
+        계산해 놓고 안 했다고 말하면 반대 방향의 거짓이 된다.
+      */}
       </PrintSection>
 
       {/* Phase B: 신고서 양식 표 (12행 / 18행) */}

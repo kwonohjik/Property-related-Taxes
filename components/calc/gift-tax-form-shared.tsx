@@ -116,6 +116,25 @@ export interface FormState extends AppraisalFeeFormFields {
    * ⚠️ `penaltyReason`(이 신고의 부정행위)과 **다른 축**이다 — 라목 단서는 법인세 쪽 사실이다.
    */
   corporateAdjustmentByFraud: boolean;
+  /**
+   * 납부지연가산세를 계산할 것인가 — 「국세기본법」 §47의4. 🔴 G-07 B3.
+   *
+   * 🔑 **신고 상태와 독립이다** — §47의4①1호는 「법정납부기한까지 납부하지 아니한」 사실만
+   *    요건으로 하므로 정기·정확 신고를 했어도 납부가 늦으면 붙는다.
+   */
+  applyLatePaymentPenalty: boolean;
+  /** 미납·과소납부세액 — §47의4①1호 base (B3) */
+  unpaidTax: string;
+  /**
+   * 법정납부기한 `YYYY-MM-DD` — 상증법 §70①에 따라 **신고기한과 같다**.
+   * ⚠️ 파생하지 않고 입력받는다 — 연부연납(§71)·납부유예(§72의2)·물납(§73) 신청분은
+   *    자진납부 대상에서 빠지고 §70② 분납은 기한이 2개월 뒤다.
+   */
+  paymentDeadline: string;
+  /** 실제 납부일 `YYYY-MM-DD` — 미입력이면 오늘까지로 본다 (B3) */
+  actualPaymentDate: string;
+  /** §47의4③6호 — 기한 내 신고·납부 후 평가 경정 (B3) */
+  paidOnTimeThenRevalued: boolean;
   foreignTaxPaid: string;
   /** 국외 증여재산 과세표준 (§59 §21① 점유비 한도 분자, H-32). foreignTaxPaid>0 시 필수. */
   foreignGiftTaxBase: string;
@@ -191,6 +210,11 @@ export const INITIAL_FORM: FormState = {
   penaltyReason: "normal",
   fraudulentPortion: "",
   corporateAdjustmentByFraud: false,
+  applyLatePaymentPenalty: false,
+  unpaidTax: "",
+  paymentDeadline: "",
+  actualPaymentDate: "",
+  paidOnTimeThenRevalued: false,
   foreignTaxPaid: "",
   foreignGiftTaxBase: "",
   specialTreatment: "",
