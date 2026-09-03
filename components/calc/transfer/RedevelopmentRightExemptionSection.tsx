@@ -161,7 +161,7 @@ export function RedevelopmentRightExemptionSection({
           <div className="space-y-3 pt-1">
             <FieldCard
               label="인가일 기준 종전주택 보유 월수"
-              hint="관리처분계획인가일 기준으로 종전주택을 보유한 기간 (개월 단위 정수). §89①3호 가목 보유 2년(24개월) 이상 요건."
+              hint="관리처분계획인가일 기준으로 종전주택을 보유한 기간 (개월 단위 정수). §89①3호 가목 보유 2년(24개월) 이상 요건. 인가일 이후에도 철거되지 않고 사실상 주거용으로 사용한 기간이 있으면 그 기간까지 합산해 입력하세요 (사전-2019-법령해석재산-0739 — 철거 후 기간은 제외)."
             >
               <DecimalInput
                 value={asset.redevPriorHouseHoldingMonths}
@@ -172,7 +172,7 @@ export function RedevelopmentRightExemptionSection({
 
             <FieldCard
               label="인가일 기준 종전주택 거주 월수"
-              hint="관리처분계획인가일 기준으로 종전주택에 거주한 기간 (개월 단위 정수). 조정대상지역 취득 시 거주 2년(24개월) 이상 요건."
+              hint="관리처분계획인가일 기준으로 종전주택에 거주한 기간 (개월 단위 정수). 조정대상지역 취득 시 거주 2년(24개월) 이상 요건. 보유 월수와 마찬가지로 인가일 이후 철거 전 사실상 주거용으로 사용·거주한 기간을 합산합니다 (사전-2019-법령해석재산-0739)."
             >
               <DecimalInput
                 value={asset.redevPriorHouseResidenceMonths}

@@ -75,6 +75,24 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
     // → 별도 API/validate 동기화 불필요 (자기선언 필드 = UI 단독 경고).
   }
 
+  /**
+   * ⑧ 인가일 이후 철거 전 「사실상 주거용 사용」 종료일 — 토글 ON이면 필수.
+   *
+   * 자동 안분 fallback 금지: 종료일을 모르면 합산 기간을 지어낼 수 없다. 「양도일까지」로
+   * 메우면 **철거 후 기간까지 세어 과대 산정**된다(사전-2019-법령해석재산-0739은 철거 전
+   * 사실상 주거용 사용 기간만 합산한다).
+   */
+  if (asset.redevPostApprovalHousingUse === "yes") {
+    const end = asset.redevPostApprovalHousingUseEndDate;
+    if (!end) {
+      return `${label}: 인가일 이후 사실상 주거용 사용을 선택했으면 사용 종료일(철거일)을 입력하세요. (사전-2019-법령해석재산-0739)`;
+    }
+    if (asset.redevApprovalDate && end <= asset.redevApprovalDate) {
+      return `${label}: 사실상 주거용 사용 종료일은 관리처분계획인가일 이후여야 합니다. 인가일까지의 기간은 이미 보유기간에 포함됩니다.`;
+    }
+    // 양도일은 폼-전역이라 이 자산-수준 validate에는 없다 — 상한은 인가일 조건으로만 건다.
+  }
+
   if (approvalLawBasis !== "urban_renovation_art_74") {
     return `${label}: 인가 법령 근거는 본 PR에서 "도정법 §74"만 지원합니다. (빈집소규모법 §29는 후속 PR)`;
   }
