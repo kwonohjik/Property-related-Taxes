@@ -60,6 +60,32 @@ describe("R4 T — 선언 토글 렌더 게이트", () => {
     expect(screen.getAllByText(/100% 기준/).length).toBeGreaterThan(0);
   });
 
+  it("T5 🔴 사유가 주어지면 토글이 disabled + 사유가 표시된다 (재개발·입주권)", () => {
+    // ⑧이 막는 자산 종류에서 **켜지는** 토글을 두면 「켰는데 여전히 막힌다」는 또 다른
+    // dead-end가 된다. 판정은 ⑧과 같은 술어(`isFractionalUnsupportedAssetKind`).
+    render(
+      <OwnershipRatioBlock
+        numerator="40"
+        denominator="100"
+        onChange={vi.fn()}
+        remainderThirdParty="yes"
+        onRemainderChange={vi.fn()}
+        remainderDisabledReason="재개발·재건축·입주권은 지분 모드 계산을 아직 지원하지 않습니다."
+      />,
+    );
+    const sw = screen.getByRole("switch");
+    // ⚠️ `getAttribute`는 값 없는 속성에 `""`를 준다 — `??`로 이어붙이면 falsy로 떨어진다.
+    //    존재 여부로 판정한다.
+    expect(
+      sw.hasAttribute("data-disabled") ||
+        sw.hasAttribute("disabled") ||
+        sw.getAttribute("aria-disabled") === "true",
+    ).toBe(true);
+    // 저장값이 "yes"로 남아 있어도 **켜진 것처럼 보이지 않는다** (⑧이 막으므로 화면과 일치시킨다)
+    expect(sw.getAttribute("aria-checked") ?? sw.getAttribute("data-state")).toMatch(/false|unchecked/);
+    expect(screen.getByText(/지분 모드 계산을 아직 지원하지 않습니다/)).toBeTruthy();
+  });
+
   it("T4 선언 ON이면 토글이 켜진 상태로 렌더된다", () => {
     render(
       <OwnershipRatioBlock

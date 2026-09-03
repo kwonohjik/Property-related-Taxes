@@ -29,6 +29,7 @@ import { validateCommercialAppurtenantLand } from "./transfer-tax-validate-comme
 import { validateCommercialEstimatedAsset } from "./transfer-tax-validate-commercial-asset";
 import { isPhdEligible } from "./phd-eligibility";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
+import { isFractionalUnsupportedAssetKind } from "./transfer-tax-api-helpers";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { validateExprValuationAsset } from "./transfer-tax-validate-expropriation";
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
@@ -824,6 +825,19 @@ export function validateAssetEntry(
    *    이 게이트의 대상이 아니고, 부담부증여 × 축 B는 `transfer-tax-validate.ts`의
    *    별개 게이트(Gate-B)가 계속 막는다. 두 게이트는 서로 간섭하지 않는다.
    */
+  /**
+   * 🔴 재개발·입주권은 **선언으로도 열지 않는다** (2026-09-03 실측).
+   *
+   * `buildRedevelopmentPayload`가 지분율을 전혀 모른다 — 권리가액·청산금·인가전 필요경비가
+   * 100%로 남아 **양도차익 138,000,000원 과소**(세액 68,026,797원 과소)가 된다.
+   * 판정 술어·수치 근거는 `isFractionalUnsupportedAssetKind`에 있다(단일 소스).
+   *
+   * ⚠️ 아래 선언 게이트보다 **앞**이다 — 뒤에 두면 선언을 켠 재개발 자산이 통과한다.
+   */
+  if (form.assets.length === 1 && ownN < ownD && isFractionalUnsupportedAssetKind(a.assetKind)) {
+    return `${label}: 재개발·재건축·입주권은 지분 모드 계산을 아직 지원하지 않습니다. 지분율을 100%로 입력하고 본인 지분에 해당하는 금액을 직접 입력하세요.`;
+  }
+
   if (form.assets.length === 1 && ownN < ownD && a.ownershipRemainderThirdParty !== "yes") {
     return `${label}: 지분 모드 자산(${ownN}/${ownD})은 단독으로 계산할 수 없습니다. 나머지 지분도 내 것이면 그 지분을 별도 자산으로 추가하고, 나머지가 타인 소유이면 「나머지 지분은 타인 소유」를 선택하세요. 단독 소유라면 지분율을 100%로 입력하세요.`;
   }

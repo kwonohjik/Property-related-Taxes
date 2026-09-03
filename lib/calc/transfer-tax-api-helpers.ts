@@ -173,6 +173,35 @@ export function isFractionalOwnership(asset: AssetForm): boolean {
 }
 
 /**
+ * 단건 공유지분(축 A)에서 **지분 스케일이 검증되지 않은** 자산 종류 — ⑤ UI·⑧ validate 공용 술어.
+ *
+ * 🔴 재개발·입주권은 `buildRedevelopmentPayload`가 **지분율을 전혀 모른다**(2026-09-03 실측).
+ * `rightsValue`(권리가액)·`settlementAmount`(청산금)·`preApprovalExpenses`가 100%로 남아
+ * 취득가액이 부풀고 **양도차익이 과소**해진다:
+ *
+ * | 40% 지분 · 원조합원 | 양도차익 | 세액 |
+ * |---|---|---|
+ * | 실제 산출 | 170,000,000 | — |
+ * | 선형성 기대(= 100% 결과 × 0.4) | 308,000,000 | — |
+ * | 차 | **−138,000,000** | 지분분 직접입력 대비 **−68,026,797원** |
+ *
+ * 같은 축의 다른 종류는 **선형임을 실측**했다(housing·land·분양권·상가 환산·일반건물 환산/실가) —
+ * 환산 기준시가는 산식에서 비율로만 쓰여 약분되기 때문이다. 재개발만 **절대금액이 취득가액에
+ * 직접 더해져** 약분되지 않는다.
+ *
+ * ⚠️ **고치기 전에 근거가 필요하다**: 청산금·권리가액을 ×지분율로 쪼갤 것인지
+ * (화면 규약 「100% 기준 입력 + 자동 적용」), 아니면 부담부증여 채무처럼 **지분 인수분을 직접
+ * 입력받을 것인지**(`BurdenedGiftBlock` 「(지분 인수분)」 라벨) 두 설계가 모두 가능하다.
+ * 근거 없이 고르면 조용히 틀린다 ⇒ 그때까지 **명시 차단**한다.
+ *
+ * 축 B(`transfer-tax-validate.ts` Gate-B)도 `redevelopment_apt`를 같은 이유로 막는다 —
+ * 저장소의 기존 입장과 일치한다.
+ */
+export function isFractionalUnsupportedAssetKind(assetKind: string): boolean {
+  return assetKind === "redevelopment_apt" || assetKind === "right_to_move_in";
+}
+
+/**
  * "진짜 지분 모드(같은 물건 분할 취득)" 판정 — 전 자산이 fractional(분자<분모)인 경우만 true.
  * route.ts:423 `isFullFractionalBundle`(primary + 전 companion fractional)와 동일 기준.
  * companion 모드(다른 물건 함께양도)에 우연히 부분소유(1/2) 자산이 섞인 경우(primary=100/100)는

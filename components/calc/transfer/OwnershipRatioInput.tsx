@@ -46,6 +46,14 @@ export interface OwnershipRemainderProps {
   remainderThirdParty?: "" | "yes";
   /** 선언 변경 핸들러. */
   onRemainderChange?: (v: "" | "yes") => void;
+  /**
+   * 선언을 켤 수 없는 사유 — 주면 토글이 **disabled**로 뜨고 사유를 표시한다.
+   *
+   * 켜도 ⑧이 막는 자산 종류(재개발·입주권)에 필요하다. 켜지는 토글을 두면
+   * 「켰는데 여전히 막힌다」는 또 다른 dead-end가 된다. 판정은 ⑧과 **같은 술어**
+   * (`isFractionalUnsupportedAssetKind`)를 써야 두 층이 갈라지지 않는다.
+   */
+  remainderDisabledReason?: string;
 }
 
 /**
@@ -122,6 +130,7 @@ export function OwnershipRatioBlock({
   label,
   remainderThirdParty,
   onRemainderChange,
+  remainderDisabledReason,
 }: OwnershipRatioInputProps & OwnershipRemainderProps) {
   const fractional = isFractionalRatioStr(numerator, denominator);
   return (
@@ -138,11 +147,13 @@ export function OwnershipRatioBlock({
           계획서: docs/02-design/features/transfer-fractional-single-asset-declaration.plan.md */}
       {fractional && onRemainderChange && (
         <ToggleCard
-          checked={remainderThirdParty === "yes"}
+          checked={remainderThirdParty === "yes" && !remainderDisabledReason}
           onCheckedChange={(v) => onRemainderChange(v ? "yes" : "")}
           tone="violet"
           title="이 물건의 나머지 지분은 타인 소유입니다"
           description="켜면 이 자산 1건만으로 계산합니다. 나머지 지분도 내 것(같은 물건을 여러 번에 나눠 취득)이라면 끄고 그 지분을 별도 자산으로 추가하세요 — 켜면 그 지분이 계산에서 빠집니다."
+          disabled={!!remainderDisabledReason}
+          disabledReason={remainderDisabledReason}
         />
       )}
       {fractional && (
