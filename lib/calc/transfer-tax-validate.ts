@@ -170,7 +170,6 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     if (form.assets.length > 1) {
       const SINGLE_ONLY: Array<[(a: AssetForm) => boolean, string]> = [
         [(a) => a.assetKind === "housing" && !!a.isMixedUseHouse, "겸용주택 분리계산"],
-        [(a) => a.assetKind === "redevelopment_apt", "재개발·재건축(시행령 §166)"],
         /**
          * 🔴 **조합원입주권·분양권 — 2026-08-25 추가.** 종전에는 이 목록에 없어 **침묵 오산**했다.
          *
@@ -197,8 +196,21 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
          *   ⑭ `bundled-split-helpers.ts` 매핑 + `toEngineAssetKind` fold 제거가 **함께** 가야 한다.
          *   한 곳만 열면 다시 침묵 오산이 된다.
          */
-        [(a) => a.assetKind === "right_to_move_in", "조합원입주권(시행령 §166①)"],
-        [(a) => a.assetKind === "presale_right", "분양권(소득세법 §104①1호)"],
+        /**
+         * 🔄 **입주권·재개발APT는 이 목록에서 나갔다 (2026-09-03).** 두 자산의 장벽이 서로
+         *    달랐다 — 입주권은 ④ fold(200이면서 §166 없이 주택 계산), 재개발APT는 ⑩ enum(400).
+         *    ⑩ enum + ⑫ `redevelopment` 서브객체 + ⑬ 자산별 `buildRedevelopmentPayload` +
+         *    ⑭ `propertyType` 매핑으로 함께 열었다. 컴패니언은 각 자산이 자기 물건의 100%라
+         *    축 A(공유지분)의 절대금액 스케일이 필요 없다.
+         *    실측: 컴패니언 결과에 `redevelopmentDetail`이 실린다(anchor RD-4).
+         */
+        /**
+         * 🔄 **분양권은 이 목록에서 나갔다 (2026-09-03).** 장벽은 ⑩ enum이 아니라 **④ fold**였고
+         *    (`toEngineAssetKind`), 그것을 걷어내니 §104①1호 60% 단일세율·§95② 장기보유특별공제
+         *    배제·개산공제 §163⑥4호가 전부 엔진의 `propertyType` 판정으로 살아난다.
+         *    **서브객체가 없어** 입주권·재개발과 달리 배관만으로 정합이 성립한다.
+         *    실측: 컴패니언 분양권이 60% 단일세율군으로 분리(anchor PR-3).
+         */
         /**
          * 지분 분할(전 자산 fractional)은 전용 경로가 있으므로 제외한다 — **일반건물 전용**.
          * route 5-0(`general-building-fractional.ts`)이 5-a보다 앞에서 가로챈다.

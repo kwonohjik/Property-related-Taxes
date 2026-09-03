@@ -3,6 +3,7 @@ import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
 import { commercialAppurtenantLandSchema } from "./transfer-tax-building-schemas";
 import { commercialBuildingValuationSchema } from "./transfer-tax-building-schemas";
+import { redevelopmentSchema } from "./transfer-tax-redevelopment-schema";
 
 // ─── ⑩ 장기임대주택 거주주택 비과세 특례 enum 재export (컴패니언) ─
 
@@ -408,12 +409,38 @@ export const companionAssetSchema = z.object({
    * route가 「Invalid option」을 내는 **안내 없는 dead-end**였다(실측).
    * 「상가는 차단하지 않는다」는 종전 주석은 **primary가 상가일 때만** 맞았다.
    *
-   * ⚠️ 나머지 4종(`general_building`·`redevelopment_apt`·`right_to_move_in`·`presale_right`)은
-   *    여전히 빠져 있고 ⑧이 막는다. 열려면 각자의 서브객체(§166 등)를 함께 배관해야 한다 —
-   *    enum만 넓히면 침묵 오산이 된다(입주권·분양권은 `toEngineAssetKind`가 housing으로
-   *    접어 **200이 나오면서 틀린 값**이 되는 것이 그 실례다).
+   * 🔄 **`presale_right` 추가 (2026-09-03).** 분양권은 장벽이 달랐다 — ⑩이 아니라 **④의 fold**가
+   *    `presale_right`를 `housing`으로 접어 **200이면서 틀린 값**이었다(§104①1호 60% 단일세율과
+   *    §95② 장기보유특별공제 배제가 함께 사라져 누진 그룹에 합산). ⑩·⑭를 함께 넓히고
+   *    `toEngineAssetKind`에서 분양권을 뺐다. 서브객체는 없다 — 분양권 특유 축(세율·LTHD 배제·
+   *    개산공제 §163⑥4호)은 전부 엔진이 `propertyType`만으로 판정한다.
+   *
+   * 🔄 **`right_to_move_in`·`redevelopment_apt` 추가 (2026-09-03).** 두 자산의 장벽이 서로
+   *    달랐다 — 입주권은 ④ fold(200이면서 §166 없이 주택 계산), 재개발APT는 ⑩ enum(400).
+   *    아래 `redevelopment` 서브객체를 함께 등록해 열었다.
+   *
+   * ⚠️ 남은 1종은 `general_building`이고 ⑧이 막는다. 토지·건물 2파트 산출물이 별도 축이라
+   *    enum만 넓히면 그 자산의 분리 계산이 사라진다.
    */
-  assetKind: z.enum(["housing", "land", "building", "commercial_building"]),
+  assetKind: z.enum([
+    "housing",
+    "land",
+    "building",
+    "commercial_building",
+    "presale_right",
+    "right_to_move_in",
+    "redevelopment_apt",
+  ]),
+  /**
+   * ⑫ 시행령 §166 (재개발·재건축) — `right_to_move_in`·`redevelopment_apt` 컴패니언 전용.
+   *
+   * **primary와 같은 스키마를 그대로 쓴다**(`redevelopmentSchema`). 컴패니언은 각 자산이
+   * 자기 물건의 100%라 지분 스케일이 없고, 나머지 규약(refine 4종 포함)이 전부 동일하다.
+   *
+   * 🔑 등록하지 않으면 **침묵 strip**이라 그 자산만 §166을 잃고 일반 주택 산식으로 계산된다
+   *    — 입주권이 ④ fold로 겪던 것과 **같은 결과**가 ⑫에서 다시 만들어진다.
+   */
+  redevelopment: redevelopmentSchema,
   /**
    * ⑫ 상가 부수토지 초과분(§101① 배율) — **물건 전체 면적**이라 지분·안분과 무관하다.
    * 누락 시 §104①8호 +10%p 세율이 통째로 사라진다(primary 축에서 실측 이력).

@@ -28,6 +28,7 @@
 
 import type { z } from "zod";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
+import { toEngineRedevelopment } from "./engine-input";
 import type { companionAssetSchema, reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { splitAcquisitionShape } from "@/lib/api/transfer-tax-schema-split";
@@ -55,6 +56,30 @@ interface CompanionForHousingCtx {
   buildingFootprintArea?: number;
   isUrbanArea?: boolean;
   appurtenantLandZone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
+}
+
+/**
+ * §166⑥ **안분 축**의 자산 종류 — `BundledAssetKind`는 `housing | land | building` **3종뿐**이다.
+ *
+ * 🔑 이 축에서 `assetKind`는 **라벨·표시용**이고 안분 키는 `standardPriceAtTransfer`(기준시가)라,
+ *    접어도 안분 결과가 달라지지 않는다. 소비처는 결과 카드 2곳뿐이다(전수 확인:
+ *    `BundledAllocationCard.tsx:583`은 일반건물 토지·건물 전용, `:788`은 표시 전달).
+ *
+ * ⚠️ 세율·환산이 걸리는 `propertyType` 축과 **혼동 금지** — 그쪽은 접으면 오산이 된다
+ *    (분양권 60%·§166 3분할이 통째로 사라진다).
+ *
+ * - 재개발APT는 **완공 주택**이므로 `housing`이다.
+ * - 입주권·분양권은 권리라 주택이 아니다. 상가와 함께 `building` 쪽으로 접는다 —
+ *   `housing` 라벨을 붙이면 표시가 거짓이 된다.
+ */
+function toApportionKind(
+  kind: CompanionRawAsset["assetKind"],
+): "housing" | "land" | "building" {
+  if (kind === "redevelopment_apt") return "housing";
+  if (kind === "commercial_building" || kind === "presale_right" || kind === "right_to_move_in") {
+    return "building";
+  }
+  return kind;
 }
 
 interface PrimaryCtxResult {
@@ -117,7 +142,14 @@ type CompanionSplitFields = Pick<
 interface CompanionRawAsset extends CompanionSplitFields {
   assetId: string;
   assetLabel?: string;
-  assetKind: "housing" | "land" | "building" | "commercial_building";
+  assetKind:
+    | "housing"
+    | "land"
+    | "building"
+    | "commercial_building"
+    | "presale_right"
+    | "right_to_move_in"
+    | "redevelopment_apt";
   acquisitionDate?: string;
   acquisitionCause: TransferTaxItemInput["acquisitionCause"];
   decedentAcquisitionDate?: string;
@@ -191,6 +223,8 @@ interface CompanionRawAsset extends CompanionSplitFields {
    *
    * ⑫(`companionAssetSchema`)의 파싱 결과를 **그대로** 받는다 — 인라인 타입으로 다시 적지 않는다.
    */
+  /** ⑫의 파싱 결과를 그대로 받는다 — 인라인 타입으로 다시 적지 않는다(F13·F15 실패 모드). */
+  redevelopment?: z.infer<typeof companionAssetSchema>["redevelopment"];
   commercialAppurtenantLand?: z.infer<typeof companionAssetSchema>["commercialAppurtenantLand"];
   commercialBuildingValuation?: z.infer<typeof companionAssetSchema>["commercialBuildingValuation"];
   burdenedGiftInfo?: z.infer<typeof companionAssetSchema>["burdenedGiftInfo"];
@@ -301,7 +335,13 @@ export function buildCompanionEngineInputs(
         ? "building"
         : c.assetKind === "commercial_building"
           ? "commercial_building"
-          : "land";
+          : c.assetKind === "presale_right"
+            ? "presale_right"
+            : c.assetKind === "right_to_move_in"
+              ? "right_to_move_in"
+              : c.assetKind === "redevelopment_apt"
+                ? "redevelopment_apt"
+                : "land";
 
   /**
    * ⑭ 분리취득 축 — ⑫가 통과시킨 필드를 **그대로** 엔진 모양으로 옮긴다.
@@ -378,6 +418,10 @@ export function buildCompanionEngineInputs(
     ownershipRatio: c.ownershipRatio,
     // ⑭ 부담부증여(소령 §159) — 축 B 컴패니언. 없으면 그 지분만 §159를 타지 않아
     //    양도차익이 「총계약가 × 지분율」로 남는다(실측 400,000,000 vs 정답 116,400,000).
+    // ⑭ §166 서브객체 — 열거 누락 시 침묵 strip이라 그 자산만 인가전·인가후 3분할을 잃는다.
+    //    Date 변환은 단건과 **같은 leaf**를 쓴다(`toEngineRedevelopment`) — 복제하면 한쪽만
+    //    필드가 늘어 그 경로에서 `Date < string` silent false가 난다.
+    ...(c.redevelopment ? { redevelopment: toEngineRedevelopment(c.redevelopment) } : {}),
     // ⑭ 상가 서브객체 — 열거 누락 시 침묵 strip이라 그 자산만 §101①·환산을 잃는다.
     commercialAppurtenantLand: c.commercialAppurtenantLand,
     commercialBuildingValuation: c.commercialBuildingValuation,
@@ -477,9 +521,9 @@ export function buildCompanionEngineInputs(
       {
         assetId: c.assetId,
         assetLabel: c.assetLabel ?? "",
-        // G-2 split은 **토지 컴패니언 전용**(진입조건 2 — 파일 헤더)이라 상가는 대상이 아니다.
-        // 접어 넘겨도 `assetKind === "land"` 게이트에서 그대로 빠진다.
-        assetKind: c.assetKind === "commercial_building" ? "building" : c.assetKind,
+        // G-2 split은 **토지 컴패니언 전용**(진입조건 2 — 파일 헤더)이라 상가·권리 자산은 대상이
+        // 아니다. 접어 넘겨도 `assetKind === "land"` 게이트에서 그대로 빠진다.
+        assetKind: toApportionKind(c.assetKind),
         areaM2: c.areaM2,
         manualHoldingPeriodOverride: effectiveOverride,
         landNature: c.landNature,
@@ -547,7 +591,14 @@ interface BundledPrimaryInput {
 interface BundledCompanionForApportion {
   assetId: string;
   assetLabel: string;
-  assetKind: "housing" | "land" | "building" | "commercial_building";
+  assetKind:
+    | "housing"
+    | "land"
+    | "building"
+    | "commercial_building"
+    | "presale_right"
+    | "right_to_move_in"
+    | "redevelopment_apt";
   acquisitionCause: TransferTaxItemInput["acquisitionCause"];
   useEstimatedAcquisition?: boolean;
   /** §97①1호나목 환산 분모(4.5 매매 estimated). 이월과세 general에서는 증여자 축 값이다. */
@@ -642,12 +693,15 @@ export function prepareBundledApportionment(
         assetId: c.assetId,
         assetLabel: c.assetLabel,
         /**
-         * §166⑥ **안분 축**은 3종뿐이다. 상가는 `building`으로 접는다 — 이 축에서
+         * §166⑥ **안분 축**은 3종뿐이다. 상가·분양권은 `building`으로 접는다 — 이 축에서
          * `assetKind`는 라벨·표시용이고 안분 키는 **기준시가**라 결과가 달라지지 않는다.
          * (primary도 위 `primaryAssetKind`에서 같은 fold를 한다.)
+         *
          * ⚠️ 세율·환산이 걸리는 `propertyType` 축과 혼동 금지 — 그쪽은 접으면 오산이다.
+         * ⚠️ 분양권을 `housing`으로 접지 않는 이유: 이 값은 결과 카드의 `ValuationDetailCards`
+         *    게이트로도 흘러가므로, 권리에 주택 라벨을 붙이면 표시가 거짓이 된다.
          */
-        assetKind: c.assetKind === "commercial_building" ? "building" : c.assetKind,
+        assetKind: toApportionKind(c.assetKind),
         // §166⑥ 안분 키 — 전용 필드 우선. 구필드 fallback은 전용 키를 모르는 직접 호출자 하위호환
         // (⑩ superRefine의 `apportionKey` 선택식과 **같은 식**이어야 한다 — 단일 기준).
         standardPriceAtTransfer:

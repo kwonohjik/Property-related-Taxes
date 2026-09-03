@@ -121,16 +121,11 @@ export { buildCommercialBuildingValuation } from "./transfer-tax-api-commercial"
 // ⑬ 컴패니언 payload에서 직접 호출한다 — 위 재수출은 호출부 호환용이라 이 파일 스코프엔 없다.
 import { buildCommercialAppurtenantLand } from "./transfer-tax-api-commercial";
 import { buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
+import { buildRedevelopmentPayload as buildRedevPayloadForCompanion } from "./transfer-tax-api-redev";
 
 // ─── ④ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — transfer-tax-api-rental-housing.ts로 분리 (800줄 정책, 재export 호환) ───
 export { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 
-export function toEngineAssetKind(
-  kind: AssetForm["assetKind"]
-): "housing" | "land" | "building" | "commercial_building" | "general_building" | "redevelopment_apt" {
-  if (kind === "right_to_move_in" || kind === "presale_right") return "housing";
-  return kind;
-}
 
 // ─── ④ 일반건물(토지+건물 일괄) API 변환 — transfer-tax-api-gb.ts로 분리 (800줄 정책, 재export 호환) ───
 export { buildGeneralBuildingValuation } from "./transfer-tax-api-gb";
@@ -526,7 +521,19 @@ export function buildAssetPayload(
     }),
     assetId: asset.assetId,
     assetLabel: asset.assetLabel,
-    assetKind: toEngineAssetKind(asset.assetKind),
+    /**
+     * ⑬ 자산 종류는 **접지 않고 그대로 보낸다** (2026-09-03).
+     *
+     * 종전에는 `toEngineAssetKind`가 `presale_right`·`right_to_move_in`을 `"housing"`으로
+     * 접었다. 그 fold는 200을 내면서 §104①1호 60% 단일세율(분양권)·§166 3분할(입주권)을
+     * **통째로 삭제**했고, 부수적으로 `resolveHousingContextFromCompanion`이 **정착면적 없는
+     * 권리**를 부수토지 배율의 기준 주택으로 집게 만들었다. 두 자산의 ⑩⑫를 열면서
+     * fold가 항등이 되어 함수를 제거했다.
+     *
+     * ⚠️ `general_building`은 ⑩ enum에 아직 없다 — ⑧이 막고 있고, 열려면 토지·건물 2파트
+     *    산출물 축을 함께 배관해야 한다.
+     */
+    assetKind: asset.assetKind,
     // ④ 공익수용 §164⑨ 1호 특례 — **컴패니언 자산도 지원**(계획 Q5).
     //
     // 🔴 `transferCause`는 **1호 트랙의 게이트**다(엔진 `applyExpropriationValuation`:112 ·
@@ -591,6 +598,18 @@ export function buildAssetPayload(
     /** ⑬ 상가 서브객체 — 열거 누락 시 침묵 stripping이라 그 자산만 환산·부수토지 축을 잃는다. */
     ...(cbAppurtenantLand !== undefined ? { commercialAppurtenantLand: cbAppurtenantLand } : {}),
     ...(cbValuation !== undefined ? { commercialBuildingValuation: cbValuation } : {}),
+    /**
+     * ⑬ 시행령 §166 서브객체 — 입주권·재개발APT 컴패니언.
+     *
+     * **primary와 같은 빌더**를 자산별로 부른다(`buildRedevelopmentPayload`). 그 빌더는 절대금액
+     * 성분(권리가액·필요경비)의 지분 스케일을 이미 안고 있는데, 컴패니언은 각 자산이 자기 물건의
+     * 100%라 `ownershipRatio`를 넘기지 않는다 — 축 A(공유지분)와 갈리는 지점이다.
+     *
+     * 누락 시 침묵 strip이라 그 자산만 §166을 잃고 일반 주택 산식으로 계산된다.
+     */
+    ...(asset.assetKind === "right_to_move_in" || asset.assetKind === "redevelopment_apt"
+      ? { redevelopment: buildRedevPayloadForCompanion(asset) }
+      : {}),
     ...(asset.transferType === "burdened_gift"
       ? {
           // ⑬ 엔진 §159 게이트가 보는 값 — `burdenedGiftInfo`만으로는 발동하지 않는다.

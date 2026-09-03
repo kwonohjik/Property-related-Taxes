@@ -204,11 +204,23 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
       expect(msgs.some((m) => m.includes("일반건물(토지·건물 일괄)은(는) 함께 양도"))).toBe(true);
     });
 
-    it("겸용주택·재개발·부담부증여의 함께양도 차단은 그대로다", () => {
+    /**
+     * 🔄 **반전 (2026-09-03)** — 재개발APT 함께양도가 열렸다(⑩ enum + ⑫ §166 서브객체).
+     * 이 항목의 원래 역할(「가드를 통째로 없앤 것이 아니다」)은 **바로 위 양성 대조군**
+     * (일반건물 100% 2건 차단)이 계속 맡는다. 겸용주택은 아래에서 따로 고정한다.
+     */
+    it("재개발·재건축 함께양도는 더는 차단되지 않는다", () => {
       const redev1 = gbShare({ assetId: "r1", assetKind: "redevelopment_apt", ownershipNumerator: "100", ownershipDenominator: "100" });
       const redev2 = gbShare({ assetId: "r2", assetKind: "redevelopment_apt", ownershipNumerator: "100", ownershipDenominator: "100" });
       const msgs = messages(fractionalForm([redev1, redev2]));
-      expect(msgs.some((m) => m.includes("재개발·재건축"))).toBe(true);
+      expect(msgs.some((m) => m.includes("재개발·재건축"))).toBe(false);
+    });
+
+    it("겸용주택 함께양도 차단은 그대로다 (아직 열리지 않은 축)", () => {
+      const mu1 = gbShare({ assetId: "m1", assetKind: "housing", isMixedUseHouse: true, ownershipNumerator: "100", ownershipDenominator: "100" });
+      const mu2 = gbShare({ assetId: "m2", assetKind: "housing", isMixedUseHouse: true, ownershipNumerator: "100", ownershipDenominator: "100" });
+      const msgs = messages(fractionalForm([mu1, mu2]));
+      expect(msgs.some((m) => m.includes("겸용주택"))).toBe(true);
     });
   });
 
