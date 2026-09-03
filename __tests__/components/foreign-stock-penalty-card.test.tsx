@@ -48,7 +48,15 @@ describe("FC-1 가산세 행", () => {
     expect(screen.queryByText(/납부지연 가산세/)).toBeNull();
   });
 
-  it("FC-1-2: 신고불성실 가산세와 **기준금액**이 보인다", () => {
+  /**
+   * 🔴 G-36: **금액을 단언한다.**
+   *
+   * 종전 FC-1-2~4는 라벨·문구 존재만 봐서 카드가 가산세를 0원으로 그려도 통과했다
+   * (뮤테이션 실측: `value={0}`으로 바꿔도 498파일 4,424테스트 전건 GREEN).
+   * 이 파일 헤더가 스스로 막겠다고 선언한 실패 모드 —「계산은 맞는데 표시 누락」— 를
+   * 정작 잡지 못했던 것이다. 라벨이 아니라 **숫자**를 본다.
+   */
+  it("FC-1-2: 신고불성실 가산세 금액과 **기준금액**이 화면에 있다", () => {
     render(
       <ForeignStockResultCard
         result={res({
@@ -59,25 +67,33 @@ describe("FC-1 가산세 행", () => {
       />,
     );
     expect(screen.getByText(/신고불성실 가산세/)).toBeTruthy();
-    expect(screen.getByText(/과소신고납부세액등/)).toBeTruthy();
+    expect(screen.getByText(/기준금액 19,500,000 \(과소신고납부세액등\)/)).toBeTruthy();
+    // 🔑 금액 자체 — 종전에는 이 줄이 없어 0원으로 그려도 통과했다
+    expect(screen.getByText("7,800,000")).toBeTruthy();
   });
 
-  it("FC-1-3: 납부지연 가산세 행과 산식이 보인다", () => {
+  it("FC-1-3: 납부지연 가산세 금액과 산식이 화면에 있다", () => {
     render(
       <ForeignStockResultCard
         result={res({ latePaymentPenalty: 68_200, finalTax: 19_568_200 })}
       />,
     );
     expect(screen.getByText(/납부지연 가산세/)).toBeTruthy();
+    // 🔴 G-03: 산정 종기는 「납부일의 전날」이다(국세기본법 §47의4①1호).
+    expect(screen.getByText(/산정일수\(법정납부기한 다음 날 ~ 납부일 전날\)/)).toBeTruthy();
     expect(screen.getByText(/1일 10만분의 22/)).toBeTruthy();
+    expect(screen.getByText("68,200")).toBeTruthy();
   });
 
-  it("FC-1-4: 가산세가 있으면 최종 소득세 산식에 「+ 가산세」가 붙는다", () => {
+  it("FC-1-4: 가산세가 있으면 최종 소득세가 산출세액 + 가산세다 (문구가 아니라 값)", () => {
     render(
       <ForeignStockResultCard
         result={res({ underReportPenalty: 7_800_000, finalTax: 27_300_000 })}
       />,
     );
     expect(screen.getByText(/\+ 가산세/)).toBeTruthy();
+    // 19,500,000(산출세액) + 7,800,000(가산세) = 27,300,000 이 실제로 인쇄된다
+    expect(screen.getByText("27,300,000")).toBeTruthy();
+    expect(screen.getByText("7,800,000")).toBeTruthy();
   });
 });

@@ -13,6 +13,7 @@
  */
 
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
+import type { FraudPortionSplit } from "../transfer-tax-penalty";
 import { calculateStockTransferTaxInternal } from "./stock-transfer-tax";
 import { floorTen } from "./stock-transfer-helpers";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
@@ -106,6 +107,18 @@ export interface StockTransferAggregateResult {
   totalUnderReportPenalty: number;
   /** 납부지연가산세 — 신고 1건 단위 1회 (국세기본법 §47조의4①1호) */
   totalLatePaymentPenalty: number;
+  /**
+   * 🔴 G-46: 신고불성실가산세 **기준금액** echo — 「과소신고납부세액등」(§47조의3①).
+   *
+   * 종목별 결과는 `stripItemPenalties`가 가산세를 0으로 만들어 상세 카드가 조기반환하므로,
+   * 다종목 신고에서는 이 echo 가 없으면 「기준금액 × 세율」 산식이 화면에서 통째로 사라진다.
+   * 사용자가 「산출세액 × 세율」로 오해하는 것을 막는 것이 base 표시의 존재 이유다.
+   */
+  penaltyBase?: number;
+  /** 🔴 G-46: 적용 조문 echo — 가산세가 0이면 넣지 않는다 */
+  penaltyRuleRef?: string;
+  /** 🔴 G-46 · G-12: §47조의3①1호 가목·나목 분해 echo — 「부정행위로 인한 과소신고분」 입력 시 */
+  fraudSplit?: FraudPortionSplit;
   /** 합산 전자신고 공제 (전체 1회) */
   electronicFilingCredit: number;
   /** 합산 최종세액 */
@@ -175,6 +188,26 @@ export function calculateStockTransferTaxAggregate(
   return aggregateCore(mergeDomestic(resolvedDomestic), deductionMode);
 }
 
+/**
+ * 🔴 G-46: 신고 단위 가산세의 **표시용 echo**만 뽑는다.
+ *
+ * 가산세가 0이면 아무것도 싣지 않는다 — 「가산세 0인데 기준금액·조문 배지」가 남으면
+ * `stripItemPenalties`가 warnings에서 조문을 걷어내는 것과 반대 방향의 드리프트가 된다
+ * (메모리 `feedback_engine_result_display_drift`).
+ */
+function penaltyEcho(u: ReturnType<typeof computeFilingUnitPenalty>): {
+  penaltyBase?: number;
+  penaltyRuleRef?: string;
+  fraudSplit?: FraudPortionSplit;
+} {
+  if (u.filing <= 0) return {};
+  return {
+    penaltyBase: u.penaltyBase,
+    ...(u.ruleRef ? { penaltyRuleRef: u.ruleRef } : {}),
+    ...(u.fraudSplit ? { fraudSplit: u.fraudSplit } : {}),
+  };
+}
+
 /** 합산 계산 본체 — 이월과세 A/B가 **이미 확정된** 입력을 받는다. */
 function aggregateCore(
   inputs: AggregateStockItemInput[],
@@ -211,9 +244,18 @@ function aggregateCore(
       items.reduce((s, r) => s + taxableField(r, "transferIncome"), 0),
     );
     const totalCalculatedTax = items.reduce((s, r) => s + taxableField(r, "calculatedTax"), 0);
-    const electronicFilingCredit = items.some((r) => r.electronicFilingCredit > 0)
-      ? 20_000
-      : 0;
+    /**
+     * 🔴 G-45: **입력값**으로 판정한다 — 긴 분기(`anyElectronic`)와 같은 소스다.
+     *
+     * 종전에는 종목 **결과값**(`r.electronicFilingCredit > 0`)을 봤는데, 국외 종목은 어댑터가
+     * 그 필드를 항상 0으로 눌러 놓아 영영 잡히지 않았다. 그래서 같은 「전자신고」 선언인데
+     * **종목 수만으로** 공제 적용 여부가 갈리고, 그 20,000원이 곧바로 가산세 base 를 움직였다
+     * (실측: 국외 1건 → 가산세 7,800,000 / 국외 2건 → 7,872,000).
+     *
+     * 조특법 §104의8①의 공제는 「전자신고의 방법으로 … 신고를 하는 경우」이므로 **신고 단위**
+     * 1회다 — 종목이 국내인지 국외인지와 무관하다.
+     */
+    const electronicFilingCredit = inputs.some((inp) => inp.isElectronicFiling) ? 20_000 : 0;
     // §118의6①1호 외국납부세액공제는 **산출세액에서 차감**된다. 이 단축 분기(단건·each_item)도
     // 반드시 빼야 한다 — 국외 종목의 `finalTax`에는 이미 반영돼 있는데 총계에서 빠지면
     // 종목 세액과 결정세액이 어긋난다(anchor FA-2-2가 이 누락을 잡았다).
@@ -253,6 +295,8 @@ function aggregateCore(
       totalCalculatedTax,
       totalUnderReportPenalty,
       totalLatePaymentPenalty,
+      // 🔴 G-46: 기준금액·조문·가목나목 분해 echo — 다종목에서 산식이 사라지지 않도록.
+      ...penaltyEcho(unitPenalty),
       electronicFilingCredit,
       totalFinalTax,
       totalLocalIncomeTax,
@@ -603,6 +647,8 @@ function aggregateCore(
     ...(otherAssetComparativeTax ? { otherAssetComparativeTax } : {}),
     totalUnderReportPenalty,
     totalLatePaymentPenalty,
+    // 🔴 G-46: 기준금액·조문·가목나목 분해 echo — 다종목에서 산식이 사라지지 않도록.
+    ...penaltyEcho(unitPenalty),
     electronicFilingCredit,
     totalFinalTax,
     totalLocalIncomeTax,

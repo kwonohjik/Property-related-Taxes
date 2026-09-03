@@ -3,7 +3,7 @@
  *
  * STEP 10: 신고불성실 가산세 (국세기본법 §47조의2 무신고 / §47조의3 과소신고)
  * STEP 10.5: 납부지연 가산세 (국세기본법 §47조의4 · 국기령 §27조의4① 1일 10만분의 22)
- * STEP 11: 전자신고 공제 §52의2
+ * STEP 11: 전자신고 공제 조특법 §104의8①
  * STEP 12: 지방소득세 §103의3 + 10원 미만 절사 (국고금 관리법 §47③)
  *
  * ## 계산 엔진은 부동산 정본을 재사용한다
@@ -45,6 +45,15 @@ export interface FinalizeStockResult {
   appliedRules: string[];
   /** 가산세 기준금액 — 「과소신고납부세액등」(§47조의3①). 결과 화면 산식 표시용 echo */
   penaltyBase?: number;
+  /**
+   * 🔴 G-12: §47조의3①1호 **가목·나목 분해** echo.
+   *
+   * 「부정행위로 인한 과소신고분」을 입력하면 엔진은 가목(부정분 × 40%·역외 60%) +
+   * 나목(나머지 × 10%)으로 나눠 계산하는데, 종전에는 이 값을 결과에 싣지 않아 결과 카드가
+   * 토글(`isFraudulent`·`isInternationalTransaction`)만으로 세율을 파생했다. 그래서
+   * 「기준금액 100,000,000 × 40%」와 실제 금액 17,500,000이 **나란히 인쇄**됐다.
+   */
+  fraudSplit?: FraudPortionSplit;
 }
 
 /** 주식 `filingViolation` → 부동산 정본 `FilingType` */
@@ -243,5 +252,6 @@ export function finalizeStockTax(
     localIncomeTax,
     appliedRules,
     penaltyBase: filing.penaltyBase,
+    ...(filing.fraudSplit ? { fraudSplit: filing.fraudSplit } : {}),
   };
 }

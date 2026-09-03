@@ -356,6 +356,24 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
               onChange={(v) => onChange({ filingDate: v })}
             />
           </FieldCard>
+
+          {/**
+           * 🔴 G-45: 전자신고 세액공제 입력 위젯.
+           *
+           * `isElectronicFiling`은 폼·normalize·④·⑨⑫·⑭·결과카드·신고서 28번 행까지 배선돼
+           * 있었는데 **⑤ 위젯만 저장소 전체에 0건**이라 UI에서는 영영 false였다. 결과 화면의
+           * 「전자신고 시 △20,000원」 안내와 신고서 28번 행이 도달 불가능한 표시로 남아 있었다.
+           *
+           * 공제는 「전자신고의 방법으로 … 신고를 하는 경우」이므로 **신고 단위 1회**다
+           * (조특법 §104의8①) — 종목마다 켜도 합산에서 1회만 반영된다.
+           */}
+          <ToggleCard
+            checked={form.isElectronicFiling}
+            onCheckedChange={(v) => onChange({ isElectronicFiling: v })}
+            title="전자신고 (홈택스 직접 신고)"
+            description="납세자가 직접 전자신고하면 20,000원을 세액공제합니다 (조세특례제한법 §104의8①). 신고 1건에 1회 적용됩니다."
+            tone="emerald"
+          />
         </div>
       </section>
 

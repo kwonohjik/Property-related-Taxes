@@ -15,6 +15,7 @@ import {
   isForeignStockItem,
   type AggregateStockItemInput,
 } from "./foreign-stock-aggregate-adapter";
+import type { FraudPortionSplit } from "../transfer-tax-penalty";
 import { floorTen } from "./stock-transfer-helpers";
 import {
   computeStockFilingPenalty,
@@ -69,7 +70,12 @@ function pickFilingAxisInput(
  */
 export function stripItemPenalties(items: StockTransferResult[]): StockTransferResult[] {
   return items.map((r) => {
-    if (r.underReportPenalty === 0 && r.latePaymentPenalty === 0) return r;
+    /**
+     * 🔑 비과세 종목은 건드리지 않는다 — `applyExemptZeroing`이 `finalTax`를 0으로 **강제**해
+     * 두었고 `calculatedTax`는 echo 로 남는다(§94①3 가목1) 단서 등). 아래 식으로 다시 쓰면
+     * 비과세 종목에 세액이 되살아난다(anchor AG-EX-4가 이 회귀를 잡는다).
+     */
+    if (r.isExempt) return r;
     const foreignCredit = r.foreignDetail?.foreignTaxCreditApplied ?? 0;
     return {
       ...r,
@@ -84,14 +90,35 @@ export function stripItemPenalties(items: StockTransferResult[]): StockTransferR
   });
 }
 
-/** 신고 단위 가산세 1회 산정 — 국내 종목이 하나도 없으면 0 */
+/**
+ * 신고 단위 가산세 1회 산정 — 축을 든 종목이 하나도 없으면 0.
+ *
+ * 🔴 G-46: 금액뿐 아니라 **기준금액·적용 조문·가목나목 분해**도 돌려준다. 종전에는
+ * `{filing, late}`만 돌려줘 다종목 신고에서는 「기준금액 × 세율」 산식과 적용 조문이 화면에서
+ * 통째로 사라졌다 — 종목별 결과는 `stripItemPenalties`가 0으로 만들어 상세 카드가 조기반환하고,
+ * 합산 카드에는 금액 2행뿐이었다. 사용자가 「산출세액 × 세율」로 오해하는 것을 막으려고
+ * base 를 싣는다는 것이 상세 카드의 존재 이유인데, 그 이유가 다종목에서만 사라져 있었다.
+ */
 export function computeFilingUnitPenalty(
   determinedTotal: number,
   axis: FilingAxisFields | undefined,
-): { filing: number; late: number } {
-  if (!axis) return { filing: 0, late: 0 };
+): {
+  filing: number;
+  late: number;
+  /** 「과소신고납부세액등」(국세기본법 §47조의3①) — 표시 산식용 echo */
+  penaltyBase: number;
+  /** 적용 조문 — 가산세가 0이면 빈 문자열 */
+  ruleRef: string;
+  /** §47조의3①1호 가목·나목 분해 — 「부정행위로 인한 과소신고분」 입력 시에만 */
+  fraudSplit?: FraudPortionSplit;
+} {
+  if (!axis) return { filing: 0, late: 0, penaltyBase: 0, ruleRef: "" };
+  const filing = computeStockFilingPenalty(determinedTotal, axis);
   return {
-    filing: computeStockFilingPenalty(determinedTotal, axis).penalty,
+    filing: filing.penalty,
     late: computeStockLatePaymentPenalty(axis),
+    penaltyBase: filing.penaltyBase,
+    ruleRef: filing.ruleRef,
+    ...(filing.fraudSplit ? { fraudSplit: filing.fraudSplit } : {}),
   };
 }

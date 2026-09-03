@@ -256,7 +256,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
           <Row
             label="납부지연 가산세 (국세기본법 §47조의4)"
             value={result.latePaymentPenalty!}
-            sub="미납세액 × 경과일수 × 1일 10만분의 22 (국기령 §27조의4①)"
+            sub="미납세액 × 산정일수(법정납부기한 다음 날 ~ 납부일 전날) × 1일 10만분의 22 (국기령 §27조의4①)"
             indent
           />
         )}
