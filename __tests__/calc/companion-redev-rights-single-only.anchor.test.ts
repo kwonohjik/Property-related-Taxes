@@ -80,15 +80,18 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * ## 기대값 (법령상 옳은 값)
  *
- * `collectStepIssues(0, form)`이 **두 경우 모두 차단 이슈 1건**을 돌려주어야 한다 —
- * `SINGLE_ONLY`에 `right_to_move_in`·`presale_right`를 추가해 형제 `redevelopment_apt`와 **대칭**으로.
+ * `collectStepIssues(0, form)`이 **입주권에 대해** 차단 이슈 1건을 돌려주어야 한다 —
+ * `SINGLE_ONLY`에 `right_to_move_in`을 추가해 형제 `redevelopment_apt`와 **대칭**으로.
  * (도메인 오너 결정: 「함께 양도 토글을 끄고 단건으로 계산」 유도. 다건 계산기와 동일 정책.)
+ *
+ * 🔄 **분양권은 2026-09-03에 차단이 아니라 개방으로 종결됐다**(AC-2 반전 참조).
+ *    AC-5가 실증한 삼킴의 원인이 **fold**였고, 그것을 걷어내니 서브객체 없이 정합이 성립했다.
  *
  * 🔑 라벨 **문구는 구현 자유**다. 이 anchor는 `SINGLE_ONLY` 공통 템플릿
  *    「함께 양도와 같이 계산할 수 없습니다」만 단언한다.
  *
  * ## 🔴 이 anchor는 수정 전 실패한다
- *   AC-1(입주권)·AC-2(분양권)이 `[]`를 받아 실패한다.
+ *   AC-1(입주권)이 `[]`를 받아 실패한다. (AC-2는 2026-09-03 개방으로 반전됐다.)
  *   AC-3(형제 `redevelopment_apt`)·AC-3b(순수 주택 대조군)·AC-4·AC-5는 수정 전후 모두 통과한다 —
  *   판별력(비대칭 고정)과 「왜 막는가」(삼킴의 실증)를 코드에 남기기 위한 것이다.
  */
@@ -222,7 +225,21 @@ describe("[A5] 함께양도 × 조합원입주권·분양권 — ⑧ 명시 차�
     expect(issues[0].step).toBe(0);
   });
 
-  it("🔴 AC-2 (S1-02): 컴패니언 분양권은 차단되어야 한다 — 현행은 통과", () => {
+  /**
+   * 🔄 **AC-2 반전 (2026-09-03) — 분양권은 차단이 아니라 개방으로 끝났다.**
+   *
+   * 이 anchor가 세운 「차단해야 한다」는 **fold를 전제**로 한 결론이었다. AC-5가 실증한 삼킴
+   * (§104①1호 60% · §95② 배제 · §163⑥4호 1%)은 **fold가 원인**이고, 그 fold를
+   * `toEngineAssetKind`에서 걷어내면 엔진이 `propertyType`만으로 셋을 전부 되살린다.
+   * 분양권에는 §166 같은 서브객체가 없어 **배관만으로 정합이 성립**한다.
+   *
+   * ⇒ 차단 대신 개방했다(⑩⑭ 확장 + fold 제거). 개방 후 계산 정합은
+   *   `__tests__/api/transfer.route.companion-presale-right.anchor.test.ts`가 본다.
+   *
+   * ⚠️ **AC-1(입주권)은 그대로 차단이다** — §166 서브객체가 컴패니언에 없어 fold만 걷어내면
+   *    §166 없이 계산돼 또 다른 오산이 된다. 두 자산의 차이가 여기서 갈린다.
+   */
+  it("✅ AC-2 (반전): 컴패니언 분양권은 더는 차단되지 않는다", () => {
     const form = bundledForm({
       assetKind: "presale_right",
       acquisitionDate: "2022-03-01",
@@ -230,13 +247,11 @@ describe("[A5] 함께양도 × 조합원입주권·분양권 — ⑧ 명시 차�
     });
     const issues = collectStepIssues(0, form);
 
-    // 현행 실측: [] (통과) → 아래에서 실패한다.
     expect(
       issues.filter((i) => i.message.includes(BLOCK_TEMPLATE)),
-      "분양권 컴패니언은 §104①1호 60%·§95② 배제·§163⑥4호 1%가 전부 사라지므로 차단해야 한다",
-    ).toHaveLength(1);
-    expect(issues).toHaveLength(1);
-    expect(issues[0].step).toBe(0);
+      "분양권은 2026-09-03에 개방됐다 — 차단이 남아 있으면 ⑧ 정리 누락",
+    ).toHaveLength(0);
+    expect(issues).toHaveLength(0);
   });
 
   it("✅ AC-3 (판별력): 형제 `redevelopment_apt`는 같은 픽스처에서 이미 차단된다", () => {

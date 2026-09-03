@@ -198,7 +198,13 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
          *   한 곳만 열면 다시 침묵 오산이 된다.
          */
         [(a) => a.assetKind === "right_to_move_in", "조합원입주권(시행령 §166①)"],
-        [(a) => a.assetKind === "presale_right", "분양권(소득세법 §104①1호)"],
+        /**
+         * 🔄 **분양권은 이 목록에서 나갔다 (2026-09-03).** 장벽은 ⑩ enum이 아니라 **④ fold**였고
+         *    (`toEngineAssetKind`), 그것을 걷어내니 §104①1호 60% 단일세율·§95② 장기보유특별공제
+         *    배제·개산공제 §163⑥4호가 전부 엔진의 `propertyType` 판정으로 살아난다.
+         *    **서브객체가 없어** 입주권·재개발과 달리 배관만으로 정합이 성립한다.
+         *    실측: 컴패니언 분양권이 60% 단일세율군으로 분리(anchor PR-3).
+         */
         /**
          * 지분 분할(전 자산 fractional)은 전용 경로가 있으므로 제외한다 — **일반건물 전용**.
          * route 5-0(`general-building-fractional.ts`)이 5-a보다 앞에서 가로챈다.

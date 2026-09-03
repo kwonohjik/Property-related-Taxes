@@ -117,7 +117,7 @@ type CompanionSplitFields = Pick<
 interface CompanionRawAsset extends CompanionSplitFields {
   assetId: string;
   assetLabel?: string;
-  assetKind: "housing" | "land" | "building" | "commercial_building";
+  assetKind: "housing" | "land" | "building" | "commercial_building" | "presale_right";
   acquisitionDate?: string;
   acquisitionCause: TransferTaxItemInput["acquisitionCause"];
   decedentAcquisitionDate?: string;
@@ -301,7 +301,9 @@ export function buildCompanionEngineInputs(
         ? "building"
         : c.assetKind === "commercial_building"
           ? "commercial_building"
-          : "land";
+          : c.assetKind === "presale_right"
+            ? "presale_right"
+            : "land";
 
   /**
    * ⑭ 분리취득 축 — ⑫가 통과시킨 필드를 **그대로** 엔진 모양으로 옮긴다.
@@ -477,9 +479,12 @@ export function buildCompanionEngineInputs(
       {
         assetId: c.assetId,
         assetLabel: c.assetLabel ?? "",
-        // G-2 split은 **토지 컴패니언 전용**(진입조건 2 — 파일 헤더)이라 상가는 대상이 아니다.
-        // 접어 넘겨도 `assetKind === "land"` 게이트에서 그대로 빠진다.
-        assetKind: c.assetKind === "commercial_building" ? "building" : c.assetKind,
+        // G-2 split은 **토지 컴패니언 전용**(진입조건 2 — 파일 헤더)이라 상가·분양권은 대상이
+        // 아니다. 접어 넘겨도 `assetKind === "land"` 게이트에서 그대로 빠진다.
+        assetKind:
+          c.assetKind === "commercial_building" || c.assetKind === "presale_right"
+            ? "building"
+            : c.assetKind,
         areaM2: c.areaM2,
         manualHoldingPeriodOverride: effectiveOverride,
         landNature: c.landNature,
@@ -547,7 +552,7 @@ interface BundledPrimaryInput {
 interface BundledCompanionForApportion {
   assetId: string;
   assetLabel: string;
-  assetKind: "housing" | "land" | "building" | "commercial_building";
+  assetKind: "housing" | "land" | "building" | "commercial_building" | "presale_right";
   acquisitionCause: TransferTaxItemInput["acquisitionCause"];
   useEstimatedAcquisition?: boolean;
   /** §97①1호나목 환산 분모(4.5 매매 estimated). 이월과세 general에서는 증여자 축 값이다. */
@@ -642,12 +647,18 @@ export function prepareBundledApportionment(
         assetId: c.assetId,
         assetLabel: c.assetLabel,
         /**
-         * §166⑥ **안분 축**은 3종뿐이다. 상가는 `building`으로 접는다 — 이 축에서
+         * §166⑥ **안분 축**은 3종뿐이다. 상가·분양권은 `building`으로 접는다 — 이 축에서
          * `assetKind`는 라벨·표시용이고 안분 키는 **기준시가**라 결과가 달라지지 않는다.
          * (primary도 위 `primaryAssetKind`에서 같은 fold를 한다.)
+         *
          * ⚠️ 세율·환산이 걸리는 `propertyType` 축과 혼동 금지 — 그쪽은 접으면 오산이다.
+         * ⚠️ 분양권을 `housing`으로 접지 않는 이유: 이 값은 결과 카드의 `ValuationDetailCards`
+         *    게이트로도 흘러가므로, 권리에 주택 라벨을 붙이면 표시가 거짓이 된다.
          */
-        assetKind: c.assetKind === "commercial_building" ? "building" : c.assetKind,
+        assetKind:
+          c.assetKind === "commercial_building" || c.assetKind === "presale_right"
+            ? "building"
+            : c.assetKind,
         // §166⑥ 안분 키 — 전용 필드 우선. 구필드 fallback은 전용 키를 모르는 직접 호출자 하위호환
         // (⑩ superRefine의 `apportionKey` 선택식과 **같은 식**이어야 한다 — 단일 기준).
         standardPriceAtTransfer:

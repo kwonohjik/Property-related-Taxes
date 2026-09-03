@@ -125,10 +125,25 @@ import { buildCommercialBuildingValuation } from "./transfer-tax-api-commercial"
 // ─── ④ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — transfer-tax-api-rental-housing.ts로 분리 (800줄 정책, 재export 호환) ───
 export { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 
+/**
+ * ④ 자산 종류 → 컴패니언 payload의 `assetKind`.
+ *
+ * 🔑 **유일한 호출부는 `buildAssetPayload`의 컴패니언 필드다**(전수 grep). 주택 수 산정·중과
+ *    판정은 이 함수를 타지 않는다 — 그쪽은 폼-전역 `houses`·`presaleRights` 축이다.
+ *
+ * 🔄 **`presale_right`는 2026-09-03에 fold에서 빠졌다.** 접어 보내면 §104①1호 60% 단일세율과
+ *    §95② 장기보유특별공제 배제가 **함께 사라져** 누진 그룹에 합산된다(실측: 단건 분양권
+ *    196,350,000 / 주택 79,849,000 — 세율 22%p 차). 부수 효과로
+ *    `resolveHousingContextFromCompanion`(`bundled-split-helpers.ts`)이 **정착면적 없는 권리**를
+ *    부수토지 배율의 기준 주택으로 집던 경로도 원천 차단된다.
+ *
+ * ⚠️ `right_to_move_in`은 **아직 접는다** — ⑩⑫에 §166 서브객체가 없어 접기를 걷어내면
+ *    400이 되거나(⑩ 부재) §166 없이 계산돼 또 다른 오산이 된다. ⑧이 막고 있다.
+ */
 export function toEngineAssetKind(
   kind: AssetForm["assetKind"]
-): "housing" | "land" | "building" | "commercial_building" | "general_building" | "redevelopment_apt" {
-  if (kind === "right_to_move_in" || kind === "presale_right") return "housing";
+): "housing" | "land" | "building" | "commercial_building" | "general_building" | "redevelopment_apt" | "presale_right" {
+  if (kind === "right_to_move_in") return "housing";
   return kind;
 }
 

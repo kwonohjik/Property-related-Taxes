@@ -393,12 +393,17 @@ export const companionAssetSchema = z.object({
    * route가 「Invalid option」을 내는 **안내 없는 dead-end**였다(실측).
    * 「상가는 차단하지 않는다」는 종전 주석은 **primary가 상가일 때만** 맞았다.
    *
-   * ⚠️ 나머지 4종(`general_building`·`redevelopment_apt`·`right_to_move_in`·`presale_right`)은
-   *    여전히 빠져 있고 ⑧이 막는다. 열려면 각자의 서브객체(§166 등)를 함께 배관해야 한다 —
-   *    enum만 넓히면 침묵 오산이 된다(입주권·분양권은 `toEngineAssetKind`가 housing으로
-   *    접어 **200이 나오면서 틀린 값**이 되는 것이 그 실례다).
+   * 🔄 **`presale_right` 추가 (2026-09-03).** 분양권은 장벽이 달랐다 — ⑩이 아니라 **④의 fold**가
+   *    `presale_right`를 `housing`으로 접어 **200이면서 틀린 값**이었다(§104①1호 60% 단일세율과
+   *    §95② 장기보유특별공제 배제가 함께 사라져 누진 그룹에 합산). ⑩·⑭를 함께 넓히고
+   *    `toEngineAssetKind`에서 분양권을 뺐다. 서브객체는 없다 — 분양권 특유 축(세율·LTHD 배제·
+   *    개산공제 §163⑥4호)은 전부 엔진이 `propertyType`만으로 판정한다.
+   *
+   * ⚠️ 나머지 3종(`general_building`·`redevelopment_apt`·`right_to_move_in`)은 여전히 빠져 있고
+   *    ⑧이 막는다. 열려면 각자의 서브객체(§166 등)를 함께 배관해야 한다 — enum만 넓히면
+   *    입주권은 여전히 `toEngineAssetKind` fold로 침묵 오산이 된다.
    */
-  assetKind: z.enum(["housing", "land", "building", "commercial_building"]),
+  assetKind: z.enum(["housing", "land", "building", "commercial_building", "presale_right"]),
   /**
    * ⑫ 상가 부수토지 초과분(§101① 배율) — **물건 전체 면적**이라 지분·안분과 무관하다.
    * 누락 시 §104①8호 +10%p 세율이 통째로 사라진다(primary 축에서 실측 이력).
