@@ -28,6 +28,7 @@ import { LinearInterpolationGraph } from "./acquisition/LinearInterpolationGraph
 import { ReductionPossibilityPanel } from "./acquisition/ReductionPossibilityPanel";
 import { DeemedAcquisitionResultCard } from "./acquisition/DeemedAcquisitionResultCard";
 import { InstallmentResultCard } from "./acquisition/InstallmentResultCard";
+import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
@@ -536,6 +537,20 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
             <span className="text-primary text-lg">{formatKRW(result.totalTaxAfterReduction)}</span>
           </div>
         )}
+
+        {/**
+         * 🔴 G-09: 가산세 **미포함** 고지.
+         *
+         * 취득세는 취득일부터 60일 이내 신고·납부하는 신고납부 세목이고(지방세법 §20①),
+         * 기한을 넘기면 「지방세기본법」 §53~§55 가산세를 합한 금액을 보통징수한다(지방세법 §21①).
+         * 신고 없이 매각하면 산출세액의 80%를 가산한다(같은 조 ②).
+         * 이 엔진은 가산세 축이 없으므로(엔진·타입·API·결과뷰 전수 0건) **확정적 라벨 옆에
+         * 그 사실을 상시 표시**한다 — 배너 부재가 「더 확정적인 값」이라는 신호로 읽히면 안 된다.
+         */}
+        <p className="mt-2 text-xs text-muted-foreground">
+          이 금액에는 신고·납부 지연에 따른 가산세가 포함되어 있지 않습니다 (지방세법 §21①·②,
+          지방세기본법 §53~§55).
+        </p>
       </div>
       </PrintSection>
 
@@ -697,6 +712,9 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
         </div>
         </PrintSection>
       )}
+
+      {/* 🔴 G-20: 면책 고지 — 선택 출력과 무관하게 항상 인쇄되어야 하므로 PrintSection 밖이다. */}
+      <DisclaimerBanner />
     </div>
   );
 }

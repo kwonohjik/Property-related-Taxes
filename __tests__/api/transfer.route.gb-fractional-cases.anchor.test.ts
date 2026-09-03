@@ -572,3 +572,76 @@ describe("GB × 지분 분할 — 케이스 인벤토리 잔여분", () => {
     });
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// 🔴 G-13 (2026-09-03): 지분분할 경로도 **신고서 단위 가산세**를 엔진에 전달한다
+//
+// 종전에는 세 GB 경로 중 이 경로만 `filingPenaltyDetails`·`delayedPaymentDetails`를
+// 함수 시그니처에도 aggregate 호출에도 갖고 있지 않아, **지분 칸을 1개에서 2개로 늘린
+// 것만으로 가산세가 0원**이 됐다. 형제 두 경로는 `GbAssetLevelInputs`로 이미 전달했다
+// (`-route-helper.ts:251-252` · `-route-actual.ts:664-665`).
+//
+// 가산세는 국세기본법 §47의2~§47의4 어디에도 **양도 자산의 종류·지분 수에 따른 예외가 없다**.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** 무신고(20%) — determinedTax는 aggregate가 집계값으로 주입한다. */
+const G13_FILING = {
+  determinedTax: 0,
+  reductionAmount: 0,
+  priorPaidTax: 0,
+  originalFiledTax: 0,
+  excessRefundAmount: 0,
+  interestSurcharge: 0,
+  filingType: "none",
+  penaltyReason: "normal",
+};
+
+async function callPenalty(body: object, withPenalty: boolean) {
+  const res = await POST(
+    new NextRequest("http://localhost/api/calc/transfer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(withPenalty ? { ...body, filingPenaltyDetails: G13_FILING } : body),
+    }),
+  );
+  const json = await res.json();
+  expect(res.status, JSON.stringify(json.error)).toBe(200);
+  const agg = json.data?.aggregated;
+  return {
+    determinedTax: agg?.determinedTax as number,
+    penaltyTax: agg?.penaltyTax as number,
+    totalTax: agg?.totalTax as number,
+    filingUnitPenaltyDetail: agg?.filingUnitPenaltyDetail as { totalPenalty: number } | undefined,
+  };
+}
+
+describe("G-13 지분분할 GB 경로의 신고서 단위 가산세", () => {
+  const body = fractionalBody([SHARE_A, SHARE_B]);
+
+  it("GP-1: 대조군 — 가산세 입력이 없으면 0", async () => {
+    const r = await callPenalty(body, false);
+    expect(r.penaltyTax).toBe(0);
+    expect(r.filingUnitPenaltyDetail).toBeUndefined();
+  });
+
+  it("GP-2: 🔴 무신고 가산세가 실제로 세액을 움직인다 (종전 Δ 0)", async () => {
+    const base = await callPenalty(body, false);
+    const pen = await callPenalty(body, true);
+
+    // 결정세액은 그대로, 가산세만 더해진다
+    expect(pen.determinedTax).toBe(base.determinedTax);
+    expect(pen.penaltyTax).toBeGreaterThan(0);
+    // 국세기본법 §47의2①2호 — 무신고 일반 20%
+    expect(pen.penaltyTax).toBe(Math.floor(base.determinedTax * 0.2));
+    expect(pen.filingUnitPenaltyDetail?.totalPenalty).toBe(pen.penaltyTax);
+    expect(pen.totalTax).toBe(base.totalTax + pen.penaltyTax);
+  });
+
+  it("GP-3: 지분 1개(단건 경로)와 2개(지분 경로)가 같은 규약이다 — 지분 수로 갈리면 안 된다", async () => {
+    const single = await callPenalty(singleBody(SHARE_A), true);
+    const fractional = await callPenalty(body, true);
+    // 세액은 격자가 달라 다르지만, **가산세가 붙는다는 사실**은 같아야 한다
+    expect(single.penaltyTax).toBeGreaterThan(0);
+    expect(fractional.penaltyTax).toBeGreaterThan(0);
+  });
+});

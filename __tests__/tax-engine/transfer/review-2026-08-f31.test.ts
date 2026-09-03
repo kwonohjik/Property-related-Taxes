@@ -61,22 +61,22 @@ function rowTotal(rows: ReturnType<typeof buildRows>, label: string) {
 }
 
 describe("F31 — 단건 신고서 양식의 가산세액 = §114조의2 + 국기법 §47의2~§47의4", () => {
-  it("엔진 관측값 고정 (§114조의2분 0 · 국기법분 30,896,000)", () => {
+  it("엔진 관측값 고정 (§114조의2분 0 · 국기법분 30,874,000)", () => {
     const r = calc();
     expect(r.determinedTax).toBe(141_060_000);
     expect(r.penaltyTax).toBe(0); // §114조의2 환산가액적용가산세 — 이 케이스는 미발동
     expect(r.penaltyDetail?.filingPenalty?.filingPenalty).toBe(28_212_000); // 무신고 20%
-    expect(r.penaltyDetail?.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(2_684_000);
-    expect(r.penaltyDetail?.totalPenalty).toBe(30_896_000);
+    expect(r.penaltyDetail?.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(2_662_000);
+    expect(r.penaltyDetail?.totalPenalty).toBe(30_874_000);
     expect(r.localIncomeTax).toBe(14_106_000);
-    expect(r.totalTax).toBe(186_062_000);
+    expect(r.totalTax).toBe(186_040_000);
   });
 
   it("신고서 표의 가산세액·총결정세액이 두 축을 합산한다", () => {
     const rows = buildRows(calc(), "single");
-    // 종전: 가산세액 0 · 총결정세액 141,060,000 (국기법 가산세 30,896,000 누락)
-    expect(rowTotal(rows, "가산세액")).toBe(30_896_000);
-    expect(rowTotal(rows, "총결정세액")).toBe(171_956_000);
+    // 종전: 가산세액 0 · 총결정세액 141,060,000 (국기법 가산세 30,874,000 누락)
+    expect(rowTotal(rows, "가산세액")).toBe(30_874_000);
+    expect(rowTotal(rows, "총결정세액")).toBe(171_934_000);
     expect(rowTotal(rows, "결정세액")).toBe(141_060_000);
   });
 

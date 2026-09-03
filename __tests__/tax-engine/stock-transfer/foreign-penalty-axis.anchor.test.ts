@@ -86,7 +86,7 @@ describe("FP-1 국외 단건", () => {
     expect(r.underReportPenalty).toBe(3_800_000); // (19,500,000 − 10,000,000) × 40%
   });
 
-  it("FP-1-5: §47조의4 납부지연도 계산된다 — 31일 × 0.022%", () => {
+  it("FP-1-5: §47조의4 납부지연도 계산된다 — 30일 × 0.022%", () => {
     const r = calculateForeignStockTax(
       fx(100_000_000, {
         ...FRAUD,
@@ -95,7 +95,7 @@ describe("FP-1 국외 단건", () => {
         actualPaymentDate: new Date("2024-10-01"),
       }),
     );
-    expect(r.latePaymentPenalty).toBe(68_200);
+    expect(r.latePaymentPenalty).toBe(66_000);
   });
 });
 

@@ -215,7 +215,19 @@ function TransferSection({ r, selectedSectionIds }: { r: R; selectedSectionIds?:
   const incomeAmountAfter = Math.max(0, incomeAmount - new993Reducible);
   // 농특세 총액 echo가 정본 — `new993.ruralSurtax`만 보면 세액감면형(§77 계열)이 빠진다.
   const ruralSurtax = (num(r.ruralSurtax) ?? new993?.ruralSurtax ?? 0) as number;
-  const penaltyTax = (num(r.penaltyTax) ?? 0) as number;
+  /**
+   * ㉘ 가산세액 — **두 축의 합**이다(「소득세법」 제92조 제3항 제3호).
+   *   · `r.penaltyTax`    : 「소득세법」 제114조의2 환산가액적용가산세
+   *   · `r.penaltyDetail` : 「국세기본법」 제47조의2~제47조의4 신고불성실·납부지연
+   *
+   * 🔴 G-01: 종전에는 §114조의2분만 실어, **같은 PDF의 총 납부세액 카드와 어긋났다**
+   * (총액은 엔진 `totalTax`이고 그 안에는 국기법분이 들어 있다 —
+   *  `transfer-tax-finalize.ts:502`). 화면 신고서 표는 이미 두 축을 합산한다
+   * (`components/calc/results/transfer/FilingFormTableHelpers.ts:657` — 같은 식).
+   */
+  const penaltyDetailTotal = ((r.penaltyDetail as { totalPenalty?: number } | undefined)
+    ?.totalPenalty ?? 0) as number;
+  const penaltyTax = ((num(r.penaltyTax) ?? 0) as number) + penaltyDetailTotal;
   const determinedTax = (num(r.determinedTax) ?? 0) as number;
   const totalDeterminedTax = determinedTax + penaltyTax;
   return (

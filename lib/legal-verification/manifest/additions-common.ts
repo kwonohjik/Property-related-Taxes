@@ -133,6 +133,36 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // common.ts FRAUDULENT_DEF — 부정행위 위임 체인 1단: 시행령이 조세범 처벌법 §3⑥으로 지정
+    id: "NTBL_DECREE.FRAUD_TYPES",
+    citation: "국세기본법 시행령 §12의2",
+    keywords: [
+      "부정행위의 유형",
+      "대통령령으로 정하는 사기나 그 밖의 부정한 행위",
+      "조세범 처벌법",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // common.ts REFUND_GAIN_RATE_ANNUAL(0.031) — 국세환급가산금 이율 연 1천분의 31
+    id: "NTBL_RULE.REFUND_GAIN_RATE",
+    citation: "국세기본법 시행규칙 §19의3",
+    keywords: ["국세환급가산금의 이율", "연 1천분의 31"],
+    keywordMode: "ALL",
+  },
+  {
+    // common.ts FRAUDULENT_DEF — 부정행위 위임 체인 2단: 부정행위 유형 7호 열거
+    id: "PUNISH.FRAUD_DEFINITION",
+    citation: "조세범 처벌법 §3",
+    keywords: [
+      "사기나 그 밖의 부정한 행위",
+      "이중장부의 작성 등 장부의 거짓 기장",
+      "거짓 증빙 또는 거짓 문서의 작성 및 수취",
+      "재산의 은닉",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // stock.ts STX_DECREE_5_* — 증권거래세 탄력세율 (시장별)
     id: "STX_DECREE.FLEXIBLE_RATE",
     citation: "증권거래세법 시행령 §5",

@@ -22,6 +22,7 @@ import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPan
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
+import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { formatIsoStamp } from "@/lib/utils/file-download";
 import {
   COMPREHENSIVE_PRINT_SECTIONS,
@@ -783,6 +784,9 @@ export function ComprehensiveTaxResultView({ result }: Props) {
           </li>
         </ul>
       </div>
+
+      {/* 🔴 G-20: 면책 고지 — 종전에는 입력 0단계(page.tsx)에만 렌더돼 결과 화면에서 사라졌다. */}
+      <DisclaimerBanner />
     </div>
   );
 }

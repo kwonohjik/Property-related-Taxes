@@ -89,8 +89,17 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     penaltyBase: 0,
     penaltyTax: t.penaltyTax,
     /**
+     * 🔴 G-43: 가산세 **산출근거** 승계.
+     *
+     * 종전에는 이 슬롯이 비어 있어 결과 화면에 금액만 뜨고 세율·산정일수·기준금액 행이
+     * 하나도 생성되지 않았다(`TransferTaxResultView.tsx:395`·`FilingFormTableHelpers.ts:650`이
+     * `penaltyDetail`을 국기법 가산세의 근거로 읽는다). 세액은 위 `penaltyTax`가 정본이므로
+     * 이 승계로 금액이 바뀌지는 않는다.
+     */
+    ...(t.penaltyDetail ? { penaltyDetail: t.penaltyDetail } : {}),
+    /**
      * 지방소득세 과세표준 산입분 = **0**. 위 `penaltyTax` 슬롯이 담고 있는 것은 국기법
-     * §47의2~§47의4 가산세이고, 그것은 지방소득세 과세표준에서 제외된다(지방세법 §103의3).
+     * §47의2~§47의4 가산세이고, 그것은 지방세법 §103의2 3호 열거에 없어 지방소득세 대상이 아니다.
      * 겸용 엔진도 `applyRate(determinedTax, 0.10)`으로 가산세를 base에서 빼고 있다.
      * 이 필드가 없으면 신고서·명세서가 슬롯을 §114조의2로 오인해 base를 부풀린다.
      */

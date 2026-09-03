@@ -26,7 +26,11 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { calculateFilingPenalty } from "@/lib/tax-engine/transfer-tax-penalty";
+import {
+  calculateFilingPenalty,
+  formatFilingPenaltyFormula,
+  formatFilingPenaltyLabel,
+} from "@/lib/tax-engine/transfer-tax-penalty";
 import type { FilingPenaltyInput } from "@/lib/tax-engine/transfer-tax-penalty";
 
 /** 결정세액 100,000,000 · 차감 없음 → 과소신고납부세액등 = 100,000,000 */
@@ -117,5 +121,47 @@ describe("FS-4 초과환급신고도 §47조의3 대상이라 분해된다", () 
       base({ filingType: "excess_refund", fraudulentPortion: 30_000_000 }),
     );
     expect(r.filingPenalty).toBe(19_000_000);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// 🔴 FS-5 (G-06, 2026-09-03): 표시 산식이 표시 금액을 재현해야 한다
+//
+// 혼합 시 `penaltyRate`는 **실효세율**이다. 종전 표시 계층은 그것을 `toFixed(0)`으로
+// 정수 %로 반올림해 「기준금액 × 20%」로 적었고, 그 산식을 그대로 계산하면
+// 20,000,000이 나와 실제 금액 19,900,000과 100,000 어긋났다.
+// 또 국세기본법에 없는 「20% 과소신고 가산세」로 읽혔다.
+// ────────────────────────────────────────────────────────────────────────────
+
+describe("FS-5 표시 산식 — 가목·나목 분해 (G-06)", () => {
+  it("FS-5-1: 혼합이면 라벨에 실효세율을 쓰지 않는다", () => {
+    const r = calculateFilingPenalty(base({ fraudulentPortion: 33_000_000 }));
+    expect(r.fraudSplit).toBeDefined();
+    expect(formatFilingPenaltyLabel(r)).toBe("신고불성실가산세 (가목·나목 혼합)");
+    // 종전 표기(실효세율 반올림 「20%」)를 명시적으로 배제한다
+    expect(formatFilingPenaltyLabel(r)).not.toContain("20%");
+  });
+
+  it("FS-5-2: 혼합 산식의 각 항 합이 실제 금액과 일치한다", () => {
+    const r = calculateFilingPenalty(base({ fraudulentPortion: 33_000_000 }));
+    // 가목 33,000,000 × 40% = 13,200,000 · 나목 67,000,000 × 10% = 6,700,000
+    expect(r.filingPenalty).toBe(19_900_000);
+
+    const formula = formatFilingPenaltyFormula(r);
+    expect(formula).toContain("가목 33,000,000 × 40% = 13,200,000");
+    expect(formula).toContain("나목 67,000,000 × 10% = 6,700,000");
+
+    // 산식에 적힌 항들을 더하면 표시 금액이 나온다 (자기모순 방지)
+    const parts = [...formula.matchAll(/= ([\d,]+)/g)].map((m) =>
+      Number(m[1].replace(/,/g, "")),
+    );
+    expect(parts.reduce((a, b) => a + b, 0)).toBe(r.filingPenalty);
+  });
+
+  it("FS-5-3: 혼합이 아니면 종전 단일 세율 표기를 유지한다", () => {
+    const r = calculateFilingPenalty(base({ penaltyReason: "normal" }));
+    expect(r.fraudSplit).toBeUndefined();
+    expect(formatFilingPenaltyLabel(r)).toBe("신고불성실가산세 (10%)");
+    expect(formatFilingPenaltyFormula(r)).toBe("납부세액 100,000,000 × 10%");
   });
 });

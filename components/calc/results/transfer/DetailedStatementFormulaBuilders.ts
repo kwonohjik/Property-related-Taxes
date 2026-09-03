@@ -125,11 +125,17 @@ export function buildDeterminedTaxFormula(p: PerPropertyBreakdown): string {
   return `${fmt(p.refCalculatedTax)} (감면 없음)`;
 }
 
-/** 가산세액 = §114조의2 + 신고불성실·납부지연 */
+/**
+ * 가산세액 = 「소득세법」 §114조의2 + 「국세기본법」 §47의2~§47의4 신고불성실·납부지연.
+ *
+ * 🔴 G-38: 법령명 없이 「§114의2」로 적으면 어느 법의 조문인지 화면에서 알 수 없고,
+ * 같은 화면의 다른 행이 쓰는 「§114조의2」와 조 표기까지 갈린다.
+ */
 export function buildPenaltyFormula(p: PerPropertyBreakdown): string {
   const parts: string[] = [];
-  if (p.penaltyTax > 0) parts.push(`§114의2 ${fmt(p.penaltyTax)}`);
-  if (p.filingDelayedPenaltyTax > 0) parts.push(`신고/납부지연 ${fmt(p.filingDelayedPenaltyTax)}`);
+  if (p.penaltyTax > 0) parts.push(`소득세법 §114조의2 ${fmt(p.penaltyTax)}`);
+  if (p.filingDelayedPenaltyTax > 0)
+    parts.push(`국세기본법 §47의2~§47의4 신고불성실·납부지연 ${fmt(p.filingDelayedPenaltyTax)}`);
   if (parts.length === 0) return "가산세 없음";
   return `${parts.join(" + ")} = ${fmt(p.penaltyTax + p.filingDelayedPenaltyTax)}`;
 }
@@ -241,7 +247,8 @@ export function buildSurtaxAndLocalTaxItems(
     label: "지방소득세 산출세액",
     value: localCalc,
     formula: localCalculatedTaxFormula(result.determinedTax, localTaxablePenaltyOf(result)),
-    legalBasis: "지방세법 §103의3",
+    // 🔴 G-29: §103의3은 **세율** 조항이다. 과세표준은 §103②, §114조의2분 가산은 §103의9②.
+    legalBasis: "지방세법 §103② · §103의3 · §103의9②",
     summaryOnly: true,
   });
   items.set("localReduction", {

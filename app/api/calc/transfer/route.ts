@@ -159,6 +159,9 @@ export async function POST(request: NextRequest) {
         rates,
         // ⑭ 신고서 단위 정정 — 세 GB 경로가 같은 규약이어야 한다(raw `data.amendment` 금지).
         engineInput.amendment,
+        // 🔴 G-13 ⑭ 신고서 단위 가산세 — 형제 두 GB 경로와 같은 값을 넘긴다.
+        engineInput.filingPenaltyDetails,
+        engineInput.delayedPaymentDetails,
       );
       return NextResponse.json(
         { data: { mode: "bundled" as const, apportionment, aggregated } },
@@ -269,6 +272,14 @@ export async function POST(request: NextRequest) {
             expenses: a.allocatedExpenses,
             propertyId: "primary",
             propertyLabel: a.assetLabel,
+            /**
+             * 가산세는 **신고서 단위**로만 부과한다 — 아래 (6)에서 aggregate에 직접 넘긴다.
+             * `...engineInput` 스프레드로 자산-수준에도 실리면 `transfer-tax-aggregate.ts:458`이
+             * 명시한 「자산별과 신고단위가 동시에 들어오면 둘 다 부과된다」 전제를 깨뜨린다.
+             * (실측상 현재는 자산-수준 값이 무시되지만, 그 무시에 의존하지 않는다.)
+             */
+            filingPenaltyDetails: undefined,
+            delayedPaymentDetails: undefined,
           } satisfies TransferTaxItemInput];
         }
         // 컴패니언 자산 빌드 + 한도 초과 split — bundled-split-helpers.ts로 추출
@@ -305,6 +316,16 @@ export async function POST(request: NextRequest) {
           priorReductionUsage: data.priorReductionUsage ?? [],
           // [A1] 신고서 단위 수정신고·경정청구 — engineInput.amendment는 상단(:308~)에서 Date 변환 완료.
           amendment: engineInput.amendment,
+          /**
+           * 🔴 G-02: 신고서 단위 신고불성실·납부지연 가산세 (국세기본법 §47의2~§47의4).
+           *
+           * 종전에는 이 두 필드를 넘기지 않아 **일괄양도에서 가산세가 항상 0원**이었다.
+           * 아래 (7)의 2-pass(`:551~`)는 단건 경로 전용이고 이 분기는 그 앞에서 반환하므로,
+           * 결정세액 주입은 aggregate가 자체적으로 수행한다(`transfer-tax-aggregate.ts:461~`).
+           * 형제 분기는 이미 배선돼 있다 — mixedUse `:404`, GB `:493`.
+           */
+          filingPenaltyDetails: engineInput.filingPenaltyDetails,
+          delayedPaymentDetails: engineInput.delayedPaymentDetails,
         },
         rates,
       );

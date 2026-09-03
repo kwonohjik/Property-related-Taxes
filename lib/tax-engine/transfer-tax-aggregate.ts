@@ -19,7 +19,11 @@ import {
   type CalculationStep,
 } from "./transfer-tax";
 import { computeAmendment } from "./transfer-tax-amendment";
-import { calculateTransferTaxPenalty } from "./transfer-tax-penalty";
+import {
+  calculateTransferTaxPenalty,
+  formatDelayedPaymentFormula,
+  formatFilingPenaltyFormula,
+} from "./transfer-tax-penalty";
 import {
   aggregateReductions,
   allocateAggregateReductions,
@@ -482,9 +486,10 @@ function computeAggregateOnce(
     perAssetFilingDelayedPenalty +
     (filingUnitPenaltyDetail?.totalPenalty ?? 0);
 
-  // M-10: 지방소득세 (원 미만 절사 — 지방세법 §103의3)
-  // 과세표준 = 결정세액 + §114조의2 건물 가산세만 (단건 엔진 finalize와 동일).
-  // 신고불성실·납부지연 가산세(국세기본법 §47의2~5)는 지방소득세 부과대상이 아니므로 base 제외.
+  // M-10: 지방소득세 (원 미만 절사 — 지방세법 §103② 과세표준 × §103의3 세율 − §103의4 감면)
+  // §114조의2 건물 가산세만 더한다 (단건 엔진 finalize와 동일) — 그 근거는 §103의3이 아니라
+  // §103의9②(감정·환산취득가액의 1천분의 5를 결정세액에 더한다)이고 값이 같다.
+  // 신고불성실·납부지연 가산세(국세기본법 §47의2~5)는 §103의2 3호 열거에 없어 대상이 아니다.
   const localIncomeTax = applyRate(determinedTaxBeforePenalty + perAssetBuildingPenalty, 0.1);
   // 감면 배분 — floor 잔액 말단 흡수(Σ = 전체 불변식). 상세는 reduction-step ② 참조.
   const reductionAllocations = allocateAggregateReductions(assetRecords, reductionBreakdown);
@@ -507,11 +512,12 @@ function computeAggregateOnce(
     steps.push({
       label: "가산세 (신고서 단위)",
       formula: [
+        // 가목·나목 혼합·이자율 구간 분할을 산식에 반영한다 — 단일 세율/이자율 표기는 금액을 재현하지 못한다.
         fp && fp.filingPenalty > 0
-          ? `신고불성실 ${fp.penaltyBase.toLocaleString()} × ${(fp.penaltyRate * 100).toFixed(0)}%`
+          ? `신고불성실 ${formatFilingPenaltyFormula(fp, "")}`
           : null,
         dp && dp.delayedPaymentPenalty > 0
-          ? `납부지연 ${dp.unpaidTax.toLocaleString()} × ${dp.elapsedDays}일 × ${(dp.dailyRate * 100).toFixed(3)}%`
+          ? `납부지연 ${formatDelayedPaymentFormula(dp, "")}`
           : null,
       ]
         .filter(Boolean)

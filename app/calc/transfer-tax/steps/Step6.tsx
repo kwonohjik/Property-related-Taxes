@@ -146,11 +146,13 @@ export function Step6({
                   </button>
                   {showAdvanced && (
                     <div className="mt-2">
+                      {/* 🔴 G-40: 제외 문언은 「국세기본법」 §47의2① 괄호·§47의3① 괄호에 있다.
+                          §47의2③은 부가가치세법 §69 납부의무 면제 규정이라 무관하다. */}
                       <CurrencyInput
                         label="이자상당액 가산액"
                         value={form.interestSurcharge}
                         onChange={(v) => onChange({ interestSurcharge: v })}
-                        hint="세법에 따른 이자상당액 — 가산세 산정 납부세액에서 제외 (국세기본법 §47의2③)"
+                        hint="세법에 따른 이자상당액 — 가산세 산정 납부세액에서 제외 (국세기본법 §47의2① · §47의3① 각 괄호)"
                       />
                     </div>
                   )}

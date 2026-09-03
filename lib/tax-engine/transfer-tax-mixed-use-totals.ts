@@ -7,7 +7,10 @@ import { applyRate, calculateProgressiveTax } from "./tax-utils";
 import { calcReductions } from "./transfer-tax-reductions-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
-import { calculateTransferTaxPenalty } from "./transfer-tax-penalty";
+import {
+  calculateTransferTaxPenalty,
+  type TransferTaxPenaltyResult,
+} from "./transfer-tax-penalty";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
 import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
 import type { TransferReduction, TransferTaxInput } from "./types/transfer.types";
@@ -227,7 +230,9 @@ export function buildTotalTax(
   // ── 산출세액 이후 — 감면 · 농특세 · 가산세 (F17-B) ────────────────────────
   const post = computeMixedUsePostTax(transferTax, aggregateIncome, BASIC_DEDUCTION, taxBase, postTax);
   const determinedTax = Math.max(0, transferTax - post.reductionAmount);
-  // 지방소득세 base는 **결정세액**이다(지방세법 §103의3) — 신고불성실·납부지연 가산세는 제외.
+  // 지방소득세 base는 **결정세액**이다(지방세법 §103② 과세표준 × §103의3 세율 − §103의4 감면).
+  // 국세기본법 §47의2~§47의4 가산세는 §103의2 3호 열거에 없어 대상이 아니다.
+  // (겸용에는 §114조의2가 없으므로 §103의9② 가산분도 없다.)
   const localTax = applyRate(determinedTax, 0.10);
 
   return {
@@ -250,6 +255,8 @@ export function buildTotalTax(
     reductionDetails: post.reductionDetails,
     determinedTax,
     penaltyTax: post.penaltyTax,
+    // 🔴 G-43: 산출근거 echo — 어댑터가 결과뷰의 `penaltyDetail` 슬롯으로 승계한다.
+    ...(post.penaltyDetail ? { penaltyDetail: post.penaltyDetail } : {}),
     ruralSurtax: post.ruralSurtax,
     localTax,
     totalPayable: determinedTax + localTax + post.penaltyTax + post.ruralSurtax,
@@ -312,6 +319,16 @@ interface MixedUsePostTaxResult {
   reductionDetails?: MixedUseReductionDetails;
   ruralSurtax: number;
   penaltyTax: number;
+  /**
+   * 🔴 G-43: 신고불성실·납부지연 가산세 **산출근거**.
+   *
+   * 종전에는 `calculateTransferTaxPenalty`의 결과에서 합계(`totalPenalty`)만 꺼내고
+   * 상세를 버려, 결과 화면에 금액만 남고 세율·산정일수·기준금액 행이 사라졌다.
+   * 세액은 이미 `penaltyTax`에 들어 있으므로 이것은 **표시 전용 echo**다 — 산식은 바뀌지 않는다.
+   * 형제 경로는 모두 싣는다(`transfer-tax-loss-return.ts:158` · `-normal-return.ts:120·204` ·
+   * `-multi-parcel-branch.ts:309` · `-redevelopment.ts:901`).
+   */
+  penaltyDetail?: TransferTaxPenaltyResult;
 }
 
 /**
@@ -455,5 +472,7 @@ function computeMixedUsePostTax(
     },
     ruralSurtax: surtax.surtax,
     penaltyTax: penalty?.totalPenalty ?? 0,
+    // 🔴 G-43: 산출근거 echo — 세액은 penaltyTax가 정본이고 여기서 다시 더하지 않는다.
+    ...(penalty ? { penaltyDetail: penalty } : {}),
   };
 }

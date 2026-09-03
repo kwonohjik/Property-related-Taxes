@@ -168,7 +168,7 @@ describe("PA-LATE (#19): §47조의4는 §47조의2·3을 요건으로 하지 �
   it("PA-LATE-1: 국내 — 정상신고 + 납부지연이 계산된다", () => {
     const agg = calculateStockTransferTaxAggregate([dom({ ...LATE })]);
     expect(agg.totalUnderReportPenalty).toBe(0);
-    expect(agg.totalLatePaymentPenalty).toBe(68_200);
+    expect(agg.totalLatePaymentPenalty).toBe(66_000);
   });
 
   it("PA-LATE-2: 전(全)국외 — 정상신고 + 납부지연도 계산된다", () => {
@@ -176,7 +176,7 @@ describe("PA-LATE (#19): §47조의4는 §47조의2·3을 요건으로 하지 �
     const agg = calculateStockTransferTaxAggregate([
       fx(100_000_000, { ...LATE, filingViolation: "none" }),
     ]);
-    expect(agg.totalLatePaymentPenalty).toBe(68_200);
+    expect(agg.totalLatePaymentPenalty).toBe(66_000);
   });
 
   it("PA-LATE-3: 같은 입력이면 단건과 다종목이 같다 (종목 개수로 세액이 갈리지 않는다)", () => {

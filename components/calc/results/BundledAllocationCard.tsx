@@ -378,9 +378,19 @@ function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferRes
           {/* 국세 납부세액 */}
           <Row label="국세 납부세액" value={formatKRW(nationalTax)} />
 
-          {/* 지방세 납부세액 */}
+          {/**
+           * 지방세 납부세액 — 🔴 G-16.
+           *
+           * 종전 라벨 「결정세액+가산세 × 10%」는 바로 위 「가산세」 행(국세기본법 §47의2~§47의4
+           * 포함 **총액**)이 과세표준에 든다고 읽혔다. 엔진 base는 §114조의2분뿐이다
+           * (`transfer-tax-aggregate.ts` STEP M-10). 축 설명은 `local-income-tax-display.ts`.
+           */}
           <Row
-            label="지방세 납부세액 (지방소득세, 결정세액+가산세 × 10%)"
+            label={
+              buildingPenaltySum > 0
+                ? "지방세 납부세액 (지방소득세 = (결정세액 + 소득세법 §114조의2 가산세) × 10% — 국세기본법 §47의2~§47의4 가산세는 대상 아님)"
+                : "지방세 납부세액 (지방소득세 = 결정세액 × 10% — 국세기본법 §47의2~§47의4 가산세는 대상 아님)"
+            }
             value={formatKRW(aggregated.localIncomeTax)}
             sub
           />

@@ -8,6 +8,10 @@
 import { TRANSFER, PENALTY } from "./legal-codes";
 import {
   calculateTransferTaxPenalty,
+  formatDelayedPaymentFormula,
+  formatDelayedPaymentLabel,
+  formatFilingPenaltyFormula,
+  formatFilingPenaltyLabel,
   type TransferTaxPenaltyResult,
 } from "./transfer-tax-penalty";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
@@ -62,19 +66,22 @@ export function emitPenaltySteps(
       });
     }
     if (penaltyDetail?.filingPenalty && penaltyDetail.filingPenalty.filingPenalty > 0) {
+      // 가목·나목 혼합이면 실효세율 반올림 표기가 금액을 재현하지 못한다 — 포맷터가 분해해 적는다.
+      const f = penaltyDetail.filingPenalty;
       steps.push({
-        label: `신고불성실가산세 (${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%)`,
-        formula: `납부세액 ${penaltyDetail.filingPenalty.penaltyBase.toLocaleString()} × ${(penaltyDetail.filingPenalty.penaltyRate * 100).toFixed(0)}%`,
-        amount: penaltyDetail.filingPenalty.filingPenalty,
-        legalBasis: penaltyDetail.filingPenalty.legalBasis,
+        label: formatFilingPenaltyLabel(f),
+        formula: formatFilingPenaltyFormula(f),
+        amount: f.filingPenalty,
+        legalBasis: f.legalBasis,
         sub: true,
       });
     }
     if (penaltyDetail?.delayedPaymentPenalty && penaltyDetail.delayedPaymentPenalty.delayedPaymentPenalty > 0) {
+      // 이자율 구간이 둘 이상이면 대표 이자율 단일 표기가 금액을 재현하지 못한다.
       const d = penaltyDetail.delayedPaymentPenalty;
       steps.push({
-        label: `납부지연가산세 (${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%)`,
-        formula: `미납세액 ${d.unpaidTax.toLocaleString()} × ${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(3)}%`,
+        label: formatDelayedPaymentLabel(d),
+        formula: formatDelayedPaymentFormula(d),
         amount: d.delayedPaymentPenalty,
         legalBasis: PENALTY.DELAYED_PAYMENT,
         sub: true,

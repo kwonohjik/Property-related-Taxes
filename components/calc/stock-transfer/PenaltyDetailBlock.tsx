@@ -29,6 +29,7 @@ import {
   expandToggleClass,
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
+import { calcPreliminaryDeadline } from "@/lib/calc/stock-filing-type";
 
 export function PenaltyDetailBlock({
   form,
@@ -123,6 +124,29 @@ export function PenaltyDetailBlock({
  * 부동산 정본도 같은 배치다 — `app/calc/transfer-tax/steps/Step6.tsx`가 이 블록을
  * 신고 위반 분기 **밖 형제**로 둔다.
  */
+/**
+ * 「법정납부기한」 hint — 🔴 G-25.
+ *
+ * 종전 문구는 주식에도 「양도일이 속한 **달**의 말일부터 2개월」을 제시했는데, 그것은
+ * 「소득세법」 §105①**1호**(부동산·기타자산)의 기한이다. 주식(§94①3호 가·나목)은
+ * §105①**2호**로 「반기의 말일부터 2개월」이고, 국외주식(같은 항 3호다목)은 §105① 본문
+ * 괄호로 **예정신고 대상에서 제외**된다. 같은 화면 §4 섹션은 처음부터 옳게 표시하고 있었으므로
+ * 사용자는 한 화면에서 서로 다른 두 기한을 보고 있었다.
+ *
+ * ⇒ **규칙을 다시 서술하지 않고 §4가 이미 계산해 둔 것과 같은 leaf로 날짜를 그대로 보여 준다**
+ *   (`calcPreliminaryDeadline`). 문구를 두 벌로 적으면 드리프트가 다시 생기고, 같은 화면에
+ *   같은 조문 설명이 두 번 나오기만 한다.
+ */
+function paymentDeadlineHint(
+  transferDate: string | undefined,
+  marketType: string | undefined,
+): string {
+  const suffix = "④ 신고 유형에서 고른 신고의 기한을 입력하세요";
+  const preliminary = calcPreliminaryDeadline(transferDate, marketType);
+  if (preliminary) return `예정신고 기한 ${preliminary} · 확정신고 기한은 다음 해 5월 31일 — ${suffix}`;
+  return `확정신고 기한은 다음 해 5월 31일 — ${suffix}`;
+}
+
 export function LatePaymentPenaltyBlock({
   form,
   onChange,
@@ -146,7 +170,7 @@ export function LatePaymentPenaltyBlock({
 
       <FieldCard
         label="법정납부기한"
-        hint="예정신고: 양도일이 속한 달의 말일부터 2개월 / 확정신고: 다음 해 5월 31일"
+        hint={paymentDeadlineHint(form.transferDate, form.marketType)}
       >
         <DateInput
           value={form.paymentDeadline}

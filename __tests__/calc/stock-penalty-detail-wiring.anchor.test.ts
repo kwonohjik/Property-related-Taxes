@@ -117,7 +117,7 @@ describe("PW-2 ④ 게이트 — 「당초 신고세액」은 과소신고 축�
 });
 
 describe("PW-3 납부지연가산세 — Date 두 칸이 coerceDates 를 통과한다", () => {
-  it("PW-3-1: 미납 10,000,000 · 기한 2024-08-31 · 납부 2024-10-01 → 68,200", () => {
+  it("PW-3-1: 미납 10,000,000 · 기한 2024-08-31 · 납부 2024-10-01 → 66,000", () => {
     const { body, result } = runPipeline(
       form({
         unpaidTax: "10000000",
@@ -127,7 +127,7 @@ describe("PW-3 납부지연가산세 — Date 두 칸이 coerceDates 를 통과�
     );
     expect(body.unpaidTax).toBe(10_000_000);
     expect(body.paymentDeadline).toBe("2024-08-31");
-    expect(result.latePaymentPenalty).toBe(68_200);
+    expect(result.latePaymentPenalty).toBe(66_000);
   });
 
   it("PW-3-2: 기한 미입력이면 ⑧ validation 이 막는다 (조용히 0 이 되지 않는다)", () => {

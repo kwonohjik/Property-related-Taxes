@@ -60,6 +60,38 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  /**
+   * 🔴 G-21 — 합산배제 사후관리 위반 추징의 **진짜 근거**.
+   *
+   * 종전 `legal-codes/comprehensive.ts`는 이를 「§8③」(9/16~9/30 보유현황 신고의무)으로
+   * 인용해 두어 조문 링크가 추징 요건에 닿지 않았다. 추징을 명하는 것은 §17⑤이고,
+   * 붙는 금액은 「가산세」가 아니라 「이자상당가산액」이다.
+   */
+  {
+    id: "COMPREHENSIVE.DECISION_CORRECTION_RECAPTURE",
+    citation: "종합부동산세법 §17",
+    keywords: [
+      "경감받은 세액과 이자상당가산액을 추징",
+      "과세표준 합산의 대상이 되는 주택에서 제외된 주택",
+      "1세대 1주택자로 본 납세의무자",
+    ],
+    keywordMode: "ALL",
+  },
+  /**
+   * 🔴 G-21 — 이자상당가산액의 기간·율. 국세기본법 §47의4(납부지연가산세)가 아니다.
+   * 「1일당 10만분의 22」와 「납부기한 다음 날부터 … 고지일까지」가 이 항에 있다.
+   */
+  {
+    id: "COMPREHENSIVE_DECREE.RECAPTURE_INTEREST",
+    citation: "종합부동산세법 시행령 §10",
+    keywords: [
+      "추징해야 하는 이자상당가산액",
+      "납부기한 다음 날부터",
+      "1일당 10만분의 22",
+      "임대사업자 등록이 말소된 경우",
+    ],
+    keywordMode: "ALL",
+  },
   {
     id: "COMPREHENSIVE_DECREE.PROPERTY_TAX_DEDUCTION_CALC",
     citation: "종합부동산세법 시행령 §4의3",

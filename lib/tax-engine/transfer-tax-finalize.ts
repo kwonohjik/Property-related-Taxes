@@ -440,12 +440,18 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   const determinedTaxWithPenalty = determinedTax + penaltyTax;
 
   // ── STEP 10: 지방소득세 (총결정세액 × 10%, 원 미만 절사) ──
+  // 🔴 G-29: 근거는 「지방세법」 §103②(과세표준) × §103의3(세율) − §103의4(감면)이다.
+  //          §114조의2 가산세분이 더해지는 근거는 §103의3이 아니라 §103의9②
+  //          (감정·환산취득가액의 1천분의 5를 결정세액에 더한다)이고 값이 같다.
   const localIncomeTax = applyRate(determinedTaxWithPenalty, 0.1);
   steps.push({
     label: "지방소득세",
     formula: `${determinedTaxWithPenalty.toLocaleString()} × 10%`,
     amount: localIncomeTax,
-    legalBasis: TRANSFER.LOCAL_INCOME_TAX,
+    legalBasis:
+      penaltyTax > 0
+        ? `${TRANSFER.LOCAL_INCOME_TAX} · ${TRANSFER.LOCAL_INCOME_TAX_CONVERTED_ADD}`
+        : TRANSFER.LOCAL_INCOME_TAX,
   });
 
   // ── STEP 12: 신고불성실·납부지연 가산세 ──

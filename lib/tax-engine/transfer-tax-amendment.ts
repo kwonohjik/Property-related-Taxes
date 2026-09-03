@@ -20,10 +20,12 @@ import {
   CLAIM_PERIOD_ORDINARY_YEARS,
   CLAIM_PERIOD_POSTERIOR_MONTHS,
 } from "./legal-codes";
-import { applyRate, truncateToWon } from "./tax-utils";
+import { applyRate, applyRateFraction, truncateToWon } from "./tax-utils";
 import {
   calculateFilingPenalty,
   calculateDelayedPaymentPenalty,
+  formatDelayedPaymentFormula,
+  formatDelayedPaymentLabel,
 } from "./transfer-tax-penalty";
 import type { CalculationStep } from "./types/transfer.types";
 import type {
@@ -193,7 +195,15 @@ export function computeAmendment(
           )
         : 0;
 
-    underReportingPenalty = truncateToWon(grossUnder * (1 - underReportingReductionRate));
+    // §48② 「해당 가산세액에서 … 금액을 **감면**한다」 — 감면액을 먼저 절사하고 본액에서 뺀다.
+    // ⚠️ `grossUnder * (1 - rate)` 금지: `1 - 0.9 = 0.09999999999999998`이라 90% 구간에서
+    //    10의 배수인 모든 가산세액이 1원씩 적게 나온다(저장소 규약 `tax-utils.ts:185-195`).
+    const underReportingReductionAmount = applyRateFraction(
+      grossUnder,
+      Math.round(underReportingReductionRate * 100),
+      100,
+    );
+    underReportingPenalty = grossUnder - underReportingReductionAmount;
 
     const reductionLabel =
       amendment.underReductionMode === "auto_48_2"
@@ -231,10 +241,9 @@ export function computeAmendment(
     latePaymentPenalty = dp.delayedPaymentPenalty;
     if (latePaymentPenalty > 0) {
       steps.push({
-        label: `납부지연가산세 (${dp.elapsedDays}일 × ${(dp.dailyRate * 100).toFixed(3)}%)`,
-        formula: `추가납부세액 ${additionalTax.toLocaleString()} × ${dp.elapsedDays}일 × ${(
-          dp.dailyRate * 100
-        ).toFixed(3)}%`,
+        // 이자율 구간이 둘 이상이면 대표 이자율 단일 표기가 금액을 재현하지 못한다 — 포맷터 공유.
+        label: formatDelayedPaymentLabel(dp),
+        formula: formatDelayedPaymentFormula(dp, "추가납부세액"),
         amount: latePaymentPenalty,
         legalBasis: PENALTY.DELAYED_PAYMENT,
         sub: true,
