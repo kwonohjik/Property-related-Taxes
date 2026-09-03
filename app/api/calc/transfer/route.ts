@@ -17,6 +17,15 @@ import {
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
+import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+
+/**
+ * 겸용 `multiHouse`에서 **엔진이 파생하므로 route가 싣지 않는** 키.
+ *
+ * 🔴 현재 1건이고 그것은 **의도가 아니라 갭**이다 — 단건 경로만 파생하고 겸용은 빠졌다.
+ *    상세·근거는 아래 `_mixedMultiHouseGuards` 주석. 고치면 이 목록에서 빼야 한다.
+ */
+type MixedUseMultiHouseEngineDerivedKeys = "unavoidableOutsideCapitalHouse";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
 import { calculateGeneralBuildingFractional } from "./general-building-fractional";
@@ -369,6 +378,64 @@ export async function POST(request: NextRequest) {
             ),
           }
         : undefined;
+      /**
+       * ⑭ 법 §104⑦ 다주택 중과 입력 — **가드가 보도록 이름을 붙여 끌어올렸다**.
+       *
+       * 🔴 종전에는 `mixedAsset` 안의 **중첩 객체 리터럴**이라, 상위 조립부의 키 커버리지
+       *    가드가 **이 안의 누락을 보지 못했다**(실측: `marriageMerge`·`parentalCareMerge`·
+       *    `gracePeriod`를 지워도 tsc·테스트 **둘 다 통과**). 중첩은 별도 가드가 필요하다.
+       *
+       * ⚠️ raw `data.houses` 금지 — Zod 출력은 `acquisitionDate`가 string이다.
+       *    `engineInput.houses`는 상단(:192) `mapHousesToEngine`이 Date 변환한 값이다.
+       *    날짜를 갖는 3종(`marriageMerge`·`parentalCareMerge`·`gracePeriod`)도 같은 이유로
+       *    `engineInput` 변환본을 쓴다 — 특히 `gracePeriod`는 `mapGracePeriodToEngine`(:195) 출력.
+       */
+      const mixedMultiHouse =
+        data.houses && data.houses.length > 0
+          ? ({
+              houses: engineInput.houses ?? [],
+              sellingHouseId: data.sellingHouseId ?? data.houses[0].id,
+              presaleRights: engineInput.presaleRights ?? [],
+              isOneHousehold: data.isOneHousehold,
+              isRegulatedArea: data.isRegulatedArea,
+              marriageMerge: engineInput.marriageMerge,
+              parentalCareMerge: engineInput.parentalCareMerge,
+              gracePeriod: engineInput.gracePeriod,
+            } satisfies NonNullable<MixedUseAssetInput["multiHouse"]>)
+          : undefined;
+
+      /**
+       * ⑭ **중첩 키 커버리지 가드** — 위 `multiHouse` 안의 누락을 잡는다(상위 가드는 못 본다).
+       *
+       * 🔴 **가드를 걸자마자 비대칭을 하나 찾았다** — `unavoidableOutsideCapitalHouse`.
+       *
+       * 그 키는 **엔진이 파생하는 값**이다(`transfer-tax-judgment-steps.ts:55`가
+       * `qualifiesUnavoidableOutsideCapital(input)`으로 세운다). 그런데 그 파생은 **단건
+       * 경로에만** 있고, 겸용 엔진은 `...asset.multiHouse`를 그대로 넘기면서
+       * `sellingHouseMeetsOneHouseRequirements`·`deemedOneHouseBy155` 두 개만 「단건과 같은
+       * 정본 함수」로 파생한다(`transfer-tax-mixed-use.ts:209·212`) — **이 셋째만 빠졌다.**
+       *
+       * ⇒ 겸용 + 부득이한 사유 수도권 밖 주택이면 §167의10①4호 **중과 배제가 발동하지 않는다**
+       *   (`multi-house-surcharge-exclusion.ts:393`이 그 boolean을 읽는다). 납세자에게 **불리한**
+       *   방향이다.
+       *
+       * 🟡 **이 PR에서 고치지 않는다** — 세액이 움직이는 변경이라 anchor와 요건 확인이 먼저다.
+       *    ⚠️ 같은 이름이 두 축에 있다: top-level `TransferTaxInput.unavoidableOutsideCapitalHouse`는
+       *       **`{reason, resolvedDate}` 객체**이고, 여기 중첩된 것은 **`boolean`**이다.
+       *       그대로 이어 붙이면 타입이 맞지 않는다 — 파생 함수를 태워야 한다.
+       *
+       * ⚠️ **제외는 늘리기 전에 근거를 적을 것.** 근거 없이 추가하면 가드가 그만큼 눈을 감는다.
+       */
+      const _mixedMultiHouseGuards: [
+        Exclude<
+          keyof NonNullable<MixedUseAssetInput["multiHouse"]>,
+          keyof NonNullable<typeof mixedMultiHouse> | MixedUseMultiHouseEngineDerivedKeys
+        > extends never
+          ? true
+          : never,
+      ] = [true];
+      void _mixedMultiHouseGuards;
+
       const mixedAsset = {
         ...data.mixedUse,
         isMixedUseHouse: true as const,
@@ -397,21 +464,7 @@ export async function POST(request: NextRequest) {
         //    `houses` 미전송(단독 주택)이면 undefined → 엔진이 중과 판정을 건너뛴다.
         //    ⚠️ 날짜를 갖는 3종은 `engineInput` 변환본을 쓴다 — 특히 `gracePeriod`는
         //       `mapGracePeriodToEngine`(:195)이 toDate 변환한 값이어야 한다.
-        multiHouse:
-          data.houses && data.houses.length > 0
-            ? {
-                // ⚠️ raw `data.houses` 금지 — Zod 출력은 `acquisitionDate`가 string이다.
-                //    `engineInput.houses`는 상단(:192) `mapHousesToEngine`이 Date 변환한 값이다.
-                houses: engineInput.houses ?? [],
-                sellingHouseId: data.sellingHouseId ?? data.houses[0].id,
-                presaleRights: engineInput.presaleRights ?? [],
-                isOneHousehold: data.isOneHousehold,
-                isRegulatedArea: data.isRegulatedArea,
-                marriageMerge: engineInput.marriageMerge,
-                parentalCareMerge: engineInput.parentalCareMerge,
-                gracePeriod: engineInput.gracePeriod,
-              }
-            : undefined,
+        multiHouse: mixedMultiHouse,
         /**
          * ⑭ 법 §104⑦ 중과 **원시 플래그 fallback** — 위 `multiHouse`가 `houses` 없이는
          * 조립되지 않아 겸용주택에 중과가 통째로 미적용되던 것을 메운다(실측 505,484,136원 과소).
@@ -451,7 +504,45 @@ export async function POST(request: NextRequest) {
               usageChangeDate: toOptionalDate(data.mixedUse.partialUsageChange.usageChangeDate),
             }
           : undefined,
-      };
+      } satisfies MixedUseAssetInput;
+
+      /**
+       * ⑭ **겸용 조립 키 커버리지 가드** — 런타임 영향 없음(`void`로 소비).
+       *
+       * ## 왜 필요한가 (착수 전 뮤테이션 실측)
+       *
+       * `MixedUseAssetInput`은 **59필드 중 45개가 optional(76%)** 이라, 조립부가 한 줄을
+       * 빠뜨려도 타입이 통과한다. 실제로 재 보니:
+       *
+       * | 제거한 필드 | tsc | 테스트 |
+       * |---|---|---|
+       * | `marriageMerge`·`parentalCareMerge`·`gracePeriod` | 0건 | **전건 통과** 🔴 |
+       * | `specialHouseExclusions` | 0건 | 1 failed ✅ |
+       * | `isOneHousehold`(필수) | **잡힘** | 전건 통과 |
+       *
+       * ⇒ **필수 필드는 컴파일러가 이미 잡고**, 위험은 **optional 필드**다. 4개 중 3개는
+       *   tsc도 테스트도 못 잡았다 — 이 가드가 그 구멍을 닫는다.
+       *
+       * ## `satisfies`여야 한다
+       *
+       * `const mixedAsset: MixedUseAssetInput = {…}`로 바꾸면 추론 타입이 넓어져 `keyof`가
+       * 항상 전체 키가 되고 **가드가 상수 참**이 된다(컴패니언 축에서 실측 — PR #1462).
+       *
+       * ## 제외 목록이 없다
+       *
+       * 실측 결과 이 조립부는 **엔진 키 전부를 이미 덮고 있어** `keyof MixedUseAssetInput`
+       * 전체를 그대로 강제한다. 컴패니언 축과 달리 「의도적으로 안 싣는 축」이 없다.
+       *
+       * ⚠️ 이 가드는 **키의 존재만** 본다 — 값이 옳은지·Date 변환을 했는지는 못 본다.
+       *
+       * 계획서: `docs/02-design/features/companion-derived-type-guard.plan.md` (장치 3)
+       */
+      const _mixedUseKeyCoverageGuards: [
+        typeof mixedAsset extends MixedUseAssetInput ? true : never,
+        Exclude<keyof MixedUseAssetInput, keyof typeof mixedAsset> extends never ? true : never,
+      ] = [true, true];
+      void _mixedUseKeyCoverageGuards;
+
       const mixedResult = calcMixedUseTransferTax(
         data.transferPrice,
         new Date(data.transferDate),

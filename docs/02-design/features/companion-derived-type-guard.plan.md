@@ -1,6 +1,6 @@
 # ⑫→⑭ 파생 타입 · 컴파일 타임 키 커버리지 가드 — 구현 계획
 
-**상태**: ✅ **장치 1·2 구현 완료** (2026-09-04) · 장치 3(겸용 leaf) 미착수
+**상태**: ✅ **장치 1·2·3 구현 완료** (2026-09-04)
 **계기**: 겸용주택 × 함께양도 착수 선행 조건
 (`transfer-bundled-subengine-hosting.design.md` §9.3)
 **적용 범위**: 컴패니언(함께양도) 경로의 ⑫→⑭ 배관 전체. 겸용은 그 위에 얹는다.
@@ -186,7 +186,7 @@ const _mixedUseGuards: [
 
 1. ✅ **완료** — 장치 2를 컴패니언 일반 경로에 걸었다(§6 참조)
 2. ✅ **완료** — 장치 1(전면 파생)로 손 유지 면적을 없앴다(§7 참조)
-3. 장치 3(겸용 leaf + 가드)을 얹고, 그 위에서 겸용 컴패니언 축을 연다
+3. ✅ **완료** — 장치 3(겸용 조립 가드, §8). 그 위에서 겸용 컴패니언 축을 연다
    (`transfer-bundled-subengine-hosting.design.md` §9.2 파트 카드 구성 · §9.1 12억 카드 단위 함정)
 
 > 1·2는 **겸용 착수 없이도 독립적으로 머지 가능**하다 — 먼저 넣어 두면 그 뒤 축 개방이
@@ -296,3 +296,70 @@ type CompanionOwnedKeys = Exclude<
   치웠다(변경 전에는 둘 다 사용 중이었음을 stash로 확인).
 - ⚠️ 파일이 **여전히 800줄 정책 초과**(808)다. 이 작업이 84줄을 줄였지만 트리거 아래로는
   내려가지 않았다 — **분리는 별건**으로 남긴다.
+
+---
+
+## 8. 장치 3 구현 결과 ✅ (2026-09-04)
+
+### 8.1 🔴 착수 전 안전망 실측 — **구멍이 실재했다**
+
+route 5-a-2의 `mixedAsset` 조립에서 필드를 하나씩 지우고 잰 결과:
+
+| 제거한 필드 | tsc | 겸용 route 테스트 |
+|---|---|---|
+| `isOneHousehold` (**필수**) | **잡힘** ✅ | 전건 통과 |
+| `marriageMerge` (optional) | 0건 | **전건 통과** 🔴 |
+| `parentalCareMerge` (optional) | 0건 | **전건 통과** 🔴 |
+| `gracePeriod` (optional) | 0건 | **전건 통과** 🔴 |
+| `specialHouseExclusions` (optional) | 0건 | 1 failed ✅ |
+
+⇒ **필수 필드는 컴파일러가 이미 잡는다.** 위험은 **optional**이고, 4개 중 **3개는 tsc도
+테스트도 못 잡았다**. 이것이 이 장치가 닫는 구멍이다(추정이 아니라 실측).
+
+### 8.2 leaf 추출은 하지 않았다 — 소비처가 아직 하나다
+
+계획서 §2.3은 「route 5-a-2의 조립을 leaf로 추출해 컴패니언과 공유」였는데, **컴패니언 겸용
+축이 아직 없어 두 번째 소비처가 없다.** 소비처 하나짜리 추상화는 이 저장소가 금지하는
+speculative abstraction이다 ⇒ **가드만 먼저 건다.** 추출은 컴패니언 축 작업과 함께.
+
+조립부가 이미 무주석 추론(`const mixedAsset = {`)이라 재구조화 없이 `satisfies` + 가드로 끝났다.
+
+### 8.3 🔴 상위 가드는 **중첩을 못 본다** — 별도 가드가 필요했다
+
+상위 가드(`keyof MixedUseAssetInput`)를 걸고 §8.1의 3필드를 다시 지웠더니 **여전히 안 잡혔다**.
+그 셋은 `multiHouse` **중첩 객체 리터럴 안**이라 top-level `keyof`에 나타나지 않는다.
+
+⇒ 중첩 객체를 **이름 있는 const로 끌어올리고**(`mixedMultiHouse`) 별도 가드를 걸었다.
+
+> 🔑 **「가드를 걸었다」와 「그 가드가 내가 잰 구멍을 닫는다」는 다른 말이다.** 상위 가드만
+> 걸고 끝냈다면 §8.1에서 잰 구멍이 그대로 남은 채 「가드 완료」로 보고할 뻔했다.
+
+### 8.4 🔴 가드가 비대칭을 하나 찾았다 — `unavoidableOutsideCapitalHouse`
+
+중첩 가드를 걸자마자 이 키가 짚혔다. 추적 결과:
+
+- 그 boolean은 **엔진이 파생**한다 — `transfer-tax-judgment-steps.ts:55`가
+  `qualifiesUnavoidableOutsideCapital(input)`으로 세운다.
+- 그런데 그 파생은 **단건 경로에만** 있다. 겸용 엔진은 `...asset.multiHouse`를 넘기면서
+  `sellingHouseMeetsOneHouseRequirements`·`deemedOneHouseBy155` **둘만** 「단건과 같은 정본
+  함수」로 파생한다(`transfer-tax-mixed-use.ts:209·212`) — **셋째만 빠졌다.**
+- ⇒ 겸용 + 부득이한 사유 수도권 밖 주택이면 §167의10①4호 **중과 배제가 발동하지 않는다**
+  (`multi-house-surcharge-exclusion.ts:393`). **납세자에게 불리한** 방향이다.
+
+> ⚠️ **처음에 「route가 안 실은 결함」으로 오판했다.** top-level
+> `TransferTaxInput.unavoidableOutsideCapitalHouse`는 **`{reason, resolvedDate}` 객체**이고
+> 중첩된 것은 **`boolean`** — **같은 이름의 다른 축**이었다. 그대로 이어 붙이려다 타입 에러로
+> 드러났다([[feedback_rename_same_name_two_axes]]와 같은 함정).
+
+🟡 **이 PR에서 고치지 않았다** — 세액이 움직이는 변경이라 anchor와 요건 확인이 먼저다.
+`MixedUseMultiHouseEngineDerivedKeys`로 **근거와 함께 제외**해 추적 가능하게 남겼다.
+
+### 8.5 검증
+
+| # | 뮤테이션 | 착수 전 | 가드 후 |
+|---|---|---|---|
+| **V-1** | `marriageMerge` 제거 | tsc 0 · 테스트 통과 🔴 | **tsc 1건** ✅ |
+| | `parentalCareMerge` 제거 | tsc 0 · 테스트 통과 🔴 | **tsc 1건** ✅ |
+| | `gracePeriod` 제거 | tsc 0 · 테스트 통과 🔴 | **tsc 1건** ✅ |
+| **V-1b** | `specialHouseExclusions` 제거(상위) | tsc 0 | **tsc 1건** ✅ |
+| V-2 | 거짓 실패 없음 | — | tsc 0 · 회귀 0(4,684) · 겸용 E2E 9건 통과 |
