@@ -50,7 +50,13 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
     birthExemption: "",
     priorUsedDeduction: "",
     priorUsedMarriageBirthDeduction: "",
-    isFiledOnTime: true,
+    // 🔴 G-07 B1: `isFiledOnTime: boolean` → `filingStatus` 3-state 승격
+    filingStatus: "on_time",
+    lateFilingDate: "",
+    priorAssessmentNotified: false,
+    isUnderReported: false,
+    originalFiledTax: "",
+    underReportExclusion: "",
     foreignTaxPaid: "",
     foreignGiftTaxBase: "",
     specialTreatment: "",
@@ -270,18 +276,24 @@ describe("buildGiftTaxInput() — ④ 지점 변환 anchor (G-H3)", () => {
     expect(result.deductionInput.donorRelation).toBe("spouse");
   });
 
-  // ─────── isFiledOnTime ───────
+  // ─────── filingStatus → §69 신고세액공제 축 (🔴 G-07 B1: 2-state → 3-state) ───────
 
-  it("[GA-19] isFiledOnTime=false → creditInput.isFiledOnTime=false (신고공제 미적용 경로)", () => {
-    const form = makeForm({ isFiledOnTime: false });
+  it("[GA-19] 기한후신고 → creditInput.isFiledOnTime=false (신고공제 미적용 경로)", () => {
+    const form = makeForm({ filingStatus: "late" });
     const result = buildGiftTaxInput(form);
     expect(result.creditInput.isFiledOnTime).toBe(false);
   });
 
-  it("[GA-19b] isFiledOnTime=true → creditInput.isFiledOnTime=true (기본값 보존)", () => {
-    const form = makeForm({ isFiledOnTime: true });
+  it("[GA-19b] 정기신고 → creditInput.isFiledOnTime=true (기본값 보존)", () => {
+    const form = makeForm({ filingStatus: "on_time" });
     const result = buildGiftTaxInput(form);
     expect(result.creditInput.isFiledOnTime).toBe(true);
+  });
+
+  it("[GA-19c] 무신고도 §69 공제 미적용 — 「신고기한 이내 신고」가 아니다", () => {
+    const form = makeForm({ filingStatus: "none" });
+    const result = buildGiftTaxInput(form);
+    expect(result.creditInput.isFiledOnTime).toBe(false);
   });
 
   // ─────── 결합 시나리오: strip 회귀 감지 ───────

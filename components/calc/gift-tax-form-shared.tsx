@@ -82,7 +82,28 @@ export interface FormState extends AppraisalFeeFormFields {
    * 3-state: undefined=동시증여 없음 / []=ON 빈 / [...]=데이터.
    */
   simultaneousGifts?: Array<{ donorRelation: DonorRelation; taxableValue: string }>;
-  isFiledOnTime: boolean;
+  /**
+   * 🔴 G-07 B1: 신고 상태 **3-state**. 종전 `isFiledOnTime: boolean`을 승격했다.
+   *
+   * `on_time`만 §69 신고세액공제(3%) 대상이고, `late`·`none`은 「국세기본법」 §47의2
+   * 무신고가산세 대상이다(§48②2호 감면은 `late`에만). ④가 이 하나에서 두 축을 파생한다.
+   */
+  filingStatus: "on_time" | "late" | "none";
+  /** 기한후신고일 `YYYY-MM-DD` — §48②2호 감면 구간 판정 (`late` 전용) */
+  lateFilingDate: string;
+  /** 「결정할 것을 미리 알고」 기한후신고서를 제출했는가 — §48②2호 괄호 배제 */
+  priorAssessmentNotified: boolean;
+  /** 과소신고 여부 — 「국세기본법」 §47의3 (`on_time` 전용) */
+  isUnderReported: boolean;
+  /** 당초 신고세액 — §47의3① 「과소신고한 납부세액」 산정에 필요 */
+  originalFiledTax: string;
+  /** §47의3④1호 적용제외 사유 — 빈 문자열 = 해당 없음 */
+  underReportExclusion:
+    | ""
+    | "ownership_dispute"
+    | "deduction_error"
+    | "supplementary_valuation"
+    | "corporate_adjustment";
   foreignTaxPaid: string;
   /** 국외 증여재산 과세표준 (§59 §21① 점유비 한도 분자, H-32). foreignTaxPaid>0 시 필수. */
   foreignGiftTaxBase: string;
@@ -149,7 +170,12 @@ export const INITIAL_FORM: FormState = {
   birthExemption: "",
   priorUsedDeduction: "",
   priorUsedMarriageBirthDeduction: "",
-  isFiledOnTime: true,
+  filingStatus: "on_time",
+  lateFilingDate: "",
+  priorAssessmentNotified: false,
+  isUnderReported: false,
+  originalFiledTax: "",
+  underReportExclusion: "",
   foreignTaxPaid: "",
   foreignGiftTaxBase: "",
   specialTreatment: "",

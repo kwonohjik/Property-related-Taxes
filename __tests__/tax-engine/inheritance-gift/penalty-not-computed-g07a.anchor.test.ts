@@ -105,19 +105,24 @@ describe("G-07 A-2·A-3 결과 화면 고지 — 법정기한 내 신고가 아�
     expect(off.latePaymentPenalty).toBe(0);
   });
 
+  /**
+   * 🔴 B1 이후 **scope 가 갈린다** — 증여세는 §47의2·§47의3을 실제로 산출하므로 남은 축
+   * (부정행위율 B2 · 납부지연 B3)만 고지하고, 상속세는 아직 전부 미산출이다.
+   * 배너가 「전부 미포함」이라고 계속 말하면 그 자체가 새 거짓말이 된다.
+   */
   it.each([
-    ["components/calc/results/GiftTaxResultView.tsx", "증여세"],
-    ["components/calc/results/InheritanceTaxResultView.tsx", "상속세"],
-  ])("A2-3: %s 가 고지 배너를 배선한다", (rel, label) => {
+    ["components/calc/results/GiftTaxResultView.tsx", "증여세", ' scope="filing-only"'],
+    ["components/calc/results/InheritanceTaxResultView.tsx", "상속세", ""],
+  ])("A2-3: %s 가 고지 배너를 배선한다", (rel, label, scope) => {
     const src = read(rel);
     expect(src).toContain(
       'import { PenaltyNotIncludedNotice } from "@/components/calc/results/shared/PenaltyNotIncludedNotice"',
     );
     expect(src).toContain("result.creditDetail.isFiledOnTime === false");
-    expect(src).toContain(`<PenaltyNotIncludedNotice taxLabel="${label}" />`);
+    expect(src).toContain(`<PenaltyNotIncludedNotice taxLabel="${label}"${scope} />`);
   });
 
-  it("A2-4: 배너 **렌더 문구**가 세 조문을 모두 가리킨다", () => {
+  it("A2-4: 배너 **렌더 문구**가 세 조문을 모두 가리킨다 (scope=\"all\" — 상속세)", () => {
     const src = read("components/calc/results/shared/PenaltyNotIncludedNotice.tsx");
     expect(src).toContain("가산세가 포함되어 있지 않습니다");
     /**
@@ -130,11 +135,16 @@ describe("G-07 A-2·A-3 결과 화면 고지 — 법정기한 내 신고가 아�
   });
 });
 
-describe("G-07 A-4·A-5 입력 위젯 — 고르는 자리에서 미포함을 밝힌다", () => {
-  it("A4-1: 증여 §69 토글 description", () => {
-    expect(read("components/calc/gift/GiftCreditChecklist.tsx")).toContain(
-      "가산세는 이 계산에 포함되지 않습니다",
-    );
+describe("G-07 A-4·A-5 입력 위젯 — 고르는 자리에서 밝힌다", () => {
+  /**
+   * 🔴 B1 이후 증여 화면은 「미포함」이 아니라 **적용 세율**을 밝힌다 — 실제로 산출하기
+   * 때문이다. 「미포함」 문구를 그대로 두면 계산해 놓고 안 했다고 말하는 셈이 된다.
+   */
+  it("A4-1: 증여 신고 상태 라디오가 적용 세율·감면을 밝힌다", () => {
+    const src = read("components/calc/gift/GiftCreditChecklist.tsx");
+    expect(src).toContain("무신고가산세 20% (국세기본법 §47의2①2호)");
+    expect(src).toContain("§48②2호 감면(1개월 50% · 3개월 30% · 6개월 20%)");
+    expect(src).toContain("기한후신고가 아니므로 §48②2호 감면 대상이 아닙니다");
   });
 
   it("A5-1: 상속 3-state 중 late·none 두 옵션 모두", () => {

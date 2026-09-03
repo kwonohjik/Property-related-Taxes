@@ -201,7 +201,13 @@ export function buildBesshi10Rows(
     penaltyRow("㊷", "신고불성실가산세", r.underreportPenalty ?? 0, "국기법 §47의2·§47의3"),
     penaltyRow("㊸", "납부지연가산세", r.latePaymentPenalty ?? 0, "국기법 §47의4"),
     penaltyRow("㊹", "공익법인 등 관련 가산세", r.publicInterestPenalty ?? 0, "상증법 §78"),
-    { number: "㊺", column: "right", label: "자진납부할 세액(합계액)",        amount: r.finalTax,                                display: "amount", formula: "㉞+㉟−㊱−㊲+㊷+㊸+㊹" },
+    /**
+     * 🔴 G-07 B1: ㊺는 **총 납부세액**이다 — 그 산식(`㉞+㉟−㊱−㊲+㊷+㊸+㊹`)에 가산세가
+     * 들어 있으므로 `finalTax`(결정세액)만 실으면 **인쇄된 산식이 인쇄된 금액을 재현하지
+     * 못한다**. `totalPayableWithPenalty`가 있으면 그것을, 없으면(가산세 0) `finalTax`를 쓴다.
+     * anchor B10-SC4가 이 항등식을 지킨다.
+     */
+    { number: "㊺", column: "right", label: "자진납부할 세액(합계액)",        amount: r.totalPayableWithPenalty ?? r.finalTax,   display: "amount", formula: "㉞+㉟−㊱−㊲+㊷+㊸+㊹" },
     { number: "",   column: "right", label: "납부방법",                       amount: 0,                                         display: "header" },
     { number: "㊻", column: "right", label: "연부연납",                       amount: installment,                               display: "amount", lawRef: "§71" },
     { number: "㊼", column: "right", label: "현금 분납",                      amount: cashDef,                                   display: "amount", lawRef: "§70②" },

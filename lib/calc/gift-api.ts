@@ -14,6 +14,8 @@ import { injectSuperficiesRemainingYears, injectIntangibleRemainingYears, inject
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
 import { deriveDonorRelation } from "@/components/calc/gift-tax-form-shared";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
+import { getGiftFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
+import type { InheritanceGiftPenaltyInput } from "@/lib/tax-engine/inheritance-gift-penalty";
 import type {
   GiftTaxInput,
   GiftDeductionInput,
@@ -75,7 +77,9 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
   const creditInput: GiftTaxCreditInput = {
     foreignTaxPaid: parseAmount(form.foreignTaxPaid) || undefined,
     foreignGiftTaxBase: parseAmount(form.foreignGiftTaxBase) || undefined, // §21① 점유비 한도 분자 (H-32)
-    isFiledOnTime: form.isFiledOnTime,
+    // 🔴 G-07 B1: §69 신고세액공제 축 — 폼 3-state에서 파생한다(단일 소스).
+    //   기한후신고·무신고 모두 「신고기한 이내 신고」가 아니므로 공제 없음(종전과 동일).
+    isFiledOnTime: form.filingStatus === "on_time",
     specialTreatment: form.specialTreatment || undefined,
     // G-M7: startupInvestmentCompleted — startup 선택 시에만 전달
     startupInvestmentCompleted:
@@ -114,6 +118,14 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     isSubstituteGift: form.donor === "grandparent" ? (form.isSubstituteGift || undefined) : undefined,
     deductionInput,
     creditInput,
+    /**
+     * 🔴 G-07 B1: 신고불성실가산세 축 (국세기본법 §47의2·§47의3).
+     *
+     * ⚠️ **정상 신고면 키 자체를 넣지 않는다** — 엔진 기본이 `{filingStatus:"on_time"}`이라
+     *    결과는 같지만, 이력에 남는 payload 를 종전과 동일하게 유지한다(3중 패턴 규약).
+     * 🔑 법정신고기한은 **④가 파생**한다 — 엔진은 받기만 한다(§68① 단서 케이스 때문).
+     */
+    ...buildFilingPenalty(form),
     // 감정평가수수료 공제 (§55①·시행령 §46의2 → §20의3 준용)
     appraisalFee: buildAppraisalFee(form),
     // 분납 (§70②) — 별지10호 ㊼. 엔진이 finalTax로 calcInstallmentSplit 후 cashDeferred echo
@@ -127,6 +139,53 @@ export function buildGiftTaxInput(form: FormState): GiftTaxInput {
     // §36 부분 대납 — 빈값/0 → undefined → 엔진 ?? 0 (전액 대납 기존 동작)
     doneePaidGiftTax: parseAmount(form.doneePaidGiftTax ?? "") || undefined,
   };
+}
+
+
+/**
+ * 🔴 G-07 B1: 폼 3-state → 엔진 가산세 입력 (④ 지점).
+ *
+ * · `on_time` + 과소신고 아님 → 키 없음(종전 payload 보존)
+ * · `on_time` + 과소신고 → §47의3 축 (당초 신고세액 · 적용제외)
+ * · `late` → §47의2 + §48②2호 감면 (법정신고기한은 §68① 본문으로 파생)
+ * · `none` → §47의2 (감면 없음 — 기한후신고가 아니다)
+ *
+ * ⚠️ **대상 밖 값은 보내지 않는다.** 3-state를 바꿔도 앞서 입력한 「당초 신고세액」·
+ *    「기한후신고일」이 payload 로 새면 가산세 base·감면율이 조용히 움직인다
+ *    (부동산 G-10과 같은 stale 누출).
+ */
+function buildFilingPenalty(form: FormState): { filingPenalty?: InheritanceGiftPenaltyInput } {
+  const status = form.filingStatus;
+
+  if (status === "on_time") {
+    if (!form.isUnderReported) return {};
+    return {
+      filingPenalty: {
+        filingStatus: "on_time",
+        isUnderReported: true,
+        originalFiledTax: parseAmount(form.originalFiledTax) || 0,
+        ...(form.underReportExclusion
+          ? { underReportExclusion: form.underReportExclusion }
+          : {}),
+      },
+    };
+  }
+
+  if (status === "late") {
+    return {
+      filingPenalty: {
+        filingStatus: "late",
+        // §68① 본문 — 증여받은 날이 속하는 달의 말일부터 3개월
+        ...(getGiftFilingDueDates(form.giftDate)?.filing
+          ? { statutoryDeadline: getGiftFilingDueDates(form.giftDate)!.filing }
+          : {}),
+        ...(form.lateFilingDate ? { actualFilingDate: form.lateFilingDate } : {}),
+        ...(form.priorAssessmentNotified ? { priorAssessmentNotified: true } : {}),
+      },
+    };
+  }
+
+  return { filingPenalty: { filingStatus: "none" } };
 }
 
 /**

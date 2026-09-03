@@ -497,6 +497,13 @@ export interface GiftTaxInput {
    */
   isSubstituteGift?: boolean;
   deductionInput: GiftDeductionInput;
+  /**
+   * 🔴 G-07 B1: 신고불성실가산세 축 — 「국세기본법」 §47의2·§47의3.
+   *
+   * 미입력이면 가산세를 산출하지 않는다(종전 동작 100% 보존). `creditInput.isFiledOnTime`은
+   * §69 신고세액공제 축이라 **별개다** — 폼의 3-state 하나에서 ④가 둘을 파생한다.
+   */
+  filingPenalty?: import("../inheritance-gift-penalty").InheritanceGiftPenaltyInput;
   creditInput: GiftTaxCreditInput;
   /** 평가기준일 (기본: 증여일) */
   valuationBaseDate?: string;
@@ -585,8 +592,22 @@ export interface GiftTaxResult extends TaxResultMeta {
   interestEquivalent?: number;       // ㉟ 이자상당액
   museumDeferredTax?: number;        // ㊱ §75 박물관자료 등 징수유예세액
   underreportPenalty?: number;       // ㊷ 국기법 §47의2·§47의3
-  latePaymentPenalty?: number;       // ㊸ 국기법 §47의4
-  publicInterestPenalty?: number;    // ㊹ §78 공익법인 등 관련 가산세
+  latePaymentPenalty?: number;       // ㊸ 국기법 §47의4 (B3 — 현재 미산출)
+  publicInterestPenalty?: number;    // ㊹ 상증법 §78③~⑮ 공익법인 등 관련 가산세 (범위 밖)
+  /**
+   * 🔴 G-07 B1: 신고불성실가산세 **산출근거** — 「국세기본법」 §47의2·§47의3.
+   * 기준금액·세율·§48②2호 감면·§47의3④1호 적용제외를 담는다. 미입력이면 undefined.
+   */
+  filingPenaltyDetail?: import("../inheritance-gift-penalty").InheritanceGiftPenaltyResult;
+  /**
+   * 🔴 G-07 B1: **총 납부세액** = `finalTax`(결정세액) + 가산세. 가산세가 0이면 `undefined`
+   * (= `finalTax`와 같다).
+   *
+   * 🔑 `finalTax`는 **결정세액 그대로 둔다** — 별지9호 ㉔·별지10호 ㉞ 축이고 연부연납·분납
+   *    산정 base 이며 19,000건 넘는 anchor 가 그 의미에 걸려 있다. 별지10호 ㊺
+   *    「자진납부할 세액(합계액)」이 `㉞+㉟−㊱−㊲+㊷+㊸+㊹`이므로 **그 칸이 이 값**이다.
+   */
+  totalPayableWithPenalty?: number;
   installmentPayment?: number;       // ㊻ §71 연부연납
   cashDeferred?: number;             // ㊼ §70② 현금 분납
   /** 별지 제10호서식 좌·우 컬럼 행 배열 (총 34행) — UI는 본 배열만 읽음 */
