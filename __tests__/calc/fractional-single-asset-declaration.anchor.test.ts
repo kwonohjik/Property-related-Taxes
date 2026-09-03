@@ -169,11 +169,12 @@ describe("R4 D — 단건 공유지분 선언 게이트", () => {
     expect(msgs([a1, a2]).some((m) => /지분 분할 취득과 함께 계산할 수 없습니다/.test(m))).toBe(false);
   });
 
-  it("D11 🔴 공익수용 × 축 B는 **여전히 차단**된다 (D7과 짝 — 묶어서 열지 않았다)", () => {
+  it("D11 🔄 공익수용 × 축 B도 **2026-09-03에 열렸다** (D7과 짝)", () => {
+    // 「보상가액과 비양립」이라는 차단 사유가 틀렸다 — 양도가액은 총계약가를 그대로 쓰고
+    // 보상 필드는 §164⑨ **환산 분모** 전용이라 분자와 약분된다(지분 스케일 불요).
+    // 정합은 `axis-b-expropriation.anchor.test.ts`가 6케이스로 지킨다.
     const e1 = asset({ assetId: 1, ownershipNumerator: "60", ownershipDenominator: "100", transferCause: "public_expropriation" });
     const e2 = asset({ assetId: 2, ownershipNumerator: "40", ownershipDenominator: "100", transferCause: "public_expropriation" });
-    expect(
-      msgs([e1, e2]).some((m) => /공익수용은 지분 분할 취득과 함께 계산할 수 없습니다/.test(m)),
-    ).toBe(true);
+    expect(msgs([e1, e2]).some((m) => /지분 분할 취득과 함께 계산할 수 없습니다/.test(m))).toBe(false);
   });
 });
