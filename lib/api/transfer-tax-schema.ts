@@ -746,6 +746,26 @@ export const multiInputSchema = z
       }
       seen.add(ids[i]);
     }
+    /**
+     * 🔴 G-28: 수정신고 ↔ 무신고·과소신고 가산세 **상호배타** (동시 전송 금지).
+     *
+     * 단건 스키마는 :536 에서 이미 막는다. 다건에는 클라이언트·Zod 양쪽 다 없어,
+     * 같은 과소신고 1건에 대해 `amendmentDetail`의 신고불성실가산세와 자산별
+     * §47의2~§47의4 가산세가 **동시에** 산출됐다(`transfer-tax-aggregate.ts`의
+     * `computeAmendment`와 `perAssetFilingDelayedPenalty`가 배타 검사 없이 나란히 돈다).
+     *
+     * 단건 화면에서 같은 조합은 400 으로 거부되는데 다건만 통과했다.
+     */
+    if (
+      data.amendment &&
+      data.properties.some((p) => p.filingPenaltyDetails || p.delayedPaymentDetails)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["amendment"],
+        message: "수정신고와 무신고/과소신고 가산세는 동시에 적용할 수 없습니다",
+      });
+    }
     // annualBasicDeductionUsed 한도 검증
     if (data.annualBasicDeductionUsed > 2_500_000) {
       ctx.addIssue({

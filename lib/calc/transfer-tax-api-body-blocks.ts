@@ -93,8 +93,27 @@ export function buildPenaltyAmendmentPayload(form: TransferFormData): object {
           determinedTax: 0,
           reductionAmount: 0,
           priorPaidTax: parseAmount(form.priorPaidTax),
-          originalFiledTax: parseAmount(form.originalFiledTax),
-          excessRefundAmount: parseAmount(form.excessRefundAmount),
+          /**
+           * 🔴 G-10: **신고 유형별 게이트.** ⑤ UI 는 이 두 칸을 조건부로만 노출하는데
+           * (`Step6.tsx` — 당초 신고세액은 과소·초과환급, 환급세액은 초과환급에서만)
+           * ④ 변환은 유형과 무관하게 무조건 실어 **stale 값이 가산세 base 를 움직였다**.
+           *
+           * 실측(토지 10억/2억 무신고, 기준금액 211,650,000 · 가산세 42,330,000):
+           *   · `originalFiledTax` 1억 잔존 → 22,330,000 (**20,000,000 과소**)
+           *   · `excessRefundAmount` 5천만 잔존 → 52,330,000 (**10,000,000 과대**)
+           * 「무신고납부세액」(국세기본법 §47의2①)은 「그 신고로 납부하여야 할 세액」이고
+           * 당초 신고세액을 빼라는 문언이 없다.
+           *
+           * 🔑 도달 경로는 라디오 전환만이 아니다 — `lib/calc/filing-deadline.ts`의
+           *    `derivePenaltyFields`가 양도일·신고일 변경만으로 `filingType`을 자동 전이시킨다.
+           * 형제 축(주식)은 이미 ④·⑤ 양쪽에서 막는다(`stock-transfer-tax-api.ts`).
+           */
+          originalFiledTax:
+            form.filingType === "under" || form.filingType === "excess_refund"
+              ? parseAmount(form.originalFiledTax)
+              : 0,
+          excessRefundAmount:
+            form.filingType === "excess_refund" ? parseAmount(form.excessRefundAmount) : 0,
           interestSurcharge: parseAmount(form.interestSurcharge),
           // 빈 문자열이면 키 자체를 넣지 않는다 — 미입력 = 전액 부정(종전 동작).
           // 0 은 「부정행위분이 없다」는 유효한 선언이라 0도 보낸다.

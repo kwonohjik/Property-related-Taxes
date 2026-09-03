@@ -65,7 +65,18 @@ export function Step6({
                 name="filingType"
                 tone="amber"
                 value={form.filingType ?? "correct"}
-                onChange={(v) => onChange({ filingType: v })}
+                /**
+                 * 🔴 G-10: 유형을 바꾸면 **대상 밖이 되는 칸을 함께 비운다.**
+                 * 화면에서 칸이 사라져도 값은 스토어에 남아 payload 로 새고, 그대로
+                 * 가산세 기준금액을 늘리거나 줄인다. 주식 축 `Step3.tsx`와 같은 패턴이다.
+                 */
+                onChange={(v) =>
+                  onChange({
+                    filingType: v,
+                    ...(v !== "under" && v !== "excess_refund" ? { originalFiledTax: "0" } : {}),
+                    ...(v !== "excess_refund" ? { excessRefundAmount: "0" } : {}),
+                  })
+                }
                 options={[
                   { value: "correct", label: "정상신고", description: "가산세 없음" },
                   { value: "none", label: "무신고", description: "납부세액 × 20% (부정행위 40%)" },

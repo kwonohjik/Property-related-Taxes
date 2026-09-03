@@ -22,8 +22,16 @@ import { isHousingLike } from "./housing-like-asset";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 
-/** TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용) */
-export function buildPropertyPayload(form: TransferFormData) {
+/**
+ * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
+ *
+ * @param filingUnitAmendment 🔴 G-28 — **신고서 단위** 수정신고 플래그(`multiForm.amendmentMode`).
+ *   자산 form 의 `amendmentMode`가 아니다. 켜져 있으면 자산별 가산세 블록을 전송하지 않는다 —
+ *   수정신고(국세기본법 §45·§48②1호)와 무신고·과소신고 가산세(§47의2·§47의3)는 **상호배타**라
+ *   같은 과소신고 1건에 신고불성실가산세가 두 번 산출되기 때문이다. 단건 경로는 ④·⑫ 양쪽에서
+ *   막는데(`transfer-tax-api-body-blocks.ts:90` · `transfer-tax-schema.ts:536`) 다건만 없었다.
+ */
+export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment = false) {
   const primary = form.assets?.[0];
   const reductions = toEngineReductions(primary?.reductions ?? [], primary?.acquisitionCause ?? "purchase", primary?.expropriationNoticeDate);
   const primaryKind = primary?.assetKind ?? "";
@@ -265,7 +273,8 @@ export function buildPropertyPayload(form: TransferFormData) {
         }
       : {}),
     // 자산별 가산세 — 단건 엔진이 자산별 결정세액 기준으로 계산.
-    ...(form.enablePenalty && form.filingType !== "correct"
+    // 🔴 G-28: 신고서 단위 수정신고가 켜져 있으면 전송하지 않는다(상호배타 — JSDoc 참조).
+    ...(!filingUnitAmendment && form.enablePenalty && form.filingType !== "correct"
       ? {
           filingPenaltyDetails: {
             determinedTax: 0,
@@ -274,12 +283,27 @@ export function buildPropertyPayload(form: TransferFormData) {
             originalFiledTax: parseAmount(form.originalFiledTax ?? "0"),
             excessRefundAmount: parseAmount(form.excessRefundAmount ?? "0"),
             interestSurcharge: parseAmount(form.interestSurcharge ?? "0"),
+            /**
+             * 🔴 G-11: §47의3①1호 **가목·나목 분해**의 유일한 입력. 단건 빌더는 싣는데
+             * 다건 빌더만 키를 빠뜨려 「미입력 = 전액 부정」 하위호환 분기로 떨어졌다.
+             *
+             * 다건 마법사는 자산 편집에 **단건 계산기를 그대로 임베드**하므로 Step6의
+             * 「부정행위로 인한 과소신고분」 칸이 렌더되고 값도 저장된다 — 입력 경로는 있는데
+             * 전송만 빠진 것이다. 실측(과소신고납부세액등 1억 · 부정행위분 3천만):
+             *   조문대로 19,000,000 → 전송 누락 시 **40,000,000** (21,000,000 과대, 불리)
+             *
+             * 🔑 빈 문자열이면 키를 넣지 않는 규약을 그대로 지킨다 — 0 은 「부정행위분이 없다」는
+             *    유효한 선언이라 0도 보낸다(단건 `transfer-tax-api-body-blocks.ts`와 동일).
+             */
+            ...((form.fraudulentPortion ?? "").trim() !== ""
+              ? { fraudulentPortion: parseAmount(form.fraudulentPortion) }
+              : {}),
             filingType: form.filingType,
             penaltyReason: form.penaltyReason,
           },
         }
       : {}),
-    ...(form.enablePenalty && form.paymentDeadline
+    ...(!filingUnitAmendment && form.enablePenalty && form.paymentDeadline
       ? {
           delayedPaymentDetails: {
             unpaidTax: parseAmount(form.unpaidTax ?? "0"),
@@ -323,7 +347,7 @@ export async function callMultiTransferTaxAPI(
   const propertiesPayload = properties.map((p) => ({
     propertyId: p.propertyId,
     propertyLabel: p.propertyLabel,
-    ...buildPropertyPayload(p.form),
+    ...buildPropertyPayload(p.form, Boolean(multiForm.amendmentMode)),
   }));
 
   // 확정신고 기납부세액 정산 (§111③) — 미편집 시 신고일 필터 자동 파생(computeAutoPriorPaid),

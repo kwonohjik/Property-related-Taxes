@@ -13,8 +13,14 @@
  * ⚠️ ⑫ Zod 는 여기서 직접 검증하지 않는다 — `filingPenaltyDetailsSchema` 를 import 하면
  *    **순환 import(TDZ)** 로 터진다(`transfer-tax-schema-sub` ↔ `transfer-tax-schema-reductions`,
  *    실측 `TypeError: Cannot read properties of undefined (reading 'optional')`).
- *    ⑭ 는 `engine-input.ts` 가 `{...data.filingPenaltyDetails}` **스프레드**라 새 키가 자동
- *    전달되고, 그 경로는 route 를 태우는 `__tests__/api/transfer.route.*` 계열이 덮는다.
+ *
+ * 🔴 **G-14 정정 (2026-09)** — 종전 이 자리에는 「⑭ 는 스프레드라 자동 전달되고, 그 경로는
+ *    route 를 태우는 `__tests__/api/transfer.route.*` 계열이 덮는다」고 적혀 있었다.
+ *    **사실이 아니었다**: `grep -rn "fraudulentPortion" __tests__/api/` 가 **0건**이었고,
+ *    ⑫ 스키마에서 그 키를 지워 조용히 strip 되게 해도 1,172파일 11,293테스트가 전건 통과했다.
+ *    키가 strip 되면 엔진이 「미입력 = 전액 부정」으로 보아 21,000,000원(2.1배) 불리한 세액이
+ *    나온다. ⇒ ⑫⑭ 는 이제 **`__tests__/api/transfer.route.penalty-b6-plumbing.anchor.test.ts`**
+ *    가 route 를 관통해 덮는다. 이 파일은 ④ payload 규약과 엔진 leaf 만 담당한다.
  */
 
 import { describe, it, expect } from "vitest";
