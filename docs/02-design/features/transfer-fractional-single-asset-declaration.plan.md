@@ -150,7 +150,7 @@ Gate-A의 메시지는 두 가지 우회로를 제시한다. 축 A에서는 **�
 
 ---
 
-## 3.5 [실측 · Phase 0] 일반양도 축 A도 **같은 결함**이다 — 9,900,000원
+### 3.5 [실측 · Phase 0] 일반양도 축 A도 **같은 결함**이다 — 9,900,000원
 
 결정 (b)의 착수 조건이던 probe를 **route를 태워** 돌렸다(leaf 아님 — ⑫⑭까지 포함).
 
@@ -248,41 +248,57 @@ Gate-A를 그냥 없애면 안 된다. 주석이 지목한 위험은 **실재**�
 
 ---
 
-## 7. anchor 계획
+## 7. anchor — **구현된 것**
 
-### 7.1 신규 — `__tests__/calc/fractional-single-asset-declaration.anchor.test.ts`
+> ⚠️ 이 절은 착수 전 「계획」으로 썼다가 구현 후 **실제 파일·건수로 정정**했다.
+> 계획 단계의 파일명·케이스 수를 그대로 두면 계획↔구현 드리프트가 문서에 박힌다.
+
+### 7.1 `__tests__/calc/fractional-single-asset-declaration.anchor.test.ts` (7건)
 
 | id | 케이스 | 기대 |
 |---|---|---|
-| D1 | 단건 · 60% · 선언 OFF · 일반양도 | 🔴 차단 (회귀 가드 — 현행 유지) |
+| D1 | 단건 · 60% · 선언 OFF · 일반양도 | 차단 (회귀 가드) |
 | D2 | 단건 · 60% · 선언 **ON** · 일반양도 | 통과 |
-| D3 | 단건 · 50% · 선언 ON · **부담부증여** | 통과 (R4 본체) |
-| D4 | 단건 · 100% · 선언 무관 | 통과 (대조 — 토글이 100%에 간섭하지 않음) |
-| D5 | 다자산(축 B) · 60%+40% · 선언 ON | Gate-A 미발동 (`assets.length===1` 조건 유지 확인) |
-| D6 | 선언 OFF 메시지에 **두 갈래**가 모두 들어 있다 | 「별도 자산」 + 「타인 소유」 |
+| D3 | 단건 · 50% · 선언 OFF/ON · **부담부증여** | 차단/통과 (R4 본체) |
+| D4 | 단건 · 100% · 선언 유무 무관 | 통과 (토글이 단독 소유에 간섭하지 않음) |
+| D5 | 다자산(축 B) · 60%+40% | Gate-A 미발동 (`assets.length===1` 조건 유지) |
+| D6 | 차단 메시지 | 「별도 자산으로 추가」 + 「타인 소유」 두 갈래 모두 |
+| **D7** | 축 B × 부담부증여 · 선언 ON | **여전히 Gate-B가 차단** (D5와 짝 — 두 게이트 무간섭) |
 
-### 7.2 신규 — `__tests__/components/fractional-declaration-toggle.anchor.test.tsx`
+### 7.2 `__tests__/components/fractional-declaration-toggle.anchor.test.tsx` (4건)
 
 | id | 케이스 | 기대 |
 |---|---|---|
-| T1 | 지분율 60% | 토글 렌더 |
+| T1 | 지분율 60% + 핸들러 제공 | 토글 렌더 |
 | T2 | 지분율 100% | 토글 **미렌더** |
-| T3 | `splitMode==="fractional"`(축 B) | 토글 미렌더 (③로 이동한 자리엔 안 붙는다) |
+| T3 | 핸들러 미제공(축 B 호출부) | 토글 미렌더 · 「100% 기준」 안내는 유지 |
+| **T4** | 선언 ON | 토글이 켜진 상태로 렌더 |
 
-### 7.3 신규 — 회귀 수치 고정 `__tests__/tax-engine/.../fractional-single-asset-highvalue.anchor.test.ts`
+### 7.3 `__tests__/calc/fractional-single-asset-whole-property-threshold.anchor.test.ts` (3건)
+
+> 📌 계획 단계 가칭은 `__tests__/tax-engine/.../fractional-single-asset-highvalue`였다.
+> **`__tests__/calc/`로 옮겼다** — 이 anchor는 엔진 leaf가 아니라 **route를 태운다**
+> (④ 변환 → ⑫ Zod → ⑭ 매핑 → 엔진). leaf 직접 호출은 ⑫⑭를 건너뛰어 같은 결함을 놓친다
+> (memory `feedback_leaf_anchor_skips_zod_layer`).
 
 | id | 케이스 | 기대 |
 |---|---|---|
-| H1 | 24억 물건 1/2 지분 부담부증여 | `totalTax === 3_619_000` |
-| H2 | 우회로(100/100 + 12억)와 **다르다** | `!== 0` — §3 판별력 고정 |
+| H1 | 지분율 40% + 물건 전체 24억 | `ownershipRatio=0.4` · `totalPropertyTransferPrice=24억` · `totalTax === 9,900,000` |
+| H2 | 🔴 우회로 100/100 + 지분분 9.6억 | `totalTax === 0` — 양도가액·취득가액은 H1과 **같은데** 판정 분모만 다름 |
+| H3 | 12억 미만 물건(10억) | 두 경로 동일 · 둘 다 0 (문턱 축 고정) |
 
-> ⚠️ H1의 3,619,000원은 이번 probe 실측값이다. 착수 시 **다시 재현**하고 어긋나면
-> 값이 아니라 원인을 먼저 본다(mock rates 변동 가능).
+> ⚠️ 9,900,000원은 **mock 세율표 실측값**이지 「정본 세액」이 아니다. 값이 바뀌면
+> 값을 고치기 전에 **원인**을 먼저 본다.
 
-### 7.4 E2E — `e2e/transfer-fractional-single-asset.spec.ts`
+### 7.4 `e2e/transfer-fractional-single-asset.spec.ts` (3건)
 
-폼 → 지분율 60% → 선언 토글 ON → 계산 → 결과 도달. **선언 없이는 차단됨**도 함께 단언한다
-(dead-end 재발 방지 — 이 결함의 본질이 「화면엔 있는데 통과 못 함」이므로 E2E가 정본 게이트다).
+| 케이스 | 기대 |
+|---|---|
+| ① 기본정보 렌더 | 「공유 지분율」 + 「100% 기준 입력」 + **선언 토글**이 함께 |
+| 🔴 선언 없이 계산 | 차단 메시지 노출 + 두 갈래 제시 |
+| 선언 ON 계산 | 200 · `ownershipRatio=0.4` · `totalPropertyTransferPrice=24억` · `totalTax > 0` |
+
+**E2E가 §8.2의 파생 결함을 잡았다** — 유닛만으로는 통과했다.
 
 ---
 
