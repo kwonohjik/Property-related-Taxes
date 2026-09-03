@@ -22,7 +22,21 @@ export function addCompanionAcquisitionCauseRefines(
   // ── 컴패니언별 acquisitionCause 검증 ──
   for (let i = 0; i < companions.length; i++) {
     const c = companions[i];
-    if (c.acquisitionCause === "purchase") {
+    /**
+     * 🔴 **부담부증여 제외** (축 B, 2026-09-03).
+     *
+     * 부담부증여는 취득가액을 「소득세법 시행령」 제159조 제1항 제1호가 **자동 산정**한다
+     * (기준시가 모드 = 취득시 기준시가 × 채무비율 / 시가 모드 = K-4 실지·K-5 환산).
+     * 그래서 UI도 자산 전체 취득가액 칸을 숨긴다 — 요구하면 **입력할 칸이 화면에 없는데
+     * 그 칸을 채우라고 막는** 상태가 된다.
+     *
+     * 단건 경로는 이 요구가 아예 없고, ⑧ `validateAssetEntry`도 같은 이유로
+     * `transferType !== "burdened_gift"` 게이트를 둔다(O-2, 2026-08-12) — **같은 규율**이다.
+     *
+     * 판정을 `burdenedGiftInfo` 존재로 하는 이유: 컴패니언 스키마에는 `transferType`이 없고,
+     * 이 서브객체가 실렸다는 것 자체가 「§159가 취득가액을 산정한다」는 신호이기 때문이다.
+     */
+    if (c.acquisitionCause === "purchase" && c.burdenedGiftInfo === undefined) {
       if (c.useEstimatedAcquisition) {
         if (!c.standardPriceAtAcquisition || c.standardPriceAtAcquisition <= 0) {
           ctx.addIssue({

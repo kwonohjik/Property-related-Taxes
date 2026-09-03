@@ -37,6 +37,18 @@ interface Props {
    * 모달이 `eventDate`로 받아 상증 평가연도를 도출한다(`BuildingStdPriceForm.tsx:124-127`).
    */
   transferDate?: string;
+  /**
+   * 지분 분할 모드(축 B) 여부 — **채무 입력 규약이 축에 따라 반대**다.
+   *
+   * - 축 A(공유 소유·단건): 공유자마다 **별개 증여계약**이라 인수채무는 **사실**이다
+   *   ⇒ 사용자가 **지분 인수분**을 입력하고 엔진은 스케일하지 않는다.
+   * - 축 B(지분 분할 취득): 갑 한 사람의 **하나의 계약**이라 tranche는 계산 단위일 뿐이다
+   *   ⇒ **물건 전체**를 입력하고 ④가 §159의 B/C 보존을 위해 지분 안분한다.
+   *
+   * 자산 하나만 보면 두 축이 구별되지 않는다(둘 다 `ownershipRatio < 1`).
+   * 이 prop이 없으면 축 B에서 「(지분 인수분)」이라는 **정반대 안내**가 뜬다.
+   */
+  isFractionalSplit?: boolean;
 }
 
 const VALUATION_MODE_OPTIONS = [
@@ -132,7 +144,7 @@ const DONOR_RELATION_OPTIONS = [
   },
 ] as const;
 
-export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
+export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalSplit }: Props) {
   /**
    * ④ 상속·증여 계산기 런처 사양 — null이면 미노출.
    * ⚠️ 주입 규칙(건물분 단독 vs 부수토지 합산)이 자산마다 반대다. 판단은 전부 이 함수에 있다.
@@ -148,7 +160,11 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
   // 공유지분 부담부증여 — 채무는 **해당 지분 인수분**을 입력받는다.
   // 엔진은 평가액(§159의 A·C)만 지분분으로 축소하고 채무는 입력값 그대로 쓴다
   // (물건 전체 채무를 ×지분율로 쪼개면 자동 안분 fallback 정책 위반).
-  const isFractional = getOwnershipRatio(asset) < 1;
+  /**
+   * 「지분 인수분 직접 입력」 규약이 적용되는 축인가 — **축 A 전용**이다.
+   * 축 B(`isFractionalSplit`)에서는 물건 전체를 입력하므로 이 라벨을 쓰면 안 된다.
+   */
+  const isFractional = getOwnershipRatio(asset) < 1 && !isFractionalSplit;
   const shareLabel = `${asset.ownershipNumerator}/${asset.ownershipDenominator}`;
 
   // 상증법 §60~§66 평가 미리보기 (useMemo — store 미러링 금지)
@@ -234,6 +250,14 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate }: Props) {
             공유지분({shareLabel}) 부담부증여 — 아래 채무·보증금·임대료는 <b>이 지분에 대응하는
             인수분</b>을 입력하세요. 기준시가·시가 등 <b>평가액은 물건 전체로 입력</b>하면
             엔진이 지분분으로 환산합니다(소령 §159 — 평가액 A·C만 지분분, 채무 B는 실제 인수액).
+          </p>
+        )}
+        {/* 축 B — 축 A와 **반대** 규약이라 침묵하면 사용자가 지분분을 넣어 세액이 조용히 틀린다. */}
+        {isFractionalSplit && (
+          <p className="text-caption text-rose-700">
+            지분 분할 취득 — 채무·보증금·임대료를 <b>물건 전체(100%) 기준</b>으로 입력하세요.
+            하나의 증여계약이므로 시스템이 지분별로 안분합니다(소령 §159 — 채무비율 B/C는
+            물건 단위로 하나입니다).
           </p>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

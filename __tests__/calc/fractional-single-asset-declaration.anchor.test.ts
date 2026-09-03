@@ -160,12 +160,20 @@ describe("R4 D — 단건 공유지분 선언 게이트", () => {
     ).toBe(true);
   });
 
-  it("D7 부담부증여 × 축 B는 여전히 차단된다 (Gate-B 무간섭 — D5와 짝)", () => {
-    // 선언을 켜도 축 B의 부담부증여는 `transfer-tax-validate.ts` Gate-B가 막는다.
+  it("D7 🔄 부담부증여 × 축 B는 **2026-09-03에 열렸다** (D5와 짝)", () => {
+    // 종전에는 Gate-B가 막았다. `transfer-axis-b-burdened-gift.plan.md`가 열면서
+    // 채무를 지분 안분해 §159의 B/C를 보존한다 — 합계가 단건 100%와 일치한다.
+    // ⚠️ 공익수용은 같은 줄에 있었지만 **여전히 차단**된다(보상가액 축 미검증).
     const a1 = bg({ assetId: 1, ownershipNumerator: "60", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" });
     const a2 = bg({ assetId: 2, ownershipNumerator: "40", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" });
+    expect(msgs([a1, a2]).some((m) => /지분 분할 취득과 함께 계산할 수 없습니다/.test(m))).toBe(false);
+  });
+
+  it("D11 🔴 공익수용 × 축 B는 **여전히 차단**된다 (D7과 짝 — 묶어서 열지 않았다)", () => {
+    const e1 = asset({ assetId: 1, ownershipNumerator: "60", ownershipDenominator: "100", transferCause: "public_expropriation" });
+    const e2 = asset({ assetId: 2, ownershipNumerator: "40", ownershipDenominator: "100", transferCause: "public_expropriation" });
     expect(
-      msgs([a1, a2]).some((m) => /부담부증여·공익수용은 지분 분할 취득과 함께/.test(m)),
+      msgs([e1, e2]).some((m) => /공익수용은 지분 분할 취득과 함께 계산할 수 없습니다/.test(m)),
     ).toBe(true);
   });
 });

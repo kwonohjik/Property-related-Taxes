@@ -184,6 +184,17 @@ interface CompanionRawAsset extends CompanionSplitFields {
    */
   ownershipRatio?: number;
   /**
+   * ⑭ 부담부증여(소령 §159) — 축 B(지분 분할 취득) 컴패니언.
+   *
+   * 🔴 이 매핑이 없으면 ⑫를 통과한 값이 엔진에 **도달하지 못한다**(명시 매핑 = 침묵 strip 지점).
+   *    실측: 40% 컴패니언의 양도차익이 400,000,000(§159 미적용)으로 나왔다 — 정답 116,400,000.
+   *
+   * ⑫(`companionAssetSchema`)의 파싱 결과를 **그대로** 받는다 — 인라인 타입으로 다시 적지 않는다.
+   */
+  burdenedGiftInfo?: z.infer<typeof companionAssetSchema>["burdenedGiftInfo"];
+  /** ⑭ 양도 형태 — 엔진 §159 게이트가 보는 값. `burdenedGiftInfo`와 **짝**이다. */
+  transferType?: z.infer<typeof companionAssetSchema>["transferType"];
+  /**
    * ⑭ 배우자등 이월과세 §97의2 — **⑫(`companionAssetSchema`)의 파싱 결과 그대로**.
    *
    * 🔴 느슨한 인라인 타입으로 다시 적으면 안 된다 — ⑫에 필드가 늘 때 한쪽만 갱신되어
@@ -350,6 +361,10 @@ export function buildCompanionEngineInputs(
     // ⑭ 개산공제(§163⑥) base 지분 축소 — 기준시가는 물건 전체 값을 유지하고 개산공제만 지분분이 된다.
     //    단건 `engine-input.ts:218`·겸용 `route.ts:333`과 같은 축(F39).
     ownershipRatio: c.ownershipRatio,
+    // ⑭ 부담부증여(소령 §159) — 축 B 컴패니언. 없으면 그 지분만 §159를 타지 않아
+    //    양도차익이 「총계약가 × 지분율」로 남는다(실측 400,000,000 vs 정답 116,400,000).
+    burdenedGiftInfo: c.burdenedGiftInfo,
+    transferType: c.transferType,
     // 공익수용 §164⑨ 1호 환산 min[] 특례 — 컴패니언 자산 지원(계획 Q5).
     // 엔진이 게이트 판정(적격 자산·환산·수용·2009.02.04·후보>0) — 여기선 원값만 전달.
     // ⚠️ 이 매핑이 없으면 ⑫ Zod를 통과한 값이 엔진에 **도달하지 못한다**(명시 매핑 = 침묵 strip 지점).

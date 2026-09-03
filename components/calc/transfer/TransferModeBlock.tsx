@@ -33,6 +33,17 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   /** form-global 양도일 (YYYY-MM-DD) — 공익수용 #3 환산 min[] 게이트 */
   transferDate: string;
+  /**
+   * 지분 분할 모드(축 B) 여부 — **채무 입력 규약이 축에 따라 반대**라 필요하다.
+   *
+   * - 축 A(공유 소유·단건): 공유자마다 **별개 증여계약** ⇒ 사용자가 **지분 인수분**을 입력
+   * - 축 B(지분 분할 취득): 갑 한 사람의 **하나의 계약** ⇒ **물건 전체**를 입력하고
+   *   ④가 §159의 B/C 보존을 위해 지분 안분한다
+   *
+   * 자산 하나만 봐서는 두 축이 구별되지 않는다(둘 다 `ownershipRatio < 1`) —
+   * 그래서 폼을 아는 상위(`Step1` splitMode)에서 내려받는다.
+   */
+  isFractionalSplit?: boolean;
 }
 
 // 설명은 상단 안내 문단이 이미 3지선다 전체를 서술하므로 옵션별 description을 두지 않는다
@@ -70,7 +81,7 @@ const UNSUPPORTED_LABELS = (Object.keys(ASSET_KIND_LABELS) as AssetForm["assetKi
   .map((k) => ASSET_KIND_LABELS[k])
   .join(", ");
 
-export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
+export function TransferModeBlock({ asset, onChange, transferDate, isFractionalSplit }: Props) {
   // transferCause=공익수용이면 그것을 우선 표시, 아니면 transferType(일반/부담부증여)
   const currentMode =
     asset.transferCause === "public_expropriation"
@@ -175,7 +186,12 @@ export function TransferModeBlock({ asset, onChange, transferDate }: Props) {
 
       {/* 부담부증여 펼침 — BurdenedGiftBlock 재사용 */}
       {isBurdenedGift && isSupported && (
-        <BurdenedGiftBlock asset={asset} onChange={onChange} transferDate={transferDate} />
+        <BurdenedGiftBlock
+          asset={asset}
+          onChange={onChange}
+          transferDate={transferDate}
+          isFractionalSplit={isFractionalSplit}
+        />
       )}
 
       {/* 공익수용·협의매수 상세 펼침 */}

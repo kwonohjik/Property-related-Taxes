@@ -8,6 +8,9 @@
  * 근거: 디자인 문서 `transfer-tax-burdened-gift-phase2.engine.design.md` Step 2.5.
  */
 
+// ⚠️ `transfer-tax-api-helpers`가 이 파일을 import하므로 **원 위치에서 직접** 가져온다
+//    (helpers 경유 re-export를 쓰면 순환 import가 된다).
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -99,16 +102,50 @@ function buildCarryoverDonorBasis(
  *
  * 호출 조건: primary.transferType === "burdened_gift" (acquisitionCause === "burdened_gift" 레거시도 normalize에서 이전됨)
  */
-export function buildBurdenedGiftInfo(primary: AssetForm): BurdenedGiftInfoPayload {
+/**
+ * 🔴 **축 B 전용** 채무 안분 비율 — 축 A와 **반대**다.
+ *
+ * `scaleBurdenedGiftInfo`(엔진)는 §159의 A·C(평가액·기준시가)만 줄이고 **B(채무)는 그대로** 둔다.
+ * 축 A(공유 소유)에서는 그것이 옳다 — 공유자마다 **별개 증여계약**이라 인수채무는 **사실**이고
+ * 사용자가 지분 인수분을 직접 입력한다.
+ *
+ * 그런데 **축 B(같은 물건 지분 분할 취득)** 는 갑 한 사람의 **하나의 증여계약**이고 tranche는
+ * 세법상 계산 단위일 뿐이다. §159①1호의 **B/C(채무비율)는 물건 단위 하나**여야 하는데,
+ * A만 줄이면 담보평가 항이 **절대금액**이라 C가 채무로 clamp돼 B/C가 1을 넘는다:
+ *
+ * | 카드 | A | C = max(보충적, 담보) | B | B/C |
+ * |---|---|---|---|---|
+ * | 60% | 6억 | max(6억, **6억**) | **6억** | **1.0** 🔴 (정답 0.6) |
+ * | 40% | 4억 | max(4억, **6억**) | **6억** | **1.5** 🔴 |
+ *
+ * 실측: 미안분 시 결정세액 **187,374,000원**(정답 64,600,360의 **2.9배**).
+ *
+ * ⇒ 축 B에서는 채무·보증금·임대료·저당설정액도 **×지분율**로 안분한다. 이는
+ *   **자동 안분 fallback이 아니다** — 「미입력을 추정」하는 것이 아니라 「하나의 값을 §159 산식이
+ *   요구하는 계산 단위로 나누는 것」이다(`feedback_no_silent_apportion_fallback`이 막는 것은 전자).
+ *
+ * ⚠️ 같은 필드가 축에 따라 반대로 처리된다(`feedback_rename_same_name_two_axes`) —
+ *    공통 헬퍼로 통합하지 말 것. 축 판정은 **호출부**가 넘긴다.
+ *
+ * @param debtScaleRatio 축 B일 때 지분율(0<r<1). 미전달·1.0이면 축 A/단독 — 완전 무변경.
+ */
+export function buildBurdenedGiftInfo(
+  primary: AssetForm,
+  debtScaleRatio?: number,
+): BurdenedGiftInfoPayload {
+  const scaleDebt =
+    debtScaleRatio !== undefined && debtScaleRatio > 0 && debtScaleRatio < 1;
+  /** 채무 성분 전용 — 평가액·기준시가에는 쓰지 않는다(엔진 `scaleBurdenedGiftInfo` 소관). */
+  const d = (v: number): number => (scaleDebt ? applyRatio(v, debtScaleRatio!) : v);
   const common = {
     valuationMode: (primary.bgValuationMode || "sangjeungbeop_standard") as
       | "sangjeungbeop_standard"
       | "sangjeungbeop_market",
-    lendingDepositTotal: parseAmount(primary.bgLendingDepositTotal) || 0,
-    mortgageDebtAmount: parseAmount(primary.bgMortgageDebtAmount) || 0,
-    annualRentTotal: parseAmount(primary.bgAnnualRentTotal) || 0,
+    lendingDepositTotal: d(parseAmount(primary.bgLendingDepositTotal) || 0),
+    mortgageDebtAmount: d(parseAmount(primary.bgMortgageDebtAmount) || 0),
+    annualRentTotal: d(parseAmount(primary.bgAnnualRentTotal) || 0),
     mortgageSetAmount: primary.bgMortgageSetAmount
-      ? parseAmount(primary.bgMortgageSetAmount)
+      ? d(parseAmount(primary.bgMortgageSetAmount))
       : undefined,
     marketValueAtTransfer: primary.bgMarketValueAtTransfer
       ? parseAmount(primary.bgMarketValueAtTransfer)

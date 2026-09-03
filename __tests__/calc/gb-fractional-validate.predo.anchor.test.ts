@@ -253,36 +253,44 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
   // ══════════════════════════════════════════════════════════════════
   // GBF-14 — 범위 밖 조합은 계속 차단 (계획 §2-2)
   // ══════════════════════════════════════════════════════════════════
-  describe("GBF-14: 부담부증여·공익수용은 범위 밖 유지", () => {
+  describe("GBF-14: 공익수용은 범위 밖 유지 · 부담부증여는 ✅ 지원", () => {
     /**
-     * ⚠️ **지금은 이 메시지가 뜨지 않는다** — 2026-08-10 실행에서 발견.
+     * 🔄 **2026-09-03 정정 — 부담부증여가 열렸다.**
      *
-     * `collectStepIssues`(`transfer-tax-validate.ts:72~88`)는 **if-else 체인**이고
-     * 자산종류 분기(`:75~80`)가 부담부증여 분기(`:81~87`)보다 **앞**이다.
-     * 일반건물이면 앞 분기가 먼저 잡아 뒤가 실행되지 않는다.
+     * 종전 서술: 「부담부증여·공익수용은 범위 밖으로 유지된다」.
+     * 축 B × 부담부증여를 구현하면서(`transfer-axis-b-burdened-gift.plan.md`)
+     * 부담부증여만 해제했다 — §159는 총양도가를 쓰지 않고 `양도가액 = A × B/C`로 자체
+     * 산정하므로 「지분 분할 양도가액 = 총양도가 × 지분율」과의 비양립이 애초에 없었다.
      *
-     * Phase G가 그 분기에서 `general_building`을 빼면 **자동으로 뒤 분기로 흘러가** 이 두 건이
-     * green으로 전환된다 — 별도 작업이 필요 없다는 계획 §2-2의 결론은 유지되지만,
-     * 「지금도 차단된다」는 서술은 **틀렸다**(계획 개정 4에서 정정).
+     * ⚠️ **공익수용은 그대로 차단**한다 — 보상가액 축의 지분 안분 정합을 재지 않았다.
+     *    같은 줄에 있었다는 이유로 묶어서 열지 말 것.
+     *
+     * ⚠️ 단언을 「부담부증여·공익수용」 **합성 문자열 substring**으로 하고 있었다. 메시지가
+     *    갈라지자 **차단이 유지되는 공익수용까지 함께 빨개졌다** — 동작 변화와 문구 변화를
+     *    구별하지 못하는 단언이었다. 조문별 고유 문구로 바꾼다
+     *    (`feedback_enum_substring_match_forbidden`과 같은 층위).
      */
-    it("부담부증여 × 지분 분할은 계속 차단된다", () => {
+    it("✅ 부담부증여 × 지분 분할은 이제 계산된다", () => {
       const msgs = messages(
         fractionalForm([
           { ...SHARE_A, transferType: "burdened_gift" } as AssetForm,
           { ...SHARE_B, transferType: "burdened_gift" } as AssetForm,
         ]),
       );
-      expect(msgs.some((m) => m.includes("부담부증여·공익수용"))).toBe(true);
+      expect(msgs.some((m) => m.includes("지분 분할 취득과 함께 계산할 수 없습니다"))).toBe(false);
+      expect(msgs.some((m) => m.includes("함께 양도와 같이 계산할 수 없습니다"))).toBe(false);
     });
 
-    it("공익수용 × 지분 분할은 계속 차단된다", () => {
+    it("🔴 공익수용 × 지분 분할은 계속 차단된다", () => {
       const msgs = messages(
         fractionalForm([
           { ...SHARE_A, transferCause: "public_expropriation" } as AssetForm,
           { ...SHARE_B, transferCause: "public_expropriation" } as AssetForm,
         ]),
       );
-      expect(msgs.some((m) => m.includes("부담부증여·공익수용"))).toBe(true);
+      expect(
+        msgs.some((m) => m.includes("공익수용은 지분 분할 취득과 함께 계산할 수 없습니다")),
+      ).toBe(true);
     });
   });
 

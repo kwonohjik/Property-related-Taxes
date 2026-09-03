@@ -12,6 +12,7 @@
  * 기존 단건 엔진(`calculateTransferTax`)을 건별로 재사용하며, 상위에서 합산·통산·비교과세 수행.
  */
 
+import { buildBurdenedGiftBreakdown } from "./burdened-gift-apportionment";
 import {
   calculateTransferTax,
   parseRatesFromMap,
@@ -169,6 +170,25 @@ function computeAggregateOnce(
 
   // M-0: 검증
   validateInput(input);
+
+  /**
+   * M-0.5: 축 B × 부담부증여 — **물건 전체 기준 §159를 1회** 계산한다 (표시 전용).
+   *
+   * 카드는 채무가 지분 안분된 info를 갖는다(§159의 B/C 보존). 그래서 카드별 breakdown을
+   * 합치면 **증여세가 쪼개져** 증여재산공제가 N번 차감되고 누진이 갈라진다(−19,400,000원 실측).
+   * 세액에는 영향이 없다 — 양도세는 아래 M-1의 카드별 결과 합이다.
+   */
+  const burdenedGiftWhole = input.burdenedGiftWholeInfo
+    ? buildBurdenedGiftBreakdown({
+        landStdPriceAtTransfer: input.burdenedGiftWholeInfo.landStdPriceAtTransfer,
+        buildingStdPriceAtTransfer: input.burdenedGiftWholeInfo.buildingStdPriceAtTransfer,
+        landStdPriceAtAcquisition: input.burdenedGiftWholeInfo.landStdPriceAtAcquisition,
+        buildingStdPriceAtAcquisition: input.burdenedGiftWholeInfo.buildingStdPriceAtAcquisition,
+        info: input.burdenedGiftWholeInfo,
+        giftDate: input.burdenedGiftDate,
+        // ⚠️ `ownershipRatio`를 **주지 않는다** — 물건 전체 기준이 이 계산의 존재 이유다.
+      })
+    : undefined;
 
   // M-1: 건별 단건 엔진 호출 (기본공제 스킵, 차손 허용)
   const perAsset = input.properties.map((item, assetIdx) => {
@@ -659,6 +679,8 @@ function computeAggregateOnce(
 
   return {
     properties,
+    // 축 B × 부담부증여 — 물건 전체 §159 1건 (표시 전용, M-0.5)
+    burdenedGift: burdenedGiftWhole,
     totalTransferGain: assetRecords.reduce((s, r) => s + r.result.transferGain, 0),
     totalLongTermHoldingDeduction: assetRecords.reduce((s, r) => s + r.lthd, 0),
     totalIncomeBeforeOffset: assetRecords.reduce((s, r) => s + r.income, 0),

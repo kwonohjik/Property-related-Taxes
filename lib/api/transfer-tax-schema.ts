@@ -450,6 +450,15 @@ const propertyBaseShape = {
    */
   burdenedGiftInfo: burdenedGiftInfoSchema.optional(),
   /**
+   * ⑫ 축 B(지분 분할 취득) × 부담부증여 — **물건 전체(100%) §159 정보**. 표시 전용.
+   *
+   * 위 `burdenedGiftInfo`는 축 B에서 채무가 **지분 안분**돼 있어(§159의 B/C 보존)
+   * 물건 단위 값을 복원할 수 없다. 특히 **증여세를 카드별로 계산하면 증여재산공제가
+   * N번 차감되고 누진이 쪼개진다**(실측 −19,400,000원). 이 필드로 집계가 1회만 계산한다.
+   * **세액에는 영향이 없다** — 양도세는 카드별 결과의 합이다.
+   */
+  burdenedGiftWholeInfo: burdenedGiftInfoSchema.optional(),
+  /**
    * ⑫ 가업상속공제 §97의2④ 의제 취득가액 입력 (소령 §163의2③).
    * familyBusinessInheritance 미제공 시 일반 §97 산식 그대로 적용.
    * ★★★ 침묵 stripping 차단: Zod 객체 정의 없으면 route handler에서 자동 제거됨.
