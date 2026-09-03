@@ -93,6 +93,9 @@ export async function POST(req: NextRequest) {
     generationSkipAssetAmount: parsedData.generationSkipAssetAmount,
     // 감정평가수수료 공제 (§25①2호·§20의3) — ⑭ route 명시 매핑 (누락 시 Zod 통과해도 엔진 미도달)
     appraisalFee: parsedData.appraisalFee,
+    // 🔴 G-07 B1 신고불성실가산세 (국세기본법 §47의2·§47의3) — ⑭ 명시 매핑.
+    //    여기에 없으면 Zod 를 통과하고도 엔진에 닿지 않아 가산세가 **조용히 0**이 된다.
+    filingPenalty: parsedData.filingPenalty,
   };
 
   // ─────────────────────────────────────────────

@@ -142,14 +142,21 @@ export function buildFilingForm9Data(
   const b35 = 0; // 면제세액 — 이중계상 방지
   // ㉖ §74 징수유예세액 — 납부세액(㊳)에서 차감(결정세액 finalTax는 불변, 재결례 940708)
   const b26 = result.culturalHeritageDeferredTax ?? 0;
-  // ㊳ = max(0, ㉔ + ㉕ − ㉖ − ㉗) — 징수유예(산출세액 기준) > 결정세액 시 음수 방지(납부세액 0 하한)
-  const b43 = Math.max(0, result.finalTax - b26);
+  // ㊱ 신고불성실가산세 (「국세기본법」 §47의2·§47의3) — 🔴 G-07 B1.
+  //    신고 **단위** 1회다(상속인별 안분 아님). 미입력이면 0 → display "dash".
+  const b36 = result.underreportPenalty ?? 0;
+  // ㊲ 납부지연가산세 (「국세기본법」 §47의4) — B3 에서 산출한다. 지금은 0.
+  const b37 = 0;
+  // ㊳ = max(0, ㉔ + ㉕ − ㉖ − ㉗) + ㊱ + ㊲
+  //    🔑 0 하한은 **가산세 가산 전**에 건다 — 징수유예(산출세액 기준) > 결정세액이어도
+  //       가산세는 그대로 납부해야 하므로, 하한이 가산세를 삼키면 안 된다.
+  const b43 = Math.max(0, result.finalTax - b26) + b36 + b37;
 
   const values: Record<string, number> = {
     "⑰": b17, "⑱": b18, "⑲": b19, "⑳": b20, "㉑": b21Rate,
     "㉒": b22, "㉓": b23, "㉔": b24, "㉕": 0, "㉖": b26,
     "㉗": b27, "㉘": b28, "㉙": b29, "㉚": 0, "㉛": b31, "㉜": b32, "㉝": b33, "㉞": 0,
-    "㉟": b35, "㊱": 0, "㊲": 0, "㊳": b43,
+    "㉟": b35, "㊱": b36, "㊲": b37, "㊳": b43,
   };
 
   // ── 좌측 행 ──
@@ -189,8 +196,8 @@ export function buildFilingForm9Data(
     { number: "", label: FF9_CALC_LABELS.bequestValue, amount: 0, display: "dash", column: "right" },
     amtRow("㉟", b35, "right", { lawRef: FF9_LAW_REFS["㉟"] }),
     { number: "", label: FF9_CALC_LABELS.exemptedPayable, amount: 0, display: "dash", column: "right" },
-    amtRow("㊱", 0, "right"),
-    amtRow("㊲", 0, "right"),
+    amtRow("㊱", b36, "right"),
+    amtRow("㊲", b37, "right"),
     amtRow("㊳", b43, "right", { forceAmount: true }),
     headerRow(FF9_CALC_LABELS.paymentMethodTitle, "right"),
     amtRow("㊴", 0, "right"),

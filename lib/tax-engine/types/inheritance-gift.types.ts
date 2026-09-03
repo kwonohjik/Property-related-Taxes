@@ -284,6 +284,13 @@ export interface InheritanceTaxInput {
   valuationBaseDate?: string;
   /** 감정평가수수료 입력 (§25①2호·시행령 §20의3) */
   appraisalFee?: AppraisalFeeInput;
+  /**
+   * 🔴 G-07 B1: 신고불성실가산세 입력 — 「국세기본법」 §47의2·§47의3.
+   *
+   * ⭐ **신고 단위**다 — 상속인별 안분 입력이 아니다(상속세는 1건의 신고).
+   * 미입력이면 정기신고·과소신고 없음으로 보아 가산세 0(종전 동작 보존).
+   */
+  filingPenalty?: import("../inheritance-gift-penalty").InheritanceGiftPenaltyInput;
 }
 
 /** 상속세 계산 결과 전체 */
@@ -388,6 +395,21 @@ export interface InheritanceTaxResult extends TaxResultMeta {
   appraisalFeeDetail?: AppraisalFeeResult;
   /** §74 징수유예세액 (별지9호 ㉖) — echo, finalTax(결정세액) 불변. 별지9호 ㊳에서 차감 */
   culturalHeritageDeferredTax?: number;
+  /** 🔴 G-07 B1: 신고불성실가산세 (별지9호 ㊱) — 「국세기본법」 §47의2·§47의3. 신고 단위 1회. */
+  underreportPenalty?: number;
+  /**
+   * 🔴 G-07 B1: 신고불성실가산세 **산출근거**. 기준금액·세율·§48②2호 감면·§47의3④1호
+   * 적용제외를 담는다. 미입력이면 undefined.
+   */
+  filingPenaltyDetail?: import("../inheritance-gift-penalty").InheritanceGiftPenaltyResult;
+  /**
+   * 🔴 G-07 B1: **총 납부세액** = `finalTax`(결정세액) + 가산세. 가산세가 0이면 undefined.
+   *
+   * 🔑 `finalTax`는 **결정세액 그대로 둔다** — 별지9호 ㉔ 축이고 연부연납(§71)·분납(§70②)
+   *    산정 base 다. 별지9호 ㊳「납부할세액(합계액)」이 `㉔+㉕−㉖−㉗+㉟+㊱+㊲`이므로
+   *    **그 칸이 이 값**이다(㉖ 징수유예 차감 후).
+   */
+  totalPayableWithPenalty?: number;
   /** §74 징수유예 상세 (결과 카드 ▼펼침) */
   culturalHeritageDeferralDetail?: CulturalHeritageDeferralDetail;
 }

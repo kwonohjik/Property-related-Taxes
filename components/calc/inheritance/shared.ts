@@ -17,6 +17,10 @@ import type { ExemptionCheckedItem } from "@/lib/tax-engine/exemption-evaluator"
 import type { AppraisalFeeFormFields } from "@/lib/calc/appraisal-fee-form";
 import { INITIAL_APPRAISAL_FEE_FIELDS } from "@/lib/calc/appraisal-fee-form";
 import type { AddressValue } from "@/components/ui/address-search";
+import type {
+  InheritanceGiftFilingStatus,
+  UnderReportExclusion,
+} from "@/lib/tax-engine/inheritance-gift-penalty";
 
 export interface FormState extends AppraisalFeeFormFields {
   // Step 0
@@ -115,6 +119,23 @@ export interface FormState extends AppraisalFeeFormFields {
   isFiledOnTime: boolean;
   /** §21① 단서 — 완전 무신고 여부 (true면 일괄공제 5억 고정). 신고상태 라디오 "무신고" 선택 시 set. */
   isUnfiled: boolean;
+  /**
+   * 🔴 G-07 B1 — 신고불성실가산세(「국세기본법」 §47의2·§47의3) 하위 입력.
+   *
+   * ⚠️ 3-state 는 여기서 **새 필드로 승격하지 않는다** — `isFiledOnTime`+`isUnfiled` 조합에
+   *    이미 §21① 단서(일괄공제 5억 고정) 축이 걸려 있어, 이름을 바꾸면 공제 축까지 흔든다.
+   *    아래 4칸은 그 조합에서 파생되는 **하위** 입력이다.
+   */
+  /** 기한후신고일 — §48②2호 감면 구간 판정 (기한후신고에서만 의미) */
+  lateFilingDate: string;
+  /** 「결정할 것을 미리 알고」 기한후신고서 제출 — §48②2호 괄호 배제 */
+  priorAssessmentNotified: boolean;
+  /** 과소신고 여부 — 정기신고에서만 의미 (§47의3) */
+  isUnderReported: boolean;
+  /** 당초 신고세액 — §47의3① 「과소신고한 납부세액」 산정 base */
+  originalFiledTax: string;
+  /** §47의3④1호 적용제외 사유 — 있으면 과소신고가산세 0 */
+  underReportExclusion: UnderReportExclusion | "";
   foreignTaxPaid: string;
   /** 국외 상속재산 과세표준 (§29/상증령 §21① 한도식 분자) */
   foreignInheritanceTaxBase: string;
@@ -240,6 +261,11 @@ export const INITIAL_FORM: FormState = {
   generationSkipAssetAmount: "",
   isFiledOnTime: true,
   isUnfiled: false,
+  lateFilingDate: "",
+  priorAssessmentNotified: false,
+  isUnderReported: false,
+  originalFiledTax: "",
+  underReportExclusion: "",
   foreignTaxPaid: "",
   foreignInheritanceTaxBase: "",
   shortTermReinheritPriorDeathDate: "",
@@ -375,4 +401,21 @@ export function pruneOrphanHeirReferences(form: FormState): FormState {
     priorGifts,
     farming,
   };
+}
+
+/**
+ * 🔴 G-07 B1: 신고 상태 3-state 파생 — **단일 소스**.
+ *
+ * 상속 폼은 `filingStatus` 단일 필드를 갖지 않는다. `isUnfiled`에 §21① 단서(일괄공제
+ * 5억 고정) 축이, `isFiledOnTime`에 §69 신고세액공제 축이 이미 걸려 있어 이름을 바꾸면
+ * 공제 축까지 흔들리기 때문이다.
+ *
+ * ⚠️ 이 파생을 **라디오(⑤)와 ④가 각자 하면** 조용히 어긋난다 — 한쪽만 고치면 화면과
+ *    payload 가 다른 상태를 말하게 된다. 양쪽 모두 이 함수를 부른다.
+ */
+export function resolveInheritanceFilingStatus(
+  form: Pick<FormState, "isFiledOnTime" | "isUnfiled">,
+): InheritanceGiftFilingStatus {
+  if (form.isUnfiled) return "none";
+  return form.isFiledOnTime ? "on_time" : "late";
 }

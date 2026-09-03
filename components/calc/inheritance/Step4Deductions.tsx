@@ -27,6 +27,8 @@ import { useMemo, useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { DateInput } from "@/components/ui/date-input";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { AutoSuggestBadge } from "./AutoSuggestBadge";
 import { FamilyBusinessEligibilitySection } from "./FamilyBusinessEligibilitySection";
 import { InstallmentInputSection } from "./InstallmentInputSection";
@@ -41,6 +43,7 @@ import { InheritanceReviewSummary } from "./InheritanceReviewSummary";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Step4DeductionChecklist } from "./Step4DeductionChecklist";
 import { isManualItemActive } from "@/lib/calc/inheritance-deduction-checklist";
+import { resolveInheritanceFilingStatus } from "./shared";
 import type { FormState, FormSet } from "./shared";
 import type { Step4Autos } from "./steps";
 
@@ -488,7 +491,7 @@ export function Step4({
         <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-semibold text-violet-700">
-              신고 상태 (§67 · §69 신고세액공제 · §21① 일괄공제)
+              신고 상태 (상증법 §67 · §69 신고세액공제 · §21① 일괄공제 / 국세기본법 §47의2·§47의3)
             </p>
             <LawArticleModal legalBasis="상속세및증여세법 §69" label="§69 신고세액공제" />
             <LawArticleModal legalBasis="상속세및증여세법 §21" label="§21 일괄공제" />
@@ -499,33 +502,118 @@ export function Step4({
             lawLinks="상증법"
             name="filing-status"
             tone="violet"
-            value={form.isUnfiled ? "none" : form.isFiledOnTime ? "on_time" : "late"}
+            value={resolveInheritanceFilingStatus(form)}
             onChange={(v) => {
-              if (v === "on_time") set({ isFiledOnTime: true, isUnfiled: false });
-              else if (v === "late") set({ isFiledOnTime: false, isUnfiled: false });
-              else set({ isFiledOnTime: false, isUnfiled: true });
+              // 🔑 대상 밖이 되는 하위 칸을 함께 비운다 — 화면에서 사라진 값이 payload 로
+              //    새면 가산세 base·감면율이 조용히 움직인다(부동산 G-10과 같은 stale 누출).
+              const cleared = {
+                ...(v !== "late" ? { lateFilingDate: "", priorAssessmentNotified: false } : {}),
+                ...(v !== "on_time"
+                  ? { isUnderReported: false, originalFiledTax: "", underReportExclusion: "" as const }
+                  : {}),
+              };
+              if (v === "on_time") set({ isFiledOnTime: true, isUnfiled: false, ...cleared });
+              else if (v === "late") set({ isFiledOnTime: false, isUnfiled: false, ...cleared });
+              else set({ isFiledOnTime: false, isUnfiled: true, ...cleared });
             }}
             options={[
               {
                 value: "on_time",
                 label: "법정기한 내 신고 (정기신고)",
                 description:
-                  "상속개시일로부터 6개월 이내 신고 — 신고세액공제 3% 적용 · 일괄공제 max(기초+인적, 5억)",
+                  "상속개시일이 속하는 달의 말일부터 6개월 이내 신고 (§67① — 비거주자 9개월 §67④) — 신고세액공제 3% 적용 · 일괄공제 max(기초+인적, 5억)",
               },
               {
                 value: "late",
                 label: "기한후신고 (국세기본법 §45의3)",
                 description:
-                  "법정기한 경과 후 신고 — 신고세액공제 미적용 · 일괄공제 max 적용 (단서 미해당). 국세기본법 §47의2 무신고가산세(§48②2호 감면 대상)는 이 계산에 포함되지 않습니다.",
+                  "법정기한 경과 후 신고 — 신고세액공제 미적용 · 일괄공제 max 적용 (단서 미해당) · 무신고가산세 20% (국세기본법 §47의2①2호), 신고 시기에 따라 §48②2호 감면(1개월 50% · 3개월 30% · 6개월 20%)",
               },
               {
                 value: "none",
                 label: "무신고",
                 description:
-                  "정기·기한후신고 모두 없음 — 신고세액공제 미적용 · 일괄공제 5억 고정 (§21① 단서). 국세기본법 §47의2 무신고가산세는 이 계산에 포함되지 않습니다.",
+                  "정기·기한후신고 모두 없음 — 신고세액공제 미적용 · 일괄공제 5억 고정 (§21① 단서) · 무신고가산세 20% (국세기본법 §47의2①2호). 기한후신고가 아니므로 §48②2호 감면 대상이 아닙니다.",
               },
             ]}
           />
+
+          {/* ── 기한후신고 — §48②2호 감면 구간 판정 입력 ─────────────── */}
+          {resolveInheritanceFilingStatus(form) === "late" && (
+            <div className="space-y-2">
+              <FieldCard
+                label="기한후신고일"
+                hint="법정신고기한(상속개시일이 속한 달의 말일 + 6개월, 비거주자 9개월)이 지난 후 언제 신고했는지 — 감면율이 갈립니다"
+              >
+                <DateInput
+                  value={form.lateFilingDate}
+                  onChange={(v) => set({ lateFilingDate: v })}
+                />
+              </FieldCard>
+              <ToggleCard
+                tone="rose"
+                variant="chip"
+                title="결정할 것을 미리 알고 신고"
+                description="관할 세무서가 결정할 것을 미리 알고 기한후신고서를 제출한 경우 §48②2호 감면이 배제됩니다"
+                checked={form.priorAssessmentNotified}
+                onCheckedChange={(v) => set({ priorAssessmentNotified: v })}
+              />
+            </div>
+          )}
+
+          {/* ── 정기신고 — 과소신고(§47의3) 축 ──────────────────────── */}
+          {resolveInheritanceFilingStatus(form) === "on_time" && (
+            <ToggleCard
+              tone="rose"
+              title="과소신고 (국세기본법 §47의3)"
+              description="신고는 했으나 납부할 세액을 적게 신고한 경우 — 과소신고납부세액의 10%"
+              checked={form.isUnderReported}
+              onCheckedChange={(v) =>
+                set({
+                  isUnderReported: v,
+                  ...(!v ? { originalFiledTax: "", underReportExclusion: "" as const } : {}),
+                })
+              }
+            >
+              <div className="space-y-2">
+                <CurrencyInput
+                  label="당초 신고세액"
+                  value={form.originalFiledTax}
+                  onChange={(v) => set({ originalFiledTax: v })}
+                  hint="최초 신고한 납부세액 — 「과소신고한 납부세액」은 결정세액에서 이 금액을 뺀 값입니다 (국세기본법 §47의3①)"
+                />
+                <FieldCard
+                  label="적용제외 사유 (국세기본법 §47의3④1호)"
+                  hint="상속·증여에만 있는 제외 사유입니다. 해당하면 과소신고가산세를 적용하지 않습니다."
+                >
+                  <select
+                    value={form.underReportExclusion}
+                    onChange={(e) =>
+                      set({
+                        underReportExclusion: e.target
+                          .value as FormState["underReportExclusion"],
+                      })
+                    }
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">해당 없음</option>
+                    <option value="ownership_dispute">
+                      가. 소유권 소송 등으로 상속재산이 확정되지 않았던 경우
+                    </option>
+                    <option value="deduction_error">
+                      나. 상증법 §18~§24·§53·§53의2·§54 공제 적용 착오
+                    </option>
+                    <option value="supplementary_valuation">
+                      다. 상증법 §60②③·§66 보충적 평가액으로 과세표준 결정
+                    </option>
+                    <option value="corporate_adjustment">
+                      라. 법인세 경정에 따른 §45의3~§45의5 증여의제이익 변경
+                    </option>
+                  </select>
+                </FieldCard>
+              </div>
+            </ToggleCard>
+          )}
         </div>
 
         {/* 외국납부세액공제 §29 — 수동 항목 */}

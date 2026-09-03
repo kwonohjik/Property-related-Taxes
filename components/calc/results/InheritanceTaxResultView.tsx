@@ -16,6 +16,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { SummaryRow } from "./SummaryRow";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { PenaltyNotIncludedNotice } from "@/components/calc/results/shared/PenaltyNotIncludedNotice";
+import { FilingPenaltyDetailCard } from "@/components/calc/results/shared/FilingPenaltyDetailCard";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { HeirAllocationSummaryTable } from "@/components/calc/results/HeirAllocationSummaryTable";
 import { FilingForm9CoverSection } from "@/components/calc/inheritance/filing-form-9/FilingForm9CoverSection";
@@ -253,9 +254,32 @@ export function InheritanceTaxResultView({
               />
             </>
           )}
+          {/**
+           * 🔴 G-07 B1: 신고불성실가산세 — 「국세기본법」 §47의2·§47의3. **신고 단위 1회**다
+           * (상속인별 안분 아님). `finalTax`(결정세액)는 불변이고 총 납부세액을 따로 낸다.
+           */}
+          {(result.underreportPenalty ?? 0) > 0 && (
+            <>
+              <SummaryRow
+                label="신고불성실가산세 (국세기본법 §47의2·§47의3)"
+                value={`+ ${formatKRW(result.underreportPenalty ?? 0)}`}
+                sub
+              />
+              <SummaryRow
+                label="총 납부세액 (결정세액 + 가산세)"
+                value={formatKRW(result.totalPayableWithPenalty ?? result.finalTax)}
+                highlight
+              />
+            </>
+          )}
         </div>
 
-        {/* 🔴 G-07: 법정기한 내 신고가 아니면(기한후신고·무신고) 가산세 미포함을 고지한다. */}
+        {result.filingPenaltyDetail && (
+          <FilingPenaltyDetailCard detail={result.filingPenaltyDetail} />
+        )}
+
+        {/* 🔴 G-07: 법정기한 내 신고가 아니면 아직 산출하지 않는 가산세를 고지한다.
+            B1으로 §47의2·§47의3은 산출되므로, 남은 축(부정행위 40·60% · 납부지연 §47의4)만 알린다. */}
         {result.creditDetail.isFiledOnTime === false && (
           <div className="mt-4">
             <PenaltyNotIncludedNotice taxLabel="상속세" />

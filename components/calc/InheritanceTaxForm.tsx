@@ -51,6 +51,8 @@ import {
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import { injectSuperficiesRemainingYears, injectIntangibleRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate, injectTrustBenefitRemainingYears, injectPeriodicRemainingYears, injectCryptoUnitPriceIfTimeseries } from "@/lib/calc/estate-item-valuation";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";
+import { buildFilingPenaltyInput } from "@/lib/calc/inheritance-gift-filing-penalty-input";
+import { getInheritanceFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import { applyCorporateGiftTaxFallback } from "@/lib/calc/prior-gift-auto-tax";
 import {
   suggestSpouseActualAmount,
@@ -67,6 +69,7 @@ import {
   STEPS,
   pruneOrphanHeirReferences,
   migrateLegacyOtherHeirs,
+  resolveInheritanceFilingStatus,
 } from "@/components/calc/inheritance/shared";
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
 import {
@@ -598,6 +601,14 @@ export function InheritanceTaxForm() {
           : undefined,
       // 감정평가수수료 공제 (§25①2호·시행령 §20의3)
       appraisalFee: buildAppraisalFee(form),
+      // 🔴 G-07 B1 — 신고불성실가산세 (「국세기본법」 §47의2·§47의3).
+      //   게이팅은 증여와 공용 leaf. 여기서 넘기는 것은 **상속 고유의 법정신고기한**뿐 —
+      //   §67① 상속개시일이 속한 달의 말일 + 6개월, §67④ 비거주자 9개월.
+      ...buildFilingPenaltyInput(
+        resolveInheritanceFilingStatus(form),
+        form,
+        getInheritanceFilingDueDates(form.deathDate, form.decedentType).filing || undefined,
+      ),
     };
   };
 

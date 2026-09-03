@@ -49,7 +49,11 @@ test.describe("§21① 단서 무신고 일괄공제", () => {
     // 신고 상태는 Step4 C그룹(세액공제) progressive disclosure에 접힘 → 그룹 펼치기
     await page.getByRole("button", { name: /신고 상태·외국납부·단기재상속 세액공제/ }).click();
     await expect(
-      page.getByText("신고 상태 (§67 · §69 신고세액공제 · §21① 일괄공제)").first(),
+      page
+        .getByText(
+          "신고 상태 (상증법 §67 · §69 신고세액공제 · §21① 일괄공제 / 국세기본법 §47의2·§47의3)",
+        )
+        .first(),
     ).toBeVisible();
     await page.getByText("무신고", { exact: true }).click();
 
