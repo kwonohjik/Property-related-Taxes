@@ -34,9 +34,8 @@ import { tagGbCards } from "./general-building-part-cards";
 import { remapGbSwap } from "./general-building-part-cards";
 import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
 import { buildProperties } from "./general-building-route-cards";
-import type { companionAssetSchema, reductionSchema } from "@/lib/api/transfer-tax-schema-sub";
+import type { companionAssetSchema } from "@/lib/api/transfer-tax-schema-sub";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
-import { splitAcquisitionShape } from "@/lib/api/transfer-tax-schema-split";
 import { resolveCompanionSplit, splitCompanionIntoTwo } from "./bundled-companion-split";
 import {
   calculateHoldingPeriod,
@@ -175,113 +174,27 @@ type CompanionOwnedKeys = Exclude<
  */
 type CompanionContextOnlyKeys = "buildingFootprintArea" | "isUrbanArea" | "appurtenantLandZone";
 
-type CompanionSplitFields = Pick<
-  z.infer<typeof companionAssetSchema>,
-  keyof typeof splitAcquisitionShape
->;
-
-interface CompanionRawAsset extends CompanionSplitFields {
-  assetId: string;
-  assetLabel?: string;
-  assetKind:
-    | "housing"
-    | "land"
-    | "building"
-    | "commercial_building"
-    | "presale_right"
-    | "right_to_move_in"
-    | "redevelopment_apt"
-    | "general_building";
-  acquisitionDate?: string;
-  acquisitionCause: TransferTaxItemInput["acquisitionCause"];
-  decedentAcquisitionDate?: string;
-  /**
-   * §154⑧3호 상속주택 자체 양도 — 동일세대 게이트 + 통산 보유 기산일·통산 거주 개월.
-   * ⑫(`companionAssetSchema`)·⑬(`buildAssetPayload`)에는 있는데 ⑭만 빠져 있었다(F13):
-   * 세 값이 엔진에 도달하지 않아 컴패니언 상속주택의 §154① 비과세가 통째로 사라졌다.
-   * (엔진이 `acquisitionCause === "inheritance"` 게이트를 내부에서 판정하므로 여기서는 원값만 전달 —
-   *  단건 `engine-input.ts:71-73`과 같은 형태.)
-   */
-  decedentSameHouseholdBeforeInheritance?: boolean;
-  decedentCohabitationHoldingStartDate?: string;
-  decedentCohabitationResidenceMonths?: number;
-  donorAcquisitionDate?: string;
-  assetContractDate?: string;
-  capitalExpenditure?: number;
-  transferExpense?: number;
-  useEstimatedAcquisition?: boolean;
-  standardPriceAtAcquisition?: number;
-  standardPriceAtTransfer?: number;
-  /** §164⑧ 동일조정기간 환산 (⑫ companionAssetSchema와 같은 형태) */
-  sameAdjustmentPeriod?: import("@/lib/tax-engine/types/transfer.types").SameAdjustmentPeriodTransferInput;
-  // 공익수용 §164⑨ 1호 환산 min[] 특례 (계획 Q5 — 컴패니언 지원).
-  // ⑫ `transfer-tax-schema-sub.ts` 컴패니언 스키마와 1:1이어야 한다(누락 시 침묵 strip).
-  transferCause?: "general" | "public_expropriation";
-  /** §77 직접 경작 토지 — 농특세령 §4①1호 괄호 (D11-02). ⑫와 1:1. */
-  isSelfCultivatedExpropriatedLand?: boolean;
-  standardPricePerSqmAtTransfer?: number;
-  transferArea?: number;
-  compensationPerSqm?: number;
-  compensationBasisStdPrice?: number;
-  // §164⑨2호 공매·경락 특례 (P4 — 컴패니언 지원, 1호와 대칭)
-  isAuctionTransfer?: boolean;
-  auctionPrice?: number;
-  // §164⑨1호 주택 총액 트랙 (P5 — 컴패니언 주택 지원)
-  housingCompensationTotal?: number;
-  housingCompensationBasisTotal?: number;
-  residencePeriodMonths?: number;
-  isUnregistered?: boolean;
-  isNonBusinessLand?: boolean;
-  isOneHousehold?: boolean;
-  /**
-   * ⑫ `companionAssetSchema.reductions`(= `z.array(reductionSchema)`)의 파싱 결과 그대로.
-   *
-   * 🔴 느슨한 `Array<{ type: string; [key: string]: unknown }>`로 두면 안 된다 —
-   *    정본 매퍼(`mapReductionsToEngine`)가 요구하는 판별 유니온과 어긋나 캐스팅으로 때우게 되고,
-   *    variant별 일자 변환 누락을 컴파일러가 다시 못 잡는다(F14가 그렇게 발생했다).
-   */
-  reductions?: Array<z.infer<typeof reductionSchema>>;
-  manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
-  /**
-   * 토지 성질 명시 입력 (assetKind === "land" 전용).
-   * Zod companion schema의 landNature enum에서 도출됨.
-   * - "appurtenant_to_housing": 주택 부수토지 (§104①2호 괄호·영 §167의5 일체과세 대상)
-   * - "non_appurtenant": 독립 나대지
-   */
-  landNature?: "appurtenant_to_housing" | "non_appurtenant";
-  areaM2?: number;
-  totalPropertyTransferPrice?: number;
-  /**
-   * 공유지분율 (0<r≤1) — 필요경비 개산공제(§163⑥) base 축소 전용.
-   * ⑫(`companionAssetSchema:ownershipRatio`)·⑬(`buildAssetPayload`)에는 있었는데 ⑭만 빠져 있어
-   * 지분 자산의 개산공제가 100% 기준시가로 계산됐다(F39).
-   */
-  ownershipRatio?: number;
-  /**
-   * ⑭ 부담부증여(소령 §159) — 축 B(지분 분할 취득) 컴패니언.
-   *
-   * 🔴 이 매핑이 없으면 ⑫를 통과한 값이 엔진에 **도달하지 못한다**(명시 매핑 = 침묵 strip 지점).
-   *    실측: 40% 컴패니언의 양도차익이 400,000,000(§159 미적용)으로 나왔다 — 정답 116,400,000.
-   *
-   * ⑫(`companionAssetSchema`)의 파싱 결과를 **그대로** 받는다 — 인라인 타입으로 다시 적지 않는다.
-   */
-  /** ⑫의 파싱 결과를 그대로 받는다 — 인라인 타입으로 다시 적지 않는다(F13·F15 실패 모드). */
-  redevelopment?: z.infer<typeof companionAssetSchema>["redevelopment"];
-  generalBuildingValuation?: z.infer<typeof companionAssetSchema>["generalBuildingValuation"];
-  commercialAppurtenantLand?: z.infer<typeof companionAssetSchema>["commercialAppurtenantLand"];
-  commercialBuildingValuation?: z.infer<typeof companionAssetSchema>["commercialBuildingValuation"];
-  burdenedGiftInfo?: z.infer<typeof companionAssetSchema>["burdenedGiftInfo"];
-  /** ⑭ 양도 형태 — 엔진 §159 게이트가 보는 값. `burdenedGiftInfo`와 **짝**이다. */
-  transferType?: z.infer<typeof companionAssetSchema>["transferType"];
-  /**
-   * ⑭ 배우자등 이월과세 §97의2 — **⑫(`companionAssetSchema`)의 파싱 결과 그대로**.
-   *
-   * 🔴 느슨한 인라인 타입으로 다시 적으면 안 된다 — ⑫에 필드가 늘 때 한쪽만 갱신되어
-   *    조용히 strip된다(F14가 `reductions`에서 그렇게 발생했다).
-   *    일자는 아직 **string**이다(JSON 경유) — 매핑에서 `toDate`로 변환한다.
-   */
-  carryoverTaxation?: z.infer<typeof companionAssetSchema>["carryoverTaxation"];
-}
+/**
+ * ⑭ 컴패니언 원시 자산 — **⑫ 스키마에서 전면 파생**한다 (장치 1, 2026-09-04).
+ *
+ * ## 왜 손으로 쓰지 않는가
+ *
+ * 종전에는 `CompanionSplitFields`(분리취득 24키)만 파생하고 **나머지 44키를 손으로 나열**했다.
+ * 그러면 ⑫에 필드가 늘어도 여기 적지 않는 한 **타입에 나타나지 않아 접근조차 못 한다**
+ * — 이 파일 헤더가 경고하는 F13·F15의 절반(갭 1)이다.
+ *
+ * **실측**(2026-09-04): 손으로 쓴 44키 **전부**가 ⑫에 존재했고, 전면 파생으로 바꿔도
+ * `tsc` 에러 **0건**이었다 — 좁힘 override가 하나도 필요 없다. 그리고 파생 전에는
+ * ⑫ 전용 키 접근이 `TS2339`로 막혔고(예: `inheritanceValuation`), 파생 후에는 통과한다.
+ *
+ * ## 갭 1만 닫는다 — 갭 2는 아래 키 커버리지 가드가 막는다
+ *
+ * 「타입에 있다」와 「조립부가 싣는다」는 다른 문제다. F13·F15가 실제로 터진 곳은 후자이고,
+ * 그쪽은 `_companionKeyCoverageGuards`가 담당한다. 두 장치는 **함께** 있어야 한다.
+ *
+ * 계획서: `docs/02-design/features/companion-derived-type-guard.plan.md`
+ */
+type CompanionRawAsset = z.infer<typeof companionAssetSchema>;
 
 interface CompanionApportioned {
   assetLabel?: string;
@@ -574,7 +487,10 @@ export function buildCompanionEngineInputs(
    *
    * ⑫가 파싱한 값이 여기서 **열거되지 않으면 조용히 사라진다.** 이 파일 헤더가 스스로
    * 경고하는 실패 모드이고, F13·F15가 실제로 터진 지점이다 — 필드는 타입에 **있었고**
-   * 조립부가 안 실었다. 타입 파생(`CompanionSplitFields`)은 그 갭을 못 막는다.
+   * 조립부가 안 실었다.
+   *
+   * 🔑 **`CompanionRawAsset` 전면 파생(장치 1)은 이 갭을 못 막는다.** 파생은 「타입에
+   *    나타난다」(갭 1)까지이고, 「조립부가 싣는다」(갭 2)는 이 가드만 본다. 둘은 함께 있어야 한다.
    *
    * ## 어떻게 막는가
    *
