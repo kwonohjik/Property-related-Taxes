@@ -197,7 +197,7 @@ describe("PU-3 당초 신고세액·기납부세액이 base 에서 빠진다", (
 // ============================================================
 
 describe("PU-4 납부지연가산세", () => {
-  it("PU-4-1: 미납 10,000,000 · 기한 2024-08-31 · 납부 2024-10-01 → 31일 × 0.022% = 68,200", () => {
+  it("PU-4-1: 미납 10,000,000 · 기한 2024-08-31 · 납부 2024-10-01 → 30일 × 0.022% = 66,000", () => {
     const r = calculateStockTransferTax(
       dom({
         unpaidTax: 10_000_000,
@@ -205,7 +205,7 @@ describe("PU-4 납부지연가산세", () => {
         actualPaymentDate: new Date("2024-10-01"),
       }),
     );
-    expect(r.latePaymentPenalty).toBe(68_200);
+    expect(r.latePaymentPenalty).toBe(66_000);
   });
 
   it("PU-4-2: 기한 당일 납부 → 경과일 0 → 가산세 0", () => {
@@ -227,8 +227,8 @@ describe("PU-4 납부지연가산세", () => {
         actualPaymentDate: new Date("2024-10-01"),
       }),
     );
-    // 산출 19,500,000 + 신고불성실 7,800,000 + 납부지연 68,200
-    expect(r.finalTax).toBe(27_368_200);
+    // 산출 19,500,000 + 신고불성실 7,800,000 + 납부지연 66,000 (G-03: 산정 30일 — 납부일 전날까지)
+    expect(r.finalTax).toBe(27_366_000);
   });
 
   it("PU-4-4: 다종목에서도 납부지연은 신고 단위 1회", () => {
@@ -240,6 +240,6 @@ describe("PU-4 납부지연가산세", () => {
       }),
       fx(100_000_000),
     ]);
-    expect(agg.totalLatePaymentPenalty).toBe(68_200);
+    expect(agg.totalLatePaymentPenalty).toBe(66_000);
   });
 });

@@ -163,27 +163,33 @@ describe("calculateDelayedPaymentPenalty — 지연납부가산세", () => {
     expect(result.delayedPaymentPenalty).toBe(0);
   });
 
-  it("D3 30일 경과 (2024년 — 현행 0.022%)", () => {
+  /**
+   * 🔴 G-03 (2026-09-03): 산정기간은 「법정납부기한의 **다음 날**부터 납부일의 **전날**까지」다
+   * (국세기본법 §47의4①1호). 종전 기댓값은 종기를 납부일 당일로 잡아 전 건이 하루 과다했다.
+   * 아래 기댓값은 전부 `(납부일 − 기한) − 1`일로 정정한 것이다.
+   */
+  it("D3 30일 뒤 납부 (2024년 — 현행 0.022%) — 산정일수 29일", () => {
     const result = calculateDelayedPaymentPenalty({
       unpaidTax,
       paymentDeadline: deadline,
       actualPaymentDate: new Date("2024-10-30"),
     });
-    expect(result.elapsedDays).toBe(30);
+    // 2024-10-01 ~ 2024-10-29 = 29일 (납부일 10-30의 전날까지)
+    expect(result.elapsedDays).toBe(29);
     expect(result.dailyRate).toBe(0.00022);
-    // 10_000_000 × 30 × 0.00022 = 66,000
-    expect(result.delayedPaymentPenalty).toBe(66_000);
+    // 10_000_000 × 29 × 22/100,000 = 63,800
+    expect(result.delayedPaymentPenalty).toBe(63_800);
   });
 
-  it("D4 365일 경과", () => {
+  it("D4 365일 뒤 납부 — 산정일수 364일", () => {
     const result = calculateDelayedPaymentPenalty({
       unpaidTax,
       paymentDeadline: deadline,
       actualPaymentDate: new Date("2025-09-30"),
     });
-    expect(result.elapsedDays).toBe(365);
-    // 10_000_000 × 365 × 0.00022 = 803,000
-    expect(result.delayedPaymentPenalty).toBe(803_000);
+    expect(result.elapsedDays).toBe(364);
+    // 10_000_000 × 364 × 22/100,000 = 800,800
+    expect(result.delayedPaymentPenalty).toBe(800_800);
   });
 
   it("D5 2021년 납부 — 이전 이자율 0.025% 적용", () => {
@@ -193,9 +199,32 @@ describe("calculateDelayedPaymentPenalty — 지연납부가산세", () => {
       actualPaymentDate: new Date("2021-07-01"),
     });
     expect(result.dailyRate).toBe(0.00025);
-    // 31일 경과: 10_000_000 × 31 × 0.00025 = 77,500
-    expect(result.elapsedDays).toBe(31);
-    expect(result.delayedPaymentPenalty).toBe(77_500);
+    // 2021-06-01 ~ 2021-06-30 = 30일: 10_000_000 × 30 × 25/100,000 = 75,000
+    expect(result.elapsedDays).toBe(30);
+    expect(result.delayedPaymentPenalty).toBe(75_000);
+  });
+
+  /** 🔴 G-03 경계 — 1일 지연은 법정 산정기간이 0일이라 가산세가 없다. */
+  it("D3b 1일 뒤 납부 — 산정기간 0일이라 가산세 0 (§47의4①1호)", () => {
+    const result = calculateDelayedPaymentPenalty({
+      unpaidTax,
+      paymentDeadline: deadline,
+      actualPaymentDate: new Date("2024-10-01"),
+    });
+    expect(result.elapsedDays).toBe(0);
+    expect(result.delayedPaymentPenalty).toBe(0);
+  });
+
+  /** 🔴 G-03 경계 — 2일 지연이 가산세가 붙는 최소 격자(산정기간 1일). */
+  it("D3c 2일 뒤 납부 — 산정일수 1일", () => {
+    const result = calculateDelayedPaymentPenalty({
+      unpaidTax,
+      paymentDeadline: deadline,
+      actualPaymentDate: new Date("2024-10-02"),
+    });
+    expect(result.elapsedDays).toBe(1);
+    // 10_000_000 × 1 × 22/100,000 = 2,200
+    expect(result.delayedPaymentPenalty).toBe(2_200);
   });
 
   it("D6 미납세액 0 — 가산세 0", () => {
@@ -213,7 +242,8 @@ describe("calculateDelayedPaymentPenalty — 지연납부가산세", () => {
       paymentDeadline: deadline,
       actualPaymentDate: new Date("2024-10-30"),
     });
-    expect(result.steps.some(s => s.label === "경과일수")).toBe(true);
+    // G-03: 라벨을 「경과일수」 → 「산정일수」로 바꿨다(종기가 납부일 전날이라 "경과"와 다르다).
+    expect(result.steps.some(s => s.label === "산정일수")).toBe(true);
     expect(result.steps.some(s => s.label === "지연납부가산세")).toBe(true);
   });
 });
@@ -241,10 +271,10 @@ describe("calculateTransferTaxPenalty — 통합", () => {
         actualPaymentDate: new Date("2024-10-30"),
       },
     });
-    // 신고불성실: 2,000,000 / 지연납부: 66,000
+    // 신고불성실: 2,000,000 / 지연납부: 29일(G-03 — 납부일 전날까지) × 0.022% = 63,800
     expect(result.filingPenalty?.filingPenalty).toBe(2_000_000);
-    expect(result.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(66_000);
-    expect(result.totalPenalty).toBe(2_066_000);
+    expect(result.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(63_800);
+    expect(result.totalPenalty).toBe(2_063_800);
   });
 
   it("U2 신고불성실만 제공", () => {
@@ -273,9 +303,10 @@ describe("calculateTransferTaxPenalty — 통합", () => {
         actualPaymentDate: new Date("2024-10-30"),
       },
     });
+    // G-03: 29일 × 20,000,000 × 22/100,000 = 127,600
     expect(result.filingPenalty).toBeNull();
-    expect(result.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(132_000);
-    expect(result.totalPenalty).toBe(132_000);
+    expect(result.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(127_600);
+    expect(result.totalPenalty).toBe(127_600);
   });
 
   it("U4 입력 없으면 totalPenalty 0", () => {

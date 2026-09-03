@@ -50,9 +50,10 @@ describe("computeAmendment — 수정신고 추가납부세액", () => {
       }),
       50_000_000,
     );
-    // 2023-05-31 → 2026-06-30 = 1126일. 20,000,000 × 1126 × 0.00022 = 4,954,400
-    expect(r.latePaymentPenalty).toBe(4_954_400);
-    expect(r.totalPayable).toBe(24_954_400);
+    // 🔴 G-03: 산정기간은 기한 다음날 ~ 납부일 **전날**(국세기본법 §47의4①1호).
+    // 2023-06-01 ~ 2026-06-29 = 1,125일. 20,000,000 × 1,125 × 22/100,000 = 4,950,000
+    expect(r.latePaymentPenalty).toBe(4_950_000);
+    expect(r.totalPayable).toBe(24_950_000);
   });
 
   it("A4 수정<당초 (경정청구 영역) — delta 0", () => {
@@ -116,7 +117,58 @@ describe("computeAmendment — 수정신고 추가납부세액", () => {
       50_000_000,
     );
     // 신고불성실은 감면(50%)되지만 납부지연은 A3와 동일(감면 미적용)
-    expect(r.latePaymentPenalty).toBe(4_954_400);
+    expect(r.latePaymentPenalty).toBe(4_950_000);
+  });
+
+  // ── 🔴 G-18 · G-34: §48②1호 감면 6개 목 전수 + 2년 초과 무감면 ────────────
+  //
+  // 종전에는 다(50%)·나(75%) 두 목만 단언해 **가·라·마·바 4개 목과 「2년 초과 = 0」이
+  // 무커버리지**였다(G-34). 그 공백에서 90% 구간의 부동소수 결함(G-18)이 통과했다 —
+  // `grossUnder * (1 - 0.9)`는 `1-0.9 = 0.09999999999999998`이라 10의 배수 전건이 1원 부족했다.
+  //
+  // 기한 2024-05-31 기준 · 추가납부 본세 20,000,000 → grossUnder = 20,000,000 × 10% = 2,000,000
+  const RED_CASES: ReadonlyArray<{
+    목: string;
+    filedAt: string;
+    rate: number;
+    penalty: number;
+  }> = [
+    { 목: "가 (1개월 이내)",        filedAt: "2024-06-20", rate: 0.90, penalty: 200_000 },
+    { 목: "나 (1~3개월)",           filedAt: "2024-08-15", rate: 0.75, penalty: 500_000 },
+    { 목: "다 (3~6개월)",           filedAt: "2024-11-15", rate: 0.50, penalty: 1_000_000 },
+    { 목: "라 (6개월~1년)",         filedAt: "2025-03-15", rate: 0.30, penalty: 1_400_000 },
+    { 목: "마 (1년~1년 6개월)",     filedAt: "2025-10-15", rate: 0.20, penalty: 1_600_000 },
+    { 목: "바 (1년 6개월~2년)",     filedAt: "2026-03-15", rate: 0.10, penalty: 1_800_000 },
+    { 목: "2년 초과 — 감면 없음",   filedAt: "2026-08-15", rate: 0,    penalty: 2_000_000 },
+  ];
+
+  it.each(RED_CASES)("A9 §48②1호 $목 → 감면율 $rate", ({ filedAt, rate, penalty }) => {
+    const r = computeAmendment(
+      baseAmend({
+        applyUnderReportingPenalty: true,
+        underReductionMode: "auto_48_2",
+        statutoryFilingDeadline: new Date("2024-05-31"),
+        amendedFilingDate: new Date(filedAt),
+      }),
+      50_000_000,
+    );
+    expect(r.underReportingReductionRate).toBe(rate);
+    expect(r.underReportingPenalty).toBe(penalty);
+  });
+
+  it("A9-b 90% 구간은 정확히 200,000 — 부동소수면 199,999로 1원 부족 (G-18)", () => {
+    const r = computeAmendment(
+      baseAmend({
+        applyUnderReportingPenalty: true,
+        underReductionMode: "auto_48_2",
+        statutoryFilingDeadline: new Date("2024-05-31"),
+        amendedFilingDate: new Date("2024-06-20"), // 1개월 이내 → 90%
+      }),
+      50_000_000,
+    );
+    // grossUnder 2,000,000 − 감면 1,800,000 = 200,000
+    expect(r.underReportingPenalty).toBe(200_000);
+    expect(r.underReportingPenalty).not.toBe(199_999);
   });
 
   it("A8 경정 예고 후 → 감면율 0", () => {

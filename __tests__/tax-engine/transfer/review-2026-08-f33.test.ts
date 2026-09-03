@@ -64,9 +64,9 @@ describe("F33 — 양도차손 조기반환 경로의 신고불성실·납부지
     expect(r.penaltyDetail).toBeDefined();
     expect(r.penaltyDetail!.filingPenalty?.penaltyBase).toBe(50_000_000);
     expect(r.penaltyDetail!.filingPenalty?.filingPenalty).toBe(5_000_000);
-    expect(r.penaltyDetail!.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(2_409_000);
-    expect(r.penaltyDetail!.totalPenalty).toBe(7_409_000);
-    expect(r.totalTax).toBe(7_409_000);
+    expect(r.penaltyDetail!.delayedPaymentPenalty?.delayedPaymentPenalty).toBe(2_402_400);
+    expect(r.penaltyDetail!.totalPenalty).toBe(7_402_400);
+    expect(r.totalTax).toBe(7_402_400);
 
     // 지방소득세 base는 §114조의2분만 — 국기법 가산세는 base에 들어가지 않는다.
     expect(r.penaltyTax).toBe(0);
@@ -76,7 +76,8 @@ describe("F33 — 양도차손 조기반환 경로의 신고불성실·납부지
     const labels = r.steps.map((s) => s.label);
     expect(labels).toContain("가산세 합계");
     expect(labels).toContain("신고불성실가산세 (10%)");
-    expect(labels).toContain("납부지연가산세 (365일 × 0.022%)");
+    // G-03: 산정일수 364일(납부일 전날까지) · G-04: 이자율 표기를 4자리로 통일
+    expect(labels).toContain("납부지연가산세 (364일 × 0.0220%)");
   });
 
   it("같은 가산세 입력의 이익 케이스와 값이 일치한다 (차손이라는 이유만으로 사라지지 않는다)", () => {
@@ -87,7 +88,7 @@ describe("F33 — 양도차손 조기반환 경로의 신고불성실·납부지
     const loss = calculateTransferTax(lossLand(PENALTY_INPUTS), mockRates);
 
     expect(gain.determinedTax).toBe(83_990_000);
-    expect(gain.penaltyDetail!.totalPenalty).toBe(7_409_000);
+    expect(gain.penaltyDetail!.totalPenalty).toBe(7_402_400);
     expect(loss.penaltyDetail!.totalPenalty).toBe(gain.penaltyDetail!.totalPenalty);
   });
 
@@ -98,8 +99,8 @@ describe("F33 — 양도차손 조기반환 경로의 신고불성실·납부지
     );
     expect(r.penaltyDetail).toBeDefined();
     expect(r.penaltyDetail!.filingPenalty).toBeNull();
-    expect(r.penaltyDetail!.totalPenalty).toBe(2_409_000);
-    expect(r.totalTax).toBe(2_409_000);
+    expect(r.penaltyDetail!.totalPenalty).toBe(2_402_400);
+    expect(r.totalTax).toBe(2_402_400);
   });
 
   it("가산세 미입력 차손: 종전 동작 보존 (penaltyDetail 없음 · totalTax 0)", () => {

@@ -19,7 +19,11 @@ import {
   type CalculationStep,
 } from "./transfer-tax";
 import { computeAmendment } from "./transfer-tax-amendment";
-import { calculateTransferTaxPenalty } from "./transfer-tax-penalty";
+import {
+  calculateTransferTaxPenalty,
+  formatDelayedPaymentFormula,
+  formatFilingPenaltyFormula,
+} from "./transfer-tax-penalty";
 import {
   aggregateReductions,
   allocateAggregateReductions,
@@ -507,11 +511,12 @@ function computeAggregateOnce(
     steps.push({
       label: "가산세 (신고서 단위)",
       formula: [
+        // 가목·나목 혼합·이자율 구간 분할을 산식에 반영한다 — 단일 세율/이자율 표기는 금액을 재현하지 못한다.
         fp && fp.filingPenalty > 0
-          ? `신고불성실 ${fp.penaltyBase.toLocaleString()} × ${(fp.penaltyRate * 100).toFixed(0)}%`
+          ? `신고불성실 ${formatFilingPenaltyFormula(fp, "")}`
           : null,
         dp && dp.delayedPaymentPenalty > 0
-          ? `납부지연 ${dp.unpaidTax.toLocaleString()} × ${dp.elapsedDays}일 × ${(dp.dailyRate * 100).toFixed(3)}%`
+          ? `납부지연 ${formatDelayedPaymentFormula(dp, "")}`
           : null,
       ]
         .filter(Boolean)

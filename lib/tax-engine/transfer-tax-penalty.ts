@@ -9,9 +9,9 @@
  *   납부세액 기준:    부칙 §12848호 제10조② (2015.7.1 이후 양도분)
  */
 
-import { differenceInCalendarDays, addDays } from "date-fns";
+import { differenceInCalendarDays, addDays, startOfDay } from "date-fns";
 import { PENALTY, PENALTY_CONST } from "./legal-codes";
-import { applyRate, truncateToWon } from "./tax-utils";
+import { applyRate, applyRateFraction, safeMultiply, truncateToWon } from "./tax-utils";
 
 // ============================================================
 // 타입 정의
@@ -27,7 +27,7 @@ export type FilingType =
 /** 부정행위 유형 */
 export type PenaltyReason =
   | "normal"         // 일반 (단순 착오·실수)
-  | "fraudulent"     // 부정행위 (이중장부·허위증빙·재산은닉 등 — 국세기본법 §26의2 ⑪)
+  | "fraudulent"     // 부정행위 (이중장부·허위증빙·재산은닉 등 — 국세기본법 §26의2②2호 · 같은 법 시행령 §12의2① · 조세범 처벌법 §3⑥)
   | "offshore_fraud"; // 역외거래 부정행위 (2015.7.1 이후 양도분 60%)
 
 /** 신고불성실가산세 입력 */
@@ -181,35 +181,51 @@ export interface TransferTaxPenaltyResult {
 // 내부 유틸
 // ============================================================
 
-/** 납부기한 기준 일 이자율 결정 (국세기본법 시행령 §27의4 이력 적용) */
 /**
  * 납부지연가산세 이자율 시행 구간 (국세기본법 시행령 §27의4).
- * `resolveDailyRate`가 쓰던 컷오프와 **동일 값**을 구간 형태로 재표현한 것이다 —
- * 두 곳이 갈리지 않도록 `resolveDailyRate`도 이 배열을 참조한다.
  * 현행 ①항 "1일 10만분의 22"는 KoreanLaw 원문 확인(2026-07-29).
+ *
+ * ⚠️ 금액은 `rate`(소수)를 직접 곱하지 않는다 — 0.0003의 double 표현 때문에 정확값이 정수인
+ * 입력에서도 floor가 1원 아래로 떨어진다(실측: `10000000*150*0.0003 = 449999.99999999994`).
+ * 저장소 규약(`tax-utils.ts:185-195`)대로 **분모 10만의 정수 분수연산**으로 계산한다.
+ * 분자는 `rate`에서 **파생**시킨다 — 상수를 따로 두면 표시(rate)와 계산(분자)이 조용히 갈린다.
  */
-const DELAYED_RATE_PERIODS: ReadonlyArray<{ from: Date | null; label: string; rate: number }> = [
+const DELAYED_RATE_PERIODS: ReadonlyArray<{
+  from: Date | null;
+  label: string;
+  rate: number;
+}> = [
   { from: null, label: "~2019-02-11", rate: PENALTY_CONST.DAILY_PENALTY_RATE_2016 },
   { from: new Date("2019-02-12"), label: "2019-02-12", rate: PENALTY_CONST.DAILY_PENALTY_RATE_2019 },
   { from: new Date("2022-02-15"), label: "2022-02-15", rate: PENALTY_CONST.DAILY_PENALTY_RATE },
 ];
 
+/** 이자율 분모 — 국세기본법 시행령 §27의4의 "1일 10만분의 N" */
+const DAILY_RATE_DENOM = 100_000;
+
 /**
- * 경과기간 [start, end](양끝 포함)을 이자율 시행 구간으로 분할한다.
- * 구간 일수 합 = 전체 경과일수 불변식을 지킨다.
+ * 가산세 산정기간 [start, end](양끝 포함)을 이자율 시행 구간으로 분할한다.
+ * 구간 일수 합 = 전체 산정일수 불변식을 지킨다.
+ *
+ * ⚠️ **날짜 축을 달력일로 통일한다**(`startOfDay`). 종전에는 구간 채택을 timestamp 비교
+ * (`segEnd < segStart`)로 하면서 일수는 `differenceInCalendarDays`(달력일)로 세어 축이 갈려 있었다.
+ * 그래서 시각이 섞인 입력(예: `calculationDate` 미지정 시 `new Date()`)에서 산정일수는 1 이상인데
+ * 구간이 전부 탈락해 `breakdown`이 공집합이 되고 가산세가 0으로 무너졌다.
  */
 function splitByRatePeriods(
   unpaidTax: number,
-  start: Date,
-  end: Date,
+  startInput: Date,
+  endInput: Date,
 ): DelayedPaymentRateSegment[] {
+  const start = startOfDay(startInput);
+  const end = startOfDay(endInput);
   const out: DelayedPaymentRateSegment[] = [];
   for (let i = 0; i < DELAYED_RATE_PERIODS.length; i++) {
     const p = DELAYED_RATE_PERIODS[i];
     const next = DELAYED_RATE_PERIODS[i + 1];
     // 이 구간의 유효 범위 [pStart, pEnd] — 다음 구간 시행일 전날까지
-    const pStart = p.from ?? start;
-    const pEnd = next?.from ? addDays(next.from, -1) : end;
+    const pStart = p.from ? startOfDay(p.from) : start;
+    const pEnd = next?.from ? addDays(startOfDay(next.from), -1) : end;
     const segStart = pStart > start ? pStart : start;
     const segEnd = pEnd < end ? pEnd : end;
     if (segEnd < segStart) continue;
@@ -219,14 +235,28 @@ function splitByRatePeriods(
       effectiveFrom: p.label,
       dailyRate: p.rate,
       days,
-      amount: truncateToWon(unpaidTax * days * p.rate),
+      // 정수 분수연산 — `unpaidTax × days × (rate × 10만) ÷ 10만`. 부동소수 곱 금지(위 주석).
+      // 분자를 rate에서 파생시켜 표시값과 계산값이 갈리지 않게 한다.
+      amount: applyRateFraction(
+        safeMultiply(unpaidTax, days),
+        Math.round(p.rate * DAILY_RATE_DENOM),
+        DAILY_RATE_DENOM,
+      ),
     });
   }
   return out;
 }
 
+/**
+ * 산정기간이 공집합일 때만 쓰이는 **대표 이자율 fallback**.
+ *
+ * ⚠️ 죽은 코드가 아니다 — 1일 지연처럼 법정 산정기간이 0일이어서 `breakdown`이 비는 격자에서
+ * `:439`가 이 함수를 호출한다. **삭제하면 `breakdown[last].dailyRate`가 TypeError가 된다.**
+ * 컷오프는 `DELAYED_RATE_PERIODS`와 같은 값이지만 **배열을 참조하지는 않는다**(별도 하드코딩) —
+ * 두 곳을 함께 고쳐야 한다.
+ */
 function resolveDailyRate(referenceDate: Date): number {
-  const d = referenceDate;
+  const d = startOfDay(referenceDate);
   if (d >= new Date("2022-02-15")) return PENALTY_CONST.DAILY_PENALTY_RATE;
   if (d >= new Date("2019-02-12")) return PENALTY_CONST.DAILY_PENALTY_RATE_2019;
   return PENALTY_CONST.DAILY_PENALTY_RATE_2016;
@@ -250,9 +280,12 @@ function resolveFilingRate(
 /**
  * 신고불성실가산세 계산
  *
- * 납부세액 = 결정세액 − 세액공제·감면 − 기납부세액 − 당초 신고세액
- *           − 이자상당액 가산액 + 초과환급세액
+ * 납부세액 = 결정세액 − 기납부세액 − 당초 신고세액 − 이자상당액 가산액 + 초과환급세액
  * 가산세 = 납부세액 × 가산세율
+ *
+ * ⚠️ **세액공제·감면은 여기서 빼지 않는다.** `determinedTax`가 이미 감면 반영 후(net) 금액이라
+ * 재차감하면 이중차감이 된다(아래 ① 주석·`FilingPenaltyInput.determinedTax` 정의 참조).
+ * 종전 주석은 「− 세액공제·감면」을 차감한다고 적혀 있어 구현과 정반대였다.
  *
  * 부칙 §12848호 §10② 기준 (2015.7.1 이후 양도분)
  */
@@ -402,8 +435,12 @@ export function calculateFilingPenalty(
 /**
  * 지연납부가산세 계산
  *
- * 가산세 = 미납세액 × 경과일수 × 일 이자율
- * 경과일수: 납부기한 다음날 ~ 실제 납부일(또는 계산기준일)
+ * 가산세 = 미납세액 × 산정일수 × 일 이자율
+ *
+ * **산정기간은 「법정납부기한의 다음 날부터 납부일의 _전날_까지」다**
+ * (국세기본법 §47의4①1호 — "법정납부기한의 다음 날부터 납부고지일(납부고지일 전에 납부한
+ * 경우에는 그 납부일)의 **전날**까지의 기간"). 종전에는 종기를 납부일 당일로 잡아 전 건이
+ * 하루 과다했다(1일 지연 시 법정 0원인데 하루치를 부과 — 미납 1억 기준 22,000원).
  */
 export function calculateDelayedPaymentPenalty(
   input: DelayedPaymentInput,
@@ -411,11 +448,11 @@ export function calculateDelayedPaymentPenalty(
   const steps: PenaltyStep[] = [];
   const calcDate = input.actualPaymentDate ?? input.calculationDate ?? new Date();
 
-  // 경과일수: 납부기한 다음날부터 기산 (납부기한 당일 납부 → 0일)
-  const elapsedDays = Math.max(
-    0,
-    differenceInCalendarDays(calcDate, input.paymentDeadline),
-  );
+  // 산정기간 [기한+1일, 납부일−1일] 양끝 포함 ⇒ 일수 = (납부일 − 기한) − 1.
+  // 기한 당일 납부·1일 지연은 기간이 0일이라 가산세가 없다(§47의4①1호).
+  const periodStart = addDays(startOfDay(input.paymentDeadline), 1);
+  const periodEnd = addDays(startOfDay(calcDate), -1);
+  const elapsedDays = Math.max(0, differenceInCalendarDays(periodEnd, periodStart) + 1);
 
   if (input.unpaidTax <= 0 || elapsedDays <= 0) {
     return {
@@ -434,14 +471,14 @@ export function calculateDelayedPaymentPenalty(
   //   경과기간을 **구간별로 분할**해 합산한다. 종전에는 납부일 시점 이자율 하나를 전 기간에
   //   곱해, 개정 전 기간분까지 신율(더 낮은 율)로 계산되어 가산세가 과소했다.
   //   (예: 2021-12-01 기한 → 2022-06-01 납부 = 182일. 단일율 400,400 vs 구간분할 422,900)
-  const breakdown = splitByRatePeriods(input.unpaidTax, addDays(input.paymentDeadline, 1), calcDate);
+  const breakdown = splitByRatePeriods(input.unpaidTax, periodStart, periodEnd);
   // 대표 이자율 = 납부일이 속한 마지막 구간율 (표시·하위호환용)
   const dailyRate = breakdown.length > 0 ? breakdown[breakdown.length - 1].dailyRate : resolveDailyRate(calcDate);
   const rateLabel = (dailyRate * 100).toFixed(4) + "%";
 
   steps.push({
-    label: "경과일수",
-    formula: `납부기한(${input.paymentDeadline.toLocaleDateString("ko-KR")}) 다음날 ~ 납부일(${calcDate.toLocaleDateString("ko-KR")})`,
+    label: "산정일수",
+    formula: `납부기한(${input.paymentDeadline.toLocaleDateString("ko-KR")}) 다음날 ~ 납부일(${calcDate.toLocaleDateString("ko-KR")}) 전날`,
     amount: elapsedDays,
     legalBasis: PENALTY.DELAYED_PAYMENT,
   });
@@ -475,6 +512,74 @@ export function calculateDelayedPaymentPenalty(
     breakdown,
     steps,
   };
+}
+
+// ============================================================
+// 표시 산식 포맷터 — 화면·신고서·수정신고가 **같은 문자열**을 쓰게 한다
+// ============================================================
+
+/**
+ * 신고불성실가산세 표시 라벨.
+ *
+ * 가목(부정행위 40%)·나목(그 밖 10%)이 **혼합**되면 `penaltyRate`는 실효세율이라
+ * 정수 %로 반올림해 「(20%)」처럼 적으면 국세기본법에 없는 세율로 읽힌다. 혼합이면 세율을 쓰지 않는다.
+ */
+export function formatFilingPenaltyLabel(f: FilingPenaltyResult): string {
+  if (f.fraudSplit) return "신고불성실가산세 (가목·나목 혼합)";
+  return `신고불성실가산세 (${(f.penaltyRate * 100).toFixed(0)}%)`;
+}
+
+/**
+ * 신고불성실가산세 표시 산식.
+ *
+ * 혼합이면 §47의3①1호 가목·나목으로 분해해 적는다 — 실효세율을 곱한 문자열은
+ * 표시 금액을 재현하지 못한다(실측: 기준 1억·부정행위분 3,300만 → 산식 20,000,000 vs 금액 19,900,000).
+ */
+export function formatFilingPenaltyFormula(
+  f: FilingPenaltyResult,
+  baseLabel = "납부세액",
+): string {
+  const s = f.fraudSplit;
+  if (s) {
+    const fraudPart = truncateToWon(applyRate(s.fraudBase, s.fraudRate));
+    const normalPart = truncateToWon(applyRate(s.normalBase, s.normalRate));
+    return (
+      `가목 ${s.fraudBase.toLocaleString()} × ${(s.fraudRate * 100).toFixed(0)}% = ${fraudPart.toLocaleString()}` +
+      ` + 나목 ${s.normalBase.toLocaleString()} × ${(s.normalRate * 100).toFixed(0)}% = ${normalPart.toLocaleString()}`
+    );
+  }
+  return `${baseLabel ? baseLabel + " " : ""}${f.penaltyBase.toLocaleString()} × ${(f.penaltyRate * 100).toFixed(0)}%`;
+}
+
+/**
+ * 납부지연가산세 표시 라벨. 이자율 구간이 둘 이상이면 대표 이자율 하나를 적지 않는다.
+ */
+export function formatDelayedPaymentLabel(d: DelayedPaymentResult): string {
+  if (d.breakdown.length > 1) {
+    return `납부지연가산세 (총 ${d.elapsedDays}일 · 이자율 ${d.breakdown.length}구간)`;
+  }
+  return `납부지연가산세 (${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(4)}%)`;
+}
+
+/**
+ * 납부지연가산세 표시 산식.
+ *
+ * 구간이 둘 이상이면 구간별로 풀어 쓴다 — 단일 이자율 표기는 자기모순이 된다
+ * (실측: 2021-12-01 기한 → 2022-06-01 납부에서 산식 4,004,000 vs 금액 4,229,000).
+ */
+export function formatDelayedPaymentFormula(
+  d: DelayedPaymentResult,
+  baseLabel = "미납세액",
+): string {
+  if (d.breakdown.length > 1) {
+    return d.breakdown
+      .map(
+        (b) =>
+          `${b.effectiveFrom} 시행분 ${b.days}일 × ${(b.dailyRate * 100).toFixed(4)}% = ${b.amount.toLocaleString()}`,
+      )
+      .join(" + ");
+  }
+  return `${baseLabel ? baseLabel + " " : ""}${d.unpaidTax.toLocaleString()} × ${d.elapsedDays}일 × ${(d.dailyRate * 100).toFixed(4)}%`;
 }
 
 // ============================================================
