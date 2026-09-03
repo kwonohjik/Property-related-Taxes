@@ -14,6 +14,7 @@
  */
 
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 
 function fmt(n: number): string {
   return n.toLocaleString();
@@ -47,6 +48,8 @@ export function StockTransferPenaltySection({
   const isFraud = Boolean(isFraudulent);
 
   const underRate = isFraud && isIntl ? 60 : isFraud ? 40 : isNonReport ? 20 : 10;
+  /** 🔴 G-12: §47조의3①1호 가목·나목 분해 — 있으면 세율 파생보다 **우선**한다. */
+  const split = result.fraudSplit;
   // v3: 무신고/과소 별 분기 + 역외 괄호 분리
   //
   // ⚠️ `violation === "none"`을 **먼저** 가른다. 이 카드는 신고불성실가산세 행과 달리
@@ -54,6 +57,9 @@ export function StockTransferPenaltySection({
   //    「정상 신고 + 납부지연만」인 결과에 **없는 위반이 인쇄된다**(§47조의4 사안이 흔하다).
   const underBasis = !isNonReport && !isUnderReport
     ? "정상 신고 — 신고불성실가산세 해당 없음 (납부지연은 국세기본법 §47조의4)"
+    : split
+      // 🔴 G-12: 혼합이면 가목만 적으면 나목 적용 사실이 사라진다.
+      ? "국세기본법 §47조의3 ①1호 가목 + 나목 — 부정행위분과 그 밖의 과소신고분을 나눠 적용"
     : isFraud && isIntl
       ? isNonReport
         ? "국세기본법 §47조의2 ①1호 (괄호) — 무신고 + 역외거래 부정 60%"
@@ -75,16 +81,29 @@ export function StockTransferPenaltySection({
           {result.underReportPenalty > 0 && (
             <div className="flex justify-between py-2">
               <span className="text-rose-600">
-                {isNonReport ? "무신고" : "과소신고"} 가산세 ({underRate}%)
+                {isNonReport ? "무신고" : "과소신고"} 가산세{split ? " (가목·나목 혼합)" : ` (${underRate}%)`}
                 {/*
                   base 를 함께 보인다 — 「산출세액 × 세율」로 오해하지 않도록.
                   국세기본법 §47조의3① 의 base 는 「과소신고납부세액등」이라 당초 신고세액·
                   기납부세액·이자상당가산액을 뺀 금액이다.
+
+                  🔴 G-12: 「부정행위로 인한 과소신고분」을 입력하면 §47조의3①1호는 가목(부정분
+                  × 40%·역외 60%)과 나목(나머지 × 10%)으로 **나뉜다**. 종전에는 토글에서만
+                  세율을 파생해 「기준금액 100,000,000 × 40%」(= 40,000,000)를 적고 그 옆에
+                  17,500,000을 찍었다 — 인쇄된 산식이 인쇄된 금액을 재현하지 못했다.
+                  분해값(`fraudSplit`)이 있으면 그것을 단일 소스로 삼는다.
                 */}
-                {result.penaltyBase !== undefined && (
+                {split ? (
                   <span className="block text-xs text-rose-500 mt-0.5">
-                    기준금액 {fmt(result.penaltyBase)} × {underRate}%
+                    가목 {fmt(split.fraudBase)} × {Math.round(split.fraudRate * 100)}% + 나목{" "}
+                    {fmt(split.normalBase)} × {Math.round(split.normalRate * 100)}%
                   </span>
+                ) : (
+                  result.penaltyBase !== undefined && (
+                    <span className="block text-xs text-rose-500 mt-0.5">
+                      기준금액 {fmt(result.penaltyBase)} × {underRate}%
+                    </span>
+                  )
                 )}
               </span>
               <span className="font-medium text-rose-900">{fmt(result.underReportPenalty)}</span>
@@ -98,7 +117,12 @@ export function StockTransferPenaltySection({
           )}
           {result.electronicFilingCredit > 0 && (
             <div className="flex justify-between py-2">
-              <span className="text-emerald-600">전자신고 세액공제 (§52의2)</span>
+              {/* 🔴 G-26: 전자신고 세액공제는 조특법 §104의8①이다. 「§52의2」는 이 저장소 안에서
+                  상증법 §52의2(장애인신탁 불산입)·상증령 §52의2(증자·합병 기간조정)로 이미
+                  쓰이고 있어 법령명 없이는 판별이 불가능하다. 상수를 단일 소스로 참조한다. */}
+              <span className="text-emerald-600">
+                전자신고 세액공제 ({STOCK.ELECTRONIC_FILING_CREDIT})
+              </span>
               <span className="font-medium text-emerald-700">−{fmt(result.electronicFilingCredit)}</span>
             </div>
           )}
@@ -192,7 +216,7 @@ export function StockTransferPenaltySection({
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
           <p>
             <strong>가산세 비발동 조건</strong>: 법정 신고기한 내 신고서 제출 + 산출세액 정확 + 납부기한 내 완납.
-            전자신고 시 §52의2에 따라 △20,000원 세액공제.
+            전자신고 시 {STOCK.ELECTRONIC_FILING_CREDIT}에 따라 △20,000원 세액공제.
           </p>
         </div>
       </div>

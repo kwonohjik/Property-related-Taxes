@@ -132,3 +132,38 @@ describe("FG-3 §105① 호가 갈린다 — 기타자산은 1호(달), 국내�
     expect(screen.getByText(/확정신고 기한은 다음 해 5월 31일/)).toBeTruthy();
   });
 });
+
+describe("FG-4 🔴 G-24 국외전출세 — ④⑤ 섹션은 배선이 없으므로 렌더하지 않는다", () => {
+  /**
+   * ④⑤ 는 종전에 `marketType` 분기 없이 항상 렌더됐는데, 그 입력은 ④ 변환
+   * (`buildExitTaxApiBody`)·⑫ Zod(`exitTaxInputSchema`)·⑭ Route(`handleExitTax`) 어디에도
+   * 없어 **조용히 버려졌다**. 사용자는 미납세액·법정납부기한을 넣고도 가산세가 0원인 이유를
+   * 알 수 없었다(⑧ validate 도 국외전출세 분기에는 차단이 없다).
+   *
+   * 게다가 ④ 제목이 「§105① · §110①」인데 국외전출자의 신고기한은 §118의15②다 —
+   * §105①은 국외전출세를 규율하지 않는다.
+   */
+  it("FG-4-1: 가산세 입력 블록이 렌더되지 않는다 (침묵 stripping 제거)", () => {
+    render(<Step3 form={form({ marketType: "exit_tax" })} onChange={() => {}} />);
+    expect(screen.queryByText(/가산세 \(국세기본법/)).toBeNull();
+    expect(screen.queryByText("미납·과소납부세액")).toBeNull();
+    expect(screen.queryByText("법정납부기한")).toBeNull();
+  });
+
+  it("FG-4-2: §105①/§110① 신고 유형 섹션 대신 §118의15 안내가 뜬다", () => {
+    render(<Step3 form={form({ marketType: "exit_tax" })} onChange={() => {}} />);
+    expect(screen.queryByText(/신고 유형 \(§105① · §110①\)/)).toBeNull();
+    expect(screen.getByText(/신고·납부 \(소득세법 §118의15\)/)).toBeTruthy();
+    // §118의15② — 출국일이 속하는 달의 말일부터 3개월
+    expect(screen.getByText(/출국일이 속하는 달의 말일부터/)).toBeTruthy();
+    // §118의15④ — 보유현황 미신고·누락 2%
+    expect(screen.getByText(/산출세액에 더합니다/)).toBeTruthy();
+  });
+
+  it("FG-4-3: ⛔ 국내 종목은 종전대로 ④⑤가 보인다 (양성 대조군)", () => {
+    render(<Step3 form={form({ marketType: "kospi" })} onChange={() => {}} />);
+    expect(screen.getByText(/신고 유형 \(§105① · §110①\)/)).toBeTruthy();
+    expect(screen.getByText("법정납부기한")).toBeTruthy();
+    expect(screen.queryByText(/신고·납부 \(소득세법 §118의15\)/)).toBeNull();
+  });
+});

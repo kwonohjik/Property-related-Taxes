@@ -214,7 +214,35 @@ export function StockAggregateSummaryCard({
           */}
           {aggregate.totalUnderReportPenalty > 0 && (
             <div className="flex justify-between">
-              <dt>신고불성실 가산세</dt>
+              {/**
+               * 🔴 G-46: **기준금액·세율·조문**을 함께 보인다.
+               *
+               * 종목별 결과는 신고 단위 산정이라 0으로 눌러 두므로 상세 카드
+               * (`StockTransferPenaltySection`)가 조기반환해 렌더되지 않는다. 그래서 종전
+               * 다종목 신고에는 **금액 한 줄뿐**이었다 — 기준금액에서 당초 신고세액이 빠졌다는
+               * 사실도, 어느 세율·조문이 적용됐는지도 화면에서 확인할 수 없었다.
+               * base 를 보이는 이유가 「산출세액 × 세율」 오해를 막는 것인데(§47조의3①의 base 는
+               * 「과소신고납부세액등」이다) 그 이유가 다종목에서만 사라져 있었다.
+               */}
+              <dt>
+                신고불성실 가산세
+                {aggregate.fraudSplit ? (
+                  <span className="block text-xs text-muted-foreground">
+                    가목 {won(aggregate.fraudSplit.fraudBase)} ×{" "}
+                    {Math.round(aggregate.fraudSplit.fraudRate * 100)}% + 나목{" "}
+                    {won(aggregate.fraudSplit.normalBase)} ×{" "}
+                    {Math.round(aggregate.fraudSplit.normalRate * 100)}%
+                    {aggregate.penaltyRuleRef ? ` (${aggregate.penaltyRuleRef})` : ""}
+                  </span>
+                ) : (
+                  aggregate.penaltyBase !== undefined && (
+                    <span className="block text-xs text-muted-foreground">
+                      기준금액 {won(aggregate.penaltyBase)}
+                      {aggregate.penaltyRuleRef ? ` (${aggregate.penaltyRuleRef})` : ""}
+                    </span>
+                  )
+                )}
+              </dt>
               <dd className="font-mono tabular-nums">{won(aggregate.totalUnderReportPenalty)}</dd>
             </div>
           )}

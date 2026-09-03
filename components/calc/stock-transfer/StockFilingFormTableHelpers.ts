@@ -8,6 +8,7 @@
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-basic-deduction-total";
+import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 /**
  * 라벨 헬퍼는 `StockFilingFormLabels.ts`로 나갔다(800줄 정책) — 이음매는 **역할**이다.
  * 이쪽은 행값 계산, 저쪽은 enum·세율을 사람이 읽는 문자열로 옮기는 일만 한다.
@@ -623,9 +624,10 @@ export function buildRows(
     ),
   });
 
-  // 28. 전자신고 세액공제 §52의2
+  // 28. 전자신고 세액공제 — 「조세특례제한법」 §104의8①
+  //     🔴 G-26: 종전 「§52의2」는 이 저장소에서 상증법·상증령의 다른 조문으로 이미 쓰인다.
   rows.push({
-    label: "28. 전자신고 세액공제 §52의2 (−20,000)",
+    label: `28. 전자신고 세액공제 (${STOCK.ELECTRONIC_FILING_CREDIT}) (−20,000)`,
     values: val(
       result.electronicFilingCredit > 0 ? -result.electronicFilingCredit : null,
       (agg) => (agg.electronicFilingCredit > 0 ? -agg.electronicFilingCredit : null),

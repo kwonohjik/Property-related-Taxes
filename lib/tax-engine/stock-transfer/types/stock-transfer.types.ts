@@ -10,6 +10,7 @@
 // export는 외부 import 경로 무변경용 re-export.
 import type { PostListingValuationResult } from "./post-listing-result.types";
 import type { Cross1045Adjustment } from "../../comparative-104-5-cross";
+import type { FraudPortionSplit } from "../../transfer-tax-penalty";
 export type { PostListingValuationResult };
 
 // ============================================================
@@ -944,6 +945,13 @@ export type StockTransferResult = {
    * 「산출세액 × 세율」로 오해하지 않도록 **산식에 그대로 쓰라고** 싣는 echo 다.
    */
   penaltyBase?: number;
+  /**
+   * 🔴 G-12: §47조의3①1호 **가목·나목 분해** echo — 「부정행위로 인한 과소신고분」 입력 시에만.
+   *
+   * 결과 카드는 이것이 있으면 「가목 X × 40% + 나목 Y × 10%」로 분해해 적는다. 없으면 단일
+   * 세율이다. 토글에서 세율을 파생하면 혼합 국면에서 산식이 금액을 재현하지 못한다.
+   */
+  fraudSplit?: FraudPortionSplit;
   electronicFilingCredit: number;
 
   // 최종

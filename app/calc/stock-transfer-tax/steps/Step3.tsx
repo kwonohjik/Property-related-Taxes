@@ -88,6 +88,22 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
     [form.transferDate, form.marketType],
   );
   const preliminaryClause = resolvePreliminaryClause(form.marketType);
+  /**
+   * 🔴 G-24: 국외전출세(§118의9~§118의15)는 **신고·가산세 축이 다르다**.
+   *
+   * ④⑤ 섹션은 종전에 `marketType` 분기 없이 항상 렌더됐는데, 그 입력은 ④ 변환
+   * (`buildExitTaxApiBody`)·⑫ Zod(`exitTaxInputSchema`)·⑭ Route(`handleExitTax`) 어디에도
+   * 없어 **조용히 버려졌다**. 사용자는 미납세액·법정납부기한을 넣고도 결과 가산세가 0원인
+   * 이유를 알 수 없었다. ⑧ validate 도 국외전출세 분기에는 차단이 없어 걸리지 않는다.
+   *
+   * 또 ④ 제목이 「§105① · §110①」인데, 국외전출자의 신고기한은 **§118의15②**로
+   * 「출국일이 속하는 달의 말일부터 3개월 이내(납세관리인을 신고한 경우 §110① 확정신고
+   * 기간 내)」다 — §105①은 국외전출세를 규율하지 않는다.
+   *
+   * ⇒ 배선 대신 **게이트**를 택한다(리뷰 수정 방향 (a)). 침묵 stripping 이 사라지고,
+   *   전용 안내가 정확한 조문을 가리킨다. 가산세 축 배선은 별건이다.
+   */
+  const isExitTax = form.marketType === "exit_tax";
 
   // 증권거래세 미리보기 — 엔진 단일 진실 (dual-truth 해소 — feedback_ui_engine_dual_truth_avoidance)
   // total/per_share/exchange 모드 모두 지원 (폼 default "total"에서 미리보기 안 뜨던 기존 갭 해소)
@@ -260,7 +276,34 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
         </div>
       </section>
 
+      {/* 🔴 G-24: 국외전출세 전용 신고 안내 — §105①/§110① 축이 아니다 */}
+      {isExitTax && (
+        <section>
+          <SectionTitle n={4} title="신고·납부 (소득세법 §118의15)" />
+          <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3 text-sm text-violet-700 space-y-2">
+            <p className="font-medium">국외전출세는 신고 축이 다릅니다</p>
+            <ul className="list-disc pl-4 space-y-1 text-xs leading-relaxed">
+              <li>
+                <strong>과세표준 신고기한</strong>: 출국일이 속하는 달의 말일부터 <strong>3개월</strong> 이내.
+                납세관리인을 신고한 경우에는 §110① 확정신고 기간 내입니다 (§118의15②).
+              </li>
+              <li>
+                <strong>출국일 전날까지</strong> 납세관리인과 주식등 보유현황을 신고해야 합니다 (§118의15①).
+              </li>
+              <li>
+                보유현황을 신고하지 않거나 누락하면 액면금액·출자가액의 <strong>2%</strong>를
+                산출세액에 더합니다 (§118의15④). 이 계산기는 이 금액을 반영합니다.
+              </li>
+              <li>
+                국세기본법 §47의2~§47의4 신고불성실·납부지연 가산세는 이 화면에서 입력받지 않습니다.
+              </li>
+            </ul>
+          </div>
+        </section>
+      )}
+
       {/* ④ 신고 유형 + 기한 helper */}
+      {!isExitTax && (
       <section>
         <SectionTitle n={4} title="신고 유형 (§105① · §110①)" />
         <div className="space-y-4">
@@ -356,10 +399,30 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
               onChange={(v) => onChange({ filingDate: v })}
             />
           </FieldCard>
+
+          {/**
+           * 🔴 G-45: 전자신고 세액공제 입력 위젯.
+           *
+           * `isElectronicFiling`은 폼·normalize·④·⑨⑫·⑭·결과카드·신고서 28번 행까지 배선돼
+           * 있었는데 **⑤ 위젯만 저장소 전체에 0건**이라 UI에서는 영영 false였다. 결과 화면의
+           * 「전자신고 시 △20,000원」 안내와 신고서 28번 행이 도달 불가능한 표시로 남아 있었다.
+           *
+           * 공제는 「전자신고의 방법으로 … 신고를 하는 경우」이므로 **신고 단위 1회**다
+           * (조특법 §104의8①) — 종목마다 켜도 합산에서 1회만 반영된다.
+           */}
+          <ToggleCard
+            checked={form.isElectronicFiling}
+            onCheckedChange={(v) => onChange({ isElectronicFiling: v })}
+            title="전자신고 (홈택스 직접 신고)"
+            description="납세자가 직접 전자신고하면 20,000원을 세액공제합니다 (조세특례제한법 §104의8①). 신고 1건에 1회 적용됩니다."
+            tone="emerald"
+          />
         </div>
       </section>
+      )}
 
-      {/* ⑤ 가산세 분기 */}
+      {/* ⑤ 가산세 분기 — 🔴 G-24: 국외전출세는 배선이 없으므로 렌더하지 않는다 */}
+      {!isExitTax && (
       <section>
         <SectionTitle n={5} title="가산세 (국세기본법 §47조의2·§47조의3·§47조의4)" />
         <div className="space-y-3">
@@ -459,6 +522,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
           </div>
         </div>
       </section>
+      )}
 
     </div>
   );
