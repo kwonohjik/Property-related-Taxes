@@ -1,6 +1,6 @@
 # 일괄양도(5-a)가 「서브엔진 자산」을 호스팅하는 설계 — 일반건물·겸용주택 × 함께양도
 
-**상태**: ✅ **일반건물 구현 완료** (2026-09-03) · 겸용주택은 미착수 (V-2~V-4 · Q-1 미해소)
+**상태**: ✅ 일반건물 구현 완료 (2026-09-03) · 겸용주택 **V-2~V-4 실측 완료 · Q-1 결정 완료** (2026-09-04) — 구현은 ⑭ 25필드 매핑이 선행 조건
 **배경**: 「컴패니언 남은 4종」 배치 3·4 (`transfer-companion-remaining-4.plan.md`)
 **선행 완료**: 배치 1 분양권 · 배치 2 입주권·재개발APT (둘 다 **배관**으로 끝났다)
 
@@ -111,9 +111,9 @@ GB는 카드 경로가 이미 있으므로 위험이 낮다. 겸용은 세액 �
 | ID | 확인할 것 | 왜 |
 |---|---|---|
 | ~~**V-1**~~ | ✅ **해소** — **2단 안분**이다. 자산 간 안분은 5-a가, 자산 안의 토지·건물 분해는 GB 엔진이 자기 기준시가 분모로 한다. 두 축이 `buildGbPartCards` **한 leaf를 공유**하므로 경로에 따라 갈리지 않는다. anchor **GBC-4**가 「컴패니언 GB 두 파트 차익 합 = 같은 양도가액 단건 GB」로 고정(기준값을 상수로 박지 않고 같은 테스트에서 계산) | — |
-| **V-2** | 겸용 파트를 카드로 내보내면 **§89① 12억 비과세 안분**이 aggregate 경로에서 재현되는가 | 겸용 엔진 내부 로직이라 이관 시 소실 위험 |
-| **V-3** | 겸용 **LTHD 표1/표2 선택**이 파트별 카드에서 유지되는가 | 주택분은 표2(보유+거주), 상가분은 표1 |
-| **V-4** | 배율초과 **비사업용토지 파트**(`nonBusinessLandPart`)가 카드로 나가면 §104①8호 +10%p가 붙는가 | 세율군 분리 축 |
+| ~~**V-2**~~ | ✅ **재현된다** — 1세대1주택 · 10.7억 → `isExempt: true` · `exemptReason "1세대1주택 비과세"`. 15억 → 안분 후 차익 228,571,428 기준 LTHD 182,857,142. **단, 🔴 아래 §9.1 함정** | — |
+| ~~**V-3**~~ | ✅ **재현된다** — 같은 자산에 거주기간만 바꿔 실측: 거주 120개월 **182,857,142**(표2, 보유 0.4 + 거주 0.4) vs 거주 0 **63,999,999**(표1 14년 0.28) | — |
+| ~~**V-4**~~ | ✅ **재현된다** — `non_business_land` 세율군이 **별도로** 생기고 `surchargeRate: 0.10`(appliedRate 0.48), 주택은 `progressive` 0.42로 분리 | — |
 | **V-5** | 기본공제 §103② 1회·§104⑤ 비교과세가 **파트 수만큼** 갈라지지 않는가 | 축 B GB가 「aggregate 1회」로 푼 것과 같은 함정 |
 | **V-6** | 결과 표시(`BundledAllocationCard`)·신고서 양식 열 구성이 파트 카드를 감당하는가 | GB는 선례 있음(축 B) — 컴패니언에서도 E2E 통과. **겸용은 여전히 미확인** |
 | **V-7** | 겸용 경로가 버리던 `penaltyDetail`(리뷰 G-43)이 이관 후에도 같은 상태인지 | 이관이 그 결함을 고치는지·악화시키는지 |
@@ -122,7 +122,7 @@ GB는 카드 경로가 이미 있으므로 위험이 낮다. 겸용은 세액 �
 
 | ID | 질문 |
 |---|---|
-| **Q-1** | 겸용주택 × 함께양도에서 **파트별 세율군 분리**를 허용할 것인가? (주택분 누진 / 배율초과 비사토 +10%p) — 축 B 분양권 실측에서 「같은 물건의 지분이 서로 다른 세율군」이 나온 전례가 있어, 파트 축에서도 같은 판단이 필요하다 |
+| ~~**Q-1**~~ | ✅ **「분리」로 결정**(2026-09-04). ⭐ 실측 결과 **새 정책이 아니라 현행 유지**였다 — 겸용 엔진은 이미 `buildTotalTax(rateParts)`로 파트별 세율군(`housing`/`commercial_land`/`commercial_building`/`non_business_land` + `surchargeAddon`)을 만들고 **§104⑤ MAX**를 수행한다 |
 | **Q-2** | (B)로 갈 때 겸용주택을 **⑧ 차단 유지**로 남길 것인가(현행), 아니면 명시 안내 문구를 바꿀 것인가 |
 
 ---
@@ -189,3 +189,61 @@ GB는 카드 경로가 이미 있으므로 위험이 낮다. 겸용은 세액 �
 V-2~V-5·V-7 미해소 + **Q-1**(파트별 세율군 분리 허용 여부)·**Q-2**(차단 문구). ⑧은 계속
 차단하며, 그 차단을 지키는 **양성 대조군**은 `gb-fractional-validate.predo` GBF-21의
 「겸용주택 함께양도 차단은 그대로다」 항목이다(뮤테이션으로 구별력 확인 — 겸용 가드 제거 시 RED).
+
+---
+
+## 9. 겸용주택 — 실측 완료 · 구현 선행 조건 (2026-09-04)
+
+### 9.1 🔴 12억 판정은 **카드 단위**다 — 주택분을 쪼개면 안 된다
+
+| 카드 구성 | 결과 |
+|---|---|
+| 각 8억 2카드(합 16억) · 분모 미지정 | **둘 다 `isExempt: true`** — 전액 비과세 🔴 |
+| 각 8억 2카드 + `totalPropertyTransferPrice: 16억` | 정상 과세 — 각 차익 600,000,000 · LTHD 120,000,000 |
+
+⇒ **주택분은 토지·건물을 합쳐 한 카드**로 만든다. 겸용 엔진의 `rateParts`도 주택을
+`kind: "housing"` **하나**로 본다(토지·건물 합산 income) — 규약이 일치한다.
+쪼갤 수밖에 없는 경우에는 `totalPropertyTransferPrice`를 **반드시** 실어야 한다.
+
+### 9.2 파트 카드 구성 (겸용 엔진 `rateParts`와 1:1)
+
+| 카드 | `propertyType` | 비고 |
+|---|---|---|
+| 주택(토지+건물) | `housing` | §104①2·3호 괄호 — 딸린 토지 포함 |
+| 상가 토지 | `land` | |
+| 상가 건물 | `building` | |
+| 배율초과 비사토 | `land` + `isNonBusinessLand` | §104⑤ 후단(별개 자산) · §104①8호 · **주택분 토지에서 carve-out**(`housingPart.nonBusinessTransferRatio`) |
+
+### 9.3 🛑 착수 선행 조건 — ⑭ **25필드 매핑**
+
+컴패니언 겸용은 route 5-a-2(`route.ts:363~440`)의 `mixedAsset` 조립을 컴패니언 컨텍스트로
+다시 이어야 한다. 그 매핑은 **25개 필드**이고 대부분 **폼-전역**이다:
+
+```
+firstDisclosureDate isMixedUseHouse ownershipRatio isUnregistered wasRegulatedAtAcquisition
+regionCode oneHouseExemptionProviso temporaryTwoHouse householdHousingCountForExclusion
+assetContractDate specialHouseExclusions multiHouse houses sellingHouseId presaleRights
+isOneHousehold isRegulatedArea marriageMerge parentalCareMerge gracePeriod surchargeFallback
+householdHousingCount landAcquisitionDate buildingAcquisitionDate
+```
+
+🔴 **전부 optional이라 TypeScript가 누락을 못 잡는다.** 하나만 빠져도 세액이 조용히 틀린다 —
+`CompanionRawAsset`이 손으로 쓴 인터페이스라 겪은 F13·F15와 **같은 실패 모드**다.
+
+⇒ 착수 시 **⑫ 스키마에서 타입을 파생**시켜(`CompanionSplitFields` 선례) 컴파일러가 누락을
+잡게 할 것. 그 장치 없이 손으로 25필드를 옮기면 안 된다.
+
+### 9.4 엔진은 수술하지 않는다
+
+파트 산출은 `buildHousingPart`·`buildCommercialPart`(rate-free)가 하지만, 그 **입력 조립**은
+`calcMixedUseTransferTax` 안에서 rates 기반 판정(§104⑦ 중과·감면)을 거친다. 550줄 함수를
+`buildTotalTax` 경계에서 쪼개는 것은 세액 계산 핵심을 건드리는 일이라,
+**엔진을 그대로 호출해 파트만 쓰고 `total`은 버리는** 편이 위험이 훨씬 낮다
+(세액을 두 번 계산하는 낭비는 감수한다 — GB가 `buildGbPartCards`로 카드만 얻는 것과 같은 층위).
+`rates`는 `CompanionBuildContext`에 추가해 전달한다.
+
+### 9.5 지금 남긴 것
+
+`__tests__/api/transfer.route.companion-mixed-use.anchor.test.ts` — **MU-2 대조군 1건**만 둔다
+(「primary 겸용은 계속 차단된다」). 개방 단언 4건(⑧ 해제·⑫ 도달·파트 확장·세율군 분리)은
+착수 시 함께 넣는다. **지금 RED로 두면 CI가 상시 빨간불이 되어 게이트 구실을 못 한다.**
