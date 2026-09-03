@@ -233,6 +233,11 @@ householdHousingCount landAcquisitionDate buildingAcquisitionDate
 ⇒ 착수 시 **⑫ 스키마에서 타입을 파생**시켜(`CompanionSplitFields` 선례) 컴파일러가 누락을
 잡게 할 것. 그 장치 없이 손으로 25필드를 옮기면 안 된다.
 
+📐 **그 장치의 구현 계획**: [`companion-derived-type-guard.plan.md`](./companion-derived-type-guard.plan.md)
+— 갭이 **두 개**(타입 부재 / 조립부 미탑재)이고 F13·F15가 터진 곳은 **후자**라는 점,
+가드가 조건부 spread에서도 작동함을 실측한 결과, 그리고 「반환 타입을 명시하면 가드가
+무의미해진다」는 함정이 거기 있다.
+
 ### 9.4 엔진은 수술하지 않는다
 
 파트 산출은 `buildHousingPart`·`buildCommercialPart`(rate-free)가 하지만, 그 **입력 조립**은
