@@ -18,14 +18,8 @@ import {
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import { qualifiesUnavoidableOutsideCapital } from "@/lib/tax-engine/transfer-tax-helpers";
 
-/**
- * 겸용 `multiHouse`에서 **엔진이 파생하므로 route가 싣지 않는** 키.
- *
- * 🔴 현재 1건이고 그것은 **의도가 아니라 갭**이다 — 단건 경로만 파생하고 겸용은 빠졌다.
- *    상세·근거는 아래 `_mixedMultiHouseGuards` 주석. 고치면 이 목록에서 빼야 한다.
- */
-type MixedUseMultiHouseEngineDerivedKeys = "unavoidableOutsideCapitalHouse";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
 import { calculateGeneralBuildingFractional } from "./general-building-fractional";
@@ -401,35 +395,49 @@ export async function POST(request: NextRequest) {
               marriageMerge: engineInput.marriageMerge,
               parentalCareMerge: engineInput.parentalCareMerge,
               gracePeriod: engineInput.gracePeriod,
+              /**
+               * 🔴 **영 §167의10①4호 — §155⑧ 수도권 밖 부득이 주택** (2026-09-04 정정).
+               *
+               * 종전에는 겸용 경로만 이 값을 세우지 않아 **중과 배제가 발동하지 않았다**
+               * (`multi-house-surcharge-exclusion.ts:393`이 읽는다). 단건은
+               * `transfer-tax-judgment-steps.ts:55`가 같은 정본 함수로 세우고 있었고, 겸용 엔진은
+               * `sellingHouseMeetsOneHouseRequirements`·`deemedOneHouseBy155` 둘만 파생해
+               * **셋째만 빠진** 비대칭이었다. ⑭ 키 커버리지 가드가 짚었다.
+               *
+               * 🔑 요건 판정은 **비과세와 같은 정본**(`qualifiesUnavoidableOutsideCapital`)을
+               *    쓴다 — 2주택·해소일부터 3년 기한 규칙을 재구현하지 않는다(계획서 F-2).
+               *    단건이 `workingInput`(폼-전역 원시 카운트)을 넘기는 것과 **같은 축**이다.
+               *
+               * ⚠️ **같은 이름의 두 축을 그대로 잇지 말 것** — top-level
+               *    `TransferTaxInput.unavoidableOutsideCapitalHouse`는 `{reason, resolvedDate}`
+               *    **객체**이고 여기는 요건 판정 **결과 boolean**이다(그렇게 시도했다가 타입
+               *    에러로 드러났다). `engineInput` 변환본을 쓰는 이유는 위 3종과 같다 —
+               *    `resolvedDate` Date 변환.
+               */
+              unavoidableOutsideCapitalHouse: qualifiesUnavoidableOutsideCapital({
+                householdHousingCount: data.householdHousingCount,
+                transferDate,
+                unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
+              }),
             } satisfies NonNullable<MixedUseAssetInput["multiHouse"]>)
           : undefined;
 
       /**
        * ⑭ **중첩 키 커버리지 가드** — 위 `multiHouse` 안의 누락을 잡는다(상위 가드는 못 본다).
        *
-       * 🔴 **가드를 걸자마자 비대칭을 하나 찾았다** — `unavoidableOutsideCapitalHouse`.
+       * ✅ **가드가 비대칭을 하나 찾았고 고쳤다** — `unavoidableOutsideCapitalHouse`
+       *    (2026-09-04). 겸용만 그 boolean을 세우지 않아 §167의10①4호 중과 배제가 발동하지
+       *    않았다. 위 `mixedMultiHouse`에서 **비과세와 같은 정본 함수**로 파생한다.
+       *    anchor: `transfer.route.mixed-use-unavoidable-outside-capital.anchor.test.ts`
        *
-       * 그 키는 **엔진이 파생하는 값**이다(`transfer-tax-judgment-steps.ts:55`가
-       * `qualifiesUnavoidableOutsideCapital(input)`으로 세운다). 그런데 그 파생은 **단건
-       * 경로에만** 있고, 겸용 엔진은 `...asset.multiHouse`를 그대로 넘기면서
-       * `sellingHouseMeetsOneHouseRequirements`·`deemedOneHouseBy155` 두 개만 「단건과 같은
-       * 정본 함수」로 파생한다(`transfer-tax-mixed-use.ts:209·212`) — **이 셋째만 빠졌다.**
+       *    ⇒ **제외 목록이 없다** — 이 조립부는 엔진 키 전부를 덮는다.
        *
-       * ⇒ 겸용 + 부득이한 사유 수도권 밖 주택이면 §167의10①4호 **중과 배제가 발동하지 않는다**
-       *   (`multi-house-surcharge-exclusion.ts:393`이 그 boolean을 읽는다). 납세자에게 **불리한**
-       *   방향이다.
-       *
-       * 🟡 **이 PR에서 고치지 않는다** — 세액이 움직이는 변경이라 anchor와 요건 확인이 먼저다.
-       *    ⚠️ 같은 이름이 두 축에 있다: top-level `TransferTaxInput.unavoidableOutsideCapitalHouse`는
-       *       **`{reason, resolvedDate}` 객체**이고, 여기 중첩된 것은 **`boolean`**이다.
-       *       그대로 이어 붙이면 타입이 맞지 않는다 — 파생 함수를 태워야 한다.
-       *
-       * ⚠️ **제외는 늘리기 전에 근거를 적을 것.** 근거 없이 추가하면 가드가 그만큼 눈을 감는다.
+       * ⚠️ **제외를 추가하려거든 근거를 먼저 적을 것.** 근거 없이 추가하면 가드가 그만큼 눈을 감는다.
        */
       const _mixedMultiHouseGuards: [
         Exclude<
           keyof NonNullable<MixedUseAssetInput["multiHouse"]>,
-          keyof NonNullable<typeof mixedMultiHouse> | MixedUseMultiHouseEngineDerivedKeys
+          keyof NonNullable<typeof mixedMultiHouse>
         > extends never
           ? true
           : never,
