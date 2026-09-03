@@ -338,6 +338,9 @@ export const COMPREHENSIVE_EXCL_CONST = {
   UNSOLD_EXCLUSION_YEARS:          5,
 
   // ── 사후관리 위반 추징 이자 ──
-  /** 납부불성실 가산세율 (일 0.022%) */
+  /**
+   * 이자상당가산액 일 이자율 — 「종합부동산세법 시행령」 §10②2호 「1일당 10만분의 22」.
+   * ⚠️ 「가산세율」이 아니다(국세기본법 §47의4가 아니라 종부세령의 이자상당가산액이다).
+   */
   DAILY_PENALTY_RATE:              0.00022,
 } as const;

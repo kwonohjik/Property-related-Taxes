@@ -133,7 +133,7 @@ export interface FamilyBusinessPostMgmtInput {
   employmentTracking?: EmploymentTracking;
   /** 양도세 상당액 환원 공제 (§18의2⑩, transfer-tax 측 산정값 수동 입력) */
   cgtCreditAmount?: number;
-  /** 국세기본법 §43의3② 연 이자율 (예: 0.022) */
+  /** 국세기본법 **시행령** §43의3② 연 이자율 (현행 0.031 — 시행규칙 §19의3) */
   annualInterestRate: number;
 }
 
@@ -188,7 +188,17 @@ export interface FamilyBusinessPostMgmtResult {
 export interface AmendmentReturnData {
   /** 추가 결정세액 */
   additionalDeterminedTax: number;
-  /** 이자상당액 가산세 */
+  /**
+   * 🔴 G-41: **이자상당액** — 「가산세」가 아니다.
+   *
+   * 상증법 §18의2⑤ 후단은 「이자상당액을 그 부과하는 상속세에 **가산**한다」이고 §18의2⑨도
+   * 「해당 상속세와 이자상당액을」이라 한다. 별지 제9호서식에서도 ㉕(이자상당액)과
+   * ㊱(신고불성실가산세)는 **다른 칸**이다. 구분에 실익도 있다 — 국세기본법 §47의3① 괄호가
+   * 이자상당가산액을 과소신고가산세 base 에서 제외한다.
+   *
+   * ⚠️ 필드명 `interestPenalty` 는 하위호환으로 유지한다(엔진·테스트 소비처 존재).
+   *    표시 라벨은 「이자상당액」이어야 한다.
+   */
   interestPenalty: number;
   /** 양도세 환원 공제(기납부세액) */
   cgtCreditReceived: number;

@@ -4,10 +4,11 @@
  * T-06: 1세대1주택 세액공제 (고령자·장기보유)
  * T-07: 주택분 세부담 상한
  * T-08: 재산세 비율 안분 공제
- * 사후관리 위반 추징 (§8③)
+ * 사후관리 위반 추징 (종합부동산세법 §17⑤ + 시행령 §10②)
  */
 
-import { safeMultiplyThenDivide, safeMulDivRound } from "./tax-utils";
+import { differenceInCalendarDays } from "date-fns";
+import { safeMultiplyThenDivide, safeMulDivRound, applyRateFraction, safeMultiply } from "./tax-utils";
 import {
   COMPREHENSIVE_CONST,
   COMPREHENSIVE_EXCL_CONST,
@@ -314,6 +315,36 @@ export function calculatePropertyTaxCreditProration(
 // ============================================================
 
 /**
+ * 이자상당가산액 일 이자율의 **정수 분수** 표현 — 「1일당 10만분의 22」(시행령 §10②2호).
+ *
+ * ⚠️ 분자를 별도 상수로 두지 않고 `DAILY_PENALTY_RATE`에서 **파생**한다. 따로 두면 상수를
+ *    바꿔도 금액이 안 움직여 뮤테이션이 잡히지 않는 이중 진실이 된다(B2에서 겪은 함정).
+ */
+const DAILY_INTEREST_DENOM = 100_000;
+const DAILY_INTEREST_NUMER = Math.round(
+  COMPREHENSIVE_EXCL_CONST.DAILY_PENALTY_RATE * DAILY_INTEREST_DENOM,
+);
+
+/**
+ * 그 해 이자 기산일 — 종합부동산세 납부기한(매년 12월 15일, 「종합부동산세법」 §16①)의 **다음 날**.
+ */
+function interestStartOf(taxYear: number): Date {
+  return new Date(taxYear, 11, 16);
+}
+
+/** 시각 성분을 떨어뜨린다 — `new Date()` fallback 이 섞이면 일수가 하루 흔들린다(R-4와 같은 축). */
+function startOfDayUtcSafe(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** `YYYY-MM-DD` — 표시용 echo */
+function toIsoDate(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/**
  * 합산배제 사후관리 위반 추징 계산
  * 의무임대기간 미충족·임대료 5% 초과 등 위반 시 과거 배제세액 + 이자상당가산액 추징
  *
@@ -326,26 +357,36 @@ export function calculatePropertyTaxCreditProration(
 export function calculatePostManagementPenalty(
   input: PostManagementViolationInput,
 ): PostManagementPenaltyResult {
-  const recoveryPeriodYears = input.annualExcludedTax.length;
-  const totalRecoveryTax = input.annualExcludedTax.reduce(
-    (sum, tax) => sum + tax,
-    0,
-  );
+  const noticeDate = startOfDayUtcSafe(input.noticeDate);
 
-  const daysPassed = Math.floor(
-    (input.assessmentDate.getTime() - input.exclusionStartDate.getTime()) /
-      (1000 * 60 * 60 * 24),
-  );
-  const interestAmount = Math.floor(
-    totalRecoveryTax *
-      daysPassed *
-      COMPREHENSIVE_EXCL_CONST.DAILY_PENALTY_RATE,
-  );
+  const annualInterest = input.annualExcludedTax.map((row) => {
+    const from = interestStartOf(row.taxYear);
+    // 「납부기한 다음 날부터 … 고지일까지의 기간」 — 양쪽 끝을 모두 산입한다.
+    // 기산일이 명시돼 오전 0시부터 시작하므로 초일을 산입하고(민법 §157 단서), 종기도 산입한다.
+    // 부동산 정본 `calculateDelayedPaymentPenalty`(국기법 §47의4①1호)와 같은 계산이다.
+    const days = Math.max(0, differenceInCalendarDays(noticeDate, from) + 1);
+    return {
+      taxYear: row.taxYear,
+      amount: row.amount,
+      interestFrom: toIsoDate(from),
+      days,
+      // 정수 분수 연산 — 0.00022 를 그대로 곱하면 부동소수 오차로 1원이 어긋난다.
+      interest: applyRateFraction(
+        safeMultiply(row.amount, days),
+        DAILY_INTEREST_NUMER,
+        DAILY_INTEREST_DENOM,
+      ),
+    };
+  });
+
+  const totalRecoveryTax = annualInterest.reduce((sum, r) => sum + r.amount, 0);
+  const interestAmount = annualInterest.reduce((sum, r) => sum + r.interest, 0);
 
   return {
     totalRecoveryTax,
     interestAmount,
     totalPayable: totalRecoveryTax + interestAmount,
-    recoveryPeriodYears,
+    recoveryPeriodYears: annualInterest.length,
+    annualInterest,
   };
 }

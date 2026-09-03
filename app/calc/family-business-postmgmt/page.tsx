@@ -19,6 +19,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Button } from "@/components/ui/button";
 import { calcInheritanceFilingDeadline } from "@/lib/tax-engine/deductions/family-business";
+import { CURRENT_SURCHARGE_RATE } from "@/lib/tax-engine/data/installment-surcharge-rates";
 import {
   buildAmendmentReturnData,
   calcFamilyBusinessPostMgmt,
@@ -124,7 +125,19 @@ function FamilyBusinessPostMgmtPageInner() {
   const [usedDirectInput, setUsedDirectInput] = useState(searchParams.get("direct") === "1");
   // cgt — 양도세 환원 공제(§18의2⑩). 양도세 결과뷰에서 creditAmount prefill (PR-5 연동)
   const [cgtCreditAmount, setCgtCreditAmount] = useState(searchParams.get("cgt") ?? "");
-  const [interestRate, setInterestRate] = useState("0.022");
+  /**
+   * 🔴 G-08: 이자상당액 이자율 — **현행 고시**를 기본값으로 둔다.
+   *
+   * 종전 `"0.022"`는 저장소가 보유한 고시 연혁 표 14개 값 어디에도 없는 값이었다
+   * (`installment-surcharge-rates.ts` — 0.037·0.04·0.034·0.029·0.025·0.018·0.016·0.018·
+   * 0.021·0.018·0.012·0.029·0.035·0.031). 현행은 국세기본법 시행규칙 §19의3의 연 1천분의 31.
+   *
+   * 🔑 **위반일이 아니라 현행 율이다.** 상증령 §15⑯3호는 「**부과 당시**의 「국세기본법
+   *    시행령」 제43조의3제2항 본문에 따른 이자율」이라 하는데, 부과는 아직 일어나지 않은
+   *    장래의 일이고 이 화면에는 부과일 입력 칸이 없다. 위반일로 lookup 하면 조문이 지목하지
+   *    않은 시점의 율을 쓰게 된다 ⇒ 현행 고시를 제시하고 사용자 override 를 열어 둔다.
+   */
+  const [interestRate, setInterestRate] = useState(String(CURRENT_SURCHARGE_RATE));
 
   const [violations, setViolations] = useState<ViolationRow[]>([emptyViolation()]);
 
@@ -258,7 +271,9 @@ function FamilyBusinessPostMgmtPageInner() {
           </div>
           <div className="space-y-1 md:col-span-2">
             <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-              국세기본법 §43의3② 이자율 (소수)
+              {/* 🔴 G-19: 국세기본법 제43조는 「과세표준신고의 관할」이고 제43조의3은 없다.
+                  이자율의 근거는 국세기본법 **시행령** §43의3② 본문 → 시행규칙 §19의3다. */}
+              이자율 (국세기본법 시행령 §43의3② 본문 → 시행규칙 §19의3) (소수)
             </label>
             <input
               type="text"
@@ -267,9 +282,12 @@ function FamilyBusinessPostMgmtPageInner() {
               onChange={(e) => setInterestRate(e.target.value)}
               onFocus={(e) => e.target.select()}
               className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="0.022"
+              placeholder={String(CURRENT_SURCHARGE_RATE)}
             />
-            <p className="text-micro text-muted-foreground">예: 0.022 = 연 2.2% (시점별 개정 — 국세청 고시 확인)</p>
+            <p className="text-micro text-muted-foreground">
+              현행 {(CURRENT_SURCHARGE_RATE * 100).toFixed(1)}% (국세기본법 시행규칙 §19의3 — 연 1천분의 31).
+              상증령 §15⑯3호는 <strong>부과 당시</strong>의 율을 적용하므로 고시가 바뀌면 직접 입력하세요.
+            </p>
           </div>
         </div>
         <ToggleCard
@@ -474,7 +492,10 @@ function FamilyBusinessPostMgmtPageInner() {
                 </button>
                 <ul className={`${amendOpen ? "" : "hidden print:block "}mt-2 space-y-1 text-caption`}>
                   <li className="flex justify-between"><span className="text-muted-foreground">추가 결정세액</span><span className="font-mono tabular-nums">{formatKRW(amendment.additionalDeterminedTax)}</span></li>
-                  <li className="flex justify-between"><span className="text-muted-foreground">이자상당액 가산세</span><span className="font-mono tabular-nums">{formatKRW(amendment.interestPenalty)}</span></li>
+                  <li className="flex justify-between">{/* 🔴 G-41: 「가산세」가 아니다 — 상증법 §18의2⑤ 후단은 「이자상당액을 그 부과하는
+                      상속세에 **가산**한다」이고, 별지9호에서도 ㉕(이자상당액)과 ㊱(신고불성실가산세)는
+                      다른 칸이다. 국세기본법 §47의3① 괄호도 이자상당가산액을 가산세 base 에서 제외한다. */}
+                  <span className="text-muted-foreground">이자상당액 (별지9호 ㉕)</span><span className="font-mono tabular-nums">{formatKRW(amendment.interestPenalty)}</span></li>
                   <li className="flex justify-between"><span className="text-muted-foreground">양도세 환원 공제(기납부)</span><span className="font-mono tabular-nums">{formatKRW(amendment.cgtCreditReceived)}</span></li>
                   <li className="flex justify-between font-semibold"><span>최종 납부세액</span><span className="font-mono tabular-nums">{formatKRW(amendment.netPayable)}</span></li>
                 </ul>

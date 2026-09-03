@@ -18,6 +18,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { Button } from "@/components/ui/button";
 import { calcFarmingPostMgmt } from "@/lib/tax-engine/deductions/farming-post-mgmt";
+import { CURRENT_SURCHARGE_RATE } from "@/lib/tax-engine/data/installment-surcharge-rates";
 import type {
   FarmingPostMgmtInput,
   FarmingPostMgmtJustifiedReason,
@@ -112,7 +113,12 @@ function FarmingPostMgmtPageInner() {
   const [baseTaxableAmount, setBaseTaxableAmount] = useState(
     sanitizeBaseTaxableParam(searchParams.get("baseTaxable")),
   );
-  const [interestRate, setInterestRate] = useState("0.029");  // 기본 연 2.9%
+  /**
+   * 🔴 G-08: 이자상당액 이자율 — **현행 고시**를 기본값으로 둔다.
+   * 종전 `"0.029"`는 2023-03-20~2024-03-21 구간의 **구율**이었다. 축 설명은
+   * `family-business-postmgmt/page.tsx`의 같은 주석 참조(상증령 §16⑧3호도 「부과 당시」다).
+   */
+  const [interestRate, setInterestRate] = useState(String(CURRENT_SURCHARGE_RATE));
   const [justifiedReason, setJustifiedReason] = useState<FarmingPostMgmtJustifiedReason | "">("");
   const [maintainsMajorShareholder, setMaintainsMajorShareholder] = useState(false);
   const [result, setResult] = useState<FarmingPostMgmtResult | null>(null);
@@ -233,7 +239,9 @@ function FarmingPostMgmtPageInner() {
         />
         <div className="space-y-1 md:col-span-2">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-            국세기본법 §43의3② 이자율 (소수)
+            {/* 🔴 G-19: 근거는 국세기본법 **시행령** §43의3② 본문 → 시행규칙 §19의3다.
+                국세기본법 제43조는 「과세표준신고의 관할」이고 제43조의3은 존재하지 않는다. */}
+            이자율 (국세기본법 시행령 §43의3② 본문 → 시행규칙 §19의3) (소수)
           </label>
           <input
             type="text"
@@ -241,10 +249,11 @@ function FarmingPostMgmtPageInner() {
             value={interestRate}
             onChange={(e) => setInterestRate(e.target.value)}
             className="w-32 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            placeholder="0.029"
+            placeholder={String(CURRENT_SURCHARGE_RATE)}
           />
           <p className="text-micro text-muted-foreground">
-            예: 0.029 = 연 2.9% (시점별 개정 — 국세청 고시 확인)
+            현행 {(CURRENT_SURCHARGE_RATE * 100).toFixed(1)}% (국세기본법 시행규칙 §19의3 — 연 1천분의 31).
+            상증령 §16⑧3호는 <strong>부과 당시</strong>의 율을 적용하므로 고시가 바뀌면 직접 입력하세요.
           </p>
         </div>
       </section>

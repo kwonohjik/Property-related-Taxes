@@ -11,7 +11,8 @@
  *     4호 5년 평균 정규직&총급여 모두 직전 2개 평균의 100분의 90 미달 (AND)
  *   - §15⑮ 추징율 — "대통령령으로 정하는 율" = 100분의 100 일률
  *   - §15⑩ 자산처분비율 = 처분자산 가액 / 전체 가업용자산 가액
- *   - §15⑯ 이자상당액 = 결정상속세액 × 일수 × (국세기본법 §43의3② 이자율 / 365)
+ *   - §15⑯ 이자상당액 = 결정상속세액 × 일수 × (국세기본법 **시행령** §43의3② 이자율 / 365)
+ *     — 그 시행령이 위임한 실제 율은 국세기본법 시행규칙 §19의3(현행 연 1천분의 31)이다.
  *
  * scope: 산식 헬퍼만 — 실 사용자 시뮬레이터 UI/시간경과 추적은 별도 PR.
  */
@@ -37,7 +38,7 @@ export interface FamilyBusinessInterestInput {
   determinedTax: number;
   /** 신고기한 다음날부터 사유 발생일까지 일수 (§15⑯ 2호) */
   daysFromFilingDeadlineToViolation: number;
-  /** 국세기본법 시행령 §43의3② 이자율 (예: 0.022 = 연 2.2%) */
+  /** 국세기본법 시행령 §43의3② 이자율 (현행 0.031 = 연 3.1% — 시행규칙 §19의3) */
   annualInterestRate: number;
 }
 
@@ -123,7 +124,7 @@ export function calcFamilyBusinessRecapture(
  * 산식:
  *   이자상당액 = determinedTax × daysFromFilingDeadlineToViolation × (annualInterestRate / 365)
  *
- * @param input 결정세액 + 일수 + 연이자율 (예 0.022 = 2.2%)
+ * @param input 결정세액 + 일수 + 연이자율 (현행 0.031 = 연 3.1% — 국세기본법 시행규칙 §19의3)
  */
 export function calcFamilyBusinessInterest(
   input: FamilyBusinessInterestInput,

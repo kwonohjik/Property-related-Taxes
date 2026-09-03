@@ -720,14 +720,34 @@ export interface ComprehensiveTaxResult {
   appliedLawDate: string;         // 적용 법령 기준일
 }
 
+/** 연도별 경감세액 — 「종합부동산세법 시행령」 §10①(합산 세액 − 배제 세액) */
+export interface PostManagementAnnualExcludedTax {
+  /** 합산배제 임대주택등으로 **신고한 과세연도** (§10②1호의 기간 기산 축) */
+  taxYear: number;
+  /** 그 해 경감받은 세액 */
+  amount: number;
+}
+
 /**
  * 사후관리 위반 추징 입력 (합산배제 후 의무 위반 시)
+ *
+ * 🔴 G-22: 이자상당가산액의 기간은 **연도마다 따로** 정해진다 —
+ * 「합산배제 임대주택등으로 신고한 **매 과세연도**…의 납부기한 다음 날부터 … 고지일까지의
+ * 기간」(시행령 §10②1호). 종전에는 연도별 배열을 곧바로 합산하고 **단일 일수**를 곱해
+ * 표본 계산에서 약 2배 과대였다.
  */
 export interface PostManagementViolationInput {
-  violationDate: Date;               // 위반일
-  exclusionStartDate: Date;          // 최초 합산배제 시작일
-  annualExcludedTax: number[];       // 연도별 합산배제 받은 세액
-  assessmentDate: Date;              // 현재 과세기준일
+  /**
+   * 위반일 — 추징 사유가 발생한 날.
+   *
+   * ⚠️ **이자 기간 산정에는 쓰이지 않는다.** §10②1호의 종기는 위반일이 아니라 **고지일**이다.
+   *    사유 판정·표시용으로만 받는다.
+   */
+  violationDate: Date;
+  /** 연도별 경감세액 — 과세연도와 함께 받는다(합산하면 기간 축이 소실된다) */
+  annualExcludedTax: PostManagementAnnualExcludedTax[];
+  /** 추징할 세액의 **고지일** (§10②1호의 종기) */
+  noticeDate: Date;
 }
 
 /**
@@ -738,4 +758,17 @@ export interface PostManagementPenaltyResult {
   interestAmount: number;            // 이자상당가산액 (같은 법 시행령 §10②2호 — 1일 10만분의 22)
   totalPayable: number;              // 총 납부액 (추징세 + 이자상당가산액)
   recoveryPeriodYears: number;       // 추징 대상 연수
+  /**
+   * 🔴 G-22: 연도별 산출근거 echo — 표시 산식이 금액을 재현할 수 있어야 한다.
+   * 「전체 추징세액 × 단일 일수」로는 어느 해가 며칠인지 화면에서 확인할 수 없다.
+   */
+  annualInterest: {
+    taxYear: number;
+    amount: number;
+    /** 기산일 — 그 해 납부기한(12/15) 다음 날 */
+    interestFrom: string;
+    /** 산정일수 — 기산일부터 고지일까지(양쪽 끝 포함) */
+    days: number;
+    interest: number;
+  }[];
 }
