@@ -172,9 +172,15 @@ describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
       expect(blockMsg([redev, other]).join()).not.toMatch(/재개발/);
     });
 
-    it("🔴 일반건물 + 함께양도 → 차단", () => {
+    /**
+     * 🔄 **반전 (2026-09-03)** — 일반건물 컴패니언이 열렸다. 차단 사유는 「일괄이 GB 분기를
+     * 삼킨다」였는데 정확히는 **5-a가 `return`해 5-a-3이 도달조차 하지 않는다**였고,
+     * ⑭가 `buildGbPartCards`로 파트 카드를 만들어 aggregate에 합류시켜 해소했다.
+     * 설계: `docs/02-design/features/transfer-bundled-subengine-hosting.design.md`
+     */
+    it("✅ 일반건물 + 함께양도 → 더는 차단되지 않는다", () => {
       const gb = { ...bg, transferType: "regular", assetKind: "general_building" };
-      expect(blockMsg([gb, other]).join()).toMatch(/일반건물/);
+      expect(blockMsg([gb, other]).join()).not.toMatch(/일반건물/);
     });
 
     it("각 기능의 단건은 차단되지 않는다 (회귀 가드)", () => {

@@ -220,11 +220,16 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
          *    `fullFractional` 조건이 더는 필요 없다. 대신 아래 「상증법 평가 승자」 게이트가
          *    합산 증여세를 낼 수 없는 조합만 좁게 막는다.
          */
-        ...(fullFractional
-          ? []
-          : ([
-              [(a) => a.assetKind === "general_building", "일반건물(토지·건물 일괄)"],
-            ] as Array<[(a: AssetForm) => boolean, string]>)),
+        /**
+         * 🔄 **일반건물은 이 목록에서 나갔다 (2026-09-03).** 종전 사유는 「일괄(5-a)이 일반건물
+         *    분기를 삼킨다」였는데, 정확히는 **5-a가 `return`해 5-a-3이 도달조차 하지 않는다**였다
+         *    (설계문서 `transfer-bundled-subengine-hosting.design.md` §1). ⑭가
+         *    `buildGbPartCards`로 파트 카드를 만들어 aggregate에 합류시켜 해소했다 —
+         *    축 B(지분 분할)와 **같은 leaf**를 쓴다.
+         *
+         * ⚠️ 겸용주택은 위에서 **계속 차단**한다. `MixedUseGainBreakdown`이 세액까지 자체
+         *    완결해 aggregate 합류 경로가 없다(설계문서 §2 · 미검증 V-2~V-4).
+         */
       ];
       for (const [match, label] of SINGLE_ONLY) {
         if (form.assets.some(match)) {

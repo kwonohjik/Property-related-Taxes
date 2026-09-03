@@ -194,14 +194,21 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
     });
 
     /**
-     * 🔑 **양성 대조군** — 진짜 함께양도(지분율 100%인 자산 2건)는 **계속 차단**되어야 한다.
-     * 이게 없으면 「가드를 통째로 없앴다」와 구별되지 않는다.
+     * 🔄 **반전 (2026-09-03) — 이 항목은 「양성 대조군」이었다.**
+     *
+     * 종전에는 진짜 함께양도(지분율 100% 자산 2건)가 **계속 차단**되는 것이 「가드를 통째로
+     * 없앴다」와의 유일한 구별점이었다. 그런데 일반건물 컴패니언이 열려 그 비대칭 자체가
+     * 소멸했다 — GB는 이제 **지분 모드·함께양도 양쪽에서** 계산된다.
+     *
+     * ⚠️ **대조군 역할은 아래 겸용주택 항목이 이어받는다.** 반전만 하고 대조군을 두지 않으면
+     *    `SINGLE_ONLY` 가드가 통째로 사라져도 이 파일이 초록으로 남는다
+     *    ([[feedback_shared_assertion_reversal_erases_sibling_net]]).
      */
-    it("진짜 함께양도(전 자산 100%)는 계속 차단된다", () => {
+    it("진짜 함께양도(전 자산 100%)도 더는 차단되지 않는다", () => {
       const full1 = gbShare({ assetId: "f1", ownershipNumerator: "100", ownershipDenominator: "100" });
       const full2 = gbShare({ assetId: "f2", ownershipNumerator: "100", ownershipDenominator: "100" });
       const msgs = messages(fractionalForm([full1, full2]));
-      expect(msgs.some((m) => m.includes("일반건물(토지·건물 일괄)은(는) 함께 양도"))).toBe(true);
+      expect(msgs.some((m) => m.includes("일반건물(토지·건물 일괄)은(는) 함께 양도"))).toBe(false);
     });
 
     /**
@@ -216,6 +223,7 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
       expect(msgs.some((m) => m.includes("재개발·재건축"))).toBe(false);
     });
 
+    /** 🔑 **양성 대조군** — `SINGLE_ONLY` 가드가 살아 있음을 이 항목이 홀로 증명한다. */
     it("겸용주택 함께양도 차단은 그대로다 (아직 열리지 않은 축)", () => {
       const mu1 = gbShare({ assetId: "m1", assetKind: "housing", isMixedUseHouse: true, ownershipNumerator: "100", ownershipDenominator: "100" });
       const mu2 = gbShare({ assetId: "m2", assetKind: "housing", isMixedUseHouse: true, ownershipNumerator: "100", ownershipDenominator: "100" });

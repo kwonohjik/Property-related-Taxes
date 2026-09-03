@@ -4,6 +4,7 @@ import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
 import { commercialAppurtenantLandSchema } from "./transfer-tax-building-schemas";
 import { commercialBuildingValuationSchema } from "./transfer-tax-building-schemas";
 import { redevelopmentSchema } from "./transfer-tax-redevelopment-schema";
+import { generalBuildingValuationSchema } from "./transfer-tax-building-schemas";
 
 // ─── ⑩ 장기임대주택 거주주택 비과세 특례 enum 재export (컴패니언) ─
 
@@ -419,8 +420,13 @@ export const companionAssetSchema = z.object({
    *    달랐다 — 입주권은 ④ fold(200이면서 §166 없이 주택 계산), 재개발APT는 ⑩ enum(400).
    *    아래 `redevelopment` 서브객체를 함께 등록해 열었다.
    *
-   * ⚠️ 남은 1종은 `general_building`이고 ⑧이 막는다. 토지·건물 2파트 산출물이 별도 축이라
-   *    enum만 넓히면 그 자산의 분리 계산이 사라진다.
+   * 🔄 **`general_building` 추가 (2026-09-03).** 장벽은 ⑩만이 아니었다 — route 5-a가
+   *    `return`해 5-a-3 GB 분기가 **도달조차 하지 않았다**. ⑭가 `buildGbPartCards`로 파트
+   *    카드를 만들어 aggregate에 합류시킨다(축 B와 **같은 leaf**).
+   *
+   * ⚠️ 남은 1종은 **겸용주택**(`housing` + `isMixedUseHouse`)이고 ⑧이 막는다. 그쪽은
+   *    `MixedUseGainBreakdown`으로 **세액까지 자체 완결**해 aggregate 합류 경로가 없다 —
+   *    세액 계산 주체를 옮기는 별건이다(설계문서 §2·V-2~V-4).
    */
   assetKind: z.enum([
     "housing",
@@ -430,6 +436,7 @@ export const companionAssetSchema = z.object({
     "presale_right",
     "right_to_move_in",
     "redevelopment_apt",
+    "general_building",
   ]),
   /**
    * ⑫ 시행령 §166 (재개발·재건축) — `right_to_move_in`·`redevelopment_apt` 컴패니언 전용.
@@ -441,6 +448,14 @@ export const companionAssetSchema = z.object({
    *    — 입주권이 ④ fold로 겪던 것과 **같은 결과**가 ⑫에서 다시 만들어진다.
    */
   redevelopment: redevelopmentSchema,
+  /**
+   * ⑫ 일반건물(토지+건물 일괄) — `general_building` 컴패니언 전용. **primary와 같은 스키마**.
+   *
+   * 🔑 이 서브객체가 있어야 ⑭가 파트 카드로 펼칠 수 있다. 등록하지 않으면 침묵 strip이라
+   *    그 자산이 **토지·건물 분리 없이** 계산된다 — route 5-a-3이 도달조차 못 하던 종전 상태와
+   *    같은 결과다(설계문서 `transfer-bundled-subengine-hosting.design.md` §1).
+   */
+  generalBuildingValuation: generalBuildingValuationSchema.optional(),
   /**
    * ⑫ 상가 부수토지 초과분(§101① 배율) — **물건 전체 면적**이라 지분·안분과 무관하다.
    * 누락 시 §104①8호 +10%p 세율이 통째로 사라진다(primary 축에서 실측 이력).

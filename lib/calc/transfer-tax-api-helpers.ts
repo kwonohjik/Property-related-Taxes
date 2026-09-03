@@ -122,6 +122,7 @@ export { buildCommercialBuildingValuation } from "./transfer-tax-api-commercial"
 import { buildCommercialAppurtenantLand } from "./transfer-tax-api-commercial";
 import { buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
 import { buildRedevelopmentPayload as buildRedevPayloadForCompanion } from "./transfer-tax-api-redev";
+import { buildGeneralBuildingValuation as buildGeneralBuildingValuationForCompanion } from "./transfer-tax-api-gb";
 
 // ─── ④ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — transfer-tax-api-rental-housing.ts로 분리 (800줄 정책, 재export 호환) ───
 export { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
@@ -610,6 +611,18 @@ export function buildAssetPayload(
     ...(asset.assetKind === "right_to_move_in" || asset.assetKind === "redevelopment_apt"
       ? { redevelopment: buildRedevPayloadForCompanion(asset) }
       : {}),
+    /**
+     * ⑬ 일반건물 서브객체 — 컴패니언 함께양도. **primary와 같은 빌더**를 쓴다.
+     *
+     * ⑭가 이것을 받아 `buildGbPartCards`로 **토지·건물 파트 카드**를 만든다. 누락 시 침묵
+     * strip이라 그 자산이 토지·건물 분리 없이 계산된다(route 5-a-3이 도달 못 하던 종전 상태).
+     */
+    ...(() => {
+      const gbv = asset.assetKind === "general_building"
+        ? buildGeneralBuildingValuationForCompanion(asset, transferDate)
+        : undefined;
+      return gbv !== undefined ? { generalBuildingValuation: gbv } : {};
+    })(),
     ...(asset.transferType === "burdened_gift"
       ? {
           // ⑬ 엔진 §159 게이트가 보는 값 — `burdenedGiftInfo`만으로는 발동하지 않는다.
