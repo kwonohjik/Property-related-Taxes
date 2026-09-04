@@ -594,6 +594,7 @@ export function buildCompanionEngineInputs(
     return buildMixedUseCompanionItems(c.mixedUse, companionEngine, ctx, {
       ownershipRatio: c.ownershipRatio,
       isUnregistered: c.isUnregistered,
+      totalPropertyTransferPrice: c.totalPropertyTransferPrice,
       assetId: c.assetId,
       assetLabel: c.assetLabel ?? "",
       allocatedSalePrice: a.allocatedSalePrice,

@@ -151,6 +151,26 @@ describe("겸용 파트 카드 ≡ 단건 겸용", () => {
     expect(agg.totalTax).toBe(Math.floor(single.total.transferTax * 1.1));
   });
 
+  it("EQ-6 🔑 배율초과 비사토 + 1세대1주택 — 12억 분모가 carve-out **전** 값이어야 한다", () => {
+    const base = mixedUseExcessLand();
+    /** 주택 기준시가를 올려 **주택분이 12억을 넘도록** — 그래야 12억 축이 켜져 분모가 갈린다. */
+    const asset: MixedUseAssetInput = {
+      ...base,
+      isOneHouseExempt: true,
+      transferStandardPrice: { ...base.transferStandardPrice, housingPrice: 5_000_000_000 },
+    };
+    const { single, agg } = compare(
+      asset,
+      companionBase({ isOneHousehold: true, residencePeriodMonths: 25 * 12 }),
+    );
+    // 판별력 근거 — 비사토가 실제로 떼어져야 두 분모(carve-out 전/후)가 갈린다.
+    // 판별력 근거 — 비사토가 실제로 떼어지고(carve-out 전/후 분모가 갈린다) 12억 축이 켜져야 한다.
+    expect(single.housingPart.nonBusinessTransferRatio).toBeGreaterThan(0);
+    expect(single.housingPart.isExempt).toBe(false);
+    expect(agg.taxBase).toBe(single.total.taxBase);
+    expect(agg.totalTax).toBe(Math.floor(single.total.transferTax * 1.1));
+  });
+
   it("MUT-1 🔴 주택 2카드에서 `totalPropertyTransferPrice`를 지우면 12억 판정이 무너진다", () => {
     const asset: MixedUseAssetInput = { ...mixedUseCase14(), isOneHouseExempt: true };
     const companion = companionBase({ isOneHousehold: true, residencePeriodMonths: 25 * 12 });

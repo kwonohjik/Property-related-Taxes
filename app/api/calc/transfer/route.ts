@@ -343,6 +343,7 @@ export async function POST(request: NextRequest) {
               {
                 ownershipRatio: data.ownershipRatio,
                 isUnregistered: data.isUnregistered,
+                totalPropertyTransferPrice: data.totalPropertyTransferPrice,
                 assetId: "primary",
                 assetLabel: a.assetLabel ?? "",
                 allocatedSalePrice: a.allocatedSalePrice,
@@ -452,6 +453,7 @@ export async function POST(request: NextRequest) {
         transferDate,
         ownershipRatio: data.ownershipRatio,
         isUnregistered: data.isUnregistered,
+        totalPropertyTransferPrice: data.totalPropertyTransferPrice,
         reductions: engineInput.reductions,
         filingPenaltyDetails: engineInput.filingPenaltyDetails,
         delayedPaymentDetails: engineInput.delayedPaymentDetails,

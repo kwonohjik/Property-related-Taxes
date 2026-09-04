@@ -41,6 +41,11 @@ export interface MixedUseAssetInputSources {
   ownershipRatio: number | undefined;
   /** §104③ 미등기양도자산. */
   isUnregistered: boolean | undefined;
+  /**
+   * **물건 전체(100%) 양도가액** — §89①3호 고가주택(12억) 판정·안분 분모(영 §156①·②).
+   * 지분 양도에서만 값이 있다. 단독 소유면 `undefined`(= 양도가액이 곧 분모).
+   */
+  totalPropertyTransferPrice: number | undefined;
   /** ⚠️ `mapReductionsToEngine` 변환본 — raw 금지(§77① 「소급 2년」 비교가 침묵 오작동). */
   reductions: TransferTaxInput["reductions"];
   filingPenaltyDetails: TransferTaxInput["filingPenaltyDetails"];
@@ -148,6 +153,8 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     // ⑭ 개산공제(§163⑥) 지분 축소 — `mixedUse` 서브객체에는 없는 자산-수준 값.
     ownershipRatio: s.ownershipRatio,
     isUnregistered: s.isUnregistered,
+    // ⑭ §89①3호 12억 분모 — 지분 양도에서 이 값이 없으면 문턱이 1/지분율만큼 올라간다.
+    totalPropertyTransferPrice: s.totalPropertyTransferPrice,
     // ⑭ 영 §154① 요건 판정 — 폼-전역이라 서브객체에 없다. 누락 시 거주요건·단서 면제가 미판정.
     wasRegulatedAtAcquisition: s.wasRegulatedAtAcquisition,
     regionCode: s.regionCode,
