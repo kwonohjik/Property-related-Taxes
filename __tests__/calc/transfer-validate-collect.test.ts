@@ -190,6 +190,8 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     form.assets.push(second);
 
     const issues = collectStepIssues(0, form);
-    expect(issues.some((it) => it.message.includes("지분율(분자/분모)"))).toBe(true);
+    // 문구는 화면에 있는 말이어야 한다 — 위젯이 단일 백분율 칸이 된 뒤 「분자/분모」는
+    // 화면 어디에도 없다(2026-09-04, `ownership-ratio-percent-message.anchor`).
+    expect(issues.some((it) => it.message.includes("공유 지분율(%)을 입력하세요"))).toBe(true);
   });
 });

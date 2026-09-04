@@ -7,6 +7,8 @@ import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { OtherLandParcelSection } from "./OtherLandParcelSection";
 import { FactoryLandSection } from "./FactoryLandSection";
 import { NblLandValueAutoFetchButton } from "./NblLandAutoFetch";
+// 공유 지분은 자산-수준 「공유 지분율」(%) 단일 소스 — NBL 전용 지분 입력칸은 폐지됐다(2026-09-04).
+import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -613,7 +615,7 @@ export function OtherLandDetailSection({
             <NblLandValueAutoFetchButton
               jibun={asset.addressJibun}
               area={parseFloat(asset.acquisitionArea || "0") || 0}
-              ratio={parseFloat(asset.nblOwnershipRatio || "1") || 1}
+              ratio={getOwnershipRatio(asset)}
               transferDate={transferDate ?? ""}
               onResult={(cur, prior) =>
                 onAssetChange({ nblRevenueCurrentLandValue: cur, nblRevenuePriorLandValue: prior })

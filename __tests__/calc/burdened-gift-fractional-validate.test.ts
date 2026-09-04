@@ -55,7 +55,10 @@ describe("⑧ 부담부증여 지분 — B/C 검사 스케일 정합", () => {
     );
     expect(msg).toContain("600,000,000"); // 지분분 C
     expect(msg).toContain("1,200,000,000"); // 물건 전체 (사용자 혼란 방지)
-    expect(msg).toContain("1/2");
+    // 지분 표기는 화면 위젯과 같은 백분율이다 — 레거시 분모(1/2)도 「50%」로 보인다
+    // (2026-09-04, `ownership-ratio-percent-message.anchor`). 분모는 화면에 없다.
+    expect(msg).toContain("지분 50%");
+    expect(msg).not.toContain("1/2");
   });
 
   it("지분 1/2 + 채무 5억: 지분분 6억 이내 → 통과 (판별력)", () => {

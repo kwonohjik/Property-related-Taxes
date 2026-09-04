@@ -49,7 +49,11 @@ export interface NblJudgmentFormSlice {
   nblIsMetropolitanArea: "" | "yes" | "no" | "unknown";
   /** 소재지 행정구역 단위 — 법 §104의3①1호나목·3호가목 지역 열거(읍·면 제외) 판정용 */
   nblLandDivision: "" | "dong" | "eup_myeon";
-  nblOwnershipRatio: string;
+  /*
+   * `nblOwnershipRatio`는 2026-09-04에 **폼에서 제거**됐다. 공유 지분은 자산-수준
+   * `ownershipNumerator`/`ownershipDenominator`(%) 단일 소스에서 파생한다
+   * (`buildNonBusinessLandRaw`). 전송 페이로드(⑫ Zod)에는 파생값으로 남아 있다.
+   */
 
   // ── NBL 농지 세부 ──
   nblFarmingSelf: boolean;

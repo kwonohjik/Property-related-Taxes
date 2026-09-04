@@ -291,7 +291,6 @@ export const NBL_DEFAULTS = {
   nblUrbanIncorporationDate: "",
   nblIsMetropolitanArea: "" as "" | "yes" | "no" | "unknown",
   nblLandDivision: "" as "" | "dong" | "eup_myeon",
-  nblOwnershipRatio: "",
   nblFarmingSelf: false,
   nblDisqualifiedTaxPeriods: "",
   nblFarmerResidenceDistance: "",

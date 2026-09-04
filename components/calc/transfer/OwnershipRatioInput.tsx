@@ -19,6 +19,11 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { isFractionalRatioStr } from "@/lib/calc/transfer-tax-api-helpers";
+// ⑤ 인라인 경고와 ⑧ 계산 전 차단은 **같은 술어**를 쓴다 (문구가 갈리지 않도록 단일 소스).
+import {
+  ownershipRatioError,
+  formatOwnershipPercent,
+} from "@/lib/calc/transfer-tax-api-asset-basics";
 import { cn } from "@/lib/utils";
 
 /** 자산 분할 모드 — 토글 A(함께양도)·토글 B(지분분할)·없음. Step1↔③ 4레벨 prop 공유 타입. */
@@ -81,6 +86,7 @@ export function OwnershipRatioInput({
     <FieldCard
       label={label}
       hint="소유·취득 지분을 백분율(%)로 입력 (단독 소유는 100)"
+      warning={ownershipRatioError(numerator, denominator)}
       trailing={
         fractional ? (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-micro font-semibold text-amber-800">
@@ -162,7 +168,8 @@ export function OwnershipRatioBlock({
               <ul className="text-xs text-amber-800 space-y-0.5 leading-relaxed list-disc list-inside">
                 <li>
                   <strong>양도가액·취득가액·필요경비</strong>는 물건 전체(100%) 기준으로
-                  입력합니다. 시스템이 지분율({numerator}/{denominator})을 자동으로 적용합니다.
+                  입력합니다. 시스템이 지분율({formatOwnershipPercent(numerator, denominator)})을
+                  자동으로 적용합니다.
                 </li>
                 <li>
                   예: 60% 지분의 실제 매매가 600,000,000원 → 100% 기준{" "}

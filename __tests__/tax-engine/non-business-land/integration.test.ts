@@ -7,6 +7,7 @@ import { describe, it, expect } from "vitest";
 import { mapAssetToNblInput } from "@/lib/tax-engine/non-business-land/form-mapper";
 import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
+import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 // ── 헬퍼 ──────────────────────────────────────────────────────
@@ -250,16 +251,23 @@ describe("시나리오 11~14 — 특수 케이스", () => {
 describe("시나리오 15~17 — 복합 및 결과 구조", () => {
 
   it("시나리오 15: 공동상속 50% 지분 → 판정 결과 반환, warnings에 지분 정보 포함", () => {
+    // 지분은 자산-수준 「공유 지분율」(%)이 단일 소스다 — ④ `buildNonBusinessLandRaw`가
+    // [0..1]로 파생해 NBL 페이로드에 싣는다(2026-09-04, NBL 전용 지분 입력칸 폐지).
+    // 그래서 이 시나리오만 ④를 태워 실제 배선을 그대로 검증한다.
     const asset = makeLandAsset({
       nblLandType: "housing_site",
       nblZoneType: "general_residential",
       nblIsMetropolitanArea: "yes",
       nblHousingFootprint: "50",
-      nblOwnershipRatio: "0.5",
+      ownershipNumerator: "50",
+      ownershipDenominator: "100",
+      acquisitionDate: "2010-01-01",
       acquisitionArea: "500",
       nblBusinessUsePeriods: [],
     });
-    const result = judge(asset, "2010-01-01", "2024-01-01");
+    const raw = buildNonBusinessLandRaw(asset, "2024-01-01")!;
+    expect(raw.nblOwnershipRatio).toBe("0.5");
+    const result = judge(raw as unknown as AssetForm, "2010-01-01", "2024-01-01");
     expect(result).not.toBeNull();
     // 공동소유 0.5 지분이면 면적 안분이 지분 비례로 적용되거나 경고 메시지에 포함
     const hasCoOwnershipInfo =

@@ -92,6 +92,11 @@ export const nonBusinessLandRawSchema = z.object({
   nblUrbanIncorporationDate: z.string().optional(),
   nblIsMetropolitanArea: z.string().optional(),
   nblLandDivision: z.string().optional(),
+  /**
+   * 공유 지분 [0..1] — **사용자 입력이 아니라 파생값**이다(2026-09-04).
+   * ④ `buildNonBusinessLandRaw`가 자산-수준 「공유 지분율」(%)에서 계산해 싣는다.
+   * NBL 전용 입력칸은 폐지됐으므로 이 키를 다시 폼 필드로 만들지 말 것 — 단위가 갈린다.
+   */
   nblOwnershipRatio: z.string().optional(),
   nblFarmerResidenceDistance: z.string().optional(),
   nblLandSigunguCode: z.string().optional(),
