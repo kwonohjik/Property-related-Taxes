@@ -95,8 +95,13 @@ describe("G-29 지방소득세 — §103의3은 세율 조항이고 §114조의2
 
 describe("G-16 · G-38 표시 문자열 — 법령명 병기 · 지방소득세 base 축 명시", () => {
   it("B1-16-1: 일괄양도 카드 지방세 라벨이 §114조의2분만 base에 든다고 말한다", () => {
+    /**
+     * 🔄 **파일이 옮겨졌다 (2026-09-04, 800줄 분리)** — 합산 세액 요약(`AggregatedTaxSummary`)이
+     * `BundledAllocationSubCards.tsx`로 나갔다. 인용은 그 문자열을 **렌더하는 곳**에 있어야 하므로
+     * 검사 대상도 함께 옮긴다(무동작 리팩터 — 문구 자체는 그대로다).
+     */
     expectCitations(
-      "components/calc/results/BundledAllocationCard.tsx",
+      "components/calc/results/BundledAllocationSubCards.tsx",
       ["소득세법 §114조의2 가산세) × 10%", "국세기본법 §47의2~§47의4 가산세는 대상 아님"],
       ["지방세 납부세액 (지방소득세, 결정세액+가산세 × 10%)"],
     );
