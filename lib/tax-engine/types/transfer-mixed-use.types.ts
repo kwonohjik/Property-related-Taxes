@@ -355,6 +355,15 @@ export interface MixedUseAssetInput {
    */
   ownershipRatio?: number;
   /**
+   * **물건 전체(100%) 양도가액** — §89①3호 고가주택(12억) 판정·안분 분모 전용(영 §156①·②).
+   *
+   * 🔴 지분 양도에서 이 값을 주지 않으면 12억 판정이 **내 지분분 기준**이 되어
+   *    문턱이 `1/지분율`만큼 올라간다. 단독 소유면 미지정(= 양도가액과 동일)이 정상이다.
+   *
+   * ⚠️ `ownershipRatio`(개산공제 base 축소)와 **다른 축**이다 — 그쪽은 필요경비, 이쪽은 비과세다.
+   */
+  totalPropertyTransferPrice?: number;
+  /**
    * 미등기양도자산 여부(소득세법 §104③) — §163⑥ 개산공제율 3/100 → **3/1000** 전환.
    * 호출부가 `TransferTaxInput.isUnregistered`를 그대로 내려준다(서브엔진 재판정 금지).
    * 율 산출은 `estimatedDeductionRate()` 단일 경유.
@@ -436,6 +445,26 @@ export interface MixedUseApportionment {
   housingTransferPrice: number;
   /** 상가 양도가액 */
   commercialTransferPrice: number;
+  /**
+   * **물건 전체(100%) 기준 주택분 양도가액** — §89①3호 고가주택(12억) 판정·안분 **분모 전용**.
+   *
+   * 🔑 공유지분 양도에서 `housingTransferPrice`는 **내 지분분**이라 12억 문턱이
+   *    `1/지분율`만큼 올라간다(지분 60%면 물건 전체 20억까지 비과세로 빠져나간다 — 실측).
+   *
+   * [「소득세법 시행령」 제156조 제1항] "1주택 및 이에 딸린 토지의 일부를 양도하거나 **일부가
+   * 타인 소유인 경우**로서 실지거래가액 합계액에 양도하는 부분(**타인 소유부분을 포함한다**)의
+   * 면적이 전체 주택면적에서 차지하는 비율을 나누어 계산한 금액이 12억원을 초과하는 경우에는
+   * 고가주택으로 본다."
+   * [같은 조 제2항] 겸용주택은 "제154조제3항 본문에 따라 **주택으로 보는 부분**(이에 부수되는
+   * 토지를 포함한다)에 해당하는 실지거래가액을 포함한다" ⇒ **주택분**으로 판정한다.
+   *
+   * ⇒ 분모 = (물건 전체 양도가액) × 주택 기준시가 비율. 단독 소유(지분 100%)면
+   *   `housingTransferPrice`와 같아 동작이 바뀌지 않는다.
+   *
+   * 일반 주택 경로가 `TransferTaxInput.totalPropertyTransferPrice`로 이미 같은 규약을 쓴다
+   * (`transfer-tax-helpers.ts` `calcOneHouseProration`). 겸용만 그 축이 없었다.
+   */
+  wholeHousingTransferPrice?: number;
 }
 
 /** 주택부분 계산 결과 */

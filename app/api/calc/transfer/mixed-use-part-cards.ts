@@ -91,13 +91,36 @@ export function buildMixedUsePartCards(
    * 절사는 비사토 쪽에서 하고 **잔액은 주택이 흡수**한다(합 불변식 — 저장소 공통 규약).
    */
   const ratio = hp.nonBusinessTransferRatio ?? 0;
-  const nblT = Math.floor(hp.landTransferPrice * ratio);
   const nblA = Math.floor(hp.landAcqPrice * ratio);
   const nblE = Math.floor(hp.landAppraisalDed * ratio);
+  /**
+   * 🔑 **양도가액이 잔액을 흡수한다** — 비사토 카드의 차익이 엔진의
+   * `nonBusinessTransferredGain`과 **정확히** 같아지도록 역산한다.
+   *
+   * ⚠️ 세 금액을 각각 `floor(비율 × ·)` 하면 차익이 1원 어긋난다(실측). 엔진은 **차익**을
+   *    비율로 쪼개고(`floor(landGain × ratio)`) 우리는 **금액**을 쪼개므로, 절사 지점이 다르면
+   *    그만큼 갈린다. 주택 토지 카드가 나머지를 그대로 받으므로 합은 불변이다.
+   */
+  const nblT = ratio > 0 ? hp.nonBusinessTransferredGain + nblA + nblE : 0;
 
   const housingLandT = hp.landTransferPrice - nblT;
-  /** §89① 12억 판정 분모 — **주택분(토지+건물) 합계**. 카드별 판정을 막는다. */
-  const housingTotal = housingLandT + hp.buildingTransferPrice;
+
+  /**
+   * §89①3호 고가주택(12억) 판정·안분 **분모** — 카드별 판정을 막는다.
+   *
+   * 🔑 **겸용 엔진이 쓴 값을 그대로 가져온다**(`apportionment`). 여기서 카드 금액으로 다시
+   *    만들면 두 경로가 갈린다:
+   *
+   *    · **지분 양도** — 엔진은 `wholeHousingTransferPrice`(물건 전체 주택분, 영 §156①)를
+   *      쓰는데 카드 합계는 **내 지분분**이다. 지분 60%·물건 전체 주택분 16.7억이면
+   *      카드 합계 10억이 12억 이하가 되어 **전액 비과세**가 된다(실측).
+   *    · **배율초과 비사토** — 카드 합계는 carve-out **후**, 엔진 분모는 carve-out **전**이다.
+   *      비사토가 있으면 그만큼 분모가 작아져 안분율이 달라진다.
+   *
+   *   ⇒ 단일 소스는 `apportionment`다.
+   */
+  const housingTotal =
+    r.apportionment.wholeHousingTransferPrice ?? r.apportionment.housingTransferPrice;
 
   /**
    * 두 축을 **명시적으로 중화**한다 — `companionEngine` 스프레드가 실어 오지만 파트 카드에서는
@@ -252,6 +275,8 @@ export function buildMixedUseCompanionItems(
   asset: {
     ownershipRatio: number | undefined;
     isUnregistered: boolean | undefined;
+    /** §89①3호 12억 분모(영 §156①·②) — 지분 양도 전용. */
+    totalPropertyTransferPrice: number | undefined;
     assetId: string;
     assetLabel: string;
     allocatedSalePrice: number;
@@ -272,6 +297,7 @@ export function buildMixedUseCompanionItems(
     // ── 자산-수준 ──
     ownershipRatio: asset.ownershipRatio,
     isUnregistered: asset.isUnregistered,
+    totalPropertyTransferPrice: asset.totalPropertyTransferPrice,
     reductions: companionEngine.reductions,
     /**
      * 가산세는 **신고서 단위**로만 부과한다 — route가 aggregate에 직접 넘긴다.

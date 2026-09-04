@@ -133,6 +133,18 @@ export function apportionTransferPrice(
     housingRatio,
     housingTransferPrice,
     commercialTransferPrice,
+    /**
+     * §89①3호 고가주택 분모 — **물건 전체 주택분**(영 §156①·②). 지분 양도 전용이고,
+     * 미지정(단독 소유)이면 `housingTransferPrice`가 그대로 분모가 된다.
+     * 안분 비율은 위와 **같은 `housingRatio`** 를 쓴다 — 다른 비율을 쓰면 두 값이 어긋난다.
+     */
+    ...(asset.totalPropertyTransferPrice !== undefined
+      ? {
+          wholeHousingTransferPrice: Math.floor(
+            asset.totalPropertyTransferPrice * housingRatio,
+          ),
+        }
+      : {}),
   };
 }
 
@@ -496,8 +508,24 @@ export function buildHousingPart(
   // ─── 🚨 Critical (이슈 8-A): 다주택자 1세대1주택 비과세 미적용 분기 ───
   // - isOneHouseExempt === false: 다주택자·요건 미충족 → 12억 비과세 미적용 (전액 과세)
   // - isOneHouseExempt === true (기본): 12억 이하 비과세 + 표2 거주공제 가능
-  const isExempt =
-    isOneHouseExempt && apportionment.housingTransferPrice <= HIGH_VALUE_THRESHOLD;
+  /**
+   * §89①3호 고가주택 판정·안분 **분모** — 「소득세법 시행령」 제156조 제1항·제2항.
+   *
+   * ①은 "1주택 및 이에 딸린 토지의 일부를 양도하거나 **일부가 타인 소유인 경우**"에
+   * "양도하는 부분(**타인 소유부분을 포함한다**)"의 비율로 나눈 금액으로 12억을 판정하라고 한다
+   * ⇒ 공유지분이어도 **물건 전체 기준**이다. ②는 겸용주택에서 "**주택으로 보는 부분**"의
+   * 실지거래가액으로 판정하라고 한다 ⇒ 그 전체 중 **주택분**이다.
+   *
+   * 🔴 종전에는 이 분모가 `housingTransferPrice`(= **내 지분분**)뿐이라 지분 60%면 물건 전체
+   *    20억까지 12억 이하로 판정돼 **전액 비과세**가 됐다(실측: 세액 153,322,963 → 17,983,739).
+   *    일반 주택 경로는 `totalPropertyTransferPrice`로 이미 총 물건가를 분모로 쓰고 있었고
+   *    (`transfer-tax-helpers.ts` `calcOneHouseProration`) 겸용만 빠져 있었다.
+   *
+   * 단독 소유면 `wholeHousingTransferPrice`가 없어 종전과 완전히 같은 값이다.
+   */
+  const highValueBase =
+    apportionment.wholeHousingTransferPrice ?? apportionment.housingTransferPrice;
+  const isExempt = isOneHouseExempt && highValueBase <= HIGH_VALUE_THRESHOLD;
 
   // ── ① 비사업용토지 이전 (안분 전 양도차익에서 분리) ──
   const nonBizRatio = excessResult.nonBizRatio;
@@ -513,10 +541,9 @@ export function buildHousingPart(
   } else if (isExempt) {
     proratio = 0;  // 1세대1주택자 + 12억 이하: 전액 비과세
   } else {
-    // 1세대1주택자 + 12억 초과: 안분 과세
-    proratio =
-      (apportionment.housingTransferPrice - HIGH_VALUE_THRESHOLD) /
-      apportionment.housingTransferPrice;
+    // 1세대1주택자 + 12억 초과: 안분 과세.
+    // 판정과 **같은 분모**를 쓴다 — 갈라 놓으면 「12억 초과로 판정해 놓고 지분분으로 안분」이 된다.
+    proratio = (highValueBase - HIGH_VALUE_THRESHOLD) / highValueBase;
   }
 
   const proratedLandGain = Math.floor(Math.max(housingLandGainAfterNB, 0) * proratio);
