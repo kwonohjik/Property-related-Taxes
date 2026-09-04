@@ -11,10 +11,14 @@
  *    AcquisitionInfoBlock만 「그 밖의 관계」. 「그 밖의 관계」로 통일한다
  *    (부동산 양도세 `CarryoverGiftBlock.tsx:132` 산문 표현과도 일치).
  *
- * 세 곳:
+ * 두 곳:
  *   AcquisitionInfoBlock     단일 종목 축
- *   AcquisitionLotsMatrix    다건 취득 lot 축
- *   SplitLotsBlock           분할 양도 lot 축
+ *   AcquisitionLotCard       매수 lot 축 — `SplitLotsBlock`(분할 양도)·`AcquisitionLotsMatrix`(다건 취득)
+ *                            **둘의 단일 소스**다.
+ *
+ * 종전에는 lot 축이 두 파일에 복제돼 있어 여기서 파일 3개를 훑었다. 2026-09-04에
+ * `AcquisitionLotCard`로 추출하면서 그 두 축이 한 파일로 합쳐졌다 — 라벨이 갈릴 여지가
+ * **구조적으로 사라졌으므로** 소스 스캔 대상도 2곳이 된다.
  *
  * ⚠️ 값(spouse·lineal·other)은 엔진 계약이므로 **바꾸지 않는다** — 라벨만이다.
  */
@@ -33,20 +37,33 @@ import path from "node:path";
 
 const FILES = {
   AcquisitionInfoBlock: "components/calc/stock-transfer/AcquisitionInfoBlock.tsx",
-  AcquisitionLotsMatrix: "components/calc/stock-transfer/AcquisitionLotsMatrix.tsx",
-  SplitLotsBlock: "components/calc/stock-transfer/SplitLotsBlock.tsx",
+  AcquisitionLotCard: "components/calc/stock-transfer/AcquisitionLotCard.tsx",
 } as const;
+
+/**
+ * 복제 재발 가드 — lot 카드를 다시 복사해 넣으면 여기서 걸린다.
+ * (종전 결함: 두 파일이 같은 JSX를 들고 있다가 「1주당 단가」 조문 인용이 한쪽에만 붙었다.)
+ */
+const LOT_CONSUMERS = [
+  "components/calc/stock-transfer/SplitLotsBlock.tsx",
+  "components/calc/stock-transfer/AcquisitionLotsMatrix.tsx",
+] as const;
 
 function src(f: keyof typeof FILES) {
   return fs.readFileSync(path.join(process.cwd(), FILES[f]), "utf-8");
 }
 
-/** donorRelation 라디오 블록만 잘라낸다 (파일에 다른 RadioCardGroup이 있을 수 있다) */
+/**
+ * donorRelation 라디오 블록만 잘라낸다 (파일에 다른 RadioCardGroup이 있을 수 있다).
+ *
+ * ⚠️ `name` 문자열로 찾지 않는다 — 공용 `AcquisitionLotCard`는 name이 prop(`radioNamePrefix`)이라
+ *    리터럴이 없다. **선택지 내용(「직계존비속」)** 으로 식별한다.
+ */
 function donorBlock(f: keyof typeof FILES) {
   const s = src(f);
-  const i = s.indexOf("DonorRelation-${idx}") >= 0
-    ? s.lastIndexOf("<RadioCardGroup", s.indexOf("DonorRelation-${idx}"))
-    : s.lastIndexOf("<RadioCardGroup", s.indexOf('name="donorRelation"'));
+  const marker = s.indexOf('label: "직계존비속"');
+  expect(marker).toBeGreaterThan(-1);
+  const i = s.lastIndexOf("<RadioCardGroup", marker);
   expect(i).toBeGreaterThan(-1);
   const j = s.indexOf("/>", s.indexOf("]}", i));
   return s.slice(i, j);
@@ -76,6 +93,16 @@ describe("DR — 증여자와의 관계 라디오 (§97의2① 본문)", () => {
       for (const v of ["spouse", "lineal", "other"]) {
         expect(b).toContain(`value: "${v}"`);
       }
+    }
+  );
+
+  it.each(LOT_CONSUMERS)(
+    "DR-5 %s — lot 카드를 직접 그리지 않고 AcquisitionLotCard를 쓴다 (복제 재발 차단)",
+    (rel) => {
+      const s = fs.readFileSync(path.join(process.cwd(), rel), "utf-8");
+      expect(s).toContain("<AcquisitionLotCard");
+      // 자체 donorRelation 라디오를 다시 들이면 복제가 재발한 것이다
+      expect(s).not.toMatch(/DonorRelation-\$\{idx\}/);
     }
   );
 

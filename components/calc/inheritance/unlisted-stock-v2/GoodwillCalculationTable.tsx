@@ -78,14 +78,14 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
               label="(나 − 마)"
               value={goodwill.annualExcessProfit}
               emphasized
-              hint={goodwill.weightedAvgHalf - goodwill.selfCapitalRate < 0 ? "★ 음수 → 0 처리" : "양수"}
+              hint={goodwill.weightedAvgHalf - goodwill.selfCapitalRate < 0 ? "★ 음수 → 0 처리" : undefined}
             />
             <RowDisplay cellNum="바" label="영업권 지속연수" value={goodwill.durationYears} unit="년" />
             <RowDisplay
               cellNum="사"
               label="영업권 계산액"
               value={goodwill.goodwillCalc}
-              hint="∑(나−마) / (1+0.1)^n for n=1..5 (정확 산식)"
+              hint="(나 − 마)를 1년차부터 5년차까지 각각 연 10% 할인율로 현재가치 환산해 합한 금액"
             />
             <RowDisplay cellNum="아" label="매입 무체재산권 차감액" value={goodwill.intangibleDeduction} />
             <tr className="border-t-2 border-amber-400 bg-amber-100/60">

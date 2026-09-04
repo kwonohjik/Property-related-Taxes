@@ -79,7 +79,7 @@ export function Step2({ form, onChange }: Step2Props) {
         <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-4 text-sm text-violet-900">
           <p className="font-semibold mb-1">🔀 분할 양도 모드 활성</p>
           <p className="text-xs">
-            양도가액·취득가액은 Step1의 lot 입력에서 자동 산출됩니다. 본 단계의 1주당 단가 입력은 비활성화됩니다.
+            양도가액·취득가액은 1단계의 건별 입력에서 자동 산출됩니다. 본 단계의 1주당 단가 입력은 비활성화됩니다.
             <br />취득가 산정방법은 <strong>실가(actual)</strong>만 지원되며, 환산·매매사례·감정·액면가·교환 모드는 사용할 수 없습니다.
           </p>
         </div>
@@ -123,7 +123,7 @@ export function Step2({ form, onChange }: Step2Props) {
                       value: "total",
                       label: "합계 직접 입력",
                       description: isSplitMode
-                        ? "분할 모드에서는 lot별 단가만 지원됩니다 (Step1)"
+                        ? "분할 모드에서는 건별 단가만 지원됩니다 (1단계)"
                         : "양도가액 총액을 원 단위로 직접 입력 (§96① 실지거래가액)",
                       disabled: isSplitMode,
                     },
@@ -143,7 +143,7 @@ export function Step2({ form, onChange }: Step2Props) {
                     label="1주당 양도가액"
                     required
                     disabled={isSplitMode}
-                    hint={isSplitMode ? "분할 모드에서는 매도 lot에서 자동 산출됩니다 (Step1 참조)" : "실제 거래 가격 (원)"}
+                    hint={isSplitMode ? "분할 모드에서는 매도 건에서 자동 산출됩니다 (1단계 참조)" : "실제 거래 가격 (원)"}
                     value={form.perShareTransferPrice}
                     onChange={(v) => onChange({ perShareTransferPrice: v })}
                   />
@@ -277,7 +277,7 @@ export function Step2({ form, onChange }: Step2Props) {
               label="1주당 취득가액"
               required
               disabled
-              hint="분할 모드에서는 매수 lot에서 자동 산출됩니다 (Step1 참조)"
+              hint="분할 모드에서는 매수 건에서 자동 산출됩니다 (1단계 참조)"
               value={form.perShareAcquisitionPrice}
               onChange={(v) => onChange({ perShareAcquisitionPrice: v })}
             />
@@ -312,7 +312,7 @@ export function Step2({ form, onChange }: Step2Props) {
                     {
                       value: "lots",
                       label: "일자별 다건",
-                      description: "여러 시점 분할 매수 lot별 입력 (§97① 실지거래가액)",
+                      description: "여러 시점 분할 매수 건별 입력 (§97① 실지거래가액)",
                     },
                   ]}
                 />

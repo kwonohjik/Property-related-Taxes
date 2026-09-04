@@ -87,7 +87,7 @@ export function Step1({ form, onChange }: Step1Props) {
     } else {
       // split → single: 사용자 확인 (UI 단순화 — confirm 사용)
       if (form.acquisitionLots.length > 0 || form.transferLots.length > 0) {
-        const ok = confirm("분할 lot 데이터가 단일 모드로 전환됩니다. 첫 번째 lot만 유지됩니다. 계속하시겠습니까?");
+        const ok = confirm("분할 입력 데이터가 단일 모드로 전환됩니다. 첫 번째 건만 유지됩니다. 계속하시겠습니까?");
         if (!ok) return;
       }
       const firstAcq = form.acquisitionLots[0];
@@ -174,7 +174,7 @@ export function Step1({ form, onChange }: Step1Props) {
       key: "dates",
       title:
         form.lotsMode === "split"
-          ? "양도·취득 lot (분할 양도 모드)"
+          ? "양도·취득 건 (분할 양도 모드)"
           : "양도·취득 일자 및 주식수",
       render: () => (
         <div className="space-y-4">

@@ -522,7 +522,6 @@ function OwnershipSection({
             <ToneCard tone="amber" title="건물·부속토지 소유자 정보 (§107①2호)" bodyClassName="space-y-3" noDark>
               <FieldCard
                 label="건물 소유자"
-                hint="건물(건축물) 소유자 성명 또는 식별자"
               >
                 <input
                   type="text"
@@ -534,7 +533,6 @@ function OwnershipSection({
               </FieldCard>
               <FieldCard
                 label="부속토지 소유자"
-                hint="부속토지 소유자 성명 또는 식별자"
               >
                 <input
                   type="text"
