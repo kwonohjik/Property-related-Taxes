@@ -210,7 +210,7 @@ export function SaleSplitExemptionCard({ asset, onChange }: Props) {
           value={asset.saleSplitExemption as "other_law" | "demolished_land_only"}
           onChange={(v) => onChange({ saleSplitExemption: v })}
         />
-        <FieldCard label="근거" hint="신고서에 기재됩니다">
+        <FieldCard label="근거">
           <input
             type="text"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

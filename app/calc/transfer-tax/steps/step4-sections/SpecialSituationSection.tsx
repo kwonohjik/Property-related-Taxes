@@ -64,7 +64,7 @@ export function SpecialSituationSection({
             checked={form.isUnregistered}
             onCheckedChange={(v) => onChange({ isUnregistered: v })}
             title="미등기 양도"
-            description="70% 단일세율 적용 — 장기보유공제·기본공제 전액 배제"
+            description="70% 단일세율 — 장기보유공제·기본공제 배제, 개산공제 0.3%"
             tone="rose"
           />
         )}

@@ -183,7 +183,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         <ToggleCard
           tone="amber"
           title="환산취득가 사용"
-          description="증여자 실거래가를 알 수 없거나, 기준시가 환산·PHD·APD 방식을 적용하는 경우"
+          description="증여자 실거래가를 알 수 없거나, 기준시가 환산·최초공시 전 환산 방식을 적용하는 경우"
           checked={c.useEstimatedAcquisition}
           onCheckedChange={(v) =>
             updateCarryover({

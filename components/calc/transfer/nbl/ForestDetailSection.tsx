@@ -19,7 +19,7 @@ export function ForestDetailSection({
     <div className="space-y-3">
       <SectionHeader
         title="임야 세부 정보"
-        description="§168-9 임야 판정"
+        description="소득령 §168의9 임야 판정"
         action={<LawArticleModal legalBasis="소득세법 시행령 §168의9" label="§168의9 임야" />}
       />
 

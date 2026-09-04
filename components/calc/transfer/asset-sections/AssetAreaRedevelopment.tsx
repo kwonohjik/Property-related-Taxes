@@ -136,7 +136,7 @@ export function AssetAreaRedevelopment({ asset, onChange }: Props) {
         hint={
           isLand
             ? "§166③ 분자·분모 공통 면적. 취득·관리처분 시점 동일 가정."
-            : "시점별 동일 가정 — 환지·합병으로 면적이 다른 케이스는 후속 PR"
+            : "시점별 동일 가정 — 환지·합병으로 면적이 달라진 경우는 반영되지 않습니다."
         }
       >
         <DecimalInput

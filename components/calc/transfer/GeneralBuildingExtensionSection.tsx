@@ -192,7 +192,6 @@ export function GeneralBuildingExtensionSection({
           {/* 증축분 취득방식 (실가/환산) — 원취득과 독립 선택 */}
           <FieldCard
             label="증축분 취득 방식"
-            hint="원취득과 무관하게 증축분의 취득가액 산정 방식을 별도로 선택합니다."
           >
             <RadioCardGroup
               name="gbExtensionAcquisitionMode"
@@ -242,7 +241,7 @@ export function GeneralBuildingExtensionSection({
               <FieldCard
                 label="양도시 건물2 기준시가 총액"
                 unit="원"
-                hint="증축 건물분 기준시가 총액 (원). ㎡당 단가가 아닌 총액(원). 모르면 위 「증축분 2시점 기준시가 일괄 계산」으로 산정."
+                hint="㎡당 단가가 아닌 총액입니다. 모르면 위 「증축분 2시점 기준시가 일괄 계산」으로 산정."
               >
                 <CurrencyInput
                   label="양도시 건물2 기준시가 총액"
@@ -256,7 +255,7 @@ export function GeneralBuildingExtensionSection({
               <FieldCard
                 label="취득시(증축시) 건물2 기준시가 총액"
                 unit="원"
-                hint="증축 완료 시점 건물2 기준시가 총액 (원). 환산취득가 분자. ㎡당 단가가 아닌 총액(원)."
+                hint="환산취득가 분자. ㎡당 단가가 아닌 총액입니다."
               >
                 <CurrencyInput
                   label="취득시(증축시) 건물2 기준시가 총액"
@@ -275,7 +274,7 @@ export function GeneralBuildingExtensionSection({
               <FieldCard
                 label="양도시 건물2 기준시가 총액"
                 unit="원"
-                hint="§166⑥ 양도가액 안분 분모 계산에 필요합니다. 증축 건물분 기준시가 총액 (원). 모르면 아래 계산기로 산정."
+                hint="§166⑥ 양도가액 안분 분모 계산에 필요합니다. 모르면 아래 계산기로 산정."
               >
                 <CurrencyInput
                   label="양도시 건물2 기준시가 총액"

@@ -105,7 +105,6 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
         size="sm"
         tone="amber"
         title="취득시 면적 직접 입력"
-        description="자동값 대신 수동 입력"
         checked={isCustomized}
         onCheckedChange={(c) => {
           if (!c) {
@@ -124,7 +123,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
 
       {isCustomized && (
         <div className="space-y-2">
-          <FieldCard label="취득시 주택 연면적 (㎡)" hint="비워두면 자동값 사용">
+          <FieldCard label="취득시 주택 연면적 (㎡)">
             <DecimalInput
               value={asset.partialChangeAcqResidentialArea}
               onChange={(v) => onChange({ partialChangeAcqResidentialArea: v })}
@@ -132,7 +131,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
               unit="㎡"
             />
           </FieldCard>
-          <FieldCard label="취득시 상가 연면적 (㎡)" hint="비워두면 자동값 사용">
+          <FieldCard label="취득시 상가 연면적 (㎡)">
             <DecimalInput
               value={asset.partialChangeAcqCommercialArea}
               onChange={(v) => onChange({ partialChangeAcqCommercialArea: v })}

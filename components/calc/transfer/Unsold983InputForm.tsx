@@ -172,7 +172,7 @@ export function Unsold983InputForm({
             <ToggleCard
               tone="rose"
               title="매매계약일 현재 입주 사실 없음"
-              description="매매계약일 현재 입주한 사실이 있는 주택은 제외됩니다 (조특령 §98의3②1호)"
+              description="조특령 §98의3②1호 — 해당하면 적용 배제"
               checked={value.isNotOccupiedAtContract983}
               onCheckedChange={(v) => onChange({ isNotOccupiedAtContract983: v })}
             />

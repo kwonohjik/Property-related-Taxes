@@ -190,7 +190,7 @@ describe("§99의3 3시점 기준시가 자동조회", () => {
         }}
       />,
     );
-    fireEvent.click(screen.getByText("📋 자산 카드의 PHD 데이터 가져오기"));
+    fireEvent.click(screen.getByText("📋 자산 카드의 최초공시 전 환산 데이터 가져오기"));
     expect(onUpdateMany).toHaveBeenCalledTimes(1);
     expect(onUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({

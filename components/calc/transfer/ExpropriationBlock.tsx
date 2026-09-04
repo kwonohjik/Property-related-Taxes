@@ -282,14 +282,12 @@ export function ExpropriationBlock({
               value={asset.housingCompensationTotal}
               onChange={(v) => onChange({ housingCompensationTotal: v })}
               hideUnit
-              hint="수용 보상액 총액 (원)"
             />
             <CurrencyInput
               label="③ 보상산정 기초 기준시가 총액"
               value={asset.housingCompensationBasisTotal}
               onChange={(v) => onChange({ housingCompensationBasisTotal: v })}
               hideUnit
-              hint="보상 산정 기초 기준시가 총액 (원)"
             />
           </div>
         </div>
@@ -312,14 +310,12 @@ export function ExpropriationBlock({
               value={asset.splitLandCompensationTotal}
               onChange={(v) => onChange({ splitLandCompensationTotal: v })}
               hideUnit
-              hint="토지분 수용 보상액 총액 (원)"
             />
             <CurrencyInput
               label="③ 토지분 보상산정 기초 기준시가 총액"
               value={asset.splitLandCompensationBasisTotal}
               onChange={(v) => onChange({ splitLandCompensationBasisTotal: v })}
               hideUnit
-              hint="토지분 보상 산정 기초 개별공시지가 총액 (원)"
             />
           </div>
         </div>
@@ -344,14 +340,12 @@ export function ExpropriationBlock({
                 value={asset.housingCompensationTotal}
                 onChange={(v) => onChange({ housingCompensationTotal: v })}
                 hideUnit
-                hint="주택분 수용 보상액 총액 (원)"
               />
               <CurrencyInput
                 label="③ 주택분 보상산정 기초 기준시가 총액"
                 value={asset.housingCompensationBasisTotal}
                 onChange={(v) => onChange({ housingCompensationBasisTotal: v })}
                 hideUnit
-                hint="주택분 보상 산정 기초 기준시가 총액 (원)"
               />
             </div>
           </div>
@@ -363,14 +357,12 @@ export function ExpropriationBlock({
                 value={asset.mixedCommercialLandCompensationTotal}
                 onChange={(v) => onChange({ mixedCommercialLandCompensationTotal: v })}
                 hideUnit
-                hint="상가분 토지 수용 보상액 총액 (원)"
               />
               <CurrencyInput
                 label="③ 상가분 토지 보상산정 기초 개별공시지가 총액"
                 value={asset.mixedCommercialLandCompensationBasisTotal}
                 onChange={(v) => onChange({ mixedCommercialLandCompensationBasisTotal: v })}
                 hideUnit
-                hint="상가분 토지 보상 산정 기초 개별공시지가 총액 (원)"
               />
             </div>
           </div>

@@ -88,7 +88,10 @@ describe("R-12 ⑤ — 승계 입주권 추계 입력 UI", () => {
   it("[N-05] 매매사례 → 매매사례가액 + §165① 취득 2칸 · 양도당시 없음", () => {
     renderBlock(successorAsset({ isSalesCaseAcquisition: true }));
 
-    expect(screen.getByText(/동일하거나 유사한 자산의 매매사례가액/)).toBeTruthy();
+    // 「매매사례가액」은 산정방식 라디오 옵션 라벨로도 항상 뜬다 — 그래서 단순 존재 단언은
+    // 구별력이 0이다. 입력칸 FieldCard가 함께 떠 **2회**가 되는 것으로 분기를 가른다
+    // (다른 모드에서는 라디오 옵션 1회뿐).
+    expect(screen.getAllByText("매매사례가액")).toHaveLength(2);
     expect(screen.getByText("취득일까지 납입한 금액")).toBeTruthy();
     expect(screen.queryByText("양도일까지 납입한 금액")).toBeNull();
   });

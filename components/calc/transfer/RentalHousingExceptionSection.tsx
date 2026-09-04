@@ -171,7 +171,7 @@ export function RentalHousingExceptionSection({
             <FieldCard
               label="직전거주주택 양도일"
               required
-              hint="D_prior — §161① 비과세 기산점"
+              hint="§161① 비과세 기산점"
             >
               <DateInput
                 value={rh.priorResidenceTransferDate ?? ""}
@@ -237,7 +237,6 @@ export function RentalHousingExceptionSection({
               <HousingStdPriceLookupField
                 label="현 양도 당시 기준시가"
                 required
-                hint="이번에 양도하는 시점의 공동주택가격(또는 개별주택가격)"
                 value={rh.standardPriceAtTransferForPhrp ?? ""}
                 onChange={(v) => set("standardPriceAtTransferForPhrp", v || undefined)}
                 jibun={asset.addressJibun || undefined}

@@ -36,7 +36,7 @@ test.describe("§99 3시점 기준시가 조회형 + PHD 환산", () => {
     // ── ② PHD 환산 토글 ON → 취득시 기준시가가 echo(§164⑤ 자동 산출)로 전환 ──
     // (신축주택은 취득 당시 주택가격 공시 전 → PHD 환산으로 취득시 기준시가 도출)
     await expect(page.getByTestId("new99-stdprice-acq-echo")).toHaveCount(0); // PHD OFF: echo 없음
-    await page.getByText(/PHD 환산 — 최초공시 전 취득/).first().click();
+    await page.getByText(/최초공시 전 환산 \(취득시 환산공시가격/).first().click();
     await expect(page.getByTestId("new99-stdprice-acq-echo")).toBeVisible(); // PHD ON: echo 표시
     // PHD ON 시 취득 조회형 위젯은 숨김(echo 대체) — 5년·양도 조회형은 유지
     await expect(page.getByTestId("new99-stdprice-acq-lookup-btn")).toHaveCount(0);

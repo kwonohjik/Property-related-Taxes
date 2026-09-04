@@ -130,7 +130,7 @@ export function ResidencePeriodSection({
                     <FieldCard
                       label="퇴거일"
                       required
-                      hint="필수 입력 — 양도일까지 거주한 경우 양도일을 퇴거일로 입력"
+                      hint="양도일까지 거주한 경우 양도일을 퇴거일로 입력"
                     >
                       <DateInput
                         value={p.moveOutDate}

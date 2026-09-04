@@ -107,7 +107,6 @@ export function Step6({
                   label="기납부세액"
                   value={form.priorPaidTax}
                   onChange={handlePriorPaidChange}
-                  hint="예정신고 시 기납부한 세액"
                 />
 
                 {/*
@@ -135,7 +134,6 @@ export function Step6({
                     label="당초 신고세액"
                     value={form.originalFiledTax}
                     onChange={(v) => onChange({ originalFiledTax: v })}
-                    hint="최초 신고한 납부세액"
                   />
                 )}
 
@@ -144,7 +142,6 @@ export function Step6({
                     label="초과환급신고 환급세액"
                     value={form.excessRefundAmount}
                     onChange={(v) => onChange({ excessRefundAmount: v })}
-                    hint="과다 수령한 환급세액"
                   />
                 )}
 

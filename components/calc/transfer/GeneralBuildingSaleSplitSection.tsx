@@ -128,7 +128,7 @@ export function GeneralBuildingSaleSplitSection({
       {mode === "actual" && (
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
-            <FieldCard label="토지 양도가액" hint="소득세법 §100②">
+            <FieldCard label="토지 양도가액">
               <CurrencyInput
                 label=""
                 hideUnit

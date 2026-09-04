@@ -47,7 +47,7 @@ export function UnconditionalExemptionSection({
   return (
     <div className="space-y-3">
       <SectionHeader
-        title="무조건 사업용 토지 판정 (§168-14③)"
+        title="무조건 사업용 토지 판정 (소득령 §168의14③)"
         description="아래 사유의 날짜·지목 요건을 충족하면 지목별 판정 없이 사업용으로 분류됩니다."
       />
 
@@ -72,7 +72,7 @@ export function UnconditionalExemptionSection({
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168-14③1호"
+            label="소득령 §168의14③1호"
             className={LAW_BADGE_CLASS}
           />
         }
@@ -95,7 +95,7 @@ export function UnconditionalExemptionSection({
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168-14③2호"
+            label="소득령 §168의14③2호"
             className={LAW_BADGE_CLASS}
           />
         }
@@ -111,7 +111,7 @@ export function UnconditionalExemptionSection({
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168-14③1의2호"
+            label="소득령 §168의14③1의2호"
             className={LAW_BADGE_CLASS}
           />
         }
@@ -127,7 +127,7 @@ export function UnconditionalExemptionSection({
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168-14③3호"
+            label="소득령 §168의14③3호"
             className={LAW_BADGE_CLASS}
           />
         }
@@ -154,7 +154,7 @@ export function UnconditionalExemptionSection({
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행규칙 §83조의5"
-            label="소득령 §168-14③5호 (시행규칙 §83의5④1호)"
+            label="소득령 §168의14③5호 (소득칙 §83의5④1호)"
             className={LAW_BADGE_CLASS}
           />
         }
@@ -170,7 +170,7 @@ export function UnconditionalExemptionSection({
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168-14③4호가목"
+            label="소득령 §168의14③4호가목"
             className={LAW_BADGE_CLASS}
           />
         }
@@ -193,7 +193,7 @@ export function UnconditionalExemptionSection({
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168-14③4호"
+            label="소득령 §168의14③4호"
             className={LAW_BADGE_CLASS}
           />
         }
@@ -210,7 +210,7 @@ export function UnconditionalExemptionSection({
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행규칙 §83조의5"
-            label="소득령 §168-14③5호 (시행규칙 §83의5④2호)"
+            label="소득령 §168의14③5호 (소득칙 §83의5④2호)"
             className={LAW_BADGE_CLASS}
           />
         }

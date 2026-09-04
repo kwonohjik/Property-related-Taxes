@@ -20,7 +20,7 @@ export function FarmlandDetailSection({
     <div className="space-y-3">
       <SectionHeader
         title="농지 세부 정보"
-        description="§168-8 농지 판정 — 자경 기간 및 의제자경 사유를 입력하세요."
+        description="소득령 §168의8 농지 판정 — 자경 기간 및 의제자경 사유를 입력하세요."
         action={<LawArticleModal legalBasis="소득세법 시행령 §168의8" label="§168의8 농지" />}
       />
 
@@ -89,7 +89,7 @@ export function FarmlandDetailSection({
 
       {/* 의제자경 사유 */}
       <SectionHeader
-        title="의제자경 사유 (§168-8 ③)"
+        title="의제자경 사유 (소득령 §168의8③)"
         description="해당 시 자경 기간 입력 없이도 사업용으로 간주합니다."
       />
 

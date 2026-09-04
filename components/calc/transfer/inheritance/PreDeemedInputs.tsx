@@ -275,7 +275,6 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
             tone="amber"
             size="sm"
             title="의제취득일 시점 기준시가 직접 입력"
-            description="자동 계산값 override"
             checked={asset.useStandardPriceAtAcqOverride}
             onCheckedChange={(v) =>
               onChange({
@@ -340,7 +339,6 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
             tone="emerald"
             size="sm"
             title="양도시 기준시가 직접 입력"
-            description="자동 계산값 override"
             checked={asset.useStandardPriceAtTransferOverride}
             onCheckedChange={(v) =>
               onChange({

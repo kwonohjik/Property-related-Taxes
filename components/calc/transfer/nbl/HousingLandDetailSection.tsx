@@ -48,7 +48,7 @@ export function HousingLandDetailSection({
     <div className="space-y-3">
       <SectionHeader
         title="주택 부속토지 세부 정보"
-        description="§168-12 주택 부속토지 배율 판정"
+        description="소득령 §168의12 주택 부속토지 배율 판정"
         action={<LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />}
       />
 

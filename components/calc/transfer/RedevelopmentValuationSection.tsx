@@ -63,7 +63,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
       sumAtFirst = Math.floor(landFirst * area) + bldFirst;
       if (sumAtFirst > 0) {
         P_A = Number((BigInt(A) * BigInt(sumAtAcq)) / BigInt(sumAtFirst));
-        step1Formula = `floor(${A.toLocaleString()} × ${sumAtAcq.toLocaleString()} / ${sumAtFirst.toLocaleString()})`;
+        step1Formula = `${A.toLocaleString()} × ${sumAtAcq.toLocaleString()} ÷ ${sumAtFirst.toLocaleString()}`;
       } else {
         P_A = 0;
       }
@@ -85,7 +85,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
       sumAtAcq, sumAtFirst,
       P_A, D, rights,
       step1Formula,
-      step2Formula: `floor(${rights.toLocaleString()} × ${P_A.toLocaleString()} / ${D.toLocaleString()})`,
+      step2Formula: `${rights.toLocaleString()} × ${P_A.toLocaleString()} ÷ ${D.toLocaleString()}`,
     };
   }, [
     asset.useEstimatedAcquisition,
@@ -141,7 +141,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
       rights,
       acq,
       approval,
-      formula: `floor(${rights.toLocaleString()} × ${acq.toLocaleString()} / ${approval.toLocaleString()})`,
+      formula: `${rights.toLocaleString()} × ${acq.toLocaleString()} ÷ ${approval.toLocaleString()}`,
     };
   }, [
     isLand,
@@ -199,7 +199,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
           onTotalPriceChange={(v) => onChange({ redevManagementDisposalHousingPrice: v })}
           jibun={asset.addressJibun || undefined}
           referenceDate={asset.redevApprovalDate}
-          label="D. 관리처분 인가일 개별주택공시가격"
+          label="관리처분 인가일 개별주택공시가격"
           hint="§166③ 분모 — 양도 의제 시점의 §99①1호 라목 단일 라목값"
         />
 
@@ -228,7 +228,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         {isPreDisclosureTriggered && (
           <div className="rounded-md border border-rose-200 bg-rose-50/60 p-3 space-y-3">
             <p className="text-caption font-semibold text-rose-700">
-              §164⑦ 본문 발동 — PHD 패턴: 취득당시 라목값 P_A = floor(A × Sum_A / Sum_F)
+              §164⑦ 본문 발동 — 취득당시 주택가격 = 최초공시 주택가격 × (취득시 합계 기준시가 ÷ 최초공시 당시 합계 기준시가)
             </p>
 
             <StandardPriceInput
@@ -237,8 +237,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               onTotalPriceChange={(v) => onChange({ redevFirstDisclosureHousingPrice: v })}
               jibun={asset.addressJibun || undefined}
               referenceDate={asset.redevFirstDisclosureDate}
-              label="A. 최초공시 주택가격"
-              hint="국토교통부장관이 최초로 공시한 주택가격 (단일 라목값)"
+              label="최초공시 주택가격"
             />
 
             {/* 토지 면적은 ① 기본정보로 이전했다 (2026-08-04) —
@@ -252,7 +251,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               <p className="text-caption font-semibold text-rose-700">토지 기준시가</p>
               <LandPriceLookupField
                 label="취득시 개별공시지가 (원/㎡)"
-                hint="Vworld API 조회 — 기준연도 = 취득연도. Sum_A 구성"
+                hint="Vworld API 조회 — 기준연도 = 취득연도. 취득시 합계 기준시가를 구성합니다"
                 pricePerSqm={asset.redevLandPricePerSqmAtAcq}
                 onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtAcq: v })}
                 area={landAreaNumber}
@@ -261,7 +260,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               />
               <LandPriceLookupField
                 label="최초공시 당시 개별공시지가 (원/㎡)"
-                hint="Vworld API 조회 — 기준연도 = 최초공시연도 (단독 2005, 공동 2006). Sum_F 구성"
+                hint="Vworld API 조회 — 기준연도 = 최초공시연도 (단독 2005, 공동 2006). 최초공시 당시 합계 기준시가를 구성합니다"
                 pricePerSqm={asset.redevLandPricePerSqmAtFirst}
                 onPricePerSqmChange={(v) => onChange({ redevLandPricePerSqmAtFirst: v })}
                 area={landAreaNumber}
@@ -317,14 +316,14 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                   }
                 />
               </div>
-              <FieldCard label="취득시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원). Sum_A 구성 — 계산기 결과 수정 가능">
+              <FieldCard label="취득시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원). 취득시 합계 기준시가를 구성합니다 — 계산기 결과 수정 가능">
                 <CurrencyInput label=""
                   value={asset.redevBuildingStdPriceAtAcq}
                   onChange={(v) => onChange({ redevBuildingStdPriceAtAcq: v })}
                   hideUnit
                 />
               </FieldCard>
-              <FieldCard label="최초공시 당시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원). Sum_F 구성 — 계산기 결과 수정 가능">
+              <FieldCard label="최초공시 당시 건물 기준시가" hint="국세청 건물 기준시가 (총액, 원). 최초공시 당시 합계 기준시가를 구성합니다 — 계산기 결과 수정 가능">
                 <CurrencyInput label=""
                   value={asset.redevBuildingStdPriceAtFirst}
                   onChange={(v) => onChange({ redevBuildingStdPriceAtFirst: v })}
@@ -341,37 +340,39 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             {valuationPreview.canApplyMain && valuationPreview.step1Formula && (
               <>
                 <p className="text-rose-700">
-                  Sum_A (취득시 합계) = 단가×면적 + 건물 ={" "}
+                  취득시 합계 기준시가 = 공시지가 × 면적 + 건물 기준시가 ={" "}
                   <span className="font-mono">{valuationPreview.sumAtAcq.toLocaleString()}</span>
                 </p>
                 <p className="text-rose-700">
-                  Sum_F (최초공시 당시 합계) = 단가×면적 + 건물 ={" "}
+                  최초공시 당시 합계 기준시가 = 공시지가 × 면적 + 건물 기준시가 ={" "}
                   <span className="font-mono">{valuationPreview.sumAtFirst.toLocaleString()}</span>
                 </p>
-                <p className="text-rose-700">Step 1 (§164⑦ 본문) — P_A = floor(A × Sum_A / Sum_F)</p>
+                <p className="text-rose-700">
+                  1단계 (§164⑦ 본문) — 취득당시 주택가격 = 최초공시 주택가격 × (취득시 합계 기준시가 ÷ 최초공시 당시 합계 기준시가)
+                </p>
                 <p className="text-rose-700 font-mono">
-                  = {valuationPreview.step1Formula} = {valuationPreview.P_A.toLocaleString()}
+                  = <FormulaText value={valuationPreview.step1Formula} /> = {valuationPreview.P_A.toLocaleString()}
                 </p>
               </>
             )}
             <p className="text-rose-700">
-              Step 2 (§166③) — 환산취득가 = floor(권리가액 × {valuationPreview.canApplyMain ? "P_A" : "취득당시 라목값"} / D)
+              2단계 (§166③) — 환산취득가 = 권리가액 × (취득당시 주택가격 ÷ 관리처분 인가일 주택가격)
             </p>
-            <p className="text-rose-700 font-mono">= {valuationPreview.step2Formula}</p>
+            <p className="text-rose-700 font-mono">= <FormulaText value={valuationPreview.step2Formula} /></p>
             <p className="text-rose-700 font-mono">= {valuationPreview.converted.toLocaleString()}</p>
             <p className="text-rose-700">
               §164⑦ 본문:{" "}
               <span className={valuationPreview.canApplyMain ? "font-semibold text-rose-900" : "text-rose-600"}>
                 {valuationPreview.canApplyMain
-                  ? "발동 — PHD 패턴 2단계 산식 적용"
+                  ? "발동 — 2단계 산식 적용"
                   : valuationPreview.provisionTriggered
-                    ? "트리거(취득일 < 최초공시일) 이나 PHD 필수입력 누락 → 본문 미적용"
+                    ? "트리거(취득일 < 최초공시일) 이나 필수입력 누락 → 본문 미적용"
                     : "미발동 — 취득당시 라목값 단일 입력"}
               </span>
             </p>
             {valuationPreview.missingFields && (
               <p className="text-rose-800 font-semibold">
-                ⚠ §164⑦ 본문 트리거 발동이지만 PHD 필수입력(A·면적·단가·건물) 중 일부 누락 — 위 영역을 모두 채워주세요.
+                ⚠ §164⑦ 본문 트리거 발동이지만 필수입력(최초공시 주택가격·토지면적·개별공시지가·건물 기준시가) 중 일부 누락 — 위 영역을 모두 채워주세요.
               </p>
             )}
           </div>
@@ -439,7 +440,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
           <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
         </div>
         <p className="text-caption text-amber-700">
-          환산취득가 = floor(권리가액 × <strong>취득당시 토지기준시가</strong> / <strong>관리처분 직전 토지기준시가</strong>)
+          환산취득가 = 권리가액 × (<strong>취득당시 토지기준시가</strong> ÷ <strong>관리처분 직전 토지기준시가</strong>)
         </p>
         <p className="text-caption text-amber-600">
           기준시가 = 개별공시지가 (원/㎡) × 면적 (㎡) — Vworld 자동 조회 가능
@@ -492,11 +493,11 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
             관리처분 직전 토지기준시가 = {landAreaNumber ? `${fmt(landAreaNumber)} ㎡ × ` : ""}{fmt(parseAmount(asset.redevLandPricePerSqmAtApproval) || 0)} 원/㎡ = {fmt(preview.approval)}
           </p>
           <p className="text-amber-700">
-            환산취득가 = floor({fmt(preview.rights)} × <Frac top={fmt(preview.acq)} bottom={fmt(preview.approval)} />)
+            환산취득가 = {fmt(preview.rights)} × <Frac top={fmt(preview.acq)} bottom={fmt(preview.approval)} />
           </p>
           <p className="text-amber-700 font-mono">= <FormulaText value={preview.formula} /> = {fmt(preview.convertedAcq)}</p>
           <p className="text-amber-700">
-            개산공제 (§163⑥) = floor({fmt(preview.acq)} × 3%) = {fmt(preview.estDeduction)}
+            개산공제 (§163⑥) = {fmt(preview.acq)} × 3% = {fmt(preview.estDeduction)}
           </p>
           <p className="text-amber-700">
             인가전 양도차익 = 권리가액 {fmt(preview.rights)} − 환산취득가 {fmt(preview.convertedAcq)} − 개산공제 {fmt(preview.estDeduction)} ={" "}

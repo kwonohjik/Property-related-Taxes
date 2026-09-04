@@ -189,7 +189,7 @@ export function OtherLandDetailSection({
     <div className="space-y-3">
       <SectionHeader
         title="나대지·잡종지 세부 정보"
-        description="§168-11 기타 토지 판정"
+        description="소득령 §168의11 기타 토지 판정"
         action={<LawArticleModal legalBasis="소득세법 시행령 §168의11①" label="§168의11① 기타토지" />}
       />
 
@@ -289,10 +289,10 @@ export function OtherLandDetailSection({
         {/* F2 Phase B(B-3) — resort: 6호 휴양 §83의4⑫ 3요소 합산 */}
         {relatedType === "resort" && (
           <>
-            <FieldCard label="옥외 방목장·식물원 면적 (㎡)" unit="㎡" hint="§83의4⑫1호 — 옥외 동물방목장·식물원 토지 면적" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
+            <FieldCard label="옥외 방목장·식물원 면적 (㎡)" unit="㎡" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
               <DecimalInput value={asset.nblOtherResortOutdoorArea} onChange={(v) => onAssetChange({ nblOtherResortOutdoorArea: v })} />
             </FieldCard>
-            <FieldCard label="부설주차장 설치기준면적 (㎡)" unit="㎡" hint="§83의4⑫2호 — 「주차장법」 설치기준면적. 엔진이 ×2(2배 이내) 적용">
+            <FieldCard label="부설주차장 설치기준면적 (㎡)" unit="㎡" hint="§83의4⑫2호 — 「주차장법」 설치기준면적. ×2(2배 이내) 자동 적용">
               <DecimalInput value={asset.nblOtherResortParkingStdArea} onChange={(v) => onAssetChange({ nblOtherResortParkingStdArea: v })} />
             </FieldCard>
             <FieldCard label="건축물 바닥면적 (㎡)" unit="㎡" hint="§83의4⑫3호 — 바닥면적 × 용도지역별 배율(지방세법 시행령 §101②) 자동 산출. 미매핑 용도지역(세분 전 주거지역 등)은 아래 직접입력.">
@@ -530,20 +530,20 @@ export function OtherLandDetailSection({
           />
           {asset.nblOtherMixedUseMode === "single_building" && (
             <>
-              <FieldCard label="특정용도분 연면적 (㎡)" unit="㎡" hint="거주·특정사업에 사용되는 부분의 연면적 (안분 분자)">
+              <FieldCard label="특정용도분 연면적 (㎡)" unit="㎡" hint="안분 분자">
                 <DecimalInput value={asset.nblOtherMixedUseSpecificFloorArea} onChange={(v) => onAssetChange({ nblOtherMixedUseSpecificFloorArea: v })} />
               </FieldCard>
-              <FieldCard label="건축물 전체 연면적 (㎡)" unit="㎡" hint="건축물 전체 연면적 (안분 분모). 특정용도분 ÷ 전체 비율로 부속토지 안분">
+              <FieldCard label="건축물 전체 연면적 (㎡)" unit="㎡" hint="안분 분모">
                 <DecimalInput value={asset.nblOtherMixedUseTotalFloorArea} onChange={(v) => onAssetChange({ nblOtherMixedUseTotalFloorArea: v })} />
               </FieldCard>
             </>
           )}
           {asset.nblOtherMixedUseMode === "multiple_buildings" && (
             <>
-              <FieldCard label="특정용도분 바닥면적 (㎡)" unit="㎡" hint="거주·특정사업에 사용되는 건축물의 바닥면적 (안분 분자)">
+              <FieldCard label="특정용도분 바닥면적 (㎡)" unit="㎡" hint="안분 분자">
                 <DecimalInput value={asset.nblOtherMixedUseSpecificFootprint} onChange={(v) => onAssetChange({ nblOtherMixedUseSpecificFootprint: v })} />
               </FieldCard>
-              <FieldCard label="다수 건축물 전체 바닥면적 (㎡)" unit="㎡" hint="동일 경계 안 다수 건축물의 전체 바닥면적 (안분 분모)">
+              <FieldCard label="다수 건축물 전체 바닥면적 (㎡)" unit="㎡" hint="동일 경계 안 전체 — 안분 분모">
                 <DecimalInput value={asset.nblOtherMixedUseTotalFootprint} onChange={(v) => onAssetChange({ nblOtherMixedUseTotalFootprint: v })} />
               </FieldCard>
             </>

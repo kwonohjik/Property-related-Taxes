@@ -317,6 +317,33 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
 
 // ── 등록일·세무서 등록·임대개시일 공통 상단 필드 (섹션 ① 내부에서 사용) ──
 
+/**
+ * 세무서 사업자 등록 토글 — `RegistrationFields`(§97의2·§97의3·§97의4·§97 본류)와
+ * `Rental975InputForm`(§97의5)이 **같은 토글**을 쓴다.
+ *
+ * §97의5는 등록일 아래에 3개월 검증 배지가 들어가 `RegistrationFields`를 통째로 쓸 수 없어
+ * 종전에는 토글을 복제해 뒀다 — 제목·설명이 갈리면 같은 요건이 화면마다 다르게 설명된다.
+ * 레이아웃은 각자 두되 토글만 여기로 올린다.
+ */
+export function TaxRegistrationToggle({
+  checked,
+  onCheckedChange,
+}: {
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <ToggleCard
+      variant="chip"
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      title="세무서 사업자 등록"
+      description="소득세법 §168 — 임대개시 인정 요건"
+      tone="violet"
+    />
+  );
+}
+
 interface RegistrationFieldsProps {
   registrationDate: string;
   isTaxRegistered: boolean;
@@ -340,14 +367,7 @@ export function RegistrationFields({
         <label className="mb-1 block text-xs font-medium">지자체 임대사업자 등록일</label>
         <DateInput value={registrationDate} onChange={onRegistrationDateChange} />
       </div>
-      <ToggleCard
-        variant="chip"
-        checked={isTaxRegistered}
-        onCheckedChange={onIsTaxRegisteredChange}
-        title="세무서 사업자 등록"
-        description="소득세법 §168 — 임대개시 인정 요건"
-        tone="violet"
-      />
+      <TaxRegistrationToggle checked={isTaxRegistered} onCheckedChange={onIsTaxRegisteredChange} />
       <div>
         <label className="mb-1 block text-xs font-medium">임대개시일</label>
         <DateInput value={rentalStartDate} onChange={onRentalStartDateChange} />

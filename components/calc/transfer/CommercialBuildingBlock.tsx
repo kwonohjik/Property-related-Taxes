@@ -237,7 +237,6 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               <FieldCard
                 label="양도시 ㎡당 호별고시가"
                 unit="원/㎡"
-                hint="호별로 고시된 ㎡당 가액 입력"
               >
                 <CurrencyInput
                   label=""
@@ -415,7 +414,6 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             <FieldCard
               label="최초고시시(2005) 건물 기준시가"
               unit="원"
-              hint="2005.1.1 최초 고시 시점 건물 기준시가 총액"
             >
               <CurrencyInput
                 label=""
@@ -451,7 +449,6 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               <FieldCard
                 label="양도시 건물 기준시가"
                 unit="원"
-                hint="양도 당시 건물 기준시가 총액"
               >
                 <CurrencyInput
                   label=""

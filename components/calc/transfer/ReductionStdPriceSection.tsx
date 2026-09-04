@@ -188,15 +188,15 @@ export function ReductionStdPriceSection({
             <label className="mb-1 block text-xs font-medium">취득시 기준시가</label>
             <div className="rounded-md border border-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2">
               <p className="text-xs text-amber-900 dark:text-amber-200">
-                PHD 환산 자동 계산(§164⑤):{" "}
+                최초공시 전 환산 자동 계산(§164⑤):{" "}
                 <span className="font-semibold font-mono">
                   {phdEchoAcqStdPrice != null
                     ? `${phdEchoAcqStdPrice.toLocaleString()} 원`
-                    : "위 PHD 입력을 완료하세요"}
+                    : "위 환산 입력을 완료하세요"}
                 </span>
               </p>
               <p className="mt-0.5 text-micro text-amber-800 dark:text-amber-300">
-                최초공시 전 취득 — 취득시 기준시가는 위 PHD 환산으로 자동 산출됩니다.
+                최초공시 전 취득 — 취득시 기준시가는 위 환산으로 자동 산출됩니다.
               </p>
             </div>
           </div>
@@ -210,7 +210,7 @@ export function ReductionStdPriceSection({
               dong={dong}
               ho={ho}
               referenceDate={acquisitionDate}
-              hint="최초고시 전 취득이면 위 PHD 환산 토글을 켜세요"
+              hint="최초공시 전 취득이면 위 「최초공시 전 환산」 토글을 켜세요"
               onExclusiveArea={onExclusiveAreaChange ? (area) => onExclusiveAreaChange(String(area)) : undefined}
               testidPrefix={`${testidPrefix}-stdprice-acq`}
             />

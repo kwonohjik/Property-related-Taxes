@@ -388,7 +388,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 </FieldCard>
               ) : (
                 <FieldCard label="실지취득가액 (주택·건물 전체)"
-                  hint="양도인의 취득 당시 실지거래가액">
+                  >
                   <CurrencyInput label="" hideUnit
                     value={asset.bgActualAcquisitionTotal}
                     onChange={(v) => onChange({ bgActualAcquisitionTotal: v })} />
@@ -401,7 +401,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                   onChange={(v) => onChange({ capitalExpenditure: v })} />
               </FieldCard>
               <FieldCard label="양도비 (선택)"
-                hint="소령 §163⑤ — 양도분(채무비율)에 대응하는 부분만 안분 공제">
+                >
                 <CurrencyInput label="" hideUnit
                   value={asset.transferExpense}
                   onChange={(v) => onChange({ transferExpense: v })} />
@@ -511,7 +511,6 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               ) : (
                 <FieldCard
                   label="당초 증여자의 실지취득가액 (전체)"
-                  hint="당초 증여자가 이 자산을 취득할 때의 실지거래가액"
                 >
                   <CurrencyInput
                     label=""

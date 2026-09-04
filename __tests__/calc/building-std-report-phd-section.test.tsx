@@ -144,7 +144,7 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(screen.queryByText(/상속 건물 기준시가 계산/)).toBeNull();
   });
 
-  it("감면 PHD 환산 통합 스냅샷(-red-phd) — 취득시·최초공시일 2벌 렌더(계산서 미출력 결함 정정)", async () => {
+  it("감면 최초공시 전 환산 통합 스냅샷(-red-phd) — 취득시·최초공시일 2벌 렌더(계산서 미출력 결함 정정)", async () => {
     const { initialBuildingStdPriceForm } = await import("../../lib/calc/building-std-price-form");
     // 취득시+최초공시시 2시점을 한 모달에서 계산하는 단일 스냅샷(transfer 모드, 최초공시=transYear).
     const redForm = {
@@ -163,8 +163,8 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
 
     // 단일 스냅샷 2 인스턴스 → 시점별 계산서 2벌
     expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
-    expect(screen.getAllByText(/취득시 \(감면 PHD 환산/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/최초공시일 \(감면 PHD 환산/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/취득시 \(감면 최초공시 전 환산/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/최초공시일 \(감면 최초공시 전 환산/).length).toBeGreaterThan(0);
     // §164⑤ 환산은 두 시점 모두 "취득 시점 측" — 취득당시(acq2001) 칸 마킹, 양도당시(transfer) 아님
     expect(
       screen.getAllByTestId("nts-bsp-1-acq2001").filter((el) => (el.textContent ?? "").includes("○")).length,
@@ -205,7 +205,7 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(screen.getAllByText(/취득시 \(재개발 환산 §164⑦/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/최초공시일 \(재개발 환산 §164⑦/).length).toBeGreaterThan(0);
     // 🔑 감면(§164⑤) 라벨이 섞이지 않는다 — 조문 분기 구별력
-    expect(screen.queryByText(/감면 PHD 환산/)).toBeNull();
+    expect(screen.queryByText(/감면 최초공시 전 환산/)).toBeNull();
     // 두 시점 모두 "취득 시점 측" — 취득당시(acq2001) 칸 마킹, 양도당시 아님
     expect(
       screen.getAllByTestId("nts-bsp-1-acq2001").filter((el) => (el.textContent ?? "").includes("○")).length,
@@ -293,8 +293,8 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(screen.getAllByTestId("nts-bsp-report").length).toBe(4);
     // 제목은 접힘 헤더와 펼친 서식 양쪽에 렌더되므로 개수 대신 **존재**로 단언한다
     // (개수에 기대면 렌더 구조 변경에 취약하다). 핵심은 두 조문이 **구별된다**는 것.
-    expect(screen.getAllByText(/§99의3 감면 PHD 환산/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/§98의8 감면 PHD 환산/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/§99의3 감면 최초공시 전 환산/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/§98의8 감면 최초공시 전 환산/).length).toBeGreaterThan(0);
   });
 
   it("구 키(`-red-phd`)는 조문 표기 없이 종전 제목 그대로 — 저장분 호환", async () => {
@@ -314,8 +314,8 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     render(<BuildingStdPriceReportSection inputData={{ assets: [{ assetId: "asset-k" }] }} />);
     expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
     // 조문 표기가 붙지 않은 종전 제목 그대로
-    expect(screen.getAllByText(/취득시 \(감면 PHD 환산 §164⑤\)/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/§99의3 감면 PHD 환산/)).toBeNull();
+    expect(screen.getAllByText(/취득시 \(감면 최초공시 전 환산 §164⑤\)/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/§99의3 감면 최초공시 전 환산/)).toBeNull();
   });
 
   it("소속되지 않는 스냅샷(다른 assetId)은 렌더 안 함", () => {

@@ -412,7 +412,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           label="양도 당시 공시된 개별주택 가격"
           hint="홈택스/부동산공시가격알리미 — 양도일 직전 공시된 개별주택가격"
         />
-        <FieldCard label="양도당시 건물기준시가" unit="원" hint="국세청 기준시가 — 양도시 합계 기준시가의 건물 성분. 미입력 시 P_T로 대체." className="sm:grid-cols-[160px_1fr]">
+        <FieldCard label="양도당시 건물기준시가" unit="원" hint="국세청 기준시가 — 양도시 합계 기준시가의 건물 성분. 미입력 시 위 「양도 당시 공시된 개별주택 가격」으로 대체." className="sm:grid-cols-[160px_1fr]">
           <div className="w-1/2">
             <CurrencyInput
               label=""
@@ -595,7 +595,6 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           tone="amber"
           size="sm"
           title={`${acqTimeLabel} 시점 주택가격 직접 입력`}
-          description="환산 가격 override"
           checked={asset.inhHouseValUseHousePriceOverride}
           onCheckedChange={(v) => {
             onChange({

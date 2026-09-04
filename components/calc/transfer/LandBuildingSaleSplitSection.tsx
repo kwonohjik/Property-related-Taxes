@@ -93,7 +93,7 @@ export function LandBuildingSaleSplitSection(props: Props) {
         </div>
         {props.saleSplitMode === "actual" && (
           <div className="grid grid-cols-2 gap-2">
-            <FieldCard label="토지 양도가액" hint="소득령 §166⑥">
+            <FieldCard label="토지 양도가액">
               <CurrencyInput label="" value={props.landTransferPrice} onChange={props.onLandTransferPriceChange} placeholder="미입력 시 나머지에서 자동 계산" data-testid="split-land-transfer-price" />
             </FieldCard>
             <FieldCard label="건물 양도가액">

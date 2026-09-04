@@ -105,13 +105,13 @@ export function MergedHouseholdRightSection({ form, onChange }: Props) {
 
       {ownsMergeDateInputs && (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <FieldCard label="동거봉양 합가일" hint="해당하지 않으면 비워 두세요.">
+          <FieldCard label="동거봉양 합가일">
             <DateInput
               value={form.parentalCareMergeDate}
               onChange={(v) => onChange({ parentalCareMergeDate: v })}
             />
           </FieldCard>
-          <FieldCard label="혼인 합가일" hint="해당하지 않으면 비워 두세요.">
+          <FieldCard label="혼인 합가일">
             <DateInput
               value={form.marriageDate}
               onChange={(v) => onChange({ marriageDate: v })}
