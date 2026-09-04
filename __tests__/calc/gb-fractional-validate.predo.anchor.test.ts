@@ -114,14 +114,25 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
       expect(msgs.some((m) => m.includes("해당 자산 종류는 지분 분할 취득"))).toBe(false);
     });
 
-    it("재개발(redevelopment_apt)은 계속 차단된다", () => {
+    /**
+     * 🔄 **반전 (2026-09-04)** — 재개발APT도 열렸다. 차단 사유(「§166 서브객체 부재 +
+     * 청산금·권리가액이 절대금액이라 지분 스케일 필요」)는 **stale**이었다:
+     * `buildRedevelopmentPayload`는 스케일을 **이미 갖고 있었고**(청산금만 「납부한 사실」이라
+     * 제외), ⑫ 서브객체도 2026-09-03에 등록됐다. 막던 것은 **컴패니언 호출부가
+     * `ownershipRatio`를 안 넘기던 것** 하나였다.
+     * 실측: 축 B 60/40 합계 **453,700,500 = 단건 100%와 완전 일치**
+     * (`redev-fractional-axis-b.anchor.test.ts`).
+     *
+     * 🔴 **이로써 자산 종류 목록이 비었다** — 대조군은 아래 Gate-A가 맡는다.
+     */
+    it("재개발(redevelopment_apt)도 더는 차단되지 않는다", () => {
       const msgs = messages(
         fractionalForm([
           { ...SHARE_A, assetKind: "redevelopment_apt" } as AssetForm,
           { ...SHARE_B, assetKind: "redevelopment_apt" } as AssetForm,
         ]),
       );
-      expect(msgs.some((m) => m.includes("해당 자산 종류는 지분 분할 취득"))).toBe(true);
+      expect(msgs.some((m) => m.includes("해당 자산 종류는 지분 분할 취득"))).toBe(false);
     });
   });
 
@@ -239,21 +250,23 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
     });
 
     /**
-     * 🔑 **양성 대조군 (2026-09-04 재인계)** — 위 반전들이 「차단 블록을 통째로 없앴다」와
+     * 🔑 **양성 대조군 (2026-09-04 3차 인계)** — 위 반전들이 「차단 블록을 통째로 없앴다」와
      * 구별되게 한다.
      *
-     * ⚠️ 이 자리는 **두 번 옮겼다**: 겸용 함께양도(→ 열림) → 겸용 × 지분 분할(→ 같은 날 열림)
-     *    → **재개발APT × 지분 분할**. 반전할 때마다 「무엇이 아직 살아 있는가」를 다시 골라야
-     *    한다([[feedback_shared_assertion_reversal_erases_sibling_net]]).
+     * ⚠️ 이 자리는 **세 번 옮겼다**: 겸용 함께양도(→열림) → 겸용 × 지분 분할(→같은 날 열림)
+     *    → 재개발APT × 지분 분할(→같은 날 열림) → **Gate-A**.
+     *    반전할 때마다 「무엇이 아직 살아 있는가」를 다시 골라야 한다
+     *    ([[feedback_shared_assertion_reversal_erases_sibling_net]]).
      *
-     * 재개발이 남아 있는 이유는 근거가 분명하다 — **청산금·권리가액이 절대금액**이라 지분
-     * 스케일이 필요한데 그 배관이 없다(겸용이 같은 이유로 막혀 있다가 ④ 스케일로 열렸다).
+     * 🔑 **자산 종류 목록은 이제 비었다**(축 B가 전건 개방). 지분 축에서 살아 있는 게이트는
+     *    `transfer-tax-validate-asset.ts`의 **Gate-A** — 「지분 모드 자산은 **단독으로** 계산할
+     *    수 없다」다. 폼 데이터만으로 축 A(공유 소유)와 축 B 오입력을 구별할 수 없어
+     *    사용자 선언을 요구하는 게이트이고, 없어지면 나머지 지분이 통째로 누락된다.
      */
-    it("재개발APT × 지분 분할은 계속 차단된다", () => {
-      const r1 = gbShare({ assetId: "r1", assetKind: "redevelopment_apt", ownershipNumerator: "60", ownershipDenominator: "100" });
-      const r2 = gbShare({ assetId: "r2", assetKind: "redevelopment_apt", ownershipNumerator: "40", ownershipDenominator: "100" });
-      const msgs = messages(fractionalForm([r1, r2]));
-      expect(msgs.some((m) => m.includes("지분 분할 취득 계산을 지원하지 않습니다"))).toBe(true);
+    it("지분 모드 자산 1건만 있으면 계속 차단된다 (Gate-A)", () => {
+      const lone = gbShare({ assetId: "s1", ownershipNumerator: "60", ownershipDenominator: "100" });
+      const msgs = messages(fractionalForm([lone]));
+      expect(msgs.some((m) => m.includes("단독으로 계산할 수 없습니다"))).toBe(true);
     });
   });
 

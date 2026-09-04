@@ -86,23 +86,29 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
        *    (기준시가·면적은 물건 전체 유지 — `MixedUseAssetInput.ownershipRatio` 계약).
        *    실측: 축 B 60/40 합계 **152,203,211 = 단건 100%와 완전 일치**.
        */
-      if (
-        // ✅ `general_building` 제외 (2026-08-10) — 지분별 토지·건물 카드를 만들어 aggregate 1회로
-        //    계산하는 전용 경로가 생겼다(`app/api/calc/transfer/general-building-fractional.ts`).
-        //
-        // ✅ **`commercial_building` 제외 (2026-09-03)** — 전용 경로 없이 컴패니언 축으로 열렸다.
-        //    막고 있던 것은 「경로 부재」가 아니라 **⑩ enum 3종**(`housing|land|building`)이었다.
-        //    상가 서브객체 둘 다 **지분 스케일이 불요**해서(§101① 면적은 물건 단위 사실,
-        //    환산 기준시가는 분자·분모 약분) enum·⑫⑬⑭ 배관만으로 정합이 성립한다.
-        //    실측: 축 B 60/40 합계 세액 187,665,500 = 단건 100%와 완전 일치, 부수토지 초과
-        //    판정도 **양쪽 카드에서 발동**(부수토지 미입력 대조군과 819,500원 차 — 판별력 있음).
-        //
-        //    ⚠️ 재개발은 **계속 차단**한다 — §166 서브객체가 컴패니언에 없고, 청산금·권리가액이
-        //       **절대금액 성분**이라 지분 스케일이 필요하다(상가와 반대).
-        primaryAsset.assetKind === "redevelopment_apt"
-      ) {
-        issues.push({ step, assetIndex: 0, message: "해당 자산 종류는 지분 분할 취득 계산을 지원하지 않습니다. 지분 분할 토글을 끄고 계산하세요." });
-      }
+      /**
+       * 🔑 **목록이 비었다 (2026-09-04).** 지분 분할 취득(축 B)을 막던 자산 종류가 전건 열렸다:
+       *
+       * | 자산 | 열린 날 | 막고 있던 진짜 원인 |
+       * |---|---|---|
+       * | `general_building` | 2026-08-10 | 전용 경로 부재 → `general-building-fractional.ts` |
+       * | `commercial_building` | 2026-09-03 | 「경로 부재」가 아니라 **⑩ enum 3종** |
+       * | 겸용주택 | 2026-09-04 | 「모델 비양립」이 아니라 **절대금액 미스케일** |
+       * | `redevelopment_apt` | 2026-09-04 | 「§166 서브객체 부재 + 절대금액 스케일 필요」 — **둘 다 이미 있었다**. 컴패니언에 `ownershipRatio`를 **안 넘기고 있었을 뿐**이다 |
+       *
+       * ⚠️ 재개발 차단 사유는 **stale 기재**였다. `buildRedevelopmentPayload`는 `rightsValue`·
+       *    `preApprovalExpenses`·`postApprovalExpenses` 스케일을 **이미 갖고 있었고**
+       *    (청산금은 「납부한 사실」이라 스케일 X — UI가 지분 납부분을 직접 받는다),
+       *    ⑫ `redevelopment` 서브객체도 2026-09-03에 등록됐다.
+       *    실측: 축 B 60/40 합계 **453,700,500 = 단건 100%와 완전 일치**.
+       *
+       * ⚠️ **목록이 비었으므로 「이 가드가 살아 있음」 대조군은 성립하지 않는다.**
+       *    지분 축의 살아 있는 게이트는 `transfer-tax-validate-asset.ts`의
+       *    「지분 모드 자산은 단독으로 계산할 수 없습니다」(Gate-A)다.
+       *
+       * 구조는 유지한다 — 새 자산 종류가 생기면 여기 한 줄이 정본이고, 위 표가 그 판단 이력이다.
+       */
+      void primaryAsset;
       /**
        * ✅ **부담부증여·공익수용 차단은 2026-09-03에 모두 해제됐다.**
        *
