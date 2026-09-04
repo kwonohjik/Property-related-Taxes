@@ -141,6 +141,16 @@ export function buildMixedUsePartCards(
     buildingTransferPrice: undefined,
     saleSplitMode: undefined,
     useEstimatedAcquisition: false,
+    /**
+     * · **필요경비 축**(`capitalExpenditure`·`transferExpense`): 겸용 엔진이 공통 필요경비를
+     *   **파트 개산공제에 이미 접어 넣었다**(`resolvePartNecessaryExpense` — 법 §100② 후문
+     *   "공통되는 취득가액과 양도비용은 해당 자산의 가액에 비례하여 안분계산한다").
+     *   카드가 원값을 또 들고 있으면 aggregate가 **카드마다 다시** 빼서 **카드 수만큼 배가**된다
+     *   (실측: 자본적지출 1억 + 양도비 2천만에서 과세표준 1,670,099,614 → 1,317,564,948,
+     *   **352,534,666 과대차감**). 각 카드의 몫은 아래 `amounts.expenses`가 이미 담고 있다.
+     */
+    capitalExpenditure: undefined,
+    transferExpense: undefined,
     standardPriceAtAcquisition: undefined,
     standardPriceAtTransfer: undefined,
     totalPropertyTransferPrice: undefined,

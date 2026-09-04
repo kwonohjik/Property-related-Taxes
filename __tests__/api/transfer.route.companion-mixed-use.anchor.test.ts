@@ -205,7 +205,13 @@ describe("컴패니언 × 겸용주택 (시행령 §160① 단서)", () => {
     expect(asPrimary.totalTax).toBe(171_006_000);
   });
 
-  it("PM-4 겸용 × **지분 분할**은 계속 차단된다 (양성 대조군)", () => {
+  it("PM-4 🔄 겸용 × **지분 분할**도 열렸다 (2026-09-04 후속)", () => {
+    /**
+     * 종전 차단 사유는 「양도가액 모델 비양립」이었으나, 실측하면 막고 있던 것은
+     * **절대금액 성분에 지분 스케일이 없다**는 것이었다(취득가액·필요경비가 100% 값 그대로).
+     * ④가 그 성분만 스케일하게 고쳐 열었다 — 축 B 60/40 합계 = 단건 100%.
+     * 상세 anchor: `mixed-use-fractional-axis-b.anchor.test.ts`.
+     */
     const fractional = {
       ...createDefaultTransferFormData(),
       assets: [
@@ -217,12 +223,11 @@ describe("컴패니언 × 겸용주택 (시행령 §160① 단서)", () => {
       contractTotalPrice: "1200000000",
       householdHousingCount: "2",
     } as TransferFormData;
-    // `totalPropertyTransferPrice`가 「물건 전체 양도가액」과 「주택분 합계」 두 의미로 충돌한다.
     expect(
       collectStepIssues(0, fractional)
         .map((i) => i.message)
-        .some((m) => /겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다/.test(m)),
-    ).toBe(true);
+        .filter((m) => /겸용주택/.test(m)),
+    ).toEqual([]);
   });
 
   it("MU-1 컴패니언 겸용은 ⑧을 통과한다 (차단 해제)", () => {

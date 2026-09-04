@@ -171,6 +171,26 @@ describe("겸용 파트 카드 ≡ 단건 겸용", () => {
     expect(agg.totalTax).toBe(Math.floor(single.total.transferTax * 1.1));
   });
 
+  it("EQ-7 🔑 자본적지출·양도비가 있어도 일치한다 (카드 이중계상 금지)", () => {
+    /**
+     * 🔴 겸용 엔진은 공통 필요경비를 **파트 개산공제에 접어 넣는다**
+     * (`resolvePartNecessaryExpense` — 법 §100② 후문 안분). 파트 카드가 `capitalExpenditure`·
+     * `transferExpense`를 **또** 들고 있으면 aggregate가 카드마다 다시 빼서 **카드 수만큼 배가**된다.
+     */
+    const asset: MixedUseAssetInput = {
+      ...mixedUseCase14(),
+      isOneHouseExempt: false,
+      capitalExpenditure: 100_000_000,
+      transferExpense: 20_000_000,
+    };
+    const { single, agg } = compare(
+      asset,
+      companionBase({ capitalExpenditure: 100_000_000, transferExpense: 20_000_000 }),
+    );
+    expect(agg.taxBase).toBe(single.total.taxBase);
+    expect(agg.totalTax).toBe(Math.floor(single.total.transferTax * 1.1));
+  });
+
   it("MUT-1 🔴 주택 2카드에서 `totalPropertyTransferPrice`를 지우면 12억 판정이 무너진다", () => {
     const asset: MixedUseAssetInput = { ...mixedUseCase14(), isOneHouseExempt: true };
     const companion = companionBase({ isOneHousehold: true, residencePeriodMonths: 25 * 12 });
