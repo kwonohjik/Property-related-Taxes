@@ -158,23 +158,49 @@ describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
         .filter((m) => /함께 양도와 같이 계산할 수 없습니다/.test(m));
 
     /**
-     * 🔄 **반전 (2026-09-04) — 겸용주택은 «주 자산일 때만» 차단이다.**
+     * 🔄 **반전 (2026-09-04) — 겸용주택 차단이 «전부» 없어졌다.**
      *
-     * 컴패니언 겸용은 열렸다(⑩ enum + ⑫ `mixedUse` + ⑭ 파트 카드 4~5장 — 실측상 단건 겸용과
-     * 세액이 완전히 일치한다). primary만 남긴 이유는 5-a의 primary가 `{...engineInput}`
-     * 스프레드라 겸용이어도 평범한 주택 item이 되기 때문이다.
+     * 컴패니언이 먼저 열리고(#1466), 이어 **주 자산 겸용**도 열렸다 — 5-a의 primary 조립부가
+     * `{...engineInput}` 스프레드라 겸용이 평범한 주택 item이 되던 것을 파트 확장으로 바꿨다.
+     * 파트 카드 되먹임은 실측상 단건 겸용과 **세액이 완전히 일치**한다.
      *
-     * ⚠️ 문구도 함께 바뀌었다 — 처방이 「토글을 끄라」가 아니라 **「자산 순서를 바꾸라」** 라서
-     *    위 `blockMsg`의 공용 필터(`함께 양도와 같이 계산할 수 없습니다`)에 걸리지 않는다.
-     *    그래서 이 항목만 원문 메시지를 직접 본다 — 형제 단언의 안전망은 그대로 둔다.
+     * ⚠️ **반전이 안전망을 지우지 않도록** 아래를 함께 단언한다:
+     *    ① 겸용 × **지분 분할**은 여전히 차단(`totalPropertyTransferPrice` 의미 충돌)
+     *    ② 일반건물·부담부증여 등 형제 항목의 `blockMsg` 필터는 그대로다(각자 it이 지킨다)
      */
-    it("🔴 겸용주택이 **주 자산**이면 차단 (컴패니언 겸용은 개방됨)", () => {
+    it("✅ 겸용주택 + 함께양도 → 자리에 무관하게 더는 차단되지 않는다", () => {
       const mixed = { ...bg, transferType: "regular", isMixedUseHouse: true };
-      const msgs = collectStepIssues(0, form([mixed, other])).map((i) => i.message);
-      expect(msgs.join()).toMatch(/겸용주택은 함께 양도의 주 자산\(1번\)이 될 수 없습니다/);
-      // 대조군 — 컴패니언 자리(2번)의 겸용은 **막히지 않는다**.
-      const asCompanion = collectStepIssues(0, form([other, mixed])).map((i) => i.message);
-      expect(asCompanion.filter((m) => /겸용주택/.test(m))).toEqual([]);
+      const msgs = (assets: unknown[]) =>
+        collectStepIssues(0, form(assets)).map((i) => i.message);
+      const asPrimary = msgs([mixed, other]);
+      const asCompanion = msgs([other, mixed]);
+      expect(asPrimary.filter((m) => /함께 양도/.test(m))).toEqual([]);
+      expect(asCompanion.filter((m) => /함께 양도/.test(m))).toEqual([]);
+      /**
+       * ⚠️ **공허하지 않음을 보인다** — 이 픽스처는 겸용 면적을 채우지 않아 그쪽 검증이 뜬다.
+       *    그 메시지가 있다는 것이 「검증이 실제로 돌았는데 함께양도 차단만 없다」의 근거다.
+       */
+      expect(asPrimary.some((m) => /주택 연면적/.test(m))).toBe(true);
+    });
+
+    /**
+     * 🔒 **위 반전의 양성 대조군** — 겸용 × 지분 분할은 별개 축이고 **계속 차단**이다.
+     * 이 항목이 없으면 위 반전이 「겸용 관련 차단이 전부 사라졌다」를 조용히 허용한다.
+     */
+    it("🔴 겸용주택 × 지분 분할 → 계속 차단", () => {
+      const mixed = {
+        ...bg,
+        transferType: "regular",
+        isMixedUseHouse: true,
+        ownershipNumerator: "60",
+        ownershipDenominator: "100",
+      };
+      const rest = { ...other, ownershipNumerator: "40", ownershipDenominator: "100" };
+      expect(
+        collectStepIssues(0, form([mixed, rest]))
+          .map((i) => i.message)
+          .some((m) => /겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다/.test(m)),
+      ).toBe(true);
     });
 
     /**

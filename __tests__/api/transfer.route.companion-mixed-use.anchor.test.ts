@@ -168,11 +168,60 @@ function primaryMixedForm(): TransferFormData {
 
 describe("컴패니언 × 겸용주택 (시행령 §160① 단서)", () => {
 
-  it("MU-2 primary 겸용은 **계속 차단**된다 (양성 대조군 · 별건 축)", () => {
-    const msgs = collectStepIssues(0, primaryMixedForm()).map((i) => i.message);
+  it("PM-1 primary 겸용도 ⑧을 통과한다 (2026-09-04 개방)", () => {
+    expect(collectStepIssues(0, primaryMixedForm()).map((i) => i.message)).toEqual([]);
+  });
+
+  it("PM-2 primary 겸용이 파트 5장으로 펼쳐진다", async () => {
+    const r = await pipeline(primaryMixedForm());
+    expect(r.status).toBe(200);
+    const props = aggregated(r).properties ?? [];
+    expect(props.map((p) => String(p.propertyId).split("#")[0])).toEqual([
+      "mu-house-land",
+      "mu-house-bld",
+      "mu-comm-land",
+      "mu-comm-bld",
+      "mu-nbl",
+      // 컴패니언(일반 주택)은 그대로 1장
+      String(props[5].propertyId),
+    ]);
+    // 🔑 파트 id의 접미사가 `#primary` — 결과뷰가 주 자산으로 되짚는다.
+    expect(props.slice(0, 5).every((p) => String(p.propertyId).endsWith("#primary"))).toBe(true);
+  });
+
+  it("PM-3 🔑 **위치 불변** — 겸용이 1번이든 2번이든 세액이 같다", async () => {
+    const asPrimary = aggregated(await pipeline(primaryMixedForm())) as {
+      taxBase?: number;
+      totalTax?: number;
+    };
+    const asCompanion = aggregated(await pipeline(bundledForm())) as {
+      taxBase?: number;
+      totalTax?: number;
+    };
+    // 두 폼은 겸용주택과 일반주택의 **자리만 바꾼** 거울상이다. 같은 신고이므로 같은 세액이어야 한다.
+    expect(asPrimary.taxBase).toBe(asCompanion.taxBase);
+    expect(asPrimary.totalTax).toBe(asCompanion.totalTax);
+    // 값이 0이면 위 두 단언이 공허해진다.
+    expect(asPrimary.totalTax).toBe(171_006_000);
+  });
+
+  it("PM-4 겸용 × **지분 분할**은 계속 차단된다 (양성 대조군)", () => {
+    const fractional = {
+      ...createDefaultTransferFormData(),
+      assets: [
+        asset(1, { ...MIXED_FIELDS, ownershipNumerator: "60", ownershipDenominator: "100" }),
+        asset(2, { ownershipNumerator: "40", ownershipDenominator: "100" }),
+      ],
+      transferDate: "2024-06-01",
+      filingDate: "2024-08-31",
+      contractTotalPrice: "1200000000",
+      householdHousingCount: "2",
+    } as TransferFormData;
+    // `totalPropertyTransferPrice`가 「물건 전체 양도가액」과 「주택분 합계」 두 의미로 충돌한다.
     expect(
-      msgs.some((m) => /겸용주택은 함께 양도의 주 자산\(1번\)이 될 수 없습니다/.test(m)),
-      "primary 겸용까지 열면 5-a의 primary 조립부를 바꿔야 한다 — 이번 범위 밖",
+      collectStepIssues(0, fractional)
+        .map((i) => i.message)
+        .some((m) => /겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다/.test(m)),
     ).toBe(true);
   });
 
