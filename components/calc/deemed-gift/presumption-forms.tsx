@@ -88,21 +88,19 @@ export function NomineeTrustFields({ form, set }: Props) {
               label="신주인수가액 (발행가액)"
               value={form.ntSubscriptionPrice}
               onChange={(v) => set({ ntSubscriptionPrice: v })}
-              hint="평가가액 아님 — 비교 표시용"
               placeholder="신주인수가액 (원)"
             />
             <CurrencyInput
               label="이론적 권리락 증자후 1주당"
               value={form.ntTheoreticalExRights}
               onChange={(v) => set({ ntTheoreticalExRights: v })}
-              hint="평가가액 아님 — 비교 표시용"
               placeholder="권리락 단가 (원)"
             />
             <CurrencyInput
               label="증자 전 1주당 평가액"
               value={form.ntPreIncreasePerShare}
               onChange={(v) => set({ ntPreIncreasePerShare: v })}
-              hint="희석 출발점 — 비교 표시용"
+              hint="희석 출발점"
               placeholder="증자 전 평가액 (원)"
             />
             <input

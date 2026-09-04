@@ -87,7 +87,7 @@ export function EstateBodySuperficies({ item, onUpdate, valuationDate }: Variant
           label="지상권 설정 토지 개별공시지가"
           hint="원/㎡ — 토지가액 = 공시지가 × 면적 (§61①)"
         />
-        <FieldCard label="토지 면적" unit="㎡" hint="지상권 설정 토지 면적">
+        <FieldCard label="토지 면적" unit="㎡">
           <DecimalInput
             value={item.superficiesLandArea != null ? String(item.superficiesLandArea) : ""}
             onChange={(v) => set({ superficiesLandArea: parseDecimal(v) || undefined })}

@@ -82,15 +82,15 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
         </p>
         <p className="text-slate-500">
           {isLotMode
-            ? "각 매수 lot의 총취득원가는 불변. 1주당 단가 환산이 매칭·양도차익에 반영됩니다."
+            ? "각 매수 건의 총취득원가는 불변. 1주당 단가 환산이 매칭·양도차익에 반영됩니다."
             : "총 취득원가는 불변. 1주당 표시 단가만 환산."}
         </p>
       </div>
 
       {isLotMode && (
         <div className="rounded border border-violet-200 bg-violet-50/70 px-3 py-2 text-xs text-violet-700">
-          매수 다건/분할 모드: 발생일 이전 보유한 매수 lot만 희석됩니다. 무상주 보유기간은 원주 취득일로 통산되며(집행기준 97-163-12),
-          각 lot의 총취득원가는 불변·1주당 단가만 환산됩니다. 배정 수량은 매수 당시(원주) 기준으로 입력하세요.
+          매수 다건/분할 모드: 발생일 이전 보유한 매수 건만 희석됩니다. 무상주 보유기간은 원주 취득일로 통산되며(집행기준 97-163-12),
+          각 매수 건의 총취득원가는 불변·1주당 단가만 환산됩니다. 배정 수량은 매수 당시(원주) 기준으로 입력하세요.
         </div>
       )}
 

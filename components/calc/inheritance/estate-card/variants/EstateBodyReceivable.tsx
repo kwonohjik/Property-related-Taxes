@@ -163,7 +163,7 @@ export function EstateBodyReceivable({ item, onUpdate, valuationDate }: VariantB
         {/* simple 전용 입력 */}
         {mode === "simple" && (
           <>
-            <FieldCard label="원본(원금) 가액" unit="원" hint="채권 원금">
+            <FieldCard label="원본(원금) 가액" unit="원">
               <CurrencyInput
                 label="원본 가액"
                 value={item.receivablePrincipal != null ? String(item.receivablePrincipal) : ""}

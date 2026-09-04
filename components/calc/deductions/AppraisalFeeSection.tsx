@@ -69,14 +69,12 @@ export function AppraisalFeeSection({
           label="평가대상 법인 수"
           value={value.appraisalUnlistedTargetCount}
           onChange={(v) => onChange({ appraisalUnlistedTargetCount: v })}
-          hint="미입력 시 1로 계산합니다."
           placeholder="미입력 시 1"
         />
         <CurrencyInput
           label="신용평가전문기관 수"
           value={value.appraisalUnlistedAgencyCount}
           onChange={(v) => onChange({ appraisalUnlistedAgencyCount: v })}
-          hint="미입력 시 1로 계산합니다."
           placeholder="미입력 시 1"
         />
       </div>

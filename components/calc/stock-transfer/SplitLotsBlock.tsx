@@ -53,19 +53,14 @@ interface SplitLotsBlockProps {
   onChange: (patch: Partial<StockTransferFormData>) => void;
 }
 
-export const ACQ_CAUSE_LABEL: Record<AcquisitionLotForm["acquisitionCause"], string> = {
-  purchase: "매매",
-  inheritance: "상속",
-  gift: "증여",
-  /** §97의2① 이월과세 — 2025.1.1.~ 증여분. §104②2호로 증여자 취득일 기산 */
-  carryover_gift: "이월과세(증여)",
-  merger_split: "합병·분할",
-};
+// ACQ_CAUSE_LABEL·매수 lot 카드는 `AcquisitionLotCard`가 단일 소스다 (기존 import 경로 유지용 재export).
+export { ACQ_CAUSE_LABEL } from "@/components/calc/stock-transfer/AcquisitionLotCard";
+import { AcquisitionLotCard } from "@/components/calc/stock-transfer/AcquisitionLotCard";
 
 const COST_METHOD_HINT: Record<NonNullable<StockTransferFormData["costAllocationMethod"]>, string> = {
-  specific: "매도 lot 옆에서 어떤 매수 lot에서 차감할지 명시 입력하세요 (납세자 입증 가능 시)",
-  fifo: "매수 lot이 매수일 오름차순으로 자동 정렬되어 매칭됩니다 (선입선출법)",
-  moving_avg: "전체 매수 lot의 가중평균 단가를 사용합니다 (총평균법). 보유기간은 FIFO 기준",
+  specific: "매도 건 옆에서 어떤 매수 건에서 차감할지 명시 입력하세요 (납세자 입증 가능 시)",
+  fifo: "매수 건이 매수일 오름차순으로 자동 정렬되어 매칭됩니다 (선입선출법)",
+  moving_avg: "전체 매수 건의 가중평균 단가를 사용합니다 (총평균법). 보유기간은 선입선출법 기준",
 };
 
 export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
@@ -177,207 +172,21 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
     <div className="space-y-6">
       {/* ⓐ 매수 lot 행렬 */}
       <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-amber-800">ⓐ 매수 lot (취득 정보)</h3>
+        <h3 className="text-sm font-semibold text-amber-800">ⓐ 매수 건 (취득 정보)</h3>
         {form.acquisitionLots.length === 0 ? (
           <p className="text-xs text-amber-700 bg-amber-100/60 rounded p-3">
-            매수 행 추가부터 시작하세요. 동일 종목을 여러 차례 매수한 경우 lot별로 입력.
+            매수 행 추가부터 시작하세요. 동일 종목을 여러 차례 매수한 경우 건별로 입력하세요.
           </p>
         ) : (
           form.acquisitionLots.map((lot, idx) => (
-            <div key={lot.id} className="rounded border border-amber-300 bg-white p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-amber-700">매수 #{idx + 1}</p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteAcquisitionLot(idx)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <FieldCard
-                  label={
-                    lot.acquisitionCause === "gift" || lot.acquisitionCause === "carryover_gift"
-                      ? "수증일"
-                      : "취득일"
-                  }
-                  hint={
-                    lot.acquisitionCause === "gift"
-                      ? "수증일 기산 — §97의2① 미적용 (§104② 본문)"
-                      : lot.acquisitionCause === "carryover_gift"
-                        ? "증여받은 날 — 2025.1.1. 이후여야 §104②2호 적용"
-                        : undefined
-                  }
-                >
-                  <DateInput
-                    value={lot.acquisitionDate}
-                    onChange={(v) => updateAcquisitionLot(idx, { acquisitionDate: v })}
-                  />
-                </FieldCard>
-                <FieldCard label="취득원인" hint="lot별 §104② 보유기간 기산점">
-                  <Select
-                    value={lot.acquisitionCause}
-                    onValueChange={(v) =>
-                      updateAcquisitionLot(idx, {
-                        acquisitionCause: v as AcquisitionLotForm["acquisitionCause"],
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue>{ACQ_CAUSE_LABEL[lot.acquisitionCause]}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(ACQ_CAUSE_LABEL).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>
-                          {v}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FieldCard>
-                <FieldCard label="주식수" hint="lot 수량 (주)">
-                  <DecimalInput
-                    value={lot.shareCount}
-                    onChange={(v) => updateAcquisitionLot(idx, { shareCount: v })}
-                    thousandSeparator
-                  />
-                </FieldCard>
-                <CurrencyInput
-                  label="1주당 단가"
-                  hint={
-                    lot.acquisitionCause === "inheritance"
-                      ? "상속개시일 §60-66 평가가액 (원) — 소령 §163⑨"
-                      : lot.acquisitionCause === "gift" ||
-                          lot.acquisitionCause === "carryover_gift"
-                      ? "수증일 §60-66 평가가액 (원) — 소령 §163⑨"
-                      : lot.acquisitionCause === "merger_split"
-                      ? "1주당 가중평균 취득원가 (원) — 소령 §163①4·5호"
-                      : "1주당 실지 매수가 (원)"
-                  }
-                  value={lot.perShareAcquisitionPrice}
-                  onChange={(v) =>
-                    updateAcquisitionLot(idx, { perShareAcquisitionPrice: v })
-                  }
-                />
-                {lot.acquisitionCause === "inheritance" && (
-                  <FieldCard label="피상속인 취득일" hint="§104②1 보유기간 기산점">
-                    <DateInput
-                      value={lot.decedentAcquisitionDate ?? ""}
-                      onChange={(v) =>
-                        updateAcquisitionLot(idx, { decedentAcquisitionDate: v })
-                      }
-                    />
-                  </FieldCard>
-                )}
-                {lot.acquisitionCause === "carryover_gift" && (
-                  <FieldCard
-                    label="증여자 취득일"
-                    hint="§104②2 보유기간 기산점 — 수증일이 2025.1.1. 이후여야 적용됩니다"
-                  >
-                    <DateInput
-                      value={lot.donorAcquisitionDate ?? ""}
-                      onChange={(v) =>
-                        updateAcquisitionLot(idx, { donorAcquisitionDate: v })
-                      }
-                    />
-                  </FieldCard>
-                )}
-                {lot.acquisitionCause === "carryover_gift" && (
-                  <FieldCard
-                    label="증여자 취득가액 (1주당)"
-                    hint="§97의2①1호 — 이 값이 있어야 취득가액이 승계됩니다"
-                  >
-                    <CurrencyInput
-                      label=""
-                      hideLabel
-                      value={lot.donorAcquisitionPrice ?? ""}
-                      onChange={(v) =>
-                        updateAcquisitionLot(idx, { donorAcquisitionPrice: v })
-                      }
-                    />
-                  </FieldCard>
-                )}
-                {lot.acquisitionCause === "carryover_gift" && (
-                  <FieldCard
-                    label="증여자 자본적지출"
-                    hint="§97의2①2호 — 이 lot 전체 주식수 기준 총액. 매도한 주식수만큼 안분되어 산입됩니다"
-                  >
-                    <CurrencyInput
-                      label=""
-                      hideLabel
-                      value={lot.donorCapitalExpenditure ?? ""}
-                      onChange={(v) =>
-                        updateAcquisitionLot(idx, { donorCapitalExpenditure: v })
-                      }
-                    />
-                  </FieldCard>
-                )}
-                {lot.acquisitionCause === "carryover_gift" && (
-                  <FieldCard
-                    label="증여세 산출세액"
-                    hint="§97의2①3호 — 이 lot을 증여받은 건의 증여세 산출세액"
-                  >
-                    <CurrencyInput
-                      label=""
-                      hideLabel
-                      value={lot.donorGiftTaxAmount ?? ""}
-                      onChange={(v) => updateAcquisitionLot(idx, { donorGiftTaxAmount: v })}
-                    />
-                  </FieldCard>
-                )}
-                {lot.acquisitionCause === "carryover_gift" && (
-                  <FieldCard
-                    label="증여세 과세가액"
-                    hint="영 §163의2② 안분 분모. 분자(양도한 자산가액)는 매도 주식수 × 증여 당시 평가액으로 계산됩니다"
-                  >
-                    <CurrencyInput
-                      label=""
-                      hideLabel
-                      value={lot.donorGiftTaxableValue ?? ""}
-                      onChange={(v) => updateAcquisitionLot(idx, { donorGiftTaxableValue: v })}
-                    />
-                  </FieldCard>
-                )}
-                {lot.acquisitionCause === "carryover_gift" && (
-                  <FieldCard
-                    label="증여자와의 관계"
-                    hint="§97의2① 본문 — 배우자·직계존비속이 아니면 대상이 아닙니다"
-                  >
-                    {/* 선택지가 3~7자이고 description이 없다 — 세로로 쌓을 이유가 없다.
-                        inline은 한 행 나열 + description 미렌더인데 여기는 잃을 설명이 없다.
-                        anchor: donor-relation-radio-inline.anchor.test.tsx DR-1~DR-3 */}
-                    <RadioCardGroup
-                      name={`lotDonorRelation-${idx}`}
-                      value={lot.donorRelation ?? ""}
-                      onChange={(v) =>
-                        updateAcquisitionLot(idx, {
-                          donorRelation: v as "spouse" | "lineal" | "other",
-                        })
-                      }
-                      layout="inline"
-                      options={[
-                        { value: "spouse", label: "배우자" },
-                        { value: "lineal", label: "직계존비속" },
-                        { value: "other", label: "그 밖의 관계" },
-                      ]}
-                    />
-                  </FieldCard>
-                )}
-                {lot.acquisitionCause === "merger_split" && (
-                  <FieldCard label="종전 주식 취득일" hint="§104②3 보유기간 기산점">
-                    <DateInput
-                      value={lot.preMergerAcquisitionDate ?? ""}
-                      onChange={(v) =>
-                        updateAcquisitionLot(idx, { preMergerAcquisitionDate: v })
-                      }
-                    />
-                  </FieldCard>
-                )}
-              </div>
-            </div>
+            <AcquisitionLotCard
+              key={lot.id}
+              lot={lot}
+              idx={idx}
+              onUpdate={(patch) => updateAcquisitionLot(idx, patch)}
+              onDelete={() => deleteAcquisitionLot(idx)}
+              radioNamePrefix="lotDonorRelation"
+            />
           ))
         )}
         <Button type="button" variant="outline" size="sm" onClick={addAcquisitionLot}>
@@ -387,10 +196,10 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
 
       {/* ⓑ 매도 lot 행렬 */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-emerald-800">ⓑ 매도 lot (양도 정보)</h3>
+        <h3 className="text-sm font-semibold text-emerald-800">ⓑ 매도 건 (양도 정보)</h3>
         {form.transferLots.length === 0 ? (
           <p className="text-xs text-emerald-700 bg-emerald-100/60 rounded p-3">
-            매도 행 추가부터 시작하세요. 분할 양도인 경우 lot별로 입력.
+            매도 행 추가부터 시작하세요. 분할 양도인 경우 건별로 입력하세요.
           </p>
         ) : (
           form.transferLots.map((lot, idx) => (
@@ -414,7 +223,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                     onChange={(v) => updateTransferLot(idx, { transferDate: v })}
                   />
                 </FieldCard>
-                <FieldCard label="주식수" hint="lot 수량 (주)">
+                <FieldCard label="주식수">
                   <DecimalInput
                     value={lot.shareCount}
                     onChange={(v) => updateTransferLot(idx, { shareCount: v })}
@@ -457,9 +266,9 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
           name="costAllocationMethod"
           value={form.costAllocationMethod}
           options={[
-            { value: "specific", label: "개별법", description: "매도 lot과 매수 lot을 사용자가 명시 매칭" },
-            { value: "fifo", label: "선입선출법", description: "먼저 매수한 lot부터 양도 (자동 매칭)" },
-            { value: "moving_avg", label: "이동평균법", description: "전체 매수 lot 가중평균 (총평균법)" },
+            { value: "specific", label: "개별법", description: "매도 건과 매수 건을 사용자가 명시 매칭" },
+            { value: "fifo", label: "선입선출법", description: "먼저 매수한 건부터 양도 (자동 매칭)" },
+            { value: "moving_avg", label: "이동평균법", description: "전체 매수 건 가중평균 (총평균법)" },
           ]}
           layout="inline"
           tone="violet"
@@ -482,7 +291,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
           ) : (
             form.specificMatchings.map((m, idx) => (
               <div key={idx} className="rounded border border-fuchsia-300 bg-white p-2 grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
-                <FieldCard label="매도 lot">
+                <FieldCard label="매도 건">
                   <Select
                     value={m.transferLotId}
                     onValueChange={(v) => v && updateMatching(idx, { transferLotId: v })}
@@ -499,7 +308,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                     </SelectContent>
                   </Select>
                 </FieldCard>
-                <FieldCard label="매수 lot">
+                <FieldCard label="매수 건">
                   <Select
                     value={m.acquisitionLotId}
                     onValueChange={(v) => v && updateMatching(idx, { acquisitionLotId: v })}
