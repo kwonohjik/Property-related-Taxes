@@ -52,10 +52,24 @@ export function addCompanionAcquisitionCauseRefines(
      * 판정을 서브객체 존재로 하는 이유는 부담부증여와 같다: 컴패니언 스키마에는 `assetKind`가
      * 있지만, **「누가 취득가액을 산정하는가」를 말해 주는 것은 그 서브객체**다.
      */
+    /**
+     * 🔴 **겸용주택 제외** (2026-09-04) — 일반건물과 **완전히 같은 형태**다.
+     *
+     * 겸용은 환산 기준시가를 **자기 서브객체가 갖는다**(`mixedUse`의 `transferStandardPrice`·
+     * `acquisitionStandardPrice` 3시점). 컴패니언-수준 `standardPriceAtAcquisition`은 겸용
+     * 경로 계산에 **쓰이지 않는다** — ⑭가 겸용 엔진을 돌릴 때 서브객체 값만 읽는다.
+     *
+     * ⑧도 같은 기준이다(`validateAssetEntry`가 겸용을 전용 검증에 위임한다). 요구하면
+     * **「⑧ 통과 ↔ ⑩ 400」 모순**이 되어 사용자가 안내 없는 dead-end를 만난다 —
+     * 실측으로 실제 그 상태였다(겸용 × 환산 × 컴패니언/축 B가 전부 400).
+     *
+     * 판정을 서브객체 존재로 하는 이유는 부담부증여·일반건물과 같다.
+     */
     if (
       c.acquisitionCause === "purchase" &&
       c.burdenedGiftInfo === undefined &&
-      c.generalBuildingValuation === undefined
+      c.generalBuildingValuation === undefined &&
+      c.mixedUse === undefined
     ) {
       if (c.useEstimatedAcquisition) {
         if (!c.standardPriceAtAcquisition || c.standardPriceAtAcquisition <= 0) {

@@ -439,7 +439,7 @@ totalTransferPriceForFourPart
 | `capitalExpenditure`·`transferExpense` | **한다** | 자산 단위 공통 필요경비 |
 | `housing·commercialInheritedValue` | **한다** | 상속·증여 신고 **평가액** |
 | `housing·commercialInheritedExpense` | **한다** | 파트별 필요경비 |
-| `totalTransferPriceForFourPart` | **한다** | PHD 4분할 분모인데 짝이 되는 `housingTransferPrice`가 지분분 |
+| `totalTransferPriceForFourPart` | **한다** ✅실측 | §12.7 |
 | 기준시가 전부 | 안 한다 | 환산 산식에서 분자·분모 약분 |
 | 면적 전부 | 안 한다 | 물건 단위 사실 |
 | **보상액 4종** | **안 한다** | 기준시가 총액과 `min`으로 겨루는 값이라 **같은 스케일**이어야 한다(§164⑨1호 환산 분모) |
@@ -514,3 +514,45 @@ buildRedevPayloadForCompanion(asset)
 `transfer-tax-validate-asset.ts`의 **Gate-A**(「지분 모드 자산은 **단독으로** 계산할 수 없다」)
 이고, 대조군을 그리로 옮겼다(GBF-13 · GBF-21 · burdened-gift 3곳). Gate-A를 지우는 뮤테이션에서
 2건이 RED가 되는 것을 확인했다.
+
+
+---
+
+## 12.7 ✅ PHD 4부분 분모 스케일 — 실측 완료 (2026-09-04 후속)
+
+§12.4 판정표에서 `totalTransferPriceForFourPart`만 「판정 근거는 세웠으나 **PHD 픽스처로
+실측하지 못했다**」로 남아 있었다. Case A 픽스처로 닫았다.
+
+### 근거 (엔진 구조)
+
+4부분 분기는 `totalTransfer4`에서 **모든 값을 파생**한다
+(`transfer-tax-pre-housing-disclosure.ts`): 양도가액 4분할이 그 총액을 나눠 갖고
+(`commercialBuildingTransferPrice = totalTransfer4 − 나머지 셋`), 환산취득가 총액도
+`floor(totalTransfer4 × P_A_est / H34)`다. 기준시가 3시점은 **비율 산정에만** 쓰여 물건 전체로
+유지되고, 개산공제는 `computeEstimatedDeduction(..., input.ownershipRatio)`가 따로 줄인다.
+
+### 실측
+
+| | 4분할 분모 | 주택 차익 | 산출세액 |
+|---|---:|---:|---:|
+| 단독 100% | 1,500,000,000 | 919,976,978 | 325,318,906 |
+| 60% 지분 (스케일 O) | **900,000,000** | 551,986,187 (**0.6배**) | **180,395,344** |
+| 60% 지분 (스케일 X) | 1,500,000,000 | 921,700,921 (**물건 전체**) | 326,162,218 |
+
+⇒ 스케일하지 않으면 **60% 지분인데 물건 전체 차익**이 나온다(145,766,874 과대).
+
+축 B 60/40: 스케일 O **357,850,801** vs 단건×1.1 357,850,796 — **5원 차**.
+스케일 X면 **782,727,113**(단건의 2.2배).
+
+> ⚠️ **5원은 구조에서 나온다** — 4부분은 개산공제를 「성분별 독립 floor(잔액 흡수 없음)」로
+> 계산하고(엔진 주석), 지분 카드마다 그 floor가 다시 걸려
+> `floor(0.6x) + floor(0.4x) ≤ floor(x)`가 성분 수만큼 누적된다.
+> **비-PHD 겸용 축 B는 완전 일치**한다(그쪽엔 이 floor가 없다). anchor는 ±10원 허용 + 상수 고정.
+
+### 🔴 함께 발견 — 겸용 × 환산 컴패니언이 **안내 없는 400**이었다
+
+⑩ `addCompanionAcquisitionCauseRefines`가 컴패니언-수준 `standardPriceAtAcquisition`을
+요구하는데, 겸용은 그 값을 **자기 `mixedUse` 서브객체**(3시점 기준시가)가 갖고 ⑧도 요구하지
+않는다 ⇒ **⑧ 통과 ↔ ⑩ 400**. 일반건물·부담부증여가 같은 이유로 이미 예외였고 **겸용만
+빠져 있었다**. #1466·#1467의 픽스처가 전부 **실가 모드**라 드러나지 않았다
+(「픽스처 기본값이 게이트 결함을 가린다」의 세 번째 사례).
