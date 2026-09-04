@@ -21,6 +21,17 @@ import { buildUncondSourceRecord } from "@/lib/calc/nbl-unconditional-exemption-
 /** Zod 검증 후 출력(z.infer = z.output) — 빌더의 z.input과 구분 */
 type NonBusinessLandRaw = z.infer<typeof nonBusinessLandRawSchema>;
 
+/**
+ * 자산-수준 「공유 지분율」(%) → [0..1] 비율. `getOwnershipRatio`와 **동치**여야 한다
+ * (동치는 `__tests__/lib/calc/nbl-ownership-ratio-resort-gate.anchor.test.tsx`가 지킨다).
+ */
+function deriveOwnershipRatio(asset: AssetForm): number {
+  const n = parseFloat(asset.ownershipNumerator || "100");
+  const d = parseFloat(asset.ownershipDenominator || "100");
+  if (!isFinite(n) || !isFinite(d) || d <= 0 || n <= 0) return 1;
+  return Math.min(n / d, 1);
+}
+
 function parseRawNumber(s: string): number | undefined {
   const n = parseFloat(String(s).replace(/,/g, ""));
   return Number.isFinite(n) ? n : undefined;
@@ -94,6 +105,23 @@ export function buildNonBusinessLandRaw(
   const acqSigungu5 = (asset.acquisitionSigunguCode || "").slice(0, 5);
   return {
     ...nblFields,
+    /**
+     * 공유 지분 — 자산-수준 「공유 지분율」(%) **단일 소스**에서 파생한다 (2026-09-04).
+     *
+     * 종전에는 NBL 섹션에 「공동소유 지분」 입력칸이 따로 있었고, 같은 값을 **한 화면에서 두 번,
+     * 서로 다른 단위로** 받았다 — 자산-수준은 백분율(단독 100), NBL은 비율(단독 1). 그래서
+     * 백분율 감각으로 `50`을 넣으면 UI 자동조회(`NblLandAutoFetch`)는 `공시지가 × 면적 × 50`을
+     * verbatim 곱하고 엔진은 조용히 1로 접었다. ⑧ validate가 이를 차단하고 있었으나, 차단은
+     * 두 단위가 공존한다는 사실 자체를 없애지 못한다.
+     *
+     * ⇒ 입력칸을 없애고 여기서 파생한다. `nblFields` 스프레드 **뒤**에 두어 레거시 저장 데이터의
+     *   `nblOwnershipRatio`(구 비율값)를 반드시 덮어쓴다 — 순서를 바꾸면 stale 값이 되살아난다.
+     *
+     * 산식은 `getOwnershipRatio`(transfer-tax-api-asset-basics.ts)와 동일하다. 그 파일은
+     * React 컴포넌트(`CurrencyInput`)를 import하므로 서버도 쓰는 본 모듈에서 직접 import하지
+     * 않는다(파일 상단 ⚠️ 주석과 같은 이유). 동치는 anchor 테스트가 지킨다.
+     */
+    nblOwnershipRatio: String(deriveOwnershipRatio(asset)),
     nblUrbanIncorporationDate: resolveNblUrbanIncorporationDate(asset),
     nblLandSigunguCode: asset.nblLandSigunguCode || acqSigungu5,
     // 농지 좌표(직선거리 30km 재촌 판정 기준점) — 양도 물건 주소검색 시 세팅됨.

@@ -5,7 +5,6 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
@@ -233,7 +232,7 @@ export function NblSectionContainer({
         )}
 
         {/* 5. 공통 지원 필드 */}
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="mt-3">
           <FieldCard label="도시편입일" hint="도시지역 편입 시 3년 유예 적용. 편입일은 토지이용계획확인원에서 확인해 입력하세요(자동조회 불가)">
             <DateInput
               value={nblIncorpDateIsValid ? asset.nblUrbanIncorporationDate : ""}
@@ -245,12 +244,6 @@ export function NblSectionContainer({
               </p>
             )}
             <NblUrbanZoneCheckButton jibun={asset.addressJibun} transferDate={transferDate ?? ""} />
-          </FieldCard>
-          <FieldCard label="공동소유 지분" hint="0 초과 1 이하의 비율로 입력합니다 — 50%는 0.5, 단독소유는 1(또는 미입력). 백분율(50)을 넣으면 계산 전에 차단됩니다.">
-            <DecimalInput
-              value={asset.nblOwnershipRatio}
-              onChange={(v) => onAssetChange({ nblOwnershipRatio: v })}
-            />
           </FieldCard>
         </div>
 

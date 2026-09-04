@@ -196,6 +196,10 @@ export function mapAssetToNblInput(
  * nblOwnershipRatio 파싱 헬퍼.
  * Orchestrator 에서 applyCoOwnershipRatio() 호출 시 사용.
  *
+ * 값의 출처는 자산-수준 「공유 지분율」(%)이다 — ④ `buildNonBusinessLandRaw`가 [0..1]로
+ * 파생해 싣는다(2026-09-04, NBL 전용 지분 입력칸 폐지). 여기서는 그 규약을 신뢰하지 않고
+ * 범위를 다시 접는다 — 레거시 페이로드가 그대로 도달할 수 있기 때문이다.
+ *
  * @returns 0 < ratio < 1 이면 해당 값, 그 외 1 반환.
  */
 export function parseOwnershipRatio(

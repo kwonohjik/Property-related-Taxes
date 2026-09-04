@@ -9,6 +9,11 @@
  *   엔진(`parseOwnershipRatio`)은 **조용히 1로 정규화**한다. 전자만으로 §168의11②
  *   수입금액비율이 50분의 1이 되어 사업용이던 토지가 비사업용으로 뒤집힌다(+10%p 중과).
  *
+ *   → 2026-09-04에 **차단이 아니라 원인을 없앴다**. 뿌리는 「같은 지분을 한 화면에서 두 번,
+ *   서로 다른 단위로 받는 것」이었다(자산-수준 「공유 지분율」 % · NBL 「공동소유 지분」 비율).
+ *   NBL 입력칸을 폐지하고 자산-수준에서 파생하도록 바꿨으므로 범위 밖 값의 **입력 경로가
+ *   없다**. 아래 E5-03R이 그 단일 소스 규약을 지킨다 — 종전 범위 게이트는 도달 불가라 폐지.
+ *
  * · **U2-02** — 휴양시설(6호) 「기준면적 직접입력」 노출 조건이 `nblOtherResortBuildingFloorArea`를
  *   빠뜨려, 바닥면적만 입력해도 칸이 계속 보이고 그 입력값은 엔진이 무시했다.
  *   ⑧ validate는 처음부터 바닥면적을 포함한 4요소로 판정하고 있었다(UI↔validate 반대).
@@ -19,8 +24,10 @@ import { render, screen, cleanup } from "@testing-library/react";
 afterEach(cleanup);
 
 import "@/lib/api/transfer-tax-schema";
-import { validateNblDetailedJudgment } from "@/lib/calc/transfer-tax-validate-nbl";
 import { parseOwnershipRatio } from "@/lib/tax-engine/non-business-land/form-mapper";
+import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
+import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-asset-basics";
+import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { OtherLandDetailSection } from "@/components/calc/transfer/nbl/OtherLandDetailSection";
@@ -45,40 +52,84 @@ function landAsset(overrides: Partial<AssetForm> = {}): AssetForm {
   } as AssetForm;
 }
 
-describe("[E5-03] 공동소유 지분 — 0 < ratio ≤ 1 강제", () => {
+describe("[E5-03R] 공유 지분 — 자산-수준 「공유 지분율」(%) 단일 소스", () => {
   const parseNum = (s: string) => {
     const n = parseFloat(s);
     return Number.isFinite(n) ? n : undefined;
   };
 
-  it.each(["50", "100", "1.5", "0", "-0.5"])("범위 밖 「%s」은 계산 전에 차단된다", (v) => {
-    const err = validateNblDetailedJudgment(landAsset({ nblOwnershipRatio: v }), "자산1", TRANSFER);
-    expect(err).toContain("공동소유 지분");
-  });
-
-  it.each(["0.5", "1", "0.001", "0.9999"])("정상값 「%s」은 통과한다", (v) => {
-    const err = validateNblDetailedJudgment(landAsset({ nblOwnershipRatio: v }), "자산1", TRANSFER);
-    expect(err).toBeNull();
-  });
-
-  it("미입력은 차단하지 않는다 (단독소유 = 기본 1)", () => {
-    expect(validateNblDetailedJudgment(landAsset({ nblOwnershipRatio: "" }), "자산1", TRANSFER)).toBeNull();
+  /** ④ 변환이 자산-수준 지분율에서 NBL 페이로드의 [0..1] 비율을 파생한다. */
+  it.each([
+    ["100", "100", "1"],
+    ["50", "100", "0.5"],
+    ["1", "2", "0.5"],
+    ["", "", "1"],
+    // 상한·하한이 산식 자체로 접힌다 — 범위 게이트 없이도 배율이 될 수 없다.
+    ["150", "100", "1"],
+    ["0", "100", "1"],
+    ["-50", "100", "1"],
+  ])("지분율 %s/%s → nblOwnershipRatio 「%s」", (n, d, expected) => {
+    const raw = buildNonBusinessLandRaw(
+      landAsset({ ownershipNumerator: n, ownershipDenominator: d }),
+      TRANSFER,
+    );
+    expect(raw?.nblOwnershipRatio).toBe(expected);
   });
 
   /**
-   * 차단이 필요한 이유의 실측 — 엔진과 UI가 같은 `"50"`을 다르게 읽는다.
-   * 엔진은 1로 접고(면적 축소 없음), UI 자동조회는 그대로 곱해 토지가액을 50배로 만든다.
+   * 🔴 스프레드 순서 가드 — `buildNonBusinessLandRaw`는 `nbl*` prefix-pick으로 자산을 훑는다.
+   * 레거시 sessionStorage에 남은 구 `nblOwnershipRatio`가 그 pick에 걸리므로, 파생값이
+   * **뒤에** 놓여 반드시 이겨야 한다. 순서가 뒤집히면 stale 비율이 조용히 되살아난다.
    */
-  it("차단이 없으면 엔진은 1로 접고 UI는 50을 그대로 곱한다 (해석 분기 실측)", () => {
-    expect(parseOwnershipRatio({ nblOwnershipRatio: "50" }, parseNum)).toBe(1);
-    // NblLandAutoFetch의 산식과 동일 — parseFloat(raw || "1") || 1
-    const raw: string = "50";
-    const uiRatio = parseFloat(raw || "1") || 1;
-    expect(uiRatio).toBe(50);
-    // 공시지가 1,000,000원/㎡ × 1,000㎡
-    expect(Math.floor(1_000_000 * 1000 * uiRatio)).toBe(50_000_000_000);
-    expect(Math.floor(1_000_000 * 1000 * parseOwnershipRatio({ nblOwnershipRatio: "50" }, parseNum)))
-      .toBe(1_000_000_000);
+  it("레거시 자산에 남은 구 nblOwnershipRatio는 파생값에 덮인다", () => {
+    const legacy = {
+      ...landAsset({ ownershipNumerator: "50", ownershipDenominator: "100" }),
+      nblOwnershipRatio: "0.25",
+    } as AssetForm;
+    expect(buildNonBusinessLandRaw(legacy, TRANSFER)?.nblOwnershipRatio).toBe("0.5");
+  });
+
+  /** 파생 산식은 금액 스케일링이 쓰는 `getOwnershipRatio`와 **동치**여야 한다. */
+  it.each([
+    ["100", "100"],
+    ["50", "100"],
+    ["1", "3"],
+    ["", ""],
+    ["150", "100"],
+    ["0", "100"],
+    ["abc", "100"],
+  ])("파생 산식 ≡ getOwnershipRatio (%s/%s)", (n, d) => {
+    const asset = landAsset({ ownershipNumerator: n, ownershipDenominator: d });
+    expect(buildNonBusinessLandRaw(asset, TRANSFER)?.nblOwnershipRatio).toBe(
+      String(getOwnershipRatio(asset)),
+    );
+  });
+
+  /**
+   * 종전 실패 경로의 소멸 — 백분율 감각으로 `50`을 넣어도 이제 배율 50이 아니라 50%(=0.5)다.
+   * 엔진과 UI 자동조회가 **같은 값**을 읽는다(종전에는 1 vs 50으로 갈렸다).
+   */
+  it("「50」은 배율 50이 아니라 50%로 읽힌다 — 엔진·자동조회 해석 일치", () => {
+    const asset = landAsset({ ownershipNumerator: "50", ownershipDenominator: "100" });
+    const raw = buildNonBusinessLandRaw(asset, TRANSFER)!;
+    const engineRatio = parseOwnershipRatio(raw, parseNum);
+    const uiRatio = getOwnershipRatio(asset); // NblLandAutoFetch가 쓰는 값과 동일 소스
+    expect(engineRatio).toBe(0.5);
+    expect(uiRatio).toBe(0.5);
+    // 공시지가 1,000,000원/㎡ × 1,000㎡ → 종전엔 50,000,000,000원(50배)이 채워졌다.
+    expect(Math.floor(1_000_000 * 1000 * uiRatio)).toBe(500_000_000);
+  });
+
+  /** ⑤ 입력칸 재유입 차단 — NBL 섹션에 지분 입력칸이 다시 생기면 단위가 또 갈린다. */
+  it("NBL 정밀판정 섹션에 「공동소유 지분」 입력칸이 없다", () => {
+    render(
+      <NblSectionContainer
+        asset={landAsset({ nblUseDetailedJudgment: true })}
+        onAssetChange={() => {}}
+        transferDate={TRANSFER}
+      />,
+    );
+    expect(screen.queryByText(/공동소유 지분/)).toBeNull();
   });
 });
 
