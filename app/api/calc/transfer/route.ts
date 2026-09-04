@@ -19,6 +19,9 @@ import {
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
+import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
+import type { MixedUseCompanionContext } from "./bundled-split-helpers";
 import { dispatchGeneralBuilding } from "./general-building-route-helper";
 import { calculateGeneralBuildingFractional } from "./general-building-fractional";
 import {
@@ -31,7 +34,6 @@ import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/ra
 import {
   propertySchema as inputSchema,
 } from "@/lib/api/transfer-tax-schema";
-import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
 import { prepareBundledApportionment } from "./bundled-apportionment";
 import { buildTransferEngineInput } from "./engine-input";
 
@@ -263,11 +265,39 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      /**
+       * ⑭ 겸용 서브엔진 컨텍스트 — **primary와 컴패니언이 같은 객체를 쓴다**.
+       *
+       * 폼-전역 값이라 자산마다 달라질 수 없다. 두 곳에서 따로 조립하면 한쪽만 필드를
+       * 빠뜨리는 순간 「같은 물건이 자리에 따라 다른 값」이 된다.
+       *
+       * `globals` 타입은 `MixedUseAssetInputSources`에서 **파생**한다 — leaf에 폼-전역 필드가
+       * 늘면 여기서 컴파일이 실패한다.
+       * ⚠️ 날짜를 갖는 값은 전부 `engineInput` 변환본이다(Zod 출력은 string).
+       */
+      const mixedUseCtx = {
+        rates,
+        globals: {
+          regionCode: data.regionCode,
+          oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
+          temporaryTwoHouse: engineInput.temporaryTwoHouse,
+          specialHouseExclusions: engineInput.specialHouseExclusions,
+          isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,
+          rawHouses: data.houses,
+          houses: engineInput.houses,
+          sellingHouseId: data.sellingHouseId,
+          marriageMerge: engineInput.marriageMerge,
+          parentalCareMerge: engineInput.parentalCareMerge,
+          gracePeriod: engineInput.gracePeriod,
+          unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
+        },
+      } satisfies MixedUseCompanionContext;
+
       const items: TransferTaxItemInput[] = apportionment.apportioned.flatMap((a, idx) => {
         if (a.assetId === "primary") {
           // 주 자산: engineInput을 복제 + 안분 결과로 양도·취득·필요경비 덮어쓰기
           // 지분 모드: data.totalPropertyTransferPrice는 engineInput에서 이미 상속됨 (...engineInput).
-          return [{
+          const primaryItem = {
             ...engineInput,
             transferPrice: a.allocatedSalePrice,
             acquisitionPrice: a.allocatedAcquisitionPrice,
@@ -282,7 +312,44 @@ export async function POST(request: NextRequest) {
              */
             filingPenaltyDetails: undefined,
             delayedPaymentDetails: undefined,
-          } satisfies TransferTaxItemInput];
+          } satisfies TransferTaxItemInput;
+
+          /**
+           * ⑭ **주 자산이 겸용주택이면 파트 4~5장으로 대체한다** — 컴패니언과 **같은 leaf**.
+           *
+           * 🔴 종전에는 이 스프레드가 겸용을 **평범한 주택 item**으로 만들었다. 5-a-2 겸용
+           *    분기는 5-a가 `return`해 도달하지 못하므로, 주택·상가 분리가 통째로 사라진
+           *    채 200이 나갔다 — 그래서 ⑧이 「주 자산이 겸용이면」 막고 있었다.
+           *    그 차단을 여기서 없앤다(⑧도 함께 걷었다).
+           *
+           * ⚠️ 겸용 × 지분 분할은 별도로 계속 차단이다(`transfer-tax-validate.ts`) —
+           *    `totalPropertyTransferPrice`가 「물건 전체 양도가액」과 「주택분 합계」 두 의미로
+           *    충돌한다. 그 차단이 살아 있어 여기서 두 축이 만나지 않는다.
+           */
+          if (data.propertyType === "mixed-use-house" && data.mixedUse) {
+            return buildMixedUseCompanionItems(
+              data.mixedUse,
+              primaryItem,
+              {
+                transferDate,
+                mixedUseCtx,
+                primaryEngineInput: {
+                  householdHousingCount: engineInput.householdHousingCount,
+                  isRegulatedArea: engineInput.isRegulatedArea,
+                  wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
+                  presaleRights: engineInput.presaleRights,
+                },
+              },
+              {
+                ownershipRatio: data.ownershipRatio,
+                isUnregistered: data.isUnregistered,
+                assetId: "primary",
+                assetLabel: a.assetLabel ?? "",
+                allocatedSalePrice: a.allocatedSalePrice,
+              },
+            );
+          }
+          return [primaryItem];
         }
         // 컴패니언 자산 빌드 + 한도 초과 split — bundled-split-helpers.ts로 추출
         const c = companions[idx - 1];
@@ -313,23 +380,7 @@ export async function POST(request: NextRequest) {
            * 늘면 여기서 컴파일이 실패한다. 손으로 나열한 목록이었다면 조용히 누락됐을 축이다.
            * ⚠️ 날짜를 갖는 값은 전부 `engineInput` 변환본이다(Zod 출력은 string).
            */
-          mixedUseCtx: {
-            rates,
-            globals: {
-              regionCode: data.regionCode,
-              oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
-              temporaryTwoHouse: engineInput.temporaryTwoHouse,
-              specialHouseExclusions: engineInput.specialHouseExclusions,
-              isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,
-              rawHouses: data.houses,
-              houses: engineInput.houses,
-              sellingHouseId: data.sellingHouseId,
-              marriageMerge: engineInput.marriageMerge,
-              parentalCareMerge: engineInput.parentalCareMerge,
-              gracePeriod: engineInput.gracePeriod,
-              unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
-            },
-          },
+          mixedUseCtx,
         });
       });
 

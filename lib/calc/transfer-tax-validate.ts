@@ -168,6 +168,18 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     //    보고 걸려서 지분 분할 일반건물이 **계산 자체를 못 하는** 상태였다
     //    (vitest anchor는 payload를 손으로 만들어 route만 봤기 때문에 못 잡았다).
     if (form.assets.length > 1) {
+      /**
+       * 🔑 **목록이 비었다 (2026-09-04).** 자산종류별 「함께양도 불가」 축은 **전건 개방**됐다 —
+       *    분양권·입주권·재개발APT·일반건물·부담부증여(2026-09-03) · 겸용주택(2026-09-04).
+       *
+       * `e2e/known-failures.ts`가 0건이 된 뒤에도 배열을 남겨 둔 것과 같은 이유로 **구조를
+       * 유지한다**: 새 축이 생기면 여기에 한 줄 추가하는 것이 정본이고, 그때 각 항목이 왜
+       * 막혔는지의 이력이 아래 주석에 그대로 있다.
+       *
+       * ⚠️ **이 목록이 비었으므로 「가드가 살아 있음」을 보는 대조군은 이제 성립하지 않는다.**
+       *    `gb-fractional-validate.predo` GBF-21이 그 역할을 **겸용 × 지분 분할 차단**
+       *    (`:81` — 별개 블록)으로 옮겼다.
+       */
       const SINGLE_ONLY: Array<[(a: AssetForm, i: number) => boolean, string]> = [
         /**
          * 🔄 **컴패니언 겸용은 이 목록에서 나갔다 (2026-09-04).** 종전 사유는
@@ -244,17 +256,16 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
          */
       ];
       /**
-       * 🔴 **주 자산(1번)이 겸용주택이면 막는다** — 안내를 따로 두는 이유는 처방이 다르기 때문이다.
-       *    「토글을 끄라」가 아니라 **자산 순서를 바꾸면 계산된다**(컴패니언 겸용은 개방됐다).
+       * 🔄 **겸용주택 차단은 전부 없어졌다 (2026-09-04).**
+       *
+       * 컴패니언은 파트 카드 되먹임으로 먼저 열렸고(#1466), **주 자산 겸용**도 5-a의
+       * primary 조립부(`route.ts`)에 같은 확장을 달아 열었다 — 종전에는 그 자리가
+       * `{...engineInput}` 스프레드라 겸용이 평범한 주택 item이 됐다.
+       *
+       * ⚠️ **겸용 × 지분 분할은 위(`:81`)에서 여전히 차단**이다 —
+       *    `totalPropertyTransferPrice`가 「물건 전체 양도가액」과 「주택분 합계」 두 의미로
+       *    충돌한다. 그 차단이 이 축과 지분 축이 만나지 않게 지킨다.
        */
-      if (form.assets[0]?.assetKind === "housing" && form.assets[0]?.isMixedUseHouse) {
-        issues.push({
-          step,
-          assetIndex: 0,
-          message:
-            "겸용주택은 함께 양도의 주 자산(1번)이 될 수 없습니다. 다른 자산을 1번으로 옮기면 겸용주택도 함께 계산됩니다.",
-        });
-      }
 
       for (const [match, label] of SINGLE_ONLY) {
         if (form.assets.some((a, i) => match(a, i))) {

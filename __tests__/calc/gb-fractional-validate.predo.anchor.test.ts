@@ -223,12 +223,31 @@ describe("⑧ 일반건물 × 지분 분할 — validate Pre-Do anchor", () => {
       expect(msgs.some((m) => m.includes("재개발·재건축"))).toBe(false);
     });
 
-    /** 🔑 **양성 대조군** — `SINGLE_ONLY` 가드가 살아 있음을 이 항목이 홀로 증명한다. */
-    it("겸용주택 함께양도 차단은 그대로다 (아직 열리지 않은 축)", () => {
+    /**
+     * 🔄 **반전 (2026-09-04) — 겸용주택 함께양도도 열렸다.** 파트 카드 4~5장으로 되먹이면
+     * 단건 겸용과 세액이 완전히 일치한다(설계문서 §10·§11). 컴패니언·주 자산 양쪽 다 열렸다.
+     *
+     * 🔴 **이로써 `SINGLE_ONLY` 목록이 비었다** — 「그 가드가 살아 있음」을 보는 대조군은
+     *    더 이상 성립하지 않는다. 아래 항목이 그 역할을 **살아 있는 다른 차단**으로 옮겨 받는다.
+     *    ([[feedback_shared_assertion_reversal_erases_sibling_net]])
+     */
+    it("겸용주택 함께양도는 더는 차단되지 않는다", () => {
       const mu1 = gbShare({ assetId: "m1", assetKind: "housing", isMixedUseHouse: true, ownershipNumerator: "100", ownershipDenominator: "100" });
       const mu2 = gbShare({ assetId: "m2", assetKind: "housing", isMixedUseHouse: true, ownershipNumerator: "100", ownershipDenominator: "100" });
       const msgs = messages(fractionalForm([mu1, mu2]));
-      expect(msgs.some((m) => m.includes("겸용주택"))).toBe(true);
+      expect(msgs.some((m) => m.includes("함께 양도"))).toBe(false);
+    });
+
+    /**
+     * 🔑 **양성 대조군 (2026-09-04 인계)** — 위 반전들이 「차단 블록을 통째로 없앴다」와
+     * 구별되게 한다. 겸용 × **지분 분할**은 `totalPropertyTransferPrice`가 두 의미로 충돌해
+     * **계속 차단**이고, 그것은 `SINGLE_ONLY`가 아니라 `:81`의 **별개 블록**이 지킨다.
+     */
+    it("겸용주택 × 지분 분할은 계속 차단된다", () => {
+      const mu1 = gbShare({ assetId: "m1", assetKind: "housing", isMixedUseHouse: true, ownershipNumerator: "60", ownershipDenominator: "100" });
+      const mu2 = gbShare({ assetId: "m2", assetKind: "housing", isMixedUseHouse: true, ownershipNumerator: "40", ownershipDenominator: "100" });
+      const msgs = messages(fractionalForm([mu1, mu2]));
+      expect(msgs.some((m) => m.includes("겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다"))).toBe(true);
     });
   });
 

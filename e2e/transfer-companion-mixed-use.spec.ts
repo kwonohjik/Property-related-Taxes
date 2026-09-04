@@ -31,6 +31,11 @@ const MIXED = {
   mixedAcqLandPricePerSqm: "1000000",
 };
 
+/** 겸용을 **주 자산(1번)** 으로 둔 거울상 — 자리만 바뀌므로 세액이 같아야 한다. */
+function mirrored(assets: Record<string, unknown>[]) {
+  return [assets[1], assets[0]];
+}
+
 const ASSETS = [
   {
     ...makeDefaultAsset(1),
@@ -53,11 +58,11 @@ const ASSETS = [
   },
 ];
 
-function seedForm() {
+function seedForm(assets: Record<string, unknown>[] = ASSETS) {
   return {
     state: {
       formData: {
-        assets: ASSETS,
+        assets,
         transferDate: "2024-06-01",
         filingDate: "2024-08-31",
         contractTotalPrice: "1200000000",
@@ -73,21 +78,18 @@ function seedForm() {
   };
 }
 
-async function seedAndOpen(page: Page) {
+async function seedAndOpen(page: Page, assets: Record<string, unknown>[] = ASSETS) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(),
+    seedForm(assets),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
 }
 
-test("컴패니언 겸용주택 — 종전 차단이 파트 5장 계산으로 바뀐다", async ({ page }) => {
-  test.setTimeout(90_000);
-  await seedAndOpen(page);
-
+async function calculate(page: Page) {
   for (const step of ["보유 상황", "감면·공제", "가산세"]) {
     await page.getByRole("button", { name: step }).first().click();
   }
@@ -96,7 +98,13 @@ test("컴패니언 겸용주택 — 종전 차단이 파트 5장 계산으로 �
     { timeout: 30_000 },
   );
   await page.getByRole("button", { name: /계산하기/ }).click();
-  const resp = await calcResponse;
+  return calcResponse;
+}
+
+test("컴패니언 겸용주택 — 종전 차단이 파트 5장 계산으로 바뀐다", async ({ page }) => {
+  test.setTimeout(90_000);
+  await seedAndOpen(page);
+  const resp = await calculate(page);
 
   // 종전: ⑧이 "겸용주택 분리계산은 함께 양도와 같이 계산할 수 없습니다"로 막아 요청 자체가 없었다.
   expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()}`).toBe(true);
@@ -128,4 +136,25 @@ test("컴패니언 겸용주택 — 종전 차단이 파트 5장 계산으로 �
     (p) => p.rateGroup,
   );
   expect(groups.filter((g) => g === "non_business_land")).toHaveLength(1);
+});
+
+test("🔑 주 자산 겸용주택 — 자리를 바꿔도 세액이 같다", async ({ page }) => {
+  test.setTimeout(90_000);
+  await seedAndOpen(page, mirrored(ASSETS));
+  const resp = await calculate(page);
+  // 종전: ⑧이 "겸용주택은 함께 양도의 주 자산(1번)이 될 수 없습니다"로 막았다.
+  //       그 앞에는 아예 200이면서 겸용 산출물이 하나도 없는 **침묵 오산**이었다.
+  expect(resp.ok(), `계산 API 비정상 응답 ${resp.status()}`).toBe(true);
+
+  const body = await resp.json();
+  const props = body.data.aggregated.properties as { propertyId: string }[];
+  expect(props.slice(0, 5).map((p) => p.propertyId.split("#")[0])).toEqual([
+    "mu-house-land",
+    "mu-house-bld",
+    "mu-comm-land",
+    "mu-comm-bld",
+    "mu-nbl",
+  ]);
+  // 파트 id 접미사가 `#primary` — 결과뷰가 주 자산으로 되짚는다.
+  expect(props.slice(0, 5).every((p) => p.propertyId.endsWith("#primary"))).toBe(true);
 });

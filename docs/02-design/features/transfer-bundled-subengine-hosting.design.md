@@ -330,6 +330,32 @@ householdHousingCount landAcquisitionDate buildingAcquisitionDate
 (MUT-1 분모 제거 · MUT-2 세대 축 누출). §10.1의 **2원 차이도 사라졌다** — 그것은 주택 1카드가
 만든 인공물이었다.
 
-**⑧을 primary까지 열지 않는 이유**: 5-a의 primary는 `{...engineInput}` 스프레드라(`route.ts:279`)
-겸용이어도 **평범한 주택 item**이 된다. 컴패니언만 여는 것이 「⑧ 통과 ↔ route 침묵 오산」을
-만들지 않는 최소 개방이다. primary 겸용 개방은 그 스프레드 지점에 같은 확장을 다는 별건이다.
+~~**⑧을 primary까지 열지 않는 이유**~~ ⇒ §11에서 함께 열었다.
+
+---
+
+## 11. primary 겸용도 열었다 (2026-09-04)
+
+5-a의 primary는 `{...engineInput}` 스프레드라 겸용이어도 **평범한 주택 item**이 됐다.
+그 자리에 **컴패니언과 같은 leaf**(`buildMixedUseCompanionItems`)를 달아 파트 4~5장으로 대체한다.
+
+| | |
+|---|---|
+| ⑭ | primary 분기가 `data.propertyType === "mixed-use-house" && data.mixedUse`면 파트로 대체 |
+| ⑧ | 겸용 함께양도 차단 **전부 제거** |
+| 공용화 | `mixedUseCtx`를 `items` 앞으로 끌어올려 **primary·컴패니언이 같은 객체**를 쓴다 — 폼-전역 값이라 자산마다 달라질 수 없고, 두 곳에서 따로 조립하면 한쪽만 필드를 빠뜨린다 |
+
+### 11.1 🔑 위치 불변이 핵심 anchor다
+
+겸용과 일반주택의 **자리만 바꾼 거울상** 두 폼이 같은 세액을 내야 한다 —
+실측 **과세표준 453,500,002 · 총세액 171,006,000**으로 일치(PM-3 · E2E).
+
+종전 상태는 「⑧이 막기 전에는 200이면서 겸용 산출물이 하나도 없는 **침묵 오산**」이었으므로,
+확장을 제거하는 뮤테이션에서 PM-2·PM-3가 함께 RED가 된다(실측).
+
+### 11.2 ⚠️ 겸용 × 지분 분할은 **계속 차단**이다
+
+`totalPropertyTransferPrice`가 두 의미로 충돌한다 — 지분 축에서는 「물건 전체 양도가액」,
+겸용 파트에서는 「주택분 합계」다. `transfer-tax-validate.ts:81`의 기존 차단이 살아 있어
+두 축이 만나지 않는다. **반전이 이 안전망을 지우지 않도록** 양성 대조군을 두 곳에 뒀다
+(PM-4 · `burdened-gift-fractional-validate`).
