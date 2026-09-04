@@ -5,16 +5,8 @@
  * 용도는 번호(usageNo) 기반. 독립 도구(API route 미사용).
  */
 import { describe, it, expect } from "vitest";
-import {
-  initialBuildingStdPriceForm,
-  emptyCompositePart,
-  toEngineInput,
-  validateBuildingStdPriceForm,
-  deriveYearFromEventDate,
-  availableYears,
-  type BuildingStdPriceFormState,
-  type CompositePartForm,
-} from "../../lib/calc/building-std-price-form";
+import { initialBuildingStdPriceForm, emptyCompositePart, toEngineInput, deriveYearFromEventDate, availableYears, type BuildingStdPriceFormState, type CompositePartForm } from "../../lib/calc/building-std-price-form";
+import { validateBuildingStdPriceForm } from "../../lib/calc/building-std-price-validate";
 import { calcBuildingStandardPrice } from "../../lib/tax-engine/building-standard-price";
 
 const form = (o: Partial<BuildingStdPriceFormState>): BuildingStdPriceFormState => ({

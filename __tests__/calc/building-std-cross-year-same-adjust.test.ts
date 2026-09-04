@@ -7,7 +7,8 @@
  * 미해결이었던 것 — 「게이트를 넓혔다」와 「입력이 그 게이트에 닿는다」는 다르다.
  */
 import { describe, it, expect } from "vitest";
-import { toEngineInput, validateBuildingStdPriceForm, initialBuildingStdPriceForm } from "@/lib/calc/building-std-price-form";
+import { toEngineInput, initialBuildingStdPriceForm } from "@/lib/calc/building-std-price-form";
+import { validateBuildingStdPriceForm } from "@/lib/calc/building-std-price-validate";
 import type { BuildingStdPriceFormState } from "@/lib/calc/building-std-price-form";
 
 /** 2005 취득 → 2006 양도 (집행기준 사례1 연도축) */

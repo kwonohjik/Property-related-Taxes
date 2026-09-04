@@ -38,7 +38,8 @@ import {
   calcPriorStdPriceSubstitute,
   usesPriorStdPriceSubstitute,
 } from "@/lib/tax-engine/same-adjustment-period-std-price";
-import { validateBuildingStdPriceForm, initialBuildingStdPriceForm } from "@/lib/calc/building-std-price-form";
+import { initialBuildingStdPriceForm } from "@/lib/calc/building-std-price-form";
+import { validateBuildingStdPriceForm } from "@/lib/calc/building-std-price-validate";
 import type { BuildingStandardPriceInput } from "@/lib/tax-engine/types/building-standard-price.types";
 
 const ACQ2001 = (over: Partial<BuildingStandardPriceInput> = {}): BuildingStandardPriceInput => ({
