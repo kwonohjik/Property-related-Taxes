@@ -252,3 +252,56 @@ householdHousingCount landAcquisitionDate buildingAcquisitionDate
 `__tests__/api/transfer.route.companion-mixed-use.anchor.test.ts` — **MU-2 대조군 1건**만 둔다
 (「primary 겸용은 계속 차단된다」). 개방 단언 4건(⑧ 해제·⑫ 도달·파트 확장·세율군 분리)은
 착수 시 함께 넣는다. **지금 RED로 두면 CI가 상시 빨간불이 되어 게이트 구실을 못 한다.**
+
+---
+
+## 10. 🔑 착수 실측 — **파트를 raw 금액으로 되먹이면 단건과 세액이 같다** (2026-09-04)
+
+§9.4는 「엔진을 그대로 호출해 파트만 쓰고 `total`은 버린다」고 적었지만, **파트는
+소득금액(차익−장특) 층위**이고 aggregate가 요구하는 것은 **양도가액·취득가액·필요경비**다.
+그 사이를 잇는 재구성이 **드리프트 없이 성립하는가**가 착수 전 유일한 구조적 위험이었다.
+
+⇒ throwaway probe로 4케이스를 쟀다. 재구성 규칙은 파트가 **이미 노출하는 echo 값**뿐이다
+(`landTransferPrice`·`landAcqPrice`·`landAppraisalDed`, 건물분 동일 — 새 산식 없음):
+
+| 케이스 | 과세표준 (단건 / aggregate) | 세액 (단건×1.1 / aggregate `totalTax`) |
+|---|---|---|
+| case14 (배율초과 없음) | 1,670,099,614 / **동일** | 754,165,308 / **754,165,308** |
+| 배율초과(비사토 ratio 0.700) | 1,348,935,828 / **동일** | 595,189,234 / **595,189,234** |
+| §104⑦ 중과 2주택 | 2,123,794,113 / **동일** | 1,251,108,072 / **1,251,108,072** |
+| 1세대1주택 표2 + 12억 | 674,353,403 / 674,353,40**2** | — / **2원 차이** ⚠️ |
+
+**재현되는 것**: 비사토 carve-out(`nonBusinessTransferRatio`로 토지분 3값을 나눈다) · 장특
+표1/표2 · §95② 중과 LTHD 배제(`lthd 0`) · §104⑤ 세율군 분리(`multi_house_surcharge` ↔
+`progressive`) · §104⑤ MAX(`clause2`).
+
+> 🔑 **왜 재현되는가** — aggregate는 item마다 **단건 엔진을 그대로 돌린다**
+> (`transfer-tax-aggregate.ts:210`). `TransferTaxItemInput`은 `TransferTaxInput`에서 4필드만
+> 뺀 것이라 `multiHouse`·`residencePeriodMonths`·`isOneHousehold`를 **그대로 싣는다** —
+> 겸용 엔진이 파트에 적용하던 판정을 item이 자기 힘으로 다시 판정한다. GB가
+> `buildProperties`에서 `isOneHousehold: false`를 **하드코딩**하는 것과 대비된다(GB는 주택이
+> 없어 그래도 됐다) ⇒ **겸용은 `buildProperties`를 재사용할 수 없다.**
+
+### 10.1 ⚠️ 미해소 — **V-8: 12억 안분에서 2원**
+
+단건 `proratedTaxableGain` 314,371,441 vs aggregate 314,371,439. 차익(1,512,314,999)과
+장특율(0.8)이 **같은데** 안분 결과만 갈린다 ⇒ **§89① 안분의 절사 순서**가 두 경로에서 다르다
+(`applyRate` 소수 rate 1원 부족과 같은 계열). 양도가액을 `apportionment.housingTransferPrice`
+그대로 써도 변하지 않았다 — 원인은 재구성이 아니라 **안분 leaf 자체**다.
+
+🔴 **anchor를 「완전 일치」로 쓰면 이 경로에서 상시 RED가 된다.** 구현 시 ① 두 경로가 같은
+안분 leaf를 쓰게 만들거나, ② 그 케이스만 허용 오차를 근거와 함께 명시할 것. **①을 먼저 시도한다.**
+
+### 10.2 확정된 구현 형태
+
+| 지점 | 내용 |
+|---|---|
+| leaf 승격 | route 5-a-2의 `mixedAsset` 조립(25필드)을 **`buildMixedUseAssetInput`으로 승격**해 route와 컴패니언이 **한 소스**를 쓴다 — §9.3의 「손으로 25필드를 옮기면 안 된다」를 구조로 푼다(GB가 `buildGbPartCards`를 승격한 것과 같은 층위). `satisfies` + 키 커버리지 가드도 leaf 안으로 함께 간다 |
+| ⑩⑫ | `companionAssetSchema.assetKind` += `"mixed_use_house"` · `mixedUse: mixedUseAssetSchema.optional()` |
+| ⑬ | ④가 컴패니언마다 `buildMixedUsePayload(a, form)`을 싣는다(그 함수는 이미 `AssetForm`을 받는다 — primary 전용이 아니다) |
+| ⑭ | `bundled-split-helpers.ts`에 겸용 분기 — 엔진 1회 호출 후 파트 4건을 `TransferTaxItemInput`으로. `rates`를 `CompanionBuildContext`에 추가 |
+| ⑧ | `transfer-tax-validate.ts:172`의 차단을 **primary 겸용만**으로 좁힌다(컴패니언 겸용은 개방) |
+
+**⑧을 primary까지 열지 않는 이유**: 5-a의 primary는 `{...engineInput}` 스프레드라(`route.ts:279`)
+겸용이어도 **평범한 주택 item**이 된다. 컴패니언만 여는 것이 「⑧ 통과 ↔ route 침묵 오산」을
+만들지 않는 최소 개방이다. primary 겸용 개방은 그 스프레드 지점에 같은 확장을 다는 별건이다.
