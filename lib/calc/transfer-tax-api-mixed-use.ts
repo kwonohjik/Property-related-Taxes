@@ -15,6 +15,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { consolidateResidenceMonths } from "@/lib/tax-engine/transfer-tax-exemption";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
+import { getOwnershipRatio } from "./transfer-tax-api-helpers";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 
 /** 겸용주택 mixedUse 페이로드. 비-겸용이면 undefined. */
 export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData) {
@@ -37,6 +39,36 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
   const mixedAppraisalSalesTotal = primary.isSalesCaseAcquisition
     ? parseAmount(primary.similarSalesValue)
     : parseAmount(primary.fixedAcquisitionPrice);
+
+  /**
+   * 🔴 **공유지분 — 절대금액 성분만 지분 스케일한다** (2026-09-04).
+   *
+   * 겸용 엔진의 계약(`MixedUseAssetInput.ownershipRatio` 주석)은 명시적이다:
+   * **기준시가·면적은 물건 전체(100%)를 유지**하고(환산 산식에서 분자·분모로 상쇄 ·
+   * §166⑥ 안분 비율이 100% 스케일 전제), `ownershipRatio`는 **개산공제 base 축소 전용**이다.
+   * ⇒ 그 밖의 **절대금액**은 호출부(④)가 지분분으로 만들어 넘겨야 한다.
+   *
+   * 종전에는 아무것도 스케일하지 않아 지분 60%인데 취득가액·자본적지출·양도비가 **100% 값**으로
+   * 들어갔다 — 차익 과소 ⇒ **세액 과소**(실측: 취득가액 411,522,633이 100%와 동일).
+   *
+   * | 필드 | 스케일 | 근거 |
+   * |---|---|---|
+   * | `acquisitionActualTotalPrice` | **한다** | 취득 실거래가·감정가액·매매사례가액 **총액** |
+   * | `capitalExpenditure`·`transferExpense` | **한다** | 자산 단위 공통 필요경비(법 §100② 후문으로 엔진이 주택/상가로만 나눈다) |
+   * | `housing·commercialInheritedValue` | **한다** | 상속·증여 신고 **평가액** |
+   * | `housing·commercialInheritedExpense` | **한다** | 파트별 필요경비 |
+   * | `totalTransferPriceForFourPart` | **한다** | PHD 4분할 분모인데 짝이 되는 `housingTransferPrice`가 **지분분**이다 |
+   * | 기준시가 전부(㎡당·총액) | 안 한다 | 환산 산식에서 분자·분모 약분 |
+   * | 면적 전부 | 안 한다 | **물건 단위 사실**(상가 축 B가 같은 근거로 열렸다) |
+   * | 보상액 4종 | **안 한다** | 기준시가 총액과 `min`으로 겨루는 값이라 **같은 스케일**이어야 한다(§164⑨1호 환산 분모) |
+   * | `totalPropertyTransferPrice` | 안 한다 | 정의가 「물건 전체」다(영 §156①) |
+   *
+   * 단독 소유(지분 100%)면 `ratio === 1`이라 모든 값이 그대로다 — 동작이 바뀌지 않는다.
+   */
+  const ratio = getOwnershipRatio(primary);
+  /** 절대금액 → 지분분. `undefined`는 그대로 통과시킨다(0으로 바뀌면 「미입력」이 「0원」이 된다). */
+  const share = (v: number | undefined): number | undefined =>
+    v === undefined ? undefined : applyRatio(v, ratio);
 
   // 거주 개월 단일 소스 — 실거주(공제율)와 §154⑧3호 통산(표2 대상 판정) 둘 다 여기서 도출.
   const resMonths = deriveResidencePeriodMonths(
@@ -157,7 +189,7 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
                     parseAmount(primary.phdCommercialBuildingStdPriceAtAcq) ||
                     parseAmount(primary.mixedAcqCommercialBuildingPrice),
                   commercialBuildingStdPriceAtFirstDisclosure: parseAmount(primary.phdCommercialBuildingStdPriceAtFirst),
-                  totalTransferPriceForFourPart: parseAmount(form.contractTotalPrice),
+                  totalTransferPriceForFourPart: applyRatio(parseAmount(form.contractTotalPrice), ratio),
                 }
               : {}),
           }
@@ -207,28 +239,32 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       (primary.acquisitionDate ?? "") >= "1985-01-01",
     // reported 값(B1) — 엔진은 동일 필드 소비. ⚠️ blind || 금지: 취득원인 전환 시 반대편 override 폼필드가
     // 클리어되지 않으므로(stale), **현재 acquisitionCause에 종속**해 선택(상속→상속필드·증여→증여필드).
-    housingInheritedValue:
+    housingInheritedValue: share(
       (primary.acquisitionCause === "gift"
         ? parseAmount(primary.mixedHousingGiftValueOverride)
         : parseAmount(primary.mixedHousingInheritedValueOverride)) || undefined,
-    commercialInheritedValue:
+    ),
+    commercialInheritedValue: share(
       (primary.acquisitionCause === "gift"
         ? parseAmount(primary.mixedCommercialGiftValueOverride)
         : parseAmount(primary.mixedCommercialInheritedValueOverride)) || undefined,
+    ),
     // 실비(자본적지출·양도비) — 상속/증여/매매실가 공용 엔진 슬롯(usesDeemedAcq 경로 건물분 차감).
     // ⚠️ 취득원인 종속 선택(stale 방지): 매매→Actual·증여→Gift·그 외(상속)→Inherited.
-    housingInheritedExpense:
+    housingInheritedExpense: share(
       (isMixedActualAcquisition
         ? parseAmount(primary.mixedHousingActualExpense)
         : primary.acquisitionCause === "gift"
           ? parseAmount(primary.mixedHousingGiftExpense)
           : parseAmount(primary.mixedHousingInheritedExpense)) || undefined,
-    commercialInheritedExpense:
+    ),
+    commercialInheritedExpense: share(
       (isMixedActualAcquisition
         ? parseAmount(primary.mixedCommercialActualExpense)
         : primary.acquisitionCause === "gift"
           ? parseAmount(primary.mixedCommercialGiftExpense)
           : parseAmount(primary.mixedCommercialInheritedExpense)) || undefined,
+    ),
     /**
      * 🔴 자산 단위 **공통** 자본적지출·양도비 (2026-08-07 W-3).
      *
@@ -239,18 +275,20 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
      * ⚠️ 안분 **비율**은 엔진만 안다(취득시·양도시 기준시가) — 클라이언트에서 미리 나누지 않는다
      *    (메모리 `feedback_ui_engine_dual_truth_avoidance`).
      */
-    capitalExpenditure: parseAmount(primary.capitalExpenditure) || undefined,
-    transferExpense: parseAmount(primary.transferExpense) || undefined,
+    capitalExpenditure: share(parseAmount(primary.capitalExpenditure) || undefined),
+    transferExpense: share(parseAmount(primary.transferExpense) || undefined),
     // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매 + 실거래가 모드.
     // 상속·증여(byInheritance/byGift)와 상호배타(취득원인 purchase라 자동 배타). 환산/감정/매매사례 모드는 제외.
     useActualAcquisition: isMixedActualAcquisition,
     // 감정가액·매매사례가액 추계 안분 (R-B) — 개산공제 유지(실거래가와 배타).
     useAppraisalSalesAcquisition: isMixedAppraisalSales,
-    acquisitionActualTotalPrice: isMixedActualAcquisition
-      ? parseAmount(primary.fixedAcquisitionPrice) || undefined
-      : isMixedAppraisalSales
-        ? mixedAppraisalSalesTotal || undefined
-        : undefined,
+    acquisitionActualTotalPrice: share(
+      isMixedActualAcquisition
+        ? parseAmount(primary.fixedAcquisitionPrice) || undefined
+        : isMixedAppraisalSales
+          ? mixedAppraisalSalesTotal || undefined
+          : undefined,
+    ),
     // 보유 중 일부 용도변경 (시행령 §166⑥ + 집행기준 99-164-10)
     partialUsageChange:
       primary.hasPartialUsageChange && primary.partialChangeDirection

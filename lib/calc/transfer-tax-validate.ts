@@ -77,9 +77,16 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
 
     // 지분 모드 미지원 조합 차단 — 지분별 안분 UI 부재 또는 양도가액 모델 비양립.
     if (fullFractional && primaryAsset) {
-      if (primaryAsset.assetKind === "housing" && primaryAsset.isMixedUseHouse) {
-        issues.push({ step, assetIndex: 0, message: "겸용주택은 지분 분할 취득과 함께 계산할 수 없습니다. 지분 분할 토글을 끄고 계산하세요." });
-      } else if (
+      /**
+       * 🔄 **겸용주택은 이 목록에서 나갔다 (2026-09-04).** 종전 사유는 「지분별 안분 UI 부재
+       *    또는 양도가액 모델 비양립」이었는데, 실측하면 **배관은 이미 통했다**
+       *    (파트 카드 5장 × 지분 수). 막고 있던 것은 **절대금액 성분에 지분 스케일이 없다**는
+       *    것이었다 — 취득가액·자본적지출·양도비가 카드마다 **100% 값 그대로**여서
+       *    2배 계상됐다. `buildMixedUsePayload`가 그 성분만 스케일하게 고쳐 해소했다
+       *    (기준시가·면적은 물건 전체 유지 — `MixedUseAssetInput.ownershipRatio` 계약).
+       *    실측: 축 B 60/40 합계 **152,203,211 = 단건 100%와 완전 일치**.
+       */
+      if (
         // ✅ `general_building` 제외 (2026-08-10) — 지분별 토지·건물 카드를 만들어 aggregate 1회로
         //    계산하는 전용 경로가 생겼다(`app/api/calc/transfer/general-building-fractional.ts`).
         //
