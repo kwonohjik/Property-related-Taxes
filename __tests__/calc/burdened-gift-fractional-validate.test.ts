@@ -188,17 +188,18 @@ describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
      * 이 항목이 없으면 위 반전이 「겸용 관련 차단이 전부 사라졌다」를 조용히 허용한다.
      */
     /**
-     * 🔄 **재인계 (2026-09-04 후속)** — 겸용 × 지분 분할도 같은 날 열렸다(막던 것은 「모델
-     * 비양립」이 아니라 **절대금액 성분의 지분 스케일 부재**였다). 대조군은 아직 살아 있는
-     * **재개발APT × 지분 분할**로 옮긴다 — 청산금·권리가액이 절대금액이라 그 배관이 없다.
+     * 🔄 **3차 인계 (2026-09-04)** — 재개발APT × 지분 분할도 같은 날 열렸다. 차단 사유
+     * (「§166 서브객체 부재 + 절대금액 스케일 필요」)가 **stale**이었고, 실제로 막던 것은
+     * 컴패니언 호출부가 `ownershipRatio`를 안 넘기던 것 하나였다.
+     *
+     * ⇒ 자산 종류 목록은 비었다. 대조군은 지분 축에서 살아 있는 **Gate-A**로 옮긴다.
      */
-    it("🔴 재개발APT × 지분 분할 → 계속 차단 (양성 대조군)", () => {
-      const r1 = { ...bg, transferType: "regular", assetKind: "redevelopment_apt", ownershipNumerator: "60", ownershipDenominator: "100" };
-      const r2 = { ...other, assetKind: "redevelopment_apt", ownershipNumerator: "40", ownershipDenominator: "100" };
+    it("🔴 지분 모드 자산 1건만 → 계속 차단 (Gate-A · 양성 대조군)", () => {
+      const lone = { ...bg, transferType: "regular", ownershipNumerator: "60", ownershipDenominator: "100" };
       expect(
-        collectStepIssues(0, form([r1, r2]))
+        collectStepIssues(0, form([lone]))
           .map((i) => i.message)
-          .some((m) => /지분 분할 취득 계산을 지원하지 않습니다/.test(m)),
+          .some((m) => /단독으로 계산할 수 없습니다/.test(m)),
       ).toBe(true);
     });
 

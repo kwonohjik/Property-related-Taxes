@@ -628,13 +628,18 @@ export function buildAssetPayload(
      * ⑬ 시행령 §166 서브객체 — 입주권·재개발APT 컴패니언.
      *
      * **primary와 같은 빌더**를 자산별로 부른다(`buildRedevelopmentPayload`). 그 빌더는 절대금액
-     * 성분(권리가액·필요경비)의 지분 스케일을 이미 안고 있는데, 컴패니언은 각 자산이 자기 물건의
-     * 100%라 `ownershipRatio`를 넘기지 않는다 — 축 A(공유지분)와 갈리는 지점이다.
+     * 성분(권리가액·필요경비)의 지분 스케일을 이미 안고 있다.
+     *
+     * 🔄 **지분율을 넘긴다 (2026-09-04).** 종전에는 「컴패니언은 각 자산이 자기 물건의 100%」라는
+     *    전제로 넘기지 않았다. **함께양도(다른 물건)에서는 맞지만 축 B(지분 분할)에서는 틀리다** —
+     *    그쪽 컴패니언은 **같은 물건의 다른 지분**이다. 안 넘기면 그 카드만 권리가액·필요경비가
+     *    **100% 값**으로 남아 과대 계상된다(실측: 40% 카드의 `rightsValue`가 600,000,000).
+     *    함께양도 자산은 `ownershipRatio`가 1이라 `share()`가 항등이므로 동작이 바뀌지 않는다.
      *
      * 누락 시 침묵 strip이라 그 자산만 §166을 잃고 일반 주택 산식으로 계산된다.
      */
     ...(asset.assetKind === "right_to_move_in" || asset.assetKind === "redevelopment_apt"
-      ? { redevelopment: buildRedevPayloadForCompanion(asset) }
+      ? { redevelopment: buildRedevPayloadForCompanion(asset, getOwnershipRatio(asset)) }
       : {}),
     /**
      * ⑬ 일반건물 서브객체 — 컴패니언 함께양도. **primary와 같은 빌더**를 쓴다.
