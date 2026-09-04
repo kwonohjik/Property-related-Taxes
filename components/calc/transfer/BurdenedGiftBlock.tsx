@@ -25,6 +25,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
+import { formatOwnershipPercent } from "@/lib/calc/transfer-tax-api-helpers";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { bgGiftStdPriceLauncherSpec } from "@/lib/calc/burdened-gift-std-price-launcher";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
@@ -177,7 +178,11 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
    * 축 B(`isFractionalSplit`)에서는 물건 전체를 입력하므로 이 라벨을 쓰면 안 된다.
    */
   const isFractional = getOwnershipRatio(asset) < 1 && !isFractionalSplit;
-  const shareLabel = `${asset.ownershipNumerator}/${asset.ownershipDenominator}`;
+  // 화면 위젯과 같은 백분율 표기 — 분자/분모는 화면에 없다(`formatOwnershipPercent` 주석).
+  const shareLabel = formatOwnershipPercent(
+    asset.ownershipNumerator,
+    asset.ownershipDenominator,
+  );
 
   // 상증법 §60~§66 평가 미리보기 (useMemo — store 미러링 금지)
   const valuationPreview = useMemo(() => {

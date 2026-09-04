@@ -19,11 +19,20 @@ import { render, screen, cleanup } from "@testing-library/react";
 
 afterEach(cleanup);
 
-import { ownershipRatioError } from "@/lib/calc/transfer-tax-api-asset-basics";
+import fs from "fs";
+import path from "path";
+
+import {
+  ownershipRatioError,
+  formatOwnershipPercent,
+} from "@/lib/calc/transfer-tax-api-asset-basics";
 import { validateAssetEntry } from "@/lib/calc/transfer-tax-validate-asset";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { OwnershipRatioInput } from "@/components/calc/transfer/OwnershipRatioInput";
+import {
+  OwnershipRatioInput,
+  OwnershipRatioBlock,
+} from "@/components/calc/transfer/OwnershipRatioInput";
 
 const OVER_100 = "공유 지분율은 100%를 초과할 수 없습니다 (입력값 150%).";
 
@@ -100,5 +109,55 @@ describe("[OWN-PCT] ⑤ 인라인 경고 ↔ ⑧ 계산 전 차단이 같은 문
   it("⑤ 빈값(타이핑 시작 전)에는 경고가 없다", () => {
     render(<OwnershipRatioInput numerator="" denominator="" onChange={vi.fn()} />);
     expect(screen.queryByText(/공유 지분율은/)).toBeNull();
+  });
+});
+
+describe("[OWN-PCT] 지분 표시는 화면 위젯과 같은 백분율 표기다", () => {
+  it.each([
+    ["50", "100", "50%"],
+    ["100", "100", "100%"],
+    ["1", "2", "50%"], // 레거시 분모 — 화면에는 50%로 보인다
+    ["1", "3", "33.3333%"], // 위젯 pctValue와 같은 4자리 반올림
+  ])("%s/%s → %s", (n, d, expected) => {
+    expect(formatOwnershipPercent(n, d)).toBe(expected);
+  });
+
+  it("⑧ Gate-A 차단 문구가 50%로 뜬다 (종전 「50/100」)", () => {
+    const form = formWith("50", "100");
+    const msg = validateAssetEntry(form.assets[0], 0, form)!;
+    expect(msg).toContain("지분 모드 자산(50%)");
+    expect(msg).not.toContain("50/100");
+  });
+
+  it("⑤ 「100% 기준 입력」 안내 배너도 50%로 뜬다", () => {
+    render(
+      <OwnershipRatioBlock numerator="50" denominator="100" onChange={vi.fn()} />,
+    );
+    expect(screen.getByText(/시스템이 지분율\(50%\)을/)).toBeTruthy();
+  });
+
+  /**
+   * 재유입 차단 — 안내문·오류문에 분자/분모를 그대로 박는 표기가 되살아나면
+   * 사용자는 화면에 없는 값과 대조하게 된다. 표시는 `formatOwnershipPercent` 한 곳으로.
+   */
+  it("전송·표시 경로에 `분자}/{분모` 템플릿이 남아 있지 않다", () => {
+    const roots = ["components/calc/transfer", "lib/calc"];
+    const bad: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (/\.tsx?$/.test(e.name)) {
+          const s = fs.readFileSync(p, "utf-8");
+          if (
+            /\{numerator\}\s*\/\s*\{denominator\}/.test(s) ||
+            /ownershipNumerator\}\s*\/\s*\$\{[^}]*ownershipDenominator\}/.test(s)
+          )
+            bad.push(p);
+        }
+      }
+    };
+    for (const r of roots) walk(path.join(process.cwd(), r));
+    expect(bad).toEqual([]);
   });
 });

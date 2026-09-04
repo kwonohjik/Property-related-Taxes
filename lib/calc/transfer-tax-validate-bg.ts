@@ -20,6 +20,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
+import { formatOwnershipPercent } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { needsBgAcqStdPriceInput, resolveBgAcqStdPrice } from "./burdened-gift-acq-std-price";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -180,7 +181,7 @@ export function validateBurdenedGiftAsset(
     if (giftValuationMarket > 0 && assumedDebt > giftValuationMarket) {
       const scaleNote =
         ratio < 1
-          ? ` (지분 ${asset.ownershipNumerator}/${asset.ownershipDenominator} 해당분 — 물건 전체 ${marketWhole.toLocaleString()}원)`
+          ? ` (지분 ${formatOwnershipPercent(asset.ownershipNumerator, asset.ownershipDenominator)} 해당분 — 물건 전체 ${marketWhole.toLocaleString()}원)`
           : "";
       return `${label}: 채무액(${assumedDebt.toLocaleString()}원)이 증여가액(${giftValuationMarket.toLocaleString()}원)${scaleNote}을 초과합니다. 부담부증여로는 성립하지 않습니다(상증법 §47③ 검토 필요). 양도 형태를 "일반 양도"로 변경하거나 평가액·채무액을 재확인하세요.`;
     }

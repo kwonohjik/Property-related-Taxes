@@ -72,6 +72,23 @@ export function isFractionalRatioStr(numerator: string, denominator: string): bo
 }
 
 /**
+ * 지분 표시 문자열 — 화면 위젯과 **같은 백분율 표기**("50%").
+ *
+ * 🔴 안내문·오류문에 `50/100`처럼 분자/분모를 그대로 쓰지 말 것 — 위젯이 단일 백분율
+ *    칸이 된 뒤 분모는 화면 어디에도 없어서, 사용자가 자기 입력값과 대조할 수 없다.
+ *    반올림은 위젯 `pctValue`와 같은 4자리로 맞춘다(보이는 수와 같은 수를 쓴다).
+ */
+export function formatOwnershipPercent(
+  numerator: string,
+  denominator: string,
+): string {
+  const n = parseFloat(numerator);
+  const d = parseFloat((denominator ?? "").trim() === "" ? "100" : denominator);
+  if (!isFinite(n) || !isFinite(d) || d <= 0) return `${numerator}%`;
+  return `${parseFloat(((n / d) * 100).toFixed(4))}%`;
+}
+
+/**
  * 공유 지분율 입력 오류 — ⑤ 인라인 경고와 ⑧ 계산 전 차단이 **같은 술어**를 쓴다.
  *
  * 🔴 메시지가 화면에 있는 말이어야 한다 — 종전 문구는 「지분율 분자는 분모를 초과할 수

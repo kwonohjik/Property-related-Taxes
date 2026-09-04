@@ -27,7 +27,10 @@ import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriatio
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
-import { ownershipRatioError } from "./transfer-tax-api-asset-basics";
+import {
+  ownershipRatioError,
+  formatOwnershipPercent,
+} from "./transfer-tax-api-asset-basics";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 
 /**
@@ -178,7 +181,7 @@ export function validateAssetEntry(
    *    별개 게이트(Gate-B)가 계속 막는다. 두 게이트는 서로 간섭하지 않는다.
    */
   if (form.assets.length === 1 && ownN < ownD && a.ownershipRemainderThirdParty !== "yes") {
-    return `${label}: 지분 모드 자산(${ownN}/${ownD})은 단독으로 계산할 수 없습니다. 나머지 지분도 내 것이면 그 지분을 별도 자산으로 추가하고, 나머지가 타인 소유이면 「나머지 지분은 타인 소유」를 선택하세요. 단독 소유라면 지분율을 100%로 입력하세요.`;
+    return `${label}: 지분 모드 자산(${formatOwnershipPercent(a.ownershipNumerator || "100", a.ownershipDenominator || "100")})은 단독으로 계산할 수 없습니다. 나머지 지분도 내 것이면 그 지분을 별도 자산으로 추가하고, 나머지가 타인 소유이면 「나머지 지분은 타인 소유」를 선택하세요. 단독 소유라면 지분율을 100%로 입력하세요.`;
   }
 
   // 다자산 양도가액 — 지분 모드(ratio < 1.0) 자산은 양도가액이 총양도가 × ratio로
