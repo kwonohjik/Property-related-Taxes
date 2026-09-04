@@ -46,7 +46,7 @@ import {
 
 // ── 토지 취득원인 옵션 (이월과세 포함 4종) ──
 // Phase 2 (2026-05-12): 부담부증여는 "양도" 사건이므로 취득원인에서 분리.
-// 별도 TransferModeBlock(양도 정보 카드)에서 transferType 라디오로 선택.
+// 별도 TransferModeBlock(「양도 형태·원인」 카드)에서 transferType 라디오로 선택.
 // 취득원인은 증여자의 당초 취득 정보(매매·상속·증여·이월과세)를 받음.
 const LAND_CAUSE_OPTIONS = [
   { value: "purchase",       label: "매매" },
@@ -633,7 +633,7 @@ export function GeneralBuildingAcquisitionCards({
         )}
 
         {/*
-         * Phase 2 (2026-05-12): 부담부증여 BurdenedGiftBlock은 TransferModeBlock(양도 정보 카드)로 이동.
+         * Phase 2 (2026-05-12): 부담부증여 BurdenedGiftBlock은 TransferModeBlock(「양도 형태·원인」 카드)로 이동.
          * 취득 정보 카드에서는 증여자의 당초 취득 정보(매매·상속·증여·이월과세)만 받음.
          */}
 
