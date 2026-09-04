@@ -26,18 +26,8 @@ import { ApartmentConversionSection } from "./ApartmentConversionSection";
 import { SectionCard } from "./BuildingStdSectionCard";
 import { isSameAdjustmentPeriodConversion } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { BuildingStdValuationSections } from "./BuildingStdValuationSections";
-import {
-  type BuildingStdPriceFormState,
-  initialBuildingStdPriceForm,
-  availableYears,
-  deriveYearFromEventDate,
-  toEngineInput,
-  validateBuildingStdPriceForm,
-  buildNtsReportContext,
-  computeValuationLandTotal,
-  buildAddressPatch,
-  isRestorableSnapshot,
-} from "@/lib/calc/building-std-price-form";
+import { type BuildingStdPriceFormState, initialBuildingStdPriceForm, availableYears, deriveYearFromEventDate, toEngineInput, buildNtsReportContext, buildAddressPatch, isRestorableSnapshot } from "@/lib/calc/building-std-price-form";
+import { validateBuildingStdPriceForm, computeValuationLandTotal } from "@/lib/calc/building-std-price-validate";
 import { buildNtsReportModel, type NtsReportModel } from "@/lib/calc/nts-report-adapter";
 import {
   calcBuildingStandardPrice,

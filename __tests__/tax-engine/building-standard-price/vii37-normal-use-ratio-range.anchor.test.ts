@@ -29,7 +29,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { calcBuildingStandardPrice } from "@/lib/tax-engine/building-standard-price";
-import { validateBuildingStdPriceForm, initialBuildingStdPriceForm } from "@/lib/calc/building-std-price-form";
+import { initialBuildingStdPriceForm } from "@/lib/calc/building-std-price-form";
+import { validateBuildingStdPriceForm } from "@/lib/calc/building-std-price-validate";
 import type { BuildingStandardPriceInput } from "@/lib/tax-engine/types/building-standard-price.types";
 
 const BASE: BuildingStandardPriceInput = {
