@@ -33,5 +33,5 @@ export const ACQ_MODE_OPTIONS = [
 
 export const APPROVAL_LAW_OPTIONS = [
   { value: "urban_renovation_art_74" as const, label: "도시정비법 §74 (재개발/재건축)", description: "도시 및 주거환경정비법 §74 관리처분계획 인가 — 본류" },
-  { value: "small_housing_art_29" as const, label: "빈집소규모정비법 §29 (소규모정비)", description: "빈집 및 소규모주택 정비에 관한 특례법 §29 사업시행계획 인가 — 후속 PR" },
+  { value: "small_housing_art_29" as const, label: "빈집소규모정비법 §29 (소규모정비)", description: "빈집 및 소규모주택 정비에 관한 특례법 §29 사업시행계획 인가 — 아직 지원하지 않습니다" },
 ];

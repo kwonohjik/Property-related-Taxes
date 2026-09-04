@@ -42,7 +42,7 @@ export function PastureDetailSection({
     <div className="space-y-3">
       <SectionHeader
         title="목장용지 세부 정보"
-        description="§168-10 목장용지 판정"
+        description="소득령 §168의10 목장용지 판정"
         action={<LawArticleModal legalBasis="소득세법 시행령 §168의10" label="§168의10 목장용지" />}
       />
 
@@ -80,7 +80,7 @@ export function PastureDetailSection({
       <FieldCard
         label="사육 두수"
         unit="두"
-        hint="「소득세법 시행령」 [별표 1의3] 제2호 — 다음 3가지 중 납세자가 선택하는 방법으로 산정합니다. ① 양도일 이전 최근 6과세기간(양도일이 속하는 과세기간 포함) 중 납세자가 선택하는, 축산업을 영위한 3과세기간의 최고사육두수를 평균 ② 최근 4과세기간 중 축산업을 영위한 2과세기간의 최고사육두수를 평균 ③ 축산업을 영위한 기간이 2년 이하이면 축산업을 영위한 과세기간의 최고사육두수를 평균"
+        hint="「소득세법 시행령」 [별표 1의3] 제2호 — 다음 3가지 중 납세자가 선택합니다. ① 최근 6과세기간(양도일 속한 기간 포함) 중 선택한 축산업 영위 3과세기간의 최고사육두수 평균 ② 최근 4과세기간 중 축산업 영위 2과세기간의 최고사육두수 평균 ③ 영위기간 2년 이하이면 영위한 과세기간의 최고사육두수 평균"
       >
         <DecimalInput
           value={asset.nblPastureLivestockCount}

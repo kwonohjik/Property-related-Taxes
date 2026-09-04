@@ -19,7 +19,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { RentalCommonFields } from "./RentalCommonFields";
+import { RentalCommonFields, TaxRegistrationToggle } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 
 type Rental975Form = Extract<RentalReductionFormVariant, { type: "rental_97_5" }>;
@@ -108,13 +108,9 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           )}
         </div>
 
-        <ToggleCard
-          variant="chip"
+        <TaxRegistrationToggle
           checked={value.isTaxRegistered}
           onCheckedChange={(v) => onChange({ isTaxRegistered: v })}
-          title="세무서 사업자 등록"
-          description="소득세법 §168 — 임대개시 인정 요건"
-          tone="violet"
         />
 
         <div>

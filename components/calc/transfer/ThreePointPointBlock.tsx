@@ -374,7 +374,7 @@ export function PointBlock({
               <FieldCard
                 label="주택건물 기준시가"
                 unit="원"
-                hint="홈택스 — 양도시 주택 부분에 해당하는 면적의 당시 건물 기준시가"
+                hint="홈택스 — 양도시 주택 부분 면적에 해당하는 금액"
                 required
               >
                 <CurrencyInput
@@ -401,7 +401,7 @@ export function PointBlock({
               <FieldCard
                 label="상가건물 기준시가"
                 unit="원"
-                hint="홈택스 — 양도시 상가 부분에 해당하는 면적의 당시 건물 기준시가"
+                hint="홈택스 — 양도시 상가 부분 면적에 해당하는 금액"
                 required
               >
                 <CurrencyInput

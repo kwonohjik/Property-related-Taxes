@@ -58,10 +58,26 @@ describe("RedevelopmentValuationSection — 항목축 재편", () => {
     expect(screen.getByText("최초공시 당시 건물 기준시가")).toBeTruthy();
   });
 
-  it("Sum_A·Sum_F 합계는 미리보기 박스가 값과 함께 계속 보여준다 (헤더 제거로 인한 정보 손실 없음)", () => {
+  it("두 시점 합계 기준시가는 미리보기 박스가 값과 함께 계속 보여준다 (헤더 제거로 인한 정보 손실 없음)", () => {
     render(<RedevelopmentValuationSection asset={phdTriggeredAsset()} onChange={vi.fn()} />);
-    expect(screen.getByText(/Sum_A \(취득시 합계\)/)).toBeTruthy();
-    expect(screen.getByText(/Sum_F \(최초공시 당시 합계\)/)).toBeTruthy();
+    expect(screen.getByText(/취득시 합계 기준시가 =/)).toBeTruthy();
+    expect(screen.getByText(/최초공시 당시 합계 기준시가 =/)).toBeTruthy();
+  });
+
+  /**
+   * 산식 표기 정책 가드 — 결과 산식은 한국어 풀어쓰기이며 변수 약어(`P_A`·`Sum_A`)와
+   * `floor()`를 쓰지 않는다(`components/calc/CLAUDE.md`). 엔진 쪽에는 이미 같은 가드가
+   * 있었는데(`__tests__/tax-engine/inheritance-house-valuation.test.ts`) UI에는 없어
+   * 이 섹션이 정책 밖에 남아 있었다.
+   */
+  it("미리보기 산식에 변수 약어·floor()가 없다", () => {
+    const { container } = render(
+      <RedevelopmentValuationSection asset={phdTriggeredAsset()} onChange={vi.fn()} />,
+    );
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/Sum_[A-Z]/);
+    expect(text).not.toMatch(/P_[A-Z]/);
+    expect(text).not.toMatch(/floor\(/);
   });
 });
 

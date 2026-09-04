@@ -78,7 +78,6 @@ export function SuccessorRightStdPriceSection({
 
       <FieldCard
         label="취득일까지 납입한 금액"
-        hint="승계취득일까지 조합에 납입된 금액의 누계입니다."
       >
         <CurrencyInput
           label=""
@@ -90,7 +89,6 @@ export function SuccessorRightStdPriceSection({
 
       <FieldCard
         label="취득일 현재 프리미엄"
-        hint="승계취득일 현재의 프리미엄 상당액입니다. 없으면 비워두세요."
       >
         <CurrencyInput
           label=""
@@ -104,7 +102,6 @@ export function SuccessorRightStdPriceSection({
         <>
           <FieldCard
             label="양도일까지 납입한 금액"
-            hint="양도일까지 조합에 납입된 금액의 누계입니다."
           >
             <CurrencyInput
               label=""
@@ -116,7 +113,6 @@ export function SuccessorRightStdPriceSection({
 
           <FieldCard
             label="양도일 현재 프리미엄"
-            hint="양도일 현재의 프리미엄 상당액입니다. 없으면 비워두세요."
           >
             <CurrencyInput
               label=""

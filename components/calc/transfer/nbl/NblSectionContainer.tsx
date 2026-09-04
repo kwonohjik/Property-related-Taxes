@@ -127,7 +127,7 @@ export function NblSectionContainer({
         </button>
       </div>
 
-      {/* 1. 무조건 면제 (§168-14③) — 최우선 */}
+      {/* 1. 무조건 면제 (§168의14③) — 최우선 */}
       <UnconditionalExemptionSection
         asset={asset}
         onAssetChange={onAssetChange}

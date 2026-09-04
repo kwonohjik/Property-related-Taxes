@@ -80,14 +80,14 @@ export function Unsold989InputForm({ value, onChange }: Props) {
           checked={value.isNonCapitalRegion}
           onCheckedChange={(v) => onChange({ isNonCapitalRegion: v })}
           title="수도권 밖 소재"
-          description="준공후미분양주택이 수도권 밖의 지역에 소재 (§98의9①1호)"
+          description="조특령 §98의9①1호"
           tone="rose"
         />
         <ToggleCard
           checked={value.wasOneHouseholdAtAcquisition}
           onCheckedChange={(v) => onChange({ wasOneHouseholdAtAcquisition: v })}
           title="취득 당시 1세대 1주택"
-          description="준공후미분양주택 취득 당시 세대가 1주택만 보유 (§98의9① 본문)"
+          description="조특령 §98의9① 본문"
           tone="violet"
         />
         <ToggleCard

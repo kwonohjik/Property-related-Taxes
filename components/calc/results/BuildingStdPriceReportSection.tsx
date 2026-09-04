@@ -106,7 +106,7 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         const phdConversionKind = /-redev-phd$/.test(key)
           ? { suffix: "재개발 환산 §164⑦" }
           : /-red\d*-phd$/.test(key)
-            ? { suffix: redArticle ? `${redArticle} 감면 PHD 환산 §164⑤` : "감면 PHD 환산 §164⑤" }
+            ? { suffix: redArticle ? `${redArticle} 감면 최초공시 전 환산 §164⑤` : "감면 최초공시 전 환산 §164⑤" }
             : null;
         if (phdConversionKind) {
           const acqInst = model.instances.find((i) => i.markCell !== "transfer");

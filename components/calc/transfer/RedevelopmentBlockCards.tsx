@@ -284,8 +284,8 @@ export function ExemptionAtApprovalCard({
         }
         options={[
           { value: "", label: "자동 판정", description: "취득일·관리처분일 기준 자동 산정값 사용" },
-          { value: "yes", label: "수동: 충족", description: "비과세 요건 충족 (override)" },
-          { value: "no", label: "수동: 미충족", description: "비과세 요건 미충족 (override) — LTHD 표1 강등" },
+          { value: "yes", label: "수동: 충족", description: "자동 판정을 무시하고 충족으로 처리" },
+          { value: "no", label: "수동: 미충족", description: "자동 판정을 무시하고 미충족으로 처리 — 장기보유특별공제 표1 적용" },
         ]}
         layout="inline"
       />
@@ -414,7 +414,7 @@ export function SuccessorMemberSection({
         <div className="space-y-2 pt-1">
           <FieldCard
             label="준공일 (사용검사필증 교부일)"
-            hint="신축아파트 사용검사필증 교부일. 보유기간·세율의 기산일이 됩니다."
+            hint="보유기간·세율의 기산일이 됩니다."
             trailing={
               <LawArticleModal
                 legalBasis="소득세법 시행령 §162 ① 4호"
@@ -481,12 +481,12 @@ export function SuccessorMemberSection({
           </div>
 
           <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-caption text-amber-900">
-            <div className="font-semibold">본 PR 미지원 분기 (자동 차단)</div>
+            <div className="font-semibold">현재 지원하지 않는 분기 (자동 차단)</div>
             <ul className="list-disc pl-4 space-y-0.5 mt-1">
-              <li>승계조합원 + 청산금 분기 (납부·수령) — 후속 PR</li>
-              <li>승계조합원 + 12억 초과 안분 — 후속 PR</li>
-              <li>승계조합원 + 환산취득가 모드 — 후속 PR (상속·증여 평가액 직접 입력)</li>
-              <li>승계조합원 + 동일세대 상속 §154⑧ 통산 — 후속 PR</li>
+              <li>승계조합원 + 청산금 분기 (납부·수령)</li>
+              <li>승계조합원 + 12억 초과 안분</li>
+              <li>승계조합원 + 환산취득가 모드 (상속·증여 평가액을 직접 입력하세요)</li>
+              <li>승계조합원 + 동일세대 상속 §154⑧ 통산</li>
             </ul>
           </div>
         </div>

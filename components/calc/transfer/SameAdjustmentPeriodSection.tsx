@@ -285,7 +285,6 @@ export function SameAdjustmentPeriodSection({
           <FieldCard
             label="전기의 토지·건물 기준시가 합계액"
             required
-            hint="시행규칙 §80③3호 — 전기의 (가목 + 나목) 합계액"
           >
             <CurrencyInput
               label="전기의 토지·건물 기준시가 합계액"
@@ -297,7 +296,7 @@ export function SameAdjustmentPeriodSection({
           <FieldCard
             label="취득당시의 토지·건물 기준시가 합계액"
             required
-            hint="시행규칙 §80③3호 — 취득당시의 (가목 + 나목) 합계액. 취득당시 기준시가는 위 취득 정보에서 가져온다."
+            hint="시행규칙 §80③3호 — 취득당시 기준시가는 위 취득 정보에서 가져온다."
           >
             <CurrencyInput
               label="취득당시의 토지·건물 기준시가 합계액"

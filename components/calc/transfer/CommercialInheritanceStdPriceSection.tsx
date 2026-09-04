@@ -95,7 +95,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         <div className="flex flex-col items-end gap-1">
           <CommercialStdPriceLookupModal asset={asset} onChange={onChange} transferDate={transferDate} variant="inheritance" />
         </div>
-        <FieldCard label="최초고시(2005) ㎡당 호별고시가" unit="원/㎡" hint="2005.1.1 최초 고시 시점 ㎡당 가액. 국세청 고시 이력에서 확인.">
+        <FieldCard label="최초고시(2005) ㎡당 호별고시가" unit="원/㎡" hint="국세청 고시 이력에서 확인.">
           <CurrencyInput label="" value={asset.cbUnitPriceAtFirstOrAcq} onChange={(v) => onChange({ cbUnitPriceAtFirstOrAcq: v })} hideUnit />
         </FieldCard>
       </ToneCard>
@@ -116,7 +116,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         <div className="flex justify-end">
           <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cbinh-acq`} applyTimePoint="acquisition" hideFloorAreaInput prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtAcq: String(v) })} />
         </div>
-        <FieldCard label="최초고시시(2005) 건물 기준시가" unit="원" hint="2005.1.1 최초 고시 시점 건물 기준시가 총액">
+        <FieldCard label="최초고시시(2005) 건물 기준시가" unit="원">
           <CurrencyInput label="" value={asset.cbBuildingStdPriceAtFirst} onChange={(v) => onChange({ cbBuildingStdPriceAtFirst: v })} hideUnit />
         </FieldCard>
       </ToneCard>

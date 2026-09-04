@@ -66,7 +66,6 @@ export function SurchargeJudgmentSection({
             checked={form.isRegulatedArea}
             onCheckedChange={(v) => onChange({ isRegulatedArea: v, isRegulatedAreaTouched: true })}
             title="양도일 기준 조정대상지역"
-            description="중과세 판단 기준"
             tone="rose"
           />
         )}

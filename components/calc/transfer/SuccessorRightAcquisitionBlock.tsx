@@ -169,7 +169,6 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         {mode === "salesCase" && (
           <FieldCard
             label="매매사례가액"
-            hint="취득일 전후 3개월 이내에 있었던 동일하거나 유사한 자산의 매매사례가액입니다."
           >
             <CurrencyInput
               label=""

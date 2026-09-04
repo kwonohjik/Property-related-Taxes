@@ -134,7 +134,7 @@ export function ResidenceHistorySection({
       {histories.length === 0 && (
         <FieldCard
           label="직선거리 (km)"
-          hint="거주지 이력 미입력 시 대체 판정에 사용됩니다. (소득령 §168-8)"
+          hint="거주지 이력 미입력 시 대체 판정에 사용됩니다. (소득령 §168의8)"
           trailing={<LawArticleModal legalBasis="소득세법 시행령 §168의8" label="§168의8 농지" />}
         >
           <DecimalInput

@@ -190,7 +190,7 @@ export function GracePeriodSection({
               </div>
             ) : null}
 
-            <FieldCard label="설명" hint="간략한 사유 메모 (선택)">
+            <FieldCard label="설명">
               <input
                 type="text"
                 value={p.description}

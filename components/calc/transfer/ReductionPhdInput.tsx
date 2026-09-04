@@ -137,7 +137,7 @@ export function ReductionPhdInput({
       <ToggleCard
         checked={isOn}
         onCheckedChange={(v) => onChange({ phdMode: v })}
-        title="PHD 환산 — 최초공시 전 취득 (취득시 환산공시가격 자동 계산)"
+        title="최초공시 전 환산 (취득시 환산공시가격 자동 계산)"
         description={
           autoRecommended
             ? "✓ 자산의 취득일이 최초공시일 이전 — 환산 권장"
@@ -154,7 +154,7 @@ export function ReductionPhdInput({
               onClick={onCopyFromAsset}
               className="w-full rounded-md border border-amber-300 bg-amber-100/60 px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-200 dark:hover:bg-amber-900/50"
             >
-              📋 자산 카드의 PHD 데이터 가져오기
+              📋 자산 카드의 최초공시 전 환산 데이터 가져오기
             </button>
           )}
 
@@ -176,7 +176,6 @@ export function ReductionPhdInput({
                 value={value.firstDisclosurePrice ?? ""}
                 onChange={(v) => onChange({ firstDisclosurePrice: v })}
               />
-              <p className="mt-1 text-micro text-muted-foreground">최초고시 P_F 값</p>
             </div>
 
             <div>

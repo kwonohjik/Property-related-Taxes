@@ -391,7 +391,6 @@ export function MixedUseAssetMajorStdPrice({
             referenceDate={acqLandReferenceDate}
             jibun={jibun}
             label="개별공시지가 (원/㎡)"
-            hint="상가부수토지 기준시가 자동 계산용 (필수)"
             placeholder={`${acqLabel} 개별공시지가 /㎡`}
           />
         </div>
@@ -404,7 +403,6 @@ export function MixedUseAssetMajorStdPrice({
             referenceDate={transferDate}
             jibun={jibun}
             label="개별공시지가 (원/㎡)"
-            hint="상가부수토지 산정용 (필수)"
             placeholder="양도시 개별공시지가 /㎡"
           />
         </div>

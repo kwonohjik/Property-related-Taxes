@@ -43,14 +43,14 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         <ToggleCard
           tone="rose"
           title="국민주택규모 이하"
-          description="국민주택규모 이하의 주택 (조특령 §98①·⑤)"
+          description="조특령 §98①·⑤"
           checked={value.isNationalScale98}
           onCheckedChange={(v) => onChange({ isNationalScale98: v })}
         />
         <ToggleCard
           tone="rose"
           title="서울특별시 외 지역 소재"
-          description="서울 밖의 지역에 소재하는 주택 (조특령 §98①·⑤)"
+          description="조특령 §98①·⑤"
           checked={value.isOutsideSeoul98}
           onCheckedChange={(v) => onChange({ isOutsideSeoul98: v })}
         />
