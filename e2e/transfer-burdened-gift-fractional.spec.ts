@@ -181,7 +181,9 @@ test.describe("부담부증여 §159 (A2 / PR #851)", () => {
     await expandAssetSection(page, 2);
     await expect(card.getByText("인수 채무 + 임대 평가 보조").first()).toBeVisible();
 
-    await expect(card.getByText(/공유지분\(50\/100\) 부담부증여/)).toBeVisible();
+    // 지분 표기는 화면 위젯과 같은 백분율이다 — 분모는 화면에 없다
+    // (2026-09-04 `formatOwnershipPercent`. 종전 표기는 「50/100」이었다).
+    await expect(card.getByText(/공유지분\(50%\) 부담부증여/)).toBeVisible();
     await expect(card.getByText(/평가액은 물건 전체로 입력/)).toBeVisible();
 
     // 라벨이 단독 소유("총액"·"실제 채무잔액")와 구분된다
