@@ -684,6 +684,22 @@ export const propertySchema = z
         }
         seen.add(ids[i]);
       }
+      /**
+       * ⑩ 겸용주택 컴패니언 — `mixedUse` 서브객체 **필수**.
+       *
+       * 🔴 없으면 ⑭의 겸용 분기(`bundled-split-helpers.ts`)가 **안 타고**, 그 자산이 주택·상가
+       *    분리 없이 평범한 주택으로 계산된다 — 침묵 오산이다. 「전용 서브객체가 있어야만
+       *    전용 경로가 성립한다」는 규약을 여기서 강제한다(일반건물·§166이 같은 규약).
+       */
+      for (let i = 0; i < companions.length; i++) {
+        if (companions[i].assetKind === "mixed_use_house" && !companions[i].mixedUse) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["companionAssets", i, "mixedUse"],
+            message: "겸용주택은 주택·상가 면적과 기준시가 정보가 필요합니다",
+          });
+        }
+      }
       // inheritanceValuation 사용 시 landAreaM2 일관성
       for (let i = 0; i < companions.length; i++) {
         const v = companions[i].inheritanceValuation;

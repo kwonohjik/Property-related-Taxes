@@ -30,17 +30,20 @@
  * | 상가 건물 | `building` | |
  * | 배율초과 비사토 | `land` + `isNonBusinessLand` | §104⑤ 후단(별개 자산) · §104①8호 |
  *
- * ## 🛑 아직 열지 않았다 — 이 파일은 **차단이 유지되는지만** 본다
+ * ## ✅ 열었다 (2026-09-04)
  *
- * 착수 조사에서 규모가 드러났다: 컴패니언 겸용은 route 5-a-2의 **⑭ 매핑 25개 필드**
- * (`householdHousingCount`·`isOneHousehold`·`marriageMerge`·`parentalCareMerge`·`gracePeriod`·
- * `specialHouseExclusions`·`multiHouse`·`houses`·`presaleRights`·`oneHouseExemptionProviso` …)를
- * 컴패니언 컨텍스트로 다시 이어야 하는데, **전부 optional이라 TypeScript가 누락을 못 잡는다**.
- * 하나만 빠져도 세액이 조용히 틀린다.
+ * | 지점 | 내용 |
+ * |---|---|
+ * | leaf 승격 | route 5-a-2의 25필드 조립을 `buildMixedUseAssetInput`으로 — 컴패니언이 **같은 소스**를 쓴다 |
+ * | ⑩⑫ | `assetKind` += `mixed_use_house` · `mixedUse` 서브객체 + **없으면 400**인 refine |
+ * | ⑬ | ④가 컴패니언마다 `buildMixedUsePayload`를 싣는다 |
+ * | ⑭ | `buildMixedUsePartCards` — 겸용 엔진 1회 호출 후 **파트 4~5장**으로 대체 |
+ * | ⑧ | 차단을 **primary 겸용만**으로 좁혔다 |
  *
- * ⇒ 개방 단언(⑧ 해제·⑫ 도달·파트 확장·세율군 분리)은 **구현과 함께** 다시 넣는다. 지금
- *   RED로 두면 CI가 상시 빨간불이 되어 게이트 구실을 못 한다(`known-failures` 도입 당시와 같은 실패).
- *   설계문서 §9에 그 매핑 체크리스트가 있다.
+ * 🔑 **설계 §9.2가 틀렸다.** 「주택은 토지+건물 **한 카드**」로 적혀 있었으나, 주택분 장특은
+ *    토지·건물 **각각의 보유기간**으로 계산해 더하므로 한 카드로는 재현할 수 없다
+ *    (실측 38,272,640원 차이). 주택은 **2카드 + `totalPropertyTransferPrice`**가 정답이다 —
+ *    12억 판정은 그 분모가 담당한다. 등가는 `mixed-use-part-cards.equivalence.anchor.test.ts`가 고정한다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -95,6 +98,11 @@ async function pipeline(form: TransferFormData) {
     status: res.status,
     json: (await res.json()) as Record<string, unknown>,
   };
+}
+
+type AggProp = { propertyId?: unknown; rateGroup?: unknown };
+function aggregated(r: { json: Record<string, unknown> }) {
+  return (r.json as { data?: { aggregated?: { properties?: AggProp[] } } }).data?.aggregated ?? {};
 }
 
 /** 겸용주택 — 주택 60㎡ · 상가 40㎡ · 정착 50㎡ · 대지 600㎡(배율초과 발생). */
@@ -163,9 +171,64 @@ describe("컴패니언 × 겸용주택 (시행령 §160① 단서)", () => {
   it("MU-2 primary 겸용은 **계속 차단**된다 (양성 대조군 · 별건 축)", () => {
     const msgs = collectStepIssues(0, primaryMixedForm()).map((i) => i.message);
     expect(
-      msgs.some((m) => /겸용주택.*함께 양도와 같이 계산할 수 없습니다/.test(m)),
+      msgs.some((m) => /겸용주택은 함께 양도의 주 자산\(1번\)이 될 수 없습니다/.test(m)),
       "primary 겸용까지 열면 5-a의 primary 조립부를 바꿔야 한다 — 이번 범위 밖",
     ).toBe(true);
+  });
+
+  it("MU-1 컴패니언 겸용은 ⑧을 통과한다 (차단 해제)", () => {
+    const msgs = collectStepIssues(0, bundledForm()).map((i) => i.message);
+    expect(msgs.filter((m) => /겸용주택/.test(m))).toEqual([]);
+  });
+
+  it("MU-3 ⑬⑫ 도달 — `mixed_use_house` + `mixedUse` 서브객체가 실린다", async () => {
+    const r = await pipeline(bundledForm());
+    expect(r.body.companionAssets?.[0]?.assetKind).toBe("mixed_use_house");
+    // 🔴 서브객체가 없으면 ⑭ 분기가 안 타고 평범한 주택으로 계산된다(침묵 오산).
+    expect(r.body.companionAssets?.[0]?.mixedUse).toBeDefined();
+    expect(r.status).toBe(200);
+  });
+
+  it("MU-4 ⑭ 겸용 컴패니언 1건이 **파트 5장**으로 펼쳐진다", async () => {
+    const r = await pipeline(bundledForm());
+    const props = aggregated(r).properties ?? [];
+    // primary 1 + 겸용 파트 5
+    expect(props).toHaveLength(6);
+    expect(props.map((p) => String(p.propertyId).split("#")[0])).toEqual([
+      "primary",
+      "mu-house-land",
+      "mu-house-bld",
+      "mu-comm-land",
+      "mu-comm-bld",
+      "mu-nbl",
+    ]);
+    // 🔑 파트 id는 `#<assetId>`로 자산을 되짚을 수 있어야 한다(결과뷰·신고서).
+    expect(props.slice(1).every((p) => String(p.propertyId).includes("#"))).toBe(true);
+  });
+
+  it("MU-5 배율초과 파트가 §104⑤ 후단 **별개 자산**으로 갈린다", async () => {
+    const r = await pipeline(bundledForm());
+    const props = aggregated(r).properties ?? [];
+    const nbl = props.find((p) => String(p.propertyId).startsWith("mu-nbl"));
+    expect(nbl?.rateGroup).toBe("non_business_land");
+    // 대조군 — 주택·상가 파트는 그 세율군이 아니다(전건이 비사토가 되는 오류 방지).
+    expect(props.filter((p) => p.rateGroup === "non_business_land")).toHaveLength(1);
+  });
+
+  it("MU-6 ⑩ `mixedUse` 없이 `mixed_use_house`를 보내면 **400** (침묵 오산 금지)", async () => {
+    const r = await pipeline(bundledForm());
+    const body = JSON.parse(JSON.stringify(r.body)) as {
+      companionAssets: { mixedUse?: unknown }[];
+    };
+    delete body.companionAssets[0].mixedUse;
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/transfer", {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    expect(res.status).toBe(400);
   });
 
 

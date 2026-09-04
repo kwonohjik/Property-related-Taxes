@@ -754,7 +754,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             .slice(1)
             // 지분 모드(같은 물건 분할취득): companion ① 기본정보를 UI에서 숨기므로
             // primary basic(자산종류·면적·토지성격)을 병합해 엔진에 전달 (mergePrimaryBasic).
-            .map((a, ci) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1])),
+            .map((a, ci) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form)),
           bundledSaleMode: form.bundledSaleMode,
           // primary 확정 양도가액.
           //  - 지분 모드: 총계약가 × ratio 자동 결정 (bundledSaleMode 무관, actualSalePrice 무시 —

@@ -205,11 +205,16 @@ V-2~V-5·V-7 미해소 + **Q-1**(파트별 세율군 분리 허용 여부)·**Q-
 `kind: "housing"` **하나**로 본다(토지·건물 합산 income) — 규약이 일치한다.
 쪼갤 수밖에 없는 경우에는 `totalPropertyTransferPrice`를 **반드시** 실어야 한다.
 
-### 9.2 파트 카드 구성 (겸용 엔진 `rateParts`와 1:1)
+### 9.2 파트 카드 구성 🔴 **아래 표는 틀렸다 — §10.3이 정본**
+
+> 「주택은 토지+건물 **한 카드**」로 적었으나, 주택분 장기보유특별공제는 토지·건물을
+> **각각의 보유기간으로** 계산해 더한다(실측 38,272,640원 차이). 카드 1장은 취득일이 하나뿐이라
+> 재현할 수 없다. ⇒ **주택은 2카드 + `totalPropertyTransferPrice`**가 정답이다.
+> 12억 판정(§9.1)은 그 분모가 담당한다 — 두 요구가 충돌하지 않는다.
 
 | 카드 | `propertyType` | 비고 |
 |---|---|---|
-| 주택(토지+건물) | `housing` | §104①2·3호 괄호 — 딸린 토지 포함 |
+| ~~주택(토지+건물)~~ | ~~`housing`~~ | 🔴 §10.3 참조 |
 | 상가 토지 | `land` | |
 | 상가 건물 | `building` | |
 | 배율초과 비사토 | `land` + `isNonBusinessLand` | §104⑤ 후단(별개 자산) · §104①8호 · **주택분 토지에서 carve-out**(`housingPart.nonBusinessTransferRatio`) |
@@ -252,3 +257,79 @@ householdHousingCount landAcquisitionDate buildingAcquisitionDate
 `__tests__/api/transfer.route.companion-mixed-use.anchor.test.ts` — **MU-2 대조군 1건**만 둔다
 (「primary 겸용은 계속 차단된다」). 개방 단언 4건(⑧ 해제·⑫ 도달·파트 확장·세율군 분리)은
 착수 시 함께 넣는다. **지금 RED로 두면 CI가 상시 빨간불이 되어 게이트 구실을 못 한다.**
+
+---
+
+## 10. 🔑 착수 실측 — **파트를 raw 금액으로 되먹이면 단건과 세액이 같다** (2026-09-04)
+
+§9.4는 「엔진을 그대로 호출해 파트만 쓰고 `total`은 버린다」고 적었지만, **파트는
+소득금액(차익−장특) 층위**이고 aggregate가 요구하는 것은 **양도가액·취득가액·필요경비**다.
+그 사이를 잇는 재구성이 **드리프트 없이 성립하는가**가 착수 전 유일한 구조적 위험이었다.
+
+⇒ throwaway probe로 4케이스를 쟀다. 재구성 규칙은 파트가 **이미 노출하는 echo 값**뿐이다
+(`landTransferPrice`·`landAcqPrice`·`landAppraisalDed`, 건물분 동일 — 새 산식 없음):
+
+| 케이스 | 과세표준 (단건 / aggregate) | 세액 (단건×1.1 / aggregate `totalTax`) |
+|---|---|---|
+| case14 (배율초과 없음) | 1,670,099,614 / **동일** | 754,165,308 / **754,165,308** |
+| 배율초과(비사토 ratio 0.700) | 1,348,935,828 / **동일** | 595,189,234 / **595,189,234** |
+| §104⑦ 중과 2주택 | 2,123,794,113 / **동일** | 1,251,108,072 / **1,251,108,072** |
+| 1세대1주택 표2 + 12억 | 674,353,403 / 674,353,40**2** | — / **2원 차이** ⚠️ |
+
+**재현되는 것**: 비사토 carve-out(`nonBusinessTransferRatio`로 토지분 3값을 나눈다) · 장특
+표1/표2 · §95② 중과 LTHD 배제(`lthd 0`) · §104⑤ 세율군 분리(`multi_house_surcharge` ↔
+`progressive`) · §104⑤ MAX(`clause2`).
+
+> 🔑 **왜 재현되는가** — aggregate는 item마다 **단건 엔진을 그대로 돌린다**
+> (`transfer-tax-aggregate.ts:210`). `TransferTaxItemInput`은 `TransferTaxInput`에서 4필드만
+> 뺀 것이라 `multiHouse`·`residencePeriodMonths`·`isOneHousehold`를 **그대로 싣는다** —
+> 겸용 엔진이 파트에 적용하던 판정을 item이 자기 힘으로 다시 판정한다. GB가
+> `buildProperties`에서 `isOneHousehold: false`를 **하드코딩**하는 것과 대비된다(GB는 주택이
+> 없어 그래도 됐다) ⇒ **겸용은 `buildProperties`를 재사용할 수 없다.**
+
+### 10.1 ~~⚠️ 미해소 — V-8: 12억 안분에서 2원~~ ✅ **해소 — 주택 1카드가 만든 인공물이었다**
+
+단건 `proratedTaxableGain` 314,371,441 vs aggregate 314,371,439. 차익(1,512,314,999)과
+장특율(0.8)이 **같은데** 안분 결과만 갈린다 ⇒ **§89① 안분의 절사 순서**가 두 경로에서 다르다
+(`applyRate` 소수 rate 1원 부족과 같은 계열). 양도가액을 `apportionment.housingTransferPrice`
+그대로 써도 변하지 않았다 — 원인은 재구성이 아니라 **안분 leaf 자체**다.
+
+✅ **주택을 토지·건물 2카드로 나누자 차이가 0이 됐다.** 원인은 안분 leaf가 아니라 **주택 1카드**
+였다 — 한 카드로 합치면 §89① 안분 base가 겸용 엔진의 것과 미세하게 어긋난다. 지금은 anchor를
+**완전 일치**로 쓴다(EQ-1~EQ-5 전건).
+
+> ⭐ **교훈** — 「2원 차이는 절사 계열이니 허용 오차로 두자」로 갈 뻔했다. 실제 원인은 **구조**였고,
+> 구조를 고치니 오차 자체가 사라졌다. 오차를 허용하기 전에 **오차가 어느 구조에서 나오는지**를
+> 먼저 볼 것.
+
+### 10.2 확정된 구현 형태
+
+| 지점 | 내용 |
+|---|---|
+| leaf 승격 | route 5-a-2의 `mixedAsset` 조립(25필드)을 **`buildMixedUseAssetInput`으로 승격**해 route와 컴패니언이 **한 소스**를 쓴다 — §9.3의 「손으로 25필드를 옮기면 안 된다」를 구조로 푼다(GB가 `buildGbPartCards`를 승격한 것과 같은 층위). `satisfies` + 키 커버리지 가드도 leaf 안으로 함께 간다 |
+| ⑩⑫ | `companionAssetSchema.assetKind` += `"mixed_use_house"` · `mixedUse: mixedUseAssetSchema.optional()` |
+| ⑬ | ④가 컴패니언마다 `buildMixedUsePayload(a, form)`을 싣는다(그 함수는 이미 `AssetForm`을 받는다 — primary 전용이 아니다) |
+| ⑭ | `bundled-split-helpers.ts`에 겸용 분기 — 엔진 1회 호출 후 파트 4건을 `TransferTaxItemInput`으로. `rates`를 `CompanionBuildContext`에 추가 |
+| ⑧ | `transfer-tax-validate.ts:172`의 차단을 **primary 겸용만**으로 좁힌다(컴패니언 겸용은 개방) |
+
+### 10.3 ✅ 확정된 카드 구성 (구현본)
+
+| 카드 | `propertyType` | 세대 축 | 취득일 |
+|---|---|---|---|
+| 주택 토지 | `housing` | **싣는다** + `totalPropertyTransferPrice`(주택분 합계) | 토지 취득일 |
+| 주택 건물 | `housing` | **싣는다** + 같은 분모 | 건물 취득일 |
+| 상가 토지 | `land` | 없음 | 토지 취득일 |
+| 상가 건물 | `building` | 없음 | 건물 취득일 |
+| 배율초과 비사토 | `land` + `isNonBusinessLand` | 없음 | 토지 취득일 |
+
+🔴 **상가·비사토에 세대 축을 실으면 상가가 1세대1주택 표2 80% 장특을 받는다**(실측 — 처음
+프로브에서 실제로 그렇게 나왔다). GB `buildProperties`가 `isOneHousehold: false`를 하드코딩하는
+것과 같은 규약이다.
+
+⇒ 이 세 결정은 anchor `mixed-use-part-cards.equivalence.anchor.test.ts`가 뮤테이션으로 고정한다
+(MUT-1 분모 제거 · MUT-2 세대 축 누출). §10.1의 **2원 차이도 사라졌다** — 그것은 주택 1카드가
+만든 인공물이었다.
+
+**⑧을 primary까지 열지 않는 이유**: 5-a의 primary는 `{...engineInput}` 스프레드라(`route.ts:279`)
+겸용이어도 **평범한 주택 item**이 된다. 컴패니언만 여는 것이 「⑧ 통과 ↔ route 침묵 오산」을
+만들지 않는 최소 개방이다. primary 겸용 개방은 그 스프레드 지점에 같은 확장을 다는 별건이다.

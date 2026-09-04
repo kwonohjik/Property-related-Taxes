@@ -5,6 +5,7 @@ import { commercialAppurtenantLandSchema } from "./transfer-tax-building-schemas
 import { commercialBuildingValuationSchema } from "./transfer-tax-building-schemas";
 import { redevelopmentSchema } from "./transfer-tax-redevelopment-schema";
 import { generalBuildingValuationSchema } from "./transfer-tax-building-schemas";
+import { mixedUseAssetSchema } from "./transfer-tax-schema-mixed-use";
 
 // ─── ⑩ 장기임대주택 거주주택 비과세 특례 enum 재export (컴패니언) ─
 
@@ -437,7 +438,19 @@ export const companionAssetSchema = z.object({
     "right_to_move_in",
     "redevelopment_apt",
     "general_building",
+    "mixed_use_house",
   ]),
+  /**
+   * ⑫ 겸용주택(§160① 단서) — `mixed_use_house` 컴패니언 전용. **primary와 같은 스키마**.
+   *
+   * 🔑 이 서브객체가 있어야 ⑭가 겸용 엔진을 돌려 파트 카드로 펼칠 수 있다. 등록하지 않으면
+   *    침묵 strip이라 그 자산이 **주택·상가 분리 없이** 계산된다.
+   *
+   * ⚠️ **primary 겸용은 여전히 ⑧이 막는다** — 5-a의 primary는 `{...engineInput}` 스프레드라
+   *    (`route.ts`) 겸용이어도 평범한 주택 item이 된다. 컴패니언만 여는 것이
+   *    「⑧ 통과 ↔ route 침묵 오산」을 만들지 않는 최소 개방이다.
+   */
+  mixedUse: mixedUseAssetSchema.optional(),
   /**
    * ⑫ 시행령 §166 (재개발·재건축) — `right_to_move_in`·`redevelopment_apt` 컴패니언 전용.
    *

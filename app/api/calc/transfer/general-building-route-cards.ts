@@ -117,7 +117,11 @@ export interface GbUnregisteredAxes {
  * 「입력은 되는데 침묵 무시」 상태였다. **같은 파일이 같은 모양의 결함을 이미 한 번 고쳤다** —
  * 바로 위 `isUnregistered`의 `false` 하드코딩이다.
  */
-function reductionsForCard(
+/**
+ * 🔑 **겸용 파트 카드도 같은 규칙을 쓴다** — 그래서 `export`한다(복제 금지).
+ *    겸용은 주택건물·상가건물이 `isBuilding`이다.
+ */
+export function reductionsForCard(
   reductions: TransferReduction[] | undefined,
   isBuilding: boolean,
 ): TransferReduction[] {

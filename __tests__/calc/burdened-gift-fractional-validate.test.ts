@@ -157,9 +157,24 @@ describe("부담부증여 × 함께양도 — 침묵 오산 차단", () => {
         .map((i) => i.message)
         .filter((m) => /함께 양도와 같이 계산할 수 없습니다/.test(m));
 
-    it("🔴 겸용주택 분리계산 + 함께양도 → 차단", () => {
+    /**
+     * 🔄 **반전 (2026-09-04) — 겸용주택은 «주 자산일 때만» 차단이다.**
+     *
+     * 컴패니언 겸용은 열렸다(⑩ enum + ⑫ `mixedUse` + ⑭ 파트 카드 4~5장 — 실측상 단건 겸용과
+     * 세액이 완전히 일치한다). primary만 남긴 이유는 5-a의 primary가 `{...engineInput}`
+     * 스프레드라 겸용이어도 평범한 주택 item이 되기 때문이다.
+     *
+     * ⚠️ 문구도 함께 바뀌었다 — 처방이 「토글을 끄라」가 아니라 **「자산 순서를 바꾸라」** 라서
+     *    위 `blockMsg`의 공용 필터(`함께 양도와 같이 계산할 수 없습니다`)에 걸리지 않는다.
+     *    그래서 이 항목만 원문 메시지를 직접 본다 — 형제 단언의 안전망은 그대로 둔다.
+     */
+    it("🔴 겸용주택이 **주 자산**이면 차단 (컴패니언 겸용은 개방됨)", () => {
       const mixed = { ...bg, transferType: "regular", isMixedUseHouse: true };
-      expect(blockMsg([mixed, other]).join()).toMatch(/겸용주택/);
+      const msgs = collectStepIssues(0, form([mixed, other])).map((i) => i.message);
+      expect(msgs.join()).toMatch(/겸용주택은 함께 양도의 주 자산\(1번\)이 될 수 없습니다/);
+      // 대조군 — 컴패니언 자리(2번)의 겸용은 **막히지 않는다**.
+      const asCompanion = collectStepIssues(0, form([other, mixed])).map((i) => i.message);
+      expect(asCompanion.filter((m) => /겸용주택/.test(m))).toEqual([]);
     });
 
     /**
