@@ -7,6 +7,7 @@ import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 // ④ 분리취득 축 — 단건과 **같은 공용 빌더**(자산-무관 함수라 컴패니언도 그대로 쓴다).
@@ -409,6 +410,14 @@ export function buildAssetPayload(
    * 축 B(지분 분할)에서는 넘기지 않는다 — 그쪽은 지분율 스케일이 §159의 B/C를 보존한다.
    */
   burdenedGiftDebtOverride?: number,
+  /**
+   * ⑬ 겸용주택 컴패니언 전용 — `buildMixedUsePayload`가 폼-전역 값(거주개월·계약총액·세대 축)을
+   * 읽어야 해서 폼을 통째로 받는다.
+   *
+   * ⚠️ optional이지만 **누락이 조용하지 않다** — ⑩ refine이 `mixed_use_house`에 `mixedUse`를
+   *    강제하므로 빠지면 400이 된다(침묵 오산이 아니라 명시 실패).
+   */
+  form?: TransferFormData,
 ) {
   const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause, asset.expropriationNoticeDate);
 
@@ -534,7 +543,23 @@ export function buildAssetPayload(
      * ⚠️ `general_building`은 ⑩ enum에 아직 없다 — ⑧이 막고 있고, 열려면 토지·건물 2파트
      *    산출물 축을 함께 배관해야 한다.
      */
-    assetKind: asset.assetKind,
+    /**
+     * 🔄 **겸용주택 → `mixed_use_house` (2026-09-04).** UI는 `housing` + `isMixedUseHouse`로
+     *    모델링하지만, ⑫ 컴패니언 enum은 전용 값을 쓴다 — ⑭가 그 값으로 파트 확장 분기를
+     *    고르기 때문이다. `housing`으로 접으면 주택·상가 분리 없이 계산된다(침묵 오산).
+     */
+    assetKind:
+      asset.assetKind === "housing" && asset.isMixedUseHouse
+        ? ("mixed_use_house" as const)
+        : asset.assetKind,
+    /**
+     * ⑬ 겸용 서브객체 — **primary와 같은 빌더**(`buildMixedUsePayload`)를 자산별로 부른다.
+     * ⑭가 이것으로 겸용 서브엔진을 돌려 파트 카드 4~5장을 만든다.
+     */
+    ...(() => {
+      const mu = form ? buildMixedUsePayload(asset, form) : undefined;
+      return mu !== undefined ? { mixedUse: mu } : {};
+    })(),
     // ④ 공익수용 §164⑨ 1호 특례 — **컴패니언 자산도 지원**(계획 Q5).
     //
     // 🔴 `transferCause`는 **1호 트랙의 게이트**다(엔진 `applyExpropriationValuation`:112 ·

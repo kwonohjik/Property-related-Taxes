@@ -168,8 +168,20 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
     //    보고 걸려서 지분 분할 일반건물이 **계산 자체를 못 하는** 상태였다
     //    (vitest anchor는 payload를 손으로 만들어 route만 봤기 때문에 못 잡았다).
     if (form.assets.length > 1) {
-      const SINGLE_ONLY: Array<[(a: AssetForm) => boolean, string]> = [
-        [(a) => a.assetKind === "housing" && !!a.isMixedUseHouse, "겸용주택 분리계산"],
+      const SINGLE_ONLY: Array<[(a: AssetForm, i: number) => boolean, string]> = [
+        /**
+         * 🔄 **컴패니언 겸용은 이 목록에서 나갔다 (2026-09-04).** 종전 사유는
+         *    「`MixedUseGainBreakdown`이 세액까지 자체 완결해 aggregate 합류 경로가 없다」였는데,
+         *    실측 결과 **파트 카드로 되먹이면 단건과 세액이 완전히 일치**한다(5케이스 —
+         *    설계문서 `transfer-bundled-subengine-hosting.design.md` §10). ⑩ enum +
+         *    ⑫ `mixedUse` 서브객체 + ⑬ 자산별 `buildMixedUsePayload` + ⑭ 파트 확장으로 열었다.
+         *
+         * ⚠️ **primary 겸용은 계속 막는다** — 5-a의 primary는 `{...engineInput}` 스프레드라
+         *    (`route.ts`) 겸용이어도 **평범한 주택 item**이 된다. 여기를 함께 열면
+         *    「⑧ 통과 ↔ route 침묵 오산」이 된다. primary 개방은 그 스프레드 지점에 같은 확장을
+         *    다는 별건이다.
+         */
+
         /**
          * 🔴 **조합원입주권·분양권 — 2026-08-25 추가.** 종전에는 이 목록에 없어 **침묵 오산**했다.
          *
@@ -231,8 +243,21 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
          *    완결해 aggregate 합류 경로가 없다(설계문서 §2 · 미검증 V-2~V-4).
          */
       ];
+      /**
+       * 🔴 **주 자산(1번)이 겸용주택이면 막는다** — 안내를 따로 두는 이유는 처방이 다르기 때문이다.
+       *    「토글을 끄라」가 아니라 **자산 순서를 바꾸면 계산된다**(컴패니언 겸용은 개방됐다).
+       */
+      if (form.assets[0]?.assetKind === "housing" && form.assets[0]?.isMixedUseHouse) {
+        issues.push({
+          step,
+          assetIndex: 0,
+          message:
+            "겸용주택은 함께 양도의 주 자산(1번)이 될 수 없습니다. 다른 자산을 1번으로 옮기면 겸용주택도 함께 계산됩니다.",
+        });
+      }
+
       for (const [match, label] of SINGLE_ONLY) {
-        if (form.assets.some(match)) {
+        if (form.assets.some((a, i) => match(a, i))) {
           issues.push({
             step,
             assetIndex: 0,

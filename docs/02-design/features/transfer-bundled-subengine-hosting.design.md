@@ -205,11 +205,16 @@ V-2~V-5·V-7 미해소 + **Q-1**(파트별 세율군 분리 허용 여부)·**Q-
 `kind: "housing"` **하나**로 본다(토지·건물 합산 income) — 규약이 일치한다.
 쪼갤 수밖에 없는 경우에는 `totalPropertyTransferPrice`를 **반드시** 실어야 한다.
 
-### 9.2 파트 카드 구성 (겸용 엔진 `rateParts`와 1:1)
+### 9.2 파트 카드 구성 🔴 **아래 표는 틀렸다 — §10.3이 정본**
+
+> 「주택은 토지+건물 **한 카드**」로 적었으나, 주택분 장기보유특별공제는 토지·건물을
+> **각각의 보유기간으로** 계산해 더한다(실측 38,272,640원 차이). 카드 1장은 취득일이 하나뿐이라
+> 재현할 수 없다. ⇒ **주택은 2카드 + `totalPropertyTransferPrice`**가 정답이다.
+> 12억 판정(§9.1)은 그 분모가 담당한다 — 두 요구가 충돌하지 않는다.
 
 | 카드 | `propertyType` | 비고 |
 |---|---|---|
-| 주택(토지+건물) | `housing` | §104①2·3호 괄호 — 딸린 토지 포함 |
+| ~~주택(토지+건물)~~ | ~~`housing`~~ | 🔴 §10.3 참조 |
 | 상가 토지 | `land` | |
 | 상가 건물 | `building` | |
 | 배율초과 비사토 | `land` + `isNonBusinessLand` | §104⑤ 후단(별개 자산) · §104①8호 · **주택분 토지에서 carve-out**(`housingPart.nonBusinessTransferRatio`) |
@@ -282,15 +287,20 @@ householdHousingCount landAcquisitionDate buildingAcquisitionDate
 > `buildProperties`에서 `isOneHousehold: false`를 **하드코딩**하는 것과 대비된다(GB는 주택이
 > 없어 그래도 됐다) ⇒ **겸용은 `buildProperties`를 재사용할 수 없다.**
 
-### 10.1 ⚠️ 미해소 — **V-8: 12억 안분에서 2원**
+### 10.1 ~~⚠️ 미해소 — V-8: 12억 안분에서 2원~~ ✅ **해소 — 주택 1카드가 만든 인공물이었다**
 
 단건 `proratedTaxableGain` 314,371,441 vs aggregate 314,371,439. 차익(1,512,314,999)과
 장특율(0.8)이 **같은데** 안분 결과만 갈린다 ⇒ **§89① 안분의 절사 순서**가 두 경로에서 다르다
 (`applyRate` 소수 rate 1원 부족과 같은 계열). 양도가액을 `apportionment.housingTransferPrice`
 그대로 써도 변하지 않았다 — 원인은 재구성이 아니라 **안분 leaf 자체**다.
 
-🔴 **anchor를 「완전 일치」로 쓰면 이 경로에서 상시 RED가 된다.** 구현 시 ① 두 경로가 같은
-안분 leaf를 쓰게 만들거나, ② 그 케이스만 허용 오차를 근거와 함께 명시할 것. **①을 먼저 시도한다.**
+✅ **주택을 토지·건물 2카드로 나누자 차이가 0이 됐다.** 원인은 안분 leaf가 아니라 **주택 1카드**
+였다 — 한 카드로 합치면 §89① 안분 base가 겸용 엔진의 것과 미세하게 어긋난다. 지금은 anchor를
+**완전 일치**로 쓴다(EQ-1~EQ-5 전건).
+
+> ⭐ **교훈** — 「2원 차이는 절사 계열이니 허용 오차로 두자」로 갈 뻔했다. 실제 원인은 **구조**였고,
+> 구조를 고치니 오차 자체가 사라졌다. 오차를 허용하기 전에 **오차가 어느 구조에서 나오는지**를
+> 먼저 볼 것.
 
 ### 10.2 확정된 구현 형태
 
@@ -301,6 +311,24 @@ householdHousingCount landAcquisitionDate buildingAcquisitionDate
 | ⑬ | ④가 컴패니언마다 `buildMixedUsePayload(a, form)`을 싣는다(그 함수는 이미 `AssetForm`을 받는다 — primary 전용이 아니다) |
 | ⑭ | `bundled-split-helpers.ts`에 겸용 분기 — 엔진 1회 호출 후 파트 4건을 `TransferTaxItemInput`으로. `rates`를 `CompanionBuildContext`에 추가 |
 | ⑧ | `transfer-tax-validate.ts:172`의 차단을 **primary 겸용만**으로 좁힌다(컴패니언 겸용은 개방) |
+
+### 10.3 ✅ 확정된 카드 구성 (구현본)
+
+| 카드 | `propertyType` | 세대 축 | 취득일 |
+|---|---|---|---|
+| 주택 토지 | `housing` | **싣는다** + `totalPropertyTransferPrice`(주택분 합계) | 토지 취득일 |
+| 주택 건물 | `housing` | **싣는다** + 같은 분모 | 건물 취득일 |
+| 상가 토지 | `land` | 없음 | 토지 취득일 |
+| 상가 건물 | `building` | 없음 | 건물 취득일 |
+| 배율초과 비사토 | `land` + `isNonBusinessLand` | 없음 | 토지 취득일 |
+
+🔴 **상가·비사토에 세대 축을 실으면 상가가 1세대1주택 표2 80% 장특을 받는다**(실측 — 처음
+프로브에서 실제로 그렇게 나왔다). GB `buildProperties`가 `isOneHousehold: false`를 하드코딩하는
+것과 같은 규약이다.
+
+⇒ 이 세 결정은 anchor `mixed-use-part-cards.equivalence.anchor.test.ts`가 뮤테이션으로 고정한다
+(MUT-1 분모 제거 · MUT-2 세대 축 누출). §10.1의 **2원 차이도 사라졌다** — 그것은 주택 1카드가
+만든 인공물이었다.
 
 **⑧을 primary까지 열지 않는 이유**: 5-a의 primary는 `{...engineInput}` 스프레드라(`route.ts:279`)
 겸용이어도 **평범한 주택 item**이 된다. 컴패니언만 여는 것이 「⑧ 통과 ↔ route 침묵 오산」을

@@ -24,7 +24,6 @@ import { calculateGeneralBuildingFractional } from "./general-building-fractiona
 import {
   resolveHousingContextFromCompanion,
   buildCompanionEngineInputs,
-  prepareBundledApportionment,
 } from "./bundled-split-helpers";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
@@ -33,6 +32,7 @@ import {
   propertySchema as inputSchema,
 } from "@/lib/api/transfer-tax-schema";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
+import { prepareBundledApportionment } from "./bundled-apportionment";
 import { buildTransferEngineInput } from "./engine-input";
 
 // ============================================================
@@ -306,6 +306,30 @@ export async function POST(request: NextRequest) {
           },
           bundledSaleMode: data.bundledSaleMode,
           adjustedAcqPrice: adjustedAcq.get(c.assetId)?.price,
+          /**
+           * ⑭ 겸용 컴패니언 서브엔진 컨텍스트 — **`| null`이라 명시가 강제된다**.
+           *
+           * `globals`는 `MixedUseAssetInputSources`에서 파생된 타입이라, leaf에 폼-전역 필드가
+           * 늘면 여기서 컴파일이 실패한다. 손으로 나열한 목록이었다면 조용히 누락됐을 축이다.
+           * ⚠️ 날짜를 갖는 값은 전부 `engineInput` 변환본이다(Zod 출력은 string).
+           */
+          mixedUseCtx: {
+            rates,
+            globals: {
+              regionCode: data.regionCode,
+              oneHouseExemptionProviso: engineInput.oneHouseExemptionProviso,
+              temporaryTwoHouse: engineInput.temporaryTwoHouse,
+              specialHouseExclusions: engineInput.specialHouseExclusions,
+              isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,
+              rawHouses: data.houses,
+              houses: engineInput.houses,
+              sellingHouseId: data.sellingHouseId,
+              marriageMerge: engineInput.marriageMerge,
+              parentalCareMerge: engineInput.parentalCareMerge,
+              gracePeriod: engineInput.gracePeriod,
+              unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
+            },
+          },
         });
       });
 

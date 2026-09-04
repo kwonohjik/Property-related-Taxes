@@ -29,7 +29,10 @@
 import type { z } from "zod";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { toEngineRedevelopment } from "./engine-input";
+import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { buildGbPartCards } from "./general-building-part-cards";
+import type { MixedUseAssetInputSources } from "./mixed-use-asset-input";
+import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
 import { tagGbCards } from "./general-building-part-cards";
 import { remapGbSwap } from "./general-building-part-cards";
 import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
@@ -76,10 +79,12 @@ interface CompanionForHousingCtx {
  * - 입주권·분양권은 권리라 주택이 아니다. 상가와 함께 `building` 쪽으로 접는다 —
  *   `housing` 라벨을 붙이면 표시가 거짓이 된다.
  */
-function toApportionKind(
+export function toApportionKind(
   kind: CompanionRawAsset["assetKind"],
 ): "housing" | "land" | "building" {
-  if (kind === "redevelopment_apt") return "housing";
+  // 겸용주택은 **주택**이다 — ⑭가 주택·상가 파트로 다시 펼치므로 이 축의 값은 안분 표
+  // 라벨에만 쓰인다(안분 키는 기준시가). `building`으로 접으면 표시가 거짓이 된다.
+  if (kind === "redevelopment_apt" || kind === "mixed_use_house") return "housing";
   if (
     kind === "commercial_building" ||
     kind === "presale_right" ||
@@ -172,7 +177,20 @@ type CompanionOwnedKeys = Exclude<
  *
  * ⚠️ **이 목록은 늘리기 전에 근거를 적을 것.** 근거 없이 추가하면 가드가 그만큼 눈을 감는다.
  */
-type CompanionContextOnlyKeys = "buildingFootprintArea" | "isUrbanArea" | "appurtenantLandZone";
+type CompanionContextOnlyKeys =
+  | "buildingFootprintArea"
+  | "isUrbanArea"
+  | "appurtenantLandZone"
+  /**
+   * 🔑 **겸용주택은 자기 item으로 가지 않는다** — 아래 ⑭ 겸용 분기가 그 자산 1건을
+   * **파트 4건**(주택·상가토지·상가건물·배율초과 비사토)으로 **대체**하므로 `companionEngine`에
+   * 실을 자리가 없다. 실으면 aggregate가 겸용을 모르는 단건 엔진으로 돌려 조용히 틀린다
+   * (`mixedUse`를 읽는 것은 `calcMixedUseTransferTax`뿐이다).
+   *
+   * ⚠️ 타입도 다르다 — ⑫는 **Zod payload**, 엔진은 `MixedUseAssetInput`이다. 그 사이는
+   *    `buildMixedUseAssetInput` leaf가 잇는다.
+   */
+  | "mixedUse";
 
 /**
  * ⑭ 컴패니언 원시 자산 — **⑫ 스키마에서 전면 파생**한다 (장치 1, 2026-09-04).
@@ -244,6 +262,37 @@ interface CompanionBuildContext {
   };
   bundledSaleMode?: "actual" | "apportioned";
   adjustedAcqPrice?: number;
+  /**
+   * 겸용 컴패니언 전용 컨텍스트. **optional이 아니라 `| null`이다** — 호출부가 「이 축은 없다」를
+   * 명시하게 만들어 조용한 누락(⑫는 통과하는데 ⑭가 못 받는 상태)을 컴파일 에러로 바꾼다.
+   */
+  mixedUseCtx: MixedUseCompanionContext | null;
+}
+
+/**
+ * 겸용 컴패니언이 서브엔진을 돌리는 데 필요한 것.
+ *
+ * 🔑 `globals` 타입을 **`MixedUseAssetInputSources`에서 파생**시킨다 — leaf에 필드가 늘면
+ *    route가 그것을 넘기지 않는 한 컴파일이 실패한다. 손으로 나열했다면 조용히 누락됐을 축이다.
+ *    자산-수준·세대 축은 컴패니언 자기 값(`c`·`primaryEngineInput`)을 쓰므로 여기 없다.
+ */
+export interface MixedUseCompanionContext {
+  rates: TaxRatesMap;
+  globals: Pick<
+    MixedUseAssetInputSources,
+    | "regionCode"
+    | "oneHouseExemptionProviso"
+    | "temporaryTwoHouse"
+    | "specialHouseExclusions"
+    | "isSelfCultivatedExpropriatedLand"
+    | "rawHouses"
+    | "houses"
+    | "sellingHouseId"
+    | "marriageMerge"
+    | "parentalCareMerge"
+    | "gracePeriod"
+    | "unavoidableOutsideCapitalHouse"
+  >;
 }
 
 /**
@@ -297,7 +346,12 @@ export function buildCompanionEngineInputs(
               ? "right_to_move_in"
               : c.assetKind === "redevelopment_apt"
                 ? "redevelopment_apt"
-                : "land";
+                : // 겸용주택은 아래 ⑭ 분기가 **파트 4건으로 대체**하므로 이 값이 세액에 닿지
+                  // 않는다. 그래도 `land`로 두면 그 분기가 (mixedUse 누락 등으로) 안 타는 순간
+                  // 침묵 오산이 되므로 정직하게 주택으로 접는다.
+                  c.assetKind === "mixed_use_house"
+                  ? "housing"
+                  : "land";
 
   /**
    * ⑭ 분리취득 축 — ⑫가 통과시킨 필드를 **그대로** 엔진 모양으로 옮긴다.
@@ -529,6 +583,23 @@ export function buildCompanionEngineInputs(
    * 🔴 카드 태깅과 swap Map 재맵핑은 **같은 시점에** 해야 한다 — 한쪽만 접미사가 붙으면
    *    `buildProperties`가 `swap.allocation.get(card.propertyId)`에서 조용히 미스한다.
    */
+  /**
+   * ⑭ **겸용주택 컴패니언 — 1건이 파트 카드 4~5장으로 펼쳐진다.**
+   *
+   * 조립과 확장은 `mixed-use-part-cards.ts`가 한다(응집도 · 800줄 정책). 여기서는 진입만 판정한다.
+   *
+   * ⚠️ `mixedUse`가 없으면 이 분기가 안 타고 평범한 주택으로 계산된다 — ⑩ refine이 막는다.
+   */
+  if (c.assetKind === "mixed_use_house" && c.mixedUse) {
+    return buildMixedUseCompanionItems(c.mixedUse, companionEngine, ctx, {
+      ownershipRatio: c.ownershipRatio,
+      isUnregistered: c.isUnregistered,
+      assetId: c.assetId,
+      assetLabel: c.assetLabel ?? "",
+      allocatedSalePrice: a.allocatedSalePrice,
+    });
+  }
+
   if (c.assetKind === "general_building" && c.generalBuildingValuation) {
     const gbv = coerceGeneralBuildingPayload(
       c.generalBuildingValuation as unknown as Record<string, unknown>,
@@ -607,202 +678,3 @@ export {
 //   27 variant 중 3개(public_expropriation·replacement_land_comp·self_farming)만 Date 변환하고
 //   나머지는 string 그대로 통과시켜 컴패니언에서만 다른 세액이 나왔다.
 //   정본은 `route-reductions-mapper.ts`의 `mapReductionsToEngine` 하나다.
-
-// ─── 일괄양도 안분 준비·실행 헬퍼 (route.ts (1)~(4.5) 추출, 800줄 정책) ───
-// 상속 보충평가 취득가액 → companion 취득가액 → BundledAssetInput 조립 → 안분 →
-// 매매 환산 사후산정까지를 단일 함수로. route는 결과(apportionment·adjustedAcq)만 소비한다.
-
-interface BundledInheritanceValuation {
-  inheritanceDate: string;
-  assetKind: InheritanceAssetKind;
-  landAreaM2?: number;
-  publishedValueAtInheritance: number;
-}
-
-interface BundledPrimaryInput {
-  // 넓은 union 허용 (right_to_move_in 등) — 내부에서 housing/building/land로 매핑
-  propertyType: TransferTaxItemInput["propertyType"];
-  totalSalePrice?: number;
-  standardPriceAtTransferForApportion?: number;
-  expenses?: number;
-  acquisitionPrice: number;
-  /** 지분 모드·actual 모드에서 route가 fixedSalePrice로 주입할 primary 확정 양도가액 */
-  primaryActualSalePrice?: number;
-  primaryInheritanceValuation?: BundledInheritanceValuation;
-}
-
-interface BundledCompanionForApportion {
-  assetId: string;
-  assetLabel: string;
-  assetKind:
-    | "housing"
-    | "land"
-    | "building"
-    | "commercial_building"
-    | "presale_right"
-    | "right_to_move_in"
-    | "redevelopment_apt"
-    | "general_building";
-  acquisitionCause: TransferTaxItemInput["acquisitionCause"];
-  useEstimatedAcquisition?: boolean;
-  /** §97①1호나목 환산 분모(4.5 매매 estimated). 이월과세 general에서는 증여자 축 값이다. */
-  standardPriceAtTransfer?: number;
-  /**
-   * §166⑥ **안분 키** — 사용자가 입력한 자산-수준 「양도시 기준시가」(⑫ 전용 필드).
-   * `standardPriceAtTransfer`와 나눠 두지 않으면 이월과세 general 환산 컴패니언에서
-   * 안분 키가 증여자 기준시가로 치환된다(D-5·V-10).
-   */
-  standardPriceAtTransferForApportion?: number;
-  standardPriceAtAcquisition?: number;
-  directExpenses?: number;
-  fixedAcquisitionPrice?: number;
-  fixedSalePrice?: number;
-  inheritanceValuation?: BundledInheritanceValuation;
-}
-
-/**
- * 일괄양도 안분 준비·실행.
- * @param opts.isActualMode §166⑥ 본문 (계약서 구분기재)
- * @param opts.isFullFractionalBundle 완전 지분 모드 (같은 물건 지분 분할) — fixedSalePrice 주입 + 잔액 흡수
- */
-export function prepareBundledApportionment(
-  primary: BundledPrimaryInput,
-  companions: BundledCompanionForApportion[],
-  opts: { isActualMode: boolean; isFullFractionalBundle: boolean },
-): {
-  apportionment: BundledApportionmentResult;
-  adjustedAcq: Map<string, { price: number; used: boolean }>;
-} {
-  const { isActualMode, isFullFractionalBundle } = opts;
-
-  // (1) 주 자산 상속 보충적평가액 (선택)
-  let primaryFixedAcq: number | undefined;
-  if (primary.primaryInheritanceValuation) {
-    const v = primary.primaryInheritanceValuation;
-    primaryFixedAcq = calculateInheritanceAcquisitionPrice({
-      inheritanceDate: new Date(v.inheritanceDate),
-      assetKind: v.assetKind,
-      landAreaM2: v.landAreaM2,
-      reportedValue: v.publishedValueAtInheritance,
-      reportedMethod: "supplementary",
-    }).acquisitionPrice;
-  }
-
-  // (2) 컴패니언 자산별 취득가액 (acquisitionCause 분기)
-  const companionFixedAcq: (number | undefined)[] = companions.map((c) => {
-    if (c.acquisitionCause === "purchase" && c.useEstimatedAcquisition) return undefined;
-    if (c.acquisitionCause === "inheritance" && c.inheritanceValuation) {
-      const v = c.inheritanceValuation;
-      return calculateInheritanceAcquisitionPrice({
-        inheritanceDate: new Date(v.inheritanceDate),
-        assetKind: v.assetKind,
-        landAreaM2: v.landAreaM2,
-        reportedValue: v.publishedValueAtInheritance,
-        reportedMethod: "supplementary",
-      }).acquisitionPrice;
-    }
-    return c.fixedAcquisitionPrice;
-  });
-
-  // (3) BundledAssetInput 배열 구성
-  const primaryAssetKind: BundledAssetInput["assetKind"] =
-    primary.propertyType === "housing"
-      ? "housing"
-      : primary.propertyType === "building"
-        ? "building"
-        : "land";
-  const primaryLabel =
-    primary.propertyType === "housing"
-      ? "주 자산(주택)"
-      : primary.propertyType === "land"
-        ? "주 자산(토지)"
-        : "주 자산";
-
-  const bundleAssets: BundledAssetInput[] = [
-    {
-      assetId: "primary",
-      assetLabel: primaryLabel,
-      assetKind: primaryAssetKind,
-      standardPriceAtTransfer: primary.standardPriceAtTransferForApportion ?? 0,
-      directExpenses: primary.expenses,
-      fixedAcquisitionPrice:
-        primaryFixedAcq ??
-        (primary.acquisitionPrice > 0 ? primary.acquisitionPrice : undefined),
-      // actual 모드 또는 완전 지분 모드: 주 자산의 확정 양도가액 주입
-      fixedSalePrice:
-        isActualMode || isFullFractionalBundle ? primary.primaryActualSalePrice : undefined,
-    },
-    ...companions.map(
-      (c, i): BundledAssetInput => ({
-        assetId: c.assetId,
-        assetLabel: c.assetLabel,
-        /**
-         * §166⑥ **안분 축**은 3종뿐이다. 상가·분양권은 `building`으로 접는다 — 이 축에서
-         * `assetKind`는 라벨·표시용이고 안분 키는 **기준시가**라 결과가 달라지지 않는다.
-         * (primary도 위 `primaryAssetKind`에서 같은 fold를 한다.)
-         *
-         * ⚠️ 세율·환산이 걸리는 `propertyType` 축과 혼동 금지 — 그쪽은 접으면 오산이다.
-         * ⚠️ 분양권을 `housing`으로 접지 않는 이유: 이 값은 결과 카드의 `ValuationDetailCards`
-         *    게이트로도 흘러가므로, 권리에 주택 라벨을 붙이면 표시가 거짓이 된다.
-         */
-        assetKind: toApportionKind(c.assetKind),
-        // §166⑥ 안분 키 — 전용 필드 우선. 구필드 fallback은 전용 키를 모르는 직접 호출자 하위호환
-        // (⑩ superRefine의 `apportionKey` 선택식과 **같은 식**이어야 한다 — 단일 기준).
-        standardPriceAtTransfer:
-          c.standardPriceAtTransferForApportion ?? c.standardPriceAtTransfer ?? 0,
-        standardPriceAtAcquisition: c.standardPriceAtAcquisition,
-        directExpenses: c.directExpenses,
-        fixedAcquisitionPrice: companionFixedAcq[i],
-        // actual 모드 또는 완전 지분 모드: 컴패니언의 확정 양도가액 주입
-        fixedSalePrice:
-          isActualMode || isFullFractionalBundle ? c.fixedSalePrice : undefined,
-      }),
-    ),
-  ];
-
-  // 완전 지분 모드: applyRatio(floor) 절사로 Σfixed < total일 수 있으므로
-  // 마지막 자산이 잔액을 흡수해 Σfixed = totalSalePrice 불변식 보장
-  // (apportionBundledSale "잔여 양도가액 있으나 안분 대상 없음" throw 회피).
-  // 정수 보정(1~2원)일 뿐 안분 방식 선택이 아님 — feedback_floor_residual_absorption.
-  if (isFullFractionalBundle && bundleAssets.every((a) => a.fixedSalePrice !== undefined)) {
-    const last = bundleAssets.length - 1;
-    const sumExceptLast = bundleAssets
-      .slice(0, last)
-      .reduce((s, a) => s + (a.fixedSalePrice ?? 0), 0);
-    bundleAssets[last].fixedSalePrice = primary.totalSalePrice! - sumExceptLast;
-  }
-
-  // (4) 안분 실행
-  const apportionment = apportionBundledSale({
-    totalSalePrice: primary.totalSalePrice!,
-    assets: bundleAssets,
-  });
-
-  // (4.5) 매매 estimated 컴패니언: 안분된 양도가액으로 환산취득가 사후 산정
-  const adjustedAcq = new Map<string, { price: number; used: boolean }>();
-  companions.forEach((c) => {
-    if (
-      c.acquisitionCause === "purchase" &&
-      c.useEstimatedAcquisition &&
-      c.standardPriceAtAcquisition &&
-      c.standardPriceAtTransfer
-    ) {
-      const alloc = apportionment.apportioned.find((a) => a.assetId === c.assetId);
-      if (!alloc) return;
-      const price = calculateEstimatedAcquisitionPrice(
-        alloc.allocatedSalePrice,
-        c.standardPriceAtAcquisition,
-        c.standardPriceAtTransfer,
-      );
-      adjustedAcq.set(c.assetId, { price, used: true });
-    }
-  });
-
-  // usedEstimatedAcquisition 플래그 전파 (결과 표시용)
-  apportionment.apportioned.forEach((a) => {
-    const adj = adjustedAcq.get(a.assetId);
-    if (adj?.used) a.usedEstimatedAcquisition = true;
-  });
-
-  return { apportionment, adjustedAcq };
-}
