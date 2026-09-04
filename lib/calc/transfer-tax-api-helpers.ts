@@ -78,6 +78,7 @@ export {
   isFractionalRatio,
   isFractionalRatioStr,
   getOwnershipRatio,
+  ownershipRatioError,
   isFractionalOwnership,
   isFullFractionalBundle,
   effectiveTransferExpenseFor,

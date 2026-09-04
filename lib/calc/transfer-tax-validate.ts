@@ -388,7 +388,7 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({
           step,
           assetIndex: i,
-          message: "지분 분할 취득: 공유 지분율(분자/분모)을 입력하세요.",
+          message: "지분 분할 취득: 공유 지분율(%)을 입력하세요.",
         });
     }
 

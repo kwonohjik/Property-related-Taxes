@@ -19,6 +19,8 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { isFractionalRatioStr } from "@/lib/calc/transfer-tax-api-helpers";
+// ⑤ 인라인 경고와 ⑧ 계산 전 차단은 **같은 술어**를 쓴다 (문구가 갈리지 않도록 단일 소스).
+import { ownershipRatioError } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { cn } from "@/lib/utils";
 
 /** 자산 분할 모드 — 토글 A(함께양도)·토글 B(지분분할)·없음. Step1↔③ 4레벨 prop 공유 타입. */
@@ -81,6 +83,7 @@ export function OwnershipRatioInput({
     <FieldCard
       label={label}
       hint="소유·취득 지분을 백분율(%)로 입력 (단독 소유는 100)"
+      warning={ownershipRatioError(numerator, denominator)}
       trailing={
         fractional ? (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-micro font-semibold text-amber-800">

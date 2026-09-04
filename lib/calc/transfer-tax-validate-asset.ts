@@ -27,6 +27,7 @@ import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriatio
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
+import { ownershipRatioError } from "./transfer-tax-api-asset-basics";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 
 /**
@@ -142,14 +143,15 @@ export function validateAssetEntry(
     }
   }
 
-  // 공유 지분율 검증 (분자 ≤ 분모, 분모 > 0)
+  // 공유 지분율 범위 — ⑤ 인라인 경고(`OwnershipRatioInput`)와 **같은 술어**를 쓴다.
+  // 술어가 갈리면 「칸에는 경고가 없는데 다음을 누르면 막히는」 모순이 생긴다.
   const ownN = parseFloat(a.ownershipNumerator || "100");
   const ownD = parseFloat(a.ownershipDenominator || "100");
-  if (!isFinite(ownN) || !isFinite(ownD)) return `${label}: 지분율 분자/분모는 숫자여야 합니다.`;
-  if (ownD <= 0) return `${label}: 지분율 분모는 0보다 커야 합니다.`;
-  if (ownN <= 0) return `${label}: 지분율 분자는 0보다 커야 합니다.`;
-  if (ownN > ownD) return `${label}: 지분율 분자는 분모를 초과할 수 없습니다.`;
-  if (ownD > 1000) return `${label}: 지분율 분모는 1000 이하여야 합니다.`;
+  const ownErr = ownershipRatioError(
+    a.ownershipNumerator || "100",
+    a.ownershipDenominator || "100",
+  );
+  if (ownErr) return `${label}: ${ownErr}`;
 
   /**
    * 단건 + 지분 모드 — **선언이 없으면** 차단한다 (R4, 2026-09-03).
