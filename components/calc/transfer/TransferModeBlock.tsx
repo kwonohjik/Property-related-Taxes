@@ -158,11 +158,13 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-micro font-bold text-fuchsia-800 select-none">
           💎
         </span>
-        <p className="text-sm font-semibold text-fuchsia-900">양도 정보</p>
+        {/* 이 카드는 ② 「양도정보」 섹션 안에만 뜬다 — 제목을 「양도 정보」로 두면
+            섹션 헤더와 같은 말을 두 번 하게 된다. 카드가 **무엇을 고르는 곳인지**를 쓴다. */}
+        <p className="text-sm font-semibold text-fuchsia-900">양도 형태·원인</p>
       </div>
 
       <p className="text-xs text-fuchsia-700">
-        양도 형태·원인을 선택하세요. 부담부증여 시 양도가액은 인수 채무액으로 자동 산정되고(소령 §159),
+        부담부증여 시 양도가액은 인수 채무액으로 자동 산정되고(소령 §159),
         공익수용·협의매수 시 §77 감면·비사업용 토지 사업용 의제가 함께 적용됩니다.
       </p>
 
