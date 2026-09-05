@@ -137,7 +137,17 @@ describe("§164⑤~⑦ 주택 — 부분 입력 차단", () => {
     ).toMatch(/§164/);
   });
 
-  it("C-4: 상속 · 1990 前 · 4필수 + 상속개시일 단가만 → 통과 (택일 충족)", () => {
+  /**
+   * 🔄 **C-4·C-4b는 2026-09-05(Q11)에 결론이 뒤집혔다** — 종전에는 「등급 3종+1990가 ↔
+   * 취득당시 단가」 **택일**이라 단가만으로 통과했다. 그러나 1990.8.30. 이전에는 개별공시지가가
+   * **고시된 적이 없어** 그 단가는 존재하지 않는 값이고, 영 §164④가 그 자리를 등급환산으로
+   * 채운다. 토지 축(`sec164LandStatus`)은 처음부터 등급 4필드를 **필수**로 요구했다 —
+   * 주택 축만 예외였고, 그 예외가 UI에서 사라진 칸의 stale 값을 「충족」으로 읽어
+   * 엔진에서 등급환산을 덮어쓰게 했다(`inheritance-house-valuation.ts:173`).
+   *
+   * ⚠️ 단언을 약화시킨 것이 아니라 **반대로 뒤집었다** — 통과였던 두 케이스가 이제 차단이다.
+   */
+  it("C-4(정정): 상속 · 1990 前 · 4필수 + 단가만 → **차단** (등급환산이 유일한 길)", () => {
     expect(
       blocked(
         house({
@@ -147,11 +157,10 @@ describe("§164⑤~⑦ 주택 — 부분 입력 차단", () => {
           inhHouseValLandPricePerSqmAtInheritance: "250000",
         }),
       ),
-    ).toBeNull();
+    ).toMatch(/§164/);
   });
 
-  it("🔴 C-4b: 상속 · 1990 前 · 단가 완성 + 등급 2/3 → 통과 (완성 그룹 우선)", () => {
-    // 판정 순서가 뒤바뀌면 여기서 잘못 차단한다 — 빌더는 단가 분기로 payload를 만든다.
+  it("C-4b(정정): 상속 · 1990 前 · 단가 + 등급 2/3 → **차단** (등급 4필드 미완성)", () => {
     expect(
       blocked(
         house({
@@ -161,6 +170,23 @@ describe("§164⑤~⑦ 주택 — 부분 입력 차단", () => {
           inhHouseValLandPricePerSqmAtInheritance: "250000",
           pre1990Grade_current: "218",
           pre1990Grade_prev: "218",
+          pre1990GradeMode: "number",
+        }),
+      ),
+    ).toMatch(/§164/);
+  });
+
+  it("🔑 C-4c: 상속 · 1990 前 · 4필수 + 등급 4필드 완성 → 통과 (§164④ 경로)", () => {
+    expect(
+      blocked(
+        house({
+          acquisitionDate: "1987-05-01",
+          inheritanceStartDate: "1987-05-01",
+          ...HOUSE_4,
+          pre1990Grade_current: "218",
+          pre1990Grade_prev: "218",
+          pre1990Grade_atAcq: "200",
+          pre1990PricePerSqm_1990: "1100000",
           pre1990GradeMode: "number",
         }),
       ),

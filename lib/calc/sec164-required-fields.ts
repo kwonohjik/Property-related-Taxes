@@ -77,21 +77,11 @@ function tally(a: AssetForm, specs: FieldSpec[]) {
   };
 }
 
-/**
- * 택일 그룹 판정 — **완성된 그룹이 하나라도 있으면 충족**으로 본다.
- *
- * ⚠️ 순서가 뒤바뀌면 「단가 완성 + 등급 2/3」에서 잘못 차단한다. 빌더
- * (`transfer-tax-api-inheritance.ts:206`)가 완성된 분기로 payload를 만들므로 validate가 더
- * 엄격하면 "칸은 다 있는데 차단"이 된다(memory `feedback_validation_sync_8th_point`).
- *
- * 어느 그룹도 완성되지 않았으면 **손댄 그룹**(filled가 큰 쪽)을 기준으로 누락을 안내한다.
+/*
+ * ⛔ 종전의 택일 판정 헬퍼(`oneOf`)는 **소비처가 사라져 제거했다** (2026-09-05 · Q11).
+ *    유일한 사용처가 주택 축의 「등급 3종+1990가 ↔ 취득당시 단가」였는데, 1990.8.30. 前
+ *    개별공시지가는 고시된 적이 없어 그 택일 자체가 성립하지 않았다(아래 §164⑤~⑦ 주석).
  */
-function oneOf(a: AssetForm, groups: FieldSpec[][]) {
-  const tallies = groups.map((g) => tally(a, g));
-  const complete = tallies.find((t) => t.filled === t.total);
-  if (complete) return complete;
-  return tallies.reduce((best, t) => (t.filled > best.filled ? t : best), tallies[0]);
-}
 
 function merge(clause: string, ...parts: ReturnType<typeof tally>[]): Sec164FieldStatus {
   return {
@@ -106,8 +96,8 @@ function merge(clause: string, ...parts: ReturnType<typeof tally>[]): Sec164Fiel
 /**
  * 주택 §164⑤~⑦ (§163⑨2호) — `buildInheritedHouseValuationPayload`와 같은 조건.
  *
- * 필수 4 + (1990.8.30. **前**이면 「등급 3종 + 1990 ㎡당가」와 「상속개시일·증여일 단가」 **택일**,
- * **後**면 단가 필수).
+ * 필수 4 + (1990.8.30. **前**이면 「등급 3종 + 1990 ㎡당가」 **필수**(§164④ 등급환산이 유일한
+ * 길이다 — 그 전에는 개별공시지가가 고시된 적이 없다), **後**면 취득당시 단가 필수).
  */
 export function sec164HouseStatus(asset: AssetForm): Sec164FieldStatus | null {
   const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
@@ -130,10 +120,23 @@ export function sec164HouseStatus(asset: AssetForm): Sec164FieldStatus | null {
     amountField("pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가"),
   ];
 
+  /**
+   * 1990.8.30. **前**은 등급환산이 유일한 길이다 (2026-09-05 · 코드리뷰 Q11에서 정정).
+   *
+   * 🔴 종전에는 「등급 3종 + 1990 ㎡당가」와 「취득당시 단가」의 **택일**이었다. 그런데
+   *   1990.8.30. 이전에는 개별공시지가가 **고시된 적이 없다** — 그 시점 단가를 직접 적는
+   *   것은 존재하지 않는 고시가를 적는 것이다. 영 §164④가 그 자리를 등급환산으로 채운다.
+   *
+   * 🔑 **토지 축은 이미 이 모양이다**(`sec164LandStatus` — 등급 4필드 필수, 택일 없음).
+   *   주택 축만 예외였고, 그 예외가 UI에서 사라진 칸의 stale 값을 「충족」으로 읽어
+   *   엔진에서 등급환산을 덮어쓰게 했다(`inheritance-house-valuation.ts:173` — 직접
+   *   입력값이 있으면 경고만 남기고 우선한다).
+   *
+   * ⚠️ 그래서 ④도 이 구간에서 단가를 **보내지 않는다**(`transfer-tax-api-inheritance.ts`).
+   *   ⑧만 고치면 「검증은 통과인데 엔진은 옛 값을 쓰는」 어긋남이 남는다.
+   */
   const second =
-    baseDate < LAND_FIRST_DISCLOSURE
-      ? oneOf(asset, [gradeGroup, [atBaseDate]])
-      : tally(asset, [atBaseDate]);
+    baseDate < LAND_FIRST_DISCLOSURE ? tally(asset, gradeGroup) : tally(asset, [atBaseDate]);
 
   return merge("§164⑤~⑦", base, second);
 }
