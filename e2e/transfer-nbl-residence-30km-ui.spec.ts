@@ -35,7 +35,7 @@ test.describe("NBL 재촌 판정 — 30km 힌트 + 거주지 주소검색", () =
     await page.getByText("독립 나대지", { exact: true }).click();
     await page.getByPlaceholder("면적 입력").first().fill("1000");
     await inputByLabel(page, "양도가액 (원)").fill("1000000000");
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
 
     // 보유 상황 → 비사업용 스위치 → 판정 도움 필요
     await page.getByRole("button", { name: "보유 상황" }).first().click();

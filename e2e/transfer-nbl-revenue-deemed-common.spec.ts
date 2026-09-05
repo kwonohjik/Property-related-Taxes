@@ -45,7 +45,7 @@ test.describe("§168의11③1·2호 간주임대료·공통수입 안분 — 풀
     await inputByLabel(page, "양도가액 (원)").fill("2000000000");
 
     // 취득원인 매매 → 환산취득가
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // 취득일 1997-02-03 (세 번째 DateInput 그룹)

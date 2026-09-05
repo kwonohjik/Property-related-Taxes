@@ -5,7 +5,7 @@
  * 800줄 정책에 따라 CompanionAssetCard.tsx에서 추출 (2026-05-07).
  */
 
-import { cn } from "@/lib/utils";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { CompanionAcqPurchaseBlock } from "./CompanionAcqPurchaseBlock";
 import { CompanionAcqNewConstructionBlock } from "./CompanionAcqNewConstructionBlock";
@@ -70,36 +70,36 @@ export function CompanionAcquisitionCauseSection({
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium">취득 원인</label>
-      <div className="grid grid-cols-5 gap-1.5">
-        {ACQUISITION_CAUSE_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() =>
-              onChange({
-                acquisitionCause: opt.value,
-                // 매매 → 비-매매 전환 시 `hasSeperateLandAcquisitionDate` stale 정리(2026-07-30).
-                // 그 플래그는 매매 경로의 취득일 2열 UI 표시 상태이지 사용자 데이터가 아니다.
-                // 남겨두면 토지 취득일이 채워진 채 상속으로 넘어갔을 때 `isSeparateAcquisition`이
-                // true가 되어 파트별 취득가액 필수 → 입력 칸 없는 차단이 된다.
-                ...(opt.value !== "purchase" ? { hasSeperateLandAcquisitionDate: false } : {}),
-                // 상속 → 비-상속 전환 시 가업상속공제 §97의2④ stale 정리(A04 · 2026-09-02).
-                // 카드가 화면에서 사라져 **사용자가 끌 방법이 없으므로** 여기서 지운다.
-                // `migrateCarryoverFields`가 carryover에 대해 쓰는 것과 같은 규약이다.
-                ...(opt.value !== "inheritance" ? { familyBusinessInheritance: undefined } : {}),
-              })
-            }
-            className={cn(
-              "rounded-md border-2 px-1 py-2 text-center transition-all",
-              asset.acquisitionCause === opt.value
-                ? "border-primary bg-primary/5 text-primary"
-                : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
-            )}
-          >
-            <div className="text-sm font-semibold whitespace-nowrap">{opt.label}</div>
-          </button>
-        ))}
-      </div>
+      {/*
+        🔴 종전에는 native 5열 고정 그리드(`grid-cols-5` + `whitespace-nowrap`)였다 (Q25 · Q29).
+        반응형 브레이크포인트가 없어 375px에서 셀 폭이 50px 안팎이 되고 줄바꿈도 막혀,
+        「이월과세(증여)」·「신축(자가건축)」 글자가 셀 밖으로 삐져나와 **어떤 취득원인을 고르는지
+        읽을 수 없었다**. `layout="inline"`은 `flex-wrap`이라 폭에 맞춰 스스로 접힌다.
+
+        ⚠️ `name`은 **자산마다 달라야** 한다 — 같으면 함께양도 카드들의 라디오가 한 그룹으로
+           묶여 자산 1의 선택이 자산 2를 해제한다(§166⑥ 토글에서 같은 결함을 이미 고쳤다).
+      */}
+      <RadioCardGroup
+        name={`acquisitionCause-${asset.assetId}`}
+        tone="sky"
+        layout="inline"
+        value={asset.acquisitionCause ?? ""}
+        options={ACQUISITION_CAUSE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        onChange={(value) =>
+          onChange({
+            acquisitionCause: value,
+            // 매매 → 비-매매 전환 시 `hasSeperateLandAcquisitionDate` stale 정리(2026-07-30).
+            // 그 플래그는 매매 경로의 취득일 2열 UI 표시 상태이지 사용자 데이터가 아니다.
+            // 남겨두면 토지 취득일이 채워진 채 상속으로 넘어갔을 때 `isSeparateAcquisition`이
+            // true가 되어 파트별 취득가액 필수 → 입력 칸 없는 차단이 된다.
+            ...(value !== "purchase" ? { hasSeperateLandAcquisitionDate: false } : {}),
+            // 상속 → 비-상속 전환 시 가업상속공제 §97의2④ stale 정리(A04 · 2026-09-02).
+            // 카드가 화면에서 사라져 **사용자가 끌 방법이 없으므로** 여기서 지운다.
+            // `migrateCarryoverFields`가 carryover에 대해 쓰는 것과 같은 규약이다.
+            ...(value !== "inheritance" ? { familyBusinessInheritance: undefined } : {}),
+          })
+        }
+      />
 
       {/* 신축(자가건축) — 사용승인일 4-시점 입력 블록 (영 §162①4호, G-5) */}
       {isNewConstruction && (

@@ -85,7 +85,7 @@ test.describe("인천 중구 내동 6-20 학원용 토지 환산취득가액", (
     await yangdoInput.fill("2000000000");
 
     // ─── 취득원인: 매매 ─────────────────────────────────────────────
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
 
     // ─── 취득가액 산정방식: 환산취득가 ─────────────────────────────
     await page.getByRole("radio", { name: "환산취득가" }).click();

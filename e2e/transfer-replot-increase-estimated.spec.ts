@@ -45,7 +45,7 @@ test.describe("증환지 환산 모드 — 증가분 자동복사 (PR#473 Phase 
 
     // 취득정보 → 매매 → 환산취득가 (환산 모드 브라우저 진입 확인)
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // 증가분(32.2㎡) 자산 자동 추가

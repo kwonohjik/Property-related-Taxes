@@ -42,7 +42,7 @@ test.describe("1990.8.30 이전 취득 토지 환산 — 양도시 기준시가"
     await getInputByLabel(page, "양도가액 (원)").fill("2000000000");
 
     // 매매 → 환산취득가
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.waitForTimeout(300);
     await page.getByRole("radio", { name: "환산취득가" }).click();
     await page.waitForTimeout(300);

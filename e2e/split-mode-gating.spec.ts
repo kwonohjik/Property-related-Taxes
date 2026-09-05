@@ -30,7 +30,7 @@ async function setupSplitAsset(page: Page) {
   await expandAssetSection(page, 1);
   await page.getByRole("button", { name: "주택", exact: true }).first().click();
   await expandAssetSection(page, 3);
-  await page.getByRole("button", { name: "매매", exact: true }).click();
+  await page.getByRole("radio", { name: "매매", exact: true }).click();
   await page.getByRole("switch", { name: /토지·건물 취득일 다름/ }).click();
 }
 
@@ -74,7 +74,7 @@ test.describe("P1 — 분리 모드 취득시 기준시가 입력 노출", () =>
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     // 분리 토글을 켜지 않음 — 종전 동작 그대로 숨김
     await expect(page.getByText("취득시 기준시가", { exact: false })).toHaveCount(0);
   });
@@ -610,7 +610,7 @@ test.describe("P7 — 소유자 분리 토글 배치", () => {
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
 
     await expect(ownerToggle(page)).toBeVisible();
     await expect(dateToggle(page)).toBeVisible();
@@ -630,7 +630,7 @@ test.describe("P7 — 소유자 분리 토글 배치", () => {
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
 
     await ownerToggle(page).getByRole("switch").click();
     await expect(page.getByRole("button", { name: /건물만 본인 소유/ })).toBeVisible();
@@ -650,7 +650,7 @@ test.describe("P7 — 소유자 분리 토글 배치", () => {
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "상속", exact: true }).click();
+    await page.getByRole("radio", { name: "상속", exact: true }).click();
 
     await expect(ownerToggle(page)).toBeVisible();
     // OFF 상태에서는 분리 입력이 없다
@@ -670,7 +670,7 @@ test.describe("P7 — 소유자 분리 토글 배치", () => {
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "증여", exact: true }).click();
+    await page.getByRole("radio", { name: "증여", exact: true }).click();
 
     await ownerToggle(page).getByRole("switch").click();
     await expect(page.getByTestId("non-purchase-split-inputs")).toBeVisible();
@@ -683,7 +683,7 @@ test.describe("P7 — 소유자 분리 토글 배치", () => {
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
 
     await ownerToggle(page).getByRole("switch").click();
     await expect(page.getByTestId("non-purchase-split-inputs")).toHaveCount(0);
@@ -706,7 +706,7 @@ test.describe("P8 — 신축 + 토지 상속·증여", () => {
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "신축(자가건축)" }).click();
+    await page.getByRole("radio", { name: "신축(자가건축)" }).click();
   }
   const landAcqToggle = (p: Page) => p.getByTestId("newconstruction-land-acq");
 
@@ -749,7 +749,7 @@ test.describe("P8 — 신축 + 토지 상속·증여", () => {
     await expandAssetSection(page, 1);
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await expect(landAcqToggle(page)).toHaveCount(0);
   });
 });

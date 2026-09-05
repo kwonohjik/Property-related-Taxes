@@ -28,7 +28,7 @@ async function gotoInheritanceHouse(page: Page) {
   await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
   await expandAssetSection(page, 3);
-  await page.getByRole("button", { name: "상속", exact: true }).click();
+  await page.getByRole("radio", { name: "상속", exact: true }).click();
 
   // 상속 자산구분 라디오는 보조계산·§164⑦ 맥락으로 강등됨: 토지/주택은 assetKind 파생,
   // 주택 개별/공동 픽커는 §164⑦ 환산 섹션(주택+미공시) 내부에 노출된다(라벨 동일).

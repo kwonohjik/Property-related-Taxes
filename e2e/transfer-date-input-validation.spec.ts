@@ -29,7 +29,7 @@ async function fillBaseAsset(page: Page, acq: [string, string, string]) {
   await expandAssetSection(page, 2);
   await expandAssetSection(page, 3);
   await getInputByLabel(page, "양도가액 (원)").first().fill("1500000000");
-  await page.getByRole("button", { name: "매매", exact: true }).click();
+  await page.getByRole("radio", { name: "매매", exact: true }).click();
   await year(page, 2).fill(acq[0]);
   await month(page, 2).fill(acq[1]);
   await day(page, 2).fill(acq[2]);

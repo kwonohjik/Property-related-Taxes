@@ -51,7 +51,7 @@ async function setupMixedUsePre2001PhdAsset(page: Page) {
   await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
 
   await expandAssetSection(page, 3);
-  await page.getByRole("button", { name: "매매", exact: true }).click();
+  await page.getByRole("radio", { name: "매매", exact: true }).click();
   await page.getByRole("radio", { name: "환산취득가" }).click();
   // 취득 1997 → ≤2000 → 위치지수는 2001.1.1 기준 트랙(§164⑤)
   //

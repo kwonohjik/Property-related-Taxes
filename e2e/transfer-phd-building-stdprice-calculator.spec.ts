@@ -25,7 +25,7 @@ async function gotoPhdWidget(page: Page) {
   await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
   await expandAssetSection(page, 3);
-  await page.getByRole("button", { name: "매매", exact: true }).click();
+  await page.getByRole("radio", { name: "매매", exact: true }).click();
   await page.getByRole("radio", { name: "환산취득가" }).click();
 
   await page
@@ -156,7 +156,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // 취득일 2003 (< 2005.4.29 → 개별주택가격 미공시 PHD 자동 활성)
@@ -240,7 +240,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // 취득일 1992 (< 최초고시 1993 — §164⑦ 게이트 충족)
@@ -322,7 +322,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // 취득일 2003 (< 2005.4.29 → PHD 자동 활성)
@@ -420,7 +420,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     await fillDateExact(acqDateBuilding(page), {
@@ -465,7 +465,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
     await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
     await fillDateExact(acqDateBuilding(page), {
       year: "2010",
@@ -539,7 +539,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     );
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
     await fillDateExact(acqDateBuilding(page), {
       year: "2010",
@@ -585,7 +585,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
       year: "2018", month: "06", day: "15",
     });
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
     await fillDateExact(acqDateBuilding(page), {
       year: "2010", month: "06", day: "15",
@@ -653,7 +653,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // 취득일 1999 (< 2005.4.29 → PHD 자동 활성, ≤2000 → 산정기준율 경로)
@@ -718,7 +718,7 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     await page.getByRole("button", { name: "주택", exact: true }).first().click();
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // 건물 취득일 2014-09-14
