@@ -48,9 +48,15 @@ function renderBlock(a: AssetForm) {
   );
 }
 
-/** ③-c 카드의 자동 판정 줄 (그리드 밖 단독 박스). */
+/**
+ * ③-c 카드의 **참고 기간** 줄 (그리드 밖 단독 박스).
+ *
+ * ⚠️ 접두사가 「자동 판정:」에서 「참고 —」로 바뀌었다 (2026-09-05 · Q16). 이 줄은 결론이
+ *    아니라 사용자 판단의 재료다 — 엔진은 자기선언(라디오)만 읽는다. **아래 단언들은 그대로**다:
+ *    합산 계산 자체는 바뀌지 않았고, 이 anchor가 고정하는 것도 그 계산이다.
+ */
 function autoLine(): string {
-  return screen.getByText(/자동 판정:/).textContent ?? "";
+  return screen.getByText(/^참고 —/).textContent ?? "";
 }
 
 describe("R8 — 인가일 이후 철거 전 사실상 주거용 사용 기간 합산", () => {

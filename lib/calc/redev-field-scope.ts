@@ -70,6 +70,39 @@ export function postApprovalExpensesInScope(
 }
 
 /**
+ * 축이 바뀌어 **범위 밖으로 나간 재개발 필드**를 비우는 patch (2026-09-05 · 코드리뷰 Q20).
+ *
+ * ## 왜 필요한가 — 마이그레이션만으로는 세션 안에서 늦다
+ *
+ * `calc-wizard-asset-migrate.ts`가 같은 정리를 하지만 그것은 **저장값 재수화 시점**에만
+ * 돈다. 사용자가 지금 축을 바꾸면(청산금 방향 수령→납부, 원조합원→승계조합원) 카드가
+ * 화면에서 사라지는데 값은 남고, ⑧ validate가 그 값을 근거로 차단한다 —
+ * **채울 칸 없는 영구 차단**이다(memory `feedback_ui_gate_removes_sole_input_path`).
+ * 새로고침해야 정상화되는 상태가 된다.
+ *
+ * ⇒ 축을 쓰는 onChange가 **같은 patch 문장에서** 이 함수의 결과를 함께 편다.
+ *   ⚠️ 두 키를 따로 patch하면 stale spread로 뒤엣것이 앞엣것을 덮는다
+ *      (memory `feedback_multikey_patch_stale_spread_overwrite`).
+ *
+ * @param next 축 변경이 **이미 반영된** 자산 (`{ ...asset, ...patch }`)
+ */
+export function clearOutOfScopeRedevPatch(next: AssetForm): Partial<AssetForm> {
+  const patch: Partial<AssetForm> = {};
+
+  if (!exemptionAtApprovalInScope(next)) {
+    if (next.redevExemptionEligibleAtApproval) patch.redevExemptionEligibleAtApproval = "";
+    // 같은 카드(③-c) 안의 부속 입력이다 — 축을 벗어나면 함께 지운다. 종전에는 자기선언만
+    // 비우고 이 둘을 남겨, 토글 ON + 종료일 공란이면 ⑧이 영구 차단했다.
+    if (next.redevPostApprovalHousingUse) patch.redevPostApprovalHousingUse = "";
+    if (next.redevPostApprovalHousingUseEndDate) patch.redevPostApprovalHousingUseEndDate = "";
+  }
+  if (!postApprovalExpensesInScope(next) && next.redevPostApprovalExpenses) {
+    patch.redevPostApprovalExpenses = "";
+  }
+  return patch;
+}
+
+/**
  * 「청산금 수령분 **단독 신고**」인가 — ④ API 변환·⑥ 사이드바 공용 술어 (C1-05).
  *
  * 이 모드에서는 **신고 단위가 청산금 수령액**이고 양도일이 소유권이전 고시일이다.
