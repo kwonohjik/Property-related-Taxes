@@ -40,8 +40,8 @@ test.describe("양도세 사이드바 — 자산별 요약 + 안분 양도가액
     // 함께 양도 토글 → 자산 2건 자동 생성
     await page.getByRole("switch", { name: /함께 파셨나요/ }).click();
     await expect(page.locator('[data-asset-card-index]')).toHaveCount(2);
-    // 안분(기준시가 비율) 모드가 기본 노출
-    await expect(page.getByRole("button", { name: /안분/ })).toBeVisible();
+    // 안분(기준시가 비율) 모드가 기본 노출 — §166⑥ 토글은 RadioCardGroup(role=radio)
+    await expect(page.getByRole("radio", { name: /안분/ })).toBeChecked();
 
     const aside = page.locator('[data-slot="wizard-sidebar"]');
 
