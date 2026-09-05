@@ -431,6 +431,8 @@ export interface AggregateTransferResult {
   settlementRefund: number;
   /** 지방 이번 납부할세액 = max(0, localIncomeTax − priorPaidLocalTax) */
   settlementLocalPayable: number;
+  /** 지방 환급 = max(0, priorPaidLocalTax − localIncomeTax). 국세 `settlementRefund`와 대칭 (Q27) */
+  settlementLocalRefund: number;
   /** 최종 납부할세액 = settlementAdditionalPayable + settlementLocalPayable */
   settlementTotalDue: number;
 

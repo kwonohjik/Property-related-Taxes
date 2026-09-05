@@ -192,6 +192,25 @@ export function MultiTransferTaxSummaryCard({
         {/* 15~16. 지방세 */}
         <ResultRow label="지방세 결정세액" value={result.localIncomeTax} />
         <ResultRow label="지방세 기납부 세액" value={-priorPaidLocalTax} />
+        {/*
+          🔴 종전에는 지방세 정산 **결과 행 자체가 없었다** (Q27). 결정세액과 기납부만 나열해
+             기납부가 결정세액을 넘어도 환급이라는 사실이 어디에도 남지 않았다.
+             국세(바로 위)와 같은 규약으로 편다 — 엔진이 `settlementLocalRefund`를 대칭으로 싣는다.
+             (옛 저장 결과(IndexedDB)에는 신규 필드가 없다 — null 가드 필수.)
+        */}
+        {(result.settlementLocalRefund ?? 0) > 0 ? (
+          <ResultRow
+            label="환급세액 (지방소득세)"
+            value={result.settlementLocalRefund}
+            highlight
+          />
+        ) : (
+          <ResultRow
+            label="이번에 납부할 지방소득세"
+            value={result.settlementLocalPayable}
+            highlight
+          />
+        )}
 
         {/**
          * 농어촌특별세 — 「농어촌특별세법」 §5①1호(조특법 감면세액 × 20%).

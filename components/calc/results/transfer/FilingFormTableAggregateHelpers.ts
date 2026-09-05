@@ -391,9 +391,28 @@ export function buildAggregateRows(
   setNum("localDeterminedTax", "total", aggregated.localIncomeTax);
   // 기납부·차감납부 (§111③ 예정신고 정산) — 합계 열만. MultiTransferTaxSummaryCard와 동일 엔진 필드(절대값).
   setNum("priorPaidTax", "total", aggregated.priorPaidTax);
-  setNum("deductedPayable", "total", aggregated.settlementAdditionalPayable);
+  /**
+   * 🔴 「차감납부할세액(환급세액)」은 **부호 있는 한 칸**이다 (Q27 · 별지 제84호서식).
+   *
+   * 종전에는 `settlementAdditionalPayable`만 실었는데 그 필드는 `max(0, …)`로 clamp된다 —
+   * 기납부세액이 결정세액을 넘으면 **환급액이 표에서 통째로 사라졌다**. 표만 인쇄한 서식에는
+   * 환급이 있다는 사실 자체가 남지 않는다.
+   *
+   * 서식 원형이 한 칸이므로 행을 늘리지 않고 부호로 표현한다(음수 = 환급).
+   * 두 필드 중 하나는 항상 0이라 뺄셈이 곧 부호 있는 정산액이다.
+   */
+  setNum(
+    "deductedPayable",
+    "total",
+    aggregated.settlementAdditionalPayable - aggregated.settlementRefund,
+  );
   setNum("priorPaidLocalTax", "total", aggregated.priorPaidLocalTax);
-  setNum("deductedLocalPayable", "total", aggregated.settlementLocalPayable);
+  // 지방소득세도 같은 규약 — 엔진이 국세와 대칭으로 `settlementLocalRefund`를 싣는다.
+  setNum(
+    "deductedLocalPayable",
+    "total",
+    aggregated.settlementLocalPayable - (aggregated.settlementLocalRefund ?? 0),
+  );
 
   const acqDateRowLabel = acquisitionDateLabel
     ? `취득일자 ${acquisitionDateLabel}`
@@ -437,13 +456,13 @@ export function buildAggregateRows(
     ["penaltyTax", "가산세액"],
     ["totalDeterminedTax", "총결정세액", { highlight: true }],
     ["priorPaidTax", "기납부세액 (예정신고, §111③)"],
-    ["deductedPayable", "차감납부할세액", { highlight: true, separatorAfter: true }],
+    ["deductedPayable", "차감납부할세액(환급세액)", { highlight: true, separatorAfter: true }],
     ["ruralSurtax", "농어촌특별세"],
     ["localCalculatedTax", "지방소득세 산출세액"],
     ["localReduction", "지방세 감면세액"],
     ["localDeterminedTax", "지방세 결정세액", { highlight: true }],
     ["priorPaidLocalTax", "기납부세액 (지방, 예정신고)"],
-    ["deductedLocalPayable", "차감납부할 지방소득세", { highlight: true }],
+    ["deductedLocalPayable", "차감납부할 지방소득세(환급세액)", { highlight: true }],
   ];
 
   return rowOrder.map(([key, label, opts]) => ({
