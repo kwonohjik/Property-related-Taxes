@@ -462,8 +462,11 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         // P1 §98의8 준공후미분양 50% (2026-06-11): 계약일·취득가·면적·임대개시일 필수 (⑧).
         // 자격 토글 3종은 차단하지 않음 — 엔진 불적용 사유 (낙관 입력 패턴).
         if (r.type === "unsold_98_8") {
-          if (!r.contractDate988)
-            return fail("§98의8 적용: 최초 매매계약일을 입력하세요.");
+          // ⑧ 자산-수준 `assetContractDate` fallback — §99의3(:188)과 **같은 규약**이다 (Q15).
+          //    엔진도 같은 fallback을 읽으므로(income-deduction-router `evalUnsold988`) 3중이 맞는다.
+          //    종전에는 여기만 조문 전용 필드를 요구해 **같은 날짜를 두 번** 입력해야 했다.
+          if (!(r.contractDate988 || asset.assetContractDate))
+            return fail("§98의8 적용: 최초 매매계약일을 펼침 영역 상단에 입력하세요.");
           if (parseAmount(r.acquisitionPrice988 || "0") <= 0)
             return fail("§98의8 적용: 취득가액을 입력하세요.");
           if (!(parseDecimal(r.exclusiveAreaSqm988 || "") > 0))

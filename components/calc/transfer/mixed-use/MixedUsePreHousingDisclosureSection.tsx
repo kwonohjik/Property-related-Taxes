@@ -18,6 +18,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ThreePointStandardPriceInput } from "../ThreePointStandardPriceInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { isMixedUseCaseA } from "@/lib/calc/mixed-use-case";
 import { derivePhdResidentialLandArea } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import { residualArea } from "@/lib/tax-engine/area-utils";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
@@ -61,17 +62,21 @@ export function MixedUsePreHousingDisclosureSection({
     !!asset.partialChangeDirection &&
     !!asset.partialChangeDate;
 
-  // PHD §164⑦ Case A 식별 — 최초공시일 < 용도변경일 (전체 건물이 주택이었던 시점)
-  // Case A: 취득시·최초공시 시점 입력란은 "전체 건물 기준시가" 의미 (주택+상가 합계 = 그 시점엔 모두 주택)
-  // Case B: 모든 시점이 겸용 상태 → "주택분만" 의미 (현재 로직)
-  const isCaseA = useMemo(() => {
-    if (!hasUsageChange) return false;
-    if (!asset.phdFirstDisclosureDate || !asset.partialChangeDate) return false;
-    const firstDate = new Date(asset.phdFirstDisclosureDate);
-    const ucDate = new Date(asset.partialChangeDate);
-    if (Number.isNaN(firstDate.getTime()) || Number.isNaN(ucDate.getTime())) return false;
-    return firstDate < ucDate;
-  }, [hasUsageChange, asset.phdFirstDisclosureDate, asset.partialChangeDate]);
+  /**
+   * PHD §164⑦ Case A 식별 — **정본 헬퍼를 쓴다** (2026-09-05 · 코드리뷰 Q04).
+   *
+   * 🔴 종전에는 이 자리에 판정을 복제해 두고 **`partialChangeDirection`을 보지 않았다**.
+   *   그래서 「상가 → 주택」을 고른 사용자에게도 4부분 분리 입력이 뜨고, 안내문은
+   *   「취득시 전체가 주택이었다」로 **사실과 정반대**를 설명했다. 정본 헬퍼
+   *   `isMixedUseCaseA`·Legacy 판정·⑧ validate 셋은 이미 `house_to_commercial`을 요구한다 —
+   *   이 파일만 보지 않았다.
+   *
+   * ⚠️ 방향 제한의 근거는 **조문이 아니라 엔진의 Case A 모델**이다(취득시 전체 주택 →
+   *   양도시 일부 상가). 영 §166⑥은 위임 끝(부가가치세법 시행령 §64①)까지 따라가도 방향을
+   *   가리지 않고, 애초에 토지↔건물 **2분할** 규정이다 — 「주택분/상가분 × 토지/건물」 4분할은
+   *   §89①3호·§154③이 만드는 별개 축이다(A축 Q04 조문 확인 결과).
+   */
+  const isCaseA = useMemo(() => isMixedUseCaseA(asset), [asset]);
 
   // 개별주택가격·토지 공시지가는 useEffect로 store 업데이트하지 않음 (무한 루프 방지).
   // 표시는 ThreePointStandardPriceInput에 mixed 값을 직접 전달, API는 fallback으로 처리.

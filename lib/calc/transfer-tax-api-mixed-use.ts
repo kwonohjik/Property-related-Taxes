@@ -10,6 +10,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { isMixedUseCaseA } from "./mixed-use-case";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
@@ -181,7 +182,15 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
             // Case A 4부분 안분 — 취득시·최초공시 상가건물 기준시가 + 총양도가액 함께 충족 시 활성화.
             // 취득시 상가건물은 메인 mixedAcqCommercialBuildingPrice fallback 인식 (UI 통합 후 단일 필드).
             // 최초공시 상가건물은 PHD-only 필드 (일반 겸용주택 흐름에 없음).
-            ...((parseAmount(primary.phdCommercialBuildingStdPriceAtAcq) ||
+            //
+            // 🔴 **방향 게이트를 함께 건다** (2026-09-05 · 코드리뷰 Q04). 종전에는 이 활성 조건이
+            //    「그 칸이 채워졌는가」뿐이라, 사용자가 값을 남겨 두기만 하면 **세액 산식이 갈렸다**.
+            //    ⑤가 방향을 보지 않고 칸을 열어 주던 탓에 「상가 → 주택」에서도 채울 수 있었고,
+            //    ⑧은 그 방향에서 그 값을 요구하지도 않는다. ⑤를 정본 술어로 고치면 칸은 사라지지만
+            //    **값은 남으므로** 여기서도 같은 술어로 막아야 한다(Q20과 같은 규약 —
+            //    「범위 밖이면 보내지 않는다」).
+            ...(isMixedUseCaseA(primary) &&
+                (parseAmount(primary.phdCommercialBuildingStdPriceAtAcq) ||
                  parseAmount(primary.mixedAcqCommercialBuildingPrice)) > 0 &&
                 parseAmount(primary.phdCommercialBuildingStdPriceAtFirst) > 0
               ? {

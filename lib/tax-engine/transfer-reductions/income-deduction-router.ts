@@ -316,7 +316,18 @@ function evalUnsold988(
     const detail = evaluateUnsold988({
       transferDate: ctx.transferDate,
       acquisitionDate: ctx.acquisitionDate,
-      contractDate: coerceOptionalDate(r988.contractDate988 as Date | string | undefined),
+      /**
+       * 🔴 **자산-수준 매매계약일 fallback을 여기만 빠뜨리고 있었다** (2026-09-05 · 코드리뷰 Q15).
+       *
+       * 감면 그룹 상단의 자산-수준 「매매계약일」(`assetContractDate`)은 「신축·미분양·임대 감면
+       * 시한 판정의 1차 기준」이라고 화면이 안내하고, §99의3(:240)·§99(:283)는 그 값을 fallback으로
+       * 읽는다. 그런데 §98의8만 조문 전용 필드(`contractDate988`)만 봐서, 사용자는 **같은 날짜를
+       * 두 번** 입력해야 했다. ⑧만 완화하면 계약일 없이 통과해 **조용히 감면 미적용**이 된다
+       * ⇒ 엔진에 fallback을 넣고 ⑧을 같은 술어로 맞춘다(3중 패턴).
+       */
+      contractDate:
+        coerceOptionalDate(r988.contractDate988 as Date | string | undefined) ??
+        ctx.assetContractDate,
       acquisitionPrice: r988.acquisitionPrice988 as number | undefined,
       exclusiveAreaSqm: r988.exclusiveAreaSqm988 as number | undefined,
       rentalContractDate: coerceOptionalDate(r988.rentalContractDate988 as Date | string | undefined),
