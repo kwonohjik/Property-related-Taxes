@@ -15,7 +15,7 @@ import { AmendmentResultCard } from "@/components/calc/results/transfer/Amendmen
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
 import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
-import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
+import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
@@ -131,7 +131,6 @@ interface Props {
   onReset: () => void;
   onBack: () => void;
   onGoToFirst?: () => void;
-  onLoginPrompt?: boolean;
   showMultiTransferButton?: boolean;
   onContinueToMulti?: () => void;
   formData?: TransferFormData;
@@ -169,7 +168,6 @@ export function TransferTaxResultView({
   onReset,
   onBack,
   onGoToFirst,
-  onLoginPrompt = false,
   showMultiTransferButton = false,
   onContinueToMulti,
   formData,
@@ -712,12 +710,11 @@ export function TransferTaxResultView({
       <DisclaimerBanner />
 
       {/* 비로그인 안내 */}
-      {onLoginPrompt && (
-        <div className="print:hidden">
-          <LoginPromptBanner hasPendingResult />
-        </div>
-      )}
-
+      {/* ⛔ 로그인 안내 배너를 되살리지 말 것 (2026-09-05 · 코드리뷰 Q30).
+          「로그인하면 이력 저장·PDF 가능」은 **사실이 아니다** — 이력은 로컬 IndexedDB로
+          일원화됐고(`proxy.ts:4`에서 /api/history 보호 라우트 제거), PDF는 클라이언트에서
+          생성한다(같은 화면의 PDF 버튼이 비로그인에서도 동작한다). 로그인이 실제로 무엇을
+          더 주는지가 생기면 그때 그 사실을 쓴다. `onLoginPrompt` prop도 함께 제거했다. */}
       {/* 하단 버튼 — 입력 단계 네비와 통일 (컴팩트 nav + 글자폭 CTA) */}
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <div className="flex items-center gap-2">
@@ -727,10 +724,13 @@ export function TransferTaxResultView({
           <NavButton direction="prev" label="이전" onClick={onBack} />
         </div>
         <div className="flex items-center gap-2">
-          <CtaButton onClick={onReset}>다시 계산하기</CtaButton>
+          {/* 폐기(확인 필수)와 복귀를 라벨대로 분리 — Q25. 「다시 계산하기」는 규약(CLAUDE.md:13)
+              대로 마지막 입력 단계 복귀이고, 전체 초기화는 아래 전용 버튼이 확인을 받고 수행한다. */}
+          <RestartFromScratchButton onReset={onReset} />
           {showMultiTransferButton && onContinueToMulti && (
             <CtaButton tone="outline" onClick={onContinueToMulti}>동일연도 다른 양도건</CtaButton>
           )}
+          <CtaButton onClick={onBack}>다시 계산하기</CtaButton>
         </div>
       </div>
     </div>

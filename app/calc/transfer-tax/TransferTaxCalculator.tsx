@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { useCalcWizardStore, createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
-import { useMultiTransferStore, generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
+import { useMultiTransferStore, generatePropertyId, multiStoreHasUserWork } from "@/lib/stores/multi-transfer-tax-store";
 import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { StepIndicator } from "@/components/calc/StepIndicator";
@@ -30,6 +30,8 @@ import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
+import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Step1 } from "./steps/Step1";
 import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
@@ -61,31 +63,41 @@ export default function TransferTaxCalculator({
   // 검증 실패 자산 인덱스 — Step1 자산 카드 인라인 에러 + 자동 스크롤 대상 (step 0 한정)
   const [errorAssetIndex, setErrorAssetIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [penaltyResult, setPenaltyResult] = useState<TransferTaxPenaltyResult | null>(null);
   const [isPenaltyLoading, setIsPenaltyLoading] = useState(false);
   /** 가산세 계산하기로 얻은 결정세액 — unpaidTax 자동 계산용 */
   const [calcDeterminedTax, setCalcDeterminedTax] = useState<number | null>(null);
+  /**
+   * Q28 — 이 세션이 만든 「단건 자동 백업」의 propertyId.
+   *
+   * 다건 store에 들어 있는 1건이 **사용자가 다건에서 직접 만든 것**인지, 직전 단건 계산이
+   * 자동으로 넣어 둔 백업인지 가르는 유일한 신호다. 새로고침하면 ref가 비므로 그 뒤로는
+   * 덮어쓰지 않는다 — 안전측(사용자 입력 보존)으로 기운다.
+   */
+  const autoBackupPropertyIdRef = useRef<string | null>(null);
+
+  /** 다건 store에 **사용자 실입력**이 들어 있는가 (덮어쓰면 데이터 손실이 나는가). */
+  const multiHasUserWork = useCallback(
+    () =>
+      multiStoreHasUserWork(
+        useMultiTransferStore.getState().form.properties,
+        autoBackupPropertyIdRef.current,
+      ),
+    [],
+  );
+
+  /** 「동일연도 다른 양도건」이 다건 작업을 지우기 전 폐기 확인 (Q28) */
+  const [discardMultiOpen, setDiscardMultiOpen] = useState(false);
+
   const perAssetSummary = useMemo(
     () => computeTransferPerAssetSummary(formData, result),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [formData.assets, formData.contractTotalPrice, formData.bundledSaleMode, result]
   );
 
-  // 로그인 상태 확인 (클라이언트 사이드)
-  useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
-    import("@/lib/supabase/client").then(({ createClient }) => {
-      const supabase = createClient();
-      supabase.auth.getUser().then(({ data }) => {
-        setIsLoggedIn(!!data.user);
-      });
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-        setIsLoggedIn(!!session?.user);
-      });
-      return () => subscription.unsubscribe();
-    });
-  }, []);
+  // ⛔ 로그인 상태 구독을 되살리지 말 것 (2026-09-05 · Q30) — 이 화면에서 로그인 여부로
+  //    갈리는 동작이 **하나도 없다**. 유일한 소비처였던 결과 화면 로그인 안내 배너를 제거하면서
+  //    함께 지웠다(이력은 로컬 IndexedDB, PDF는 클라이언트 생성 — 배너 문구가 사실과 달랐다).
 
   const totalSteps = STEPS.length;
   const isLastStep = currentStep === totalSteps - 1;
@@ -223,7 +235,12 @@ export default function TransferTaxCalculator({
       // 단건 계산 완료 시 multi-store.properties[0]에 자동 백업.
       // 사용자가 이후 "동일연도 다른 양도건 계산하기"를 눌러도, 또는 직접 /multi로 이동해도 자산1 데이터가 보존된다.
       // 다건 임베드(isEmbeddedInMulti)일 때는 multi 흐름이 이미 properties를 관리하므로 백업하지 않는다.
-      if (!isEmbeddedInMulti) {
+      //
+      // 🔴 Q28 — 종전에는 `multiStore.reset()`을 **무조건** 불렀다. 다건에서 자산 3건을 입력해
+      //    두고(계산 전) 단건에서 「세금 계산하기」를 한 번 누르면 그 3건이 경고·확인 없이
+      //    전부 사라졌다. 백업의 편의가 사용자 실입력보다 우선할 수는 없다.
+      //    ⇒ **비어 있거나, 지금 이 세션이 만든 백업일 때만** 덮어쓴다.
+      if (!isEmbeddedInMulti && !multiHasUserWork()) {
         const multiStore = useMultiTransferStore.getState();
         const completion = calcPropertyCompletion(formData);
         const newItem = {
@@ -234,6 +251,7 @@ export default function TransferTaxCalculator({
         };
         multiStore.reset();
         multiStore.addProperty(newItem);
+        autoBackupPropertyIdRef.current = newItem.propertyId;
         if (formData.transferDate) {
           const year = parseInt(formData.transferDate.slice(0, 4), 10);
           if (!Number.isNaN(year)) multiStore.setForm({ taxYear: year });
@@ -287,7 +305,7 @@ export default function TransferTaxCalculator({
   // 단건 결과 화면의 "동일연도 다른 양도건 계산하기" 버튼 핸들러.
   // 단건 입력값을 다건 store의 자산1로 이전하고 빈 자산2를 추가한 뒤 다건 페이지로 이동.
   // 자산1은 보존되며 사용자는 곧장 자산2 입력으로 넘어간다.
-  const handleContinueToMulti = useCallback(() => {
+  const performContinueToMulti = useCallback(() => {
     const multiStore = useMultiTransferStore.getState();
     const wizardStore = useCalcWizardStore.getState();
 
@@ -326,6 +344,19 @@ export default function TransferTaxCalculator({
 
     router.push("/calc/transfer-tax/multi");
   }, [formData, router]);
+
+  /**
+   * Q28 — 이 경로도 `multiStore.reset()`으로 다건 작업을 통째로 지운다. 단건 백업과 달리
+   * 사용자가 **명시적으로 누른** 버튼이므로 차단하지 않고 폐기 확인만 받는다.
+   * (window.confirm 금지 — 메모리 `feedback_dialog_data_discard_confirm`)
+   */
+  const handleContinueToMulti = useCallback(() => {
+    if (multiHasUserWork()) {
+      setDiscardMultiOpen(true);
+      return;
+    }
+    performContinueToMulti();
+  }, [multiHasUserWork, performContinueToMulti]);
 
   const stepComponentsAll = [
     <Step1
@@ -481,6 +512,17 @@ export default function TransferTaxCalculator({
 
       <SaveToast message={saveMessage} onClose={() => setSaveMessage(null)} />
 
+      {/* Q28 — 「동일연도 다른 양도건」이 작업 중인 다건 세션을 지우기 전 확인 */}
+      <ConfirmDialog
+        open={discardMultiOpen}
+        onOpenChange={setDiscardMultiOpen}
+        title="작업 중인 동일연도 합산 입력을 지울까요?"
+        description="동일연도 합산에 입력해 둔 양도 건이 모두 삭제되고, 지금 계산한 건이 「양도 1번」이 됩니다. 이 동작은 되돌릴 수 없습니다."
+        confirmLabel="삭제하고 이동"
+        destructive
+        onConfirm={performContinueToMulti}
+      />
+
       {isResult && result ? (
         result.mode === "single" ? (
           <>
@@ -496,7 +538,6 @@ export default function TransferTaxCalculator({
                 setStep(0);
                 clearError();
               }}
-              onLoginPrompt={!isLoggedIn}
               showMultiTransferButton={!isEmbeddedInMulti}
               onContinueToMulti={handleContinueToMulti}
               formData={formData}
@@ -518,13 +559,10 @@ export default function TransferTaxCalculator({
                   label="이전 (가산세)"
                   onClick={() => { setStep(totalSteps - 1); clearError(); }}
                 />
-                <button
-                  type="button"
-                  className="rounded-lg border border-destructive/50 px-5 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors"
-                  onClick={handleReset}
-                >
-                  초기화
-                </button>
+                {/* Q25 ② — 종전에는 native 버튼이 **확인 없이** 전체 입력을 지웠다
+                    (sessionStorage까지 갱신되어 되돌릴 수 없다). 다른 결과뷰와 같은 공용
+                    컴포넌트로 통일한다. */}
+                <RestartFromScratchButton onReset={handleReset} />
               </div>
             </div>
           </div>

@@ -2,6 +2,7 @@
 
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -524,7 +525,11 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           <HomeButton />
           {onBack && <NavButton direction="prev" label="이전 화면" onClick={onBack} />}
         </div>
-        {onReset && <CtaButton onClick={onReset}>다시 계산하기</CtaButton>}
+        {/* 폐기(확인 필수)와 복귀를 라벨대로 분리 — Q25 (단건 결과뷰와 동일 규약). */}
+        <div className="flex items-center gap-2">
+          {onReset && <RestartFromScratchButton onReset={onReset} />}
+          {onBack && <CtaButton onClick={onBack}>다시 계산하기</CtaButton>}
+        </div>
       </div>
     </div>
   );

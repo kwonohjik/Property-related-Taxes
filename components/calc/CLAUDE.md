@@ -11,6 +11,7 @@ Layer 1의 프런트엔드 측. 마법사(StepWizard) 기반 폼 + 결과 화면
 - 모든 단계에 **뒤로가기 + 다음 버튼 필수**.
 - 1단계 뒤로가기 = 홈(`/`) 으로 이동.
 - 결과 화면의 "다시 계산하기" 는 마지막 입력 단계(감면/가산세 등)로 복귀 (첫 화면 아님).
+- **전체 초기화는 그 라벨에 달지 않는다** — `<RestartFromScratchButton>`(「처음부터 새로」 + 폐기 확인 Dialog) 전용이다. 2026-09-05까지 양도세 결과뷰 3곳이 "다시 계산하기"·native "초기화"에 `onReset`을 달아 **확인 없이** 전체 입력을 지웠다(sessionStorage까지 갱신 — 되돌릴 수 없다). `window.confirm` 금지(메모리 `feedback_dialog_data_discard_confirm`).
 
 ### Step 파일 분리 규칙 (2026-04 리팩터링 후)
 
