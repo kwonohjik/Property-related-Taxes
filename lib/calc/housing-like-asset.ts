@@ -48,3 +48,37 @@ export const HOUSING_LIKE_ASSET_KINDS: ReadonlySet<string> = new Set([
 export function isHousingLike(kind: AssetForm["assetKind"] | string | undefined): boolean {
   return kind !== undefined && HOUSING_LIKE_ASSET_KINDS.has(kind);
 }
+
+/**
+ * 「이 자산이 §154① **1세대1주택 비과세 판정**을 받는가」 — ⑤ 렌더 게이트 전용.
+ *
+ * ## `isHousingLike`와 다르다 (2026-09-05)
+ *
+ * `isHousingLike`는 「세대 주택 목록을 입력받을 자산인가」(4종)이고, 이 술어는
+ * 「§154① 보유·거주 요건 판정을 받는 자산인가」(2종)다. 조합원입주권·분양권이 빠진다.
+ *
+ * | 자산 | §154① 판정 | 근거 |
+ * |---|---|---|
+ * | `housing` | ✅ | 법 §89①3호가목 → 영 §154① |
+ * | `redevelopment_apt` | ✅ | 재개발 신축주택은 §94①1호 「건물」이자 §89①3호가목의 「주택」. `checkExemption` 경계에서 `housing`으로 번역된다(`transfer-tax.ts:196~200` 주석) |
+ * | `right_to_move_in` | ❌ | 비과세는 법 §89①**4호**. 「인가일 현재 §89①3호가목에 해당하는 **기존주택** 소유」 요건이고, 엔진은 그 판정을 `exemptionEligibleAtApproval` **자기선언**으로 받는다(`transfer-tax-redevelopment-transforms.ts:467`) — 이 자산의 조정대상지역 토글이 필요 없다 |
+ * | `presale_right` | ❌ | 법 §89①4호가 **조합원입주권만** 열거한다. 분양권은 §89②에서 주택 비과세를 **방해하는 요소**로만 다뤄진다 |
+ *
+ * ## 🔴 넓히면 ④·엔진과 어긋난다
+ *
+ * ④(`transfer-tax-api.ts:399·401`)는 `residencePeriodMonths`·`wasRegulatedAtAcquisition`을
+ * **자산종류 게이트 없이** 보낸다. 즉 화면 게이트가 유일한 통제점이다 — 여기에 입주권·분양권을
+ * 넣으면 엔진이 §154① 요건을 안 보는 자산에 대해 사용자가 값을 채우게 되고, 그 값은
+ * 조용히 버려진다(memory `feedback_ui_gate_removes_sole_input_path`의 역방향).
+ */
+export const ONE_HOUSE_EXEMPTION_ASSET_KINDS: ReadonlySet<string> = new Set([
+  "housing",
+  "redevelopment_apt",
+]);
+
+/** §154① 비과세 판정 대상 자산인가 (⑤ 렌더 게이트 · 리셋 게이트 공용). */
+export function isOneHouseExemptionAsset(
+  kind: AssetForm["assetKind"] | string | undefined,
+): boolean {
+  return kind !== undefined && ONE_HOUSE_EXEMPTION_ASSET_KINDS.has(kind);
+}
