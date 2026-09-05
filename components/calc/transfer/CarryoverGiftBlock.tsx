@@ -170,6 +170,13 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
             value={c.donorAcquisitionCause}
             onChange={(v) => updateCarryover({ donorAcquisitionCause: v as CarryoverTaxationForm["donorAcquisitionCause"] })}
           />
+          {/* 이 값은 엔진에 전송되지 않는다(타입 JSDoc 참조) — 아래 ② 취득가액을 어떤 기준으로
+              채울지 알려 주는 안내 축이다. 상속·증여는 §163⑨가 실지거래가액을 의제한다. */}
+          <p className="text-xs text-muted-foreground">
+            {c.donorAcquisitionCause === "purchase"
+              ? "아래 ② 증여자 취득가액에 증여자의 실지거래가액을 입력하세요 (소득세법 §97①1호)."
+              : "상속·증여로 취득한 경우 증여자의 취득가액은 상속개시일·증여일 현재 「상속세 및 증여세법」 평가액입니다 (소득세법 시행령 §163⑨). 그 금액을 아래 ②에 입력하세요."}
+          </p>
         </div>
       </div>
 

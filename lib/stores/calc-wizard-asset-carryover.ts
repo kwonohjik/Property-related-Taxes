@@ -30,7 +30,18 @@ export interface CarryoverTaxationForm {
   giftRegistryDate: string;
   /** 증여자 취득일 (YYYY-MM-DD) — 보유기간·장기보유공제 기산일 §95④ */
   donorAcquisitionDate: string;
-  /** 증여자 취득원인 */
+  /**
+   * 증여자 취득원인 — **참고 표시 전용. ④·⑧·엔진 어디에도 전송되지 않는다.**
+   *
+   * 법령상으로는 경로가 갈린다: 법 §97의2①1호가 취득가액을 「증여자가 해당 자산을 취득할
+   * 당시의 **§97①1호에 따른 금액**」으로 정하고, 증여자가 상속·증여로 취득했다면 그 금액은
+   * 영 §163⑨(상속개시일·증여일 현재 상증법 평가액을 실지거래가액으로 의제)로 이어진다.
+   *
+   * 그런데 이 폼은 그 경로의 **결과**를 직접 받는다 — `donorAcquisitionPrice`(직접 입력)
+   * 또는 `estimationMode` 환산 3종. 사용자가 이미 산정한 금액이 들어오므로 엔진이 취득원인을
+   * 알 필요가 없다. ⇒ 배관하지 말 것. 사용자가 ② 취득가액을 어떤 기준으로 채울지 판단하는
+   * 데 쓰는 안내 축이다(UI hint 참조).
+   */
   donorAcquisitionCause: "purchase" | "inheritance" | "gift";
   /** 환산취득가 사용 여부 */
   useEstimatedAcquisition: boolean;
