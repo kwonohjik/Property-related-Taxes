@@ -18,6 +18,8 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
+import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
+import { derivePre1990PlainHousePhdLandPricePerSqmAtAcqString } from "@/lib/calc/transfer-pre1990-phd-bridge";
 
 // ─── Props ────────────────────────────────────────────────────────
 
@@ -71,6 +73,21 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
 
   // 건물 기준시가 계산기 모달 소재지 prefill — GeneralBuildingBlock 패턴 복제
   const stdPriceAddress = stdPriceAddressOf(asset);
+
+  /**
+   * 1990.8.30. 이전 취득 — 그날 이전에는 **개별공시지가가 고시되지 않았다**.
+   * 영 §164④ 등급가액 환산이 §164⑦ 분자의 「취득당시의 법 §99①1호 **가목**의 가액」을 채운다
+   * (법 §99③2호가 「…공시되기 전에 취득한 **토지 및 주택**」을 한 호에서 위임).
+   *
+   * ⚠️ 파생값은 **store에 쓰지 않는다** — 아래 `landPricePerSqmAtAcq`의 display fallback으로만
+   *    전달한다(useEffect→store 미러링 금지). ④·⑧도 **같은 함수**를 부른다(3중 패턴).
+   */
+  const acqDateForPre1990 = asset.landAcquisitionDate || asset.acquisitionDate;
+  const isPre1990Acq = !!acqDateForPre1990 && acqDateForPre1990 < "1990-08-30";
+  const pre1990DerivedPerSqm = derivePre1990PlainHousePhdLandPricePerSqmAtAcqString(
+    asset,
+    transferDate,
+  );
 
   return (
     <div className="space-y-4 rounded-md border border-primary/30 bg-primary/5 p-4">
@@ -171,6 +188,35 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
         <p className="text-xs font-semibold text-muted-foreground">
           3시점 기준시가 입력 — 토지 단위 공시지가(원/㎡) + 건물 기준시가(원)
         </p>
+        {/*
+          영 §164④ 토지등급가액 환산 — 1990.8.30. 이전 취득 주택 전용.
+          아래 3-시점 입력의 「취득시 공시지가」가 이 환산값으로 자동 채워진다.
+        */}
+        {isPre1990Acq && (
+          <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 dark:border-amber-800 dark:bg-amber-900/15">
+            <p className="mb-2 text-xs font-medium text-amber-700 dark:text-amber-300">
+              1990.8.30. 이전 취득 — 개별공시지가 고시 전이므로 토지등급가액으로 환산합니다
+              (소득세법 시행령 §164④).
+            </p>
+            <Pre1990LandValuationInput
+              form={{
+                pre1990Enabled: asset.pre1990Enabled,
+                pre1990PricePerSqm_1990: asset.pre1990PricePerSqm_1990,
+                pre1990PricePerSqm_atTransfer: asset.pre1990PricePerSqm_atTransfer,
+                pre1990Grade_current: asset.pre1990Grade_current,
+                pre1990Grade_prev: asset.pre1990Grade_prev,
+                pre1990Grade_atAcq: asset.pre1990Grade_atAcq,
+                pre1990GradeMode: asset.pre1990GradeMode,
+              }}
+              onChange={(patch) => onChange(patch)}
+              acquisitionArea={asset.acquisitionArea || undefined}
+              jibun={asset.addressJibun || undefined}
+              acquisitionDate={acqDateForPre1990 || undefined}
+              transferDate={transferDate}
+            />
+          </div>
+        )}
+
         <ThreePointStandardPriceInput
           jibun={asset.addressJibun || undefined}
           landArea={asset.acquisitionArea || undefined}
@@ -187,7 +233,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
           onLandPriceYearAtAcqChange={(year, isManual) =>
             onChange({ phdLandPriceYearAtAcq: year, phdLandPriceYearAtAcqIsManual: isManual })
           }
-          landPricePerSqmAtAcq={asset.phdLandPricePerSqmAtAcq}
+          landPricePerSqmAtAcq={asset.phdLandPricePerSqmAtAcq || pre1990DerivedPerSqm}
           onLandPricePerSqmAtAcqChange={(v) => onChange({ phdLandPricePerSqmAtAcq: v })}
           buildingStdPriceAtAcq={asset.phdBuildingStdPriceAtAcq}
           onBuildingStdPriceAtAcqChange={(v) => onChange({ phdBuildingStdPriceAtAcq: v })}

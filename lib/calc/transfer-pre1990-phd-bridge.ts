@@ -56,12 +56,25 @@ export function derivePhdResidentialLandArea(asset: AssetForm): number {
 export function derivePre1990PhdLandPricePerSqmAtAcq(
   asset: AssetForm,
   transferDate: string,
+  /**
+   * 면적(㎡) 주입 — **일반 주택 PHD 경로용**(2026-09-05).
+   *
+   * 미지정 시 겸용주택 주택부수토지 안분면적(`derivePhdResidentialLandArea`)을 쓴다.
+   * 일반 주택은 그 안분 축이 없으므로 `asset.acquisitionArea`를 넘긴다.
+   *
+   * ℹ️ **면적은 반환값에 영향이 없다.** `pricePerSqmAtAcquisition = floor(pricePerSqm_1990 ×
+   *    appliedRatio)`로 면적과 무관하고(`pre-1990-land-valuation.ts:287`), 면적은
+   *    `standardPriceAtAcquisition`(미반환)과 `areaSqm > 0` guard에만 쓰인다.
+   *    그래도 주입구를 여는 이유는 겸용 안분면적이 **0이면 guard에 걸려 null**이 되기 때문이다 —
+   *    일반 주택에서 겸용 면적을 쓰면 항상 0이라 환산이 통째로 죽는다.
+   */
+  areaSqmOverride?: number,
 ): number | null {
   const acqDate = asset.landAcquisitionDate || asset.acquisitionDate;
   const isPre1990 = !!acqDate && acqDate < "1990-08-30";
   if (!isPre1990 || !asset.pre1990Enabled || !transferDate) return null;
 
-  const area = derivePhdResidentialLandArea(asset);
+  const area = areaSqmOverride ?? derivePhdResidentialLandArea(asset);
   if (area <= 0) return null;
 
   const buildGrade = (raw: string | undefined): LandGradeInput | undefined => {
@@ -101,7 +114,42 @@ export function derivePre1990PhdLandPricePerSqmAtAcq(
 export function derivePre1990PhdLandPricePerSqmAtAcqString(
   asset: AssetForm,
   transferDate: string,
+  areaSqmOverride?: number,
 ): string {
-  const v = derivePre1990PhdLandPricePerSqmAtAcq(asset, transferDate);
+  const v = derivePre1990PhdLandPricePerSqmAtAcq(asset, transferDate, areaSqmOverride);
+  return v !== null && v > 0 ? String(v) : "";
+}
+
+/**
+ * 일반 주택(비-겸용) PHD 경로 전용 래퍼 — 면적 소스가 `acquisitionArea`다.
+ *
+ * ## 왜 필요한가 (2026-09-05 · 코드리뷰 Q01)
+ *
+ * 1990.8.30. 이전에 취득한 주택의 §164⑦ 3-시점 환산은 분자에 「취득당시의 법 §99①1호
+ * **가목**의 가액」(=개별공시지가)을 요구하는데, 그날 이전에는 개별공시지가가 **고시되지
+ * 않았다**. 영 §164④가 바로 그 자리를 채우는 규정이고, 법 §99③2호는 「…공시되기 전에 취득한
+ * **토지 및 주택**의 취득 당시의 기준시가」를 한 호에서 위임한다.
+ *
+ * ⚠️ 「토지등급 환산은 `assetKind="land"` 전용」이라는 종전 규약 서술은 **오독**이다 —
+ *    §164④는 「가목 가액」의 정의이지 자산 종류 제한이 아니다. 이 저장소도 이미 겸용주택
+ *    (`assetKind="housing"`)에서 같은 브리지를 쓰고 있었다.
+ *
+ * 종전에는 이 경로가 없어 일반 주택 PHD가 **존재하지 않는 「취득시 개별공시지가」를 필수로
+ * 요구**했다(⑧ `transfer-tax-validate-acquisition.ts`) — 1990.8.30. 이전 취득 주택은 계산 불가.
+ */
+export function derivePre1990PlainHousePhdLandPricePerSqmAtAcq(
+  asset: AssetForm,
+  transferDate: string,
+): number | null {
+  const area = parseArea(asset.acquisitionArea);
+  return derivePre1990PhdLandPricePerSqmAtAcq(asset, transferDate, area);
+}
+
+/** 위 파생값을 폼 문자열로 — display fallback prop용. */
+export function derivePre1990PlainHousePhdLandPricePerSqmAtAcqString(
+  asset: AssetForm,
+  transferDate: string,
+): string {
+  const v = derivePre1990PlainHousePhdLandPricePerSqmAtAcq(asset, transferDate);
   return v !== null && v > 0 ? String(v) : "";
 }

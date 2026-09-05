@@ -55,7 +55,11 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 
 **감정가액 + 개산공제 자동 적용**: 엔진 `calcTransferGain`(`transfer-tax-helpers.ts`)이 `acquisitionMethod === "appraisal"` 시 자동으로 `취득시 기준시가 × 3%` 개산공제 적용 (소득세법 시행령 §163⑥).
 
-**1990 환산 표시 조건**: `assetKind === "land"` AND `acquisitionDate < "1990-08-30"` AND 환산취득가 모드. 토지 외 자산은 토지등급 환산 미적용 (법령상 토지 전용).
+**1990 환산 표시 조건**: `acquisitionDate < "1990-08-30"`인 **모든 토지 성분**에 적용된다 — `assetKind === "land"`(환산취득가 모드) · 겸용주택 PHD · 일반 주택 PHD(§164⑦) · 상속주택 평가 · 상가건물(§164⑥) · 일반건물.
+
+> 🔴 **「법령상 토지 전용」은 오독이었다** (2026-09-05 정정). 영 §164④는 「1990년 8월 30일 개별공시지가가 고시되기 전에 취득한 **토지의 취득당시의 기준시가**」를 정하는 규정, 즉 법 §99①1호 **가목의 가액**을 정의한다 — 자산 종류 제한이 아니다. 주택의 §164⑦ 산식 분자가 「취득당시의 법 §99①1호 **가목**의 가액과 나목의 가액의 합계액」을 요구하므로, 1990.8.30. 이전 취득 주택의 부수토지에도 §164④가 그 자리를 채운다. 상위 위임도 둘을 한 호에서 묶는다 — 법 §99③2호 「…공시되기 전에 취득한 **토지 및 주택**의 취득 당시의 기준시가」.
+>
+> 파생은 `lib/calc/transfer-pre1990-phd-bridge.ts` 단일 소스를 ④·⑤·⑧이 공유한다(3중 패턴). 컴포넌트에서 `useEffect → store`로 미러링하지 말 것 — display fallback으로만 전달한다.
 
 **sessionStorage 마이그레이션**: `lib/stores/calc-wizard-migration.ts`의 `migrateLegacyForm`이 legacy 폼-전역 13필드 → assets[0]로 자동 이전.
 
@@ -76,7 +80,7 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 | 신축·증축 입력 | `@/components/calc/transfer/SelfBuiltSection.tsx` | 자산-수준 4필드 (isSelfBuilt·buildingType·constructionDate·extensionFloorArea). `acquisitionCause === "purchase"` + housing/building 자산 전용. |
 | 감면 통합 패널 | `@/components/calc/transfer/UnifiedReductionPanel.tsx` | 5카테고리·24개 조문 통합 UI. standalone(자경·공익)=체크박스, 그룹(장기임대·신축·미분양)=펼침 헤더+라디오. 시한 외/미구현 항목 자동 disabled. Step5 내 `ReductionExpansion.tsx` 대체 (폐지). |
 | 감면 조문 PHD 환산 입력 | `@/components/calc/transfer/ReductionPhdInput.tsx` | 신축주택 감면 조문(§99의3 등)용 소득세법 시행령 §164⑦ 환산 위젯. 자산-수준 PHD와 별도 — 활성화는 수동 토글이며, 취득일 < 최초공시일이면 「환산 권장」 안내만 표시. |
-| 1990 환산 | `@/components/calc/inputs/Pre1990LandValuationInput.tsx` | 토지 자산 + acquisitionDate < 1990-08-30 시 자동 활성화. 자산-수준 props (`form` = `Pre1990FormSlice`). |
+| 1990 환산 | `@/components/calc/inputs/Pre1990LandValuationInput.tsx` | acquisitionDate < 1990-08-30 시 활성화 — **토지 자산 전용이 아니다**(주택 PHD·겸용·상속주택·상가건물도 소비). 자산-수준 props (`form` = `Pre1990FormSlice`). |
 | 주소 검색 | `@/components/ui/address-search.tsx` | Vworld 주소 검색 API. 조정대상지역·공시가격 조회에 필수 (지번 주소). |
 | 리셋 버튼 | `@/components/calc/shared/ResetButton.tsx` | 1단계에만 배치. 확인 다이얼로그 포함. |
 | 홈으로 버튼 | `@/components/calc/shared/HomeButton.tsx` (`HomeButton`) | 집 아이콘(`Home`) + `rounded-full` 테두리 pill 표준. **native `<Link href="/">`·`<button>` 홈링크·`ChevronLeft` 홈버튼 신규 작성 금지.** `variant`: `pill`(기본, 헤더·breadcrumb) / `block`(전체폭, `flex-1` 결과·에러 화면). `confirmMessage`(입력 이탈 확인)·`onBeforeNavigate`(stale 정리)·`label` prop. |

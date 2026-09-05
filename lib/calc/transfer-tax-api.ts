@@ -528,7 +528,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(parcelModeActive
       ? { parcels: buildParcelsPayload(primary.parcels, primaryFractional, primaryRatio) }
       : {}),
-    ...buildPreHousingDisclosurePayload(primary, isMixed),
+    ...buildPreHousingDisclosurePayload(primary, isMixed, form.transferDate),
     // ── landNature (토지 자산 성격 — 부수토지 vs 독립 나대지) ──
     // 폼 enum("appurtenant"/"standalone") → 엔진 enum("appurtenant_to_housing"/"non_appurtenant") 변환.
     // undefined이면 엔진에 전달하지 않음.
