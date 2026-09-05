@@ -75,12 +75,17 @@ function calcImputedPreview(fb: FamilyBusinessSlice): number {
   );
 }
 
-/** 적용률 문자열(%) → 0~1 소수 변환 (100% → 1.0) */
-function parseRateStr(val: string): number {
+/**
+ * 입력 중 draft 문자열 → **퍼센트 단위 숫자**(0~1 소수 아님). 파싱 불가면 null.
+ *
+ * ⚠️ **클램프하지 않는다** — 클램프는 포커스 아웃 시점의 일이다(Q13). 종전 `parseRateStr`는
+ *    매 타건마다 `n > 100 → 1`을 걸어, 「805」를 향해 치는 도중에 **100%로 확정**돼 버렸다.
+ *    (그 함수는 이 draft 방식으로 대체되어 소비처가 사라졌다.)
+ */
+function parseRatePercentDraft(val: string | null): number | null {
+  if (val === null) return null;
   const n = parseFloat(val.replace(/[^0-9.]/g, ""));
-  if (!isFinite(n) || n < 0) return 0;
-  if (n > 100) return 1;
-  return n / 100;
+  return isFinite(n) ? n : null;
 }
 
 /** 0~1 소수 → 백분율 문자열 (소수점 4자리까지, 불필요한 0 제거) */
@@ -94,6 +99,8 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
   const isOn = asset.familyBusinessInheritance !== undefined;
   const fb = asset.familyBusinessInheritance;
   const [lookupOpen, setLookupOpen] = useState(false);
+  /** 적용률 입력 중 draft — Q13. null이면 store 값을 그대로 표시한다. */
+  const [rateDraft, setRateDraft] = useState<string | null>(null);
 
   /** K10 prefill — 상속세 이력 modal 선택 콜백 */
   function handlePrefillFromHistory(prefill: FamilyBusinessInheritancePrefill) {
@@ -229,12 +236,46 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
             required
             hint="소령 §163의2③ — 개인가업: 공제금액 ÷ 가업상속 재산가액 / 법인가업: 사업관련자산가액 ÷ 총자산가액"
           >
-            <DecimalInput
-              unit="%"
-              value={toRateStr(fb.fbDeductionAppliedRate)}
-              onChange={(v) => patchFb({ fbDeductionAppliedRate: parseRateStr(v) })}
-              placeholder="적용률 (0~100)"
-            />
+            {/*
+              🔴 **소수점을 입력할 수 없었다** (2026-09-05 · 코드리뷰 Q13).
+
+              저장값이 0~1 소수라 매 타건마다 파싱(문자열→소수) →
+              `toRateStr`(소수→문자열) 왕복을 거쳤다. 「80.5」를 치려고 「80.」까지 가면
+              `parseFloat("80.") = 80` → `toRateStr(0.8) = "80"`이 되어 **찍은 소수점이
+              곧바로 지워졌다**. 게다가 「805」를 향해 치는 도중 `n > 100 → 1` 클램프가 걸려
+              **입력 중에 100%로 확정**됐다.
+
+              ⇒ 이 섹션 안에 **로컬 draft**를 둔다(1파일·범위 transfer·회귀 최소).
+                공용 `DecimalInput`을 건드리면 면적·연수 등 다수 소비처를 함께 흔들고,
+                폼 필드를 신설하면 이 하나를 위해 14지점을 여는 셈이 된다.
+
+              · 입력 중 — draft가 화면을 잡고, **범위 안(0~100)일 때만** store에 쓴다.
+              · 포커스 아웃 — 클램프해 확정한다(`onBlur`는 버블링되므로 래퍼에서 받는다.
+                공용 컴포넌트에 prop을 새로 뚫지 않는다).
+            */}
+            <div
+              onBlur={() => {
+                const n = parseRatePercentDraft(rateDraft);
+                if (n !== null) {
+                  patchFb({ fbDeductionAppliedRate: Math.min(Math.max(n, 0), 100) / 100 });
+                }
+                setRateDraft(null);
+              }}
+            >
+              <DecimalInput
+                unit="%"
+                value={rateDraft ?? toRateStr(fb.fbDeductionAppliedRate)}
+                onChange={(v) => {
+                  setRateDraft(v);
+                  const n = parseRatePercentDraft(v);
+                  // 범위 밖은 **쓰지 않는다** — 종전에는 여기서 100%로 확정돼 버렸다.
+                  if (n !== null && n >= 0 && n <= 100) {
+                    patchFb({ fbDeductionAppliedRate: n / 100 });
+                  }
+                }}
+                placeholder="적용률 (0~100)"
+              />
+            </div>
           </FieldCard>
 
           {/* ④ 상속개시일 */}

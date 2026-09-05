@@ -189,6 +189,39 @@ const EXCLUSION_REASON_LABELS: Record<string, string> = {
   family_business: "§97조의2 ④ — 가업상속공제 적용 자산",
 };
 
+/**
+ * 배제 사유별 **출처** — 사용자가 선언한 것인가, 엔진이 판정한 것인가 (2026-09-05 · 코드리뷰 Q19).
+ *
+ * 🔴 종전에는 배너가 사유와 무관하게 **전부 「사용자 선언」**이라 적었다. 기간 초과·관계 요건은
+ *   엔진이 날짜·관계로 **자동 판정**하는데도 사용자가 그렇게 선언한 것처럼 보였다.
+ *
+ * 귀속은 `transfer-tax-carryover-eligibility.ts`의 게이트 순서를 그대로 읽어 확정했다:
+ *
+ * | 사유 | 출처 | 근거 |
+ * |---|---|---|
+ * | `family_business` | **사용자 선언** | `exclusionDeclared.isFamilyBusinessInheritedAsset` (:73) |
+ * | `relation_invalid` | 엔진 자동 | `isCarryoverRelationExcluded(관계·사망·증여일)` (:76) |
+ * | `period_exceeded` | 엔진 자동 | `transferDate > 증여일 + 적용기간` (:79) |
+ * | `expropriation` | **사용자 선언** | `exclusionDeclared.expropriationWithin2Years` (:82) |
+ * | `one_house_exemption` | **둘 다** | 선언(:85) **또는** 엔진 자동(`transfer-tax-carryover.ts:502`) |
+ * | `tax_comparison` | 엔진 자동 | §97의2②3호 비교 (`:539`) — 배너 대상이 아니다 |
+ *
+ * ⚠️ **리뷰의 사실 오류를 정정한다** — 리뷰는 `family_business`를 「엔진 자동」이라 했으나
+ *    실제로는 **사용자 플래그**다(위 :73). 표를 코드로 확인하지 않고 고쳤다면 반대로 틀렸을 것이다.
+ *
+ * 🟠 `one_house_exemption`만 출처를 **가릴 수 없다** — 두 경로가 같은 값 하나를 공유하고,
+ *    `CarryoverTaxationDetail`에는 선언 여부 echo가 없다. 지어내지 않고 둘 다 적는다.
+ *    가르려면 엔진이 echo 필드를 실어야 한다(별건).
+ */
+const EXCLUSION_REASON_SOURCE: Record<string, string> = {
+  expropriation: "사용자 선언",
+  one_house_exemption: "사용자 선언 또는 엔진 자동 판정",
+  period_exceeded: "엔진 자동 판정",
+  relation_invalid: "엔진 자동 판정",
+  family_business: "사용자 선언",
+  tax_comparison: "엔진 자동 판정",
+};
+
 // ── 메인 컴포넌트 ────────────────────────────────────────────────
 
 interface Props {
@@ -231,7 +264,9 @@ export function CarryoverComparisonCard({ detail }: Props) {
       {/* 적용배제 배너 (배제 사유 있을 때) */}
       {!detail.isEligible && detail.exclusionReason && detail.exclusionReason !== "tax_comparison" && (
         <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs">
-          <p className="font-semibold text-amber-800 mb-0.5">이월과세 적용배제 — 사용자 선언</p>
+          <p className="font-semibold text-amber-800 mb-0.5">
+            이월과세 적용배제 — {EXCLUSION_REASON_SOURCE[detail.exclusionReason] ?? "판정 결과"}
+          </p>
           <p className="text-amber-700">{EXCLUSION_REASON_LABELS[detail.exclusionReason] ?? detail.exclusionReason}</p>
           <p className="text-amber-600 mt-1">→ 일반 양도소득세 계산 적용</p>
         </div>
