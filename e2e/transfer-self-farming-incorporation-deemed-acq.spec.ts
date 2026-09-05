@@ -36,7 +36,7 @@ test.describe("자경 §66 편입 — 의제취득 취득시 기준시가 읽기
     await inputByLabel(page, "양도가액 (원)").fill("826000000");
 
     // 취득원인 매매 → 취득일 1984 (앱이 1985-01-01로 클램핑 = 의제취득)
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByLabel("연도", { exact: true }).nth(2).fill("1984");
     await page.getByLabel("월", { exact: true }).nth(2).fill("06");
     await page.getByLabel("일", { exact: true }).nth(2).fill("01");

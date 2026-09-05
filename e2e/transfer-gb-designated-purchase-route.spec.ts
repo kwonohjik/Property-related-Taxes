@@ -41,7 +41,7 @@ test.describe("§77의3 매수 경로 축", () => {
       .first()
       .fill("2000000000");
 
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByLabel("연도", { exact: true }).nth(2).fill("2000");
     await page.getByLabel("월", { exact: true }).nth(2).fill("01");
     await page.getByLabel("일", { exact: true }).nth(2).fill("01");

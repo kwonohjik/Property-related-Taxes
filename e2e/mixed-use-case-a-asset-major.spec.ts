@@ -42,7 +42,7 @@ test.describe("겸용주택 Case A — 자산-우선 전치", () => {
     });
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
     await fillDateExact(page.locator('[data-asset-card-index="0"] [data-asset-section="3"]'), {
       year: "2010",

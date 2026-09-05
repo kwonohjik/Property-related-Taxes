@@ -49,7 +49,7 @@ test.describe("겸용주택 자산-우선 — 상가건물 통합 모달", () =>
     await page.getByRole("switch", { name: "겸용주택 분리계산" }).click();
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
     // ⚠️ `acq-date-building` 스코프 필수 — 겸용주택은 분리 모드가 강제 ON이라 취득일이
     //    `[토지 | 건물]` 2열이고, 섹션 스코프 + `.first()`는 앞 칸인 **토지** 취득일을 잡는다.

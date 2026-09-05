@@ -46,7 +46,7 @@ test.describe("비사업용 토지 무조건 의제 — UI가 엔진 판정 반�
     await inputByLabel(page, "양도가액 (원)").fill("1000000000");
 
     // 취득원인 매매 → 환산취득가 (취득일 입력칸 노출)
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     // 취득일 2015-06-01 (고시일 2017-04-23 기준 5년 이내 → 미충족 케이스)
@@ -115,7 +115,7 @@ test.describe("비사업용 토지 무조건 의제 — UI가 엔진 판정 반�
     await inputByLabel(page, "양도가액 (원)").fill("1000000000");
 
     // 취득원인 매매 → 실거래(환산 미토글) → 취득가액 + 취득일 2018-01-01
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await inputByLabel(page, "취득가액 (원)").fill("400000000");
     await page.getByLabel("연도", { exact: true }).nth(2).fill("2018");
     await page.getByLabel("월", { exact: true }).nth(2).fill("01");

@@ -39,7 +39,7 @@ test("상세 내역 표 제거 후 신고서 양식·상세명세서·총 납부
   await getInputByLabel(page, "양도가액 (원)").first().fill("1500000000");
 
   // 취득원인 매매 · 취득일 2015-03-10 · 취득가액 800,000,000
-  await page.getByRole("button", { name: "매매", exact: true }).click();
+  await page.getByRole("radio", { name: "매매", exact: true }).click();
   await year(2).fill("2015");
   await month(2).fill("03");
   await day(2).fill("10");

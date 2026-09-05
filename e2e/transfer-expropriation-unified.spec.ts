@@ -66,7 +66,7 @@ test.describe("양도세 공익수용 통합 — Step1 양도원인", () => {
     await page.getByText("독립 나대지", { exact: true }).click();
 
     // 매매 → 환산취득가 (useEstimatedAcquisition ON)
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.waitForTimeout(300);
     await page.getByRole("radio", { name: "환산취득가" }).click();
     await page.waitForTimeout(300);
@@ -129,7 +129,7 @@ test.describe("양도세 공익수용 통합 — Step1 양도원인", () => {
     await page.getByRole("button", { name: "건물(토지 제외)" }).click(); // 나목
 
     await expandAssetSection(page, 3);
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     await expandAssetSection(page, 2);
@@ -153,7 +153,7 @@ test.describe("양도세 공익수용 통합 — Step1 양도원인", () => {
     await expandAssetSection(page, 1);
     await expandAssetSection(page, 3);
     // 기본 자산종류 = 주택(housing)
-    await page.getByRole("button", { name: "매매", exact: true }).click();
+    await page.getByRole("radio", { name: "매매", exact: true }).click();
     await page.getByRole("radio", { name: "환산취득가" }).click();
 
     await expandAssetSection(page, 2);

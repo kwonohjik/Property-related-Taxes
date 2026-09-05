@@ -20,7 +20,7 @@ import { expandAssetSection } from "./_helpers/expandAssetSection";
 async function fillTransferStdPrice(page: Page, assetIndex: number, value: string) {
   const card = page.locator(`[data-asset-card-index="${assetIndex}"]`);
   await expandAssetSection(page, 3, assetIndex);
-  await card.getByRole("button", { name: "매매", exact: true }).click();
+  await card.getByRole("radio", { name: "매매", exact: true }).click();
   await card.getByRole("radio", { name: "환산취득가" }).click();
   // 양도시 기준시가 — <label>양도시 기준시가 (원)</label> 를 감싼 블록 내 첫 입력(주택=공시가격 총액)
   const block = card.locator('div:has(> label:has-text("양도시 기준시가"))').last();

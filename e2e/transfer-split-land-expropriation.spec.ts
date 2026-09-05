@@ -23,7 +23,7 @@ async function setupBuildingSplit(page: Page) {
   await page.getByRole("button", { name: "건물(토지 제외)", exact: true }).first().click();
   // ③ 취득정보 — 매매 + 토지·건물 취득일 분리(split) 토글 ON
   await expandAssetSection(page, 3);
-  await page.getByRole("button", { name: "매매", exact: true }).click();
+  await page.getByRole("radio", { name: "매매", exact: true }).click();
   await page.getByRole("switch", { name: /토지·건물 취득일 다름/ }).click();
 }
 

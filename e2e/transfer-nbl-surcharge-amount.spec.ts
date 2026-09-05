@@ -69,7 +69,7 @@ async function calcOnce(page: Page, nonBusiness: boolean) {
   // ⚠️ 취득일은 **2013-01-01**이어야 한다 — 부칙 <제9270호> §14①이 2009.3.16.~2012.12.31.
   //    취득 토지의 +10%p 중과를 배제하므로(`isCrisisAcqExempt`) 그 창 안의 취득일을 쓰면
   //    중과가 0이 되어 이 대조가 조용히 무의미해진다.
-  await page.getByRole("button", { name: "매매", exact: true }).click();
+  await page.getByRole("radio", { name: "매매", exact: true }).click();
   await page.getByLabel("연도", { exact: true }).nth(2).fill("2013");
   await page.getByLabel("월", { exact: true }).nth(2).fill("01");
   await page.getByLabel("일", { exact: true }).nth(2).fill("01");
