@@ -78,7 +78,11 @@ describe("B4-2c — partial 시 필요경비 안분 안내", () => {
 describe("B4-2c — 기존 안내와의 우선순위", () => {
   it("폼-수준 총 양도비 자동 안분이 있으면 그 안내가 우선한다 (계산된 값 설명이 더 구체적)", () => {
     renderExpense({ areaScenario: "partial" }, "10,000,000");
-    expect(screen.getByText(/자동 적용/)).toBeInTheDocument();
+    // 문구 마커 갱신 (2026-09-05 · Q08): 종전 「자동 적용 {총액}」은 컴패니언에서 **틀린 숫자**였다
+    // (지분율 축이 없어 ratio=1.0 → 모든 카드가 총액을 보여 줬는데 ④는 0을 보냈다).
+    // 지금은 §100② 후단대로 「양도가액에 비례하여 안분」이라 적는다. 이 테스트가 고정하는 것은
+    // **우선순위**(폼-수준 안내가 partial 안내를 덮는가)이지 문구 자체가 아니다.
+    expect(screen.getByText(/양도가액에 비례하여 안분/)).toBeInTheDocument();
     expect(
       screen.queryByText(/양도비는 이번 양도에서 발생한 금액이므로/),
     ).not.toBeInTheDocument();
