@@ -15,6 +15,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
@@ -541,11 +542,9 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
      * 게이트가 `gracePeriod` 내용과 무관하게 `suspended: true`를 낸다). ⑤도 같은 조건으로
      * `HousesListSection hideGracePeriod`가 위젯을 닫으므로 짝이 맞는다.
      */
-    const graceHidden = isMultiHouseSurchargeSuppressed(
-      form.transferDate,
-      form.assets?.[0]?.acquisitionDate,
-    );
-    if (!graceHidden && houses.length > 0 && form.gracePeriod) {
+    // 술어는 ⑤ 위젯·④ 전송과 **같은 함수**다 (Q03). 종전에는 여기만 `houses.length > 0`이라
+    // 「분양권·입주권만 있는 세대」에서 검증이 빠졌고, 그 상태로 ④가 보내 ⑫ Zod가 400을 냈다.
+    if (gracePeriodInScope(form) && form.gracePeriod) {
       if (!form.gracePeriod.contractDate)
         issues.push({ step, message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
       if (form.gracePeriod.isLandPermitTarget === true && !form.gracePeriod.permitApplicationDate)

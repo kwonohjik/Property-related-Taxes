@@ -22,6 +22,9 @@
  */
 
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { saleStdPlacement, effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -81,6 +84,45 @@ export function NonPurchaseSplitInputsBlock(props: {
           referenceDate={asset.acquisitionDate}
           hint="토지·건물 안분 비율 산정 기준 (§166⑥). 토지분 = ㎡당 공시지가 × 면적, 건물분 = 총액 − 토지분"
         />
+        {/*
+          🔴 **주택은 여기서 막다른 길이었다** (2026-09-05 · 코드리뷰 Q14).
+
+          `StandardPriceInput`의 단가×면적 모드는 `propertyKind`가 `land`·
+          `building_non_residential`일 때만 열린다(`isAreaMode`). 주택은 `house_individual`로
+          접혀 **총액 칸 하나만** 렌더됐는데, ⑧ V8은 셋을 모두 요구한다
+          (`transfer-tax-validate-split.ts:133` — 단가·면적·총액). ⇒ 채울 칸이 없는데 차단되는
+          영구 dead-end였다(memory `feedback_ui_gate_removes_sole_input_path`).
+
+          매매 경로는 같은 요구를 이미 이 형태로 받고 있다 —
+          `LandBuildingSplitSection`의 `PartAcqStdPrice`(토지 파트)가 `LandPriceLookupField` +
+          별도 면적 칸을 쓴다. **형제 경로의 규약을 그대로 따른다**
+          (memory `feedback_sibling_path_already_implements_rule` ·
+           「개별공시지가 필드는 `LandPriceLookupField` 필수」 — components/calc/CLAUDE.md).
+
+          주택은 세 값이 **서로 다른 사실**이라 셋 다 필요하다:
+            총액 = 개별주택가격(§99①1호 라목) · 토지분 = ㎡당 개별공시지가(가목) × 면적.
+          토지·건물 자산은 위 단가×면적 모드가 이미 셋을 채우므로 이 블록을 렌더하지 않는다.
+        */}
+        {toPropertyKind(asset.assetKind) !== "land" &&
+          toPropertyKind(asset.assetKind) !== "building_non_residential" && (
+            <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2">
+              <LandPriceLookupField
+                label="취득시 토지 공시지가"
+                pricePerSqm={asset.standardPricePerSqmAtAcq ?? ""}
+                onPricePerSqmChange={(v) => onChange({ standardPricePerSqmAtAcq: v })}
+                area={parseDecimal(asset.acquisitionArea) || undefined}
+                referenceDate={asset.acquisitionDate}
+                jibun={asset.addressJibun}
+                hint="취득일 직전 고시 개별공시지가 (원/㎡) — 위 총액에서 토지분을 가르는 유일한 근거 (§99①1호 가목)"
+              />
+              <FieldCard label="토지 면적" unit="㎡" hint="토지분 기준시가 = ㎡당 공시지가 × 이 면적">
+                <DecimalInput
+                  value={asset.acquisitionArea ?? ""}
+                  onChange={(v) => onChange({ acquisitionArea: v })}
+                />
+              </FieldCard>
+            </div>
+          )}
       </div>
 
       {/* ② 축 A — 양도가액 구분/일괄 + 양도시 기준시가 */}
