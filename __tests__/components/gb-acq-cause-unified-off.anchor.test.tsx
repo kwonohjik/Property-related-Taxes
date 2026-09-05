@@ -109,12 +109,18 @@ describe("U-2·U-3 — OFF의 취득원인은 두 축을 함께 기록한다", (
     });
   });
 
-  it("U-3 이월과세 — 건물 축에 없는 값이라 purchase로 낮춘다", () => {
+  /**
+   * 🔄 **U-3은 2026-09-05(Q09)에 결론이 뒤집혔다.** 종전 전제였던 「건물 축에 이월과세가
+   * 없다」가 사실이 아니다 — `BUILDING_CAUSE_OPTIONS`에 이미 있고, 법 §97의2①도
+   * 「**토지·건물** 등」이다. 강등의 결과는 조용했다: 화면은 이월과세인데 건물만 매매로
+   * 계산돼 토지분만 증여자 취득가액·증여세 상당액을 승계했다.
+   */
+  it("U-3(정정) 이월과세 — 건물 축도 함께 이월과세로 간다", () => {
     const onChange = renderCards();
     fireEvent.click(screen.getByText("이월과세(증여)"));
     expect(lastPatch(onChange)).toMatchObject({
       acquisitionCause: "carryover_gift",
-      gbBuildingAcquisitionCause: "purchase",
+      gbBuildingAcquisitionCause: "carryover_gift",
     });
   });
 });
@@ -154,7 +160,7 @@ describe("U-5 — 토글 OFF 전환은 날짜와 원인을 함께 되맞춘다",
     });
   });
 
-  it("토지 원인이 이월과세면 건물은 purchase로 되맞춘다 (U-3과 같은 규칙)", () => {
+  it("토지 원인이 이월과세면 건물도 이월과세로 되맞춘다 (U-3 정정과 같은 규칙)", () => {
     const onChange = renderCards({
       hasSeperateLandAcquisitionDate: true,
       acquisitionCause: "carryover_gift",
@@ -164,7 +170,7 @@ describe("U-5 — 토글 OFF 전환은 날짜와 원인을 함께 되맞춘다",
     });
     // 이름으로 특정 — 이월과세 블록도 자체 switch를 갖는다(무방어 getByRole은 strict 위반)
     fireEvent.click(screen.getByRole("switch", { name: /토지·건물 취득일 다름/ }));
-    expect(lastPatch(onChange)).toMatchObject({ gbBuildingAcquisitionCause: "purchase" });
+    expect(lastPatch(onChange)).toMatchObject({ gbBuildingAcquisitionCause: "carryover_gift" });
   });
 });
 
@@ -287,8 +293,10 @@ describe("U-9 — 마이그레이션이 OFF 불변식을 복원한다", () => {
 
   it("종전 M-2 — 미입력이면 토지 원인을 복사한다 (회귀 0)", () => {
     expect(gb({ acquisitionCause: "gift" }).gbBuildingAcquisitionCause).toBe("gift");
-    // carryover_gift는 건물 축에 없다
-    expect(gb({ acquisitionCause: "carryover_gift" }).gbBuildingAcquisitionCause).toBe("purchase");
+    // 🔄 carryover_gift도 건물 축의 유효값이다 (Q09 정정 — UI `toBuildingCause`와 같이 움직인다)
+    expect(gb({ acquisitionCause: "carryover_gift" }).gbBuildingAcquisitionCause).toBe(
+      "carryover_gift",
+    );
   });
 });
 

@@ -69,11 +69,22 @@ export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
   delete (a as Record<string, unknown>).gbIsSelfBuilt;
   // M-2: general_building + gbBuildingAcquisitionCause 미입력 시 acquisitionCause 값 복사
   // (사례 31 호환 데이터: 단일 취득원인이었던 경우 건물도 같은 원인으로 추정)
-  const validBuildingCauses = ["purchase", "inheritance", "gift", "newConstruction"];
+  /**
+   * ⚠️ **UI의 `toBuildingCause`와 같이 움직인다** (2026-09-05 · Q09에서 `carryover_gift` 추가).
+   *    한쪽만 넓히면 구 세션 복원에서 다시 `purchase`로 강등돼, 화면은 이월과세인데 건물만
+   *    매매로 계산되는 상태가 되살아난다.
+   */
+  const validBuildingCauses = [
+    "purchase",
+    "inheritance",
+    "gift",
+    "carryover_gift",
+    "newConstruction",
+  ];
   if (a.assetKind === "general_building") {
     // acquisitionCause 중 건물 카드에 허용된 원인이면 그대로 사용
     const ac = a.acquisitionCause as string;
-    // "carryover_gift"는 건물 카드 미지원 → "purchase" fallback
+    // 건물 카드가 지원하지 않는 원인(예: 신규 축)이면 "purchase" fallback
     const fromLand = validBuildingCauses.includes(ac) ? ac : "purchase";
     const current = a.gbBuildingAcquisitionCause as string | undefined;
     const isSeparate = a.hasSeperateLandAcquisitionDate === true;
