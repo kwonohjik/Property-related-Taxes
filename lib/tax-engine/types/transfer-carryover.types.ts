@@ -230,13 +230,19 @@ export interface CarryoverTaxationDetail {
   /** 적용기간 (5년 or 10년) — 증여 등기접수일 기준 */
   applicablePeriodYears: 5 | 10;
   /**
-   * 적용배제 사유 (있을 시).
-   * - "expropriation": ② 1호 사용자 선언
-   * - "one_house_exemption": ② 2호 사용자 선언 (고가주택 포함)
-   * - "tax_comparison": ② 3호 자동 비교과세 (B 채택)
-   * - "period_exceeded": ③ 기간 초과
-   * - "relation_invalid": ① 단서 관계 요건 불충족 (사망 등)
-   * - "family_business": ④ 가업상속공제 자산 (validation 차단 후 방어코드)
+   * 적용배제 사유 (있을 시). **출처(사용자 선언 ↔ 엔진 자동)를 함께 적는다** —
+   * 결과 카드가 이 구분을 표시하는데, 종전에는 전부 「사용자 선언」이라 적혀 있었다
+   * (2026-09-05 · 코드리뷰 Q19). 귀속은 `transfer-tax-carryover-eligibility.ts` 게이트 순서다.
+   *
+   * - "expropriation": ② 1호 — **사용자 선언**(`exclusionDeclared.expropriationWithin2Years`)
+   * - "one_house_exemption": ② 2호 — **선언 또는 엔진 자동** ⚠️ 두 경로가 이 값 하나를 공유한다
+   *   (선언: eligibility `:85` / 자동: `transfer-tax-carryover.ts:502`). 출처를 가르려면
+   *   여기에 echo 필드가 필요하다 — 없으므로 카드는 둘 다 적는다.
+   * - "tax_comparison": ② 3호 — **엔진 자동** 비교과세 (B 채택)
+   * - "period_exceeded": ③ — **엔진 자동** (양도일 > 증여일 + 적용기간)
+   * - "relation_invalid": ① — **엔진 자동** (관계·증여자 사망·증여일로 판정)
+   * - "family_business": ④ — **사용자 선언**(`exclusionDeclared.isFamilyBusinessInheritedAsset`).
+   *   「엔진 자동」이 아니다 — validation 차단 후의 방어코드 경로이지만 값의 출처는 사용자다.
    */
   exclusionReason?: "expropriation" | "one_house_exemption" | "tax_comparison" | "period_exceeded" | "relation_invalid" | "family_business";
   /** Scenario A — 이월과세 적용 시나리오 */
