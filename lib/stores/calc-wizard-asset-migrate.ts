@@ -17,10 +17,7 @@ import {
 import { migratePartialAreaApportionFields } from "./calc-wizard-asset-partial-area";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS, makeDefaultAsset } from "./calc-wizard-asset-factory";
 import type { AssetForm } from "./calc-wizard-asset";
-import {
-  exemptionAtApprovalInScope,
-  postApprovalExpensesInScope,
-} from "@/lib/calc/redev-field-scope";
+import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 
 /**
  * 금액 문자열(CurrencyInput 저장 규약 — 콤마 포함)이 양수인가.
@@ -439,14 +436,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 재개발 자산에만 적용한다 — 다른 종류의 잔재는 종류를 되돌리면 복귀해야 한다.
   if (a.assetKind === "redevelopment_apt" || a.assetKind === "right_to_move_in") {
     // 술어가 읽는 4필드는 위에서 모두 기본값이 채워졌다(`a`는 아직 raw 레코드다).
-    const redevAxes = a as unknown as AssetForm;
-    if (!exemptionAtApprovalInScope(redevAxes)) {
-      a.redevExemptionEligibleAtApproval = "";
-      // 같은 축의 부속 입력이다 — 축을 벗어나면 함께 지운다(카드가 사라지면 지울 위젯도 없다).
-      a.redevPostApprovalHousingUse = "";
-      a.redevPostApprovalHousingUseEndDate = "";
-    }
-    if (!postApprovalExpensesInScope(redevAxes)) a.redevPostApprovalExpenses = "";
+    // 술어·정리 대상은 `redev-field-scope.ts` **단일 소스**다 — 세션 내 축 변경(⑤ onChange)도
+    // 같은 함수를 쓴다. 한쪽만 고치면 「새로고침해야 정상화되는」 상태가 된다.
+    Object.assign(a, clearOutOfScopeRedevPatch(a as unknown as AssetForm));
   }
   // 사례 36 — 1세대1입주권 비과세 C-1 안전장치
   if (a.redevPriorHouseHoldingMonths === undefined) a.redevPriorHouseHoldingMonths = "";

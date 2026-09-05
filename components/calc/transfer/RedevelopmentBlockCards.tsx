@@ -13,6 +13,7 @@
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -190,22 +191,45 @@ export function ExemptionAtApprovalCard({
     asset.redevPostApprovalHousingUseEndDate,
   ]);
 
-  // 사용자 override 우선, 빈문자열 시 자동
+  /**
+   * 🔴 **엔진이 읽는 것은 자기선언뿐이다** (2026-09-05 · 코드리뷰 Q16).
+   *
+   * 종전에는 선언이 비어 있으면 아래 `auto`(취득일~인가일 24개월)를 결론으로 승격시켜
+   * 「비과세 해당」이라 단언했다. 그러나 ④는 선언이 빈 값이면 `undefined`를 보내고
+   * (`transfer-tax-api-redev.ts:180`), 엔진은 `=== true`일 때만 §89①4호·청산금 비과세를
+   * 연다(`transfer-tax-redevelopment-transforms.ts:320`). ⇒ 화면은 「해당」인데 엔진은 미적용.
+   *
+   * 근거 둘이 자기선언 쪽을 가리킨다:
+   *  ① 이 파일의 기존 설계 의도가 명시적으로 자기선언이다(아래 토글 주석).
+   *  ② 화면이 인용한 예규 **사전-2019-법령해석재산-0739**의 본문이
+   *     「사실상 주거용으로 사용되고 있는지 여부는 **사실판단할 사항**이다」로 끝난다 —
+   *     자동 배선은 예규가 사실판단으로 남긴 것을 자동화하는 셈이 된다.
+   *
+   * ⇒ `auto`는 **참고 제안**으로만 표시하고, 결론 박스는 선언만 반영한다.
+   *   선언이 없으면 `null` — 아래 `SettlementExemptionGuideCard`도 함께 렌더되지 않아
+   *   「자동 적용」이라는 같은 허위 단언이 사라진다.
+   */
   const effective: "yes" | "no" | null =
     asset.redevExemptionEligibleAtApproval === "yes"
       ? "yes"
       : asset.redevExemptionEligibleAtApproval === "no"
         ? "no"
-        : auto
-          ? auto.eligible
-            ? "yes"
-            : "no"
-          : null;
+        : null;
 
+  /**
+   * 참고 기간 문구 — **결론이 아니라 재료**다(Q16). 종전 접두사는 「자동 판정:」이었다.
+   *
+   * ⚠️ 「인가일까지」와 「사용 종료일까지」를 구분해 적는다 — 합산이 걸리면 세는 끝점이
+   *    인가일이 아니다(사전-2019-법령해석재산-0739은 **철거 전 사용 기간**만 합산한다).
+   */
   const labelText =
     auto === null
-      ? "취득일 + 관리처분계획인가일을 모두 입력하면 자동 판정"
-      : `자동 판정: ${auto.eligible ? "충족" : "미충족"} (${Math.floor(auto.months / 12)}년 ${auto.months % 12}개월${auto.extended ? " — 인가일 이후 사실상 주거용 사용 기간 합산" : ""})`;
+      ? "취득일 + 관리처분계획인가일을 모두 입력하면 참고 기간이 계산됩니다."
+      : `참고 — 취득일부터 ${auto.extended ? "사실상 주거용 사용 종료일" : "관리처분계획인가일"}까지 ` +
+        `${Math.floor(auto.months / 12)}년 ${auto.months % 12}개월 → 2년 요건 ` +
+        `${auto.eligible ? "충족" : "미충족"}` +
+        `${auto.extended ? " (인가일 이후 사실상 주거용 사용 기간 합산)" : ""}. ` +
+        "계산에 반영하려면 아래에서 직접 선언하세요.";
 
   return (
     <ToneCard
@@ -283,14 +307,40 @@ export function ExemptionAtApprovalCard({
           onChange({ redevExemptionEligibleAtApproval: v as "" | "yes" | "no" })
         }
         options={[
-          { value: "", label: "자동 판정", description: "취득일·관리처분일 기준 자동 산정값 사용" },
-          { value: "yes", label: "수동: 충족", description: "자동 판정을 무시하고 충족으로 처리" },
-          { value: "no", label: "수동: 미충족", description: "자동 판정을 무시하고 미충족으로 처리 — 장기보유특별공제 표1 적용" },
+          {
+            value: "",
+            label: "선언 안 함",
+            description:
+              "비과세 특례를 적용하지 않습니다. 장기보유특별공제는 일반 1세대1주택 판정을 그대로 따릅니다.",
+          },
+          {
+            value: "yes",
+            label: "충족으로 선언",
+            description: "인가일 현재 비과세 요건을 갖췄음 — 청산금 비과세·표2 적용 대상",
+          },
+          {
+            value: "no",
+            label: "미충족으로 선언",
+            description: "인가일 현재 요건 미충족 — 장기보유특별공제 표1 강제",
+          },
         ]}
         layout="inline"
       />
 
-      {effective !== null && (
+      {/* 결론 박스는 **선언된 값만** 반영한다 (Q16). 선언이 없으면 무엇이 적용되는지를 그대로 적는다. */}
+      {effective === null ? (
+        <div className="rounded-md border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-900">
+          <p>
+            <span className="font-semibold">선언하지 않음</span> — 청산금 비과세·§89①4호 특례가{" "}
+            <span className="font-semibold">적용되지 않습니다</span>. 장기보유특별공제는 일반
+            1세대1주택 판정을 따릅니다(표1 강등은 「미충족」을 선언한 경우에만).
+          </p>
+          <p className="text-muted-foreground">
+            위 참고 기간은 계산에 반영되지 않습니다 — 충족 여부는 사실판단 사항입니다
+            (사전-2019-법령해석재산-0739).
+          </p>
+        </div>
+      ) : (
         <div
           className={`rounded-md border p-2 text-caption ${
             effective === "yes"
@@ -300,11 +350,11 @@ export function ExemptionAtApprovalCard({
         >
           {effective === "yes" ? (
             <p>
-              <span className="font-semibold">비과세 해당</span> — LTHD 표2 적용 가능 (1세대1주택 + 12억 초과 시 안분 적용)
+              <span className="font-semibold">충족으로 선언됨</span> — LTHD 표2 적용 가능 (1세대1주택 + 12억 초과 시 안분 적용)
             </p>
           ) : (
             <p>
-              <span className="font-semibold">비과세 미해당</span> — LTHD 표1 강제 (2년 보유요건 미충족, 12억 안분 비활성)
+              <span className="font-semibold">미충족으로 선언됨</span> — LTHD 표1 강제 (12억 안분 비활성)
             </p>
           )}
         </div>
@@ -347,7 +397,18 @@ export function SuccessorMemberSection({
   // successor 진입 시 동반 셋팅 (onChange 1회 — useEffect 미러링 금지)
   const handleToggle = (v: "yes" | "no") => {
     if (v === "yes") {
+      /**
+       * Q20 — 승계조합원 전환은 ③-c 자기선언 축(`exemptionAtApprovalInScope`)도 함께 닫는다
+       * (승계조합원이면 범위 밖). 종전에는 그 카드의 3필드가 남아, 「사실상 주거용 사용」
+       * 토글이 ON인 채 종료일이 비어 있으면 ⑧이 **채울 칸 없이** 차단했다.
+       * 정리 대상은 마이그레이션과 같은 `clearOutOfScopeRedevPatch` 단일 소스를 쓴다.
+       */
+      const axisPatch = {
+        redevIsSuccessorMember: "yes" as const,
+        redevSettlementDirection: "pay" as const,
+      };
       onChange({
+        ...clearOutOfScopeRedevPatch({ ...asset, ...axisPatch }),
         redevIsSuccessorMember: "yes",
         // 명시 셋팅 (display fallback 의존 차단)
         // 3중 패턴 동기화: right_to_move_in → "right", 그 외 → "apt" (buildRedevelopmentPayload 동일)
@@ -363,10 +424,11 @@ export function SuccessorMemberSection({
         redevRightsValue: "",
       });
     } else {
-      // U1-02 — 「예」 분기가 이미 쓰는 패턴 그대로. 「인가후 필요경비」는 승계 전용 칸이라
-      //         되돌리면 화면에서 사라지는데 값은 남아 인가후 양도차익을 조용히 깎는다
-      //         (시행령 §166①1호). 원조합원에는 그 금액을 지울 칸이 없다.
-      onChange({ redevIsSuccessorMember: "no", redevPostApprovalExpenses: "" });
+      // U1-02 — 「인가후 필요경비」는 승계 전용 칸이라 되돌리면 화면에서 사라지는데 값은 남아
+      //         인가후 양도차익을 조용히 깎는다(시행령 §166①1호). 원조합원에는 그 금액을 지울
+      //         칸이 없다. 「예」 분기와 **같은 leaf**로 정리한다(Q20 — 대상 목록 단일 소스).
+      const axisPatch = { redevIsSuccessorMember: "no" as const };
+      onChange({ ...axisPatch, ...clearOutOfScopeRedevPatch({ ...asset, ...axisPatch }) });
     }
   };
 

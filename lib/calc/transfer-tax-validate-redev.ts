@@ -15,6 +15,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
+import { exemptionAtApprovalInScope } from "@/lib/calc/redev-field-scope";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -82,7 +83,17 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
    * 메우면 **철거 후 기간까지 세어 과대 산정**된다(사전-2019-법령해석재산-0739은 철거 전
    * 사실상 주거용 사용 기간만 합산한다).
    */
-  if (asset.redevPostApprovalHousingUse === "yes") {
+  //
+  // ⚠️ **범위 안일 때만 차단한다** (2026-09-05 · Q20). 이 토글은 ③-c 카드 안에만 있으므로
+  //    축이 바뀌어 카드가 사라지면 값을 지울 위젯이 없다 — 그 상태에서 차단하면 「채울 칸 없는
+  //    영구 차단」이 된다(memory `feedback_ui_gate_removes_sole_input_path`).
+  //    ⑤ onChange·마이그레이션이 `clearOutOfScopeRedevPatch`로 함께 비우지만, 이 가드는
+  //    그 정리를 거치지 않고 조립된 폼(직접 fixture·구 저장분)까지 덮는 두 번째 안전망이다.
+  //
+  // 🟠 남는 좁은 케이스: 카드의 렌더 게이트에는 폼-전역 `isOneHouseSingle`도 걸려 있는데
+  //    ⑧은 자산만 받아 그 값을 볼 수 없다. 1세대1주택 플래그를 끄면 카드가 사라진 채 이 가드가
+  //    살아난다 — 새로고침 시 마이그레이션이 정리한다. 닫으려면 ⑧에 폼-전역 축을 넘겨야 한다.
+  if (exemptionAtApprovalInScope(asset) && asset.redevPostApprovalHousingUse === "yes") {
     const end = asset.redevPostApprovalHousingUseEndDate;
     if (!end) {
       return `${label}: 인가일 이후 사실상 주거용 사용을 선택했으면 사용 종료일(철거일)을 입력하세요. (사전-2019-법령해석재산-0739)`;

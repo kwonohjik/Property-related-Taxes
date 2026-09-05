@@ -162,7 +162,8 @@ describe("A8 — 입주권 비과세 자기선언 토글의 3-state 계약", () 
     // 사례 36 카드 (ToggleCard)
     expect(toggle()).toBeTruthy();
     // 사례 46·47 카드 (RadioCardGroup — `<label>` + `<input type="radio">`).
-    // "자동 판정" 옵션은 그 카드에만 있다.
-    expect(screen.getByRole("radio", { name: /자동 판정/ })).toBeTruthy();
+    // "선언 안 함" 옵션은 그 카드에만 있다 (2026-09-05 · Q16에서 "자동 판정"에서 개명 —
+    // 그 옵션은 자동값을 쓰는 것이 아니라 **아무것도 선언하지 않는** 상태다).
+    expect(screen.getByRole("radio", { name: /선언 안 함/ })).toBeTruthy();
   });
 });

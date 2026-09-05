@@ -34,6 +34,7 @@
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
+import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -186,19 +187,26 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           <RadioCardGroup
             name={`redevSettlement-${asset.assetId}`}
             value={asset.redevSettlementDirection || "pay"}
-            onChange={(v) =>
+            onChange={(v) => {
               /**
-               * U1-01 — 「수령」에서만 뜨는 ③-c 자기선언을 **같은 배치**로 함께 비운다.
-               * 방향만 patch하면 카드가 사라지면서 `"no"`가 남고, 완공APT에는 그 값을
-               * 지울 다른 위젯이 없어 LTHD가 표1로 강등된 채 고정된다(§95② 표1·표2).
+               * U1-01 — 「수령」에서만 뜨는 ③-c 카드의 값들을 **같은 배치**로 함께 비운다.
+               * 방향만 patch하면 카드가 사라지면서 값이 남고, 완공APT에는 그 값을 지울 다른
+               * 위젯이 없다 — 자기선언 `"no"`는 LTHD를 표1로 고정하고(§95② 표1·표2),
+               * 「사실상 주거용 사용」 토글은 종료일 없이 남아 ⑧이 영구 차단한다(Q20).
+               *
+               * 정리 대상은 `clearOutOfScopeRedevPatch` **단일 소스**다 — 마이그레이션과
+               * 같은 함수를 쓴다. 종전에는 이 자리에서 자기선언 1키만 비웠다.
                * ⚠️ 두 키를 따로 patch하면 stale spread로 뒤엣것이 앞엣것을 덮는다
                *    (memory `feedback_multikey_patch_stale_spread_overwrite`).
                */
-              onChange({
+              const axisPatch = {
                 redevSettlementDirection: v as "" | "pay" | "receive",
-                ...(v === "receive" ? {} : { redevExemptionEligibleAtApproval: "" as const }),
-              })
-            }
+              };
+              onChange({
+                ...axisPatch,
+                ...clearOutOfScopeRedevPatch({ ...asset, ...axisPatch }),
+              });
+            }}
             options={SETTLEMENT_OPTIONS}
             layout="inline"
           />
