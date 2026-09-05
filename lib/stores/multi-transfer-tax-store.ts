@@ -224,3 +224,24 @@ export const useMultiTransferStore = create<MultiTransferState>()(
 );
 
 export { generatePropertyId };
+
+/**
+ * 다건 store에 **사용자 실입력**이 들어 있는가 — 덮어쓰면 데이터 손실이 나는가 (Q28).
+ *
+ * 🔴 단건 계산기는 계산 성공 시 `properties[0]`에 자동 백업을 넣는데, 종전에는 그 앞에
+ *    `reset()`을 **무조건** 불렀다. 다건에서 자산 3건을 입력해 두고(계산 전) 단건에서
+ *    「세금 계산하기」를 한 번 누르면 그 3건이 경고 없이 전부 사라졌다.
+ *
+ * 자동 백업과 사용자 입력을 가르는 신호는 **직전 백업의 propertyId** 하나뿐이다.
+ * 호출부가 그 id를 세션 ref로 들고 있다가 넘긴다. 새로고침하면 id가 사라져 「사용자 입력」으로
+ * 판정되므로 **안전측(보존)** 으로 기운다 — 백업이 한 번 갱신되지 않는 것보다 입력이
+ * 사라지는 쪽이 훨씬 나쁘다.
+ */
+export function multiStoreHasUserWork(
+  properties: readonly Pick<PropertyItem, "propertyId">[],
+  autoBackupPropertyId: string | null,
+): boolean {
+  if (properties.length === 0) return false;
+  if (properties.length > 1) return true;
+  return properties[0].propertyId !== autoBackupPropertyId;
+}

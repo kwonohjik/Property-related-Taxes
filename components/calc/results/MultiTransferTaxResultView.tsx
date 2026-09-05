@@ -44,7 +44,6 @@ interface MultiTransferTaxResultViewProps {
   result: AggregateTransferResult;
   properties: PropertyItem[];
   taxYear: number;
-  isLoggedIn?: boolean;
   savedId?: string | null;
 }
 
@@ -382,7 +381,6 @@ export function MultiTransferTaxResultView({
   result,
   properties,
   taxYear,
-  isLoggedIn,
 }: MultiTransferTaxResultViewProps) {
   // showSteps는 명세서 카드의 EngineStepsSubToggle로 통합됨 (2026-05-12)
   const [isPdfLoading, setIsPdfLoading] = useState(false);
@@ -537,17 +535,11 @@ export function MultiTransferTaxResultView({
         <CrossEngine1045Notice from="real_estate" />
       )}
 
-      {/* 이력 안내 */}
-      {!isLoggedIn && (
-        <Card className="border-dashed print:hidden">
-          <CardContent className="py-4 text-center text-sm text-muted-foreground">
-            로그인하면 계산 이력이 자동 저장되고 PDF 다운로드가 가능합니다.{" "}
-            <a href="/auth/login" className="text-primary underline">
-              로그인
-            </a>
-          </CardContent>
-        </Card>
-      )}
+      {/* ⛔ 로그인 안내 배너를 되살리지 말 것 (2026-09-05 · 코드리뷰 Q30).
+          「로그인하면 이력 저장·PDF 가능」은 **사실이 아니었다** — 이력은 로컬 IndexedDB로
+          일원화됐고(`proxy.ts:4`에서 /api/history 보호 라우트 제거), PDF는 클라이언트에서
+          생성한다. 같은 화면의 PDF 버튼이 비로그인에서도 동작해 안내와 정면으로 모순됐다.
+          로그인이 실제로 무엇을 더 주는지가 생기면 그때 그 사실을 쓴다. */}
     </div>
   );
 }
