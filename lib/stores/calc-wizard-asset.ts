@@ -717,7 +717,6 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 최초고시 시점 개별주택가격 (원) */
   inhHouseValHousePriceAtFirst: string;
   /** 양도당시 건물기준시가 (원) — 국세청 기준시가. 양도시 합계 기준시가의 건물 성분 */
-  inhHouseValBuildingStdPriceAtTransfer: string;
   /** 최초고시 시점 건물기준시가 (원) — §164⑤ Sum_F 분모: 토지기준시가 + 이 값. 국세청 기준시가 */
   inhHouseValBuildingStdPriceAtFirst: string;
   /** 상속개시일 시점 건물기준시가 (원) — §164⑤ Sum_A 분자의 건물 성분. 국세청 기준시가 */
