@@ -204,10 +204,18 @@ export function buildInheritedHouseValuationPayload(
       })()
     : undefined;
 
-  const landPriceAtInheritance = parseAmount(primary.inhHouseValLandPricePerSqmAtInheritance);
-
-  // 1990 前「등급 3종+1990가 ↔ 취득당시 단가」 택일·1990 後 단가 필수는 위 `sec164HouseStatus`가
-  // 이미 판정했다(`oneOf`). 여기서 다시 게이트하지 않는다 — 두 곳이 어긋나면 침묵 실패가 재발한다.
+  /**
+   * 1990.8.30. **前**에는 취득당시 단가를 **보내지 않는다** (2026-09-05 · 코드리뷰 Q11).
+   *
+   * 그 구간에는 개별공시지가가 고시된 적이 없어 이 칸이 UI에서 렌더되지 않는다 —
+   * 그런데 날짜를 뒤로 고치면 **값은 남는다**. 그대로 실으면 엔진이 등급환산을 덮어쓴다
+   * (`inheritance-house-valuation.ts:173` — 직접 입력값 우선, 경고만).
+   * 「범위 밖이면 보내지 않는다」 — 필수 판정도 같은 구간에서 등급 4필드만 요구한다
+   * (`sec164-required-fields.ts` — ⑧과 ④가 같은 소스).
+   */
+  const landPriceAtInheritance = isBefore1990
+    ? 0
+    : parseAmount(primary.inhHouseValLandPricePerSqmAtInheritance);
 
   return {
     inheritedHouseValuation: {
