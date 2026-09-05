@@ -28,7 +28,7 @@ import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHo
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
-import { isHousingLike } from "@/lib/calc/housing-like-asset";
+import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 
 /**
  * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
@@ -315,11 +315,18 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   ]);
 
   // assetKind 변경 시 표시되지 않는 필드 값 초기화
-  //   - 조정대상지역 체크박스: 주택(housing)에서만 표시 → 그 외 false
+  //   - 조정대상지역 체크박스: §154① 판정 대상 자산(주택·재개발APT)에서만 표시 → 그 외 false
   //   - 미등기 양도: UNREGISTERED_EXCLUDED_KINDS 제외 종류에서만 표시 → 그 외 false
+  //
+  // 🔴 종전 게이트는 `primaryKind !== "housing"`이었다 (2026-09-05 정정 — **세액 변경**).
+  //    재개발 신축주택도 `checkExemption` 경계에서 `housing`으로 번역돼 §154① 경로를 타는데
+  //    (`transfer-tax.ts:196~200`), 이 리셋이 `wasRegulatedAtAcquisition`을 **false로 강제**했다.
+  //    그러면 조정대상지역에서 취득한 재개발 신축주택도 거주요건을 면제받아 비과세가 인정된다.
+  //    ⚠️ 자동판별 effect는 `isHousingLike`(4종)라 재개발APT에도 값을 **쓰고 있었다** — 즉 두
+  //      effect가 서로 다른 술어로 같은 필드를 두고 다퉜다. 렌더 게이트와 같은 술어로 통일한다.
   useEffect(() => {
     const patch: Partial<TransferFormData> = {};
-    if (primaryKind !== "housing") {
+    if (!isOneHouseExemptionAsset(primaryKind)) {
       if (form.isRegulatedArea) patch.isRegulatedArea = false;
       if (form.wasRegulatedAtAcquisition) patch.wasRegulatedAtAcquisition = false;
       // 토글 자체가 리셋되므로 수동 조작 이력도 함께 초기화 — 재진입 시 자동판별 재개
@@ -368,9 +375,22 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               — {regulatedAuto.acquisitionBasis}
             </p>
           )}
+          {/*
+            🔴 「아래 체크박스」는 §154① 판정 대상 자산에만 존재한다 (2026-09-05 정정).
+               입주권·분양권에는 그 토글이 없고 **있어서도 안 된다** — 입주권 비과세는 법 §89①4호
+               이고 그 요건(인가일 현재 기존주택이 §89①3호가목 충족)은 `exemptionEligibleAtApproval`
+               자기선언이 담는다. 분양권은 §89①4호 열거 자체에 없다.
+               종전에는 두 자산에도 「아래 체크박스를 수동 확인하세요」가 떠서 존재하지 않는
+               컨트롤을 가리켰다.
+          */}
           {regulatedAuto.confidence !== "high" && (
             <p className="text-caption text-amber-700 dark:text-amber-400">
-              ⚠️ 신뢰도: {regulatedAuto.confidence} — 시군구 일부만 지정된 경우 아래 체크박스를 수동 확인하세요.
+              ⚠️ 신뢰도: {regulatedAuto.confidence} — 시군구 일부만 지정된 경우{" "}
+              {isOneHouseExemptionAsset(primaryKind)
+                ? "아래 체크박스를 수동 확인하세요."
+                : primaryKind === "presale_right"
+                  ? "표시된 판별 결과를 참고만 하세요. 분양권은 1세대1주택 비과세 대상이 아니어서(「소득세법」 §89①4호는 조합원입주권만 열거) 취득 당시 조정대상지역 보정이 필요하지 않습니다."
+                  : "표시된 판별 결과를 참고만 하세요. 조합원입주권 비과세는 「소득세법」 §89①4호에 따라 관리처분계획 인가일 현재 종전주택이 요건을 충족했는지로 판정하며, 그 선언은 자산 카드의 재개발 입력에서 받습니다."}
             </p>
           )}
         </>
@@ -497,8 +517,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         </section>
       )}
 
-      {/* ② 1세대1주택 비과세 판정 — 취득일 조정지역·거주기간·§154① 면제사유 (비과세 트랙) */}
-      {primaryKind === "housing" && (
+      {/* ② 1세대1주택 비과세 판정 — 취득일 조정지역·거주기간·§154① 면제사유 (비과세 트랙)
+          재개발 신축주택도 §89①3호가목의 「주택」이라 같은 판정을 받는다(술어 JSDoc 참조). */}
+      {isOneHouseExemptionAsset(primaryKind) && (
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <SectionHeader title="② 1세대1주택 비과세 판정" description="취득일 조정대상지역·거주기간·보유거주 요건 면제 사유를 입력하세요" />
           <div className="space-y-3">
@@ -577,8 +598,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               </div>
             )}
 
-            {/* 거주기간 — 1세대1주택 + 주택 자산일 때만 노출 */}
-            {form.isOneHousehold && primaryKind === "housing" && primary && (
+            {/* 거주기간 — 1세대1주택 + §154① 판정 대상 자산일 때 노출.
+                ④(`transfer-tax-api.ts:399`)는 `residencePeriodMonths`를 자산종류 게이트 없이
+                보내므로 이 게이트가 **유일한 입력 통제점**이다 — 조정대상지역 토글과 짝이라
+                한쪽만 열면 「거주 2년 필요」라 안내하고 채울 칸이 없는 dead-end가 된다. */}
+            {form.isOneHousehold && isOneHouseExemptionAsset(primaryKind) && primary && (
               <ResidencePeriodSection
                 residenceInputMode={primary.residenceInputMode}
                 residencePeriods={primary.residencePeriods}
