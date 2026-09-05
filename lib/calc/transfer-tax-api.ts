@@ -167,15 +167,25 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 폼-수준 총 양도비 (B3) — 지분 모드 자동 안분의 분자 sourcing.
   // primary.transferExpense가 직접 입력되면 그것이 우선, 미입력시 form.totalTransferExpense × ratio 사용.
   const formTotalTransferExpense = parseAmount(form.totalTransferExpense || "0");
+  /**
+   * 🔴 **공통 양도비를 자산에 직접 싣는 경로와 신고 단위로 보내는 경로는 배타다** (Q08).
+   *
+   * 함께양도(컴패니언) 번들이 나갈 때는 폼-수준 총 양도비를 `commonTransferExpense`로
+   * **한 번만** 보내고 엔진이 §100② 후단대로 양도가액 비율로 안분한다. 그때 자산에도 실으면
+   * 이중 계상이다. 종전에는 이 값이 **주 자산에 100%** 실리고 컴패니언에는 0이 갔다.
+   */
+  const isCompanionBundle = form.assets.length > 1 && gbShares === undefined;
   const primaryTransferExpenseDirect = parseAmount(primary.transferExpense);
   const primaryEffectiveTransferExpense =
     primaryTransferExpenseDirect > 0
       ? primaryFractional
         ? applyRatio(primaryTransferExpenseDirect, primaryRatio)
         : primaryTransferExpenseDirect
-      : primaryFractional && formTotalTransferExpense > 0
-        ? applyRatio(formTotalTransferExpense, primaryRatio)
-        : formTotalTransferExpense; // 단독 모드: form-level이 있으면 사용, 없으면 0
+      : isCompanionBundle
+        ? 0 // 공통분은 아래 `commonTransferExpense`로 신고 단위 1회 전송 (§100② 후단)
+        : primaryFractional && formTotalTransferExpense > 0
+          ? applyRatio(formTotalTransferExpense, primaryRatio)
+          : formTotalTransferExpense; // 단건: form-level이 있으면 사용, 없으면 0
 
   // 부담부증여 (소령 §159) — 양도가액은 엔진 STEP 0.48에서 채무 안분 후 자동 override.
   // 단, Zod schema는 transferPrice >0 요구이므로 채무 합계를 placeholder로 전달 (엔진에서 다시 계산).
@@ -614,8 +624,19 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             .slice(1)
             // 지분 모드(같은 물건 분할취득): companion ① 기본정보를 UI에서 숨기므로
             // primary basic(자산종류·면적·토지성격)을 병합해 엔진에 전달 (mergePrimaryBasic).
-            .map((a, ci) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, formTotalTransferExpense || undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form)),
+            // ⑬ 폼-수준 총 양도비를 **자산에 싣지 않는다** — 아래 `commonTransferExpense`로
+            //    신고 단위 1회만 보내고 엔진이 §100② 후단(가액 비례)으로 안분한다(Q08).
+            //    자산별 직접 입력분(`transferExpense`)은 그대로 `directExpenses`로 더해진다.
+            .map((a, ci) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form)),
           bundledSaleMode: form.bundledSaleMode,
+          /**
+           * ⑬ 신고 단위 공통 양도비 (§100② 후단) — 「공통되는 … 양도비용은 해당 자산의
+           * 가액에 비례하여 안분계산한다」. 안분은 `apportionBundledSale`의 `commonExpenses`가
+           * 수행하고 마지막 자산이 잔액을 흡수해 Σ가 보존된다.
+           */
+          ...(formTotalTransferExpense > 0
+            ? { commonTransferExpense: formTotalTransferExpense }
+            : {}),
           // primary 확정 양도가액.
           //  - 지분 모드: 총계약가 × ratio 자동 결정 (bundledSaleMode 무관, actualSalePrice 무시 —
           //    companion buildAssetPayload:428 정책과 일관). route가 fixedSalePrice로 주입해

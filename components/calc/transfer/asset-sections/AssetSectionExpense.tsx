@@ -78,14 +78,27 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense }: P
           return (
             <CurrencyInput
               label="양도비 (원) — §97① 나목"
-              value={useFormLevel ? String(allocated) : asset.transferExpense}
+              // 지분 모드만 확정 금액을 보여 준다(가액 비례 = 지분 비례라 화면에서 계산 가능).
+              // 컴패니언은 자산별 양도가액이 엔진에서 정해지므로 칸을 비워 둔다 — 잘못된
+              // 숫자(총액)를 그대로 보여 주던 것이 Q08의 오해 지점이었다.
+              value={useFormLevel ? (fractional ? String(allocated) : "") : asset.transferExpense}
               onChange={(v) => onChange({ transferExpense: v })}
               disabled={useFormLevel}
               hint={
                 useFormLevel
                   ? fractional
                     ? `자동 안분 ${allocated.toLocaleString()} = 총 양도비 ${formTotal.toLocaleString()} × 지분 ${num}/${den}. 폼 상단 "총 양도비"를 비우면 직접 입력 가능`
-                    : `자동 적용 ${allocated.toLocaleString()} (폼 상단 "총 양도비"). 비우면 직접 입력 가능`
+                    : /**
+                       * 🔴 종전 문구는 「자동 적용 {총액}」이었다 — 컴패니언에는 지분율 축이 없어
+                       *   `ratio = 1.0`이 되는 탓에 **모든 카드가 총액을 그대로** 보여 줬고,
+                       *   정작 ④는 그 값을 컴패니언에 0으로 보냈다(Q08).
+                       *
+                       *   지금은 신고 단위로 1회 보내 엔진이 §100② 후단(양도가액 비례)으로
+                       *   안분한다. 「기준시가 안분」 모드에서는 자산별 양도가액을 **엔진이**
+                       *   정하므로 이 화면에서 금액을 확정할 수 없다 — 지어내지 않고
+                       *   배분 규칙만 밝힌다(결과 화면의 안분 표에 자산별 금액이 나온다).
+                       */
+                      `총 양도비 ${formTotal.toLocaleString()}을 자산별 양도가액에 비례하여 안분합니다 (소득세법 §100② 후단). 폼 상단 "총 양도비"를 비우면 자산별 직접 입력 가능`
                   : isPartial
                     ? PARTIAL_TRANSFER_EXPENSE_NOTE
                     : fractional

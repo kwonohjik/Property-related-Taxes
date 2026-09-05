@@ -35,6 +35,13 @@ interface BundledPrimaryInput {
   /** 지분 모드·actual 모드에서 route가 fixedSalePrice로 주입할 primary 확정 양도가액 */
   primaryActualSalePrice?: number;
   primaryInheritanceValuation?: BundledInheritanceValuation;
+  /**
+   * 신고 단위 **공통 양도비** (원) — 「소득세법」 §100② 후단 (Q08).
+   * 「공통되는 취득가액과 양도비용은 해당 자산의 가액에 비례하여 안분계산한다」.
+   * `apportionBundledSale`의 `commonExpenses`로 그대로 넘어간다 — 자산별 `directExpenses`와
+   * **더해지지 대체되지 않는다**(`allocatedExpenses = direct + commonShare`).
+   */
+  commonTransferExpense?: number;
 }
 
 interface BundledCompanionForApportion {
@@ -183,6 +190,9 @@ export function prepareBundledApportionment(
   const apportionment = apportionBundledSale({
     totalSalePrice: primary.totalSalePrice!,
     assets: bundleAssets,
+    // §100② 후단 — 공통 양도비를 결정된 양도가액 비율로 안분(마지막 자산 잔액 흡수).
+    // 🔴 종전에는 이 인자가 **한 번도 전달되지 않아** 엔진 Step 5가 죽은 코드였다(Q08).
+    commonExpenses: primary.commonTransferExpense,
   });
 
   // (4.5) 매매 estimated 컴패니언: 안분된 양도가액으로 환산취득가 사후 산정

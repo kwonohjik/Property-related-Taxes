@@ -361,6 +361,25 @@ const propertyBaseShape = {
   bundledSaleMode: z.enum(["actual", "apportioned"]).default("apportioned"),
   /** actual 모드 시 주 자산의 계약서상 양도가액 (원) */
   primaryActualSalePrice: z.number().int().positive().optional(),
+  /**
+   * ⑫ **신고 단위 공통 양도비** (원) — 「소득세법」 §100② 후단 (2026-09-05 · 코드리뷰 Q08).
+   *
+   * 「이 경우 **공통되는 취득가액과 양도비용은 해당 자산의 가액에 비례하여 안분계산한다**」
+   *
+   * 중개수수료·인지대처럼 **양도 1회에 발생해 자산에 공통**되는 비용을 담는다. 안분은
+   * `apportionBundledSale`의 `commonExpenses`가 수행한다 — 결정된 양도가액 비율로 나누고
+   * 마지막 자산이 잔액을 흡수해 `Σ = 총액`을 보존한다(`bundled-sale-apportionment.ts:210`).
+   *
+   * 🔴 그 안분 엔진은 **구현·단위테스트까지 되어 있었는데 프로덕션 호출자가 0건**이었다.
+   *    그래서 ④가 폼-수준 총 양도비를 **주 자산에 100%** 싣고 컴패니언에는 0을 보냈다
+   *    (`effectiveTransferExpenseFor`는 지분 모드에서만 안분한다) — 화면은 카드마다
+   *    「자동 적용」이라 표시하는데 실제로는 §100② 후단과 어긋난 배분이었다.
+   *
+   * ⚠️ 이 값을 보내면 ④는 **어느 자산에도** 폼-수준 양도비를 싣지 않는다. 자산별
+   *    `transferExpense`(직접 입력분)는 그대로 `directExpenses`로 더해진다 —
+   *    엔진 계약이 `allocatedExpenses = direct + commonShare`다. 둘 다 실으면 이중 계상이다.
+   */
+  commonTransferExpense: z.number().int().nonnegative().optional(),
   /** 개별주택가격 미공시 취득 시 3-시점 환산취득가 계산 입력 (§164⑤) */
   preHousingDisclosure: preHousingDisclosureSchema.optional(),
   /**

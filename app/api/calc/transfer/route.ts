@@ -214,6 +214,8 @@ export async function POST(request: NextRequest) {
           acquisitionPrice: data.acquisitionPrice,
           primaryActualSalePrice: data.primaryActualSalePrice,
           primaryInheritanceValuation: data.primaryInheritanceValuation,
+          // ⑭ 신고 단위 공통 양도비 (§100② 후단) — 안분은 엔진 Step 5가 수행한다.
+          commonTransferExpense: data.commonTransferExpense,
         },
         companions,
         { isActualMode, isFullFractionalBundle },
