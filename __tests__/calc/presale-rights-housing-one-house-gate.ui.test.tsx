@@ -51,7 +51,7 @@ function form(overrides: Partial<TransferFormData> = {}): TransferFormData {
     transferDate: "2026-06-01",
     assets: base.assets.map((a, i) =>
       i === 0
-        ? { ...a, assetKind: "housing" as const, acquisitionDate: "2015-01-10", isRegulatedAreaAtTransfer: true }
+        ? { ...a, assetKind: "housing" as const, acquisitionDate: "2015-01-10" }
         : a,
     ),
     isOneHousehold: true,

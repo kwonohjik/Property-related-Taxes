@@ -164,7 +164,6 @@ export function ReplotIncreaseFields({
       standardPriceAtTransferLabel: asset.standardPriceAtTransferLabel,
       regionCode: asset.regionCode,
       addressPnu: asset.addressPnu, // 건물 기준시가 모달 건축물대장 조회용(당초분과 동일 필지)
-      isRegulatedAreaAtTransfer: asset.isRegulatedAreaAtTransfer,
       acquisitionSigunguCode: asset.acquisitionSigunguCode,
       nblLandSigunguCode: asset.nblLandSigunguCode,
       nblLandSigunguName: asset.nblLandSigunguName,

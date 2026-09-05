@@ -139,7 +139,8 @@ Do 진입 전 `wc -l components/calc/transfer/RedevelopmentBlock.tsx` 실측 →
 - ✅ `DateInput` (기존 RedevelopmentBlock에서 import 사용 중)
 - ❌ `SectionCard`, `InfoCard`, `PreviewCard`, `LawArticleBadge`, `LawArticleLink`, `Badge` — 본 inputs/ 폴더에 미존재
   - 섹션 카드는 기존 RedevelopmentBlock 패턴(div + Tailwind tone 클래스) 그대로 차용
-  - PreviewCard 패턴은 `components/calc/transfer/InheritanceValuationPreviewCard.tsx` 와 `PreHousingDisclosurePreviewCard.tsx` 모방
+  - PreviewCard 패턴은 `components/calc/transfer/CompanionAssetsSection.tsx` (div + Tailwind tone · `useMemo`로 순수 도출 · store 쓰기 금지) 모방
+    > ⚠️ **인용 정정 (2026-09-05)** — 종전에 적혀 있던 `InheritanceValuationPreviewCard.tsx`는 **저장소에 존재한 적이 없고**, `PreHousingDisclosurePreviewCard.tsx`는 어디서도 import되지 않는 dead 파일이라 2026-09-05에 삭제했다(코드리뷰 Q24). 렌더되지 않는 컴포넌트를 모범 사례로 베끼지 말 것.
 
 ### 구성 (기존 RedevelopmentBlock 섹션 패턴 차용 — div + Tailwind)
 
@@ -443,7 +444,9 @@ const autoSuggestionState = useMemo<"hidden" | "recommend" | "ambiguous">(() => 
 
 ## 미리보기 카드 (read-only) — 산식 도출
 
-`InheritanceValuationPreviewCard.tsx` / `PreHousingDisclosurePreviewCard.tsx` 와 동일 패턴 (div + Tailwind tone, useMemo로 순수 도출, store 쓰기 금지):
+위 `components/calc/transfer/CompanionAssetsSection.tsx` (div + Tailwind tone · `useMemo`로 순수 도출 · store 쓰기 금지) 와 동일 패턴:
+
+> ⚠️ 종전 인용 두 파일은 **각각 미존재·삭제**다(2026-09-05 · Q24). 위 각주 참조.
 
 ```tsx
 {isSuccessor && completionDate && transferDate && (
@@ -519,7 +522,7 @@ useMemo 순수 함수로 도출. store에 쓰지 않음 (`feedback_useeffect_sto
 | 1 | **오류** | `redevSubject: "right_to_move_in"` | `redevSubject: "right"` | `calc-wizard-asset-redev.ts:24` 실측 유니언 `"" \| "right" \| "apt"` |
 | 2 | **오류** | 결과 카드 경로 `components/calc/transfer/result/...` | `components/calc/results/transfer/RedevelopmentDetailCard.tsx` | grep 실측 |
 | 3 | **오류** | `LawArticleModal alias` 등록 + `aliases.ts` 추가 | `LawArticleModal legalBasis="..." label="..."` 기존 패턴 그대로 | `RedevelopmentBlock.tsx:381,473` 실측 / `aliases.ts`는 약칭 사전 (모달 무관) |
-| 4 | **누락** | `SectionCard`/`InfoCard`/`PreviewCard`/`LawArticleBadge`/`LawArticleLink`/`Badge` 컴포넌트 사용 | 모두 미존재 — 기존 div + Tailwind tone 패턴 차용 (`InheritanceValuationPreviewCard`/`PreHousingDisclosurePreviewCard` 모방) | `components/calc/inputs/` ls 실측 |
+| 4 | **누락** | `SectionCard`/`InfoCard`/`PreviewCard`/`LawArticleBadge`/`LawArticleLink`/`Badge` 컴포넌트 사용 | 모두 미존재 — 기존 div + Tailwind tone 패턴 차용 (모범 사례는 `CompanionAssetsSection.tsx`. 종전 인용 두 PreviewCard는 미존재·삭제 — 2026-09-05 · Q24) | `components/calc/inputs/` ls 실측 |
 | 5 | **누락** | `valuationMeta.method` 유니언 확장 미언급 | 엔진 디자인에 `"successor_member_decree_162_1_4"` 추가 명시 | `transfer-redevelopment.types.ts:247-250` 유니언 실측 |
 | 6 | **누락** | `successorMemberApplied?: boolean` 결과 필드 미언급 | `DetailedStatementRedevelopmentBuilders.getBranchLabels()` 분기 신규에 필요 | `DetailedStatementRedevelopmentBuilders.ts:52` 실측 |
 | 7 | **누락** | 분기 진입점 `transfer-tax-redevelopment.ts` 가정 | 실제 진입점은 `lib/tax-engine/redevelopment.ts:87 runRedevelopment()` | grep 실측 |

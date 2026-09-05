@@ -37,11 +37,21 @@ export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
       standardPriceAtDeemedDate: z.number().int().nonnegative().optional(),
       /** 양도시 기준시가 (원) */
       standardPriceAtTransfer: z.number().int().positive().optional(),
-      /** 피상속인 실지취득가액 입증 가능 여부 */
+      /**
+       * ⚠️ **아래 3키와 refine은 현재 도달하지 않는다** (2026-09-05 · 코드리뷰 Q22).
+       *
+       * ④(`lib/calc/transfer-tax-api-inheritance.ts`)가 이 키들을 **보내지 않는다** —
+       * `hasDecedentActualPrice`는 항상 `default(false)`로 채워지므로 refine도 언제나 통과한다.
+       * 폼 슬라이스(`calc-wizard-asset-inheritance-acq.ts`)에도 ⑤ 위젯이 없다.
+       *
+       * 남겨 두는 이유는 **호환**이다 — 저장된 이력이 이 키를 담고 있을 수 있어 제거 전에
+       * 확인이 필요하다. 「현행 입력」으로 오해하지 말 것. 되살리려면 ⑤ → ④ 순서로 열어야
+       * 여기까지 도달한다(⑫만 있으면 no-op).
+       */
       hasDecedentActualPrice: z.boolean().default(false),
-      /** 피상속인 취득일 (hasDecedentActualPrice=true 시 필수) */
+      /** 피상속인 취득일 (hasDecedentActualPrice=true 시 필수) — 위 주석 참조(미도달) */
       decedentAcquisitionDate: z.string().date().optional(),
-      /** 피상속인 실지취득가액 (원, hasDecedentActualPrice=true 시 필수) */
+      /** 피상속인 실지취득가액 (원, hasDecedentActualPrice=true 시 필수) — 위 주석 참조(미도달) */
       decedentActualPrice: z.number().int().nonnegative().optional(),
     })
     .refine(

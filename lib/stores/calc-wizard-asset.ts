@@ -276,11 +276,10 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 위도 */
   latitude: string;
 
-  // ── 조정대상지역 조회 결과 (주택 전용) ──
-  /** 취득 시점 조정대상지역 여부 (주택만 조회, 비주택은 null) */
-  isRegulatedAreaAtAcq: boolean | null;
-  /** 양도 시점 조정대상지역 여부 (주택만 조회, 비주택은 null) */
-  isRegulatedAreaAtTransfer: boolean | null;
+  // ⛔ `isRegulatedAreaAtAcq`·`isRegulatedAreaAtTransfer`를 되살리지 말 것 (2026-09-05 · Q23).
+  //    쓰기 지점이 저장소 전체에 0건이라 **항상 null**이었고 읽는 로직도 0건이었다.
+  //    정본은 폼-전역 `wasRegulatedAtAcquisition`(§154① 거주요건) + 자산-수준 `regionCode`
+  //    (엔진 `isRegulatedByBjdCode()` 정밀 판정)다. 자산별 캐시가 필요해지면 **읽는 쪽부터** 만들 것.
   /**
    * 법정동코드 10자리 (AddressSearch PNU 앞 10자리).
    * 제공 시 엔진이 isRegulatedByBjdCode()로 정밀 판정.
