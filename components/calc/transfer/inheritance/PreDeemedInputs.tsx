@@ -23,7 +23,6 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { HouseValuationSection } from "./HouseValuationSection";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
-import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers";
 import { inheritanceReportedValuePartSuffix } from "@/lib/calc/inheritance-reported-value-scope";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -46,8 +45,6 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
   const isLand = asset.assetKind === "land";
   // 토지/주택 판정은 상단 assetKind로 파생(상속 자산구분 라디오 폐지 대응).
   const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
-  // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용). 파생은 공용 단일 소스.
-  const houseKind = deriveInheritanceHouseKind(asset);
   // 일반건물은 이 칸이 토지분이다(건물분 전용 칸이 따로 있다) — 판정·문구는 공용 단일 소스.
   const partSuffix = inheritanceReportedValuePartSuffix(asset.assetKind);
 
@@ -223,11 +220,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
       {/* 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 3-시점 보조 입력 */}
       {showHouseValuation && (
         <>
-          <InheritanceHouseKindPicker
-            value={houseKind}
-            assetId={asset.assetId}
-            onChange={onChange}
-          />
+          <InheritanceHouseKindPicker asset={asset} onChange={onChange} />
           <HouseValuationSection
             asset={asset}
             onChange={onChange}

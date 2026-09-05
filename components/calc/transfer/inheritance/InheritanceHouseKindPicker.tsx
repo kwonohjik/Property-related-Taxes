@@ -9,6 +9,7 @@
  */
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const HOUSE_KIND_OPTIONS = [
@@ -17,22 +18,39 @@ const HOUSE_KIND_OPTIONS = [
 ] as const;
 
 export function InheritanceHouseKindPicker({
-  value,
-  assetId,
+  asset,
   onChange,
 }: {
-  /** 현재 개별/공동 값 (미선택 시 호출부가 동·호로 기본 도출) */
-  value: "house_individual" | "house_apart";
-  assetId: string;
+  /**
+   * 자산 폼 — 개별/공동 현재값은 **공용 파생**(`deriveInheritanceHouseKind`)으로 여기서 구한다.
+   * 종전에는 호출부가 같은 파생을 세 곳에서 각자 계산해 넘겼다.
+   */
+  asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
 }) {
+  const value = deriveInheritanceHouseKind(asset);
+  /**
+   * 개별↔공동 전환 시 stale 조회값 정리 (2026-09-05 · 코드리뷰 Q17에서 정정).
+   *
+   * 🔴 종전에는 여기서 `useSupplementaryHelper: false`도 함께 껐다. 그런데 이 픽커는
+   *   **그 토글의 내부**(PostDeemedInputs 「보충적평가 보조계산」)에 산다 — 주택 구분을
+   *   고르는 순간 픽커가 들어 있던 패널이 통째로 접혔다.
+   *
+   * ⚠️ 토글을 끄지 않는 대신 **파생 신고가액도 함께 비운다**. 조회 3필드만 비우면
+   *   `publishedValueAtInheritance`(그 3필드에서 계산돼 들어간 값)가 옛 구분의 값으로
+   *   남는다 — 화면에는 빈 칸, 엔진에는 stale 금액이 가는 조합이다.
+   *   비우는 조건은 `reportedPatch`(PostDeemedInputs)와 **같다**: 보조계산 ON + 보충적평가.
+   */
+  const helperFeeds =
+    asset.useSupplementaryHelper === true &&
+    asset.inheritanceValuationMethod === "supplementary";
   return (
     <div className="space-y-1.5">
       <label className="block text-caption text-muted-foreground font-medium">
         주택 구분 (공시가격 조회용)
       </label>
       <RadioCardGroup
-        name={`inh-house-kind-${assetId}`}
+        name={`inh-house-kind-${asset.assetId}`}
         tone="amber"
         layout="stack"
         options={HOUSE_KIND_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
@@ -40,11 +58,11 @@ export function InheritanceHouseKindPicker({
         onChange={(v) =>
           onChange({
             inheritanceAssetKind: v as AssetForm["inheritanceAssetKind"],
-            // 개별↔공동 전환 시 보조계산 입력 초기화 (stale 조회값 방지)
-            useSupplementaryHelper: false,
+            // 개별↔공동 전환 시 조회값 초기화 (stale 방지) — 토글은 끄지 않는다(위 주석).
             supplementaryLandUnitPrice: "",
             supplementaryLandArea: "",
             supplementaryBuildingValue: "",
+            ...(helperFeeds ? { publishedValueAtInheritance: "" } : {}),
           })
         }
       />

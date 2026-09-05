@@ -7,17 +7,31 @@
  */
 
 import type { InheritanceHouseValuationResult } from "@/lib/tax-engine/types/inheritance-house-valuation.types";
+import type { InheritanceAcquisitionResult } from "@/lib/tax-engine/types/inheritance-acquisition.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: InheritanceHouseValuationResult;
+  /**
+   * 같은 화면 옆 카드(`InheritedAcquisitionDetailCard`)가 읽는 **바로 그 결과** (2026-09-05 · Q18).
+   *
+   * 아래 (B) 「환산취득가액 = 양도가액 × 비율」은 실제로 적용되는 일이 드물다 —
+   * 법 §97①1호 **단서**상 나목(환산)은 가목(①상증법 평가액·②§164 기준시가)을 **확인할 수
+   * 없을 때에 한정**되는데, 이 카드가 뜨는 상황에서는 ②가 함께 주입되므로 가목이 확인된다.
+   * 종전에는 그 사실을 말하지 않고 산식을 **결론처럼** 보여, 옆 카드가 같은 값에 「미적용」
+   * 취소선을 긋는 것과 화면 안에서 모순됐다.
+   *
+   * ⚠️ 적용 여부를 여기서 **다시 판정하지 않는다** — 옆 카드와 같은 `selectedMethod`를 읽는다.
+   *    복제하면 두 카드가 갈릴 수 있다(두 번째 진실 금지).
+   */
+  acquisitionDetail?: InheritanceAcquisitionResult;
 }
 
 function formatN(n: number): string {
   return n.toLocaleString();
 }
 
-export function InheritedHouseValuationDetailCard({ detail }: Props) {
+export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }: Props) {
   const {
     sumAtInheritance,
     sumAtFirstDisclosure,
@@ -35,6 +49,23 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
     warnings,
   } = detail;
   const isEstimated = estimationMethod === "estimated_phd";
+
+  /**
+   * (B) 환산취득가액의 **적용 상태** — 판정은 옆 카드와 같은 소스에서 읽는다.
+   *  · "applied"  — 가목을 확인할 수 없어 실제로 나목(환산)이 쓰였다.
+   *  · "clause_a" — 가목(①②)이 확인돼 나목에 가지 않았다(법 §97①1호 단서).
+   *  · "no_clause_b" — 의제취득일 **이후** 상속은 §163⑨가 가목을 의제하므로 나목 자체가 없다
+   *    (`preDeemedBreakdown`이 붙지 않는 경로가 곧 그 경우다).
+   *  · "unknown" — 취득가액 결과가 함께 오지 않았다. **단정하지 않는다**.
+   */
+  const convertedState: "applied" | "clause_a" | "no_clause_b" | "unknown" = !acquisitionDetail
+    ? "unknown"
+    : acquisitionDetail.preDeemedBreakdown
+      ? acquisitionDetail.preDeemedBreakdown.selectedMethod === "converted"
+        ? "applied"
+        : "clause_a"
+      : "no_clause_b";
+  const convertedApplied = convertedState === "applied";
 
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/50 dark:border-sky-800/40 dark:bg-sky-950/20 p-4 space-y-4">
@@ -117,9 +148,31 @@ export function InheritedHouseValuationDetailCard({ detail }: Props) {
         </div>
       )}
 
-      {/* (B) 환산취득가 산식 요약 — 개별주택가격 비율(취득 ÷ 양도, 부수토지 포함) */}
-      <div className="rounded bg-white/70 dark:bg-white/5 border border-sky-100 dark:border-sky-800/30 p-2.5 text-xs space-y-1">
-        <p className="text-muted-foreground">
+      {/* (B) 환산취득가 산식 요약 — 개별주택가격 비율(취득 ÷ 양도, 부수토지 포함).
+          결론이 아니라 **상태를 밝힌 참고 산식**이다(Q18) — 판정 소스는 위 `convertedState`. */}
+      <div
+        className="rounded bg-white/70 dark:bg-white/5 border border-sky-100 dark:border-sky-800/30 p-2.5 text-xs space-y-1"
+        data-testid="inh-house-converted-box"
+      >
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <p className="text-xs font-semibold text-sky-800 dark:text-sky-300">환산취득가액</p>
+          {convertedState === "clause_a" && (
+            <span className="text-micro rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+              미적용 — 실지거래가액 의제(가목)가 확인됨
+            </span>
+          )}
+          {convertedState === "no_clause_b" && (
+            <span className="text-micro rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+              미적용 — 상증법 평가액·§164 기준시가로 산정
+            </span>
+          )}
+          {convertedState === "applied" && (
+            <span className="text-micro rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5">
+              적용
+            </span>
+          )}
+        </div>
+        <p className={convertedApplied ? "text-muted-foreground" : "text-muted-foreground/70"}>
           환산취득가액 = 양도가액 ×{" "}
           <Frac
             top={
