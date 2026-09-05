@@ -219,8 +219,6 @@ export function migrateLegacyForm(
       buildingName: String(ca.buildingName ?? ""),
       longitude: String(ca.longitude ?? ""),
       latitude: String(ca.latitude ?? ""),
-      isRegulatedAreaAtAcq: null,
-      isRegulatedAreaAtTransfer: null,
       parcelMode: Boolean(ca.parcelMode ?? false),
       parcels: ((ca.parcels as unknown[]) ?? []).map(migrateParcel),
       acquisitionArea: String(ca.acquisitionArea ?? legacyLandArea),

@@ -68,7 +68,6 @@ function housingFormWithPresaleRight() {
     assetKind: "housing",
     acquisitionDate: "2015-01-10",
     fixedAcquisitionPrice: "700,000,000",
-    isRegulatedAreaAtTransfer: true,
   };
   return form;
 }
