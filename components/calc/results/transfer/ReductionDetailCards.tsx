@@ -173,7 +173,11 @@ export function ReductionDetailCards({
         <InheritedAcquisitionDetailCard detail={result.inheritedAcquisitionDetail} />
       )}
       {result.inheritedHouseValuationDetail && (
-        <InheritedHouseValuationDetailCard detail={result.inheritedHouseValuationDetail} />
+        <InheritedHouseValuationDetailCard
+          detail={result.inheritedHouseValuationDetail}
+          /* 환산취득가 적용 여부는 옆 카드와 **같은 결과**에서 읽는다(Q18 — 판정 복제 금지). */
+          acquisitionDetail={result.inheritedAcquisitionDetail}
+        />
       )}
       {result.newHousingReductionDetail && (
         <NewHousingReductionDetailCard detail={result.newHousingReductionDetail} />

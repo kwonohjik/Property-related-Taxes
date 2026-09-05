@@ -247,11 +247,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
           {asset.useSupplementaryHelper && (
             <div className="space-y-3">
               {isHouse && (
-                <InheritanceHouseKindPicker
-                  value={kind}
-                  assetId={asset.assetId}
-                  onChange={onChange}
-                />
+                <InheritanceHouseKindPicker asset={asset} onChange={onChange} />
               )}
               {isLand ? (
                 /* 토지 — 개별공시지가(Vworld 조회) + 면적. 토지기준시가 = 단가×면적(LandPriceLookupField 자동표시). */
@@ -342,11 +338,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
             <strong>{houseSec164 ? `${houseSec164.total}개 항목을 모두` : "항목을 모두"}</strong>{" "}
             입력한 경우에만 비교하며, <strong>일부만 입력하면 계산할 때 오류로 안내</strong>합니다.
           </p>
-          <InheritanceHouseKindPicker
-            value={kind}
-            assetId={asset.assetId}
-            onChange={onChange}
-          />
+          <InheritanceHouseKindPicker asset={asset} onChange={onChange} />
           <HouseValuationSection
             asset={asset}
             onChange={onChange}
