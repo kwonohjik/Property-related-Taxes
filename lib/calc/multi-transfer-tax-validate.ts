@@ -6,6 +6,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
+import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 
 /**
  * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
@@ -141,8 +142,21 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
     // 필요한데 다건 route 미지원 → 취득가액 0 과대과세되므로 신고가액 확정 전까지만 차단.
     return "상속 취득가액(신고가액)을 입력하거나 단건 계산기를 사용하세요. 보충적평가 자동조회·환산취득가는 단건 계산기에서만 지원됩니다.";
   }
+  /**
+   * 비주택 → 주택 용도변경 (소득세법 §95⑤·⑥ · 시행령 §154⑤ 단서) — 다건 미지원 (Q26).
+   *
+   * 🔴 종전에는 이 가드가 없어 **조용히 무시**됐다. 다건 화면은 단건 마법사를 그대로
+   *   임베드하므로 토글을 켜고 주거용 사용 개시일까지 입력할 수 있고 ⑧도 통과시키는데,
+   *   다건 변환(`multi-transfer-tax-api.ts`)은 `nonHousingToHousingConversion`을 만들지 않고
+   *   거주월수 §95⑤2호 클램프(`clampResidenceToHousingPeriod`)도 태우지 않는다
+   *   ⇒ §95⑤ 기간 분해와 §154⑤ 단서 보유기간 기산이 통째로 빠져 **세액이 조용히 달라졌고**,
+   *   사용자는 입력이 반영된 것으로 오인했다. 침묵 오산보다 명시 차단이 안전하다.
+   */
+  if (isUsageConversionActive(a)) {
+    return "비주택→주택 용도변경(소득세법 §95⑤·⑥·영 §154⑤ 단서)은 단건 계산기에서만 지원됩니다.";
+  }
   if (a.usePreHousingDisclosure) {
-    return "개별주택가격 미공시 환산취득가(§164⑤)는 단건 계산기에서만 지원됩니다.";
+    return "개별주택가격 미공시 환산취득가(영 §164⑦)는 단건 계산기에서만 지원됩니다.";
   }
   if (a.parcelMode && a.assetKind === "land") {
     return "다필지 토지는 단건 계산기에서만 지원됩니다.";

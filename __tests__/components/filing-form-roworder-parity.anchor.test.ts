@@ -22,12 +22,17 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AggregateMeta } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 
-/** 합산에만 있는 행 — 신고 단위 개념이라 단건 표에는 없다 */
+/**
+ * 합산에만 있는 행 — 신고 단위 개념이라 단건 표에는 없다.
+ *
+ * 「(환급세액)」 병기는 별지 제84호서식의 칸 이름 그대로다 — 그 칸은 납부·환급 **한 칸**이라
+ * 기납부가 결정세액을 넘으면 음수로 표기한다(Q27). 라벨에서 그 괄호를 떼지 말 것.
+ */
 const AGGREGATE_ONLY = [
   "기납부세액 (예정신고, §111③)",
-  "차감납부할세액",
+  "차감납부할세액(환급세액)",
   "기납부세액 (지방, 예정신고)",
-  "차감납부할 지방소득세",
+  "차감납부할 지방소득세(환급세액)",
 ];
 /** 단건에만 있는 행 — 현재 없다(합산이 단건의 상위집합이다). */
 const SINGLE_ONLY: string[] = [];

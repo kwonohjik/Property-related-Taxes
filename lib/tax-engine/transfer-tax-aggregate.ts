@@ -710,6 +710,7 @@ function computeAggregateOnce(
     settlementAdditionalPayable: settlement.settlementAdditionalPayable,
     settlementRefund: settlement.settlementRefund,
     settlementLocalPayable: settlement.settlementLocalPayable,
+    settlementLocalRefund: settlement.settlementLocalRefund,
     settlementTotalDue: settlement.settlementTotalDue,
     penaltyTax,
     // 가산세 상세는 자산별로 properties[i].penaltyDetail 에서 노출.

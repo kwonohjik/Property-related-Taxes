@@ -36,6 +36,14 @@ export interface SettlementResult {
   settlementRefund: number;
   /** 지방 이번 납부할세액 = max(0, 지방결정 − 지방기납부) */
   settlementLocalPayable: number;
+  /**
+   * 지방 환급 = max(0, 지방기납부 − 지방결정).
+   *
+   * 🔴 종전에는 국세에만 `settlementRefund`가 있고 지방에는 **환급 필드 자체가 없었다**.
+   *   `settlementLocalPayable`이 0으로 clamp되므로, 기납부가 결정세액을 넘으면 지방분
+   *   환급액이 결과·신고서에서 **통째로 사라졌다**(Q27). 국세와 대칭으로 싣는다.
+   */
+  settlementLocalRefund: number;
   /** 최종 납부할세액 = 국세 납부 + 지방 납부 */
   settlementTotalDue: number;
   step: CalculationStep;
@@ -50,6 +58,7 @@ export function computeSettlement(input: SettlementInput): SettlementResult {
   const settlementAdditionalPayable = Math.max(0, nationalDue - input.priorPaidTax);
   const settlementRefund = Math.max(0, input.priorPaidTax - nationalDue);
   const settlementLocalPayable = Math.max(0, input.localIncomeTax - input.priorPaidLocalTax);
+  const settlementLocalRefund = Math.max(0, input.priorPaidLocalTax - input.localIncomeTax);
   const settlementTotalDue = settlementAdditionalPayable + settlementLocalPayable;
 
   const step: CalculationStep = {
@@ -69,6 +78,7 @@ export function computeSettlement(input: SettlementInput): SettlementResult {
     settlementAdditionalPayable,
     settlementRefund,
     settlementLocalPayable,
+    settlementLocalRefund,
     settlementTotalDue,
     step,
   };

@@ -126,8 +126,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
   // ⑬ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 토글 OFF 시 undefined, body에서 제외
   const rhPayload = primary ? toRentalHousingExceptionApi(primary) : undefined;
 
-  // 주의: 부담부증여·재개발(§166)·겸용주택·이월과세(§97의2)·일반건물/상업용 환산·PHD(§164⑤)·
-  // 다필지·토지/건물 분리·가업상속(§97의2④)·건별 다자산(companion)은 다건 합산 route(⑭)가
+  // 주의: 부담부증여·재개발(§166)·겸용주택·이월과세(§97의2)·일반건물/상업용 환산·PHD(영 §164⑦)·
+  // 다필지·토지/건물 분리·가업상속(§97의2④)·용도변경(§95⑤·⑥)·건별 다자산(companion)은 다건 합산 route(⑭)가
   // 매핑하지 않으므로 여기서 전송하지 않는다 — validateMultiSupportedMode에서 명시 차단.
   // (1990 환산은 route ⑭·엔진이 지원 — 아래 pre1990Land spread로 전송.)
   return {
