@@ -176,9 +176,28 @@ export function NblSectionContainer({
           </FieldCard>
         </div>
 
-        {/* 3. 재촌 판정 (농지·임야·목장 공통) — 토지 소재지 → 거주 이력 순 */}
+        {/*
+          3. 소재지·재촌 — 농지·임야·목장 공통 블록이지만 **안의 요소는 지목별로 갈린다**.
+
+          ⚠️ 이 블록 전체를 지목으로 게이트하지 말 것 (2026-09-05 실측): 아래 「소재지 행정구역
+             단위」는 **목장**의 §104의3①3호가목 도시지역 판정에 필요하다. 블록째 목장을 빼면
+             그 입력 경로가 함께 사라진다(tsc가 잡았다).
+        */}
         {(asset.nblLandType === "farmland" || asset.nblLandType === "forest" || asset.nblLandType === "pasture") && (
           <div className="mt-3 space-y-3">
+            {/*
+              재촌 판정 축 — **농지·임야 전용**. 목장용지에는 재촌 요건이 없다 (2026-09-05).
+
+              법 §104의3①3호는 목장용지를 가목 「축산업을 경영하는 자가 소유하는 목장용지로서
+              기준면적 초과 또는 도시지역 소재」·나목 「축산업을 경영하지 아니하는 자가 소유하는
+              토지」로만 정하고, 단서의 제외 사유(영 §168의10② — 상속 3년 미경과·종중·사회복지
+              법인등)에도 **거주 요건이 없다**. 재촌은 농지(§168의8②)·임야(§168의9②)에만 있는
+              축이고, 엔진 `pasture.ts`도 거주 이력·거리를 전혀 참조하지 않는다.
+
+              종전에는 목장에도 이 두 입력이 떠서 「재촌 판정에 사용됩니다」라고 안내했으나
+              판정에 전혀 쓰이지 않았다.
+            */}
+            {asset.nblLandType !== "pasture" && (
             <div data-testid="nbl-land-sigungu">
               <FieldCard
                 label="토지 소재지 (시·군·구)"
@@ -197,6 +216,7 @@ export function NblSectionContainer({
                 )}
               </FieldCard>
             </div>
+            )}
             {(asset.nblLandType === "farmland" || asset.nblLandType === "pasture") && (
               <div data-testid="nbl-land-division">
                 <FieldCard
@@ -215,7 +235,13 @@ export function NblSectionContainer({
                 </FieldCard>
               </div>
             )}
-            <ResidenceHistorySection asset={asset} onAssetChange={onAssetChange} />
+            {asset.nblLandType !== "pasture" && (
+              <ResidenceHistorySection
+                asset={asset}
+                onAssetChange={onAssetChange}
+                landType={asset.nblLandType}
+              />
+            )}
           </div>
         )}
 
