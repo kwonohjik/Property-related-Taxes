@@ -12,7 +12,9 @@
  *
  * 소비처(재정의 금지): PreHousingDisclosureSection(UI 경고) ·
  * transfer-tax-validate-asset(⑧ 차단) · transfer-tax-schema-refines(⑩ Zod refine) ·
- * CompanionAcqPurchaseBlock(자동 ON 억제).
+ * CompanionAcqPurchaseBlock(자동 ON 억제) ·
+ * ReductionPhdInput(감면 축 권장·경고 — 2026-09-05 Q12에서 복제 판정을 여기로 합류시켰다.
+ * 감면 축은 아직 **경고만** 하고 차단하지 않는다).
  */
 
 /** 의제취득일 (소득세법 부칙 — 1984.12.31. 이전 취득은 1985.1.1. 취득 의제) */

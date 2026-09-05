@@ -24,6 +24,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { prefillAcqLandPrice } from "@/lib/calc/phd-acq-land-price-track";
+import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import {
   calcReductionAcquisitionStdPrice,
   canCalcReductionPhd,
@@ -35,6 +36,14 @@ import {
 
 export interface ReductionPhdValue {
   phdMode?: boolean;
+  /**
+   * 최초 고시일 — **§164⑦ 적격 판정 전용이고 엔진에 전송되지 않는다** (2026-09-05 · Q12).
+   *
+   * 환산 산식(`calcReductionAcquisitionStdPrice`)의 입력은 최초고시 **가격**·면적·단가·건물
+   * 기준시가뿐이고 이 날짜는 쓰이지 않는다. 여기서 하는 일은 「취득 당시 고시분이 있었는가」를
+   * 가려 권장·경고를 띄우는 것이다 — 「죽은 입력」이 아니라 **판정 전용**이다.
+   * 엔진까지 배선하려면 ④⑫⑭를 함께 열어야 한다(별건).
+   */
   firstDisclosureDate?: string;
   firstDisclosurePrice?: string;
   landAreaSqm?: string;
@@ -108,11 +117,24 @@ export function ReductionPhdInput({
         : snapshotKeyPrefix
           ? `${snapshotKeyPrefix}-bsp`
           : undefined;
-  // 자동 활성화 권장 — 취득일 < 최초공시일
-  const autoRecommended = useMemo(() => {
-    if (!acquisitionDate || !value.firstDisclosureDate) return false;
-    return new Date(acquisitionDate) < new Date(value.firstDisclosureDate);
-  }, [acquisitionDate, value.firstDisclosureDate]);
+  /**
+   * §164⑦ 적격 판정 — **자산 축과 같은 leaf**를 쓴다 (2026-09-05 · 코드리뷰 Q12).
+   *
+   * 🔴 종전에는 이 자리에서 `new Date(a) < new Date(f)`로 판정을 **복제**했다. 그 식은
+   *   `isPhdEligible`이 접어 주는 **의제취득일(1985-01-01)** 을 보지 않아, 1985년 이전 취득에서
+   *   자산 축과 답이 갈렸다. 게다가 **부적격일 때 아무 말도 하지 않아** 취득일이 최초공시일
+   *   이후여도 토글을 켤 수 있었고, 그 환산값이 그대로 감면 대상소득 산정에 쓰였다 —
+   *   자산 축(⑤ 경고·⑧ 차단·⑫ refine 3중)과 **같은 규정, 반대 취급**이었다.
+   *
+   * ⚠️ 여기서는 **차단하지 않고 경고만** 한다(1단계). 차단을 바로 넣으면 이미 저장된 감면
+   *   입력이 갑자기 계산 불가가 된다 — 새로 저장되는 것부터 차단으로 승격하는 2단계가 남는다.
+   */
+  const phdEligible = isPhdEligible(acquisitionDate ?? "", value.firstDisclosureDate ?? "");
+  const bothDatesKnown = !!acquisitionDate && !!value.firstDisclosureDate;
+  /** 취득일 < 최초공시일 — 환산 권장 */
+  const autoRecommended = bothDatesKnown && phdEligible;
+  /** 취득 당시 이미 고시분이 있다 — §164⑦ 대상이 아니다 */
+  const notEligible = bothDatesKnown && !phdEligible;
 
   const isOn = value.phdMode === true;
 
@@ -140,12 +162,34 @@ export function ReductionPhdInput({
         description={
           autoRecommended
             ? "✓ 자산의 취득일이 최초공시일 이전 — 환산 권장"
-            : "신축주택 취득 당시 공시가격이 없는 경우 소득세법 시행령 §164⑦ 환산 적용"
+            : notEligible
+              ? "⚠ 취득 당시 이미 공시가격이 고시돼 있습니다 — §164⑦ 환산 대상이 아닙니다"
+              : "신축주택 취득 당시 공시가격이 없는 경우 소득세법 시행령 §164⑦ 환산 적용"
         }
         tone="amber"
         size="sm"
       >
         <div className="space-y-3 mt-2">
+          {/*
+            §164⑦ 부적격 경고 (Q12) — **차단하지 않는다**. 자산 축은 같은 상황을 ⑧에서 막지만
+            (`transfer-tax-validate-acquisition.ts:511`), 감면 축에 차단을 바로 넣으면 이미
+            저장된 입력이 갑자기 계산 불가가 된다. 우선 경고로 알리고, 새로 저장되는 것부터
+            차단으로 승격하는 2단계를 남긴다.
+          */}
+          {notEligible && isOn && (
+            <div
+              className="rounded-md border border-rose-300 bg-rose-50/70 px-3 py-2 text-xs text-rose-900"
+              data-testid="reduction-phd-not-eligible"
+            >
+              <p className="font-semibold">§164⑦ 환산 대상이 아닙니다</p>
+              <p className="mt-0.5">
+                취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다 — 취득 당시
+                주택공시가격이 고시되어 있으므로 환산이 아니라 <strong>실제 고시된 취득시
+                기준시가</strong>를 입력해야 합니다. 이 환산값은 감면 대상소득 산정에 그대로
+                쓰이므로 확인하세요.
+              </p>
+            </div>
+          )}
           {/* 자산 카드 데이터 가져오기 버튼 (Q4 b 선택의 사용자 친화 보조) */}
           {onCopyFromAsset && assetHasPhdData && (
             <button
