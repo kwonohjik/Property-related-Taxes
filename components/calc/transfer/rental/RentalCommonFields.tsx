@@ -309,6 +309,28 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               </p>
             </div>
           )}
+
+          {/* Q10 — 안분 분모의 두 시점(E·D). 자산 카드의 취득시·양도시 기준시가는
+              추계·분리 모드에서만 엔진에 전송되므로, 실지거래가액 모드에서는 채울 칸이
+              없어 안분이 성립하지 않았다(§97의3 전액 불적용). 비우면 자산 카드 값으로
+              폴백하므로 추계 모드 사용자는 종전과 같다. */}
+          <div className="mt-2 space-y-2 border-t border-violet-200 pt-2">
+            <p className="text-micro text-muted-foreground">
+              안분 산식의 분모 — <strong>양도 당시 기준시가 D − 취득 당시 기준시가 E</strong>.
+              자산 카드의 환산 입력이 있으면 비워 두어도 그 값을 씁니다 — <strong>두 곳에 서로
+              다른 값을 넣지 마세요</strong>(이 칸이 우선합니다).
+            </p>
+            <CurrencyInput
+              label="취득 당시 기준시가 (주택+부속토지 합계)"
+              value={value.stdPriceAtAcquisition}
+              onChange={(v) => onChange({ stdPriceAtAcquisition: v })}
+            />
+            <CurrencyInput
+              label="양도 당시 기준시가 (주택+부속토지 합계)"
+              value={value.stdPriceAtTransfer}
+              onChange={(v) => onChange({ stdPriceAtTransfer: v })}
+            />
+          </div>
         </ToneCard>
       )}
     </>

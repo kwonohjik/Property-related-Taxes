@@ -24,6 +24,12 @@ const rental97CommonShape = {
   rentalContinuesToTransfer: z.boolean().optional(),
   /** D2-06 — 실제 임대기간 마지막 날의 기준시가 (원) */
   stdPriceAtRentalEnd: z.number().int().nonnegative().optional(),
+  /**
+   * Q10 — 안분 산식 E·D (조특령 §97의3⑤·§97의5②). **감면-수준 override**이고,
+   * 없으면 라우터가 자산-수준 기준시가(ctx)로 폴백한다. ⑫에 없으면 침묵 stripping된다.
+   */
+  stdPriceAtAcquisition: z.number().int().nonnegative().optional(),
+  stdPriceAtTransfer: z.number().int().nonnegative().optional(),
 } as const;
 
 /** §97 본문·단서 전용 — 조특령 §97① 5호 요건 + §97⑤4호 5호 미만 기간 (D1-01) */

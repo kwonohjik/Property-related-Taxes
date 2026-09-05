@@ -339,6 +339,32 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
               return fail(
                 `${label} 적용: 임대 종료일 당시 기준시가를 입력하세요 (안분 산식의 B). 자동 안분은 수행하지 않습니다.`,
               );
+            /**
+             * Q10 — 분모의 두 시점(E 취득당시 · D 양도당시). 감면-수준 override 또는
+             * 자산-수준(환산 모드) 값 중 **하나는** 있어야 한다. §66⑦ 블록(:167)과 같은 모양.
+             *
+             * ⚠️ **안분이 실제로 필요할 때만 묻는다** — `calcRentalGainRatio`는
+             *    「양도일까지 계속 임대 + 임대개시 ≤ 취득일」이면 기준시가를 **보지도 않고**
+             *    비율 1을 돌려준다(`rental-97-shared-helpers.ts:211`). 그 경우까지 막으면
+             *    필요 없는 값을 요구하는 오탐이 된다.
+             */
+            const rentalStart = r.rentalStartDate || "";
+            const prorationNeeded =
+              r.rentalContinuesToTransfer === false ||
+              (!!rentalStart && !!asset.acquisitionDate && rentalStart > asset.acquisitionDate);
+            if (prorationNeeded) {
+              const hasAcqStd =
+                parseAmount(r.stdPriceAtAcquisition || "") > 0 ||
+                parseAmount(asset.standardPriceAtAcq || "") > 0;
+              const hasTransferStd =
+                parseAmount(r.stdPriceAtTransfer || "") > 0 ||
+                parseAmount(asset.standardPriceAtTransfer || "") > 0;
+              if (!hasAcqStd || !hasTransferStd)
+                return fail(
+                  `${label} 적용: 안분 산식의 취득 당시·양도 당시 기준시가를 입력하세요 ` +
+                    `(감면 카드의 두 칸, 또는 자산 카드의 환산 입력). 자동 안분은 수행하지 않습니다.`,
+                );
+            }
           }
           if ((r.type === "rental_97_main" || r.type === "rental_97_proviso") && !(parseInt((r as { constructionYear?: string }).constructionYear || "") > 0))
             return fail(`${label} 적용: 신축 연도를 입력하세요.`);
