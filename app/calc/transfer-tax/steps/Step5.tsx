@@ -131,7 +131,7 @@ function AssetReductionBlock({
               value={selfFarming.farmingYears}
               onChange={(v) => updateReduction("self_farming", { farmingYears: v } as Partial<AssetReductionForm>)}
             />
-            <span className="text-sm text-muted-foreground">년 (8년 이상이어야 감면 적용)</span>
+            <span className="text-xs text-muted-foreground">년 (8년 이상이어야 감면 적용)</span>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-sm text-muted-foreground whitespace-nowrap">
@@ -146,7 +146,7 @@ function AssetReductionBlock({
                 } as Partial<AssetReductionForm>)
               }
             />
-            <span className="text-sm text-muted-foreground">년</span>
+            <span className="text-xs text-muted-foreground">년</span>
           </div>
           <p className="text-micro text-muted-foreground">
             사업소득금액(농업·임업·부동산임대·농가부업소득 제외) + 총급여액이 <b>3,700만원 이상</b>인
@@ -186,7 +186,7 @@ function AssetReductionBlock({
                         updateReduction("self_farming", { decedentFarmingYears: v } as Partial<AssetReductionForm>)
                       }
                     />
-                    <span className="text-sm text-muted-foreground">년</span>
+                    <span className="text-xs text-muted-foreground">년</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-muted-foreground whitespace-nowrap">
@@ -201,7 +201,7 @@ function AssetReductionBlock({
                         } as Partial<AssetReductionForm>)
                       }
                     />
-                    <span className="text-sm text-muted-foreground">년</span>
+                    <span className="text-xs text-muted-foreground">년</span>
                   </div>
                   <ToggleCard
                     tone="emerald"
@@ -283,7 +283,7 @@ function AssetReductionBlock({
                 updateReduction("long_term_rental", { rentalYears: v } as Partial<AssetReductionForm>)
               }
             />
-            <span className="text-sm text-muted-foreground">년 임대</span>
+            <span className="text-xs text-muted-foreground">년 임대</span>
           </div>
           <div className="flex items-center gap-2">
             <DecimalInput
@@ -293,7 +293,7 @@ function AssetReductionBlock({
                 updateReduction("long_term_rental", { rentIncreaseRate: v } as Partial<AssetReductionForm>)
               }
             />
-            <span className="text-sm text-muted-foreground">% 임대료 인상률 (5% 이하여야 감면)</span>
+            <span className="text-xs text-muted-foreground">% 임대료 인상률 (5% 이하여야 감면)</span>
           </div>
         </div>
       )}

@@ -39,11 +39,25 @@ import {
   type FamilyBusinessInheritanceCandidate,
   type FamilyBusinessInheritancePrefill,
   type FbLookupWarning,
+  type FbLookupWarningReason,
 } from "@/lib/calc/family-business-inheritance-lookup";
 
 // ============================================================
 // 라벨 매핑
 // ============================================================
+
+/**
+ * 제외 사유 한국어 라벨. `Record<FbLookupWarningReason, …>`이라 사유가 추가되면
+ * 라벨 누락을 tsc가 잡는다(내부 enum 값이 화면에 노출되는 것을 막는다).
+ */
+const FB_WARNING_REASON_LABELS: Record<FbLookupWarningReason, string> = {
+  result_missing: "가업상속공제 상세 누락",
+  no_family_business: "가업상속공제 미적용",
+  rate_zero: "가업상속공제 적용률 0",
+  no_assets: "가업 분류 자산 0건",
+  transfer_before_inheritance: "상속개시일이 양도일 이후",
+  death_date_missing: "상속개시일 누락·형식 오류",
+};
 
 const CATEGORY_LABEL: Record<string, string> = {
   business_real_estate: "가업용 부동산",
@@ -198,7 +212,7 @@ export function FamilyBusinessInheritanceHistoryModal({
   };
 
   const warningsByReason = useMemo(() => {
-    const grouped: Record<string, FbLookupWarning[]> = {};
+    const grouped: Partial<Record<FbLookupWarningReason, FbLookupWarning[]>> = {};
     for (const w of warnings) {
       (grouped[w.reason] ??= []).push(w);
     }
@@ -274,7 +288,7 @@ export function FamilyBusinessInheritanceHistoryModal({
               <ul className="mt-2 space-y-1">
                 {Object.entries(warningsByReason).map(([reason, ws]) => (
                   <li key={reason}>
-                    <span className="text-gray-500">[{reason}]</span> {ws.length}건
+                    <span className="text-gray-500">[{FB_WARNING_REASON_LABELS[reason as FbLookupWarningReason] ?? reason}]</span> {ws.length}건
                     <ul className="ml-4 text-caption text-gray-600">
                       {ws.slice(0, 3).map((w, i) => (
                         <li key={i}>· {w.message}</li>

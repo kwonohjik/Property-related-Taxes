@@ -140,7 +140,7 @@ export function MixedUseAssetMajorStdPrice({
           {isInheritance && (
             <ToneCard
               tone="violet"
-              title="상속개시일 신고가액 override (선택)"
+              title="상속개시일 신고가액 직접 입력 (선택)"
               titleExtra={<LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />}
             >
               <CurrencyInput

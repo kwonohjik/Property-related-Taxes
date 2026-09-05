@@ -28,6 +28,8 @@ const LAND_NATURE_OPTIONS: RadioCardOption<LandNatureValue>[] = [
 
 interface Props {
   landNature: AssetForm["landNature"];
+  /** 라디오 name 스코프 — 일괄양도 토지 2건이 한 그룹으로 묶이는 것을 막는다 */
+  assetId: AssetForm["assetId"];
   onChange: (patch: Partial<AssetForm>) => void;
 }
 
@@ -35,7 +37,7 @@ interface Props {
  * 토지 자산 성격 선택 위젯.
  * assetKind === "land" 인 자산 카드 면적 입력 직후에 배치.
  */
-export function CompanionLandNatureBlock({ landNature, onChange }: Props) {
+export function CompanionLandNatureBlock({ landNature, assetId, onChange }: Props) {
   return (
     <div className="rounded-lg border border-violet-200/70 bg-violet-50/70 p-3 space-y-2">
       <div className="space-y-0.5">
@@ -47,7 +49,7 @@ export function CompanionLandNatureBlock({ landNature, onChange }: Props) {
         </p>
       </div>
       <RadioCardGroup
-        name="landNature"
+        name={`landNature-${assetId}`}
         options={LAND_NATURE_OPTIONS}
         value={(landNature ?? "") as LandNatureValue | ""}
         onChange={(v) => onChange({ landNature: v as LandNatureValue })}

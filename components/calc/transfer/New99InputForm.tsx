@@ -155,7 +155,7 @@ export function New99InputForm({
           assetPhdSnapshot={assetPhdSnapshot}
           testidPrefix="new99"
           snapshotKeyPrefix="red99"
-          areaHint="고가주택 판정용 — 1998~2002.9 계약 기준은 전용 165㎡ 이상이면서 양도가 6억 초과 시 적용 제외 (법 §99① 단서). 부수토지는 건물 연면적 2배 이내 토지를 포함해 입력합니다"
+          areaHint="주택 전용면적만 입력 — 부수토지 면적은 포함하지 마세요. 고가주택 판정용이며, 1998~2002.9 계약 기준은 전용 165㎡ 이상이면서 양도가 6억 초과 시 적용 제외 (법 §99① 단서)"
         />
       </SectionShell>
 

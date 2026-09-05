@@ -114,7 +114,7 @@ function ReductionRecalculationSection({
 
                 <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   <span className="text-muted-foreground">합산 산출세액</span>
-                  <span className="text-right tabular-nums">
+                  <span className="text-right font-mono tabular-nums whitespace-nowrap">
                     {entry.aggregateCalculatedTax.toLocaleString()}
                   </span>
                   {/*
@@ -127,7 +127,7 @@ function ReductionRecalculationSection({
                   */}
                   {/* 옛 저장 결과(IndexedDB)에는 신규 필드가 없다 — 종전 값으로 폴백한다. */}
                   <span className="text-muted-foreground">합산 감면대상소득 (감면율 前)</span>
-                  <span className="text-right tabular-nums">
+                  <span className="text-right font-mono tabular-nums whitespace-nowrap">
                     {(entry.eligibleIncomeBeforeRate ?? entry.totalReducibleIncome).toLocaleString()}
                   </span>
                   {/*
@@ -138,7 +138,7 @@ function ReductionRecalculationSection({
                   {(entry.basicDeductionApplied ?? 0) > 0 && (
                     <>
                       <span className="text-muted-foreground">양도소득 기본공제</span>
-                      <span className="text-right tabular-nums">
+                      <span className="text-right font-mono tabular-nums whitespace-nowrap">
                         −{entry.basicDeductionApplied.toLocaleString()}
                       </span>
                     </>
@@ -153,7 +153,7 @@ function ReductionRecalculationSection({
                   {entry.appliedReductionRate != null && entry.appliedReductionRate !== 1 && (
                     <>
                       <span className="text-muted-foreground">적용 감면율</span>
-                      <span className="text-right tabular-nums">
+                      <span className="text-right font-mono tabular-nums whitespace-nowrap">
                         {(entry.appliedReductionRate * 100).toFixed(entry.appliedReductionRate * 100 % 1 === 0 ? 0 : 2)}%
                       </span>
                     </>
@@ -172,21 +172,21 @@ function ReductionRecalculationSection({
                         <span className="text-muted-foreground">
                           {RATED_REDUCIBLE_INCOME_LABEL}
                         </span>
-                        <span className="text-right tabular-nums">
+                        <span className="text-right font-mono tabular-nums whitespace-nowrap">
                           {entry.reducibleIncomeAfterBasicDeduction.toLocaleString()}
                         </span>
                       </>
                     )}
                   <span className="text-muted-foreground">합산 과세표준</span>
-                  <span className="text-right tabular-nums">
+                  <span className="text-right font-mono tabular-nums whitespace-nowrap">
                     {entry.aggregateTaxBase.toLocaleString()}
                   </span>
                   <span className="text-muted-foreground">재계산 원시 감면</span>
-                  <span className="text-right tabular-nums">
+                  <span className="text-right font-mono tabular-nums whitespace-nowrap">
                     {entry.rawAggregateReduction.toLocaleString()}
                   </span>
                   <span className="text-muted-foreground font-medium">최종 감면세액</span>
-                  <span className="text-right tabular-nums font-medium text-primary">
+                  <span className="text-right font-mono tabular-nums whitespace-nowrap font-medium text-primary">
                     {entry.cappedAggregateReduction.toLocaleString()}
                   </span>
                 </div>
@@ -215,10 +215,10 @@ function ReductionRecalculationSection({
                               (감면율 = 감면 ÷ 산출 검산 불가). 옛 저장 결과에서 필드가 없을 수
                               있으므로 아코디언과 같은 가드(`resolveRefCalculatedTax`)를 쓴다.
                             */}
-                            <td className="text-right tabular-nums">
+                            <td className="text-right font-mono tabular-nums whitespace-nowrap">
                               {resolveRefCalculatedTax(p).toLocaleString()}
                             </td>
-                            <td className="text-right tabular-nums">
+                            <td className="text-right font-mono tabular-nums whitespace-nowrap">
                               {p.reductionAmount.toLocaleString()}
                             </td>
                             {/*
@@ -226,7 +226,7 @@ function ReductionRecalculationSection({
                                  값이 「감면대상소득」으로 뜬다 — 위 합계 행·신고서 ⑲와 어긋난다.
                                  ⑲의 단일 소스(`reductionEligibleIncome`)를 그대로 쓴다.
                             */}
-                            <td className="text-right tabular-nums">
+                            <td className="text-right font-mono tabular-nums whitespace-nowrap">
                               {reductionEligibleIncome(
                                 p.reductionType,
                                 p.income,
@@ -234,7 +234,7 @@ function ReductionRecalculationSection({
                                 p.replacementLandDetail?.eligibleTransferIncome,
                               ).toLocaleString()}
                             </td>
-                            <td className="text-right tabular-nums font-medium">
+                            <td className="text-right font-mono tabular-nums whitespace-nowrap font-medium">
                               {p.reductionAggregated.toLocaleString()}
                             </td>
                           </tr>

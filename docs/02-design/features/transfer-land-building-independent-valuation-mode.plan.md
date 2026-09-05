@@ -77,7 +77,7 @@ if (input.acquisitionMethod === "appraisal")  { /* 둘 다 감정 */ }
 ```
 → `landSplitMode`는 **엔진에 전달되지만 계산에 미사용.** API가 `landSplitMode === "actual"`일 때만 6필드(landTransferPrice 등)를 전송하는 **게이트 역할**만 한다(`transfer-tax-api.ts:321-338`). 엔진 `splitPair`(`transfer-tax-split-gain.ts:48-59`)는 필드 **유무**로만 판단(입력 우선 → 한쪽만 있으면 잔액 → 둘 다 없으면 안분).
 
-**양도가액 축은 2-레벨** (중복 아님 — 실측 정정): `bundledSaleMode`(`calc-wizard-store.ts:61`, 폼-전역, default `apportioned`:232)는 **다건 자산 "간"** 일괄양도 안분 축이다(`BundledAllocationPreview.tsx:21` `assets.length < 2` 시 무효화, 단건은 `CompanionAssetsSection.tsx:85`에서 `singleMode`=`assets.length===1` 파생 → `CompanionSaleModeBlock` 라벨 단순화). 반면 본 계획의 `saleSplitMode`는 **한 자산 "내" 토지·건물 간** 분리 축 — **레벨이 다르므로 공존 가능**(bundledSaleMode 재활용 불가). 현재 결함은 "죽은 모드 `landSplitMode`가 취득·양도를 하나로 묶은 것"이지 양도 축 중복이 아니다.
+**양도가액 축은 2-레벨** (중복 아님 — 실측 정정): `bundledSaleMode`(`calc-wizard-store.ts:61`, 폼-전역, default `apportioned`:232)는 **다건 자산 "간"** 일괄양도 안분 축이다(단건은 `CompanionAssetsSection.tsx:87`에서 `singleMode`=`assets.length===1` 파생 → `CompanionSaleModeBlock` 라벨 단순화). 반면 본 계획의 `saleSplitMode`는 **한 자산 "내" 토지·건물 간** 분리 축 — **레벨이 다르므로 공존 가능**(bundledSaleMode 재활용 불가). 현재 결함은 "죽은 모드 `landSplitMode`가 취득·양도를 하나로 묶은 것"이지 양도 축 중복이 아니다.
 
 ### 2.3 안분 비율 시점 — 취득시 기준시가 (법령 정합성 문제)
 
@@ -398,4 +398,4 @@ Phase E. 전체 회귀 + 완료 보고
 - 데이터 모델 기존 필드: `calc-wizard-asset.ts:328,368-388`
 - 법령: 소득세법 시행령 §166⑥ (MST 286211), 부가가치세법 시행령 §64① (MST 283641) — KoreanLaw 조회 완료 2026-07-27
 - 케이스 매트릭스 현행: `land-building-split.test.ts` S1~S5 (혼합 케이스 0건)
-- 양도 모드 2-레벨(중복 아님): `bundledSaleMode` 자산 간 폼-전역(`calc-wizard-store.ts:61`·`:232` default apportioned, `BundledAllocationPreview.tsx:20-21` `assets.length<2` 무효) ↔ `saleSplitMode` 자산 내 토지·건물(신규). 단건 판정 `CompanionAssetsSection.tsx:85`
+- 양도 모드 2-레벨(중복 아님): `bundledSaleMode` 자산 간 폼-전역(`calc-wizard-store.ts:61`·`:232` default apportioned) ↔ `saleSplitMode` 자산 내 토지·건물(신규). 단건 판정 `CompanionAssetsSection.tsx:87`

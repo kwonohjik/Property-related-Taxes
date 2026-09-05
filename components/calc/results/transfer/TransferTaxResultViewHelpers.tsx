@@ -77,9 +77,11 @@ export function Row({
       )}>
         {label}
       </td>
+      {/* 금액 열은 sub 여부와 무관하게 표에서 크기를 상속받는다 — 같은 열에 12px·14px가
+          섞이면 자릿수가 세로로 어긋난다. sub 구분은 라벨 열의 들여쓰기·색상이 담당. */}
       <td className={cn(
-        "px-4 py-2.5 text-right font-mono whitespace-nowrap",
-        sub && "text-xs text-muted-foreground",
+        "px-4 py-2.5 text-right font-mono tabular-nums whitespace-nowrap",
+        sub && "text-muted-foreground",
         highlight && "bg-muted/50",
       )}>
         {value}

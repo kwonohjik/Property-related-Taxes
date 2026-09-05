@@ -62,7 +62,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
               className="w-24"
               value={value.constructionYear}
               onChange={(v) => onChange({ constructionYear: v })}
-              placeholder="예: 1998"
+              placeholder="신축 연도"
             />
             <span className="text-xs text-muted-foreground">년 (1986~2000 신축)</span>
           </div>

@@ -344,6 +344,7 @@ export function AssetSectionBasic({
       {asset.assetKind === "land" && (
         <CompanionLandNatureBlock
           landNature={asset.landNature}
+          assetId={asset.assetId}
           onChange={onChange}
         />
       )}

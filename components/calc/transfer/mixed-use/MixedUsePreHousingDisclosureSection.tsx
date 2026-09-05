@@ -188,7 +188,9 @@ export function MixedUsePreHousingDisclosureSection({
           jibun={asset.addressJibun || undefined}
           acquisitionDate={acqDate || undefined}
           transferDate={transferDate}
-          /* onCalculatedPrice 콜백은 미사용 — 위 useMemo가 ㎡당 가액을 직접 phdLandPricePerSqmAtAcq에 주입 */
+          /* onCalculatedPrice 콜백은 미사용 — 파생값은 store에 쓰지 않고
+             아래 ⑥ 3-시점 입력의 display fallback(landPricePerSqmAtAcq)으로만 전달한다
+             (useEffect→store 미러링 금지 정책) */
         />
       )}
 

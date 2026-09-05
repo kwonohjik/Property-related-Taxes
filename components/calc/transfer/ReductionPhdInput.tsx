@@ -4,13 +4,12 @@
  *
  * 신축주택은 준공 후 1~2년 후 공시가격이 공시되므로, 모든 신축주택 취득 당시에는
  * 공시가격이 없음. 5년간 발생분 차감 안분 산식을 적용하는 8개 조문에서 "취득시 기준시가"가
- * 필수이므로 §164⑤ 환산 자동화.
+ * 필수이므로 소득세법 시행령 §164⑦ 환산 자동화.
  *
  * 사용자 결정사항 #4 (b): 각 감면 조문 입력 폼에 PHD 입력 별도 (자산-수준 PHD와 분리)
  *
- * 활성화 모드:
- *   - 자동: 자산의 acquisitionDate < firstDisclosureDate 자동 감지 → ON
- *   - 수동: 토글로 ON/OFF
+ * 활성화는 **항상 수동 토글**(`phdMode`)이다. 취득일 < 최초공시일이면 토글 설명이
+ * 「✓ 환산 권장」으로 바뀔 뿐 자동으로 켜지지 않는다(useEffect→store 미러링 금지 정책).
  *
  * 사용처:
  *   - §99의3 본격 입력 폼 (Round 10.3)
@@ -141,7 +140,7 @@ export function ReductionPhdInput({
         description={
           autoRecommended
             ? "✓ 자산의 취득일이 최초공시일 이전 — 환산 권장"
-            : "신축주택 취득 당시 공시가격이 없는 경우 §164⑤ 환산 적용"
+            : "신축주택 취득 당시 공시가격이 없는 경우 소득세법 시행령 §164⑦ 환산 적용"
         }
         tone="amber"
         size="sm"
@@ -227,7 +226,7 @@ export function ReductionPhdInput({
                    * 🔴 세목 고정 — 없으면 모달에 세목 라디오가 뜨고, 사용자가
                    * 「상속·증여(1시점)」로 바꾸면 결과 카드가 `onApply`(여기선 **미배선**)를
                    * 부르는 「이 금액 적용」 버튼을 낸다. 두 필드 중 아무것도 안 채워지는
-                   * **침묵 no-op**인데 스냅샷은 저장돼, 결과탭에 「감면 PHD 환산 §164⑤」
+                   * **침묵 no-op**인데 스냅샷은 저장돼, 결과탭에 「감면 PHD 환산 §164⑦」
                    * 라벨을 단 상증 계산서가 남는다. 이 호출부는 양도 2시점 전용이다.
                    */
                   lockedTaxType="transfer"
@@ -263,7 +262,7 @@ export function ReductionPhdInput({
                    * 🔴 세목 고정 — 없으면 모달에 세목 라디오가 뜨고, 사용자가
                    * 「상속·증여(1시점)」로 바꾸면 결과 카드가 `onApply`(여기선 **미배선**)를
                    * 부르는 「이 금액 적용」 버튼을 낸다. 두 필드 중 아무것도 안 채워지는
-                   * **침묵 no-op**인데 스냅샷은 저장돼, 결과탭에 「감면 PHD 환산 §164⑤」
+                   * **침묵 no-op**인데 스냅샷은 저장돼, 결과탭에 「감면 PHD 환산 §164⑦」
                    * 라벨을 단 상증 계산서가 남는다. 이 호출부는 양도 2시점 전용이다.
                    */
                   lockedTaxType="transfer"
@@ -290,7 +289,7 @@ export function ReductionPhdInput({
           {result && (
             <div className="rounded-md border border-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2 space-y-1">
               <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
-                환산 결과 (소득세법 §164⑤)
+                환산 결과 (소득세법 시행령 §164⑦)
               </p>
               <div className="space-y-0.5 text-caption text-amber-800 dark:text-amber-300">
                 {result.formulaSteps.map((s, i) => (

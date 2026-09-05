@@ -38,6 +38,8 @@ const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
 const LAND_FIRST_DISCLOSURE_DATE = "1990-08-30";
 
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { TONE } from "@/components/calc/shared/tones";
 
 const VALUATION_METHOD_OPTIONS = [
   { value: "market_value",        label: "매매사례가액 (시가)" },
@@ -332,8 +334,8 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
 
       {/* 주택 미공시(2005-04-30 이전 상속): §164⑦ 환산 위젯 — §163⑨2호 max(상증법 평가액, §164⑦) */}
       {showHouseValuation && (
-        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-3">
-          <p className="text-xs font-medium text-amber-800">
+        <ToneCard tone="amber">
+          <p className={`text-xs font-medium ${TONE.amber.title}`}>
             개별주택가격 미공시(2005.4.30. 이전 상속) — 아래 §164⑦ 환산으로 취득당시 기준시가를 산정합니다.
             취득가액은 위 상속세 신고가액(상증법 평가액)과 §164⑦ 환산액 중 <strong>큰 금액</strong>으로 자동
             적용됩니다 (소득세법 시행령 §163⑨2호).{" "}
@@ -350,7 +352,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
             onChange={onChange}
             transferDate={transferDate}
           />
-        </div>
+        </ToneCard>
       )}
 
       {/* 토지 미공시(1990.8.30. 이전 상속·증여): §164④ 등급환산 — §163⑨**1호** max(상증법 평가액, §164④)
@@ -358,8 +360,8 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
           ⚠️ 이 기간에는 위 보충적평가 섹션이 `isPreDisclosure`로 **숨겨진다**(개별공시지가가 존재하지 않으므로).
              주택이 `showHouseValuation`으로 별도 경로를 갖는 것처럼, 토지도 여기가 **유일한 산정 경로**다. */}
       {landPre1990 && (
-        <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-3">
-          <p className="text-xs font-medium text-amber-800">
+        <ToneCard tone="amber">
+          <p className={`text-xs font-medium ${TONE.amber.title}`}>
             개별공시지가 미공시(1990.8.30. 이전 상속·증여) — 아래 토지등급가액 환산으로 취득당시
             기준시가를 산정합니다. 취득가액은 위 상속세 신고가액(상증법 평가액)과 §164④ 환산액 중{" "}
             <strong>큰 금액</strong>으로 자동 적용됩니다 (소득세법 시행령 §163⑨1호).{" "}
@@ -382,7 +384,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
             acquisitionDate={asset.acquisitionDate || undefined}
             transferDate={transferDate}
           />
-        </div>
+        </ToneCard>
       )}
     </div>
   );

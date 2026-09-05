@@ -22,18 +22,18 @@ import { NewConstructionFootprintSection } from "./NewConstructionFootprintSecti
 export const MANUAL_RATE_OVERRIDE_OPTIONS = [
   {
     value: "shortTermHousing70",
-    label: "70% — 단기보유 주택 세율 적용",
-    description: "§104①2·3호 괄호 — 주택·부수토지 일체과세(영 §167의5)",
+    label: "70% — 1년 미만 보유 주택 세율 적용",
+    description: "소득세법 §104①3호 괄호 — 주택·부수토지 일체과세(영 §167의5)",
   },
   {
     value: "shortTerm60",
-    label: "40% — 1년~2년 보유 토지 세율 적용",
-    description: "§104①3호 — 토지 1년 이상 2년 미만 보유",
+    label: "60% — 1년~2년 보유 주택 세율 적용",
+    description: "소득세법 §104①2호 괄호 — 주택·부수토지 일체과세(영 §167의5)",
   },
   {
     value: "progressive",
     label: "누진세율 — 기본세율 적용",
-    description: "§104① 일반 누진세율 (6~45%)",
+    description: "소득세법 §104①1호 — §55① 기본세율",
   },
 ] as const;
 

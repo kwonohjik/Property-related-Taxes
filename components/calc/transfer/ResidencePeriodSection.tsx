@@ -164,7 +164,7 @@ export function ResidencePeriodSection({
           </div>
         )}
         {!isInterval && (
-          <FieldCard label="거주기간 (개월)" hint="상속개시일부터 상속인 본인 실거주 개월 (표2 거주분 공제율)">
+          <FieldCard label="거주기간 (개월)" hint="해당 주택에 실제 거주한 총 개월 수 (표2 거주분 공제율). 상속으로 취득한 경우 상속개시일부터 상속인 본인이 거주한 기간입니다.">
             <div className="flex items-center gap-2">
               <div className="w-32">
                 <DecimalInput

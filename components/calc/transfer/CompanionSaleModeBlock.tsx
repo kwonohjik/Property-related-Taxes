@@ -13,7 +13,8 @@
 
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
-import { cn } from "@/lib/utils";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { useState } from "react";
 
 export type BundledSaleMode = "actual" | "apportioned";
@@ -23,6 +24,19 @@ interface ToggleProps {
   onChange: (mode: BundledSaleMode) => void;
 }
 
+const BUNDLED_SALE_MODE_OPTIONS: RadioCardOption<BundledSaleMode>[] = [
+  {
+    value: "actual",
+    label: "실가 (계약서 구분 기재)",
+    description: "계약서에 자산별 가액이 명시됨 — 그대로 사용 (§166⑥ 본문)",
+  },
+  {
+    value: "apportioned",
+    label: "안분 (기준시가 비율)",
+    description: "구분 불분명 — 양도시 기준시가 비율로 안분 (§166⑥ 단서)",
+  },
+];
+
 /**
  * 양도가액 결정 방식 토글 (Step1 일괄양도 섹션 상단 배치)
  */
@@ -30,38 +44,14 @@ export function BundledSaleModeToggle({ value, onChange }: ToggleProps) {
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium">양도가액 결정 방식 (§166⑥)</label>
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => onChange("actual")}
-          className={cn(
-            "rounded-md border-2 p-3 text-left transition-all",
-            value === "actual"
-              ? "border-primary bg-primary/5 text-primary"
-              : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
-          )}
-        >
-          <div className="text-sm font-semibold">실가 (계약서 구분 기재)</div>
-          <div className="text-caption text-muted-foreground leading-tight mt-0.5">
-            계약서에 자산별 가액이 명시됨 — 그대로 사용
-          </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => onChange("apportioned")}
-          className={cn(
-            "rounded-md border-2 p-3 text-left transition-all",
-            value === "apportioned"
-              ? "border-primary bg-primary/5 text-primary"
-              : "border-border hover:border-muted-foreground/50 hover:bg-muted/40",
-          )}
-        >
-          <div className="text-sm font-semibold">안분 (기준시가 비율)</div>
-          <div className="text-caption text-muted-foreground leading-tight mt-0.5">
-            구분 불분명 — 양도시 기준시가 비율로 안분
-          </div>
-        </button>
-      </div>
+      <RadioCardGroup<BundledSaleMode>
+        name="bundledSaleMode"
+        options={BUNDLED_SALE_MODE_OPTIONS}
+        value={value}
+        onChange={onChange}
+        tone="amber"
+        columns={2}
+      />
     </div>
   );
 }

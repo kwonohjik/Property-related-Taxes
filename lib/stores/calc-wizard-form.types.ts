@@ -39,7 +39,14 @@ export interface TransferFormData {
   filingDate: string;
 
   // ── Step 2 (구 Step3 잔여): 대표 자산 고급 취득 정보 ──
-  /** 대표 자산 취득가 산정 방식 (3지선다 — assets[0].useEstimatedAcquisition 과 동기화) */
+  /**
+   * @deprecated 자산-수준 `useEstimatedAcquisition`/`isAppraisalAcquisition`로 대체됨(2026-04-25).
+   *
+   * **읽지 말 것** — `defaultFormData`(calc-wizard-store.ts:56)에서 `"actual"`로 한 번 정해진 뒤
+   * 갱신하는 코드가 0건이다(「동기화」한다는 종전 서술은 사실이 아니었다).
+   * 필드를 남겨 두는 것은 구 스키마 sessionStorage를 `migrateLegacyForm`이 읽기 위해서다
+   * (calc-wizard-migration.ts:93 — 구 폼의 `"appraisal"` → `assets[0].isAppraisalAcquisition`).
+   */
   acquisitionMethod: "actual" | "estimated" | "appraisal";
   appraisalValue: string;
   isSelfBuilt: boolean;
