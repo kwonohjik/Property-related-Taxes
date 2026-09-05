@@ -13,11 +13,17 @@ import type { AssetForm, ResidenceHistoryInput } from "@/lib/stores/calc-wizard-
 export interface ResidenceHistorySectionProps {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /**
+   * 지목 — 「직선거리(km)」 legacy fallback 칸의 노출 게이트.
+   * 이 섹션 자체는 농지·임야에만 렌더된다(NblSectionContainer).
+   */
+  landType?: AssetForm["nblLandType"];
 }
 
 export function ResidenceHistorySection({
   asset,
   onAssetChange,
+  landType,
 }: ResidenceHistorySectionProps) {
   const histories = asset.nblResidenceHistories ?? [];
 
@@ -130,8 +136,18 @@ export function ResidenceHistorySection({
         + 거주지 추가
       </button>
 
-      {/* 거주지 이력 미입력 시 fallback — 거주지~토지 직선거리로 재촌 판정 */}
-      {histories.length === 0 && (
+      {/*
+        거주지 이력 미입력 시 fallback — 거주지~토지 직선거리로 재촌 판정.
+
+        ⚠️ **농지 전용**이다 (2026-09-05). 영 §168의9②은 임야 재촌을 「… 지역에 **주민등록이
+        되어 있고** 사실상 거주하는 자」로 정하는데, 거리 스냅샷 하나로는 주민등록 여부를 세울 수
+        없다 — 그래서 `forest.ts`는 이 fallback을 의도적으로 쓰지 않는다(E1-04, 2026-09-02).
+        종전에는 임야 화면에도 이 칸이 떠서 입력해도 판정에 반영되지 않았다.
+
+        ✅ 임야에서도 **직선거리 30km 자체는 유효한 요건**이다 — 다만 그 판정은 위 거주 이력의
+        소재지 매칭(`computeResidencePeriods`의 `distanceLimitKm`)이 수행한다. 이 칸이 아니다.
+      */}
+      {landType === "farmland" && histories.length === 0 && (
         <FieldCard
           label="직선거리 (km)"
           hint="거주지 이력 미입력 시 대체 판정에 사용됩니다. (소득령 §168의8)"
