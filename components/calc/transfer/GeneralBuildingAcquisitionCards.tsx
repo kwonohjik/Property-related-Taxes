@@ -82,14 +82,23 @@ const UNIFIED_CAUSE_OPTIONS = [
 /**
  * 토지 취득원인 → **건물 축**의 대응값 (분리 OFF 불변식).
  *
- * 건물 축에는 이월과세가 없다(`BUILDING_CAUSE_OPTIONS`). 마이그레이션 M-2
- * (`calc-wizard-asset-migrate-phase3.ts:61-75`)가 이미 쓰는 규칙 — 유효하면 그대로,
- * 아니면 `purchase` — 을 그대로 재사용한다. 규칙을 새로 만들면 두 곳이 갈린다.
+ * 🔴 **`carryover_gift`를 `purchase`로 강등하던 것을 고쳤다** (2026-09-05 · 코드리뷰 Q09).
+ *    「건물 축에는 이월과세가 없다」는 종전 주석은 **낡았다** — `BUILDING_CAUSE_OPTIONS`에
+ *    이미 「이월과세(증여)」가 있다. 법 §97의2①이 「**토지·건물** 등」이라 건물도 대상이고,
+ *    토지+건물을 함께 증여받는 것이 오히려 전형이다.
+ *
+ *    강등의 결과는 조용했다 — 분리 OFF에서 이월과세를 골라도 **토지만** 증여자 취득가액·
+ *    증여세 상당액을 승계하고 건물은 매매로 계산됐다.
+ *
+ * ⚠️ 마이그레이션 M-2(`calc-wizard-asset-migrate-phase3.ts`)의 허용 목록과 **같이** 움직여야
+ *    한다 — 한쪽만 넓히면 구 세션 복원에서 다시 강등된다.
  */
 function toBuildingCause(
   cause: AssetForm["acquisitionCause"] | undefined,
 ): NonNullable<AssetForm["gbBuildingAcquisitionCause"]> {
-  return cause === "inheritance" || cause === "gift" ? cause : "purchase";
+  return cause === "inheritance" || cause === "gift" || cause === "carryover_gift"
+    ? cause
+    : "purchase";
 }
 
 /** 양도일 − 건물취득일 < 5년 여부 판정 (소득세법 §114조의2 ① "5년 이내") */
@@ -262,6 +271,50 @@ function GbBuildingInheritedValueCard({
         value={asset.gbBuildingInheritedValue}
         onChange={(v) => onChange({ gbBuildingInheritedValue: v })}
         hint="상속세 신고서·결정통지서상 건물 평가액(상증법 §60~66). 상속개시일 평가액을 취득가액으로 직접 사용 — 환산·개산공제 미적용"
+      />
+    </ToneCard>
+  );
+}
+
+/**
+ * §97의2 **건물 파트** 이월과세 — 분리 OFF 전용 (2026-09-05 · Q09).
+ *
+ * 분리 ON에서는 건물 카드가 같은 블록을 이미 띄운다(:723 부근). OFF에서는 카드가 하나뿐이라
+ * 여기에 놓는다 — 위 `GbBuildingInheritedValueCard`(상속)와 같은 자리·같은 이유다.
+ *
+ * ⚠️ **모듈 스코프에 둔다** — 렌더 안에서 선언하면 매 렌더 새 컴포넌트 타입이 되어 입력
+ *    상태가 초기화된다(`react-hooks/static-components`, pre-commit 하드블록).
+ *
+ * 증여 **사건** 정보(등기접수일·산출세액·과세가액·적용배제)는 토지 블록 하나가 정본이다 —
+ * 여기서 편집한 값은 전부 `buildingCarryover`로 간다.
+ */
+function GbBuildingCarryoverCard({
+  asset,
+  onChange,
+  transferDate,
+}: {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+  transferDate?: string;
+}) {
+  return (
+    <ToneCard tone="violet" title="건물 파트 이월과세 (소득세법 §95④·§97의2①1호)">
+      <p className="mb-2 text-caption text-violet-800">
+        증여자의 취득일·취득가액과 증여 당시 평가액은 <strong>토지·건물이 각각</strong> 다릅니다
+        (증여세 신고서에 물건별로 적혀 있습니다). 증여 등기접수일·증여세 산출세액·과세가액은
+        위 <strong>토지</strong> 블록에서 한 번만 입력합니다.
+      </p>
+      <CarryoverGiftBlock
+        asset={{ ...asset, carryover: asset.buildingCarryover ?? asset.carryover }}
+        transferDate={transferDate ?? ""}
+        onChange={(patch) => {
+          // 🔑 건물 카드의 편집은 `buildingCarryover`로 간다 — 토지 값을 덮어쓰지 않는다.
+          if ("carryover" in patch && patch.carryover) {
+            onChange({ buildingCarryover: patch.carryover });
+            return;
+          }
+          onChange(patch);
+        }}
       />
     </ToneCard>
   );
@@ -631,6 +684,27 @@ export function GeneralBuildingAcquisitionCards({
             onChange={landCardOnChange}
           />
         )}
+
+        {/*
+          분리 OFF + 이월과세 — **건물 파트도 이 카드 안**에서 받는다 (2026-09-05 · Q09).
+
+          OFF에서는 두 취득원인이 항상 같으므로(불변식) 토지가 이월과세면 건물도 이월과세다.
+          그런데 증여자의 취득일·취득가액·증여 당시 평가액은 **파트마다 다르다**
+          (법 §95④·§97의2①1호). 위 상속 경로(`GbBuildingInheritedValueCard`)가 같은 이유로
+          이미 이 자리에 건물 칸을 두고 있다.
+
+          🔴 **칸을 안 두면 조용히 2배가 된다** — ④가 `asset.buildingCarryover ?? c`로 토지
+             값을 복사해 영 §163의2② 안분 분자를 두 번 세고, ⑧ Σ 검증이 「합계 > 증여세
+             과세가액」으로 **채울 칸도 없이** 차단한다.
+
+          ⚠️ 부담부증여는 제외 — §159 경로가 취득가액을 정하므로 이 블록이 도달하지 않는다
+             (`transfer-tax-api-gb-carryover.ts`의 조기 반환과 같은 조건).
+        */}
+        {asset.transferType !== "burdened_gift" &&
+          !isSeparate &&
+          asset.gbBuildingAcquisitionCause === "carryover_gift" && (
+            <GbBuildingCarryoverCard asset={asset} onChange={onChange} transferDate={transferDate} />
+          )}
 
         {/*
          * Phase 2 (2026-05-12): 부담부증여 BurdenedGiftBlock은 TransferModeBlock(「양도 형태·원인」 카드)로 이동.

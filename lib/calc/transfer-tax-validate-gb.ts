@@ -422,18 +422,28 @@ export function validateGeneralBuildingAsset(
     //  두 파트가 모두 실가인 경우는 아래 V-5b가 따로 판정한다 — 그 경로는 취득 축 안분에
     //  취득시 기준시가를 **쓴다**(2026-08-07 P-2).)
 
-    // (a) 건물 취득원인 미선택 차단
+    /**
+     * (a) 건물 취득원인 미선택 차단.
+     *
+     * ⚠️ **세 곳이 같이 움직인다** (2026-09-05 · Q09에서 `carryover_gift` 추가):
+     *    ⑤ `toBuildingCause`(GeneralBuildingAcquisitionCards) ·
+     *    ③ `validBuildingCauses`(calc-wizard-asset-migrate-phase3) · 여기 ⑧.
+     *    ⑫(`transfer-tax-building-schemas.ts:195`)는 이미 5종을 전부 받는다.
+     *    한 곳만 넓히면 「UI는 고를 수 있는데 ⑧이 막는」 dead-end가 된다 —
+     *    실제로 이 목록이 낡아 E2E `general-building-carryover` 2건이 죽었다.
+     */
     const validBuildingCauses = [
       "purchase",
       "inheritance",
       "gift",
+      "carryover_gift",
       "newConstruction",
     ];
     if (
       !asset.gbBuildingAcquisitionCause ||
       !validBuildingCauses.includes(asset.gbBuildingAcquisitionCause)
     ) {
-      return `${label}: 건물 취득원인을 선택하세요 (매매·상속·증여·신축(자가건축) 중).`;
+      return `${label}: 건물 취득원인을 선택하세요 (매매·상속·증여·이월과세(증여)·신축(자가건축) 중).`;
     }
     // (b) 신축(자가건축) + 건물 취득일 미입력 차단
     if (asset.gbBuildingAcquisitionCause === "newConstruction") {
