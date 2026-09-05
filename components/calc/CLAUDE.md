@@ -97,7 +97,7 @@ acquisitionMethod: isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actu
 - CalculationStep 목록 (산식·근거조문 포함)
 - 상세 카드 (서브엔진별: `MultiHouseSurchargeDetailCard`, `NonBusinessLandResultCard`, `AcquisitionSurchargeDetailCard`, `SeparateTaxationDetailCard`, `TaxCreditBreakdownCard` 등)
 - `DisclaimerBanner` (모든 결과 화면 하단 고정)
-- `LoginPromptBanner` (비로그인 시 이력 저장 유도)
+- ~~`LoginPromptBanner`~~ — **양도세 결과뷰에서는 제거됐다**(2026-09-05). 「로그인하면 이력 저장·PDF 가능」이 사실이 아니다: 이력은 로컬 IndexedDB로 일원화됐고(`proxy.ts:4`), PDF는 클라이언트 생성이라 비로그인에서도 동작한다. 상속·증여·종부세 3곳은 아직 이 컴포넌트를 쓴다 — **같은 허위 문구이므로 신규 결과뷰에 달지 말 것**.
 
 ## Zustand 마법사 Store (`lib/stores/calc-wizard-store.ts`)
 
