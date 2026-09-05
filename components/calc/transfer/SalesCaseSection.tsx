@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 매매사례가액 추계(§176의2③1호) 입력 섹션
+ * 매매사례가액 추계(소득세법 시행령 §176의2③1호) 입력 섹션
  *
  * CompanionAcqPurchaseBlock에서 분리 (800줄 정책).
  * isSalesCaseAcquisition=true 시 렌더됨:
@@ -84,7 +84,7 @@ export function SalesCaseSection({
               onSimilarSalesSourceChange?.(undefined);
             }
           }}
-          hint="소득세법 §176의2③1호: 취득일 전후 3개월 내 유사 면적·용도 매매사례 확인 가격. 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
+          hint="소득세법 시행령 §176의2③1호: 취득일 전후 3개월 내 유사 면적·용도 매매사례 확인 가격. 필요경비 개산공제(취득시 기준시가 × 3%)가 자동 적용됩니다."
         />
         <div className="space-y-1">
           <span className="text-sm font-medium">취득 당시 면적 (㎡)</span>

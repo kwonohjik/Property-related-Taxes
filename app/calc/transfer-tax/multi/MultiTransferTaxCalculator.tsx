@@ -15,6 +15,7 @@ import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTrans
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
+import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import {
   useMultiTransferStore,
@@ -57,15 +58,6 @@ import {
 const STEPS: MultiStep[] = ["list", "edit", "settings", "result"];
 const STEP_LABELS = ["자산 목록", "자산 편집", "공통 설정", "계산 결과"];
 
-const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  housing: "주택",
-  land: "토지",
-  building: "건물",
-  right_to_move_in: "입주권",
-  presale_right: "분양권",
-};
-
-
 // ─── Step A: 자산 목록 ────────────────────────────────────────
 
 interface StepListProps {
@@ -75,11 +67,10 @@ interface StepListProps {
   onEdit: (index: number) => void;
   onRemove: (index: number) => void;
   onNext: () => void;
-  onPrev: () => void;
   onReset: () => void;
 }
 
-function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onPrev, onReset }: StepListProps) {
+function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onReset }: StepListProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
@@ -114,7 +105,10 @@ function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onPrev,
                   <p className="font-medium">{p.propertyLabel}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline" className="text-xs">
-                      {PROPERTY_TYPE_LABELS[p.form.assets[0]?.assetKind ?? ""] ?? p.form.assets[0]?.assetKind ?? ""}
+                      {(() => {
+                        const kind = p.form.assets[0]?.assetKind;
+                        return kind ? (ASSET_KIND_LABELS[kind] ?? kind) : "";
+                      })()}
                     </Badge>
                     {p.form.transferDate && (
                       <span className="text-xs text-muted-foreground">
@@ -182,8 +176,10 @@ function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, onPrev,
         </Alert>
       )}
 
+      {/* 자산 목록은 다건 마법사의 첫 단계 — 하단 좌측은 「이전」이 아니라 홈 pill이 정본
+          (components/calc/CLAUDE.md 「홈으로 버튼 규칙」 — step 0 = HomeButton) */}
       <div className="flex items-center justify-between gap-2 pt-4">
-        <NavButton direction="prev" label="이전" onClick={onPrev} />
+        <HomeButton />
         <NavButton
           direction="next"
           label="공통 설정으로"
@@ -550,7 +546,6 @@ export default function MultiTransferTaxCalculator() {
               onEdit={handleEditProperty}
               onRemove={(i) => removeProperty(i)}
               onNext={() => setStep("settings")}
-              onPrev={() => router.push("/")}
               onReset={() => {
                 resetMulti();
                 resetWizard();

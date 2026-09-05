@@ -18,14 +18,13 @@ import { PreDeemedInputs } from "./inheritance/PreDeemedInputs";
 import { PostDeemedInputs } from "./inheritance/PostDeemedInputs";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
-// 1985-01-01 (UTC) — 소득세법 부칙(1985.1.1. 개정) 의제취득일
-const DEEMED_DATE_STR = "1985-01-01";
-
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
+import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
 
 /**
  * 의제취득일(1985.1.1.) 기준 분기 — **이 저장소의 유일한 산출 지점**.
- * - "pre-deemed": 상속개시일 < 1985-01-01 → max(환산가액, 실가×물가상승률)
+ * - "pre-deemed": 상속개시일 < 1985-01-01 → 소령 §163⑨ 가목 우선 —
+ *   max(① 상증법 평가액, ② §164④~⑦ 기준시가). 둘 다 없을 때만 소령 §176조의2④ 환산.
  * - "post-deemed": 상속개시일 ≥ 1985-01-01 → 상속세 신고가액
  * - null: 상속개시일 미입력 또는 미적용
  *
@@ -36,7 +35,7 @@ function computeMode(
   dateStr: string,
 ): "pre-deemed" | "post-deemed" | null {
   if (!dateStr) return null;
-  return dateStr < DEEMED_DATE_STR ? "pre-deemed" : "post-deemed";
+  return dateStr < DEEMED_ACQUISITION_DATE ? "pre-deemed" : "post-deemed";
 }
 
 interface Props {

@@ -44,7 +44,7 @@
 - **RadioCardGroup 필수**(native 금지 — components/calc/CLAUDE.md). ToneCard amber 섹션 안 서브카드 ①② 시각 분리.
 - **점진 노출**: 흔한 조합(둘 다 실가·둘 다 환산·토지 실가+건물 환산)은 라디오 기본. 감정·매매사례는 선택 시 관련 입력만 펼침.
 - 공시지가는 `LandPriceLookupField` 필수. 라벨 정본 클래스·placeholder 숫자 예시 금지.
-- **양도 토글 2-레벨 공존 (계획서 §2.2)**: 본 `saleSplitMode`(자산 **내** 토지·건물)는 기존 `bundledSaleMode`(자산 **간** 일괄양도, 다건 시 Step 상단 `BundledSaleModeToggle`)와 레벨이 달라 공존한다. 다건 자산에서 상단 자산간 토글 + 각 카드 내 토지·건물 토글이 중첩될 수 있으므로, 자산내 토글 라벨을 **"이 자산의 토지·건물 양도가액"**으로 명확히 구분한다. 단건(`assets.length===1`)은 자산간 토글이 비노출(`BundledAllocationPreview.tsx:20-21`)이라 중첩 없음.
+- **양도 토글 2-레벨 공존 (계획서 §2.2)**: 본 `saleSplitMode`(자산 **내** 토지·건물)는 기존 `bundledSaleMode`(자산 **간** 일괄양도, 다건 시 Step 상단 `BundledSaleModeToggle`)와 레벨이 달라 공존한다. 다건 자산에서 상단 자산간 토글 + 각 카드 내 토지·건물 토글이 중첩될 수 있으므로, 자산내 토글 라벨을 **"이 자산의 토지·건물 양도가액"**으로 명확히 구분한다. 단건(`assets.length===1`)은 자산간 토글이 비노출(`CompanionAssetsSection.tsx:87`)이라 중첩 없음.
 
 ## 3. 케이스 인벤토리 (UI 노출 조건)
 

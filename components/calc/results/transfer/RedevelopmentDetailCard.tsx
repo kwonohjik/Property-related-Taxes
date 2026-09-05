@@ -32,8 +32,9 @@ interface Props {
    */
   subject?: "apt" | "right";
   /**
-   * 청산금 방향 — "pay" 시 §95② 본문 괄호 안내 카드 노출 (subject="right" 시만 의미).
-   * "receive" 분기 전용 처리는 후속 PR. 미전달 시 "pay" fallback.
+   * 청산금 방향 — subject="right" 시만 의미. 미전달 시 "pay" fallback.
+   * - "pay":     §95② 본문 괄호 안내 카드
+   * - "receive": §166①2호 가목·나목 안내 카드 + 가·나목 라벨 분기(보유기간·양도차익 행)
    */
   settlementDirection?: "pay" | "receive";
   /**
@@ -52,6 +53,8 @@ export const BRANCH_LABEL_RIGHT_RECEIVE_POSTAPPROVAL = "인가후 분 (§166①2
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
+/** 개월 수 → 「N년 M개월」 (단위 없는 숫자가 연수인지 월수인지 모호해지는 것을 막는다) */
+const fmtMonths = (m: number) => `${Math.floor(m / 12)}년 ${m % 12}개월`;
 
 export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDirection = "pay", lthdExclusionReason }: Props) {
   const { preApproval, postApprovalExistingHouse, settlement, total, salePriceTotal, valuationMeta, estimatedLumpDeduction, highValueAllocation, lthdResidenceAttribution, successorMemberApplied, successorMemberDetail, oneRightExemptionApplied, oneRightHighValueApplied } = detail;
@@ -307,11 +310,11 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-1">
             <Row
               label="기존건물분 거주 (종전+신축 통산)"
-              value={lthdResidenceAttribution.existingResidenceMonths}
+              value={fmtMonths(lthdResidenceAttribution.existingResidenceMonths)}
             />
             <Row
               label="청산금분 거주 (신축만)"
-              value={lthdResidenceAttribution.payResidenceMonths}
+              value={fmtMonths(lthdResidenceAttribution.payResidenceMonths)}
             />
             <div className="text-micro">
               <p className="text-emerald-700">기존건물분 적용 표</p>
@@ -553,12 +556,14 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
   );
 }
 
-function Row({ label, value, highlight }: { label: React.ReactNode; value: number; highlight?: boolean }) {
+function Row({ label, value, highlight }: { label: React.ReactNode; value: number | string; highlight?: boolean }) {
   return (
     <div className="flex items-center justify-between text-caption">
       <span className="text-violet-700">{label}</span>
-      <span className={`font-mono ${highlight ? "font-semibold text-violet-900" : "text-violet-800"}`}>
-        {fmt(value)}
+      <span
+        className={`font-mono tabular-nums whitespace-nowrap ${highlight ? "font-semibold text-violet-900" : "text-violet-800"}`}
+      >
+        {typeof value === "number" ? fmt(value) : value}
       </span>
     </div>
   );

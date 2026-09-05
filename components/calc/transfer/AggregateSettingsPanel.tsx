@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import {
@@ -14,6 +15,26 @@ import {
 } from "@/components/ui/select";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 import { computeAutoPriorPaid } from "@/lib/calc/multi-prior-filed";
+
+type BasicDeductionAllocation = MultiTransferFormData["basicDeductionAllocation"];
+
+const BASIC_DEDUCTION_ALLOCATION_OPTIONS: RadioCardOption<BasicDeductionAllocation>[] = [
+  {
+    value: "MAX_BENEFIT",
+    label: "납세자 유리 배분 (권장)",
+    description: "세율이 높은 자산(절세 효과 최대)에 우선 배분",
+  },
+  {
+    value: "FIRST",
+    label: "입력 순서 우선 배분",
+    description: "목록 첫 번째 자산에 우선 배분",
+  },
+  {
+    value: "EARLIEST_TRANSFER",
+    label: "양도일 빠른 순 배분",
+    description: "양도일이 이른 자산에 우선 배분",
+  },
+];
 
 interface AggregateSettingsPanelProps {
   form: MultiTransferFormData;
@@ -75,37 +96,13 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
           <Label>기본공제 배분 전략 (소득세법 §103)</Label>
           <LawArticleModal legalBasis="소득세법 §103" label="§103 기본공제" />
         </div>
-        <RadioGroup
+        <RadioCardGroup<BasicDeductionAllocation>
+          name="basicDeductionAllocation"
+          options={BASIC_DEDUCTION_ALLOCATION_OPTIONS}
           value={form.basicDeductionAllocation}
-          onValueChange={(v) =>
-            onChange({ basicDeductionAllocation: v as MultiTransferFormData["basicDeductionAllocation"] })
-          }
-          className="space-y-2"
-        >
-          <div className="flex items-start gap-3">
-            <RadioGroupItem value="MAX_BENEFIT" id="alloc-max" className="mt-0.5" />
-            <div>
-              <Label htmlFor="alloc-max" className="font-medium cursor-pointer">
-                납세자 유리 배분 (권장)
-              </Label>
-              <p className="text-xs text-muted-foreground">세율이 높은 자산(절세 효과 최대)에 우선 배분</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <RadioGroupItem value="FIRST" id="alloc-first" className="mt-0.5" />
-            <div>
-              <Label htmlFor="alloc-first" className="cursor-pointer">입력 순서 우선 배분</Label>
-              <p className="text-xs text-muted-foreground">목록 첫 번째 자산에 우선 배분</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <RadioGroupItem value="EARLIEST_TRANSFER" id="alloc-earliest" className="mt-0.5" />
-            <div>
-              <Label htmlFor="alloc-earliest" className="cursor-pointer">양도일 빠른 순 배분</Label>
-              <p className="text-xs text-muted-foreground">양도일이 이른 자산에 우선 배분</p>
-            </div>
-          </div>
-        </RadioGroup>
+          onChange={(v) => onChange({ basicDeductionAllocation: v })}
+          tone="sky"
+        />
       </div>
 
       {/* 예정신고 기납부세액 정산 (§111③) */}

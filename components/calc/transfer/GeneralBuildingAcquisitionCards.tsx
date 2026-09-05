@@ -716,7 +716,7 @@ export function GeneralBuildingAcquisitionCards({
           <>
             {asset.acquisitionCause !== "carryover_gift" && (
               <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
-                증여 등기접수일·증여세 산출세액·과세가액은 **토지 취득** 카드의 이월과세 정보에서
+                증여 등기접수일·증여세 산출세액·과세가액은 <strong>토지 취득</strong> 카드의 이월과세 정보에서
                 한 번만 입력합니다(하나의 증여이기 때문입니다).
               </p>
             )}

@@ -243,7 +243,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
           unit="원"
           hint={
             stdPriceAtAcqAutoActive
-              ? `자동 계산값: ${autoStdPriceAtAcq!.toLocaleString()} (위 환산 결과 사용 중). 직접 입력하려면 아래 override를 켜세요.`
+              ? `자동 계산값: ${autoStdPriceAtAcq!.toLocaleString()} (위 환산 결과 사용 중). 직접 입력하려면 아래 직접 입력 토글을 켜세요.`
               : showHouseValuation
                 ? "위 3-시점 환산 결과(토지+주택 합계)가 있으면 자동 계산됩니다. 또는 직접 입력."
                 : stdPriceHint
@@ -316,7 +316,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
           unit="원"
           hint={
             stdPriceAtTransferAutoActive
-              ? `자동 계산값: ${autoStdPriceAtTransfer!.toLocaleString()} (양도 당시 공시된 개별주택가격 사용). 직접 입력하려면 아래 override를 켜세요.`
+              ? `자동 계산값: ${autoStdPriceAtTransfer!.toLocaleString()} (양도 당시 공시된 개별주택가격 사용). 직접 입력하려면 아래 직접 입력 토글을 켜세요.`
               : "환산취득가 공식 분모 — 양도일 직전 공시된 기준시가."
           }
           disabled={stdPriceAtTransferAutoActive}

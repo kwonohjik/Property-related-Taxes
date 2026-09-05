@@ -125,7 +125,7 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
  *
  * 🔴 **가드가 있어야 하는 이유**: 결과는 IndexedDB에 저장·복원된다. 옛 저장 결과·HMR 부분
  * 적용 등으로 이 필드가 없는 breakdown이 도달할 수 있고, 그대로 `.toLocaleString()`을 부르면
- * `TypeError`로 결과 페이지 전체가 죽는다. 없으면 「과세표준 기여분 × 세율 − 누진차감」으로
+ * `TypeError`로 결과 페이지 전체가 죽는다. 없으면 「과세표준 기여분 × 세율 − 누진공제」으로
  * 인라인 재계산한다(NaN 차단).
  *
  * 아코디언(`PropertyBreakdownAccordion`)과 감면 재계산 표(`MultiTransferTaxResultView`)가
@@ -335,7 +335,7 @@ export function PropertyBreakdownAccordion({
                   formula={
                     breakdown.refCalculatedTaxNote ??
                     (breakdown.progressiveDeduction > 0
-                      ? `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%${breakdown.surchargeRate ? ` (기본 ${(breakdown.appliedRate * 100).toFixed(0)}% + 중과 ${(breakdown.surchargeRate * 100).toFixed(0)}%p)` : ""} - 누진차감 ${formatKRW(breakdown.progressiveDeduction)}`
+                      ? `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%${breakdown.surchargeRate ? ` (기본 ${(breakdown.appliedRate * 100).toFixed(0)}% + 중과 ${(breakdown.surchargeRate * 100).toFixed(0)}%p)` : ""} − 누진공제 ${formatKRW(breakdown.progressiveDeduction)}`
                       : `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%`)
                   }
                   legalBasis="소득세법 §104"

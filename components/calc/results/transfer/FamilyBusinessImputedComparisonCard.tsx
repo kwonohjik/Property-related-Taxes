@@ -48,7 +48,9 @@ function Row({
       <td className={`py-1.5 pl-3 pr-2 text-muted-foreground ${sub ? "pl-6 text-xs" : "text-sm"}`}>
         {label}
       </td>
-      <td className={`py-1.5 pr-3 text-right font-mono ${highlight ? "font-semibold" : ""} ${sub ? "text-xs" : "text-sm"}`}>
+      {/* 금액 열은 sub 여부와 무관하게 표(text-sm)에서 크기를 상속받는다 —
+          구성요소와 합계가 다른 크기로 렌더되면 자릿수가 세로로 어긋난다. */}
+      <td className={`py-1.5 pr-3 text-right font-mono tabular-nums whitespace-nowrap ${highlight ? "font-semibold" : ""}`}>
         {value}
       </td>
     </tr>

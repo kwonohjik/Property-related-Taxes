@@ -370,9 +370,7 @@ export function SameAdjustmentPeriodSection({
             : "취득당시 기준시가 결정일부터 새로운 기준시가 결정일 전일까지 (시행규칙 §80②1호). 비워두면 12개월"
         }
       >
-        <CurrencyInput
-          label="기준시가 조정월수"
-          hideLabel
+        <DecimalInput
           value={asset.sapAdjustMonths}
           onChange={(v) => onChange({ sapAdjustMonths: v })}
         />

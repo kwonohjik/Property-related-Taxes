@@ -375,20 +375,6 @@ export function buildIncomeDeductionReducibleFormula(
 }
 
 /**
- * §99의3 전용 래퍼 — 기존 호출부 유지용. 공용 빌더에 위임한다.
- */
-export function buildNew993ReducibleFormula(
-  detail: NonNullable<TransferTaxResult["new993Detail"]>,
-  income: number,
-): ReactNode {
-  return buildIncomeDeductionReducibleFormula(
-    { ...detail, articleLabel: "§99의3" },
-    income,
-  );
-}
-
-
-/**
  * 취득가액 산식 — 단건은 실제 변수값(양도차익 항목과 동일 표기), 다건은 자산별 합계 요약.
  * 환산취득가 모드는 기준시가 비율식까지 풀어쓰되, 기준시가 echo가 없는
  * 감정가액·매매사례가액 모드는 추계 취득가액만 표시(비율식 부적용).

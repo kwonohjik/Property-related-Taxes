@@ -140,10 +140,16 @@ export function CarryoverEstimationSection({
           {parseAmount(c.donorStandardPriceAtAcquisition) > 0 &&
             parseAmount(c.donorStandardPriceAtTransfer) > 0 && (
               <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
-                <span className="font-medium">환산취득가 (참고)</span>
+                <span className="font-medium">개산공제 (참고)</span>
                 <br />
                 개산공제 = 취득시 기준시가{" "}
-                {Math.floor(parseAmount(c.donorStandardPriceAtAcquisition) * 0.03).toLocaleString()}원
+                <span className="font-mono tabular-nums whitespace-nowrap">
+                  {parseAmount(c.donorStandardPriceAtAcquisition).toLocaleString()}
+                </span>{" "}
+                × 3% ={" "}
+                <span className="font-mono tabular-nums whitespace-nowrap">
+                  {Math.floor(parseAmount(c.donorStandardPriceAtAcquisition) * 0.03).toLocaleString()}
+                </span>
               </div>
             )}
         </div>

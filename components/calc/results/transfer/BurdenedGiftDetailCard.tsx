@@ -99,19 +99,19 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
           </tr>
           <tr className={rowSelected("supplementary")}>
             <td className="py-1 pr-2">① 보충적평가 (양도세 §99)</td>
-            <td className="text-right font-mono">{fmt(bg.sangjeungbeopValuation.supplementary)}</td>
+            <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.sangjeungbeopValuation.supplementary)}</td>
           </tr>
           <tr className={rowSelected("mortgage")}>
             <td className="py-1 pr-2">② 담보평가</td>
-            <td className="text-right font-mono">{fmt(bg.sangjeungbeopValuation.mortgage)}</td>
+            <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.sangjeungbeopValuation.mortgage)}</td>
           </tr>
           <tr className={rowSelected("rental")}>
             <td className="py-1 pr-2">③ 임대평가</td>
-            <td className="text-right font-mono">{fmt(bg.sangjeungbeopValuation.rental)}</td>
+            <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.sangjeungbeopValuation.rental)}</td>
           </tr>
           <tr className="border-t border-fuchsia-300 font-semibold">
             <td className="py-1 pr-2">Max 채택 (양도세): {SELECTED_LABEL[bg.sangjeungbeopValuation.selectedMode]}</td>
-            <td className="text-right font-mono">{fmt(bg.sangjeungbeopValuation.max)}</td>
+            <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.sangjeungbeopValuation.max)}</td>
           </tr>
           {bg.giftValuation && bg.giftValuation.max !== bg.sangjeungbeopValuation.max && (
             <>
@@ -122,21 +122,21 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
               </tr>
               <tr>
                 <td className="py-1 pr-2">증여세 보충적평가 (§61)</td>
-                <td className="text-right font-mono">{fmt(bg.giftValuation.supplementary)}</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftValuation.supplementary)}</td>
               </tr>
               <tr className="border-t border-fuchsia-300 font-semibold">
                 <td className="py-1 pr-2">Max 채택 (증여세): {SELECTED_LABEL[bg.giftValuation.selectedMode]}</td>
-                <td className="text-right font-mono">{fmt(bg.giftValuation.max)}</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftValuation.max)}</td>
               </tr>
             </>
           )}
           <tr>
             <td className="py-1 pr-2">인수 채무액 (= 양도가액)</td>
-            <td className="text-right font-mono">{fmt(bg.assumedDebtAmount)}</td>
+            <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.assumedDebtAmount)}</td>
           </tr>
           <tr>
             <td className="py-1 pr-2">채무비율 = <Frac top="채무액" bottom="증여재산 평가액" /></td>
-            <td className="text-right font-mono">{(bg.debtRatio * 100).toFixed(4)}%</td>
+            <td className="text-right font-mono tabular-nums whitespace-nowrap">{(bg.debtRatio * 100).toFixed(4)}%</td>
           </tr>
           {/* 자산별 취득가액 산식 (소령 §159①1호) — 3경로 분기 (8개 동기화 지점 ⑦) */}
           <tr className="border-t border-fuchsia-300">
@@ -155,7 +155,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                       bottom={`양도기준시가 ${fmt(bg.perAsset.land.stdPriceAtTransfer)}`}
                     />
                   </td>
-                  <td className="text-right font-mono">{fmt(bg.perAsset.land.acquisitionPrice)}</td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.land.acquisitionPrice)}</td>
                 </tr>
               )}
               {bg.perAsset.building.acquisitionPrice > 0 && (
@@ -167,7 +167,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                       bottom={`양도기준시가 ${fmt(bg.perAsset.building.stdPriceAtTransfer)}`}
                     />
                   </td>
-                  <td className="text-right font-mono">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
                 </tr>
               )}
             </>
@@ -179,7 +179,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                     토지 취득가 = 실지취득가 {fmt(bg.perAsset.land.actualAcquisition ?? 0)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}%
                   </td>
-                  <td className="text-right font-mono">{fmt(bg.perAsset.land.acquisitionPrice)}</td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.land.acquisitionPrice)}</td>
                 </tr>
               )}
               {bg.perAsset.building.acquisitionPrice > 0 && (
@@ -188,7 +188,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                     건물 취득가 = 실지취득가 {fmt(bg.perAsset.building.actualAcquisition ?? 0)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}%
                   </td>
-                  <td className="text-right font-mono">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
                 </tr>
               )}
               <tr>
@@ -205,7 +205,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                     토지 취득가 = 취득기준시가 {fmt(bg.perAsset.land.stdPriceAtAcquisition)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}%
                   </td>
-                  <td className="text-right font-mono">{fmt(bg.perAsset.land.acquisitionPrice)}</td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.land.acquisitionPrice)}</td>
                 </tr>
               )}
               {bg.perAsset.building.acquisitionPrice > 0 && (
@@ -214,14 +214,14 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                     건물 취득가 = 취득기준시가 {fmt(bg.perAsset.building.stdPriceAtAcquisition)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}%
                   </td>
-                  <td className="text-right font-mono">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
                 </tr>
               )}
             </>
           )}
           <tr>
             <td className="py-1 pr-2 text-fuchsia-700">무상이전분 (증여세 과세 가액)</td>
-            <td className="text-right font-mono text-fuchsia-700">{fmt(bg.gratuitousPortion)}</td>
+            <td className="text-right font-mono tabular-nums whitespace-nowrap text-fuchsia-700">{fmt(bg.gratuitousPortion)}</td>
           </tr>
           {bg.giftTax && (
             <>
@@ -237,32 +237,32 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                   {RELATION_LABEL[bg.giftTax.donorRelation] ?? "기타"}
                   {")"}
                 </td>
-                <td className="text-right font-mono">{fmt(bg.giftTax.deduction)}</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftTax.deduction)}</td>
               </tr>
               <tr>
                 <td className="py-1 pr-2 pl-3">{"  └ 증여세 과세표준"}</td>
-                <td className="text-right font-mono">{fmt(bg.giftTax.taxBase)}</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftTax.taxBase)}</td>
               </tr>
               <tr>
                 <td className="py-1 pr-2 pl-3">{"  └ 증여세 산출세액"}</td>
-                <td className="text-right font-mono">{fmt(bg.giftTax.computedTax)}</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftTax.computedTax)}</td>
               </tr>
               {bg.giftTax.priorGiftCredit !== undefined &&
                 bg.giftTax.priorGiftCredit > 0 && (
                   <tr>
                     <td className="py-1 pr-2 pl-3">{"  └ §58 기납부세액공제"}</td>
-                    <td className="text-right font-mono">
+                    <td className="text-right font-mono tabular-nums whitespace-nowrap">
                       -{fmt(bg.giftTax.priorGiftCredit)}
                     </td>
                   </tr>
                 )}
               <tr>
                 <td className="py-1 pr-2 pl-3">{"  └ 신고세액공제 (3%)"}</td>
-                <td className="text-right font-mono">-{fmt(bg.giftTax.filingCredit)}</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">-{fmt(bg.giftTax.filingCredit)}</td>
               </tr>
               <tr className="font-semibold bg-fuchsia-100/70">
                 <td className="py-1 pr-2">증여세 결정세액 (수증자 부담)</td>
-                <td className="text-right font-mono">{fmt(bg.giftTax.finalTax)}</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftTax.finalTax)}</td>
               </tr>
             </>
           )}

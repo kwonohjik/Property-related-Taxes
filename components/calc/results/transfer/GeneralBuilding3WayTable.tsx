@@ -95,38 +95,38 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
             {/* 양도가액 */}
             <tr className="border-b border-border/40">
               <td className="py-1 pr-2 text-muted-foreground">양도가액</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(land.transferPrice)}</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.transferPrice)}</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld2.transferPrice)}</td>
-              <td className="py-1 text-right font-mono font-semibold">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(land.transferPrice)}</td>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(bld1.transferPrice)}</td>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(bld2.transferPrice)}</td>
+              <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
                 {formatKRW(land.transferPrice + bld1.transferPrice + bld2.transferPrice)}
               </td>
             </tr>
             {/* 취득가액 */}
             <tr className="border-b border-border/40">
               <td className="py-1 pr-2 text-muted-foreground">취득가액</td>
-              <td className="py-1 pr-2 text-right font-mono">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(land.acquisitionPrice)}
                 {acqBadge(landEstimated, "text-sky-600")}
               </td>
-              <td className="py-1 pr-2 text-right font-mono">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(bld1.acquisitionPrice)}
                 {acqBadge(bld1Estimated, "text-emerald-600")}
               </td>
-              <td className="py-1 pr-2 text-right font-mono">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(bld2.acquisitionPrice)}
                 {acqBadge(bld2Estimated, "text-fuchsia-600")}
               </td>
-              <td className="py-1 text-right font-mono font-semibold">
+              <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
                 {formatKRW(land.acquisitionPrice + bld1.acquisitionPrice + bld2.acquisitionPrice)}
               </td>
             </tr>
             {/* 필요경비 */}
             <tr className="border-b border-border/40">
               <td className="py-1 pr-2 text-muted-foreground">필요경비</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(land.necessaryExpense)}</td>
-              <td className="py-1 pr-2 text-right font-mono">{formatKRW(bld1.necessaryExpense)}</td>
-              <td className="py-1 pr-2 text-right font-mono">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(land.necessaryExpense)}</td>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(bld1.necessaryExpense)}</td>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(bld2.necessaryExpense)}
                 {/* 환산 파트만 개산공제(§163⑥)다 — 실가 파트는 실제 지출액(§97②1호). */}
                 {bld2Estimated !== undefined && (
@@ -135,45 +135,45 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
                   </span>
                 )}
               </td>
-              <td className="py-1 text-right font-mono font-semibold">
+              <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
                 {formatKRW(land.necessaryExpense + bld1.necessaryExpense + bld2.necessaryExpense)}
               </td>
             </tr>
             {/* 양도차익 */}
             <tr className="border-b border-border/40">
               <td className="py-1 pr-2 font-medium">양도차익</td>
-              <td className="py-1 pr-2 text-right font-mono font-medium">{fmt(land.transferGain)}</td>
-              <td className={`py-1 pr-2 text-right font-mono font-medium ${bld1.transferGain < 0 ? "text-rose-600" : ""}`}>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium">{fmt(land.transferGain)}</td>
+              <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium ${bld1.transferGain < 0 ? "text-rose-600" : ""}`}>
                 {fmt(bld1.transferGain)}
               </td>
-              <td className="py-1 pr-2 text-right font-mono font-medium">{fmt(bld2.transferGain)}</td>
-              <td className="py-1 text-right font-mono font-semibold">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium">{fmt(bld2.transferGain)}</td>
+              <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
                 {fmt(land.transferGain + bld1.transferGain + bld2.transferGain)}
               </td>
             </tr>
             {/* 장기보유공제 */}
             <tr className="border-b border-border/40">
               <td className="py-1 pr-2 text-muted-foreground">장기보유공제</td>
-              <td className="py-1 pr-2 text-right font-mono">△{formatKRW(land.longTermHoldingDeduction)}</td>
-              <td className="py-1 pr-2 text-right font-mono text-muted-foreground">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">△{formatKRW(land.longTermHoldingDeduction)}</td>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-muted-foreground">
                 {bld1.longTermHoldingDeduction > 0 ? `△${formatKRW(bld1.longTermHoldingDeduction)}` : "0"}
               </td>
-              <td className="py-1 pr-2 text-right font-mono">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {bld2.longTermHoldingDeduction > 0 ? `△${formatKRW(bld2.longTermHoldingDeduction)}` : "0"}
               </td>
-              <td className="py-1 text-right font-mono font-semibold">
+              <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
                 △{formatKRW(land.longTermHoldingDeduction + bld1.longTermHoldingDeduction + bld2.longTermHoldingDeduction)}
               </td>
             </tr>
             {/* 양도소득금액 (통산 전) */}
             <tr className="border-b border-border/40 bg-muted/20">
               <td className="py-1 pr-2 font-medium">양도소득금액</td>
-              <td className="py-1 pr-2 text-right font-mono font-medium">{fmt(land.income)}</td>
-              <td className={`py-1 pr-2 text-right font-mono font-medium ${bld1.income < 0 ? "text-rose-600" : ""}`}>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium">{fmt(land.income)}</td>
+              <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium ${bld1.income < 0 ? "text-rose-600" : ""}`}>
                 {fmt(bld1.income)}
               </td>
-              <td className="py-1 pr-2 text-right font-mono font-medium">{fmt(bld2.income)}</td>
-              <td className="py-1 text-right font-mono font-semibold">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium">{fmt(bld2.income)}</td>
+              <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
                 {fmt(land.income + bld1.income + bld2.income)}
               </td>
             </tr>
@@ -182,18 +182,18 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
               <td className="py-1 pr-2 text-muted-foreground text-caption">
                 결손 통산 (영§102②)
               </td>
-              <td className="py-1 pr-2 text-right font-mono text-rose-600 text-xs">{landOffsetRow}</td>
-              <td className="py-1 pr-2 text-right font-mono text-emerald-600 text-xs">{bld1OffsetRow}</td>
-              <td className="py-1 pr-2 text-right font-mono text-rose-600 text-xs">{bld2OffsetRow}</td>
-              <td className="py-1 text-right font-mono text-xs text-muted-foreground">0</td>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-rose-600 text-xs">{landOffsetRow}</td>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-emerald-600 text-xs">{bld1OffsetRow}</td>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-rose-600 text-xs">{bld2OffsetRow}</td>
+              <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground">0</td>
             </tr>
             {/* 통산 후 양도소득금액 */}
             <tr className="bg-muted/40 font-semibold">
               <td className="py-1.5 pr-2 text-sm">통산 후 양도소득금액</td>
-              <td className="py-1.5 pr-2 text-right font-mono">{formatKRW(land.incomeAfterOffset)}</td>
-              <td className="py-1.5 pr-2 text-right font-mono">{formatKRW(bld1.incomeAfterOffset)}</td>
-              <td className="py-1.5 pr-2 text-right font-mono">{formatKRW(bld2.incomeAfterOffset)}</td>
-              <td className="py-1.5 text-right font-mono">
+              <td className="py-1.5 pr-2 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(land.incomeAfterOffset)}</td>
+              <td className="py-1.5 pr-2 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(bld1.incomeAfterOffset)}</td>
+              <td className="py-1.5 pr-2 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(bld2.incomeAfterOffset)}</td>
+              <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(land.incomeAfterOffset + bld1.incomeAfterOffset + bld2.incomeAfterOffset)}
               </td>
             </tr>
