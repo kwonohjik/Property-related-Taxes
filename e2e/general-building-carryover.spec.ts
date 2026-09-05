@@ -39,7 +39,18 @@ function seedForm(carryover: boolean) {
             ...makeDefaultAsset(1),
             assetKind: "general_building",
             acquisitionCause: carryover ? "carryover_gift" : "purchase",
-            gbBuildingAcquisitionCause: "purchase",
+            /**
+             * 🔑 **건물 축을 토지와 맞춘다** (2026-09-05 · Q09).
+             *
+             * 종전 시드는 「토지 이월과세 + 건물 매매」였다. 분리 OFF에서 그 조합은 화면에
+             * 표현할 방법이 없어, 마이그레이션 M-2b가 **분리를 자동 ON** 한다
+             * (`calc-wizard-asset-migrate-phase3.ts`). 그러면 파트별 취득가액이 필수가 되어
+             * ⑧이 막고 계산 요청 자체가 나가지 않는다(이 spec이 그렇게 죽었다).
+             *
+             * 종전에는 `toBuildingCause`가 이월과세를 `purchase`로 **강등**해 두 축이
+             * 우연히 일치했을 뿐이다 — 그 강등이 곧 Q09가 고친 결함이다.
+             */
+            gbBuildingAcquisitionCause: carryover ? "carryover_gift" : "purchase",
             acquisitionDate: "2021-03-01",
             useEstimatedAcquisition: true,
             landAcqMode: "estimated",
