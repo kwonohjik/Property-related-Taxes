@@ -227,7 +227,6 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     inhHouseValLandPricePerSqmAtInheritance: "",
     inhHouseValHousePriceAtTransfer: "",
     inhHouseValHousePriceAtFirst: "",
-    inhHouseValBuildingStdPriceAtTransfer: "",
     inhHouseValBuildingStdPriceAtFirst: "",
     inhHouseValBuildingStdPriceAtInheritance: "",
     inhHouseValUseHousePriceOverride: false,

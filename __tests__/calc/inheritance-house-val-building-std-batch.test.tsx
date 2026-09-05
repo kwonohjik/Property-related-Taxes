@@ -98,7 +98,19 @@ describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산기 �
     expect(screen.queryByTestId("phd-batch-stub")).toBeNull();
   });
 
-  it("F1: '모두 적용' → 3필드가 단일 onChange patch로 병합 갱신", () => {
+  /**
+   * 병합 갱신 대상은 **2필드**다 (2026-09-05 정정 — 종전 3필드).
+   *
+   * 「양도시 건물기준시가」를 받지 않는다: 영 §164⑦이 나목(건물) 기준시가를 요구하는 시점은
+   * **취득당시·최초공시당시** 둘뿐이고, 양도 당시 주택 기준시가는 법 §99①1호 **라목**의
+   * 개별주택가격 **단일값**이다(별도 StandardPriceInput이 받는다). 종전에는 모달이 계산한
+   * 양도시 값을 `inhHouseValBuildingStdPriceAtTransfer`에 썼으나 엔진이 그 필드를 한 번도
+   * 읽지 않아 조용히 버려졌다.
+   *
+   * ⚠️ 이 anchor의 요지는 **단일 patch 병합**(연속 호출 시 stale-clobber)이지 필드 개수가
+   *    아니다 — 필드가 늘어도 `toHaveBeenCalledTimes(1)`은 유지돼야 한다.
+   */
+  it("F1: '모두 적용' → 2필드가 단일 onChange patch로 병합 갱신", () => {
     const onChange = vi.fn();
     render(
       <HouseValuationSection
@@ -109,10 +121,9 @@ describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산기 �
     );
     fireEvent.click(screen.getByTestId("phd-batch-stub"));
 
-    // 단일 호출로 3필드 병합 (3연속 아님 — stale-clobber 원천 차단)
+    // 단일 호출로 병합 (연속 호출 아님 — stale-clobber 원천 차단)
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith({
-      inhHouseValBuildingStdPriceAtTransfer: "111",
       inhHouseValBuildingStdPriceAtFirst: "222",
       inhHouseValBuildingStdPriceAtInheritance: "333",
     });

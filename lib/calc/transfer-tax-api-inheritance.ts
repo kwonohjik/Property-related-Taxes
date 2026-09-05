@@ -219,8 +219,6 @@ export function buildInheritedHouseValuationPayload(
       landPricePerSqmAtInheritance: landPriceAtInheritance || undefined,
       housePriceAtTransfer: parseAmount(primary.inhHouseValHousePriceAtTransfer) || 0,
       housePriceAtFirstDisclosure: parseAmount(primary.inhHouseValHousePriceAtFirst),
-      buildingStdPriceAtTransfer:
-        parseAmount(primary.inhHouseValBuildingStdPriceAtTransfer) || undefined,
       buildingStdPriceAtFirstDisclosure:
         parseAmount(primary.inhHouseValBuildingStdPriceAtFirst) || undefined,
       buildingStdPriceAtInheritance:

@@ -154,8 +154,6 @@ export const inheritanceHouseValuationSchema = z
     landPricePerSqmAtInheritance: z.number().int().positive().optional(),
     /** 상속개시일 시점 주택가격 직접 입력 override (원) */
     housePriceAtInheritanceOverride: z.number().int().nonnegative().optional(),
-    /** 양도시 건물기준시가 (원) — Sum 분모(양도시) 정확화. 미입력 시 housePriceAtTransfer로 대체 */
-    buildingStdPriceAtTransfer: z.number().int().nonnegative().optional(),
     /** 최초고시 시점 건물기준시가 (원) — §164⑤ Sum_F 분모: 토지기준시가 + 이 값 */
     buildingStdPriceAtFirstDisclosure: z.number().int().nonnegative().optional(),
     /** 상속개시일 시점 건물기준시가 (원) — §164⑤ Sum_A 분자: 토지기준시가 + 이 값 */

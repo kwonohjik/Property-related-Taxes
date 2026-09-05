@@ -333,7 +333,6 @@ describe("E-6: Excel 13번 — 상속주택 환산가액 전체 통합 시나리
         landPricePerSqmAtFirstDisclosure: fx.landPricePerSqmAtFirstDisclosure,
         housePriceAtTransfer: fx.housePriceAtTransfer,                       // 1,287,000,000
         housePriceAtFirstDisclosure: fx.housePriceAtFirstDisclosure,         // 341,000,000
-        buildingStdPriceAtTransfer: fx.buildingStdPriceAtTransfer,           // 26,136,250
         buildingStdPriceAtFirstDisclosure: fx.buildingStdPriceAtFirstDisclosure, // 42,630,000
         buildingStdPriceAtInheritance: fx.buildingStdPriceAtInheritance,     // 38,135,580
         // housePriceAtInheritanceOverride 미입력 → §164⑤ 자동 추정 (P_A_est = 153,336,855)
@@ -536,7 +535,6 @@ describe("E-7: post-deemed 미공시 주택 §164⑦ max — 소령 §163⑨2호
     landPricePerSqmAtInheritance: 500_000,
     housePriceAtTransfer: 400_000_000,
     housePriceAtFirstDisclosure: 300_000_000,
-    buildingStdPriceAtTransfer: 30_000_000,
     buildingStdPriceAtFirstDisclosure: 20_000_000,
     buildingStdPriceAtInheritance: 10_000_000,
   };
@@ -639,7 +637,6 @@ describe("V2-G: 자동 주입 경로에서는 ③이 채택되지 않는다 — 
         landPricePerSqmAtFirstDisclosure: fx.landPricePerSqmAtFirstDisclosure,
         housePriceAtTransfer: fx.housePriceAtTransfer,
         housePriceAtFirstDisclosure: fx.housePriceAtFirstDisclosure,
-        buildingStdPriceAtTransfer: fx.buildingStdPriceAtTransfer,
         buildingStdPriceAtFirstDisclosure: fx.buildingStdPriceAtFirstDisclosure,
         buildingStdPriceAtInheritance: fx.buildingStdPriceAtInheritance,
         pre1990: fx.pre1990,

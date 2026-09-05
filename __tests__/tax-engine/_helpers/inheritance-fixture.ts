@@ -89,8 +89,6 @@ export const EXCEL_13_INHERITED_HOUSE_PRE_DISCLOSURE = {
   housePriceAtTransfer: 1_287_000_000,
   /** 최초 공시(2005-04-30) 시점 개별주택가격 P_F */
   housePriceAtFirstDisclosure: 341_000_000,
-  /** 양도시 건물기준시가 (국세청) — 합계 기준시가 산출용 */
-  buildingStdPriceAtTransfer: 26_136_250,
   /** 최초 공시 시점 건물기준시가 — §164⑤ Sum_F 분모 */
   buildingStdPriceAtFirstDisclosure: 42_630_000,
   /** 상속개시일 시점 건물기준시가 — §164⑤ Sum_A 분자 */

@@ -54,12 +54,21 @@ export interface InheritanceHouseValuationInput {
   landPricePerSqmAtTransfer: number;
   /** 양도시 공시된 개별주택가격 P_T (원) — 홈택스/부동산공시가격알리미 조회 */
   housePriceAtTransfer: number;
-  /**
-   * 양도당시 건물기준시가 (원) — 국세청 기준시가.
-   * 제공 시 totalStdPriceAtTransfer = 양도시 토지기준시가 + 이 값.
-   * 미제공 시 housePriceAtTransfer(P_T)를 대신 사용.
+  /*
+   * ❌ 「양도당시 건물기준시가」를 받지 않는다 — 조문에 그런 축이 없다 (2026-09-05).
+   *
+   * 종전에는 `buildingStdPriceAtTransfer?: number`가 「제공 시 totalStdPriceAtTransfer =
+   * 양도시 토지기준시가 + 이 값」이라고 약속했으나, **엔진은 그 필드를 한 번도 읽지 않았고**
+   * (`inheritance-house-valuation.ts` 전수 grep 0건) 그 약속에는 법령 근거도 없었다.
+   *
+   * 양도 당시 주택의 기준시가는 법 §99①1호 **라목**이 「개별주택가격 및 공동주택가격」이라는
+   * **단일값**으로 정한다 — 「양도시 합계기준시가」라는 개념 자체가 없다. 위 `housePriceAtTransfer`
+   * (P_T) 하나가 정본이다.
+   *
+   * 건물(나목) 기준시가가 필요한 시점은 영 §164⑦이 지정한 **취득당시·최초공시당시** 둘뿐이다
+   * (아래 `buildingStdPriceAtInheritance`·`buildingStdPriceAtFirstDisclosure`). 양도시는 아니다.
+   * ⇒ 되살리지 말 것.
    */
-  buildingStdPriceAtTransfer?: number;
 
   // ── 최초고시 시점 ──
   /** 최초 고시일 (기본 "2005-04-30", 사용자가 다른 날짜로 보정 가능) */

@@ -318,7 +318,6 @@ describe("A-4: inheritedHouseValuationDetail anchor", () => {
         landPricePerSqmAtInheritance: 800_000,            // 1995=최초공시 동일 (1990 이후 필수)
         housePriceAtTransfer: 400_000_000,
         housePriceAtFirstDisclosure: 80_000_000,
-        buildingStdPriceAtTransfer: 50_000_000,
         buildingStdPriceAtFirstDisclosure: 30_000_000,
         buildingStdPriceAtInheritance: 20_000_000,
         housePriceAtInheritanceOverride: 50_000_000,      // 직접 입력

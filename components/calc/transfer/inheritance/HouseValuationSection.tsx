@@ -300,7 +300,8 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   // F1: 산출값을 3필드에 단일 onChange patch로 병합(3연속 호출 아님 — stale-clobber 차단).
   const applyBatch = (v: MultiPointStdPriceApply) => {
     const patch: Partial<AssetForm> = {};
-    if (v.transfer?.housing != null) patch.inhHouseValBuildingStdPriceAtTransfer = String(v.transfer.housing);
+    // 양도시 건물기준시가는 받지 않는다 — 영 §164⑦이 나목을 요구하는 시점은 취득시·최초공시시뿐이고,
+    // 양도시 주택 기준시가는 법 §99①1호 라목의 개별주택가격 단일값이다(위 StandardPriceInput).
     if (v.firstDisclosure?.housing != null) patch.inhHouseValBuildingStdPriceAtFirst = String(v.firstDisclosure.housing);
     if (v.acquisition?.housing != null) patch.inhHouseValBuildingStdPriceAtInheritance = String(v.acquisition.housing);
     if (Object.keys(patch).length) onChange(patch);
@@ -412,17 +413,6 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           label="양도 당시 공시된 개별주택 가격"
           hint="홈택스/부동산공시가격알리미 — 양도일 직전 공시된 개별주택가격"
         />
-        <FieldCard label="양도당시 건물기준시가" unit="원" hint="국세청 기준시가 — 양도시 합계 기준시가의 건물 성분. 미입력 시 위 「양도 당시 공시된 개별주택 가격」으로 대체." className="sm:grid-cols-[160px_1fr]">
-          <div className="w-1/2">
-            <CurrencyInput
-              label=""
-              hideUnit
-              value={asset.inhHouseValBuildingStdPriceAtTransfer}
-              onChange={(v) => onChange({ inhHouseValBuildingStdPriceAtTransfer: v })}
-              placeholder="국세청 기준시가 조회"
-            />
-          </div>
-        </FieldCard>
       </div>
 
       {/* ③ 최초고시 시점 (기본 2005-04-30) — violet 톤 (중간 시점) */}
