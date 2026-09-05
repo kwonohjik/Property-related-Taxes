@@ -241,6 +241,14 @@ export function toEngineReductions(
         ...(r.rentalContinuesToTransfer === false
           ? { stdPriceAtRentalEnd: parseAmount(r.stdPriceAtRentalEnd || "0") || undefined }
           : {}),
+        // Q10 — 안분 기준시가 E·D override. **입력이 있을 때만** 실어 라우터의 `?? ctx` 폴백을
+        // 살린다(0을 보내면 폴백이 죽고 안분이 조용히 불성립한다).
+        ...(parseAmount(r.stdPriceAtAcquisition || "0") > 0
+          ? { stdPriceAtAcquisition: parseAmount(r.stdPriceAtAcquisition) }
+          : {}),
+        ...(parseAmount(r.stdPriceAtTransfer || "0") > 0
+          ? { stdPriceAtTransfer: parseAmount(r.stdPriceAtTransfer) }
+          : {}),
       };
       if (r.type === "rental_97_3") {
         return {

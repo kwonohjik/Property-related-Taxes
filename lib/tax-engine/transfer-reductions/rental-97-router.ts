@@ -59,9 +59,14 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
     rentIncreaseViolated: r.rentIncreaseViolated,
     rentHistory: r.rentHistory,
     vacancyPeriods: r.vacancyPeriods,
-    stdPriceAtAcquisition: ctx.stdPriceAtAcquisition,
+    // Q10 — 감면-수준 override가 있으면 그것을 쓰고, 없으면 자산-수준(ctx)으로 폴백한다.
+    // 자산-수준 값의 전송 조건은 두 시점이 다르다(`transfer-tax-api.ts` 실측) — 취득시는
+    // 추계 또는 분리 모드, 양도시는 **추계 모드만**이다. 실지거래가액 모드에서는 둘 다
+    // 비어 안분이 성립하지 않았고, 분리 전용 모드에서는 양도시만 비었다. 전송 조건을 넓히는 대신(무관한 경로의
+    // 세액이 함께 움직인다) 여기서 조문 전용 입력을 받는다 — §98의8 계약일 폴백과 같은 모양.
+    stdPriceAtAcquisition: r.stdPriceAtAcquisition ?? ctx.stdPriceAtAcquisition,
     stdPriceAtRentalStart: r.stdPriceAtRentalStart,
-    stdPriceAtTransfer: ctx.stdPriceAtTransfer,
+    stdPriceAtTransfer: r.stdPriceAtTransfer ?? ctx.stdPriceAtTransfer,
     // D2-06 — 조특령 §97의3⑤ B·§97의5②의 「실제 임대기간 마지막 날」 축.
     // ⚠️ 이 base는 **명시 매핑**이라 여기 적지 않은 키는 조용히 사라진다
     //    (직전 배치 D1-01에서 실제로 발생했다 — memory `feedback_explicit_prop_mapping_strip`).

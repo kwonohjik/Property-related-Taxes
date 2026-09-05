@@ -213,6 +213,24 @@ export interface RentalCommonFormFields {
   rentalContinuesToTransfer: boolean | null;
   /** 실제 임대기간 마지막 날의 기준시가 (원) — 위가 「아니오」일 때만 사용 */
   stdPriceAtRentalEnd: string;
+  /**
+   * 안분 산식의 분모 감수 E — **취득 당시** 기준시가 (주택+부속토지 합계, 원).
+   *
+   * 조특령 §97의3⑤·§97의5②의 안분은 취득시·양도시 기준시가를 요구한다. 그런데 자산-수준
+   * 기준시가의 전송 조건은 **두 시점이 서로 다르다**(`transfer-tax-api.ts`, 실측):
+   * 취득시는 추계 **또는 분리**(§166⑥) 모드, 양도시는 **추계 모드만**이다 —
+   * 즉 분리 전용 모드에서도 D(양도시)는 도달하지 않는다.
+   * 실지거래가액 모드에서는 값이 도달하지 않아 안분이 성립하지 않고, 그러면 §97의3 자체가
+   * `MISSING_PRORATION_PRICES`로 **전액 불적용**된다(감면이 조용히 사라지는 것이 아니라
+   * 사유가 뜨지만, 채울 칸이 없었다).
+   *
+   * ⚠️ 자산-수준 전송 조건을 넓히지 않는다 — 그 값은 §164⑧·개산공제·분리 안분의 입력이라
+   *    무관한 경로의 세액이 함께 움직인다. 감면-수준 override로 받고, **비우면 자산-수준
+   *    값으로 폴백**한다(라우터에서 `?? ctx`). 같은 파일의 §98의8 계약일 폴백과 같은 모양이다.
+   */
+  stdPriceAtAcquisition: string;
+  /** 안분 산식의 분모 D — **양도 당시** 기준시가 (주택+부속토지 합계, 원). 위와 같은 폴백. */
+  stdPriceAtTransfer: string;
   /** 공실 구간 (true 시 ≥ 1행) */
   vacancyPeriods?: VacancyPeriodFormItem[];
 }
