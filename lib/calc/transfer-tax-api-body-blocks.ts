@@ -11,6 +11,7 @@ import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store
 import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
 import { getFilingDeadline, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { deriveStatutoryDeadline } from "@/lib/calc/transfer-amendment-helpers";
+import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 
 /**
  * ④⑬ 기한 후 신고 감면 축 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05)
@@ -194,7 +195,12 @@ export function buildPenaltyAmendmentPayload(form: TransferFormData): object {
 }
 
 /** ④⑬ 개별주택가격 미공시 취득 환산 §164⑤ (일반 자산 전용 — 겸용주택은 mixedUse 경로) */
-export function buildPreHousingDisclosurePayload(primary: AssetForm, isMixed: boolean): object {
+export function buildPreHousingDisclosurePayload(
+  primary: AssetForm,
+  isMixed: boolean,
+  /** 양도일 — 영 §164④ 등급가액 환산 파생에 필요(1990.8.30. 이전 취득 주택) */
+  transferDate: string,
+): object {
   return {
   // ── 개별주택가격 미공시 취득 환산 §164⑤ (일반 자산 전용) ──
   // 겸용주택은 mixedUse.preHousingDisclosure에서 별도 전송하므로 여기 송신 금지.
@@ -208,7 +214,12 @@ export function buildPreHousingDisclosurePayload(primary: AssetForm, isMixed: bo
           firstDisclosureDate: primary.phdFirstDisclosureDate,
           firstDisclosureHousingPrice: parseAmount(primary.phdFirstDisclosureHousingPrice),
           landArea: parseFloat(primary.acquisitionArea) || 0,
-          landPricePerSqmAtAcquisition: parseAmount(primary.phdLandPricePerSqmAtAcq) || 0,
+          // 1990.8.30. 이전 취득 주택 — 그날 이전에는 개별공시지가가 고시되지 않았다.
+          // 영 §164④ 등급가액 환산이 §164⑦ 분자의 「가목 가액」을 채운다(법 §99③2호가 토지·주택을
+          // 한 호에서 위임). ⑤·⑧과 **같은 파생 함수**를 쓴다(3중 패턴 — 한쪽만 열면 침묵 불일치).
+          landPricePerSqmAtAcquisition:
+            parseAmount(primary.phdLandPricePerSqmAtAcq) ||
+            (derivePre1990PlainHousePhdLandPricePerSqmAtAcq(primary, transferDate) ?? 0),
           buildingStdPriceAtAcquisition: parseAmount(primary.phdBuildingStdPriceAtAcq) || 0,
           landPricePerSqmAtFirstDisclosure: parseAmount(primary.phdLandPricePerSqmAtFirst) || 0,
           buildingStdPriceAtFirstDisclosure: parseAmount(primary.phdBuildingStdPriceAtFirst) || 0,

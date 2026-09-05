@@ -20,6 +20,7 @@ import { validateCommercialInheritanceAsset } from "./transfer-tax-validate-comm
 import { validateCommercialAppurtenantLand } from "./transfer-tax-validate-commercial-asset";
 import { validateCommercialEstimatedAsset } from "./transfer-tax-validate-commercial-asset";
 import { isPhdEligible } from "./phd-eligibility";
+import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
@@ -515,8 +516,22 @@ export function validateAssetAcquisition(
     // 일반 자산: acquisitionArea 직접 입력 필요 (겸용주택은 면적 자동 계산이므로 제외)
     if (!asset.acquisitionArea || parseFloat(asset.acquisitionArea) <= 0)
       return `${label}: 토지 면적(㎡)을 입력하세요. (자산 기본 정보)`;
-    if (!asset.phdLandPricePerSqmAtAcq || parseAmount(asset.phdLandPricePerSqmAtAcq) <= 0)
-      return `${label}: 취득시 토지 단위 공시지가를 입력하세요.`;
+    /**
+     * 취득시 토지 단위 공시지가 — 1990.8.30. 이전 취득 주택은 **영 §164④ 등급가액 환산**이 대신한다.
+     *
+     * 그날 이전에는 개별공시지가가 고시되지 않았으므로 「입력하세요」로 막으면 그 취득 시기의
+     * 주택은 계산 자체가 불가능하다. §164⑦ 분자가 요구하는 「취득당시의 법 §99①1호 **가목**의
+     * 가액」을 §164④가 정의하고, 법 §99③2호가 「…공시되기 전에 취득한 **토지 및 주택**」을 한 호에서
+     * 위임한다. 겸용주택(`assetKind="housing"`)은 이미 같은 브리지를 쓰고 있었다.
+     *
+     * ⚠️ ④(`transfer-tax-api-body-blocks.ts`)·⑤와 **같은 파생 함수**를 쓴다 — 3중 패턴.
+     *    한쪽만 열면 「UI 통과 ↔ validate 차단」 또는 그 반대의 침묵 불일치가 난다.
+     */
+    if (
+      (!asset.phdLandPricePerSqmAtAcq || parseAmount(asset.phdLandPricePerSqmAtAcq) <= 0) &&
+      derivePre1990PlainHousePhdLandPricePerSqmAtAcq(asset, formTransferDate ?? "") === null
+    )
+      return `${label}: 취득시 토지 단위 공시지가를 입력하세요. (1990.8.30. 이전 취득이면 아래 토지등급가액 환산을 켜고 등급을 입력하세요 — 영 §164④)`;
     if (!asset.phdBuildingStdPriceAtAcq || parseAmount(asset.phdBuildingStdPriceAtAcq) <= 0)
       return `${label}: 취득시 건물 기준시가를 입력하세요.`;
     if (!asset.phdLandPricePerSqmAtFirst || parseAmount(asset.phdLandPricePerSqmAtFirst) <= 0)
