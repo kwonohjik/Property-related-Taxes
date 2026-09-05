@@ -18,6 +18,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { Settings } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -444,9 +445,10 @@ export function HousesListSection({
   // 보유 항목 0건이면 엔진이 gracePeriod를 소비하지 않으므로(houses[] 경로 전용 — rate-calc:307·helpers:783)
   // 위젯·API 전송(housesPayload && gracePeriod)·엔진 사용을 일치시켜 침묵 무시(silent omission) 차단.
   const householdCount = parseInt(form.householdHousingCount || "1", 10);
-  const hasMultiHouseEntries = houses.length > 0 || form.presaleRights.length > 0;
-  const showGracePeriod =
-    !hideGracePeriod && form.isOneHousehold && householdCount >= 2 && hasMultiHouseEntries;
+  // 술어는 ④ 전송·⑧ validate와 **같은 함수**다 (Q03 — `gracePeriodInScope`).
+  // 종전에는 세 층이 각자 조건을 적어 갈라졌다. `hideGracePeriod`는 상위(Step4)가 한시배제 창
+  // 분기에서 명시로 닫는 축이라 그대로 둔다 — 술어도 같은 창을 보므로 중복이지 모순이 아니다.
+  const showGracePeriod = !hideGracePeriod && gracePeriodInScope(form);
 
   // ①(세대 보유 주택 수) ↔ ④(다른 보유 주택 목록) 정합성 안내 (표시 전용 — 계획서 §2·§3).
   // 배제규칙은 엔진 전용이라 UI 재계산 금지 → 구조적 개수만 대조(useMemo 파생, store 미기록).

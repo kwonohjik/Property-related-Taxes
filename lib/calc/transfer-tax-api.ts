@@ -10,6 +10,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
+import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -532,7 +533,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : {};
     })(),
     // ⑬ 다주택 중과 한시 유예 — houses 제공 시에만 엔진이 소비 (form-global gracePeriod)
-    ...(housesPayload && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
+    // 술어는 ⑤ 위젯·⑧ validate와 **같은 함수**를 쓴다 (Q03) — 종전에는 셋이 갈라져
+    // 「⑤는 열리고 ④는 보내는데 ⑧이 검증 안 함」·「창 안인데 stale 값이 전송됨」으로 400이 났다.
+    ...(gracePeriodInScope(form) && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     ...buildPenaltyAmendmentPayload(form),
     // ⑬ 다필지(§114⑦) — 필지별 페이로드 조립은 `transfer-tax-api-parcels.ts`로 분리(2026-08-23, 800줄 정책).
     ...(parcelModeActive

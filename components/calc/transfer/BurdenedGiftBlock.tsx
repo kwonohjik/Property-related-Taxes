@@ -625,10 +625,23 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         <p className="text-caption text-violet-700">
           무상이전분(증여가액 C − 채무액 B)에 대한 증여세 동시 산출. 수증자가 별도 신고·납부.
         </p>
+        {/*
+          🔴 hint가 「미선택 시 직계비속(성년) 기본값」이라 안내했는데 ⑧은 선택을 **차단**한다
+             (`transfer-tax-validate-bg.ts:192`) — 안내를 믿고 넘어간 사용자는 원인 모를 차단을
+             만났다 (2026-09-05 · 코드리뷰 Q21).
+
+          저장소 정책 둘이 충돌하는 자리다: 3중 패턴은 「④·엔진 fallback이 있으면 validate도
+          인정하라」, 루트 규약은 「미입력은 검증 오류로 차단하라」. **후자를 택했다** —
+          상증법 §53 증여재산공제가 관계에 따라 **5천만 ↔ 6억**으로 갈리므로 사용자가 모르고
+          지나가면 안 되는 크기다. ⇒ 기본값 문장을 걷고 필수로 표기한다.
+
+          ④·엔진의 기본값은 남긴다 — 마법사를 거치지 않고 조립된 입력(직접 fixture)용 안전망이다.
+        */}
         <FieldCard
           stacked
+          required
           label="증여자-수증자 관계"
-          hint="상증법 §53 증여재산공제 차등 적용. 미선택 시 직계비속(성년) 기본값."
+          hint="상증법 §53 증여재산공제가 관계에 따라 5천만 ↔ 6억으로 갈립니다. 반드시 선택하세요."
         >
           <RadioCardGroup
             name="bgDonorRelation"
