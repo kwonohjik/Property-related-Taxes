@@ -83,6 +83,44 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
         onCheckedChange={(v) => onChange({ cbUnapprovedBuilding: v })}
       />
 
+      {/*
+        🔴 두 면적은 **단서 ON/OFF와 무관하게 항상 렌더**한다 (2026-09-06 UI 리뷰).
+        종전에는 「허가·사용승인 미이행」을 켜는 순간 이 두 칸이 렌더에서 빠졌고, 토글이 칸보다
+        위에 있어 사용자는 대개 먼저 켰다. 그러면 두 면적이 빈 채로 남아 ④
+        `buildCommercialAppurtenantLand`가 **payload 전체를 `undefined`로 버리고**
+        (`transfer-tax-api-commercial.ts:32`) 함께 실려야 할 `unapprovedBuilding: true`까지
+        사라져, 화면은 「부속토지 전체 비사업용」이라 확언하는데 §104의3 +10%p 중과가
+        **전혀 적용되지 않았다**(세액 과소·경고 없음).
+        단서 ON에서도 엔진은 `nonBusinessArea = landArea - 0`으로 면적을 쓴다
+        (`appurtenant-land-excess.ts:98`) — 즉 면적은 이 분기에서도 필수다.
+        배율만 불필요하므로 **용도지역과 배율 배지만** 숨긴다.
+      */}
+      <FieldCard
+        label="집합건물 전체 대지면적"
+        hint="건축물대장 총괄표제부의 대지면적. 위 환산 입력의 대지면적(해당 호 지분)과 다른 값입니다."
+        unit="㎡"
+      >
+        <DecimalInput
+          value={asset.cbTotalLandArea}
+          onChange={(v) => onChange({ cbTotalLandArea: v })}
+          placeholder="집합건물 전체 대지면적"
+          unit="㎡"
+        />
+      </FieldCard>
+
+      <FieldCard
+        label="집합건물 전체 바닥면적"
+        hint="각 층 중 최대 바닥면적(지하 포함). 연면적·건축면적이 아닙니다."
+        unit="㎡"
+      >
+        <DecimalInput
+          value={asset.cbTotalBuildingFootprintArea}
+          onChange={(v) => onChange({ cbTotalBuildingFootprintArea: v })}
+          placeholder="각 층 중 최대 바닥면적"
+          unit="㎡"
+        />
+      </FieldCard>
+
       {asset.cbUnapprovedBuilding ? (
         <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-700">
           허가·사용승인 미이행 — 부속토지 전체 비사업용 (배율 계산 없음)
@@ -92,32 +130,6 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
         </div>
       ) : (
         <>
-          <FieldCard
-            label="집합건물 전체 대지면적"
-            hint="건축물대장 총괄표제부의 대지면적. 위 환산 입력의 대지면적(해당 호 지분)과 다른 값입니다."
-            unit="㎡"
-          >
-            <DecimalInput
-              value={asset.cbTotalLandArea}
-              onChange={(v) => onChange({ cbTotalLandArea: v })}
-              placeholder="집합건물 전체 대지면적"
-              unit="㎡"
-            />
-          </FieldCard>
-
-          <FieldCard
-            label="집합건물 전체 바닥면적"
-            hint="각 층 중 최대 바닥면적(지하 포함). 연면적·건축면적이 아닙니다."
-            unit="㎡"
-          >
-            <DecimalInput
-              value={asset.cbTotalBuildingFootprintArea}
-              onChange={(v) => onChange({ cbTotalBuildingFootprintArea: v })}
-              placeholder="각 층 중 최대 바닥면적"
-              unit="㎡"
-            />
-          </FieldCard>
-
           <FieldCard
             label="용도지역 (필수)"
             hint="국토계획법상 용도지역. 미선택 시 계산이 진행되지 않습니다."

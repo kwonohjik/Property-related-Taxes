@@ -117,4 +117,29 @@ describe("F-3 (⑧) — validate가 API 변환 조건과 일치한다", () => {
   it("완전 입력이면 통과", () => {
     expect(appurtenantError(cbAsset(FULL))).toBeNull();
   });
+
+  /**
+   * 🔑 **단서 ON + 면적 공란** (2026-09-06 UI 리뷰).
+   *
+   * 종전 anchor는 단서 케이스를 늘 `FULL`(면적 채움) 위에서만 봤고, **그 칸을 비운 케이스가
+   * 없어** 결함이 그대로 남았다. 토글을 켜면 ⑤가 면적칸을 렌더에서 빼버려 두 값이 빈 채로
+   * 남고, ④가 payload 전체를 `undefined`로 버리며(`transfer-tax-api-commercial.ts:32`)
+   * `unapprovedBuilding: true`까지 함께 사라져 **+10%p 중과가 전혀 적용되지 않았다**.
+   * 화면은 「부속토지 전체 비사업용」이라 확언하는데 세액은 그 반대였다.
+   */
+  it("🔑 §101① 단서 ON인데 면적이 비면 차단 — 중과가 조용히 사라지는 것을 막는다", () => {
+    const err = appurtenantError(cbAsset({ cbUnapprovedBuilding: true }));
+    expect(err).toContain("허가·사용승인 미이행");
+    expect(err).toContain("§101① 단서");
+  });
+
+  it("§101① 단서 ON + 면적 입력 → 통과 (①까지 배선되면 막지 않는다)", () => {
+    expect(
+      appurtenantError(cbAsset({ ...FULL, cbZoneType: "", cbUnapprovedBuilding: true })),
+    ).toBeNull();
+  });
+
+  it("단서 OFF + 둘 다 공란은 종전대로 통과 (판정 생략 — 과차단 금지)", () => {
+    expect(appurtenantError(cbAsset())).toBeNull();
+  });
 });
