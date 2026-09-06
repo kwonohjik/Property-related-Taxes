@@ -113,8 +113,22 @@ export function buildIncomeFormula(p: PerPropertyBreakdown): string {
  */
 export function buildCalculatedTaxFormula(p: PerPropertyBreakdown): string {
   if (p.refCalculatedTaxNote) return p.refCalculatedTaxNote;
-  const ratePct = ((p.appliedRate + (p.surchargeRate ?? 0)) * 100).toFixed(1).replace(/\.0$/, "");
-  return `${fmt(p.taxBaseShare)} × ${ratePct}% - ${fmt(p.progressiveDeduction)} = ${fmt(p.refCalculatedTax)}`;
+  /**
+   * 🔴 **`surchargeRate`를 더하지 않는다** (2026-09-06 · UI 리뷰 `surcharge-rate-double-count`).
+   *
+   * `appliedRate`는 **이미 중과를 포함한 실효세율**이다 —
+   * `transfer-tax-rate-calc.ts:410` `appliedRate: roundRate(baseRate + additionalRate * ratio)`,
+   * 타입 주석도 「`surchargeRate`를 더하면 이중 계상」이라 못박고 있다
+   * (`types/transfer-aggregate.types.ts:191`).
+   *
+   * 종전에는 비사업용 토지(기본 45% + 10%p = 실효 55%)가 화면에 **65%**로 찍혔고, 금액은
+   * 엔진이 55%로 낸 `refCalculatedTax`라 **산술적으로 성립하지 않는 등식**이 출력됐다.
+   * 형제 표시부(`FilingFormTableRowDefs.ts:31 fmtRatePct` · `DetailedStatementHelpers.ts`
+   * `formatRatePct`)는 2026-09-02에 이미 정정됐고 여기만 남아 있었다.
+   */
+  const ratePct = (p.appliedRate * 100).toFixed(1).replace(/\.0$/, "");
+  const surcharged = (p.surchargeRate ?? 0) > 0 ? " (중과 포함)" : "";
+  return `${fmt(p.taxBaseShare)} × ${ratePct}%${surcharged} - ${fmt(p.progressiveDeduction)} = ${fmt(p.refCalculatedTax)}`;
 }
 
 /** 결정세액 = 산출세액 − 감면 (자산별 참고값) */

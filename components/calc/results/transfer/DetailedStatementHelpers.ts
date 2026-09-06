@@ -468,7 +468,26 @@ export function buildStatementItems(
   const sumIncome = isAggregate
     ? properties.reduce((s, p) => s + p.incomeAfterOffset, 0)
     : 0;
-  const singleIncome = Math.max(0, result.taxableGain - result.longTermHoldingDeduction);
+  /**
+   * §161(장기임대주택 보유자 거주주택 비과세, `isRH`)만 **분기한다** (2026-09-06 · UI 리뷰
+   * `rh161-income-double-deduct`).
+   *
+   * 🔴 그 경로에서 엔진은 `taxableGain` 슬롯에 **이미 장특공제·§161 안분이 끝난 양도소득금액**을
+   *   담는다(`transfer-tax-rental-housing-step.ts:617` `taxableGain: totalTaxableIncome`).
+   *   여기서 장특공제를 또 빼면 「양도소득금액」이 그만큼 과소 표시되고, 바로 아래
+   *   「감면후 소득금액」은 isRH 분기를 타 `result.taxableGain`을 그대로 쓰므로
+   *   **감면후가 감면 전보다 커지는** 자기모순이 표에 그대로 남는다.
+   *
+   * 🔑 신고서 카드(`FilingFormTableHelpers.ts:603`)는 이미 같은 분기를 쓴다 — 두 카드의
+   *   「양도소득금액」이 갈리지 않도록 **같은 식**을 쓴다(비과세분은 아래 「비과세 양도소득금액
+   *   (소령 §161①)」 행이 별도로 보여 준다 — 신고서와 같은 구조다).
+   *
+   * ⚠️ 이 값은 ⑲ 세액감면대상금액 산정에도 그대로 흘러간다(:515).
+   */
+  const isRentalHousingException = result.rentalHousingExceptionDetail?.applied === true;
+  const singleIncome = isRentalHousingException
+    ? result.transferGain - result.longTermHoldingDeduction
+    : Math.max(0, result.taxableGain - result.longTermHoldingDeduction);
   items.set("incomeAmount", {
     label: "양도소득금액",
     value: isAggregate ? sumIncome : singleIncome,
@@ -477,7 +496,9 @@ export function buildStatementItems(
     legalBasis: incomeStep?.legalBasis ?? "소득세법 §95①",
     note: isAggregate
       ? "다건 모드: §102② 차손통산(같은 그룹 우선·타군 안분) 후의 자산별 합계"
-      : undefined,
+      : isRentalHousingException
+        ? "§161 특례: 전체 양도차익 기준(비과세분 포함) — 비과세 부분은 아래 행에서 차감합니다"
+        : undefined,
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
@@ -556,7 +577,8 @@ export function buildStatementItems(
 
   // 감면후 소득금액 = 양도소득금액 − 소득금액 감면대상(§90② 소득금액차감). FilingFormTableHelpers와 동일.
   // §161(장기임대 거주주택 비과세, isRH)은 taxableGain이 이미 안분 후 값이므로 별도 분기.
-  const isRH = result.rentalHousingExceptionDetail?.applied === true;
+  // 위 4단계에서 이미 판정했다 — 같은 술어를 두 번 쓰지 않는다(두 곳이 갈리면 표가 다시 모순된다).
+  const isRH = isRentalHousingException;
   const incomeAfterValue = isAggregate
     ? properties.reduce((s, p) => s + Math.max(0, p.incomeAfterOffset - (p.incomeDeductionReducible ?? 0)), 0)
     : isRH
