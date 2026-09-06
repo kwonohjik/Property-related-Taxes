@@ -12,6 +12,7 @@ import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transf
 import { getFilingDeadline, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { deriveStatutoryDeadline } from "@/lib/calc/transfer-amendment-helpers";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
+import { phdToggleReachable } from "./phd-toggle-scope";
 
 /**
  * ④⑬ 기한 후 신고 감면 축 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05)
@@ -205,7 +206,11 @@ export function buildPreHousingDisclosurePayload(
   // ── 개별주택가격 미공시 취득 환산 §164⑤ (일반 자산 전용) ──
   // 겸용주택은 mixedUse.preHousingDisclosure에서 별도 전송하므로 여기 송신 금지.
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)도 PHD 전송.
+  // 🔴 자산 종류 축 — ⑤ 토글이 닿지 않는 종류에서는 보내지 않는다(2026-09-07). 11칸을 다 채운
+  //    뒤 종류를 바꾸면 ⑧이 통과하고 여기서 그대로 실어 **토지·상가에 주택 3-시점 환산 산식**이
+  //    적용됐다 — 차단이 아니라 조용한 오산이다.
   ...(!isMixed &&
+  phdToggleReachable(primary) &&
   primary.usePreHousingDisclosure &&
   primary.phdFirstDisclosureDate &&
   parseAmount(primary.phdFirstDisclosureHousingPrice) > 0

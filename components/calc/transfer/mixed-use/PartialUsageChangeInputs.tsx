@@ -142,10 +142,22 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
         </div>
       )}
 
-      {/* 용도변경일 — 입력 시 LTHD 시간 비례 분할 적용 (집행기준 89-154-24) */}
+      {/*
+        용도변경일 — 입력 시 LTHD 시간 비례 분할 적용 (집행기준 89-154-24).
+
+        🔴 **PHD가 켜져 있으면 「(선택)」이 아니다** (2026-09-07 UI 리뷰 보통).
+           ⑧(`transfer-tax-validate-mixed-use-asset.ts:165~168`)은 `usePreHousingDisclosure`
+           일 때 이 값을 **필수로 차단**한다 — §164⑤ 환산 산식이 최초고시일과 용도변경일의
+           선후(Case A/B)로 갈리기 때문이다. 라벨만 「(선택)」이라 사용자는 비워 두었다가
+           원인 모를 차단을 만났다. 라벨을 ⑧과 같은 조건으로 파생시킨다.
+      */}
       <FieldCard
-        label="용도변경일 (선택)"
-        hint="입력 시 장기보유특별공제를 용도변경일 전후로 분리 계산 (집행기준 89-154-24 — 주택 사용 기간 통산 취지)"
+        label={asset.usePreHousingDisclosure ? "용도변경일 (필수)" : "용도변경일 (선택)"}
+        hint={
+          asset.usePreHousingDisclosure
+            ? "3-시점 환산(§164⑦)을 함께 쓰면 필수입니다 — 환산 산식이 최초고시일과 용도변경일의 선후에 따라 달라집니다. 입력 시 장기보유특별공제도 용도변경일 전후로 분리 계산합니다 (집행기준 89-154-24)."
+            : "입력 시 장기보유특별공제를 용도변경일 전후로 분리 계산 (집행기준 89-154-24 — 주택 사용 기간 통산 취지)"
+        }
       >
         <DateInput
           value={asset.partialChangeDate}
