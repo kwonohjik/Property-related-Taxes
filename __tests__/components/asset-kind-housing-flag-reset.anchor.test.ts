@@ -32,7 +32,10 @@ function ready(over: Partial<AssetForm> = {}): AssetForm {
 describe("자산 종류 전환 — 주택 전용 플래그 정리", () => {
   it("🔑 K-1: 비주택으로 바꾸면 겸용·용도변경 플래그와 종속 필드를 비운다", () => {
     const patch = housingFlagResetPatchForAssetKind("land");
-    expect(patch).toEqual({
+    // ⚠️ `toEqual`을 쓰지 않는다 — 이 patch는 축이 늘어난다(§155⑳ 특례 초기화가
+    //    2026-09-07에 합류했다). 전체 일치를 고정하면 축이 추가될 때마다 무관한 anchor가
+    //    깨지고, 그 수정 과정에서 진짜 회귀를 놓치기 쉽다. **이 축의 키만** 본다.
+    expect(patch).toMatchObject({
       isMixedUseHouse: false,
       hasPartialUsageChange: false,
       partialChangeDirection: "",
@@ -41,8 +44,17 @@ describe("자산 종류 전환 — 주택 전용 플래그 정리", () => {
     });
   });
 
-  it("K-2: 주택으로 바꿀 때는 건드리지 않는다 (되돌리면 다시 켤 수 있다)", () => {
-    expect(housingFlagResetPatchForAssetKind("housing")).toEqual({});
+  it("K-2: 주택으로 바꿀 때는 이 축을 건드리지 않는다 (되돌리면 다시 켤 수 있다)", () => {
+    const patch = housingFlagResetPatchForAssetKind("housing");
+    for (const k of [
+      "isMixedUseHouse",
+      "hasPartialUsageChange",
+      "partialChangeDirection",
+      "hasNonHousingConversion",
+      "residentialUseStartDate",
+    ]) {
+      expect(patch).not.toHaveProperty(k);
+    }
   });
 
   it("🔑 K-3: 전환 patch를 적용하면 겸용 dead-end가 사라진다", () => {

@@ -7,6 +7,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { isRentalHousingExceptionApplicable } from "./rental-housing-exception-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
@@ -22,6 +23,14 @@ export function validateRentalHousingException(
   formTransferDate?: string,
 ): string | null {
   if (!rh?.applyException) return null;
+  /**
+   * 🔴 자산 종류 게이트 — ⑤와 **같은 술어**를 쓴다 (2026-09-07 UI 리뷰).
+   *
+   * 종전에는 여기에 술어가 없어, 주택에서 특례를 켠 뒤 종류를 토지·상가 등으로 바꾸면
+   * 「임대주택 정보를 1호 이상 입력하세요」로 계산이 영구 차단됐다 — 그 입력 카드는
+   * ⑤ 게이트(`AssetSectionExtras.tsx:28`) 밖이라 **화면에 없다**(dead-end).
+   */
+  if (!isRentalHousingExceptionApplicable(asset.assetKind)) return null;
 
   // 임대주택 1호 이상 필수
   if (!rh.rentalUnits || rh.rentalUnits.length === 0) {

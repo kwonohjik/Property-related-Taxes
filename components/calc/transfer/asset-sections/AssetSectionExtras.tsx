@@ -9,6 +9,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { NblSectionContainer } from "../nbl/NblSectionContainer";
 import { RentalHousingExceptionSection } from "../RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
+import { isRentalHousingExceptionApplicable } from "@/lib/calc/rental-housing-exception-scope";
 
 interface Props {
   asset: AssetForm;
@@ -25,7 +26,7 @@ export function AssetSectionExtras({ asset, onChange, transferDate }: Props) {
       )}
 
       {/* 장기임대주택 보유자 거주주택 비과세 특례 — 주택 자산에만 표시 (소령 §155⑳) */}
-      {(asset.assetKind === "housing" || asset.assetKind === "right_to_move_in") && (
+      {isRentalHousingExceptionApplicable(asset.assetKind) && (
         <RentalHousingExceptionSection
           rh={asset.rentalHousingException ?? { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS }}
           asset={asset}

@@ -11,6 +11,7 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import { deriveRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { isRentalHousingExceptionApplicable } from "./rental-housing-exception-scope";
 
 // ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
 
@@ -22,6 +23,13 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 export function toRentalHousingExceptionApi(asset: AssetForm): object | undefined {
   const rh = asset.rentalHousingException;
   if (!rh?.applyException) return undefined;
+  /**
+   * 🔴 자산 종류 게이트 — ⑤·⑧과 **같은 술어**(3중 패턴, 2026-09-07 UI 리뷰).
+   *
+   * 종전에는 여기에도 술어가 없어, 임대주택 행이 채워진 채 자산 종류만 바꾸면
+   * **주택이 아닌 자산에 §155⑳ 거주주택 비과세가 적용된 payload**가 엔진까지 갔다.
+   */
+  if (!isRentalHousingExceptionApplicable(asset.assetKind)) return undefined;
   if (!rh.rentalUnits || rh.rentalUnits.length === 0) return undefined;
 
   return {
