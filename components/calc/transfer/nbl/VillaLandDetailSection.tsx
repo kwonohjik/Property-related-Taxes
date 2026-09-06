@@ -8,6 +8,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
+import { MetropolitanAreaField } from "./shared/MetropolitanAreaField";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface VillaLandDetailSectionProps {
@@ -34,6 +35,17 @@ export function VillaLandDetailSection({
           label="별장 사용기간"
         />
       </FieldCard>
+
+      {/*
+        🔴 수도권 여부 (2026-09-06 UI 리뷰 — E1-02와 같은 재분류 경로의 나머지 한 축).
+        재분류 후 인정면적은 `getHousingMultiplier(zoneType, isMetropolitan)`이 정하는데
+        이 입력이 주택부수토지 화면에만 있어, 별장 경로는 항상 「미지정 → 보수적 기본값
+        (수도권)」으로 3배를 받았다(`housing-land.ts:68`). 비수도권 도시지역 주·상·공은
+        실제로 5배이므로 인정면적이 40% 과소 → 초과분이 비사업용으로 넘어가 +10%p 중과가
+        붙었다. 화면에 값을 넣을 수단이 없어 회피할 방법도 없었다 — 법 근거 없는 불리 적용.
+        용도지역(`nblZoneType`)은 상단 공통 블록에 이미 있다(`NblSectionContainer.tsx:160`).
+      */}
+      <MetropolitanAreaField asset={asset} onAssetChange={onAssetChange} />
 
       {/*
         🔴 정착면적 입력 (E1-02, 2026-09-02 코드리뷰).

@@ -53,8 +53,42 @@ describe("[B6] 주택부수토지 수도권 여부 미입력 차단", () => {
     expect(validateNblDetailedJudgment(nblAsset({ nblLandType: "farmland" }), "자산 1", "2024-05-01")).toBeNull();
   });
 
-  it("B6-7: villa_land + urban 주거 + 미선택 → 통과(redirect edge, housing_site 한정)", () => {
-    expect(validateNblDetailedJudgment(nblAsset({ nblLandType: "villa_land" }), "자산 1", "2024-05-01")).toBeNull();
+  /**
+   * 🔴 **반전** (2026-09-06 UI 리뷰). 종전 단언은 「통과(redirect edge, housing_site 한정)」로
+   *    **결함을 고정**하고 있었다 — 별장은 요건 미해당 시 엔진이 주택부수토지로 자동
+   *    재분류하므로(`engine.ts:118`) 같은 배율을 쓰는데, ⑤에 수도권 입력이 없고(주택부수토지
+   *    화면 전용) ⑧도 막지 않아 항상 「미지정 → 보수적 기본값(수도권) 3배」로 계산됐다.
+   *
+   *    실측(정착 100㎡ · 부수토지 500㎡ · 일반주거 · 2024 양도):
+   *      미지정/수도권 → 3배 → 초과 200㎡ **비사업용 +10%p 중과**
+   *      비수도권     → 5배 → 배율 이내 → **사업용, 중과 0**
+   *    화면에 넣을 수단이 없어 회피 불가였다 — 법 근거 없는 불리 적용.
+   *
+   *    바로 아래 정착면적 게이트는 이미 `villa_land`까지 넓혀져 있었다(E1-02) — 같은 경로의
+   *    나머지 한 축만 남아 있던 것이다.
+   */
+  it("🔑 B6-7: villa_land + urban 주거 + 미선택 → 차단 (재분류 경로도 같은 배율을 쓴다)", () => {
+    expect(validateNblDetailedJudgment(nblAsset({ nblLandType: "villa_land" }), "자산 1", "2024-05-01")).toContain(msg);
+  });
+
+  it("B6-7b: villa_land + 수도권='no' → 통과", () => {
+    expect(
+      validateNblDetailedJudgment(
+        nblAsset({ nblLandType: "villa_land", nblIsMetropolitanArea: "no" }),
+        "자산 1",
+        "2024-05-01",
+      ),
+    ).toBeNull();
+  });
+
+  it("B6-7c: villa_land + 도시 外(agriculture_forest) + 미선택 → 통과 (배율 무관 — 오탐 금지)", () => {
+    expect(
+      validateNblDetailedJudgment(
+        nblAsset({ nblLandType: "villa_land", nblZoneType: "agriculture_forest" }),
+        "자산 1",
+        "2024-05-01",
+      ),
+    ).toBeNull();
   });
 
   it("B6-8: 무조건 의제(§168의14③) + 미선택 → 통과(배율 판정 skip)", () => {
