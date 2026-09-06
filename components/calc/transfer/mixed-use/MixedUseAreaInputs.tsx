@@ -4,6 +4,8 @@ import { useState } from "react";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { APPURTENANT_ZONE_OPTIONS } from "@/components/calc/transfer/appurtenant-zone-options";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { computeDerivedAreas, round2 } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { residualArea } from "@/lib/tax-engine/area-utils";
@@ -352,10 +354,35 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         <ToggleCard
           tone="rose"
           title="수도권 지역"
-          description="배율 3배·5배 구분 — 수도권 주·상·공: 3배 / 수도권 녹지·밖: 5배 / 도시 외: 10배 (시행령 §168의12)"
+          description="배율은 용도지역과 함께 정해집니다 — 수도권 주·상·공 3배 / 수도권 녹지·수도권 밖 도시 5배 / 도시지역 밖 10배 (시행령 §168의12)"
           checked={!!asset.mixedIsMetropolitanArea}
           onCheckedChange={(v) => onChange({ mixedIsMetropolitanArea: v })}
         />
+
+        {/*
+          용도지역 — 배율의 **두 번째 축** (2026-09-06 · UI 리뷰 `desc-promises-unreachable-branch`).
+
+          🔴 종전에는 이 칸이 없었고 ④가 `zoneType: "residential"`을 하드코딩해, 위 설명이
+             약속한 「도시지역 밖 10배」·「수도권 녹지 5배」가 **도달 불가**였다. 비도시지역
+             상가주택은 인정 부수토지가 절반으로 잘려 초과분이 비사업용 토지로 넘어갔다.
+
+          선택지는 부수토지 판정 공용 목록(`APPURTENANT_ZONE_OPTIONS` — 엔진 `ZoneType` 키)을
+          그대로 쓴다. 세분 전 「주거지역」은 그 목록이 의도적으로 제외한다(전용·일반·준주거의
+          배율이 달라 통합 키로는 정할 수 없다).
+        */}
+        <FieldCard
+          label="용도지역"
+          hint="미선택 시 종전과 같이 주거지역(수도권 3배 / 그 밖 5배)으로 계산합니다. 부수토지가 인정 면적을 넘을 수 있으면 반드시 선택하세요."
+        >
+          <RadioCardGroup
+            name={`mixed-zone-${asset.assetId}`}
+            layout="inline"
+            tone="rose"
+            value={asset.mixedZoneType ?? ""}
+            onChange={(v) => onChange({ mixedZoneType: v })}
+            options={APPURTENANT_ZONE_OPTIONS}
+          />
+        </FieldCard>
       </div>
     </div>
   );

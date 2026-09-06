@@ -116,6 +116,8 @@ const MIXED_FIELDS = {
   nonResidentialFloorArea: "40",
   buildingFootprintArea: "50",
   mixedUseTotalLandArea: "600",
+  // 부수토지가 정착면적의 3배 초과 ⇒ 용도지역 필수 (2026-09-06 · UI 리뷰). 주제와 무관한 축이라 값만 채운다.
+  mixedZoneType: "general_residential",
   mixedTransferHousingPrice: "900000000",
   mixedTransferCommercialBuildingPrice: "300000000",
   mixedTransferLandPricePerSqm: "2000000",
