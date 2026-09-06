@@ -26,6 +26,7 @@ import { buildGeneralBuildingExtensionBatchPoints } from "@/lib/calc/building-st
 import { buildGeneralBuildingExtensionBatchPatch } from "@/lib/calc/building-std-batch-apply";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { AddressValue } from "@/components/ui/address-search";
+import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 
 interface Props {
   asset: AssetForm;
@@ -68,7 +69,7 @@ export function GeneralBuildingExtensionSection({
 
   /**
    * 증축 있음 안분 미리보기 — 4가지 조합 모두 지원.
-   * - 원건물: isOriginActual = !useEstimatedAcquisition
+   * - 원건물: isOriginActual = 파트 취득방식(`effectivePartAcqMode`)이 실가인가
    * - 증축분: extMode = gbExtensionAcquisitionMode ("estimated" | "actual")
    * 완전 입력 시에만 결과 표시 (불완전 입력은 null 반환).
    * useEffect → store 미러링 금지 정책 준수.
@@ -84,7 +85,30 @@ export function GeneralBuildingExtensionSection({
     const acqLandPerSqm = parseAmount(asset.gbAcqLandPricePerSqm ?? "");
     const acqBuildingStd = parseAmount(asset.gbAcqBuildingValue ?? "");
 
-    const isOriginActual = !asset.useEstimatedAcquisition;
+    /**
+     * 🔴 **원건물 모드는 파트 축에서 읽는다** (2026-09-07 UI 리뷰).
+     *
+     * 2026-08-08에 「증축 × 토지·건물 분리 취득」 차단이 해제되어 둘이 함께 켜질 수 있다.
+     * 분리 ON에서는 자산-단위 「취득가액 산정 방식」 라디오가 **숨겨지고**
+     * 파트별 라디오(`landAcqMode`·`buildingAcqMode`)가 실제 계산을 가른다. 그런데 이
+     * 미리보기만 옛 자산-단위 플래그 `useEstimatedAcquisition`을 봐서, 두 파트를 환산으로
+     * 골라도 「원건물 실가」로 안분하고 화면에서 사라진 stale `fixedAcquisitionPrice`를
+     * 계속 읽었다. 술어는 ④·⑧과 **같은 함수**(`effectivePartAcqMode`)를 쓴다.
+     *
+     * ⚠️ 두 파트 모드가 **서로 다르면** 이 미리보기의 「일괄 취득가 안분」 모델로 표현할 수
+     *    없다 — 틀린 수를 보여 주는 대신 미리보기를 내지 않는다(계산은 엔진이 정확히 한다).
+     */
+    // ⚠️ `asset` **객체 자체**를 넘기면 React Compiler가 이 useMemo의 메모이제이션을 보존하지
+    //    못한다(`Compilation Skipped`). 레거시 파생에 필요한 세 플래그만 추려 넘긴다.
+    const legacyFlags = {
+      isSalesCaseAcquisition: asset.isSalesCaseAcquisition,
+      isAppraisalAcquisition: asset.isAppraisalAcquisition,
+      useEstimatedAcquisition: asset.useEstimatedAcquisition,
+    };
+    const landMode = effectivePartAcqMode(asset.landAcqMode, legacyFlags);
+    const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, legacyFlags);
+    if (landMode !== buildingMode) return null;
+    const isOriginActual = landMode === "actual";
     const extMode = asset.gbExtensionAcquisitionMode || "estimated";
 
     // 양도가액 안분 — §166⑥ (3-way: 토지·건물1·건물2 기준시가 비율)
@@ -142,6 +166,10 @@ export function GeneralBuildingExtensionSection({
     asset.gbAcqLandPricePerSqm,
     asset.gbAcqBuildingValue,
     asset.useEstimatedAcquisition,
+    asset.landAcqMode,
+    asset.buildingAcqMode,
+    asset.isAppraisalAcquisition,
+    asset.isSalesCaseAcquisition,
     asset.gbExtensionAcquisitionMode,
   ]);
 
