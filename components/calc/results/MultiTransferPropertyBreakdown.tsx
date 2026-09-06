@@ -134,10 +134,15 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
 export function resolveRefCalculatedTax(b: PerPropertyBreakdown): number {
   if (typeof b.refCalculatedTax === "number") return b.refCalculatedTax;
   if (b.isExempt) return 0;
-  const effectiveRate = (b.appliedRate ?? 0) + (b.surchargeRate ?? 0);
+  /**
+   * 🔴 **`surchargeRate`를 더하지 않는다** (2026-09-06 · UI 리뷰 `surcharge-rate-double-count`).
+   * `appliedRate`가 이미 중과 포함 실효세율이다(`types/transfer-aggregate.types.ts:191`).
+   * 여기는 **fallback 계산**이라 더하면 라벨이 아니라 **금액 자체가** 틀린다 —
+   * 비사업용 토지에서 55% 대신 65%로 산출됐다.
+   */
   return Math.max(
     0,
-    Math.floor((b.taxBaseShare ?? 0) * effectiveRate) - (b.progressiveDeduction ?? 0),
+    Math.floor((b.taxBaseShare ?? 0) * (b.appliedRate ?? 0)) - (b.progressiveDeduction ?? 0),
   );
 }
 
@@ -186,7 +191,8 @@ export function PropertyBreakdownAccordion({
   // 자산별 산출세액·결정세액(참고) — 엔진이 다건 컨텍스트로 미리 계산한 값 사용.
   // 자산이 1건일 때 합산 산출세액과 일치. 비교과세 적용 시 자산별 합 ≠ 합산 산출세액일 수 있어 "(참고)" 표기.
   // 옛 데이터·HMR 부분 적용 등 누락 시 fallback은 `resolveRefCalculatedTax`가 담당(단일 소스).
-  const effectiveRate = (breakdown.appliedRate ?? 0) + (breakdown.surchargeRate ?? 0);
+  // 🔴 중과는 `appliedRate`에 이미 들어 있다 — 더하면 이중 계상이다(위 `resolveRefCalculatedTax` 주석).
+  const effectiveRate = breakdown.appliedRate ?? 0;
   const refCalculatedTax = resolveRefCalculatedTax(breakdown);
   const refDeterminedTax =
     typeof breakdown.refDeterminedTax === "number"
@@ -335,7 +341,7 @@ export function PropertyBreakdownAccordion({
                   formula={
                     breakdown.refCalculatedTaxNote ??
                     (breakdown.progressiveDeduction > 0
-                      ? `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%${breakdown.surchargeRate ? ` (기본 ${(breakdown.appliedRate * 100).toFixed(0)}% + 중과 ${(breakdown.surchargeRate * 100).toFixed(0)}%p)` : ""} − 누진공제 ${formatKRW(breakdown.progressiveDeduction)}`
+                      ? `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%${breakdown.surchargeRate ? ` (중과 ${(breakdown.surchargeRate * 100).toFixed(0)}%p 포함)` : ""} − 누진공제 ${formatKRW(breakdown.progressiveDeduction)}`
                       : `과세표준 기여분 ${formatKRW(breakdown.taxBaseShare)} × 세율 ${(effectiveRate * 100).toFixed(0)}%`)
                   }
                   legalBasis="소득세법 §104"
