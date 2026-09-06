@@ -140,6 +140,32 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
           )}
         </div>
 
+        {/*
+          소재지 — 가목의 기준시가 한도를 6억/3억으로 가르는 축(소령 §167의3①2호 가목 괄호).
+          엔진 `rental-97-4.ts:125`가 `region === "non_capital"`로 한도를 정하는데 ⑤가 없어
+          항상 기본값 "capital"(6억)이 굳어 있었다 — 수도권 밖 3~6억 주택이 한도 초과인데도
+          감면을 받았다. 형제 §97의3·§97의5 폼에는 같은 라디오가 이미 있다.
+          위치는 아래 기준시가보다 **앞** — 한도를 정한 뒤 금액을 판정하는 로직 순서를 따르고,
+          기준시가 hint가 이 값을 인용하기 때문이다.
+        */}
+        <div className="border-t border-sky-200 pt-2">
+          <p className="mb-1 text-xs font-medium">소재지</p>
+          <RadioCardGroup
+            name="region_974"
+            layout="inline"
+            tone="sky"
+            value={value.region}
+            onChange={(v) => onChange({ region: v as Rental974Form["region"] })}
+            options={[
+              { value: "capital", label: "수도권" },
+              { value: "non_capital", label: "비수도권" },
+            ]}
+          />
+          <p className="mt-1 text-micro text-muted-foreground">
+            가목(민간매입)만 수도권 밖 한도가 3억원입니다 — 다목(건설임대)은 소재지와 무관하게 6억원입니다.
+          </p>
+        </div>
+
         <div className="border-t border-sky-200 pt-2">
           <CurrencyInput
             label="임대개시일 당시 기준시가 (주택+부수토지 합계)"
