@@ -18,6 +18,7 @@ import { consolidateResidenceMonths } from "@/lib/tax-engine/transfer-tax-exempt
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 
 /** 겸용주택 mixedUse 페이로드. 비-겸용이면 undefined. */
 export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData) {
@@ -218,7 +219,23 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       }) / 12,
     ),
     isMetropolitanArea: primary.mixedIsMetropolitanArea,
-    zoneType: "residential" as const,
+    /**
+     * 🔴 종전에는 `zoneType: "residential" as const` **하드코딩**이었다 (2026-09-06 · UI 리뷰
+     *   `desc-promises-unreachable-branch`).
+     *
+     * 배율은 엔진에서 `getHousingMultiplier(zoneType, isMetro, transferDate)`가 **용도지역 ×
+     * 수도권 2축**으로 정하는데(`non-business-land/urban-area.ts:106`), 겸용 경로만 한 축을
+     * 상수로 묶어 도달 가능한 값이 **3배·5배 둘뿐**이었다. 화면 설명이 약속한 「도시지역 外
+     * 10배」는 영원히 적용되지 않아, 비도시지역 상가주택은 인정 부수토지가 절반으로 잘리고
+     * 초과분이 비사업용 토지로 넘어가 +10%p 중과·장특 배제를 받았다(세액 과대).
+     *
+     * ⚠️ 미선택(`""`)이면 **키를 싣지 않는다** — 엔진의 `?? "residential"` 폴백이 종전 동작을
+     *   유지한다(구 세션 회귀 0). 새로 입력하는 사용자는 ⑧이 배율이 실제로 갈리는 경우에만
+     *   선택을 요구한다.
+     */
+    ...(primary.mixedZoneType
+      ? { zoneType: primary.mixedZoneType as MixedUseAssetInput["zoneType"] }
+      : {}),
     // 🚨 Critical (이슈 8-A): 1세대 1주택 비과세 요건 충족 여부 (다주택자 분기)
     // 소득세법 §89①3 — 1세대 + 1주택. 일시적 2주택 특례 적용 시에도 비과세 요건 충족으로 본다.
     // ⚠️ form.isOneHousehold 사용 — Step4 "1세대 해당" 토글은 form-level에만 쓰고 asset-level로 동기화되지 않음.

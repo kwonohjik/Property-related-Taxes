@@ -28,7 +28,7 @@ export function validateMixedUseAsset(
     !asset.landAcquisitionDate
   )
     return `${label}: 토지 취득일을 입력하세요.`;
-  const areaErr = validateMixedUseAreas(asset, label);
+  const areaErr = validateMixedUseAreas(asset, label, formTransferDate);
   if (areaErr) return areaErr;
   if (!asset.mixedTransferHousingPrice || parseAmount(asset.mixedTransferHousingPrice) <= 0)
     return `${label}: 양도시 개별주택공시가격을 입력하세요. (양도시 기준시가)`;

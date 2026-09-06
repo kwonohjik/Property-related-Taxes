@@ -333,6 +333,15 @@ export interface GeneralBuildingFormSlice {
   mixedAcqLandPricePerSqm: string;
   /** 수도권 여부 */
   mixedIsMetropolitanArea: boolean;
+  /**
+   * 부수토지 배율 판정 용도지역 (「소득세법 시행령」 §168의12·§154⑦). `""` = 미선택.
+   *
+   * 수도권 여부와 **2축**으로 배율이 갈린다(3배 / 5배 / 10배). 이 축이 없으면 엔진이
+   * `"residential"`로 떨어져 도시지역 外 10배·수도권 녹지 5배가 **영원히 도달하지 않는다**
+   * (`transfer-tax-mixed-use-helpers.ts:458`의 `?? "residential"`).
+   * 값은 `APPURTENANT_ZONE_OPTIONS`(= 엔진 `ZoneType` 키)와 같은 집합이다.
+   */
+  mixedZoneType: string;
 
   // ── 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (엔진 정합, acquisitionByInheritance 파생) ──
   /**

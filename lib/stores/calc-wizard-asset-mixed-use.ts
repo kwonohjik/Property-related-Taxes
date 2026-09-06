@@ -54,6 +54,7 @@ export const MIXED_USE_DEFAULTS: Pick<
   | "mixedAcqCommercialBuildingPrice"
   | "mixedAcqLandPricePerSqm"
   | "mixedIsMetropolitanArea"
+  | "mixedZoneType"
   | "mixedHousingInheritedValueOverride"
   | "mixedCommercialInheritedValueOverride"
   | "mixedHousingInheritedExpense"
@@ -90,6 +91,16 @@ export const MIXED_USE_DEFAULTS: Pick<
   mixedAcqCommercialBuildingPrice: "",
   mixedAcqLandPricePerSqm: "",
   mixedIsMetropolitanArea: true,
+  /**
+   * 부수토지 배율 판정 용도지역 (영 §168의12·§154⑦) — `""`는 **미선택**이다 (2026-09-06 · UI 리뷰).
+   *
+   * 🔴 종전에는 이 축이 폼에 아예 없었고 ④가 `zoneType: "residential"`을 **하드코딩**했다.
+   *   그래서 도달 가능한 배율이 수도권 ON→3배 / OFF→5배 **두 개뿐**이었다 — 화면 설명이
+   *   약속한 「도시지역 外 10배」·「수도권 녹지 5배」는 영원히 적용되지 않았고, 비도시지역
+   *   상가주택은 인정 부수토지가 절반으로 잘려 초과분이 비사업용 토지로 넘어가
+   *   **+10%p 중과 + 장특 배제**를 받았다(세액 과대).
+   */
+  mixedZoneType: "",
   // ── 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (엔진 정합) ──
   mixedHousingInheritedValueOverride: "",
   mixedCommercialInheritedValueOverride: "",
@@ -167,6 +178,7 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   if (!a.mixedAcqCommercialBuildingPrice) a.mixedAcqCommercialBuildingPrice = "";
   if (!a.mixedAcqLandPricePerSqm) a.mixedAcqLandPricePerSqm = "";
   if (a.mixedIsMetropolitanArea === undefined) a.mixedIsMetropolitanArea = true;
+  if (a.mixedZoneType === undefined) a.mixedZoneType = "";
 
   // 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (신규 — 엔진 정합)
   if (!a.mixedHousingInheritedValueOverride) a.mixedHousingInheritedValueOverride = "";
