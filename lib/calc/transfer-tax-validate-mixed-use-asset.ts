@@ -5,6 +5,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isPhdEligible } from "./phd-eligibility";
+import { isMixedUseCaseA } from "./mixed-use-case";
 import { validateMixedUseAreas } from "./transfer-tax-validate-mixed-area";
 import { validateMixedUseExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateMixedUseInheritanceAsset } from "./transfer-tax-validate-mixed-use-inheritance";
@@ -103,13 +104,8 @@ export function validateMixedUseAsset(
     if (transferHousingValue <= 0)
       return `${label}: 양도시 개별주택가격을 입력하세요. (양도시 기준시가 섹션)`;
     // Case A 4부분 안분 — house_to_commercial + 최초공시일 < 용도변경일 시 상가건물 기준시가 별도 입력 필수
-    if (
-      asset.hasPartialUsageChange &&
-      asset.partialChangeDirection === "house_to_commercial" &&
-      asset.partialChangeDate &&
-      asset.phdFirstDisclosureDate &&
-      asset.phdFirstDisclosureDate < asset.partialChangeDate
-    ) {
+    // 판정은 정본 헬퍼 하나뿐이다 — 종전에는 ⑤ Legacy·⑧·④가 각자 표현식을 갖고 있었다.
+    if (isMixedUseCaseA(asset)) {
       // ⑧ Validation fallback — API는 phdCommercialBuildingStdPriceAtAcq || mixedAcqCommercialBuildingPrice fallback.
       // 메인 취득시 상가건물 기준시가도 인정 (UI 통합으로 단일 필드 공유).
       const acqCommercialBuildingValue =

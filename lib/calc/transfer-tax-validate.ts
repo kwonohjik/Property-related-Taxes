@@ -17,6 +17,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
+import { rightThreeYearExceptionVisible } from "@/lib/calc/right-three-year-exception-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
@@ -584,13 +585,28 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
      * ⚠️ 미선택(`""`)은 막지 않는다 — 판정 불가로 남아 종전대로 계산되고 결과에 안내가 붙는다.
      *    여기서 차단하면 3년 초과 세대 전체가 계산 자체를 못 하게 된다.
      */
-    if (form.rightThreeYearExceptionKind === "new_house" && !form.rightNewHouseCompletionDate) {
+    /**
+     * 🔴 **카드 노출 조건을 함께 본다**(2026-09-07). 이 카드는 스스로 사라진다 —
+     *    양도일을 3년 이내로 고치거나, 세대 보유 권리 행을 지우거나, 자산 종류를 주택 외로
+     *    바꾸면 화면에서 없어진다. 그런데 ⑧은 `rightThreeYearExceptionKind`만 보고 필수값을
+     *    요구해, 채울 칸도 선택을 해제할 컨트롤도 없는 **영구 차단**이 됐다.
+     */
+    const r3ySectionVisible = rightThreeYearExceptionVisible(form);
+    if (
+      r3ySectionVisible &&
+      form.rightThreeYearExceptionKind === "new_house" &&
+      !form.rightNewHouseCompletionDate
+    ) {
       issues.push({
         step,
         message: "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
       });
     }
-    if (form.rightThreeYearExceptionKind === "delay" && !form.rightDisposalDelayReason) {
+    if (
+      r3ySectionVisible &&
+      form.rightThreeYearExceptionKind === "delay" &&
+      !form.rightDisposalDelayReason
+    ) {
       issues.push({
         step,
         message: "3년 초과 예외(시행규칙 §75①): 3년이 되는 날 현재의 사유를 선택하세요.",

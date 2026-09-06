@@ -47,9 +47,21 @@ export function housingFlagResetPatchForAssetKind(
     ? {}
     : { rentalHousingException: { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS } };
 
+  /**
+   * §164⑤ PHD — 종류를 바꾸면 토글이 사라지는데 플래그는 남는다. 취득일 < 2005-04-29 주택에서
+   * ⑤가 **자동으로 켜 주는** 값이라 사용자는 켠 적조차 없다.
+   *
+   * ⚠️ `building`은 **분리취득이면 토글이 남는다** — 여기서는 종류만 알므로 `building`으로
+   *    바꿀 때는 건드리지 않는다. 잔재를 실제로 무해하게 만드는 정본 게이트는 ⑧·④에 있다
+   *    (`phdToggleReachable`) — 이 리셋은 stale sessionStorage·이력 복원분을 못 잡는다.
+   */
+  const phdReset: Partial<AssetForm> =
+    nextKind === "building" ? {} : { usePreHousingDisclosure: false };
+
   if (nextKind === "housing") return rhReset;
   return {
     ...rhReset,
+    ...phdReset,
     // 겸용주택 축 — 종속 필드(용도변경 부분·방향)까지 함께 비운다.
     isMixedUseHouse: false,
     hasPartialUsageChange: false,
