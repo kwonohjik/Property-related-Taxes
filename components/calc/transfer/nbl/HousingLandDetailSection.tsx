@@ -1,48 +1,22 @@
 "use client";
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { MetropolitanAreaField } from "./shared/MetropolitanAreaField";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { getHousingMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
-import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 
 export interface HousingLandDetailSectionProps {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
 }
 
-type MetroValue = "" | "yes" | "no" | "unknown";
-type SelectableMetroValue = Exclude<MetroValue, "">;
-
-const METRO_OPTIONS: { value: SelectableMetroValue; label: string }[] = [
-  { value: "yes", label: "수도권" },
-  { value: "no", label: "비수도권" },
-  { value: "unknown", label: "미확인" },
-];
-
-
 export function HousingLandDetailSection({
   asset,
   onAssetChange,
 }: HousingLandDetailSectionProps) {
   const metro = asset.nblIsMetropolitanArea;
-  // 배율은 엔진 getHousingMultiplier가 단일 진실 — UI에서 재구현 금지.
-  //   §168의12: 1호가목 수도권 주·상·공 3배 / 1호나목 수도권 녹지 5배 /
-  //             1호다목 수도권 밖 도시지역 5배 / 2호 그 밖(도시지역 外) 10배.
-  //   ⚠️ 종전 UI는 "비수도권 = 10배"로 안내했으나 **비수도권 도시지역은 5배**다(1호다목).
-  const badge =
-    metro === "yes" || metro === "no"
-      ? (() => {
-          const m = getHousingMultiplier(
-            (asset.nblZoneType || "undesignated") as ZoneType,
-            metro === "yes",
-          );
-          return `${m.multiplier}배 적용 (${m.detail})`;
-        })()
-      : null;
 
   return (
     <div className="space-y-3">
@@ -52,21 +26,7 @@ export function HousingLandDetailSection({
         action={<LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />}
       />
 
-      <FieldCard label="수도권 여부" badge={badge ?? undefined}>
-        <RadioCardGroup
-          name={`nblIsMetropolitanArea-${asset.assetId}`}
-          tone="rose"
-          layout="inline"
-          options={METRO_OPTIONS}
-          value={(asset.nblIsMetropolitanArea ?? "") as SelectableMetroValue | ""}
-          onChange={(v) => onAssetChange({ nblIsMetropolitanArea: v })}
-        />
-        {metro === "yes" && (
-          <p className="text-xs text-muted-foreground mt-1">
-            수도권 주·상·공 3배 / 녹지·기타 도시 5배 / 도시지역 외 10배
-          </p>
-        )}
-      </FieldCard>
+      <MetropolitanAreaField asset={asset} onAssetChange={onAssetChange} />
 
       <FieldCard
         label="주택 정착면적"

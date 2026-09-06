@@ -143,8 +143,14 @@ export function validateNblDetailedJudgment(
   //    엔진(`housing-land.ts`)은 `undefined`를 **명시적으로 수도권(true)** 으로 대체한다
   //    (「보수적 기본값」 주석). 그 결과 비수도권 도시 주·상·공이 5배 대신 3배를 받아
   //    부수토지의 40%가 비사업용으로 넘어갔다 — 법 근거 없는 불리 적용이다.
+  //
+  // 🔴 **별장도 포함한다** (2026-09-06 UI 리뷰). 별장 요건 미해당 시 엔진이 주택부수토지로
+  //    자동 재분류하므로(`engine.ts:118`) 같은 배율을 쓴다 — 바로 아래 정착면적 게이트가
+  //    이미 `villa_land`까지 넓혀져 있는(E1-02) 것과 **같은 경로의 나머지 한 축**이다.
+  //    종전에는 이 게이트만 `housing_site`에 머물러, 별장은 값을 넣을 화면도 없고
+  //    차단도 되지 않은 채 3배(불리)로 계산됐다.
   if (
-    asset.nblLandType === "housing_site" &&
+    (asset.nblLandType === "housing_site" || asset.nblLandType === "villa_land") &&
     isUrbanResidentialCommercialIndustrial(asset.nblZoneType as ZoneType) &&
     (!asset.nblIsMetropolitanArea || asset.nblIsMetropolitanArea === "unknown")
   ) {
