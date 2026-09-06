@@ -239,7 +239,7 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, transferDate }: 
         isCommercialAreaAsset(asset) ||
         isGeneralBuildingAreaAsset(asset) ||
         (isRedevAreaAsset(asset) && shouldShowRedevValuationSection(asset)) ||
-        asset.isMixedUseHouse === true) && (
+        isMixedUseSeparated(asset)) && (
         <div className="space-y-3">
           {/* ── 상업용건물·오피스텔 전용 면적 3축 (전용·공유·대지) ──────────
               취득원인 무관 단일 입력. 종전에는 CommercialBuildingBlock(비상속)과
@@ -295,7 +295,14 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, transferDate }: 
                  카드에 있다. 1칸만 떼면 분모와 결과가 두 화면으로 갈리고, "부수토지 합 =
                  전체 토지" validate를 맞추려 사용자가 ①↔③을 오가야 한다.
               ※ 1-A(취득시점 자산 구성)는 ③에 남는다 — 카드 안내 문구가 그 관계를 설명. */}
-          {asset.isMixedUseHouse === true && (
+          {/* 🔴 게이트는 `isMixedUseSeparated`(= housing && isMixedUseHouse)다 —
+                 종전에는 여기만 `isMixedUseHouse`만 봐서, 겸용을 켠 뒤 자산 종류를
+                 토지·상가 등으로 바꾸면 축 A와 겸용 11칸 카드가 **동시에** 떴다.
+                 ④ `buildMixedUsePayload`는 `assetKind === "housing"`을 함께 보므로
+                 그 11칸에 채운 값은 **전부 버려진다** — 계산에 쓰이지 않는 카드에
+                 같은 물건의 토지 면적을 두 번 넣게 되고, 카드 안의 겸용 토글은 이미
+                 사라진 상태라 없앨 방법도 없었다(2026-09-07 UI 리뷰). */}
+          {isMixedUseSeparated(asset) && (
             <MixedUseAreaInputs asset={asset} onChange={onChange} sectionNum={1} />
           )}
           {/* ── 축 A: 토지 면적 (시나리오 분기) ──────────────────────────
