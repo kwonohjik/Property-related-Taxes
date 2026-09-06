@@ -494,7 +494,23 @@ export function buildRows(
     const capExp = result.capitalExpenditureForDisplay ?? 0;
     setNum("acquisitionPrice", "total", estimatedDisplay.base > 0 ? estimatedDisplay.base : null);
     setNum("expenses", "total", estimatedDisplay.deduction > 0 ? estimatedDisplay.deduction : null);
-    const notDeducted = Math.max(capExp, totalExpenses);
+    /**
+     * 🔴 **양도비가 빠져 있었다** (2026-09-07 UI 리뷰).
+     *
+     * 종전 비교항은 `capExp`(자본적지출)와 `totalExpenses`뿐이었는데, 후자는 폼의 **legacy**
+     * `directExpenses`다(`calc-wizard-asset.ts:178~182` — 신규 입력은 `capitalExpenditure`·
+     * `transferExpense`로 **분리**된다). ⇒ 자본적지출 0 + **양도비만** 입력하면 두 항이 다 0이라
+     * **고지 자체가 뜨지 않고**, 사용자는 입력한 양도비가 왜 세액에 반영되지 않는지 알 수 없었다.
+     *
+     * 지분 스케일은 `totalExpenses`와 **같은 규칙**을 쓴다(지분 모드에서 폼값은 물건 전체다).
+     */
+    const rawEntered =
+      Number(primary?.capitalExpenditure || 0) + Number(primary?.transferExpense || 0);
+    const enteredExpenses =
+      transferPriceOverride === undefined && ownRatio < 1.0
+        ? Math.floor(rawEntered * ownRatio)
+        : rawEntered;
+    const notDeducted = Math.max(capExp, totalExpenses, enteredExpenses);
     if (notDeducted > 0) {
       setRoseNote(
         "expenses",

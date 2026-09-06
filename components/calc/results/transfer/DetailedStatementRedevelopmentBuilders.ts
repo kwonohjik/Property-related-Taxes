@@ -213,23 +213,52 @@ export function buildRedevExpenseFormula(
     return "0 (receiveOnly — 신고 대상 아님)";
   }
 
+  /**
+   * 🔴 **분할 행은 엔진의 `branch.expenses`를 그대로 쓴다** (2026-09-07 UI 리뷰).
+   *
+   * 합계는 이미 `redevBranchTotals(redev).expenses`(세 분기 합)로 고쳐져 있었는데 분할 행만
+   * 「인가전 = `estimatedLumpDeduction`, 나머지 = 0」으로 남아 **합계와 분할이 어긋났다**.
+   * 엔진은 인가전에 `preApprovalNecessaryExpense(개산공제, 인가전필요경비)`(수령 분기는 §166①2호
+   * 나목 비율로 안분), 인가후 기존건물분에 `postApprovalExpenseShare.existingHouse`,
+   * 청산금 분에 `postApprovalExpenseShare.settlement + settlementPreExpenseShare`를 담는다
+   * (`redevelopment.ts:667·694·740`).
+   */
+  const amount = redev[branch].expenses ?? 0;
+
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
     if (lump > 0 && redev.valuationMeta && redev.valuationMeta.numerator !== undefined) {
       // base는 엔진 echo(지분 기준시가) 우선 — numerator는 물건 전체(100%) 값이다.
       const P_A = redev.valuationMeta.lumpDeductionBase ?? redev.valuationMeta.numerator;
-      return `개산공제 = ${fmt(P_A)} × 3% = ${fmt(lump)} (§163⑥ — 취득 당시 개별주택가격(소득세법 시행령 §164④ 라목) × 3%, 1원 미만 절사)`;
+      const lumpFormula = `개산공제 = ${fmt(P_A)} × 3% = ${fmt(lump)} (§163⑥ — 취득 당시 개별주택가격(소득세법 시행령 §164④ 라목) × 3%, 1원 미만 절사)`;
+      // 개산공제 외 성분(인가전 필요경비·수령 분기 안분)이 있으면 **합계를 함께** 밝힌다.
+      return amount === lump
+        ? lumpFormula
+        : `${lumpFormula} → 인가전 분 필요경비 합계 ${fmt(amount)} (인가전 필요경비 포함 · 청산금 수령 분기는 §166①2호 나목 비율로 안분된 값)`;
     }
-    return "필요경비 없음 (실가 모드)";
+    return amount > 0
+      ? `인가전 분 필요경비 ${fmt(amount)} (실가 모드 — 개산공제 미적용)`
+      : "필요경비 없음 (실가 모드)";
   }
-  // 인가후·청산금 분은 신고서 표시상 0 (인가후·청산금 분에는 별도 필요경비 항목이 없음)
-  return "해당 분할에는 개산공제 미적용";
+  // 인가후·청산금 분에는 개산공제(§163⑥)가 없다 — 다만 그 분할 몫의 필요경비는 있을 수 있다.
+  return amount > 0
+    ? `${branch === "settlement" ? "청산금 분" : "인가후 기존건물분"} 필요경비 ${fmt(amount)} (개산공제 미적용)`
+    : "해당 분할에는 개산공제 미적용";
 }
 
 /** 양도차익 분할별 산식 (사례 45 — 12억 안분 시 과세대상 표기) */
 export function buildRedevGainFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
+  /**
+   * 「**전체** 양도차익」 행인가 — 12억 안분 **전** 값을 쓴다.
+   *
+   * 🔴 종전에는 한 빌더가 「전체 양도차익」과 「과세대상 양도차익」 **두 행에 모두** 쓰였다.
+   *   `detail.gain`은 12억 안분이 걸리면 **안분 後 과세대상**이라(안분 전은
+   *   `gainBeforeAllocation`에 따로 있다 — `transfer-tax-redevelopment-transforms.ts:209~211`),
+   *   전체 양도차익 행의 자산별 값이 그 행의 합계(Σ`gainBeforeAllocation`)와 어긋났다.
+   */
+  gross = false,
 ): string {
   const detail = redev[branch];
   const t = detail.apportionedTransfer;
@@ -245,6 +274,7 @@ export function buildRedevGainFormula(
   ) {
     const before = detail.gainBeforeAllocation ?? detail.gainAfterAllocation;
     const after = detail.gainAfterAllocation;
+    if (gross) return `${fmt(t)} − ${fmt(a)} = ${fmt(before)} (안분 전)`;
     return (
       `${fmt(t)} − ${fmt(a)} = ${fmt(before)} (안분 전) ` +
       `→ × (양도가 − 12억) / 양도가 = ${fmt(after)} (안분 후) ` +
@@ -254,14 +284,15 @@ export function buildRedevGainFormula(
   }
 
   // 12억 안분 적용 시 detail.gain 은 과세대상(전체 × taxableRatio). 안내 라벨 추가.
-  const suffix = hva
+  const suffix = hva && !gross
     ? ` (12억 안분 후 과세대상 — 전체 × ${(hva.taxableRatio * 100).toFixed(0)}%)`
     : "";
+  const value = gross ? (detail.gainBeforeAllocation ?? detail.gain) : detail.gain;
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
-    return `${fmt(t)} − ${fmt(a)} − 개산공제 ${fmt(lump)} = ${fmt(detail.gain)}${suffix}`;
+    return `${fmt(t)} − ${fmt(a)} − 개산공제 ${fmt(lump)} = ${fmt(value)}${suffix}`;
   }
-  return `${fmt(t)} − ${fmt(a)} = ${fmt(detail.gain)}${suffix}`;
+  return `${fmt(t)} − ${fmt(a)} = ${fmt(value)}${suffix}`;
 }
 
 /** 장기보유공제 분할별 산식 (사례 45 — 거주월수 귀속 분리 시 안내) */
@@ -378,7 +409,7 @@ export function buildRedevPerAssetForExpense(
 ): PerAssetValue[] {
   return buildPerAsset(
     redev,
-    (b, r) => (b === "preApproval" ? (r.estimatedLumpDeduction ?? 0) : 0),
+    (b, r) => r[b].expenses ?? 0,
     (b, r) => buildRedevExpenseFormula(b, r),
     subject,
     settlementDirection,
@@ -394,6 +425,27 @@ export function buildRedevPerAssetForGain(
     redev,
     (b, r) => r[b].gain,
     (b, r) => buildRedevGainFormula(b, r),
+    subject,
+    settlementDirection,
+  );
+}
+
+/**
+ * 「**전체** 양도차익」 행 전용 — 12억 안분 **전** 값(`gainBeforeAllocation`).
+ *
+ * 그 행의 합계는 `effectiveGrossGain(result)` → `redevBranchTotals().gain` =
+ * Σ`gainBeforeAllocation`이다. 종전에는 자산별 행이 `buildRedevPerAssetForGain`(안분 後)을
+ * 그대로 써서 **합계와 어긋났다** — 「과세대상 양도차익」 행과 값이 완전히 같아지기도 했다.
+ */
+export function buildRedevPerAssetForGrossGain(
+  redev: RedevelopmentResult,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
+): PerAssetValue[] {
+  return buildPerAsset(
+    redev,
+    (b, r) => r[b].gainBeforeAllocation ?? r[b].gain,
+    (b, r) => buildRedevGainFormula(b, r, true),
     subject,
     settlementDirection,
   );
@@ -715,7 +767,7 @@ export function applyRedevelopmentOverrides(
         : "재개발 §166 분할별 양도차익 합 = 인가전 + 인가후 기존건물분 + 청산금 분";
       gainItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①1호" : "소득세법 시행령 §166①·②";
     }
-    gainItem.perAsset = buildRedevPerAssetForGain(redev, subject, settlementDirection);
+    gainItem.perAsset = buildRedevPerAssetForGrossGain(redev, subject, settlementDirection);
   }
 
   // 과세대상 양도차익 — 합계 result.taxableGain 유지 (1세대1주택 12억 안분 등은 합계 단계에서 처리)

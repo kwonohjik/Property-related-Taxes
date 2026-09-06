@@ -39,6 +39,15 @@ function case44Detail(): RedevelopmentResult {
       apportionedTransfer: 219_218_500, // 권리가액 (의제)
       apportionedAcquisition: 141_221_534, // 환산취득가 = floor(219,218,500 × 85,034,988 / 132,000,000)
       gain: 75_445_917, // 219,218,500 - 141,221,534 - 2,551,049
+      /**
+       * 🔴 종전 픽스처에는 `expenses`가 **아예 없었다**(undefined). 엔진은 세 분기 모두에
+       *    항상 채운다(`redevelopment.ts:667·694·740`) — 인가전은
+       *    `preApprovalNecessaryExpense(개산공제, 인가전필요경비)`다. 사례 44는 인가전
+       *    필요경비가 없고 청산금 **납부** 분기라 안분도 없으므로 개산공제와 같다.
+       *    없는 채로 두면 「분할 행이 `estimatedLumpDeduction`을 쓴다」는 결함을 픽스처가
+       *    가려 버린다(실제로 그랬다).
+       */
+      expenses: 2_551_049,
       holdingMonths: 250, // 20년 10개월 (엔진 실측)
       lthd: 22_633_775, // floor(75,445,917 × 30%)
       lthdRate: 0.3,
@@ -47,6 +56,7 @@ function case44Detail(): RedevelopmentResult {
       apportionedTransfer: 368_877_283, // floor(525,000,000 × 219,218,500 / 312,000,000)
       apportionedAcquisition: 219_218_500, // 권리가액 (의제)
       gain: 149_658_783, // 안분 분 양도차익 (엔진 실측)
+      expenses: 0, // 인가후 기존건물분 필요경비 없음
       holdingMonths: 250, // 엔진 실측
       lthd: 44_897_634, // floor(149,658,783 × 30%)
       lthdRate: 0.3,
@@ -58,6 +68,7 @@ function case44Detail(): RedevelopmentResult {
       apportionedTransfer: 156_122_717, // 525,000,000 − 368,877,283
       apportionedAcquisition: 92_781_500, // 청산금
       gain: 63_341_217, // 156,122,717 − 92,781,500 (엔진 실측)
+      expenses: 0, // 청산금 분 필요경비 없음 (청산금 자체는 취득가액 측)
       holdingMonths: 195, // 16년 3개월 (인가일 기산 — 엔진 실측)
       lthd: 19_002_365, // floor(63,341,217 × 30%)
       lthdRate: 0.3,
