@@ -61,6 +61,50 @@ describe("§97의4 통합 anchor (R-3 활성)", () => {
     expect((withR.rental97LthdDetail as { additionalRate?: number }).additionalRate).toBe(0.10);
   });
 
+  /**
+   * ⭐ 소재지 축 — 가목의 기준시가 한도는 수도권 밖에서 3억으로 좁아진다
+   *    (소령 §167의3①2호 가목 괄호, `rental-97-4.ts:125`).
+   *
+   * 종전에는 폼에 소재지 ⑤ 라디오가 없어 `region`이 기본값 `"capital"`에 굳어 있었고,
+   * 그래서 **이 분기가 영원히 도달하지 않았다** — 수도권 밖 3~6억 주택이 한도를 넘고도
+   * 추가공제를 받았다(세액 과소). 아래 두 케이스는 같은 입력에서 소재지만 다르다.
+   */
+  it("🔑 가목 + 비수도권 → 기준시가 5억이 3억 한도 초과로 불적용 (종전 도달 불가)", () => {
+    const base = input974();
+    const nonCapital = {
+      ...base,
+      reductions: [
+        { ...base.reductions[0], region: "non_capital" } as (typeof base.reductions)[0],
+      ],
+    };
+    const capital = calculateTransferTax(base, rates);
+    const outside = calculateTransferTax(nonCapital, rates);
+
+    expect(capital.rental97LthdDetail?.isEligible).toBe(true);
+    expect(outside.rental97LthdDetail?.isEligible).toBe(false);
+    // 추가율 6%가 사라져 공제가 3천만 줄고, 그만큼 세액이 늘어난다.
+    expect(capital.longTermHoldingDeduction - outside.longTermHoldingDeduction).toBe(30_000_000);
+    expect(outside.totalTax).toBeGreaterThan(capital.totalTax);
+  });
+
+  it("다목(건설임대)은 소재지와 무관하게 6억 한도 — 비수도권에서도 적용된다", () => {
+    const base = input974();
+    const c = calculateTransferTax(
+      {
+        ...base,
+        reductions: [
+          {
+            ...base.reductions[0],
+            rental974Category: "construction_c",
+            region: "non_capital",
+          } as (typeof base.reductions)[0],
+        ],
+      },
+      rates,
+    );
+    expect(c.rental97LthdDetail?.isEligible).toBe(true);
+  });
+
   it("5년 임대 → 6년 미달 불적용 (추가율 0)", () => {
     const base = input974();
     const fiveYear = {
