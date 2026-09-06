@@ -71,7 +71,7 @@ export function CarryoverEstimationSection({
       <div className="space-y-1.5">
         <p className="text-sm font-medium text-amber-800">환산 방식 선택</p>
         <RadioCardGroup
-          name="carryoverEstimationMode"
+          name={`carryoverEstimationMode-${asset.assetId ?? "primary"}`}
           tone="amber"
           layout="stack"
           options={ESTIMATION_MODE_OPTIONS}

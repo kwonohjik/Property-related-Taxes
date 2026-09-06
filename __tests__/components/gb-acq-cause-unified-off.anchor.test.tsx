@@ -227,7 +227,9 @@ describe("U-8 — 신규 자산의 두 취득원인은 처음부터 같다", () 
     );
     // 취득원인 그룹으로 좁힌다 — 건물 카드에는 「산정 방식」 라디오도 있다
     const checked = document.querySelectorAll(
-      'input[name="gbBuildingAcquisitionCause"]:checked',
+      // name은 자산별로 스코프된다(`gbBuildingAcquisitionCause-<assetId>`) — 다자산에서 native
+      // 라디오 그룹이 문서 전역으로 합쳐지는 것을 막기 위해서다. 접두사로 찾는다.
+      'input[name^="gbBuildingAcquisitionCause"]:checked',
     );
     expect(checked).toHaveLength(1);
     expect((checked[0] as HTMLInputElement).value).toBe("purchase");

@@ -40,6 +40,7 @@ import {
   FLine,
   PartialUsageChangeCard,
 } from "@/components/calc/results/mixed-use/MixedUseResultCardParts";
+import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import {
   mixedUseToFilingResult,
   adoptedCalculatedTax,
@@ -793,6 +794,15 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
           <BuildingStdPriceReportSection inputData={{ assets: formData?.assets }} />
         </PrintSection>
       )}
+
+      {/*
+        면책 고지 — 선택 출력과 무관하게 **항상** 인쇄되어야 하므로 `PrintSection` 밖이다
+        (`TransferTaxResultView.tsx:709`와 같은 규약).
+
+        🔴 겸용주택 결과·PDF에만 이 고지가 없었다 (2026-09-07 UI 리뷰). 같은 물건을 단건(주택)으로
+           계산하면 붙으므로, **자산 종류를 겸용으로 바꾸는 것만으로 고지가 사라졌다**.
+      */}
+      <DisclaimerBanner />
     </div>
   );
 }

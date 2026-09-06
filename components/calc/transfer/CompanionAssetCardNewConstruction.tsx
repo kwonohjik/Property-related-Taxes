@@ -112,7 +112,7 @@ export function CompanionLandRateOverrideToggle({ asset, onChange }: LandRateOve
       }}
     >
       <RadioCardGroup
-        name="manualHoldingPeriodOverride"
+        name={`manualHoldingPeriodOverride-${asset.assetId ?? "primary"}`}
         tone="amber"
         layout="stack"
         value={asset.manualHoldingPeriodOverride ?? ""}

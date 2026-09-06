@@ -504,7 +504,7 @@ export function GeneralBuildingAcquisitionCards({
         >
           {isSeparate ? (
             <RadioCardGroup
-              name="gbLandAcquisitionCause"
+              name={`gbLandAcquisitionCause-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.acquisitionCause ?? ""}
               onChange={(v) =>
@@ -516,7 +516,7 @@ export function GeneralBuildingAcquisitionCards({
             />
           ) : (
             <RadioCardGroup
-              name="gbUnifiedAcquisitionCause"
+              name={`gbUnifiedAcquisitionCause-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.acquisitionCause ?? ""}
               onChange={setUnifiedCause}
@@ -734,7 +734,7 @@ export function GeneralBuildingAcquisitionCards({
 
         <FieldCard label="취득원인">
           <RadioCardGroup
-            name="gbBuildingAcquisitionCause"
+            name={`gbBuildingAcquisitionCause-${asset.assetId ?? "primary"}`}
             layout="inline"
             value={asset.gbBuildingAcquisitionCause ?? ""}
             onChange={(v) => {

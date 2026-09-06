@@ -269,7 +269,7 @@ export function OtherLandDetailSection({
           <LawArticleModal legalBasis="소득세법 시행령 §168의11①" label="§168의11①" />
         </div>
         <RadioCardGroup
-          name="nblOtherRelatedBusinessType"
+          name={`nblOtherRelatedBusinessType-${asset.assetId ?? "primary"}`}
           tone="sky"
           options={RELATED_BUSINESS_OPTIONS}
           value={asset.nblOtherRelatedBusinessType}
@@ -328,7 +328,7 @@ export function OtherLandDetailSection({
           <>
             <FieldCard label="체육시설 유형">
               <RadioCardGroup
-                name="nblOtherSportsCategory"
+                name={`nblOtherSportsCategory-${asset.assetId ?? "primary"}`}
                 tone="sky"
                 layout="inline"
                 options={SPORTS_CATEGORY_OPTIONS}
@@ -524,7 +524,7 @@ export function OtherLandDetailSection({
             건축물이 거주·특정사업 사용분(특정용도분)과 그 외로 함께 사용될 때, 특정용도분 부속토지만 사업용으로 보고 안분합니다. 선택 시 위 호별 기준면적(§168의11①)은 적용하지 않습니다.
           </p>
           <RadioCardGroup
-            name="nblOtherMixedUseMode"
+            name={`nblOtherMixedUseMode-${asset.assetId ?? "primary"}`}
             tone="emerald"
             options={MIXED_USE_MODE_OPTIONS}
             value={asset.nblOtherMixedUseMode}

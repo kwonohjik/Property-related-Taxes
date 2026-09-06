@@ -158,7 +158,7 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
             trailing={<LawArticleModal legalBasis="소득세법 §95②" label="§95② 표1 장특공제" />}
           >
             <RadioCardGroup
-              name="gbWasMultiHouseAtConversion"
+              name={`gbWasMultiHouseAtConversion-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={
                 asset.gbWasMultiHouseAtConversion === null

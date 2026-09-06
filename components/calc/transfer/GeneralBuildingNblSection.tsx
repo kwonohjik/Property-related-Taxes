@@ -103,7 +103,7 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
                 hint="국토계획법상 용도지역. 미선택 시 계산이 진행되지 않습니다."
               >
                 <RadioCardGroup
-                  name="gbZoneType"
+                  name={`gbZoneType-${asset.assetId ?? "primary"}`}
                   layout="inline"
                   value={asset.gbZoneType}
                   onChange={(v) => onChange({ gbZoneType: v })}

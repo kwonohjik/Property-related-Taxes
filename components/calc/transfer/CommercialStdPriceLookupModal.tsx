@@ -100,6 +100,8 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
     if (!asset.addressPnu || refPoints.length === 0) return;
     setLoading(true);
     setError(null);
+    // 새 조회는 새 호 목록이다 — 옛 검색어를 들고 가면 결과가 이유 없이 비어 보인다.
+    setSearch("");
     try {
       const call = async (dates: string[]) => {
         const q = new URLSearchParams({ pnu: asset.addressPnu!, dates: dates.join(",") });
@@ -246,7 +248,15 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
 
             {res && res.units.length > 0 && (
               <ToneCard tone="emerald" sectionNum="1" title="호 목록" noDark>
-                {filtered.length > SEARCH_THRESHOLD && (
+                {/*
+                  🔴 **노출 조건은 원본 호 수(`res.units`)다** (2026-09-07 UI 리뷰).
+                  종전에는 **검색 결과 수**(`filtered`)를 봐서, 한 글자만 입력해 결과가 임계 이하로
+                  줄면 그 즉시 입력 요소가 **언마운트**됐다 — 포커스가 날아가고 `search` 상태는
+                  그대로 남아 목록은 계속 필터된 채였다. 오타 한 글자를 지울 수도, 고칠 수도 없고
+                  (`runLookup`도 `setSearch("")`를 하지 않고 다이얼로그를 닫아도 언마운트되지 않아)
+                  모달을 다시 열어도 옛 검색어가 유지된 채 검색창은 여전히 보이지 않았다.
+                */}
+                {res.units.length > SEARCH_THRESHOLD && (
                   <input
                     type="search"
                     value={search}

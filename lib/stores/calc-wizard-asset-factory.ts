@@ -23,9 +23,21 @@ export const RENTAL_HOUSING_EXCEPTION_DEFAULTS: AssetForm["rentalHousingExceptio
   standardPriceAtTransferForPhrp: undefined,
 };
 
+/**
+ * 임대주택 호 식별자 발급 — React 리스트 key 전용(엔진 미전송).
+ *
+ * 같은 밀리초에 여러 호를 추가해도 겹치지 않도록 카운터를 함께 쓴다.
+ */
+let rentalUnitSeq = 0;
+export function nextRentalUnitId(): string {
+  rentalUnitSeq += 1;
+  return `rental-unit-${Date.now()}-${rentalUnitSeq}`;
+}
+
 /** 빈 임대주택 1호 초기값 (토글 ON 시 자동 추가) */
 export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["rentalUnits"][number] {
   return {
+    unitId: nextRentalUnitId(),
     businessRegistrationDate: "",
     rentalRegistrationDate: "",
     rentalCategory: "long_general",

@@ -226,7 +226,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
           <div className="space-y-1">
             <p className="text-xs font-medium text-muted-foreground">공장 소재 지역</p>
             <RadioCardGroup
-              name="nblFactoryLocationCategory"
+              name={`nblFactoryLocationCategory-${asset.assetId ?? "primary"}`}
               options={LOCATION_OPTIONS}
               value={loc}
               onChange={(v) => onAssetChange({ nblFactoryLocationCategory: v })}
@@ -406,7 +406,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
                     hint="종업원 50명 이하인 「법인」은 코트면적만 기준면적으로 인정됩니다 (별표6 3호바 비고 2-나). 개인사업자는 이 제한을 받지 않습니다."
                   >
                     <RadioCardGroup
-                      name="nblFactorySportsEntityType"
+                      name={`nblFactorySportsEntityType-${asset.assetId ?? "primary"}`}
                       tone="amber"
                       options={[
                         { value: "corporation", label: "법인", description: "코트면적만 인정 (비고 2-나)" },

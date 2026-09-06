@@ -163,7 +163,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         <div className="space-y-1.5">
           <p className="text-sm font-medium">증여자 취득원인</p>
           <RadioCardGroup
-            name="donorAcquisitionCause"
+            name={`donorAcquisitionCause-${asset.assetId ?? "primary"}`}
             tone="amber"
             layout="inline"
             options={DONOR_CAUSE_OPTIONS}
