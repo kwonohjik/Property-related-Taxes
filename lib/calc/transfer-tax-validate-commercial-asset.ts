@@ -95,6 +95,22 @@ export function validateCommercialAppurtenantLand(asset: AssetForm, label: strin
   const totalLand = parseDecimal(asset.cbTotalLandArea);
   const totalFootprint = parseDecimal(asset.cbTotalBuildingFootprintArea);
   const anyEntered = totalLand > 0 || totalFootprint > 0;
+
+  /**
+   * 🔴 **§101① 단서를 켰으면 「판정 생략」이 성립하지 않는다** (2026-09-06 UI 리뷰).
+   *
+   * 단서 ON은 「부속토지 전체가 비사업용」이라는 **적극적 주장**이다. 그런데 종전에는 두 면적이
+   * 모두 공란이면 `anyEntered=false`로 통과했고, ④가 payload 전체를 버리면서
+   * (`transfer-tax-api-commercial.ts:32`) `unapprovedBuilding: true`까지 함께 사라져
+   * §104의3 +10%p 중과가 **전혀 적용되지 않았다** — 화면은 전량 비사업용이라 확언하는데
+   * 세액은 그 반대였고 경고도 없었다.
+   *
+   * 종전에는 토글을 켜면 면적칸이 화면에서 사라져 이 차단이 dead-end였다. ⑤가 이제 단서
+   * ON에서도 두 칸을 렌더하므로(같은 PR) 사용자가 채울 수 있다.
+   */
+  if (asset.cbUnapprovedBuilding && !anyEntered)
+    return `${label}: 부수토지 판정 — 「허가·사용승인 미이행」을 선택하면 부속토지 전체가 비사업용이 되므로 집합건물 전체 대지면적·바닥면적을 입력하세요 (「지방세법 시행령」 §101① 단서).`;
+
   if (!anyEntered) return null;
 
   if (!(totalLand > 0)) return `${label}: 부수토지 판정 — 집합건물 전체 대지면적을 입력하세요.`;
