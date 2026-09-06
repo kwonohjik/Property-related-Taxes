@@ -33,6 +33,7 @@ import { RedevelopmentBlock } from "../RedevelopmentBlock";
 import { SuccessorRightAcquisitionBlock } from "../SuccessorRightAcquisitionBlock";
 import { isSuccessorRightTransfer } from "@/lib/calc/transfer-successor-right";
 import { NonHousingConversionExpandedPanel } from "../NonHousingConversionSection";
+import { fractionalEntryBlockedReason as fractionalEntryBlockedReasonOf } from "./fractional-entry-gate";
 
 interface Props {
   asset: AssetForm;
@@ -73,26 +74,16 @@ export function AssetSectionAcquisition({
 }: Props) {
   const [pendingFractionalOff, setPendingFractionalOff] = useState(false);
 
-  // 토글 B(지분 분할) 진입 차단 사유 — 이미 ON이면 차단 안 함(끄기 허용).
-  // 겸용주택·특수 자산종류(상가·재개발)는 지분별 안분 UI 부재로 미지원(validate도 차단).
-  //
-  // ✅ **일반건물은 2026-08-10부터 지원**한다 — 지분별 토지·건물 카드를 만들어 aggregate 1회로
-  //    계산하는 전용 경로가 생겼다(`app/api/calc/transfer/general-building-fractional.ts`).
-  //    ⚠️ 이 목록에서 `general_building`을 뺐을 때 **부담부증여·공익수용 차단이 살아난다** —
-  //       if-else 체인이라 앞 분기가 빠지면 뒤로 흘러간다(계획서 §2-2 · anchor GBF-14).
-  const fractionalEntryBlockedReason =
-    splitMode === "fractional"
-      ? undefined
-      : splitMode === "companion"
-        ? "‘함께 양도’ 모드와 동시에 사용할 수 없습니다."
-        : asset.assetKind === "housing" && asset.isMixedUseHouse
-          ? "겸용주택은 지분 분할 취득과 함께 사용할 수 없습니다."
-          : asset.assetKind === "commercial_building" ||
-              asset.assetKind === "redevelopment_apt"
-            ? "이 자산 종류는 지분 분할 취득을 지원하지 않습니다."
-            : // ✅ 부담부증여·공익수용 차단은 2026-09-03에 모두 해제됐다
-              //    — ⑧ `transfer-tax-validate.ts`와 같은 조건이다.
-              undefined;
+  /**
+   * 토글 B(지분 분할) 진입 차단 사유 — 판정은 `fractional-entry-gate.ts`가 한다.
+   *
+   * 🔴 종전에는 여기서 겸용·상가·재개발APT를 막았는데, 그 목록은 ⑧
+   *   (`transfer-tax-validate.ts:79~131`)의 **낡은 복제본**이었다 — ⑧의 목록은 이미
+   *   비어 있다(세 종류 모두 2026-09-03~04에 실측과 함께 열렸다). 토글 B가 지분 모드의
+   *   유일한 진입점이라 그 조합들은 화면에서 도달 불가였고, Gate-A의 「나머지 지분을
+   *   별도 자산으로 추가하세요」 안내와 맞물려 **완전한 dead-end**를 만들었다.
+   */
+  const fractionalEntryBlockedReason = fractionalEntryBlockedReasonOf(splitMode);
 
   /**
    * 지분율 — **지분 분할 모드 전용**으로 여기 남는다 (2026-08-11 사용자 확정).
