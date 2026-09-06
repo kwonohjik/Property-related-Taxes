@@ -85,6 +85,38 @@ describe("2호 매입임대 — 매매계약일 축", () => {
   });
 });
 
+/**
+ * 🔴 **유형 미선택은 「2호」가 아니다** (2026-09-06 UI 리뷰).
+ *
+ * 종전 술어는 `construction`이 아니면 전부 2호로 떨어뜨렸고, 위 두 describe도 **유형을 늘
+ * 명시**해서 그 갈래를 건드리지 않았다 — 그래서 결함이 남았다.
+ *
+ * 유형 라디오는 그 감면 항목을 **켜야 열리는** 폼 안에 있다(`Rental972InputForm:51`).
+ * 즉 항목을 켜기 전에는 언제나 미선택이고, 미선택이 2호로 판정되면 1호 나목 사례는
+ * 「항목을 켜려면 유형을 골라야 하고, 유형을 고르려면 항목을 켜야 하는」 잠금에 걸려
+ * `GroupCategorySection`이 항목을 disabled로 만든다 ⇒ **100% 면제를 선택할 방법이 없었다**.
+ *
+ * ⇒ 미선택이면 시한 **게이트**만 두 축 모두 열고, 요건 판정은 `evaluateRental972`가 한다.
+ */
+describe("유형 미선택 — 게이트만 낙관적으로 연다", () => {
+  it("🔑 미선택 + 1998년 취득 → 통과 (1호 나목을 선택할 수 있어야 한다)", () => {
+    expect(check({ acquisitionDate: D("1998-03-01") })).toBe(true);
+  });
+
+  it("미선택 + 2000년 계약 → 통과 (2호 축도 함께 열린다)", () => {
+    expect(check({ contractDate: D("2000-06-01") })).toBe(true);
+  });
+
+  it("미선택이어도 두 축 모두 시한 밖이면 배제 — 게이트가 무의미해지지 않는다", () => {
+    expect(check({ acquisitionDate: D("2002-01-01") })).toBe(false);
+    expect(check({ acquisitionDate: D("2002-01-01"), contractDate: D("2003-05-01") })).toBe(false);
+  });
+
+  it("유형을 고르면 그 호의 축만 본다 (낙관은 미선택에만)", () => {
+    expect(check({ rental972Type: "purchase", acquisitionDate: D("1998-03-01") })).toBe(false);
+  });
+});
+
 describe("구별력 — 같은 날짜가 호에 따라 갈린다", () => {
   it("1998-03-01: 1호는 통과(나목), 2호는 배제", () => {
     const c = check({ rental972Type: "construction", acquisitionDate: D("1998-03-01") });

@@ -75,18 +75,31 @@ const RULES: Record<TransferReductionId, PeriodRule> = {
      *    (없는 입력을 추정해 판정하지 않는다.)
      */
     check: (c) => {
-      if (c.rental972Type === "construction") {
-        // 1호 — 신축일 축. 건설임대는 신축이 곧 취득이므로 취득일을 쓴다.
-        const built = c.acquisitionDate;
-        // 가목: 1999.8.20~2001.12.31 신축 / 나목: 1999.8.19 이전 신축(하한 없음)
-        return (
-          within(built, D("1999-08-20"), D("2001-12-31")) ||
-          before(built, D("1999-08-19"))
-        );
-      }
+      // 1호 — 신축일 축. 건설임대는 신축이 곧 취득이므로 취득일을 쓴다.
+      // 가목: 1999.8.20~2001.12.31 신축 / 나목: 1999.8.19 이전 신축(하한 없음)
+      const built = c.acquisitionDate;
+      const clause1 =
+        within(built, D("1999-08-20"), D("2001-12-31")) || before(built, D("1999-08-19"));
       // 2호 — 매매계약일 축. 계약일이 없으면 취득일로 대체한다.
       const target = c.contractDate ?? c.acquisitionDate;
-      return within(target, D("1999-08-20"), D("2001-12-31"));
+      const clause2 = within(target, D("1999-08-20"), D("2001-12-31"));
+
+      if (c.rental972Type === "construction") return clause1;
+      if (c.rental972Type === "purchase") return clause2;
+      /**
+       * 🔴 **유형 미선택은 「2호」가 아니다** (2026-09-06 UI 리뷰).
+       *
+       * 종전에는 `construction`이 아니면 전부 2호로 떨어뜨렸다. 그런데 유형 라디오는
+       * 그 감면 항목을 **켜야 열리는** 폼 안에 있어서(`Rental972InputForm:51`), 항목을
+       * 켜기 전에는 언제나 미선택이다. 즉 1호 나목(1999.8.19 이전 신축) 사례는
+       * 「항목을 켜려면 유형을 골라야 하고, 유형을 고르려면 항목을 켜야 하는」 잠금에
+       * 걸려 **선택 자체가 불가능**했다(100% 면제 상실).
+       *
+       * ⇒ 미선택이면 두 축을 모두 연다 — 시한 **게이트**만 낙관적으로 통과시키고,
+       *   요건 판정은 `evaluateRental972`가 그대로 한다(세액에 낙관이 새지 않는다).
+       *   등록일 미입력을 양도일로 낙관 대체하는 §97의3 fallback과 같은 방침이다.
+       */
+      return clause1 || clause2;
     },
     failReason:
       "신축일(1호) 또는 매매계약일(2호)이 조특법 §97의2① 시한 외 — " +

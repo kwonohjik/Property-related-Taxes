@@ -80,7 +80,12 @@ const ASSET_KIND_LABEL: Record<AssetForm["assetKind"], string> = {
 // 시한 검증 컨텍스트
 // ============================================================================
 
-function buildPeriodContext(asset: AssetForm, transferDate: string): PeriodCheckContext {
+/**
+ * 시한 검증 ctx 조립. **export는 anchor가 키 누락을 값으로 고정하기 위한 것**이다 —
+ * `rental972Type` 같은 optional 키는 빠져도 tsc가 잡지 못하고(⑫⑬⑭와 같은 층위),
+ * 실제로 그 키가 빠져 §97의2 1호 나목이 영구 비활성이었다.
+ */
+export function buildPeriodContext(asset: AssetForm, transferDate: string): PeriodCheckContext {
   const acqDate = asset.acquisitionDate ? new Date(asset.acquisitionDate) : undefined;
   const transDate = transferDate ? new Date(transferDate) : new Date();
   // Round 9 (2026-05-06): 자산-수준 매매계약일 주입.
@@ -106,6 +111,24 @@ function buildPeriodContext(asset: AssetForm, transferDate: string): PeriodCheck
     registrationDate: rentalReg ?? acqDate ?? transDate,
     rentalStartDate: rentalStart ?? acqDate,
     usageApprovalDate: undefined,
+    /**
+     * 🔴 §97의2 판정 축 (2026-09-06 UI 리뷰).
+     *
+     * `period-check.ts`의 §97의2는 **호마다 축이 다르다** — 1호(건설임대)는 신축일,
+     * 2호(매입임대)는 매매계약일. 그 갈림은 `rental972Type` 하나가 정하는데 이 ctx에
+     * 키가 아예 없어 **항상 2호 분기**로 판정됐다. 그래서 1호 **나목**(1999.8.19 이전
+     * 신축 공동주택)은 어떤 입력으로도 시한을 통과하지 못했고, `GroupCategorySection`이
+     * 항목을 disabled로 만들어 **100% 면제를 선택할 방법 자체가 없었다** — 유형 라디오는
+     * 그 항목을 켜야 열리는 폼 안에 있어(`Rental972InputForm:51`) 우회 경로도 없었다.
+     *
+     * 미선택("")은 `undefined`로 보낸다 — period-check가 그때 두 축을 모두 열어 항목을
+     * 켤 수 있게 한다(등록일 낙관 fallback과 같은 방침). 정확한 요건 판정은 엔진
+     * `evaluateRental972`가 한다.
+     */
+    rental972Type:
+      rentalRed && rentalRed.type === "rental_97_2" && rentalRed.rental972Type
+        ? rentalRed.rental972Type
+        : undefined,
   };
 }
 
