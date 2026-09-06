@@ -55,6 +55,29 @@ export function Step6({
       >
         <div className="space-y-5">
 
+          {/*
+            🔴 **기납부세액은 신고 유형과 무관하게 받는다** (2026-09-07 UI 리뷰 보통).
+
+            종전에는 이 칸이 `filingType !== "correct"` 블록 안에 있었다. 그런데 아래
+            지연납부가산세(「국세기본법」 §47의4)는 **신고 유형과 무관하게 항상** 렌더되고,
+            미납·미달납부세액의 자동 산식은 `결정세액 − 기납부세액`이다
+            (`TransferTaxCalculator.tsx`의 `handlePenaltyCalc` 2단계).
+
+            ⇒ 정상신고 후 **일부만 납부한** 납세자는 기납부세액을 넣을 칸이 없어
+              `priorPaidTax`가 0으로 남고, 「가산세 계산하기」를 누를 때마다 미납세액이
+              **결정세액 전액**으로 덮어써진다. 미납세액 칸을 손으로 고쳐도 다음 클릭에
+              다시 지워진다.
+
+            두 소비처(§47의2·§47의3 기준금액 · §47의4 미납세액)가 모두 이 값을 쓰므로
+            **양쪽보다 앞**에 둔다 — UI 순서 = 로직 순서.
+          */}
+          <CurrencyInput
+            label="기납부세액"
+            value={form.priorPaidTax}
+            onChange={handlePriorPaidChange}
+            hint="예정신고 등으로 이미 납부한 세액 — 신고불성실 기준금액과 미납·미달납부세액 산정에 함께 반영됩니다"
+          />
+
           {/* 신고불성실가산세 */}
           <SectionHeader title="신고불성실가산세" description="국세기본법 §47의2·§47의3" />
           <div className="space-y-3">
@@ -102,12 +125,6 @@ export function Step6({
                     ]}
                   />
                 </div>
-
-                <CurrencyInput
-                  label="기납부세액"
-                  value={form.priorPaidTax}
-                  onChange={handlePriorPaidChange}
-                />
 
                 {/*
                   🔴 G-05 — 기한 후 신고 감면(「국세기본법」 §48②2호·§48②3호라목).

@@ -16,6 +16,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
+import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
@@ -551,8 +552,19 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
         issues.push({ step, message: "중과 한시 유예(나목): 토지거래허가 신청일을 입력하세요." });
     }
 
-    // ⑧ §156의2⑤ 대체주택 특례 — 토글 ON 시 4필드 필수 (자동 안분 fallback 금지)
-    if (form.replacementHouseSpecial) {
+    /**
+     * ⑧ §156의2⑤ 대체주택 특례 — 토글 ON 시 4필드 필수 (자동 안분 fallback 금지).
+     *
+     * 🔴 **섹션 노출 게이트를 함께 본다**(2026-09-07). 종전에는 무게이트라, 주택수를 2채로
+     *    두고 토글을 켠 뒤 1채로 정정하거나 자산 종류를 주택 외로 바꾸면 ③ 섹션이 사라진 채
+     *    플래그만 남아 **화면에 없는 4필드를 요구**했다 — 값을 채우거나 토글을 끌 컨트롤이
+     *    어디에도 없어 세션 초기화 외에 탈출 수단이 없었다(실측: 차단 메시지 4건).
+     */
+    const t2hSectionVisible = temporaryTwoHouseSectionVisible({
+      primaryAssetKind: form.assets?.[0]?.assetKind,
+      householdHousingCount: form.householdHousingCount,
+    });
+    if (t2hSectionVisible && form.replacementHouseSpecial) {
       if (!form.replBusinessApprovalDate)
         issues.push({ step, message: "대체주택 특례: 사업시행계획인가일을 입력하세요." });
       if (!form.replCompletionDate)
@@ -593,8 +605,17 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
       householdHousingCount: form.householdHousingCount,
       temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
     }).mode;
-    // ⑧ 일시적 2주택 특례 — 입력존재만 차단. 요건 미달(1년 미경과·3년 초과)은 정상 통과(특례만 미적용).
-    if (provisoMode === "temporary_two_house") {
+    /**
+     * ⑧ 일시적 2주택 특례 — 입력존재만 차단. 요건 미달(1년 미경과·3년 초과)은 정상 통과(특례만 미적용).
+     *
+     * 🔴 게이트를 **섹션 노출 조건**으로 바꿨다(2026-09-07). 종전 게이트 `provisoMode ===
+     *    "temporary_two_house"`는 **§154① 단서 카드**의 맥락(1세대 + `assetKind === "housing"`
+     *    + 정확히 2채)이라 이 섹션(주택 계열 4종 + 2채 **이상**)보다 좁았다. 그래서
+     *    입주권·분양권·재개발APT 세대나 3주택 이상 세대에서는 토글을 켜고 신규 취득일을
+     *    비워도 **경고가 0건**이었고, ④는 두 날짜가 다 있어야 `temporaryTwoHouse` 키를
+     *    만들므로 §155① 특례가 **조용히 누락**됐다(실측: 메시지 0건).
+     */
+    if (t2hSectionVisible && form.temporaryTwoHouseSpecial) {
       if (!form.assets?.[0]?.acquisitionDate)
         issues.push({ step, message: "일시적 2주택: 양도 자산의 취득일을 1단계에서 입력하세요." });
       if (!form.newHouseAcquisitionDate)

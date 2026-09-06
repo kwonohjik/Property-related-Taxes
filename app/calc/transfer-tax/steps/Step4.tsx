@@ -29,6 +29,7 @@ import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHo
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 
 /**
  * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
@@ -661,8 +662,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         </section>
       )}
 
-      {/* ③ 일시적 2주택·합가 특례 — 보유 주택수 ≥ 2 일 때만 의미 있음 (시행령 §155 일시적 2주택은 정의상 종전+신규 2채 보유 중) */}
-      {isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2 && (
+      {/* ③ 일시적 2주택·합가 특례 — 보유 주택수 ≥ 2 일 때만 의미 있음 (시행령 §155 일시적 2주택은 정의상 종전+신규 2채 보유 중).
+          게이트는 ④ 전송·⑧ 검증과 **같은 술어**다 — 종전에는 세 층이 각자 달라 양방향으로 어긋났다. */}
+      {temporaryTwoHouseSectionVisible({
+        primaryAssetKind: primaryKind,
+        householdHousingCount: form.householdHousingCount,
+      }) && (
         <TemporaryTwoHouseSection
           form={form}
           onChange={onChange}
