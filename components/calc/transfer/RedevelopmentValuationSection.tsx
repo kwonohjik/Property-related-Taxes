@@ -26,6 +26,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
 import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
+import { computeSalePriceTotal } from "@/lib/tax-engine/redevelopment-settlement";
 
 interface Props {
   asset: AssetForm;
@@ -127,10 +128,27 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     const estDeduction = Math.floor(acq * 0.03);
     // 인가전 양도차익
     const preApprovalGain = rights - convertedAcq - estDeduction;
-    // 인가후 양도차익 = 양도가액 − 권리가액 − 청산금
+    /**
+     * 인가후 양도차익 = 양도가액 − **분양가** (분양가는 청산금 방향에 따라 다르다).
+     *
+     * 🔴 종전에는 방향을 보지 않고 언제나 `− rights − settlement`(=납부 산식)를 썼다.
+     *    엔진은 `computeSalePriceTotal`로 갈린다 —
+     *      · 납부(pay)   : 권리가액 **+** 청산금
+     *      · 수령(receive): 권리가액 **−** 청산금 (0 하한)
+     *    (`redevelopment-settlement.ts:39~49` · `redevelopment-split.ts:406`)
+     *    토지 출자 + 완공APT + 청산금 **수령** + 환산 조합은 2026-08-27에 차단이 해제돼
+     *    실제로 도달 가능한 경로다. 그 조합에서 미리보기가 청산금의 **2배**만큼 어긋났다.
+     *
+     * 방향 판정·산식 모두 엔진의 단일 소스를 그대로 호출한다.
+     */
     const actualTransferPrice = parseAmount(asset.actualSalePrice);
+    const salePriceTotal = computeSalePriceTotal(
+      rights,
+      settlement,
+      asset.redevSettlementDirection === "receive" ? "receive" : "pay",
+    );
     const postApprovalGain = actualTransferPrice > 0
-      ? actualTransferPrice - rights - settlement
+      ? actualTransferPrice - salePriceTotal
       : null;
 
     return {
@@ -138,6 +156,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
       estDeduction,
       preApprovalGain,
       postApprovalGain,
+      settlementDirection: (asset.redevSettlementDirection === "receive" ? "receive" : "pay") as "pay" | "receive",
       rights,
       acq,
       approval,
@@ -153,6 +172,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     asset.redevLandStdPriceAtAcq,
     asset.redevLandStdPriceAtApproval,
     asset.redevSettlementAmount,
+    asset.redevSettlementDirection,
     asset.actualSalePrice,
   ]);
 
@@ -397,6 +417,8 @@ interface LandContribPreview {
   acq: number;
   approval: number;
   formula: string;
+  /** 청산금 방향 — 인가후 분양가 산식이 갈린다(`computeSalePriceTotal`). */
+  settlementDirection: "pay" | "receive";
 }
 
 interface LandContribProps {
@@ -505,7 +527,8 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
           </p>
           {preview.postApprovalGain !== null && (
             <p className="text-amber-700">
-              인가후 양도차익 = 양도가액 − 권리가액 − 청산금 = <strong>{fmt(preview.postApprovalGain)}</strong>
+              인가후 양도차익 = 양도가액 − 분양가({preview.settlementDirection === "receive" ? "권리가액 − 수령 청산금" : "권리가액 + 납부 청산금"}) ={" "}
+              <strong>{fmt(preview.postApprovalGain)}</strong>
             </p>
           )}
           <div className="mt-1 rounded border border-rose-200 bg-rose-50/70 p-1 text-micro text-rose-700">

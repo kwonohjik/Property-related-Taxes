@@ -18,6 +18,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 
 type New994Rural = Extract<AssetReductionForm, { type: "new_99_4_rural" }>;
 type New994Hometown = Extract<AssetReductionForm, { type: "new_99_4_hometown" }>;
@@ -30,13 +31,24 @@ interface Props {
   transferDate?: string;
 }
 
+/**
+ * 보유 연수 — **엔진과 같은 함수**(`calculateHoldingPeriod`)를 쓴다.
+ *
+ * 🔴 종전에는 월 단위 뺄셈이라 **일(day)을 보지 않았다**: 취득 2020-03-31 → 양도 2023-03-01이면
+ *    months = 36이 되어 「3년」으로 표시됐다(실제 2년 11개월). 그 결과 아래 `< 3` 조건이
+ *    거짓이 되어 「⚠ 보유 3년 미만 — … 2개월 내 납부해야 합니다 (§99의4⑥)」 **추징 경고가
+ *    사라졌다** — 사후 추징 위험이 있는 사용자에게 안전하다는 신호를 준 셈이다.
+ *
+ * 엔진은 민법 초일불산입(취득일 다음날 기산)까지 반영한다(`tax-utils.ts:241`) — 그 판정을
+ * 그대로 빌려 화면과 계산이 갈리지 않게 한다.
+ */
 function diffYears(from: string, to: string): number | null {
   if (!from || !to) return null;
   const d1 = new Date(from);
   const d2 = new Date(to);
   if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return null;
-  const months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
-  return months < 0 ? null : Math.floor(months / 12);
+  if (d2.getTime() < d1.getTime()) return null;
+  return calculateHoldingPeriod(d1, d2).years;
 }
 
 export function New994InputForm({ value, onChange, transferDate }: Props) {

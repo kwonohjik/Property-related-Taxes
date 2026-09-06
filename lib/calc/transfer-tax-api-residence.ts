@@ -9,6 +9,7 @@ import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-re
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { toDate } from "@/lib/api/date-coerce";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
+import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -25,6 +26,27 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
         conversionOn ? primary.residentialUseStartDate : undefined,
       )
     : { months: 0, trimmed: 0 };
+  /**
+   * §154① 단서 사유 — ④ 전송과 **같은 게이트**를 통과한 값만 쓴다 (2026-09-07 UI 리뷰).
+   *
+   * 🔴 종전에는 `form.provisoReason`을 **정규화 없이** 그대로 넣었다. 반면 ④
+   *   (`transfer-tax-api.ts:516~533`)는 `provisoGate` → `effectiveProvisoReason`으로
+   *   **카드 숨김(mode=null)·일시적 2주택 화이트리스트 밖 사유를 버린다**.
+   *
+   *   ⇒ 3주택 이상 등으로 카드가 숨겨졌는데 사유가 남아 있으면, Step4 안내는
+   *     `proviso === "both"` 단락으로 「거주요건 충족」이라 판단해 경고를 띄우지 않는데
+   *     실제 계산은 그 사유를 **버린 채** 거주 2년을 요구한다. 사용자는 경고 없이 계산 후
+   *     비과세 탈락 결과를 본다.
+   */
+  const effectiveReason = effectiveProvisoReason(
+    provisoGate({
+      isOneHousehold: form.isOneHousehold,
+      isHousing: primary?.assetKind === "housing",
+      householdHousingCount: form.householdHousingCount,
+      temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+    }).mode,
+    form.provisoReason,
+  ) as NonNullable<ResidenceReqInput["oneHouseExemptionProviso"]>["reason"] | "";
   return {
     acquisitionDate: toDate(primary?.acquisitionDate, "acquisitionDate"),
     transferDate: toDate(form.transferDate, "transferDate"),
@@ -53,9 +75,10 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
           residenceMonthsTrimmed: residence.trimmed,
         }
       : undefined,
-    oneHouseExemptionProviso: form.provisoReason
+    // 사유는 ④와 같은 게이트를 통과한 값이다 — 근거는 `effectiveReason` 선언부 참조.
+    oneHouseExemptionProviso: effectiveReason
       ? {
-          reason: form.provisoReason,
+          reason: effectiveReason,
           ...(form.provisoDepartureDate
             ? { departureDate: toDate(form.provisoDepartureDate, "provisoDepartureDate") }
             : {}),
