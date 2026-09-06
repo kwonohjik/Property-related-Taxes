@@ -2,6 +2,7 @@ import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-sto
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   isExprValuationEligibleAssetKind,
   isHousingExprEligibleAssetKind,
@@ -40,11 +41,20 @@ export function ExpropriationBlock({
   asset,
   onChange,
   transferDate,
+  isCompanionBundle = false,
 }: {
   asset: AssetForm;
   onChange: (d: Partial<AssetForm>) => void;
   /** form-global 양도일 (YYYY-MM-DD) — #3 게이트 판정 */
   transferDate: string;
+  /**
+   * 함께양도(컴패니언) 카드인가 — ⑧ `validateSplitLandExprAsset(..., index > 0)`과 **같은 축**.
+   *
+   * 🔴 종전에는 이 값이 넘어오지 않아, ⑧이 **무조건 차단**하는 조합에서도 ⑤가 토지분 보상
+   *    2칸을 그대로 렌더했다. 사용자는 채울 수 있는 칸을 채운 뒤 「함께양도 자산은 …
+   *    지원하지 않습니다」로 막혔다(그 2필드는 ④⑫⑭ 어디에도 없어 엔진에 도달하지도 않는다).
+   */
+  isCompanionBundle?: boolean;
 }) {
   // 공통 게이트: 환산모드 + 양도 ≥ 2009.02.04 (단건 — 다필지는 필지 카드 전용).
   const exprDateOk =
@@ -78,7 +88,9 @@ export function ExpropriationBlock({
   const showHousingTotal =
     isHousingExprEligibleAssetKind(asset.assetKind) && exprDateOk && !isHousingRegularSplit && !isMixedUse;
   // §164⑨ 1호 건물 split 토지분 총액 트랙 게이트 (P6/D6).
-  const showSplitLandExpr = isSplitBuilding && exprDateOk;
+  // 컴패니언은 ⑧이 이 조합 전체를 차단한다(A05) — 칸 대신 그 사유를 보여준다(침묵 숨김 금지).
+  const splitLandExprBlockedByCompanion = isSplitBuilding && exprDateOk && isCompanionBundle;
+  const showSplitLandExpr = isSplitBuilding && exprDateOk && !isCompanionBundle;
 
   const expr = asset.reductions?.find(
     (r): r is ExprReduction => r.type === "public_expropriation",
@@ -291,6 +303,16 @@ export function ExpropriationBlock({
             />
           </div>
         </div>
+      )}
+
+      {splitLandExprBlockedByCompanion && (
+        <ToneCard tone="rose" title="토지·건물 분리 양도 + 공익수용 환산 — 함께양도 미지원">
+          <p className="text-caption leading-relaxed">
+            함께양도(두 번째 이후) 자산은 <b>토지·건물 취득일 분리</b> + <b>공익수용 환산</b>
+            (「소득세법 시행령」 §164⑨ 1호) 조합을 지원하지 않습니다. 이 자산을 첫 번째로 옮기거나
+            취득일 분리를 해제하세요.
+          </p>
+        </ToneCard>
       )}
 
       {showSplitLandExpr && (
