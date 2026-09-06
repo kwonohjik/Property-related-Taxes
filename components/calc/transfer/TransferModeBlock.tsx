@@ -200,7 +200,12 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
 
       {/* 공익수용·협의매수 상세 펼침 */}
       {isExpropriation && (
-        <ExpropriationBlock asset={asset} onChange={onChange} transferDate={transferDate} />
+        <ExpropriationBlock
+          asset={asset}
+          onChange={onChange}
+          transferDate={transferDate}
+          isCompanionBundle={isCompanionBundle}
+        />
       )}
 
       {/* §164⑨2호 공매·경락 (P4) — 수용(1호)과 배타(N3)라 수용 미선택 시에만 노출 */}

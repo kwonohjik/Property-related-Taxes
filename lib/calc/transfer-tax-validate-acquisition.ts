@@ -145,6 +145,23 @@ export function validateAssetAcquisition(
   //     환산 블록·generic 검증(`if(!isEstimated)`)보다 **먼저**·**isEstimated 무관**하게 둔다.
   //   · 상속·환산 두 블록은 진입하면 **항상 종료**한다(`return`). 조건을 함수 안으로 옮겨
   //     null을 반환하게 만들면 상속 상가가 generic 취득 검증으로 흘러가 다른 규칙을 탄다.
+  /**
+   * 부수토지 초과분 판정 — 미해당이면 null로 **계속 진행**(취득 모드·취득원인과 직교).
+   *
+   * 🔴 **상속 인터셉트보다 앞이어야 한다** (2026-09-07 UI 리뷰 보통).
+   *    ⑤는 이 섹션을 `assetKind === "commercial_building"`만 보고 마운트한다 —
+   *    「취득방법 무관(상속 포함)」이 그 자리의 명시 규약이다
+   *    (`AssetSectionAcquisition.tsx:292~296`). 그런데 이 호출이 상속 인터셉트
+   *    **아래**에 있어, 상속 취득 상가에서는 한 줄도 실행되지 않았다 —
+   *    면적을 한쪽만 채우면 침묵하고, 용도지역을 안 고르면 ④가 payload를 만든 채
+   *    서버에서 400으로 죽었다.
+   *
+   * ⚠️ 위 두 블록(용도변경·부담부증여 조기 return)보다는 **뒤**여야 한다 — 그 경로들은
+   *    상가 부수토지 판정 자체를 타지 않는다.
+   */
+  const cbAppurtenantErr = validateCommercialAppurtenantLand(asset, label);
+  if (cbAppurtenantErr) return cbAppurtenantErr;
+
   if (asset.assetKind === "commercial_building" && asset.acquisitionCause === "inheritance") {
     return validateCommercialInheritanceAsset(asset, label);
   }
@@ -153,10 +170,6 @@ export function validateAssetAcquisition(
   const cbGiftEstErr =
     asset.assetKind === "commercial_building" ? giftEstimatedModeError(asset, label) : null;
   if (cbGiftEstErr) return cbGiftEstErr;
-
-  // 부수토지 초과분 판정 — 미해당이면 null로 **계속 진행**(취득 모드와 직교).
-  const cbAppurtenantErr = validateCommercialAppurtenantLand(asset, label);
-  if (cbAppurtenantErr) return cbAppurtenantErr;
 
   if (asset.assetKind === "commercial_building" && asset.useEstimatedAcquisition) {
     return validateCommercialEstimatedAsset(asset, label, formTransferDate);
