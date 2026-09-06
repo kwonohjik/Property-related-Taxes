@@ -31,6 +31,7 @@ import {
   areaResetPatchForAssetKind,
 } from "./AssetAreaSection";
 import { redevSubjectPatchForAssetKind } from "./AssetAreaRedevelopment";
+import { housingFlagResetPatchForAssetKind } from "./housing-flag-reset";
 import { successorRightTogglePatch } from "@/lib/calc/transfer-successor-right";
 import { CompanionLandNatureBlock } from "../CompanionLandNatureBlock";
 import { OwnershipRatioBlock, type AssetSplitMode } from "../OwnershipRatioInput";
@@ -151,6 +152,10 @@ export function AssetSectionBasic({
                     assetKind: opt.value,
                     ...areaResetPatchForAssetKind(asset, opt.value),
                     ...redevSubjectPatchForAssetKind(opt.value),
+                    // 🔴 주택 전용 플래그(겸용·용도변경)도 함께 비운다 — 두 토글은 아래
+                    //    `assetKind === "housing"` 게이트 안에만 있어 전환 즉시 끄는 수단이
+                    //    사라지는데, ⑧은 자산 종류를 보지 않아 칸 없는 입력을 요구했다.
+                    ...housingFlagResetPatchForAssetKind(opt.value),
                   })
                 }
                 className={cn(
