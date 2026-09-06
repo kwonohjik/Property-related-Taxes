@@ -456,13 +456,25 @@ export function applyLandContribOverrides(
 
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const pre = redev.preApproval;
-  const post = redev.postApprovalExistingHouse;
+  /**
+   * 🔴 **인가후 분은 `settlement`다** (2026-09-07 UI 리뷰).
+   *
+   * 토지 출자 경로에서 엔진은 `postApprovalExistingHouse`를 **전 필드 0으로 zero-fill**하고
+   * (`lib/tax-engine/redevelopment.ts:267` 「항상 0」) 실제 인가후 분을 `settlement`에 담는다
+   * (:293~309 — 양도가액=실지 양도가 전액 · 취득가액=권리가액 · 필요경비=청산금+부대비용).
+   *
+   * 같은 화면 신고서 양식은 이를 알고 `const post = r.settlement;`를 쓰며
+   * `FilingFormTableRedevRows.ts:284`에 「zero-filled — **사용 금지**」라고 적어 두었다.
+   * 이 파일만 금지된 슬롯을 읽어 ② 인가후 분 행이 **전부 0**으로 떴고, 합계 행은 정상값이라
+   * 「합계 ≠ 분할 합」이 되며 신고서와 명세서가 같은 자산을 정면으로 다르게 표시했다.
+   */
+  const post = redev.settlement;
 
   // 양도가액
   const transferItem = items.get("transferPrice");
   if (transferItem) {
     transferItem.formula =
-      "합계 = 실지 양도가액. 분할 표시는 §166① — 인가전(권리가액 의제)·인가후(양도가액 − 권리가액 − 청산금)이며 단계별 의제라 합계와 다르다";
+      "합계 = 실지 양도가액. 분할 표시는 §166① — 인가전은 권리가액 의제, 인가후는 실지 양도가액 전액이며 단계별 의제라 합계와 다르다";
     transferItem.legalBasis = "소득세법 시행령 §166①1호 · §166④";
     transferItem.perAsset = [
       {
@@ -473,7 +485,10 @@ export function applyLandContribOverrides(
       {
         label: "② 인가후 분 (LTHD 제외 — §95② 본문 괄호)",
         value: post.apportionedTransfer,
-        formula: `양도가액 ${fmt(totalTransferPrice)} − 권리가액 ${fmt(pre.apportionedTransfer)} − 청산금 ${fmt(redev.settlement.apportionedAcquisition)} = ${fmt(post.apportionedTransfer)}`,
+        // 인가후 분의 **양도가액**은 실지 양도가액 전액이다(신고서 정본과 같은 값).
+        // 종전 문구는 양도차익 산식을 양도가액 자리에 적고, 「청산금」 항에 권리가액을
+        // 넣은 데다 우변이 zero-filled 0이라 좌변이 만들지 못하는 거짓 등식이었다.
+        formula: `실지 양도가액 전액 = ${fmt(post.apportionedTransfer)} (§166①1호 — 인가전 분은 권리가액으로 의제)`,
       },
     ];
   }
@@ -537,7 +552,8 @@ export function applyLandContribOverrides(
       {
         label: "② 인가후 분",
         value: post.gain,
-        formula: `${fmt(post.apportionedTransfer)} − ${fmt(post.apportionedAcquisition)} = ${fmt(post.gain)}`,
+        // 필요경비(청산금 불입액 + 인가후 부대비용) 항을 빠뜨리면 좌변이 우변을 만들지 못한다.
+        formula: `${fmt(post.apportionedTransfer)} − ${fmt(post.apportionedAcquisition)} − 필요경비 ${fmt(post.expenses ?? 0)} = ${fmt(post.gain)}`,
       },
     ];
   }
