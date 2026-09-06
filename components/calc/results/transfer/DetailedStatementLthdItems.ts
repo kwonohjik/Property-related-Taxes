@@ -32,8 +32,18 @@ interface LthdItemsArgs {
   primary: AssetForm | undefined;
   /** 양도일 "YYYY-MM-DD" */
   transferDate: string;
-  /** 거주 개월 */
+  /** 거주 개월 (대표 자산 — 단건·합계 행용) */
   residenceMs: number;
+  /**
+   * 다건 모드에서 **그 양도건 자신의** 거주 개월수.
+   *
+   * 🔴 종전에는 `splitForAsset`이 대표 자산의 `residenceMs` 하나를 **모든 자산에** 적용했다.
+   *   1번이 거주 24개월 이상 고가주택이고 2번이 토지·상가면 **거주 사실이 없는 토지에도
+   *   「거주 기간분 장특」이 배정**됐고, 반대 배치에서는 실제 거주한 자산의 거주분이 0으로 눌렸다.
+   *   자산별 취득일·양도일은 이미 `acqDateOf`·`transferDateOf`로 갈라 놓은 상태였다 —
+   *   거주 축만 남아 있었다.
+   */
+  residenceMsOf: (propertyId: string) => number;
   /**
    * 다건 모드에서 **그 양도건 자신의** 취득일·양도일을 돌려주는 해석기.
    *
@@ -52,7 +62,7 @@ export function setLongTermDeductionItems(
   items: Map<string, StatementItem>,
   args: LthdItemsArgs,
 ): void {
-  const { result, isAggregate, properties, primary, transferDate, residenceMs, acqDateOf, transferDateOf } =
+  const { result, isAggregate, properties, primary, transferDate, residenceMs, residenceMsOf, acqDateOf, transferDateOf } =
     args;
 
   // 겸용주택은 주택분(표2 가능·보유+거주)과 비주택분(상가, 표1·보유만)이 공제율 체계가 달라
@@ -92,13 +102,23 @@ export function setLongTermDeductionItems(
   const lthSplit = splitLtDeduction(totalLth, totalHoldingMs, residenceMs, useTable2);
 
   // 다건 모드 자산별 보유/거주분 (자산별 holdingMs 기준)
-  const splitForAsset = (p: PerPropertyBreakdown) =>
-    splitLtDeduction(
+  const splitForAsset = (p: PerPropertyBreakdown) => {
+    // 자산별 거주 개월수 — 거주 사실이 없는 자산은 0이 되어 거주분이 배정되지 않는다.
+    const rms = residenceMsOf(p.propertyId);
+    return splitLtDeduction(
       p.longTermHoldingDeduction,
       holdingMonthsFromDates(acqDateOf(p.propertyId), transferDateOf(p.propertyId)),
-      residenceMs,
-      useTable2,
+      rms,
+      /**
+       * 표2 판정도 **그 자산의** 거주 개월수로 fallback 한다.
+       *
+       * 🔴 전역 `useTable2`는 대표 자산의 거주 개월수를 fallback으로 쓴다. 그래서 1번이 토지,
+       *   2번이 실제 거주한 고가주택이면 전역 판정이 표1이 되어 **거주한 자산의 거주분까지
+       *   0으로 눌렸다**. 엔진 신호가 있으면 그것이 우선인 것은 종전과 같다.
+       */
+      isTable2Applied(result.steps, rms >= 24),
     );
+  };
   const ltHoldingPerAsset = isAggregate
     ? properties.map((p) => ({ label: p.propertyLabel, value: splitForAsset(p).holdingAmount }))
     : undefined;

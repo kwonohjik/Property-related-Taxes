@@ -64,6 +64,32 @@ import { localTaxablePenaltyOf } from "@/components/calc/results/transfer/local-
 // ── 헬퍼 ─────────────────────────────────────────────────────────
 
 /**
+ * 그 자산의 거주 개월수 — 구간 입력(`interval`)이면 구간 합, 아니면 직접 입력 월수.
+ *
+ * 자산별로 부를 수 있도록 함수로 뽑았다(종전에는 대표 자산 하나에 대해 인라인 IIFE였다).
+ * 구간의 종료일이 비면 그 자산의 **양도일**로 마감한다 — 다건에서는 신고단위 양도일이 아니라
+ * 그 양도건 자신의 양도일이어야 한다.
+ */
+export function residenceMonthsOfAsset(
+  asset: AssetForm | undefined,
+  transferDate: string,
+): number {
+  const ps = asset?.residenceInputMode === "interval" ? (asset.residencePeriods ?? []) : [];
+  if (ps.length > 0) {
+    return ps.reduce((sum, pp) => {
+      const end = pp.moveOutDate || transferDate;
+      const a = new Date(pp.moveInDate);
+      const t = new Date(end);
+      if (isNaN(a.getTime()) || isNaN(t.getTime())) return sum;
+      let m = (t.getFullYear() - a.getFullYear()) * 12 + (t.getMonth() - a.getMonth());
+      if (t.getDate() < a.getDate()) m -= 1;
+      return sum + Math.max(0, m);
+    }, 0);
+  }
+  return parseInt(asset?.residencePeriodMonthsAsset || "0") || 0;
+}
+
+/**
  * result.steps[] 에서 label 부분일치로 step 찾기.
  * 엔진이 emit한 산식·법령을 그대로 재사용하기 위함.
  */
@@ -216,20 +242,14 @@ export function buildStatementItems(
   const lastMoveOut = periods.length > 0
     ? (periods[periods.length - 1].moveOutDate || transferDate)
     : "";
-  const residenceMs = (() => {
-    if (primary?.residenceInputMode === "interval" && periods.length > 0) {
-      return periods.reduce((sum, pp) => {
-        const end = pp.moveOutDate || transferDate;
-        const a = new Date(pp.moveInDate);
-        const t = new Date(end);
-        if (isNaN(a.getTime()) || isNaN(t.getTime())) return sum;
-        let m = (t.getFullYear() - a.getFullYear()) * 12 + (t.getMonth() - a.getMonth());
-        if (t.getDate() < a.getDate()) m -= 1;
-        return sum + Math.max(0, m);
-      }, 0);
-    }
-    return parseInt(primary?.residencePeriodMonthsAsset || "0") || 0;
-  })();
+  const residenceMs = residenceMonthsOfAsset(primary, transferDate);
+  /**
+   * 다건 모드에서 **그 양도건 자신의** 거주 개월수. 종전에는 자산별 장특 분할에도
+   * 1번 자산의 거주 개월수를 그대로 썼다 — 거주 사실이 없는 토지·상가에까지 「거주 기간분」이
+   * 배정되고, 반대 배치에서는 실제 거주한 자산의 거주분이 0으로 눌렸다.
+   */
+  const residenceMsOf = (pid: string) =>
+    residenceMonthsOfAsset(assetOf(pid), transferDateOf(pid));
 
   items.set("moveOut", {
     label: "퇴거일",
@@ -378,9 +398,29 @@ export function buildStatementItems(
       : undefined,
   });
 
+  /**
+   * §161(장기임대주택 보유자 거주주택 비과세) 경로인가 — **양도차익 축이 통째로 다르다**.
+   *
+   * 🔴 그 경로에서 `result.taxableGain`은 양도차익이 아니라 **장특공제·§161 안분이 끝난
+   *   과세대상 양도소득금액**이다(`transfer-tax-rental-housing-step.ts:617`
+   *   `taxableGain: totalTaxableIncome`). 그대로 「전체 양도차익 − taxableGain」을 하면
+   *   「비과세 양도차익」이 **장특공제액만큼 부풀고**, 「과세대상 양도차익」 자리에는
+   *   소득금액이 실린다.
+   *
+   * §161은 비과세를 **양도차익 단계가 아니라 양도소득금액 단계에서** 가른다. 그래서
+   *   신고서 정본(`FilingFormTableHelpers.ts:531~532`)은 같은 상황에서
+   *   `비과세 양도차익 = 0` · `과세대상 양도차익 = 전체 양도차익`으로 **명시 분기**한다.
+   *   비과세분은 아래 「비과세 양도소득금액 (소령 §161①)」 행이 따로 보여 준다.
+   *
+   * ⚠️ 이 플래그는 4단계 「양도소득금액」에서도 쓴다 — 두 자리가 같은 사실을 봐야 한다.
+   */
+  const isRentalHousingException = result.rentalHousingExceptionDetail?.applied === true;
+
   // 비과세 자산은 `transferGain`이 0이라 「비과세 양도차익」까지 0이 됐다 — gross 축으로 맞춘다
   // (신고서 정본: `FilingFormTableHelpers.ts:644`).
-  const exemptGainSingle = Math.max(0, singleGrossGain - result.taxableGain);
+  const exemptGainSingle = isRentalHousingException
+    ? 0
+    : Math.max(0, singleGrossGain - result.taxableGain);
   const exemptGainAgg = isAggregate
     ? properties.reduce((s, p) => {
         const gross = effectiveGrossGain(p);
@@ -409,7 +449,9 @@ export function buildStatementItems(
             : p.transferGain),
         0,
       )
-    : result.taxableGain;
+    : isRentalHousingException
+      ? singleGrossGain
+      : result.taxableGain;
   // 순환 참조 제거: 과세대상 양도차익을 독립 산식(엔진 §95③ 12억 초과 안분 STEP 재사용)으로,
   // 비과세 양도차익을 차감(전체 − 과세대상)으로 방향 고정. 전액 과세(비과세 0) 케이스는 별도 문구.
   const proratedStep = isAggregate
@@ -417,13 +459,17 @@ export function buildStatementItems(
     : findStepByLabel(result.steps, "과세 양도차익 (12억 초과분)");
   const taxableFormula: ReactNode = isAggregate
     ? "각 자산 과세대상 양도차익 합계"
-    : proratedStep
+    : isRentalHousingException
+      ? `전체 양도차익 ${totalTransferGainVal.toLocaleString()} (§161①은 양도소득금액 단계에서 비과세분을 가른다)`
+      : proratedStep
       ? prorationFormulaAsFrac(proratedStep.formula)
       : exemptVal <= 0
         ? `전체 양도차익 ${totalTransferGainVal.toLocaleString()} (전액 과세)`
         : `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 비과세 양도차익 ${exemptVal.toLocaleString()}`;
   const exemptFormula = isAggregate
     ? "각 자산 비과세 양도차익 합계 (§89 비과세 또는 §95 12억 초과 안분)"
+    : isRentalHousingException
+    ? "§161①은 양도차익이 아니라 양도소득금액 단계에서 비과세분을 가른다 — 아래 「비과세 양도소득금액 (소령 §161①)」 행 참조"
     : `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 과세대상 양도차익 ${taxableGainVal.toLocaleString()} (§89 비과세 또는 §95 12억 초과 안분)`;
   items.set("exemptGain", {
     label: "비과세 양도차익",
@@ -461,12 +507,25 @@ export function buildStatementItems(
     primary,
     transferDate,
     residenceMs,
+    residenceMsOf,
     acqDateOf,
     transferDateOf,
   });
 
   // ── 4단계: 양도소득금액·기본공제 ────────────────────────────
-  const incomeStep = findStepByLabel(result.steps, "양도소득금액");
+  /**
+   * 🔴 **`findStepByLabel`은 부분일치라 「비과세 양도소득금액」을 잡는다** (2026-09-07 UI 리뷰).
+   *
+   * §161 경로의 steps에는 순수 「양도소득금액」 step이 없다 — 엔진이 STEP 4.5 앞에서
+   * 즉시 반환하기 때문이다(`transfer-tax.ts:437~451`). 남는 것은
+   * 「비과세 양도소득금액 (소령 §161①)」뿐이라, 그 산식(`§95① 양도소득금액 X −
+   * 과세대상 양도소득금액 Y = Z`)과 법령이 **「양도소득금액」 행에** 붙어 바로 아래
+   * 비과세 행과 같은 산식이 두 번 찍혔다. 비과세 라벨을 먼저 걸러낸다.
+   */
+  const incomeStep = findStepByLabel(
+    result.steps?.filter((s) => !s.label?.includes("비과세")),
+    "양도소득금액",
+  );
   const sumIncome = isAggregate
     ? properties.reduce((s, p) => s + p.incomeAfterOffset, 0)
     : 0;
@@ -486,7 +545,6 @@ export function buildStatementItems(
    *
    * ⚠️ 이 값은 ⑲ 세액감면대상금액 산정에도 그대로 흘러간다(:515).
    */
-  const isRentalHousingException = result.rentalHousingExceptionDetail?.applied === true;
   const singleIncome = isRentalHousingException
     ? result.transferGain - result.longTermHoldingDeduction
     : Math.max(0, result.taxableGain - result.longTermHoldingDeduction);
