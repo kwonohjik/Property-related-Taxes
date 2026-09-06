@@ -19,6 +19,10 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import {
+  usesSelfComputedTransferPrice,
+} from "./burdened-gift-transfer-price-scope";
+import { stdPriceAtTransferComesFromElsewhere } from "./burdened-gift-transfer-price-scope";
 import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 import { validateExprValuationAsset } from "./transfer-tax-validate-expropriation";
 import { validateAuctionAsset } from "./transfer-tax-validate-expropriation";
@@ -191,10 +195,22 @@ export function validateAssetEntry(
   // 증환지 증가분 존재 시 양도가액 구분 기재(actual) 불가 → 양도시 기준시가 안분 강제 (Step1 토글 숨김과 일치)
   const effBundledMode = form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode;
   if (form.assets.length > 1 && !isFractionalAsset) {
-    if (effBundledMode === "actual") {
+    /**
+     * 🔴 부담부증여 자산은 ⑤가 **모드를 자산별로 덮어쓴다** (2026-09-07 UI 리뷰).
+     *
+     * 종전에는 폼-전역 모드만 봐서, 「구분 기재(actual)」에서 부담부증여 자산에도
+     * 「계약서상 양도가액」을 요구했다 — 그 칸은 화면에 없고(⑤가 apportioned로 덮어씀),
+     * 같은 화면은 「양도가액은 자동 산정됩니다」라고 안내한다. 값 자체도 쓰이지 않는다:
+     * ④가 채무 합계를 placeholder로 넣고 엔진 STEP 0.48이 §159로 다시 계산한다.
+     */
+    if (effBundledMode === "actual" && !usesSelfComputedTransferPrice(a)) {
       if (!a.actualSalePrice || parseAmount(a.actualSalePrice) <= 0)
         return `${label}: 계약서상 양도가액을 입력하세요.`;
-    } else {
+    } else if (!stdPriceAtTransferComesFromElsewhere(a)) {
+      /**
+       * 🔴 부담부증여 × 일반건물·시가모드는 「양도시 기준시가」를 **다른 필드로 받는다**
+       *   (`gb*` · `bgMarketValueAtTransfer`) — 공용 칸이 화면에 없으므로 요구하지 않는다.
+       */
       // 증환지 증가분은 당초분(assets[0]) ㎡당 기준시가 × 증가분 면적으로 파생(live fallback) →
       // 자기 standardPriceAtTransfer 없어도 통과 (⑤·⑥·④와 **같은 leaf**, 모순 차단).
       const replotIncDerivable =

@@ -16,6 +16,10 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
+import {
+  stdPriceAtTransferComesFromElsewhere,
+  usesSelfComputedTransferPrice,
+} from "@/lib/calc/burdened-gift-transfer-price-scope";
 
 
 interface Props {
@@ -91,11 +95,16 @@ export function AssetSectionTransfer({
         general_building은 GeneralBuildingBlock의 gb* 필드, 시가 모드는 bgMarketValueAtTransfer 사용.
         따라서 housing/land/building/commercial_building + 기준시가 모드일 때만 표시.
       */}
-      {!(asset.transferType === "burdened_gift" && asset.assetKind === "general_building") &&
-       !(asset.transferType === "burdened_gift" && asset.bgValuationMode === "sangjeungbeop_market") && (
+      {/* 술어는 `burdened-gift-transfer-price-scope.ts` 단일 소스 — ⑧이 같은 것을 읽는다
+          (종전에는 ⑧이 폼-전역 모드만 보고 화면에 없는 칸을 요구했다). */}
+      {!stdPriceAtTransferComesFromElsewhere(asset) && (
         <CompanionSaleModeBlock
           bundledSaleMode={
-            asset.transferType === "burdened_gift" ? "apportioned" : (singleMode ? "actual" : bundledSaleMode)
+            usesSelfComputedTransferPrice(asset)
+              ? "apportioned"
+              : singleMode
+                ? "actual"
+                : bundledSaleMode
           }
           assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building" || asset.assetKind === "redevelopment_apt") ? "building" : asset.assetKind}
           actualSalePrice={asset.actualSalePrice}
