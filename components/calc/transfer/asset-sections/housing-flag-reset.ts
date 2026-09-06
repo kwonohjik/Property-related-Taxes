@@ -24,6 +24,8 @@
  *
  * ⚠️ `useEffect → store` 미러링 금지 — 전환 `onChange` 한 번에 단일 배치로 보낸다.
  */
+import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
+import { isRentalHousingExceptionApplicable } from "@/lib/calc/rental-housing-exception-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 /**
@@ -34,8 +36,20 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 export function housingFlagResetPatchForAssetKind(
   nextKind: AssetForm["assetKind"],
 ): Partial<AssetForm> {
-  if (nextKind === "housing") return {};
+  /**
+   * §155⑳ 특례는 **입주권도 대상**이라 축이 다르다 — 주택 전용 플래그와 조건을 공유할 수 없다.
+   * 술어는 `rental-housing-exception-scope.ts` 단일 소스를 쓴다(⑤·⑧·④와 같은 것).
+   *
+   * ⚠️ 이 초기화만으로는 부족하다 — stale sessionStorage·이력 복원분은 전환을 거치지 않는다.
+   *    정본 게이트는 ⑧·④에 있다.
+   */
+  const rhReset: Partial<AssetForm> = isRentalHousingExceptionApplicable(nextKind)
+    ? {}
+    : { rentalHousingException: { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS } };
+
+  if (nextKind === "housing") return rhReset;
   return {
+    ...rhReset,
     // 겸용주택 축 — 종속 필드(용도변경 부분·방향)까지 함께 비운다.
     isMixedUseHouse: false,
     hasPartialUsageChange: false,
