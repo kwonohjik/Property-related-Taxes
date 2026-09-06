@@ -372,7 +372,9 @@ export function buildStatementItems(
     formula: gainStep?.formula ?? "양도가액 − 취득가액 − 필요경비",
     legalBasis: gainStep?.legalBasis ?? "소득세법 §95①",
     perAsset: isAggregate
-      ? buildPerAssetWithFormula(properties, (p) => p.transferGain, buildSubGainFormula)
+      ? // 🔴 비과세 자산은 `transferGain`이 0이라 자산별 행이 0을 찍고 합계와 어긋났다
+        //   (합계는 :366에서 이미 `effectiveGrossGain`으로 고쳐져 있었다 — 같은 축으로 맞춘다).
+        buildPerAssetWithFormula(properties, (p) => effectiveGrossGain(p), buildSubGainFormula)
       : undefined,
   });
 

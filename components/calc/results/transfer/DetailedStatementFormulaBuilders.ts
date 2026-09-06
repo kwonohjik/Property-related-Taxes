@@ -44,24 +44,38 @@ export {
   buildGbExpenseFormula,
 } from "./DetailedStatementGbFormulas";
 import { fmt } from "./DetailedStatementGbFormulas";
+import { effectiveGrossGain, assetTaxableGain } from "./exempt-gross-gain";
 
 // ── 단순 산식 (자산별 동일 산식) ──────────────────────────────────
 
-/** 양도차익 = 양도가액 − 취득가액 − 필요경비 */
+/**
+ * 양도차익 = 양도가액 − 취득가액 − 필요경비
+ *
+ * 🔴 우변은 `effectiveGrossGain`이다 — 전액 비과세 자산은 엔진 `transferGain`이 **0**이라
+ *   `p.transferGain`을 쓰면 「1,000,000,000 - 400,000,000 - 10,000,000 = 0」처럼
+ *   **좌변이 우변을 만들지 못하는 거짓 등식**이 출력됐다(2026-09-06 UI 리뷰 실측).
+ *   같은 화면 신고서 양식은 이미 `effectiveGrossGain`을 쓰고 있어 두 표가 어긋났다.
+ */
 export function buildSubGainFormula(p: PerPropertyBreakdown): string {
   const displayAcq = p.acquisitionPrice + p.capitalExpenditureForDisplay;
   const displayExp = Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
-  return `${fmt(p.transferPrice)} - ${fmt(displayAcq)} - ${fmt(displayExp)} = ${fmt(p.transferGain)}`;
+  return `${fmt(p.transferPrice)} - ${fmt(displayAcq)} - ${fmt(displayExp)} = ${fmt(effectiveGrossGain(p))}`;
 }
 
-/** 과세대상 양도차익 = min(전체양도차익, max(0, income) + 장특공제) */
+/**
+ * 과세대상 양도차익 = min(전체양도차익, max(0, income) + 장특공제)
+ *
+ * 🔴 여기도 `effectiveGrossGain` 축이다 — `p.transferGain`(비과세면 0)을 쓰면 비과세 자산이
+ *   **「차손 자산 — 양도차익 0 (음수)」**로 표시됐다(2026-09-06 UI 리뷰 실측). 비과세와 차손은
+ *   전혀 다른 사실이다. 과세대상 금액 자체는 `assetTaxableGain` leaf가 정한다(재구현 금지).
+ */
 export function buildTaxableGainFormula(p: PerPropertyBreakdown): string {
-  const tg = p.transferGain;
+  const tg = effectiveGrossGain(p);
   const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
   if (tg <= 0) return `차손 자산 — 양도차익 ${fmt(tg)} (음수)`;
   const sum = inc + lth;
-  return `min(양도차익 ${fmt(tg)}, 양도소득금액 ${fmt(inc)} + 장특공제 ${fmt(lth)} = ${fmt(sum)}) = ${fmt(Math.min(tg, sum))}`;
+  return `min(양도차익 ${fmt(tg)}, 양도소득금액 ${fmt(inc)} + 장특공제 ${fmt(lth)} = ${fmt(sum)}) = ${fmt(assetTaxableGain(p))}`;
 }
 
 /** 장특공제 = 과세대상양도차익 × 율 */
