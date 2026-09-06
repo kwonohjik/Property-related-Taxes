@@ -274,9 +274,26 @@ export function HistoryClient() {
       });
     }
     if (record.taxType === "transfer") {
-      import("@/lib/stores/calc-wizard-store").then(({ useCalcWizardStore }) => {
+      Promise.all([
+        import("@/lib/stores/calc-wizard-store"),
+        import("@/lib/stores/calc-wizard-asset"),
+      ]).then(([{ useCalcWizardStore }, { migrateAsset }]) => {
         const { updateFormData, setStep } = useCalcWizardStore.getState();
-        updateFormData(record.inputData as Parameters<typeof updateFormData>[0]);
+        /**
+         * ⚠️ 이력 assets는 **migrate를 통과시켜야 한다** — `updateFormData`는 단순 merge라
+         *    assets 배열이 통째로 교체된다. sessionStorage 복원은 `migrateAsset`을 거치는데
+         *    이 경로만 우회하면 옛 이력의 신규 필드 디폴트 누락과 파생 면적의 부동소수점
+         *    잔재가 그대로 엔진에 도달한다(잔재는 `floor(단가 × 면적)`을 1원 깎는다 —
+         *    표시만의 문제가 아니다).
+         *
+         * 🔴 **같은 기능의 상세 드로어(`HistoryDetailDrawer.tsx:128~146`)는 이미 통과시키고
+         *    있었다** — 목록의 「편집」 버튼만 빠져 있었다(2026-09-07 UI 리뷰).
+         */
+        const input = record.inputData as Parameters<typeof updateFormData>[0];
+        const migrated = Array.isArray(input?.assets)
+          ? { ...input, assets: input.assets.map((a) => migrateAsset({ ...a })) }
+          : input;
+        updateFormData(migrated);
         setStep(0);
         router.push(route);
       });

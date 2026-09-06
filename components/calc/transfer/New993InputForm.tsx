@@ -296,7 +296,15 @@ export function New993InputForm({
 
         <div className="sm:col-span-2">
           <HousingStdPriceLookupField
-            label="양도시 기준시가 (선택)"
+            /**
+             * 🔴 라벨이 ⑧의 필수 여부를 따라간다 (2026-09-07 UI 리뷰) — 재개발 변형을 켜면
+             *    5년 **이내** 양도도 안분 경로라 이 값이 없으면 엔진이 감면 0을 낸다.
+             */
+            label={
+              value.isRedevelopedNewHouse993
+                ? "양도시 기준시가 (필수 — 재개발 변형)"
+                : "양도시 기준시가 (5년 경과 양도 시 필수)"
+            }
             value={value.standardPriceAtTransfer993 ?? ""}
             onChange={(v) => onUpdate("standardPriceAtTransfer993", v)}
             jibun={jibun}

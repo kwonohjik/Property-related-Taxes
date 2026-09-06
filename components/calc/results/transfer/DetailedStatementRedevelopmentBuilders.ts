@@ -43,10 +43,20 @@ const BRANCH_LABEL_RIGHT_PAY: Record<RedevBranch, BranchLabelDef> = {
   settlement: { prefix: "② 인가후·청산금 납부분 (LTHD 제외)", legal: "§166①1호 · §95② 본문 괄호 (LTHD 공제율 0%)" },
 };
 
-// 사례 46 — receiveOnly 모드 전용 라벨 (§166①2호 가목 단독, 인가전·인가후 0 강제).
+/*
+ * 사례 46 — 청산금 **수령 단독 신고** 전용 라벨 (§166①2호 가목 단독, 인가전·인가후 0 강제).
+ *
+ * 🔴 `legal` 자리는 화면·PDF에서 **근거 조문**으로 읽힌다(다른 분기는 전부 「§166①1호 ·
+ *    §166⑤2호나목」 같은 인용이다). 종전에는 여기에 내부 플래그 이름이 그대로 실려
+ *    「① 인가전 분 (미신고) (**receiveOnly — 0 강제**)」로 찍혔다 — 코드 식별자가 근거인 것처럼
+ *    보였다(메모리 `feedback_no_internal_id_in_result`).
+ */
 const BRANCH_LABEL_RECEIVE_ONLY: Record<RedevBranch, BranchLabelDef> = {
-  preApproval: { prefix: "① 인가전 분 (미신고)", legal: "receiveOnly — 0 강제" },
-  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (미신고)", legal: "receiveOnly — 0 강제" },
+  preApproval: { prefix: "① 인가전 분 (미신고)", legal: "§166①2호 가목 — 청산금 수령분 단독 신고" },
+  postApprovalExistingHouse: {
+    prefix: "② 인가후 기존건물분 (미신고)",
+    legal: "§166①2호 가목 — 청산금 수령분 단독 신고",
+  },
   settlement: { prefix: "③ 청산금 수령분 (단독 신고)", legal: "§166①2호 가목 · 재산-439 · 서면2016-2705" },
 };
 

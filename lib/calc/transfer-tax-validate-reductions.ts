@@ -235,14 +235,24 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           const hasStdPriceAtTransfer993 =
             parseAmount(r.standardPriceAtTransfer993 || "0") > 0 ||
             parseAmount(asset.standardPriceAtTransfer || "0") > 0;
-          if (
-            asset.acquisitionDate &&
-            form.transferDate &&
-            !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate)) &&
-            !hasStdPriceAtTransfer993
-          ) {
+          /**
+           * 🔴 **재개발 변형이면 5년 이내에도 필수다** (2026-09-07 UI 리뷰).
+           *
+           * 엔진은 `if (isWithin5Years && !variant)`에서만 전액 차감 경로로 빠지고
+           * (`new-99-3.ts:504`), 그 밖에서는 `standardPriceAtTransfer <= 0`이면
+           * `MISSING_STD_PRICE`로 **감면 0**을 반환한다(:531~537). 종전 ⑧은 `!isWithin5Years`만
+           * 봐서, 재개발 토글을 켠 5년 이내 양도는 **경고 없이 감면이 통째로 사라졌다**.
+           */
+          const needsStdPriceAtTransfer =
+            !!r.isRedevelopedNewHouse993 ||
+            (!!asset.acquisitionDate &&
+              !!form.transferDate &&
+              !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate)));
+          if (needsStdPriceAtTransfer && !hasStdPriceAtTransfer993) {
             return fail(
-              "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니면 자산값이 전달되지 않습니다).",
+              r.isRedevelopedNewHouse993
+                ? "§99의3 적용: 재개발·재건축 신축주택 변형은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99의3②2호 안분의 분자)."
+                : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니면 자산값이 전달되지 않습니다).",
             );
           }
         }
