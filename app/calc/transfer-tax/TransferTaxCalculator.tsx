@@ -38,6 +38,7 @@ import { Step5 } from "./steps/Step5";
 import { Step6 } from "./steps/Step6";
 import { CorrectionModeBanner } from "@/components/calc/transfer/CorrectionModeBanner";
 import { STEPS_SINGLE, STEP_TITLES, type TransferTaxCalculatorProps } from "./transfer-calculator-meta";
+import { patchInvalidatesDeterminedTax } from "./transfer-penalty-invalidation";
 
 // ============================================================
 // 메인 컴포넌트
@@ -146,6 +147,16 @@ export default function TransferTaxCalculator({
   // onChange 핸들러에서 직접 파생(아래 handleFormChange). 로드 시점 보정은 migrateLegacyForm에서 처리.
   // assets 패치도 트리거 — transferType(부담부증여) 변경 시 신고기한이 2↔3개월로 바뀜 (§105①3호).
   // derivePenaltyFields는 동일 상태면 빈 패치 반환이므로 빈번 호출 무해.
+  const updateFormAndInvalidate = useCallback(
+    (patch: Partial<typeof formData>) => {
+      if (patchInvalidatesDeterminedTax(patch)) setCalcDeterminedTax(null);
+      // 가산세 결과는 어느 쪽이 바뀌어도 낡는다 — 결정세액·가산세 입력 둘 다 반영하므로.
+      setPenaltyResult(null);
+      updateFormData(patch);
+    },
+    [updateFormData],
+  );
+
   const handleFormChange = useCallback(
     (patch: Partial<typeof formData>) => {
       if ("transferDate" in patch || "filingDate" in patch || "assets" in patch) {
@@ -158,12 +169,12 @@ export default function TransferTaxCalculator({
           formData,
           isAllBurdenedGift(nextAssets),
         );
-        updateFormData({ ...patch, ...penaltyPatch });
+        updateFormAndInvalidate({ ...patch, ...penaltyPatch });
       } else {
-        updateFormData(patch);
+        updateFormAndInvalidate(patch);
       }
     },
-    [formData, updateFormData],
+    [formData, updateFormAndInvalidate],
   );
 
   // 검증 실패 적용 — 오류 목록 일괄 표시 + 첫 자산 오류 인덱스 설정 + (step 0) 해당 카드로 자동 스크롤
@@ -300,6 +311,8 @@ export default function TransferTaxCalculator({
     reset();
     clearError();
     setPenaltyResult(null);
+    // 🔴 종전에는 이 줄이 없어 「초기화」 후 새 건을 입력해도 **옛 결정세액**이 남았다.
+    setCalcDeterminedTax(null);
   }
 
   // 단건 결과 화면의 "동일연도 다른 양도건 계산하기" 버튼 핸들러.
@@ -370,9 +383,9 @@ export default function TransferTaxCalculator({
           : null
       }
     />,
-    <Step4 key={1} form={formData} onChange={updateFormData} />,
-    <Step5 key={2} form={formData} onChange={updateFormData} />,
-    <Step6 key={3} form={formData} onChange={updateFormData} determinedTax={calcDeterminedTax} />,
+    <Step4 key={1} form={formData} onChange={updateFormAndInvalidate} />,
+    <Step5 key={2} form={formData} onChange={updateFormAndInvalidate} />,
+    <Step6 key={3} form={formData} onChange={updateFormAndInvalidate} determinedTax={calcDeterminedTax} />,
   ];
   const stepComponents = stepComponentsAll;
 
