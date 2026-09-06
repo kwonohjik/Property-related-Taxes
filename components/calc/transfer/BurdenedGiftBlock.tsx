@@ -246,7 +246,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         }
       >
         <RadioCardGroup
-          name="bgValuationMode"
+          name={`bgValuationMode-${asset.assetId ?? "primary"}`}
           layout="stack"
           columns={2}
           value={asset.bgValuationMode || ""}
@@ -350,7 +350,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             }
           >
             <RadioCardGroup
-              name="bgAcquisitionMethod"
+              name={`bgAcquisitionMethod-${asset.assetId ?? "primary"}`}
               layout="stack"
               value={asset.bgAcquisitionMethod || ""}
               onChange={(v) => onChange({ bgAcquisitionMethod: v as AssetForm["bgAcquisitionMethod"] })}
@@ -644,7 +644,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           hint="상증법 §53 증여재산공제가 관계에 따라 5천만 ↔ 6억으로 갈립니다. 반드시 선택하세요."
         >
           <RadioCardGroup
-            name="bgDonorRelation"
+            name={`bgDonorRelation-${asset.assetId ?? "primary"}`}
             layout="stack"
             columns={3}
             value={asset.bgDonorRelation || ""}

@@ -9,6 +9,7 @@ import { migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
 import { normalizeRentalAndSplitFields, hasPositiveAmount } from "./calc-wizard-asset-migrate-rental-split";
 import { migrateResidenceFields } from "./calc-wizard-asset-residence";
 import { migrateRentalPeriodFields } from "./calc-wizard-asset-rental-period";
+import { nextRentalUnitId } from "./calc-wizard-asset-factory";
 import { migrateCarryoverFields } from "./calc-wizard-asset-carryover";
 import {
   applyPhase3Normalize,
@@ -538,6 +539,9 @@ export function migrateAsset(raw: unknown): AssetForm {
     // 구 스키마 임대주택 유닛 → 신규 스키마 분해 (능동형 UI 개편, 2026-07-25)
     else {
       (rhe.rentalUnits as Record<string, unknown>[]).forEach((u) => {
+        // React 리스트 key 전용 안정 식별자 — stale sessionStorage·이력 복원분에는 없다.
+        // 없으면 카드 key가 인덱스로 되돌아가 삭제 시 자식 로컬 state가 옆 카드에 남는다.
+        if (typeof u.unitId !== "string" || !u.unitId) u.unitId = nextRentalUnitId();
         // 임대기간 다중 구간 필드 기본값 (interval 모드·rentalPeriods)
         migrateRentalPeriodFields(u);
         // 등록일 1필드 → 세무서/지자체 2필드 (구 값을 지자체 신청일로 이전, 세무서는 재입력)

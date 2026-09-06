@@ -105,7 +105,7 @@ export function GeneralBuildingSaleSplitSection({
     <ToneCard tone="emerald" sectionNum={sectionNum} title={SECTION_TITLE}>
       <div data-testid="gb-sale-split-mode">
         <RadioCardGroup
-          name="gbSaleSplitMode"
+          name={`gbSaleSplitMode-${asset.assetId ?? "primary"}`}
           tone="emerald"
           layout="inline"
           options={options}

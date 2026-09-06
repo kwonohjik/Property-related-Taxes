@@ -105,7 +105,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
 
       {/* 주택유형 선택 */}
       <RadioCardGroup
-        name="housingType"
+        name={`housingType-${asset.assetId ?? "primary"}`}
         value={housingType}
         onChange={setHousingType}
         options={HOUSING_TYPE_OPTIONS}

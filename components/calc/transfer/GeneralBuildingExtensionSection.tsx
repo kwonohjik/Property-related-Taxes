@@ -222,7 +222,7 @@ export function GeneralBuildingExtensionSection({
             label="증축분 취득 방식"
           >
             <RadioCardGroup
-              name="gbExtensionAcquisitionMode"
+              name={`gbExtensionAcquisitionMode-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.gbExtensionAcquisitionMode || "estimated"}
               onChange={(v) => onChange({ gbExtensionAcquisitionMode: v as "actual" | "estimated" })}
@@ -273,6 +273,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="양도시 건물2 기준시가 총액"
+                  hideLabel
                   hideUnit
                   value={asset.gbTransferExtensionBuildingStdPrice}
                   onChange={(v) => onChange({ gbTransferExtensionBuildingStdPrice: v })}
@@ -287,6 +288,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="취득시(증축시) 건물2 기준시가 총액"
+                  hideLabel
                   hideUnit
                   value={asset.gbAcquisitionExtensionBuildingStdPrice}
                   onChange={(v) => onChange({ gbAcquisitionExtensionBuildingStdPrice: v })}
@@ -306,6 +308,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="양도시 건물2 기준시가 총액"
+                  hideLabel
                   hideUnit
                   value={asset.gbTransferExtensionBuildingStdPrice}
                   onChange={(v) => onChange({ gbTransferExtensionBuildingStdPrice: v })}
@@ -348,6 +351,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="증축 실거래가"
+                  hideLabel
                   hideUnit
                   value={asset.gbExtensionActualAcquisitionPrice}
                   onChange={(v) => onChange({ gbExtensionActualAcquisitionPrice: v })}
@@ -365,6 +369,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="증축 실제 필요경비"
+                  hideLabel
                   hideUnit
                   value={asset.gbExtensionActualExpenses}
                   onChange={(v) => onChange({ gbExtensionActualExpenses: v })}
@@ -376,7 +381,7 @@ export function GeneralBuildingExtensionSection({
           {/* 증축 취득원인 */}
           <FieldCard label="증축 취득원인" hint="자가증축(신축자가건축)이 기본입니다. 타인에게 매수한 경우 매매 선택.">
             <RadioCardGroup
-              name="gbExtensionAcquisitionCause"
+              name={`gbExtensionAcquisitionCause-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.gbExtensionAcquisitionCause ?? "newConstruction"}
               onChange={(v) => onChange({ gbExtensionAcquisitionCause: v as "purchase" | "newConstruction" })}

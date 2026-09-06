@@ -98,7 +98,7 @@ export function RentalHousingExceptionSection({
     >
       {/* 시나리오 선택 */}
       <RadioCardGroup
-        name="rental-scenario"
+        name={`rental-scenario-${asset.assetId ?? "primary"}`}
         tone="violet"
         layout="stack"
         options={[
@@ -133,7 +133,13 @@ export function RentalHousingExceptionSection({
         <div className="space-y-3">
           {rh.rentalUnits.map((unit, i) => (
             <RentalUnitCard
-              key={i}
+              /**
+               * 🔴 **인덱스 key 금지** (2026-09-07 UI 리뷰). 중간 호를 삭제하면 뒤 카드가 삭제된
+               *    호의 인덱스를 물려받아 자식의 **로컬 state**(주소 검색어·기준시가 조회 연도·
+               *    수동 입력 여부·오류 메시지)가 그대로 남았다 — 그 state들은 마운트 시 1회만
+               *    초기화되기 때문이다. `unitId`는 ②·③이 보장한다.
+               */
+              key={unit.unitId}
               unit={unit}
               index={i}
               onChange={(u) => updateUnit(i, u)}

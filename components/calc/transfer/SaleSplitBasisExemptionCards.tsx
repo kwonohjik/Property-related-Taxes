@@ -204,7 +204,7 @@ export function SaleSplitExemptionCard({ asset, onChange }: Props) {
     >
       <div className="space-y-2">
         <RadioCardGroup
-          name="saleSplitExemption"
+          name={`saleSplitExemption-${asset.assetId ?? "primary"}`}
           tone="amber"
           options={EXEMPTION_OPTIONS}
           value={asset.saleSplitExemption as "other_law" | "demolished_land_only"}

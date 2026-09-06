@@ -364,6 +364,7 @@ export function GeneralBuildingBlock({
             >
               <CurrencyInput
                 label="최초공시주택가격"
+                hideLabel
                 hideUnit
                 value={asset.gbFirstDisclosurePrice}
                 onChange={(v) => onChange({ gbFirstDisclosurePrice: v })}
@@ -598,6 +599,7 @@ export function GeneralBuildingBlock({
                 >
                   <CurrencyInput
                     label="최초공시시 건물 기준시가"
+                    hideLabel
                     hideUnit
                     value={asset.gbFirstDisclosureBuildingStdPrice}
                     onChange={(v) => onChange({ gbFirstDisclosureBuildingStdPrice: v })}

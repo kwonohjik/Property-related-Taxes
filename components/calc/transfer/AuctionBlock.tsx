@@ -70,6 +70,7 @@ export function AuctionBlock({
       >
         <CurrencyInput
           label="공매·경락가액"
+          hideLabel
           hideUnit
           value={asset.auctionPrice}
           onChange={(v) => onChange({ auctionPrice: v })}

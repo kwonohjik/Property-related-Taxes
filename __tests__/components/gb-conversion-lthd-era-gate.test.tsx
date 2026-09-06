@@ -35,7 +35,9 @@ function asset(conversionDate: string, wasMultiHouse: boolean | null): AssetForm
 /** 「예 (배제 자산)」 라디오의 input 엘리먼트 */
 function yesRadio(container: HTMLElement): HTMLInputElement {
   const el = container.querySelector<HTMLInputElement>(
-    'input[name="gbWasMultiHouseAtConversion"][value="true"]',
+    // name은 자산별로 스코프된다(`gbWasMultiHouseAtConversion-<assetId>`) — 다자산에서
+    // native 라디오 그룹이 문서 전역으로 합쳐지는 것을 막기 위해서다. 접두사로 찾는다.
+    'input[name^="gbWasMultiHouseAtConversion"][value="true"]',
   );
   if (!el) throw new Error("「예」 라디오를 찾지 못했다 — 셀렉터가 컴포넌트와 어긋났다");
   return el;

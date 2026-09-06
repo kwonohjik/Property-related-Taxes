@@ -135,7 +135,7 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
             hint="국토계획법상 용도지역. 미선택 시 계산이 진행되지 않습니다."
           >
             <RadioCardGroup
-              name="cbZoneType"
+              name={`cbZoneType-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.cbZoneType}
               onChange={(v) => onChange({ cbZoneType: v })}
