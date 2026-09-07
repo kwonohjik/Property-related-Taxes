@@ -28,7 +28,7 @@
  *
  *   [§166①2호 가목: 인가후 분 (settlement 노드)]
  *   settlement.gain = 320M − (300M − 50M) − 0 = 320M − 250M = 70,000,000  ← PDF 일치
- *   settlement.lthd = 0 (§95② 단서 — 입주권 §94①2호 자산, LTHD 미적용)
+ *   settlement.lthd = 0 (§95② 본문 괄호 — 입주권 §94①2호 자산, LTHD 미적용)
  *
  *   [합계]
  *   total.gain = 100M + 70M = 170,000,000

@@ -55,7 +55,7 @@ export function deriveColumns(
         columns: [
           { key: "total", label: "합계" },
           { key: "preApproval", label: "① 인가전 분 (취득일~인가일)" },
-          { key: "postApprovalExistingHouse", label: "② 인가후 분 (LTHD 제외)" },
+          { key: "postApprovalExistingHouse", label: "② 인가후 분 (장기보유특별공제 제외)" },
         ],
       };
     }

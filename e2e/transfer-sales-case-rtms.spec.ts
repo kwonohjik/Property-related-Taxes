@@ -84,7 +84,7 @@ test.describe("양도세 매매사례가액 추계(§176의2③1호)", () => {
     // SalesCaseSection 노출
     await expect(card.getByText("매매사례가액 (원)")).toBeVisible();
     await expect(
-      card.getByText("취득시 기준시가 (원) — 개산공제 base"),
+      card.getByText("취득시 기준시가 (원) — 개산공제 기준액"),
     ).toBeVisible();
 
     // 취득 당시 면적(㎡) 입력란 노출 (RTMS 유사재산 면적 필터 base)

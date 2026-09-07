@@ -82,7 +82,7 @@ export function applyLandContribOverrides(
         formula: `의제 양도가액 = 권리가액 = ${fmt(pre.apportionedTransfer)} (§166④)`,
       },
       {
-        label: "② 인가후 분 (LTHD 제외 — §95② 본문 괄호)",
+        label: "② 인가후 분 (장기보유특별공제 제외 — §95② 본문 괄호)",
         value: post.apportionedTransfer,
         // 인가후 분의 **양도가액**은 실지 양도가액 전액이다(신고서 정본과 같은 값).
         // 종전 문구는 양도차익 산식을 양도가액 자리에 적고, 「청산금」 항에 권리가액을
@@ -166,7 +166,7 @@ export function applyLandContribOverrides(
   // 장기보유특별공제
   const ltItem = items.get("ltDeduction");
   if (ltItem) {
-    ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전 분만 LTHD (취득일~인가일 기산). 인가후 LTHD=0 (본문 괄호)";
+    ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전 분만 장기보유특별공제 (취득일~인가일 기산). 인가후 장기보유특별공제 0 (본문 괄호)";
     ltItem.legalBasis = "소득세법 §95② 본문 괄호 · 시행령 §166⑤1호";
     const preYears = Math.floor(pre.holdingMonths / 12);
     const preMons = pre.holdingMonths % 12;
@@ -178,9 +178,9 @@ export function applyLandContribOverrides(
         formula: `${fmt(pre.gain)} × ${prePct}% (보유 ${preYears}년 ${preMons}개월) = ${fmt(pre.lthd)}`,
       },
       {
-        label: "② 인가후 분 (LTHD=0 — §95② 본문 괄호)",
+        label: "② 인가후 분 (장기보유특별공제 0 — §95② 본문 괄호)",
         value: 0,
-        formula: "LTHD 대상 양도차익 부존재 (본문 괄호 — 관리처분 인가 전 토지·건물분에 한정)",
+        formula: "장기보유특별공제 대상 양도차익 부존재 (본문 괄호 — 관리처분 인가 전 토지·건물분에 한정)",
       },
     ];
   }
@@ -188,7 +188,7 @@ export function applyLandContribOverrides(
   // 보유/거주 분리 항목
   const ltHoldItem = items.get("ltHoldingPart");
   if (ltHoldItem) {
-    ltHoldItem.note = "토지 출자 §166⑤1호 — 인가전 분만 보유기간 LTHD (표1), 인가후 미적용";
+    ltHoldItem.note = "토지 출자 §166⑤1호 — 인가전 분만 보유기간 장기보유특별공제 (표1), 인가후 미적용";
     ltHoldItem.perAsset = undefined;
   }
   const ltResItem = items.get("ltResidencePart");
@@ -200,7 +200,7 @@ export function applyLandContribOverrides(
   // 양도소득금액
   const incomeItem = items.get("incomeAmount");
   if (incomeItem) {
-    incomeItem.formula = "토지 출자 §166 분할별 (양도차익 − LTHD) 합";
+    incomeItem.formula = "토지 출자 §166 분할별 (양도차익 − 장기보유특별공제) 합";
     incomeItem.legalBasis = "소득세법 §95①";
     incomeItem.perAsset = [
       {
@@ -327,14 +327,14 @@ export function applyRedevelopmentOverrides(
   const ltItem = items.get("ltDeduction");
   if (ltItem) {
     if (isRightReceive) {
-      ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전(나목) 분만 LTHD 적용. 청산금(가목) 분 LTHD=0 (§94①2호)";
-      ltItem.legalBasis = "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목";
+      ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전(나목) 분만 장기보유특별공제 적용. 청산금(가목) 분 장기보유특별공제 0 (§94①2호)";
+      ltItem.legalBasis = "소득세법 §95② 본문 괄호 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목";
     } else {
       ltItem.formula = isRightSubject
-        ? "§95② 본문 괄호 + §166⑤1호 — 인가전 분만 LTHD 적용 (취득일~인가일 기산). 인가후·청산금 분 LTHD=0"
+        ? "§95② 본문 괄호 + §166⑤1호 — 인가전 분만 장기보유특별공제 적용 (취득일~인가일 기산). 인가후·청산금 분 장기보유특별공제 0"
         : "재개발 §166⑤ 분할별 보유기간·율 — 인가전·인가후 기존건물분(취득일 기산) + 청산금분(인가일 기산)";
       ltItem.legalBasis = isRightSubject
-        ? "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호"
+        ? "소득세법 §95② 본문 괄호 · §94①2호 · 시행령 §166⑤1호"
         : "소득세법 §95② · 시행령 §166⑤";
     }
     ltItem.perAsset = buildRedevPerAssetForLthd(redev, subject, settlementDirection);
@@ -355,7 +355,7 @@ export function applyRedevelopmentOverrides(
   // 양도소득금액 — 합계 기존 유지
   const incomeItem = items.get("incomeAmount");
   if (incomeItem) {
-    incomeItem.formula = "재개발 §166 분할별 (양도차익 − LTHD) 합 (음수 시 0)";
+    incomeItem.formula = "재개발 §166 분할별 (양도차익 − 장기보유특별공제) 합 (음수 시 0)";
     incomeItem.legalBasis = "소득세법 §95①";
     incomeItem.perAsset = buildRedevPerAssetForIncome(redev, subject, settlementDirection);
   }

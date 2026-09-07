@@ -172,7 +172,7 @@ export function MixedUseAssetMajorStdPrice({
           {isGift && (
             <ToneCard
               tone="violet"
-              title="증여일 신고가액 override (선택)"
+              title="증여일 신고가액 직접 입력 (선택)"
               titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
             >
               <CurrencyInput
@@ -276,7 +276,7 @@ export function MixedUseAssetMajorStdPrice({
         {isInheritance && (
           <ToneCard
             tone="violet"
-            title="상속개시일 신고가액 override (선택, 상가 전체)"
+            title="상속개시일 신고가액 직접 입력 (선택, 상가 전체)"
             titleExtra={<LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />}
           >
             <CurrencyInput
@@ -299,7 +299,7 @@ export function MixedUseAssetMajorStdPrice({
         {isGift && (
           <ToneCard
             tone="violet"
-            title="증여일 신고가액 override (선택, 상가 전체)"
+            title="증여일 신고가액 직접 입력 (선택, 상가 전체)"
             titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
           >
             <CurrencyInput

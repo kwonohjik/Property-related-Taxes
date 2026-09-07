@@ -1,7 +1,7 @@
 /**
  * 자산 종류 축 일원화 — 입주권 / 재개발APT (2026-08-13 사용자 지시).
  *
- *   입주권(`right_to_move_in`)      = 조합원입주권 양도 전담 (§166① · §95② 단서 · §89①4호)
+ *   입주권(`right_to_move_in`)      = 조합원입주권 양도 전담 (§166① · §95② 본문 괄호 · §89①4호)
  *   재개발APT(`redevelopment_apt`)  = 재개발·재건축으로 완공된 APT 양도 전담 (§166②)
  *
  * 종전 결함: `AssetSectionAcquisition.tsx`의 렌더 게이트가 `redevelopment_apt` 하나뿐이라

@@ -256,7 +256,7 @@ export function EstateBodyConvertibleBond({ item, onUpdate, valuationDate }: Var
                 </FieldCard>
                 <FieldCard label="발생이자상당액 직접입력" unit="원" hint="비우면 직전 이자지급일·이자율로 자동 산정">
                   <CurrencyInput
-                    label="발생이자 override"
+                    label="발생이자 직접 입력"
                     value={cur(item.cbAccruedInterestOverride)}
                     onChange={(v) => set({ cbAccruedInterestOverride: parseAmount(v) || undefined })}
                     hideLabel
@@ -362,7 +362,7 @@ export function EstateBodyConvertibleBond({ item, onUpdate, valuationDate }: Var
                 </FieldCard>
                 <FieldCard label="배당차액 직접입력" unit="원" hint="비우면 위 항목으로 자동 산정">
                   <CurrencyInput
-                    label="배당차액 override"
+                    label="배당차액 직접 입력"
                     value={cur(item.cbDividendDifferenceOverride)}
                     onChange={(v) => set({ cbDividendDifferenceOverride: parseAmount(v) || undefined })}
                     hideLabel

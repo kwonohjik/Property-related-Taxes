@@ -64,7 +64,7 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
     if (exceedsExisting && exceedsNew) {
       return {
         tone: "sky" as const,
-        title: "C-3 — 12억 초과 + 분할 LTHD 모두 표2 적용",
+        title: "C-3 — 12억 초과 + 분할 장기보유특별공제 모두 표2 적용",
         body: "기존건물분과 청산금분 모두 표2(보유+거주) 적용. 거주월수 귀속은 분리되어 산정됩니다 (기존: 종전+신축 통산 / 청산금분: 신축만).",
       };
     }
@@ -89,12 +89,12 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
       <p className="text-caption text-emerald-800 leading-relaxed">
         <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
         {" "}— 재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다.
-        사전법령해석재산 2020-386 — 청산금납부분 LTHD 표2 진입은 신축주택 거주 2년 이상이 필요합니다.
+        사전법령해석재산 2020-386 — 청산금납부분 장기보유특별공제 표2 진입은 신축주택 거주 2년 이상이 필요합니다.
       </p>
 
       <ResidencePeriodGroup
         label="종전주택 거주기간"
-        hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§154⑧ 통산 산식 prior)."
+        hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§154⑧ 통산 산식의 종전주택 분)."
         startValue={asset.redevPriorResidenceStartDate}
         endValue={asset.redevPriorResidenceEndDate}
         monthsValue={asset.redevPriorHouseResidenceMonths}

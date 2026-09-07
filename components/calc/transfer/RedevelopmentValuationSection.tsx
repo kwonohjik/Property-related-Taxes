@@ -536,7 +536,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
             </p>
           )}
           <div className="mt-1 rounded border border-rose-200 bg-rose-50/70 p-1 text-micro text-rose-700">
-            인가후 분 LTHD = 0 — 소득세법 §95② 본문 괄호
+            인가후 분 장기보유특별공제 = 0 — 소득세법 §95② 본문 괄호
           </div>
         </div>
       )}

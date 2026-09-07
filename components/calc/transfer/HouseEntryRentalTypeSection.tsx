@@ -56,7 +56,7 @@ const FIELD_META: Record<string, { kind: FieldKind; label: string; hint?: string
   isConvertedToSale: { kind: "bool", label: "분양전환 해당" },
   hasHalfDutyPeriodMet: { kind: "bool", label: "임대의무기간 1/2 이상 충족" },
   isSoldWithin1YearOfCancellation: { kind: "bool", label: "말소일 이후 1년 이내 양도" },
-  saMokBaseArticle: { kind: "select", label: "말소 전 base 목", hint: "사목은 base 목의 기준시가·면적 등 다른 요건도 충족해야 합니다(임대기간요건만 면제)" },
+  saMokBaseArticle: { kind: "select", label: "말소 전 근거 목", hint: "사목은 근거 목의 기준시가·면적 등 다른 요건도 충족해야 합니다(임대기간요건만 면제)" },
   // 결격(제외) 사유 — 체크 시 중과배제가 적용되지 않음
   isExcluded918Rule: { kind: "bool", label: "2018.9.14 이후 조정지역 취득 (결격)" },
   isExcludedAfter20200711Apt: { kind: "bool", label: "2020.7.11 이후 등록 아파트 (결격)" },

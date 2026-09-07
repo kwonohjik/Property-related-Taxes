@@ -148,7 +148,7 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
 
     // 사목(자진·자동 말소 후 양도) 선택 → base 목 selector + 말소 게이트 노출
     await dialog.getByText("자진·자동 말소 후 양도", { exact: false }).click();
-    await expect(dialog.getByText("말소 전 base 목", { exact: false })).toBeVisible();
+    await expect(dialog.getByText("말소 전 근거 목", { exact: false })).toBeVisible();
     await expect(dialog.getByText("자진·자동 말소일", { exact: false })).toBeVisible();
     // base 목 미선택 시 base 요건 필드 없음
     await expect(dialog.getByText("임대개시 당시 공시가격", { exact: false })).toHaveCount(0);

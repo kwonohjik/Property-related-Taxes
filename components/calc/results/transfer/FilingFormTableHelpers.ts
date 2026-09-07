@@ -114,8 +114,8 @@ export interface RowDef {
    */
   notes?: Record<ColumnKey, string>;
   /**
-   * 열별 rose 색상 주석 — §95② 단서 배제 등 법령 경고를 붉은 색으로 표시.
-   * 예: { "postApproval": "§95② 단서 배제" }
+   * 열별 rose 색상 주석 — §95② 본문 괄호 배제 등 법령 경고를 붉은 색으로 표시.
+   * 예: { "postApproval": "§95② 본문 괄호 배제" }
    */
   roseNotes?: Record<ColumnKey, string>;
 }
