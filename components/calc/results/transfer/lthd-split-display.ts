@@ -16,9 +16,14 @@
  */
 import type { CalculationStep } from "@/lib/tax-engine/types/transfer.types";
 import { splitLtDeduction } from "@/components/calc/results/transfer/FilingFormTableHelpers";
+import {
+  LTHD_HOLDING_STEP_LABEL,
+  LTHD_RESIDENCE_STEP_LABEL,
+} from "@/lib/tax-engine/transfer-tax-lthd-steps";
 
-const HOLDING_LABEL = "보유 기간분 장특";
-const RESIDENCE_LABEL = "거주 기간분 장특";
+// 라벨 단일 소스는 엔진이다 — 여기서 리터럴을 복제하면 한쪽만 바뀔 때 조용히 표1로 떨어진다.
+const HOLDING_LABEL = LTHD_HOLDING_STEP_LABEL;
+const RESIDENCE_LABEL = LTHD_RESIDENCE_STEP_LABEL;
 
 export interface LthdSplit {
   holdingAmount: number;

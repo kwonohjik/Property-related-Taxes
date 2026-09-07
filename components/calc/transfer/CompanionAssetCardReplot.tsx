@@ -120,12 +120,22 @@ export function ReplotIncreaseFields({
   asset,
   onChange,
   onAddAsset,
+  hasIncrementAsset = false,
 }: {
   asset: AssetForm;
   onChange: (d: Partial<AssetForm>) => void;
   onAddAsset?: (patch: Partial<AssetForm>) => void;
+  /**
+   * 증환지 **증가분 자산이 이미 목록에 있는가** — 폼의 사실이다.
+   *
+   * 🔴 종전에는 이 자리에 `useState(false)`가 있었다. 자산 카드를 접었다 펴거나 단계를
+   *    오가면 컴포넌트가 재마운트되어 false로 돌아가고, 「+ 증가분 자산 자동 추가」 버튼이
+   *    다시 떠 **중복 자산이 만들어졌다**(2026-09-07 대장 재대조). 추가 여부는 컴포넌트의
+   *    기억이 아니라 `assets`에 그 자산이 있는지로 판정한다.
+   */
+  hasIncrementAsset?: boolean;
 }) {
-  const [increaseAdded, setIncreaseAdded] = useState(false);
+  const increaseAdded = hasIncrementAsset;
 
   const alloc = parseFloat(asset.allocatedArea ?? "");
   const ent = parseFloat(asset.entitlementArea ?? "");
@@ -168,7 +178,6 @@ export function ReplotIncreaseFields({
       nblLandSigunguCode: asset.nblLandSigunguCode,
       nblLandSigunguName: asset.nblLandSigunguName,
     });
-    setIncreaseAdded(true);
   }
 
   return (

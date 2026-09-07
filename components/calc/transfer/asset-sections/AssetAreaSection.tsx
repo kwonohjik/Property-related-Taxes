@@ -223,11 +223,13 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   /** 증환지(increase) 증가분 자동 추가용 — `ReplotIncreaseFields`가 소비 */
   onAddAsset?: (patch: Partial<AssetForm>) => void;
+  /** 증환지 증가분 자산이 이미 목록에 있는가 — 중복 추가 차단(폼의 사실). */
+  hasIncrementAsset?: boolean;
   /** 양도일 — 일반건물 「주택→상가 용도변경」 보유기간 미리보기가 소비 */
   transferDate?: string;
 }
 
-export function AssetAreaSection({ asset, onChange, onAddAsset, transferDate }: Props) {
+export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsset, transferDate }: Props) {
   return (
     <>
       {/* 면적 정보 — AREA_SCENARIOS_BY_ASSET_KIND 등재 자산유형 + 전용 위젯 보유 자산유형.
@@ -446,6 +448,7 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, transferDate }: 
               asset={asset}
               onChange={onChange}
               onAddAsset={onAddAsset}
+              hasIncrementAsset={hasIncrementAsset}
             />
           )}
           </>

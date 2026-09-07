@@ -67,6 +67,7 @@ interface Props {
   isMultiBundled: boolean;
   /** 증환지 증가분 등 자산 자동 추가 콜백 */
   onAddAsset?: (patch: Partial<AssetForm>) => void;
+  hasIncrementAsset?: boolean;
   /** 첫 자산(주 자산) 카드일 때만 양도일·신고일 입력란 노출 (폼-전역값) */
   showFormDates?: boolean;
   /** 폼-전역 양도일 */
@@ -93,6 +94,7 @@ export function AssetSectionBasic({
   onChange,
   isMultiBundled,
   onAddAsset,
+  hasIncrementAsset,
   showFormDates,
   transferDate,
   filingDate,
@@ -342,6 +344,7 @@ export function AssetSectionBasic({
         asset={asset}
         onChange={onChange}
         onAddAsset={onAddAsset}
+        hasIncrementAsset={hasIncrementAsset}
         transferDate={transferDate}
       />
 

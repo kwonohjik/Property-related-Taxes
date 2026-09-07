@@ -17,6 +17,14 @@ import type { UsageConversionDetail } from "./types/transfer-result.types";
 import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 
+/**
+ * 장특공제 보유·거주 분리 sub-step 라벨 — **표시 계층이 이 문자열로 sub-step을 찾는다**.
+ * (`components/calc/results/transfer/lthd-split-display.ts`). 종전에는 양쪽이 리터럴을
+ * 복제하고 있어 한쪽만 바꾸면 조용히 「표1」로 떨어졌다 — 단일 소스로 고정한다.
+ */
+export const LTHD_HOLDING_STEP_LABEL = "보유 기간분 장특";
+export const LTHD_RESIDENCE_STEP_LABEL = "거주 기간분 장특";
+
 export interface LthdStepArgs {
   steps: CalculationStep[];
   taxableGain: number;
@@ -127,14 +135,14 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
         ? `주택으로 보유한 기간 중 거주 ${residenceYearsForStep}년 × 4%, 40% 한도`
         : `거주 ${residenceYearsForStep}년 × 4%, 40% 한도`;
       steps.push({
-        label: "보유 기간분 장특",
+        label: LTHD_HOLDING_STEP_LABEL,
         formula: `${longTermHoldingDeduction.toLocaleString()} × ${holdingPct}% / ${totalRate}% = ${holdingAmt.toLocaleString()} (${holdingDesc})`,
         amount: holdingAmt,
         legalBasis: basis,
         sub: true,
       });
       steps.push({
-        label: "거주 기간분 장특",
+        label: LTHD_RESIDENCE_STEP_LABEL,
         formula: `${longTermHoldingDeduction.toLocaleString()} × ${residencePct}% / ${totalRate}% = ${residenceAmt.toLocaleString()} (${residenceDesc})`,
         amount: residenceAmt,
         legalBasis: basis,

@@ -189,10 +189,18 @@ export function ReductionDetailCards({
         />
       )}
       {/* §97 시리즈 Phase 2 — 정밀 계산 결과 카드 */}
+      {/* 🔴 `rental97LthdDetail`은 **§97의3(대체율)과 §97의4(추가율) 둘 다**를 담는다
+          (`transfer-tax-lthd.ts` — `effectCategory`가 `long_term_holding` / `long_term_holding_additional`).
+          라벨을 §97의3으로 하드코딩해 두면 §97의4 결과 카드가 **다른 조문을 근거로 제시**한다
+          (2026-09-07 대장 재대조). 축은 `effectCategory` 하나다. */}
       {result.rental97LthdDetail && (
         <Rental97DetailCard
           detail={result.rental97LthdDetail}
-          effectLabel="장기보유특별공제 특례 (§97의3)"
+          effectLabel={
+            result.rental97LthdDetail.effectCategory === "long_term_holding_additional"
+              ? "장기보유특별공제 추가공제율 (§97의4)"
+              : "장기보유특별공제 특례 (§97의3)"
+          }
           calculatedTax={calculatedTax}
         />
       )}
