@@ -324,9 +324,11 @@ export async function POST(request: NextRequest) {
            *    채 200이 나갔다 — 그래서 ⑧이 「주 자산이 겸용이면」 막고 있었다.
            *    그 차단을 여기서 없앤다(⑧도 함께 걷었다).
            *
-           * ⚠️ 겸용 × 지분 분할은 별도로 계속 차단이다(`transfer-tax-validate.ts`) —
-           *    `totalPropertyTransferPrice`가 「물건 전체 양도가액」과 「주택분 합계」 두 의미로
-           *    충돌한다. 그 차단이 살아 있어 여기서 두 축이 만나지 않는다.
+           * ~~⚠️ 겸용 × 지분 분할은 별도로 계속 차단이다~~ → **그 차단도 2026-09-04에 없어졌다**
+           *    (`transfer-tax-validate.ts:81` 목록의 표). 막고 있던 것은
+           *    「`totalPropertyTransferPrice`의 의미 충돌」이 아니라 **절대금액 미스케일**이었고
+           *    `buildMixedUsePayload`가 해소했다(축 B 60/40 합계 152,203,211 = 단건 일치).
+           *    ⚠️ 이 문단은 **이력**이다 — 두 축은 이미 만난다.
            */
           if (data.propertyType === "mixed-use-house" && data.mixedUse) {
             return buildMixedUseCompanionItems(
