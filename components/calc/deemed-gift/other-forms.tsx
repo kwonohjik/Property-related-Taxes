@@ -282,7 +282,7 @@ export function ListingGainFields({ form, set }: Props) {
           onFill={(patch) => set({ lgSettlementPrice: String(patch.listedStockAvgPrice) })}
         />
       </div>
-      <CurrencyInput label="정산기준일 1주당 평가가액" value={form.lgSettlementPrice} onChange={(v) => set({ lgSettlementPrice: v })} hint={form.lgEventType === "merger" ? "합병등기일 +3개월 (§63 평가)" : "상장일 +3개월 (§63 평가)"} placeholder="정산기준일 1주당 평가가액 (원)" />
+      <CurrencyInput label="정산기준일 1주당 평가가액" value={form.lgSettlementPrice} onChange={(v) => set({ lgSettlementPrice: v })} hint={form.lgEventType === "merger" ? "합병등기일 +3개월 (§63 평가)" : "상장일 +3개월 (§63 평가)"} />
       {/* §63③ 최대주주 20% 할증 (정산기준일 평가가액에 적용) */}
       <ToggleCard
         tone="amber"
@@ -318,7 +318,7 @@ export function ListingGainFields({ form, set }: Props) {
           ]}
         />
         {form.lgCorpGrowthMode === "direct" ? (
-          <CurrencyInput label="1주당 기업가치 실질증가이익" allowNegative value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤ (기업가치 감소 시 음수 입력)" placeholder="1주당 기업가치 실질증가이익 (원)" />
+          <CurrencyInput label="1주당 기업가치 실질증가이익" allowNegative value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤ (기업가치 감소 시 음수 입력)" />
         ) : (
           <>
             <CurrencyInput label="사업연도별 1주당 순손익액 합계" allowNegative value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1, 결손 시 음수)" />
@@ -385,7 +385,7 @@ export function PropertyServiceUseFields({ form, set }: Props) {
       />
       <CurrencyInput label={isFree ? "재산사용·용역 시가 상당액" : "시가"} value={form.psuMarketValue} onChange={(v) => set({ psuMarketValue: v })} hint={isFree ? "기준금액 1천만원 이상이면 과세" : "기준금액 시가의 30% 이상이면 과세"} placeholder={isFree ? "시가 상당액 (원)" : "시가 (원)"} />
       {!isFree && (
-        <CurrencyInput label="대가" value={form.psuConsideration} onChange={(v) => set({ psuConsideration: v })} placeholder="대가 (원)" />
+        <CurrencyInput label="대가" value={form.psuConsideration} onChange={(v) => set({ psuConsideration: v })} />
       )}
     </ToneCard>
   );
@@ -494,7 +494,7 @@ export function ValueIncreaseFields({ form, set }: Props) {
 
       {/* ③ 금액 */}
       <CurrencyInput label="사유발생일 현재 재산가액" value={form.viCurrentValue} onChange={(v) => set({ viCurrentValue: v })} />
-      <CurrencyInput label="취득가액" value={form.viAcqCost} onChange={(v) => set({ viAcqCost: v })} hint="증여받은 재산은 증여세 과세가액" placeholder="취득가액 (원)" />
+      <CurrencyInput label="취득가액" value={form.viAcqCost} onChange={(v) => set({ viAcqCost: v })} hint="증여받은 재산은 증여세 과세가액" />
       <CurrencyInput label="통상적인 가치상승분" value={form.viNormalIncrease} onChange={(v) => set({ viNormalIncrease: v })} />
       <CurrencyInput label="가치상승기여분" value={form.viContribution} onChange={(v) => set({ viContribution: v })} hint="자본적지출액 등" />
 

@@ -29,8 +29,8 @@ test.describe("증여이익 계산기 — 상세 입력 모달", () => {
 
     // 증여일 + 상세는 모달 안에서 입력
     await fillGiftDate(page);
-    await page.getByPlaceholder("시가 (원)").fill("1000000000");
-    await page.getByPlaceholder("거래대가 (원)").fill("600000000");
+    await page.getByLabel("시가", { exact: true }).fill("1000000000");
+    await page.getByLabel("거래대가", { exact: true }).fill("600000000");
 
     // 확인 닫기 → 요약 카드
     await page.getByTestId("deemed-detail-confirm").click();
@@ -48,14 +48,14 @@ test.describe("증여이익 계산기 — 상세 입력 모달", () => {
     await page.goto("/calc/gift-deemed");
     await page.getByTestId("deemed-type-bargain_transfer").click();
     await fillGiftDate(page);
-    await page.getByPlaceholder("시가 (원)").fill("1000000000");
+    await page.getByLabel("시가", { exact: true }).fill("1000000000");
     await page.getByTestId("deemed-detail-confirm").click();
     await expect(page.getByTestId("deemed-detail-dialog")).toBeHidden();
 
     // 수정 → 재오픈 + 시가 값 보존
     await page.getByTestId("deemed-edit-btn").click();
     await expect(page.getByTestId("deemed-detail-dialog")).toBeVisible();
-    await expect(page.getByPlaceholder("시가 (원)")).toHaveValue(/1,000,000,000/);
+    await expect(page.getByLabel("시가", { exact: true })).toHaveValue(/1,000,000,000/);
   });
 
   test("M-3: 다른 유형 라디오 선택 → 새 유형으로 모달 재오픈", async ({ page }) => {
@@ -69,7 +69,7 @@ test.describe("증여이익 계산기 — 상세 입력 모달", () => {
     // 다른 유형 선택 → onChange 발화 → 보험금 필드로 재오픈
     await page.getByTestId("deemed-type-insurance").click();
     await expect(page.getByTestId("deemed-detail-dialog")).toBeVisible();
-    await expect(page.getByPlaceholder("보험금 (원)")).toBeVisible();
+    await expect(page.getByLabel("보험금", { exact: true })).toBeVisible();
   });
 
   test("M-5: 특수관계인 범위 조회 버튼 → 범위 모달 표시 → 닫기(부모 모달 유지)", async ({ page }) => {
@@ -115,8 +115,8 @@ test.describe("증여이익 계산기 — 상세 입력 모달", () => {
     await page.goto("/calc/gift-deemed");
     await page.getByTestId("deemed-type-bargain_transfer").click();
     // 증여일 미입력, 상세만 채우고 닫기
-    await page.getByPlaceholder("시가 (원)").fill("1000000000");
-    await page.getByPlaceholder("거래대가 (원)").fill("600000000");
+    await page.getByLabel("시가", { exact: true }).fill("1000000000");
+    await page.getByLabel("거래대가", { exact: true }).fill("600000000");
     await page.getByTestId("deemed-detail-confirm").click();
     await expect(page.getByTestId("deemed-detail-dialog")).toBeHidden();
 

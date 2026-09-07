@@ -71,10 +71,10 @@ export function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set
 
       {!multi &&
         (isFreeUse ? (
-          <CurrencyInput label="부동산 가액" value={form.freePropertyValue} onChange={(v) => set({ freePropertyValue: v })} hint="5년 현가합이 1억 이상이면 과세 (연 2%·할인율 10%)" placeholder="부동산 가액 (원)" />
+          <CurrencyInput label="부동산 가액" value={form.freePropertyValue} onChange={(v) => set({ freePropertyValue: v })} hint="5년 현가합이 1억 이상이면 과세 (연 2%·할인율 10%)" />
         ) : (
           <>
-            <CurrencyInput label="차입금" value={form.freeLoanAmount} onChange={(v) => set({ freeLoanAmount: v })} hint="차입이익(차입금×4.6%−이자)이 1천만 이상이면 과세" placeholder="차입금 (원)" />
+            <CurrencyInput label="차입금" value={form.freeLoanAmount} onChange={(v) => set({ freeLoanAmount: v })} hint="차입이익(차입금×4.6%−이자)이 1천만 이상이면 과세" />
             <CurrencyInput label="실제 지급이자" value={form.freeInterest} onChange={(v) => set({ freeInterest: v })} />
           </>
         ))}
@@ -108,7 +108,7 @@ export function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set
           description={`${isFreeUse ? "무상사용기간(5년)" : "담보이용기간(1년)"} 중 중단 시 잔여기간분 경정청구 (§79②1호)`}
         >
           <div className="space-y-2">
-            <CurrencyInput label="증여세 산출세액" value={form.freeRectTax} onChange={(v) => set({ freeRectTax: v })} hint="세대생략 할증(§57) 포함" placeholder="증여세 산출세액 (원)" />
+            <CurrencyInput label="증여세 산출세액" value={form.freeRectTax} onChange={(v) => set({ freeRectTax: v })} hint="세대생략 할증(§57) 포함" />
             <div className="space-y-1" data-testid="free-rect-giftdate-wrap">
               <label className="block text-xs text-emerald-700">당초 증여일({isFreeUse ? "무상사용" : "담보이용"} 개시일)</label>
               <DateInput value={form.freeRectGiftDate} onChange={(v) => set({ freeRectGiftDate: v })} />

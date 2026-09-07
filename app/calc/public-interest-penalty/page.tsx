@@ -22,6 +22,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Button } from "@/components/ui/button";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { PublicInterestStepList } from "@/components/calc/shared/PublicInterestStepList";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { calcPublicInterestPenalty } from "@/lib/tax-engine/deductions/public-interest-penalty";
 import type {
   PublicInterestPenaltyInput,
@@ -211,11 +212,20 @@ export default function PublicInterestPenaltyPage() {
           <div className="space-y-3">
             <AmountField
               label="출연받은 재산의 가액"
-              hint="상증령 §38⑱ — 직전 과세기간·사업연도 종료일 현재 재무상태표·운영성과표 기준, 수익용·수익사업용 운용재산(직접 공익목적사업용 제외)의 [총자산가액 − (부채가액 + 당기순이익)]. 3년 이상 5년 미만 보유 상장주식은 직전 3개, 5년 이상은 직전 5개 종료일 평균액으로 합니다."
+              hint="수익용·수익사업용 운용재산의 「총자산가액 − (부채가액 + 당기순이익)」입니다."
               value={assetBase}
               onChange={setAssetBase}
               testId="pn-asset-base"
             />
+            {/* 산정 기준일·평가 특례는 접힘으로 강등한다 — 입력칸 밑에서 세 줄을 차지하던 것이
+                검증 오류 메시지를 밀어냈다. 인쇄 시에는 본문이 자동 노출된다. */}
+            <CollapsibleHintCard tone="rose" summary="가액 산정 기준 (상증령 §38⑱)">
+              <ul className="list-disc space-y-1 pl-4">
+                <li>직전 과세기간·사업연도 종료일 현재 재무상태표·운영성과표 기준입니다.</li>
+                <li>직접 공익목적사업용 재산은 제외합니다.</li>
+                <li>보유 3년 이상 5년 미만 상장주식은 직전 3개, 5년 이상은 직전 5개 종료일 평균액으로 합니다.</li>
+              </ul>
+            </CollapsibleHintCard>
             <ToggleCard
               tone="sky"
               variant="chip"

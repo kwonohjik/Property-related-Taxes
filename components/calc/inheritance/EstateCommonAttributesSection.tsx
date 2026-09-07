@@ -38,6 +38,7 @@ import { FamilyBusinessCategorySection } from "@/components/calc/inheritance/Fam
 import { CorporateNonBusinessAssetsSection } from "@/components/calc/inheritance/CorporateNonBusinessAssetsSection";
 import { FinancialDeductionChip } from "@/components/calc/inheritance/FinancialDeductionChip";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { HeirAllocationToggleSection } from "@/components/calc/inheritance/HeirAllocationToggleSection";
 import { MajorShareholderStockToggle } from "@/components/calc/inheritance/unlisted-stock-v2/MajorShareholderStockToggle";
 import {
@@ -177,12 +178,23 @@ function EstateCommonAttributesSectionInner({
         <ToggleCard
           tone="amber"
           title="최초상장 + 처분제한 (물납 §74①2호가목 단서)"
-          description="최초로 거래소에 상장되어 물납허가통지서 발송일 전일 현재 자본시장법에 따라 처분이 제한된 경우(보호예수 등)에 켜세요. 켜면 물납 충당 대상에 포함되어 2순위가 되고(§74②2호), 물납 한도에서 차감하지 않습니다(§73①2호 「처분이 제한된 것은 제외한다」). 결정세액에는 영향이 없습니다."
+          description="최초로 거래소에 상장되어 물납허가통지서 발송일 전일 현재 자본시장법에 따라 처분이 제한된 경우(보호예수 등)에 켜세요."
           checked={item.isNewlyListedDisposalRestricted === true}
           onCheckedChange={(on) =>
             onUpdate({ ...item, isNewlyListedDisposalRestricted: on })
           }
         />
+      )}
+      {/* 「켜면 무슨 일이 일어나는가」는 접힘으로 강등한다 — 토글 설명은 «언제 켜는가»만 남긴다.
+          ToggleCard children은 ON일 때만 렌더되므로 형제로 둔다(꺼져 있을 때도 읽을 수 있어야 한다). */}
+      {item.category === "listed_stock" && (
+        <CollapsibleHintCard tone="amber" summary="켜면 달라지는 것 (물납 충당순위·한도)">
+          <ul className="list-disc space-y-1 pl-4">
+            <li>물납 충당 대상에 포함되어 <strong>2순위</strong>가 됩니다(상증령 §74②2호).</li>
+            <li>물납 한도에서 차감하지 않습니다(§73①2호 「처분이 제한된 것은 제외한다」).</li>
+            <li>결정세액에는 영향이 없습니다.</li>
+          </ul>
+        </CollapsibleHintCard>
       )}
 
       {/* hidden_expandable 펼침 영역 */}

@@ -27,7 +27,7 @@ const confirm = (page: Page) => page.getByTestId("deemed-detail-confirm").click(
 test.describe("금전무상대출 §41의4② 다년 + §43² 합산", () => {
   test("[PERIOD-1] 사례1 10억·2022.1.2~2023.12.31·연3% → 1년차 16,000,000 + 2년차 15,956,164", async ({ page }) => {
     await openLoan(page);
-    await page.getByPlaceholder("대출금액 (원)").fill("1000000000");
+    await page.getByLabel("대출금액", { exact: true }).fill("1000000000");
     await page.getByPlaceholder("실제 지급이자 (무이자면 빈칸)").fill("30000000");
     await fillDate(page, "loan-start-date", "2022", "1", "2");
     await fillDate(page, "loan-end-date", "2023", "12", "31");
@@ -45,17 +45,17 @@ test.describe("금전무상대출 §41의4② 다년 + §43² 합산", () => {
     // 행 0 (㉮ 2022.5.4 3억 이자900만)
     await fillDate(page, "loan-item-date-0", "2022", "5", "4");
     const row0 = page.getByTestId("loan-item-0");
-    await row0.getByPlaceholder("대출금액 (원)").fill("300000000");
+    await row0.getByLabel("대출금액", { exact: true }).fill("300000000");
     await row0.getByPlaceholder("실제 지급이자 (무이자면 빈칸)").fill("9000000");
     // 행 1 (㉯ 2022.9.20 1억 무상)
     await page.getByTestId("loan-item-add").click();
     await fillDate(page, "loan-item-date-1", "2022", "9", "20");
-    await page.getByTestId("loan-item-1").getByPlaceholder("대출금액 (원)").fill("100000000");
+    await page.getByTestId("loan-item-1").getByLabel("대출금액", { exact: true }).fill("100000000");
     // 행 2 (㉰ 2023.4.25 5억 이자1,300만)
     await page.getByTestId("loan-item-add").click();
     await fillDate(page, "loan-item-date-2", "2023", "4", "25");
     const row2 = page.getByTestId("loan-item-2");
-    await row2.getByPlaceholder("대출금액 (원)").fill("500000000");
+    await row2.getByLabel("대출금액", { exact: true }).fill("500000000");
     await row2.getByPlaceholder("실제 지급이자 (무이자면 빈칸)").fill("13000000");
     await confirm(page);
     await page.getByTestId("deemed-calc-btn").click();
@@ -67,7 +67,7 @@ test.describe("금전무상대출 §41의4② 다년 + §43² 합산", () => {
 
   test("[회귀] 단건 무상 3억 (기간·다건 없음) → 13,800,000", async ({ page }) => {
     await openLoan(page);
-    await page.getByPlaceholder("대출금액 (원)").fill("300000000");
+    await page.getByLabel("대출금액", { exact: true }).fill("300000000");
     await confirm(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("13,800,000");

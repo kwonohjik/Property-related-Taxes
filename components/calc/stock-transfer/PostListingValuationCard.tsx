@@ -357,12 +357,10 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                     <div className="space-y-3">
                       <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required allowNegative
                         value={form.listingYearNetIncomePerShare}
-                        onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
-                        placeholder="상장일 직전 사업연도 1주당 순손익가치" />
+                        onChange={(v) => onChange({ listingYearNetIncomePerShare: v })} />
                       <CurrencyInput label="상장일 직전 사업연도 1주당 순자산가치" required allowNegative
                         value={form.listingYearNetAssetPerShare}
-                        onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
-                        placeholder="상장일 직전 사업연도 1주당 순자산가치" />
+                        onChange={(v) => onChange({ listingYearNetAssetPerShare: v })} />
                     </div>
                   </div>
                   <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
@@ -370,12 +368,10 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                     <div className="space-y-3">
                       <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
                         value={form.acquisitionYearNetIncomePerShare}
-                        onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
-                        placeholder="취득일 직전 사업연도 1주당 순손익가치" />
+                        onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })} />
                       <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required allowNegative
                         value={form.acquisitionYearNetAssetPerShare}
-                        onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
-                        placeholder="취득일 직전 사업연도 1주당 순자산가치" />
+                        onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })} />
                     </div>
                   </div>
                 </>
@@ -423,12 +419,10 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                   <div className="space-y-3">
                     <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
                       value={form.acquisitionYearNetIncomePerShare}
-                      onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })}
-                      placeholder="취득일 직전 사업연도 1주당 순손익가치" />
+                      onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })} />
                     <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required allowNegative
                       value={form.acquisitionYearNetAssetPerShare}
-                      onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })}
-                      placeholder="취득일 직전 사업연도 1주당 순자산가치" />
+                      onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })} />
                   </div>
                 </div>
               )}

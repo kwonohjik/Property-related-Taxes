@@ -40,8 +40,8 @@ test.describe("§39 증자 이익 cap-table", () => {
 
     // 증자 개요: 고가발행, ㉮ 10,000 / ㉰ 30,000
     await page.getByTestId("ci-alloc-direction-high").click();
-    await page.getByPlaceholder("증자 전 1주당 평가가액 (원)").fill("10000");
-    await page.getByPlaceholder("신주 1주당 인수가액 (원)").fill("30000");
+    await page.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("10000");
+    await page.getByLabel("신주 1주당 인수가액", { exact: true }).fill("30000");
 
     // 4행 (INITIAL 2행 + 2 추가)
     await page.getByTestId("ci-alloc-add-row").click();
@@ -82,9 +82,9 @@ test.describe("§39 증자 이익 cap-table", () => {
     await d.getByLabel("연도").fill("2025");
     await d.getByLabel("월").fill("7");
     await d.getByLabel("일", { exact: true }).fill("1");
-    await d.getByPlaceholder("증자 전 1주당 평가가액 (원)").fill("20000");
+    await d.getByLabel("증자 전 1주당 평가가액", { exact: true }).fill("20000");
     await d.getByPlaceholder("증자 전 발행주식총수").fill("100000");
-    await d.getByPlaceholder("신주 1주당 인수가액 (원)").fill("10000");
+    await d.getByLabel("신주 1주당 인수가액", { exact: true }).fill("10000");
     await d.getByPlaceholder("증자 주식수").fill("100000");
     await d.getByPlaceholder("배정받은 실권주수").fill("60000");
     // 「상증법」§39① 괄호의 주어가 「주권상장법인이」라 공모 제외는 **상장이 AND 조건**이다(anchor PO-9).
