@@ -120,7 +120,6 @@ export function CarryoverEstimationSection({
               label=""
               value={c.donorStandardPriceAtAcquisition}
               onChange={(v) => onCarryoverChange({ donorStandardPriceAtAcquisition: v })}
-              placeholder="취득시 기준시가 (원)"
             />
           </FieldCard>
 
@@ -132,7 +131,6 @@ export function CarryoverEstimationSection({
               label=""
               value={c.donorStandardPriceAtTransfer}
               onChange={(v) => onCarryoverChange({ donorStandardPriceAtTransfer: v })}
-              placeholder="양도시 기준시가 (원)"
             />
           </FieldCard>
 

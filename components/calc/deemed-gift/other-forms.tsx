@@ -267,7 +267,7 @@ export function ListingGainFields({ form, set }: Props) {
           maxLength={6}
           value={form.lgStockCode}
           onChange={(e) => set({ lgStockCode: e.target.value })}
-          placeholder="종목코드 6자리 (예: 005930)"
+          placeholder="6자리 숫자"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           data-testid="lg-stock-code"
         />
@@ -321,7 +321,7 @@ export function ListingGainFields({ form, set }: Props) {
           <CurrencyInput label="1주당 기업가치 실질증가이익" allowNegative value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤ (기업가치 감소 시 음수 입력)" placeholder="1주당 기업가치 실질증가이익 (원)" />
         ) : (
           <>
-            <CurrencyInput label="사업연도별 1주당 순손익액 합계" allowNegative value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1, 결손 시 음수)" placeholder="1주당 순손익액 합계 (원)" />
+            <CurrencyInput label="사업연도별 1주당 순손익액 합계" allowNegative value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1, 결손 시 음수)" />
             <CurrencyInput label="사업연도개시일~상장전일 월수" value={form.lgMonthsBusinessStart} onChange={(v) => set({ lgMonthsBusinessStart: v })} hint="분모 월수 (1월미만은 1월)" placeholder="월수" />
             <CurrencyInput label="증여·취득일~정산기준일 월수" value={form.lgMonthsAcqToSettlement} onChange={(v) => set({ lgMonthsAcqToSettlement: v })} hint="곱수 월수 (령§31의3⑤2, 1월미만은 1월)" placeholder="월수" />
             <p className="text-xs font-medium text-emerald-800" data-testid="lg-corp-growth-echo">
@@ -409,14 +409,14 @@ export function OrgChangeFields({ form, set }: Props) {
       />
       {isShare ? (
         <>
-          <CurrencyInput label="변동 전 지분" value={form.ocPreShares} onChange={(v) => set({ ocPreShares: v })} placeholder="변동 전 지분(주식수)" />
-          <CurrencyInput label="변동 후 지분" value={form.ocPostShares} onChange={(v) => set({ ocPostShares: v })} placeholder="변동 후 지분(주식수)" />
-          <CurrencyInput label="변동 후 1주당 가액" value={form.ocPostPerShare} onChange={(v) => set({ ocPostPerShare: v })} placeholder="변동 후 1주당 가액 (원)" />
+          <CurrencyInput label="변동 전 지분" value={form.ocPreShares} onChange={(v) => set({ ocPreShares: v })} placeholder="주식수" />
+          <CurrencyInput label="변동 후 지분" value={form.ocPostShares} onChange={(v) => set({ ocPostShares: v })} placeholder="주식수" />
+          <CurrencyInput label="변동 후 1주당 가액" value={form.ocPostPerShare} onChange={(v) => set({ ocPostPerShare: v })} />
         </>
       ) : (
         <>
-          <CurrencyInput label="변동 전 가액" value={form.ocPreValue} onChange={(v) => set({ ocPreValue: v })} placeholder="변동 전 가액 (원)" />
-          <CurrencyInput label="변동 후 가액" value={form.ocPostValue} onChange={(v) => set({ ocPostValue: v })} placeholder="변동 후 가액 (원)" />
+          <CurrencyInput label="변동 전 가액" value={form.ocPreValue} onChange={(v) => set({ ocPreValue: v })} />
+          <CurrencyInput label="변동 후 가액" value={form.ocPostValue} onChange={(v) => set({ ocPostValue: v })} />
         </>
       )}
       <CurrencyInput label="변동 전 해당 재산가액 (기준금액 산정)" value={form.ocBaseValue} onChange={(v) => set({ ocBaseValue: v })} hint="기준금액 = min(변동전 재산가액 × 30%, 3억)" placeholder="변동 전 재산가액 (원)" />
@@ -493,10 +493,10 @@ export function ValueIncreaseFields({ form, set }: Props) {
       </div>
 
       {/* ③ 금액 */}
-      <CurrencyInput label="사유발생일 현재 재산가액" value={form.viCurrentValue} onChange={(v) => set({ viCurrentValue: v })} placeholder="사유발생일 현재 재산가액 (원)" />
+      <CurrencyInput label="사유발생일 현재 재산가액" value={form.viCurrentValue} onChange={(v) => set({ viCurrentValue: v })} />
       <CurrencyInput label="취득가액" value={form.viAcqCost} onChange={(v) => set({ viAcqCost: v })} hint="증여받은 재산은 증여세 과세가액" placeholder="취득가액 (원)" />
-      <CurrencyInput label="통상적인 가치상승분" value={form.viNormalIncrease} onChange={(v) => set({ viNormalIncrease: v })} placeholder="통상적인 가치상승분 (원)" />
-      <CurrencyInput label="가치상승기여분" value={form.viContribution} onChange={(v) => set({ viContribution: v })} hint="자본적지출액 등" placeholder="가치상승기여분 (원)" />
+      <CurrencyInput label="통상적인 가치상승분" value={form.viNormalIncrease} onChange={(v) => set({ viNormalIncrease: v })} />
+      <CurrencyInput label="가치상승기여분" value={form.viContribution} onChange={(v) => set({ viContribution: v })} hint="자본적지출액 등" />
 
       {/* ④ 기간 (5년 요건 echo) */}
       <FieldCard label="취득일" hint="취득일부터 5년 이내 가치증가사유 발생 여부 표시">

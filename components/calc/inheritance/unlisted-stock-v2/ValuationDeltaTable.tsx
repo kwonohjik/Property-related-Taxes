@@ -182,7 +182,7 @@ export function ValuationDeltaTable({
                     onChange={(v) =>
                       updateRow(row.rowId, { evaluationAmount: Number(v.replace(/,/g, "")) || 0 })
                     }
-                    placeholder="상증법 평가액"
+                    placeholder="상증법"
                     hideUnit
                   />
                   <CurrencyInput
@@ -191,7 +191,7 @@ export function ValuationDeltaTable({
                     onChange={(v) =>
                       updateRow(row.rowId, { bookAmount: Number(v.replace(/,/g, "")) || 0 })
                     }
-                    placeholder="장부금액"
+                    placeholder="금액"
                     hideUnit
                   />
                   <div
@@ -261,7 +261,7 @@ export function ValuationDeltaTable({
                     onChange={(v) =>
                       updateRow(row.rowId, { evaluationAmount: Number(v.replace(/,/g, "")) || 0 })
                     }
-                    placeholder="상증법 평가액"
+                    placeholder="상증법"
                     hideUnit
                   />
                   <CurrencyInput
@@ -270,7 +270,7 @@ export function ValuationDeltaTable({
                     onChange={(v) =>
                       updateRow(row.rowId, { bookAmount: Number(v.replace(/,/g, "")) || 0 })
                     }
-                    placeholder="장부금액"
+                    placeholder="금액"
                     hideUnit
                   />
                   <div

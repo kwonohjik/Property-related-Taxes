@@ -684,7 +684,7 @@ export function Step5({
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        자산별로 해당 감면을 선택하세요. 조특법 §127⑦ 규정에 따라 유리한 감면이 자동 선택됩니다.
+        자산별로 해당 감면을 선택하세요. 조특법 §127⑦ 중복배제에 따라 감면세액이 큰 것 하나만 적용됩니다.
       </p>
 
       {/* 감면 조문 인벤토리 안내 — 개수는 ALL_REDUCTION_IDS(24)와 일치시킬 것 (D9-08) */}

@@ -46,7 +46,12 @@ describe("PFY — 비상장 보충적 평가 입력은 «직전 사업연도» �
   // ⚠️ `getByRole("textbox", { name })`을 쓰지 말 것 — 이 카드의 `<label>`은 `for`로 input과
   //    연결돼 있지 않아 RTL이 접근성 이름을 만들지 못한다(실측: aria-label·id 모두 null).
   //    Playwright는 관대해 E2E에서는 동작하므로 **두 층의 셀렉터가 다르다**.
-  //    여기서는 라벨 텍스트와 placeholder를 직접 본다.
+  //    여기서는 **라벨 텍스트**를 직접 본다.
+  //
+  // 🔴 2026-09-07 정정 — 종전에는 같은 문구를 `placeholder`로도 단언했다. 그런데 그 placeholder는
+  //    **라벨을 그대로 되풀이한 것**이라 hint 삭제 캠페인 3라운드에서 지웠다(라벨+단위+placeholder
+  //    3중 중복). 이 describe의 제목이 말하는 것은 「**라벨**에 드러난다」이므로, 단언도 라벨
+  //    한 축으로 모은다 — 지워야 할 중복을 테스트가 붙잡고 있으면 그 중복은 영원히 남는다.
   const LABELS = [
     "상장일 직전 사업연도 1주당 순손익가치",
     "상장일 직전 사업연도 1주당 순자산가치",
@@ -56,7 +61,6 @@ describe("PFY — 비상장 보충적 평가 입력은 «직전 사업연도» �
 
   it.each(LABELS)("PFY-1 simple 모드 — 「%s」 입력이 있다", (label) => {
     renderCard({ unlistedDetailMode: "simple" });
-    expect(screen.getByPlaceholderText(label)).toBeTruthy();
     // 라벨 텍스트에는 required 표시(*)가 붙는다 — 부분 일치로 본다.
     expect(screen.getByText((_, el) => el?.tagName === "LABEL" && (el.textContent ?? "").startsWith(label))).toBeTruthy();
   });
@@ -70,17 +74,17 @@ describe("PFY — 비상장 보충적 평가 입력은 «직전 사업연도» �
     renderCard({ unlistedDetailMode: "simple" });
     // 🔑 구별력 확보 — 대조군이 같은 렌더에서 실제로 잡히는지 먼저 확인한다.
     //    (부정 단언은 «대상이 애초에 없을 때»도 통과한다)
-    expect(screen.getByPlaceholderText(LABELS[0])).toBeTruthy();
-    expect(screen.queryByPlaceholderText(stale)).toBeNull();
-    // 라벨 노드에도 종전 문구가 «단독으로» 남아 있지 않아야 한다.
-    // ("상장일 직전 사업연도 1주당 순손익가치"는 "상장연도…"를 부분문자열로 갖지 않는다)
     const labelTexts = Array.from(document.querySelectorAll("label")).map((l) => l.textContent ?? "");
+    expect(labelTexts.some((t) => t.startsWith(LABELS[0]))).toBe(true);
+    // 종전 문구가 «단독으로» 남아 있지 않아야 한다.
+    // ("상장일 직전 사업연도 1주당 순손익가치"는 "상장연도…"를 부분문자열로 갖지 않는다)
     expect(labelTexts.some((t) => t.startsWith(stale))).toBe(false);
   });
 
   it("PFY-3 listing_only 모드의 취득일 축 직접 입력도 같은 라벨을 쓴다", () => {
     renderCard({ unlistedDetailMode: "listing_only" });
-    expect(screen.getByPlaceholderText("취득일 직전 사업연도 1주당 순손익가치")).toBeTruthy();
-    expect(screen.getByPlaceholderText("취득일 직전 사업연도 1주당 순자산가치")).toBeTruthy();
+    const labelTexts = Array.from(document.querySelectorAll("label")).map((l) => l.textContent ?? "");
+    expect(labelTexts.some((t) => t.startsWith("취득일 직전 사업연도 1주당 순손익가치"))).toBe(true);
+    expect(labelTexts.some((t) => t.startsWith("취득일 직전 사업연도 1주당 순자산가치"))).toBe(true);
   });
 });

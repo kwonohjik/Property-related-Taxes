@@ -240,7 +240,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
               void search(query);
             }
           }}
-          placeholder="도로명 또는 지번 주소 입력 (예: 테헤란로 123)"
+          placeholder="도로명 또는 지번 주소 입력"
           disabled={disabled}
           className="w-full rounded-md border border-input bg-background px-3 py-2 pr-24 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         />

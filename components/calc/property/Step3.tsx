@@ -99,7 +99,7 @@ export function Step3({ form, onChange }: Props) {
             label="직전연도 과세표준"
             value={form.previousYearTaxBase}
             onChange={(v) => onChange({ previousYearTaxBase: v })}
-            placeholder="직전연도 과세표준 금액"
+            placeholder="금액"
           />
           <p className="text-xs text-muted-foreground">
             직전연도 세율로 세액상당액을 재산정해 150% 상한을 적용합니다.

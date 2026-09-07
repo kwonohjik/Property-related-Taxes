@@ -130,7 +130,7 @@ export function CarryoverGiftExclusionSection({
         <ToggleCard
           tone="rose"
           title="§97조의2 ④ — 가업상속공제 적용 자산"
-          description="가업상속공제를 적용받은 자산 — 선택 시 계산이 차단됩니다 (현재 버전 미지원)"
+          description="가업상속공제를 적용받은 자산 — 이 계산기에서는 지원하지 않아 선택 시 계산이 차단됩니다"
           checked={exclusionDeclared.isFamilyBusinessInheritedAsset}
           onCheckedChange={(v) => onChange({ isFamilyBusinessInheritedAsset: v })}
         />

@@ -124,7 +124,7 @@ export function InstallmentReceiptsMatrix({
               <DecimalInput
                 value={row.exchangeRate}
                 onChange={(v) => updateRow(idx, { exchangeRate: v })}
-                placeholder="환율 (예: 1350.00)"
+                placeholder="기준환율"
               />
 
               {/* 원화 환산 미리보기 + 삭제 */}

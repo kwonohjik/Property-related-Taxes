@@ -183,7 +183,6 @@ export function CorporateNonBusinessAssetsSection({
             value={assets?.currentCash ? String(assets.currentCash) : ""}
             onChange={(v) => updateAssets({ currentCash: parseKrw(v) })}
             hint="요구불예금 + 취득일부터 만기 3개월 이내 금융상품 포함"
-            placeholder="보유현금 입력 (원)"
           />
           <p className="text-micro font-medium text-sky-700 dark:text-sky-300">
             직전 5개 사업연도 말 현금 (입력한 칸의 평균 사용)

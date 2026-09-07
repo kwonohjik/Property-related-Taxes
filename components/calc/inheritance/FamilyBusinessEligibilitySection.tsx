@@ -252,8 +252,8 @@ export function FamilyBusinessEligibilitySection({
             </div>
             {/* 다. 피상속인 */}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <FbTextField label="대표이사 재직기간" placeholder="예: 20년" value={familyBusiness.decedentCeoTenure} onChange={(v) => update({ decedentCeoTenure: v })} />
-              <FbTextField label="특수관계인포함 지분율" placeholder="예: 60%" value={familyBusiness.decedentShareRatio} onChange={(v) => update({ decedentShareRatio: v })} />
+              <FbTextField label="대표이사 재직기간" placeholder="재직 연수" value={familyBusiness.decedentCeoTenure} onChange={(v) => update({ decedentCeoTenure: v })} />
+              <FbTextField label="특수관계인포함 지분율" placeholder="지분율" value={familyBusiness.decedentShareRatio} onChange={(v) => update({ decedentShareRatio: v })} />
             </div>
             {/* 라. 가업상속인 */}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

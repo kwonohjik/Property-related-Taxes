@@ -241,7 +241,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={asset.residentialFloorArea}
               onChange={(v) => onFloorAreaChange({ residentialFloorArea: v })}
-              placeholder="주택 연면적"
               unit="㎡"
               data-testid="mixed-area-residential-floor"
             />
@@ -254,7 +253,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={asset.nonResidentialFloorArea}
               onChange={(v) => onFloorAreaChange({ nonResidentialFloorArea: v })}
-              placeholder="상가 연면적"
               unit="㎡"
               data-testid="mixed-area-commercial-floor"
             />
@@ -273,7 +271,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={show(fpOv, derived.residentialFootprintArea, fpComputable)}
               onChange={(v) => onChange({ mixedResidentialFootprintOverride: v })}
-              placeholder="주택 정착면적"
               unit="㎡"
               data-testid="mixed-area-residential-footprint"
             />
@@ -292,7 +289,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={bufferValid ? commercialFootprintRaw! : fpComputable ? String(commercialFootprint) : ""}
               onChange={onCommercialFootprintChange}
-              placeholder="상가 정착면적"
               unit="㎡"
               data-testid="mixed-area-commercial-footprint"
             />
@@ -311,7 +307,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={show(landOv, derived.residentialLandArea, landComputable)}
               onChange={(v) => onChange({ mixedResidentialLandAreaOverride: v })}
-              placeholder="주택 부수토지"
               unit="㎡"
               data-testid="mixed-area-residential-land"
             />
@@ -329,7 +324,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={show(commLandOv, derived.commercialLandArea, landComputable)}
               onChange={(v) => onChange({ mixedCommercialLandAreaOverride: v })}
-              placeholder="상가 부수토지"
               unit="㎡"
               data-testid="mixed-area-commercial-land"
             />
