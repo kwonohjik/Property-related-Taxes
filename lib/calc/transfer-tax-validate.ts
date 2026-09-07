@@ -16,6 +16,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
+import { isHousingLike } from "@/lib/calc/housing-like-asset";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { rightThreeYearExceptionVisible } from "@/lib/calc/right-three-year-exception-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -527,7 +528,12 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
 
     // ⑧ 세대 보유 분양권·입주권 — 각 행 취득일 필수 (자동 안분 fallback 금지)
     // 위 houses와 같은 이유로 한시배제 skip을 두지 않는다 — §89②는 비과세 축이고 ⑤도 열려 있다.
-    const presaleRights = form.presaleRights ?? [];
+    // 🔴 단, **주택 계열 자산일 때만** 요구한다. ⑤는 `isHousingLike` 안에서만 이 위젯을 열고
+    //    (`Step4.tsx:409`), ④도 같은 술어로 전송을 막는다(`presale-rights-payload.ts:62`).
+    //    자산 종류를 주택→토지로 바꾸면 행은 남는데 삭제 UI가 사라져 **막다른 길**이 됐다.
+    const presaleRights = isHousingLike(form.assets?.[0]?.assetKind ?? "")
+      ? (form.presaleRights ?? [])
+      : [];
     for (let i = 0; i < presaleRights.length; i++) {
       if (!presaleRights[i].acquisitionDate)
         issues.push({ step, message: `분양권·입주권 ${i + 1}: 취득일을 입력하세요.` });

@@ -396,8 +396,16 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             if (m5 === null || m5 === undefined)
               return fail(`${label} 적용: 임대주택 5호 이상 임대 여부를 선택하세요 (조특령 §97①).`);
             // 구간을 열어 놓고 비워 두면 엔진에 NaN이 흘러가므로 여기서 차단한다.
-            const below = (r as { belowMin5UnitsPeriods?: { startDate: string; endDate: string }[] })
-              .belowMin5UnitsPeriods;
+            // 🔴 단, **「5호 이상」일 때만** 요구한다 — ⑤는 이 구간 편집·삭제 UI를
+            //    `hasMin5RentalUnits === true` 안에만 두므로(`Rental97MainInputForm.tsx:246`),
+            //    「미해당」을 고른 뒤에는 남은 빈 행을 지울 수단이 사라져 **막다른 길**이 됐다.
+            //    엔진도 `hasMin5RentalUnits !== true`면 감면 자체를 적용하지 않아
+            //    (`rental-97-main.ts:107`) 그 구간은 계산에 도달하지 않는다.
+            const below =
+              m5 === true
+                ? (r as { belowMin5UnitsPeriods?: { startDate: string; endDate: string }[] })
+                    .belowMin5UnitsPeriods
+                : undefined;
             if (below?.some((p) => !p.startDate || !p.endDate))
               return fail(
                 `${label} 적용: 5호 미만 임대 기간의 시작일·종료일을 모두 입력하세요 (조특령 §97⑤4호). 해당 없으면 구간을 삭제하세요.`,

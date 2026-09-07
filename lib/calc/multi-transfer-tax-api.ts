@@ -11,6 +11,7 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import { toEngineReductions, toSelfCultivatedExpropriatedLand, toRentalHousingExceptionApi, buildPre1990LandPayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
+import { provisoGate, effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
 import { buildHouseholdSpecialPayload, buildLateFilingPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
@@ -21,6 +22,7 @@ import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-perio
 import { isHousingLike } from "./housing-like-asset";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
+import { selfBuiltActive } from "./self-built-scope";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -126,6 +128,17 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
   // ⑬ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 토글 OFF 시 undefined, body에서 제외
   const rhPayload = primary ? toRentalHousingExceptionApi(primary) : undefined;
 
+  // ⑬ §154① 단서 사유 — 단건 ④와 **같은 두 leaf**로 정규화한다(아래 spread에서 소비).
+  const effectiveProviso = effectiveProvisoReason(
+    provisoGate({
+      isOneHousehold: form.isOneHousehold,
+      isHousing: primaryKind === "housing",
+      householdHousingCount: form.householdHousingCount,
+      temporaryTwoHouseSpecial: form.temporaryTwoHouseSpecial,
+    }).mode,
+    form.provisoReason,
+  );
+
   // 주의: 부담부증여·재개발(§166)·겸용주택·이월과세(§97의2)·일반건물/상업용 환산·PHD(영 §164⑦)·
   // 다필지·토지/건물 분리·가업상속(§97의2④)·용도변경(§95⑤·⑥)·건별 다자산(companion)은 다건 합산 route(⑭)가
   // 매핑하지 않으므로 여기서 전송하지 않는다 — validateMultiSupportedMode에서 명시 차단.
@@ -169,6 +182,11 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     standardPriceAtAcquisition: isEstimated ? parseAmount(primary?.standardPriceAtAcq ?? "") : undefined,
     standardPriceAtTransfer: isEstimated ? parseAmount(primary?.standardPriceAtTransfer ?? "") : undefined,
     // ⑬ §164⑧ 동일조정기간 환산 — 단건과 같은 빌더(단일 소스)
+    // 🔴 ⑬ 법정동코드 10자리 — 단건 ④(`transfer-tax-api.ts:421`)에만 있었다.
+    //    없으면 엔진이 `isRegulatedArea` boolean fallback으로 떨어져 조정대상지역 **정밀 판정**
+    //    (`isRegulatedByBjdCode` — 지정·해제 이력 기준)이 통째로 빠진다. houses 배열 안에는
+    //    이미 싣고 있었는데(`:65`) 최상위만 빠져, 같은 값이 층마다 다르게 쓰였다.
+    regionCode: primary?.regionCode || form.regionCode || undefined,
     sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(primary),
     acquisitionMethod: isSalesCase ? "salesCase" : isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual",
     // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고
@@ -179,9 +197,17 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     appraisalValue: isAppraisal ? (ratioed(primary?.fixedAcquisitionPrice) ?? 0) : undefined,
     // ④⑬ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
     similarSalesValue: isSalesCase ? ratioed(primary?.similarSalesValue) : undefined,
-    isSelfBuilt: primary?.isSelfBuilt || undefined,
+    // 자산 종류 게이트는 ⑤·⑧과 같은 leaf(`selfBuiltActive`) — 단건 ④와 같은 것.
+    isSelfBuilt: selfBuiltActive(primary) || undefined,
     buildingType: primary?.buildingType || undefined,
-    constructionDate: primary?.isSelfBuilt && primary?.constructionDate ? primary.constructionDate : undefined,
+    constructionDate: selfBuiltActive(primary) && primary?.constructionDate ? primary.constructionDate : undefined,
+    // 🔴 ⑧이 증축에서 **필수로 요구하는** 값인데 다건 ④만 만들지 않았다
+    //    (`transfer-tax-validate-acquisition.ts` — 「증축부분 취득(완공)당시 기준시가」).
+    //    면적만 실리고 base가 빠지면 §114조의2 환산이 조용히 다른 값을 낸다. 단건 ④와 같은 게이트.
+    extensionStdPriceAtAcquisition:
+      primary?.buildingType === "extension" && primary?.extensionStdPriceAtAcquisition
+        ? parseAmount(primary.extensionStdPriceAtAcquisition) || undefined
+        : undefined,
     extensionFloorArea:
       primary?.buildingType === "extension" && primary?.extensionFloorArea
         ? parseFloat(primary.extensionFloorArea)
@@ -262,10 +288,13 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
-    ...(form.provisoReason
+    // 🔴 §154① 단서 reason 정규화 — 단건 ④(`transfer-tax-api.ts:521`)와 **같은 두 leaf**를 쓴다.
+    //    종전 다건은 `form.provisoReason`을 게이트 없이 그대로 실어, 카드가 숨겨진 상태(mode=null)나
+    //    일시적 2주택에서 무효인 사유(나·다목·5호)까지 엔진에 도달했다 — 화면에 없는 선언이 계산을 바꿨다.
+    ...(effectiveProviso
       ? {
           oneHouseExemptionProviso: {
-            reason: form.provisoReason,
+            reason: effectiveProviso,
             ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
             ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
             ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),

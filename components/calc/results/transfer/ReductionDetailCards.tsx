@@ -212,6 +212,7 @@ export function ReductionDetailCards({
               : "장기보유특별공제 특례 (§97의3)"
           }
           calculatedTax={calculatedTax}
+          aggregatedContext={aggregatedContext}
         />
       )}
       {result.rental97TaxDetail && excludedByOverlap("long_term_rental") && (
@@ -222,6 +223,7 @@ export function ReductionDetailCards({
           detail={result.rental97TaxDetail}
           effectLabel="장기임대주택 세액감면"
           calculatedTax={calculatedTax}
+          aggregatedContext={aggregatedContext}
         />
       )}
       {/* §99의4 농어촌·고향주택 주택수 제외 (2026-06-11) */}

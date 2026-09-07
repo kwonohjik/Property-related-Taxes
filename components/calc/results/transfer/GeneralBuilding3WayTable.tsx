@@ -46,11 +46,19 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
       <span className={`ml-1 text-micro ${tone}`}>{estimated ? "(환산)" : "(실거래가)"}</span>
     );
 
-  // 통산 분배: 건물1 결손(음수 income)이 토지·건물2로 안분 흡수됨
-  const lossOffset1 = bld1.income < 0 ? Math.abs(bld1.income) : 0;
-  // 토지·건물2의 통산 흡수분 = lossOffsetFromOtherGroup (aggregate가 채움)
-  const landOffsetAbsorbed = land.lossOffsetFromSameGroup + land.lossOffsetFromOtherGroup;
-  const bld2OffsetAbsorbed = bld2.lossOffsetFromSameGroup + bld2.lossOffsetFromOtherGroup;
+  /**
+   * 통산 분배 — **결손이 어느 자산에서 나오든** 같은 규칙으로 읽는다.
+   *
+   * 🔴 종전에는 「건물1이 결손」을 하드코딩했다(`lossOffset1`만 income<0을 보고, 토지·건물2는
+   *    흡수분만 봤다). 토지나 건물2가 결손이면 그 자산의 기여분이 「-」로 사라지고, 흡수한 쪽은
+   *    흡수분이 있는데도 부호가 뒤집혀 **합계 0이 거짓**이 됐다(2026-09-07 대장 재대조).
+   *    결손 자산은 흡수분이 0이므로 한 함수로 세 자산을 모두 처리할 수 있다.
+   */
+  const offsetOf = (a: { income: number; lossOffsetFromSameGroup: number; lossOffsetFromOtherGroup: number }) => {
+    const contributed = a.income < 0 ? Math.abs(a.income) : 0;
+    const absorbed = a.lossOffsetFromSameGroup + a.lossOffsetFromOtherGroup;
+    return { contributed, absorbed };
+  };
 
   const fmt = (n: number) => {
     if (n === 0) return "0";
@@ -59,17 +67,23 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
       : formatKRW(n);
   };
 
-  // 결손 통산 분배량 (토지·건물2가 흡수한 양, 건물1은 결손 전액)
-  const landOffsetRow = landOffsetAbsorbed > 0 ? `△${formatKRW(landOffsetAbsorbed)}` : "-";
-  const bld1OffsetRow = lossOffset1 > 0 ? `+${formatKRW(lossOffset1)}` : "-";
-  const bld2OffsetRow = bld2OffsetAbsorbed > 0 ? `△${formatKRW(bld2OffsetAbsorbed)}` : "-";
+  // 결손 통산 분배량 — 결손 기여는 `+`(emerald), 흡수는 `△`(rose).
+  const offsetCell = (a: Parameters<typeof offsetOf>[0]) => {
+    const { contributed, absorbed } = offsetOf(a);
+    if (contributed > 0) return { text: `+${formatKRW(contributed)}`, tone: "text-emerald-600" };
+    if (absorbed > 0) return { text: `△${formatKRW(absorbed)}`, tone: "text-rose-600" };
+    return { text: "-", tone: "text-muted-foreground" };
+  };
+  const landOffsetCell = offsetCell(land);
+  const bld1OffsetCell = offsetCell(bld1);
+  const bld2OffsetCell = offsetCell(bld2);
 
   return (
     <div className="rounded-lg border bg-card p-4 shadow-sm">
       <h3 className="font-semibold text-base mb-1">일반건물 3-자산 요약 (영 §102② 결손 통산)</h3>
       <p className="text-xs text-muted-foreground mb-3">
         토지(1001) · 건물1(3001) · 증축건물2(3002) 소득 라인을 분리 표시.
-        자산별 취득가액 산정 방식은 취득가액 옆에 표기됩니다. 건물1 결손이 토지·건물2에 안분 흡수됩니다.
+        자산별 취득가액 산정 방식은 취득가액 옆에 표기됩니다. 결손이 난 자산의 손실은 나머지 자산의 양수 소득에 안분 흡수됩니다.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -182,9 +196,9 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
               <td className="py-1 pr-2 text-muted-foreground text-caption">
                 결손 통산 (영§102②)
               </td>
-              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-rose-600 text-xs">{landOffsetRow}</td>
-              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-emerald-600 text-xs">{bld1OffsetRow}</td>
-              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-rose-600 text-xs">{bld2OffsetRow}</td>
+              <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-xs ${landOffsetCell.tone}`}>{landOffsetCell.text}</td>
+              <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-xs ${bld1OffsetCell.tone}`}>{bld1OffsetCell.text}</td>
+              <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-xs ${bld2OffsetCell.tone}`}>{bld2OffsetCell.text}</td>
               <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground">0</td>
             </tr>
             {/* 통산 후 양도소득금액 */}
@@ -202,7 +216,7 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
         양도소득금액 합계는 통산 전후 동일하지만,{" "}
-        <strong>자산별 분포가 변경</strong>됩니다. 건물1 결손이 토지·건물2 양수에 흡수되어
+        <strong>자산별 분포가 변경</strong>됩니다. 결손 자산의 손실이 나머지 자산의 양수에 흡수되어
         세율 적용 기준 양도소득금액이 자산 단위로 재분배됩니다 (영 §102②).
       </p>
     </div>

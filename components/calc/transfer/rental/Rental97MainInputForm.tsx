@@ -286,7 +286,9 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
         vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}
-        sectionOffset={isProviso ? 4 : 3}
+        // 🔴 종전 `isProviso ? 4 : 3`은 `shows1985`·`showsProvisoB`를 세지 않아 위 `num()`과
+        //    어긋날 수 있었다. 같은 `sectionOrder`에서 파생해 번호가 이어지게 한다.
+        sectionOffset={sectionOrder.filter(Boolean).length + 1}
       />
     </div>
   );

@@ -47,6 +47,7 @@ import {
   buildCommercialInheritanceValuationPayload,
 } from "./transfer-tax-api-inheritance";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
+import { selfBuiltActive } from "./self-built-scope";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
 export { toEngineReductions } from "./transfer-tax-api-helpers";
@@ -363,10 +364,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     appraisalValue: !isMixed && isAppraisal ? (ratioed(primary.fixedAcquisitionPrice) ?? 0) : undefined,
     // ④⑬ 매매사례가액 추계(§176의2③1호) — salesCase 모드 시 엔진에 전달
     similarSalesValue: isSalesCase ? ratioed(primary.similarSalesValue) : undefined,
-    isSelfBuilt: !isMixed && primary.isSelfBuilt || undefined,
+    // 자산 종류 게이트는 ⑤·⑧과 같은 leaf(`selfBuiltActive`) — 종류를 바꾼 뒤 남은 플래그가
+    // 토지 자산에 §114조의2 가산세를 오발동시키던 경로를 막는다.
+    isSelfBuilt: (!isMixed && selfBuiltActive(primary)) || undefined,
     buildingType: primary.buildingType || undefined,
     constructionDate:
-      primary.isSelfBuilt && primary.constructionDate ? primary.constructionDate : undefined,
+      selfBuiltActive(primary) && primary.constructionDate ? primary.constructionDate : undefined,
     extensionFloorArea:
       primary.buildingType === "extension" && primary.extensionFloorArea
         ? parseFloat(primary.extensionFloorArea)

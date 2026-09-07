@@ -75,7 +75,9 @@ function InfoRow({ label, value, sub = false }: { label: string; value: string; 
   return (
     <div className={cn("flex justify-between text-xs", sub && "pl-2 text-muted-foreground")}>
       <span>{label}</span>
-      <span className="tabular-nums font-medium">{value}</span>
+      {/* 금액 칸 정렬 규약 — `font-mono tabular-nums`가 한 쌍이다(components/calc/CLAUDE.md).
+          `tabular-nums` 단독은 자릿수만 고정할 뿐 글립 폭이 본문 폰트라 콤마가 세로로 안 선다. */}
+      <span className="font-mono tabular-nums font-medium whitespace-nowrap">{value}</span>
     </div>
   );
 }

@@ -87,11 +87,18 @@ describe("#35 — 한 화면에 같은 번호가 두 번 나오지 않는다", (
     expect(screen.getAllByText("④")).toHaveLength(1);
   });
 
-  it("B-3: 조건부 카드가 없으면 ①② 둘뿐", () => {
+  it("B-3: 조건부 카드가 없으면 그 섹션이 번호를 차지하지 않는다", () => {
     renderForm({ constructionYear: "" });
     expect(screen.getAllByText("①")).toHaveLength(1);
     expect(screen.getAllByText("②")).toHaveLength(1);
-    expect(screen.queryByText("③")).toBeNull();
+    // 🔴 종전에는 「③이 없다」로 확인했는데, 그 배지는 **공통 필드가 3·4를 아라비아 숫자로**
+    //    찍고 있어서 없던 것이다(2026-09-07 대장 재대조 #28에서 원문자로 통일). 이제 ③④는
+    //    공통 필드 자리로 정상 이어진다 — 확인해야 할 것은 「조건부 카드가 번호를 안 먹는다」다.
+    expect(screen.queryByText("§97①2호 요건")).toBeNull();
+    expect(screen.queryByText("단서 분기 — 100% 감면 요건")).toBeNull();
+    expect(screen.getAllByText("③")).toHaveLength(1);
+    expect(screen.getAllByText("④")).toHaveLength(1);
+    expect(screen.queryByText("⑤")).toBeNull();
   });
 });
 
