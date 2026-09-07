@@ -62,6 +62,30 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
   // subject="right": 입주권 양도 분기 (사례 36)
   const isRightSubject = subject === "right";
 
+  /**
+   * 개산공제(§163⑥) 표시 보조 — **base와 율을 지어내지 않는다** (2026-09-07 대장 재대조 #19·#32).
+   *
+   * · base는 엔진이 실제로 쓴 값(`valuationMeta.lumpDeductionBase` = 지분 기준시가)을 그대로 쓴다.
+   *   100% 기준시가를 적으면 공유지분·미등기에서 산식이 자기 값을 만들지 못한다.
+   * · 율은 자산 종류·미등기 여부로 갈리는데(§163⑥ 4호·단서) 카드에는 그 플래그가 없다.
+   *   그래서 **실제 두 값에서 역산**해 표기한다 — 하드코딩한 「3%」가 미등기에서 거짓이 되는 것을 막는다.
+   * · 「라목값」도 하드코딩이었다. 토지 출자 분기의 base는 가목(개별공시지가)이다.
+   */
+  const lumpBase = valuationMeta?.lumpDeductionBase;
+  const estimatedDeductionRateLabel = (() => {
+    if (!lumpBase || !estimatedLumpDeduction) return "개산공제율";
+    const pct = (estimatedLumpDeduction / lumpBase) * 100;
+    return `${Number(pct.toFixed(2))}%`;
+  })();
+  const lumpDeductionBaseLabel = (() => {
+    const kind = detail.landContribDetail
+      ? "취득당시 가목값(개별공시지가)"
+      : detail.housingContribDetail
+        ? "취득당시 라목값(개별주택가격)"
+        : "취득당시 기준시가";
+    return lumpBase ? `${kind} ${lumpBase.toLocaleString("ko-KR")}` : kind;
+  })();
+
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -371,15 +395,25 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <Row label="의제양도가액 (권리가액 × 안분비율)" value={preApproval.apportionedTransfer} />
             {/* 취득가액 — 실가 vs 환산 분기 */}
             {detail.housingContribDetail ? (
-              /* 사례 39 — 환산취득가 + 개산공제 분리 표시 */
+              /*
+                사례 39 — 환산취득가 + 개산공제.
+                🔴 종전에는 §166③·§163⑥의 **원액**(안분 전)을 그대로 찍어, 같은 열의 의제양도가액·
+                   양도차익(둘 다 안분 후)과 검산이 맞지 않았다(2026-09-07 대장 재대조 · #18).
+                   §166①2호 나목은 (권리가액 − 환산취득가 − 개산공제)에 salePriceTotal/권리가액을
+                   곱하므로 **실효 차감액이 이미 안분값**이고, 엔진도 그렇게 담아 둔다
+                   (`redevelopment.ts:407·421`). 열에는 안분 후 값을 쓰고, 원액 산식은 라벨에 남긴다.
+              */
               <>
                 <Row
-                  label={`− 환산취득가 (§166③: 권리가액 × ${detail.housingContribDetail.housingStdPriceAtAcq.toLocaleString("ko-KR")} / ${detail.housingContribDetail.housingStdPriceAtApproval.toLocaleString("ko-KR")})`}
-                  value={detail.housingContribDetail.convertedAcquisition}
+                  label={`− 환산취득가(안분 후) — §166③ 원액 ${detail.housingContribDetail.convertedAcquisition.toLocaleString("ko-KR")} = 권리가액 × ${detail.housingContribDetail.housingStdPriceAtAcq.toLocaleString("ko-KR")} / ${detail.housingContribDetail.housingStdPriceAtApproval.toLocaleString("ko-KR")}`}
+                  value={preApproval.apportionedAcquisition}
                 />
+                {/* 🔴 base는 **지분 기준시가**(`lumpDeductionBase`)다. 100% 값인
+                    `housingStdPriceAtAcq`를 쓰면 공유지분·미등기에서 산식이 자기 값을 만들지
+                    못하고 같은 카드의 지분 배지와 모순된다(2026-09-07 대장 재대조 · #19). */}
                 <Row
-                  label={`− 개산공제 (§163⑥: 취득시 개별주택가격 ${detail.housingContribDetail.housingStdPriceAtAcq.toLocaleString("ko-KR")} × 3%)`}
-                  value={detail.housingContribDetail.estimatedDeduction}
+                  label={`− 필요경비(안분 후) — §163⑥ 개산공제 원액 ${detail.housingContribDetail.estimatedDeduction.toLocaleString("ko-KR")} = 취득시 개별주택가격 ${(valuationMeta?.lumpDeductionBase ?? detail.housingContribDetail.housingStdPriceAtAcq).toLocaleString("ko-KR")} × ${estimatedDeductionRateLabel}`}
+                  value={preApproval.expenses ?? 0}
                 />
               </>
             ) : (
@@ -439,8 +473,10 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </p>
           <Row label={isRightSubject ? "의제 양도가액(=권리가액)" : "의제 양도가액(=권리가액)"} value={preApproval.apportionedTransfer} />
           <Row label="취득가액" value={preApproval.apportionedAcquisition} />
+          {/* 🔴 「라목값」 하드코딩이었다 — 토지 종전자산 분기의 base는 **가목(개별공시지가)**이다
+              (2026-09-07 대장 재대조 · #32). 어느 분기인지는 echo 필드가 말해 준다. */}
           {estimatedLumpDeduction != null && estimatedLumpDeduction > 0 && (
-            <Row label="개산공제 (취득당시 라목값 × 3%, §163⑥)" value={estimatedLumpDeduction} />
+            <Row label={`개산공제 (${lumpDeductionBaseLabel} × ${estimatedDeductionRateLabel}, §163⑥)`} value={estimatedLumpDeduction} />
           )}
           <Row label="양도차익" value={preApproval.gain} highlight />
           <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">

@@ -3,13 +3,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
-import { useCalcWizardStore, createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
-import { useMultiTransferStore, generatePropertyId, multiStoreHasUserWork } from "@/lib/stores/multi-transfer-tax-store";
-import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { useCalcWizardStore } from "@/lib/stores/calc-wizard-store";
+import { useMultiTransferStore, multiStoreHasUserWork } from "@/lib/stores/multi-transfer-tax-store";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { WizardSidebar, type WizardSidebarStep } from "@/components/calc/shared/WizardSidebar";
-import { REDUCTION_SHORT_LABELS } from "@/components/calc/transfer/reduction-short-labels";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { BundledAllocationCard } from "@/components/calc/results/BundledAllocationCard";
 import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUseResultCard";
@@ -22,7 +19,6 @@ import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadli
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
-import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { runTransferManualSave, formatTransferSaveMessage } from "@/components/calc/transfer-tax-save-handler";
 import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
@@ -39,6 +35,8 @@ import { Step6 } from "./steps/Step6";
 import { CorrectionModeBanner } from "@/components/calc/transfer/CorrectionModeBanner";
 import { STEPS_SINGLE, STEP_TITLES, type TransferTaxCalculatorProps } from "./transfer-calculator-meta";
 import { patchInvalidatesDeterminedTax } from "./transfer-penalty-invalidation";
+import { TransferSidebarSummary } from "./TransferSidebarSummary";
+import { backupSingleToMulti, continueToMulti, runPenaltyCalc } from "./transfer-calc-actions";
 
 // ============================================================
 // 메인 컴포넌트
@@ -92,8 +90,11 @@ export default function TransferTaxCalculator({
 
   const perAssetSummary = useMemo(
     () => computeTransferPerAssetSummary(formData, result),
+    // 🔴 `formData.transferDate`가 빠져 있었다 — `previewStdPriceAtTransfer`
+    //    (`transfer-per-asset-summary.ts:293·555`)가 §164⑧ 동일조정기간 판정에 이 날짜를 쓰므로,
+    //    양도일을 바꿔도 사이드바 환산취득가액 프리뷰가 옛 값에 머물렀다(2026-09-07 대장 재대조).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [formData.assets, formData.contractTotalPrice, formData.bundledSaleMode, result]
+    [formData.assets, formData.contractTotalPrice, formData.bundledSaleMode, formData.transferDate, result]
   );
 
   // ⛔ 로그인 상태 구독을 되살리지 말 것 (2026-09-05 · Q30) — 이 화면에서 로그인 여부로
@@ -252,21 +253,7 @@ export default function TransferTaxCalculator({
       //    전부 사라졌다. 백업의 편의가 사용자 실입력보다 우선할 수는 없다.
       //    ⇒ **비어 있거나, 지금 이 세션이 만든 백업일 때만** 덮어쓴다.
       if (!isEmbeddedInMulti && !multiHasUserWork()) {
-        const multiStore = useMultiTransferStore.getState();
-        const completion = calcPropertyCompletion(formData);
-        const newItem = {
-          propertyId: generatePropertyId(),
-          propertyLabel: "양도 1번",
-          form: formData,
-          completionPercent: completion,
-        };
-        multiStore.reset();
-        multiStore.addProperty(newItem);
-        autoBackupPropertyIdRef.current = newItem.propertyId;
-        if (formData.transferDate) {
-          const year = parseInt(formData.transferDate.slice(0, 4), 10);
-          if (!Number.isNaN(year)) multiStore.setForm({ taxYear: year });
-        }
+        autoBackupPropertyIdRef.current = backupSingleToMulti(formData);
       }
 
       // 이력 저장은 로컬 IndexedDB(useAutoSaveCalculation)에서 처리 — 서버 저장 제거(로컬 일원화)
@@ -281,25 +268,12 @@ export default function TransferTaxCalculator({
     clearError();
     setIsPenaltyLoading(true);
     try {
-      // 1단계: enablePenalty 없이 결정세액만 확보 (단건 모드만 가산세 지원)
-      const baseRes = await callTransferTaxAPI({ ...formData, enablePenalty: false });
-      if (baseRes.mode !== "single") return;
-      const detTax = baseRes.result.determinedTax;
-      setCalcDeterminedTax(detTax);
-
-      // 2단계: 미납세액 자동 계산
-      const priorPaid = parseAmount(formData.priorPaidTax ?? "0");
-      const autoUnpaid = Math.max(0, detTax - priorPaid);
-      const updatedUnpaidTax = autoUnpaid > 0 ? String(autoUnpaid) : "0";
-      updateFormData({ unpaidTax: updatedUnpaidTax });
-
-      // 3단계: 계산된 unpaidTax로 가산세 포함 재계산
-      const penaltyRes = await callTransferTaxAPI({ ...formData, unpaidTax: updatedUnpaidTax });
-      const penaltyResult = penaltyRes.mode === "single" ? (penaltyRes.result.penaltyDetail ?? null) : null;
-      setPenaltyResult(penaltyResult);
-      if (!penaltyResult) {
-        setError("가산세 항목을 입력해 주세요. (신고 유형 또는 미납세액+납부기한)");
-      }
+      await runPenaltyCalc(formData, {
+        setDeterminedTax: setCalcDeterminedTax,
+        setUnpaidTax: (v) => updateFormData({ unpaidTax: v }),
+        setPenaltyResult,
+        setError,
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "가산세 계산 중 오류가 발생했습니다.");
     } finally {
@@ -318,45 +292,10 @@ export default function TransferTaxCalculator({
   // 단건 결과 화면의 "동일연도 다른 양도건 계산하기" 버튼 핸들러.
   // 단건 입력값을 다건 store의 자산1로 이전하고 빈 자산2를 추가한 뒤 다건 페이지로 이동.
   // 자산1은 보존되며 사용자는 곧장 자산2 입력으로 넘어간다.
-  const performContinueToMulti = useCallback(() => {
-    const multiStore = useMultiTransferStore.getState();
-    const wizardStore = useCalcWizardStore.getState();
-
-    multiStore.reset();
-
-    const asset1Form = formData;
-    const asset1Completion = calcPropertyCompletion(asset1Form);
-    multiStore.addProperty({
-      propertyId: generatePropertyId(),
-      propertyLabel: "양도 1번",
-      form: asset1Form,
-      completionPercent: asset1Completion,
-    });
-
-    const asset2Form = createDefaultTransferFormData();
-    multiStore.addProperty({
-      propertyId: generatePropertyId(),
-      propertyLabel: "양도 2번",
-      form: asset2Form,
-      completionPercent: 0,
-    });
-
-    if (formData.transferDate) {
-      const year = parseInt(formData.transferDate.slice(0, 4), 10);
-      if (!Number.isNaN(year)) {
-        multiStore.setForm({ taxYear: year });
-      }
-    }
-
-    multiStore.setActiveProperty(1);
-    multiStore.setStep("edit");
-
-    wizardStore.reset();
-    wizardStore.updateFormData(asset2Form);
-    wizardStore.setStep(0);
-
-    router.push("/calc/transfer-tax/multi");
-  }, [formData, router]);
+  const performContinueToMulti = useCallback(
+    () => continueToMulti(formData, (href) => router.push(href)),
+    [formData, router],
+  );
 
   /**
    * Q28 — 이 경로도 `multiStore.reset()`으로 다건 작업을 통째로 지운다. 단건 백업과 달리
@@ -421,78 +360,7 @@ export default function TransferTaxCalculator({
     onClick: () => { clearError(); setStep(i); scrollToTop(); },
   }));
 
-  // 사이드바 요약 — 자산별 카드(자산 1·2·…). 안분 모드 양도가액은 §166⑥ 기준시가 비율로
-  // 자산별 산출(computeTransferPerAssetSummary). 값 > 0 이면 금액, pending 이면 «계산 후 표시»,
-  // 그 외엔 라인 미표시. 자산이 2건 이상일 때만 자산 헤더 + 합계 양도가액 노출.
-  const showAssetHeader = perAssetSummary.rows.length >= 2;
-  // 라벨(양도가액·취득가액·필요경비)은 항상 표시. 값 > 0 이면 금액,
-  // pending 이면 «계산 후 표시», 그 외(미입력·해당없음)엔 «-».
-  const renderSidebarAmount = (label: string, value: number, pending: boolean, note?: string) => {
-    return (
-      <div className="text-sm">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-muted-foreground">{label}</span>
-          {note && <span className="text-xs text-muted-foreground/70">{note}</span>}
-        </div>
-        {value > 0 ? (
-          <p className="text-right font-mono tabular-nums">{value.toLocaleString()}</p>
-        ) : pending ? (
-          <p className="text-right text-xs text-muted-foreground/50">계산 후 표시</p>
-        ) : (
-          <p className="text-right text-xs text-muted-foreground/50">-</p>
-        )}
-      </div>
-    );
-  };
-
-  const sidebarSummaryContent = (
-    <div className="space-y-3">
-      {perAssetSummary.rows.map((row, i) => {
-        const saleNote = row.saleIsApportioned
-          ? "기준시가 안분"
-          : row.ownershipRatio < 1
-            ? `지분 ${(row.ownershipRatio * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`
-            : undefined;
-        return (
-          // 자산 2건 이상일 때 자산 사이에 구분선(상단 border) 삽입
-          <div key={row.assetId} className={`space-y-1.5${i > 0 ? " border-t pt-3" : ""}`}>
-            {showAssetHeader && (
-              <p className="text-xs font-semibold text-foreground/80">
-                자산 {row.index} — {ASSET_KIND_LABELS[row.assetKind] ?? row.assetLabel}
-              </p>
-            )}
-            {renderSidebarAmount("양도가액", row.salePrice, row.salePending, saleNote)}
-            {/* 라벨은 자산 종류별 표시 범위에 따라 갈린다 — 재개발·입주권은 「인가전 분 취득가액」 */}
-            {renderSidebarAmount(row.acqLabel, row.acqPrice, row.acqPending)}
-            {renderSidebarAmount("필요경비", row.expense, row.expensePending)}
-            {/* 공제·감면 사항 라벨은 항상 표시 (감면 없으면 «-») */}
-            <div className="border-t pt-1.5">
-              <p className="mb-1 text-sm text-muted-foreground">공제·감면 사항</p>
-              {row.reductionTypes.length > 0 ? (
-                <ul className="space-y-0.5">
-                  {row.reductionTypes.map((t) => (
-                    <li key={t} className="text-sm">
-                      {REDUCTION_SHORT_LABELS[t]}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground/50">-</p>
-              )}
-            </div>
-          </div>
-        );
-      })}
-      {showAssetHeader && perAssetSummary.totalSalePrice > 0 && (
-        <div className="flex items-baseline justify-between gap-2 border-t pt-2 text-sm font-semibold">
-          <span>합계 양도가액</span>
-          <span className="text-right font-mono tabular-nums">
-            {perAssetSummary.totalSalePrice.toLocaleString()}
-          </span>
-        </div>
-      )}
-    </div>
-  );
+  const sidebarSummaryContent = <TransferSidebarSummary summary={perAssetSummary} />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">

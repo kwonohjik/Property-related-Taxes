@@ -23,6 +23,7 @@ import { isPhdEligible } from "./phd-eligibility";
 import { phdToggleReachable } from "./phd-toggle-scope";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
+import { selfBuiltActive } from "./self-built-scope";
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
@@ -681,7 +682,10 @@ export function validateAssetAcquisition(
   }
 
   // 6) 신축·증축 (매매 + housing/building 전용)
-  if (asset.isSelfBuilt && asset.acquisitionCause === "purchase") {
+  // 🔴 종전에는 자산 종류를 보지 않아, 주택→토지로 바꾼 뒤 남은 `isSelfBuilt`가
+  //    **화면에 없는 칸**(SelfBuiltSection은 housing·building 전용)을 요구했다.
+  //    술어는 ⑤·④와 같은 leaf 하나를 쓴다.
+  if (selfBuiltActive(asset)) {
     if (!asset.buildingType) return `${label}: 신축·증축 구분을 선택하세요.`;
     if (!asset.constructionDate) return `${label}: 신축·증축 완공일을 입력하세요.`;
     // 보유 중 공사 완료가 전제 — 양도일 이후 완공은 모순 (완공 당일 양도는 허용)

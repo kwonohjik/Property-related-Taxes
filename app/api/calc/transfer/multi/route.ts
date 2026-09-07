@@ -141,6 +141,8 @@ export async function POST(request: NextRequest) {
       residencePeriodMonths: p.residencePeriodMonths,
       isRegulatedArea: p.isRegulatedArea,
       wasRegulatedAtAcquisition: p.wasRegulatedAtAcquisition,
+      // ⑭ ④와 짝 — 제공 시 엔진이 `isRegulatedByBjdCode()` 정밀 판정을 쓴다(단건 `engine-input.ts:68`).
+      regionCode: p.regionCode,
       isUnregistered: p.isUnregistered,
       isNonBusinessLand: p.isNonBusinessLand,
       isSuccessorRightToMoveIn: p.isSuccessorRightToMoveIn,
@@ -272,6 +274,8 @@ export async function POST(request: NextRequest) {
       buildingType: p.buildingType,
       constructionDate: toOptionalDate(p.constructionDate),
       extensionFloorArea: p.extensionFloorArea,
+      // ⑭ ④와 짝 — 한쪽만 배선하면 엔진에 도달하지 않는다(§114조의2 환산 base).
+      extensionStdPriceAtAcquisition: p.extensionStdPriceAtAcquisition,
       pre1990Land: p.pre1990Land
         ? {
             acquisitionDate: toDate(p.pre1990Land.acquisitionDate, "pre1990Land.acquisitionDate"),

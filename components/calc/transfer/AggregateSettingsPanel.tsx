@@ -21,8 +21,10 @@ type BasicDeductionAllocation = MultiTransferFormData["basicDeductionAllocation"
 const BASIC_DEDUCTION_ALLOCATION_OPTIONS: RadioCardOption<BasicDeductionAllocation>[] = [
   {
     value: "MAX_BENEFIT",
-    label: "납세자 유리 배분 (권장)",
-    description: "세율이 높은 자산(절세 효과 최대)에 우선 배분",
+    // 🔴 「납세자 유리」·「절세 효과 최대」는 루트 CLAUDE.md의 **유리/불리·절감 표현 금지**에 걸린다
+    //    (2026-09-07 대장 재대조 · #34). 배분 규칙 자체를 사실대로 적는다.
+    label: "높은 세율 소득 우선 배분 (기본값)",
+    description: "적용 세율이 높은 자산의 소득에 먼저 배분",
   },
   {
     value: "FIRST",

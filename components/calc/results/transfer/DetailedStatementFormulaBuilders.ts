@@ -215,9 +215,11 @@ export function setAggregateProcedureItems(
       value: basicAggregateStep.amount,
       formula:
         basicAggregateStep.formula ??
-        "연 250만원 한도 자산별 배분 (MAX_BENEFIT 정책 — 세부담 최소 자산 우선)",
+        "연 250만원 한도 자산별 배분 (최고세율이 적용되는 소득에 먼저 배정)",
       legalBasis: basicAggregateStep.legalBasis ?? "소득세법 §103",
-      note: "유자격 자산(미등기·exempt 제외) 간 한도 배분. 단일 자산은 전액 배정.",
+      // 🔴 종전 문구는 한국어 문장 속에 내부 플래그 이름 `exempt`와 정책 상수명 `MAX_BENEFIT`을
+      //    그대로 노출했다(2026-09-07 대장 재대조 · `feedback_no_internal_id_in_result`).
+      note: "미등기 양도·비과세 자산을 제외한 자산 간 한도 배분. 단일 자산은 전액 배정.",
       summaryOnly: true,
     });
   }

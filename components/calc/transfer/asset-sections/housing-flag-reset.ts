@@ -26,6 +26,7 @@
  */
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
 import { isRentalHousingExceptionApplicable } from "@/lib/calc/rental-housing-exception-scope";
+import { selfBuiltSectionApplicable } from "@/lib/calc/self-built-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 /**
@@ -58,10 +59,20 @@ export function housingFlagResetPatchForAssetKind(
   const phdReset: Partial<AssetForm> =
     nextKind === "building" ? {} : { usePreHousingDisclosure: false };
 
+  /**
+   * 신축·증축 축(§114조의2) — `SelfBuiltSection`은 housing·building **둘 다**에서 열리므로
+   * 리셋 조건도 `selfBuiltSectionApplicable`과 같은 것을 쓴다. 주택 전용 플래그들과 달리
+   * `building`으로 바꿀 때는 축이 살아 있어 비우면 안 된다.
+   */
+  const selfBuiltReset: Partial<AssetForm> = selfBuiltSectionApplicable(nextKind)
+    ? {}
+    : { isSelfBuilt: false, buildingType: "", constructionDate: "", extensionFloorArea: "", extensionStdPriceAtAcquisition: "" };
+
   if (nextKind === "housing") return rhReset;
   return {
     ...rhReset,
     ...phdReset,
+    ...selfBuiltReset,
     // 겸용주택 축 — 종속 필드(용도변경 부분·방향)까지 함께 비운다.
     isMixedUseHouse: false,
     hasPartialUsageChange: false,

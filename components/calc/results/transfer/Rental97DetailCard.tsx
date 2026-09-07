@@ -23,6 +23,13 @@ interface Props {
    * 이름이 같으면 의미가 뭉개진다(`ReductionDetailCards`의 §77 계열과 동일 규약).
    */
   calculatedTax: number;
+  /**
+   * 다건·일괄 — `calculatedTax`가 자산별 **참고 산출세액**(`refCalculatedTax`)이라
+   * 「산출세액 × 감면율 = 감면세액」 등식이 신고 단위에서 성립하지 않는다.
+   * §77 계열 카드(`ReplacementLand77_2DetailCard` 등)가 이미 쓰는 것과 **같은 축**이다 —
+   * 그 카드들만 고치고 여기를 빠뜨렸다(2026-09-07 대장 재대조 · 종전 #044와 동형).
+   */
+  aggregatedContext?: boolean;
 }
 
 function formatN(n: number): string {
@@ -48,7 +55,7 @@ const ARTICLE_LABELS: Record<string, string> = {
   rental_97_5: "§97의5 — 장기일반민간임대 100% 감면",
 };
 
-export function Rental97DetailCard({ detail, effectLabel, calculatedTax }: Props) {
+export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggregatedContext = false }: Props) {
   if (!detail.isEligible) {
     return (
       <div className="rounded-lg border border-rose-300 bg-rose-50/80 dark:border-rose-700/50 dark:bg-rose-950/30 p-4 space-y-3">
@@ -249,7 +256,11 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax }: Props
         {/* 산출근거 — 라벨 산식 + 값 대입 (§77의2 카드와 동일 규약) */}
         <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">감면세액 산출근거</p>
-          {taxEffect.rentalGainRatio < 1 ? (
+          {aggregatedContext ? (
+            <p className="text-muted-foreground">
+              감면세액은 여러 건 합산 재계산(§133 한도) 후 확정 — 「감면세액 합산 재계산 내역」 참조
+            </p>
+          ) : taxEffect.rentalGainRatio < 1 ? (
             <>
               <p className="text-muted-foreground">
                 감면세액 = 산출세액 × 임대기간 분 비율 × 감면율

@@ -17,6 +17,7 @@
 
 import { useMemo, useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -380,13 +381,14 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
 
       {/* ① 토지 면적 */}
       <FieldCard label="토지 면적" unit="㎡" hint="주택 부수 토지 면적(㎡). 3시점 토지 기준시가 계산의 기준값.">
-        <input
-          type="text"
-          inputMode="decimal"
+        {/* 🔴 종전에는 raw `<input>` + `replace(/[^0-9.]/g, "")`였다 (2026-09-07 대장 재대조 · #24).
+            그 정규식은 숫자·점만 남길 뿐 **점의 개수를 세지 않아** "1.2.3" 같은 입력을 그대로
+            저장했고, 소비처의 `parseFloat`이 "1.2"로 조용히 잘랐다. 소수 입력은 공용
+            `DecimalInput` 정본을 쓴다(components/calc/CLAUDE.md — CurrencyInput 대체 불가 규칙). */}
+        <DecimalInput
           value={asset.inhHouseValLandArea}
-          onChange={(e) => onChange({ inhHouseValLandArea: e.target.value.replace(/[^0-9.]/g, "") })}
+          onChange={(v) => onChange({ inhHouseValLandArea: v })}
           placeholder="토지 면적 입력"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </FieldCard>
 

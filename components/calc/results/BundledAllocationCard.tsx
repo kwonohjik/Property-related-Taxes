@@ -1,5 +1,6 @@
 "use client";
 
+import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
@@ -518,6 +519,11 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
       <PrintSection id="building-std-report" selectedIds={selectedPrintIds}>
         <BuildingStdPriceReportSection inputData={{ assets: formData.assets }} />
       </PrintSection>
+
+      {/* 🔴 면책 고지 — 종전에는 이 화면(다자산 일괄양도의 **종착지**)에만 통째로 없었다
+          (2026-09-07 대장 재대조 · #33). 단건(`TransferTaxResultView:722`)·겸용·다건은 모두 있다.
+          `print:hidden`을 붙이지 않아 PDF에도 함께 남는다 — 고지의 존재 이유가 그것이다. */}
+      <DisclaimerBanner />
 
       {/* 하단 네비게이션 버튼 — 입력 단계 네비와 통일 (컴팩트 nav + 글자폭 CTA) */}
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">

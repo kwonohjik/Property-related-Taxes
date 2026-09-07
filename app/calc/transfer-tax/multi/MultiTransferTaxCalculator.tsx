@@ -519,6 +519,10 @@ export default function MultiTransferTaxCalculator() {
           }
           onStepClick={(i) => {
             const target: MultiStep = i === 0 ? "list" : i === 1 ? "settings" : "result";
+            // 🔴 결과가 없는데 「계산 결과」로 넘어가면 `:636`의 `&& result` 게이트가
+            //    아무것도 렌더하지 않아 **빈 화면**이 된다. 마운트 시 리다이렉트(`:418`)는
+            //    deps가 `[]`라 이 클릭에는 도달하지 않는다 — 여기서 막는다.
+            if (target === "result" && !result) return;
             setStep(target);
           }}
         />
