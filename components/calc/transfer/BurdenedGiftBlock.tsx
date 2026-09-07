@@ -29,6 +29,7 @@ import { formatOwnershipPercent } from "@/lib/calc/transfer-tax-api-helpers";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import { bgGiftStdPriceLauncherSpec } from "@/lib/calc/burdened-gift-std-price-launcher";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 
 interface Props {
   asset: AssetForm;
@@ -169,6 +170,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const lendingDeposit = parseAmount(asset.bgLendingDepositTotal) || 0;
   const mortgageDebt = parseAmount(asset.bgMortgageDebtAmount) || 0;
   const assumedDebtAmount = lendingDeposit + mortgageDebt;
+  // 축 B 스케일 — ④(`buildBurdenedGiftInfo`)와 **같은 함수**로 같은 비율을 쓴다.
+  const ownRatio = getOwnershipRatio(asset);
 
   // 공유지분 부담부증여 — 채무는 **해당 지분 인수분**을 입력받는다.
   // 엔진은 평가액(§159의 A·C)만 지분분으로 축소하고 채무는 입력값 그대로 쓴다
@@ -697,10 +700,32 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-100/70 p-3 space-y-1">
         <p className="text-xs font-semibold text-fuchsia-900">자동 계산 미리보기</p>
         <div className="text-xs text-fuchsia-800 space-y-0.5">
+          {/*
+            🔴 **축마다 채무의 계산 단위가 다르다** (2026-09-07 대장 재대조).
+
+            · 축 B(지분 분할) — ④ `buildBurdenedGiftInfo`가 채무·보증금·임대료·저당설정액을
+              **× 지분율**로 안분한다(§159의 B/C 비율 보존). 총액을 「= 양도가액」이라 적으면
+              지분 60%인 사용자에게 실제의 1.67배를 양도가액이라 말하는 것이 된다.
+            · 컴패니언 함께 부담부증여 — 지분율이 아니라 **자산가액 비율로 재배분**한다.
+              여기서 지분율로 스케일하면 그것대로 틀리므로 금액을 단정하지 않는다.
+          */}
           <p>
-            인수 채무액 (= 양도가액):{" "}
-            <span className="font-mono font-semibold">{fmt(assumedDebtAmount)}원</span>
+            인수 채무액{isFractionalSplit ? " (내 지분분 = 양도가액)" : isCompanionBundle ? " (신고 단위 합계)" : " (= 양도가액)"}:{" "}
+            <span className="font-mono font-semibold">
+              {fmt(isFractionalSplit ? applyRatio(assumedDebtAmount, ownRatio) : assumedDebtAmount)}원
+            </span>
+            {isFractionalSplit && ownRatio < 1 && (
+              <span className="ml-1 text-fuchsia-600">
+                (입력 총액 {fmt(assumedDebtAmount)} × 지분 {(ownRatio * 100).toFixed(2)}%)
+              </span>
+            )}
           </p>
+          {isCompanionBundle && (
+            <p className="text-fuchsia-600">
+              * 함께 부담부증여는 신고 단위 채무를 **자산가액 비율**로 재배분합니다 — 이 자산의
+              양도가액은 그 배분 결과이며 위 합계와 다릅니다.
+            </p>
+          )}
           <p>
             담보평가:{" "}
             <span className="font-mono">{fmt(valuationPreview.mortgage)}원</span>
