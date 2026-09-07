@@ -358,7 +358,8 @@ export async function callMultiTransferTaxAPI(
   const priorPaidTax = multiForm.priorPaidTaxEdited
     ? parseAmount(multiForm.priorPaidTax ?? "0")
     : autoPriorPaid.national;
-  const priorPaidLocalTax = multiForm.priorPaidTaxEdited
+  // 🔴 지방소득세는 **자기 플래그**를 본다(H5) — 공유하면 한쪽 편집이 다른 쪽 자동값을 0으로 만든다.
+  const priorPaidLocalTax = multiForm.priorPaidLocalTaxEdited
     ? parseAmount(multiForm.priorPaidLocalTax ?? "0")
     : autoPriorPaid.local;
 

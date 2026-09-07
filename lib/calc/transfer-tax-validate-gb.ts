@@ -56,8 +56,20 @@ export function validateGeneralBuildingAsset(
     if (asset.bgValuationMode === "sangjeungbeop_market") {
       if (!asset.bgMarketValueAtTransfer || parseAmount(asset.bgMarketValueAtTransfer) <= 0)
         return `${label}: 시가 모드의 양도시 평가액을 입력하세요.`;
-      if (!asset.bgMarketValueAtAcquisition || parseAmount(asset.bgMarketValueAtAcquisition) <= 0)
-        return `${label}: 시가 모드의 취득시 평가액을 입력하세요.`;
+      /**
+       * 🔴 **취득시 평가액(`bgMarketValueAtAcquisition`)을 여기서 요구하지 말 것** (2026-09-07).
+       *
+       * 그 필드를 쓰는 **입력 위젯이 저장소에 하나도 없다**(존재하는 것은 store 기본값 ""·
+       * ④ 읽기·이 검증뿐). `BurdenedGiftBlock`의 시가 모드 블록은 양도시 평가액만 렌더한다.
+       * 그래서 일반건물 + 부담부증여 + 시가 모드는 **채울 칸이 없는 채로 영구 차단**됐다.
+       *
+       * 공유 검증 `validateBurdenedGiftAsset`은 이미 H-5에서 이 무조건 차단을 없애고
+       * 취득가액 산정방식(K-4 실지 / K-5 환산)별 필수 입력으로 바꿨다. 그 함수가
+       * `transfer-tax-validate-acquisition.ts:116`에서 **GB 위임(:181)보다 먼저** 돌므로
+       * 여기 남아 있던 것은 갱신되지 않은 중복이었다. 엔진에서도 이 필드는
+       * `acquisitionMethod` 미지정일 때만 쓰는 backward-compat 경로다
+       * (`burdened-gift-apportionment.ts:239`).
+       */
     }
     if (!parseDecimal(asset.gbLandArea))
       return `${label}: 토지면적을 입력하세요.`;

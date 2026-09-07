@@ -12,7 +12,7 @@ import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transf
 import { getFilingDeadline, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { deriveStatutoryDeadline } from "@/lib/calc/transfer-amendment-helpers";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
-import { phdToggleReachable } from "./phd-toggle-scope";
+import { phdPayloadActive } from "./phd-toggle-scope";
 
 /**
  * ④⑬ 기한 후 신고 감면 축 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05)
@@ -209,9 +209,11 @@ export function buildPreHousingDisclosurePayload(
   // 🔴 자산 종류 축 — ⑤ 토글이 닿지 않는 종류에서는 보내지 않는다(2026-09-07). 11칸을 다 채운
   //    뒤 종류를 바꾸면 ⑧이 통과하고 여기서 그대로 실어 **토지·상가에 주택 3-시점 환산 산식**이
   //    적용됐다 — 차단이 아니라 조용한 오산이다.
+  //    🔴 이월과세(증여) 축도 함께 본다(H3) — `CarryoverEstimationSection`은 store의
+  //       `usePreHousingDisclosure`를 **일부러 안 켜므로**, 그것만 보면 ⑤가 렌더하고 ⑧이
+  //       요구하는 3-시점 값이 여기서 통째로 버려진다(증여자 취득가액 0).
   ...(!isMixed &&
-  phdToggleReachable(primary) &&
-  primary.usePreHousingDisclosure &&
+  phdPayloadActive(primary) &&
   primary.phdFirstDisclosureDate &&
   parseAmount(primary.phdFirstDisclosureHousingPrice) > 0
     ? {
