@@ -44,7 +44,7 @@ import {
   buildIncomeDeductionReducibleFormula,
   prorationFormulaAsFrac,
 } from "./DetailedStatementFormulaBuilders";
-import { applyRedevelopmentOverrides } from "./DetailedStatementRedevelopmentBuilders";
+import { applyRedevelopmentOverrides } from "./DetailedStatementRedevOverrides";
 import { setLongTermDeductionItems } from "./DetailedStatementLthdItems";
 import {
   reductionEligibleIncome,

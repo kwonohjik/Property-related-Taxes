@@ -12,6 +12,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
@@ -223,6 +224,9 @@ export function New993InputForm({
         </div>
       )}
 
+      {/* ① 형제 감면 폼 10종과 같은 「색상 카드 + 섹션 번호」 패턴 (2026-09-07 UI 리뷰 L5).
+          외곽 primary 래퍼는 저장소 관용구라 그대로 둔다 — 갈린 것은 번호 축뿐이었다. */}
+      <ToneCard tone="sky" sectionNum="①" title="취득 유형 · 소재지" noDark bodyClassName="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium">취득 유형</label>
@@ -273,7 +277,11 @@ export function New993InputForm({
         )}
       </div>
 
-      {/* PHD 환산 — 취득시 기준시가 직전 배치(입력→출력 순서). ON 시 취득시 기준시가는 아래 echo로 자동 산출. */}
+      </ToneCard>
+
+      {/* ② 기준시가 3시점 + 전용면적. PHD 환산은 취득시 기준시가 직전 배치(입력→출력 순서) —
+          ON 시 취득시 기준시가는 아래 echo로 자동 산출된다. */}
+      <ToneCard tone="emerald" sectionNum="②" title="기준시가 · 전용면적" noDark bodyClassName="space-y-3">
       {phdSection}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -341,6 +349,7 @@ export function New993InputForm({
           <p className="mt-1 text-micro text-muted-foreground">공동주택 조회 시 자동 채움 · 2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
+      </ToneCard>
 
       <ToggleCard
         tone="rose"

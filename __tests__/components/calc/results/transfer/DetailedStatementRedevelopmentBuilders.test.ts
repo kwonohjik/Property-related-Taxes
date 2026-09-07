@@ -19,8 +19,8 @@ import {
   buildRedevPerAssetForGain,
   buildRedevPerAssetForLthd,
   buildRedevPerAssetForIncome,
-  applyRedevelopmentOverrides,
 } from "@/components/calc/results/transfer/DetailedStatementRedevelopmentBuilders";
+import { applyRedevelopmentOverrides } from "@/components/calc/results/transfer/DetailedStatementRedevOverrides";
 import type { StatementItem } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
 

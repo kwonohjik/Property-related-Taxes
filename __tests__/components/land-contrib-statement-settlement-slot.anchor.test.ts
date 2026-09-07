@@ -16,7 +16,7 @@
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "../tax-engine/_helpers/mock-rates";
-import { applyLandContribOverrides } from "@/components/calc/results/transfer/DetailedStatementRedevelopmentBuilders";
+import { applyLandContribOverrides } from "@/components/calc/results/transfer/DetailedStatementRedevOverrides";
 import type { RedevelopmentInfo } from "@/lib/tax-engine/types/transfer-redevelopment.types";
 import type { StatementItem } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 

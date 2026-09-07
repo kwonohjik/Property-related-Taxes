@@ -204,8 +204,12 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
           />
         ) : (
           <>
+        {/* 🔴 배지는 «5a» — 부모와 겹치지 않는 하위 번호다 (2026-09-07 UI 리뷰 L6).
+            이 컴포넌트는 `RedevelopmentBlock`의 `<ToneCard sectionNum={5}>` **본문 안에서**
+            렌더되므로 「5」를 쓰면 한 카드에 5가 두 번 보인다. 같은 부모의 형제 분기
+            `HousingContribEstimatedSection`이 이미 「5a」를 쓴다(세 분기는 상호배타적). */}
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">5</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">5a</span>
           <p className="text-xs font-semibold text-rose-700">환산 기준시가</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -454,7 +458,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
       {/* 안내 헤더 */}
       <div className="rounded-md border border-amber-200 bg-amber-50/70 p-2 space-y-1">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">5</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">5a</span>
           <p className="text-xs font-semibold text-amber-700">토지 출자 — §166③ 비율 환산 (사례 37)</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">

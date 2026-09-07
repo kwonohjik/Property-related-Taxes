@@ -110,14 +110,25 @@ export function validateNblDetailedJudgment(
    * 「토지가액 50배 → §168의11② 수입금액비율 붕괴」 경로 자체가 사라졌다.
    */
 
+  // 무조건 의제 성립 시 아래 기간기준 상세 입력은 엔진이 무시 + UI 비활성 → 검증 스킵
+  if (nblExempt) return null;
+
   /**
    * 조특령 §66⑭ 결격 과세기간 — 형식·범위 차단 (E2-09, 2026-09-03).
    *
    * 파서(`parseTaxPeriodYears`)는 4자리 정수가 아닌 토큰을 **버리지 않고 `invalid`로 돌려준다**.
    * 조용히 버리면 「입력했는데 반영이 안 된 것」이 사용자에게 보이지 않는다(자동 fallback 금지).
    * 범위는 취득연도~양도연도 — 그 밖의 연도는 자경 기간과 겹칠 수 없어 아무것도 차감하지 못한다.
+   *
+   * 🔴 **위치·게이트는 입력칸의 렌더 게이트와 같아야 한다** (2026-09-07 UI 리뷰 L2).
+   *    유일한 입력칸 `FarmlandDetailSection`은 ① 지목이 「농지」일 때만 마운트되고
+   *    ② `NblSectionContainer`의 `isExempt ? "pointer-events-none"` 래퍼 안에 있다.
+   *    종전에는 이 블록이 `if (nblExempt) return null;` **앞**에 있고 지목 조건도 없어,
+   *    형식 오류를 남긴 채 지목을 임야로 바꾸거나 무조건 사업용 의제가 성립하면
+   *    「인식할 수 없는 값…」으로 1단계가 막히는데 그 칸을 **클릭조차 할 수 없었다**.
+   *    ④(`form-mapper.ts`)는 파싱된 연도만 싣고 invalid는 버리므로 계산 결과는 불변이다.
    */
-  if (asset.nblDisqualifiedTaxPeriods) {
+  if (asset.nblLandType === "farmland" && asset.nblDisqualifiedTaxPeriods) {
     const { years, invalid } = parseTaxPeriodYears(asset.nblDisqualifiedTaxPeriods);
     if (invalid.length > 0)
       return `${label}: 결격 과세기간(조특령 §66⑭)은 4자리 연도를 쉼표로 구분해 입력하세요 (예: 2019, 2020). 인식할 수 없는 값: ${invalid.join(", ")}`;
@@ -129,9 +140,6 @@ export function validateNblDetailedJudgment(
         return `${label}: 결격 과세기간(조특령 §66⑭)은 취득연도(${acqYear})부터 양도연도(${trfYear}) 사이여야 합니다. 범위 밖: ${outOfRange.join(", ")}`;
     }
   }
-
-  // 무조건 의제 성립 시 아래 기간기준 상세 입력은 엔진이 무시 + UI 비활성 → 검증 스킵
-  if (nblExempt) return null;
 
   // 주택부수토지(§168-12) 도시지역 주·상·공 배율은 수도권 여부에 따라 3배/5배로 갈린다.
   // 미선택 시 엔진(housing-land.ts)이 수도권(불리)로 default 적용 → 유리-default 정책상 계산 전 차단.
