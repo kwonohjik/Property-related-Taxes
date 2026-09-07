@@ -17,7 +17,7 @@ test.describe("증여로 보는 경우 — 추정·의제", () => {
   test("§45 재산취득자금 증여추정 취득10억·입증6억 → 4억 + 증여세 연결", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "acquisition_fund_presumption");
-    await page.getByPlaceholder("취득재산가액 (원)").fill("1000000000");
+    await page.getByTestId("af-acquisition-value").fill("1000000000");
     await page.getByPlaceholder("입증된 금액 (원)").fill("600000000");
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
@@ -28,7 +28,7 @@ test.describe("증여로 보는 경우 — 추정·의제", () => {
   test("§45 미입증액 기준금액 미만 → 미적용", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "acquisition_fund_presumption");
-    await page.getByPlaceholder("취득재산가액 (원)").fill("1000000000");
+    await page.getByTestId("af-acquisition-value").fill("1000000000");
     await page.getByPlaceholder("입증된 금액 (원)").fill("850000000");
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();

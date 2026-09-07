@@ -222,7 +222,7 @@ test("공시지가 자동조회 — 소재지+연도 입력 후 조회 버튼 �
   await expect(lookupBtn).toBeDisabled();
 
   // 소재지 검색 → 결과 선택 → jibun 채움
-  await page.getByPlaceholder("도로명 또는 지번 주소 입력 (예: 테헤란로 123)").fill("테헤란로 123");
+  await page.getByPlaceholder("도로명 또는 지번 주소 입력").fill("테헤란로 123");
   await page.getByRole("button", { name: /테헤란로 123/ }).click();
 
   // 조회 버튼 활성 → 클릭 → 취득당시 ㎡당 공시지가 자동 채움

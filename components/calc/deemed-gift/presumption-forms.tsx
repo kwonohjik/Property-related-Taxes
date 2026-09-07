@@ -30,6 +30,7 @@ export function AcquisitionFundFields({ form, set }: Props) {
       />
       <CurrencyInput
         label={isDebt ? "채무상환금액" : "취득재산가액"}
+        data-testid="af-acquisition-value"
         value={form.afAcquisitionValue}
         onChange={(v) => set({ afAcquisitionValue: v })}
         hint="미입증액이 취득가액(상환금액) 20%·2억 중 적은 금액 이상이면 증여추정 (§45③)"

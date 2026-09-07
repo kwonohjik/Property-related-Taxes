@@ -8,7 +8,7 @@ import { test, expect } from "@playwright/test";
  * 순수 영문 입력이라 이 경로를 그대로 재현한다.
  */
 
-const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력 (예: 테헤란로 123)";
+const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력";
 
 test.beforeEach(async ({ page }) => {
   // 외부 주소 API 실호출 차단 (debounce 후 검색이 돈다)
