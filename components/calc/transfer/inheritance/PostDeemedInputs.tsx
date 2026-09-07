@@ -10,7 +10,7 @@
  * ① 평가방법 선택 → ② 신고가액 → ③ (보충적평가 선택 시) 보조계산
  */
 
-import { useState } from "react";
+import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -90,12 +90,23 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
     (isLand && !!inheritanceDate && inheritanceDate < LAND_FIRST_DISCLOSURE_DATE) ||
     (isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE);
 
-  // 보충적평가 보조계산: 토지 단가 × 면적 = 자동 합산
-  const [landTotal, setLandTotal] = useState(() => {
+  /**
+   * 보충적평가 보조계산: 토지 단가 × 면적 = 자동 합산.
+   *
+   * 🔴 **로컬 state로 들고 있지 말 것** (2026-09-07 재검증 H6). 종전에는 `useState`
+   *    초기화 후 단가·면적 핸들러에서만 갱신됐는데, 평가방법 Select(:아래)는 store의
+   *    `supplementaryLandUnitPrice`·`supplementaryLandArea`만 지우고 이 값은 남겼다.
+   *    그래서 「보충적평가 → 단가·면적 입력 → 감정평가액 → 다시 보충적평가 → 보조계산 ON」이면
+   *    **화면에 없는 옛 금액**이 상속세 신고가액에 자동 기입됐다.
+   *
+   *    두 store 필드가 이 값을 완전히 결정하므로 파생(useMemo)이 정본이다 — stale이 원천 불가능하고
+   *    `useEffect → store` 미러링도 아니다(memory `mirror-pattern`).
+   */
+  const landTotal = useMemo(() => {
     const unitPrice = parseAmount(asset.supplementaryLandUnitPrice);
     const area = parseFloat(asset.supplementaryLandArea) || 0;
     return unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
-  });
+  }, [asset.supplementaryLandUnitPrice, asset.supplementaryLandArea]);
 
   // 보충적평가 보조계산: 합산 → publishedValueAtInheritance(① 상증법 평가액, 엔진 실경로) 동기화.
   // memory `mirror-pattern` — useEffect→store 미러링 금지. onChange 핸들러에서 직접 패치.
@@ -111,7 +122,6 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
     const unitPrice = parseAmount(v);
     const area = parseFloat(asset.supplementaryLandArea) || 0;
     const newLandTotal = unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
-    setLandTotal(newLandTotal);
     onChange({
       supplementaryLandUnitPrice: v,
       ...reportedPatch(newLandTotal, asset.supplementaryBuildingValue),
@@ -122,7 +132,6 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
     const unitPrice = parseAmount(asset.supplementaryLandUnitPrice);
     const area = parseFloat(v.replace(/,/g, "")) || 0;
     const newLandTotal = unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
-    setLandTotal(newLandTotal);
     onChange({
       supplementaryLandArea: v,
       ...reportedPatch(newLandTotal, asset.supplementaryBuildingValue),

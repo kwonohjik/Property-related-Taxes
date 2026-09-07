@@ -20,6 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { getFilingDeadline, isFilingOverdue, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
+import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 
 // ============================================================
 // Step 1: 자산 목록
@@ -69,9 +70,8 @@ export function Step1({
   // 증환지 증가분 존재 시: 당초분·증가분은 한 필지·한 계약이라 양도가액 구분 기재(actual)가 불가능.
   // 양도시 기준시가 안분(§166⑥ 단서)만 유효 → 결정방식 토글 숨김 + apportioned 강제(파생).
   const hasReplotIncrement = form.assets.some((a) => a.isReplotIncrement);
-  const effBundledSaleMode: "actual" | "apportioned" = hasReplotIncrement
-    ? "apportioned"
-    : form.bundledSaleMode;
+  // ④·⑧과 **같은 leaf**를 쓴다(H8) — 인라인 복제 금지.
+  const effBundledSaleMode = effectiveBundledSaleMode(form);
 
   // 토글 A — 함께 양도(다른 물건 N개)
   function handleCompanionToggle(yes: boolean) {

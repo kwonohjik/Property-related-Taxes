@@ -39,3 +39,50 @@ export function phdToggleReachable(asset: {
   if (asset.assetKind === "housing") return true;
   return asset.assetKind === "building" && !!asset.hasSeperateLandAcquisitionDate;
 }
+
+/**
+ * 이월과세(증여) 축에서 §164⑤ PHD·APD 환산을 **쓰고 있는가**.
+ *
+ * ## 왜 별도 술어인가 — ⑤·⑧은 요구하는데 ④만 안 보냈다 (2026-09-07 재검증 H3)
+ *
+ * `CarryoverEstimationSection`은 `PreHousingDisclosureSection`을 **렌더 사본에만**
+ * `usePreHousingDisclosure: true`를 주입하고 store 패치에서는 그 키를 떼어낸다
+ * (「carryover 모드 선택으로 제어」 — 자산-수준 토글과 축을 섞지 않으려는 의도다).
+ * 그런데 ④ `buildPreHousingDisclosurePayload`는 **store 값**만 보고 전송을 결정했다.
+ *
+ * 그 플래그를 켜는 곳은 `CompanionAcqPurchaseBlock`(취득원인=매매 전용)뿐이라
+ * `carryover_gift`에서는 결코 true가 되지 않는다 ⇒ 사용자가 3-시점 칸을 채우고
+ * ⑧(`transfer-tax-validate-acquisition.ts`의 이월과세 전용 블록)도 그것을 **요구**하는데,
+ * ④가 `preHousingDisclosure`를 통째로 안 보내 증여자 취득가액이 0이 됐다.
+ *
+ * ⇒ 축은 `carryover.estimationMode`다. ④·⑧·⑤가 같은 사실을 보게 한다.
+ */
+export function carryoverPhdMode(
+  asset: Pick<AssetForm, "acquisitionCause" | "carryover">,
+): boolean {
+  if (asset.acquisitionCause !== "carryover_gift") return false;
+  const c = asset.carryover;
+  if (!c?.useEstimatedAcquisition) return false;
+  return c.estimationMode === "phd" || c.estimationMode === "apd";
+}
+
+/**
+ * ④가 `preHousingDisclosure` 페이로드를 **실어야 하는가** — 두 축의 합집합.
+ *
+ * ⚠️ `phdToggleReachable`은 **자산-수준 토글 축에만** 건다. 이월과세는 자기 패널·자기 ⑧
+ *    게이트를 갖고 있어 stale 토글 문제가 없고, 여기에 자산 종류 축을 걸면 이번엔
+ *    이월과세 경로가 조용히 막힌다(같은 결함의 거울상).
+ */
+export function phdPayloadActive(
+  asset: Pick<
+    AssetForm,
+    | "assetKind"
+    | "hasSeperateLandAcquisitionDate"
+    | "usePreHousingDisclosure"
+    | "acquisitionCause"
+    | "carryover"
+  >,
+): boolean {
+  if (carryoverPhdMode(asset)) return true;
+  return asset.usePreHousingDisclosure === true && phdToggleReachable(asset);
+}

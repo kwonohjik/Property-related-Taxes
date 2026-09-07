@@ -45,10 +45,13 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
   // 미편집 시 기납부세액 = 신고일 필터 자동 파생(§111③). 편집 시 사용자 입력값 표시.
   const derived = useMemo(() => computeAutoPriorPaid(form.properties), [form.properties]);
   const priorPaidTaxValue = form.priorPaidTaxEdited ? form.priorPaidTax : String(derived.national);
-  const priorPaidLocalValue = form.priorPaidTaxEdited
+  // 🔴 두 칸은 **각자의 편집 플래그**를 본다(H5 — 공유하면 한쪽 편집이 다른 쪽 자동값을 지운다).
+  const priorPaidLocalValue = form.priorPaidLocalTaxEdited
     ? form.priorPaidLocalTax
     : String(derived.local);
-  const showAutoBadge = !form.priorPaidTaxEdited && (derived.national > 0 || derived.local > 0);
+  const showAutoBadge =
+    (!form.priorPaidTaxEdited || !form.priorPaidLocalTaxEdited) &&
+    (derived.national > 0 || derived.local > 0);
   return (
     <div className="space-y-6">
       {/* 과세연도 */}
@@ -133,7 +136,7 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
             <CurrencyInput
               label="예정신고 기납부 지방소득세"
               value={priorPaidLocalValue}
-              onChange={(v) => onChange({ priorPaidLocalTax: v, priorPaidTaxEdited: true })}
+              onChange={(v) => onChange({ priorPaidLocalTax: v, priorPaidLocalTaxEdited: true })}
             />
             <p className="mt-1 text-xs text-muted-foreground">지방소득세 예정신고 납부액</p>
           </div>

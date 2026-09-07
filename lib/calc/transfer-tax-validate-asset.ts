@@ -53,6 +53,7 @@ export function todayLocalISO(): string {
 // ─── ⑧ 취득가액 축 검증 — transfer-tax-validate-acquisition.ts로 분리 (800줄 정책, 재export 호환) ───
 export { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
+import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 
 /**
  * 날짜 순서 교차 검증 — 자산 카드 실시간 인라인 경고(UI)와
@@ -193,7 +194,7 @@ export function validateAssetEntry(
   // 동일 물건 지분 단계취득 케이스(사례 27)에서 안분 키 입력 강요 차단.
   const isFractionalAsset = ownN < ownD;
   // 증환지 증가분 존재 시 양도가액 구분 기재(actual) 불가 → 양도시 기준시가 안분 강제 (Step1 토글 숨김과 일치)
-  const effBundledMode = form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode;
+  const effBundledMode = effectiveBundledSaleMode(form);
   if (form.assets.length > 1 && !isFractionalAsset) {
     /**
      * 🔴 부담부증여 자산은 ⑤가 **모드를 자산별로 덮어쓴다** (2026-09-07 UI 리뷰).

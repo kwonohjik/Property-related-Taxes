@@ -11,6 +11,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
+import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -165,6 +166,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 엔진이 개산공제 계산 지점에서만 적용한다(설계 transfer-fractional-lump-sum-deduction).
   const ownershipRatioForDeduction = primaryFractional ? primaryRatio : undefined;
   const totalContractPrice = parseAmount(form.contractTotalPrice);
+  // 증환지 증가분이 있으면 결정방식은 `apportioned` 강제 — ⑤·⑧과 **같은 leaf**를 쓴다(H8).
+  const effBundledSaleMode = effectiveBundledSaleMode(form);
   // 폼-수준 총 양도비 (B3) — 지분 모드 자동 안분의 분자 sourcing.
   // primary.transferExpense가 직접 입력되면 그것이 우선, 미입력시 form.totalTransferExpense × ratio 사용.
   const formTotalTransferExpense = parseAmount(form.totalTransferExpense || "0");
@@ -630,8 +633,10 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             // ⑬ 폼-수준 총 양도비를 **자산에 싣지 않는다** — 아래 `commonTransferExpense`로
             //    신고 단위 1회만 보내고 엔진이 §100② 후단(가액 비례)으로 안분한다(Q08).
             //    자산별 직접 입력분(`transferExpense`)은 그대로 `directExpenses`로 더해진다.
-            .map((a, ci) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, form.assets.some((x) => x.isReplotIncrement) ? "apportioned" : form.bundledSaleMode, form.transferDate, totalContractPrice, undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form)),
-          bundledSaleMode: form.bundledSaleMode,
+            .map((a, ci) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, effBundledSaleMode, form.transferDate, totalContractPrice, undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form)),
+          // 🔴 신고 단위 선언도 **파생값**이다(H8) — 자산별 계산만 안분하고 여기를 raw로 두면
+          //    한 요청 안에서 「자산은 안분 / 신고는 구분기재」로 어긋난다.
+          bundledSaleMode: effBundledSaleMode,
           /**
            * ⑬ 신고 단위 공통 양도비 (§100② 후단) — 「공통되는 … 양도비용은 해당 자산의
            * 가액에 비례하여 안분계산한다」. 안분은 `apportionBundledSale`의 `commonExpenses`가
@@ -648,7 +653,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           //  - apportioned 비지분: undefined (양도시 기준시가 비율 안분).
           primaryActualSalePrice: primaryFractional
             ? applyRatio(totalContractPrice, primaryRatio)
-            : form.bundledSaleMode === "actual" && primary.actualSalePrice
+            : effBundledSaleMode === "actual" && primary.actualSalePrice
               ? parseAmount(primary.actualSalePrice)
               : undefined,
         }
