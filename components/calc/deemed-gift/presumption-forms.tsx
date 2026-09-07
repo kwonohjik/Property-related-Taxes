@@ -80,7 +80,6 @@ export function NomineeTrustFields({ form, set }: Props) {
             value={form.ntNewShares}
             onChange={(v) => set({ ntNewShares: v })}
             hint="유상증자로 명의자에게 배정된 신주 수 (제척기간 만료된 기존분 제외)"
-            placeholder="명의신탁 신주 수"
           />
           <div className="space-y-2 rounded-md border border-emerald-200 bg-white p-2">
             <p className="text-xs font-semibold text-emerald-700">참고·비교 입력 (선택 — 평가에 미적용)</p>
@@ -129,7 +128,6 @@ export function NomineeTrustFields({ form, set }: Props) {
           value={form.ntPropertyValue}
           onChange={(v) => set({ ntPropertyValue: v })}
           hint="등기등이 필요한 재산(토지·건물 제외) — 주식 등"
-          placeholder="명의신탁 재산 가액 (원)"
         />
       )}
       <ToggleCard

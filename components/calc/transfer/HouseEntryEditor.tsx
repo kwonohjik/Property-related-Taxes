@@ -136,7 +136,6 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
           <CurrencyInput
             label="취득가액"
             hideLabel
-            placeholder="취득가액 입력"
             value={house.acquisitionPrice ?? ""}
             onChange={(v) => onUpdate({ acquisitionPrice: v })}
             hint="소형신축·준공후미분양 특례 가액 기준 (원)"

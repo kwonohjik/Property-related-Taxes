@@ -39,7 +39,7 @@ test.describe("#3-B1 신축·준공후미분양 특례 비차단 경고", () => 
     await expect(warning).toBeVisible();
 
     // 취득가액까지 입력 → 경고 해제
-    await dialog.getByPlaceholder("취득가액 입력").fill("500000000");
+    await dialog.getByLabel("취득가액", { exact: true }).fill("500000000");
     await expect(warning).not.toBeVisible();
   });
 });

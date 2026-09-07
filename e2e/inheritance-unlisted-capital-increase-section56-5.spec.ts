@@ -69,7 +69,7 @@ test.describe("비상장주식 V2 — §56⑤ 유상증자 조정 UI 반영", ()
     await page.getByPlaceholder("법인명 입력").fill("예제법인");
     await fillFieldCardDate(page, "사업개시일", "2000", "1", "1");
     await fillFieldCardDate(page, "평가기준일", "2022", "6", "30");
-    await page.getByPlaceholder("1주당 액면가액").fill("5000");
+    await page.getByLabel("1주당 액면가액", { exact: true }).fill("5000");
     await page.getByPlaceholder("발행주식총수").fill("180000");
     await page.getByPlaceholder("보유 주식수").fill("180000");
 

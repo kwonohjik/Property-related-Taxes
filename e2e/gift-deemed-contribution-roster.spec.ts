@@ -22,9 +22,9 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
   test("계산사례1 저가 roster — gross 500M·A 275M·B 175M·과세 450M + 증여세 handoff", async ({ page }) => {
     const dialog = await openContribution(page);
     // 저가(①1호) 기본값. 5개 공통 입력
-    await dialog.getByPlaceholder("현물출자 전 1주당 평가가액 (원)").fill("20000");
+    await dialog.getByLabel("현물출자 전 1주당 평가가액", { exact: true }).fill("20000");
     await dialog.getByPlaceholder("현물출자 전 발행주식총수").fill("100000");
-    await dialog.getByPlaceholder("신주 1주당 인수가액 (원)").fill("10000");
+    await dialog.getByLabel("신주 1주당 인수가액", { exact: true }).fill("10000");
     await dialog.getByPlaceholder("현물출자 주식수").fill("100000");
     await dialog.getByPlaceholder("배정받은 신주수").fill("100000");
     // 증여자 명부 ON
@@ -58,9 +58,9 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
   test("계산사례2 고가 roster per-donee — B 175M·C 50M·합 225M", async ({ page }) => {
     const dialog = await openContribution(page);
     await dialog.getByTestId("con-case-high").click();
-    await dialog.getByPlaceholder("현물출자 전 1주당 평가가액 (원)").fill("5000");
+    await dialog.getByLabel("현물출자 전 1주당 평가가액", { exact: true }).fill("5000");
     await dialog.getByPlaceholder("현물출자 전 발행주식총수").fill("100000");
-    await dialog.getByPlaceholder("신주 1주당 인수가액 (원)").fill("20000");
+    await dialog.getByLabel("신주 1주당 인수가액", { exact: true }).fill("20000");
     await dialog.getByPlaceholder("현물출자 주식수").fill("50000");
     await dialog.getByPlaceholder("인수 신주수").fill("50000");
     // 수증자 명부 ON
@@ -98,9 +98,9 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
   test("Phase D 저가 상장 Min — 이론 15,000 → 평가 13,000 · gross 300,000,000", async ({ page }) => {
     const dialog = await openContribution(page);
     // 저가(①1호) 기본값 — 이론값 = (20,000×100,000 + 10,000×100,000) ÷ 200,000 = 15,000
-    await dialog.getByPlaceholder("현물출자 전 1주당 평가가액 (원)").fill("20000");
+    await dialog.getByLabel("현물출자 전 1주당 평가가액", { exact: true }).fill("20000");
     await dialog.getByPlaceholder("현물출자 전 발행주식총수").fill("100000");
-    await dialog.getByPlaceholder("신주 1주당 인수가액 (원)").fill("10000");
+    await dialog.getByLabel("신주 1주당 인수가액", { exact: true }).fill("10000");
     await dialog.getByPlaceholder("현물출자 주식수").fill("100000");
     await dialog.getByPlaceholder("배정받은 신주수").fill("100000");
     // 주권상장법인 토글 ON → 종가평균 13,000 (< 이론 15,000 ⇒ §29②1가 단서 발동)
@@ -121,9 +121,9 @@ test.describe("현물출자 §39의3 — 당사자 명부 roster", () => {
 
   test("계산사례3 저가 roster無 — gross 4,000,000 + 자기지분 경고", async ({ page }) => {
     const dialog = await openContribution(page);
-    await dialog.getByPlaceholder("현물출자 전 1주당 평가가액 (원)").fill("1000");
+    await dialog.getByLabel("현물출자 전 1주당 평가가액", { exact: true }).fill("1000");
     await dialog.getByPlaceholder("현물출자 전 발행주식총수").fill("20000");
-    await dialog.getByPlaceholder("신주 1주당 인수가액 (원)").fill("600");
+    await dialog.getByLabel("신주 1주당 인수가액", { exact: true }).fill("600");
     await dialog.getByPlaceholder("현물출자 주식수").fill("20000");
     await dialog.getByPlaceholder("배정받은 신주수").fill("20000");
     // roster 미사용 (OFF 기본)

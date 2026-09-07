@@ -287,7 +287,6 @@ export function CorporateInfoSection({
               hideLabel
               value={String(faceValuePerShare || "")}
               onChange={(v) => onChange({ faceValuePerShare: Number(v.replace(/,/g, "")) || 0 })}
-              placeholder="1주당 액면가액"
               hideUnit
             />
           </FieldCard>
@@ -318,7 +317,6 @@ export function CorporateInfoSection({
               hideLabel
               value={capitalDisplay}
               onChange={(v) => onChange({ capital: Number(v.replace(/,/g, "")) || 0 })}
-              placeholder="자본금"
               hideUnit
             />
           </FieldCard>

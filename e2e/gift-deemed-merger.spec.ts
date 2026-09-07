@@ -18,7 +18,7 @@ test.describe("합병 §38 — 평가 보조·주주 매트릭스", () => {
     await page.getByTestId("mrg-over-price").fill("30000"); // 과대평가(B) 1주평가
     await page.getByPlaceholder("합병 전 주식수").fill("100000");
     await page.getByPlaceholder("교부받은 주식수").fill("100000");
-    await page.getByPlaceholder("합병 후 1주당 평가가액 (원)").fill("36666"); // 단순평균액(직접입력)
+    await page.getByLabel("합병 후 1주당 평가가액", { exact: true }).fill("36666"); // 단순평균액(직접입력)
     await page.getByPlaceholder("대주주등 주식수").fill("70000"); // 병
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
@@ -71,7 +71,7 @@ test.describe("합병 §38 — 평가 보조·주주 매트릭스", () => {
     await page.getByTestId("mrg-split-cna").fill("10000000000");
     await page.getByPlaceholder("합병 전 주식수").fill("100000");
     await page.getByPlaceholder("교부받은 주식수").fill("100000");
-    await page.getByPlaceholder("합병 후 1주당 평가가액 (원)").fill("20000");
+    await page.getByLabel("합병 후 1주당 평가가액", { exact: true }).fill("20000");
     await page.getByPlaceholder("대주주등 주식수").fill("70000");
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();
