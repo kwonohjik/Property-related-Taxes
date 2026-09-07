@@ -55,7 +55,13 @@ function isSpecialAsset(kind: AssetForm["assetKind"]): boolean {
  */
 export function summarizeAssetSections(
   asset: AssetForm,
-  ctx: { totalTransferExpense?: string } = {},
+  ctx: {
+    totalTransferExpense?: string;
+    /** 폼-전역 함께양도 모드 — 「안분」이면 ②가 받는 칸이 양도시 기준시가다. */
+    bundledSaleMode?: string;
+    /** 지분 분할(축 B) — 양도가액 칸이 자동산정 카드로 대체된다. */
+    isFractionalSplit?: boolean;
+  } = {},
 ): AssetSummary {
   const kindLabel = ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind;
 
@@ -71,14 +77,36 @@ export function summarizeAssetSections(
   if (hasArea) basicParts.push("면적 입력됨");
   const basic: SectionSummary = { label: basicParts.join(" · "), filled: !!place || hasArea };
 
-  // ② 양도정보 — 양도형태 (부담부증여는 §159 자동산정)
+  /**
+   * ② 양도정보 — 양도형태 (부담부증여는 §159 자동산정).
+   *
+   * 🔴 **`transferCause`도 본다** (2026-09-07 UI 리뷰). `TransferModeBlock.selectMode`는
+   *    공익수용을 `transferType: "regular" + transferCause: "public_expropriation"`으로 저장한다.
+   *    같은 파일의 `currentMode`는 `transferCause`를 **우선**해 라디오를 올바로 그리는데
+   *    이 요약만 `transferType`만 읽어, 3지선다에서 「공익수용·협의매수」를 고르고 섹션을 접으면
+   *    헤더와 칩바가 「일반 양도」라고 말했다 — §77 감면·NBL 사업용 의제가 걸린 선택이다.
+   *
+   * 🔴 **입력여부도 한 필드만 보지 않는다.** 안분(`bundledSaleMode === "apportioned"`) 모드는
+   *    양도가액 대신 **양도시 기준시가**를 받고, 지분 분할 모드는 양도가액 칸 자체를 자동산정
+   *    카드로 대체해 `actualSalePrice`를 아예 쓰지 않는다(`CompanionSaleModeBlock`).
+   *    두 경우 ②를 완전히 채워도 영구히 「○ 미입력」이었다.
+   */
   const isBurdened = asset.transferType === "burdened_gift";
-  const transfer: SectionSummary = {
-    label: isBurdened
+  const isExpropriation = asset.transferCause === "public_expropriation";
+  const transferLabel = isExpropriation
+    ? "공익수용·협의매수"
+    : isBurdened
       ? "§159 자동산정"
-      : TRANSFER_TYPE_LABELS[asset.transferType || "regular"] ?? "일반 양도",
-    filled: isBurdened || hasText(asset.actualSalePrice),
-  };
+      : (TRANSFER_TYPE_LABELS[asset.transferType || "regular"] ?? "일반 양도");
+  /** 이 모드에서 ②의 값을 받는 칸이 무엇인가 — ⑤ `CompanionSaleModeBlock`과 같은 축. */
+  const transferFilled =
+    isBurdened ||
+    hasText(asset.actualSalePrice) ||
+    // 안분 모드: 양도가액 대신 양도시 기준시가를 받는다.
+    (ctx.bundledSaleMode === "apportioned" && hasText(asset.standardPriceAtTransfer)) ||
+    // 지분 분할: 양도가액은 자동산정이라 지분율 입력이 곧 ② 완료 신호다.
+    (!!ctx.isFractionalSplit && hasText(asset.ownershipNumerator));
+  const transfer: SectionSummary = { label: transferLabel, filled: transferFilled };
 
   // ③ 취득정보 — 원인 · 산정방식 (특수자산은 방식이 전용 블록에 있어 원인만)
   const causeLabel = ACQUISITION_CAUSE_LABELS[asset.acquisitionCause] ?? asset.acquisitionCause;

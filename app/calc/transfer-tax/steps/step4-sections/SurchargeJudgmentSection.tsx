@@ -22,6 +22,7 @@ import {
   isWithinSurchargeSuspensionWindow,
 } from "@/lib/tax-engine/legal-codes/transfer";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 
 /** 한시배제 종료일 표시 문자열 — 상수 단일 출처에서 파생(재연장 개정 시 문구 자동 추종, 하드코딩 금지) */
 const SUSPENSION_END_KO = (() => {
@@ -87,13 +88,27 @@ export function SurchargeJudgmentSection({
                 비교 적용).
               </p>
             )}
-            {/* B3: 양도일이 한시배제 종료일 이후 — 계약·허가 기반 경과조치 가능성 안내(자동판정 미지원) */}
+            {/*
+              B3: 양도일이 한시배제 종료일 이후 — 계약·허가 기반 경과조치 가능성 안내(자동판정 미지원).
+
+              🔴 **안내가 가리키는 곳이 틀렸고, 아예 없을 수도 있었다** (2026-09-07 UI 리뷰).
+                 ① 경과조치 입력(`GracePeriodSection`)은 이 안내보다 **위**인 같은 섹션의
+                    `HouseCountExemptionInputs → HousesListSection` 안에 렌더된다 —
+                    「아래 ④」는 방향이 반대다.
+                 ② 더 중요한 것은 **존재 여부**다. 노출 게이트는
+                    `gracePeriodInScope`(1세대 + 2주택 이상 + 주택 목록 **또는** 분양권 1건 이상)인데,
+                    주택 목록은 화면에 「정밀 중과세 판정용, 선택」이라 적힌 **선택 입력**이다.
+                    비워 두면 입력 자체가 없는데 안내만 「거기서 판정합니다」라고 말했다.
+              ⇒ 같은 술어로 문구를 갈라, 없으면 **여는 방법**을 알려 준다.
+            */}
             {!!form.transferDate &&
               form.transferDate > SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end && (
                 <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
                   {SUSPENSION_END_KO}까지 매매계약 체결(계약금 수령)·토지거래허가 신청분은
                   경과조치로 중과가 배제될 수 있습니다(§167의3①12의2 나·다, §167의10①12의2 나·다).
-                  아래 ④ 중과 판정 &gt; 중과 경과조치 조건 입력에서 나·다목을 판정합니다.
+                  {gracePeriodInScope(form)
+                    ? " 위 「세대 보유 주택 목록」 아래의 «중과 경과조치 조건» 입력에서 나·다목을 판정합니다."
+                    : " 나·다목 판정 입력은 «세대 보유 주택 목록» 또는 «분양권»을 1건 이상 입력하면 그 아래에 열립니다(1세대 + 2주택 이상)."}
                 </p>
               )}
           </div>

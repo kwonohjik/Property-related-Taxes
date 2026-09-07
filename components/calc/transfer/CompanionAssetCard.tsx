@@ -158,8 +158,13 @@ export function CompanionAssetCard({
 
   // 섹션 요약(라벨 전용·금액 없음) — store 미러링 없음, useMemo
   const summary = useMemo(
-    () => summarizeAssetSections(asset, { totalTransferExpense }),
-    [asset, totalTransferExpense],
+    () =>
+      summarizeAssetSections(asset, {
+        totalTransferExpense,
+        bundledSaleMode,
+        isFractionalSplit: splitMode === "fractional",
+      }),
+    [asset, totalTransferExpense, bundledSaleMode, splitMode],
   );
 
   // 접기 상태 — 첫 자산(양도일·신고일 호스트)은 ① 자동 펼침, 그 외 전부 접힘.

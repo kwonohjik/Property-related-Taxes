@@ -7,6 +7,7 @@
  * ⚠️ stale 서버 주의 — lsof -ti :3100 | xargs kill 후 실행.
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("양도세 P1 차감형 감면 패널", () => {
   test("미분양 그룹 → §98의8 폼 렌더 + 신축 그룹 → §99 폼 렌더", async ({ page }) => {
@@ -22,7 +23,7 @@ test.describe("양도세 P1 차감형 감면 패널", () => {
     await page.getByRole("button", { name: "감면·공제" }).click();
 
     // ── §98의8: 미분양주택 그룹 펼침 → 라디오 활성 + 폼 렌더 ──
-    await page.getByRole("button", { name: /미분양주택/ }).click();
+    await expandReductionCategory(page, /미분양주택/);
     const item988 = page.getByText("§98의8 — 준공후미분양 6억·135㎡↓ 50%", { exact: false }).first();
     await expect(item988).toBeVisible();
     await item988.click();
@@ -32,7 +33,7 @@ test.describe("양도세 P1 차감형 감면 패널", () => {
     await expect(page.getByText("임대개시일", { exact: false }).first()).toBeVisible();
 
     // ── §99: 신축주택 그룹 펼침 → 라디오 활성 + 폼 렌더 ──
-    await page.getByRole("button", { name: /신축주택/ }).click();
+    await expandReductionCategory(page, /신축주택/);
     const item99 = page.getByText("§99 — 신축주택 양도세 감면 (IMF 1차)", { exact: false }).first();
     await expect(item99).toBeVisible();
     await item99.click();

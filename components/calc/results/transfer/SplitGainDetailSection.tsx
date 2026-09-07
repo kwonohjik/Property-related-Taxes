@@ -1,5 +1,37 @@
 "use client";
 
+type SplitPart = NonNullable<TransferTaxResult["splitDetail"]>["land"];
+
+/** 12억 안분(영 §160①)·비과세 제외로 과세 양도차익이 양도차익보다 작아졌는가. */
+function hasProration(part: SplitPart): boolean {
+  return (
+    part.taxableGainAfterProration !== undefined && part.taxableGainAfterProration !== part.gain
+  );
+}
+
+/**
+ * 취득가액 셀 — §97②2호 단서 swap이 발동한 파트는 **차감되지 않았음**을 밝힌다.
+ * 금액은 그대로 보여 준다(사용자가 입력·산정한 값이므로 숨기면 그것대로 혼란이다).
+ */
+function AcqCell({ owned, part }: { owned: boolean; part: SplitPart }) {
+  // 표의 다른 금액 칸과 같은 클래스를 쓴다 — 비소유 파트는 종전대로 취소선·연회색이다.
+  const cls = owned
+    ? "font-mono text-right"
+    : "font-mono text-right text-muted-foreground/50 line-through";
+  if (!part.swapApplied) {
+    return <span className={cls}>{part.acquisitionPrice.toLocaleString()}</span>;
+  }
+  return (
+    <span className={cls}>
+      <span className="line-through">{part.acquisitionPrice.toLocaleString()}</span>
+      <span className="block text-caption font-normal text-rose-700 dark:text-rose-400">
+        차감 안 됨 (§97②2호 단서 — 자본적지출·양도비 택일)
+      </span>
+    </span>
+  );
+}
+
+
 /**
  * 토지·건물 분리 양도차익 상세 (소득령 §166⑥ · §100②).
  *
@@ -67,9 +99,16 @@ export function SplitGainDetailSection({
             <span className="text-muted-foreground">양도가액</span>
             <span className={colCls(landIsOwned)}>{splitDetail.land.transferPrice.toLocaleString()}</span>
             <span className={colCls(buildingIsOwned)}>{splitDetail.building.transferPrice.toLocaleString()}</span>
+            {/*
+              🔴 **§97②2호 단서 swap이 발동한 파트는 취득가액이 차감되지 않는다**
+                 (2026-09-07 UI 리뷰). 엔진은 그 파트에서 취득가액을 **전혀 빼지 않는다**
+                 (`transfer-tax-split-gain.ts:248` — `… − (swapApplied ? 0 : acqPrice) − …`).
+                 종전에는 환산취득가액 전액을 그대로 찍어, 억 단위 금액이 차감된 것처럼 보이는
+                 표와 그것을 반영하지 않은 양도차익이 나란히 놓였다.
+            */}
             <span className="text-muted-foreground">취득가액</span>
-            <span className={colCls(landIsOwned)}>{splitDetail.land.acquisitionPrice.toLocaleString()}</span>
-            <span className={colCls(buildingIsOwned)}>{splitDetail.building.acquisitionPrice.toLocaleString()}</span>
+            <AcqCell owned={landIsOwned} part={splitDetail.land} />
+            <AcqCell owned={buildingIsOwned} part={splitDetail.building} />
             <span className="text-muted-foreground">필요경비 (개산공제)</span>
             <span className={colCls(landIsOwned)}>
               {splitDetail.land.appraisalDeduction.toLocaleString()}
@@ -95,9 +134,44 @@ export function SplitGainDetailSection({
                   : "개별주택가격(부수토지 포함)에서 토지분을 분리한 값입니다 (소득세법 시행령 §163⑥2호가목)."}
               </span>
             )}
+            {/*
+              🔴 **자본적지출·양도비 행이 없었다** (2026-09-07 UI 리뷰). 엔진 산식은
+                 `gain = 양도가액 − 취득가액 − effectiveDirect − 개산공제`
+                 (`transfer-tax-split-gain.ts:248~249`)이고, 실지취득가액 파트는
+                 `effectiveAppraisalDed: 0 / effectiveDirect: directExp`다(:338~341).
+                 ⇒ 가장 흔한 실가 분리취득 사안에서 표는 「필요경비(개산공제) 0」만 찍고
+                 실제 차감된 자본적지출·양도비(자산 단위 양도비 안분분 포함)는 **어디에도 없었다** —
+                 표만으로 양도차익을 재현할 수 없었다.
+            */}
+            {(splitDetail.land.directExpenses > 0 || splitDetail.building.directExpenses > 0) && (
+              <>
+                <span className="text-muted-foreground">자본적지출·양도비</span>
+                <span className={colCls(landIsOwned)}>{splitDetail.land.directExpenses.toLocaleString()}</span>
+                <span className={colCls(buildingIsOwned)}>{splitDetail.building.directExpenses.toLocaleString()}</span>
+              </>
+            )}
             <span className="text-muted-foreground">양도차익</span>
             <span className={cn(colCls(landIsOwned), landIsOwned && "font-semibold")}>{splitDetail.land.gain.toLocaleString()}</span>
             <span className={cn(colCls(buildingIsOwned), buildingIsOwned && "font-semibold")}>{splitDetail.building.gain.toLocaleString()}</span>
+            {/*
+              🔴 **장특공제액의 base는 12억 안분 후 과세 양도차익이다** (2026-09-07 UI 리뷰).
+                 `calcLongTermHoldingDeduction`의 split 분기는
+                 `applyRate(taxableGainAfterProration, rate)`로 계산한다(`transfer-tax-lthd.ts:388~405`).
+                 1세대1주택 고가주택(12억 초과)·부수토지 비과세 제외(G-3) 사안에서는
+                 `taxableGainAfterProration < gain`이라 「양도차익 × 공제율 ≠ 장특공제액」이 되고,
+                 12억 안분이 적용된 사실 자체가 이 카드에서 사라졌다. 두 값이 다를 때만 행을 낸다.
+            */}
+            {(hasProration(splitDetail.land) || hasProration(splitDetail.building)) && (
+              <>
+                <span className="text-muted-foreground">과세 양도차익 (12억 안분 후)</span>
+                <span className={colCls(landIsOwned)}>
+                  {(splitDetail.land.taxableGainAfterProration ?? splitDetail.land.gain).toLocaleString()}
+                </span>
+                <span className={colCls(buildingIsOwned)}>
+                  {(splitDetail.building.taxableGainAfterProration ?? splitDetail.building.gain).toLocaleString()}
+                </span>
+              </>
+            )}
             <span className="text-muted-foreground">보유연수</span>
             <span className={colCls(landIsOwned)}>{splitDetail.land.holdingYears}년</span>
             <span className={colCls(buildingIsOwned)}>{splitDetail.building.holdingYears}년</span>
