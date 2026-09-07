@@ -8,6 +8,7 @@
  * 외부 API(/api/address/search·standard-price)는 mock — 정부사이트 조회는 결정적 재현 위해 mock.
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("§99의4 농어촌주택 기준시가 조회형", () => {
   test("주소 검색 → 선택 → 공시가격 조회 → ruralHouseStdPrice 자동 입력", async ({ page }) => {
@@ -43,7 +44,7 @@ test.describe("§99의4 농어촌주택 기준시가 조회형", () => {
 
     // ── 감면·공제 단계 → 신축주택 그룹 → §99의4 농어촌주택 ──
     await page.getByRole("button", { name: "감면·공제" }).click();
-    await page.getByRole("button", { name: /신축주택/ }).first().click();
+    await expandReductionCategory(page, /신축주택/);
     await page.getByText("§99의4 (농어촌주택)", { exact: false }).first().click();
 
     // ── New994 폼: 농어촌주택 주소 필드(조회형) 렌더 확인 ──

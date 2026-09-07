@@ -8,6 +8,7 @@
  * worktree 실행: E2E_PORT=3100 npx playwright test e2e/transfer-rental-97-3.spec.ts
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("양도세 §97의3 감면 패널", () => {
   test("rental 그룹 펼침 → §97의3 선택 → 폼 렌더", async ({ page }) => {
@@ -23,7 +24,7 @@ test.describe("양도세 §97의3 감면 패널", () => {
     await page.getByRole("button", { name: "감면·공제" }).click();
 
     // ── rental 그룹 펼침 ──
-    await page.getByRole("button", { name: /장기임대주택/ }).click();
+    await expandReductionCategory(page, /장기임대주택/);
 
     // §97의3 항목 노출 + 클릭 (등록일 미입력 → 양도일 낙관 fallback으로 활성)
     const item973 = page.getByText("§97의3 — 장특공제율 70%", { exact: false }).first();

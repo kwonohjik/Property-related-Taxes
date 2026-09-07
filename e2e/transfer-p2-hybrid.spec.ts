@@ -7,6 +7,7 @@
  * ⚠️ stale 서버 주의 — lsof -ti :3100 | xargs kill 후 실행.
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("양도세 P2 하이브리드 감면 패널", () => {
   test("미분양 그룹 → §98의7 폼 렌더 + §99의2 폼 렌더", async ({ page }) => {
@@ -22,7 +23,7 @@ test.describe("양도세 P2 하이브리드 감면 패널", () => {
     await page.getByRole("button", { name: "감면·공제" }).click();
 
     // ── §98의7: 미분양주택 그룹 펼침 → 라디오 활성 + 폼 렌더 ──
-    await page.getByRole("button", { name: /미분양주택/ }).click();
+    await expandReductionCategory(page, /미분양주택/);
     const item987 = page.getByText("§98의7 — 9억↓ 미분양 100%", { exact: false }).first();
     await expect(item987).toBeVisible();
     await item987.click();

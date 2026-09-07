@@ -10,6 +10,7 @@
  * reduction-994-stdprice-lookup.spec.ts(§99의4)가 커버 → 본 스펙은 3시점 렌더 + PHD echo에 집중.
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("§99 3시점 기준시가 조회형 + PHD 환산", () => {
   test("3시점 조회형 위젯 3개 렌더 + PHD 환산 토글 → 취득시 echo 전환", async ({ page }) => {
@@ -21,7 +22,7 @@ test.describe("§99 3시점 기준시가 조회형 + PHD 환산", () => {
     await page.getByTestId("transfer-date").getByLabel("월").fill("06");
     await page.getByTestId("transfer-date").getByLabel("일").fill("01");
     await page.getByRole("button", { name: "감면·공제" }).click();
-    await page.getByRole("button", { name: /신축주택/ }).first().click();
+    await expandReductionCategory(page, /신축주택/);
     await page.getByText("§99 — 신축주택 양도세 감면", { exact: false }).first().click();
 
     // ── ① 3시점 조회형 위젯(취득·5년·양도) 모두 렌더 ──
