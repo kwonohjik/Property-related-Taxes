@@ -28,6 +28,7 @@ import { VillaLandDetailSection } from "./VillaLandDetailSection";
 import { OtherLandDetailSection } from "./OtherLandDetailSection";
 import { DeemedTransferSection } from "./DeemedTransferSection";
 import { NblUrbanZoneCheckButton } from "./NblLandAutoFetch";
+import { nblLandSigunguCodeOf } from "@/lib/calc/nbl-land-sigungu";
 
 const LAND_TYPE_OPTIONS = [
   { value: "farmland",     label: "농지 (전·답·과수원)" },
@@ -93,7 +94,8 @@ export function NblSectionContainer({
   // 토지 소재지 = 양도 물건 소재지 자동연동. 판정용 코드는 acquisitionSigunguCode(10자리)를 5자리로 정규화,
   // 표시용 이름은 자산 주소 문자열에서 파싱(시군구 코드 테이블 누락 시군구도 표시됨).
   // nblLandSigunguCode 미입력 시 fallback으로 판정에 사용됨(buildNonBusinessLandRaw). 표시로 일관성 확보.
-  const acqSigungu5 = (asset.acquisitionSigunguCode || "").slice(0, 5);
+  // ④·⑧과 같은 leaf — 세 층이 같은 코드를 본다(3중 패턴).
+  const acqSigungu5 = nblLandSigunguCodeOf({ ...asset, nblLandSigunguCode: "" });
   const acqSigunguName = extractSidoSigunguName(asset.addressJibun || asset.addressRoad) || undefined;
 
   if (!asset.nblUseDetailedJudgment) {

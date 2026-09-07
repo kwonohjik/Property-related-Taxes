@@ -17,6 +17,7 @@ import type { nonBusinessLandRawSchema } from "@/lib/api/transfer-tax-schema-sub
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { buildUncondSourceRecord } from "@/lib/calc/nbl-unconditional-exemption-status";
+import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
 
 /** Zod 검증 후 출력(z.infer = z.output) — 빌더의 z.input과 구분 */
 type NonBusinessLandRaw = z.infer<typeof nonBusinessLandRawSchema>;
@@ -100,9 +101,6 @@ export function buildNonBusinessLandRaw(
   const nblFields = Object.fromEntries(
     Object.entries(asset).filter(([k]) => k.startsWith("nbl")),
   );
-  // 토지 소재지 시·군·구: NBL 전용값 우선, 미입력 시 양도 물건 소재지(acquisitionSigunguCode)로 fallback.
-  // acquisitionSigunguCode는 10자리("XXXXX00000") → 5자리로 정규화(NBL sigungu-codes는 5자리계).
-  const acqSigungu5 = (asset.acquisitionSigunguCode || "").slice(0, 5);
   return {
     ...nblFields,
     /**
@@ -123,7 +121,7 @@ export function buildNonBusinessLandRaw(
      */
     nblOwnershipRatio: String(deriveOwnershipRatio(asset)),
     nblUrbanIncorporationDate: resolveNblUrbanIncorporationDate(asset),
-    nblLandSigunguCode: asset.nblLandSigunguCode || acqSigungu5,
+    nblLandSigunguCode: nblLandSigunguCodeOf(asset),
     // 농지 좌표(직선거리 30km 재촌 판정 기준점) — 양도 물건 주소검색 시 세팅됨.
     nblLandLat: asset.latitude,
     nblLandLng: asset.longitude,

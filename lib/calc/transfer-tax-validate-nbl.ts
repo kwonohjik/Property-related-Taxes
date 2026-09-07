@@ -23,6 +23,7 @@ import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { resolveNblUrbanIncorporationDate } from "./non-business-land-request";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
 import { parseTaxPeriodYears } from "@/lib/tax-engine/non-business-land/disqualified-tax-periods";
+import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
 
 /** 폼의 3-state 값을 엔진 `LandDivision`으로 — ④ form-mapper와 **같은 접기 규칙**(3중 패턴). */
 function nblLandDivisionOf(asset: AssetForm): LandDivision | undefined {
@@ -57,7 +58,7 @@ function isUrbanForIncorporationGrace(
   // 지역기준 자체가 적용되지 않으므로 편입일도 요구하지 않는다 — 과차단 방지 (E2-01).
   if (
     (landType === "farmland" || landType === "pasture") &&
-    isUrbanCriteriaRegion(asset.nblLandSigunguCode, nblLandDivisionOf(asset)) === false
+    isUrbanCriteriaRegion(nblLandSigunguCodeOf(asset), nblLandDivisionOf(asset)) === false
   ) {
     return false;
   }
@@ -183,8 +184,10 @@ export function validateNblDetailedJudgment(
   if (
     (asset.nblLandType === "farmland" || asset.nblLandType === "pasture") &&
     isUrbanResidentialCommercialIndustrial(asset.nblZoneType as ZoneType) &&
-    isUrbanCriteriaRegion(asset.nblLandSigunguCode, nblLandDivisionOf(asset)) === undefined &&
-    asset.nblLandSigunguCode
+    isUrbanCriteriaRegion(nblLandSigunguCodeOf(asset), nblLandDivisionOf(asset)) === undefined &&
+    // 🔴 ④·⑤와 **같은 fallback**을 본다(2026-09-07). 종전 `asset.nblLandSigunguCode`는
+    //    자동 연동 상태에서 falsy라 이 차단이 통째로 건너뛰어졌다.
+    nblLandSigunguCodeOf(asset)
   ) {
     return `${label}: 도시지역 ${LAND_TYPE_LABEL[asset.nblLandType] ?? "토지"} — 소재지 행정구역 단위(동 / 읍·면)를 선택하세요. 법 §104조의3①1호나목·3호가목은 읍·면지역을 도시지역 판정에서 제외합니다.`;
   }
