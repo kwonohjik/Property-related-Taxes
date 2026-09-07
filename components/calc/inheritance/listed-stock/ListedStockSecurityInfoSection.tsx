@@ -61,7 +61,7 @@ export function ListedStockSecurityInfoSection({
               set({ name: m.stockName, listedStockCode: m.stockCode })
             }
             onNameChange={(name) => set({ name })}
-            placeholder="종목명 검색 또는 자동조회 시 자동 입력 (예: 삼성전자)"
+            placeholder="종목명 검색 또는 자동조회 시 자동 입력"
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             testId="ls-security-info-name"
           />
@@ -84,7 +84,7 @@ export function ListedStockSecurityInfoSection({
                 .slice(0, 6);
               set({ listedStockCode: v });
             }}
-            placeholder="6자리 종목코드 (예: 005930)"
+            placeholder="6자리 숫자"
             inputMode="text"
             maxLength={6}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

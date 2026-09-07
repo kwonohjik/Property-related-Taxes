@@ -417,7 +417,7 @@ function DebtFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
           { value: "third_party_assumption", label: "제3자 인수·변제 (계약체결일)", testId: "debt-occur-third_party_assumption" },
         ]}
       />
-      <CurrencyInput label="면제·인수·변제 채무액" value={form.debtForgiven} onChange={(v) => set({ debtForgiven: v })} placeholder="채무액 (원)" />
+      <CurrencyInput label="면제·인수·변제 채무액" value={form.debtForgiven} onChange={(v) => set({ debtForgiven: v })} />
       <CurrencyInput label="보상(지급)액" value={form.debtCompensation} onChange={(v) => set({ debtCompensation: v })} />
     </ToneCard>
   );

@@ -13,7 +13,7 @@
 
 import { test, expect, type Page } from "@playwright/test";
 
-const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력 (예: 테헤란로 123)";
+const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력";
 
 /** RadioCardGroup 카드를 라벨 텍스트로 클릭 */
 function radioCard(page: Page, labelText: string | RegExp) {

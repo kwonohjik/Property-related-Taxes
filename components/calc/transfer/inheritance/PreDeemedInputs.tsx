@@ -259,7 +259,6 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
                 : asset.standardPriceAtAcq
             }
             onChange={(v) => onChange({ standardPriceAtAcq: v })}
-            placeholder="기준시가 입력 (원)"
             disabled={stdPriceAtAcqAutoActive}
           />
         </FieldCard>
@@ -332,7 +331,6 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
                 : asset.standardPriceAtTransfer
             }
             onChange={(v) => onChange({ standardPriceAtTransfer: v })}
-            placeholder="기준시가 입력 (원)"
             disabled={stdPriceAtTransferAutoActive}
           />
         </FieldCard>

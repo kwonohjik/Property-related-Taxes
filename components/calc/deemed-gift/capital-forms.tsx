@@ -139,8 +139,8 @@ export function MergerFields({ form, set }: Props) {
             {splitNet && (
               <>
                 <CurrencyInput label="분할법인 분할직전 1주당 평가가액" value={form.mrgSplitPrePrice} onChange={(v) => set({ mrgSplitPrePrice: v })} placeholder="1주당 평가가액 (원)" data-testid="mrg-split-pre" />
-                <CurrencyInput label="분할사업부문 순자산가액" value={form.mrgSplitBusinessNetAsset} onChange={(v) => set({ mrgSplitBusinessNetAsset: v })} placeholder="순자산가액 (원)" data-testid="mrg-split-bna" />
-                <CurrencyInput label="분할법인 순자산가액" value={form.mrgSplitCompanyNetAsset} onChange={(v) => set({ mrgSplitCompanyNetAsset: v })} placeholder="순자산가액 (원)" data-testid="mrg-split-cna" />
+                <CurrencyInput label="분할사업부문 순자산가액" value={form.mrgSplitBusinessNetAsset} onChange={(v) => set({ mrgSplitBusinessNetAsset: v })} data-testid="mrg-split-bna" />
+                <CurrencyInput label="분할법인 순자산가액" value={form.mrgSplitCompanyNetAsset} onChange={(v) => set({ mrgSplitCompanyNetAsset: v })} data-testid="mrg-split-cna" />
               </>
             )}
           </ToggleCard>
@@ -207,8 +207,8 @@ export function MergerFields({ form, set }: Props) {
         </>
       ) : (
         <>
-          <CurrencyInput label="액면가액" value={form.mrgFaceValue} onChange={(v) => set({ mrgFaceValue: v })} placeholder="액면가액 (원)" />
-          <CurrencyInput label="합병대가 (액면 미달 시 적용)" value={form.mrgConsideration} onChange={(v) => set({ mrgConsideration: v })} placeholder="합병대가 (원)" />
+          <CurrencyInput label="액면가액" value={form.mrgFaceValue} onChange={(v) => set({ mrgFaceValue: v })} />
+          <CurrencyInput label="합병대가 (액면 미달 시 적용)" value={form.mrgConsideration} onChange={(v) => set({ mrgConsideration: v })} />
           <CurrencyInput label="합병당사법인 1주당 평가가액" value={form.mrgOvervaluedPrice} onChange={(v) => set({ mrgOvervaluedPrice: v })} placeholder="1주당 평가가액 (원)" />
           <CurrencyInput label="대주주등 주식수" value={form.mrgMajorShares} onChange={(v) => set({ mrgMajorShares: v })} placeholder="대주주등 주식수" />
         </>
@@ -507,7 +507,7 @@ export function CapitalDecreaseFields({ form, set }: Props) {
               { value: "high", label: "고가 소각 (①2호)", testId: "cd-case-high" },
             ]}
           />
-          <CurrencyInput label="감자주식 1주당 평가액" value={form.cdSharePrice} onChange={(v) => set({ cdSharePrice: v })} placeholder="감자주식 1주당 평가액 (원)" />
+          <CurrencyInput label="감자주식 1주당 평가액" value={form.cdSharePrice} onChange={(v) => set({ cdSharePrice: v })} />
           <CurrencyInput label="소각 시 지급한 1주당 금액" value={form.cdRedemptionPrice} onChange={(v) => set({ cdRedemptionPrice: v })} placeholder="소각 지급 1주당 금액 (원)" />
           {isHigh ? (
             <>
@@ -634,7 +634,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
       )}
       {isConversion && (
         <>
-          <CurrencyInput label="전환등 전 1주당 평가가액" value={form.cbPreConvPrice} onChange={(v) => set({ cbPreConvPrice: v })} placeholder="전환등 전 1주당 평가가액 (원)" />
+          <CurrencyInput label="전환등 전 1주당 평가가액" value={form.cbPreConvPrice} onChange={(v) => set({ cbPreConvPrice: v })} />
           <CurrencyInput label="전환등 전 발행주식총수" value={form.cbPreConvShares} onChange={(v) => set({ cbPreConvShares: v })} placeholder="전환등 전 발행주식총수" />
           <CurrencyInput label="1주당 전환가액등" value={form.cbConversionPrice} onChange={(v) => set({ cbConversionPrice: v })} placeholder="1주당 전환가액등 (원)" />
           <CurrencyInput label="전환등 증가주식수 (㉡ 가중평균 분모)" value={form.cbIncreasedShares} onChange={(v) => set({ cbIncreasedShares: v })} placeholder="전환등 증가주식수" />
@@ -674,7 +674,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
             title="이자손실분 자동계산 (PV §10의2)"
             description="ON: 만기상환금액·발행이율·적정할인율 현가계수로 산출. OFF: 이자손실분 직접입력"
           >
-            <CurrencyInput label="만기상환금액 (원금)" value={form.cbBondMaturity} onChange={(v) => set({ cbBondMaturity: v })} placeholder="만기상환금액 (원)" />
+            <CurrencyInput label="만기상환금액 (원금)" value={form.cbBondMaturity} onChange={(v) => set({ cbBondMaturity: v })} />
             <FieldCard label="사채발행이율" hint="표면이율" unit="%">
               <DecimalInput value={form.cbCouponRatePct} onChange={(v) => set({ cbCouponRatePct: v })} />
             </FieldCard>

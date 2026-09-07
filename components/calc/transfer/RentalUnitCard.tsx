@@ -544,7 +544,6 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
             value={unit.acquisitionOfficialPrice}
             onChange={(v) => set("acquisitionOfficialPrice", v)}
             hideUnit
-            placeholder="취득 당시 기준시가 (원)"
           />
         </FieldCard>
       ) : (

@@ -388,7 +388,6 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         <DecimalInput
           value={asset.inhHouseValLandArea}
           onChange={(v) => onChange({ inhHouseValLandArea: v })}
-          placeholder="토지 면적 입력"
         />
       </FieldCard>
 

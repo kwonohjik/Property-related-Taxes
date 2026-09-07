@@ -226,7 +226,7 @@ export function MergerNetIncomeBlock({
                         hideLabel
                         value={String(yr.netIncome)}
                         onChange={(v) => updateAcquirer(idx, { netIncome: parseAmount(v) })}
-                        placeholder="순손익액 입력 (결손 시 음수)"
+                        placeholder="결손 시 음수"
                         allowNegative
                         data-testid={`merger-acquirer-${idx}-income`}
                       />

@@ -107,7 +107,7 @@ export function HeirAssessmentCard({
             ? "2년 직접 영농 종사"
             : "2년 법인 종사"
         }
-        description="피상속인 65세 미만 사망 시 면제 (farming-수준 decedentEarlyDeath)"
+        description="피상속인이 65세 미만으로 사망한 경우 이 요건은 면제됩니다"
         checked={assessment.heirTwoYearFarming}
         onCheckedChange={(v) => update({ heirTwoYearFarming: v })}
         disabled={assessment.isDesignatedSuccessor === true}

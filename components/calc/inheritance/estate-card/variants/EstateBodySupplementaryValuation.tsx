@@ -235,7 +235,6 @@ export function EstateBodySupplementaryValuation({
             <DecimalInput
               value={item.totalBuildingArea != null ? String(item.totalBuildingArea) : ""}
               onChange={(v) => set({ totalBuildingArea: parseDecimal(v) || undefined })}
-              placeholder="전체 건물 연면적"
             />
           </FieldCard>
         )}

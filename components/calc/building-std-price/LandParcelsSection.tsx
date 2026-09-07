@@ -56,7 +56,7 @@ export function LandParcelsSection({ parcels, onChange, jibun, referenceDate }: 
             )}
           </div>
           <FieldCard label="필지 면적" hint="해당 부속토지 면적">
-            <DecimalInput value={p.areaM2} onChange={(v) => update(i, { areaM2: v })} unit="㎡" placeholder="필지 면적" />
+            <DecimalInput value={p.areaM2} onChange={(v) => update(i, { areaM2: v })} unit="㎡" />
           </FieldCard>
           <LandPriceLookupField
             pricePerSqm={p.pricePerM2}

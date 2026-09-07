@@ -103,7 +103,6 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
         <DecimalInput
           value={asset.cbTotalLandArea}
           onChange={(v) => onChange({ cbTotalLandArea: v })}
-          placeholder="집합건물 전체 대지면적"
           unit="㎡"
         />
       </FieldCard>

@@ -323,7 +323,6 @@ export function ExitTaxBlock({ form, onChange }: ExitTaxBlockProps) {
               value={form.etForeignTaxPaid}
               onChange={(v) => onChange({ etForeignTaxPaid: v })}
               hideUnit
-              placeholder="외국납부세액 (원화 환산)"
             />
 
           {/*
@@ -339,7 +338,7 @@ export function ExitTaxBlock({ form, onChange }: ExitTaxBlockProps) {
               <DecimalInput
                 value={form.etForeignTaxPaidForeign}
                 onChange={(v) => onChange({ etForeignTaxPaidForeign: v })}
-                placeholder="예: 1000"
+                placeholder="외화 금액"
               />
             </FieldCard>
             <FieldCard label="통화" hint="표시용 — 계산에는 쓰지 않습니다">
@@ -361,7 +360,7 @@ export function ExitTaxBlock({ form, onChange }: ExitTaxBlockProps) {
               <DecimalInput
                 value={form.etForeignTaxExchangeRate}
                 onChange={(v) => onChange({ etForeignTaxExchangeRate: v })}
-                placeholder="예: 1350.00"
+                placeholder="납부일 기준환율"
               />
             </FieldCard>
           </div>

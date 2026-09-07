@@ -207,7 +207,6 @@ export function EstateBodyReceivable({ item, onUpdate, valuationDate }: VariantB
                   type="text"
                   value={item.receivableUncollectibleReason ?? ""}
                   onChange={(e) => set({ receivableUncollectibleReason: e.target.value || undefined })}
-                  placeholder="회수불가능 사유"
                   className={TEXT_INPUT_CLASS}
                 />
               </FieldCard>
