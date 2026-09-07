@@ -357,10 +357,12 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                     <div className="space-y-3">
                       <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required allowNegative
                         value={form.listingYearNetIncomePerShare}
-                        onChange={(v) => onChange({ listingYearNetIncomePerShare: v })} />
+                        onChange={(v) => onChange({ listingYearNetIncomePerShare: v })}
+                        placeholder="상장일 직전 사업연도 1주당 순손익가치" />
                       <CurrencyInput label="상장일 직전 사업연도 1주당 순자산가치" required allowNegative
                         value={form.listingYearNetAssetPerShare}
-                        onChange={(v) => onChange({ listingYearNetAssetPerShare: v })} />
+                        onChange={(v) => onChange({ listingYearNetAssetPerShare: v })}
+                        placeholder="상장일 직전 사업연도 1주당 순자산가치" />
                     </div>
                   </div>
                   <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">

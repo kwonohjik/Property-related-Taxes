@@ -76,9 +76,15 @@ describe("placeholder 정책 — 정적 가드", () => {
    *    `[^>]*`가 요소를 조기 종료시킨다(실측: 그 방식은 132건 중 1건만 봤다).
    *    그래서 중괄호·따옴표를 세는 스캐너를 쓴다.
    */
-  // 2026-09-07 실측값. 3라운드 직후 남은 것은 전부 `getByPlaceholder(...)`가 물고 있어
+  // 2026-09-07 실측값. 3라운드 직후 남은 것은 전부 테스트 셀렉터가 물고 있어
   // 셀렉터 이관이 선행돼야 한다(4라운드). 이 수는 **줄이기만 한다**.
-  const ECHO_MAX = 56;
+  //
+  // 🔴 56 → 58: PostListingValuationCard의 「상장일 직전 사업연도 1주당 순손익/순자산가치」
+  //    2건을 되돌렸다. E2E가 `getByRole("textbox", { name })`로 잡는데, CurrencyInput의
+  //    `<label>`에 htmlFor가 없어 **placeholder가 그 요소의 accessible name**이다
+  //    (`stock-transfer-165-5-floor80.spec.ts:76`). 지우면 이름 자체가 사라진다.
+  //    ⇒ 셀렉터 축은 `getByPlaceholder`만이 아니다. 4라운드는 이 형태까지 세고 이관할 것.
+  const ECHO_MAX = 58;
 
   /** `<Tag` 부터 여는 태그의 끝(`>` 또는 `/>`)까지 — 문자열·중괄호 안의 `>`는 건너뛴다. */
   function openTag(src: string, i: number): string {
