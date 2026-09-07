@@ -6,8 +6,8 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
   await page.goto("/calc/gift-deemed");
   await page.getByTestId("deemed-type-related_corp").click();
   const dialog = page.getByTestId("deemed-detail-dialog");
-  await dialog.getByLabel("연도").fill("2023");
-  await dialog.getByLabel("월").fill("12");
+  await dialog.getByLabel("연도", { exact: true }).fill("2023");
+  await dialog.getByLabel("월", { exact: true }).fill("12");
   await dialog.getByLabel("일", { exact: true }).fill("31");
 
   // 섹션 1 — 기업규모·재무
