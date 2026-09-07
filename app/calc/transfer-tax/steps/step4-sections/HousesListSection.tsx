@@ -19,6 +19,8 @@
 
 import { useMemo, useState } from "react";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
+import { differenceInYears } from "date-fns";
+import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { sellingHouseExclusionVisible } from "@/lib/calc/house-count-inputs-scope";
 import { Settings } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
@@ -197,12 +199,37 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
     onChange({ gracePeriod: { ...gp, ...patch } });
   }
 
-  // 기한 미리보기 — 엔진 판정 함수 재사용(단일 진실 소스, 드리프트 방지)
+  /**
+   * 기한 미리보기 — 엔진 판정 함수 재사용(단일 진실 소스, 드리프트 방지).
+   *
+   * 🔴 **엔진의 바깥 게이트도 함께 본다** (2026-09-07 대장 재대조).
+   *    `multi-house-surcharge-exclusion.ts:462`는 「양도 주택 보유기간 **2년 이상**」
+   *    (§167의3①12의2 본문 · §95④ 기산)을 통과해야 `checkGracePeriodExemption`에 **도달한다**.
+   *    미리보기는 그 함수만 직접 불러 게이트를 건너뛰었고, 그래서 보유 2년 미만이라
+   *    엔진이 중과를 적용하는 케이스에도 초록색 「충족 — 중과 경과조치 배제 대상」을 띄웠다.
+   */
   const preview = useMemo(() => {
     if (!gp || !gp.contractDate || gp.isLandPermitTarget === undefined) return null;
     const contractDate = new Date(gp.contractDate);
     if (Number.isNaN(contractDate.getTime())) return null;
     const transferDate = form.transferDate ? new Date(form.transferDate) : contractDate;
+    /**
+     * 양도 주택 = 주 자산.
+     *
+     * ⚠️ 취득일이 **없으면 이 게이트를 적용하지 않는다** — 「판정 불가」와 「미충족」은 다르다.
+     *    취득일을 아직 안 넣은 사용자에게 「보유 2년 미만」이라고 단정하면 그것대로 거짓이다.
+     *    그 경우는 종전처럼 나·다목 조건만 미리 보여 준다.
+     */
+    const sellingAcqDate = form.assets?.[0]?.acquisitionDate;
+    const sellingAcq = sellingAcqDate ? new Date(sellingAcqDate) : null;
+    if (
+      sellingAcq &&
+      !Number.isNaN(sellingAcq.getTime()) &&
+      differenceInYears(transferDate, sellingAcq) <
+        MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS
+    ) {
+      return { suspended: false, deadline: undefined, holdingGateFailed: true };
+    }
     return checkGracePeriodExemption(
       transferDate,
       {
@@ -219,6 +246,7 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
   }, [
     gp,
     form.transferDate,
+    form.assets,
     sellingRegionCode,
   ]);
 
@@ -360,7 +388,9 @@ function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) {
                   >
                     {preview.suspended
                       ? "충족 — 중과 경과조치 배제 대상"
-                      : "미충족 — 현재 입력 기준 경과조치 배제 미해당"}
+                      : "holdingGateFailed" in preview
+                        ? `미충족 — 양도 주택 보유기간이 ${MULTI_HOUSE.SURCHARGE_SUSPENSION_MIN_HOLDING_YEARS}년 미만입니다 (§167의3①12의2 본문)`
+                        : "미충족 — 현재 입력 기준 경과조치 배제 미해당"}
                   </p>
                 )}
               </div>

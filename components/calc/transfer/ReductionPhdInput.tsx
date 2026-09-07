@@ -360,7 +360,12 @@ export function ReductionPhdInput({
 
           {!result && isOn && (
             <p className="text-caption text-amber-700 dark:text-amber-400">
-              ⚠ 환산을 위해 최초공시일·최초공시가격·토지면적·취득시·최초공시시 토지 공시지가를 모두 입력하세요.
+              ⚠ 환산을 위해 최초공시일·최초공시가격·토지면적·취득시·최초공시시 토지 공시지가
+              {/* 🔴 `canCalcReductionPhd`는 **취득시 건물 기준시가가 있으면** 최초공시시 건물
+                  기준시가도 요구한다(`phd-helper.ts:187~189`). 종전 안내는 토지 5개만 열거해,
+                  그 다섯을 다 채운 사용자가 무엇이 빠졌는지 알 수 없었다(2026-09-07 대장 재대조). */}
+              {parseAmount(value.buildingStdAtAcq) > 0 ? "·최초공시시 건물 기준시가" : ""}를 모두
+              입력하세요.
             </p>
           )}
         </div>

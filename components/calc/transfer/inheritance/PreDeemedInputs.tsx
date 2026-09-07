@@ -296,9 +296,18 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
           jibun={asset.addressJibun || undefined}
           acquisitionDate={asset.acquisitionDate || undefined}
           transferDate={transferDate}
-          onCalculatedPrice={(price) =>
-            onChange({ standardPriceAtAcq: String(price) })
-          }
+          /**
+           * 🔴 **override가 켜져 있으면 덮지 않는다** (2026-09-07 대장 재대조).
+           *
+           * 종전에는 `useStandardPriceAtAcqOverride`와 무관하게 자동 환산값을 store에 썼다.
+           * 사용자가 「직접 입력」 토글을 켜고 값을 넣어도, 등급·연도 입력을 조금만 건드리면
+           * 그 값이 자동값으로 되덮였다 — 직접 입력이라는 선언 자체가 무의미해진다.
+           * 표시 분기(:196 `stdPriceAtAcqAutoActive`)는 이미 같은 플래그를 본다.
+           */
+          onCalculatedPrice={(price) => {
+            if (asset.useStandardPriceAtAcqOverride) return;
+            onChange({ standardPriceAtAcq: String(price) });
+          }}
         />
       )}
 
