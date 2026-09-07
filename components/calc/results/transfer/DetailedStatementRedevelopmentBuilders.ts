@@ -127,7 +127,7 @@ function getBranchLabels(
   if (redev.settlementExemptionApplied === true) return BRANCH_LABEL_SETTLEMENT_EXEMPTED;
   // 우선순위 3: subject="right" + settlementDirection="receive" — §166①2호 가목·나목 (R-5)
   if (subject === "right" && settlementDirection === "receive") return BRANCH_LABEL_RIGHT_RECEIVE_NAMOK;
-  // 우선순위 4: subject="right" 입주권 납부 모드 (사례 36 — §166①1호 + §95② 단서)
+  // 우선순위 4: subject="right" 입주권 납부 모드 (사례 36 — §166①1호 + §95② 본문 괄호)
   if (subject === "right") return BRANCH_LABEL_RIGHT_PAY;
   return BRANCH_LABEL_PAY;
 }

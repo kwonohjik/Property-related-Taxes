@@ -330,7 +330,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   /**
    * 양도 대상 축을 **자산 종류로 일원화**한다 (2026-08-13).
    *
-   *   입주권(`right_to_move_in`)  = 조합원입주권 양도 전담 (§166① · §95② 단서 · §89①4호)
+   *   입주권(`right_to_move_in`)  = 조합원입주권 양도 전담 (§166① · §95② 본문 괄호 · §89①4호)
    *   재개발APT(`redevelopment_apt`) = 재개발·재건축으로 완공된 APT 양도 전담 (§166②)
    *
    * 종전에는 재개발APT 자산 안의 ① 「양도 대상」 라디오(`redevSubject`)가 축을 겸해

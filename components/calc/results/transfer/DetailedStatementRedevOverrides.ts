@@ -328,13 +328,13 @@ export function applyRedevelopmentOverrides(
   if (ltItem) {
     if (isRightReceive) {
       ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전(나목) 분만 장기보유특별공제 적용. 청산금(가목) 분 장기보유특별공제 0 (§94①2호)";
-      ltItem.legalBasis = "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목";
+      ltItem.legalBasis = "소득세법 §95② 본문 괄호 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목";
     } else {
       ltItem.formula = isRightSubject
         ? "§95② 본문 괄호 + §166⑤1호 — 인가전 분만 장기보유특별공제 적용 (취득일~인가일 기산). 인가후·청산금 분 장기보유특별공제 0"
         : "재개발 §166⑤ 분할별 보유기간·율 — 인가전·인가후 기존건물분(취득일 기산) + 청산금분(인가일 기산)";
       ltItem.legalBasis = isRightSubject
-        ? "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호"
+        ? "소득세법 §95② 본문 괄호 · §94①2호 · 시행령 §166⑤1호"
         : "소득세법 §95② · 시행령 §166⑤";
     }
     ltItem.perAsset = buildRedevPerAssetForLthd(redev, subject, settlementDirection);

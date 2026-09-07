@@ -124,7 +124,7 @@ export function RedevelopmentRightExemptionSection({
           1세대1입주권 비과세 요건(§89①4호 가목)은 아래 카드에서 확인하세요. 비과세 적용 시 전액 비과세이며, 양도가액이 12억을 초과하면 초과분만 과세됩니다.
         </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 단서" />
+          <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 본문 괄호" />
           <LawArticleModal legalBasis="소득세법 §94 ① 2호" label="§94①2호" />
           <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호 가목" />
         </div>

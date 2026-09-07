@@ -9,7 +9,7 @@
  *       합계 / ① 인가전 / ② 인가후 기존건물분 / ③ 청산금 분
  *   - redev-right-pay (right+pay):
  *       합계 / ① 인가전 / ② 인가후 (= §166⑤1호 청산금 납부분)
- *       ※ postApprovalExistingHouse는 §95② 단서에 의해 LTHD 대상 양도차익 부존재(gain=0)
+ *       ※ postApprovalExistingHouse는 §95② 본문 괄호에 의해 LTHD 대상 양도차익 부존재(gain=0)
  *         → settlement 열에 합산하여 "인가후" 단일 열로 표시
  */
 
@@ -253,7 +253,7 @@ export function fillRedevRightReceiveBranchData(
   setNum("ltHoldingPart", "settlement", 0);
   setNum("ltResidencePart", "settlement", 0);
   // rose 배지 — 청산금 분 LTHD 행에 §95② 본문 괄호 배제 안내
-  setRoseNote?.("ltDeduction", "settlement", "§95② 단서·§94①2호 — 장기보유특별공제 대상 외");
+  setRoseNote?.("ltDeduction", "settlement", "§95② 본문 괄호·§94①2호 — 장기보유특별공제 대상 외");
 
   setNum("ltHoldingPart", "total", nakkokHp);
   setNum("ltResidencePart", "total", nakkokRp);
@@ -470,8 +470,8 @@ export function fillRedevRightPayBranchData(
   setNum("ltDeduction", "postApproval", 0);
   setNum("ltHoldingPart", "postApproval", 0);
   setNum("ltResidencePart", "postApproval", 0);
-  // rose 배지 — 장기보유특별공제 행에만 §95② 단서 배제 안내
-  setRoseNote?.("ltDeduction", "postApproval", "§95② 단서 배제");
+  // rose 배지 — 장기보유특별공제 행에만 §95② 본문 괄호 배제 안내
+  setRoseNote?.("ltDeduction", "postApproval", "§95② 본문 괄호 배제");
 
   setNum("ltHoldingPart", "total", preHp);
   setNum("ltResidencePart", "total", preRp);

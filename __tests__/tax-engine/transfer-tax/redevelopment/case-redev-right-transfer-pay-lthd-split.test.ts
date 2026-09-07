@@ -240,7 +240,7 @@ describe("R-PAY-10 — 1세대1주택 + 거주 2년+ → preApproval LTHD 표2�
 //   R-PAY-11: 부정합 조합 → redevelopmentDetail 미생성 + 일반 양도 분기 진입 (API remap 필수 신호)
 //   R-PAY-12: 부정합 조합 → LTHD가 전체 양도차익에 일괄 적용 (LTHD 126M 회귀 재현)
 //   R-PAY-13: 정상 조합(right_to_move_in + right) → redevelopmentDetail 생성 + preApproval.gain = 200M
-//   R-PAY-14: 정상 조합 → settlement.lthd = 0 (§95② 단서)
+//   R-PAY-14: 정상 조합 → settlement.lthd = 0 (§95② 본문 괄호)
 // ──────────────────────────────────────────────────────────────────────────────
 
 describe("R-PAY-11~14 — UI 입력 경로 회귀 차단 (propertyType ↔ subject 정합성)", () => {

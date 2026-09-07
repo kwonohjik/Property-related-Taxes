@@ -98,7 +98,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           ) : isRightSubject ? (
             <>
               <span className="rounded-full bg-violet-200 px-2 py-0.5 text-micro font-bold text-violet-800">시행령 §166①</span>
-              <h3 className="text-sm font-semibold text-violet-900">조합원입주권 양도 (§95② 단서 + §166①)</h3>
+              <h3 className="text-sm font-semibold text-violet-900">조합원입주권 양도 (§95② 본문 괄호 + §166①)</h3>
               {oneRightExemptionApplied && !oneRightHighValueApplied && (
                 <span className="rounded-full bg-violet-300 px-2 py-0.5 text-micro font-bold text-violet-900">1세대1입주권 비과세</span>
               )}
@@ -127,7 +127,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         ) : isRightSubject ? (
           <>
             <LawArticleModal legalBasis="소득세법 시행령 §166 ①" label="시행령 §166①" />
-            <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 단서" />
+            <LawArticleModal legalBasis="소득세법 §95 ②" label="§95② 본문 괄호" />
             <LawArticleModal legalBasis="소득세법 §94 ① 2호" label="§94①2호" />
             <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호 가목" />
           </>
@@ -206,11 +206,11 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         </div>
       )}
 
-      {/* subject="right" + settlementDirection="pay" — §95② 단서 안내 카드 */}
+      {/* subject="right" + settlementDirection="pay" — §95② 본문 괄호 안내 카드 */}
       {isRightSubject && !successorMemberApplied && settlementDirection === "pay" && (
         <div className="rounded-md bg-rose-50 border border-rose-200 p-3 text-caption text-rose-900 space-y-1">
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-rose-200 px-2 py-0.5 text-micro font-bold text-rose-800">소득세법 §95② 단서</span>
+            <span className="rounded-full bg-rose-200 px-2 py-0.5 text-micro font-bold text-rose-800">소득세법 §95② 본문 괄호</span>
             <span className="font-semibold">인가후 양도차익 — 장기보유특별공제 적용 제외</span>
           </div>
           <p className="leading-relaxed">
@@ -531,7 +531,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               <Row label="양도차익" value={settlement.gain} highlight />
               <div className="pt-1 border-t border-rose-200 rounded bg-rose-50/60 px-1.5 py-1 space-y-0.5">
                 <div className="flex items-center gap-1.5">
-                  <span className="rounded-full bg-rose-200 px-1.5 py-0.5 text-micro font-bold text-rose-800">§95② 단서</span>
+                  <span className="rounded-full bg-rose-200 px-1.5 py-0.5 text-micro font-bold text-rose-800">§95② 본문 괄호</span>
                   <span className="text-micro text-rose-800 font-semibold">장기보유특별공제 대상 제외</span>
                 </div>
                 <p className="text-micro text-rose-700">
