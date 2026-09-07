@@ -29,6 +29,7 @@ import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHo
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 
 /**
@@ -717,9 +718,12 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         **그대로 유지**한 채 한시배제 분기에만 같은 위젯을 연다 — ④와 동시에 뜨지 않으므로
         같은 배열을 두 컴포넌트가 각각 patch하는 last-write-wins 위험이 없다.
       */}
+      {/* 🔴 「담긴 값이 있으면」도 연다 (2026-09-07 대장 재대조 — `houseCountInputsVisible`).
+          주택 목록에 빈 행을 남긴 채 주택수를 1채로 낮추면 위젯이 사라지는데 ⑧은 그 행을
+          계속 검증해 지울 화면이 없는 dead-end가 됐다. ⑧의 skip은 D4-03에서 이미 걷어낸
+          것이므로(무검증 통과 비대칭) 고칠 곳은 렌더 게이트다. */}
       {surchargeSuspended &&
-        isHousingLike(primaryKind) &&
-        parseInt(form.householdHousingCount) >= 2 && (
+        houseCountInputsVisible(form, primaryKind, { requireHousingPrimary: true }) && (
         <section className="rounded-xl border border-violet-200 bg-violet-50/30 p-4 dark:border-violet-900/50 dark:bg-violet-950/20">
           <SectionHeader
             title="④ 주택수 판정 (비과세)"
@@ -760,9 +764,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
       {/* ④ 주택수·중과 판정 — 세대 주택 목록·감면주택 제외·양도일 조정대상지역 (중과 트랙).
           800줄 정책으로 `step4-sections/SurchargeJudgmentSection.tsx`로 분리(2026-09-02). */}
-      {!surchargeSuspended &&
-        (primaryKind === "housing" ||
-          (isHousingLike(primaryKind) && parseInt(form.householdHousingCount) >= 2)) && (
+      {!surchargeSuspended && houseCountInputsVisible(form, primaryKind) && (
         <SurchargeJudgmentSection
           form={form}
           onChange={onChange}

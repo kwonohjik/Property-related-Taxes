@@ -12,6 +12,7 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
+import { derivePre1990PhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 
 interface Props {
   asset: AssetForm;
@@ -90,9 +91,18 @@ export function MixedUseAssetMajorStdPrice({
   const transferCommercialBuilding = parseAmount(asset.mixedTransferCommercialBuildingPrice) ?? 0;
   const transferCommercialTotal = transferCommercialLandStd + transferCommercialBuilding;
 
-  // 취득시 상가부분 자동 계산 (mixedAcq 우선, PHD 토지가액 fallback — API 변환과 동일 우선순위)
+  /**
+   * 취득시 상가부분 자동 계산 — ④ 변환(`transfer-tax-api-mixed-use.ts:141~142`)과 **같은 우선순위**.
+   *
+   * 🔴 **1990.8.30. 이전 취득 등급환산 fallback이 빠져 있었다** (2026-09-07 대장 재대조).
+   *    ④는 `mixedAcq → phd → derivePre1990PhdLandPricePerSqmAtAcq` 3단인데 여기는 2단이라,
+   *    그 시기 취득 겸용주택은 화면이 「—」를 보여주는 동안 엔진은 환산값으로 계산했다.
+   *    3중 패턴(⑤·④·⑧ 같은 파생 함수) 위반이다 — 파생일 뿐 store에 쓰지 않는다.
+   */
   const acqLandPerSqm =
-    parseAmount(asset.mixedAcqLandPricePerSqm) || parseAmount(asset.phdLandPricePerSqmAtAcq);
+    parseAmount(asset.mixedAcqLandPricePerSqm) ||
+    parseAmount(asset.phdLandPricePerSqmAtAcq) ||
+    (derivePre1990PhdLandPricePerSqmAtAcq(asset, transferDate ?? "") ?? 0);
   const acqCommercialLandStd = Math.floor(acqLandPerSqm * commercialLandArea);
   const acqCommercialBuilding = parseAmount(asset.mixedAcqCommercialBuildingPrice) ?? 0;
   const acqCommercialTotal = acqCommercialLandStd + acqCommercialBuilding;

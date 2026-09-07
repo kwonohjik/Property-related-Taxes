@@ -19,6 +19,7 @@
 
 import { useMemo, useState } from "react";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
+import { sellingHouseExclusionVisible } from "@/lib/calc/house-count-inputs-scope";
 import { Settings } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -565,8 +566,11 @@ export function HousesListSection({
         showSpouseOwned={!!form.marriageDate}
       />
 
-      {/* ── 양도 주택 3주택+ 전용 배제 특례 (householdHousingCount≥3 시) ── */}
-      {householdCount >= 3 && (
+      {/* ── 양도 주택 3주택+ 전용 배제 특례 ──
+          🔴 「담긴 값이 있으면」도 연다 (2026-09-07 대장 재대조). 토글을 켠 뒤 주택수를 2채로
+             낮추면 섹션이 사라지는데 ⑧(`transfer-tax-validate.ts`)은 켜진 토글의 기간(년)을
+             계속 요구해, 그 토글을 끌 화면이 없는 dead-end가 됐다. 술어는 leaf 단일 소스. */}
+      {sellingHouseExclusionVisible(form) && (
         <SellingHouseExclusionSection
           value={form.sellingHouseExclusion}
           onChange={(sellingHouseExclusion) => onChange({ sellingHouseExclusion })}

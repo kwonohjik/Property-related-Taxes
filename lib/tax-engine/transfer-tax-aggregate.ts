@@ -64,6 +64,10 @@ import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 // 기존 소비자들을 위해 본체 파일에서 재수출한다.
 // ============================================================
 
+import {
+  LTHD_HOLDING_STEP_LABEL,
+  LTHD_RESIDENCE_STEP_LABEL,
+} from "./transfer-tax-lthd-steps";
 import type {
   RateGroup,
   TransferTaxItemInput,
@@ -658,6 +662,19 @@ function computeAggregateOnce(
       surchargeRate: r.result.surchargeRate,
       refCalculatedTax,
       refCalculatedTaxNote: partAssetTax?.note,
+      // [echo] 신고서 표가 단건과 같은 분기를 하도록 파생 입력을 그대로 실어 보낸다(세액 불변).
+      filingDisplay: {
+        estimatedBase: r.result.estimatedBase,
+        estimatedDeduction: r.result.estimatedDeduction,
+        swapApplied: r.result.swapApplied,
+        commercialEstimatedAcquisition:
+          r.result.commercialBuildingValuationDetail?.estimatedAcquisitionTotal,
+        commercialEstimatedDeduction:
+          r.result.commercialBuildingValuationDetail?.estimatedDeductionTotal,
+        lthdHoldingPart: r.result.steps?.find((st) => st.label === LTHD_HOLDING_STEP_LABEL)?.amount,
+        lthdResidencePart: r.result.steps?.find((st) => st.label === LTHD_RESIDENCE_STEP_LABEL)
+          ?.amount,
+      },
       // [echo] §166 분할 열 게이트용 (표시 전용 — 세액 불변). 결과탭 코드리뷰 #080 ③.
       redevelopmentDetail: r.result.redevelopmentDetail,
       refDeterminedTax,

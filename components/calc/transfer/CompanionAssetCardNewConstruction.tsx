@@ -17,6 +17,10 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { NewConstructionFootprintSection } from "./NewConstructionFootprintSection";
+import {
+  appurtenantLandMultiplier,
+  type AppurtenantLandZone,
+} from "@/lib/tax-engine/appurtenant-land-rate";
 
 /** 수동 세율 오버라이드 옵션 (부수토지 일체과세 §104①2호·영§167의5) */
 export const MANUAL_RATE_OVERRIDE_OPTIONS = [
@@ -70,7 +74,26 @@ export function useUnifiedRateBadge(
     // 면적 한도 판정
     const footprint = parseFloat(primaryAsset.buildingFootprintArea || "0");
     if (footprint <= 0) return false;
-    const multiplier = primaryAsset.isUrbanArea === false ? 10 : 5;
+    /**
+     * 🔴 **엔진과 같은 §167의5 축을 쓴다** (2026-09-07 대장 재대조).
+     *
+     * 종전 `isUrbanArea === false ? 10 : 5`는 **폐지된 2분기 boolean**이다
+     * (`calc-wizard-asset.ts`가 `@deprecated`로 「단일 boolean은 영 §167의5 3단계(3/5/10배)를
+     * 표현 못함」이라고 못박았다). 그래서 배지는 **3배를 낼 수 없었고** 2022.1.1. 경과조치
+     * (2020.2.11. 대통령령 제30395호 부칙 §39)도 보지 않았다 — 엔진이 3배로 자른 한도를
+     * 배지는 5배로 계산해 「자동 적용 중」이라 말할 수 있었다.
+     *
+     * `appurtenantLandMultiplier`가 zone·양도일을 함께 보는 단일 소스다.
+     */
+    // 우선순위·fallback 모두 엔진(`appurtenant-land-rate.ts:240~247`)과 **자구까지 같게** 둔다.
+    const zone: AppurtenantLandZone | undefined =
+      (primaryAsset.appurtenantLandZone as AppurtenantLandZone | undefined) ??
+      (primaryAsset.isUrbanArea === undefined
+        ? undefined
+        : primaryAsset.isUrbanArea
+          ? "non_metropolitan_or_green"
+          : "non_urban");
+    const multiplier = appurtenantLandMultiplier(zone, trnDate);
     const limitArea = footprint * multiplier;
     const companionArea = parseFloat(asset.acquisitionArea || asset.transferArea || "0");
     if (companionArea <= 0) return false;

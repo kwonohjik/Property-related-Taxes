@@ -62,6 +62,7 @@ interface Props {
   onFormChange?: (patch: Partial<TransferFormData>) => void;
   /** 증환지 증가분 등 자산 자동 추가 콜백 */
   onAddAsset?: (patch: Partial<AssetForm>) => void;
+  hasIncrementAsset?: boolean;
   /** 폼-수준 총 양도가액 — 지분 모드 시 ratio×total 자동 계산용 */
   contractTotalPrice?: string;
   /** 폼-수준 총 양도비 — 자산별 자동 안분 표시용 */
@@ -104,6 +105,7 @@ export function CompanionAssetCard({
   showFormDates,
   onFormChange,
   onAddAsset,
+  hasIncrementAsset,
   contractTotalPrice,
   totalTransferExpense,
   primaryAsset,
@@ -322,6 +324,7 @@ export function CompanionAssetCard({
             onChange={handleBasicChange}
             isMultiBundled={isMultiBundled}
             onAddAsset={onAddAsset}
+            hasIncrementAsset={hasIncrementAsset}
             showFormDates={showFormDates}
             transferDate={transferDate}
             filingDate={filingDate}
