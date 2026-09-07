@@ -31,9 +31,17 @@ export function fmtD(d?: Date | string): string {
   return iso ? fmtDate(iso.slice(0, 10)) : "-";
 }
 
+/**
+ * 기간 표기 — **「N년 M월」**. `fmtPeriod`(FilingFormTableHelpers)와 같은 규약이다.
+ *
+ * 🔴 「개월」로 쓰지 말 것 (2026-09-07 UI 리뷰 L3). 같은 「거주기간」 행에서 합계 열은
+ *    `fmtPeriod`가 채우고 분기 열은 이 함수가 채우므로, 표기가 갈리면 한 줄에
+ *    「2년 0월 | 2년 0개월」이 나란히 찍혀 두 값이 다른 척도인 것처럼 보인다.
+ *    신고서 재현 표의 다른 모든 열(토지·건물·겸용·합산)도 「월」을 쓴다.
+ */
 export function fmtMonths(m?: number, d?: number): string {
   if (m === undefined || m <= 0) return "-";
-  return `${Math.floor(m / 12)}년 ${m % 12}개월${d && d > 0 ? ` ${d}일` : ""}`;
+  return `${Math.floor(m / 12)}년 ${m % 12}월${d && d > 0 ? ` ${d}일` : ""}`;
 }
 
 const toIsoSlice = (d?: Date | string): string | undefined =>

@@ -244,9 +244,16 @@ export function AmendmentBlock({
                 </div>
                 {previewRate !== null && (
                   <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                    {/* 🔴 0%의 사유는 두 가지다 (2026-09-07 UI 리뷰 L4).
+                        `resolveAmendmentReductionRate`는 `notified === true`면 경과기간을
+                        보지도 않고 0을 낸다. 아래 토글을 켠 상태에서 「2년 초과 경과」라고
+                        말하면, 법정신고기한 다음 날 신고한 사용자가 날짜를 잘못 넣은 줄 알고
+                        수정신고일만 계속 바꾸게 된다. */}
                     {previewRate > 0
                       ? `법정신고기한 경과 → 신고불성실가산세 ${(previewRate * 100).toFixed(0)}% 감면`
-                      : "2년 초과 경과 → 감면 없음 (0%)"}
+                      : form.priorAssessmentNotified
+                        ? "경정 예고 후 수정신고 → 국세기본법 §48② 감면 배제 (0%)"
+                        : "2년 초과 경과 → 감면 없음 (0%)"}
                   </p>
                 )}
                 <ToggleCard
