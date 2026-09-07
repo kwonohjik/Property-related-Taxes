@@ -286,6 +286,18 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           }
           if (r.hasVacancyOverGrace === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
             return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
+          /**
+           * 🔴 **빈 날짜도 막는다** (2026-09-07 대장 재대조). 종전에는 구간 **개수**만 봤다.
+           *
+           * 형제 축인 5호 미만 임대 기간(:아래 `belowMin5UnitsPeriods`)은 이미 같은 이유로
+           * 「구간을 열어 놓고 비워 두면 엔진에 NaN이 흘러간다」며 시작일·종료일을 요구한다.
+           * 공실 구간만 그 짝이 없어, 「+ 구간 추가」만 누르고 날짜를 안 채우면 ⑧을 통과한 뒤
+           * Zod가 영문 필드 경로로 400을 냈다 — 사용자는 어느 칸인지 알 수 없었다.
+           */
+          if (r.hasVacancyOverGrace === true && r.vacancyPeriods?.some((p) => !p.startDate || !p.endDate))
+            return fail(
+              `${label} 적용: 공실 구간의 시작일·종료일을 모두 입력하세요. 해당 없으면 구간을 삭제하세요.`,
+            );
           // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
           //          그 전 등록분은 법률 제19199호 부칙 §38 경과조치로 종전 규정을 따른다.
           if (

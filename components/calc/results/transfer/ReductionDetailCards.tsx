@@ -182,11 +182,21 @@ export function ReductionDetailCards({
       {result.newHousingReductionDetail && (
         <NewHousingReductionDetailCard detail={result.newHousingReductionDetail} />
       )}
+      {/* 🔴 §97 계열도 §127⑦ 중복배제 대상이다 (2026-09-07 대장 재대조).
+          `long_term_rental`은 후보 배열의 승자가 될 수 있고(`transfer-tax-reductions-calc.ts:206`),
+          지면 **배제된 후보**가 된다. 종전에는 배너가 자경·수용·대토·개발제한 4곳에만 붙어,
+          배제된 §97 감면 카드가 자기 감면세액을 그대로 인쇄했다.
+          ⚠️ 아래 `rental97LthdDetail`(장특공제 축)은 **대상이 아니다** — §127⑦은 세액감면 간 배제다. */}
       {result.rentalReductionDetail && (
-        <RentalReductionDetailCard
-          detail={result.rentalReductionDetail}
-          calculatedTax={calculatedTax}
-        />
+        <>
+          {excludedByOverlap("long_term_rental") && (
+            <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
+          )}
+          <RentalReductionDetailCard
+            detail={result.rentalReductionDetail}
+            calculatedTax={calculatedTax}
+          />
+        </>
       )}
       {/* §97 시리즈 Phase 2 — 정밀 계산 결과 카드 */}
       {/* 🔴 `rental97LthdDetail`은 **§97의3(대체율)과 §97의4(추가율) 둘 다**를 담는다
@@ -203,6 +213,9 @@ export function ReductionDetailCards({
           }
           calculatedTax={calculatedTax}
         />
+      )}
+      {result.rental97TaxDetail && excludedByOverlap("long_term_rental") && (
+        <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
       )}
       {result.rental97TaxDetail && (
         <Rental97DetailCard
