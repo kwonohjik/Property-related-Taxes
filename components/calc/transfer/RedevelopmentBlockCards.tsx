@@ -115,7 +115,7 @@ export function ReceiveOnlyToggleCard({
           <LawArticleModal legalBasis="소득세법 시행령 §166 ① 2호" label="시행령 §166①2호" />
           <PrecedentArticleModal
             citation="기획재정부 재산-439 (2014.06.09)"
-            label="재산-439 (LTHD 기간)"
+            label="재산-439 (장기보유특별공제 기간)"
             kind="ruling"
             summary="장기보유특별공제 계산시 취득일~관리처분계획인가일까지가 아닌 취득일부터 양도일까지의 기간에 대하여 공제한다."
           />
@@ -350,11 +350,11 @@ export function ExemptionAtApprovalCard({
         >
           {effective === "yes" ? (
             <p>
-              <span className="font-semibold">충족으로 선언됨</span> — LTHD 표2 적용 가능 (1세대1주택 + 12억 초과 시 안분 적용)
+              <span className="font-semibold">충족으로 선언됨</span> — 장기보유특별공제 표2 적용 가능 (1세대1주택 + 12억 초과 시 안분 적용)
             </p>
           ) : (
             <p>
-              <span className="font-semibold">미충족으로 선언됨</span> — LTHD 표1 강제 (12억 안분 비활성)
+              <span className="font-semibold">미충족으로 선언됨</span> — 장기보유특별공제 표1 강제 (12억 안분 비활성)
             </p>
           )}
         </div>
@@ -537,7 +537,7 @@ export function SuccessorMemberSection({
                 citation="사전-2019-법령해석재산-0649 (2020.02.11)"
                 label="사전-2019-법령해석재산-0649"
                 kind="ruling"
-                summary="관리처분계획인가일 이후 입주권을 승계 취득한 자의 신축아파트 취득시기는 아파트의 사용검사필증 교부일이며, 1세대1주택 비과세·LTHD·세율 적용에 있어 보유기간 기산일은 모두 준공일이다."
+                summary="관리처분계획인가일 이후 입주권을 승계 취득한 자의 신축아파트 취득시기는 아파트의 사용검사필증 교부일이며, 1세대1주택 비과세·장기보유특별공제·세율 적용에 있어 보유기간 기산일은 모두 준공일이다."
               />
             </div>
           </div>

@@ -39,8 +39,8 @@ const BRANCH_LABEL_PAY: Record<RedevBranch, BranchLabelDef> = {
 // LTHD: 인가전 분만 적용 (§95② 본문 괄호). 인가후·청산금 분 LTHD=0 강제.
 const BRANCH_LABEL_RIGHT_PAY: Record<RedevBranch, BranchLabelDef> = {
   preApproval: { prefix: "① 인가전 분", legal: "§166①1호 · §166⑤1호 (취득일~인가일 기산)" },
-  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (LTHD 제외)", legal: "§166①1호 · §95② 본문 괄호 (인가후분 = 0 fill)" },
-  settlement: { prefix: "② 인가후·청산금 납부분 (LTHD 제외)", legal: "§166①1호 · §95② 본문 괄호 (LTHD 공제율 0%)" },
+  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (장기보유특별공제 제외)", legal: "§166①1호 · §95② 본문 괄호 (인가후분 = 0 fill)" },
+  settlement: { prefix: "② 인가후·청산금 납부분 (장기보유특별공제 제외)", legal: "§166①1호 · §95② 본문 괄호 (장기보유특별공제 공제율 0%)" },
 };
 
 /*
@@ -105,12 +105,12 @@ const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
     legal: "§166①2호 나목 · §166⑤1호 (취득일~인가일 기산)",
   },
   postApprovalExistingHouse: {
-    prefix: "② 인가후 기존건물분 (LTHD 제외)",
+    prefix: "② 인가후 기존건물분 (장기보유특별공제 제외)",
     legal: "§166①2호 · §95② 본문 괄호 (인가후분 = 0)",
   },
   settlement: {
-    prefix: "③ 인가후 분 (§166①2호 가목) — LTHD 미적용",
-    legal: "§166①2호 가목 · §95② 본문 괄호 · §94①2호 (zeroBranch)",
+    prefix: "③ 인가후 분 (§166①2호 가목) — 장기보유특별공제 미적용",
+    legal: "§166①2호 가목 · §95② 본문 괄호 · §94①2호 (공제율 0 적용)",
   },
 };
 
@@ -342,7 +342,7 @@ export function buildRedevLthdFormula(
   }
 
   if (!detail.gain || detail.gain <= 0) {
-    return "LTHD 대상 양도차익 부존재";
+    return "장기보유특별공제 대상 양도차익 부존재";
   }
   const years = Math.floor(detail.holdingMonths / 12);
   const months = detail.holdingMonths % 12;

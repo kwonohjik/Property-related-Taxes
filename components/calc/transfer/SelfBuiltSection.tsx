@@ -116,7 +116,7 @@ export function SelfBuiltSection({
             onChange={onExtensionStdPriceAtAcquisitionChange}
           />
           <p className="text-xs text-muted-foreground">
-            §114조의2① 가산세 base 산출용. 국세청 건물 기준시가 조회 후 면적 × 단가로 총액 입력.
+            §114조의2① 가산세 산정 기준액 산출용. 국세청 건물 기준시가 조회 후 면적 × 단가로 총액 입력.
           </p>
         </div>
       )}

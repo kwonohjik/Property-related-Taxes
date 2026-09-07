@@ -121,7 +121,7 @@ export function SalesCaseSection({
 
       {/* 취득시 기준시가 — 개산공제 3% base */}
       <CurrencyInput
-        label="취득시 기준시가 (원) — 개산공제 base"
+        label="취득시 기준시가 (원) — 개산공제 기준액"
         value={standardPriceAtAcq}
         onChange={onStandardPriceAtAcqChange}
         hint="필요경비 개산공제 = 이 금액의 3%. 미입력 시 0% 적용."

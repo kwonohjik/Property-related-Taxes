@@ -155,7 +155,7 @@ export function fillRedev4SplitBranchData(
       setRoseNote("transferGain", "settlement", `§89①4호 비과세 차감: ${exemptedGain.toLocaleString()}`);
     }
     if (exemptedLthd > 0) {
-      setRoseNote("ltDeduction", "settlement", `§89①4호 비과세 LTHD 차감: ${exemptedLthd.toLocaleString()}`);
+      setRoseNote("ltDeduction", "settlement", `§89①4호 비과세 장기보유특별공제 차감: ${exemptedLthd.toLocaleString()}`);
     }
   }
 }
@@ -253,7 +253,7 @@ export function fillRedevRightReceiveBranchData(
   setNum("ltHoldingPart", "settlement", 0);
   setNum("ltResidencePart", "settlement", 0);
   // rose 배지 — 청산금 분 LTHD 행에 §95② 본문 괄호 배제 안내
-  setRoseNote?.("ltDeduction", "settlement", "§95② 단서·§94①2호 — LTHD 대상 외");
+  setRoseNote?.("ltDeduction", "settlement", "§95② 단서·§94①2호 — 장기보유특별공제 대상 외");
 
   setNum("ltHoldingPart", "total", nakkokHp);
   setNum("ltResidencePart", "total", nakkokRp);

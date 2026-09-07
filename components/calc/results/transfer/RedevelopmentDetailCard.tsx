@@ -200,8 +200,8 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
       {/* subject="right" 시 §166 의제구조 안내 대신 §166① 구조 안내 */}
       {isRightSubject && !successorMemberApplied && (
         <div className="rounded-md bg-violet-100/60 border border-violet-200 p-2 text-caption text-violet-900 leading-relaxed">
-          <span className="font-semibold">§166① 입주권 양도 구조</span> — 인가전 양도차익에만 LTHD 적용 (§95② 본문 괄호).
-          인가후·청산금 분은 LTHD 대상 외 (§94①2호 + §166①1호 산식 구조).
+          <span className="font-semibold">§166① 입주권 양도 구조</span> — 인가전 양도차익에만 장기보유특별공제 적용 (§95② 본문 괄호).
+          인가후·청산금 분은 장기보유특별공제 대상 외 (§94①2호 + §166①1호 산식 구조).
           인가후 기존건물분(=0) 행은 표시 생략.
         </div>
       )}
@@ -216,11 +216,11 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <p className="leading-relaxed">
             관리처분계획 인가 후 양도차익(인가후 분 + 청산금 납부분)은 소득세법 §95② 본문 괄호에 따라
             장기보유특별공제 대상에서 제외됩니다. 인가전 양도차익(권리가액 − 취득가액 − 인가전 필요경비)만
-            LTHD 적용 대상입니다.
+            장기보유특별공제 적용 대상입니다.
           </p>
           <p className="text-micro text-rose-700">
             근거: §95② 본문 괄호 (조합원입주권은 관리처분 인가 전 토지분·건물분의 양도차익으로 한정) + 시행령 §166①1호 (인가전·인가후 산식 분리) + 시행령 §166⑤1호 (인가전분 보유기간 = 취득일~인가일).
-            인가후 분·청산금 납부분은 LTHD 기산 대상 자산에 해당하지 않아 공제율 0%.
+            인가후 분·청산금 납부분은 장기보유특별공제 기산 대상 자산에 해당하지 않아 공제율 0%.
           </p>
         </div>
       )}
@@ -234,14 +234,14 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </div>
           <p className="leading-relaxed">
             <strong>가목 (청산금 수령분):</strong> 청산금 수령액 − 안분 취득가액(종전취득가 × 청산금 / 권리가액).
-            LTHD 대상 외 — §95② 본문 괄호(인가 전 토지분·건물분의 양도차익으로 한정) + 집행기준 보수적 적용으로 zeroBranch 처리.
+            장기보유특별공제 대상 외 — §95② 본문 괄호(인가 전 토지분·건물분의 양도차익으로 한정) + 집행기준 보수적 적용으로 0 처리.
           </p>
           <p className="leading-relaxed">
             <strong>나목 (인가전 분 — 축소):</strong> 인가전양도차익 × (권리가액 − 청산금) / 권리가액.
-            LTHD: §166⑤1호 (취득일~인가일 기산, 원조합원 한정).
+            장기보유특별공제: §166⑤1호 (취득일~인가일 기산, 원조합원 한정).
           </p>
           <p className="text-micro text-violet-700">
-            청산금 분 LTHD zeroBranch 사유: §94①2호(입주권은 토지·건물 범위 외) + §166①2호 가목 산식 구조상 LTHD 산정 불가.
+            청산금 분 장기보유특별공제 0 적용 사유: §94①2호(입주권은 토지·건물 범위 외) + §166①2호 가목 산식 구조상 장기보유특별공제 산정 불가.
             별도 법령해석 확보 전 보수적 적용 유지.
           </p>
         </div>
@@ -424,7 +424,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">
               장기보유공제 (표1 {fmtPct(preApproval.lthdRate)} · 만 {Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월)
             </p>
-            <Row label="LTHD (인가전 분)" value={preApproval.lthd} />
+            <Row label="장기보유특별공제 (인가전 분)" value={preApproval.lthd} />
             <div className="pt-1 border-t border-violet-100">
               <Row label="인가전 양도소득금액" value={preApproval.gain - preApproval.lthd} highlight />
             </div>
@@ -436,7 +436,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               {BRANCH_LABEL_RIGHT_RECEIVE_POSTAPPROVAL}
             </p>
             <p className="text-micro text-violet-600">
-              §166①2호 가목 · §94①2호 (LTHD 대상 외)
+              §166①2호 가목 · §94①2호 (장기보유특별공제 대상 외)
             </p>
             <Row label="양도가액 (실제 양도가)" value={settlement.apportionedTransfer} />
             <Row label="− (평가액 − 수령청산금)" value={settlement.apportionedAcquisition} />
@@ -449,7 +449,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <div className="pt-1 border-t border-rose-200 rounded bg-rose-50/60 px-1.5 py-1 space-y-0.5">
               <div className="flex items-center gap-1.5">
                 <span className="rounded-full bg-rose-200 px-1.5 py-0.5 text-micro font-bold text-rose-800">§95② 본문 괄호</span>
-                <span className="text-micro text-rose-800 font-semibold">LTHD 적용 없음</span>
+                <span className="text-micro text-rose-800 font-semibold">장기보유특별공제 적용 없음</span>
               </div>
               <p className="text-micro text-rose-700">
                 조합원입주권은 §94①2호 가목(부동산을 취득할 수 있는 권리)이고, §95② 본문 괄호가 공제 대상을 관리처분 인가 전 토지분·건물분의 양도차익으로 한정합니다 — 인가후 분은 적용 제외.
@@ -482,7 +482,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">
             장기보유공제 ({Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월, {fmtPct(preApproval.lthdRate)})
           </p>
-          <Row label="LTHD" value={preApproval.lthd} />
+          <Row label="장기보유특별공제" value={preApproval.lthd} />
         </div>
 
         {/* 인가후 기존건물분 — subject="apt" 시만 표시 */}
@@ -496,7 +496,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">
             장기보유공제 ({Math.floor(postApprovalExistingHouse.holdingMonths / 12)}년 {postApprovalExistingHouse.holdingMonths % 12}개월, {fmtPct(postApprovalExistingHouse.lthdRate)})
           </p>
-          <Row label="LTHD" value={postApprovalExistingHouse.lthd} />
+          <Row label="장기보유특별공제" value={postApprovalExistingHouse.lthd} />
         </div>
         )}
 
@@ -511,9 +511,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </p>
           <p className="text-micro text-violet-600">
             {isRightSubject && settlementDirection === "receive"
-              ? "§166①2호 가목 · §94①2호 (청산금 분 — LTHD 대상 외)"
+              ? "§166①2호 가목 · §94①2호 (청산금 분 — 장기보유특별공제 대상 외)"
               : isRightSubject
-              ? "§166①1호 · §166⑤1호 (인가일 기산 — LTHD 대상 외)"
+              ? "§166①1호 · §166⑤1호 (인가일 기산 — 장기보유특별공제 대상 외)"
               : "§166②1호 안분 (청산금/분양가) · §166⑤2호가목 (인가일 기산)"}
           </p>
           <Row label="안분 양도가액" value={settlement.apportionedTransfer} />
@@ -532,7 +532,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               <div className="pt-1 border-t border-rose-200 rounded bg-rose-50/60 px-1.5 py-1 space-y-0.5">
                 <div className="flex items-center gap-1.5">
                   <span className="rounded-full bg-rose-200 px-1.5 py-0.5 text-micro font-bold text-rose-800">§95② 단서</span>
-                  <span className="text-micro text-rose-800 font-semibold">LTHD 대상 제외</span>
+                  <span className="text-micro text-rose-800 font-semibold">장기보유특별공제 대상 제외</span>
                 </div>
                 <p className="text-micro text-rose-700">
                   인가후·청산금 분은 §95② 본문 괄호에 따라 장기보유특별공제 대상이 아닙니다.
@@ -547,7 +547,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">
                 장기보유공제 ({Math.floor(settlement.holdingMonths / 12)}년 {settlement.holdingMonths % 12}개월, {fmtPct(settlement.lthdRate)})
               </p>
-              <Row label="LTHD" value={settlement.lthdAfterAllocation ?? 0} />
+              <Row label="장기보유특별공제" value={settlement.lthdAfterAllocation ?? 0} />
               <div className="pt-1 mt-1 border-t border-rose-200 rounded bg-rose-50/60 px-1.5 py-1">
                 <Row
                   label="1세대1주택 비과세 차감"
@@ -566,7 +566,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">
                 장기보유공제 ({Math.floor(settlement.holdingMonths / 12)}년 {settlement.holdingMonths % 12}개월, {fmtPct(settlement.lthdRate)})
               </p>
-              <Row label="LTHD" value={settlement.lthd} />
+              <Row label="장기보유특별공제" value={settlement.lthd} />
             </>
           )}
         </div>
