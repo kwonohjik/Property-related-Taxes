@@ -19,10 +19,17 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { nanoid } from "nanoid";
 import { MarketTypeBlock } from "@/components/calc/stock-transfer/MarketTypeBlock";
-import { MajorShareholderBlock } from "@/components/calc/stock-transfer/MajorShareholderBlock";
+import {
+  MajorShareholderBlock,
+  computeShareRatioFromShares,
+} from "@/components/calc/stock-transfer/MajorShareholderBlock";
 import { suggestPriorYearEndDate } from "@/lib/tax-engine/stock-transfer/major-shareholder-judgment-date";
 import { CompanyTypeBlock } from "@/components/calc/stock-transfer/CompanyTypeBlock";
 import { OtherAssetBlock } from "@/components/calc/stock-transfer/OtherAssetBlock";
+import {
+  TradingVenueBlock,
+  isTradingVenueApplicable,
+} from "@/components/calc/stock-transfer/TradingVenueBlock";
 import { AcquisitionInfoBlock } from "@/components/calc/stock-transfer/AcquisitionInfoBlock";
 import { SplitLotsBlock } from "@/components/calc/stock-transfer/SplitLotsBlock";
 import { SecurityMetadataBlock } from "@/components/calc/stock-transfer/SecurityMetadataBlock";
@@ -53,6 +60,29 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 
 export function Step1({ form, onChange }: Step1Props) {
   const syncedChange = withAutoSyncMajor(form, onChange);
+
+  /**
+   * 발행주식 총수 — 대주주 판정 주식수 모드의 **분모**다 (C-7, 2026-09-08).
+   *
+   * 종전에는 대주주 판정 섹션 안에도 같은 입력칸이 있었고, 지분율 재산출은 **그쪽**
+   * onChange에만 걸려 있었다. 입력 지점을 이 섹션 한 곳으로 모으면서 그 배선도 함께 옮긴다.
+   * 옮기지 않으면 「발행주식수를 고쳐도 지분율이 따라오지 않는」 회귀가 생긴다.
+   *
+   * useEffect → store 미러링 금지 — onChange patch에 동승시킨다.
+   * 분모가 0이거나 보유 주식수가 비어 있으면 비율을 건드리지 않는다(자동 0 fallback 금지).
+   */
+  const handleTotalIssuedSharesChange = (v: string) => {
+    const patch: Partial<StockTransferFormData> = { totalIssuedShares: v };
+    if (form.selfShareRatioMode === "shares") {
+      const ratio = computeShareRatioFromShares(form.selfOwnedShares, v);
+      if (ratio !== null) patch.selfShareRatio = ratio;
+    }
+    if (form.combinedShareRatioMode === "shares") {
+      const ratio = computeShareRatioFromShares(form.combinedOwnedShares, v);
+      if (ratio !== null) patch.combinedShareRatio = ratio;
+    }
+    syncedChange(patch);
+  };
 
   // ── lotsMode 토글 마이그레이션 wrapper ──
   const handleLotsModeToggle = (newMode: "single" | "split") => {
@@ -261,7 +291,7 @@ export function Step1({ form, onChange }: Step1Props) {
               <FieldCard label="발행주식 총수" required>
                 <DecimalInput
                   value={form.totalIssuedShares}
-                  onChange={(v) => onChange({ totalIssuedShares: v })}
+                  onChange={handleTotalIssuedSharesChange}
                   thousandSeparator
                 />
               </FieldCard>
@@ -272,7 +302,7 @@ export function Step1({ form, onChange }: Step1Props) {
               <FieldCard label="발행주식 총수" required>
                 <DecimalInput
                   value={form.totalIssuedShares}
-                  onChange={(v) => onChange({ totalIssuedShares: v })}
+                  onChange={handleTotalIssuedSharesChange}
                   thousandSeparator
                 />
               </FieldCard>
@@ -298,6 +328,17 @@ export function Step1({ form, onChange }: Step1Props) {
         key: "major",
         title: "대주주 판정 (시행령 §157)",
         render: () => <MajorShareholderBlock form={form} onChange={onChange} />,
+      });
+    }
+
+    // 5. 거래 구분 · 증권거래세 — 대주주 판정이 **아니다**(C-9, 2026-09-08).
+    //    §94①3 가목1) 단서(과세대상)와 증권거래세법 §8②(탄력세율)의 축이라 별도 섹션이다.
+    //    다만 설명문이 대주주 여부로 4갈래 갈리므로 판정 **바로 뒤**에 둔다.
+    if (isTradingVenueApplicable(form)) {
+      items.push({
+        key: "venue",
+        title: "거래 구분 · 증권거래세 (§94①3 가목1) 단서 · 증권거래세법 §8②)",
+        render: () => <TradingVenueBlock form={form} onChange={onChange} />,
       });
     }
 

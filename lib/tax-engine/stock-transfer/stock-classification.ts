@@ -134,23 +134,13 @@ function judgeIsMajorShareholder(input: StockTransferInput): {
     { isVentureCompany: input.isVentureCompany, isKOTCTrading: input.isKOTCTrading },
   );
 
-  // F-15·F-16 (2026-05-19) — 대차주식·사모펀드 간접소유 자동 가산 (시행령 §157 2013.2.15. 이후)
-  // 교재 §3장 이미지 51 Check Point ⑧·⑨.
-  // 양도일 >= 2013.2.15. 이고 lent/PEF 입력값이 있을 때 지분율 추가 가산.
-  // 시가총액 가산은 가격 외부 의존이라 사용자 책임 (UI hint 안내).
-  const F15_F16_EFFECTIVE_DATE = new Date("2013-02-15");
-  const lent = input.lentSharesCount ?? 0;
-  const pef = input.pefIndirectSharesCount ?? 0;
-  const rawAugment = lent + pef;
-  const shareAugmentationApplied =
-    input.transferDate >= F15_F16_EFFECTIVE_DATE &&
-    rawAugment > 0 &&
-    input.totalIssuedShares > 0;
-  // 적용 안 됐을 때는 augmentedShares 도 0 (UI 결과 카드 혼동 방지)
-  const augmentedShares = shareAugmentationApplied ? rawAugment : 0;
-  const ratioAugment = shareAugmentationApplied
-    ? augmentedShares / input.totalIssuedShares
-    : 0;
+  // F-15·F-16 — 대차주식·사모펀드 간접소유 자동 가산. 산식은 `computeShareRatioAugmentation`
+  // 단일 소스이며 화면(major-sync·MajorShareholderBlock)도 **같은 함수**를 부른다.
+  const {
+    applied: shareAugmentationApplied,
+    augmentedShares,
+    ratioAugment,
+  } = computeShareRatioAugmentation(input);
 
   // 적용 지분율·시총 결정 (2-step 판정)
   // 본인 단독 임계 우선, 미달 시 합산 적용
@@ -456,6 +446,38 @@ function classifySection94(
  * - `exit_tax` (소득세법 §118의9~§118의16): exit-tax.ts
  * - `out_of_scope_foreign` (legacy): classifyStockTransfer 내 차단 분기 유지
  */
+/**
+ * F-15·F-16 — 대차주식·사모펀드 간접소유 **지분율 가산** (시행령 §157, 2013.2.15. 이후).
+ * 교재 §3장 이미지 51 Check Point ⑧·⑨.
+ *
+ * 🔑 이 산식은 **엔진과 화면이 공유한다**. 화면이 따로 구현하면 같은 술어를 다른 인자로
+ *    부르게 되어 판정이 갈린다([[feedback_shared_predicate_argument_parity]]) — 비상장 벤처
+ *    40억 임계에서 실제로 겪은 사고다. 화면은 `computeAutoIsMajor`·`MajorShareholderBlock`
+ *    에서 이 함수를 import해 쓴다.
+ *
+ * 가산은 **본인·합산 양쪽**에 적용된다(대여자·간접소유 주식이 양측 판정에 동일하게 영향).
+ * 시가총액 가산은 가격이 외부 의존이라 사용자 입력 책임이다(UI hint 안내).
+ */
+export function computeShareRatioAugmentation(input: {
+  transferDate: Date;
+  lentSharesCount?: number;
+  pefIndirectSharesCount?: number;
+  totalIssuedShares: number;
+}): { applied: boolean; augmentedShares: number; ratioAugment: number } {
+  const F15_F16_EFFECTIVE_DATE = new Date("2013-02-15");
+  const lent = input.lentSharesCount ?? 0;
+  const pef = input.pefIndirectSharesCount ?? 0;
+  const rawAugment = lent + pef;
+  const applied =
+    input.transferDate >= F15_F16_EFFECTIVE_DATE &&
+    rawAugment > 0 &&
+    input.totalIssuedShares > 0;
+  // 적용 안 됐을 때는 augmentedShares 도 0 (UI 결과 카드 혼동 방지)
+  const augmentedShares = applied ? rawAugment : 0;
+  const ratioAugment = applied ? augmentedShares / input.totalIssuedShares : 0;
+  return { applied, augmentedShares, ratioAugment };
+}
+
 export function isForeignTaxCategory(
   marketType: StockTransferInput["marketType"] | string | undefined
 ): boolean {

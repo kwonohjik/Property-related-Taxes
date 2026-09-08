@@ -122,6 +122,13 @@ export function StockBurdenedDebtSection({
         // ([[feedback_shared_predicate_argument_parity]] — 리뷰 #14가 고친 결함).
         isVentureCompany: false,
         isKOTCTrading: false,
+        // 대차·사모펀드 가산 축(§157 2013.2.15.~) — 부담부증여 경로에는 입력 UI가 없고
+        // ④도 엔진에 보내지 않는다(`gift-burdened-transfer-api.ts`). 미리보기도 **같은
+        // 인자**여야 저장값과 화면이 갈리지 않는다([[feedback_shared_predicate_argument_parity]]).
+        // (부담부증여 입력에는 발행주식 총수 자체가 없다 — 가산 분모가 0이라 어차피 미적용)
+        lentSharesCount: "0",
+        pefIndirectSharesCount: "0",
+        totalIssuedShares: "0",
       },
       {},
     );
