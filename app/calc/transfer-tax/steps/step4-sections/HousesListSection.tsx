@@ -625,6 +625,7 @@ export function HousesListSection({
               house={editingHouse}
               onUpdate={(patch) => updateHouse(editingHouse.id, patch)}
               showSpouseOwned={!!form.marriageDate}
+              transferDate={form.transferDate}
             />
           )}
           <div className="flex justify-end pt-2 border-t border-border">

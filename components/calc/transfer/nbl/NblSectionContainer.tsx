@@ -27,6 +27,7 @@ import { HousingLandDetailSection } from "./HousingLandDetailSection";
 import { VillaLandDetailSection } from "./VillaLandDetailSection";
 import { OtherLandDetailSection } from "./OtherLandDetailSection";
 import { DeemedTransferSection } from "./DeemedTransferSection";
+import { isDeemedTransferApplicable } from "@/lib/calc/nbl-deemed-transfer-scope";
 import { NblUrbanZoneCheckButton } from "./NblLandAutoFetch";
 import { nblLandSigunguCodeOf } from "@/lib/calc/nbl-land-sigungu";
 
@@ -281,7 +282,7 @@ export function NblSectionContainer({
         </div>
 
         {/* 7. 양도일 의제 (§168의14②) — 기간기준 5지목 (주택부수토지는 §168의6 미적용이라 제외) */}
-        {asset.nblLandType && asset.nblLandType !== "housing_site" && (
+        {isDeemedTransferApplicable(asset.nblLandType) && (
           <div className="mt-3">
             <DeemedTransferSection asset={asset} onAssetChange={onAssetChange} />
           </div>
