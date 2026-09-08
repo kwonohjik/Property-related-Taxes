@@ -116,7 +116,7 @@ describe("L-2 — 「합병·분할·간접투자」 hint 카드는 소멸했다
   // 긍정 짝 — 항목이 지워진 게 아니라 이사했음을 증명한다
   it("L-2b 「상장 전환」 항목은 기준 영역에 살아 있다", () => {
     block(JUDGABLE);
-    const item = screen.getByText(/상장 전환/);
+    const item = screen.getAllByText(/상장 전환/)[0];
     const dateLabel = screen.getByText("직전 사업연도 종료일");
     expect(isBefore(item, dateLabel)).toBe(true);
   });
@@ -124,13 +124,14 @@ describe("L-2 — 「합병·분할·간접투자」 hint 카드는 소멸했다
   it("L-2c 「§178 투자기구」 항목은 합산 hint로 이사했다 (펼쳐서 확인)", () => {
     block({ ...JUDGABLE, isLargestShareholderGroup: true });
     expect(expandHintCard(/특수관계인 합산/)).toBe(true);
-    expect(screen.getByText(/§178 투자기구/)).toBeTruthy();
+    // 라벨 span과 그 조상 li가 함께 매칭되므로 getAllByText로 존재만 단언한다
+    expect(screen.getAllByText(/§178 투자기구/).length).toBeGreaterThan(0);
   });
 
   it("L-2d 「창업투자조합」 항목도 함께 이사했다", () => {
     block({ ...JUDGABLE, isLargestShareholderGroup: true });
     expect(expandHintCard(/특수관계인 합산/)).toBe(true);
-    expect(screen.getByText(/창업투자조합/)).toBeTruthy();
+    expect(screen.getAllByText(/창업투자조합/).length).toBeGreaterThan(0);
   });
 });
 

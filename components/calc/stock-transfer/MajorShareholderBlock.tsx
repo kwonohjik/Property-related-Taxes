@@ -44,12 +44,11 @@ import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync"
 import { KiwoomMarketCapHelper } from "./KiwoomMarketCapHelper";
 // F-06 (2026-05-19) — 직전사업연도 종료일 비거래일 → 직전거래일 적용 안내
 import { isKrxTradingDay, nonTradingLabel } from "@/lib/kiwoom/calendar";
-// Phase C + F-08/12/13 (2026-05-19) — 교재 Check Point UI hint 그룹
+// Phase C + F-08/12/13 (2026-05-19 · 재배치 2026-09-08) — 교재 Check Point UI hint 그룹
 import {
-  MarketCapHintsCard,
-  IssuedSharesHintsCard,
+  MarketCapAndSharesHintsCard,
   CombinedShareHintsCard,
-  SpecialEntityHintsCard,
+  ListingConversionHint,
 } from "./MajorShareholderCheckpointHints";
 
 type MajorShareholderFormSlice = Pick<
@@ -324,9 +323,6 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           </div>
         </ToggleCard>
 
-        {/* F-08·F-12·F-13 (2026-05-19) — Group D 합병·분할·간접투자 추가 hint */}
-        <SpecialEntityHintsCard />
-
         {/* 동적 임계 박스 — 직전 사업연도 종료일 + 시장 선택 후 자동 표시 */}
         {threshold && form.priorYearEndDate && (
           <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm">
@@ -359,6 +355,8 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 벤처기업 해당 시 회사 분류 토글에서 &quot;벤처기업&quot; 선택 → 시총 기준 40억 적용 (현재: 10억)
               </p>
             )}
+            {/* 어느 시장의 임계를 쓰는지는 기준을 읽는 순간 필요한 정보다 (C-4) */}
+            <ListingConversionHint />
           </div>
         )}
 
@@ -456,11 +454,8 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           onChange={(v) => handleAutoSyncChange({ selfMarketCap: v })}
         />
 
-        {/* Phase C (2026-05-19) — Group A: 시가총액 산정 hint 4건 */}
-        <MarketCapHintsCard />
-
-        {/* Phase C (2026-05-19) — Group B: 발행주식총수 산정 hint 2건 */}
-        <IssuedSharesHintsCard />
+        {/* 시가총액·발행주식총수 산정 hint 6건 — 지분율 분자·분모라는 한 주제 (C-5) */}
+        <MarketCapAndSharesHintsCard />
 
         {/* 최대주주그룹 합산 토글 */}
         <ToggleCard
