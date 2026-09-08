@@ -99,6 +99,29 @@ export function computeShareRatioFromShares(
   return ((owned / total) * 100).toFixed(4);
 }
 
+/**
+ * 발행주식 총수 읽기 전용 표시 (C-7).
+ *
+ * 입력은 「양도·취득 일자 및 주식수」 섹션 한 곳에서만 받는다. 여기서는 지분율 산출식의
+ * **분모**가 무엇인지 보여주기만 한다 — 같은 값을 여러 화면에서 묻지 않기 위해서다.
+ */
+function IssuedSharesReadout({ total }: { total: string }) {
+  const parsed = total?.trim() ? parseDecimal(total) : 0;
+  return (
+    <p className="text-xs text-violet-700">
+      발행주식 총수{" "}
+      {parsed > 0 ? (
+        <strong>{parsed.toLocaleString()}주</strong>
+      ) : (
+        <strong className="text-violet-500">미입력</strong>
+      )}
+      <span className="ml-1 text-violet-600">
+        — 「양도·취득 일자 및 주식수」 단계에서 입력합니다.
+      </span>
+    </p>
+  );
+}
+
 interface MajorShareholderBlockProps {
   form: MajorShareholderFormSlice;
   onChange: (patch: Partial<StockTransferFormData>) => void;
@@ -400,13 +423,10 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             </FieldCard>
           ) : (
             <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
-              <FieldCard label="총 발행주식수" hint="해당 법인의 발행주식 총수 (주). 다른 단계에서도 함께 사용됩니다.">
-                <DecimalInput
-                  value={form.totalIssuedShares}
-                  onChange={(v) => handleSharesChange("self", { totalIssuedShares: v })}
-                  thousandSeparator
-                />
-              </FieldCard>
+              {/* C-7 (2026-09-08) — 발행주식 총수는 「양도·취득 일자 및 주식수」 섹션이
+                  **유일한 입력 지점**이다. 여기서 또 받으면 같은 값을 세 곳에서 묻게 된다.
+                  산출식의 분모가 무엇인지만 보여준다. */}
+              <IssuedSharesReadout total={form.totalIssuedShares} />
               <FieldCard label="본인 보유 주식수" hint="본인 단독 명의 보유 주식수 (주)">
                 <DecimalInput
                   value={form.selfOwnedShares}
@@ -423,7 +443,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 </div>
               ) : (
                 <p className="text-xs text-violet-600">
-                  총 발행주식수와 본인 보유 주식수를 입력하면 지분율이 자동 산출됩니다.
+                  발행주식 총수와 본인 보유 주식수가 모두 입력되면 지분율이 자동 산출됩니다.
                 </p>
               )}
             </ToneCard>
@@ -484,13 +504,8 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               </FieldCard>
             ) : (
               <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
-                <FieldCard label="총 발행주식수" hint="해당 법인의 발행주식 총수 (주). 본인 단독 입력과 동일 값.">
-                  <DecimalInput
-                    value={form.totalIssuedShares}
-                    onChange={(v) => handleSharesChange("combined", { totalIssuedShares: v })}
-                    thousandSeparator
-                  />
-                </FieldCard>
+                {/* C-7 — 본인 단독과 동일. 입력 지점은 §「양도·취득 일자 및 주식수」 한 곳이다. */}
+                <IssuedSharesReadout total={form.totalIssuedShares} />
                 <FieldCard label="합산 보유 주식수" hint="본인+특수관계인 — 최대주주그룹 합산 보유 주식수 (주)">
                   <DecimalInput
                     value={form.combinedOwnedShares}
@@ -507,7 +522,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                   </div>
                 ) : (
                   <p className="text-xs text-violet-600">
-                    총 발행주식수와 합산 보유 주식수를 입력하면 지분율이 자동 산출됩니다.
+                    발행주식 총수와 합산 보유 주식수가 모두 입력되면 지분율이 자동 산출됩니다.
                   </p>
                 )}
               </ToneCard>

@@ -49,13 +49,20 @@ function isBefore(a: Element, b: Element): boolean {
   return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 }
 
-/** 라벨 텍스트가 붙은 FieldCard 안의 input */
-function inputInFieldCard(labelText: string): HTMLInputElement | null {
-  const label = screen.queryByText(labelText);
-  if (!label) return null;
-  const card = label.closest("[data-slot='field-card']");
-  if (!card) return null;
-  return within(card as HTMLElement).queryByRole("textbox") as HTMLInputElement | null;
+/**
+ * 라벨이 매칭되는 **FieldCard 안의** input 전부.
+ *
+ * 🔑 `queryByText` 단건 조회로는 안 된다 — 읽기 전용 안내문이 라벨과 같은 문구를 인용하면
+ * 셀렉터가 두 곳에 걸려 「multiple elements」로 터진다
+ * (feedback_hint_quoting_toggle_title_breaks_selector). FieldCard 조상이 있는 것만 남긴다.
+ */
+function fieldCardInputs(labelPattern: RegExp): HTMLInputElement[] {
+  return screen
+    .queryAllByText(labelPattern)
+    .map((el) => el.closest("[data-slot='field-card']"))
+    .filter((c): c is HTMLElement => c !== null)
+    .map((c) => within(c).queryByRole("textbox") as HTMLInputElement | null)
+    .filter((i): i is HTMLInputElement => i !== null);
 }
 
 /**
@@ -179,7 +186,7 @@ describe("L-9 — 시총·발행주식총수 hint는 한 장으로 병합됐다"
 describe("L-4 — §5에는 총 발행주식수 입력칸이 없다", () => {
   it("본인 주식수 모드에서도 §5에 입력칸이 없다", () => {
     block({ ...JUDGABLE, selfShareRatioMode: "shares" });
-    expect(inputInFieldCard("총 발행주식수")).toBeNull();
+    expect(fieldCardInputs(/발행주식 총수|총 발행주식수/)).toHaveLength(0);
   });
 
   it("합산 주식수 모드에서도 없다", () => {
@@ -188,13 +195,13 @@ describe("L-4 — §5에는 총 발행주식수 입력칸이 없다", () => {
       isLargestShareholderGroup: true,
       combinedShareRatioMode: "shares",
     });
-    expect(inputInFieldCard("총 발행주식수")).toBeNull();
+    expect(fieldCardInputs(/발행주식 총수|총 발행주식수/)).toHaveLength(0);
   });
 
   // 긍정 짝 — 필드가 사라진 게 아니라 §3이 유일한 입력 지점이 됐다
   it("L-4b §3에는 「발행주식 총수」 입력칸이 그대로 있다", () => {
     step1({ ...JUDGABLE, selfShareRatioMode: "shares" });
-    expect(inputInFieldCard("발행주식 총수")).toBeTruthy();
+    expect(fieldCardInputs(/발행주식 총수/).length).toBeGreaterThan(0);
   });
 });
 
@@ -223,9 +230,9 @@ describe("L-5 — §3에서 발행주식 총수를 바꾸면 지분율이 재산
     const onPatch = vi.fn();
     render(<Harness onPatch={onPatch} />);
 
-    const input = inputInFieldCard("발행주식 총수");
+    const [input] = fieldCardInputs(/발행주식 총수/);
     expect(input).toBeTruthy();
-    fireEvent.change(input as HTMLInputElement, { target: { value: "100000" } });
+    fireEvent.change(input, { target: { value: "100000" } });
 
     const patches = onPatch.mock.calls.map((c) => c[0]);
     const withTotal = patches.find((p) => p.totalIssuedShares);
