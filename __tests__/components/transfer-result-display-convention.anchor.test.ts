@@ -72,7 +72,10 @@ function codeLines(rel: string): { line: number; text: string }[] {
       if (t.includes("*/")) inBlock = false;
       return;
     }
-    if (t.startsWith("/*")) {
+    // ⚠️ `{/* … */}`(JSX 주석)도 주석이다. 종전에는 `/*`만 봐서 이것이 코드로 남았다 —
+    //    다른 D-규칙은 백틱 리터럴만 훑어 드러나지 않았고, 2026-09-08 `min(`·`max(` 규칙을
+    //    추가하자 JSX 주석 3건이 **가짜 결함**으로 잡혔다.
+    if (t.startsWith("/*") || t.startsWith("{/*")) {
       if (!t.includes("*/")) inBlock = true;
       return;
     }
@@ -204,6 +207,38 @@ describe("D-4 산식이 한국어 풀어쓰기다", () => {
         for (const lit of displayLiterals(text)) {
           if (/P_A|\/\s*D\)/.test(shownText(lit))) hits.push(`${rel}:${line}  ${lit.slice(0, 120)}`);
         }
+      }
+    }
+    expect(hits).toEqual([]);
+  });
+
+  /**
+   * `min(...)`·`max(...)` — `floor(`와 같은 **함수 표기**다. 정본은 한국어다:
+   * 「A와 B 중 큰 금액 / 작은 금액」.
+   *
+   * 🔴 이 규칙을 D-4에 넣으면서 **두 가지 사각지대**가 드러났다(2026-09-08 실측 9곳):
+   *   ① `displayLiterals`는 **백틱만** 본다 — 실제 위반의 다수가 `description="…"`·JSX 텍스트였다.
+   *   ② `TARGETS`가 결과탭 경로뿐이라 **산식을 인쇄하는 입력 폼 hint**를 못 봤다
+   *      (`GiftHouseStdPriceSection` 등). 같은 세목·같은 규칙이므로 이 검사만 범위를 넓힌다.
+   *   ③ `pre-1990-land-valuation.ts`의 `formula`는 `Pre1990LandValuationDetailCard:26`이
+   *      `<FormulaText>`로 그대로 인쇄하는데 `TARGETS`에 없었다 — 추가했다.
+   *
+   * ⚠️ `${Math.max(...)}`·`{Math.min(...)}`는 **코드**다(화면엔 값이 찍힌다) — 치환 후 검사한다.
+   */
+  it("표시 문구에 함수 표기 `min(`·`max(`가 없다", () => {
+    const FORMULA_TARGETS = [
+      ...TARGETS,
+      "lib/tax-engine/pre-1990-land-valuation.ts",
+      ...walk("components/calc/transfer"),
+    ];
+    const hits: string[] = [];
+    for (const rel of new Set(FORMULA_TARGETS)) {
+      for (const { line, text } of codeLines(rel)) {
+        // 표현식 자리를 먼저 지운다 — `${...}`(템플릿)와 `{...}`(JSX) 둘 다.
+        const shown = text.replace(/\$\{[^}]*\}/g, "◇").replace(/\{[^}]*\}/g, "◇");
+        // 한글이 같이 있는 조각만 «사용자 문구»로 본다(순수 코드 라인 배제).
+        if (!/[가-힣]/.test(shown)) continue;
+        if (/\b(min|max)\s*\(/.test(shown)) hits.push(`${rel}:${line}  ${shown.trim().slice(0, 120)}`);
       }
     }
     expect(hits).toEqual([]);

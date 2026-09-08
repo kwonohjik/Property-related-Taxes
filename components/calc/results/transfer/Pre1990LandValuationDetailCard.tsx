@@ -32,7 +32,7 @@ export function Pre1990LandValuationDetailCard({ detail }: { detail: Detail }) {
                     <span className="font-mono text-right">{detail.breakdown.gradeValue_1990_0830.toLocaleString()}</span>
                     <span className="text-muted-foreground">90.8.30. 직전 등급가액</span>
                     <span className="font-mono text-right">{detail.breakdown.gradeValuePrev_1990_0830.toLocaleString()}</span>
-                    <span className="text-muted-foreground">분모 (min(평균, 현재))</span>
+                    <span className="text-muted-foreground">분모 (평균과 현재 중 작은 금액)</span>
                     <span className="font-mono text-right">{detail.breakdown.appliedDenominator.toLocaleString()}</span>
                     <span className="text-muted-foreground">적용 비율</span>
                     <span className="font-mono text-right">{(detail.breakdown.appliedRatio * 100).toFixed(2)}%</span>

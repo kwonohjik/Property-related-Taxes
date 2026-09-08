@@ -290,7 +290,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
         <div className="flex justify-between font-semibold text-foreground text-sm">
           <span>채택 시나리오: {detail.adoptedScenario} ({detail.adoptedScenario === "A" ? "이월과세 적용" : "비교과세 미적용"})</span>
           {filing === undefined && (
-            <span>신고세액 = max(A, B) = {fmt(Math.max(detail.scenarioA.determinedTax, detail.scenarioB.determinedTax))}</span>
+            <span>신고세액 = 시나리오 A·B 중 큰 금액 = {fmt(Math.max(detail.scenarioA.determinedTax, detail.scenarioB.determinedTax))}</span>
           )}
         </div>
         {filing !== undefined && (

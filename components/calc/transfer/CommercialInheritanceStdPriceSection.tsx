@@ -79,7 +79,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥" />
       </div>
       <p className="text-xs text-amber-700">
-        상가 기준시가 최초고시(2005.1.1) 전 {causeLabel}받은 상가는 <b>max({dateLabel} 상증법 평가액, §164⑥ 취득당시 기준시가)</b>를
+        상가 기준시가 최초고시(2005.1.1) 전 {causeLabel}받은 상가는 <b>{dateLabel} 상증법 평가액과 §164⑥ 취득당시 기준시가 중 큰 금액</b>를
         취득가액으로 봅니다. 취득당시 기준시가는 최초고시(2005) 역환산으로 산정합니다.{" "}
         <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한
         경우에만 비교합니다. 전부 비워두면 {dateLabel} 평가액만 사용하고,{" "}

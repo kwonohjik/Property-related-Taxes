@@ -62,7 +62,7 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
       </div>
       <p className="text-xs text-amber-700">
         개별주택가격 최초공시(2005.4.30.) 전 증여받은 주택은{" "}
-        <b>max(증여일 상증법 평가액, §164⑤~⑦ 취득당시 기준시가)</b>를 취득가액으로 봅니다. 위
+        <b>증여일 상증법 평가액과 §164⑤~⑦ 취득당시 기준시가 중 큰 금액</b>를 취득가액으로 봅니다. 위
         「증여 신고가액」이 앞의 값이고, 아래 3시점 입력이 뒤의 값을 산정합니다.{" "}
         <b>{status ? `${status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만
         비교합니다. 전부 비워두면 증여 신고가액만 사용하고,{" "}
