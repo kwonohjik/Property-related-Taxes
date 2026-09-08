@@ -161,7 +161,7 @@ export function FiscalYearAdjustmentTable({
   return (
     <ToneCard tone="emerald" sectionNum={sectionNum} title="사업연도별 순손익액 (별지 6쪽 ①~㉒)" bodyClassName="space-y-3" noDark>
       <p className="text-caption text-emerald-700/80">
-        평가기준일 이전 1·2·3년차 사업연도. 가중치 ×3·×2·×1로 가중평균 후 ÷ 환원율(10%) = 1주당 순손익가치 ⑤
+        평가기준일 이전 1·2·3년차 사업연도. 가중치 ×3·×2·×1로 가중평균한 뒤 환원율(10%)로 나누면 1주당 순손익가치 ⑤
       </p>
       <p className="text-micro text-emerald-600/80">
         사업연도 변경 시: 평가기준일 이전 1·2·3년이 되는 날이 속하는 사업연도를 입력.

@@ -24,6 +24,7 @@ import {
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
 import { fetchKiwoomWithTimeout } from "@/lib/kiwoom/fetch-with-timeout";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /**
  * 축 — 양도일(§163⑨ 분모) / 취득일(분자).
@@ -238,8 +239,12 @@ export function KiwoomAutoFetchButton({
               <strong>{info.tradingDays}</strong>일
             </p>
             <p>
-              평균 = <strong>{info.sum.toLocaleString()}</strong> ÷{" "}
-              <strong>{info.tradingDays}</strong> ={" "}
+              평균 ={" "}
+              <Frac
+                top={<strong>{info.sum.toLocaleString()}</strong>}
+                bottom={<strong>{info.tradingDays}</strong>}
+              />{" "}
+              ={" "}
               <strong className="text-emerald-900 text-sm">{info.average.toLocaleString()}</strong>원 (원미만 절사)
             </p>
             <p className="text-emerald-700">

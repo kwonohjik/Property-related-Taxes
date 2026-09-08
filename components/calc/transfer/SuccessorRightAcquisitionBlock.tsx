@@ -62,7 +62,7 @@ const ACQ_MODE_OPTIONS: { value: AcqMode; label: string; description: string }[]
   { value: "actual", label: "실지거래가액", description: "승계취득 시 실제로 지급한 금액 (§97①1호 가목)" },
   { value: "salesCase", label: "매매사례가액", description: "취득일 전후 3개월 이내 동일·유사 자산의 매매사례 (§176의2③1호)" },
   { value: "appraisal", label: "감정가액", description: "취득일 전후 3개월 이내 2 이상 감정평가법인등 평가액의 평균 (§176의2③2호)" },
-  { value: "estimated", label: "환산취득가액", description: "양도가액 × (취득당시 기준시가 ÷ 양도당시 기준시가) (§176의2②2호·③3호)" },
+  { value: "estimated", label: "환산취득가액", description: "양도가액 × 「취득당시 기준시가를 양도당시 기준시가로 나눈 비율」 (§176의2②2호·③3호)" },
 ];
 
 /**

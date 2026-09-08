@@ -94,8 +94,10 @@ test.describe("§165⑤ 환산 분자·분모 80% 하한 — 프리뷰", () => {
     await expect(preview.getByText(/50×3\/5 \+ 200×2\/5 =/)).toBeVisible({ timeout: 10_000 });
     await expect(preview.getByText(/순자산가치 200 × 80% =/)).toBeVisible();
     await expect(preview.getByText(FLOOR_HINT)).toBeVisible();
-    // 환산비율은 하한 적용 후 값으로 계산된다 — 100 ÷ 160 = 0.625
-    await expect(preview.getByText(/환산비율 = 100 ÷ 160/)).toBeVisible();
+    // 환산비율은 하한 적용 후 값으로 계산된다 — 100을 160으로 나눠 0.625.
+    // 분수 표기(`<Frac>`)라 분자·분모가 별도 span으로 갈리고, 줄 텍스트는 «분자+분모» 순으로
+    // 이어 붙는다. 줄 자체를 스코프해 **순서까지** 고정한다(숫자 단독 매칭은 화면 곳곳과 충돌).
+    await expect(preview.locator("p").filter({ hasText: "환산비율 =" })).toContainText("100160");
   });
 
   test("F-2: 하한 미발동 → 하한 줄이 없다 (F-1의 음성 대조군)", async ({ page }) => {
@@ -111,6 +113,7 @@ test.describe("§165⑤ 환산 분자·분모 80% 하한 — 프리뷰", () => {
     await expect(preview.getByText(/300×3\/5 \+ 100×2\/5 =/)).toBeVisible({ timeout: 10_000 });
     await expect(preview.getByText(/200×3\/5 \+ 100×2\/5 =/)).toBeVisible();
     await expect(preview.getByText(FLOOR_HINT)).toHaveCount(0);
-    await expect(preview.getByText(/환산비율 = 160 ÷ 220/)).toBeVisible();
+    // 분수 표기 — 줄을 스코프해 분자+분모 순서를 고정한다.
+    await expect(preview.locator("p").filter({ hasText: "환산비율 =" })).toContainText("160220");
   });
 });

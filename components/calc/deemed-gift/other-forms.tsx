@@ -18,6 +18,7 @@ import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuatio
 import type { DeemedFormState } from "./shared";
 import { ExcessShareholderTable } from "./ExcessShareholderTable";
 import { SpecificCorpShareholderTable } from "./SpecificCorpShareholderTable";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -341,7 +342,8 @@ export function ListingGainFields({ form, set }: Props) {
       >
         ※ 증여·취득일부터 상장 전일까지 <b>무상주(증자)</b>를 발행한 경우, 환산주식수 기준으로 1주당 평가가액·순손익액을 산정해 입력하세요 (령§31의3⑦ → 칙§17의3⑤).
         <br />
-        환산주식수 = 과거 사업연도말 주식수 × (증자 직전 주식수 + 증자 주식수) ÷ 증자 직전 주식수
+        환산주식수 = 과거 사업연도말 주식수 ×{" "}
+        <Frac top="증자 직전 주식수 + 증자 주식수" bottom="증자 직전 주식수" />
       </div>
 
       {/* §41의3 적용 요건·특례 정보성 안내 (전환사채·거짓·증여시기·연대납부·합산배제) */}

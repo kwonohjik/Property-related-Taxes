@@ -185,7 +185,7 @@ export function Page6NetIncomeBreakdown({
       {result.estimatedProfitResult?.applied && (
         <p className="mb-3 text-micro text-violet-700" data-testid="p6-추정이익">
           ※ §56② 추정이익 갈음 적용 — 위 가중평균(아.) 대신 2 이상 신용평가기관 추정이익 평균가액{" "}
-          {fmt(result.estimatedProfitResult.estimatedProfitAverage)} ÷ 환원율로 산출
+          {fmt(result.estimatedProfitResult.estimatedProfitAverage)}을 환원율로 나누어 산출
         </p>
       )}
     </section>

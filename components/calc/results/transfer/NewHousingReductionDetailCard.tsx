@@ -7,6 +7,7 @@
  */
 
 import type { NewHousingReductionResult } from "@/lib/tax-engine/new-housing-reduction";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: NewHousingReductionResult;
@@ -134,14 +135,19 @@ export function NewHousingReductionDetailCard({ detail }: Props) {
           ) : (
             <>
               <p className="text-muted-foreground">
-                감면대상 양도차익 = 전체 양도차익 × 감면대상 보유일수 ÷ 전체 보유일수
+                감면대상 양도차익 = 전체 양도차익 ×{" "}
+                <Frac top="감면대상 보유일수" bottom="전체 보유일수" />
               </p>
               {totalCapitalGainApplied !== undefined &&
               reductionDaysApplied !== undefined &&
               totalDaysApplied ? (
                 <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
-                  {formatN(totalCapitalGainApplied)} × {formatN(reductionDaysApplied)}일 ÷{" "}
-                  {formatN(totalDaysApplied)}일 = {formatN(reducibleGain)}
+                  {formatN(totalCapitalGainApplied)} ×{" "}
+                  <Frac
+                    top={`${formatN(reductionDaysApplied)}일`}
+                    bottom={`${formatN(totalDaysApplied)}일`}
+                  />{" "}
+                  = {formatN(reducibleGain)}
                 </p>
               ) : (
                 <>

@@ -46,7 +46,7 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
           unit="㎡"
         />
         <p className="text-xs text-muted-foreground">
-          공시가격 ÷ 면적 = 개별공시지가(원/㎡)로 자동 환산됩니다.
+          공시가격을 면적으로 나누어 개별공시지가(원/㎡)로 자동 환산됩니다.
         </p>
       </div>
 

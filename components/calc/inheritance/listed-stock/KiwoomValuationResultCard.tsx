@@ -13,6 +13,7 @@
 
 import React from "react";
 import type { KiwoomValuationInfo } from "./useKiwoomValuationFetch";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import {
   expandToggleClass,
   expandToggleLabel,
@@ -75,8 +76,11 @@ export function KiwoomValuationResultCard({
         </p>
         <p>
           전후 2개월 종가 단순평균 ={" "}
-          <strong>{info.sum.toLocaleString()}</strong> ÷{" "}
-          <strong>{info.tradingDays}</strong> ={" "}
+          <Frac
+            top={<strong>{info.sum.toLocaleString()}</strong>}
+            bottom={<strong>{info.tradingDays}</strong>}
+          />{" "}
+          ={" "}
           <strong className="text-emerald-900 text-sm">
             {info.average.toLocaleString()}
           </strong>

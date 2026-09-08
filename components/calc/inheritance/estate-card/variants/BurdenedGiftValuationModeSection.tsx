@@ -19,6 +19,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /** Date → YYYY-MM-DD (DateInput 교환용). new Date 직접 호출 금지 — 역변환은 toOptionalDate. */
 function dateToStr(d: Date | undefined): string {
@@ -241,7 +242,7 @@ export function ValuationModeSection({
         <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:border-sky-700 dark:bg-sky-900/20 px-3 py-2 text-xs text-sky-700 dark:text-sky-300">
           <p className="font-semibold mb-1">K-5 환산취득가액 계산 방식</p>
           <p>
-            환산취득가 = 취득시 기준시가 ÷ 양도시 기준시가 × 양도시 시가 (소령 §176의2②2호)
+            환산취득가 = <Frac top="취득시 기준시가" bottom="양도시 기준시가" /> × 양도시 시가 (소령 §176의2②2호)
           </p>
           <p className="mt-1">
             양도비용 대신 양도가액의 3% 개산공제가 적용됩니다. (소법 §163⑥)

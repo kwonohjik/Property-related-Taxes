@@ -18,6 +18,7 @@
 
 import { useMemo, useState } from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -107,8 +108,12 @@ const LOCATION_OPTIONS: RadioCardOption<Exclude<LocationCategory, "">>[] = [
   {
     value: "eup_myeon_or_complex",
     label: "읍·면지역(군 지역 포함) · 산업단지 · 공업지역",
-    description:
-      "분리과세 — 기준면적 = 공장건축물 연면적 × 100 ÷ 업종별 기준공장면적률 (「지방세법 시행령」 §102①1호 · 시행규칙 별표6)",
+    description: (
+      <>
+        분리과세 — 기준면적 = <Frac top="공장건축물 연면적 × 100" bottom="업종별 기준공장면적률" /> (「지방세법
+        시행령」 §102①1호 · 시행규칙 별표6)
+      </>
+    ),
     testId: "nbl-factory-loc-complex",
   },
   {

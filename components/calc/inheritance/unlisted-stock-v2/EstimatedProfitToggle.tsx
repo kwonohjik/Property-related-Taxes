@@ -43,6 +43,7 @@ import {
   type EstimatedProfitReasonCode,
 } from "@/lib/tax-engine/property-valuation/estimated-profit-section-56-2";
 import { VALUATION } from "@/lib/tax-engine/legal-codes/inheritance-gift";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /** §17의3③ 기관 유형 라벨 (상증규 §17의3③) */
 const AGENCY_TYPE_LABEL: Record<AgencyType, string> = {
@@ -339,8 +340,16 @@ export function EstimatedProfitToggle({
                 >
                   {preview.applied ? (
                     <p>
-                      추정이익 평균가액 <b>{fmt(preview.estimatedProfitAverage)}</b> (기관 {preview.agencyCount}개 평균)
-                      {" "}÷ 환원율 {(capitalizationRate * 100).toFixed(0)}% = 1주당 순손익가치{" "}
+                      <Frac
+                        top={
+                          <>
+                            추정이익 평균가액 <b>{fmt(preview.estimatedProfitAverage)}</b> (기관{" "}
+                            {preview.agencyCount}개 평균)
+                          </>
+                        }
+                        bottom={`환원율 ${(capitalizationRate * 100).toFixed(0)}%`}
+                      />{" "}
+                      = 1주당 순손익가치{" "}
                       <b>{fmt(preview.perShareIncomeValue)}</b>
                     </p>
                   ) : (

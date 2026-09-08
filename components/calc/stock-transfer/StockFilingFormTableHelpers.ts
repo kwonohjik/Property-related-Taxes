@@ -584,7 +584,7 @@ export function buildRows(
 
   if (hasForeignCredit) {
     rows.push({
-      label: "25-1. 외국납부세액공제 §118의6①1호 (한도 = 산출세액 × 해당 종목 소득 ÷ 국외주식 소득)",
+      label: "25-1. 외국납부세액공제 §118의6①1호 (한도 = 산출세액 × 「해당 종목 소득을 국외주식 소득으로 나눈 비율」)",
       values: val(
         result.foreignDetail?.foreignTaxCreditApplied ?? null,
         () =>

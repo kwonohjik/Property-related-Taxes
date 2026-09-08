@@ -362,7 +362,7 @@ export function UnlistedStockSimpleFields({
     <div className="space-y-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-lg p-4">
       {/* 법적 근거 안내 */}
       <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
-        ℹ️ 1주당 가치 = (순손익가치×3 + 순자산가치×2) ÷ 5 (상증법 §63①1호 다목, 시행령 §54)
+        ℹ️ 1주당 가치 = <Frac top="순손익가치×3 + 순자산가치×2" bottom="5" /> (상증법 §63①1호 다목, 시행령 §54)
       </p>
 
       {/* ① 평가 대상·주식 수 */}
@@ -490,7 +490,7 @@ export function UnlistedStockSimpleFields({
               자동 계산: 3년 가중평균 순손익 (§56①)
             </p>
             <p className="text-indigo-600 dark:text-indigo-400">
-              = (직전1년×3 + 직전2년×2 + 직전3년×1) ÷ 6
+              = <Frac top="직전1년×3 + 직전2년×2 + 직전3년×1" bottom="6" />
               {" = "}
               <span className="font-medium">{weightedNetIncomePreview.toLocaleString()}</span>
               {weightedNetIncomePreview <= 0 && (
