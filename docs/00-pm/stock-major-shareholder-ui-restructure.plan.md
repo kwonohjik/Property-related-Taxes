@@ -410,3 +410,47 @@ hint 카드 제목이 내용과 어긋난다: **「합병·분할·간접투자�
 - `computeShareRatioFromShares`·`computeAutoIsMajor` 시그니처 변경 없음.
 - hint **내용**(조문·해석례 인용) 수정 없음 — 세율 부칙 1건 삭제만 예외이고, 이는 사용자 결정.
 - 색·톤 토큰 신설 없음. 기존 `tones.ts` 범위에서 재배정만.
+
+---
+
+## 11. 안전망 실측 결과 — **0건** (2026-09-08 실측)
+
+뮤테이션 7종을 **동시에** 적용하고 전건 vitest를 돌렸다.
+
+| 뮤테이션 | 대상 (원본 줄) |
+|---|---|
+| SN-1a | `SpecialEntityHintsCard` 렌더 제거 (327-328) |
+| SN-1b | `MarketCapHintsCard`·`IssuedSharesHintsCard` 렌더 제거 (459-463) |
+| SN-1c | `CombinedShareHintsCard` 렌더 제거 (575-576) |
+| SN-2a | 본인 모드 「총 발행주식수」 FieldCard 제거 (408-414) |
+| SN-2b | 합산 모드 「총 발행주식수」 FieldCard 제거 (494-500) |
+| SN-3 | 대차·PEF 블록 제거 (529-573) |
+| SN-4 | 거래소 장내 거래 토글 제거 (644-663) |
+
+**결과 (`--reporter=json`)**:
+
+```
+numTotalTestSuites  7266
+numTotalTests      20261
+numPassedTests     20244      (차이 17건은 skip/todo)
+numFailedTests         0
+success             true
+```
+
+`npx tsc --noEmit`도 **0건**이었다 — 미사용 import가 남아도 tsc는 잡지 않는다.
+
+⇒ **이 화면의 배치를 지키는 안전망은 존재하지 않는다.** 708줄 중 88줄을 지워도 아무도 모른다.
+선행 계획의 「토글 폐지 뮤테이션에 3130테스트 전건 통과」와 같은 결과이며, 그때보다 모집단이
+6배 커졌는데도 여전히 0건이다.
+
+⇒ 재배치에 앞서 **L-1~L-12를 반드시 먼저 세운다**. 앵커 없이 옮기면 이 작업의 결과물도
+다음 사람이 자유롭게 지울 수 있다.
+
+**부수 확인**: E2E도 장내 토글을 조작하지 않는다 — `stock-transfer-securities-tax.spec.ts`를
+비롯한 어느 spec에도 「장내」·`isOnMarketTransaction` 문자열이 없고, default `true`에 의존만 한다.
+따라서 토글을 §6으로 옮겨도 E2E는 통과한다(감지도 못 한다).
+
+**C-6 확정 (V-1 후속)**: `FieldCard`에는 `trailing` slot이 있지만(`FieldCard.tsx:12`),
+`KiwoomMarketCapHelper`는 버튼이 아니라 **219줄 카드**로 조회 산출내역(종가·주식수·시총·임계
+판정)까지 담는다(`:158-210`). `trailing`에 넣을 크기가 아니므로 **시총 입력칸 → 키움 카드**
+순서 교체로 간다.
