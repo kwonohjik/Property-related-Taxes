@@ -393,3 +393,32 @@ describe("L-14 — 시가총액 입력이 FieldCard 안에 있다", () => {
     expect(fieldCardInputs(/본인 단독 시가총액/).length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * L-15 — 비거래일 안내는 「무엇을 해야 하는지」만 남긴다.
+ *
+ * 「교재 49 (3) ①」은 우리 내부 출처라 사용자에게 의미가 없고, 「키움 자동조회가 직전거래일
+ * 종가를 자동 적용한다」는 도구가 당연히 해줄 일이다. 둘이 붙으면 정작 읽어야 할 한 줄이 묻힌다.
+ */
+describe("L-15 — 비거래일 안내 단순화", () => {
+  // JUDGABLE의 2025-12-31은 휴장일이라 안내가 뜬다
+  it("휴장일 안내가 뜬다", () => {
+    block(JUDGABLE);
+    expect(screen.getByText(/휴장일|거래일 제외/)).toBeTruthy();
+  });
+
+  it("내부 출처(「교재」)를 화면에 노출하지 않는다", () => {
+    block(JUDGABLE);
+    expect(screen.queryByText(/교재/)).toBeNull();
+  });
+
+  it("키움 자동조회 동작을 설명하지 않는다", () => {
+    block(JUDGABLE);
+    expect(screen.queryByText(/키움증권 자동조회는/)).toBeNull();
+  });
+
+  it("해야 할 일(직전거래일 최종시세가액)은 남아 있다", () => {
+    block(JUDGABLE);
+    expect(screen.getByText(/직전거래일 최종시세가액/)).toBeTruthy();
+  });
+});
