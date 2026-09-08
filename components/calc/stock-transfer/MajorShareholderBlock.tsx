@@ -255,6 +255,61 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
 
   const innerContent = (
     <div className={isAutoJudgmentActive ? "space-y-4" : "mt-4 space-y-4"}>
+        {/* 동적 임계 박스 — 직전 사업연도 종료일 + 시장 선택 후 자동 표시 */}
+        {threshold && form.priorYearEndDate && (
+          <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm">
+            <p className="font-semibold text-violet-900 mb-1 flex items-center gap-1">
+              현재 적용 기준 (
+              {form.marketType === "unlisted"
+                ? <LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호" />
+                : <LawArticleModal legalBasis="소득세법 시행령 §157" label="§157④" />}
+              )
+            </p>
+            <p className="text-violet-800">
+              지분율 <strong>{(threshold.shareRatioThreshold * 100).toFixed(1)}%</strong> ·
+              시총 <strong>{(threshold.marketCapThreshold / 100_000_000).toFixed(0)}억</strong>
+            </p>
+            <p className="text-xs text-violet-600 mt-1">
+              {MARKET_LABEL[form.marketType as keyof typeof MARKET_LABEL]} ·{" "}
+              {resolveThresholdFromDate(
+                form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
+                new Date(form.transferDate),
+              )}~ 적용
+            </p>
+            {form.marketType === "unlisted" && threshold.isVentureRule && (
+              <p className="text-xs text-violet-700 mt-1 font-semibold flex items-center gap-1 flex-wrap">
+                ✓ 자동 적용 중 — 비상장 벤처기업 시총 기준 <strong>40억</strong>{" "}
+                (<LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호 나목" />)
+              </p>
+            )}
+            {form.marketType === "unlisted" && !threshold.isVentureRule && (
+              <p className="text-xs text-slate-500 mt-1">
+                벤처기업 해당 시 회사 분류 토글에서 &quot;벤처기업&quot; 선택 → 시총 기준 40억 적용 (현재: 10억)
+              </p>
+            )}
+            {/* 어느 시장의 임계를 쓰는지는 기준을 읽는 순간 필요한 정보다 (C-4) */}
+            <ListingConversionHint />
+            {/* 시기별 임계 이력 — 기준의 부속 정보라 같은 카드 안에 둔다 (C-1) */}
+            <div className="mt-2 border-t border-violet-200 pt-2">
+              <button
+                type="button"
+                onClick={() => setThresholdHistoryOpen((o) => !o)}
+                aria-expanded={thresholdHistoryOpen}
+                className={expandToggleClass("violet")}
+              >
+                {expandToggleLabel(thresholdHistoryOpen)} · 시기별 기준 이력 보기
+              </button>
+              {thresholdHistoryOpen && (
+                <div className="mt-3">
+                  <MajorThresholdTimeline
+                    marketType={form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted"}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <FieldCard label="직전 사업연도 종료일" required hint="통상 전년 12월 31일. 사업연도가 다른 경우 해당 연도 종료일.">
           <DateInput
             value={form.priorYearEndDate}
@@ -323,64 +378,6 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           </div>
         </ToggleCard>
 
-        {/* 동적 임계 박스 — 직전 사업연도 종료일 + 시장 선택 후 자동 표시 */}
-        {threshold && form.priorYearEndDate && (
-          <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm">
-            <p className="font-semibold text-violet-900 mb-1 flex items-center gap-1">
-              현재 적용 기준 (
-              {form.marketType === "unlisted"
-                ? <LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호" />
-                : <LawArticleModal legalBasis="소득세법 시행령 §157" label="§157④" />}
-              )
-            </p>
-            <p className="text-violet-800">
-              지분율 <strong>{(threshold.shareRatioThreshold * 100).toFixed(1)}%</strong> ·
-              시총 <strong>{(threshold.marketCapThreshold / 100_000_000).toFixed(0)}억</strong>
-            </p>
-            <p className="text-xs text-violet-600 mt-1">
-              {MARKET_LABEL[form.marketType as keyof typeof MARKET_LABEL]} ·{" "}
-              {resolveThresholdFromDate(
-                form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
-                new Date(form.transferDate),
-              )}~ 적용
-            </p>
-            {form.marketType === "unlisted" && threshold.isVentureRule && (
-              <p className="text-xs text-violet-700 mt-1 font-semibold flex items-center gap-1 flex-wrap">
-                ✓ 자동 적용 중 — 비상장 벤처기업 시총 기준 <strong>40억</strong>{" "}
-                (<LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호 나목" />)
-              </p>
-            )}
-            {form.marketType === "unlisted" && !threshold.isVentureRule && (
-              <p className="text-xs text-slate-500 mt-1">
-                벤처기업 해당 시 회사 분류 토글에서 &quot;벤처기업&quot; 선택 → 시총 기준 40억 적용 (현재: 10억)
-              </p>
-            )}
-            {/* 어느 시장의 임계를 쓰는지는 기준을 읽는 순간 필요한 정보다 (C-4) */}
-            <ListingConversionHint />
-          </div>
-        )}
-
-        {/* 시기별 임계 이력 펼침 — 상장 3시장 + 비상장에만 표시 */}
-        {threshold && (
-          <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
-            <button
-              type="button"
-              onClick={() => setThresholdHistoryOpen((o) => !o)}
-              aria-expanded={thresholdHistoryOpen}
-              className={expandToggleClass("slate")}
-            >
-              {expandToggleLabel(thresholdHistoryOpen)} · 시기별 기준 이력 보기
-            </button>
-            {thresholdHistoryOpen && (
-              <div className="mt-3">
-                <MajorThresholdTimeline
-                  marketType={form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted"}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
         {/* 본인 단독 지분율 — 입력 방식 선택 */}
         <div className="space-y-3">
           <RadioCardGroup
@@ -433,8 +430,17 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           )}
         </div>
 
-        {/* 키움 시가총액 자동 산정 — 본인 보유 주식수 입력 이후 노출.
-            의존 순서(종목코드 + 직전 사업연도말 + 보유 주식수)와 UI 입력 순서를 일치시킴. */}
+        {/* 본인 단독 시총 — 자동 산정 결과가 이 필드에 채워짐 */}
+        <CurrencyInput
+          label="본인 단독 시가총액"
+          hint="직전 사업연도 말 기준 (원)"
+          value={form.selfMarketCap}
+          onChange={(v) => handleAutoSyncChange({ selfMarketCap: v })}
+        />
+
+        {/* 키움 시가총액 자동 산정 — 위 시가총액 칸을 채우는 도구라 그 **뒤**에 온다 (C-6).
+            조회 산출내역(종가·주식수·시총·임계 판정)까지 담는 카드라 FieldCard trailing에는
+            들어가지 않는다. 의존 순서: 종목코드 + 직전 사업연도말 + 보유 주식수. */}
         <KiwoomMarketCapHelper
           securityCode={form.securityCode}
           priorYearEndDate={form.priorYearEndDate}
@@ -444,14 +450,6 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           combinedOwnedShares={form.combinedOwnedShares}
           isLargestShareholderGroup={form.isLargestShareholderGroup}
           onFill={onChange}
-        />
-
-        {/* 본인 단독 시총 — 자동 산정 결과가 이 필드에 채워짐 */}
-        <CurrencyInput
-          label="본인 단독 시가총액"
-          hint="직전 사업연도 말 기준 (원)"
-          value={form.selfMarketCap}
-          onChange={(v) => handleAutoSyncChange({ selfMarketCap: v })}
         />
 
         {/* 시가총액·발행주식총수 산정 hint 6건 — 지분율 분자·분모라는 한 주제 (C-5) */}
@@ -694,9 +692,9 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
       titleExtra={judgmentBadge}
       bodyClassName=""
     >
-      <p className="text-xs text-muted-foreground mb-3">
-        아래 입력값에서 자동으로 판정됩니다. 기준 조건 충족 여부는 판정 결과 박스에서 확인하세요.
-      </p>
+      {/* C-2 (2026-09-08) — 「판정 결과 박스에서 확인하세요」 안내문 삭제.
+          헤더 배지가 이미 결과를 보여주고, 기준 박스가 맨 위로 올라와
+          「아래에서 확인하세요」가 가리킬 곳이 없어졌다. */}
       {innerContent}
     </ToneCard>
   );
