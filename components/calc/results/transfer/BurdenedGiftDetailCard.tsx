@@ -47,6 +47,9 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   building: "건물(토지 제외)",
   general_building: "일반건물(토지+건물 일괄)",
   commercial_building: "상업용건물·오피스텔",
+  // 2026-09-08 편입 — 없으면 `ptLabel`이 undefined가 되어 **헤더 자산 라벨이 사라진다**.
+  // 라벨 문자열은 `components/calc/transfer/asset-labels.ts`의 `ASSET_KIND_LABELS`와 같게 둔다.
+  redevelopment_apt: "재개발/재건축 APT",
 };
 
 export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }: Props) {

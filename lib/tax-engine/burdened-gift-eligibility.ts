@@ -19,6 +19,28 @@ import type { BurdenedGiftInfo } from "./types/transfer-burdened-gift.types";
 const HIGH_PRICE_THRESHOLD_KRW = 1_200_000_000;
 
 /**
+ * 부담부증여 지원 자산 종류 — **엔진 층 게이트**(3층 중 하나).
+ *
+ * 나머지 둘은 ⑤ `components/calc/transfer/TransferModeBlock.tsx`의 `SUPPORTED_ASSET_KINDS`,
+ * ⑧ `lib/calc/transfer-tax-validate-bg.ts`의 `SUPPORTED_KINDS`다. 타입이 서로 달라
+ * (엔진은 `string`, 클라이언트는 `AssetForm["assetKind"]`) 상수를 하나로 합치지 않는다 —
+ * 대신 **`__tests__/tax-engine/transfer/burdened-gift-gate-parity.anchor.test.ts`가
+ * 세 배열의 내용 동일성을 단언**한다. 한 곳만 넓히면 그 테스트가 깨진다.
+ *
+ * · F-3 (2026-05-12): `commercial_building` 편입.
+ * · 2026-09-08: `redevelopment_apt` 편입 (§166② 완공 신축주택 × §159).
+ *   조합원입주권(`right_to_move_in`)은 §61③ 평가 축이 달라 후속 배치다.
+ */
+export const BURDENED_GIFT_SUPPORTED_PROPERTY_TYPES: string[] = [
+  "housing",
+  "land",
+  "building",
+  "general_building",
+  "commercial_building",
+  "redevelopment_apt",
+];
+
+/**
  * 부담부증여 진입 게이트 — Phase 2.
  *
  * 책임:
@@ -43,12 +65,19 @@ export function assertBurdenedGiftEligible(args: {
   const { propertyType, isOneHousehold, ownershipRatio } = args;
   const info = scaleBurdenedGiftInfo(args.info, ownershipRatio);
 
-  // F-3 (2026-05-12): commercial_building 확장. general_building_unit은 엔진 내부 타입.
-  const SUPPORTED: string[] = ["housing", "land", "building", "general_building", "commercial_building"];
-  if (!SUPPORTED.includes(propertyType)) {
+  if (!BURDENED_GIFT_SUPPORTED_PROPERTY_TYPES.includes(propertyType)) {
+    /**
+     * 열거를 **배열에서 파생**한다 — 손으로 쓰지 않는다.
+     *
+     * 종전에는 「주택·토지·건물·일반건물·상업용건물·오피스텔에서만 지원합니다」가
+     * 하드코딩돼 있어, 배열에 종류를 더할 때마다 문구가 조용히 낡을 자리였다.
+     * ⑤ `TransferModeBlock`은 같은 이유로 이미 파생으로 고쳐져 있다.
+     * 여기는 엔진 fail-fast라 UI 라벨(`components/.../asset-labels.ts`)을 import할 수 없으므로
+     * enum 키를 그대로 싣는다 — 어차피 `propertyType` 원문도 함께 노출하는 개발자용 메시지다.
+     */
     throw new Error(
       `[burdened_gift] propertyType "${propertyType}"는 부담부증여 미지원입니다. ` +
-      "주택·토지·건물·일반건물·상업용건물·오피스텔에서만 지원합니다 (입주권·분양권 등은 별도 PR).",
+      `지원: ${BURDENED_GIFT_SUPPORTED_PROPERTY_TYPES.join(", ")}.`,
     );
   }
 
