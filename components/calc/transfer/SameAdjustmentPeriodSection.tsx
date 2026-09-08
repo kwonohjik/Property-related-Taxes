@@ -26,6 +26,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -216,13 +217,22 @@ export function SameAdjustmentPeriodSection({
             value: "prev" as const,
             label: "양도일까지 새 기준시가가 고시되지 않은 경우",
             description: "시행규칙 §80①1호 가목 — 취득당시 기준시가와 전기의 기준시가 차이로 보정",
-            hint: "양도당시 = 취득당시 + (취득당시 − 전기) × 보유월수 ÷ 조정월수 (100분의 100 한도)",
+            hint: (
+              <>
+                양도당시 = 취득당시 + (취득당시 − 전기) × <Frac top="보유월수" bottom="조정월수" /> (100분의 100
+                한도)
+              </>
+            ),
           },
           {
             value: "new" as const,
             label: "양도일부터 2월이 되는 날이 속하는 월의 말일까지 새 기준시가가 고시된 경우",
             description: "시행규칙 §80①1호 나목 — 거주자가 이 산식으로 확정신고를 선택한 경우에 적용",
-            hint: "양도당시 = 취득당시 + (새로운 − 취득당시) × 보유월수 ÷ 조정월수",
+            hint: (
+              <>
+                양도당시 = 취득당시 + (새로운 − 취득당시) × <Frac top="보유월수" bottom="조정월수" />
+              </>
+            ),
             disabled: !newNoticeAvailable,
           },
         ]}

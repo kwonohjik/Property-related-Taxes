@@ -28,6 +28,27 @@
  * 산출물을 넣고 컴포넌트를 렌더**해 DOM으로 확인하는 짝(B)을 둔다.
  * 픽스처를 손으로 짜면 결함을 가릴 수 있으므로 산식은 엔진에서 받는다
  * ([[feedback_fixture_default_masks_gate_defect]]).
+ *
+ * ## ROOTS는 «결과뷰»가 아니라 «산식을 보여주는 화면» 전부다 (2026-09-08 2차)
+ *
+ * 처음엔 축 C의 ROOTS를 `components/calc/results` + `lib/tax-engine`로 잡았다. 그래서
+ * **입력 폼(`components/calc/transfer`)의 나눗셈 4건이 판정 대상 밖**이었고, 「양도세 표면
+ * 종결」이라 보고한 뒤에 남아 있었다. 판정 수단이 모집단을 좁힌 다섯 번째 사례다
+ * ([[feedback_closure_claim_scoped_to_verified_subset]]).
+ *
+ * 입력 폼도 이미 `<Frac>`을 쓰고 있었다(`BurdenedGiftBlock:423` ·
+ * `HousingContribEstimatedSection:66·108` · `LandBuildingSplitSection:322`) — 즉 이건
+ * 범위 확대가 아니라 **같은 화면 안의 불일치**였다
+ * ([[feedback_sibling_path_already_implements_rule]]).
+ *
+ * ⚠️ 아래 예외 목록의 「입력 폼」 두 항목은 **ROOTS가 좁아지면 죽는다** — 「예외 목록이
+ * 죽지 않았다」 검사가 그때 실패한다. ROOTS를 되돌리려면 그 두 항목도 함께 지워야 하고,
+ * 그 삭제는 리뷰에 드러난다(조용한 축소 방지).
+ *
+ * 🔴 **`\n` 이스케이프가 정규식 `\s`에 걸리지 않는다.** `"… (A)\n   ÷ (B)"` 처럼 소스에
+ * 두 줄로 쓴 산식은 피연산자가 양쪽 다 괄호여도 `FRACTION_RE`가 놓친다. 그래서
+ * `GeneralBuildingBlock:339`를 1차 감사에서 **「`\n` 리터럴이라 나눗셈 아님」으로 오판**했다.
+ * 실제로는 나눗셈이고, 다만 집행기준 원문 재현이라 예외다.
  */
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -158,6 +179,23 @@ const NON_DIVISION_ALLOWLIST: { file: string; snippet: string; 사유: string }[
   { file: "new-99-3.ts", snippet: "부호 양수/음수", 사유: "부호 병기 — 나눗셈 아님" },
   { file: "new-99-3.ts", snippet: "부호 음수/음수", 사유: "부호 병기 — 나눗셈 아님" },
   { file: "MixedUseResultCard.tsx", snippet: "토지/건물 별 보유연수", 사유: "대비 병기 — 나눗셈 아님" },
+
+  // ── 입력 폼(`components/calc/transfer`) — 매체가 JSX를 받지 못하는 두 곳 ──
+  // `title=`은 HTML 속성이라 값이 **평문 문자열**이다. 브라우저 기본 툴팁이 그리므로
+  // `<Frac>`은 물리적으로 들어갈 수 없다. 이 축에서 유일한 `title=` 산식이다.
+  {
+    file: "CompanionAssetCardReplot.tsx",
+    snippet: "의제취득면적 = 종전×(교부÷권리)",
+    사유: "title= HTML 속성 — 평문 전용 매체(JSX 불가)",
+  },
+  // `PrecedentArticleModal`의 `summary?: string`을 `<pre>`가 그대로 찍는다.
+  // NTS 집행기준 99-164-10 **원문 재현**이라 표기를 바꾸면 인용이 아니게 된다
+  // (별지 서식 replica와 같은 층위의 표준 예외).
+  {
+    file: "GeneralBuildingBlock.tsx",
+    snippet: "취득당시의 환산주택가격",
+    사유: "집행기준 99-164-10 원문 재현 — <pre> 평문",
+  },
 ];
 
 const OPERAND = String.raw`(?:\([^()]*\)|\d[\d,]*(?:\.\d+)?%?)`;
@@ -210,7 +248,7 @@ function walkAny(dir: string, out: string[] = []): string[] {
 }
 
 describe("C. 산식 나눗셈은 분수 변환 대상이다 (표현 축)", () => {
-  const hits = scanDivisionCandidates(["components/calc/results", "lib/tax-engine"]);
+  const hits = scanDivisionCandidates(["components/calc/results", "components/calc/transfer", "lib/tax-engine"]);
 
   it("스캐너가 실제로 «변환되는» 나눗셈을 본다 (구별력 확보)", () => {
     // 변환되는 쪽이 0이면 「변환 안 되는 것이 없다」는 공허하다.
