@@ -15,6 +15,7 @@ import { replotIncrementStdPriceAtTransfer } from "@/lib/calc/replot-increment-s
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
 import {
   stdPriceAtTransferComesFromElsewhere,
@@ -82,8 +83,11 @@ export function AssetSectionTransfer({
             </p>
           </div>
           <p className="text-xs text-fuchsia-800">
-            부담부증여(소득세법 시행령 §159)에서는 <b>양도가액 = 인수 채무액 × (자산별 평가가액 ÷ 증여가액)</b>으로
-            엔진이 자동 산정합니다. 채무액·평가액은 위 <b>인수 채무 + 임대 평가 보조</b> 카드에서 입력하세요.
+            부담부증여(소득세법 시행령 §159)에서는{" "}
+            <b>
+              양도가액 = 인수 채무액 × <Frac top="자산별 평가가액" bottom="증여가액" />
+            </b>
+            으로 엔진이 자동 산정합니다. 채무액·평가액은 위 <b>인수 채무 + 임대 평가 보조</b> 카드에서 입력하세요.
           </p>
           <p className="text-caption text-fuchsia-700">
             ※ 아래 <b>양도시 기준시가</b> 입력은 §159 분모(증여가액 C)의 보충적 평가 산정에 사용됩니다 (기준시가 모드).
