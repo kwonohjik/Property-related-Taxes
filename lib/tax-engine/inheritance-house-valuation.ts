@@ -261,7 +261,7 @@ function buildFormula(
     lines.push(`취득당시 개별주택가격 = ${fmt(housePriceAtInheritanceUsed)} (직접 입력)`);
   } else {
     lines.push(`취득당시 개별주택가격 추정 (§164⑦ · ⑤ 준용)`);
-    lines.push(`  = 최초공시 개별주택가격(${fmt(input.housePriceAtFirstDisclosure)}) × 취득 합계기준시가 ÷ 최초공시 합계기준시가`);
+    lines.push(`  = 최초공시 개별주택가격(${fmt(input.housePriceAtFirstDisclosure)}) × (취득 합계기준시가) ÷ (최초공시 합계기준시가)`);
     lines.push(`  = ${fmt(input.housePriceAtFirstDisclosure)} × ${fmt(sumAtInheritance)} ÷ ${fmt(sumAtFirstDisclosure)}`);
     lines.push(`  = ${fmt(housePriceAtInheritanceUsed)}`);
     lines.push(`  (합계기준시가 = 토지기준시가 + 건물기준시가)`);
@@ -269,7 +269,7 @@ function buildFormula(
   lines.push(``);
 
   // 환산취득가액 — 취득/양도 개별주택가격 비율 (토지 별도 가산 없음, 부수토지 포함)
-  lines.push(`환산취득가액 = 양도가액 × (취득당시 개별주택가격 ÷ 양도당시 개별주택가격)`);
+  lines.push(`환산취득가액 = 양도가액 × (취득당시 개별주택가격) ÷ (양도당시 개별주택가격)`);
   lines.push(`  = 양도가액 × (${fmt(housePriceAtInheritanceUsed)} ÷ ${fmt(input.housePriceAtTransfer)})`);
 
   return lines.join("\n");

@@ -272,7 +272,7 @@ export function calcFarmingPostMgmt(
       note: `${(input.interestRate * 100).toFixed(3)}% (사용자 입력)`,
     },
     {
-      label: "이자상당액 = 추징세액 × 일수 × 이자율 / 365",
+      label: "이자상당액 = 추징세액 × 일수 × (이자율) / (365)",
       amount: interestAmount,
       lawRef: "상증령 §16⑧",
     },

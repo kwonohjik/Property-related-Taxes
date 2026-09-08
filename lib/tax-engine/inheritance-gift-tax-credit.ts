@@ -149,7 +149,7 @@ export function calcGiftTaxCredit(
 
   if (ratioLimit < computedTax) {
     breakdown.push({
-      label: `${TAX_CREDIT.GIFT_TAX_CREDIT} ① 안분 한도 (증여세 과세표준 × 산출세액 ÷ 상속세 과세표준)`,
+      label: `${TAX_CREDIT.GIFT_TAX_CREDIT} ① 안분 한도 (산출세액 × (증여세 과세표준) ÷ (상속세 과세표준))`,
       amount: ratioLimit,
       note: `사전증여 과세표준 ${totalGiftTaxBase.toLocaleString()} / 상속세 과세표준 ${denominator.toLocaleString()}`,
     });

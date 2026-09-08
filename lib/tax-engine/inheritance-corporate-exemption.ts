@@ -131,7 +131,7 @@ export function calcCorporateExemption(
       lawRef: INH.TAXPAYER,
     },
     {
-      label: "면제 한도 — 산출세액 × 영리법인 과세표준 ÷ 상속세 과세표준",
+      label: "면제 한도 — 산출세액 × (영리법인 과세표준) ÷ (상속세 과세표준)",
       amount: limit,
       lawRef: INH.TAXPAYER,
       note: `${totalComputedTax.toLocaleString()} × ${corporateGiftTaxBase.toLocaleString()} ÷ ${totalTaxBase.toLocaleString()}`,
