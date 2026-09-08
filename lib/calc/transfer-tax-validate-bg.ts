@@ -23,15 +23,36 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { needsBgAcqStdPriceInput, resolveBgAcqStdPrice } from "./burdened-gift-acq-std-price";
+import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
-const SUPPORTED_KINDS = [
+/**
+ * 부담부증여 지원 자산 종류 — **⑧ validate 층 게이트**(3층 중 하나).
+ *
+ * 나머지 둘은 ⑤ `TransferModeBlock.tsx`의 `SUPPORTED_ASSET_KINDS`,
+ * 엔진 `burdened-gift-eligibility.ts`의 `BURDENED_GIFT_SUPPORTED_PROPERTY_TYPES`다.
+ * 세 배열의 내용 동일성은 `burdened-gift-gate-parity.anchor.test.ts`가 단언한다.
+ *
+ * · F-3 (2026-05-12): `commercial_building` 편입.
+ * · 2026-09-08: `redevelopment_apt` 편입 (§166② 완공 신축주택 × §159).
+ */
+const SUPPORTED_KINDS: AssetForm["assetKind"][] = [
   "housing",
   "land",
   "building",
   "general_building",
   "commercial_building",
+  "redevelopment_apt",
 ];
+
+/**
+ * 안내문의 자산 열거는 **위 배열에서 파생**한다 — 손으로 쓰지 않는다.
+ *
+ * 종전에는 「주택·토지·건물·일반건물·상업용건물·오피스텔」이 문자열에 박혀 있었다.
+ * ⑤는 같은 드리프트(F-3 상업용건물 편입 시 문구만 남음)를 겪고 이미 파생으로 고쳤는데
+ * 여기만 하드코딩이 남아, 다음 편입 때 조용히 낡을 자리였다.
+ */
+const SUPPORTED_LABELS = SUPPORTED_KINDS.map((k) => ASSET_KIND_LABELS[k]).join("·");
 
 export function validateBurdenedGiftAsset(
   asset: AssetForm,
@@ -56,7 +77,7 @@ export function validateBurdenedGiftAsset(
 
   // (1) F-3 (2026-05-12): commercial_building 확장
   if (!SUPPORTED_KINDS.includes(asset.assetKind)) {
-    return `${label}: 부담부증여는 주택·토지·건물·일반건물·상업용건물·오피스텔 자산에서만 지원됩니다 (현재: ${asset.assetKind}).`;
+    return `${label}: 부담부증여는 ${SUPPORTED_LABELS} 자산에서만 지원됩니다 (현재: ${ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind}).`;
   }
 
   /**

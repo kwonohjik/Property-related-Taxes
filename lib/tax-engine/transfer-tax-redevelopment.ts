@@ -25,6 +25,7 @@
  */
 
 import { isRedevelopmentActive } from "./redevelopment";
+import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import { runRedevelopmentGainSteps } from "./transfer-tax-redevelopment-steps";
 import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
@@ -120,6 +121,16 @@ export function calculateRedevelopmentTax(
      * 이 분기는 바로 앞에서 `resolveInheritedRedevelopmentAcqPrice`로 그 값을 **소비까지
      * 하면서** 근거만 버리고 있었다. 세액은 불변(소비처가 표시 계층뿐 — 전수 확인).
      */
+    /**
+     * 부담부증여 §159 명세 (STEP 0.48 산출) — 종전에는 이 분기가 **통째로 버렸다**(D-4).
+     *
+     * 파급 셋:
+     *   ① `result.transferBurdenedGiftBreakdown`이 undefined → 결과 화면
+     *      `BurdenedGiftDetailCard`가 렌더되지 않아 **양도가액이 채무액이 된 근거가 사라진다**
+     *   ② `computeTransferSummary`(`lib/stores/calc-wizard-store.ts:487`)가 증여세를 못 읽는다
+     *   ③ §166 β 스케일·12억 분모가 `debtRatio`·`sangjeungbeopValuation`을 필요로 한다
+     */
+    burdenedGift?: TransferBurdenedGiftBreakdown;
     inheritedAcquisitionStep?: {
       result?: TransferTaxResult["inheritedAcquisitionDetail"];
       houseValuationResult?: TransferTaxResult["inheritedHouseValuationDetail"];
@@ -177,7 +188,7 @@ export function calculateRedevelopmentTax(
    * 입력 3개·출력 5개로 이음매가 좁아 **구조분해로 받으면 하류 참조가 바뀌지 않는다**.
    */
   const { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special } =
-    runRedevelopmentGainSteps(input, parsedRates, steps, isOneHouseSingle, lthdSpecialNotice, multiHouseSurchargeResult, opts?.exemptionResult);
+    runRedevelopmentGainSteps(input, parsedRates, steps, isOneHouseSingle, lthdSpecialNotice, multiHouseSurchargeResult, opts?.exemptionResult, opts?.burdenedGift);
 
   // ─ Step B: 양도차익·LTHD steps emit (인가전 / 인가후 기존 / 청산금 3분할) ─
   emitRedevelopmentSteps(steps, redevAfterRight, input.redevelopment!);
@@ -558,6 +569,8 @@ export function calculateRedevelopmentTax(
       : {}),
     // D4-08 — STEP 0.9+0.95 주택수 제외 상세. 이 분기가 조기이탈이라 상류에서 받아 실어야 한다.
     ...(opts?.houseCountExclusion ?? {}),
+    // 부담부증여 §159 명세 — 정상 경로는 `transfer-tax-finalize.ts`가 싣는데 이 분기만 버렸다 (D-4).
+    ...(opts?.burdenedGift ? { transferBurdenedGiftBreakdown: opts.burdenedGift } : {}),
     /** 비차단 안내 — 정상 경로와 동형으로 항상 키를 싣는다(종전에는 키 자체가 없었다). */
     warnings: lthdSpecialNotice ? [...(opts?.warnings ?? []), lthdSpecialNotice] : (opts?.warnings ?? []),
     transferGain: redevAfterRight.total.gain,

@@ -31,7 +31,7 @@ describe("부담부증여 미지원 안내문", () => {
     expect(renderNotice().textContent).toContain("상업용건물·오피스텔");
   });
 
-  it("지원 5종이 전부 열거된다", () => {
+  it("지원 6종이 전부 열거된다", () => {
     const text = renderNotice().textContent ?? "";
     for (const label of [
       "주택",
@@ -39,6 +39,8 @@ describe("부담부증여 미지원 안내문", () => {
       "건물(토지 제외)",
       "일반건물(토지+건물 일괄)",
       "상업용건물·오피스텔",
+      // 2026-09-08 편입 — §166② 완공 신축주택 × §159
+      "재개발/재건축 APT",
     ]) {
       expect(text).toContain(label);
     }
@@ -52,6 +54,7 @@ describe("부담부증여 미지원 안내문", () => {
     expect(pending).not.toContain("상업용건물");
     expect(pending).not.toContain("일반건물");
     expect(pending).not.toContain("주택");
+    expect(pending).not.toContain("재개발");
   });
 
   it("현재 선택은 내부 enum이 아니라 라벨로 표시한다", () => {
