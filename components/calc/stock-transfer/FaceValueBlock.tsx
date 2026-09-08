@@ -16,6 +16,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface FaceValueBlockProps {
   form: StockTransferFormData;
@@ -107,7 +108,7 @@ export function FaceValueBlock({ form, onChange }: FaceValueBlockProps) {
           장부가 분실된 경우 취득기준시가 = 액면가. 양도기준시가는 비상장 보충적 평가로 산출합니다.
         </p>
         <p className="text-xs mt-1 text-rose-600">
-          환산취득가 = 양도가액 × 액면가 ÷ 양도기준시가 (§165④1 가중평균 + 80% 하한)
+          환산취득가 = 양도가액 × <Frac top="액면가" bottom="양도기준시가" /> (§165④1 가중평균 + 80% 하한)
         </p>
       </div>
 
@@ -138,7 +139,7 @@ export function FaceValueBlock({ form, onChange }: FaceValueBlockProps) {
           <CurrencyInput
             label="1주당 순손익가치"
             allowNegative
-            hint="= 1주당 순손익액 ÷ 10% (없으면 0)"
+            hint="= 1주당 순손익액을 10%로 나눈 값 (없으면 0)"
             value={form.transferYearNetIncomePerShare}
             onChange={(v) => onChange({ transferYearNetIncomePerShare: v })}
           />

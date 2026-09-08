@@ -510,7 +510,7 @@ export function GiftCreditChecklist({
               label="국외 증여재산 과세표준"
               value={form.foreignGiftTaxBase}
               onChange={(v) => set({ foreignGiftTaxBase: v })}
-              hint="§21① 점유비 한도 = 산출세액 × (국외 증여재산 과세표준 ÷ 전체 과세표준)"
+              hint="§21① 점유비 한도 = 산출세액 × 「국외 증여재산 과세표준을 전체 과세표준으로 나눈 비율」"
             />
           )}
         </div>

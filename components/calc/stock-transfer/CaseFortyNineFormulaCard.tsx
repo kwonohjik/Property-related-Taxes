@@ -12,6 +12,7 @@
  */
 
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface CaseFortyNineFormulaCardProps {
   transferPrice: number;
@@ -70,11 +71,19 @@ export function CaseFortyNineFormulaCard({
         ) : (
           <>
             <p className="text-fuchsia-700">
-              가중평균 = (1주당 순손익가치 × {niWeight} + 1주당 순자산가치 × {naWeight}) ÷ 5
+              가중평균 ={" "}
+              <Frac
+                top={`1주당 순손익가치 × ${niWeight} + 1주당 순자산가치 × ${naWeight}`}
+                bottom="5"
+              />
             </p>
             <p className="text-fuchsia-700">
-              = ({niPerShare.toLocaleString()} × {niWeight} + {naPerShare.toLocaleString()} ×{" "}
-              {naWeight}) ÷ 5 = <strong>{weighted.toLocaleString()}</strong>
+              ={" "}
+              <Frac
+                top={`${niPerShare.toLocaleString()} × ${niWeight} + ${naPerShare.toLocaleString()} × ${naWeight}`}
+                bottom="5"
+              />{" "}
+              = <strong>{weighted.toLocaleString()}</strong>
             </p>
             {floor80Applied && (
               <p className="text-rose-700">
@@ -110,10 +119,16 @@ export function CaseFortyNineFormulaCard({
         <p className="font-semibold text-fuchsia-800">
           ③ 환산취득가 (<LawArticleModal legalBasis="소득세법 §99 ① 4호" label="§99①4" /> 후단 + <LawArticleModal legalBasis="소득세법 시행령 §165 ④" label="§165④" /> 혼합)
         </p>
-        <p className="text-fuchsia-700">= 양도가 × (1주당 액면가 ÷ 양도기준시가)</p>
         <p className="text-fuchsia-700">
-          = {transferPrice.toLocaleString()} × ({acqFaceValuePerShare.toLocaleString()} ÷{" "}
-          {transferStdPriceAfterFloor.toLocaleString()}) ={" "}
+          = 양도가 × <Frac top="1주당 액면가" bottom="양도기준시가" />
+        </p>
+        <p className="text-fuchsia-700">
+          = {transferPrice.toLocaleString()} ×{" "}
+          <Frac
+            top={acqFaceValuePerShare.toLocaleString()}
+            bottom={transferStdPriceAfterFloor.toLocaleString()}
+          />{" "}
+          ={" "}
           <strong className="text-fuchsia-900">{acquisitionPrice.toLocaleString()}</strong>
         </p>
       </section>

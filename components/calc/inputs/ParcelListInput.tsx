@@ -10,6 +10,7 @@ import { CurrencyInput, parseAmount, formatKRW } from "@/components/calc/inputs/
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { ParcelFormItem } from "@/lib/stores/calc-wizard-store";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface ParcelListInputProps {
   parcels: ParcelFormItem[];
@@ -330,7 +331,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                       <div className="space-y-1.5">
                         <Label className="text-sm">
                           환지 이전 종전 면적 (㎡)
-                          <span title="환지 전 보유했던 원래 면적. 의제 취득면적 = 종전 × (교부 ÷ 권리) 산식에 사용됩니다." className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
+                          <span title="환지 전 보유했던 원래 면적. 의제 취득면적 = 종전면적에 「교부면적을 권리면적으로 나눈 비율」을 곱해 산정합니다." className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
                         </Label>
                         <input
                           type="number"
@@ -351,7 +352,8 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                         <div>
                           의제 취득면적:{" "}
                           <strong>
-                            {p.priorLandArea}㎡ × ({p.allocatedArea}㎡ ÷ {p.entitlementArea}㎡) ={" "}
+                            {p.priorLandArea}㎡ ×{" "}
+                            <Frac top={`${p.allocatedArea}㎡`} bottom={`${p.entitlementArea}㎡`} /> ={" "}
                             {effArea.toFixed(4)}㎡
                           </strong>{" "}
                           (자동 사용)

@@ -25,6 +25,7 @@ import { adaptUnlistedFlatToApiBody } from "@/lib/tax-engine/stock-transfer/unli
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface EstimatedUnlistedBlockProps {
   form: StockTransferFormData;
@@ -232,12 +233,17 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         <p className="text-xs mt-1">
           {/* 2026-08-09: `acquisitionSideOnly`일 때 "+ 80% 하한"을 빼던 분기를 제거했다 —
               하한은 양도·취득 양쪽에 적용된다(§165④1 단서). 라벨이 엔진과 갈리면 안 된다. */}
-          {isNetAssetOnly
-            ? "순자산가치 단독 평가 (§165④3) — 80% 하한 미적용"
-            : `가중평균 = (순손익가치 × ${niWeight} + 순자산가치 × ${naWeight}) ÷ 5 + 80% 하한`}
+          {isNetAssetOnly ? (
+            "순자산가치 단독 평가 (§165④3) — 80% 하한 미적용"
+          ) : (
+            <>
+              가중평균 ={" "}
+              <Frac top={`순손익가치 × ${niWeight} + 순자산가치 × ${naWeight}`} bottom="5" /> + 80% 하한
+            </>
+          )}
         </p>
         <p className="text-xs text-fuchsia-600 mt-1">
-          입력값: 순손익가치 = 1주당 순손익액 ÷ 10% (이미 반영된 값으로 입력)
+          입력값: 순손익가치 = <Frac top="1주당 순손익액" bottom="10%" /> (이미 반영된 값으로 입력)
         </p>
       </div>
 
@@ -348,7 +354,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
               label="1주당 순손익가치"
               required
               allowNegative
-              hint="= 1주당 순손익액 ÷ 10% (할인율 적용 후 값)"
+              hint="= 1주당 순손익액을 10%로 나눈 값 (할인율 적용 후)"
               value={form.transferYearNetIncomePerShare}
               onChange={(v) => onChange({ transferYearNetIncomePerShare: v })}
             />
@@ -357,7 +363,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
             label="1주당 순자산가치"
             required
             allowNegative
-            hint="직전 사업연도 말 기준 순자산 ÷ 발행주식수"
+            hint="직전 사업연도 말 기준 순자산을 발행주식수로 나눈 값"
             value={form.transferYearNetAssetPerShare}
             onChange={(v) => onChange({ transferYearNetAssetPerShare: v })}
           />
@@ -478,10 +484,14 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
         >
           <p className="font-medium">환산취득가 (사례 49 — §99①4 후단 + §165④)</p>
           <p className="text-xs">
-            = 양도가 × (1주당 액면가 ÷ 양도기준시가)
+            = 양도가 × <Frac top="1주당 액면가" bottom="양도기준시가" />
           </p>
           <p className="text-xs">
-            = (양도가) × ({acqFaceValuePerShareNum.toLocaleString()} ÷ {transferStdPricePreview.perShare.toLocaleString()})
+            = (양도가) ×{" "}
+            <Frac
+              top={acqFaceValuePerShareNum.toLocaleString()}
+              bottom={transferStdPricePreview.perShare.toLocaleString()}
+            />
           </p>
           <p className="font-semibold text-fuchsia-900">
             = {conversionPreview.toLocaleString()}원

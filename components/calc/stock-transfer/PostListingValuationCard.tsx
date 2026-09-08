@@ -38,6 +38,7 @@ import { PostListingNetAssetStatement } from "./PostListingNetAssetStatement";
 import { PostListingFormulaPreview } from "./PostListingFormulaPreview";
 import { MonthlyAccrual81Section } from "./MonthlyAccrual81Section";
 import { PostListingAmountInputSection } from "./PostListingAmountInputSection";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface PostListingValuationCardProps {
   form: StockTransferFormData;
@@ -145,9 +146,19 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
         <div className="rounded-lg border border-violet-200 bg-violet-50/70 px-4 py-3 text-sm">
           <p className="font-semibold text-violet-800 mb-2">환산 산식 (소령 §165⑤ + §176의2②1호 합성)</p>
           <div className="text-violet-700 space-y-1 text-xs font-mono">
-            <p>[§165⑤] 1주당 취득기준시가 = ②상장일 이후 1개월 종가평균 × (③취득연도 평가 ÷ ③상장연도 평가)</p>
-            <p>[§176의2②1호] 환산취득가 = 양도가 × (1주당 취득기준시가 ÷ ①양도 당시 기준시가)</p>
-            <p>③1주당 평가 = 순손익가치×3/5 + 순자산가치×2/5 {form.isHeavyRealEstateForValuation && "(부동산과다 시 2:3 반전)"}</p>
+            <p>
+              [§165⑤] 1주당 취득기준시가 = ②상장일 이후 1개월 종가평균 ×{" "}
+              <Frac top="③취득연도 평가" bottom="③상장연도 평가" />
+            </p>
+            <p>
+              [§176의2②1호] 환산취득가 = 양도가 ×{" "}
+              <Frac top="1주당 취득기준시가" bottom="①양도 당시 기준시가" />
+            </p>
+            <p>
+              ③1주당 평가 = 순손익가치 × <Frac top="3" bottom="5" /> + 순자산가치 ×{" "}
+              <Frac top="2" bottom="5" />{" "}
+              {form.isHeavyRealEstateForValuation && "(부동산과다 시 2:3 반전)"}
+            </p>
           </div>
         </div>
 

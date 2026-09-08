@@ -466,7 +466,11 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
           <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
         </div>
         <p className="text-caption text-amber-700">
-          환산취득가 = 권리가액 × (<strong>취득당시 토지기준시가</strong> ÷ <strong>관리처분 직전 토지기준시가</strong>)
+          환산취득가 = 권리가액 ×{" "}
+          <Frac
+            top={<strong>취득당시 토지기준시가</strong>}
+            bottom={<strong>관리처분 직전 토지기준시가</strong>}
+          />
         </p>
         <p className="text-caption text-amber-600">
           기준시가 = 개별공시지가 (원/㎡) × 면적 (㎡) — Vworld 자동 조회 가능

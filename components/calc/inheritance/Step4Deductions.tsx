@@ -53,6 +53,7 @@ import type { Step4Autos } from "./steps";
 // autoFillValue — steps.tsx와 동일 (DRY 불가 — 순환 import 회피)
 // ────────────────────────────────────────────────────
 import type { DeductionSuggestion } from "@/lib/calc/inheritance-deduction-suggest";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 function autoFillValue(raw: string, s: DeductionSuggestion): string {
   if (raw !== "") return raw;
@@ -670,8 +671,9 @@ export function Step4({
               <LawArticleModal legalBasis="상속세및증여세법 §29" label="§29" />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              해외 소재 상속재산에 외국 법령에 따라 부과된 상속세를 공제합니다. 한도는
-              산출세액 × (국외 상속재산 과세표준 ÷ 상속세 과세표준)으로 계산됩니다 (상증령 §21①).
+              해외 소재 상속재산에 외국 법령에 따라 부과된 상속세를 공제합니다. 한도는 산출세액 ×{" "}
+              <Frac top="국외 상속재산 과세표준" bottom="상속세 과세표준" />
+              으로 계산됩니다 (상증령 §21①).
             </p>
             <FieldCard
               label="외국에서 납부한 상속세액"

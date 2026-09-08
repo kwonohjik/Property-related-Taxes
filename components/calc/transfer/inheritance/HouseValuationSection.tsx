@@ -174,6 +174,7 @@ import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers";
 import { sec163_9BaseDateLabel } from "@/lib/calc/transfer-163-9-base-date";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   asset: AssetForm;
@@ -569,10 +570,18 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
               <div className="flex items-start justify-between rounded bg-muted/40 px-3 py-2 gap-3">
                 <div className="space-y-0.5">
                   <span className="text-caption text-muted-foreground leading-relaxed block">
-                    최초 공시된 개별주택가격 × (취득시 토지기준시가 + 취득시 건물기준시가) ÷ (최초고시 토지기준시가 + 최초고시 건물기준시가)
+                    최초 공시된 개별주택가격 ×{" "}
+                    <Frac
+                      top="취득시 토지기준시가 + 취득시 건물기준시가"
+                      bottom="최초고시 토지기준시가 + 최초고시 건물기준시가"
+                    />
                   </span>
                   <span className="text-caption text-muted-foreground/60 tabular-nums block">
-                    {P_F.toLocaleString()} × ({landStdA.toLocaleString()} + {buildingA.toLocaleString()}) ÷ ({landStdF.toLocaleString()} + {buildingStdF.toLocaleString()})
+                    {P_F.toLocaleString()} ×{" "}
+                    <Frac
+                      top={`${landStdA.toLocaleString()} + ${buildingA.toLocaleString()}`}
+                      bottom={`${landStdF.toLocaleString()} + ${buildingStdF.toLocaleString()}`}
+                    />
                   </span>
                   {landStdA > 0 && (
                     <span className="text-caption text-muted-foreground/50 block">

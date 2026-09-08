@@ -335,7 +335,7 @@ export function StockBurdenedDebtSection({
                 <FieldCard
                   label="증여자 당초 취득가 합계 (안분 전)"
                   unit="원"
-                  hint="증여자가 주식을 취득할 때 실제 지불한 전체 금액. 채무비율(채무액 ÷ 평가액)로 자동 안분하여 양도소득세 취득가액을 산출합니다."
+                  hint="증여자가 주식을 취득할 때 실제 지불한 전체 금액. 채무비율(채무액을 평가액으로 나눈 비율)로 자동 안분하여 양도소득세 취득가액을 산출합니다."
                 >
                   <CurrencyInput
                     label="증여자 당초 취득가 합계 (안분 전)"

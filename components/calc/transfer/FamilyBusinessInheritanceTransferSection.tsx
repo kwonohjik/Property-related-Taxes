@@ -35,6 +35,7 @@ import type { FamilyBusinessInheritancePrefill } from "@/lib/calc/family-busines
 // 시점 판정은 엔진 leaf 단일 소스 재사용 (skill single-source-engine-helper)
 import { isFamilyBusinessAssetScopeDecreeEra, isFamilyBusinessCgtEra } from "@/lib/tax-engine/data/family-business-cgt-era";
 import { calcFamilyBusinessImputedAcquisitionPrice } from "@/lib/tax-engine/transfer-tax-family-business";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ── 타입 ──────────────────────────────────────────────────────
 
@@ -234,7 +235,12 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           <FieldCard
             label="가업상속공제적용률 (%)"
             required
-            hint="소령 §163의2③ — 개인가업: 공제금액 ÷ 가업상속 재산가액 / 법인가업: 사업관련자산가액 ÷ 총자산가액"
+            hint={
+              <>
+                소령 §163의2③ — 개인가업: <Frac top="공제금액" bottom="가업상속 재산가액" /> / 법인가업:{" "}
+                <Frac top="사업관련자산가액" bottom="총자산가액" />
+              </>
+            }
           >
             {/*
               🔴 **소수점을 입력할 수 없었다** (2026-09-05 · 코드리뷰 Q13).
