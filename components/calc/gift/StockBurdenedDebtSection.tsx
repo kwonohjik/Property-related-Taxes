@@ -35,6 +35,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync";
 import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
 import { resolveBurdenedGiftJudgmentDate } from "@/lib/calc/gift-burdened-transfer-api";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface StockBurdenedDebtSectionProps {
   item: EstateItem;
@@ -363,7 +364,8 @@ export function StockBurdenedDebtSection({
                   title={<>환산취득가 산정용 1개월 종가평균 <span className="text-rose-500">*</span></>}
                 >
                   <p className="text-caption text-amber-700 dark:text-amber-400">
-                    환산취득가 = 양도가액(채무인수액) × (취득시 기준시가 ÷ 양도시 기준시가).
+                    환산취득가 = 양도가액(채무인수액) ×{" "}
+                    <Frac top="취득시 기준시가" bottom="양도시 기준시가" />.
                     두 값이 없으면 취득가액과 개산공제가 모두 0으로 산출됩니다 (소령 §176의2②1호).
                   </p>
                   <FieldCard

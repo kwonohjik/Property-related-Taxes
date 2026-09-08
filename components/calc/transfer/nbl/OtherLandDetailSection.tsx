@@ -67,8 +67,26 @@ const AREA_LEGAL_BASIS: Partial<Record<Exclude<RelatedBusinessType, "">, { legal
 // §168의11⑥ 복합용도 건축물 부속토지 안분 모드 (건축물 존재 시)
 const MIXED_USE_MODE_OPTIONS: RadioCardOption<"" | "single_building" | "multiple_buildings">[] = [
   { value: "", label: "미적용", description: "복합용도 안분 없음 — 위 §168의11① 호별 기준면적으로 판정", testId: "nbl-other-mixed-none" },
-  { value: "single_building", label: "하나의 건축물 복합용도 (⑥1호)", description: "한 건물 일부만 거주·특정사업 사용 → 특정용도분 연면적 ÷ 건축물 연면적 비율로 부속토지 안분", testId: "nbl-other-mixed-single" },
-  { value: "multiple_buildings", label: "동일경계 다수 건축물 (⑥2호)", description: "여러 건물 중 일부만 거주·특정사업 사용 → 특정용도분 바닥면적 ÷ 전체 바닥면적 비율로 부속토지 안분", testId: "nbl-other-mixed-multiple" },
+  {
+    value: "single_building",
+    label: "하나의 건축물 복합용도 (⑥1호)",
+    description: (
+      <>
+        한 건물 일부만 거주·특정사업 사용 → <Frac top="특정용도분 연면적" bottom="건축물 연면적" /> 비율로 부속토지 안분
+      </>
+    ),
+    testId: "nbl-other-mixed-single",
+  },
+  {
+    value: "multiple_buildings",
+    label: "동일경계 다수 건축물 (⑥2호)",
+    description: (
+      <>
+        여러 건물 중 일부만 거주·특정사업 사용 → <Frac top="특정용도분 바닥면적" bottom="전체 바닥면적" /> 비율로 부속토지 안분
+      </>
+    ),
+    testId: "nbl-other-mixed-multiple",
+  },
 ];
 
 // F2 Phase A/B — 체육시설 종목(실외 11 + 실내 3). 유형별 기준면적(별표3 직장 / 별표4 운동경기업)은 자동 산출 — 라벨은 종목명만.

@@ -33,6 +33,7 @@ const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
 const PRE_1990_DATE = "1990-08-30";
 
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   asset: AssetForm;
@@ -376,7 +377,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
       <p className="text-caption text-muted-foreground">
         취득가액 = <b>① 상속세 신고가액</b>과 <b>② 취득당시 기준시가(§164④~⑦)</b> 중 많은 금액(가목).
         둘 다 확인할 수 없을 때에 <b>한정</b>해 <b>③ 환산취득가</b>를 적용합니다(법 §97①1호 단서).
-        환산취득가 = 양도가액 × (의제취득일 기준시가 ÷ 양도시 기준시가)
+        환산취득가 = 양도가액 × <Frac top="의제취득일 기준시가" bottom="양도시 기준시가" />
       </p>
     </div>
   );

@@ -27,6 +27,7 @@ import {
   resolveListingClosingAvg,
 } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface PostListingFormulaPreviewProps {
   form: StockTransferFormData;
@@ -206,8 +207,12 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
           {(data.perShareStdPrice ?? 0) > 0 ? (
             <div className="space-y-0.5">
               <p>
-                환산비율 = {(data.acqEval ?? 0).toLocaleString()} ÷{" "}
-                {(data.listingEval ?? 0).toLocaleString()} ={" "}
+                환산비율 ={" "}
+                <Frac
+                  top={(data.acqEval ?? 0).toLocaleString()}
+                  bottom={(data.listingEval ?? 0).toLocaleString()}
+                />{" "}
+                ={" "}
                 <strong>{(data.ratio ?? 0).toFixed(5)}</strong>
               </p>
               <p>

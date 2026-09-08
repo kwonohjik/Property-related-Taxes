@@ -254,7 +254,16 @@ export function SameAdjustmentPeriodSection({
               { value: "direct" as const, label: "실제 전기 기준시가", description: "§80②2호 — 취득당시 결정일 전일의 기준시가" },
               { value: "nearby_land" as const, label: "인근토지 전기 기준시가", description: "§80③1호 — 토지: 지목·이용상황이 유사한 인근토지" },
               { value: "first_notice_rate" as const, label: "최초고시 × 기준율", description: "§80③2호 — 건물: 국세청장 최초고시 기준시가 × 고시 기준율" },
-              { value: "ratio_conversion" as const, label: "합계액 비율환산", description: "§80③3호 — 오피스텔·상업용건물·주택: 취득당시 × (전기 합계 ÷ 취득당시 합계)" },
+              {
+                value: "ratio_conversion" as const,
+                label: "합계액 비율환산",
+                description: (
+                  <>
+                    §80③3호 — 오피스텔·상업용건물·주택: 취득당시 ×{" "}
+                    <Frac top="전기 합계" bottom="취득당시 합계" />
+                  </>
+                ),
+              },
             ]}
           />
         </FieldCard>

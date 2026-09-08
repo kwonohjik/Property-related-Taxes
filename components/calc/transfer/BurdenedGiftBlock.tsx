@@ -119,7 +119,7 @@ const ACQUISITION_METHOD_OPTIONS = [
   {
     value: "converted",
     label: "환산취득가액",
-    description: "실지취득가 불명 시 — 양도가액 × 취득기준시가 ÷ 양도기준시가 (§176의2③)",
+    description: "실지취득가 불명 시 — 양도가액 × 「취득기준시가를 양도기준시가로 나눈 비율」 (§176의2③)",
   },
 ] as const;
 

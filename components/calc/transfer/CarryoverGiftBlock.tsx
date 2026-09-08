@@ -276,7 +276,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
           <FieldCard
             label="증여세 상당액"
             hint={
-              "소득세법 시행령 §163의2②: 증여세 산출세액 × (양도한 해당 자산가액 ÷ 증여세 과세가액). 미신고 시 0 입력." +
+              "소득세법 시행령 §163의2②: 증여세 산출세액 × 「양도한 해당 자산가액을 증여세 과세가액으로 나눈 비율」. 미신고 시 0 입력." +
               giftTaxShareHint
             }
             trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}

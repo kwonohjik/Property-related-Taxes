@@ -45,6 +45,7 @@ import { computeShareRatioAugmentation } from "@/lib/tax-engine/stock-transfer/s
 import { KiwoomMarketCapHelper } from "./KiwoomMarketCapHelper";
 // F-06 (2026-05-19) — 직전사업연도 종료일 비거래일 → 직전거래일 적용 안내
 import { isKrxTradingDay, nonTradingLabel } from "@/lib/kiwoom/calendar";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 // Phase C + F-08/12/13 (2026-05-19 · 재배치 2026-09-08) — 교재 Check Point UI hint 그룹
 import {
   MarketCapAndSharesHintsCard,
@@ -434,7 +435,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             value={form.selfShareRatioMode}
             options={[
               { value: "direct", label: "지분율 직접 입력 (%)" },
-              { value: "shares", label: "주식수로 계산 (본인보유 ÷ 총발행)" },
+              { value: "shares", label: "주식수로 계산 (본인보유를 총발행으로 나눔)" },
             ]}
             layout="inline"
             tone="violet"
@@ -464,7 +465,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 <div className="rounded-md bg-violet-100/60 px-3 py-2 text-sm text-violet-900">
                   산출 지분율: <strong>{selfRatioFromShares}%</strong>
                   <span className="ml-1 text-xs text-violet-700">
-                    ({form.selfOwnedShares} ÷ {form.totalIssuedShares} × 100)
+                    (<Frac top={form.selfOwnedShares} bottom={form.totalIssuedShares} /> × 100)
                   </span>
                 </div>
               ) : (
@@ -569,7 +570,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               value={form.combinedShareRatioMode}
               options={[
                 { value: "direct", label: "지분율 직접 입력 (%)" },
-                { value: "shares", label: "주식수로 계산 (합산보유 ÷ 총발행)" },
+                { value: "shares", label: "주식수로 계산 (합산보유를 총발행으로 나눔)" },
               ]}
               layout="inline"
               tone="violet"
@@ -597,7 +598,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                   <div className="rounded-md bg-violet-100/60 px-3 py-2 text-sm text-violet-900">
                     산출 합산 지분율: <strong>{combinedRatioFromShares}%</strong>
                     <span className="ml-1 text-xs text-violet-700">
-                      ({form.combinedOwnedShares} ÷ {form.totalIssuedShares} × 100)
+                      (<Frac top={form.combinedOwnedShares} bottom={form.totalIssuedShares} /> × 100)
                     </span>
                   </div>
                 ) : (

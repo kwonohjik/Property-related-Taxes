@@ -17,6 +17,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm, CarryoverEstimationMode } from "@/lib/stores/calc-wizard-asset-carryover";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ── 법령 배지 ────────────────────────────────────────────────────
 function LegalBadge({ text }: { text: string }) {
@@ -89,7 +90,7 @@ export function CarryoverEstimationSection({
             취득시·양도시 기준시가 입력
           </p>
           <p className="text-xs text-muted-foreground">
-            환산취득가 = 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가)
+            환산취득가 = 양도가액 × <Frac top="취득시 기준시가" bottom="양도시 기준시가" />
             <br />
             개산공제 = 취득시 기준시가 × 3% (소득세법 시행령 §163⑥)
           </p>

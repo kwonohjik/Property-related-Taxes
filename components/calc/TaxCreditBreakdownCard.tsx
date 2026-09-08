@@ -62,12 +62,15 @@ function buildSection28Formula(
         deceasedMarginalDenominator != null && (
           <div className="mt-1 rounded-md bg-rose-50/60 dark:bg-rose-950/20 p-2 text-caption text-rose-700 dark:text-rose-300">
             <div>
-              종전 증여재산 산출세액 = 부·모 합산 산출세액 × (생존 증여자분 ÷ 부·모 합산 증여재산가액)
+              종전 증여재산 산출세액 = 부·모 합산 산출세액 ×{" "}
+              <Frac top="생존 증여자분" bottom="부·모 합산 증여재산가액" />
             </div>
             <div className="flex flex-wrap items-baseline gap-x-1">
-              = <Amt val={priorComputedTax} /> &nbsp;(생존분{" "}
-              <Amt val={deceasedMarginalNumerator} /> ÷ 합산{" "}
-              <Amt val={deceasedMarginalDenominator} />)
+              = <Amt val={priorComputedTax} /> &nbsp;
+              <Frac
+                top={<>생존분 <Amt val={deceasedMarginalNumerator} /></>}
+                bottom={<>합산 <Amt val={deceasedMarginalDenominator} /></>}
+              />
             </div>
             <div className="mt-0.5 text-micro text-rose-500 dark:text-rose-400">
               ※ 증여자가 금번 증여 전 사망 — 생전 증여재산은 §47② 합산 제외 (재산-58·서일46014-11750)
@@ -77,11 +80,12 @@ function buildSection28Formula(
       {aggregatedTaxBase > 0 ? (
         <>
           <div className="text-gray-500 dark:text-gray-400 mt-1">
-            공제한도 = 산출세액 × (가산한 증여재산 과세표준 ÷ 합산 후 과세표준)
+            공제한도 = 산출세액 × <Frac top="가산한 증여재산 과세표준" bottom="합산 후 과세표준" />
           </div>
           <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
-            = <Amt val={computedTax} /> × (<Amt val={priorAddedTaxBase} /> ÷{" "}
-            <Amt val={aggregatedTaxBase} />) = <Amt val={creditLimit} />
+            = <Amt val={computedTax} /> ×{" "}
+            <Frac top={<Amt val={priorAddedTaxBase} />} bottom={<Amt val={aggregatedTaxBase} />} /> ={" "}
+            <Amt val={creditLimit} />
           </div>
         </>
       ) : (
@@ -123,11 +127,12 @@ function buildSection29Formula(
       {overallTaxBase > 0 ? (
         <>
           <div className="text-gray-500 dark:text-gray-400 mt-1">
-            한도 = 상속세 산출세액 × (국외 상속재산 과세표준 ÷ 상속세 과세표준)
+            한도 = 상속세 산출세액 × <Frac top="국외 상속재산 과세표준" bottom="상속세 과세표준" />
           </div>
           <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
-            = <Amt val={computedTax} /> × (<Amt val={foreignInheritanceTaxBase} /> ÷{" "}
-            <Amt val={overallTaxBase} />) = <Amt val={creditLimit} />
+            = <Amt val={computedTax} /> ×{" "}
+            <Frac top={<Amt val={foreignInheritanceTaxBase} />} bottom={<Amt val={overallTaxBase} />} /> ={" "}
+            <Amt val={creditLimit} />
           </div>
         </>
       ) : (
