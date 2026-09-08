@@ -620,6 +620,14 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   // ── 개별주택가격 미공시 취득 환산 (§164⑤) ──
   /** true 시 3-시점 미공시 취득 환산 모드 활성화 */
   usePreHousingDisclosure: boolean;
+  /**
+   * 주택유형 — 「개별주택가격(단독·다가구)」 / 「공동주택가격(아파트)」 라벨 축.
+   *
+   * 🔴 종전에는 `PreHousingDisclosureSection`의 `useState` 로컬이었다(R12). 단계를 옮기거나
+   *    새로고침하면 항상 「단독·다가구」로 되돌아가, **저장된 공동주택가격에 개별주택가격
+   *    라벨**이 붙었다. 표시 축이라 ④⑧에는 싣지 않는다.
+   */
+  phdHousingType: "individual" | "apartment";
   /** 최초 고시일 (YYYY-MM-DD, 사용자 직접 입력) */
   phdFirstDisclosureDate: string;
   /** 최초 고시 개별주택가격 P_F (원) */

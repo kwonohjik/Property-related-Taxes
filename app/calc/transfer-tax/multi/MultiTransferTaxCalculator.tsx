@@ -591,6 +591,7 @@ export default function MultiTransferTaxCalculator() {
           <TransferTaxCalculator
             onSaveAndAddNext={handleSaveAndAddNext}
             onSaveAndGoToSettings={handleSaveAndGoToSettings}
+            onBackToList={() => setStep("list")}
           />
         </div>
       )}

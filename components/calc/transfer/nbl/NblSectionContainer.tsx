@@ -139,6 +139,11 @@ export function NblSectionContainer({
       {/* 2. 공통 — 지목·용도지역 (실제 의제 성립 시에만 비활성) */}
       <div
         data-testid="nbl-per-category"
+        // 🔴 `pointer-events-none`은 **Tab 포커스를 막지 않는다**(R18). 키보드·스크린리더
+        //    사용자는 의제 성립으로 무시되는 지목·용도지역을 여전히 바꿀 수 있었다.
+        //    React 19의 `inert`가 포커스·AT 노출까지 함께 끊는다.
+        inert={exemptionStatus.isExempt ? true : undefined}
+        aria-hidden={exemptionStatus.isExempt ? true : undefined}
         className={exemptionStatus.isExempt ? "opacity-50 pointer-events-none" : undefined}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

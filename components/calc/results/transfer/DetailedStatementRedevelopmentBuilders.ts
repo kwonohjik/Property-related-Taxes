@@ -80,7 +80,12 @@ const BRANCH_LABEL_SUCCESSOR_MEMBER: Record<RedevBranch, BranchLabelDef> = {
     prefix: "② 승계조합원 신축APT (단순 차감)",
     legal: "사전-2019-법령해석재산-0649 · 시행령 §162①4호",
   },
-  settlement: { prefix: "③ 청산금 분 (승계조합원 — 미신고)", legal: "본 PR 미지원" },
+  // 🔴 `legal`은 **근거 조문** 자리다 — 종전 "본 PR 미지원"은 저장소 내부 사정을
+  //    법령근거인 것처럼 인쇄했다(위 사례 46 L7과 같은 병).
+  settlement: {
+    prefix: "③ 청산금 분 (승계조합원 — 미신고)",
+    legal: "사전-2019-법령해석재산-0649 — 승계조합원 청산금 분은 별도 산정",
+  },
 };
 
 // 사례 47 — settlement 비과세 차감 모드 라벨 (신축APT 양도 + 청산금 수령 동시신고).

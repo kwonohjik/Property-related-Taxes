@@ -146,11 +146,27 @@ export function calcRentalPeriodYears(house: HouseInfo): number {
   return 0;
 }
 
+/**
+ * 「사업자등록등 완비」 원시 술어 — **UI(⑤)와 엔진이 공유한다**.
+ *
+ * 🔴 UI의 9유형(가~자목) 매트릭스는 「임대사업자 정식 등록」 토글 **밖**에 놓여 있어,
+ *    등록이 비어 있어도 유형을 다 채울 수 있다. 그런데 아래 `isLongTermRentalHousingExempt`가
+ *    이 술어에서 `false`를 내면 중과배제가 **침묵 미적용**된다(R20). 화면이 그 사실을
+ *    말하려면 같은 술어를 봐야 한다 — 날짜 타입이 달라(엔진 Date / 폼 string) 원시값을 받는다.
+ */
+export function hasRentalBasicRegistration(
+  isRegisteredRental: unknown,
+  rentalRegistrationDate: unknown,
+  businessRegistrationDate: unknown,
+): boolean {
+  return !!(isRegisteredRental && rentalRegistrationDate && businessRegistrationDate);
+}
+
 function hasBasicRegistration(house: HouseInfo): boolean {
-  return !!(
-    house.isRegisteredRental &&
-    house.rentalRegistrationDate &&
-    house.businessRegistrationDate
+  return hasRentalBasicRegistration(
+    house.isRegisteredRental,
+    house.rentalRegistrationDate,
+    house.businessRegistrationDate,
   );
 }
 

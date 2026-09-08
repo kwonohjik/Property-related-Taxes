@@ -9,7 +9,6 @@
  * 법령 근거: 소득세법 시행령 §164 ⑤
  */
 
-import { useState } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -59,8 +58,11 @@ const PRICE_LABEL: Record<HousingType, { first: string; transfer: string }> = {
 // ─── 메인 패널 ────────────────────────────────────────────────
 
 export function PreHousingDisclosureSection({ asset, transferDate, onChange }: Props) {
-  // UI 로컬 상태 — 폼 state·API 페이로드에 포함되지 않음
-  const [housingType, setHousingType] = useState<HousingType>("individual");
+  // 🔴 폼-지속 상태다 — 로컬 `useState`면 단계 이동·새로고침에 「단독·다가구」로 되돌아가
+  //    **저장된 공동주택가격에 개별주택가격 라벨**이 붙는다(R12). API 페이로드에는 싣지
+  //    않는다(표시 축).
+  const housingType: HousingType = asset.phdHousingType ?? "individual";
+  const setHousingType = (v: HousingType) => onChange({ phdHousingType: v });
 
   const priceLabel = PRICE_LABEL[housingType];
   // §164⑦ 게이트 비교일 — 이월과세(§97의2)는 증여자 취득가액 기준이므로 증여자 취득일

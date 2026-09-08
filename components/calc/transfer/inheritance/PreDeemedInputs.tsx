@@ -234,7 +234,6 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
       <div className="space-y-1">
         <FieldCard
           label={showHouseValuation ? "의제취득일(1985.1.1.) 시점 합계 기준시가" : "의제취득일(1985.1.1.) 시점 기준시가"}
-          unit="원"
           hint={
             stdPriceAtAcqAutoActive
               ? `자동 계산값: ${autoStdPriceAtAcq!.toLocaleString()} (위 환산 결과 사용 중). 직접 입력하려면 아래 직접 입력 토글을 켜세요.`
@@ -354,7 +353,6 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
       {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — ②와 함께 **가목**을 이룬다(max(①,②)) */}
       <FieldCard
         label={`상속세 신고가액 (상증법 평가액)${partSuffix.label}`}
-        unit="원"
         // §163⑨ 본문 괄호가 소스 서열을 **강행**으로 정한다 — 결정·경정액이 있으면 그 가액이다(U2-F).
         hint={`상속세 신고서상 평가액. 세무서장등이 결정·경정한 가액이 있으면 그 가액을 입력하세요(§163⑨ 본문). 1984.12.31. 이전 취득분은 「소득세법」 부칙(법률 제4803호) §8상 취득시기가 1985.1.1.로 의제되므로 원칙은 그날 현재 평가액이며, 상속세 신고가액(상속개시일 기준)을 입력하는 경우 아래 §164④~⑦ 기준시가와 비교해 큰 금액이 적용됩니다. 그중 하나라도 확인되면 환산취득가는 적용하지 않습니다(소득세법 §97①1호 단서).${partSuffix.hint}`}
         trailing={

@@ -44,6 +44,7 @@ import { backupSingleToMulti, continueToMulti, runPenaltyCalc } from "./transfer
 export default function TransferTaxCalculator({
   onSaveAndAddNext,
   onSaveAndGoToSettings,
+  onBackToList,
 }: TransferTaxCalculatorProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -622,7 +623,19 @@ export default function TransferTaxCalculator({
               </div>
             )}
             <div className="flex items-center justify-between gap-2">
-              <WizardBackNav isFirstStep={currentStep === 0} onBack={handleBack} />
+              {/* 🔴 임베드 시 step 0은 **자산 목록으로** 돌아간다(R03). `WizardBackNav`는
+                     isFirstStep에서 `onBack`을 부르지 않고 HomeButton을 렌더하므로
+                     (`WizardNav.tsx:56`) 그대로 두면 다건 흐름을 벗어나고,
+                     `handleBack`의 임베드 가드도 도달하지 못한다. */}
+              {isEmbeddedInMulti && currentStep === 0 && onBackToList ? (
+                <NavButton
+                  direction="prev"
+                  label="자산 목록으로"
+                  onClick={() => { clearError(); onBackToList(); }}
+                />
+              ) : (
+                <WizardBackNav isFirstStep={currentStep === 0} onBack={handleBack} />
+              )}
               {isLastStep ? (
                 isEmbeddedInMulti ? (
                   <div className="flex gap-2">

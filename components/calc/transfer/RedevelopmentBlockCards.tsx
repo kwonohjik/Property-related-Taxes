@@ -107,9 +107,10 @@ export function ReceiveOnlyToggleCard({
           ※ <span className="font-semibold">양도일</span>은 소유권이전 고시일의 익일로 입력하세요 (NTS 집행기준).
         </p>
         <p>
+          {/* 🔴 「본 PR 미매핑」은 저장소 내부 사정이다 — 사용자 화면에 쓰지 않는다(B1). */}
           ※ 본 모드에서 자본적지출·양도비·인가후 필요경비 입력은{" "}
-          <span className="font-semibold">0으로 처리</span>됩니다 (§97①2·3호 슬롯은 법문상 존재하나
-          본 PR 미매핑 — 별도 산정 시 직접 신고 권장).
+          <span className="font-semibold">0으로 처리</span>됩니다. §97①2·3호의 필요경비 항목은
+          법문상 존재하나 이 모드에서는 산정하지 않으므로, 해당분이 있으면 별도 산정해 신고하세요.
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
           <LawArticleModal legalBasis="소득세법 시행령 §166 ① 2호" label="시행령 §166①2호" />
