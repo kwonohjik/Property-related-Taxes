@@ -42,7 +42,7 @@ export function LandParcelsSection({ parcels, onChange, jibun, referenceDate }: 
   return (
     <div className="space-y-2.5">
       {parcels.map((p, i) => (
-        <div key={i} className="rounded-md border border-sky-200 bg-white/60 p-2.5 space-y-2">
+        <div key={i} className="rounded-md border border-sky-200 bg-white/60 dark:bg-white/5 p-2.5 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-sky-700">필지 {i + 1}</span>
             {parcels.length > 1 && (

@@ -130,7 +130,7 @@ function CandidateCard({
             key={a.itemId}
             type="button"
             onClick={() => onSelectAsset(a.itemId)}
-            className="w-full text-left rounded-md border border-emerald-300 bg-white px-3 py-2 text-xs hover:bg-emerald-100 hover:border-emerald-400 transition-colors"
+            className="w-full text-left rounded-md border border-emerald-300 bg-white dark:bg-gray-900 px-3 py-2 text-xs hover:bg-emerald-100 hover:border-emerald-400 transition-colors"
           >
             <div className="flex items-center justify-between">
               <div>

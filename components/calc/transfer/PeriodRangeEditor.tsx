@@ -96,7 +96,7 @@ export function PeriodRangeEditor({
         const m = diffMonthsClamped(p.start, p.end);
         const isStartOnly = !!p.start && !p.end;
         return (
-          <div key={idx} className={`rounded-md border ${toneBorder} bg-white p-3 space-y-2`}>
+          <div key={idx} className={`rounded-md border ${toneBorder} bg-white dark:bg-gray-900 p-3 space-y-2`}>
             <div className="flex items-center justify-between">
               <span className={`text-xs font-semibold ${toneText}`}>
                 {rowLabel} #{idx + 1}

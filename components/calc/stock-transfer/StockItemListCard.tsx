@@ -91,7 +91,7 @@ export function StockItemListCard({
           {savedItems.map((f, i) => (
             <li
               key={i}
-              className="flex items-center justify-between gap-2 rounded-md border border-sky-200 bg-white/70 px-3 py-2"
+              className="flex items-center justify-between gap-2 rounded-md border border-sky-200 bg-white/70 dark:bg-white/5 px-3 py-2"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">
@@ -134,7 +134,7 @@ export function StockItemListCard({
         </ul>
       )}
 
-      <div className="rounded-md border border-dashed border-sky-300 bg-white/50 px-3 py-2">
+      <div className="rounded-md border border-dashed border-sky-300 bg-white/50 dark:bg-white/5 px-3 py-2">
         <p className="text-caption text-muted-foreground">
           아래 입력 영역이 <strong>{savedItems.length + 1}번째 종목</strong>입니다.
         </p>

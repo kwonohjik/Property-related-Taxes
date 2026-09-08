@@ -79,7 +79,7 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
   const sorted = [...rows].sort((a, b) => b.from.getTime() - a.from.getTime());
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3">
+    <div className="rounded-lg border border-slate-200 bg-white dark:bg-gray-900 p-3">
       <p className="text-sm font-semibold mb-2 text-slate-800">
         {label} ({legal}) — 시기별 기준 이력
       </p>

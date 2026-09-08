@@ -476,7 +476,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             <LawArticleModal legalBasis="소득세법 시행령 §159" label="시행령 §159①1호" />
           </div>
 
-          <div className="rounded border border-sky-200 bg-white/70 p-2 text-caption text-sky-900 space-y-1">
+          <div className="rounded border border-sky-200 bg-white/70 dark:bg-white/5 p-2 text-caption text-sky-900 space-y-1">
             <p>
               <b>당초 증여자</b> = 지금 부담부증여를 하는 <b>양도인에게 이 자산을 증여한 사람</b>입니다.
               위쪽 취득 입력(양도인 기준)과 <b>다른 사람</b>이니 혼동하지 마세요.

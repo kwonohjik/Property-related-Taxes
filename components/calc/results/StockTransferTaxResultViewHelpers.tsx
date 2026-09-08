@@ -31,7 +31,7 @@ export function ResultRow({
   return (
     <div
       className={`flex justify-between items-center px-4 py-3 ${
-        highlight ? "bg-white" : ""
+        highlight ? "bg-white dark:bg-gray-900" : ""
       }`}
     >
       <span className={`text-sm ${highlight ? "font-medium text-slate-700" : "text-slate-500"}`}>

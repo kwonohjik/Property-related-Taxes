@@ -83,7 +83,7 @@ export function EvaluationCommitteeResultCard({
       </p>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="rounded border border-emerald-200 bg-white p-2">
+        <div className="rounded border border-emerald-200 bg-white dark:bg-gray-900 p-2">
           <p className="text-emerald-700/70 text-micro">적용 평가방법</p>
           <p
             className="font-semibold text-emerald-900 mt-1"
@@ -92,7 +92,7 @@ export function EvaluationCommitteeResultCard({
             {METHOD_LABEL[result.method]}
           </p>
         </div>
-        <div className="rounded border border-emerald-200 bg-white p-2">
+        <div className="rounded border border-emerald-200 bg-white dark:bg-gray-900 p-2">
           <p className="text-emerald-700/70 text-micro">보충적 대비 편차</p>
           <p
             className={`font-semibold mt-1 ${
@@ -121,7 +121,7 @@ export function EvaluationCommitteeResultCard({
               ? "border-rose-300 bg-rose-50 text-rose-800"
               : deadlineInfo.days <= 30
                 ? "border-amber-300 bg-amber-50 text-amber-800"
-                : "border-emerald-200 bg-white text-emerald-800"
+                : "border-emerald-200 bg-white dark:bg-gray-900 text-emerald-800"
           }`}
           data-testid="evaluation-committee-deadline-card"
         >

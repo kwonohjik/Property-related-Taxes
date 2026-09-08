@@ -108,7 +108,7 @@ export function DeemedGiftResultView({
       {result.nomineeCapitalIncrease && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="nominee-capital-increase">
           <p className="text-sm font-semibold text-emerald-800">유상증자 신주 명의신탁 평가 (§45의2 · 명의개서일 §63 평가)</p>
-          <div className="mt-2 rounded-md border border-emerald-200 bg-white p-2 text-sm text-emerald-900">
+          <div className="mt-2 rounded-md border border-emerald-200 bg-white dark:bg-gray-900 p-2 text-sm text-emerald-900">
             1주당 평가액{" "}
             <b className="font-mono tabular-nums">{result.nomineeCapitalIncrease.perSharePrice.toLocaleString("ko-KR")}</b>
             {" × 명의신탁 신주 "}
@@ -286,7 +286,7 @@ export function DeemedGiftResultView({
                     value={selectedDoneeIndex}
                     onChange={(e) => onSelectDonee?.(Number(e.target.value))}
                     data-testid="con-high-donee-selector"
-                    className="mt-2 w-full rounded-md border border-rose-200 bg-white px-2 py-1.5 text-sm"
+                    className="mt-2 w-full rounded-md border border-rose-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm"
                   >
                     {contribTaxableDonees.map((d, i) => (
                       <option key={`${d.party}-${i}`} value={i}>

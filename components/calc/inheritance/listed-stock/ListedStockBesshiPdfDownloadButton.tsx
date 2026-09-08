@@ -84,7 +84,7 @@ export function ListedStockBesshiPdfDownloadButton({ item, valuationDate }: Prop
     <PDFDownloadLink
       document={document}
       fileName={filename}
-      className="text-xs px-2.5 py-1 rounded border border-sky-300 bg-white hover:bg-sky-100 text-sky-700 font-medium transition-colors no-underline"
+      className="text-xs px-2.5 py-1 rounded border border-sky-300 bg-white dark:bg-gray-900 hover:bg-sky-100 text-sky-700 font-medium transition-colors no-underline"
       data-testid="ls-besshi-pdf-button"
     >
       {({ loading, error }) =>

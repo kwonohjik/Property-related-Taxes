@@ -359,7 +359,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </div>
           {/* 거주기간 산정 근거 (입주일·퇴거일) — UI 자동산정 입력 시에만 부착 */}
           {(lthdResidenceAttribution.priorPeriod || lthdResidenceAttribution.newPeriod) && (
-            <div className="mt-2 rounded border border-emerald-200 bg-white/60 p-2 text-micro space-y-0.5">
+            <div className="mt-2 rounded border border-emerald-200 bg-white/60 dark:bg-white/5 p-2 text-micro space-y-0.5">
               <p className="font-semibold text-emerald-800">거주기간 산정 근거</p>
               {lthdResidenceAttribution.priorPeriod && (
                 <p className="text-emerald-900">
@@ -383,7 +383,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         /* 사례 38·39 — 인가전 분(나목) / 인가후 분(가목) 2-블록 분리 표시 */
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {/* 블록 1: 인가전 분 (§166①2호 나목) */}
-          <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
+          <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
             <p className="text-caption font-semibold text-violet-700">
               {BRANCH_LABEL_RIGHT_RECEIVE_PREAPPROVAL}
             </p>
@@ -431,7 +431,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </div>
 
           {/* 블록 2: 인가후 분 (§166①2호 가목) + §95² LTHD 미적용 */}
-          <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
+          <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
             <p className="text-caption font-semibold text-violet-700">
               {BRANCH_LABEL_RIGHT_RECEIVE_POSTAPPROVAL}
             </p>
@@ -464,7 +464,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
       /* 기존 3분할 표 — subject="apt" 또는 subject="right"+pay */
       <div className={`grid grid-cols-1 gap-3 ${isRightSubject ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
         {/* 인가전 분 */}
-        <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
+        <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700">① 인가전 분</p>
           <p className="text-micro text-violet-600">
             {isRightSubject
@@ -487,7 +487,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
 
         {/* 인가후 기존건물분 — subject="apt" 시만 표시 */}
         {!isRightSubject && (
-        <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
+        <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700">② 인가후 기존건물분</p>
           <p className="text-micro text-violet-600">§166②1호 안분 (권리가액/분양가) · §166⑤2호나목</p>
           <Row label="안분 양도가액" value={postApprovalExistingHouse.apportionedTransfer} />
@@ -501,7 +501,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         )}
 
         {/* 청산금 분 */}
-        <div className="rounded-md bg-white border border-violet-200 p-3 space-y-1.5">
+        <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700">
             {isRightSubject && settlementDirection === "receive"
               ? "② 청산금 수령분 (§166①2호 가목)"

@@ -76,7 +76,7 @@ export function EvaluationCommitteeFilingGuideCard({
           {ATTACHMENT_ITEMS.map((item) => (
             <li
               key={item.no}
-              className="rounded border border-sky-200 bg-white p-2 text-xs"
+              className="rounded border border-sky-200 bg-white dark:bg-gray-900 p-2 text-xs"
               data-testid={`evaluation-committee-attachment-${item.no}`}
             >
               <div className="flex gap-1.5">
@@ -95,7 +95,7 @@ export function EvaluationCommitteeFilingGuideCard({
 
       {/* §49의2④ 신청·통지 기한 안내 */}
       <section
-        className="rounded border border-sky-200 bg-white p-2.5 text-xs space-y-1"
+        className="rounded border border-sky-200 bg-white dark:bg-gray-900 p-2.5 text-xs space-y-1"
         data-testid="evaluation-committee-deadline-guide"
       >
         <p className="font-semibold text-sky-900">
@@ -109,7 +109,7 @@ export function EvaluationCommitteeFilingGuideCard({
 
       {/* §49의2⑦ 심의 고려사항 */}
       <section
-        className="rounded border border-sky-200 bg-white p-2.5 text-xs space-y-1"
+        className="rounded border border-sky-200 bg-white dark:bg-gray-900 p-2.5 text-xs space-y-1"
         data-testid="evaluation-committee-review-criteria"
       >
         <p className="font-semibold text-sky-900">③ 심의 고려사항 (§49의2⑦)</p>

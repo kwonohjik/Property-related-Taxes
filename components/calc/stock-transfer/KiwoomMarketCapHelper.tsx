@@ -167,7 +167,7 @@ export function KiwoomMarketCapHelper({
               </span>
             </p>
           </div>
-          <div className="rounded border border-emerald-300 bg-white p-2 space-y-1.5">
+          <div className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-2 space-y-1.5">
             <p className="text-micro text-emerald-700 border-b border-emerald-100 pb-1">
               시총 산식 검증 (시행령 §157①)
             </p>

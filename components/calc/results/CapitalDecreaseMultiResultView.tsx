@@ -114,7 +114,7 @@ export function CapitalDecreaseMultiResultView({
             value={selectedDoneeIndex}
             onChange={(e) => onSelectDonee(Number(e.target.value))}
             data-testid="cd-multi-donee-selector"
-            className="mt-2 w-full rounded-md border border-rose-200 bg-white px-2 py-1.5 text-sm"
+            className="mt-2 w-full rounded-md border border-rose-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm"
           >
             {taxable.map((d, i) => (
               <option key={d.name} value={i}>

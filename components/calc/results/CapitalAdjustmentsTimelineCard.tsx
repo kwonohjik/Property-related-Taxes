@@ -34,7 +34,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
         자본조정 시계열 (법§17② 단서 + 집행기준 97-163-12)
       </p>
 
-      <div className="rounded-lg border border-violet-100 bg-white overflow-hidden">
+      <div className="rounded-lg border border-violet-100 bg-white dark:bg-gray-900 overflow-hidden">
         <table className="w-full text-xs">
           <thead className="bg-violet-50 text-violet-700">
             <tr>
@@ -69,7 +69,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
         </table>
       </div>
 
-      <div className="rounded border border-violet-200 bg-white px-3 py-2 text-xs text-violet-800 space-y-1">
+      <div className="rounded border border-violet-200 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-violet-800 space-y-1">
         <p>
           최종 환산 주식수 (취득가액 분모) ={" "}
           <strong className="font-mono">{fmt(detail.adjustedShareCount)}주</strong>

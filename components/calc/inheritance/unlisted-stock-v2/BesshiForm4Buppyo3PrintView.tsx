@@ -114,7 +114,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
   }
 
   return (
-    <div className="rounded-lg border border-gray-300 bg-white print:bg-white print:border-none">
+    <div className="rounded-lg border border-gray-300 bg-white dark:bg-gray-900 print:bg-white print:border-none">
       {/* 헤더 — 토글 + PR-J PDF 다운로드 (화면 전용) */}
       <div className="flex items-center justify-between p-3 print:hidden">
         <button

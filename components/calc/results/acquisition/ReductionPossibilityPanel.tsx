@@ -136,7 +136,7 @@ export function ReductionPossibilityPanel({ result, onGoToStep }: Props) {
             <button
               type="button"
               onClick={() => onGoToStep?.(item.step)}
-              className="w-full text-left rounded-md border border-amber-200 bg-white/70 px-3 py-2 hover:bg-amber-50 transition-colors group"
+              className="w-full text-left rounded-md border border-amber-200 bg-white/70 dark:bg-white/5 px-3 py-2 hover:bg-amber-50 transition-colors group"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
