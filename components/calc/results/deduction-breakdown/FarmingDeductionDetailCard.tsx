@@ -36,7 +36,7 @@ function FarmingDetailContent({ detail }: { detail: FarmingDeductionDetail }) {
     return (
       <div className="mx-4 my-2 rounded-md border border-violet-200 bg-violet-50 dark:bg-violet-950/20 dark:border-violet-800 p-2">
         <p className="text-caption text-violet-700 dark:text-violet-300">
-          ⓘ 요건 미평가 (legacy 모드). Step4에서 영농상속공제 요건 입력을 활성화하면 자격을 자동 평가합니다.
+          ⓘ 요건 미평가(요건 미입력 방식). Step4에서 영농상속공제 요건 입력을 활성화하면 자격을 자동 평가합니다.
         </p>
       </div>
     );

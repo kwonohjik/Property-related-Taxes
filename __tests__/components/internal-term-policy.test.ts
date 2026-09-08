@@ -1,5 +1,5 @@
 /**
- * anchor: 양도세 UI — 사용자 노출 문구에 내부 영어 용어 금지 (정적 가드).
+ * anchor: 계산 UI 전 세목 — 사용자 노출 문구에 내부 영어 용어 금지 (정적 가드).
  *
  * 계기(2026-09-08 · UI 리뷰 대장 재감사): 대장 항목 `internal-term-exposed`가 「종결」로
  * 집계돼 있었으나 `MixedUseAssetMajorStdPrice.tsx`에 3건이 살아 있었다(대장은 `:143` 1건으로
@@ -14,9 +14,12 @@
  * 🔑 **정적 분석**이라 jsdom·렌더가 필요 없다 → pre-push와 CI 전체 테스트 양쪽에서 자동으로
  *    잡힌다(placeholder 정책 가드·법령 커버리지 가드와 같은 층위).
  *
- * ⚠️ 범위는 **양도세 UI 표면**이다(리뷰 대장 파티션과 동일 — `.claude/skills/review-chunk`).
- *    상속·증여 UI에는 같은 축이 훨씬 넓게 남아 있다(legacy·override 30건 이상) — 그쪽을
- *    정리할 때 ROOTS를 넓힌다. 지금 넓히면 상시 빨간불이 되어 게이트 구실을 못 한다.
+ * ✅ **범위를 전 세목으로 넓혔다** (2026-09-08 2차). 도입 당시에는 양도세 표면만 봤고
+ *    「상속·증여에 같은 축이 30건 이상 남아 있어 지금 넓히면 상시 빨간불」이라 적어 두었다.
+ *    실측하니 **19곳**이었고(legacy 11 · override 5 · base 2 · prior 2) 전부 한국어로
+ *    바꿨다 — 그래서 이제 `components/calc` + `app/calc` 전체를 본다.
+ *    ⚠️ 「30건 이상」은 어림이었다. **넓히기 전에 세면** 대개 생각보다 작다
+ *    ([[feedback_open_item_audit_stale_rate]]).
  *
  * ⚠️ 금지어를 빼거나 예외 목록을 만들어 통과시키지 말 것. 걸리면 **문구를 한국어로 바꾸는
  *    것**이 처방이다. 식별자(`LTHD_EXCLUSION_LABEL`·`areaScenario`)는 애초에 대상이 아니다 —
@@ -26,12 +29,8 @@ import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-/** 양도세 UI 표면 — 리뷰 대장이 나눈 파티션 그대로. */
-const ROOTS = [
-  "components/calc/transfer",
-  "components/calc/results/transfer",
-  "app/calc/transfer-tax",
-];
+/** 계산 UI 전 세목 — 마법사·결과뷰·페이지 전부. */
+const ROOTS = ["components/calc", "app/calc"];
 
 /**
  * 내부 식별자·영어 용어. 한국어 문장에 섞이면 사용자가 화면에서 찾을 수 없는 이름이 된다.

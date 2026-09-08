@@ -630,7 +630,7 @@ export function GiftRowEditor({
           {gift.specialTreatmentType === "family_business" && (
             <p className="text-caption text-emerald-700 dark:text-emerald-400">
               {showGiftPhaseA
-                ? "§30의6 — 가업승계는 §30의5 제8항~제13항 준용. 과거 가업승계 prior는 기간무관 합산됩니다."
+                ? "§30의6 — 가업승계는 §30의5 제8항~제13항 준용. 과거 가업승계분은 기간무관 합산됩니다."
                 : "§30의6⑤ — 가업승계 주식은 §30의5⑧~⑬ 준용. §13 기간과 관계없이 상속세 과세가액에 가산됩니다."}
             </p>
           )}

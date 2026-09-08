@@ -223,7 +223,7 @@ export function FarmingEligibilitySection({
         description={
           isActive
             ? "활성화됨 — 아래 요건을 정확히 체크해야 공제가 적용됩니다."
-            : "체크하면 자격 요건을 정확히 평가합니다. 미체크 시 사용자 입력값을 그대로 30억 한도까지 공제 (legacy)."
+            : "체크하면 자격 요건을 정확히 평가합니다. 미체크 시 사용자 입력값을 그대로 30억 한도까지 공제(요건 미입력 방식)."
         }
         checked={isActive}
         onCheckedChange={(v) => (v ? handleToggleOn() : handleToggleOff())}
@@ -533,7 +533,7 @@ export function FarmingEligibilitySection({
               {farming.heirAssessments !== undefined ? (
                 <>
                   <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
-                    자격자 직접 조정 (override) — §16⑤ 본문
+                    자격자 직접 조정 — §16⑤ 본문
                   </p>
                   <p className="text-micro text-violet-700 dark:text-violet-300">
                     미선택 시 위 자동 도출 결과를 적용합니다. 직접 선택하면 자동 판정을 무시하고
@@ -582,7 +582,7 @@ export function FarmingEligibilitySection({
                 >
                   {farming.heirAssessments !== undefined
                     ? "↺ 자동 도출 결과로 되돌리기"
-                    : "↺ 전체 상속인 자격 충족(legacy)로 되돌리기"}
+                    : "↺ 전체 상속인 자격 충족(요건 미입력 방식)으로 되돌리기"}
                 </button>
               )}
               {/* PR5 — 명시 override가 자동 판정과 다를 때 경고 (중립적 사실) */}
@@ -709,7 +709,7 @@ export function FarmingEligibilitySection({
           <DialogHeader>
             <DialogTitle>영농상속공제 요건 입력을 끄시겠습니까?</DialogTitle>
             <DialogDescription>
-              입력한 자격 요건 데이터가 모두 삭제되고 legacy 모드로 전환됩니다.
+              입력한 자격 요건 데이터가 모두 삭제되고 「요건 미입력 방식」으로 전환됩니다.
               영농상속재산가액 수동 입력 시 자격 평가 없이 30억 한도까지 공제됩니다.
               이 동작은 되돌릴 수 없습니다.
             </DialogDescription>

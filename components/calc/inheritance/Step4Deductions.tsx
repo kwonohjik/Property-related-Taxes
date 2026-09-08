@@ -354,7 +354,7 @@ export function Step4({
 
                 <div className="space-y-2">
                   <CurrencyInput
-                    label="가업상속재산가액 (legacy / 요건 미입력 시)"
+                    label="가업상속재산가액 (요건 미입력 시 직접 입력)"
                     value={form.familyBusinessValue}
                     onChange={(v) => set({ familyBusinessValue: v })}
                     hint="요건 판정 모드 미사용 시 가업재산가액 직접 입력 — 중소·중견기업 가업 (최대 600억)"
@@ -362,7 +362,7 @@ export function Step4({
                   {parseAmount(form.familyBusinessValue) > 0 && !form.familyBusiness && (
                     <div className="space-y-1">
                       <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-                        가업 영위 기간 (년) — legacy 모드
+                        가업 영위 기간 (년) — 요건 미입력 방식
                       </label>
                       <input
                         type="text"
