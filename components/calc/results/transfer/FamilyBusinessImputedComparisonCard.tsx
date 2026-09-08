@@ -147,7 +147,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
 
             {/* §18의2⑩ 공제액 */}
             <Row
-              label="§18의2⑩ 공제액 = max(0, 의제 결정세액 − 일반 결정세액)"
+              label="§18의2⑩ 공제액 = 의제 결정세액 − 일반 결정세액 (음수면 0)"
               value={creditAmount > 0 ? `- ${formatKRW(creditAmount)}` : formatKRW(0)}
               highlight
             />

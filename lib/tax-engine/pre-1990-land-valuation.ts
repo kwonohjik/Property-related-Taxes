@@ -296,8 +296,11 @@ export function calculatePre1990LandValuation(
     `㎡당 가액 = ${input.pricePerSqm_1990.toLocaleString()} × ` +
     `${gradeValueAtAcquisition.toLocaleString()} / ` +
     `${appliedDenominator.toLocaleString()}` +
-    (denominatorCap1Applied ? " [분모 capping: min(평균, 현재)]" : "") +
-    (ratioCap2Applied ? " [비율 100% capping]" : "") +
+    // 🔴 종전에는 「[분모 capping: min(평균, 현재)]」·「[비율 100% capping]」이었다
+    //    (2026-09-08 · 산식 한국어 풀어쓰기). 이 문자열은 `Pre1990LandValuationDetailCard:26`이
+    //    `<FormulaText>`로 **그대로 인쇄**한다 — 함수 표기와 영어 용어가 화면에 나갔다.
+    (denominatorCap1Applied ? " [분모 상한: 평균과 현재 중 작은 금액]" : "") +
+    (ratioCap2Applied ? " [비율 100% 상한]" : "") +
     ` = ${pricePerSqmAtAcquisition.toLocaleString()}/㎡ → 기준시가 ${standardPriceAtAcquisition.toLocaleString()}`;
 
   const breakdown: Pre1990LandValuationBreakdown = {
