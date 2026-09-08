@@ -18,6 +18,7 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { Badge } from "@/components/ui/badge";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
 import { cn } from "@/lib/utils";
@@ -493,7 +494,7 @@ function DetailRow({
           {label}
         </p>
         {formula && (
-          <p className="text-xs text-muted-foreground/70 mt-0.5 break-words">{formula}</p>
+          <p className="text-xs text-muted-foreground/70 mt-0.5 break-words"><FormulaText value={formula} /></p>
         )}
         {legalBasis && (
           <p className="text-micro text-muted-foreground/50 mt-0.5">{legalBasis}</p>

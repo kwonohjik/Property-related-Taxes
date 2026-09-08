@@ -11,6 +11,7 @@
  */
 
 import type { ReactNode } from "react";
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 // ── 포맷 ────────────────────────────────────────────────────
 /** 1,440,000 → "1,440,000원" */
@@ -81,7 +82,7 @@ export function StepLine({
       <span className={strong ? "font-semibold text-foreground" : "text-foreground"}>
         {label}
         {formula ? (
-          <span className="ml-1 text-caption font-normal text-muted-foreground">{formula}</span>
+          <span className="ml-1 text-caption font-normal text-muted-foreground"><FormulaText value={formula} /></span>
         ) : null}
       </span>
       {amount !== undefined && (
@@ -206,7 +207,7 @@ export function GaNaDaLine({
       <span className="text-foreground">
         {label}
         {formula ? (
-          <span className="ml-1 text-caption font-normal text-muted-foreground">{formula}</span>
+          <span className="ml-1 text-caption font-normal text-muted-foreground"><FormulaText value={formula} /></span>
         ) : null}
       </span>
       {amount !== undefined && (

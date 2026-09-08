@@ -12,6 +12,7 @@
  */
 
 import type { InheritanceAcquisitionResult } from "@/lib/tax-engine/types/inheritance-acquisition.types";
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: InheritanceAcquisitionResult;
@@ -87,7 +88,7 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">계산 산식</p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs text-muted-foreground whitespace-pre-wrap">
-            {formula}
+            <FormulaText value={formula} />
           </div>
         </div>
       )}
