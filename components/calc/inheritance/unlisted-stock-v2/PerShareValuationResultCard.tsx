@@ -312,7 +312,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
                 {input.evaluationCommittee && (
                   <p className="mt-0.5 text-micro leading-snug">
                     ※ §54⑥ 평가심의위 70~130% 범위는 보충적평가({fmt(result.preIpoListingResult.supplementaryValue)}원)
-                    기준입니다 (§63② override와 무관).
+                    기준입니다 (§63② 특례 적용과 무관).
                   </p>
                 )}
               </>

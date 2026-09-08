@@ -96,7 +96,7 @@ export function CorporateNonBusinessAssetsSection({
           법인 사업무관자산 차감 (시행령 §15⑤2호 + §16⑤2호)
         </p>
         <p className="text-micro text-amber-700 dark:text-amber-300">
-          ⓘ 산식: 평가가액 × (총자산 − 사업무관자산 합) / 총자산. 총자산 미입력 시 차감 미적용 (legacy).
+          ⓘ 산식: 평가가액 × (총자산 − 사업무관자산 합) / 총자산. 총자산 미입력 시 차감 미적용(이전 입력 형식).
         </p>
         <div className="flex flex-wrap gap-1.5">
           <LawArticleModal legalBasis="상증령 §15" label="상증령 §15⑤2호" />
