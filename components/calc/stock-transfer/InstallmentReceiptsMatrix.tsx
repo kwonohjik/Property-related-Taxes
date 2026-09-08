@@ -100,7 +100,7 @@ export function InstallmentReceiptsMatrix({
           return (
             <div
               key={idx}
-              className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 items-start rounded-lg border border-fuchsia-100 bg-white px-2 py-2"
+              className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 items-start rounded-lg border border-fuchsia-100 bg-white dark:bg-gray-900 px-2 py-2"
             >
               {/* 행 번호 */}
               <span className="w-6 mt-2 text-center text-xs text-slate-400 font-medium select-none">

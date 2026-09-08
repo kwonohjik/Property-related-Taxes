@@ -203,7 +203,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
           </p>
         ) : (
           form.transferLots.map((lot, idx) => (
-            <div key={lot.id} className="rounded border border-emerald-300 bg-white p-3 space-y-2">
+            <div key={lot.id} className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-emerald-700">매도 #{idx + 1}</p>
                 <Button
@@ -290,7 +290,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
             <p className="text-xs text-fuchsia-700">매칭 추가부터 시작하세요.</p>
           ) : (
             form.specificMatchings.map((m, idx) => (
-              <div key={idx} className="rounded border border-fuchsia-300 bg-white p-2 grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+              <div key={idx} className="rounded border border-fuchsia-300 bg-white dark:bg-gray-900 p-2 grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
                 <FieldCard label="매도 건">
                   <Select
                     value={m.transferLotId}

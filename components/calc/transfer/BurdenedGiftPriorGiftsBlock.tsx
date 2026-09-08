@@ -63,7 +63,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
         <button
           type="button"
           onClick={addRow}
-          className="text-xs font-semibold text-violet-700 hover:text-violet-900 px-2 py-1 rounded border border-violet-300 bg-white"
+          className="text-xs font-semibold text-violet-700 hover:text-violet-900 px-2 py-1 rounded border border-violet-300 bg-white dark:bg-gray-900"
         >
           + 사전증여 추가
         </button>
@@ -87,7 +87,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
           {rows.map((row, idx) => (
             <div
               key={idx}
-              className="rounded-md border border-violet-200 bg-white p-2 space-y-1.5"
+              className="rounded-md border border-violet-200 bg-white dark:bg-gray-900 p-2 space-y-1.5"
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="text-caption font-semibold text-violet-800">

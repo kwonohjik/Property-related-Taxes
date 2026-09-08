@@ -244,7 +244,7 @@ export function ReplotIncreaseFields({
                 type="button"
                 onClick={handleAddIncrease}
                 data-testid="replot-inc-add-btn"
-                className="w-full rounded-md border border-orange-300 bg-white px-3 py-2 text-sm text-orange-700 hover:bg-orange-50 transition-colors"
+                className="w-full rounded-md border border-orange-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-orange-700 hover:bg-orange-50 transition-colors"
               >
                 + 증가분 {increaseM2.toFixed(2)}㎡ 자산 자동 추가
               </button>

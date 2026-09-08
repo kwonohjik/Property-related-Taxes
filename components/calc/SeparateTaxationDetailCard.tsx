@@ -100,7 +100,7 @@ export default function SeparateTaxationDetailCard({ result }: Props) {
   const { category, appliedRate, taxBase, fairMarketRatio, calculatedTax, reasoning, warnings } = result;
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden" data-testid="separate-taxation-detail-card">
+    <div className="rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-sm overflow-hidden" data-testid="separate-taxation-detail-card">
       {/* 헤더 */}
       <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
         <h3 className="text-sm font-semibold text-gray-700">분리과세 판정 결과</h3>

@@ -140,7 +140,7 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
       </div>
 
       {/* 산식 카드 */}
-      <div className="rounded-md border border-violet-200 bg-white/60 divide-y divide-violet-100 text-sm">
+      <div className="rounded-md border border-violet-200 bg-white/60 dark:bg-white/5 divide-y divide-violet-100 text-sm">
 
         {/* 과점주주 전용 산식 */}
         {detail.type === "major_shareholder" && (
@@ -241,7 +241,7 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
       </div>
 
       {/* 세율 + 세액 */}
-      <div className="rounded-md border border-border bg-white/60 px-3 py-2">
+      <div className="rounded-md border border-border bg-white/60 dark:bg-white/5 px-3 py-2">
         <div className="flex justify-between text-sm text-muted-foreground py-1">
           <span>적용 세율</span>
           <span>

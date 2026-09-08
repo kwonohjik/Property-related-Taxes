@@ -100,8 +100,8 @@ export function KiwoomValuationResultCard({
       </button>
 
       {showDetail && (
-        <div className="rounded border border-emerald-300 bg-white p-2 space-y-1 max-h-96 overflow-y-auto">
-          <p className="text-micro text-emerald-700 sticky top-0 bg-white pb-1 border-b border-emerald-100">
+        <div className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-2 space-y-1 max-h-96 overflow-y-auto">
+          <p className="text-micro text-emerald-700 sticky top-0 bg-white dark:bg-gray-900 pb-1 border-b border-emerald-100">
             평가기준일 전후 2개월 일자별 종가 — 거래일만 분모 산입 (상증령 §52의2④ 공휴일·토요일 제외)
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-caption font-mono">

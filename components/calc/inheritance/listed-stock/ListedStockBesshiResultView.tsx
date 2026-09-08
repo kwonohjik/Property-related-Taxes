@@ -55,7 +55,7 @@ export function ListedStockBesshiResultView({ item, besshi, valuatedAmount }: Pr
       <button
         type="button"
         onClick={() => setPage1Open((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 text-left text-sm font-semibold py-2 px-3 bg-white border border-sky-300 rounded mb-2 print:hidden"
+        className="w-full flex items-center justify-between gap-2 text-left text-sm font-semibold py-2 px-3 bg-white dark:bg-gray-900 border border-sky-300 rounded mb-2 print:hidden"
         data-testid="ls-besshi-p1-toggle"
         aria-expanded={page1Open}
       >
@@ -70,7 +70,7 @@ export function ListedStockBesshiResultView({ item, besshi, valuatedAmount }: Pr
       <button
         type="button"
         onClick={() => setPage2Open((v) => !v)}
-        className="w-full flex items-center justify-between gap-2 text-left text-sm font-semibold py-2 px-3 bg-white border border-sky-300 rounded mb-2 print:hidden"
+        className="w-full flex items-center justify-between gap-2 text-left text-sm font-semibold py-2 px-3 bg-white dark:bg-gray-900 border border-sky-300 rounded mb-2 print:hidden"
         data-testid="ls-besshi-p2-toggle"
         aria-expanded={page2Open}
       >

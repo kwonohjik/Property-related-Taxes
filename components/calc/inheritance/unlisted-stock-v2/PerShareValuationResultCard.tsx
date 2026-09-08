@@ -514,7 +514,7 @@ function MergerBreakdownCard({ mergerResult }: { mergerResult: MergerNetIncomeRe
         {mergerResult.breakdown.map((row, i) => (
           <div
             key={i}
-            className="rounded border border-amber-200 bg-white/60 p-2 grid grid-cols-2 gap-x-3 gap-y-0.5 font-mono tabular-nums"
+            className="rounded border border-amber-200 bg-white/60 dark:bg-white/5 p-2 grid grid-cols-2 gap-x-3 gap-y-0.5 font-mono tabular-nums"
             data-testid={`merger-breakdown-row-${i}`}
           >
             <span className="col-span-2 font-semibold text-amber-800 not-font-mono text-caption">

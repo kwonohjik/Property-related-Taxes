@@ -33,7 +33,7 @@ const SC_RELATION_OPTIONS: { value: ScRelation; label: string }[] = [
 ];
 
 const textInputCls =
-  "w-full rounded-md border border-sky-200 bg-white px-2 py-1.5 text-sm focus:border-sky-400 focus:outline-none";
+  "w-full rounded-md border border-sky-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm focus:border-sky-400 focus:outline-none";
 
 export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
   const update = (i: number, patch: Partial<ScShareholderRow>) =>
@@ -66,7 +66,7 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
           <div
             key={row.id}
             data-testid={`sc-sh-row-${i}`}
-            className="space-y-2 rounded-md border border-sky-200 bg-white/70 p-2"
+            className="space-y-2 rounded-md border border-sky-200 bg-white/70 dark:bg-white/5 p-2"
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-sky-800">주주 {i + 1}</span>
@@ -96,7 +96,7 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
                 value={row.relation}
                 onChange={(e) => update(i, { relation: e.target.value as ScRelation })}
                 data-testid={`sc-sh-relation-${i}`}
-                className="flex-1 rounded-md border border-sky-200 bg-white px-2 py-1.5 text-sm focus:border-sky-400 focus:outline-none"
+                className="flex-1 rounded-md border border-sky-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm focus:border-sky-400 focus:outline-none"
               >
                 {SC_RELATION_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>

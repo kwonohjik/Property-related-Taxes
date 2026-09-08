@@ -169,7 +169,7 @@ export function MergerNetIncomeBlock({
               return (
                 <div
                   key={idx}
-                  className="rounded border border-amber-200 bg-white/60 p-2.5 space-y-2"
+                  className="rounded border border-amber-200 bg-white/60 dark:bg-white/5 p-2.5 space-y-2"
                 >
                   <p className="text-caption font-semibold text-amber-700">{YEAR_LABELS[idx]}</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -244,7 +244,7 @@ export function MergerNetIncomeBlock({
               <button
                 type="button"
                 onClick={addTarget}
-                className="text-caption px-2 py-1 rounded border border-sky-300 bg-white hover:bg-sky-50 text-sky-700 font-medium"
+                className="text-caption px-2 py-1 rounded border border-sky-300 bg-white dark:bg-gray-900 hover:bg-sky-50 text-sky-700 font-medium"
                 data-testid="merger-target-add"
               >
                 + 사업연도 추가
@@ -264,7 +264,7 @@ export function MergerNetIncomeBlock({
             {context.targetFiscalYears.map((tyr, idx) => (
               <div
                 key={idx}
-                className="rounded border border-sky-200 bg-white/60 p-2.5 space-y-2"
+                className="rounded border border-sky-200 bg-white/60 dark:bg-white/5 p-2.5 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <p className="text-caption font-semibold text-sky-700">피합병 #{idx + 1}</p>
