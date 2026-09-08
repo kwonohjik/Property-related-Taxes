@@ -174,7 +174,12 @@ export function computeAmendment(
   // ── 신고불성실가산세 (§47의3, §48② 감면 대상) ──
   let underReportingReductionRate = 0;
   let underReportingPenalty = 0;
-  if (amendment.applyUnderReportingPenalty && additionalTax > 0) {
+  // 🔴 `exempt`(정당한 사유 면제 — 국세기본법 §48①2호)를 **여기서 걸러야** 한다.
+  //    종전에는 이 조건이 모드를 보지 않아 면제를 골라도 감면율 0으로 **전액** 부과됐고,
+  //    아래 면제 분기는 `additionalTax <= 0`일 때만 도달해 의미 있는 경우에 한 번도 실행되지
+  //    않았다. §48①은 「부과하지 아니한다」로 §48②의 감면율(10~90%)과 층이 다르다(R23).
+  const underReportingExempt = amendment.underReductionMode === "exempt";
+  if (amendment.applyUnderReportingPenalty && additionalTax > 0 && !underReportingExempt) {
     const grossUnder = calculateFilingPenalty({
       determinedTax: additionalTax,
       reductionAmount: 0,
@@ -219,7 +224,7 @@ export function computeAmendment(
         amendment.underReductionMode === "auto_48_2" ? AMENDMENT_48_2 : PENALTY.UNDER_FILING,
       sub: true,
     });
-  } else if (amendment.applyUnderReportingPenalty && amendment.underReductionMode === "exempt") {
+  } else if (amendment.applyUnderReportingPenalty && underReportingExempt && additionalTax > 0) {
     // 면제(§48①2호) 명시 — 금액 0이지만 근거 표기
     steps.push({
       label: "신고불성실가산세 (정당한 사유 면제)",
