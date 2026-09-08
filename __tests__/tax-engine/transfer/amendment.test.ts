@@ -31,9 +31,31 @@ describe("computeAmendment — 수정신고 추가납부세액", () => {
     expect(r.additionalLocalIncomeTax).toBe(2_000_000);
   });
 
-  it("A2 + 신고불성실 ON(normal, exempt) — 20M×10%", () => {
+  /**
+   * 🔴 **반전(2026-09-08 · R23)** — 종전 이 항목은 `exempt`에서 전액 2,000,000을 단언해
+   * **결함을 고정**하고 있었다. `exempt`는 「정당한 사유 면제(국세기본법 §48①2호)」이고
+   * §48①은 「부과하지 아니한다」이므로 0이 정본이다(⑤ 라디오 설명도 「가산세 0」).
+   * 「가산세 ON이면 10%가 붙는다」는 축은 **A2b로 옮겨 보존**했다.
+   * 상세: `amendment-exempt-mode.anchor.test.ts` · [[feedback_anchor_correction_legal_priority]]
+   */
+  it("A2 + 신고불성실 ON(normal, exempt) — 정당한 사유 면제라 0", () => {
     const r = computeAmendment(
       baseAmend({ applyUnderReportingPenalty: true }),
+      50_000_000,
+    );
+    expect(r.underReportingReductionRate).toBe(0);
+    expect(r.underReportingPenalty).toBe(0);
+    expect(r.totalPayable).toBe(20_000_000);
+  });
+
+  it("A2b + 신고불성실 ON(normal, auto_48_2 · 2년 초과) — 20M×10% 전액", () => {
+    const r = computeAmendment(
+      baseAmend({
+        applyUnderReportingPenalty: true,
+        underReductionMode: "auto_48_2",
+        statutoryFilingDeadline: new Date("2022-05-31"),
+        amendedFilingDate: new Date("2025-05-31"),
+      }),
       50_000_000,
     );
     expect(r.underReportingReductionRate).toBe(0);
