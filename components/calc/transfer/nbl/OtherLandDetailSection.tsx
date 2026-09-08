@@ -270,7 +270,7 @@ export function OtherLandDetailSection({
           <FieldCard
             label="건축물 바닥면적"
             unit="㎡"
-            hint="건물 시가표준액이 토지 시가표준액의 2% 미만이면 이 바닥면적만 별도합산(사업용) 유지, 나머지 부속토지는 종합합산(비사업용)으로 부분 안분 — 지방세법 시행령 §101①2호나목"
+            hint="건축물이 있으면 필수. 부속토지 배율 한도(지방세법 시행령 §101①2호) 판정에 쓰입니다. 건물 시가표준액이 토지 시가표준액의 2% 미만인 경우에는 이 바닥면적만 별도합산(사업용)으로 남고 나머지 부속토지는 종합합산으로 안분됩니다(같은 호 나목)."
           >
             <DecimalInput
               value={asset.nblOtherBuildingFloorArea}

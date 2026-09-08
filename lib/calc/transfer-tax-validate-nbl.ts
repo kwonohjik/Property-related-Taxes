@@ -18,6 +18,7 @@ import { isUrbanForPasture } from "@/lib/tax-engine/non-business-land/urban-area
 import { isUrbanForForest } from "@/lib/tax-engine/non-business-land/urban-area";
 import { isUrbanCriteriaRegion } from "@/lib/tax-engine/non-business-land/urban-region-scope";
 import type { LandDivision } from "@/lib/tax-engine/non-business-land/types";
+import { requiresDeemedTransferDate } from "@/lib/calc/nbl-deemed-transfer-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { resolveNblUrbanIncorporationDate } from "./non-business-land-request";
@@ -207,8 +208,11 @@ export function validateNblDetailedJudgment(
     return `${label}: 도시지역 ${LAND_TYPE_LABEL[asset.nblLandType] ?? "토지"} — 도시지역 편입일을 입력하세요. 미입력 시 편입 유예가 적용되지 않아 비사업용으로 판정됩니다.`;
   }
 
-  // §168의14② 양도일 의제 — 사유 선택 시 의제일 필수 (자동 fallback 금지)
-  if (asset.nblDeemedTransferReason && asset.nblDeemedTransferReason !== "none" && !asset.nblDeemedTransferDate)
+  // §168의14② 양도일 의제 — 사유 선택 시 의제일 필수 (자동 fallback 금지).
+  // 🔴 **지목 게이트를 ⑤와 공유한다**(R11). 종전에는 지목을 보지 않아, 사유를 고른 뒤
+  //    지목을 주택부수토지로 바꾸면 섹션은 사라지고 사유만 남아 **화면에 없는 칸을
+  //    요구하며 영구 차단**됐다(리셋 패치 없음).
+  if (requiresDeemedTransferDate(asset) && !asset.nblDeemedTransferDate)
     return `${label}: 양도일 의제 사유를 선택했습니다. 의제일(최초 경매기일·공매일·공고일 등)을 입력하세요.`;
   // §168의11①·⑤·⑥ 기타토지 정밀판정 입력 검증 (별도 파일 분리 — 800줄 정책)
   if (asset.nblLandType === "other_land") {

@@ -23,13 +23,30 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 2005 }, (_, i) => CURRENT_YEAR - i);
 
+/**
+ * 조회 기준연도 기본값 — **양도일이 속한 연도**.
+ *
+ * 🔴 종전에는 `CURRENT_YEAR`(오늘 연도)였다(R13). 여기서 채운 `house.officialPrice`는
+ *    `transfer-tax-api-houses.ts`를 거쳐 §167의3①1호 다주택 **주택 수 산정의 기준시가**가
+ *    되는데, 그 판정 시점은 **양도 당시**다. 과거 연도 양도를 계산하면 조용히 현재
+ *    연도 공시가격이 실렸다.
+ * 양도일이 비었거나 공시 개시(2006) 이전이면 오늘 연도로 떨어진다.
+ */
+export function resolveLookupYear(transferDate: string | undefined): string {
+  const y = parseInt((transferDate ?? "").slice(0, 4));
+  if (!isFinite(y) || y < 2006 || y > CURRENT_YEAR) return String(CURRENT_YEAR);
+  return String(y);
+}
+
 interface Props {
   house: HouseEntry;
+  /** 양도일 (YYYY-MM-DD) — 조회 기준연도 기본값 산정용 */
+  transferDate?: string;
   onUpdate: (patch: Partial<HouseEntry>) => void;
 }
 
-export function HousePriceYearLookup({ house, onUpdate }: Props) {
-  const [year, setYear] = useState(house.officialPriceYear || String(CURRENT_YEAR));
+export function HousePriceYearLookup({ house, transferDate, onUpdate }: Props) {
+  const [year, setYear] = useState(house.officialPriceYear || resolveLookupYear(transferDate));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const canLookup = !!house.addressPnu && !loading;

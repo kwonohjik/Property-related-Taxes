@@ -27,6 +27,21 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
   if (!asset.nblOtherPropertyTaxType)
     return `${label}: 기타토지 — 재산세 과세 분류(종합합산·별도합산·분리과세·비과세)를 선택하세요. 미선택 시 종합합산으로 간주되어 비사업용 중과가 적용됩니다.`;
 
+  /**
+   * §101①2호 건물 부수토지 — **건축물이 있으면 바닥면적 필수** (R06).
+   *
+   * 🔴 종전에는 어느 층에도 요구가 없었고, ⑤ hint가 「건물 시가표준액이 토지의 2% 미만이면…」
+   *    이라며 **2% 케이스만** 설명해 정상 건물(2% 이상) 보유자는 칸을 비워 뒀다. 그런데 엔진
+   *    Step 0.6(`other-land.ts:165-172`)은 `buildingFloorArea > 0`일 때만 §101①2호 **배율
+   *    한도**를 판정하므로, 미입력이면 한도 초과 부속토지가 **사업용으로 남는다**(세액 과소).
+   *    「미입력은 검증 오류로 차단」 원칙(루트 CLAUDE.md)대로 여기서 막는다.
+   */
+  if (
+    asset.nblOtherHasBuilding &&
+    (!asset.nblOtherBuildingFloorArea || parseDecimal(asset.nblOtherBuildingFloorArea) <= 0)
+  )
+    return `${label}: 기타토지 — 건축물 바닥면적(㎡)을 입력하세요. 부속토지 배율 한도(지방세법 시행령 제101조 제1항 제2호) 판정에 쓰이며, 미입력 시 한도 초과분이 사업용으로 남습니다.`;
+
   // §168의11① 호별 면적기준 — 면적인자 요구 호 선택 시 해당 면적인자 필수 (자동 안분 fallback 금지)
   const bt = asset.nblOtherRelatedBusinessType;
   const needsStandardArea = bt === "parking_attached";

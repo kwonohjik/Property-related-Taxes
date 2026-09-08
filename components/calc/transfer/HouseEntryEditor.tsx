@@ -37,13 +37,15 @@ interface Props {
   onUpdate: (patch: Partial<HouseEntry>) => void;
   /** #2a 혼인합가일 입력 시 "배우자 단독 보유" chip 노출 (§167의3⑨) */
   showSpouseOwned?: boolean;
+  /** 양도일 — 공시가격 조회 기준연도 기본값(§167의3①1호 기준시가는 **양도 당시**) */
+  transferDate?: string;
 }
 
 // ============================================================
 // 섹션 ① 기본정보 (sky)
 // ============================================================
 
-function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
+function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate }: Props) {
   return (
     <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보" noDark>
 
@@ -143,7 +145,7 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned }: Props) {
         </div>
 
         {/* 공시가격 (취득가액과 같은 행) — 기준연도 선택 + Vworld 재조회 */}
-        <HousePriceYearLookup house={house} onUpdate={onUpdate} />
+        <HousePriceYearLookup house={house} transferDate={transferDate} onUpdate={onUpdate} />
       </div>
 
       {/* 특례 chip */}
@@ -442,10 +444,10 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
 // 메인 에디터 (3섹션 조합)
 // ============================================================
 
-export function HouseEntryEditor({ house, onUpdate, showSpouseOwned }: Props) {
+export function HouseEntryEditor({ house, onUpdate, showSpouseOwned, transferDate }: Props) {
   return (
     <div className="space-y-3">
-      <BasicInfoSection house={house} onUpdate={onUpdate} showSpouseOwned={showSpouseOwned} />
+      <BasicInfoSection house={house} onUpdate={onUpdate} showSpouseOwned={showSpouseOwned} transferDate={transferDate} />
       <InheritanceSection house={house} onUpdate={onUpdate} />
       <LongTermRentalSection house={house} onUpdate={onUpdate} />
       <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
