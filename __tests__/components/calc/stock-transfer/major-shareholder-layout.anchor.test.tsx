@@ -336,3 +336,60 @@ describe("L-7 / L-8 — 거래소 장내 거래 토글은 §5 밖으로 나갔�
     expect(isBefore(major, venue)).toBe(true);
   });
 });
+
+/**
+ * L-13 — 판정 사유가 **실제로 비교한 값**을 쓴다.
+ *
+ * 2026-09-08 브라우저 확인에서 발견: `judgment` 계산은 대차 가산을 반영하는데 결과 박스의
+ * 사유 문자열만 폼 원본값을 다시 읽어, 기준이 2.0%인 화면에 「✓ 지분율 1.50% → 대주주 해당」이
+ * 떴다. 계산과 표시가 갈리면 사용자는 화면을 신뢰할 수 없다
+ * ([[feedback_engine_result_display_drift]]).
+ */
+describe("L-13 — 판정 사유가 가산 후 값을 보여준다", () => {
+  it("본인 1.5% + 대차 0.6% → 사유에 「2.10%」가 나오고 「1.50% → 대주주」는 없다", () => {
+    block(PHF03);
+    const reason = screen.getByText(/대주주 자동 판정/);
+    const text = reason.textContent ?? "";
+    expect(text).toContain("2.10%");
+    // 가산 전 값만 단독으로 사유가 되는 일이 없어야 한다
+    expect(text).not.toMatch(/지분율 1\.50% → 대주주 해당/);
+  });
+
+  it("가산 내역을 함께 보여준다 — 사용자가 차이를 설명받아야 한다", () => {
+    block(PHF03);
+    const text = screen.getByText(/대주주 자동 판정/).textContent ?? "";
+    expect(text).toContain("본인 1.50%");
+    expect(text).toContain("0.60%p");
+  });
+
+  it("가산이 없으면 내역 표기도 붙지 않는다", () => {
+    block({ ...PHF03, lentSharesCount: "0", selfShareRatio: "3" });
+    const text = screen.getByText(/대주주 자동 판정/).textContent ?? "";
+    expect(text).toContain("3.00%");
+    expect(text).not.toContain("대차·사모펀드");
+  });
+});
+
+/**
+ * L-14 — 금액 입력도 FieldCard 안에 있다 (정렬 통일).
+ *
+ * `CurrencyInput`을 맨몸으로 쓰면 자체 `<label>`을 위에 그려서, 좌-라벨 FieldCard를 쓰는
+ * 같은 섹션의 다른 필드와 정렬이 어긋난다(2026-09-08 브라우저 확인에서 발견).
+ */
+describe("L-14 — 시가총액 입력이 FieldCard 안에 있다", () => {
+  it("본인 단독 시가총액", () => {
+    block(JUDGABLE);
+    expect(fieldCardInputs(/본인 단독 시가총액/).length).toBeGreaterThan(0);
+  });
+
+  it("합산 시가총액 (합산 토글 ON)", () => {
+    block({ ...JUDGABLE, isLargestShareholderGroup: true });
+    expect(fieldCardInputs(/합산 시가총액/).length).toBeGreaterThan(0);
+  });
+
+  it("지분율 필드와 같은 구조다 — 둘 다 FieldCard 안", () => {
+    block(JUDGABLE);
+    expect(fieldCardInputs(/본인 단독 지분율/).length).toBeGreaterThan(0);
+    expect(fieldCardInputs(/본인 단독 시가총액/).length).toBeGreaterThan(0);
+  });
+});

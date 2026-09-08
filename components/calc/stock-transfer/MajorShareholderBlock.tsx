@@ -169,7 +169,11 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
   const judgment = useMemo(() => {
     // 기타자산은 자동 판정 미적용 — threshold null 가드 (fallback 0 false positive 차단)
     if (!threshold) {
-      return { isMajor: false, selfMeetsRatio: false, selfMeetsCap: false, combMeetsRatio: false, combMeetsCap: false };
+      return {
+        isMajor: false, selfMeetsRatio: false, selfMeetsCap: false,
+        combMeetsRatio: false, combMeetsCap: false,
+        ratioAugment: 0, effectiveSelfRatio: 0, effectiveCombRatio: 0,
+      };
     }
     // 대차·사모펀드 가산 — 엔진과 **같은 함수**(산식 복제 금지). 본인·합산 양쪽에 더한다.
     const { ratioAugment } = computeShareRatioAugmentation({
@@ -192,7 +196,13 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     const combMeetsCap = combCap > 0 && combCap >= marketCapThreshold;
 
     const isMajor = selfMeetsRatio || selfMeetsCap || combMeetsRatio || combMeetsCap;
-    return { isMajor, selfMeetsRatio, selfMeetsCap, combMeetsRatio, combMeetsCap };
+    // 판정에 **실제로 쓴 값**을 함께 돌려준다. 결과 박스가 폼 원본값을 다시 읽으면
+    // 「지분율 1.50% → 대주주 해당」인데 기준은 2.0%인 자기모순이 화면에 뜬다
+    // ([[feedback_engine_result_display_drift]] — 2026-09-08 브라우저 확인에서 실제로 발견).
+    return {
+      isMajor, selfMeetsRatio, selfMeetsCap, combMeetsRatio, combMeetsCap,
+      ratioAugment, effectiveSelfRatio: selfRatio, effectiveCombRatio: combRatio,
+    };
   }, [
     form.selfShareRatio,
     form.selfMarketCap,
@@ -466,13 +476,17 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           )}
         </div>
 
-        {/* 본인 단독 시총 — 자동 산정 결과가 이 필드에 채워짐 */}
-        <CurrencyInput
-          label="본인 단독 시가총액"
-          hint="직전 사업연도 말 기준 (원)"
-          value={form.selfMarketCap}
-          onChange={(v) => handleAutoSyncChange({ selfMarketCap: v })}
-        />
+        {/* 본인 단독 시총 — 자동 산정 결과가 이 필드에 채워짐.
+            🔑 FieldCard로 감싼다. `CurrencyInput`을 맨몸으로 쓰면 라벨이 카드 밖에 떠서
+            같은 섹션의 다른 필드(좌-라벨 FieldCard)와 정렬이 어긋난다. */}
+        <FieldCard label="본인 단독 시가총액" hint="직전 사업연도 말 기준" unit="원">
+          <CurrencyInput
+            label=""
+            hideUnit
+            value={form.selfMarketCap}
+            onChange={(v) => handleAutoSyncChange({ selfMarketCap: v })}
+          />
+        </FieldCard>
 
         {/* 키움 시가총액 자동 산정 — 위 시가총액 칸을 채우는 도구라 그 **뒤**에 온다 (C-6).
             조회 산출내역(종가·주식수·시총·임계 판정)까지 담는 카드라 FieldCard trailing에는
@@ -593,12 +607,14 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 )}
               </ToneCard>
             )}
-            <CurrencyInput
-              label="합산 시가총액"
-              hint="특수관계인 합산 (원)"
-              value={form.combinedMarketCap}
-              onChange={(v) => handleAutoSyncChange({ combinedMarketCap: v })}
-            />
+            <FieldCard label="합산 시가총액" hint="본인+특수관계인 합산" unit="원">
+              <CurrencyInput
+                label=""
+                hideUnit
+                value={form.combinedMarketCap}
+                onChange={(v) => handleAutoSyncChange({ combinedMarketCap: v })}
+              />
+            </FieldCard>
 
             {/* 특수관계인 합산 범위 hint 5건 (§178·창업투자조합 합류 — C-4) */}
             <CombinedShareHintsCard />
@@ -610,11 +626,16 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           (() => {
             // 어떤 항목이 기준을 충족했는지 사유 문자열 구성 (본인·합산 / 지분율·시총)
             const reasonParts: string[] = [];
+            // 가산이 걸렸으면 「본인 + 가산」 내역까지 보여준다 — 합계만 쓰면 사용자가
+            // 자기 입력값(1.50%)과 화면 판정 근거(2.10%)의 차이를 설명받지 못한다.
+            const augPct = judgment.ratioAugment * 100;
+            const augNote = augPct > 0 ? ` (본인 ${parseDecimal(form.selfShareRatio).toFixed(2)}% + 대차·사모펀드 ${augPct.toFixed(2)}%p)` : "";
             if (judgment.selfMeetsRatio) {
-              reasonParts.push(`지분율 ${parseDecimal(form.selfShareRatio).toFixed(2)}%`);
+              reasonParts.push(`지분율 ${(judgment.effectiveSelfRatio * 100).toFixed(2)}%${augNote}`);
             }
             if (judgment.combMeetsRatio && !judgment.selfMeetsRatio) {
-              reasonParts.push(`합산 지분율 ${parseDecimal(form.combinedShareRatio).toFixed(2)}%`);
+              const combAugNote = augPct > 0 ? ` (합산 ${parseDecimal(form.combinedShareRatio).toFixed(2)}% + 대차·사모펀드 ${augPct.toFixed(2)}%p)` : "";
+              reasonParts.push(`합산 지분율 ${(judgment.effectiveCombRatio * 100).toFixed(2)}%${combAugNote}`);
             }
             if (judgment.selfMeetsCap) {
               reasonParts.push(
