@@ -61,15 +61,26 @@ describe("G-1 · 부담부증여 게이트 3층 parity", () => {
     expect([...validate].sort()).toEqual([...engine].sort());
   });
 
-  it("2026-09-08 편입분 — redevelopment_apt가 세 곳 모두에 있다", () => {
-    expect(ui).toContain("redevelopment_apt");
-    expect(validate).toContain("redevelopment_apt");
-    expect(engine).toContain("redevelopment_apt");
+  it("2026-09-08 편입분 — 재개발 APT·조합원입주권이 세 곳 모두에 있다", () => {
+    for (const kind of ["redevelopment_apt", "right_to_move_in"]) {
+      expect(ui).toContain(kind);
+      expect(validate).toContain(kind);
+      expect(engine).toContain(kind);
+    }
   });
 
-  it("🔴 대조군 — 조합원입주권은 아직 세 곳 모두에 없다 (후속 배치)", () => {
-    expect(ui).not.toContain("right_to_move_in");
-    expect(validate).not.toContain("right_to_move_in");
-    expect(engine).not.toContain("right_to_move_in");
+  /**
+   * 🔄 **대조군 교체 (2026-09-08 · PR 단계)** — 종전 대조군은 `right_to_move_in`이었다.
+   *    조합원입주권이 지원에 편입되면서 그 단언이 성립하지 않게 됐으므로, **아직 지원되지 않는**
+   *    `presale_right`로 바꾼다. 단언 축(「미지원 자산이 세 층 모두에서 빠져 있다」)은 유지된다 —
+   *    약화가 아니다(`feedback_anchor_correction_legal_priority`).
+   *
+   *    분양권은 사용자 판단으로 **범위 밖**이다(실무 사례 희소). 법령 판정은 입주권과 같으므로
+   *    재개 시 승계 가능하다.
+   */
+  it("🔴 대조군 — 분양권은 세 곳 모두에 없다 (범위 밖)", () => {
+    expect(ui).not.toContain("presale_right");
+    expect(validate).not.toContain("presale_right");
+    expect(engine).not.toContain("presale_right");
   });
 });

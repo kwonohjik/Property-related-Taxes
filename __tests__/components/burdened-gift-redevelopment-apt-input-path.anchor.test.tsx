@@ -45,10 +45,15 @@ describe("① ⑤ UI — 재개발 APT에서 부담부증여 입력이 렌더된
     expect(screen.getByText("증여재산 평가 — 증여일 현재 기준시가")).toBeTruthy();
   });
 
-  it("🔴 대조군 — 조합원입주권에서는 rose 안내가 뜬다 (아직 미지원)", () => {
+  /**
+   * 🔄 **대조군 교체 (2026-09-08 · PR 단계)** — 종전 대조군은 `right_to_move_in`이었다.
+   *    조합원입주권이 지원에 편입되면서 그 자산으로는 안내문이 렌더되지 않는다.
+   *    아직 미지원인 `presale_right`(분양권 — 범위 밖)로 바꾼다. 단언 축은 유지된다.
+   */
+  it("🔴 대조군 — 분양권에서는 rose 안내가 뜬다 (범위 밖)", () => {
     render(
       <TransferModeBlock
-        asset={asset({ assetKind: "right_to_move_in" })}
+        asset={asset({ assetKind: "presale_right" })}
         onChange={() => {}}
         transferDate="2025-06-01"
       />,
@@ -59,7 +64,7 @@ describe("① ⑤ UI — 재개발 APT에서 부담부증여 입력이 렌더된
   it("안내문의 지원 목록에 재개발 APT가 들어 있다 (배열 파생 · 하드코딩 회귀)", () => {
     render(
       <TransferModeBlock
-        asset={asset({ assetKind: "right_to_move_in" })}
+        asset={asset({ assetKind: "presale_right" })}
         onChange={() => {}}
         transferDate="2025-06-01"
       />,
@@ -76,17 +81,17 @@ describe("② ⑧ validate — 「미지원」으로 차단하지 않는다", ()
     expect(err).not.toMatch(/에서만 지원됩니다/);
   });
 
-  it("🔴 대조군 — 조합원입주권은 지원 목록 검사에서 차단된다", () => {
-    const err = validateBurdenedGiftAsset(asset({ assetKind: "right_to_move_in" }), "자산1");
+  it("🔴 대조군 — 분양권은 지원 목록 검사에서 차단된다 (범위 밖)", () => {
+    const err = validateBurdenedGiftAsset(asset({ assetKind: "presale_right" }), "자산1");
     expect(err).toMatch(/에서만 지원됩니다/);
   });
 
   it("차단 메시지의 자산 열거가 배열에서 파생된다 (재개발 APT 포함)", () => {
-    const err = validateBurdenedGiftAsset(asset({ assetKind: "right_to_move_in" }), "자산1")!;
+    const err = validateBurdenedGiftAsset(asset({ assetKind: "presale_right" }), "자산1")!;
     expect(err).toContain("재개발/재건축 APT");
-    // 「현재: 입주권」 — 내부 enum이 아니라 라벨로 표시한다
-    expect(err).toContain("현재: 입주권");
-    expect(err).not.toContain("right_to_move_in");
+    // 「현재: 분양권」 — 내부 enum이 아니라 라벨로 표시한다
+    expect(err).toContain("현재: 분양권");
+    expect(err).not.toContain("presale_right");
   });
 });
 

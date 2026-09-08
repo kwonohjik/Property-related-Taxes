@@ -32,14 +32,19 @@ type AcqStdAsset = Pick<
  * 제외 이유:
  *  · 시가 모드    — 취득가액이 K-4(실지)·K-5(환산) 축으로 간다(§100①). 이 값을 쓰지 않는다.
  *  · `general_building` — `gbAcqLandPricePerSqm`·`gbAcqBuildingValue` 전용 입력이 있고 API가
- *    그것을 쓴다(`transfer-tax-api-burdened-gift.ts:169-180`). 여기 칸을 만들면 **엔진이
+ *    그것을 쓴다(`transfer-tax-api-burdened-gift.ts`). 여기 칸을 만들면 **엔진이
  *    쓰지 않는 값**을 입력하게 되고, validate가 그걸 요구하면 gb*를 채운 사용자가 막힌다.
+ *  · `right_to_move_in` — **K-4 전용이라 이 칸을 쓰지 않는다**(2026-09-08). 조합원입주권의
+ *    증여재산 평가는 상증법 §61③이고, §159①1호 A괄호의 열거(§61①②⑤·§66)에 **없어**
+ *    괄호가 발동하지 않는다 ⇒ 취득가액은 §97①1호 실지거래가액이다. ④ API 변환도
+ *    `buildingStdPriceAtAcquisition: 0`을 보낸다 — 칸을 띄우면 **엔진이 버리는 값**을 요구하게 된다.
  */
 export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
   return (
     asset.transferType === "burdened_gift" &&
     asset.bgValuationMode !== "sangjeungbeop_market" &&
-    asset.assetKind !== "general_building"
+    asset.assetKind !== "general_building" &&
+    asset.assetKind !== "right_to_move_in"
   );
 }
 

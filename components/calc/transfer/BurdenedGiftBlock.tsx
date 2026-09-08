@@ -23,6 +23,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { BurdenedGiftRightValuationSection } from "./BurdenedGiftRightValuationSection";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "@/lib/calc/transfer-tax-api-helpers";
@@ -209,6 +210,11 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
 
   const isMarketMode = asset.bgValuationMode === "sangjeungbeop_market";
   /**
+   * 조합원입주권 — 증여재산 평가가 상증법 §61③이라 §159①1호 A괄호가 **발동하지 않는다**.
+   * ⇒ 취득가액이 실지거래가액(K-4)으로 고정되고, 취득시·양도시 기준시가 칸을 쓰지 않는다.
+   */
+  const isRightToMoveIn = asset.assetKind === "right_to_move_in";
+  /**
    * 이월과세(「소득세법」 §97의2) 조합인가 — **화면의 「증여자」가 두 사람이 되는 순간**이다.
    *
    * · **양도인**      = 부담부증여를 하는 사람(기존 입력 전부가 이 사람 기준)
@@ -374,58 +380,6 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             />
           </FieldCard>
 
-          {/* K-4: 실지취득가액 입력 (assetKind별) */}
-          {asset.bgAcquisitionMethod === "actual" && (
-            <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-semibold text-amber-800">실지취득가액 입력</span>
-                <LawArticleModal legalBasis="소득세법 §97" label="§97①1호가목" />
-              </div>
-              <div className="rounded border border-violet-200 bg-violet-50 p-2 text-caption text-violet-800">
-                개산공제(§163⑥ 3%) 미적용 — 실지거래가액 경로이므로 자본적지출·양도비를 필요경비로 공제합니다 (양도분 채무비율 안분).
-              </div>
-              {asset.assetKind === "general_building" ? (
-                <>
-                  <FieldCard label="토지 실지취득가액">
-                    <CurrencyInput label="" hideUnit
-                      value={asset.bgActualAcquisitionLand}
-                      onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
-                  </FieldCard>
-                  <FieldCard label="건물 실지취득가액">
-                    <CurrencyInput label="" hideUnit
-                      value={asset.bgActualAcquisitionBuilding}
-                      onChange={(v) => onChange({ bgActualAcquisitionBuilding: v })} />
-                  </FieldCard>
-                </>
-              ) : asset.assetKind === "land" ? (
-                <FieldCard label="토지 실지취득가액">
-                  <CurrencyInput label="" hideUnit
-                    value={asset.bgActualAcquisitionLand}
-                    onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
-                </FieldCard>
-              ) : (
-                <FieldCard label="실지취득가액 (주택·건물 전체)"
-                  >
-                  <CurrencyInput label="" hideUnit
-                    value={asset.bgActualAcquisitionTotal}
-                    onChange={(v) => onChange({ bgActualAcquisitionTotal: v })} />
-                </FieldCard>
-              )}
-              <FieldCard label="자본적지출 (선택)"
-                hint="소령 §163③ — 양도분(채무비율)에 대응하는 부분만 안분 공제">
-                <CurrencyInput label="" hideUnit
-                  value={asset.capitalExpenditure}
-                  onChange={(v) => onChange({ capitalExpenditure: v })} />
-              </FieldCard>
-              <FieldCard label="양도비 (선택)"
-                >
-                <CurrencyInput label="" hideUnit
-                  value={asset.transferExpense}
-                  onChange={(v) => onChange({ transferExpense: v })} />
-              </FieldCard>
-            </div>
-          )}
-
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
           {asset.bgAcquisitionMethod === "converted" && (
             <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800">
@@ -437,6 +391,75 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             </div>
           )}
         </div>
+      )}
+
+      {/*
+        K-4 실지취득가액 — **두 경로가 여기로 온다**.
+
+        ① 시가 모드(§60②) + 산정방식 「실지」  ② **조합원입주권**(자산 종류로 고정)
+
+        ②는 §159①1호 A괄호의 열거(상증법 §61①·②·⑤ 및 §66)에 §61③이 **없어서** 괄호가
+        발동하지 않기 때문이다 — 평가 모드(기준시가/시가)와 무관하게 취득가액이 실지거래가액이다.
+        그래서 이 블록을 「시가 모드」 카드 **밖으로** 뺐다. 안에 두면 기준시가 모드를 고른
+        입주권 사용자에게 칸이 뜨지 않아 ⑧이 요구하는 값을 넣을 곳이 없어진다.
+      */}
+      {((isMarketMode && asset.bgAcquisitionMethod === "actual") || isRightToMoveIn) && (
+          <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-semibold text-amber-800">실지취득가액 입력</span>
+              <LawArticleModal legalBasis="소득세법 §97" label="§97①1호가목" />
+            </div>
+            <div className="rounded border border-violet-200 bg-violet-50 p-2 text-caption text-violet-800">
+              개산공제(§163⑥ 3%) 미적용 — 실지거래가액 경로이므로 자본적지출·양도비를 필요경비로 공제합니다 (양도분 채무비율 안분).
+            </div>
+            {isRightToMoveIn && (
+              <div className="rounded border border-fuchsia-200 bg-fuchsia-50 p-2 text-caption text-fuchsia-800">
+                조합원입주권의 취득가액은 <b>종전 부동산의 실지취득가액</b>입니다 (소득세법 시행령
+                §166①1호 「기존건물과 그 부수토지의 취득가액」 · §97①1호가목). 인수 채무 비율만큼
+                안분됩니다.
+              </div>
+            )}
+            {asset.assetKind === "general_building" ? (
+              <>
+                <FieldCard label="토지 실지취득가액">
+                  <CurrencyInput label="" hideUnit
+                    value={asset.bgActualAcquisitionLand}
+                    onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
+                </FieldCard>
+                <FieldCard label="건물 실지취득가액">
+                  <CurrencyInput label="" hideUnit
+                    value={asset.bgActualAcquisitionBuilding}
+                    onChange={(v) => onChange({ bgActualAcquisitionBuilding: v })} />
+                </FieldCard>
+              </>
+            ) : asset.assetKind === "land" ? (
+              <FieldCard label="토지 실지취득가액">
+                <CurrencyInput label="" hideUnit
+                  value={asset.bgActualAcquisitionLand}
+                  onChange={(v) => onChange({ bgActualAcquisitionLand: v })} />
+              </FieldCard>
+            ) : (
+              <FieldCard
+                label={isRightToMoveIn ? "종전 부동산 실지취득가액" : "실지취득가액 (주택·건물 전체)"}
+              >
+                <CurrencyInput label="" hideUnit
+                  value={asset.bgActualAcquisitionTotal}
+                  onChange={(v) => onChange({ bgActualAcquisitionTotal: v })} />
+              </FieldCard>
+            )}
+            <FieldCard label="자본적지출 (선택)"
+              hint="소령 §163③ — 양도분(채무비율)에 대응하는 부분만 안분 공제">
+              <CurrencyInput label="" hideUnit
+                value={asset.capitalExpenditure}
+                onChange={(v) => onChange({ capitalExpenditure: v })} />
+            </FieldCard>
+            <FieldCard label="양도비 (선택)"
+              >
+              <CurrencyInput label="" hideUnit
+                value={asset.transferExpense}
+                onChange={(v) => onChange({ transferExpense: v })} />
+            </FieldCard>
+          </div>
       )}
 
       {/* ③-b 이월과세 §97의2 — 「당초 증여자」 취득 당시 값 한 벌 (D-7b) */}
@@ -560,7 +583,13 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           (`GIFT_STD_PRICE_FIELD` 참조 — 건물분만 vs 토지 포함).
           시가 모드에서는 평가액이 시가로 통째 대체되어 이 값이 쓰이지 않고(상증법 §60②~④ ·
           `burdened-gift-valuation.ts:134-137`), 토지 자산은 건물이 없다 — 둘 다 숨긴다. */}
-      {!isMarketMode && asset.assetKind !== "land" && (
+      {/* ④′ 증여재산 평가 — 조합원입주권 (상증법 §61③). ④의 단일 칸을 대체한다.
+          기준시가 모드에서만: 시가 모드는 §60② 시가가 평가액을 통째로 대체한다. */}
+      {!isMarketMode && isRightToMoveIn && (
+        <BurdenedGiftRightValuationSection asset={asset} onChange={onChange} />
+      )}
+
+      {!isMarketMode && asset.assetKind !== "land" && !isRightToMoveIn && (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">

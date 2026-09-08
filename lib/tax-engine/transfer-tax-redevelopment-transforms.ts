@@ -512,6 +512,22 @@ export function applyOneRightExemption(
     return redev;
   }
 
+  /**
+   * 🟠 **U-8 미결 (2026-09-08) — 부담부증여에서 이 분모는 「양도가액」이 아니다.**
+   *
+   * `input.transferPrice`는 부담부증여에서 소령 §159가 안분한 **채무액 B**다. 24억 입주권을
+   * 채무 6억으로 부담부증여하면 6억 ≤ 12억이 되어 **전액 비과세로 판정**된다.
+   *
+   * 같은 결함을 완공 신축주택(`subject="apt"`) 경로에서는 고쳤다 —
+   * `transfer-tax-redevelopment-steps.ts`가 `input.burdenedGiftDenominator`(= 증여가액 C)를 쓴다.
+   * **여기는 고치지 않았다**: 아래 `resolveOneRightExemptionClause`의 근거 주석이
+   * 「국세청 해석례 근거 — **분모 = transferPrice 단일(해석 A)**」를 명시하고 있어,
+   * 해석 B(C 분모)로 바꾸려면 **그 해석례와의 충돌을 먼저 해소**해야 한다.
+   * 근거 없이 바꾸면 §89①4호 판정이 조용히 달라진다.
+   *
+   * ⇒ 착수 조건: 해석 A의 근거 해석례를 확인하고 **부담부증여 사안에서의 적용 여부**를 판정할 것.
+   *   계획서 `burdened-gift-redevelopment-assets.plan.md` §9 U-8 · §13.
+   */
   if (input.transferPrice <= HIGH_VALUE_THRESHOLD) {
     // ── 전액 비과세 (12억 이하) ──
     // 3분기 모두 trace 보존 후 0 마스킹

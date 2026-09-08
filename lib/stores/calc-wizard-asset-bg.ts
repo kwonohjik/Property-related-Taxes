@@ -51,6 +51,20 @@ export interface BurdenedGiftFormSlice {
   /** [신설] K-4 실지취득가액 — 단일자산 (housing·building·commercial_building). 원, string. */
   bgActualAcquisitionTotal: string;
 
+  // ── 조합원입주권 증여재산 평가 (상증법 §61③ · 상증령 §51② · 상증칙 §16③) ──
+  /**
+   * 조합원권리가액 (상증칙 §16③ — 종전 토지·건축물 가격 × 비례율). 원, string.
+   *
+   * ⚠️ 재개발 정보의 `redevRightsValue`(소령 §166④1호 「정하여진 가격」)와 **법문이 다른 값**이다.
+   *    미입력 시 그 값을 **파생 표시**하되(`lib/calc/burdened-gift-right-valuation.ts`),
+   *    store에 써 넣지는 않는다 — 사용자가 서로 다른 값을 입력할 수 있어야 한다.
+   */
+  bgRightMemberRightsValue: string;
+  /** 증여일까지 납입한 계약금·중도금 등 (상증령 §51② 본문 괄호). 0 허용. 원, string. */
+  bgRightPaidInstallments: string;
+  /** 증여일 현재 프리미엄 (상증령 §51② 본문). 0 허용. 원, string. */
+  bgRightPremium: string;
+
   // ── 이월과세(§97의2) — 「당초 증여자」 취득 당시 값 **두 번째 벌** (2026-08-10 D-7b) ──
   /**
    * ## ⚠️ 「증여자」가 두 사람을 가리킨다 — 용어를 먼저 고정한다

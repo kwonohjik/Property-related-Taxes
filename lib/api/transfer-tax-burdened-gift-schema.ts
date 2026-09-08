@@ -72,6 +72,25 @@ export const burdenedGiftInfoSchema = z.object({
    * 미입력 시 양도세용 buildingStdPriceAtTransfer fallback.
    */
   giftBuildingStdPriceAtTransfer: z.number().int().nonnegative().optional(),
+
+  /**
+   * ⑫ 조합원입주권 평가 명세 (상증법 §61③ · 상증령 §51② · 상증칙 §16③).
+   *
+   * 🔴 **여기 등록하지 않으면 `z.object`가 통째로 침묵 strip한다** — TypeScript는 감지하지
+   *    못하고(⑬⑭는 객체 통째 spread라 그대로 통과), 엔진에서는 `rightValuation === undefined`가
+   *    되어 §159①1호 A괄호가 **발동한 것으로 판정**된다. 그러면 취득가액이 「취득시 기준시가 × r」이
+   *    되는데 입주권은 그 칸을 0으로 보내므로 **취득가액 0 → 양도차익 과대**가 된다.
+   *
+   * `.optional()`인 이유는 `carryoverDonorBasis`와 같다 — 모드별 필수 여부는 ⑧ validate와
+   * 엔진이 지킨다(자산 종류를 Zod가 알지 못한다).
+   */
+  rightValuation: z
+    .object({
+      memberRightsValue: z.number().int().nonnegative(),
+      paidInstallments: z.number().int().nonnegative(),
+      premium: z.number().int().nonnegative(),
+    })
+    .optional(),
   // Phase 3 (2026-05-12): 증여세 통합 입력
   /** 증여자-수증자 관계 (상증법 §53 증여재산공제). */
   donorRelation: z

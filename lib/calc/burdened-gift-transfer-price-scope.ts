@@ -48,6 +48,13 @@ export function stdPriceAtTransferComesFromElsewhere(asset: AssetForm): boolean 
   return (
     asset.transferType === "burdened_gift" &&
     (asset.assetKind === "general_building" ||
+      /**
+       * 조합원입주권 — 평가액이 ④′ 3항(`bgRight*`)에서 오고 ④ API 변환이 그 합계를
+       * `buildingStdPriceAtTransfer`에 싣는다(2026-09-08). 공용 칸을 띄우면
+       * **엔진이 쓰지 않는 값**을 입력받게 되고, `toPropertyKind`가 입주권을
+       * `building_non_residential`로 매핑해 **비주거 건물 공시가격 조회 UI**까지 뜬다.
+       */
+      asset.assetKind === "right_to_move_in" ||
       asset.bgValuationMode === "sangjeungbeop_market")
   );
 }
