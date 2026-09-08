@@ -23,6 +23,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AddressSearch, type AddressValue } from "@/components/ui/address-search";
 import { HousePriceYearLookup } from "@/components/calc/transfer/HousePriceYearLookup";
+import { hasRentalBasicRegistration } from "@/lib/tax-engine/multi-house-surcharge-count";
 import { buildHouseAddressPatch } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
@@ -432,6 +433,28 @@ function LongTermRentalSection({ house, onUpdate }: Props) {
             </p>
           </div>
 
+          {/*
+            🔴 9유형 매트릭스는 「임대사업자 정식 등록」 토글 **밖**의 형제다(R20).
+               엔진 `isLongTermRentalHousingExempt`는 `rentalType`이 있어도
+               `hasRentalBasicRegistration`(등록 플래그 + 임대등록일 + 사업자등록일)이
+               false면 **중과배제를 침묵 미적용**한다. 요건을 다 채워도 아무 말이 없었다.
+               ⇒ 배치는 그대로 두고(등록 여부와 무관하게 유형은 고를 수 있어야 한다)
+                 **미충족 사실과 빠진 항목을 밝힌다**.
+          */}
+          {!hasRentalBasicRegistration(
+            house.isRegisteredRental,
+            house.rentalRegistrationDate,
+            house.businessRegistrationDate,
+          ) && (
+            <p
+              className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-caption text-amber-900"
+              data-testid="rental-registration-incomplete-warning"
+            >
+              위 <strong>「임대사업자 정식 등록」</strong>이 완료되지 않아, 아래 유형을 모두
+              채워도 <strong>중과 배제가 적용되지 않습니다</strong>. 등록 토글을 켜고
+              임대사업자 등록일·사업자 등록일을 입력하세요.
+            </p>
+          )}
           {/* 9유형(가~자목) 매트릭스 — 유형 선택 시 유형별 요건 정밀 판정 */}
           <HouseEntryRentalTypeSection house={house} onUpdate={onUpdate} />
         </div>

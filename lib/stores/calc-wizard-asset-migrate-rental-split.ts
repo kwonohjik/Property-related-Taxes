@@ -378,5 +378,8 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
   if (!a.landStandardPriceAtTransfer) a.landStandardPriceAtTransfer = "";
   if (!a.buildingStandardPriceAtTransfer) a.buildingStandardPriceAtTransfer = "";
   if (a.usePreHousingDisclosure === undefined) a.usePreHousingDisclosure = false;
+  // R12 — 신규 표시 축. 옛 sessionStorage에는 없으므로 기본값을 채운다.
+  if (a.phdHousingType !== "individual" && a.phdHousingType !== "apartment")
+    a.phdHousingType = "individual";
   if (!a.phdFirstDisclosureDate) a.phdFirstDisclosureDate = "";
 }

@@ -95,6 +95,12 @@ export function formatOwnershipPercent(
  *    없습니다」로 **분자/분모 2칸이던 옛 UI 용어**였다. 위젯이 단일 백분율 칸으로 바뀐 뒤
  *    분모(=100)는 화면에 없어, 사용자는 고칠 칸을 찾을 수 없었다.
  *
+ * 🔴 **필드명을 「지분율」로만 부른다** (R15). 이 위젯의 라벨은 호출부가 정한다 —
+ *    비-지분 모드는 「공유 지분율」(`AssetSectionBasic`), 지분 분할 모드는 「취득 지분율」
+ *    (`AssetSectionAcquisition:100`)이다. 종전 문구는 「공유 지분율…」로 고정돼 있어
+ *    지분 분할 모드에서 **화면에 없는 칸 이름**을 안내했다. 경고는 해당 FieldCard 안에
+ *    붙으므로 공통 어간만으로 대상이 명확하다.
+ *
  * ⚠️ 빈값은 `null`(정상)로 돌려준다 — 미입력 차단은 `transfer-tax-validate.ts`의 별도
  *    게이트가 담당하고, 여기서 걸면 타이핑 도중에 경고가 깜빡인다.
  *
@@ -109,16 +115,16 @@ export function ownershipRatioError(
   if ((numerator ?? "").trim() === "") return null;
   const n = parseFloat(numerator);
   const d = parseFloat((denominator ?? "").trim() === "" ? "100" : denominator);
-  if (!isFinite(n) || !isFinite(d)) return "공유 지분율은 숫자로 입력하세요.";
+  if (!isFinite(n) || !isFinite(d)) return "지분율은 숫자로 입력하세요.";
   // 분모는 화면에 없다 — 레거시 저장값이 깨진 경우이므로 「%를 다시 입력」으로 유도한다
   // (다시 입력하면 위젯이 분모를 100으로 재설정한다).
   if (d <= 0 || d > 1000)
-    return "공유 지분율을 다시 입력하세요 (저장된 지분 값이 올바르지 않습니다).";
-  if (n <= 0) return "공유 지분율은 0보다 커야 합니다.";
+    return "지분율을 다시 입력하세요 (저장된 지분 값이 올바르지 않습니다).";
+  if (n <= 0) return "지분율은 0보다 커야 합니다.";
   if (n > d) {
     // 표시 백분율은 위젯 `pctValue`와 같은 방식으로 반올림한다(같은 수가 보여야 한다).
     const pct = parseFloat(((n / d) * 100).toFixed(4));
-    return `공유 지분율은 100%를 초과할 수 없습니다 (입력값 ${pct}%).`;
+    return `지분율은 100%를 초과할 수 없습니다 (입력값 ${pct}%).`;
   }
   return null;
 }

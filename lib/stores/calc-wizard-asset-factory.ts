@@ -195,6 +195,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     landSalesCaseValue: "",
     buildingSalesCaseValue: "",
     usePreHousingDisclosure: false,
+    phdHousingType: "individual",
     phdFirstDisclosureDate: "",
     phdFirstDisclosureHousingPrice: "",
     phdLandPriceYearAtAcq: "",

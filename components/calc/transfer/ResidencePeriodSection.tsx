@@ -105,7 +105,7 @@ export function ResidencePeriodSection({
               return (
                 <div
                   key={idx}
-                  className="rounded-md border border-violet-200 bg-white p-3 space-y-2"
+                  className="rounded-md border border-violet-200 bg-card p-3 space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-violet-700">
