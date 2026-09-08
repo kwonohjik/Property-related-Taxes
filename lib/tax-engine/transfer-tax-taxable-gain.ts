@@ -71,7 +71,7 @@ export function resolveTaxableGain(args: {
   const denomLabel = isBurdened ? "증여가액 C" : isFractional ? "총양도가" : "양도가";
   steps.push({
     label: "과세 양도차익 (12억 초과분)",
-    formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - 12억) / ${denomLabel} ${denom.toLocaleString()}`,
+    formula: `${transferGain.toLocaleString()} × (${denomLabel} ${denom.toLocaleString()} - 12억) / (${denomLabel} ${denom.toLocaleString()})`,
     amount: taxableGain,
     legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
   });

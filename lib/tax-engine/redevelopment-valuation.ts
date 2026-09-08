@@ -243,7 +243,13 @@ function buildRationale(args: BuildRationaleArgs): string {
 
   if (canApplyPreDisclosureMain && firstDisclosureDate) {
     const disclosureStr = formatDate(firstDisclosureDate);
-    return `취득일 ${acqDateStr} < 최초공시일 ${disclosureStr} → ${REDEVELOPMENT.PRE_DISCLOSURE_PROVISO} 본문 발동, PHD 패턴 2단계 산식 (Step 1: P_A = floor(A × Sum_A / Sum_F), Step 2: 환산취득가 = floor(권리가액 × P_A / D)) (method=${method})`;
+    // 🔴 종전에는 이 문장이 내부 표기를 그대로 인쇄했다 (2026-09-08 · 산식 한국어 풀어쓰기):
+    //    「Step 1: P_A = floor(A × Sum_A / Sum_F), Step 2: 환산취득가 = floor(권리가액 × P_A / D)) (method=…)」
+    //    `RedevelopmentDetailCard:283`이 화면에 그대로 찍는다 — 변수 약어 5종(P_A·A·Sum_A·
+    //    Sum_F·D)·함수 표기 `floor(`·내부 식별자 `method=`가 한 문장에 모여 있었다.
+    //    이름은 이 파일 헤더(:14~26)의 정의를 그대로 한국어로 옮긴 것이다.
+    //    나눗셈 피연산자를 괄호로 감싸 `renderFormula`가 분수로 그리게 한다.
+    return `취득일 ${acqDateStr} < 최초공시일 ${disclosureStr} → ${REDEVELOPMENT.PRE_DISCLOSURE_PROVISO} 본문 발동, 2단계 산식 — ① 취득당시 개별주택가격 = 최초공시 개별주택가격 × (취득시 합계기준시가) ÷ (최초공시 합계기준시가), ② 환산취득가 = 권리가액 × (취득당시 개별주택가격) ÷ (관리처분 인가일 개별주택가격)`;
   }
 
   if (isPreDisclosure && firstDisclosureDate) {

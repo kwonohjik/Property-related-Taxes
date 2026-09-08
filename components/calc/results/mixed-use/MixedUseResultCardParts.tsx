@@ -71,7 +71,7 @@ export function Row({
       </div>
       {formula && (
         <div className="text-caption text-muted-foreground/80 leading-snug pl-2 border-l-2 border-muted space-y-0.5">
-          {formula}
+          <FormulaText value={formula} />
         </div>
       )}
     </div>
@@ -79,7 +79,7 @@ export function Row({
 }
 
 // 산식 분수(Frac)·줄(FLine)은 전 세목 공용으로 승격 — shared/FormulaParts.tsx에서 재export.
-import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
+import { Frac, FLine, FormulaText } from "@/components/calc/results/shared/FormulaParts";
 export { Frac, FLine };
 
 export function DivRow() {

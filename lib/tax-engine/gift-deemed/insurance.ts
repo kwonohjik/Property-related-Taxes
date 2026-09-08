@@ -29,7 +29,7 @@ export function calcInsuranceGift(input: InsuranceInput): DeemedGiftResult {
           : "증여받은 재산으로 납부한 보험료",
       amount: relevantPremium,
     },
-    { label: "보험금 × (관련 보험료 ÷ 총 보험료)", amount: proportional },
+    { label: "보험금 × (관련 보험료) ÷ (총 보험료)", amount: proportional },
     ...(caseType === "gifted_premium"
       ? [{ label: "증여받은 재산으로 납부한 보험료 차감", amount: -relevantPremium, lawRef: GIFT.INSURANCE }]
       : []),

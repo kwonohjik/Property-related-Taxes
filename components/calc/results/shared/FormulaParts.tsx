@@ -32,6 +32,27 @@ export function FLine({ children }: { children: React.ReactNode }) {
 const OPERAND = String.raw`(?:\([^()]*\)|\d[\d,]*(?:\.\d+)?%?)`;
 const FRACTION_RE = new RegExp(`(${OPERAND})\\s*[/÷]\\s*(${OPERAND})`, "g");
 
+/**
+ * 분수 칸에 들어갈 때 **바깥 괄호 한 겹을 벗긴다.**
+ *
+ * 분수 막대가 이미 묶음을 표현하므로 `(A + B)` 의 괄호는 중복이고, 한국어 피연산자를
+ * 괄호로 감싸 분수로 만든 경우(`(세대생략재산) / (분모)`)에는 괄호가 순수 잡음이 된다.
+ * ⚠️ **매칭 규칙은 건드리지 않는다** — 무엇이 분수가 되는지는 그대로다(표시만 정리).
+ */
+function unwrap(operand: string): string {
+  const t = operand.trim();
+  if (!t.startsWith("(") || !t.endsWith(")")) return t;
+  const inner = t.slice(1, -1);
+  // 안쪽에 또 괄호가 있으면 건드리지 않는다 (짝이 어긋날 수 있다)
+  if (inner.includes("(") || inner.includes(")")) return t;
+  // ⚠️ **연산자가 든 묶음은 그대로 둔다** — `(339,492,000+12,308,310+54,501,720)` 처럼
+  //    괄호가 원래 의미를 갖고 있고, 그 표시를 고정한 앵커가 이미 있다
+  //    (`DetailedCalculationStatementCard.test.tsx` T-09). 벗기는 대상은 한국어 피연산자를
+  //    분수로 만들려고 감싼 **단순 라벨**뿐이다 — 거기서는 괄호가 순수 잡음이다.
+  if (/[+\-−×÷/]/.test(inner)) return t;
+  return inner;
+}
+
 export function renderFormula(text: string): React.ReactNode {
   const parts: React.ReactNode[] = [];
   let last = 0;
@@ -39,7 +60,7 @@ export function renderFormula(text: string): React.ReactNode {
   FRACTION_RE.lastIndex = 0;
   while ((m = FRACTION_RE.exec(text)) !== null) {
     if (m.index > last) parts.push(text.slice(last, m.index));
-    parts.push(<Frac key={m.index} top={m[1]} bottom={m[2]} />);
+    parts.push(<Frac key={m.index} top={unwrap(m[1])} bottom={unwrap(m[2])} />);
     last = m.index + m[0].length;
   }
   if (parts.length === 0) return text;

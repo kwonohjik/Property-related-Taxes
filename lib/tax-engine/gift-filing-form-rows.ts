@@ -183,7 +183,7 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
       label: "공제한도",
       amount: d.surchargeCreditLimit,
       display: hasPriorGifts ? "amount" : "dash",
-      formula: "⑦ × ⑤_prior / ⑤ × 할증율",
+      formula: "⑦ × (직전 ⑤) / (⑤) × 할증율",
       lawRef: GIFT.GENERATION_SKIP_LIMIT_FORMULA,
     });
     rows.push({
@@ -221,7 +221,7 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
       label: "한도",
       amount: priorGiftCreditDetail?.creditLimit ?? 0,
       display: hasPriorGifts ? "amount" : "dash",
-      formula: "⑦ × ⑤_prior / ⑤",
+      formula: "⑦ × (직전 ⑤) / (⑤)",
       lawRef: GIFT.PRIOR_TAX_CREDIT_LIMIT_FORMULA,
     });
     rows.push({
@@ -262,7 +262,7 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
       label: "한도",
       amount: priorGiftCreditDetail?.creditLimit ?? 0,
       display: hasPriorGifts ? "amount" : "dash",
-      formula: "⑦ × ⑤_prior / ⑤",
+      formula: "⑦ × (직전 ⑤) / (⑤)",
       lawRef: GIFT.PRIOR_TAX_CREDIT_LIMIT_FORMULA,
     });
     rows.push({

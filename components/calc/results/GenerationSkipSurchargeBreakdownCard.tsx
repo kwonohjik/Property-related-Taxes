@@ -18,7 +18,7 @@
 import { useState } from "react";
 import type { GenerationSkipSurchargeDetail } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { ExpandToggleButton } from "./shared/ExpandToggleButton";
-import { Frac } from "./shared/FormulaParts";
+import { Frac, FormulaText } from "./shared/FormulaParts";
 
 function Amt({ val }: { val: number }) {
   return <span className="font-mono">{val.toLocaleString()}</span>;
@@ -291,7 +291,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
       </div>
       {expanded && formula && (
         <div className="ml-3 px-3 py-2 text-caption text-gray-600 dark:text-gray-400 bg-rose-50/60 dark:bg-rose-900/20 rounded-md space-y-1 print:block">
-          {formula}
+          <FormulaText value={formula} />
         </div>
       )}
     </div>

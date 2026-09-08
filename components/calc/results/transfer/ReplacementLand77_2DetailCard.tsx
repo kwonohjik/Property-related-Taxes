@@ -60,7 +60,7 @@ export function ReplacementLand77_2DetailCard({
         <LawArticleModal legalBasis="조세특례제한법 §133" label="§133 종합한도" />
       </div>
       <div className="space-y-0.5">
-        <p className="text-muted-foreground">① 대토보상 비율 = 대토보상 / (현금보상 + 대토보상)</p>
+        <p className="text-muted-foreground">① 대토보상 비율 = <Frac top="대토보상" bottom="현금보상 + 대토보상" /></p>
         <p>{(d.replacementRatio * 100).toFixed(2)}%</p>
       </div>
       <div className="space-y-0.5">

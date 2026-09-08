@@ -299,7 +299,7 @@ export function buildRedevGainFormula(
     if (gross) return `${fmt(t)} − ${fmt(a)} = ${fmt(before)} (안분 전)`;
     return (
       `${fmt(t)} − ${fmt(a)} = ${fmt(before)} (안분 전) ` +
-      `→ × (양도가 − 12억) / 양도가 = ${fmt(after)} (안분 후) ` +
+      `→ × (양도가 − 12억) / (양도가) = ${fmt(after)} (안분 후) ` +
       `− 1세대1주택 비과세 차감 ${fmt(after)} = 0 ` +
       `(인가일 평가액 ≤ 12억 — 서면2016-법령해석재산-2705)`
     );

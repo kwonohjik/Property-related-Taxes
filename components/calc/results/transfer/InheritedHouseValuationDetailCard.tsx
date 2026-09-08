@@ -8,7 +8,7 @@
 
 import type { InheritanceHouseValuationResult } from "@/lib/tax-engine/types/inheritance-house-valuation.types";
 import type { InheritanceAcquisitionResult } from "@/lib/tax-engine/types/inheritance-acquisition.types";
-import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: InheritanceHouseValuationResult;
@@ -102,7 +102,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-sky-800 dark:text-sky-300">계산 산식</p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-sky-100 dark:border-sky-800/30 p-2.5 text-xs text-muted-foreground whitespace-pre-wrap">
-            {formula}
+            <FormulaText value={formula} />
           </div>
         </div>
       )}
@@ -202,7 +202,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
           </p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-sky-100 dark:border-sky-800/30 p-2.5 text-xs space-y-1 text-muted-foreground">
             <p>{pre1990Result.caseLabel}</p>
-            <p className="font-mono">{pre1990Result.breakdown.formula}</p>
+            <p className="font-mono"><FormulaText value={pre1990Result.breakdown.formula} /></p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 pt-1">
               <span>취득 시 등급가액</span>
               <span className="font-mono tabular-nums text-right text-foreground">
