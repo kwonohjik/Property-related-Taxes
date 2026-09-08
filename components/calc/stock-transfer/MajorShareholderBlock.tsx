@@ -489,6 +489,56 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
         />
 
         {/* 시가총액·발행주식총수 산정 hint 6건 — 지분율 분자·분모라는 한 주제 (C-5) */}
+        {/* F-15·F-16 — 대차/사모펀드 자동 가산 입력 (C-8, 2026-09-08).
+            🔑 **합산 토글 밖**이다. 엔진은 합산 여부와 무관하게 본인 지분율에도 가산하므로
+            (`stock-classification.ts` effectiveShareRatio · 앵커 PHF-03/04), 토글 children에
+            두면 「본인 단독 판정 + 대여 주식 보유」에 입력 경로가 아예 없다
+            (ToggleCard는 `{checked && children}`이라 OFF면 렌더조차 안 된다). */}
+        <div className={`rounded-lg border p-3 space-y-3 ${
+          f15f16Eligible ? "border-amber-300 bg-amber-50/60" : "border-slate-200 bg-slate-50/40"
+        }`}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-amber-900">
+              대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
+            </span>
+            {!f15f16Eligible && (
+              <span className="text-micro text-slate-500">
+                {form.transferDate ? `양도일 ${form.transferDate}은 2013.2.15. 이전 → 미적용` : "양도일 입력 시 활성화"}
+              </span>
+            )}
+          </div>
+          <FieldCard
+            label="대차주식 수"
+            hint="본인이 대여 중인 주식 수. 양도일 2013.2.15. 이후 자동 합산 (지분율 가산)"
+            unit="주"
+          >
+            <DecimalInput
+              value={form.lentSharesCount}
+              onChange={(v) => onChange({ lentSharesCount: v })}
+              thousandSeparator
+              disabled={!f15f16Eligible}
+            />
+          </FieldCard>
+          <FieldCard
+            label="사모펀드 간접소유 주식 수"
+            hint="본인·기타주주가 사모펀드 통해 간접소유. 양도일 2013.2.15. 이후 자동 합산"
+            unit="주"
+          >
+            <DecimalInput
+              value={form.pefIndirectSharesCount}
+              onChange={(v) => onChange({ pefIndirectSharesCount: v })}
+              thousandSeparator
+              disabled={!f15f16Eligible}
+            />
+          </FieldCard>
+          {f15f16Eligible && (parseDecimal(form.lentSharesCount) > 0 || parseDecimal(form.pefIndirectSharesCount) > 0) && (
+            <p className="text-micro text-amber-700 bg-amber-100/70 px-2 py-1 rounded">
+              ✓ 양도일 2013.2.15. 이후 — 엔진이 지분율에 자동 가산합니다.
+              시가총액 가산은 사용자 입력 책임 (가격 외부 의존).
+            </p>
+          )}
+        </div>
+
         <MarketCapAndSharesHintsCard />
 
         {/* 최대주주그룹 합산 토글 */}
@@ -550,53 +600,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               onChange={(v) => handleAutoSyncChange({ combinedMarketCap: v })}
             />
 
-            {/* F-15·F-16 (2026-05-19) — 대차/사모펀드 자동 가산 입력 */}
-            <div className={`rounded-lg border p-3 space-y-3 ${
-              f15f16Eligible ? "border-amber-300 bg-amber-50/60" : "border-slate-200 bg-slate-50/40"
-            }`}>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-amber-900">
-                  대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
-                </span>
-                {!f15f16Eligible && (
-                  <span className="text-micro text-slate-500">
-                    {form.transferDate ? `양도일 ${form.transferDate}은 2013.2.15. 이전 → 미적용` : "양도일 입력 시 활성화"}
-                  </span>
-                )}
-              </div>
-              <FieldCard
-                label="대차주식 수"
-                hint="본인이 대여 중인 주식 수. 양도일 2013.2.15. 이후 자동 합산 (지분율 가산)"
-                unit="주"
-              >
-                <DecimalInput
-                  value={form.lentSharesCount}
-                  onChange={(v) => onChange({ lentSharesCount: v })}
-                  thousandSeparator
-                  disabled={!f15f16Eligible}
-                />
-              </FieldCard>
-              <FieldCard
-                label="사모펀드 간접소유 주식 수"
-                hint="본인·기타주주가 사모펀드 통해 간접소유. 양도일 2013.2.15. 이후 자동 합산"
-                unit="주"
-              >
-                <DecimalInput
-                  value={form.pefIndirectSharesCount}
-                  onChange={(v) => onChange({ pefIndirectSharesCount: v })}
-                  thousandSeparator
-                  disabled={!f15f16Eligible}
-                />
-              </FieldCard>
-              {f15f16Eligible && (parseDecimal(form.lentSharesCount) > 0 || parseDecimal(form.pefIndirectSharesCount) > 0) && (
-                <p className="text-micro text-amber-700 bg-amber-100/70 px-2 py-1 rounded">
-                  ✓ 양도일 2013.2.15. 이후 — 엔진이 지분율에 자동 가산합니다.
-                  시가총액 가산은 사용자 입력 책임 (가격 외부 의존).
-                </p>
-              )}
-            </div>
-
-            {/* Phase C (2026-05-19) — Group C: 특수관계인 합산 hint 3건 */}
+            {/* 특수관계인 합산 범위 hint 5건 (§178·창업투자조합 합류 — C-4) */}
             <CombinedShareHintsCard />
           </div>
         </ToggleCard>
