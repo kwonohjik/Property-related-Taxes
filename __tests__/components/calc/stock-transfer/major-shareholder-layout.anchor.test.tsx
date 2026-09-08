@@ -90,9 +90,9 @@ const JUDGABLE = {
 // ────────────────────────────────────────────────────────────────
 
 describe("L-1 — 판정 기준이 기준일 입력보다 앞에 온다", () => {
-  it("「현재 적용 기준」이 「직전 사업연도 종료일」보다 문서상 앞", () => {
+  it("「대주주 판정 기준」이 「직전 사업연도 종료일」보다 문서상 앞", () => {
     block(JUDGABLE);
-    const criteria = screen.getByText(/현재 적용 기준/);
+    const criteria = screen.getByText(/대주주 판정 기준/);
     const dateLabel = screen.getByText("직전 사업연도 종료일");
     expect(isBefore(criteria, dateLabel)).toBe(true);
   });

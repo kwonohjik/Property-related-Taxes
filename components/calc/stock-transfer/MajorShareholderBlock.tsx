@@ -309,7 +309,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
         {threshold && form.priorYearEndDate && (
           <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm">
             <p className="font-semibold text-violet-900 mb-1 flex items-center gap-1">
-              현재 적용 기준 (
+              대주주 판정 기준 (
               {form.marketType === "unlisted"
                 ? <LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호" />
                 : <LawArticleModal legalBasis="소득세법 시행령 §157" label="§157④" />}
