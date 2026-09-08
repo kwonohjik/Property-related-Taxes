@@ -309,7 +309,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
         {threshold && form.priorYearEndDate && (
           <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm">
             <p className="font-semibold text-violet-900 mb-1 flex items-center gap-1">
-              현재 적용 기준 (
+              대주주 판정 기준 (
               {form.marketType === "unlisted"
                 ? <LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호" />
                 : <LawArticleModal legalBasis="소득세법 시행령 §157" label="§157④" />}
@@ -367,20 +367,20 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
           />
         </FieldCard>
 
-        {/* F-06 (2026-05-19) — 직전사업연도 종료일 비거래일 안내
-            시행령 §157① · 교재 §3장 이미지 49 (3) ①: 종료일 종가 없으면 직전거래일 종가 적용 */}
+        {/* F-06 — 직전사업연도 종료일이 비거래일일 때 안내 (시행령 §157①).
+            🔑 사용자가 **무엇을 해야 하는지**만 남긴다.
+              · 「교재 49 (3) ①」 — 우리 내부 출처라 사용자는 무엇인지 모른다.
+              · 「키움 자동조회가 직전거래일 종가를 자동 적용」 — 도구가 당연히 해줄 일이라
+                안내할 가치가 없다. 안내가 길어지면 정작 읽어야 할 한 줄이 묻힌다. */}
         {priorYearEndTradingStatus && !priorYearEndTradingStatus.isTrading && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
             <p className="font-semibold">
-              ⚠️ 비거래일 입력 — 직전거래일 종가 적용 필요 (<LawArticleModal legalBasis="소득세법 시행령 §157 ①" label="§157①" />, 교재 49 (3) ①)
+              ⚠️ {form.priorYearEndDate}은 {priorYearEndTradingStatus.reason}입니다
+              (<LawArticleModal legalBasis="소득세법 시행령 §157 ①" label="§157①" />)
             </p>
             <p className="mt-1 text-amber-800">
-              <strong>{form.priorYearEndDate}</strong>은 {priorYearEndTradingStatus.reason}입니다.
-              해당 일자 종가가 없는 경우 <strong>직전거래일 최종시세가액</strong>을 사용해야 합니다.
-            </p>
-            <p className="mt-1 text-micro text-amber-700">
-              💡 키움증권 자동조회는 비거래일 입력 시 직전거래일 종가를 자동 적용합니다.
-              수동 입력 시 사용자가 직전거래일 시세로 시가총액을 산정한 뒤 입력해 주세요.
+              해당 일자 종가가 없으므로 <strong>직전거래일 최종시세가액</strong>으로
+              시가총액을 산정해 입력하세요.
             </p>
           </div>
         )}
