@@ -41,6 +41,7 @@ import {
 import { MARKET_LABEL } from "@/components/calc/stock-transfer/market-label";
 import { MajorThresholdTimeline } from "@/components/calc/stock-transfer/MajorThresholdTimeline";
 import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync";
+import { computeShareRatioAugmentation } from "@/lib/tax-engine/stock-transfer/stock-classification";
 import { KiwoomMarketCapHelper } from "./KiwoomMarketCapHelper";
 // F-06 (2026-05-19) — 직전사업연도 종료일 비거래일 → 직전거래일 적용 안내
 import { isKrxTradingDay, nonTradingLabel } from "@/lib/kiwoom/calendar";
@@ -170,9 +171,19 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     if (!threshold) {
       return { isMajor: false, selfMeetsRatio: false, selfMeetsCap: false, combMeetsRatio: false, combMeetsCap: false };
     }
-    const selfRatio = parseDecimal(form.selfShareRatio) * 0.01;
+    // 대차·사모펀드 가산 — 엔진과 **같은 함수**(산식 복제 금지). 본인·합산 양쪽에 더한다.
+    const { ratioAugment } = computeShareRatioAugmentation({
+      transferDate: new Date(form.transferDate),
+      lentSharesCount: parseDecimal(form.lentSharesCount),
+      pefIndirectSharesCount: parseDecimal(form.pefIndirectSharesCount),
+      totalIssuedShares: parseDecimal(form.totalIssuedShares),
+    });
+
+    const selfRatio = parseDecimal(form.selfShareRatio) * 0.01 + ratioAugment;
     const selfCap = parseAmount(form.selfMarketCap);
-    const combRatio = form.isLargestShareholderGroup ? parseDecimal(form.combinedShareRatio) * 0.01 : 0;
+    const combRatio = form.isLargestShareholderGroup
+      ? parseDecimal(form.combinedShareRatio) * 0.01 + ratioAugment
+      : 0;
     const combCap = form.isLargestShareholderGroup ? parseAmount(form.combinedMarketCap) : 0;
 
     const selfMeetsRatio = selfRatio >= shareRatioThreshold;
@@ -188,6 +199,11 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     form.isLargestShareholderGroup,
     form.combinedShareRatio,
     form.combinedMarketCap,
+    // 가산 축 — 빠뜨리면 대차주식을 입력해도 배지가 갱신되지 않는다
+    form.transferDate,
+    form.lentSharesCount,
+    form.pefIndirectSharesCount,
+    form.totalIssuedShares,
     threshold,
     shareRatioThreshold,
     marketCapThreshold,
