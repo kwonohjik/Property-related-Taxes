@@ -486,10 +486,13 @@ export function resolveOneRightExemptionClause(
  *   - 소득세법 §95③ + 시행령 §160: 안분 산식 (taxableRatio = (양도가 − 12억) / 양도가)
  *   - 시행령 §154: 1세대 범위
  *
- * 국세청 해석례 근거 (분모 = transferPrice 단일 — 해석 A):
- *   - "고가주택에 해당하는 조합원입주권 양도차익 산정방법" (국세청, 2010.11.01)
- *   - "1세대1주택인 고가주택의 입주권을 양도하는 경우 양도차익 산정방법" (국세청, 2008.01.10)
+ * 국세청 해석례 근거 — **일반(유상) 양도**에서 분모 = 양도가액 단일 (해석 A):
+ *   - 재산세제과-1061 "고가주택에 해당하는 조합원입주권 양도차익 산정방법" (2010.11.01)
+ *   - 서면5팀-74 "1세대1주택인 고가주택의 입주권을 양도하는 경우 양도차익 산정방법" (2008.01.10)
  *   (링크: https://taxlaw.nts.go.kr/qt/USEQTA002P.do?ntstDcmId=010000000000144597)
+ *   ⚠️ **이 3건은 부담부증여를 다루지 않는다**(본문 실독 2026-09-08 — 법 §96① 「양도자와
+ *      양수자간에 실제로 거래한 가액」이 전제다). 부담부증여의 분모는 해석 B가 따로 정한다 —
+ *      아래 `highValueBase` 주석.
  *
  * 미적용 케이스에서는 redev 입력 그대로 반환 (회귀 안전).
  * subject="right" 가드로 사례 44~48 (apt) 경로 영향 0.
@@ -513,22 +516,50 @@ export function applyOneRightExemption(
   }
 
   /**
-   * 🟠 **U-8 미결 (2026-09-08) — 부담부증여에서 이 분모는 「양도가액」이 아니다.**
+   * ✅ **U-8 해소 (2026-09-08) — 고가 판정·안분 분모는 「이전방식 무관 전체가액」이다.**
    *
-   * `input.transferPrice`는 부담부증여에서 소령 §159가 안분한 **채무액 B**다. 24억 입주권을
-   * 채무 6억으로 부담부증여하면 6억 ≤ 12억이 되어 **전액 비과세로 판정**된다.
+   * `input.transferPrice`는 부담부증여에서 소령 §159가 안분한 **채무액 B**다. 그 값으로 12억을
+   * 재면 24억 입주권을 채무 6억으로 부담부증여할 때 6억 ≤ 12억이 되어 **전액 비과세**가 된다.
    *
-   * 같은 결함을 완공 신축주택(`subject="apt"`) 경로에서는 고쳤다 —
-   * `transfer-tax-redevelopment-steps.ts`가 `input.burdenedGiftDenominator`(= 증여가액 C)를 쓴다.
-   * **여기는 고치지 않았다**: 아래 `resolveOneRightExemptionClause`의 근거 주석이
-   * 「국세청 해석례 근거 — **분모 = transferPrice 단일(해석 A)**」를 명시하고 있어,
-   * 해석 B(C 분모)로 바꾸려면 **그 해석례와의 충돌을 먼저 해소**해야 한다.
-   * 근거 없이 바꾸면 §89①4호 판정이 조용히 달라진다.
+   * ## 해석 A와 충돌하지 않는다 — 두 해석은 «다른 질문»에 답한다
    *
-   * ⇒ 착수 조건: 해석 A의 근거 해석례를 확인하고 **부담부증여 사안에서의 적용 여부**를 판정할 것.
-   *   계획서 `burdened-gift-redevelopment-assets.plan.md` §9 U-8 · §13.
+   * 아래 `applyOneRightExemption` 헤더가 인용하는 해석 A 3건(재산세제과-1061 ·
+   * 서면5팀-1152 · 서면5팀-74)은 **전부 유상 양도** 사안이고, 「양도자와 양수자간에 실제로
+   * 거래한 가액」(법 §96①)을 전제로 **양도차익 산정 방법**(§95③ · 영 §160 · 청산금 미산입)에
+   * 답한 것이다 — **부담부증여를 다루지 않는다**(본문 실독, 2026-09-08).
+   *
+   * 부담부증여에는 「실지거래가액」이 없다. 그 자리를 무엇으로 채우는지는 **국세청이 따로**
+   * 답해 두었다 (해석 B · `assertBurdenedGiftEligible`의 D-0-2 5건):
+   *
+   * > **서면4팀-1692**(2007.05.16) — 「고가주택의 판정은 주택(그 부수 토지 포함)의 전체이전,
+   * >   일부이전, **부담부 증여이전 등 이전방식에 관계없이 1주택의 전체가액을 기준으로 판정**
+   * >   하는 것이므로 1주택을 부담부 증여 이전하는 경우 고가주택 판정은 **당해 주택의
+   * >   증여가액에 의하는 것**입니다.」
+   * >   (질의 사실관계가 「양도가액을 채무액 3억으로 보아야 하는지」였고 답은 **아니다**였다.)
+   *
+   * > **서면4팀-1526**(2004.09.24) — 영 §160①1호 산식에서 「법 §95①의 양도차익」은 **영 §159**로
+   * >   산정한 「양도로 보는」 값으로 계산하고, **「양도가액은 〔채무액 × (전체증여가액 ÷ 채무액)〕
+   * >   을 적용」** 한다 = **전체 증여가액**.
+   *
+   * ## 입주권에도 같다
+   *
+   * 해석 A 자신이 「입주권이 요건을 충족하면 이를 **법 §89①3호에서 규정하는 고가주택으로 보아**
+   * §95③ · 영 §160으로 계산한다」고 밝힌다 — 입주권의 고가 판정은 **3호 고가주택 규정을 준용**한다.
+   * 현행 §89①**4호 단서**의 문언(「해당 조합원입주권의 **양도 당시 실지거래가액**이 12억원을
+   * 초과하는 경우」)도 3호 괄호(「**양도 당시 실지거래가액의 합계액**이 12억원을 초과하는
+   * 고가주택은 제외」)와 **같은 구조**다. 3호에서 증여가액을 쓰면서 4호만 채무액을 쓸 근거가 없다.
+   *
+   * ⚠️ **비교와 안분이 반드시 같은 값**이어야 한다 — 다르면 「12억을 넘는다」고 판정해 놓고 다른
+   *    분모로 나눈다. 완공 APT 경로에서 그 어긋남이 `taxableRatio = −1`을 만들어 과세대상
+   *    양도차익이 음수가 된 실측이 있다(`transfer-tax-redevelopment-steps.ts`). 그래서 한 상수다.
+   * ⚠️ `??`가 아니라 `> 0` 판정이다 — `??`는 0을 걸러내지 못한다.
    */
-  if (input.transferPrice <= HIGH_VALUE_THRESHOLD) {
+  const highValueBase =
+    (input.burdenedGiftDenominator ?? 0) > 0
+      ? input.burdenedGiftDenominator!
+      : input.transferPrice;
+
+  if (highValueBase <= HIGH_VALUE_THRESHOLD) {
     // ── 전액 비과세 (12억 이하) ──
     // 3분기 모두 trace 보존 후 0 마스킹
     const maskBranch = (branch: RedevelopmentResult["preApproval"]) => ({
@@ -554,7 +585,8 @@ export function applyOneRightExemption(
     // ── 12억 초과 안분과세 (§89①4호 각 목 외의 부분 단서 + §95③) ──
     // apt 분기 applyHighValueAllocation 과 동일 taxableRatio 로직 적용
     // 단, isOneHouseSingle 조건(householdHousingCount===1)과 별개로 right 전용 처리
-    const taxableRatio = (input.transferPrice - HIGH_VALUE_THRESHOLD) / input.transferPrice;
+    // 분모는 위 비교와 **같은 값**이다 (부담부증여면 증여가액 C, 그 외 양도가액).
+    const taxableRatio = (highValueBase - HIGH_VALUE_THRESHOLD) / highValueBase;
 
     const scaleBranch = (branch: RedevelopmentResult["preApproval"]) => {
       if (branch.gain <= 0) {
