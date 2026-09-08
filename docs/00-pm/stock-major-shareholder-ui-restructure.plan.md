@@ -454,3 +454,63 @@ success             true
 `KiwoomMarketCapHelper`는 버튼이 아니라 **219줄 카드**로 조회 산출내역(종가·주식수·시총·임계
 판정)까지 담는다(`:158-210`). `trailing`에 넣을 크기가 아니므로 **시총 입력칸 → 키움 카드**
 순서 교체로 간다.
+
+---
+
+## 12. 구현 결과 (2026-09-08 완료)
+
+### 커밋
+
+| 커밋 | 내용 |
+|---|---|
+| `a9dc7d34` | 계획 문서 (진단 8건·결함 2건) |
+| `839b786b` | 앵커 L-1~L-12 신설 — 현행 기준 **19 failed / 7 passed** |
+| `940030e5` | C-4·C-5 hint 4장 → 2장 + 상장전환 인라인 |
+| `8e0526b2` | C-1·C-2·C-3·C-6 기준 상단화·안내문 삭제·자동계산 위치 |
+| `7a916bde` | C-7 발행주식 총수 §3 일원화 + 배선 이식 |
+| `da43046d` | D-2 가산 헬퍼 추출 (엔진·화면 단일 소스) |
+| `0e2a9edf` | C-8 대차·PEF 게이트 해제 (D-1 해소) |
+| `bc8af177` | C-9 장내 토글 §6 분리 |
+
+### 검증
+
+| 항목 | 결과 |
+|---|---|
+| 앵커 L-1~L-12 | **26건 전건 GREEN** (19 failed → 0) |
+| 전건 vitest | **7278파일 20287테스트 · 실패 0** |
+| `tsc --noEmit` | 0건 |
+| `npm run lint` | **0 errors** (warning 349 — 기존 수준) |
+| 엔진 앵커 PHF-01~06 | 8건 통과 (헬퍼 추출 후 동작 불변) |
+| 기존 앵커 T-1·T-2·T-6·T-7 · MJ-1~5 | 통과 유지 |
+
+### 파일 크기 (File Size Policy)
+
+| 파일 | 줄 |
+|---|---|
+| `MajorShareholderBlock.tsx` | 708 → **704** |
+| `MajorShareholderCheckpointHints.tsx` | 217 → **211** |
+| `TradingVenueBlock.tsx` (신설) | 73 |
+| `Step1.tsx` | 331 → **372** |
+
+장내 토글 33줄이 빠졌지만 `IssuedSharesReadout`과 근거 주석이 그만큼 들어와 실질 변화가
+없다. **704는 분리 트리거(800)도 위험구간(≥750)도 아니므로 기회주의적 분리를 하지 않는다**
+— 「700~749에 안정적으로 앉은 파일을 커지지도 않는데 미리 쪼개면 순수 낭비」(File Size Policy).
+
+### 계획 대비 달라진 것
+
+1. **C-6** — `CurrencyInput`에 액션 슬롯이 없고(V-1) `KiwoomMarketCapHelper`가 219줄 카드라
+   `FieldCard.trailing`에 넣을 수 없었다. 「입력칸 → 키움 카드」 **순서 교체**로 갔다.
+2. **D-2** — 계획 수립 시점에 없던 항목. V-3(`computeAutoIsMajor` 정독) 중 발견했다.
+   C-8이 입력 경로를 여는 순간 화면과 엔진이 갈리는 구조였다.
+3. **앵커 셀렉터 2회 정정** — 둘 다 「구별력 0」 함정이었다:
+   - `CollapsibleHintCard`가 접히면 본문을 렌더하지 않아 「본문에 X가 없다」가 공짜로 참이
+     됐다 ⇒ 본문 단언 전에 펼치는 헬퍼를 도입.
+   - `IssuedSharesReadout`이 §3 라벨과 같은 문구를 인용해 셀렉터가 두 곳에 걸렸다
+     ⇒ FieldCard 조상 기준으로 좁혔다([[feedback_hint_quoting_toggle_title_breaks_selector]]).
+
+### 남은 것 (범위 밖 · §8-2)
+
+`computeAutoIsMajor`는 `isLargestShareholderGroup`이 false면 합산값을 0으로 버리지만
+엔진은 `forcedCombinedJudgment`(본인 지분율·시총이 **둘 다 0**이고 합산값이 있을 때)로
+합산을 강제 적용한다. 이 조합에서 화면과 엔진이 여전히 갈린다. D-1/D-2와 무관하게
+이미 존재하던 괴리라 이번 범위에서 고치지 않았다.
