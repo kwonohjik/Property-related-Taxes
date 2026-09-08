@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 export interface OtherLandDetailSectionProps {
   asset: AssetForm;
@@ -602,7 +603,14 @@ export function OtherLandDetailSection({
               {revenuePreview ? (
                 revenuePreview.applied ? (
                   <div className="rounded-md bg-amber-100/60 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 space-y-0.5">
-                    <p>영위 {revenuePreview.days}일 ÷ {revenuePreview.taxYear}년 {revenuePreview.yearDays}일 환산</p>
+                    <p>
+                      영위{" "}
+                      <Frac
+                        top={`${revenuePreview.days}일`}
+                        bottom={`${revenuePreview.taxYear}년 ${revenuePreview.yearDays}일`}
+                      />{" "}
+                      환산
+                    </p>
                     <p className="font-semibold">연간환산 수입금액 = {revenuePreview.annualized.toLocaleString()}원</p>
                   </div>
                 ) : (

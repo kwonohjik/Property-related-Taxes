@@ -15,6 +15,7 @@ export { ContributionFields } from "./contribution-form";
 // §39①3호 전환주식 폼도 분리(800줄 정책). re-export로 import 경로 보존.
 export { ConvertibleStockFields } from "./convertible-stock-form";
 import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint } from "./capital-forms-shared";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -175,7 +176,15 @@ export function MergerFields({ form, set }: Props) {
                 checked={isAuto}
                 onCheckedChange={(v) => set({ mrgMergedPriceMode: v ? "auto" : "direct" })}
                 title="합병 후 1주당 평가가액 — 단순평균액 자동계산 (§28⑤)"
-                description="OFF: 직접입력 / ON: (과대평가 1주평가×주식수 + 과소평가 1주평가×주식수) ÷ 합병 후 주식수"
+                description={
+                  <>
+                    OFF: 직접입력 / ON:{" "}
+                    <Frac
+                      top="과대평가 1주평가×주식수 + 과소평가 1주평가×주식수"
+                      bottom="합병 후 주식수"
+                    />
+                  </>
+                }
               >
                 <CurrencyInput label="과소평가(반대)법인 1주당 평가가액" value={form.mrgUnderSharePrice} onChange={(v) => set({ mrgUnderSharePrice: v })} placeholder="1주당 평가가액 (원)" />
                 <CurrencyInput label="과소평가법인 합병 전 주식수" value={form.mrgUnderPreShares} onChange={(v) => set({ mrgUnderPreShares: v })} placeholder="합병 전 주식수" />

@@ -25,6 +25,7 @@ import { calcNetIncomePerShare } from "@/lib/tax-engine/stock-transfer/stock-val
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // PDF 행 라벨 (가산 4행)
 const ADD_LABELS = [
@@ -188,8 +189,14 @@ export function YearColumn({
       {(preview.perShareValue !== 0 || preview.netIncomeAmount !== 0) && (
         <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-800 space-y-0.5">
           <p>17. 순손익액 = A − B = <strong>{preview.netIncomeAmount.toLocaleString()}</strong></p>
-          <p>21. 1주당 순손익액 = 17 ÷ 20 = <strong>{preview.perShareIncome.toLocaleString()}</strong></p>
-          <p>24. 1주당 가액 = 21 ÷ 환원율 = <strong className="text-amber-900">{preview.perShareValue.toLocaleString()}</strong></p>
+          <p>
+            21. 1주당 순손익액 = <Frac top="17" bottom="20" /> ={" "}
+            <strong>{preview.perShareIncome.toLocaleString()}</strong>
+          </p>
+          <p>
+            24. 1주당 가액 = <Frac top="21" bottom="환원율" /> ={" "}
+            <strong className="text-amber-900">{preview.perShareValue.toLocaleString()}</strong>
+          </p>
           {preview.netIncomeAmount < 0 && (
             <p className="text-amber-700 pt-0.5 border-t border-amber-200">
               결손 입력 — 1주당 순손익액이 음수이므로 <strong>0으로 보아</strong> 평가합니다.

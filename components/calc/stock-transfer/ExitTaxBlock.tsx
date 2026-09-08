@@ -405,11 +405,11 @@ export function ExitTaxBlock({ form, onChange }: ExitTaxBlockProps) {
           <div className="space-y-2">
             <div className="rounded-lg border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-700 leading-relaxed">
               미신고 가산세 = 보유 주식 액면금액 합계 × 2% (§118의15).
-              액면금액이 없는 무액면주식은 자본금÷발행총주수로 환산합니다.
+              액면금액이 없는 무액면주식은 자본금을 발행총주수로 나누어 환산합니다.
             </div>
             <FieldCard
               label="보유 주식 액면금액 합계 (원)"
-              hint="출국일 전날 기준 보유 주식 전체의 액면금액 합계. 무액면주식은 자본금÷발행총주수로 환산."
+              hint="출국일 전날 기준 보유 주식 전체의 액면금액 합계. 무액면주식은 자본금을 발행총주수로 나누어 환산."
             >
               <CurrencyInput
                 label=""

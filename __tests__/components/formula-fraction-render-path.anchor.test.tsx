@@ -180,14 +180,11 @@ const NON_DIVISION_ALLOWLIST: { file: string; snippet: string; 사유: string }[
   { file: "new-99-3.ts", snippet: "부호 음수/음수", 사유: "부호 병기 — 나눗셈 아님" },
   { file: "MixedUseResultCard.tsx", snippet: "토지/건물 별 보유연수", 사유: "대비 병기 — 나눗셈 아님" },
 
-  // ── 입력 폼(`components/calc/transfer`) — 매체가 JSX를 받지 못하는 두 곳 ──
-  // `title=`은 HTML 속성이라 값이 **평문 문자열**이다. 브라우저 기본 툴팁이 그리므로
-  // `<Frac>`은 물리적으로 들어갈 수 없다. 이 축에서 유일한 `title=` 산식이다.
-  {
-    file: "CompanionAssetCardReplot.tsx",
-    snippet: "의제취득면적 = 종전×(교부÷권리)",
-    사유: "title= HTML 속성 — 평문 전용 매체(JSX 불가)",
-  },
+  // ── 입력 폼(`components/calc/transfer`) ──
+  // 🔄 `CompanionAssetCardReplot.tsx`의 `title=` 항목은 **없어졌다**(2026-09-08 2차).
+  //    평문 매체라 `<Frac>`이 불가한 것은 맞지만, 그렇다고 `÷`를 남길 이유는 아니었다 —
+  //    「교부면적을 권리면적으로 나눈 비율」로 **말로 풀어** 예외 자체를 없앴다.
+  //    ⇒ 매체가 막히면 «예외로 남긴다»가 아니라 «말로 푼다»가 먼저다.
   // `PrecedentArticleModal`의 `summary?: string`을 `<pre>`가 그대로 찍는다.
   // NTS 집행기준 99-164-10 **원문 재현**이라 표기를 바꾸면 인용이 아니게 된다
   // (별지 서식 replica와 같은 층위의 표준 예외).

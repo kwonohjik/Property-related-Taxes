@@ -459,7 +459,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
                 <DateInput value={form.loanEndDate} onChange={(v) => set({ loanEndDate: v })} />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">마지막 해가 1년 미만이면 일수 안분(÷365). 비우면 1년분 단건.</p>
+            <p className="text-xs text-muted-foreground">마지막 해가 1년 미만이면 일수 안분(365일 기준). 비우면 1년분 단건.</p>
           </ToneCard>
         </>
       )}

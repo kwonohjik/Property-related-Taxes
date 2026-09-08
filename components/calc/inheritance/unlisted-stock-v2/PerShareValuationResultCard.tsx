@@ -34,7 +34,7 @@ const AGENCY_TYPE_LABEL: Record<AgencyType, string> = {
  * capRate는 최상위 UnlistedStockValuationResult.capitalizationRate 주입
  */
 function buildEstimatedProfitHint(r: EstimatedProfitResult, capRate: number): string {
-  const base = `§56② 추정이익 평균가액 ${r.estimatedProfitAverage.toLocaleString()}원 (기관 ${r.agencyCount}개 평균) ÷ 환원율 ${(capRate * 100).toFixed(0)}%`;
+  const base = `§56② 추정이익 평균가액 ${r.estimatedProfitAverage.toLocaleString()}원 (기관 ${r.agencyCount}개 평균)을 환원율 ${(capRate * 100).toFixed(0)}%로 나눈 값`;
   if (r.agencyMeta && r.agencyMeta.length > 0) {
     const agencyList = r.agencyMeta
       .map((a) => (a.name ? `${AGENCY_TYPE_LABEL[a.type]} ${a.name}` : AGENCY_TYPE_LABEL[a.type]))
@@ -116,8 +116,8 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
             result.treasuryStockApplied?.purpose === "temporary_holding"
               ? `자기주식을 1주당 평가액으로 재평가한 순자산가치 (자기주식 일시보유)`
               : result.treasuryStockApplied?.purpose === "cancellation"
-                ? `= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(result.treasuryStockApplied.effectiveTotalShares)}주 (발행주식총수 − 자기주식)`
-                : `= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(input.totalShares)}주 (발행주식총수)`
+                ? `= ${fmt(result.netAssetTotal)}원을 ${fmt(result.treasuryStockApplied.effectiveTotalShares)}주로 나눈 값 (발행주식총수 − 자기주식)`
+                : `= ${fmt(result.netAssetTotal)}원을 ${fmt(input.totalShares)}주로 나눈 값 (발행주식총수)`
           }
           law="상증령 §54 ②"
         />
@@ -128,7 +128,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           hint={
             result.estimatedProfitResult?.applied
               ? buildEstimatedProfitHint(result.estimatedProfitResult, result.capitalizationRate)
-              : `최근 3년 가중평균 ${fmt(result.weightedNetIncomePerShare)}원 ÷ 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%`
+              : `최근 3년 가중평균 ${fmt(result.weightedNetIncomePerShare)}원을 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%로 나눈 값`
           }
           law={
             result.estimatedProfitResult?.applied
@@ -228,7 +228,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           cellNum="⑥-㉠"
           label="가중평균"
           value={`${fmt(result.weightedAvgPerShare)}원`}
-          hint="(⑤ × 3 + ④ × 2) ÷ 5 (일반) 또는 (⑤ × 2 + ④ × 3) ÷ 5 (부동산과다보유)"
+          hint="(⑤ × 3 + ④ × 2)를 5로 나눈 값 (일반) 또는 (⑤ × 2 + ④ × 3)을 5로 나눈 값 (부동산과다보유)"
           law="상증령 §54 ① 본문"
         />
         <ResultRow

@@ -24,6 +24,7 @@ import { calcNetAssetPerShare } from "@/lib/tax-engine/stock-transfer/stock-valu
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const ASSET_ADD_LABELS = [
   "2. 평가차액",
@@ -205,7 +206,10 @@ export function YearColumn({
         <div className="rounded border border-sky-300 bg-sky-100/60 px-3 py-2 text-xs text-sky-800 space-y-0.5">
           <p>18. 영업권 포함 전 순자산가액 = <strong>{preview.netAssetBeforeGoodwillRaw.toLocaleString()}</strong></p>
           <p>20. 순자산가액 = <strong>{preview.netAssetAmount.toLocaleString()}</strong></p>
-          <p>1주당 순자산가치 = 순자산 ÷ 주식수 = <strong className="text-sky-900">{preview.perShareAsset.toLocaleString()}</strong></p>
+          <p>
+            1주당 순자산가치 = <Frac top="순자산" bottom="주식수" /> ={" "}
+            <strong className="text-sky-900">{preview.perShareAsset.toLocaleString()}</strong>
+          </p>
           {preview.zeroFloorApplied && (
             <p className="text-sky-700 pt-0.5 border-t border-sky-200">
               자본잠식 — 영업권 포함 전 순자산가액이 0원 이하이므로 <strong>0원으로 보아</strong> 평가합니다.

@@ -84,7 +84,7 @@ export function ReplotReductionFields({
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">
             종전면적 (㎡)
-            <span title="환지 전 보유했던 원래 면적. 의제취득면적 = 종전×(교부÷권리)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
+            <span title="환지 전 보유했던 원래 면적. 의제취득면적 = 종전면적 × 「교부면적을 권리면적으로 나눈 비율」" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
           <DecimalInput
             value={asset.priorLandArea}

@@ -258,7 +258,7 @@ export function ExpropriationBlock({
               value={asset.compensationPerSqm}
               onChange={(v) => onChange({ compensationPerSqm: v })}
               hideUnit
-              hint="(현금+채권)÷양도면적 자동 (수정 가능, 원/㎡)"
+              hint="「현금+채권」을 양도면적으로 나눠 자동 산정 (수정 가능, 원/㎡)"
             />
             <CurrencyInput
               label="③ 보상산정 기초 기준시가"

@@ -17,6 +17,7 @@ import type {
   CalculationStep,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ============================================================
 // 금액 인라인 표시 — 라벨(한국어) + 값
@@ -173,11 +174,11 @@ function buildSection30Formula(
     return (
       <>
         <div>
-          단기재상속공제 = 전의 산출세액 × (재상속분 재산가액 ÷ 전의 상속재산가액) × 공제율
+          단기재상속공제 = 전의 산출세액 × <Frac top="재상속분 재산가액" bottom="전의 상속재산가액" /> × 공제율
         </div>
         <div className="text-gray-500 dark:text-gray-400 mt-1">
           경과 구간 {band}년 이내 → 공제율 {(creditRate * 100).toFixed(0)}% · 전의 산출세액{" "}
-          <Amt val={priorComputedTax} /> ÷ 전의 상속재산가액 <Amt val={priorEstateValue} />
+          <Amt val={priorComputedTax} />, 전의 상속재산가액 <Amt val={priorEstateValue} />
         </div>
         <table className="mt-1 w-full text-caption">
           <thead>

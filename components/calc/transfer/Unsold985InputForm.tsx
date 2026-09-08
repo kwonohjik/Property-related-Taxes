@@ -14,6 +14,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReductionStdPriceSection } from "@/components/calc/transfer/ReductionStdPriceSection";
 import type { ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 type Unsold985Form = Extract<AssetReductionForm, { type: "unsold_98_5" }>;
 
@@ -88,7 +89,7 @@ export function Unsold985InputForm({
             onChange={(v) => onChange({ priceReductionRatePct985: v })}
           />
           <p className="mt-1 text-micro text-muted-foreground">
-            (최초 입주자 모집공고에 공시된 분양가격 − 실제 매매가격) ÷ 최초 공시 분양가격 × 100.
+            <Frac top="최초 입주자 모집공고에 공시된 분양가격 − 실제 매매가격" bottom="최초 공시 분양가격" /> × 100.
             10% 이하 = 감면율 60% / 10% 초과 20% 이하 = 80% / 20% 초과 = 100% (법 §98의5①각호)
           </p>
         </div>
