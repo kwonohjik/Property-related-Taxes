@@ -50,6 +50,7 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   // 2026-09-08 편입 — 없으면 `ptLabel`이 undefined가 되어 **헤더 자산 라벨이 사라진다**.
   // 라벨 문자열은 `components/calc/transfer/asset-labels.ts`의 `ASSET_KIND_LABELS`와 같게 둔다.
   redevelopment_apt: "재개발/재건축 APT",
+  right_to_move_in: "입주권",
 };
 
 export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }: Props) {
@@ -101,9 +102,30 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
             </td>
           </tr>
           <tr className={rowSelected("supplementary")}>
-            <td className="py-1 pr-2">① 보충적평가 (양도세 §99)</td>
+            <td className="py-1 pr-2">
+              {bg.assetKind === "right_to_move_in"
+                ? "① 보충적평가 (상증법 §61③ — 조합원입주권)"
+                : "① 보충적평가 (양도세 §99)"}
+            </td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.sangjeungbeopValuation.supplementary)}</td>
           </tr>
+          {/* 조합원입주권 평가 3항 구성 (상증령 §51② · 상증칙 §16③) — 합계는 ①과 같다. */}
+          {bg.rightValuationDetail && (
+            <>
+              <tr>
+                <td className="py-1 pr-2 pl-4 text-caption text-fuchsia-700">· 조합원권리가액 (상증법 시행규칙 §16③)</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap text-caption">{fmt(bg.rightValuationDetail.memberRightsValue)}</td>
+              </tr>
+              <tr>
+                <td className="py-1 pr-2 pl-4 text-caption text-fuchsia-700">· 증여일까지 납입한 계약금·중도금</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap text-caption">{fmt(bg.rightValuationDetail.paidInstallments)}</td>
+              </tr>
+              <tr>
+                <td className="py-1 pr-2 pl-4 text-caption text-fuchsia-700">· 증여일 현재 프리미엄</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap text-caption">{fmt(bg.rightValuationDetail.premium)}</td>
+              </tr>
+            </>
+          )}
           <tr className={rowSelected("mortgage")}>
             <td className="py-1 pr-2">② 담보평가</td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.sangjeungbeopValuation.mortgage)}</td>

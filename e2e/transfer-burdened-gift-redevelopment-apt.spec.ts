@@ -48,7 +48,12 @@ test.describe("부담부증여 × 재개발 APT — 입력 경로 개방", () =>
     await expect(card.locator('[data-testid="bg-acq-std-price"]')).toBeVisible();
   });
 
-  test("🔴 대조군 — 조합원입주권은 아직 미지원 안내가 뜬다", async ({ page }) => {
+  /**
+   * 🔄 **대조군 교체 (2026-09-08)** — 종전 대조군은 조합원입주권이었다. 같은 날 후속 배치에서
+   *    입주권이 지원에 편입되면서 그 자산으로는 안내문이 렌더되지 않는다. 아직 미지원인
+   *    분양권(사용자 판단으로 범위 밖)으로 바꾼다. 단언 축은 그대로다.
+   */
+  test("🔴 대조군 — 분양권은 미지원 안내가 뜬다 (범위 밖)", async ({ page }) => {
     test.setTimeout(60_000);
 
     await page.goto("/calc/transfer-tax");
@@ -58,7 +63,7 @@ test.describe("부담부증여 × 재개발 APT — 입력 경로 개방", () =>
     await expandAssetSection(page, 1);
     await expandAssetSection(page, 2);
 
-    await card.getByRole("button", { name: "입주권", exact: true }).click();
+    await card.getByRole("button", { name: "분양권", exact: true }).click();
     await card.getByRole("radio", { name: /부담부증여/ }).check();
 
     const notice = card.getByText(/에서만 지원됩니다/);

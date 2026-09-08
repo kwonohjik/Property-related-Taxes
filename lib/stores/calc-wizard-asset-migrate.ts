@@ -389,6 +389,25 @@ export function migrateAsset(raw: unknown): AssetForm {
     a.isSalesCaseAcquisition = false;
     a.redevIsSuccessorMember = "";
   }
+  /**
+   * ③ 조합원입주권 평가 3항 — stale sessionStorage 가드 (2026-09-08).
+   *
+   * 신규 필드라 저장된 폼에는 없다. `undefined`로 남으면 `parseAmount(undefined)`가
+   * 도는 자리가 생기고, ⑤ `CurrencyInput`이 uncontrolled로 마운트된다.
+   *
+   * ⚠️ **다른 자산에서 입주권으로 바꾼 경우도 정리한다** — 위 `right_to_move_in` 블록과 달리
+   *    여기서는 「입주권이 아닌 자산에 남아 있는 입주권 값」을 지운다. 남겨 두면 ④ API 변환이
+   *    자산 종류를 보고 분기하므로 세액에는 닿지 않지만, 자산 종류를 되돌렸을 때
+   *    ⑧ 자기일관 검사가 옛 값으로 오판한다.
+   */
+  if (a.bgRightMemberRightsValue === undefined) a.bgRightMemberRightsValue = "";
+  if (a.bgRightPaidInstallments === undefined) a.bgRightPaidInstallments = "";
+  if (a.bgRightPremium === undefined) a.bgRightPremium = "";
+  if (a.assetKind !== "right_to_move_in") {
+    a.bgRightMemberRightsValue = "";
+    a.bgRightPaidInstallments = "";
+    a.bgRightPremium = "";
+  }
   // 승계조합원 입주권 취득가액 (§97①1호 가목) — sessionStorage 호환
   if (a.successorRightAcqPrice === undefined) a.successorRightAcqPrice = "";
   if (a.successorRightAddedContribution === undefined) a.successorRightAddedContribution = "";

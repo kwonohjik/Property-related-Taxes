@@ -77,6 +77,7 @@ const SUPPORTED_ASSET_KINDS: AssetForm["assetKind"][] = [
   "general_building",
   "commercial_building",
   "redevelopment_apt",
+  "right_to_move_in",
 ];
 
 /**

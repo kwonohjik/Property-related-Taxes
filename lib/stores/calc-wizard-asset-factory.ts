@@ -467,6 +467,10 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     bgActualAcquisitionLand: "",
     bgActualAcquisitionBuilding: "",
     bgActualAcquisitionTotal: "",
+    // 조합원입주권 평가 3항 (상증령 §51②) — ①이 non-optional string이라 undefined는 타입 에러다.
+    bgRightMemberRightsValue: "",
+    bgRightPaidInstallments: "",
+    bgRightPremium: "",
     // 이월과세 §97의2 — 「당초 증여자」 취득 당시 값 두 번째 벌 (D-7b)
     bgCoDonorLandStdPriceAtAcq: "",
     bgCoDonorBuildingStdPriceAtAcq: "",

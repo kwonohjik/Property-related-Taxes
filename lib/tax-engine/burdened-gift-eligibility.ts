@@ -29,7 +29,7 @@ const HIGH_PRICE_THRESHOLD_KRW = 1_200_000_000;
  *
  * · F-3 (2026-05-12): `commercial_building` 편입.
  * · 2026-09-08: `redevelopment_apt` 편입 (§166② 완공 신축주택 × §159).
- *   조합원입주권(`right_to_move_in`)은 §61③ 평가 축이 달라 후속 배치다.
+ * · 2026-09-08: `right_to_move_in` 편입 (상증법 §61③ 평가 — §159①1호 A괄호 미발동).
  */
 export const BURDENED_GIFT_SUPPORTED_PROPERTY_TYPES: string[] = [
   "housing",
@@ -38,6 +38,7 @@ export const BURDENED_GIFT_SUPPORTED_PROPERTY_TYPES: string[] = [
   "general_building",
   "commercial_building",
   "redevelopment_apt",
+  "right_to_move_in",
 ];
 
 /**
