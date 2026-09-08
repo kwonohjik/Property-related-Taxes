@@ -146,9 +146,9 @@ export function calcSpouseDeduction(
     breakdown: [
       { label: "법정상속분", amount: legalShareAmount, lawRef: INH.SPOUSE_DEDUCTION },
       { label: "배우자 실제 상속금액", amount: actualAmount },
-      { label: "공제 기준액 (min)", amount: baseBeforeFloor },
+      { label: "공제 기준액 (법정상속분·실제 상속금액 중 작은 금액)", amount: baseBeforeFloor },
       {
-        label: `배우자공제 (min(5억,기준) ~ max 30억)`,
+        label: `배우자공제 (5억원 최소보장 ~ 30억원 한도)`,
         amount: deduction,
         lawRef: INH.SPOUSE_DEDUCTION,
       },

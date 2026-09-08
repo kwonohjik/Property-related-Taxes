@@ -244,8 +244,8 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           value={`${fmt(result.finalPerShareValue)}원`}
           hint={
             result.preIpoListingResult?.applied
-              ? `${preIpoClause} ${preIpoLabel} — MAX(공모가격 ${fmt(result.preIpoListingResult.publicOfferingPrice)}원, 보충적평가 ${fmt(result.preIpoListingResult.supplementaryValue)}원)`
-              : `MAX(⑥-㉠, ⑥-㉡)${result.netAssetFloorApplied ? " — 80% 하한 우선" : " — 가중평균 우선"}`
+              ? `${preIpoClause} ${preIpoLabel} — 공모가격 ${fmt(result.preIpoListingResult.publicOfferingPrice)}원과 보충적평가 ${fmt(result.preIpoListingResult.supplementaryValue)}원 중 큰 금액`
+              : `⑥-㉠과 ⑥-㉡ 중 큰 금액${result.netAssetFloorApplied ? " — 80% 하한 우선" : " — 가중평균 우선"}`
           }
           law={result.preIpoListingResult?.applied ? preIpoLaw : "상증령 §54 ①"}
           emphasized

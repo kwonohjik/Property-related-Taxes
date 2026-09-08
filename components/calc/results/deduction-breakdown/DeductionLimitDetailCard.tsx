@@ -150,7 +150,7 @@ function DeductionLimitContent({
         muted
       />
       <SubTotalRow
-        label={`Min(공제합계, §24 한도)${detail.wasCapped ? " — 한도 초과 적용" : ""}`}
+        label={`공제합계와 §24 한도 중 작은 금액${detail.wasCapped ? " — 한도 초과 적용" : ""}`}
         value={formatKRW(detail.limitedDeduction)}
         tone={detail.wasCapped ? "amber" : "blue"}
       />

@@ -367,7 +367,7 @@ export function calcGiftGenerationSkipSurchargeWithLimit(
       lawRef: GIFT.GENERATION_SKIP_LIMIT_FORMULA,
     },
     {
-      label: "⑪ 차감 기할증과세액 Min(⑨,⑩)",
+      label: "⑪ 차감 기할증과세액 — ⑨와 ⑩ 중 작은 금액",
       amount: priorSurchargeCredit,
     },
     {

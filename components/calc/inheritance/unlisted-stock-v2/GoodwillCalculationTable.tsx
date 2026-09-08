@@ -90,7 +90,7 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
             <RowDisplay cellNum="아" label="매입 무체재산권 차감액" value={goodwill.intangibleDeduction} />
             <tr className="border-t-2 border-amber-400 bg-amber-100/60">
               <td className="py-2 pr-2 font-bold text-amber-900">자.</td>
-              <td className="py-2 px-1 font-bold text-amber-900">영업권 평가액 = max(사 − 아, 0)</td>
+              <td className="py-2 px-1 font-bold text-amber-900">영업권 평가액 = 사 − 아 (음수면 0)</td>
               <td className="py-2 pl-1 text-right font-mono font-bold text-amber-900">
                 {fmt(goodwill.goodwillFinal)}원
               </td>

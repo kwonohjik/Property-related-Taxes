@@ -68,8 +68,8 @@ export function ExcessDividendFields({ form, set }: Props) {
             },
             {
               value: "comprehensive",
-              label: "종합과세 확정 — Max(ⓐ−ⓑ, 14%) 산식 (규칙 §10의3②3호)",
-              description: "종합소득과세표준을 입력하면 Max 산식으로 자동 계산합니다",
+              label: "종합과세 확정 — ⓐ−ⓑ와 14% 상당액 중 큰 금액 (규칙 §10의3②3호)",
+              description: "종합소득과세표준을 입력하면 둘 중 큰 금액으로 자동 계산합니다",
               testId: "ed-mode-comprehensive",
             },
           ]}
@@ -118,7 +118,8 @@ export function ExcessDividendFields({ form, set }: Props) {
               />
             </FieldCard>
             <p className="text-xs text-muted-foreground">
-              Max(ⓐ과세표준 세율 적용액 − ⓑ차감액 세율 적용액, 초과배당금액 × 14%) — 서버 계산 후 결과에 표시됩니다.
+              (ⓐ과세표준 세율 적용액 − ⓑ차감액 세율 적용액)과 (초과배당금액 × 14%) 중 큰 금액 — 서버 계산 후 결과에
+              표시됩니다.
             </p>
           </div>
         )}
@@ -419,7 +420,7 @@ export function OrgChangeFields({ form, set }: Props) {
           <CurrencyInput label="변동 후 가액" value={form.ocPostValue} onChange={(v) => set({ ocPostValue: v })} />
         </>
       )}
-      <CurrencyInput label="변동 전 해당 재산가액 (기준금액 산정)" value={form.ocBaseValue} onChange={(v) => set({ ocBaseValue: v })} hint="기준금액 = min(변동전 재산가액 × 30%, 3억)" placeholder="변동 전 재산가액 (원)" />
+      <CurrencyInput label="변동 전 해당 재산가액 (기준금액 산정)" value={form.ocBaseValue} onChange={(v) => set({ ocBaseValue: v })} hint="기준금액 = (변동 전 재산가액 × 30%)와 3억원 중 작은 금액" placeholder="변동 전 재산가액 (원)" />
     </ToneCard>
   );
 }
@@ -578,7 +579,7 @@ export function SpecificCorpFields({ form, set }: Props) {
             label="법인세 상당액"
             value={form.scCorporateTax}
             onChange={(v) => set({ scCorporateTax: v })}
-            hint="(산출세액 − 공제·감면) × min(거래이익/소득금액, 1). 이월결손금 0이면 0 입력"
+            hint="(산출세액 − 공제·감면) × 「거래이익을 소득금액으로 나눈 값」과 1 중 작은 값. 이월결손금 0이면 0 입력"
             data-testid="sc-corporate-tax"
           />
         )}

@@ -213,6 +213,12 @@ describe("D-4 산식이 한국어 풀어쓰기다", () => {
   });
 
   /**
+   * 함수 호출 표기 `min(`/`max(` — **대소문자 무관**. 선행 문자 조건이 `Math.min(`처럼
+   * 점 뒤에 오는 **코드**를 배제한다(식별자 일부인 `formatMax(`도 함께 배제된다).
+   */
+  const MINMAX_CALL = /(^|[^A-Za-z0-9_.])(min|max)\s*\(/i;
+
+  /**
    * `min(...)`·`max(...)` — `floor(`와 같은 **함수 표기**다. 정본은 한국어다:
    * 「A와 B 중 큰 금액 / 작은 금액」.
    *
@@ -224,8 +230,16 @@ describe("D-4 산식이 한국어 풀어쓰기다", () => {
    *      `<FormulaText>`로 그대로 인쇄하는데 `TARGETS`에 없었다 — 추가했다.
    *
    * ⚠️ `${Math.max(...)}`·`{Math.min(...)}`는 **코드**다(화면엔 값이 찍힌다) — 치환 후 검사한다.
+   *
+   * 🔴 **④ 대소문자를 구분하고 있었다** (2026-09-08 2차). `\b(min|max)\(`는 소문자만 봐서
+   *    `MIN(`·`Max(`·`MAX[MIN(`을 통째로 놓쳤다. 그래서 이 규칙을 넣고 「양도세 종결」이라
+   *    보고한 뒤에도 **양도세 표면에 2건이 남아 있었다** —
+   *    `CommercialBuildingValuationDetailCard:250`(`MIN(15, 보유연수)`)와
+   *    `DetailedStatementFormulaBuilders:238`(`MAX(세율군별 합산세액, …)`).
+   *    ⇒ `/i`로 바꾸되 `Math.min(`은 앞 문자 `.`으로 배제한다(`[^A-Za-z0-9_.]` 선행 조건).
+   *    [[feedback_enumerate_forms_vs_conservative_superset]]
    */
-  it("표시 문구에 함수 표기 `min(`·`max(`가 없다", () => {
+  it("표시 문구에 함수 표기 `min(`·`max(`가 없다 (대소문자 무관)", () => {
     const FORMULA_TARGETS = [
       ...TARGETS,
       "lib/tax-engine/pre-1990-land-valuation.ts",
@@ -238,7 +252,7 @@ describe("D-4 산식이 한국어 풀어쓰기다", () => {
         const shown = text.replace(/\$\{[^}]*\}/g, "◇").replace(/\{[^}]*\}/g, "◇");
         // 한글이 같이 있는 조각만 «사용자 문구»로 본다(순수 코드 라인 배제).
         if (!/[가-힣]/.test(shown)) continue;
-        if (/\b(min|max)\s*\(/.test(shown)) hits.push(`${rel}:${line}  ${shown.trim().slice(0, 120)}`);
+        if (MINMAX_CALL.test(shown)) hits.push(`${rel}:${line}  ${shown.trim().slice(0, 120)}`);
       }
     }
     expect(hits).toEqual([]);

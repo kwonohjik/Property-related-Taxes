@@ -150,7 +150,7 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
                   </td>
                 </tr>
                 <tr className="border-t border-amber-100">
-                  <td className="py-1.5 pr-2 text-muted-foreground">Max(ⓐ−ⓑ, 14%) 적용액</td>
+                  <td className="py-1.5 pr-2 text-muted-foreground">ⓐ−ⓑ와 14% 상당액 중 큰 금액 (적용액)</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
                     {formatKRW(detail.comprehensiveMaxDetail.appliedAmount)}
                   </td>

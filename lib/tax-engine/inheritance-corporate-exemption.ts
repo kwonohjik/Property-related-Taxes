@@ -137,7 +137,7 @@ export function calcCorporateExemption(
       note: `${totalComputedTax.toLocaleString()} × ${corporateGiftTaxBase.toLocaleString()} ÷ ${totalTaxBase.toLocaleString()}`,
     },
     {
-      label: "영리법인 면제세액 Min(증여세 산출세액, 한도)",
+      label: "영리법인 면제세액 — 증여세 산출세액과 한도 중 작은 금액",
       amount,
       lawRef: INH.TAXPAYER,
     },

@@ -63,7 +63,7 @@ export function FarmlandReductionCard({ detail, computedTax, priorTaxCredit }: P
           <span className="font-mono tabular-nums">{formatKRW(detail.reductionLimitRemaining)}</span>
         </div>
         <div className="flex items-center justify-between px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-300">
-          <span>농지 감면세액 ㉤ = min(㉣, 잔여) · §71②</span>
+          <span>농지 감면세액 ㉤ = ㉣과 잔여 중 작은 금액 · §71②</span>
           <span className="font-mono tabular-nums">{formatKRW(detail.reductionAmount)}</span>
         </div>
         <div

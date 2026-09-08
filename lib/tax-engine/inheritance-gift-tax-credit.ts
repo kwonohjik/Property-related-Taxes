@@ -481,7 +481,7 @@ export function calcGiftTaxCredits(params: GiftTaxCreditParams): TaxCreditResult
       note: `${computedTax.toLocaleString()} × ${priorGiftAddedTaxBase.toLocaleString()} / ${aggregatedTaxBase.toLocaleString()}`,
     });
     allBreakdown.push({
-      label: `§58 ① 공제액 Min(가산 산출세액, 한도)`,
+      label: `§58 ① 공제액 — 가산 산출세액과 한도 중 작은 금액`,
       amount: -priorPaidCredit,
       lawRef: GIFT_LAW.PRIOR_TAX_CREDIT,
       note: `가산 산출세액 ${priorGiftComputedTax.toLocaleString()}, 한도 ${limit58.toLocaleString()}`,

@@ -114,9 +114,9 @@ function buildSection29Formula(
 
   return (
     <>
-      <div>외국납부세액공제 = Min(한도, 외국에서 납부한 상속세액)</div>
+      <div>외국납부세액공제 = 한도와 외국에서 납부한 상속세액 중 작은 금액</div>
       <div className="flex flex-wrap items-baseline gap-x-1">
-        = Min(<Amt val={creditLimit} />, <Amt val={foreignTaxPaid} />) ={" "}
+        = <Amt val={creditLimit} /> · <Amt val={foreignTaxPaid} /> 중 작은 금액 ={" "}
         <span className="font-semibold"><Amt val={creditAmount} /></span>
       </div>
       {overallTaxBase > 0 ? (
