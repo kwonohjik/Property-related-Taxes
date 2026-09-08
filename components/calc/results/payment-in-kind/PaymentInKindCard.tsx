@@ -135,7 +135,7 @@ export function PaymentInKindCard({
                 <span className={amountCell}>{formatKRW(data.limit2)}</span>
               </div>
               <div className="flex justify-between text-xs font-semibold text-sky-700 dark:text-sky-300">
-                <span>▶ 허용한도 = min(①,②)</span>
+                <span>▶ 허용한도 = ①과 ② 중 작은 금액</span>
                 <span className={amountCell}>{formatKRW(data.allowedLimit)}</span>
               </div>
               <div className="flex justify-between text-caption text-gray-500">

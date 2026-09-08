@@ -735,7 +735,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             <span className="font-mono">{fmt(valuationPreview.rental)}원</span>
           </p>
           <p className="text-fuchsia-600 mt-1">
-            * Max(보충적·담보·임대)를 분모로 양도가/취득가 자산별 안분 — 엔진이 자동 산정.
+            * 보충적·담보·임대 평가액 중 가장 큰 금액을 분모로 양도가·취득가를 자산별 안분 — 엔진이 자동 산정.
           </p>
         </div>
       </div>

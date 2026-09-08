@@ -235,7 +235,7 @@ export function setAggregateProcedureItems(
       value: comparedStep.amount,
       formula:
         comparedStep.formula ??
-        "MAX(세율군별 합산세액, 전체누진세액) — 중과·단기 세율군 존재 시만",
+        "세율군별 합산세액과 전체누진세액 중 큰 금액 — 중과·단기 세율군 존재 시만",
       legalBasis: comparedStep.legalBasis ?? "소득세법 §104⑤",
       note: "다주택 중과·비사업용토지·단기보유 자산 포함 시 자동 활성화. 두 방법 중 큰 세액 적용.",
       summaryOnly: true,

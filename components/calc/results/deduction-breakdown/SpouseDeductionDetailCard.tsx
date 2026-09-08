@@ -148,11 +148,11 @@ export function SpouseDeductionDetailCard({ detail, triggerLabel, triggerValue }
             value={formatKRW(detail.capAmount)}
           />
 
-          {/* Max[Min] 산식 */}
+          {/* 「가장 작은 금액 → 5억 최소보장」 산식 */}
           <div className="px-3 py-2 text-caption text-muted-foreground bg-muted/10">
             {detail.actualAmountTable
-              ? `Max[Min(법정상속분 ${formatKRW(detail.legalShareCapped)}, 실제상속액 ${formatKRW(detail.actualAmountCapped)}, 30억), 5억]`
-              : `Max[Min(법정상속분 ${formatKRW(detail.legalShareCapped)}, 30억), 5억]`}
+              ? `법정상속분 ${formatKRW(detail.legalShareCapped)} · 실제상속액 ${formatKRW(detail.actualAmountCapped)} · 30억원 중 가장 작은 금액과 5억원 중 큰 금액`
+              : `법정상속분 ${formatKRW(detail.legalShareCapped)}과 30억원 중 작은 금액, 그것과 5억원 중 큰 금액`}
             {detail.floorApplied && (
               <span className="text-amber-700 dark:text-amber-300 ml-1">→ 5억 최소보장 적용 (§19④)</span>
             )}

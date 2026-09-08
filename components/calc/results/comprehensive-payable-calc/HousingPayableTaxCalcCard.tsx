@@ -309,7 +309,7 @@ function Step2({
           )}
           <Bullet indent={2}>
             부과된 재산세액{curMultiHouse ? " 합계" : ""} : {won(c.totalPropertyTax)}
-            {showCapRow ? `[= Min(${won(c.propertyTaxBase)}, ${won(capLimit)})]` : ""}
+            {showCapRow ? `[= ${won(c.propertyTaxBase)}과 ${won(capLimit)} 중 작은 금액]` : ""}
           </Bullet>
         </>
       )}

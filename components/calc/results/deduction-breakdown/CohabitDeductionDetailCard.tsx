@@ -267,7 +267,7 @@ export function CohabitDeductionDetailCard({ detail, triggerLabel, triggerValue 
             muted
           />
           <SubTotalRow
-            label={`Min(공시가격 × ${(detail.rate * 100).toFixed(0)}%, ${(detail.cap / 100_000_000).toFixed(0)}억)`}
+            label={`(공시가격 × ${(detail.rate * 100).toFixed(0)}%)와 ${(detail.cap / 100_000_000).toFixed(0)}억원 중 작은 금액`}
             value={formatKRW(detail.cappedDeduction)}
             tone="blue"
           />

@@ -245,7 +245,7 @@ export function evaluateConvertibleBond(item: EstateItem): PropertyValuationResu
         { label: "전환금지 신주인수권부사채 평가액 a (1호나목)", amount: a, lawRef },
         { label: "전환금지 신주인수권증권 평가액 b (1호가목)", amount: b, lawRef },
         { label: "전환가능 신주인수권증권 평가액 c (2호다목)", amount: c, lawRef },
-        { label: "신주인수권부사채 평가액 (2호나목, Max(a, a−b+c))", amount: v, lawRef },
+        { label: "신주인수권부사채 평가액 (2호나목, a와 a−b+c 중 큰 금액)", amount: v, lawRef },
       ]);
     }
     default:

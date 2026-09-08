@@ -70,7 +70,7 @@ export function HeirGiftCreditDetailCard({
                   muted
                 />
                 <DetailRow
-                  label={`${labelOf(h.id, heirs)} ⓒ 사전증여세액공제 = Min(ⓐ, ⓑ)`}
+                  label={`${labelOf(h.id, heirs)} ⓒ 사전증여세액공제 = ⓐ와 ⓑ 중 작은 금액`}
                   value={formatKRW(p.priorGiftCredit)}
                   deduction
                 />

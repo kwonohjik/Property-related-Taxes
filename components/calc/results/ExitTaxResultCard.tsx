@@ -254,7 +254,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
             )}
             {hasForeignCredit && (
               <Row
-                label="외국납부세액공제 (§118의13) = min(외국납부세액, 한도)"
+                label="외국납부세액공제 (§118의13) = 외국납부세액과 한도 중 작은 금액"
                 value={result.foreignTaxCreditApplied!}
                 indent
               />

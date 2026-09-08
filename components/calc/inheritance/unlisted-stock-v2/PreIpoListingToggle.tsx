@@ -137,7 +137,7 @@ export function PreIpoListingToggle({
           checked={isOn}
           onCheckedChange={handleToggle}
           title="§63② 기업공개·상장신청 준비 중 법인 — 특례 평가"
-          description={`유가증권 신고(미신고 시 상장신청·등록신청)일 ${windowMonths}개월 전부터 ${terminalLabel}까지 평가기준일이 속하면 MAX(공모가격, 보충적평가)로 평가 (상증령 §57①②)`}
+          description={`유가증권 신고(미신고 시 상장신청·등록신청)일 ${windowMonths}개월 전부터 ${terminalLabel}까지 평가기준일이 속하면 공모가격과 보충적평가액 중 큰 금액으로 평가 (상증령 §57①②)`}
         >
           {isOn && value && (
             <div className="space-y-3 mt-2" data-testid="pre-ipo-listing-form">

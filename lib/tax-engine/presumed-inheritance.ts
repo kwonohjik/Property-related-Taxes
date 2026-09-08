@@ -126,7 +126,7 @@ export function evaluatePresumedItem(
       amount: unverifiedAmount,
     },
     {
-      label: "기준차감액 (Min(처분금액 × 20%, 2억))",
+      label: "기준차감액 (처분금액의 20%와 2억원 중 적은 금액)",
       amount: -baseDeduction,
       note: `${scrutinyAmount.toLocaleString()} × 20% = ${Math.floor(scrutinyAmount * BASE_DEDUCTION_RATE).toLocaleString()}, 한도 2억`,
     },

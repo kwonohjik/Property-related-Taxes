@@ -176,7 +176,7 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
       label: "누적 기할증과세액",
       amount: d.priorAdditionalCumulative,
       display: "amount", // priorGifts=0 이면 0 표기 (옵션 A)
-      formula: "Σ ⑫_prior",
+      formula: "Σ 직전 ⑫",
     });
     rows.push({
       number: "⑩",
@@ -191,7 +191,7 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
       label: "차감 기할증과세액",
       amount: d.priorSurchargeCredit,
       display: hasPriorGifts ? "amount" : "dash",
-      formula: "Min(⑨, ⑩)",
+      formula: "⑨와 ⑩ 중 적은 금액",
     });
     rows.push({
       number: "⑫",
@@ -229,7 +229,7 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
       label: "공제액",
       amount: priorGiftCreditDetail?.priorPaidCredit ?? 0,
       display: "amount", // 0 표기 옵션 A
-      formula: "Min(⑭, ⑮)",
+      formula: "⑭와 ⑮ 중 적은 금액",
       lawRef: GIFT.PRIOR_TAX_CREDIT,
     });
     rows.push({
@@ -270,7 +270,7 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
       label: "공제액",
       amount: priorGiftCreditDetail?.priorPaidCredit ?? 0,
       display: hasPriorGifts ? "amount" : "dash",
-      formula: "Min(⑧, ⑨)",
+      formula: "⑧과 ⑨ 중 적은 금액",
       lawRef: GIFT.PRIOR_TAX_CREDIT,
     });
     rows.push({

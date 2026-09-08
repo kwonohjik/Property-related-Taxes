@@ -163,7 +163,7 @@ export function MergerFields({ form, set }: Props) {
               <p className="text-xs font-semibold text-emerald-700">합병 후 1주당 평가가액 — 단순평균액 (§28⑤)</p>
               <CurrencyInput label="과소평가(반대)법인 1주당 평가가액" value={form.mrgUnderSharePrice} onChange={(v) => set({ mrgUnderSharePrice: v })} placeholder="1주당 평가가액 (원)" data-testid="mrg-under-price" />
               <CurrencyInput label="합병 후 존속법인 주식수 (합병비율 반영)" value={form.mrgPostMergerTotalShares} onChange={(v) => set({ mrgPostMergerTotalShares: v })} placeholder="합병 후 주식수" data-testid="mrg-post-total" />
-              <ToggleCard tone="emerald" checked={form.mrgIsListed} onCheckedChange={(v) => set({ mrgIsListed: v })} title="상장법인" description="Min(합병등기일 후 2개월 종가평균, 단순평균액) 적용">
+              <ToggleCard tone="emerald" checked={form.mrgIsListed} onCheckedChange={(v) => set({ mrgIsListed: v })} title="상장법인" description="합병등기일 후 2개월 종가평균과 단순평균액 중 작은 금액 적용">
                 <CurrencyInput label="합병등기일 후 2개월 종가평균" value={form.mrgListedPostAvgPrice} onChange={(v) => set({ mrgListedPostAvgPrice: v })} placeholder="종가평균 (원)" />
               </ToggleCard>
             </div>
@@ -180,7 +180,7 @@ export function MergerFields({ form, set }: Props) {
                 <CurrencyInput label="과소평가(반대)법인 1주당 평가가액" value={form.mrgUnderSharePrice} onChange={(v) => set({ mrgUnderSharePrice: v })} placeholder="1주당 평가가액 (원)" />
                 <CurrencyInput label="과소평가법인 합병 전 주식수" value={form.mrgUnderPreShares} onChange={(v) => set({ mrgUnderPreShares: v })} placeholder="합병 전 주식수" />
                 <CurrencyInput label="합병 후 존속법인 주식수 (합병비율 반영)" value={form.mrgPostMergerTotalShares} onChange={(v) => set({ mrgPostMergerTotalShares: v })} placeholder="합병 후 주식수" />
-                <ToggleCard tone="emerald" checked={form.mrgIsListed} onCheckedChange={(v) => set({ mrgIsListed: v })} title="상장법인" description="Min(합병등기일 후 2개월 종가평균, 단순평균액) 적용">
+                <ToggleCard tone="emerald" checked={form.mrgIsListed} onCheckedChange={(v) => set({ mrgIsListed: v })} title="상장법인" description="합병등기일 후 2개월 종가평균과 단순평균액 중 작은 금액 적용">
                   <CurrencyInput label="합병등기일 후 2개월 종가평균" value={form.mrgListedPostAvgPrice} onChange={(v) => set({ mrgListedPostAvgPrice: v })} placeholder="종가평균 (원)" />
                 </ToggleCard>
               </ToggleCard>
@@ -271,8 +271,8 @@ export function CapitalIncreaseFields({ form, set }: Props) {
         title="주권상장법인등 (증자 후 1주당 가액 단서 §29②1가·3나)"
         description={
           isHigh
-            ? "고가: Max(종가평균, 산식 이론값)"
-            : "저가: Min(종가평균, 산식 이론값)"
+            ? "고가: 종가평균과 산식 이론값 중 큰 금액"
+            : "저가: 종가평균과 산식 이론값 중 작은 금액"
         }
       >
         <ListedAvgAutoFetch
@@ -642,8 +642,12 @@ export function ConvertibleBondFields({ form, set }: Props) {
             tone="emerald"
             checked={form.cbIsListed}
             onCheckedChange={(v) => set({ cbIsListed: v })}
-            title="주권상장법인 (교부주식가액 Min/Max §30⑤1)"
-            description={ct === "conversion_reverse" ? "라목: Max(종가평균, 이론주가)" : "가·나·다목: Min(종가평균, 이론주가)"}
+            title="주권상장법인 (교부주식가액 상·하한 §30⑤1)"
+            description={
+              ct === "conversion_reverse"
+                ? "라목: 종가평균과 이론주가 중 큰 금액"
+                : "가·나·다목: 종가평균과 이론주가 중 작은 금액"
+            }
           >
             <CurrencyInput label="전환일 전후 2개월 종가평균" value={form.cbListedMarketAvg} onChange={(v) => set({ cbListedMarketAvg: v })} />
           </ToggleCard>

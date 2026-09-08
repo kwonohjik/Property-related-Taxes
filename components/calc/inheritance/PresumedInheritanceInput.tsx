@@ -232,7 +232,7 @@ function PresumedItemEditor({ item, heirs, onUpdate }: PresumedItemEditorProps) 
       {result.thresholdTriggered && (
         <div className="text-xs px-2 py-1.5 rounded bg-white dark:bg-slate-900 border border-border space-y-0.5">
           <div>소명대상 {formatKRW(result.scrutinyAmount)} − 확인 {formatKRW(item.verifiedUseAmount)} = 미소명 {formatKRW(result.unverifiedAmount)}</div>
-          <div>− 기준차감 {formatKRW(result.baseDeduction)} (Min(처분×20%, 2억))</div>
+          <div>− 기준차감 {formatKRW(result.baseDeduction)} (처분액의 20%와 2억원 중 작은 금액)</div>
           <div className="font-semibold pt-0.5 border-t border-border">
             추정상속재산 가산 = {formatKRW(result.addedAmount)}
           </div>
