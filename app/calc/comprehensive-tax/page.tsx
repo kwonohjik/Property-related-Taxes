@@ -16,7 +16,6 @@ import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate
 
 import { useState } from "react";
 import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
-import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { callComprehensiveApi, validateLandParcels, validateAppurtenantSplit, validateMultiFamily, validatePriorAssessedValue, validateOneHouseConsistency, deriveCorporateClass } from "@/lib/calc/comprehensive-api";
@@ -395,7 +394,6 @@ function Step4Land() {
 // (API 호출·변환은 lib/calc/comprehensive-api.ts — 800줄 정책 분리)
 
 export default function ComprehensiveTaxPage() {
-  const router = useRouter();
   const { currentStep, setStep, formData, setResult, result, reset } =
     useComprehensiveWizardStore();
   // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
@@ -436,15 +434,18 @@ export default function ComprehensiveTaxPage() {
 
   // 이전 단계
   function handlePrev() {
-    if (currentStep === 0) {
-      router.push("/");
-    } else if (result && currentStep === STEPS.length) {
+    // step 0에서는 `WizardBackNav`가 `onBack`을 부르지 않는다 — `WizardNav.tsx:56`이
+    // HomeButton을 직접 렌더한다(anchor: `__tests__/components/wizard-nav.test.tsx:46`).
+    // 종전의 `router.push("/")`는 그래서 **도달하지 않는 홈 이동**이었다 — 읽는 사람에게
+    // 「step 0 뒤로가기 = 홈」이라 오독시켰다. 경계 가드만 남긴다.
+    if (currentStep === 0) return;
+    if (result && currentStep === STEPS.length) {
       // 결과 화면 → 마지막 단계로
       setResult(null);
       setStep(STEPS.length - 1);
-    } else {
-      setStep(currentStep - 1);
+      return;
     }
+    setStep(currentStep - 1);
   }
 
   // 다음 단계 / 계산 실행

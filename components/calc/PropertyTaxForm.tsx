@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { PropertyTaxResultView } from "@/components/calc/results/PropertyTaxResultView";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
@@ -20,7 +19,6 @@ import { Step3 } from "./property/Step3";
 import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
 
 export function PropertyTaxForm() {
-  const router = useRouter();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +95,11 @@ export function PropertyTaxForm() {
 
   function handleBack() {
     setError(null);
-    if (step === 0) { router.push("/"); return; }
+    // step 0에서는 `WizardBackNav`가 `onBack`을 부르지 않는다 — `WizardNav.tsx:56`이
+    // HomeButton을 직접 렌더한다(anchor: `__tests__/components/wizard-nav.test.tsx:46`).
+    // 종전의 `router.push("/")`는 그래서 **도달하지 않는 홈 이동**이었다 — 읽는 사람에게
+    // 「step 0 뒤로가기 = 홈」이라 오독시켰다. 경계 가드만 남긴다.
+    if (step === 0) return;
     if (step === 3) {
       if (form.objectType !== "land") { setStep(0); return; }
       setStep(needsLandDetail ? 2 : 1);

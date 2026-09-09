@@ -219,12 +219,15 @@ export default function TransferTaxCalculator({
 
   function handleBack() {
     clearError();
-    if (currentStep === 0) {
-      if (!isEmbeddedInMulti) router.push("/");
-    } else {
-      setStep(currentStep - 1);
-      scrollToTop();
-    }
+    // step 0에서는 `WizardBackNav`가 `onBack`을 부르지 않는다 — `WizardNav.tsx:56`이
+    // HomeButton을 직접 렌더한다(anchor: `__tests__/components/wizard-nav.test.tsx:46`).
+    // 종전의 `router.push("/")`는 그래서 **도달하지 않는 홈 이동**이었다 — 읽는 사람에게
+    // 「step 0 뒤로가기 = 홈」이라 오독시켰다. 경계 가드만 남긴다.
+    // 임베드 가드(`!isEmbeddedInMulti`)도 같은 이유로 도달하지 않았다 — 다건 step 0은
+    // `:637`이 「자산 목록으로」 NavButton으로 분기한다(R03).
+    if (currentStep === 0) return;
+    setStep(currentStep - 1);
+    scrollToTop();
   }
 
   async function handleSubmit() {
@@ -625,8 +628,8 @@ export default function TransferTaxCalculator({
             <div className="flex items-center justify-between gap-2">
               {/* 🔴 임베드 시 step 0은 **자산 목록으로** 돌아간다(R03). `WizardBackNav`는
                      isFirstStep에서 `onBack`을 부르지 않고 HomeButton을 렌더하므로
-                     (`WizardNav.tsx:56`) 그대로 두면 다건 흐름을 벗어나고,
-                     `handleBack`의 임베드 가드도 도달하지 못한다. */}
+                     (`WizardNav.tsx:56`) 그대로 두면 다건 흐름을 벗어난다. `handleBack`
+                     안에서는 막을 수 없다 — 애초에 호출되지 않기 때문이다. */}
               {isEmbeddedInMulti && currentStep === 0 && onBackToList ? (
                 <NavButton
                   direction="prev"
