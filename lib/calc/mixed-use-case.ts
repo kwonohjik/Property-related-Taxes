@@ -42,7 +42,8 @@ export function isMixedUseCaseA(asset: AssetForm): boolean {
 
 /**
  * 자산분 토지기준시가 = floor(공시지가 × 그 자산분 면적).
- * area는 호출부에서 `parseFloat(x.toFixed(2))`로 사전 반올림해 전달(표시=계산 일치).
+ * area는 호출부에서 `round2()`로 사전 반올림해 전달(표시=계산 일치).
+ * ⚠️ 인라인 `parseFloat(x.toFixed(2))`는 금지 — 십진 스케일 반올림과 결과가 다르다(RU-2).
  * 값이 없으면 null(미표시).
  */
 export function landStdForArea(pricePerSqm: number, area: number): number | null {

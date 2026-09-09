@@ -21,7 +21,7 @@ import { ExpandToggleButton } from "./shared/ExpandToggleButton";
 import { Frac, FormulaText } from "./shared/FormulaParts";
 
 function Amt({ val }: { val: number }) {
-  return <span className="font-mono">{val.toLocaleString()}</span>;
+  return <span className="font-mono tabular-nums">{val.toLocaleString()}</span>;
 }
 
 export interface GenerationSkipSurchargeBreakdownCardProps {
@@ -70,7 +70,7 @@ export function GenerationSkipSurchargeBreakdownCard({
           )}
         </div>
         <div className="flex items-center gap-3">
-          <p className="text-base font-bold text-rose-700 dark:text-rose-300 font-mono">
+          <p className="text-base font-bold text-rose-700 dark:text-rose-300 font-mono tabular-nums">
             + {detail.additionalSurcharge.toLocaleString()}
           </p>
           <ExpandToggleButton

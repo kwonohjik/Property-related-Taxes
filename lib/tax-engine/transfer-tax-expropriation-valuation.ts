@@ -24,6 +24,7 @@
 
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { SplitLandExpropriationValuationDetail } from "./types/transfer-split-gain.types";
+import { round2 } from "./area-utils";
 import {
   isExprValuationEligiblePropertyType,
   EXPR_VALUATION_MIN_TRANSFER_DATE,
@@ -120,8 +121,12 @@ export function applyExpropriationValuation(
   }
 
   const chosenPerSqm = Math.min(perSqm, comp, basis);
-  // 면적 반올림 UI 일치(feedback_area_rounding_consistency) 후 곱, floor
-  const area2 = parseFloat(area.toFixed(2));
+  // 면적 반올림 UI 일치(feedback_area_rounding_consistency) 후 곱, floor.
+  // ⚠️ `round2()`를 쓴다 — 인라인 `parseFloat(x.toFixed(2))`는 규칙이 금지한 형태이고
+  //    (`components/calc/CLAUDE.md:177`) 실제로 **결과가 다르다**: 8.045는 double로
+  //    8.04499…라 `toFixed`가 8.04로 내리지만 십진 스케일 반올림은 8.05다(x.xx5 전수
+  //    10만 중 43,412건 상이). 이 값은 곧바로 단가와 곱해지므로 분모가 갈린다(RU-2).
+  const area2 = round2(area);
   const denominator = Math.floor(chosenPerSqm * area2);
 
   return {

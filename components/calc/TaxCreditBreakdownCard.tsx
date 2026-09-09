@@ -24,7 +24,7 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 // ============================================================
 
 function Amt({ val }: { val: number }) {
-  return <span className="font-mono">{val.toLocaleString()}</span>;
+  return <span className="font-mono tabular-nums">{val.toLocaleString()}</span>;
 }
 
 // ============================================================

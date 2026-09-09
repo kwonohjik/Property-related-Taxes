@@ -83,7 +83,7 @@ function ParcelDisclosure({
         className="flex w-full items-center gap-2 px-4 py-3 bg-muted/20 hover:bg-muted/40 text-sm font-medium text-left"
       >
         <span>필지 {idx + 1}</span>
-        <span className="ml-auto font-mono text-xs text-muted-foreground">
+        <span className="ml-auto font-mono tabular-nums text-xs text-muted-foreground">
           양도차익 {formatKRW(pr.transferGain)}
         </span>
         <span className={expandToggleClass("slate")} aria-hidden>

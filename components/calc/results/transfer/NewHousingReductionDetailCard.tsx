@@ -153,7 +153,7 @@ export function NewHousingReductionDetailCard({ detail }: Props) {
                 <>
                   <p className="text-muted-foreground">
                     5년 이내 취득분 안분 비율:{" "}
-                    <span className="font-mono text-foreground">{(fiveYearRatio * 100).toFixed(4)}%</span>
+                    <span className="font-mono tabular-nums text-foreground">{(fiveYearRatio * 100).toFixed(4)}%</span>
                   </p>
                   <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
                     = {formatN(reducibleGain)}

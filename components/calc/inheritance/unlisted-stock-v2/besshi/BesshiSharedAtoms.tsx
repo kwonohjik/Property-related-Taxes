@@ -43,7 +43,7 @@ export function ResultTableRow({ cellNum, label, value, emphasized, testid, unit
     >
       <td className="border border-black p-1 w-12 text-center font-mono">{cellNum}</td>
       <td className="border border-black p-1">{label}</td>
-      <td className="border border-black p-1 text-right font-mono">
+      <td className="border border-black p-1 text-right font-mono tabular-nums">
         {value}
         {unit}
       </td>
@@ -68,7 +68,7 @@ export function BreakdownRow({ label, values, emphasized, unit = "", testid }: B
     >
       <td className="border border-black p-1">{label}</td>
       {values.map((v, i) => (
-        <td key={i} className="border border-black p-1 text-right font-mono">
+        <td key={i} className="border border-black p-1 text-right font-mono tabular-nums">
           {fmt(v)}
           {unit}
         </td>

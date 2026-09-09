@@ -14,6 +14,7 @@
  */
 "use client";
 
+import { round2 } from "@/lib/tax-engine/area-utils";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
@@ -68,7 +69,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
 
   const exclusive = parseFloat(asset.cbExclusiveArea || "0") || 0;
   const shared = parseFloat(asset.cbSharedArea || "0") || 0;
-  const totalFloorArea = exclusive + shared > 0 ? parseFloat((exclusive + shared).toFixed(2)) : null;
+  const totalFloorArea = exclusive + shared > 0 ? round2(exclusive + shared) : null;
   // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(CommercialBuildingBlock와 동일 AddressValue).
   const stdPriceAddress = stdPriceAddressOf(asset);
 

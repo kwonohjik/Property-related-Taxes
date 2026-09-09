@@ -366,17 +366,17 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               <>
                 <p className="text-rose-700">
                   취득시 합계 기준시가 = 공시지가 × 면적 + 건물 기준시가 ={" "}
-                  <span className="font-mono">{valuationPreview.sumAtAcq.toLocaleString()}</span>
+                  <span className="font-mono tabular-nums">{valuationPreview.sumAtAcq.toLocaleString()}</span>
                 </p>
                 <p className="text-rose-700">
                   최초공시 당시 합계 기준시가 = 공시지가 × 면적 + 건물 기준시가 ={" "}
-                  <span className="font-mono">{valuationPreview.sumAtFirst.toLocaleString()}</span>
+                  <span className="font-mono tabular-nums">{valuationPreview.sumAtFirst.toLocaleString()}</span>
                 </p>
                 <p className="text-rose-700">
                   1단계 (§164⑦ 본문) — 취득당시 주택가격 = 최초공시 주택가격 ×{" "}
               <Frac top="취득시 합계 기준시가" bottom="최초공시 당시 합계 기준시가" />
                 </p>
-                <p className="text-rose-700 font-mono">
+                <p className="text-rose-700 font-mono tabular-nums">
                   = <FormulaText value={valuationPreview.step1Formula} /> = {valuationPreview.P_A.toLocaleString()}
                 </p>
               </>
@@ -385,8 +385,8 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               2단계 (§166③) — 환산취득가 = 권리가액 ×{" "}
               <Frac top="취득당시 주택가격" bottom="관리처분 인가일 주택가격" />
             </p>
-            <p className="text-rose-700 font-mono">= <FormulaText value={valuationPreview.step2Formula} /></p>
-            <p className="text-rose-700 font-mono">= {valuationPreview.converted.toLocaleString()}</p>
+            <p className="text-rose-700 font-mono tabular-nums">= <FormulaText value={valuationPreview.step2Formula} /></p>
+            <p className="text-rose-700 font-mono tabular-nums">= {valuationPreview.converted.toLocaleString()}</p>
             <p className="text-rose-700">
               §164⑦ 본문:{" "}
               <span className={valuationPreview.canApplyMain ? "font-semibold text-rose-900" : "text-rose-600"}>
@@ -528,7 +528,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
           <p className="text-amber-700">
             환산취득가 = {fmt(preview.rights)} × <Frac top={fmt(preview.acq)} bottom={fmt(preview.approval)} />
           </p>
-          <p className="text-amber-700 font-mono">= <FormulaText value={preview.formula} /> = {fmt(preview.convertedAcq)}</p>
+          <p className="text-amber-700 font-mono tabular-nums">= <FormulaText value={preview.formula} /> = {fmt(preview.convertedAcq)}</p>
           <p className="text-amber-700">
             개산공제 (§163⑥) = {fmt(preview.acq)} × 3% = {fmt(preview.estDeduction)}
           </p>

@@ -234,7 +234,7 @@ export function CorporateNonBusinessAssetsSection({
           <p className="text-micro text-amber-800 dark:text-amber-200">
             평가가액 {formatKRW(stockValue)} × (총자산 {formatKRW(totalAssets!)} − 사업무관자산 {formatKRW(preview.sumOfNonBusiness)}) / 총자산
           </p>
-          <p className="text-xs font-mono text-amber-900 dark:text-amber-100">
+          <p className="text-xs font-mono tabular-nums text-amber-900 dark:text-amber-100">
             = {formatKRW(preview.adjustedValue)} (사업자산 비율 {(preview.ratio * 100).toFixed(2)}%)
           </p>
         </div>

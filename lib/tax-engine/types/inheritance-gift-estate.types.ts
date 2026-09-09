@@ -283,7 +283,7 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
   // ===== 지상권 평가 (상증법 §61③·상증령 §51·상증칙 §16) =====
   /** 지상권 설정 토지 개별공시지가 (원/㎡) — §61① 토지가액 산정 */
   superficiesLandStandardPrice?: number;
-  /** 지상권 설정 토지 면적 (㎡) — UI에서 parseFloat(toFixed(2)) 후 전달 */
+  /** 지상권 설정 토지 면적 (㎡) — UI에서 `round2()` 후 전달 */
   superficiesLandArea?: number;
   /** 존속기간 약정 여부 (민법 §280 약정 / §281 미약정) */
   superficiesAgreed?: boolean;

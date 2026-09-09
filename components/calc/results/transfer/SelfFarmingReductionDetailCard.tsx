@@ -100,14 +100,14 @@ export function SelfFarmingReductionDetailCard({ detail }: Props) {
                 bottom="양도 당시 기준시가 − 취득 당시 기준시가"
               />
             </p>
-            <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+            <p className="font-mono tabular-nums font-semibold text-emerald-900 dark:text-emerald-200">
               = {(reducibleRatio * 100).toFixed(4)}%
             </p>
             <p className="text-muted-foreground border-t border-emerald-100 dark:border-emerald-800/30 pt-1.5 mt-1">
               감면대상 양도소득금액 = 전체 양도소득금액{" "}
               <span className="font-mono text-foreground">{formatN(reducibleIncome + nonReducibleIncome)}</span>
               {" "}× 감면비율{" "}
-              <span className="font-mono text-foreground">{(reducibleRatio * 100).toFixed(4)}%</span>
+              <span className="font-mono tabular-nums text-foreground">{(reducibleRatio * 100).toFixed(4)}%</span>
             </p>
             <p className="font-mono font-semibold text-emerald-900 dark:text-emerald-200 mt-0.5">
               = {formatN(reducibleIncome)}

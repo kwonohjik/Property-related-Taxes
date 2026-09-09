@@ -38,8 +38,8 @@ export function MarketSampleDetailCard({ detail, shareCount }: Props) {
             {detail.acquisitionApplied && (
               <tr>
                 <td className="px-3 py-2">취득 매매사례</td>
-                <td className="px-3 py-2 text-right font-mono">{fmt(detail.acquisitionPerShare)}원</td>
-                <td className="px-3 py-2 text-right font-mono">
+                <td className="px-3 py-2 text-right font-mono tabular-nums">{fmt(detail.acquisitionPerShare)}원</td>
+                <td className="px-3 py-2 text-right font-mono tabular-nums">
                   {detail.acquisitionPerShare !== undefined
                     ? fmt(detail.acquisitionPerShare * shareCount)
                     : "—"}
@@ -54,8 +54,8 @@ export function MarketSampleDetailCard({ detail, shareCount }: Props) {
             {detail.transferApplied && (
               <tr>
                 <td className="px-3 py-2">양도 매매사례</td>
-                <td className="px-3 py-2 text-right font-mono">{fmt(detail.transferPerShare)}원</td>
-                <td className="px-3 py-2 text-right font-mono">
+                <td className="px-3 py-2 text-right font-mono tabular-nums">{fmt(detail.transferPerShare)}원</td>
+                <td className="px-3 py-2 text-right font-mono tabular-nums">
                   {detail.transferPerShare !== undefined
                     ? fmt(detail.transferPerShare * shareCount)
                     : "—"}

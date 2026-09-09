@@ -139,11 +139,11 @@ export function PartialUsageChangeCard({
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-md bg-white/60 dark:bg-white/5 border border-amber-200 px-3 py-2">
           <div className="text-caption text-amber-700">취득시 주택 연면적</div>
-          <div className="font-mono text-amber-900">{puc.acqResidentialArea.toFixed(2)}㎡</div>
+          <div className="font-mono tabular-nums text-amber-900">{puc.acqResidentialArea.toFixed(2)}㎡</div>
         </div>
         <div className="rounded-md bg-white/60 dark:bg-white/5 border border-amber-200 px-3 py-2">
           <div className="text-caption text-amber-700">취득시 상가 연면적</div>
-          <div className="font-mono text-amber-900">{puc.acqCommercialArea.toFixed(2)}㎡</div>
+          <div className="font-mono tabular-nums text-amber-900">{puc.acqCommercialArea.toFixed(2)}㎡</div>
         </div>
       </div>
       {puc.isAreaCustomized && (

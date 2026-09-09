@@ -115,7 +115,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         </div>
         {!successorMemberApplied && !isRightSubject && salePriceTotal != null && (
           <div className="text-xs text-violet-700">
-            분양가 <span className="font-mono font-semibold">{fmt(salePriceTotal)}</span>
+            분양가 <span className="font-mono tabular-nums font-semibold">{fmt(salePriceTotal)}</span>
           </div>
         )}
       </div>
@@ -253,7 +253,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <div className="space-y-0.5">
             <div className="font-semibold">보유기간 기산일 = 준공일 (사용검사필증 교부일)</div>
             <div>
-              · 준공일: <span className="font-mono font-semibold">{new Date(successorMemberDetail.completionDate as unknown as string | Date).toISOString().slice(0, 10)}</span>
+              · 준공일: <span className="font-mono tabular-nums font-semibold">{new Date(successorMemberDetail.completionDate as unknown as string | Date).toISOString().slice(0, 10)}</span>
             </div>
             <div>
               · 보유일수(개략): <span className="font-mono font-semibold">{successorMemberDetail.holdingDaysFromCompletion}일</span>
@@ -263,10 +263,10 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <div className="space-y-0.5 pt-1 border-t border-rose-200">
             <div className="font-semibold">단순 차감 산식 (§166 안분 우회)</div>
             <div>
-              양도차익 = 양도가액 <span className="font-mono">{fmt(postApprovalExistingHouse.apportionedTransfer)}</span>{" "}
-              − 권리가액(상속·증여 평가액) <span className="font-mono">{fmt(postApprovalExistingHouse.apportionedAcquisition)}</span>{" "}
-              − 인가후 필요경비 <span className="font-mono">{fmt(postApprovalExistingHouse.expenses ?? 0)}</span>{" "}
-              = <span className="font-mono font-bold">{fmt(postApprovalExistingHouse.gain)}</span>
+              양도차익 = 양도가액 <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.apportionedTransfer)}</span>{" "}
+              − 권리가액(상속·증여 평가액) <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.apportionedAcquisition)}</span>{" "}
+              − 인가후 필요경비 <span className="font-mono tabular-nums">{fmt(postApprovalExistingHouse.expenses ?? 0)}</span>{" "}
+              = <span className="font-mono tabular-nums font-bold">{fmt(postApprovalExistingHouse.gain)}</span>
             </div>
           </div>
           <div className="pt-1 text-caption text-rose-700">
@@ -577,15 +577,15 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
       <div className="rounded-md bg-violet-100/60 border border-violet-300 p-3 grid grid-cols-3 gap-2 text-xs">
         <div>
           <p className="text-micro text-violet-700">합계 양도차익</p>
-          <p className="font-mono font-semibold text-violet-900">{fmt(total.gain)}</p>
+          <p className="font-mono tabular-nums font-semibold text-violet-900">{fmt(total.gain)}</p>
         </div>
         <div>
           <p className="text-micro text-violet-700">합계 장기보유공제</p>
-          <p className="font-mono font-semibold text-violet-900">{fmt(total.lthd)}</p>
+          <p className="font-mono tabular-nums font-semibold text-violet-900">{fmt(total.lthd)}</p>
         </div>
         <div>
           <p className="text-micro text-violet-700">양도소득금액</p>
-          <p className="font-mono font-semibold text-violet-900">{fmt(total.taxableIncome)}</p>
+          <p className="font-mono tabular-nums font-semibold text-violet-900">{fmt(total.taxableIncome)}</p>
         </div>
       </div>
     </div>

@@ -91,7 +91,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
                 공유지분 {(bg.ownershipRatio * 100).toFixed(4).replace(/\.?0+$/, "")}% 적용 —
                 아래 평가액은 <b>지분 해당분</b>입니다(소령 §159의 A·C). 인수 채무는 입력한
                 실제 인수액 그대로입니다. 12억 고가주택 판정 분모로는 물건 전체
-                보충적평가액 <span className="font-mono">{fmt(bg.wholePropertySupplementary)}</span>
+                보충적평가액 <span className="font-mono tabular-nums">{fmt(bg.wholePropertySupplementary)}</span>
                 을 별도 사용합니다.
               </td>
             </tr>

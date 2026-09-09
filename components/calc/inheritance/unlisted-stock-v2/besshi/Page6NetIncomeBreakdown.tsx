@@ -27,7 +27,7 @@ export interface Page6NetIncomeBreakdownProps {
 }
 
 const TD = "border border-black p-1";
-const TD_VAL = `${TD} text-right font-mono`;
+const TD_VAL = `${TD} text-right font-mono tabular-nums`;
 
 export function Page6NetIncomeBreakdown({
   result,
@@ -141,7 +141,7 @@ export function Page6NetIncomeBreakdown({
           <tr data-besshi-cell="p6-사" data-testid="p6-사">
             <td className={`${TD} bg-gray-50`} aria-hidden />
             <td className={TD}>
-              {P6.perShareLabel} <span className="font-mono">{P6.perShareMarkers.join("")}</span>
+              {P6.perShareLabel} <span className="font-mono tabular-nums">{P6.perShareMarkers.join("")}</span>
             </td>
             {valCells(fyb.map((fy) => fy.perShareNetIncome))}
           </tr>

@@ -142,7 +142,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
           {lthdEffect.rentalGainRatio < 1 && (
             <div className="flex justify-between border-t border-violet-100 dark:border-violet-800/30 pt-1.5 mt-0.5">
               <span className="text-muted-foreground">임대기간 분 양도차익 안분 비율</span>
-              <span className="font-mono text-violet-900 dark:text-violet-200">
+              <span className="font-mono tabular-nums text-violet-900 dark:text-violet-200">
                 {(lthdEffect.rentalGainRatio * 100).toFixed(1)}%
               </span>
             </div>
@@ -248,7 +248,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
           {taxEffect.rentalGainRatio < 1 && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">임대기간 분 비율</span>
-              <span className="font-mono">{(taxEffect.rentalGainRatio * 100).toFixed(1)}%</span>
+              <span className="font-mono tabular-nums">{(taxEffect.rentalGainRatio * 100).toFixed(1)}%</span>
             </div>
           )}
         </div>

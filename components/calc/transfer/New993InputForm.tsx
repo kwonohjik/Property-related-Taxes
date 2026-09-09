@@ -180,7 +180,7 @@ export function New993InputForm({
       <div className="rounded-md border border-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2">
         <p className="text-xs text-amber-900 dark:text-amber-200">
           최초공시 전 환산 자동 계산(§164⑤):{" "}
-          <span className="font-semibold font-mono">
+          <span className="font-semibold font-mono tabular-nums">
             {phdEchoAcqStdPrice != null ? `${phdEchoAcqStdPrice.toLocaleString()} 원` : "위 환산 입력을 완료하세요"}
           </span>
         </p>

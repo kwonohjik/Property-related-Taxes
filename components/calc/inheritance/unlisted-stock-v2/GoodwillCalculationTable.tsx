@@ -91,7 +91,7 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
             <tr className="border-t-2 border-amber-400 bg-amber-100/60">
               <td className="py-2 pr-2 font-bold text-amber-900">자.</td>
               <td className="py-2 px-1 font-bold text-amber-900">영업권 평가액 = 사 − 아 (음수면 0)</td>
-              <td className="py-2 pl-1 text-right font-mono font-bold text-amber-900">
+              <td className="py-2 pl-1 text-right font-mono tabular-nums font-bold text-amber-900">
                 {fmt(goodwill.goodwillFinal)}원
               </td>
             </tr>
@@ -119,7 +119,7 @@ function RowDisplay({ cellNum, label, value, unit = "원", hint, emphasized }: R
         <div className={emphasized ? "font-semibold text-amber-900" : ""}>{label}</div>
         {hint && <div className="text-micro text-gray-500">{hint}</div>}
       </td>
-      <td className={`py-1 pl-1 text-right font-mono ${emphasized ? "text-amber-900 font-bold" : ""}`}>
+      <td className={`py-1 pl-1 text-right font-mono tabular-nums ${emphasized ? "text-amber-900 font-bold" : ""}`}>
         {fmt(value)}{unit}
       </td>
     </tr>

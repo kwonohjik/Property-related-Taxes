@@ -212,13 +212,13 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             {apportionment.apportioned.map((a) => (
               <tr key={a.assetId} className="border-b last:border-0 text-sm">
                 <td className="py-1.5 pr-2">{a.assetLabel}</td>
-                <td className="py-1.5 pr-2 text-right font-mono">
+                <td className="py-1.5 pr-2 text-right font-mono tabular-nums">
                   {formatKRW(a.standardPriceAtTransfer)}
                 </td>
                 <td className="py-1.5 pr-2 text-right text-muted-foreground">
                   {(a.displayRatio * 100).toFixed(2)}%
                 </td>
-                <td className="py-1.5 text-right font-mono font-medium">
+                <td className="py-1.5 text-right font-mono tabular-nums font-medium">
                   {formatKRW(a.allocatedSalePrice)}
                 </td>
               </tr>
@@ -227,11 +227,11 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           <tfoot>
             <tr className="font-semibold text-sm">
               <td className="pt-2 pr-2">합계</td>
-              <td className="pt-2 pr-2 text-right font-mono">
+              <td className="pt-2 pr-2 text-right font-mono tabular-nums">
                 {formatKRW(apportionment.totalStandardAtTransfer)}
               </td>
               <td className="pt-2 pr-2 text-right">100%</td>
-              <td className="pt-2 text-right font-mono">
+              <td className="pt-2 text-right font-mono tabular-nums">
                 {formatKRW(apportionment.apportioned.reduce((s, a) => s + a.allocatedSalePrice, 0))}
               </td>
             </tr>

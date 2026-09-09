@@ -316,7 +316,7 @@ export function FiscalYearAdjustmentTable({
                       <span className="ml-1">가산 소계 (②~⑦)</span>
                     </div>
                     {perYear.map((p, idx) => (
-                      <div key={idx} className="text-right font-mono font-semibold text-sky-900">
+                      <div key={idx} className="text-right font-mono tabular-nums font-semibold text-sky-900">
                         {p.add.toLocaleString()}
                       </div>
                     ))}
@@ -333,7 +333,7 @@ export function FiscalYearAdjustmentTable({
                       <span className="ml-1">차감 소계 (⑧~㉒)</span>
                     </div>
                     {perYear.map((p, idx) => (
-                      <div key={idx} className="text-right font-mono font-semibold text-rose-900">
+                      <div key={idx} className="text-right font-mono tabular-nums font-semibold text-rose-900">
                         {p.sub.toLocaleString()}
                       </div>
                     ))}
@@ -353,7 +353,7 @@ export function FiscalYearAdjustmentTable({
               <span className="ml-1">순손익액 (= ① + 가산 − 차감)</span>
             </div>
             {previewAdjustedIncomes.map((val, idx) => (
-              <div key={idx} className="text-right font-mono font-semibold text-emerald-900">
+              <div key={idx} className="text-right font-mono tabular-nums font-semibold text-emerald-900">
                 {val.toLocaleString()}
                 <span className="ml-1 text-micro">원</span>
               </div>

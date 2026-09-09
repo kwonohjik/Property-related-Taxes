@@ -111,21 +111,21 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
                 {judgment.revenueTestDetail.currentBusinessDays !== undefined && (
                   <>
                     <span>당해 영위일수</span>
-                    <span className="font-mono text-right">{judgment.revenueTestDetail.currentBusinessDays}일</span>
+                    <span className="font-mono tabular-nums text-right">{judgment.revenueTestDetail.currentBusinessDays}일</span>
                   </>
                 )}
                 <span>당해 연간환산 수입 (원)</span>
-                <span className="font-mono text-right">{judgment.revenueTestDetail.annualizedCurrentRevenue.toLocaleString()}</span>
+                <span className="font-mono tabular-nums text-right">{judgment.revenueTestDetail.annualizedCurrentRevenue.toLocaleString()}</span>
                 {judgment.revenueTestDetail.priorBusinessDays !== undefined && (
                   <>
                     <span>직전 영위일수</span>
-                    <span className="font-mono text-right">{judgment.revenueTestDetail.priorBusinessDays}일</span>
+                    <span className="font-mono tabular-nums text-right">{judgment.revenueTestDetail.priorBusinessDays}일</span>
                   </>
                 )}
                 {judgment.revenueTestDetail.annualizedPriorRevenue !== undefined && (
                   <>
                     <span>직전 연간환산 수입 (원)</span>
-                    <span className="font-mono text-right">{judgment.revenueTestDetail.annualizedPriorRevenue.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-right">{judgment.revenueTestDetail.annualizedPriorRevenue.toLocaleString()}</span>
                   </>
                 )}
               </div>
@@ -140,11 +140,11 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
               <p className="font-medium">§168의11③1호 간주임대료 합산</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
                 <span>당해 간주임대료 (원)</span>
-                <span className="font-mono text-right">{judgment.revenueTestDetail.deemedRentCurrent.toLocaleString()}</span>
+                <span className="font-mono tabular-nums text-right">{judgment.revenueTestDetail.deemedRentCurrent.toLocaleString()}</span>
                 {judgment.revenueTestDetail.deemedRentPrior > 0 && (
                   <>
                     <span>직전 간주임대료 (원)</span>
-                    <span className="font-mono text-right">{judgment.revenueTestDetail.deemedRentPrior.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-right">{judgment.revenueTestDetail.deemedRentPrior.toLocaleString()}</span>
                   </>
                 )}
               </div>
@@ -155,11 +155,11 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
               <p className="font-medium">§168의11③2호 공통수입 안분</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
                 <span>당해 안분액 (원)</span>
-                <span className="font-mono text-right">{judgment.revenueTestDetail.commonApportionedCurrent.toLocaleString()}</span>
+                <span className="font-mono tabular-nums text-right">{judgment.revenueTestDetail.commonApportionedCurrent.toLocaleString()}</span>
                 {judgment.revenueTestDetail.commonApportionedPrior > 0 && (
                   <>
                     <span>직전 안분액 (원)</span>
-                    <span className="font-mono text-right">{judgment.revenueTestDetail.commonApportionedPrior.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-right">{judgment.revenueTestDetail.commonApportionedPrior.toLocaleString()}</span>
                   </>
                 )}
               </div>
@@ -172,17 +172,17 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
           )}
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs mt-1.5">
             <span className="text-muted-foreground">당해 비율</span>
-            <span className="font-mono text-right">{(judgment.revenueTestDetail.ratioCurrent * 100).toFixed(2)}%</span>
+            <span className="font-mono tabular-nums text-right">{(judgment.revenueTestDetail.ratioCurrent * 100).toFixed(2)}%</span>
             {judgment.revenueTestDetail.ratioCombined !== undefined && (
               <>
                 <span className="text-muted-foreground">합산 비율(당해+직전)</span>
-                <span className="font-mono text-right">{(judgment.revenueTestDetail.ratioCombined * 100).toFixed(2)}%</span>
+                <span className="font-mono tabular-nums text-right">{(judgment.revenueTestDetail.ratioCombined * 100).toFixed(2)}%</span>
               </>
             )}
             <span className="text-muted-foreground">적용 비율(큰 값)</span>
-            <span className="font-mono text-right">{(judgment.revenueTestDetail.actualRatio * 100).toFixed(2)}%</span>
+            <span className="font-mono tabular-nums text-right">{(judgment.revenueTestDetail.actualRatio * 100).toFixed(2)}%</span>
             <span className="text-muted-foreground">기준 비율</span>
-            <span className="font-mono text-right">{(judgment.revenueTestDetail.threshold * 100).toFixed(0)}%</span>
+            <span className="font-mono tabular-nums text-right">{(judgment.revenueTestDetail.threshold * 100).toFixed(0)}%</span>
           </div>
         </div>
       )}
@@ -193,15 +193,15 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
           <p className="text-xs font-medium text-muted-foreground mb-2">기간 분석</p>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
             <span className="text-muted-foreground">전체 보유일수</span>
-            <span className="font-mono text-right">{judgment.totalOwnershipDays.toLocaleString()}일</span>
+            <span className="font-mono tabular-nums text-right">{judgment.totalOwnershipDays.toLocaleString()}일</span>
             <span className="text-muted-foreground">사업용 사용일수</span>
-            <span className="font-mono text-right">{judgment.effectiveBusinessDays.toLocaleString()}일</span>
+            <span className="font-mono tabular-nums text-right">{judgment.effectiveBusinessDays.toLocaleString()}일</span>
             <span className="text-muted-foreground">사업용 비율</span>
-            <span className="font-mono text-right">{(judgment.businessUseRatio * 100).toFixed(1)}%</span>
+            <span className="font-mono tabular-nums text-right">{(judgment.businessUseRatio * 100).toFixed(1)}%</span>
             {judgment.gracePeriodDays > 0 && (
               <>
                 <span className="text-muted-foreground">유예기간 가산</span>
-                <span className="font-mono text-right">{judgment.gracePeriodDays.toLocaleString()}일</span>
+                <span className="font-mono tabular-nums text-right">{judgment.gracePeriodDays.toLocaleString()}일</span>
               </>
             )}
           </div>
@@ -215,13 +215,13 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
           <AreaBar businessArea={area.businessArea} nonBusinessArea={area.nonBusinessArea} />
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs mt-2">
             <span className="text-muted-foreground">사업용 면적</span>
-            <span className="font-mono text-right text-emerald-600">{area.businessArea.toFixed(1)} ㎡</span>
+            <span className="font-mono tabular-nums text-right text-emerald-600">{area.businessArea.toFixed(1)} ㎡</span>
             <span className="text-muted-foreground">비사업용 면적</span>
-            <span className="font-mono text-right text-red-600">{area.nonBusinessArea.toFixed(1)} ㎡</span>
+            <span className="font-mono tabular-nums text-right text-red-600">{area.nonBusinessArea.toFixed(1)} ㎡</span>
             {area.mixedUseBuildingRatio !== undefined && (
               <>
                 <span className="text-muted-foreground">특정용도분 비율 (§168의11⑥)</span>
-                <span className="font-mono text-right">{(area.mixedUseBuildingRatio * 100).toFixed(1)}%</span>
+                <span className="font-mono tabular-nums text-right">{(area.mixedUseBuildingRatio * 100).toFixed(1)}%</span>
               </>
             )}
           </div>
