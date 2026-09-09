@@ -210,9 +210,9 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
                 <div key={i} className="flex items-baseline gap-1 text-amber-900">
                   <span className="font-mono text-micro w-16">{label}</span>
                   <span>1주당 순손익액</span>
-                  <span className="font-mono">{fmt(before)}</span>
+                  <span className="font-mono tabular-nums">{fmt(before)}</span>
                   <span>→ ×12/N개월 →</span>
-                  <span className="font-mono font-semibold">{fmt(after)}</span>
+                  <span className="font-mono tabular-nums font-semibold">{fmt(after)}</span>
                   <span className="text-micro text-amber-600">(연환산)</span>
                 </div>
               );
@@ -373,17 +373,17 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           <p className="font-semibold text-amber-800">영업권 평가 (상증령 §59 ②)</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
             <span>가. 3년 가중평균 순손익액</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.weightedAvg3y)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.weightedAvg3y)}원</span>
             <span>나. 가 × 50%</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.weightedAvgHalf)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.weightedAvgHalf)}원</span>
             <span>다. 자기자본</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.selfCapital)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.selfCapital)}원</span>
             <span>마. 다 × {(result.goodwillCalculation.rate * 100).toFixed(0)}% (§19①)</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.selfCapitalRate)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.selfCapitalRate)}원</span>
             <span>초과이익 (나 − 마)</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.annualExcessProfit)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.annualExcessProfit)}원</span>
             <span className="font-bold">자. 영업권 평가액</span>
-            <span className="font-mono text-right font-bold">{fmt(result.goodwillCalculation.goodwillFinal)}원</span>
+            <span className="font-mono tabular-nums text-right font-bold">{fmt(result.goodwillCalculation.goodwillFinal)}원</span>
           </div>
         </div>
       )}

@@ -611,7 +611,7 @@ export function SpecificCorpFields({ form, set }: Props) {
             {corpTaxEcho !== null && (
               <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800">
                 안분 법인세 상당액 (표시용) ≈{" "}
-                <span className="font-mono font-bold">{corpTaxEcho.toLocaleString()}</span>원
+                <span className="font-mono tabular-nums font-bold">{corpTaxEcho.toLocaleString()}</span>원
                 <span className="ml-1 text-amber-600">(실계산은 엔진)</span>
               </div>
             )}

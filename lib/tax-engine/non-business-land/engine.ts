@@ -19,7 +19,7 @@ import type {
   NonBusinessLandJudgmentRules,
 } from "./types";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "./types";
-import { classifyLandCategory } from "./land-category";
+import { classifyLandCategory, consumesPeriodJudgmentDate } from "./land-category";
 import { checkUnconditionalExemption } from "./unconditional-exemption";
 import { judgeFarmland } from "./farmland";
 import { judgeForest } from "./forest";
@@ -292,7 +292,20 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
     businessUseRatio,
     criteria,
     areaProportioning: categoryResult?.areaProportioning,
+    /**
+     * 양도일 의제(§168의14②) echo — **실제로 판정에 쓰인 경우에만** 싣는다 (F-1).
+     *
+     * 결과 카드는 이 값을 받아 「…을 양도일로 보아 기간기준(§168의6)을 판정했습니다」라고
+     * **단정**한다. 그러므로 두 조건을 함께 본다:
+     *   · `categoryResult` 존재 — 무조건 사업용 의제(§168의14③)로 Step 2에서 조기반환하면
+     *     지목별 judge가 아예 돌지 않는다.
+     *   · `consumesPeriodJudgmentDate(landType)` — 주택·건물 부수토지는 배율축이라
+     *     `getPeriodJudgmentDate`를 부르지 않는다.
+     * 종전에는 둘 다 보지 않아 적용되지 않은 의제를 적용했다고 표시했다.
+     */
     deemedTransfer:
+      categoryResult &&
+      consumesPeriodJudgmentDate(input.landType) &&
       input.deemedTransferReason && input.deemedTransferReason !== "none" && input.deemedTransferDate
         ? { reason: input.deemedTransferReason, date: input.deemedTransferDate }
         : undefined,

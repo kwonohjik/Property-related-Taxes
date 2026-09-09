@@ -14,12 +14,19 @@
  * (`feedback_ui_gate_two_conditions_downstream_one`).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { consumesPeriodJudgmentDate } from "@/lib/tax-engine/non-business-land/land-category";
 
-/** 양도일 의제 입력(사유·의제일)이 적용되는 지목인가 — 기간기준 5지목. */
+/**
+ * 양도일 의제 입력(사유·의제일)이 적용되는 지목인가 — 기간기준 5지목.
+ *
+ * 판정은 **엔진 술어에 위임한다**. 종전에는 여기서 `!== "housing_site"`를 직접 적었고,
+ * ④(`form-mapper.ts`)·엔진 emit은 지목을 아예 보지 않아 결과 카드가 적용되지 않은 의제를
+ * 「판정했습니다」라고 단정했다(F-1). 술어를 한 곳에 두어 ⑤·⑧·엔진이 같은 축을 본다.
+ */
 export function isDeemedTransferApplicable(
   nblLandType: AssetForm["nblLandType"] | undefined,
 ): boolean {
-  return !!nblLandType && nblLandType !== "housing_site";
+  return consumesPeriodJudgmentDate(nblLandType);
 }
 
 /** 그 자산이 실제로 의제 사유를 선택한 상태인가 (「none」·미선택 제외). */

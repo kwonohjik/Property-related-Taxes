@@ -220,7 +220,7 @@ export function NetAssetCalculationTable({
         })}
         <div className="border-t border-emerald-300 pt-1 mt-1 flex justify-between text-caption font-bold text-emerald-900">
           <span>⑧ 자산총액 소계</span>
-          <span className="font-mono">{totalAssets.toLocaleString()}원</span>
+          <span className="font-mono tabular-nums">{totalAssets.toLocaleString()}원</span>
         </div>
       </div>
 
@@ -251,7 +251,7 @@ export function NetAssetCalculationTable({
         ))}
         <div className="border-t border-rose-300 pt-1 mt-1 flex justify-between text-caption font-bold text-rose-900">
           <span>⑲ 부채총액 소계</span>
-          <span className="font-mono">{totalLiabilities.toLocaleString()}원</span>
+          <span className="font-mono tabular-nums">{totalLiabilities.toLocaleString()}원</span>
         </div>
       </div>
 
@@ -320,7 +320,7 @@ export function NetAssetCalculationTable({
           <p className="text-caption font-bold text-violet-900">다. 영업권 포함 전 순자산가액</p>
           <p className="text-micro text-violet-700">= 자산총액 ⑧ − 부채총액 ⑲ {netAssetBeforeGoodwill === 0 && totalAssets - totalLiabilities < 0 && "(§55① 후단 — 0 이하 → 0)"}</p>
         </div>
-        <span className="font-mono text-sm font-bold text-violet-900">
+        <span className="font-mono tabular-nums text-sm font-bold text-violet-900">
           {netAssetBeforeGoodwill.toLocaleString()}원
         </span>
       </div>

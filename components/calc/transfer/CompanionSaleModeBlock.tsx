@@ -196,7 +196,7 @@ function FractionalAutoSalePriceCard({
       <div className="text-caption font-medium text-amber-700 mb-0.5">
         자동 계산 (총 양도가액 × 지분율)
       </div>
-      <div className="font-mono text-base font-semibold text-amber-900">
+      <div className="font-mono tabular-nums text-base font-semibold text-amber-900">
         {allocated.toLocaleString()} 원
       </div>
       <div className="text-micro text-amber-700 mt-0.5">

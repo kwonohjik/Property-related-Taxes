@@ -129,7 +129,7 @@ export function SpecialTreatmentAssetSelector({
       >
         <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-100/60 px-3 py-2">
           <span className="text-sm text-emerald-800 font-medium">{label}</span>
-          <span className="text-sm font-mono text-emerald-800">
+          <span className="text-sm font-mono tabular-nums text-emerald-800">
             {val > 0 ? formatKRW(val) : "—"}
           </span>
         </div>
@@ -200,7 +200,7 @@ export function SpecialTreatmentAssetSelector({
                 )}
               </div>
               {val > 0 && (
-                <span className="text-sm font-mono text-gray-600 dark:text-gray-400">
+                <span className="text-sm font-mono tabular-nums text-gray-600 dark:text-gray-400">
                   {formatKRW(val)}
                 </span>
               )}

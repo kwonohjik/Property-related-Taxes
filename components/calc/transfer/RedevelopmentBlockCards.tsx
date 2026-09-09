@@ -140,10 +140,10 @@ export function SalePriceTotalPreviewCard({ asset }: { asset: AssetForm }) {
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1">
       <p className="font-semibold text-sky-800">분양가액 (자동 도출, 입력 불요)</p>
-      <p className="text-sky-700 font-mono">
+      <p className="text-sky-700 font-mono tabular-nums">
         분양가액 = 권리가액 {preview.rights.toLocaleString()} − 청산금 수령액 {preview.settle.toLocaleString()}
       </p>
-      <p className="text-sky-700 font-mono">= {preview.salePriceTotal.toLocaleString()}</p>
+      <p className="text-sky-700 font-mono tabular-nums">= {preview.salePriceTotal.toLocaleString()}</p>
       <p className="text-caption text-sky-600">
         ※ &ldquo;분양가액&rdquo;은 위와 같이 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다.
       </p>

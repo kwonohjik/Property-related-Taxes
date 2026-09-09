@@ -126,7 +126,7 @@ function NetAssetTr({
     <tr className={rowClass} data-besshi-cell={`p2-${testid}`} data-testid={`p2-${testid}`}>
       <td className="border border-black p-1 text-center font-mono w-10">{cellNum}</td>
       <td className="border border-black p-1">{label}</td>
-      <td className="border border-black p-1 text-right font-mono w-36">{fmt(amount)}</td>
+      <td className="border border-black p-1 text-right font-mono tabular-nums w-36">{fmt(amount)}</td>
       <td className="border border-black p-1 text-micro text-gray-500 bg-gray-100 print:bg-gray-100 w-44">
         {refText ?? ""}
       </td>

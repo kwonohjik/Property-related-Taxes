@@ -16,8 +16,8 @@ function hasProration(part: SplitPart): boolean {
 function AcqCell({ owned, part }: { owned: boolean; part: SplitPart }) {
   // 표의 다른 금액 칸과 같은 클래스를 쓴다 — 비소유 파트는 종전대로 취소선·연회색이다.
   const cls = owned
-    ? "font-mono text-right"
-    : "font-mono text-right text-muted-foreground/50 line-through";
+    ? "font-mono tabular-nums text-right"
+    : "font-mono tabular-nums text-right text-muted-foreground/50 line-through";
   if (!part.swapApplied) {
     return <span className={cls}>{part.acquisitionPrice.toLocaleString()}</span>;
   }
@@ -72,7 +72,7 @@ export function SplitGainDetailSection({
     const buildingIsOwned = selfOwns !== "land_only";
     const ownerLabel = selfOwns === "building_only" ? "건물" : selfOwns === "land_only" ? "토지" : null;
     const colCls = (owned: boolean) =>
-      owned ? "font-mono text-right" : "font-mono text-right text-muted-foreground/50 line-through";
+      owned ? "font-mono tabular-nums text-right" : "font-mono text-right text-muted-foreground/50 line-through";
     const headerCls = (owned: boolean) =>
       owned ? "font-medium text-center" : "font-medium text-center text-muted-foreground/50";
     const acqModeLabel = (m?: "actual" | "estimated" | "appraisal" | "salesCase") =>

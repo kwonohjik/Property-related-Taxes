@@ -113,7 +113,7 @@ export function CorporateExemptionSection({
             className="flex justify-between text-xs text-gray-700 dark:text-gray-300"
           >
             <span>{step.label}</span>
-            <span className="font-mono">{formatKRW(step.amount)}</span>
+            <span className="font-mono tabular-nums">{formatKRW(step.amount)}</span>
           </div>
         ))}
         <div className="flex justify-between text-sm font-bold text-violet-800 dark:text-violet-200 border-t border-violet-200 dark:border-violet-700 pt-2">
@@ -177,13 +177,13 @@ export function CorporateExemptionSection({
                       <td className="px-3 py-2 text-micro">
                         {heir?.businessAddress ?? "—"}
                       </td>
-                      <td className="px-3 py-2 text-right font-mono">
+                      <td className="px-3 py-2 text-right font-mono tabular-nums">
                         {formatKRW(detail.inheritedAmount)}
                       </td>
-                      <td className="px-3 py-2 text-right font-mono">
+                      <td className="px-3 py-2 text-right font-mono tabular-nums">
                         {formatKRW(detail.exemptionAmount)}
                       </td>
-                      <td className="px-3 py-2 text-right font-mono">
+                      <td className="px-3 py-2 text-right font-mono tabular-nums">
                         {formatKRW(detail.tenPercentBaseline)}
                       </td>
                     </tr>
@@ -196,13 +196,13 @@ export function CorporateExemptionSection({
                     <td className="px-3 py-2" colSpan={3}>
                       합계
                     </td>
-                    <td className="px-3 py-2 text-right font-mono">
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">
                       {formatKRW(totalInherited)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono">
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">
                       {formatKRW(totalExemption)}
                     </td>
-                    <td className="px-3 py-2 text-right font-mono">
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">
                       {formatKRW(totalTenPercent)}
                     </td>
                   </tr>
@@ -302,10 +302,10 @@ function renderShareholderRows(
           <td className="px-3 py-2 font-mono text-micro">
             {displayRrn ?? "—"}
           </td>
-          <td className="px-3 py-2 text-right font-mono">
+          <td className="px-3 py-2 text-right font-mono tabular-nums">
             {(payment.shareRatio * 100).toFixed(2)}%
           </td>
-          <td className="px-3 py-2 text-right font-mono">
+          <td className="px-3 py-2 text-right font-mono tabular-nums">
             {formatKRW(payment.paymentAmount)}
           </td>
         </tr>,

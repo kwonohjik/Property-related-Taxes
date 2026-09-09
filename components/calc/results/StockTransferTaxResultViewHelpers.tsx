@@ -173,7 +173,7 @@ export function SwapComparisonBlock({ result }: { result: StockTransferResult })
       <p className="font-semibold">
         {applied ? "§97②2호 단서 적용 — 실제 필요경비 선택" : "§97②2호 단서 비교 — 본문(개산공제) 적용"}
       </p>
-      <div className="font-mono space-y-0.5">
+      <div className="font-mono tabular-nums space-y-0.5">
         <p>가목 (환산취득가 + 개산공제) = {fmt(cmp.estimatedSide)}</p>
         <p>나목 (자본적지출 + 양도비) = {fmt(cmp.directSide)}</p>
       </div>

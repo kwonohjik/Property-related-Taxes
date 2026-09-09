@@ -113,7 +113,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
       {preview && (
         <div className="mt-1 rounded-md bg-fuchsia-100/70 border border-fuchsia-200 p-2 text-caption text-fuchsia-900 space-y-0.5">
           <p className="font-semibold text-fuchsia-800">미리보기 — §166③ 환산취득가</p>
-          <p className="font-mono">
+          <p className="font-mono tabular-nums">
             환산취득가 = {parseAmount(asset.redevRightsValue).toLocaleString("ko-KR")}{" "}
             × <Frac top={stdAtAcq.toLocaleString("ko-KR")} bottom={stdAtApproval.toLocaleString("ko-KR")} />{" "}
             = <span className="font-semibold">{preview.convertedAcquisition.toLocaleString("ko-KR")}</span>
@@ -121,7 +121,7 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
           {/* 🔴 base는 **엔진이 실제로 쓴 지분 기준시가**를 echo한다 — 100%를 찍으면
                 산식이 자기 금액을 재현하지 못한다(`feedback_engine_result_display_drift`).
                 엔진 `valuationMeta.lumpDeductionBase`와 같은 규약. */}
-          <p className="font-mono">
+          <p className="font-mono tabular-nums">
             개산공제(§163⑥) = {preview.lumpDeductionBase.toLocaleString("ko-KR")} × 3%{" "}
             = <span className="font-semibold">{preview.estimatedDeduction.toLocaleString("ko-KR")}</span>
           </p>

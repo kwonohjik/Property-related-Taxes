@@ -195,7 +195,7 @@ export function ValuationDeltaTable({
                     hideUnit
                   />
                   <div
-                    className={`text-caption font-mono text-right ${
+                    className={`text-caption font-mono tabular-nums text-right ${
                       delta < 0 ? "text-rose-700" : "text-sky-900"
                     }`}
                   >
@@ -215,7 +215,7 @@ export function ValuationDeltaTable({
 
             <div className="border-t border-sky-300 pt-1 mt-1 flex justify-between text-caption font-bold text-sky-900">
               <span>① 자산 합계</span>
-              <span className="font-mono">{assetTotal.toLocaleString()}</span>
+              <span className="font-mono tabular-nums">{assetTotal.toLocaleString()}</span>
             </div>
           </div>
 
@@ -274,7 +274,7 @@ export function ValuationDeltaTable({
                     hideUnit
                   />
                   <div
-                    className={`text-caption font-mono text-right ${
+                    className={`text-caption font-mono tabular-nums text-right ${
                       delta < 0 ? "text-rose-700" : "text-rose-900"
                     }`}
                   >
@@ -294,7 +294,7 @@ export function ValuationDeltaTable({
 
             <div className="border-t border-rose-300 pt-1 mt-1 flex justify-between text-caption font-bold text-rose-900">
               <span>② 부채 합계</span>
-              <span className="font-mono">{liabilityTotal.toLocaleString()}</span>
+              <span className="font-mono tabular-nums">{liabilityTotal.toLocaleString()}</span>
             </div>
           </div>
 

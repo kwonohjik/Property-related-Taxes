@@ -86,11 +86,11 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
       <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">
         <div className="flex justify-between text-xs text-amber-700">
           <span>취득시 주택 연면적 {isCustomized ? "(수정됨)" : "(자동)"}</span>
-          <span className="font-mono">{acqResShown.toFixed(2)}㎡</span>
+          <span className="font-mono tabular-nums">{acqResShown.toFixed(2)}㎡</span>
         </div>
         <div className="flex justify-between text-xs text-amber-700">
           <span>취득시 상가 연면적 {isCustomized ? "(수정됨)" : "(자동)"}</span>
-          <span className="font-mono">{acqCommShown.toFixed(2)}㎡</span>
+          <span className="font-mono tabular-nums">{acqCommShown.toFixed(2)}㎡</span>
         </div>
       </div>
 

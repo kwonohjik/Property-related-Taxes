@@ -5,6 +5,7 @@
  * factory의 makeDefaultAsset과 짝(신규 필드 추가 시 양쪽 동기화). RENTAL_HOUSING_EXCEPTION_DEFAULTS는 factory에서 import.
  */
 
+import { round2 } from "@/lib/tax-engine/area-utils";
 import { migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
 import { normalizeRentalAndSplitFields, hasPositiveAmount } from "./calc-wizard-asset-migrate-rental-split";
 import { migrateResidenceFields } from "./calc-wizard-asset-residence";
@@ -523,7 +524,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   const legacyArea = typeof a.gbBuildingArea === "string" ? parseFloat(a.gbBuildingArea) : 0;
   if (a.gbBuildingFootprintArea === undefined || a.gbBuildingFootprintArea === "") {
     if (legacyFloors > 0 && legacyArea > 0) {
-      a.gbBuildingFootprintArea = String(parseFloat((legacyArea / legacyFloors).toFixed(2)));
+      a.gbBuildingFootprintArea = String(round2(legacyArea / legacyFloors));
     } else {
       a.gbBuildingFootprintArea = "";
     }

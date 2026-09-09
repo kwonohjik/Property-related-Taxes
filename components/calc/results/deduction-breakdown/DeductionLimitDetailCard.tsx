@@ -38,7 +38,7 @@ export function DeductionLimitDetailCard({ detail, rawTotalDeduction, standalone
       <div className="flex items-center justify-between px-4 py-2.5">
         <span className="text-sm">§24 종합한도</span>
         <span className="flex items-center gap-1">
-          <span className="font-mono text-sm">
+          <span className="font-mono tabular-nums text-sm">
             {formatKRW(detail.limitedDeduction)}
           </span>
           <ExpandButton expanded={open} onClick={() => setOpen((v) => !v)} />

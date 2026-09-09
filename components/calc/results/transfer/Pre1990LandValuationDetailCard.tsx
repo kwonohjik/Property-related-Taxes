@@ -27,19 +27,19 @@ export function Pre1990LandValuationDetailCard({ detail }: { detail: Detail }) {
                   </div>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2">
                     <span className="text-muted-foreground">취득시 등급가액</span>
-                    <span className="font-mono text-right">{detail.breakdown.gradeValueAtAcquisition.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-right">{detail.breakdown.gradeValueAtAcquisition.toLocaleString()}</span>
                     <span className="text-muted-foreground">90.8.30. 현재 등급가액</span>
-                    <span className="font-mono text-right">{detail.breakdown.gradeValue_1990_0830.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-right">{detail.breakdown.gradeValue_1990_0830.toLocaleString()}</span>
                     <span className="text-muted-foreground">90.8.30. 직전 등급가액</span>
-                    <span className="font-mono text-right">{detail.breakdown.gradeValuePrev_1990_0830.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-right">{detail.breakdown.gradeValuePrev_1990_0830.toLocaleString()}</span>
                     <span className="text-muted-foreground">분모 (평균과 현재 중 작은 금액)</span>
-                    <span className="font-mono text-right">{detail.breakdown.appliedDenominator.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-right">{detail.breakdown.appliedDenominator.toLocaleString()}</span>
                     <span className="text-muted-foreground">적용 비율</span>
-                    <span className="font-mono text-right">{(detail.breakdown.appliedRatio * 100).toFixed(2)}%</span>
+                    <span className="font-mono tabular-nums text-right">{(detail.breakdown.appliedRatio * 100).toFixed(2)}%</span>
                     <span className="text-muted-foreground">㎡당 가액</span>
-                    <span className="font-mono text-right">{detail.pricePerSqmAtAcquisition.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-right">{detail.pricePerSqmAtAcquisition.toLocaleString()}</span>
                     <span className="text-muted-foreground font-medium">취득시 기준시가</span>
-                    <span className="font-mono text-right font-medium">{detail.standardPriceAtAcquisition.toLocaleString()}</span>
+                    <span className="font-mono tabular-nums text-right font-medium">{detail.standardPriceAtAcquisition.toLocaleString()}</span>
                     {/* 양도시 기준시가는 상위 폼 standardPriceAtTransfer 입력값으로 공급 — 서브엔진 미산출 */}
                   </div>
                   {detail.warnings.length > 0 && (

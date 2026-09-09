@@ -749,7 +749,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           */}
           <p>
             인수 채무액{isFractionalSplit ? " (내 지분분 = 양도가액)" : isCompanionBundle ? " (신고 단위 합계)" : " (= 양도가액)"}:{" "}
-            <span className="font-mono font-semibold">
+            <span className="font-mono tabular-nums font-semibold">
               {fmt(isFractionalSplit ? applyRatio(assumedDebtAmount, ownRatio) : assumedDebtAmount)}원
             </span>
             {isFractionalSplit && ownRatio < 1 && (
@@ -766,11 +766,11 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
           <p>
             담보평가:{" "}
-            <span className="font-mono">{fmt(valuationPreview.mortgage)}원</span>
+            <span className="font-mono tabular-nums">{fmt(valuationPreview.mortgage)}원</span>
           </p>
           <p>
             임대평가:{" "}
-            <span className="font-mono">{fmt(valuationPreview.rental)}원</span>
+            <span className="font-mono tabular-nums">{fmt(valuationPreview.rental)}원</span>
           </p>
           <p className="text-fuchsia-600 mt-1">
             * 보충적·담보·임대 평가액 중 가장 큰 금액을 분모로 양도가·취득가를 자산별 안분 — 엔진이 자동 산정.

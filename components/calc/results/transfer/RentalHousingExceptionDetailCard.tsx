@@ -156,7 +156,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
                 bottom="현 양도 당시 기준시가 − 취득 당시 기준시가"
               />
             </p>
-            <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
+            <p className="font-mono tabular-nums font-semibold text-violet-900 dark:text-violet-200">
               = {(formulaTrace.ratio161_1 * 100).toFixed(4)}%
             </p>
 
@@ -164,7 +164,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
             <div className="border-t border-violet-100 dark:border-violet-800/30 pt-1.5 mt-1.5">
               <p className="text-muted-foreground">
                 장기보유특별공제(일반표) 적용 후 양도소득금액:
-                {" "}<span className="font-mono text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
+                {" "}<span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
               </p>
             </div>
 
@@ -184,9 +184,9 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
                 <p className="text-muted-foreground">
                   과세대상 양도소득금액
                   {" "}= 장기보유공제 적용 후 양도소득금액{" "}
-                  <span className="font-mono text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
+                  <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
                   {" "}× 과세 안분 비율{" "}
-                  <span className="font-mono text-foreground">{(formulaTrace.ratio161_1 * 100).toFixed(4)}%</span>
+                  <span className="font-mono tabular-nums text-foreground">{(formulaTrace.ratio161_1 * 100).toFixed(4)}%</span>
                 </p>
                 <p className="font-mono font-semibold text-violet-900 dark:text-violet-200 mt-0.5">
                   = {formatN(taxableGain)}
@@ -240,7 +240,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs text-muted-foreground">
             <p>
               과세 비율 = <Frac top="양도가액 − 12억원" bottom="양도가액" />
-              {" "}= <span className="font-mono text-foreground font-semibold">
+              {" "}= <span className="font-mono tabular-nums text-foreground font-semibold">
                 {(formulaTrace.ratioHighValue * 100).toFixed(4)}%
               </span>
             </p>
@@ -268,9 +268,9 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
               </p>
               <p className="text-muted-foreground pl-2">
                 = 장기보유공제(일반표) 적용 후 양도소득금액{" "}
-                <span className="font-mono text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
+                <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
                 {" "}× 안분 비율{" "}
-                <span className="font-mono text-foreground">
+                <span className="font-mono tabular-nums text-foreground">
                   {((formulaTrace.ratio161_1 ?? 0) * 100).toFixed(4)}%
                 </span>
               </p>
@@ -286,15 +286,15 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
               </p>
               <p className="text-muted-foreground pl-2">
                 장기보유공제(1세대1주택표) 적용 후 양도소득금액{" "}
-                <span className="font-mono text-foreground">{formatN(formulaTrace.gain95Table2)}</span>
+                <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table2)}</span>
               </p>
               <p className="text-muted-foreground pl-2">
                 × 이후 보유분 안분 비율{" "}
-                <span className="font-mono text-foreground">
+                <span className="font-mono tabular-nums text-foreground">
                   {(formulaTrace.ratio161_2_2 * 100).toFixed(4)}%
                 </span>
                 {" "}× 고가주택 과세 비율{" "}
-                <span className="font-mono text-foreground">
+                <span className="font-mono tabular-nums text-foreground">
                   {((formulaTrace.ratioHighValue ?? 0) * 100).toFixed(4)}%
                 </span>
               </p>
@@ -307,9 +307,9 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
             <div className="border-t border-violet-100 dark:border-violet-800/30 pt-2">
               <p className="text-muted-foreground">
                 과세대상 양도소득금액 = 1호{" "}
-                <span className="font-mono text-foreground">{formatN(formulaTrace.part1)}</span>
+                <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.part1)}</span>
                 {" "}+ 2호{" "}
-                <span className="font-mono text-foreground">{formatN(formulaTrace.part2)}</span>
+                <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.part2)}</span>
               </p>
               <p className="font-mono font-semibold text-violet-900 dark:text-violet-200 mt-0.5">
                 = {formatN(taxableGain)}

@@ -303,7 +303,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
             {parseAmount(asset.fixedAcquisitionPrice) > 0 && (
               <div className="pt-1">
                 현재 사용 중인 취득가액:{" "}
-                <span className="font-mono font-semibold">
+                <span className="font-mono tabular-nums font-semibold">
                   {parseAmount(asset.fixedAcquisitionPrice).toLocaleString("ko-KR")}
                 </span>
               </div>
@@ -393,7 +393,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           <div className="mt-2 rounded-md bg-violet-100/60 border border-violet-200 p-2 text-xs space-y-1">
             <p className="font-semibold text-violet-800">미리보기 — 분양가 (인가후 분 취득가) 자동 산정</p>
             <p className="text-violet-700">
-              분양가 = 권리가액 {preview.sign} 청산금 = <span className="font-mono font-semibold">{preview.salePriceTotal.toLocaleString()}</span>
+              분양가 = 권리가액 {preview.sign} 청산금 = <span className="font-mono tabular-nums font-semibold">{preview.salePriceTotal.toLocaleString()}</span>
             </p>
             <p className="text-caption text-violet-600">
               ※ §166②1호 인가후 분 양도차익 산정 시 양도가액에서 차감되는 분양가. 상단 일반 &ldquo;취득가액&rdquo; 입력 대신 본 값이 자동 사용됩니다.

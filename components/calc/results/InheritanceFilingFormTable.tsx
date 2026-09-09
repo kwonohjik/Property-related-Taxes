@@ -124,7 +124,7 @@ export function InheritanceFilingFormTable({
               <td className="px-3 py-2" colSpan={4}>
                 합계 (상속세 과세가액 가산)
               </td>
-              <td className="px-3 py-2 text-right font-mono">
+              <td className="px-3 py-2 text-right font-mono tabular-nums">
                 {formatKRW(priorGiftAggregated)}
               </td>
               <td className="px-3 py-2" colSpan={3}></td>
@@ -221,13 +221,13 @@ function renderGiftRow(
       </td>
       <td className="px-3 py-2">{relationLabel}</td>
       <td className="px-3 py-2">{categoryLabel}</td>
-      <td className="px-3 py-2 text-right font-mono">
+      <td className="px-3 py-2 text-right font-mono tabular-nums">
         {formatKRW(gift.giftAmount)}
       </td>
-      <td className="px-3 py-2 text-right font-mono">
+      <td className="px-3 py-2 text-right font-mono tabular-nums">
         {computedTax > 0 ? formatKRW(computedTax) : "—"}
       </td>
-      <td className="px-3 py-2 text-right font-mono">
+      <td className="px-3 py-2 text-right font-mono tabular-nums">
         {isCorporate ? (
           <span className="text-micro">— (§4의2③ 비과세)</span>
         ) : (

@@ -53,7 +53,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
                 <td className="px-2 py-2 font-mono">{fmtDate(a.eventDate)}</td>
                 <td className="px-2 py-2">{TYPE_LABEL[a.type] || a.type}</td>
                 <td className="px-2 py-2 text-right font-mono">{a.ratio}</td>
-                <td className="px-2 py-2 text-right font-mono">
+                <td className="px-2 py-2 text-right font-mono tabular-nums">
                   {fmt(a.beforeShares)} → {fmt(a.afterShares)}
                 </td>
                 <td className="px-2 py-2 text-center">
@@ -72,16 +72,16 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
       <div className="rounded border border-violet-200 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-violet-800 space-y-1">
         <p>
           최종 환산 주식수 (취득가액 분모) ={" "}
-          <strong className="font-mono">{fmt(detail.adjustedShareCount)}주</strong>
+          <strong className="font-mono tabular-nums">{fmt(detail.adjustedShareCount)}주</strong>
         </p>
         <p>
           환산 1주당 단가 ={" "}
-          <strong className="font-mono">{fmt(detail.adjustedPerShareCost)}원</strong>{" "}
+          <strong className="font-mono tabular-nums">{fmt(detail.adjustedPerShareCost)}원</strong>{" "}
           (= <Frac top="총 취득원가" bottom="환산 주식수" />)
         </p>
         <p>
           총 취득원가 (불변) ={" "}
-          <strong className="font-mono">{fmt(detail.baseTotalCost)}원</strong>
+          <strong className="font-mono tabular-nums">{fmt(detail.baseTotalCost)}원</strong>
         </p>
       </div>
 
