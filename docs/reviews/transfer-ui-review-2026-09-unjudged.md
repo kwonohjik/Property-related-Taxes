@@ -146,13 +146,57 @@ E2E 「토글 없이 상시 표시」 단언이 그대로 통과하는 것으로
   **본 PR 미매핑** — 별도 산정 시 직접 신고 권장」이 렌더된다. R09·R17과 같은 축인데
   23건 모집단 밖이라 별도로 적는다.
 
-## 3. 남은 구조적 공백 (이 23건과 별개)
+## 3. 누락 점검 3종 — **2026-09-10 실행 완료** (PR #1552)
 
-원 리뷰 `gaps.json`의 `criticFail 3` — **누락 점검 3종이 한 번도 돌지 못했다**:
+원 리뷰 `gaps.json`의 `criticFail 3`(한 번도 돌지 못한 점검)을 돌렸다. 발견 7건 중
+결함 3건을 고쳤고 나머지 4건은 죽은 무게(세액 무관)로 판정했다.
 
-1. `critic:rules` — 규칙 전수 대조
-2. `critic:sync` — AssetForm × ④⑤⑧ 동기화 전수
-3. `critic:flow` — validate 오류 메시지 역추적(도달 불가 차단 탐지)
+### critic:flow — 1건
 
-R11·R16처럼 이 23건 안에서 나온 결함이 **정확히 `critic:flow`가 잡았어야 할 형태**라,
-그 축은 아직 모집단 자체가 비어 있다고 봐야 한다.
+**F-1 · `deemedTransfer`가 지목을 보지 않고 실렸다.** `getPeriodJudgmentDate`(§168의14②)를
+부르는 것은 농지·임야·목장·별장·기타토지의 judge뿐인데(주택·건물 부수토지는 배율축이라
+부르지 않는다) `engine.ts`의 `assemble()`이 지목과 무관하게 emit했고, 결과 카드가
+「…을 양도일로 보아 **기간기준(§168의6)을 판정했습니다**」라고 단정했다.
+**무조건 사업용 의제(§168의14③) 조기반환 경로**도 같은 허위를 냈다 — 지목별 judge가
+아예 돌지 않는데 판정했다고 말했다.
+
+🔑 **이것은 R11의 나머지 반쪽**이다. #1548에서 ⑧(검증)만 닫았고 표시를 만드는 층은
+그대로였다(`feedback_fixed_layer_vs_consumed_layer`). ⇒ `consumesPeriodJudgmentDate()`를
+`land-category.ts`에 두고 **엔진 emit·⑤·⑧이 같은 술어에 위임**한다.
+
+- (b) 두 화면이 같은 필드를 쓰는 축 → CLAUDE.md가 정한 **의도된** 양방향 패턴, 발견 0
+- (c) `assetKind` 전환 시 stale 값 → ④가 재개발·GB·CB·겸용 전 계열을 게이트, **엔진 도달 0**
+
+### critic:rules — 3건 (R1·R2·R3는 0건 — 이관 완결 확인)
+
+| ID | 규칙 | 실측 | 처리 |
+|---|---|---|---|
+| RU-1 | 금액 셀 `tabular-nums` (`components/calc/CLAUDE.md:176`) | **170행 / 47파일** | ✅ 전건 + 가드 신설 |
+| RU-2 | 인라인 `parseFloat(x.toFixed(2))` 금지 (`:177`) | **4곳**(§164⑨ 환산 분모 포함) | ✅ 전건 + 가드 신설 |
+| RU-3 | `app/guide/layout.tsx:9` breadcrumb native `<Link href="/">` | 1건 | 🟡 보류 — affordance가 달라 판단 필요 |
+
+- 🔑 **규칙 범위 > 가드 범위였다.** 둘 다 문언은 전역인데 가드는 양도세 신고서 1곳
+  또는 아예 없었다 → `feedback_rule_wider_than_its_guard`.
+- 🔴 **RU-2를 처음에 「1건」으로 셌다** — 스캔 정규식 문자군에 `+`가 없어
+  `parseFloat((excl + shared).toFixed(2))`를 놓쳤다 →
+  `feedback_regex_charclass_undercounts_population`.
+- RU-2는 스타일이 아니다: `round2`는 십진 스케일을, 인라인은 이진 배정도 실제값을
+  반올림해 **`x.xx5` 10만 개 중 43,412건(43.4%) 상이**하고 그 면적은 단가와 곱해진다.
+
+### critic:sync — 3건, 전부 죽은 무게 (🔴 세액 결함 0)
+
+| ID | 필드 | 근거 |
+|---|---|---|
+| S-1 | `inhHouseValEnabled` | `transfer-tax-api-inheritance.ts:172`가 이미 "dead flag"로 주석 |
+| S-2 | `standardPriceAtAcqLabel` / `…AtTransferLabel` | `calc-wizard-migration.ts`만 복사, 소비처 0 |
+| S-3 | `pre1990PricePerSqm_atTransfer` | 입력 UI 없음(validate 주석 확인) · 소비처는 상시 fallback |
+
+**「⑧만 · ④만 · 화면에 없는 칸을 요구」 = 0건.**
+
+### ⚠️ 이 실행의 한계 (다음 사람이 알아야 할 것)
+
+원 리뷰는 **LLM 3명의 개방형 비판**이었고 이번엔 **결정론적 스캔**으로 돌렸다.
+규칙화·grep 가능한 축만 봤으므로 「규칙에 없지만 이상한 것」은 여전히 사각이다.
+반대로 R6(`Math.round` 115건)·R7(`new Date` 82건)·R9(결과 `floor(` 20건)는 오탐이
+압도적이라(세율 정수 스케일링·정당한 날짜 생성 등) 보고에서 제외했다 — **「0건」이
+아니라 「판정하지 않았다」**이다.
