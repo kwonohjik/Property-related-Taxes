@@ -9,7 +9,6 @@
  */
 
 import { useCallback, useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { StockSidebar } from "@/components/calc/stock-transfer/StockSidebar";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -38,7 +37,6 @@ import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/Wi
 const STEPS = ["자산·시장·대주주", "양도·취득가액", "필요경비·신고", "결과"] as const;
 
 export default function StockTransferTaxCalculator() {
-  const router = useRouter();
 
   // atomic selector (무한 루프 방지)
   const currentStep = useStockTransferStore((s) => s.currentStep);
@@ -139,12 +137,13 @@ export default function StockTransferTaxCalculator() {
   }, [currentStep, formData, setError, setStep]);
 
   const handleBack = useCallback(() => {
-    if (currentStep === 0) {
-      router.push("/");
-      return;
-    }
+    // step 0에서는 `WizardBackNav`가 `onBack`을 부르지 않는다 — `WizardNav.tsx:56`이
+    // HomeButton을 직접 렌더한다(anchor: `__tests__/components/wizard-nav.test.tsx:46`).
+    // 종전의 `router.push("/")`는 그래서 **도달하지 않는 홈 이동**이었다 — 읽는 사람에게
+    // 「step 0 뒤로가기 = 홈」이라 오독시켰다. 경계 가드만 남긴다.
+    if (currentStep === 0) return;
     setStep(currentStep - 1);
-  }, [currentStep, router, setStep]);
+  }, [currentStep, setStep]);
 
   // 계산 실행
   //
