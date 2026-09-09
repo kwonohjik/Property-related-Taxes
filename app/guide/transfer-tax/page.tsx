@@ -53,8 +53,9 @@ export default function TransferTaxGuidePage() {
       <article className="space-y-12 min-w-0">
 
         {/* 페이지 헤더 */}
+        {/* 홈 이동은 레이아웃 breadcrumb의 HomeButton 하나로 족하다 — 바로 위에 있다.
+            종전에는 breadcrumb 홈 링크 + 이 pill + 하단 pill로 **셋**이 겹쳤다(RU-3). */}
         <header className="space-y-2 pb-4 border-b">
-          <HomeButton />
           <p className="text-xs text-muted-foreground">세금 가이드</p>
           <h1 className="text-2xl font-bold">양도소득세 계산 방법 완전 가이드</h1>
           <p className={pCls}>
