@@ -1,9 +1,12 @@
 /**
  * 가이드 공통 레이아웃 (T-10)
  * 헤더 아래 breadcrumb 바 + 최대 폭 컨테이너 제공
+ *
+ * 홈 이동은 `HomeButton` pill이다 — 규칙이 `pill` variant를 「헤더·**breadcrumb**」용으로
+ * 명시한다(`components/calc/CLAUDE.md:87`). 종전에는 native `<Link href="/">`였다(RU-3).
  */
 
-import Link from "next/link";
+import { HomeButton } from "@/components/calc/shared/HomeButton";
 
 export default function GuideLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,9 +14,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
       {/* Breadcrumb 바 */}
       <div className="border-b bg-muted/30">
         <div className="mx-auto max-w-screen-lg px-4 py-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">
-            홈
-          </Link>
+          <HomeButton label="홈" />
           <span>/</span>
           <span>가이드</span>
         </div>
