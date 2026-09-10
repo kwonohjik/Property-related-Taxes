@@ -38,7 +38,8 @@ export const timelineScenario: ScenarioRunner = {
 
     const [prec, interpretation] = await Promise.all([
       searchDecisions(q, "prec", 1, 10).catch(() => null),
-      searchDecisions(q, "detc", 1, 5).catch(() => null),
+      // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
+      searchDecisions(q, "expc", 1, 5).catch(() => null),
     ]);
 
     // 날짜 필터 (있으면) — 법제처 API 자체 필터링이 불안정해 클라이언트 사이드 필터

@@ -26,7 +26,8 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
   const [parentLaw, ordinances, consDecisions, tribunal] = await Promise.all([
     searchLawMany(q, 2).catch(() => []),
     searchDecisions(q, "ordin", 1, 5).catch(() => EMPTY),
-    searchDecisions(`${q} 위헌`, "expc", 1, 5).catch(() => EMPTY),
+    // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
+    searchDecisions(`${q} 위헌`, "detc", 1, 5).catch(() => EMPTY),
     searchDecisions(`${q} 위법`, "ppc", 1, 3).catch(() => EMPTY),
   ]);
 

@@ -48,7 +48,8 @@ export const penaltyScenario: ScenarioRunner = {
     const [prec, tribunal, interpretation] = await Promise.all([
       safePage(() => searchDecisions(enriched, "prec", 1, 5)),
       safePage(() => searchDecisions(enriched, "ppc", 1, 5)),
-      safePage(() => searchDecisions(enriched, "detc", 1, 3)),
+      // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
+      safePage(() => searchDecisions(enriched, "expc", 1, 3)),
     ]);
 
     const sections: ChainSection[] = [];

@@ -132,7 +132,8 @@ const fullResearch: Runner = async ({ query }) => {
       return { kind: "decisions", heading: "대법원 판례", decisions: p.items };
     }),
     secOrSkip("법령해석례", async () => {
-      const p: DecisionSearchPage = await searchDecisions(query, "detc", 1, 5);
+      // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
+      const p: DecisionSearchPage = await searchDecisions(query, "expc", 1, 5);
       return { kind: "decisions", heading: "법령해석례", decisions: p.items };
     }),
   ]);
@@ -208,7 +209,8 @@ const disputePrep: Runner = async ({ query }) => {
       return { kind: "decisions", heading: "대법원 판례", decisions: p.items };
     }),
     secOrSkip("헌재결정례", async () => {
-      const p = await searchDecisions(query, "expc", 1, 5);
+      // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
+      const p = await searchDecisions(query, "detc", 1, 5);
       return { kind: "decisions", heading: "헌재결정례", decisions: p.items };
     }),
     secOrSkip("조세심판원", async () => {
@@ -216,7 +218,8 @@ const disputePrep: Runner = async ({ query }) => {
       return { kind: "decisions", heading: "조세심판원", decisions: p.items };
     }),
     secOrSkip("국민권익위", async () => {
-      const p = await searchDecisions(query, "oia", 1, 3);
+      // oia 는 빈 응답을 주는 무효 target 이었다. 국민권익위원회 실체는 acr (응답 `기관명` 실측).
+      const p = await searchDecisions(query, "acr", 1, 3);
       return { kind: "decisions", heading: "국민권익위", decisions: p.items };
     }),
   ]);

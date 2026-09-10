@@ -230,7 +230,8 @@ const ROUTER_PATTERNS: Pattern[] = [
     patterns: [/(판례|판결|선고|판시|결정례|해석례)/],
     extract: (query) => ({
       tool: "search_decisions",
-      params: { q: query, domain: /해석례/.test(query) ? "detc" : "prec" },
+      // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
+      params: { q: query, domain: /해석례/.test(query) ? "expc" : "prec" },
       reason: "판례·판결·해석례 키워드 → 판례/결정례 검색",
       targetTab: "decision",
       confidence: "high",

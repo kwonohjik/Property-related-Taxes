@@ -237,10 +237,12 @@ describe("Query Router — 판례·결정례", () => {
     expect(r.targetTab).toBe("decision");
   });
 
-  it('"해석례" 키워드 → search_decisions (detc)', () => {
+  it('"해석례" 키워드 → search_decisions (expc = 법령해석례)', () => {
+    // ⚠ 종전 기대값은 "detc" 였는데, detc 는 실제로 **헌재결정례** 다
+    //   (응답 필드 `헌재결정례상세링크`·사건번호 "2011헌바357" 실측). 해석례는 expc.
     const r = routeQuery("양도소득세 해석례");
     expect(r.tool).toBe("search_decisions");
-    expect(r.params.domain).toBe("detc");
+    expect(r.params.domain).toBe("expc");
   });
 });
 

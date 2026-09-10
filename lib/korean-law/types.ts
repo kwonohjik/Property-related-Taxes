@@ -22,22 +22,23 @@ import { z } from "zod";
  */
 export const DECISION_DOMAINS = [
   "prec",       // 판례 (대법원)
-  "detc",       // 법령해석례 (법제처)
-  "expc",       // 헌재결정례
+  // 🔴 detc / expc 는 이름의 직관과 반대다 — 법제처 응답이 스스로 밝힌다(2026-09-11 실측):
+  //    target=detc → 필드 `헌재결정례상세링크`·`헌재결정례일련번호`, 사건번호 "2011헌바357"
+  //    target=expc → 필드 `법령해석례상세링크`·`질의기관명`·`회신기관명`, 안건번호 "17-0358"
+  "detc",       // 헌재결정례
+  "expc",       // 법령해석례 (법제처)
   "admrul",     // 행정규칙
-  "ppc",        // 조세심판원 결정
+  // 🔴 ppc 는 조세심판원이 아니다 — 응답 컨테이너의 `기관명` 이 "개인정보보호위원회" 이고
+  //    레코드도 개인정보 제공 심의·의결이다(실측). 종전 라벨이 틀렸다.
+  "ppc",        // 개인정보보호위원회 심의·의결
   "fsc",        // 금융위원회
   "ftc",        // 공정거래위원회
   "nlrc",       // 중앙노동위원회
   "kcc",        // 방송통신위원회
-  "pipc",       // 개인정보보호위원회
-  "oia",        // 국민권익위원회 (국민고충처리)
-  "acr",        // 소청심사위원회
+  "acr",        // 국민권익위원회 (응답 `기관명` 실측)
   "ordin",      // 자치법규
   "public",     // 공공기관 규정
-  "nhrc",       // 국가인권위원회
   "trty",       // 조약
-  "lawnkor",    // 북한법령
 ] as const;
 
 export type DecisionDomain = typeof DECISION_DOMAINS[number];
@@ -45,22 +46,18 @@ export type DecisionDomain = typeof DECISION_DOMAINS[number];
 /** UI 표기용 한글 레이블 (드롭다운·필터용) */
 export const DECISION_DOMAIN_LABELS: Record<DecisionDomain, string> = {
   prec:     "대법원 판례",
-  detc:     "법령해석례",
-  expc:     "헌재결정례",
+  detc:     "헌재결정례",
+  expc:     "법령해석례",
   admrul:   "행정규칙",
-  ppc:      "조세심판원 결정",
+  ppc:      "개인정보보호위원회",
   fsc:      "금융위원회 의결",
   ftc:      "공정거래위원회 의결",
   nlrc:     "중앙노동위원회",
   kcc:      "방송통신위원회",
-  pipc:     "개인정보보호위원회",
-  oia:      "국민권익위원회",
-  acr:      "소청심사위원회",
+  acr:      "국민권익위원회",
   ordin:    "자치법규",
   public:   "공공기관 규정",
-  nhrc:     "국가인권위원회",
   trty:     "조약",
-  lawnkor:  "북한법령",
 };
 
 // ────────────────────────────────────────────────────────────────────────────
