@@ -92,6 +92,27 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
   const handleAcqDateChange = (v: string) => {
     const { coerced, applied } = coerceDeemed(v);
     setAcqOriginal(applied ? v : null);
+    /*
+      취득일이 바뀌면 1개월 종가표 잔재를 «모드와 무관하게» 지운다.
+
+      분모 축에서 똑같은 결함을 겪었다(제보 2026-09-01 — 화면 두 줄이 16,560 vs 16,559):
+      표의 미리보기는 기준일 파생 `displayDates`로 **매 렌더 재계산**되는데 저장 평균은
+      셀 편집·자동조회 때만 갱신된다. 기준일만 바뀌면 둘이 갈리고, 저장 평균은
+      §99①3 환산 **분자로 엔진에 가므로** 표시만의 문제가 아니다.
+      종가 배열도 남으면 새 일자 배열과 인덱스가 어긋난다.
+
+      ⚠️ 모드로 좁히지 말 것 — direct에서 취득일을 바꾼 뒤 daily로 전환하면 잔재가 살아남는다.
+      anchor: `__tests__/components/calc/stock-transfer/acq-one-month-table.anchor.test.tsx`
+    */
+    if (coerced !== form.acquisitionDate) {
+      onChange({
+        acquisitionDate: coerced,
+        acquisitionPriceDates: [],
+        acquisitionPriceClosing: [],
+        acquisitionDatePriceAvg1Month: "",
+      });
+      return;
+    }
     onChange({ acquisitionDate: coerced });
   };
 

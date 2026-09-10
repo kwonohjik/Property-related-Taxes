@@ -17,6 +17,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, cleanup, fireEvent } from "@testing-library/react";
 import { TransferDate1MonthClosingPriceTable } from "@/components/calc/stock-transfer/TransferDate1MonthClosingPriceTable";
 import { buildOneMonthBeforeSlots } from "@/lib/kiwoom/calendar";
+import { createInitialStockFormData } from "@/lib/stores/calc-wizard-stock-form";
 
 afterEach(cleanup);
 
@@ -27,10 +28,9 @@ function renderTable(closing: string[] = []) {
   return render(
     <TransferDate1MonthClosingPriceTable
       form={{
+        ...createInitialStockFormData(),
         transferDate: TRANSFER_DATE,
-        transferPriceDates: [],
         transferPriceClosing: closing,
-        transferDatePriceAvg1Month: "",
       }}
       onChange={vi.fn()}
     />,

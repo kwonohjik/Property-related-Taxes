@@ -1,7 +1,12 @@
 "use client";
 
 /**
- * TransferDate1MonthClosingPriceTable — 양도일 이전 1개월 종가 표
+ * TransferDate1MonthClosingPriceTable — 「기준일 이전 1개월」 종가 표 (**양도일·취득일 두 축 공용**)
+ *
+ * ⚠️ 이름은 양도일 축만 있던 시기의 것이다(소비처·anchor 다수가 참조해 그대로 둔다).
+ *    `axis="acquisition"`이면 §99①3 환산비율의 **분자**(취득 당시 기준시가)를 담당한다 —
+ *    기간 산식(`buildOneMonthBeforeSlots`)·평균 산식·비거래일 처리가 두 축에서 **완전히 동일**하므로
+ *    복제하지 않는다. 이 저장소는 「같은 산식이 두 벌」로 반복해서 데었다(아래 단일 소스 주석 참조).
  *
  * 소득세법 §99①3(법률) → 상증법 §63①1가목 준용 → 상증령 §52의2
  *   ※ §99는 **법률**이다. 종전 주석·화면 문구의 「소령 §99①3」은 오기였다.
@@ -45,17 +50,38 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store
 interface TransferDate1MonthClosingPriceTableProps {
   form: Pick<
     StockTransferFormData,
-    "transferDate" | "transferPriceDates" | "transferPriceClosing" | "transferDatePriceAvg1Month"
+    | "transferDate"
+    | "transferPriceDates"
+    | "transferPriceClosing"
+    | "transferDatePriceAvg1Month"
+    | "acquisitionDate"
+    | "acquisitionPriceDates"
+    | "acquisitionPriceClosing"
+    | "acquisitionDatePriceAvg1Month"
   >;
   onChange: (patch: Partial<StockTransferFormData>) => void;
+  /** 기본은 양도일 축 = §99①3 **분모** (기존 호출부 무변경) */
+  axis?: "transfer" | "acquisition";
 }
 
-export function TransferDate1MonthClosingPriceTable({ form, onChange }: TransferDate1MonthClosingPriceTableProps) {
-  // 양도일 기반 일자 자동 채움 (UTC + 윤년 처리)
-  const displayDates = useMemo(() => preTransferAutoFillDates(form.transferDate), [form.transferDate]);
+export function TransferDate1MonthClosingPriceTable({
+  form,
+  onChange,
+  axis = "transfer",
+}: TransferDate1MonthClosingPriceTableProps) {
+  const isAcq = axis === "acquisition";
+  const dateLabel = isAcq ? "취득일" : "양도일";
+  /** 환산비율에서 이 축이 앉는 자리 — 취득일 = 분자 / 양도일 = 분모 */
+  const roleLabel = isAcq ? "분자" : "분모";
+  const targetLabel = isAcq ? "취득시 1주당 기준시가" : "양도시 1주당 기준시가";
+  const baseDate = isAcq ? form.acquisitionDate : form.transferDate;
+  const closingCells = isAcq ? form.acquisitionPriceClosing : form.transferPriceClosing;
 
-  const anchor = useMemo(() => resolvePreTransferAnchor(form.transferDate), [form.transferDate]);
-  const anchorShifted = anchor !== "" && anchor !== form.transferDate;
+  // 기준일 기반 일자 자동 채움 (UTC + 윤년 처리)
+  const displayDates = useMemo(() => preTransferAutoFillDates(baseDate), [baseDate]);
+
+  const anchor = useMemo(() => resolvePreTransferAnchor(baseDate), [baseDate]);
+  const anchorShifted = anchor !== "" && anchor !== baseDate;
   const total = displayDates.length;
   const leftCount = Math.ceil(total / 2);
 
@@ -71,10 +97,10 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
       const dow = dayOfWeek(d);
       if (dow === 0 || dow === 6) return 0;
       if (isKrxHolidayInFixture(d)) return 0; // KRX 평일 휴장일 제외 (대선·현충일 등)
-      return parseAmount(form.transferPriceClosing[i] || "0");
+      return parseAmount(closingCells[i] || "0");
     });
     return calcMonthlyClosingAverage(displayDates, closes);
-  }, [displayDates, form.transferPriceClosing]);
+  }, [displayDates, closingCells]);
 
   // Enter 키 → 다음 거래일 셀로 포커스 이동
   const handleGridKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -95,7 +121,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
   };
 
   const handleCloseChange = (idx: number, value: string) => {
-    const next = [...form.transferPriceClosing];
+    const next = [...closingCells];
     while (next.length < total) next.push("");
     next.length = total;
     // 비거래일 셀 zero-out (transferDate 변경 시 인덱스 misalign 차단)
@@ -114,19 +140,29 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
       return parseAmount(next[i] || "0");
     });
     const { avg } = calcMonthlyClosingAverage(displayDates, closes);
+    const avgText = avg > 0 ? String(avg) : "";
 
-    onChange({
-      transferPriceClosing: next,
-      transferPriceDates: displayDates,
-      transferDatePriceAvg1Month: avg > 0 ? String(avg) : "",
-    });
+    // ★ 자동 평균 산정 → 축의 저장 필드에 mirror (onChange 단일 호출)
+    onChange(
+      isAcq
+        ? {
+            acquisitionPriceClosing: next,
+            acquisitionPriceDates: displayDates,
+            acquisitionDatePriceAvg1Month: avgText,
+          }
+        : {
+            transferPriceClosing: next,
+            transferPriceDates: displayDates,
+            transferDatePriceAvg1Month: avgText,
+          },
+    );
   };
 
-  if (!form.transferDate) {
+  if (!baseDate) {
     return (
       <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 text-sm text-amber-800">
-        <p className="font-semibold mb-1">양도일을 먼저 입력하세요 (Step 1).</p>
-        <p className="text-xs">양도일을 포함한 이전 1개월 일자가 자동 채워집니다.</p>
+        <p className="font-semibold mb-1">{dateLabel}을 먼저 입력하세요 (Step 1).</p>
+        <p className="text-xs">{dateLabel}을 포함한 이전 1개월 일자가 자동 채워집니다.</p>
       </div>
     );
   }
@@ -138,13 +174,13 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
       noDark
       title={
         <>
-          양도일 이전 1개월 종가 (소득세법 §99①3 분모 — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일, 휴일·주말은 빈칸으로 두면 자동 제외)
+          {dateLabel} 이전 1개월 종가 (소득세법 §99①3 {roleLabel} — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일, 휴일·주말은 빈칸으로 두면 자동 제외)
         </>
       }
     >
       {anchorShifted && (
         <p className="text-caption text-amber-700/90 leading-relaxed">
-          양도일 <strong>{form.transferDate}</strong>이(가) 휴장일이므로 직전 거래일{" "}
+          {dateLabel} <strong>{baseDate}</strong>이(가) 휴장일이므로 직전 거래일{" "}
           <strong>{anchor}</strong>을(를) 기산점으로 1개월 범위를 산정했습니다.
         </p>
       )}
@@ -182,7 +218,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
                       <CurrencyInput
                         label=""
                         hideUnit
-                        value={form.transferPriceClosing[idx] ?? ""}
+                        value={closingCells[idx] ?? ""}
                         onChange={(v) => handleCloseChange(idx, v)}
                         placeholder="종가"
                       />
@@ -201,7 +237,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
           거래일 <strong>{preview.tradingDays}</strong>일 · 종가합계{" "}
           <strong>{preview.sum.toLocaleString()}</strong> · 1개월 종가평균{" "}
           <strong className="text-amber-900">{preview.avg.toLocaleString()}</strong>
-          {" "}→ 「양도시 1주당 기준시가」로 자동 입력됩니다 (§99①3 환산 분모)
+          {" "}→ 「{targetLabel}」로 자동 입력됩니다 (§99①3 환산 {roleLabel})
         </div>
       )}
     </ToneCard>

@@ -183,6 +183,19 @@ export interface StockTransferFormData {
   transferPriceDates: string[];
   /** daily 모드 — 거래일별 종가 입력 (주말·공휴일은 빈 문자) */
   transferPriceClosing: string[];
+  /**
+   * 취득시 기준시가 입력 방식 — direct(단일 숫자) | daily(일자별 종가). 분모 축의 거울.
+   * 3중 패턴 default: "direct" (기존 동작 보존).
+   *
+   * ⚠️ 라디오가 `acquisitionStdMode === "monthly_avg"` 카드 **안에만** 있다 —
+   *    다른 방식에서 daily가 남으면 되돌릴 UI가 없다(F-10 dead-end).
+   *    ⇒ normalize가 `listingStdInputMode`와 같은 형태로 게이팅한다.
+   */
+  acquisitionStdInputMode: "direct" | "daily";
+  /** daily 모드 — 취득일 이전 1개월 일자 배열 (UTC, 29~32일 가변) */
+  acquisitionPriceDates: string[];
+  /** daily 모드 — 거래일별 종가 입력 (주말·휴장일은 빈 문자) */
+  acquisitionPriceClosing: string[];
   listingDate: string;                    // 상장일 "YYYY-MM-DD"
   /**
    * 상장일 **이후** 1개월 종가평균 (원) — 소령 §165⑤ 계산식 첫 항.
@@ -598,6 +611,9 @@ export function createInitialStockFormData(): StockTransferFormData {
     transferStdInputMode: "direct",  // 3중 패턴 default — 기존 동작 보존
     transferPriceDates: [],
     transferPriceClosing: [],
+    acquisitionStdInputMode: "direct",  // 3중 패턴 default — 기존 동작 보존
+    acquisitionPriceDates: [],
+    acquisitionPriceClosing: [],
     listingDate: "",
     listingDatePriceAvg1Month: "",
     listingStdInputMode: "direct",   // 3중 패턴 default — 기존 동작 보존

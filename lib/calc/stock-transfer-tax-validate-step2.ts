@@ -339,12 +339,39 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
       }
       if (stdMode === "monthly_avg") {
         // [C-1] 취득정지 시 분자(취득일 종가평균)는 법령상 무효·엔진 미사용 → 필수 면제 (G-6 패턴 mirror)
-        if (isEmpty(form.acquisitionDatePriceAvg1Month)) {
-          errors.push({
-            field: "acquisitionDatePriceAvg1Month",
-            message: "취득일 이전 1개월 종가 평균을 입력하세요 (시행령 §163⑨ 환산비율 분자)",
-            severity: "error",
-          });
+        //
+        // 입력 축 direct|daily — 분모 축(`transferStdInputMode`, :302)과 **같은 형태**다.
+        // ⚠️ UI가 두 조건으로 열면 ⑧도 두 조건 다 봐야 한다: daily에서 단일 칸을 요구하면
+        //    표만 채운 사용자가 «막다른 길»에 갇힌다(memory `feedback_ui_gate_two_conditions_downstream_one`).
+        const acqInputMode = form.acquisitionStdInputMode || "direct";
+        if (acqInputMode === "direct") {
+          if (isEmpty(form.acquisitionDatePriceAvg1Month)) {
+            errors.push({
+              field: "acquisitionDatePriceAvg1Month",
+              message:
+                "취득일 이전 1개월 종가 평균을 입력하세요 (시행령 §163⑨ 환산비율 분자 — '일자별 입력' 모드 사용 가능)",
+              severity: "error",
+            });
+          }
+        } else {
+          const hasAnyClose = form.acquisitionPriceClosing?.some(
+            (s) => !isEmpty(s) && parseI(s) > 0,
+          );
+          if (!hasAnyClose) {
+            errors.push({
+              field: "acquisitionPriceClosing",
+              message:
+                "일자별 입력 모드: 취득일 이전 1개월 거래일 종가를 1셀 이상 입력하세요 (§163⑨ 환산 분자 자동 산정용)",
+              severity: "error",
+            });
+          }
+          if (parseI(form.acquisitionDatePriceAvg1Month) <= 0) {
+            errors.push({
+              field: "acquisitionDatePriceAvg1Month",
+              message: "일자별 입력에서 자동 평균 산정 실패 — 종가 값을 확인하세요",
+              severity: "error",
+            });
+          }
         }
       }
       if (stdMode === "post_listing") {
