@@ -113,6 +113,23 @@ export async function mockLawApi(page: Page): Promise<void> {
     if (CAPTURE) {
       const res = await route.fetch();
       const body = await res.text();
+
+      // 🔴 **실패 응답으로 기존 fixture 를 덮지 않는다.**
+      //   법제처는 버스트(페이지 1회 로드에 조문+영향분석 동시 발사) 중에 간헐적으로
+      //   502/인증오류를 돌려준다. 실측(2026-09-11): 정상 조문 fixture 가
+      //   `{"error":"...인증 오류...등록된 IP/도메인이 맞는지 확인하세요"}` 로 덮어써져
+      //   회귀 테스트가 **조용히 무의미해질 뻔했다**(그 상태로 커밋되면 더 이상 조문을
+      //   검증하지 않는다). 캡처는 «성공 응답만» 기록하고, 실패는 크게 알린다.
+      if (res.status() >= 400) {
+        console.error(
+          `[law-fixture] ✗ 캡처 실패(${res.status()}) — 기존 fixture 를 보존한다: ${key}\n` +
+            `    ${body.slice(0, 200)}\n` +
+            `    법제처 일시 거절일 수 있다. 잠시 후 재시도할 것.`
+        );
+        await route.fulfill({ status: res.status(), headers: res.headers(), body });
+        return;
+      }
+
       const fixture: LawFixture = {
         request: `${req.method()} ${new URL(req.url()).pathname}${new URL(req.url()).search}`,
         status: res.status(),
