@@ -22,13 +22,12 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
   const q = ctx.cleanedQuery || ctx.query;
   const sections: ChainSection[] = [];
 
-  // 원본 MCP customs/fta: 조약(trty) + 관세해석례(detc w/ "관세") + 조세심판(ppc)
-  const [ftaLaws, treaties, customsInterpret, tribunal] = await Promise.all([
+  // 원본 MCP customs/fta: 조약(trty) + 관세해석례(expc w/ "관세")
+  const [ftaLaws, treaties, customsInterpret] = await Promise.all([
     searchLawMany("자유무역협정", 3).catch(() => []),
     searchDecisions(q, "trty", 1, 5).catch(() => EMPTY),
     // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
     searchDecisions(`${q} 관세`, "expc", 1, 5).catch(() => EMPTY),
-    searchDecisions(`${q} 관세`, "ppc", 1, 3).catch(() => EMPTY),
   ]);
 
   if (ftaLaws.length > 0) {
@@ -58,14 +57,6 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
       kind: "decisions",
       heading: "[시나리오: fta] 관세청 해석례",
       decisions: customsInterpret.items,
-    });
-  }
-
-  if (tribunal.items.length > 0) {
-    sections.push({
-      kind: "decisions",
-      heading: "[시나리오: fta] 관련 조세심판 결정",
-      decisions: tribunal.items,
     });
   }
 

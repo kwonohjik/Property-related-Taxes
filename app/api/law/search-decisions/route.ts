@@ -4,7 +4,6 @@
  *
  * 도메인별 추가 쿼리스트링(있으면 반영) — **법제처가 실제로 반영하는 것만** 받는다:
  *   prec:  curt(법원명) · caseNumber(사건번호) · fromDate/toDate(선고일 범위)
- *   ppc:   gana(가나다순)
  *
  * 종전엔 detc·expc·admrul·trty·ordin 옵션도 받았으나 전수 차등 실측에서 법제처가
  * 무시하는 것으로 확인돼 제거했다(근거·수치: client-decisions-search.ts:DomainSearchOptions).

@@ -28,9 +28,6 @@ export const DECISION_DOMAINS = [
   "detc",       // 헌재결정례
   "expc",       // 법령해석례 (법제처)
   "admrul",     // 행정규칙
-  // 🔴 ppc 는 조세심판원이 아니다 — 응답 컨테이너의 `기관명` 이 "개인정보보호위원회" 이고
-  //    레코드도 개인정보 제공 심의·의결이다(실측). 종전 라벨이 틀렸다.
-  "ppc",        // 개인정보보호위원회 심의·의결
   "fsc",        // 금융위원회
   "ftc",        // 공정거래위원회
   "nlrc",       // 중앙노동위원회
@@ -49,7 +46,6 @@ export const DECISION_DOMAIN_LABELS: Record<DecisionDomain, string> = {
   detc:     "헌재결정례",
   expc:     "법령해석례",
   admrul:   "행정규칙",
-  ppc:      "개인정보보호위원회",
   fsc:      "금융위원회 의결",
   ftc:      "공정거래위원회 의결",
   nlrc:     "중앙노동위원회",
@@ -343,8 +339,6 @@ export const domainSearchOptionsSchema = z.object({
   caseNumber: z.string().max(50).optional(),
   fromDate: z.string().regex(/^\d{8}$/, "YYYYMMDD 형식").optional(),
   toDate: z.string().regex(/^\d{8}$/, "YYYYMMDD 형식").optional(),
-  // ppc — 가나다순
-  gana: z.string().max(5).optional(),
 });
 export type DomainSearchOptions = z.infer<typeof domainSearchOptionsSchema>;
 

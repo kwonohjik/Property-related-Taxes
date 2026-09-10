@@ -8,7 +8,6 @@
  *   1. 본법 + 시행령·시행규칙 위임 관계를 서술적 note 섹션으로 제공
  *      (법제처 API가 위임조항 파싱 API를 직접 노출하지 않으므로 메타 가이드 제공)
  *   2. 헌법재판소 결정 3건 + 대법원 위법·무효 판결 5건
- *   3. 조세심판원 취소 결정 5건
  *
  * 한계: 법제처 3단비교(thdCmp) 엔드포인트 노출은 Phase 3 이상. 현재는
  * 사용자가 개정 영향도를 가늠할 수 있는 판례·결정 묶음 제공.
@@ -30,11 +29,10 @@ export const impactScenario: ScenarioRunner = {
   triggers: TRIGGERS,
   async run(ctx) {
     const q = ctx.cleanedQuery ?? ctx.query;
-    const [constDec, prec, tribunal] = await Promise.all([
+    const [constDec, prec] = await Promise.all([
       // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
       searchDecisions(`${q} 위헌 위법 헌법불합치`, "detc", 1, 3).catch(() => null),
       searchDecisions(`${q} 무효 취소`, "prec", 1, 5).catch(() => null),
-      searchDecisions(`${q} 취소`, "ppc", 1, 5).catch(() => null),
     ]);
 
     const sections: ChainSection[] = [
@@ -57,13 +55,6 @@ export const impactScenario: ScenarioRunner = {
         kind: "decisions",
         heading: "[시나리오: impact] 대법원 무효·취소 판결",
         decisions: prec.items,
-      });
-    }
-    if (tribunal && tribunal.items.length > 0) {
-      sections.push({
-        kind: "decisions",
-        heading: "[시나리오: impact] 조세심판원 취소 결정",
-        decisions: tribunal.items,
       });
     }
     return sections;

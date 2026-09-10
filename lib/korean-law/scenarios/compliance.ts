@@ -22,13 +22,12 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
   const q = ctx.cleanedQuery || ctx.query;
   const sections: ChainSection[] = [];
 
-  // 원본 MCP compliance: 상위법 + 자치법규 + 헌재 위헌결정(expc) + 행심 위법취소(ppc)
-  const [parentLaw, ordinances, consDecisions, tribunal] = await Promise.all([
+  // 원본 MCP compliance: 상위법 + 자치법규 + 헌재 위헌결정(detc)
+  const [parentLaw, ordinances, consDecisions] = await Promise.all([
     searchLawMany(q, 2).catch(() => []),
     searchDecisions(q, "ordin", 1, 5).catch(() => EMPTY),
     // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
     searchDecisions(`${q} 위헌`, "detc", 1, 5).catch(() => EMPTY),
-    searchDecisions(`${q} 위법`, "ppc", 1, 3).catch(() => EMPTY),
   ]);
 
   if (parentLaw.length > 0) {
@@ -61,13 +60,6 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
     });
   }
 
-  if (tribunal.items.length > 0) {
-    sections.push({
-      kind: "decisions",
-      heading: "[시나리오: compliance] 조세심판·행정심판 위법 판단",
-      decisions: tribunal.items,
-    });
-  }
 
   sections.push({
     kind: "note",

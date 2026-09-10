@@ -29,8 +29,6 @@ interface AdvancedOptions {
   caseNumber?: string;
   fromDate?: string;
   toDate?: string;
-  // ppc
-  gana?: string;
 }
 
 /** 판례·결정례 검색 탭 (페이지네이션 포함) */
@@ -196,7 +194,7 @@ export function DecisionSearchTab({
     }
   }
 
-  const hasAdvanced = ["prec", "ppc"].includes(domain);
+  const hasAdvanced = domain === "prec";
 
   return (
     <div className="space-y-4">
@@ -275,14 +273,6 @@ export function DecisionSearchTab({
                     onChange={(v) => setAdvanced({ ...advanced, toDate: v })}
                   />
                 </>
-              )}
-              {domain === "ppc" && (
-                <OptionField
-                  label="가나다순 (gana)"
-                  placeholder="ga / na / da / ra / ma"
-                  value={advanced.gana ?? ""}
-                  onChange={(v) => setAdvanced({ ...advanced, gana: v })}
-                />
               )}
               <div className="col-span-full flex gap-2">
                 <button
@@ -578,8 +568,6 @@ function allowedOptionsForDomain(domain: DecisionDomain): Set<string> {
   switch (domain) {
     case "prec":
       return new Set(["curt", "caseNumber", "fromDate", "toDate"]);
-    case "ppc":
-      return new Set(["gana"]);
     default:
       return new Set();
   }

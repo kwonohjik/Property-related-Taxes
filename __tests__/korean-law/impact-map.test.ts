@@ -45,25 +45,25 @@ function page(items: number, total: number, domain: string) {
 describe("impact-map", () => {
   beforeEach(() => mockSearch.mockReset());
 
-  it("4개 도메인 탐색 (IMPACT_DOMAINS 상수)", () => {
+  it("3개 도메인 탐색 (IMPACT_DOMAINS 상수)", () => {
     // 법령해석례의 target 은 expc 다 — detc 는 헌재결정례(types.ts 주석·실측).
     // 종전 상수는 "법령해석례"를 의도하면서 detc 를 넣어 헌재결정례를 뒤지고 있었다.
-    expect(IMPACT_DOMAINS).toEqual(["prec", "expc", "ppc", "ordin"]);
+    // ppc 는 조세심판원인 줄 알았으나 개인정보보호위원회여서 도메인째 제거됐다.
+    expect(IMPACT_DOMAINS).toEqual(["prec", "expc", "ordin"]);
   });
 
   it("도메인별 그룹 + totalCitations 합산", async () => {
     mockSearch.mockImplementation(async (_q: string, domain: string) => {
       if (domain === "prec") return page(2, 2, "prec");
       if (domain === "expc") return page(5, 7, "expc");
-      if (domain === "ordin") return page(5, 30, "ordin");
-      return page(0, 0, domain); // ppc 0건
+      return page(0, 0, domain); // ordin 은 아래에서 0건 처리 확인용
     });
 
     const r = await buildImpactMap("소득세법", "제89조");
     expect(r.citationQuery).toBe("소득세법 제89조");
-    // 0건(ppc) 도메인은 그룹에서 제외
-    expect(r.groups.map((g) => g.domain)).toEqual(["prec", "expc", "ordin"]);
-    expect(r.totalCitations).toBe(2 + 7 + 30);
+    // 0건(ordin) 도메인은 그룹에서 제외
+    expect(r.groups.map((g) => g.domain)).toEqual(["prec", "expc"]);
+    expect(r.totalCitations).toBe(2 + 7);
     expect(r.groups[1].totalCount).toBe(7);
     expect(r.groups[1].items).toHaveLength(5);
   });
@@ -83,7 +83,7 @@ describe("impact-map", () => {
     });
     const r = await buildImpactMap("소득세법", "제89조");
     expect(r.groups.some((g) => g.domain === "expc")).toBe(false);
-    expect(r.groups.length).toBe(3); // prec·ppc·ordin
+    expect(r.groups.length).toBe(2); // prec·ordin
   });
 
   it("전 도메인 0건 → 빈 groups", async () => {

@@ -1,12 +1,12 @@
 /**
- * customs 시나리오 — 관세3법 + 관세 판례·심판
+ * customs 시나리오 — 관세3법
  *
  * Design Ref: §7.1 Architecture Decisions / Plan FR-06
  * 체인: full_research / action_basis 부착
  * 트리거: "관세", "수입", "수출", "통관"
  */
 
-import { searchLawMany, searchDecisions } from "../client";
+import { searchLawMany } from "../client";
 import type { ChainSection } from "../types";
 import type { ScenarioContext, ScenarioRunner } from "./index";
 
@@ -23,16 +23,6 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
       kind: "note",
       heading: "관세 관련 법령",
       note: "[NOT_FOUND] 관련 법령을 찾지 못했습니다. LLM은 내용을 추측/생성하지 마세요.",
-    });
-  }
-
-  // 관세 관련 조세심판례
-  const ppc = await searchDecisions(q, "ppc", 1, 3).catch(() => ({ items: [], totalCount: 0, page: 1, pageSize: 3 }));
-  if (ppc.items.length > 0) {
-    sections.push({
-      kind: "decisions",
-      heading: "관세 관련 조세심판례",
-      decisions: ppc.items,
     });
   }
 
