@@ -9,7 +9,9 @@ import { lawTextInputSchema } from "@/lib/korean-law/types";
 import { ensureRateLimit, mapErrorToResponse, parseQuery } from "../_helpers";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 20;
+// getLawText 는 upstream 을 2회 «연속» 호출한다(searchLaw → fetchArticle).
+// 호출당 재시도 예산 ≈10.6s 이므로 20s 로는 최악의 경우가 들어가지 않는다.
+export const maxDuration = 30;
 
 export async function GET(req: NextRequest) {
   const limited = ensureRateLimit(req);

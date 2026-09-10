@@ -14,16 +14,22 @@
  * upstream: chrisryugj/korean-law-mcp src/lib/date-parser.ts
  */
 
+// ⚠ client-core 가 아니라 today.ts 에서 가져온다 — 이 모듈은 클라이언트 컴포넌트까지 번들된다.
+import { todayKstDate } from "./today";
+
 export interface DateRange {
   fromDate?: string;
   toDate?: string;
   cleanedQuery: string;
 }
 
+/**
+ * 오늘(KST 달력일). 종전 구현은 `get*()`(실행 환경 TZ)를 `Date.UTC` 로 감싸
+ * "시간대 안정성"이라 적어 두었지만 실제로는 **서버 TZ 종속**이었다 —
+ * 로컬(KST)과 Vercel/CI(UTC)에서 하루가 어긋난다. client-core 단일 소스로 통일.
+ */
 function today(): Date {
-  // 시간대 안정성을 위해 UTC 일자만 사용. Vercel/로컬 모두 동일.
-  const d = new Date();
-  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  return todayKstDate();
 }
 
 function toYmd(d: Date): string {

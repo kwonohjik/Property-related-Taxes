@@ -3,8 +3,8 @@
  *
  * 별표 파일을 서버측에서 다운로드 → HWPX/PDF/XLSX → Markdown 변환 후 반환.
  *
- * Feature Flag: LAW_ANNEX_BODY_ENABLED !== "true" 이면 404 (번들 영향·법제처
- * 트래픽 통제용). 기본은 활성화 상태로 간주.
+ * Feature Flag: LAW_ANNEX_BODY_ENABLED === "false" 이면 404 (번들 영향·법제처
+ * 트래픽 통제용). 즉 **기본은 활성화**이고, 끄려면 명시적으로 "false" 를 넣는다.
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -30,21 +30,29 @@ const inputSchema = z.object({
   annexNo: z.string().max(20).optional(),
 });
 
-const DISABLED: NextResponse<LawApiErrorEnvelope> = NextResponse.json(
-  {
-    error:
-      "별표 본문 변환이 비활성화되어 있습니다. LAW_ANNEX_BODY_ENABLED=true 로 설정하세요.",
-    code: "UPSTREAM",
-  },
-  { status: 404 }
-);
+/**
+ * 🔴 **매 요청마다 새로 만든다.** 종전엔 모듈 레벨 상수였는데, Response 본문은
+ *    1회 소비형이라 같은 인스턴스를 두 번 돌려주면 두 번째부터 깨진다
+ *    (실측: `TypeError: Body is unusable: Body has already been read`).
+ *    킬 스위치를 켠 «바로 그때» 두 번째 요청부터 500 이 나는 셈이었다.
+ */
+function disabledResponse(): NextResponse<LawApiErrorEnvelope> {
+  return NextResponse.json(
+    {
+      error:
+        "별표 본문 변환이 비활성화되어 있습니다. LAW_ANNEX_BODY_ENABLED 를 지우거나 \"false\" 가 아닌 값으로 설정하세요.",
+      code: "UPSTREAM",
+    },
+    { status: 404 }
+  );
+}
 
 function isEnabled(): boolean {
   return process.env.LAW_ANNEX_BODY_ENABLED !== "false";
 }
 
 export async function GET(req: NextRequest) {
-  if (!isEnabled()) return DISABLED;
+  if (!isEnabled()) return disabledResponse();
   const limited = ensureRateLimit(req);
   if (limited) return limited;
   try {

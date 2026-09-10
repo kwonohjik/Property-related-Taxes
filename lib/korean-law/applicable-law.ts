@@ -35,6 +35,7 @@ import {
   writeCacheNonEmpty,
 } from "./client-core";
 import { buildLawSourceUrl, normalizeArticleNo } from "./client-law";
+import { todayYmdKst } from "./today";
 import type { ApplicableLawResult, LawVersionEntry, TransitionExcerpt } from "./types";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -59,11 +60,8 @@ export function normalizeYmd(input: string): string | null {
   return `${y}${String(mo).padStart(2, "0")}${String(d).padStart(2, "0")}`;
 }
 
-/** 오늘 YYYYMMDD (UTC 일자 — date-parser.ts 와 동일 기준) */
-export function todayYmd(): string {
-  const d = new Date();
-  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
-}
+/** 오늘 YYYYMMDD (KST 달력일 — client-core 단일 소스). */
+export const todayYmd = todayYmdKst;
 
 /** 시행일 내림차순(같으면 공포일 내림차순) 정렬 — 선택 함수들의 전제 */
 export function sortVersionsDesc(versions: LawVersionEntry[]): LawVersionEntry[] {

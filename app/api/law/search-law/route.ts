@@ -19,8 +19,8 @@ export async function GET(req: NextRequest) {
   const limited = ensureRateLimit(req);
   if (limited) return limited;
   try {
-    const { q, limit, sort, ancYd, efYd } = parseQuery(req, searchLawInputSchema);
-    const results = await searchLawMany(q, limit, { sort, ancYd, efYd });
+    const { q, limit, sort, ancYd } = parseQuery(req, searchLawInputSchema);
+    const results = await searchLawMany(q, limit, { sort, ancYd });
 
     // 결과 없음 — 키워드 간소화 힌트 제공
     if (results.length === 0) {

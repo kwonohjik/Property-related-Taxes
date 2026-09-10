@@ -20,6 +20,10 @@ export const CACHE_DIR = path.resolve(process.cwd(), ".legal-cache");
 // 법제처 DRF API는 주말·공휴일·야간에 접속 차단되는 경향 → TTL 30일로 만료 실패 완화
 export const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
+// 「오늘」(KST)은 today.ts 단일 소스. **client-core 는 fs/promises 를 import 하므로
+// 클라이언트 번들에 들어가면 안 된다** — 그래서 날짜 헬퍼를 별도 파일로 분리했다.
+export { todayKstDate, todayYmdKst } from "./today";
+
 // ────────────────────────────────────────────────────────────────────────────
 // 에러 클래스
 // ────────────────────────────────────────────────────────────────────────────
@@ -65,11 +69,16 @@ export async function fetchJson<T>(endpoint: string, params: Record<string, stri
   const url = `${API_BASE}/${endpoint}?${qs}`;
   let res: Response;
   try {
-    // timeout 15s · retry 2회
+    // 재시도 예산은 **라우트 maxDuration 안에** 들어가야 한다.
+    //   종전 15s × 3회 + 백오프 ≈ 47s 로, search-law(15s)·law-text(20s) 를 훌쩍 넘겨
+    //   재시도가 끝나기 전에 라우트가 먼저 죽었다 — 예산을 쓸 수 없는 예산이었다.
+    //   실측 정상 응답은 0.24~0.28s(한국 IP) 이므로 5s 는 20배 헤드룸이다.
+    //   해외 IP 차단 시 증상은 `fetch failed`(즉시 실패)라 긴 타임아웃이 이득도 아니다.
+    //   worst ≈ 5s + 0.6s(백오프) + 5s ≈ 10.6s.
     res = await fetchWithRetry(url, {
-      timeout: 15_000,
-      retries: 2,
-      baseDelay: 500,
+      timeout: 5_000,
+      retries: 1,
+      baseDelay: 400,
       retryOn: [429, 503, 504],
     });
   } catch (err) {

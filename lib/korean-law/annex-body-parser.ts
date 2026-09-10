@@ -22,6 +22,15 @@ import { formatMarkerMessage } from "./markers";
 const CACHE_DIR = path.resolve(process.cwd(), ".legal-cache");
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const PARSER_VERSION = "1.0.0";
+/**
+ * 변환 «실패» 결과의 캐시 수명. 성공분(30일)과 분리한다.
+ *
+ * 🔴 종전 주석은 "1일만 유효하도록 parsedAt 당겨 저장"이라 했지만 **구현이 없었다** —
+ *    writeCache 는 그냥 쓰고 readCache 는 파일 mtime 만 봤으며 parsedAt 은 어디서도
+ *    읽지 않았다. 결과적으로 일시적 타임아웃 한 번이 그 별표를 **30일간** 변환 불가로
+ *    고정시켰다. 이제 parsedAt 을 실제로 읽어 실패분만 1일로 만료시킨다.
+ */
+const FAILURE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_MARKDOWN_BYTES = 50_000;
 
 export type AnnexFileType = "HWPX" | "HWP" | "PDF" | "XLSX" | "XLS" | "DOCX" | "UNKNOWN";
@@ -52,6 +61,11 @@ async function readCache(key: string): Promise<AnnexBodyResult | null> {
     if (Date.now() - stat.mtimeMs > CACHE_TTL_MS) return null;
     const parsed = JSON.parse(await fs.readFile(file, "utf-8")) as AnnexBodyResult;
     if (parsed.parserVersion !== PARSER_VERSION) return null;
+    // 실패분은 짧게 만료 — 일시 장애가 30일 고착되지 않도록.
+    if (parsed.status === "NOT_CONVERTED") {
+      const parsedAt = Date.parse(parsed.parsedAt ?? "");
+      if (!Number.isFinite(parsedAt) || Date.now() - parsedAt > FAILURE_TTL_MS) return null;
+    }
     return parsed;
   } catch {
     return null;
@@ -334,7 +348,7 @@ export async function parseAnnexBody(
       parserVersion: PARSER_VERSION,
       parsedAt: new Date().toISOString(),
     };
-    // 실패도 짧은 기간 캐시 (재시도 폭주 방지) — 1일만 유효하도록 parsedAt 당겨 저장
+    // 실패도 캐시한다(재시도 폭주 방지). 수명은 readCache 가 parsedAt + FAILURE_TTL_MS 로 판정.
     await writeCache(cacheKey, fallback);
     return fallback;
   }

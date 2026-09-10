@@ -15,6 +15,7 @@ import {
   selectApplicableVersion,
 } from "./applicable-law";
 import { LawApiError } from "./client-core";
+import { todayYmdKst } from "./today";
 import { normalizeArticleNo } from "./client-law";
 import type { ArticleDiff, ArticleSnapshot, DiffLine, LawVersionEntry } from "./types";
 
@@ -147,7 +148,7 @@ export async function compareLatestAmendment(
   // 오늘 이하 시행 버전만 (시행예정 제외), 시행일 내림차순.
   // 단계시행으로 같은 MST가 여러 efYd로 중복 → 조문 본문은 MST당 고정이므로
   // distinct MST로 축약(첫 출현=최신 efYd)해 실제 개정 단위로 거슬러 올라간다.
-  const today = todayYmdLocal();
+  const today = todayYmdKst();
   const seenMst = new Set<string>();
   const enacted = versions
     .filter((v) => v.efYd <= today)
@@ -200,11 +201,6 @@ function buildDiff(
   };
 }
 
-function todayYmdLocal(): string {
-  const d = new Date();
-  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
-}
-
 /**
  * 자연어/혼합 쿼리에서 "법령명 + 조문번호" 추출 (amendment_track 체인용).
  * "소득세법 89조 개정" / "소득세법 제89조 신구대조" → { lawName, articleNo }.
@@ -215,7 +211,28 @@ export function extractLawAndArticle(
 ): { lawName: string; articleNo: string } | null {
   const m = query.match(/([가-힣·\s]{1,28}?(?:법률|법|시행령|시행규칙|령|규칙|조례|규정))\s*제?\s*(\d{1,4})\s*조(?:\s*의\s*(\d+))?/);
   if (!m) return null;
-  const lawName = m[1].trim();
+  const lawName = stripTimeExpressionPrefix(m[1]);
+  if (!lawName) return null;
   const articleNo = m[3] ? `제${m[2]}조의${m[3]}` : `제${m[2]}조`;
   return { lawName, articleNo };
+}
+
+/**
+ * 법령명 앞에 붙어 온 **시점 표현**을 떼어낸다.
+ *
+ * 🔴 법령명 패턴이 `[가-힣·\s]` 로 공백을 포함해 앞 구절까지 삼킨다 —
+ *    실측: "2021년 시행 소득세법 89조" → lawName **"년 시행 소득세법"**.
+ *    (숫자는 클래스 밖이라 "2021"에서 끊기고 "년"부터 딸려 온다.)
+ *    그대로 fetchLawVersions 에 넘기면 NOT_FOUND 다.
+ *
+ * 라우터의 applicable_law 패턴이 쓰는 시점 신호와 같은 어휘를 앞에서만 벗겨낸다.
+ * 뒤쪽은 건드리지 않는다 — "시행령"·"시행규칙" 은 법령명의 일부다.
+ */
+function stripTimeExpressionPrefix(raw: string): string {
+  let name = raw.trim();
+  for (;;) {
+    const next = name.replace(/^(?:\d{1,4}\s*)?(?:년|월|일|에|시행|당시|기준|적용|현재)\s+/, "").trim();
+    if (next === name) return name;
+    name = next;
+  }
 }

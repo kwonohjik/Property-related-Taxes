@@ -68,16 +68,6 @@ export interface VerifyCitationsOptions {
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * 법령명 회복 시 제거할 접두사 (stopword).
- * "또한 소득세법 제89조" → "소득세법 제89조"가 되도록.
- */
-const STOPWORD_PREFIXES = [
-  "또한", "따라서", "그러므로", "그리고", "해당", "이", "그", "위", "아래",
-  "본", "동", "앞", "뒤", "같은", "한편", "다만", "즉", "예컨대", "즉시",
-  "특히", "이때", "경우", "법률", "규정",
-];
-
-/**
  * 텍스트에서 법령 조문 인용 패턴 추출.
  *
  * 매칭 패턴: `법령명 제N조[의M][ 제P항][ 제Q호]`
@@ -169,20 +159,14 @@ function recoverLawName(lookback: string): string | null {
   const LAW_NAME_RE = /([\uAC00-\uD7A3]{1,29}?(?:법률|법|시행령|시행규칙|규칙|규정|조례))\s*$/;
   const m = lookback.match(LAW_NAME_RE);
   if (!m) return null;
-  let name = m[1];
+  const name = m[1];
 
-  // stopword 제거 — 접두사 반복
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const sw of STOPWORD_PREFIXES) {
-      if (name.startsWith(sw) && name.length > sw.length + 1) {
-        name = name.slice(sw.length).trim();
-        changed = true;
-        break;
-      }
-    }
-  }
+  // ⚠ 종전엔 여기서 stopword 접두사("또한"·"해당"·"이"·"동"…)를 반복 제거했다.
+  //   그런데 LAW_NAME_RE 의 `[가-힣]` 클래스는 **공백을 넘지 못하므로** "또한 소득세법"
+  //   에서 이미 "소득세법"만 잡힌다 — 루프가 기여하는 바가 없다.
+  //   반대로 붙여 쓴 실재 법령명은 갉아먹었다(실측):
+  //     동물보호법 → 물보호법 · 위험물안전관리법 → 험물안전관리법 · 법률구조법 → 구조법
+  //   환각 감지기가 **실존 조문을 「법령을 찾지 못했습니다」로 오판**하는 방향이라 제거했다.
 
   // 너무 짧은 법령명은 오탐(예: "법", "령" 단독)
   if (name.length < 2) return null;
