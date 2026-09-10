@@ -23,16 +23,14 @@ const PAGE_SIZE = 10;
  * 법제처 API는 도메인마다 다른 필터 파라미터를 받으므로 UI도 동적으로 노출.
  */
 interface AdvancedOptions {
-  // prec
+  // prec — 법제처가 실제로 반영하는 것만 노출한다. 무시되는 필터를 띄우면
+  // "필터 적용 중" 배지가 걸리지도 않은 필터를 걸렸다고 알리는 셈이 된다.
   curt?: string;
   caseNumber?: string;
   fromDate?: string;
   toDate?: string;
   // ppc
-  cls?: string;
   gana?: string;
-  dpaYd?: string;
-  rslYd?: string;
 }
 
 /** 판례·결정례 검색 탭 (페이지네이션 포함) */
@@ -279,32 +277,12 @@ export function DecisionSearchTab({
                 </>
               )}
               {domain === "ppc" && (
-                <>
-                  <OptionField
-                    label="분류 (cls)"
-                    placeholder="예: 양도, 상속, 증여"
-                    value={advanced.cls ?? ""}
-                    onChange={(v) => setAdvanced({ ...advanced, cls: v })}
-                  />
-                  <OptionField
-                    label="가나다순 (gana)"
-                    placeholder="ga / na / da / ra / ma"
-                    value={advanced.gana ?? ""}
-                    onChange={(v) => setAdvanced({ ...advanced, gana: v })}
-                  />
-                  <OptionField
-                    label="처분일 (YYYYMMDD)"
-                    placeholder="예: 20240101"
-                    value={advanced.dpaYd ?? ""}
-                    onChange={(v) => setAdvanced({ ...advanced, dpaYd: v })}
-                  />
-                  <OptionField
-                    label="결정일 (YYYYMMDD)"
-                    placeholder="예: 20241231"
-                    value={advanced.rslYd ?? ""}
-                    onChange={(v) => setAdvanced({ ...advanced, rslYd: v })}
-                  />
-                </>
+                <OptionField
+                  label="가나다순 (gana)"
+                  placeholder="ga / na / da / ra / ma"
+                  value={advanced.gana ?? ""}
+                  onChange={(v) => setAdvanced({ ...advanced, gana: v })}
+                />
               )}
               <div className="col-span-full flex gap-2">
                 <button
@@ -601,16 +579,7 @@ function allowedOptionsForDomain(domain: DecisionDomain): Set<string> {
     case "prec":
       return new Set(["curt", "caseNumber", "fromDate", "toDate"]);
     case "ppc":
-      return new Set(["cls", "gana", "dpaYd", "rslYd"]);
-    case "detc":
-    case "admrul":
-      return new Set(["knd", "inq", "rpl"]);
-    case "expc":
-      return new Set(["caseNumber", "fromDate", "toDate"]);
-    case "trty":
-      return new Set(["cls", "natCd", "eftYd", "concYd"]);
-    case "ordin":
-      return new Set(["locGov"]);
+      return new Set(["gana"]);
     default:
       return new Set();
   }

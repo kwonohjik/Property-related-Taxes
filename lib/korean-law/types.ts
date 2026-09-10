@@ -336,30 +336,18 @@ export type LawTextInput = z.infer<typeof lawTextInputSchema>;
 
 /**
  * 도메인별 법제처 API 옵션 (GET 파라미터).
- * client.ts:DOMAIN_OPTION_WHITELIST 에서 도메인별 허용 키만 passthrough.
+ * client-decisions-search.ts:DOMAIN_OPTION_WHITELIST 에서 도메인별 허용 키만 통과시키고,
+ * buildDomainParams 가 DRF 파라미터명(`caseNumber`→`nb`, `fromDate`+`toDate`→`prncYd`)으로 변환.
  * 모든 필드 optional — 필요 시 UI/호출자가 부분 지정.
  */
 export const domainSearchOptionsSchema = z.object({
-  // prec (판례)
+  // prec (판례) — 실측 반영 확인된 것만. 상세 근거는 DomainSearchOptions 주석.
   curt: z.string().max(20).optional(),
   caseNumber: z.string().max(50).optional(),
   fromDate: z.string().regex(/^\d{8}$/, "YYYYMMDD 형식").optional(),
   toDate: z.string().regex(/^\d{8}$/, "YYYYMMDD 형식").optional(),
-  // ppc (조세심판원)
-  cls: z.string().max(20).optional(),
+  // ppc — 가나다순
   gana: z.string().max(5).optional(),
-  dpaYd: z.string().regex(/^\d{8}$/).optional(),
-  rslYd: z.string().regex(/^\d{8}$/).optional(),
-  // detc, admrul
-  knd: z.string().max(20).optional(),
-  inq: z.string().max(50).optional(),
-  rpl: z.string().max(50).optional(),
-  // trty
-  natCd: z.string().max(5).optional(),
-  eftYd: z.string().regex(/^\d{8}$/).optional(),
-  concYd: z.string().regex(/^\d{8}$/).optional(),
-  // ordin
-  locGov: z.string().max(10).optional(),
 });
 export type DomainSearchOptions = z.infer<typeof domainSearchOptionsSchema>;
 
