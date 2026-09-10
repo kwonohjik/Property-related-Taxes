@@ -30,6 +30,7 @@ import { resolveFilingRateCode } from "./filing-rate-code";
 import { reductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
 import { baseCardId, shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
+import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 /** 일반건물이 엔진 내부에서 분해하는 카드 id (지분 접미사 제거 후 기준). */
 const GB_CARD_BASE_IDS = new Set([
@@ -40,6 +41,30 @@ const GB_CARD_BASE_IDS = new Set([
   "building1",
   "building2",
 ]);
+
+/**
+ * 자산별 환산취득가 표시 소스 — 단건(`FilingFormTableHelpers`)의 `estimatedDisplay`와 **같은 규칙**.
+ *
+ * · §97②2호 **단서** swap이면 `null`(환산취득가를 차감하지 않으므로 역산이 정본이다)
+ * · 본문 환산이면 `estimatedBase` / `estimatedDeduction`
+ * · 상가 §164⑥은 엔진이 환산 결과를 실가처럼 주입하므로 플래그가 아니라 detail로 판정한다
+ */
+function aggregateEstimatedDisplay(
+  p: PerPropertyBreakdown,
+): { base: number; deduction: number } | null {
+  const fd = p.filingDisplay;
+  if (!fd || fd.swapApplied) return null;
+  if (fd.estimatedBase !== undefined) {
+    return { base: fd.estimatedBase, deduction: fd.estimatedDeduction ?? 0 };
+  }
+  if (fd.commercialEstimatedAcquisition !== undefined) {
+    return {
+      base: fd.commercialEstimatedAcquisition,
+      deduction: fd.commercialEstimatedDeduction ?? 0,
+    };
+  }
+  return null;
+}
 
 export function buildAggregateRows(
   _result: TransferTaxResult,
@@ -170,9 +195,23 @@ export function buildAggregateRows(
     setStr("moveIn", col, firstMoveIn ? fmtDate(firstMoveIn) : "-");
     setStr("residencePeriod", col, fmtPeriod(residenceMs));
 
-    // 가격 — 신고서 양식 표시 관행: 자본적지출은 취득가액에 합산, 필요경비는 양도비만
-    const displayAcq = p.acquisitionPrice + p.capitalExpenditureForDisplay;
-    const displayExp = Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
+    /**
+     * 가격 — 신고서 양식 표시 관행: 자본적지출은 취득가액에 합산, 필요경비는 양도비만.
+     *
+     * 🔴 **환산취득가 모드는 예외다** (2026-09-07 대장 재대조 · 단건 #069와 같은 결함).
+     *    §97②2호 **본문**에서 필요경비는 개산공제(§163⑥)로 **갈음**되므로 엔진은 자본적지출·
+     *    양도비를 차감하지 않는다. 그런데 실가 모드와 같은 방식으로 자본적지출을 취득가액에
+     *    더하면 그 금액만큼 「양도가 − 취득가 − 경비 = 양도차익」 자기정합이 깨진다.
+     *    단건 표는 #069에서 고쳐졌는데 다건만 그대로였다 — 「단건과 동일」 주석이 사실이 아니었다.
+     *
+     *    분기 판정은 엔진 echo(`filingDisplay`)를 쓴다 — 단서 swap이면 환산 분기로 가지 않는 것도
+     *    단건과 같다.
+     */
+    const est = aggregateEstimatedDisplay(p);
+    const displayAcq = est ? est.base : p.acquisitionPrice + p.capitalExpenditureForDisplay;
+    const displayExp = est
+      ? est.deduction
+      : Math.max(0, p.necessaryExpense - p.capitalExpenditureForDisplay);
     setNum("transferPrice", col, p.transferPrice);
     setNum("acquisitionPrice", col, displayAcq);
     setNum("expenses", col, displayExp);
@@ -190,11 +229,21 @@ export function buildAggregateRows(
     setNum("exemptGain", col, exemptGainOfAsset);
     setNum("taxableGain", col, taxableGainOfAsset);
 
-    // 장기보유공제 (계 + 보유분/거주분 분리)
+    /**
+     * 장기보유공제 (계 + 보유분/거주분 분리).
+     *
+     * 🔴 **엔진 sub-step이 있으면 그것이 정본**이다 (2026-09-07 대장 재대조 · 단건 #1519와 같은 결함).
+     *    종전 `useTable2 = residenceMs >= 24`는 **날 휴리스틱**이라 표1로 계산된 자산에도
+     *    「거주 기간분」을 만들어냈다. 단건은 `isTable2Applied`(엔진 신호 우선)로 교체됐는데
+     *    다건은 자산별 `steps`가 없어 따라가지 못했다 — 이제 `filingDisplay`가 그 두 금액을 echo한다.
+     */
     const holdingMs = holdingMonthsFromDates(acqDate, colTransferDate);
-    // useTable2: 거주 ≥ 24개월 휴리스틱 (단건과 동일)
-    const useTable2 = residenceMs >= 24;
-    const split = splitLtDeduction(longTermDed, holdingMs, residenceMs, useTable2);
+    const echoHolding = p.filingDisplay?.lthdHoldingPart;
+    const echoResidence = p.filingDisplay?.lthdResidencePart;
+    const split =
+      echoHolding !== undefined || echoResidence !== undefined
+        ? { holdingAmount: echoHolding ?? longTermDed, residenceAmount: echoResidence ?? 0 }
+        : splitLtDeduction(longTermDed, holdingMs, residenceMs, residenceMs >= 24);
     setNum("ltDeduction", col, longTermDed);
     setNum("ltHoldingPart", col, split.holdingAmount);
     setNum("ltResidencePart", col, split.residenceAmount);

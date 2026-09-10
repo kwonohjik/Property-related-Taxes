@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 export interface OtherLandDetailSectionProps {
   asset: AssetForm;
@@ -66,8 +67,26 @@ const AREA_LEGAL_BASIS: Partial<Record<Exclude<RelatedBusinessType, "">, { legal
 // §168의11⑥ 복합용도 건축물 부속토지 안분 모드 (건축물 존재 시)
 const MIXED_USE_MODE_OPTIONS: RadioCardOption<"" | "single_building" | "multiple_buildings">[] = [
   { value: "", label: "미적용", description: "복합용도 안분 없음 — 위 §168의11① 호별 기준면적으로 판정", testId: "nbl-other-mixed-none" },
-  { value: "single_building", label: "하나의 건축물 복합용도 (⑥1호)", description: "한 건물 일부만 거주·특정사업 사용 → 특정용도분 연면적 ÷ 건축물 연면적 비율로 부속토지 안분", testId: "nbl-other-mixed-single" },
-  { value: "multiple_buildings", label: "동일경계 다수 건축물 (⑥2호)", description: "여러 건물 중 일부만 거주·특정사업 사용 → 특정용도분 바닥면적 ÷ 전체 바닥면적 비율로 부속토지 안분", testId: "nbl-other-mixed-multiple" },
+  {
+    value: "single_building",
+    label: "하나의 건축물 복합용도 (⑥1호)",
+    description: (
+      <>
+        한 건물 일부만 거주·특정사업 사용 → <Frac top="특정용도분 연면적" bottom="건축물 연면적" /> 비율로 부속토지 안분
+      </>
+    ),
+    testId: "nbl-other-mixed-single",
+  },
+  {
+    value: "multiple_buildings",
+    label: "동일경계 다수 건축물 (⑥2호)",
+    description: (
+      <>
+        여러 건물 중 일부만 거주·특정사업 사용 → <Frac top="특정용도분 바닥면적" bottom="전체 바닥면적" /> 비율로 부속토지 안분
+      </>
+    ),
+    testId: "nbl-other-mixed-multiple",
+  },
 ];
 
 // F2 Phase A/B — 체육시설 종목(실외 11 + 실내 3). 유형별 기준면적(별표3 직장 / 별표4 운동경기업)은 자동 산출 — 라벨은 종목명만.
@@ -251,7 +270,7 @@ export function OtherLandDetailSection({
           <FieldCard
             label="건축물 바닥면적"
             unit="㎡"
-            hint="건물 시가표준액이 토지 시가표준액의 2% 미만이면 이 바닥면적만 별도합산(사업용) 유지, 나머지 부속토지는 종합합산(비사업용)으로 부분 안분 — 지방세법 시행령 §101①2호나목"
+            hint="건축물이 있으면 필수. 부속토지 배율 한도(지방세법 시행령 §101①2호) 판정에 쓰입니다. 건물 시가표준액이 토지 시가표준액의 2% 미만인 경우에는 이 바닥면적만 별도합산(사업용)으로 남고 나머지 부속토지는 종합합산으로 안분됩니다(같은 호 나목)."
           >
             <DecimalInput
               value={asset.nblOtherBuildingFloorArea}
@@ -269,7 +288,7 @@ export function OtherLandDetailSection({
           <LawArticleModal legalBasis="소득세법 시행령 §168의11①" label="§168의11①" />
         </div>
         <RadioCardGroup
-          name="nblOtherRelatedBusinessType"
+          name={`nblOtherRelatedBusinessType-${asset.assetId ?? "primary"}`}
           tone="sky"
           options={RELATED_BUSINESS_OPTIONS}
           value={asset.nblOtherRelatedBusinessType}
@@ -328,7 +347,7 @@ export function OtherLandDetailSection({
           <>
             <FieldCard label="체육시설 유형">
               <RadioCardGroup
-                name="nblOtherSportsCategory"
+                name={`nblOtherSportsCategory-${asset.assetId ?? "primary"}`}
                 tone="sky"
                 layout="inline"
                 options={SPORTS_CATEGORY_OPTIONS}
@@ -524,7 +543,7 @@ export function OtherLandDetailSection({
             건축물이 거주·특정사업 사용분(특정용도분)과 그 외로 함께 사용될 때, 특정용도분 부속토지만 사업용으로 보고 안분합니다. 선택 시 위 호별 기준면적(§168의11①)은 적용하지 않습니다.
           </p>
           <RadioCardGroup
-            name="nblOtherMixedUseMode"
+            name={`nblOtherMixedUseMode-${asset.assetId ?? "primary"}`}
             tone="emerald"
             options={MIXED_USE_MODE_OPTIONS}
             value={asset.nblOtherMixedUseMode}
@@ -602,7 +621,14 @@ export function OtherLandDetailSection({
               {revenuePreview ? (
                 revenuePreview.applied ? (
                   <div className="rounded-md bg-amber-100/60 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 space-y-0.5">
-                    <p>영위 {revenuePreview.days}일 ÷ {revenuePreview.taxYear}년 {revenuePreview.yearDays}일 환산</p>
+                    <p>
+                      영위{" "}
+                      <Frac
+                        top={`${revenuePreview.days}일`}
+                        bottom={`${revenuePreview.taxYear}년 ${revenuePreview.yearDays}일`}
+                      />{" "}
+                      환산
+                    </p>
                     <p className="font-semibold">연간환산 수입금액 = {revenuePreview.annualized.toLocaleString()}원</p>
                   </div>
                 ) : (

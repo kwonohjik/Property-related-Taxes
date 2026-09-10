@@ -12,6 +12,8 @@
  * (memory `feedback_ui_engine_dual_truth_avoidance`).
  */
 
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+
 export type PartAcqMode = "actual" | "estimated" | "appraisal" | "salesCase";
 
 /** 양도가액 토지·건물 안분 방식 — 법정 우선순위 순(§100② → 부가령 §64①1호 → 같은 항 2호). */
@@ -159,7 +161,7 @@ export function separateAcqPartsSum(asset: SeparatePartAmounts): { sum: number; 
  */
 export function calcLandStdPriceAtAcq(pricePerSqm: number, area: number): number | null {
   if (!(pricePerSqm > 0) || !(area > 0)) return null;
-  return Math.floor(pricePerSqm * area);
+  return multiplyByArea(pricePerSqm, area);
 }
 
 /**
@@ -422,7 +424,7 @@ export function resolveLandStdAtTransfer(a: {
 }): number | undefined {
   const perSqm = positive(a.standardPricePerSqmAtTransfer);
   const area = positive(a.transferArea);
-  if (perSqm > 0 && area > 0) return Math.floor(perSqm * area);
+  if (perSqm > 0 && area > 0) return multiplyByArea(perSqm, area);
 
   const stored = positive(a.landStandardPriceAtTransfer);
   return stored > 0 ? stored : undefined;

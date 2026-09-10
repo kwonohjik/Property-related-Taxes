@@ -4,6 +4,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 export const AREA_INPUT_CLASS = "w-full border rounded-md px-3 py-2 text-sm bg-background";
 
@@ -84,7 +85,7 @@ export function ReplotReductionFields({
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">
             종전면적 (㎡)
-            <span title="환지 전 보유했던 원래 면적. 의제취득면적 = 종전×(교부÷권리)" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
+            <span title="환지 전 보유했던 원래 면적. 의제취득면적 = 종전면적 × 「교부면적을 권리면적으로 나눈 비율」" className="ml-1 cursor-help text-muted-foreground">ⓘ</span>
           </label>
           <DecimalInput
             value={asset.priorLandArea}
@@ -120,12 +121,22 @@ export function ReplotIncreaseFields({
   asset,
   onChange,
   onAddAsset,
+  hasIncrementAsset = false,
 }: {
   asset: AssetForm;
   onChange: (d: Partial<AssetForm>) => void;
   onAddAsset?: (patch: Partial<AssetForm>) => void;
+  /**
+   * 증환지 **증가분 자산이 이미 목록에 있는가** — 폼의 사실이다.
+   *
+   * 🔴 종전에는 이 자리에 `useState(false)`가 있었다. 자산 카드를 접었다 펴거나 단계를
+   *    오가면 컴포넌트가 재마운트되어 false로 돌아가고, 「+ 증가분 자산 자동 추가」 버튼이
+   *    다시 떠 **중복 자산이 만들어졌다**(2026-09-07 대장 재대조). 추가 여부는 컴포넌트의
+   *    기억이 아니라 `assets`에 그 자산이 있는지로 판정한다.
+   */
+  hasIncrementAsset?: boolean;
 }) {
-  const [increaseAdded, setIncreaseAdded] = useState(false);
+  const increaseAdded = hasIncrementAsset;
 
   const alloc = parseFloat(asset.allocatedArea ?? "");
   const ent = parseFloat(asset.entitlementArea ?? "");
@@ -137,7 +148,7 @@ export function ReplotIncreaseFields({
     // 양도당시 ㎡당 기준시가는 동일 필지라 복사, 총액은 증가분 면적으로 재계산(§166⑥ 안분 키)
     const perSqm = parseFloat(asset.standardPricePerSqmAtTransfer || "");
     const stdTotalAtTransfer =
-      isFinite(perSqm) && perSqm > 0 ? String(Math.floor(perSqm * increaseM2)) : "";
+      isFinite(perSqm) && perSqm > 0 ? String(multiplyByArea(perSqm, increaseM2)) : "";
     onAddAsset({
       assetLabel: "증환지 증가분",
       assetKind: "land",
@@ -168,7 +179,6 @@ export function ReplotIncreaseFields({
       nblLandSigunguCode: asset.nblLandSigunguCode,
       nblLandSigunguName: asset.nblLandSigunguName,
     });
-    setIncreaseAdded(true);
   }
 
   return (
@@ -235,7 +245,7 @@ export function ReplotIncreaseFields({
                 type="button"
                 onClick={handleAddIncrease}
                 data-testid="replot-inc-add-btn"
-                className="w-full rounded-md border border-orange-300 bg-white px-3 py-2 text-sm text-orange-700 hover:bg-orange-50 transition-colors"
+                className="w-full rounded-md border border-orange-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-orange-700 hover:bg-orange-50 transition-colors"
               >
                 + 증가분 {increaseM2.toFixed(2)}㎡ 자산 자동 추가
               </button>

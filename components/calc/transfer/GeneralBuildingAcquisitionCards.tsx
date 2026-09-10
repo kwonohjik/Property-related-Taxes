@@ -333,8 +333,27 @@ export function GeneralBuildingAcquisitionCards({
       !asset.acquisitionDate ||
       !transferDate
     ) return false;
+    /**
+     * 🔴 **엔진의 두 게이트를 함께 본다** (2026-09-07 대장 재대조).
+     *
+     * `calculateBuildingPenalty`(`transfer-tax-building-penalty.ts:25·28`)는
+     *   ① 양도일 ≥ 2018-01-01 (§114조의2 신설 시행일)
+     *   ② 취득가액 산정방식이 **환산**(`method === "estimated"`)
+     * 을 모두 요구한다. 종전 배지는 「신축 + 5년 이내」만 보고 「가산세 적용 대상」이라 말해,
+     * 실거래가 모드나 2018 이전 양도에서도 떴다.
+     */
+    if (new Date(transferDate) < new Date("2018-01-01")) return false;
+    if (effectivePartAcqMode(asset.buildingAcqMode, asset) !== "estimated") return false;
     return isWithin5Years(asset.acquisitionDate, transferDate);
-  }, [asset.gbBuildingAcquisitionCause, asset.acquisitionDate, transferDate]);
+  }, [
+    asset.gbBuildingAcquisitionCause,
+    asset.acquisitionDate,
+    asset.buildingAcqMode,
+    asset.isSalesCaseAcquisition,
+    asset.isAppraisalAcquisition,
+    asset.useEstimatedAcquisition,
+    transferDate,
+  ]);
 
   /**
    * M-1a 취득일 기록 — 분리 OFF면 **토지·건물이 같은 값**이어야 한다(불변식·계획서 §3.2(1)).
@@ -504,7 +523,7 @@ export function GeneralBuildingAcquisitionCards({
         >
           {isSeparate ? (
             <RadioCardGroup
-              name="gbLandAcquisitionCause"
+              name={`gbLandAcquisitionCause-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.acquisitionCause ?? ""}
               onChange={(v) =>
@@ -516,7 +535,7 @@ export function GeneralBuildingAcquisitionCards({
             />
           ) : (
             <RadioCardGroup
-              name="gbUnifiedAcquisitionCause"
+              name={`gbUnifiedAcquisitionCause-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.acquisitionCause ?? ""}
               onChange={setUnifiedCause}
@@ -734,7 +753,7 @@ export function GeneralBuildingAcquisitionCards({
 
         <FieldCard label="취득원인">
           <RadioCardGroup
-            name="gbBuildingAcquisitionCause"
+            name={`gbBuildingAcquisitionCause-${asset.assetId ?? "primary"}`}
             layout="inline"
             value={asset.gbBuildingAcquisitionCause ?? ""}
             onChange={(v) => {

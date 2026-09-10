@@ -33,6 +33,28 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
 
   const isProviso = value.type === "rental_97_proviso";
 
+  /**
+   * 섹션 번호는 **렌더 순서대로 자동 부여**한다 (2026-09-07 대장 재대조).
+   *
+   * 🔴 종전에는 네 카드가 「②」를 **하드코딩**하고 마지막만 `isProviso ? "③" : "②"`였다.
+   *    조건부 카드라 동시 노출을 잊기 쉬운데, 실제로
+   *      · 단서 분기(②) + 단서 나목(②) — `provisoCase === "b_purchase"`
+   *      · §97①2호(②) + 임대 호수(②) — 비-단서 + 1985년 이전 신축
+   *    두 조합에서 한 화면에 ②가 2~3개 떴다. 번호가 위치를 가리키는 표지 구실을 못 한다.
+   */
+  const CIRCLED = ["①", "②", "③", "④", "⑤", "⑥"] as const;
+  const shows1985 = parseInt(value.constructionYear || "0") > 0 && parseInt(value.constructionYear) <= 1985;
+  const showsProvisoB = isProviso && value.provisoCase === "b_purchase";
+  const sectionOrder = [
+    true, // ① 등록·신분 (항상)
+    isProviso, // 단서 분기
+    showsProvisoB, // 단서 나목 요건
+    shows1985, // §97①2호 요건
+    true, // 임대 호수 요건 (항상)
+  ];
+  /** i번째(0-base) 섹션의 번호 — 앞에서 실제로 렌더되는 것만 센다. */
+  const num = (i: number) => CIRCLED[sectionOrder.slice(0, i).filter(Boolean).length];
+
   // ── 조특령 §97⑤4호 — 5호 미만으로 임대한 기간 ──
   const belowPeriods = value.belowMin5UnitsPeriods ?? [];
   const patchBelow = (next: BelowPeriod[]) => onChange({ belowMin5UnitsPeriods: next });
@@ -44,7 +66,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
+      <ToneCard tone="violet" sectionNum={num(0)} title="등록·신분" noDark>
 
         <RegistrationFields
           registrationDate={value.registrationDate}
@@ -83,7 +105,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
 
       {/* ② 단서 분기 (rental_97_proviso만) */}
       {isProviso && (
-        <ToneCard tone="amber" sectionNum="②" title="단서 분기 — 100% 감면 요건" noDark>
+        <ToneCard tone="amber" sectionNum={num(1)} title="단서 분기 — 100% 감면 요건" noDark>
           <RadioCardGroup
             name="provisoCase_97"
             tone="amber"
@@ -113,7 +135,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       {/* §97①2호 — 1985.12.31 이전 신축 공동주택 (D1-06) */}
       {parseInt(value.constructionYear || "0") > 0 &&
         parseInt(value.constructionYear) <= 1985 && (
-          <ToneCard tone="amber" sectionNum="②" title="§97①2호 요건" bodyClassName="space-y-2" noDark>
+          <ToneCard tone="amber" sectionNum={num(3)} title="§97①2호 요건" bodyClassName="space-y-2" noDark>
             <p className="text-micro text-amber-800">
               조특법 §97①2호 — 「<strong>1985년 12월 31일 이전에 신축된 공동주택</strong>으로서
               <strong>1986년 1월 1일 현재 입주된 사실이 없는 주택</strong>」. 두 가지를 모두
@@ -159,7 +181,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
 
       {/* §97① 단서 나목 — 취득 당시 미입주 (D1-07) */}
       {isProviso && value.provisoCase === "b_purchase" && (
-        <ToneCard tone="rose" sectionNum="②" title="단서 나목 요건" bodyClassName="space-y-2" noDark>
+        <ToneCard tone="rose" sectionNum={num(2)} title="단서 나목 요건" bodyClassName="space-y-2" noDark>
           <p className="text-micro text-rose-800">
             조특법 §97① 단서 — 매입임대주택은 「<strong>취득 당시 입주된 사실이 없는 주택만
             해당한다</strong>」.
@@ -190,7 +212,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       {/* 주체 요건 — 조특령 §97① 5호 이상 (D1-01) */}
       <ToneCard
         tone="sky"
-        sectionNum={isProviso ? "③" : "②"}
+        sectionNum={num(4)}
         title="임대 호수 요건"
         bodyClassName="space-y-2"
         noDark
@@ -264,7 +286,9 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
         vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}
-        sectionOffset={isProviso ? 4 : 3}
+        // 🔴 종전 `isProviso ? 4 : 3`은 `shows1985`·`showsProvisoB`를 세지 않아 위 `num()`과
+        //    어긋날 수 있었다. 같은 `sectionOrder`에서 파생해 번호가 이어지게 한다.
+        sectionOffset={sectionOrder.filter(Boolean).length + 1}
       />
     </div>
   );

@@ -116,27 +116,27 @@ export function DebtAllocationResultCard({
         <dl className="text-xs space-y-1 text-gray-800 dark:text-gray-200">
           <div className="flex justify-between">
             <dt>금융채무</dt>
-            <dd className="font-mono">{formatKRW(totals.financial)}</dd>
+            <dd className="font-mono tabular-nums">{formatKRW(totals.financial)}</dd>
           </div>
           <div className="flex justify-between">
             <dt>공과금</dt>
-            <dd className="font-mono">{formatKRW(totals.tax)}</dd>
+            <dd className="font-mono tabular-nums">{formatKRW(totals.tax)}</dd>
           </div>
           <div className="flex justify-between">
             <dt>사적채무</dt>
-            <dd className="font-mono">{formatKRW(totals.personal)}</dd>
+            <dd className="font-mono tabular-nums">{formatKRW(totals.personal)}</dd>
           </div>
           <div className="flex justify-between">
             <dt>장례비 (한도 적용 전)</dt>
-            <dd className="font-mono">{formatKRW(totals.funeral)}</dd>
+            <dd className="font-mono tabular-nums">{formatKRW(totals.funeral)}</dd>
           </div>
           <div className="flex justify-between border-t border-rose-200 dark:border-rose-900 pt-1.5 font-semibold">
             <dt>입력 합계 (한도 적용 전)</dt>
-            <dd className="font-mono">{formatKRW(totalInput)}</dd>
+            <dd className="font-mono tabular-nums">{formatKRW(totalInput)}</dd>
           </div>
           <div className="flex justify-between font-semibold text-rose-700 dark:text-rose-300">
             <dt>한도 적용 후 합계</dt>
-            <dd className="font-mono">{formatKRW(totalAfterLimit)}</dd>
+            <dd className="font-mono tabular-nums">{formatKRW(totalAfterLimit)}</dd>
           </div>
         </dl>
       </div>
@@ -151,28 +151,28 @@ export function DebtAllocationResultCard({
           <dl className="text-xs space-y-1 text-gray-800 dark:text-gray-200">
             <div className="flex justify-between">
               <dt>식대 입력</dt>
-              <dd className="font-mono">{formatKRW(funeralMeal)}</dd>
+              <dd className="font-mono tabular-nums">{formatKRW(funeralMeal)}</dd>
             </div>
             <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
               <dt className="pl-3">→ 한도 적용 (최대 10,000,000)</dt>
-              <dd className="font-mono">{formatKRW(funeralMealApplied)}</dd>
+              <dd className="font-mono tabular-nums">{formatKRW(funeralMealApplied)}</dd>
             </div>
             <div className="flex justify-between">
               <dt>봉안 입력</dt>
-              <dd className="font-mono">{formatKRW(funeralBongan)}</dd>
+              <dd className="font-mono tabular-nums">{formatKRW(funeralBongan)}</dd>
             </div>
             <div className="flex justify-between text-emerald-700 dark:text-emerald-300">
               <dt className="pl-3">→ 한도 적용 (최대 5,000,000)</dt>
-              <dd className="font-mono">{formatKRW(funeralBonganApplied)}</dd>
+              <dd className="font-mono tabular-nums">{formatKRW(funeralBonganApplied)}</dd>
             </div>
             <div className="flex justify-between border-t border-emerald-200 dark:border-emerald-900 pt-1.5 font-semibold">
               <dt>장례비 한도 적용 합계</dt>
-              <dd className="font-mono">{formatKRW(funeralApplied)}</dd>
+              <dd className="font-mono tabular-nums">{formatKRW(funeralApplied)}</dd>
             </div>
             {funeralExcess > 0 && (
               <div className="flex justify-between text-amber-700 dark:text-amber-400">
                 <dt>미적용분 (한도 초과)</dt>
-                <dd className="font-mono">{formatKRW(funeralExcess)}</dd>
+                <dd className="font-mono tabular-nums">{formatKRW(funeralExcess)}</dd>
               </div>
             )}
           </dl>
@@ -212,19 +212,19 @@ export function DebtAllocationResultCard({
                       className="border-b border-sky-100 dark:border-sky-950"
                     >
                       <td className="py-1.5 pr-2">{h.name}</td>
-                      <td className="text-right py-1.5 px-2 font-mono">
+                      <td className="text-right py-1.5 px-2 font-mono tabular-nums">
                         {s.financial > 0 ? formatKRW(s.financial) : "-"}
                       </td>
-                      <td className="text-right py-1.5 px-2 font-mono">
+                      <td className="text-right py-1.5 px-2 font-mono tabular-nums">
                         {s.tax > 0 ? formatKRW(s.tax) : "-"}
                       </td>
-                      <td className="text-right py-1.5 px-2 font-mono">
+                      <td className="text-right py-1.5 px-2 font-mono tabular-nums">
                         {s.personal > 0 ? formatKRW(s.personal) : "-"}
                       </td>
-                      <td className="text-right py-1.5 px-2 font-mono">
+                      <td className="text-right py-1.5 px-2 font-mono tabular-nums">
                         {s.funeral > 0 ? formatKRW(s.funeral) : "-"}
                       </td>
-                      <td className="text-right py-1.5 pl-2 font-mono font-semibold">
+                      <td className="text-right py-1.5 pl-2 font-mono tabular-nums font-semibold">
                         {sum > 0 ? formatKRW(sum) : "-"}
                       </td>
                     </tr>
@@ -232,19 +232,19 @@ export function DebtAllocationResultCard({
                 })}
                 <tr className="font-semibold bg-sky-50 dark:bg-sky-950/30">
                   <td className="py-1.5 pr-2">합계</td>
-                  <td className="text-right py-1.5 px-2 font-mono">
+                  <td className="text-right py-1.5 px-2 font-mono tabular-nums">
                     {formatKRW(totals.financial)}
                   </td>
-                  <td className="text-right py-1.5 px-2 font-mono">
+                  <td className="text-right py-1.5 px-2 font-mono tabular-nums">
                     {formatKRW(totals.tax)}
                   </td>
-                  <td className="text-right py-1.5 px-2 font-mono">
+                  <td className="text-right py-1.5 px-2 font-mono tabular-nums">
                     {formatKRW(totals.personal)}
                   </td>
-                  <td className="text-right py-1.5 px-2 font-mono">
+                  <td className="text-right py-1.5 px-2 font-mono tabular-nums">
                     {formatKRW(totals.funeral)}
                   </td>
-                  <td className="text-right py-1.5 pl-2 font-mono">
+                  <td className="text-right py-1.5 pl-2 font-mono tabular-nums">
                     {formatKRW(totalInput)}
                   </td>
                 </tr>
@@ -286,7 +286,7 @@ export function DebtAllocationResultCard({
                         </span>
                       )}
                     </dt>
-                    <dd className="font-mono font-semibold">{formatKRW(d.amount)}</dd>
+                    <dd className="font-mono tabular-nums font-semibold">{formatKRW(d.amount)}</dd>
                   </div>
                   <p className="text-micro text-gray-500 dark:text-gray-400 pl-0">
                     분배: {allocationText}
@@ -296,7 +296,7 @@ export function DebtAllocationResultCard({
             })}
             <div className="flex justify-between border-t border-amber-200 dark:border-amber-900 pt-1.5 font-semibold text-amber-700 dark:text-amber-300">
               <dt>담보채무 §14 자동공제 합계</dt>
-              <dd className="font-mono">
+              <dd className="font-mono tabular-nums">
                 {formatKRW(
                   collateralDebtDetail.reduce((s, d) => s + d.amount, 0),
                 )}

@@ -113,7 +113,7 @@ export function calcForeignTaxCredit(
     creditLimit = safeMultiplyThenDivide(computedTax, numerator, overallTaxBase);
     usesProportion = true;
     breakdown.push({
-      label: "공제 한도 — 산출세액 × (국외 상속재산 과세표준 ÷ 상속세 과세표준)",
+      label: "공제 한도 — 산출세액 × (국외 상속재산 과세표준) ÷ (상속세 과세표준)",
       amount: creditLimit,
       lawRef: limitLawRef,
       note: `${computedTax.toLocaleString()} × (${numerator.toLocaleString()} ÷ ${overallTaxBase.toLocaleString()})`,

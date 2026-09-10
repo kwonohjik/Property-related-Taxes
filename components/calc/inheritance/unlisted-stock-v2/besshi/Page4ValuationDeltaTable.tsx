@@ -23,7 +23,7 @@ export interface Page4ValuationDeltaTableProps {
 }
 
 const TD = "border border-black p-1";
-const TD_AMT = `${TD} text-right font-mono`;
+const TD_AMT = `${TD} text-right font-mono tabular-nums`;
 const TD_DIV = `${TD} border-l-2`; // 자산/부채 블록 구분선
 
 export function Page4ValuationDeltaTable({ raw }: Page4ValuationDeltaTableProps) {

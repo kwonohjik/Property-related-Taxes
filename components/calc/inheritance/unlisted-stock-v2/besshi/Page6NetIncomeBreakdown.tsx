@@ -27,7 +27,7 @@ export interface Page6NetIncomeBreakdownProps {
 }
 
 const TD = "border border-black p-1";
-const TD_VAL = `${TD} text-right font-mono`;
+const TD_VAL = `${TD} text-right font-mono tabular-nums`;
 
 export function Page6NetIncomeBreakdown({
   result,
@@ -141,7 +141,7 @@ export function Page6NetIncomeBreakdown({
           <tr data-besshi-cell="p6-사" data-testid="p6-사">
             <td className={`${TD} bg-gray-50`} aria-hidden />
             <td className={TD}>
-              {P6.perShareLabel} <span className="font-mono">{P6.perShareMarkers.join("")}</span>
+              {P6.perShareLabel} <span className="font-mono tabular-nums">{P6.perShareMarkers.join("")}</span>
             </td>
             {valCells(fyb.map((fy) => fy.perShareNetIncome))}
           </tr>
@@ -185,7 +185,7 @@ export function Page6NetIncomeBreakdown({
       {result.estimatedProfitResult?.applied && (
         <p className="mb-3 text-micro text-violet-700" data-testid="p6-추정이익">
           ※ §56② 추정이익 갈음 적용 — 위 가중평균(아.) 대신 2 이상 신용평가기관 추정이익 평균가액{" "}
-          {fmt(result.estimatedProfitResult.estimatedProfitAverage)} ÷ 환원율로 산출
+          {fmt(result.estimatedProfitResult.estimatedProfitAverage)}을 환원율로 나누어 산출
         </p>
       )}
     </section>

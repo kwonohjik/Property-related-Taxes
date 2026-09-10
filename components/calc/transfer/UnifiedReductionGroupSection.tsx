@@ -180,6 +180,8 @@ export function GroupCategorySection({
       <button
         type="button"
         onClick={onToggleOpen}
+        // 펼침 상태를 접근성 트리에 노출한다 — 화면 낭독기와 테스트가 같은 사실을 본다.
+        aria-expanded={isOpen}
         className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/20"
       >
         <div>

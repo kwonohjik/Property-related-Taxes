@@ -247,7 +247,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
                 <tr><td colSpan={2} className="py-1 text-caption text-muted-foreground">보유기간: {holdingText}</td></tr>
               )}
               {lthdRatePct && (
-                <tr><td colSpan={2} className="py-1 text-caption text-muted-foreground">장특공률: MIN(15, 보유연수) × 2% = {lthdRatePct} (상한 30%, 소법 §95② 표1 일반자산)</td></tr>
+                <tr><td colSpan={2} className="py-1 text-caption text-muted-foreground">장특공률: 보유연수(15년 한도) × 2% = {lthdRatePct} (상한 30%, 소법 §95② 표1 일반자산)</td></tr>
               )}
               {longTermDeduction !== undefined && (
                 /* 🔴 종전에는 율을 못 받으면 `× 장특공률`이라고 **변수명을 그대로** 찍었다

@@ -18,6 +18,7 @@
 
 import { useMemo, useState } from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -107,8 +108,12 @@ const LOCATION_OPTIONS: RadioCardOption<Exclude<LocationCategory, "">>[] = [
   {
     value: "eup_myeon_or_complex",
     label: "읍·면지역(군 지역 포함) · 산업단지 · 공업지역",
-    description:
-      "분리과세 — 기준면적 = 공장건축물 연면적 × 100 ÷ 업종별 기준공장면적률 (「지방세법 시행령」 §102①1호 · 시행규칙 별표6)",
+    description: (
+      <>
+        분리과세 — 기준면적 = <Frac top="공장건축물 연면적 × 100" bottom="업종별 기준공장면적률" /> (「지방세법
+        시행령」 §102①1호 · 시행규칙 별표6)
+      </>
+    ),
     testId: "nbl-factory-loc-complex",
   },
   {
@@ -226,7 +231,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
           <div className="space-y-1">
             <p className="text-xs font-medium text-muted-foreground">공장 소재 지역</p>
             <RadioCardGroup
-              name="nblFactoryLocationCategory"
+              name={`nblFactoryLocationCategory-${asset.assetId ?? "primary"}`}
               options={LOCATION_OPTIONS}
               value={loc}
               onChange={(v) => onAssetChange({ nblFactoryLocationCategory: v })}
@@ -406,7 +411,7 @@ export function FactoryLandSection({ asset, onAssetChange, transferDate }: Facto
                     hint="종업원 50명 이하인 「법인」은 코트면적만 기준면적으로 인정됩니다 (별표6 3호바 비고 2-나). 개인사업자는 이 제한을 받지 않습니다."
                   >
                     <RadioCardGroup
-                      name="nblFactorySportsEntityType"
+                      name={`nblFactorySportsEntityType-${asset.assetId ?? "primary"}`}
                       tone="amber"
                       options={[
                         { value: "corporation", label: "법인", description: "코트면적만 인정 (비고 2-나)" },

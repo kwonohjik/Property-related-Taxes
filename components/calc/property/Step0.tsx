@@ -479,7 +479,7 @@ function OwnershipSection({
               className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
               value={form.projectOperator}
               onChange={(e) => onChange({ projectOperator: e.target.value })}
-              placeholder="사업시행자 성명 또는 식별자"
+              placeholder="성명 또는 식별자"
             />
           </FieldCard>
         )}
@@ -495,7 +495,7 @@ function OwnershipSection({
               className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
               value={form.importer}
               onChange={(e) => onChange({ importer: e.target.value })}
-              placeholder="수입자 성명 또는 식별자"
+              placeholder="성명 또는 식별자"
             />
           </FieldCard>
         )}

@@ -57,9 +57,9 @@ export function getFamilyBusinessHint(category: AssetCategory): string {
     return "주거용 아파트는 §15⑤2호 나목 사업무관자산 원칙. 단, 임대법인 보유 + 임직원 5년 이상 무상임대(국민주택 또는 기준시가 6억 이하)는 사업용 인정 가능";
   }
   if (category === "financial") {
-    return '§15⑤2호 마목 "영업활동과 직접 관련 없는" 주식·채권·금융상품은 사업무관자산. 영업관련 운영자금 등은 사용자 override 가능';
+    return '§15⑤2호 마목 "영업활동과 직접 관련 없는" 주식·채권·금융상품은 사업무관자산. 영업관련 운영자금 등은 사용자가 직접 지정할 수 있습니다';
   }
-  return "§15⑤ 가업상속재산 본질 미적용 — 필요 시 사용자 override 가능";
+  return "§15⑤ 가업상속재산 본질 미적용 — 필요 시 사용자가 직접 지정할 수 있습니다";
 }
 
 /** §22 hidden_expandable 카테고리별 안내 (emerald) */
@@ -72,7 +72,7 @@ export function getFinancialDeductionHint(category: AssetCategory): string {
     return "부동산은 §19① 미열거 — 원칙적 §22 미적용 (단, 부동산신탁 → 금전신탁 전환분은 §19① 적용)";
   }
   if (category === "deposit") {
-    return '§19① "금융회사등이 취급" 한정 — 전세보증금 사인간 직접채권 미열거 (해석례 따라 사용자 override 가능)';
+    return '§19① "금융회사등이 취급" 한정 — 전세보증금 사인간 직접채권 미열거 (해석례 따라 사용자가 직접 지정할 수 있습니다)';
   }
   return "§19① 열거 항목(예금·신탁·보험금·공제금·주식·채권 등) 해당 여부 확인 후 토글";
 }

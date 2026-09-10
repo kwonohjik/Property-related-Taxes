@@ -244,7 +244,7 @@ function FamilyBusinessPostMgmtPageInner() {
             label="상속개시 당시 상속세 과세표준 (공제 적용 후)"
             value={baseTaxableAmount}
             onChange={setBaseTaxableAmount}
-            hint="추징세액 재계산 base — 신고서상 과세표준(§18의2⑤). 산입액을 더해 상속세를 재계산"
+            hint="추징세액 재계산 기준액 — 신고서상 과세표준(§18의2⑤). 산입액을 더해 상속세를 재계산"
           />
           <CurrencyInput
             label="양도소득세 환원 공제 (§18의2⑩, 선택)"

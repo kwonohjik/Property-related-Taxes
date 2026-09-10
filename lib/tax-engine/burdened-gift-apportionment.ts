@@ -32,6 +32,7 @@ import {
   calculateEstimatedAcquisitionPrice,
 } from "./tax-utils";
 import { calcGiftTax } from "./gift-tax";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type {
   BurdenedGiftInfo,
   TransferBurdenedGiftBreakdown,
@@ -191,9 +192,63 @@ export function buildBurdenedGiftBreakdown(params: {
     }
   }
 
+  /**
+   * §159①1호 **A괄호 발동 판정** — 취득가액을 기준시가로 강제하는가.
+   *
+   * 괄호는 열거를 **닫아** 두고 있다:
+   *
+   * > 「… 취득가액(양도가액을 「상속세 및 증여세법」 **제61조제1항ㆍ제2항ㆍ제5항 및 제66조**에
+   * >   따라 기준시가로 산정한 경우에는 취득가액도 기준시가로 산정한다) …」
+   *
+   * **§61③은 열거에 없다.** 조합원입주권의 증여재산 평가는 §61③(부동산을 취득할 수 있는 권리)
+   * → 시행령 §51②이므로 그 괄호가 발동하지 않고, 취득가액은 §97①1호 **실지거래가액**이다.
+   *
+   * ⇒ 판정 축은 「사용자가 고른 평가 모드」가 아니라 **「어느 조항으로 양도가액을 산정했는가」**다.
+   *
+   * | 상황 | 산정 근거 | 괄호 | 취득가액 |
+   * |---|---|---|---|
+   * | 기준시가 모드 · 보충적 승 · 입주권 | **§61③** | **미발동** | 실지(K-4) |
+   * | 기준시가 모드 · 보충적 승 · 그 외 | §61①4호 등 | 발동 | 기준시가 |
+   * | 기준시가 모드 · 담보 승 | §66 | 발동 | 기준시가 |
+   * | 기준시가 모드 · 임대 승 | §61⑤ | 발동 | 기준시가 |
+   * | 시가 모드 | §60② | 미발동 | K-4/K-5 |
+   *
+   * ⚠️ 기존 5종은 `rightValuation`이 없어 판정이 **항상 「발동」**이다 — 동작 불변.
+   * ⚠️ 축은 `sangjeungbeopValuation`(양도세 축)이다. 괄호가 말하는 것은 「**양도가액**을
+   *    무엇으로 산정했는가」이지 증여세 평가가 아니다.
+   */
+  const isRightToMoveInValuation = info.rightValuation !== undefined;
+  const isStandardMode = info.valuationMode === "sangjeungbeop_standard";
+
+  /**
+   * 🔴 입주권 × 담보(§66)·임대(§61⑤) 승리는 **fail-fast**.
+   *
+   * 그 경로는 괄호가 발동해 「입주권의 기준시가」(소령 §165①)를 요구하는데, 본 설계는 그 입력을
+   * 두지 않는다(입주권은 K-4 전용). 값이 0으로 흘러 **취득가액 0 → 양도차익 과대**가 되므로
+   * 근거 없는 불리 적용을 막기 위해 계산을 중단한다 — `assertBurdenedGiftEligible`과 같은 층위다.
+   */
+  if (
+    isRightToMoveInValuation &&
+    isStandardMode &&
+    sangjeungbeopValuation.selectedMode !== "supplementary"
+  ) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "[burdened_gift] 조합원입주권의 증여재산 평가가 " +
+        (sangjeungbeopValuation.selectedMode === "mortgage" ? "담보(§66)" : "임대(§61⑤)") +
+        " 평가로 결정됐습니다. 이 경우 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 " +
+        "취득가액도 기준시가로 산정해야 하는데, 조합원입주권의 기준시가(같은 영 제165조 제1항) " +
+        "입력 경로가 없어 계산할 수 없습니다. 담보 설정액·임대 보증금 입력을 재확인하세요.",
+    );
+  }
+
+  /** 괄호가 발동하는가 = 취득가액을 취득시 기준시가로 강제하는가. */
+  const acqStdPriceForced = isStandardMode && !isRightToMoveInValuation;
+
   // STEP 4: 자산별 취득가액 산정 (소령 §159 ① 1호) — 4-way 분기 (§100① 일치 게이트 내재화)
-  //   K-1~K-3 (standard):        취득시 기준시가 × 채무비율 (§159①1호 A괄호 강제). 분모 giftValuation.max.
-  //   K-4 (market+actual):       실지취득가액 × 채무비율 (§159①1호 본문). 개산공제 미적용.
+  //   K-1~K-3 (괄호 발동):        취득시 기준시가 × 채무비율 (§159①1호 A괄호 강제). 분모 giftValuation.max.
+  //   K-4 (actual):              실지취득가액 × 채무비율 (§159①1호 본문). 개산공제 미적용.
+  //                              시가 모드 + `actual`, 그리고 **조합원입주권**(괄호 미발동)이 여기로 온다.
   //   K-5 (market+converted):    환산취득가액 = 자산별 양도가액 × (취득기준시가 ÷ 양도기준시가) (§176의2②2호). 개산공제 적용.
   //   market+미지정 (legacy):    backward-compat — marketValueAtAcquisition 기반 (개산공제 적용).
   let landAcquisitionPrice: number;
@@ -202,13 +257,16 @@ export function buildBurdenedGiftBreakdown(params: {
   let landActualAcquisition: number | undefined;
   let buildingActualAcquisition: number | undefined;
 
-  if (info.valuationMode === "sangjeungbeop_standard") {
+  if (acqStdPriceForced) {
     // K-1~K-3: 취득시 기준시가 × 채무비율 (A괄호). 분모 giftValuation.max (Excel 정합).
     acquisitionMethodUsed = "standard_price";
     landAcquisitionPrice = apportionAcquisitionPrice(landStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
     buildingAcquisitionPrice = apportionAcquisitionPrice(buildingStdPriceAtAcquisition, assumedDebtAmount, giftValuation.max);
-  } else if (info.acquisitionMethod === "actual") {
+  } else if (info.acquisitionMethod === "actual" || isRightToMoveInValuation) {
     // K-4: 실지취득가액 × 채무비율 (§159①1호 본문).
+    //   조합원입주권은 **항상 이 경로**다 — §166①1호가 쓰는 취득가액이 「기존건물과 그 부수토지의
+    //   취득가액」(= 종전 부동산 실지취득가액)이고, 그 환산(§166③)은 부담부증여에서 점화되지
+    //   않는다(`transfer-tax-burdened-gift-step.ts`가 `useEstimatedAcquisition: false`를 강제).
     //   자산별 실지취득가 — 토지·건물 분리 입력 우선, 없으면 단일 total을 취득기준시가 비율로 분배.
     acquisitionMethodUsed = "actual";
     if (info.actualLandAcquisitionPrice !== undefined || info.actualBuildingAcquisitionPrice !== undefined) {
@@ -528,6 +586,25 @@ export function buildBurdenedGiftBreakdown(params: {
     sangjeungbeopValuation,
     giftValuation,
     wholePropertySupplementary,
+    /**
+     * 입주권 평가 구성 내역 — 표시·검증 전용. 평가액 **자체**는
+     * `buildingStdPriceAtTransfer`(→ `perAsset.building.sangjeungbeopValue`)가 담는다.
+     * 값은 **지분 축소 후**(`scaleBurdenedGiftInfo`)라 std 필드와 같은 스케일이다.
+     */
+    ...(info.rightValuation
+      ? {
+          assetKind: "right_to_move_in" as const,
+          rightValuationDetail: {
+            memberRightsValue: info.rightValuation.memberRightsValue,
+            paidInstallments: info.rightValuation.paidInstallments,
+            premium: info.rightValuation.premium,
+            total:
+              info.rightValuation.memberRightsValue +
+              info.rightValuation.paidInstallments +
+              info.rightValuation.premium,
+          },
+        }
+      : {}),
     ownershipRatio: ownershipRatio !== undefined && ownershipRatio < 1 ? ownershipRatio : undefined,
     debtRatio,
     gratuitousPortion,

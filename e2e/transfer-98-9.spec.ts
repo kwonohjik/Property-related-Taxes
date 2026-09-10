@@ -7,6 +7,7 @@
  * ⚠️ stale 서버 주의 — lsof -ti :3100 | xargs kill 후 실행.
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("양도세 §98의9 준공후미분양 패널", () => {
   test("미분양주택 그룹 펼침 → §98의9 선택 → 폼 렌더", async ({ page }) => {
@@ -22,7 +23,7 @@ test.describe("양도세 §98의9 준공후미분양 패널", () => {
     await page.getByRole("button", { name: "감면·공제" }).click();
 
     // ── unsold_housing 그룹 펼침 ──
-    await page.getByRole("button", { name: /미분양주택/ }).click();
+    await expandReductionCategory(page, /미분양주택/);
 
     // §98의9 라디오 활성 + 클릭 (D-1' 낙관 통과 — 시한은 evaluator 판정)
     const item989 = page.getByText("§98의9 — 수도권 밖 준공후미분양 (주택수 제외)", { exact: false }).first();

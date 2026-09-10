@@ -59,7 +59,7 @@ export function AuctionBlock({
     <ToggleCard
       tone="amber"
       title="공매·경락으로 양도했나요? (소득세법 시행령 §164⑨ 2호)"
-      description="국세징수법 공매·민사집행법 강제경매·저당권실행 경매 낙찰. 환산취득가 계산 시 양도당시 기준시가를 min(기준시가, 공매·경락가액)으로 낮춥니다."
+      description="국세징수법 공매·민사집행법 강제경매·저당권실행 경매 낙찰. 환산취득가 계산 시 양도당시 기준시가를 기준시가와 공매·경락가액 중 작은 금액으로 낮춥니다."
       checked={asset.isAuctionTransfer ?? false}
       onCheckedChange={(v) => onChange({ isAuctionTransfer: v })}
     >
@@ -70,6 +70,7 @@ export function AuctionBlock({
       >
         <CurrencyInput
           label="공매·경락가액"
+          hideLabel
           hideUnit
           value={asset.auctionPrice}
           onChange={(v) => onChange({ auctionPrice: v })}

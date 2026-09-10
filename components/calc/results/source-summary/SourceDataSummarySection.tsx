@@ -53,7 +53,7 @@ export function SourceDataSummarySection({
 
   return (
     <section
-      className="rounded-lg border border-sky-200 bg-white shadow-sm"
+      className="rounded-lg border border-sky-200 bg-white dark:bg-gray-900 shadow-sm"
       data-testid="source-data-summary"
     >
       <button

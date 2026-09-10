@@ -63,9 +63,9 @@ test.describe("외국납부세액공제 §29 — 결과 ▼펼침 산식", () =>
     await expect(expandBtn).toBeVisible();
     await expandBtn.click();
 
-    // Min(한도, 외국세액) 산식 + 한도 계산식 노출 (결과 전용 "한도 = 상속세 산출세액 …")
+    // 「둘 중 작은 금액」 산식 + 한도 계산식 노출 (결과 전용 "한도 = 상속세 산출세액 …")
     await expect(
-      page.getByText("외국납부세액공제 = Min(한도, 외국에서 납부한 상속세액)"),
+      page.getByText("외국납부세액공제 = 한도와 외국에서 납부한 상속세액 중 작은 금액"),
     ).toBeVisible();
     await expect(
       page.getByText("한도 = 상속세 산출세액", { exact: false }),

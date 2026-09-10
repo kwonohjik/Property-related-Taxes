@@ -63,7 +63,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
         <button
           type="button"
           onClick={addRow}
-          className="text-xs font-semibold text-violet-700 hover:text-violet-900 px-2 py-1 rounded border border-violet-300 bg-white"
+          className="text-xs font-semibold text-violet-700 hover:text-violet-900 px-2 py-1 rounded border border-violet-300 bg-white dark:bg-gray-900"
         >
           + 사전증여 추가
         </button>
@@ -71,7 +71,11 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
       <p className="text-caption text-violet-700">
         동일 증여자가 동일 수증자에게 10년 이내 한 증여재산을 합산하여 누진세율 적용(§47②).
         §58 기납부세액공제(이중과세 방지) 적용을 위해 <strong>당시 산출세액·과세표준</strong> 입력 필수 —
-        미입력 시 합산 누진만 적용되고 공제가 누락됩니다.
+        {/* 🔴 종전 「미입력 시 합산 누진만 적용되고 공제가 누락됩니다」는 사실과 **반대**였다(R16).
+              ⑧ `transfer-tax-validate-bg.ts:306-313`이 유효한 사전증여 행에 대해 두 값을
+              요구하며 **계산을 차단**한다. 안내가 「진행은 된다」고 말하면 사용자는 차단 사유를
+              엉뚱한 곳에서 찾는다(`feedback_blocked_message_is_not_missing_input_path`). */}
+        미입력 시 <strong>계산이 차단됩니다</strong>. 행이 필요 없으면 삭제하세요.
       </p>
 
       {rows.length === 0 ? (
@@ -83,7 +87,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
           {rows.map((row, idx) => (
             <div
               key={idx}
-              className="rounded-md border border-violet-200 bg-white p-2 space-y-1.5"
+              className="rounded-md border border-violet-200 bg-white dark:bg-gray-900 p-2 space-y-1.5"
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="text-caption font-semibold text-violet-800">

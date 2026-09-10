@@ -27,7 +27,9 @@ import { HousingLandDetailSection } from "./HousingLandDetailSection";
 import { VillaLandDetailSection } from "./VillaLandDetailSection";
 import { OtherLandDetailSection } from "./OtherLandDetailSection";
 import { DeemedTransferSection } from "./DeemedTransferSection";
+import { isDeemedTransferApplicable } from "@/lib/calc/nbl-deemed-transfer-scope";
 import { NblUrbanZoneCheckButton } from "./NblLandAutoFetch";
+import { nblLandSigunguCodeOf } from "@/lib/calc/nbl-land-sigungu";
 
 const LAND_TYPE_OPTIONS = [
   { value: "farmland",     label: "농지 (전·답·과수원)" },
@@ -93,7 +95,8 @@ export function NblSectionContainer({
   // 토지 소재지 = 양도 물건 소재지 자동연동. 판정용 코드는 acquisitionSigunguCode(10자리)를 5자리로 정규화,
   // 표시용 이름은 자산 주소 문자열에서 파싱(시군구 코드 테이블 누락 시군구도 표시됨).
   // nblLandSigunguCode 미입력 시 fallback으로 판정에 사용됨(buildNonBusinessLandRaw). 표시로 일관성 확보.
-  const acqSigungu5 = (asset.acquisitionSigunguCode || "").slice(0, 5);
+  // ④·⑧과 같은 leaf — 세 층이 같은 코드를 본다(3중 패턴).
+  const acqSigungu5 = nblLandSigunguCodeOf({ ...asset, nblLandSigunguCode: "" });
   const acqSigunguName = extractSidoSigunguName(asset.addressJibun || asset.addressRoad) || undefined;
 
   if (!asset.nblUseDetailedJudgment) {
@@ -136,6 +139,11 @@ export function NblSectionContainer({
       {/* 2. 공통 — 지목·용도지역 (실제 의제 성립 시에만 비활성) */}
       <div
         data-testid="nbl-per-category"
+        // 🔴 `pointer-events-none`은 **Tab 포커스를 막지 않는다**(R18). 키보드·스크린리더
+        //    사용자는 의제 성립으로 무시되는 지목·용도지역을 여전히 바꿀 수 있었다.
+        //    React 19의 `inert`가 포커스·AT 노출까지 함께 끊는다.
+        inert={exemptionStatus.isExempt ? true : undefined}
+        aria-hidden={exemptionStatus.isExempt ? true : undefined}
         className={exemptionStatus.isExempt ? "opacity-50 pointer-events-none" : undefined}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -279,7 +287,7 @@ export function NblSectionContainer({
         </div>
 
         {/* 7. 양도일 의제 (§168의14②) — 기간기준 5지목 (주택부수토지는 §168의6 미적용이라 제외) */}
-        {asset.nblLandType && asset.nblLandType !== "housing_site" && (
+        {isDeemedTransferApplicable(asset.nblLandType) && (
           <div className="mt-3">
             <DeemedTransferSection asset={asset} onAssetChange={onAssetChange} />
           </div>

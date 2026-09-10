@@ -16,7 +16,9 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
+import { isHousingLike } from "@/lib/calc/housing-like-asset";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
+import { rightThreeYearExceptionVisible } from "@/lib/calc/right-three-year-exception-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
@@ -203,10 +205,10 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
          *    설계문서 `transfer-bundled-subengine-hosting.design.md` §10). ⑩ enum +
          *    ⑫ `mixedUse` 서브객체 + ⑬ 자산별 `buildMixedUsePayload` + ⑭ 파트 확장으로 열었다.
          *
-         * ⚠️ **primary 겸용은 계속 막는다** — 5-a의 primary는 `{...engineInput}` 스프레드라
-         *    (`route.ts`) 겸용이어도 **평범한 주택 item**이 된다. 여기를 함께 열면
-         *    「⑧ 통과 ↔ route 침묵 오산」이 된다. primary 개방은 그 스프레드 지점에 같은 확장을
-         *    다는 별건이다.
+         * ~~⚠️ primary 겸용은 계속 막는다~~ → **primary 겸용도 같은 날 열렸다**(아래 `:275` 참조).
+         *    당시 사유는 「5-a의 primary가 `{...engineInput}` 스프레드라 겸용이어도 평범한 주택
+         *    item이 된다」였고, 그 스프레드 지점(`route.ts`)에 같은 확장을 달아 해소했다.
+         *    ⚠️ 이 문단은 **이력**이다 — 「막혀 있다」로 읽지 말 것.
          */
 
         /**
@@ -266,8 +268,10 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
          *    `buildGbPartCards`로 파트 카드를 만들어 aggregate에 합류시켜 해소했다 —
          *    축 B(지분 분할)와 **같은 leaf**를 쓴다.
          *
-         * ⚠️ 겸용주택은 위에서 **계속 차단**한다. `MixedUseGainBreakdown`이 세액까지 자체
-         *    완결해 aggregate 합류 경로가 없다(설계문서 §2 · 미검증 V-2~V-4).
+         * ~~⚠️ 겸용주택은 위에서 계속 차단한다~~ → **2026-09-04에 열렸다.** 종전 사유
+         *    「`MixedUseGainBreakdown`이 세액까지 자체 완결해 aggregate 합류 경로가 없다」는
+         *    파트 카드 되먹임으로 해소됐고, 미검증이던 V-2~V-4도 전부 재현됐다.
+         *    ⚠️ 이 문단은 **이력**이다.
          */
       ];
       /**
@@ -277,9 +281,13 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
        * primary 조립부(`route.ts`)에 같은 확장을 달아 열었다 — 종전에는 그 자리가
        * `{...engineInput}` 스프레드라 겸용이 평범한 주택 item이 됐다.
        *
-       * ⚠️ **겸용 × 지분 분할은 위(`:81`)에서 여전히 차단**이다 —
-       *    `totalPropertyTransferPrice`가 「물건 전체 양도가액」과 「주택분 합계」 두 의미로
-       *    충돌한다. 그 차단이 이 축과 지분 축이 만나지 않게 지킨다.
+       * ~~⚠️ 겸용 × 지분 분할은 위(`:81`)에서 여전히 차단~~ → **그 차단도 같은 날 없어졌다.**
+       *    위 `:81` 목록의 표가 적고 있듯, 막고 있던 것은 「`totalPropertyTransferPrice`의
+       *    의미 충돌」이 아니라 **절대금액 미스케일**이었고 `buildMixedUsePayload`가 해소했다
+       *    (실측: 축 B 60/40 합계 152,203,211 = 단건 100%와 일치).
+       *
+       * ⚠️ **이 문단은 이력이다.** 2026-09-07 probe 재확인 — 겸용 2자산 60/40 지분 분할은
+       *    게이트에 걸리지 않고 필드 검증(연면적)으로 진행한다(대조군 일반주택도 동일).
        */
 
       for (const [match, label] of SINGLE_ONLY) {
@@ -526,7 +534,12 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
 
     // ⑧ 세대 보유 분양권·입주권 — 각 행 취득일 필수 (자동 안분 fallback 금지)
     // 위 houses와 같은 이유로 한시배제 skip을 두지 않는다 — §89②는 비과세 축이고 ⑤도 열려 있다.
-    const presaleRights = form.presaleRights ?? [];
+    // 🔴 단, **주택 계열 자산일 때만** 요구한다. ⑤는 `isHousingLike` 안에서만 이 위젯을 열고
+    //    (`Step4.tsx:409`), ④도 같은 술어로 전송을 막는다(`presale-rights-payload.ts:62`).
+    //    자산 종류를 주택→토지로 바꾸면 행은 남는데 삭제 UI가 사라져 **막다른 길**이 됐다.
+    const presaleRights = isHousingLike(form.assets?.[0]?.assetKind ?? "")
+      ? (form.presaleRights ?? [])
+      : [];
     for (let i = 0; i < presaleRights.length; i++) {
       if (!presaleRights[i].acquisitionDate)
         issues.push({ step, message: `분양권·입주권 ${i + 1}: 취득일을 입력하세요.` });
@@ -584,13 +597,28 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
      * ⚠️ 미선택(`""`)은 막지 않는다 — 판정 불가로 남아 종전대로 계산되고 결과에 안내가 붙는다.
      *    여기서 차단하면 3년 초과 세대 전체가 계산 자체를 못 하게 된다.
      */
-    if (form.rightThreeYearExceptionKind === "new_house" && !form.rightNewHouseCompletionDate) {
+    /**
+     * 🔴 **카드 노출 조건을 함께 본다**(2026-09-07). 이 카드는 스스로 사라진다 —
+     *    양도일을 3년 이내로 고치거나, 세대 보유 권리 행을 지우거나, 자산 종류를 주택 외로
+     *    바꾸면 화면에서 없어진다. 그런데 ⑧은 `rightThreeYearExceptionKind`만 보고 필수값을
+     *    요구해, 채울 칸도 선택을 해제할 컨트롤도 없는 **영구 차단**이 됐다.
+     */
+    const r3ySectionVisible = rightThreeYearExceptionVisible(form);
+    if (
+      r3ySectionVisible &&
+      form.rightThreeYearExceptionKind === "new_house" &&
+      !form.rightNewHouseCompletionDate
+    ) {
       issues.push({
         step,
         message: "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
       });
     }
-    if (form.rightThreeYearExceptionKind === "delay" && !form.rightDisposalDelayReason) {
+    if (
+      r3ySectionVisible &&
+      form.rightThreeYearExceptionKind === "delay" &&
+      !form.rightDisposalDelayReason
+    ) {
       issues.push({
         step,
         message: "3년 초과 예외(시행규칙 §75①): 3년이 되는 날 현재의 사유를 선택하세요.",

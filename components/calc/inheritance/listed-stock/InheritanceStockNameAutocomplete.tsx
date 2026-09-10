@@ -184,7 +184,7 @@ export function InheritanceStockNameAutocomplete({
         <ul
           id={listboxId}
           role="listbox"
-          className="absolute z-50 mt-1 w-full max-h-72 overflow-y-auto rounded-md border border-sky-200 bg-white shadow-lg text-sm"
+          className="absolute z-50 mt-1 w-full max-h-72 overflow-y-auto rounded-md border border-sky-200 bg-white dark:bg-gray-900 shadow-lg text-sm"
         >
           {loading && matches.length === 0 && (
             <li className="px-3 py-2 text-xs text-muted-foreground">

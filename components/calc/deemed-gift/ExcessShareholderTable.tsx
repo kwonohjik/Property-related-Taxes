@@ -96,7 +96,7 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
                   <td className="py-1.5 pl-3 pr-2">
                     <input
                       type="text"
-                      className="w-24 rounded border border-sky-200 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-sky-300"
+                      className="w-24 rounded border border-sky-200 bg-white dark:bg-gray-900 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-sky-300"
                       value={row.name}
                       onChange={(e) => patchRow(row.id, { name: e.target.value })}
                       placeholder="주주명"

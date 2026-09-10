@@ -71,7 +71,7 @@ export function Row({
       </div>
       {formula && (
         <div className="text-caption text-muted-foreground/80 leading-snug pl-2 border-l-2 border-muted space-y-0.5">
-          {formula}
+          <FormulaText value={formula} />
         </div>
       )}
     </div>
@@ -79,7 +79,7 @@ export function Row({
 }
 
 // 산식 분수(Frac)·줄(FLine)은 전 세목 공용으로 승격 — shared/FormulaParts.tsx에서 재export.
-import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
+import { Frac, FLine, FormulaText } from "@/components/calc/results/shared/FormulaParts";
 export { Frac, FLine };
 
 export function DivRow() {
@@ -137,13 +137,13 @@ export function PartialUsageChangeCard({
         </span>
       </p>
       <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-md bg-white/60 border border-amber-200 px-3 py-2">
+        <div className="rounded-md bg-white/60 dark:bg-white/5 border border-amber-200 px-3 py-2">
           <div className="text-caption text-amber-700">취득시 주택 연면적</div>
-          <div className="font-mono text-amber-900">{puc.acqResidentialArea.toFixed(2)}㎡</div>
+          <div className="font-mono tabular-nums text-amber-900">{puc.acqResidentialArea.toFixed(2)}㎡</div>
         </div>
-        <div className="rounded-md bg-white/60 border border-amber-200 px-3 py-2">
+        <div className="rounded-md bg-white/60 dark:bg-white/5 border border-amber-200 px-3 py-2">
           <div className="text-caption text-amber-700">취득시 상가 연면적</div>
-          <div className="font-mono text-amber-900">{puc.acqCommercialArea.toFixed(2)}㎡</div>
+          <div className="font-mono tabular-nums text-amber-900">{puc.acqCommercialArea.toFixed(2)}㎡</div>
         </div>
       </div>
       {puc.isAreaCustomized && (

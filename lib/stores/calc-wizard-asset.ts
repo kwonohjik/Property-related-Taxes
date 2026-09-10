@@ -620,6 +620,14 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   // ── 개별주택가격 미공시 취득 환산 (§164⑤) ──
   /** true 시 3-시점 미공시 취득 환산 모드 활성화 */
   usePreHousingDisclosure: boolean;
+  /**
+   * 주택유형 — 「개별주택가격(단독·다가구)」 / 「공동주택가격(아파트)」 라벨 축.
+   *
+   * 🔴 종전에는 `PreHousingDisclosureSection`의 `useState` 로컬이었다(R12). 단계를 옮기거나
+   *    새로고침하면 항상 「단독·다가구」로 되돌아가, **저장된 공동주택가격에 개별주택가격
+   *    라벨**이 붙었다. 표시 축이라 ④⑧에는 싣지 않는다.
+   */
+  phdHousingType: "individual" | "apartment";
   /** 최초 고시일 (YYYY-MM-DD, 사용자 직접 입력) */
   phdFirstDisclosureDate: string;
   /** 최초 고시 개별주택가격 P_F (원) */
@@ -745,6 +753,20 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     /** 거주주택 양도(A) / PHRP 양도(B) */
     scenario: 'A' | 'B';
     rentalUnits: Array<{
+      /**
+       * React 리스트 key 전용 **안정 식별자** — 엔진·④에 전송되지 않는다
+       * (`transfer-tax-api-rental-housing.ts`는 필드를 명시 매핑한다).
+       *
+       * 🔴 종전에는 카드 key가 배열 인덱스였다. 중간 호를 삭제하면 뒤 카드가 삭제된 호의
+       *    인덱스를 물려받아 **자식의 로컬 state가 그대로 남았다** — `AddressSearch`의 검색어는
+       *    마운트 시 1회만 초기화되고(`address-search.tsx:75`) 동기화 useEffect는 외부 값이
+       *    **빈 문자열이 될 때만** 초기화하며(:102~105), `HousingStdPriceLookupField`의
+       *    `selectedYear`·`isManual`·`priceType`·`lookupError`도 로컬 state뿐이다.
+       *    ⇒ 삭제된 호의 주소 검색어·조회 상태가 남은 카드에 그대로 붙어 있었다.
+       *
+       * ⚠️ stale sessionStorage·이력 복원분에는 없다 — ③ `migrateAsset`이 채운다.
+       */
+      unitId: string;
       /** 세무서 사업자등록일 §168 (YYYY-MM-DD) */
       businessRegistrationDate: string;
       /** 지자체 임대사업자등록신청일 민특법§5 (YYYY-MM-DD) */

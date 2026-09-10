@@ -107,16 +107,21 @@ export function SalesCaseSection({
         >
           실거래가 자동조회 (RTMS)
         </Button>
+        {/* 🔴 **막고 있는 조건을 그대로 말한다** (2026-09-07 대장 재대조). 종전 문구는 주소·면적만
+            언급해, 주소를 직접 타이핑해 시군구코드가 해석되지 않은 사용자가 이미 입력을 마쳤는데도
+            빠져나갈 길이 없었다. */}
         {rtmsDisabled && (
           <p className="text-caption text-muted-foreground">
-            자동조회를 사용하려면 취득 주소·면적을 먼저 입력하세요.
+            {!hasAddress || !hasArea
+              ? "자동조회를 사용하려면 취득 주소·면적을 먼저 입력하세요."
+              : "주소에서 시·군·구가 확인되지 않았습니다 — 주소 검색으로 다시 선택하면 자동조회를 쓸 수 있습니다."}
           </p>
         )}
       </div>
 
       {/* 취득시 기준시가 — 개산공제 3% base */}
       <CurrencyInput
-        label="취득시 기준시가 (원) — 개산공제 base"
+        label="취득시 기준시가 (원) — 개산공제 기준액"
         value={standardPriceAtAcq}
         onChange={onStandardPriceAtAcqChange}
         hint="필요경비 개산공제 = 이 금액의 3%. 미입력 시 0% 적용."

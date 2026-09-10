@@ -139,9 +139,9 @@ export function ContributionFields({ form, set }: Props) {
           { value: "high", label: "고가 인수 (①2호)", testId: "con-case-high" },
         ]}
       />
-      <CurrencyInput label="현물출자 전 1주당 평가가액" value={form.conPrePrice} onChange={(v) => set({ conPrePrice: v })} placeholder="현물출자 전 1주당 평가가액 (원)" />
+      <CurrencyInput label="현물출자 전 1주당 평가가액" value={form.conPrePrice} onChange={(v) => set({ conPrePrice: v })} />
       <CurrencyInput label="현물출자 전 발행주식총수" value={form.conPreShares} onChange={(v) => set({ conPreShares: v })} placeholder="현물출자 전 발행주식총수" />
-      <CurrencyInput label="신주 1주당 인수가액" value={form.conNewPrice} onChange={(v) => set({ conNewPrice: v })} placeholder="신주 1주당 인수가액 (원)" />
+      <CurrencyInput label="신주 1주당 인수가액" value={form.conNewPrice} onChange={(v) => set({ conNewPrice: v })} />
       <CurrencyInput label="현물출자 주식수" value={form.conContributedShares} onChange={(v) => set({ conContributedShares: v })} placeholder="현물출자 주식수" />
       <CurrencyInput label={isHigh ? "인수 신주수" : "배정받은 신주수"} value={form.conAllocatedShares} onChange={(v) => set({ conAllocatedShares: v })} placeholder={isHigh ? "인수 신주수" : "배정받은 신주수"} />
 
@@ -154,8 +154,8 @@ export function ContributionFields({ form, set }: Props) {
         title="주권상장법인등 (§29②1가·3나 단서 준용)"
         description={
           isHigh
-            ? "고가: Max(종가평균, 산식 이론값) — 평가액이 산식값보다 크면 평가액"
-            : "저가: Min(종가평균, 산식 이론값) — 평가액이 산식값보다 적으면 평가액"
+            ? "고가: 종가평균과 산식 이론값 중 큰 금액 — 평가액이 산식값보다 크면 평가액"
+            : "저가: 종가평균과 산식 이론값 중 작은 금액 — 평가액이 산식값보다 적으면 평가액"
         }
       >
         {/* §63①1가 종가평균 키움 자동조회 (선택) — 평가기준일 = 증여일 = 현물출자 납입일(법 §39의3① 본문) */}

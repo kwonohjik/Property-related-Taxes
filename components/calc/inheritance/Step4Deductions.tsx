@@ -53,6 +53,7 @@ import type { Step4Autos } from "./steps";
 // autoFillValue — steps.tsx와 동일 (DRY 불가 — 순환 import 회피)
 // ────────────────────────────────────────────────────
 import type { DeductionSuggestion } from "@/lib/calc/inheritance-deduction-suggest";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 function autoFillValue(raw: string, s: DeductionSuggestion): string {
   if (raw !== "") return raw;
@@ -353,7 +354,7 @@ export function Step4({
 
                 <div className="space-y-2">
                   <CurrencyInput
-                    label="가업상속재산가액 (legacy / 요건 미입력 시)"
+                    label="가업상속재산가액 (요건 미입력 시 직접 입력)"
                     value={form.familyBusinessValue}
                     onChange={(v) => set({ familyBusinessValue: v })}
                     hint="요건 판정 모드 미사용 시 가업재산가액 직접 입력 — 중소·중견기업 가업 (최대 600억)"
@@ -361,7 +362,7 @@ export function Step4({
                   {parseAmount(form.familyBusinessValue) > 0 && !form.familyBusiness && (
                     <div className="space-y-1">
                       <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-                        가업 영위 기간 (년) — legacy 모드
+                        가업 영위 기간 (년) — 요건 미입력 방식
                       </label>
                       <input
                         type="text"
@@ -530,7 +531,7 @@ export function Step4({
                 value: "on_time",
                 label: "법정기한 내 신고 (정기신고)",
                 description:
-                  "상속개시일이 속하는 달의 말일부터 6개월 이내 신고 (§67① — 비거주자 9개월 §67④) — 신고세액공제 3% 적용 · 일괄공제 max(기초+인적, 5억)",
+                  "상속개시일이 속하는 달의 말일부터 6개월 이내 신고 (§67① — 비거주자 9개월 §67④) — 신고세액공제 3% 적용 · 일괄공제는 「기초공제 + 인적공제」와 5억원 중 큰 금액",
               },
               {
                 value: "late",
@@ -670,8 +671,9 @@ export function Step4({
               <LawArticleModal legalBasis="상속세및증여세법 §29" label="§29" />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              해외 소재 상속재산에 외국 법령에 따라 부과된 상속세를 공제합니다. 한도는
-              산출세액 × (국외 상속재산 과세표준 ÷ 상속세 과세표준)으로 계산됩니다 (상증령 §21①).
+              해외 소재 상속재산에 외국 법령에 따라 부과된 상속세를 공제합니다. 한도는 산출세액 ×{" "}
+              <Frac top="국외 상속재산 과세표준" bottom="상속세 과세표준" />
+              으로 계산됩니다 (상증령 §21①).
             </p>
             <FieldCard
               label="외국에서 납부한 상속세액"

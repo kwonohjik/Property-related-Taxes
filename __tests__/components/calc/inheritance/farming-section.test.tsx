@@ -338,7 +338,9 @@ describe("[RD-UI] FarmingDeductionDetailRow — 5-way 분기 (F-6)", () => {
       cappedDeduction: 1_000_000_000,
     };
     render(<FarmingDeductionDetailRow detail={detail} />);
-    expect(screen.queryByText(/legacy 모드/)).not.toBeNull();
+    // 「legacy 모드」는 내부 영어 용어라 한국어로 바뀌었다(`internal-term-policy` 가드).
+    // 단언 축(「요건 미평가 안내가 뜬다」)은 그대로다.
+    expect(screen.queryByText(/요건 미입력 방식/)).not.toBeNull();
   });
 
   it("RD-UI-7: detail=undefined → 미렌더 (null)", () => {

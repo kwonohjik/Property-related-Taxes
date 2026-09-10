@@ -158,13 +158,13 @@ export function PresumedInheritanceTable({
       <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900">
         <p className="mb-1 font-medium">산식 (상증법 §15)</p>
         <p>㉠ 미소명액 = 처분액 − 사용처확인액</p>
-        <p>㉡ 추정상속재산 = max(0, 미소명액 − Min(처분액×20%, 2억))</p>
+        <p>㉡ 추정상속재산 = 미소명액 − (처분액의 20%와 2억원 중 적은 금액), 음수면 0</p>
       </div>
 
       <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
         <p className="font-medium">상속추정의 배제 (상증법 집행기준 15-11-6)</p>
         <p className="mt-1">
-          용도불분명한 금액 &lt; Min(처분재산가액·인출금액·채무부담액×20%, 2억) → 상속추정 배제
+          용도불분명한 금액 &lt; 「처분재산가액·인출금액·채무부담액의 20%와 2억원 중 적은 금액」 → 상속추정 배제
         </p>
       </div>
     </div>

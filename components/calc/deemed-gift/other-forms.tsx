@@ -18,6 +18,7 @@ import { KiwoomValuationAutoFetchButton } from "@/components/calc/KiwoomValuatio
 import type { DeemedFormState } from "./shared";
 import { ExcessShareholderTable } from "./ExcessShareholderTable";
 import { SpecificCorpShareholderTable } from "./SpecificCorpShareholderTable";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -68,8 +69,8 @@ export function ExcessDividendFields({ form, set }: Props) {
             },
             {
               value: "comprehensive",
-              label: "종합과세 확정 — Max(ⓐ−ⓑ, 14%) 산식 (규칙 §10의3②3호)",
-              description: "종합소득과세표준을 입력하면 Max 산식으로 자동 계산합니다",
+              label: "종합과세 확정 — ⓐ−ⓑ와 14% 상당액 중 큰 금액 (규칙 §10의3②3호)",
+              description: "종합소득과세표준을 입력하면 둘 중 큰 금액으로 자동 계산합니다",
               testId: "ed-mode-comprehensive",
             },
           ]}
@@ -118,7 +119,8 @@ export function ExcessDividendFields({ form, set }: Props) {
               />
             </FieldCard>
             <p className="text-xs text-muted-foreground">
-              Max(ⓐ과세표준 세율 적용액 − ⓑ차감액 세율 적용액, 초과배당금액 × 14%) — 서버 계산 후 결과에 표시됩니다.
+              (ⓐ과세표준 세율 적용액 − ⓑ차감액 세율 적용액)과 (초과배당금액 × 14%) 중 큰 금액 — 서버 계산 후 결과에
+              표시됩니다.
             </p>
           </div>
         )}
@@ -267,7 +269,7 @@ export function ListingGainFields({ form, set }: Props) {
           maxLength={6}
           value={form.lgStockCode}
           onChange={(e) => set({ lgStockCode: e.target.value })}
-          placeholder="종목코드 6자리 (예: 005930)"
+          placeholder="6자리 숫자"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           data-testid="lg-stock-code"
         />
@@ -282,7 +284,7 @@ export function ListingGainFields({ form, set }: Props) {
           onFill={(patch) => set({ lgSettlementPrice: String(patch.listedStockAvgPrice) })}
         />
       </div>
-      <CurrencyInput label="정산기준일 1주당 평가가액" value={form.lgSettlementPrice} onChange={(v) => set({ lgSettlementPrice: v })} hint={form.lgEventType === "merger" ? "합병등기일 +3개월 (§63 평가)" : "상장일 +3개월 (§63 평가)"} placeholder="정산기준일 1주당 평가가액 (원)" />
+      <CurrencyInput label="정산기준일 1주당 평가가액" value={form.lgSettlementPrice} onChange={(v) => set({ lgSettlementPrice: v })} hint={form.lgEventType === "merger" ? "합병등기일 +3개월 (§63 평가)" : "상장일 +3개월 (§63 평가)"} />
       {/* §63③ 최대주주 20% 할증 (정산기준일 평가가액에 적용) */}
       <ToggleCard
         tone="amber"
@@ -318,10 +320,10 @@ export function ListingGainFields({ form, set }: Props) {
           ]}
         />
         {form.lgCorpGrowthMode === "direct" ? (
-          <CurrencyInput label="1주당 기업가치 실질증가이익" allowNegative value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤ (기업가치 감소 시 음수 입력)" placeholder="1주당 기업가치 실질증가이익 (원)" />
+          <CurrencyInput label="1주당 기업가치 실질증가이익" allowNegative value={form.lgCorpGrowth} onChange={(v) => set({ lgCorpGrowth: v })} hint="시행령 §31의3⑤ (기업가치 감소 시 음수 입력)" />
         ) : (
           <>
-            <CurrencyInput label="사업연도별 1주당 순손익액 합계" allowNegative value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1, 결손 시 음수)" placeholder="1주당 순손익액 합계 (원)" />
+            <CurrencyInput label="사업연도별 1주당 순손익액 합계" allowNegative value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1, 결손 시 음수)" />
             <CurrencyInput label="사업연도개시일~상장전일 월수" value={form.lgMonthsBusinessStart} onChange={(v) => set({ lgMonthsBusinessStart: v })} hint="분모 월수 (1월미만은 1월)" placeholder="월수" />
             <CurrencyInput label="증여·취득일~정산기준일 월수" value={form.lgMonthsAcqToSettlement} onChange={(v) => set({ lgMonthsAcqToSettlement: v })} hint="곱수 월수 (령§31의3⑤2, 1월미만은 1월)" placeholder="월수" />
             <p className="text-xs font-medium text-emerald-800" data-testid="lg-corp-growth-echo">
@@ -340,7 +342,8 @@ export function ListingGainFields({ form, set }: Props) {
       >
         ※ 증여·취득일부터 상장 전일까지 <b>무상주(증자)</b>를 발행한 경우, 환산주식수 기준으로 1주당 평가가액·순손익액을 산정해 입력하세요 (령§31의3⑦ → 칙§17의3⑤).
         <br />
-        환산주식수 = 과거 사업연도말 주식수 × (증자 직전 주식수 + 증자 주식수) ÷ 증자 직전 주식수
+        환산주식수 = 과거 사업연도말 주식수 ×{" "}
+        <Frac top="증자 직전 주식수 + 증자 주식수" bottom="증자 직전 주식수" />
       </div>
 
       {/* §41의3 적용 요건·특례 정보성 안내 (전환사채·거짓·증여시기·연대납부·합산배제) */}
@@ -385,7 +388,7 @@ export function PropertyServiceUseFields({ form, set }: Props) {
       />
       <CurrencyInput label={isFree ? "재산사용·용역 시가 상당액" : "시가"} value={form.psuMarketValue} onChange={(v) => set({ psuMarketValue: v })} hint={isFree ? "기준금액 1천만원 이상이면 과세" : "기준금액 시가의 30% 이상이면 과세"} placeholder={isFree ? "시가 상당액 (원)" : "시가 (원)"} />
       {!isFree && (
-        <CurrencyInput label="대가" value={form.psuConsideration} onChange={(v) => set({ psuConsideration: v })} placeholder="대가 (원)" />
+        <CurrencyInput label="대가" value={form.psuConsideration} onChange={(v) => set({ psuConsideration: v })} />
       )}
     </ToneCard>
   );
@@ -409,17 +412,17 @@ export function OrgChangeFields({ form, set }: Props) {
       />
       {isShare ? (
         <>
-          <CurrencyInput label="변동 전 지분" value={form.ocPreShares} onChange={(v) => set({ ocPreShares: v })} placeholder="변동 전 지분(주식수)" />
-          <CurrencyInput label="변동 후 지분" value={form.ocPostShares} onChange={(v) => set({ ocPostShares: v })} placeholder="변동 후 지분(주식수)" />
-          <CurrencyInput label="변동 후 1주당 가액" value={form.ocPostPerShare} onChange={(v) => set({ ocPostPerShare: v })} placeholder="변동 후 1주당 가액 (원)" />
+          <CurrencyInput label="변동 전 지분" value={form.ocPreShares} onChange={(v) => set({ ocPreShares: v })} placeholder="주식수" />
+          <CurrencyInput label="변동 후 지분" value={form.ocPostShares} onChange={(v) => set({ ocPostShares: v })} placeholder="주식수" />
+          <CurrencyInput label="변동 후 1주당 가액" value={form.ocPostPerShare} onChange={(v) => set({ ocPostPerShare: v })} />
         </>
       ) : (
         <>
-          <CurrencyInput label="변동 전 가액" value={form.ocPreValue} onChange={(v) => set({ ocPreValue: v })} placeholder="변동 전 가액 (원)" />
-          <CurrencyInput label="변동 후 가액" value={form.ocPostValue} onChange={(v) => set({ ocPostValue: v })} placeholder="변동 후 가액 (원)" />
+          <CurrencyInput label="변동 전 가액" value={form.ocPreValue} onChange={(v) => set({ ocPreValue: v })} />
+          <CurrencyInput label="변동 후 가액" value={form.ocPostValue} onChange={(v) => set({ ocPostValue: v })} />
         </>
       )}
-      <CurrencyInput label="변동 전 해당 재산가액 (기준금액 산정)" value={form.ocBaseValue} onChange={(v) => set({ ocBaseValue: v })} hint="기준금액 = min(변동전 재산가액 × 30%, 3억)" placeholder="변동 전 재산가액 (원)" />
+      <CurrencyInput label="변동 전 해당 재산가액 (기준금액 산정)" value={form.ocBaseValue} onChange={(v) => set({ ocBaseValue: v })} hint="기준금액 = (변동 전 재산가액 × 30%)와 3억원 중 작은 금액" placeholder="변동 전 재산가액 (원)" />
     </ToneCard>
   );
 }
@@ -493,10 +496,10 @@ export function ValueIncreaseFields({ form, set }: Props) {
       </div>
 
       {/* ③ 금액 */}
-      <CurrencyInput label="사유발생일 현재 재산가액" value={form.viCurrentValue} onChange={(v) => set({ viCurrentValue: v })} placeholder="사유발생일 현재 재산가액 (원)" />
-      <CurrencyInput label="취득가액" value={form.viAcqCost} onChange={(v) => set({ viAcqCost: v })} hint="증여받은 재산은 증여세 과세가액" placeholder="취득가액 (원)" />
-      <CurrencyInput label="통상적인 가치상승분" value={form.viNormalIncrease} onChange={(v) => set({ viNormalIncrease: v })} placeholder="통상적인 가치상승분 (원)" />
-      <CurrencyInput label="가치상승기여분" value={form.viContribution} onChange={(v) => set({ viContribution: v })} hint="자본적지출액 등" placeholder="가치상승기여분 (원)" />
+      <CurrencyInput label="사유발생일 현재 재산가액" value={form.viCurrentValue} onChange={(v) => set({ viCurrentValue: v })} />
+      <CurrencyInput label="취득가액" value={form.viAcqCost} onChange={(v) => set({ viAcqCost: v })} hint="증여받은 재산은 증여세 과세가액" />
+      <CurrencyInput label="통상적인 가치상승분" value={form.viNormalIncrease} onChange={(v) => set({ viNormalIncrease: v })} />
+      <CurrencyInput label="가치상승기여분" value={form.viContribution} onChange={(v) => set({ viContribution: v })} hint="자본적지출액 등" />
 
       {/* ④ 기간 (5년 요건 echo) */}
       <FieldCard label="취득일" hint="취득일부터 5년 이내 가치증가사유 발생 여부 표시">
@@ -578,7 +581,7 @@ export function SpecificCorpFields({ form, set }: Props) {
             label="법인세 상당액"
             value={form.scCorporateTax}
             onChange={(v) => set({ scCorporateTax: v })}
-            hint="(산출세액 − 공제·감면) × min(거래이익/소득금액, 1). 이월결손금 0이면 0 입력"
+            hint="(산출세액 − 공제·감면) × 「거래이익을 소득금액으로 나눈 값」과 1 중 작은 값. 이월결손금 0이면 0 입력"
             data-testid="sc-corporate-tax"
           />
         )}
@@ -608,7 +611,7 @@ export function SpecificCorpFields({ form, set }: Props) {
             {corpTaxEcho !== null && (
               <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800">
                 안분 법인세 상당액 (표시용) ≈{" "}
-                <span className="font-mono font-bold">{corpTaxEcho.toLocaleString()}</span>원
+                <span className="font-mono tabular-nums font-bold">{corpTaxEcho.toLocaleString()}</span>원
                 <span className="ml-1 text-amber-600">(실계산은 엔진)</span>
               </div>
             )}

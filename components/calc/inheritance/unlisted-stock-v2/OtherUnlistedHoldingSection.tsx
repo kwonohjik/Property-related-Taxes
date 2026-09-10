@@ -169,7 +169,7 @@ export function OtherUnlistedHoldingSection({
                     setRow(idx, { counterparty: c ? makeNewCounterparty() : undefined })
                   }
                   title="상호출자 (상대도 평가대상 주식 보유)"
-                  description="ON 시 다원일차연립방정식. OFF는 단방향 보충적평가(Max(장부,보충적))."
+                  description="ON 시 다원일차연립방정식. OFF는 단방향 보충적평가(장부가액과 보충적평가액 중 큰 금액)."
                 >
                   {hasCounterparty && h.counterparty && (
                     <div className="grid grid-cols-2 gap-2 pt-1">

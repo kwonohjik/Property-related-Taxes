@@ -6,15 +6,15 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
   await page.goto("/calc/gift-deemed");
   await page.getByTestId("deemed-type-related_corp").click();
   const dialog = page.getByTestId("deemed-detail-dialog");
-  await dialog.getByLabel("연도").fill("2023");
-  await dialog.getByLabel("월").fill("12");
+  await dialog.getByLabel("연도", { exact: true }).fill("2023");
+  await dialog.getByLabel("월", { exact: true }).fill("12");
   await dialog.getByLabel("일", { exact: true }).fill("31");
 
   // 섹션 1 — 기업규모·재무
   await dialog.getByTestId("rc-size-small").click();
-  await dialog.getByPlaceholder("총 매출액 (원)").fill("20000000000");
-  await dialog.getByPlaceholder(/세무조정 후 영업손익/).fill("2500000000");
-  await dialog.getByPlaceholder("각 사업연도 소득금액 (원)").fill("1800000000");
+  await dialog.getByLabel("총 매출액", { exact: true }).fill("20000000000");
+  await dialog.getByPlaceholder(/영업손실 시 음수/).fill("2500000000");
+  await dialog.getByLabel("각 사업연도 소득금액", { exact: true }).fill("1800000000");
   await dialog.getByPlaceholder("산출세액 − 공제·감면액 (원)").fill("340000000");
 
   // 섹션 2 — 주주현황 6행
@@ -68,7 +68,7 @@ test("§45의3 일감몰아주기 사례4 roster 전체 → 36,720,000", async (
     const [name, amount, related, excl] = sales[i];
     const row = dialog.getByTestId(`rc-sales-row-${i}`);
     await row.getByPlaceholder("매출처 이름").fill(name);
-    await row.getByPlaceholder("매출액 (원)").fill(amount);
+    await row.getByLabel("매출액", { exact: true }).fill(amount);
     await row.getByLabel(`매출처 ${i + 1} 특수관계`).selectOption(related);
     if (related === "y") {
       await row.getByLabel(`매출처 ${i + 1} 과세제외유형`).selectOption(excl);

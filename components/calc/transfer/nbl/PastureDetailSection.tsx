@@ -2,6 +2,7 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -77,16 +78,24 @@ export function PastureDetailSection({
         곱해지므로(§168의10③) 입력 오류가 곧바로 비사업용 면적비에 반영된다 — 한우 30두를
         10두로 넣으면 기준면적 한도가 3분의 1로 줄어 초과분이 통째로 중과 대상이 된다.
       */}
-      <FieldCard
-        label="사육 두수"
-        unit="두"
-        hint="「소득세법 시행령」 [별표 1의3] 제2호 — 다음 3가지 중 납세자가 선택합니다. ① 최근 6과세기간(양도일 속한 기간 포함) 중 선택한 축산업 영위 3과세기간의 최고사육두수 평균 ② 최근 4과세기간 중 축산업 영위 2과세기간의 최고사육두수 평균 ③ 영위기간 2년 이하이면 영위한 과세기간의 최고사육두수 평균"
-      >
+      <FieldCard label="사육 두수" unit="두" hint="산정방법 3가지 중 납세자가 선택합니다.">
         <DecimalInput
           value={asset.nblPastureLivestockCount}
           onChange={(v) => onAssetChange({ nblPastureLivestockCount: v })}
         />
       </FieldCard>
+      {/* 조문 열거는 접힘으로 강등한다 — 요약 한 줄만 남기고, 인쇄 시에는 본문이 자동
+          노출되므로 법적 설명이 PDF에서 사라지지 않는다(print-only-css-toggle). */}
+      <CollapsibleHintCard
+        tone="sky"
+        summary="사육 두수 산정방법 3가지 — 「소득세법 시행령」 [별표 1의3] 제2호"
+      >
+        <ol className="list-decimal space-y-1 pl-4">
+          <li>최근 6과세기간(양도일이 속한 기간 포함) 중 선택한 축산업 영위 3과세기간의 최고사육두수 평균</li>
+          <li>최근 4과세기간 중 축산업 영위 2과세기간의 최고사육두수 평균</li>
+          <li>영위기간이 2년 이하이면 영위한 과세기간의 최고사육두수 평균</li>
+        </ol>
+      </CollapsibleHintCard>
 
       <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
         <p className="text-xs font-semibold text-sky-700">보유 시설 (해당하는 것을 모두 선택)</p>

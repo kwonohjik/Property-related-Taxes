@@ -205,7 +205,7 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
  * 가진 결과를 선택하는 것만으로 regionCode가 추출되어 자동 판정까지 이어지는지 검증.
  * /api/address/search만 mock하고 /api/address/regulated-area는 실제 로컬 판정(REGULATED_REGIONS)을 사용.
  */
-const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력 (예: 테헤란로 123)";
+const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력";
 
 test.describe("P2-b 소재지 검색 → regionCode 자동추출 → 자동판정", () => {
   test("강남 주소 선택만으로 regionCode 추출 + 조정대상지역 자동 판정 + 토글 체크", async ({

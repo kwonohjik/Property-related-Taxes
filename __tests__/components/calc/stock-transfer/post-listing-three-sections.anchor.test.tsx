@@ -70,8 +70,10 @@ describe("SEC — 산식의 항 = 화면의 섹션", () => {
   it("SEC-2 산식 박스가 같은 번호로 각 항을 가리킨다 (화면↔산식 1:1)", () => {
     renderCard();
     expect(screen.getByText(/②상장일 이후 1개월 종가평균/)).toBeTruthy();
-    expect(screen.getByText(/③취득연도 평가 ÷ ③상장연도 평가/)).toBeTruthy();
-    expect(screen.getByText(/①양도 당시 기준시가/)).toBeTruthy();
+    // 분수 표기(`<Frac>`)로 분자·분모가 각각 span에 들어간다 — 인라인 `÷` 문자열로 매칭되지 않는다.
+    expect(screen.getByText("③취득연도 평가")).toBeTruthy();
+    expect(screen.getByText("③상장연도 평가")).toBeTruthy();
+    expect(screen.getByText("①양도 당시 기준시가")).toBeTruthy();
   });
 
   it("SEC-3 「환산 입력 방식」은 세 섹션보다 **위**에 있다 (카드 전체 스위치)", () => {

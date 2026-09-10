@@ -171,7 +171,9 @@ describe("AM — 순액 입력에서 1주당 가치가 자동 산정·mirror된�
         onPatch={vi.fn()}
       />,
     );
-    expect(screen.getByText(/1주당 순손익가치 = 1주당 순손익액 ÷ 10%/)).toBeTruthy();
+    // 분수 표기(`<Frac>`)라 분자·분모가 별도 span으로 갈린다 — 한 텍스트 노드로 매칭되지 않는다.
+    expect(screen.getByText("1주당 순손익액")).toBeTruthy();
+    expect(screen.getByText("10%")).toBeTruthy();
     expect(screen.getByText(/§81② → 상속세 및 증여세법\s*시행규칙 §17/)).toBeTruthy();
   });
 });

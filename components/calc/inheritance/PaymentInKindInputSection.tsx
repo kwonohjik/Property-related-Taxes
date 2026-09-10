@@ -44,7 +44,7 @@ export function PaymentInKindInputSection({
         </FieldCard>
         <FieldCard
           label="희망 물납액"
-          hint="비워두면 결과 화면에서 허용한도로 안내합니다. 별지 제9호서식 물납란 = min(희망액, 허용한도)."
+          hint="비워두면 결과 화면에서 허용한도로 안내합니다. 별지 제9호서식 물납란 = 희망액과 허용한도 중 작은 금액."
         >
           <CurrencyInput
             label="희망 물납액"

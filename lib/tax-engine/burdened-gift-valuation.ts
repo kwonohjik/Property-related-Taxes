@@ -57,6 +57,31 @@ import type {
  * 성분별 **독립 floor**(`applyRatio` = `Math.floor(v × ratio)`). 잔액 흡수는 PR #845에서
  * 논파되어 규약에서 제외됐다(소득세법 §100② "각각 구분하여 기장"). 재도입 금지.
  */
+/**
+ * 조합원입주권 평가 3항의 지분 축소 — **잔액 흡수**로 합을 보존한다.
+ *
+ * 🔴 세 항을 각각 `floor`하면 합이 `floor(총액 × 지분율)`보다 최대 2원 작아진다. 그런데
+ *    평가액 총액은 `buildingStdPriceAtTransfer`가 따로 `floor(총액 × 지분율)`로 줄어들므로,
+ *    ⑧의 자기일관 검사(3항 합 == building std)가 **지분 자산에서만** 깨진다.
+ *
+ * ⇒ 앞 두 항을 floor하고 **마지막 항(프리미엄)이 잔액을 흡수**한다
+ *   (`feedback_floor_residual_absorption` — 별도 floor 금지).
+ */
+function scaleRightValuation(
+  rv: NonNullable<BurdenedGiftInfo["rightValuation"]>,
+  ownershipRatio: number,
+): NonNullable<BurdenedGiftInfo["rightValuation"]> {
+  const total = rv.memberRightsValue + rv.paidInstallments + rv.premium;
+  const scaledTotal = applyRatio(total, ownershipRatio);
+  const memberRightsValue = applyRatio(rv.memberRightsValue, ownershipRatio);
+  const paidInstallments = applyRatio(rv.paidInstallments, ownershipRatio);
+  return {
+    memberRightsValue,
+    paidInstallments,
+    premium: scaledTotal - memberRightsValue - paidInstallments,
+  };
+}
+
 export function scaleBurdenedGiftInfo(
   info: BurdenedGiftInfo,
   ownershipRatio?: number,
@@ -79,6 +104,14 @@ export function scaleBurdenedGiftInfo(
     actualLandAcquisitionPrice: s(info.actualLandAcquisitionPrice),
     actualBuildingAcquisitionPrice: s(info.actualBuildingAcquisitionPrice),
     actualAcquisitionTotal: s(info.actualAcquisitionTotal),
+    /**
+     * 조합원입주권 평가 3항 — 평가액 총액이 `buildingStdPriceAtTransfer`에 실리므로
+     * **같은 비율로 함께 줄여야** 자기일관 검사(3항 합 == building std)가 성립한다.
+     *
+     * 🔴 이 함수는 스케일 대상을 **명시 열거**하고 나머지는 `...info`로 통과시킨다 —
+     *    신규 금액 필드를 여기 넣지 않으면 지분 부담부증여에서 그 필드만 100% 값으로 남는다.
+     */
+    ...(info.rightValuation ? { rightValuation: scaleRightValuation(info.rightValuation, ownershipRatio) } : {}),
   };
 }
 

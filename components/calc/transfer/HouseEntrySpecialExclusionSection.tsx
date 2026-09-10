@@ -15,6 +15,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
+import { classifyPopulationDeclineArea } from "@/lib/tax-engine/data/population-decline-areas";
 
 interface Props {
   house: HouseEntry;
@@ -22,6 +23,14 @@ interface Props {
 }
 
 export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
+  /**
+   * 소재지 코드에서 파생한 다·라목 구분 — **엔진과 같은 함수**(`classifyPopulationDeclineArea`).
+   * 표시 fallback 전용이다(store에 쓰지 않는다 — `useEffect → store` 미러링 금지).
+   */
+  const autoPopulationAreaKind = house.regionCode
+    ? classifyPopulationDeclineArea(house.regionCode).kind
+    : null;
+
   return (
     <ToneCard tone="rose" sectionNum="④" bodyClassName="space-y-2.5" title="특수 배제 사유 (2주택·인구감소)" noDark>
 
@@ -121,11 +130,21 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           />
           <div className="space-y-1">
             <label className="block text-caption text-muted-foreground font-medium">지역 유형 (가액 한도)</label>
+            {/*
+              🔴 **표시 fallback을 엔진과 맞춘다** (2026-09-07 UI 리뷰).
+                 ④(`transfer-tax-api-houses.ts:117`)는 `populationAreaType`을 **fallback 없이**
+                 그대로 보내고, 엔진(`multi-house-surcharge-count.ts:478`)은
+                 `house.populationAreaType ?? autoKind ?? undefined`로 `regionCode` 자동판정을
+                 끼워 넣는다. 그런데 화면만 `?? "interest"`(4억)라, 소재지가 실제
+                 **인구감소지역(다목·9억)** 인데 사용자가 라디오를 건드리지 않은 경우
+                 **화면은 4억 한도라 말하고 엔진은 9억으로 계산**했다.
+                 자동판정 결과를 표시 fallback으로 쓴다(3중 패턴 — store에 쓰지 않는다).
+            */}
             <RadioCardGroup
               name={`house-pop-area-${house.id}`}
               layout="inline"
               tone="rose"
-              value={house.populationAreaType ?? "interest"}
+              value={house.populationAreaType ?? autoPopulationAreaKind ?? "interest"}
               onChange={(v) => onUpdate({ populationAreaType: v as "decline" | "interest" })}
               options={[
                 { value: "decline", label: "인구감소지역(다목·9억)" },

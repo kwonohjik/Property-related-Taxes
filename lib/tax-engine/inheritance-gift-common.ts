@@ -210,7 +210,7 @@ export function calcGenerationSkipSurcharge(
       adjustedDenominator * 10,
     );
     breakdown.push({
-      label: `세대생략 할증 — 안분기준 (산출세액 × 세대생략재산 / 분모)`,
+      label: `세대생략 할증 — 안분기준 (산출세액 × (세대생략재산) / (분모))`,
       amount: safeMultiplyThenDivide(
         computedTax,
         generationSkipAssetAmount!,
@@ -362,12 +362,12 @@ export function calcGiftGenerationSkipSurchargeWithLimit(
       amount: priorAggregation.totalAdditionalSurcharge,
     },
     {
-      label: "⑩ 공제한도 (⑦ × 가산과표/합산과표 × 할증율)",
+      label: "⑩ 공제한도 (⑦ × (가산과표) / (합산과표) × 할증율)",
       amount: surchargeCreditLimit,
       lawRef: GIFT.GENERATION_SKIP_LIMIT_FORMULA,
     },
     {
-      label: "⑪ 차감 기할증과세액 Min(⑨,⑩)",
+      label: "⑪ 차감 기할증과세액 — ⑨와 ⑩ 중 작은 금액",
       amount: priorSurchargeCredit,
     },
     {

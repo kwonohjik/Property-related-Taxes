@@ -15,6 +15,7 @@ export { ContributionFields } from "./contribution-form";
 // §39①3호 전환주식 폼도 분리(800줄 정책). re-export로 import 경로 보존.
 export { ConvertibleStockFields } from "./convertible-stock-form";
 import { CI_SHARES_LABEL, ListedAvgAutoFetch, ALLOCATION_METHOD_OPTIONS, allocationMethodHint } from "./capital-forms-shared";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 type SetFn = (patch: Partial<DeemedFormState>) => void;
 type Props = { form: DeemedFormState; set: SetFn };
@@ -139,8 +140,8 @@ export function MergerFields({ form, set }: Props) {
             {splitNet && (
               <>
                 <CurrencyInput label="분할법인 분할직전 1주당 평가가액" value={form.mrgSplitPrePrice} onChange={(v) => set({ mrgSplitPrePrice: v })} placeholder="1주당 평가가액 (원)" data-testid="mrg-split-pre" />
-                <CurrencyInput label="분할사업부문 순자산가액" value={form.mrgSplitBusinessNetAsset} onChange={(v) => set({ mrgSplitBusinessNetAsset: v })} placeholder="순자산가액 (원)" data-testid="mrg-split-bna" />
-                <CurrencyInput label="분할법인 순자산가액" value={form.mrgSplitCompanyNetAsset} onChange={(v) => set({ mrgSplitCompanyNetAsset: v })} placeholder="순자산가액 (원)" data-testid="mrg-split-cna" />
+                <CurrencyInput label="분할사업부문 순자산가액" value={form.mrgSplitBusinessNetAsset} onChange={(v) => set({ mrgSplitBusinessNetAsset: v })} data-testid="mrg-split-bna" />
+                <CurrencyInput label="분할법인 순자산가액" value={form.mrgSplitCompanyNetAsset} onChange={(v) => set({ mrgSplitCompanyNetAsset: v })} data-testid="mrg-split-cna" />
               </>
             )}
           </ToggleCard>
@@ -163,7 +164,7 @@ export function MergerFields({ form, set }: Props) {
               <p className="text-xs font-semibold text-emerald-700">합병 후 1주당 평가가액 — 단순평균액 (§28⑤)</p>
               <CurrencyInput label="과소평가(반대)법인 1주당 평가가액" value={form.mrgUnderSharePrice} onChange={(v) => set({ mrgUnderSharePrice: v })} placeholder="1주당 평가가액 (원)" data-testid="mrg-under-price" />
               <CurrencyInput label="합병 후 존속법인 주식수 (합병비율 반영)" value={form.mrgPostMergerTotalShares} onChange={(v) => set({ mrgPostMergerTotalShares: v })} placeholder="합병 후 주식수" data-testid="mrg-post-total" />
-              <ToggleCard tone="emerald" checked={form.mrgIsListed} onCheckedChange={(v) => set({ mrgIsListed: v })} title="상장법인" description="Min(합병등기일 후 2개월 종가평균, 단순평균액) 적용">
+              <ToggleCard tone="emerald" checked={form.mrgIsListed} onCheckedChange={(v) => set({ mrgIsListed: v })} title="상장법인" description="합병등기일 후 2개월 종가평균과 단순평균액 중 작은 금액 적용">
                 <CurrencyInput label="합병등기일 후 2개월 종가평균" value={form.mrgListedPostAvgPrice} onChange={(v) => set({ mrgListedPostAvgPrice: v })} placeholder="종가평균 (원)" />
               </ToggleCard>
             </div>
@@ -175,17 +176,25 @@ export function MergerFields({ form, set }: Props) {
                 checked={isAuto}
                 onCheckedChange={(v) => set({ mrgMergedPriceMode: v ? "auto" : "direct" })}
                 title="합병 후 1주당 평가가액 — 단순평균액 자동계산 (§28⑤)"
-                description="OFF: 직접입력 / ON: (과대평가 1주평가×주식수 + 과소평가 1주평가×주식수) ÷ 합병 후 주식수"
+                description={
+                  <>
+                    OFF: 직접입력 / ON:{" "}
+                    <Frac
+                      top="과대평가 1주평가×주식수 + 과소평가 1주평가×주식수"
+                      bottom="합병 후 주식수"
+                    />
+                  </>
+                }
               >
                 <CurrencyInput label="과소평가(반대)법인 1주당 평가가액" value={form.mrgUnderSharePrice} onChange={(v) => set({ mrgUnderSharePrice: v })} placeholder="1주당 평가가액 (원)" />
                 <CurrencyInput label="과소평가법인 합병 전 주식수" value={form.mrgUnderPreShares} onChange={(v) => set({ mrgUnderPreShares: v })} placeholder="합병 전 주식수" />
                 <CurrencyInput label="합병 후 존속법인 주식수 (합병비율 반영)" value={form.mrgPostMergerTotalShares} onChange={(v) => set({ mrgPostMergerTotalShares: v })} placeholder="합병 후 주식수" />
-                <ToggleCard tone="emerald" checked={form.mrgIsListed} onCheckedChange={(v) => set({ mrgIsListed: v })} title="상장법인" description="Min(합병등기일 후 2개월 종가평균, 단순평균액) 적용">
+                <ToggleCard tone="emerald" checked={form.mrgIsListed} onCheckedChange={(v) => set({ mrgIsListed: v })} title="상장법인" description="합병등기일 후 2개월 종가평균과 단순평균액 중 작은 금액 적용">
                   <CurrencyInput label="합병등기일 후 2개월 종가평균" value={form.mrgListedPostAvgPrice} onChange={(v) => set({ mrgListedPostAvgPrice: v })} placeholder="종가평균 (원)" />
                 </ToggleCard>
               </ToggleCard>
               {!isAuto && (
-                <CurrencyInput label="합병 후 1주당 평가가액" value={form.mrgMergedPrice} onChange={(v) => set({ mrgMergedPrice: v })} placeholder="합병 후 1주당 평가가액 (원)" />
+                <CurrencyInput label="합병 후 1주당 평가가액" value={form.mrgMergedPrice} onChange={(v) => set({ mrgMergedPrice: v })} />
               )}
             </>
           )}
@@ -207,8 +216,8 @@ export function MergerFields({ form, set }: Props) {
         </>
       ) : (
         <>
-          <CurrencyInput label="액면가액" value={form.mrgFaceValue} onChange={(v) => set({ mrgFaceValue: v })} placeholder="액면가액 (원)" />
-          <CurrencyInput label="합병대가 (액면 미달 시 적용)" value={form.mrgConsideration} onChange={(v) => set({ mrgConsideration: v })} placeholder="합병대가 (원)" />
+          <CurrencyInput label="액면가액" value={form.mrgFaceValue} onChange={(v) => set({ mrgFaceValue: v })} />
+          <CurrencyInput label="합병대가 (액면 미달 시 적용)" value={form.mrgConsideration} onChange={(v) => set({ mrgConsideration: v })} />
           <CurrencyInput label="합병당사법인 1주당 평가가액" value={form.mrgOvervaluedPrice} onChange={(v) => set({ mrgOvervaluedPrice: v })} placeholder="1주당 평가가액 (원)" />
           <CurrencyInput label="대주주등 주식수" value={form.mrgMajorShares} onChange={(v) => set({ mrgMajorShares: v })} placeholder="대주주등 주식수" />
         </>
@@ -249,9 +258,9 @@ export function CapitalIncreaseFields({ form, set }: Props) {
           { value: "no_realloc", label: "실권주 미배정 (나목)", testId: "ci-subtype-no_realloc" },
         ]}
       />
-      <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciPrePrice} onChange={(v) => set({ ciPrePrice: v })} placeholder="증자 전 1주당 평가가액 (원)" />
+      <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciPrePrice} onChange={(v) => set({ ciPrePrice: v })} />
       <CurrencyInput label="증자 전 발행주식총수" value={form.ciPreShares} onChange={(v) => set({ ciPreShares: v })} placeholder="증자 전 발행주식총수" />
-      <CurrencyInput label="신주 1주당 인수가액" value={form.ciNewPrice} onChange={(v) => set({ ciNewPrice: v })} placeholder="신주 1주당 인수가액 (원)" />
+      <CurrencyInput label="신주 1주당 인수가액" value={form.ciNewPrice} onChange={(v) => set({ ciNewPrice: v })} />
       <CurrencyInput label="증자 주식수" value={form.ciIssuedShares} onChange={(v) => set({ ciIssuedShares: v })} placeholder="증자 주식수" />
       <CurrencyInput label={sharesLabel} value={form.ciForfeitedShares} onChange={(v) => set({ ciForfeitedShares: v })} placeholder={sharesLabel} />
       <RadioCardGroup
@@ -271,8 +280,8 @@ export function CapitalIncreaseFields({ form, set }: Props) {
         title="주권상장법인등 (증자 후 1주당 가액 단서 §29②1가·3나)"
         description={
           isHigh
-            ? "고가: Max(종가평균, 산식 이론값)"
-            : "저가: Min(종가평균, 산식 이론값)"
+            ? "고가: 종가평균과 산식 이론값 중 큰 금액"
+            : "저가: 종가평균과 산식 이론값 중 작은 금액"
         }
       >
         <ListedAvgAutoFetch
@@ -354,8 +363,8 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
             { value: "high", label: "고가발행 (①2호)", testId: "ci-alloc-direction-high" },
           ]}
         />
-        <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciAllocPrePrice} onChange={(v) => set({ ciAllocPrePrice: v })} placeholder="증자 전 1주당 평가가액 (원)" />
-        <CurrencyInput label="신주 1주당 인수가액" value={form.ciAllocNewPrice} onChange={(v) => set({ ciAllocNewPrice: v })} placeholder="신주 1주당 인수가액 (원)" />
+        <CurrencyInput label="증자 전 1주당 평가가액" value={form.ciAllocPrePrice} onChange={(v) => set({ ciAllocPrePrice: v })} />
+        <CurrencyInput label="신주 1주당 인수가액" value={form.ciAllocNewPrice} onChange={(v) => set({ ciAllocNewPrice: v })} />
       </ToneCard>
 
       {/*
@@ -507,7 +516,7 @@ export function CapitalDecreaseFields({ form, set }: Props) {
               { value: "high", label: "고가 소각 (①2호)", testId: "cd-case-high" },
             ]}
           />
-          <CurrencyInput label="감자주식 1주당 평가액" value={form.cdSharePrice} onChange={(v) => set({ cdSharePrice: v })} placeholder="감자주식 1주당 평가액 (원)" />
+          <CurrencyInput label="감자주식 1주당 평가액" value={form.cdSharePrice} onChange={(v) => set({ cdSharePrice: v })} />
           <CurrencyInput label="소각 시 지급한 1주당 금액" value={form.cdRedemptionPrice} onChange={(v) => set({ cdRedemptionPrice: v })} placeholder="소각 지급 1주당 금액 (원)" />
           {isHigh ? (
             <>
@@ -624,28 +633,32 @@ export function ConvertibleBondFields({ form, set }: Props) {
         </>
       )}
       {(ct === "acquisition" || ct === "transfer") && (
-        <CurrencyInput label="전환사채등 시가" value={form.cbMarketValue} onChange={(v) => set({ cbMarketValue: v })} placeholder="전환사채등 시가 (원)" />
+        <CurrencyInput label="전환사채등 시가" value={form.cbMarketValue} onChange={(v) => set({ cbMarketValue: v })} />
       )}
       {ct === "acquisition" && (
-        <CurrencyInput label="인수·취득가액" value={form.cbAcquisitionPrice} onChange={(v) => set({ cbAcquisitionPrice: v })} placeholder="인수·취득가액 (원)" />
+        <CurrencyInput label="인수·취득가액" value={form.cbAcquisitionPrice} onChange={(v) => set({ cbAcquisitionPrice: v })} />
       )}
       {ct === "transfer" && (
-        <CurrencyInput label="양도가액" value={form.cbTransferPrice} onChange={(v) => set({ cbTransferPrice: v })} placeholder="양도가액 (원)" />
+        <CurrencyInput label="양도가액" value={form.cbTransferPrice} onChange={(v) => set({ cbTransferPrice: v })} />
       )}
       {isConversion && (
         <>
-          <CurrencyInput label="전환등 전 1주당 평가가액" value={form.cbPreConvPrice} onChange={(v) => set({ cbPreConvPrice: v })} placeholder="전환등 전 1주당 평가가액 (원)" />
+          <CurrencyInput label="전환등 전 1주당 평가가액" value={form.cbPreConvPrice} onChange={(v) => set({ cbPreConvPrice: v })} />
           <CurrencyInput label="전환등 전 발행주식총수" value={form.cbPreConvShares} onChange={(v) => set({ cbPreConvShares: v })} placeholder="전환등 전 발행주식총수" />
-          <CurrencyInput label="1주당 전환가액등" value={form.cbConversionPrice} onChange={(v) => set({ cbConversionPrice: v })} placeholder="1주당 전환가액등 (원)" />
+          <CurrencyInput label="1주당 전환가액등" value={form.cbConversionPrice} onChange={(v) => set({ cbConversionPrice: v })} />
           <CurrencyInput label="전환등 증가주식수 (㉡ 가중평균 분모)" value={form.cbIncreasedShares} onChange={(v) => set({ cbIncreasedShares: v })} placeholder="전환등 증가주식수" />
           <ToggleCard
             tone="emerald"
             checked={form.cbIsListed}
             onCheckedChange={(v) => set({ cbIsListed: v })}
-            title="주권상장법인 (교부주식가액 Min/Max §30⑤1)"
-            description={ct === "conversion_reverse" ? "라목: Max(종가평균, 이론주가)" : "가·나·다목: Min(종가평균, 이론주가)"}
+            title="주권상장법인 (교부주식가액 상·하한 §30⑤1)"
+            description={
+              ct === "conversion_reverse"
+                ? "라목: 종가평균과 이론주가 중 큰 금액"
+                : "가·나·다목: 종가평균과 이론주가 중 작은 금액"
+            }
           >
-            <CurrencyInput label="전환일 전후 2개월 종가평균" value={form.cbListedMarketAvg} onChange={(v) => set({ cbListedMarketAvg: v })} placeholder="전환일 전후 2개월 종가평균 (원)" />
+            <CurrencyInput label="전환일 전후 2개월 종가평균" value={form.cbListedMarketAvg} onChange={(v) => set({ cbListedMarketAvg: v })} />
           </ToggleCard>
         </>
       )}
@@ -674,7 +687,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
             title="이자손실분 자동계산 (PV §10의2)"
             description="ON: 만기상환금액·발행이율·적정할인율 현가계수로 산출. OFF: 이자손실분 직접입력"
           >
-            <CurrencyInput label="만기상환금액 (원금)" value={form.cbBondMaturity} onChange={(v) => set({ cbBondMaturity: v })} placeholder="만기상환금액 (원)" />
+            <CurrencyInput label="만기상환금액 (원금)" value={form.cbBondMaturity} onChange={(v) => set({ cbBondMaturity: v })} />
             <FieldCard label="사채발행이율" hint="표면이율" unit="%">
               <DecimalInput value={form.cbCouponRatePct} onChange={(v) => set({ cbCouponRatePct: v })} />
             </FieldCard>

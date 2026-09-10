@@ -17,6 +17,7 @@
 
 import { useMemo, useState } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -96,7 +97,7 @@ function LandPriceLookup({
 
   const pricePerSqm = parseAmount(landPricePerSqm);
   const area = parseFloat(landArea) || 0;
-  const landStdPrice = pricePerSqm > 0 && area > 0 ? Math.floor(pricePerSqm * area) : null;
+  const landStdPrice = pricePerSqm > 0 && area > 0 ? multiplyByArea(pricePerSqm, area) : null;
   const canLookup = !!jibun && !!effectiveYear;
 
   return (
@@ -171,6 +172,10 @@ function yearOf(d?: string): number | undefined {
 
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers";
+import { sec163_9BaseDateLabel } from "@/lib/calc/transfer-163-9-base-date";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -188,7 +193,9 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   // B-1 — 「소득세법」 부칙(법률 제4803호) §8이 1984.12.31. 이전 취득분의 취득시기를 1985.1.1.로
   // **의제**하므로, §164⑦ 3시점 환산의 「취득시점」도 그날이다. 엔진 산식에는 시점 파라미터가
   // 없어(계획서 §3.0) 이 라벨이 사용자가 넣을 값의 시점을 정하는 **유일한 통제점**이다.
-  const acqTimeLabel = sec164AcqTimePointLabel(inheritanceDate, "상속개시일");
+  // 「상속개시일」/「증여일」 — §163⑨ 본문이 둘을 나란히 든다. 하드코딩 금지(2026-09-07).
+  const baseDateLabel = sec163_9BaseDateLabel(asset);
+  const acqTimeLabel = sec164AcqTimePointLabel(inheritanceDate, baseDateLabel);
   const isDeemedAcq = isDeemedAcquisitionApplied(inheritanceDate);
 
   // 3시점 건물기준시가 일괄 계산기 배선(§164⑤).
@@ -336,12 +343,12 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       </div>
 
       <p className="text-caption text-muted-foreground">
-        상속개시일({inheritanceDate || "미입력"})이 개별주택가격 최초 공시일(2005-04-30) 이전이므로
+        {baseDateLabel}({inheritanceDate || "미입력"})이 개별주택가격 최초 공시일(2005-04-30) 이전이므로
         토지·주택 분리 입력으로 {acqTimeLabel} 합계 기준시가를 환산합니다.
         {isDeemedAcq && (
           <span className="ml-1 font-medium text-rose-700 dark:text-rose-400">
             1984.12.31. 이전 취득분은 「소득세법」 부칙(법률 제4803호) §8에 따라 1985.1.1.에 취득한
-            것으로 보므로, 아래 ③ 취득시점 입력은 <b>실제 상속개시일이 아니라 1985.1.1. 시점</b> 값입니다.
+            것으로 보므로, 아래 ③ 취득시점 입력은 <b>실제 {baseDateLabel}이 아니라 1985.1.1. 시점</b> 값입니다.
           </span>
         )}
         {isBefore1990 && (
@@ -376,13 +383,13 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
 
       {/* ① 토지 면적 */}
       <FieldCard label="토지 면적" unit="㎡" hint="주택 부수 토지 면적(㎡). 3시점 토지 기준시가 계산의 기준값.">
-        <input
-          type="text"
-          inputMode="decimal"
+        {/* 🔴 종전에는 raw `<input>` + `replace(/[^0-9.]/g, "")`였다 (2026-09-07 대장 재대조 · #24).
+            그 정규식은 숫자·점만 남길 뿐 **점의 개수를 세지 않아** "1.2.3" 같은 입력을 그대로
+            저장했고, 소비처의 `parseFloat`이 "1.2"로 조용히 잘랐다. 소수 입력은 공용
+            `DecimalInput` 정본을 쓴다(components/calc/CLAUDE.md — CurrencyInput 대체 불가 규칙). */}
+        <DecimalInput
           value={asset.inhHouseValLandArea}
-          onChange={(e) => onChange({ inhHouseValLandArea: e.target.value.replace(/[^0-9.]/g, "") })}
-          placeholder="토지 면적 입력"
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onChange={(v) => onChange({ inhHouseValLandArea: v })}
         />
       </FieldCard>
 
@@ -396,12 +403,12 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             양도시 (양도일 기준)
           </p>
         </div>
-        <LandPriceLookup
+        <LandPriceLookupField
           label="양도시 토지 개별공시지가"
           referenceDate={transferDate ?? ""}
-          landPricePerSqm={asset.inhHouseValLandPricePerSqmAtTransfer}
-          onLandPricePerSqmChange={(v) => onChange({ inhHouseValLandPricePerSqmAtTransfer: v })}
-          landArea={asset.inhHouseValLandArea}
+          pricePerSqm={asset.inhHouseValLandPricePerSqmAtTransfer}
+          onPricePerSqmChange={(v: string) => onChange({ inhHouseValLandPricePerSqmAtTransfer: v })}
+          area={parseFloat(asset.inhHouseValLandArea || "0") || undefined}
           jibun={asset.addressJibun || undefined}
         />
         <StandardPriceInput
@@ -425,12 +432,12 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             최초고시 시점 (기본 {HOUSE_FIRST_DISCLOSURE_DATE})
           </p>
         </div>
-        <LandPriceLookup
+        <LandPriceLookupField
           label="최초고시 토지 개별공시지가"
           referenceDate={asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}
-          landPricePerSqm={asset.inhHouseValLandPricePerSqmAtFirst}
-          onLandPricePerSqmChange={(v) => onChange({ inhHouseValLandPricePerSqmAtFirst: v })}
-          landArea={asset.inhHouseValLandArea}
+          pricePerSqm={asset.inhHouseValLandPricePerSqmAtFirst}
+          onPricePerSqmChange={(v: string) => onChange({ inhHouseValLandPricePerSqmAtFirst: v })}
+          area={parseFloat(asset.inhHouseValLandArea || "0") || undefined}
           jibun={asset.addressJibun || undefined}
         />
         <StandardPriceInput
@@ -455,7 +462,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         </FieldCard>
         {(() => {
           const area = parseFloat(asset.inhHouseValLandArea) || 0;
-          const landStdF = Math.floor(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst) * area);
+          const landStdF = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst), area);
           const buildingStdF = parseAmount(asset.inhHouseValBuildingStdPriceAtFirst) || 0;
           const sumF = landStdF + buildingStdF;
           if (sumF <= 0) return null;
@@ -468,14 +475,14 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         })()}
       </div>
 
-      {/* ④ 상속개시일 시점 토지단가 — rose 톤 (가장 오래된 시점) */}
+      {/* ④ 기준일(상속개시일·증여일) 시점 토지단가 — rose 톤 (가장 오래된 시점) */}
       <div className="space-y-2 rounded-md border-2 border-rose-300 dark:border-rose-700 bg-rose-50/70 dark:bg-rose-950/30 p-3">
         <div className="flex items-center gap-2">
           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-caption font-bold text-white dark:bg-rose-500">
             3
           </span>
           <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">
-            {acqTimeLabel} 시점 {isDeemedAcq ? `(실제 상속개시일 ${inheritanceDate})` : `(${inheritanceDate || "미입력"})`}
+            {acqTimeLabel} 시점 {isDeemedAcq ? `(실제 ${baseDateLabel} ${inheritanceDate})` : `(${inheritanceDate || "미입력"})`}
           </p>
         </div>
 
@@ -499,20 +506,22 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             onCalculatedPrice={handlePre1990Calculated}
           />
         ) : (
-          /* 1990-08-30 이후 → 개별공시지가 직접 입력 */
-          <FieldCard
+          /* 1990-08-30 이후 → 개별공시지가 직접 입력.
+             🔴 **공용 `LandPriceLookupField` 필수**(components/calc/CLAUDE.md 강제 규칙) —
+                종전에는 맨 `CurrencyInput`이라 기준연도 드롭다운·Vworld 조회 버튼·
+                토지기준시가 자동 계산이 전부 없었다. 형제 2시점(양도시·최초고시)은 이미
+                조회 위젯을 쓰고 있어 **같은 화면에서 세 칸의 기능이 달랐다**. */
+          <LandPriceLookupField
             label={`${acqTimeLabel} 토지 개별공시지가`}
-            unit="원/㎡"
-            hint={`${acqTimeLabel} 직전 공시된 개별공시지가. Vworld 또는 홈택스에서 조회.`}
-          >
-            <CurrencyInput
-              label=""
-              hideUnit
-              value={asset.inhHouseValLandPricePerSqmAtInheritance}
-              onChange={(v) => onChange({ inhHouseValLandPricePerSqmAtInheritance: v })}
-              placeholder="원/㎡"
-            />
-          </FieldCard>
+            hint={`${acqTimeLabel} 직전 공시된 개별공시지가.`}
+            referenceDate={inheritanceDate || ""}
+            pricePerSqm={asset.inhHouseValLandPricePerSqmAtInheritance}
+            onPricePerSqmChange={(v: string) =>
+              onChange({ inhHouseValLandPricePerSqmAtInheritance: v })
+            }
+            area={parseFloat(asset.inhHouseValLandArea || "0") || undefined}
+            jibun={asset.addressJibun || undefined}
+          />
         )}
 
         {/* 취득시점 건물기준시가 — §164⑤ Sum_A 분자의 건물 성분 */}
@@ -541,9 +550,9 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           const landPricePerSqmAtInheritance = parseAmount(asset.inhHouseValLandPricePerSqmAtInheritance);
           const landStdA = isBefore1990
             ? (pre1990Land?.total ?? 0)
-            : Math.floor(landPricePerSqmAtInheritance * area);
+            : multiplyByArea(landPricePerSqmAtInheritance, area);
           const buildingA = parseAmount(asset.inhHouseValBuildingStdPriceAtInheritance) || 0;
-          const landStdF = Math.floor(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst) * area);
+          const landStdF = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst), area);
           const buildingStdF = parseAmount(asset.inhHouseValBuildingStdPriceAtFirst) || 0;
           const P_F = parseAmount(asset.inhHouseValHousePriceAtFirst) || 0;
           const sumA = landStdA + buildingA;
@@ -562,10 +571,18 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
               <div className="flex items-start justify-between rounded bg-muted/40 px-3 py-2 gap-3">
                 <div className="space-y-0.5">
                   <span className="text-caption text-muted-foreground leading-relaxed block">
-                    최초 공시된 개별주택가격 × (취득시 토지기준시가 + 취득시 건물기준시가) ÷ (최초고시 토지기준시가 + 최초고시 건물기준시가)
+                    최초 공시된 개별주택가격 ×{" "}
+                    <Frac
+                      top="취득시 토지기준시가 + 취득시 건물기준시가"
+                      bottom="최초고시 토지기준시가 + 최초고시 건물기준시가"
+                    />
                   </span>
                   <span className="text-caption text-muted-foreground/60 tabular-nums block">
-                    {P_F.toLocaleString()} × ({landStdA.toLocaleString()} + {buildingA.toLocaleString()}) ÷ ({landStdF.toLocaleString()} + {buildingStdF.toLocaleString()})
+                    {P_F.toLocaleString()} ×{" "}
+                    <Frac
+                      top={`${landStdA.toLocaleString()} + ${buildingA.toLocaleString()}`}
+                      bottom={`${landStdF.toLocaleString()} + ${buildingStdF.toLocaleString()}`}
+                    />
                   </span>
                   {landStdA > 0 && (
                     <span className="text-caption text-muted-foreground/50 block">

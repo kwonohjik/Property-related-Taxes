@@ -235,14 +235,24 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           const hasStdPriceAtTransfer993 =
             parseAmount(r.standardPriceAtTransfer993 || "0") > 0 ||
             parseAmount(asset.standardPriceAtTransfer || "0") > 0;
-          if (
-            asset.acquisitionDate &&
-            form.transferDate &&
-            !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate)) &&
-            !hasStdPriceAtTransfer993
-          ) {
+          /**
+           * 🔴 **재개발 변형이면 5년 이내에도 필수다** (2026-09-07 UI 리뷰).
+           *
+           * 엔진은 `if (isWithin5Years && !variant)`에서만 전액 차감 경로로 빠지고
+           * (`new-99-3.ts:504`), 그 밖에서는 `standardPriceAtTransfer <= 0`이면
+           * `MISSING_STD_PRICE`로 **감면 0**을 반환한다(:531~537). 종전 ⑧은 `!isWithin5Years`만
+           * 봐서, 재개발 토글을 켠 5년 이내 양도는 **경고 없이 감면이 통째로 사라졌다**.
+           */
+          const needsStdPriceAtTransfer =
+            !!r.isRedevelopedNewHouse993 ||
+            (!!asset.acquisitionDate &&
+              !!form.transferDate &&
+              !isWithin5YearsCheck(new Date(asset.acquisitionDate), new Date(form.transferDate)));
+          if (needsStdPriceAtTransfer && !hasStdPriceAtTransfer993) {
             return fail(
-              "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니면 자산값이 전달되지 않습니다).",
+              r.isRedevelopedNewHouse993
+                ? "§99의3 적용: 재개발·재건축 신축주택 변형은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99의3②2호 안분의 분자)."
+                : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니면 자산값이 전달되지 않습니다).",
             );
           }
         }
@@ -276,6 +286,18 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           }
           if (r.hasVacancyOverGrace === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
             return fail(`${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`);
+          /**
+           * 🔴 **빈 날짜도 막는다** (2026-09-07 대장 재대조). 종전에는 구간 **개수**만 봤다.
+           *
+           * 형제 축인 5호 미만 임대 기간(:아래 `belowMin5UnitsPeriods`)은 이미 같은 이유로
+           * 「구간을 열어 놓고 비워 두면 엔진에 NaN이 흘러간다」며 시작일·종료일을 요구한다.
+           * 공실 구간만 그 짝이 없어, 「+ 구간 추가」만 누르고 날짜를 안 채우면 ⑧을 통과한 뒤
+           * Zod가 영문 필드 경로로 400을 냈다 — 사용자는 어느 칸인지 알 수 없었다.
+           */
+          if (r.hasVacancyOverGrace === true && r.vacancyPeriods?.some((p) => !p.startDate || !p.endDate))
+            return fail(
+              `${label} 적용: 공실 구간의 시작일·종료일을 모두 입력하세요. 해당 없으면 구간을 삭제하세요.`,
+            );
           // D2-07 — 2023.1.1 이후 등록분은 §97의3①이 민간건설임대주택에 한정한다.
           //          그 전 등록분은 법률 제19199호 부칙 §38 경과조치로 종전 규정을 따른다.
           if (
@@ -374,8 +396,16 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             if (m5 === null || m5 === undefined)
               return fail(`${label} 적용: 임대주택 5호 이상 임대 여부를 선택하세요 (조특령 §97①).`);
             // 구간을 열어 놓고 비워 두면 엔진에 NaN이 흘러가므로 여기서 차단한다.
-            const below = (r as { belowMin5UnitsPeriods?: { startDate: string; endDate: string }[] })
-              .belowMin5UnitsPeriods;
+            // 🔴 단, **「5호 이상」일 때만** 요구한다 — ⑤는 이 구간 편집·삭제 UI를
+            //    `hasMin5RentalUnits === true` 안에만 두므로(`Rental97MainInputForm.tsx:246`),
+            //    「미해당」을 고른 뒤에는 남은 빈 행을 지울 수단이 사라져 **막다른 길**이 됐다.
+            //    엔진도 `hasMin5RentalUnits !== true`면 감면 자체를 적용하지 않아
+            //    (`rental-97-main.ts:107`) 그 구간은 계산에 도달하지 않는다.
+            const below =
+              m5 === true
+                ? (r as { belowMin5UnitsPeriods?: { startDate: string; endDate: string }[] })
+                    .belowMin5UnitsPeriods
+                : undefined;
             if (below?.some((p) => !p.startDate || !p.endDate))
               return fail(
                 `${label} 적용: 5호 미만 임대 기간의 시작일·종료일을 모두 입력하세요 (조특령 §97⑤4호). 해당 없으면 구간을 삭제하세요.`,

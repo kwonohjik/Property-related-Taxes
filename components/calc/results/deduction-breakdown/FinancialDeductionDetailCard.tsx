@@ -149,7 +149,7 @@ export function FinancialDeductionDetailCard({
                 muted
               />
               <SubTotalRow
-                label="최대주주가 있을 시 MAX[MIN(㉠, ㉡), 2천만]"
+                label="최대주주가 있을 시 「㉠과 ㉡ 중 작은 금액」과 2천만원 중 큰 금액"
                 value={formatKRW(detail.cappedDeduction)}
                 tone="blue"
               />

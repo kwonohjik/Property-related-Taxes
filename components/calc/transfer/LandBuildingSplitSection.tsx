@@ -408,7 +408,7 @@ export function LandBuildingSplitSection(props: Props) {
           </div>
           <div data-testid="part-acq-mode-land">
             <RadioCardGroup
-              name="landAcqMode"
+              name={`landAcqMode-${props.asset?.assetId ?? "primary"}`}
               tone="amber"
               layout="inline"
               options={ACQ_MODE_OPTIONS}
@@ -479,7 +479,7 @@ export function LandBuildingSplitSection(props: Props) {
           </div>
           <div data-testid="part-acq-mode-building">
             <RadioCardGroup
-              name="buildingAcqMode"
+              name={`buildingAcqMode-${props.asset?.assetId ?? "primary"}`}
               tone="amber"
               layout="inline"
               options={ACQ_MODE_OPTIONS}
@@ -521,14 +521,27 @@ export function LandBuildingSplitSection(props: Props) {
       {/* 자본적지출 — 모드·양도 방식과 무관하게 항상 입력 가능.
           ⚠️ hint는 **파트 모드별**로 갈린다(2026-07-30). 실가 파트는 전액 필요경비로 차감되지만
              (§97①2호), 추계 파트는 개산공제(§163⑥)가 적용되어 차감되지 않거나 §97②2호 단서의
-             택일 대상이 된다 — 안내가 없으면 "입력했는데 세액이 안 변한다"는 오인을 부른다. */}
+             택일 대상이 된다 — 안내가 없으면 "입력했는데 세액이 안 변한다"는 오인을 부른다.
+
+          🔴 **비소유 파트는 렌더하지 않는다** (2026-09-07 UI 리뷰). `selfOwns`가 한쪽이면
+             엔진은 그 파트의 양도차익을 **통째로 버리고**(`transfer-tax.ts:315~316`·`:371~373`)
+             신규 입력 경로에서는 파트 자본적지출이 독립값으로만 쓰이므로
+             (`transfer-tax-split-gain.ts:169~172`) 그 칸은 **입력해도 세액이 변하지 않는다**.
+             같은 파일이 바로 그 이유로 비소유 파트의 취득가액 방식 라디오·금액 칸은 이미
+             숨기고 있었다(위 ①' 주석) — 자본적지출만 빠져 있었다.
+             ⚠️ 기준시가 카드는 다르다 — 그쪽은 건물분 도출·안분의 소스라 **소유와 무관하게**
+                필요하다(그래서 위 ①'가 남는다). */}
       <div className="grid grid-cols-2 gap-2">
-        <FieldCard label="토지 자본적지출" hint={capexHint("토지", props.landAcqMode)}>
-          <CurrencyInput label="" value={props.landDirectExpenses} onChange={props.onLandDirectExpensesChange} placeholder="없으면 비워두세요" />
-        </FieldCard>
-        <FieldCard label="건물 자본적지출" hint={capexHint("건물", props.buildingAcqMode)}>
-          <CurrencyInput label="" value={props.buildingDirectExpenses} onChange={props.onBuildingDirectExpensesChange} placeholder="없으면 비워두세요" />
-        </FieldCard>
+        {landOwned && (
+          <FieldCard label="토지 자본적지출" hint={capexHint("토지", props.landAcqMode)}>
+            <CurrencyInput label="" value={props.landDirectExpenses} onChange={props.onLandDirectExpensesChange} placeholder="없으면 비워두세요" />
+          </FieldCard>
+        )}
+        {buildingOwned && (
+          <FieldCard label="건물 자본적지출" hint={capexHint("건물", props.buildingAcqMode)}>
+            <CurrencyInput label="" value={props.buildingDirectExpenses} onChange={props.onBuildingDirectExpensesChange} placeholder="없으면 비워두세요" />
+          </FieldCard>
+        )}
       </div>
     </div>
   );

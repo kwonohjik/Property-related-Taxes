@@ -166,7 +166,7 @@ export function FilingFormTable({
                       <td
                         key={c.key}
                         className={cn(
-                          "px-3 py-1.5 text-right border-r border-slate-200 font-mono whitespace-nowrap",
+                          "px-3 py-1.5 text-right border-r border-slate-200 font-mono tabular-nums whitespace-nowrap",
                           c.key === "total" && "bg-slate-50/60 dark:bg-slate-800/40",
                           (note || roseNote) && "align-top",
                         )}

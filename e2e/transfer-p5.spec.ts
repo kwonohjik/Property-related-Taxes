@@ -4,6 +4,7 @@
  * worktree 실행: E2E_PORT=3100 npx playwright test e2e/transfer-p5.spec.ts
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("양도세 P5", () => {
   test("미분양 그룹 → §98 폼 렌더 + Step4 보유 감면주택 섹션", async ({ page }) => {
@@ -26,7 +27,7 @@ test.describe("양도세 P5", () => {
 
     // ── Step5 감면: §98 폼 ──
     await page.getByRole("button", { name: "감면·공제" }).click();
-    await page.getByRole("button", { name: /미분양주택/ }).click();
+    await expandReductionCategory(page, /미분양주택/);
     const item98 = page.getByText("§98 — 미분양 분리과세 20%", { exact: false }).first();
     await expect(item98).toBeVisible();
     await item98.click();

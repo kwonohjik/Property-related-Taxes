@@ -74,8 +74,12 @@ export function buildTaxableGainFormula(p: PerPropertyBreakdown): string {
   const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
   if (tg <= 0) return `차손 자산 — 양도차익 ${fmt(tg)} (음수)`;
-  const sum = inc + lth;
-  return `min(양도차익 ${fmt(tg)}, 양도소득금액 ${fmt(inc)} + 장특공제 ${fmt(lth)} = ${fmt(sum)}) = ${fmt(assetTaxableGain(p))}`;
+  // 🔴 종전 문구는 `min(양도차익 A, 양도소득금액 B + 장특공제 C = sum) = 결과`였다
+  //    (2026-09-08 · 산식 한국어 풀어쓰기). 두 가지가 규약 위반이었다 —
+  //    ① 함수 표기 `min(...)` ② 괄호 안의 **중간 산술 결과** `= sum`
+  //    (`feedback_result_view_korean_formula`: 「중간 산술 결과 표기 금지」).
+  //    형제 산식(:62·:93·:145)은 전부 「입력값과 연산 기호 + = 결과값」 한 겹이다.
+  return `양도차익 ${fmt(tg)}과 (양도소득금액 ${fmt(inc)} + 장특공제 ${fmt(lth)}) 중 작은 금액 = ${fmt(assetTaxableGain(p))}`;
 }
 
 /** 장특공제 = 과세대상양도차익 × 율 */
@@ -215,9 +219,11 @@ export function setAggregateProcedureItems(
       value: basicAggregateStep.amount,
       formula:
         basicAggregateStep.formula ??
-        "연 250만원 한도 자산별 배분 (MAX_BENEFIT 정책 — 세부담 최소 자산 우선)",
+        "연 250만원 한도 자산별 배분 (최고세율이 적용되는 소득에 먼저 배정)",
       legalBasis: basicAggregateStep.legalBasis ?? "소득세법 §103",
-      note: "유자격 자산(미등기·exempt 제외) 간 한도 배분. 단일 자산은 전액 배정.",
+      // 🔴 종전 문구는 한국어 문장 속에 내부 플래그 이름 `exempt`와 정책 상수명 `MAX_BENEFIT`을
+      //    그대로 노출했다(2026-09-07 대장 재대조 · `feedback_no_internal_id_in_result`).
+      note: "미등기 양도·비과세 자산을 제외한 자산 간 한도 배분. 단일 자산은 전액 배정.",
       summaryOnly: true,
     });
   }
@@ -229,7 +235,7 @@ export function setAggregateProcedureItems(
       value: comparedStep.amount,
       formula:
         comparedStep.formula ??
-        "MAX(세율군별 합산세액, 전체누진세액) — 중과·단기 세율군 존재 시만",
+        "세율군별 합산세액과 전체누진세액 중 큰 금액 — 중과·단기 세율군 존재 시만",
       legalBasis: comparedStep.legalBasis ?? "소득세법 §104⑤",
       note: "다주택 중과·비사업용토지·단기보유 자산 포함 시 자동 활성화. 두 방법 중 큰 세액 적용.",
       summaryOnly: true,

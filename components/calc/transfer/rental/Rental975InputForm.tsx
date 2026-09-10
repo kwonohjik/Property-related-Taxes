@@ -21,6 +21,8 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { RentalCommonFields, TaxRegistrationToggle } from "./RentalCommonFields";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
+import { addMonths } from "date-fns";
+import { RENTAL_97_5_REGISTRATION_MONTHS } from "@/lib/tax-engine/transfer-reductions";
 
 type Rental975Form = Extract<RentalReductionFormVariant, { type: "rental_97_5" }>;
 
@@ -33,12 +35,24 @@ interface Props {
   transferDate?: string;
 }
 
-function addMonths(dateStr: string, months: number): Date | null {
+/**
+ * 3개월 기한 — **엔진과 같은 함수**(`date-fns` `addMonths`)를 쓴다.
+ *
+ * 🔴 종전에는 `d.setMonth(d.getMonth() + 3)`이었다. 그것은 **말일을 넘긴다**:
+ *    2018-11-30 + 3개월 → 2019-03-02(2월이 28일뿐이라 오버플로). 반면 엔진
+ *    (`rental-97-5.ts:70`)의 `date-fns addMonths`는 말일로 **clamp** 한다 → 2019-02-28.
+ *
+ *    그래서 취득 2018-11-30 · 등록 2019-03-01이면 화면에는 emerald 「✓ 취득 후 3개월 내 등록」이
+ *    뜨는데 엔진은 `REGISTRATION_AFTER_3_MONTHS`로 §97의5①1호 불충족을 잡아 **100% 세액감면을
+ *    전액 배제**한다. §97의5는 2018.12.31.까지 취득분이 대상이라 말일 취득이 실제로 흔하다.
+ *
+ * 개월수도 엔진 상수(`RENTAL_97_5_REGISTRATION_MONTHS`)를 그대로 쓴다 — 두 곳이 갈릴 수 없다.
+ */
+function registrationDeadline(dateStr: string): Date | null {
   if (!dateStr) return null;
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return null;
-  d.setMonth(d.getMonth() + months);
-  return d;
+  return addMonths(d, RENTAL_97_5_REGISTRATION_MONTHS);
 }
 
 function diffYearsMonths(from: string, to: string): string {
@@ -62,7 +76,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
   // 3개월 검증 배지 (useMemo — store 미기록)
   const regBadge = useMemo(() => {
     if (!acquisitionDate || !value.registrationDate) return null;
-    const deadline = addMonths(acquisitionDate, 3);
+    const deadline = registrationDeadline(acquisitionDate);
     if (!deadline) return null;
     const regDate = new Date(value.registrationDate);
     if (isNaN(regDate.getTime())) return null;

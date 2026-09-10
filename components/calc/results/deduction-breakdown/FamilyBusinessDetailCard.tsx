@@ -123,7 +123,7 @@ export function FamilyBusinessDetailCard({ detail, triggerLabel, triggerValue, h
               {detail.multipleBusinessDetail.lineItems.map((li) => (
                 <DetailRow
                   key={li.order}
-                  label={`${li.order}순위 ${li.label ?? `영위 ${li.operatingYears}년`} — Min(잔여 ${formatBillion(li.remainingTotalCapBefore)}, 가액 ${formatKRW(li.value)}, 개별한도 ${formatBillion(li.individualCap)})`}
+                  label={`${li.order}순위 ${li.label ?? `영위 ${li.operatingYears}년`} — 잔여 ${formatBillion(li.remainingTotalCapBefore)} · 가액 ${formatKRW(li.value)} · 개별한도 ${formatBillion(li.individualCap)} 중 가장 작은 금액`}
                   value={formatKRW(li.deduction)}
                 />
               ))}

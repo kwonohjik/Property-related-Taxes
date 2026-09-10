@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 이월과세 미적용(Scenario B) 신고서 핵심 항목 요약 카드 — 소득세법 §97조의2
+ * 이월과세 미적용(시나리오 B) 신고서 핵심 항목 요약 카드 — 소득세법 §97조의2
  *
  * 완전한 TransferTaxResult 없이 CarryoverScenarioBDetail만으로 표시.
  * 표시 껍데기는 `CarryoverScenarioSummaryCard`와 공유한다 — A 카드와 대칭이어야 한다(#023).
@@ -67,7 +67,7 @@ export function CarryoverScenarioBFilingCard({
     <CarryoverScenarioSummaryCard
       title="[B] 이월과세 미적용 (비교용)"
       subtitle="수증자 기산 보유기간 · 취득가액 = 증여 당시 평가액"
-      footnote="※ Scenario B는 이월과세 미적용 시 결과. 비교과세(§97조의2 ② 3호) 판정용."
+      footnote="※ 시나리오 B는 이월과세 미적용 시 결과. 비교과세(§97조의2 ② 3호) 판정용."
       rows={rows}
       adopted={adopted}
       onPrint={onPrint}

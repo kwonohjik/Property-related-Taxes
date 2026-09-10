@@ -67,7 +67,7 @@ export function AcquisitionLotCard({
   const isCarryover = lot.acquisitionCause === "carryover_gift";
 
   return (
-    <div className="rounded border border-amber-300 bg-white p-3 space-y-2">
+    <div className="rounded border border-amber-300 bg-white dark:bg-gray-900 p-3 space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold text-amber-700">매수 #{idx + 1}</p>
         <Button

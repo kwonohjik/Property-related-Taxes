@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { recommendLandPriceYear } from "@/lib/utils/land-price-year";
 import { lookupLandPrice, isUrbanZone } from "@/lib/calc/nbl-land-zone";
+import { multiplyByAreaShare } from "@/lib/tax-engine/area-utils";
 
 const BTN_CLASS =
   "h-8 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors";
@@ -62,8 +63,9 @@ export function NblLandValueAutoFetchButton({
         lookupLandPrice(jibun, String(curYear)),
         lookupLandPrice(jibun, String(priorYear)),
       ]);
-      const curVal = Math.floor(cur.pricePerSqm * area * ratio);
-      const priorVal = Math.floor(prior.pricePerSqm * area * ratio);
+      // floor 1회·순서 그대로, 부동소수 1원 과소산정만 제거 (`multiplyByAreaShare` 주석)
+      const curVal = multiplyByAreaShare(cur.pricePerSqm, area, ratio);
+      const priorVal = multiplyByAreaShare(prior.pricePerSqm, area, ratio);
       onResult(String(curVal), String(priorVal));
       setInfo(
         `당해 ${cur.year}년 ${cur.pricePerSqm.toLocaleString()}원/㎡ · ` +

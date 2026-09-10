@@ -161,7 +161,7 @@ export function CompanionAcqAmountSection({
       )}
       {props.isAppraisalAcquisition && (
         <CurrencyInput
-          label="취득시 기준시가 (원) — 개산공제 base"
+          label="취득시 기준시가 (원) — 개산공제 기준액"
           value={props.standardPriceAtAcq}
           onChange={props.onStandardPriceAtAcqChange}
           hint="필요경비 개산공제 = 이 금액의 3%. 미입력 시 0% 적용."

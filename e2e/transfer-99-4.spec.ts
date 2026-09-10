@@ -7,6 +7,7 @@
  * ⚠️ stale 서버 주의 — lsof -ti :3100 | xargs kill 후 실행.
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("양도세 §99의4 농어촌주택 패널", () => {
   test("신축주택 그룹 펼침 → §99의4 농어촌 선택 → 폼 렌더", async ({ page }) => {
@@ -22,7 +23,7 @@ test.describe("양도세 §99의4 농어촌주택 패널", () => {
     await page.getByRole("button", { name: "감면·공제" }).click();
 
     // ── new_housing 그룹 펼침 ──
-    await page.getByRole("button", { name: /신축주택/ }).click();
+    await expandReductionCategory(page, /신축주택/);
 
     // §99의4 농어촌 라디오 활성 + 클릭 (D-1 낙관 통과 — 시한은 evaluator 판정)
     const item994 = page.getByText("§99의4 (농어촌주택) — 주택수 제외", { exact: false }).first();

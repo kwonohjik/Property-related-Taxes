@@ -51,6 +51,7 @@ function makeMultiForm(props: PropertyItem[]): MultiTransferFormData {
     priorPaidTax: "0",
     priorPaidLocalTax: "0",
     priorPaidTaxEdited: false,
+    priorPaidLocalTaxEdited: false,
     // 정정(수정신고·경정청구) 기본값
     amendmentMode: false,
     correctionKind: "amend",

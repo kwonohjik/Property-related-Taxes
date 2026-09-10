@@ -21,6 +21,7 @@ import type {
   GeneralBuildingAllocation,
   GeneralBuildingAcquisition,
 } from "./general-building-valuation";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /**
  * Step 2: 환산취득가 (소득세법 시행령 §176조의2②)
@@ -41,12 +42,8 @@ export function calculateConvertedAcquisition(
   /** §164⑨ 산출근거 — 게이트 미충족 시 undefined */
   expropriationValuationDetail?: ExpropriationValuationDetail;
 } {
-  const landStdTotal = Math.floor(
-    input.transferLandPricePerSqm * input.landArea,
-  );
-  const acqLandStdTotal = Math.floor(
-    input.acquisitionLandPricePerSqm * input.landArea,
-  );
+  const landStdTotal = multiplyByArea(input.transferLandPricePerSqm, input.landArea);
+  const acqLandStdTotal = multiplyByArea(input.acquisitionLandPricePerSqm, input.landArea);
 
   // §164⑨ 1호 공익수용 특례 (토지 전용): 양도시 토지 기준시가(분모)만 min[]로 낮춘다.
   // `applyExpropriationValuation` 재사용(원/㎡ ← transferLandPricePerSqm, 면적 ← landArea).

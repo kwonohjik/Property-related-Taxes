@@ -43,6 +43,7 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { VariantBodyProps } from "./types";
 import { RtmsSimilarSalesModal } from "./RtmsSimilarSalesModal";
 import { BurdenedGiftTransferSection } from "./BurdenedGiftTransferSection";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ============================================================
 // §23의2 자산 유형 옵션 — 정적 정의 (Tailwind JIT purge 안전)
@@ -558,7 +559,12 @@ function CollateralLeaseFields({
           label="월 임대료 (원)"
           unit="원"
           badge={<LawArticleModal legalBasis="상증법 §61" label="§61⑤" />}
-          hint="임대 부동산 §61⑤ — (월세×12÷12%)+임대보증금이 보충평가(공시지가)보다 크면 평가액으로 채택"
+          hint={
+            <>
+              임대 부동산 §61⑤ — <Frac top="월세 × 12" bottom="12%" /> + 임대보증금이
+              보충평가(공시지가)보다 크면 평가액으로 채택
+            </>
+          }
         >
           <CurrencyInput
             label="월 임대료 (원)"

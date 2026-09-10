@@ -102,7 +102,7 @@ function TaxpayerSection({ taxpayer }: { taxpayer: PropertyTaxpayerInfo }) {
         </span>
         <p className="text-xs font-semibold text-sky-700">납세의무자 유형</p>
       </div>
-      <div className="rounded-md border border-sky-200 bg-white/60 divide-y text-sm">
+      <div className="rounded-md border border-sky-200 bg-white/60 dark:bg-white/5 divide-y text-sm">
         <div className="flex items-start justify-between py-2 px-3">
           <span className="text-muted-foreground">납세의무자</span>
           <span className="font-medium">{taxpayer.name || "(미입력)"}</span>
@@ -461,7 +461,7 @@ export function PropertyTaxResultView({ result }: Props) {
                   과세표준상한 적용 (지방세법 §110③)
                 </p>
               </div>
-              <div className="rounded-md border border-sky-200 bg-white/60 divide-y">
+              <div className="rounded-md border border-sky-200 bg-white/60 dark:bg-white/5 divide-y">
                 <TaxRow label="당해연도 과세표준" amount={taxBaseBeforeCap} sub />
                 <TaxRow
                   label="직전연도 과세표준 상당액"
@@ -648,11 +648,11 @@ export function PropertyTaxResultView({ result }: Props) {
             재산세 산출세액이 20만원을 초과하여 7월과 9월에 나누어 납부할 수 있습니다.
           </p>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded bg-white border p-2 text-center">
+            <div className="rounded bg-white dark:bg-gray-900 border p-2 text-center">
               <div className="text-xs text-muted-foreground mb-1">1차 (7월)</div>
               <div className="font-semibold">{formatKRW(installment.firstPayment)}</div>
             </div>
-            <div className="rounded bg-white border p-2 text-center">
+            <div className="rounded bg-white dark:bg-gray-900 border p-2 text-center">
               <div className="text-xs text-muted-foreground mb-1">2차 (9월)</div>
               <div className="font-semibold">{formatKRW(installment.secondPayment)}</div>
             </div>

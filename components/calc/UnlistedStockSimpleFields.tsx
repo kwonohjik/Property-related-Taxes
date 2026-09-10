@@ -31,6 +31,7 @@ import {
 import { buildDefaultFiscalYears } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 import type { EstateItem, UnlistedStockData, UnlistedAssetValueOnlyReason } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { UnlistedStockSpecialReasonSection } from "@/components/calc/inheritance/UnlistedStockSpecialReasonSection";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ============================================================
 // §54④ 호별 분류 — 1·2·6호(무조건 순자산) / 3·5호(단서 조건부) / undefined(본칙)
@@ -171,7 +172,9 @@ export function UnlistedStockPreview({
 
       {companyWeightedNetIncome != null && (
         <div className="flex justify-between text-gray-400 dark:text-gray-500 text-caption">
-          <span>3년 가중평균 순손익 (회사 전체, §56①) ÷ (발행주식수 × 환원율)</span>
+          <span>
+            <Frac top="3년 가중평균 순손익 (회사 전체, §56①)" bottom="발행주식수 × 환원율" />
+          </span>
           <span>{Math.round(companyWeightedNetIncome).toLocaleString()}</span>
         </div>
       )}
@@ -231,7 +234,9 @@ export function UnlistedStockPreview({
         <span>{preview.perShareAssetValue.toLocaleString()}</span>
       </div>
       <div className="flex justify-between text-gray-500 dark:text-gray-400">
-        <span>가중평균 (순손익×{iw} + 순자산×{aw} ÷ 5)</span>
+        <span>
+          가중평균 <Frac top={`순손익×${iw} + 순자산×${aw}`} bottom="5" />
+        </span>
         <span>{preview.perShareWeightedValue.toLocaleString()}</span>
       </div>
       <div className="flex justify-between text-gray-500 dark:text-gray-400">
@@ -357,7 +362,7 @@ export function UnlistedStockSimpleFields({
     <div className="space-y-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-lg p-4">
       {/* 법적 근거 안내 */}
       <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
-        ℹ️ 1주당 가치 = (순손익가치×3 + 순자산가치×2) ÷ 5 (상증법 §63①1호 다목, 시행령 §54)
+        ℹ️ 1주당 가치 = <Frac top="순손익가치×3 + 순자산가치×2" bottom="5" /> (상증법 §63①1호 다목, 시행령 §54)
       </p>
 
       {/* ① 평가 대상·주식 수 */}
@@ -414,7 +419,7 @@ export function UnlistedStockSimpleFields({
         onCheckedChange={(v) => setStock({ isRealEstateHeavy: v || undefined })}
       >
         <p className="text-xs text-rose-700 dark:text-rose-300 font-medium">
-          적용 가중치: 순손익가치×2 + 순자산가치×3 ÷ 5
+          적용 가중치: <Frac top="순손익가치×2 + 순자산가치×3" bottom="5" />
         </p>
       </ToggleCard>
 
@@ -485,7 +490,7 @@ export function UnlistedStockSimpleFields({
               자동 계산: 3년 가중평균 순손익 (§56①)
             </p>
             <p className="text-indigo-600 dark:text-indigo-400">
-              = (직전1년×3 + 직전2년×2 + 직전3년×1) ÷ 6
+              = <Frac top="직전1년×3 + 직전2년×2 + 직전3년×1" bottom="6" />
               {" = "}
               <span className="font-medium">{weightedNetIncomePreview.toLocaleString()}</span>
               {weightedNetIncomePreview <= 0 && (
@@ -552,7 +557,7 @@ export function UnlistedStockSimpleFields({
        data.netAssetValue > 0 && preview.perShareAssetValue === 0 && (
         <div className="rounded-md border border-amber-300 bg-amber-50/70 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
           ⚠️ 입력한 회사 전체 순자산가치({data.netAssetValue.toLocaleString()}원)가 발행주식 수({data.totalShares.toLocaleString()}주)에 비해 매우 작아 1주당 가액이 0으로 절사됩니다.
-          입력 단위가 &quot;회사 전체&quot;인지 다시 확인하세요. (1주당 금액을 입력하시려면 회사 전체 ÷ 발행주식 수 후 입력)
+          입력 단위가 &quot;회사 전체&quot;인지 다시 확인하세요. (1주당 금액을 입력하시려면 회사 전체 금액을 발행주식 수로 나눈 뒤 입력)
         </div>
       )}
       {preview && data && data.totalShares > 0 && data.ownedShares > 0 &&

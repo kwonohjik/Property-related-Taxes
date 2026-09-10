@@ -34,6 +34,7 @@ import {
   countActiveReductionsByCategory,
   evaluateAllPeriods,
   isReductionCategoryAllowedForAssetKind,
+  getReductionsByCategory,
   isReductionAllowedForAssetKind,
   type TransferReductionId,
   type ReductionCategory,
@@ -158,11 +159,29 @@ export function buildAssetPhdSnapshot(asset: AssetForm): ReductionPhdValue | und
 
 export function UnifiedReductionPanel({ asset, transferDate, onChange }: UnifiedReductionPanelProps) {
   const reductions = asset.reductions ?? [];
-  const [openCategories, setOpenCategories] = useState<Record<ReductionCategory, boolean>>({
-    rental: false,
-    new_housing: false,
-    unsold_housing: false,
-    standalone: false,
+  /**
+   * 🔴 **이미 고른 조문이 든 카테고리는 열린 채로 시작한다** (2026-09-07 UI 리뷰).
+   *
+   * 종전에는 단계에 들어올 때마다 전부 접혀 있었다. 「세금 계산하기」를 눌러
+   * «§99의3 적용: 전용면적(㎡)을 입력하세요» 같은 오류를 받고 감면·공제 단계로 돌아오면,
+   * **그 조문이 든 카테고리가 접혀 있어 오류가 지목한 입력칸이 화면에 없었다** —
+   * 사용자는 세 카테고리를 하나씩 열어 어느 조문인지 찾아야 했고 단서는 「활성 N / 전체 M」
+   * 배지뿐이었다.
+   *
+   * ⚠️ `useState` **초기화 함수**로만 쓴다 — `useEffect → setState` 미러링이 아니다.
+   *    이후 사용자가 접는 것은 그대로 존중된다.
+   */
+  const [openCategories, setOpenCategories] = useState<Record<ReductionCategory, boolean>>(() => {
+    const byCategory = getReductionsByCategory();
+    const selected = new Set((asset.reductions ?? []).map((r) => r.type));
+    const hasSelected = (cat: ReductionCategory) =>
+      byCategory[cat].some((m) => selected.has(m.id as never));
+    return {
+      rental: hasSelected("rental"),
+      new_housing: hasSelected("new_housing"),
+      unsold_housing: hasSelected("unsold_housing"),
+      standalone: false,
+    };
   });
 
   const periodCtx = useMemo(() => buildPeriodContext(asset, transferDate), [asset, transferDate]);

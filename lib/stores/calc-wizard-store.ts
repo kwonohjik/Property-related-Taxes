@@ -6,6 +6,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
+import { deriveRightValuationTotal } from "@/lib/calc/burdened-gift-right-valuation";
 import { calculateEstimatedAcquisitionPrice, computeEstimatedDeduction, applyRatio } from "@/lib/tax-engine/tax-utils";
 import { migrateLegacyForm, migrateGracePeriod } from "./calc-wizard-migration";
 import {
@@ -45,6 +46,7 @@ function parseRaw(v: string | undefined): number {
 // ─── 폼 타입 — calc-wizard-form.types.ts로 분리 (800줄 정책, 재export 호환) ───
 export type { TransferFormData } from "./calc-wizard-form.types";
 import type { TransferFormData } from "./calc-wizard-form.types";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 const defaultFormData: TransferFormData = {
   assets: [makeDefaultAsset(1)],
@@ -432,7 +434,7 @@ export function computeTransferSummary(
       parseRaw(primary.mixedTransferLandPricePerSqm) || parseRaw(primary.phdLandPricePerSqmAtTransfer);
     const transferCommercialBuilding = parseRaw(primary.mixedTransferCommercialBuildingPrice);
     const commercialStdPrice =
-      Math.floor(transferLandPerSqm * commercialLandArea) + transferCommercialBuilding;
+      multiplyByArea(transferLandPerSqm, commercialLandArea) + transferCommercialBuilding;
     const totalStd = housingStdPrice + commercialStdPrice;
     const transferPrice = parseRaw(primary.actualSalePrice);
 
@@ -469,7 +471,13 @@ export function computeTransferSummary(
       approxValuation = parseRaw(primary!.bgMarketValueAtTransfer);
     } else {
       // 보충적 평가 추정: standardPriceAtTransfer (housing·building·land 단일) + bgMortgageSet/임대 보조
-      const standard = parseRaw(primary!.standardPriceAtTransfer);
+      //
+      // 🔴 조합원입주권은 그 칸을 쓰지 않는다 — 평가액이 ④′ 3항(상증령 §51②)에서 온다.
+      //    ④ API 변환과 **같은 파생**을 봐야 사이드바 채무비율이 0%로 표시되지 않는다.
+      const standard =
+        primary!.assetKind === "right_to_move_in"
+          ? deriveRightValuationTotal(primary!)
+          : parseRaw(primary!.standardPriceAtTransfer);
       const annualRent = parseRaw(primary!.bgAnnualRentTotal);
       const mortgageSet = primary!.bgMortgageSetAmount
         ? parseRaw(primary!.bgMortgageSetAmount)

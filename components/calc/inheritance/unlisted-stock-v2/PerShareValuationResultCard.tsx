@@ -34,7 +34,7 @@ const AGENCY_TYPE_LABEL: Record<AgencyType, string> = {
  * capRate는 최상위 UnlistedStockValuationResult.capitalizationRate 주입
  */
 function buildEstimatedProfitHint(r: EstimatedProfitResult, capRate: number): string {
-  const base = `§56② 추정이익 평균가액 ${r.estimatedProfitAverage.toLocaleString()}원 (기관 ${r.agencyCount}개 평균) ÷ 환원율 ${(capRate * 100).toFixed(0)}%`;
+  const base = `§56② 추정이익 평균가액 ${r.estimatedProfitAverage.toLocaleString()}원 (기관 ${r.agencyCount}개 평균)을 환원율 ${(capRate * 100).toFixed(0)}%로 나눈 값`;
   if (r.agencyMeta && r.agencyMeta.length > 0) {
     const agencyList = r.agencyMeta
       .map((a) => (a.name ? `${AGENCY_TYPE_LABEL[a.type]} ${a.name}` : AGENCY_TYPE_LABEL[a.type]))
@@ -116,8 +116,8 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
             result.treasuryStockApplied?.purpose === "temporary_holding"
               ? `자기주식을 1주당 평가액으로 재평가한 순자산가치 (자기주식 일시보유)`
               : result.treasuryStockApplied?.purpose === "cancellation"
-                ? `= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(result.treasuryStockApplied.effectiveTotalShares)}주 (발행주식총수 − 자기주식)`
-                : `= ${fmt(result.netAssetTotal)}원 ÷ ${fmt(input.totalShares)}주 (발행주식총수)`
+                ? `= ${fmt(result.netAssetTotal)}원을 ${fmt(result.treasuryStockApplied.effectiveTotalShares)}주로 나눈 값 (발행주식총수 − 자기주식)`
+                : `= ${fmt(result.netAssetTotal)}원을 ${fmt(input.totalShares)}주로 나눈 값 (발행주식총수)`
           }
           law="상증령 §54 ②"
         />
@@ -128,7 +128,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           hint={
             result.estimatedProfitResult?.applied
               ? buildEstimatedProfitHint(result.estimatedProfitResult, result.capitalizationRate)
-              : `최근 3년 가중평균 ${fmt(result.weightedNetIncomePerShare)}원 ÷ 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%`
+              : `최근 3년 가중평균 ${fmt(result.weightedNetIncomePerShare)}원을 환원율 ${(result.capitalizationRate * 100).toFixed(0)}%로 나눈 값`
           }
           law={
             result.estimatedProfitResult?.applied
@@ -210,9 +210,9 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
                 <div key={i} className="flex items-baseline gap-1 text-amber-900">
                   <span className="font-mono text-micro w-16">{label}</span>
                   <span>1주당 순손익액</span>
-                  <span className="font-mono">{fmt(before)}</span>
+                  <span className="font-mono tabular-nums">{fmt(before)}</span>
                   <span>→ ×12/N개월 →</span>
-                  <span className="font-mono font-semibold">{fmt(after)}</span>
+                  <span className="font-mono tabular-nums font-semibold">{fmt(after)}</span>
                   <span className="text-micro text-amber-600">(연환산)</span>
                 </div>
               );
@@ -228,7 +228,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           cellNum="⑥-㉠"
           label="가중평균"
           value={`${fmt(result.weightedAvgPerShare)}원`}
-          hint="(⑤ × 3 + ④ × 2) ÷ 5 (일반) 또는 (⑤ × 2 + ④ × 3) ÷ 5 (부동산과다보유)"
+          hint="(⑤ × 3 + ④ × 2)를 5로 나눈 값 (일반) 또는 (⑤ × 2 + ④ × 3)을 5로 나눈 값 (부동산과다보유)"
           law="상증령 §54 ① 본문"
         />
         <ResultRow
@@ -244,8 +244,8 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           value={`${fmt(result.finalPerShareValue)}원`}
           hint={
             result.preIpoListingResult?.applied
-              ? `${preIpoClause} ${preIpoLabel} — MAX(공모가격 ${fmt(result.preIpoListingResult.publicOfferingPrice)}원, 보충적평가 ${fmt(result.preIpoListingResult.supplementaryValue)}원)`
-              : `MAX(⑥-㉠, ⑥-㉡)${result.netAssetFloorApplied ? " — 80% 하한 우선" : " — 가중평균 우선"}`
+              ? `${preIpoClause} ${preIpoLabel} — 공모가격 ${fmt(result.preIpoListingResult.publicOfferingPrice)}원과 보충적평가 ${fmt(result.preIpoListingResult.supplementaryValue)}원 중 큰 금액`
+              : `⑥-㉠과 ⑥-㉡ 중 큰 금액${result.netAssetFloorApplied ? " — 80% 하한 우선" : " — 가중평균 우선"}`
           }
           law={result.preIpoListingResult?.applied ? preIpoLaw : "상증령 §54 ①"}
           emphasized
@@ -312,7 +312,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
                 {input.evaluationCommittee && (
                   <p className="mt-0.5 text-micro leading-snug">
                     ※ §54⑥ 평가심의위 70~130% 범위는 보충적평가({fmt(result.preIpoListingResult.supplementaryValue)}원)
-                    기준입니다 (§63② override와 무관).
+                    기준입니다 (§63② 특례 적용과 무관).
                   </p>
                 )}
               </>
@@ -373,17 +373,17 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           <p className="font-semibold text-amber-800">영업권 평가 (상증령 §59 ②)</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
             <span>가. 3년 가중평균 순손익액</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.weightedAvg3y)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.weightedAvg3y)}원</span>
             <span>나. 가 × 50%</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.weightedAvgHalf)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.weightedAvgHalf)}원</span>
             <span>다. 자기자본</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.selfCapital)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.selfCapital)}원</span>
             <span>마. 다 × {(result.goodwillCalculation.rate * 100).toFixed(0)}% (§19①)</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.selfCapitalRate)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.selfCapitalRate)}원</span>
             <span>초과이익 (나 − 마)</span>
-            <span className="font-mono text-right">{fmt(result.goodwillCalculation.annualExcessProfit)}원</span>
+            <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.annualExcessProfit)}원</span>
             <span className="font-bold">자. 영업권 평가액</span>
-            <span className="font-mono text-right font-bold">{fmt(result.goodwillCalculation.goodwillFinal)}원</span>
+            <span className="font-mono tabular-nums text-right font-bold">{fmt(result.goodwillCalculation.goodwillFinal)}원</span>
           </div>
         </div>
       )}
@@ -514,7 +514,7 @@ function MergerBreakdownCard({ mergerResult }: { mergerResult: MergerNetIncomeRe
         {mergerResult.breakdown.map((row, i) => (
           <div
             key={i}
-            className="rounded border border-amber-200 bg-white/60 p-2 grid grid-cols-2 gap-x-3 gap-y-0.5 font-mono tabular-nums"
+            className="rounded border border-amber-200 bg-white/60 dark:bg-white/5 p-2 grid grid-cols-2 gap-x-3 gap-y-0.5 font-mono tabular-nums"
             data-testid={`merger-breakdown-row-${i}`}
           >
             <span className="col-span-2 font-semibold text-amber-800 not-font-mono text-caption">

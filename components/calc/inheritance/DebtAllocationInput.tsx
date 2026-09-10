@@ -149,7 +149,7 @@ export function DebtAllocationInput({
                   className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-700 dark:text-gray-300"
                 >
                   <span className="font-medium">{d.creditorName}</span>
-                  <span className="font-mono">{formatKRW(d.amount)}</span>
+                  <span className="font-mono tabular-nums">{formatKRW(d.amount)}</span>
                   {d.financialDebtAmount > 0 && (
                     <span
                       className={`px-1.5 py-0.5 rounded-full text-micro font-semibold ${SLATE_CARD.badge}`}

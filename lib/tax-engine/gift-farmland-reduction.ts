@@ -96,7 +96,7 @@ export function calcFarmlandGiftReduction(
   const isMixed = farmlandValue < currentTotalGiftValue;
   breakdown.push({
     label: isMixed
-      ? "농지분 산출세액 ㉣ ((합산 − 직전) × 농지가액/금번총가액 안분)"
+      ? "농지분 산출세액 ㉣ ((합산 − 직전) × (농지가액) / (금번총가액) 안분)"
       : "농지분 산출세액 ㉣ (합산 산출세액 − 직전 회차 산출세액)",
     amount: farmlandComputedTax,
     lawRef: GIFT.FARMLAND_REDUCTION,
@@ -119,10 +119,10 @@ export function calcFarmlandGiftReduction(
   // ㉤ 감면세액 = min(㉣, 잔여)
   const reductionAmount = Math.min(farmlandComputedTax, reductionLimitRemaining);
   breakdown.push({
-    label: "농지 감면세액 ㉤ = min(㉣ 농지분 산출세액, 5년 한도 잔여)",
+    label: "농지 감면세액 ㉤ = ㉣ 농지분 산출세액과 5년 한도 잔여 중 작은 금액",
     amount: reductionAmount,
     lawRef: GIFT.FARMLAND_REDUCTION_LIMIT,
-    note: `min(${farmlandComputedTax.toLocaleString()}, ${reductionLimitRemaining.toLocaleString()})`,
+    note: `${farmlandComputedTax.toLocaleString()}과 ${reductionLimitRemaining.toLocaleString()} 중 작은 금액`,
   });
 
   // ㉮ 감면농지가액(감면범위) = farmlandValue × ㉤ / ㉣ — BigInt 안전 안분
@@ -140,7 +140,7 @@ export function calcFarmlandGiftReduction(
   } else {
     breakdown.push(
       {
-        label: "감면받은 농지가액(감면범위) ㉮ = 농지가액 × ㉤ / ㉣",
+        label: "감면받은 농지가액(감면범위) ㉮ = 농지가액 × (㉤) / (㉣)",
         amount: reducedFarmlandValue,
         lawRef: GIFT.FARMLAND_REDUCTION,
         note: `${farmlandValue.toLocaleString()} × ${reductionAmount.toLocaleString()} / ${farmlandComputedTax.toLocaleString()}`,

@@ -12,6 +12,7 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ReductionPhdInput, type ReductionPhdValue } from "@/components/calc/transfer/ReductionPhdInput";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
@@ -179,7 +180,7 @@ export function New993InputForm({
       <div className="rounded-md border border-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2">
         <p className="text-xs text-amber-900 dark:text-amber-200">
           최초공시 전 환산 자동 계산(§164⑤):{" "}
-          <span className="font-semibold font-mono">
+          <span className="font-semibold font-mono tabular-nums">
             {phdEchoAcqStdPrice != null ? `${phdEchoAcqStdPrice.toLocaleString()} 원` : "위 환산 입력을 완료하세요"}
           </span>
         </p>
@@ -223,6 +224,9 @@ export function New993InputForm({
         </div>
       )}
 
+      {/* ① 형제 감면 폼 10종과 같은 「색상 카드 + 섹션 번호」 패턴 (2026-09-07 UI 리뷰 L5).
+          외곽 primary 래퍼는 저장소 관용구라 그대로 둔다 — 갈린 것은 번호 축뿐이었다. */}
+      <ToneCard tone="sky" sectionNum="①" title="취득 유형 · 소재지" noDark bodyClassName="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium">취득 유형</label>
@@ -273,7 +277,11 @@ export function New993InputForm({
         )}
       </div>
 
-      {/* PHD 환산 — 취득시 기준시가 직전 배치(입력→출력 순서). ON 시 취득시 기준시가는 아래 echo로 자동 산출. */}
+      </ToneCard>
+
+      {/* ② 기준시가 3시점 + 전용면적. PHD 환산은 취득시 기준시가 직전 배치(입력→출력 순서) —
+          ON 시 취득시 기준시가는 아래 echo로 자동 산출된다. */}
+      <ToneCard tone="emerald" sectionNum="②" title="기준시가 · 전용면적" noDark bodyClassName="space-y-3">
       {phdSection}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -296,7 +304,15 @@ export function New993InputForm({
 
         <div className="sm:col-span-2">
           <HousingStdPriceLookupField
-            label="양도시 기준시가 (선택)"
+            /**
+             * 🔴 라벨이 ⑧의 필수 여부를 따라간다 (2026-09-07 UI 리뷰) — 재개발 변형을 켜면
+             *    5년 **이내** 양도도 안분 경로라 이 값이 없으면 엔진이 감면 0을 낸다.
+             */
+            label={
+              value.isRedevelopedNewHouse993
+                ? "양도시 기준시가 (필수 — 재개발 변형)"
+                : "양도시 기준시가 (5년 경과 양도 시 필수)"
+            }
             value={value.standardPriceAtTransfer993 ?? ""}
             onChange={(v) => onUpdate("standardPriceAtTransfer993", v)}
             jibun={jibun}
@@ -333,6 +349,7 @@ export function New993InputForm({
           <p className="mt-1 text-micro text-muted-foreground">공동주택 조회 시 자동 채움 · 2002.12.31 이전 취득 고가주택 판정(165/149㎡ AND 6억 초과)</p>
         </div>
       </div>
+      </ToneCard>
 
       <ToggleCard
         tone="rose"

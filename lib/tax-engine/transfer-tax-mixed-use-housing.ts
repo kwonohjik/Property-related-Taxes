@@ -17,6 +17,7 @@ import { splitDeemedExpense, resolvePartNecessaryExpense } from "./transfer-tax-
 import { apportionAcquisitionPrice, apportionTransferPrice } from "./transfer-tax-mixed-use-helpers";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import type { HousingEstimatedAcqResult } from "./transfer-tax-mixed-use-helpers";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 // ──────────────────────────────────────────────────────────────
 // 4. 주택부분 토지/건물 양도차익 분리 (STEP 4)
@@ -251,7 +252,7 @@ export function calcHousingGainSplit(
     const acqLandPerSqm = asset.acquisitionStandardPrice.landPricePerSqm;
     // 가정: 취득시 토지면적 = 양도시 토지면적 (단순 용도변경 케이스)
     // 분필·합필·도로편입 시에는 사용자가 partialChangeAcqResidentialArea로 보정 가능
-    const acqCommTotal = acqCommBuilding + Math.floor(acqLandPerSqm * asset.totalLandArea);
+    const acqCommTotal = acqCommBuilding + multiplyByArea(acqLandPerSqm, asset.totalLandArea);
     const totalFloor = asset.residentialFloorArea + asset.nonResidentialFloorArea;
     const housRatio = totalFloor > 0 ? asset.residentialFloorArea / totalFloor : 0;
     const acqHousingTotal = Math.floor(acqCommTotal * housRatio);

@@ -103,7 +103,6 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
         <DecimalInput
           value={asset.cbTotalLandArea}
           onChange={(v) => onChange({ cbTotalLandArea: v })}
-          placeholder="집합건물 전체 대지면적"
           unit="㎡"
         />
       </FieldCard>
@@ -135,7 +134,7 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
             hint="국토계획법상 용도지역. 미선택 시 계산이 진행되지 않습니다."
           >
             <RadioCardGroup
-              name="cbZoneType"
+              name={`cbZoneType-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.cbZoneType}
               onChange={(v) => onChange({ cbZoneType: v })}

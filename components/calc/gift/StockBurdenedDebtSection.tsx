@@ -35,6 +35,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { computeAutoIsMajor } from "@/components/calc/stock-transfer/major-sync";
 import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
 import { resolveBurdenedGiftJudgmentDate } from "@/lib/calc/gift-burdened-transfer-api";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface StockBurdenedDebtSectionProps {
   item: EstateItem;
@@ -122,6 +123,13 @@ export function StockBurdenedDebtSection({
         // ([[feedback_shared_predicate_argument_parity]] — 리뷰 #14가 고친 결함).
         isVentureCompany: false,
         isKOTCTrading: false,
+        // 대차·사모펀드 가산 축(§157 2013.2.15.~) — 부담부증여 경로에는 입력 UI가 없고
+        // ④도 엔진에 보내지 않는다(`gift-burdened-transfer-api.ts`). 미리보기도 **같은
+        // 인자**여야 저장값과 화면이 갈리지 않는다([[feedback_shared_predicate_argument_parity]]).
+        // (부담부증여 입력에는 발행주식 총수 자체가 없다 — 가산 분모가 0이라 어차피 미적용)
+        lentSharesCount: "0",
+        pefIndirectSharesCount: "0",
+        totalIssuedShares: "0",
       },
       {},
     );
@@ -328,7 +336,7 @@ export function StockBurdenedDebtSection({
                 <FieldCard
                   label="증여자 당초 취득가 합계 (안분 전)"
                   unit="원"
-                  hint="증여자가 주식을 취득할 때 실제 지불한 전체 금액. 채무비율(채무액 ÷ 평가액)로 자동 안분하여 양도소득세 취득가액을 산출합니다."
+                  hint="증여자가 주식을 취득할 때 실제 지불한 전체 금액. 채무비율(채무액을 평가액으로 나눈 비율)로 자동 안분하여 양도소득세 취득가액을 산출합니다."
                 >
                   <CurrencyInput
                     label="증여자 당초 취득가 합계 (안분 전)"
@@ -356,7 +364,8 @@ export function StockBurdenedDebtSection({
                   title={<>환산취득가 산정용 1개월 종가평균 <span className="text-rose-500">*</span></>}
                 >
                   <p className="text-caption text-amber-700 dark:text-amber-400">
-                    환산취득가 = 양도가액(채무인수액) × (취득시 기준시가 ÷ 양도시 기준시가).
+                    환산취득가 = 양도가액(채무인수액) ×{" "}
+                    <Frac top="취득시 기준시가" bottom="양도시 기준시가" />.
                     두 값이 없으면 취득가액과 개산공제가 모두 0으로 산출됩니다 (소령 §176의2②1호).
                   </p>
                   <FieldCard

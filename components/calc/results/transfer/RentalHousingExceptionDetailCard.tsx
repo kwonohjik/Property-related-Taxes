@@ -15,6 +15,7 @@
 
 import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 
 interface Props {
   detail: RentalHousingExceptionResult;
@@ -155,7 +156,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
                 bottom="현 양도 당시 기준시가 − 취득 당시 기준시가"
               />
             </p>
-            <p className="font-mono font-semibold text-violet-900 dark:text-violet-200">
+            <p className="font-mono tabular-nums font-semibold text-violet-900 dark:text-violet-200">
               = {(formulaTrace.ratio161_1 * 100).toFixed(4)}%
             </p>
 
@@ -163,23 +164,43 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
             <div className="border-t border-violet-100 dark:border-violet-800/30 pt-1.5 mt-1.5">
               <p className="text-muted-foreground">
                 장기보유특별공제(일반표) 적용 후 양도소득금액:
-                {" "}<span className="font-mono text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
+                {" "}<span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
               </p>
             </div>
 
-            {/* 과세대상 양도소득금액 산식 */}
-            <div className="border-t border-violet-100 dark:border-violet-800/30 pt-1.5 mt-1.5">
-              <p className="text-muted-foreground">
-                과세대상 양도소득금액
-                {" "}= 장기보유공제 적용 후 양도소득금액{" "}
-                <span className="font-mono text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
-                {" "}× 과세 안분 비율{" "}
-                <span className="font-mono text-foreground">{(formulaTrace.ratio161_1 * 100).toFixed(4)}%</span>
-              </p>
-              <p className="font-mono font-semibold text-violet-900 dark:text-violet-200 mt-0.5">
-                = {formatN(taxableGain)}
-              </p>
-            </div>
+            {/*
+              과세대상 양도소득금액 산식 — **B1 전용**.
+
+              🔴 B2(고가 PHRP)에서는 이 등식이 성립하지 않는다 (2026-09-07 UI 리뷰).
+                 엔진(`prhp-allocation.ts`)은 B2에서도 `ratio161_1`을 항상 채우지만,
+                 B2의 `taxableGain`은 **1호 + 2호**(`part1 + part2`)이고
+                 `gain95Table1 × ratio161_1`은 **part1 하나뿐**이다. 그래서 이 블록은
+                 좌변과 우변이 다른 등식을 인쇄했다 — 바로 아래 「§161② 1호 + 2호」 블록이
+                 같은 숫자를 올바르게 도출하므로, 한 화면에서 같은 값에 **두 개의 서로 다른
+                 산출근거**가 인쇄됐다.
+            */}
+            {scenarioId !== "RH-B2" && (
+              <div className="border-t border-violet-100 dark:border-violet-800/30 pt-1.5 mt-1.5">
+                <p className="text-muted-foreground">
+                  과세대상 양도소득금액
+                  {" "}= 장기보유공제 적용 후 양도소득금액{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
+                  {" "}× 과세 안분 비율{" "}
+                  <span className="font-mono tabular-nums text-foreground">{(formulaTrace.ratio161_1 * 100).toFixed(4)}%</span>
+                </p>
+                <p className="font-mono font-semibold text-violet-900 dark:text-violet-200 mt-0.5">
+                  = {formatN(taxableGain)}
+                </p>
+              </div>
+            )}
+            {scenarioId === "RH-B2" && (
+              <div className="border-t border-violet-100 dark:border-violet-800/30 pt-1.5 mt-1.5">
+                <p className="text-caption text-muted-foreground leading-relaxed">
+                  이 비율은 아래 §161② **1호**(직전 거주주택 양도일 이전 보유분) 산정에 쓰입니다 —
+                  과세대상 양도소득금액은 1호와 2호의 합이므로 아래 블록을 보세요.
+                </p>
+              </div>
+            )}
 
             {/* 상한 적용 (소득세법 시행령 제161조 제3항) */}
             {formulaTrace.capApplied && (
@@ -197,9 +218,17 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
             고가주택 과세 비율
+            {/*
+              🔴 **§159의4가 아니다** (2026-09-07 UI 리뷰). 그 조문은 **장기보유특별공제 표2
+                 「대상」 판정** 조항이다(`transfer-tax-lthd.ts:266~267` — 「§159의4는 표2 대상을
+                 「1주택(제155조 … 1세대 1주택으로 보는 주택 …)」으로 규정」).
+                 이 산식(양도차익 × (양도가액 − 12억)/양도가액)의 근거는 저장소 정본 상수가
+                 §160으로 못박고 있다(`legal-codes/transfer-house.ts:266~267`
+                 `HIGH_PRICE_FORMULA: "소득세법 시행령 §160"` — §95③ 위임 산식).
+            */}
             {scenarioId === "RH-A2" && (
               <span className="ml-1 text-micro text-muted-foreground font-normal">
-                (소득세법 시행령 제159조의4 — 1세대 1주택 고가주택)
+                ({REDEVELOPMENT.HIGH_PRICE_FORMULA} — 1세대 1주택 고가주택 §95③ 위임 산식)
               </span>
             )}
             {scenarioId === "RH-B2" && (
@@ -211,7 +240,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           <div className="rounded bg-white/70 dark:bg-white/5 border border-violet-100 dark:border-violet-800/30 p-2.5 text-xs text-muted-foreground">
             <p>
               과세 비율 = <Frac top="양도가액 − 12억원" bottom="양도가액" />
-              {" "}= <span className="font-mono text-foreground font-semibold">
+              {" "}= <span className="font-mono tabular-nums text-foreground font-semibold">
                 {(formulaTrace.ratioHighValue * 100).toFixed(4)}%
               </span>
             </p>
@@ -239,9 +268,9 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
               </p>
               <p className="text-muted-foreground pl-2">
                 = 장기보유공제(일반표) 적용 후 양도소득금액{" "}
-                <span className="font-mono text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
+                <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
                 {" "}× 안분 비율{" "}
-                <span className="font-mono text-foreground">
+                <span className="font-mono tabular-nums text-foreground">
                   {((formulaTrace.ratio161_1 ?? 0) * 100).toFixed(4)}%
                 </span>
               </p>
@@ -257,15 +286,15 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
               </p>
               <p className="text-muted-foreground pl-2">
                 장기보유공제(1세대1주택표) 적용 후 양도소득금액{" "}
-                <span className="font-mono text-foreground">{formatN(formulaTrace.gain95Table2)}</span>
+                <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table2)}</span>
               </p>
               <p className="text-muted-foreground pl-2">
                 × 이후 보유분 안분 비율{" "}
-                <span className="font-mono text-foreground">
+                <span className="font-mono tabular-nums text-foreground">
                   {(formulaTrace.ratio161_2_2 * 100).toFixed(4)}%
                 </span>
                 {" "}× 고가주택 과세 비율{" "}
-                <span className="font-mono text-foreground">
+                <span className="font-mono tabular-nums text-foreground">
                   {((formulaTrace.ratioHighValue ?? 0) * 100).toFixed(4)}%
                 </span>
               </p>
@@ -278,9 +307,9 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
             <div className="border-t border-violet-100 dark:border-violet-800/30 pt-2">
               <p className="text-muted-foreground">
                 과세대상 양도소득금액 = 1호{" "}
-                <span className="font-mono text-foreground">{formatN(formulaTrace.part1)}</span>
+                <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.part1)}</span>
                 {" "}+ 2호{" "}
-                <span className="font-mono text-foreground">{formatN(formulaTrace.part2)}</span>
+                <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.part2)}</span>
               </p>
               <p className="font-mono font-semibold text-violet-900 dark:text-violet-200 mt-0.5">
                 = {formatN(taxableGain)}

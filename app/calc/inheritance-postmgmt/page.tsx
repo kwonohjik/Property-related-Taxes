@@ -372,7 +372,7 @@ function FarmingPostMgmtPageInner() {
                     {step.note && <span className="block text-micro text-gray-500">{step.note}</span>}
                   </span>
                   {step.amount !== 0 && (
-                    <span className="font-mono">{formatKRW(step.amount)}</span>
+                    <span className="font-mono tabular-nums">{formatKRW(step.amount)}</span>
                   )}
                 </li>
               ))}

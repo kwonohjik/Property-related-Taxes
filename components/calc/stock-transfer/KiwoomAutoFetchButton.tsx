@@ -24,6 +24,7 @@ import {
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { isKiwoomFetchable, type StoreMarketType } from "@/lib/kiwoom/market-mapping";
 import { fetchKiwoomWithTimeout } from "@/lib/kiwoom/fetch-with-timeout";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /**
  * 축 — 양도일(§163⑨ 분모) / 취득일(분자).
@@ -238,8 +239,12 @@ export function KiwoomAutoFetchButton({
               <strong>{info.tradingDays}</strong>일
             </p>
             <p>
-              평균 = <strong>{info.sum.toLocaleString()}</strong> ÷{" "}
-              <strong>{info.tradingDays}</strong> ={" "}
+              평균 ={" "}
+              <Frac
+                top={<strong>{info.sum.toLocaleString()}</strong>}
+                bottom={<strong>{info.tradingDays}</strong>}
+              />{" "}
+              ={" "}
               <strong className="text-emerald-900 text-sm">{info.average.toLocaleString()}</strong>원 (원미만 절사)
             </p>
             <p className="text-emerald-700">
@@ -303,8 +308,8 @@ export function KiwoomAutoFetchButton({
             {expandToggleLabel(showDetail)} · 일자별 종가 (검증용)
           </button>
           {showDetail && (
-            <div className="rounded border border-emerald-300 bg-white p-2 space-y-1 max-h-96 overflow-y-auto">
-              <p className="text-micro text-emerald-700 sticky top-0 bg-white pb-1 border-b border-emerald-100">
+            <div className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-2 space-y-1 max-h-96 overflow-y-auto">
+              <p className="text-micro text-emerald-700 sticky top-0 bg-white dark:bg-gray-900 pb-1 border-b border-emerald-100">
                 양도일 이전 1개월 일자별 종가 — 거래일만 분모 산입 (상증령 §52의2④ 공휴일·토요일 제외)
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-caption font-mono">
@@ -325,7 +330,7 @@ export function KiwoomAutoFetchButton({
                   );
                 })}
               </div>
-              <p className="text-micro text-emerald-700 pt-1 border-t border-emerald-100 sticky bottom-0 bg-white">
+              <p className="text-micro text-emerald-700 pt-1 border-t border-emerald-100 sticky bottom-0 bg-white dark:bg-gray-900">
                 합계 = {info.sum.toLocaleString()} · 거래일 = {info.tradingDays} · 평균 = floor(합계/거래일) = {info.average.toLocaleString()}
               </p>
             </div>

@@ -486,7 +486,7 @@ export function MultiPointBuildingStdPriceModal({
               </Button>
             </div>
             {rows.map((row, idx) => (
-              <div key={idx} className="space-y-2 rounded-md border border-amber-200/60 bg-white/50 p-2">
+              <div key={idx} className="space-y-2 rounded-md border border-amber-200/60 bg-white/50 dark:bg-white/5 p-2">
                 {(enableCommercial || rows.length > 1) && (
                   <div className="flex items-center justify-between gap-2">
                     {enableCommercial ? (

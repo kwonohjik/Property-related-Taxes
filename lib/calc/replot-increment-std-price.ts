@@ -12,6 +12,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 type IncrementAsset = Pick<AssetForm, "isReplotIncrement" | "standardPriceAtTransfer" | "transferArea">;
 type PrimaryAsset = Pick<AssetForm, "standardPricePerSqmAtTransfer">;
@@ -32,5 +33,5 @@ export function replotIncrementStdPriceAtTransfer(
 
   const perSqm = parseAmount(primary.standardPricePerSqmAtTransfer);
   const area = parseFloat((asset.transferArea || "").replace(/,/g, ""));
-  return perSqm > 0 && area > 0 ? Math.floor(perSqm * area) : undefined;
+  return perSqm > 0 && area > 0 ? multiplyByArea(perSqm, area) : undefined;
 }

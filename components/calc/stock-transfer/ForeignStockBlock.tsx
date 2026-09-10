@@ -309,7 +309,7 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
               <DecimalInput
                 value={form.transferExchangeRate}
                 onChange={(v) => onChange({ transferExchangeRate: v })}
-                placeholder="예: 1350.50"
+                placeholder="양도일 기준환율"
               />
             </FieldCard>
 
@@ -422,7 +422,7 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
           <DecimalInput
             value={form.acquisitionExchangeRate}
             onChange={(v) => onChange({ acquisitionExchangeRate: v })}
-            placeholder="예: 1280.00"
+            placeholder="취득일 기준환율"
           />
         </FieldCard>
 
@@ -532,7 +532,7 @@ export function ForeignStockBlock({ form, onChange }: ForeignStockBlockProps) {
             <DecimalInput
               value={form.foreignTaxExchangeRate}
               onChange={(v) => onChange({ foreignTaxExchangeRate: v })}
-              placeholder="예: 1340.00"
+              placeholder="납부일 기준환율"
             />
           </FieldCard>
 

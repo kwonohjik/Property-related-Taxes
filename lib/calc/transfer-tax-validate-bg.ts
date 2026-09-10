@@ -23,15 +23,41 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { needsBgAcqStdPriceInput, resolveBgAcqStdPrice } from "./burdened-gift-acq-std-price";
+import {
+  deriveMemberRightsValue,
+  deriveRightValuationTotal,
+} from "./burdened-gift-right-valuation";
+import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
-const SUPPORTED_KINDS = [
+/**
+ * 부담부증여 지원 자산 종류 — **⑧ validate 층 게이트**(3층 중 하나).
+ *
+ * 나머지 둘은 ⑤ `TransferModeBlock.tsx`의 `SUPPORTED_ASSET_KINDS`,
+ * 엔진 `burdened-gift-eligibility.ts`의 `BURDENED_GIFT_SUPPORTED_PROPERTY_TYPES`다.
+ * 세 배열의 내용 동일성은 `burdened-gift-gate-parity.anchor.test.ts`가 단언한다.
+ *
+ * · F-3 (2026-05-12): `commercial_building` 편입.
+ * · 2026-09-08: `redevelopment_apt` 편입 (§166② 완공 신축주택 × §159).
+ */
+const SUPPORTED_KINDS: AssetForm["assetKind"][] = [
   "housing",
   "land",
   "building",
   "general_building",
   "commercial_building",
+  "redevelopment_apt",
+  "right_to_move_in",
 ];
+
+/**
+ * 안내문의 자산 열거는 **위 배열에서 파생**한다 — 손으로 쓰지 않는다.
+ *
+ * 종전에는 「주택·토지·건물·일반건물·상업용건물·오피스텔」이 문자열에 박혀 있었다.
+ * ⑤는 같은 드리프트(F-3 상업용건물 편입 시 문구만 남음)를 겪고 이미 파생으로 고쳤는데
+ * 여기만 하드코딩이 남아, 다음 편입 때 조용히 낡을 자리였다.
+ */
+const SUPPORTED_LABELS = SUPPORTED_KINDS.map((k) => ASSET_KIND_LABELS[k]).join("·");
 
 export function validateBurdenedGiftAsset(
   asset: AssetForm,
@@ -56,7 +82,7 @@ export function validateBurdenedGiftAsset(
 
   // (1) F-3 (2026-05-12): commercial_building 확장
   if (!SUPPORTED_KINDS.includes(asset.assetKind)) {
-    return `${label}: 부담부증여는 주택·토지·건물·일반건물·상업용건물·오피스텔 자산에서만 지원됩니다 (현재: ${asset.assetKind}).`;
+    return `${label}: 부담부증여는 ${SUPPORTED_LABELS} 자산에서만 지원됩니다 (현재: ${ASSET_KIND_LABELS[asset.assetKind] ?? asset.assetKind}).`;
   }
 
   /**
@@ -137,8 +163,16 @@ export function validateBurdenedGiftAsset(
     if (!parseAmount(asset.bgMarketValueAtTransfer)) {
       return `${label}: 부담부증여 시가 모드 — 양도시 시가 평가액을 입력하세요.`;
     }
-    // 취득가액 산정방식별 필수 입력 (H-5: bgMarketValueAtAcquisition 무조건 차단 제거)
-    const acqMethod = asset.bgAcquisitionMethod || "";
+    /**
+     * 취득가액 산정방식별 필수 입력 (H-5: bgMarketValueAtAcquisition 무조건 차단 제거)
+     *
+     * ⚠️ **조합원입주권은 K-4 고정**이라 ⑤가 산정방식 라디오를 렌더하지 않는다
+     *    (④ API 변환도 `acquisitionMethod: "actual"`을 강제한다). 여기서 선택을 요구하면
+     *    **화면에 없는 컨트롤을 요구**하게 되어 영구 차단이 된다 — ④와 같은 값으로 읽는다.
+     *    실지취득가액 자체는 (5-d)가 요구한다.
+     */
+    const acqMethod =
+      asset.assetKind === "right_to_move_in" ? "actual" : asset.bgAcquisitionMethod || "";
     if (acqMethod === "actual") {
       // K-4 실지취득가액 안분 — 자산별 실지취득가 필수 (자동 안분 fallback 금지)
       if (asset.assetKind === "general_building") {
@@ -220,6 +254,41 @@ export function validateBurdenedGiftAsset(
     return asset.assetKind === "land"
       ? `${label}: 부담부증여 기준시가 모드 — 취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율입니다 (소득세법 시행령 제159조 제1항 제1호).`
       : `${label}: 부담부증여 기준시가 모드 — 「② 양도정보」의 취득시 기준시가를 입력하세요. 취득가액 = 취득시 기준시가 × 채무비율이므로, 미입력 시 취득가액이 0으로 계산됩니다 (소득세법 시행령 제159조 제1항 제1호).`;
+  }
+
+  /**
+   * (5-d) 조합원입주권 — 상증법 §61③ 평가 3항 + K-4 취득가액 (2026-09-08).
+   *
+   * §61③ 평가는 §159①1호 A괄호의 열거에 없어 **취득가액이 실지거래가액**이다(K-4 전용).
+   * 그래서 (5-c)의 취득시 기준시가는 요구하지 않고(`needsBgAcqStdPriceInput`이 제외),
+   * 대신 **평가 3항과 실지취득가액**을 요구한다.
+   *
+   * ⚠️ 조합원권리가액은 ⑤ 표시·④ 전송과 **같은 파생**을 본다
+   *    (`deriveMemberRightsValue` — 재개발 권리가액 프리필). 여기서 명시 입력만 보면
+   *    「화면에는 값이 보이는데 검증이 막는」 3중 패턴 위반이 된다.
+   */
+  if (asset.assetKind === "right_to_move_in") {
+    if (deriveMemberRightsValue(asset) <= 0) {
+      return `${label}: 조합원입주권 증여재산 평가 — 조합원권리가액을 입력하세요 (상속세 및 증여세법 시행규칙 제16조 제3항 — 종전 토지·건축물 가격 × 비례율). 재개발 정보의 권리가액을 입력해 두면 그 값이 파생됩니다.`;
+    }
+    if ((parseAmount(asset.bgActualAcquisitionTotal) || 0) <= 0) {
+      return `${label}: 조합원입주권 부담부증여 — 종전 부동산의 실지취득가액을 입력하세요. 증여재산 평가가 「소득세법 시행령」 제159조 제1항 제1호 괄호의 열거(상속세 및 증여세법 제61조 제1항·제2항·제5항 및 제66조)에 없는 같은 법 제61조 제3항이므로, 취득가액은 기준시가가 아니라 실지거래가액입니다 (소득세법 제97조 제1항 제1호 가목 · 시행령 제166조 제1항 제1호).`;
+    }
+    /**
+     * 🔴 자기일관 — 3항 합이 ④가 보내는 평가액 총액과 일치해야 한다.
+     *
+     * ④는 `deriveRightValuationTotal`을 `buildingStdPriceAtTransfer`에 싣고, 엔진은
+     * `rightValuationDetail.total`을 따로 기록한다. 두 값이 갈리면 결과 화면의 명세와
+     * 실제 안분 분모가 어긋나는데 **세액은 조용히 나온다**. ④·⑧이 같은 파생을 쓰므로
+     * 정상 경로에서는 항상 일치하고, 이 검사는 파생이 갈라진 순간을 잡는 트립와이어다.
+     */
+    const parts =
+      deriveMemberRightsValue(asset) +
+      (parseAmount(asset.bgRightPaidInstallments) || 0) +
+      (parseAmount(asset.bgRightPremium) || 0);
+    if (parts !== deriveRightValuationTotal(asset)) {
+      return `${label}: 조합원입주권 증여재산 평가 항목의 합계가 평가액과 일치하지 않습니다. 조합원권리가액·납입금·프리미엄을 재확인하세요.`;
+    }
   }
 
   // (6) Phase 3 — 사전증여 행별 부분 입력 검증

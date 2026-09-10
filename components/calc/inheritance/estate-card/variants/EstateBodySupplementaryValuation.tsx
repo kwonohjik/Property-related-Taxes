@@ -22,6 +22,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { calcVacantPortionStandardPrice } from "@/lib/tax-engine/property-valuation";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { resolvePropertyKind } from "./EstateBodyHelpers";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 type RealEstateCat =
   | "real_estate_land"
@@ -121,7 +122,7 @@ function VacancyPortionFields({
           <div className="rounded-md border border-sky-200 bg-sky-100/60 px-2 py-1.5 text-caption space-y-0.5 dark:border-sky-800/40 dark:bg-sky-950/30">
             <div className="flex justify-between">
               <span className="text-sky-700 dark:text-sky-300">
-                미임대분 토지 기준시가 (전체 토지 × 미임대면적 ÷ 전체면적)
+                미임대분 토지 기준시가 (전체 토지 × <Frac top="미임대면적" bottom="전체면적" />)
               </span>
               <span className="font-mono tabular-nums">
                 {vacantLandStd.toLocaleString("ko-KR")}
@@ -235,7 +236,6 @@ export function EstateBodySupplementaryValuation({
             <DecimalInput
               value={item.totalBuildingArea != null ? String(item.totalBuildingArea) : ""}
               onChange={(v) => set({ totalBuildingArea: parseDecimal(v) || undefined })}
-              placeholder="전체 건물 연면적"
             />
           </FieldCard>
         )}

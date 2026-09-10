@@ -622,8 +622,8 @@ export function calcApartmentConversion(
     throw new BuildingStdPriceError("공동주택 환산: 산정기준율 미수록(취득연도 2000 초과 또는 셀 부재)");
   }
 
-  const firstNoticeLandValue = Math.floor(ac.firstNoticeLandPrice * ac.landAreaM2);
-  const acqLandValue = Math.floor(ac.acquisitionLandPrice * ac.landAreaM2);
+  const firstNoticeLandValue = multiplyByArea(ac.firstNoticeLandPrice, ac.landAreaM2);
+  const acqLandValue = multiplyByArea(ac.acquisitionLandPrice, ac.landAreaM2);
   const firstNoticeBuildingValue = Math.floor(base2001 * firstNoticeAcqBaseRate);
   const acqBuildingValue = Math.floor(base2001 * acquisitionAcqBaseRate);
 
@@ -667,3 +667,4 @@ import {
   calcSpecialAdjustmentRate,
 } from "./building-standard-price-special";
 import type { AdjustmentContext } from "./building-standard-price-special";
+import { multiplyByArea } from "./area-utils";

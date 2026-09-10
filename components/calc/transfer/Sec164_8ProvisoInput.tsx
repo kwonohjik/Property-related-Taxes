@@ -79,7 +79,7 @@ export function Sec164_8ProvisoInput({ asset, onChange }: Props) {
       </FieldCard>
 
       <p className="text-caption text-muted-foreground">
-        C(취득일~최초고시일 월수)는 자동 산출하며, C÷D에는 100% 한도를 적용합니다(시행규칙 §80①1호가목).
+        C(취득일~최초고시일 월수)는 자동 산출하며, C를 D로 나눈 비율에는 100% 한도를 적용합니다(시행규칙 §80①1호가목).
       </p>
     </ToneCard>
   );

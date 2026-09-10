@@ -163,7 +163,7 @@ function _attachRect(base: DeemedGiftResult, subType: SubType, rect?: Rectificat
   const refundableTax = safeMultiplyThenDivide(rect.giftTaxCalculated, remainingMonths, totalMonths);
   const steps: CalculationStep[] = [
     { label: "증여세 산출세액 (세대생략 할증 §57 포함)", amount: rect.giftTaxCalculated, lawRef: GIFT.RECTIFICATION_FORMULA_81_9 },
-    { label: `× 잔여 ${remainingMonths}개월 / ${totalMonths}개월`, amount: refundableTax, lawRef: GIFT.RECTIFICATION_79_2, note: "경정청구 가능 세액" },
+    { label: `× (잔여 ${remainingMonths}개월) / (${totalMonths}개월)`, amount: refundableTax, lawRef: GIFT.RECTIFICATION_79_2, note: "경정청구 가능 세액" },
   ];
   return {
     ...base,

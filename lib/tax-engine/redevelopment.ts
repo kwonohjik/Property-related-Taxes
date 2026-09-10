@@ -24,6 +24,7 @@ import {
 } from "./redevelopment-split";
 import { computeRedevelopmentLthd, applyLthdToGain } from "./redevelopment-lthd";
 import { runSuccessorMember } from "./redevelopment-successor";
+import { scaleRedevelopmentForBurdenedGift } from "./redevelopment-burdened-gift";
 import {
   calcRedevLandContribEstimated,
 } from "./redevelopment-land-contribution";
@@ -118,6 +119,17 @@ export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput 
    * 사례 45 — 청산금납부분 LTHD 표2 진입 가드 (해석례 2020-386).
    */
   newHouseResidenceMonths?: number;
+  /**
+   * 부담부증여 채무비율 `r = B/C` (소령 §159①) — **β 스케일**.
+   *
+   * 미전달·`1`이면 아무 것도 바뀌지 않는다(일반 양도). 값이 오면 §166 산식의 절대 금액항
+   * (평가액·청산금·인가전후 필요경비)을 `r`배로 줄여 §159가 이미 안분한 취득가액·양도가액과
+   * **스케일을 맞춘다**. 근거·적용 범위는 `redevelopment-burdened-gift.ts` 헤더.
+   *
+   * ⚠️ `ownershipRatio`(공유지분)와 **독립**이다 — `scaleBurdenedGiftInfo`가 평가액·채무액을
+   *    먼저 지분분으로 줄이므로 `B/C`는 지분 중립이고, 두 비율은 서로 다른 축이다.
+   */
+  debtRatio?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -136,8 +148,38 @@ export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput 
  * total.gain 과 total.lthd 에 적용 (분배법칙으로 분기별 분배는 UI 표시용).
  */
 export function runRedevelopment(
-  input: RedevelopmentOrchestratorInput,
+  rawInput: RedevelopmentOrchestratorInput,
 ): RedevelopmentResult {
+  /**
+   * ─ Step 0: 부담부증여 β 스케일 (소령 §159 × §166) ─
+   *
+   * **모든 분기보다 먼저** 한 번만 적용한다. 승계조합원·주택출자환산·토지출자환산 셋은
+   * `computeRedevelopmentSplit`보다 **앞에서 조기 반환**하므로, 스케일을 split 안에 두면
+   * 그 세 경로에 도달하지 않는다.
+   *
+   * `debtRatio`가 없으면 `rawInput`을 그대로 돌려받는다 — 일반 양도 경로는 무변경이다.
+   */
+  const scaledRedevelopment = scaleRedevelopmentForBurdenedGift(
+    rawInput.redevelopment,
+    rawInput.debtRatio,
+  );
+  /**
+   * §166③ 환산 분기는 부담부증여에서 **점화되지 않는다** —
+   * `transfer-tax-burdened-gift-step.ts`가 `useEstimatedAcquisition: false`를 강제한다.
+   * 그 전제가 깨지면 기준시가(비율항)는 물건 전체인데 평가액(절대항)만 줄어들어 환산 산식이
+   * 조용히 틀린다 ⇒ 통과시키지 않고 여기서 멈춘다.
+   */
+  if (rawInput.debtRatio !== undefined && rawInput.debtRatio !== 1 && rawInput.useEstimatedAcquisition) {
+    throw new Error(
+      "[redev-burdened-gift] 부담부증여에서 §166③ 환산 분기는 지원하지 않습니다 — " +
+        "취득가액은 소령 §159①1호가 정하는 값(기준시가 또는 실지거래가액)을 채무비율로 안분합니다.",
+    );
+  }
+  const input: RedevelopmentOrchestratorInput =
+    scaledRedevelopment === rawInput.redevelopment
+      ? rawInput
+      : { ...rawInput, redevelopment: scaledRedevelopment };
+
   // 사례 48 — 승계조합원 분기 (관리처분 후 입주권 승계 → 신축APT 양도).
   // §166 안분 우회 + 준공일 기산 LTHD/세율 (사전-2019-법령해석재산-0649).
   if (input.redevelopment.isSuccessorMember === true) {

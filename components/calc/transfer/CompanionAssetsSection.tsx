@@ -94,6 +94,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           contractTotalPrice={contractTotalPrice}
           totalTransferExpense={totalTransferExpense}
           onAddAsset={(patch) => addAsset(patch)}
+          hasIncrementAsset={assets.some((a) => a.isReplotIncrement)}
           primaryAsset={idx > 0 ? assets[0] : undefined}
           isOneHouseSingle={isOneHouseSingle}
           wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}

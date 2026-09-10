@@ -56,7 +56,7 @@ test.describe("비상장주식 V2 입력 편의 3종", () => {
     await openV2FormalCard(page);
 
     // 액면가 입력 후 blur (다음 필드로 이동해 onChange 완료 보장)
-    const faceValueInput = page.getByPlaceholder("1주당 액면가액");
+    const faceValueInput = page.getByLabel("1주당 액면가액", { exact: true });
     await faceValueInput.fill("5000");
     await faceValueInput.press("Tab");
 
@@ -88,7 +88,7 @@ test.describe("비상장주식 V2 입력 편의 3종", () => {
     await openV2FormalCard(page);
 
     // 액면가·발행주식총수 입력 — 자동 계산 hint 나타남
-    const faceValueInput = page.getByPlaceholder("1주당 액면가액");
+    const faceValueInput = page.getByLabel("1주당 액면가액", { exact: true });
     await faceValueInput.fill("5000");
     await faceValueInput.press("Tab");
 
@@ -101,7 +101,7 @@ test.describe("비상장주식 V2 입력 편의 3종", () => {
 
     // 자본금을 사용자가 직접 입력하면 capital이 store에 저장되어 hint가 사라짐
     // (capital이 있으면 hint = "제1쪽 1번" 표시)
-    const capitalInput = page.getByPlaceholder("자본금");
+    const capitalInput = page.getByLabel("자본금", { exact: true });
     await capitalInput.click();
     await capitalInput.press("Control+A");
     await capitalInput.type("99000000");

@@ -14,6 +14,7 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { getMajorShareholderThreshold } from "@/lib/tax-engine/stock-transfer/stock-rate-tables";
+import { computeShareRatioAugmentation } from "@/lib/tax-engine/stock-transfer/stock-classification";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 
@@ -35,6 +36,13 @@ export function computeAutoIsMajor(
     //   갈려, 사용자가 없앨 수 없는 상시 오탐 경고가 떴다(세액은 엔진 자동 산출이 우선이라 무영향).
     | "isVentureCompany"
     | "isKOTCTrading"
+    // 🔴 2026-09-08 — 대차·사모펀드 가산 축이 빠져 있었다. 엔진은 합산 여부와 무관하게
+    //   본인 지분율에 가산하는데(`stock-classification.ts` effectiveShareRatio) 화면은
+    //   가산하지 않아, 입력 경로를 여는 순간 판정이 갈리고 지울 수 없는 mismatchWarning이
+    //   뜬다([[feedback_shared_predicate_argument_parity]] — 벤처 40억 축과 같은 구조).
+    | "lentSharesCount"
+    | "pefIndirectSharesCount"
+    | "totalIssuedShares"
   >,
   patch: Partial<StockTransferFormData>,
 ): boolean | undefined {
@@ -60,10 +68,19 @@ export function computeAutoIsMajor(
     { isVentureCompany: merged.isVentureCompany, isKOTCTrading: merged.isKOTCTrading },
   );
 
-  const selfRatio = parseDecimal(merged.selfShareRatio) * 0.01;
+  // 대차·사모펀드 가산 — 엔진과 **같은 함수**를 부른다(산식 복제 금지).
+  // 본인·합산 양쪽에 더해진다는 점도 엔진과 같다.
+  const { ratioAugment } = computeShareRatioAugmentation({
+    transferDate: new Date(merged.transferDate),
+    lentSharesCount: parseDecimal(merged.lentSharesCount),
+    pefIndirectSharesCount: parseDecimal(merged.pefIndirectSharesCount),
+    totalIssuedShares: parseDecimal(merged.totalIssuedShares),
+  });
+
+  const selfRatio = parseDecimal(merged.selfShareRatio) * 0.01 + ratioAugment;
   const selfCap = parseAmount(merged.selfMarketCap);
   const combRatio = merged.isLargestShareholderGroup
-    ? parseDecimal(merged.combinedShareRatio) * 0.01
+    ? parseDecimal(merged.combinedShareRatio) * 0.01 + ratioAugment
     : 0;
   const combCap = merged.isLargestShareholderGroup
     ? parseAmount(merged.combinedMarketCap)

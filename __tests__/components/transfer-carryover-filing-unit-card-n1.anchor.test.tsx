@@ -30,8 +30,15 @@ import type { CarryoverTaxationDetail } from "@/lib/tax-engine/types/transfer-ca
 
 afterEach(cleanup);
 
-/** 자산별 문구 — 다건에서는 사라져야 한다. */
-const ASSET_SCOPE_MARK = /신고세액 = max\(A, B\)/;
+/**
+ * 자산별 문구 — 다건에서는 사라져야 한다.
+ *
+ * ⚠️ 2026-09-08: 프록시 문자열이 「신고세액 = max(A, B)」에서 바뀌었다 — 산식 함수 표기
+ *    금지 규약(`feedback_result_view_korean_formula` · D-4)에 따라 한국어로 풀었다.
+ *    **이 앵커가 지키는 것은 문자열이 아니라 「자산별 스코프 문구의 유무」다** — 프록시만
+ *    갱신하고 단언(C-2 유·C-3 무)은 그대로 둔다.
+ */
+const ASSET_SCOPE_MARK = /신고세액 = 시나리오 A·B 중 큰 금액/;
 const BIGGER_TAX_BADGE = /채택 \(더 큰 세액\)/;
 /** 신고단위 판정 근거 블록의 판별 문구. */
 const FILING_UNIT_MARK = /신고 전체 결정세액 비교/;

@@ -446,7 +446,7 @@ export function Step2({ form, onChange }: Step2Props) {
                       <CurrencyInput
                         label="취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)"
                         required
-                        hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 base"
+                        hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 기준액"
                         value={form.acquisitionDatePriceAvg1Month}
                         onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
                         placeholder="취득일 이전 1개월 종가평균 (1주당)"

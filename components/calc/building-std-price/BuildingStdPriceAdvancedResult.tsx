@@ -9,6 +9,7 @@ import type {
   BuildingStdPriceBreakdown,
 } from "@/lib/tax-engine/building-standard-price";
 import type { ApartmentConversionResult } from "@/lib/tax-engine/types/building-standard-price.types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 
@@ -89,7 +90,8 @@ function ApartmentConversionCard({ ac }: { ac: ApartmentConversionResult }) {
 
       <div className="space-y-2 border-t pt-2 text-xs leading-relaxed text-slate-600">
         <p>
-          취득당시 기준시가 = 최초고시 공동주택기준시가 × (취득당시 토지 + 건물) ÷ (최초고시 토지 + 건물)
+          취득당시 기준시가 = 최초고시 공동주택기준시가 ×{" "}
+          <Frac top="취득당시 토지 + 건물" bottom="최초고시 토지 + 건물" />
         </p>
         <div className="grid grid-cols-2 gap-x-3 gap-y-1">
           <span>② 최초고시 토지가액</span>
@@ -108,7 +110,7 @@ function ApartmentConversionCard({ ac }: { ac: ApartmentConversionResult }) {
           <b>{ac.acquisitionAcqBaseRate}</b>
         </p>
         <p>
-          = {fmt(numer)} ÷ {fmt(denom)} × 최초고시 기준시가 ={" "}
+          = <Frac top={fmt(numer)} bottom={fmt(denom)} /> × 최초고시 기준시가 ={" "}
           <b className="font-mono tabular-nums">{fmt(ac.convertedAcquisitionPrice)}</b>
         </p>
       </div>

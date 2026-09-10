@@ -39,14 +39,35 @@ const BRANCH_LABEL_PAY: Record<RedevBranch, BranchLabelDef> = {
 // LTHD: 인가전 분만 적용 (§95② 본문 괄호). 인가후·청산금 분 LTHD=0 강제.
 const BRANCH_LABEL_RIGHT_PAY: Record<RedevBranch, BranchLabelDef> = {
   preApproval: { prefix: "① 인가전 분", legal: "§166①1호 · §166⑤1호 (취득일~인가일 기산)" },
-  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (LTHD 제외)", legal: "§166①1호 · §95② 본문 괄호 (인가후분 = 0 fill)" },
-  settlement: { prefix: "② 인가후·청산금 납부분 (LTHD 제외)", legal: "§166①1호 · §95② 본문 괄호 (LTHD 공제율 0%)" },
+  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (장기보유특별공제 제외)", legal: "§166①1호 · §95② 본문 괄호 (인가후분 = 0 fill)" },
+  settlement: { prefix: "② 인가후·청산금 납부분 (장기보유특별공제 제외)", legal: "§166①1호 · §95② 본문 괄호 (장기보유특별공제 공제율 0%)" },
 };
 
-// 사례 46 — receiveOnly 모드 전용 라벨 (§166①2호 가목 단독, 인가전·인가후 0 강제).
+/*
+ * 사례 46 — 청산금 **수령 단독 신고** 전용 라벨 (§166①2호 가목 단독, 인가전·인가후 0 강제).
+ *
+ * 🔴 `legal` 자리는 화면·PDF에서 **근거 조문**으로 읽힌다(다른 분기는 전부 「§166①1호 ·
+ *    §166⑤2호나목」 같은 인용이다). 종전에는 여기에 내부 플래그 이름이 그대로 실려
+ *    「① 인가전 분 (미신고) (**receiveOnly — 0 강제**)」로 찍혔다 — 코드 식별자가 근거인 것처럼
+ *    보였다(메모리 `feedback_no_internal_id_in_result`).
+ */
+/**
+ * 사례 46에서 인가전·인가후 분의 **산식 칸**에 찍히는 0 — 3항목(양도가액·취득가액·필요경비)
+ * × 2분할 = 6칸이다.
+ *
+ * 🔴 같은 이유로 내부 식별자를 쓰지 않는다 (2026-09-07 UI 리뷰 L7). 종전 문자열
+ *    `"0 (receiveOnly — 신고 대상 아님)"`은 `PerAssetRow`의 `<FormulaText>`가 그대로
+ *    인쇄해 사용자가 한 화면에서 코드 토큰을 6번 봤다. 산식 슬롯은 components/calc/CLAUDE.md가
+ *    「한국어 풀어쓰기·법정 용어 우선」을 요구하는 자리다.
+ */
+const RECEIVE_ONLY_ZERO_FORMULA = "0 (청산금 수령분만 신고 대상 — §166①2호 가목)";
+
 const BRANCH_LABEL_RECEIVE_ONLY: Record<RedevBranch, BranchLabelDef> = {
-  preApproval: { prefix: "① 인가전 분 (미신고)", legal: "receiveOnly — 0 강제" },
-  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분 (미신고)", legal: "receiveOnly — 0 강제" },
+  preApproval: { prefix: "① 인가전 분 (미신고)", legal: "§166①2호 가목 — 청산금 수령분 단독 신고" },
+  postApprovalExistingHouse: {
+    prefix: "② 인가후 기존건물분 (미신고)",
+    legal: "§166①2호 가목 — 청산금 수령분 단독 신고",
+  },
   settlement: { prefix: "③ 청산금 수령분 (단독 신고)", legal: "§166①2호 가목 · 재산-439 · 서면2016-2705" },
 };
 
@@ -59,7 +80,12 @@ const BRANCH_LABEL_SUCCESSOR_MEMBER: Record<RedevBranch, BranchLabelDef> = {
     prefix: "② 승계조합원 신축APT (단순 차감)",
     legal: "사전-2019-법령해석재산-0649 · 시행령 §162①4호",
   },
-  settlement: { prefix: "③ 청산금 분 (승계조합원 — 미신고)", legal: "본 PR 미지원" },
+  // 🔴 `legal`은 **근거 조문** 자리다 — 종전 "본 PR 미지원"은 저장소 내부 사정을
+  //    법령근거인 것처럼 인쇄했다(위 사례 46 L7과 같은 병).
+  settlement: {
+    prefix: "③ 청산금 분 (승계조합원 — 미신고)",
+    legal: "사전-2019-법령해석재산-0649 — 승계조합원 청산금 분은 별도 산정",
+  },
 };
 
 // 사례 47 — settlement 비과세 차감 모드 라벨 (신축APT 양도 + 청산금 수령 동시신고).
@@ -84,12 +110,12 @@ const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
     legal: "§166①2호 나목 · §166⑤1호 (취득일~인가일 기산)",
   },
   postApprovalExistingHouse: {
-    prefix: "② 인가후 기존건물분 (LTHD 제외)",
+    prefix: "② 인가후 기존건물분 (장기보유특별공제 제외)",
     legal: "§166①2호 · §95② 본문 괄호 (인가후분 = 0)",
   },
   settlement: {
-    prefix: "③ 인가후 분 (§166①2호 가목) — LTHD 미적용",
-    legal: "§166①2호 가목 · §95② 본문 괄호 · §94①2호 (zeroBranch)",
+    prefix: "③ 인가후 분 (§166①2호 가목) — 장기보유특별공제 미적용",
+    legal: "§166①2호 가목 · §95② 본문 괄호 · §94①2호 (공제율 0 적용)",
   },
 };
 
@@ -106,12 +132,13 @@ function getBranchLabels(
   if (redev.settlementExemptionApplied === true) return BRANCH_LABEL_SETTLEMENT_EXEMPTED;
   // 우선순위 3: subject="right" + settlementDirection="receive" — §166①2호 가목·나목 (R-5)
   if (subject === "right" && settlementDirection === "receive") return BRANCH_LABEL_RIGHT_RECEIVE_NAMOK;
-  // 우선순위 4: subject="right" 입주권 납부 모드 (사례 36 — §166①1호 + §95② 단서)
+  // 우선순위 4: subject="right" 입주권 납부 모드 (사례 36 — §166①1호 + §95② 본문 괄호)
   if (subject === "right") return BRANCH_LABEL_RIGHT_PAY;
   return BRANCH_LABEL_PAY;
 }
 
-const fmt = (n: number) => n.toLocaleString("ko-KR");
+/** 재개발 산식·오버라이드 공용 숫자 포맷. 분리 파일(`…RedevOverrides`)도 쓴다. */
+export const fmt = (n: number) => n.toLocaleString("ko-KR");
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 산식 빌더 — 각 분할별
@@ -128,7 +155,7 @@ export function buildRedevTransferFormula(
     if (branch === "settlement") {
       return `청산금 수령액 = ${fmt(redev.settlement.apportionedTransfer)} (§166①2호 가목 — 양도가액 의제)`;
     }
-    return "0 (receiveOnly — 신고 대상 아님)";
+    return RECEIVE_ONLY_ZERO_FORMULA;
   }
 
   const sale = redev.salePriceTotal ?? 0;
@@ -176,7 +203,7 @@ export function buildRedevAcquisitionFormula(
       const oldAcq = settle > 0 ? Math.round((apportioned * rights) / settle) : 0;
       return `안분 취득가액 = ${fmt(oldAcq)} × (${fmt(settle)} ÷ ${fmt(rights)}) = ${fmt(apportioned)} (§166①2호 가목 — 종전 취득가 × 청산금 ÷ 권리가액, 1원 미만 절사)`;
     }
-    return "0 (receiveOnly — 신고 대상 아님)";
+    return RECEIVE_ONLY_ZERO_FORMULA;
   }
 
   if (branch === "preApproval") {
@@ -210,26 +237,55 @@ export function buildRedevExpenseFormula(
     if (branch === "settlement") {
       return "0 (청산금 수령분 별도 필요경비 미산정 — §97①2·3호 슬롯 미매핑)";
     }
-    return "0 (receiveOnly — 신고 대상 아님)";
+    return RECEIVE_ONLY_ZERO_FORMULA;
   }
+
+  /**
+   * 🔴 **분할 행은 엔진의 `branch.expenses`를 그대로 쓴다** (2026-09-07 UI 리뷰).
+   *
+   * 합계는 이미 `redevBranchTotals(redev).expenses`(세 분기 합)로 고쳐져 있었는데 분할 행만
+   * 「인가전 = `estimatedLumpDeduction`, 나머지 = 0」으로 남아 **합계와 분할이 어긋났다**.
+   * 엔진은 인가전에 `preApprovalNecessaryExpense(개산공제, 인가전필요경비)`(수령 분기는 §166①2호
+   * 나목 비율로 안분), 인가후 기존건물분에 `postApprovalExpenseShare.existingHouse`,
+   * 청산금 분에 `postApprovalExpenseShare.settlement + settlementPreExpenseShare`를 담는다
+   * (`redevelopment.ts:667·694·740`).
+   */
+  const amount = redev[branch].expenses ?? 0;
 
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
     if (lump > 0 && redev.valuationMeta && redev.valuationMeta.numerator !== undefined) {
       // base는 엔진 echo(지분 기준시가) 우선 — numerator는 물건 전체(100%) 값이다.
       const P_A = redev.valuationMeta.lumpDeductionBase ?? redev.valuationMeta.numerator;
-      return `개산공제 = ${fmt(P_A)} × 3% = ${fmt(lump)} (§163⑥ — 취득 당시 개별주택가격(소득세법 시행령 §164④ 라목) × 3%, 1원 미만 절사)`;
+      const lumpFormula = `개산공제 = ${fmt(P_A)} × 3% = ${fmt(lump)} (§163⑥ — 취득 당시 개별주택가격(소득세법 시행령 §164④ 라목) × 3%, 1원 미만 절사)`;
+      // 개산공제 외 성분(인가전 필요경비·수령 분기 안분)이 있으면 **합계를 함께** 밝힌다.
+      return amount === lump
+        ? lumpFormula
+        : `${lumpFormula} → 인가전 분 필요경비 합계 ${fmt(amount)} (인가전 필요경비 포함 · 청산금 수령 분기는 §166①2호 나목 비율로 안분된 값)`;
     }
-    return "필요경비 없음 (실가 모드)";
+    return amount > 0
+      ? `인가전 분 필요경비 ${fmt(amount)} (실가 모드 — 개산공제 미적용)`
+      : "필요경비 없음 (실가 모드)";
   }
-  // 인가후·청산금 분은 신고서 표시상 0 (인가후·청산금 분에는 별도 필요경비 항목이 없음)
-  return "해당 분할에는 개산공제 미적용";
+  // 인가후·청산금 분에는 개산공제(§163⑥)가 없다 — 다만 그 분할 몫의 필요경비는 있을 수 있다.
+  return amount > 0
+    ? `${branch === "settlement" ? "청산금 분" : "인가후 기존건물분"} 필요경비 ${fmt(amount)} (개산공제 미적용)`
+    : "해당 분할에는 개산공제 미적용";
 }
 
 /** 양도차익 분할별 산식 (사례 45 — 12억 안분 시 과세대상 표기) */
 export function buildRedevGainFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
+  /**
+   * 「**전체** 양도차익」 행인가 — 12억 안분 **전** 값을 쓴다.
+   *
+   * 🔴 종전에는 한 빌더가 「전체 양도차익」과 「과세대상 양도차익」 **두 행에 모두** 쓰였다.
+   *   `detail.gain`은 12억 안분이 걸리면 **안분 後 과세대상**이라(안분 전은
+   *   `gainBeforeAllocation`에 따로 있다 — `transfer-tax-redevelopment-transforms.ts:209~211`),
+   *   전체 양도차익 행의 자산별 값이 그 행의 합계(Σ`gainBeforeAllocation`)와 어긋났다.
+   */
+  gross = false,
 ): string {
   const detail = redev[branch];
   const t = detail.apportionedTransfer;
@@ -245,23 +301,25 @@ export function buildRedevGainFormula(
   ) {
     const before = detail.gainBeforeAllocation ?? detail.gainAfterAllocation;
     const after = detail.gainAfterAllocation;
+    if (gross) return `${fmt(t)} − ${fmt(a)} = ${fmt(before)} (안분 전)`;
     return (
       `${fmt(t)} − ${fmt(a)} = ${fmt(before)} (안분 전) ` +
-      `→ × (양도가 − 12억) / 양도가 = ${fmt(after)} (안분 후) ` +
+      `→ × (양도가 − 12억) / (양도가) = ${fmt(after)} (안분 후) ` +
       `− 1세대1주택 비과세 차감 ${fmt(after)} = 0 ` +
       `(인가일 평가액 ≤ 12억 — 서면2016-법령해석재산-2705)`
     );
   }
 
   // 12억 안분 적용 시 detail.gain 은 과세대상(전체 × taxableRatio). 안내 라벨 추가.
-  const suffix = hva
+  const suffix = hva && !gross
     ? ` (12억 안분 후 과세대상 — 전체 × ${(hva.taxableRatio * 100).toFixed(0)}%)`
     : "";
+  const value = gross ? (detail.gainBeforeAllocation ?? detail.gain) : detail.gain;
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
-    return `${fmt(t)} − ${fmt(a)} − 개산공제 ${fmt(lump)} = ${fmt(detail.gain)}${suffix}`;
+    return `${fmt(t)} − ${fmt(a)} − 개산공제 ${fmt(lump)} = ${fmt(value)}${suffix}`;
   }
-  return `${fmt(t)} − ${fmt(a)} = ${fmt(detail.gain)}${suffix}`;
+  return `${fmt(t)} − ${fmt(a)} = ${fmt(value)}${suffix}`;
 }
 
 /** 장기보유공제 분할별 산식 (사례 45 — 거주월수 귀속 분리 시 안내) */
@@ -289,7 +347,7 @@ export function buildRedevLthdFormula(
   }
 
   if (!detail.gain || detail.gain <= 0) {
-    return "LTHD 대상 양도차익 부존재";
+    return "장기보유특별공제 대상 양도차익 부존재";
   }
   const years = Math.floor(detail.holdingMonths / 12);
   const months = detail.holdingMonths % 12;
@@ -378,7 +436,7 @@ export function buildRedevPerAssetForExpense(
 ): PerAssetValue[] {
   return buildPerAsset(
     redev,
-    (b, r) => (b === "preApproval" ? (r.estimatedLumpDeduction ?? 0) : 0),
+    (b, r) => r[b].expenses ?? 0,
     (b, r) => buildRedevExpenseFormula(b, r),
     subject,
     settlementDirection,
@@ -394,6 +452,27 @@ export function buildRedevPerAssetForGain(
     redev,
     (b, r) => r[b].gain,
     (b, r) => buildRedevGainFormula(b, r),
+    subject,
+    settlementDirection,
+  );
+}
+
+/**
+ * 「**전체** 양도차익」 행 전용 — 12억 안분 **전** 값(`gainBeforeAllocation`).
+ *
+ * 그 행의 합계는 `effectiveGrossGain(result)` → `redevBranchTotals().gain` =
+ * Σ`gainBeforeAllocation`이다. 종전에는 자산별 행이 `buildRedevPerAssetForGain`(안분 後)을
+ * 그대로 써서 **합계와 어긋났다** — 「과세대상 양도차익」 행과 값이 완전히 같아지기도 했다.
+ */
+export function buildRedevPerAssetForGrossGain(
+  redev: RedevelopmentResult,
+  subject?: "apt" | "right",
+  settlementDirection?: "pay" | "receive",
+): PerAssetValue[] {
+  return buildPerAsset(
+    redev,
+    (b, r) => r[b].gainBeforeAllocation ?? r[b].gain,
+    (b, r) => buildRedevGainFormula(b, r, true),
     subject,
     settlementDirection,
   );
@@ -425,362 +504,4 @@ export function buildRedevPerAssetForIncome(
     subject,
     settlementDirection,
   );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 진입 헬퍼 — DetailedStatementHelpers.ts buildStatementItems()에서 1줄 호출
-// ──────────────────────────────────────────────────────────────────────────────
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 사례 37 — 토지 출자 §166③ 2분할 산식 빌더
-// ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * 토지 출자 §166③ 케이스 — 산식 오버라이드.
- *
- * originalAssetType="land" + subject="right" + settlementDirection="pay" 분기.
- * landContribDetail echo 필드를 소비하여 산식·LTHD 라벨 부착.
- *
- * 산식 규칙:
- *  - 인가전: 권리가액 − 환산취득가(§166③) − 개산공제(§163⑥) = 인가전 양도차익
- *  - 인가후: 양도가액 − 권리가액 − 청산금 − 인가후 필요경비 = 인가후 양도차익
- *  - LTHD: 인가전 14% (§166⑤1호) / 인가후 0 (§95② 본문 괄호)
- */
-export function applyLandContribOverrides(
-  items: Map<string, StatementItem>,
-  redev: RedevelopmentResult,
-  totalTransferPrice: number,
-): void {
-  const lcd = redev.landContribDetail;
-  if (!lcd) return; // landContribDetail 없으면 하우징 분기로 fall-through
-
-  const fmt = (n: number) => n.toLocaleString("ko-KR");
-  const pre = redev.preApproval;
-  /**
-   * 🔴 **인가후 분은 `settlement`다** (2026-09-07 UI 리뷰).
-   *
-   * 토지 출자 경로에서 엔진은 `postApprovalExistingHouse`를 **전 필드 0으로 zero-fill**하고
-   * (`lib/tax-engine/redevelopment.ts:267` 「항상 0」) 실제 인가후 분을 `settlement`에 담는다
-   * (:293~309 — 양도가액=실지 양도가 전액 · 취득가액=권리가액 · 필요경비=청산금+부대비용).
-   *
-   * 같은 화면 신고서 양식은 이를 알고 `const post = r.settlement;`를 쓰며
-   * `FilingFormTableRedevRows.ts:284`에 「zero-filled — **사용 금지**」라고 적어 두었다.
-   * 이 파일만 금지된 슬롯을 읽어 ② 인가후 분 행이 **전부 0**으로 떴고, 합계 행은 정상값이라
-   * 「합계 ≠ 분할 합」이 되며 신고서와 명세서가 같은 자산을 정면으로 다르게 표시했다.
-   */
-  const post = redev.settlement;
-
-  // 양도가액
-  const transferItem = items.get("transferPrice");
-  if (transferItem) {
-    transferItem.formula =
-      "합계 = 실지 양도가액. 분할 표시는 §166① — 인가전은 권리가액 의제, 인가후는 실지 양도가액 전액이며 단계별 의제라 합계와 다르다";
-    transferItem.legalBasis = "소득세법 시행령 §166①1호 · §166④";
-    transferItem.perAsset = [
-      {
-        label: "① 인가전 분 (§166①1호 · §166⑤1호 — 취득일~인가일 기산)",
-        value: pre.apportionedTransfer,
-        formula: `의제 양도가액 = 권리가액 = ${fmt(pre.apportionedTransfer)} (§166④)`,
-      },
-      {
-        label: "② 인가후 분 (LTHD 제외 — §95② 본문 괄호)",
-        value: post.apportionedTransfer,
-        // 인가후 분의 **양도가액**은 실지 양도가액 전액이다(신고서 정본과 같은 값).
-        // 종전 문구는 양도차익 산식을 양도가액 자리에 적고, 「청산금」 항에 권리가액을
-        // 넣은 데다 우변이 zero-filled 0이라 좌변이 만들지 못하는 거짓 등식이었다.
-        formula: `실지 양도가액 전액 = ${fmt(post.apportionedTransfer)} (§166①1호 — 인가전 분은 권리가액으로 의제)`,
-      },
-    ];
-  }
-
-  // 취득가액
-  const acqItem = items.get("acquisitionPrice");
-  if (acqItem) {
-    // 합계는 **역산**이다 — §166은 파트가 단계별 의제라 파트 합이 실제 취득가액이 아니다.
-    // 신고서 양식과 같은 leaf·같은 인자를 쓴다(`redev-acquisition-inverse.ts`).
-    acqItem.value = redevFilingTotals(redev, totalTransferPrice).acquisition;
-    acqItem.formula =
-      "토지 출자 §166③ — 합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (단계별 의제 구조상 파트 합과 다름)";
-    acqItem.legalBasis = "소득세법 시행령 §166③";
-    acqItem.note = undefined;
-    acqItem.perAsset = [
-      {
-        label: "① 인가전 분 (§166③ — 권리가액 × 취득기준시가 / 관리처분 직전 기준시가)",
-        value: pre.apportionedAcquisition,
-        formula:
-          `환산취득가 = ${fmt(pre.apportionedTransfer)} × (${fmt(lcd.landStdPriceAtAcq)} ÷ ${fmt(lcd.landStdPriceAtApproval)}) = ${fmt(lcd.convertedAcquisition)} (1원 미만 절사)`,
-      },
-      {
-        label: "② 인가후 분 (§166②1호 — 권리가액 의제)",
-        value: post.apportionedAcquisition,
-        formula: `의제 = 권리가액 = ${fmt(post.apportionedAcquisition)}`,
-      },
-    ];
-  }
-
-  // 필요경비
-  const expItem = items.get("expenses");
-  if (expItem) {
-    expItem.value = redevBranchTotals(redev).expenses;
-    expItem.formula = "분할별 필요경비 합 — 인가전 개산공제(§163⑥) + 인가후 분 필요경비";
-    expItem.legalBasis = "소득세법 시행령 §163⑥";
-    expItem.perAsset = [
-      {
-        label: "① 인가전 분 (§163⑥)",
-        value: lcd.estimatedDeduction,
-        formula: `${fmt(lcd.landStdPriceAtAcq)} × 3% = ${fmt(lcd.estimatedDeduction)} (1원 미만 절사)`,
-      },
-      {
-        label: "② 인가후 분",
-        value: 0,
-        formula: "해당 분할에는 개산공제 미적용",
-      },
-    ];
-  }
-
-  // 전체 양도차익
-  const gainItem = items.get("transferGain");
-  if (gainItem) {
-    gainItem.formula = "토지 출자 §166① 분할별 양도차익 합 = 인가전 + 인가후";
-    gainItem.legalBasis = "소득세법 시행령 §166①1호";
-    gainItem.perAsset = [
-      {
-        label: "① 인가전 분",
-        value: pre.gain,
-        formula: `권리가액 ${fmt(pre.apportionedTransfer)} − 환산취득가 ${fmt(lcd.convertedAcquisition)} − 개산공제 ${fmt(lcd.estimatedDeduction)} = ${fmt(pre.gain)}`,
-      },
-      {
-        label: "② 인가후 분",
-        value: post.gain,
-        // 필요경비(청산금 불입액 + 인가후 부대비용) 항을 빠뜨리면 좌변이 우변을 만들지 못한다.
-        formula: `${fmt(post.apportionedTransfer)} − ${fmt(post.apportionedAcquisition)} − 필요경비 ${fmt(post.expenses ?? 0)} = ${fmt(post.gain)}`,
-      },
-    ];
-  }
-
-  // 과세대상 양도차익
-  const taxableItem = items.get("taxableGain");
-  if (taxableItem) {
-    taxableItem.perAsset = gainItem?.perAsset;
-  }
-
-  // 장기보유특별공제
-  const ltItem = items.get("ltDeduction");
-  if (ltItem) {
-    ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전 분만 LTHD (취득일~인가일 기산). 인가후 LTHD=0 (본문 괄호)";
-    ltItem.legalBasis = "소득세법 §95② 본문 괄호 · 시행령 §166⑤1호";
-    const preYears = Math.floor(pre.holdingMonths / 12);
-    const preMons = pre.holdingMonths % 12;
-    const prePct = (pre.lthdRate * 100).toFixed(0);
-    ltItem.perAsset = [
-      {
-        label: `① 인가전 분 (§166⑤1호 — 취득일~인가일, ${prePct}%)`,
-        value: pre.lthd,
-        formula: `${fmt(pre.gain)} × ${prePct}% (보유 ${preYears}년 ${preMons}개월) = ${fmt(pre.lthd)}`,
-      },
-      {
-        label: "② 인가후 분 (LTHD=0 — §95② 본문 괄호)",
-        value: 0,
-        formula: "LTHD 대상 양도차익 부존재 (본문 괄호 — 관리처분 인가 전 토지·건물분에 한정)",
-      },
-    ];
-  }
-
-  // 보유/거주 분리 항목
-  const ltHoldItem = items.get("ltHoldingPart");
-  if (ltHoldItem) {
-    ltHoldItem.note = "토지 출자 §166⑤1호 — 인가전 분만 보유기간 LTHD (표1), 인가후 미적용";
-    ltHoldItem.perAsset = undefined;
-  }
-  const ltResItem = items.get("ltResidencePart");
-  if (ltResItem) {
-    ltResItem.note = "토지 출자 — 거주 분리 미적용";
-    ltResItem.perAsset = undefined;
-  }
-
-  // 양도소득금액
-  const incomeItem = items.get("incomeAmount");
-  if (incomeItem) {
-    incomeItem.formula = "토지 출자 §166 분할별 (양도차익 − LTHD) 합";
-    incomeItem.legalBasis = "소득세법 §95①";
-    incomeItem.perAsset = [
-      {
-        label: "① 인가전 분",
-        value: Math.max(0, pre.gain - pre.lthd),
-        formula: `${fmt(pre.gain)} − ${fmt(pre.lthd)} = ${fmt(Math.max(0, pre.gain - pre.lthd))}`,
-      },
-      {
-        label: "② 인가후 분",
-        value: Math.max(0, post.gain - post.lthd),
-        formula: `${fmt(post.gain)} − 0 = ${fmt(post.gain)}`,
-      },
-    ];
-  }
-}
-
-/**
- * 재개발 케이스 1단계 양도차익 산정 그룹의 항목에 3분할 perAsset[] 부착.
- *
- * - isAggregate(다건) 모드와 mutually exclusive로 처리 (호출 전 분기 체크)
- * - 합계값(value)은 기존 단건 합계 그대로 유지 → 32-항목 합계 anchor 회귀 0
- * - 각 항목의 formula·legalBasis는 재개발 §166 컨텍스트로 갱신
- */
-export function applyRedevelopmentOverrides(
-  items: Map<string, StatementItem>,
-  redev: RedevelopmentResult,
-  totalTransferPrice: number,
-  subject?: "apt" | "right",
-  settlementDirection?: "pay" | "receive",
-  /**
-   * §95② 장기보유특별공제 **배제 사유** — 있으면 분할별 산식 대신 사유를 쓴다.
-   *
-   * 재개발은 자체 산식 빌더를 쓰므로 일반 경로의 `buildLthdFallbackFormulas`(배제 시
-   * 「0 — 사유」로 대체)를 타지 않는다. 그래서 배제돼도 「양도차익 × **0%** (보유 21년 1개월)」로
-   * 표시돼 **보유기간이 짧아서 0인 것처럼** 읽혔다.
-   */
-  lthdExclusionReason?: LthdExclusionReason,
-): void {
-  // 사례 37 — 토지 출자 §166③ 분기: landContribDetail 존재 시 2분할 산식으로 오버라이드
-  if (redev.landContribDetail) {
-    applyLandContribOverrides(items, redev, totalTransferPrice);
-    applyLthdExclusionOverride(items, lthdExclusionReason);
-    return;
-  }
-
-  const isRightSubject = subject === "right";
-  const isRightReceive = isRightSubject && settlementDirection === "receive";
-
-  // 양도가액 — 합계는 totalTransferPrice 유지.
-  // ⚠️ 산식 문구는 **합계가 아니라 분할 구조**를 설명한다. 종전 문구("인가전 + 인가후 + 청산금")는
-  //    합계가 그 셋의 합인 것처럼 읽혀 값(계약총액)과 어긋났다 — 파트 합은 실제 양도가액이 아니다.
-  const transferItem = items.get("transferPrice");
-  if (transferItem) {
-    // 청산금 **수령** 동시신고는 신고 단위가 두 개의 양도다 — 신축APT 양도가액 + 청산금.
-    // 신고서 양식과 같은 leaf를 써서 두 카드가 같은 합계를 말하게 한다.
-    const separate = redev.settlementSeparateConsideration ?? 0;
-    if (separate > 0) {
-      transferItem.value = redevFilingTotals(redev, totalTransferPrice).transferPrice;
-      transferItem.formula = `합계 = 신축주택 양도가액 ${fmt(totalTransferPrice)} + 청산금 수령액 ${fmt(separate)} — 동시신고 단위의 대가 전부(§166①2호 가목은 별개의 양도다)`;
-      transferItem.legalBasis = "소득세법 시행령 §166①2호 가목 · §166②·④";
-    } else if (isRightReceive) {
-      transferItem.formula = "합계 = 실지 양도가액. 분할 표시는 §166①2호 — 인가전(권리가액−청산금 의제)·청산금 수령분(청산금 의제)이며 단계별 의제라 합계와 다르다";
-      transferItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166④";
-    } else {
-      transferItem.formula = isRightSubject
-        ? "합계 = 실지 양도가액. 분할 표시는 §166① — 인가전(권리가액 의제)·인가후·청산금(양도가액 − 권리가액 − 청산금 납부액)이며 단계별 의제라 합계와 다르다"
-        : "합계 = 실지 양도가액. 분할 표시는 §166 — 인가전(권리가액 의제)·인가후(분양가 안분)·청산금(분양가 안분)이며 단계별 의제라 합계와 다르다";
-      transferItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①·④" : "소득세법 시행령 §166①·②·④";
-    }
-    transferItem.perAsset = buildRedevPerAssetForTransfer(redev, totalTransferPrice, subject, settlementDirection);
-  }
-
-  // 취득가액
-  const acqItem = items.get("acquisitionPrice");
-  if (acqItem) {
-    // 합계: 분할별 apportionedAcquisition 합
-    // 합계는 **역산**이다 — 파트 합(단계별 의제)이 아니라 자기일관식에서 얻는다.
-    // 신고서 양식과 같은 leaf·같은 인자(`redevFilingTotals`)를 쓴다.
-    acqItem.value = redevFilingTotals(redev, totalTransferPrice).acquisition;
-    if (isRightReceive) {
-      acqItem.formula = "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166①2호 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(실가 또는 환산 − 안분 취득가)·청산금 분(종전취득가 × 청산금/권리가)";
-      acqItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166③";
-    } else {
-      acqItem.formula = isRightSubject
-        ? "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(§166③ 환산 또는 실가)·인가후·청산금(권리가액+청산금 의제)"
-        : "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(§166③ 환산 또는 실가)·인가후(권리가액 의제)·청산금(청산금 의제)";
-      acqItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①③ · §163" : "소득세법 시행령 §166③ · §163";
-    }
-    acqItem.note = undefined;
-    acqItem.perAsset = buildRedevPerAssetForAcquisition(redev, subject, settlementDirection);
-  }
-
-  // 필요경비 — 개산공제(§163⑥, 인가전만)
-  const expItem = items.get("expenses");
-  if (expItem) {
-    expItem.value = redevBranchTotals(redev).expenses;
-    expItem.formula = "분할별 필요경비 합 — 인가전 개산공제(§163⑥) + 인가후·청산금 분 필요경비";
-    expItem.legalBasis = "소득세법 시행령 §163⑥";
-    expItem.perAsset = buildRedevPerAssetForExpense(redev, subject, settlementDirection);
-  }
-
-  // 전체 양도차익 — 합계는 기존 result.transferGain 유지
-  const gainItem = items.get("transferGain");
-  if (gainItem) {
-    if (isRightReceive) {
-      gainItem.formula = "입주권 §166①2호 분할별 양도차익 합 = 인가전(나목 축소) + 청산금(가목)";
-      gainItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목";
-    } else {
-      gainItem.formula = isRightSubject
-        ? "입주권 §166①1호 분할별 양도차익 합 = 인가전 + 인가후·청산금"
-        : "재개발 §166 분할별 양도차익 합 = 인가전 + 인가후 기존건물분 + 청산금 분";
-      gainItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①1호" : "소득세법 시행령 §166①·②";
-    }
-    gainItem.perAsset = buildRedevPerAssetForGain(redev, subject, settlementDirection);
-  }
-
-  // 과세대상 양도차익 — 합계 result.taxableGain 유지 (1세대1주택 12억 안분 등은 합계 단계에서 처리)
-  const taxableItem = items.get("taxableGain");
-  if (taxableItem) {
-    taxableItem.perAsset = buildRedevPerAssetForGain(redev, subject, settlementDirection);
-  }
-
-  // 장기보유특별공제 — 분할별 lthdRate 상이
-  const ltItem = items.get("ltDeduction");
-  if (ltItem) {
-    if (isRightReceive) {
-      ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전(나목) 분만 LTHD 적용. 청산금(가목) 분 LTHD=0 (§94①2호)";
-      ltItem.legalBasis = "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목";
-    } else {
-      ltItem.formula = isRightSubject
-        ? "§95② 본문 괄호 + §166⑤1호 — 인가전 분만 LTHD 적용 (취득일~인가일 기산). 인가후·청산금 분 LTHD=0"
-        : "재개발 §166⑤ 분할별 보유기간·율 — 인가전·인가후 기존건물분(취득일 기산) + 청산금분(인가일 기산)";
-      ltItem.legalBasis = isRightSubject
-        ? "소득세법 §95② 단서 · §94①2호 · 시행령 §166⑤1호"
-        : "소득세법 §95② · 시행령 §166⑤";
-    }
-    ltItem.perAsset = buildRedevPerAssetForLthd(redev, subject, settlementDirection);
-  }
-
-  // 보유분/거주분 — 재개발은 분할별 표1·표2 적용으로 보유/거주 분리 미적용
-  const ltHoldItem = items.get("ltHoldingPart");
-  if (ltHoldItem) {
-    ltHoldItem.note = "재개발은 분할별 표1·표2 적용 — 보유/거주 분리 미적용";
-    ltHoldItem.perAsset = undefined;
-  }
-  const ltResItem = items.get("ltResidencePart");
-  if (ltResItem) {
-    ltResItem.note = "재개발은 분할별 표1·표2 적용 — 보유/거주 분리 미적용";
-    ltResItem.perAsset = undefined;
-  }
-
-  // 양도소득금액 — 합계 기존 유지
-  const incomeItem = items.get("incomeAmount");
-  if (incomeItem) {
-    incomeItem.formula = "재개발 §166 분할별 (양도차익 − LTHD) 합 (음수 시 0)";
-    incomeItem.legalBasis = "소득세법 §95①";
-    incomeItem.perAsset = buildRedevPerAssetForIncome(redev, subject, settlementDirection);
-  }
-
-  applyLthdExclusionOverride(items, lthdExclusionReason);
-}
-
-/**
- * §95② 배제 시 장특공제 행을 **사유로 덮는다** — 분할별 산식은 이때 의미가 없다.
- *
- * 일반 경로(`buildLthdFallbackFormulas`)와 **같은 라벨 소스**(`LTHD_EXCLUSION_LABEL`)를 쓴다.
- * 문구를 따로 쓰면 같은 배제가 화면 두 곳에서 다르게 읽힌다.
- */
-function applyLthdExclusionOverride(
-  items: Map<string, StatementItem>,
-  reason: LthdExclusionReason | undefined,
-): void {
-  if (!reason) return;
-  const ltItem = items.get("ltDeduction");
-  if (!ltItem) return;
-
-  const label = LTHD_EXCLUSION_LABEL[reason];
-  ltItem.formula = `0 — ${label}`;
-  ltItem.legalBasis = "소득세법 §95② 본문 괄호 · §104⑦";
-  // 분할별 값도 전부 0이므로 「분할별 산식」을 남기면 0%가 보유기간 탓으로 읽힌다.
-  ltItem.perAsset = undefined;
 }

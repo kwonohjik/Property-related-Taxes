@@ -38,7 +38,7 @@ export function DeductionLimitDetailCard({ detail, rawTotalDeduction, standalone
       <div className="flex items-center justify-between px-4 py-2.5">
         <span className="text-sm">§24 종합한도</span>
         <span className="flex items-center gap-1">
-          <span className="font-mono text-sm">
+          <span className="font-mono tabular-nums text-sm">
             {formatKRW(detail.limitedDeduction)}
           </span>
           <ExpandButton expanded={open} onClick={() => setOpen((v) => !v)} />
@@ -150,7 +150,7 @@ function DeductionLimitContent({
         muted
       />
       <SubTotalRow
-        label={`Min(공제합계, §24 한도)${detail.wasCapped ? " — 한도 초과 적용" : ""}`}
+        label={`공제합계와 §24 한도 중 작은 금액${detail.wasCapped ? " — 한도 초과 적용" : ""}`}
         value={formatKRW(detail.limitedDeduction)}
         tone={detail.wasCapped ? "amber" : "blue"}
       />

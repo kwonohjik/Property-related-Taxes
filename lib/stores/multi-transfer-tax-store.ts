@@ -46,7 +46,17 @@ export interface MultiTransferFormData {
   /** 예정신고 기납부 지방소득세 (원 문자열). 미입력 "0" */
   priorPaidLocalTax: string;
   /** 기납부세액이 사용자 수동편집됐는지(=true면 불러오기 자동채움이 덮어쓰지 않음, 배지 제거) */
+  /**
+   * 국세 기납부세액을 사용자가 직접 고쳤는가.
+   *
+   * 🔴 **지방소득세와 플래그를 공유하지 말 것** (2026-09-07 재검증 H5).
+   *    종전에는 두 칸이 이 플래그 하나를 공유해, 지방소득세만 고치는 순간 국세 칸의
+   *    자동 파생값(§111③ 신고일 필터)이 store 기본값 "0"으로 바뀌었다 —
+   *    화면만이 아니라 ④ payload에도 0이 실렸다.
+   */
   priorPaidTaxEdited: boolean;
+  /** 지방소득세 기납부세액을 사용자가 직접 고쳤는가. 국세와 **독립**이다(위 주석). */
+  priorPaidLocalTaxEdited: boolean;
   // 가산세는 자산별로 입력 — 자산 form(TransferFormData)에 보관됨.
 
   // ── 신고서 단위 수정신고·경정청구 (filing-level, 단건 TransferFormData와 동일 필드명 —
@@ -79,6 +89,7 @@ const defaultFormData: MultiTransferFormData = {
   priorPaidTax: "0",
   priorPaidLocalTax: "0",
   priorPaidTaxEdited: false,
+  priorPaidLocalTaxEdited: false,
   // 정정(수정신고·경정청구) 기본값 — 단건 defaultFormData와 동일
   amendmentMode: false,
   correctionKind: "amend",
@@ -146,8 +157,22 @@ export const useMultiTransferStore = create<MultiTransferState>()(
       result: null,
       isCalculating: false,
 
+      /**
+       * 🔴 **입력이 바뀌면 `result`를 무효화한다** (2026-09-07 재검증 H4).
+       *
+       * 종전에는 `setForm`·`addProperty`·`updateProperty`·`removeProperty`·
+       * `duplicateProperty`·`reorderProperties` 어느 것도 `result`를 비우지 않았다.
+       * 단계 표시기의 「계산 결과」는 재계산 없이 `setStep("result")`만 하므로,
+       * 계산 → 자산 편집 → 「계산 결과」 클릭이면 **직전 세액**이 **방금 고친 자산 목록**과
+       * 나란히 표시됐다(같은 화면에서 두 시점이 섞인다).
+       *
+       * ⚠️ `setStep`·`setActiveProperty`는 **비우지 않는다** — 순수 이동이라
+       *    비우면 결과 탭에 갈 때마다 결과가 사라진다.
+       * ⚠️ 단건 계산기의 같은 결함은 이미 고쳐져 있다
+       *    (memory `feedback_store_update_must_invalidate_result`). 여기는 다건 축이다.
+       */
       setForm: (updates) =>
-        set((state) => ({ form: { ...state.form, ...updates } })),
+        set((state) => ({ form: { ...state.form, ...updates }, result: null })),
 
       addProperty: (item) =>
         set((state) => ({
@@ -155,13 +180,14 @@ export const useMultiTransferStore = create<MultiTransferState>()(
             ...state.form,
             properties: [...state.form.properties, item],
           },
+          result: null,
         })),
 
       updateProperty: (index, item) =>
         set((state) => {
           const properties = [...state.form.properties];
           properties[index] = { ...properties[index], ...item };
-          return { form: { ...state.form, properties } };
+          return { form: { ...state.form, properties }, result: null };
         }),
 
       removeProperty: (index) =>
@@ -171,7 +197,7 @@ export const useMultiTransferStore = create<MultiTransferState>()(
             state.form.activePropertyIndex,
             Math.max(0, properties.length - 1),
           );
-          return { form: { ...state.form, properties, activePropertyIndex } };
+          return { form: { ...state.form, properties, activePropertyIndex }, result: null };
         }),
 
       duplicateProperty: (index) =>
@@ -185,7 +211,7 @@ export const useMultiTransferStore = create<MultiTransferState>()(
           };
           const properties = [...state.form.properties];
           properties.splice(index + 1, 0, copy);
-          return { form: { ...state.form, properties } };
+          return { form: { ...state.form, properties }, result: null };
         }),
 
       reorderProperties: (from, to) =>
@@ -193,7 +219,7 @@ export const useMultiTransferStore = create<MultiTransferState>()(
           const properties = [...state.form.properties];
           const [item] = properties.splice(from, 1);
           properties.splice(to, 0, item);
-          return { form: { ...state.form, properties } };
+          return { form: { ...state.form, properties }, result: null };
         }),
 
       setActiveProperty: (index) =>

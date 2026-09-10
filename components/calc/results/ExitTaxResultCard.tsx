@@ -167,7 +167,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
       )}
 
       {/* ── 메인 산식 카드 ── */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-1">
+      <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-5 space-y-1">
         <p className="text-sm font-semibold text-slate-700 mb-2">산출세액 계산 (§118의10~§118의11)</p>
 
         <Row
@@ -254,7 +254,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
             )}
             {hasForeignCredit && (
               <Row
-                label="외국납부세액공제 (§118의13) = min(외국납부세액, 한도)"
+                label="외국납부세액공제 (§118의13) = 외국납부세액과 한도 중 작은 금액"
                 value={result.foreignTaxCreditApplied!}
                 indent
               />

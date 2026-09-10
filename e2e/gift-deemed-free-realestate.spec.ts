@@ -28,9 +28,9 @@ const confirm = (page: Page) => page.getByTestId("deemed-detail-confirm").click(
 test.describe("증여로 보는 경우 §37 — 경정청구·다기간", () => {
   test("[RECT-1] 경정청구 산출세액 55,815,740 · 2020-03-15~2023-07-20 → 18,605,246", async ({ page }) => {
     await openFreeRealEstate(page);
-    await page.getByPlaceholder("부동산 가액 (원)").fill("5000000000");
+    await page.getByLabel("부동산 가액", { exact: true }).fill("5000000000");
     await page.getByTestId("free-rect-toggle").getByRole("switch").click();
-    await page.getByPlaceholder("증여세 산출세액 (원)").fill("55815740");
+    await page.getByLabel("증여세 산출세액", { exact: true }).fill("55815740");
     await fillDate(page, "free-rect-giftdate-wrap", "2020", "3", "15");
     await fillDate(page, "free-rect-termdate-wrap", "2023", "7", "20");
     await confirm(page);
@@ -43,11 +43,11 @@ test.describe("증여로 보는 경우 §37 — 경정청구·다기간", () => 
     await page.getByTestId("free-periods-toggle").getByRole("switch").click();
     // 기간 1
     await fillDate(page, "free-period-date-wrap-0", "2020", "3", "15");
-    await page.getByTestId("free-period-0").getByPlaceholder("부동산 가액 (원)").fill("5000000000");
+    await page.getByTestId("free-period-0").getByLabel("부동산 가액", { exact: true }).fill("5000000000");
     // 기간 2 추가
     await page.getByTestId("free-period-add").click();
     await fillDate(page, "free-period-date-wrap-1", "2025", "3", "16");
-    await page.getByTestId("free-period-1").getByPlaceholder("부동산 가액 (원)").fill("5000000000");
+    await page.getByTestId("free-period-1").getByLabel("부동산 가액", { exact: true }).fill("5000000000");
     await confirm(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-period-breakdown")).toBeVisible();
@@ -56,7 +56,7 @@ test.describe("증여로 보는 경우 §37 — 경정청구·다기간", () => 
 
   test("[회귀] 단일 무상사용 20억 (다기간·경정 OFF) → 151,631,469", async ({ page }) => {
     await openFreeRealEstate(page);
-    await page.getByPlaceholder("부동산 가액 (원)").fill("2000000000");
+    await page.getByLabel("부동산 가액", { exact: true }).fill("2000000000");
     await confirm(page);
     await page.getByTestId("deemed-calc-btn").click();
     await expect(page.getByTestId("deemed-result-value")).toContainText("151,631,469");
@@ -65,9 +65,9 @@ test.describe("증여로 보는 경우 §37 — 경정청구·다기간", () => 
   test("[COL-RECT-1] 담보 경정 산출 5천만 · 2023-01-01~2023-07-01 → 25,000,000 (분모 12월)", async ({ page }) => {
     await openFreeRealEstate(page);
     await page.getByTestId("free-subtype-collateral").click();
-    await page.getByPlaceholder("차입금 (원)").fill("500000000");
+    await page.getByLabel("차입금", { exact: true }).fill("500000000");
     await page.getByTestId("free-rect-toggle").getByRole("switch").click();
-    await page.getByPlaceholder("증여세 산출세액 (원)").fill("50000000");
+    await page.getByLabel("증여세 산출세액", { exact: true }).fill("50000000");
     await fillDate(page, "free-rect-giftdate-wrap", "2023", "1", "1");
     await fillDate(page, "free-rect-termdate-wrap", "2023", "7", "1");
     await confirm(page);

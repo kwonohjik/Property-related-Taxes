@@ -34,6 +34,24 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
     const newM = parseInt((asset.redevNewHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
     const isHighValue = tp > 1_200_000_000;
 
+    /**
+     * 🔴 **양도가액이 0이면 「12억 이하」가 아니라 「판정 불가」다** (2026-09-07 UI 리뷰).
+     *
+     * `asset.actualSalePrice`는 지분 분할 모드와 안분(bundled) 모드에서 **입력칸 자체가
+     * 렌더되지 않는다**(`CompanionSaleModeBlock.tsx` — 지분은 자동산정 카드만, 안분은
+     * 기준시가 블록만 낸다). 그 모드에서 `tp`는 항상 0이라 `isHighValue`가 영원히 false가
+     * 되어, 실제 양도가액이 30억이어도 초록 카드로 **「전체 양도차익이 비과세 대상」이라고
+     * 단정**했다. 같은 파일군의 `RedevelopmentRightExemptionSection`은 반대로
+     * **초과일 때만** 안내를 띄워 이 함정을 피하고 있었다.
+     */
+    if (tp <= 0) {
+      return {
+        tone: "sky" as const,
+        title: "C-1 — 양도가액 미입력, 12억 초과 여부 판정 불가",
+        body: "이 모드에서는 자산-수준 양도가액을 입력하지 않으므로(지분 분할·안분 모드) 12억 초과 여부를 여기서 판정할 수 없습니다. 아래 거주개월 입력은 12억 초과 시에만 세액에 반영되며, 최종 판정은 계산 시 엔진이 수행합니다.",
+      };
+    }
+
     if (!isHighValue) {
       return {
         tone: "emerald" as const,
@@ -46,7 +64,7 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
     if (exceedsExisting && exceedsNew) {
       return {
         tone: "sky" as const,
-        title: "C-3 — 12억 초과 + 분할 LTHD 모두 표2 적용",
+        title: "C-3 — 12억 초과 + 분할 장기보유특별공제 모두 표2 적용",
         body: "기존건물분과 청산금분 모두 표2(보유+거주) 적용. 거주월수 귀속은 분리되어 산정됩니다 (기존: 종전+신축 통산 / 청산금분: 신축만).",
       };
     }
@@ -71,12 +89,12 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
       <p className="text-caption text-emerald-800 leading-relaxed">
         <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
         {" "}— 재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다.
-        사전법령해석재산 2020-386 — 청산금납부분 LTHD 표2 진입은 신축주택 거주 2년 이상이 필요합니다.
+        사전법령해석재산 2020-386 — 청산금납부분 장기보유특별공제 표2 진입은 신축주택 거주 2년 이상이 필요합니다.
       </p>
 
       <ResidencePeriodGroup
         label="종전주택 거주기간"
-        hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§154⑧ 통산 산식 prior)."
+        hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§154⑧ 통산 산식의 종전주택 분)."
         startValue={asset.redevPriorResidenceStartDate}
         endValue={asset.redevPriorResidenceEndDate}
         monthsValue={asset.redevPriorHouseResidenceMonths}

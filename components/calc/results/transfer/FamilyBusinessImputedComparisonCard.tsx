@@ -147,7 +147,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
 
             {/* §18의2⑩ 공제액 */}
             <Row
-              label="§18의2⑩ 공제액 = max(0, 의제 결정세액 − 일반 결정세액)"
+              label="§18의2⑩ 공제액 = 의제 결정세액 − 일반 결정세액 (음수면 0)"
               value={creditAmount > 0 ? `- ${formatKRW(creditAmount)}` : formatKRW(0)}
               highlight
             />
@@ -157,20 +157,28 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
       </div>
 
       {/* 적용 분기 안내 */}
+      {/*
+        🔴 두 안내문을 함께 고쳤다 (2026-09-07 대장 재대조 · #14 · #31).
+          · #31 — 「납세자에게 유리」·「납세자 불리 케이스」는 루트 CLAUDE.md의 **유리/불리 표현 금지**에 걸린다.
+          · #14 — 인과가 거꾸로였다. 일반 §97의 취득가액 기준은 **상속개시일 평가액**(영 §163⑨)이지
+            「피상속인 원취득가액」이 아니다(그것은 의제 산식의 **구성요소**다). 두 결정세액의
+            차이를 만드는 것은 「의제 취득가액 vs 상속개시일 평가액」이므로, 비교 대상은 위 표의
+            **두 결정세액** 그 자체로 말한다.
+      */}
       {imputedIsFavorable ? (
-        /* 의제 산식이 유리한 경우 → sky 안내 */
+        /* 의제 결정세액 ≤ 일반 결정세액 → §18의2⑩ 공제 없음 */
         <div className="rounded-md border border-sky-300 bg-sky-50/60 px-3 py-2 text-xs text-sky-800">
-          <p className="font-semibold">의제 §97의2④ 산식 적용 (납세자에게 유리)</p>
+          <p className="font-semibold">의제 §97의2④ 산식 적용 — §18의2⑩ 공제액 없음</p>
           <p className="mt-0.5">
-            의제 취득가액({formatKRW(imputedAcquisitionPrice)})이 피상속인 원취득가액({formatKRW(decedentAcquisitionPrice)})보다{" "}
-            {cgtUnderSection97_2_4 < cgtUnderSection97 ? "낮아 세액이 감소합니다." : "와 동일한 세액입니다."}
-            {" "}§18의2⑩ 추가 공제 없음.
+            의제 결정세액({formatKRW(cgtUnderSection97_2_4)})이 일반 결정세액({formatKRW(cgtUnderSection97)})
+            {cgtUnderSection97_2_4 < cgtUnderSection97 ? "보다 작습니다." : "과 같습니다."}
+            {" "}§18의2⑩ 공제는 「의제 − 일반」의 양(+)의 차액에만 적용되므로 이 경우 공제액이 0입니다.
           </p>
         </div>
       ) : (
-        /* 의제 산식이 불리한 경우 → rose 강제 적용 안내 */
+        /* 의제 결정세액 > 일반 결정세액 → 강제 적용 + §18의2⑩ 공제 */
         <div className="rounded-md border border-rose-300 bg-rose-50/60 px-3 py-2 text-xs text-rose-800 space-y-1">
-          <p className="font-semibold">소법 §97의2④ 본문 — 강제 적용 (납세자 불리 케이스)</p>
+          <p className="font-semibold">소법 §97의2④ 본문 — 의제 산식 강제 적용</p>
           <p>
             의제 결정세액({formatKRW(cgtUnderSection97_2_4)})이 일반 결정세액({formatKRW(cgtUnderSection97)})보다 높습니다.
           </p>

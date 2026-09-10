@@ -17,7 +17,7 @@ function newRow(): CdShareholderRow {
 }
 
 const textInputCls =
-  "w-full rounded-md border border-amber-200 bg-white px-2 py-1.5 text-sm focus:border-amber-400 focus:outline-none";
+  "w-full rounded-md border border-amber-200 bg-white dark:bg-gray-900 px-2 py-1.5 text-sm focus:border-amber-400 focus:outline-none";
 
 export function CapitalDecreaseShareholderTable({ shareholders, onChange }: Props) {
   const update = (i: number, patch: Partial<CdShareholderRow>) =>
@@ -36,7 +36,7 @@ export function CapitalDecreaseShareholderTable({ shareholders, onChange }: Prop
             <div
               key={row.id}
               data-testid={`cd-shareholder-row-${i}`}
-              className="space-y-2 rounded-md border border-amber-200 bg-white/70 p-2"
+              className="space-y-2 rounded-md border border-amber-200 bg-white/70 dark:bg-white/5 p-2"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-amber-800">주주 {i + 1}</span>

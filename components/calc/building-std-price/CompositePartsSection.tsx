@@ -128,7 +128,7 @@ export function CompositePartsSection({
       )}
 
       {parts.map((p, i) => (
-        <div key={i} className="rounded-md border border-violet-200 bg-white/60 p-2.5 space-y-2">
+        <div key={i} className="rounded-md border border-violet-200 bg-white/60 dark:bg-white/5 p-2.5 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-violet-700">부분 {i + 1}</span>
             {parts.length > 1 && (

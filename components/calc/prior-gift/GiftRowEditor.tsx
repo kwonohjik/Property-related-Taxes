@@ -630,7 +630,7 @@ export function GiftRowEditor({
           {gift.specialTreatmentType === "family_business" && (
             <p className="text-caption text-emerald-700 dark:text-emerald-400">
               {showGiftPhaseA
-                ? "§30의6 — 가업승계는 §30의5 제8항~제13항 준용. 과거 가업승계 prior는 기간무관 합산됩니다."
+                ? "§30의6 — 가업승계는 §30의5 제8항~제13항 준용. 과거 가업승계분은 기간무관 합산됩니다."
                 : "§30의6⑤ — 가업승계 주식은 §30의5⑧~⑬ 준용. §13 기간과 관계없이 상속세 과세가액에 가산됩니다."}
             </p>
           )}
@@ -665,7 +665,7 @@ export function GiftRowEditor({
               }
               hint={
                 showGiftPhaseA
-                  ? "§30의5①후단 합산 시 기납부 특례세액 차감 (max(0, 합산기준특례산출세액 - Σ기납부))."
+                  ? "§30의5①후단 합산 시 기납부 특례세액 차감 (합산기준특례산출세액 − 기납부액 합계, 음수면 0)."
                   : "§30의5⑩ — 증여 당시 납부한 창업자금·가업승계 증여세액 (안분 없이 상속세 산출세액에서 직접 전액 공제, 초과환급 없음). 기납부 증여세 란에서 입력한 값과 동일합니다."
               }
             />

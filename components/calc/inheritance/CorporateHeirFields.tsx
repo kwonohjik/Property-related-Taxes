@@ -195,7 +195,7 @@ function ShareholderRow({
                   : Math.min(100, Math.max(0, v)) / 100,
               });
             }}
-            placeholder="예: 60"
+            placeholder="지분율"
             className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>

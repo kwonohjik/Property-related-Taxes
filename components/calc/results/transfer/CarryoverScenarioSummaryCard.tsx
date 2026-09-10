@@ -103,7 +103,7 @@ export function CarryoverScenarioSummaryCard({
                 {row.label}
               </td>
               <td className={cn(
-                "px-3 py-1.5 text-right font-mono whitespace-nowrap bg-slate-50/60 dark:bg-slate-800/40",
+                "px-3 py-1.5 text-right font-mono tabular-nums whitespace-nowrap bg-slate-50/60 dark:bg-slate-800/40",
                 row.highlight && "bg-amber-50/60 dark:bg-amber-950/30",
               )}>
                 {row.value || "-"}

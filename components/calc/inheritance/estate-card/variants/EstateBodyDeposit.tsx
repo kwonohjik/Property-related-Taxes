@@ -15,6 +15,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { EstateBodySection } from "./EstateBodySection";
 import { makePatcher } from "./EstateBodyHelpers";
 import type { VariantBodyProps } from "./types";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const TEXT_INPUT_CLASS =
   "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -33,7 +34,7 @@ export function EstateBodyDeposit({
     >
       <EstateBodySection
         title="평가액 입력"
-        subtitle="자산 명칭 · 임대보증금 — 환산가액 = 보증금 ÷ 12%"
+        subtitle="자산 명칭 · 임대보증금 — 환산가액 = 보증금을 12%로 나눈 값"
       >
         {/* 자산명 */}
         <FieldCard label="자산 명칭">
@@ -56,7 +57,7 @@ export function EstateBodyDeposit({
           label="임대보증금"
           required
           unit="원"
-          hint="환산가액 = 보증금 ÷ 12%"
+          hint={<>환산가액 = <Frac top="보증금" bottom="12%" /></>}
         >
           <CurrencyInput
             label="임대보증금"

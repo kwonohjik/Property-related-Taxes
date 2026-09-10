@@ -26,6 +26,8 @@ import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
 import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
+import { computeSalePriceTotal } from "@/lib/tax-engine/redevelopment-settlement";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -59,8 +61,8 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     let step1Formula: string | null = null;
 
     if (canApplyMain) {
-      sumAtAcq = Math.floor(landAcq * area) + bldAcq;
-      sumAtFirst = Math.floor(landFirst * area) + bldFirst;
+      sumAtAcq = multiplyByArea(landAcq, area) + bldAcq;
+      sumAtFirst = multiplyByArea(landFirst, area) + bldFirst;
       if (sumAtFirst > 0) {
         P_A = Number((BigInt(A) * BigInt(sumAtAcq)) / BigInt(sumAtFirst));
         step1Formula = `${A.toLocaleString()} × ${sumAtAcq.toLocaleString()} ÷ ${sumAtFirst.toLocaleString()}`;
@@ -113,10 +115,10 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     const pricePerSqmApproval = parseAmount(asset.redevLandPricePerSqmAtApproval) || 0;
     // 단가×면적 계산 우선, fallback은 legacy 총액
     const acq = (pricePerSqmAcq > 0 && landArea > 0)
-      ? Math.floor(pricePerSqmAcq * landArea)
+      ? multiplyByArea(pricePerSqmAcq, landArea)
       : parseAmount(asset.redevLandStdPriceAtAcq);
     const approval = (pricePerSqmApproval > 0 && landArea > 0)
-      ? Math.floor(pricePerSqmApproval * landArea)
+      ? multiplyByArea(pricePerSqmApproval, landArea)
       : parseAmount(asset.redevLandStdPriceAtApproval);
     const settlement = parseAmount(asset.redevSettlementAmount);
     if (rights <= 0 || acq <= 0 || approval <= 0) return null;
@@ -127,10 +129,27 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     const estDeduction = Math.floor(acq * 0.03);
     // 인가전 양도차익
     const preApprovalGain = rights - convertedAcq - estDeduction;
-    // 인가후 양도차익 = 양도가액 − 권리가액 − 청산금
+    /**
+     * 인가후 양도차익 = 양도가액 − **분양가** (분양가는 청산금 방향에 따라 다르다).
+     *
+     * 🔴 종전에는 방향을 보지 않고 언제나 `− rights − settlement`(=납부 산식)를 썼다.
+     *    엔진은 `computeSalePriceTotal`로 갈린다 —
+     *      · 납부(pay)   : 권리가액 **+** 청산금
+     *      · 수령(receive): 권리가액 **−** 청산금 (0 하한)
+     *    (`redevelopment-settlement.ts:39~49` · `redevelopment-split.ts:406`)
+     *    토지 출자 + 완공APT + 청산금 **수령** + 환산 조합은 2026-08-27에 차단이 해제돼
+     *    실제로 도달 가능한 경로다. 그 조합에서 미리보기가 청산금의 **2배**만큼 어긋났다.
+     *
+     * 방향 판정·산식 모두 엔진의 단일 소스를 그대로 호출한다.
+     */
     const actualTransferPrice = parseAmount(asset.actualSalePrice);
+    const salePriceTotal = computeSalePriceTotal(
+      rights,
+      settlement,
+      asset.redevSettlementDirection === "receive" ? "receive" : "pay",
+    );
     const postApprovalGain = actualTransferPrice > 0
-      ? actualTransferPrice - rights - settlement
+      ? actualTransferPrice - salePriceTotal
       : null;
 
     return {
@@ -138,6 +157,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
       estDeduction,
       preApprovalGain,
       postApprovalGain,
+      settlementDirection: (asset.redevSettlementDirection === "receive" ? "receive" : "pay") as "pay" | "receive",
       rights,
       acq,
       approval,
@@ -153,6 +173,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     asset.redevLandStdPriceAtAcq,
     asset.redevLandStdPriceAtApproval,
     asset.redevSettlementAmount,
+    asset.redevSettlementDirection,
     asset.actualSalePrice,
   ]);
 
@@ -184,8 +205,12 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
           />
         ) : (
           <>
+        {/* 🔴 배지는 «5a» — 부모와 겹치지 않는 하위 번호다 (2026-09-07 UI 리뷰 L6).
+            이 컴포넌트는 `RedevelopmentBlock`의 `<ToneCard sectionNum={5}>` **본문 안에서**
+            렌더되므로 「5」를 쓰면 한 카드에 5가 두 번 보인다. 같은 부모의 형제 분기
+            `HousingContribEstimatedSection`이 이미 「5a」를 쓴다(세 분기는 상호배타적). */}
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">5</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">5a</span>
           <p className="text-xs font-semibold text-rose-700">환산 기준시가</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -228,7 +253,8 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         {isPreDisclosureTriggered && (
           <div className="rounded-md border border-rose-200 bg-rose-50/60 p-3 space-y-3">
             <p className="text-caption font-semibold text-rose-700">
-              §164⑦ 본문 발동 — 취득당시 주택가격 = 최초공시 주택가격 × (취득시 합계 기준시가 ÷ 최초공시 당시 합계 기준시가)
+              §164⑦ 본문 발동 — 취득당시 주택가격 = 최초공시 주택가격 ×{" "}
+              <Frac top="취득시 합계 기준시가" bottom="최초공시 당시 합계 기준시가" />
             </p>
 
             <StandardPriceInput
@@ -341,25 +367,27 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               <>
                 <p className="text-rose-700">
                   취득시 합계 기준시가 = 공시지가 × 면적 + 건물 기준시가 ={" "}
-                  <span className="font-mono">{valuationPreview.sumAtAcq.toLocaleString()}</span>
+                  <span className="font-mono tabular-nums">{valuationPreview.sumAtAcq.toLocaleString()}</span>
                 </p>
                 <p className="text-rose-700">
                   최초공시 당시 합계 기준시가 = 공시지가 × 면적 + 건물 기준시가 ={" "}
-                  <span className="font-mono">{valuationPreview.sumAtFirst.toLocaleString()}</span>
+                  <span className="font-mono tabular-nums">{valuationPreview.sumAtFirst.toLocaleString()}</span>
                 </p>
                 <p className="text-rose-700">
-                  1단계 (§164⑦ 본문) — 취득당시 주택가격 = 최초공시 주택가격 × (취득시 합계 기준시가 ÷ 최초공시 당시 합계 기준시가)
+                  1단계 (§164⑦ 본문) — 취득당시 주택가격 = 최초공시 주택가격 ×{" "}
+              <Frac top="취득시 합계 기준시가" bottom="최초공시 당시 합계 기준시가" />
                 </p>
-                <p className="text-rose-700 font-mono">
+                <p className="text-rose-700 font-mono tabular-nums">
                   = <FormulaText value={valuationPreview.step1Formula} /> = {valuationPreview.P_A.toLocaleString()}
                 </p>
               </>
             )}
             <p className="text-rose-700">
-              2단계 (§166③) — 환산취득가 = 권리가액 × (취득당시 주택가격 ÷ 관리처분 인가일 주택가격)
+              2단계 (§166③) — 환산취득가 = 권리가액 ×{" "}
+              <Frac top="취득당시 주택가격" bottom="관리처분 인가일 주택가격" />
             </p>
-            <p className="text-rose-700 font-mono">= <FormulaText value={valuationPreview.step2Formula} /></p>
-            <p className="text-rose-700 font-mono">= {valuationPreview.converted.toLocaleString()}</p>
+            <p className="text-rose-700 font-mono tabular-nums">= <FormulaText value={valuationPreview.step2Formula} /></p>
+            <p className="text-rose-700 font-mono tabular-nums">= {valuationPreview.converted.toLocaleString()}</p>
             <p className="text-rose-700">
               §164⑦ 본문:{" "}
               <span className={valuationPreview.canApplyMain ? "font-semibold text-rose-900" : "text-rose-600"}>
@@ -397,6 +425,8 @@ interface LandContribPreview {
   acq: number;
   approval: number;
   formula: string;
+  /** 청산금 방향 — 인가후 분양가 산식이 갈린다(`computeSalePriceTotal`). */
+  settlementDirection: "pay" | "receive";
 }
 
 interface LandContribProps {
@@ -432,7 +462,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
       {/* 안내 헤더 */}
       <div className="rounded-md border border-amber-200 bg-amber-50/70 p-2 space-y-1">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">5</span>
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">5a</span>
           <p className="text-xs font-semibold text-amber-700">토지 출자 — §166③ 비율 환산 (사례 37)</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -440,7 +470,11 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
           <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
         </div>
         <p className="text-caption text-amber-700">
-          환산취득가 = 권리가액 × (<strong>취득당시 토지기준시가</strong> ÷ <strong>관리처분 직전 토지기준시가</strong>)
+          환산취득가 = 권리가액 ×{" "}
+          <Frac
+            top={<strong>취득당시 토지기준시가</strong>}
+            bottom={<strong>관리처분 직전 토지기준시가</strong>}
+          />
         </p>
         <p className="text-caption text-amber-600">
           기준시가 = 개별공시지가 (원/㎡) × 면적 (㎡) — Vworld 자동 조회 가능
@@ -495,7 +529,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
           <p className="text-amber-700">
             환산취득가 = {fmt(preview.rights)} × <Frac top={fmt(preview.acq)} bottom={fmt(preview.approval)} />
           </p>
-          <p className="text-amber-700 font-mono">= <FormulaText value={preview.formula} /> = {fmt(preview.convertedAcq)}</p>
+          <p className="text-amber-700 font-mono tabular-nums">= <FormulaText value={preview.formula} /> = {fmt(preview.convertedAcq)}</p>
           <p className="text-amber-700">
             개산공제 (§163⑥) = {fmt(preview.acq)} × 3% = {fmt(preview.estDeduction)}
           </p>
@@ -505,11 +539,12 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
           </p>
           {preview.postApprovalGain !== null && (
             <p className="text-amber-700">
-              인가후 양도차익 = 양도가액 − 권리가액 − 청산금 = <strong>{fmt(preview.postApprovalGain)}</strong>
+              인가후 양도차익 = 양도가액 − 분양가({preview.settlementDirection === "receive" ? "권리가액 − 수령 청산금" : "권리가액 + 납부 청산금"}) ={" "}
+              <strong>{fmt(preview.postApprovalGain)}</strong>
             </p>
           )}
           <div className="mt-1 rounded border border-rose-200 bg-rose-50/70 p-1 text-micro text-rose-700">
-            인가후 분 LTHD = 0 — 소득세법 §95② 본문 괄호
+            인가후 분 장기보유특별공제 = 0 — 소득세법 §95② 본문 괄호
           </div>
         </div>
       )}

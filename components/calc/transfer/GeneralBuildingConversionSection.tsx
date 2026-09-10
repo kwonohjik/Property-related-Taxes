@@ -16,6 +16,7 @@
  */
 
 import { useMemo } from "react";
+import { isGbFirstDisclosureApplicable } from "@/lib/calc/gb-first-disclosure";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -158,7 +159,7 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
             trailing={<LawArticleModal legalBasis="소득세법 §95②" label="§95② 표1 장특공제" />}
           >
             <RadioCardGroup
-              name="gbWasMultiHouseAtConversion"
+              name={`gbWasMultiHouseAtConversion-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={
                 asset.gbWasMultiHouseAtConversion === null
@@ -210,7 +211,12 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
               `docs/02-design/features/gb-first-disclosure-3point-integration.plan.md`
             ⚠️ 여기로 되돌리지 말 것.
           */}
-          {asset.useEstimatedAcquisition && (
+          {/* 🔴 게이트는 **파트 축**이다 (2026-09-07 UI 리뷰 L1).
+              이 안내가 가리키는 목적지(③ 취득정보의 환산주택가격 토글)의 노출 조건이
+              `isGbFirstDisclosureApplicable`(토지·건물 중 **하나라도** 환산)이므로 같은 술어를 쓴다.
+              종전 `asset.useEstimatedAcquisition`은 플래그 축이라 「토지·건물 취득일 다름 + 건물
+              파트만 환산」에서 이정표만 사라졌다 — gb-first-disclosure.ts가 스스로 경고한 지점이다. */}
+          {isGbFirstDisclosureApplicable(asset) && (
             <ToneCard tone="violet" noDark className="p-2.5">
               <p className="text-caption text-violet-800">
                 취득 당시 주택으로 개별주택가격이 고시된 뒤 상가로 바꾼 경우의{" "}

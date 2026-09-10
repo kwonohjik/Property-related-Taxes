@@ -199,6 +199,31 @@ export interface PerPropertyBreakdown
    * 파트가 없는 자산은 `undefined`(UI가 종전 산식을 쓴다).
    */
   refCalculatedTaxNote?: string;
+
+  /**
+   * [echo] **신고서 표 전용 파생 입력** — 세액에 관여하지 않는다.
+   *
+   * 🔴 다건 신고서 표(`FilingFormTableAggregateHelpers`)가 단건 표와 **같은 분기**를 하려면
+   *    단건이 `TransferTaxResult`에서 읽는 값이 자산별로도 있어야 한다. 없어서 다건만
+   *    자체 휴리스틱을 썼고, 단건이 #069(환산 자본적지출)·#1519(`isTable2Applied`)로
+   *    고쳐질 때 다건은 따라가지 못했다 — 「단건과 동일」이라 적힌 주석이 사실이 아니었다.
+   */
+  filingDisplay?: {
+    /** §97②2호 **본문** 환산취득가 base (`estimatedBase`). 단서 swap이면 미제공. */
+    estimatedBase?: number;
+    /** 같은 조 개산공제(§163⑥). */
+    estimatedDeduction?: number;
+    /** §97②2호 **단서** swap 적용 — true면 환산 분기로 가지 않는다(단건과 동일). */
+    swapApplied?: boolean;
+    /** 상가 §164⑥ 환산(엔진이 실가처럼 주입하는 경로) 표시용 총액. */
+    commercialEstimatedAcquisition?: number;
+    /** 〃 개산공제 총액. */
+    commercialEstimatedDeduction?: number;
+    /** 장특 보유분 sub-step 금액 — 있으면 UI 재안분 금지. */
+    lthdHoldingPart?: number;
+    /** 장특 거주분 sub-step 금액 — **존재 자체가 표2 적용 신호**다. */
+    lthdResidencePart?: number;
+  };
   /**
    * [echo] 재개발·재건축 §166 분할 detail (**표시 전용** — 세액 불변).
    *

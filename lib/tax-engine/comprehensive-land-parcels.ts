@@ -16,6 +16,7 @@ import type {
   LandParcelInput,
   LandJurisdictionPropertyTax,
 } from "./types/comprehensive.types";
+import { multiplyByAreaShare } from "./area-utils";
 
 export type LandKind = "aggregate" | "separate";
 
@@ -53,9 +54,15 @@ export function calcLandStandardPropertyTax(kind: LandKind, propertyTaxBase: num
     : calcSeparateAggregateLandStdTax(propertyTaxBase);
 }
 
-/** 필지 공시가격 = floor(면적 × 지분율 × ㎡당 공시지가) — 소수 곱 floor 1회 */
+/**
+ * 필지 공시가격 = floor(면적 × 지분율 × ㎡당 공시지가) — **소수 곱 floor 1회**.
+ *
+ * 산식과 floor 횟수는 종전 그대로다. 다만 부동소수 곱을 정수 연산으로 바꿔
+ * **1원 과소산정만 제거**한다 — (단가·면적·지분) 4만8천 조합 중 5,048건(10.5%)이
+ * 어긋났고 전부 1원 과소였다. 지분 적용 «순서»는 바꾸지 않았다(미결 — `multiplyByAreaShare` 주석).
+ */
 function parcelOfficialValue(area: number, shareRatio: number, pricePerSqm: number): number {
-  return Math.floor(area * shareRatio * pricePerSqm);
+  return multiplyByAreaShare(pricePerSqm, area, shareRatio);
 }
 
 /** 그룹 재산세 과표 = floor(공시합산 × 70%) — 분수 정수 */

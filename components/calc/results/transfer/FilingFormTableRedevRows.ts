@@ -9,7 +9,7 @@
  *       합계 / ① 인가전 / ② 인가후 기존건물분 / ③ 청산금 분
  *   - redev-right-pay (right+pay):
  *       합계 / ① 인가전 / ② 인가후 (= §166⑤1호 청산금 납부분)
- *       ※ postApprovalExistingHouse는 §95② 단서에 의해 LTHD 대상 양도차익 부존재(gain=0)
+ *       ※ postApprovalExistingHouse는 §95② 본문 괄호에 의해 LTHD 대상 양도차익 부존재(gain=0)
  *         → settlement 열에 합산하여 "인가후" 단일 열로 표시
  */
 
@@ -31,9 +31,17 @@ export function fmtD(d?: Date | string): string {
   return iso ? fmtDate(iso.slice(0, 10)) : "-";
 }
 
+/**
+ * 기간 표기 — **「N년 M월」**. `fmtPeriod`(FilingFormTableHelpers)와 같은 규약이다.
+ *
+ * 🔴 「개월」로 쓰지 말 것 (2026-09-07 UI 리뷰 L3). 같은 「거주기간」 행에서 합계 열은
+ *    `fmtPeriod`가 채우고 분기 열은 이 함수가 채우므로, 표기가 갈리면 한 줄에
+ *    「2년 0월 | 2년 0개월」이 나란히 찍혀 두 값이 다른 척도인 것처럼 보인다.
+ *    신고서 재현 표의 다른 모든 열(토지·건물·겸용·합산)도 「월」을 쓴다.
+ */
 export function fmtMonths(m?: number, d?: number): string {
   if (m === undefined || m <= 0) return "-";
-  return `${Math.floor(m / 12)}년 ${m % 12}개월${d && d > 0 ? ` ${d}일` : ""}`;
+  return `${Math.floor(m / 12)}년 ${m % 12}월${d && d > 0 ? ` ${d}일` : ""}`;
 }
 
 const toIsoSlice = (d?: Date | string): string | undefined =>
@@ -147,7 +155,7 @@ export function fillRedev4SplitBranchData(
       setRoseNote("transferGain", "settlement", `§89①4호 비과세 차감: ${exemptedGain.toLocaleString()}`);
     }
     if (exemptedLthd > 0) {
-      setRoseNote("ltDeduction", "settlement", `§89①4호 비과세 LTHD 차감: ${exemptedLthd.toLocaleString()}`);
+      setRoseNote("ltDeduction", "settlement", `§89①4호 비과세 장기보유특별공제 차감: ${exemptedLthd.toLocaleString()}`);
     }
   }
 }
@@ -245,7 +253,7 @@ export function fillRedevRightReceiveBranchData(
   setNum("ltHoldingPart", "settlement", 0);
   setNum("ltResidencePart", "settlement", 0);
   // rose 배지 — 청산금 분 LTHD 행에 §95② 본문 괄호 배제 안내
-  setRoseNote?.("ltDeduction", "settlement", "§95② 단서·§94①2호 — LTHD 대상 외");
+  setRoseNote?.("ltDeduction", "settlement", "§95② 본문 괄호·§94①2호 — 장기보유특별공제 대상 외");
 
   setNum("ltHoldingPart", "total", nakkokHp);
   setNum("ltResidencePart", "total", nakkokRp);
@@ -462,8 +470,8 @@ export function fillRedevRightPayBranchData(
   setNum("ltDeduction", "postApproval", 0);
   setNum("ltHoldingPart", "postApproval", 0);
   setNum("ltResidencePart", "postApproval", 0);
-  // rose 배지 — 장기보유특별공제 행에만 §95② 단서 배제 안내
-  setRoseNote?.("ltDeduction", "postApproval", "§95② 단서 배제");
+  // rose 배지 — 장기보유특별공제 행에만 §95② 본문 괄호 배제 안내
+  setRoseNote?.("ltDeduction", "postApproval", "§95② 본문 괄호 배제");
 
   setNum("ltHoldingPart", "total", preHp);
   setNum("ltResidencePart", "total", preRp);

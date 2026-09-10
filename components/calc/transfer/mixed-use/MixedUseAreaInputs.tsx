@@ -125,6 +125,13 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
     });
   };
 
+  /** 상가 정착면적 원문이 건물 정착면적을 초과하는가 — ⑤ 경고 표시용(R07). */
+  const commercialFootprintExceeds =
+    footprint > 0 &&
+    commercialFootprintRaw !== null &&
+    commercialFootprintRaw.trim() !== "" &&
+    round2(parseDecimal(commercialFootprintRaw)) > footprint;
+
   /** 상가 정착면적 편집 → 주택분 역산 저장 (엔진 축은 주택). */
   const onCommercialFootprintChange = (v: string) => {
     setCommercialFootprintRaw(v);
@@ -136,8 +143,15 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
     //    DecimalInput이 "−"를 입력 단계에서 제거하므로 그 칸은 타이핑으로 되돌릴 수 없다
     //    → store write를 건너뛰고 원문만 보관한다(건물 정착면적 입력 시 정상 역산으로 복귀).
     if (footprint <= 0) return;
+    // 🔴 상가 정착면적이 건물 정착면적을 넘으면 역산이 **음수**가 된다(R07).
+    //    건물 100㎡ + 상가 120㎡ → `residualArea(100,120) = −20`이 주택 축에 저장돼,
+    //    사용자가 건드리지도 않은 「주택 정착면적」 이름으로 계산이 막혔다.
+    //    `DecimalInput`이 "−"를 지우므로 그 칸에서 되돌릴 수도 없다.
+    //    ⇒ 초과분은 store에 쓰지 않고 원문만 보관한다(위 `footprint <= 0`과 같은 처리).
+    const residual = residualArea(footprint, round2(parseDecimal(v)));
+    if (residual < 0) return;
     onChange({
-      mixedResidentialFootprintOverride: String(residualArea(footprint, round2(parseDecimal(v)))),
+      mixedResidentialFootprintOverride: String(residual),
     });
   };
 
@@ -241,7 +255,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={asset.residentialFloorArea}
               onChange={(v) => onFloorAreaChange({ residentialFloorArea: v })}
-              placeholder="주택 연면적"
               unit="㎡"
               data-testid="mixed-area-residential-floor"
             />
@@ -254,7 +267,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={asset.nonResidentialFloorArea}
               onChange={(v) => onFloorAreaChange({ nonResidentialFloorArea: v })}
-              placeholder="상가 연면적"
               unit="㎡"
               data-testid="mixed-area-commercial-floor"
             />
@@ -273,7 +285,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={show(fpOv, derived.residentialFootprintArea, fpComputable)}
               onChange={(v) => onChange({ mixedResidentialFootprintOverride: v })}
-              placeholder="주택 정착면적"
               unit="㎡"
               data-testid="mixed-area-residential-footprint"
             />
@@ -288,11 +299,14 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
               />
             }
             hint="수정하면 주택 정착면적이 자동 조정됩니다."
+            /* 🔴 초과 입력은 store에 반영되지 않는다 — **그 사실을 말한다**(R07).
+                  침묵하면 사용자는 값이 반영된 줄 알고, 나중에 건드리지도 않은
+                  「주택 정착면적」 이름으로 차단된다. */
+            warning={commercialFootprintExceeds ? `상가 정착면적이 건물 정착면적(${footprint}㎡)을 초과합니다. 초과분은 반영되지 않습니다.` : undefined}
           >
             <DecimalInput
               value={bufferValid ? commercialFootprintRaw! : fpComputable ? String(commercialFootprint) : ""}
               onChange={onCommercialFootprintChange}
-              placeholder="상가 정착면적"
               unit="㎡"
               data-testid="mixed-area-commercial-footprint"
             />
@@ -311,7 +325,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={show(landOv, derived.residentialLandArea, landComputable)}
               onChange={(v) => onChange({ mixedResidentialLandAreaOverride: v })}
-              placeholder="주택 부수토지"
               unit="㎡"
               data-testid="mixed-area-residential-land"
             />
@@ -329,7 +342,6 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             <DecimalInput
               value={show(commLandOv, derived.commercialLandArea, landComputable)}
               onChange={(v) => onChange({ mixedCommercialLandAreaOverride: v })}
-              placeholder="상가 부수토지"
               unit="㎡"
               data-testid="mixed-area-commercial-land"
             />

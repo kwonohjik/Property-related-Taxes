@@ -107,15 +107,16 @@ export function ReceiveOnlyToggleCard({
           ※ <span className="font-semibold">양도일</span>은 소유권이전 고시일의 익일로 입력하세요 (NTS 집행기준).
         </p>
         <p>
+          {/* 🔴 「본 PR 미매핑」은 저장소 내부 사정이다 — 사용자 화면에 쓰지 않는다(B1). */}
           ※ 본 모드에서 자본적지출·양도비·인가후 필요경비 입력은{" "}
-          <span className="font-semibold">0으로 처리</span>됩니다 (§97①2·3호 슬롯은 법문상 존재하나
-          본 PR 미매핑 — 별도 산정 시 직접 신고 권장).
+          <span className="font-semibold">0으로 처리</span>됩니다. §97①2·3호의 필요경비 항목은
+          법문상 존재하나 이 모드에서는 산정하지 않으므로, 해당분이 있으면 별도 산정해 신고하세요.
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
           <LawArticleModal legalBasis="소득세법 시행령 §166 ① 2호" label="시행령 §166①2호" />
           <PrecedentArticleModal
             citation="기획재정부 재산-439 (2014.06.09)"
-            label="재산-439 (LTHD 기간)"
+            label="재산-439 (장기보유특별공제 기간)"
             kind="ruling"
             summary="장기보유특별공제 계산시 취득일~관리처분계획인가일까지가 아닌 취득일부터 양도일까지의 기간에 대하여 공제한다."
           />
@@ -139,10 +140,10 @@ export function SalePriceTotalPreviewCard({ asset }: { asset: AssetForm }) {
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1">
       <p className="font-semibold text-sky-800">분양가액 (자동 도출, 입력 불요)</p>
-      <p className="text-sky-700 font-mono">
+      <p className="text-sky-700 font-mono tabular-nums">
         분양가액 = 권리가액 {preview.rights.toLocaleString()} − 청산금 수령액 {preview.settle.toLocaleString()}
       </p>
-      <p className="text-sky-700 font-mono">= {preview.salePriceTotal.toLocaleString()}</p>
+      <p className="text-sky-700 font-mono tabular-nums">= {preview.salePriceTotal.toLocaleString()}</p>
       <p className="text-caption text-sky-600">
         ※ &ldquo;분양가액&rdquo;은 위와 같이 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다.
       </p>
@@ -350,11 +351,11 @@ export function ExemptionAtApprovalCard({
         >
           {effective === "yes" ? (
             <p>
-              <span className="font-semibold">충족으로 선언됨</span> — LTHD 표2 적용 가능 (1세대1주택 + 12억 초과 시 안분 적용)
+              <span className="font-semibold">충족으로 선언됨</span> — 장기보유특별공제 표2 적용 가능 (1세대1주택 + 12억 초과 시 안분 적용)
             </p>
           ) : (
             <p>
-              <span className="font-semibold">미충족으로 선언됨</span> — LTHD 표1 강제 (12억 안분 비활성)
+              <span className="font-semibold">미충족으로 선언됨</span> — 장기보유특별공제 표1 강제 (12억 안분 비활성)
             </p>
           )}
         </div>
@@ -537,7 +538,7 @@ export function SuccessorMemberSection({
                 citation="사전-2019-법령해석재산-0649 (2020.02.11)"
                 label="사전-2019-법령해석재산-0649"
                 kind="ruling"
-                summary="관리처분계획인가일 이후 입주권을 승계 취득한 자의 신축아파트 취득시기는 아파트의 사용검사필증 교부일이며, 1세대1주택 비과세·LTHD·세율 적용에 있어 보유기간 기산일은 모두 준공일이다."
+                summary="관리처분계획인가일 이후 입주권을 승계 취득한 자의 신축아파트 취득시기는 아파트의 사용검사필증 교부일이며, 1세대1주택 비과세·장기보유특별공제·세율 적용에 있어 보유기간 기산일은 모두 준공일이다."
               />
             </div>
           </div>

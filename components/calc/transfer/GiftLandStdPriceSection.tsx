@@ -62,7 +62,7 @@ export function GiftLandStdPriceSection({ asset, onChange, transferDate }: Props
       </div>
       <p className="text-xs text-amber-700">
         개별공시지가 최초고시(1990.8.30.) 전 증여받은 토지는{" "}
-        <b>max(증여일 상증법 평가액, §164④ 취득당시 기준시가)</b>를 취득가액으로 봅니다. 위 「증여
+        <b>증여일 상증법 평가액과 §164④ 취득당시 기준시가 중 큰 금액</b>를 취득가액으로 봅니다. 위 「증여
         신고가액」이 앞의 값이고, 아래 토지등급 입력이 뒤의 값을 산정합니다.{" "}
         <b>{status ? `${status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만
         비교합니다. 전부 비워두면 증여 신고가액만 사용하고,{" "}

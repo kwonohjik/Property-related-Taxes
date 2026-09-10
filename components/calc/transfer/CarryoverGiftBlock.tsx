@@ -163,7 +163,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
         <div className="space-y-1.5">
           <p className="text-sm font-medium">증여자 취득원인</p>
           <RadioCardGroup
-            name="donorAcquisitionCause"
+            name={`donorAcquisitionCause-${asset.assetId ?? "primary"}`}
             tone="amber"
             layout="inline"
             options={DONOR_CAUSE_OPTIONS}
@@ -211,7 +211,6 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
               label=""
               value={c.donorAcquisitionPrice}
               onChange={(v) => updateCarryover({ donorAcquisitionPrice: v })}
-              placeholder="증여자 취득가액 (원)"
             />
           </FieldCard>
         )}
@@ -255,7 +254,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
                 label=""
                 value={c.giftTaxCalculated}
                 onChange={(v) => updateCarryover({ giftTaxCalculated: v })}
-                placeholder="증여세 산출세액 (없으면 0)"
+                placeholder="없으면 0"
               />
             </FieldCard>
 
@@ -270,7 +269,6 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
                 label=""
                 value={c.giftTaxBase}
                 onChange={(v) => updateCarryover({ giftTaxBase: v })}
-                placeholder="증여세 과세가액"
               />
             </FieldCard>
           </>
@@ -278,7 +276,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
           <FieldCard
             label="증여세 상당액"
             hint={
-              "소득세법 시행령 §163의2②: 증여세 산출세액 × (양도한 해당 자산가액 ÷ 증여세 과세가액). 미신고 시 0 입력." +
+              "소득세법 시행령 §163의2②: 증여세 산출세액 × 「양도한 해당 자산가액을 증여세 과세가액으로 나눈 비율」. 미신고 시 0 입력." +
               giftTaxShareHint
             }
             trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
@@ -287,7 +285,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange }: Props) {
               label=""
               value={c.giftTaxAmount}
               onChange={(v) => updateCarryover({ giftTaxAmount: v })}
-              placeholder="증여세 상당액 (없으면 0)"
+              placeholder="없으면 0"
             />
           </FieldCard>
         )}

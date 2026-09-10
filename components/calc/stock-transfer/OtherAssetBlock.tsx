@@ -121,7 +121,6 @@ export function OtherAssetBlock({ form, onChange }: OtherAssetBlockProps) {
               <DecimalInput
                 value={form.nblRatioOfCorpAssets}
                 onChange={(v) => onChange({ nblRatioOfCorpAssets: v })}
-                placeholder="비사업용토지 가액 비율"
               />
             </FieldCard>
           </ToneCard>

@@ -16,6 +16,10 @@ import { scaleBurdenedGiftInfo } from "@/lib/tax-engine/burdened-gift-valuation"
 import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import {
+  deriveMemberRightsValue,
+  deriveRightValuationTotal,
+} from "./burdened-gift-right-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface BurdenedGiftInfoPayload {
@@ -41,6 +45,15 @@ export interface BurdenedGiftInfoPayload {
   actualAcquisitionTotal?: number;
   /** 증여재산 평가용 양도시 건물 기준시가 (상증법 §61 — 층별 가감율 적용). */
   giftBuildingStdPriceAtTransfer?: number;
+  /**
+   * 조합원입주권 평가 명세 (상증법 §61③ · 상증령 §51② · 상증칙 §16③).
+   * 평가액 **총액**은 `buildingStdPriceAtTransfer`가 담는다 — 이 객체는 구성 내역이다.
+   */
+  rightValuation?: {
+    memberRightsValue: number;
+    paidInstallments: number;
+    premium: number;
+  };
   // Phase 3: 증여세 통합 입력
   donorRelation?:
     | "spouse"
@@ -247,7 +260,40 @@ export function buildBurdenedGiftInfo(
     };
   }
 
-  // ── housing / building / commercial_building: 단일 공시가격(주택공시가격·건물기준시가·호별고시가 통합) ──
+  /**
+   * ── 조합원입주권: 상증법 §61③ 평가 (2026-09-08) ──
+   *
+   * 🔴 **평가액 총액을 `buildingStdPriceAtTransfer`에 싣는다** — 단일자산 3종 관행과 동일.
+   *    `rightValuation`에만 넣고 std 4필드를 0으로 두면 엔진에서 세 값이 동시에 0이 된다:
+   *      · `sangjeungbeopValuation.supplementary` = **양도가액 안분 분모** → `transferDenominator === 0`
+   *        가드 발동 → 양도가액 land·building 모두 0 → **세액 0**(침묵)
+   *      · `wholePropertySupplementary` = 12억 판정 분모
+   *    `rightValuation`은 **구성 내역**(표시·자기일관 검증)이다.
+   *
+   * 취득가액은 **K-4 전용**이다 — §61③ 평가는 §159①1호 A괄호의 열거(§61①②⑤·§66)에 없어
+   * 괄호가 발동하지 않고, §166①1호가 쓰는 취득가액이 「기존건물과 그 부수토지의 취득가액」
+   * (= 종전 부동산 실지취득가액)이다. ⇒ 취득시 기준시가 2필드는 **0으로 보낸다**(쓰지 않는다).
+   */
+  if (primary.assetKind === "right_to_move_in") {
+    const rightTotal = deriveRightValuationTotal(primary);
+    return {
+      ...common,
+      landStdPriceAtTransfer: 0,
+      buildingStdPriceAtTransfer: rightTotal,
+      landStdPriceAtAcquisition: 0,
+      buildingStdPriceAtAcquisition: 0,
+      // D-2: K-4 고정. 시가 모드에서 사용자가 「환산」을 골라 뒀어도 입주권에는 그 경로가 없다.
+      acquisitionMethod: "actual" as const,
+      actualAcquisitionTotal: parseAmount(primary.bgActualAcquisitionTotal) || 0,
+      rightValuation: {
+        memberRightsValue: deriveMemberRightsValue(primary),
+        paidInstallments: parseAmount(primary.bgRightPaidInstallments) || 0,
+        premium: parseAmount(primary.bgRightPremium) || 0,
+      },
+    };
+  }
+
+  // ── housing / building / commercial_building / redevelopment_apt: 단일 공시가격(주택공시가격·건물기준시가·호별고시가 통합) ──
   // 토지·건물 분리 없이 buildingStdPrice 자리에 통째로 넣어 엔진 sum에서 그대로 사용.
   // F-3 (2026-05-12): commercial_building도 단일 기준시가 fallback 패턴 적용.
   //   cb*·호별고시가는 환산취득가(useEstimatedAcquisition) 전용 — 부담부증여 모드에서는 사용자가

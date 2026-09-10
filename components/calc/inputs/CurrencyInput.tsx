@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -76,6 +76,7 @@ export function CurrencyInput({
   const [focused, setFocused] = useState(false);
   const [localRaw, setLocalRaw] = useState(toRawDigits(value, allowNegative));
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputId = useId();
 
   // 외부 value가 변경되면 로컬 raw 동기화 (단, 포커스 중에는 사용자 입력 보호)
   /* eslint-disable react-hooks/set-state-in-effect -- 의도된 외부→로컬 sync. 포커스 가드로 cascading render 방지 */
@@ -113,16 +114,21 @@ export function CurrencyInput({
   return (
     <div className="space-y-1.5">
       {label && !hideLabel && (
-        <label className="block text-sm font-medium">
+        <label htmlFor={inputId} className="block text-sm font-medium">
           {label} {required && <span className="text-destructive">*</span>}
         </label>
       )}
       <div className="relative">
         <input
           ref={inputRef}
+          id={inputId}
           type="text"
           inputMode="numeric"
-          aria-label={hideLabel && label ? label : undefined}
+          // 접근성 이름은 **항상 라벨**에서 온다. 종전에는 hideLabel일 때만 aria-label을 붙였고,
+          // 그 밖에는 `<label>`이 input과 연결돼 있지 않아 **placeholder가 이름 노릇**을 했다
+          // ⇒ placeholder를 지우면 이름 자체가 사라져 getByRole이 못 찾는다(2026-09-07 CI 실측).
+          // htmlFor는 클릭 포커스용이고, 이름은 aria-label로 고정한다(라벨의 required `*` 제외).
+          aria-label={label || undefined}
           value={displayValue}
           onChange={handleChange}
           onFocus={handleFocus}

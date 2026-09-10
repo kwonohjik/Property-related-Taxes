@@ -34,7 +34,7 @@ export function AllocationResultView({
         </div>
         <div className="mt-3 space-y-3">
           {result.perBeneficiary.map((b) => (
-            <div key={b.beneficiaryId} className="rounded-md border border-rose-100 bg-white/60 p-3" data-testid={`ci-alloc-beneficiary-${b.beneficiaryId}`}>
+            <div key={b.beneficiaryId} className="rounded-md border border-rose-100 bg-white/60 dark:bg-white/5 p-3" data-testid={`ci-alloc-beneficiary-${b.beneficiaryId}`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-rose-900">{nameById.get(b.beneficiaryId)}</span>
                 <span className="text-right font-mono text-lg font-bold tabular-nums text-rose-900" data-testid={`ci-alloc-total-${b.beneficiaryId}`}>

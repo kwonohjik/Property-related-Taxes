@@ -64,6 +64,10 @@ export function isSec163_9PreDeemed(asset: Sec163_9Asset): boolean {
  *
  * 화면 문구가 "상속개시일"로 고정돼 있으면 증여 사용자에게는 **틀린 안내**가 된다.
  * 라벨·안내문은 이 함수를 거친다.
+ *
+ * ⚠️ **소비처가 이 함수를 부르는지 확인할 것** — `HouseValuationSection`은 2026-09-07까지
+ *    이 leaf가 있는 채로 「상속개시일」을 4곳에 하드코딩하고 있었다. leaf의 존재가 곧
+ *    적용을 뜻하지는 않는다([[feedback_sibling_path_already_implements_rule]]).
  */
 export function sec163_9BaseDateLabel(asset: Sec163_9Asset): string {
   return asset.acquisitionCause === "gift" ? "증여일" : "상속개시일";

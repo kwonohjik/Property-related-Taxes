@@ -33,7 +33,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import { isRightThreeYearExceeded } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
+import { rightThreeYearExceptionVisible } from "@/lib/calc/right-three-year-exception-scope";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 type Props = {
@@ -49,21 +49,14 @@ const DELAY_REASONS = [
 
 export function RightThreeYearExceptionSection({ form, onChange }: Props) {
   /**
-   * 세대 보유 권리 중 **가장 먼저 취득한** 것이 기준이다 — 엔진도 `rights[0]`을 본다.
-   * 취득일이 비어 있는 행은 「입력 중」이라 판정 대상이 아니다.
+   * 노출 조건은 ⑧ 검증과 **같은 술어**다(`rightThreeYearExceptionVisible`).
+   *
+   * 🔴 종전에는 여기서만 계산했고 ⑧은 `rightThreeYearExceptionKind`만 봤다 — 카드가 사라진
+   *    뒤에도 필수값을 요구해 **채울 칸 없는 영구 차단**이 됐다.
+   *    세대 보유 권리 중 **가장 먼저 취득한** 것이 기준이고(엔진도 `rights[0]`을 본다),
+   *    취득일이 비어 있는 행은 「입력 중」이라 판정 대상이 아니다 — 술어가 그대로 옮겨졌다.
    */
-  const exceeded = useMemo(() => {
-    if (!form.transferDate) return false;
-    const transferDate = new Date(form.transferDate);
-    return form.presaleRights.some(
-      (r) =>
-        r.acquisitionDate &&
-        isRightThreeYearExceeded({
-          rightAcquisitionDate: new Date(r.acquisitionDate),
-          transferDate,
-        }),
-    );
-  }, [form.presaleRights, form.transferDate]);
+  const exceeded = useMemo(() => rightThreeYearExceptionVisible(form), [form]);
 
   if (!exceeded) return null;
 

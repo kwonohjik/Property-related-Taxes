@@ -151,7 +151,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
 
       {/* ① 「양도 대상」 라디오는 폐지됐다 (2026-08-13 축 일원화).
           양도 대상은 **자산 종류**가 결정한다:
-            입주권(`right_to_move_in`)     → 조합원입주권 양도 (§166① · §95② 단서 · §89①4호)
+            입주권(`right_to_move_in`)     → 조합원입주권 양도 (§166① · §95② 본문 괄호 · §89①4호)
             재개발APT(`redevelopment_apt`) → 완공 신축주택 양도 (§166②)
           종전 라디오는 「APT 자산인데 입주권 양도」 같은 불일치 조합을 허용했고, 같은 사실을
           두 곳(자산 종류 + 라디오)에서 입력받아 축이 이중화돼 있었다.
@@ -303,7 +303,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
             {parseAmount(asset.fixedAcquisitionPrice) > 0 && (
               <div className="pt-1">
                 현재 사용 중인 취득가액:{" "}
-                <span className="font-mono font-semibold">
+                <span className="font-mono tabular-nums font-semibold">
                   {parseAmount(asset.fixedAcquisitionPrice).toLocaleString("ko-KR")}
                 </span>
               </div>
@@ -393,7 +393,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, wasRegul
           <div className="mt-2 rounded-md bg-violet-100/60 border border-violet-200 p-2 text-xs space-y-1">
             <p className="font-semibold text-violet-800">미리보기 — 분양가 (인가후 분 취득가) 자동 산정</p>
             <p className="text-violet-700">
-              분양가 = 권리가액 {preview.sign} 청산금 = <span className="font-mono font-semibold">{preview.salePriceTotal.toLocaleString()}</span>
+              분양가 = 권리가액 {preview.sign} 청산금 = <span className="font-mono tabular-nums font-semibold">{preview.salePriceTotal.toLocaleString()}</span>
             </p>
             <p className="text-caption text-violet-600">
               ※ §166②1호 인가후 분 양도차익 산정 시 양도가액에서 차감되는 분양가. 상단 일반 &ldquo;취득가액&rdquo; 입력 대신 본 값이 자동 사용됩니다.

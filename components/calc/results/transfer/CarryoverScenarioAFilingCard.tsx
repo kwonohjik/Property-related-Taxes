@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 이월과세 **적용**(Scenario A) 요약 카드 — 소득세법 §97조의2.
+ * 이월과세 **적용**(시나리오 A) 요약 카드 — 소득세법 §97조의2.
  *
  * ## 왜 생겼나 (결과탭 코드리뷰 #023)
  *
@@ -78,7 +78,7 @@ export function CarryoverScenarioAFilingCard({
     <CarryoverScenarioSummaryCard
       title="[A] 이월과세 적용 (비교용)"
       subtitle="증여자 기산 보유기간 · 취득가액 = 증여자 취득 당시 가액"
-      footnote="※ Scenario A는 이월과세 적용 시 결과. 비교과세(§97조의2 ② 3호) 판정용."
+      footnote="※ 시나리오 A는 이월과세 적용 시 결과. 비교과세(§97조의2 ② 3호) 판정용."
       rows={rows}
       adopted={adopted}
       onPrint={onPrint}

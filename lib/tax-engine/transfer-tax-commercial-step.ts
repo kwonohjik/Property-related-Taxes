@@ -16,6 +16,7 @@ import {
 } from "./commercial-building-valuation";
 import type { TransferTaxInput } from "./types/transfer.types";
 import { calcStdPriceMonths } from "./same-adjustment-period-std-price";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 export interface CommercialBuildingStepResult {
   /** 엔진 input 덮어쓰기용 업데이트된 acquisitionPrice·expenses */
@@ -87,7 +88,7 @@ export function runCommercialBuildingStep(
   //    **raw 연면적**을 쓴다 → 연면적이 소수 3자리 이상이면 표시값이 실제와 어긋난다(dual-truth).
   //    CB에서는 detail.denominator를 **실제 분모(raw)**로 덮어써 결과 카드가 실제 계산과 일치하게 한다.
   const exprDetail = exprVal
-    ? { ...exprVal.detail, denominator: Math.floor(exprVal.detail.chosenPerSqm * floorAreaTotal) }
+    ? { ...exprVal.detail, denominator: multiplyByArea(exprVal.detail.chosenPerSqm, floorAreaTotal) }
     : undefined;
 
   // §164⑥ 단서 판정용 취득연도 — 이미 있는 acquisitionDate에서 파생한다.

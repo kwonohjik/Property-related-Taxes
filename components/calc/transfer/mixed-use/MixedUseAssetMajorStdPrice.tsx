@@ -12,6 +12,8 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
+import { derivePre1990PhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -86,14 +88,23 @@ export function MixedUseAssetMajorStdPrice({
   // 양도시 상가부분 자동 계산 (mixedTransfer 우선, PHD 토지가액 fallback — API 변환과 동일 우선순위)
   const transferLandPerSqm =
     parseAmount(asset.mixedTransferLandPricePerSqm) || parseAmount(asset.phdLandPricePerSqmAtTransfer);
-  const transferCommercialLandStd = Math.floor(transferLandPerSqm * commercialLandArea);
+  const transferCommercialLandStd = multiplyByArea(transferLandPerSqm, commercialLandArea);
   const transferCommercialBuilding = parseAmount(asset.mixedTransferCommercialBuildingPrice) ?? 0;
   const transferCommercialTotal = transferCommercialLandStd + transferCommercialBuilding;
 
-  // 취득시 상가부분 자동 계산 (mixedAcq 우선, PHD 토지가액 fallback — API 변환과 동일 우선순위)
+  /**
+   * 취득시 상가부분 자동 계산 — ④ 변환(`transfer-tax-api-mixed-use.ts:141~142`)과 **같은 우선순위**.
+   *
+   * 🔴 **1990.8.30. 이전 취득 등급환산 fallback이 빠져 있었다** (2026-09-07 대장 재대조).
+   *    ④는 `mixedAcq → phd → derivePre1990PhdLandPricePerSqmAtAcq` 3단인데 여기는 2단이라,
+   *    그 시기 취득 겸용주택은 화면이 「—」를 보여주는 동안 엔진은 환산값으로 계산했다.
+   *    3중 패턴(⑤·④·⑧ 같은 파생 함수) 위반이다 — 파생일 뿐 store에 쓰지 않는다.
+   */
   const acqLandPerSqm =
-    parseAmount(asset.mixedAcqLandPricePerSqm) || parseAmount(asset.phdLandPricePerSqmAtAcq);
-  const acqCommercialLandStd = Math.floor(acqLandPerSqm * commercialLandArea);
+    parseAmount(asset.mixedAcqLandPricePerSqm) ||
+    parseAmount(asset.phdLandPricePerSqmAtAcq) ||
+    (derivePre1990PhdLandPricePerSqmAtAcq(asset, transferDate ?? "") ?? 0);
+  const acqCommercialLandStd = multiplyByArea(acqLandPerSqm, commercialLandArea);
   const acqCommercialBuilding = parseAmount(asset.mixedAcqCommercialBuildingPrice) ?? 0;
   const acqCommercialTotal = acqCommercialLandStd + acqCommercialBuilding;
 
@@ -162,7 +173,7 @@ export function MixedUseAssetMajorStdPrice({
           {isGift && (
             <ToneCard
               tone="violet"
-              title="증여일 신고가액 override (선택)"
+              title="증여일 신고가액 직접 입력 (선택)"
               titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
             >
               <CurrencyInput
@@ -266,7 +277,7 @@ export function MixedUseAssetMajorStdPrice({
         {isInheritance && (
           <ToneCard
             tone="violet"
-            title="상속개시일 신고가액 override (선택, 상가 전체)"
+            title="상속개시일 신고가액 직접 입력 (선택, 상가 전체)"
             titleExtra={<LawArticleModal legalBasis="상속세및증여세법 §60" label="상증법 §60" />}
           >
             <CurrencyInput
@@ -289,7 +300,7 @@ export function MixedUseAssetMajorStdPrice({
         {isGift && (
           <ToneCard
             tone="violet"
-            title="증여일 신고가액 override (선택, 상가 전체)"
+            title="증여일 신고가액 직접 입력 (선택, 상가 전체)"
             titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163⑨" label="소령 §163⑨" />}
           >
             <CurrencyInput

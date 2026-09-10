@@ -27,6 +27,7 @@ import type {
   RedevelopmentResult,
   CalculationStep,
 } from "./types/transfer.types";
+import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 
 export function runRedevelopmentGainSteps(
@@ -38,6 +39,15 @@ export function runRedevelopmentGainSteps(
   multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined,
   /** §89①3호가목 비과세 판정 결과 — `opts.exemptionResult`(subject="apt" 전용). 마스킹에만 쓴다. */
   exemptionResult: { isExempt: boolean; isPartialExempt: boolean; exemptReason?: string } | undefined,
+  /**
+   * 부담부증여 §159 명세 — 이 분기가 메인 파이프라인을 조기 이탈하므로 상류에서 받아야 한다.
+   *
+   *   · `debtRatio` → §166 β 스케일 (`redevelopment-burdened-gift.ts`)
+   *   · 12억 비교·안분 분모 → `input.burdenedGiftDenominator`(= 증여가액 C)
+   *
+   * 미제공이면 종전과 동일하게 동작한다(일반 양도 · additive).
+   */
+  burdenedGift?: TransferBurdenedGiftBreakdown,
 ) {
   // ─ Step A: redevelopment orchestrator 호출 ─
   const redevRaw: RedevelopmentResult = runRedevelopment({
@@ -54,6 +64,7 @@ export function runRedevelopmentGainSteps(
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
     ownershipRatio: input.ownershipRatio,
     isUnregistered: input.isUnregistered,
+    debtRatio: burdenedGift?.debtRatio,
   });
 
   /**
@@ -97,20 +108,42 @@ export function runRedevelopmentGainSteps(
   //    (= 세대 주택수 1)만으로 **apt용 안분**이 걸려, §89①4호 요건을 하나도 충족하지 못한
   //    세대에도 과세대상 양도차익이 1/5 수준으로 깎였다
   //    (실측: 15억·주택1채 → 479,638,500 → 70,485,800 · Δ 409,152,700 과소).
+  /**
+   * 🔴 **12억 비교·안분 분모는 부담부증여에서 「양도가액」이 아니다** (2026-09-08 · D-2).
+   *
+   * 부담부증여에서 `input.transferPrice`는 §159가 안분한 **채무액 B**다. 그 값으로 12억을
+   * 재면 문턱이 `1/r`배로 올라가 **고가주택 판정 자체가 빠진다** — 24억 물건을 채무 6억으로
+   * 부담부증여하면 6억 ≤ 12억이라 안분이 걸리지 않는다.
+   *
+   * 일반 경로(`transfer-tax-exemption.ts` 7곳)는 이미 `burdenedGiftDenominator`(= 증여가액 C,
+   * 국세청 해석례 5건 기반 해석 B)를 같은 우선순위로 쓴다. 재개발 경로만 배선이 없었다.
+   *
+   * ⚠️ **비교와 안분이 반드시 같은 값이어야 한다** — 다르면 「12억을 넘는다」고 판정해 놓고
+   *    다른 분모로 나누는 모순이 된다. 그래서 한 상수로 뽑아 두 곳에 함께 쓴다.
+   * ⚠️ `??`가 아니라 `> 0` 판정이다 — `??`는 0을 걸러내지 못한다.
+   */
+  const highValueBase =
+    (input.burdenedGiftDenominator ?? 0) > 0
+      ? input.burdenedGiftDenominator!
+      : input.transferPrice;
   const isHighValue = aptExemption
     ? aptExemption.isPartialExempt === true
     : input.redevelopment!.subject !== "right" &&
       isOneHouseSingle &&
-      input.transferPrice > HIGH_VALUE_THRESHOLD;
+      highValueBase > HIGH_VALUE_THRESHOLD;
   const allocated: RedevelopmentResult = isHighValue
-    ? applyHighValueAllocation(redevAfterExemption, input.transferPrice, input.redevelopment!)
+    ? applyHighValueAllocation(redevAfterExemption, highValueBase, input.redevelopment!)
     : redevAfterExemption;
 
   if (isHighValue && allocated.highValueAllocation) {
     const ha = allocated.highValueAllocation;
     steps.push({
       label: "1세대1주택 12억 초과 과세대상 양도차익 안분",
-      formula: `전체 양도차익 ${redevRaw.total.gain.toLocaleString()} × (양도가액 ${input.transferPrice.toLocaleString()} - 12억) / 양도가액 = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
+      formula: (() => {
+        const baseLabel =
+          highValueBase === input.transferPrice ? "양도가액" : "증여가액";
+        return `전체 양도차익 ${redevRaw.total.gain.toLocaleString()} × (${baseLabel} ${highValueBase.toLocaleString()} - 12억) / (${baseLabel} ${highValueBase.toLocaleString()}) = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`;
+      })(),
       amount: ha.taxableGain,
       legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
     });

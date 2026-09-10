@@ -309,7 +309,7 @@ export interface TransferTaxInput {
   /**
    * 조합원입주권 승계취득 여부 (propertyType === "right_to_move_in" 일 때만 의미).
    * true = 승계조합원 (장특공제 배제), false/미지정 = 원조합원.
-   * 소득세법 §95② 단서: 조합원입주권은 원조합원에 한해 장기보유특별공제 적용.
+   * 소득세법 §95② 본문 괄호(「조합원으로부터 취득한 것은 제외한다」): 조합원입주권은 원조합원에 한해 장기보유특별공제 적용.
    */
   isSuccessorRightToMoveIn?: boolean;
   /** 1세대 여부 */

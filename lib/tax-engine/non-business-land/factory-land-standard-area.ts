@@ -169,7 +169,7 @@ export function judgeFactoryLandExcess(
     throw new TaxCalculationError(
       TaxErrorCode.INVALID_INPUT,
       `${context} 비사업용토지 판정: 공장건축물 연면적과 업종별 기준공장면적률을 입력하세요 ` +
-        `(「지방세법 시행규칙」 별표 6 — 연면적 × 100 ÷ 기준공장면적률).`,
+        `(「지방세법 시행규칙」 별표 6 — 연면적 × 100 ÷ (기준공장면적률)).`,
     );
   }
 

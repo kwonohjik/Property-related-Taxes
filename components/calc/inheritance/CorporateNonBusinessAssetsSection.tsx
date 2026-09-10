@@ -96,7 +96,7 @@ export function CorporateNonBusinessAssetsSection({
           법인 사업무관자산 차감 (시행령 §15⑤2호 + §16⑤2호)
         </p>
         <p className="text-micro text-amber-700 dark:text-amber-300">
-          ⓘ 산식: 평가가액 × (총자산 − 사업무관자산 합) / 총자산. 총자산 미입력 시 차감 미적용 (legacy).
+          ⓘ 산식: 평가가액 × (총자산 − 사업무관자산 합) / 총자산. 총자산 미입력 시 차감 미적용(이전 입력 형식).
         </p>
         <div className="flex flex-wrap gap-1.5">
           <LawArticleModal legalBasis="상증령 §15" label="상증령 §15⑤2호" />
@@ -183,7 +183,6 @@ export function CorporateNonBusinessAssetsSection({
             value={assets?.currentCash ? String(assets.currentCash) : ""}
             onChange={(v) => updateAssets({ currentCash: parseKrw(v) })}
             hint="요구불예금 + 취득일부터 만기 3개월 이내 금융상품 포함"
-            placeholder="보유현금 입력 (원)"
           />
           <p className="text-micro font-medium text-sky-700 dark:text-sky-300">
             직전 5개 사업연도 말 현금 (입력한 칸의 평균 사용)
@@ -235,7 +234,7 @@ export function CorporateNonBusinessAssetsSection({
           <p className="text-micro text-amber-800 dark:text-amber-200">
             평가가액 {formatKRW(stockValue)} × (총자산 {formatKRW(totalAssets!)} − 사업무관자산 {formatKRW(preview.sumOfNonBusiness)}) / 총자산
           </p>
-          <p className="text-xs font-mono text-amber-900 dark:text-amber-100">
+          <p className="text-xs font-mono tabular-nums text-amber-900 dark:text-amber-100">
             = {formatKRW(preview.adjustedValue)} (사업자산 비율 {(preview.ratio * 100).toFixed(2)}%)
           </p>
         </div>

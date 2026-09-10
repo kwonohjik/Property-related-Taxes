@@ -131,13 +131,13 @@ export function calcCorporateExemption(
       lawRef: INH.TAXPAYER,
     },
     {
-      label: "면제 한도 — 산출세액 × 영리법인 과세표준 ÷ 상속세 과세표준",
+      label: "면제 한도 — 산출세액 × (영리법인 과세표준) ÷ (상속세 과세표준)",
       amount: limit,
       lawRef: INH.TAXPAYER,
       note: `${totalComputedTax.toLocaleString()} × ${corporateGiftTaxBase.toLocaleString()} ÷ ${totalTaxBase.toLocaleString()}`,
     },
     {
-      label: "영리법인 면제세액 Min(증여세 산출세액, 한도)",
+      label: "영리법인 면제세액 — 증여세 산출세액과 한도 중 작은 금액",
       amount,
       lawRef: INH.TAXPAYER,
     },

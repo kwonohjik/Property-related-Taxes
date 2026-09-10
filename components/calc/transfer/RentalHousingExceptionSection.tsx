@@ -98,7 +98,7 @@ export function RentalHousingExceptionSection({
     >
       {/* 시나리오 선택 */}
       <RadioCardGroup
-        name="rental-scenario"
+        name={`rental-scenario-${asset.assetId ?? "primary"}`}
         tone="violet"
         layout="stack"
         options={[
@@ -133,7 +133,13 @@ export function RentalHousingExceptionSection({
         <div className="space-y-3">
           {rh.rentalUnits.map((unit, i) => (
             <RentalUnitCard
-              key={i}
+              /**
+               * 🔴 **인덱스 key 금지** (2026-09-07 UI 리뷰). 중간 호를 삭제하면 뒤 카드가 삭제된
+               *    호의 인덱스를 물려받아 자식의 **로컬 state**(주소 검색어·기준시가 조회 연도·
+               *    수동 입력 여부·오류 메시지)가 그대로 남았다 — 그 state들은 마운트 시 1회만
+               *    초기화되기 때문이다. `unitId`는 ②·③이 보장한다.
+               */
+              key={unit.unitId}
               unit={unit}
               index={i}
               onChange={(u) => updateUnit(i, u)}
@@ -324,12 +330,33 @@ export function RentalHousingExceptionSection({
               <p className="text-xs font-semibold text-violet-700">거주주택 요건 충족 상태</p>
             </div>
 
-            {/* 거주기간 입력 — 개월 직접 또는 입주·퇴거일 다중 구간 (자산-수준 residence 필드 양방향 동기화) */}
+            {/* 거주기간 입력 — 입주·퇴거일 다중 구간 (자산-수준 residence 필드 양방향 동기화).
+                토글 없이 상시 표시는 `251df37b`의 의도된 설계다(최소 1건 필수 입력) — 되돌리지 말 것. */}
             {onChangeResidence && (
               <div className="space-y-1">
                 <p className="text-sm font-medium text-violet-800">
                   거주주택 거주기간 <span className="text-rose-500">*</span>
                 </p>
+                {/*
+                  🔴 **direct 모드 echo** (R21). store 기본값이 `residenceInputMode: "direct"`
+                     (`calc-wizard-asset-residence.ts:17`)라, 보유 상황 단계에서 개월 수로
+                     입력한 사용자가 이 카드를 열면 구간이 비어 **「합계 거주기간 0개월」**이
+                     보이는데 바로 아래 실시간 판정은 direct 개월을 읽어 **「✓ 충족」**을 찍었다
+                     — 한 카드가 자기 자신과 모순됐다.
+                     게다가 구간을 입력하면 `deriveResidencePeriodMonths`가 `interval &&
+                     periods.length > 0`에서 구간 합산으로 갈아타므로 **그 개월 수는 버려진다**.
+                     둘 다 말로 밝힌다 — 값을 몰래 옮기지 않는다(개월→날짜 역산 불가).
+                */}
+                {asset.residenceInputMode !== "interval" &&
+                  (parseInt(asset.residencePeriodMonthsAsset) || 0) > 0 && (
+                    <p
+                      className="rounded-md border border-violet-200 bg-violet-100/60 px-3 py-2 text-caption text-violet-900"
+                      data-testid="residence-direct-months-echo"
+                    >
+                      「보유 상황」 단계에서 <strong>{parseInt(asset.residencePeriodMonthsAsset)}개월</strong>로
+                      입력돼 있습니다. 아래에 구간을 입력하면 <strong>그 개월 수를 대체</strong>합니다.
+                    </p>
+                  )}
                 <PeriodRangeEditor
                   tone="violet"
                   startLabel="입주일"

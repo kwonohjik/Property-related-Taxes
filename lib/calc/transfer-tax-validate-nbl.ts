@@ -18,11 +18,13 @@ import { isUrbanForPasture } from "@/lib/tax-engine/non-business-land/urban-area
 import { isUrbanForForest } from "@/lib/tax-engine/non-business-land/urban-area";
 import { isUrbanCriteriaRegion } from "@/lib/tax-engine/non-business-land/urban-region-scope";
 import type { LandDivision } from "@/lib/tax-engine/non-business-land/types";
+import { requiresDeemedTransferDate } from "@/lib/calc/nbl-deemed-transfer-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { resolveNblUrbanIncorporationDate } from "./non-business-land-request";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
 import { parseTaxPeriodYears } from "@/lib/tax-engine/non-business-land/disqualified-tax-periods";
+import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
 
 /** 폼의 3-state 값을 엔진 `LandDivision`으로 — ④ form-mapper와 **같은 접기 규칙**(3중 패턴). */
 function nblLandDivisionOf(asset: AssetForm): LandDivision | undefined {
@@ -57,7 +59,7 @@ function isUrbanForIncorporationGrace(
   // 지역기준 자체가 적용되지 않으므로 편입일도 요구하지 않는다 — 과차단 방지 (E2-01).
   if (
     (landType === "farmland" || landType === "pasture") &&
-    isUrbanCriteriaRegion(asset.nblLandSigunguCode, nblLandDivisionOf(asset)) === false
+    isUrbanCriteriaRegion(nblLandSigunguCodeOf(asset), nblLandDivisionOf(asset)) === false
   ) {
     return false;
   }
@@ -110,14 +112,25 @@ export function validateNblDetailedJudgment(
    * 「토지가액 50배 → §168의11② 수입금액비율 붕괴」 경로 자체가 사라졌다.
    */
 
+  // 무조건 의제 성립 시 아래 기간기준 상세 입력은 엔진이 무시 + UI 비활성 → 검증 스킵
+  if (nblExempt) return null;
+
   /**
    * 조특령 §66⑭ 결격 과세기간 — 형식·범위 차단 (E2-09, 2026-09-03).
    *
    * 파서(`parseTaxPeriodYears`)는 4자리 정수가 아닌 토큰을 **버리지 않고 `invalid`로 돌려준다**.
    * 조용히 버리면 「입력했는데 반영이 안 된 것」이 사용자에게 보이지 않는다(자동 fallback 금지).
    * 범위는 취득연도~양도연도 — 그 밖의 연도는 자경 기간과 겹칠 수 없어 아무것도 차감하지 못한다.
+   *
+   * 🔴 **위치·게이트는 입력칸의 렌더 게이트와 같아야 한다** (2026-09-07 UI 리뷰 L2).
+   *    유일한 입력칸 `FarmlandDetailSection`은 ① 지목이 「농지」일 때만 마운트되고
+   *    ② `NblSectionContainer`의 `isExempt ? "pointer-events-none"` 래퍼 안에 있다.
+   *    종전에는 이 블록이 `if (nblExempt) return null;` **앞**에 있고 지목 조건도 없어,
+   *    형식 오류를 남긴 채 지목을 임야로 바꾸거나 무조건 사업용 의제가 성립하면
+   *    「인식할 수 없는 값…」으로 1단계가 막히는데 그 칸을 **클릭조차 할 수 없었다**.
+   *    ④(`form-mapper.ts`)는 파싱된 연도만 싣고 invalid는 버리므로 계산 결과는 불변이다.
    */
-  if (asset.nblDisqualifiedTaxPeriods) {
+  if (asset.nblLandType === "farmland" && asset.nblDisqualifiedTaxPeriods) {
     const { years, invalid } = parseTaxPeriodYears(asset.nblDisqualifiedTaxPeriods);
     if (invalid.length > 0)
       return `${label}: 결격 과세기간(조특령 §66⑭)은 4자리 연도를 쉼표로 구분해 입력하세요 (예: 2019, 2020). 인식할 수 없는 값: ${invalid.join(", ")}`;
@@ -129,9 +142,6 @@ export function validateNblDetailedJudgment(
         return `${label}: 결격 과세기간(조특령 §66⑭)은 취득연도(${acqYear})부터 양도연도(${trfYear}) 사이여야 합니다. 범위 밖: ${outOfRange.join(", ")}`;
     }
   }
-
-  // 무조건 의제 성립 시 아래 기간기준 상세 입력은 엔진이 무시 + UI 비활성 → 검증 스킵
-  if (nblExempt) return null;
 
   // 주택부수토지(§168-12) 도시지역 주·상·공 배율은 수도권 여부에 따라 3배/5배로 갈린다.
   // 미선택 시 엔진(housing-land.ts)이 수도권(불리)로 default 적용 → 유리-default 정책상 계산 전 차단.
@@ -175,8 +185,10 @@ export function validateNblDetailedJudgment(
   if (
     (asset.nblLandType === "farmland" || asset.nblLandType === "pasture") &&
     isUrbanResidentialCommercialIndustrial(asset.nblZoneType as ZoneType) &&
-    isUrbanCriteriaRegion(asset.nblLandSigunguCode, nblLandDivisionOf(asset)) === undefined &&
-    asset.nblLandSigunguCode
+    isUrbanCriteriaRegion(nblLandSigunguCodeOf(asset), nblLandDivisionOf(asset)) === undefined &&
+    // 🔴 ④·⑤와 **같은 fallback**을 본다(2026-09-07). 종전 `asset.nblLandSigunguCode`는
+    //    자동 연동 상태에서 falsy라 이 차단이 통째로 건너뛰어졌다.
+    nblLandSigunguCodeOf(asset)
   ) {
     return `${label}: 도시지역 ${LAND_TYPE_LABEL[asset.nblLandType] ?? "토지"} — 소재지 행정구역 단위(동 / 읍·면)를 선택하세요. 법 §104조의3①1호나목·3호가목은 읍·면지역을 도시지역 판정에서 제외합니다.`;
   }
@@ -196,8 +208,11 @@ export function validateNblDetailedJudgment(
     return `${label}: 도시지역 ${LAND_TYPE_LABEL[asset.nblLandType] ?? "토지"} — 도시지역 편입일을 입력하세요. 미입력 시 편입 유예가 적용되지 않아 비사업용으로 판정됩니다.`;
   }
 
-  // §168의14② 양도일 의제 — 사유 선택 시 의제일 필수 (자동 fallback 금지)
-  if (asset.nblDeemedTransferReason && asset.nblDeemedTransferReason !== "none" && !asset.nblDeemedTransferDate)
+  // §168의14② 양도일 의제 — 사유 선택 시 의제일 필수 (자동 fallback 금지).
+  // 🔴 **지목 게이트를 ⑤와 공유한다**(R11). 종전에는 지목을 보지 않아, 사유를 고른 뒤
+  //    지목을 주택부수토지로 바꾸면 섹션은 사라지고 사유만 남아 **화면에 없는 칸을
+  //    요구하며 영구 차단**됐다(리셋 패치 없음).
+  if (requiresDeemedTransferDate(asset) && !asset.nblDeemedTransferDate)
     return `${label}: 양도일 의제 사유를 선택했습니다. 의제일(최초 경매기일·공매일·공고일 등)을 입력하세요.`;
   // §168의11①·⑤·⑥ 기타토지 정밀판정 입력 검증 (별도 파일 분리 — 800줄 정책)
   if (asset.nblLandType === "other_land") {

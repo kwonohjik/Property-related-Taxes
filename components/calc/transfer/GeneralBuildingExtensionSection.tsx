@@ -26,6 +26,8 @@ import { buildGeneralBuildingExtensionBatchPoints } from "@/lib/calc/building-st
 import { buildGeneralBuildingExtensionBatchPatch } from "@/lib/calc/building-std-batch-apply";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { AddressValue } from "@/components/ui/address-search";
+import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -68,7 +70,7 @@ export function GeneralBuildingExtensionSection({
 
   /**
    * 증축 있음 안분 미리보기 — 4가지 조합 모두 지원.
-   * - 원건물: isOriginActual = !useEstimatedAcquisition
+   * - 원건물: isOriginActual = 파트 취득방식(`effectivePartAcqMode`)이 실가인가
    * - 증축분: extMode = gbExtensionAcquisitionMode ("estimated" | "actual")
    * 완전 입력 시에만 결과 표시 (불완전 입력은 null 반환).
    * useEffect → store 미러링 금지 정책 준수.
@@ -84,13 +86,36 @@ export function GeneralBuildingExtensionSection({
     const acqLandPerSqm = parseAmount(asset.gbAcqLandPricePerSqm ?? "");
     const acqBuildingStd = parseAmount(asset.gbAcqBuildingValue ?? "");
 
-    const isOriginActual = !asset.useEstimatedAcquisition;
+    /**
+     * 🔴 **원건물 모드는 파트 축에서 읽는다** (2026-09-07 UI 리뷰).
+     *
+     * 2026-08-08에 「증축 × 토지·건물 분리 취득」 차단이 해제되어 둘이 함께 켜질 수 있다.
+     * 분리 ON에서는 자산-단위 「취득가액 산정 방식」 라디오가 **숨겨지고**
+     * 파트별 라디오(`landAcqMode`·`buildingAcqMode`)가 실제 계산을 가른다. 그런데 이
+     * 미리보기만 옛 자산-단위 플래그 `useEstimatedAcquisition`을 봐서, 두 파트를 환산으로
+     * 골라도 「원건물 실가」로 안분하고 화면에서 사라진 stale `fixedAcquisitionPrice`를
+     * 계속 읽었다. 술어는 ④·⑧과 **같은 함수**(`effectivePartAcqMode`)를 쓴다.
+     *
+     * ⚠️ 두 파트 모드가 **서로 다르면** 이 미리보기의 「일괄 취득가 안분」 모델로 표현할 수
+     *    없다 — 틀린 수를 보여 주는 대신 미리보기를 내지 않는다(계산은 엔진이 정확히 한다).
+     */
+    // ⚠️ `asset` **객체 자체**를 넘기면 React Compiler가 이 useMemo의 메모이제이션을 보존하지
+    //    못한다(`Compilation Skipped`). 레거시 파생에 필요한 세 플래그만 추려 넘긴다.
+    const legacyFlags = {
+      isSalesCaseAcquisition: asset.isSalesCaseAcquisition,
+      isAppraisalAcquisition: asset.isAppraisalAcquisition,
+      useEstimatedAcquisition: asset.useEstimatedAcquisition,
+    };
+    const landMode = effectivePartAcqMode(asset.landAcqMode, legacyFlags);
+    const buildingMode = effectivePartAcqMode(asset.buildingAcqMode, legacyFlags);
+    if (landMode !== buildingMode) return null;
+    const isOriginActual = landMode === "actual";
     const extMode = asset.gbExtensionAcquisitionMode || "estimated";
 
     // 양도가액 안분 — §166⑥ (3-way: 토지·건물1·건물2 기준시가 비율)
     // 증축분 양도시 기준시가는 모드 무관 항상 필요 (안분 분모 구성)
     if (!landAreaVal || !transferLandPerSqm || !transferBuildingStd || !transferExtStd || !totalTransfer) return null;
-    const landStdTotal = Math.floor(transferLandPerSqm * landAreaVal);
+    const landStdTotal = multiplyByArea(transferLandPerSqm, landAreaVal);
     const denom = landStdTotal + transferBuildingStd + transferExtStd;
     if (denom <= 0) return null;
 
@@ -104,7 +129,7 @@ export function GeneralBuildingExtensionSection({
       // 실가 모드: 일괄 취득가를 취득시 기준시가 비율로 토지·건물1 안분
       const bundledAcq = parseAmount(asset.fixedAcquisitionPrice ?? "");
       if (!bundledAcq || !acqLandPerSqm || !acqBuildingStd) return null;
-      const acqLandStd = Math.floor(acqLandPerSqm * landAreaVal);
+      const acqLandStd = multiplyByArea(acqLandPerSqm, landAreaVal);
       const denomAcq = acqLandStd + acqBuildingStd;
       if (denomAcq <= 0) return null;
       landAcq = Math.floor((bundledAcq * acqLandStd) / denomAcq);
@@ -112,7 +137,7 @@ export function GeneralBuildingExtensionSection({
     } else {
       // 환산 모드: 안분 양도가 × (취득시 기준시가 ÷ 양도시 기준시가)
       if (!acqLandPerSqm || !acqBuildingStd) return null;
-      const acqLandStd = Math.floor(acqLandPerSqm * landAreaVal);
+      const acqLandStd = multiplyByArea(acqLandPerSqm, landAreaVal);
       landAcq = Math.floor((landTransfer * acqLandStd) / landStdTotal);
       b1Acq = Math.floor((b1Transfer * acqBuildingStd) / transferBuildingStd);
     }
@@ -142,6 +167,10 @@ export function GeneralBuildingExtensionSection({
     asset.gbAcqLandPricePerSqm,
     asset.gbAcqBuildingValue,
     asset.useEstimatedAcquisition,
+    asset.landAcqMode,
+    asset.buildingAcqMode,
+    asset.isAppraisalAcquisition,
+    asset.isSalesCaseAcquisition,
     asset.gbExtensionAcquisitionMode,
   ]);
 
@@ -194,7 +223,7 @@ export function GeneralBuildingExtensionSection({
             label="증축분 취득 방식"
           >
             <RadioCardGroup
-              name="gbExtensionAcquisitionMode"
+              name={`gbExtensionAcquisitionMode-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.gbExtensionAcquisitionMode || "estimated"}
               onChange={(v) => onChange({ gbExtensionAcquisitionMode: v as "actual" | "estimated" })}
@@ -245,6 +274,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="양도시 건물2 기준시가 총액"
+                  hideLabel
                   hideUnit
                   value={asset.gbTransferExtensionBuildingStdPrice}
                   onChange={(v) => onChange({ gbTransferExtensionBuildingStdPrice: v })}
@@ -259,6 +289,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="취득시(증축시) 건물2 기준시가 총액"
+                  hideLabel
                   hideUnit
                   value={asset.gbAcquisitionExtensionBuildingStdPrice}
                   onChange={(v) => onChange({ gbAcquisitionExtensionBuildingStdPrice: v })}
@@ -278,6 +309,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="양도시 건물2 기준시가 총액"
+                  hideLabel
                   hideUnit
                   value={asset.gbTransferExtensionBuildingStdPrice}
                   onChange={(v) => onChange({ gbTransferExtensionBuildingStdPrice: v })}
@@ -320,6 +352,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="증축 실거래가"
+                  hideLabel
                   hideUnit
                   value={asset.gbExtensionActualAcquisitionPrice}
                   onChange={(v) => onChange({ gbExtensionActualAcquisitionPrice: v })}
@@ -337,6 +370,7 @@ export function GeneralBuildingExtensionSection({
               >
                 <CurrencyInput
                   label="증축 실제 필요경비"
+                  hideLabel
                   hideUnit
                   value={asset.gbExtensionActualExpenses}
                   onChange={(v) => onChange({ gbExtensionActualExpenses: v })}
@@ -348,7 +382,7 @@ export function GeneralBuildingExtensionSection({
           {/* 증축 취득원인 */}
           <FieldCard label="증축 취득원인" hint="자가증축(신축자가건축)이 기본입니다. 타인에게 매수한 경우 매매 선택.">
             <RadioCardGroup
-              name="gbExtensionAcquisitionCause"
+              name={`gbExtensionAcquisitionCause-${asset.assetId ?? "primary"}`}
               layout="inline"
               value={asset.gbExtensionAcquisitionCause ?? "newConstruction"}
               onChange={(v) => onChange({ gbExtensionAcquisitionCause: v as "purchase" | "newConstruction" })}

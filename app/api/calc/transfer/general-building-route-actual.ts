@@ -32,6 +32,7 @@ import {
   type GeneralBuildingRouteResult,
   type GbAssetLevelInputs,
 } from "./general-building-route-cards";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** 실거래가/감정가 모드 NBL 전용 payload. */
 export interface GeneralBuildingActualPricePayload {
@@ -281,7 +282,7 @@ export function buildActualGeneralBuildingCards(
    *    취득시 비율로 정정 (양도시 비율 사용 시 정답표 T-05과 수학적으로 동시 만족 불가)」).
    *    실가 경로만 미반영이었다.
    */
-  const acqLandStdTotal = Math.floor((acquisitionLandPricePerSqm ?? 0) * landArea);
+  const acqLandStdTotal = multiplyByArea((acquisitionLandPricePerSqm ?? 0), landArea);
   const acqTotalStd = acqLandStdTotal + (acquisitionBuildingStdPrice ?? 0);
   const hasAcqStd = acqTotalStd > 0;
   const acqLandRatioNum = hasAcqStd ? acqLandStdTotal / acqTotalStd : 0;
@@ -619,7 +620,7 @@ export function buildActualGeneralBuildingCards(
     transferBuildingStdPrice,
     // UI 자산별 산식 인라인 표시용 — 실가 모드에서도 gbDetail 노출 (사례 35 등).
     acqLandStdTotal: acquisitionLandPricePerSqm
-      ? Math.floor(acquisitionLandPricePerSqm * landArea)
+      ? multiplyByArea(acquisitionLandPricePerSqm, landArea)
       : undefined,
     acqBuilding1StdTotal: acquisitionBuildingStdPrice ?? undefined,
     bundledActualAcquisitionPrice: actualAcquisitionPrice ?? undefined,

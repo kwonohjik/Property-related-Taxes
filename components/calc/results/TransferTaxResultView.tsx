@@ -83,7 +83,7 @@ function ParcelDisclosure({
         className="flex w-full items-center gap-2 px-4 py-3 bg-muted/20 hover:bg-muted/40 text-sm font-medium text-left"
       >
         <span>필지 {idx + 1}</span>
-        <span className="ml-auto font-mono text-xs text-muted-foreground">
+        <span className="ml-auto font-mono tabular-nums text-xs text-muted-foreground">
           양도차익 {formatKRW(pr.transferGain)}
         </span>
         <span className={expandToggleClass("slate")} aria-hidden>
@@ -383,7 +383,19 @@ export function TransferTaxResultView({
             <p className="text-2xl font-bold mt-1">납부세액 0</p>
           </div>
         ) : result.amendmentDetail ? (
-          <AmendmentResultCard detail={result.amendmentDetail} fullTotalTax={result.totalTax} />
+          <AmendmentResultCard
+            detail={result.amendmentDetail}
+            fullTotalTax={result.totalTax}
+            /**
+             * 🔴 **단건 부담부증여도 한정해야 한다** (2026-09-07 UI 리뷰).
+             *    `totalScopeNote`는 이 문제를 막으려고 도입됐는데 저장소에서
+             *    `BundledAllocationCard` **한 곳만** 넘기고 있었다. 그런데 주택·토지·건물·상가
+             *    부담부증여는 route가 `mode: "single"`로 떨어져 **이 뷰가 종착지**이고,
+             *    같은 화면에 `BurdenedGiftDetailCard`(증여세)가 함께 뜬다 —
+             *    `result.totalTax`는 양도세 집계뿐이라 한정 없이는 증여세까지 포함한 금액으로 읽힌다.
+             */
+            {...(result.transferBurdenedGiftBreakdown ? { totalScopeNote: "양도세분" } : {})}
+          />
         ) : (
           <div className="rounded-xl border-2 border-primary bg-primary/5 p-5">
             <p className="text-sm font-medium text-muted-foreground mb-1">총 납부세액</p>

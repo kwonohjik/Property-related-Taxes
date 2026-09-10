@@ -46,6 +46,7 @@ import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclu
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
+import { detectRedevelopmentBurdenedGiftNotice } from "./redevelopment-burdened-gift";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
@@ -237,12 +238,25 @@ export function calculateTransferTax(
     //    A/B를 판정해 `workingInput`까지 교체해 놓고 그 근거가 결과에 실리지 않아
     //    ① 결과 화면 A/B 비교 카드 미표시 ② 다건 §97의2②3호 신고단위 비교에서 자산 누락
     //    ③ 신고서 표시 취득가액이 수증자 것으로 되돌아감 — 셋이 함께 발생했다.
+    /**
+     * β 적용 고지 (§159 × §166 결합에 명문·해석례 없음) — `warnings`에 push한다.
+     * `detectBurdenedGiftMultiHouseWarning` 선례와 같은 배선이다(별도 컴포넌트 없음).
+     * 근거·문구는 `redevelopment-burdened-gift.ts`.
+     */
+    const redevBgNotice = detectRedevelopmentBurdenedGiftNotice({
+      propertyType: redevInput.propertyType,
+      hasRedevelopment: redevInput.redevelopment !== undefined,
+      isBurdenedGift: transferBurdenedGiftBreakdown !== undefined,
+    });
+    if (redevBgNotice) warnings.push(redevBgNotice);
+
     return calculateRedevelopmentTax(redevInput, parsedRates, steps, multiHouseSurchargeResult, {
       exemptionResult: redevExemption,
       carryoverDetail,
       warnings,
       houseCountExclusion: redevHouseExclusion,
       inheritedAcquisitionStep,
+      burdenedGift: transferBurdenedGiftBreakdown,
     });
   }
 

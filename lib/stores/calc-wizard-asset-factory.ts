@@ -23,9 +23,21 @@ export const RENTAL_HOUSING_EXCEPTION_DEFAULTS: AssetForm["rentalHousingExceptio
   standardPriceAtTransferForPhrp: undefined,
 };
 
+/**
+ * 임대주택 호 식별자 발급 — React 리스트 key 전용(엔진 미전송).
+ *
+ * 같은 밀리초에 여러 호를 추가해도 겹치지 않도록 카운터를 함께 쓴다.
+ */
+let rentalUnitSeq = 0;
+export function nextRentalUnitId(): string {
+  rentalUnitSeq += 1;
+  return `rental-unit-${Date.now()}-${rentalUnitSeq}`;
+}
+
 /** 빈 임대주택 1호 초기값 (토글 ON 시 자동 추가) */
 export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["rentalUnits"][number] {
   return {
+    unitId: nextRentalUnitId(),
     businessRegistrationDate: "",
     rentalRegistrationDate: "",
     rentalCategory: "long_general",
@@ -183,6 +195,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     landSalesCaseValue: "",
     buildingSalesCaseValue: "",
     usePreHousingDisclosure: false,
+    phdHousingType: "individual",
     phdFirstDisclosureDate: "",
     phdFirstDisclosureHousingPrice: "",
     phdLandPriceYearAtAcq: "",
@@ -455,6 +468,10 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     bgActualAcquisitionLand: "",
     bgActualAcquisitionBuilding: "",
     bgActualAcquisitionTotal: "",
+    // 조합원입주권 평가 3항 (상증령 §51②) — ①이 non-optional string이라 undefined는 타입 에러다.
+    bgRightMemberRightsValue: "",
+    bgRightPaidInstallments: "",
+    bgRightPremium: "",
     // 이월과세 §97의2 — 「당초 증여자」 취득 당시 값 두 번째 벌 (D-7b)
     bgCoDonorLandStdPriceAtAcq: "",
     bgCoDonorBuildingStdPriceAtAcq: "",

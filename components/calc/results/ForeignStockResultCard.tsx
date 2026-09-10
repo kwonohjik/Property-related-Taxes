@@ -106,7 +106,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
       </div>
 
       {/* 환율 환산 표 (§178의5) */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-1">
+      <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-4 space-y-1">
         <p className="text-xs font-semibold text-slate-500 mb-2">환율 환산 (§178의5)</p>
 
         {result.transferReceiptDetail ? (
@@ -163,7 +163,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
       </div>
 
       {/* 양도차익 계산 */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-1">
+      <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-4 space-y-1">
         <p className="text-xs font-semibold text-slate-500 mb-2">양도차익 계산 (§118② → §118의3·§118의4 준용)</p>
 
         <Row label="양도가액 (원화 환산)" value={result.transferPriceKrw} />
@@ -197,7 +197,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
       </div>
 
       {/* 세율 적용 (§104①12호나목) */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-1">
+      <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-4 space-y-1">
         <p className="text-xs font-semibold text-slate-500 mb-2">세율 적용 (§104①12호나목)</p>
 
         <Row

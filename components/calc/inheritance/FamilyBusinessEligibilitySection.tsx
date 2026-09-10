@@ -220,7 +220,7 @@ export function FamilyBusinessEligibilitySection({
         description={
           isActive
             ? "활성화됨 — 아래 요건을 정확히 체크해야 공제가 적용됩니다."
-            : "체크하면 자격 요건을 정확히 평가합니다. 미체크 시 가업재산가액·영위연수 수동 입력값을 그대로 한도까지 공제 (legacy)."
+            : "체크하면 자격 요건을 정확히 평가합니다. 미체크 시 가업재산가액·영위연수 수동 입력값을 그대로 한도까지 공제(요건 미입력 방식)."
         }
         checked={isActive}
         onCheckedChange={(v) => (v ? handleToggleOn() : handleToggleOff())}
@@ -252,8 +252,8 @@ export function FamilyBusinessEligibilitySection({
             </div>
             {/* 다. 피상속인 */}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <FbTextField label="대표이사 재직기간" placeholder="예: 20년" value={familyBusiness.decedentCeoTenure} onChange={(v) => update({ decedentCeoTenure: v })} />
-              <FbTextField label="특수관계인포함 지분율" placeholder="예: 60%" value={familyBusiness.decedentShareRatio} onChange={(v) => update({ decedentShareRatio: v })} />
+              <FbTextField label="대표이사 재직기간" placeholder="재직 연수" value={familyBusiness.decedentCeoTenure} onChange={(v) => update({ decedentCeoTenure: v })} />
+              <FbTextField label="특수관계인포함 지분율" placeholder="지분율" value={familyBusiness.decedentShareRatio} onChange={(v) => update({ decedentShareRatio: v })} />
             </div>
             {/* 라. 가업상속인 */}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -574,7 +574,7 @@ export function FamilyBusinessEligibilitySection({
           <DialogHeader>
             <DialogTitle>가업상속공제 요건 입력을 끄시겠습니까?</DialogTitle>
             <DialogDescription>
-              입력한 요건 데이터가 모두 삭제되고 legacy 모드로 전환됩니다.
+              입력한 요건 데이터가 모두 삭제되고 「요건 미입력 방식」으로 전환됩니다.
               가업재산가액·영위연수 수동 입력값을 그대로 한도까지 공제합니다.
               이 동작은 되돌릴 수 없습니다.
             </DialogDescription>

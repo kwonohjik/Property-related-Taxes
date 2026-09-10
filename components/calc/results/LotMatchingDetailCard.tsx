@@ -81,7 +81,7 @@ export function LotMatchingDetailCard({ detail }: Props) {
             </thead>
             <tbody>
               {detail.matched.map((sub, idx) => (
-                <tr key={idx} className={sub.perLotGain < 0 ? "bg-red-50/40" : "bg-white"}>
+                <tr key={idx} className={sub.perLotGain < 0 ? "bg-red-50/40" : "bg-white dark:bg-gray-900"}>
                   <td className="border border-violet-200 p-1.5">{idx + 1}</td>
                   <td className="border border-violet-200 p-1.5">{formatDate(sub.acquisitionDate)}</td>
                   <td className="border border-violet-200 p-1.5">{formatDate(sub.saleDate)}</td>

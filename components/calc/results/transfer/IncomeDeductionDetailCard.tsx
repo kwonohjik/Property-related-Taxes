@@ -198,7 +198,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
         <div className="rounded border border-emerald-200 bg-white/70 dark:border-emerald-800/40 dark:bg-emerald-950/40 p-2.5 space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">감면세액 산출근거</p>
           <p className="text-caption text-muted-foreground">감면세액 = 산출세액 × 감면율</p>
-          <p className="text-xs font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+          <p className="text-xs font-mono tabular-nums font-semibold text-emerald-900 dark:text-emerald-200">
             {calculatedTax.toLocaleString()} × {hybridRatePct}% ={" "}
             {(result as UnsoldHybridResult).reductionAmount.toLocaleString()}
           </p>

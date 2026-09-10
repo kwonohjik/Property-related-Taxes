@@ -68,6 +68,8 @@ import {
 } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 
 // 배율은 엔진 getBuildingSiteMultiplier가 단일 진실 — UI에서 재구현 금지.
@@ -181,7 +183,7 @@ export function GeneralBuildingBlock({
     const landArea = parseDecimal(asset.gbLandArea ?? "");
     if (!firstDisc || !firstDiscLand || !firstDiscBld || !acqLandPerSqm || !acqBld || !landArea)
       return null;
-    const acqLand = Math.floor(acqLandPerSqm * landArea);
+    const acqLand = multiplyByArea(acqLandPerSqm, landArea);
     const acqTotal = acqLand + acqBld;
     const firstDiscTotal = firstDiscLand + firstDiscBld;
     if (firstDiscTotal <= 0 || acqTotal <= 0) return null;
@@ -364,6 +366,7 @@ export function GeneralBuildingBlock({
             >
               <CurrencyInput
                 label="최초공시주택가격"
+                hideLabel
                 hideUnit
                 value={asset.gbFirstDisclosurePrice}
                 onChange={(v) => onChange({ gbFirstDisclosurePrice: v })}
@@ -378,9 +381,10 @@ export function GeneralBuildingBlock({
                 <p className="mt-1 text-caption text-violet-800">
                   = {convertedHousingPreview.firstDisc.toLocaleString("ko-KR")}
                   {" × "}
-                  {convertedHousingPreview.acqTotal.toLocaleString("ko-KR")}
-                  {" ÷ "}
-                  {convertedHousingPreview.firstDiscTotal.toLocaleString("ko-KR")}
+                  <Frac
+                    top={convertedHousingPreview.acqTotal.toLocaleString("ko-KR")}
+                    bottom={convertedHousingPreview.firstDiscTotal.toLocaleString("ko-KR")}
+                  />
                 </p>
                 <p className="mt-1 text-caption text-violet-700">
                   근거: 양도소득세 집행기준 99-164-10
@@ -598,6 +602,7 @@ export function GeneralBuildingBlock({
                 >
                   <CurrencyInput
                     label="최초공시시 건물 기준시가"
+                    hideLabel
                     hideUnit
                     value={asset.gbFirstDisclosureBuildingStdPrice}
                     onChange={(v) => onChange({ gbFirstDisclosureBuildingStdPrice: v })}

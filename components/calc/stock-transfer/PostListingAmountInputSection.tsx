@@ -41,6 +41,7 @@ import {
   SIMPLE_DISCOUNT_RATE,
 } from "@/lib/calc/post-listing-amount-derive";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /** 사용자가 직접 넣는 원천 4칸 — 파생값은 여기 없다(실수로 덮어쓰는 것을 타입으로 막는다). */
 type RawKey = "netIncomeAmount" | "shareCount" | "netAssetAmount" | "goodwill";
@@ -161,12 +162,14 @@ export function PostListingAmountInputSection({ title, axisLabel, form, onChange
       {showIncome && (
         <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-900 space-y-0.5">
           <div className="flex justify-between font-mono tabular-nums">
-            <span>1주당 순손익액 = 순손익액 ÷ 발행주식총수</span>
+            <span>
+              1주당 순손익액 = <Frac top="순손익액" bottom="발행주식총수" />
+            </span>
             <span>{won(derived.perShareIncomeBeforeRate)}</span>
           </div>
           <div className="flex justify-between font-mono tabular-nums border-t border-amber-200 pt-0.5">
             <span className="font-semibold">
-              1주당 순손익가치 = 1주당 순손익액 ÷ {SIMPLE_DISCOUNT_RATE * 100}%
+              1주당 순손익가치 = <Frac top="1주당 순손익액" bottom={`${SIMPLE_DISCOUNT_RATE * 100}%`} />
             </span>
             <strong>{won(derived.netIncomePerShare)}</strong>
           </div>
@@ -212,7 +215,9 @@ export function PostListingAmountInputSection({ title, axisLabel, form, onChange
             <span>{won(derived.netAssetTotal)}</span>
           </div>
           <div className="flex justify-between font-mono tabular-nums border-t border-amber-200 pt-0.5">
-            <span className="font-semibold">1주당 순자산가치 = 순자산가액 ÷ 발행주식총수</span>
+            <span className="font-semibold">
+              1주당 순자산가치 = <Frac top="순자산가액" bottom="발행주식총수" />
+            </span>
             <strong>{won(derived.netAssetPerShare)}</strong>
           </div>
         </div>

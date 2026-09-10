@@ -16,6 +16,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 /** 조특령 §66④1호 본문 — 3년 배제가 걸리는 소재지 범위 */
 const LOCATION_OPTIONS = [
@@ -205,7 +206,8 @@ export function SelfFarmingIncorporationInput({
 
           {/* 취득시·양도시 기준시가 — 편입 비율 = (편입−취득)/(양도−취득). 실지 모드 필수 입력 */}
           <p className="text-caption text-muted-foreground -mb-1">
-            편입 부분감면 비율 = (편입시 − 취득시) ÷ (양도시 − 취득시) 기준시가. 실지거래가액 양도도 아래 3점이 필요합니다.
+            편입 부분감면 비율 = <Frac top="편입시 − 취득시" bottom="양도시 − 취득시" /> 기준시가. 실지거래가액 양도도
+            아래 3점이 필요합니다.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">

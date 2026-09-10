@@ -15,8 +15,15 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(cleanup);
 
-/** 미지원 자산이라야 안내문이 렌더된다 (`isBurdenedGift && !isSupported`). */
-function renderNotice(assetKind: AssetForm["assetKind"] = "right_to_move_in") {
+/**
+ * 미지원 자산이라야 안내문이 렌더된다 (`isBurdenedGift && !isSupported`).
+ *
+ * 🔄 **기본값 교체 (2026-09-08)** — 종전 기본값은 `right_to_move_in`이었다. 조합원입주권이
+ *    부담부증여 지원에 편입되면서 그 자산으로는 안내문 자체가 렌더되지 않는다.
+ *    아직 미지원인 `presale_right`(분양권 — 사용자 판단으로 범위 밖)로 바꾼다.
+ *    단언 축(「안내문의 열거가 배열에서 파생된다」)은 그대로다 — 약화가 아니다.
+ */
+function renderNotice(assetKind: AssetForm["assetKind"] = "presale_right") {
   const asset: AssetForm = {
     ...makeDefaultAsset(1),
     assetKind,
@@ -31,7 +38,7 @@ describe("부담부증여 미지원 안내문", () => {
     expect(renderNotice().textContent).toContain("상업용건물·오피스텔");
   });
 
-  it("지원 5종이 전부 열거된다", () => {
+  it("지원 7종이 전부 열거된다", () => {
     const text = renderNotice().textContent ?? "";
     for (const label of [
       "주택",
@@ -39,6 +46,10 @@ describe("부담부증여 미지원 안내문", () => {
       "건물(토지 제외)",
       "일반건물(토지+건물 일괄)",
       "상업용건물·오피스텔",
+      // 2026-09-08 편입 — §166② 완공 신축주택 × §159
+      "재개발/재건축 APT",
+      // 2026-09-08 편입 — 상증법 §61③ 평가 (§159①1호 A괄호 미발동)
+      "입주권",
     ]) {
       expect(text).toContain(label);
     }
@@ -52,10 +63,12 @@ describe("부담부증여 미지원 안내문", () => {
     expect(pending).not.toContain("상업용건물");
     expect(pending).not.toContain("일반건물");
     expect(pending).not.toContain("주택");
+    expect(pending).not.toContain("재개발");
+    expect(pending).not.toContain("입주권");
   });
 
   it("현재 선택은 내부 enum이 아니라 라벨로 표시한다", () => {
-    const text = renderNotice("presale_right").textContent ?? "";
+    const text = renderNotice().textContent ?? "";
     expect(text).toContain("현재 선택: 분양권");
     expect(text).not.toContain("presale_right");
   });

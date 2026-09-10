@@ -157,7 +157,7 @@ export function PropertyCardEditor({
                 type="text"
                 value={property.dong}
                 onChange={(e) => onUpdate({ dong: e.target.value })}
-                placeholder="예: 101동"
+                placeholder="동"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
@@ -169,7 +169,7 @@ export function PropertyCardEditor({
                 type="text"
                 value={property.ho}
                 onChange={(e) => onUpdate({ ho: e.target.value })}
-                placeholder="예: 201호"
+                placeholder="호"
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>

@@ -49,7 +49,7 @@ export function SelfBuiltSection({
     <ToggleCard
       tone="amber"
       title="본인이 신축 또는 증축한 건물입니까?"
-      description="§114조의2 가산세 판정에 영향. 매매 취득 자산 전용."
+      description="「소득세법」 §114조의2 가산세 판정에 영향. 매매 취득 자산 전용."
       checked={isSelfBuilt}
       onCheckedChange={(v) => {
         onIsSelfBuiltChange(v);
@@ -116,7 +116,7 @@ export function SelfBuiltSection({
             onChange={onExtensionStdPriceAtAcquisitionChange}
           />
           <p className="text-xs text-muted-foreground">
-            §114조의2① 가산세 base 산출용. 국세청 건물 기준시가 조회 후 면적 × 단가로 총액 입력.
+            「소득세법」 §114조의2① 가산세 산정 기준액 산출용. 국세청 건물 기준시가 조회 후 면적 × 단가로 총액 입력.
           </p>
         </div>
       )}

@@ -68,7 +68,7 @@ export function ListedAvgAutoFetch({
         maxLength={6}
         value={stockCode}
         onChange={(e) => onStockCode(e.target.value.toUpperCase())}
-        placeholder="종목코드 6자리"
+        placeholder="6자리 숫자"
         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         aria-label="종목코드"
         data-testid={testId}

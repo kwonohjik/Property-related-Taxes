@@ -49,7 +49,7 @@ const baseDetail: PerCorporateExemptionDetail = {
 const baseBreakdown = [
   { label: "영리법인 증여세 산출세액", amount: 150_000_000 },
   { label: "면제 한도 — 산출세액 × 영리법인 과세표준 ÷ 상속세 과세표준", amount: 272_874_251 },
-  { label: "영리법인 면제세액 Min(증여세 산출세액, 한도)", amount: 150_000_000 },
+  { label: "영리법인 면제세액 — 증여세 산출세액과 한도 중 작은 금액", amount: 150_000_000 },
 ];
 
 function makeExemption(

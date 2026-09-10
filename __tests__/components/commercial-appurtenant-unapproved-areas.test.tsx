@@ -24,7 +24,9 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
 }
 
 function zoneRadios(): NodeListOf<HTMLInputElement> {
-  return document.querySelectorAll<HTMLInputElement>('input[name="cbZoneType"]');
+  // name은 자산별로 스코프된다(`cbZoneType-<assetId>`) — 다자산에서 native 라디오 그룹이
+  // 문서 전역으로 합쳐지는 것을 막기 위해서다. 접두사로 찾는다.
+  return document.querySelectorAll<HTMLInputElement>('input[name^="cbZoneType"]');
 }
 
 describe("상가 부수토지 — §101① 단서 ON에서도 면적칸이 남는다", () => {

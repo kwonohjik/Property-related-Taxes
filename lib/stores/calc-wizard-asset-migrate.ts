@@ -5,10 +5,12 @@
  * factory의 makeDefaultAsset과 짝(신규 필드 추가 시 양쪽 동기화). RENTAL_HOUSING_EXCEPTION_DEFAULTS는 factory에서 import.
  */
 
+import { round2 } from "@/lib/tax-engine/area-utils";
 import { migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
 import { normalizeRentalAndSplitFields, hasPositiveAmount } from "./calc-wizard-asset-migrate-rental-split";
 import { migrateResidenceFields } from "./calc-wizard-asset-residence";
 import { migrateRentalPeriodFields } from "./calc-wizard-asset-rental-period";
+import { nextRentalUnitId } from "./calc-wizard-asset-factory";
 import { migrateCarryoverFields } from "./calc-wizard-asset-carryover";
 import {
   applyPhase3Normalize,
@@ -329,7 +331,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   /**
    * 양도 대상 축을 **자산 종류로 일원화**한다 (2026-08-13).
    *
-   *   입주권(`right_to_move_in`)  = 조합원입주권 양도 전담 (§166① · §95② 단서 · §89①4호)
+   *   입주권(`right_to_move_in`)  = 조합원입주권 양도 전담 (§166① · §95② 본문 괄호 · §89①4호)
    *   재개발APT(`redevelopment_apt`) = 재개발·재건축으로 완공된 APT 양도 전담 (§166②)
    *
    * 종전에는 재개발APT 자산 안의 ① 「양도 대상」 라디오(`redevSubject`)가 축을 겸해
@@ -387,6 +389,25 @@ export function migrateAsset(raw: unknown): AssetForm {
     a.isAppraisalAcquisition = false;
     a.isSalesCaseAcquisition = false;
     a.redevIsSuccessorMember = "";
+  }
+  /**
+   * ③ 조합원입주권 평가 3항 — stale sessionStorage 가드 (2026-09-08).
+   *
+   * 신규 필드라 저장된 폼에는 없다. `undefined`로 남으면 `parseAmount(undefined)`가
+   * 도는 자리가 생기고, ⑤ `CurrencyInput`이 uncontrolled로 마운트된다.
+   *
+   * ⚠️ **다른 자산에서 입주권으로 바꾼 경우도 정리한다** — 위 `right_to_move_in` 블록과 달리
+   *    여기서는 「입주권이 아닌 자산에 남아 있는 입주권 값」을 지운다. 남겨 두면 ④ API 변환이
+   *    자산 종류를 보고 분기하므로 세액에는 닿지 않지만, 자산 종류를 되돌렸을 때
+   *    ⑧ 자기일관 검사가 옛 값으로 오판한다.
+   */
+  if (a.bgRightMemberRightsValue === undefined) a.bgRightMemberRightsValue = "";
+  if (a.bgRightPaidInstallments === undefined) a.bgRightPaidInstallments = "";
+  if (a.bgRightPremium === undefined) a.bgRightPremium = "";
+  if (a.assetKind !== "right_to_move_in") {
+    a.bgRightMemberRightsValue = "";
+    a.bgRightPaidInstallments = "";
+    a.bgRightPremium = "";
   }
   // 승계조합원 입주권 취득가액 (§97①1호 가목) — sessionStorage 호환
   if (a.successorRightAcqPrice === undefined) a.successorRightAcqPrice = "";
@@ -503,7 +524,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   const legacyArea = typeof a.gbBuildingArea === "string" ? parseFloat(a.gbBuildingArea) : 0;
   if (a.gbBuildingFootprintArea === undefined || a.gbBuildingFootprintArea === "") {
     if (legacyFloors > 0 && legacyArea > 0) {
-      a.gbBuildingFootprintArea = String(parseFloat((legacyArea / legacyFloors).toFixed(2)));
+      a.gbBuildingFootprintArea = String(round2(legacyArea / legacyFloors));
     } else {
       a.gbBuildingFootprintArea = "";
     }
@@ -538,6 +559,9 @@ export function migrateAsset(raw: unknown): AssetForm {
     // 구 스키마 임대주택 유닛 → 신규 스키마 분해 (능동형 UI 개편, 2026-07-25)
     else {
       (rhe.rentalUnits as Record<string, unknown>[]).forEach((u) => {
+        // React 리스트 key 전용 안정 식별자 — stale sessionStorage·이력 복원분에는 없다.
+        // 없으면 카드 key가 인덱스로 되돌아가 삭제 시 자식 로컬 state가 옆 카드에 남는다.
+        if (typeof u.unitId !== "string" || !u.unitId) u.unitId = nextRentalUnitId();
         // 임대기간 다중 구간 필드 기본값 (interval 모드·rentalPeriods)
         migrateRentalPeriodFields(u);
         // 등록일 1필드 → 세무서/지자체 2필드 (구 값을 지자체 신청일로 이전, 세무서는 재입력)

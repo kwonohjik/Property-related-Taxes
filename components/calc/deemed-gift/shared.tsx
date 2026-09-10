@@ -326,8 +326,8 @@ function InsuranceFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
           { value: "gifted_premium", label: "증여받은 재산으로 보험료 납부 (§34①2호)", testId: "ins-case-gifted_premium" },
         ]}
       />
-      <CurrencyInput label="보험금" value={form.insProceeds} onChange={(v) => set({ insProceeds: v })} placeholder="보험금 (원)" />
-      <CurrencyInput label="납부보험료 총액" value={form.insTotalPremium} onChange={(v) => set({ insTotalPremium: v })} placeholder="납부보험료 총액 (원)" />
+      <CurrencyInput label="보험금" value={form.insProceeds} onChange={(v) => set({ insProceeds: v })} />
+      <CurrencyInput label="납부보험료 총액" value={form.insTotalPremium} onChange={(v) => set({ insTotalPremium: v })} />
       <CurrencyInput
         label={form.insCaseType === "non_payer" ? "수령인 외의 자가 납부한 보험료" : "증여받은 재산으로 납부한 보험료"}
         value={form.insRelevantPremium}
@@ -378,8 +378,8 @@ function BargainFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
           { value: "sale", label: "고가 양도", testId: "barg-type-sale" },
         ]}
       />
-      <CurrencyInput label="시가" value={form.bargMarketValue} onChange={(v) => set({ bargMarketValue: v })} placeholder="시가 (원)" />
-      <CurrencyInput label="거래대가" value={form.bargPrice} onChange={(v) => set({ bargPrice: v })} placeholder="거래대가 (원)" />
+      <CurrencyInput label="시가" value={form.bargMarketValue} onChange={(v) => set({ bargMarketValue: v })} />
+      <CurrencyInput label="거래대가" value={form.bargPrice} onChange={(v) => set({ bargPrice: v })} />
       {!form.bargRelated && (
         <ToggleCard
           lawLinks="상증법"
@@ -417,7 +417,7 @@ function DebtFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
           { value: "third_party_assumption", label: "제3자 인수·변제 (계약체결일)", testId: "debt-occur-third_party_assumption" },
         ]}
       />
-      <CurrencyInput label="면제·인수·변제 채무액" value={form.debtForgiven} onChange={(v) => set({ debtForgiven: v })} placeholder="채무액 (원)" />
+      <CurrencyInput label="면제·인수·변제 채무액" value={form.debtForgiven} onChange={(v) => set({ debtForgiven: v })} />
       <CurrencyInput label="보상(지급)액" value={form.debtCompensation} onChange={(v) => set({ debtCompensation: v })} />
     </ToneCard>
   );
@@ -446,7 +446,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
 
       {!isMulti && (
         <>
-          <CurrencyInput label="대출금액" value={form.loanAmount} onChange={(v) => set({ loanAmount: v })} hint="증여이익(대출금×4.6%−실제이자)이 1천만 이상이면 과세" placeholder="대출금액 (원)" />
+          <CurrencyInput label="대출금액" value={form.loanAmount} onChange={(v) => set({ loanAmount: v })} hint="증여이익(대출금×4.6%−실제이자)이 1천만 이상이면 과세" />
           <CurrencyInput label="실제 지급이자" value={form.loanInterest} onChange={(v) => set({ loanInterest: v })} hint="다년 기간 입력 시 연간 실제이자" placeholder="실제 지급이자 (무이자면 빈칸)" />
           <ToneCard tone="amber" title="대출 기간 (선택 — 입력 시 §41의4② 매년 별개 증여로 분할)" bodyClassName="space-y-2" noDark>
             <div className="grid grid-cols-2 gap-2">
@@ -459,7 +459,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
                 <DateInput value={form.loanEndDate} onChange={(v) => set({ loanEndDate: v })} />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">마지막 해가 1년 미만이면 일수 안분(÷365). 비우면 1년분 단건.</p>
+            <p className="text-xs text-muted-foreground">마지막 해가 1년 미만이면 일수 안분(365일 기준). 비우면 1년분 단건.</p>
           </ToneCard>
         </>
       )}
@@ -484,7 +484,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
                 <label className="block text-xs text-gray-600 dark:text-gray-400">대출일</label>
                 <DateInput value={item.loanDate} onChange={(v) => set({ loanLoans: loans.map((it, idx) => (idx === i ? { ...it, loanDate: v } : it)) })} />
               </div>
-              <CurrencyInput label="대출금액" value={item.amount} onChange={(v) => set({ loanLoans: loans.map((it, idx) => (idx === i ? { ...it, amount: v } : it)) })} placeholder="대출금액 (원)" />
+              <CurrencyInput label="대출금액" value={item.amount} onChange={(v) => set({ loanLoans: loans.map((it, idx) => (idx === i ? { ...it, amount: v } : it)) })} />
               <CurrencyInput label="실제 지급이자" value={item.interest} onChange={(v) => set({ loanLoans: loans.map((it, idx) => (idx === i ? { ...it, interest: v } : it)) })} placeholder="실제 지급이자 (무이자면 빈칸)" />
             </div>
           ))}

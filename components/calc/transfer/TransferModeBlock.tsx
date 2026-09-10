@@ -59,13 +59,25 @@ const TRANSFER_TYPE_OPTIONS: {
   { value: "public_expropriation", label: "공익수용·협의매수", testId: "expr-cause-radio" },
 ];
 
-// F-3 (2026-05-12): commercial_building 확장 — 부담부증여 지원 자산 종류
+/**
+ * 부담부증여 지원 자산 종류 — **⑤ UI 층 게이트**(3층 중 하나).
+ *
+ * 나머지 둘은 ⑧ `lib/calc/transfer-tax-validate-bg.ts`의 `SUPPORTED_KINDS`,
+ * 엔진 `lib/tax-engine/burdened-gift-eligibility.ts`의
+ * `BURDENED_GIFT_SUPPORTED_PROPERTY_TYPES`다. 세 배열의 내용 동일성은
+ * `__tests__/tax-engine/transfer/burdened-gift-gate-parity.anchor.test.ts`가 단언한다.
+ *
+ * · F-3 (2026-05-12): `commercial_building` 확장.
+ * · 2026-09-08: `redevelopment_apt` 편입 (§166② 완공 신축주택 × §159).
+ */
 const SUPPORTED_ASSET_KINDS: AssetForm["assetKind"][] = [
   "housing",
   "land",
   "building",
   "general_building",
   "commercial_building",
+  "redevelopment_apt",
+  "right_to_move_in",
 ];
 
 /**

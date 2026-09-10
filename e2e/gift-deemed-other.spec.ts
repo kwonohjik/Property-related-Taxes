@@ -27,9 +27,9 @@ test.describe("증여로 보는 경우 — 기타이익·법인", () => {
   test("§41의3 상장이익 (정산5만−과세1만−기업5천)×2만주 → 7억", async ({ page }) => {
     await page.goto("/calc/gift-deemed");
     await openDetail(page, "listing_gain");
-    await page.getByPlaceholder("정산기준일 1주당 평가가액 (원)").fill("50000");
+    await page.getByLabel("정산기준일 1주당 평가가액", { exact: true }).fill("50000");
     await page.getByPlaceholder("1주당 과세가액(취득가액) (원)").fill("10000");
-    await page.getByPlaceholder("1주당 기업가치 실질증가이익 (원)").fill("5000");
+    await page.getByLabel("1주당 기업가치 실질증가이익", { exact: true }).fill("5000");
     await page.getByPlaceholder("증여·유상취득 주식수").fill("20000");
     await closeDetail(page);
     await page.getByTestId("deemed-calc-btn").click();

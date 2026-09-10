@@ -94,6 +94,17 @@ function AssetReductionBlock({
   // §77 감면율 2025.3.14 개정 — 2025.1.1 이후 양도분 상향(현금 15·채권 20/35/45%, 연간 2억).
   // 문자열 ISO(YYYY-MM-DD) 사전순 비교. 미입력("") → 개정 전 표기.
   const expropriationAmended2025 = (transferDate ?? "") >= "2025-01-01";
+  /**
+   * §133 한도군 안내 — §77·§77의2·§77의3은 **같은 한도군**을 쓴다(`aggregate-reduction-limits.ts`).
+   *
+   * 🔴 2025 과세연도 전에는 §133①이 자경 계열과 **하나의 1억원**을 공유하고, 2025부터
+   *    §133②로 갈라져 2억원이 된다. 종전에는 §77만 연도 분기를 하고 §77의2·§77의3 안내는
+   *    「연간 한도 2억원」으로 고정돼 있어, 2024년 이전 양도에서 **한도를 두 배로 안내**했다
+   *    (2026-09-07 대장 재대조).
+   */
+  const involuntaryLimitNote = expropriationAmended2025
+    ? "연간 한도 2억원 (조특법 §133② — 2025 과세연도 이후)"
+    : "연간 한도 1억원 — 자경농지 감면과 **합산**됩니다 (조특법 §133① — 2024 과세연도 이전)";
 
   const label =
     asset.assetLabel ||
@@ -374,7 +385,7 @@ function AssetReductionBlock({
           <div>
             <p className="text-xs font-medium text-primary">개발제한구역 매수 토지 감면 (조특법 §77의3)</p>
             <p className="text-xs text-muted-foreground mt-1">
-              40%(지정일 이전 취득+거주) / 25%(매수·고시일 20년 이전 취득+거주). 2028.12.31까지 양도. 연간 한도 2억원. 취득일은 자산 취득일 사용(상속 시 피상속인 취득일).
+              40%(지정일 이전 취득+거주) / 25%(매수·고시일 20년 이전 취득+거주). 2028.12.31까지 양도. {involuntaryLimitNote}. 취득일은 자산 취득일 사용(상속 시 피상속인 취득일).
             </p>
           </div>
           <div>
@@ -481,7 +492,7 @@ function AssetReductionBlock({
           <div>
             <p className="text-xs font-medium text-primary">대토보상 과세특례 (조특법 §77의2)</p>
             <p className="text-xs text-muted-foreground mt-1">
-              대토(토지)보상 받는 부분의 양도세 40% 세액감면. 2026.12.31까지 양도. 연간 한도 2억원. 과세이연 선택은 별도(추후 지원). 현금 전환·현물출자 시 이자상당가산액 추징(§77의2③).
+              대토(토지)보상 받는 부분의 양도세 40% 세액감면. 2026.12.31까지 양도. {involuntaryLimitNote}. 과세이연 선택은 별도(추후 지원). 현금 전환·현물출자 시 이자상당가산액 추징(§77의2③).
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -673,7 +684,7 @@ export function Step5({
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        자산별로 해당 감면을 선택하세요. 조특법 §127⑦ 규정에 따라 유리한 감면이 자동 선택됩니다.
+        자산별로 해당 감면을 선택하세요. 조특법 §127⑦ 중복배제에 따라 감면세액이 큰 것 하나만 적용됩니다.
       </p>
 
       {/* 감면 조문 인벤토리 안내 — 개수는 ALL_REDUCTION_IDS(24)와 일치시킬 것 (D9-08) */}

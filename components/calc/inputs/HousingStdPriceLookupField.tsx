@@ -200,7 +200,7 @@ export function HousingStdPriceLookupField({
         stacked
       >
         <div data-testid={`${testidPrefix}-price-input`}>
-          <CurrencyInput label="" value={value} onChange={onChange} hideUnit placeholder="기준시가 (원)" />
+          <CurrencyInput label="" value={value} onChange={onChange} hideUnit />
         </div>
       </FieldCard>
       </div>

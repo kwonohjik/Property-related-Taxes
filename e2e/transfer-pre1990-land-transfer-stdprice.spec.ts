@@ -95,6 +95,6 @@ test.describe("1990.8.30 이전 취득 토지 환산 — 양도시 기준시가"
     const visible = (re: string | RegExp) => page.getByText(re).filter({ visible: true });
     await expect(visible("1990.8.30. 이전 취득 토지 기준시가 환산")).toBeVisible();
     await expect(visible("취득시 등급가액")).toBeVisible();
-    await expect(visible(/분모 \(min\(평균, 현재\)\)/)).toBeVisible();
+    await expect(visible(/분모 \(평균과 현재 중 작은 금액\)/)).toBeVisible();
   });
 });

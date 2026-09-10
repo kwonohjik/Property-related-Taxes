@@ -30,6 +30,27 @@ export type BurdenedGiftValuationMode = "sangjeungbeop_standard" | "sangjeungbeo
  * 채무액(B) = lendingDepositTotal + mortgageDebtAmount (연간 임대료는 채무가 아님).
  * 증여가액(C) = Max(보충적평가, 담보평가, 임대평가) [§60~§66].
  */
+/**
+ * 조합원입주권 증여재산 평가 3항 (상증령 §51② 본문 괄호 + 프리미엄).
+ *
+ * > 부동산을 취득할 수 있는 권리 … 의 가액은 평가기준일까지 납입한 금액(「소득세법」
+ * > 제89조제2항에 따른 **조합원입주권**의 경우 「도시 및 주거환경정비법」 제74조제1항에 따른
+ * > 관리처분계획을 기준으로 하여 재정경제부령으로 정하는 **조합원권리가액**과 평가기준일까지
+ * > 납입한 **계약금, 중도금 등**을 합한 금액으로 한다)과 평가기준일 현재의 **프레미엄**에
+ * > 상당하는 금액을 합한 금액으로 한다.
+ *
+ * ⚠️ 같은 항 **단서**(「소득세법 시행령」 §165⑧3호에 따른 가액이 있으면 그 가액)는
+ *    **시설물이용권** 축이라 조합원입주권에 적용되지 않는다(계획서 §2.2 실측).
+ */
+export interface RightToMoveInValuation {
+  /** 조합원권리가액 (상증칙 §16③ — 종전 토지·건축물 가격 × 비례율). 필수. */
+  memberRightsValue: number;
+  /** 평가기준일까지 납입한 계약금·중도금 등 (상증령 §51② 본문 괄호). 0 허용. */
+  paidInstallments: number;
+  /** 평가기준일 현재의 프리미엄 (상증령 §51② 본문). 0 허용. */
+  premium: number;
+}
+
 export interface BurdenedGiftInfo {
   /** 양도(증여)시 평가 모드 (상증법 기준시가 vs 시가). */
   valuationMode: BurdenedGiftValuationMode;
@@ -181,6 +202,27 @@ export interface BurdenedGiftInfo {
   /** K-4: 증여자 실지취득가액 — 단일자산 (housing·building·commercial_building). 취득시 기준시가 비율로 토지·건물 분배. */
   actualAcquisitionTotal?: number;
 
+  // === 조합원입주권 평가 명세 (상증법 §61③ · 상증령 §51② · 상증칙 §16③) ===
+  /**
+   * 조합원입주권 증여재산 평가의 **구성 내역** — `propertyType === "right_to_move_in"` 전용.
+   *
+   * 🔴 **평가액 «자체»는 `buildingStdPriceAtTransfer`에 싣는다.** 이 객체는 그 값이 어떻게
+   *    구성됐는지를 담아 결과 표시와 자기일관 검증에 쓴다.
+   *
+   *    이 객체만 채우고 std 4필드를 0으로 두면 **세액이 조용히 0이 된다** —
+   *    `sangjeungbeopValuation.supplementary`(양도가액 안분 **분모**)와
+   *    `wholePropertySupplementary`(12억 분모)가 동시에 0이 되어
+   *    `transferDenominator === 0` 가드가 발동하고 양도가액이 land·building 모두 0이 된다.
+   *    단일자산 3종(housing·building·commercial_building)이 이미 쓰는 관행과 같다.
+   *
+   * ⚠️ **`redevelopment.rightsValue`와 다른 값이다.**
+   *    · 소령 §166④1호 「평가액」 = 관리처분계획등에 따라 **정하여진 가격**
+   *    · 상증칙 §16③ 「조합원권리가액」 = 종전 토지·건축물 가격 × 비례율
+   *      (비례율 = (완료 후 총 수입추산액 − 총 소요사업비) ÷ 종전 토지·건축물 총 가액)
+   *    법문이 다르므로 한쪽을 다른 쪽으로 **재사용하지 않는다**(UI 프리필만 허용).
+   */
+  rightValuation?: RightToMoveInValuation;
+
   // === 이월과세(§97의2) — 시나리오 A 전용 취득 값 「두 번째 벌」 (2026-08-10 D-7a) ===
   /**
    * **당초 증여자** 취득 당시 값 한 벌 (「소득세법」 §97의2①1호).
@@ -316,6 +358,22 @@ export interface TransferBurdenedGiftBreakdown {
    * 단독 소유에서는 `sangjeungbeopValuation.supplementary`와 항상 같다.
    */
   wholePropertySupplementary: number;
+  /**
+   * 자산 종류 — 결과 표시가 행 라벨을 고르는 근거.
+   * ❌ 모드 플래그(`valuationMode` 등)로 자산을 추론하지 않는다
+   *    (`feedback_ui_mode_flag_not_domain_semantics`).
+   */
+  assetKind?: "right_to_move_in" | "redevelopment_apt";
+  /**
+   * 조합원입주권 평가 구성 내역 (표시·검증 전용).
+   * `total`은 `buildingStdPriceAtTransfer`와 일치해야 한다 — ⑧ validate가 그것을 확인한다.
+   */
+  rightValuationDetail?: {
+    memberRightsValue: number;
+    paidInstallments: number;
+    premium: number;
+    total: number;
+  };
 
   /** 적용된 공유지분율(0<r<1). 단독 소유면 undefined — 결과 화면 표시·감사 추적용. */
   ownershipRatio?: number;

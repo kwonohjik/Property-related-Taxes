@@ -31,6 +31,8 @@
  *   결과 X(취득시 기준시가) ≈ 547M (역산값) → §99의3 5년 안분 비율 0.4334 도출
  */
 
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+
 /**
  * PHD 환산 입력 (감면 조문용 단순화 7개 필드)
  */
@@ -98,8 +100,8 @@ export function calcReductionAcquisitionStdPrice(
   } = input;
 
   // 토지 기준시가 = 공시지가 × 면적
-  const landStdAtAcquisition = Math.floor(landPricePerSqmAtAcquisition * landAreaSqm);
-  const landStdAtFirstDisclosure = Math.floor(landPricePerSqmAtFirstDisclosure * landAreaSqm);
+  const landStdAtAcquisition = multiplyByArea(landPricePerSqmAtAcquisition, landAreaSqm);
+  const landStdAtFirstDisclosure = multiplyByArea(landPricePerSqmAtFirstDisclosure, landAreaSqm);
 
   /**
    * A13(2026-09-02): **「최초공시 미입력 시 취득시와 동일」 fallback을 제거했다.**

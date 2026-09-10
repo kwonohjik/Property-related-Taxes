@@ -10,6 +10,7 @@
  *   ⚠️ 임계는 조문마다 다르다 — `vacancyGraceMonths` prop으로 받는다(D1-03).
  */
 
+import { useId } from "react";
 import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -47,7 +48,18 @@ const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> 
   semi_jeonse: "반전세",
 };
 
+/** 섹션 배지 원문자 — 임대 감면 입력 폼 전체가 공유하는 표기(`Rental97MainInputForm`의 `CIRCLED`와 같은 것). */
+export const CIRCLED_SECTION_NUM = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧"] as const;
+
 export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false }: Props) {
+  /**
+   * 🔴 라디오 `name`이 전역 상수라 **자산 간에 한 그룹으로 묶였다**
+   *    (2026-09-07 대장 재대조 · #25). 감면은 자산-수준(`asset.reductions`)이므로 다자산에서
+   *    같은 폼이 여러 번 마운트되는데, native radio는 같은 `name`이면 하나만 선택된다 —
+   *    자산 2의 선택이 자산 1을 **해제**했다. 인스턴스마다 다른 접두사를 붙인다
+   *    (`CompanionAcquisitionCauseSection`이 같은 결함을 이미 고쳤다).
+   */
+  const uid = useId();
   const graceLabel = vacancyGraceMonths === 3 ? "3개월" : "6개월";
   const graceBasis =
     vacancyGraceMonths === 3
@@ -94,8 +106,14 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
     });
   }
 
-  const sec3 = sectionOffset;
-  const sec4 = sectionOffset + 1;
+  /**
+   * 🔴 섹션 배지가 한 화면에서 원문자(①②)와 아라비아 숫자(3·4)로 갈렸다
+   *    (2026-09-07 대장 재대조 · #28). 호출부(`Rental97MainInputForm` 등)는 `ToneCard sectionNum`에
+   *    원문자를 넘기는데 이 컴포넌트만 raw 숫자를 넘겼다. 표기를 호출부와 통일한다.
+   */
+  const circled = (n: number) => CIRCLED_SECTION_NUM[n - 1] ?? String(n);
+  const sec3 = circled(sectionOffset);
+  const sec4 = circled(sectionOffset + 1);
 
   return (
     <>
@@ -104,7 +122,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
           <RadioCardGroup
-            name="rentIncreaseViolationMode"
+            name={`rentIncreaseViolationMode-${uid}`}
             layout="inline"
             tone="violet"
             value={value.rentIncreaseViolationMode}
@@ -205,7 +223,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
           </p>
           <p className="mb-1.5 text-micro text-muted-foreground">{graceBasis}</p>
           <RadioCardGroup
-            name="hasVacancyOverGrace"
+            name={`hasVacancyOverGrace-${uid}`}
             layout="inline"
             tone="sky"
             value={value.hasVacancyOverGrace === null ? "" : value.hasVacancyOverGrace ? "yes" : "no"}
@@ -274,7 +292,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               그 시점 기준시가가 따로 필요합니다.
             </p>
             <RadioCardGroup
-              name="rentalContinuesToTransfer"
+              name={`rentalContinuesToTransfer-${uid}`}
               layout="inline"
               tone="violet"
               value={

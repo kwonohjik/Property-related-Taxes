@@ -146,7 +146,7 @@ export function SpecificCorpMultiResultView({
                 value={selectedDoneeIndex}
                 onChange={(e) => onSelectDonee(Number(e.target.value))}
                 data-testid="sc-multi-donee-selector"
-                className="rounded-md border border-violet-300 bg-white px-2 py-0.5 text-sm text-violet-900 focus:outline-none focus:border-violet-400"
+                className="rounded-md border border-violet-300 bg-white dark:bg-gray-900 px-2 py-0.5 text-sm text-violet-900 focus:outline-none focus:border-violet-400"
               >
                 {taxableDonees.map((d, i) => (
                   <option key={i} value={i}>

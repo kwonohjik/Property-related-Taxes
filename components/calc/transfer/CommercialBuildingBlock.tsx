@@ -27,6 +27,7 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { round2 } from "@/lib/tax-engine/area-utils";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -120,7 +121,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
     const excl = parseFloat(asset.cbExclusiveArea || "0");
     const shared = parseFloat(asset.cbSharedArea || "0");
     if (excl > 0 || shared > 0) {
-      return parseFloat((excl + shared).toFixed(2));
+      return round2(excl + shared);
     }
     return null;
   }, [asset.cbExclusiveArea, asset.cbSharedArea]);

@@ -143,7 +143,7 @@ export function StockTransferPenaltySection({
         </div>
 
         {/* 가산세 분기 매트릭스 표 */}
-        <div className="rounded-lg border border-rose-100 bg-white overflow-hidden">
+        <div className="rounded-lg border border-rose-100 bg-white dark:bg-gray-900 overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-rose-50 text-rose-700">
               <tr>

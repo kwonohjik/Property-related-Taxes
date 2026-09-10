@@ -370,7 +370,7 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
   });
 
   test("소재 지역 자동판별 — 임대 소재지 검색(강남 수도권) → 배지 + 직접지정 override", async ({ page }) => {
-    const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력 (예: 테헤란로 123)";
+    const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력";
     // 강남 PNU(앞2=11 서울 → 수도권). 부수 호출 차단(std-price·reverse-geocode).
     await page.route("**/api/address/search**", (route) =>
       route.fulfill({

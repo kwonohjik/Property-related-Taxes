@@ -105,7 +105,7 @@ export function ResidencePeriodSection({
               return (
                 <div
                   key={idx}
-                  className="rounded-md border border-violet-200 bg-white p-3 space-y-2"
+                  className="rounded-md border border-violet-200 bg-card p-3 space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-violet-700">
@@ -163,24 +163,36 @@ export function ResidencePeriodSection({
             </div>
           </div>
         )}
-        {!isInterval && (
-          <FieldCard label="거주기간 (개월)" hint="해당 주택에 실제 거주한 총 개월 수 (표2 거주분 공제율). 상속으로 취득한 경우 상속개시일부터 상속인 본인이 거주한 기간입니다.">
-            <div className="flex items-center gap-2">
-              <div className="w-32">
-                <DecimalInput
-                  value={residencePeriodMonthsAsset}
-                  onChange={(v) => onChange({ residencePeriodMonthsAsset: v })}
-                />
-              </div>
-              <span className="text-xs text-muted-foreground">
-                ({fmtPeriod(parseInt(residencePeriodMonthsAsset) || 0)})
-              </span>
-            </div>
-          </FieldCard>
-        )}
       </ToggleCard>
+
+      {/*
+        🔴 **ToggleCard 「밖」이어야 한다** (2026-09-07 UI 리뷰 재검증 H2).
+           `ToggleCard`는 `{checked && children}`이라 OFF에서는 children을 렌더하지 않는다
+           (`inputs/ToggleCard.tsx`). 종전에는 이 블록이 그 안에 `{!isInterval && …}`로 있어
+           **구조적으로 도달 불가**였다 — store 기본값이 `residenceInputMode: "direct"`
+           (`calc-wizard-asset-residence.ts`)이므로 1세대1주택 주택 사용자가 Step4에 처음 오면
+           「거주 기간 입력」 카드 제목만 보이고 **입력칸이 하나도 없었다**.
+      */}
+      {!isInterval && (
+        <FieldCard label="거주기간 (개월)" hint="해당 주택에 실제 거주한 총 개월 수 (표2 거주분 공제율). 위 「거주 기간 입력」 토글을 켜면 입주일·퇴거일 구간으로 입력할 수 있습니다.">
+          <div className="flex items-center gap-2">
+            <div className="w-32">
+              <DecimalInput
+                value={residencePeriodMonthsAsset}
+                onChange={(v) => onChange({ residencePeriodMonthsAsset: v })}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">
+              ({fmtPeriod(parseInt(residencePeriodMonthsAsset) || 0)})
+            </span>
+          </div>
+        </FieldCard>
+      )}
       <p className="text-xs text-violet-700">
-        거주기간(상속개시일부터 상속인 본인 실거주)은 표2 장특공제 거주분 공제율 계산에 사용됩니다.
+        {/* 🔴 상속 전용 문구를 여기 두지 말 것 — 이 섹션은 1세대1주택 주택 **전체**에 뜬다.
+            상속 취득의 기산 규칙은 아래 한 문장으로 조건부 서술한다(2026-09-07 UI 리뷰). */}
+        거주기간은 표2 장특공제 거주분 공제율 계산에 사용됩니다. 상속으로 취득한 주택은
+        상속개시일부터 상속인 본인이 거주한 기간입니다.
         동일세대 상속의 통산 거주분은 취득 원인 카드의 &lsquo;동일세대 통산 거주기간&rsquo;에 별도 입력하세요.
       </p>
     </div>

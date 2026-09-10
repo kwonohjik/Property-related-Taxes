@@ -49,7 +49,7 @@ export function DeemedTransferSection({
         양도차익·세율·도시지역·편입유예는 실제 양도일 기준으로 계산됩니다.
       </p>
       <RadioCardGroup
-        name="nbl-deemed-reason"
+        name={`nbl-deemed-reason-${asset.assetId ?? "primary"}`}
         value={reason}
         onChange={(v) => onAssetChange({ nblDeemedTransferReason: v })}
         options={DEEMED_OPTIONS}

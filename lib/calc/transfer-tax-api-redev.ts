@@ -21,6 +21,7 @@ import {
   exemptionAtApprovalInScope,
   postApprovalExpensesInScope,
 } from "./redev-field-scope";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /**
  * AssetForm redev* 필드 → RedevelopmentInfo 서브객체 변환.
@@ -202,7 +203,7 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
       const pricePerSqmAcq = parseAmount(asset.redevLandPricePerSqmAtAcq) || 0;
       // 단가×면적 계산 우선 (land 분기 §166③ 분자)
       if (pricePerSqmAcq > 0 && landArea > 0) {
-        return Math.floor(pricePerSqmAcq * landArea);
+        return multiplyByArea(pricePerSqmAcq, landArea);
       }
       // legacy fallback: 총액 직접 입력 (redevLandStdPriceAtAcq @deprecated)
       const legacyAcq = asset.redevLandStdPriceAtAcq ? parseAmount(asset.redevLandStdPriceAtAcq) : 0;
@@ -213,7 +214,7 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
       const pricePerSqmApproval = parseAmount(asset.redevLandPricePerSqmAtApproval) || 0;
       // 단가×면적 계산 우선 (land 분기 §166③ 분모)
       if (pricePerSqmApproval > 0 && landArea > 0) {
-        return Math.floor(pricePerSqmApproval * landArea);
+        return multiplyByArea(pricePerSqmApproval, landArea);
       }
       // legacy fallback: 총액 직접 입력 (redevLandStdPriceAtApproval @deprecated)
       const legacyApproval = asset.redevLandStdPriceAtApproval ? parseAmount(asset.redevLandStdPriceAtApproval) : 0;

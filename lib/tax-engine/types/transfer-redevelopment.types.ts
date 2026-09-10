@@ -539,7 +539,7 @@ export interface RedevelopmentResult {
 
   /**
    * 인가후 기존주택분 (§166②1호 "기존건물분양도차익"의 일부, subject="apt" 만 산출).
-   * subject="right" 시 gain·lthd 모두 0 (§95② 단서 — LTHD 대상 양도차익 부존재).
+   * subject="right" 시 gain·lthd 모두 0 (§95② 본문 괄호 — LTHD 대상 양도차익 부존재).
    */
   postApprovalExistingHouse: RedevelopmentBranchDetail;
 

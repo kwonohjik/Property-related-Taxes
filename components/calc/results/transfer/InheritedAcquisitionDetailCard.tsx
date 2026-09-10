@@ -12,6 +12,7 @@
  */
 
 import type { InheritanceAcquisitionResult } from "@/lib/tax-engine/types/inheritance-acquisition.types";
+import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: InheritanceAcquisitionResult;
@@ -28,7 +29,17 @@ const METHOD_LABELS: Record<InheritanceAcquisitionResult["method"], string> = {
   auction_public_sale: "수용·경매·공매가액",
   similar_sale: "유사매매사례가액",
   supplementary: "보충적평가액 (공시가격)",
-  pre_deemed_max: "의제취득일 전 상속·증여 — 상증법 평가액·§164·환산 중 큰 금액",
+  /**
+   * 🔴 「①·②·③ 중 큰 금액」이 아니다 (2026-09-07 UI 리뷰).
+   *
+   * 엔진은 `clauseA = Math.max(①, ②)` 후 `acquisitionPrice = clauseA > 0 ? clauseA : ③`이다
+   * (`inheritance-acquisition-price.ts:163~167`) — ③(환산)은 **가목(①②)이 둘 다 없을 때만**
+   * 쓴다. 근거는 법 §97①1호 **단서**의 「가목의 실지거래가액을 확인할 수 없는 경우에
+   * **한정하여** 나목의 금액을 적용한다」이다.
+   * 같은 카드 하단이 이미 「환산취득가액은 「가목을 확인할 수 없는 경우에 한정」되어 적용하지
+   * 않습니다」라고 적고 있어, 헤더 배지와 **정면으로 모순**됐다.
+   */
+  pre_deemed_max: "의제취득일 전 상속·증여 — 가목(상증법 평가액·§164) 중 큰 금액 · 나목(환산)은 가목 확인불가 시",
 };
 
 /** 후보 선택 배지 */
@@ -77,7 +88,7 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">계산 산식</p>
           <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs text-muted-foreground whitespace-pre-wrap">
-            {formula}
+            <FormulaText value={formula} />
           </div>
         </div>
       )}

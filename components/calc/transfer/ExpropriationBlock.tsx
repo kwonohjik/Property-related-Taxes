@@ -191,7 +191,7 @@ export function ExpropriationBlock({
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">채권 만기특약</label>
         <RadioCardGroup
-          name="exprBondYears"
+          name={`exprBondYears-${asset.assetId ?? "primary"}`}
           tone="rose"
           value={expr?.expropriationBondHoldingYears ?? "none"}
           onChange={(v) => updateExpr({ expropriationBondHoldingYears: v })}
@@ -215,7 +215,7 @@ export function ExpropriationBlock({
       <div className="space-y-1.5">
         <label className="block text-sm font-medium">직접 경작한 토지 여부</label>
         <RadioCardGroup
-          name="exprSelfCultivated"
+          name={`exprSelfCultivated-${asset.assetId ?? "primary"}`}
           tone="rose"
           value={expr?.expropriationSelfCultivated ? "yes" : "no"}
           onChange={(v) => updateExpr({ expropriationSelfCultivated: v === "yes" })}
@@ -258,7 +258,7 @@ export function ExpropriationBlock({
               value={asset.compensationPerSqm}
               onChange={(v) => onChange({ compensationPerSqm: v })}
               hideUnit
-              hint="(현금+채권)÷양도면적 자동 (수정 가능, 원/㎡)"
+              hint="「현금+채권」을 양도면적으로 나눠 자동 산정 (수정 가능, 원/㎡)"
             />
             <CurrencyInput
               label="③ 보상산정 기초 기준시가"

@@ -20,8 +20,10 @@ import { validateCommercialInheritanceAsset } from "./transfer-tax-validate-comm
 import { validateCommercialAppurtenantLand } from "./transfer-tax-validate-commercial-asset";
 import { validateCommercialEstimatedAsset } from "./transfer-tax-validate-commercial-asset";
 import { isPhdEligible } from "./phd-eligibility";
+import { phdToggleReachable } from "./phd-toggle-scope";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
+import { selfBuiltActive } from "./self-built-scope";
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
@@ -492,7 +494,11 @@ export function validateAssetAcquisition(
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(사례 23 공동주택 등)해도 PHD 경로는 표준시가 직접 입력 불요.
   // 🔴 첫 자산이 아니면 PHD는 ④가 싣지 않아 엔진에 도달하지 않는다 ⇒ 11필드를 요구하지 않는다.
   //    (stale `usePreHousingDisclosure`가 남아 있어도 dead-end를 만들지 않는다.)
-  const usesPhd = asset.usePreHousingDisclosure === true && !isNonPrimaryAsset;
+  // 🔴 **자산 종류 축도 본다**(2026-09-07). 취득일 < 2005-04-29 주택이면 ⑤가 이 플래그를
+  //    **자동으로 켜는데**, 종류를 토지·상가로 바꾸면 토글이 사라진 채 플래그만 남아
+  //    화면에 없는 11칸을 요구했다. 술어는 ⑤ 렌더 조건과 같은 것(`phdToggleReachable`).
+  const usesPhd =
+    asset.usePreHousingDisclosure === true && !isNonPrimaryAsset && phdToggleReachable(asset);
 
   if (isEstimated && !hasPre1990 && !usesPhd) {
     if (!asset.standardPriceAtAcq || parseAmount(asset.standardPriceAtAcq) <= 0)
@@ -676,7 +682,10 @@ export function validateAssetAcquisition(
   }
 
   // 6) 신축·증축 (매매 + housing/building 전용)
-  if (asset.isSelfBuilt && asset.acquisitionCause === "purchase") {
+  // 🔴 종전에는 자산 종류를 보지 않아, 주택→토지로 바꾼 뒤 남은 `isSelfBuilt`가
+  //    **화면에 없는 칸**(SelfBuiltSection은 housing·building 전용)을 요구했다.
+  //    술어는 ⑤·④와 같은 leaf 하나를 쓴다.
+  if (selfBuiltActive(asset)) {
     if (!asset.buildingType) return `${label}: 신축·증축 구분을 선택하세요.`;
     if (!asset.constructionDate) return `${label}: 신축·증축 완공일을 입력하세요.`;
     // 보유 중 공사 완료가 전제 — 양도일 이후 완공은 모순 (완공 당일 양도는 허용)

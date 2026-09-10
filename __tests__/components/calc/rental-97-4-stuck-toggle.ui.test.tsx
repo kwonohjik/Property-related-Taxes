@@ -48,8 +48,14 @@ function panel(reductions: AssetReductionForm[]) {
     reductions,
   } as AssetForm;
   render(<UnifiedReductionPanel asset={asset} transferDate="2013-06-01" onChange={vi.fn()} />);
-  // §97 시리즈 그룹은 기본 접힘 — 펼쳐야 라디오가 렌더된다.
-  fireEvent.click(screen.getByRole("button", { name: /장기임대주택/ }));
+  /**
+   * §97 시리즈 그룹은 **이미 고른 조문이 있으면 열린 채로 시작한다**(2026-09-07 —
+   * 검증 오류로 되돌아왔을 때 오류가 지목한 칸이 화면에 없던 문제). 이 픽스처는
+   * `reductions`에 §97 계열을 담고 있으므로 여는 클릭이 더 이상 필요 없다 —
+   * 열려 있으면 같은 이름의 내부 버튼이 함께 잡혀 strict 셀렉터가 깨진다.
+   */
+  const header = screen.getAllByRole("button", { name: /장기임대주택/ })[0];
+  if (header.getAttribute("aria-expanded") === "false") fireEvent.click(header);
 }
 
 const toggle974 = () => screen.getByRole("switch", { name: /§97의4/ });

@@ -253,9 +253,22 @@ function SingleTransferResultCard({
         );
       })()}
 
-      {/* 상세 펼침 — §159 안분비율 + 산식 */}
-      {detailOpen && (
-        <div className="border-t border-sky-200 dark:border-sky-700 bg-sky-50/30 dark:bg-sky-900/10 px-4 py-3 space-y-1.5 text-xs text-gray-600 dark:text-gray-300">
+      {/*
+        상세 펼침 — §159 안분비율 + 산식.
+
+        🔴 **조건부 언마운트 금지** (2026-09-07 UI 리뷰). `ExpandToggleButton`은 버튼에
+           `print:hidden`을 걸고 본문은 `hidden print:block`으로 남기는 것을 전제한다
+           (`shared/ExpandToggleButton.tsx:8`). 종전에는 접힘 상태(기본값)에서 DOM이 아예 없어,
+           **손으로 펼치지 않고 인쇄하면** §159①1호 안분비율·취득가액 산정 경로(K-1~K-5)·
+           장특공제·산출세액 산식이 출력물에서 통째로 빠졌다. 특히 `result.warnings`가
+           이 블록 안에만 있어 다주택 중과 안내 등 **엔진 경고까지 사라졌다**.
+      */}
+      <div
+        className={
+          (detailOpen ? "block" : "hidden print:block") +
+          " border-t border-sky-200 dark:border-sky-700 bg-sky-50/30 dark:bg-sky-900/10 px-4 py-3 space-y-1.5 text-xs text-gray-600 dark:text-gray-300"
+        }
+      >
           <p className="font-semibold text-sky-700 dark:text-sky-300 mb-1">
             산식 상세 (소령 §159①1호 안분)
           </p>
@@ -330,8 +343,7 @@ function SingleTransferResultCard({
               ))}
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@
  * worktree 실행: E2E_PORT=3100 npx playwright test e2e/transfer-p4.spec.ts
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("양도세 P4 감면 패널", () => {
   test("미분양 그룹 → §98의2·§98의4 폼 렌더", async ({ page }) => {
@@ -15,7 +16,7 @@ test.describe("양도세 P4 감면 패널", () => {
     await page.getByTestId("transfer-date").getByLabel("일").fill("01");
 
     await page.getByRole("button", { name: "감면·공제" }).click();
-    await page.getByRole("button", { name: /미분양주택/ }).click();
+    await expandReductionCategory(page, /미분양주택/);
 
     // §98의2 — 특칙 안내
     const item982 = page.getByText("§98의2 — 지방 미분양 일반세율", { exact: false }).first();

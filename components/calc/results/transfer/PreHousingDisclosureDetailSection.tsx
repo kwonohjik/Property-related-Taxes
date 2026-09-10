@@ -9,7 +9,7 @@
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 // 단건 결과·일괄 자산별 breakdown 양쪽에서 쓰이므로 **필요한 필드만** 요구한다.
 type PhdSource = Pick<TransferTaxResult, "preHousingDisclosureDetail">;
-import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
 
 interface PhdRowProps {
   label: string;
@@ -34,7 +34,7 @@ function PhdRow({ label, value, formula, highlight }: PhdRowProps) {
           {fmt(value)}
         </span>
       </div>
-      <p className="mt-0.5 text-caption text-muted-foreground leading-relaxed">{formula}</p>
+      <p className="mt-0.5 text-caption text-muted-foreground leading-relaxed"><FormulaText value={formula} /></p>
     </div>
   );
 }

@@ -63,7 +63,7 @@ export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }
           )}
           {(result.specialStreamAggregatedValue ?? 0) > 0 && (
             <Row
-              label="특례 스트림 합산 과세가액 (신규 + 기간무관 prior)"
+              label="특례 스트림 합산 과세가액 (신규 + 기간무관 종전분)"
               value={formatKRW(result.specialStreamAggregatedValue ?? 0)}
             />
           )}

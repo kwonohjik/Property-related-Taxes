@@ -156,7 +156,7 @@ function getStepStyle(status: StepStatus) {
     };
   }
   return {
-    container: "bg-white/60 border border-gray-200 text-muted-foreground",
+    container: "bg-white/60 dark:bg-white/5 border border-gray-200 text-muted-foreground",
     badge: "bg-gray-100 text-gray-500",
     badgeLabel: "미해당",
     numberBg: "bg-gray-200 text-gray-500",
@@ -215,7 +215,7 @@ export function SurchargeFlowDiagram({ result }: Props) {
               </button>
 
               {expanded === step.id && (
-                <div className="mx-3 rounded-b-md border border-t-0 border-gray-200 bg-white/80 px-3 py-2">
+                <div className="mx-3 rounded-b-md border border-t-0 border-gray-200 bg-white/80 dark:bg-white/5 px-3 py-2">
                   <p className="text-xs text-muted-foreground">{step.detail}</p>
                   <div className="mt-1">
                     <LawArticleModal legalBasis={step.legalBasis} />

@@ -27,6 +27,7 @@ import type {
   PreDeemedBreakdown,
   PreDeemedSelectedMethod,
 } from "./types/inheritance-acquisition.types";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 export type {
   InheritanceAcquisitionInput,
@@ -264,8 +265,8 @@ function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisit
             ? TRANSFER.INHERITED_AFTER_DEEMED_COMMERCIAL_MAX
             : TRANSFER.INHERITED_AFTER_DEEMED_LAND_MAX,
       formula:
-        `max(상증법 평가액 ${reported.toLocaleString()}, ` +
-        `${clause} 취득당시 기준시가 ${std.toLocaleString()}) = ${acquisitionPrice.toLocaleString()} ` +
+        `상증법 평가액 ${reported.toLocaleString()}과 ` +
+        `${clause} 취득당시 기준시가 ${std.toLocaleString()} 중 큰 금액 = ${acquisitionPrice.toLocaleString()} ` +
         `(${disclosureLabel} · ${sec164Wins ? `${clause} 채택` : "상증법 평가액 채택"})`,
     };
   }
@@ -357,7 +358,7 @@ function computeSupplementary(
 ): { amount: number; formula: string } {
   if (assetKind === "land") {
     const area = landAreaM2 ?? 0;
-    const amount = Math.floor(publishedValue * area);
+    const amount = multiplyByArea(publishedValue, area);
     return {
       amount,
       formula: `개별공시지가 ${publishedValue.toLocaleString()}/㎡ × ${area}㎡ = ${amount.toLocaleString()}`,

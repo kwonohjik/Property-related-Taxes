@@ -355,7 +355,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
           description={
             article === "마"
               ? "마목(장기 매입)은 해당하면 §155⑳ 특례가 배제됩니다."
-              : "아목(단기 매입)은 원칙 배제 — 조정대상지역 공고 전 계약 + 계약금 지급 증빙이 있으면 예외(carve-out)."
+              : "아목(단기 매입)은 원칙 배제 — 조정대상지역 공고 전 계약 + 계약금 지급 증빙이 있으면 예외."
           }
           checked={unit.isExcluded918Rule}
           onCheckedChange={(v) => set("isExcluded918Rule", v)}
@@ -544,7 +544,6 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove }: R
             value={unit.acquisitionOfficialPrice}
             onChange={(v) => set("acquisitionOfficialPrice", v)}
             hideUnit
-            placeholder="취득 당시 기준시가 (원)"
           />
         </FieldCard>
       ) : (

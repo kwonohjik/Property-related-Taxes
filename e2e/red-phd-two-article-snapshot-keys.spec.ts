@@ -16,6 +16,7 @@
 import { test, expect } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { getReductionDefault } from "../components/calc/transfer/UnifiedReductionPanel-defaults";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 function seedForm() {
   return {
@@ -58,10 +59,17 @@ test("두 조문의 감면 PHD가 동시에 열리고 건물기준시가 런처�
   // 사이드바에서 「감면·공제」 스텝으로 점프 (currentStep은 persist되지 않는다)
   await page.getByRole("button", { name: "감면·공제", exact: true }).click();
 
-  // 카테고리 섹션은 기본 접힘(`openCategories` 초기값 전부 false) — 두 category를 각각 펼친다.
-  // 이것이 이 결함의 발현 조건이기도 하다: 두 category에 하나씩 선택할 수 있어야 키가 충돌한다.
-  await page.getByRole("button", { name: /신축주택/ }).first().click();
-  await page.getByRole("button", { name: /미분양주택/ }).first().click();
+  /**
+   * 두 category를 **열린 상태로 만든다** — 이것이 이 결함의 발현 조건이다
+   * (두 category에 하나씩 선택할 수 있어야 키가 충돌한다).
+   *
+   * ⚠️ **기본 접힘을 전제하지 않는다** (2026-09-07). 이제 카테고리는 **이미 고른 조문이 있으면
+   *    열린 채로 시작한다**(검증 오류로 되돌아왔을 때 오류가 지목한 칸이 화면에 없던 문제).
+   *    이 seed는 두 조문을 미리 담고 있으므로 무조건 클릭하면 **오히려 접힌다** —
+   *    실제로 그렇게 실패했다. `aria-expanded`로 판정하고 필요할 때만 누른다.
+   */
+  await expandReductionCategory(page, /신축주택/);
+  await expandReductionCategory(page, /미분양주택/);
 
   // 두 조문의 PHD 폼이 함께 렌더 → 런처는 조문당 2개(취득시·최초공시시) = 총 4개.
   // 종전에는 폼이 둘 다 떠도 **같은 스냅샷 키**를 써서 계산이 서로를 덮어썼다.

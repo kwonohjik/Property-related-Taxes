@@ -21,8 +21,10 @@ type BasicDeductionAllocation = MultiTransferFormData["basicDeductionAllocation"
 const BASIC_DEDUCTION_ALLOCATION_OPTIONS: RadioCardOption<BasicDeductionAllocation>[] = [
   {
     value: "MAX_BENEFIT",
-    label: "납세자 유리 배분 (권장)",
-    description: "세율이 높은 자산(절세 효과 최대)에 우선 배분",
+    // 🔴 「납세자 유리」·「절세 효과 최대」는 루트 CLAUDE.md의 **유리/불리·절감 표현 금지**에 걸린다
+    //    (2026-09-07 대장 재대조 · #34). 배분 규칙 자체를 사실대로 적는다.
+    label: "높은 세율 소득 우선 배분 (기본값)",
+    description: "적용 세율이 높은 자산의 소득에 먼저 배분",
   },
   {
     value: "FIRST",
@@ -45,10 +47,13 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
   // 미편집 시 기납부세액 = 신고일 필터 자동 파생(§111③). 편집 시 사용자 입력값 표시.
   const derived = useMemo(() => computeAutoPriorPaid(form.properties), [form.properties]);
   const priorPaidTaxValue = form.priorPaidTaxEdited ? form.priorPaidTax : String(derived.national);
-  const priorPaidLocalValue = form.priorPaidTaxEdited
+  // 🔴 두 칸은 **각자의 편집 플래그**를 본다(H5 — 공유하면 한쪽 편집이 다른 쪽 자동값을 지운다).
+  const priorPaidLocalValue = form.priorPaidLocalTaxEdited
     ? form.priorPaidLocalTax
     : String(derived.local);
-  const showAutoBadge = !form.priorPaidTaxEdited && (derived.national > 0 || derived.local > 0);
+  const showAutoBadge =
+    (!form.priorPaidTaxEdited || !form.priorPaidLocalTaxEdited) &&
+    (derived.national > 0 || derived.local > 0);
   return (
     <div className="space-y-6">
       {/* 과세연도 */}
@@ -133,7 +138,7 @@ export function AggregateSettingsPanel({ form, onChange }: AggregateSettingsPane
             <CurrencyInput
               label="예정신고 기납부 지방소득세"
               value={priorPaidLocalValue}
-              onChange={(v) => onChange({ priorPaidLocalTax: v, priorPaidTaxEdited: true })}
+              onChange={(v) => onChange({ priorPaidLocalTax: v, priorPaidLocalTaxEdited: true })}
             />
             <p className="mt-1 text-xs text-muted-foreground">지방소득세 예정신고 납부액</p>
           </div>

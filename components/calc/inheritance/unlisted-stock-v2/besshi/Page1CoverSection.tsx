@@ -43,11 +43,11 @@ export function Page1CoverSection({ input, result }: Page1CoverSectionProps) {
           </tr>
           <tr data-besshi-cell="p1-①" data-testid="p1-①">
             <td className="border border-black p-2 bg-gray-100">① 발행주식총수</td>
-            <td className="border border-black p-2 font-mono">{fmt(input.totalShares)}주</td>
+            <td className="border border-black p-2 font-mono tabular-nums">{fmt(input.totalShares)}주</td>
             <td className="border border-black p-2 bg-gray-100">1주당 액면가</td>
-            <td className="border border-black p-2 font-mono">{fmt(input.faceValuePerShare)}</td>
+            <td className="border border-black p-2 font-mono tabular-nums">{fmt(input.faceValuePerShare)}</td>
             <td className="border border-black p-2 bg-gray-100">자본금</td>
-            <td className="border border-black p-2 font-mono">{capitalDisplay ? fmt(capitalDisplay) : "-"}</td>
+            <td className="border border-black p-2 font-mono tabular-nums">{capitalDisplay ? fmt(capitalDisplay) : "-"}</td>
           </tr>
           <tr data-besshi-cell="p1-②" data-testid="p1-②">
             <td className="border border-black p-2 bg-gray-100">평가기준일</td>

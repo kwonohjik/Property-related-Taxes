@@ -12,7 +12,9 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
+import { isMixedUseCaseA } from "@/lib/calc/mixed-use-case";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -73,7 +75,7 @@ export function MixedUseLegacyStdPrice({
   // 양도시 상가부분 자동 계산 (mixedTransfer 우선, PHD 토지가액 fallback — API 변환과 동일 우선순위)
   const transferLandPerSqm =
     parseAmount(asset.mixedTransferLandPricePerSqm) || parseAmount(asset.phdLandPricePerSqmAtTransfer);
-  const transferCommercialLandStd = Math.floor(transferLandPerSqm * commercialLandArea);
+  const transferCommercialLandStd = multiplyByArea(transferLandPerSqm, commercialLandArea);
   const transferCommercialBuilding = parseAmount(asset.mixedTransferCommercialBuildingPrice) ?? 0;
   const transferCommercialTotal = transferCommercialLandStd + transferCommercialBuilding;
 
@@ -81,7 +83,7 @@ export function MixedUseLegacyStdPrice({
   const acqLandPerSqm =
     parseAmount(asset.mixedAcqLandPricePerSqm) ||
     parseAmount(asset.phdLandPricePerSqmAtAcq);
-  const acqCommercialLandStd = Math.floor(acqLandPerSqm * commercialLandArea);
+  const acqCommercialLandStd = multiplyByArea(acqLandPerSqm, commercialLandArea);
   const acqCommercialBuilding = parseAmount(asset.mixedAcqCommercialBuildingPrice) ?? 0;
   const acqCommercialTotal = acqCommercialLandStd + acqCommercialBuilding;
 
@@ -103,14 +105,15 @@ export function MixedUseLegacyStdPrice({
   // snapshotKey는 대상 폼 필드 기준(§4.4) — 같은 필드가 Case A/B에서 다른 컴포넌트로 렌더돼도 스냅샷 공유
   const bspPrefix = `bsp-${asset.assetId}-phd`;
 
-  // Case A 4부분 안분 — 최초공시일 < 용도변경일
-  const isCaseA = useMemo(() => {
-    if (!asset.hasPartialUsageChange || asset.partialChangeDirection !== "house_to_commercial") return false;
-    if (!asset.phdFirstDisclosureDate || !asset.partialChangeDate) return false;
-    const fd = new Date(asset.phdFirstDisclosureDate);
-    const uc = new Date(asset.partialChangeDate);
-    return !isNaN(fd.getTime()) && !isNaN(uc.getTime()) && fd < uc;
-  }, [asset.hasPartialUsageChange, asset.partialChangeDirection, asset.phdFirstDisclosureDate, asset.partialChangeDate]);
+  /**
+   * Case A 4부분 안분 — 정본 헬퍼 `isMixedUseCaseA`를 쓴다.
+   *
+   * 🔴 종전에는 **같은 판정을 여기서 복제**했고 그 복제본에만 PHD 조건이 없었다. PHD를 켜서
+   *    최초고시일을 채운 뒤 다시 끄면 `isCaseA`가 참으로 남아 아래 두 `{!isCaseA && …}`가
+   *    상가 기준시가 칸을 지우는데 PHD 패널(대체 입력처)도 접혀 있어, 화면 어디에도 칸이
+   *    없는 채로 ⑧이 그 값을 요구했다(막다른 길). 근거는 헬퍼 헤더 참조.
+   */
+  const isCaseA = useMemo(() => isMixedUseCaseA(asset), [asset]);
 
   // (Case A 양도 4부분 파생은 자산-우선 위젯으로 이관 — legacy에서 제거)
 
@@ -275,9 +278,10 @@ export function MixedUseLegacyStdPrice({
       </div>
 
       {/* ── 양도시 기준시가 ───────────────────────────
-          Case A(항상 PHD ON)에서 개별주택공시가격을 숨기면 헤더만 남는 빈 박스가 되므로
-          sub-block 전체를 {!(isCaseA && PHD)} 로 가드. non-Case-A는 상가 필드가 남아 정상. */}
-      {!(isCaseA && asset.usePreHousingDisclosure) && (
+          Case A에서 개별주택공시가격을 숨기면 헤더만 남는 빈 박스가 되므로 sub-block 전체를
+          가드한다. non-Case-A는 상가 필드가 남아 정상.
+          (`isCaseA`가 PHD ON을 이미 포함하므로 종전의 `&& PHD` 병기는 중복이라 지웠다.) */}
+      {!isCaseA && (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
         <div className="flex items-center gap-2">
           {transferSectionNum !== undefined && (

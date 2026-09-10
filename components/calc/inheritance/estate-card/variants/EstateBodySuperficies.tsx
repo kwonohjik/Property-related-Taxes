@@ -147,7 +147,7 @@ export function EstateBodySuperficies({ item, onUpdate, valuationDate }: Variant
           </p>
         )}
         <p className="text-xs text-sky-600 dark:text-sky-400">
-          민법 최단존속기간: ㉠견고건물 30년 / ㉡기타건물 15년 / ㉢공작물 5년 · 약정 시 max(약정, 최단)
+          민법 최단존속기간: ㉠견고건물 30년 / ㉡기타건물 15년 / ㉢공작물 5년 · 약정 시 약정기간과 최단존속기간 중 긴 기간
         </p>
       </EstateBodySection>
     </div>

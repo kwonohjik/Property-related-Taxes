@@ -26,6 +26,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -35,6 +36,7 @@ import {
 } from "@/lib/calc/same-adjustment-period-lookup";
 import { resolveSapPriorStdPrice } from "@/lib/calc/transfer-same-adjustment-period-input";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** §80①1호 기간 요건 — 취득일이 속하는 연도의 다음 연도 말일 이전 양도 */
 export function isWithinSameAdjustmentWindow(
@@ -147,7 +149,7 @@ export function SameAdjustmentPeriodSection({
       const rawPrice = Number(prior.price ?? 0);
       const priorTotal =
         propertyType === "land"
-          ? (landAreaSqm && landAreaSqm > 0 ? Math.floor(rawPrice * landAreaSqm) : 0)
+          ? (landAreaSqm && landAreaSqm > 0 ? multiplyByArea(rawPrice, landAreaSqm) : 0)
           : rawPrice;
 
       if (!(priorTotal > 0)) {
@@ -216,13 +218,22 @@ export function SameAdjustmentPeriodSection({
             value: "prev" as const,
             label: "양도일까지 새 기준시가가 고시되지 않은 경우",
             description: "시행규칙 §80①1호 가목 — 취득당시 기준시가와 전기의 기준시가 차이로 보정",
-            hint: "양도당시 = 취득당시 + (취득당시 − 전기) × 보유월수 ÷ 조정월수 (100분의 100 한도)",
+            hint: (
+              <>
+                양도당시 = 취득당시 + (취득당시 − 전기) × <Frac top="보유월수" bottom="조정월수" /> (100분의 100
+                한도)
+              </>
+            ),
           },
           {
             value: "new" as const,
             label: "양도일부터 2월이 되는 날이 속하는 월의 말일까지 새 기준시가가 고시된 경우",
             description: "시행규칙 §80①1호 나목 — 거주자가 이 산식으로 확정신고를 선택한 경우에 적용",
-            hint: "양도당시 = 취득당시 + (새로운 − 취득당시) × 보유월수 ÷ 조정월수",
+            hint: (
+              <>
+                양도당시 = 취득당시 + (새로운 − 취득당시) × <Frac top="보유월수" bottom="조정월수" />
+              </>
+            ),
             disabled: !newNoticeAvailable,
           },
         ]}
@@ -244,7 +255,16 @@ export function SameAdjustmentPeriodSection({
               { value: "direct" as const, label: "실제 전기 기준시가", description: "§80②2호 — 취득당시 결정일 전일의 기준시가" },
               { value: "nearby_land" as const, label: "인근토지 전기 기준시가", description: "§80③1호 — 토지: 지목·이용상황이 유사한 인근토지" },
               { value: "first_notice_rate" as const, label: "최초고시 × 기준율", description: "§80③2호 — 건물: 국세청장 최초고시 기준시가 × 고시 기준율" },
-              { value: "ratio_conversion" as const, label: "합계액 비율환산", description: "§80③3호 — 오피스텔·상업용건물·주택: 취득당시 × (전기 합계 ÷ 취득당시 합계)" },
+              {
+                value: "ratio_conversion" as const,
+                label: "합계액 비율환산",
+                description: (
+                  <>
+                    §80③3호 — 오피스텔·상업용건물·주택: 취득당시 ×{" "}
+                    <Frac top="전기 합계" bottom="취득당시 합계" />
+                  </>
+                ),
+              },
             ]}
           />
         </FieldCard>

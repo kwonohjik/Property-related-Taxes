@@ -75,7 +75,9 @@ function InfoRow({ label, value, sub = false }: { label: string; value: string; 
   return (
     <div className={cn("flex justify-between text-xs", sub && "pl-2 text-muted-foreground")}>
       <span>{label}</span>
-      <span className="tabular-nums font-medium">{value}</span>
+      {/* 금액 칸 정렬 규약 — `font-mono tabular-nums`가 한 쌍이다(components/calc/CLAUDE.md).
+          `tabular-nums` 단독은 자릿수만 고정할 뿐 글립 폭이 본문 폰트라 콤마가 세로로 안 선다. */}
+      <span className="font-mono tabular-nums font-medium whitespace-nowrap">{value}</span>
     </div>
   );
 }
@@ -179,7 +181,7 @@ function ScenarioBContent({ b, adopted, isComparisonExclusion, filingUnit }: {
 const EXCLUSION_REASON_LABELS: Record<string, string> = {
   expropriation: "§97조의2 ② 1호 — 사업인정고시일 2년 이전 증여받은 토지·건물의 협의매수·수용",
   one_house_exemption: "§97조의2 ② 2호 — 이월과세 적용 시 1세대1주택 비과세 해당 (고가주택 포함)",
-  tax_comparison: "§97조의2 ② 3호 — 비교과세 (Scenario B 세액이 더 큼)",
+  tax_comparison: "§97조의2 ② 3호 — 비교과세 (시나리오 B 세액이 더 큼)",
   period_exceeded: "§97조의2 ③ — 적용기간 초과",
   // 🔴 **두 사유를 한 값이 나눠 쓴다** — 「사망」만 적으면 O-2로 들어온 「그 외 관계」가 거짓 사유를 본다.
   //    ⓐ 대상 관계가 아님(배우자·직계존비속 외) — ① 본문 요건. 증여자 생존과 무관하다.
@@ -288,7 +290,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
         <div className="flex justify-between font-semibold text-foreground text-sm">
           <span>채택 시나리오: {detail.adoptedScenario} ({detail.adoptedScenario === "A" ? "이월과세 적용" : "비교과세 미적용"})</span>
           {filing === undefined && (
-            <span>신고세액 = max(A, B) = {fmt(Math.max(detail.scenarioA.determinedTax, detail.scenarioB.determinedTax))}</span>
+            <span>신고세액 = 시나리오 A·B 중 큰 금액 = {fmt(Math.max(detail.scenarioA.determinedTax, detail.scenarioB.determinedTax))}</span>
           )}
         </div>
         {filing !== undefined && (
@@ -312,7 +314,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
         )}
         {detail.comparisonExclusion && (
           <p className="text-rose-600">
-            ※ §97조의2 ② 3호 비교과세 — Scenario B 채택 (세액 역전
+            ※ §97조의2 ② 3호 비교과세 — 시나리오 B 채택 (세액 역전
             {filing !== undefined ? " · 신고 전체 결정세액 기준" : ""})
           </p>
         )}

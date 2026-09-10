@@ -35,6 +35,7 @@ import type { FamilyBusinessInheritancePrefill } from "@/lib/calc/family-busines
 // 시점 판정은 엔진 leaf 단일 소스 재사용 (skill single-source-engine-helper)
 import { isFamilyBusinessAssetScopeDecreeEra, isFamilyBusinessCgtEra } from "@/lib/tax-engine/data/family-business-cgt-era";
 import { calcFamilyBusinessImputedAcquisitionPrice } from "@/lib/tax-engine/transfer-tax-family-business";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 // ── 타입 ──────────────────────────────────────────────────────
 
@@ -234,7 +235,12 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           <FieldCard
             label="가업상속공제적용률 (%)"
             required
-            hint="소령 §163의2③ — 개인가업: 공제금액 ÷ 가업상속 재산가액 / 법인가업: 사업관련자산가액 ÷ 총자산가액"
+            hint={
+              <>
+                소령 §163의2③ — 개인가업: <Frac top="공제금액" bottom="가업상속 재산가액" /> / 법인가업:{" "}
+                <Frac top="사업관련자산가액" bottom="총자산가액" />
+              </>
+            }
           >
             {/*
               🔴 **소수점을 입력할 수 없었다** (2026-09-05 · 코드리뷰 Q13).
@@ -339,9 +345,13 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
             <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs space-y-1">
               <p className="font-semibold text-emerald-800">의제 취득가액 미리보기 (소법 §97의2④)</p>
               <p className="text-emerald-700">
-                피상속인 원취득가액 {fb!.decedentAcquisitionPrice.toLocaleString()}
+                {/* 🔴 자본적지출이 있으면 **괄호로 묶는다** (2026-09-07 대장 재대조).
+                    엔진은 `(원취득가 + 자본적지출) × 적용률`인데 괄호가 없으면
+                    「원취득가 + (자본적지출 × 적용률)」로 읽힌다 — 산식이 거짓이 된다. */}
+                피상속인 {fb!.decedentCapitalExpenditure ? "(" : ""}원취득가액{" "}
+                {fb!.decedentAcquisitionPrice.toLocaleString()}
                 {fb!.decedentCapitalExpenditure
-                  ? ` + 자본적지출 ${fb!.decedentCapitalExpenditure.toLocaleString()}`
+                  ? ` + 자본적지출 ${fb!.decedentCapitalExpenditure.toLocaleString()})`
                   : ""}
                 {" × "}{(fb!.fbDeductionAppliedRate * 100).toFixed(2)}%
                 {" + "}상속개시일 평가액 {fb!.inheritanceMarketValue.toLocaleString()}

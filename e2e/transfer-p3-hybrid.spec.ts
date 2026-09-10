@@ -6,6 +6,7 @@
  * worktree 실행: E2E_PORT=3100 npx playwright test e2e/transfer-p3-hybrid.spec.ts
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("양도세 P3 하이브리드 감면 패널", () => {
   test("미분양 그룹 → §98의3·§98의5·§98의6 폼 렌더", async ({ page }) => {
@@ -17,7 +18,7 @@ test.describe("양도세 P3 하이브리드 감면 패널", () => {
     await page.getByTestId("transfer-date").getByLabel("일").fill("01");
 
     await page.getByRole("button", { name: "감면·공제" }).click();
-    await page.getByRole("button", { name: /미분양주택/ }).click();
+    await expandReductionCategory(page, /미분양주택/);
 
     // §98의3 — 과밀 60% hint + 주체 라디오
     const item983 = page.getByText("§98의3 — 서울 외 미분양 100%(과밀 60%)", { exact: false }).first();

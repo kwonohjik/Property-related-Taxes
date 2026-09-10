@@ -116,7 +116,7 @@ export function NewConstructionLandAcqBlock(props: {
             <p className="text-xs font-semibold text-amber-800">토지 취득 원인</p>
             <div data-testid="land-acq-cause">
               <RadioCardGroup
-                name="landAcquisitionCause"
+                name={`landAcquisitionCause-${asset.assetId ?? "primary"}`}
                 tone="amber"
                 layout="inline"
                 options={CAUSE_OPTIONS}

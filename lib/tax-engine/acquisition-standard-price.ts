@@ -9,6 +9,7 @@
 
 import { ACQUISITION } from "./legal-codes";
 import type { PropertyObjectType, StandardPriceInput } from "./types/acquisition.types";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 // ============================================================
 // 시가표준액 산정 결과 타입
@@ -83,7 +84,7 @@ function calcLandStandardPrice(
   if (price <= 0) warnings.push("개별공시지가 미입력 — 시가표준액 0으로 처리됩니다.");
   if (area <= 0) warnings.push("토지 면적 미입력 — 시가표준액 0으로 처리됩니다.");
 
-  return Math.floor(price * area);
+  return multiplyByArea(price, area);
 }
 
 /**

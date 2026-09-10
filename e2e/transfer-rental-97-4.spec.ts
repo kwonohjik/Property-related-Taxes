@@ -6,6 +6,7 @@
  * worktree 실행: E2E_PORT=3100 npx playwright test e2e/transfer-rental-97-4.spec.ts
  */
 import { test, expect } from "@playwright/test";
+import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 
 test.describe("양도세 §97의4 감면 패널 (R-3 활성)", () => {
   test("rental 그룹 펼침 → §97의4 선택 → 추가율 표 폼 렌더", async ({ page }) => {
@@ -21,7 +22,7 @@ test.describe("양도세 §97의4 감면 패널 (R-3 활성)", () => {
     await page.getByRole("button", { name: "감면·공제" }).click();
 
     // ── rental 그룹 펼침 ──
-    await page.getByRole("button", { name: /장기임대주택/ }).click();
+    await expandReductionCategory(page, /장기임대주택/);
 
     // §97의4 항목 노출 + 클릭 (R-3 활성 — 더 이상 disabled 아님)
     const item974 = page.getByText("§97의4 — 장특공제 추가율", { exact: false }).first();
