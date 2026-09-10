@@ -74,14 +74,10 @@ export const DOMAIN_RESPONSE_KEY: Record<DecisionDomain, { root: string; list: s
   ftc:      { root: "Ftc",            list: "ftc" },
   nlrc:     { root: "Nlrc",           list: "nlrc" },
   kcc:      { root: "Kcc",            list: "kcc" },
-  pipc:     { root: "PipcSearch",     list: "pipc" },
-  oia:      { root: "OiaSearch",      list: "oia" },
   acr:      { root: "Acr",            list: "acr" },
   ordin:    { root: "OrdinSearch",    list: "law" },
   public:   { root: "PublicSearch",   list: "public" },
-  nhrc:     { root: "NhrcSearch",     list: "nhrc" },
   trty:     { root: "TrtySearch",     list: "trty" },
-  lawnkor:  { root: "LawNkorSearch",  list: "lawnkor" },
 };
 
 /** 검색 응답 container에서 메타데이터 필드명 (리스트로 간주 금지) */
@@ -140,12 +136,8 @@ const DOMAIN_OPTION_WHITELIST: Record<DecisionDomain, ReadonlyArray<keyof Domain
   ftc:      [],
   nlrc:     [],
   kcc:      [],
-  pipc:     [],
-  oia:      [],
   acr:      [],
   public:   [],
-  nhrc:     [],
-  lawnkor:  [],
 };
 
 /** 공개 옵션명 → DRF 파라미터명 (1:1 인 것만. 선고일 범위는 buildPrncYd 가 조립). */

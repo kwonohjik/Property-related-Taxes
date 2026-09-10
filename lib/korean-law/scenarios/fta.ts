@@ -26,7 +26,8 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
   const [ftaLaws, treaties, customsInterpret, tribunal] = await Promise.all([
     searchLawMany("자유무역협정", 3).catch(() => []),
     searchDecisions(q, "trty", 1, 5).catch(() => EMPTY),
-    searchDecisions(`${q} 관세`, "detc", 1, 5).catch(() => EMPTY),
+    // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
+    searchDecisions(`${q} 관세`, "expc", 1, 5).catch(() => EMPTY),
     searchDecisions(`${q} 관세`, "ppc", 1, 3).catch(() => EMPTY),
   ]);
 

@@ -22,10 +22,11 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
   const q = ctx.cleanedQuery || ctx.query;
   const sections: ChainSection[] = [];
 
-  // 원본 MCP manual 체인 구성: 행정규칙(admrul) + 법령해석례(detc) + 자치법규(ordin)
-  const [admrul, detc, ordin] = await Promise.all([
+  // 원본 MCP manual 체인 구성: 행정규칙(admrul) + 법령해석례(expc) + 자치법규(ordin)
+  // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
+  const [admrul, interpretation, ordin] = await Promise.all([
     searchDecisions(q, "admrul", 1, 5).catch(() => EMPTY),
-    searchDecisions(q, "detc", 1, 5).catch(() => EMPTY),
+    searchDecisions(q, "expc", 1, 5).catch(() => EMPTY),
     searchDecisions(q, "ordin", 1, 3).catch(() => EMPTY),
   ]);
 
@@ -40,8 +41,8 @@ async function run(ctx: ScenarioContext): Promise<ChainSection[]> {
   );
 
   sections.push(
-    detc.items.length > 0
-      ? { kind: "decisions", heading: "[시나리오: manual] 법령해석례 (실무 참고)", decisions: detc.items }
+    interpretation.items.length > 0
+      ? { kind: "decisions", heading: "[시나리오: manual] 법령해석례 (실무 참고)", decisions: interpretation.items }
       : {
           kind: "note",
           heading: "[시나리오: manual] 법령해석례",

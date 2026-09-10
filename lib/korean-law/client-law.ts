@@ -45,10 +45,12 @@ export function buildDecisionSourceUrl(domain: DecisionDomain, id: string): stri
   switch (domain) {
     case "prec":
       return `https://www.law.go.kr/판례/(${encodeURIComponent(id)})`;
+    // ⚠ detc=헌재결정례 / expc=법령해석례. 이름의 직관과 반대다(types.ts 주석 참조).
+    //   종전엔 반대로 매핑돼 결과를 클릭하면 **다른 종류의 원문 페이지**가 열렸다.
     case "detc":
-      return `https://www.law.go.kr/법령해석례/(${encodeURIComponent(id)})`;
-    case "expc":
       return `https://www.law.go.kr/헌재결정례/(${encodeURIComponent(id)})`;
+    case "expc":
+      return `https://www.law.go.kr/법령해석례/(${encodeURIComponent(id)})`;
     case "admrul":
       return `https://www.law.go.kr/행정규칙/(${encodeURIComponent(id)})`;
     default:

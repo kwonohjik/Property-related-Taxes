@@ -5,7 +5,8 @@
  * 본 구현은 mermaid 대신 웹 네이티브 도메인별 그룹 트리로 노출(외부 라이브러리 불필요).
  *
  * 메커니즘: 각 도메인에서 "법령명 제N조"를 본문 검색(search=2)으로 역추적.
- *   판례(prec)·법령해석례(detc)·자치법규(ordin)·조세심판원(ppc) 4개 도메인.
+ *   판례(prec)·법령해석례(expc)·자치법규(ordin)·개인정보보호위(ppc) 4개 도메인.
+ *   ⚠ 법령해석례의 target 은 expc 다(detc 는 헌재결정례) — types.ts 주석 참조.
  *
  * 호출량 제어: 도메인당 상위 N건(기본 5) + 직렬 호출 + 캐시 + 버튼 클릭 시에만 실행.
  */
@@ -18,7 +19,7 @@ import { DECISION_DOMAIN_LABELS } from "./types";
 import type { DecisionDomain, ImpactGroup, ImpactMapResult } from "./types";
 
 /** 영향 탐색 대상 도메인 (세법 실무 가중) */
-export const IMPACT_DOMAINS: DecisionDomain[] = ["prec", "detc", "ppc", "ordin"];
+export const IMPACT_DOMAINS: DecisionDomain[] = ["prec", "expc", "ppc", "ordin"];
 
 /** 도메인당 표시 상위 건수 */
 const PER_DOMAIN = 5;

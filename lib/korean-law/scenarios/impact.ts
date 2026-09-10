@@ -31,7 +31,8 @@ export const impactScenario: ScenarioRunner = {
   async run(ctx) {
     const q = ctx.cleanedQuery ?? ctx.query;
     const [constDec, prec, tribunal] = await Promise.all([
-      searchDecisions(`${q} 위헌 위법 헌법불합치`, "expc", 1, 3).catch(() => null),
+      // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
+      searchDecisions(`${q} 위헌 위법 헌법불합치`, "detc", 1, 3).catch(() => null),
       searchDecisions(`${q} 무효 취소`, "prec", 1, 5).catch(() => null),
       searchDecisions(`${q} 취소`, "ppc", 1, 5).catch(() => null),
     ]);

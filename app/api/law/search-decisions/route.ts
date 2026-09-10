@@ -82,9 +82,9 @@ export async function GET(req: NextRequest) {
 
 function buildDecisionHint(q: string, domain: string): string {
   if (domain === "prec") {
-    return `💡 다음 액션: search_decisions(q="${q}", domain="detc") 로 법령해석례를 시도하거나, run_chain(full_research, query="${q}") 로 법령·판례·해석례를 한 번에 조회하세요.`;
+    return `💡 다음 액션: search_decisions(q="${q}", domain="expc") 로 법령해석례를 시도하거나, run_chain(full_research, query="${q}") 로 법령·판례·해석례를 한 번에 조회하세요.`;
   }
-  if (domain === "detc" || domain === "admrul") {
+  if (domain === "expc" || domain === "admrul") {
     return `💡 다음 액션: 도메인을 "prec"(대법원 판례)로 변경하거나, search_law(q="${q}") 로 관련 법령을 먼저 조회하세요.`;
   }
   return `💡 다음 액션: 짧은 키워드로 재시도하거나, run_chain(full_research, query="${q}") 로 여러 도메인을 동시에 검색하세요.`;
