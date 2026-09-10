@@ -15,6 +15,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { setStockConversionMode } from "./_helpers/stock-conversion";
 
 const ACCRUAL_TOGGLE_TITLE = "같은 사업연도에 취득·상장 (소칙 §81④ 1호)";
 
@@ -72,12 +73,7 @@ async function fillStep2PostListing(page: Page, acqEqual: boolean) {
   await page.getByRole("radio", { name: "환산취득가" }).first().click();
 
   // 취득 후 상장 토글 ON
-  const postListingSwitch = page
-    .locator('[data-slot="toggle-card"]')
-    .filter({ hasText: "취득 후 상장" })
-    .getByRole("switch")
-    .first();
-  await postListingSwitch.click();
+  await setStockConversionMode(page, "post_listing");
 
   // 2026-09-02: 「환산 입력 방식」 기본 선택이 «재무제표로 계산»(full)로 바뀌었다.
   // 이 spec은 1주당 가액을 직접 넣는 흐름이므로 «평가액 직접 입력»(simple)을 명시한다.

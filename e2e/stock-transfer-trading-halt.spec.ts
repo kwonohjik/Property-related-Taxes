@@ -15,8 +15,9 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { setStockConversionModeByTitle, conversionToggleTitle } from "./_helpers/stock-conversion";
 
-const HALT_TOGGLE_TITLE = "양도일 거래정지·관리종목 지정 (소령 §165③)";
+const HALT_TOGGLE_TITLE = conversionToggleTitle("halt_transfer");
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -73,8 +74,8 @@ test.describe("거래정지 §165③ UI", () => {
     await fillStep1(page);
     await gotoStep2Estimated(page);
 
-    // 토글 제목 텍스트 클릭 (switch role 이중토글 회피)
-    await page.getByText(HALT_TOGGLE_TITLE).click();
+    // 토글 제목 텍스트 클릭 (switch role 이중토글 회피) — S0에서 헬퍼로 이관
+    await setStockConversionModeByTitle(page, "halt_transfer");
 
     // 비상장 보충 평가 폼 노출
     await expect(page.getByText("비상장 보충적 평가 — 시행령 §165④1")).toBeVisible({ timeout: 10_000 });
@@ -89,7 +90,7 @@ test.describe("거래정지 §165③ UI", () => {
     await gotoStockTransferTax(page);
     await fillStep1(page);
     await gotoStep2Estimated(page);
-    await page.getByText(HALT_TOGGLE_TITLE).click();
+    await setStockConversionModeByTitle(page, "halt_transfer");
 
     // 비상장 평가 입력 (A-TH-1 동일 — 양도 30,000/10,000 · 취득 15,000/5,000)
     // 라벨 "1주당 순손익가치/순자산가치"가 양도·취득 2섹션 공통 → nth(0)=양도, nth(1)=취득

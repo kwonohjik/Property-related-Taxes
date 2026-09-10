@@ -13,8 +13,9 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { setStockConversionModeByTitle, conversionToggleTitle } from "./_helpers/stock-conversion";
 
-const ACQ_HALT_TOGGLE_TITLE = "취득일 거래정지·관리종목 지정 (소령 §165③)";
+const ACQ_HALT_TOGGLE_TITLE = conversionToggleTitle("halt_acquisition");
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -68,7 +69,7 @@ test.describe("C-1 취득일 거래정지 §165③ UI", () => {
     // OFF 상태: 분자 입력 노출
     await expect(page.getByText("취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)")).toBeVisible();
 
-    await page.getByText(ACQ_HALT_TOGGLE_TITLE, { exact: true }).click();
+    await setStockConversionModeByTitle(page, "halt_acquisition");
 
     // ON: 분자 입력 숨김 + 대체 안내 + 취득연도 NI/NA 노출 (acquisitionSideOnly — 양도연도 섹션 비노출)
     await expect(page.getByText("취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)")).toHaveCount(0);
@@ -86,7 +87,7 @@ test.describe("C-1 취득일 거래정지 §165③ UI", () => {
     await fillStep1(page);
     await gotoStep2Estimated(page);
 
-    await page.getByText(ACQ_HALT_TOGGLE_TITLE, { exact: true }).click();
+    await setStockConversionModeByTitle(page, "halt_acquisition");
 
     // 취득연도 NI/NA (토글 내 acquisitionSideOnly 블록 — (취득시점) 라벨 고유)
     await fillByLabel(page, "1주당 순손익가치 (취득시점)", "6000");

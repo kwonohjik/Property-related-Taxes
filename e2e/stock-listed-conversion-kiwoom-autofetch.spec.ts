@@ -22,6 +22,7 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import { mockKiwoom1Month, FIXTURE_2025_06_10 } from "./_helpers/kiwoom-1month-mock";
+import { setStockConversionMode, togglePostListingOff } from "./_helpers/stock-conversion";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -159,14 +160,12 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
     await fillStep1(page);
     await gotoStep2Estimated(page);
 
-    const postListingToggle = page.getByRole("switch", { name: /취득 후 상장/ });
-
     // ① 켠다 → 입력 방식 라디오가 나타난다
-    await postListingToggle.click();
+    await setStockConversionMode(page, "post_listing");
     await page.getByRole("radio", { name: /일자별 입력/ }).first().click();
 
     // ② 다시 끈다 → 라디오도 일자별 표도 사라진다 (되돌릴 수단 없음)
-    await postListingToggle.click();
+    await togglePostListingOff(page);
     await expect(page.getByRole("radio", { name: /일자별 입력/ })).toHaveCount(0);
 
     // ③ 일반 §163⑨ 경로의 분모·분자를 정상 입력한다

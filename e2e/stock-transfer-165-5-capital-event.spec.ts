@@ -12,6 +12,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { setStockConversionMode } from "./_helpers/stock-conversion";
 
 const CAPITAL_EVENT_TOGGLE_TITLE = "평가기간 중 증자·합병 발생 (상증령 §52의2②)";
 
@@ -60,12 +61,7 @@ test.describe("B-5 §165⑤ 증자·합병 기간 조정 UI", () => {
     await page.getByRole("radio", { name: "환산취득가" }).first().click();
 
     // 취득 후 상장 ON
-    await page
-      .locator('[data-slot="toggle-card"]')
-      .filter({ hasText: "취득 후 상장" })
-      .getByRole("switch")
-      .first()
-      .click();
+    await setStockConversionMode(page, "post_listing");
 
     // full 모드 — 종가 표 + 증자·합병 섹션 노출
     await page.getByText("재무제표로 계산", { exact: true }).click();

@@ -15,6 +15,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { setStockConversionMode } from "./_helpers/stock-conversion";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -59,12 +60,7 @@ async function openPostListingCard(page: Page) {
   await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
   await fillByLabel(page, "양도가액 합계", "44750000");
   await page.getByRole("radio", { name: "환산취득가" }).first().click();
-  await page
-    .locator('[data-slot="toggle-card"]')
-    .filter({ hasText: "취득 후 상장" })
-    .getByRole("switch")
-    .first()
-    .click();
+  await setStockConversionMode(page, "post_listing");
 }
 
 test.describe("비상장 보충적 평가 — 결손·자본잠식 음수 입력", () => {
