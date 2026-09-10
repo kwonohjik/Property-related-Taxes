@@ -29,19 +29,28 @@ describe("multiplyByArea — 참값을 낸다", () => {
     expect(Math.floor(5_000_000 * 8.04)).toBe(40_199_999);
   });
 
+  /**
+   * ⚠️ 루프 **안에서 `expect()`를 부르지 않는다.** 20만 회 × 3 단언 = 60만 호출이라
+   *    로컬 1.09초가 CI(2 worker)에서 기본 timeout 5초를 넘겼다(PR #1556 shard 4/4 실패).
+   *    집계만 하고 밖에서 한 번 단언한다 — 커버리지는 그대로다.
+   */
   it("UA-2: 전수 스윕 — 0.01~2000.00㎡에서 naive보다 작아지지 않고, 참값과 일치한다", () => {
     let fixed = 0;
+    let wrong = 0;
+    let regressed = 0;
     for (let i = 1; i <= 200_000; i++) {
       const area = i / 100;
       const got = multiplyByArea(5_000_000, area);
       const naive = Math.floor(5_000_000 * area);
       // 참값 = 정수 연산
       const exact = Math.floor((5_000_000 * Math.round(area * 100)) / 100);
-      expect(got).toBe(exact);
-      expect(got).toBeGreaterThanOrEqual(naive);
+      if (got !== exact) wrong++;
+      if (got < naive) regressed++;
       if (got !== naive) fixed++;
     }
-    expect(fixed).toBe(11_105);
+    expect(wrong).toBe(0); // 전건 참값 일치
+    expect(regressed).toBe(0); // 종전보다 작아진 케이스 없음
+    expect(fixed).toBe(11_105); // 실제로 고쳐진 수 — 구별력
   });
 
   it("UA-3: [대조군] 정수 면적은 종전과 완전히 같다", () => {
