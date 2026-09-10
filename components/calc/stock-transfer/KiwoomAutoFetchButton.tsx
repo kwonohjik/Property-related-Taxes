@@ -156,10 +156,13 @@ export function KiwoomAutoFetchButton({
       const avg = data.average;
 
       /**
-       * 축마다 «쓰는 필드»가 다르다.
+       * 축마다 «쓰는 필드»가 다르다 — **자기 축의 배열만** 채운다.
        *
-       * · 취득일 축에는 일자별 입력 표가 없다 ⇒ `transferPriceDates/Closing`을 건드리지 않는다.
-       * · 🔴 취득일 축은 `kiwoomTradingHalt`도 쓰지 않는다 — 그 값은 폼 전역이라
+       * · 취득일 축은 `acquisitionPriceDates/Closing`을 채운다(그 축에도 일자별 표가 생겼다).
+       *   🔑 종전에는 아무 배열도 채우지 않았다 — 그때는 취득 축에 표가 없었기 때문이다.
+       *   표를 붙이면서 함께 열지 않으면 **자동조회가 평균만 넣고 표는 빈 칸으로 남아**,
+       *   사용자가 셀 하나만 고쳐도 그 순간 표에서 파생한 평균이 조회값을 덮어쓴다.
+       * · 🔴 취득일 축은 `kiwoomTradingHalt`를 쓰지 않는다 — 그 값은 폼 전역이라
        *   `Step2.tsx`의 배너가 그것을 보고 「**양도일** 거래정지 토글을 켜라」고 안내한다.
        *   취득일 조회가 그 플래그를 세우면 축이 뒤섞인다(자가검토 F-5).
        *   현재 정지 사실은 아래 결과 카드에서 «안내»한다.
@@ -167,6 +170,8 @@ export function KiwoomAutoFetchButton({
       onFill(
         isAcquisition
           ? {
+              acquisitionPriceDates: dates,
+              acquisitionPriceClosing: closings,
               acquisitionDatePriceAvg1Month: avg > 0 ? String(avg) : "",
               kiwoomLastFetchedAt: new Date().toISOString(),
             }

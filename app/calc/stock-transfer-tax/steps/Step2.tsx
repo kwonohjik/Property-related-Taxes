@@ -16,6 +16,7 @@ import { KiwoomAutoFetchButton } from "@/components/calc/stock-transfer/KiwoomAu
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TransferStdPriceSection } from "@/components/calc/stock-transfer/TransferStdPriceSection";
+import { TransferDate1MonthClosingPriceTable } from "@/components/calc/stock-transfer/TransferDate1MonthClosingPriceTable";
 import { AcquisitionStdModeRadio } from "@/components/calc/stock-transfer/AcquisitionStdModeRadio";
 import { FaceValueBlock } from "@/components/calc/stock-transfer/FaceValueBlock";
 import { MarketSampleBlock } from "@/components/calc/stock-transfer/MarketSampleBlock";
@@ -47,6 +48,8 @@ export function Step2({ form, onChange }: Step2Props) {
   const transferActualInputMode = form.transferActualInputMode || "total"; // 3중 패턴 default
   const acquisitionMode = form.acquisitionMode || "actual";
   const acquisitionActualInputMode = form.acquisitionActualInputMode || "per_share"; // 3중 패턴 default
+  // 취득 당시 기준시가 입력 방식 — 3중 패턴 default(분모 축 `transferStdInputMode`와 같은 형태)
+  const acqInputMode = form.acquisitionStdInputMode || "direct";
   const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
   const isSplitMode = form.lotsMode === "split";
 
@@ -416,6 +419,29 @@ export function Step2({ form, onChange }: Step2Props) {
                     🔑 현재 거래정지로 «막지 않는다» — §52의2③이 문제 삼는 것은
                        「취득일 이전 1개월 구간」의 정지이지 조회 시점의 상태가 아니다.
                   */}
+                  {/*
+                    입력 방식 — 분모 축(`TransferStdPriceSection`)과 **같은 형태**다.
+                    종전에는 이 축에 단일 숫자 칸만 있어 두 화면이 크게 달랐다(제보 2026-09-10).
+                    ⚠️ 이 라디오는 `monthly_avg` 카드 «안에만» 있다 — 다른 방식에서 daily가
+                       남으면 되돌릴 UI가 없으므로 normalize가 축을 게이팅한다
+                       (`calc-wizard-stock-normalize.ts` — `listingStdInputMode`와 같은 형태).
+                  */}
+                  <FieldCard label="기준시가 입력 방식">
+                    <RadioCardGroup
+                      name="acquisitionStdInputMode"
+                      value={acqInputMode}
+                      onChange={(v) =>
+                        onChange({ acquisitionStdInputMode: v as "direct" | "daily" })
+                      }
+                      tone="emerald"
+                      layout="inline"
+                      options={[
+                        { value: "direct", label: "직접 입력 (1개월 평균 단일 숫자)" },
+                        { value: "daily", label: "일자별 입력 (자동 평균 산정)" },
+                      ]}
+                    />
+                  </FieldCard>
+
                   <KiwoomAutoFetchButton
                     axis="acquisition"
                     securityCode={form.securityCode}
@@ -424,14 +450,26 @@ export function Step2({ form, onChange }: Step2Props) {
                     tradingHalt={false}
                     onFill={onChange}
                   />
-                  <CurrencyInput
-                    label="취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)"
-                    required
-                    hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 기준액"
-                    value={form.acquisitionDatePriceAvg1Month}
-                    onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
-                    placeholder="취득일 이전 1개월 종가평균 (1주당)"
-                  />
+                  {acqInputMode === "direct" ? (
+                    <CurrencyInput
+                      label="취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)"
+                      required
+                      hint="모법 §99①3 — 환산비율의 분자. 개산공제(§163⑥4) 산정 기준액"
+                      value={form.acquisitionDatePriceAvg1Month}
+                      onChange={(v) => onChange({ acquisitionDatePriceAvg1Month: v })}
+                      placeholder="취득일 이전 1개월 종가평균 (1주당)"
+                    />
+                  ) : (
+                    /*
+                      요약줄은 표 안의 것 **하나만** 둔다 — 저장 필드를 읽는 줄과 매 렌더
+                      재계산하는 줄이 갈렸던 사고가 분모 축에 있었다(2026-09-01).
+                    */
+                    <TransferDate1MonthClosingPriceTable
+                      form={form}
+                      onChange={onChange}
+                      axis="acquisition"
+                    />
+                  )}
                 </ToneCard>
               )}
 

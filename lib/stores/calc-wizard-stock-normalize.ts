@@ -85,6 +85,15 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     defaults.transferStdInputMode,
   );
   /*
+    `acquisitionStdInputMode`는 「취득일 이전 1개월 종가평균」 방식 **전용**이다 —
+    라디오가 그 카드(`acquisitionStdMode === "monthly_avg"`) 안에만 있어,
+    다른 방식에서 daily가 남으면 되돌릴 UI가 없다(F-10 dead-end와 같은 형태).
+  */
+  const acquisitionStdInputMode =
+    acquisitionStdMode === "monthly_avg"
+      ? enumField("acquisitionStdInputMode", ["direct", "daily"], defaults.acquisitionStdInputMode)
+      : "direct";
+  /*
     `listingStdInputMode`는 여전히 §165⑤ 전용이다 — 라디오가 그 방식의 전용 입력
     (`PostListingValuationCard`) 안에만 있다. 다른 모드에서 daily가 남으면 되돌릴 UI가 없다.
   */
@@ -193,6 +202,11 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     transferStdInputMode,
     transferPriceDates: Array.isArray(d.transferPriceDates) ? (d.transferPriceDates as string[]) : [],
     transferPriceClosing: Array.isArray(d.transferPriceClosing) ? (d.transferPriceClosing as string[]) : [],
+    acquisitionStdInputMode,
+    acquisitionPriceDates: Array.isArray(d.acquisitionPriceDates) ? (d.acquisitionPriceDates as string[]) : [],
+    acquisitionPriceClosing: Array.isArray(d.acquisitionPriceClosing)
+      ? (d.acquisitionPriceClosing as string[])
+      : [],
     listingDate: strField("listingDate"),
     listingDatePriceAvg1Month: strField("listingDatePriceAvg1Month"),
     listingStdInputMode,
