@@ -23,12 +23,18 @@ import { IMPACT_DOMAINS } from "@/lib/korean-law/impact-map";
 const GROUND_TRUTH = {
   detc: "헌재결정례",
   expc: "법령해석례",
-  ppc: "개인정보보호위원회",
   acr: "국민권익위원회",
 } as const;
 
 /** 빈 응답만 돌려주던 무효 target — 셀렉터에 죽은 선택지로 남아 있었다. */
 const REMOVED_INVALID = ["pipc", "oia", "nhrc", "lawnkor"];
+
+/**
+ * 유효하지만 제거한 target — `ppc` 는 조세심판원인 줄 알고 넣었으나 실제로는
+ * 개인정보보호위원회(응답 `기관명` 실측)여서 부동산 세무와 무관하다.
+ * 다시 넣으려면 «무엇을 위해» 넣는지부터 정하라 — 조세심판원은 여기에 없다.
+ */
+const REMOVED_IRRELEVANT = ["ppc"];
 
 describe("DOM — 도메인 라벨은 법제처 실측과 일치한다", () => {
   it.each(Object.entries(GROUND_TRUTH))("DOM-1 %s → %s", (domain, truth) => {
@@ -52,6 +58,13 @@ describe("DOM — 무효 target 은 열거에서 빠진다", () => {
     for (const d of REMOVED_INVALID) {
       expect(DECISION_DOMAINS as readonly string[]).not.toContain(d);
       expect(Object.keys(DECISION_DOMAIN_LABELS)).not.toContain(d);
+    }
+  });
+
+  it("DOM-4b: 세무와 무관해 제거한 ppc(=개인정보보호위원회)는 돌아오지 않는다", () => {
+    for (const d of REMOVED_IRRELEVANT) {
+      expect(DECISION_DOMAINS as readonly string[]).not.toContain(d);
+      expect(IMPACT_DOMAINS as readonly string[]).not.toContain(d);
     }
   });
 

@@ -69,7 +69,6 @@ export const DOMAIN_RESPONSE_KEY: Record<DecisionDomain, { root: string; list: s
   detc:     { root: "DetcSearch",     list: "Detc" },
   expc:     { root: "Expc",           list: "expc" },
   admrul:   { root: "AdmRulSearch",   list: "admrul" },
-  ppc:      { root: "Ppc",            list: "ppc" },
   fsc:      { root: "Fsc",            list: "fsc" },
   ftc:      { root: "Ftc",            list: "ftc" },
   nlrc:     { root: "Nlrc",           list: "nlrc" },
@@ -107,7 +106,8 @@ const CONTAINER_META_KEYS = new Set([
  *      detc knd·inq·rpl / expc caseNumber·fromDate·toDate / trty cls·eftYd·concYd / ordin locGov
  *    "반응은 하지만 쓸 수 없음"(제거): admrul knd — 사람이 읽는 값(훈령·고시)이면 전부 0건.
  *      trty natCd — ZZ·QQ·US·미국 **전부 동일한 15건** → 국가 필터가 아니다.
- *    작동 확인(유지): prec curt(3382→대법원 1392·서울고법 183·없는법원 0) · ppc gana(18→3).
+ *    작동 확인(유지): prec curt(3382→대법원 1392·서울고법 183·없는법원 0).
+ *    ppc gana 도 작동했으나 ppc 도메인 자체를 제거하면서 함께 빠졌다.
  *
  * 이름은 **사용자 관점**을 유지하고 DRF 파라미터명 변환은 buildDomainParams 가 맡는다.
  */
@@ -120,13 +120,10 @@ export interface DomainSearchOptions {
   fromDate?: string;
   /** prec — 선고일 종료 YYYYMMDD. DRF `prncYd` 범위의 뒤쪽. */
   toDate?: string;
-  /** ppc — 가나다순. DRF `gana`. */
-  gana?: string;
 }
 
 const DOMAIN_OPTION_WHITELIST: Record<DecisionDomain, ReadonlyArray<keyof DomainSearchOptions>> = {
   prec:     ["curt", "caseNumber", "fromDate", "toDate"],
-  ppc:      ["gana"],
   detc:     [],
   expc:     [],
   admrul:   [],
@@ -144,7 +141,6 @@ const DOMAIN_OPTION_WHITELIST: Record<DecisionDomain, ReadonlyArray<keyof Domain
 const DRF_PARAM_NAME = {
   curt: "curt",
   caseNumber: "nb",
-  gana: "gana",
 } as const satisfies Partial<Record<keyof DomainSearchOptions, string>>;
 
 /** 선고일 범위 상한 sentinel — "시작만 지정" 을 유효 범위로 만들기 위한 원거리 종료값. */

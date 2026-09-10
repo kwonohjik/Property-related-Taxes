@@ -6,8 +6,7 @@
  *
  * 보강 로직:
  *   1. "감경 | 정당한 사유" 키워드로 판례 5건 추가 검색
- *   2. 조세심판원(ppc) 결정 5건 추가 — 실제 감경 결정 다수
- *   3. 법령해석례(detc) 3건 — 가산세 제외 사유 유권해석
+ *   2. 법령해석례(expc) 3건 — 가산세 제외 사유 유권해석
  *
  * 모두 0건이어도 최소 1개 NOT_FOUND 섹션을 반환해 시나리오 감지 사실을 사용자에게 노출.
  */
@@ -45,9 +44,8 @@ export const penaltyScenario: ScenarioRunner = {
     const base = ctx.cleanedQuery ?? ctx.query;
     const enriched = maybeEnrich(base);
 
-    const [prec, tribunal, interpretation] = await Promise.all([
+    const [prec, interpretation] = await Promise.all([
       safePage(() => searchDecisions(enriched, "prec", 1, 5)),
-      safePage(() => searchDecisions(enriched, "ppc", 1, 5)),
       // detc=헌재결정례 / expc=법령해석례 (types.ts 주석 — 이름의 직관과 반대)
       safePage(() => searchDecisions(enriched, "expc", 1, 3)),
     ]);
@@ -58,13 +56,6 @@ export const penaltyScenario: ScenarioRunner = {
         kind: "decisions",
         heading: "[시나리오: penalty] 감경 판례",
         decisions: prec.items,
-      });
-    }
-    if (tribunal && tribunal.items.length > 0) {
-      sections.push({
-        kind: "decisions",
-        heading: "[시나리오: penalty] 조세심판원 감경 결정",
-        decisions: tribunal.items,
       });
     }
     if (interpretation && interpretation.items.length > 0) {

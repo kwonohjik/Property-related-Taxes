@@ -213,10 +213,6 @@ const disputePrep: Runner = async ({ query }) => {
       const p = await searchDecisions(query, "detc", 1, 5);
       return { kind: "decisions", heading: "헌재결정례", decisions: p.items };
     }),
-    secOrSkip("조세심판원", async () => {
-      const p = await searchDecisions(query, "ppc", 1, 5);
-      return { kind: "decisions", heading: "조세심판원", decisions: p.items };
-    }),
     secOrSkip("국민권익위", async () => {
       // oia 는 빈 응답을 주는 무효 target 이었다. 국민권익위원회 실체는 acr (응답 `기관명` 실측).
       const p = await searchDecisions(query, "acr", 1, 3);

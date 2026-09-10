@@ -17,7 +17,7 @@ import { domainSearchOptionsSchema } from "@/lib/korean-law/types";
 import type { DecisionDomain } from "@/lib/korean-law/types";
 
 /** 법제처가 반영한다고 실측된 DRF 파라미터명 전체 */
-const LIVE_DRF_PARAMS = ["curt", "nb", "prncYd", "gana"];
+const LIVE_DRF_PARAMS = ["curt", "nb", "prncYd"];
 
 describe("OPT — prec 옵션은 DRF 파라미터명으로 변환돼 나간다", () => {
   it("OPT-1: caseNumber → nb (종전엔 caseNumber 그대로 보내 무시됐다)", () => {
@@ -59,7 +59,6 @@ describe("OPT — prec 옵션은 DRF 파라미터명으로 변환돼 나간다",
   it("OPT-6(긍정 짝): 실측 작동 옵션은 그대로 통과 — 전부 막는 게 아니다", () => {
     expect(buildDomainParams("prec", { curt: "대법원", caseNumber: "2018두1", fromDate: "20200101", toDate: "20201231" }))
       .toEqual({ curt: "대법원", nb: "2018두1", prncYd: "20200101~20201231" });
-    expect(buildDomainParams("ppc", { gana: "ga" })).toEqual({ gana: "ga" });
   });
 
   it("OPT-7: 단일 날짜는 법제처가 무시하므로 buildPrncYd 가 범위로 만든다", () => {
@@ -71,29 +70,29 @@ describe("OPT — prec 옵션은 DRF 파라미터명으로 변환돼 나간다",
 });
 
 describe("OPT — 무시되는 옵션은 더 이상 나가지 않는다", () => {
-  it("OPT-8: 제거된 ppc 옵션(cls·dpaYd·rslYd)은 넘겨도 무시된다", () => {
-    const p = buildDomainParams("ppc", {
-      gana: "ga",
-      // @ts-expect-error — 타입에서 제거된 키. 런타임 유입(구 클라이언트)에도 새지 않아야 한다.
-      cls: "양도", dpaYd: "20240101", rslYd: "20240101",
+  it("OPT-8: 타입에서 제거된 옵션은 런타임으로 흘러들어와도 나가지 않는다", () => {
+    const p = buildDomainParams("prec", {
+      curt: "대법원",
+      // @ts-expect-error — 제거된 키. 구 클라이언트가 보내와도 DRF 로 새지 않아야 한다.
+      cls: "양도", dpaYd: "20240101", rslYd: "20240101", gana: "ga", locGov: "서울",
     });
-    expect(p).toEqual({ gana: "ga" });
+    expect(p).toEqual({ curt: "대법원" });
   });
 
   it("OPT-9: 옵션이 전부 무시되던 도메인은 빈 파라미터를 낸다", () => {
     for (const d of ["detc", "expc", "admrul", "trty", "ordin"] as DecisionDomain[]) {
       expect(buildDomainParams(d, {
-        curt: "대법원", caseNumber: "2018두1", fromDate: "20200101", toDate: "20201231", gana: "ga",
+        curt: "대법원", caseNumber: "2018두1", fromDate: "20200101", toDate: "20201231",
       })).toEqual({});
     }
   });
 
   it("OPT-10: 어떤 도메인·입력이 와도 DRF 파라미터는 실측 작동 4종을 넘지 않는다", () => {
     const all = new Set<string>();
-    const domains: DecisionDomain[] = ["prec", "ppc", "detc", "expc", "admrul", "trty", "ordin", "fsc", "ordin"];
+    const domains: DecisionDomain[] = ["prec", "detc", "expc", "admrul", "trty", "ordin", "fsc"];
     for (const d of domains) {
       Object.keys(buildDomainParams(d, {
-        curt: "대법원", caseNumber: "2018두1", fromDate: "20200101", toDate: "20201231", gana: "ga",
+        curt: "대법원", caseNumber: "2018두1", fromDate: "20200101", toDate: "20201231",
       })).forEach((k) => all.add(k));
     }
     expect([...all].sort()).toEqual([...LIVE_DRF_PARAMS].sort());
@@ -103,10 +102,11 @@ describe("OPT — 무시되는 옵션은 더 이상 나가지 않는다", () => 
 describe("OPT — 스키마가 옵션 키의 단일 소스다", () => {
   it("OPT-11: Zod 스키마 키가 실측 통과 옵션과 정확히 일치 (route 의 OPTION_KEYS 는 여기서 파생)", () => {
     expect(Object.keys(domainSearchOptionsSchema.shape).sort())
-      .toEqual(["caseNumber", "curt", "fromDate", "gana", "toDate"]);
+      .toEqual(["caseNumber", "curt", "fromDate", "toDate"]);
   });
 
   it("OPT-12: 제거된 키는 스키마를 통과해도 조용히 버려진다 (구 클라이언트 400 금지)", () => {
-    expect(domainSearchOptionsSchema.parse({ cls: "양도", locGov: "서울", gana: "ga" })).toEqual({ gana: "ga" });
+    expect(domainSearchOptionsSchema.parse({ cls: "양도", locGov: "서울", gana: "ga" })).toEqual({});
+    expect(domainSearchOptionsSchema.parse({ curt: "대법원", cls: "양도" })).toEqual({ curt: "대법원" });
   });
 });
