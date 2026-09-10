@@ -23,6 +23,14 @@
  *
  * ⚠️ 자본조정(PostListingCapitalEventSection)은 **①**이다 — 평가기간을 절단해 종가평균을
  *    바꾼다(상증령 §52의2②2호 준용 해석). ②(평가액)로 옮기면 안 된다.
+ *
+ * ## 🔄 S3 (2026-09-10) — 세 섹션이 **두 섹션**이 됐다
+ *
+ * ③ 「양도 당시 기준시가」(분모)는 이 카드 밖으로 나가 `TransferStdPriceSection`이 됐다 —
+ * 같은 값의 입력 UI가 일반 경로에도 있어 **두 곳**이었기 때문이다(계획서 §1-2).
+ * 그 섹션을 지키는 anchor는 `post-listing-transfer-std-section.anchor.test.tsx`로 이관했다.
+ *
+ * 남은 ①② 두 섹션이 §165⑤ 산식(`①종가평균 × ②비율`)의 두 항이다.
  */
 
 import "fake-indexeddb/auto";
@@ -39,7 +47,7 @@ function renderCard(patch: Partial<StockTransferFormData> = {}) {
   const form = {
     ...createInitialStockFormData(),
     marketType: "kosdaq",
-    acquiredBeforeListing: true,
+    acquisitionStdMode: "post_listing",
     ...patch,
   } as StockTransferFormData;
   render(<PostListingValuationCard form={form} onChange={vi.fn()} />);
@@ -57,19 +65,29 @@ function section(title: string): HTMLElement {
 // 「상장일 현재의 **제4항에 따른 평가액**」이고 그것은 ②다(§165⑤ 후단).
 const T1 = "상장일 이후 1개월 종가";
 const T2 = "상장연도·취득연도 평가액";
-const T3 = "양도 당시 기준시가";
 
 describe("SEC — 산식의 항 = 화면의 섹션", () => {
-  it("SEC-1 세 섹션이 ①②③ 번호 배지를 달고 이 순서로 놓인다", () => {
+  it("SEC-1 두 섹션이 ①② 번호 배지를 달고 이 순서로 놓인다", () => {
     renderCard();
-    for (const [t, n] of [[T1, "1"], [T2, "2"], [T3, "3"]] as const) {
+    for (const [t, n] of [[T1, "1"], [T2, "2"]] as const) {
       const header = screen.getByText(t).parentElement!;
       expect(header.textContent).toContain(n);
     }
-    const order = [T1, T2, T3].map((t) => screen.getByText(t));
-    // DOM 순서 = ① → ② → ③
+    const order = [T1, T2].map((t) => screen.getByText(t));
     expect(order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(order[1].compareDocumentPosition(order[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("SEC-1b 분모(양도 당시 기준시가)는 이 카드 «밖»이다 (S3 이관)", () => {
+    renderCard();
+    /*
+      산식 박스는 분모를 «언급»한다(`<Frac bottom="양도 당시 기준시가">`) — 그건 남아야 한다.
+      없어야 하는 것은 **입력 섹션**이다. 그래서 «번호 배지를 단 섹션 제목»과 **입력 축**으로 본다.
+    */
+    const sectionTitles = Array.from(document.querySelectorAll("p.font-semibold")).map(
+      (el) => el.textContent ?? "",
+    );
+    expect(sectionTitles.some((t) => t.includes("양도 당시 기준시가"))).toBe(false);
+    expect(document.querySelector('input[name="transferStdInputMode"]')).toBeNull();
   });
 
   it("SEC-2 산식 박스가 같은 번호로 각 항을 가리킨다 (화면↔산식 1:1)", () => {
@@ -78,10 +96,11 @@ describe("SEC — 산식의 항 = 화면의 섹션", () => {
     // 분수 표기(`<Frac>`)로 분자·분모가 각각 span에 들어간다 — 인라인 `÷` 문자열로 매칭되지 않는다.
     expect(screen.getByText("②취득연도 평가")).toBeTruthy();
     expect(screen.getByText("②상장연도 평가")).toBeTruthy();
-    expect(screen.getByText("③양도 당시 기준시가")).toBeTruthy();
+    // 분모는 이 카드 밖이라 번호 없이 이름만 남는다
+    expect(screen.getByText("양도 당시 기준시가")).toBeTruthy();
   });
 
-  it("SEC-3 「환산 입력 방식」은 세 섹션보다 **위**에 있다 (카드 전체 스위치)", () => {
+  it("SEC-3 「환산 입력 방식」은 두 섹션보다 **위**에 있다 (카드 전체 스위치)", () => {
     renderCard();
     const sw = document.querySelector('input[name="unlistedDetailMode"]')!;
     const first = screen.getByText(T1);
@@ -89,7 +108,6 @@ describe("SEC — 산식의 항 = 화면의 섹션", () => {
     // 어느 섹션에도 속하지 않는다
     expect(section(T1).contains(sw)).toBe(false);
     expect(section(T2).contains(sw)).toBe(false);
-    expect(section(T3).contains(sw)).toBe(false);
   });
 
   it("SEC-4 「평가액 입력 방식」은 ② 안에 있다 (하위 토글임이 드러난다)", () => {
@@ -137,18 +155,15 @@ describe("SEC — 산식의 항 = 화면의 섹션", () => {
     스위치를 고른 직후 나오는 칸이 그 선택과 상관없는 칸이 된다.
     뮤테이션: 세 섹션 순서를 예전(양도 → 상장 → 평가)으로 되돌리면 이 단언이 깨진다.
   */
-  it("SEC-8 스위치와 무관한 ③(양도 당시 기준시가)은 지배 대상 ①②보다 **아래**에 있다", () => {
+  /**
+   * 🔄 **S3에서 성질이 더 강해졌다.** 종전에는 「무관한 ③이 지배 대상보다 아래에 있다」였다.
+   * 분모가 카드 밖으로 나가면서 **이 카드 안에는 지배 대상만 남는다** — 더 단순한 계약이다.
+   */
+  it("SEC-8 「환산 입력 방식」 아래에는 그 스위치가 지배하는 축만 있다", () => {
     renderCard({ unlistedDetailMode: "simple" });
-    const sw = document.querySelector('input[name="unlistedDetailMode"]')!;
-    // 스위치가 실제로 지배하는 두 축이 ①·② 안에 있다
     expect(section(T1).querySelector('input[name="listingStdInputMode"]')).toBeTruthy();
     expect(section(T2).querySelector('input[name="simpleValueInputMode"]')).toBeTruthy();
-    // 무관한 축(transferStdInputMode)은 ③ 안에 있고, ③은 ①·②보다 뒤다
-    const indep = section(T3).querySelector('input[name="transferStdInputMode"]')!;
-    for (const t of [T1, T2]) {
-      const head = screen.getByText(t);
-      expect(head.compareDocumentPosition(indep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    }
-    expect(sw.compareDocumentPosition(indep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // 무관한 축은 이 카드에 없다
+    expect(document.querySelector('input[name="transferStdInputMode"]')).toBeNull();
   });
 });

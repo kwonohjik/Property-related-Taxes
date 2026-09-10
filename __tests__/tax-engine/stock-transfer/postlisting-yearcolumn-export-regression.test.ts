@@ -53,7 +53,7 @@ describe("EU-15: PostListing YearColumn export 회귀 보호", () => {
   test("adaptFlatToApiBody — Listing 키 입력으로 PostListing 변환 정상 (EU 키 간섭 0)", () => {
     const form: StockTransferFormData = {
       ...createInitialStockFormData(),
-      acquiredBeforeListing: true,
+      acquisitionStdMode: "post_listing",
       unlistedDetailMode: "listing_only",
       // Listing 입력
       niAddRow1Listing: "100000000",

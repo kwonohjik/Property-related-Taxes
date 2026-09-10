@@ -185,7 +185,7 @@ describe("C-1: validate · Zod", () => {
       transferDate: "2024-06-01",
       acquisitionDate: "2018-01-01",
       transferDatePriceAvg1Month: "10000",
-      tradingHaltAtAcquisition: true,
+      acquisitionStdMode: "halt_acquisition" as const,
       // 취득연도 NI/NA 미입력 + 분자(acquisitionDatePriceAvg1Month) 미입력
     };
     const errors = validateStep2Domestic(form);
@@ -195,7 +195,15 @@ describe("C-1: validate · Zod", () => {
     expect(errors.some((e) => e.field === "acquisitionDatePriceAvg1Month")).toBe(false);
   });
 
-  it("C1-VALIDATE-2: 취득정지 + 취득 후 상장 → 차단 (M-4)", () => {
+  /**
+   * 🔄 **S3 이관 (2026-09-10)** — 종전에는 「취득정지 + 취득 후 상장」이라는 **불가 조합**을
+   * ⑧이 막는지 보았다. `acquisitionStdMode`가 배타적 4상태가 되면서 폼에서 그 조합을
+   * **만들 수 없게** 됐고, ⑧의 차단 코드는 도달 불가라 제거했다(계획서 Q-2 3안).
+   *
+   * **⑫는 남아 있다** — API 직접 호출은 여전히 만들 수 있다. 바로 아래 `C1-ZOD-2`가 그것이고,
+   * 「폼에서 만들 수 없다」는 `stock-std-mode-migration.anchor.test.ts` MAP-5가 지킨다.
+   */
+  it("C1-VALIDATE-2: 취득정지 방식이면 §165⑤ 요구가 붙지 않는다 (배타 증명)", () => {
     const form = {
       ...createInitialStockFormData(),
       marketType: "kospi" as const,
@@ -204,12 +212,12 @@ describe("C-1: validate · Zod", () => {
       perShareTransferPrice: "10000",
       transferDate: "2024-06-01",
       acquisitionDate: "2018-01-01",
-      tradingHaltAtAcquisition: true,
-      acquiredBeforeListing: true,
-      listingDate: "2020-01-01",
+      transferDatePriceAvg1Month: "10000",
+      acquisitionStdMode: "halt_acquisition" as const,
     };
     const errors = validateStep2Domestic(form);
-    expect(errors.some((e) => e.field === "tradingHaltAtAcquisition")).toBe(true);
+    // §165⑤ 전용 요구(상장일)가 없다 — 그 방식이 아니기 때문이다
+    expect(errors.some((e) => e.field === "listingDate")).toBe(false);
   });
 
   it("C1-ZOD-1: tradingHaltAtAcquisition 포함 body → 스키마 통과 + strip 부재 (⑫⑬⑭)", () => {

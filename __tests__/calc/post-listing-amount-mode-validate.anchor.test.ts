@@ -31,7 +31,7 @@ function postListingForm(o: Partial<StockTransferFormData> = {}): StockTransferF
     shareCount: "1000",
     transferTotalPrice: "60000000",
     acquisitionMode: "estimated",
-    acquiredBeforeListing: true,
+    acquisitionStdMode: "post_listing",
     unlistedDetailMode: "simple",
     listingDate: "2009-08-21",
     listingDatePriceAvg1Month: "8001",

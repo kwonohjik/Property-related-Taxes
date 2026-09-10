@@ -128,7 +128,7 @@ describe("C2 거래정지 full/사례49 확장", () => {
       transferActualInputMode: "per_share" as const,
       perShareTransferPrice: "200000",
       shareCount: "1000",
-      tradingHaltAtTransfer: true,
+      acquisitionStdMode: "halt_transfer" as const,
       acqFaceValueOnly: true,
       acqFaceValuePerShare: "5000",
       transferYearNetIncomePerShare: "30000",
@@ -195,18 +195,21 @@ describe("C3 거래정지 + 취득후상장 양립 불가 차단", () => {
     }
   });
 
-  it("C3-VALIDATE-1: 거래정지 + 취득후상장 → validate error(§52의2③ G-5)", () => {
+  /**
+   * 🔄 **S3 이관 (2026-09-10)** — 종전에는 G-5(「거래정지 + 취득후상장」 양립 불가)를
+   * ⑧이 막는지 보았다. 축이 하나가 되어 폼에서 그 조합을 **만들 수 없다**(계획서 Q-2 3안).
+   *
+   * 서버 가드(⑫)는 남아 있다 —
+   * `__tests__/calc/stock-conversion-branch-matrix.anchor.test.ts` MTX-XA'가 지킨다.
+   */
+  it("C3-VALIDATE-1: 거래정지 방식이면 §165⑤ 요구가 붙지 않는다 (배타 증명)", () => {
     const form = {
       ...createInitialStockFormData(),
       marketType: "kosdaq" as const,
       acquisitionMode: "estimated" as const,
-      tradingHaltAtTransfer: true,
-      acquiredBeforeListing: true,
-      listingDate: "2020-01-01",
+      acquisitionStdMode: "halt_transfer" as const,
     };
     const errors = validateStep2Domestic(form);
-    expect(
-      errors.some((e) => e.field === "tradingHaltAtTransfer" && e.message.includes("§52의2③")),
-    ).toBe(true);
+    expect(errors.some((e) => e.field === "listingDate")).toBe(false);
   });
 });

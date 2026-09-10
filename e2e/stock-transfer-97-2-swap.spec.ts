@@ -13,6 +13,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { fillTransferStdPrice } from "./_helpers/stock-conversion";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -57,7 +58,7 @@ test.describe("B-2 §97②2호 단서 swap", () => {
     await fillByLabel(page, "양도가액 합계", "50000000");
     await page.getByRole("radio", { name: "환산취득가" }).first().click();
     // 분모/분자 (가목 30,300,000 = 환산 30,000,000 + 개산 300,000)
-    await fillByLabel(page, "양도시 1주당 기준시가", "50000");
+    await fillTransferStdPrice(page, "50000");
     await fillByLabel(page, "취득시 1주당 기준시가", "30000");
 
     await page.getByRole("button", { name: /^다음/ }).click();

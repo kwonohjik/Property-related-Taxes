@@ -23,6 +23,11 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mockKiwoom1Month, FIXTURE_2025_06_10 } from "./_helpers/kiwoom-1month-mock";
 import { setStockConversionMode, togglePostListingOff } from "./_helpers/stock-conversion";
+import {
+  fillTransferStdPrice,
+  setTransferStdInputMode,
+  transferStdPriceInput,
+} from "./_helpers/stock-conversion";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -84,7 +89,8 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
     await fillStep1(page);
     await gotoStep2Estimated(page);
 
-    await expect(page.getByText(/환산취득가 \(시행령 §163⑨\)/)).toBeVisible();
+    // S3: 「환산취득가 (시행령 §163⑨)」 블록이 「분모 섹션 + 산정 방식 라디오」로 바뀌었다
+    await expect(page.getByText(/양도 당시 기준시가 \(환산비율의 분모\)/)).toBeVisible();
     // Phase 5 이후 두 축이 모두 있다 — 분모(양도일)·분자(취득일)
     await expect(page.getByRole("button", { name: /양도일 키움 자동조회/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /취득일 키움 자동조회/ })).toBeVisible();
@@ -104,10 +110,7 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
     await expect(page.getByText(/56,590/).first()).toBeVisible();
 
     // 폼 mirror — 분모 칸에 실제로 실렸다
-    const denom = page
-      .locator(`div:has(> label:has-text('양도시 1주당 기준시가'))`)
-      .locator('input[type="text"]')
-      .first();
+    const denom = transferStdPriceInput(page);
     await expect(denom).toHaveValue("56,590");
   });
 
@@ -131,10 +134,7 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
     await expect(numer).toHaveValue("51,000", { timeout: 15_000 });
 
     // 🔑 분모는 건드리지 않는다 — 두 축이 서로를 덮어쓰면 환산비율이 무너진다
-    const denom = page
-      .locator(`div:has(> label:has-text('양도시 1주당 기준시가'))`)
-      .locator('input[type="text"]')
-      .first();
+    const denom = transferStdPriceInput(page);
     await expect(denom).toHaveValue("");
   });
 
@@ -164,12 +164,23 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
     await setStockConversionMode(page, "post_listing");
     await page.getByRole("radio", { name: /일자별 입력/ }).first().click();
 
-    // ② 다시 끈다 → 라디오도 일자별 표도 사라진다 (되돌릴 수단 없음)
-    await togglePostListingOff(page);
-    await expect(page.getByRole("radio", { name: /일자별 입력/ })).toHaveCount(0);
+    /*
+      ② 일반 방식으로 되돌린다.
 
-    // ③ 일반 §163⑨ 경로의 분모·분자를 정상 입력한다
-    await fillByLabel(page, "양도시 1주당 기준시가", "56590");
+      🔄 **S3에서 성질이 뒤집혔다.** 종전에는 「라디오도 일자별 표도 사라진다 —
+      되돌릴 수단이 없다」가 이 dead-end의 **원인**이었다. 분모 블록이 4갈래 위에
+      항상 있게 되면서 그 축은 **남는다** — 되돌릴 수단이 화면에 있다는 뜻이다.
+      이 spec이 지키던 「그래도 다음 단계로 넘어간다」는 아래 ④에서 그대로 확인한다.
+    */
+    await togglePostListingOff(page);
+    await expect(page.getByRole("radio", { name: /일자별 입력/ }).first()).toBeVisible();
+
+    /*
+      ③ 분모를 직접 입력으로 되돌린다 — **이것이 F-10 dead-end의 해소 증거**다.
+         종전에는 이 라디오가 화면에 없어 `daily`에 갇혔다. 지금은 되돌릴 수 있다.
+    */
+    await setTransferStdInputMode(page, "direct");
+    await fillTransferStdPrice(page, "56590");
     await fillByLabel(page, "취득시 1주당 기준시가", "51000");
 
     // ④ 넘어간다 — 종전에는 여기서 막혔다
@@ -189,7 +200,7 @@ test.describe("상장 환산 §163⑨ — 키움 자동조회 (일반 경로)", 
     await gotoStep2Estimated(page);
 
     await expect(
-      page.getByText("양도시 1주당 기준시가 (양도일 이전 1개월 종가평균)"),
+      page.getByText(/양도 당시 기준시가 \(환산비율의 분모\)/),
     ).toBeVisible();
     await expect(page.getByText(/양도일 직전 1개월/)).toHaveCount(0);
   });

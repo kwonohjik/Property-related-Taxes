@@ -179,7 +179,7 @@ describe("AT-1~2: 소칙 §81④ 월할 토글 노출 조건 (소령 §165⑤ �
     render(
       <Stateful
         initial={{
-          acquiredBeforeListing: true,
+          acquisitionStdMode: "post_listing",
           unlistedDetailMode: "simple",
           transferDate: "2026-01-01",
           listingYearNetIncomePerShare: "-50000",
@@ -197,7 +197,7 @@ describe("AT-1~2: 소칙 §81④ 월할 토글 노출 조건 (소령 §165⑤ �
     render(
       <Stateful
         initial={{
-          acquiredBeforeListing: true,
+          acquisitionStdMode: "post_listing",
           unlistedDetailMode: "simple",
           transferDate: "2026-01-01",
         }}

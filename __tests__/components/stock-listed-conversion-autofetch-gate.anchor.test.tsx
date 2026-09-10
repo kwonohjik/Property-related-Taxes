@@ -44,9 +44,7 @@ function listedEstimatedForm(o: Partial<StockTransferFormData> = {}): StockTrans
     acquisitionDate: "2015-04-20",
     transferDate: "2025-06-10",
     acquisitionMode: "estimated",
-    tradingHaltAtTransfer: false,
-    tradingHaltAtAcquisition: false,
-    acquiredBeforeListing: false,
+    acquisitionStdMode: "monthly_avg",
     // 2026-09-02: 스토어 기본값이 "full"이 됐다. full은 종가 표(PostListingClosingPriceTable)를
     // 그려 **자체 자동조회 버튼**을 갖는다 — 여기서 증명하려는 것은 게이트 ②
     // (`transferStdInputMode` daily/direct)이므로 축이 섞이지 않게 simple로 고정한다.
@@ -56,10 +54,14 @@ function listedEstimatedForm(o: Partial<StockTransferFormData> = {}): StockTrans
 }
 
 describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 대조군)", () => {
-  it("AG-0: 일반 §163⑨ 환산 블록 자체는 렌더된다 (대조군의 대조군)", () => {
+  /**
+   * 🔄 **S3 (2026-09-10)** — 종전의 「환산취득가 (시행령 §163⑨)」 emerald 블록은 사라졌다.
+   * 그 자리를 「① 양도 당시 기준시가(분모) + ② 산정 방식 라디오」가 대신한다(Q-2 3안).
+   */
+  it("AG-0: 상장 환산 화면이 분모 블록 + 산정 방식 축으로 렌더된다 (대조군의 대조군)", () => {
     render(<Step2 form={listedEstimatedForm()} onChange={() => {}} />);
-    // 라벨의 「직전」은 Phase 3에서 「이전」으로 정정된다 — 여기서는 블록 존재만 본다.
-    expect(screen.getByText(/환산취득가 \(시행령 §163⑨\)/)).toBeTruthy();
+    expect(screen.getByText(/양도 당시 기준시가 \(환산비율의 분모\)/)).toBeTruthy();
+    expect(document.querySelector('input[name="acquisitionStdMode"]')).toBeTruthy();
   });
 
   /**
@@ -87,7 +89,7 @@ describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 
 
   it("AG-1d: 취득일 거래정지 토글 ON이면 분자 입력과 함께 취득일 버튼도 사라진다", () => {
     render(
-      <Step2 form={listedEstimatedForm({ tradingHaltAtAcquisition: true })} onChange={() => {}} />,
+      <Step2 form={listedEstimatedForm({ acquisitionStdMode: "halt_acquisition" })} onChange={() => {}} />,
     );
     expect(screen.queryByRole("button", { name: /취득일 키움 자동조회/ })).toBeNull();
     // 분모 축은 남는다 (비대칭 — §165③은 취득측 기준시가만 대체한다)
@@ -96,14 +98,21 @@ describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 
 
   it("AG-1b: 양도일 거래정지 토글 ON이면 환산 블록 자체가 닫혀 두 버튼 모두 사라진다", () => {
     render(
-      <Step2 form={listedEstimatedForm({ tradingHaltAtTransfer: true })} onChange={() => {}} />,
+      <Step2 form={listedEstimatedForm({ acquisitionStdMode: "halt_transfer" })} onChange={() => {}} />,
     );
     expect(screen.queryAllByRole("button", { name: /키움 자동조회/ })).toHaveLength(0);
   });
 
-  it("AG-2: 「취득 후 상장」 OFF면 입력 방식(direct/daily) 라디오도 없다", () => {
+  /**
+   * 🔄 **S3에서 «반대 방향»으로 대체됐다** — 파일 상단 주석이 예고한 그대로다.
+   *
+   * 종전(Phase 0~2): 「취득 후 상장 OFF면 direct/daily 라디오가 **없다**」 —
+   *   그 축이 ToggleCard children 안에만 있어 생긴 F-10 dead-end를 고정하던 트립와이어.
+   * 지금: 분모 블록이 4갈래 **위에 항상** 있으므로 어느 방식에서도 그 축이 **있다**.
+   */
+  it("AG-2: 어떤 산정 방식에서도 분모의 입력 방식(direct/daily) 축이 있다", () => {
     render(<Step2 form={listedEstimatedForm()} onChange={() => {}} />);
-    expect(screen.queryByText("일자별 입력 (자동 평균 산정)")).toBeNull();
+    expect(document.querySelector('input[name="transferStdInputMode"]')).toBeTruthy();
   });
 
   /**
@@ -111,14 +120,19 @@ describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 
    * 이 단언은 Phase 4 이후에도 «참»으로 남을 수 있다(버튼이 게이트 밖으로 나가면
    * 이 조건에서도 보이게 되므로 그때 대체한다).
    */
-  it("AG-3: 「취득 후 상장」 ON + direct 모드에서도 버튼은 없다 (게이트 ② 존재 증명)", () => {
+  /**
+   * 🔄 **S3에서 «반대 방향»으로 대체됐다.** 종전에는 「direct 모드에서는 버튼이 없다」로
+   * 이중 게이트의 존재를 고정했다. 그 게이트를 없앤 것이 이 트랙의 목적이었다 —
+   * 이제 분모 블록의 키움 버튼은 **입력 방식과 무관하게** 있다.
+   */
+  it("AG-3: 「취득 후 상장」 + direct 모드에서도 분모 자동조회 버튼이 있다", () => {
     render(
       <Step2
-        form={listedEstimatedForm({ acquiredBeforeListing: true, transferStdInputMode: "direct" })}
+        form={listedEstimatedForm({ acquisitionStdMode: "post_listing", transferStdInputMode: "direct" })}
         onChange={() => {}}
       />,
     );
-    expect(screen.queryByRole("button", { name: /키움 자동조회/ })).toBeNull();
+    expect(screen.getAllByRole("button", { name: /키움 자동조회/ }).length).toBeGreaterThan(0);
   });
 
   /**
@@ -129,7 +143,7 @@ describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 
   it("AG-4: 「취득 후 상장」 ON + daily 모드에서만 버튼이 보인다 (현재 유일 경로 · 셀렉터 대조군)", () => {
     render(
       <Step2
-        form={listedEstimatedForm({ acquiredBeforeListing: true, transferStdInputMode: "daily" })}
+        form={listedEstimatedForm({ acquisitionStdMode: "post_listing", transferStdInputMode: "daily" })}
         onChange={() => {}}
       />,
     );
@@ -155,10 +169,10 @@ describe("AG — 상장 환산 블록의 자동조회 도달 가능성 (Phase 4 
     expect(screen.getAllByRole("button", { name: /키움 자동조회/ })).toHaveLength(2);
   });
 
-  it("AG-5b: 「취득 후 상장」 경로(§165⑤)는 종전 그대로 1개다 (축이 다르다)", () => {
+  it("AG-5b: 「취득 후 상장」 경로(§165⑤)는 분모 1 + 상장일 축 1 = 2개다", () => {
     render(
       <Step2
-        form={listedEstimatedForm({ acquiredBeforeListing: true, transferStdInputMode: "daily" })}
+        form={listedEstimatedForm({ acquisitionStdMode: "post_listing", transferStdInputMode: "daily" })}
         onChange={() => {}}
       />,
     );

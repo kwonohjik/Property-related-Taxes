@@ -130,7 +130,7 @@ describe("DN-1~5: 완전재현 순손익 계산서 행 1 (소령 §165④1 가�
 
 describe("DN-7~9: 1주당 순손익가치 직접입력", () => {
   it("DN-7: 간이 direct 모드 — 상장연도 1주당 순손익가치 음수 보존 (W-4)", () => {
-    const { Harness, patches } = useFormHarness({ acquiredBeforeListing: true, unlistedDetailMode: "simple" });
+    const { Harness, patches } = useFormHarness({ acquisitionStdMode: "post_listing", unlistedDetailMode: "simple" });
     render(<Harness>{(form, onChange) => <PostListingValuationCard form={form} onChange={onChange} />}</Harness>);
 
     const ni = inputByLabel(/^상장일 직전 사업연도 1주당 순손익가치/);
@@ -156,7 +156,7 @@ describe("DN-7~9: 1주당 순손익가치 직접입력", () => {
     // direct 위젯에 allowNegative가 없으면 화면이 "50,000"으로 보이고,
     // 그 칸을 한 번 고치는 순간 부호가 영구 소실된다.
     const { Harness } = useFormHarness({
-      acquiredBeforeListing: true,
+      acquisitionStdMode: "post_listing",
       unlistedDetailMode: "simple",
       listingYearNetIncomePerShare: "-50000",
     });
@@ -172,7 +172,7 @@ describe("DN-7~9: 1주당 순손익가치 직접입력", () => {
 
 describe("DN-10~12: 1주당 순자산가치 직접입력 (자본잠식 — 소령 §165④1 나목)", () => {
   it("DN-10: 간이 direct 모드 — 상장연도 1주당 순자산가치 음수 보존 (W-9)", () => {
-    const { Harness, patches } = useFormHarness({ acquiredBeforeListing: true, unlistedDetailMode: "simple" });
+    const { Harness, patches } = useFormHarness({ acquisitionStdMode: "post_listing", unlistedDetailMode: "simple" });
     render(<Harness>{(form, onChange) => <PostListingValuationCard form={form} onChange={onChange} />}</Harness>);
 
     const na = inputByLabel(/^상장일 직전 사업연도 1주당 순자산가치/);

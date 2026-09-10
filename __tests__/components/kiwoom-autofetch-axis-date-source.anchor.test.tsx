@@ -40,9 +40,7 @@ function form(o: Partial<StockTransferFormData> = {}): StockTransferFormData {
     acquisitionDate: ACQUISITION_DATE,
     transferDate: TRANSFER_DATE,
     acquisitionMode: "estimated",
-    tradingHaltAtTransfer: false,
-    tradingHaltAtAcquisition: false,
-    acquiredBeforeListing: false,
+    acquisitionStdMode: "monthly_avg",
     ...o,
   };
 }

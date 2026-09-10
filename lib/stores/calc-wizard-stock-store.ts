@@ -46,10 +46,13 @@ export {
 // 폼 데이터 타입 + 초기값 팩토리 — 분리 sibling: calc-wizard-stock-form.ts (800줄 정책)
 // 기존 import 경로 호환을 위해 import + re-export
 // ============================================================
-import type { StockTransferFormData } from "./calc-wizard-stock-form";
-import { createInitialStockFormData } from "./calc-wizard-stock-form";
-export type { StockTransferFormData };
-export { createInitialStockFormData };
+import type { AcquisitionStdMode, StockTransferFormData } from "./calc-wizard-stock-form";
+import {
+  createInitialStockFormData,
+  deriveAcquisitionStdMode,
+} from "./calc-wizard-stock-form";
+export type { AcquisitionStdMode, StockTransferFormData };
+export { createInitialStockFormData, deriveAcquisitionStdMode };
 
 
 // ============================================================

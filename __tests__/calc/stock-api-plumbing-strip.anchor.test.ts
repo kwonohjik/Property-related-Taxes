@@ -252,7 +252,7 @@ describe("AP-PL (#20): 취득 후 상장 환산은 「순손익가치 0」을 �
       perShareTransferPrice: "20000",
       transferTotalPrice: "",
       acquisitionMode: "estimated",
-      acquiredBeforeListing: true,
+      acquisitionStdMode: "post_listing",
       listingDate: "2023-06-01",
       transferDatePriceAvg1Month: "20000",
       listingDatePriceAvg1Month: "10000",
