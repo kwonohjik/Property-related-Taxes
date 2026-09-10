@@ -16,15 +16,10 @@
  * ## ⛔ 대상이 아닌 것
  *
  * 1. **`area-utils.ts` 자신** — 표준 구현체다.
- * 2. **3항 이상 곱** — `단가 × 면적 × 지분`은 **지분을 언제 적용하는지**를 먼저 정해야 한다
- *    (`applyRatio`가 저장소의 지분 단일 규약이므로 `applyRatio(multiplyByArea(p, a), r)`가
- *    유력하나, floor가 한 번 더 들어가 결과가 갈린다). 판정하지 않은 형태에 하드게이트를
- *    걸지 않는다 — 남은 곳은 **4행**이고 아래 래칫이 잠근다:
- *    `NblLandAutoFetch.tsx:65·66`(단가×면적×지분) ·
- *    `comprehensive-land-parcels.ts:58`·`comprehensive-land-prior-year.ts:74`
- *    (면적×지분율×단가 — 종부세 토지).
- *    ⚠️ 이 목록을 처음엔 「2행」이라 적었다가 **이 가드가 4행임을 잡아냈다**. 모집단은
- *    세어 보기 전에는 모른다(`feedback_closure_claim_scoped_to_verified_subset`).
+ * 2. **3항 곱 `단가 × 면적 × 지분`** — 이제 `multiplyByAreaShare()`를 쓴다(2026-09-10 종결).
+ *    ⚠️ **지분 적용 «순서»는 여전히 미결**이지만, 「현행 순서 그대로 정확히 계산」은
+ *    순서 판단과 **무관**하다 — 그 둘을 갈라 정밀도만 고쳤다. 후보 3안의 실측 차이는
+ *    `unit-price-area-precision.anchor.test.ts`의 UA-11에 고정돼 있다.
  * 3. **나눗셈이 섞인 안분** — `floor(금액 × 면적 / 전체면적)`은 다른 규약이다
  *    (`feedback_safemul_decimal_apportion_precision` — 면적 직접 안분).
  */
@@ -135,7 +130,7 @@ for (const dir of SCAN_DIRS) {
         violations.push({ file, line, text });
         continue;
       }
-      // 3항 이상 곱에 면적·단가가 함께 있으면 «미판정»으로 따로 센다
+      // 3항 이상 곱에 면적·단가가 함께 있으면 `multiplyByAreaShare()`를 써야 한다
       const stars = topLevelStars(inner);
       if (stars.length >= 2 && !/[/%]/.test(inner)) {
         const parts = inner.split("*").map((p) => p.trim());
@@ -156,14 +151,12 @@ describe("단가 × 면적 정밀도 — multiplyByArea()만 쓴다", () => {
     ).toHaveLength(0);
   });
 
-  /**
-   * 🔒 3항 이상 곱(`단가 × 면적 × 지분`)은 **지분 적용 순서 판정이 먼저**라 남겨 뒀다.
-   * 실측 4행(NBL 자동조회 2 · 종부세 토지 2). **늘리지 않는다** — 새로 쓰려면 순서를 먼저
-   * 정하고 위 문서 주석에 근거를 적을 것.
-   */
-  it("🔒 미판정 3항 곱 래칫 — 4행 이하 (줄이기만 한다)", () => {
+  it("🔴 `Math.floor(단가 * 면적 * 지분)`도 0건이다 — multiplyByAreaShare()를 쓴다", () => {
     const msg = multiTerm.map((v) => `  ${v.file}:${v.line}\n    Math.floor(${v.text})`).join("\n");
-    expect(multiTerm.length, `미판정 3항 곱:\n${msg}`).toBeLessThanOrEqual(4);
+    expect(
+      multiTerm,
+      `부동소수 3항 곱 ${multiTerm.length}건 — multiplyByAreaShare()로 바꿀 것:\n${msg}`,
+    ).toHaveLength(0);
   });
 });
 
@@ -189,7 +182,7 @@ describe("가드 자체의 구별력 — 규칙이 실제로 무언가를 잡는
     expect(isUnitPriceTimesArea("phdBuilding * nonResArea / totalFloor")).toBe(false);
   });
 
-  it("🔑 3항 곱은 «위반»으로 세지 않는다 — 미판정 래칫으로 간다", () => {
+  it("🔑 3항 곱은 2항 규칙으로 세지 않는다 — 별도 축(multiplyByAreaShare)이다", () => {
     expect(isUnitPriceTimesArea("cur.pricePerSqm * area * ratio")).toBe(false);
   });
 });
