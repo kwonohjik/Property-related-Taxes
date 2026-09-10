@@ -124,7 +124,10 @@ export function LawArticleModal({ legalBasis, label, className }: Props) {
 
   async function handleOpen() {
     setOpen(true);
-    if (state.status !== "idle") return;
+    // 성공분은 재조회하지 않되, **실패는 다시 시도할 수 있어야 한다**.
+    // 종전엔 `status !== "idle"` 이라 일시적 네트워크 오류 한 번이면 그 배지는
+    // 리마운트 전까지 영영 "조회 실패" 로 남았다.
+    if (state.status === "loading" || state.status === "ok") return;
     if (!ref) {
       setState({ status: "error", message: "조문 정보를 파싱할 수 없습니다." });
       return;
