@@ -1,17 +1,22 @@
 /**
  * @vitest-environment jsdom
  *
- * ② 「상장일 이후 1개월 종가」 — 입력 방식 축(direct ↔ daily)
+ * 「상장일 이후 1개월 종가」 — 입력 방식 축(direct ↔ daily)
  *
- * 제보(2026-09-02, 이미지 30): ①의 「입력 방식」 옵션 단추 효과를 ②에도 달라.
+ * 제보(2026-09-02, 이미지 30): 「양도 당시 기준시가」의 「입력 방식」 옵션 단추 효과를
+ * 「상장일 이후 1개월 종가」에도 달라.
+ *
+ * ⚠️ 파일명·describe의 「section2」는 **역사적 이름**이다. 2026-09-10 재배치로 이 섹션은
+ *    ①이 되었다(계산 소비 순서 — post-listing-three-sections.anchor.test.tsx 참조).
+ *    이 파일은 번호가 아니라 **제목**으로 섹션을 집으므로 번호 재부여에 영향받지 않는다.
  *
  * ## 종전에는 ②의 입력 경로가 ③의 «자료 선택»에 종속돼 있었다
  *
- *   unlistedDetailMode = simple            → ②는 단일 숫자
- *   unlistedDetailMode = full/listing_only → ②는 32셀 표
+ *   unlistedDetailMode = simple            → 단일 숫자
+ *   unlistedDetailMode = full/listing_only → 32셀 표
  *
  * 「평가액은 갖고 있는데 종가는 일자별로 넣고 싶다」가 표현되지 않았다.
- * ⇒ simple 모드 «안»에 ②의 자기 축 `listingStdInputMode`를 둔다.
+ * ⇒ simple 모드 «안»에 이 섹션의 자기 축 `listingStdInputMode`를 둔다.
  *
  * ## 왜 full/listing_only에는 라디오를 두지 않는가
  *
@@ -56,16 +61,15 @@ function section(title: string): HTMLElement {
 const radio = (name: string) => document.querySelector(`input[name="${name}"]`);
 
 describe("LS — ② 상장일 이후 1개월 종가의 입력 방식 축", () => {
-  it("LS-1 simple — ② «안»에 자기 라디오가 있다 (①의 축과 별개다)", () => {
+  it("LS-1 simple — 이 섹션 «안»에 자기 라디오가 있다 (양도 당시 기준시가의 축과 별개다)", () => {
     renderCard({ unlistedDetailMode: "simple" });
 
     const own = radio("listingStdInputMode");
     expect(own).toBeTruthy();
-    // 🔑 소속을 단언한다 — 두 축은 라벨이 「입력 방식」으로 같아서
-    //    이름만 보면 어느 섹션 것인지 갈리지 않는다.
+    // 🔑 소속을 단언한다 — 두 축은 선택지 라벨이 같아서 값만 보면 어느 섹션 것인지 갈리지 않는다.
     expect(section(T2).contains(own!)).toBe(true);
     expect(section(T1).contains(own!)).toBe(false);
-    // ①의 축은 여전히 ① 안에 있다
+    // 「양도 당시 기준시가」의 축은 여전히 그 섹션 안에 있다
     const transferAxis = radio("transferStdInputMode")!;
     expect(section(T1).contains(transferAxis)).toBe(true);
     expect(section(T2).contains(transferAxis)).toBe(false);
@@ -129,10 +133,12 @@ describe("LS — ② 상장일 이후 1개월 종가의 입력 방식 축", () =
   it("LS-6 안쪽 표가 자기 번호 배지를 달지 않는다 (바깥 ①②③과 겹치지 않게)", () => {
     renderCard({ unlistedDetailMode: "simple", listingStdInputMode: "daily" });
     const s2 = section(T2);
-    // 섹션 헤더의 "2" 배지 하나만 남는다 — 표가 "1" 배지를 달면 ② 안에 1이 보인다
+    // 🔑 **번호를 하드코딩하지 않는다** — 2026-09-10 재배치로 이 섹션의 배지가 2에서 1로
+    //    바뀌었고, 종전의 「"1" 배지가 0개」 단언은 그 순간 섹션 자기 헤더를 세어 깨졌다.
+    //    지킬 성질은 「한 섹션 안에 번호 배지가 둘 보이지 않는다」다.
     const badges = Array.from(s2.querySelectorAll("span")).filter(
-      (el) => (el.textContent ?? "").trim() === "1" && el.className.includes("rounded-full"),
+      (el) => /^[0-9]$/.test((el.textContent ?? "").trim()) && el.className.includes("rounded-full"),
     );
-    expect(badges).toHaveLength(0);
+    expect(badges).toHaveLength(1); // 섹션 헤더 배지 하나뿐
   });
 });
