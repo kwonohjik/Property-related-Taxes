@@ -34,6 +34,23 @@ describe("LawContent — 항(項) 하이라이트 (G-5)", () => {
     expect(container.querySelector("[data-clause]")).toBeNull();
   });
 
+  it("HL-4: ⑯~⑳ 항도 분할·강조된다 — legal-codes 가 §155⑳ 를 실제로 인용한다", () => {
+    // CLAUSE_MARKERS 가 ⑮ 에서 끊겨 있던 동안 16항 이상은 앞 항 블록에 흡수돼
+    // data-clause 자체가 생기지 않았다(하이라이트 불가).
+    const long =
+      "제155조(1세대1주택의 특례)\n⑮ 열다섯째 항\n⑯ 열여섯째 항\n⑳ 스무째 항";
+    const { container } = render(
+      <LawContent content={long} highlight={new Set(["⑳"])} />,
+    );
+    expect(
+      container.querySelector('[data-clause="⑳"]')?.getAttribute("data-highlighted"),
+    ).toBe("true");
+    expect(container.querySelector('[data-clause="⑯"]')).not.toBeNull();
+    expect(
+      container.querySelector('[data-clause="⑯"]')?.getAttribute("data-highlighted"),
+    ).toBeNull();
+  });
+
   it("HL-3: 복수 항(①④) 강조 — ①은 강조, ②는 비강조", () => {
     const { container } = render(
       <LawContent content={content} highlight={new Set(["①", "④"])} />,

@@ -5,8 +5,8 @@
 import {
   fetchJson,
   safeCacheKey,
-  readCache,
-  writeCache,
+  readCacheNonEmpty,
+  writeCacheNonEmpty,
   strip,
   toArray,
 } from "./client-core";
@@ -170,7 +170,7 @@ export async function searchDecisions(
     .join("&");
   const optionsSuffix = optionsKey ? `_${safeCacheKey(optionsKey)}` : "";
   const cacheKey = `decision_search_${domain}_${safeCacheKey(query)}_p${page}_s${pageSize}${optionsSuffix}`;
-  const cached = await readCache<DecisionSearchPage>(cacheKey);
+  const cached = await readCacheNonEmpty<DecisionSearchPage>(cacheKey);
   if (cached) return cached;
 
   const data = await fetchJson<Record<string, unknown>>("lawSearch.do", {
@@ -285,6 +285,6 @@ export async function searchDecisions(
   const totalCount = Number(totalCountRaw) || items.length;
 
   const result: DecisionSearchPage = { items, totalCount, page, pageSize };
-  await writeCache(cacheKey, result);
+  await writeCacheNonEmpty(cacheKey, result);
   return result;
 }

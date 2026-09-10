@@ -8,7 +8,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { parseLawRef, buildLawUrl, extractClauseMarkers } from "@/lib/utils/law-url";
+import {
+  parseLawRef,
+  buildLawUrl,
+  extractClauseMarkers,
+  CLAUSE_MARKERS,
+} from "@/lib/utils/law-url";
 
 interface Props {
   legalBasis: string;
@@ -23,9 +28,6 @@ type FetchState =
   | { status: "ok"; content: string }
   | { status: "error"; message: string };
 
-/** 항(項) 번호 동그라미 숫자 — 본문을 항 단위로 분할해 인용 항을 강조(G-5) */
-const CLAUSE_MARKERS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮";
-
 // 법령 원문에 포함된 <img> 태그를 실제 이미지로 렌더링
 // law.go.kr API는 <img src="...">ASCII표 텍스트</img> 형태로 반환하므로
 // 개구 태그~닫힘 태그 사이 텍스트 표현은 이미지로 대체
@@ -34,7 +36,8 @@ export function LawContent({
   highlight,
 }: {
   content: string;
-  /** 강조할 항(項) 마커 집합 (예: new Set(["③"])) — 인용 항을 본문에서 시각 강조 */
+  /** 강조할 항(項) 마커 집합 (예: new Set(["③"])) — 인용 항을 본문에서 시각 강조.
+   *  분할·판정에 쓰는 마커 범위는 lib/utils/law-url.ts:CLAUSE_MARKERS 단일 소스. */
   highlight?: Set<string>;
 }) {
   // <img ...>...</img> (텍스트 내용 포함) 또는 단독 <img ...> 기준으로 분리
@@ -67,7 +70,7 @@ export function LawContent({
             </pre>
           );
         }
-        // 항(①~⑮) 경계로 분할 후 인용 항만 강조 (해당 항 안의 호도 함께 강조됨)
+        // 항(①~⑳) 경계로 분할 후 인용 항만 강조 (해당 항 안의 호도 함께 강조됨)
         const clauses = text.split(new RegExp(`(?=[${CLAUSE_MARKERS}])`));
         return (
           <div key={i} className="space-y-1">

@@ -11,7 +11,14 @@ vi.mock("@/lib/korean-law/client", () => ({
 // 캐시 우회
 vi.mock("@/lib/korean-law/client-core", async (orig) => {
   const actual = await orig<typeof import("@/lib/korean-law/client-core")>();
-  return { ...actual, readCache: vi.fn(async () => null), writeCache: vi.fn(async () => undefined) };
+  // ⚠ 부분 mock 은 이름 단위 — 캐시 진입점이 늘면 스텁을 빠져나가 실제 캐시를 건드린다.
+  return {
+    ...actual,
+    readCache: vi.fn(async () => null),
+    writeCache: vi.fn(async () => undefined),
+    readCacheNonEmpty: vi.fn(async () => null),
+    writeCacheNonEmpty: vi.fn(async () => undefined),
+  };
 });
 
 import { searchDecisions } from "@/lib/korean-law/client";

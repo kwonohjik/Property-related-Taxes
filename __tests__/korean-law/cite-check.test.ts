@@ -15,6 +15,11 @@ vi.mock("@/lib/korean-law/client-core", async (orig) => {
     fetchJson: vi.fn(),
     readCache: vi.fn(async () => null),
     writeCache: vi.fn(async () => undefined),
+    // ⚠ 부분 mock 은 **이름 단위**다 — 캐시 진입점이 늘거나 이름이 바뀌면
+    //    스텁을 빠져나가 실제 `.legal-cache/` 를 건드리고 테스트 간 상태가 샌다
+    //    (2026-09-10 실측: cite-check 3번째 케이스가 2번째가 남긴 캐시를 읽어 오판정).
+    readCacheNonEmpty: vi.fn(async () => null),
+    writeCacheNonEmpty: vi.fn(async () => undefined),
   };
 });
 

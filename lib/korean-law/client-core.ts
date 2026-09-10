@@ -136,6 +136,37 @@ export async function writeCache(key: string, data: unknown): Promise<void> {
   await fs.writeFile(path.join(CACHE_DIR, `${key}.json`), JSON.stringify(data, null, 2), "utf-8");
 }
 
+/**
+ * 「0건 결과」인가 — 배열 0건 또는 `{ items: [] }` 페이지.
+ *
+ * 법제처는 일시 장애·해외 IP 차단 상태에서도 **정상 응답 형태로 0건**을 돌려주는 경우가
+ * 있는데, 그것을 TTL 30일 캐시에 굳히면 해당 쿼리가 한 달 내내 "검색 결과 없음"으로
+ * 고착된다. 게다가 빈 배열은 truthy 라 `if (cached)` 히트 검사를 그대로 통과하고,
+ * searchLawMany 의 stale fallback(allowStale)까지 타면 진짜 upstream 에러마저 삼킨다.
+ *
+ * ⇒ 0건은 **기록하지도, 히트로 인정하지도 않는다**. 트레이드오프는 진짜 0건 쿼리의
+ *   반복 호출인데, 30일 오답 고착보다 낫다(fetchLawVersions 가 이미 쓰던 정책).
+ */
+function isEmptyResult(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length === 0;
+  if (value && typeof value === "object") {
+    const items = (value as { items?: unknown }).items;
+    if (Array.isArray(items)) return items.length === 0;
+  }
+  return false;
+}
+
+/** 0건 결과를 캐시 미스로 취급하는 readCache. */
+export async function readCacheNonEmpty<T>(key: string, allowStale = false): Promise<T | null> {
+  const cached = await readCache<T>(key, allowStale);
+  return cached != null && !isEmptyResult(cached) ? cached : null;
+}
+
+/** 0건 결과는 기록하지 않는 writeCache. */
+export async function writeCacheNonEmpty(key: string, data: unknown): Promise<void> {
+  if (!isEmptyResult(data)) await writeCache(key, data);
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // 범용 헬퍼
 // ────────────────────────────────────────────────────────────────────────────
