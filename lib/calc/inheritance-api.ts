@@ -90,6 +90,9 @@ export async function callInheritanceTaxAPI(
     generationSkipAssetAmount: input.generationSkipAssetAmount,
     // 감정평가수수료 공제 (§25①2호·§20의3) — ⑬ body 명시 (누락 시 침묵 strip)
     appraisalFee: input.appraisalFee,
+    // 신고·납부 가산세 (국기법 §47의2·§47의4) — ⑫Zod·⑭Route 둘 다 이 키를 기다린다.
+    // 2026-09-11까지 여기서만 빠져 있어 가산세가 조용히 0이었다.
+    filingPenalty: input.filingPenalty,
   };
 
   const res = await fetch("/api/calc/inheritance", {

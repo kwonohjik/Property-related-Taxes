@@ -61,4 +61,11 @@ export const familyBusinessInheritanceInputSchema = z.object({
     .optional(),
   decedentMajorShareholdingMetOverride: z.boolean().optional(),
   decedentCEORequirementMetOverride: z.boolean().optional(),
+  // ⑫ 자동판정이 실제로 소비하는 별지 제1호서식 날짜 2종 (2026-09-11 추가)
+  //    타입 주석은 이 둘을 「표시 전용」 블록에 두지만 엔진은 계산에 쓴다:
+  //    - openingDate         → family-business-autoderive.ts:345 (피상속인 나목 대표이사 재직비율)
+  //    - heirOfficerAppointDate → 동 :291 (상속인 다목 임원취임 기한)
+  //    누락 시 z.object가 침묵 strip → legacy 수동 플래그(기본 false)로 떨어져 자동판정이 죽는다.
+  openingDate: z.string().optional(),
+  heirOfficerAppointDate: z.string().optional(),
 });

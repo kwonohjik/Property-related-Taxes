@@ -10,7 +10,9 @@
  *   - feedback_three_state_optional_mode_toggle: burdenedGiftTransferTax !== undefined = ON
  *   - mirror-pattern: onChange 핸들러로 동기화 (useEffect→store 미러링 금지)
  *   - feedback_dialog_data_discard_confirm: OFF 전환 시 shadcn Dialog (window.confirm 금지)
- *   - feedback_land_price_lookup_field: land category는 LandPriceLookupField 필수
+ *   - feedback_land_price_lookup_field: land 개별공시지가는 조회+연도선택+단가×면적 총액계산을 갖춘
+ *     위젯 필수. 여기서는 `StandardPriceInput`(area-mode)을 쓴다 — store에 «총액»을 넣어야 하는데
+ *     `LandPriceLookupField`는 단가 콜백만 주기 때문이다(형제: EstateBodySupplementaryValuation).
  *   - feedback_no_silent_apportion_fallback: 미입력=차단 (validate에서 처리)
  *   - feedback_tailwind_static_tone_mapping: 정적 클래스 매핑
  */
@@ -23,7 +25,7 @@ import {
   DecimalInput,
   parseDecimal,
 } from "@/components/calc/inputs/DecimalInput";
-import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
 import {
@@ -119,6 +121,13 @@ export function BurdenedGiftTransferSection({
   jibun,
 }: Props) {
   const [discardOpen, setDiscardOpen] = useState(false);
+  // 개별공시지가 «단가» local state — store에는 총액만 넣는다.
+  // `standardPriceAtAcquisition`·`item.standardPrice` 둘 다 타입 주석이
+  // 「real_estate_land: 개별공시지가 **총액**(원)」이고, 엔진도 총액으로 소비한다
+  // (resolve-estate-item-value.ts:153-154가 면적 곱셈 없이 그대로 평가액으로 반환).
+  // 형제 경로(EstateBodySupplementaryValuation.tsx:153-155)와 동일한 패턴.
+  const [acqPricePerSqm, setAcqPricePerSqm] = useState("");
+  const [transferPricePerSqm, setTransferPricePerSqm] = useState("");
 
   const bgt = item.burdenedGiftTransferTax;
   const isOn = bgt !== undefined;
@@ -234,18 +243,25 @@ export function BurdenedGiftTransferSection({
               />
             </FieldCard>
 
-            {/* 취득시 개별공시지가 (LandPriceLookupField 필수) */}
+            {/* 취득시 개별공시지가 — 단가는 local, store에는 «총액» */}
             <div data-testid="bg-transfer-acq-stdprice">
-              <LandPriceLookupField
-                pricePerSqm={
+              <StandardPriceInput
+                propertyKind="land"
+                totalPrice={
                   bgt.standardPriceAtAcquisition > 0
                     ? String(bgt.standardPriceAtAcquisition)
                     : ""
                 }
-                onPricePerSqmChange={(v) =>
+                onTotalPriceChange={(v) =>
                   set({ standardPriceAtAcquisition: parseAmount(v) || 0 })
                 }
-                area={item.areaSqm}
+                pricePerSqm={acqPricePerSqm}
+                onPricePerSqmChange={setAcqPricePerSqm}
+                // 면적은 «자산 전체 면적»(item.areaSqm) 단일 소스를 양방향 read/write 한다
+                // — 취득시·양도시 두 위젯이 각자 내부 state를 갖게 두면 같은 토지 면적을
+                //   두 번 입력해야 하고 값이 갈린다(components/calc/CLAUDE.md 「양방향 read/write 통합」).
+                area={item.areaSqm != null ? String(item.areaSqm) : ""}
+                onAreaChange={(v) => onChange({ areaSqm: parseDecimal(v) || undefined })}
                 referenceDate={dateToStr(bgt.acquisitionDate)}
                 jibun={jibun}
                 label={stdPriceLabel}
@@ -262,22 +278,26 @@ export function BurdenedGiftTransferSection({
               jibun={jibun}
             />
 
-            {/* 기준시가 모드: 양도시 개별공시지가 (area prop 필수 → 총액으로 저장됨) */}
+            {/* 기준시가 모드: 양도시 개별공시지가 — 단가는 local, store(item.standardPrice)에는 «총액» */}
             {(bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_standard" && (
               <div data-testid="bg-transfer-transfer-stdprice-land">
-                <LandPriceLookupField
-                  pricePerSqm={
+                <StandardPriceInput
+                  propertyKind="land"
+                  totalPrice={
                     item.standardPrice && item.standardPrice > 0
                       ? String(item.standardPrice)
                       : ""
                   }
-                  onPricePerSqmChange={(v) =>
+                  onTotalPriceChange={(v) =>
                     onTransferStdPriceChange(parseAmount(v) || undefined)
                   }
-                  area={item.areaSqm}
+                  pricePerSqm={transferPricePerSqm}
+                  onPricePerSqmChange={setTransferPricePerSqm}
+                  area={item.areaSqm != null ? String(item.areaSqm) : ""}
+                  onAreaChange={(v) => onChange({ areaSqm: parseDecimal(v) || undefined })}
                   jibun={jibun}
-                  label="양도시(증여시) 개별공시지가 (원/㎡)"
-                  hint="증여일(양도일) 기준 공시지가. §159 안분 분모로 사용됩니다."
+                  label="양도시(증여시) 개별공시지가"
+                  hint="증여일(양도일) 기준 공시지가 총액. §159 안분 분모로 사용됩니다."
                 />
               </div>
             )}

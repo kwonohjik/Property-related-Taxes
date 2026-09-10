@@ -583,12 +583,30 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           };
         }
       }
-      // single 경로 (기존 하위호환)
+      // single 경로 (지분율 직접 입력)
+      const singleRatio = {
+        numer: Math.round(parseDecimal(form.scRatioPct) * 100),
+        denom: 10_000,
+      };
+      if (isAuto) {
+        // auto: 엔진이 §34의5④2호로 안분한다. corporateTax를 «보내지 않아야» 한다 —
+        // 0을 보내면 엔진의 `input.corporateTax ?? apportion(...)`이 0을 채택해 안분이 죽는다.
+        // (UI가 auto에서 직접입력 칸을 숨기므로 scCorporateTax는 항상 ""→0이다.)
+        return {
+          type: "specific_corp",
+          transactionBenefit,
+          ownershipRatio: singleRatio,
+          annualIncome: parseAmount(form.scCorpIncome),
+          corporateTaxComputed: parseAmount(form.scCorpTaxAssessed),
+          corporateTaxCredit: parseAmount(form.scCorpTaxDeduction) || undefined,
+          giftDeduction,
+        };
+      }
       return {
         type: "specific_corp",
         transactionBenefit,
         corporateTax: parseAmount(form.scCorporateTax),
-        ownershipRatio: { numer: Math.round(parseDecimal(form.scRatioPct) * 100), denom: 10_000 },
+        ownershipRatio: singleRatio,
         giftDeduction,
       };
     }

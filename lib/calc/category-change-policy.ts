@@ -65,7 +65,16 @@ export function pickPreservedFields({
   }
 
   // 그룹 간 변경 — 호환 필드만
+  //
+  // ⚠️ 비호환 필드는 «명시적 undefined»로 담는다. 호출부가 `{ ...item, ...preserved }`로
+  //    병합하므로(CategoryChangeDialog onConfirm) 키가 아예 없으면 원본 값이 그대로 살아남아
+  //    「필드가 삭제됩니다」 경고와 어긋난다 — 특히 `deductSecuredClaimAsDebt`·`mortgageAmount`가
+  //    남으면 카테고리를 바꾼 뒤에도 §14 담보채무가 유령으로 계속 공제된다.
+  //    `computeLossFields`는 `preserved[k] === undefined`로 판정하므로 손실 경고 목록은 그대로다.
   const base: Partial<EstateItem> = {
+    ...(Object.fromEntries(
+      LOSS_TRACKED_KEYS.map((k) => [k, undefined]),
+    ) as Partial<EstateItem>),
     id: item.id,
     name: item.name,
     heirAllocations: item.heirAllocations,
