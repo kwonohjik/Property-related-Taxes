@@ -16,6 +16,7 @@ import { getDecisionText } from "./client";
 import {
   LawApiError,
   fetchJson,
+  normalizeCaseNo,
   readCacheNonEmpty,
   safeCacheKey,
   toArray,
@@ -71,16 +72,10 @@ export function isEnBanc(title: string, judgmentType?: string): boolean {
 }
 
 /**
- * 사건번호 정규화 — 출처별 표기 차 흡수.
- * "2021두59908" / "대법원-2021-두-59908" / "부산고등법원(울산)-2021-누-10817"
- *   → "2021두59908" / "2021누10817".
- * 자기 자신 제외·중복 제거 비교용.
+ * 사건번호 정규화 — 자기 자신 제외·중복 제거 비교용.
+ * 구현은 client-core 로 옮겼다(검색 옵션 조립도 같은 정규화를 쓴다). 재export 로 표면 유지.
  */
-export function normalizeCaseNo(s: string): string {
-  const flat = (s ?? "").replace(/\s/g, "");
-  const m = flat.match(/(\d{2,4})-?([가-힣]{1,2})-?(\d{1,7})/);
-  return m ? `${m[1]}${m[2]}${m[3]}` : flat;
-}
+export { normalizeCaseNo };
 
 /**
  * 본문(전문) 제공 판례인지 — DRF prec는 데이터출처가 "대법원"인 것만 본문 JSON을 제공.

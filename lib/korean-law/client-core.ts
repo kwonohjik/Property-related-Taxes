@@ -171,6 +171,22 @@ export async function writeCacheNonEmpty(key: string, data: unknown): Promise<vo
 // 범용 헬퍼
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * 사건번호 정규화 — 출처별 표기 차를 흡수해 법제처가 받는 **평문 표기**로.
+ *   "2021두59908" · "대법원-2021-두-59908" · "부산고등법원(울산)-2021-누-10817"
+ *     → "2021두59908" · "2021두59908" · "2021누10817"
+ *
+ * 🔴 법제처 `nb`(사건번호 검색)는 평문만 받는다 — 실측: `nb=2025누972` 1건 /
+ *    `nb=수원고등법원-2025-누-972` **0건**. 그런데 검색 결과 목록이 화면에 보여주는
+ *    사건번호는 후자(출처별 표기)일 수 있어, 사용자가 우리 화면에서 복붙하면 0건이 된다.
+ *    ⇒ 검색 옵션 조립(buildDomainParams)과 인용 역추적(cite-check) 양쪽이 이 함수를 공유한다.
+ */
+export function normalizeCaseNo(s: string): string {
+  const flat = (s ?? "").replace(/\s/g, "");
+  const m = flat.match(/(\d{2,4})-?([가-힣]{1,2})-?(\d{1,7})/);
+  return m ? `${m[1]}${m[2]}${m[3]}` : flat;
+}
+
 /** HTML 태그·엔티티를 제거한 순수 텍스트 반환 */
 export function strip(raw: string): string {
   return raw.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();

@@ -2,14 +2,12 @@
  * GET /api/law/search-decisions?q=양도소득세&domain=prec&page=1&pageSize=10
  * 판례·결정례 검색 (17 도메인 enum) — 도메인별 고급 옵션 passthrough.
  *
- * 도메인별 추가 쿼리스트링(있으면 반영):
- *   prec:  curt, caseNumber, fromDate, toDate
- *   ppc:   cls, gana, dpaYd, rslYd
- *   detc:  knd, inq, rpl
- *   expc:  caseNumber, fromDate, toDate
- *   admrul: knd
- *   trty:  cls, natCd, eftYd, concYd
- *   ordin: locGov
+ * 도메인별 추가 쿼리스트링(있으면 반영) — **법제처가 실제로 반영하는 것만** 받는다:
+ *   prec:  curt(법원명) · caseNumber(사건번호) · fromDate/toDate(선고일 범위)
+ *   ppc:   gana(가나다순)
+ *
+ * 종전엔 detc·expc·admrul·trty·ordin 옵션도 받았으나 전수 차등 실측에서 법제처가
+ * 무시하는 것으로 확인돼 제거했다(근거·수치: client-decisions-search.ts:DomainSearchOptions).
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -23,13 +21,9 @@ import { ensureRateLimit, mapErrorToResponse } from "../_helpers";
 export const dynamic = "force-dynamic";
 export const maxDuration = 20;
 
-const OPTION_KEYS = [
-  "curt", "caseNumber", "fromDate", "toDate",
-  "cls", "gana", "dpaYd", "rslYd",
-  "knd", "inq", "rpl",
-  "natCd", "eftYd", "concYd",
-  "locGov",
-] as const;
+// 옵션 키는 Zod 스키마에서 **파생**한다. 목록을 따로 들면 스키마에 옵션을 추가하고
+// 여기를 빠뜨렸을 때 그 파라미터가 baseObj 로 새어 조용히 strip 된다(= 다시 무시되는 옵션).
+const OPTION_KEYS: readonly string[] = Object.keys(domainSearchOptionsSchema.shape);
 
 export async function GET(req: NextRequest) {
   const limited = ensureRateLimit(req);
@@ -39,7 +33,7 @@ export async function GET(req: NextRequest) {
     const baseObj: Record<string, string> = {};
     const optionsObj: Record<string, string> = {};
     url.searchParams.forEach((v, k) => {
-      if ((OPTION_KEYS as readonly string[]).includes(k)) {
+      if (OPTION_KEYS.includes(k)) {
         optionsObj[k] = v;
       } else {
         baseObj[k] = v;

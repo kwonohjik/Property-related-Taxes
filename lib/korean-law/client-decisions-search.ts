@@ -5,6 +5,7 @@
 import {
   fetchJson,
   safeCacheKey,
+  normalizeCaseNo,
   readCacheNonEmpty,
   writeCacheNonEmpty,
   strip,
@@ -99,32 +100,42 @@ const CONTAINER_META_KEYS = new Set([
 // 도메인별 파라미터 필터링
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * 도메인별 검색 옵션 — **법제처 DRF 가 실제로 반영하는 것만** 남긴다.
+ *
+ * 🔴 2026-09-11 전수 차등 실측(동일 쿼리에서 옵션 유/무 totalCnt 비교): 종전 20개 키 중
+ *    **16개가 법제처에서 조용히 무시**됐다. 무시되는 옵션은 없느니만 못하다 —
+ *    UI 가 "필터 적용 중" 배지까지 띄우므로 사용자는 걸리지 않은 필터를 걸렸다고 믿는다.
+ *
+ *    무시 확인(제거): prec caseNumber·fromDate·toDate / ppc cls·dpaYd·rslYd /
+ *      detc knd·inq·rpl / expc caseNumber·fromDate·toDate / trty cls·eftYd·concYd / ordin locGov
+ *    "반응은 하지만 쓸 수 없음"(제거): admrul knd — 사람이 읽는 값(훈령·고시)이면 전부 0건.
+ *      trty natCd — ZZ·QQ·US·미국 **전부 동일한 15건** → 국가 필터가 아니다.
+ *    작동 확인(유지): prec curt(3382→대법원 1392·서울고법 183·없는법원 0) · ppc gana(18→3).
+ *
+ * 이름은 **사용자 관점**을 유지하고 DRF 파라미터명 변환은 buildDomainParams 가 맡는다.
+ */
 export interface DomainSearchOptions {
+  /** prec — 법원명. DRF `curt`. */
   curt?: string;
+  /** prec — 사건번호. DRF `nb` (종전엔 `caseNumber` 로 보내 무시됐다). */
   caseNumber?: string;
+  /** prec — 선고일 시작 YYYYMMDD. DRF `prncYd` 범위의 앞쪽. */
   fromDate?: string;
+  /** prec — 선고일 종료 YYYYMMDD. DRF `prncYd` 범위의 뒤쪽. */
   toDate?: string;
-  cls?: string;
+  /** ppc — 가나다순. DRF `gana`. */
   gana?: string;
-  dpaYd?: string;
-  rslYd?: string;
-  knd?: string;
-  inq?: string;
-  rpl?: string;
-  natCd?: string;
-  eftYd?: string;
-  concYd?: string;
-  locGov?: string;
 }
 
 const DOMAIN_OPTION_WHITELIST: Record<DecisionDomain, ReadonlyArray<keyof DomainSearchOptions>> = {
   prec:     ["curt", "caseNumber", "fromDate", "toDate"],
-  ppc:      ["cls", "gana", "dpaYd", "rslYd"],
-  detc:     ["knd", "inq", "rpl"],
-  expc:     ["caseNumber", "fromDate", "toDate"],
-  admrul:   ["knd"],
-  trty:     ["cls", "natCd", "eftYd", "concYd"],
-  ordin:    ["locGov"],
+  ppc:      ["gana"],
+  detc:     [],
+  expc:     [],
+  admrul:   [],
+  trty:     [],
+  ordin:    [],
   fsc:      [],
   ftc:      [],
   nlrc:     [],
@@ -137,17 +148,58 @@ const DOMAIN_OPTION_WHITELIST: Record<DecisionDomain, ReadonlyArray<keyof Domain
   lawnkor:  [],
 };
 
-function buildDomainParams(
+/** 공개 옵션명 → DRF 파라미터명 (1:1 인 것만. 선고일 범위는 buildPrncYd 가 조립). */
+const DRF_PARAM_NAME = {
+  curt: "curt",
+  caseNumber: "nb",
+  gana: "gana",
+} as const satisfies Partial<Record<keyof DomainSearchOptions, string>>;
+
+/** 선고일 범위 상한 sentinel — "시작만 지정" 을 유효 범위로 만들기 위한 원거리 종료값. */
+const PRNC_OPEN_END = "99991231";
+
+/**
+ * DRF `prncYd` 조립. 실측 제약 3가지(2026-09-11):
+ *   · `YYYYMMDD~YYYYMMDD` 만 필터로 동작한다.
+ *   · 단일 날짜 `YYYYMMDD` 는 **무시**된다 (기준선 3382 → 3382).
+ *   · 열린 끝 `YYYYMMDD~` 는 **0건**을 돌려준다 — 조용한 전멸이라 절대 보내면 안 된다.
+ * 시작만 있으면 원거리 종료값으로 닫고(`~99991231` = `~20991231` = `~20261231` = 474건 동일),
+ * 종료만 있으면 `~종료`(실측 동작, 2984건)를 쓴다.
+ */
+export function buildPrncYd(from?: string, to?: string): string | null {
+  const f = normalizeYmd8(from);
+  const t = normalizeYmd8(to);
+  if (f && t) return `${f}~${t}`;
+  if (f) return `${f}~${PRNC_OPEN_END}`;
+  if (t) return `~${t}`;
+  return null;
+}
+
+function normalizeYmd8(v?: string): string | null {
+  const s = (v ?? "").replace(/[-.\s]/g, "");
+  return /^\d{8}$/.test(s) ? s : null;
+}
+
+export function buildDomainParams(
   domain: DecisionDomain,
   options: DomainSearchOptions = {}
 ): Record<string, string> {
-  const allowed = DOMAIN_OPTION_WHITELIST[domain];
+  const allowed = new Set<keyof DomainSearchOptions>(DOMAIN_OPTION_WHITELIST[domain]);
   const out: Record<string, string> = {};
-  for (const key of allowed) {
+  for (const [key, drfName] of Object.entries(DRF_PARAM_NAME) as [
+    keyof DomainSearchOptions,
+    string,
+  ][]) {
+    if (!allowed.has(key)) continue;
     const v = options[key];
     if (v !== undefined && v !== null && String(v).trim() !== "") {
-      out[key] = String(v);
+      // 사건번호는 평문 표기로만 검색된다 — 화면에 보이는 출처별 표기를 그대로 넣어도 걸리도록.
+      out[drfName] = key === "caseNumber" ? normalizeCaseNo(String(v)) : String(v).trim();
     }
+  }
+  if (allowed.has("fromDate") || allowed.has("toDate")) {
+    const prncYd = buildPrncYd(options.fromDate, options.toDate);
+    if (prncYd) out.prncYd = prncYd;
   }
   return out;
 }
