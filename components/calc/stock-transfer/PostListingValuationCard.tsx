@@ -50,7 +50,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
   // 간이 모드 «안»의 하위 축 — 3중 패턴 default "direct"(기존 결과값 직접 입력 보존)
   const valueMode = form.simpleValueInputMode || "direct";
   /*
-    ② 상장일 이후 1개월 종가의 입력 축.
+    ① 상장일 이후 1개월 종가의 입력 축.
     「재무제표로 계산」·「상장연도만 재무제표」는 **자료 자체가 결산서와 종가표**라
     종가도 항상 일자별이다 — 그 두 모드에서는 이 축이 의미를 갖지 않으므로 라디오를
     노출하지 않고 표로 고정한다(선택지를 6조합으로 늘리지 않는다).
@@ -142,34 +142,39 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             ★ 산식의 각 항에 ①②③을 달아 **아래 섹션 번호와 1:1로 잇는다**.
             제보(2026-09-02): 「환산 입력 방식 이후로는 그 옵션 버튼이 뭐하는 것인지 헷갈린다」 —
             사용자가 넣어야 할 값은 셋뿐인데 화면이 평평해서 «이 칸이 산식의 어디에 들어가는가»가
-            보이지 않았다. 번호가 그 답이다. */}
+            보이지 않았다. 번호가 그 답이다.
+            ★ 번호 순서 = **계산이 소비하는 순서**다(제보 2026-09-10 재배치). ①②로 1주당
+            취득기준시가를 만든 뒤 ③으로 나눈다 — 시간순(상장 → 평가 → 양도)과도 일치하고,
+            전역 스위치가 지배하는 ①②가 스위치 바로 아래에 연달아 온다. */}
         <div className="rounded-lg border border-violet-200 bg-violet-50/70 px-4 py-3 text-sm">
           <p className="font-semibold text-violet-800 mb-2">환산 산식 (소령 §165⑤ + §176의2②1호 합성)</p>
           <div className="text-violet-700 space-y-1 text-xs font-mono">
             <p>
-              [§165⑤] 1주당 취득기준시가 = ②상장일 이후 1개월 종가평균 ×{" "}
-              <Frac top="③취득연도 평가" bottom="③상장연도 평가" />
+              [§165⑤] 1주당 취득기준시가 = ①상장일 이후 1개월 종가평균 ×{" "}
+              <Frac top="②취득연도 평가" bottom="②상장연도 평가" />
+            </p>
+            <p>
+              ②1주당 평가 = 순손익가치 × <Frac top="3" bottom="5" /> + 순자산가치 ×{" "}
+              <Frac top="2" bottom="5" />{" "}
+              {form.isHeavyRealEstateForValuation && "(부동산과다 시 2:3 반전)"}
             </p>
             <p>
               [§176의2②1호] 환산취득가 = 양도가 ×{" "}
-              <Frac top="1주당 취득기준시가" bottom="①양도 당시 기준시가" />
-            </p>
-            <p>
-              ③1주당 평가 = 순손익가치 × <Frac top="3" bottom="5" /> + 순자산가치 ×{" "}
-              <Frac top="2" bottom="5" />{" "}
-              {form.isHeavyRealEstateForValuation && "(부동산과다 시 2:3 반전)"}
+              <Frac top="1주당 취득기준시가" bottom="③양도 당시 기준시가" />
             </p>
           </div>
         </div>
 
-        {/* 환산 입력 방식 — **카드 전체의 스위치**다. 산식 바로 아래 최상단으로 올린다.
-            종전에는 「상장일」과 같은 높이에 있어 지배 범위가 보이지 않았다. 실제로는
-            ②(종가 표 ↔ 단일 숫자)와 ③(결산서 ↔ 평가액)을 **동시에** 바꾼다.
-            ①은 이 선택과 무관하다 — 그래서 hint로 범위를 명시한다.
+        {/* 환산 입력 방식 — ①②를 **동시에** 바꾸는 스위치다. 산식 바로 아래 최상단.
+            ①(종가 표 ↔ 단일 숫자)와 ②(결산서 ↔ 평가액)가 지배 대상이고, ③은 무관하다.
+            🔑 그래서 ③을 맨 아래로 내렸다 — 종전에는 무관한 ③(당시 ①)이 스위치와 지배
+               대상 사이에 끼어 있어, 스위치를 고른 직후 나오는 칸이 그 선택과 상관없는
+               칸이었다(제보 2026-09-10 「순서가 맞지 않는다」). 이제 스위치 아래는 전부
+               지배 대상이므로 hint에 「무관합니다」라는 부정문을 둘 필요가 없다.
             라벨이 «가진 자료» 기준인 이유는 PR #1389 참조. */}
         <FieldCard
           label="환산 입력 방식"
-          hint="아래 ③을 어떤 자료로 채울지 정합니다. 재무제표를 고르면 ②의 종가도 일자별 입력이 됩니다. ①은 이 선택과 무관합니다."
+          hint="아래 ②를 어떤 자료로 채울지 정합니다. 재무제표를 고르면 ①의 종가도 일자별 입력이 됩니다."
         >
           <RadioCardGroup
             name="unlistedDetailMode"
@@ -185,82 +190,17 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           />
         </FieldCard>
 
-        {/* ★ 양도 당시 기준시가 — 「입력 방식」과 「1개월 종가 평균」을 한 섹션으로 묶는다.
-            제보(2026-09-02): 두 필드가 각각 떨어져 있어 **무엇을 넣는 칸인지 라벨만으로는
-            알 수 없었다** — 아래 hint를 읽어야 비로소 「양도 당시 기준시가구나」 하고 알았다.
-            섹션 제목이 그 답을 먼저 말하게 한다.
-            근거: 「소득세법」 제99조 제1항 제3호 → 같은 법 시행령 제165조 제3항
-                  (상장주식의 기준시가 = 양도일 이전 1개월간 최종시세가액의 평균액).
-                  이 값이 「소득세법 시행령」 제176조의2 제2항 제1호 환산취득가액의 **분모**다. */}
-        <ToneCard tone="amber" sectionNum={1} title="양도 당시 기준시가" bodyClassName="space-y-3">
-          {/* hint를 두지 않는다 — 섹션 제목이 이미 같은 말을 하고, 종전 hint의
-              「direct vs daily」는 내부 용어였다. 선택지 라벨만으로 판단이 선다. */}
-          <FieldCard label="입력 방식">
-            <RadioCardGroup
-              name="transferStdInputMode"
-              value={form.transferStdInputMode || "direct"}
-              onChange={(v) => onChange({ transferStdInputMode: v as "direct" | "daily" })}
-              tone="amber"
-              layout="inline"
-              options={[
-                { value: "direct", label: "직접 입력 (1개월 평균 단일 숫자)" },
-                { value: "daily", label: "일자별 입력 (자동 평균 산정)" },
-              ]}
-            />
-          </FieldCard>
-
-          {/* direct 모드 — 기존 단일 숫자 입력 */}
-          {(form.transferStdInputMode || "direct") === "direct" && (
-            <FieldCard
-              label="1개월 종가 평균"
-              required
-              hint="양도일 이전 1개월 종가 평균 (1주당, 「소득세법」 제99조 제1항 제3호 · 같은 법 시행령 제165조 제3항) — 환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
-            >
-              <CurrencyInput
-                label=""
-                hideUnit
-                value={form.transferDatePriceAvg1Month}
-                onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-                placeholder="양도일 이전 1개월 종가평균 (1주당)"
-              />
-            </FieldCard>
-          )}
-
-          {/* daily 모드 — 일자별 종가표 + 자동 평균 mirror */}
-          {form.transferStdInputMode === "daily" && (
-            <>
-              {/* 키움 자동조회 버튼 — 종목코드 + 양도일 + 상장 종목 충족 시 활성화 */}
-              <KiwoomAutoFetchButton
-                securityCode={form.securityCode}
-                transferDate={form.transferDate}
-                marketType={form.marketType}
-                tradingHalt={form.kiwoomTradingHalt}
-                onFill={onChange}
-              />
-              {/*
-                요약줄은 표(`TransferDate1MonthClosingPriceTable`) 안의 것 **하나만** 둔다.
-
-                종전에는 여기에 같은 값을 한 줄 더 그렸는데, 그 줄은 **저장 필드**를 읽고
-                표의 줄은 **매 렌더 재계산**한 값을 읽어서 둘이 갈렸다(제보 2026-09-01 —
-                16,560 vs 16,559). 값이 갈리는 원인 자체는 Step1의 양도일 리셋으로 막았고,
-                표시는 실시간 재계산 쪽 한 곳으로 모은다 — stale이 구조적으로 불가능한 쪽이다.
-              */}
-              <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} />
-            </>
-          )}
-        </ToneCard>
-
-        {/* ② 상장일 이후 1개월 종가 — 산식의 기초가액.
+        {/* ① 상장일 이후 1개월 종가 — 산식의 기초가액. **계산이 가장 먼저 소비**한다.
             · 상장일이 여기 속한다 — 「이후 1개월」의 **기산일**이자 종가 표 32셀 자동 채움 trigger다.
-            · 자본조정(증자·합병)도 ②다 — 평가기간을 절단해 **종가평균**을 바꾼다(③이 아니다).
+            · 자본조정(증자·합병)도 ①이다 — 평가기간을 절단해 **종가평균**을 바꾼다(②가 아니다).
               상증령 §52의2②2호 준용 해석(PostListingCapitalEventSection 주석 참조).
 
             🔑 제목은 조문 표현을 따른다(제보 2026-09-02의 「상장 당시 기준시가」는 채택하지 않았다).
                §165⑤이 「기준시가」라 부르는 것은 **계산식의 결과**(취득 당시의 기준시가)이고,
                상장 시점의 가액을 법이 부르는 이름은 「상장일 현재의 **제4항에 따른 평가액**」 —
-               그것은 이 화면의 ③이다. ②에 「상장 당시 기준시가」를 붙이면 ③과 이름이 겹친다.
+               그것은 이 화면의 ②다. ①에 「상장 당시 기준시가」를 붙이면 ②와 이름이 겹친다.
                이 칸의 법문상 이름은 「상장일 이후 1개월간 … 최종시세가액의 평균액」이다. */}
-        <ToneCard tone="amber" sectionNum={2} title="상장일 이후 1개월 종가" bodyClassName="space-y-3">
+        <ToneCard tone="amber" sectionNum={1} title="상장일 이후 1개월 종가" bodyClassName="space-y-3">
           {/* 상장일 (기존 — 종가 표 자동 채움 trigger) */}
           <FieldCard label="상장일" required hint="최초 상장 기준일. 입력 시 종가 표 32셀 일자가 자동 채워집니다.">
             <DateInput
@@ -279,9 +219,10 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             />
           </FieldCard>
 
-          {/* 입력 방식 — ①과 같은 축, 같은 문구. 「재무제표」 모드에서는 노출하지 않는다. */}
+          {/* 입력 방식 — ③과 같은 축, 같은 선택지. 「재무제표」 모드에서는 노출하지 않는다.
+              라벨에 대상을 박아 ②·③의 동명 라디오와 구별한다. */}
           {mode === "simple" ? (
-            <FieldCard label="입력 방식">
+            <FieldCard label="종가 입력 방식">
               <RadioCardGroup
                 name="listingStdInputMode"
                 value={listingStdMode}
@@ -333,14 +274,15 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           )}
         </ToneCard>
 
-        {/* ③ 상장연도·취득연도 평가액 — 산식의 **비율**(취득연도 평가 ÷ 상장연도 평가).
-            「값 입력 방식」은 ③ 안의 하위 토글이다(simple 모드 전용) — 종전에는 카드
-            최상위에 있어 ②의 종가평균까지 지배하는 것처럼 보였다. */}
-        <ToneCard tone="amber" sectionNum={3} title="상장연도·취득연도 평가액" bodyClassName="space-y-3">
+        {/* ② 상장연도·취득연도 평가액 — 산식의 **비율**(취득연도 평가 ÷ 상장연도 평가).
+            「값 입력 방식」은 ② 안의 하위 토글이다(simple 모드 전용) — 종전에는 카드
+            최상위에 있어 ①의 종가평균까지 지배하는 것처럼 보였다.
+            여기까지가 1주당 취득기준시가를 만드는 구간이다 — ③은 그것을 나누는 분모다. */}
+        <ToneCard tone="amber" sectionNum={2} title="상장연도·취득연도 평가액" bodyClassName="space-y-3">
           {mode === "simple" ? (
             <>
               {/* 값 입력 방식 — 결과값 직접 ↔ 순액에서 계산 (계획서 Q-1: 간이 모드 «안»의 하위 토글) */}
-              <FieldCard label="값 입력 방식">
+              <FieldCard label="평가액 입력 방식">
                 <RadioCardGroup
                   name="simpleValueInputMode"
                   value={valueMode}
@@ -437,6 +379,74 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                   </div>
                 </div>
               )}
+            </>
+          )}
+        </ToneCard>
+
+        {/* ★ 양도 당시 기준시가 — 「입력 방식」과 「1개월 종가 평균」을 한 섹션으로 묶는다.
+            제보(2026-09-02): 두 필드가 각각 떨어져 있어 **무엇을 넣는 칸인지 라벨만으로는
+            알 수 없었다** — 아래 hint를 읽어야 비로소 「양도 당시 기준시가구나」 하고 알았다.
+            섹션 제목이 그 답을 먼저 말하게 한다.
+            🔑 **맨 아래에 둔다**(제보 2026-09-10). §176의2②1호의 분모라 ①②로 만든 1주당
+               취득기준시가가 있어야 쓸 자리가 생기고, 「환산 입력 방식」의 지배 대상도
+               아니다 — 스위치와 그 지배 대상 사이에 끼워 두면 순서가 어긋나 보인다.
+            근거: 「소득세법」 제99조 제1항 제3호 → 같은 법 시행령 제165조 제3항
+                  (상장주식의 기준시가 = 양도일 이전 1개월간 최종시세가액의 평균액).
+                  이 값이 「소득세법 시행령」 제176조의2 제2항 제1호 환산취득가액의 **분모**다. */}
+        <ToneCard tone="amber" sectionNum={3} title="양도 당시 기준시가" bodyClassName="space-y-3">
+          {/* hint를 두지 않는다 — 섹션 제목이 이미 같은 말을 하고, 종전 hint의
+              「direct vs daily」는 내부 용어였다. 선택지 라벨만으로 판단이 선다. */}
+          <FieldCard label="기준시가 입력 방식">
+            <RadioCardGroup
+              name="transferStdInputMode"
+              value={form.transferStdInputMode || "direct"}
+              onChange={(v) => onChange({ transferStdInputMode: v as "direct" | "daily" })}
+              tone="amber"
+              layout="inline"
+              options={[
+                { value: "direct", label: "직접 입력 (1개월 평균 단일 숫자)" },
+                { value: "daily", label: "일자별 입력 (자동 평균 산정)" },
+              ]}
+            />
+          </FieldCard>
+
+          {/* direct 모드 — 기존 단일 숫자 입력 */}
+          {(form.transferStdInputMode || "direct") === "direct" && (
+            <FieldCard
+              label="1개월 종가 평균"
+              required
+              hint="양도일 이전 1개월 종가 평균 (1주당, 「소득세법」 제99조 제1항 제3호 · 같은 법 시행령 제165조 제3항) — 환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                value={form.transferDatePriceAvg1Month}
+                onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
+                placeholder="양도일 이전 1개월 종가평균 (1주당)"
+              />
+            </FieldCard>
+          )}
+
+          {/* daily 모드 — 일자별 종가표 + 자동 평균 mirror */}
+          {form.transferStdInputMode === "daily" && (
+            <>
+              {/* 키움 자동조회 버튼 — 종목코드 + 양도일 + 상장 종목 충족 시 활성화 */}
+              <KiwoomAutoFetchButton
+                securityCode={form.securityCode}
+                transferDate={form.transferDate}
+                marketType={form.marketType}
+                tradingHalt={form.kiwoomTradingHalt}
+                onFill={onChange}
+              />
+              {/*
+                요약줄은 표(`TransferDate1MonthClosingPriceTable`) 안의 것 **하나만** 둔다.
+
+                종전에는 여기에 같은 값을 한 줄 더 그렸는데, 그 줄은 **저장 필드**를 읽고
+                표의 줄은 **매 렌더 재계산**한 값을 읽어서 둘이 갈렸다(제보 2026-09-01 —
+                16,560 vs 16,559). 값이 갈리는 원인 자체는 Step1의 양도일 리셋으로 막았고,
+                표시는 실시간 재계산 쪽 한 곳으로 모은다 — stale이 구조적으로 불가능한 쪽이다.
+              */}
+              <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} />
             </>
           )}
         </ToneCard>

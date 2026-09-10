@@ -60,7 +60,8 @@ describe("TS — 양도 당시 기준시가 섹션", () => {
     const labels = Array.from(inside.querySelectorAll("label")).map((l) =>
       (l.textContent ?? "").replace("*", "").trim()
     );
-    expect(labels).toContain("입력 방식");
+    // 라벨에 대상을 박았다(2026-09-10) — 카드 안의 동명 라디오 셋을 구별하기 위해서다.
+    expect(labels).toContain("기준시가 입력 방식");
     expect(labels).toContain("1개월 종가 평균");
   });
 
