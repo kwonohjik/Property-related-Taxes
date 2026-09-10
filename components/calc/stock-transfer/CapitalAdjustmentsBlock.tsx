@@ -32,7 +32,8 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
     (form.lotsMode || "single") === "split" ||
     (form.acquisitionActualInputMode || "per_share") === "lots";
 
-  const rows = form.capitalAdjustments || [];
+  // 🔑 미입력이면 매 렌더 «새 빈 배열»이라 아래 `sorted` useMemo가 무효가 된다.
+  const rows = useMemo(() => form.capitalAdjustments || [], [form.capitalAdjustments]);
 
   const sorted = useMemo(() => {
     return [...rows]

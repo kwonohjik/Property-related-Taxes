@@ -96,14 +96,21 @@ export function YearColumn({
   onChange: (patch: Partial<StockTransferFormData>) => void;
   col: Column;
 }): React.JSX.Element {
-  const addKeys = [
-    `niAddRow1${col}`, `niAddRow2${col}`, `niAddRow3${col}`, `niAddRow4${col}`,
-  ] as const;
-  const subKeys = [
-    `niSubRow5${col}`, `niSubRow6${col}`, `niSubRow7${col}`, `niSubRow8${col}`,
-    `niSubRow9${col}`, `niSubRow10${col}`, `niSubRow11${col}`, `niSubRow12${col}`,
-    `niSubRow13${col}`, `niSubRow14${col}`, `niSubRow15${col}`, `niSubRow16${col}`,
-  ] as const;
+  // 🔑 키 배열은 `col`에서만 파생된다 — 매 렌더 새 배열을 만들면 아래 `preview` useMemo의
+  //    deps가 매번 바뀌어 **메모가 사실상 무효**가 된다(값은 같고 참조만 달라서 조용히 그렇다).
+  const addKeys = useMemo(
+    () => [`niAddRow1${col}`, `niAddRow2${col}`, `niAddRow3${col}`, `niAddRow4${col}`] as const,
+    [col],
+  );
+  const subKeys = useMemo(
+    () =>
+      [
+        `niSubRow5${col}`, `niSubRow6${col}`, `niSubRow7${col}`, `niSubRow8${col}`,
+        `niSubRow9${col}`, `niSubRow10${col}`, `niSubRow11${col}`, `niSubRow12${col}`,
+        `niSubRow13${col}`, `niSubRow14${col}`, `niSubRow15${col}`, `niSubRow16${col}`,
+      ] as const,
+    [col],
+  );
   const shareKey = `niShareCount${col}` as keyof StockTransferFormData;
   const rateKey = `niDiscountRate${col}` as keyof StockTransferFormData;
 

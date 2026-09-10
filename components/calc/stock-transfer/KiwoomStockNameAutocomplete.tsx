@@ -119,7 +119,11 @@ export function KiwoomStockNameAutocomplete({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [value]);
+    // `onFetchError`는 현재 유일한 소비처가 useState setter를 그대로 넘긴다
+    // (`SecurityMetadataBlock.tsx:187` — 렌더 간 참조가 안정적이라 재실행을 유발하지 않는다).
+    // ⚠️ 새 소비처가 «인라인 화살표 함수»를 넘기면 매 렌더 디바운스 fetch가 다시 걸린다 —
+    //    그때는 부모에서 `useCallback`으로 감쌀 것.
+  }, [value, onFetchError]);
 
   // 외부 클릭 시 dropdown 닫기
   useEffect(() => {
