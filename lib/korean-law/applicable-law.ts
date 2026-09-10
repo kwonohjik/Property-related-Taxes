@@ -31,11 +31,11 @@ import {
   readCacheNonEmpty,
   safeCacheKey,
   toArray,
-  todayYmdKst,
   writeCache,
   writeCacheNonEmpty,
 } from "./client-core";
 import { buildLawSourceUrl, normalizeArticleNo } from "./client-law";
+import { todayYmdKst } from "./today";
 import type { ApplicableLawResult, LawVersionEntry, TransitionExcerpt } from "./types";
 
 // ────────────────────────────────────────────────────────────────────────────

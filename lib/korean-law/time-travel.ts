@@ -14,7 +14,8 @@ import {
   normalizeYmd,
   selectApplicableVersion,
 } from "./applicable-law";
-import { LawApiError, todayYmdKst } from "./client-core";
+import { LawApiError } from "./client-core";
+import { todayYmdKst } from "./today";
 import { normalizeArticleNo } from "./client-law";
 import type { ArticleDiff, ArticleSnapshot, DiffLine, LawVersionEntry } from "./types";
 

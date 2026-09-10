@@ -14,7 +14,8 @@
  * upstream: chrisryugj/korean-law-mcp src/lib/date-parser.ts
  */
 
-import { todayKstDate } from "./client-core";
+// ⚠ client-core 가 아니라 today.ts 에서 가져온다 — 이 모듈은 클라이언트 컴포넌트까지 번들된다.
+import { todayKstDate } from "./today";
 
 export interface DateRange {
   fromDate?: string;
