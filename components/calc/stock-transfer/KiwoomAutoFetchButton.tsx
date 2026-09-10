@@ -313,7 +313,16 @@ export function KiwoomAutoFetchButton({
                 양도일 이전 1개월 일자별 종가 — 거래일만 분모 산입 (상증령 §52의2④ 공휴일·토요일 제외)
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-caption font-mono">
-                {info.slotDates.map((iso, i) => {
+                {info.slotDates.map((_, pos) => {
+                  /*
+                    표시 순서 — **기준일(양도일·취득일)이 맨 위**에 오도록 최신 → 과거 역순.
+                    데이터 인덱스(`slotDates[i]` ↔ `closingPrices[i]` ↔ `weekendLabels[i]`)는
+                    route 응답 순서 그대로다 — 여기서 뒤집는 것은 화면 배치뿐이다.
+                    형제 표 `TransferDate1MonthClosingPriceTable`과 같은 규칙.
+                    (§165⑤ 상장일 «이후» 축은 기준일이 이미 첫 칸이라 그대로 둔다.)
+                  */
+                  const i = info.slotDates.length - 1 - pos;
+                  const iso = info.slotDates[i];
                   const close = info.closingPrices[i];
                   const label = info.weekendLabels[i];
                   const isTrading = typeof close === "number" && close > 0;
@@ -324,7 +333,7 @@ export function KiwoomAutoFetchButton({
                         isTrading ? "" : "bg-amber-50 text-amber-700"
                       }`}
                     >
-                      <span className="text-gray-500 tabular-nums">{i + 1}. {iso}</span>
+                      <span className="text-gray-500 tabular-nums">{pos + 1}. {iso}</span>
                       <span className="tabular-nums">{isTrading ? close.toLocaleString() : label || "—"}</span>
                     </div>
                   );
