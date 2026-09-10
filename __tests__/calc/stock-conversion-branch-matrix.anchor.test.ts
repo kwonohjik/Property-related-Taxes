@@ -23,10 +23,18 @@
  *   R1 일반    → 25,061 = **환산 후** 1주당 취득가 (`stock-acquisition-basis.ts` Bug-A 정정분)
  *   R2·R3·R4  → 5,600·5,824·5,600 = 1주당 **취득기준시가**
  *
- * 현재 소비처는 경로별로 게이팅돼 있어 오표시가 없다
- * (`StockTransferTaxResultViewHelpers.tsx:83`이 `method === "post_listing_conversion"`으로 건다).
- * 그러나 S3에서 경로를 하나로 합칠 때 **이 의미 분기를 모르고 통일하면 화면이 조용히 틀려진다.**
- * 그래서 두 필드를 **함께** 고정한다.
+ * 소비처는 경로별로 게이팅돼 있어 오표시가 없다. 그러나 경로를 하나로 합칠 때
+ * **이 의미 분기를 모르고 통일하면 화면이 조용히 틀려진다.** 그래서 두 필드를 **함께** 고정한다.
+ *
+ * 🔴 **정정(S4).** 종전 이 자리에 「`StockTransferTaxResultViewHelpers.tsx:83`이
+ * `method === "post_listing_conversion"`으로 건다」고 적었다. **그 게이트가 지킨 게 아니었다** —
+ * 실제 조건은 `method && weightedAvgPerShare !== undefined`였고, 그 method를 세팅하는
+ * 2곳 중 어느 쪽도 `weightedAvgPerShare`를 채우지 않아 **우연히** 닫혀 있었다.
+ * 게다가 그 블록의 산식(`1주당 × 주식수`)은 §176의2②1호 환산과 어긋나 있었다 —
+ * R3로 재면 5,824 × 1,000 = 5,824,000인데 취득가액은 26,064,147이다.
+ * ⇒ 블록은 삭제했고, 재도입은
+ * `__tests__/components/calc/results/post-listing-acquisition-formula-single-source.anchor.test.tsx`
+ * (PLF-1~3)가 막는다.
  *
  * ## 불가 조합 2건은 «값»이 아니라 «차단»을 고정한다
  *

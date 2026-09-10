@@ -243,7 +243,8 @@ FAIL  filing-form-conversion-rows.anchor.test.ts > A-3-4: 분모 자동 대체 �
 - fallback 값 = `floor(양도가 × acqStd / floor(양도가 ÷ 주식수))`
 - 차단 시 값 = `apply163_9Conversion`의 `fallbackTotal`
   = `postListingResult.totalAcquisitionPrice`
-  = `finalPerShareValue × shareCount` (`stock-valuation-post-listing.ts:560`)
+  = `finalPerShareValue × shareCount` (당시 `stock-valuation-post-listing.ts:560`
+    — 그 필드는 **S4에서 제거**됐다. 아래 §6-4 ① 정정 참조)
 
 **주식수가 양도가를 나누어떨어뜨리면 둘이 같아진다.** PL-3 픽스처가 정확히 그 경우다
 (44,750,000 ÷ 5,000 = 8,950, 나머지 0).
@@ -503,9 +504,45 @@ anchor가 **의도한 사유로만** 실패했다 — PLD-1이 낸 `29,121,952`�
 2배로 바꿔도 회귀표가 **전건 통과**했고, `components/`에서 이 필드를 읽는 곳은 없다
 (`LotMatchingDetailCard.tsx:116`의 동명 필드는 **다른 타입**이다).
 
-⇒ **제거하지 않는다.** 값 자체는 「환산 전 취득기준시가 총액」으로 여전히 옳고
+⇒ (S2 시점 판정) **제거하지 않는다.** 값 자체는 「환산 전 취득기준시가 총액」으로 여전히 옳고
 (`estimatedBase`와 같은 뜻), 진단용 echo로 남긴다. 다만 **anchor로 지킬 수 없는 필드**임을
 알고 있어야 한다 — S3에서 result 형태를 손볼 때 정리 후보다.
+
+> 🔴 **S4 정정 — 두 군데가 틀렸다.**
+>
+> **㉮ 「anchor로 지킬 수 없다」는 반증됐다.** 값을 2배로 바꾸는 뮤테이션을
+> `__tests__/tax-engine/stock-transfer/` + `__tests__/calc/` + `__tests__/components/`
+> **701파일 6,448건**으로 돌리니 **정확히 4건**이 실패했다(타입 제거 시 `tsc` 오류도 같은 4곳).
+> S2가 「전건 통과」로 본 것은 **회귀표만** 돌렸기 때문이다 — 같은 세션에서 이미 한 번
+> 배운 「뮤테이션의 실행 범위가 결론의 분모다」를 **두 번째로** 밟았다.
+>
+> **㉯ 「`estimatedBase`와 같은 뜻」도 조건부다.** §97의2①1호 이월과세면 호출부가
+> `acquisitionStdPriceOverridePerShare`로 분자를 갈아끼우므로
+> (`stock-acquisition-basis.ts:137`) `estimatedBase = 그 override × 주식수`가 되어
+> (`:146`)
+> 이 필드와 **갈린다**.
+>
+> ⇒ **제거로 판정을 뒤집는다.** 근거 넷:
+> 1. 프로덕션 소비처 **0** (S2 판정 유지 — 재실측 확인)
+> 2. 이름이 **거짓말을 한다** — `totalAcquisitionPrice`·주석 「총 환산취득가」인데
+>    실제 값은 **환산 전** 취득기준시가 총액이다. 결과 카드에 「환산취득가」로 배선하면
+>    실측 4.5배 틀린 수가 화면에 뜬다(S2 MTX-R3: 5,824,000 vs 26,064,147)
+> 3. 단언 4건은 **직전 줄이 이미 `finalPerShareValue`를 고정**하므로 `× shareCount`
+>    항등식의 중복이다 — 제거해도 커버리지 손실 0
+> 4. 형제 경로가 같은 양을 **이미 바른 이름**으로 부른다 —
+>    `UnlistedValuationResult.acquisitionStdPriceTotal` ([[feedback_sibling_path_already_implements_rule]])
+>
+> 단 `section81-4-preprior-floor80.anchor.test.ts` **F81-2**만은 삭제가 아니라 **승격**했다.
+> 그 주석이 「🔑 세액 축까지 고정한다」를 명시하는데 **leaf 값이라 세액에 닿지 않았다**
+> ([[feedback_anchor_observes_wrong_stage]]). 엔진 본체 호출로 바꿔 취득기준시가 총액
+> 3,888,885,000 · 취득가액 4,374,995,625 · 산출세액 16,723,100을 고정한다
+> (하한 미구속이면 116,250,000 — 하한 하나가 세액을 약 1억 원 가른다).
+>
+> ⚠️ 그 과정에서 **픽스처가 타입 불성립**이었음도 드러났다 —
+> `postListingDetail: { monthlyAccrualToggle: true }`에 **필수** 필드
+> `unlistedDetailMode`가 없어(`as unknown as` 캐스트가 가렸다) `synthesizePostListingInput`이
+> full 모드로 읽고 5 필드를 0으로 덮어써 **엔진 취득가액이 0**이 됐다.
+> 프로덕션 도달 경로는 아니다 — 타입·⑫ Zod 모두 그 필드를 필수로 요구한다.
 
 **② `valuationDetail.finalPerShareValue`의 «의미»가 경로마다 다르다.**
 
@@ -520,6 +557,41 @@ anchor가 **의도한 사유로만** 실패했다 — PLD-1이 낸 `29,121,952`�
 
 ⇒ 그러나 **S3에서 경로를 하나로 합칠 때 이 분기를 모르고 통일하면 화면이 조용히 틀려진다.**
 회귀표가 `method`와 `finalPerShareValue`를 **함께** 고정하는 이유가 이것이다.
+
+> 🔴 **S4 정정 — 「오표시 없음」은 맞았지만 «이유»가 틀렸고, 블록 «내용»이 틀려 있었다.**
+>
+> **㉮ 안전을 만든 것은 `method` 게이트가 아니다.** 실제 게이트는
+> `method === "post_listing_conversion" && detail.weightedAvgPerShare !== undefined`
+> 였고, 그 method를 세팅하는 **2곳이 전부**인데(`stock-acquisition-basis.ts:150` ·
+> `exempt-informational-acquisition.ts:118`) **어느 쪽도 `weightedAvgPerShare`를 채우지 않는다.**
+> ⇒ 잠근 것은 **우연한 두 번째 conjunct**다. `method` 하나였다면 그대로 렌더됐다.
+> 누가 그 필드를 채우는 순간 열리는 문이었다
+> ([[feedback_ui_gate_expansion_activates_latent_defect]]).
+>
+> **㉯ 그 문 뒤의 산식이 틀려 있었다.**
+> ```
+> 취득가액 = {finalPerShareValue} × {shareCount}주 = {result.acquisitionPrice}
+> ```
+> S1이 §176의2②1호를 정본으로 세운 뒤 취득가액은 `양도가 × (취득기준 ÷ 양도기준)`이다.
+> MTX-R3 실측으로 좌변 5,824 × 1,000 = **5,824,000**, 우변 **26,064,147** — **자기모순**이다.
+> 그 곱셈의 결과는 취득가액이 아니라 취득기준시가 총액이고, **같은 카드가 바로 아래 줄에서**
+> 이미 「취득기준시가 합계」로 표시한다. 즉 죽은 코드이자 중복이자 오표시였다.
+>
+> ⇒ **블록을 삭제**한다. 고쳐 살릴 이유가 없다 — 올바른 판이
+> `PostListingDetailCard.tsx:175`에 이미 있고 **실제로 렌더된다**(같은 결과 화면).
+> 살리면 같은 산식이 두 카드에 중복되어, 이 트랙이 없앤 「두 곳에 각각 구현」이 재발한다.
+> 고아가 된 `shareCount` prop도 함께 걷었다(그 블록이 유일한 사용처였다).
+>
+> **신규 anchor** `__tests__/components/calc/results/post-listing-acquisition-formula-single-source.anchor.test.tsx`
+> — 재도입의 **두 변형**을 각각 잡는다(뮤테이션 실측):
+>
+> | probe | 되살린 형태 | 실패한 anchor |
+> |---|---|---|
+> | P-1 | 원래 게이트 그대로 + `weightedAvgPerShare` 채워짐 | **PLF-3** |
+> | P-2 | conjunct를 떼고 `method`만 게이팅 | **PLF-2 · PLF-3** |
+>
+> PLF-0(픽스처 가드: 두 수가 서로 다름) · PLF-1(positive twin: 올바른 판은 실재함)은
+> 두 probe 모두에서 통과했다 — 과녁을 벗어나지 않았다.
 
 ### S3 — 본체 (한 PR · S2 산출 후 별도 설계서로 확장)
 

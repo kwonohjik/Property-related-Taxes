@@ -189,7 +189,6 @@ describe("PL-CONV — 환산비율 + 1주당 (사례 EXAMPLE 본칙)", () => {
     expect(result.acquisitionYearPerShareValue).toBe(28_451);
     expect(result.conversionRatio).toBeCloseTo(0.72801, 4);
     expect(result.finalPerShareValue).toBe(5_824);
-    expect(result.totalAcquisitionPrice).toBe(29_120_000);
   });
 });
 

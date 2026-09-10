@@ -14,8 +14,6 @@ export type PostListingValuationResult = {
   conversionRatio: number;
   /** 1주당 취득기준시가 = floor(상장일 1개월 종가평균 × 환산비율) */
   finalPerShareValue: number;
-  /** 총 환산취득가 = 1주당 × 주식수 */
-  totalAcquisitionPrice: number;
   /**
    * 월할 가산 적용 여부 (시행규칙 §81④).
    * PR-2 의미 재정의: "평가액 동일 감지"(PR-1) → "1호 보정 실제 발동" (C-3·C-5만 true).

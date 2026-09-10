@@ -308,7 +308,6 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     listingYearNetAssetPerShare,
     acquisitionYearNetIncomePerShare,
     acquisitionYearNetAssetPerShare,
-    shareCount,
     postListingDetail,
   } = input;
 
@@ -347,7 +346,6 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
       acquisitionYearPerShareValue: 0,
       conversionRatio: 0,
       finalPerShareValue: 0,
-      totalAcquisitionPrice: 0,
       monthlyAccrualApplied: false,
       appliedRules,
       warnings,
@@ -448,7 +446,6 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
       acquisitionYearPerShareValue,
       conversionRatio: 0,
       finalPerShareValue: 0,
-      totalAcquisitionPrice: 0,
       monthlyAccrualApplied: false,
       weightedBasis,
       listingClosingAvg1Month: listingDatePriceAvg1Month,
@@ -525,7 +522,6 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
         acquisitionYearPerShareValue,
         conversionRatio: 0,
         finalPerShareValue: 0,
-        totalAcquisitionPrice: 0,
         monthlyAccrualApplied: false,
         weightedBasis,
         listingClosingAvg1Month: listingDatePriceAvg1Month,
@@ -557,14 +553,11 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     ? Math.floor((listingDatePriceAvg1Month * acquisitionYearPerShareValue) / denominator)
     : Math.floor(listingDatePriceAvg1Month * conversionRatio);
 
-  const totalAcquisitionPrice = finalPerShareValue * shareCount;
-
   return {
     listingYearPerShareValue,
     acquisitionYearPerShareValue,
     conversionRatio,
     finalPerShareValue,
-    totalAcquisitionPrice,
     monthlyAccrualApplied,
     monthlyAccrualDetail,
     weightedBasis,

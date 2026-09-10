@@ -85,7 +85,6 @@ describe("PLF — §165⑤ 환산 분자·분모 80% 하한", () => {
     expect(r.acquisitionYearPerShareValue).toBe(100);
     expect(r.conversionRatio).toBeCloseTo(0.625, 6);
     expect(r.finalPerShareValue).toBe(6_250);
-    expect(r.totalAcquisitionPrice).toBe(6_250_000);
     expect(r.detail?.floor80Applied).toEqual({ listing: true, acquisition: false });
     // 종전 구현은 분모를 110으로 두어 9,090을 냈다 — 되돌아가면 이 단언이 깨진다.
     expect(r.finalPerShareValue).not.toBe(9_090);

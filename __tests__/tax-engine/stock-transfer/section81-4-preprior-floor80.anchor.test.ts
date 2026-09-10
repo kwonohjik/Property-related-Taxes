@@ -29,13 +29,16 @@
  *
  * 하한이 전전연도를 끌어올리면 (직전 − 전전)이 작아져 보정 분모가 내려가고,
  * §165⑤ 환산 분자(취득기준시가)가 **올라간다** ⇒ 취득가액 증가 = 양도차익 감소.
- * 실측(아래 F81-1): 1주당 666,666 → 777,777 · 총 취득가액 3,333,330,000 → 3,888,885,000.
+ * 실측(아래 F81-1): 1주당 666,666 → 777,777 · **취득기준시가 총액**(개산공제 base)
+ * 3,333,330,000 → 3,888,885,000. ⚠️ 이 수는 「취득가액」이 아니다 — 취득가액은 그 뒤에
+ * §176의2②1호 환산을 한 번 더 거친다(F81-2가 두 값을 나눠 고정한다).
  *
  * 🔑 **착수 전 안전망 0건**이었다 — 이 변경을 적용해도 `__tests__/tax-engine/stock-transfer`
  *    + `__tests__/calc` **295파일 3,240건이 전부 통과**했다. 아무도 보고 있지 않았다.
  */
 
 import { describe, it, expect } from "vitest";
+import { calculateStockTransferTax } from "@/lib/tax-engine/stock-transfer/stock-transfer-tax";
 import { calcPostListingConversion } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import { calcUnlistedValuation } from "@/lib/tax-engine/stock-transfer/stock-valuation-unlisted";
 import type { StockTransferInput } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
@@ -102,7 +105,7 @@ function postListingInput(prePrior: { ni: number; na: number }): StockTransferIn
     acquisitionYearNetAssetPerShare: 200_000,
     prePriorYearNetIncomePerShare: prePrior.ni,
     prePriorYearNetAssetPerShare: prePrior.na,
-    postListingDetail: { monthlyAccrualToggle: true },
+    postListingDetail: { unlistedDetailMode: "simple", monthlyAccrualToggle: true },
   } as Partial<StockTransferInput>);
 }
 
@@ -132,11 +135,30 @@ describe("F81 — §81④ 전전사업연도 평가액의 80% 하한", () => {
    * 🔑 세액 축까지 고정한다 — 평가값만 보면 「그 값을 호출부가 쓰는지」를 모른다.
    * 보정 분모 = 200,000 + (200,000 − 240,000) × (6/12) = 180,000
    * 환산 분자 = 700,000 × (200,000 / 180,000) = 777,777.77… → 777,777
+   *
+   * 🔴 **2026-09-10 정정 — 종전 단언은 그 세액 축에 «닿지 않았다».**
+   * `calcPostListingConversion(...).totalAcquisitionPrice`를 봤는데, 그 필드는
+   * §176의2②1호 환산을 한 함수로 모은 뒤(S1) **프로덕션 소비처가 0**이 됐다.
+   * 게다가 값의 정체가 취득가액이 아니라 **취득기준시가 총액**이었다 —
+   * 이름이 「총 환산취득가」라고 말해 반대로 읽히던 자리다. ⇒ 필드를 걷어내고,
+   * **엔진 본체를 돌려** 하한이 실제로 움직이는 세 값을 고정한다.
+   *
+   *   취득기준시가 총액 = 777,777 × 5,000주            = 3,888,885,000  ← 종전 단언이 보던 수
+   *   취득가액        = 4,500,000,000 × (777,777/800,000) = 4,374,995,625
+   *   산출세액                                            =    16,723,100
+   *
+   * 하한이 구속하지 않으면(F81-3 조합) 산출세액은 116,250,000이다 — 하한 하나가
+   * 세액을 약 1억 원 가른다. 종전 단언은 그 축을 한 번도 지나지 않았다.
    */
   it("F81-2: §165⑤ 경로 — 취득기준시가·취득가액이 하한을 반영한다", () => {
     const r = calcPostListingConversion(postListingInput(PREPRIOR_FLOOR_BOUND));
     expect(r.finalPerShareValue).toBe(777_777);
-    expect(r.totalAcquisitionPrice).toBe(3_888_885_000);
+
+    const full = calculateStockTransferTax(postListingInput(PREPRIOR_FLOOR_BOUND));
+    expect(full.valuationDetail?.conversionAcqStdPerShare).toBe(777_777);
+    expect(full.estimatedBase).toBe(3_888_885_000);
+    expect(full.acquisitionPrice).toBe(4_374_995_625);
+    expect(full.calculatedTax).toBe(16_723_100);
   });
 
   /**

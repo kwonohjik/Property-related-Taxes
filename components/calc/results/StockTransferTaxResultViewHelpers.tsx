@@ -50,13 +50,7 @@ export function ResultRow({
 
 // ── EstimatedValuationBreakdown ──
 
-export function EstimatedValuationBreakdown({
-  result,
-  shareCount,
-}: {
-  result: StockTransferResult;
-  shareCount: number;
-}) {
+export function EstimatedValuationBreakdown({ result }: { result: StockTransferResult }) {
   const detail = result.valuationDetail;
   if (!detail) return null;
 
@@ -80,15 +74,6 @@ export function EstimatedValuationBreakdown({
         </p>
       )}
       <div className="space-y-1 text-xs text-amber-700 font-mono">
-        {detail.method === "post_listing_conversion" && detail.weightedAvgPerShare !== undefined && (
-          <>
-            <p>1주당 취득기준시가 = {fmt(detail.finalPerShareValue)}</p>
-            <p>
-              취득가액 = {fmt(detail.finalPerShareValue)} × {shareCount.toLocaleString()}주 ={" "}
-              <strong>{fmt(result.acquisitionPrice)}</strong>
-            </p>
-          </>
-        )}
         {isHaltAcquisition && detail.conversionAcqStdPerShare !== undefined && (
           <>
             {detail.netAssetOnlyReason ? (

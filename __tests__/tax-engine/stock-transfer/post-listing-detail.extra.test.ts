@@ -95,7 +95,6 @@ describe("A-MA — 소칙 §81④ 1호 월할 보정 (§165⑤ 후단 준용)", 
     expect(result.monthlyAccrualDetail?.adjustedListingYearPerShareValue).toBe(36_266);
     // final = floor(8,001 × 32,000 / 36,266) = 7,059
     expect(result.finalPerShareValue).toBe(7_059);
-    expect(result.totalAcquisitionPrice).toBe(35_295_000);
   });
 
   it("A-MA-2(=C-2): 평가 동일 + 토글 OFF → 2호 보정 없음 (PL-MONTHLY-1로 갈음 — 중복 회피)", () => {
