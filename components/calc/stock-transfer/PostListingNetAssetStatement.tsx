@@ -96,18 +96,32 @@ export function YearColumn({
   col: Column;
 }): React.JSX.Element {
   const totalKey = `naAssetTotalRow1${col}` as keyof StockTransferFormData;
-  const assetAddKeys = [
-    `naAssetAddRow2${col}`, `naAssetAddRow3${col}`, `naAssetAddRow4${col}`, `naAssetAddRow5${col}`,
-  ] as const;
-  const assetSubKeys = [`naAssetSubRow6${col}`, `naAssetSubRow7${col}`] as const;
+  // 🔑 키 배열은 `col`에서만 파생된다 — 매 렌더 새 배열이면 아래 `preview` useMemo의 deps가
+  //    매번 바뀌어 **메모가 사실상 무효**가 된다(값은 같고 참조만 달라서 조용히 그렇다).
+  const assetAddKeys = useMemo(
+    () =>
+      [
+        `naAssetAddRow2${col}`, `naAssetAddRow3${col}`, `naAssetAddRow4${col}`, `naAssetAddRow5${col}`,
+      ] as const,
+    [col],
+  );
+  const assetSubKeys = useMemo(
+    () => [`naAssetSubRow6${col}`, `naAssetSubRow7${col}`] as const,
+    [col],
+  );
   const liabTotalKey = `naLiabTotalRow8${col}` as keyof StockTransferFormData;
-  const liabAddKeys = [
-    `naLiabAddRow9${col}`, `naLiabAddRow10${col}`, `naLiabAddRow11${col}`,
-    `naLiabAddRow12${col}`, `naLiabAddRow13${col}`, `naLiabAddRow14${col}`,
-  ] as const;
-  const liabSubKeys = [
-    `naLiabSubRow15${col}`, `naLiabSubRow16${col}`, `naLiabSubRow17${col}`,
-  ] as const;
+  const liabAddKeys = useMemo(
+    () =>
+      [
+        `naLiabAddRow9${col}`, `naLiabAddRow10${col}`, `naLiabAddRow11${col}`,
+        `naLiabAddRow12${col}`, `naLiabAddRow13${col}`, `naLiabAddRow14${col}`,
+      ] as const,
+    [col],
+  );
+  const liabSubKeys = useMemo(
+    () => [`naLiabSubRow15${col}`, `naLiabSubRow16${col}`, `naLiabSubRow17${col}`] as const,
+    [col],
+  );
   const goodwillKey = `naGoodwillRow19${col}` as keyof StockTransferFormData;
   const shareKey = `naShareCount${col}` as keyof StockTransferFormData;
 

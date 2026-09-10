@@ -36,7 +36,6 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form"
 
 afterEach(cleanup);
 
-const T1 = "양도 당시 기준시가";
 const T2 = "상장일 이후 1개월 종가";
 
 function renderCard(patch: Partial<StockTransferFormData> = {}) {
