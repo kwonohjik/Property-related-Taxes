@@ -16,7 +16,7 @@ import { KiwoomAutoFetchButton } from "@/components/calc/stock-transfer/KiwoomAu
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TransferStdPriceSection } from "@/components/calc/stock-transfer/TransferStdPriceSection";
-import { TransferDate1MonthClosingPriceTable } from "@/components/calc/stock-transfer/TransferDate1MonthClosingPriceTable";
+import { Pre1MonthClosingPriceTable } from "@/components/calc/stock-transfer/Pre1MonthClosingPriceTable";
 import { AcquisitionStdModeRadio } from "@/components/calc/stock-transfer/AcquisitionStdModeRadio";
 import { FaceValueBlock } from "@/components/calc/stock-transfer/FaceValueBlock";
 import { MarketSampleBlock } from "@/components/calc/stock-transfer/MarketSampleBlock";
@@ -464,7 +464,7 @@ export function Step2({ form, onChange }: Step2Props) {
                       요약줄은 표 안의 것 **하나만** 둔다 — 저장 필드를 읽는 줄과 매 렌더
                       재계산하는 줄이 갈렸던 사고가 분모 축에 있었다(2026-09-01).
                     */
-                    <TransferDate1MonthClosingPriceTable
+                    <Pre1MonthClosingPriceTable
                       form={form}
                       onChange={onChange}
                       axis="acquisition"
