@@ -59,6 +59,12 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
   const total = displayDates.length;
   const leftCount = Math.ceil(total / 2);
 
+  // 표시 순서 — **기준일(양도일)이 왼쪽 맨 위**에 오도록 최신 → 과거 «역순»으로 렌더한다.
+  // 데이터 인덱스(`displayDates[idx]` ↔ `transferPriceClosing[idx]`)는 **오름차순 그대로**다 —
+  // 키움 자동조회(`KiwoomAutoFetchButton`)·엔진 전달 배열이 그 순서에 묶여 있으므로
+  // 여기서 뒤집는 것은 화면 배치뿐이다. 화면 번호는 표시 위치(pos+1)를 따른다.
+  const renderOrder = useMemo(() => Array.from({ length: total }, (_, pos) => total - 1 - pos), [total]);
+
   // 미리보기 — 자동 평균 산정 (주말 + KRX 휴장일 + 빈문자 자동 제외)
   const preview = useMemo(() => {
     const closes = displayDates.map((d, i) => {
@@ -79,7 +85,8 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
     const currentIdx = Number(slot.getAttribute("data-slot-idx"));
     if (Number.isNaN(currentIdx)) return;
     e.preventDefault();
-    for (let next = currentIdx + 1; next < total; next++) {
+    // 표시가 역순이므로 «화면상 아래 칸»은 데이터 인덱스가 하나 **작은** 쪽이다.
+    for (let next = currentIdx - 1; next >= 0; next--) {
       const dow = dayOfWeek(displayDates[next] ?? "");
       if (dow === 0 || dow === 6) continue;
       const nextInput = e.currentTarget.querySelector<HTMLInputElement>(`[data-slot-idx="${next}"] input`);
@@ -150,7 +157,8 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
           return (
             <div key={col} className="space-y-1">
               {Array.from({ length: end - start }, (_, i) => {
-                const idx = start + i;
+                const pos = start + i;
+                const idx = renderOrder[pos];
                 const iso = displayDates[idx] ?? "";
                 const dow = dayOfWeek(iso);
                 const isWeekend = dow === 0 || dow === 6;
@@ -164,7 +172,7 @@ export function TransferDate1MonthClosingPriceTable({ form, onChange }: Transfer
                 return (
                   <div key={idx} data-slot-idx={idx} className="grid grid-cols-[110px_1fr] gap-2 items-center">
                     <span className="text-muted-foreground tabular-nums">
-                      {idx + 1}. {displayDates[idx] || "-"}
+                      {pos + 1}. {displayDates[idx] || "-"}
                     </span>
                     {nonTrading ? (
                       <div className="rounded-md border border-amber-200/60 bg-amber-100/40 px-3 py-2 text-caption text-amber-700 select-none">
