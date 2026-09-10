@@ -209,6 +209,9 @@ describe("LO-PRE-1: route.ts split 모드 — API 경로 회귀 보호", () => {
       perShareTransferPrice: 8_950,
       acquisitionMode: "estimated",
       acquiredBeforeListing: true,
+      // ⑫가 §165⑤ 경로에서도 분모를 요구한다(2026-09-10 Q-1). 값은 종전 fallback이 쓰던
+      // 1주당 양도가와 같게 잡아 이 테스트의 §81④ 단언을 수치로 흔들지 않는다.
+      transferDatePriceAvg1Month: 8_950,
       listingDate: "2024-10-20", // m=8
       listingDatePriceAvg1Month: 8_001,
       listingYearNetIncomePerShare: 50_000,

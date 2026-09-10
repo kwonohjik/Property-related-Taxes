@@ -27,7 +27,8 @@ import { safeMultiply } from "@/lib/tax-engine/tax-utils";
  * @param transferPrice — 양도가액 총액 (원)
  * @param acqStdPerShare — 취득시 1주당 기준시가 (§165⑤ 보정 후, 원)
  * @param transferStd — 양도시 1주당 기준시가 (양도일 직전 1개월 평균, 원)
- * @param fallbackTotal — transferStd 또는 acqStdPerShare가 0일 때 반환할 fallback 값
+ * @param fallbackTotal — transferStd 또는 acqStdPerShare가 0일 때 반환할 값.
+ *        분모 미입력 방어에서는 **0**을 넘긴다(Q-1 차단 정본) — 「환산 미적용」이 아니라 차단이다.
  * @returns 총액 환산취득가 (floor 1회 적용, 원)
  */
 export function apply163_9Conversion(
@@ -45,24 +46,29 @@ export function apply163_9Conversion(
 }
 
 /**
- * 양도시 1주당 기준시가 해석 — transferDatePriceAvg1Month 우선,
- * 미입력 시 1주당 양도가(transferPrice / shareCount)를 자동 fallback으로 사용한다.
+ * 양도시 1주당 기준시가 해석 — `transferDatePriceAvg1Month`가 유일한 소스다.
  *
- * 사용자가 양도일 직전 1개월 평균을 미입력해도 §163⑨ 산식이 작동하도록 보장.
- * (취득기준시가가 그대로 취득가로 표시되는 버그 차단)
+ * ## 종전에는 1주당 양도가로 자동 fallback했다. 없앴다 (2026-09-10)
  *
- * @returns { transferStd, usedFallback } — usedFallback이 true면 fallback 사용됨
+ * 같은 필드의 미입력을 두 경로가 **다르게** 처리하고 있었다:
+ *
+ *   일반 §176의2②1호 (`stock-valuation-listed.ts`) → 0-가드 → 취득가 0 + 사유 경고
+ *   취득 후 상장 §165⑤ (여기)                      → 1주당 양도가 fallback → 환산 미적용
+ *
+ * CLAUDE.md 「자동 안분 fallback 금지」와 일관되는 **차단** 쪽으로 통일했다
+ * (계획서 `docs/00-pm/stock-listed-conversion-unification.plan.md` Q-1).
+ *
+ * ⚠️ **무해한 변경이 아니다.** fallback 값은 `floor(양도가 × 취득기준 / floor(양도가 ÷ 주식수))`라
+ *    주식수가 양도가를 나누어떨어뜨릴 때만 「환산 미적용」과 같아진다. 기존 픽스처 둘이
+ *    모두 그 경우여서 수치로 드러나지 않았다 — anchor `PLD-0`이 그 함정을 막는다.
+ *
+ * 도달 경로는 ⑧ validate와 ⑫ Zod가 모두 막으므로 **엔진 직접 호출(외부 연동) 방어**로만 남는다.
+ * anchor: `__tests__/calc/post-listing-denominator-blocked.anchor.test.ts` PLD-1·PLD-3
  */
 export function resolveTransferStd(
-  transferPrice: number,
-  shareCount: number,
   transferDatePriceAvg1Month: number | undefined,
-): { transferStd: number; usedFallback: boolean } {
-  if (transferDatePriceAvg1Month && transferDatePriceAvg1Month > 0) {
-    return { transferStd: transferDatePriceAvg1Month, usedFallback: false };
-  }
-  if (shareCount > 0) {
-    return { transferStd: Math.floor(transferPrice / shareCount), usedFallback: true };
-  }
-  return { transferStd: 0, usedFallback: false };
+): number {
+  return transferDatePriceAvg1Month && transferDatePriceAvg1Month > 0
+    ? transferDatePriceAvg1Month
+    : 0;
 }

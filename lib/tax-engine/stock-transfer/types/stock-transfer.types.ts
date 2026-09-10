@@ -792,10 +792,8 @@ export type StockTransferResult = {
     finalPerShareValue: number;
     /** §163⑨ 환산 진단 — 분자(취득시 1주당 기준시가) */
     conversionAcqStdPerShare?: number;
-    /** §163⑨ 환산 진단 — 분모(양도시 1주당 기준시가, fallback 시 1주당 양도가) */
+    /** §176의2②1호 환산 진단 — 분모(양도시 1주당 기준시가). 미입력이면 0이고 취득가도 0이다 */
     conversionTransferStd?: number;
-    /** §163⑨ 환산 진단 — true면 transferDatePriceAvg1Month 미입력으로 1주당 양도가 fallback 사용 */
-    conversionUsedFallback?: boolean;
     /** daily 모드 사용 여부 (input.transferStdInputMode echo) */
     transferDailyModeUsed?: boolean;
     /** daily 모드 자동 산정 평균 (= input.transferDatePriceAvg1Month, UI mirror된 값) */

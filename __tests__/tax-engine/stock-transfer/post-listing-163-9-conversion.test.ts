@@ -101,13 +101,22 @@ describe("PL — 취득 후 상장 §165⑤ + §163⑨ 환산 합성 산식", ()
     expect(r.acquisitionPrice).toBe(25_000_000);
   });
 
-  // PL-3 — transferStd 미입력 → fallback (validate에서 차단해야 하지만 방어 처리)
-  it("PL-3: transferStd 미입력 → fallback (기존 동작)", () => {
+  /**
+   * PL-3 — 분모 미입력은 **차단**한다 (⑧·⑫가 앞서 막으므로 엔진 직접 호출 방어).
+   *
+   * 🔄 **2026-09-10 정본 전환**: 종전 이름은 「transferStd 미입력 → fallback (기존 동작)」이었고
+   *    1주당 양도가 fallback 결과 29,120,000을 단언했다. 그 fallback을 없앴다(계획서 Q-1).
+   *
+   * ⚠️ 이 픽스처는 44,750,000 ÷ 5,000 = 8,950으로 **나누어떨어져서**, fallback 값과
+   *    「환산 미적용」 값이 우연히 같았다 — 그래서 종전 단언은 둘을 구별하지 못했다.
+   *    구별하는 픽스처는 `__tests__/calc/post-listing-denominator-blocked.anchor.test.ts` PLD-0·PLD-1.
+   */
+  it("PL-3: transferStd 미입력 → 취득가액 0 + 사유 경고 (Q-1 차단 정본)", () => {
     const r = calculateStockTransferTax(
       baseInput({ transferDatePriceAvg1Month: 0 })
     );
-    // fallback = postListingResult.totalAcquisitionPrice = 5,824 × 5,000 = 29,120,000
-    expect(r.acquisitionPrice).toBe(29_120_000);
+    expect(r.acquisitionPrice).toBe(0);
+    expect(r.warnings.join(" ")).toContain("양도일 이전 1개월 종가평균이 0 이하");
   });
 
   // PL-4 — 환산비율 1.0 (양도기준 = 취득기준) → 양도차익 음수 처리
