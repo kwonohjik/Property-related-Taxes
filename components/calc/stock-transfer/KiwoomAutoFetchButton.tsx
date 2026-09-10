@@ -310,7 +310,11 @@ export function KiwoomAutoFetchButton({
           {showDetail && (
             <div className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-2 space-y-1 max-h-96 overflow-y-auto">
               <p className="text-micro text-emerald-700 sticky top-0 bg-white dark:bg-gray-900 pb-1 border-b border-emerald-100">
-                양도일 이전 1개월 일자별 종가 — 거래일만 분모 산입 (상증령 §52의2④ 공휴일·토요일 제외)
+                {/* 축을 따라간다 — 카드 제목·버튼은 `dateLabel`을 쓰는데 이 줄만 「양도일」·「분모」로
+                    하드코딩돼 있어 **취득일 축에서도 양도일이라 표시**됐다. §99①3에서 취득일 축은
+                    환산비율의 **분자**다(위 요약줄은 이미 축으로 갈린다). */}
+                {dateLabel} 이전 1개월 일자별 종가 — 거래일만 {isAcquisition ? "분자" : "분모"} 산입
+                (상증령 §52의2④ 공휴일·토요일 제외)
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-caption font-mono">
                 {info.slotDates.map((_, pos) => {
