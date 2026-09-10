@@ -34,6 +34,7 @@ const PRE_1990_DATE = "1990-08-30";
 
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -101,11 +102,11 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         }
       }
     } else {
-      landStdA = Math.floor(parseAmount(asset.inhHouseValLandPricePerSqmAtInheritance) * area);
+      landStdA = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtInheritance), area);
     }
 
     const buildingA = parseAmount(asset.inhHouseValBuildingStdPriceAtInheritance) || 0;
-    const landStdF = Math.floor(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst) * area);
+    const landStdF = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst), area);
     const buildingStdF = parseAmount(asset.inhHouseValBuildingStdPriceAtFirst) || 0;
     const P_F = parseAmount(asset.inhHouseValHousePriceAtFirst) || 0;
     const sumA = landStdA + buildingA;

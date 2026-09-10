@@ -40,6 +40,7 @@ const LAND_FIRST_DISCLOSURE_DATE = "1990-08-30";
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TONE } from "@/components/calc/shared/tones";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 const VALUATION_METHOD_OPTIONS = [
   { value: "market_value",        label: "매매사례가액 (시가)" },
@@ -105,7 +106,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   const landTotal = useMemo(() => {
     const unitPrice = parseAmount(asset.supplementaryLandUnitPrice);
     const area = parseFloat(asset.supplementaryLandArea) || 0;
-    return unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
+    return unitPrice > 0 && area > 0 ? multiplyByArea(unitPrice, area).toLocaleString() : "";
   }, [asset.supplementaryLandUnitPrice, asset.supplementaryLandArea]);
 
   // 보충적평가 보조계산: 합산 → publishedValueAtInheritance(① 상증법 평가액, 엔진 실경로) 동기화.
@@ -121,7 +122,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   function handleLandUnitPriceChange(v: string) {
     const unitPrice = parseAmount(v);
     const area = parseFloat(asset.supplementaryLandArea) || 0;
-    const newLandTotal = unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
+    const newLandTotal = unitPrice > 0 && area > 0 ? multiplyByArea(unitPrice, area).toLocaleString() : "";
     onChange({
       supplementaryLandUnitPrice: v,
       ...reportedPatch(newLandTotal, asset.supplementaryBuildingValue),
@@ -131,7 +132,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   function handleLandAreaChange(v: string) {
     const unitPrice = parseAmount(asset.supplementaryLandUnitPrice);
     const area = parseFloat(v.replace(/,/g, "")) || 0;
-    const newLandTotal = unitPrice > 0 && area > 0 ? Math.floor(unitPrice * area).toLocaleString() : "";
+    const newLandTotal = unitPrice > 0 && area > 0 ? multiplyByArea(unitPrice, area).toLocaleString() : "";
     onChange({
       supplementaryLandArea: v,
       ...reportedPatch(newLandTotal, asset.supplementaryBuildingValue),

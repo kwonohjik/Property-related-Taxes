@@ -13,6 +13,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { resolveCbEra } from "./commercial-cb-era";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /**
  * §164⑥ 단서 발동 여부 — 취득당시 건물 기준시가(나목)가 없는 구간인가.
@@ -69,5 +70,5 @@ export function stdPriceSumAt(asset: AssetForm, point: "acq" | "first"): number 
     point === "acq" ? asset.cbBuildingStdPriceAtAcq : asset.cbBuildingStdPriceAtFirst,
   );
   if (!landArea || !landPrice || !building) return 0;
-  return Math.floor(landPrice * landArea) + Math.floor(building);
+  return multiplyByArea(landPrice, landArea) + Math.floor(building);
 }

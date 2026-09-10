@@ -29,6 +29,7 @@ import {
   isExprValuationEligiblePropertyType,
   EXPR_VALUATION_MIN_TRANSFER_DATE,
 } from "./expropriation-scope";
+import { multiplyByArea } from "./area-utils";
 
 /** 산출근거 — Map 금지(JSON 소실), Record로 노출 */
 export interface ExpropriationValuationDetail {
@@ -127,7 +128,7 @@ export function applyExpropriationValuation(
   //    8.04499…라 `toFixed`가 8.04로 내리지만 십진 스케일 반올림은 8.05다(x.xx5 전수
   //    10만 중 43,412건 상이). 이 값은 곧바로 단가와 곱해지므로 분모가 갈린다(RU-2).
   const area2 = round2(area);
-  const denominator = Math.floor(chosenPerSqm * area2);
+  const denominator = multiplyByArea(chosenPerSqm, area2);
 
   return {
     denominator,

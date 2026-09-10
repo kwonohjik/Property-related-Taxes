@@ -26,6 +26,7 @@
  *   기준시가를 입력하세요」로 계산을 영구 차단했다. 복제를 지우고 이 헬퍼로 합쳤다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** Case A(용도변경 house→commercial + 최초공시<용도변경) 여부. */
 export function isMixedUseCaseA(asset: AssetForm): boolean {
@@ -47,5 +48,5 @@ export function isMixedUseCaseA(asset: AssetForm): boolean {
  * 값이 없으면 null(미표시).
  */
 export function landStdForArea(pricePerSqm: number, area: number): number | null {
-  return pricePerSqm > 0 && area > 0 ? Math.floor(pricePerSqm * area) : null;
+  return pricePerSqm > 0 && area > 0 ? multiplyByArea(pricePerSqm, area) : null;
 }

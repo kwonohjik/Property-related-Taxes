@@ -27,6 +27,7 @@ import { buildGeneralBuildingExtensionBatchPatch } from "@/lib/calc/building-std
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { AddressValue } from "@/components/ui/address-search";
 import { effectivePartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -114,7 +115,7 @@ export function GeneralBuildingExtensionSection({
     // 양도가액 안분 — §166⑥ (3-way: 토지·건물1·건물2 기준시가 비율)
     // 증축분 양도시 기준시가는 모드 무관 항상 필요 (안분 분모 구성)
     if (!landAreaVal || !transferLandPerSqm || !transferBuildingStd || !transferExtStd || !totalTransfer) return null;
-    const landStdTotal = Math.floor(transferLandPerSqm * landAreaVal);
+    const landStdTotal = multiplyByArea(transferLandPerSqm, landAreaVal);
     const denom = landStdTotal + transferBuildingStd + transferExtStd;
     if (denom <= 0) return null;
 
@@ -128,7 +129,7 @@ export function GeneralBuildingExtensionSection({
       // 실가 모드: 일괄 취득가를 취득시 기준시가 비율로 토지·건물1 안분
       const bundledAcq = parseAmount(asset.fixedAcquisitionPrice ?? "");
       if (!bundledAcq || !acqLandPerSqm || !acqBuildingStd) return null;
-      const acqLandStd = Math.floor(acqLandPerSqm * landAreaVal);
+      const acqLandStd = multiplyByArea(acqLandPerSqm, landAreaVal);
       const denomAcq = acqLandStd + acqBuildingStd;
       if (denomAcq <= 0) return null;
       landAcq = Math.floor((bundledAcq * acqLandStd) / denomAcq);
@@ -136,7 +137,7 @@ export function GeneralBuildingExtensionSection({
     } else {
       // 환산 모드: 안분 양도가 × (취득시 기준시가 ÷ 양도시 기준시가)
       if (!acqLandPerSqm || !acqBuildingStd) return null;
-      const acqLandStd = Math.floor(acqLandPerSqm * landAreaVal);
+      const acqLandStd = multiplyByArea(acqLandPerSqm, landAreaVal);
       landAcq = Math.floor((landTransfer * acqLandStd) / landStdTotal);
       b1Acq = Math.floor((b1Transfer * acqBuildingStd) / transferBuildingStd);
     }

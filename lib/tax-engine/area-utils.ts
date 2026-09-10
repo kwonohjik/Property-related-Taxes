@@ -26,6 +26,39 @@ export function round2(area: number): number {
 }
 
 /**
+ * 단가(원/㎡) × 면적(㎡) → 원 단위 절사. **부동소수 곱을 쓰지 않는다.**
+ *
+ * 🔴 `Math.floor(unitPrice * area)`는 **1원 과소산정**한다. 면적이 이진 배정도로 정확히
+ *    표현되지 않아 곱이 참값보다 미세하게 작아지고, `floor`가 그 차이를 1원으로 확대한다:
+ *
+ *    `5_000_000 × 8.04` → `40199999.999999996` → floor **40,199,999** (참값 40,200,000)
+ *
+ *    단가 5,000,000원 기준 면적 0.01~2000.00㎡ 전수 20만 개 중 **11,105건(5.6%)** 이 어긋나고
+ *    방향은 **항상 과소**다.
+ *
+ * 이 저장소는 같은 부류를 이미 한 번 해결했다 — `applyFairMarketRatio`(`tax-utils.ts`)의
+ * 「0.70의 double 표현으로 `Math.floor`가 1원 과소산정된다 → 정수 분수연산으로 대체」가
+ * 그 기록이다. 여기서도 **면적을 정수로 올려 곱한 뒤 나눈다**.
+ *
+ * ⚠️ 면적의 소수 자릿수를 값에서 읽는다(최대 6자리). 규약상 면적은 `round2` 후 곱해지므로
+ *    보통 2자리이고, 잔액 흡수(`residualArea`)로 생긴 긴 소수도 6자리에서 잘린다 —
+ *    6자리 아래는 원 단위에 영향을 주지 않는다.
+ */
+export function multiplyByArea(unitPrice: number, area: number): number {
+  if (!Number.isFinite(unitPrice) || !Number.isFinite(area)) return 0;
+  const frac = String(area).split(".")[1];
+  const decimals = Math.min(6, frac ? frac.length : 0);
+  if (decimals === 0) return Math.floor(unitPrice * area);
+  const scale = 10 ** decimals;
+  const scaledArea = Math.round(area * scale);
+  const product = unitPrice * scaledArea;
+  if (!Number.isSafeInteger(product)) {
+    return Number((BigInt(Math.floor(unitPrice)) * BigInt(scaledArea)) / BigInt(scale));
+  }
+  return Math.floor(product / scale);
+}
+
+/**
  * 면적 안분 잔액 — **마지막 항목 전용**. `전체 − 앞서 확정된 항목들의 합`.
  *
  * 각 항목을 독립적으로 `round2(전체 × 비율)` 하면 합이 전체와 어긋난다

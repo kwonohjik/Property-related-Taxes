@@ -15,6 +15,7 @@
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 type AcqStdAsset = Pick<
   AssetForm,
@@ -61,5 +62,5 @@ export function resolveBgAcqStdPrice(asset: AcqStdAsset): number {
   if (asset.assetKind !== "land") return 0;
   const perSqm = parseAmount(asset.standardPricePerSqmAtAcq) || 0;
   const area = parseFloat((asset.acquisitionArea || "").replace(/,/g, "")) || 0;
-  return Math.floor(perSqm * area);
+  return multiplyByArea(perSqm, area);
 }

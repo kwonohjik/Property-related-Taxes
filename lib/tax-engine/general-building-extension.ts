@@ -37,6 +37,7 @@ import {
   type GeneralBuildingOutput,
   type AssetCardForAggregate,
 } from "./general-building-valuation";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 // ============================================================
 // 증축 3-way 분기 메인 함수
@@ -68,9 +69,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
 
   // ── Step 1: 양도가 3-way 안분 (§166⑥) ─────────────────────────────
   // 분모: 양도시 토지기준시가 + 건물1기준시가 + 건물2기준시가 (원 총액 통일)
-  const landStdTotal = Math.floor(
-    input.transferLandPricePerSqm * input.landArea,
-  );
+  const landStdTotal = multiplyByArea(input.transferLandPricePerSqm, input.landArea);
   const buildingStdTotal = input.transferBuildingStdPrice; // 건물1 총액
   // NOTE: #16에서 acquisitionMode 분기 추가 예정. 현재는 "estimated" 경로만 지원.
   // optional로 완화된 필드는 0 fallback — denom3===0 검증에서 차단됨.
@@ -173,9 +172,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   //   actualBundledAcquisitionPrice === undefined → "estimated" (사례 31 환산 산식)
   //
   // 공통: 취득시 기준시가 (환산 분자 + 안분 비율 분모 공유)
-  const acqLandStdTotal = Math.floor(
-    input.acquisitionLandPricePerSqm * input.landArea,
-  );
+  const acqLandStdTotal = multiplyByArea(input.acquisitionLandPricePerSqm, input.landArea);
   const acqBuilding1StdTotal = input.acquisitionBuildingStdPrice; // 건물1 취득시 기준시가
   const denom2 = acqLandStdTotal + acqBuilding1StdTotal;
 

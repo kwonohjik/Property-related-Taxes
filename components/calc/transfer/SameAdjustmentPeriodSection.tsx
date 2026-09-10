@@ -36,6 +36,7 @@ import {
 } from "@/lib/calc/same-adjustment-period-lookup";
 import { resolveSapPriorStdPrice } from "@/lib/calc/transfer-same-adjustment-period-input";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** §80①1호 기간 요건 — 취득일이 속하는 연도의 다음 연도 말일 이전 양도 */
 export function isWithinSameAdjustmentWindow(
@@ -148,7 +149,7 @@ export function SameAdjustmentPeriodSection({
       const rawPrice = Number(prior.price ?? 0);
       const priorTotal =
         propertyType === "land"
-          ? (landAreaSqm && landAreaSqm > 0 ? Math.floor(rawPrice * landAreaSqm) : 0)
+          ? (landAreaSqm && landAreaSqm > 0 ? multiplyByArea(rawPrice, landAreaSqm) : 0)
           : rawPrice;
 
       if (!(priorTotal > 0)) {

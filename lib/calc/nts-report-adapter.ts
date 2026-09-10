@@ -10,6 +10,7 @@ import type {
   AncillaryApportionment,
   AncillaryFacilityKind,
 } from "@/lib/tax-engine/types/building-standard-price.types";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** 부속 종류 한글 라벨 — 계산서 Ⅳ "용도(구분)" 칸 표기용 */
 const ANCILLARY_KIND_LABEL: Record<AncillaryFacilityKind, string> = {
@@ -162,7 +163,7 @@ function toRow(b: BuildingStdPriceBreakdown): NtsReportRow {
     // 세액 경로는 `convertedTotal` 을 쓰므로 **표시 한정**이다(F-27).
     standardPrice:
       b.acqBaseRate !== undefined && b.pricePerM2 !== undefined && b.floorArea !== undefined
-        ? Math.floor(b.pricePerM2 * b.floorArea)
+        ? multiplyByArea(b.pricePerM2, b.floorArea)
         : b.standardPrice,
   };
 }
@@ -235,7 +236,7 @@ function fillSingle(bd: BuildingStdPriceBreakdown) {
 }
 
 function landValueOf(areaM2: number, pricePerM2: number): number {
-  return Math.floor(areaM2 * pricePerM2);
+  return multiplyByArea(pricePerM2, areaM2);
 }
 
 function buildLandFields(ctx: NtsReportContext, pricePerM2: number) {

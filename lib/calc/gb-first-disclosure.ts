@@ -14,6 +14,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** `isGbFirstDisclosureApplicable`가 읽는 필드만. */
 type GateAsset = Pick<
@@ -84,7 +85,7 @@ type LandStdAsset = Pick<
 export function gbFirstDisclosureLandStdPriceOf(asset: LandStdAsset): number {
   const perSqm = parseAmount(asset.gbFirstDisclosureLandPricePerSqm);
   const area = parseDecimal(asset.gbLandArea);
-  if (perSqm > 0 && area > 0) return Math.floor(perSqm * area);
+  if (perSqm > 0 && area > 0) return multiplyByArea(perSqm, area);
   return parseAmount(asset.gbFirstDisclosureLandStdPrice);
 }
 

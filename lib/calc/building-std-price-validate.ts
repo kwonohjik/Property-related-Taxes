@@ -26,6 +26,7 @@ import {
   parseNos,
   type BuildingStdPriceFormState,
 } from "./building-std-price-form";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** 복합 부분 + 부속시설 검증(상증·양도 공용). forTransfer=양도(취득시 용도 필수·조정률 금지). 통과 = null. */
 function validateCompositeParts(f: BuildingStdPriceFormState, forTransfer: boolean): string | null {
@@ -71,12 +72,12 @@ export function computeValuationLandTotal(f: BuildingStdPriceFormState): number 
     return f.landParcels.reduce((sum, p) => {
       const area = parseDecimal(p.areaM2);
       const price = parseAmount(p.pricePerM2);
-      return area > 0 && price > 0 ? sum + Math.floor(price * area) : sum;
+      return area > 0 && price > 0 ? sum + multiplyByArea(price, area) : sum;
     }, 0);
   }
   const area = parseDecimal(f.landAreaM2);
   const price = parseAmount(f.valLandPrice);
-  return area > 0 && price > 0 ? Math.floor(price * area) : 0;
+  return area > 0 && price > 0 ? multiplyByArea(price, area) : 0;
 }
 
 /** 검증(⑧). 엔진 silent-fallback 식별표와 동기화. 통과 = null. */

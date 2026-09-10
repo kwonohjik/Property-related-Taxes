@@ -13,6 +13,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclosureSection";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -87,7 +88,7 @@ export function MixedUseAssetMajorStdPrice({
   // 양도시 상가부분 자동 계산 (mixedTransfer 우선, PHD 토지가액 fallback — API 변환과 동일 우선순위)
   const transferLandPerSqm =
     parseAmount(asset.mixedTransferLandPricePerSqm) || parseAmount(asset.phdLandPricePerSqmAtTransfer);
-  const transferCommercialLandStd = Math.floor(transferLandPerSqm * commercialLandArea);
+  const transferCommercialLandStd = multiplyByArea(transferLandPerSqm, commercialLandArea);
   const transferCommercialBuilding = parseAmount(asset.mixedTransferCommercialBuildingPrice) ?? 0;
   const transferCommercialTotal = transferCommercialLandStd + transferCommercialBuilding;
 
@@ -103,7 +104,7 @@ export function MixedUseAssetMajorStdPrice({
     parseAmount(asset.mixedAcqLandPricePerSqm) ||
     parseAmount(asset.phdLandPricePerSqmAtAcq) ||
     (derivePre1990PhdLandPricePerSqmAtAcq(asset, transferDate ?? "") ?? 0);
-  const acqCommercialLandStd = Math.floor(acqLandPerSqm * commercialLandArea);
+  const acqCommercialLandStd = multiplyByArea(acqLandPerSqm, commercialLandArea);
   const acqCommercialBuilding = parseAmount(asset.mixedAcqCommercialBuildingPrice) ?? 0;
   const acqCommercialTotal = acqCommercialLandStd + acqCommercialBuilding;
 

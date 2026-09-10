@@ -20,6 +20,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
 import type { AddressValue } from "@/components/ui/address-search";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 // ─── 라벨 매핑 ──────────────────────────────────────────────────
 // targetLabel + useWholeBuildingLabels 값에 따라 입력 필드 라벨·hint를 명확화.
@@ -204,13 +205,13 @@ export function PointBlock({
   // 토지기준시가 = 공시지가(원/㎡) × 면적(㎡)
   const pricePerSqm = parseAmount(landPricePerSqm);
   const area = landArea ? parseFloat(landArea) : 0;
-  const landStdPrice = pricePerSqm > 0 && area > 0 ? Math.floor(pricePerSqm * area) : null;
+  const landStdPrice = pricePerSqm > 0 && area > 0 ? multiplyByArea(pricePerSqm, area) : null;
 
   // Case A 분리 모드 — 주택분/상가분 토지 기준시가 분리 계산
   const housingArea = splitMode && housingLandArea ? parseFloat(housingLandArea) : 0;
   const commercialArea = splitMode && commercialLandArea ? parseFloat(commercialLandArea) : 0;
-  const housingLandStd = splitMode && pricePerSqm > 0 && housingArea > 0 ? Math.floor(pricePerSqm * housingArea) : null;
-  const commercialLandStd = splitMode && pricePerSqm > 0 && commercialArea > 0 ? Math.floor(pricePerSqm * commercialArea) : null;
+  const housingLandStd = splitMode && pricePerSqm > 0 && housingArea > 0 ? multiplyByArea(pricePerSqm, housingArea) : null;
+  const commercialLandStd = splitMode && pricePerSqm > 0 && commercialArea > 0 ? multiplyByArea(pricePerSqm, commercialArea) : null;
 
   const yearBadge = isManual ? (
     <span className="flex items-center gap-1">

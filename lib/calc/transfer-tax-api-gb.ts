@@ -14,6 +14,7 @@ import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { buildGbCarryoverPayload } from "./transfer-tax-api-gb-carryover";
 import { gbFirstDisclosureLandStdPriceOf } from "./gb-first-disclosure";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 // ─── ④ 사례 33: 증축 extensionInfo 서브객체 변환 헬퍼 ───
 
@@ -286,9 +287,7 @@ export function buildGeneralBuildingValuation(
     (buildingAcquisitionByInheritance || isBuildingGift) &&
     isBeforeBuildingStdPriceNotice(asset.acquisitionDate);
   /** ② §164④ 가액 — 취득시 토지 기준시가 **총액**(㎡당 × 면적). */
-  const sec164LandTotal = Math.floor(
-    effectiveGbLandPriceAtAcq(asset, transferDate ?? "") * (parseDecimal(asset.gbLandArea) || 0),
-  );
+  const sec164LandTotal = multiplyByArea(effectiveGbLandPriceAtAcq(asset, transferDate ?? ""), (parseDecimal(asset.gbLandArea) || 0));
   /** ② §164⑤ 가액 — 취득시 건물 기준시가. */
   const sec164BuildingValue = parseAmount(asset.gbAcqBuildingValue);
 

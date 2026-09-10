@@ -27,6 +27,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
 import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { computeSalePriceTotal } from "@/lib/tax-engine/redevelopment-settlement";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -60,8 +61,8 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     let step1Formula: string | null = null;
 
     if (canApplyMain) {
-      sumAtAcq = Math.floor(landAcq * area) + bldAcq;
-      sumAtFirst = Math.floor(landFirst * area) + bldFirst;
+      sumAtAcq = multiplyByArea(landAcq, area) + bldAcq;
+      sumAtFirst = multiplyByArea(landFirst, area) + bldFirst;
       if (sumAtFirst > 0) {
         P_A = Number((BigInt(A) * BigInt(sumAtAcq)) / BigInt(sumAtFirst));
         step1Formula = `${A.toLocaleString()} × ${sumAtAcq.toLocaleString()} ÷ ${sumAtFirst.toLocaleString()}`;
@@ -114,10 +115,10 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     const pricePerSqmApproval = parseAmount(asset.redevLandPricePerSqmAtApproval) || 0;
     // 단가×면적 계산 우선, fallback은 legacy 총액
     const acq = (pricePerSqmAcq > 0 && landArea > 0)
-      ? Math.floor(pricePerSqmAcq * landArea)
+      ? multiplyByArea(pricePerSqmAcq, landArea)
       : parseAmount(asset.redevLandStdPriceAtAcq);
     const approval = (pricePerSqmApproval > 0 && landArea > 0)
-      ? Math.floor(pricePerSqmApproval * landArea)
+      ? multiplyByArea(pricePerSqmApproval, landArea)
       : parseAmount(asset.redevLandStdPriceAtApproval);
     const settlement = parseAmount(asset.redevSettlementAmount);
     if (rights <= 0 || acq <= 0 || approval <= 0) return null;

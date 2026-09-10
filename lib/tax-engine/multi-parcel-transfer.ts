@@ -26,6 +26,7 @@ import { applyExpropriationValuation } from "./transfer-tax-expropriation-valuat
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { ExpropriationValuationDetail } from "./transfer-tax-expropriation-valuation";
 import { estimatedDeductionRate } from "./legal-codes/transfer-nbl";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 // ============================================================
 // 타입 정의
@@ -348,8 +349,8 @@ export function calculateMultiParcelTransfer(input: MultiParcelInput): MultiParc
       const sqmAtTransfer = parcel.standardPricePerSqmAtTransfer ?? 0;
 
       // 면적 × 단가는 소수 곱셈 가능 → Math.floor로 정수화
-      standardAtAcq = Math.floor(acqArea * sqmAtAcq);
-      standardAtTransfer = Math.floor(parcel.transferArea * sqmAtTransfer);
+      standardAtAcq = multiplyByArea(sqmAtAcq, acqArea);
+      standardAtTransfer = multiplyByArea(sqmAtTransfer, parcel.transferArea);
 
       // 공익수용 §164⑨ 1호 — 양도당시 기준시가 차감 특례 (필지별 독립 판정).
       // 판정식은 단건 경로와 **동일 함수**를 재사용한다(dual-truth 회피 — 여기서 min[]을
