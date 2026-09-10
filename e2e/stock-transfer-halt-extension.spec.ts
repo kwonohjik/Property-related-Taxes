@@ -64,25 +64,13 @@ test.describe("C-2/C-3 거래정지 확장 UI", () => {
     await expect(page.getByText("취득시점 장부분실", { exact: false })).toBeVisible();
   });
 
-  test("C3 E-2: 거래정지 + 취득 후 상장 → 양립 불가 차단 메시지(§52의2③)", async ({ page }) => {
-    test.setTimeout(120_000);
-    await gotoStockTransferTax(page);
-    await fillStep1(page);
+  /*
+    🔄 **S3에서 삭제 (2026-09-10)** — 종전 「C3 E-2: 거래정지 + 취득 후 상장 → 양립 불가 차단」은
+    **불가 조합을 일부러 만드는** 테스트였다. `acquisitionStdMode`가 배타적 4상태가 되면서
+    그 조합을 **UI로 만들 수 없다**(계획서 Q-2 3안) — 브라우저에서 재현할 방법이 없다.
 
-    await page.getByRole("button", { name: /^다음/ }).click();
-    await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
-    await fillByLabel(page, "양도가액 합계", "200000000");
-    await page.getByRole("radio", { name: "환산취득가" }).first().click();
-
-    // 🔑 «불가 조합»을 일부러 만든다 — 이 spec의 대상이 그 차단이다.
-    //    S3(Q-2 3안)에서는 축이 하나가 되어 이 조합을 UI로 만들 수 없게 되므로,
-    //    그때 이 테스트는 ⑧·⑫ 단위 anchor로 이관해야 한다
-    //    (`__tests__/calc/stock-conversion-branch-matrix.anchor.test.ts` MTX-XA/XA').
-    await setStockConversionMode(page, "post_listing");
-    await setStockConversionMode(page, "halt_transfer");
-
-    // 다음 시도 → 양립 불가 차단 메시지(§52의2③)
-    await page.getByRole("button", { name: /^다음/ }).click();
-    await expect(page.getByText("§52의2③", { exact: false })).toBeVisible({ timeout: 10_000 });
-  });
+    지킬 성질은 두 곳으로 옮겼다(S0에서 이 자리에 예고해 둔 그대로):
+      · 「폼에서 만들 수 없다」  → `__tests__/calc/stock-std-mode-migration.anchor.test.ts` MAP-5
+      · 「API로는 여전히 막힌다」 → `__tests__/calc/stock-conversion-branch-matrix.anchor.test.ts` MTX-XA'
+  */
 });

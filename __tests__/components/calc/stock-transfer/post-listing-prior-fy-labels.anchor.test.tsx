@@ -36,7 +36,7 @@ function renderCard(patch: Partial<StockTransferFormData> = {}) {
   const form = {
     ...createInitialStockFormData(),
     marketType: "kosdaq",
-    acquiredBeforeListing: true,
+    acquisitionStdMode: "post_listing",
     ...patch,
   } as StockTransferFormData;
   render(<PostListingValuationCard form={form} onChange={vi.fn()} />);

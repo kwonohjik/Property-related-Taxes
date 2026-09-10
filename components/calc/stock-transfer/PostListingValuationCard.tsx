@@ -18,7 +18,6 @@
  */
 
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -30,8 +29,6 @@ import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { PostListingClosingPriceTable, autoFillDates, dayOfWeek } from "./PostListingClosingPriceTable";
 import { PostListingCapitalEventSection } from "./PostListingCapitalEventSection";
-import { TransferDate1MonthClosingPriceTable } from "./TransferDate1MonthClosingPriceTable";
-import { KiwoomAutoFetchButton } from "./KiwoomAutoFetchButton";
 import { KiwoomPostListingAutoFetchButton } from "./KiwoomPostListingAutoFetchButton";
 import { PostListingNetIncomeStatement } from "./PostListingNetIncomeStatement";
 import { PostListingNetAssetStatement } from "./PostListingNetAssetStatement";
@@ -113,30 +110,25 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
     if (next) next.focus();
   };
 
+  /*
+    🔄 **S3 — ToggleCard 껍데기를 걷었다.**
+
+    종전에는 이 카드 자체가 `acquiredBeforeListing` 토글이었고, «끌 때»
+    `transferStdInputMode`·`listingStdInputMode`를 `direct`로 되돌리는 F-10 정규화를
+    `onCheckedChange`가 맡았다. 축이 라디오 하나로 합쳐지면서 그 책임은
+    `Step2`의 `onChange`(방식 전환 지점)로 옮겼다 — 한 번의 patch로 보낸다.
+
+    ⚠️ 이 컴포넌트는 이제 **`acquisitionStdMode === "post_listing"`일 때만** 렌더된다.
+       자기 자신은 그 조건을 검사하지 않는다(호출부가 분기한다).
+  */
   return (
-    <ToggleCard
-      checked={form.acquiredBeforeListing}
-      /*
-        F-10: 끄면 아래 입력 방식 라디오가 통째로 사라진다(ToggleCard.tsx:303 `{checked && children}`).
-        모드가 `daily`로 남으면 일반 §163⑨ 경로에서 되돌릴 수단이 없으므로 «끌 때» 함께 정규화한다.
-        ⚠️ 반드시 한 번의 patch로 — 나눠 부르면 뒤 호출이 앞의 spread를 덮어쓴다.
-        anchor: __tests__/components/post-listing-toggle-off-normalizes-mode.anchor.test.tsx
-      */
-      onCheckedChange={(v) =>
-        onChange(
-          v
-            ? { acquiredBeforeListing: true }
-            : {
-                acquiredBeforeListing: false,
-                transferStdInputMode: "direct",
-                listingStdInputMode: "direct",
-              },
-        )
-      }
-      title="취득 후 상장 — 환산취득가 (소령 §165⑤)"
-      description="취득 당시 비상장이었으나 양도 시점에 상장된 주식 — 상장일 이후 1개월 종가평균 기반 환산"
-      tone="amber"
-    >
+    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4">
+      <p className="text-sm font-semibold text-amber-800">
+        취득 후 상장 — 환산취득가 (소령 §165⑤)
+      </p>
+      <p className="text-caption text-amber-700 mt-1">
+        취득 당시 비상장이었으나 양도 시점에 상장된 주식 — 상장일 이후 1개월 종가평균 기반 환산
+      </p>
       <div className="mt-4 space-y-4" onKeyDown={handleEnterNext} data-enter-nav="off">
         {/* 환산 산식 안내 (violet) — §165⑤ + §176의2②1호 합성.
             ★ 산식의 각 항에 ①②③을 달아 **아래 섹션 번호와 1:1로 잇는다**.
@@ -160,7 +152,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             </p>
             <p>
               [§176의2②1호] 환산취득가 = 양도가 ×{" "}
-              <Frac top="1주당 취득기준시가" bottom="③양도 당시 기준시가" />
+              <Frac top="1주당 취득기준시가" bottom="양도 당시 기준시가" />
             </p>
           </div>
         </div>
@@ -383,74 +375,6 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           )}
         </ToneCard>
 
-        {/* ★ 양도 당시 기준시가 — 「입력 방식」과 「1개월 종가 평균」을 한 섹션으로 묶는다.
-            제보(2026-09-02): 두 필드가 각각 떨어져 있어 **무엇을 넣는 칸인지 라벨만으로는
-            알 수 없었다** — 아래 hint를 읽어야 비로소 「양도 당시 기준시가구나」 하고 알았다.
-            섹션 제목이 그 답을 먼저 말하게 한다.
-            🔑 **맨 아래에 둔다**(제보 2026-09-10). §176의2②1호의 분모라 ①②로 만든 1주당
-               취득기준시가가 있어야 쓸 자리가 생기고, 「환산 입력 방식」의 지배 대상도
-               아니다 — 스위치와 그 지배 대상 사이에 끼워 두면 순서가 어긋나 보인다.
-            근거: 「소득세법」 제99조 제1항 제3호 → 같은 법 시행령 제165조 제3항
-                  (상장주식의 기준시가 = 양도일 이전 1개월간 최종시세가액의 평균액).
-                  이 값이 「소득세법 시행령」 제176조의2 제2항 제1호 환산취득가액의 **분모**다. */}
-        <ToneCard tone="amber" sectionNum={3} title="양도 당시 기준시가" bodyClassName="space-y-3">
-          {/* hint를 두지 않는다 — 섹션 제목이 이미 같은 말을 하고, 종전 hint의
-              「direct vs daily」는 내부 용어였다. 선택지 라벨만으로 판단이 선다. */}
-          <FieldCard label="기준시가 입력 방식">
-            <RadioCardGroup
-              name="transferStdInputMode"
-              value={form.transferStdInputMode || "direct"}
-              onChange={(v) => onChange({ transferStdInputMode: v as "direct" | "daily" })}
-              tone="amber"
-              layout="inline"
-              options={[
-                { value: "direct", label: "직접 입력 (1개월 평균 단일 숫자)" },
-                { value: "daily", label: "일자별 입력 (자동 평균 산정)" },
-              ]}
-            />
-          </FieldCard>
-
-          {/* direct 모드 — 기존 단일 숫자 입력 */}
-          {(form.transferStdInputMode || "direct") === "direct" && (
-            <FieldCard
-              label="1개월 종가 평균"
-              required
-              hint="양도일 이전 1개월 종가 평균 (1주당, 「소득세법」 제99조 제1항 제3호 · 같은 법 시행령 제165조 제3항) — 환산취득가 산식의 분모. 미입력 시 환산 미적용으로 1주당 취득기준시가가 그대로 취득가로 표시됩니다."
-            >
-              <CurrencyInput
-                label=""
-                hideUnit
-                value={form.transferDatePriceAvg1Month}
-                onChange={(v) => onChange({ transferDatePriceAvg1Month: v })}
-                placeholder="양도일 이전 1개월 종가평균 (1주당)"
-              />
-            </FieldCard>
-          )}
-
-          {/* daily 모드 — 일자별 종가표 + 자동 평균 mirror */}
-          {form.transferStdInputMode === "daily" && (
-            <>
-              {/* 키움 자동조회 버튼 — 종목코드 + 양도일 + 상장 종목 충족 시 활성화 */}
-              <KiwoomAutoFetchButton
-                securityCode={form.securityCode}
-                transferDate={form.transferDate}
-                marketType={form.marketType}
-                tradingHalt={form.kiwoomTradingHalt}
-                onFill={onChange}
-              />
-              {/*
-                요약줄은 표(`TransferDate1MonthClosingPriceTable`) 안의 것 **하나만** 둔다.
-
-                종전에는 여기에 같은 값을 한 줄 더 그렸는데, 그 줄은 **저장 필드**를 읽고
-                표의 줄은 **매 렌더 재계산**한 값을 읽어서 둘이 갈렸다(제보 2026-09-01 —
-                16,560 vs 16,559). 값이 갈리는 원인 자체는 Step1의 양도일 리셋으로 막았고,
-                표시는 실시간 재계산 쪽 한 곳으로 모은다 — stale이 구조적으로 불가능한 쪽이다.
-              */}
-              <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} />
-            </>
-          )}
-        </ToneCard>
-
 
         {/* 환산 미리보기 — Preview 컴포넌트 (P2 G-02·G-05 분리) */}
         <PostListingFormulaPreview form={form} />
@@ -473,6 +397,6 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
 
         {/* 거래정지 §165③ 토글은 Step2 상장 환산 분기 레벨로 이동·활성화 (엔진 분기 순서 일치) */}
       </div>
-    </ToggleCard>
+    </div>
   );
 }

@@ -67,7 +67,7 @@ function postListingForm(o: Partial<StockTransferFormData> = {}): StockTransferF
     filingType: "preliminary",
     filingDate: "2025-08-31",
     acquisitionMode: "estimated",
-    acquiredBeforeListing: true,
+    acquisitionStdMode: "post_listing",
     unlistedDetailMode: "simple",
     listingDate: "2023-06-01",
     transferDatePriceAvg1Month: "20000",

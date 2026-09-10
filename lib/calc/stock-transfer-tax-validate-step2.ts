@@ -293,16 +293,14 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
   } else if (acquisitionMode === "estimated") {
     const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
     if (isListed) {
-      // G-6: 거래정지 시 §163⑨ 분모(1개월 종가평균)는 법령상 무효·엔진 미사용 → 검증 면제
-      if (!form.tradingHaltAtTransfer) {
+      // G-6: 양도일 거래정지 시 분모(1개월 종가평균)는 법령상 무효·엔진 미사용 → 검증 면제
+      const stdMode = form.acquisitionStdMode;
+      if (stdMode !== "halt_transfer") {
         const transferAvg = parseI(form.transferDatePriceAvg1Month);
-        // F-10: `transferStdInputMode`는 «취득 후 상장(§165⑤)» 축 전용 필드다.
-        //   모드 라디오도 일자별 종가표도 그 ToggleCard children 안에만 있고
-        //   (PostListingValuationCard.tsx:117·156), 일반 §163⑨ 블록과는
-        //   상호배타로 렌더된다(Step2.tsx:393 vs :465).
-        //   ⇒ 축 밖에서 daily를 검사하면 «입력 UI 없이 차단되는 dead-end»가 된다.
+        // S3: `transferStdInputMode`는 **더 이상 축 전용이 아니다** — 「양도 당시 기준시가」
+        //   블록이 4갈래 위에 항상 있어 어느 모드에서도 되돌릴 수 있다(F-10 dead-end 구조 해소).
         //   anchor: __tests__/calc/stock-std-input-mode-axis.anchor.test.ts
-        const mode = form.acquiredBeforeListing ? form.transferStdInputMode || "direct" : "direct";
+        const mode = form.transferStdInputMode || "direct";
         if (mode === "direct") {
           if (isEmpty(form.transferDatePriceAvg1Month) || transferAvg <= 0) {
             errors.push({
@@ -332,16 +330,16 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
 
       // C-6: 거래정지 우회(§165③) — 취득 후 상장이 아니면 비상장 보충 평가 필수 (자동 fallback 금지)
       // [C-2] 공유 헬퍼 — simple/full/사례49+§165⑨ 전체 모드 검증(simpleOnly 해제로 거래정지도 전체 노출)
-      if (form.tradingHaltAtTransfer && !form.acquiredBeforeListing) {
+      if (stdMode === "halt_transfer") {
         validateUnlistedValuationFields(form, errors);
       }
       // [C-1] 취득일 거래정지 — 취득측 보충 평가 필수 (양도정지 ON이면 C-6이 양·취 모두 커버 — 중복 방지)
-      if (form.tradingHaltAtAcquisition && !form.tradingHaltAtTransfer && !form.acquiredBeforeListing) {
+      if (stdMode === "halt_acquisition") {
         validateAcquisitionSideUnlistedFields(form, errors);
       }
-      if (!form.acquiredBeforeListing && !form.tradingHaltAtTransfer) {
+      if (stdMode === "monthly_avg") {
         // [C-1] 취득정지 시 분자(취득일 종가평균)는 법령상 무효·엔진 미사용 → 필수 면제 (G-6 패턴 mirror)
-        if (!form.tradingHaltAtAcquisition && isEmpty(form.acquisitionDatePriceAvg1Month)) {
+        if (isEmpty(form.acquisitionDatePriceAvg1Month)) {
           errors.push({
             field: "acquisitionDatePriceAvg1Month",
             message: "취득일 이전 1개월 종가 평균을 입력하세요 (시행령 §163⑨ 환산비율 분자)",
@@ -349,28 +347,24 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           });
         }
       }
-      if (form.acquiredBeforeListing) {
+      if (stdMode === "post_listing") {
         const detailMode = form.unlistedDetailMode || "simple";
         if (isEmpty(form.listingDate)) {
           errors.push({ field: "listingDate", message: "상장일을 입력하세요 (소령 §165⑤)", severity: "error" });
         }
-        // G-5: 거래정지(양도) + 취득 후 상장 = 법령상 양립 불가 (§165⑤ 양도일 §3항 전제 ↔ §52의2③ 거래정지 제외).
-        // [C-3] validate + Zod refine 이중 차단 — 엔진 post-listing 先行으로 거래정지 침묵 무시 방지.
-        if (form.tradingHaltAtTransfer) {
-          errors.push({
-            field: "tradingHaltAtTransfer",
-            message: "양도일 거래정지·관리종목 주식은 §3항 주식이 아니어서(상증령 §52의2③ 제외) 취득 후 상장(§165⑤) 환산 대상이 아닙니다. 거래정지 또는 취득 후 상장 중 하나만 선택하세요.",
-            severity: "error",
-          });
-        }
-        // [C-1 M-4] 취득일 거래정지 + 취득 후 상장 — 취득 당시 비상장이면 취득일 거래정지 개념 불성립 (Zod refine과 동일 문구)
-        if (form.tradingHaltAtAcquisition) {
-          errors.push({
-            field: "tradingHaltAtAcquisition",
-            message: "취득 당시 비상장 주식은 취득일 거래정지 대상이 아닙니다. 취득일 거래정지 토글 또는 취득 후 상장 토글을 해제하세요.",
-            severity: "error",
-          });
-        }
+        /*
+          🔄 **S3에서 제거** — 종전에는 여기서 두 «불가 조합»을 차단했다:
+            G-5     양도일 거래정지 × 취득 후 상장 (§165⑤ 전제 ↔ 상증령 §52의2③ 제외)
+            C-1 M-4 취득일 거래정지 × 취득 후 상장 (취득 당시 비상장이면 개념 불성립)
+
+          `acquisitionStdMode`가 배타적 4상태라 그 조합을 **표현할 수 없다**. 여기 남겨 두면
+          도달 불가 코드가 된다(계획서 Q-2 3안).
+
+          ⚠️ **⑫ Zod의 같은 refine은 남아 있다** — UI가 못 만들 뿐 API 직접 호출은
+             만들 수 있다(`stock-transfer-tax-schema.ts:419·429`).
+             그 차단은 `__tests__/calc/stock-conversion-branch-matrix.anchor.test.ts`
+             MTX-XA'·XB'가 지킨다.
+        */
         if (detailMode === "simple") {
           // ② 입력 축 — direct(단일 숫자) | daily(종가 표). ①(`transferStdInputMode`, :302)과 같은 형태.
           // ⚠️ daily에서 단일 숫자를 요구하면 **입력 UI 없이 차단되는 dead-end**가 된다

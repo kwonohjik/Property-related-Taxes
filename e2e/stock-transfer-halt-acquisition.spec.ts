@@ -14,6 +14,7 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import { setStockConversionModeByTitle, conversionToggleTitle } from "./_helpers/stock-conversion";
+import { fillTransferStdPrice } from "./_helpers/stock-conversion";
 
 const ACQ_HALT_TOGGLE_TITLE = conversionToggleTitle("halt_acquisition");
 
@@ -64,21 +65,24 @@ test.describe("C-1 취득일 거래정지 §165③ UI", () => {
     await fillStep1(page);
     await gotoStep2Estimated(page);
 
-    // 토글 노출 (양도일 토글과 별개 — exact 제목)
-    await expect(page.getByText(ACQ_HALT_TOGGLE_TITLE, { exact: true })).toBeVisible({ timeout: 10_000 });
-    // OFF 상태: 분자 입력 노출
+    /*
+      🔄 **S3 (2026-09-10)** — 토글이 산정 방식 라디오의 선택지가 됐다(Q-2 3안).
+      「ON/OFF」가 아니라 «다른 방식 선택»이고, 분자 입력은 그 방식의 전용 섹션에 있다.
+    */
+    // 선택지 노출
+    await expect(page.getByRole("radio", { name: /취득일 거래정지/ })).toBeVisible({ timeout: 10_000 });
+    // 기본(일반) 방식: 분자 입력 노출
     await expect(page.getByText("취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)")).toBeVisible();
 
     await setStockConversionModeByTitle(page, "halt_acquisition");
 
-    // ON: 분자 입력 숨김 + 대체 안내 + 취득연도 NI/NA 노출 (acquisitionSideOnly — 양도연도 섹션 비노출)
+    // 전환 후: 분자 입력이 보충 평가 폼으로 대체된다 (acquisitionSideOnly — 양도연도 섹션 비노출)
     await expect(page.getByText("취득시 1주당 기준시가 (취득일 이전 1개월 종가평균)")).toHaveCount(0);
-    await expect(page.getByText("취득시 기준시가는 위 토글의 비상장 보충 평가로 산정됩니다", { exact: false })).toBeVisible();
     await expect(page.getByText("1주당 순손익가치 (취득시점)")).toBeVisible();
     await expect(page.getByText("1주당 순자산가치 (취득시점)")).toBeVisible();
     await expect(page.getByText("양도일 직전 사업연도 평가 (양도기준시가 산출용)")).toHaveCount(0);
-    // 분모(양도시 종가평균) 입력은 유지
-    await expect(page.getByText("양도시 1주당 기준시가 (양도일 이전 1개월 종가평균)")).toBeVisible();
+    // 🔑 분모 블록은 **항상 1곳**에 남는다 — S3의 핵심 이득
+    await expect(page.getByText(/양도 당시 기준시가 \(환산비율의 분모\)/)).toBeVisible();
   });
 
   test("E-2: 토글 ON + 입력 + 계산 → acquisitionPrice 5,600,000 (C1-ENGINE-1)", async ({ page }) => {
@@ -93,7 +97,7 @@ test.describe("C-1 취득일 거래정지 §165③ UI", () => {
     await fillByLabel(page, "1주당 순손익가치 (취득시점)", "6000");
     await fillByLabel(page, "1주당 순자산가치 (취득시점)", "5000");
     // 분모 (양도시 1개월 종가평균)
-    await fillByLabel(page, "양도시 1주당 기준시가", "10000");
+    await fillTransferStdPrice(page, "10000");
 
     // Step2 → Step3
     await page.getByRole("button", { name: /^다음/ }).click();

@@ -9,6 +9,8 @@
  */
 
 import {
+  type AcquisitionStdMode,
+  deriveAcquisitionStdMode,
   type StockTransferFormData,
   type AcquisitionLotForm,
   type TransferLotForm,
@@ -20,6 +22,14 @@ import {
 // ============================================================
 // normalize — sessionStorage 마이그레이션 호환 (③ 동기화 지점)
 // ============================================================
+
+/** `acquisitionStdMode` 유효값 — enumField가 keyof를 요구해 별도로 둔다. */
+const STD_MODES: readonly AcquisitionStdMode[] = [
+  "monthly_avg",
+  "halt_acquisition",
+  "post_listing",
+  "halt_transfer",
+];
 
 export function normalizeStockFormData(raw: unknown): StockTransferFormData {
   const d = (raw ?? {}) as Record<string, unknown>;
@@ -50,20 +60,38 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     return def;
   };
 
-  // F-10: `transferStdInputMode`는 «취득 후 상장(§165⑤)» 축 전용 필드다.
-  //   입력 라디오가 그 ToggleCard children 안에만 있어(PostListingValuationCard.tsx:117),
-  //   축 밖에서 `daily`가 남으면 되돌릴 UI가 없다. 토글을 끄는 순간의 정규화는 ⑤가
-  //   담당하고, 여기서는 «이미 저장된» 폼(세션 복원·이력 재진입)을 정규화한다.
-  //   anchor: __tests__/calc/stock-std-input-mode-axis.anchor.test.ts (FD-4·4b)
-  const acquiredBeforeListing = boolField("acquiredBeforeListing", defaults.acquiredBeforeListing);
-  const transferStdInputMode = acquiredBeforeListing
-    ? enumField("transferStdInputMode", ["direct", "daily"], defaults.transferStdInputMode)
-    : "direct";
-  // 같은 축 위의 형제 — `listingStdInputMode`도 「취득 후 상장」 ToggleCard children 안에만
-  // 라디오가 있다(PostListingValuationCard.tsx). 축 밖에서 daily가 남으면 되돌릴 UI가 없다.
-  const listingStdInputMode = acquiredBeforeListing
-    ? enumField("listingStdInputMode", ["direct", "daily"], defaults.listingStdInputMode)
-    : "direct";
+  /*
+    ③ 산정 방식 — 저장된 폼이 **구 boolean 3개**일 수 있다(세션 복원·이력 재진입).
+    `acquisitionStdMode`가 이미 있으면 그것을 쓰고, 없으면 구 boolean에서 역산한다.
+    역산 순서는 엔진 if-체인을 따른다 — `deriveAcquisitionStdMode` 주석 참조.
+  */
+  const acquisitionStdMode: AcquisitionStdMode =
+    typeof d.acquisitionStdMode === "string" &&
+    STD_MODES.includes(d.acquisitionStdMode as AcquisitionStdMode)
+      ? (d.acquisitionStdMode as AcquisitionStdMode)
+      : deriveAcquisitionStdMode(d);
+
+  /*
+    `transferStdInputMode`는 **더 이상 축 전용이 아니다**.
+
+    종전에는 이 축의 라디오·32셀 표가 「취득 후 상장」 ToggleCard children 안에만 있어,
+    축 밖에서 `daily`가 남으면 되돌릴 UI가 없었다(F-10 dead-end). S3에서 «양도 당시
+    기준시가» 블록을 4갈래 **위에 항상** 두었으므로 어느 모드에서도 되돌릴 수 있다.
+    ⇒ 게이팅을 제거한다.
+  */
+  const transferStdInputMode = enumField(
+    "transferStdInputMode",
+    ["direct", "daily"],
+    defaults.transferStdInputMode,
+  );
+  /*
+    `listingStdInputMode`는 여전히 §165⑤ 전용이다 — 라디오가 그 방식의 전용 입력
+    (`PostListingValuationCard`) 안에만 있다. 다른 모드에서 daily가 남으면 되돌릴 UI가 없다.
+  */
+  const listingStdInputMode =
+    acquisitionStdMode === "post_listing"
+      ? enumField("listingStdInputMode", ["direct", "daily"], defaults.listingStdInputMode)
+      : "direct";
 
   return {
     ...defaults, // foreign-stock 등 신규 필드 누락 시 default fallback (typecheck 가드)
@@ -168,9 +196,7 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     listingDate: strField("listingDate"),
     listingDatePriceAvg1Month: strField("listingDatePriceAvg1Month"),
     listingStdInputMode,
-    acquiredBeforeListing,
-    tradingHaltAtTransfer: boolField("tradingHaltAtTransfer", defaults.tradingHaltAtTransfer),
-    tradingHaltAtAcquisition: boolField("tradingHaltAtAcquisition", defaults.tradingHaltAtAcquisition),
+    acquisitionStdMode,
     transferYearNetIncomePerShare: strField("transferYearNetIncomePerShare"),
     transferYearNetAssetPerShare: strField("transferYearNetAssetPerShare"),
     listingYearNetIncomePerShare: strField("listingYearNetIncomePerShare"),

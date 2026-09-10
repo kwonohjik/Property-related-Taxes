@@ -25,7 +25,7 @@ function simpleModeForm(): StockTransferFormData {
     transferPriceMode: "actual",
     transferActualInputMode: "per_share",
     acquisitionMode: "estimated",
-    acquiredBeforeListing: true,
+    acquisitionStdMode: "post_listing",
     listingDate: "2018-07-01",
     unlistedDetailMode: "simple",
     listingDatePriceAvg1Month: "8001",
@@ -117,35 +117,43 @@ describe("PL-VALIDATE — 취득 후 상장 모드별 매트릭스", () => {
     expect(fields).toContain("naLiabTotalRow8Acq");
   });
 
-  it("PL-VALIDATE-6 — 거래정지 + 취득 후 상장 조합 차단 (full 모드 — 문구 갱신)", () => {
+  /**
+   * 🔄 **S3 이관 (2026-09-10)** — 종전 PL-VALIDATE-6·7은 「거래정지 + 취득 후 상장」이라는
+   * **불가 조합**을 ⑧이 막는지 보았다. `acquisitionStdMode`가 배타적 4상태가 되면서
+   * 폼에서 그 조합을 **만들 수 없게** 됐고, ⑧의 차단 코드는 도달 불가라 제거했다(Q-2 3안).
+   *
+   * 지킬 성질은 두 곳으로 나뉘었다:
+   *   · 「폼에서 만들 수 없다」 → `stock-std-mode-migration.anchor.test.ts` MAP-5
+   *   · 「API로는 여전히 막힌다」 → `stock-conversion-branch-matrix.anchor.test.ts` MTX-XA'·XB'
+   *
+   * 여기서는 **각 방식이 서로를 배제한다**는 것만 확인한다 — 조합 자체가 표현 불가라는 증거.
+   */
+  it("PL-VALIDATE-6 — 산정 방식은 배타적이다 (halt_transfer면 §165⑤ 요구가 없다)", () => {
     const form: StockTransferFormData = {
       ...simpleModeForm(),
       unlistedDetailMode: "full",
-      tradingHaltAtTransfer: true,   // 거래정지 ON
+      acquisitionStdMode: "halt_transfer",
     };
     const errors = validateStep2(form);
-    const haltError = errors.find((e) => e.field === "tradingHaltAtTransfer");
-    expect(haltError).toBeDefined();
-    expect(haltError?.message).toContain("§52의2③");
+    // §165⑤ 전용 요구(상장일 등)가 붙지 않는다 — 그 방식이 아니기 때문이다
+    expect(errors.find((e) => e.field === "listingDate")).toBeUndefined();
   });
 
-  it("PL-VALIDATE-7 — 거래정지 + 취득 후 상장 조합은 simple 모드도 차단 (G-5 모드 무관 재산정)", () => {
-    // PR-§165③: 엔진은 post-listing 우선이라 거래정지 침묵 무시 → 모드 무관 차단으로 통일
+  it("PL-VALIDATE-7 — post_listing이면 거래정지 쪽 요구가 없다 (반대 방향 대조군)", () => {
     const form: StockTransferFormData = {
       ...simpleModeForm(),
       unlistedDetailMode: "simple",
-      tradingHaltAtTransfer: true,
+      acquisitionStdMode: "post_listing",
     };
     const errors = validateStep2(form);
-    const haltError = errors.find((e) => e.field === "tradingHaltAtTransfer");
-    expect(haltError).toBeDefined();
-    expect(haltError?.message).toContain("§52의2③");
+    // 보충 평가(거래정지 방식) 전용 필드를 요구하지 않는다
+    expect(errors.find((e) => e.field === "transferYearNetIncomePerShare")).toBeUndefined();
   });
 
   it("PL-VALIDATE-8 — acquiredBeforeListing=false 시 unlistedDetailMode 무관 통과", () => {
     const form: StockTransferFormData = {
       ...simpleModeForm(),
-      acquiredBeforeListing: false,
+      acquisitionStdMode: "monthly_avg",
       unlistedDetailMode: "full",   // 모드 무관
     };
     const errors = validateStep2(form);
@@ -160,8 +168,7 @@ describe("PL-VALIDATE — 취득 후 상장 모드별 매트릭스", () => {
   it("A-TH-4 — 거래정지 ON + 평가 미입력 → 비상장 평가 필수 차단 (C-6)", () => {
     const form: StockTransferFormData = {
       ...simpleModeForm(),
-      acquiredBeforeListing: false,
-      tradingHaltAtTransfer: true,
+      acquisitionStdMode: "halt_transfer",
       transferYearNetIncomePerShare: "",
       transferYearNetAssetPerShare: "",
       acquisitionYearNetIncomePerShare: "",
@@ -176,8 +183,7 @@ describe("PL-VALIDATE — 취득 후 상장 모드별 매트릭스", () => {
   it("A-TH-5 — 거래정지 ON + §163⑨ 분모 미입력 → 분모 오류 면제 (G-6)", () => {
     const form: StockTransferFormData = {
       ...simpleModeForm(),
-      acquiredBeforeListing: false,
-      tradingHaltAtTransfer: true,
+      acquisitionStdMode: "halt_transfer",
       transferDatePriceAvg1Month: "", // 분모 비움 — 거래정지 시 무효·미사용
       transferYearNetIncomePerShare: "30000",
       transferYearNetAssetPerShare: "10000",

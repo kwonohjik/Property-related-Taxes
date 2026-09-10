@@ -207,7 +207,7 @@ function haltComboForm(over: Record<string, unknown> = {}) {
     transferStdInputMode: "direct" as const,
     acquisitionDate: "2018-01-01",
     transferDate: "2024-06-01",
-    acquiredBeforeListing: true,
+    acquisitionStdMode: "post_listing" as const,
     listingDate: "2019-08-21",
     listingDatePriceAvg1Month: "8001",
     unlistedDetailMode: "simple" as const,
@@ -273,22 +273,21 @@ function zodBody(over: Record<string, unknown> = {}) {
   };
 }
 
-describe("MTX-X — 불가 조합은 ⑧·⑫가 «둘 다» 막는다", () => {
+/*
+  🔄 **S3 이관(2026-09-10)** — 종전에는 ⑧(`MTX-XA`·`MTX-XB`)과 ⑫(`XA'`·`XB'`)를 둘 다 봤다.
+  축이 `acquisitionStdMode` 하나로 합쳐지면서 폼에서는 그 조합을 **표현할 수 없게** 됐고,
+  ⑧의 차단 코드는 도달 불가라 제거했다(계획서 Q-2 3안).
+
+  ⑫는 남는다 — UI가 못 만들 뿐 **API 직접 호출**은 만들 수 있다. 아래 두 단언이 그 서버
+  가드를 지킨다. 「폼에서 표현 불가」 쪽은 ④ 매핑 anchor(`MAP-5`)가 맡는다.
+*/
+describe("MTX-X — 불가 조합은 ⑫(서버 가드)가 막는다", () => {
   it("MTX-X0 (대조군): 조합 없이는 ⑧·⑫를 통과한다", () => {
     const errors = validateStep2Domestic(haltComboForm() as never).filter(
       (e) => e.severity === "error",
     );
     expect(errors).toHaveLength(0);
     expect(addStockRefines(stockTransferInputSchema).safeParse(zodBody()).success).toBe(true);
-  });
-
-  it("MTX-XA: 취득 후 상장 × **양도일** 거래정지 — ⑧이 막는다", () => {
-    const errors = validateStep2Domestic(
-      haltComboForm({ tradingHaltAtTransfer: true }) as never,
-    );
-    expect(errors.some((e) => e.field === "tradingHaltAtTransfer" && e.severity === "error")).toBe(
-      true,
-    );
   });
 
   it("MTX-XA': 취득 후 상장 × **양도일** 거래정지 — ⑫도 막는다", () => {
@@ -299,15 +298,6 @@ describe("MTX-X — 불가 조합은 ⑧·⑫가 «둘 다» 막는다", () => {
     if (!parsed.success) {
       expect(parsed.error.issues.map((i) => i.path.join("."))).toContain("tradingHaltAtTransfer");
     }
-  });
-
-  it("MTX-XB: 취득 후 상장 × **취득일** 거래정지 — ⑧이 막는다", () => {
-    const errors = validateStep2Domestic(
-      haltComboForm({ tradingHaltAtAcquisition: true }) as never,
-    );
-    expect(
-      errors.some((e) => e.field === "tradingHaltAtAcquisition" && e.severity === "error"),
-    ).toBe(true);
   });
 
   it("MTX-XB': 취득 후 상장 × **취득일** 거래정지 — ⑫도 막는다", () => {

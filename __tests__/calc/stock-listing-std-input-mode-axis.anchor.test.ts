@@ -108,7 +108,7 @@ function postListingForm(o: Partial<StockTransferFormData> = {}): StockTransferF
     transferDate: "2025-06-10",
     shareCount: "5000",
     acquisitionMode: "estimated",
-    acquiredBeforeListing: true,
+    acquisitionStdMode: "post_listing",
     unlistedDetailMode: "simple",
     listingDate: "2009-08-24",
     // ③은 채워 둔다 — ②의 오류만 남기기 위해

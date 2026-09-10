@@ -286,7 +286,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
      * anchor: `__tests__/calc/stock-listing-daily-banner.anchor.test.ts` LDB-5
      */
     let listingAvg: number | undefined;
-    if (form.acquiredBeforeListing) {
+    if (form.acquisitionStdMode === "post_listing") {
       const derived = resolveListingClosingAvg(form);
       // 0은 「자료 없음」이다(1개월 종가평균이 0일 수는 없다). 그때는 종전대로 undefined를
       // 흘려 엔진의 「입력값 없음」 경고를 살린다 — 0을 실으면 그 진단이 사라진다.
@@ -376,16 +376,26 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
       }));
   }
 
-  // 취득 후 상장 + 거래정지 (3중 패턴)
-  body.acquiredBeforeListing = form.acquiredBeforeListing;     // default: false
-  body.tradingHaltAtTransfer = form.tradingHaltAtTransfer;     // default: false
-  body.tradingHaltAtAcquisition = form.tradingHaltAtAcquisition; // [C-1] default: false
+  /*
+    ④ 산정 방식 enum → 엔진 boolean 3개로 «펼친다».
+
+    폼은 배타적 4상태 하나만 들고 있고, 엔진 input은 종전대로 boolean 3개를 받는다.
+    이 매핑이 **불가능한 조합을 만들 수 없다**는 것이 축 통합의 핵심 이득이다 —
+    켜지는 boolean은 언제나 **0개 또는 1개**다(anchor MAP-5).
+
+    ⚠️ ⑫ Zod의 조합 refine(`stock-transfer-tax-schema.ts:419·429`)은 **그대로 둔다.**
+       UI가 못 만들 뿐 API 직접 호출은 여전히 만들 수 있다.
+  */
+  const stdMode = form.acquisitionStdMode;
+  body.acquiredBeforeListing = stdMode === "post_listing";
+  body.tradingHaltAtTransfer = stdMode === "halt_transfer";
+  body.tradingHaltAtAcquisition = stdMode === "halt_acquisition";
 
   // [사례 49] 취득시 장부분실 액면가 + 양도시 §165④ 보충 평가 혼합
   // 활성 조건: (marketType==="unlisted" || 거래정지) + estimated + acqFaceValueOnly===true
   // [C-2] 거래정지(양도) 상장주식도 §165③→§165④ 비상장 보충평가 → 사례49 허용(silent strip 해소)
   if (
-    (form.marketType === "unlisted" || form.tradingHaltAtTransfer) &&
+    (form.marketType === "unlisted" || form.acquisitionStdMode === "halt_transfer") &&
     form.acquisitionMode === "estimated" &&
     form.acqFaceValueOnly === true &&
     form.acqFaceValuePerShare
@@ -404,7 +414,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // 활성 조건: (marketType === "unlisted" || 거래정지) + estimated 모드 + unlistedValuationMode === "full"
   // [C-2] 거래정지(양도) 상장주식도 비상장 보충평가 → full 결산서 허용(silent strip 해소)
   // [E-6] isNetAssetOnly === true 시 NI 호출 skip + body NI 미설정 (엔진이 isNetAssetOnly 시 NI 값 무시)
-  if ((form.marketType === "unlisted" || form.tradingHaltAtTransfer) && form.unlistedValuationMode === "full") {
+  if (
+    (form.marketType === "unlisted" || form.acquisitionStdMode === "halt_transfer") &&
+    form.unlistedValuationMode === "full"
+  ) {
     const niSkip = shouldSkipNetIncome(form);
     const reduced = adaptUnlistedFlatToApiBody(form, { niSkip });
     if (!niSkip) body.transferYearNetIncomePerShare = reduced.transferNi;
@@ -415,7 +428,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   }
 
   // Round 4 H-02 — full/listing_only 모드 시 adapter로 nested + 4 필드 자동 합성
-  if (form.acquiredBeforeListing && (form.unlistedDetailMode === "listing_only" || form.unlistedDetailMode === "full")) {
+  if (
+    form.acquisitionStdMode === "post_listing" &&
+    (form.unlistedDetailMode === "listing_only" || form.unlistedDetailMode === "full")
+  ) {
     const adapted = adaptFlatToApiBody(form, true);
     body.postListingDetail = adapted.postListingDetail;
     /**

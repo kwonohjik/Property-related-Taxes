@@ -43,7 +43,7 @@ function renderCard(patch: Partial<StockTransferFormData> = {}) {
   const form = {
     ...createInitialStockFormData(),
     marketType: "kosdaq",
-    acquiredBeforeListing: true,
+    acquisitionStdMode: "post_listing",
     transferDate: "2025-06-10",
     listingDate: "2009-08-23",
     ...patch,
@@ -61,18 +61,19 @@ function section(title: string): HTMLElement {
 const radio = (name: string) => document.querySelector(`input[name="${name}"]`);
 
 describe("LS — ② 상장일 이후 1개월 종가의 입력 방식 축", () => {
-  it("LS-1 simple — 이 섹션 «안»에 자기 라디오가 있다 (양도 당시 기준시가의 축과 별개다)", () => {
+  /**
+   * 🔄 **S3 (2026-09-10)** — 종전에는 「이 축이 «양도 당시 기준시가»의 축과 별개다」를
+   * 두 섹션 소속으로 단언했다. 분모 섹션이 카드 밖(`TransferStdPriceSection`)으로 나가면서
+   * 성질이 더 단순해졌다: **이 카드 안에 있는 direct/daily 축은 이것 하나뿐**이다.
+   */
+  it("LS-1 simple — 이 섹션 «안»에 자기 라디오가 있고, 카드 안의 유일한 축이다", () => {
     renderCard({ unlistedDetailMode: "simple" });
 
     const own = radio("listingStdInputMode");
     expect(own).toBeTruthy();
-    // 🔑 소속을 단언한다 — 두 축은 선택지 라벨이 같아서 값만 보면 어느 섹션 것인지 갈리지 않는다.
     expect(section(T2).contains(own!)).toBe(true);
-    expect(section(T1).contains(own!)).toBe(false);
-    // 「양도 당시 기준시가」의 축은 여전히 그 섹션 안에 있다
-    const transferAxis = radio("transferStdInputMode")!;
-    expect(section(T1).contains(transferAxis)).toBe(true);
-    expect(section(T2).contains(transferAxis)).toBe(false);
+    // 「양도 당시 기준시가」의 축은 이 카드에 없다 (S3에서 분리)
+    expect(radio("transferStdInputMode")).toBeNull();
   });
 
   it("LS-2 simple + direct — 단일 숫자만. 종가 표·자본조정은 없다", () => {

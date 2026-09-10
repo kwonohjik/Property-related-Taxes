@@ -3,15 +3,16 @@
  *
  * 계획서 `docs/00-pm/stock-listed-conversion-unification.plan.md` **S0**.
  *
- * ## 왜 헬퍼인가 — testid로는 못 막는다
+ * ## 왜 헬퍼인가 — testid로는 못 막았다
  *
- * S3은 세 ToggleCard(취득 후 상장 · 양도일 거래정지 · 취득일 거래정지)를
- * **라디오 선택지 하나로 흡수**한다(Q-2 3안). 즉 라벨이 바뀌는 게 아니라 **엘리먼트가 사라진다** —
- * 그 자리에 `data-testid`를 붙여 둬도 소용이 없다.
+ * S3이 세 ToggleCard(취득 후 상장 · 양도일 거래정지 · 취득일 거래정지)를
+ * **라디오 선택지 하나로 흡수**했다(Q-2 3안). 라벨이 바뀐 게 아니라 **엘리먼트가 사라졌다** —
+ * `data-testid`를 붙여 뒀어도 소용없었을 변화다.
  *
- * 실제로 막을 수 있는 것은 **호출 지점의 수**다. 같은 조작이
+ * 실제로 통한 것은 **호출 지점을 모으는 것**이었다. 같은 조작이
  * `[data-slot="toggle-card"] → filter({hasText}) → getByRole("switch")` 형태로
- * **13개 지점에 복제**돼 있었다(V-4 실측). 헬퍼로 모으면 S3이 **이 파일 하나**만 고친다.
+ * **13개 지점에 복제**돼 있었고(V-4 실측), S3에서 **이 파일 하나만** 고쳐 끝났다.
+ * 호출부 13곳은 **한 줄도 바뀌지 않았다.**
  *
  * ## 규칙 — «동작»만 모으고 «단언»은 각 spec에 남긴다
  *
@@ -41,38 +42,18 @@ export type StockConversionMode =
 type ToggleMode = Exclude<StockConversionMode, "monthly_avg">;
 
 /**
- * ToggleCard 스코프용 **부분 문자열** — `filter({ hasText })`가 자손 텍스트로 매칭한다.
- * 조문 표기(§165⑤ 등)를 빼 두어 문구가 다듬어져도 덜 깨진다.
+ * 라디오 선택지 라벨 — `AcquisitionStdModeRadio.tsx`의 `options[].label`과 일치해야 한다.
+ * 🔑 정규식인 이유는 라벨에 조문·설명이 붙기 때문이다(부분 매칭).
  */
-const TOGGLE_MATCH: Record<ToggleMode, string> = {
-  post_listing: "취득 후 상장",
-  halt_transfer: "양도일 거래정지·관리종목 지정",
-  halt_acquisition: "취득일 거래정지·관리종목 지정",
+const MODE_LABEL: Record<ToggleMode, RegExp> = {
+  post_listing: /취득 후 상장/,
+  halt_transfer: /양도일 거래정지/,
+  halt_acquisition: /취득일 거래정지/,
 };
 
-/**
- * **정확 일치** 제목 — `getByText(..., { exact: true })` 변형이 쓴다.
- * 실측(2026-09-10): `Step2.tsx:373·386` · `PostListingValuationCard.tsx:136`.
- */
-const TOGGLE_FULL_TITLE: Record<ToggleMode, string> = {
-  post_listing: "취득 후 상장 — 환산취득가 (소령 §165⑤)",
-  halt_transfer: "양도일 거래정지·관리종목 지정 (소령 §165③)",
-  halt_acquisition: "취득일 거래정지·관리종목 지정 (소령 §165③)",
-};
-
-/**
- * ToggleCard 안의 스위치를 켠다.
- *
- * ⚠️ `.first()`가 필요하다 — `filter({hasText})`는 **자손 텍스트**로 매칭하므로
- *    바깥 카드까지 함께 걸릴 수 있다.
- */
-async function clickToggle(page: Page, title: string): Promise<void> {
-  await page
-    .locator('[data-slot="toggle-card"]')
-    .filter({ hasText: title })
-    .getByRole("switch")
-    .first()
-    .click();
+/** 산정 방식 라디오에서 한 선택지를 고른다. */
+async function pickMode(page: Page, mode: ToggleMode): Promise<void> {
+  await page.getByRole("radio", { name: MODE_LABEL[mode] }).first().click();
 }
 
 /**
@@ -85,8 +66,12 @@ export async function setStockConversionMode(
   page: Page,
   mode: StockConversionMode,
 ): Promise<void> {
-  if (mode === "monthly_avg") return;
-  await clickToggle(page, TOGGLE_MATCH[mode]);
+  if (mode === "monthly_avg") {
+    // 기본값이지만 «명시적으로» 고른다 — 다른 방식에서 되돌아오는 플로우가 있다.
+    await page.getByRole("radio", { name: /취득일 이전 1개월 종가평균/ }).first().click();
+    return;
+  }
+  await pickMode(page, mode);
 }
 
 /**
@@ -101,12 +86,50 @@ export async function setStockConversionModeByTitle(
   page: Page,
   mode: ToggleMode,
 ): Promise<void> {
-  await page.getByText(TOGGLE_FULL_TITLE[mode], { exact: true }).click();
+  // S3 이후 두 방식은 같다 — 축이 라디오 하나라 「이중토글」 문제 자체가 없다.
+  await pickMode(page, mode);
 }
 
 /** 제목 문자열 자체가 필요한 «단언»용 — 동작이 아니라 표시를 확인하는 spec이 쓴다. */
 export function conversionToggleTitle(mode: ToggleMode): string {
-  return TOGGLE_FULL_TITLE[mode];
+  return {
+    post_listing: "취득 후 상장 → 상장일 이후 1개월 종가평균 환산",
+    halt_transfer: "양도일 거래정지·관리종목 → 양·취 모두 보충 평가",
+    halt_acquisition: "취득일 거래정지·관리종목 → 보충 평가",
+  }[mode];
+}
+
+/**
+ * 분모의 «입력 방식»(직접/일자별)을 고른다.
+ *
+ * 🔑 S3의 핵심 이득이 이 함수로 표현된다 — 종전에는 이 축의 라디오가 「취득 후 상장」
+ * 카드 **안**에만 있어, 다른 방식에서 `daily`가 남으면 **되돌릴 UI가 없었다**(F-10 dead-end).
+ * 분모 블록이 4갈래 위에 항상 있으므로 어느 방식에서도 되돌릴 수 있다.
+ */
+export async function setTransferStdInputMode(
+  page: Page,
+  mode: "direct" | "daily",
+): Promise<void> {
+  await page
+    .locator(`label:has(input[name="transferStdInputMode"][value="${mode}"])`)
+    .first()
+    .click();
+}
+
+/**
+ * 분모(양도 당시 기준시가)를 채운다.
+ *
+ * S3에서 이 칸의 라벨이 「양도시 1주당 기준시가 (양도일 이전 1개월 종가평균)」에서
+ * 「1개월 종가 평균」으로 바뀌었다 — 섹션 제목이 그 말을 이미 하기 때문이다.
+ * ⇒ **라벨을 spec에 흩뿌리지 않는다.** placeholder는 S3 전후로 같아 축이 안정적이다.
+ */
+export async function fillTransferStdPrice(page: Page, value: string): Promise<void> {
+  await transferStdPriceInput(page).fill(value);
+}
+
+/** 분모 입력 칸 — 값 단언이 필요한 spec용 */
+export function transferStdPriceInput(page: Page) {
+  return page.getByPlaceholder("양도일 이전 1개월 종가평균 (1주당)");
 }
 
 /**
@@ -116,7 +139,7 @@ export function conversionToggleTitle(mode: ToggleMode): string {
  * (`setStockConversionMode(page, "post_listing")`를 두 번 부르면 토글인지 재설정인지 모른다).
  */
 export async function togglePostListingOff(page: Page): Promise<void> {
-  await clickToggle(page, TOGGLE_MATCH.post_listing);
+  await setStockConversionMode(page, "monthly_avg");
 }
 
 /**
@@ -124,8 +147,5 @@ export async function togglePostListingOff(page: Page): Promise<void> {
  * (예: 카드 안의 유일한 DateInput = 상장일).
  */
 export function postListingCard(page: Page) {
-  return page
-    .locator('[data-slot="toggle-card"]')
-    .filter({ hasText: TOGGLE_MATCH.post_listing })
-    .first();
+  return page.locator("div.rounded-lg").filter({ hasText: "취득 후 상장 — 환산취득가" }).first();
 }

@@ -18,13 +18,22 @@
  *
  * ⚠️ 선택지 **라벨**은 E2E 셀렉터다(`getByRole("radio", { name: /일자별 입력/ })` —
  *    e2e/stock-listed-conversion-kiwoom-autofetch.spec.ts). 바꾸면 함께 갱신할 것.
+ *
+ * ## 🔄 S3 이관 (2026-09-10)
+ *
+ * 이 섹션은 「취득 후 상장」 카드 **안**의 ③이었다. 같은 값(분모)의 입력 UI가 일반 경로에도
+ * 따로 있어 **두 곳**이었고, 토글을 켜면 위 칸이 사라지고 아래에 다시 나타났다.
+ *
+ * S3에서 **`TransferStdPriceSection`**으로 뽑아 4갈래 **위에 항상** 두었다
+ * (계획서 §1-2 · 설계서 §1-2). 이 파일이 보는 대상도 그 컴포넌트로 옮긴다 —
+ * 지키는 성질(제목이 먼저 말한다 · 두 필드가 한 섹션 · inline 라디오)은 그대로다.
  */
 
 import "fake-indexeddb/auto";
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { PostListingValuationCard } from "@/components/calc/stock-transfer/PostListingValuationCard";
+import { TransferStdPriceSection } from "@/components/calc/stock-transfer/TransferStdPriceSection";
 import { createInitialStockFormData } from "@/lib/stores/calc-wizard-stock-form";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 
@@ -34,24 +43,25 @@ function renderCard(patch: Partial<StockTransferFormData> = {}) {
   const form = {
     ...createInitialStockFormData(),
     marketType: "kosdaq",
-    acquiredBeforeListing: true,
+    acquisitionStdMode: "post_listing",
     ...patch,
   } as StockTransferFormData;
-  render(<PostListingValuationCard form={form} onChange={vi.fn()} />);
+  render(<TransferStdPriceSection form={form} onChange={vi.fn()} />);
 }
 
 /** 「양도 당시 기준시가」 제목을 가진 섹션 카드 */
 function section(): HTMLElement {
-  const title = screen.getByText("양도 당시 기준시가");
+  const title = screen.getByText(/양도 당시 기준시가/);
   const card = title.closest("div.rounded-lg");
   expect(card).toBeTruthy();
   return card as HTMLElement;
 }
 
 describe("TS — 양도 당시 기준시가 섹션", () => {
-  it("TS-1 섹션 제목이 「양도 당시 기준시가」다", () => {
+  it("TS-1 섹션 제목이 「양도 당시 기준시가」로 시작한다", () => {
     renderCard();
-    expect(screen.getByText("양도 당시 기준시가")).toBeTruthy();
+    // S3에서 「(환산비율의 분모)」를 덧붙였다 — 산식의 어느 자리인지 제목이 말하게 한다.
+    expect(screen.getByText(/^양도 당시 기준시가/)).toBeTruthy();
   });
 
   it("TS-2 「입력 방식」과 「1개월 종가 평균」이 **같은 섹션 안**에 있다", () => {

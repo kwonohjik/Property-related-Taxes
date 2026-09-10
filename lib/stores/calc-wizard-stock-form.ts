@@ -23,6 +23,35 @@ import type {
 // boolean 필드는 boolean
 // ============================================================
 
+/**
+ * 상장 환산 기준시가 산정 방식 — 배타적 4상태 (계획서 Q-2 3안).
+ * 값 이름은 엔진 boolean과 1:1로 읽히도록 골랐다.
+ */
+export type AcquisitionStdMode =
+  | "monthly_avg"
+  | "halt_acquisition"
+  | "post_listing"
+  | "halt_transfer";
+
+/**
+ * 구 boolean 3개 → `acquisitionStdMode` 역산.
+ *
+ * 🔴 **순서가 곧 계약이다.** 엔진 if-체인이 `acquiredBeforeListing`을 **선두**로 두므로
+ *    (`stock-acquisition-basis.ts:128`), 게이트가 생기기 전의 stale 데이터에 두 플래그가
+ *    함께 켜져 있으면 엔진은 `post_listing`을 택했다. 순서를 뒤집으면 **과거 세액이 바뀐다**.
+ *    anchor: `__tests__/calc/stock-std-mode-migration.anchor.test.ts` MIG-1~5
+ */
+export function deriveAcquisitionStdMode(raw: {
+  acquiredBeforeListing?: unknown;
+  tradingHaltAtTransfer?: unknown;
+  tradingHaltAtAcquisition?: unknown;
+}): AcquisitionStdMode {
+  if (raw.acquiredBeforeListing === true) return "post_listing";
+  if (raw.tradingHaltAtTransfer === true) return "halt_transfer";
+  if (raw.tradingHaltAtAcquisition === true) return "halt_acquisition";
+  return "monthly_avg";
+}
+
 export interface StockTransferFormData {
   // ── 종목 메타데이터 (엔진 미전달 — 저장·이력·신고서 표시용) ──
   securityName: string;           // 종목명 (필수 — 빈문자 = 검증 오류)
@@ -168,9 +197,23 @@ export interface StockTransferFormData {
    *    이 축이 의미를 갖지 않는다 — 라디오도 그때는 노출하지 않는다.
    */
   listingStdInputMode: "direct" | "daily";
-  acquiredBeforeListing: boolean;        // 3중 패턴 default: false
-  tradingHaltAtTransfer: boolean;        // 3중 패턴 default: false
-  tradingHaltAtAcquisition: boolean;     // [C-1] 3중 패턴 default: false
+  /**
+   * 상장 환산의 «기준시가 산정 방식» — **배타적 4상태**.
+   *
+   * 종전에는 boolean 3개(`acquiredBeforeListing`·`tradingHaltAtTransfer`·
+   * `tradingHaltAtAcquisition`)의 조합이었다. 조합 중 둘은 **법령상 양립 불가**라
+   * ⑧·⑫가 런타임으로 막고 있었는데, 축을 하나로 합쳐 **표현 자체를 없앴다**
+   * (계획서 Q-2 3안, `docs/00-pm/stock-listed-conversion-unification.plan.md`).
+   *
+   * 엔진 `StockTransferInput`은 **여전히 boolean 3개**를 받는다 — ④가 펼친다.
+   * 엔진 if-체인(`stock-acquisition-basis.ts:128·165·257·303`)과 1:1이다:
+   *
+   *   post_listing     → acquiredBeforeListing     (§165⑤ 취득 후 상장)
+   *   halt_transfer    → tradingHaltAtTransfer     (§165③ 양도일 정지 — **분모까지** 대체)
+   *   halt_acquisition → tradingHaltAtAcquisition  (§165③ 취득일 정지 — 분자만)
+   *   monthly_avg      → 셋 다 false               (일반 §176의2②1호)
+   */
+  acquisitionStdMode: AcquisitionStdMode;
 
   // ── 환산 — 비상장 보충적 평가 (3시점) ──
   transferYearNetIncomePerShare: string;
@@ -558,9 +601,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     listingDate: "",
     listingDatePriceAvg1Month: "",
     listingStdInputMode: "direct",   // 3중 패턴 default — 기존 동작 보존
-    acquiredBeforeListing: false,        // 3중 패턴 default
-    tradingHaltAtTransfer: false,        // 3중 패턴 default
-    tradingHaltAtAcquisition: false,     // [C-1] 3중 패턴 default
+    acquisitionStdMode: "monthly_avg",   // 3중 패턴 default
 
     transferYearNetIncomePerShare: "",
     transferYearNetAssetPerShare: "",
