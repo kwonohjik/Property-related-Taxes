@@ -72,11 +72,24 @@ describe("RU-2 — §164⑨1호 환산 분모가 round2를 쓴다", () => {
     expect(r.denominator - inlineDenominator).toBe(50_001);
   });
 
-  it("RU2-3: [대조군] 갈리지 않는 면적은 종전과 같다 — 통째 변경이 아니다", () => {
+  it("RU2-3: [대조군] 반올림이 갈리지 않는 면적은 면적값이 그대로다", () => {
     for (const a of [100, 76.51, 33.33, 8.04, 0.5]) {
       const r = applyExpropriationValuation(params(a))!;
       expect(r.detail.area).toBe(parseFloat(a.toFixed(2)));
-      expect(r.denominator).toBe(Math.floor(PER_SQM * a));
+    }
+  });
+
+  /**
+   * 🔴 종전 이 대조군은 분모를 `Math.floor(PER_SQM * a)`로 기대했다 —
+   *    **버그를 기대값으로 박아둔 것**이었다. `5,000,000 × 8.04`는 참값이 40,200,000인데
+   *    부동소수 곱이 `40199999.999999996`이라 floor가 1원을 깎는다.
+   *    분모를 «참값»으로 다시 세운다(`feedback_anchor_correction_legal_priority`).
+   */
+  it("RU2-3b: 분모는 참값이다 — 부동소수 곱의 1원 과소산정을 따라가지 않는다", () => {
+    expect(applyExpropriationValuation(params(8.04))!.denominator).toBe(40_200_000);
+    expect(Math.floor(PER_SQM * 8.04)).toBe(40_199_999); // 종전 값 — 되돌아가면 여기서 드러난다
+    for (const [a, expected] of [[100, 500_000_000], [0.5, 2_500_000], [0.41, 2_050_000]] as const) {
+      expect(applyExpropriationValuation(params(a))!.denominator).toBe(expected);
     }
   });
 

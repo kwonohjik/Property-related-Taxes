@@ -4,6 +4,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 export const AREA_INPUT_CLASS = "w-full border rounded-md px-3 py-2 text-sm bg-background";
 
@@ -147,7 +148,7 @@ export function ReplotIncreaseFields({
     // 양도당시 ㎡당 기준시가는 동일 필지라 복사, 총액은 증가분 면적으로 재계산(§166⑥ 안분 키)
     const perSqm = parseFloat(asset.standardPricePerSqmAtTransfer || "");
     const stdTotalAtTransfer =
-      isFinite(perSqm) && perSqm > 0 ? String(Math.floor(perSqm * increaseM2)) : "";
+      isFinite(perSqm) && perSqm > 0 ? String(multiplyByArea(perSqm, increaseM2)) : "";
     onAddAsset({
       assetLabel: "증환지 증가분",
       assetKind: "land",

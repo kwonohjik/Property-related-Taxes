@@ -26,6 +26,7 @@ import {
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 export interface LandPriceLookupFieldProps {
   /** 공시지가 (원/㎡) 현재 값 */
@@ -142,7 +143,7 @@ export function LandPriceLookupField({
   const numericPrice = parseAmount(pricePerSqm);
   const landStdPrice =
     numericPrice > 0 && area && area > 0
-      ? Math.floor(numericPrice * area)
+      ? multiplyByArea(numericPrice, area)
       : null;
 
   const canLookup = !!jibun && !!effectiveYear;

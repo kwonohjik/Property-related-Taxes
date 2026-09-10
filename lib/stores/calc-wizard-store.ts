@@ -46,6 +46,7 @@ function parseRaw(v: string | undefined): number {
 // ─── 폼 타입 — calc-wizard-form.types.ts로 분리 (800줄 정책, 재export 호환) ───
 export type { TransferFormData } from "./calc-wizard-form.types";
 import type { TransferFormData } from "./calc-wizard-form.types";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 const defaultFormData: TransferFormData = {
   assets: [makeDefaultAsset(1)],
@@ -433,7 +434,7 @@ export function computeTransferSummary(
       parseRaw(primary.mixedTransferLandPricePerSqm) || parseRaw(primary.phdLandPricePerSqmAtTransfer);
     const transferCommercialBuilding = parseRaw(primary.mixedTransferCommercialBuildingPrice);
     const commercialStdPrice =
-      Math.floor(transferLandPerSqm * commercialLandArea) + transferCommercialBuilding;
+      multiplyByArea(transferLandPerSqm, commercialLandArea) + transferCommercialBuilding;
     const totalStd = housingStdPrice + commercialStdPrice;
     const transferPrice = parseRaw(primary.actualSalePrice);
 

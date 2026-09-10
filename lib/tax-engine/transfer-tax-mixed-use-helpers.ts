@@ -35,6 +35,7 @@ import type { TaxBracket } from "./types";
 import { calculateProgressiveTax } from "./tax-utils";
 import { computeDerivedAreas, round2 } from "./mixed-use-derived-areas";
 import { residualArea } from "./area-utils";
+import { multiplyByArea } from "./area-utils";
 
 // ──────────────────────────────────────────────────────────────
 // 1. 면적 파생값 계산
@@ -106,9 +107,7 @@ export function apportionTransferPrice(
 ): MixedUseApportionment {
   const housingStdPrice = asset.transferStandardPrice.housingPrice;
   // 상가부수토지 기준시가 = 공시지가/㎡ × 상가부수토지 면적 — 원 단위 정수 보장
-  const commercialLandPrice = Math.floor(
-    asset.transferStandardPrice.landPricePerSqm * derived.commercialLandArea,
-  );
+  const commercialLandPrice = multiplyByArea(asset.transferStandardPrice.landPricePerSqm, derived.commercialLandArea);
   const commercialStdPrice =
     commercialLandPrice + asset.transferStandardPrice.commercialBuildingPrice;
 
@@ -172,9 +171,7 @@ export function apportionAcquisitionPrice(
   acqStdOverride?: { housingStd?: number; commercialStd?: number },
 ): { housingRatio: number; housingAcqPrice: number; commercialAcqPrice: number } {
   const housingStd = acqStdOverride?.housingStd ?? (asset.acquisitionStandardPrice.housingPrice ?? 0);
-  const commercialLandStd = Math.floor(
-    asset.acquisitionStandardPrice.landPricePerSqm * acqDerived.commercialLandArea,
-  );
+  const commercialLandStd = multiplyByArea(asset.acquisitionStandardPrice.landPricePerSqm, acqDerived.commercialLandArea);
   const commercialStd =
     acqStdOverride?.commercialStd ??
     commercialLandStd + asset.acquisitionStandardPrice.commercialBuildingPrice;
@@ -386,7 +383,7 @@ export function calcHousingEstimatedAcq(
   if (asset.partialUsageChange?.direction === "commercial_to_house") {
     const acqCommBuilding = asset.acquisitionStandardPrice.commercialBuildingPrice;
     const acqLandPerSqm = asset.acquisitionStandardPrice.landPricePerSqm;
-    const acqCommTotal = acqCommBuilding + Math.floor(acqLandPerSqm * asset.totalLandArea);
+    const acqCommTotal = acqCommBuilding + multiplyByArea(acqLandPerSqm, asset.totalLandArea);
     const totalFloor = asset.residentialFloorArea + asset.nonResidentialFloorArea;
     const housRatio = totalFloor > 0 ? asset.residentialFloorArea / totalFloor : 0;
     stdAtAcq = Math.floor(acqCommTotal * housRatio);

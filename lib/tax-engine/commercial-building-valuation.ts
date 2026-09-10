@@ -24,6 +24,7 @@ import type {
   CommercialBuildingValuationInput,
   CommercialBuildingValuationResult,
 } from "./types/commercial-building.types";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** D 기본값 — 기준시가 조정월수 통상값(시행규칙 §80②1호: 전기 결정일 ~ 취득당시 결정일 전일). */
 export const SEC_164_8_DEFAULT_ADJUST_MONTHS = 12;
@@ -63,7 +64,7 @@ export function calcStdPriceSum(
   landArea: number,
   buildingStdPriceTotal: number,
 ): number {
-  return Math.floor(landPricePerSqm * landArea) + Math.floor(buildingStdPriceTotal);
+  return multiplyByArea(landPricePerSqm, landArea) + Math.floor(buildingStdPriceTotal);
 }
 
 /**
@@ -210,7 +211,7 @@ export function calculateCommercialBuildingValuation(
   const floorAreaTotal = input.exclusiveArea + input.commonArea;
 
   // ── 공통: 양도시 호별총액 (floor 정합 — 원 단위 정수) ──
-  const unitPriceTotalAtTransfer = Math.floor(input.unitPriceAtTransfer * floorAreaTotal);
+  const unitPriceTotalAtTransfer = multiplyByArea(input.unitPriceAtTransfer, floorAreaTotal);
 
   if (input.isPreDisclosure) {
     return _calcPreDisclosure(input, transferPrice, floorAreaTotal, unitPriceTotalAtTransfer);
@@ -251,16 +252,16 @@ function _calcPreDisclosure(
   }
 
   // ── Step 1: 최초고시 호별총액 (floor 정합 — 원 단위 정수) ──
-  const unitPriceTotalAtFirst = Math.floor(input.unitPriceAtFirstDisclosure * floorAreaTotal);
+  const unitPriceTotalAtFirst = multiplyByArea(input.unitPriceAtFirstDisclosure, floorAreaTotal);
 
   // ── Step 2: 3시점 기준시가합 (법 §99①1호 가목의 가액 + 나목의 가액 — §164⑥ 산식) ──
   // 토지: ㎡당 개별공시지가 × 대지면적 (INT 절사) / 건물: 외부에서 면적 곱한 총액 (INT)
   // floor 정합: 각 기준시가를 원 단위 정수화 → 합·안분 분모의 BigInt 경로 일치 보장.
-  const landStdAtAcq    = Math.floor(input.landPriceAtAcquisition * input.landArea);
+  const landStdAtAcq    = multiplyByArea(input.landPriceAtAcquisition, input.landArea);
   const buildingStdAtAcq = Math.floor(input.buildingStdPriceAtAcquisition);
   const combinedStdAtAcq = landStdAtAcq + buildingStdAtAcq;
 
-  const landStdAtFirst    = Math.floor(input.landPriceAtFirstDisclosure * input.landArea);
+  const landStdAtFirst    = multiplyByArea(input.landPriceAtFirstDisclosure, input.landArea);
   const buildingStdAtFirst = Math.floor(input.buildingStdPriceAtFirstDisclosure);
   const combinedStdAtFirst = landStdAtFirst + buildingStdAtFirst;
 
@@ -269,7 +270,7 @@ function _calcPreDisclosure(
   let buildingStdAtTransfer: number | undefined;
   let combinedStdAtTransfer: number | undefined;
   if (input.landPriceAtTransfer !== undefined && input.buildingStdPriceAtTransfer !== undefined) {
-    landStdAtTransfer    = Math.floor(input.landPriceAtTransfer * input.landArea);
+    landStdAtTransfer    = multiplyByArea(input.landPriceAtTransfer, input.landArea);
     buildingStdAtTransfer = Math.floor(input.buildingStdPriceAtTransfer);
     combinedStdAtTransfer = landStdAtTransfer + buildingStdAtTransfer;
   }
@@ -378,7 +379,7 @@ function _calcPostDisclosure(
   }
 
   // 취득시 호별총액 (floor 정합 — 원 단위 정수)
-  const unitTotalAtAcq = Math.floor(input.unitPriceAtAcquisition * floorAreaTotal);
+  const unitTotalAtAcq = multiplyByArea(input.unitPriceAtAcquisition, floorAreaTotal);
 
   // ── 환산취득가 합계 ──
   // INT( 양도가액 × 취득시호별총액 / 양도시호별총액 )
@@ -399,7 +400,7 @@ function _calcPostDisclosure(
     input.landPriceAtAcquisition !== undefined &&
     input.buildingStdPriceAtAcquisition !== undefined
   ) {
-    landStdAtAcq    = Math.floor(input.landPriceAtAcquisition * input.landArea);
+    landStdAtAcq    = multiplyByArea(input.landPriceAtAcquisition, input.landArea);
     buildingStdAtAcq = Math.floor(input.buildingStdPriceAtAcquisition);
     combinedStdAtAcq = landStdAtAcq + buildingStdAtAcq;
     const split = splitEstimatedAcquisitionByLandBuilding(
@@ -432,7 +433,7 @@ function _calcPostDisclosure(
   let buildingStdAtTransfer: number | undefined;
   let combinedStdAtTransfer: number | undefined;
   if (input.landPriceAtTransfer !== undefined && input.buildingStdPriceAtTransfer !== undefined) {
-    landStdAtTransfer    = Math.floor(input.landPriceAtTransfer * input.landArea);
+    landStdAtTransfer    = multiplyByArea(input.landPriceAtTransfer, input.landArea);
     buildingStdAtTransfer = Math.floor(input.buildingStdPriceAtTransfer);
     combinedStdAtTransfer = landStdAtTransfer + buildingStdAtTransfer;
   }

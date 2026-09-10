@@ -27,6 +27,7 @@ import type {
   PreDeemedBreakdown,
   PreDeemedSelectedMethod,
 } from "./types/inheritance-acquisition.types";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 export type {
   InheritanceAcquisitionInput,
@@ -357,7 +358,7 @@ function computeSupplementary(
 ): { amount: number; formula: string } {
   if (assetKind === "land") {
     const area = landAreaM2 ?? 0;
-    const amount = Math.floor(publishedValue * area);
+    const amount = multiplyByArea(publishedValue, area);
     return {
       amount,
       formula: `개별공시지가 ${publishedValue.toLocaleString()}/㎡ × ${area}㎡ = ${amount.toLocaleString()}`,

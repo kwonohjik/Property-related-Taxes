@@ -10,6 +10,7 @@
 
 import type { GeneralBuildingInput } from "./general-building-valuation";
 import { safeMultiplyThenDivide } from "./tax-utils";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /**
  * §99-164-10 산정 상세 — **결과 화면 표시용**(2026-08-13).
@@ -126,7 +127,7 @@ export function applyConvertedHousingPriceOverride(
   // 흡수한다"는 정책을 쓰므로, override 도 같은 정책을 이어받아 **합계를 보존**한다
   // (실측: landArea 100 → 94원, 317 → 300원 소실. 저장소 정책 `feedback_floor_residual_absorption`).
   const landPerSqm = input.landArea > 0 ? Math.floor(d.convertedLand / input.landArea) : 0;
-  const restoredLand = Math.floor(landPerSqm * input.landArea);
+  const restoredLand = multiplyByArea(landPerSqm, input.landArea);
   const residual = d.convertedLand - restoredLand;
   return {
     ...input,

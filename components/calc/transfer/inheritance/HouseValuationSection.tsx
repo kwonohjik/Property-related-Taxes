@@ -97,7 +97,7 @@ function LandPriceLookup({
 
   const pricePerSqm = parseAmount(landPricePerSqm);
   const area = parseFloat(landArea) || 0;
-  const landStdPrice = pricePerSqm > 0 && area > 0 ? Math.floor(pricePerSqm * area) : null;
+  const landStdPrice = pricePerSqm > 0 && area > 0 ? multiplyByArea(pricePerSqm, area) : null;
   const canLookup = !!jibun && !!effectiveYear;
 
   return (
@@ -175,6 +175,7 @@ import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers"
 import { sec163_9BaseDateLabel } from "@/lib/calc/transfer-163-9-base-date";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -461,7 +462,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         </FieldCard>
         {(() => {
           const area = parseFloat(asset.inhHouseValLandArea) || 0;
-          const landStdF = Math.floor(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst) * area);
+          const landStdF = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst), area);
           const buildingStdF = parseAmount(asset.inhHouseValBuildingStdPriceAtFirst) || 0;
           const sumF = landStdF + buildingStdF;
           if (sumF <= 0) return null;
@@ -549,9 +550,9 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           const landPricePerSqmAtInheritance = parseAmount(asset.inhHouseValLandPricePerSqmAtInheritance);
           const landStdA = isBefore1990
             ? (pre1990Land?.total ?? 0)
-            : Math.floor(landPricePerSqmAtInheritance * area);
+            : multiplyByArea(landPricePerSqmAtInheritance, area);
           const buildingA = parseAmount(asset.inhHouseValBuildingStdPriceAtInheritance) || 0;
-          const landStdF = Math.floor(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst) * area);
+          const landStdF = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst), area);
           const buildingStdF = parseAmount(asset.inhHouseValBuildingStdPriceAtFirst) || 0;
           const P_F = parseAmount(asset.inhHouseValHousePriceAtFirst) || 0;
           const sumA = landStdA + buildingA;

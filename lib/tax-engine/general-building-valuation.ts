@@ -79,6 +79,7 @@ import type {
   AssetCardForAggregate,
   GeneralBuildingOutput,
 } from "./types/general-building.types";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 // ============================================================
 // 내부 계산 함수
@@ -126,9 +127,7 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
   judgment?: SaleSplitJudgmentDetail;
 } {
   // 토지 기준시가 총액
-  const landStdTotal = Math.floor(
-    input.transferLandPricePerSqm * input.landArea,
-  );
+  const landStdTotal = multiplyByArea(input.transferLandPricePerSqm, input.landArea);
 
   /**
    * 안분 basis — split 경로와 **같은 함수**를 쓴다(계획서 §16.2).
@@ -231,9 +230,7 @@ function calculateEstimatedDeduction(
   landRate: number,
   buildingRate: number,
 ): GeneralBuildingEstimatedDeduction {
-  const acqLandStdTotal = Math.floor(
-    input.acquisitionLandPricePerSqm * input.landArea,
-  );
+  const acqLandStdTotal = multiplyByArea(input.acquisitionLandPricePerSqm, input.landArea);
 
   // 공유지분 축소(§163⑥ base) — 성분별 독립 적용. 토지는 §99①1호 가목(개별공시지가),
   // 건물은 나목(국세청장 산정)으로 **별도 공시**라 결합 총액 개념이 없다.
@@ -574,12 +571,8 @@ export function buildGeneralBuildingAssetCards(
   });
 
   // 산식 분모/분자 변수 (UI 자산별 산식 인라인 표시용 — 사례 31 경로)
-  const landStdTotalForFormula = Math.floor(
-    input.transferLandPricePerSqm * input.landArea,
-  );
-  const acqLandStdTotalForFormula = Math.floor(
-    input.acquisitionLandPricePerSqm * input.landArea,
-  );
+  const landStdTotalForFormula = multiplyByArea(input.transferLandPricePerSqm, input.landArea);
+  const acqLandStdTotalForFormula = multiplyByArea(input.acquisitionLandPricePerSqm, input.landArea);
 
   /**
    * 🔴 환산 모드 이월과세 기준시가 (설계 D9-8) — **카드 조립 후 일괄 주입**.

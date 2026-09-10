@@ -69,6 +69,7 @@ import {
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 
 // 배율은 엔진 getBuildingSiteMultiplier가 단일 진실 — UI에서 재구현 금지.
@@ -182,7 +183,7 @@ export function GeneralBuildingBlock({
     const landArea = parseDecimal(asset.gbLandArea ?? "");
     if (!firstDisc || !firstDiscLand || !firstDiscBld || !acqLandPerSqm || !acqBld || !landArea)
       return null;
-    const acqLand = Math.floor(acqLandPerSqm * landArea);
+    const acqLand = multiplyByArea(acqLandPerSqm, landArea);
     const acqTotal = acqLand + acqBld;
     const firstDiscTotal = firstDiscLand + firstDiscBld;
     if (firstDiscTotal <= 0 || acqTotal <= 0) return null;

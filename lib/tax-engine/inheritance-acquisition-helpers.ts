@@ -14,6 +14,7 @@ import type { InheritanceHouseValuationResult } from "./types/inheritance-house-
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { Pre1990LandValuationResult } from "./pre-1990-land-valuation";
 import { applyRatio } from "./tax-utils";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** STEP 0.45 실행 결과 */
 export interface InheritedAcquisitionStepResult {
@@ -114,7 +115,7 @@ const LAND_FIRST_DISCLOSURE_DATE = new Date("1990-08-30T00:00:00.000Z");
  */
 export function computeCommercial164_6StdPrice(v: CommercialInheritanceValuationInput): number {
   const floorAreaTotal = v.exclusiveArea + v.commonArea;
-  const unitTotalAtFirst = Math.floor(v.unitPriceAtFirstDisclosure * floorAreaTotal);
+  const unitTotalAtFirst = multiplyByArea(v.unitPriceAtFirstDisclosure, floorAreaTotal);
   const combinedStdAtAcq = calcStdPriceSum(
     v.landPriceAtAcquisition,
     v.landArea,

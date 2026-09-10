@@ -11,6 +11,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { ParcelFormItem } from "@/lib/stores/calc-wizard-store";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface ParcelListInputProps {
   parcels: ParcelFormItem[];
@@ -496,9 +497,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                     개산공제(자동):{" "}
                     {formatKRW(
                       Math.floor(
-                        Math.floor(
-                          acqAreaForPreview * parseFloat(p.standardPricePerSqmAtAcq)
-                        ) * 0.03
+                        multiplyByArea(parseFloat(p.standardPricePerSqmAtAcq), acqAreaForPreview) * 0.03
                       )
                     )}
                   </p>

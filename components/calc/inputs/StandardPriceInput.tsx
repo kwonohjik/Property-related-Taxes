@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { cn } from "@/lib/utils";
 import { useStandardPriceLookup, getDefaultPriceYear, isNoticeAfterReference } from "@/lib/hooks/useStandardPriceLookup";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 export type PriceSource = "lookup" | "manual" | "lookup-edited";
 
@@ -133,7 +134,7 @@ export function StandardPriceInput({
     const sqm = parseFloat(v.replace(/,/g, "") || "0");
     const areaNum = parseFloat(areaValue.replace(/,/g, "") || "0");
     if (sqm > 0 && areaNum > 0) {
-      const computed = String(Math.floor(sqm * areaNum));
+      const computed = String(multiplyByArea(sqm, areaNum));
       onTotalPriceChange(computed);
       onSourceChange?.("manual");
     }
@@ -146,7 +147,7 @@ export function StandardPriceInput({
     const areaNum = parseFloat(v || "0");
     const sqm = parseFloat(pricePerSqmValue.replace(/,/g, "") || "0");
     if (sqm > 0 && areaNum > 0) {
-      const computed = String(Math.floor(sqm * areaNum));
+      const computed = String(multiplyByArea(sqm, areaNum));
       onTotalPriceChange(computed);
       onSourceChange?.("manual");
     }
@@ -177,7 +178,7 @@ export function StandardPriceInput({
       }
       // 면적이 있으면 총액 자동계산
       if (areaNum > 0) {
-        onTotalPriceChange(String(Math.floor(areaNum * price)));
+        onTotalPriceChange(String(multiplyByArea(price, areaNum)));
       }
     } else {
       // 주택: 총액 직접 저장
