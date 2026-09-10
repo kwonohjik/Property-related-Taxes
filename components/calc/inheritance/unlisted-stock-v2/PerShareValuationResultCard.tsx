@@ -10,6 +10,13 @@
  * UI Design: docs/02-design/features/inheritance-unlisted-stock-valuation.ui.design.md §7
  */
 
+// 사유 라벨은 단일 출처에서 import한다 — 종전에는 enum 식별자("real_estate_80"·
+// "subsidiary_other_max" 등)가 화면에 그대로 출력됐다.
+import { GOODWILL_EXCLUSION_LABELS } from "@/lib/tax-engine/data/goodwill-exclusion-labels";
+import {
+  STOCK_PREMIUM_EXCLUSION_LABELS,
+  STOCK_PREMIUM_EXCLUSION_SHORT_LABELS,
+} from "@/lib/tax-engine/data/stock-premium-exclusion-labels";
 import { useMemo, useState } from "react";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { parseLawRefsForModal } from "@/lib/utils/law-url";
@@ -341,7 +348,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
               cellNum="⑦"
               label="비최대주주 1주당 평가액"
               value={`${fmt(result.perShareValueNonMaxShareholder)}원`}
-              hint={result.premiumExclusionReason ? `최대주주 할증 배제 사유: ${result.premiumExclusionReason}` : "비최대주주"}
+              hint={result.premiumExclusionReason ? `최대주주 할증 배제 사유: ${STOCK_PREMIUM_EXCLUSION_SHORT_LABELS[result.premiumExclusionReason]}` : "비최대주주"}
               law="상증법 §63 ③ 본문 + 상증령 §53"
             />
           </>
@@ -391,14 +398,14 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
       {/* §55③ 영업권 배제 안내 */}
       {result.goodwillCalculation.excludedByLaw && (
         <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800">
-          ⚠️ 영업권 자동 배제 (상증령 §55 ③) — 사유: {result.goodwillCalculation.excludedByLaw}
+          ⚠️ 영업권 자동 배제 — {GOODWILL_EXCLUSION_LABELS[result.goodwillCalculation.excludedByLaw]}
         </div>
       )}
 
       {/* 할증 배제 안내 */}
       {result.premiumExclusionReason && (
         <div className="rounded border border-violet-300 bg-violet-100/60 p-2 text-caption text-violet-800">
-          ℹ️ 최대주주 할증평가 배제 — 사유: {result.premiumExclusionReason} (상증령 §53 ⑧)
+          ℹ️ 최대주주 할증평가 배제 — {STOCK_PREMIUM_EXCLUSION_LABELS[result.premiumExclusionReason]}
         </div>
       )}
 

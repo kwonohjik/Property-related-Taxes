@@ -35,18 +35,21 @@ const PDFDownloadLink = dynamic(
 
 export interface UnlistedStockBesshiPdfDownloadButtonProps {
   input: UnlistedStockValuationInput;
+  /** 제1쪽 총계 행 라벨(상속/증여재산가액) 분기. 미지정 시 상속 — 화면과 같은 계약. */
+  taxKind?: "inheritance" | "gift";
 }
 
 export function UnlistedStockBesshiPdfDownloadButton({
   input,
+  taxKind,
 }: UnlistedStockBesshiPdfDownloadButtonProps) {
   // 비활성 조건 — 평가 가능 입력 미충족
   const isDisabled = input.totalShares <= 0 || input.ownedShares <= 0 || !input.corpName.trim();
 
   const filename = useMemo(() => generateBesshiPdfFilename(input), [input]);
   const document = useMemo(
-    () => <UnlistedStockBesshiPdfDocument input={input} />,
-    [input],
+    () => <UnlistedStockBesshiPdfDocument input={input} taxKind={taxKind} />,
+    [input, taxKind],
   );
 
   if (isDisabled) {

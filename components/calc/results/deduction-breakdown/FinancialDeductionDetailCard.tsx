@@ -123,21 +123,25 @@ export function FinancialDeductionDetailCard({
               />
               {detail.bracket === "tier3" && (
                 <DetailRow
-                  label={`㉠ 순금융재산 × ${(detail.rate * 100).toFixed(0)}%`}
+                  label={`㉠ 순금융재산 × ${(detail.rate * 100).toFixed(0)}% (§22 ①1호 — 20%와 2천만원 중 큰 금액)`}
                   value={formatKRW(detail.rawDeduction)}
                   indent
                 />
               )}
+              {/* 호 번호는 법문 그대로다 — §22①
+                    1호: 순금융재산 > 2천만 → MAX(20%, 2천만)  ⇒ tier2(2천만 고정)·tier3(20%)
+                    2호: 순금융재산 ≤ 2천만 → 전액             ⇒ tier1
+                  종전에는 tier1에 1호, tier2에 2호를 달아 서로 뒤바뀌어 있었다. */}
               {detail.bracket === "tier2" && (
                 <DetailRow
-                  label="㉠ 고정액 (§22 ①2호)"
+                  label="㉠ 고정액 (§22 ①1호 — 20%와 2천만원 중 큰 금액)"
                   value={formatKRW(detail.rawDeduction)}
                   indent
                 />
               )}
               {detail.bracket === "tier1" && (
                 <DetailRow
-                  label="㉠ 전액 공제 (§22 ①1호)"
+                  label="㉠ 전액 공제 (§22 ①2호)"
                   value={formatKRW(detail.rawDeduction)}
                   indent
                 />
@@ -148,8 +152,14 @@ export function FinancialDeductionDetailCard({
                 indent
                 muted
               />
+              {/* 엔진에 2천만원 «하한(MAX)» 연산은 없다 — `Math.min(rawDeduction, FINANCIAL_MAX)`
+                  하나뿐이다(inheritance-deduction-items.ts:220). 2천만원 MAX는 §22①1호 «안»의
+                  두 갈래일 뿐 공제액 산식의 조건이 아니고, 최대주주 여부는 §22②의 «자산 제외»
+                  규정이라 애초에 다른 축이다(그 안내는 위 §22② 배지가 맡는다).
+                  산식 문구는 한국어 풀어쓰기가 정본이라 「MIN(...)」 함수 표기를 쓰지 않는다
+                  (__tests__/components/minmax-function-notation-policy.test.ts). */}
               <SubTotalRow
-                label="최대주주가 있을 시 「㉠과 ㉡ 중 작은 금액」과 2천만원 중 큰 금액"
+                label="공제액 = ㉠ 산정액과 ㉡ 한도 2억 중 작은 금액"
                 value={formatKRW(detail.cappedDeduction)}
                 tone="blue"
               />

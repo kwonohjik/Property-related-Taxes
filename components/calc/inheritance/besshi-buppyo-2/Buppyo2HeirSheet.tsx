@@ -16,6 +16,8 @@ import {
   BP2_NA_SECTION_TITLE,
   BP2_FORM_TITLE,
   BP2_FORM_SUBTITLE,
+  BP2_FORM_SIDE,
+  BP2_FOOTER,
   splitBuppyo2NaRows,
 } from "./besshi-buppyo-2-constants";
 
@@ -44,8 +46,14 @@ export function Buppyo2HeirSheet({
           needsPage2 ? " print:break-after-page" : ""
         }`}
       >
+        {/* 서식 정적 텍스트는 besshi-buppyo-2-constants가 단일 출처다. BP2_FORM_SIDE·BP2_FOOTER는
+            선언만 있고 소비처가 0건이라 화면에서 빠져 있었다 — 형제 서식(Besshi1·5·Buppyo3)은
+            모두 PAPER_FOOTER를, Besshi6_2는 「(앞쪽)」을 렌더한다. */}
         <header className="mb-3">
-          <p className="text-micro text-slate-500">{BP2_FORM_SUBTITLE}</p>
+          <div className="flex items-baseline justify-between">
+            <p className="text-micro text-slate-500">{BP2_FORM_SUBTITLE}</p>
+            <p className="text-micro text-gray-500">{BP2_FORM_SIDE}</p>
+          </div>
           <p className="text-center text-lg font-bold tracking-wide text-slate-900 dark:text-slate-50">
             {BP2_FORM_TITLE}
           </p>
@@ -67,6 +75,8 @@ export function Buppyo2HeirSheet({
         <div className="mt-3" data-testid={`buppyo2-heir-${idx}-kye`}>
           <Buppyo2KyeSection total={heirData.sectionTotal} idx={idx} />
         </div>
+
+        <p className="mt-2 text-right text-micro text-gray-500">{BP2_FOOTER}</p>
       </div>
 
       {/* ── 2쪽: 「상속인별 상속재산명세」 — 오버플로분(중복 없음) + 계. N>5일 때만 ── */}
@@ -91,6 +101,8 @@ export function Buppyo2HeirSheet({
               total={heirData.itemRowsTotal}
             />
           </HorizontalScrollContainer>
+
+          <p className="mt-2 text-right text-micro text-gray-500">{BP2_FOOTER}</p>
         </div>
       )}
     </div>

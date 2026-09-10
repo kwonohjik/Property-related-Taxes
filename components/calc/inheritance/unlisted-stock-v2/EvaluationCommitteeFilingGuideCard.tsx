@@ -8,7 +8,10 @@
  *
  * 법령 (KoreanLaw MCP 2026-05-24):
  *   §49의2⑤2호 — 첨부 자료 3종 (가·나·다)
- *   §49의2④ — 신청·통지 기한 (상속 4개월/1개월 · 증여 70일/20일)
+ *   §49의2⑤ — 신청기한 (상속 신고기한 만료 4개월 전 · 증여 70일 전)
+ *   §49의2⑥ — 통지기한 (상속 신고기한 만료 1개월 전 · 증여 20일 전)
+ *   ⚠️ ④는 «위원의 해임·해촉» 사유다 — 종전에 기한 근거로 잘못 인용했다
+ *      (KoreanLaw MCP 재검증 2026-09-11, 상증령 MST 283637 시행 20260227).
  *   §49의2⑦ — 심의 고려사항 3종
  *   §49의2⑨ — 신용평가전문기관 의뢰 (수수료 납세자 부담)
  *
@@ -93,13 +96,13 @@ export function EvaluationCommitteeFilingGuideCard({
         </ul>
       </section>
 
-      {/* §49의2④ 신청·통지 기한 안내 */}
+      {/* §49의2⑤(신청기한)·⑥(통지기한) 안내 */}
       <section
         className="rounded border border-sky-200 bg-white dark:bg-gray-900 p-2.5 text-xs space-y-1"
         data-testid="evaluation-committee-deadline-guide"
       >
         <p className="font-semibold text-sky-900">
-          ② 신청·통지 기한 (§49의2④ — {taxKind === "inheritance" ? "상속세" : "증여세"})
+          ② 신청기한 §49의2⑤ · 통지기한 §49의2⑥ ({taxKind === "inheritance" ? "상속세" : "증여세"})
         </p>
         <p className="text-sky-700">{deadlineLabel}</p>
         <p className="text-sky-700/70 text-micro">

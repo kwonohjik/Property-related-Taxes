@@ -748,6 +748,7 @@ export function calcHeirAllocation(
   return {
     perHeir,
     distributableTax,
+    nonPayerNaturalGiftCredit,
     indirectDistributionBase: indirectDenominator,
     indirectNumerator,
     computedTaxShareDenominator,

@@ -52,11 +52,13 @@ export function CrossHoldingResultCard({
           </tr>
         </thead>
         <tbody>
-          {reflection.appliedHoldings.map((h) => {
+          {reflection.appliedHoldings.map((h, index) => {
             const perShare = reflection.solution.perShareSupplementary[h.rowId];
             return (
               <tr key={h.rowId} className="border-t border-emerald-100">
-                <td className="py-1">{h.issuerCorpName || h.rowId}</td>
+                {/* rowId는 crypto.randomUUID() 또는 `oh-<타임스탬프>-<랜덤>` 내부 식별자다 —
+                    미입력 fallback으로 화면에 노출하면 안 된다(순번 라벨로 대체). */}
+                <td className="py-1">{h.issuerCorpName?.trim() || `발행법인 ${index + 1}`}</td>
                 <td className="text-right font-mono tabular-nums">{won(perShare ?? 0)}</td>
                 <td className="text-right font-mono tabular-nums">{won(h.bookValue)}</td>
                 <td className="text-right font-mono tabular-nums">{won(h.supplementaryValue)}</td>

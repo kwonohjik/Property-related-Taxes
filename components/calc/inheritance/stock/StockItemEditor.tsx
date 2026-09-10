@@ -233,7 +233,6 @@ function ListedStockEditor({
             const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
             set({ listedStockAvgPrice: v || undefined });
           }}
-          placeholder="주당 순손익 입력 (원)"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           data-testid="ls-avg-price"
         />

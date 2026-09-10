@@ -28,6 +28,7 @@ export function ComputedTaxDetailCard({
   const perHeir = a?.perHeir ?? {};
   const denom = a?.computedTaxShareDenominator ?? 0;
   const distributable = a?.distributableTax ?? 0;
+  const nonPayerNaturalGiftCredit = a?.nonPayerNaturalGiftCredit ?? 0;
   const subtotal = result.computedTax + result.generationSkipSurcharge;
   const rate = result.computedTaxAppliedRate;
   const deduction = result.computedTaxProgressiveDeduction;
@@ -62,8 +63,17 @@ export function ComputedTaxDetailCard({
             <GenerationSkipFormulaRows detail={result.generationSkipDetail} />
           )}
           <SubTotalRow label="⑨ 산출세액 소계 (⑦ + ⑧)" value={formatKRW(subtotal)} />
+          {/* distributableTax는 영리법인 면제 «외에» 상속인 외 자연인의 §28②본문 증여세액공제도
+              뺀 값이다(inheritance-allocation.ts:452). 며느리·후순위 인척처럼 법정상속분이 없고
+              사전증여만 받은 자가 있으면 두 항이 모두 0이 아니어서 종전 산식은 성립하지 않았다.
+              값이 0인 항은 적지 않는다. */}
           <DetailRow
-            label={`배부대상 산출세액 = ⑦ − 영리법인 면제 ${formatKRW(result.corporateExemption?.amount ?? 0)}`}
+            label={
+              `배부대상 산출세액 = ⑦ − 영리법인 면제 ${formatKRW(result.corporateExemption?.amount ?? 0)}` +
+              (nonPayerNaturalGiftCredit > 0
+                ? ` − 상속인 외 자 증여세액공제 ${formatKRW(nonPayerNaturalGiftCredit)}`
+                : "")
+            }
             value={formatKRW(distributable)}
           />
           {rows.map((h) => {

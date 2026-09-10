@@ -456,8 +456,8 @@ export function FamilyBusinessEligibilitySection({
           <div className="space-y-2">
             <CollapsibleHintCard tone="sky" summary="사업무관자산 차감 안내 (§15⑤2호)">
               <p className="text-sky-700 dark:text-sky-300">
-                법인 주식(corporate_stock)은 §15⑤2호에 따라 사업무관자산 가액을 차감한 후 가업상속재산에 포함됩니다.
-                Step1 자산 카드에서 familyBusinessCategory 선택 시, 사업무관자산 차감 후 평가액을 직접 입력하세요.
+                「가업 법인 주식」은 §15⑤2호에 따라 사업무관자산 가액을 차감한 후 가업상속재산에 포함됩니다.
+                Step1 자산 카드에서 가업 자산 분류를 고를 때, 사업무관자산 차감 후 평가액을 직접 입력하세요.
               </p>
             </CollapsibleHintCard>
             <ToggleCard

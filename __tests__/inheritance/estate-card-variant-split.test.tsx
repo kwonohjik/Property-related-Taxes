@@ -154,7 +154,25 @@ describe("EstateBodyDeposit — 전세보증금", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("자산 명칭")).toBeInTheDocument();
     expect(screen.getByText("임대보증금")).toBeInTheDocument();
-    expect(screen.getByText(/전세보증금/)).toBeInTheDocument();
+    // 안내문 하나를 특정한다 — `/전세보증금/`는 hint에도 걸려 다중 매칭이 된다
+    // (memory feedback_hint_quoting_toggle_title_breaks_selector).
+    expect(screen.getByText(/임차인이 임대인에게 맡긴/)).toBeInTheDocument();
+  });
+
+  // 대장 IG-042 — 머리글·subtitle·hint 셋이 「÷12%」를, 본문 안내문만 액면가를 적어
+  // 파일이 자기 자신과 모순이었다. 엔진은 액면 그대로다(property-valuation.ts:405).
+  it("IG-042 · 화면 어디에도 「÷12%」 환산 산식이 없다 (엔진은 액면 평가)", () => {
+    const { container } = render(
+      <EstateBodyDeposit
+        item={makeItem("deposit")}
+        onUpdate={() => {}}
+        showCollateralDeductToggle={false}
+        mode="inheritance"
+      />,
+    );
+    // 긍정 짝 — 「없다」만 단언하면 렌더가 통째로 비어도 통과한다
+    expect(screen.getAllByText(/반환받을 채권 액면가/).length).toBeGreaterThan(0);
+    expect(container.textContent).not.toMatch(/12\s*%/);
   });
 });
 

@@ -192,27 +192,62 @@ describe("PriorGiftTableView — 렌더·수증자 라벨", () => {
     expect(screen.getByText("기타 친족")).toBeTruthy();
   });
 
-  it("D-4 증여세 모드(heirs 없음) → doneeRelation 라벨만", () => {
+  // ⚠️ D-4·D-5는 2026-09-11에 «계약 자체»를 뒤집었다 (대장 IG-066).
+  //
+  // 종전 계약은 「증여세 모드 → doneeRelation 라벨만」이었는데, 그 doneeRelation은
+  // 이력 조회가 `donorRelation`(증여자 관계)을 그대로 복사해 넣은 값이고
+  // (lib/calc/prior-gift-lookup.ts:327), GiftRowEditor는 증여세 모드에서 수증인 관계
+  // select를 아예 렌더하지 않는다(:371 showIsHeir 게이트). 즉 「수증자」 헤더 아래에
+  // 증여자 관계가 찍혔고, §47 동일인 합산을 실제로 가르는 gift.donor는 표에 없었다.
+  // 이 두 테스트는 그 결함을 «지키고» 있었다 — 제목("doneeRelation 라벨만")이 곧 결함이다.
+
+  it("D-4 증여세 모드(heirs 없음) → donor 라벨을 보여준다", () => {
     render(
       <PriorGiftTableView
-        gifts={[makeGift({ doneeRelation: "lineal_descendant" })]}
+        gifts={[makeGift({ donor: "father", doneeRelation: "lineal_descendant" })]}
         selectedIndex={null}
         onSelect={() => {}}
         mode="gift"
       />,
     );
-    expect(screen.getByText("직계비속")).toBeTruthy();
+    expect(screen.getByText("부")).toBeTruthy();
+    // 구별력 — doneeRelation을 다시 표시하면 이 단언이 깨진다
+    expect(screen.queryByText("직계비속")).toBeNull();
   });
 
-  it("D-5 증여세 모드 관계 미지정 → '수증인 미지정'", () => {
+  it("D-5 증여세 모드 증여자 미지정 → '증여자 미지정'", () => {
     render(
       <PriorGiftTableView
-        gifts={[makeGift({ doneeRelation: undefined })]}
+        gifts={[makeGift({ donor: undefined })]}
         selectedIndex={null}
         onSelect={() => {}}
         mode="gift"
       />,
     );
-    expect(screen.getByText("수증인 미지정")).toBeTruthy();
+    expect(screen.getByText("증여자 미지정")).toBeTruthy();
+  });
+
+  it("D-6 컬럼 헤더가 모드별로 갈린다 — 상속 「수증자」 / 증여 「증여자」", () => {
+    const { unmount } = render(
+      <PriorGiftTableView
+        gifts={[makeGift()]}
+        selectedIndex={null}
+        onSelect={() => {}}
+        mode="inheritance"
+        heirs={HEIRS}
+      />,
+    );
+    expect(screen.getByRole("columnheader", { name: "수증자" })).toBeTruthy();
+    unmount();
+
+    render(
+      <PriorGiftTableView
+        gifts={[makeGift({ donor: "mother" })]}
+        selectedIndex={null}
+        onSelect={() => {}}
+        mode="gift"
+      />,
+    );
+    expect(screen.getByRole("columnheader", { name: "증여자" })).toBeTruthy();
   });
 });

@@ -17,6 +17,7 @@ import {
 } from "@/components/calc/inheritance/estate-card/chip-config";
 import {
   DONOR_RELATION_LABELS,
+  GIFT_DONOR_LABELS,
   donorSummaryLabel,
 } from "@/components/calc/prior-gift/meta";
 import {
@@ -66,9 +67,15 @@ function resolveDoneeDisplay(
       sub: gift.doneeRelation ? DONOR_RELATION_LABELS[gift.doneeRelation] : "관계 미지정",
     };
   }
-  // 증여세 모드 (heirs 없음) — 4·5. doneeRelation 라벨만
+  // 증여세 모드 (heirs 없음) — 표시 대상은 «증여자»(donor)다.
+  //
+  // 종전에는 doneeRelation을 「수증자」 칸에 넣었는데, 증여세 모드에서 그 필드는
+  // 이력 조회가 `donorRelation`을 그대로 복사해 넣은 값이고(prior-gift-lookup.ts:327)
+  // GiftRowEditor는 증여세 모드에서 수증인 관계 select를 아예 렌더하지 않는다(:371 showIsHeir 게이트).
+  // 즉 「수증자」 라벨 아래에 증여자 관계가 찍혔고, §47 동일인 합산을 실제로 가르는
+  // gift.donor는 표에도 배지에도 없었다. 컬럼 헤더도 모드별로 나눈다(:220).
   return {
-    label: gift.doneeRelation ? DONOR_RELATION_LABELS[gift.doneeRelation] : "수증인 미지정",
+    label: gift.donor ? GIFT_DONOR_LABELS[gift.donor] : "증여자 미지정",
     sub: null,
   };
 }
@@ -217,7 +224,9 @@ export function PriorGiftTableView({
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
             <th className="py-2 text-left pl-3 text-gray-500 font-medium">증여일</th>
-            <th className="py-2 text-left pl-2 text-gray-500 font-medium">수증자</th>
+            <th className="py-2 text-left pl-2 text-gray-500 font-medium">
+              {mode === "inheritance" ? "수증자" : "증여자"}
+            </th>
             <th className="py-2 text-right pr-2 text-gray-500 font-medium">
               증여재산가액
             </th>

@@ -70,8 +70,13 @@ export const BESSHI_P1_SECTION3 = {
   nonMaxShareholder: "최대주주 해당 없음 (⑥ 적용)",
   /** ⑨ 보충적 평가가액 */
   reportingValue: "보충적 평가가액",
-  /** 총 상속재산가액 (⑨ × 보유주식수) */
-  total: (shares: string) => `상속재산가액 (⑨ × 보유주식수 ${shares}주)`,
+  /**
+   * 총 상속(증여)재산가액 (⑨ × 보유주식수).
+   * 이 별지는 증여세 평가에서도 그대로 쓰인다(StockItemEditor가 gift 모드에서 렌더) —
+   * 세목을 안 받으면 증여 화면에도 「상속재산가액」이 찍힌다.
+   */
+  total: (shares: string, taxKind: "inheritance" | "gift" = "inheritance") =>
+    `${taxKind === "gift" ? "증여" : "상속"}재산가액 (⑨ × 보유주식수 ${shares}주)`,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────
@@ -158,8 +163,25 @@ export const BESSHI_P2_SECTION4 = {
   liabilityGroup: "나. 부채총액",
   /** ⑧ 소계 산식 */
   assetSubtotalFormula: "소계 (①+②+③+④+⑤−⑥−⑦)",
-  /** ⑲ 소계 산식 (⑮ 가산) */
-  liabilitySubtotalFormula: "소계 (⑨+⑩+⑪+⑫+⑬+⑭+⑮−⑯−⑰−⑱)",
+  /**
+   * ⑲ 소계 산식 (⑮ 가산) — 라벨과 값이 «같은 배열»에서 나오게 파생한다.
+   *
+   * ⑲ 칸의 값은 `sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, ...)`이고 그 배열에는
+   * 양식이 번호를 부여하지 않은 보험준비금 3행(cellNum "*")이 가산 항목으로 들어 있다.
+   * 종전에는 산식이 번호 10개만 나열한 고정 문자열이라, 보험사 입력이 있으면
+   * 라벨의 항 합 ≠ 표시 금액이었다. 보험준비금이 실제로 합산될 때만 항을 덧붙인다.
+   */
+  liabilitySubtotalFormula: (
+    raw?: Partial<Record<NetAssetNumericField, number>>,
+  ): string => {
+    const body = BESSHI_P2_LIABILITY_ROWS.filter((r) => r.cellNum !== "*")
+      .map((r, i) => (i === 0 ? r.cellNum : `${r.isSubtract ? "−" : "+"}${r.cellNum}`))
+      .join("");
+    const hasInsurance = BESSHI_P2_LIABILITY_ROWS.some(
+      (r) => r.cellNum === "*" && (raw?.[r.field] ?? 0) !== 0,
+    );
+    return `소계 (${body}${hasInsurance ? "+보험준비금" : ""})`;
+  },
   /** 다 영업권 포함 전 순자산가액 */
   preGoodwillLabel: "영업권포함전 순자산가액(⑧-⑲)",
   /** 라 영업권 + 회색 참조 */

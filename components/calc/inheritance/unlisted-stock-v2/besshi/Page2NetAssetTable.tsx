@@ -83,7 +83,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
               />
             );
           })}
-          <NetAssetTr cellNum="⑲" label={BESSHI_P2_SECTION4.liabilitySubtotalFormula} amount={liabilitySubtotal} testid="⑲" emphasis />
+          <NetAssetTr cellNum="⑲" label={BESSHI_P2_SECTION4.liabilitySubtotalFormula(eff)} amount={liabilitySubtotal} testid="⑲" emphasis />
 
           {/* 다·라·마 */}
           <NetAssetTr cellNum="다" label={BESSHI_P2_SECTION4.preGoodwillLabel} amount={preGoodwill} testid="다" topBorder />

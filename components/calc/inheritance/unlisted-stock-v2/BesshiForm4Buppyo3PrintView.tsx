@@ -57,6 +57,8 @@ export { Page6NetIncomeBreakdown } from "./besshi/Page6NetIncomeBreakdown";
 
 export interface BesshiForm4Buppyo3PrintViewProps {
   input: UnlistedStockValuationInput;
+  /** 제1쪽 총계 행 라벨(상속/증여재산가액) 분기. 미지정 시 상속. */
+  taxKind?: "inheritance" | "gift";
 }
 
 /**
@@ -93,7 +95,7 @@ function normalizeBesshiInput(input: UnlistedStockValuationInput): UnlistedStock
   };
 }
 
-export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintViewProps) {
+export function BesshiForm4Buppyo3PrintView({ input, taxKind }: BesshiForm4Buppyo3PrintViewProps) {
   const [open, setOpen] = useState(false);
 
   // F-8: 미완성 입력(날짜 공란 등)은 toDate가 throw → 원본 fallback. 어차피 아래 가드·PDF 버튼이 막음.
@@ -127,7 +129,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           📄 별지 제4호 부표3 비상장주식 평가서 (인쇄 미리보기){" "}
           <span className={expandToggleClass("slate")}>{expandToggleLabel(open)}</span>
         </button>
-        <UnlistedStockBesshiPdfDownloadButton input={safe} />
+        <UnlistedStockBesshiPdfDownloadButton input={safe} taxKind={taxKind} />
       </div>
 
       {/* @page A4 portrait — 인쇄 시 5쪽 자동 분리 */}
@@ -157,7 +159,7 @@ export function BesshiForm4Buppyo3PrintView({ input }: BesshiForm4Buppyo3PrintVi
           </p>
 
           {/* 제1쪽 */}
-          <Page1CoverSection input={safe} result={result} />
+          <Page1CoverSection input={safe} result={result} taxKind={taxKind} />
 
           {/* PR-L/L2: §63② 기업공개·상장신청 준비 중 평가 적용 시 ⑥ 최종평가액 반영 안내 (preparationType 분기) */}
           {result?.preIpoListingResult?.applied && (

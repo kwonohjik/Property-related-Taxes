@@ -5,22 +5,13 @@
  * 계산 결과 화면에서 비과세 차감 내역을 표시합니다.
  */
 
+import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { ExemptionResult } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { ExemptionItemResult } from "@/lib/tax-engine/exemption-evaluator";
 
-// ============================================================
-// 금액 포매터
-// ============================================================
-
-function formatKRW(amount: number) {
-  if (amount === 0) return "0원";
-  const eok = Math.floor(amount / 100_000_000);
-  const man = Math.floor((amount % 100_000_000) / 10_000);
-  if (eok > 0 && man > 0) return `${eok}억 ${man}만원`;
-  if (eok > 0) return `${eok}억원`;
-  if (man > 0) return `${man}만원`;
-  return `${amount.toLocaleString()}`;
-}
+// 금액 포매터는 저장소 정본(CurrencyInput의 `formatKRW` = toLocaleString)을 쓴다.
+// 종전에는 같은 이름의 로컬 함수가 억·만 단위로만 조립해 «만원 미만이 버려졌고»
+// (`Math.floor((amount % 1e8) / 1e4)`), 표시값이 실제 차감액보다 최대 9,999원 작았다.
 
 // ============================================================
 // 항목 행

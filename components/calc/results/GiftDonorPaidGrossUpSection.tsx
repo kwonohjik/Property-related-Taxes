@@ -63,9 +63,12 @@ export function GiftDonorPaidGrossUpSection({ grossUp }: Props) {
           <span className="font-mono tabular-nums">{formatKRW(grossUp.donorPaidTax)}</span>
         </div>
 
-        {/* ⑤ gross-up 후 최종 과세표준 V* */}
+        {/* ⑤ gross-up 후 증여세 과세가액 V*
+            ⚠️ 「과세표준」이 아니다 — grossedUpNetGift는 §53 증여재산공제를 «차감하기 전» 합산
+            과세가액이다(inheritance-gift.types.ts:731-736이 명시적으로 부정). ①행(:40)이 같은 축을
+            「과세가액」이라 부르므로 종전 라벨은 카드 내부에서도 모순이었다. */}
         <div className="flex items-center justify-between px-3 py-2 font-semibold bg-violet-100/60 dark:bg-violet-900/20 rounded-lg">
-          <span>gross-up 후 최종 과세표준</span>
+          <span>gross-up 후 증여세 과세가액</span>
           <span className="font-mono tabular-nums">{formatKRW(grossUp.grossedUpNetGift)}</span>
         </div>
       </div>
@@ -84,7 +87,7 @@ export function GiftDonorPaidGrossUpSection({ grossUp }: Props) {
         <span className="text-violet-400">+</span>
         <span>{formatKRW(grossUp.donorPaidTax)} (증여자 대납분)</span>
         <span className="text-violet-400">=</span>
-        <span className="font-semibold">{formatKRW(grossUp.grossedUpNetGift)} (최종 과표)</span>
+        <span className="font-semibold">{formatKRW(grossUp.grossedUpNetGift)} (과세가액)</span>
       </div>
 
       {/* 수렴 비교용 baseline */}

@@ -45,7 +45,7 @@ function Cell({
         {label}
       </div>
       <div
-        className={`border border-slate-400 px-2 py-2 text-sm text-right tabular-nums ${spanLabel ? "col-span-3" : ""}`}
+        className={`border border-slate-400 px-2 py-2 text-sm text-right font-mono tabular-nums whitespace-nowrap ${spanLabel ? "col-span-3" : ""}`}
         data-testid={testId}
       >
         {value ?? "-"}

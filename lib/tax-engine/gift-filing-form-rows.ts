@@ -5,6 +5,7 @@
  * 단독 신고 (priorGifts=0) 시 산식 무의미 행은 display="dash" 로 마킹.
  */
 
+import { ratePercent } from "./tax-utils";
 import { GIFT } from "./legal-codes";
 import type {
   FilingFormRow,
@@ -77,7 +78,7 @@ export function buildFilingFormRows(input: FilingFormRowsInput): FilingFormRow[]
   } = input;
 
   // §69 적용율 (연도별, 미전달 이력 호환 fallback 3%).
-  const filingRatePct = (filingCreditRate ?? 0.03) * 100;
+  const filingRatePct = ratePercent(filingCreditRate ?? 0.03);
 
   // §69 신고세액공제 formula 문자열 빌드.
   // filingCreditBase가 전달된 경우: "신고세액공제 대상금액 × N%" 풀어쓰기로 base를 echo.

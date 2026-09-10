@@ -99,9 +99,12 @@ function ExemptionChip({
       onClick={handleClick}
       className={cn(active ? CHIP_ON[group] : CHIP_OFF[group])}
       aria-pressed={active}
+      // 해제하면 부모 handleToggle이 `value.filter(v => v.ruleId !== ruleId)`로 항목을 배열에서
+      // «제거»한다(ExemptionChecklist.tsx:370) — 금액·면적·협의분할·§16② 주식수 입력이 함께 사라진다.
+      // 「값 보존」은 미구현이므로(같은 파일 :162-167 주석) 문구를 실제 동작에 맞춘다.
       title={
         active
-          ? `${label} — 클릭하여 숨기기 (값 보존)`
+          ? `${label} — 클릭하여 해제 (입력값 삭제)`
           : `${label} — 클릭하여 입력 섹션 열기`
       }
     >
