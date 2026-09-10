@@ -57,8 +57,8 @@ describe("OV-2 상장 — ATS", () => {
     expect(screen.getByText(/조특법 §14①7호\s*\n?\s*비과세 대상이므로 이 토글을 켜세요|비과세 대상이므로 이 토글을 켜세요/)).toBeTruthy();
   });
 
-  it("OV-2-3: 켠 상태에서는 나목 단서 미적용 경고가 유지된다", () => {
+  it("OV-2-3: 켠 상태에서도 벤처 비과세 안내가 유지된다", () => {
     render(<CompanyTypeBlock form={form({ marketType: "kospi", isKOTCTrading: true })} onChange={() => {}} />);
-    expect(screen.getByText(/나목 단서/)).toBeTruthy();
+    expect(screen.getByText(/비과세 대상이므로 이 토글을 켜세요/)).toBeTruthy();
   });
 });

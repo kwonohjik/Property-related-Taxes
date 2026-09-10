@@ -99,30 +99,18 @@ export function CompanyTypeBlock({ form, onChange }: CompanyTypeBlockProps) {
       </div>
 
       {/*
-        상장주식은 K-OTC 대상이 아니다 — 자본시장법 §286①5호는 협회 업무를
-        「**증권시장에 상장되지 아니한 주권**의 장외매매거래」로 정의한다.
-        ⚠️ 토글을 숨기지는 않는다: 조특법 §14①7호(벤처) 비과세는 「증권시장 밖에서 거래되는」
-           벤처기업 주식이라 **상장주식도 포섭**하고, 지금 그 유일한 입력 경로가 이 토글이다
-           ([[feedback_ui_gate_removes_sole_input_path]]).
-           나목 단서 오적용은 엔진 가드가 막는다.
+        ⚠️ 상장에서도 토글을 숨기지는 않는다: 조특법 §14①7호(벤처) 비과세는
+        「증권시장 밖에서 거래되는」 벤처기업 주식이라 **상장주식도 포섭**하고,
+        지금 그 유일한 입력 경로가 이 토글이다
+        ([[feedback_ui_gate_removes_sole_input_path]]).
+        나목 단서 오적용은 엔진 가드가 막는다.
       */}
       {isListedMarket && (
         <div className="mt-2">
           <ToneCard tone="amber" noDark>
             <p className="text-xs leading-relaxed">
-              <strong>상장주식은 K-OTC 거래 대상이 아닙니다.</strong> K-OTC는{" "}
-              <LawArticleModal
-                legalBasis="자본시장과 금융투자업에 관한 법률 §286 ① 5호"
-                label="자본시장법 §286①5호"
-              />{" "}
-              에 따라 <strong>증권시장에 상장되지 아니한 주권</strong>의 장외매매거래 시장입니다.
-              따라서 <strong>§94①3 나목 단서(중소·중견 소액주주) 비과세는 적용되지 않습니다</strong> —
-              상장 비대주주의 장외 양도는 §94①3 가목 2)로 과세됩니다.
-            </p>
-            <p className="text-caption mt-2 leading-relaxed text-amber-800/90">
-              다만 <strong>벤처기업</strong>을 다자간매매체결회사(ATS)에서 양도했다면 조특법 §14①7호
-              비과세 대상이므로 이 토글을 켜세요 — 그 비과세는 상장·비상장을 가리지 않고
-              <strong>거래 장소</strong>로만 판정합니다.
+              <strong>벤처기업</strong>을 다자간매매체결회사(ATS)에서 양도했다면 조특법 §14①7호
+              비과세 대상이므로 이 토글을 켜세요.
             </p>
           </ToneCard>
         </div>
