@@ -569,12 +569,10 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
               cohabitExcludedYears={heir.cohabitExcludedYears}
               birthDate={heir.birthDate}
               deathDate={deathDate}
-              onChange={(patch) =>
-                set({
-                  cohabitStartDate: patch.cohabitStartDate,
-                  cohabitReasons: patch.cohabitReasons,
-                })
-              }
+              // patch를 그대로 넘긴다. 키를 나열해 재구성하면 patch에 없던 키가
+              // `undefined` own property로 들어가 set의 spread(:217)에서 기존 값을 지운다
+              // — 시작일 입력 후 사유 토글을 켜면 시작일이 사라지던 결함.
+              onChange={set}
             />
           )}
         </>

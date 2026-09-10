@@ -209,6 +209,22 @@ export const unlistedStockValuationV2Schema = z
           treasuryShares: z.number().int().nonnegative().optional(),
           movingAverageAcquisitionValue: z.number().nonnegative().optional(),
           marketValue: z.number().nonnegative().optional(),
+          // 10% 초과 경로 (§54③ 옵션 불가) — 누락 시 z.object가 침묵 strip 해
+          // 장부가액 비교(Max(장부, 보충적))와 상호출자 연립방정식이 서버에서 발동하지 않는다.
+          // OtherUnlistedCounterparty 타입과 1:1 (other-unlisted-holdings.ts).
+          bookValue: z.number().nonnegative().optional(),
+          counterparty: z
+            .object({
+              netAssetExStock: z.number().nonnegative(),
+              totalLiabilities: z.number().nonnegative(),
+              issuedShares: z.number().int().positive(),
+              // 결손 법인은 1주당 순손익가치가 음수일 수 있다
+              netIncomePerShare: z.number(),
+              isRealEstateHeavy: z.boolean(),
+              netAssetOnly: z.boolean(),
+              crossHeldOfTarget: z.number().int().nonnegative(),
+            })
+            .optional(),
         }),
       )
       .optional(),

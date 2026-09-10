@@ -15,15 +15,38 @@ const FILING_CREDIT_NUMER = 3; // §69 신고세액공제 3%
 const FILING_CREDIT_DENOM = 100;
 
 /**
+ * 상증령 §34의5④2호 — 법인세 안분 = (산출세액 − 공제감면) × min(거래이익, 소득금액) ÷ 소득금액.
+ *
+ * **법인 단위 계산이라 주주 명부와 무관하다** — single(지분율 직접)·roster(주주명부) 양쪽이 공유한다.
+ * `annualIncome`이 0이면 안분 불가 → 호출자가 직접 넣은 `corporateTax` fallback.
+ */
+export function apportionCorporateTax(input: SpecificCorpInput): number {
+  const annualIncome = input.annualIncome ?? 0;
+  const corpTaxNet = Math.max(
+    0,
+    (input.corporateTaxComputed ?? 0) - (input.corporateTaxCredit ?? 0),
+  );
+  return annualIncome > 0
+    ? safeMultiplyThenDivide(
+        corpTaxNet,
+        Math.min(input.transactionBenefit, annualIncome),
+        annualIncome,
+      ) // min으로 비율 1 상한
+    : (input.corporateTax ?? 0); // 이월결손금 0 / 직접입력 fallback
+}
+
+/**
  * §45의5①: 증여의제이익 = 특정법인의 이익 × 지배주주등 주식보유비율.
  * 시행령 §34의5④: 특정법인의 이익 = 거래이익 − 법인세 상당액.
  * §34의5⑤: 증여의제이익이 1억원 이상인 경우로 한정. (한도 §45의5②는 증여세액 단계 — 별도)
  *
- * single(하위호환) — 법인세 안분·지분율은 호출자가 사전 계산해 corporateTax·ownershipRatio로 전달.
+ * single — 지분율은 호출자가 `ownershipRatio`로 전달한다.
+ * 법인세는 직접입력(`corporateTax`)이거나, 미전달 시 §34의5④2호 안분(`annualIncome` 등)을 쓴다.
+ * 종전에는 안분이 roster 전용이라 UI의 「지분율 직접 + 법인세 자동안분」 조합이 항상 0원이었다.
  */
 export function calcSpecificCorpGift(input: SpecificCorpInput): DeemedGiftResult {
   const { transactionBenefit } = input;
-  const corporateTax = input.corporateTax ?? 0;
+  const corporateTax = input.corporateTax ?? apportionCorporateTax(input);
   const ratio = input.ownershipRatio ?? { numer: 0, denom: 1 };
   const corpProfit = transactionBenefit - corporateTax;
   const gain = corpProfit > 0 ? safeMultiplyThenDivide(corpProfit, ratio.numer, ratio.denom) : 0;
@@ -60,13 +83,8 @@ export function calcSpecificCorpGiftMulti(input: SpecificCorpInput): DeemedGiftR
   const shareholders = input.shareholders ?? [];
   const giftDeduction = input.giftDeduction ?? 0;
 
-  // ── §34의5④2호 법인세 안분 = (산출세액 − 공제감면) × min(거래이익/소득금액, 1) ──
-  const annualIncome = input.annualIncome ?? 0;
-  const corpTaxNet = Math.max(0, (input.corporateTaxComputed ?? 0) - (input.corporateTaxCredit ?? 0));
-  const corpTaxApportioned =
-    annualIncome > 0
-      ? safeMultiplyThenDivide(corpTaxNet, Math.min(transactionBenefit, annualIncome), annualIncome) // min으로 비율 1 상한
-      : (input.corporateTax ?? 0); // 이월결손금 0 / single 직접값 fallback
+  // ── §34의5④2호 법인세 안분 (single과 공용 leaf) ──
+  const corpTaxApportioned = apportionCorporateTax(input);
 
   // ── §34의5④ 특정법인의 이익 = 거래이익 − 법인세 안분 ──
   const corpProfit = Math.max(0, transactionBenefit - corpTaxApportioned);

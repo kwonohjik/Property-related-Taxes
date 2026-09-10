@@ -92,25 +92,31 @@ function ExemptionRow({
       </div>
 
       <div className="pl-3 border-l-2 border-sky-300 dark:border-sky-700 space-y-2">
-        {/* 금액 입력 (사회통념 타입 제외하고 모두 표시) */}
-        {rule.limitType !== "social_norm" && (
-          <div>
-            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-              해당 자산 가액
-              {rule.limitType === "fixed" && rule.limitAmount && (
-                <span className="ml-1 text-amber-600">
-                  (최대 {rule.limitAmount.toLocaleString()})
-                </span>
-              )}
-            </label>
-            <CurrencyInput
-              label=""
-              value={amount > 0 ? String(amount) : ""}
-              onChange={(v) => onAmountChange(rule.id, parseInt(v.replace(/,/g, "") || "0", 10))}
-              placeholder="금액 입력"
-            />
-          </div>
-        )}
+        {/*
+          금액 입력 — 전 타입 표시.
+          social_norm(축의금·혼수품·생활비·이재구호금품 등)도 엔진이 claimedAmount를 그대로
+          비과세로 인정하므로(exemption-evaluator.ts:179-181) 입력란이 없으면 항상 0원이 된다.
+          법정 한도가 없을 뿐 금액 자체는 사용자가 신고하는 값이다.
+        */}
+        <div>
+          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+            해당 자산 가액
+            {rule.limitType === "fixed" && rule.limitAmount && (
+              <span className="ml-1 text-amber-600">
+                (최대 {rule.limitAmount.toLocaleString()})
+              </span>
+            )}
+            {rule.limitType === "social_norm" && (
+              <span className="ml-1 text-amber-600">(사회통념상 인정되는 범위)</span>
+            )}
+          </label>
+          <CurrencyInput
+            label=""
+            value={amount > 0 ? String(amount) : ""}
+            onChange={(v) => onAmountChange(rule.id, parseInt(v.replace(/,/g, "") || "0", 10))}
+            placeholder="금액 입력"
+          />
+        </div>
 
         {/* 장애인 신탁 §52의2③ — 생존 중 평생 합산 기사용액 (5억 한도에서 차감) */}
         {rule.id === "gift_disabled_trust" && (

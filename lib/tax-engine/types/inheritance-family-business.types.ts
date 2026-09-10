@@ -167,7 +167,11 @@ export interface FamilyBusinessInheritanceInput {
   /** 형 확정 (공제 배제) — short-circuit. */
   hasTaxFraudConviction?: boolean;
 
-  // ─ 별지 제1호서식 표시 전용 식별정보 (계산 미사용, 신고서 자동채움) ─
+  // ─ 별지 제1호서식 식별정보 (신고서 자동채움) ─
+  //   ⚠️ 이 블록은 원래 「계산 미사용」이었으나 openingDate·heirOfficerAppointDate 둘은
+  //      요건 자동판정이 실제로 소비한다(family-business-autoderive.ts:345·:291).
+  //      두 필드는 Zod ⑫(family-business-inheritance-schema.ts)에도 반드시 있어야 한다.
+  //      나머지는 UI가 폼 상태에서 직접 렌더하므로 서버 왕복이 필요 없다.
   /** 가. 사업자등록번호 */
   businessRegistrationNumber?: string;
   /** 가. 성명(대표자) */

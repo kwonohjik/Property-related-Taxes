@@ -319,7 +319,8 @@ export function Step4DeductionChecklist({
       <div className={cn("space-y-1.5", GROUP_DIVIDER.amber)}>
         <p className={GROUP_HEADER.amber}>종합한도 보정·재해손실 (B그룹)</p>
         <div className="flex flex-wrap gap-1.5">
-          {(["legatee", "priorGiftDeduction", "disasterAdjust", "casualtyLoss", "appraisalFee"] as ManualChecklistKey[]).map(
+          {/* §24 각 호 순서: 1호 유증(legatee) · 2호 상속포기(heirWaiver) · 3호 사전증여(priorGiftDeduction) */}
+          {(["legatee", "heirWaiver", "priorGiftDeduction", "disasterAdjust", "casualtyLoss", "appraisalFee"] as ManualChecklistKey[]).map(
             (k) => (
               <ManualChip key={k} chipKey={k} form={form} set={set} onToggle={onManualChipToggle} />
             ),
