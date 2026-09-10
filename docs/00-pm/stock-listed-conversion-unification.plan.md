@@ -6,7 +6,7 @@
 >
 > **작성**: 2026-09-10 · **검증 깊이 L3**(여러 파일 · 상태 모델 · **세액 변동 있음**)
 > **상태**: 착수 전. §1~§4는 **전부 실측 완료**(뮤테이션 4회 포함). **V-1·V-3 종결**(§6-1·6-2).
-> 잔여 미결 **V-4 · Q-2**(둘 다 S1 전제 아님). §5의 S3은 S2 산출물이 나온 뒤 별도 설계서로 확장한다.
+> 잔여 미결 **V-4**(S0 전제). **Q-1·Q-2 결정 완료.** §5의 S3은 S2 산출물이 나온 뒤 별도 설계서로 확장한다.
 >
 > **자가검토 1회차 완료**(2026-09-10, `plan-design-self-review-loop`) — 인용 46건/65줄 기계 검증,
 > 불일치 8건 정정 · 판정 뒤집힘 1건(마이그레이션 위치) · 누락 4건(14지점 표·상호배타 UI·불가 조합 2행)
@@ -134,18 +134,48 @@ lib/tax-engine/stock-transfer/exempt-informational-acquisition.ts:105  if (input
 
 ### 3-1. 설계
 
+> 🔄 **초판 정정(2026-09-10, Q-2 결정 반영)** — 초판은 `acquisitionStdMode` enum +
+> `transferStdHalt` boolean **2필드**였다. Q-2에서 3안(축 통합)을 택하면서 `transferStdHalt`가
+> enum의 네 번째 값으로 흡수돼 **1필드**가 된다. 방향(폼 enum → ④에서 boolean 펼침)은 유지된다.
+
 ```
 폼 상태 (①②③⑧ + UI)
-    acquisitionStdMode : "monthly_avg" | "halt_supplementary" | "post_listing"
-    transferStdHalt    : boolean                      ← 유일한 «편집» 지점
+    acquisitionStdMode : "monthly_avg" | "halt_acquisition" | "post_listing" | "halt_transfer"
+                                                      ← 유일한 «편집» 지점 (1필드)
         │
         ④ lib/calc/stock-transfer-tax-api.ts          enum → boolean 3개로 펼침
         │
-        ⑫ lib/api/stock-transfer-tax-schema.ts        boolean 수신 + superRefine으로 불가능 조합 거부
+        ⑫ lib/api/stock-transfer-tax-schema.ts        boolean 수신 + 기존 refine이 서버 가드
         │
    엔진 StockTransferInput                            boolean 3개 유지 — 법령 요건 플래그
                                                       ← 엔진·56 테스트 무변경
 ```
+
+**④ 매핑** (엔진 if-체인과 1:1):
+
+| enum | `acquiredBeforeListing` | `tradingHaltAtTransfer` | `tradingHaltAtAcquisition` |
+|---|---|---|---|
+| `monthly_avg` | false | false | false |
+| `halt_acquisition` | false | false | **true** |
+| `post_listing` | **true** | false | false |
+| `halt_transfer` | false | **true** | false |
+
+⇒ ④가 **불가능한 조합을 만들 수 없다**. ⑫의 기존 refine(`:419`·`:429`)은 그대로 두어
+**API 직접 호출**에 대한 서버 가드로 남긴다(제거하면 좁히는 방향의 안전망이 사라진다).
+
+**③ 마이그레이션의 우선순위는 «엔진 if-체인 순서»를 따른다** — 게이트가 생기기 전의
+stale 데이터에 두 플래그가 함께 켜져 있을 수 있고, 그때 **과거 결과를 보존하려면**
+엔진이 실제로 택하던 분기와 같아야 한다:
+
+```
+acquiredBeforeListing → "post_listing"
+else tradingHaltAtTransfer → "halt_transfer"
+else tradingHaltAtAcquisition → "halt_acquisition"
+else "monthly_avg"
+```
+
+> ⚠️ 「양도정지가 이긴다」가 아니다 — **`acquiredBeforeListing`이 선두**다(`:128`).
+> 순서를 뒤집으면 stale 조합에서 세액이 바뀐다. anchor로 고정할 것.
 
 **이것도 C다.** 목표였던 「불가능한 조합 배제」를 타입 대신 **스키마 `superRefine`**로
 달성하고, 값은 **하나의 enum에서만 편집**되므로 이중 진실이 아니다 — boolean은 파생
@@ -256,11 +286,33 @@ FAIL  filing-form-conversion-rows.anchor.test.ts > A-3-4: 분모 자동 대체 �
 anchor `A-3-4`는 **폐기가 아니라 이관**한다 — 지킬 성질이 「대체 사실을 병기한다」에서
 「⑫가 미입력을 거부한다」로 바뀐다.
 
-### Q-2 ⏳ **미결 — S3 착수 시 결정**: 불가 조합 A의 UI 표현
+### Q-2 ✅ **결정: 3안 — 축 통합** (사용자 결정 2026-09-10)
 
-「양도일 거래정지」와 「분자 = 취득 후 상장」을 사용자가 동시에 고르지 못하게 하는 방식.
-§5 S3의 세 안(disabled · 숨김 · 축 통합) 중 택일한다. **작업량은 셋이 비슷하고 UX가 갈린다** —
-3안(축 통합)은 조합 자체를 소멸시키지만 「분모/분자」 2블록 구조가 흐려진다.
+「양도일 거래정지」를 분자 라디오의 **4번째 선택지**로 흡수해 **조합 자체를 표현 불가**로 만든다.
+1안(disabled)·2안(숨김)은 기각했다.
+
+**채택 근거 — 네 갈래가 실제로 배타적 4상태다 (실측)**
+
+`stock-acquisition-basis.ts`의 if-체인이 이미 배타적으로 갈라져 있다:
+
+```
+:128  if (acquiredBeforeListing)          ← 선두
+:161  else if (tradingHaltAtTransfer)
+:208  else if (marketType === "unlisted")  ← 상장 환산 축 밖
+:253  else if (tradingHaltAtAcquisition)
+:299  else                                 ← 일반
+```
+
+그리고 **양도정지 분기는 `calcUnlistedValuation`으로 양·취 양쪽을 함께** 처리하므로,
+그 상태에서 취득정지 정보는 애초에 쓰이지 않는다(Step2의 「양도정지 ON 시 취득정지 토글 숨김 —
+양도정지 블록이 양·취 모두 수집」 주석과 같은 사실). ⇒ **축을 하나로 합쳐도 표현력 손실이 없다.**
+
+**기각 근거**
+- **1안(disabled)**: 상호배타가 **양방향**이라 「어느 쪽을 먼저 골랐나」에 따라 반대쪽을 잠가야
+  하고, 잠긴 상태에서 되돌리는 경로가 헷갈린다. 잔존 상태도 남는다.
+- **2안(숨김)**: 이 저장소가 **이미 겪은 실패 패턴**이다 — `ToggleCard`가 `{checked && children}`이라
+  끄면 children이 사라지고 값만 남아 **입력 UI 없이 차단**되는 dead-end가 됐다
+  (`docs/00-pm/stock-transfer-std-input-mode-dead-end.plan.md` F-10).
 
 ---
 
@@ -353,7 +405,7 @@ anchor가 **의도한 사유로만** 실패했다 — PLD-1이 낸 `29,121,952`�
 (`StockFilingFormTableHelpers.ts` · `PostListingDetailCard.tsx`)을 함께 걷었다.
 `stock-valuation-listed.ts`의 거래정지 조기반환은 **기존** dead code라 §6-1대로 손대지 않았다.
 
-### S2 — 안전망 측정 (프로덕션 무변경)
+### S2 — 안전망 측정 (프로덕션 무변경) ✅ **완료 2026-09-10**
 
 4갈래 × 분모 조합의 **현재 결과**를 회귀표 anchor로 고정한다. S3의 수용 기준이 된다.
 
@@ -369,8 +421,64 @@ anchor가 **의도한 사유로만** 실패했다 — PLD-1이 낸 `29,121,952`�
 > 「바꾸기 전에 안전망을 잰다」(memory `feedback_pre_change_safety_net_probe`).
 > S2 없이 S3를 하면 「바뀐 것이 UI인지 계산인지」를 가를 수단이 없다.
 
-**수용 기준**: 1~4행은 실행 결과로 채우고(추정 금지) 각 행에 뮤테이션 1회로 구별력을 확인한다.
-5~6행은 값이 아니라 **차단 자체**를 고정한다(400 또는 validate error).
+**수용 기준 — 실측 결과**
+
+`__tests__/calc/stock-conversion-branch-matrix.anchor.test.ts` — **10건**.
+프로덕션 코드 변경 **0줄**(계획대로).
+
+네 행이 **같은 base**(양도가 44,753,000 · 주식수 1,000 · 분모 10,000)를 쓴다.
+양도가는 주식수로 나누어떨어지지 않게 잡았다 — §4-2의 그 함정과 같은 이유다.
+
+| 행 | 분자 산정 | acquisitionPrice | estimatedBase | expenses | calculatedTax | method |
+|---|---|---:|---:|---:|---:|---|
+| R1 | 취득일 1개월 종가평균 (입력 5,600) | 25,061,680 | 5,600,000 | 56,000 | 3,427,060 | `monthly_avg_listed` |
+| R2 | 취득일 거래정지 → 보충 평가 (산출 5,600) | 25,061,680 | 5,600,000 | 56,000 | 3,427,060 | `halt_acquisition_conversion` |
+| R3 | 취득 후 상장 §165⑤ (산출 5,824) | 26,064,147 | 5,824,000 | 58,240 | 3,226,120 | `post_listing_conversion` |
+| R4 | **분모까지** 보충 평가 (양도일 정지) | 23,205,259 | 5,600,000 | 56,000 | 3,798,340 | `weighted_avg` |
+
+> R1·R2는 **분자를 같게 맞춰** 세액이 같다 — 「경로가 달라도 분자가 같으면 결과가 같다」를
+> 보이려는 것이다. 그래서 `method`를 함께 못박아 두 행이 뒤바뀌는 것도 잡고,
+> 대조군 `MTX-R0`이 「원래 다 같은 값 아닌가」라는 오독을 막는다.
+
+**불가 조합 2건은 값이 아니라 «차단»을 고정한다** — `MTX-XA/XA'`(⑧·⑫) · `MTX-XB/XB'`(⑧·⑫)
++ 대조군 `MTX-X0`(조합이 없으면 둘 다 통과).
+
+**뮤테이션 5회 — 각 행이 정확히 자기 것만 지킨다**
+
+| M-n | 무력화 | 깨진 행 |
+|---|---|---|
+| M-ALL | 개산공제율 1% → 2% (`STOCK_ESTIMATED_EXPENSE_RATE`) | **R1·R2·R3·R4 전부** |
+| M-R3 | §165⑤ 1주당 취득기준시가 산출에 ×1.1 | **R3만** |
+| M-R4 | 양도정지 분기를 if-체인에서 비활성화 | **R4만** |
+| M-XA | ⑧의 양도정지×취득후상장 차단 제거 | **MTX-XA만** |
+| M-XB | ⑫의 취득정지×취득후상장 차단 제거 | **MTX-XB'만** |
+
+### 6-4. S2가 부수적으로 드러낸 것 2건
+
+**① `postListingDetail.totalAcquisitionPrice`가 S1 이후 «소비처 0»이 됐다.**
+
+종전에는 `apply163_9Conversion`의 `fallbackTotal` 인자로 쓰였는데(그 fallback 경로가 유일한
+소비처였다), S1이 그 인자를 0으로 바꾸면서 읽는 곳이 사라졌다. 실측 — 뮤테이션으로 그 값을
+2배로 바꿔도 회귀표가 **전건 통과**했고, `components/`에서 이 필드를 읽는 곳은 없다
+(`LotMatchingDetailCard.tsx:116`의 동명 필드는 **다른 타입**이다).
+
+⇒ **제거하지 않는다.** 값 자체는 「환산 전 취득기준시가 총액」으로 여전히 옳고
+(`estimatedBase`와 같은 뜻), 진단용 echo로 남긴다. 다만 **anchor로 지킬 수 없는 필드**임을
+알고 있어야 한다 — S3에서 result 형태를 손볼 때 정리 후보다.
+
+**② `valuationDetail.finalPerShareValue`의 «의미»가 경로마다 다르다.**
+
+| 경로 | 값 | 의미 |
+|---|---|---|
+| R1 일반 | 25,061 | **환산 후** 1주당 취득가 (`stock-acquisition-basis.ts:309` Bug-A 정정분) |
+| R2·R3·R4 | 5,600 · 5,824 · 5,600 | 1주당 **취득기준시가** |
+
+현재 오표시는 **없다** — 화면의 「1주당 취득기준시가 =」 문구가
+`StockTransferTaxResultViewHelpers.tsx:83`에서 `method === "post_listing_conversion"`으로
+게이팅돼 있어, 의미가 맞는 경로에서만 렌더된다.
+
+⇒ 그러나 **S3에서 경로를 하나로 합칠 때 이 분기를 모르고 통일하면 화면이 조용히 틀려진다.**
+회귀표가 `method`와 `finalPerShareValue`를 **함께** 고정하는 이유가 이것이다.
 
 ### S3 — 본체 (한 PR · S2 산출 후 별도 설계서로 확장)
 
@@ -391,56 +499,59 @@ anchor가 **의도한 사유로만** 실패했다 — PLD-1이 낸 `29,121,952`�
 
 #### S3의 14 동기화 지점 커버리지 (신규 폼 필드 2개)
 
-`acquisitionStdMode`·`transferStdHalt`가 ①에 들어가므로 14지점을 전수로 잡는다.
+`acquisitionStdMode` **1필드**가 ①에 들어가므로 14지점을 전수로 잡는다(Q-2 3안 확정 반영).
 **N/A도 명시한다** — ⑫⑬⑭는 TypeScript가 못 잡아 **침묵 strip**되는 지점이다.
 
 | # | 지점 | S3에서 할 일 |
 |---|---|---|
-| ① | 폼 상태 `StockTransferFormData` | 필드 2개 추가 · boolean 3개 제거 |
-| ② | initial `createInitialStockFormData` | `"monthly_avg"` / `false` |
-| ③ | normalize | **F-1의 그 함수** — 구 boolean → enum 역산 |
-| ④ | API 변환 `stock-transfer-tax-api.ts` | enum → boolean 3개 펼침 |
+| ① | 폼 상태 `StockTransferFormData` | **enum 1필드 추가** · boolean 3개 제거 |
+| ② | initial `createInitialStockFormData` | `"monthly_avg"` |
+| ③ | normalize | **F-1의 그 함수** — 구 boolean → enum 역산. **우선순위는 §3-1의 if-체인 순서** |
+| ④ | API 변환 `stock-transfer-tax-api.ts` | enum → boolean 3개 펼침 (§3-1 매핑 표) |
 | ⑤ | UI 위젯 | 분모 블록 + 분자 라디오 (상호배타 규칙 아래 참조) |
 | ⑥ | 사이드바 합계 | **N/A** — `StockSidebar.tsx`에 이 축 참조 0건(실측) |
 | ⑦ | 결과 카드 | **N/A** — `PostListingDetailCard.tsx:77`이 읽는 것은 **엔진 result의** `acquiredBeforeListing`이고 result는 boolean을 유지한다 |
 | ⑧ | validation | 술어를 enum 축으로 전환 + 상호배타 차단 |
 | ⑨⑩⑪ | Zod enum 메인·컴패니언 · 자산-수준 fallback | **N/A** — 엔진 input이 boolean을 유지하므로 스키마 형태 불변 |
-| ⑫ | Zod 입력 객체 | boolean 유지 + `superRefine` 강화 |
+| ⑫ | Zod 입력 객체 | boolean 유지 + **기존 refine 그대로** — API 직접 호출 서버 가드 |
 | ⑬ | body spread | ④가 만든 boolean 3개가 실제로 body에 실리는지 **grep 자가 점검** |
 | ⑭ | Route handler 엔진 input 매핑 | boolean 그대로 — 변경 없음을 **확인**(무변경도 점검 대상) |
 
-#### S3 필수 — 「양도일 거래정지 × 취득 후 상장」 상호배타 UI
+#### S3 필수 — 상호배타는 **축 통합으로 해소**됐다 (Q-2 3안)
 
-메뉴 초안은 분모의 체크박스와 분자의 라디오를 **독립**으로 그렸다. 그대로 두면 사용자가
-「분자 = 취득 후 상장」 + 「분모 = 양도일 거래정지」를 동시에 고를 수 있는데, 그 조합은
-**법령상 양립 불가**로 ⑧ G-5(`stock-transfer-tax-validate-step2.ts:359`)와
-⑫(`stock-transfer-tax-schema.ts:419`)가 각각 차단·400 처리한다
-(취득일 정지 짝은 ⑧ `:367` + ⑫ `:429` — V-5 종결분).
+종전 초안은 분모 체크박스와 분자 라디오를 **독립**으로 그려, 사용자가 불가 조합을 고를 수
+있었다 — ⑧ G-5(`stock-transfer-tax-validate-step2.ts:359`)와 ⑫(`stock-transfer-tax-schema.ts:419`)가
+막으므로 **UI 통과 ↔ validate 차단 모순**이 됐을 것이다(memory
+`feedback_ui_gate_two_conditions_downstream_one`).
 
-⇒ **UI가 통과시키고 validate가 막는 모순**이 된다(CLAUDE.md ⑧ 규칙 · memory
-`feedback_ui_gate_two_conditions_downstream_one`). S3 설계 시 **셋 중 하나**를 택해 명시한다:
+Q-2에서 **축 통합**을 택해 그 조합이 **표현 불가**가 됐다. 남은 S3 필수 항목은 둘이다:
 
-1. 분모 체크박스를 켜면 분자 라디오에서 「취득 후 상장」을 **disabled**로
-2. 「취득 후 상장」을 고르면 분모 체크박스를 **숨김**
-3. 분자 라디오에 「양도일 거래정지」를 **4번째 선택지**로 합쳐 축을 하나로 (조합 자체가 소멸)
+1. **③ 마이그레이션 우선순위 anchor** — §3-1의 if-체인 순서대로 역산하는지
+   (뒤집으면 stale 조합에서 세액이 바뀐다)
+2. **④ 매핑 anchor** — enum 4값이 boolean 3개로 §3-1 표대로 펼쳐지는지.
+   ⑬ body spread까지 grep 자가 점검(**TypeScript가 못 잡는 지점**)
 
-> 3안은 §1-5 표의 「양도일 거래정지는 분모까지 대체한다」는 성질과 가장 잘 맞는다 —
-> 다만 「분모/분자」 2블록 구조가 흐려지므로 S3 설계서에서 UX로 판정한다.
-
-메뉴 최종형(초안):
+메뉴 최종형 (Q-2 3안 확정):
 
 ```
 환산취득가 (시행령 §176의2②1호)
 
-  양도 당시 기준시가 (분모)
-    [기준시가 입력 방식]  직접 / 일자별        [🔍 키움 자동조회]
-    □ 양도일 이전 1개월에 거래정지·관리종목 구간 있음 (§165③) → 보충 평가로 대체
+  ① 양도 당시 기준시가 (분모)
+     [기준시가 입력 방식]  직접 / 일자별        [🔍 키움 자동조회]
+     1개월 종가 평균 ......... 8,659
+     └ ②에서 「양도일 거래정지」를 고르면 이 블록이
+       「이 방식에서는 보충 평가로 대체됩니다」 안내로 바뀐다
 
-  취득 당시 기준시가 (분자) — 산정 방식
-    ( ) 취득일 이전 1개월 종가평균                     (일반)
-    ( ) 취득일 거래정지 → 비상장 보충 평가              (§165③)
-    ( ) 취득 후 상장 → 상장일 이후 1개월 종가평균 환산   (§165⑤)
+  ② 기준시가 산정 방식 — **축 하나**
+     ( ) 취득일 이전 1개월 종가평균                      (일반)
+     ( ) 취득일 거래정지 → 취득측만 보충 평가             (§165③)
+     ( ) 취득 후 상장 → 상장일 이후 1개월 종가평균 환산    (§165⑤)
+     ( ) 양도일 거래정지 → 양·취 모두 보충 평가            (§165③)
+         └ 이 방식은 ①의 분모까지 대체합니다
 ```
+
+「분모/분자」 2블록 구조는 **유지된다** — 4번째를 고르면 ① 블록이 안내로 바뀌므로,
+그 방식만 분모까지 대체한다는 사실이 화면에 남는다(3안의 유일한 단점을 이렇게 푼다).
 
 ---
 
@@ -555,14 +666,14 @@ UI 경로는 ⑧이 이미 막고 있어 증상이 안 보이므로 더 위험�
 ## 7. 착수 순서 요약
 
 ```
-S0 (셀렉터 방탄화)  ─┐
-S1 (산식 통합 + Q-1) ─┼─ 각각 독립 PR 가능 · UI 무변경 · S1은 V-2 선행
-S2 (회귀표 anchor)  ─┘
+S0 (셀렉터 방탄화)   ⏳ V-4 선행
+S1 (산식 통합 + Q-1) ✅ 완료 — PR #1562
+S2 (회귀표 anchor)   ✅ 완료
             ↓
-S3 (enum + UI 최종형) ─ 설계서 별도 · S2 표가 수용 기준
+S3 (enum + UI 최종형) ─ 설계서 별도 · S2 표가 수용 기준 · **Q-2 결정 완료(3안)**
 ```
 
 **V-1·V-2·V-3·V-5 전건 종결**(§6-1·6-2·6-3 · §6 표) — **S1은 착수 조건을 충족했다.**
-남은 것은 V-4(S0의 셀렉터 범위 산정)와 Q-2(S3의 상호배타 UI 결정)뿐이고, 둘 다 S1의 전제가 아니다.
+**Q-1·Q-2도 결정 완료**다. 남은 미결은 **V-4**(S0의 셀렉터 범위 산정) 하나뿐이고 S1의 전제가 아니다.
 
 S1 착수 시 **2·3·4를 한 PR로 묶는 제약**(§6-2)을 반드시 지킬 것.
