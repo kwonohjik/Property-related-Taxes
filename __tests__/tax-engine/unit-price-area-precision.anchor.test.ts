@@ -149,6 +149,22 @@ describe("multiplyByAreaShare — 지분 3항 곱도 참값", () => {
     expect(multiplyByAreaShare(p, a, r)).toBeGreaterThanOrEqual(Math.floor(a * r * p));
   });
 
+  /**
+   * 🔴 회귀 anchor — PR #1557 초판이 `decompose`에서 자릿수를 `Math.min(6, …)`으로 잘랐다.
+   *    면적은 규약상 2자리라 무해했지만 **지분율은 `1/3`처럼 고정밀 값이 정상**이고,
+   *    50억 필지에서 **1,666원**이 잘렸다. 「부동소수 오차를 고치는 함수」가 더 큰 오차를
+   *    만들고 있었다 — 정밀도 한계는 «임의 상수»가 아니라 «표현 가능 한계»가 정해야 한다.
+   */
+  it("UA-13: 고정밀 지분율을 자르지 않는다 — 6자리 캡 회귀", () => {
+    const p = 5_000_000, a = 1000;
+    expect(multiplyByAreaShare(p, a, 1 / 3)).toBe(1_666_666_666);
+    expect(multiplyByAreaShare(p, a, 1 / 3)).toBe(Math.floor((p * a) / 3));
+    // 6자리로 자르면 나오던 값 — 되돌아가면 여기서 드러난다
+    expect(multiplyByAreaShare(p, a, 0.333333)).toBe(1_666_665_000);
+    // 사용자가 33.33%를 입력한 경우는 그대로 4자리다(입력 정밀도를 임의로 늘리지 않는다)
+    expect(multiplyByAreaShare(p, a, 0.3333)).toBe(1_666_500_000);
+  });
+
   it("UA-12: [대조군] 비정상 입력은 0, 지수표기는 종전 동작으로 되돌아간다", () => {
     expect(multiplyByAreaShare(NaN, 1, 1)).toBe(0);
     expect(multiplyByAreaShare(1_000_000, 1e-7, 1)).toBe(Math.floor(1_000_000 * 1e-7 * 1));

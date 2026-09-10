@@ -40,9 +40,8 @@ export function round2(area: number): number {
  * 「0.70의 double 표현으로 `Math.floor`가 1원 과소산정된다 → 정수 분수연산으로 대체」가
  * 그 기록이다. 여기서도 **면적을 정수로 올려 곱한 뒤 나눈다**.
  *
- * ⚠️ 면적의 소수 자릿수를 값에서 읽는다(최대 6자리). 규약상 면적은 `round2` 후 곱해지므로
- *    보통 2자리이고, 잔액 흡수(`residualArea`)로 생긴 긴 소수도 6자리에서 잘린다 —
- *    6자리 아래는 원 단위에 영향을 주지 않는다.
+ * ⚠️ 면적의 소수 자릿수는 **값에서 읽는다**(상수 캡 없음 — `decompose` 주석 참조).
+ *    규약상 면적은 `round2` 후 곱해지므로 보통 2자리다.
  */
 export function multiplyByArea(unitPrice: number, area: number): number {
   return floorProduct(unitPrice, area);
@@ -74,17 +73,29 @@ export function multiplyByAreaShare(
   return floorProduct(unitPrice, area, shareRatio);
 }
 
-/** 소수 인자를 «십진 스케일 정수»로 분해. 지수표기·음수는 분해하지 않는다(호출부가 fallback). */
+/**
+ * 소수 인자를 «십진 스케일 정수»로 분해. 지수표기·음수는 분해하지 않는다(호출부가 fallback).
+ *
+ * 🔴 **자릿수를 상수로 고정하지 않는다.** 초판(PR #1556·#1557)은 `Math.min(6, …)`으로 잘랐는데,
+ *    면적은 규약상 2자리라 무해했지만 **지분율은 `1/3`처럼 고정밀 값이 정상**이다.
+ *    50억 필지 × 지분 `1/3`에서 **1,666원**이 잘려 나갔다(1,666,666,666 → 1,666,665,000) —
+ *    부동소수 오차를 고치겠다는 함수가 **더 큰 오차를 만들고 있었다**.
+ *
+ * ⇒ 값이 가진 자릿수를 그대로 쓰되, `x × 10^d`가 **안전정수를 벗어나지 않는 선까지만**
+ *    내린다. 정밀도 한계를 «임의의 상수»가 아니라 «표현 가능 한계»가 정한다.
+ */
 function decompose(x: number): { n: bigint; scale: bigint } | null {
   if (!Number.isFinite(x) || x < 0) return null;
   const text = String(x);
   if (text.includes("e") || text.includes("E")) return null;
   const frac = text.split(".")[1];
-  const decimals = Math.min(6, frac ? frac.length : 0);
-  const scale = 10 ** decimals;
-  const scaled = Math.round(x * scale);
-  if (!Number.isSafeInteger(scaled)) return null;
-  return { n: BigInt(scaled), scale: BigInt(scale) };
+  for (let d = frac ? frac.length : 0; d >= 0; d--) {
+    const scale = 10 ** d;
+    if (!Number.isSafeInteger(scale)) continue;
+    const scaled = Math.round(x * scale);
+    if (Number.isSafeInteger(scaled)) return { n: BigInt(scaled), scale: BigInt(scale) };
+  }
+  return null;
 }
 
 /**
