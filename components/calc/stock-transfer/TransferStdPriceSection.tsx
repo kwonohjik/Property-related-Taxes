@@ -27,7 +27,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { KiwoomAutoFetchButton } from "./KiwoomAutoFetchButton";
-import { TransferDate1MonthClosingPriceTable } from "./TransferDate1MonthClosingPriceTable";
+import { Pre1MonthClosingPriceTable } from "./Pre1MonthClosingPriceTable";
 
 interface TransferStdPriceSectionProps {
   form: StockTransferFormData;
@@ -103,7 +103,7 @@ export function TransferStdPriceSection({ form, onChange }: TransferStdPriceSect
           요약줄은 표 안의 것 **하나만** 둔다 — 저장 필드를 읽는 줄과 매 렌더 재계산하는 줄이
           갈렸던 사고가 있었다(제보 2026-09-01: 16,560 vs 16,559).
         */
-        <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} />
+        <Pre1MonthClosingPriceTable form={form} onChange={onChange} />
       )}
     </ToneCard>
   );

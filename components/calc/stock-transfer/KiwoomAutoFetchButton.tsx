@@ -327,7 +327,7 @@ export function KiwoomAutoFetchButton({
                     표시 순서 — **기준일(양도일·취득일)이 맨 위**에 오도록 최신 → 과거 역순.
                     데이터 인덱스(`slotDates[i]` ↔ `closingPrices[i]` ↔ `weekendLabels[i]`)는
                     route 응답 순서 그대로다 — 여기서 뒤집는 것은 화면 배치뿐이다.
-                    형제 표 `TransferDate1MonthClosingPriceTable`과 같은 규칙.
+                    형제 표 `Pre1MonthClosingPriceTable`과 같은 규칙.
                     (§165⑤ 상장일 «이후» 축은 기준일이 이미 첫 칸이라 그대로 둔다.)
                   */
                   const i = info.slotDates.length - 1 - pos;

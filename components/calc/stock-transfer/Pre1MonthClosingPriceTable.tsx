@@ -1,10 +1,14 @@
 "use client";
 
 /**
- * TransferDate1MonthClosingPriceTable — 「기준일 이전 1개월」 종가 표 (**양도일·취득일 두 축 공용**)
+ * Pre1MonthClosingPriceTable — 「기준일 이전 1개월」 종가 표 (**양도일·취득일 두 축 공용**)
  *
- * ⚠️ 이름은 양도일 축만 있던 시기의 것이다(소비처·anchor 다수가 참조해 그대로 둔다).
- *    `axis="acquisition"`이면 §99①3 환산비율의 **분자**(취득 당시 기준시가)를 담당한다 —
+ * 📌 **구 이름 `TransferDate1MonthClosingPriceTable`** — 양도일 축만 있던 시기의 것이다.
+ *    취득일 축이 붙으면서 축 중립 이름으로 바꿨다(2026-09-11). `docs/`의 계획서·리뷰는
+ *    **그 시점의 기록**이라 구 이름 그대로 두었으니, 이력을 찾을 때는 구 이름으로 검색할 것.
+ *    형제는 `PostListingClosingPriceTable`(상장일 **이후** 1개월) — Pre/Post로 대칭이다.
+ *
+ * ⚠️ `axis="acquisition"`이면 §99①3 환산비율의 **분자**(취득 당시 기준시가)를 담당한다 —
  *    기간 산식(`buildOneMonthBeforeSlots`)·평균 산식·비거래일 처리가 두 축에서 **완전히 동일**하므로
  *    복제하지 않는다. 이 저장소는 「같은 산식이 두 벌」로 반복해서 데었다(아래 단일 소스 주석 참조).
  *
@@ -47,7 +51,7 @@ import { dayOfWeek, preTransferAutoFillDates, resolvePreTransferAnchor } from ".
 import { isKrxHolidayInFixture, nonTradingLabel } from "@/lib/kiwoom/calendar";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
-interface TransferDate1MonthClosingPriceTableProps {
+interface Pre1MonthClosingPriceTableProps {
   form: Pick<
     StockTransferFormData,
     | "transferDate"
@@ -64,11 +68,11 @@ interface TransferDate1MonthClosingPriceTableProps {
   axis?: "transfer" | "acquisition";
 }
 
-export function TransferDate1MonthClosingPriceTable({
+export function Pre1MonthClosingPriceTable({
   form,
   onChange,
   axis = "transfer",
-}: TransferDate1MonthClosingPriceTableProps) {
+}: Pre1MonthClosingPriceTableProps) {
   const isAcq = axis === "acquisition";
   const dateLabel = isAcq ? "취득일" : "양도일";
   /** 환산비율에서 이 축이 앉는 자리 — 취득일 = 분자 / 양도일 = 분모 */

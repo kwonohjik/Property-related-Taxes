@@ -17,7 +17,7 @@
 import React from "react";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
-import { TransferDate1MonthClosingPriceTable } from "@/components/calc/stock-transfer/TransferDate1MonthClosingPriceTable";
+import { Pre1MonthClosingPriceTable } from "@/components/calc/stock-transfer/Pre1MonthClosingPriceTable";
 import { KiwoomAutoFetchButton } from "@/components/calc/stock-transfer/KiwoomAutoFetchButton";
 import { AcquisitionInfoBlock } from "@/components/calc/stock-transfer/AcquisitionInfoBlock";
 import { Step2 } from "@/app/calc/stock-transfer-tax/steps/Step2";
@@ -36,7 +36,7 @@ const DATES = buildOneMonthBeforeSlots(ACQ_DATE);
 function renderAcqTable(o: Partial<StockTransferFormData> = {}, onChange = vi.fn()) {
   const form = { ...createInitialStockFormData(), acquisitionDate: ACQ_DATE, ...o };
   const r = render(
-    <TransferDate1MonthClosingPriceTable form={form} onChange={onChange} axis="acquisition" />,
+    <Pre1MonthClosingPriceTable form={form} onChange={onChange} axis="acquisition" />,
   );
   return { ...r, onChange };
 }

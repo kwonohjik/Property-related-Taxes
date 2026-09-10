@@ -5,7 +5,7 @@
  *
  * 제보(2026-09-10): 취득일 자동조회 결과를 펼쳐 보면 정작 기준이 되는 취득일이
  * 마지막 줄에 있어 가장 늦게 찾게 된다. 일자별 입력 표
- * (`TransferDate1MonthClosingPriceTable` — PR #1568)와 같은 규칙으로 뒤집는다.
+ * (`Pre1MonthClosingPriceTable` — PR #1568)와 같은 규칙으로 뒤집는다.
  *
  * 🔑 **표시만 뒤집는다** — route 응답 배열(`slotDates`/`closingPrices`/`weekendLabels`)의
  *    인덱스 매핑은 그대로여야 한다. KAO-2가 그것을 못박는다: 뒤집힌 첫 줄의 «종가»가
