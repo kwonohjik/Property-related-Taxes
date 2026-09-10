@@ -518,8 +518,7 @@ anchor가 **의도한 사유로만** 실패했다 — PLD-1이 낸 `29,121,952`�
 >
 > **㉯ 「`estimatedBase`와 같은 뜻」도 조건부다.** §97의2①1호 이월과세면 호출부가
 > `acquisitionStdPriceOverridePerShare`로 분자를 갈아끼우므로
-> (`stock-acquisition-basis.ts:137`) `estimatedBase = 그 override × 주식수`가 되어
-> (`:146`)
+> (`stock-acquisition-basis.ts:137`) 개산공제 base가 `그 override × 주식수`로 잡히고(`:146`)
 > 이 필드와 **갈린다**.
 >
 > ⇒ **제거로 판정을 뒤집는다.** 근거 넷:
