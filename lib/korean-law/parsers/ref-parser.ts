@@ -23,38 +23,10 @@ import { resolveLawAlias } from "../aliases";
 // 1. LawRef 파서
 // ────────────────────────────────────────────────────────────────────────────
 
-/**
- * 법령명 인식용 정규식.
- * 한글 2~20자 + (법|법률|령|규칙|시행령|시행규칙|조례|규정|기준)
- * "구 " prefix 허용 (과거 법령 표기).
- */
-const LAW_NAME_RE = /(?:구\s+)?([가-힣·\s]{2,30}?)(?=\s*제\d)/;
-const LAW_NAME_STRICT_RE =
-  /(?:^|[,;\n\s])((?:구\s+)?(?:[가-힣·]+(?:\s+[가-힣·]+)*)(?:법|법률|령|규칙|시행령|시행규칙|조례|규정|기준|통칙))(?=\s*제?\d*조?)/g;
-
 const ARTICLE_RE = /제(\d+)조(?:의(\d+))?/;
 const HANG_RE = /제(\d+)항/;
 const HO_RE = /제(\d+)호/;
 const MOK_RE = /제([가-힣])목/;
-
-const CIRCLED_DIGIT_MAP: Record<string, number> = {
-  "①": 1, "②": 2, "③": 3, "④": 4, "⑤": 5,
-  "⑥": 6, "⑦": 7, "⑧": 8, "⑨": 9, "⑩": 10,
-  "⑪": 11, "⑫": 12, "⑬": 13, "⑭": 14, "⑮": 15,
-  "⑯": 16, "⑰": 17, "⑱": 18, "⑲": 19, "⑳": 20,
-};
-
-/**
- * 원숫자 또는 "제N항" 또는 "N" 을 숫자로 변환.
- */
-function parseHangLike(input: string): number | undefined {
-  if (!input) return undefined;
-  const trimmed = input.trim();
-  if (!trimmed) return undefined;
-  if (CIRCLED_DIGIT_MAP[trimmed[0]]) return CIRCLED_DIGIT_MAP[trimmed[0]];
-  const m = trimmed.match(/\d+/);
-  return m ? parseInt(m[0], 10) : undefined;
-}
 
 /**
  * 하나의 조문 참조 문자열(이미 법령명 그룹 내부)을 LawRef로 변환.

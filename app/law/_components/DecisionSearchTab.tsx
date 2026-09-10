@@ -56,20 +56,32 @@ export function DecisionSearchTab({
   const [autoDateHint, setAutoDateHint] = useState<string | null>(null);
   const [noResultHint, setNoResultHint] = useState<string | null>(null);
 
-  async function fetchPage(targetPage: number) {
+  /**
+   * 검색 실행. 라우팅 자동검색은 아직 state 에 반영되지 않은 값을 overrides 로 넘긴다.
+   *
+   * 🔴 종전엔 fetchPage(state 사용) / fetchPageWith(파라미터 사용) 두 벌이었고 **드리프트**했다 —
+   *    후자는 사용자의 고급 필터(advanced) passthrough 와 noResultHint 설정을 통째로
+   *    빠뜨려서, 라우팅으로 들어온 검색만 필터가 무시되고 0건 힌트도 뜨지 않았다.
+   */
+  async function fetchPage(
+    targetPage: number,
+    overrides: { q?: string; domain?: DecisionDomain } = {},
+  ) {
+    const q = overrides.q ?? query;
+    const dom = overrides.domain ?? domain;
     setLoading(true);
     setError(null);
     setDetail(null);
     setSearched(true);
     try {
       // 자연어 날짜 범위 자동 추출 — "최근 3년 양도세" → fromDate/toDate + "양도세"
-      const { fromDate, toDate, cleanedQuery } = parseDateRange(query);
-      const effectiveQuery = cleanedQuery || query;
-      const allow = allowedOptionsForDomain(domain);
+      const { fromDate, toDate, cleanedQuery } = parseDateRange(q);
+      const effectiveQuery = cleanedQuery || q;
+      const allow = allowedOptionsForDomain(dom);
 
       const params = new URLSearchParams({
         q: effectiveQuery,
-        domain,
+        domain: dom,
         page: String(targetPage),
         pageSize: String(PAGE_SIZE),
       });
@@ -127,43 +139,10 @@ export function DecisionSearchTab({
       setItems([]);
       setTotalCount(0);
       setPage(1);
-      void fetchPageWith(1, initialQuery, initialDomain ?? domain);
+      void fetchPage(1, { q: initialQuery, domain: initialDomain ?? domain });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSearch]);
-
-  async function fetchPageWith(targetPage: number, q: string, dom: DecisionDomain) {
-    setLoading(true);
-    setError(null);
-    setDetail(null);
-    setSearched(true);
-    try {
-      const { fromDate, toDate, cleanedQuery } = parseDateRange(q);
-      const effectiveQuery = cleanedQuery || q;
-      const allow = allowedOptionsForDomain(dom);
-      const params = new URLSearchParams({
-        q: effectiveQuery,
-        domain: dom,
-        page: String(targetPage),
-        pageSize: String(PAGE_SIZE),
-      });
-      if (fromDate && allow.has("fromDate")) params.set("fromDate", fromDate);
-      if (toDate && allow.has("toDate")) params.set("toDate", toDate);
-      const res = await fetch(`/api/law/search-decisions?${params.toString()}`);
-      const data: DecisionSearchPage | { error: string } = await res.json();
-      if (!res.ok) throw new Error(("error" in data ? data.error : null) ?? `HTTP ${res.status}`);
-      const payload = data as DecisionSearchPage;
-      setItems(payload.items ?? []);
-      setTotalCount(payload.totalCount ?? 0);
-      setPage(payload.page ?? targetPage);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setItems([]);
-      setTotalCount(0);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function handlePageChange(p: number) {
     void fetchPage(p);

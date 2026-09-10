@@ -38,7 +38,9 @@ export function LawSearchTab({
   const [searched, setSearched] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
 
-  async function search() {
+  /** 검색 실행. 라우팅 자동검색은 아직 state 에 없는 값을 인자로 넘긴다(중복 구현 방지). */
+  async function search(override?: string) {
+    const q = override ?? query;
     setLoading(true);
     setError(null);
     setArticle(null);
@@ -46,7 +48,7 @@ export function LawSearchTab({
     setHint(null);
     setSearched(true);
     try {
-      const params = new URLSearchParams({ q: query });
+      const params = new URLSearchParams({ q });
       if (sort !== "relevance") params.set("sort", sort);
       if (ancYd.trim()) params.set("ancYd", ancYd.trim());
       const res = await fetch(`/api/law/search-law?${params.toString()}`);
@@ -71,7 +73,7 @@ export function LawSearchTab({
       // 팝업 표시 경로(inlineArticleAutoLoad=false)에서는 입력칸 prefill만 하고 인라인 조회는 생략.
       if (initialQuery && inlineArticleAutoLoad) void openArticleWith(initialQuery, initialArticleNo);
     } else if (initialQuery) {
-      void searchWith(initialQuery);
+      void search(initialQuery);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSearch]);
@@ -97,29 +99,6 @@ export function LawSearchTab({
     }
   }
 
-  async function searchWith(q: string) {
-    setLoading(true);
-    setError(null);
-    setArticle(null);
-    setResults([]);
-    setHint(null);
-    setSearched(true);
-    try {
-      const params = new URLSearchParams({ q });
-      if (sort !== "relevance") params.set("sort", sort);
-      if (ancYd.trim()) params.set("ancYd", ancYd.trim());
-      const res = await fetch(`/api/law/search-law?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
-      setResults(data.results ?? []);
-      setHint(data.hint ?? null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -130,7 +109,7 @@ export function LawSearchTab({
           className="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
         />
         <button
-          onClick={search}
+          onClick={() => void search()}
           disabled={loading || !query}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
@@ -142,7 +121,7 @@ export function LawSearchTab({
         <input
           value={articleNo}
           onChange={(e) => setArticleNo(e.target.value)}
-          placeholder="조문 번호 (숫자만 가능 · 예: 89, 제89조, 18의2, 제18조의2)"
+          placeholder="조문 번호 (예: 89, 제89조, 18의2, 제18조의2)"
           className="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
         />
         <button

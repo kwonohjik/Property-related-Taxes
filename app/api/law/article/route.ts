@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getLawText } from "@/lib/korean-law/client-law";
+import { getLawText, normalizeArticleNo } from "@/lib/korean-law/client-law";
 import { LawApiError } from "@/lib/korean-law/client-core";
 
 export async function GET(request: NextRequest) {
@@ -28,7 +28,9 @@ export async function GET(request: NextRequest) {
     const article = await getLawText(law, articleNum);
     if (!article) {
       return NextResponse.json(
-        { error: { code: "ARTICLE_NOT_FOUND", message: `조문을 찾을 수 없습니다: ${law} 제${articleNum}조` } },
+        // ⚠ `제${articleNum}조` 로 감싸면 가지번호에서 "제168의14조" 가 된다
+        //   (호출부는 "168의14" 같은 평문을 넘긴다). 엔진 정규화기를 그대로 쓴다.
+        { error: { code: "ARTICLE_NOT_FOUND", message: `조문을 찾을 수 없습니다: ${law} ${normalizeArticleNo(articleNum)}` } },
         { status: 404 },
       );
     }

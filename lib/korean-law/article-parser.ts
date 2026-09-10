@@ -210,7 +210,6 @@ export function formatArticleUnit(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toArray<T>(val: T | T[] | undefined | null): T[] {
   if (val == null) return [];
   return Array.isArray(val) ? val : [val];

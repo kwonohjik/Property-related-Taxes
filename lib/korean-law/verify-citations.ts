@@ -278,8 +278,10 @@ function verifyHangInBody(body: string, hang: number): boolean {
   // 원숫자 매칭
   const circled = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"[hang - 1];
   if (circled && body.includes(circled)) return true;
-  // "제N항" 매칭
-  if (new RegExp(`제${hang}항`).test(body)) return true;
+  // "제N항" 매칭 — 단 **다른 조문의 상호참조**는 제외한다.
+  //   조문 본문에는 "제94조제1항" 같은 인용이 흔한데, 그것까지 인정하면
+  //   존재하지 않는 항이 verified 로 통과한다(환각을 «놓치는» 방향).
+  if (new RegExp(`(?<!조\\s*)제${hang}항`).test(body)) return true;
   // 본문에 항 번호 없이 단일 문단인 경우(1개 항) — hang === 1 허용
   if (hang === 1 && !/[①-⑳]/.test(body)) return true;
   return false;
@@ -295,6 +297,34 @@ function verifyHoInBody(body: string, hang: number, ho: number): boolean {
 // ────────────────────────────────────────────────────────────────────────────
 // 3. 메인 API
 // ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 동시 upstream 호출 상한.
+ *
+ * 🔴 종전엔 최대 20건을 `Promise.all` 로 한꺼번에 던졌는데, verifyOne 은 내부에서
+ *    upstream 을 최대 2회(getLawText → searchLaw) 부르므로 **최대 40 동시 호출**이었다.
+ *    "rate limit 의식(max 20건)" 이라는 주석과 달리 동시성 제한이 전혀 없었다.
+ */
+const VERIFY_CONCURRENCY = 4;
+
+/** 상한을 지키며 순서를 보존해 매핑. */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
 
 /**
  * 텍스트 내 모든 법령 조문 인용을 병렬 검증.
@@ -322,7 +352,7 @@ export async function verifyCitations(
     };
   }
 
-  const citations = await Promise.all(truncated.map(verifyOne));
+  const citations = await mapWithConcurrency(truncated, VERIFY_CONCURRENCY, verifyOne);
 
   const verifiedCount = citations.filter((c) => c.status === "verified").length;
   const hallucinationCount = citations.filter((c) => c.status === "not_found").length;
