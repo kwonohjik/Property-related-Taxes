@@ -349,14 +349,14 @@ export function buildRows(
     indent: true,
   });
 
-  /** 분모가 사용자 입력이 아니라 1주당 양도가액 자동 대체인지 — 거짓 표시 방지 */
-  const transferStdLabel = (r: StockTransferResult) =>
-    r.valuationDetail?.conversionUsedFallback
-      ? "12-2.  환산 분모 — 양도 당시 1주당 기준시가 (미입력 · 1주당 양도가액으로 대체)"
-      : "12-2.  환산 분모 — 양도 당시 1주당 기준시가";
+  /**
+   * 분모 라벨은 **무조건**이다 — 종전에는 「미입력 · 1주당 양도가액으로 대체」를 병기했는데,
+   * 그 자동 대체 자체를 없앴다(Q-1 차단 정본, 2026-09-10). 분모가 비면 이제 12-2도 0이다.
+   */
+  const TRANSFER_STD_LABEL = "12-2.  환산 분모 — 양도 당시 1주당 기준시가";
 
   rows.push({
-    label: transferStdLabel(result),
+    label: TRANSFER_STD_LABEL,
     values: val(
       result.valuationDetail?.conversionTransferStd ?? null,
       () => null,

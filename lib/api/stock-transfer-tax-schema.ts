@@ -444,21 +444,23 @@ export function addStockRefines(
      * 면제 축: 분자(취득측)는 취득일 거래정지 또는 취득 후 상장(§165⑤) 시 법령상 무효라
      * 엔진이 쓰지 않고, 분모(양도측)는 양도일 거래정지 시 무효다.
      *
-     * ⚠️ 분모는 **취득 후 상장(§165⑤)도 면제**한다 — ⑧보다 한 칸 느슨한 유일한 지점이다.
-     * 그 분기는 `resolveTransferStd`가 1주당 양도가로 fallback하고 경고까지 남기는
-     * **설계된 동작**이라, 여기서 막으면 엔진이 정상 처리하는 payload를 400으로 돌린다
-     * (좁히는 방향은 그 자체로 위험 — 필요한 축만 막는다). ⑧은 fallback에 기대지 않도록
-     * UI에서 더 강하게 요구하고, ⑫는 **소리 없이 0이 되는** 일반 상장 환산만 차단한다.
+     * 🔄 **2026-09-10 정정 — 분모의 §165⑤ 면제를 없앴다.**
+     * 종전 주석은 「§165⑤ 분기는 `resolveTransferStd`가 1주당 양도가로 fallback하는 설계된
+     * 동작이라 여기서 막으면 정상 payload를 400으로 돌린다」였다. 그 **fallback 자체를**
+     * 없앴으므로(계획서 Q-1 차단 정본) 근거가 소멸했다. 이제 ⑧과 ⑫가 같은 축을 요구한다.
+     *
+     * 좁히는 방향이라 실사용 파손을 먼저 실측했다 — 호출자는 마법사 단건·합산과
+     * 부담부증여 단건·합산 넷뿐이고(그 외 외부 연동 없음), 단위 6,414건 중 픽스처 1건
+     * (`route-split-mode.anchor.test.ts` LO-PRE-3)만 분모가 빠져 있었으며 E2E 주식 57건 +
+     * 부담부증여 23건은 전건 통과했다. 계획서 §6-3.
+     *
+     * 분자(취득측)는 여전히 면제한다 — 취득일 거래정지·취득 후 상장 시 법령상 무효라 엔진이 쓰지 않는다.
      */
     if (
       data.acquisitionMode === "estimated" &&
       ["kospi", "kosdaq", "konex"].includes(data.marketType as string)
     ) {
-      if (
-        !data.tradingHaltAtTransfer &&
-        !data.acquiredBeforeListing &&
-        !(data.transferDatePriceAvg1Month ?? 0)
-      ) {
+      if (!data.tradingHaltAtTransfer && !(data.transferDatePriceAvg1Month ?? 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["transferDatePriceAvg1Month"],

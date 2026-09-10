@@ -204,12 +204,11 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             {" "}을 §165⑤ 계산식 첫 항으로 사용
           </p>
         )}
-        {result.valuationDetail?.conversionUsedFallback && (
-          <p className="text-caption text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 mt-1">
-            ⚠ 양도일 이전 1개월 종가평균 미입력 — 1주당 양도가({(result.valuationDetail?.conversionTransferStd ?? 0).toLocaleString()})를 §163⑨ 환산 분모로 자동 사용.
-            정확한 환산을 위해 PostListing 카드의 &quot;양도일 이전 1개월 종가 평균&quot;에 실제 값을 입력하세요.
-          </p>
-        )}
+        {/*
+          종전에는 「분모 미입력 → 1주당 양도가 자동 대체」 안내가 여기 있었다. 그 자동 대체를
+          없앴으므로(Q-1 차단 정본, 2026-09-10) 이 안내도 함께 걷었다 — ⑧·⑫가 미입력을 막고,
+          그래도 엔진에 닿으면 취득가가 0으로 산출되며 사유는 `result.warnings`에 남는다.
+        */}
       </div>
 
       {/* 80% 하한 미적용 안내 (Round 4 C-05) */}

@@ -17,7 +17,10 @@
 
 import type { StockTransferInput } from "./types/stock-transfer.types";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
-import { safeMultiply } from "@/lib/tax-engine/tax-utils";
+// 환산 산식은 §165⑤ 경로와 **같은 함수**를 쓴다 — 같은 조문(§176의2②1호)의 같은 floor 정책을
+// 두 곳에 각각 구현해 두면 한쪽만 고쳐지는 드리프트가 생긴다.
+// anchor: `__tests__/calc/post-listing-conversion-parity.anchor.test.ts`
+import { apply163_9Conversion } from "./apply-163-9-conversion";
 
 export interface ListedValuationResult {
   /** 양도시 1주당 기준시가 (양도일 이전 1개월 종가평균) */
@@ -96,11 +99,9 @@ export function calcListedValuation(
     };
   }
 
-  // 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가) — 총액 단위 floor 1회
-  // safeMultiply: 양도가 5조+ 케이스 BigInt 안전망. 일반 범위에서는 일반 곱셈과 동일
-  const totalAcquisitionPrice = Math.floor(
-    safeMultiply(transferPrice, acqStd) / transferStd
-  );
+  // 환산취득가 = 양도가 × (취득시 기준시가 / 양도시 기준시가) — 총액 단위 floor 1회.
+  // 위 0-가드를 이미 지났으므로 헬퍼의 fallback 인자(0)는 도달하지 않는다.
+  const totalAcquisitionPrice = apply163_9Conversion(transferPrice, acqStd, transferStd, 0);
   const perShareAcquisitionPrice = Math.floor(totalAcquisitionPrice / shareCount);
   const conversionRatio = acqStd / transferStd;
 

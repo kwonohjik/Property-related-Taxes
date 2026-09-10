@@ -135,16 +135,20 @@ export function resolveAcquisitionBasis(
       // §97의2①1호 — 이월과세면 분자를 **증여자 취득 당시** 기준시가로 대체한다.
       const acqStdPerShare =
         input.acquisitionStdPriceOverridePerShare ?? postListingResult.finalPerShareValue;
-      // §176의2②1호 환산 — transferStd 미입력 시 1주당 양도가 자동 fallback
-      const { transferStd, usedFallback } = resolveTransferStd(transferPrice, shareCount, input.transferDatePriceAvg1Month);
-      if (usedFallback) warningsDelta.push("양도일 이전 1개월 종가평균 미입력 — 1주당 양도가를 §176의2②1호 환산 분모로 자동 사용");
-      acquisitionPrice = apply163_9Conversion(transferPrice, acqStdPerShare, transferStd, postListingResult.totalAcquisitionPrice);
+      // §176의2②1호 환산 — 분모 미입력은 **차단**한다(Q-1 정본). 일반 상장 환산의 0-가드와 같은 문구.
+      const transferStd = resolveTransferStd(input.transferDatePriceAvg1Month);
+      if (transferStd <= 0) {
+        warningsDelta.push(
+          "양도일 이전 1개월 종가평균이 0 이하 — 상장 환산취득가·개산공제가 0으로 산출됩니다 (시행령 §176의2②1호 환산비율 분모)",
+        );
+      }
+      acquisitionPrice = apply163_9Conversion(transferPrice, acqStdPerShare, transferStd, 0);
       estimatedBase = acqStdPerShare * shareCount;       // §163⑥4 base
       postListingDetail = postListingResult;
       const dailyMode = input.transferStdInputMode === "daily";
       valuationDetail = {
         method: "post_listing_conversion", netAssetFloorApplied: false, finalPerShareValue: acqStdPerShare,
-        conversionAcqStdPerShare: acqStdPerShare, conversionTransferStd: transferStd, conversionUsedFallback: usedFallback,
+        conversionAcqStdPerShare: acqStdPerShare, conversionTransferStd: transferStd,
         transferDailyModeUsed: dailyMode, transferDailyAverage: dailyMode ? (input.transferDatePriceAvg1Month ?? 0) : undefined,
         listingDailyModeUsed: input.listingStdInputMode === "daily",
       };

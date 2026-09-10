@@ -11,6 +11,9 @@
  *
  * 안전망 실측(P-5): `resolveTransferStd`의 fallback 분기를 통째로 지워도 반응한 테스트 **0건**.
  *
+ * 🔄 **2026-09-10** — 그 fallback 자체를 없앴다(계획서 Q-1 차단 정본). A-3-4는 「대체 사실을
+ *    병기한다」에서 「대체를 **하지 않는다**」로 지킬 성질이 뒤집혔다.
+ *
  * 계획서: docs/00-pm/stock-transfer-stale-result-and-conversion-display.plan.md §2
  */
 
@@ -92,12 +95,20 @@ describe("A-3 — 환산 산식이 신고서에 분자·분모로 드러난다",
     expect(findRow(r, "11. 취득가액")?.label).toContain("환산취득가액");
   });
 
-  it("A-3-4: 분모 자동 대체 시 그 사실을 라벨에 병기한다 (거짓 표시 방지)", () => {
-    // 양도일 이전 1개월 종가평균 미입력 → 1주당 양도가액으로 자동 대체
+  /**
+   * 🔄 **이관(2026-09-10)** — 종전 성질은 「분모 자동 대체 시 그 사실을 라벨에 병기한다」였다.
+   * 자동 대체를 없앴으므로(Q-1) 지킬 성질이 뒤집힌다: **대체하지 않는다**.
+   * 「⑫가 미입력 payload를 거부한다」는 형제 anchor
+   * `__tests__/calc/post-listing-denominator-blocked.anchor.test.ts` PLD-3이 맡는다.
+   */
+  it("A-3-4: 분모 미입력이어도 «자동 대체»하지 않는다 (Q-1 차단 정본)", () => {
     const r = calculateStockTransferTax(case48({ transferDatePriceAvg1Month: undefined }));
     const row = findRow(r, "12-2");
-    expect(row?.label).toContain("대체");
-    expect(row?.values.total).toBe(8_950); // 1주당 양도가액
+    expect(row?.label).not.toContain("대체");
+    // 종전에는 1주당 양도가액 8,950이 들어갔다. 이제는 0이다.
+    expect(row?.values.total).toBe(0);
+    expect(r.acquisitionPrice).toBe(0);
+    expect(r.warnings.join(" ")).toContain("양도일 이전 1개월 종가평균이 0 이하");
   });
 
   it("A-3-5: 비과세 경로에서도 산식이 빈칸이 아니다", () => {
