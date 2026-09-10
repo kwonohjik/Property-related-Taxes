@@ -313,8 +313,6 @@ export const searchLawInputSchema = z.object({
   sort: z.enum(["relevance", "promulgation_desc", "promulgation_asc"]).optional(),
   /** 공포일자 범위 (YYYYMMDD~YYYYMMDD) */
   ancYd: z.string().regex(/^\d{8}([~\-,]\d{8})?$/, "공포일자 형식 오류: YYYYMMDD 또는 YYYYMMDD~YYYYMMDD").optional(),
-  /** 시행일자 범위 (YYYYMMDD~YYYYMMDD) */
-  efYd: z.string().regex(/^\d{8}([~\-,]\d{8})?$/, "시행일자 형식 오류: YYYYMMDD 또는 YYYYMMDD~YYYYMMDD").optional(),
 });
 export type SearchLawInput = z.infer<typeof searchLawInputSchema>;
 

@@ -81,7 +81,6 @@ export async function searchLawMany(
     mode?: "name" | "fallback" | "content";
     sort?: LawSearchSort;
     ancYd?: string;
-    efYd?: string;
   } = {}
 ): Promise<LawSearchItem[]> {
   const mode = options.mode ?? "fallback";
@@ -89,9 +88,11 @@ export async function searchLawMany(
   const normalized = normalizeLawSearchText(query);
   const resolved = resolveLawAlias(normalized);
   const sortKey = sort !== "relevance" ? `_${sort}` : "";
+  // ⚠ 종전엔 efYd(시행일자 범위)도 받아 **캐시 키에까지 넣었지만** 필터·API 파라미터
+  //   어디에도 쓰이지 않았다 — 지정한 호출자는 필터 없는 결과를 «다른 캐시 슬롯»에 받았다.
+  //   target=law 검색 응답에는 시행일자 자체가 없어 클라이언트 필터도 불가하므로 제거했다.
   const ancKey = options.ancYd ? `_anc${options.ancYd}` : "";
-  const efKey = options.efYd ? `_ef${options.efYd}` : "";
-  const cacheKey = `search_many_${safeCacheKey(resolved)}_${limit}_${mode}${sortKey}${ancKey}${efKey}`;
+  const cacheKey = `search_many_${safeCacheKey(resolved)}_${limit}_${mode}${sortKey}${ancKey}`;
   const cached = await readCacheNonEmpty<LawSearchItem[]>(cacheKey);
   if (cached) return cached;
 
@@ -110,7 +111,7 @@ async function searchLawManyLive(
   limit: number,
   mode: "name" | "fallback" | "content",
   sort: LawSearchSort,
-  options: { ancYd?: string; efYd?: string },
+  options: { ancYd?: string },
   cacheKey: string
 ): Promise<LawSearchItem[]> {
   const searchDisplay = Math.max(limit, 20);
