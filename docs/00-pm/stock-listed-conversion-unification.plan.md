@@ -176,6 +176,10 @@ else "monthly_avg"
 
 > ⚠️ 「양도정지가 이긴다」가 아니다 — **`acquiredBeforeListing`이 선두**다(`:128`).
 > 순서를 뒤집으면 stale 조합에서 세액이 바뀐다. anchor로 고정할 것.
+>
+> 📌 **줄번호 정정(2026-09-10)** — Q-2를 기록할 당시 적은 `:161·:208·:253·:299`는
+> **S1 머지 전** 값이었다. S1이 이 파일에 차단 warning 블록을 넣어 4줄 밀렸다.
+> 현행은 `:165·:212·:257·:303`이다. **인용은 머지 시점 기준으로 다시 재야 한다.**
 
 **이것도 C다.** 목표였던 「불가능한 조합 배제」를 타입 대신 **스키마 `superRefine`**로
 달성하고, 값은 **하나의 enum에서만 편집**되므로 이중 진실이 아니다 — boolean은 파생
@@ -297,10 +301,10 @@ anchor `A-3-4`는 **폐기가 아니라 이관**한다 — 지킬 성질이 「�
 
 ```
 :128  if (acquiredBeforeListing)          ← 선두
-:161  else if (tradingHaltAtTransfer)
-:208  else if (marketType === "unlisted")  ← 상장 환산 축 밖
-:253  else if (tradingHaltAtAcquisition)
-:299  else                                 ← 일반
+:165  else if (tradingHaltAtTransfer)
+:212  else if (marketType === "unlisted")  ← 상장 환산 축 밖
+:257  else if (tradingHaltAtAcquisition)
+:303  else                                 ← 일반
 ```
 
 그리고 **양도정지 분기는 `calcUnlistedValuation`으로 양·취 양쪽을 함께** 처리하므로,
@@ -637,8 +641,8 @@ Test Files  1 failed | 696 passed (697)
 
 - 뮤테이션: 그 분기에 `throw` → **6,414건 전건 통과**(도달 0)
 - 구조: `stock-acquisition-basis.ts`의 if-체인이 halt를 **먼저** 걸러낸다 —
-  `:128` `acquiredBeforeListing` → `:161` **`tradingHaltAtTransfer`** → `:208` `unlisted`
-  → `:253` `tradingHaltAtAcquisition` → **`:299` `else`에서만** `calcListedValuation` 호출.
+  `:128` `acquiredBeforeListing` → `:165` **`tradingHaltAtTransfer`** → `:212` `unlisted`
+  → `:257` `tradingHaltAtAcquisition` → **`:303` `else`에서만** `calcListedValuation` 호출.
   비과세 경로도 같다(`exempt-informational-acquisition.ts:131`이 halt를 먼저 `return`).
 - `tradingHaltFallback`의 소비처: 소스·테스트 **0건**(직접 호출 테스트 2파일도 이 필드는 안 본다)
 
