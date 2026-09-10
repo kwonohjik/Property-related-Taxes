@@ -257,7 +257,11 @@ export function BurdenedGiftTransferSection({
                 }
                 pricePerSqm={acqPricePerSqm}
                 onPricePerSqmChange={setAcqPricePerSqm}
-                area={item.areaSqm != null ? String(item.areaSqm) : undefined}
+                // 면적은 «자산 전체 면적»(item.areaSqm) 단일 소스를 양방향 read/write 한다
+                // — 취득시·양도시 두 위젯이 각자 내부 state를 갖게 두면 같은 토지 면적을
+                //   두 번 입력해야 하고 값이 갈린다(components/calc/CLAUDE.md 「양방향 read/write 통합」).
+                area={item.areaSqm != null ? String(item.areaSqm) : ""}
+                onAreaChange={(v) => onChange({ areaSqm: parseDecimal(v) || undefined })}
                 referenceDate={dateToStr(bgt.acquisitionDate)}
                 jibun={jibun}
                 label={stdPriceLabel}
@@ -289,7 +293,8 @@ export function BurdenedGiftTransferSection({
                   }
                   pricePerSqm={transferPricePerSqm}
                   onPricePerSqmChange={setTransferPricePerSqm}
-                  area={item.areaSqm != null ? String(item.areaSqm) : undefined}
+                  area={item.areaSqm != null ? String(item.areaSqm) : ""}
+                  onAreaChange={(v) => onChange({ areaSqm: parseDecimal(v) || undefined })}
                   jibun={jibun}
                   label="양도시(증여시) 개별공시지가"
                   hint="증여일(양도일) 기준 공시지가 총액. §159 안분 분모로 사용됩니다."

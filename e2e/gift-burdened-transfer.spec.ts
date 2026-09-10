@@ -403,15 +403,26 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       await dayInput.fill("10");
       await expect(yearInput).toHaveValue("2005");
 
-      // 토지: LandPriceLookupField wrapper[data-testid] 내 CurrencyInput (공시지가 원/㎡)
-      // CurrencyInput은 role="textbox". first()는 hidden input일 수 있어 role 사용.
+      // 토지 면적 — 공시지가 «단가 × 면적 = 총액» 계산의 필수 인자.
+      // 개별공시지가 칸이 StandardPriceInput(area-mode)이라 면적 없이는 총액이 만들어지지 않는다
+      // (store의 standardPrice·standardPriceAtAcquisition은 «총액» — 종전 단가 저장은 면적 배수만큼 과소평가였다).
+      // 면적은 item.areaSqm 단일 소스라 어느 위젯에서 넣든 취득시·양도시 양쪽에 반영된다.
+      const acqAreaInput = dialog
+        .locator("[data-testid='bg-transfer-acq-stdprice']")
+        .getByPlaceholder("면적 입력");
+      await expect(acqAreaInput).toBeVisible();
+      await acqAreaInput.fill("100");
+      await acqAreaInput.press("Tab");
+
+      // 취득시 개별공시지가 — StandardPriceInput area-mode의 첫 textbox = ㎡당 단가
       const stdPriceWrapper = dialog.locator("[data-testid='bg-transfer-acq-stdprice']");
       await expect(stdPriceWrapper).toBeVisible();
       const stdPriceInput = stdPriceWrapper.getByRole("textbox").first();
       await stdPriceInput.fill("200000");
       await stdPriceInput.press("Tab"); // blur → CurrencyInput 포맷팅 트리거
-      // CurrencyInput은 blur 시 쉼표 포맷 적용 — raw value와 포맷 중 하나
       await expect(stdPriceInput).toHaveValue(/200/);
+      // 단가 200,000 × 100㎡ = 20,000,000 총액이 자동 계산돼야 한다
+      await expect(stdPriceWrapper.getByRole("textbox").last()).toHaveValue(/20,000,000|20000000/);
 
       // 양도시(증여시) 개별공시지가 — 표준모드 land §159 분모 (신규 필수 차단 필드)
       const transferStdLand = dialog.locator(
@@ -422,6 +433,7 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       await transferStdLandInput.fill("250000");
       await transferStdLandInput.press("Tab");
       await expect(transferStdLandInput).toHaveValue(/250/);
+      await expect(transferStdLand.getByRole("textbox").last()).toHaveValue(/25,000,000|25000000/);
 
       // 비사업용 토지 ON — ToggleCard switch role
       const nonBizToggle = dialog.getByRole("switch", { name: /비사업용 토지/ });
