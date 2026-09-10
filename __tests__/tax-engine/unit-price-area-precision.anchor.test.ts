@@ -21,6 +21,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { multiplyByAreaShare } from "@/lib/tax-engine/area-utils";
 
 describe("multiplyByArea — 참값을 낸다", () => {
   it("UA-1: 부동소수 곱이 1원 깎던 케이스", () => {
@@ -84,5 +85,72 @@ describe("실제 엔진 경로에서도 참값이 나온다", () => {
     // 공시지가 3,150,000원/㎡ × 132.23㎡ — 참값 416,524,500
     expect(m(3_150_000, 132.23)).toBe(416_524_500);
     expect(Math.floor(3_150_000 * 132.23)).toBe(416_524_499); // 종전 1원 과소
+  });
+});
+
+describe("multiplyByAreaShare — 지분 3항 곱도 참값", () => {
+  it("UA-8: 부동소수 3항 곱이 1원 깎던 케이스", () => {
+    expect(multiplyByAreaShare(1_000_000, 0.7, 0.3333)).toBe(233_310);
+    expect(Math.floor(0.7 * 0.3333 * 1_000_000)).toBe(233_309); // 종전
+  });
+
+  it("UA-9: 전수 조합 — 참값과 일치하고 종전보다 작아지지 않는다", () => {
+    let wrong = 0, regressed = 0, fixed = 0;
+    const prices = [1_000_000, 3_150_000, 5_000_000, 12_345_000];
+    const ratios = [1, 0.5, 0.3333, 0.25, 0.6667, 0.125];
+    for (const p of prices) {
+      for (let ai = 1; ai <= 2000; ai++) {
+        const a = ai / 10;
+        for (const r of ratios) {
+          const got = multiplyByAreaShare(p, a, r);
+          const naive = Math.floor(a * r * p);
+          const exact = Number(
+            (BigInt(p) * BigInt(Math.round(a * 100)) * BigInt(Math.round(r * 10000))) / 1_000_000n,
+          );
+          if (got !== exact) wrong++;
+          if (got < naive) regressed++;
+          if (got !== naive) fixed++;
+        }
+      }
+    }
+    expect(wrong).toBe(0);
+    expect(regressed).toBe(0);
+    expect(fixed).toBe(5_048); // 실측 10.5%
+  });
+
+  it("UA-10: [대조군] 지분 1이면 multiplyByArea와 완전히 같다 — 순서를 바꾸지 않았다", () => {
+    for (const a of [8.04, 132.23, 100, 0.41]) {
+      expect(multiplyByAreaShare(5_000_000, a, 1)).toBe(multiplyByArea(5_000_000, a));
+    }
+  });
+
+  /**
+   * 🔑 **왜 「순서」를 미결로 남기는가** — 세 후보가 실제로 갈리기 때문이다(실측 5.6만 조합):
+   *
+   *   | 후보 | 산식 | ⓐ와 불일치 | 차이 크기 |
+   *   |---|---|---|---|
+   *   | ⓐ 현행 | `floor(단가 × 면적 × 지분)` | — | — |
+   *   | ⓑ | `floor(floor(단가 × 면적) × 지분)` | **5.89%** | 1원 |
+   *   | ⓒ | `floor(단가 × round2(면적 × 지분))` | **60.67%** | **수천 원** |
+   *
+   * ⓒ는 지분면적을 2자리로 접으면서 정보를 크게 잃는다(0.1㎡ × 0.3333 → 0.03).
+   * 그래서 이 PR은 **ⓐ를 정확히 계산**하는 데서 멈춘다 — 어느 쪽이 법령상 옳은지는
+   * 부동산 가격공시법·종부세법 본문으로 확인해야 하고, 근거 없이 세액 방향을 바꾸지 않는다
+   * (memory `feedback_no_unfavorable_application_without_legal_basis`).
+   */
+  it("UA-11: [대조군] 세 후보가 실제로 갈린다 — 그래서 순서는 미결이다", () => {
+    const p = 1_000_000, a = 0.3, r = 0.1667;
+    const round2 = (x: number) => Math.round(x * 100) / 100;
+    expect(multiplyByAreaShare(p, a, r)).toBe(50_010); // ⓐ 현행
+    expect(Math.floor(multiplyByArea(p, a) * r)).toBe(50_009); // ⓑ — 1원 아래
+    expect(multiplyByArea(p, round2(a * r))).toBe(50_000); // ⓒ — 10원 아래
+
+    // ⓐ = 종전 산식의 «참값»이다 — 순서를 바꾼 것이 아니다
+    expect(multiplyByAreaShare(p, a, r)).toBeGreaterThanOrEqual(Math.floor(a * r * p));
+  });
+
+  it("UA-12: [대조군] 비정상 입력은 0, 지수표기는 종전 동작으로 되돌아간다", () => {
+    expect(multiplyByAreaShare(NaN, 1, 1)).toBe(0);
+    expect(multiplyByAreaShare(1_000_000, 1e-7, 1)).toBe(Math.floor(1_000_000 * 1e-7 * 1));
   });
 });

@@ -25,6 +25,7 @@ import type {
   LandPreviousYearEquivalent,
   LandPriorJurisdictionTax,
 } from "./types/comprehensive.types";
+import { multiplyByAreaShare } from "./area-utils";
 
 /** 재산세 토지 공정시장가액비율 (지방세법 §110② — 70%) */
 const LAND_PROPERTY_FMR = PROPERTY_SEPARATE_CONST.FAIR_MARKET_RATIO; // 0.70
@@ -71,7 +72,7 @@ export function calcLandPreviousYearEquivalent(
       area: p.area,
       shareRatio: p.shareRatio,
       pricePerSqm: p.priorOfficialPricePerSqm ?? 0,
-      officialValue: Math.floor(p.area * p.shareRatio * (p.priorOfficialPricePerSqm ?? 0)),
+      officialValue: multiplyByAreaShare(p.priorOfficialPricePerSqm ?? 0, p.area, p.shareRatio),
     }));
     const groupOfficial = parcelEchos.reduce((s, e) => s + e.officialValue, 0);
     const propertyTaxBase = landPropertyTaxBase(groupOfficial);
