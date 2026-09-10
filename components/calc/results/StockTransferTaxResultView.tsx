@@ -467,7 +467,7 @@ export function StockTransferTaxResultView({
       <PrintSection id="detail-cards" selectedIds={selectedPrintIds} className="space-y-6">
       {/* 환산 취득가 분해 (사례 48) */}
       {result.usedEstimatedAcquisition && result.valuationDetail && (
-        <EstimatedValuationBreakdown result={result} shareCount={shareCount} />
+        <EstimatedValuationBreakdown result={result} />
       )}
 
       {/* 누진세율 분해 */}
