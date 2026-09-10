@@ -22,6 +22,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { setStockConversionMode, postListingCard } from "./_helpers/stock-conversion";
 
 /**
  * ⚠️ 이 저장소에서 `getByRole("textbox", { name })`은 **placeholder로만** 이름이 잡힌다.
@@ -76,12 +77,7 @@ async function openStep2Daily(page: Page) {
   await fillByLabel(page, "양도가액 합계", "44750000");
   await page.getByRole("radio", { name: "환산취득가" }).first().click();
 
-  await page
-    .locator('[data-slot="toggle-card"]')
-    .filter({ hasText: "취득 후 상장" })
-    .getByRole("switch")
-    .first()
-    .click();
+  await setStockConversionMode(page, "post_listing");
 
   // ③은 「평가액 직접 입력」(simple) — 이 축이 열려야 ②에 입력 방식 라디오가 나온다
   await page.getByText("평가액 직접 입력", { exact: true }).click();
@@ -93,11 +89,7 @@ async function openStep2Daily(page: Page) {
   // 상장일 — ②의 종가 표 일자를 자동으로 채우는 기산일.
   //   「취득 후 상장」 카드 안에서 **날짜 입력을 가진 유일한 FieldCard**가 상장일이다
   //   (라벨 텍스트로 좁히면 「상장일 이후…」·「상장일 직전…」과 부분일치로 엉킨다).
-  const postCard = page
-    .locator('[data-slot="toggle-card"]')
-    .filter({ hasText: "취득 후 상장" })
-    .first();
-  const listingDateCard = postCard
+  const listingDateCard = postListingCard(page)
     .locator('[data-slot="field-card"]')
     .filter({ has: page.locator('input[aria-label="연도"]') })
     .first();

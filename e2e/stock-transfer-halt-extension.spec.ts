@@ -10,8 +10,8 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { setStockConversionMode } from "./_helpers/stock-conversion";
 
-const HALT_TOGGLE_TITLE = "양도일 거래정지·관리종목 지정 (소령 §165③)";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -56,12 +56,7 @@ test.describe("C-2/C-3 거래정지 확장 UI", () => {
     await page.getByRole("radio", { name: "환산취득가" }).first().click();
 
     // 거래정지(양도) 토글 ON
-    await page
-      .locator('[data-slot="toggle-card"]')
-      .filter({ hasText: HALT_TOGGLE_TITLE })
-      .getByRole("switch")
-      .first()
-      .click();
+    await setStockConversionMode(page, "halt_transfer");
 
     // simpleOnly 해제 증명 — full "평가액 계산" 라디오 노출 (기존 simpleOnly면 미노출)
     await expect(page.getByText("평가액 계산", { exact: true })).toBeVisible({ timeout: 10_000 });
@@ -79,20 +74,12 @@ test.describe("C-2/C-3 거래정지 확장 UI", () => {
     await fillByLabel(page, "양도가액 합계", "200000000");
     await page.getByRole("radio", { name: "환산취득가" }).first().click();
 
-    // 취득 후 상장 ON
-    await page
-      .locator('[data-slot="toggle-card"]')
-      .filter({ hasText: "취득 후 상장" })
-      .getByRole("switch")
-      .first()
-      .click();
-    // 거래정지(양도) ON
-    await page
-      .locator('[data-slot="toggle-card"]')
-      .filter({ hasText: HALT_TOGGLE_TITLE })
-      .getByRole("switch")
-      .first()
-      .click();
+    // 🔑 «불가 조합»을 일부러 만든다 — 이 spec의 대상이 그 차단이다.
+    //    S3(Q-2 3안)에서는 축이 하나가 되어 이 조합을 UI로 만들 수 없게 되므로,
+    //    그때 이 테스트는 ⑧·⑫ 단위 anchor로 이관해야 한다
+    //    (`__tests__/calc/stock-conversion-branch-matrix.anchor.test.ts` MTX-XA/XA').
+    await setStockConversionMode(page, "post_listing");
+    await setStockConversionMode(page, "halt_transfer");
 
     // 다음 시도 → 양립 불가 차단 메시지(§52의2③)
     await page.getByRole("button", { name: /^다음/ }).click();
