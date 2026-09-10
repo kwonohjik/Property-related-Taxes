@@ -2,7 +2,7 @@
  * 별표·서식 목록 조회 (getAnnexes)
  */
 
-import { fetchJson, readCache, writeCache, toArray } from "./client-core";
+import { fetchJson, readCacheNonEmpty, writeCacheNonEmpty, toArray } from "./client-core";
 import { searchLaw } from "./client-law";
 import type { AnnexItem } from "./types";
 
@@ -25,7 +25,7 @@ export async function getAnnexes(lawName: string): Promise<AnnexItem[]> {
   if (!meta) return [];
 
   const cacheKey = `annex_${meta.mst}`;
-  const cached = await readCache<AnnexItem[]>(cacheKey);
+  const cached = await readCacheNonEmpty<AnnexItem[]>(cacheKey);
   if (cached) return cached;
 
   const data = await fetchJson<LawServiceRawResponse>("lawService.do", {
@@ -42,7 +42,7 @@ export async function getAnnexes(lawName: string): Promise<AnnexItem[]> {
       : undefined,
     mst: meta.mst,
   }));
-  await writeCache(cacheKey, results);
+  await writeCacheNonEmpty(cacheKey, results);
   return results;
 }
 

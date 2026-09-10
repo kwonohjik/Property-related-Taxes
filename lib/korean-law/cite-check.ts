@@ -13,7 +13,14 @@
  */
 
 import { getDecisionText } from "./client";
-import { LawApiError, fetchJson, readCache, safeCacheKey, toArray, writeCache } from "./client-core";
+import {
+  LawApiError,
+  fetchJson,
+  readCacheNonEmpty,
+  safeCacheKey,
+  toArray,
+  writeCacheNonEmpty,
+} from "./client-core";
 import type { ChangeSignal, CiteCheckResult, CiteCheckStatus, CitingCase } from "./types";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -114,7 +121,7 @@ interface PrecSearchEntry {
 /** 대상 사건번호를 본문에 인용한 후속 판례 목록 (대상 자신 제외) */
 export async function findCitingCases(caseNo: string, display = 50): Promise<CitingCase[]> {
   const cacheKey = `citing_${safeCacheKey(caseNo)}_${display}`;
-  const cached = await readCache<CitingCase[]>(cacheKey);
+  const cached = await readCacheNonEmpty<CitingCase[]>(cacheKey);
   if (cached) return cached;
 
   const data = await fetchJson<{
@@ -149,7 +156,7 @@ export async function findCitingCases(caseNo: string, display = 50): Promise<Cit
     if (!prev || (!prev.hasFullText && entry.hasFullText)) byNorm.set(norm, entry);
   }
   const out = [...byNorm.values()];
-  await writeCache(cacheKey, out);
+  await writeCacheNonEmpty(cacheKey, out);
   return out;
 }
 

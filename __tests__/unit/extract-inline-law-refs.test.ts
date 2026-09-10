@@ -108,7 +108,10 @@ describe("extractInlineLawRefs", () => {
       ),
     ).toEqual([
       { label: "§3①", legalBasis: "조세범처벌법 §3①" },
-      { label: "§15", legalBasis: "상속세및증여세법 §15" },
+      // ⑲ 는 §15 의 항(項) 마커다. 종전 기대값은 "§15" 였는데, 그것은 CLAUSE_MARKERS
+      // 가 ⑮ 에서 끊겨 있어 ⑯~⑳ 를 **떨어뜨리던 결함**을 고정한 것이었다.
+      // 이 케이스의 검증 축은 법령 귀속(carry-over)이며 그 부분은 그대로다.
+      { label: "§15⑲", legalBasis: "상속세및증여세법 §15⑲" },
       { label: "§39①", legalBasis: "외부감사법 §39①" },
     ]);
   });

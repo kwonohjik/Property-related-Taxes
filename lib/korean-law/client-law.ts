@@ -20,8 +20,8 @@ import {
   LawApiError,
   fetchJson,
   safeCacheKey,
-  readCache,
-  writeCache,
+  readCacheNonEmpty,
+  writeCacheNonEmpty,
   toArray,
 } from "./client-core";
 import type { LawSearchItem, LawArticleResult, DecisionDomain } from "./types";
@@ -90,14 +90,14 @@ export async function searchLawMany(
   const ancKey = options.ancYd ? `_anc${options.ancYd}` : "";
   const efKey = options.efYd ? `_ef${options.efYd}` : "";
   const cacheKey = `search_many_${safeCacheKey(resolved)}_${limit}_${mode}${sortKey}${ancKey}${efKey}`;
-  const cached = await readCache<LawSearchItem[]>(cacheKey);
+  const cached = await readCacheNonEmpty<LawSearchItem[]>(cacheKey);
   if (cached) return cached;
 
   try {
     return await searchLawManyLive(resolved, limit, mode, sort, options, cacheKey);
   } catch (err) {
     // 법제처 접속 차단(주말·공휴일·점검) → TTL 만료 캐시라도 반환
-    const stale = await readCache<LawSearchItem[]>(cacheKey, true);
+    const stale = await readCacheNonEmpty<LawSearchItem[]>(cacheKey, true);
     if (stale) return stale;
     throw err;
   }
@@ -179,7 +179,7 @@ async function searchLawManyLive(
   }
 
   const results = filtered.slice(0, limit);
-  await writeCache(cacheKey, results);
+  await writeCacheNonEmpty(cacheKey, results);
   return results;
 }
 

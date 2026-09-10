@@ -97,11 +97,20 @@ export function buildLawUrl(legalBasis: string): string {
   return name ? `https://www.law.go.kr/법령/${encodeURIComponent(name)}` : "";
 }
 
-/** 항(項) 번호 동그라미 숫자 ①~⑮ (법령 본문 항 마커) */
-const CLAUSE_MARKERS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮";
+/**
+ * 항(項) 번호 동그라미 숫자 ①~⑳ (법령 본문 항 마커) — **단일 소스**.
+ *
+ * ⚠ 종전에는 ⑮까지만 담았고 `law-article-modal.tsx` 가 같은 문자열을 따로 들고 있었다.
+ *   그런데 저장소 자체 인용이 이미 그 너머를 쓴다 — `legal-codes/transfer-house.ts`
+ *   의 "소득세법 시행령 §155⑳", `transfer-nbl.ts` 의 "…시행규칙 §83조의4 ⑯⑰".
+ *   그 결과 §155⑳ 는 `extractClauseMarkers` 가 [] 를 돌려주고(항 하이라이트 실패),
+ *   `extractInlineLawRefs` 는 label·legalBasis 에서 ⑳ 를 통째로 떨어뜨렸다.
+ *   범위를 넓힐 때는 이 상수 한 곳만 고치면 되도록 모달도 여기서 import 한다.
+ */
+export const CLAUSE_MARKERS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
 
 /**
- * 인용 문자열에서 항(項) 마커(①~⑮) 추출 — 조문 팝업 본문 하이라이트용 (G-5).
+ * 인용 문자열에서 항(項) 마커(①~⑳) 추출 — 조문 팝업 본문 하이라이트용 (G-5).
  *   "§63③ 할증평가" → ["③"] · "상증령 §56①④" → ["①","④"] · "§8 보험금" → []
  * 등장 순서 보존·중복 제거. 호(N호)는 인용 항 블록에 포함되므로 별도 추출하지 않는다.
  */
@@ -135,8 +144,11 @@ export function extractClauseMarkers(text: string): string[] {
  */
 // 법령명 토큰: "…법" 또는 "…령"(1자+령 → "시령"·"상증령" 포함). § 직전 인접 시에만 귀속.
 // "제"는 뒤에 숫자+조가 올 때만 조문 표기로 인정(공제·면제 등 흔한 단어의 '제' 오인 차단).
-const INLINE_LAW_SCAN_RE =
-  /([가-힣]+법|[가-힣]+령)?\s*(?:§|제(?=\s*\d+\s*조))\s*(\d+)(?:조)?(?:의\s*(\d+))?([①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮]*)/g;
+// 항 마커 클래스는 CLAUSE_MARKERS 에서 생성 — 범위가 두 곳으로 갈라지지 않게.
+const INLINE_LAW_SCAN_RE = new RegExp(
+  `([가-힣]+법|[가-힣]+령)?\\s*(?:§|제(?=\\s*\\d+\\s*조))\\s*(\\d+)(?:조)?(?:의\\s*(\\d+))?([${CLAUSE_MARKERS}]*)`,
+  "g",
+);
 
 export function extractInlineLawRefs(
   text: string,

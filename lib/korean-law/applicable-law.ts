@@ -28,9 +28,11 @@ import {
   LawApiError,
   fetchJson,
   readCache,
+  readCacheNonEmpty,
   safeCacheKey,
   toArray,
   writeCache,
+  writeCacheNonEmpty,
 } from "./client-core";
 import { buildLawSourceUrl, normalizeArticleNo } from "./client-law";
 import type { ApplicableLawResult, LawVersionEntry, TransitionExcerpt } from "./types";
@@ -126,10 +128,14 @@ export function extractTransitionExcerpts(
   const maxAddenda = opts.maxAddenda ?? 6;
   const maxLinesPer = opts.maxLinesPer ?? 3;
 
-  // "제89조" 매칭 시 "제89조의2"(가지번호) 오탐 방지 — 단 "제89조의 개정규정"(의=소유격)은 허용.
-  // 구분: 가지번호는 "의" 뒤에 숫자, 소유격은 "의" 뒤에 비숫자. → (?!의\d)
+  // 조문 표시명 뒤에 **자리 경계**를 붙여 인접 조문 오탐을 막는다.
+  //   · "제89조"   → (?!의\d) : "제89조의2"(가지번호)는 제외하되 "제89조의 개정규정"(소유격)은 허용.
+  //   · "제121조의3" → (?!\d)  : "제121조의33"(두 자리 가지번호)을 삼키지 않도록.
+  //     ⚠ 이 가드가 없으면 무관 조문의 경과규정이 articleSpecific=true 로 승격되어
+  //       UI 가 "이 조문 전용 적용례"로 강조한다(조특법 §121의2~§121의33 계열에서 실발생).
+  const joBoundary = joDisplay.includes("조의") ? "(?!\\d)" : "(?!의\\d)";
   const joRe = joDisplay
-    ? new RegExp(joDisplay.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + (joDisplay.includes("조의") ? "" : "(?!의\\d)"))
+    ? new RegExp(joDisplay.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + joBoundary)
     : null;
 
   const sorted = [...addenda].sort((a, b) => b.ancYd.localeCompare(a.ancYd));
@@ -278,7 +284,7 @@ export async function fetchEflawArticle(
  */
 export async function fetchAddendaUnits(mst: string): Promise<AddendumUnit[]> {
   const cacheKey = `law_addenda_${mst}`;
-  const cached = await readCache<AddendumUnit[]>(cacheKey);
+  const cached = await readCacheNonEmpty<AddendumUnit[]>(cacheKey);
   if (cached) return cached;
 
   const data = await fetchJson<{
@@ -292,7 +298,7 @@ export async function fetchAddendaUnits(mst: string): Promise<AddendumUnit[]> {
     ancYd: String(u?.부칙공포일자 ?? ""),
     content: flattenContent(u?.부칙내용),
   }));
-  await writeCache(cacheKey, result);
+  await writeCacheNonEmpty(cacheKey, result);
   return result;
 }
 

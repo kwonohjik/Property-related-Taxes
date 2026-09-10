@@ -254,8 +254,12 @@ function buildFullText(content: string, unit: any): string {
 export function buildJoCode(articleNo: string): string | null {
   // 공백·제·조 제거해서 숫자 추출
   const cleaned = articleNo.replace(/\s/g, "");
-  // "제38조의2" / "제38조" / "38조의2" / "38"
-  const m = cleaned.match(/제?(\d+)조?(?:의(\d+))?$/);
+  // "제38조의2" / "제38조" / "38조의2" / "38" / "제38조-1"(레거시)
+  //
+  // ⚠ `^` 앵커 필수 — 없으면 파싱 실패해야 할 입력에서 **끝의 숫자만** 매칭돼
+  //   전혀 다른 조문을 조용히 조회한다(실측: "제89조2" → "000200" = 제2조,
+  //   "제38조-1" → "000100" = 제1조). 해석 불가는 null 로 크게 실패시킨다.
+  const m = cleaned.match(/^제?(\d+)조?(?:(?:의|-)(\d+))?$/);
   if (!m) return null;
   const main = parseInt(m[1], 10);
   const sub = m[2] ? parseInt(m[2], 10) : 0;
