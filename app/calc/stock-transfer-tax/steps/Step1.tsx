@@ -12,7 +12,8 @@
  *   - 기타자산 조건부 표시
  */
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -61,6 +62,8 @@ function SectionTitle({ n, title }: { n: number; title: string }) {
 
 export function Step1({ form, onChange }: Step1Props) {
   const syncedChange = withAutoSyncMajor(form, onChange);
+  /** 분할 → 단일 전환 확인 — 확정 전까지 토글·데이터 불변 */
+  const [pendingSingle, setPendingSingle] = useState(false);
 
   /**
    * 발행주식 총수 — 대주주 판정 주식수 모드의 **분모**다 (C-7, 2026-09-08).
@@ -116,29 +119,41 @@ export function Step1({ form, onChange }: Step1Props) {
         transferLots: newTrnLot ? [newTrnLot] : [],
       });
     } else {
-      // split → single: 사용자 확인 (UI 단순화 — confirm 사용)
+      /**
+       * split → single 은 **입력한 건을 버린다**(첫 건만 남는다) ⇒ 확인이 필요하다.
+       *
+       * 🔑 여기서 `onChange` 를 부르지 않고 **다이얼로그만 연다**. RadioCardGroup 의
+       *    `value` 가 `form.lotsMode` 라서, 확정 전까지 토글은 「분할」에 그대로 머문다
+       *    ([[feedback_dialog_data_discard_confirm]] 의 상태 보장 정책).
+       *    취소·ESC·바깥 클릭은 데이터도 토글도 건드리지 않는다.
+       */
       if (form.acquisitionLots.length > 0 || form.transferLots.length > 0) {
-        const ok = confirm("분할 입력 데이터가 단일 모드로 전환됩니다. 첫 번째 건만 유지됩니다. 계속하시겠습니까?");
-        if (!ok) return;
+        setPendingSingle(true);
+        return;
       }
-      const firstAcq = form.acquisitionLots[0];
-      const firstTrn = form.transferLots[0];
-      onChange({
-        lotsMode: "single",
-        acquisitionDate: firstAcq?.acquisitionDate ?? "",
-        perShareAcquisitionPrice: firstAcq?.perShareAcquisitionPrice ?? "",
-        transferDate: firstTrn?.transferDate ?? "",
-        perShareTransferPrice: firstTrn?.perShareTransferPrice ?? "",
-        shareCount: firstTrn?.shareCount ?? firstAcq?.shareCount ?? "",
-        acquisitionCause: firstAcq?.acquisitionCause ?? "purchase",
-        decedentAcquisitionDate: firstAcq?.decedentAcquisitionDate ?? "",
-        preMergerAcquisitionDate: firstAcq?.preMergerAcquisitionDate ?? "",
-        acquisitionLots: [],
-        transferLots: [],
-        specificMatchings: [],
-      });
+      applySingleMode();
     }
   };
+
+  /** 분할 → 단일 전환 실제 적용 — 확인을 통과했거나 버릴 데이터가 없을 때만 부른다. */
+  function applySingleMode() {
+    const firstAcq = form.acquisitionLots[0];
+    const firstTrn = form.transferLots[0];
+    onChange({
+      lotsMode: "single",
+      acquisitionDate: firstAcq?.acquisitionDate ?? "",
+      perShareAcquisitionPrice: firstAcq?.perShareAcquisitionPrice ?? "",
+      transferDate: firstTrn?.transferDate ?? "",
+      perShareTransferPrice: firstTrn?.perShareTransferPrice ?? "",
+      shareCount: firstTrn?.shareCount ?? firstAcq?.shareCount ?? "",
+      acquisitionCause: firstAcq?.acquisitionCause ?? "purchase",
+      decedentAcquisitionDate: firstAcq?.decedentAcquisitionDate ?? "",
+      preMergerAcquisitionDate: firstAcq?.preMergerAcquisitionDate ?? "",
+      acquisitionLots: [],
+      transferLots: [],
+      specificMatchings: [],
+    });
+  }
 
   // ── 동적 번호 재할당 — visible sections useMemo ──
   const sections = useMemo(() => {
@@ -369,6 +384,15 @@ export function Step1({ form, onChange }: Step1Props) {
           {s.render()}
         </section>
       ))}
+      <ConfirmDialog
+        open={pendingSingle}
+        onOpenChange={setPendingSingle}
+        title="분할 입력 건을 버리고 단일 모드로 바꿀까요?"
+        description={`입력한 취득 ${form.acquisitionLots.length}건·양도 ${form.transferLots.length}건 중 첫 번째 건만 남고 나머지는 삭제됩니다. 이 동작은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제하고 단일 모드로"
+        destructive
+        onConfirm={applySingleMode}
+      />
     </div>
   );
 }

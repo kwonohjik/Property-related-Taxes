@@ -24,6 +24,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { FarmingEligibilitySection } from "./FarmingEligibilitySection";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -86,6 +87,12 @@ export function Step4({
   autos: Step4Autos;
 }) {
   const hasSpouse = form.heirs.some((h) => h.relation === "spouse");
+
+  /** 영농 요건 입력이 보는 자산 — 재산 카드 + 주식 카드 (autoAllItems 와 같은 모집단) */
+  const farmingAllItems = useMemo(
+    () => [...form.estateItems, ...form.stockItems],
+    [form.estateItems, form.stockItems],
+  );
 
   // ── 자동 감지 boolean 4개 — 체크리스트 패널 표시용 (useMemo — autos 의존) ──
   // ★ 자동 항목 렌더 게이팅에는 사용하지 않음 (설계 보정 2026-06-13)
@@ -335,6 +342,19 @@ export function Step4({
                 currentValue={form.farmingAssetValue}
                 onApply={(v) => set({ farmingAssetValue: v })}
                 label="영농상속재산가액"
+              />
+              {/* 요건 입력(§18의3 + 시행령 §16) — 2026-09-11 배선 복구.
+                  왜 사라져 있었는지는 FarmingEligibilitySection 파일 상단에 있다. */}
+              <FarmingEligibilitySection
+                farming={form.farming}
+                // `autoAllItems`(InheritanceTaxForm)와 **같은 모집단**이다 — 영농 분류는
+                // 주식 카드(법인 출자지분 `corporate_stock`)에도 붙으므로 둘을 합쳐야 한다.
+                // 비상장 평가모드 해석은 여기서 불필요하다(이 섹션은 `farmingCategory` 와
+                // 소재지만 읽는다).
+                estateItems={farmingAllItems}
+                heirs={form.heirs}
+                deathDate={form.deathDate}
+                onChange={(v) => set({ farming: v })}
               />
             </div>
 
