@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import { generateResultPdf } from "@/lib/pdf/generate-result-pdf";
 import { formatIsoStamp } from "@/lib/utils/file-download";
 import type { FarmingDeductionDetail } from "@/lib/tax-engine/types/inheritance-farming.types";
@@ -533,7 +534,9 @@ export function InheritanceTaxResultView({
           <span>재산 평가 내역 ({result.valuationResults.length}건)</span>
           <span className={expandToggleClass("slate")}>{expandToggleLabel(showValuation)}</span>
         </button>
-        {showValuation && (
+        {/* 인쇄 시 자동 펼침 (print-only-css-toggle) — 언마운트하면 인쇄물이 빈 껍데기가 된다.
+            같은 결과뷰의 형제 8곳이 이미 이 패턴이다(HeirAllocationSummaryTable 등). (IG-071) */}
+        <div className={showValuation ? "" : "hidden print:block"}>
           <div className="divide-y divide-border text-xs">
             {result.valuationResults.map((vr, i) => (
               <div key={i} className="px-4 py-2.5 space-y-0.5">
@@ -572,7 +575,7 @@ export function InheritanceTaxResultView({
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
       </PrintSection>
 
@@ -694,7 +697,10 @@ export function InheritanceTaxResultView({
         />
         <div className="flex items-center gap-2">
           <CtaButton tone="outline" onClick={onGoToFirst ?? onBack}>다시 계산</CtaButton>
-          <CtaButton onClick={onReset}>처음으로</CtaButton>
+          {/* 전체 폐기는 «확인 Dialog를 거치는 공용 버튼»에만 단다 — components/calc/CLAUDE.md:14.
+              onReset은 sessionStorage까지 갱신해 되돌릴 수 없는데 종전엔 확인이 없었다.
+              양도세 결과뷰 3곳은 2026-09-05에 이미 이 버튼으로 옮겼다. (IG-075) */}
+          <RestartFromScratchButton onReset={onReset} />
         </div>
       </div>
     </div>

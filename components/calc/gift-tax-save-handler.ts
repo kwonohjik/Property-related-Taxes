@@ -1,69 +1,56 @@
+"use client";
+
 /**
- * GiftTaxForm 수동 저장 핸들러 (sibling module — 800줄 정책 분리)
+ * 증여세 저장 핸들러 — 6세목 공통 표준(`shared/save-handler-builders`)에 위임.
  *
- * - `buildGiftManualSaveHandler`: 결과 유무에 따라 saveOrUpdateByContent 호출
- *   미계산 시 sentinel error("NO_RESULT") throw → 호출자가 info 토스트 분기
- * - `formatGiftSaveMessage`: 저장 결과/에러를 SaveToastMessage 로 매핑
+ * ## 왜 바뀌었나 (IG-162 · IG-163)
+ *
+ * 7개 `{tax}-save-handler.ts` 중 **증여세만** 공통 헬퍼를 안 쓰고 자체 구현이었다.
+ * 그래서 두 가지가 빠져 있었다:
+ *
+ * 1. **미결(임시) 저장 불가** — 결과가 없으면 `NO_RESULT` sentinel을 던져 저장 자체를
+ *    거부했다. 다른 6세목은 결과 전에도 draft로 저장하고, 계산 후 final로 승격한다
+ *    (`saveOrUpdateByBusinessKey` + `deleteDraftsByInput`). 증여세만 입력 도중 이탈하면
+ *    아무것도 남지 않았다.
+ * 2. **이력 한도 경고 없음** — 190건 경고 라인(`HISTORY_WARNING_THRESHOLD`)이 공통
+ *    `formatSaveMessage`에만 있어 증여세 토스트에는 붙지 않았다.
+ *
+ * 차별화는 다른 6세목과 같은 두 지점뿐이다 — `isFormEmpty`와 `getTaxLawVersion`.
  */
 
-import { calculationRepository } from "@/lib/storage/calculation-repository";
-import { generateTitle } from "@/lib/storage/title-generator";
-import type { SaveToastMessage } from "@/components/calc/shared/SaveToast";
-import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.types";
+import {
+  makeRunManualSave,
+  formatSaveMessage,
+  buildAutoSaveToast,
+  useRecordCount,
+  type ManualSaveOutcome,
+} from "@/components/calc/shared/save-handler-builders";
 
-interface BuildArgs {
-  /** 폼 상태 (직렬화 가능한 객체) */
-  form: Record<string, unknown> & { giftDate?: string };
-  result: GiftTaxResult | null;
-  clientId: string | null;
+interface GiftForm {
+  giftDate?: string;
+  giftItems?: unknown[];
+  stockItems?: unknown[];
+  [k: string]: unknown;
 }
 
-export const NO_RESULT_SENTINEL = "NO_RESULT";
-
-export async function runGiftManualSave({
-  form,
-  result,
-  clientId,
-}: BuildArgs): Promise<{ id: string; created: boolean }> {
-  if (!result) {
-    throw new Error(NO_RESULT_SENTINEL);
-  }
-  const now = new Date().toISOString();
-  const inputData = form as Record<string, unknown>;
-  const resultData = result as unknown as Record<string, unknown>;
-  const taxLawVersion = form.giftDate || now.split("T")[0];
-  const title = generateTitle("gift", inputData, now);
-
-  return calculationRepository.saveOrUpdateByContent({
-    taxType: "gift",
-    title,
-    inputData,
-    resultData,
-    taxLawVersion,
-    linkedCalculationId: null,
-    clientId,
-  });
+/**
+ * 빈 폼 판정 — 증여일도 재산도 없으면 저장할 것이 없다.
+ * (증여자·관계는 `INITIAL_FORM`에 기본값이 있어 «사용자가 넣은 값»의 근거가 못 된다.)
+ */
+export function isGiftFormEmpty(form: GiftForm): boolean {
+  const noDate = !form.giftDate || form.giftDate === "";
+  const noItems = !form.giftItems || form.giftItems.length === 0;
+  const noStocks = !form.stockItems || form.stockItems.length === 0;
+  return noDate && noItems && noStocks;
 }
 
-export function formatGiftSaveMessage(
-  outcome: { id: string; created: boolean } | Error
-): SaveToastMessage {
-  if (outcome instanceof Error) {
-    if (outcome.message === NO_RESULT_SENTINEL) {
-      return {
-        kind: "info",
-        text: "결과를 먼저 계산하시면 자동으로 이력에 저장됩니다.",
-      };
-    }
-    return {
-      kind: "error",
-      text: `저장 실패: ${outcome.message}`,
-    };
-  }
-  return {
-    kind: "success",
-    text: outcome.created
-      ? `새 이력으로 저장되었습니다. (ID: ${outcome.id.slice(0, 8)})`
-      : `현재 시점 스냅샷으로 갱신되었습니다. (ID: ${outcome.id.slice(0, 8)})`,
-  };
-}
+export const runGiftManualSave = makeRunManualSave<GiftForm>({
+  taxType: "gift",
+  isFormEmpty: isGiftFormEmpty,
+  getTaxLawVersion: (form) => form.giftDate || "",
+});
+
+export { formatSaveMessage as formatGiftSaveMessage } from "@/components/calc/shared/save-handler-builders";
+export { buildAutoSaveToast as buildGiftAutoSaveToast } from "@/components/calc/shared/save-handler-builders";
+export { useRecordCount };
+export type { ManualSaveOutcome };

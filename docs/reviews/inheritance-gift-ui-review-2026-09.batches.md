@@ -16,7 +16,7 @@ BLOCKER 10건은 **PR #1581로 종결**. 이 문서는 **MAJOR 81 + MINOR 73 = 1
 | ~~G1~~ ✅ | ~~문구·조문표기~~ | 33 | 6 | 27 | 28 | 라벨·hint·조문 인용 1~3줄 | typecheck + 기존 테스트 (값 무변동) |
 | ~~G2~~ ✅ | ~~엔진 단일소스 위임~~ | 23 | 16 | 7 | 22 | UI 로컬 재구현 삭제 → 엔진 헬퍼 import | 「UI 표시값 == 엔진 값」 anchor |
 | ~~G4~~ ✅ | ~~게이트 OFF 값 정리~~ | 16 | 9 | 7 | 12 | 게이트가 닫힐 때 patch에서 값도 정리 | RTL anchor (OFF → store 키 부재) |
-| G5 | 공용컴포넌트·인쇄·저장 | 13 | 3 | 10 | 11 | 저장소 확립 패턴으로 교체 | RTL + E2E 셀렉터 |
+| ~~G5~~ ✅ | ~~공용컴포넌트·인쇄·저장~~ | 13 | 3 | 10 | 11 | 저장소 확립 패턴으로 교체 | RTL + E2E 셀렉터 |
 | G6 | 결과뷰·별지서식 | 14 | 13 | 1 | 13 | 화면 ↔ 별지 값·산식 불일치 해소 | 결과뷰 anchor + PDF 행 대조 |
 | G7 | 재산카드·주식평가 | 10 | 7 | 3 | 9 | 카드별 게이트·목록 정합 | RTL anchor |
 | G8 | 입력폼 구조·사후관리 | 20 | 9 | 11 | 16 | 위젯 신설·죽은 경로 판정 | RTL anchor + 개별 판단 |
@@ -183,6 +183,55 @@ UI 게이트는 `!isHigh`(`capital-forms.tsx`), API도 `!isHigh`(`gift-deemed-ap
 **⑥ 내 주석이 단 줄번호가 내 편집으로 밀렸다.** `:479`·`:509`·`:322`처럼 **같은 파일 안**을
 가리키는 `:NNN` 인용은 그 파일을 편집하는 순간 썩는다(대장에서 그대로 옮겨 적은 값이었다).
 ⇒ 같은 파일 안은 **심볼명**으로, 다른 파일만 `file:line`으로 쓴다.
+
+## G5 종결 기록 (2026-09-11)
+
+전건 13건 수정 완료. 이 배치의 정체는 한 문장이다 — **저장소에 이미 확립된 공용 수단이
+있는데 그것을 안 쓴 곳**. 5축이 전부 그 형태였다(인쇄 `print-only-css-toggle` · `ToggleCard`·
+`RadioCardGroup`·`CurrencyInput` · `RestartFromScratchButton` · `save-handler-builders`).
+⇒ anchor도 「공용 수단과 **동일한가**」로 잰다(`expect(formatGiftSaveMessage).toBe(formatSaveMessage)`) —
+로컬 재구현을 다시 만들면 그 자리에서 깨진다.
+
+**⭐ ① 모집단을 줄인 것이 «내 스캔 정규식»이었다.** 죽은 `data-testid`는 대장이 3건
+(`IG-099`·`106`·`122`)을 적었는데, 실제로는 **19건 · 7파일**이었다. 내 첫 스캔
+`<(ToggleCard|RadioCardGroup)\b[^>]*?>`는 **3건**만 잡았다 — `[^>]*?`가 `description={<>…</>}`
+같은 **중첩 JSX의 `>`에서 멈추기** 때문이다. 깊이 기반으로 다시 세어야 19건이 나왔다.
+메모리 `feedback_regex_charclass_undercounts_population`의 정확한 재발이다.
+⇒ **모집단을 정규식으로 셀 때는 「그 정규식이 놓칠 수 있는 형태」를 먼저 적어라.**
+
+**② 근본 원인은 「JSX가 하이픈 속성명을 타입검사하지 않는다」다.** `ToggleCardProps`에
+`data-testid`가 없는데도 호출부는 그것을 넘길 수 있었고 **tsc는 침묵**했다. 값은 DOM에
+닿지 못하고 버려졌다. ⇒ 공용 컴포넌트가 **받아서 루트에 붙이도록** 한 지점만 고쳐
+**19곳이 한 번에** 살아났다. 호출부는 한 줄도 안 건드렸다.
+
+**③ 저장 헬퍼는 7세목 중 «증여세 하나만» 표준 밖이었다.** 그 결과 두 기능이 통째로
+빠져 있었다 — **미결(draft) 저장**(`IG-162`)과 **190건 한도 경고**(`IG-163`).
+게다가 `GiftTaxForm`은 공통 타입을 맞추려고 `isDraft: false`를 **위조**해 넘기고 있었다.
+공통 헬퍼에 위임하면서 그 위조도 사라졌다.
+
+**④ 틀린 셀렉터 축이 또 나왔다.** `gift-deemed-specific-corp.spec.ts`가
+`getByTestId("sc-sh-is-donor-N").check()`를 쓰고 있었다 — `.check()`는 **native checkbox 전용**이라
+`ToggleCard`(role=switch)로 바꾸면 깨진다. 저장소 관례는 이미
+`locator('[data-slot="toggle-card"]').getByRole("switch").click()`였다. G1의 placeholder 사례와 같은 층위다.
+
+**⑤ 인쇄 언마운트 모집단 11건 중 3건만 고쳤다 — 의도적이다.** 나머지 8건은
+`deduction-breakdown/`의 **한 단계 더 안쪽** 상세 카드들이고, 그것들을 한 번에 감싸면
+부모의 `divide-y` 자식 수가 바뀌어 **구분선이 줄어드는 시각적 변화**가 생긴다.
+보고된 3건(섹션 레벨)은 그 자체로 완결이므로 분리했다. ⇒ 아래 「별건」 참조.
+
+**⑥ 뮤테이션 프로브의 함정 — «구문 오류»는 구별력이 아니다.** `IG-090`의 첫 프로브가
+`11 passed`로 나와 구별력 0처럼 보였는데, 실은 뮤테이션이 JSX를 깨뜨려 **렌더 anchor 파일이
+아예 로드되지 않은** 것이었다(`Test Files 1 failed`가 따로 찍혔다). 구문상 유효한 뮤테이션
+(`hidden print:block` → `hidden`)으로 다시 재서 `1 failed`를 확인했다.
+⇒ **프로브 결과는 `Tests` 줄만 보지 말고 `Test Files` 줄도 함께 읽어라.**
+
+### 🟠 별건으로 남긴 것 (실측 확인 · 이 배치 범위 밖)
+
+| | 실측 | 왜 안 고쳤나 |
+|---|---|---|
+| 인쇄 언마운트 8건 | `deduction-breakdown/` 상세 카드 8곳이 `{open && …}` | 묶으면 `divide-y` 레이아웃이 바뀐다 — 별도 판단 필요 |
+| `PropertyTaxForm.tsx:178` | 「**다시 계산하기**」 라벨에 전체 초기화(`INITIAL_FORM`)를 달았다 | `components/calc/CLAUDE.md:14`가 금지하는 **바로 그것**인데 **재산세**라 이 리뷰 범위 밖 |
+| native checkbox 잔존 3곳 | `SpecialTreatmentAssetSelector` · `PrintSelectionPanel` · `/law UnifiedSearchBar` | 전부 **다중선택 목록**이지 분기 토글이 아니다 — 현행 유지가 맞다 |
 
 ## 배치별 착수 노트
 

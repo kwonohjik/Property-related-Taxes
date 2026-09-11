@@ -74,7 +74,8 @@ export function SourceDataSummarySection({
         <span className={expandToggleClass("sky")}>{expandToggleLabel(open)}</span>
       </button>
 
-      {open && (
+      {/* 인쇄 시 자동 펼침 (print-only-css-toggle) — 언마운트하면 인쇄물에서 통째로 빠진다. (IG-090) */}
+      <div className={open ? "" : "hidden print:block"}>
         <div className="space-y-4 p-4">
           {estateItems && estateItems.length > 0 && heirs.length > 0 && (
             <EstateAllocationTable
@@ -104,7 +105,7 @@ export function SourceDataSummarySection({
             <PriorGiftSummaryTable priorGifts={priorGifts} />
           )}
         </div>
-      )}
+      </div>
     </section>
   );
 }

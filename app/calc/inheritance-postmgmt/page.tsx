@@ -9,6 +9,7 @@
  * 본 마법사(/calc/inheritance)와 시간축 분리 — 별도 페이지.
  */
 
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Suspense, useMemo, useState } from "react";
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { useSearchParams } from "next/navigation";
@@ -278,17 +279,15 @@ function FarmingPostMgmtPageInner() {
           />
           {showCorporateMajorToggle && (
             <div className="rounded-md border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-3 space-y-2">
-              <label className="flex items-start gap-2 text-xs">
-                <input
-                  type="checkbox"
-                  checked={maintainsMajorShareholder}
-                  onChange={(e) => setMaintainsMajorShareholder(e.target.checked)}
-                  className="mt-0.5"
-                />
-                <span>
-                  법인주식 처분 후에도 <strong>최대주주 지위 유지</strong> (§16⑥6호 단서)
-                </span>
-              </label>
+              {/* native checkbox 금지 — 분기 토글은 ToggleCard 강제(components/calc/CLAUDE.md). (IG-093) */}
+              <ToggleCard
+                tone="emerald"
+                size="sm"
+                title="법인주식 처분 후에도 최대주주 지위 유지 (§16⑥6호 단서)"
+                checked={maintainsMajorShareholder}
+                onCheckedChange={setMaintainsMajorShareholder}
+                data-testid="fp-maintains-major-shareholder"
+              />
               <p className="text-micro text-emerald-700 dark:text-emerald-300">
                 미체크 시 정당사유 불인정 → 추징 적용
               </p>

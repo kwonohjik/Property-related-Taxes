@@ -160,6 +160,15 @@ export interface ToggleCardProps {
   lawLinks?: string;
   /** 자동 추출이 부정확한 카드용 수동 override (ReactNode description 등). */
   lawRefs?: LawRefBadge[];
+  /**
+   * 루트 요소에 붙일 E2E·단위 테스트 셀렉터.
+   *
+   * ⚠️ 이 prop이 없던 동안에도 호출부는 `data-testid`를 넘길 수 있었다 —
+   * JSX는 **하이픈이 든 속성명을 타입검사하지 않으므로** tsc가 잡지 못하고 값만
+   * 조용히 버려졌다. 저장소 전체에서 19곳이 그 상태였다(메모리
+   * `feedback_shared_card_testid_not_forwarded`). 여기서 받아 루트에 붙인다.
+   */
+  "data-testid"?: string;
 }
 
 export function ToggleCard({
@@ -177,6 +186,7 @@ export function ToggleCard({
   disabledReason,
   lawLinks,
   lawRefs,
+  "data-testid": dataTestId,
 }: ToggleCardProps) {
   const t = TONES[tone];
   const handleChange = disabled ? undefined : onCheckedChange;
@@ -200,6 +210,7 @@ export function ToggleCard({
       <label
         data-slot="toggle-card"
         data-variant="chip"
+        data-testid={dataTestId}
         data-checked={checked || undefined}
         data-disabled={disabled || undefined}
         title={
@@ -243,6 +254,7 @@ export function ToggleCard({
     <div
       data-slot="toggle-card"
       data-variant="card"
+      data-testid={dataTestId}
       data-checked={checked || undefined}
       data-disabled={disabled || undefined}
       className={cn(

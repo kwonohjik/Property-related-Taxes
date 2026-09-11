@@ -56,7 +56,7 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await dialog.getByTestId("sc-sh-name-1").fill("부");
     await dialog.getByTestId("sc-sh-relation-1").selectOption("lineal_ascendant");
     await dialog.getByTestId("sc-sh-shares-1").fill("20000");
-    await dialog.getByTestId("sc-sh-is-donor-1").check();
+    await dialog.getByTestId("sc-sh-is-donor-1").getByRole("switch").click();
 
     // 행 2: 을(형제자매, 3000)
     await dialog.getByTestId("sc-sh-add").click();
@@ -112,7 +112,7 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     await dialog.getByTestId("sc-sh-name-0").fill("부");
     await dialog.getByTestId("sc-sh-relation-0").selectOption("lineal_ascendant");
     await dialog.getByTestId("sc-sh-shares-0").fill("40000");
-    await dialog.getByTestId("sc-sh-is-donor-0").check();
+    await dialog.getByTestId("sc-sh-is-donor-0").getByRole("switch").click();
 
     // 행 1: 직원(타인, 10000)
     await dialog.getByTestId("sc-sh-add").click();

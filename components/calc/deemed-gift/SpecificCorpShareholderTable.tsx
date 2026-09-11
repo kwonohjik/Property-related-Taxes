@@ -2,6 +2,7 @@
 
 /** §45의5 특정법인 다주주 명단 입력 테이블 (행 추가/삭제). CapitalDecreaseShareholderTable 패턴 차용. */
 
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import type { ScShareholderRow } from "./deemed-form-state";
 import type { ScRelation } from "@/lib/tax-engine/gift-deemed/types";
@@ -115,20 +116,15 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
               data-testid={`sc-sh-shares-${i}`}
             />
 
-            {/* 증여자 본인 여부 */}
-            <label
-              className="flex items-center gap-2 cursor-pointer"
-              data-testid={`sc-sh-is-donor-label-${i}`}
-            >
-              <input
-                type="checkbox"
-                checked={row.isDonor}
-                onChange={(e) => update(i, { isDonor: e.target.checked })}
-                data-testid={`sc-sh-is-donor-${i}`}
-                className="rounded border-sky-300"
-              />
-              <span className="text-xs text-sky-800">증여자 본인 (과세 제외)</span>
-            </label>
+            {/* 증여자 본인 여부 — native checkbox 금지(components/calc/CLAUDE.md), ToggleCard chip (IG-096) */}
+            <ToggleCard
+              variant="chip"
+              tone="sky"
+              title="증여자 본인 (과세 제외)"
+              checked={row.isDonor}
+              onCheckedChange={(v) => update(i, { isDonor: v })}
+              data-testid={`sc-sh-is-donor-${i}`}
+            />
           </div>
         ))}
       </div>
