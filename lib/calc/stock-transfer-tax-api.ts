@@ -36,6 +36,8 @@ import {
   buildForeignStockApiBody,
   buildExitTaxApiBody,
 } from "./stock-transfer-tax-api-foreign-exit";
+import { isOtherAssetGroup } from "./stock-other-asset-scope";
+import { isClause9Applicable } from "./stock-other-asset-scope";
 
 export { buildForeignStockApiBody, buildExitTaxApiBody };
 
@@ -505,10 +507,21 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (form.actualPaymentDate) body.actualPaymentDate = form.actualPaymentDate;
   }
 
-  // ── §103② 기본공제 그룹 ──
-  body.realEstateGroupBasicDeductionUsed = parseIntOrZero(form.realEstateGroupBasicDeductionUsed);  // default: 0
+  // ── §103①1호 기본공제 그룹 ──
+  //
+  // 🔒 ⑤(Step3)와 **같은 leaf**로 게이트한다 — 주식 그룹(§103①2호)에서는 엔진이 이 값을
+  //   보지 않으므로(`calcBasicDeduction`) 화면에 칸도 없다. 그런데 기타자산에서 값을 넣고
+  //   시장유형을 되돌리면 폼에는 **stale 값이 남는다**(전환 patch가 없다 — `Step1.tsx:62`).
+  //   게이트 없이 그대로 실으면 「화면에 없는 값이 body에 실리는」 상태가 된다.
+  // ⚠️ Zod는 이 필드를 **required**로 받으므로(`stock-transfer-tax-schema.ts:345`) 키를 빼면
+  //   400이 난다. 게이트가 닫히면 **0을 보낸다**(= 기소진 없음).
+  body.realEstateGroupBasicDeductionUsed = isOtherAssetGroup(form)
+    ? parseIntOrZero(form.realEstateGroupBasicDeductionUsed)  // default: 0
+    : 0;
   // §104⑤ 크로스 조정 — 미입력이면 body에 넣지 않는다(= 조정 미적용).
-  const crossC8 = parseIntOrZero(form.crossClause8TaxBase);
+  // §104①9호(영 §167의7 — 비사업용토지 50% 이상)가 아니면 엔진이 조정액을 만들지 않으므로
+  // ⑤도 칸을 닫는다. 같은 술어로 전송도 막는다(optional이라 키를 빼면 된다).
+  const crossC8 = isClause9Applicable(form) ? parseIntOrZero(form.crossClause8TaxBase) : 0;
   if (crossC8 > 0) body.crossClause8TaxBase = crossC8;
 
   // ── 분할 매수·분할 양도 (Plan v2.2) ──⑪⑫⑬
