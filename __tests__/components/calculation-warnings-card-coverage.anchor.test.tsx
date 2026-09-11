@@ -97,8 +97,18 @@ describe("★ 세 소비자가 모두 공용 leaf를 쓴다", () => {
 /** 엔진이 실제로 채우는지는 route anchor가 본다 — 여기서는 그 지점을 가리키기만 한다. */
 describe("엔진 쪽 안전망", () => {
   it("집계 엔진이 단건 warnings를 모은다", () => {
-    const src = readFileSync("lib/tax-engine/transfer-tax-aggregate.ts", "utf8");
-    expect(src).toContain("result.warnings");
-    expect(src).toContain("warnings.push");
+    /**
+     * ⚠️ 수집 지점은 **두 파일에 걸쳐 있다** (800줄 분리, 2026-09-11).
+     *    자산별 `result.warnings` 수집은 `-asset-records.ts` 로 옮겼고(M-1+M-2),
+     *    신고 단위 `warnings.push` 는 오케스트레이터에 남았다.
+     *    한 파일만 보면 **코드를 옮겼을 때 조용히 통과**한다 — 둘 다 본다.
+     */
+    const agg = readFileSync("lib/tax-engine/transfer-tax-aggregate.ts", "utf8");
+    const records = readFileSync(
+      "lib/tax-engine/transfer-tax-aggregate-asset-records.ts",
+      "utf8",
+    );
+    expect(agg + records).toContain("result.warnings");
+    expect(agg + records).toContain("warnings.push");
   });
 });
