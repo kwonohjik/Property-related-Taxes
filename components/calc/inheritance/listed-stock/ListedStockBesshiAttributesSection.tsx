@@ -191,7 +191,14 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate, taxKind }: 
           set({
             isMaxShareholder: v || undefined,
             ...(v
-              ? {}
+              ? // 🔴 IG-050: 아래 라디오가 `item.companySize ?? "small"`로 display fallback을
+                // 걸어 **미입력에도 「중소기업」이 선택된 것처럼** 보이는데, ⑧validate는
+                // `isMaxShareholder && !companySize`를 하드 차단한다. 라디오를 손대지 않은
+                // 사용자는 화면상 입력이 끝났는데 계산이 「기업 규모 입력 필요」로 영구 차단되고,
+                // 선택된 것처럼 보이는 옵션을 다시 눌러야만 해소됐다.
+                // ⇒ 같은 파일 갑지 토글(:132-135 「기본값 명시 — store/UI/API 3중 일치」)과
+                //    동일 관례로 기본값을 **명시 저장**해 3중을 일치시킨다.
+                { companySize: item.companySize ?? ("small" as ListedCompanySize) }
               : {
                   companySize: undefined,
                   premiumExclusionReason: undefined,
@@ -316,7 +323,13 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate, taxKind }: 
           <FieldCard label="⑪ 직전기 배당률 (decimal: 0.05 = 5%)">
             <DecimalInput
               value={item.priorDividendRate?.toString() ?? ""}
-              onChange={(v) => set({ priorDividendRate: parseDecimal(v) || undefined })}
+              // 🔴 IG-051: `parseDecimal("0")`은 0이고 0은 falsy라 `|| undefined`가 0을 삼킨다.
+              // 그런데 ⑧validate는 §63②3호 분기에서 「직전기 배당률 입력 필요 (0 허용)」로
+              // 차단한다 — 메시지가 명시적으로 허용한 값을 UI가 저장할 수 없어, 직전기
+              // 무배당 법인의 미상장 신주 평가가 영구 차단됐다. 빈 문자열만 undefined로 보낸다.
+              onChange={(v) =>
+                set({ priorDividendRate: v.trim() === "" ? undefined : parseDecimal(v) })
+              }
             />
           </FieldCard>
           <FieldCard label="⑬ 배당기산일 (주금납입 다음날)">

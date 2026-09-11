@@ -53,7 +53,8 @@ function resolveExcessCash(
   assets: CorporateNonBusinessAssets,
   deathDate?: string,
 ): ExcessCashResolution {
-  const years = (assets.cashByYearEnd ?? []).filter((v) => Number.isFinite(v));
+  // 미입력 칸(null)은 평균의 분모·분자 어디에도 넣지 않는다 — 「입력한 칸의 평균」(IG-028).
+  const years = (assets.cashByYearEnd ?? []).filter((v): v is number => Number.isFinite(v));
   if (assets.currentCash != null && years.length > 0) {
     const avg5y = years.reduce((s, v) => s + Math.max(0, v), 0) / years.length;
     const ratio = getExcessCashRatioByDate(deathDate);

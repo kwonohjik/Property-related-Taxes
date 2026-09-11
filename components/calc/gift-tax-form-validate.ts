@@ -348,6 +348,20 @@ export function validateStep(step: number, form: FormState): string | null {
       }
     }
 
+    /**
+     * 🔴 IG-086: 납부지연가산세(국세기본법 §47의4) 토글 ON인데 법정납부기한이 비어 있으면,
+     * ④가 키를 payload에서 빼고 엔진이 `LATE_PAYMENT_ZERO`를 돌려줘 **차단도 경고도 없이
+     * 0원**이 된다. 증여 폼의 유일한 클라이언트 게이트는 이 validateStep이다(상속의
+     * `validateInheritanceTaxInput` 같은 제출 전 전체 검증이 없다).
+     *
+     * 형제는 이미 차단한다 — `inheritance-validate.ts`·`stock-transfer-tax-validate.ts`.
+     * 문구·근거를 상속과 맞춘다. (「토글 ON인데 미납액이 비었다」 축은 상속·주식도 차단하지
+     * 않는 **공유 갭**이라 여기서 단독으로 더하면 새 불일치가 생긴다 — 별건으로 남긴다.)
+     */
+    if (form.applyLatePaymentPenalty && !form.paymentDeadline) {
+      return "법정납부기한을 입력하세요. (국세기본법 §47의4①1호 산정기간의 기산점)";
+    }
+
     // §53의2③ 기공제액 — 엔진이 min(입력값, 1억) 가드를 처리하므로 UI 단계에서는 차단하지 않음.
     // 단, 음수 입력은 의미 없으므로 차단.
     const cumUsed = parseAmount(form.priorUsedMarriageBirthDeduction);
@@ -440,11 +454,31 @@ export function validateStep(step: number, form: FormState): string | null {
       }
     }
 
-    // 대납(代納) gross-up 차단 조합 ⑧ — Zod ⑫ superRefine과 동일 메시지
+    /**
+     * 대납(代納) gross-up 차단 조합 ⑧ — Zod ⑫ superRefine과 동일 메시지.
+     *
+     * 🔴 IG-102·IG-161: 종전 ⓐ는 구 간이 필드 `simultaneousGifts`(증여의제 prefill 전용)만
+     * 봤고, **현행 UI 경로가 쓰는 `simultaneousGiftForms`**를 보지 않았다. 두 토글은
+     * GiftCreditChecklist에서 서로를 가리지 않는 형제라 함께 켤 수 있으므로, ⑧을 통과한 뒤
+     * 서버 Zod(`giftSimultaneousRequestSchema`)가 400으로 막았다 — 이 저장소가 명시적으로
+     * 금지하는 「UI 통과 ↔ API 400 모순」이고, 이 블록 주석이 선언한 「Zod ⑫와 동일 메시지」
+     * 규약과도 어긋났다. ⇒ ⓓ·ⓔ를 Zod와 같은 문구로 추가한다.
+     */
+    // ⓔ 추가 건 자신의 대납 (SimultaneousGiftCard가 중첩 렌더하는 체크리스트로 켤 수 있다)
+    if (form.simultaneousGiftForms) {
+      const subIdx = form.simultaneousGiftForms.findIndex((sub) => sub.donorPaysGiftTax === true);
+      if (subIdx >= 0) {
+        return "동시증여 추가 건에는 대납(代納)을 사용할 수 없습니다.";
+      }
+    }
     if (form.donorPaysGiftTax === true) {
-      // ⓐ 동시증여 + 대납
+      // ⓐ 동시증여(구 간이 배열) + 대납
       if (form.simultaneousGifts && form.simultaneousGifts.length > 0) {
         return "동시증여와 대납(代納)은 현재 함께 계산할 수 없습니다.";
+      }
+      // ⓓ 동시증여 다중 건(현행 경로) + 대납
+      if (form.simultaneousGiftForms && form.simultaneousGiftForms.length > 0) {
+        return "동시증여 다중 건 계산과 대납(代納)은 현재 함께 계산할 수 없습니다.";
       }
       // ⓑ 2-스트림 특례 + 대납
       if (form.specialTreatment === "startup" || form.specialTreatment === "family_business") {

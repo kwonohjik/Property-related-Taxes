@@ -207,6 +207,23 @@ export function validateUnlistedStockV2(
     }
   }
 
+  /**
+   * 🔴 IG-057: 평가심의위 신청(§54⑥) 토글은 ON 시 `taxpayerPerShareValuation: 0`을 주입하고
+   * 화면은 필수 표시 없이 선택 입력처럼 보인다. 그런데 ⑫ Zod는 `z.number().positive()`로
+   * 필수·양수를 강제한다 ⇒ UI·⑧은 통과시키고 **서버만 400**을 내어, 자산 1건의 참고용
+   * 옵션을 켰다는 이유로 상속세 계산 전체가 실패했다(오류도 Zod path로만 나온다).
+   * 같은 스키마의 `method === "other" → methodNotes 필수` superRefine도 ⑧에 짝이 없었다.
+   */
+  const ec = v2.evaluationCommittee;
+  if (ec) {
+    if (!(ec.taxpayerPerShareValuation > 0)) {
+      return `비상장주식 "${item.name}" — 평가심의위 신청 평가액(1주당)을 입력하세요. (상증령 §49의2⑤)`;
+    }
+    if (ec.method === "other" && (!ec.methodNotes || ec.methodNotes.trim() === "")) {
+      return `비상장주식 "${item.name}" — 기타 평가법 선택 시 평가법 사유가 필수입니다. (상증령 §49의2⑤2호)`;
+    }
+  }
+
   // PR-Q: 다른 비상장법인 주식 보유 — 행별 필수 입력 (silent omission 차단)
   const holdings = v2.otherUnlistedHoldings;
   if (holdings && holdings.length > 0) {

@@ -18,7 +18,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -358,11 +358,17 @@ export function ValuationDeltaTable({
             직접 반영됩니다.
           </p>
           {onFallbackChange && (
+            // 🔴 IG-060: `assetValuationDelta`는 저장소 전체가 **부호 있는** 필드로 선언한다
+            // (Zod `z.number()` · NetAssetCalculationTable의 SIGNED_NET_ASSET_KEYS 첫 줄 ·
+            // 이 파일의 행 모드도 음수 차액을 △로 렌더). 총액 fallback만 `allowNegative`가
+            // 없어 CurrencyInput이 `-`를 지웠고, 평가차손 "-91,548,350"이 +91,548,350으로
+            // 저장돼 순자산가액이 차액의 2배만큼 과대 계상됐다.
             <CurrencyInput
               label="평가차액 총액"
               value={String(fallbackAssetValuationDelta || "")}
-              onChange={(v) => onFallbackChange(Number(v.replace(/,/g, "")) || 0)}
+              onChange={(v) => onFallbackChange(parseAmount(v))}
               placeholder="평가차액 (자산 − 부채)"
+              allowNegative
               hideUnit
             />
           )}

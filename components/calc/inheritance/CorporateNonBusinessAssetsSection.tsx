@@ -90,8 +90,16 @@ export function CorporateNonBusinessAssetsSection({
   };
 
   const updateCashYear = (idx: number, v: string) => {
-    const arr = [...(assets?.cashByYearEnd ?? [])];
-    arr[idx] = parseKrw(v) ?? 0;
+    // 🔴 IG-028·IG-029: 종전엔 빈 입력을 `?? 0`으로 0을 저장했고(→ 5년 평균을 끌어내림),
+    // 앞칸을 건너뛰면 `arr[idx] = …`가 **희소 배열**을 만들어 JSON에서 `null`이 되었다
+    // (실측: `const a=[];a[2]=1;JSON.stringify(a)` → `[null,null,1]`). 그 null을 Zod가
+    // 거절해 POST가 400으로 떨어졌다. ⇒ 자리는 고정하되 미입력은 **명시 null**로 둔다.
+    const prev = assets?.cashByYearEnd ?? [];
+    const arr: (number | null)[] = Array.from(
+      { length: Math.max(prev.length, idx + 1) },
+      (_, i) => prev[i] ?? null,
+    );
+    arr[idx] = parseKrw(v) ?? null;
     updateAssets({ cashByYearEnd: arr });
   };
 
@@ -199,7 +207,12 @@ export function CorporateNonBusinessAssetsSection({
                 key={i}
                 label={`${i + 1}년 전 말 현금`}
                 hideLabel
-                value={assets?.cashByYearEnd?.[i] ? String(assets.cashByYearEnd[i]) : ""}
+                // 0도 정당한 입력이다 — truthy 판정을 쓰면 「비어 보이는 0」이 생긴다.
+                value={
+                  assets?.cashByYearEnd?.[i] != null
+                    ? String(assets.cashByYearEnd[i])
+                    : ""
+                }
                 onChange={(v) => updateCashYear(i, v)}
                 placeholder={`${i + 1}년 전 사업연도 말 현금`}
               />

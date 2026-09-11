@@ -52,9 +52,22 @@ export function FamilyBusinessHeirSelector({
     [heirs],
   );
 
+  // 1명이면 자동선택 (없을 때만) — selectedHeir보다 «먼저» 계산해야 한다.
+  const autoSelected = naturalHeirs.length === 1 && !heirId;
+  const effectiveHeirId = autoSelected ? naturalHeirs[0].id : heirId;
+
+  /**
+   * 🔴 IG-048: 종전엔 display fallback인 `effectiveHeirId`가 아니라 store 원값 `heirId`로
+   * 조회했다. 자연인 상속인이 1명이라 자동선택되는 경로에서는 `heirId`가 undefined이므로
+   * `selectedHeir`가 **항상 null**이 되고, 그 결과 아래 `!selectedHeir?.birthDate` 조건이
+   * 항상 참이 되어 그 상속인이 이미 birthDate를 갖고 있어도 생년월일 칸이 뜬다.
+   * (같은 화면의 옵션 설명은 `h.birthDate`를 직접 읽어 나이를 이미 표시하고 있다.)
+   * 게다가 사용자가 거기에 다른 날짜를 넣으면 `heirBirthDate`에 저장되지만, 엔진은
+   * `Heir.birthDate`를 우선하므로 그 입력은 **침묵 무시**된다.
+   */
   const selectedHeir = useMemo(
-    () => naturalHeirs.find((h) => h.id === heirId) ?? null,
-    [naturalHeirs, heirId],
+    () => naturalHeirs.find((h) => h.id === effectiveHeirId) ?? null,
+    [naturalHeirs, effectiveHeirId],
   );
 
   // 선택된 Heir의 만 나이 (deathDate 기준)
@@ -69,9 +82,6 @@ export function FamilyBusinessHeirSelector({
     }
   }, [selectedHeir, heirBirthDate, deathDate]);
 
-  // 1명이면 자동선택 (없을 때만)
-  const autoSelected = naturalHeirs.length === 1 && !heirId;
-
   if (naturalHeirs.length === 0) {
     return (
       <div className="rounded-md border border-sky-200 bg-sky-50/60 dark:bg-sky-950/20 p-3 text-caption text-sky-700 dark:text-sky-300">
@@ -79,8 +89,6 @@ export function FamilyBusinessHeirSelector({
       </div>
     );
   }
-
-  const effectiveHeirId = autoSelected ? naturalHeirs[0].id : heirId;
 
   return (
     <div className="space-y-2" data-testid="fb-heir-selector">

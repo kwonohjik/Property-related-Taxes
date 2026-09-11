@@ -348,14 +348,14 @@ export function FamilyBusinessEligibilitySection({
                   label="자산총액 (원)"
                   value={familyBusiness.totalAssets != null ? String(familyBusiness.totalAssets) : ""}
                   onChange={(v) => update({ totalAssets: parseAmount(v) || undefined })}
-                  hint="중소기업 기준 5천억 이하 확인용 — 미입력 시 기준 미충족으로 처리"
+                  hint="중소기업 기준 5천억 이하 확인용 — 미입력 시 계산이 차단됩니다 (미입력을 「기준 이하」로 간주하지 않습니다)"
                 />
               ) : (
                 <CurrencyInput
                   label="직전 3개 과세기간 평균 매출액 (원)"
                   value={familyBusiness.averageRevenue3Y != null ? String(familyBusiness.averageRevenue3Y) : ""}
                   onChange={(v) => update({ averageRevenue3Y: parseAmount(v) || undefined })}
-                  hint="중견기업 기준 5천억 이하 확인용 — 미입력 시 기준 미충족으로 처리"
+                  hint="중견기업 기준 5천억 이하 확인용 — 미입력 시 계산이 차단됩니다 (미입력을 「기준 이하」로 간주하지 않습니다)"
                 />
               )}
             </div>

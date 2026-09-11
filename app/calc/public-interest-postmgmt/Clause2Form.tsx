@@ -65,13 +65,22 @@ function ShareField({
   hint?: string;
   ariaLabel: string;
   value: number | undefined;
-  onChange: (v: number) => void;
+  onChange: (v: number | undefined) => void;
 }) {
   return (
     <label className="block space-y-1">
       <span className="text-sm font-medium">{label}</span>
       {hint && <span className="block text-caption text-muted-foreground">{hint}</span>}
-      <IntegerInput ariaLabel={ariaLabel} value={value} onChange={onChange} placeholder="주식 수 입력" />
+      {/* 🔴 IG-094: 빈칸을 undefined로 올려야 `=== undefined` 센티널 가드가 실제로 작동한다.
+          종전엔 지운 칸이 0으로 올라와 가드를 통과하고, 그 목이 조용히 0으로 합산돼
+          §16②2호 보유비율 판정이 과소 계산됐다. */}
+      <IntegerInput
+        ariaLabel={ariaLabel}
+        value={value}
+        onChange={onChange}
+        placeholder="주식 수 입력"
+        allowEmpty
+      />
     </label>
   );
 }

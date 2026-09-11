@@ -37,22 +37,35 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
+/**
+ * Date → YYYY-MM-DD (DateInput 교환용).
+ *
+ * 🔴 IG-117 — **정변환이 버그였다.** `new Date("YYYY-MM-DD")`는 UTC 자정으로 파싱되는데
+ * 종전 이 함수는 로컬 getter(`getFullYear`/`getMonth`/`getDate`)로 되돌렸다. UTC보다 서쪽
+ * 타임존에서는 왕복 시 하루가 앞당겨져 취득일·종전/신규 주택 취득일이 화면에서 하루 어긋나고,
+ * 사용자가 그 표시를 고치려 재입력하면 그때 잘못된 날짜가 store에 저장된다.
+ * 같은 카드의 형제 파일(`BurdenedGiftValuationModeSection`)은 UTC-in/UTC-out이라
+ * 한 카드 안에 두 규칙이 공존했다 ⇒ 형제와 동일하게 `toISOString().slice(0,10)`로 통일한다.
+ *
+ * ⚠️ 인라인 복제 3곳(아래 DateInput들)도 같은 로컬 getter를 쓰고 있었다 — 함께 이 함수로 모은다.
+ */
 function dateToStr(d: Date | undefined): string {
-  if (!d || !(d instanceof Date) || isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return d instanceof Date && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 10) : "";
 }
 
+/**
+ * YYYY-MM-DD → Date. `toOptionalDate`는 문자열에 대해 `new Date(value)`를 그대로 실행하므로
+ * 런타임 동작은 같지만, 루트 CLAUDE.md의 「신규 코드 `new Date(x)` 직접 호출 금지」 정책과
+ * 형제 파일 관례에 맞춘다(단일 진입점 유지).
+ */
 function strToDate(s: string): Date | undefined {
   if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return undefined;
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? undefined : d;
+  return toOptionalDate(s);
 }
 
 /** 초기 빈 객체 — 토글 ON 시 생성 */
@@ -457,18 +470,10 @@ function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint,
       <FieldCard label="취득일 (증여자 당초 취득일)" required>
         <DateInput
           value={
-            bgt.acquisitionDate instanceof Date
-              ? (() => {
-                  const d = bgt.acquisitionDate;
-                  const y = d.getFullYear();
-                  const m = String(d.getMonth() + 1).padStart(2, "0");
-                  const day = String(d.getDate()).padStart(2, "0");
-                  return `${y}-${m}-${day}`;
-                })()
-              : ""
+dateToStr(bgt.acquisitionDate)
           }
           onChange={(v) => {
-            const d = v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(v) : undefined;
+            const d = strToDate(v);
             set({ acquisitionDate: d as unknown as Date });
           }}
           data-testid="bg-transfer-acq-date"
@@ -596,15 +601,10 @@ function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint,
           <FieldCard label="종전 주택 취득일">
             <DateInput
               value={
-                bgt.temporaryTwoHouse?.previousAcquisitionDate instanceof Date
-                  ? (() => {
-                      const d = bgt.temporaryTwoHouse.previousAcquisitionDate;
-                      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-                    })()
-                  : ""
+dateToStr(bgt.temporaryTwoHouse?.previousAcquisitionDate)
               }
               onChange={(v) => {
-                const d = v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(v) : undefined;
+                const d = strToDate(v);
                 set({
                   temporaryTwoHouse: {
                     previousAcquisitionDate: d as unknown as Date,
@@ -618,15 +618,10 @@ function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint,
           <FieldCard label="신규 주택 취득일">
             <DateInput
               value={
-                bgt.temporaryTwoHouse?.newAcquisitionDate instanceof Date
-                  ? (() => {
-                      const d = bgt.temporaryTwoHouse.newAcquisitionDate;
-                      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-                    })()
-                  : ""
+dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               }
               onChange={(v) => {
-                const d = v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(v) : undefined;
+                const d = strToDate(v);
                 set({
                   temporaryTwoHouse: {
                     previousAcquisitionDate:
@@ -667,15 +662,10 @@ function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStd
       <FieldCard label="취득일 (증여자 당초 취득일)" required>
         <DateInput
           value={
-            bgt.acquisitionDate instanceof Date
-              ? (() => {
-                  const d = bgt.acquisitionDate;
-                  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-                })()
-              : ""
+dateToStr(bgt.acquisitionDate)
           }
           onChange={(v) => {
-            const d = v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(v) : undefined;
+            const d = strToDate(v);
             set({ acquisitionDate: d as unknown as Date });
           }}
           data-testid="bg-transfer-acq-date"
