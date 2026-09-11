@@ -98,7 +98,6 @@ describe("AP-FV (#3): 액면가 모드도 양도기준시가 입력을 엔진까
   const faceValueForm = (o: Partial<StockTransferFormData> = {}) =>
     baseForm({
       acquisitionMode: "face_value",
-      bookLost: true,
       faceValuePerShare: "5000",
       transferYearNetIncomePerShare: "10000",
       transferYearNetAssetPerShare: "10000",
@@ -150,6 +149,27 @@ describe("AP-FV (#3): 액면가 모드도 양도기준시가 입력을 엔진까
       faceValueForm({ transferYearNetIncomePerShare: "0" }),
     ).filter((e) => e.severity === "error");
     expect(niZero.some((e) => e.field === "transferYearNetIncomePerShare")).toBe(false);
+  });
+
+  /**
+   * AP-FV-6: `bookLost`는 폼 토글이 아니라 **취득가액 모드에서 파생**된다.
+   *
+   * 종전에는 `FaceValueBlock`의 별도 ToggleCard가 `form.bookLost`를 썼고, ⑧이 face_value
+   * 모드에서 그 토글 ON을 «필수»로 강제했다 — 정보량 0인 중복 입력이었다. 파생값이 된 뒤로는
+   * 두 상태가 어긋날 수 없다. 이 anchor가 그 파생을 고정한다.
+   */
+  it("AP-FV-6: ④가 acquisitionMode 에서 bookLost 를 파생한다 (양방향)", () => {
+    expect(buildStockTransferApiBody(faceValueForm()).bookLost).toBe(true);
+    // 다른 모드에서는 true 가 될 수 없다 — 액면가 분기(§99①4)가 조용히 켜지지 않는다
+    expect(
+      buildStockTransferApiBody(
+        baseForm({
+          acquisitionMode: "actual",
+          acquisitionActualInputMode: "per_share",
+          perShareAcquisitionPrice: "40000",
+        }),
+      ).bookLost,
+    ).toBe(false);
   });
 });
 
