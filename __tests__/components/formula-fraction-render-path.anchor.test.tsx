@@ -178,7 +178,8 @@ const NON_DIVISION_ALLOWLIST: { file: string; snippet: string; 사유: string }[
   { file: "new-99-3.ts", snippet: "부호 음수/양수", 사유: "부호 병기 — 나눗셈 아님" },
   { file: "new-99-3.ts", snippet: "부호 양수/음수", 사유: "부호 병기 — 나눗셈 아님" },
   { file: "new-99-3.ts", snippet: "부호 음수/음수", 사유: "부호 병기 — 나눗셈 아님" },
-  { file: "MixedUseResultCard.tsx", snippet: "토지/건물 별 보유연수", 사유: "대비 병기 — 나눗셈 아님" },
+  // 800줄 분리(2026-09-11)로 분리계산 본문이 자식 컴포넌트로 옮겨졌다 — 파일명을 따라간다.
+  { file: "MixedUseCalculationSections.tsx", snippet: "토지/건물 별 보유연수", 사유: "대비 병기 — 나눗셈 아님" },
 
   // ── 입력 폼(`components/calc/transfer`) ──
   // 🔄 `CompanionAssetCardReplot.tsx`의 `title=` 항목은 **없어졌다**(2026-09-08 2차).

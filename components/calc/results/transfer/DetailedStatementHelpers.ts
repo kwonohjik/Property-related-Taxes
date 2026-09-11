@@ -10,16 +10,13 @@
  */
 
 import type { ReactNode } from "react";
-import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import {
   effectiveGrossGain,
   inverseAcquisitionForDisplay,
 } from "@/components/calc/results/transfer/exempt-gross-gain";
-import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
-import type { TransferTaxResult, CalculationStep } from "@/lib/tax-engine/transfer-tax";
+import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import {
   fmtDate,
@@ -36,15 +33,10 @@ import {
   buildNecessaryExpenseFormula,
   buildTaxableGainFormula,
   buildIncomeFormula,
-  buildCalculatedTaxFormula,
-  buildDeterminedTaxFormula,
-  buildPenaltyFormula,
-  setAggregateProcedureItems,
-  buildSurtaxAndLocalTaxItems,
   buildIncomeDeductionReducibleFormula,
   prorationFormulaAsFrac,
 } from "./DetailedStatementFormulaBuilders";
-import { applyRedevelopmentOverrides } from "./DetailedStatementRedevOverrides";
+import { appendLateStageItems } from "./DetailedStatementLateStages";
 import { setLongTermDeductionItems } from "./DetailedStatementLthdItems";
 import {
   reductionEligibleIncome,
@@ -55,11 +47,13 @@ import {
 import { INCOME_DEDUCTION_5YEAR_FORMULA } from "./DetailedStatementFormulaNodes";
 
 // 타입·그룹 정의는 DetailedStatementConfig.ts로 분리 (800줄 정책). 하위 호환 re-export.
+// ⚠️ 자동 정리(eslint no-unused-vars)가 `PerAssetValue` 를 여기서 **두 번** 지웠다 —
+//    `export type { … }` 는 「미사용」으로 보인다. 내 보호 규칙이 `export {` 만 봐서
+//    타입 재export 를 놓쳤다([[feedback_800line_split_playbook]] · 소비처 2곳이 tsc 로 잡았다).
 export type { PerAssetValue, StatementItem, GroupDef } from "./DetailedStatementConfig";
 export { STATEMENT_GROUPS } from "./DetailedStatementConfig";
 import type { PerAssetValue, StatementItem } from "./DetailedStatementConfig";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
-import { localTaxablePenaltyOf } from "@/components/calc/results/transfer/local-income-tax-display";
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────
 
@@ -89,45 +83,10 @@ export function residenceMonthsOfAsset(
   return parseInt(asset?.residencePeriodMonthsAsset || "0") || 0;
 }
 
-/**
- * result.steps[] 에서 label 부분일치로 step 찾기.
- * 엔진이 emit한 산식·법령을 그대로 재사용하기 위함.
- */
-export function findStepByLabel(
-  steps: CalculationStep[] | undefined,
-  ...keywords: string[]
-): CalculationStep | undefined {
-  if (!steps) return undefined;
-  for (const kw of keywords) {
-    const found = steps.find((s) => s.label?.includes(kw));
-    if (found) return found;
-  }
-  return undefined;
-}
+// 800줄 분리 — 양쪽이 함께 쓰는 두 헬퍼는 `DetailedStatementLeaf.ts`(순환 차단 leaf)로 이동.
+import { findStepByLabel, buildPerAssetWithFormula } from "./DetailedStatementLeaf";
+export { findStepByLabel, buildPerAssetWithFormula };
 
-/**
- * 자산별 PerAssetValue[] 생성.
- *
- * 일반건물 일괄 모드는 단일 AssetForm이 토지/건물/증축건물 카드로 분해되므로
- * propertyId별로 별도 매핑이 필요. 그 외는 propertyId === assetId.
- */
-/**
- * 자산별 PerAssetValue[] 생성 — formula 빌더 포함.
- *
- * 산식이 있는 항목(양도가액·취득가액·필요경비 등)에서 사용.
- * formulaBuilder가 undefined를 반환하면 formula 미설정 (라벨+값만 표시).
- */
-export function buildPerAssetWithFormula(
-  properties: PerPropertyBreakdown[],
-  picker: (p: PerPropertyBreakdown) => number | string,
-  formulaBuilder: (p: PerPropertyBreakdown) => string | undefined,
-): PerAssetValue[] {
-  return properties.map((p) => ({
-    label: p.propertyLabel,
-    value: picker(p),
-    formula: formulaBuilder(p),
-  }));
-}
 
 // ── 32 항목 빌더 ──────────────────────────────────────────────────
 
@@ -677,180 +636,14 @@ export function buildStatementItems(
     summaryOnly: true,
   });
 
-  // ── 4단계: 다건 합산 절차 (다건 모드 전용) ─────────────────────────
-  // 단건 모드에서는 result.steps에 해당 step이 없으므로 Map.set 자체를 건너뜀
-  // → STATEMENT_GROUPS의 'aggregate' 그룹이 빈 itemKeys로 자동 미렌더.
-  // 빌더는 sibling 모듈로 분리 (800줄 정책 준수).
-  if (isAggregate) {
-    setAggregateProcedureItems(items, result);
-  }
-
-  // ── 5단계: 세액 산정 ────────────────────────────────────────
-  const taxBaseStep = findStepByLabel(result.steps, "과세표준");
-  items.set("taxBase", {
-    label: "과세표준",
-    value: result.taxBase,
-    formula: taxBaseStep?.formula ?? "양도소득금액 − 기본공제",
-    legalBasis: taxBaseStep?.legalBasis ?? "소득세법 §92",
-    summaryOnly: true,
+  // 800줄 분리 — 4~7단계 + 재개발 overrides 는 `DetailedStatementLateStages.ts` 로 이동했다.
+  //   그 구간은 **out 0**(뒤에 아무것도 없다)이라 `items` 에 append 만 한다.
+  appendLateStageItems(items, {
+    result, isAggregate, primary, properties, totalTransferPrice, formData, asset, aggregate,
   });
-
-  const calcStep = findStepByLabel(result.steps, "산출세액");
-  items.set("calculatedTax", {
-    label: "산출세액",
-    value: result.calculatedTax,
-    formula:
-      calcStep?.formula ??
-      // 집계에 세율군이 둘 이상이면 단일 세율이 없다 — 「0%」로 찍지 말고 그 사실을 적는다(#071).
-      (isAggregate && result.appliedRate === 0
-        ? "자산별 세율이 서로 달라 단일 세율로 표시할 수 없습니다 — 아래 자산별 값을 참조하세요"
-        : `과세표준 × 세율(${formatRatePct(result.appliedRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`),
-    legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
-    note: result.shortTermNote,
-    perAsset: isAggregate
-      ? buildPerAssetWithFormula(
-          properties,
-          (p) => p.refCalculatedTax,
-          buildCalculatedTaxFormula,
-        )
-      : undefined,
-  });
-
-  const reductionStep = findStepByLabel(result.steps, "감면세액");
-  items.set("reductionTax", {
-    label: "감면세액",
-    value: result.reductionAmount,
-    formula:
-      reductionStep?.formula ??
-      "감면 적용 양도소득금액 비율 × 산출세액 (조특법 §127⑦ 중복배제)",
-    legalBasis: reductionStep?.legalBasis ?? "조세특례제한법 §127⑦",
-    perAsset: isAggregate
-      ? buildPerAssetWithFormula(
-          properties,
-          (p) => p.reductionAggregated,
-          (p) => p.reductionAggregated > 0
-            ? `합산 재계산 후 ${reductionTypeLabelOf(p.reductionType)} 배분 = ${p.reductionAggregated.toLocaleString()}`
-            : "감면 없음",
-        )
-      : undefined,
-  });
-
-  const determinedStep = findStepByLabel(result.steps, "결정세액");
-  items.set("determinedTax", {
-    label: "결정세액",
-    value: result.determinedTax,
-    formula: determinedStep?.formula ?? "산출세액 − 감면세액 (원 미만 절사)",
-    // §116은 「양도소득세의 **징수**」다 — 계산 근거가 아니다. 결정세액의 정본은 §92③2호
-    // 「산출세액에서 §90에 따라 감면되는 세액이 있을 때에는 이를 공제하여 계산」(결과탭 코드리뷰 #028).
-    legalBasis: determinedStep?.legalBasis ?? TRANSFER.FINAL_TAX,
-    perAsset: isAggregate
-      ? buildPerAssetWithFormula(
-          properties,
-          (p) => p.refDeterminedTax,
-          buildDeterminedTaxFormula,
-        )
-      : undefined,
-  });
-
-  // ── 6단계: 가산세·총결정세액 ────────────────────────────────
-  const totalPenalty =
-    result.penaltyTax + (result.penaltyDetail?.totalPenalty ?? 0);
-  /**
-   * 가산세 귀속은 **슬롯이 아니라 축**으로 가른다.
-   *
-   * 종전에는 `result.penaltyTax > 0`을 「§114조의2가 있다」로 읽었는데, 그 슬롯의 의미는
-   * 생산자마다 다르다(`transfer-result.types.ts`의 `localTaxPenalty` 주석):
-   *   · 단건 엔진        → §114조의2분
-   *   · 집계·건별 어댑터 → §114조의2 + 국기법 **총액**
-   *   · 겸용 어댑터      → 국기법분 **그 자체**(겸용 경로엔 §114조의2가 없다)
-   * 그래서 겸용·집계·건별에서 국기법 가산세가 「§114조의2 환산취득가액 가산세」로 이름이
-   * 바뀌었고, 어댑터가 0을 넣는 `penaltyBase` 때문에 「= 0 × 5%」라는 성립 불가능한 산식이
-   * 함께 나왔다. `localTaxablePenaltyOf`가 §114조의2분의 정본이고 나머지가 국기법분이다.
-   *
-   * `Math.min`은 방어선이다 — 두 항의 합이 언제나 `totalPenalty`와 같아야 한다.
-   * anchor: `__tests__/components/transfer-penalty-attribution.anchor.test.ts`
-   */
-  const section114_2Penalty = Math.min(localTaxablePenaltyOf(result), result.penaltyTax);
-  const statutoryPenalty =
-    result.penaltyTax - section114_2Penalty + (result.penaltyDetail?.totalPenalty ?? 0);
-  const penaltyParts: string[] = [];
-  if (section114_2Penalty > 0) {
-    // 산정기준액은 어댑터 경유 result에서 0이다(자산별 값이 합쳐지지 않는다) — 없으면 꼬리를 생략한다.
-    penaltyParts.push(
-      result.penaltyBase > 0
-        ? `§114조의2 환산취득가액 가산세 ${section114_2Penalty.toLocaleString()} (= ${result.penaltyBase.toLocaleString()} × 5%)`
-        : `§114조의2 환산취득가액 가산세 ${section114_2Penalty.toLocaleString()}`,
-    );
-  }
-  if (statutoryPenalty > 0) {
-    penaltyParts.push(
-      `신고불성실·납부지연 가산세 ${statutoryPenalty.toLocaleString()} (국세기본법 §47의2·§47의3·§47의4)`,
-    );
-  }
-  items.set("penaltyTax", {
-    label: "가산세액",
-    value: totalPenalty,
-    formula:
-      penaltyParts.length > 0 ? penaltyParts.join(" + ") : "가산세 없음",
-    // §47은 「가산세 **부과**」 총칙, §48은 「가산세 **감면** 등」이라 산정 근거가 아니다.
-    // 엔진이 실제로 적용하는 조문은 §47의2(무신고)·§47의3(과소신고)·§47의4(납부지연)이고,
-    // §92③3호도 「§47의2부터 §47의4까지」라고 지목한다 (결과탭 코드리뷰 #029).
-    legalBasis: "소득세법 §114조의2 / 국세기본법 §47의2·§47의3·§47의4",
-    perAsset: isAggregate
-      ? buildPerAssetWithFormula(
-          properties,
-          (p) => p.penaltyTax + p.filingDelayedPenaltyTax,
-          buildPenaltyFormula,
-        )
-      : undefined,
-  });
-
-  items.set("totalDeterminedTax", {
-    label: "총결정세액",
-    value: result.determinedTax + totalPenalty,
-    formula: `결정세액 ${result.determinedTax.toLocaleString()} + 가산세액 ${totalPenalty.toLocaleString()} = ${(result.determinedTax + totalPenalty).toLocaleString()}`,
-    // §92③3호 — 「결정세액에 §114의2, §115 및 「국세기본법」 §47의2부터 §47의4까지에 따른
-    // 가산세를 더하여 계산」. 같은 화면 신고서 양식이 이미 그렇게 설명하고 있다(#028).
-    legalBasis: "소득세법 §92③3호",
-  });
-
-  // ── 7단계: 부가세·지방세 ───────────────────────────────────
-  // 집계 모드의 농특세는 엔진 2-pass 산정 합계가 정본 — 어댑터가 단건 detail을 안 담아 종전엔 0이었다.
-  const aggRuralSurtax = isAggregate ? aggregate!.aggregated.ruralSurtax ?? 0 : undefined;
-  buildSurtaxAndLocalTaxItems(items, result, totalPenalty, aggRuralSurtax);
-
-  // ── 재개발 3분할 overrides (단건·환산 모드, isAggregate와 mutually exclusive) ──
-  // result.redevelopmentDetail 존재 시 1단계 양도차익 산정 그룹 항목에 perAsset[] 3분할 부착.
-  // 합계값은 기존 단건 합계 그대로 유지 → 32-항목 합계 anchor 회귀 0.
-  if (!isAggregate && result.redevelopmentDetail) {
-    // subject 도출: assetKind="right_to_move_in" 또는 redevSubject="right" → "right"
-    const redevSubject: "apt" | "right" =
-      primary?.assetKind === "right_to_move_in" || primary?.redevSubject === "right"
-        ? "right"
-        : "apt";
-    // settlementDirection 도출 (R-5 right+receive 분기 라벨 분기용)
-    const redevSettlementDir: "pay" | "receive" | undefined =
-      primary?.redevSettlementDirection === "pay" || primary?.redevSettlementDirection === "receive"
-        ? primary.redevSettlementDirection
-        : undefined;
-    applyRedevelopmentOverrides(items, result.redevelopmentDetail, totalTransferPrice, redevSubject, redevSettlementDir, result.lthdExclusionReason);
-  }
 
   return items;
 }
 
 // ── 포맷 헬퍼 ──────────────────────────────────────────────────
 
-/**
- * 세율 표시.
- *
- * ⚠️ 인자는 **`appliedRate` 하나**다 — 이미 중과를 포함한 실효세율이기 때문이다
- * (`transfer-tax-rate-calc.ts`: `baseRate + additionalRate × ratio`).
- * 종전에는 `surchargeRate`를 함께 받아 더했고, 그 결과 중과분이 **두 번** 계상됐다
- * (실측: 비사업용 토지 기본 45% + 10%p → 실효 55%인데 화면에는 65%).
- * `transfer-tax-aggregate.ts`의 `refCalculatedTax`가 같은 이유로 정정된 것과 같은 축이다.
- */
-function formatRatePct(rate: number): string {
-  if (rate === 0) return "0%";
-  return `${(rate * 100).toFixed(1).replace(/\.0$/, "")}%`;
-}
