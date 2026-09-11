@@ -293,6 +293,11 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     niSubRow15Listing: strField("niSubRow15Listing"), niSubRow16Listing: strField("niSubRow16Listing"),
     niShareCountListing: strField("niShareCountListing"),
     niDiscountRateListing: strField("niDiscountRateListing") || defaults.niDiscountRateListing,
+    // 계산서 열 헤더의 사업연도 — 표시 전용(엔진·API 미경유). stale sessionStorage 호환.
+    fiscalYearListing: strField("fiscalYearListing"),
+    fiscalYearAcq: strField("fiscalYearAcq"),
+    fiscalYearEUTransfer: strField("fiscalYearEUTransfer"),
+    fiscalYearEUAcq: strField("fiscalYearEUAcq"),
     // 순손익 — 취득연도 (18 필드)
     niAddRow1Acq: strField("niAddRow1Acq"), niAddRow2Acq: strField("niAddRow2Acq"),
     niAddRow3Acq: strField("niAddRow3Acq"), niAddRow4Acq: strField("niAddRow4Acq"),

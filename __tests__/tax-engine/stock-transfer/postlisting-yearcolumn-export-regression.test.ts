@@ -79,17 +79,32 @@ describe("EU-15: PostListing YearColumn export 회귀 보호", () => {
     expect(adapted.postListingDetail).toBeDefined();
   });
 
-  test("Column 타입 확장 후 PostListing 컴포넌트 import 동작 — YearColumn export 확인", async () => {
-    // dynamic import로 export가 깨지지 않았는지 검증
+  test("EU 경로가 PostListing 표 본체를 재사용한다 (종전 YearColumn export의 후신)", async () => {
+    // 🔑 **2026-09-11 단언 전환** — 종전에는 `YearColumn`(컬럼 1개를 렌더하는 컴포넌트)의
+    //    named export를 단언했다. 행 기반 표로 바뀌면서 **「한 컬럼을 그리는 컴포넌트」라는
+    //    개념 자체가 사라졌다** — 표가 열 목록(`cols`)을 받아 한 번에 그린다.
+    //    지키려는 것(= EU 경로가 PostListing 산식·서식을 재사용한다)은 그대로이고
+    //    **수단만 바뀌었다**: `YearColumn` → `NetIncomeStatementTable`/`NetAssetStatementTable`.
+    //    계획서: docs/00-pm/post-listing-statement-table-layout.plan.md §3.4
     const niMod = await import(
       "@/components/calc/stock-transfer/PostListingNetIncomeStatement"
     );
     const naMod = await import(
       "@/components/calc/stock-transfer/PostListingNetAssetStatement"
     );
-    expect(typeof niMod.YearColumn).toBe("function");
-    expect(typeof naMod.YearColumn).toBe("function");
+    expect(typeof niMod.NetIncomeStatementTable).toBe("function");
+    expect(typeof naMod.NetAssetStatementTable).toBe("function");
     expect(typeof niMod.PostListingNetIncomeStatement).toBe("function");
     expect(typeof naMod.PostListingNetAssetStatement).toBe("function");
+
+    // EU wrapper가 그 표 본체를 실제로 소비하는지 — import가 끊기면 여기서 잡힌다.
+    const euNi = await import(
+      "@/components/calc/stock-transfer/EstimatedUnlistedNetIncomeStatement"
+    );
+    const euNa = await import(
+      "@/components/calc/stock-transfer/EstimatedUnlistedNetAssetStatement"
+    );
+    expect(typeof euNi.EstimatedUnlistedNetIncomeStatement).toBe("function");
+    expect(typeof euNa.EstimatedUnlistedNetAssetStatement).toBe("function");
   });
 });
