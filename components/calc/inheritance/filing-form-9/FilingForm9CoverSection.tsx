@@ -103,6 +103,8 @@ export function FilingForm9CoverSection({
             deathDate={deathDate}
             decedentName={decedentName}
             decedentResidentNumber={decedentResidentNumber}
+            splitPaymentAmount={splitPaymentAmount}
+            paymentInKindAmount={paymentInKindAmount}
           />
           <ExpandToggleButton open={open} onClick={() => setOpen((v) => !v)} tone="slate" />
         </div>

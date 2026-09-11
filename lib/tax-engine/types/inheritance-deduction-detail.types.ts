@@ -319,7 +319,7 @@ export interface DeductionLimitCeilingDetail {
   taxableEstateValue: number;
   /** ① 상속인 외 수유자(유증·사인증여)에게 귀속된 금액 */
   legateeAmountNonHeir: number;
-  /** ②2호 선순위 상속인의 상속포기로 다음 순위가 받은 재산 가액 (§24 분자 차감). 대습상속 제외. (H-19) */
+  /** 2호 선순위 상속인의 상속포기로 다음 순위가 받은 재산 가액 (§24 분자 차감). 대습상속 제외. (H-19) */
   heirWaiverAmount: number;
   /** ③ 합산된 모든 사전증여 가산가액 (§13 대상 — 상속인 + 영리법인 + legatee 포함) */
   totalPriorGiftAmount: number;
@@ -394,7 +394,7 @@ import type { CasualtyLossInput } from "./inheritance-gift.types";
 
 /**
  * §23 재해손실공제 계산 근거 detail.
- * ⚠️ DeductionLimitCeilingDetail.disasterLossDeduction(§54 §24③ 분자값)과 별개 구조체.
+ * ⚠️ DeductionLimitCeilingDetail.disasterLossDeduction(§54 §24 3호 분자값)과 별개 구조체.
  */
 export interface CasualtyLossDeductionDetail {
   /** 재난 손실 상속재산 가액 (상증령 §20②) */

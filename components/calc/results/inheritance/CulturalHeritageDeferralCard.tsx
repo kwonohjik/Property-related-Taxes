@@ -43,7 +43,15 @@ export function CulturalHeritageDeferralCard({ result }: { result: InheritanceTa
   const detail = result.culturalHeritageDeferralDetail;
   const deferred = result.culturalHeritageDeferredTax ?? 0;
   if (!detail || deferred <= 0) return null;
-  const payable = Math.max(0, result.finalTax - deferred); // 납부세액 0 하한(징수유예 > 결정세액 edge)
+  // 별지9호 ㊳과 «같은 산식»을 쓴다 (IG-082) — `filing-form-9-data.ts:154`의 b43:
+  //   ㊳ = max(0, 결정세액 − 징수유예) + ㊱ 신고불성실 + ㊲ 납부지연
+  // 종전에는 가산세를 빼고 계산해, 같은 결과 페이지가 칸 번호 ㊳에 대해 서로 다른 두 금액을
+  // 보여줬다. 카드 값을 신고서에 옮겨 적으면 가산세만큼 과소 기재된다.
+  // 0 하한은 «가산세 가산 전»에 건다 — 징수유예가 결정세액을 넘어도 가산세는 납부해야 한다.
+  const underreportPenalty = result.underreportPenalty ?? 0;
+  const latePaymentPenalty = result.latePaymentPenalty ?? 0;
+  const afterDeferral = Math.max(0, result.finalTax - deferred);
+  const payable = afterDeferral + underreportPenalty + latePaymentPenalty;
 
   return (
     <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
@@ -62,6 +70,12 @@ export function CulturalHeritageDeferralCard({ result }: { result: InheritanceTa
         <div className="my-1 border-t border-emerald-200 dark:border-emerald-800" />
         <Row label="결정세액" value={formatKRW(result.finalTax)} />
         <Row label="− 징수유예세액" value={formatKRW(deferred)} />
+        {underreportPenalty > 0 && (
+          <Row label="+ 신고불성실가산세 (㊱)" value={formatKRW(underreportPenalty)} />
+        )}
+        {latePaymentPenalty > 0 && (
+          <Row label="+ 납부지연가산세 (㊲)" value={formatKRW(latePaymentPenalty)} />
+        )}
         <Row label="= 납부할세액 (별지9호 ㊳)" value={formatKRW(payable)} strong />
       </dl>
 

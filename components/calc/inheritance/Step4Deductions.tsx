@@ -424,10 +424,10 @@ export function Step4({
               />
             )}
 
-            {/* §24 ②2호 선순위 상속포기 → 후순위 수령 (대습상속 제외) */}
+            {/* §24 2호 선순위 상속포기 → 후순위 수령 (대습상속 제외) */}
             {manualActive.heirWaiver && (
               <CurrencyInput
-                label="상속포기 후순위 상속 금액 (§24② 분자 차감)"
+                label="상속포기 후순위 상속 금액 (§24 2호 분자 차감)"
                 value={form.heirWaiverAmount}
                 onChange={(v) => set({ heirWaiverAmount: v })}
                 hint="선순위 상속인의 상속포기로 다음 순위 상속인이 상속받은 재산가액. 대습상속(선순위 사망·결격)은 제외 — 상속포기 시에만 입력"

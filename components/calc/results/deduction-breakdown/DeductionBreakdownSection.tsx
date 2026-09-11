@@ -139,7 +139,7 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
             />
           )}
 
-          {/* 재해손실공제 §23 (상속세 — §54 §24③ 분자 보정과 별개) */}
+          {/* 재해손실공제 §23 (상속세 — §54 §24 3호 분자 보정과 별개) */}
           {dd.casualtyLossDeduction > 0 && (
             <div data-testid="casualty-loss-deduction-row">
               <Row
@@ -164,8 +164,11 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
             </div>
           )}
 
-          {/* ⑤ 동거주택공제 */}
-          {dd.cohabitationDeduction > 0 && (
+          {/* ⑤ 동거주택공제 — 공제액이 0이어도 «미적용 사유»가 있으면 카드를 그린다 (IG-076).
+              엔진은 §23의2 미적용(1+1 입주권·분양권·동거 10년 미충족) 시 공제를 0으로 만들면서
+              동시에 `cohabitDeductionDetail.isExcluded=true`를 채운다. 종전 게이트(>0)는 그 순간
+              카드를 언마운트해, 카드가 가진 미적용 배지·상세표가 «어떤 입력으로도» 나올 수 없었다. */}
+          {(dd.cohabitationDeduction > 0 || dd.cohabitDeductionDetail !== undefined) && (
             <CohabitDeductionDetailCard
               detail={dd.cohabitDeductionDetail}
               triggerLabel="동거주택 공제 (§23의2)"

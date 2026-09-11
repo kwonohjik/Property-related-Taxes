@@ -38,7 +38,11 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
   // 화면·PDF·엔진(`net-asset-calc`) 동일 부호 — ⑮은 가산
   const assetSubtotal = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, eff);
   const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, eff);
-  const preGoodwill = assetSubtotal - liabilitySubtotal;
+  // 「다」도 엔진과 동일하게 §55① 후단 0 하한을 적용한다 (IG-062).
+  // 엔진 `calcNetAssetTotal`은 같은 값에 `Math.max(0, raw)`를 걸어 `netAssetBeforeGoodwill`을
+  // 만들고, 「마」는 그 값 + 영업권이다. 하한을 빼먹으면 자산 < 부채인 법인에서
+  // 「다」에 음수·「마」에 0이 찍혀 서식 라벨의 항등식 «마 = 다 + 라»가 화면에서 깨진다.
+  const preGoodwill = Math.max(0, assetSubtotal - liabilitySubtotal);
 
   return (
     <section aria-label="제2쪽 4. 순자산가액">

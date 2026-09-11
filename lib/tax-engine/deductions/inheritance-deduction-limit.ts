@@ -63,7 +63,7 @@ export function applyDeductionLimit(
       (params.priorGiftDeductionTotal ?? 0) +
       (params.disasterLossDeduction ?? 0);
     legateeNonHeir = params.legateeAmountNonHeir ?? 0;
-    // §24 ②2호 — 선순위 상속포기로 후순위가 받은 재산 (단서 무관 — 항상 차감). (H-19)
+    // §24 2호 — 선순위 상속포기로 후순위가 받은 재산 (단서 무관 — 항상 차감). (H-19)
     heirWaiver = params.heirWaiverAmount ?? 0;
     // §24 단서: 제3호(사전증여 가산가액)는 상속세 과세가액 5억원 초과 시에만 차감.
     // (1·2호 유증·포기는 단서 무관 — 항상 차감.)
@@ -92,7 +92,7 @@ export function applyDeductionLimit(
   const ceilingDetail: DeductionLimitCeilingDetail = {
     taxableEstateValue,
     legateeAmountNonHeir: legateeNonHeir,
-    heirWaiverAmount: heirWaiver, // §24 ②2호 선순위 상속포기→후순위 수령 (H-19)
+    heirWaiverAmount: heirWaiver, // §24 2호 선순위 상속포기→후순위 수령 (H-19)
     totalPriorGiftAmount: totalGift,
     priorGiftDeductionTotal: params?.priorGiftDeductionTotal ?? 0,
     disasterLossDeduction: params?.disasterLossDeduction ?? 0,

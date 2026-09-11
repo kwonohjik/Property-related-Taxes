@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
-import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import type { GiftTaxResult, EstateItem, PriorGift } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
@@ -88,6 +88,11 @@ interface Props {
     giftAmount: number;
     sourceCalculationId?: string;
     donor?: GiftDonorRelation;
+    /** §47② 합산 판정 3키 (IG-073) — 부표 1 본문 A24 행을 «엔진 판정 집합»으로 좁히는 데 쓴다.
+     *  종전에는 이 세 키가 매핑에서 빠져(명시 prop 매핑 strip) 부표가 전건을 찍었고,
+     *  계 영역 ⑭·⑮(엔진 값 역산)와 본문 행 합이 어긋난 신고서가 출력됐다. */
+    specialTreatmentType?: PriorGift["specialTreatmentType"];
+    donorDeceasedDate?: string;
     // PR 3 (2026-05-22): 부표 1 양식 정합 — 04 개별주택·06 오피스텔·08 부동산 권리 신규
     propertyCategory?:
       | "cash"
@@ -283,16 +288,29 @@ export function GiftTaxResultView({
       {/* 핵심 결과 카드 */}
       <PrintSection id="core-result" selectedIds={selectedPrintIds}>
       <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 p-5">
-        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-1">
-          증여세 결정세액
-        </p>
         {/**
          * 🔴 G-07 B1: 가산세가 있으면 **총 납부세액**을 보여준다.
          * `finalTax`는 결정세액(가산세 전)이라 그대로 두면 큰 숫자가 실제 부담을 밑돈다.
+         *
+         * 라벨이 값을 따라간다 (IG-068) — 종전에는 값만 총 납부세액으로 바꾸고 라벨은
+         * 「증여세 결정세액」으로 남아, 헤드라인 숫자가 결정세액이 아닌데 결정세액으로 읽혔다.
+         * 하위 3칸(산출세액·세대생략 할증·세액공제)에는 가산세 항목이 없어 재구성도 안 된다.
+         * 형제 상속세 결과뷰는 「결정세액」/「총 납부세액 (결정세액 + 가산세)」 두 행으로 나눈다.
          */}
+        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-1">
+          {result.totalPayableWithPenalty != null
+            ? "증여세 총 납부세액 (결정세액 + 가산세)"
+            : "증여세 결정세액"}
+        </p>
         <p className="text-4xl font-bold tracking-tight">
           {formatKRW(result.totalPayableWithPenalty ?? result.finalTax)}
         </p>
+        {result.totalPayableWithPenalty != null && (
+          <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-1">
+            결정세액 {formatKRW(result.finalTax)} + 가산세{" "}
+            {formatKRW(result.totalPayableWithPenalty - result.finalTax)}
+          </p>
+        )}
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
           <div>
             <span>산출세액</span>
@@ -619,10 +637,15 @@ export function GiftTaxResultView({
                 giftAmount: pg.giftAmount,
                 isHeir: false,
                 giftTaxPaid: 0,
+                donor: pg.donor,
+                specialTreatmentType: pg.specialTreatmentType,
+                donorDeceasedDate: pg.donorDeceasedDate,
                 propertyCategory: pg.propertyCategory,
                 propertyName: pg.propertyName,
                 propertyLocation: pg.propertyLocation,
               }))}
+              giftDate={giftDate}
+              currentDonor={mainDonor}
             />
           </HorizontalScrollContainer>
         ) : (
@@ -643,10 +666,15 @@ export function GiftTaxResultView({
                 giftAmount: pg.giftAmount,
                 isHeir: false,
                 giftTaxPaid: 0,
+                donor: pg.donor,
+                specialTreatmentType: pg.specialTreatmentType,
+                donorDeceasedDate: pg.donorDeceasedDate,
                 propertyCategory: pg.propertyCategory,
                 propertyName: pg.propertyName,
                 propertyLocation: pg.propertyLocation,
               }))}
+              giftDate={giftDate}
+              currentDonor={mainDonor}
             />
           </div>
         )}

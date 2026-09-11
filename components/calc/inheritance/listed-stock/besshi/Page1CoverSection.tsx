@@ -230,6 +230,19 @@ export function Page1CoverSection({ besshi }: Props) {
         </div>
       )}
 
+      {/* §53⑧2호 «배제가 거부된» 사유 (IG-054).
+          엔진은 이 라벨을 같은 객체에 echo하고 타입에도 선언하지만, 저장소 전체에서 읽는 UI가
+          0건이었다. ⑧validate는 매매계약일 «존재»만 보므로 기간 밖 날짜도 통과하고 엔진은
+          20% 할증을 적용한다 — 사용자는 왜 ⑩이 120%인지 알 방법이 없었다. */}
+      {page1Values.section53_8_2FailLabel && (
+        <div
+          className="text-xs text-rose-700 dark:text-rose-300 mt-2"
+          data-testid="ls-besshi-p1-53-8-2-fail"
+        >
+          ※ §53⑧2호 할증 배제가 적용되지 않았습니다 — {page1Values.section53_8_2FailLabel}
+        </div>
+      )}
+
       {/* 푸터: 작성연월·서명 */}
       <div className="text-right text-sm mt-6">
         {page1.valuationDate

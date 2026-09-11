@@ -14,7 +14,7 @@
  *
  * ⚠️ 혼동 금지:
  *   - 이 파일의 §23 = 상속세 재해손실공제 (casualtyLoss / casualtyLossDeduction)
- *   - inheritance-deductions.ts의 disasterLossDeduction = §24③ 분자 보정용 (§54 증여세 재해손실공제)
+ *   - inheritance-deductions.ts의 disasterLossDeduction = §24 3호 분자 보정용 (§54 증여세 재해손실공제)
  *
  * 정수 연산: max(0, lossValue − compensatedValue) — floor 불요 (정수 입력 보장)
  * Date 직접 비교 금지: parseISO → format → YYYY-MM-DD string 비교 (CLAUDE.md date-coerce 정책)

@@ -4,7 +4,6 @@
  * 컴포넌트 로컬 state에 의존하지 않으므로 훅으로 추출 가능.
  */
 import { useMemo } from "react";
-import { addMonths, endOfMonth, format } from "date-fns";
 import type { PrintSectionId } from "@/lib/print/inheritance-print-sections";
 import type {
   InheritanceTaxResult,
@@ -23,6 +22,7 @@ import {
   derivePaymentInKindAssets,
 } from "@/lib/tax-engine/credits/payment-in-kind";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { getInheritanceFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import { ASSET_CATEGORY_LABELS } from "./InheritanceTaxResultView.types";
 
 interface DerivedArgs {
@@ -32,6 +32,8 @@ interface DerivedArgs {
   estateItems?: EstateItem[];
   priorGifts?: PriorGift[];
   deathDate?: string;
+  /** 거주자/비거주자 — §67④ 신고기한 6/9개월 분기 (IG-080) */
+  decedentType?: "resident" | "non_resident";
   installmentEnabled: boolean;
   paymentInKindEnabled: boolean;
   paymentInKindIneligibleAmount: string;
@@ -45,6 +47,7 @@ export function useInheritanceResultDerived({
   estateItems,
   priorGifts,
   deathDate,
+  decedentType,
   installmentEnabled,
   paymentInKindEnabled,
   paymentInKindIneligibleAmount,
@@ -127,6 +130,11 @@ export function useInheritanceResultDerived({
         ? parseAmount(paymentInKindRequestedAmount)
         : undefined,
     });
+    // 요건 미충족이면 신고서 ㊵에 물납액을 찍지 않는다 (IG-081).
+    // 엔진은 요건과 무관하게 allowedLimit(=min(한도1,한도2))을 계산하고, 화면 카드는
+    // 「물납 요건 미충족」을 띄우며 한도 블록을 감춘다 — 그런데 별지9호 ㊵에는 양수가
+    // 인쇄돼, 허가될 수 없는 물납액이 신고서에 기재됐다.
+    if (!d.eligible) return undefined;
     return d.acceptedRequest ?? d.allowedLimit;
   }, [
     paymentInKindEnabled,
@@ -136,18 +144,13 @@ export function useInheritanceResultDerived({
     paymentInKindRequestedAmount,
   ]);
 
-  // 분납기한 (§70② — 신고기한 §67① 말일+6개월 + 2개월). deathDate 없으면 undefined.
+  // 분납기한 (§70② — 신고기한 + 2개월). 공용 헬퍼 단일 소스에 위임한다 (IG-080).
+  // 종전 로컬 계산은 6개월로 고정돼 **§67④ 비거주자 9개월**을 무시했고, 같은 화면의
+  // 연부연납·물납 카드(둘 다 decedentType을 본다)와 날짜가 서로 어긋났다.
   const splitDueDates = useMemo(() => {
-    if (!deathDate) return undefined;
-    const base = new Date(deathDate);
-    if (isNaN(base.getTime())) return undefined;
-    const filing = addMonths(endOfMonth(base), 6);
-    const installment = addMonths(filing, 2);
-    return {
-      filing: format(filing, "yyyy-MM-dd"),
-      installment: format(installment, "yyyy-MM-dd"),
-    };
-  }, [deathDate]);
+    const d = getInheritanceFilingDueDates(deathDate, decedentType);
+    return d.filing ? d : undefined;
+  }, [deathDate, decedentType]);
 
   // 재산 평가 내역 표시명 — 자산 id → name(있으면) 또는 카테고리 한글 라벨 (내부 id 노출 방지)
   const assetNameById = useMemo(() => {

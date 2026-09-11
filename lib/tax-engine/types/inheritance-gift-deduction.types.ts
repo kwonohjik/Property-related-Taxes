@@ -25,7 +25,7 @@ import type {
 
 /**
  * §23 재해손실공제 입력 (상증법 §23 + 상증령 §20).
- * ⚠️ §24③ 분자 보정용 disasterLossDeduction(§54 증여세 재해손실)과 완전히 별개.
+ * ⚠️ §24 3호 분자 보정용 disasterLossDeduction(§54 증여세 재해손실)과 완전히 별개.
  */
 export interface CasualtyLossInput {
   /** 재해손실 상속재산 가액 (상증령 §20②) — 원 단위 정수 */
@@ -127,10 +127,10 @@ export interface InheritanceDeductionInput {
    */
   spouseLegalShareOverride?: number;
   // ===== Phase D §24 분자 보정 (orchestrator → calcInheritanceDeductions 전달) =====
-  /** 상속인 외 자에게 유증한 금액 (§24 분자 차감 — ①1호) */
+  /** 상속인 외 자에게 유증한 금액 (§24 분자 차감 — 1호) */
   legateeAmountNonHeir?: number;
   /**
-   * §24 ②2호 — 선순위 상속인의 상속포기로 다음 순위 상속인이 상속받은 재산 가액 (§24 분자 차감).
+   * §24 2호 — 선순위 상속인의 상속포기로 다음 순위 상속인이 상속받은 재산 가액 (§24 분자 차감).
    * 대습상속(§27 단서 — 선순위 사망·결격으로 그 직계비속이 대신 상속)은 상속포기가 아니므로 대상 아님 →
    * 자동도출 금지, 명시 입력. 미입력=0(현행 보존). (H-19)
    */
@@ -143,7 +143,7 @@ export interface InheritanceDeductionInput {
   // ===== §23 재해손실공제 (2026-06-07, 상증법 §23 + 상증령 §20) =====
   /**
    * §23 재해손실공제 입력. 미제공 시 공제 0.
-   * ⚠️ 기존 disasterLossDeduction(§24③ 분자 보정/§54용)과 완전히 별개 — 명칭 혼동 금지.
+   * ⚠️ 기존 disasterLossDeduction(§24 3호 분자 보정/§54용)과 완전히 별개 — 명칭 혼동 금지.
    */
   casualtyLoss?: CasualtyLossInput;
 

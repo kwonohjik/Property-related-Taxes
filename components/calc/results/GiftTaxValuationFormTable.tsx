@@ -11,6 +11,8 @@
  * - 본문 표 10행 · 계 영역 ⑨~⑮ 7행
  */
 
+import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { aggregatePriorGiftsForGift } from "@/lib/tax-engine/gift-prior-aggregation";
 import type {
   EstateItem,
   PropertyValuationResult,
@@ -80,6 +82,16 @@ export interface GiftTaxValuationFormTableProps {
    * PriorGift는 자산 평가 정보 부재 — Phase 2에서는 ②=12(기타재산) / ⑧=08(보충적 평가) 기본값.
    */
   priorGifts?: PriorGift[];
+  /**
+   * §47② 합산 판정 입력 (IG-073). 둘 다 있으면 본문 A24 행을 «엔진이 실제로 합산한 회차»로
+   * 좁힌다 — 엔진 헬퍼 `aggregatePriorGiftsForGift`의 `matchedPriorGifts`를 그대로 쓴다.
+   *
+   * 종전에는 전달된 사전증여 전건을 A24 본문 행으로 찍었는데, 계 영역 ⑭·⑮는 엔진의
+   * `aggregatedGiftValue`에서 역산한 값이라 10년 도과·타 증여자·증여자 사망·조특법 특례
+   * 회차가 본문에만 남아 **행 합 ≠ ⑭·⑮**인 신고서가 출력됐다.
+   */
+  giftDate?: string;
+  currentDonor?: GiftDonorRelation;
 }
 
 // ============================================================
@@ -137,9 +149,19 @@ export function GiftTaxValuationFormTable({
   publicTrustExclusion = 0,
   disabledTrustExclusion = 0,
   priorGifts = [],
+  giftDate,
+  currentDonor,
 }: GiftTaxValuationFormTableProps) {
+  // 본문 A24 행은 «엔진이 실제로 §47② 합산한 회차»만 찍는다 (IG-073).
+  // 판정은 엔진 헬퍼 단일 소스 — 10년 도과·동일인 그룹 불일치·증여자 사망·조특법 특례를
+  // 그대로 따른다. 판정 입력(증여일·현 증여자)이 없으면 좁히지 않는다(하위호환).
+  const aggregatedPriorGifts =
+    giftDate && currentDonor
+      ? aggregatePriorGiftsForGift(priorGifts, giftDate, currentDonor).matchedPriorGifts
+      : priorGifts;
+
   const itemMap = new Map(estateItems.map((it) => [it.id, it]));
-  const dataRowCount = valuationResults.length + priorGifts.length;
+  const dataRowCount = valuationResults.length + aggregatedPriorGifts.length;
   const totalRows = Math.max(ROWS_FIXED, dataRowCount);
   const emptyRowCount = totalRows - dataRowCount;
 
@@ -257,7 +279,7 @@ export function GiftTaxValuationFormTable({
                 </tr>
               );
             })}
-            {priorGifts.map((pg, i) => {
+            {aggregatedPriorGifts.map((pg, i) => {
               const idx = valuationResults.length + i + 1;
               return (
                 <tr
