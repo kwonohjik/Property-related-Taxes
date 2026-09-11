@@ -96,9 +96,19 @@ describe("F-16 · §164⑧ 술어는 ④·⑧·엔진·UI 가 같은 leaf 를 �
     expect(validateBuildingStdPriceForm(reversed({ holdingMonths: "" }))).not.toContain("보유월수");
   });
 
-  it("★ 역순이면 ⑧검증이 양도당시 입력을 요구한다 — ④·엔진이 그 값을 쓰기 때문", () => {
-    // 수정 전: null(통과) ↔ 엔진 「양도시: 구조 미선택」 throw 로 두 층이 모순.
-    expect(validateBuildingStdPriceForm(reversed())).toContain("양도당시 건물 구조");
+  /**
+   * 🔑 **이 축의 구별력은 「연도 순서」 가드로 이관됐다** (2026-09-12).
+   *
+   * 역순 연도를 `transferYearVisible` 모드에서 **더 앞에서** 차단하므로, 아래 두 건은
+   * §164⑧ 손술어를 복원해도 **같은 메시지로 실패한다**(뮤테이션 실측: 손술어 복원 →
+   * 동일 2건 실패 = 구별력 0). 따라서 이 둘은 이제 **「어느 층이 먼저 막는가」의 계약**을
+   * 고정하는 것이지 손술어 잔존을 잡지 못한다.
+   *
+   * ⇒ 손술어 잔존을 실제로 잡는 것은 위 「보유월수를 묻지 않는다」 1건과
+   *   ④·엔진이 공유하는 leaf 다. `building-std-year-order.anchor.test.tsx` 가 가드 축을 맡는다.
+   */
+  it("★ 역순은 「연도 순서」 가드가 먼저 막는다 — §164⑧ 축에 도달하지 않는다", () => {
+    expect(validateBuildingStdPriceForm(reversed())).toContain("취득 후에만 양도할 수 있습니다");
   });
 
   it("역방향 가드 — 정상 교차(취득2005 → 양도2006)는 종전 그대로 §164⑧ 축이다", () => {
@@ -112,10 +122,10 @@ describe("F-16 · §164⑧ 술어는 ④·⑧·엔진·UI 가 같은 leaf 를 �
     expect(validateBuildingStdPriceForm(same)).toContain("보유월수");
   });
 
-  it("역방향 가드 — 역순이어도 양도 입력을 채우면 통과한다 (차단이 아니라 축 이동)", () => {
+  it("역방향 가드 — 양도 입력을 채워도 역순 자체는 통과하지 않는다 (연도 순서 가드)", () => {
     const filled = reversed({
       transStructureKey: "rc", transUsageNo: "1", transLandPrice: "1,100,000",
     });
-    expect(validateBuildingStdPriceForm(filled)).toBeNull();
+    expect(validateBuildingStdPriceForm(filled)).toContain("취득 후에만 양도할 수 있습니다");
   });
 });

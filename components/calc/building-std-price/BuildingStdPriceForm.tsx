@@ -26,7 +26,7 @@ import { ApartmentConversionSection } from "./ApartmentConversionSection";
 import { SectionCard } from "./BuildingStdSectionCard";
 import { isSameAdjustmentPeriodConversion } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { BuildingStdValuationSections } from "./BuildingStdValuationSections";
-import { type BuildingStdPriceFormState, initialBuildingStdPriceForm, availableYears, deriveYearFromEventDate, toEngineInput, buildNtsReportContext, buildAddressPatch, isRestorableSnapshot } from "@/lib/calc/building-std-price-form";
+import { type BuildingStdPriceFormState, initialBuildingStdPriceForm, availableYears, deriveYearFromEventDate, toEngineInput, buildNtsReportContext, buildAddressPatch, isRestorableSnapshot, transferYearVisible } from "@/lib/calc/building-std-price-form";
 import { validateBuildingStdPriceForm, computeValuationLandTotal } from "@/lib/calc/building-std-price-validate";
 import { buildNtsReportModel, type NtsReportModel } from "@/lib/calc/nts-report-adapter";
 import {
@@ -321,7 +321,6 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
     //    validate 만 부분 입력을 요구해 세션 내 해소가 불가능했다(F-24).
     //    계획서 C7·C8 은 두 모드 모두 「켜지면 2시점 섹션 복원」으로 결정했는데 C8 만 이행돼 있었다.
     !composite;
-  const acqOnly = singleActive && f.singleTimePoint === "acquisition";
   const transferOnly = singleActive && f.singleTimePoint === "transfer";
   // 양도 복합 — 취득시 용도지수표 기준 연도(≤2000=2001)
   const acqUsageYear = acqIndexYear;
@@ -629,8 +628,11 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             </ToggleCard>
           )}
 
-          {/* 취득 전용 모드 — 취득시 기준시가는 취득연도 정보만으로 산정된다(양도 시점 불요) */}
-          {!apartmentConv && !acqOnly && (
+          {/* 취득 전용 모드 — 취득시 기준시가는 취득연도 정보만으로 산정된다(양도 시점 불요).
+              ⚠️ 조건을 손으로 적지 않고 `transferYearVisible` leaf 를 쓴다 — ⑧검증의
+                 「연도 순서」 차단이 **같은 술어**로 「이 칸이 화면에 있는가」를 물어야
+                 화면에 없는 칸 때문에 막히는 dead-end 가 생기지 않는다. */}
+          {transferYearVisible(f) && (
           <>
           <SectionCard num={3} title={transferSectionLabel ?? "양도 시점"} tone="emerald" testId="bsp-section-transfer">
             <div className="grid grid-cols-2 gap-2">

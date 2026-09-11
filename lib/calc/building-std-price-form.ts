@@ -319,6 +319,35 @@ export function availableYears(isMechanical: boolean): number[] {
 }
 
 /**
+ * **양도연도 Select 가 화면에 있는가** — UI 렌더 조건과 ⑧검증의 단일 술어.
+ *
+ * 양도연도 칸은 두 모드에서 숨는다(`BuildingStdPriceForm` 「양도 시점」 섹션
+ * `!apartmentConv && !acqOnly`):
+ *   · **공동주택 고시 전 취득 환산** — 최초고시 기준시가를 취득당시로 환산하므로 양도 시점 불요
+ *   · **취득 전용(단일시점 acquisition)** — 취득시 기준시가는 취득연도 정보만으로 산정된다
+ *
+ * 🔴 **「연도 순서」 검증은 이 술어를 반드시 거쳐야 한다.** 칸이 숨은 모드에서 stale
+ *    `transferYear` 를 보고 차단하면 **화면에 없는 칸 때문에 막히는 dead-end** 가 된다 —
+ *    F-16 이 정확히 그 실패모드였다(⑧이 요구한 보유월수 칸을 UI 가 숨기고 있었다).
+ *
+ * ⚠️ UI 도 이 leaf 를 쓴다. 한쪽만 바뀌면 「화면에 없는데 차단」 또는 「보이는데 무검증」이 된다.
+ */
+export function transferYearVisible(f: BuildingStdPriceFormState): boolean {
+  if (f.taxType !== "transfer") return false;
+  if (f.apartmentConversionMode) return false;
+  const singleActive =
+    !!f.singleTimePoint &&
+    !isSameAdjustmentPeriodConversion(
+      intOrUndef(f.acquisitionYear),
+      intOrUndef(f.transferYear),
+      f.crossYearSameAdjust,
+    ) &&
+    !f.isMechanicalParking &&
+    !f.compositeMode;
+  return !(singleActive && f.singleTimePoint === "acquisition");
+}
+
+/**
  * 상속·증여 평가기준일(YYYY-MM-DD) → 평가연도 문자열. 완성된 일자만 도출, 그 외 "".
  * 상속·증여 모드에서 valuationYear의 단일 진실 writer(UI onChange·taxType 전환·initial 공용).
  */
