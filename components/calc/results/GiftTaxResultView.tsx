@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { expandToggleClass, expandToggleLabel } from "@/components/calc/results/shared/ExpandToggleButton";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
+import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import type { GiftTaxResult, EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -43,7 +44,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { getGiftFilingDueDates } from "@/lib/calc/inheritance-gift-filing-deadline";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
-import { formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
+import { formatGiftSaveMessage, useRecordCount } from "@/components/calc/gift-tax-save-handler";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -138,6 +139,7 @@ export function GiftTaxResultView({
   onGoToFirst,
   onSave,
   autoSaveToast = null,
+  savedId,
   showLoginPrompt = false,
   estateItems = [],
   priorGifts = [],
@@ -165,14 +167,19 @@ export function GiftTaxResultView({
     if (autoSaveToast) setSaveMessage(autoSaveToast);
   }, [autoSaveToast]);
 
+  // 결과 화면 저장 토스트에도 190건 한도 경고를 붙인다 (IG-163) —
+  // 폼 화면만 recordCount를 넘기면 같은 버튼이 화면에 따라 다른 문구를 냈다.
+  const recordCount = useRecordCount(savedId);
   const handleSaveClick = async () => {
     if (!onSave) return;
     setSaveMessage(null);
     try {
       const outcome = await onSave();
-      setSaveMessage(formatGiftSaveMessage(outcome));
+      setSaveMessage(formatGiftSaveMessage(outcome, recordCount));
     } catch (e) {
-      setSaveMessage(formatGiftSaveMessage(e instanceof Error ? e : new Error(String(e))));
+      setSaveMessage(
+        formatGiftSaveMessage(e instanceof Error ? e : new Error(String(e)), recordCount),
+      );
     }
   };
 
@@ -742,7 +749,10 @@ export function GiftTaxResultView({
         />
         <div className="flex items-center gap-2">
           <CtaButton tone="outline" onClick={onGoToFirst ?? onBack}>다시 계산</CtaButton>
-          <CtaButton onClick={onReset}>처음으로</CtaButton>
+          {/* 전체 폐기는 «확인 Dialog를 거치는 공용 버튼»에만 단다 — components/calc/CLAUDE.md:14.
+              onReset은 sessionStorage까지 갱신해 되돌릴 수 없는데 종전엔 확인이 없었다.
+              양도세 결과뷰 3곳은 2026-09-05에 이미 이 버튼으로 옮겼다. (IG-143) */}
+          <RestartFromScratchButton onReset={onReset} />
           {onSave && <SaveButton variant="primary" onSave={handleSaveClick} />}
         </div>
       </div>

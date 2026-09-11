@@ -11,14 +11,19 @@
  * 타입·상수·Step 컴포넌트는 gift-tax-form-shared.tsx 로 분리 (800줄 정책).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
-import { runGiftManualSave, formatGiftSaveMessage } from "@/components/calc/gift-tax-save-handler";
+import {
+  runGiftManualSave,
+  formatGiftSaveMessage,
+  buildGiftAutoSaveToast,
+  useRecordCount,
+} from "@/components/calc/gift-tax-save-handler";
 import { GiftTaxResultView } from "@/components/calc/results/GiftTaxResultView";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
@@ -90,21 +95,27 @@ export function GiftTaxForm() {
     clientId: activeClientId,
   });
 
-  // 자동저장 상태 → SaveToastMessage 변환 (결과 화면 진입 시 1회 노출)
-  const autoSaveToast: SaveToastMessage | null =
-    autoSave.status === "saved" && autoSave.savedId
-      ? {
-          kind: "success",
-          text: autoSave.created
-            ? `✓ 이력에 자동 저장되었습니다 (ID: ${autoSave.savedId.slice(0, 8)})`
-            : `✓ 동일 입력의 기존 이력이 갱신되었습니다 (ID: ${autoSave.savedId.slice(0, 8)})`,
-        }
-      : autoSave.status === "error"
-      ? {
-          kind: "error",
-          text: "자동 저장 실패 — 우상단 저장하기 버튼으로 재시도하세요.",
-        }
-      : null;
+  const recordCount = useRecordCount(autoSave.savedId);
+  // 자동저장 상태 → SaveToastMessage. 공통 빌더에 위임한다 (IG-163) —
+  // 로컬 구현에는 190건 한도 경고와 draft→final «승격» 분기가 빠져 있었다.
+  // useMemo로 참조 안정화 (매 렌더 새 객체 → useEffect 무한 루프 차단 — 상속세와 동형).
+  const autoSaveToast = useMemo(
+    () =>
+      buildGiftAutoSaveToast({
+        status: autoSave.status,
+        savedId: autoSave.savedId,
+        created: autoSave.created,
+        promotedDraftCount: autoSave.promotedDraftCount ?? 0,
+        count: recordCount,
+      }),
+    [
+      autoSave.status,
+      autoSave.savedId,
+      autoSave.created,
+      autoSave.promotedDraftCount,
+      recordCount,
+    ],
+  );
 
   const set = (patch: Partial<FormState>) =>
     setForm((prev) => ({ ...prev, ...patch }));
@@ -286,28 +297,25 @@ export function GiftTaxForm() {
     setError(null);
   };
 
-  // 결과 미계산 시 NO_RESULT sentinel throw — 호출자가 info 토스트 분기
-  const handleManualSave = async (): Promise<{
-    id: string;
-    created: boolean;
-    isDraft: boolean;
-  }> => {
-    const outcome = await runGiftManualSave({
+  // 빈 폼이면 EMPTY_FORM sentinel throw — 호출자가 info 토스트 분기.
+  // 결과가 없어도 «미결(draft)»로 저장되고, 계산 후 final로 승격된다 (IG-162).
+  const handleManualSave = async () =>
+    runGiftManualSave({
       form: form as unknown as Record<string, unknown> & { giftDate?: string },
       result,
       clientId: activeClientId ?? null,
     });
-    return { ...outcome, isDraft: false };
-  };
 
-  // 폼 화면용 wrapper — 토스트 표시
+  // 폼 화면용 wrapper — 토스트 표시 (recordCount를 넘겨 190건 경고 라인 부착)
   const handleManualSaveForForm = async () => {
     setSaveMessage(null);
     try {
       const outcome = await handleManualSave();
-      setSaveMessage(formatGiftSaveMessage(outcome));
+      setSaveMessage(formatGiftSaveMessage(outcome, recordCount));
     } catch (e) {
-      setSaveMessage(formatGiftSaveMessage(e instanceof Error ? e : new Error(String(e))));
+      setSaveMessage(
+        formatGiftSaveMessage(e instanceof Error ? e : new Error(String(e)), recordCount),
+      );
     }
   };
 

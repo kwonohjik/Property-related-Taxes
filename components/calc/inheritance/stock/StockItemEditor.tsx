@@ -221,24 +221,18 @@ function ListedStockEditor({
       </div>
       <ListedStockBesshiPreviewCard item={item} valuationDate={valuationDate} />
 
-      {/* 전후 2개월 종가 평균 */}
-      <div className="space-y-1">
-        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          전후 2개월 종가 단순평균 (원/주) <span className="text-destructive">*</span>
-        </label>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={avgPrice > 0 ? avgPrice.toLocaleString() : ""}
-          onChange={(e) => {
-            const v = parseInt(e.target.value.replace(/,/g, "") || "0", 10);
-            set({ listedStockAvgPrice: v || undefined });
-          }}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          data-testid="ls-avg-price"
-        />
-        <p className="text-xs text-gray-400">평가기준일 기준 전 2개월 + 후 2개월(총 4개월) 종가 평균</p>
-      </div>
+      {/* 전후 2개월 종가 평균 — 공용 CurrencyInput (native 금액 input 금지 · IG-128).
+          종전 native 구현은 포커스 전체선택(전역 규칙)·천단위 포맷·음수 차단을 각자 구현해
+          형제 금액칸과 동작이 달랐다. testid는 그대로 유지한다(8개 spec이 건다). */}
+      <CurrencyInput
+        label="전후 2개월 종가 단순평균 (원/주)"
+        required
+        hideUnit
+        value={avgPrice > 0 ? String(avgPrice) : ""}
+        onChange={(v) => set({ listedStockAvgPrice: parseAmount(v) || undefined })}
+        hint="평가기준일 기준 전 2개월 + 후 2개월(총 4개월) 종가 평균"
+        data-testid="ls-avg-price"
+      />
 
       {/* 보유 주식 수는 ListedStockSecurityInfoSection 으로 이동 (UX 개편) */}
 

@@ -65,7 +65,8 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
         <span className={expandToggleClass("slate")}>{expandToggleLabel(showBreakdown)}</span>
       </button>
 
-      {showBreakdown && (
+      {/* 인쇄 시 자동 펼침 (print-only-css-toggle) — 언마운트하면 인쇄물에서 통째로 빠진다. (IG-148) */}
+      <div className={showBreakdown ? "" : "hidden print:block"}>
         <div className="divide-y divide-border text-xs">
           {/* ① 일괄공제 또는 기초+인적 */}
           {dd.chosenMethod === "lump_sum" ? (
@@ -183,7 +184,7 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
             />
           )}
         </div>
-      )}
+      </div>
 
       {/* §24 종합한도 발동 시 안내 (detail 없는 legacy 케이스 — breakdown 파싱) */}
       {!dd.deductionLimitDetail && (

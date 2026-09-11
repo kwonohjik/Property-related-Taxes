@@ -119,6 +119,12 @@ export interface RadioCardGroupProps<T extends string> {
    * label·description·hint(문자열) 속 §평문을 추출해 배지로 노출. 미지정 시 off.
    */
   lawLinks?: string;
+  /**
+   * 그룹 루트에 붙일 셀렉터. 옵션별 셀렉터는 `options[].testId`가 따로 있다.
+   * ToggleCard와 같은 이유로 종전엔 호출부가 넘겨도 조용히 버려졌다
+   * (JSX는 하이픈 속성명을 타입검사하지 않는다).
+   */
+  "data-testid"?: string;
 }
 
 export function RadioCardGroup<T extends string>({
@@ -131,6 +137,7 @@ export function RadioCardGroup<T extends string>({
   columns = 1,
   className,
   lawLinks,
+  "data-testid": dataTestId,
 }: RadioCardGroupProps<T>) {
   const t = TONES[tone];
 
@@ -153,6 +160,7 @@ export function RadioCardGroup<T extends string>({
     <div
       data-slot="radio-card-group"
       data-layout={layout}
+      data-testid={dataTestId}
       className={cn(
         layout === "inline"
           ? "flex flex-wrap gap-2"
