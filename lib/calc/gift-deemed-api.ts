@@ -133,7 +133,11 @@ export function buildDeemedGiftInput(form: DeemedFormState): DeemedGiftInput {
           overvaluedSharePrice: parseAmount(form.mrgOvervaluedPrice),
           majorShares: parseAmount(form.mrgMajorShares),
           faceValue: parseAmount(form.mrgFaceValue),
-          mergeConsideration: parseAmount(form.mrgConsideration),
+          // 🔴 IG-014: 라벨이 「합병대가 (액면 미달 시 적용)」이라 대가가 액면 이상인 사용자는 비워 둔다.
+          // 0을 그대로 보내면 엔진의 `const consideration = input.mergeConsideration ?? face;`가
+          // 0은 nullish가 아니라서 발동하지 않고 `base = Math.min(face, 0) = 0` → 증여이익이
+          // 항상 0원이 된다. 같은 파일의 다른 분기 관례(`|| undefined`)를 적용해 `?? face`를 살린다.
+          mergeConsideration: parseAmount(form.mrgConsideration) || undefined,
         };
       }
       {

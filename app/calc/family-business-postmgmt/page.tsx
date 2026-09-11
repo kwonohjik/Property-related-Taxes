@@ -210,6 +210,11 @@ function FamilyBusinessPostMgmtPageInner() {
       parseAmount(baseTaxableAmount) >= 0 &&
       deathDate.length === 10 &&
       effectiveFilingDeadline.length === 10 &&
+      // 🔴 IG-092: `Number("")`는 0이라 **빈칸이 게이트를 통과**하고, 엔진에 0이 들어가
+      // §15⑯ 이자상당액이 조용히 0으로 계산됐다. 게다가 빈칸일 때 placeholder가 현행 율을
+      // 보여줘 「기본값이 적용된다」로 읽힌다. 바로 위 baseTaxableAmount가 같은 이유로
+      // `.trim().length > 0` 가드를 두고 「빈칸=silent 0 방지」라고 적어 둔 것과 같은 층위다.
+      interestRate.trim().length > 0 &&
       Number(interestRate) >= 0 &&
       Number(interestRate) <= 1 &&
       violations.length > 0 &&

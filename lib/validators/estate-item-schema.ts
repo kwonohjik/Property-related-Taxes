@@ -142,7 +142,8 @@ const baseItemSchema = z.object({
       nonOperatingFinancial: z.number().nonnegative().optional(),
       // PR-3-b — 과다현금 자동산정 + 나·다목 제외 단서 (strip 방지)
       currentCash: z.number().nonnegative().optional(),
-      cashByYearEnd: z.array(z.number().nonnegative()).optional(),
+      // 미입력 칸은 null (자리 고정 — IG-028·IG-029). 엔진이 Number.isFinite로 걸러낸다.
+      cashByYearEnd: z.array(z.number().nonnegative().nullable()).optional(),
       rentedRealEstateExclusion: z.number().nonnegative().optional(),
       externalLoansExclusion: z.number().nonnegative().optional(),
     })

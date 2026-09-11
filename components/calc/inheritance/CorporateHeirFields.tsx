@@ -17,6 +17,7 @@ import {
   HEIR_RELATIONS,
 } from "@/components/calc/inheritance/heir-relation-meta";
 import { isRealHeir } from "@/lib/tax-engine/inheritance-legal-share";
+import { useState } from "react";
 
 const SHAREHOLDER_RELATION_LABEL: Record<ShareholderInfo["relation"], string> = {
   heir: "상속인",
@@ -179,24 +180,9 @@ function ShareholderRow({
           <label className="block text-micro font-medium text-gray-600 dark:text-gray-400">
             ⑩ 지분율 (%)
           </label>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={
-              shareholder.shareRatio != null
-                ? String(shareholder.shareRatio * 100)
-                : ""
-            }
-            onChange={(e) => {
-              const v = parseFloat(e.target.value || "");
-              onUpdate({
-                shareRatio: isNaN(v)
-                  ? 0
-                  : Math.min(100, Math.max(0, v)) / 100,
-              });
-            }}
-            placeholder="지분율"
-            className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <ShareRatioPercentInput
+            ratio={shareholder.shareRatio}
+            onChange={(r) => onUpdate({ shareRatio: r })}
           />
         </div>
 
@@ -443,5 +429,55 @@ export function CorporateHeirFields({
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * ⑩ 지분율 (%) 입력 — 저장은 비율(0~1), 표시는 퍼센트.
+ *
+ * 🔴 IG-031: 종전엔 매 렌더 `String(shareRatio * 100)`으로 되돌렸다. 부동소수 왕복이 깨지는
+ * 값이 있어(실측: `String(0.07 * 100) === "7.000000000000001"`, 1~100 중 7·14·28·29·55·56·57·58)
+ * "7"을 치는 순간 칸이 쓰레기 문자열로 바뀌고, 이어서 자릿수를 더 쳐도 거기에 붙어 파싱되므로
+ * 75% 같은 값을 **입력할 수 없었다**. 소수점 입력("7.")도 즉시 정수로 되돌아갔다.
+ *
+ * ⇒ 사용자가 친 문자열을 로컬 표시 상태로 보관하고, **외부에서 값이 바뀐 경우에만** 표시를
+ *   맞춘다(React의 「props 변경 시 state 조정」 패턴 — useEffect 미사용).
+ *   `useEffect → store` 미러링 금지 원칙과 무관하다: 여기서 보관하는 것은 표시 문자열뿐이다.
+ */
+function ShareRatioPercentInput({
+  ratio,
+  onChange,
+}: {
+  ratio?: number;
+  onChange: (r: number) => void;
+}) {
+  const toText = (r?: number) =>
+    r != null ? String(Number((r * 100).toFixed(6))) : "";
+  const [text, setText] = useState(() => toText(ratio));
+  const [lastRatio, setLastRatio] = useState(ratio);
+  if (ratio !== lastRatio) {
+    setLastRatio(ratio);
+    // 내가 방금 올린 값이면 사용자가 치던 문자열을 보존한다.
+    const emitted = text.trim() === "" ? undefined : Math.min(100, Math.max(0, parseFloat(text))) / 100;
+    if (!(emitted != null && Math.abs(emitted - (ratio ?? 0)) < 1e-12)) {
+      setText(toText(ratio));
+    }
+  }
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={text}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setText(raw);
+        const v = parseFloat(raw || "");
+        onChange(isNaN(v) ? 0 : Math.min(100, Math.max(0, v)) / 100);
+      }}
+      onFocus={(e) => e.target.select()}
+      placeholder="지분율"
+      data-testid="corp-shareholder-share-ratio"
+      className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    />
   );
 }

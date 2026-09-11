@@ -480,8 +480,14 @@ export function GiftCreditChecklist({
           <button
             type="button"
             onClick={() => {
-              // 건0의 giftDate를 동시증여 추가 건 초기값으로 주입 (Zod YYYY-MM-DD 검증 통과)
-              const newSub: GiftSubFormState = { ...INITIAL_FORM, giftDate: form.giftDate };
+              // 건0의 giftDate를 동시증여 추가 건 초기값으로 주입 (Zod YYYY-MM-DD 검증 통과).
+              // donor는 비운다 — INITIAL_FORM의 "father"를 물려받으면 주 건(기본값도 "father")과
+              // 즉시 §47② 동일인 그룹이 되어 생성 직후부터 막힌다 (IG-103).
+              const newSub: GiftSubFormState = {
+                ...INITIAL_FORM,
+                giftDate: form.giftDate,
+                donor: undefined,
+              };
               set({
                 simultaneousGiftForms: [
                   ...(form.simultaneousGiftForms ?? []),

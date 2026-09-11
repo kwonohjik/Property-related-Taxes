@@ -181,9 +181,18 @@ export interface FormState extends AppraisalFeeFormFields {
 /**
  * GiftSubFormState — 동시증여 추가 건 1개의 폼 상태.
  * FormState에서 simultaneousGiftForms 제외 (재귀 방지).
+ *
+ * 🔴 `donor`는 **선택적**이다(IG-103). 추가 건은 「관계 선택」 미선택 상태로 태어나야 한다 —
+ * `INITIAL_FORM.donor`가 `"father"`라서 새 건이 「부」로 생성되면, 주 건의 기본값도 「부」이므로
+ * 추가 버튼을 누르는 즉시 카드가 §47② 동일인 그룹 경고 상태가 되고 다음 단계가 막힌다.
+ * `SimultaneousGiftCard`는 이미 미선택(`sub.donor ?? ""` · 「관계 선택」 라벨)을 전제로 짜여
+ * 있었고 ⑧도 `if (!sub.donor)`로 그 상태를 차단하므로, 도달 불가였던 것은 상태 쪽이다.
+ *
  * @see buildSimultaneousGiftInputs (lib/calc/gift-api.ts)
  */
-export type GiftSubFormState = Omit<FormState, "simultaneousGiftForms">;
+export type GiftSubFormState = Omit<FormState, "simultaneousGiftForms" | "donor"> & {
+  donor?: GiftDonorRelation;
+};
 
 export const INITIAL_FORM: FormState = {
   giftDate: "",

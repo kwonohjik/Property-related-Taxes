@@ -107,15 +107,28 @@ export function NetAssetCalculationTable({
     onChange({ ...netAssetValueRaw, [key]: value });
   }
 
-  // PR-M: 보험법인 토글 — 3 필드 중 하나라도 값이 있으면 default ON, 사용자 수동 override 가능
+  /**
+   * PR-M: 보험법인 토글 — 3 필드 중 하나라도 값이 있으면 ON, 사용자 수동 override 가능.
+   *
+   * 🔴 IG-059: 종전엔 `useState(insuranceHasValue)`로 **마운트 시점에만** 초기화했다.
+   * 이력 조회 모달이 `netAssetValueRaw`를 통째로 교체해도(후보 변환이 보험 3필드를 싣는다)
+   * 이 컴포넌트는 key 없이 같은 자리에 유지되어 **재마운트되지 않으므로** 토글은 OFF로 남았다.
+   * 그러면 책임준비금 등이 ⑲ 부채총액 미리보기와 엔진 양쪽에 계속 가산되는데 화면의 토글은
+   * OFF이고 금액 칸은 보이지도 않는다 — 그리고 사용자가 확인하려 ON→OFF 하면 3필드가
+   * undefined로 지워져 값이 소실된다.
+   *
+   * ⇒ 표시 상태는 **데이터에서 파생**하고, state에는 「사용자가 값 없이 연 것」만 남긴다
+   *    (같은 저장소가 이미 이 안티패턴을 High로 판정해 `mergerBlock`을 useMemo derive로 바꿨다).
+   */
   const insuranceHasValue =
     (netAssetValueRaw.insuranceReservePolicy ?? 0) > 0 ||
     (netAssetValueRaw.insuranceExtraordinaryReserve ?? 0) > 0 ||
     (netAssetValueRaw.insuranceSurrenderReserve ?? 0) > 0;
-  const [insuranceCompanyOpen, setInsuranceCompanyOpen] = useState(insuranceHasValue);
+  const [insuranceUserOpened, setInsuranceUserOpened] = useState(false);
+  const insuranceCompanyOpen = insuranceHasValue || insuranceUserOpened;
 
   function toggleInsuranceCompany(next: boolean) {
-    setInsuranceCompanyOpen(next);
+    setInsuranceUserOpened(next);
     if (!next) {
       // OFF 시 3 필드 모두 클리어 (silent omission 차단 — UI/엔진 일관성)
       onChange({

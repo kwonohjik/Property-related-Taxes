@@ -106,6 +106,31 @@ export function validateFamilyBusinessDates(
 }
 
 /**
+ * ⑧ 기업 규모 요건(상증령 §15①3호·§15②3호) 필수 입력 검증 — IG-035.
+ *
+ * 🔴 화면 hint는 「미입력 시 기준 미충족으로 처리」라고 안내했지만 엔진은 정반대다:
+ * `(input.totalAssets ?? 0) >= 5천억`이라 **미입력(undefined)은 0으로 읽혀 규모 요건을 통과**한다
+ * (중견기업의 `averageRevenue3Y`도 같다). 즉 안내를 믿고 비워 둔 사용자는 「미충족되겠지」라고
+ * 생각하지만 실제로는 가업상속공제가 적용되어, 세액이 **조용히** 갈린다.
+ *
+ * 이 파일의 FB 날짜 검증이 쓰는 「미입력은 차단하지 않고 요건 자동판정에서 false 처리」 관례는
+ * 여기 적용되지 않는다 — 그 관례의 전제(엔진이 미입력을 false로 본다)가 **이 필드에서는 거짓**이다.
+ * ⇒ 저장소 기본 원칙(「자동 안분 fallback 금지 — 미입력은 검증 오류로 차단」)대로 차단한다.
+ */
+export function validateFamilyBusinessEnterpriseSize(
+  fb: { enterpriseSize?: "sme" | "medium"; totalAssets?: number; averageRevenue3Y?: number } | undefined,
+): string | null {
+  if (!fb) return null;
+  if (fb.enterpriseSize === "sme" && fb.totalAssets == null) {
+    return "자산총액을 입력하세요. (상증령 §15①3호 — 중소기업 규모 요건: 자산총액 5천억원 미만)";
+  }
+  if (fb.enterpriseSize === "medium" && fb.averageRevenue3Y == null) {
+    return "직전 3년 평균 매출액을 입력하세요. (상증령 §15②3호 — 중견기업 규모 요건)";
+  }
+  return null;
+}
+
+/**
  * ⑧ 복수가업 순차공제 추가 가업 입력 정합성 검증 (상증령 §15④ + 상증칙 §5 — PR-4).
  *
  * 자동 안분 fallback 금지 — 추가 가업을 등록했으면 영위연수·가업가액을 명시 입력해야 함.
@@ -481,6 +506,9 @@ export function validateInheritanceTaxInput(
     input.deathDate,
   );
   if (fbDateErr) return fbDateErr;
+  // 기업 규모 요건 필수 입력 (IG-035 — 미입력이 「통과」로 굳는 것을 차단)
+  const fbSizeErr = validateFamilyBusinessEnterpriseSize(input.deductionInput?.familyBusiness);
+  if (fbSizeErr) return fbSizeErr;
   // 복수가업 추가 가업 입력 정합성 (PR-4, 상증령 §15④)
   const fbMultiErr = validateAdditionalFamilyBusinesses(input.deductionInput?.familyBusiness);
   if (fbMultiErr) return fbMultiErr;

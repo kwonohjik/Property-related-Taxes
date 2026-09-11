@@ -188,7 +188,9 @@ export function GiftTaxForm() {
         // 라벨 생성: DONOR_LABELS[subForm.donor] + 과세가액
         const labels = (form.simultaneousGiftForms ?? []).map((sub, i) => {
           const sr = (data.simultaneousResults as GiftTaxResult[])[i];
-          const donorLabel = DONOR_LABELS[sub.donor] ?? "기타";
+          // sub.donor는 선택적이다 (IG-103 — 추가 건은 미선택으로 태어난다).
+          // 여기까지 왔다면 ⑧이 미선택을 차단했겠지만, 라벨 경로는 방어적으로 처리한다.
+          const donorLabel = (sub.donor && DONOR_LABELS[sub.donor]) ?? "기타";
           const grossValue = sr?.grossGiftValue?.toLocaleString("ko-KR") ?? "";
           return `${donorLabel}로부터 — ${grossValue}원 증여`;
         });

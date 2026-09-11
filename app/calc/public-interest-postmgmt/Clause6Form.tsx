@@ -92,6 +92,7 @@ export function Clause6Form() {
             value={totalShares}
             onChange={setTotalShares}
             placeholder="주식 수 입력"
+            allowEmpty
           />
         </label>
 
@@ -102,6 +103,7 @@ export function Clause6Form() {
             value={heldShares}
             onChange={setHeldShares}
             placeholder="주식 수 입력"
+            allowEmpty
           />
         </label>
 

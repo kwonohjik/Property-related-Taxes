@@ -10,6 +10,7 @@
  */
 
 import { useMemo } from "react";
+import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -360,6 +361,7 @@ function UnlistedStockCard({
   hideHeader = false,
   valuationOnly = false,
 }: UnlistedStockCardProps) {
+  const { activeClientId } = useProfessionalStore();
   const currentMode = resolveUnlistedDisplayMode(item);
   // 부동산과다보유법인 — store(unlistedStockData)에서 read. heavyMap local state 폐지(엔진 도달 보장).
   const isRealEstateHeavy = item.unlistedStockData?.isRealEstateHeavy ?? false;
@@ -465,6 +467,11 @@ function UnlistedStockCard({
           onChange={(next) => onUpdate({ ...item, unlistedStockValuationV2: next })}
           valuationDate={valuationDate}
           taxKind={valuationOnly ? "inheritance" : mode}
+          // 🔴 IG-063: 넘기지 않으면 UnlistedStockV2Card의 기본값 `null`이 이력 조회 모달로
+          // 그대로 흘러가고, 필터가 `record.clientId !== currentClientId`인 레코드를
+          // `different_client`로 전부 걸러낸다. 이력은 `clientId: activeClientId`로 저장되므로
+          // **세무사 모드에서는 후보가 항상 0건**이 되어 PR-H 자동조회가 전혀 동작하지 않았다.
+          currentClientId={activeClientId ?? null}
         />
       )}
 

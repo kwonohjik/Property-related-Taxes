@@ -245,10 +245,15 @@ export function EstateBodyFinancial({ item, onUpdate, valuationDate }: VariantBo
                         ? String(item.savingsWithholdingRate)
                         : "14"
                     }
+                    // 🔴 IG-120: 두 번째 `|| undefined`가 0을 삼킨다 — 0을 입력하는 즉시 표시
+                    // fallback이 「14」로 되돌린다. 비과세종합저축처럼 원천징수율 0%인 예금을
+                    // §63④ 자동 계산 모드로 입력할 수 없어 평가액이 과소 산출됐다.
+                    // 형제 관례와 동일하게 빈 문자열만 undefined로 보낸다
+                    // (EstateBodyConvertibleBond의 cbCouponRate·cbPriorDividendRate).
                     onChange={(v) =>
                       set({
                         savingsWithholdingRate:
-                          v === "" ? undefined : parseDecimal(v) || undefined,
+                          v.trim() === "" ? undefined : parseDecimal(v),
                       })
                     }
                     data-testid={`savings-withholding-rate-${item.id}`}

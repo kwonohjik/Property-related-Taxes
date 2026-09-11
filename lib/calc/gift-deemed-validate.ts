@@ -3,6 +3,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { CI_SHARES_LABEL } from "@/components/calc/deemed-gift/capital-forms-shared";
 import type { DeemedFormState, EdShareholderRow } from "@/components/calc/deemed-gift/shared";
 
 export function validateDeemedInput(form: DeemedFormState): string | null {
@@ -100,6 +101,9 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       if (form.mrgCaseType === "non_stock") {
         if (parseAmount(form.mrgFaceValue) <= 0) return "액면가액을 입력하세요";
         if (parseAmount(form.mrgOvervaluedPrice) <= 0) return "합병당사법인 1주당 평가가액을 입력하세요";
+        // 🔴 IG-017(형제 인스턴스): mergerNonStock도 1주당 이익에 majorShares를 곱한다.
+        // 비면 증여재산가액이 0원이 되고 「이익이 기준금액(3억) 미만」이라는 틀린 사유가 뜬다.
+        if (parseAmount(form.mrgMajorShares) <= 0) return "대주주등 주식수를 입력하세요";
         break;
       }
       // §28⑦ 분할합병(순자산비율)이면 과대평가 1주평가 대신 분할 3필드 필수
@@ -123,6 +127,11 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           return "과소평가(증여자측)법인 주주를 1명 이상 입력하세요";
       } else {
         if (parseAmount(form.mrgExchangedShares) <= 0) return "교부받은 주식수를 입력하세요";
+        // 🔴 IG-017: 단일 대주주 모드에서 majorShares는 엔진 `mergerStock`이 1주당 이익에 곱하는
+        // 유일한 수량이다(매트릭스 ON 경로는 ④가 0을 보내므로 무관). 같은 분기의 다른 수량 6개는
+        // 전부 차단되는데 이것만 빠져 있어, 비면 증여재산가액이 0원이 되고
+        // 「이익이 기준금액 미만」이라는 틀린 사유가 표시된다.
+        if (parseAmount(form.mrgMajorShares) <= 0) return "대주주등 주식수를 입력하세요";
         if (form.mrgMergedPriceMode === "auto") {
           // §28⑤ 단순평균액 — 자동추정 금지, 명시 입력 필수
           if (parseAmount(form.mrgUnderSharePrice) <= 0) return "과소평가법인 1주당 평가가액을 입력하세요";
@@ -140,6 +149,12 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
     case "capital_increase":
       if (parseAmount(form.ciPrePrice) <= 0) return "증자 전 1주당 평가가액을 입력하세요";
       if (parseAmount(form.ciPreShares) <= 0) return "증자 전 발행주식총수를 입력하세요";
+      // 🔴 IG-016: 엔진에서 1주당 이익에 곱해지는 유일한 수량이다
+      // (`capital-increase.ts` — `base = perShareGain > 0 ? safeMultiply(perShareGain, forfeitedShares) : 0`).
+      // 비면 증여재산가액이 0이 되면서 「증자 후 1주가가 인수가 이하 — 이익 없음」이라는,
+      // 1주당 이익이 실제로 양수인데도 거짓인 사유가 결과에 표시된다.
+      if (parseAmount(form.ciForfeitedShares) <= 0)
+        return `${CI_SHARES_LABEL[form.ciSubType]}을(를) 입력하세요`;
       if (form.ciDirection === "high" && form.ciSubType !== "forfeited_realloc") {
         if (parseAmount(form.ciRatioDenomShares) <= 0) return "분모 신주수를 입력하세요";
       }
@@ -195,6 +210,14 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
           if (parseAmount(form.cdFaceValue) <= 0) return "액면가액을 입력하세요 (고가소각 §29의2①2호 액면 게이트)";
         } else {
           if (parseAmount(form.cdTotalShares) <= 0) return "총감자 주식수를 입력하세요";
+          // 🔴 IG-015: 엔진 `decreaseLow`의 이익 산식은 `diff × relatedRedeemedShares × majorPostRatio`다.
+          // `totalRedeemedShares`는 표시용 breakdown 행에만 쓰인다 — 즉 ⑧이 지키던 칸은 산식에
+          // 안 쓰이고, 실제 곱셈 인자 2개가 무방비였다. 하나만 비어도 증여재산가액이 0원이 되고
+          // 「이익이 기준금액 미만」이라는 틀린 사유가 뜬다.
+          if (parseDecimal(form.cdMajorRatioPct) <= 0)
+            return "대주주등 감자후 지분비율을 입력하세요";
+          if (parseAmount(form.cdRelatedShares) <= 0)
+            return "대주주등 특수관계인 감자 주식수를 입력하세요";
         }
       }
       break;
@@ -235,6 +258,16 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
         return "전환 시점 증자 후 1주당 평가가액(전후 2개월 종가평균)을 입력하세요";
       if (form.csIssueIsListed && parseAmount(form.csIssueListedMarketAvg) <= 0)
         return "발행 시점 증자 후 1주당 평가가액(전후 2개월 종가평균)을 입력하세요";
+      // 🔴 IG-018: 고가발행 + (제3자 직접배정·초과배정) 경로에서 «분모 신주수»는 엔진이
+      // `denom > 0 ? safeMultiplyThenDivide(...) : 0`으로 읽는다 — 0이면 조용히 0을 낸다.
+      // 전환주식은 「전환 시점 − 발행 시점」이라 **한 시점만 비어도 결과가 뒤집힌다**.
+      // 증자 §39는 같은 조건으로 이미 차단하고 있었다(capital_increase 분기) — 여기만 빠져 있었다.
+      if (form.csDirection === "high" && form.csSubType !== "forfeited_realloc") {
+        if (parseAmount(form.csConvRatioDenomShares) <= 0)
+          return "전환 시점 분모 신주수를 입력하세요";
+        if (parseAmount(form.csIssueRatioDenomShares) <= 0)
+          return "발행 시점 분모 신주수를 입력하세요";
+      }
       break;
     case "acquisition_fund_presumption":
       if (parseAmount(form.afAcquisitionValue) <= 0)
@@ -281,6 +314,12 @@ export function validateDeemedInput(form: DeemedFormState): string | null {
       // ⑧ F7: 정산 모드 — 실제 소득세 필수 (0은 유효)
       if (form.edSettlementMode && form.edActualIncomeTax === "")
         return "정산용 실제 소득세액을 입력하세요 (납부 0원이면 0 입력)";
+      // 🔴 IG-019: ④가 `giftTaxContext`를 `edDonorRelationship`이 있을 때만 만들고, 엔진은
+      // `if (input.giftTaxContext)` 안에서만 정산을 돌린다. 관계를 안 고르면 정산 결과가
+      // 화면에 하나도 나오지 않는데, 안내문은 「정산 결과는 계산 후 결과 화면에 표시됩니다」라고
+      // 단언한다 ⇒ 정산을 쓰려면 §3 관계 선택은 「선택」이 아니라 필수다.
+      if (form.edSettlementMode && !form.edDonorRelationship)
+        return "정산 계산에는 증여자와의 관계 선택이 필요합니다";
 
       break;
     }
