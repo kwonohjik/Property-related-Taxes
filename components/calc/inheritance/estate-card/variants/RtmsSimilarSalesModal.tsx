@@ -560,7 +560,7 @@ export function RtmsSimilarSalesModal({
               </p>
               {outOfPeriod.length > 0 && (
                 <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                  평가기간 외 거래 {outOfPeriod.length}건이 있습니다 (위 목록에 표시).
+                  평가기간 외 거래 {outOfPeriod.length}건이 있습니다 — 아래 목록에서 펼쳐 볼 수 있습니다.
                 </p>
               )}
             </div>
@@ -594,32 +594,38 @@ export function RtmsSimilarSalesModal({
                 );
               })}
 
-              {/* 평가기간 외 참고 거래 */}
-              {outOfPeriod.length > 0 && (
-                <div className="mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setOutOfPeriodOpen((o) => !o)}
-                    aria-expanded={outOfPeriodOpen}
-                    className={expandToggleClass("slate")}
-                  >
-                    {expandToggleLabel(outOfPeriodOpen)} · 평가기간 외 거래 {outOfPeriod.length}건 (참고용 — 시가 불인정 가능)
-                  </button>
-                  {outOfPeriodOpen && (
-                    <div className="mt-2 space-y-2 opacity-70">
-                      {outOfPeriod.map((c) => {
-                        const key = tradeKey(c);
-                        return (
-                          <CandidateRow
-                            key={key}
-                            candidate={c}
-                            isSelected={selectedIds.has(key)}
-                            onToggle={() => handleToggle(key)}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
+            </div>
+          )}
+
+          {/* 평가기간 외 참고 거래 — 후보 리스트 «밖»에 둔다 (IG-046).
+              종전에는 `status === "ready" && candidates.length > 0` 게이트 안에 있었는데,
+              `empty`는 정의상 후보 0건이라 그 게이트가 결코 참이 되지 않았다. 즉
+              «참고 거래가 가장 필요한 상황»(기간 내 0건 · 기간 외만 존재)에서 안내문이
+              가리키는 목록이 렌더되지 않았다 — 「위 목록에 표시」가 사실이 아니었다. */}
+          {outOfPeriod.length > 0 && (
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => setOutOfPeriodOpen((o) => !o)}
+                aria-expanded={outOfPeriodOpen}
+                className={expandToggleClass("slate")}
+                data-testid="rtms-out-of-period-toggle"
+              >
+                {expandToggleLabel(outOfPeriodOpen)} · 평가기간 외 거래 {outOfPeriod.length}건 (참고용 — 시가 불인정 가능)
+              </button>
+              {outOfPeriodOpen && (
+                <div className="mt-2 space-y-2 opacity-70">
+                  {outOfPeriod.map((c) => {
+                    const key = tradeKey(c);
+                    return (
+                      <CandidateRow
+                        key={key}
+                        candidate={c}
+                        isSelected={selectedIds.has(key)}
+                        onToggle={() => handleToggle(key)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>

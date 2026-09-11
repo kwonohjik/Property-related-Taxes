@@ -19,8 +19,8 @@ import {
   type EvaluationCommitteeResult,
 } from "@/lib/tax-engine/property-valuation/evaluation-committee-section-54-6";
 import {
-  inheritanceApplicationDeadline,
-  giftApplicationDeadline,
+  evaluationCommitteeApplicationDeadline,
+  evaluationCommitteeNotificationDeadline,
   daysUntilDeadline,
 } from "@/lib/calc/evaluation-committee-deadline";
 
@@ -50,14 +50,15 @@ export function EvaluationCommitteeResultCard({
   taxKind,
   today,
 }: EvaluationCommitteeResultCardProps) {
+  // 신청기한은 «신고기한 그 자체»가 아니다 (상증령 §49의2⑤ — IG-058).
+  //   상속 = 신고기한 − 4개월 · 증여 = 신고기한 − 70일
+  // 종전에는 신고기한을 그대로 D-N으로 찍어 상속은 4개월·증여는 70일 늦은 날짜를 안내했다.
   const deadlineInfo = useMemo(() => {
     if (!baseDate || !taxKind) return null;
-    const deadline =
-      taxKind === "inheritance"
-        ? inheritanceApplicationDeadline(baseDate)
-        : giftApplicationDeadline(baseDate);
+    const deadline = evaluationCommitteeApplicationDeadline(baseDate, taxKind);
+    const notifyBy = evaluationCommitteeNotificationDeadline(baseDate, taxKind);
     const days = daysUntilDeadline(deadline, today);
-    return { deadline, days };
+    return { deadline, notifyBy, days };
   }, [baseDate, taxKind, today]);
 
   if (!result) return null;
@@ -126,8 +127,8 @@ export function EvaluationCommitteeResultCard({
           data-testid="evaluation-committee-deadline-card"
         >
           <p className="font-semibold">
-            평가심의위 신청 기한 ({taxKind === "inheritance" ? "상속세" : "증여세"} 신고기한
-            준용)
+            평가심의위 신청 기한 (상증령 §49의2⑤ —{" "}
+            {taxKind === "inheritance" ? "상속세 신고기한 만료 4개월 전" : "증여세 신고기한 만료 70일 전"})
           </p>
           <p className="mt-1">
             기한일: {formatLocalDate(deadlineInfo.deadline)} ·{" "}
@@ -138,6 +139,11 @@ export function EvaluationCommitteeResultCard({
             ) : (
               <strong>D-{deadlineInfo.days}</strong>
             )}
+          </p>
+          <p className="mt-0.5 text-micro opacity-80">
+            통지기한 (§49의2⑥ —{" "}
+            {taxKind === "inheritance" ? "신고기한 만료 1개월 전" : "신고기한 만료 20일 전"}):{" "}
+            {formatLocalDate(deadlineInfo.notifyBy)}
           </p>
         </div>
       )}

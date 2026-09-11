@@ -28,56 +28,31 @@ import {
   computeLossFields,
   LOSS_FIELD_LABELS,
 } from "@/lib/calc/category-change-policy";
+import { INHERITANCE_CATEGORIES } from "@/lib/calc/deemed-category-policy";
 import type { SupportedCategory } from "@/lib/calc/deemed-category-policy";
+import {
+  CATEGORY_LABELS,
+  GIFT_CATEGORIES,
+} from "@/components/calc/inheritance/estate-card/estate-category-meta";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
-const CATEGORY_LABELS: Record<SupportedCategory, string> = {
-  real_estate_land: "토지",
-  real_estate_building: "상업용 건물",
-  real_estate_apartment: "주택",
-  cash: "현금",
-  financial: "예금·펀드·채권·공제금",
+/**
+ * 다이얼로그 전용 라벨 override (IG-040).
+ *
+ * 목록·라벨 사본을 들고 있던 것이 결함이었다 — 단일 출처 두 곳
+ * (`deemed-category-policy.INHERITANCE_CATEGORIES` · `estate-category-meta.GIFT_CATEGORIES`)에
+ * `crypto_asset`이 추가됐을 때 **사본만 빠져**, 가상자산은 «추가»는 되는데 «변경»으로는
+ * 도달할 수 없었고, crypto_asset 항목에서 다이얼로그를 열면 대응 라디오가 없어
+ * 「(현재)」 표시 없이 아무것도 선택되지 않은 채 떴다.
+ *
+ * 이 화면에서만 다른 문구가 필요한 것은 deposit 하나다 — 그것만 override로 남긴다.
+ */
+const DIALOG_LABEL_OVERRIDES: Partial<Record<SupportedCategory, string>> = {
   deposit: "전세보증금 반환채권 (상속세 전용)",
-  superficies: "지상권",
-  intangible_ip: "무체재산권",
-  receivable: "채권 (대여금·외상매출금 등)",
-  convertible_bond: "전환사채등 (전환사채·신주인수권부사채 등)",
-  trust_benefit: "신탁수익권",
-  periodic_payment: "정기금받을권리",
-  crypto_asset: "가상화폐 (가상자산)",
-  other: "기타 재산",
 };
 
-const INHERITANCE_CATEGORIES: SupportedCategory[] = [
-  "real_estate_apartment",
-  "real_estate_building",
-  "real_estate_land",
-  "cash",
-  "financial",
-  "deposit",
-  "superficies",
-  "intangible_ip",
-  "receivable",
-  "convertible_bond",
-  "trust_benefit",
-  "periodic_payment",
-  "other",
-];
-
-const GIFT_CATEGORIES: SupportedCategory[] = [
-  "real_estate_apartment",
-  "real_estate_building",
-  "real_estate_land",
-  "cash",
-  "financial",
-  "superficies",
-  "intangible_ip",
-  "receivable",
-  "convertible_bond",
-  "trust_benefit",
-  "periodic_payment",
-  "other",
-];
+const categoryLabel = (cat: SupportedCategory): string =>
+  DIALOG_LABEL_OVERRIDES[cat] ?? CATEGORY_LABELS[cat];
 
 export interface CategoryChangeDialogProps {
   open: boolean;
@@ -134,7 +109,7 @@ export function CategoryChangeDialog({
           <p className="text-xs text-gray-600 dark:text-gray-400">
             현재 카테고리:{" "}
             <span className="font-medium text-gray-900 dark:text-gray-100">
-              {CATEGORY_LABELS[currentCategory]}
+              {categoryLabel(currentCategory)}
             </span>
           </p>
 
@@ -153,8 +128,8 @@ export function CategoryChangeDialog({
                 value: cat,
                 label:
                   cat === currentCategory
-                    ? `${CATEGORY_LABELS[cat]} (현재)`
-                    : CATEGORY_LABELS[cat],
+                    ? `${categoryLabel(cat)} (현재)`
+                    : categoryLabel(cat),
                 testId: `category-change-radio-${cat}-${item.id}`,
               }))}
             />

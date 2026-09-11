@@ -575,6 +575,7 @@ export function FamilyBusinessEligibilitySection({
             mainOperatingYears={familyBusiness.operatingYears}
             mainValue={mainBusinessValue ?? 0}
             deathDate={deathDate}
+            eligible={evalResult?.eligible}
           />
         </div>
       )}
