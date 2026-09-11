@@ -73,19 +73,22 @@ test.describe("비상장 보충적 평가 — 결손·자본잠식 음수 입력
     // 「재무제표로 계산」 모드 진입 (2026-09-02 기본 선택이 됐지만 의도를 남겨 명시 클릭)
     await page.getByText("재무제표로 계산", { exact: true }).click();
 
-    // 상장연도 열 — 행 1 각 사업연도 소득금액 = 결손 5억
-    const row1 = cardInput(page, "1. 각 사업연도 소득금액");
+    // 🔑 **셀렉터 축이 바뀌었다 (2026-09-11 표 전환)** — 계산서가 `FieldCard` 스택에서
+    //    «행 기반 표»가 되면서 `[data-slot="field-card"]`가 없어졌다. 표 셀은 `data-testid`가
+    //    정본 축이다(`${prefix}-${행 키}-${열}`). 계획서 §4.5.
+    //    `cardInput`은 이 파일의 다른 곳(양도 주식수 등 일반 FieldCard)에서 계속 쓴다.
+    const row1 = page.locator('[data-testid="ni-niAddRow1-Listing"]');
     await expect(row1).toBeVisible({ timeout: 10_000 });
     await row1.fill("-500000000");
-    // 20. 환산주식수
-    await cardInput(page, "20. 환산주식수").fill("100000");
+    // 행 20 사업연도말 주식 또는 환산주식수
+    await page.locator('[data-testid="ni-niShareCount-Listing"]').fill("100000");
 
     // 프리뷰 17행이 음수로 표시된다 (수정 전에는 "500,000,000" — 부호 반전)
-    await expect(page.getByText(/17\. 순손익액/).first()).toContainText("-500,000,000");
+    await expect(page.getByTestId("ni-17-calc-Listing")).toContainText("-500,000,000");
     // 🔑 행 21·24는 «0»이다 — 상증령 §56① 후단 준용(「음수인 경우에는 영으로 한다」).
     //    체인: 소법 §99①4 전단 → 상증법 §63①1나목 → 상증령 §54 → §56①.
     //    행 17(사실)은 음수 그대로, 「평가액」 단계에서만 0으로 본다.
-    await expect(page.getByText(/24\. 1주당 가액/).first()).toContainText("0");
+    await expect(page.getByTestId("ni-24-calc-Listing")).toHaveText("0");
     // 하한이 발동했음을 사용자에게 알린다
     await expect(page.getByText(/1주당 순손익액이 음수이므로/)).toBeVisible();
   });

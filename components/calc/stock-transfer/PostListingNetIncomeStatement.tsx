@@ -1,72 +1,268 @@
 "use client";
 
 /**
- * PostListingNetIncomeStatement — 순손익 계산서 (Phase E)
+ * PostListingNetIncomeStatement — 순손익 계산서 (PDF 24행 · 이미지 7 원본 서식 표 레이아웃)
  *
- * PDF 24행 표 정밀화:
- *   (A) 가산 행 1~4
- *   (B) 차감 행 5~16
- *   행 17 = A − B = 순손익액
+ * 계획서: docs/00-pm/post-listing-statement-table-layout.plan.md
+ * 기반 PDF: `주식-취득후 상장.pdf` (stock-transfer-post-listing-pdf-replica.plan.md:7 — 다이얼로그 ②)
+ *
+ * 구조:
+ *   행 1 = 각 사업연도 소득금액 (음수 허용)
+ *   행 2~4 = 가산 그룹 「소득에 가산할 금액」
+ *   (A) = 가산할금액 합계 (1+2+3+4)
+ *   행 5~16 = 차감 그룹 「소득에서 공제할 금액」 (+ 「비업무용토지 취득세(현행 삭제)」 비활성 행)
+ *   (B) = 공제할금액 합계 (5 + … + 16)
+ *   행 17 = 순손익액 (A − B)
  *   행 20 = 사업연도말 주식 또는 환산주식수
- *   행 21 = 1주당 순손익액 (17÷20)
+ *   행 21 = 1주당 순손익액 (17 ÷ 20)
  *   행 23 = 환원율 (default 10% — 시행규칙 §81② → 상증령 §17)
- *   행 24 = 1주당 가액 (21÷23)
+ *   행 24 = 1주당 가액 (21 ÷ 23)
  *
- * 모드별 표시:
- *   - listing_only: 상장연도만
- *   - full: 양 연도 2열
+ * 열 수는 **1 또는 2**다 — `mode` / EU wrapper 분기(계획서 §4.2.2).
  */
 
 import { useMemo } from "react";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
-import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { calcNetIncomePerShare } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
-
-// PDF 행 라벨 (가산 4행)
-const ADD_LABELS = [
-  "1. 각 사업연도 소득금액",
-  "2. 국세·지방세 과오납 환급금 이자",
-  "3. 수입배당금 중 익금불산입한 금액",
-  "4. 기부금 손금산입한도액 초과액 이월손금 산입액",
-];
+import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { StatementTable } from "./statement-table/StatementTable";
+import { StatementRow } from "./statement-table/StatementRow";
+import { StatementCalcRow } from "./statement-table/StatementCalcRow";
+import { readCell } from "./statement-table/statement-table-types";
+import type {
+  StatementColumn,
+  StatementColumnSpec,
+} from "./statement-table/statement-table-types";
+import {
+  NI_ADD_ROWS,
+  NI_SUB_ROWS,
+  NI_SHARE_ROW,
+  NI_RATE_ROW,
+} from "./statement-table/net-income-rows";
+import { buildStatementColumns } from "./statement-table/build-columns";
+import { shareCandidates } from "./statement-table/share-candidates";
 
 /**
- * 음수(결손)가 정상값인 가산 행 — 행 1 「각 사업연도 소득금액」뿐이다.
+ * [unlisted-direct-calc] Column 타입 — EUTransfer/EUAcq 비상장 §165④ 컬럼 포함.
  *
- * 「법인세법」 §14 각 사업연도 소득은 **결손이면 음수**다. 나머지 가산 행(2~4)과 차감 행(5~16)은
- * 각각 이름이 붙은 세무조정 항목이라 성질상 비음수이고, 결손금을 담을 자리가 없다
- * ⇒ **행 1 signed는 대체 불가**다.
- *
- * 형제 경로가 같은 규칙을 이미 쓴다 — 상속·증여 비상장주식 v2
- * `FiscalYearAdjustmentTable.tsx`의 `taxableIncome: signed: true`.
- * [[feedback_sibling_path_already_implements_rule]]
- *
- * ⚠️ `allowNegative` 없이 두면 `CurrencyInput`이 선행 `-`를 **차단이 아니라 조용히 제거**해
- *    결손이 같은 크기의 이익으로 뒤집힌다(CurrencyInput.tsx:97).
- *    anchor: __tests__/components/calc/stock-transfer/unlisted-deficit-negative.anchor.test.tsx DN-1~5
+ * 🔑 `statement-table-types`의 `StatementColumn`과 같은 축이다. 종전 로컬 정의를 재export해
+ *    기존 import 경로(`import type { Column } from "./PostListingNetIncomeStatement"`)를 보존한다.
  */
-const ADD_SIGNED = [true, false, false, false] as const;
+export type Column = StatementColumn;
 
-// PDF 행 라벨 (차감 12행)
-const SUB_LABELS = [
-  "5. 벌금·과료·과태료·가산금·체납처분비",
-  "6. 손금용인되지 않는 공과금",
-  "7. 업무와 관련없는 지출",
-  "8. 각 세법상 징수불이행 납부세액",
-  "9. 기부금한도초과액",
-  "10. 접대비한도초과액",
-  "11. 과다경비등 손금불산입액",
-  "12. 지급이자 손금불산입액",
-  "13. 감가상각비 시인부족액 — 손금으로 추인된 상각부인액",
-  "14. 법인세 총결정세액",
-  "15. 농어촌특별세 총결정세액",
-  "16. 지방소득세 총결정세액",
-];
+export const COL_LABEL: Record<Column, string> = {
+  Listing: "상장연도 직전",
+  Acq: "취득연도 직전 (상장 §165⑤)",
+  EUTransfer: "양도연도 직전 (비상장 §165④)",
+  EUAcq: "취득연도 직전 (비상장 §165④)",
+};
+
+/** 행 1~16의 폼 키 prefix — (A)·(B) 합계에 넘길 배열 순서와 1:1 */
+const ADD_PREFIXES = NI_ADD_ROWS.map((r) => r.keyPrefix);
+const SUB_PREFIXES = NI_SUB_ROWS.filter((r) => !r.disabled).map((r) => r.keyPrefix);
+
+/**
+ * 열별 미리보기 — 엔진 헬퍼를 그대로 부른다(이중 진실 차단).
+ *
+ * ⚠️ (A)·(B) 소계를 UI에서 따로 더하지 않는다 — 엔진 echo `addTotalA`/`subTotalB`를 쓴다.
+ *    [[feedback_ui_engine_dual_truth_avoidance]]
+ */
+function useNetIncomePreviews(form: StockTransferFormData, cols: readonly StatementColumnSpec[]) {
+  const colKeys = cols.map((c) => c.col).join("|");
+  return useMemo(() => {
+    const out = {} as Record<Column, ReturnType<typeof calcNetIncomePerShare>>;
+    for (const key of colKeys.split("|").filter(Boolean) as Column[]) {
+      const addA = ADD_PREFIXES.map((p) => parseAmount(readCell(form, p, key)));
+      const subB = SUB_PREFIXES.map((p) => parseAmount(readCell(form, p, key)));
+      const shareCount = parseInt(readCell(form, NI_SHARE_ROW.keyPrefix, key) || "0", 10);
+      const rateStr = readCell(form, NI_RATE_ROW.keyPrefix, key) || "10";
+      out[key] = calcNetIncomePerShare({
+        addA,
+        subB,
+        shareCount,
+        discountRate: parseFloat(rateStr) / 100,
+      });
+    }
+    return out;
+  }, [form, colKeys]);
+}
+
+export interface NetIncomeStatementTableProps {
+  form: StockTransferFormData;
+  onChange: (patch: Partial<StockTransferFormData>) => void;
+  cols: readonly StatementColumnSpec[];
+}
+
+/**
+ * 표 본체 — `PostListing*` 과 `EstimatedUnlisted*` wrapper가 공유한다.
+ *
+ * 🔑 종전 `YearColumn`(컬럼 1개 렌더)을 대체한다. 행 기반 표에서는 「한 컬럼을 그리는
+ *    컴포넌트」가 성립하지 않는다 — 표가 열 목록을 받아 한 번에 그린다(계획서 §3.4).
+ */
+export function NetIncomeStatementTable({
+  form,
+  onChange,
+  cols,
+}: NetIncomeStatementTableProps) {
+  const preview = useNetIncomePreviews(form, cols);
+  const set = (prefix: string, col: Column, v: string) =>
+    onChange({ [`${prefix}${col}`]: v } as Partial<StockTransferFormData>);
+  const value = (prefix: string) => (col: Column) => readCell(form, prefix, col);
+  const testIdPrefix = "ni";
+
+  let rowIndex = 0;
+  const next = () => ++rowIndex;
+
+  return (
+    <div className="space-y-2">
+      <StatementTable
+        cols={cols}
+        hasGroupColumn
+        caption="순손익 계산서"
+        testIdPrefix={testIdPrefix}
+      >
+        {NI_ADD_ROWS.map((row) => (
+          <StatementRow
+            key={row.keyPrefix}
+            row={row}
+            cols={cols}
+            hasGroupColumn
+            rowIndex={next()}
+            testIdPrefix={testIdPrefix}
+            value={value(row.keyPrefix)}
+            onChange={(c, v) => set(row.keyPrefix, c, v)}
+          />
+        ))}
+        <StatementCalcRow
+          hasGroupColumn
+          cols={cols}
+          testIdPrefix={`${testIdPrefix}-A`}
+          row={{
+            kind: "calc",
+            label: "(A) 가산할금액 합계 (1 + 2 + 3 + 4)",
+            values: Object.fromEntries(
+              cols.map((c) => [c.col, preview[c.col].addTotalA]),
+            ),
+          }}
+        />
+        {NI_SUB_ROWS.map((row) => (
+          <StatementRow
+            key={row.keyPrefix}
+            row={row}
+            cols={cols}
+            hasGroupColumn
+            rowIndex={next()}
+            testIdPrefix={testIdPrefix}
+            value={value(row.keyPrefix)}
+            onChange={(c, v) => set(row.keyPrefix, c, v)}
+          />
+        ))}
+        <StatementCalcRow
+          hasGroupColumn
+          cols={cols}
+          testIdPrefix={`${testIdPrefix}-B`}
+          row={{
+            kind: "calc",
+            label: "(B) 공제할금액 합계 (5 + … + 16)",
+            values: Object.fromEntries(
+              cols.map((c) => [c.col, preview[c.col].subTotalB]),
+            ),
+          }}
+        />
+        <StatementCalcRow
+          hasGroupColumn
+          cols={cols}
+          testIdPrefix={`${testIdPrefix}-17`}
+          row={{
+            kind: "calc",
+            num: "17.",
+            label: "순손익액 (A − B)",
+            values: Object.fromEntries(
+              cols.map((c) => [c.col, preview[c.col].netIncomeAmount]),
+            ),
+          }}
+        />
+        <StatementRow
+          row={NI_SHARE_ROW}
+          cols={cols}
+          hasGroupColumn
+          rowIndex={next()}
+          testIdPrefix={testIdPrefix}
+          value={value(NI_SHARE_ROW.keyPrefix)}
+          onChange={(c, v) => set(NI_SHARE_ROW.keyPrefix, c, v)}
+          candidates={(c) => shareCandidates(form, c, "naShareCount")}
+        />
+        <StatementCalcRow
+          hasGroupColumn
+          cols={cols}
+          testIdPrefix={`${testIdPrefix}-21`}
+          row={{
+            kind: "calc",
+            num: "21.",
+            // 나눗셈은 `<Frac>`이 정본 — 리터럴 `÷` 금지(literal-division-render 래칫 게이트)
+            label: (
+              <>
+                1주당 순손익액 = <Frac top="17" bottom="20" />
+              </>
+            ),
+            values: Object.fromEntries(
+              cols.map((c) => [c.col, preview[c.col].perShareIncome]),
+            ),
+          }}
+        />
+        <StatementRow
+          row={NI_RATE_ROW}
+          cols={cols}
+          hasGroupColumn
+          rowIndex={next()}
+          testIdPrefix={testIdPrefix}
+          value={(c) => readCell(form, NI_RATE_ROW.keyPrefix, c) || "10"}
+          onChange={(c, v) => set(NI_RATE_ROW.keyPrefix, c, v)}
+        />
+        <StatementCalcRow
+          hasGroupColumn
+          cols={cols}
+          testIdPrefix={`${testIdPrefix}-24`}
+          row={{
+            kind: "calc",
+            num: "24.",
+            label: (
+              <>
+                1주당 가액 = <Frac top="21" bottom="23" />
+              </>
+            ),
+            emphasis: true,
+            values: Object.fromEntries(
+              cols.map((c) => [c.col, preview[c.col].perShareValue]),
+            ),
+          }}
+        />
+      </StatementTable>
+
+      {/* 0 하한 안내 — 이미지 7에는 없다. 서식은 사실대로(행 17 음수) 보이되 평가 단계 규정을 알린다. */}
+      {cols.map((c) =>
+        preview[c.col].netIncomeAmount < 0 ? (
+          <p
+            key={c.col}
+            className="rounded border border-amber-300 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+          >
+            <strong>{COL_LABEL[c.col]} 사업연도</strong> — 결손 입력. 1주당 순손익액이 음수이므로{" "}
+            <strong>0으로 보아</strong> 평가합니다. 「상속세 및 증여세법 시행령」 제56조 제1항
+            후단(「소득세법」 제99조 제1항 제4호 전단이 준용)
+            <LawArticleModal
+              legalBasis={STOCK.INH_DECREE_56_1_NET_INCOME_ZERO_FLOOR}
+              label="상증령 §56①"
+              className="ml-1"
+            />
+          </p>
+        ) : null,
+      )}
+    </div>
+  );
+}
 
 interface PostListingNetIncomeStatementProps {
   form: StockTransferFormData;
@@ -74,168 +270,25 @@ interface PostListingNetIncomeStatementProps {
   mode: "listing_only" | "full";
 }
 
-// [unlisted-direct-calc] Column 타입 확장 — EUTransfer/EUAcq 비상장 §165④ 컬럼 추가
-export type Column = "Listing" | "Acq" | "EUTransfer" | "EUAcq";
-const COL_LABEL: Record<Column, string> = {
-  Listing: "상장연도 직전",
-  Acq: "취득연도 직전 (상장 §165⑤)",
-  EUTransfer: "양도연도 직전 (비상장 §165④)",
-  EUAcq: "취득연도 직전 (비상장 §165④)",
-};
-
-function getField(form: StockTransferFormData, key: keyof StockTransferFormData): string {
-  return (form[key] as string) ?? "";
-}
-
-export function YearColumn({
+export function PostListingNetIncomeStatement({
   form,
   onChange,
-  col,
-}: {
-  form: StockTransferFormData;
-  onChange: (patch: Partial<StockTransferFormData>) => void;
-  col: Column;
-}): React.JSX.Element {
-  // 🔑 키 배열은 `col`에서만 파생된다 — 매 렌더 새 배열을 만들면 아래 `preview` useMemo의
-  //    deps가 매번 바뀌어 **메모가 사실상 무효**가 된다(값은 같고 참조만 달라서 조용히 그렇다).
-  const addKeys = useMemo(
-    () => [`niAddRow1${col}`, `niAddRow2${col}`, `niAddRow3${col}`, `niAddRow4${col}`] as const,
-    [col],
-  );
-  const subKeys = useMemo(
-    () =>
-      [
-        `niSubRow5${col}`, `niSubRow6${col}`, `niSubRow7${col}`, `niSubRow8${col}`,
-        `niSubRow9${col}`, `niSubRow10${col}`, `niSubRow11${col}`, `niSubRow12${col}`,
-        `niSubRow13${col}`, `niSubRow14${col}`, `niSubRow15${col}`, `niSubRow16${col}`,
-      ] as const,
-    [col],
-  );
-  const shareKey = `niShareCount${col}` as keyof StockTransferFormData;
-  const rateKey = `niDiscountRate${col}` as keyof StockTransferFormData;
+  mode,
+}: PostListingNetIncomeStatementProps) {
+  const cols: StatementColumnSpec[] = useMemo(() => {
+    const base: { col: Column; label: string }[] = [
+      { col: "Listing", label: `${COL_LABEL.Listing} 사업연도` },
+    ];
+    if (mode === "full") base.push({ col: "Acq", label: `${COL_LABEL.Acq} 사업연도` });
+    return buildStatementColumns(form, onChange, base);
+  }, [mode, form, onChange]);
 
-  // 미리보기 — H-02 import (이중 진실 차단)
-  const preview = useMemo(() => {
-    const addA = addKeys.map((k) => parseAmount(getField(form, k as keyof StockTransferFormData)));
-    const subB = subKeys.map((k) => parseAmount(getField(form, k as keyof StockTransferFormData)));
-    const shareCount = parseInt(getField(form, shareKey) || "0", 10);
-    const rateStr = getField(form, rateKey) || "10";
-    const discountRate = parseFloat(rateStr) / 100;
-    return calcNetIncomePerShare({ addA, subB, shareCount, discountRate });
-  }, [form, addKeys, subKeys, shareKey, rateKey]);
-
-  // Enter 키 → 다음 입력 셀로 포커스 이동 (컬럼 내 순회)
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== "Enter") return;
-    const target = e.target as HTMLElement;
-    if (target.tagName !== "INPUT") return;
-    const inputs = Array.from(
-      e.currentTarget.querySelectorAll<HTMLInputElement>("input:not([disabled])")
-    );
-    const idx = inputs.indexOf(target as HTMLInputElement);
-    if (idx === -1) return;
-    e.preventDefault();
-    const next = inputs[idx + 1];
-    if (next) next.focus();
-  };
-
-  return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2" onKeyDown={handleKeyDown} data-enter-nav="off">
-      <p className="text-xs font-semibold text-amber-800">{COL_LABEL[col]} 사업연도</p>
-
-      {/* 가산 4행 */}
-      <p className="text-micro font-semibold text-amber-700 mt-2">A. 가산항목</p>
-      {addKeys.map((k, i) => (
-        <FieldCard key={k} label={ADD_LABELS[i]}>
-          <CurrencyInput
-            label="" hideUnit allowNegative={ADD_SIGNED[i]}
-            value={getField(form, k as keyof StockTransferFormData)}
-            onChange={(v) => onChange({ [k]: v } as Partial<StockTransferFormData>)}
-            placeholder="원"
-          />
-        </FieldCard>
-      ))}
-
-      {/* 차감 12행 */}
-      <p className="text-micro font-semibold text-amber-700 mt-3">B. 차감항목</p>
-      {subKeys.map((k, i) => (
-        <FieldCard key={k} label={SUB_LABELS[i]}>
-          <CurrencyInput
-            label="" hideUnit
-            value={getField(form, k as keyof StockTransferFormData)}
-            onChange={(v) => onChange({ [k]: v } as Partial<StockTransferFormData>)}
-            placeholder="원"
-          />
-        </FieldCard>
-      ))}
-
-      {/* 보조 — 주식수 + 환원율 */}
-      <p className="text-micro font-semibold text-amber-700 mt-3">환산 보조</p>
-      <FieldCard label="20. 환산주식수" hint="사업연도말 주식 또는 환산주식수 (주)">
-        <CurrencyInput
-          label="" hideUnit
-          value={getField(form, shareKey)}
-          onChange={(v) => onChange({ [shareKey]: v } as Partial<StockTransferFormData>)}
-          placeholder="주"
-        />
-      </FieldCard>
-      <FieldCard
-        label="23. 환원율"
-        hint="상증법 시행규칙 §17 — 연 10% 고정 (소령 §165④1가목 → 소칙 §81② 위임). 고시값 아닌 시행규칙 정액. 다른 값 직접 입력 시 우선."
-      >
-        <DecimalInput
-          value={getField(form, rateKey) || "10"}
-          onChange={(v) => onChange({ [rateKey]: v } as Partial<StockTransferFormData>)}
-          placeholder="10"
-          unit="%"
-        />
-      </FieldCard>
-
-      {/* 미리보기 — 결손(행 17 음수)이어도 서식은 사실대로 보여준다.
-          ⚠️ `perShareValue !== 0`만 걸면 §56① 하한이 발동한 결손 법인에서 프리뷰가 통째로 사라진다. */}
-      {(preview.perShareValue !== 0 || preview.netIncomeAmount !== 0) && (
-        <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-800 space-y-0.5">
-          <p>17. 순손익액 = A − B = <strong>{preview.netIncomeAmount.toLocaleString()}</strong></p>
-          <p>
-            21. 1주당 순손익액 = <Frac top="17" bottom="20" /> ={" "}
-            <strong>{preview.perShareIncome.toLocaleString()}</strong>
-          </p>
-          <p>
-            24. 1주당 가액 = <Frac top="21" bottom="환원율" /> ={" "}
-            <strong className="text-amber-900">{preview.perShareValue.toLocaleString()}</strong>
-          </p>
-          {preview.netIncomeAmount < 0 && (
-            <p className="text-amber-700 pt-0.5 border-t border-amber-200">
-              결손 입력 — 1주당 순손익액이 음수이므로 <strong>0으로 보아</strong> 평가합니다.
-              「상속세 및 증여세법 시행령」 제56조 제1항 후단(「소득세법」 제99조 제1항 제4호 전단이 준용)
-              <LawArticleModal
-                legalBasis={STOCK.INH_DECREE_56_1_NET_INCOME_ZERO_FLOOR}
-                label="상증령 §56①"
-                className="ml-1"
-              />
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function PostListingNetIncomeStatement({ form, onChange, mode }: PostListingNetIncomeStatementProps) {
   return (
     <div className="space-y-3">
-      {/* 번호 배지 제거(2026-09-02) — 부모 카드가 ①②③ 섹션 번호를 쓰게 되면서
-          여기 «2»·«3»과 충돌했다. 이 번호는 폐기된 「PDF 3개 화면」 계열의 잔재로,
-          «1»에 해당하는 종가 표는 애초에 배지가 없어 계열이 이미 깨져 있었다. */}
-      <div className="flex items-center gap-2">
-        <p className="text-xs font-semibold text-amber-700">
-          순손익 계산서 (PDF 24행 — 소령 §165④1 가목 + 시행규칙 §81② → 상증령 §17)
-        </p>
-      </div>
-      <div className={`grid grid-cols-1 ${mode === "full" ? "md:grid-cols-2" : ""} gap-3`}>
-        <YearColumn form={form} onChange={onChange} col="Listing" />
-        {mode === "full" && <YearColumn form={form} onChange={onChange} col="Acq" />}
-      </div>
+      <p className="text-xs font-semibold text-amber-700">
+        순손익 계산서 (PDF 24행 — 소령 §165④1 가목 + 시행규칙 §81② → 상증령 §17)
+      </p>
+      <NetIncomeStatementTable form={form} onChange={onChange} cols={cols} />
     </div>
   );
 }

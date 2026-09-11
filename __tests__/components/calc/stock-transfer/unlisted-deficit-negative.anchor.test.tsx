@@ -20,7 +20,7 @@ import "fake-indexeddb/auto";
 import React from "react";
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
-import { YearColumn as NIYearColumn } from "@/components/calc/stock-transfer/PostListingNetIncomeStatement";
+import { NetIncomeStatementTable } from "@/components/calc/stock-transfer/PostListingNetIncomeStatement";
 import { PostListingValuationCard } from "@/components/calc/stock-transfer/PostListingValuationCard";
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
 import { MonthlyAccrual81Section } from "@/components/calc/stock-transfer/MonthlyAccrual81Section";
@@ -41,10 +41,33 @@ function inputByLabel(re: RegExp): HTMLInputElement {
     re.test((l.textContent ?? "").trim()),
   );
   expect(hits, `라벨 ${re} 매칭 1건이어야 한다`).toHaveLength(1);
+  // ⚠️ **`?? parentElement` fallback은 «의도된 설계»다 — 지우지 말 것.**
+  //    위 주석이 말하는 두 구조 중 **둘째**(CurrencyInput 자체 라벨: `<div class="space-y-1.5">`
+  //    안에 label과 input이 «형제»)를 잡는 경로가 이것이다. FieldCard 경로만 남기면
+  //    `EstimatedUnlistedBlock`·`FaceValueBlock` 계열 9건이 즉시 실패한다(2026-09-11 실측).
+  //
+  //    🔑 **mutation probe P-1의 해석을 정정한다.** `data-slot="field-card"`를 무력화해도 이
+  //    파일이 통과한 것은 「단언이 무의미해서」가 아니라 **둘째 경로로 여전히 올바른 input을
+  //    찾았기** 때문이다. P-1이 증명한 것은 「이 파일이 그 속성에 의존하지 않는다」이지
+  //    「지키는 것이 없다」가 아니었다. [[feedback_deliberate_design_looks_like_the_defect]]
   const scope = hits[0].closest('[data-slot="field-card"]') ?? hits[0].parentElement!;
   const input = scope.querySelector("input");
   expect(input, `라벨 ${re} 의 입력칸`).not.toBeNull();
   return input as HTMLInputElement;
+}
+
+/**
+ * 계산서 «표» 입력칸 — `data-testid` 축으로 찾는다.
+ *
+ * 표 전환(2026-09-11) 후 행 라벨은 `<th>` 안 텍스트이고 `<label>` 태그가 아니다
+ * (`CurrencyInput hideLabel`은 aria-label만 남긴다). 라벨 텍스트로는 입력칸에 닿을 수 없다.
+ * `CurrencyInput`이 `data-testid`를 내부 input에 그대로 흘려 주므로 그것이 정본 축이다.
+ * 계획서 §4.5.
+ */
+function cellInput(testId: string): HTMLInputElement {
+  const el = document.querySelector<HTMLInputElement>(`input[data-testid="${testId}"]`);
+  expect(el, `셀 ${testId} 의 입력칸`).not.toBeNull();
+  return el as HTMLInputElement;
 }
 
 /** 상태를 들고 있는 하네스 — 입력이 store에 반영되어야 다음 단언이 의미를 갖는다. */
@@ -67,9 +90,9 @@ function useFormHarness(initial: Partial<StockTransferFormData> = {}) {
 describe("DN-1~5: 완전재현 순손익 계산서 행 1 (소령 §165④1 가목)", () => {
   it("DN-1: 행 1 「각 사업연도 소득금액」에 음수 입력 → 부호 보존", () => {
     const { Harness, patches } = useFormHarness();
-    render(<Harness>{(form, onChange) => <NIYearColumn form={form} onChange={onChange} col="Listing" />}</Harness>);
+    render(<Harness>{(form, onChange) => <NetIncomeStatementTable form={form} onChange={onChange} cols={[{ col: "Listing", label: "Listing" }]} />}</Harness>);
 
-    const row1 = inputByLabel(/^1\. 각 사업연도 소득금액$/);
+    const row1 = cellInput("ni-niAddRow1-Listing");
     fireEvent.focus(row1);
     fireEvent.change(row1, { target: { value: "-500000000" } });
 
@@ -78,9 +101,9 @@ describe("DN-1~5: 완전재현 순손익 계산서 행 1 (소령 §165④1 가�
 
   it("DN-2: 가산 행 2(환급금 이자)는 종전대로 부호 제거 — 가산 성질상 비음수", () => {
     const { Harness, patches } = useFormHarness();
-    render(<Harness>{(form, onChange) => <NIYearColumn form={form} onChange={onChange} col="Listing" />}</Harness>);
+    render(<Harness>{(form, onChange) => <NetIncomeStatementTable form={form} onChange={onChange} cols={[{ col: "Listing", label: "Listing" }]} />}</Harness>);
 
-    const row2 = inputByLabel(/^2\. 국세·지방세 과오납 환급금 이자$/);
+    const row2 = cellInput("ni-niAddRow2-Listing");
     fireEvent.focus(row2);
     fireEvent.change(row2, { target: { value: "-100" } });
 
@@ -89,9 +112,9 @@ describe("DN-1~5: 완전재현 순손익 계산서 행 1 (소령 §165④1 가�
 
   it("DN-3: 차감 행 5(벌금·과료)는 종전대로 부호 제거", () => {
     const { Harness, patches } = useFormHarness();
-    render(<Harness>{(form, onChange) => <NIYearColumn form={form} onChange={onChange} col="Listing" />}</Harness>);
+    render(<Harness>{(form, onChange) => <NetIncomeStatementTable form={form} onChange={onChange} cols={[{ col: "Listing", label: "Listing" }]} />}</Harness>);
 
-    const row5 = inputByLabel(/^5\. 벌금·과료·과태료·가산금·체납처분비$/);
+    const row5 = cellInput("ni-niSubRow5-Listing");
     fireEvent.focus(row5);
     fireEvent.change(row5, { target: { value: "-100" } });
 
@@ -100,9 +123,9 @@ describe("DN-1~5: 완전재현 순손익 계산서 행 1 (소령 §165④1 가�
 
   it("DN-4: §165④ 비상장 축(col=EUTransfer)에도 같은 수정이 파급된다", () => {
     const { Harness, patches } = useFormHarness();
-    render(<Harness>{(form, onChange) => <NIYearColumn form={form} onChange={onChange} col="EUTransfer" />}</Harness>);
+    render(<Harness>{(form, onChange) => <NetIncomeStatementTable form={form} onChange={onChange} cols={[{ col: "EUTransfer", label: "EUTransfer" }]} />}</Harness>);
 
-    const row1 = inputByLabel(/^1\. 각 사업연도 소득금액$/);
+    const row1 = cellInput("ni-niAddRow1-EUTransfer");
     fireEvent.focus(row1);
     fireEvent.change(row1, { target: { value: "-500000000" } });
 
@@ -113,14 +136,17 @@ describe("DN-1~5: 완전재현 순손익 계산서 행 1 (소령 §165④1 가�
     // ⚠️ store를 직접 시드하면 위젯을 우회해 P-1(부호 제거 복원)이 이 anchor를 못 지킨다.
     //    반드시 «입력을 거쳐» 프리뷰까지 도달하는지를 본다.
     const { Harness } = useFormHarness({ niShareCountListing: "100000" });
-    render(<Harness>{(form, onChange) => <NIYearColumn form={form} onChange={onChange} col="Listing" />}</Harness>);
+    render(<Harness>{(form, onChange) => <NetIncomeStatementTable form={form} onChange={onChange} cols={[{ col: "Listing", label: "Listing" }]} />}</Harness>);
 
-    const row1 = inputByLabel(/^1\. 각 사업연도 소득금액$/);
+    const row1 = cellInput("ni-niAddRow1-Listing");
     fireEvent.focus(row1);
     fireEvent.change(row1, { target: { value: "-500000000" } });
 
     // 17행 = A − B = -500,000,000 / 21행 = -5,000 / 24행 = -50,000
-    expect(screen.getByText(/17\. 순손익액/).textContent).toContain("-500,000,000");
+    //
+    // ⚠️ 표 전환 후 행 번호("17.")와 라벨은 별도 `<span>`이고 **값은 별도 `<td>`**다.
+    //    라벨 텍스트의 `.textContent`에는 값이 들어 있지 않다 — 값 셀을 직접 본다.
+    expect(screen.getByTestId("ni-17-calc-Listing").textContent).toContain("-500,000,000");
   });
 });
 
@@ -226,7 +252,7 @@ describe("LB-2: 하한 안내 문구가 «어느 법령인지» 말한다", () =
       niAddRow1Listing: "-500000000",
       niShareCountListing: "100000",
     });
-    render(<Harness>{(form, onChange) => <NIYearColumn form={form} onChange={onChange} col="Listing" />}</Harness>);
+    render(<Harness>{(form, onChange) => <NetIncomeStatementTable form={form} onChange={onChange} cols={[{ col: "Listing", label: "Listing" }]} />}</Harness>);
     // 「§56①」만 쓰면 어느 법령의 제56조인지 알 수 없다
     // [[feedback_law_citation_must_name_statute_and_tier]]
     const notice = screen.getByText(/1주당 순손익액이 음수이므로/);

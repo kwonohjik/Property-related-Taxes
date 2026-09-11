@@ -20,7 +20,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
 import { FaceValueBlock } from "@/components/calc/stock-transfer/FaceValueBlock";
 import { PostListingValuationCard } from "@/components/calc/stock-transfer/PostListingValuationCard";
-import { YearColumn as NAYearColumn } from "@/components/calc/stock-transfer/PostListingNetAssetStatement";
+import { NetAssetStatementTable } from "@/components/calc/stock-transfer/PostListingNetAssetStatement";
 import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import {
   createInitialStockFormData,
@@ -53,13 +53,20 @@ function shownStdPrice(re: RegExp): number {
   return Number((m as string[])[m!.length - 1].replace(/,/g, ""));
 }
 
-function inputByLabel(re: RegExp): HTMLInputElement {
-  const hits = Array.from(document.querySelectorAll("label")).filter((l) =>
-    re.test((l.textContent ?? "").trim()),
-  );
-  expect(hits, `라벨 ${re} 매칭 1건이어야 한다`).toHaveLength(1);
-  const scope = hits[0].closest('[data-slot="field-card"]') ?? hits[0].parentElement!;
-  return scope.querySelector("input") as HTMLInputElement;
+/*
+ * (`inputByLabel` 제거 — 2026-09-11) NA-1~3이 표 셀렉터(`cellInput`)로 옮겨가면서 이 파일의
+ * 유일한 사용처가 사라졌다. 라벨 축 헬퍼가 필요한 파일은
+ * `unlisted-deficit-negative.anchor.test.tsx`에 그대로 있다.
+ */
+
+/**
+ * 계산서 «표» 입력칸 — `data-testid` 축(계획서 §4.5).
+ * 표에는 `<label>` 태그가 없다(`hideLabel`은 aria-label만 남긴다).
+ */
+function cellInput(testId: string): HTMLInputElement {
+  const el = document.querySelector<HTMLInputElement>(`input[data-testid="${testId}"]`);
+  expect(el, `셀 ${testId} 의 입력칸`).not.toBeNull();
+  return el as HTMLInputElement;
 }
 
 const EUB_STD = /양도기준시가 \(1주당\)/;
@@ -218,7 +225,7 @@ describe("NA-1~3: 순자산가액 계산서 △ 조정행 (상증령 §55① · 
       <Stateful
         initial={{}}
         onPatch={onPatch}
-        render={(f, o) => <NAYearColumn form={f} onChange={o} col="Listing" />}
+        render={(f, o) => <NetAssetStatementTable form={f} onChange={o} cols={[{ col: "Listing", label: "Listing" }]} />}
       />,
     );
   }
@@ -226,7 +233,7 @@ describe("NA-1~3: 순자산가액 계산서 △ 조정행 (상증령 §55① · 
   it("NA-1: 행 2 평가차액 — 평가차손(음수) 입력 보존", () => {
     const patches: Partial<StockTransferFormData>[] = [];
     renderNA((p) => patches.push(p));
-    const el = inputByLabel(/^2\. 평가차액$/);
+    const el = cellInput("na-naAssetAddRow2-Listing");
     fireEvent.focus(el);
     fireEvent.change(el, { target: { value: "-3000000" } });
     expect(patches.at(-1)).toEqual({ naAssetAddRow2Listing: "-3000000" });
@@ -235,7 +242,7 @@ describe("NA-1~3: 순자산가액 계산서 △ 조정행 (상증령 §55① · 
   it("NA-2: 행 3 법인세법상 유보금액 — △유보(음수) 입력 보존", () => {
     const patches: Partial<StockTransferFormData>[] = [];
     renderNA((p) => patches.push(p));
-    const el = inputByLabel(/^3\. 법인세법상 유보금액$/);
+    const el = cellInput("na-naAssetAddRow3-Listing");
     fireEvent.focus(el);
     fireEvent.change(el, { target: { value: "-1000000" } });
     expect(patches.at(-1)).toEqual({ naAssetAddRow3Listing: "-1000000" });
@@ -244,7 +251,7 @@ describe("NA-1~3: 순자산가액 계산서 △ 조정행 (상증령 §55① · 
   it("NA-3: 행 4 유상증자는 종전대로 부호 제거 — 성질상 비음수", () => {
     const patches: Partial<StockTransferFormData>[] = [];
     renderNA((p) => patches.push(p));
-    const el = inputByLabel(/^4\. 유상증자 등$/);
+    const el = cellInput("na-naAssetAddRow4-Listing");
     fireEvent.focus(el);
     fireEvent.change(el, { target: { value: "-1000000" } });
     expect(patches.at(-1)).toEqual({ naAssetAddRow4Listing: "1000000" });
@@ -257,16 +264,23 @@ describe("NA-1~3: 순자산가액 계산서 △ 조정행 (상증령 §55① · 
 
 describe("LB-1: 순손익 계산서 행 3 라벨 (상증령 §56④1 나목)", () => {
   it("「수입배당금 중 익금불산입한 금액」 — 「수익」·「입금」 오타 아님", async () => {
-    const { YearColumn } = await import(
+    const { NetIncomeStatementTable } = await import(
       "@/components/calc/stock-transfer/PostListingNetIncomeStatement"
     );
     render(
       <Stateful
         initial={{}}
-        render={(f, o) => <YearColumn form={f} onChange={o} col="Listing" />}
+        render={(f, o) => (
+          <NetIncomeStatementTable
+            form={f}
+            onChange={o}
+            cols={[{ col: "Listing", label: "Listing" }]}
+          />
+        )}
       />,
     );
-    expect(screen.getByText("3. 수입배당금 중 익금불산입한 금액")).toBeInTheDocument();
+    // 표 전환 후 행 번호("3.")는 `font-mono` 정렬을 위해 별도 `<span>`이다 — 축은 라벨.
+    expect(screen.getByText("수입배당금 중 익금불산입한 금액")).toBeInTheDocument();
     expect(screen.queryByText(/수익배당금|입금불산입/)).toBeNull();
   });
 });

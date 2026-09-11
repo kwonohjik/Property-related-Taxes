@@ -319,6 +319,19 @@ export interface StockTransferFormData {
   niShareCountAcq: string;
   niDiscountRateAcq: string;
 
+  /**
+   * 계산서 열 헤더의 «사업연도» — 이미지 7 원본 화면의 `2008` / `2003`.
+   *
+   * 🔑 **표시 전용이다.** 평가 산식에 쓰이지 않고 엔진·API를 거치지 않는다
+   *    (결과 화면에 계산서가 재현되지 않음 — 계획서 §3.2 실측).
+   *    ⇒ 동기화 지점은 ①폼타입 ②initial ③normalize ⑤UI **4곳뿐**이다.
+   *
+   * 🔑 **순손익·순자산이 «한 벌»을 공유한다** — 「상장연도 직전 사업연도」는 두 계산서가
+   *    같은 연도다. ni/na로 쪼개면 두 화면이 조용히 갈라진다. 계획서 §5.1.
+   */
+  fiscalYearListing: string;
+  fiscalYearAcq: string;
+
   // 순자산 — 상장연도 (19 필드, PDF 행 1·2~5·6~7·8·9~14·15~17·19 + 보조 1)
   naAssetTotalRow1Listing: string;
   naAssetAddRow2Listing: string; naAssetAddRow3Listing: string; naAssetAddRow4Listing: string; naAssetAddRow5Listing: string;
@@ -485,6 +498,10 @@ export interface StockTransferFormData {
   niSubRow13EUAcq: string; niSubRow14EUAcq: string; niSubRow15EUAcq: string; niSubRow16EUAcq: string;
   niShareCountEUAcq: string;
   niDiscountRateEUAcq: string;
+
+  /** 비상장 §165④ 계산서 열 헤더의 사업연도 — 표시 전용(위 `fiscalYearListing` 주석 참조) */
+  fiscalYearEUTransfer: string;
+  fiscalYearEUAcq: string;
 
   // NA — 양도연도 (EUTransfer) 19 필드
   naAssetTotalRow1EUTransfer: string;

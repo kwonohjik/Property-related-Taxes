@@ -203,17 +203,28 @@ export function calcClosingAvgWithEvent(closing: {
  */
 export function calcNetIncomePerShare(
   year: NIYear,
-): { netIncomeAmount: number; perShareIncome: number; perShareValue: number } {
+): {
+  netIncomeAmount: number;
+  perShareIncome: number;
+  perShareValue: number;
+  /** 행 (A) 가산할금액 합계 (1+2+3+4) — 서식 표시용 echo. 산식 무관여. */
+  addTotalA: number;
+  /** 행 (B) 공제할금액 합계 (5 + … + 16) — 서식 표시용 echo. 산식 무관여. */
+  subTotalB: number;
+} {
   const addA = (year.addA ?? []).reduce((s, v) => s + (v || 0), 0);
   const subB = (year.subB ?? []).reduce((s, v) => s + (v || 0), 0);
   const netIncomeAmount = addA - subB;
   const shareCount = year.shareCount || 0;
-  if (shareCount <= 0) return { netIncomeAmount, perShareIncome: 0, perShareValue: 0 };
+  // 🔑 echo 2필드는 **모든 반환 경로에** 실려야 한다 — shareCount 0인 초기 입력 상태가
+  //    바로 사용자가 (A)·(B) 소계를 보며 숫자를 채워 넣는 구간이다.
+  const echo = { addTotalA: addA, subTotalB: subB };
+  if (shareCount <= 0) return { netIncomeAmount, perShareIncome: 0, perShareValue: 0, ...echo };
   // 「상속세 및 증여세법 시행령」 제56조 제1항 후단 준용 — 음수면 영으로 한다 (행 21)
   const perShareIncome = Math.max(0, Math.floor(netIncomeAmount / shareCount));
   const discountRate = year.discountRate > 0 ? year.discountRate : 0.10; // 시행규칙 §81② → 상증령 §17
   const perShareValue = Math.floor(perShareIncome / discountRate);
-  return { netIncomeAmount, perShareIncome, perShareValue };
+  return { netIncomeAmount, perShareIncome, perShareValue, ...echo };
 }
 
 /**
@@ -253,6 +264,10 @@ export function calcNetAssetPerShare(
   perShareAsset: number;
   netAssetBeforeGoodwillRaw: number;
   zeroFloorApplied: boolean;
+  /** 행 (가) 자산총계 — 서식 표시용 echo. 산식 무관여. */
+  assetSubtotal: number;
+  /** 행 (나) 부채총계 — 서식 표시용 echo. 산식 무관여. */
+  liabSubtotal: number;
 } {
   const assetAdd = (year.assetAdd ?? []).reduce((s, v) => s + (v || 0), 0);
   const assetSub = (year.assetSub ?? []).reduce((s, v) => s + (v || 0), 0);
@@ -267,7 +282,14 @@ export function calcNetAssetPerShare(
   const beforeGoodwill = zeroFloorApplied ? 0 : netAssetBeforeGoodwillRaw;
   const netAssetAmount = beforeGoodwill + (year.goodwillRow19 || 0); // 행 20
   const shareCount = year.shareCount || 0;
-  const base = { netAssetAmount, netAssetBeforeGoodwillRaw, zeroFloorApplied };
+  // 🔑 echo 2필드는 **모든 반환 경로에** 실린다 (shareCount 0 포함) — 소계를 보며 채우는 구간이다.
+  const base = {
+    netAssetAmount,
+    netAssetBeforeGoodwillRaw,
+    zeroFloorApplied,
+    assetSubtotal,
+    liabSubtotal,
+  };
   if (shareCount <= 0) return { ...base, perShareAsset: 0 };
   return { ...base, perShareAsset: Math.floor(netAssetAmount / shareCount) };
 }

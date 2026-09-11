@@ -4,12 +4,20 @@
  * EstimatedUnlistedNetAssetStatement — 비상장 §165④ 순자산가액 계산서 thin wrapper.
  *
  * [stock-transfer-unlisted-direct-calc] ui.design §4-B
- * PostListing YearColumn(상증령 §55 동일 산식) 재사용 — col="EUTransfer" / "EUAcq".
+ * PostListing 표 본체(상증령 §55 동일 산식) 재사용 — cols = EUTransfer / EUAcq.
  *
  * isNetAssetOnly === true 시에도 NA는 항상 노출 (순자산 단독 평가 자체가 NA 사용).
+ *
+ * 🔑 종전에는 `YearColumn`을 열마다 하나씩 렌더했다 — 계획서 §3.4.
  */
 
-import { YearColumn } from "./PostListingNetAssetStatement";
+import { useMemo } from "react";
+import { NetAssetStatementTable, COL_LABEL } from "./PostListingNetAssetStatement";
+import type {
+  StatementColumn,
+  StatementColumnSpec,
+} from "./statement-table/statement-table-types";
+import { buildStatementColumns } from "./statement-table/build-columns";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 
@@ -21,6 +29,14 @@ interface Props {
 export function EstimatedUnlistedNetAssetStatement({ form, onChange }: Props) {
   // [사례 49] acqFaceValueOnly 시 EUAcq 컬럼만 비노출
   const hideAcqColumn = form.acqFaceValueOnly === true;
+  const cols: StatementColumnSpec[] = useMemo(() => {
+    const base: { col: StatementColumn; label: string }[] = [
+      { col: "EUTransfer", label: `${COL_LABEL.EUTransfer} 사업연도` },
+    ];
+    if (!hideAcqColumn) base.push({ col: "EUAcq", label: `${COL_LABEL.EUAcq} 사업연도` });
+    return buildStatementColumns(form, onChange, base);
+  }, [hideAcqColumn, form, onChange]);
+
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/30 p-4 space-y-3">
       <div className="flex items-center gap-2">
@@ -42,10 +58,7 @@ export function EstimatedUnlistedNetAssetStatement({ form, onChange }: Props) {
           ⓘ {UNLISTED_MESSAGES.ACQ_FACE_VALUE_NOTICE} — 취득연도 NA 입력 비노출
         </p>
       )}
-      <div className={`grid gap-3 ${hideAcqColumn ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
-        <YearColumn form={form} onChange={onChange} col="EUTransfer" />
-        {!hideAcqColumn && <YearColumn form={form} onChange={onChange} col="EUAcq" />}
-      </div>
+      <NetAssetStatementTable form={form} onChange={onChange} cols={cols} />
     </div>
   );
 }
