@@ -9,6 +9,22 @@
  *   - undefined: legacy 모드 (하단 폼 미렌더)
  *   - 객체: 활성화 (요건 입력)
  *
+ * ## 🔴 2026-09-11 — 배선이 «빠져 있었다»
+ *
+ * 이 섹션은 `step4-5.tsx` 에 마운트돼 있었는데(`55e22d66`), 그 파일이 「orphan 삭제」되면서
+ * (`a67b2871`) 화면에서 함께 사라졌다. 제거가 의도였다는 근거는 없다 — 그 커밋의 목적은
+ * 자동채움 UI 였고 영농 요건 입력을 없앤다는 언급이 없다.
+ *
+ * 아래가 전부 살아 있었는데 **⑤(UI)만 없었다**:
+ *   ① `FormState.farming?: FarmingInheritanceInput` (shared.ts)
+ *   ③ normalize 의 고아 heirId 정리
+ *   ④ buildInput 의 `farming: form.farming`
+ *   ⑦ 결과뷰가 「Step4에서 영농상속공제 요건 입력을 활성화하면」이라고 **안내**
+ *
+ * 즉 `form.farming` 은 영원히 `undefined` 였고, 결과 화면은 **존재하지 않는 UI 를 가리키고**
+ * 있었다 ([[feedback_ui_gate_removes_sole_input_path]]). 지금은 `Step4Deductions` 의 영농
+ * 블록에 붙어 있다 — 옮기거나 지울 때 그 결과뷰 안내 문구도 함께 볼 것.
+ *
  * 정책:
  *   - feedback_three_state_optional_mode_toggle (3-state)
  *   - feedback_dialog_data_discard_confirm (OFF 시 데이터 폐기 확인)
@@ -229,8 +245,15 @@ export function FarmingEligibilitySection({
         onCheckedChange={(v) => (v ? handleToggleOn() : handleToggleOff())}
       />
 
+      {/*
+        §18의3 배지는 **여기 두지 않는다** (2026-09-11). 이 섹션이 붙는 Step4 영농 블록이
+        「영농상속재산가액」 칸 옆에 이미 같은 배지를 달고 있어(그룹 A 의 공통 패턴 —
+        금융 §22 · 영농 §18의3 · 가업 §18의2), 두 벌이 두 줄 간격으로 나란히 떴다.
+        `inheritance-law-article-badges` LAW-1 이 strict mode violation 으로 잡아냈다.
+
+        시행령 §16(요건)은 **이 섹션에만 있는 축**이라 남긴다.
+      */}
       <div className="flex flex-wrap gap-1.5 px-1">
-        <LawArticleModal legalBasis="상증법 §18의3" label="§18의3 영농상속공제" />
         <LawArticleModal legalBasis="상증령 §16" label="시행령 §16 요건" />
       </div>
 

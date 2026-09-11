@@ -402,8 +402,10 @@ test("조정률 — 기본 직접입력 / 건물 특성 라디오 클릭 시 모
 
 test("계산기 → 홈으로 네비게이션 버튼", async ({ page }) => {
   await page.goto(URL);
-  page.on("dialog", (d) => d.accept()); // 이동 확인 다이얼로그 수락
+  // ⚠️ native `confirm()` 이 아니다 (2026-09-11) — `HomeButton` 이 `ConfirmDialog` 로 옮겼다.
+  //    종전의 `page.on("dialog", d => d.accept())` 는 이제 아무것도 잡지 못한다.
   await page.getByRole("button", { name: "홈으로 이동" }).click();
+  await page.getByTestId("confirm-dialog-confirm").click();
   await expect(page).not.toHaveURL(/building-standard-price/);
 });
 
