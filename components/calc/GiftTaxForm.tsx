@@ -19,6 +19,7 @@ import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import {
+  isGiftFormEmpty,
   runGiftManualSave,
   formatGiftSaveMessage,
   buildGiftAutoSaveToast,
@@ -306,6 +307,15 @@ export function GiftTaxForm() {
       clientId: activeClientId ?? null,
     });
 
+  /**
+   * 🔴 IG-154: 폼 화면의 저장 버튼은 종전에 `result`가 없으면 비활성이었는데, 바로 위 `if (result)`
+   * 조기 반환 때문에 이 아래에서 `result`는 **항상 null**이다 ⇒ 두 버튼 모두 구조적으로
+   * 영원히 비활성인 죽은 컨트롤이었다. 형제인 상속세 마법사(InheritanceTaxForm)는 같은 자리에서
+   * `disabled={isEmpty}`로 입력 기반 임시 저장을 허용한다. 저장 핸들러도 결과 없는 폼을
+   * draft로 저장하도록 되어 있다(`runGiftManualSave` — 빈 폼만 EMPTY_FORM sentinel).
+   */
+  const isFormEmpty = isGiftFormEmpty(form as unknown as Parameters<typeof isGiftFormEmpty>[0]);
+
   // 폼 화면용 wrapper — 토스트 표시 (recordCount를 넘겨 190건 경고 라인 부착)
   const handleManualSaveForForm = async () => {
     setSaveMessage(null);
@@ -371,8 +381,8 @@ export function GiftTaxForm() {
         )}
         <SaveButton
           onSave={handleManualSaveForForm}
-          disabled={!result}
-          disabledReason="결과를 먼저 계산하시면 자동으로 이력에 저장됩니다."
+          disabled={isFormEmpty}
+          disabledReason="한 가지 이상 입력 후 저장해주세요."
         />
         <ResetButton
           onReset={() => {
@@ -412,8 +422,8 @@ export function GiftTaxForm() {
           <SaveButton
             variant="primary"
             onSave={handleManualSaveForForm}
-            disabled={!result}
-            disabledReason="결과를 먼저 계산하시면 자동으로 이력에 저장됩니다."
+            disabled={isFormEmpty}
+            disabledReason="한 가지 이상 입력 후 저장해주세요."
           />
           {isLastStep ? (
             <CtaButton onClick={handleNext} disabled={loading}>

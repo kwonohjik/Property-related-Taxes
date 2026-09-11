@@ -106,9 +106,20 @@ function CreditChip({
 export function GiftCreditChecklist({
   form,
   set,
+  hideSimultaneous = false,
 }: {
   form: FormState;
   set: (p: Partial<FormState>) => void;
+  /**
+   * 🔴 IG-024: 동시증여 서브카드 안에서 이 체크리스트를 재사용할 때 켠다.
+   *
+   * 서브폼 타입은 `GiftSubFormState = Omit<FormState, "simultaneousGiftForms">`라 중첩 자체가
+   * 계약 위반인데, 호출부의 `as FormState` 캐스트가 그 불일치를 TypeScript에서 가렸다.
+   * 중첩으로 입력한 증여 건은 ④ API 변환이 `simultaneousGiftForms: undefined`로 명시적으로
+   * 덮어 엔진에 도달하지 못하고(`gift-api`의 `buildGiftTaxInput`), ⑧validate도 최상위 배열만
+   * 순회해 경고 한 줄 없이 사라진다 ⇒ 입력 경로 자체를 닫는다.
+   */
+  hideSimultaneous?: boolean;
 }) {
   const [openSet, setOpenSet] = useState<Set<GiftCreditKey>>(new Set());
 
@@ -426,6 +437,7 @@ export function GiftCreditChecklist({
       )}
 
       {/* 동시증여 — 완전 입력 방식 (D-6: 간이 폐기, 세액 전체 계산) */}
+      {!hideSimultaneous && (
       <ToggleCard
         tone="sky"
         title="같은 날 다른 분으로부터도 받으셨나요? (동시증여 — 세액 전체 계산)"
@@ -483,6 +495,7 @@ export function GiftCreditChecklist({
           </button>
         </div>
       </ToggleCard>
+      )}
 
       {/* 감정평가수수료 공제 */}
       {active("appraisalFee") && (

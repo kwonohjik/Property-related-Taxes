@@ -39,10 +39,11 @@ import type {
   InheritanceDeductionInput,
   InheritanceTaxCreditInput,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
-import {
-  callInheritanceTaxAPI,
-  formatInheritanceApiError as formatApiError,
-} from "@/lib/calc/inheritance-api";
+// 🔴 IG-157: 종전엔 lib/calc/inheritance-api의 «일반» 포매터를 별칭 import해 실제 오류 표시에
+// 썼고(Zod path를 `iss.path.join(".")` 원문 그대로 출력), 아래에서 별도로 import하는 상속세
+// «특화» 포매터는 어디서도 호출되지 않았다(eslint는 warning이라 게이트를 통과했다).
+// 형제인 증여세는 `gift-api-error-format`을 실제로 호출한다 — 상속세만 관례에서 이탈해 있었다.
+import { callInheritanceTaxAPI } from "@/lib/calc/inheritance-api";
 import {
   validateInheritanceTaxInput,
   warnCohabitHouseRightType,
@@ -409,7 +410,12 @@ export function InheritanceTaxForm() {
           ? parseAmount(form.generationSkipAssetAmount) || undefined
           : undefined,
       // 감정평가수수료 공제 (§25①2호·시행령 §20의3)
-      appraisalFee: buildAppraisalFee(form),
+      // 🔴 IG-038: 감정평가수수료는 **수동 항목**이다(AUTO_KEYS 4개에 없다). 게이트 없이 폼 값을
+      // 그대로 읽으면, 칩을 해제해 ⑤UI 섹션이 숨고 칩이 「입력값이 있으나 계산에서 제외됩니다」를
+      // 표시하는데도 실제로는 과세표준에서 공제돼 화면 안내와 계산이 정반대가 된다.
+      // 같은 파일의 다른 수동 항목(legatee·priorGiftDeduction·disasterAdjust·foreignTax·
+      // shortTermReinherit)과 동일하게 isManualItemActive로 게이트한다.
+      appraisalFee: isManualItemActive(form, "appraisalFee") ? buildAppraisalFee(form) : undefined,
       // 🔴 G-07 B1 — 신고불성실가산세 (「국세기본법」 §47의2·§47의3).
       //   게이팅은 증여와 공용 leaf. 여기서 넘기는 것은 **상속 고유의 법정신고기한**뿐 —
       //   §67① 상속개시일이 속한 달의 말일 + 6개월, §67④ 비거주자 9개월.
@@ -446,7 +452,7 @@ export function InheritanceTaxForm() {
       if (!res.ok || !("success" in res.data) || !res.data.success) {
         setError(
           "error" in res.data || "issues" in res.data
-            ? formatApiError(res.data)
+            ? formatInheritanceApiError(res.data)
             : "계산 요청 처리에 실패했습니다.",
         );
         return;

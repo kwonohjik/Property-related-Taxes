@@ -411,6 +411,16 @@ export function StockBurdenedDebtSection({
                 </ToneCard>
               )}
 
+              {/* ⑤′ 중소기업 여부 (§104①11) — 대주주·비대주주 양쪽 세율 분기에 걸린다 */}
+              <ToggleCard
+                tone="amber"
+                title="중소기업의 주식등 (§104①11)"
+                description="비대주주는 중소 10% / 그 밖 20%(나목), 대주주는 1년 미만 보유 시 중소가 아니면 30%(가목1)로 갈립니다."
+                checked={bgt?.isSmallMediumEnterprise === true}
+                onCheckedChange={(v) => setBgt({ isSmallMediumEnterprise: v || undefined })}
+                data-testid="bg-stock-sme-toggle"
+              />
+
               {/* ⑥ 대주주 판정 실입력 (§157①·§167의8①2호) */}
               {isJudgeable && (
                 <ToneCard

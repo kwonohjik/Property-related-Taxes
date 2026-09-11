@@ -8,7 +8,6 @@
  *     ·spouseLegalShareOverride·disasterLossDeduction·familyBusinessDirectAmount
  *     ·cohabitDirectAmount·isHeir·isGenerationSkipBeneficiary·deemedCategory
  *     ·isFamilyBusinessAsset 등) 모두 명시.
- *   - formatInheritanceApiError(): API 오류 메시지 한국어 포맷.
  *
  * 종합사례 PDF 100% 재현 — 신규 필드 누락 방지 (14지점 ⑬ TypeScript 미감지 침묵 stripping 차단).
  */
@@ -54,7 +53,7 @@ export type InheritanceTaxApiResponse =
  *
  * @example
  * const res = await callInheritanceTaxAPI(buildInput(form));
- * if (!res.ok) setError(formatInheritanceApiError(res.data));
+ * if (!res.ok) setError(formatInheritanceApiError(res.data)); // ← InheritanceTaxFormErrors
  * else setResult(res.data.result);
  */
 export async function callInheritanceTaxAPI(
@@ -108,21 +107,10 @@ export async function callInheritanceTaxAPI(
 // ────────────────────────────────────────────────────
 // 오류 메시지 포맷
 // ────────────────────────────────────────────────────
-
-export function formatInheritanceApiError(
-  data: InheritanceTaxApiError,
-): string {
-  if (data.issues && data.issues.length > 0) {
-    const messages = data.issues
-      .slice(0, 5)
-      .map((iss) => {
-        const pathStr = iss.path.join(".") || "(루트)";
-        return `${pathStr}: ${iss.message}`;
-      })
-      .join("\n");
-    return `입력값이 올바르지 않습니다:\n${messages}${
-      data.issues.length > 5 ? `\n... 외 ${data.issues.length - 5}건` : ""
-    }`;
-  }
-  return data.error ?? "계산 요청 처리에 실패했습니다.";
-}
+//
+// 🔴 IG-157: 여기 있던 일반 포매터(`iss.path.join(".")` 원문 출력)는 제거했다.
+// 유일한 호출부였던 `InheritanceTaxForm`이 상속세 «특화» 포매터
+// (`components/calc/InheritanceTaxFormErrors.ts`의 `formatInheritanceApiError` —
+// 한국어 라벨 치환 + `n번` 순번)로 넘어갔기 때문이다. 증여세도 같은 관례를 따른다
+// (`components/calc/gift/gift-api-error-format.ts` ← `GiftTaxForm`).
+// 남겨 두면 「내부 식별자 화면 노출 금지」를 깨는 경로가 다시 붙을 수 있다.

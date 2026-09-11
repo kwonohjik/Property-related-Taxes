@@ -112,6 +112,12 @@ export function FarmingCategorySection({
             : "농지·초지·산림지·어선·법인 영농주식 등 영농상속재산인 경우 체크"
         }
         checked={isActive}
+        // 🔴 IG-107: 주식 자산은 영농·가업 두 섹션이 나란히 렌더되는데(asset-toggle-visibility가
+        // 둘 다 "default"), 두 컴포넌트가 서로를 몰라 동시에 켤 수 있었다. 그런데 ⑧validate는
+        // 그 조합을 `asset_dual_category_conflict`로 차단한다 ⇒ 사전 신호 없이 계산 시점에야
+        // 막히는 상태였다. 상대 분류가 켜져 있으면 사유와 함께 비활성화한다.
+        disabled={!isActive && item.familyBusinessCategory != null}
+        disabledReason="가업상속 재산으로 분류돼 있습니다 — 영농·가업 분류는 동시 선택할 수 없습니다 (상증령 §15⑤·§16⑤)."
         onCheckedChange={(v) => {
           if (v) {
             onUpdate({ ...item, farmingCategory: getDefaultFarmingCategory(item.category) });

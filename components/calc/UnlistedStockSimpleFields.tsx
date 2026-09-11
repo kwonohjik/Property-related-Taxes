@@ -38,13 +38,30 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 // 엔진 분기와 단일 진실 (lib/tax-engine/property-valuation-stock.ts:592-614).
 // ============================================================
 
-/** 순손익가치 입력이 계산에 사용되는지 판정 — 1·2·6호는 사용 안 함, 3·5호·undefined는 사용. */
+/**
+ * 순손익가치 입력이 **화면에 필요한지** 판정.
+ *
+ * 🔴 IG-087: 「최종 평가액이 순자산가치인가」와 「순손익 입력이 필요한가」는 **다른 질문**이다.
+ * 6호(잔여 존속기한 3년 이내)의 최종값은 순자산가치지만, 그 순자산가치에는 §59② 영업권이
+ * 가산되고(`netAssetWithGoodwill`), 영업권의 분자는 3년치 순손익이다
+ * (`resolveWeightedNetIncome3yForGoodwill`). 엔진의 `mapToNetAssetOnlyReason`이 6호를
+ * `undefined`로 매핑하는 것이 바로 「§55③ 배제 대상 아님 → 영업권 정상 가산」이라는 뜻이다.
+ * ⇒ 6호에서 3칸을 숨기면 영업권이 **항상 0**이 되어 평가액이 과소 산정된다.
+ *
+ * 실제로 숨겨도 되는 것은 §55③이 영업권을 배제하는 1호(청산)·2호(3년 미만)뿐이다.
+ */
 function isNetIncomeRequired(reason: UnlistedAssetValueOnlyReason | undefined): boolean {
   if (!reason) return true; // 본칙 §54①: max(가중평균, 순자산 80%)
-  // 1호·2호·6호: 무조건 순자산가치 → 순손익 입력 불필요
-  if (reason === "liquidation" || reason === "lt3y" || reason === "remaining_3y") return false;
-  // 3호·5호: 단서 (가중평균 < 순자산일 때만 순자산) → 가중평균 계산 필요 → 순손익 입력 필요
+  // 1호·2호: §55③ 영업권 배제 → 순손익이 어디에도 쓰이지 않는다
+  if (reason === "liquidation" || reason === "lt3y") return false;
+  // 3호·5호: 단서 (가중평균 < 순자산일 때만 순자산) → 가중평균 계산 필요
+  // 6호: 최종값은 순자산가치지만 §59② 영업권 산정에 3년치 순손익이 필요
   return true;
+}
+
+/** 6호(잔여 존속기한 3년 이내) — 최종값은 순자산가치이나 영업권 산정에 순손익이 필요. */
+function isGoodwillOnlyReason(reason: UnlistedAssetValueOnlyReason | undefined): boolean {
+  return reason === "remaining_3y";
 }
 
 /** 3호·5호 단서 사유 여부 (UI 안내 카드 노출용). */
@@ -437,6 +454,21 @@ export function UnlistedStockSimpleFields({
         title="순손익가치 입력 — 연도별 순손익액 (§56①)"
         testid="simple-section-net-income"
       >
+        {isGoodwillOnlyReason(data?.assetValueOnlyReason) && (
+          <div
+            data-testid="simple-net-income-goodwill-notice"
+            className="rounded-md border border-amber-300 bg-amber-50/70 dark:bg-amber-900/20 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 space-y-1"
+          >
+            <p className="font-semibold">
+              ⚠️ §54④ 6호 적용 사유 — 최종값은 순자산가치이나 순손익가치 입력 필요
+            </p>
+            <p>
+              이 사유의 최종 평가액은 1주당 순자산가치이지만, 그 순자산가치에는{" "}
+              <strong>§59② 영업권</strong>이 가산되고(§55③ 배제 대상이 아닙니다) 영업권은 3년치
+              순손익액에서 산정됩니다. 미입력 시 영업권이 0으로 계산됩니다.
+            </p>
+          </div>
+        )}
         {isConditionalReason(data?.assetValueOnlyReason) && (
           <div
             data-testid="simple-net-income-conditional-notice"

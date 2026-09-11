@@ -133,6 +133,7 @@ export function Step4({
   const groupAdjustData =
     [
       form.legateeAmountNonHeir,
+      form.heirWaiverAmount,
       form.priorGiftDeductionTotal,
       form.disasterLossDeduction,
       form.appraisalRealEstateFee,
@@ -179,6 +180,9 @@ export function Step4({
   // ── 그룹 B 노출 항목 수 ──
   const groupBVisibleCount =
     (manualActive.legatee ? 1 : 0) +
+    // 🔴 IG-037: heirWaiver 칸도 이 그룹 children 안에 있다. 빠뜨리면 heirWaiver만 활성일 때
+    // count=0으로 판정돼 children 전체가 EmptyGroupNotice로 대체되고, 칩을 켜도 칸이 안 열린다.
+    (manualActive.heirWaiver ? 1 : 0) +
     (manualActive.priorGiftDeduction ? 1 : 0) +
     (manualActive.disasterAdjust ? 1 : 0) +
     (manualActive.casualtyLoss ? 1 : 0) +
@@ -259,7 +263,7 @@ export function Step4({
                 <LawArticleModal legalBasis="상속세및증여세법 §19" label="§19 배우자 상속공제" />
                 <AutoSuggestBadge
                   suggestion={autos.spouse}
-                  currentValue={autoFillValue(form.spouseActualAmount, autos.spouse)}
+                  currentValue={form.spouseActualAmount}
                   onApply={(v) => set({ spouseActualAmount: v })}
                   label="배우자 실제 상속액"
                 />
@@ -277,7 +281,7 @@ export function Step4({
                 <LawArticleModal legalBasis="상속세및증여세법 §22" label="§22 금융재산 상속공제" />
                 <AutoSuggestBadge
                   suggestion={autos.netFin}
-                  currentValue={autoFillValue(form.netFinancialAssets, autos.netFin)}
+                  currentValue={form.netFinancialAssets}
                   onApply={(v) => set({ netFinancialAssets: v })}
                   label="순 금융재산"
                 />
@@ -296,7 +300,7 @@ export function Step4({
                 <LawArticleModal legalBasis="상속세및증여세법 §23의2" label="§23의2 동거주택 상속공제" />
                 <AutoSuggestBadge
                   suggestion={autos.cohabit}
-                  currentValue={autoFillValue(form.cohabitHouseStdPrice, autos.cohabit)}
+                  currentValue={form.cohabitHouseStdPrice}
                   onApply={(v) => set({ cohabitHouseStdPrice: v })}
                   label="동거주택 공시가격"
                 />
@@ -328,7 +332,7 @@ export function Step4({
               <LawArticleModal legalBasis="상속세및증여세법 §18의3" label="§18의3 영농상속공제" />
               <AutoSuggestBadge
                 suggestion={autos.farming}
-                currentValue={autoFillValue(form.farmingAssetValue, autos.farming)}
+                currentValue={form.farmingAssetValue}
                 onApply={(v) => set({ farmingAssetValue: v })}
                 label="영농상속재산가액"
               />

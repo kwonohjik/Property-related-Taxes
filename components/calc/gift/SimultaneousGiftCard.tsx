@@ -269,9 +269,12 @@ export function SimultaneousGiftCard({
         />
         {creditOpen && (
           <div className="rounded-lg border border-gray-200 bg-white/60 p-3 dark:border-gray-700 dark:bg-gray-900/30">
+            {/* 서브폼에는 `simultaneousGiftForms`가 없다(GiftSubFormState). 중첩 동시증여는
+                ④·⑧ 어느 쪽에도 도달하지 못하므로 입력 경로를 닫는다 (IG-024). */}
             <GiftCreditChecklist
               form={sub as import("@/components/calc/gift-tax-form-shared").FormState}
               set={(partial) => onChange(partial)}
+              hideSimultaneous
             />
           </div>
         )}

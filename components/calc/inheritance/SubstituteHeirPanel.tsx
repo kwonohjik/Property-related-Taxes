@@ -29,9 +29,15 @@ export function SubstituteHeirPanel({
   set,
 }: SubstituteHeirPanelProps) {
   const substituteGroups = useMemo(() => {
+    // forRelation은 Heir의 union을 그대로 유지한다 — `string`으로 넓히면 그룹 대표값을
+    // 다시 heir에 써넣을 때(IG-114) 타입이 맞지 않는다.
     const seen = new Map<
       string,
-      { id: string; forRelation?: string; ancestorName?: string }
+      {
+        id: string;
+        forRelation?: Heir["substituteForRelation"];
+        ancestorName?: string;
+      }
     >();
     for (const h of allHeirs) {
       if (!h.substituteGroupId) continue;
@@ -134,12 +140,21 @@ export function SubstituteHeirPanel({
                   set({ substituteGroupId: generateSubstituteGroupId() });
                   return;
                 }
-                // 기존 그룹 선택 시 피대습자 성명도 그룹 대표값으로 공유
+                // 기존 그룹 선택 시 피대습자 성명·원래순위를 그룹 대표값으로 공유.
+                //
+                // 🔴 IG-114: 종전엔 성명만 맞추고 `substituteForRelation`은 이 상속인이 앞서
+                // 고른 값 그대로 뒀다. 그런데 이 컴포넌트는 `forRelation`을 **그룹 속성**으로
+                // 다루고(위 substituteGroups 수집·그룹 라벨), 엔진의 `inheritance-legal-share`도
+                // 같은 gid를 원래순위별 그룹 배열에 넣는다. 한 그룹에 child와 sibling이 섞이면
+                // 활성 순위 한쪽만 살아남아 다른 쪽 멤버의 법정상속분이 **조용히 0**이 되고,
+                // 법정상속분 기준인 배우자공제 한도까지 함께 움직인다.
                 const g = substituteGroups.find((x) => x.id === v);
                 set({
                   substituteGroupId: v,
                   substituteAncestorName:
                     g?.ancestorName ?? heir.substituteAncestorName,
+                  substituteForRelation:
+                    g?.forRelation ?? heir.substituteForRelation,
                 });
               }}
               options={[

@@ -545,10 +545,26 @@ export function FarmingEligibilitySection({
                   <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
                     자격 충족 상속인 선택 (§16⑤ 본문)
                   </p>
-                  <p className="text-micro text-violet-700 dark:text-violet-300">
-                    미체크 시 전체 상속인이 자격 충족된 것으로 간주 (전체 영농자산 합산). 1명 이상 체크하면
-                    heirAllocations 중 해당 상속인 분배분만 영농상속재산가액에 합산됩니다.
-                  </p>
+                  {/* 🔴 IG-110: `undefined`(미선택)와 `[]`(전부 해제)는 화면상 모든 토글이 꺼진
+                      «같은 모습»이지만 계산은 정반대다 — `undefined`는 전체 합산, `[]`는 자격자
+                      0명이라 영농상속재산가액이 0이 된다(`resolveEffectiveQualifiedHeirIds`가
+                      빈 배열을 그대로 돌려준다). 고정 문구로 전자만 설명하면 후자 상태에서
+                      화면이 계산과 반대되는 규칙을 안내하게 된다. */}
+                  {farming.qualifiedHeirIds?.length === 0 ? (
+                    <p
+                      className="text-micro font-medium text-rose-700 dark:text-rose-300"
+                      data-testid="farming-qualified-zero-notice"
+                    >
+                      자격 충족 상속인 <strong>0명</strong>으로 지정된 상태입니다 — 영농상속재산가액이
+                      0이 되어 영농상속공제가 적용되지 않습니다. 전체 합산으로 되돌리려면 아래
+                      「↺ 되돌리기」를 누르세요.
+                    </p>
+                  ) : (
+                    <p className="text-micro text-violet-700 dark:text-violet-300">
+                      미체크 시 전체 상속인이 자격 충족된 것으로 간주 (전체 영농자산 합산). 1명 이상 체크하면
+                      heirAllocations 중 해당 상속인 분배분만 영농상속재산가액에 합산됩니다.
+                    </p>
+                  )}
                 </>
               )}
               {heirs.map((h) => {

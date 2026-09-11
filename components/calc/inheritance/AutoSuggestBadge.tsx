@@ -26,7 +26,14 @@ import type { DeductionSuggestion } from "@/lib/calc/inheritance-deduction-sugge
 
 export interface AutoSuggestBadgeProps {
   suggestion: DeductionSuggestion;
-  /** 현재 폼 입력값 (CurrencyInput의 value, "1,000,000" 또는 "") */
+  /**
+   * 현재 폼 입력값 — **raw 폼 값이어야 한다** (`form.netFinancialAssets` 등, "1,000,000" 또는 "").
+   *
+   * 🔴 **display fallback을 적용한 값을 넘기면 안 된다.** `autoFillValue(raw, suggestion)`처럼
+   * 빈값을 제안값으로 치환한 문자열을 넘기면 `isEmpty`가 영원히 false가 되어 아래 3상태 중
+   * 「이 값으로 채우기」 분기가 도달 불가해지고, 사용자가 아무것도 하지 않았는데 항상
+   * 「자동 채움 적용됨」이 뜬다. 표시용 fallback은 CurrencyInput의 `value`에만 둔다.
+   */
   currentValue: string;
   /** 채우기 클릭 시 호출 — 숫자를 콤마 포맷 없이 문자열로 전달 (CurrencyInput이 표시 시 포맷) */
   onApply: (value: string) => void;

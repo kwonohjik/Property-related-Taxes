@@ -89,10 +89,20 @@ export function FbDecedentRequirementsSection({
     }
   }, [fb.decedentShareRatioNum, fb.decedentShareAcquiredDate, deathDate, threshold]);
 
+  /**
+   * 재직 구간이 «반쪽»이면(취임일만 넣고 퇴임일 미입력) 판정하지 않는다.
+   *
+   * 🔴 IG-125: `handlePeriodChange`가 `[{startDate:"2005-01-01", endDate:""}]`를 저장하므로
+   * `periods.length`는 1이 된다. 그대로 엔진에 넘기면 `clipDays`가 빈 종료일에 대해 0을 반환해
+   * 재직비율 0%·미충족이 나오고, 화면은 rose ✗ 「미충족」이라는 **확정적 법적 결론**을 낸다.
+   * validate도 양쪽이 다 있을 때만 검사하므로 차단되지도 않는다. 이 파일의 정책(헤더)은
+   * 「미입력 시 false(보수적) + amber 안내」이므로 반쪽 구간은 «입력 필요»로 분류한다.
+   */
   // ── 나목 대표이사 자동판정 (useMemo)
   const ceoResult = useMemo(() => {
     const periods = fb.decedentCEOPeriods;
     if (!periods?.length || !fb.openingDate) return null;
+    if (periods.some((p) => !p.startDate || !p.endDate)) return null;
     return deriveFBDecedentCEO(periods, fb.openingDate, deathDate);
   }, [fb.decedentCEOPeriods, fb.openingDate, deathDate]);
 
@@ -102,6 +112,8 @@ export function FbDecedentRequirementsSection({
     const periods = fb.decedentCEOPeriods;
     if (!periods?.length) return "재직 구간(시작/종료)을 입력하면 자동판정";
     if (!fb.openingDate) return "개업연월일을 섹션① 표시 정보에 입력하세요";
+    if (periods.some((p) => !p.startDate || !p.endDate))
+      return "재직 구간의 퇴임일(종료)까지 입력하면 자동판정 — 현재는 판정하지 않습니다";
     if (ceoResult === null) return "계산 중 오류";
     const altLabel =
       ceoResult.satisfiedAlternative === 1

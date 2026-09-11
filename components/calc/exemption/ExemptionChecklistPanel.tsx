@@ -7,7 +7,13 @@
  *  - 마스터 "여" 선택 후 상단에 항목 칩 그리드 제공
  *  - 비과세(§12) 6칩 + 과세가액 불산입(§16·§17) 2칩
  *  - 칩 클릭 → 항목 checked 토글 + 해당 그룹 자동 펼침
- *  - 값 있는데 미체크 → amber 경고 점
+ *  - 체크만 하고 값을 안 넣은 항목 수는 상단 배지(`warningCount`)로 알린다.
+ *
+ * 🔴 「값 있는데 미체크 → 칩에 amber 경고 점」은 **이 구조에서 만들 수 없다**(IG-101).
+ * 체크 해제는 배열에서 항목을 «제거»하므로(ExemptionChecklist의 handleToggle) 미체크 항목의
+ * 값을 담는 소스가 아예 없다. 종전엔 `itemMap`을 `checkedMap`과 같은 Map으로 별칭 지정한 채
+ * `!active && item != null` 분기를 두어 **영원히 false인 죽은 분기**가 남아 있었다.
+ * 되살리려면 먼저 미체크 항목의 값을 보존하는 스토어 구조가 필요하다.
  *
  * 정책:
  *  - useEffect → store 미러링 절대 금지 (feedback_useeffect_store_mirror_forbidden)
@@ -61,7 +67,6 @@ function ExemptionChip({
   rule,
   group,
   checkedMap,
-  itemMap,
   onToggle,
   onGroupOpen,
 }: {
@@ -70,8 +75,6 @@ function ExemptionChip({
   /** 칩 색조: 비과세=sky / 과세가액 불산입=violet */
   group: "sky" | "violet";
   checkedMap: Map<string, ExemptionCheckedItem>;
-  /** ruleId → 값 있는 미체크 항목 (경고 점 표시용) */
-  itemMap: Map<string, ExemptionCheckedItem>;
   onToggle: (ruleId: string) => void;
   /** 체크 시 해당 그룹 자동 펼침 (useEffect 금지 — onClick 직접) */
   onGroupOpen: () => void;
@@ -80,9 +83,6 @@ function ExemptionChip({
   const label = getExemptionChipLabel(ruleId, rule.name);
 
   const active = checkedMap.has(ruleId);
-  const item = itemMap.get(ruleId);
-  // 값 있는데 미체크 → amber 경고 점
-  const showWarning = !active && item != null && exemptionItemHasValue(item);
 
   const handleClick = () => {
     const willBeActive = !active;
@@ -120,13 +120,6 @@ function ExemptionChip({
         {active && "✓"}
       </span>
       <span>{label}</span>
-      {/* 값 있는데 비활성 → amber 경고 점 */}
-      {showWarning && (
-        <span
-          className="h-2 w-2 rounded-full bg-amber-400 shrink-0"
-          title="입력값이 있으나 계산에서 제외됩니다"
-        />
-      )}
     </button>
   );
 }
@@ -162,13 +155,6 @@ export function ExemptionChecklistPanel({
   onNotIncludedGroupOpen: () => void;
 }) {
   const checkedMap = new Map(items.map((i) => [i.ruleId, i]));
-  // 경고 점: 배열에 없는데 값이 있는 항목 — 현행 구조에서 미체크=배열에 없음이므로
-  // 배열에 있지만 amount=0·area=undefined인 항목을 감지 (체크 해제 없이 값만 초기화된 경우)
-  // 실제로는 체크 해제 시 배열에서 제거되므로 이 경고는 "배열에 있고 값 없음" 케이스에 해당
-  // → 사용자가 체크만 했고 금액을 아직 안 입력한 상태를 amber로 알려줄 수 없는 상황.
-  // 계획서 §3.1 "체크 해제 시 입력값 보존" 패턴을 구현하려면 스토어에 미체크 항목도 유지해야 함.
-  // 현행에서 체크 해제 = 배열 제거이므로 경고 점은 "배열에 있고 금액=0" 케이스만 가능.
-  const itemMap = checkedMap; // alias for clarity
 
   // 경고 개수 (배열에 있지만 값이 없는 항목: 체크만 하고 금액 미입력)
   const warningCount = items.filter((i) => !exemptionItemHasValue(i)).length;
@@ -198,7 +184,6 @@ export function ExemptionChecklistPanel({
                 rule={rule}
                 group="sky"
                 checkedMap={checkedMap}
-                itemMap={itemMap}
                 onToggle={onToggle}
                 onGroupOpen={onNontaxableGroupOpen}
               />
@@ -220,7 +205,6 @@ export function ExemptionChecklistPanel({
                 rule={rule}
                 group="violet"
                 checkedMap={checkedMap}
-                itemMap={itemMap}
                 onToggle={onToggle}
                 onGroupOpen={onNotIncludedGroupOpen}
               />
