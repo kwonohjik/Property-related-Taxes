@@ -106,6 +106,27 @@ describe("ST — 순손익·순자산 계산서는 «행 기반 표»다", () =>
     expect(onChange).toHaveBeenCalledWith({ fiscalYearListing: "2009" });
   });
 
+  it("ST-8: 표 셀에는 placeholder 문구가 없다 (빈 칸은 비어 있다)", () => {
+    // 🔴 **48칸이 같은 문구를 반복하면 값이 든 칸을 눈으로 찾을 수 없다** (2026-09-11 실측).
+    //    `CurrencyInput`·`DecimalInput`의 기본 placeholder(「금액 입력」·「숫자 입력」)는 카드 한 장에
+    //    필드 하나일 때의 안내다. 표에서는 열 헤더와 행 라벨이 이미 의미를 말한다.
+    //    원본 서식(이미지 7)도 빈 칸은 비어 있다.
+    const { container } = render(
+      <PostListingNetIncomeStatement form={form()} onChange={vi.fn()} mode="full" />,
+    );
+    const table = screen.getByRole("table");
+    const withPlaceholder = Array.from(table.querySelectorAll("input")).filter(
+      (el) => (el.getAttribute("placeholder") ?? "") !== "",
+    );
+    expect(
+      withPlaceholder.map((el) => el.getAttribute("placeholder")),
+      "표 셀 입력칸에 placeholder가 남아 있다",
+    ).toEqual([]);
+    // 문구 자체가 화면 어디에도 없어야 한다 (positive twin: ST-1~7이 「무엇이 보이는가」를 지킨다)
+    expect(container.textContent).not.toContain("금액 입력");
+    expect(container.textContent).not.toContain("숫자 입력");
+  });
+
   it("ST-7: 순손익·순자산이 «같은» 사업연도 필드를 공유한다 (계획서 §5.1)", () => {
     // 🔑 ni/na로 쪼개면 두 계산서의 연도가 조용히 갈린다. 한 벌을 공유하는지 본다.
     const f = form({ fiscalYearListing: "2008" });

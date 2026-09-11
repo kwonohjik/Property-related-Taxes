@@ -17,6 +17,19 @@ import type { StatementColumnSpec, StatementInputRow } from "./statement-table-t
 const TD = "border border-gray-300 dark:border-gray-600 px-2 py-1 align-middle";
 
 /**
+ * 🔑 **표 셀의 placeholder는 «빈 문자열»이다.**
+ *
+ * `CurrencyInput`·`DecimalInput`은 기본값으로 「금액 입력」·「숫자 입력」을 렌더한다
+ * (`CurrencyInput.tsx:67` · `DecimalInput.tsx:42`). 카드 한 장에 필드 하나일 때는 안내가 되지만,
+ * **24행 × 2열 = 48칸이 같은 문구를 반복하면 값이 든 칸을 눈으로 찾을 수 없다**(2026-09-11 실측).
+ * 원본 서식(이미지 7)도 빈 칸은 비어 있다.
+ *
+ * 단위·의미는 이미 **열 헤더와 행 라벨**이 말하므로 셀 안에 다시 적을 것이 없다.
+ * anchor: `statement-table-layout.anchor.test.tsx` ST-8
+ */
+const CELL_PLACEHOLDER = "";
+
+/**
  * 값 후보 칩 — 이미 입력된 값과 다른 후보만 보여 준다.
  *
  * 원본 화면(이미지 7)은 행 20에 드롭다운(▼)을 두어 이미 아는 주식수를 고르게 했다.
@@ -126,6 +139,7 @@ export function StatementRow({
               value={value(c.col)}
               onChange={(v) => onChange(c.col, v)}
               unit={row.unit}
+              placeholder={CELL_PLACEHOLDER}
               data-testid={`${testIdPrefix}-${row.keyPrefix}-${c.col}`}
             />
           ) : (
@@ -137,6 +151,7 @@ export function StatementRow({
                 allowNegative={row.signed}
                 value={value(c.col)}
                 onChange={(v) => onChange(c.col, v)}
+                placeholder={CELL_PLACEHOLDER}
                 data-testid={`${testIdPrefix}-${row.keyPrefix}-${c.col}`}
               />
               {candidates && (
