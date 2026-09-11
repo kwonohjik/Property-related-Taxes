@@ -209,7 +209,7 @@ export default function Cross1045Client() {
   const oaSide: CrossSide | null =
     recalcedOa?.recordId === oaId ? recalcedOa.side : oaPick?.extract.ok ? oaPick.extract.side : null;
 
-  /** §103② 기본공제 중복(R-2) — 감지 */
+  /** §103① 기본공제 중복(R-2) — 감지 */
   const overlap = useMemo(() => {
     if (!rePick || !oaPick) return null;
     const re = (recalcedRe?.recordId === reId ? recalcedRe.raw : rePick.record.resultData) ?? {};
@@ -443,7 +443,7 @@ export default function Cross1045Client() {
             <ToneCard tone="amber" title="양도소득 기본공제가 중복 적용되어 있습니다">
               <p className="text-sm">
                 부동산과 기타자산은{" "}
-                <LawArticleModal legalBasis="소득세법 §103 ②" label="§103②1호" /> 상 <strong>같은
+                <LawArticleModal legalBasis="소득세법 §103 ①" label="§103①1호" /> 상 <strong>같은
                 그룹</strong>이라 기본공제 <strong>{won(BASIC_DEDUCTION_LIMIT)}원</strong>은 합쳐서
                 연 1회입니다. 그런데 두 계산이 합계{" "}
                 <strong>{won(overlap.total)}원</strong>을 적용해{" "}

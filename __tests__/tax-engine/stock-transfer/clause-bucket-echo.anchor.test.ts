@@ -70,7 +70,7 @@ describe("주식 §104① 호별 버킷 echo — 단건 (2b-3)", () => {
   it("S-1: 기타자산 **1호** — `clause1Bucket*`에만 실린다", () => {
     const r = calculateStockTransferTax(otherAsset(300_000_000));
     expect(r.basicDeductionGroup).toBe("real_estate_and_other_asset");
-    // §103② 기본공제 250만원 소진 후 과세표준
+    // §103① 기본공제 250만원 소진 후 과세표준
     expect(r.taxBase).toBe(297_500_000);
     expect(r.calculatedTax).toBe(93_110_000);
     expect(r.clause1BucketTaxBase).toBe(297_500_000);

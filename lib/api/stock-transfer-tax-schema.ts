@@ -341,7 +341,7 @@ export const stockTransferInputSchema = z.object({
   paymentDeadline: z.union([z.string(), z.date()]).optional(),
   actualPaymentDate: z.union([z.string(), z.date()]).optional(),
 
-  // §103② 기본공제 그룹
+  // §103① 기본공제 그룹
   realEstateGroupBasicDeductionUsed: z.number().min(0),
 
   // 분할 매수·분할 양도 (Plan v2.2 — optional, lotsMode='split' 시 필수)

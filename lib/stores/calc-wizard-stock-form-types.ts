@@ -279,7 +279,7 @@ export interface StockTransferFormData {
   /** 실제 납부일 "YYYY-MM-DD" — 미입력 시 오늘 기준 */
   actualPaymentDate: string;
 
-  // ── §103② 기본공제 그룹 ──
+  // ── §103① 기본공제 그룹 ──
   realEstateGroupBasicDeductionUsed: string;  // 3중 패턴 default: "0"
   /** §104⑤ 크로스 조정 — 같은 과세기간 부동산 §104①8호(비사업용 토지) 과세표준. 원 단위. 미입력이면 조정 미적용 */
   crossClause8TaxBase: string;

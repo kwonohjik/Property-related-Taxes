@@ -157,7 +157,7 @@ describe("합산 가능 연도", () => {
   });
 });
 
-describe("§103② 기본공제 중복 감지 (R-2)", () => {
+describe("§103① 기본공제 중복 감지 (R-2)", () => {
   it("B-1: 양쪽이 각각 250만원을 쓰면 250만원 초과", () => {
     const r = detectBasicDeductionOverlap({
       realEstateBasicDeduction: 2_500_000,

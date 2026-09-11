@@ -21,7 +21,7 @@
  *
  * ## 왜 aggregate가 1회여야 하는가
  *
- * 기본공제(법 §103②)는 **연간 1회**다. 지분마다 aggregate를 부르면 지분 수만큼 공제된다.
+ * 기본공제(법 §103①)는 **연간 1회**다. 지분마다 aggregate를 부르면 지분 수만큼 공제된다.
  * §104⑤ 비교과세도 전 자산을 함께 봐야 성립한다.
  */
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
@@ -211,7 +211,7 @@ export function calculateGeneralBuildingFractional(
     lastBuildingStdTotal = built.buildingStdAtTransfer;
   });
 
-  // (5) aggregate는 **1회만** — 기본공제 250만원(법 §103②)·§104⑤ 비교과세가 전 지분에 1번 적용된다
+  // (5) aggregate는 **1회만** — 기본공제 250만원(법 §103①)·§104⑤ 비교과세가 전 지분에 1번 적용된다
   const aggregated = calculateTransferTaxAggregate(
     {
       taxYear,

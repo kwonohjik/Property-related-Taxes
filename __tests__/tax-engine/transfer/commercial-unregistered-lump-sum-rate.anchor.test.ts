@@ -62,7 +62,7 @@ describe("anchor U-3 — 상가 환산 × 미등기 개산공제율 (§163⑥1�
     expect(r.transferGain).toBe(599_400_000);
   });
 
-  it("U-3b: 미등기 상가는 70% 단일세율 · 장특공제·기본공제 배제 (§104①10호·§95②·§103②)", () => {
+  it("U-3b: 미등기 상가는 70% 단일세율 · 장특공제·기본공제 배제 (§104①10호·§95②·§103①1호 단서)", () => {
     const r = calculateTransferTax(cb({ isUnregistered: true }), rates);
     expect(r.appliedRate).toBe(0.7);
     expect(r.longTermHoldingDeduction).toBe(0);

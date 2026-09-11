@@ -9,7 +9,7 @@
  *   3. 양도가액 결정
  *   4. 필요경비 (실가 / 개산공제 §163⑥4)
  *   5. 양도소득금액 = 양도가 − 취득가 − 필요경비
- *   6. 기본공제 §103②
+ *   6. 기본공제 §103①
  *   7. 과세표준 (1원 미만 절사 §47②)
  *   8. 세율 적용 (§104①11 / §55)
  *   9. 산출세액 (10원 미만 절사 §47①)
@@ -366,7 +366,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     : transferPrice - acquisitionPrice - expenses;
 
   // ──────────────────────────────────────────────────────────
-  // STEP 6: 기본공제 §103②
+  // STEP 6: 기본공제 §103①
   // ──────────────────────────────────────────────────────────
   const basicDeduction = calcBasicDeduction(
     transferIncome,
