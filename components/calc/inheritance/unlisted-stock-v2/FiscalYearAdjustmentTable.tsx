@@ -68,7 +68,11 @@ const ROWS: RowDef[] = [
   { key: "subWithholdingPenalty", label: "징수불이행 세액", group: "sub", cellNum: "⑬", description: "§56④ 2나" },
   { key: "subExcessiveExpenses", label: "과다경비 손금불산입", group: "sub", cellNum: "⑭", description: "§24~§28" },
   { key: "subDonationExcess", label: "기부금 한도초과액", group: "sub", cellNum: "⑮", description: "§24" },
-  { key: "subEntertainmentExcess", label: "접대비 한도초과액", group: "sub", cellNum: "⑯", description: "§25" },
+  // ⑯ 라벨을 「접대비」→「기업업무추진비」로 정정(2026-09-11). **같은 ⑯ 칸인데 입력 화면과
+  //    출력(PDF)의 용어가 갈려 있었다** — `besshi/besshi-form-constants.ts:310`은 2025 양식
+  //    재현 때 이미 「기업업무추진비 손금불산입액」으로 최신화됐는데 여기만 구판이었다.
+  //    근거: 「법인세법」 제25조 제목·제1항 정의(KoreanLaw 실측). [[feedback_citation_drift_replicates_across_repo]]
+  { key: "subEntertainmentExcess", label: "기업업무추진비 한도초과액", group: "sub", cellNum: "⑯", description: "§25" },
   { key: "subNonBusinessExpenses", label: "업무무관 비용 손금불산입", group: "sub", cellNum: "⑰", description: "§27" },
   { key: "subNonBusinessCarExpenses", label: "업무용승용차 비용 손금불산입", group: "sub", cellNum: "⑱", description: "§27의2" },
   { key: "subInterestPayment", label: "지급이자 손금불산입", group: "sub", cellNum: "⑲", description: "§28" },

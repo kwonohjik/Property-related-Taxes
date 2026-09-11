@@ -78,7 +78,7 @@ export interface FiscalYearAdjustment {
   subWithholdingPenalty?: number;      // ⑬ 징수불이행 세액 (§56④2나)
   subExcessiveExpenses?: number;       // ⑭ 과다경비 손금불산입 (§24~§28)
   subDonationExcess?: number;          // ⑮ 기부금 한도초과 (§24)
-  subEntertainmentExcess?: number;     // ⑯ 접대비 한도초과 (§25)
+  subEntertainmentExcess?: number;     // ⑯ 기업업무추진비 한도초과 (§25 — 구 「접대비」)
   subNonBusinessExpenses?: number;     // ⑰ 업무무관 비용 (§27)
   subNonBusinessCarExpenses?: number;  // ⑱ 업무용승용차 비용 손금불산입 (§27의2)
   subInterestPayment?: number;         // ⑲ 지급이자 손금불산입 (§28)

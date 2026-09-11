@@ -79,7 +79,17 @@ export const NI_SUB_ROWS: StatementInputRow[] = [
   },
   { kind: "input", keyPrefix: "niSubRow8", num: "8.", label: "각 세법상 징수불이행 납부세액", inGroup: true },
   { kind: "input", keyPrefix: "niSubRow9", num: "9.", label: "기부금한도초과액", inGroup: true },
-  { kind: "input", keyPrefix: "niSubRow10", num: "10.", label: "접대비한도초과액", inGroup: true },
+  // 🔑 **행 10은 원본 화면의 「접대비」가 아니라 현행 법령 용어 「기업업무추진비」다.**
+  //    「법인세법」 제25조의 제목이 **「기업업무추진비의 손금불산입」**이고, 같은 조 제1항이
+  //    「이 조에서 "기업업무추진비"란 접대, 교제, 사례 … 지출한 금액을 말한다」로 정의한다
+  //    (KoreanLaw 실측 2026-09-11 · 현행 시행일 2026-01-01).
+  //    ⇒ 「접대」는 이제 **정의 안에 포함된 예시어**이지 항목명이 아니다.
+  //
+  //    ⚠️ 이 한 줄은 **원본 서식 재현 원칙의 예외**다. 서식의 «구조»(행 번호·순서·소계)는 원본을
+  //    따르지만 **법령 «용어»는 현행을 따른다** — 화면이 폐지된 용어로 납세자에게 말할 수는 없다.
+  //    같은 이유로 행 23·24 라벨은 반대로 «현행 유지»다(원본 쪽이 구판이라서 — `NI_RATE_ROW` 주석).
+  //    형제 경로도 같은 용어를 쓴다: `besshi/besshi-form-constants.ts:310` ⑯.
+  { kind: "input", keyPrefix: "niSubRow10", num: "10.", label: "기업업무추진비한도초과액", inGroup: true },
   { kind: "input", keyPrefix: "niSubRow11", num: "11.", label: "과다경비등 손금불산입액", inGroup: true },
   { kind: "input", keyPrefix: "niSubRow12", num: "12.", label: "지급이자 손금불산입액", inGroup: true },
   {
