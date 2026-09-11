@@ -167,8 +167,9 @@ function ListedStockEditor({
   const capInc = isCapInc
     ? applyCapitalIncreaseShareValuation(avgPrice, item.listedStockDividendDifference ?? 0, sameBaseDate)
     : null;
-  // ★ C-B/D-8 재배선: preview totalValue = computeStockValuation(item) (§63②3호 차감 반영, dual-truth 차단)
-  const totalValue = avgPrice > 0 && shares > 0 ? computeStockValuation(item) : 0;
+  // 단일 진실 위임 — §63②3호 차감 + §53⑧ 할증배제 게이트. valuationDate를 넘기지 않으면
+  // 전부매각 배제가 조용히 죽어 미리보기에만 할증 20%가 붙는다(대장 IG-053과 같은 축).
+  const totalValue = avgPrice > 0 && shares > 0 ? computeStockValuation(item, valuationDate) : 0;
 
   return (
     <div className={hideHeader ? "space-y-3" : "border rounded-lg p-4 space-y-3 bg-white dark:bg-gray-900"}>
@@ -294,7 +295,7 @@ function ListedStockEditor({
 
       {/* 평가액 미리보기 — §63③ 할증 반영 산식 표시 (dual-truth 차단)
           Plan: docs/00-pm/listed-stock-form-formula-premium-display-fix.plan.md */}
-      <ListedStockValuationPreviewCard item={item} />
+      <ListedStockValuationPreviewCard item={item} valuationDate={valuationDate} />
 
       {/* §47① 부담부증여 채무인수 (증여 모드 전용) — 평가 입력 뒤 = 계산 로직 순서 */}
       {!valuationOnly && <StockBurdenedDebtSection item={item} onUpdate={onUpdate} mode={mode} transferDate={valuationDate} />}

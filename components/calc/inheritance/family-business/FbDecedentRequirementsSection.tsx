@@ -18,6 +18,8 @@
  * 법령: 상증령 §15③1호가(지분) · §15③1호나(대표이사 1·3호) · §15③1호나2호(승계 override)
  */
 
+import { getShareThresholdByDate } from "@/lib/tax-engine/deductions/family-business-autoderive";
+import { ratePercent } from "@/lib/tax-engine/tax-utils";
 import { useMemo, useState } from "react";
 import { differenceInYears, parseISO } from "date-fns";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -51,7 +53,15 @@ export function FbDecedentRequirementsSection({
   const [openCEO, setOpenCEO] = useState(false);
 
   const isListed = fb.isListedOnExchange === true;
-  const threshold = isListed ? 20 : 40;
+  // §15③1호가 지분 임계는 «상속개시일 시기별»이다 — 2011~2022 상속개시는 비상장 50%/상장 30%,
+  // 2010.12.31 이전은 50%/40%. 판정값은 엔진 `deriveFBDecedentShareholding`이 같은 함수로
+  // 내는데 표시용만 현행(40/20)으로 고정돼 있어, 과거 상속에서 라벨·placeholder·산식 문구가
+  // 실제 판정 기준과 어긋났다. 단일 소스로 파생한다.
+  // (ratePercent — 0.35 같은 임계가 추가돼도 40.00000000000001류 표기가 새지 않게 한다)
+  const threshold = useMemo(
+    () => ratePercent(getShareThresholdByDate(deathDate, isListed)),
+    [deathDate, isListed],
+  );
 
   // ── 가목 지분 자동판정 (useMemo — store 미러링 없음)
   const autoShare = useMemo<boolean | null>(() => {

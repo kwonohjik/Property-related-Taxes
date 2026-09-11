@@ -526,7 +526,14 @@ export function capFuneralRowAmounts(
 export function calcFuneralExpenseDeduction(
   mealExpense: number,
   bonganExpenseOrLegacyFlag: number | boolean,
-): { deduction: number; breakdown: CalculationStep[] } {
+): {
+  deduction: number;
+  /** 1호 식대 인정액 (clamp[500만, 1천만]). legacy boolean 경로에서는 deduction과 같다. */
+  mealApplied: number;
+  /** 2호 봉안 인정액 (min(실제, 500만)). legacy boolean 경로에서는 0. */
+  bonganApplied: number;
+  breakdown: CalculationStep[];
+} {
   // legacy 하위호환: boolean이 넘어오면 구 로직 (통합 한도)
   if (typeof bonganExpenseOrLegacyFlag === "boolean") {
     const includesBongan = bonganExpenseOrLegacyFlag;
@@ -535,6 +542,8 @@ export function calcFuneralExpenseDeduction(
     const deduction = Math.max(capped, FUNERAL_MIN);
     return {
       deduction,
+      mealApplied: deduction, // legacy는 통합 한도라 분리 값이 없다
+      bonganApplied: 0,
       breakdown: [
         { label: "장례비 지출액", amount: mealExpense, lawRef: INH.DEBT_DEDUCTION },
         { label: `장례비 공제 한도 (${includesBongan ? "봉안 포함 1,500만" : "일반 1,000만"})`, amount: maxLimit },
@@ -598,7 +607,7 @@ export function calcFuneralExpenseDeduction(
     lawRef: INH.DEBT_DEDUCTION,
   });
 
-  return { deduction, breakdown };
+  return { deduction, mealApplied, bonganApplied, breakdown };
 }
 
 // ============================================================

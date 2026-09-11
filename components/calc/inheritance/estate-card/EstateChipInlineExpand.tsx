@@ -125,7 +125,10 @@ export function EstateChipInlineExpand({
           <HeirAllocationToggleSection
             item={item}
             heirs={heirs}
-            effectiveValuation={effectiveValuation ?? computeEffectiveValuation(item)}
+            // 칩 라벨은 `computeEffectiveValuation(item, valuationDate)`로 날짜를 넘긴다
+            // (chip-config.ts:136-137). 여기만 인자를 빼면 지상권·무체재산권·채권·전환사채·
+            // 신탁수익권에서 잔존연수 0 등으로 다른 값(대개 0)이 나와 칩과 패널이 갈린다.
+            effectiveValuation={effectiveValuation ?? computeEffectiveValuation(item, deathDate)}
             onChange={(patch) => onUpdate({ ...item, ...patch })}
           />
         )}

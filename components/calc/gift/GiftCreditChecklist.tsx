@@ -557,6 +557,7 @@ export function GiftCreditChecklist({
             <SpecialTreatmentAssetSelector
               specialTreatment={form.specialTreatment as "startup" | "family_business"}
               allItems={[...form.giftItems, ...form.stockItems]}
+              valuationDate={form.giftDate}
               onItemChange={(index, isSpecial) => {
                 const giftLen = form.giftItems.length;
                 if (index < giftLen) {

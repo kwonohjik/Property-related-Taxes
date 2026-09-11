@@ -33,10 +33,12 @@ export function PresumedInheritanceTable({
     (resultItems ?? []).map((r) => [r.id, r] as const),
   );
 
-  const totalScrutiny = presumedItems.reduce(
-    (acc, it) => acc + it.amountWithin1Y + it.amountWithin2Y,
-    0,
-  );
+  // §15 소명대상은 «임계 분기»를 탄다 — 엔진은 `triggered2Y ? total : amountWithin1Y`이고
+  // 임계가 발동하지 않으면 0이다. 1년+2년을 무조건 더하면 과세관청이 소명을 요구하지 않는
+  // 금액까지 「소명대상」으로 표시된다. resultItems에 `scrutinyAmount`가 이미 echo돼 있다.
+  const scrutinyOf = (it: (typeof presumedItems)[number]): number =>
+    resultMap.get(it.id)?.scrutinyAmount ?? it.amountWithin1Y + it.amountWithin2Y;
+  const totalScrutiny = presumedItems.reduce((acc, it) => acc + scrutinyOf(it), 0);
   const totalVerified = presumedItems.reduce(
     (acc, it) => acc + it.verifiedUseAmount,
     0,
@@ -95,7 +97,7 @@ export function PresumedInheritanceTable({
           <tbody>
             {presumedItems.map((item) => {
               const r = resultMap.get(item.id);
-              const scrutiny = item.amountWithin1Y + item.amountWithin2Y;
+              const scrutiny = scrutinyOf(item);
               return (
                 <tr key={item.id} className="hover:bg-slate-50">
                   <td className="border border-slate-200 px-2 py-1.5 text-center">

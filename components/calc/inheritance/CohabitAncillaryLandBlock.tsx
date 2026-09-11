@@ -12,6 +12,9 @@
  * 800줄 정책: 별도 파일 분리 (HeirComposition/Step4 인라인 금지).
  */
 
+// §154⑦ 지역별 배율은 엔진 단일 소스를 쓴다 — 종전에는 이 파일 안에서만 두 번 재선언돼
+// 엔진까지 합치면 같은 표가 3벌이었다.
+import { ANCILLARY_LAND_RATIO } from "@/lib/tax-engine/deductions/inheritance-cohabit-helpers";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -83,13 +86,7 @@ export function CohabitAncillaryLandBlock({
     const area = parseDecimal(buildingFootprintArea);
     const region = ancillaryLandRegion as AncillaryLandRegion | "";
     if (!area || !region) return null;
-    const ratioMap: Record<AncillaryLandRegion, number> = {
-      metro_residential_commercial_industrial: 3,
-      metro_green: 5,
-      non_metro: 5,
-      other: 10,
-    };
-    return area * ratioMap[region];
+    return area * ANCILLARY_LAND_RATIO[region];
   })();
 
   return (
@@ -178,14 +175,7 @@ export function CohabitAncillaryLandBlock({
             {limitAreaPreview.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}㎡
           </strong>{" "}
           (건물 정착 면적 {parseDecimal(buildingFootprintArea).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}㎡ ×{" "}
-          {
-            {
-              metro_residential_commercial_industrial: 3,
-              metro_green: 5,
-              non_metro: 5,
-              other: 10,
-            }[ancillaryLandRegion as AncillaryLandRegion] ?? "?"
-          }
+          {ANCILLARY_LAND_RATIO[ancillaryLandRegion as AncillaryLandRegion] ?? "?"}
           배)
           {parseDecimal(ancillaryLandArea) > limitAreaPreview && (
             <span className="ml-1 text-rose-600 dark:text-rose-400 font-semibold">

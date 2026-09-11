@@ -6,16 +6,16 @@
  * 행 전체 클릭 → onSelect(heir.id) → 모달 오픈 구조.
  * 라디오 컬럼 제거. 맨 우측 "✎ 편집" 아이콘 힌트만 표시.
  * deriveHeirKind: isForProfitCorporate 단일 진실 (inheritance-gift-common import).
- * 미성년 배지: differenceInYears(deathDate, birthDate) < 19 (정정 #1, isMinorFromRrn 없음).
+ * 미성년 배지: 엔진 단일 진실 `resolveMinorBeneficiary`(isMinorOverride 우선 → 민법 §4 19세).
  *
  * 설계: docs/02-design/features/inheritance-heir-table-view.ui.design.md §8
  */
 
+import { resolveMinorBeneficiary } from "@/lib/tax-engine/inheritance-gift-common";
 import type { Heir, HeirRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { isForProfitCorporate } from "@/lib/tax-engine/inheritance-gift-common";
 import { HEIR_RELATION_LABELS } from "@/components/calc/inheritance/heir-relation-meta";
 import { parseResidentNumber } from "@/lib/calc/resident-number";
-import { differenceInYears } from "date-fns";
 
 // ============================================================
 // 타입 정의
@@ -164,18 +164,20 @@ function HeirTableRow({ heir, isSelected, onSelect, deathDate }: HeirTableRowPro
     );
   }
 
-  // 미성년 배지 조건 (정정 #1: differenceInYears 직접 계산, isMinorFromRrn 없음)
+  // 미성년 배지 — 엔진 단일 진실 술어에 위임한다.
+  // 종전 로컬 계산은 `heir.isMinorOverride`(사용자 지정)를 보지 않아, 사용자가 「미성년 아님」으로
+  // 지정해도 배지는 계속 떴다. `resolveMinorBeneficiary`는 override를 먼저 쓴다.
+  // RRN에서 도출한 생년월일은 heir에 없을 수 있으므로 보강해 넘긴다.
   const birthDateForMinor = parsedRrn?.birthDate ?? heir.birthDate;
   const isMinor =
     !isCorporate &&
-    !!birthDateForMinor &&
     !!deathDate &&
     (() => {
       try {
-        const death = new Date(deathDate);
-        const birth = new Date(birthDateForMinor);
-        if (isNaN(death.getTime()) || isNaN(birth.getTime())) return false;
-        return differenceInYears(death, birth) < 19;
+        return resolveMinorBeneficiary(
+          birthDateForMinor ? { ...heir, birthDate: birthDateForMinor } : heir,
+          deathDate,
+        );
       } catch {
         return false;
       }

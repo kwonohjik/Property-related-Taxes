@@ -13,6 +13,7 @@
  *   적용 여부는 buildInput/autos와 동일한 fallback 규칙으로 판정(단일 진실).
  */
 
+import { isManualItemActive } from "@/lib/calc/inheritance-deduction-checklist";
 import type { FormState } from "./shared";
 import type { Step4Autos } from "./steps";
 import type { HeirRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
@@ -92,10 +93,14 @@ export function InheritanceReviewSummary({
     deductions.push("동거주택공제");
   if (has(form.farmingAssetValue) || autos.farming.value > 0 || form.farming != null)
     deductions.push("영농상속공제");
+  // ④ buildInput은 같은 세 필드를 전부 `isManualItemActive(form, "familyBusiness")`로
+  // 게이팅해 비활성이면 undefined를 보낸다. 체크리스트에서 해제하면 값은 «보존»되므로
+  // (값 유지·계산 제외) 값 유무만 보면 「적용 예정」과 실제 계산이 정반대가 된다.
   if (
-    has(form.familyBusinessValue) ||
-    has(form.familyBusinessDirectAmount) ||
-    form.familyBusiness != null
+    isManualItemActive(form, "familyBusiness") &&
+    (has(form.familyBusinessValue) ||
+      has(form.familyBusinessDirectAmount) ||
+      form.familyBusiness != null)
   )
     deductions.push("가업상속공제");
   if (form.casualtyLossEnabled) deductions.push("재해손실공제(§23)");
@@ -103,8 +108,13 @@ export function InheritanceReviewSummary({
   // 세액공제·납부 방법
   const credits: string[] = [];
   if (form.isFiledOnTime) credits.push("신고세액공제 3%");
-  if (has(form.foreignTaxPaid)) credits.push("외국납부세액공제");
-  if (has(form.shortTermReinheritPriorDeathDate) || form.shortTermReinheritAssets.length > 0)
+  // 아래 둘도 ④ creditInput이 같은 게이트를 건다(InheritanceTaxForm.tsx:346·354).
+  if (isManualItemActive(form, "foreignTax") && has(form.foreignTaxPaid))
+    credits.push("외국납부세액공제");
+  if (
+    isManualItemActive(form, "shortTermReinherit") &&
+    (has(form.shortTermReinheritPriorDeathDate) || form.shortTermReinheritAssets.length > 0)
+  )
     credits.push("단기재상속공제");
 
   const payments: string[] = [];
