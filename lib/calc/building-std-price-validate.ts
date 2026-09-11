@@ -216,13 +216,21 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
 
   // 양도시(당해연도) 검증 — 양도년도 ≥ 2001(일반 산식). 취득은 2000이전이면 산정기준율.
   // 동일연도(§164⑧)는 취득 기준시가를 환산하므로 양도당시 구조·용도·공시지가 불요(toEngineInput과 동기).
-  const sameYear = acqY === transY;
-  // 연도 교차 opt-in도 같은 필수 입력을 요구한다(엔진 진입 조건과 동일 축).
-  const crossYearAdjust =
-    !sameYear && f.crossYearSameAdjust && acqY !== undefined && transY !== undefined &&
-    transY <= acqY + 1;
+  /**
+   * §164⑧ 환산 축 — 엔진·④변환·UI 와 **같은 leaf 를 같은 인자로** 쓴다.
+   *
+   * 🔴 종전에는 이 한 곳만 술어를 손으로 다시 적었고 **하한(양도 ≥ 취득)이 빠져** 있었다
+   *    (F-16). 실측(취득 2022 · 양도 2021 · 토글 ON): 여기서는 §164⑧ 축으로 보아
+   *    보유월수를 요구하는데 ④·엔진·UI 는 leaf 로 **아니라고** 판정해
+   *    ④가 빈 양도 필드를 싣고 엔진이 「양도시: 구조 미선택」으로 throw 했다.
+   *    요구한 보유월수 칸도 토글도 UI 가 leaf 로 숨기므로 **해소 불가 차단**이 된다.
+   *
+   * ⚠️ 「양도연도 < 취득연도」 자체의 차단은 **별건**이다 — 이 술어는 역순을 막지 않고
+   *    「그때는 §164⑧ 축이 아니라 일반 2시점 축」이라고 네 층이 같은 답을 내게만 한다.
+   */
+  const sec1648 = isSameAdjustmentPeriodConversion(acqY, transY, f.crossYearSameAdjust);
   if (!hasUsageIndexYear(transY) || !hasLocationIndexYear(transY)) return `${transY}년 양도시 지수 자료가 없습니다.`;
-  if (!sameYear && !crossYearAdjust) {
+  if (!sec1648) {
     if (!f.transStructureKey) return "양도당시 건물 구조를 선택하세요.";
     if (intOrUndef(f.transUsageNo) === undefined) return "양도당시 건물 용도를 선택하세요.";
     if (!(parseAmount(f.transLandPrice) > 0)) return "양도당시 ㎡당 개별공시지가를 입력하세요.";
@@ -233,8 +241,8 @@ export function validateBuildingStdPriceForm(f: BuildingStdPriceFormState): stri
   if (intOrUndef(f.acqUsageNo) === undefined) return "취득당시 건물 용도를 선택하세요.";
   if (!(parseAmount(f.acqLandPrice) > 0)) return "취득당시 ㎡당 개별공시지가를 입력하세요.";
 
-  // 동일연도 환산
-  if (sameYear || crossYearAdjust) {
+  // 동일조정기간(§164⑧) 환산 — 동일연도 자동 + 연도교차 opt-in(위 leaf 가 둘 다 판정한다)
+  if (sec1648) {
     const hm = intOrUndef(f.holdingMonths);
     if (hm === undefined || hm <= 0) return "동일조정기간 양도는 보유월수를 입력하세요(1개월 미만=1).";
     const am = intOrUndef(f.adjustMonths);

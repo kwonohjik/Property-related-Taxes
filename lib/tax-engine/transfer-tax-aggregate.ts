@@ -458,14 +458,35 @@ function computeAggregateOnce(
       }
     }
 
-    // 실제 적용 취득가액 (환산 시 재산식), 필요경비는 §97 개산공제 포함 역산
+    /**
+     * 실제 적용 취득가액 — 환산 자산은 **단건 엔진이 낸 `estimatedBase` 가 정본**이다.
+     * 필요경비는 §97 개산공제 포함 역산.
+     *
+     * 🔴 **재산식은 §164⑨ 특례를 못 본다** (F-14 · 2026-08-26 코드리뷰).
+     *    아래 fallback 식은 원시 `standardPriceAtTransfer` 를 분모로 쓰는데, 단건 엔진은
+     *    「소득세법 시행령」 §164⑨(1호 수용 보상·2호 공매 경락)가 발동하면
+     *    `resolveConversionDenominatorAtTransfer` 가 **낮춘 분모**로 환산한다.
+     *    실측(토지 10억·취득시 2억·양도시 5억·수용 분모 3억): 표시 취득가액 400,000,000
+     *    (엔진 666,666,666) — **266,666,666 과소**, 역산되는 필요경비가 같은 금액만큼 과대.
+     *
+     *    ⚠️ 신고서 교차검산 항등식(양도가액 − 취득가액 − 필요경비 = 양도차익)은 **양쪽 다
+     *       성립**한다(필요경비를 취득가액에서 역산하므로) — 자기검산이 오류를 가린다.
+     *
+     *    선례: 바로 위 `adoptedCarryoverAcquisitionPrice` 가 이월과세 축을 같은 방향으로
+     *    이미 고쳤다(「채택 결과를 엔진에서 받는다」).
+     *
+     *    fallback 은 남긴다 — `usedEstimatedAcquisition` 은 `useEstimatedAcquisition`(입력
+     *    플래그)에서 오고 `estimatedBase` 는 `calcTransferGain` 의 `usedEstimated` 에서 와
+     *    두 축이 갈릴 수 있다. 그 경우 종전 표시를 유지한다(회귀 0).
+     */
     const tsfStd = r.singleInput.standardPriceAtTransfer ?? 0;
     const effectiveAcquisitionPrice =
       adoptedCarryoverAcquisitionPrice(r.result.carryoverTaxationDetail) ??
       (r.result.usedEstimatedAcquisition
-        ? (tsfStd > 0
-            ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
-            : 0)
+        ? (r.result.estimatedBase ??
+            (tsfStd > 0
+              ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
+              : 0))
         : r.singleInput.acquisitionPrice);
     // 비과세 자산: gross(exemptGrossGain)와 취득가액으로 필요경비 역산(환산 시 개산공제분).
     //   → 신고서 양식 컬럼 교차검산(양도가액 − 취득가액 − 필요경비 = 전체 양도차익) 정합.

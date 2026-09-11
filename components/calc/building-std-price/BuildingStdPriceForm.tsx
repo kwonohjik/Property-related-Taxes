@@ -691,7 +691,13 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             ⇒ 사용자가 명시할 때만 환산 경로로 간다. 이 토글이 없으면 아래 §164⑧ 섹션이
                연도 교차에서 **영원히 열리지 않아** 폼-엔진 배선이 도달 불가가 된다.
           */}
-          {!sameYear && !isMech && crossYearWindow && (
+          {/*
+            ⚠️ **켜져 있으면 창을 벗어나도 남긴다** — 렌더 조건이 `crossYearWindow` 하나뿐이면
+               켠 뒤 연도를 바꿔 창을 벗어났을 때 **끌 위젯이 사라진다**(플래그는 이월된다 —
+               `changeYearWithGuard` 는 구조·용도·acqLandPrice 만 초기화한다). F-16.
+               선례: `AssetSectionTransfer:221` 이 같은 이유로 같은 조건을 쓴다.
+          */}
+          {!sameYear && !isMech && (crossYearWindow || f.crossYearSameAdjust) && (
             <ToggleCard
               checked={f.crossYearSameAdjust}
               onCheckedChange={(v) => set("crossYearSameAdjust", v)}
